@@ -202,17 +202,17 @@
 
                         <!-- Image Upload - Drag & Drop focused -->
                         <div>
-                            <label class="text-xs font-semibold text-teal-700 block mb-1.5">Chụp màn hình → Ctrl + V ảnh vào đây (chính)</label>
+                            <label class="text-xs font-semibold text-teal-700 block mb-1.5">Chụp màn hình → Ctrl + V ảnh vào đây (chính); PDF dùng nút chọn tệp hoặc kéo thả</label>
                             
                             <div id="upload-area" 
                                  class="border-3 border-dashed border-teal-300 hover:border-teal-500 bg-white hover:bg-teal-50/30 transition-all rounded-3xl p-8 text-center cursor-pointer">
                                 <div class="flex flex-col items-center">
                                     <i class="fas fa-download text-5xl text-teal-500 mb-3"></i>
                                     <div class="text-lg font-bold text-slate-700 mb-1">
-                                        Ctrl + V dán ảnh chụp màn hình vào đây
+                                        Ctrl + V dán ảnh hoặc kéo thả ảnh/PDF vào đây
                                     </div>
                                     <div class="text-sm text-slate-500 mb-4">
-                                        Chụp trang sách → dán trực tiếp (nhiều ảnh OK)
+                                        Chụp trang sách → dán trực tiếp; PDF: chọn tệp/kéo thả (nhiều tệp OK)
                                     </div>
                                     
                                     <button type="button" id="choose-file-btn"
@@ -221,13 +221,13 @@
                                         <span>Hoặc chọn file từ máy (nếu cần)</span>
                                     </button>
                                 </div>
-                                <input type="file" id="image-input" multiple accept="image/*" class="hidden">
+                                <input type="file" id="image-input" multiple accept="image/*,application/pdf,.pdf" class="hidden">
                             </div>
 
                             <div id="image-preview" class="mt-3 grid grid-cols-4 gap-2 hidden"></div>
                             
                             <div class="mt-1 text-[10px] text-teal-700 font-medium">
-                                <strong>Chụp màn hình → Ctrl + V nhiều lần</strong> để thêm ảnh. Sau đó nhấn nút lớn bên phải để gọi Gemini trực tiếp.
+                                <strong>Chụp màn hình → Ctrl + V nhiều lần</strong> để thêm ảnh. PDF từ clipboard không được mọi trình duyệt hỗ trợ, nên luôn có đường chọn tệp thay thế. Tối đa 12 tệp, 60 MB tổng cộng.
                             </div>
                         </div>
 
@@ -384,6 +384,10 @@
                                             class="lesson-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold">
                                         <i class="fas fa-layer-group mr-1"></i>Tổng hợp (JSON)
                                     </button>
+                                    <button type="button" id="lesson-tab-plan" onclick="setLessonOutputTab('plan')"
+                                            class="lesson-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold">
+                                        <i class="fas fa-chalkboard-teacher mr-1"></i>Soạn giáo án
+                                    </button>
                                 </div>
                                 <div id="lesson-panel-theory" class="lesson-output-panel">
                                     <textarea id="gemini-output-theory" rows="8"
@@ -407,6 +411,47 @@
                                               class="lesson-output-textarea w-full border border-indigo-200 bg-indigo-50/40 p-3 rounded-2xl text-sm font-mono resize-y text-slate-700"
                                               placeholder="Tự ghép Bước 1 + Bước 2 — dùng cho Kiểm tra import / Xuất JSON..."></textarea>
                                     <div class="text-[10px] text-indigo-800 mt-1">Chỉ xem — <strong>Kiểm tra import</strong> và <strong>Xuất JSON</strong> dùng nội dung ghép từ hai tab trên.</div>
+                                </div>
+                                <div id="lesson-panel-plan" class="lesson-output-panel hidden space-y-3">
+                                    <div class="rounded-2xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+                                        Soạn theo Công văn 5512 bằng <strong>gemini-3-flash-preview</strong> trong Gemini Canvas. Ảnh/PDF đã nạp ở mục Đầu vào được gửi nguyên MIME; không dùng API key hay máy chủ trung gian.
+                                    </div>
+                                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                        <section class="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                                            <div class="font-semibold text-sm text-slate-800">Cấu hình giáo án</div>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <input id="lesson-plan-teacher" type="text" class="border border-slate-300 rounded-xl px-3 py-2 text-xs" placeholder="Họ và tên giáo viên">
+                                                <input id="lesson-plan-school" type="text" class="border border-slate-300 rounded-xl px-3 py-2 text-xs" placeholder="Trường">
+                                                <input id="lesson-plan-subject" type="text" class="border border-slate-300 rounded-xl px-3 py-2 text-xs" placeholder="Môn học">
+                                                <input id="lesson-plan-grade" type="text" class="border border-slate-300 rounded-xl px-3 py-2 text-xs" placeholder="Lớp">
+                                                <input id="lesson-plan-book" type="text" class="border border-slate-300 rounded-xl px-3 py-2 text-xs" placeholder="Bộ sách">
+                                                <input id="lesson-plan-periods" type="text" class="border border-slate-300 rounded-xl px-3 py-2 text-xs" value="1 tiết" placeholder="Số tiết">
+                                            </div>
+                                            <input id="lesson-plan-title" type="text" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" placeholder="Tên đầu giáo án (ví dụ: Bài 5: Ước chung và bội chung)">
+                                            <textarea id="lesson-plan-material-text" rows="4" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs" placeholder="Hoặc nhập trực tiếp nội dung/học liệu tham khảo ở đây…"></textarea>
+                                            <div class="text-[11px] font-medium text-slate-600">Tùy chọn tích hợp (chỉ mục được bật mới được đưa vào yêu cầu AI)</div>
+                                            <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-slate-700">
+                                                <label><input id="plan-opt-digital" type="checkbox" checked class="accent-sky-600"> Năng lực số</label>
+                                                <label><input id="plan-opt-ai" type="checkbox" checked class="accent-sky-600"> Giáo dục AI</label>
+                                                <label><input id="plan-opt-active" type="checkbox" checked class="accent-sky-600"> PPDH tích cực</label>
+                                                <label><input id="plan-opt-game" type="checkbox" class="accent-sky-600"> Trò chơi</label>
+                                                <label><input id="plan-opt-defense" type="checkbox" class="accent-sky-600"> GDQP-AN</label>
+                                                <label><input id="plan-opt-disability" type="checkbox" class="accent-sky-600"> HSKT</label>
+                                                <label><input id="plan-opt-questions" type="checkbox" checked class="accent-sky-600"> Câu hỏi củng cố</label>
+                                                <label><input id="plan-opt-stem" type="checkbox" class="accent-sky-600"> STEM</label>
+                                            </div>
+                                        </section>
+                                        <section class="rounded-2xl border border-sky-200 bg-sky-50/30 p-4 space-y-3">
+                                            <div class="font-semibold text-sm text-slate-800">Kết quả tham khảo</div>
+                                            <div class="flex flex-wrap gap-2">
+                                                <button type="button" onclick="generateLessonPlan(false)" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-semibold"><i class="fas fa-wand-magic-sparkles mr-1"></i>Tạo giáo án</button>
+                                                <button type="button" onclick="generateLessonPlan(true)" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-semibold"><i class="fas fa-rotate mr-1"></i>Soạn lại</button>
+                                                <button type="button" onclick="exportLessonPlanToWord().catch(handleWordExportError)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold"><i class="fas fa-file-word mr-1"></i>Xuất Word giáo án</button>
+                                            </div>
+                                            <div id="lesson-plan-status" class="text-xs text-slate-500" aria-live="polite">Chưa có giáo án.</div>
+                                            <textarea id="lesson-plan-output" rows="23" class="w-full border border-sky-200 bg-white p-3 rounded-2xl text-xs font-mono resize-y" placeholder="Giáo án JSON theo 5512 sẽ hiện ở đây. Có thể chỉnh sửa rồi xuất Word."></textarea>
+                                        </section>
+                                    </div>
                                 </div>
                                 <div class="text-[10px] text-slate-500 mt-2">Sau khi tạo xong, hệ thống tự phân tích cấu trúc. Bạn vẫn có thể chỉnh từng tab rồi bấm “Parse”.</div>
                                 <div id="lesson-validation-panel" class="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs hidden">
@@ -726,7 +771,7 @@
             return combined;
         };
         window.setLessonOutputTab = function(tab) {
-            ['theory', 'rest', 'combined', 'quiz'].forEach(function(name) {
+            ['theory', 'rest', 'combined', 'quiz', 'plan'].forEach(function(name) {
                 var panel = document.getElementById('lesson-panel-' + name);
                 var btn = document.getElementById('lesson-tab-' + name);
                 if (panel) panel.classList.toggle('hidden', name !== tab);
@@ -965,6 +1010,63 @@
 
         // Image upload handling
         let uploadedImages = [];
+        // Nguồn cho tab “Soạn giáo án”. Giữ data URL để chuyển thẳng MIME gốc vào
+        // inlineData của Gemini Canvas, không qua API key hay máy chủ trung gian.
+        let uploadedLessonPlanSources = [];
+        const LESSON_PLAN_MAX_FILES = 12;
+        const LESSON_PLAN_MAX_FILE_BYTES = 20 * 1024 * 1024;
+        const LESSON_PLAN_MAX_TOTAL_BYTES = 60 * 1024 * 1024;
+
+        function isLessonPlanSource(file) {
+            return !!file && (String(file.type || '').startsWith('image/')
+                || String(file.type || '').toLowerCase() === 'application/pdf'
+                || /\.pdf$/i.test(String(file.name || '')));
+        }
+
+        function updateLessonPlanSourceStatus() {
+            const status = document.getElementById('lesson-plan-status');
+            if (!status || !uploadedLessonPlanSources.length) return;
+            const total = uploadedLessonPlanSources.reduce(function(sum, source) { return sum + source.size; }, 0);
+            status.textContent = 'Đã nạp ' + uploadedLessonPlanSources.length + ' nguồn (' + Math.round(total / 1024 / 1024 * 10) / 10 + ' MB) cho tab Soạn giáo án.';
+        }
+
+        function addLessonPlanSource(file, dataUrl) {
+            if (!file || !dataUrl || !isLessonPlanSource(file)) return;
+            const mimeType = String(file.type || (/\.pdf$/i.test(file.name) ? 'application/pdf' : 'image/png')).toLowerCase();
+            uploadedLessonPlanSources.push({
+                name: file.name || ('clipboard-' + Date.now()),
+                mimeType: mimeType,
+                size: Number(file.size) || 0,
+                data: dataUrl
+            });
+            updateLessonPlanSourceStatus();
+        }
+
+        function validateLessonPlanFiles(files) {
+            const selected = Array.from(files || []).filter(isLessonPlanSource);
+            const existingBytes = uploadedLessonPlanSources.reduce(function(sum, source) { return sum + source.size; }, 0);
+            const selectedBytes = selected.reduce(function(sum, file) { return sum + (Number(file.size) || 0); }, 0);
+            if (!selected.length) throw new Error('Chỉ nhận tệp hình ảnh hoặc PDF.');
+            if (selected.some(function(file) { return file.size > LESSON_PLAN_MAX_FILE_BYTES; })) throw new Error('Mỗi tệp tối đa 20 MB.');
+            if (uploadedLessonPlanSources.length + selected.length > LESSON_PLAN_MAX_FILES) throw new Error('Tối đa ' + LESSON_PLAN_MAX_FILES + ' tệp đầu vào.');
+            if (existingBytes + selectedBytes > LESSON_PLAN_MAX_TOTAL_BYTES) throw new Error('Tổng dữ liệu đầu vào tối đa 60 MB. Hãy bớt tệp hoặc nén ảnh/PDF.');
+            return selected;
+        }
+
+        function addLessonPlanFiles(files) {
+            let selected;
+            try {
+                selected = validateLessonPlanFiles(files);
+            } catch (error) {
+                showAppToast(error.message, 'warn');
+                return;
+            }
+            selected.forEach(function(file) {
+                const reader = new FileReader();
+                reader.onload = function(event) { addLessonPlanSource(file, event.target.result); };
+                reader.readAsDataURL(file);
+            });
+        }
 
         function setupImageUpload() {
             const uploadArea = document.getElementById('upload-area');
@@ -1067,6 +1169,9 @@
                 previewContainer.innerHTML = '';
                 previewContainer.classList.remove('hidden');
 
+                // Ảnh vẫn phục vụ luồng bài học cũ; cả ảnh và PDF đồng thời là nguồn
+                // của tab “Soạn giáo án”. PDF không tạo preview ảnh nhưng được gửi đúng MIME.
+                addLessonPlanFiles(files);
                 Array.from(files).forEach(file => {
                     if (!file.type.startsWith('image/')) return;
 
@@ -4083,6 +4188,213 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
             }
         }
 
+        // ===== SOẠN GIÁO ÁN 5512 (Gemini Canvas, không API key/fallback) =====
+        const LESSON_PLAN_MODEL = 'gemini-3-flash-preview';
+        const LESSON_PLAN_STEP_NAMES = ['Chuyển giao nhiệm vụ', 'Thực hiện nhiệm vụ', 'Báo cáo, thảo luận', 'Kết luận, nhận định'];
+        const UNESCO_AI_GROUPS = [
+            'Lấy con người làm trung tâm', 'Đạo đức AI', 'Kỹ thuật và ứng dụng AI', 'Thiết kế hệ thống AI'
+        ];
+
+        function getLessonPlanConfiguration() {
+            const value = function(id, fallback) { const el = document.getElementById(id); return (el && el.value || fallback || '').trim(); };
+            const checked = function(id) { const el = document.getElementById(id); return !!(el && el.checked); };
+            return {
+                teacher: value('lesson-plan-teacher'), school: value('lesson-plan-school'),
+                subject: value('lesson-plan-subject', (document.getElementById('subject') || {}).value),
+                grade: value('lesson-plan-grade', ((document.getElementById('subject') || {}).value || '').replace(/\D+/g, '')),
+                book: value('lesson-plan-book'), periods: value('lesson-plan-periods', '1 tiết'),
+                heading: value('lesson-plan-title', (document.getElementById('title') || {}).value),
+                materialText: value('lesson-plan-material-text'),
+                digital: checked('plan-opt-digital'), ai: checked('plan-opt-ai'), active: checked('plan-opt-active'),
+                game: checked('plan-opt-game'), defense: checked('plan-opt-defense'), disability: checked('plan-opt-disability'),
+                questions: checked('plan-opt-questions'), stem: checked('plan-opt-stem')
+            };
+        }
+
+        function lessonPlanPrompt(context, rewrite) {
+            const enabled = [];
+            if (context.digital) enabled.push('Tích hợp năng lực số theo Thông tư 02/2025/TT-BGDĐT: mỗi năng lực có minh chứng và sản phẩm học tập.');
+            if (context.ai) enabled.push('Tích hợp giáo dục AI theo UNESCO 2024, đủ 4 nhóm (Lấy con người làm trung tâm, Đạo đức AI, Kỹ thuật và ứng dụng AI, Thiết kế hệ thống AI), mức Hiểu/Vận dụng/Tạo phù hợp, luôn nêu an toàn AI.');
+            if (context.active) enabled.push('Dùng phương pháp dạy học tích cực phù hợp với học liệu.');
+            if (context.game) enabled.push('Thiết kế trò chơi học tập ngắn, có luật chơi/sản phẩm rõ ràng khi phù hợp.');
+            if (context.defense) enabled.push('Tích hợp GDQP-AN đúng mức, tự nhiên và chính xác khi phù hợp bài học.');
+            if (context.disability) enabled.push('Đề xuất điều chỉnh/hỗ trợ tiếp cận cho học sinh khuyết tật (HSKT) phù hợp.');
+            if (context.questions) enabled.push('Có câu hỏi củng cố/đánh giá ở hoạt động phù hợp.');
+            if (context.stem) enabled.push('Có nhiệm vụ STEM hoặc liên hệ STEM khả thi khi phù hợp.');
+            const objectiveOptional = (context.digital ? ',"digitalCompetencies":[{"competency":"...","evidence":"minh chứng quan sát được","product":"sản phẩm học tập","basis":"Thông tư 02/2025/TT-BGDĐT"}]' : '') +
+                (context.ai ? ',"aiCompetencies":[{"group":"một trong 4 nhóm UNESCO 2024","level":"Hiểu hoặc Vận dụng hoặc Tạo","application":"...","evidence":"...","safety":"bảo vệ dữ liệu, kiểm chứng và minh bạch việc dùng AI"}]' : '');
+            const activityOptional = (context.digital ? ',"digitalCompetency":"năng lực số + minh chứng/sản phẩm"' : '') +
+                (context.ai ? ',"aiIntegration":"nhóm UNESCO, mức, an toàn"' : '');
+            return `Bạn là chuyên gia xây dựng Kế hoạch bài dạy Việt Nam. Soạn ${rewrite ? 'lại và hoàn thiện' : ''} giáo án theo Công văn 5512/BDGĐT-GDTrH.\n\n` +
+                `Thông tin: giáo viên ${context.teacher || 'chưa cung cấp'}; trường ${context.school || 'chưa cung cấp'}; môn ${context.subject}; lớp ${context.grade}; bộ sách ${context.book || 'chưa cung cấp'}; số tiết ${context.periods}; chương/chủ đề ${context.chapter}; tên đầu giáo án ${context.heading}; ghi chú ${context.notes || 'không có'}; nội dung nhập trực tiếp ${context.materialText || 'không có'}.\n` +
+                (enabled.length ? `Chỉ tích hợp các lựa chọn sau (không tự thêm lựa chọn khác): ${enabled.join(' ')}\n` : '') +
+                `Đọc chính xác học liệu ảnh/PDF đính kèm; không bịa nội dung không có căn cứ. Trả lời DUY NHẤT một JSON hợp lệ, không Markdown, theo schema sau:\n` +
+                `{\n  "metadata":{"lessonHeading":"...","teacher":"...","school":"...","subject":"...","grade":"...","book":"...","chapter":"...","duration":"...","date":"..."},\n` +
+                `  "objectives":{"knowledge":["..."],"specificCompetencies":["..."],"generalCompetencies":["..."],"qualities":["..."]${objectiveOptional}},\n` +
+                `  "equipmentAndMaterials":{"teacher":["..."],"students":["..."]},\n` +
+                `  "activities":[{"name":"Hoạt động 1: Mở đầu","objective":"...","content":"...","product":"..."${activityOptional},"organization":{"steps":[{"name":"Chuyển giao nhiệm vụ","teacher":"...","students":"..."},{"name":"Thực hiện nhiệm vụ","teacher":"...","students":"..."},{"name":"Báo cáo, thảo luận","teacher":"...","students":"..."},{"name":"Kết luận, nhận định","teacher":"...","students":"..."}]}}],\n` +
+                `  "adjustments":"IV. Điều chỉnh sau bài dạy: ..."\n}\n` +
+                `Bắt buộc đúng 4 activities theo thứ tự: Hoạt động 1 Mở đầu, Hoạt động 2 Hình thành kiến thức mới, Hoạt động 3 Luyện tập, Hoạt động 4 Vận dụng. Mỗi hoạt động đủ mục tiêu, nội dung, sản phẩm và đúng 4 bước tổ chức nêu trên; từng bước luôn có teacher và students. ${context.ai ? 'Tích hợp AI có chọn lọc, không ép mọi hoạt động phải dùng AI.' : ''}`;
+        }
+
+        function parseLessonPlanJson(raw) {
+            const cleaned = String(raw || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+            return JSON.parse(cleaned);
+        }
+
+        function validateLessonPlan(plan, config) {
+            config = config || getLessonPlanConfiguration();
+            const errors = [];
+            const metadata = plan && plan.metadata;
+            ['lessonHeading', 'subject', 'grade', 'duration'].forEach(function(key) {
+                if (!metadata || !String(metadata[key] || '').trim()) errors.push('metadata.' + key + ' còn thiếu.');
+            });
+            const objectives = plan && plan.objectives;
+            ['knowledge', 'specificCompetencies', 'generalCompetencies', 'qualities'].concat(config.digital ? ['digitalCompetencies'] : [], config.ai ? ['aiCompetencies'] : []).forEach(function(key) {
+                if (!objectives || !Array.isArray(objectives[key]) || !objectives[key].length) errors.push('I. Mục tiêu thiếu ' + key + '.');
+            });
+            (config.digital ? (objectives && objectives.digitalCompetencies || []) : []).forEach(function(item, index) {
+                if (!item || !item.competency || !item.evidence || !item.product || !/02\/2025/i.test(item.basis || '')) errors.push('Năng lực số #' + (index + 1) + ' phải có năng lực, minh chứng, sản phẩm và căn cứ Thông tư 02/2025/TT-BGDĐT.');
+            });
+            if (config.ai) {
+                const aiGroups = new Set((objectives && objectives.aiCompetencies || []).map(function(item) { return item && item.group; }));
+                UNESCO_AI_GROUPS.forEach(function(group) { if (!aiGroups.has(group)) errors.push('Khung AI UNESCO 2024 thiếu nhóm: ' + group + '.'); });
+                (objectives && objectives.aiCompetencies || []).forEach(function(item, index) {
+                    if (!item || !['Hiểu', 'Vận dụng', 'Tạo'].includes(item.level) || !item.application || !item.evidence || !item.safety) errors.push('Năng lực AI #' + (index + 1) + ' phải có mức Hiểu/Vận dụng/Tạo, ứng dụng, minh chứng và an toàn AI.');
+                });
+            }
+            if (!plan || !plan.equipmentAndMaterials || !Array.isArray(plan.equipmentAndMaterials.teacher) || !Array.isArray(plan.equipmentAndMaterials.students)) errors.push('II. Thiết bị dạy học và học liệu chưa đúng cấu trúc.');
+            if (!plan || !Array.isArray(plan.activities) || plan.activities.length !== 4) {
+                errors.push('III. Tiến trình dạy học phải có chính xác 4 hoạt động.');
+            } else {
+                plan.activities.forEach(function(activity, activityIndex) {
+                    ['name', 'objective', 'content', 'product'].forEach(function(key) { if (!activity || !String(activity[key] || '').trim()) errors.push('Hoạt động ' + (activityIndex + 1) + ' thiếu ' + key + '.'); });
+                    const steps = activity && activity.organization && activity.organization.steps;
+                    if (!Array.isArray(steps) || steps.length !== 4) { errors.push('Hoạt động ' + (activityIndex + 1) + ' phải có đủ 4 bước tổ chức.'); return; }
+                    LESSON_PLAN_STEP_NAMES.forEach(function(stepName, index) {
+                        const step = steps[index];
+                        if (!step || step.name !== stepName || !String(step.teacher || '').trim() || !String(step.students || '').trim()) errors.push('Hoạt động ' + (activityIndex + 1) + ', bước ' + stepName + ' thiếu hành động giáo viên/học sinh.');
+                    });
+                });
+            }
+            if (!plan || !String(plan.adjustments || '').trim()) errors.push('IV. Điều chỉnh sau bài dạy còn thiếu.');
+            return errors;
+        }
+
+        function lessonPlanInlineParts() {
+            return uploadedLessonPlanSources.map(function(source) {
+                const match = String(source.data || '').match(/^data:([^;]+);base64,(.+)$/i);
+                return match ? { inlineData: { mimeType: source.mimeType || match[1], data: match[2] } } : null;
+            }).filter(Boolean);
+        }
+
+        async function callLessonPlanGemini(prompt) {
+            const parts = [{ text: prompt }].concat(lessonPlanInlineParts());
+            const response = await postCanvasGeminiGenerate(LESSON_PLAN_MODEL, {
+                contents: [{ parts: parts }],
+                generationConfig: { temperature: 0.35, topP: 0.9, maxOutputTokens: 16384, responseMimeType: 'application/json' }
+            });
+            if (!response.ok) {
+                let message = 'HTTP ' + response.status;
+                try { const data = await response.json(); message = data && data.error && data.error.message || message; } catch (ignored) {}
+                throw new Error('Gemini Canvas (' + LESSON_PLAN_MODEL + '): ' + message);
+            }
+            const data = await response.json();
+            const raw = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+            const text = raw.map(function(part) { return part.text || ''; }).join('').trim();
+            if (!text) throw new Error('Gemini không trả về JSON giáo án.');
+            return text;
+        }
+
+        async function generateLessonPlan(rewrite) {
+            const status = document.getElementById('lesson-plan-status');
+            const output = document.getElementById('lesson-plan-output');
+            const headingEl = document.getElementById('lesson-plan-title');
+            const context = Object.assign(getLessonPlanConfiguration(), {
+                chapter: (document.getElementById('chapter') || {}).value || '',
+                heading: (headingEl && headingEl.value || (document.getElementById('title') || {}).value || '').trim(),
+                notes: (document.getElementById('notes') || {}).value || ''
+            });
+            if (!uploadedLessonPlanSources.length && !context.materialText) { showAppToast('Hãy nhập nội dung trực tiếp hoặc nạp ít nhất một ảnh/PDF bài học trước khi soạn giáo án.', 'warn'); return; }
+            if (!context.heading) { showAppToast('Nhập Tên đầu giáo án trước khi tạo.', 'warn'); return; }
+            if (status) status.textContent = uploadedLessonPlanSources.length
+                ? ('Đang gửi ' + uploadedLessonPlanSources.length + ' học liệu trực tiếp tới ' + LESSON_PLAN_MODEL + '…')
+                : ('Đang gửi nội dung nhập trực tiếp tới ' + LESSON_PLAN_MODEL + '…');
+            try {
+                let raw = await callLessonPlanGemini(lessonPlanPrompt(context, rewrite));
+                let plan;
+                let errors;
+                try { plan = parseLessonPlanJson(raw); errors = validateLessonPlan(plan, context); } catch (error) { errors = ['JSON không hợp lệ: ' + error.message]; }
+                if (errors.length) {
+                    if (status) status.textContent = 'Đang sửa đúng định dạng một lượt bằng ' + LESSON_PLAN_MODEL + '…';
+                    raw = await callLessonPlanGemini(lessonPlanPrompt(context, true) + '\n\nBản trước bị lỗi validator: ' + errors.join(' | ') + '. Hãy trả về JSON đã sửa, không giải thích.');
+                    try { plan = parseLessonPlanJson(raw); errors = validateLessonPlan(plan, context); } catch (error) { errors = ['JSON không hợp lệ sau khi sửa: ' + error.message]; }
+                }
+                if (errors.length) throw new Error('Giáo án chưa đạt cấu trúc sau một lượt sửa: ' + errors.join(' '));
+                output.value = JSON.stringify(plan, null, 2);
+                if (status) status.textContent = 'Đã tạo và kiểm tra đạt cấu trúc 5512. Có thể chỉnh sửa JSON hoặc xuất Word.';
+                showAppToast('Đã tạo giáo án 5512 bằng ' + LESSON_PLAN_MODEL + '.', 'ok');
+            } catch (error) {
+                if (status) status.textContent = 'Không thể hoàn tất: ' + error.message;
+                showAppToast(error.message, 'err');
+            }
+        }
+
+        function lessonPlanSafeFilename(value) {
+            const clean = String(value || 'giao_an').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
+            return (clean || 'giao_an').slice(0, 80) + '.docx';
+        }
+
+        async function exportLessonPlanToWord() {
+            const output = document.getElementById('lesson-plan-output');
+            const config = getLessonPlanConfiguration();
+            let plan;
+            try { plan = parseLessonPlanJson(output && output.value); } catch (error) { throw new Error('JSON giáo án không hợp lệ: ' + error.message); }
+            const errors = validateLessonPlan(plan, config);
+            if (errors.length) throw new Error('Chưa thể xuất Word: ' + errors.join(' '));
+            const docxLib = await ensureDocxLibrary();
+            const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType, Packer } = docxLib;
+            const paragraph = function(text, options) { return new Paragraph(Object.assign({ children: [new TextRun({ text: String(text || ''), size: 22 })], spacing: { after: 100 } }, options || {})); };
+            const bulletList = function(items) { return (items || []).map(function(item) { return paragraph('• ' + item); }); };
+            const children = [
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'KẾ HOẠCH BÀI DẠY', bold: true, size: 32 })], spacing: { after: 120 } }),
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: plan.metadata.lessonHeading, bold: true, size: 28 })], spacing: { after: 180 } }),
+                paragraph('Giáo viên: ' + (plan.metadata.teacher || config.teacher || '....................') + '    Trường: ' + (plan.metadata.school || config.school || '....................')),
+                paragraph('Môn học: ' + plan.metadata.subject + '    Lớp: ' + plan.metadata.grade + '    Bộ sách: ' + (plan.metadata.book || config.book || '....................') + '    Thời lượng: ' + plan.metadata.duration)
+            ];
+            children.push(paragraph('I. MỤC TIÊU', { heading: HeadingLevel.HEADING_1 }));
+            [['Kiến thức', plan.objectives.knowledge], ['Năng lực đặc thù', plan.objectives.specificCompetencies], ['Năng lực chung', plan.objectives.generalCompetencies], ['Phẩm chất', plan.objectives.qualities]].forEach(function(pair) {
+                children.push(paragraph(pair[0] + ':', { heading: HeadingLevel.HEADING_2 })); children.push.apply(children, bulletList(pair[1]));
+            });
+            if (config.digital) {
+                children.push(paragraph('Năng lực số (Thông tư 02/2025/TT-BGDĐT):', { heading: HeadingLevel.HEADING_2 }));
+                (plan.objectives.digitalCompetencies || []).forEach(function(item) { children.push(paragraph('• ' + item.competency + '. Minh chứng: ' + item.evidence + '. Sản phẩm: ' + item.product + '.')); });
+            }
+            if (config.ai) {
+                children.push(paragraph('Năng lực AI (UNESCO 2024):', { heading: HeadingLevel.HEADING_2 }));
+                (plan.objectives.aiCompetencies || []).forEach(function(item) { children.push(paragraph('• ' + item.group + ' — mức ' + item.level + ': ' + item.application + '. Minh chứng: ' + item.evidence + '. An toàn AI: ' + item.safety + '.')); });
+            }
+            children.push(paragraph('II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU', { heading: HeadingLevel.HEADING_1 }));
+            children.push(paragraph('Giáo viên: ' + plan.equipmentAndMaterials.teacher.join('; '))); children.push(paragraph('Học sinh: ' + plan.equipmentAndMaterials.students.join('; ')));
+            children.push(paragraph('III. TIẾN TRÌNH DẠY HỌC', { heading: HeadingLevel.HEADING_1 }));
+            plan.activities.forEach(function(activity) {
+                children.push(paragraph(activity.name, { heading: HeadingLevel.HEADING_2 }));
+                children.push(paragraph('a) Mục tiêu: ' + activity.objective)); children.push(paragraph('b) Nội dung: ' + activity.content)); children.push(paragraph('c) Sản phẩm: ' + activity.product));
+                if (activity.digitalCompetency) children.push(paragraph('Năng lực số tại hoạt động: ' + activity.digitalCompetency));
+                if (activity.aiIntegration) children.push(paragraph('Tích hợp AI tại hoạt động: ' + activity.aiIntegration));
+                children.push(paragraph('d) Tổ chức thực hiện:'));
+                const rows = [new TableRow({ children: [new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, children: [paragraph('Hoạt động của giáo viên', { alignment: AlignmentType.CENTER })] }), new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, children: [paragraph('Hoạt động của học sinh', { alignment: AlignmentType.CENTER })] })] })];
+                activity.organization.steps.forEach(function(step) { rows.push(new TableRow({ children: [new TableCell({ children: [paragraph(step.name + ': ' + step.teacher)] }), new TableCell({ children: [paragraph(step.name + ': ' + step.students)] })] })); });
+                children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: rows }));
+            });
+            children.push(paragraph('IV. ĐIỀU CHỈNH SAU BÀI DẠY', { heading: HeadingLevel.HEADING_1 })); children.push(paragraph(plan.adjustments));
+            const doc = new Document({ sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 900, right: 900, bottom: 900, left: 900 } } }, children: children }] });
+            const blob = await Packer.toBlob(doc);
+            const filename = lessonPlanSafeFilename(plan.metadata.lessonHeading);
+            if (window.canAutoDownloadFiles() && window.triggerBlobDownload(blob, filename)) { showAppToast('Đã xuất Word: ' + filename, 'ok'); return; }
+            showAppToast('Gemini Canvas chặn tải file Word trong sandbox. Hãy mở file HTML ngoài Canvas hoặc thử nút tải của trình duyệt.', 'warn');
+        }
+
         const MATH4_LESSON_CATALOG = [
             { chapter: 'Tập 1 · Chủ đề 1. Ôn tập và bổ sung', lessons: [
                 'Bài 1. Ôn tập các số đến 100 000', 'Bài 2. Ôn tập các phép tính trong phạm vi 100 000',
@@ -4537,6 +4849,14 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
             initializeTailwind();
             setupLessonCatalog();
             setupImageUpload();
+            var lessonPlanTitle = document.getElementById('lesson-plan-title');
+            var lessonTitle = document.getElementById('title');
+            if (lessonPlanTitle && !lessonPlanTitle.value && lessonTitle) lessonPlanTitle.value = lessonTitle.value;
+            var lessonPlanSubject = document.getElementById('lesson-plan-subject');
+            var lessonPlanGrade = document.getElementById('lesson-plan-grade');
+            var selectedSubject = (document.getElementById('subject') || {}).value || '';
+            if (lessonPlanSubject && !lessonPlanSubject.value) lessonPlanSubject.value = selectedSubject;
+            if (lessonPlanGrade && !lessonPlanGrade.value) lessonPlanGrade.value = selectedSubject.replace(/\D+/g, '');
 
             // Set draggable=false on key containers to prevent text selection from dragging elements out
             document.querySelectorAll('#upload-area, .bg-white.rounded-3xl, .grid, textarea').forEach(el => {
@@ -4546,6 +4866,10 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
             // === PASTE SUPPORT (primary for screenshots) ===
             // Paste images from clipboard (Ctrl + V after taking screenshot) works globally
             function addPastedImage(blob, source = 'pasted') {
+                // PDF không phải lúc nào cũng có trong clipboardData; chọn tệp/kéo thả
+                // vẫn luôn là đường thay thế. Ảnh clipboard được thêm cho cả hai luồng.
+                var pastedFile = new File([blob], `${source}-${Date.now()}.png`, { type: blob.type || 'image/png' });
+                addLessonPlanFiles([pastedFile]);
                 const reader = new FileReader();
                 reader.onload = function(ev) {
                     const preview = document.getElementById('image-preview');
@@ -4576,6 +4900,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                 if (!items) return;
 
                 let foundImage = false;
+                let foundPdf = false;
                 for (let i = 0; i < items.length; i++) {
                     if (items[i].type.indexOf('image') !== -1) {
                         const blob = items[i].getAsFile();
@@ -4586,9 +4911,20 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                             break;
                         }
                     }
+                    // Một số nền tảng đưa PDF vào clipboardData. Không tạo preview ảnh;
+                    // chỉ nạp tệp PDF nguyên MIME vào nguồn của tab Soạn giáo án.
+                    if (items[i].type === 'application/pdf') {
+                        const pdfFile = items[i].getAsFile();
+                        if (pdfFile) {
+                            addLessonPlanFiles([pdfFile]);
+                            foundPdf = true;
+                            e.preventDefault();
+                            break;
+                        }
+                    }
                 }
 
-                if (foundImage) {
+                if (foundImage || foundPdf) {
                     const area = document.getElementById('upload-area');
                     if (area) {
                         area.style.transition = 'background 0.1s';
@@ -4599,6 +4935,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                     }
                     // scroll so user sees the images added
                     if (area && area.scrollIntoView) area.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (foundPdf) showAppToast('Đã nhận PDF từ clipboard cho tab Soạn giáo án.', 'ok');
                 }
             }, true);
 
@@ -4658,6 +4995,8 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
         window.refreshLessonValidation = window.refreshLessonValidation;
         window.exportToWord = exportToWord;
         window.handleWordExportError = handleWordExportError;
+        window.generateLessonPlan = generateLessonPlan;
+        window.exportLessonPlanToWord = exportLessonPlanToWord;
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
