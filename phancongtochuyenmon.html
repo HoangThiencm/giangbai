@@ -611,7 +611,7 @@
         .modal-card {
             background: #ffffff;
             width: 100%;
-            max-width: 960px;
+            max-width: 980px;
             max-height: 90vh;
             border-radius: 16px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.25);
@@ -1028,17 +1028,18 @@
                             <button class="btn-small btn-small-primary" onclick="addTeacherRow()"><i class="fas fa-plus"></i> Thêm Giáo viên</button>
                             <button class="btn-small" onclick="syncTeachersFromDB()"><i class="fas fa-rotate text-indigo-600"></i> Lấy GV từ CSDL Hệ thống</button>
                         </div>
-                        <span style="font-size: 0.8rem; color: #64748b;">Khai báo họ tên, chức vụ và định mức giảm trừ</span>
+                        <span style="font-size: 0.78rem; color: #64748b;">Định mức THCS chuẩn: GV: 19t, TTCM: 19t (giảm 3t), TPCM: 19t (giảm 1t), PHT: 4t, HT: 2t</span>
                     </div>
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th style="width: 40px;">STT</th>
+                                <th style="width: 35px; text-align:center;">STT</th>
                                 <th>Họ và Tên Giáo viên</th>
-                                <th style="width: 140px;">Chức vụ</th>
-                                <th style="width: 100px;">Giảm trừ (tiết)</th>
-                                <th style="width: 110px;">QL Máy</th>
-                                <th style="width: 50px;">Xóa</th>
+                                <th style="width: 175px;">Chức vụ / Vai trò</th>
+                                <th style="width: 90px; text-align:center;">Định mức</th>
+                                <th style="width: 90px; text-align:center;">Giảm trừ</th>
+                                <th style="width: 80px; text-align:center;">QL Máy</th>
+                                <th style="width: 45px; text-align:center;">Xóa</th>
                             </tr>
                         </thead>
                         <tbody id="teachers-table-body">
@@ -1061,12 +1062,12 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th style="width: 40px;">STT</th>
+                                <th style="width: 40px; text-align:center;">STT</th>
                                 <th style="width: 100px;">Mã môn</th>
                                 <th>Tên Môn học</th>
-                                <th style="width: 130px;">Số tiết/lớp/tuần</th>
-                                <th style="width: 80px;">Màu sắc</th>
-                                <th style="width: 50px;">Xóa</th>
+                                <th style="width: 130px; text-align:center;">Số tiết/lớp/tuần</th>
+                                <th style="width: 80px; text-align:center;">Màu sắc</th>
+                                <th style="width: 50px; text-align:center;">Xóa</th>
                             </tr>
                         </thead>
                         <tbody id="subjects-table-body">
@@ -1106,9 +1107,21 @@
     <div id="toast"><i class="fas fa-circle-check"></i> <span>Thông báo</span></div>
 
     <script>
-        // CẤU HÌNH ĐỊNH MỨC CHUẨN MẶC ĐỊNH
-        const ROLE_ALLOWANCES = { 'TTCM': 3, 'TPCM': 1, 'HP': 0, 'GV': 0, 'TP': 1, 'TT': 3 };
-        const ROLE_STANDARD_QUOTA = { 'GV': 19, 'TTCM': 16, 'TPCM': 18, 'HP': 4 };
+        // QUY CHUẨN ĐỊNH MỨC THCS (THÔNG TƯ 28/2009/TT-BGDĐT)
+        // - Giáo viên THCS: Định mức chuẩn = 19 tiết / tuần
+        // - Tổ trưởng CM: Định mức chuẩn = 19 tiết, Giảm trừ 3 tiết/tuần (Thực dạy 16t)
+        // - Tổ phó CM: Định mức chuẩn = 19 tiết, Giảm trừ 1 tiết/tuần (Thực dạy 18t)
+        // - Phó Hiệu trưởng (PHT/HP): Định mức chuẩn = 4 tiết/tuần
+        // - Hiệu trưởng (HT): Định mức chuẩn = 2 tiết/tuần
+        const ROLE_DEFAULTS = {
+            'GV':   { label: 'Giáo viên (ĐM 19t)', quota: 19, allowance: 0 },
+            'TTCM': { label: 'Tổ trưởng CM (ĐM 19t, giảm 3t)', quota: 19, allowance: 3 },
+            'TPCM': { label: 'Tổ phó CM (ĐM 19t, giảm 1t)', quota: 19, allowance: 1 },
+            'HP':   { label: 'Phó Hiệu trưởng (ĐM 4t)', quota: 4, allowance: 0 },
+            'PHT':  { label: 'Phó Hiệu trưởng (ĐM 4t)', quota: 4, allowance: 0 },
+            'HT':   { label: 'Hiệu trưởng (ĐM 2t)', quota: 2, allowance: 0 },
+            'Khác': { label: 'Tùy chỉnh khác', quota: 19, allowance: 0 }
+        };
         const PERIOD_QLPM = 3;
 
         // DỮ LIỆU KHỞI TẠO MẪU
@@ -1128,16 +1141,16 @@
             classes: ['61', '62', '63', '64', '65', '66', '71', '72', '73', '74', '75', '76', '81', '82', '83', '84', '85', '86', '91', '92', '93', '94', '95', '96', '97'],
             unassigned: {},
             teachers: [
-                { id: 't1', name: 'T.Thiên', role: 'TTCM', allowance: 3, qlpm: false, assignments: {} },
-                { id: 't2', name: 'T.Sáng', role: 'TPCM', allowance: 1, qlpm: false, assignments: {} },
-                { id: 't3', name: 'T.Đông', role: 'HP', allowance: 0, qlpm: false, assignments: {} },
-                { id: 't4', name: 'T.Danh', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
-                { id: 't5', name: 'T.Ánh', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
-                { id: 't6', name: 'T. Hải', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
-                { id: 't7', name: 'C. Bình', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
-                { id: 't8', name: 'C.Thảo', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
-                { id: 't9', name: 'T. Tính', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
-                { id: 't10', name: 'T. Tùng', role: 'GV', allowance: 0, qlpm: false, assignments: {} }
+                { id: 't1', name: 'T.Thiên', role: 'TTCM', quota: 19, allowance: 3, qlpm: false, assignments: {} },
+                { id: 't2', name: 'T.Sáng', role: 'TPCM', quota: 19, allowance: 1, qlpm: false, assignments: {} },
+                { id: 't3', name: 'T.Đông', role: 'HP', quota: 4, allowance: 0, qlpm: false, assignments: {} },
+                { id: 't4', name: 'T.Danh', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
+                { id: 't5', name: 'T.Ánh', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
+                { id: 't6', name: 'T. Hải', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
+                { id: 't7', name: 'C. Bình', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
+                { id: 't8', name: 'C.Thảo', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
+                { id: 't9', name: 'T. Tính', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
+                { id: 't10', name: 'T. Tùng', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} }
             ],
             attendance: {
                 current_month: '9',
@@ -1166,6 +1179,14 @@
 
             s.teachers.forEach(t => {
                 if (!t.assignments) t.assignments = {};
+                // Đảm bảo có trường quota
+                if (typeof t.quota !== 'number') {
+                    t.quota = (t.role === 'HT' ? 2 : ((t.role === 'HP' || t.role === 'PHT') ? 4 : 19));
+                }
+                if (typeof t.allowance !== 'number') {
+                    t.allowance = (ROLE_DEFAULTS[t.role]?.allowance ?? 0);
+                }
+
                 s.subjects.forEach(sub => {
                     if (!Array.isArray(t.assignments[sub.key])) {
                         t.assignments[sub.key] = Array.isArray(t[sub.key]) ? t[sub.key] : [];
@@ -1412,20 +1433,35 @@
             const teacher = state.teachers.find(t => t.id === teacherId);
             if (teacher) {
                 teacher.role = newRole;
-                teacher.allowance = ROLE_ALLOWANCES[newRole] ?? 0;
+                const def = ROLE_DEFAULTS[newRole] || ROLE_DEFAULTS['GV'];
+                teacher.quota = def.quota;
+                teacher.allowance = def.allowance;
                 saveToLocal();
                 render();
             }
         }
 
-        function calcTeacherTotalPeriods(t) {
-            const qlpmPeriods = t.qlpm ? PERIOD_QLPM : 0;
-            let subjectTotal = 0;
+        // Tính tổng số tiết dạy trực tiếp trên lớp
+        function calcTeachingPeriods(t) {
+            let sum = 0;
             state.subjects.forEach(sub => {
                 const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
-                subjectTotal += assigned.length * (sub.periods || 0);
+                sum += assigned.length * (sub.periods || 0);
             });
-            return subjectTotal + (t.allowance || 0) + qlpmPeriods;
+            return sum;
+        }
+
+        // Tính tổng số tiết quy đổi (thực dạy + giảm trừ + kiêm nhiệm)
+        function calcTeacherTotalPeriods(t) {
+            const teaching = calcTeachingPeriods(t);
+            const qlpmPeriods = t.qlpm ? PERIOD_QLPM : 0;
+            return teaching + (t.allowance || 0) + qlpmPeriods;
+        }
+
+        // Lấy định mức chuẩn (GV/TTCM/TPCM: 19t, HP: 4t, HT: 2t)
+        function getTeacherQuota(t) {
+            if (typeof t.quota === 'number') return t.quota;
+            return (t.role === 'HT' ? 2 : ((t.role === 'HP' || t.role === 'PHT') ? 4 : 19));
         }
 
         // ================= VẼ GIAO DIỆN (RENDER) =================
@@ -1523,7 +1559,12 @@
             }
 
             state.teachers.forEach(t => {
+                const teachingPeriods = calcTeachingPeriods(t);
                 const qlpmPeriods = t.qlpm ? PERIOD_QLPM : 0;
+                const totalPeriods = calcTeacherTotalPeriods(t);
+                const quota = getTeacherQuota(t);
+                const diff = totalPeriods - quota;
+
                 let rowsHtml = '';
                 let totalAssignedClasses = 0;
 
@@ -1547,17 +1588,14 @@
                     }
                 });
 
-                const total = calcTeacherTotalPeriods(t);
-                const standardQuota = ROLE_STANDARD_QUOTA[t.role] || 19;
-                const diff = total - standardQuota;
                 let badgeClass = 'exact';
-                let badgeText = `Đủ chuẩn (${total}/${standardQuota}t)`;
+                let badgeText = `Đủ chuẩn (${totalPeriods}/${quota}t)`;
                 if (diff > 0) {
                     badgeClass = 'over';
-                    badgeText = `Thừa +${diff}t (${total}/${standardQuota}t)`;
+                    badgeText = `Thừa +${diff}t (${totalPeriods}/${quota}t)`;
                 } else if (diff < 0) {
                     badgeClass = 'under';
-                    badgeText = `Thiếu ${diff}t (${total}/${standardQuota}t)`;
+                    badgeText = `Thiếu ${diff}t (${totalPeriods}/${quota}t)`;
                 }
 
                 const isEmpty = totalAssignedClasses === 0;
@@ -1569,10 +1607,11 @@
                                 <div class="teacher-name">
                                     <span>${t.name}</span>
                                     <select class="role-select" onchange="changeRole('${t.id}', this.value)">
-                                        <option value="GV" ${t.role === 'GV' ? 'selected' : ''}>Giáo viên</option>
-                                        <option value="TTCM" ${t.role === 'TTCM' ? 'selected' : ''}>TTCM (-3t)</option>
-                                        <option value="TPCM" ${t.role === 'TPCM' ? 'selected' : ''}>TPCM (-1t)</option>
-                                        <option value="HP" ${t.role === 'HP' ? 'selected' : ''}>Hiệu phó</option>
+                                        <option value="GV" ${t.role === 'GV' ? 'selected' : ''}>Giáo viên (19t)</option>
+                                        <option value="TTCM" ${t.role === 'TTCM' ? 'selected' : ''}>TTCM (19t, -3t)</option>
+                                        <option value="TPCM" ${t.role === 'TPCM' ? 'selected' : ''}>TPCM (19t, -1t)</option>
+                                        <option value="HP" ${(t.role === 'HP' || t.role === 'PHT') ? 'selected' : ''}>Phó Hiệu trưởng (4t)</option>
+                                        <option value="HT" ${t.role === 'HT' ? 'selected' : ''}>Hiệu trưởng (2t)</option>
                                     </select>
                                 </div>
                                 <label class="checkbox-group">
@@ -1588,12 +1627,12 @@
 
                         <div class="teacher-footer">
                             <div class="footer-row">
-                                <span>Giảm trừ &amp; Kiêm nhiệm:</span>
-                                <span><b>${(t.allowance || 0) + qlpmPeriods}</b> tiết</span>
+                                <span>Dạy: <b>${teachingPeriods}t</b> · Giảm trừ/kiêm nhiệm: <b>${(t.allowance || 0) + qlpmPeriods}t</b></span>
+                                <span>ĐM chuẩn: <b>${quota}t</b></span>
                             </div>
                             <div class="footer-row total-row">
                                 <span class="quota-status-badge ${badgeClass}">${badgeText}</span>
-                                <span class="total-periods">${total} tiết</span>
+                                <span class="total-periods">${totalPeriods} tiết</span>
                             </div>
                         </div>
                     </div>
@@ -1637,9 +1676,10 @@
                             <th>Họ và Tên Giáo viên</th>
                             <th style="text-align:center;">Chức vụ</th>
                             ${state.subjects.map(s => `<th style="text-align:center; color:${s.color};">${s.name} (${s.periods}t)</th>`).join('')}
+                            <th style="text-align:center;">Dạy lớp</th>
                             <th style="text-align:center;">Giảm trừ</th>
-                            <th style="text-align:center; color:#dc2626;">Tổng thực dạy</th>
-                            <th style="text-align:center;">Định mức</th>
+                            <th style="text-align:center; color:#dc2626;">Tổng quy đổi</th>
+                            <th style="text-align:center;">Định mức chuẩn</th>
                             <th style="text-align:center;">Chênh lệch</th>
                         </tr>
                     </thead>
@@ -1647,15 +1687,21 @@
                 `;
 
                 let tbody = '';
+                let grandTeaching = 0;
                 let grandTotal = 0;
+
                 state.teachers.forEach((t, index) => {
+                    const teaching = calcTeachingPeriods(t);
                     const total = calcTeacherTotalPeriods(t);
+                    const quota = getTeacherQuota(t);
+                    const diff = total - quota;
+
+                    grandTeaching += teaching;
                     grandTotal += total;
-                    const standard = ROLE_STANDARD_QUOTA[t.role] || 19;
-                    const diff = total - standard;
+
                     let diffBadge = `<span style="color:#059669; font-weight:bold;">Đủ chuẩn (0)</span>`;
-                    if (diff > 0) diffBadge = `<span style="color:#dc2626; font-weight:bold;">Thừa +${diff} tiết</span>`;
-                    else if (diff < 0) diffBadge = `<span style="color:#2563eb; font-weight:bold;">Thiếu ${diff} tiết</span>`;
+                    if (diff > 0) diffBadge = `<span style="color:#dc2626; font-weight:bold;">Thừa +${diff}t</span>`;
+                    else if (diff < 0) diffBadge = `<span style="color:#2563eb; font-weight:bold;">Thiếu ${diff}t</span>`;
 
                     const subCells = state.subjects.map(sub => {
                         const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
@@ -1670,11 +1716,12 @@
                         <tr>
                             <td style="text-align:center;">${index + 1}</td>
                             <td><b>${escapeHtml(t.name)}</b></td>
-                            <td style="text-align:center;">${t.role}</td>
+                            <td style="text-align:center;"><span style="font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:700;">${t.role}</span></td>
                             ${subCells}
+                            <td style="text-align:center; font-weight:700;">${teaching}t</td>
                             <td style="text-align:center;">${kn.join(' + ') || '0'}</td>
-                            <td style="text-align:center; font-weight:bold; color:#dc2626; font-size:0.95rem;">${total}</td>
-                            <td style="text-align:center;">${standard}t</td>
+                            <td style="text-align:center; font-weight:bold; color:#dc2626; font-size:0.95rem;">${total}t</td>
+                            <td style="text-align:center; font-weight:700;">${quota} tiết/tuần</td>
                             <td style="text-align:center;">${diffBadge}</td>
                         </tr>
                     `;
@@ -1682,8 +1729,10 @@
 
                 tbody += `
                     <tr style="background:#f8fafc; font-weight:bold;">
-                        <td colspan="${3 + state.subjects.length + 1}" style="text-align:right;">TỔNG CỘNG SỐ TIẾT TOÀN TỔ:</td>
-                        <td style="text-align:center; color:#dc2626; font-size:1.05rem;">${grandTotal}</td>
+                        <td colspan="${3 + state.subjects.length}" style="text-align:right;">TỔNG CỘNG TOÀN TỔ:</td>
+                        <td style="text-align:center; color:#2563eb;">${grandTeaching}t</td>
+                        <td style="text-align:center;">—</td>
+                        <td style="text-align:center; color:#dc2626; font-size:1.05rem;">${grandTotal}t</td>
                         <td colspan="2" style="text-align:center;">Trung bình: ${(grandTotal / (state.teachers.length || 1)).toFixed(1)}t/GV</td>
                     </tr>
                 `;
@@ -1711,7 +1760,6 @@
                     let missingSubs = [];
 
                     const cells = state.subjects.map(sub => {
-                        // Tìm giáo viên nào dạy môn sub cho lớp cName
                         const assignedTeacher = state.teachers.find(t => t.assignments && t.assignments[sub.key] && t.assignments[sub.key].includes(cName));
                         if (assignedTeacher) {
                             return `<td style="text-align:center; font-weight:700; color:#0f172a;">${escapeHtml(assignedTeacher.name)}</td>`;
@@ -1767,6 +1815,7 @@
 
             state.teachers.forEach((t, index) => {
                 const totalPerWeek = calcTeacherTotalPeriods(t);
+                const quota = getTeacherQuota(t);
                 const rec = monthRecords[t.id] || {
                     w1: 'Đủ', w2: 'Đủ', w3: 'Đủ', w4: 'Đủ',
                     teach_replace: 0, observe: 0, meeting: 2, leave_p: 0,
@@ -1778,7 +1827,7 @@
                     <td>${index + 1}</td>
                     <td class="text-left"><b>${escapeHtml(t.name)}</b></td>
                     <td><span style="font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:700;">${t.role}</span></td>
-                    <td><b>${totalPerWeek}</b> t/t</td>
+                    <td><b>${totalPerWeek}</b>/${quota}t</td>
                     <td><input type="text" class="att-input" value="${escapeHtml(rec.w1 || 'Đủ')}" onchange="updateAttRecord('${t.id}', 'w1', this.value)"></td>
                     <td><input type="text" class="att-input" value="${escapeHtml(rec.w2 || 'Đủ')}" onchange="updateAttRecord('${t.id}', 'w2', this.value)"></td>
                     <td><input type="text" class="att-input" value="${escapeHtml(rec.w3 || 'Đủ')}" onchange="updateAttRecord('${t.id}', 'w3', this.value)"></td>
@@ -1843,7 +1892,7 @@
             let totalPeriodsAll = 0;
             let totalAllowanceAll = 0;
             state.teachers.forEach(t => {
-                totalPeriodsAll += calcTeacherTotalPeriods(t);
+                totalPeriodsAll += calcTeachingPeriods(t);
                 totalAllowanceAll += (t.allowance || 0) + (t.qlpm ? PERIOD_QLPM : 0);
             });
 
@@ -1862,8 +1911,9 @@
                         <th style="text-align:center;">Chức vụ</th>
                         ${state.subjects.map(s => `<th style="text-align:center; color:${s.color};">${s.name} (${s.periods}t)</th>`).join('')}
                         <th style="text-align:center;">Giảm trừ/Kiêm nhiệm</th>
-                        <th style="text-align:center; color:#dc2626;">Tổng tiết/tuần</th>
+                        <th style="text-align:center; color:#dc2626;">Tổng thực dạy</th>
                         <th style="text-align:center;">Định mức chuẩn</th>
+                        <th style="text-align:center;">Tình trạng</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1872,7 +1922,8 @@
             let tbodyRows = '';
             state.teachers.forEach((t, index) => {
                 const total = calcTeacherTotalPeriods(t);
-                const standardQuota = ROLE_STANDARD_QUOTA[t.role] || 19;
+                const quota = getTeacherQuota(t);
+                const diff = total - quota;
 
                 const subCells = state.subjects.map(sub => {
                     const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
@@ -1883,15 +1934,20 @@
                 if (t.allowance > 0) kn_text.push(`${t.role} (${t.allowance}t)`);
                 if (t.qlpm) kn_text.push(`QL Máy (${PERIOD_QLPM}t)`);
 
+                let statusBadge = `<span style="color:#059669; font-weight:bold;">Đủ định mức</span>`;
+                if (diff > 0) statusBadge = `<span style="color:#dc2626; font-weight:bold;">Thừa +${diff}t</span>`;
+                else if (diff < 0) statusBadge = `<span style="color:#2563eb; font-weight:bold;">Thiếu ${diff}t</span>`;
+
                 tbodyRows += `
                     <tr>
                         <td style="text-align:center;">${index + 1}</td>
                         <td><b>${escapeHtml(t.name)}</b></td>
-                        <td style="text-align:center;">${t.role}</td>
+                        <td style="text-align:center;"><span style="font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:700;">${t.role}</span></td>
                         ${subCells}
                         <td style="text-align:center;">${kn_text.join(' + ') || '0'}</td>
-                        <td style="text-align:center; font-weight:bold; color:#dc2626; font-size:1rem;">${total}</td>
-                        <td style="text-align:center;">${standardQuota} tiết/tuần</td>
+                        <td style="text-align:center; font-weight:bold; color:#dc2626; font-size:0.95rem;">${total}t</td>
+                        <td style="text-align:center; font-weight:700;">${quota} tiết/tuần</td>
+                        <td style="text-align:center;">${statusBadge}</td>
                     </tr>
                 `;
             });
@@ -1913,7 +1969,7 @@
             let table = `<table border="1" style="border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;">
                 <thead>
                     <tr>
-                        <th colspan="${6 + state.subjects.length}" style="background-color: #1e3a8a; color: white; font-size: 16px; padding: 10px; text-align: center;">
+                        <th colspan="${7 + state.subjects.length}" style="background-color: #1e3a8a; color: white; font-size: 16px; padding: 10px; text-align: center;">
                             BẢNG PHÂN CÔNG CHUYÊN MÔN - ${state.info.title.toUpperCase()} (NĂM HỌC ${state.info.school_year || ''} - ${state.info.semester || ''})
                         </th>
                     </tr>
@@ -1923,13 +1979,18 @@
                         <th style="padding: 8px;">Chức vụ</th>
                         ${state.subjects.map(s => `<th style="padding: 8px; color: ${s.color};">${s.name} (${s.periods}t)</th>`).join('')}
                         <th style="padding: 8px;">Giảm trừ / Kiêm nhiệm</th>
-                        <th style="padding: 8px; color: #dc2626;">Tổng Số Tiết</th>
+                        <th style="padding: 8px; color: #dc2626;">Tổng Tiết Quy Đổi</th>
+                        <th style="padding: 8px;">Định Mức Chuẩn</th>
+                        <th style="padding: 8px;">Chênh Lệch</th>
                     </tr>
                 </thead>
                 <tbody>`;
 
             state.teachers.forEach((t, index) => {
                 const total = calcTeacherTotalPeriods(t);
+                const quota = getTeacherQuota(t);
+                const diff = total - quota;
+
                 const subjectCells = state.subjects.map(sub => {
                     const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
                     return `<td style="padding: 6px; text-align: center;">${assigned.join(', ') || '—'}</td>`;
@@ -1939,6 +2000,8 @@
                 if (t.allowance > 0) kn_text.push(`${t.role} (${t.allowance}t)`);
                 if (t.qlpm) kn_text.push(`QL Máy (${PERIOD_QLPM}t)`);
 
+                let diffStr = (diff === 0 ? 'Đủ chuẩn' : (diff > 0 ? `Thừa +${diff}t` : `Thiếu ${diff}t`));
+
                 table += `<tr>
                     <td style="padding: 6px; text-align: center;">${index + 1}</td>
                     <td style="padding: 6px; font-weight: bold;">${t.name}</td>
@@ -1946,6 +2009,8 @@
                     ${subjectCells}
                     <td style="padding: 6px; text-align: center;">${kn_text.join(' + ') || '0'}</td>
                     <td style="padding: 6px; text-align: center; font-weight: bold; color: #dc2626; font-size: 14px;">${total}</td>
+                    <td style="padding: 6px; text-align: center;">${quota}t/tuần</td>
+                    <td style="padding: 6px; text-align: center; font-weight: bold;">${diffStr}</td>
                 </tr>`;
             });
 
@@ -1987,13 +2052,14 @@
 
             state.teachers.forEach((t, index) => {
                 const totalPerWeek = calcTeacherTotalPeriods(t);
+                const quota = getTeacherQuota(t);
                 const rec = monthRecords[t.id] || { w1: 'Đủ', w2: 'Đủ', w3: 'Đủ', w4: 'Đủ', teach_replace: 0, observe: 0, meeting: 2, leave_p: 0, rating: 'Tốt', note: '' };
 
                 table += `<tr>
                     <td style="padding: 6px; text-align: center;">${index + 1}</td>
                     <td style="padding: 6px; font-weight: bold;">${t.name}</td>
                     <td style="padding: 6px; text-align: center;">${t.role}</td>
-                    <td style="padding: 6px; text-align: center;">${totalPerWeek} t/t</td>
+                    <td style="padding: 6px; text-align: center;">${totalPerWeek}/${quota}t</td>
                     <td style="padding: 6px; text-align: center;">${rec.w1 || 'Đủ'}</td>
                     <td style="padding: 6px; text-align: center;">${rec.w2 || 'Đủ'}</td>
                     <td style="padding: 6px; text-align: center;">${rec.w3 || 'Đủ'}</td>
@@ -2120,15 +2186,20 @@
                         <input type="text" class="form-control" style="padding:4px 8px;" value="${escapeHtml(t.name)}" onchange="updateEditingTeacher(${index}, 'name', this.value)">
                     </td>
                     <td>
-                        <select class="form-control" style="padding:4px 8px;" onchange="updateEditingTeacherRole(${index}, this.value)">
-                            <option value="GV" ${t.role === 'GV' ? 'selected' : ''}>Giáo viên (0t)</option>
-                            <option value="TTCM" ${t.role === 'TTCM' ? 'selected' : ''}>TTCM (-3t)</option>
-                            <option value="TPCM" ${t.role === 'TPCM' ? 'selected' : ''}>TPCM (-1t)</option>
-                            <option value="HP" ${t.role === 'HP' ? 'selected' : ''}>Hiệu phó (0t)</option>
+                        <select class="form-control" style="padding:4px 8px; font-weight:700;" onchange="updateEditingTeacherRole(${index}, this.value)">
+                            <option value="GV" ${t.role === 'GV' ? 'selected' : ''}>Giáo viên (ĐM 19t)</option>
+                            <option value="TTCM" ${t.role === 'TTCM' ? 'selected' : ''}>Tổ trưởng CM (ĐM 19t, -3t)</option>
+                            <option value="TPCM" ${t.role === 'TPCM' ? 'selected' : ''}>Tổ phó CM (ĐM 19t, -1t)</option>
+                            <option value="HP" ${(t.role === 'HP' || t.role === 'PHT') ? 'selected' : ''}>Phó Hiệu trưởng (ĐM 4t)</option>
+                            <option value="HT" ${t.role === 'HT' ? 'selected' : ''}>Hiệu trưởng (ĐM 2t)</option>
+                            <option value="Khác" ${t.role === 'Khác' ? 'selected' : ''}>Tùy chỉnh khác</option>
                         </select>
                     </td>
-                    <td>
-                        <input type="number" class="form-control" style="padding:4px 8px; width:70px;" value="${t.allowance || 0}" min="0" onchange="updateEditingTeacher(${index}, 'allowance', parseInt(this.value)||0)">
+                    <td style="text-align:center;">
+                        <input type="number" class="form-control" style="padding:4px 8px; width:70px; text-align:center; font-weight:bold;" value="${t.quota ?? 19}" min="0" onchange="updateEditingTeacher(${index}, 'quota', parseInt(this.value)||0)">
+                    </td>
+                    <td style="text-align:center;">
+                        <input type="number" class="form-control" style="padding:4px 8px; width:70px; text-align:center;" value="${t.allowance || 0}" min="0" onchange="updateEditingTeacher(${index}, 'allowance', parseInt(this.value)||0)">
                     </td>
                     <td style="text-align:center;">
                         <input type="checkbox" ${t.qlpm ? 'checked' : ''} onchange="updateEditingTeacher(${index}, 'qlpm', this.checked)">
@@ -2148,6 +2219,7 @@
                 id: newId,
                 name: 'Giáo viên mới',
                 role: 'GV',
+                quota: 19,
                 allowance: 0,
                 qlpm: false,
                 assignments: {}
@@ -2171,7 +2243,9 @@
         function updateEditingTeacherRole(index, newRole) {
             if (editingConfig.teachers[index]) {
                 editingConfig.teachers[index].role = newRole;
-                editingConfig.teachers[index].allowance = ROLE_ALLOWANCES[newRole] ?? 0;
+                const def = ROLE_DEFAULTS[newRole] || ROLE_DEFAULTS['GV'];
+                editingConfig.teachers[index].quota = def.quota;
+                editingConfig.teachers[index].allowance = def.allowance;
                 renderConfigTeachersTable();
             }
         }
@@ -2191,6 +2265,7 @@
                         id: st.id || ('t_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
                         name: st.name,
                         role: 'GV',
+                        quota: 19,
                         allowance: 0,
                         qlpm: false,
                         assignments: {}
@@ -2220,7 +2295,7 @@
                         <input type="text" class="form-control" style="padding:4px 8px;" value="${escapeHtml(sub.name)}" onchange="updateEditingSubject(${index}, 'name', this.value)">
                     </td>
                     <td>
-                        <input type="number" class="form-control" style="padding:4px 8px; width:80px;" value="${sub.periods || 1}" min="1" onchange="updateEditingSubject(${index}, 'periods', parseInt(this.value)||1)">
+                        <input type="number" class="form-control" style="padding:4px 8px; width:80px; text-align:center;" value="${sub.periods || 1}" min="1" onchange="updateEditingSubject(${index}, 'periods', parseInt(this.value)||1)">
                     </td>
                     <td style="text-align:center;">
                         <input type="color" value="${sub.color || '#2563eb'}" style="width:34px; height:28px; border:none; cursor:pointer;" onchange="updateEditingSubject(${index}, 'color', this.value)">
