@@ -48,11 +48,7 @@
             flex-shrink: 0;
         }
 
-        .brand-section {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .brand-section { display: flex; align-items: center; gap: 12px; }
 
         .brand-icon {
             width: 40px;
@@ -79,12 +75,7 @@
             gap: 8px;
         }
 
-        .brand-text p {
-            margin: 0;
-            font-size: 0.72rem;
-            color: #64748b;
-            font-weight: 600;
-        }
+        .brand-text p { margin: 0; font-size: 0.72rem; color: #64748b; font-weight: 600; }
 
         .plan-title-badge {
             background: #eef2ff;
@@ -143,13 +134,7 @@
             border: 1px solid #cbd5e1;
         }
 
-        .db-status-badge .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #94a3b8;
-        }
-
+        .db-status-badge .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; }
         .db-status-badge.connected { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
         .db-status-badge.connected .status-dot { background: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.2); }
         .db-status-badge.saving { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
@@ -159,11 +144,7 @@
 
         @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
 
-        .nav-actions {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+        .nav-actions { display: flex; align-items: center; gap: 6px; }
 
         .btn-toolbar {
             border: 1px solid transparent;
@@ -206,18 +187,12 @@
         .btn-export-excel:hover { background: linear-gradient(135deg, #059669, #047857); transform: translateY(-1px); }
 
         /* VIEW CONTAINER */
-        .app-view {
-            flex: 1;
-            display: none;
-            overflow: hidden;
-        }
-        .app-view.active {
-            display: flex;
-        }
+        .app-view { flex: 1; display: none; overflow: hidden; }
+        .app-view.active { display: flex; }
 
         /* 1. VIEW PHÂN CÔNG */
         #left-panel {
-            width: 380px;
+            width: 370px;
             background: var(--card-bg);
             border-right: 1px solid var(--border-color);
             display: flex;
@@ -232,7 +207,7 @@
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: white;
             font-weight: 800;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -261,18 +236,18 @@
         .pool-container { flex: 1; overflow-y: auto; padding: 14px; }
 
         .subject-group {
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             background: #f8fafc;
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 12px;
+            padding: 10px 12px;
         }
 
         .subject-title {
             font-weight: 800;
-            font-size: 0.85rem;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
+            font-size: 0.82rem;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -280,26 +255,26 @@
         }
 
         .count-badge {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 10px;
+            padding: 2px 7px;
+            border-radius: 8px;
             background: #ffffff;
             border: 1px solid var(--border-color);
             color: #64748b;
         }
 
-        .pill-container { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; }
+        .pill-container { display: flex; flex-wrap: wrap; gap: 5px; min-height: 30px; }
 
         .pill {
-            padding: 5px 11px;
-            border-radius: 16px;
+            padding: 4px 10px;
+            border-radius: 14px;
             color: white;
             font-weight: 700;
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             cursor: grab;
             user-select: none;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             transition: transform 0.12s, box-shadow 0.12s;
             display: inline-flex;
             align-items: center;
@@ -316,20 +291,61 @@
             background: var(--bg-color);
         }
 
-        .right-toolbar-sub {
-            padding: 10px 20px;
+        /* LIVE STATS BANNER TRÊN ĐỈNH PHÂN CÔNG */
+        .live-stats-banner {
             background: #ffffff;
             border-bottom: 1px solid var(--border-color);
+            padding: 10px 18px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            font-size: 0.82rem;
-            color: #64748b;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            flex-shrink: 0;
         }
-        .right-toolbar-sub b { color: #0f172a; }
+
+        .live-chips-list {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .stat-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+        }
+
+        .stat-chip.full { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+        .stat-chip.partial { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+
+        .btn-view-matrix {
+            background: #4338ca;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+        .btn-view-matrix:hover { background: #3730a3; transform: translateY(-1px); }
 
         .teachers-grid {
-            padding: 18px;
+            padding: 16px 18px;
             overflow-y: auto;
             flex: 1;
             display: grid;
@@ -362,11 +378,7 @@
             border-radius: 14px 14px 0 0;
         }
 
-        .teacher-title-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .teacher-title-row { display: flex; justify-content: space-between; align-items: center; }
 
         .teacher-name {
             font-size: 0.95rem;
@@ -467,9 +479,18 @@
             padding-top: 4px;
             border-top: 1px dashed #cbd5e1;
         }
-        .total-periods { color: #dc2626; font-size: 1.05rem; font-weight: 900; }
 
-        /* 2. VIEW CHẤM CÔNG & THEO DÕI GIÁO VIÊN */
+        .quota-status-badge {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+        }
+        .quota-status-badge.exact { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .quota-status-badge.over { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
+        .quota-status-badge.under { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+        /* 2. VIEW CHẤM CÔNG */
         #view-chamcong {
             flex-direction: column;
             background: #ffffff;
@@ -490,11 +511,7 @@
             border: 1px solid var(--border-color);
         }
 
-        .attendance-filter {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .attendance-filter { display: flex; align-items: center; gap: 10px; }
 
         .attendance-table {
             width: 100%;
@@ -510,12 +527,7 @@
             text-align: center;
         }
 
-        .attendance-table th {
-            background: #f8fafc;
-            font-weight: 800;
-            color: #1e293b;
-        }
-
+        .attendance-table th { background: #f8fafc; font-weight: 800; color: #1e293b; }
         .attendance-table td.text-left { text-align: left; }
 
         .att-input {
@@ -579,7 +591,7 @@
         .stat-card-info h3 { margin: 0; font-size: 1.4rem; font-weight: 800; color: #0f172a; }
         .stat-card-info p { margin: 2px 0 0 0; font-size: 0.78rem; color: #64748b; font-weight: 600; }
 
-        /* MODAL KHAI BÁO & CÀI ĐẶT */
+        /* MODAL KHAI BÁO & MODAL MA TRẬN */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -599,7 +611,7 @@
         .modal-card {
             background: #ffffff;
             width: 100%;
-            max-width: 880px;
+            max-width: 960px;
             max-height: 90vh;
             border-radius: 16px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.25);
@@ -617,7 +629,7 @@
             align-items: center;
         }
 
-        .modal-header h2 { margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+        .modal-header h2 { margin: 0; font-size: 1.12rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; }
         .modal-close { background: none; border: none; font-size: 1.3rem; color: #64748b; cursor: pointer; }
         .modal-close:hover { color: #0f172a; }
 
@@ -639,7 +651,6 @@
         .modal-tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: #ffffff; }
 
         .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
-
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
 
@@ -676,7 +687,7 @@
 
         .modal-footer { padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; }
 
-        /* TOAST NOTIFICATION */
+        /* TOAST */
         #toast {
             position: fixed;
             bottom: 24px;
@@ -697,7 +708,6 @@
             align-items: center;
             gap: 8px;
         }
-
         #toast.visible { opacity: 1; transform: translateY(0); }
         #toast.success { background: #065f46; border: 1px solid #059669; }
         #toast.error { background: #991b1b; border: 1px solid #dc2626; }
@@ -734,7 +744,7 @@
             </div>
         </div>
 
-        <!-- VIEW SWITCHER (CHUYỂN TAB CHỨC NĂNG) -->
+        <!-- VIEW SWITCHER -->
         <div class="view-switcher">
             <button class="view-tab-btn active" id="tab-nav-phancong" onclick="switchAppView('view-phancong')">
                 <i class="fas fa-clipboard-list"></i> 1. Phân công giảng dạy
@@ -794,17 +804,18 @@
             </div>
         </aside>
 
-        <!-- CỘT PHẢI: LƯỚI GIÁO VIÊN -->
+        <!-- CỘT PHẢI: LƯỚI GIÁO VIÊN & LIVE STATS BANNER -->
         <main id="right-panel">
-            <div class="right-toolbar-sub">
-                <div>
-                    <span>Kéo thả lớp vào thẻ giáo viên · Click vào lớp để hủy phân công</span>
+            <!-- THANH THỐNG KÊ TIẾN ĐỘ TRỰC QUAN (LIVE STATS) -->
+            <div class="live-stats-banner">
+                <div class="live-chips-list" id="live-subject-chips">
+                    <!-- Render từ JS -->
                 </div>
-                <div>
-                    <span>Tổng số GV: <b id="stat-teachers-count">0</b></span> ·
-                    <span>Tổng lớp học: <b id="stat-classes-count">0</b></span>
-                </div>
+                <button class="btn-view-matrix" onclick="openMatrixModal()" title="Mở bảng ma trận tổng hợp toàn diện">
+                    <i class="fas fa-table-cells"></i> Xem Thống kê &amp; Ma trận
+                </button>
             </div>
+
             <div class="teachers-grid" id="teachers-grid">
                 <!-- Render từ JS -->
             </div>
@@ -909,13 +920,53 @@
         </div>
 
         <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-            <h3 style="margin: 0 0 14px 0; font-size: 1rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-table-list text-indigo-600"></i> Bảng Tổng Hợp Chuyên Môn Của Tổ
-            </h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h3 style="margin: 0; font-size: 1rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-table-list text-indigo-600"></i> Bảng Tổng Hợp Chuyên Môn Của Tổ
+                </h3>
+                <button class="btn-small btn-small-primary" onclick="openMatrixModal()"><i class="fas fa-eye"></i> Xem Ma Trận Theo Lớp</button>
+            </div>
             <div style="overflow-x: auto;">
                 <table class="data-table" id="summary-report-table">
                     <!-- Render từ JS -->
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL MA TRẬN & THỐNG KÊ PHÂN CÔNG TOÀN DIỆN -->
+    <div class="modal-overlay" id="matrix-modal">
+        <div class="modal-card" style="max-width: 1050px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-chart-column text-indigo-600"></i> Bảng Thống Kê &amp; Ma Trận Phân Công Toàn Tổ</h2>
+                <button class="modal-close" onclick="closeMatrixModal()">&times;</button>
+            </div>
+            <div class="modal-tabs">
+                <button class="modal-tab-btn active" id="mtx-btn-teachers" onclick="switchMatrixTab('mtx-teachers')"><i class="fas fa-user-check"></i> 1. Thống kê theo Giáo viên</button>
+                <button class="modal-tab-btn" id="mtx-btn-classes" onclick="switchMatrixTab('mtx-classes')"><i class="fas fa-border-all"></i> 2. Ma trận Phân công theo Lớp</button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <!-- TAB 1: THỐNG KÊ THEO GIÁO VIÊN -->
+                <div class="tab-pane active" id="mtx-teachers">
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="matrix-teachers-table">
+                            <!-- Render từ JS -->
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 2: MA TRẬN THEO LỚP HỌC -->
+                <div class="tab-pane" id="mtx-classes">
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="matrix-classes-table">
+                            <!-- Render từ JS -->
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-small btn-export-excel" onclick="exportPhanCongToExcel()"><i class="fas fa-file-excel"></i> Xuất Excel Bảng này</button>
+                <button class="btn-small" onclick="closeMatrixModal()">Đóng</button>
             </div>
         </div>
     </div>
@@ -1057,6 +1108,7 @@
     <script>
         // CẤU HÌNH ĐỊNH MỨC CHUẨN MẶC ĐỊNH
         const ROLE_ALLOWANCES = { 'TTCM': 3, 'TPCM': 1, 'HP': 0, 'GV': 0, 'TP': 1, 'TT': 3 };
+        const ROLE_STANDARD_QUOTA = { 'GV': 19, 'TTCM': 16, 'TPCM': 18, 'HP': 4 };
         const PERIOD_QLPM = 3;
 
         // DỮ LIỆU KHỞI TẠO MẪU
@@ -1093,11 +1145,10 @@
             }
         };
 
-        // State hiện tại trong ứng dụng
+        // State hiện tại
         let state = JSON.parse(JSON.stringify(defaultState));
         let systemData = { teachers: [], classes: [], plans: [] };
 
-        // Chuẩn hóa cấu trúc state
         function normalizeState(s) {
             if (!s.info) s.info = { ...defaultState.info };
             if (!Array.isArray(s.subjects) || s.subjects.length === 0) s.subjects = [...defaultState.subjects];
@@ -1107,28 +1158,21 @@
             if (!s.attendance) s.attendance = { current_month: '9', records: {} };
             if (!s.attendance.records) s.attendance.records = {};
 
-            // Đảm bảo mỗi môn có mảng unassigned
             s.subjects.forEach(sub => {
                 if (!Array.isArray(s.unassigned[sub.key])) {
                     s.unassigned[sub.key] = [...s.classes];
                 }
             });
 
-            // Đảm bảo cấu trúc assignments của từng giáo viên
             s.teachers.forEach(t => {
                 if (!t.assignments) t.assignments = {};
                 s.subjects.forEach(sub => {
                     if (!Array.isArray(t.assignments[sub.key])) {
-                        if (Array.isArray(t[sub.key])) {
-                            t.assignments[sub.key] = t[sub.key];
-                        } else {
-                            t.assignments[sub.key] = [];
-                        }
+                        t.assignments[sub.key] = Array.isArray(t[sub.key]) ? t[sub.key] : [];
                     }
                 });
             });
 
-            // Loại bỏ những lớp đã được phân công khỏi kho unassigned
             s.subjects.forEach(sub => {
                 const assigned = new Set();
                 s.teachers.forEach(t => {
@@ -1140,7 +1184,6 @@
             return s;
         }
 
-        // ================= CHUYỂN TAB ỨNG DỤNG =================
         function switchAppView(viewId) {
             document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.view-tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -1202,7 +1245,7 @@
                     if (showToastNotice) showToast("CSDL chưa có dữ liệu, dùng dữ liệu tạm!", "info");
                 }
             } catch (err) {
-                console.warn('Lỗi kết nối API CSDL, fallback sang local storage:', err);
+                console.warn('Lỗi kết nối API CSDL:', err);
                 loadFromLocal();
                 render();
                 updateDBStatus('offline', 'Chế độ Offline');
@@ -1397,10 +1440,35 @@
             if (statT) statT.textContent = state.teachers.length;
             if (statC) statC.textContent = state.classes.length;
 
+            renderLiveStatsBanner();
             renderPool();
             renderTeachers();
             renderAttendance();
             renderReports();
+        }
+
+        // THỐNG KÊ TIẾN ĐỘ TRỰC QUAN LIVE BANNER
+        function renderLiveStatsBanner() {
+            const container = document.getElementById('live-subject-chips');
+            if (!container) return;
+
+            const totalClasses = state.classes.length;
+            let chipsHtml = '';
+
+            state.subjects.forEach(sub => {
+                const remaining = (state.unassigned[sub.key] || []).length;
+                const assigned = Math.max(0, totalClasses - remaining);
+                const isFull = (remaining === 0 && totalClasses > 0);
+
+                chipsHtml += `
+                    <span class="stat-chip ${isFull ? 'full' : 'partial'}" title="Đã phân công ${assigned}/${totalClasses} lớp">
+                        <i class="fas ${isFull ? 'fa-check-circle text-emerald-600' : 'fa-circle-notch fa-spin text-amber-500'}"></i>
+                        <b style="color:${sub.color};">${sub.name}:</b> ${assigned}/${totalClasses} lớp
+                    </span>
+                `;
+            });
+
+            container.innerHTML = chipsHtml;
         }
 
         function renderPool() {
@@ -1480,6 +1548,18 @@
                 });
 
                 const total = calcTeacherTotalPeriods(t);
+                const standardQuota = ROLE_STANDARD_QUOTA[t.role] || 19;
+                const diff = total - standardQuota;
+                let badgeClass = 'exact';
+                let badgeText = `Đủ chuẩn (${total}/${standardQuota}t)`;
+                if (diff > 0) {
+                    badgeClass = 'over';
+                    badgeText = `Thừa +${diff}t (${total}/${standardQuota}t)`;
+                } else if (diff < 0) {
+                    badgeClass = 'under';
+                    badgeText = `Thiếu ${diff}t (${total}/${standardQuota}t)`;
+                }
+
                 const isEmpty = totalAssignedClasses === 0;
 
                 const cardHtml = `
@@ -1512,7 +1592,7 @@
                                 <span><b>${(t.allowance || 0) + qlpmPeriods}</b> tiết</span>
                             </div>
                             <div class="footer-row total-row">
-                                <span>Tổng cộng thực dạy:</span>
+                                <span class="quota-status-badge ${badgeClass}">${badgeText}</span>
                                 <span class="total-periods">${total} tiết</span>
                             </div>
                         </div>
@@ -1524,6 +1604,139 @@
 
         function filterClasses(val) {
             renderPool();
+        }
+
+        // ================= MA TRẬN PHÂN CÔNG TOÀN DIỆN (MODAL) =================
+        function openMatrixModal() {
+            renderMatrixModalTables();
+            document.getElementById('matrix-modal').classList.add('active');
+        }
+
+        function closeMatrixModal() {
+            document.getElementById('matrix-modal').classList.remove('active');
+        }
+
+        function switchMatrixTab(tabId) {
+            document.querySelectorAll('#matrix-modal .modal-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('#matrix-modal .tab-pane').forEach(pane => pane.classList.remove('active'));
+
+            const btn = document.getElementById(tabId === 'mtx-teachers' ? 'mtx-btn-teachers' : 'mtx-btn-classes');
+            const pane = document.getElementById(tabId);
+            if (btn) btn.classList.add('active');
+            if (pane) pane.classList.add('active');
+        }
+
+        function renderMatrixModalTables() {
+            // 1. Render Matrix theo Giáo viên
+            const tTable = document.getElementById('matrix-teachers-table');
+            if (tTable) {
+                let thead = `
+                    <thead>
+                        <tr>
+                            <th style="width:40px; text-align:center;">STT</th>
+                            <th>Họ và Tên Giáo viên</th>
+                            <th style="text-align:center;">Chức vụ</th>
+                            ${state.subjects.map(s => `<th style="text-align:center; color:${s.color};">${s.name} (${s.periods}t)</th>`).join('')}
+                            <th style="text-align:center;">Giảm trừ</th>
+                            <th style="text-align:center; color:#dc2626;">Tổng thực dạy</th>
+                            <th style="text-align:center;">Định mức</th>
+                            <th style="text-align:center;">Chênh lệch</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+
+                let tbody = '';
+                let grandTotal = 0;
+                state.teachers.forEach((t, index) => {
+                    const total = calcTeacherTotalPeriods(t);
+                    grandTotal += total;
+                    const standard = ROLE_STANDARD_QUOTA[t.role] || 19;
+                    const diff = total - standard;
+                    let diffBadge = `<span style="color:#059669; font-weight:bold;">Đủ chuẩn (0)</span>`;
+                    if (diff > 0) diffBadge = `<span style="color:#dc2626; font-weight:bold;">Thừa +${diff} tiết</span>`;
+                    else if (diff < 0) diffBadge = `<span style="color:#2563eb; font-weight:bold;">Thiếu ${diff} tiết</span>`;
+
+                    const subCells = state.subjects.map(sub => {
+                        const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
+                        return `<td style="text-align:center;">${assigned.join(', ') || '—'}</td>`;
+                    }).join('');
+
+                    let kn = [];
+                    if (t.allowance > 0) kn.push(`${t.role} (${t.allowance}t)`);
+                    if (t.qlpm) kn.push(`QL Máy (3t)`);
+
+                    tbody += `
+                        <tr>
+                            <td style="text-align:center;">${index + 1}</td>
+                            <td><b>${escapeHtml(t.name)}</b></td>
+                            <td style="text-align:center;">${t.role}</td>
+                            ${subCells}
+                            <td style="text-align:center;">${kn.join(' + ') || '0'}</td>
+                            <td style="text-align:center; font-weight:bold; color:#dc2626; font-size:0.95rem;">${total}</td>
+                            <td style="text-align:center;">${standard}t</td>
+                            <td style="text-align:center;">${diffBadge}</td>
+                        </tr>
+                    `;
+                });
+
+                tbody += `
+                    <tr style="background:#f8fafc; font-weight:bold;">
+                        <td colspan="${3 + state.subjects.length + 1}" style="text-align:right;">TỔNG CỘNG SỐ TIẾT TOÀN TỔ:</td>
+                        <td style="text-align:center; color:#dc2626; font-size:1.05rem;">${grandTotal}</td>
+                        <td colspan="2" style="text-align:center;">Trung bình: ${(grandTotal / (state.teachers.length || 1)).toFixed(1)}t/GV</td>
+                    </tr>
+                `;
+
+                tTable.innerHTML = thead + tbody + `</tbody>`;
+            }
+
+            // 2. Render Matrix theo Lớp học
+            const cTable = document.getElementById('matrix-classes-table');
+            if (cTable) {
+                let thead = `
+                    <thead>
+                        <tr>
+                            <th style="width:50px; text-align:center;">STT</th>
+                            <th style="width:100px; text-align:center;">Lớp học</th>
+                            ${state.subjects.map(s => `<th style="text-align:center; color:${s.color};">${s.name} (${s.periods}t)</th>`).join('')}
+                            <th style="text-align:center;">Tình trạng lớp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+
+                let tbody = '';
+                state.classes.forEach((cName, idx) => {
+                    let missingSubs = [];
+
+                    const cells = state.subjects.map(sub => {
+                        // Tìm giáo viên nào dạy môn sub cho lớp cName
+                        const assignedTeacher = state.teachers.find(t => t.assignments && t.assignments[sub.key] && t.assignments[sub.key].includes(cName));
+                        if (assignedTeacher) {
+                            return `<td style="text-align:center; font-weight:700; color:#0f172a;">${escapeHtml(assignedTeacher.name)}</td>`;
+                        } else {
+                            missingSubs.push(sub.name);
+                            return `<td style="text-align:center; color:#ef4444; font-size:0.75rem; font-style:italic;">Chưa phân công</td>`;
+                        }
+                    }).join('');
+
+                    const statusHtml = missingSubs.length === 0
+                        ? `<span style="background:#ecfdf5; color:#065f46; padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.75rem;"><i class="fas fa-check"></i> Đủ GV bộ môn</span>`
+                        : `<span style="background:#fff1f2; color:#9f1239; padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i> Thiếu: ${missingSubs.join(', ')}</span>`;
+
+                    tbody += `
+                        <tr>
+                            <td style="text-align:center;">${idx + 1}</td>
+                            <td style="text-align:center; font-weight:800; font-size:0.9rem; color:#4338ca;">${cName}</td>
+                            ${cells}
+                            <td style="text-align:center;">${statusHtml}</td>
+                        </tr>
+                    `;
+                });
+
+                cTable.innerHTML = thead + tbody + `</tbody>`;
+            }
         }
 
         // ================= 2. CHẤM CÔNG & THEO DÕI GIÁO VIÊN =================
@@ -1544,9 +1757,7 @@
             tbody.innerHTML = '';
 
             const mKey = getMonthKey();
-            if (!state.attendance.records[mKey]) {
-                state.attendance.records[mKey] = {};
-            }
+            if (!state.attendance.records[mKey]) state.attendance.records[mKey] = {};
             const monthRecords = state.attendance.records[mKey];
 
             if (state.teachers.length === 0) {
@@ -1661,7 +1872,7 @@
             let tbodyRows = '';
             state.teachers.forEach((t, index) => {
                 const total = calcTeacherTotalPeriods(t);
-                const standardQuota = (t.role === 'HP') ? 4 : (t.role === 'TTCM' ? 16 : 19);
+                const standardQuota = ROLE_STANDARD_QUOTA[t.role] || 19;
 
                 const subCells = state.subjects.map(sub => {
                     const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
@@ -1882,8 +2093,8 @@
         }
 
         function switchModalTab(tabId) {
-            document.querySelectorAll('.modal-tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+            document.querySelectorAll('#config-modal .modal-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('#config-modal .tab-pane').forEach(pane => pane.classList.remove('active'));
 
             const btn = document.getElementById(`tab-btn-${tabId.replace('tab-', '')}`);
             const pane = document.getElementById(tabId);
