@@ -270,6 +270,16 @@
                             <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
                         </label>
                     </div>
+                    <!-- 14. Phân công chuyên môn -->
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Phân Công Chuyên Môn</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_phancongtochuyenmon"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
                 </div>
 
                 <div class="rounded-xl border border-teal-200 bg-teal-50/60 p-5 mb-6">
@@ -807,7 +817,7 @@
 
         const CLIENT_FEATURE_CHECKS = [
             'gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx',
-            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'rutgon'
+            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon'
         ];
 
         const FEATURE_NAMES = {
@@ -823,6 +833,7 @@
             vietbaocao: "Viết Báo Cáo AI",
             thanhtich: "Thống Kê Thành Tích",
             thoikhoabieu: "Xếp Thời Khóa Biểu",
+            phancongtochuyenmon: "Phân Công Chuyên Môn",
             rutgon: "Link Rút Gọn & QR",
             teacher_design: "Soạn bài lộ trình",
             teacher_progress_stats: "Thống kê tiến trình",
@@ -832,7 +843,7 @@
         const USER_FEATURE_GROUPS = [
             {
                 title: 'Công cụ AI trên hub giáo viên',
-                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'rutgon']
+                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon']
             },
             {
                 title: 'Không gian lộ trình Toán',
@@ -1920,6 +1931,7 @@
             vietbaocao: { title: 'Viết báo cáo AI', url: 'vietbaocao.html' },
             thanhtich: { title: 'Thống kê thành tích', url: 'thanhtich.html' },
             thoikhoabieu: { title: 'Xếp thời khóa biểu', url: 'thoikhoabieu.html' },
+            phancongtochuyenmon: { title: 'Phân công chuyên môn', url: 'phancongtochuyenmon.html' },
             rutgon: { title: 'Link rút gọn & QR', url: 'rutgon.html' },
             thongketientrinh: { title: 'Thống kê tiến trình lớp', url: 'thongketientrinh.html' },
             quanlyvanban: { title: 'Quản lý văn bản', url: 'quanlyvanban.html' },
@@ -1928,6 +1940,7 @@
         const teacherOnlyPages = {
             rutgon: hostingPages.rutgon,
             thoikhoabieu: hostingPages.thoikhoabieu,
+            phancongtochuyenmon: hostingPages.phancongtochuyenmon,
             thongketientrinh: hostingPages.thongketientrinh,
             quanlyvanban: hostingPages.quanlyvanban,
             theodoiai: hostingPages.theodoiai
@@ -1946,7 +1959,7 @@
             {
                 title: 'Công cụ giảng dạy',
                 hint: 'Hiện trên trang chính của giáo viên.',
-                pages: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'rutgon']
+                pages: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon']
             }
         ];
         let editingStudent = null;

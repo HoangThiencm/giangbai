@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phân công Chuyên môn - Tổ Toán Tin</title>
+    <script src="access-control.js?v=20260824"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --math-color: #2563eb;
+            --math-bg: #eff6ff;
+            --it-color: #059669;
+            --it-bg: #ecfdf5;
+            --gvcn-color: #d97706;
+            --gvcn-bg: #fffbeb;
+            --hdtn-color: #7c3aed;
+            --hdtn-bg: #f5f3ff;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: var(--bg-color);
+            color: #0f172a;
+            overflow: hidden;
+        }
+
+        /* TOP NAVIGATION / TOOLBAR */
+        #top-navbar {
+            height: 60px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 30;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 50%, #7c3aed 100%);
+            color: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.25);
+        }
+
+        .brand-text h1 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-text p {
+            margin: 0;
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .db-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+
+        .db-status-badge.connected {
+            background: #ecfdf5;
+            color: #065f46;
+            border-color: #a7f3d0;
+        }
+
+        .db-status-badge.saving {
+            background: #eff6ff;
+            color: #1e40af;
+            border-color: #bfdbfe;
+        }
+
+        .db-status-badge.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border-color: #fecaca;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #94a3b8;
+        }
+
+        .db-status-badge.connected .status-dot {
+            background: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+        }
+
+        .db-status-badge.saving .status-dot {
+            background: #3b82f6;
+            animation: pulse 1s infinite;
+        }
+
+        .db-status-badge.error .status-dot {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-toolbar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+
+        .btn-home {
+            background: #f8fafc;
+            color: #334155;
+            border-color: #cbd5e1;
+        }
+        .btn-home:hover { background: #f1f5f9; color: #0f172a; }
+
+        .btn-db-save {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+        }
+        .btn-db-save:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); transform: translateY(-1px); }
+
+        .btn-db-reload {
+            background: #f0fdf4;
+            color: #15803d;
+            border-color: #bbf7d0;
+        }
+        .btn-db-reload:hover { background: #dcfce7; }
+
+        .btn-file-open {
+            background: #f8fafc;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+        .btn-file-open:hover { background: #e2e8f0; color: #0f172a; }
+
+        .btn-file-save {
+            background: #f8fafc;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+        .btn-file-save:hover { background: #e2e8f0; color: #0f172a; }
+
+        .btn-export-excel {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+        }
+        .btn-export-excel:hover { background: linear-gradient(135deg, #059669, #047857); transform: translateY(-1px); }
+
+        /* MAIN CONTAINER (2 COLUMNS) */
+        #workspace-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* CỘT TRÁI - KHO LỚP HỌC */
+        #left-panel {
+            width: 360px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.03);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .panel-header {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            font-weight: 800;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: -0.01em;
+        }
+
+        .panel-header-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-reset {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.15s;
+        }
+        .btn-reset:hover { background: #dc2626; }
+
+        .pool-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .subject-group {
+            margin-bottom: 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .subject-title {
+            font-weight: 800;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1.5px solid transparent;
+        }
+
+        .subject-title.math { color: var(--math-color); border-color: rgba(37, 99, 235, 0.2); }
+        .subject-title.it { color: var(--it-color); border-color: rgba(5, 150, 105, 0.2); }
+        .subject-title.gvcn { color: var(--gvcn-color); border-color: rgba(217, 119, 6, 0.2); }
+        .subject-title.hdtn { color: var(--hdtn-color); border-color: rgba(124, 58, 237, 0.2); }
+
+        .count-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            color: #64748b;
+        }
+
+        .pill-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            min-height: 32px;
+        }
+
+        .pill {
+            padding: 5px 11px;
+            border-radius: 16px;
+            color: white;
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.12s, box-shadow 0.12s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+        }
+        .pill:active { cursor: grabbing; transform: scale(0.96); }
+
+        .pill.math { background-color: var(--math-color); }
+        .pill.it { background-color: var(--it-color); }
+        .pill.gvcn { background-color: var(--gvcn-color); }
+        .pill.hdtn { background-color: var(--hdtn-color); }
+
+        /* CỘT PHẢI - DANH SÁCH GIÁO VIÊN */
+        #right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg-color);
+        }
+
+        .right-toolbar-sub {
+            padding: 10px 20px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .right-toolbar-sub h2 {
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .teachers-grid {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+            gap: 16px;
+            align-content: flex-start;
+        }
+
+        .teacher-card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03);
+            border: 2px dashed transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+        }
+
+        .teacher-card.drag-over {
+            border-color: #6366f1;
+            background-color: #e0e7ff;
+            transform: scale(1.015);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+        }
+
+        .teacher-header {
+            padding: 12px 14px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 14px 14px 0 0;
+        }
+
+        .teacher-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .teacher-name {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .teacher-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: #475569;
+            font-weight: 800;
+        }
+
+        .role-select {
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 3px 6px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background-color: #ffffff;
+            color: #334155;
+            cursor: pointer;
+            outline: none;
+        }
+        .role-select:focus { border-color: #6366f1; }
+
+        .checkbox-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+            user-select: none;
+            background: #ffffff;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+        }
+        .checkbox-group input { cursor: pointer; }
+
+        .teacher-body {
+            padding: 12px 14px;
+            flex: 1;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .assigned-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+        }
+
+        .assigned-label {
+            width: 72px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #64748b;
+            padding-top: 3px;
+            flex-shrink: 0;
+        }
+
+        .assigned-pills {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .pill-assigned {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px;
+        }
+
+        .pill-assigned::after {
+            content: "×";
+            position: absolute;
+            top: 50%;
+            right: 6px;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.2);
+            color: white;
+            border-radius: 50%;
+            width: 13px;
+            height: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            line-height: 1;
+            font-weight: 900;
+            transition: background 0.15s;
+        }
+        .pill-assigned:hover::after {
+            background: #ef4444;
+        }
+        .pill-assigned:hover {
+            opacity: 0.9;
+        }
+
+        .empty-hint {
+            color: #94a3b8;
+            font-size: 0.82rem;
+            font-style: italic;
+            text-align: center;
+            margin: auto 0;
+            padding: 20px 0;
+        }
+
+        .teacher-footer {
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-top: 1px solid var(--border-color);
+            border-radius: 0 0 14px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .footer-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .footer-row.total-row {
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #0f172a;
+            padding-top: 4px;
+            border-top: 1px dashed #cbd5e1;
+        }
+
+        .total-periods {
+            color: #dc2626;
+            font-size: 1.1rem;
+            font-weight: 900;
+        }
+
+        /* TOAST NOTIFICATION */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.25s, transform 0.25s;
+            pointer-events: none;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #toast.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #toast.success { background: #065f46; border: 1px solid #059669; }
+        #toast.error { background: #991b1b; border: 1px solid #dc2626; }
+        #toast.info { background: #1e293b; border: 1px solid #475569; }
+
+        @media (max-width: 900px) {
+            #workspace-container {
+                flex-direction: column;
+            }
+            #left-panel {
+                width: 100%;
+                height: 240px;
+            }
+            #top-navbar {
+                height: auto;
+                padding: 10px 15px;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .nav-actions {
+                width: 100%;
+                justify-content: flex-start;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVBAR -->
+    <header id="top-navbar">
+        <div class="brand-section">
+            <div class="brand-icon">
+                <i class="fas fa-people-roof"></i>
+            </div>
+            <div class="brand-text">
+                <h1>Phân công Chuyên môn</h1>
+                <p>Tổ Toán - Tin học · Kéo thả phân công &amp; tính tiết</p>
+            </div>
+            <div id="db-status-badge" class="db-status-badge">
+                <span class="status-dot"></span>
+                <span id="db-status-text">Đang kiểm tra CSDL...</span>
+            </div>
+        </div>
+
+        <div class="nav-actions">
+            <a href="index.html" class="btn-toolbar btn-home" title="Trở về trang chủ">
+                <i class="fas fa-home text-slate-500"></i> Trang chủ
+            </a>
+            <button class="btn-toolbar btn-db-save" id="btn-save-db" onclick="saveToDB()" title="Lưu phân công lên CSDL MySQL">
+                <i class="fas fa-cloud-arrow-up"></i> Lưu CSDL
+            </button>
+            <button class="btn-toolbar btn-db-reload" onclick="loadFromDB(true)" title="Nạp dữ liệu mới nhất từ CSDL">
+                <i class="fas fa-rotate"></i> Nạp lại
+            </button>
+            <input type="file" id="file-input" style="display:none" accept=".json" onchange="loadFromFile(event)">
+            <button class="btn-toolbar btn-file-open" onclick="document.getElementById('file-input').click()" title="Mở file JSON từ máy tính">
+                <i class="fas fa-folder-open text-indigo-500"></i> Mở JSON
+            </button>
+            <button class="btn-toolbar btn-file-save" onclick="saveToFile()" title="Tải file JSON về máy tính">
+                <i class="fas fa-floppy-disk text-sky-600"></i> Xuất JSON
+            </button>
+            <button class="btn-toolbar btn-export-excel" onclick="exportToExcel()" title="Xuất bảng phân công ra Excel">
+                <i class="fas fa-file-excel"></i> Xuất Excel
+            </button>
+        </div>
+    </header>
+
+    <!-- WORKSPACE -->
+    <div id="workspace-container">
+        <!-- CỘT TRÁI - KHO LỚP HỌC -->
+        <div id="left-panel">
+            <div class="panel-header">
+                <div class="panel-header-title">
+                    <i class="fas fa-boxes-stacked"></i> KHO LỚP HỌC
+                </div>
+                <button class="btn-reset" onclick="resetData()" title="Khôi phục lại phân công từ đầu">
+                    <i class="fas fa-arrow-rotate-left"></i> Làm mới
+                </button>
+            </div>
+            <div class="pool-container" id="pool-container">
+                <!-- Render từ JS -->
+            </div>
+        </div>
+
+        <!-- CỘT PHẢI - GIÁO VIÊN -->
+        <div id="right-panel">
+            <div class="right-toolbar-sub">
+                <h2><i class="fas fa-hand-pointer text-indigo-600"></i> Kéo lớp học từ kho bên trái vào thẻ giáo viên</h2>
+                <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Click vào lớp đã gán để hủy phân công</span>
+            </div>
+            <div class="teachers-grid" id="teachers-grid">
+                <!-- Render từ JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast">
+        <i class="fas fa-circle-check"></i>
+        <span id="toast-message">Đã lưu tự động!</span>
+    </div>
+
+    <script>
+        const PERIODS = { math: 4, it: 1, gvcn: 4, hdtn: 3, qlpm: 3 };
+        const classList = ['61', '62', '63', '64', '65', '66', '71', '72', '73', '74', '75', '76', '81', '82', '83', '84', '85', '86', '91', '92', '93', '94', '95', '96', '97'];
+
+        const defaultState = {
+            unassigned: {
+                math: [...classList],
+                it: [...classList],
+                gvcn: [...classList],
+                hdtn: [...classList]
+            },
+            teachers: [
+                { id: 't1', name: 'T.Thiên', role: 'TTCM', allowance: 3, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
+                { id: 't2', name: 'T.Sáng', role: 'TPCM', allowance: 1, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
+                { id: 't3', name: 'T.Đông', role: 'HP', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
+                { id: 't4', name: 'T.Danh', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
+                { id: 't5', name: 'T.Ánh', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
+                { id: 't6', name: 'T. Hải', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
+                { id: 't7', name: 'C. Bình', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
+                { id: 't8', name: 'C.Thảo', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
+                { id: 't9', name: 'T. Tính', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
+                { id: 't10', name: 'T. Tùng', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] }
+            ]
+        };
+
+        let state = JSON.parse(JSON.stringify(defaultState));
+        let isSaving = false;
+
+        // Cập nhật trạng thái CSDL
+        function updateDbStatus(status, text) {
+            const badge = document.getElementById('db-status-badge');
+            const statusText = document.getElementById('db-status-text');
+            if (!badge || !statusText) return;
+
+            badge.className = 'db-status-badge ' + status;
+            statusText.textContent = text;
+        }
+
+        // Lưu & Đọc LocalStorage
+        function saveToLocal() {
+            try {
+                localStorage.setItem('phanCongData', JSON.stringify(state));
+            } catch (e) {
+                console.error("Lỗi khi lưu localStorage:", e);
+            }
+        }
+
+        function loadFromLocal() {
+            const savedData = localStorage.getItem('phanCongData');
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    if (parsed && parsed.teachers && parsed.unassigned) {
+                        state = parsed;
+                        return true;
+                    }
+                } catch (e) {
+                    console.error("Lỗi khi đọc localStorage:", e);
+                }
+            }
+            return false;
+        }
+
+        // Nạp dữ liệu từ CSDL
+        async function loadFromDB(manual = false) {
+            updateDbStatus('saving', 'Đang tải từ CSDL...');
+            try {
+                const res = await fetch('api/phancong.php?action=get', {
+                    cache: 'no-store',
+                    credentials: 'include'
+                });
+
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.ok && json.data && json.data.teachers && json.data.unassigned) {
+                        state = json.data;
+                        saveToLocal();
+                        render();
+                        const timeStr = json.plan?.updated_at ? ` (${json.plan.updated_at})` : '';
+                        updateDbStatus('connected', 'Đã nạp CSDL' + timeStr);
+                        if (manual) showToast('Đã nạp dữ liệu mới nhất từ CSDL!', 'success');
+                        return;
+                    } else {
+                        // DB rỗng, fallback sang local
+                        const hasLocal = loadFromLocal();
+                        render();
+                        updateDbStatus('connected', hasLocal ? 'Dữ liệu cục bộ (Chưa lưu CSDL)' : 'Mặc định (Chưa lưu CSDL)');
+                        if (manual) showToast('Chưa có dữ liệu trên CSDL, đang dùng dữ liệu hiện tại.', 'info');
+                        return;
+                    }
+                } else {
+                    throw new Error('Mã lỗi HTTP ' + res.status);
+                }
+            } catch (err) {
+                console.warn('Không thể kết nối API phancong.php, chuyển sang bộ nhớ cục bộ:', err);
+                loadFromLocal();
+                render();
+                updateDbStatus('error', 'Chế độ offline (bộ nhớ máy)');
+                if (manual) showToast('Không thể kết nối CSDL máy chủ!', 'error');
+            }
+        }
+
+        // Lưu dữ liệu vào CSDL
+        async function saveToDB() {
+            if (isSaving) return;
+            isSaving = true;
+
+            const saveBtn = document.getElementById('btn-save-db');
+            const originalBtnHtml = saveBtn ? saveBtn.innerHTML : '';
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+            }
+            updateDbStatus('saving', 'Đang lưu vào CSDL...');
+
+            try {
+                const payload = {
+                    plan_key: 'default',
+                    title: 'Phân công chuyên môn',
+                    data: state
+                };
+
+                const res = await fetch('api/phancong.php?action=save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                const json = await res.json().catch(() => ({}));
+                if (res.ok && json.ok) {
+                    saveToLocal();
+                    const updatedTime = json.updated_at || new Date().toLocaleTimeString('vi-VN');
+                    updateDbStatus('connected', 'Đã lưu CSDL (' + updatedTime + ')');
+                    showToast('Đã lưu vào CSDL thành công!', 'success');
+                } else {
+                    throw new Error(json.error || 'Lỗi không xác định khi lưu CSDL.');
+                }
+            } catch (err) {
+                console.error('Lỗi khi lưu CSDL:', err);
+                updateDbStatus('error', 'Lưu CSDL thất bại');
+                showToast('Lỗi khi lưu CSDL: ' + (err.message || 'Lỗi kết nối'), 'error');
+            } finally {
+                isSaving = false;
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalBtnHtml;
+                }
+            }
+        }
+
+        // Lưu và mở File JSON
+        function saveToFile() {
+            const dataStr = JSON.stringify(state, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `Phan_Cong_Chuyen_Mon_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Đã tải file JSON về máy!", "success");
+        }
+
+        function loadFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    if (importedState && importedState.teachers && importedState.unassigned) {
+                        state = importedState;
+                        saveToLocal();
+                        render();
+                        showToast("Đã mở file JSON thành công!", "success");
+                    } else {
+                        alert("File JSON không đúng cấu trúc phân công chuyên môn!");
+                    }
+                } catch (error) {
+                    alert("Lỗi định dạng file JSON: " + error.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // Làm mới dữ liệu
+        function resetData() {
+            if (confirm("XÓA TOÀN BỘ phân công hiện tại và làm lại từ đầu?")) {
+                state = JSON.parse(JSON.stringify(defaultState));
+                saveToLocal();
+                render();
+                updateDbStatus('connected', 'Đã đặt lại mặc định (Bấm Lưu CSDL để đồng bộ)');
+                showToast("Đã làm mới dữ liệu về mặc định!", "info");
+            }
+        }
+
+        // Toast thông báo
+        let toastTimeout = null;
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById("toast");
+            const messageEl = document.getElementById("toast-message");
+            if (!toast || !messageEl) return;
+
+            messageEl.textContent = msg;
+            toast.className = 'visible ' + type;
+
+            const iconEl = toast.querySelector('i');
+            if (iconEl) {
+                if (type === 'success') iconEl.className = 'fas fa-circle-check';
+                else if (type === 'error') iconEl.className = 'fas fa-circle-exclamation';
+                else iconEl.className = 'fas fa-circle-info';
+            }
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 2800);
+        }
+
+        // Kéo thả & Cập nhật chức vụ
+        function dragStart(e, subject, className) {
+            e.dataTransfer.setData('text/plain', JSON.stringify({ subject, className }));
+        }
+
+        function allowDrop(e) {
+            e.preventDefault();
+            const card = e.target.closest('.teacher-card');
+            if (card) card.classList.add('drag-over');
+        }
+
+        function dragLeave(e) {
+            const card = e.target.closest('.teacher-card');
+            if (card) card.classList.remove('drag-over');
+        }
+
+        function drop(e, teacherId) {
+            e.preventDefault();
+            const card = e.target.closest('.teacher-card');
+            if (card) card.classList.remove('drag-over');
+            const dataStr = e.dataTransfer.getData('text/plain');
+            if (dataStr) {
+                try {
+                    const data = JSON.parse(dataStr);
+                    assignClass(data.subject, data.className, teacherId);
+                } catch (err) {
+                    console.error("Drop parse error:", err);
+                }
+            }
+        }
+
+        function assignClass(subject, className, teacherId) {
+            if (!state.unassigned[subject]) state.unassigned[subject] = [];
+            state.unassigned[subject] = state.unassigned[subject].filter(c => c !== className);
+
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            if (teacher) {
+                if (!teacher[subject]) teacher[subject] = [];
+                if (!teacher[subject].includes(className)) {
+                    teacher[subject].push(className);
+                    teacher[subject].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+                }
+            }
+            saveToLocal();
+            render();
+        }
+
+        function unassignClass(subject, className, teacherId) {
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            if (teacher && teacher[subject]) {
+                teacher[subject] = teacher[subject].filter(c => c !== className);
+            }
+            if (!state.unassigned[subject]) state.unassigned[subject] = [];
+            if (!state.unassigned[subject].includes(className)) {
+                state.unassigned[subject].push(className);
+                state.unassigned[subject].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+            }
+            saveToLocal();
+            render();
+        }
+
+        function toggleQLPM(teacherId, isChecked) {
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            if (teacher) {
+                teacher.qlpm = isChecked;
+                saveToLocal();
+                render();
+            }
+        }
+
+        function changeRole(teacherId, newRole) {
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            if (teacher) {
+                teacher.role = newRole;
+                // Áp dụng định mức giảm trừ theo chức vụ
+                if (newRole === 'TTCM') teacher.allowance = 3;
+                else if (newRole === 'TPCM') teacher.allowance = 1;
+                else teacher.allowance = 0; // GV, HP...
+
+                saveToLocal();
+                render();
+            }
+        }
+
+        // Vẽ giao diện
+        function render() {
+            renderPool();
+            renderTeachers();
+        }
+
+        function renderPool() {
+            const pool = document.getElementById('pool-container');
+            if (!pool) return;
+            pool.innerHTML = '';
+
+            const subjects = [
+                { key: 'math', name: 'Toán', val: PERIODS.math, icon: 'fa-calculator' },
+                { key: 'it', name: 'Tin học', val: PERIODS.it, icon: 'fa-laptop-code' },
+                { key: 'gvcn', name: 'Chủ nhiệm', val: PERIODS.gvcn, icon: 'fa-user-tie' },
+                { key: 'hdtn', name: 'HĐTN', val: PERIODS.hdtn, icon: 'fa-compass' }
+            ];
+
+            subjects.forEach(sub => {
+                const arr = state.unassigned[sub.key] || [];
+                const pillsHtml = arr.map(c => `
+                    <div class="pill ${sub.key}" draggable="true" ondragstart="dragStart(event, '${sub.key}', '${c}')">
+                        ${c}
+                    </div>
+                `).join('');
+
+                const html = `
+                    <div class="subject-group">
+                        <div class="subject-title ${sub.key}">
+                            <span><i class="fas ${sub.icon} mr-1"></i> ${sub.name} (${sub.val}t/lớp)</span>
+                            <span class="count-badge">Còn: ${arr.length}</span>
+                        </div>
+                        <div class="pill-container">
+                            ${pillsHtml}
+                            ${arr.length === 0 ? '<div style="color: #94a3b8; font-size: 0.8rem; font-style: italic; padding: 4px 0;">Đã phân công hết lớp</div>' : ''}
+                        </div>
+                    </div>
+                `;
+                pool.innerHTML += html;
+            });
+        }
+
+        function renderTeachers() {
+            const grid = document.getElementById('teachers-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            state.teachers.forEach(t => {
+                const qlpmPeriods = t.qlpm ? PERIODS.qlpm : 0;
+                const mathPeriods = (t.math?.length || 0) * PERIODS.math;
+                const itPeriods = (t.it?.length || 0) * PERIODS.it;
+                const gvcnPeriods = (t.gvcn?.length || 0) * PERIODS.gvcn;
+                const hdtnPeriods = (t.hdtn?.length || 0) * PERIODS.hdtn;
+                const total = mathPeriods + itPeriods + gvcnPeriods + hdtnPeriods + (t.allowance || 0) + qlpmPeriods;
+
+                const mathHtml = (t.math || []).map(c => `<div class="pill math pill-assigned" onclick="unassignClass('math', '${c}', '${t.id}')" title="Bấm để hủy phân công">${c}</div>`).join('');
+                const itHtml = (t.it || []).map(c => `<div class="pill it pill-assigned" onclick="unassignClass('it', '${c}', '${t.id}')" title="Bấm để hủy phân công">${c}</div>`).join('');
+                const gvcnHtml = (t.gvcn || []).map(c => `<div class="pill gvcn pill-assigned" onclick="unassignClass('gvcn', '${c}', '${t.id}')" title="Bấm để hủy phân công">${c}</div>`).join('');
+                const hdtnHtml = (t.hdtn || []).map(c => `<div class="pill hdtn pill-assigned" onclick="unassignClass('hdtn', '${c}', '${t.id}')" title="Bấm để hủy phân công">${c}</div>`).join('');
+
+                const isEmpty = (t.math?.length || 0) === 0 && (t.it?.length || 0) === 0 && (t.gvcn?.length || 0) === 0 && (t.hdtn?.length || 0) === 0;
+
+                const cardHtml = `
+                    <div class="teacher-card" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, '${t.id}')">
+                        <div class="teacher-header">
+                            <div class="teacher-title-row">
+                                <div class="teacher-name">
+                                    <span class="teacher-avatar"><i class="fas fa-chalkboard-user"></i></span>
+                                    <span>${t.name}</span>
+                                    <select class="role-select" onchange="changeRole('${t.id}', this.value)">
+                                        <option value="GV" ${t.role === 'GV' ? 'selected' : ''}>Giáo viên</option>
+                                        <option value="TTCM" ${t.role === 'TTCM' ? 'selected' : ''}>TTCM</option>
+                                        <option value="TPCM" ${t.role === 'TPCM' ? 'selected' : ''}>TPCM</option>
+                                        <option value="HP" ${t.role === 'HP' ? 'selected' : ''}>Hiệu phó</option>
+                                    </select>
+                                </div>
+                                <label class="checkbox-group" title="Kiêm nhiệm Quản lý phòng máy (+3 tiết)">
+                                    <input type="checkbox" ${t.qlpm ? 'checked' : ''} onchange="toggleQLPM('${t.id}', this.checked)">
+                                    QL Máy
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="teacher-body">
+                            ${isEmpty ? '<div class="empty-hint"><i class="fas fa-hand-pointer mr-1"></i> Kéo thả lớp vào đây...</div>' : ''}
+                            ${(t.math && t.math.length > 0) ? `<div class="assigned-row"><div class="assigned-label">Toán:</div><div class="assigned-pills">${mathHtml}</div></div>` : ''}
+                            ${(t.it && t.it.length > 0) ? `<div class="assigned-row"><div class="assigned-label">Tin học:</div><div class="assigned-pills">${itHtml}</div></div>` : ''}
+                            ${(t.gvcn && t.gvcn.length > 0) ? `<div class="assigned-row"><div class="assigned-label">Chủ nhiệm:</div><div class="assigned-pills">${gvcnHtml}</div></div>` : ''}
+                            ${(t.hdtn && t.hdtn.length > 0) ? `<div class="assigned-row"><div class="assigned-label">HĐTN:</div><div class="assigned-pills">${hdtnHtml}</div></div>` : ''}
+                        </div>
+
+                        <div class="teacher-footer">
+                            <div class="footer-row">
+                                <span>Giảm trừ / Kiêm nhiệm:</span>
+                                <span>${(t.allowance || 0) + qlpmPeriods} tiết</span>
+                            </div>
+                            <div class="footer-row total-row">
+                                <span>Tổng cộng:</span>
+                                <span class="total-periods">${total} tiết</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += cardHtml;
+            });
+        }
+
+        // Xuất bảng phân công ra Excel chuẩn UTF-8
+        function exportToExcel() {
+            let table = `<table border="1" style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px;">
+                <thead>
+                    <tr style="background-color: #1e3a8a; color: #ffffff; text-align: center; font-weight: bold; height: 36px;">
+                        <th style="padding: 6px 12px;">STT</th>
+                        <th style="padding: 6px 16px;">Họ và Tên</th>
+                        <th style="padding: 6px 12px;">Chức vụ</th>
+                        <th style="padding: 6px 14px; background-color: #2563eb;">Lớp dạy Toán</th>
+                        <th style="padding: 6px 14px; background-color: #059669;">Lớp dạy Tin</th>
+                        <th style="padding: 6px 14px; background-color: #d97706;">Lớp Chủ nhiệm</th>
+                        <th style="padding: 6px 14px; background-color: #7c3aed;">Lớp dạy HĐTN</th>
+                        <th style="padding: 6px 12px; background-color: #475569;">Kiêm nhiệm / Giảm trừ</th>
+                        <th style="padding: 6px 14px; background-color: #dc2626;">Tổng Số Tiết</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            state.teachers.forEach((t, index) => {
+                const qlpmPeriods = t.qlpm ? PERIODS.qlpm : 0;
+                const total = ((t.math?.length || 0) * PERIODS.math) +
+                              ((t.it?.length || 0) * PERIODS.it) +
+                              ((t.gvcn?.length || 0) * PERIODS.gvcn) +
+                              ((t.hdtn?.length || 0) * PERIODS.hdtn) +
+                              (t.allowance || 0) + qlpmPeriods;
+
+                let kn_text = [];
+                if ((t.allowance || 0) > 0) kn_text.push(`${t.role} (${t.allowance})`);
+                if (t.qlpm) kn_text.push(`QL Máy (${PERIODS.qlpm})`);
+
+                const bgRow = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+
+                table += `<tr style="background-color: ${bgRow}; text-align: center; height: 30px;">
+                    <td style="padding: 6px;">${index + 1}</td>
+                    <td style="padding: 6px 12px; text-align: left; font-weight: bold;">${t.name}</td>
+                    <td style="padding: 6px;">${t.role}</td>
+                    <td style="padding: 6px;">${(t.math || []).join(', ')}</td>
+                    <td style="padding: 6px;">${(t.it || []).join(', ')}</td>
+                    <td style="padding: 6px;">${(t.gvcn || []).join(', ')}</td>
+                    <td style="padding: 6px;">${(t.hdtn || []).join(', ')}</td>
+                    <td style="padding: 6px;">${kn_text.join(' + ') || '—'}</td>
+                    <td style="padding: 6px; font-weight: bold; color: #dc2626; font-size: 14px;">${total}</td>
+                </tr>`;
+            });
+
+            table += `</tbody></table>`;
+
+            const uri = 'data:application/vnd.ms-excel;base64,';
+            const template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>PhanCongChuyenMon</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>{table}</body></html>';
+            const base64 = function(s) { return window.btoa(unescape(encodeURIComponent(s))) };
+            const format = function(s, c) { return s.replace(/{(\w+)}/g, function(m, p) { return c[p]; }) };
+            const ctx = { worksheet: 'Phân Công', table: table };
+
+            const link = document.createElement("a");
+            link.href = uri + base64(format(template, ctx));
+            link.download = `Phan_Cong_Chuyen_Mon_${new Date().toISOString().slice(0,10)}.xls`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Đã xuất file Excel thành công!", "success");
+        }
+
+        // Khởi động trang
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromDB();
+        });
+    </script>
+</body>
+</html>

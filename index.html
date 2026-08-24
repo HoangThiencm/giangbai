@@ -451,6 +451,19 @@
             background: rgba(45, 212, 191, 0.5);
         }
 
+        .tool-tile--phancong {
+            background: linear-gradient(145deg, #1e1b4b 0%, #4338ca 48%, #7c3aed 100%);
+            box-shadow: 0 14px 36px rgba(99, 102, 241, 0.22);
+        }
+
+        .tool-tile--phancong .tool-tile-glow {
+            width: 150px;
+            height: 150px;
+            right: -28px;
+            bottom: -50px;
+            background: rgba(167, 139, 250, 0.45);
+        }
+
         .tool-tile--vietbaocao {
             background: linear-gradient(145deg, #134e4a 0%, #0f766e 50%, #14b8a6 100%);
             box-shadow: 0 14px 36px rgba(20, 184, 166, 0.2);
@@ -823,6 +836,7 @@
             vietbaocao: 'vietbaocao.html',
             thanhtich: 'thanhtich.html',
             thoikhoabieu: 'thoikhoabieu.html',
+            phancongtochuyenmon: 'phancongtochuyenmon.html',
             rutgon: 'rutgon.html'
         };
         const LOTRINH_PAGE_KEYS = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
@@ -1218,6 +1232,17 @@
                             <p class="tool-tile-desc">Nhập giáo viên từ Excel, khai báo lớp 1 buổi/2 buổi và phòng bộ môn.</p>
                         </div>
                         <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="phancongtochuyenmon.html" target="_blank" rel="noopener noreferrer" data-tool="phancongtochuyenmon" class="tool-tile tool-tile--colored tool-tile--phancong">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-people-roof"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Tổ chuyên môn</span>
+                            <h3 class="tool-tile-title">Phân công chuyên môn</h3>
+                            <p class="tool-tile-desc">Kéo thả phân công Toán, Tin, Chủ nhiệm, HĐTN — tính tiết, lưu CSDL, xuất Excel.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-up-right-from-square"></i></span>
                     </a>
 
                     <a href="rutgon.html" data-tool="rutgon" class="tool-tile tool-tile--colored tool-tile--rutgon">

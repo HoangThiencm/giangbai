@@ -404,6 +404,21 @@ CREATE TABLE IF NOT EXISTS timetable_projects (
     CONSTRAINT fk_timetable_project_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS phancong_chuyenmon (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    plan_key VARCHAR(80) NOT NULL DEFAULT 'default',
+    title VARCHAR(200) NOT NULL DEFAULT 'Phân công chuyên môn',
+    school_year VARCHAR(40) NOT NULL DEFAULT '',
+    semester VARCHAR(20) NOT NULL DEFAULT 'HK1',
+    data_json LONGTEXT NOT NULL,
+    created_by INT DEFAULT NULL,
+    updated_by INT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_phancong_key (plan_key),
+    INDEX idx_phancong_updated (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published)
 VALUES
     ('Toán 6', 'Chương 1: Số tự nhiên', 'Bài 1: Tập hợp', 'math6-c1-b1-tap-hop', 1, 1),
@@ -411,3 +426,4 @@ VALUES
     ('Toán 8', 'Chương 1', 'Bài 1: Nhập nội dung', 'math8-c1-b1-draft', 1, 0),
     ('Toán 9', 'Chương 1', 'Bài 1: Nhập nội dung', 'math9-c1-b1-draft', 1, 0)
 ON DUPLICATE KEY UPDATE slug = VALUES(slug);
+

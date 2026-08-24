@@ -50,6 +50,7 @@ function page_catalog(): array
         'theodoiai' => ['title' => 'Theo dõi AI lộ trình', 'url' => 'theodoi-ai.html'],
         'thanhtich' => ['title' => 'Thống kê thành tích', 'url' => 'thanhtich.html'],
         'thoikhoabieu' => ['title' => 'Xếp thời khóa biểu', 'url' => 'thoikhoabieu.html'],
+        'phancongtochuyenmon' => ['title' => 'Phân công chuyên môn', 'url' => 'phancongtochuyenmon.html'],
     ];
 }
 
@@ -71,6 +72,7 @@ function teacher_workspace_page_ids(): array
         'padlet',
         'vietbaocao',
         'thoikhoabieu',
+        'phancongtochuyenmon',
         'rutgon',
     ];
 }
@@ -102,6 +104,7 @@ function teacher_feature_keys_for_pages(): array
         'padlet' => 'padlet',
         'vietbaocao' => 'vietbaocao',
         'thoikhoabieu' => 'thoikhoabieu',
+        'phancongtochuyenmon' => 'phancongtochuyenmon',
         'rutgon' => 'rutgon',
         'thanhtich' => 'thanhtich',
     ];
