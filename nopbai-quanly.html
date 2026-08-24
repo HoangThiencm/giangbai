@@ -106,7 +106,24 @@
                     <div><div class="flex items-center justify-between"><span class="label">Chọn tài khoản trong hệ thống</span><input id="accountSearch" oninput="renderAccountChoices()" class="field !w-52 !py-2 text-sm" placeholder="Tìm tên, lớp..."></div><div id="accountChoices" class="scroll-thin mt-2 grid max-h-48 gap-2 overflow-y-auto sm:grid-cols-2"></div></div>
                     <label><span class="label">Thêm phụ huynh, giáo viên hoặc người ngoài hệ thống</span><textarea id="manualPeople" rows="5" class="field font-mono text-xs" placeholder="Mỗi dòng: Họ tên | Vai trò | Nhóm/đơn vị | SĐT hoặc email&#10;Nguyễn Văn An | Phụ huynh | Lớp 6A | 090...&#10;&#10;Có thể giữ mã cũ khi sửa: MÃ | Họ tên | Vai trò | Nhóm | Liên hệ"></textarea></label>
                 </div>
-                <div id="schoolListAccess" class="mt-4 hidden rounded-2xl bg-sky-50 p-4"><label><span class="label">Chọn danh sách dùng chung *</span><select id="schoolListCode" class="field"><option value="">-- Chọn danh sách --</option></select></label><p class="mt-2 text-xs text-slate-500">Admin khai báo tại <b>Admin → THCS Trần Phú</b> (danh mục mặc định hoặc danh sách tùy chỉnh). Mỗi người nhận một mã nộp riêng.</p></div>
+                <div id="schoolListAccess" class="mt-4 hidden space-y-4 rounded-2xl bg-sky-50 p-4">
+                    <label><span class="label">Chọn danh sách dùng chung *</span><select id="schoolListCode" onchange="onSchoolListChange(this.value)" class="field"><option value="">-- Chọn danh sách --</option></select></label>
+                    <div id="schoolPeopleContainer" class="hidden rounded-xl border border-sky-200 bg-white/80 p-3.5 shadow-sm">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-sky-100 pb-2.5">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span id="schoolPeopleCount" class="text-xs font-bold text-sky-900">Đã chọn: 0/0</span>
+                                <div class="flex gap-1.5">
+                                    <button type="button" onclick="selectAllSchoolPeople(true)" class="rounded-lg border border-sky-300 bg-white px-2.5 py-1 text-xs font-bold text-sky-800 shadow-sm hover:bg-sky-50">Chọn tất cả</button>
+                                    <button type="button" onclick="selectAllSchoolPeople(false)" class="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-600 shadow-sm hover:bg-slate-50">Bỏ chọn</button>
+                                </div>
+                            </div>
+                            <input id="schoolPeopleSearch" oninput="renderSchoolPeopleChoices()" class="field !w-52 !py-1.5 text-xs" placeholder="Tìm tên, tổ, chức vụ...">
+                        </div>
+                        <div id="schoolPeopleLoading" class="hidden py-6 text-center text-xs text-sky-800"><i class="fas fa-circle-notch fa-spin mr-1.5"></i>Đang tải danh sách thành viên...</div>
+                        <div id="schoolPeopleChoices" class="scroll-thin mt-2.5 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2"></div>
+                    </div>
+                    <p class="text-xs text-slate-500">Admin khai báo tại <b>Admin → THCS Trần Phú</b> (danh mục mặc định hoặc danh sách tùy chỉnh). Bạn có thể tích chọn những người cụ thể được nộp.</p>
+                </div>
 
                 <div class="mt-6 grid gap-4 border-t border-slate-200 pt-6 sm:grid-cols-4">
                     <label><span class="label">Trạng thái</span><select id="status" class="field"><option value="open">Mở nhận bài</option><option value="draft">Bản nháp</option><option value="closed">Đóng</option></select></label>
@@ -139,11 +156,12 @@
 
     <script>
         const API = 'api/submissions.php';
-        let state = { assignments: [], classes: [], users: [], schoolLists: [], selectedUsers: new Set(), reportFields: [], detail: null };
+        let state = { assignments: [], classes: [], users: [], schoolLists: [], selectedUsers: new Set(), selectedSchoolPeople: new Set(), schoolListPeople: [], reportFields: [], detail: null };
         const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         const fmt = value => value ? new Intl.DateTimeFormat('vi-VN',{dateStyle:'short',timeStyle:'short'}).format(new Date(String(value).replace(' ','T'))) : 'Không giới hạn';
         const modeLabel = mode => ({public:'Tự do',class:'Theo lớp/nhóm',selected:'Danh sách chỉ định',school_list:'Danh sách dùng chung'}[mode] || mode);
         const statusMeta = status => ({open:['Đang mở','bg-emerald-50 text-emerald-700'],draft:['Bản nháp','bg-amber-50 text-amber-700'],closed:['Đã đóng','bg-slate-100 text-slate-600']}[status] || [status,'bg-slate-100']);
+        const removeAccents = str => String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
         function schoolYear(date = new Date()) {
             const y = date.getFullYear();
@@ -267,34 +285,190 @@
         }
 
         function resetForm() {
-            document.getElementById('assignmentForm').reset(); document.getElementById('assignmentId').value='';
-            document.querySelector('input[name="accessMode"][value="public"]').checked=true;
-            document.getElementById('maxFiles').value=5; document.getElementById('maxFileMb').value=25;
-            document.getElementById('extensions').value='pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,zip,rar,txt'; const now=new Date(); document.getElementById('academicYear').value=`${now.getMonth()>=7?now.getFullYear():now.getFullYear()-1}-${now.getMonth()>=7?now.getFullYear()+1:now.getFullYear()}`;
-            state.selectedUsers=new Set(); state.reportFields=[]; document.getElementById('manualPeople').value=''; document.getElementById('formError').classList.add('hidden'); toggleAccessMode(); toggleSubmissionType(); renderAccountChoices(); renderReportFields();
+            document.getElementById('assignmentForm').reset(); document.getElementById('assignmentId').value = '';
+            document.querySelector('input[name="accessMode"][value="public"]').checked = true;
+            document.getElementById('maxFiles').value = 5; document.getElementById('maxFileMb').value = 25;
+            document.getElementById('extensions').value = 'pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,zip,rar,txt'; const now = new Date(); document.getElementById('academicYear').value = `${now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1}-${now.getMonth() >= 7 ? now.getFullYear() + 1 : now.getFullYear()}`;
+            state.selectedUsers = new Set(); state.selectedSchoolPeople = new Set(); state.schoolListPeople = []; state.reportFields = []; document.getElementById('manualPeople').value = '';
+            const schoolContainer = document.getElementById('schoolPeopleContainer'); if (schoolContainer) schoolContainer.classList.add('hidden');
+            const schoolSearch = document.getElementById('schoolPeopleSearch'); if (schoolSearch) schoolSearch.value = '';
+            const schoolChoices = document.getElementById('schoolPeopleChoices'); if (schoolChoices) schoolChoices.innerHTML = '';
+            document.getElementById('formError').classList.add('hidden'); toggleAccessMode(); toggleSubmissionType(); renderAccountChoices(); renderReportFields();
         }
-        async function openEditor(id=0) {
-            resetForm(); document.getElementById('editorTitle').textContent=id?'Sửa đợt nộp':'Tạo đợt nộp mới'; document.getElementById('editorModal').classList.remove('hidden'); document.body.classList.add('overflow-hidden');
+        async function openEditor(id = 0) {
+            resetForm(); document.getElementById('editorTitle').textContent = id ? 'Sửa đợt nộp' : 'Tạo đợt nộp mới'; document.getElementById('editorModal').classList.remove('hidden'); document.body.classList.add('overflow-hidden');
             if (!id) return;
             try {
-                const data=await api(`${API}?action=detail&id=${id}`); const a=data.assignment; document.getElementById('assignmentId').value=a.id; document.getElementById('title').value=a.title||''; document.getElementById('description').value=a.description||''; document.getElementById('instructions').value=a.instructions||'';
-                document.getElementById('openAt').value=toLocalInput(a.open_at); document.getElementById('dueAt').value=toLocalInput(a.due_at); document.getElementById('academicYear').value=a.academic_year||document.getElementById('academicYear').value; document.querySelector(`input[name="accessMode"][value="${a.access_mode}"]`).checked=true; document.querySelector(`input[name="submissionType"][value="${a.submission_type||'file'}"]`).checked=true; document.getElementById('targetClass').value=a.target_class||''; document.getElementById('schoolListCode').value=a.source_list_code||''; document.getElementById('status').value=a.status; document.getElementById('maxFiles').value=a.max_files; document.getElementById('maxFileMb').value=a.max_file_mb; document.getElementById('allowMultiple').checked=Number(a.allow_multiple)===1; document.getElementById('requireFiles').checked=Number(a.require_files)===1; document.getElementById('extensions').value=a.allowed_extensions; state.reportFields=Array.isArray(a.form_fields_json)?a.form_fields_json:(()=>{try{return JSON.parse(a.form_fields_json||'[]')}catch{return[]}})();
-                state.selectedUsers=new Set((data.participants||[]).filter(p=>p.linked_user_id).map(p=>Number(p.linked_user_id)));
-                document.getElementById('manualPeople').value=(data.participants||[]).filter(p=>!p.linked_user_id).map(p=>[p.participant_code,p.full_name,p.role_label||'',p.group_name||'',p.contact||''].join(' | ')).join('\n'); toggleAccessMode(); toggleSubmissionType(); renderAccountChoices(); renderReportFields();
-            } catch(error) { showFormError(error.message); }
+                const data = await api(`${API}?action=detail&id=${id}`); const a = data.assignment; document.getElementById('assignmentId').value = a.id; document.getElementById('title').value = a.title || ''; document.getElementById('description').value = a.description || ''; document.getElementById('instructions').value = a.instructions || '';
+                document.getElementById('openAt').value = toLocalInput(a.open_at); document.getElementById('dueAt').value = toLocalInput(a.due_at); document.getElementById('academicYear').value = a.academic_year || document.getElementById('academicYear').value; document.querySelector(`input[name="accessMode"][value="${a.access_mode}"]`).checked = true; document.querySelector(`input[name="submissionType"][value="${a.submission_type || 'file'}"]`).checked = true; document.getElementById('targetClass').value = a.target_class || ''; document.getElementById('schoolListCode').value = a.source_list_code || ''; document.getElementById('status').value = a.status; document.getElementById('maxFiles').value = a.max_files; document.getElementById('maxFileMb').value = a.max_file_mb; document.getElementById('allowMultiple').checked = Number(a.allow_multiple) === 1; document.getElementById('requireFiles').checked = Number(a.require_files) === 1; document.getElementById('extensions').value = a.allowed_extensions; state.reportFields = Array.isArray(a.form_fields_json) ? a.form_fields_json : (() => { try { return JSON.parse(a.form_fields_json || '[]'); } catch { return []; } })();
+                state.selectedUsers = new Set((data.participants || []).filter(p => p.linked_user_id).map(p => Number(p.linked_user_id)));
+                document.getElementById('manualPeople').value = (data.participants || []).filter(p => !p.linked_user_id && a.access_mode === 'selected').map(p => [p.participant_code, p.full_name, p.role_label || '', p.group_name || '', p.contact || ''].join(' | ')).join('\n'); toggleAccessMode(); toggleSubmissionType(); renderAccountChoices(); renderReportFields();
+                if (a.access_mode === 'school_list' && a.source_list_code) {
+                    await fetchSchoolListPeople(a.source_list_code, data.participants);
+                }
+            } catch (error) { showFormError(error.message); }
         }
-        function closeEditor(){ document.getElementById('editorModal').classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
-        function toLocalInput(value){ return value?String(value).replace(' ','T').slice(0,16):''; }
-        function toggleAccessMode(){ const mode=document.querySelector('input[name="accessMode"]:checked').value; document.getElementById('classAccess').classList.toggle('hidden',mode!=='class'); document.getElementById('selectedAccess').classList.toggle('hidden',mode!=='selected'); document.getElementById('schoolListAccess').classList.toggle('hidden',mode!=='school_list'); }
-        function toggleSubmissionType(){ const type=document.querySelector('input[name="submissionType"]:checked').value; document.getElementById('reportBuilder').classList.toggle('hidden',type!=='report'); }
-        function addReportField(field={label:'',type:'text',required:false,allow_evidence:false,evidence_required:false,options:[]}){state.reportFields.push(field);renderReportFields();}
-        function renderReportFields(){const wrap=document.getElementById('reportFieldRows');if(!wrap)return;wrap.innerHTML=state.reportFields.length?state.reportFields.map((f,i)=>`<div class="rounded-xl border border-teal-100 bg-white p-3"><div class="grid gap-2 md:grid-cols-[1fr_130px_auto]"><input class="field !py-2 text-sm" value="${esc(f.label||'')}" oninput="state.reportFields[${i}].label=this.value" placeholder="Tên chỉ tiêu, ví dụ: Sĩ số"><select class="field !py-2 text-sm" onchange="state.reportFields[${i}].type=this.value;renderReportFields()"><option value="text" ${f.type==='text'?'selected':''}>Văn bản ngắn</option><option value="textarea" ${f.type==='textarea'?'selected':''}>Đoạn văn</option><option value="number" ${f.type==='number'?'selected':''}>Số</option><option value="date" ${f.type==='date'?'selected':''}>Ngày</option><option value="select" ${f.type==='select'?'selected':''}>Chọn đáp án</option><option value="heading" ${f.type==='heading'?'selected':''}>Tiêu đề nhóm</option></select><button type="button" onclick="state.reportFields.splice(${i},1);renderReportFields()" class="rounded-lg border border-red-200 px-3 text-sm font-bold text-red-600">Xóa</button></div>${f.type==='select'?`<input class="field mt-2 !py-2 text-sm" value="${esc((f.options||[]).join(', '))}" oninput="state.reportFields[${i}].options=this.value.split(',').map(x=>x.trim()).filter(Boolean)" placeholder="Các lựa chọn, cách nhau dấu phẩy">`:''}<div class="mt-2 flex flex-wrap gap-4 text-xs font-bold text-slate-600"><label><input type="checkbox" ${f.required?'checked':''} onchange="state.reportFields[${i}].required=this.checked" class="mr-1 accent-teal-700">Bắt buộc</label>${f.type!=='heading'?`<label><input type="checkbox" ${f.allow_evidence?'checked':''} onchange="state.reportFields[${i}].allow_evidence=this.checked;renderReportFields()" class="mr-1 accent-teal-700">Có tệp minh chứng</label>`:''}${f.allow_evidence?`<label><input type="checkbox" ${f.evidence_required?'checked':''} onchange="state.reportFields[${i}].evidence_required=this.checked" class="mr-1 accent-teal-700">Minh chứng bắt buộc</label>`:''}</div></div>`).join(''):'<p class="rounded-lg border border-dashed border-teal-200 bg-white p-3 text-xs text-slate-500">Chưa có chỉ tiêu. Bấm “Thêm trường” để tạo biểu mẫu.</p>';}
-        function renderAccountChoices(){ const q=(document.getElementById('accountSearch')?.value||'').toLowerCase(); const list=state.users.filter(u=>`${u.full_name} ${u.username} ${u.class_name}`.toLowerCase().includes(q)); document.getElementById('accountChoices').innerHTML=list.length?list.map(u=>`<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-xs"><input type="checkbox" ${state.selectedUsers.has(Number(u.id))?'checked':''} onchange="toggleUser(${u.id},this.checked)" class="accent-teal-700"><span><strong class="block text-slate-800">${esc(u.full_name)}</strong><span class="text-slate-500">${esc(u.role==='teacher'?'Giáo viên':(u.class_name||'Học sinh'))} · ${esc(u.username)}</span></span></label>`).join(''):'<p class="text-xs text-slate-500">Không tìm thấy tài khoản.</p>'; }
-        function toggleUser(id,checked){ checked?state.selectedUsers.add(Number(id)):state.selectedUsers.delete(Number(id)); }
-        function parseManualPeople(){ return document.getElementById('manualPeople').value.split(/\r?\n/).map(line=>line.trim()).filter(Boolean).map(line=>{ const p=line.split('|').map(x=>x.trim()); if(p.length>=5)return{participant_code:p[0],full_name:p[1],role_label:p[2],group_name:p[3],contact:p.slice(4).join(' | ')}; return{full_name:p[0]||'',role_label:p[1]||'',group_name:p[2]||'',contact:p.slice(3).join(' | ')}; }); }
-        function showFormError(message){ const el=document.getElementById('formError'); el.textContent=message; el.classList.remove('hidden'); }
-        async function deleteAssignment(id){const title=state.assignments.find(a=>Number(a.id)===Number(id))?.title||'đợt báo cáo này';if(!confirm(`Xóa đợt “${title}”?\n\nToàn bộ danh sách và dữ liệu nộp trong hệ thống sẽ bị xóa. Tệp trên Google Drive được giữ lại để an toàn.`))return;try{const data=await api(`${API}?action=delete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});toast(data.message||'Đã xóa đợt báo cáo');await load();}catch(error){toast(error.message);}}
-        async function saveAssignment(event){ event.preventDefault(); const button=document.getElementById('saveButton'); const mode=document.querySelector('input[name="accessMode"]:checked').value; const submission_type=document.querySelector('input[name="submissionType"]:checked').value; const payload={id:Number(document.getElementById('assignmentId').value)||0,title:document.getElementById('title').value,description:document.getElementById('description').value,instructions:document.getElementById('instructions').value,submission_type,academic_year:document.getElementById('academicYear').value,form_fields:state.reportFields,require_files:document.getElementById('requireFiles').checked,open_at:document.getElementById('openAt').value,due_at:document.getElementById('dueAt').value,access_mode:mode,target_class:document.getElementById('targetClass').value,school_list_code:document.getElementById('schoolListCode').value,status:document.getElementById('status').value,max_files:Number(document.getElementById('maxFiles').value),max_file_mb:Number(document.getElementById('maxFileMb').value),allow_multiple:document.getElementById('allowMultiple').checked,allowed_extensions:document.getElementById('extensions').value,selected_user_ids:[...state.selectedUsers],participants:parseManualPeople()}; document.getElementById('formError').classList.add('hidden'); button.disabled=true; button.innerHTML='<i class="fas fa-circle-notch fa-spin mr-2"></i>Đang lưu'; try{await api(`${API}?action=save`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); closeEditor(); toast('Đã lưu đợt nộp'); await load();}catch(error){showFormError(error.message);}finally{button.disabled=false;button.innerHTML='<i class="fas fa-check mr-2"></i>Lưu đợt nộp';}}
+        function closeEditor() { document.getElementById('editorModal').classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+        function toLocalInput(value) { return value ? String(value).replace(' ', 'T').slice(0, 16) : ''; }
+        function toggleAccessMode() {
+            const mode = document.querySelector('input[name="accessMode"]:checked').value;
+            document.getElementById('classAccess').classList.toggle('hidden', mode !== 'class');
+            document.getElementById('selectedAccess').classList.toggle('hidden', mode !== 'selected');
+            document.getElementById('schoolListAccess').classList.toggle('hidden', mode !== 'school_list');
+            if (mode === 'school_list') {
+                const listCode = document.getElementById('schoolListCode').value;
+                if (listCode && state.schoolListPeople.length === 0) {
+                    fetchSchoolListPeople(listCode);
+                }
+            }
+        }
+        function toggleSubmissionType() { const type = document.querySelector('input[name="submissionType"]:checked').value; document.getElementById('reportBuilder').classList.toggle('hidden', type !== 'report'); }
+        function addReportField(field = { label: '', type: 'text', required: false, allow_evidence: false, evidence_required: false, options: [] }) { state.reportFields.push(field); renderReportFields(); }
+        function renderReportFields() { const wrap = document.getElementById('reportFieldRows'); if (!wrap) return; wrap.innerHTML = state.reportFields.length ? state.reportFields.map((f, i) => `<div class="rounded-xl border border-teal-100 bg-white p-3"><div class="grid gap-2 md:grid-cols-[1fr_130px_auto]"><input class="field !py-2 text-sm" value="${esc(f.label || '')}" oninput="state.reportFields[${i}].label=this.value" placeholder="Tên chỉ tiêu, ví dụ: Sĩ số"><select class="field !py-2 text-sm" onchange="state.reportFields[${i}].type=this.value;renderReportFields()"><option value="text" ${f.type === 'text' ? 'selected' : ''}>Văn bản ngắn</option><option value="textarea" ${f.type === 'textarea' ? 'selected' : ''}>Đoạn văn</option><option value="number" ${f.type === 'number' ? 'selected' : ''}>Số</option><option value="date" ${f.type === 'date' ? 'selected' : ''}>Ngày</option><option value="select" ${f.type === 'select' ? 'selected' : ''}>Chọn đáp án</option><option value="heading" ${f.type === 'heading' ? 'selected' : ''}>Tiêu đề nhóm</option></select><button type="button" onclick="state.reportFields.splice(${i},1);renderReportFields()" class="rounded-lg border border-red-200 px-3 text-sm font-bold text-red-600">Xóa</button></div>${f.type === 'select' ? `<input class="field mt-2 !py-2 text-sm" value="${esc((f.options || []).join(', '))}" oninput="state.reportFields[${i}].options=this.value.split(',').map(x=>x.trim()).filter(Boolean)" placeholder="Các lựa chọn, cách nhau dấu phẩy">` : ''}<div class="mt-2 flex flex-wrap gap-4 text-xs font-bold text-slate-600"><label><input type="checkbox" ${f.required ? 'checked' : ''} onchange="state.reportFields[${i}].required=this.checked" class="mr-1 accent-teal-700">Bắt buộc</label>${f.type !== 'heading' ? `<label><input type="checkbox" ${f.allow_evidence ? 'checked' : ''} onchange="state.reportFields[${i}].allow_evidence=this.checked;renderReportFields()" class="mr-1 accent-teal-700">Có tệp minh chứng</label>` : ''}${f.allow_evidence ? `<label><input type="checkbox" ${f.evidence_required ? 'checked' : ''} onchange="state.reportFields[${i}].evidence_required=this.checked" class="mr-1 accent-teal-700">Minh chứng bắt buộc</label>` : ''}</div></div>`).join('') : '<p class="rounded-lg border border-dashed border-teal-200 bg-white p-3 text-xs text-slate-500">Chưa có chỉ tiêu. Bấm “Thêm trường” để tạo biểu mẫu.</p>'; }
+        function renderAccountChoices() { const q = (document.getElementById('accountSearch')?.value || '').toLowerCase(); const list = state.users.filter(u => `${u.full_name} ${u.username} ${u.class_name}`.toLowerCase().includes(q)); document.getElementById('accountChoices').innerHTML = list.length ? list.map(u => `<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-xs"><input type="checkbox" ${state.selectedUsers.has(Number(u.id)) ? 'checked' : ''} onchange="toggleUser(${u.id},this.checked)" class="accent-teal-700"><span><strong class="block text-slate-800">${esc(u.full_name)}</strong><span class="text-slate-500">${esc(u.role === 'teacher' ? 'Giáo viên' : (u.class_name || 'Học sinh'))} · ${esc(u.username)}</span></span></label>`).join('') : '<p class="text-xs text-slate-500">Không tìm thấy tài khoản.</p>'; }
+        function toggleUser(id, checked) { checked ? state.selectedUsers.add(Number(id)) : state.selectedUsers.delete(Number(id)); }
+        
+        async function onSchoolListChange(listCode) {
+            if (!listCode) {
+                state.schoolListPeople = [];
+                state.selectedSchoolPeople = new Set();
+                document.getElementById('schoolPeopleContainer')?.classList.add('hidden');
+                return;
+            }
+            await fetchSchoolListPeople(listCode);
+        }
+        async function fetchSchoolListPeople(listCode, preselectedParticipants = null) {
+            const container = document.getElementById('schoolPeopleContainer');
+            const loading = document.getElementById('schoolPeopleLoading');
+            const choices = document.getElementById('schoolPeopleChoices');
+            if (!listCode) {
+                if (container) container.classList.add('hidden');
+                return;
+            }
+            if (container) container.classList.remove('hidden');
+            if (loading) loading.classList.remove('hidden');
+            if (choices) choices.innerHTML = '';
+            try {
+                const data = await api(`api/tranphu_data.php?action=people&list=${encodeURIComponent(listCode)}`);
+                state.schoolListPeople = data.people || [];
+                if (preselectedParticipants && Array.isArray(preselectedParticipants) && preselectedParticipants.length > 0) {
+                    const existingKeys = new Set(preselectedParticipants.map(p => `${(p.full_name || '').trim().toLowerCase()}|${(p.group_name || '').trim().toLowerCase()}`));
+                    state.selectedSchoolPeople = new Set(
+                        state.schoolListPeople
+                            .filter(p => existingKeys.has(`${(p.full_name || '').trim().toLowerCase()}|${(p.group_name || '').trim().toLowerCase()}`))
+                            .map(p => Number(p.id))
+                    );
+                } else {
+                    state.selectedSchoolPeople = new Set(state.schoolListPeople.map(p => Number(p.id)));
+                }
+                renderSchoolPeopleChoices();
+            } catch (error) {
+                if (choices) choices.innerHTML = `<p class="col-span-2 text-xs text-red-600">${esc(error.message)}</p>`;
+            } finally {
+                if (loading) loading.classList.add('hidden');
+            }
+        }
+        function renderSchoolPeopleChoices() {
+            const q = (document.getElementById('schoolPeopleSearch')?.value || '').trim();
+            const qNorm = removeAccents(q);
+            const list = state.schoolListPeople.filter(p => {
+                const hay = `${p.full_name || ''} ${p.group_name || ''} ${p.role_label || ''} ${p.contact || ''}`;
+                return removeAccents(hay).includes(qNorm);
+            });
+            const countEl = document.getElementById('schoolPeopleCount');
+            if (countEl) {
+                countEl.textContent = `Đã chọn: ${state.selectedSchoolPeople.size}/${state.schoolListPeople.length} người`;
+            }
+            const choices = document.getElementById('schoolPeopleChoices');
+            if (!choices) return;
+            choices.innerHTML = list.length
+                ? list.map(p => `
+                    <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5 text-xs transition hover:border-sky-300 hover:bg-sky-50/40">
+                        <input type="checkbox" ${state.selectedSchoolPeople.has(Number(p.id)) ? 'checked' : ''} onchange="toggleSchoolPerson(${p.id}, this.checked)" class="accent-teal-700">
+                        <span class="min-w-0 flex-1">
+                            <strong class="block truncate text-slate-800">${esc(p.full_name)}</strong>
+                            <span class="block truncate text-[11px] text-slate-500">${esc([p.group_name, p.role_label].filter(Boolean).join(' · ') || '—')}${p.contact ? ` · ${esc(p.contact)}` : ''}</span>
+                        </span>
+                    </label>
+                `).join('')
+                : '<p class="col-span-2 py-3 text-center text-xs text-slate-500">Không tìm thấy thành viên phù hợp.</p>';
+        }
+        function toggleSchoolPerson(id, checked) {
+            if (checked) state.selectedSchoolPeople.add(Number(id));
+            else state.selectedSchoolPeople.delete(Number(id));
+            const countEl = document.getElementById('schoolPeopleCount');
+            if (countEl) countEl.textContent = `Đã chọn: ${state.selectedSchoolPeople.size}/${state.schoolListPeople.length} người`;
+        }
+        function selectAllSchoolPeople(checked) {
+            if (checked) {
+                state.selectedSchoolPeople = new Set(state.schoolListPeople.map(p => Number(p.id)));
+            } else {
+                state.selectedSchoolPeople.clear();
+            }
+            renderSchoolPeopleChoices();
+        }
+
+        function parseManualPeople() { return document.getElementById('manualPeople').value.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => { const p = line.split('|').map(x => x.trim()); if (p.length >= 5) return { participant_code: p[0], full_name: p[1], role_label: p[2], group_name: p[3], contact: p.slice(4).join(' | ') }; return { full_name: p[0] || '', role_label: p[1] || '', group_name: p[2] || '', contact: p.slice(3).join(' | ') }; }); }
+        function showFormError(message) { const el = document.getElementById('formError'); el.textContent = message; el.classList.remove('hidden'); }
+        async function deleteAssignment(id) { const title = state.assignments.find(a => Number(a.id) === Number(id))?.title || 'đợt báo cáo này'; if (!confirm(`Xóa đợt “${title}”?\n\nToàn bộ danh sách và dữ liệu nộp trong hệ thống sẽ bị xóa. Tệp trên Google Drive được giữ lại để an toàn.`)) return; try { const data = await api(`${API}?action=delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); toast(data.message || 'Đã xóa đợt báo cáo'); await load(); } catch (error) { toast(error.message); } }
+        async function saveAssignment(event) {
+            event.preventDefault();
+            const button = document.getElementById('saveButton');
+            const mode = document.querySelector('input[name="accessMode"]:checked').value;
+            const submission_type = document.querySelector('input[name="submissionType"]:checked').value;
+            if (mode === 'school_list') {
+                const listCode = document.getElementById('schoolListCode').value;
+                if (!listCode) {
+                    showFormError('Vui lòng chọn danh sách dùng chung.');
+                    return;
+                }
+                if (state.selectedSchoolPeople.size === 0) {
+                    showFormError('Vui lòng chọn ít nhất một người trong danh sách dùng chung.');
+                    return;
+                }
+            }
+            const payload = {
+                id: Number(document.getElementById('assignmentId').value) || 0,
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                instructions: document.getElementById('instructions').value,
+                submission_type,
+                academic_year: document.getElementById('academicYear').value,
+                form_fields: state.reportFields,
+                require_files: document.getElementById('requireFiles').checked,
+                open_at: document.getElementById('openAt').value,
+                due_at: document.getElementById('dueAt').value,
+                access_mode: mode,
+                target_class: document.getElementById('targetClass').value,
+                school_list_code: document.getElementById('schoolListCode').value,
+                status: document.getElementById('status').value,
+                max_files: Number(document.getElementById('maxFiles').value),
+                max_file_mb: Number(document.getElementById('maxFileMb').value),
+                allow_multiple: document.getElementById('allowMultiple').checked,
+                allowed_extensions: document.getElementById('extensions').value,
+                selected_user_ids: [...state.selectedUsers],
+                selected_school_people_ids: mode === 'school_list' ? [...state.selectedSchoolPeople] : [],
+                participants: parseManualPeople()
+            };
+            document.getElementById('formError').classList.add('hidden');
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Đang lưu';
+            try {
+                await api(`${API}?action=save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                closeEditor();
+                toast('Đã lưu đợt nộp');
+                await load();
+            } catch (error) {
+                showFormError(error.message);
+            } finally {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-check mr-2"></i>Lưu đợt nộp';
+            }
+        }
 
         async function openDetail(id){ document.getElementById('detailModal').classList.remove('hidden'); document.body.classList.add('overflow-hidden'); document.getElementById('detailBody').innerHTML='<div class="p-12 text-center text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2"></i>Đang tải...</div>'; try{const data=await api(`${API}?action=detail&id=${id}`);state.detail=data;renderDetail();}catch(error){document.getElementById('detailBody').innerHTML=`<p class="text-red-600">${esc(error.message)}</p>`;}}
         function closeDetail(){document.getElementById('detailModal').classList.add('hidden');document.body.classList.remove('overflow-hidden');state.detail=null;}

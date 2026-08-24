@@ -389,7 +389,8 @@ function submission_normalize_people($people): array
 
 function submission_school_list_people(PDO $pdo, string $listCode): array
 {
-    $stmt = $pdo->prepare("SELECT p.full_name, p.group_name, p.role_label, p.contact
+    tranphu_schema($pdo);
+    $stmt = $pdo->prepare("SELECT p.id, p.full_name, p.group_name, p.role_label, p.contact
         FROM school_reference_people p JOIN school_reference_lists l ON l.id = p.list_id
         WHERE l.list_code = ? ORDER BY p.group_name, p.full_name");
     $stmt->execute([$listCode]);
@@ -418,7 +419,15 @@ function submission_build_participants(PDO $pdo, string $mode, string $className
         } catch (Throwable $e) {
             respond(['error' => 'Danh sách THCS Trần Phú chưa được khai báo.'], 422);
         }
+        $selectedSchoolIds = isset($data['selected_school_people_ids']) && is_array($data['selected_school_people_ids'])
+            ? array_values(array_filter(array_map('intval', $data['selected_school_people_ids'])))
+            : null;
+
         foreach ($schoolPeople as $schoolPerson) {
+            $personId = (int)($schoolPerson['id'] ?? 0);
+            if ($selectedSchoolIds !== null && !in_array($personId, $selectedSchoolIds, true)) {
+                continue;
+            }
             $people[] = [
                 'linked_user_id' => null,
                 'participant_code' => submission_code(8),
@@ -427,6 +436,9 @@ function submission_build_participants(PDO $pdo, string $mode, string $className
                 'group_name' => trim((string)($schoolPerson['group_name'] ?? '')),
                 'contact' => trim((string)($schoolPerson['contact'] ?? '')),
             ];
+        }
+        if ($selectedSchoolIds !== null && empty($people)) {
+            respond(['error' => 'Vui lòng chọn ít nhất một người trong danh sách dùng chung.'], 422);
         }
         $accounts = [];
     } elseif ($selectedIds) {
@@ -467,9 +479,16 @@ function submission_sync_participants(PDO $pdo, int $assignmentId, array $people
     $existing = $existingStmt->fetchAll();
     $byUser = [];
     $byCode = [];
+    $byNameGroup = [];
     foreach ($existing as $row) {
         if ($row['linked_user_id']) $byUser[(int)$row['linked_user_id']] = $row;
-        $byCode[strtoupper((string)$row['participant_code'])] = $row;
+        if (!empty($row['participant_code'])) $byCode[strtoupper((string)$row['participant_code'])] = $row;
+        $nameKey = function_exists('mb_strtolower')
+            ? mb_strtolower(trim((string)$row['full_name']) . '|' . trim((string)($row['group_name'] ?? '')), 'UTF-8')
+            : strtolower(trim((string)$row['full_name']) . '|' . trim((string)($row['group_name'] ?? '')));
+        if (!isset($byNameGroup[$nameKey])) {
+            $byNameGroup[$nameKey] = $row;
+        }
     }
 
     $insert = $pdo->prepare('INSERT INTO submission_participants (assignment_id, linked_user_id, participant_code, full_name, role_label, group_name, contact) VALUES (?, ?, ?, ?, ?, ?, ?)');
@@ -486,7 +505,22 @@ function submission_sync_participants(PDO $pdo, int $assignmentId, array $people
             $person['group_name'] = $person['group_name'] ?: $account['class_name'];
             $person['contact'] = $person['contact'] ?: $account['username'];
         }
-        $matched = $person['linked_user_id'] ? ($byUser[(int)$person['linked_user_id']] ?? null) : ($byCode[strtoupper($person['participant_code'])] ?? null);
+        $matched = null;
+        if (!empty($person['linked_user_id'])) {
+            $matched = $byUser[(int)$person['linked_user_id']] ?? null;
+        }
+        if (!$matched && !empty($person['participant_code']) && isset($byCode[strtoupper((string)$person['participant_code'])])) {
+            $matched = $byCode[strtoupper((string)$person['participant_code'])];
+        }
+        if (!$matched) {
+            $personKey = function_exists('mb_strtolower')
+                ? mb_strtolower(trim((string)$person['full_name']) . '|' . trim((string)($person['group_name'] ?? '')), 'UTF-8')
+                : strtolower(trim((string)$person['full_name']) . '|' . trim((string)($person['group_name'] ?? '')));
+            if ($personKey !== '|' && isset($byNameGroup[$personKey])) {
+                $matched = $byNameGroup[$personKey];
+            }
+        }
+
         if ($matched) {
             // Preserve the original access code and row id so previous submissions
             // remain attached when a teacher edits the assignment.
