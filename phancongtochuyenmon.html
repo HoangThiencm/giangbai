@@ -774,6 +774,19 @@
         .btn-small-primary { background: var(--primary) !important; color: white !important; border-color: var(--primary) !important; }
         .btn-small-primary:hover { background: var(--primary-hover) !important; }
 
+        .quick-week-chip {
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+        .quick-week-chip:hover { background: #e0e7ff; color: #4338ca; border-color: #c7d2fe; }
+
         .modal-footer { padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; }
 
         /* TOAST */
@@ -1089,7 +1102,7 @@
 
     <!-- MODAL TẠO NHANH ĐỢT PHÂN CÔNG MỚI (QUICK CREATE PHASE) -->
     <div class="modal-overlay" id="quick-phase-modal">
-        <div class="modal-card" style="max-width: 600px;">
+        <div class="modal-card" style="max-width: 640px;">
             <div class="modal-header">
                 <h2><i class="fas fa-plus-circle text-amber-600"></i> Tạo Đợt Phân Công Mới (Khi Có Thay Đổi)</h2>
                 <button class="modal-close" onclick="closeQuickNewPhaseModal()">&times;</button>
@@ -1102,6 +1115,7 @@
                     <label>Tên Đợt phân công:</label>
                     <input type="text" class="form-control" id="qp-name" placeholder="VD: Đợt 2 (Từ Tuần 5 - Thầy Tùng nghỉ sinh, cô Thảo dạy thay)">
                 </div>
+
                 <div class="form-grid" style="margin-bottom: 12px;">
                     <div class="form-group">
                         <label>Thuộc Học kỳ:</label>
@@ -1111,10 +1125,38 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Số tuần áp dụng đợt này:</label>
-                        <input type="number" class="form-control" id="qp-weeks" min="1" max="25" value="4" style="font-weight: bold; color: #4338ca;">
+                        <label style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Số tuần áp dụng đợt này (tự do):</span>
+                        </label>
+                        <input type="number" step="any" min="0" class="form-control" id="qp-weeks" placeholder="Nhập số tuần tự do (VD: 1, 2, 4, 4.5, 9, 18...)" value="4" style="font-weight: 800; color: #4338ca; font-size: 0.95rem;">
                     </div>
                 </div>
+
+                <!-- CÔNG CỤ CHỌN NHANH SỐ TUẦN & TÍNH TỰ ĐỘNG TỪ TUẦN ĐẾN TUẦN -->
+                <div style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 12px;">
+                    <div style="font-size: 0.76rem; font-weight: 800; color: #475569; margin-bottom: 6px;">
+                        <i class="fas fa-wand-magic-sparkles text-indigo-500"></i> Hoặc chọn nhanh số tuần / khoảng tuần:
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+                        <span class="quick-week-chip" onclick="setQuickWeeks(1)">1 tuần</span>
+                        <span class="quick-week-chip" onclick="setQuickWeeks(2)">2 tuần</span>
+                        <span class="quick-week-chip" onclick="setQuickWeeks(3)">3 tuần</span>
+                        <span class="quick-week-chip" onclick="setQuickWeeks(4)">4 tuần</span>
+                        <span class="quick-week-chip" onclick="setQuickWeeks(6)">6 tuần</span>
+                        <span class="quick-week-chip" onclick="setQuickWeeks(8)">8 tuần</span>
+                        <span class="quick-week-chip" onclick="setQuickWeeks(9)">9 tuần</span>
+                        <span class="quick-week-chip" onclick="setQuickWeeks(18)">18 tuần (1 HK)</span>
+                        <span class="quick-week-chip" onclick="setQuickWeeks(35)">35 tuần (Cả năm)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #475569;">
+                        <span>Khoảng tuần: Từ Tuần</span>
+                        <input type="number" id="qp-from-week" min="1" max="40" style="width: 55px; padding: 3px 6px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center;" placeholder="1" oninput="calcWeeksFromRange()">
+                        <span>đến Tuần</span>
+                        <input type="number" id="qp-to-week" min="1" max="40" style="width: 55px; padding: 3px 6px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center;" placeholder="9" oninput="calcWeeksFromRange()">
+                        <span id="qp-range-calc-result" style="font-weight: 700; color: #4338ca; font-size: 0.75rem;"></span>
+                    </div>
+                </div>
+
                 <div class="form-grid" style="margin-bottom: 12px;">
                     <div class="form-group">
                         <label>Từ ngày (tùy chọn):</label>
@@ -1347,7 +1389,7 @@
                             <button class="btn-small btn-small-primary" onclick="addPhaseRow()"><i class="fas fa-plus"></i> Thêm Đợt mới</button>
                             <button class="btn-small" onclick="generateDefaultPhases()"><i class="fas fa-wand-magic-sparkles"></i> Tạo 4 đợt chuẩn năm học</button>
                         </div>
-                        <span style="font-size: 0.78rem; color: #64748b;">Khai báo số tuần thực dạy của từng đợt để quyết toán tăng giờ cuối HK1, HK2 &amp; Cả năm</span>
+                        <span style="font-size: 0.78rem; color: #64748b;">Số tuần thực dạy là tự do để quyết toán tăng giờ cuối HK1, HK2 &amp; Cả năm</span>
                     </div>
                     <table class="data-table">
                         <thead>
@@ -1355,7 +1397,7 @@
                                 <th style="width: 35px; text-align:center;">STT</th>
                                 <th>Tên Đợt phân công</th>
                                 <th style="width: 90px; text-align:center;">Học kỳ</th>
-                                <th style="width: 90px; text-align:center;">Số tuần</th>
+                                <th style="width: 95px; text-align:center;">Số tuần</th>
                                 <th style="width: 130px;">Từ ngày</th>
                                 <th style="width: 130px;">Đến ngày</th>
                                 <th>Ghi chú</th>
@@ -1502,7 +1544,7 @@
                 { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed', is_core: false }
             ],
             classes: ['61', '62', '63', '64', '65', '66', '71', '72', '73', '74', '75', '76', '81', '82', '83', '84', '85', '86', '91', '92', '93', '94', '95', '96', '97'],
-            phase_assignments: {}, // Lưu phân công riêng theo từng phase_id
+            phase_assignments: {},
             teachers: [
                 { id: 't1', name: 'T.Thiên', role: 'TTCM', quota: 19, allowance: 3, qlpm: false, assignments: {} },
                 { id: 't2', name: 'T.Sáng', role: 'TPCM', quota: 19, allowance: 1, qlpm: false, assignments: {} },
@@ -1568,7 +1610,6 @@
                 });
             });
 
-            // Đồng bộ phase_assignments nếu chưa có đợt hiện tại
             const curPhase = s.info.current_phase_id;
             if (!s.phase_assignments[curPhase]) {
                 s.phase_assignments[curPhase] = {
@@ -1613,19 +1654,14 @@
         }
 
         function switchPhase(phaseId) {
-            // 1. Lưu snapshot phân công của đợt hiện tại
             saveCurrentPhaseSnapshot();
-
-            // 2. Chuyển sang đợt mới
             state.info.current_phase_id = phaseId;
 
-            // 3. Nạp snapshot của đợt mới (nếu có) hoặc copy từ đợt hiện tại
             if (state.phase_assignments && state.phase_assignments[phaseId]) {
                 const snap = state.phase_assignments[phaseId];
                 state.teachers = JSON.parse(JSON.stringify(snap.teachers || state.teachers));
                 state.unassigned = JSON.parse(JSON.stringify(snap.unassigned || state.unassigned));
             } else {
-                // Tạo mới snapshot cho đợt này
                 if (!state.phase_assignments) state.phase_assignments = {};
                 state.phase_assignments[phaseId] = {
                     teachers: JSON.parse(JSON.stringify(state.teachers)),
@@ -1684,13 +1720,16 @@
             `).join('');
         }
 
-        // ================= TẠO NHANH ĐỢT MỚI KHI CÓ THAY ĐỔI =================
+        // ================= TẠO NHANH ĐỢT MỚI KHI CÓ THAY ĐỔI (SỐ TUẦN TỰ DO) =================
         function openQuickNewPhaseModal() {
             const nextIdx = state.phases.length + 1;
             const curPhase = getCurrentPhase();
-            document.getElementById('qp-name').value = `Đợt ${nextIdx} (Từ tuần ...)`;
+            document.getElementById('qp-name').value = `Đợt ${nextIdx}_${state.info.school_year || '2025-2026'}`;
             document.getElementById('qp-semester').value = curPhase.semester || 'HK1';
             document.getElementById('qp-weeks').value = 4;
+            document.getElementById('qp-from-week').value = '';
+            document.getElementById('qp-to-week').value = '';
+            document.getElementById('qp-range-calc-result').textContent = '';
             document.getElementById('qp-date-start').value = new Date().toISOString().slice(0, 10);
             document.getElementById('qp-date-end').value = '';
             document.getElementById('qp-note').value = 'Điều chỉnh phân công khi có thay đổi GV/Lớp';
@@ -1703,10 +1742,29 @@
             document.getElementById('quick-phase-modal').classList.remove('active');
         }
 
+        function setQuickWeeks(num) {
+            document.getElementById('qp-weeks').value = num;
+            document.getElementById('qp-range-calc-result').textContent = `(Đã chọn ${num} tuần)`;
+        }
+
+        function calcWeeksFromRange() {
+            const fromW = parseFloat(document.getElementById('qp-from-week').value);
+            const toW = parseFloat(document.getElementById('qp-to-week').value);
+            const resultLabel = document.getElementById('qp-range-calc-result');
+
+            if (!isNaN(fromW) && !isNaN(toW) && toW >= fromW) {
+                const count = (toW - fromW + 1);
+                document.getElementById('qp-weeks').value = count;
+                resultLabel.textContent = `(Từ tuần ${fromW} đến ${toW} = ${count} tuần)`;
+            } else {
+                resultLabel.textContent = '';
+            }
+        }
+
         function submitQuickNewPhase() {
             const name = document.getElementById('qp-name').value.trim();
             const semester = document.getElementById('qp-semester').value || 'HK1';
-            const weeks_count = parseInt(document.getElementById('qp-weeks').value) || 1;
+            const weeks_count = parseFloat(document.getElementById('qp-weeks').value) || 0;
             const date_start = document.getElementById('qp-date-start').value;
             const date_end = document.getElementById('qp-date-end').value;
             const note = document.getElementById('qp-note').value.trim();
@@ -1717,10 +1775,8 @@
                 return;
             }
 
-            // 1. Lưu snapshot đợt hiện tại
             saveCurrentPhaseSnapshot();
 
-            // 2. Tạo phase ID mới
             const newPhaseId = 'phase_' + Date.now();
             const newPhaseObj = {
                 id: newPhaseId,
@@ -1734,14 +1790,12 @@
 
             state.phases.push(newPhaseObj);
 
-            // 3. Kế thừa phân công
             if (inherit) {
                 state.phase_assignments[newPhaseId] = {
                     teachers: JSON.parse(JSON.stringify(state.teachers)),
                     unassigned: JSON.parse(JSON.stringify(state.unassigned))
                 };
             } else {
-                // Làm mới phân công
                 const freshTeachers = state.teachers.map(t => ({ ...t, assignments: {} }));
                 const freshUnassigned = {};
                 state.subjects.forEach(sub => {
@@ -1753,7 +1807,6 @@
                 };
             }
 
-            // 4. Chuyển sang đợt mới
             state.info.current_phase_id = newPhaseId;
             state.teachers = JSON.parse(JSON.stringify(state.phase_assignments[newPhaseId].teachers));
             state.unassigned = JSON.parse(JSON.stringify(state.phase_assignments[newPhaseId].unassigned));
@@ -1761,7 +1814,7 @@
             saveToLocal();
             closeQuickNewPhaseModal();
             render();
-            showToast(`Đã tạo và chuyển sang ${name}! Hãy chỉnh sửa các lớp thay đổi.`, "success");
+            showToast(`Đã tạo ${name} (${weeks_count} tuần)! Hãy chỉnh sửa các lớp thay đổi.`, "success");
         }
 
         // ================= CSDL & LOCAL STORAGE =================
@@ -2010,7 +2063,6 @@
         function render() {
             const titleEl = document.getElementById('display-plan-title');
             const yearEl = document.getElementById('display-plan-year');
-            const curPhase = getCurrentPhase();
 
             if (titleEl) titleEl.textContent = state.info.title || 'Tổ Chuyên Môn';
             if (yearEl) yearEl.textContent = `${state.info.school_year || ''} (${state.info.semester || 'HK1'})`;
@@ -2365,7 +2417,7 @@
             } else if (periodType === 'HK2') {
                 return state.phases.filter(p => p.semester === 'HK2');
             }
-            return state.phases; // 'ALL' - Cả năm
+            return state.phases;
         }
 
         function getMonthsForPeriod(periodType) {
@@ -2384,10 +2436,9 @@
 
             const periodType = document.getElementById('overtime-period-filter')?.value || 'HK1';
             const relevantPhases = getPhasesForPeriod(periodType);
-            const totalWeeks = relevantPhases.reduce((sum, p) => sum + (parseInt(p.weeks_count) || 0), 0);
+            const totalWeeks = relevantPhases.reduce((sum, p) => sum + (parseFloat(p.weeks_count) || 0), 0);
             const relevantMonths = getMonthsForPeriod(periodType);
 
-            // Render summary chips
             if (chips) {
                 const periodLabel = periodType === 'HK1' ? 'Học kỳ 1' : (periodType === 'HK2' ? 'Học kỳ 2' : 'Cả Năm Học');
                 chips.innerHTML = `
@@ -2401,7 +2452,6 @@
                 `;
             }
 
-            // Xây dựng Bảng Quyết Toán Tăng Giờ
             let thead = `
                 <thead>
                     <tr>
@@ -2444,10 +2494,9 @@
                     }
                     const periodsInPhase = calcTeacherTotalPeriods(tInPhase);
                     phaseWeeklyPeriods.push(periodsInPhase);
-                    totalPhanCongPeriods += periodsInPhase * (parseInt(p.weeks_count) || 0);
+                    totalPhanCongPeriods += periodsInPhase * (parseFloat(p.weeks_count) || 0);
                 });
 
-                // Tính tổng dạy thay & nghỉ phép từ Attendance
                 let totalTeachReplace = 0;
                 let totalLeave = 0;
 
@@ -2470,11 +2519,11 @@
                 let paymentBadge = `<span style="background:#f1f5f9; color:#64748b; padding:2px 6px; border-radius:4px; font-size:0.75rem;">Đủ chuẩn</span>`;
 
                 if (overtime > 0) {
-                    overtimeBadge = `<span style="color:#dc2626; font-weight:800; font-size:0.95rem;">+${overtime} tiết</span>`;
-                    paymentBadge = `<span style="background:#ecfdf5; color:#065f46; padding:3px 8px; border-radius:6px; font-weight:800; font-size:0.75rem;"><i class="fas fa-money-bill-wave"></i> Nhận ${overtime}t</span>`;
+                    overtimeBadge = `<span style="color:#dc2626; font-weight:800; font-size:0.95rem;">+${overtime.toFixed(1).replace(/\.0$/, '')} tiết</span>`;
+                    paymentBadge = `<span style="background:#ecfdf5; color:#065f46; padding:3px 8px; border-radius:6px; font-weight:800; font-size:0.75rem;"><i class="fas fa-money-bill-wave"></i> Nhận ${overtime.toFixed(1).replace(/\.0$/, '')}t</span>`;
                 } else if (under > 0) {
-                    overtimeBadge = `<span style="color:#2563eb; font-weight:700;">-${under} tiết</span>`;
-                    paymentBadge = `<span style="background:#eff6ff; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.75rem;">Thiếu ${under}t</span>`;
+                    overtimeBadge = `<span style="color:#2563eb; font-weight:700;">-${under.toFixed(1).replace(/\.0$/, '')} tiết</span>`;
+                    paymentBadge = `<span style="background:#eff6ff; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.75rem;">Thiếu ${under.toFixed(1).replace(/\.0$/, '')}t</span>`;
                 }
 
                 tbody += `
@@ -2484,11 +2533,11 @@
                         <td style="text-align:center;"><span style="font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:700;">${t.role}</span></td>
                         <td style="text-align:center;"><b>${weeklyQuota}</b>t/tuần</td>
                         ${phaseWeeklyPeriods.map(p => `<td style="text-align:center; font-weight:700;">${p}t</td>`).join('')}
-                        <td style="text-align:center; font-weight:700;">${totalPhanCongPeriods}t</td>
+                        <td style="text-align:center; font-weight:700;">${totalPhanCongPeriods.toFixed(1).replace(/\.0$/, '')}t</td>
                         <td style="text-align:center; color:#2563eb; font-weight:bold;">${totalTeachReplace > 0 ? `+${totalTeachReplace}` : '0'}</td>
                         <td style="text-align:center; color:#dc2626;">${totalLeave > 0 ? `-${totalLeave}` : '0'}</td>
-                        <td style="text-align:center; font-weight:800; font-size:0.95rem; color:#0f172a;">${totalActualExecuted}t</td>
-                        <td style="text-align:center; font-weight:700;">${periodStandardQuota}t</td>
+                        <td style="text-align:center; font-weight:800; font-size:0.95rem; color:#0f172a;">${totalActualExecuted.toFixed(1).replace(/\.0$/, '')}t</td>
+                        <td style="text-align:center; font-weight:700;">${periodStandardQuota.toFixed(1).replace(/\.0$/, '')}t</td>
                         <td style="text-align:center;">${overtimeBadge}</td>
                         <td style="text-align:center;">${paymentBadge}</td>
                     </tr>
@@ -2501,9 +2550,9 @@
                     <td style="text-align:center;">—</td>
                     <td style="text-align:center;">—</td>
                     <td style="text-align:center;">—</td>
-                    <td style="text-align:center; color:#2563eb; font-size:1.05rem;">${grandTeachingTotal}t</td>
+                    <td style="text-align:center; color:#2563eb; font-size:1.05rem;">${grandTeachingTotal.toFixed(1).replace(/\.0$/, '')}t</td>
                     <td style="text-align:center;">—</td>
-                    <td style="text-align:center; color:#dc2626; font-size:1.15rem;">+${grandTotalOvertime} tiết</td>
+                    <td style="text-align:center; color:#dc2626; font-size:1.15rem;">+${grandTotalOvertime.toFixed(1).replace(/\.0$/, '')} tiết</td>
                     <td style="text-align:center; color:#059669; font-weight:800;">Quyết toán</td>
                 </tr>
             `;
@@ -2514,7 +2563,7 @@
         function exportOvertimeToExcel() {
             const periodType = document.getElementById('overtime-period-filter')?.value || 'HK1';
             const relevantPhases = getPhasesForPeriod(periodType);
-            const totalWeeks = relevantPhases.reduce((sum, p) => sum + (parseInt(p.weeks_count) || 0), 0);
+            const totalWeeks = relevantPhases.reduce((sum, p) => sum + (parseFloat(p.weeks_count) || 0), 0);
             const relevantMonths = getMonthsForPeriod(periodType);
             const periodLabel = periodType === 'HK1' ? 'HỌC KỲ 1' : (periodType === 'HK2' ? 'HỌC KỲ 2' : 'CẢ NĂM HỌC');
 
@@ -2560,7 +2609,7 @@
                     }
                     const periodsInPhase = calcTeacherTotalPeriods(tInPhase);
                     phaseWeeklyPeriods.push(periodsInPhase);
-                    totalPhanCongPeriods += periodsInPhase * (parseInt(p.weeks_count) || 0);
+                    totalPhanCongPeriods += periodsInPhase * (parseFloat(p.weeks_count) || 0);
                 });
 
                 let totalTeachReplace = 0;
@@ -2585,12 +2634,12 @@
                     <td style="padding: 6px; text-align: center;">${t.role}</td>
                     <td style="padding: 6px; text-align: center;">${weeklyQuota}t/tuần</td>
                     ${phaseWeeklyPeriods.map(p => `<td style="padding: 6px; text-align: center;">${p}t</td>`).join('')}
-                    <td style="padding: 6px; text-align: center; font-weight: bold;">${totalPhanCongPeriods}t</td>
+                    <td style="padding: 6px; text-align: center; font-weight: bold;">${totalPhanCongPeriods.toFixed(1).replace(/\.0$/, '')}t</td>
                     <td style="padding: 6px; text-align: center; color: #2563eb;">${totalTeachReplace}</td>
                     <td style="padding: 6px; text-align: center; color: #dc2626;">${totalLeave}</td>
-                    <td style="padding: 6px; text-align: center; font-weight: bold; font-size: 14px;">${totalActualExecuted}t</td>
-                    <td style="padding: 6px; text-align: center;">${periodStandardQuota}t</td>
-                    <td style="padding: 6px; text-align: center; font-weight: bold; color: #dc2626; font-size: 14px;">${overtime > 0 ? `+${overtime} tiết` : '0'}</td>
+                    <td style="padding: 6px; text-align: center; font-weight: bold; font-size: 14px;">${totalActualExecuted.toFixed(1).replace(/\.0$/, '')}t</td>
+                    <td style="padding: 6px; text-align: center;">${periodStandardQuota.toFixed(1).replace(/\.0$/, '')}t</td>
+                    <td style="padding: 6px; text-align: center; font-weight: bold; color: #dc2626; font-size: 14px;">${overtime > 0 ? `+${overtime.toFixed(1).replace(/\.0$/, '')} tiết` : '0'}</td>
                 </tr>`;
             });
 
@@ -2599,9 +2648,9 @@
                 <td>—</td>
                 <td>—</td>
                 <td>—</td>
-                <td style="padding: 8px; color: #2563eb; font-size: 15px;">${grandTeachingTotal}t</td>
+                <td style="padding: 8px; color: #2563eb; font-size: 15px;">${grandTeachingTotal.toFixed(1).replace(/\.0$/, '')}t</td>
                 <td>—</td>
-                <td style="padding: 8px; color: #dc2626; font-size: 16px;">+${grandTotalOvertime} tiết</td>
+                <td style="padding: 8px; color: #dc2626; font-size: 16px;">+${grandTotalOvertime.toFixed(1).replace(/\.0$/, '')} tiết</td>
             </tr>`;
 
             table += `</tbody></table>`;
@@ -3258,7 +3307,7 @@
                         </select>
                     </td>
                     <td style="text-align:center;">
-                        <input type="number" class="form-control" style="padding:4px 8px; width:70px; text-align:center; font-weight:bold; color:#4338ca;" value="${p.weeks_count ?? 9}" min="1" max="25" onchange="updateEditingPhase(${index}, 'weeks_count', parseInt(this.value)||1)">
+                        <input type="number" step="any" min="0" class="form-control" style="padding:4px 8px; width:75px; text-align:center; font-weight:bold; color:#4338ca;" value="${p.weeks_count ?? 1}" placeholder="Số tuần" onchange="updateEditingPhase(${index}, 'weeks_count', parseFloat(this.value)||0)">
                     </td>
                     <td>
                         <input type="date" class="form-control" style="padding:4px 6px;" value="${p.date_start || ''}" onchange="updateEditingPhase(${index}, 'date_start', this.value)">
@@ -3285,7 +3334,7 @@
                 id: newId,
                 name: `Đợt ${count}`,
                 semester: count <= 2 ? 'HK1' : 'HK2',
-                weeks_count: 9,
+                weeks_count: 4,
                 date_start: '',
                 date_end: '',
                 note: ''
