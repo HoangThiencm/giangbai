@@ -511,7 +511,7 @@
             border: 1px solid var(--border-color);
         }
 
-        .attendance-filter { display: flex; align-items: center; gap: 10px; }
+        .attendance-filter { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
         .attendance-table {
             width: 100%;
@@ -523,7 +523,7 @@
 
         .attendance-table th, .attendance-table td {
             border: 1px solid #e2e8f0;
-            padding: 10px 12px;
+            padding: 8px 10px;
             text-align: center;
         }
 
@@ -550,6 +550,56 @@
             font-weight: 700;
             outline: none;
             cursor: pointer;
+        }
+
+        /* LIST CHỌN NHANH CHO CÁC TUẦN */
+        .att-week-select {
+            padding: 5px 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-align: center;
+            font-family: inherit;
+            outline: none;
+            cursor: pointer;
+            width: 100%;
+            min-width: 68px;
+            transition: all 0.15s ease;
+        }
+        .att-week-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15);
+        }
+        .att-week-select[data-val="Đủ"] {
+            background: #ecfdf5;
+            color: #065f46;
+            border-color: #a7f3d0;
+        }
+        .att-week-select[data-val="DT"] {
+            background: #eff6ff;
+            color: #1e40af;
+            border-color: #bfdbfe;
+        }
+        .att-week-select[data-val="DB"] {
+            background: #f5f3ff;
+            color: #6d28d9;
+            border-color: #ddd6fe;
+        }
+        .att-week-select[data-val="CT"] {
+            background: #f0fdfa;
+            color: #0f766e;
+            border-color: #99f6e4;
+        }
+        .att-week-select[data-val="P"] {
+            background: #fffbeb;
+            color: #b45309;
+            border-color: #fde68a;
+        }
+        .att-week-select[data-val="KP"] {
+            background: #fff1f2;
+            color: #be123c;
+            border-color: #fecdd3;
         }
 
         /* 3. VIEW BÁO CÁO TỔ */
@@ -822,7 +872,7 @@
         </main>
     </div>
 
-    <!-- 2. VIEW CHẤM CÔNG & THEO DÕI GIÁO VIÊN (12 THÁNG ĐẦY ĐỦ) -->
+    <!-- 2. VIEW CHẤM CÔNG & THEO DÕI GIÁO VIÊN (LIST CHỌN NHANH) -->
     <div class="app-view" id="view-chamcong">
         <div class="attendance-toolbar">
             <div class="attendance-filter">
@@ -843,11 +893,13 @@
                 </select>
                 <button class="btn-small btn-small-primary" onclick="autoFillAttendance()"><i class="fas fa-wand-magic-sparkles"></i> Điền chuẩn theo phân công</button>
             </div>
-            <div style="font-size: 0.8rem; color: #64748b;">
-                <span style="display:inline-block; margin-right: 12px;"><i class="fas fa-circle-check text-emerald-600"></i> Đ: Đủ tiết</span>
-                <span style="display:inline-block; margin-right: 12px;"><i class="fas fa-user-clock text-blue-600"></i> DT: Dạy thay</span>
-                <span style="display:inline-block; margin-right: 12px;"><i class="fas fa-person-chalkboard text-purple-600"></i> Dự: Dự giờ</span>
-                <span style="display:inline-block;"><i class="fas fa-user-xmark text-red-500"></i> P/KP: Nghỉ phép/Không phép</span>
+            <div style="font-size: 0.8rem; color: #64748b; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span style="display:inline-flex; align-items:center; gap:4px; color:#065f46; font-weight:700;"><i class="fas fa-circle-check text-emerald-600"></i> Đ: Đủ tiết</span>
+                <span style="display:inline-flex; align-items:center; gap:4px; color:#1e40af; font-weight:700;"><i class="fas fa-user-clock text-blue-600"></i> DT: Dạy thay</span>
+                <span style="display:inline-flex; align-items:center; gap:4px; color:#6d28d9; font-weight:700;"><i class="fas fa-rotate text-purple-600"></i> DB: Dạy bù</span>
+                <span style="display:inline-flex; align-items:center; gap:4px; color:#0f766e; font-weight:700;"><i class="fas fa-briefcase text-teal-600"></i> CT: Công tác</span>
+                <span style="display:inline-flex; align-items:center; gap:4px; color:#b45309; font-weight:700;"><i class="fas fa-envelope-open-text text-amber-600"></i> P: Nghỉ phép</span>
+                <span style="display:inline-flex; align-items:center; gap:4px; color:#be123c; font-weight:700;"><i class="fas fa-user-xmark text-rose-600"></i> KP: Không phép</span>
             </div>
         </div>
 
@@ -857,17 +909,17 @@
                     <tr>
                         <th style="width: 40px;">STT</th>
                         <th style="width: 170px;" class="text-left">Họ và Tên Giáo viên</th>
-                        <th style="width: 90px;">Chức vụ</th>
+                        <th style="width: 85px;">Chức vụ</th>
                         <th style="width: 90px;">Định mức/tuần</th>
-                        <th style="width: 80px;">Tuần 1</th>
-                        <th style="width: 80px;">Tuần 2</th>
-                        <th style="width: 80px;">Tuần 3</th>
-                        <th style="width: 80px;">Tuần 4</th>
-                        <th style="width: 85px; color: #2563eb;">Dạy thay (tiết)</th>
-                        <th style="width: 85px; color: #7c3aed;">Dự giờ (tiết)</th>
-                        <th style="width: 85px; color: #d97706;">SHCM (buổi)</th>
-                        <th style="width: 85px; color: #dc2626;">Nghỉ (tiết)</th>
-                        <th style="width: 120px;">Đánh giá tháng</th>
+                        <th style="width: 90px;">Tuần 1</th>
+                        <th style="width: 90px;">Tuần 2</th>
+                        <th style="width: 90px;">Tuần 3</th>
+                        <th style="width: 90px;">Tuần 4</th>
+                        <th style="width: 80px; color: #2563eb;">Dạy thay (t)</th>
+                        <th style="width: 80px; color: #7c3aed;">Dự giờ (t)</th>
+                        <th style="width: 80px; color: #d97706;">SHCM (b)</th>
+                        <th style="width: 80px; color: #dc2626;">Nghỉ (t)</th>
+                        <th style="width: 110px;">Đánh giá tháng</th>
                         <th>Ghi chú</th>
                     </tr>
                 </thead>
@@ -1121,6 +1173,16 @@
             'Khác': { label: 'Tùy chỉnh khác', quota: 19, allowance: 0 }
         };
         const PERIOD_QLPM = 3;
+
+        // CÁC TÙY CHỌN CHẤM CÔNG TUẦN
+        const WEEK_OPTIONS = [
+            { value: 'Đủ', label: 'Đ (Đủ)' },
+            { value: 'DT', label: 'DT (Dạy thay)' },
+            { value: 'DB', label: 'DB (Dạy bù)' },
+            { value: 'CT', label: 'CT (Công tác)' },
+            { value: 'P',  label: 'P (Nghỉ phép)' },
+            { value: 'KP', label: 'KP (Không phép)' }
+        ];
 
         // DỮ LIỆU KHỞI TẠO MẪU
         const defaultState = {
@@ -1792,6 +1854,19 @@
             renderAttendance();
         }
 
+        function renderWeekSelect(teacherId, weekKey, currentValue) {
+            const val = currentValue || 'Đủ';
+            const optionsHtml = WEEK_OPTIONS.map(opt => `
+                <option value="${opt.value}" ${val === opt.value ? 'selected' : ''}>${opt.label}</option>
+            `).join('');
+
+            return `
+                <select class="att-week-select" data-val="${val}" onchange="updateAttRecord('${teacherId}', '${weekKey}', this.value); this.setAttribute('data-val', this.value);">
+                    ${optionsHtml}
+                </select>
+            `;
+        }
+
         function renderAttendance() {
             const tbody = document.getElementById('attendance-table-body');
             if (!tbody) return;
@@ -1821,10 +1896,10 @@
                     <td class="text-left"><b>${escapeHtml(t.name)}</b></td>
                     <td><span style="font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:700;">${t.role}</span></td>
                     <td><b>${totalPerWeek}</b>/${quota}t</td>
-                    <td><input type="text" class="att-input" value="${escapeHtml(rec.w1 || 'Đủ')}" onchange="updateAttRecord('${t.id}', 'w1', this.value)"></td>
-                    <td><input type="text" class="att-input" value="${escapeHtml(rec.w2 || 'Đủ')}" onchange="updateAttRecord('${t.id}', 'w2', this.value)"></td>
-                    <td><input type="text" class="att-input" value="${escapeHtml(rec.w3 || 'Đủ')}" onchange="updateAttRecord('${t.id}', 'w3', this.value)"></td>
-                    <td><input type="text" class="att-input" value="${escapeHtml(rec.w4 || 'Đủ')}" onchange="updateAttRecord('${t.id}', 'w4', this.value)"></td>
+                    <td>${renderWeekSelect(t.id, 'w1', rec.w1)}</td>
+                    <td>${renderWeekSelect(t.id, 'w2', rec.w2)}</td>
+                    <td>${renderWeekSelect(t.id, 'w3', rec.w3)}</td>
+                    <td>${renderWeekSelect(t.id, 'w4', rec.w4)}</td>
                     <td><input type="number" class="att-input" min="0" value="${rec.teach_replace || 0}" onchange="updateAttRecord('${t.id}', 'teach_replace', parseInt(this.value)||0)"></td>
                     <td><input type="number" class="att-input" min="0" value="${rec.observe || 0}" onchange="updateAttRecord('${t.id}', 'observe', parseInt(this.value)||0)"></td>
                     <td><input type="number" class="att-input" min="0" value="${rec.meeting || 0}" onchange="updateAttRecord('${t.id}', 'meeting', parseInt(this.value)||0)"></td>
