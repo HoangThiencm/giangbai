@@ -303,6 +303,7 @@ function submission_participant_payload(?array $participant): ?array
     if (!$participant) return null;
     return [
         'id' => (int)$participant['id'],
+        'participant_code' => $participant['participant_code'] ?? '',
         'full_name' => $participant['full_name'],
         'role_label' => $participant['role_label'] ?? '',
         'group_name' => $participant['group_name'] ?? '',
@@ -741,11 +742,31 @@ if ($method === 'GET' && $action === 'public') {
     if (!$assignment) respond(['error' => 'Đường link nộp bài không tồn tại.'], 404);
     $user = submission_current_user($pdo);
     $participant = $assignment['access_mode'] === 'public' ? null : submission_participant_by_access($pdo, $assignment, $user, (string)($_GET['participant_code'] ?? ''));
+
+    $publicParticipants = [];
+    if ($assignment['access_mode'] !== 'public') {
+        $partStmt = $pdo->prepare("SELECT p.id, p.participant_code, p.full_name, p.role_label, p.group_name,
+            EXISTS(SELECT 1 FROM assignment_submissions s WHERE s.assignment_id = p.assignment_id AND s.participant_id = p.id) AS has_submitted
+            FROM submission_participants p WHERE p.assignment_id = ? ORDER BY p.group_name, p.full_name");
+        $partStmt->execute([(int)$assignment['id']]);
+        foreach ($partStmt->fetchAll() as $pr) {
+            $publicParticipants[] = [
+                'id' => (int)$pr['id'],
+                'participant_code' => $pr['participant_code'],
+                'full_name' => $pr['full_name'],
+                'role_label' => $pr['role_label'] ?? '',
+                'group_name' => $pr['group_name'] ?? '',
+                'has_submitted' => (bool)$pr['has_submitted'],
+            ];
+        }
+    }
+
     respond([
         'ok' => true,
         'assignment' => submission_public_assignment($assignment),
         'participant' => submission_participant_payload($participant),
-        'needs_access_code' => $assignment['access_mode'] !== 'public' && !$participant,
+        'participants' => $publicParticipants,
+        'needs_access_code' => false,
         'signed_in_as' => $user ? ['full_name' => $user['full_name'], 'role' => $user['role'], 'class_name' => $user['class_name']] : null,
     ]);
 }
