@@ -204,23 +204,107 @@ if ($method === 'POST' && $action === 'import') {
     tranphu_require_admin();
     $data = json_body();
     $code = trim((string)($data['list_code'] ?? ''));
+    $mode = trim((string)($data['mode'] ?? 'replace'));
     $list = tranphu_list($pdo, $code);
     if (!$list) respond(['error' => 'Danh sách không hợp lệ.'], 422);
     $rows = tranphu_normalize_rows($data['rows'] ?? []);
     if (!$rows) respond(['error' => 'Không đọc được dòng dữ liệu hợp lệ. Cần có cột Họ và tên.'], 422);
     $pdo->beginTransaction();
     try {
-        $pdo->prepare('DELETE FROM school_reference_people WHERE list_id = ?')->execute([(int)$list['id']]);
-        $insert = $pdo->prepare('INSERT INTO school_reference_people (list_id, full_name, group_name, role_label, contact, data_json, source_row) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        foreach ($rows as $row) {
-            $insert->execute([(int)$list['id'], $row['full_name'], $row['group_name'], $row['role_label'], $row['contact'], json_encode($row['extra'], JSON_UNESCAPED_UNICODE), $row['source_row']]);
+        if ($mode === 'append') {
+            $existingStmt = $pdo->prepare('SELECT full_name, group_name FROM school_reference_people WHERE list_id = ?');
+            $existingStmt->execute([(int)$list['id']]);
+            $existingRows = $existingStmt->fetchAll();
+            $existingKeys = [];
+            foreach ($existingRows as $er) {
+                $fn = trim((string)($er['full_name'] ?? ''));
+                $gn = trim((string)($er['group_name'] ?? ''));
+                $k = function_exists('mb_strtolower') ? mb_strtolower($fn . '|' . $gn, 'UTF-8') : strtolower($fn . '|' . $gn);
+                $existingKeys[$k] = true;
+            }
+            $toInsert = [];
+            $skippedCount = 0;
+            foreach ($rows as $row) {
+                $fn = trim((string)($row['full_name'] ?? ''));
+                $gn = trim((string)($row['group_name'] ?? ''));
+                $k = function_exists('mb_strtolower') ? mb_strtolower($fn . '|' . $gn, 'UTF-8') : strtolower($fn . '|' . $gn);
+                if (isset($existingKeys[$k])) {
+                    $skippedCount++;
+                    continue;
+                }
+                $existingKeys[$k] = true;
+                $toInsert[] = $row;
+            }
+            if (!empty($toInsert)) {
+                $insert = $pdo->prepare('INSERT INTO school_reference_people (list_id, full_name, group_name, role_label, contact, data_json, source_row) VALUES (?, ?, ?, ?, ?, ?, ?)');
+                foreach ($toInsert as $row) {
+                    $insert->execute([(int)$list['id'], $row['full_name'], $row['group_name'], $row['role_label'], $row['contact'], json_encode($row['extra'], JSON_UNESCAPED_UNICODE), $row['source_row']]);
+                }
+            }
+            $pdo->commit();
+            $insertedCount = count($toInsert);
+            respond([
+                'ok' => true,
+                'count' => $insertedCount,
+                'skipped' => $skippedCount,
+                'mode' => 'append',
+                'message' => "Đã thêm $insertedCount người mới (bỏ qua $skippedCount người trùng lặp)."
+            ]);
+        } else {
+            $pdo->prepare('DELETE FROM school_reference_people WHERE list_id = ?')->execute([(int)$list['id']]);
+            $insert = $pdo->prepare('INSERT INTO school_reference_people (list_id, full_name, group_name, role_label, contact, data_json, source_row) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            foreach ($rows as $row) {
+                $insert->execute([(int)$list['id'], $row['full_name'], $row['group_name'], $row['role_label'], $row['contact'], json_encode($row['extra'], JSON_UNESCAPED_UNICODE), $row['source_row']]);
+            }
+            $pdo->commit();
+            respond(['ok' => true, 'count' => count($rows), 'mode' => 'replace', 'message' => 'Đã thay thế danh sách bằng ' . count($rows) . ' dòng dữ liệu.']);
         }
-        $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $e;
     }
-    respond(['ok' => true, 'count' => count($rows), 'message' => 'Đã thay thế danh sách bằng ' . count($rows) . ' dòng dữ liệu.']);
+}
+
+if ($method === 'POST' && $action === 'delete-person') {
+    tranphu_require_admin();
+    $data = json_body();
+    $personId = (int)($data['person_id'] ?? 0);
+    if ($personId <= 0) respond(['error' => 'ID người không hợp lệ.'], 422);
+    $stmt = $pdo->prepare('DELETE FROM school_reference_people WHERE id = ?');
+    $stmt->execute([$personId]);
+    respond(['ok' => true, 'message' => 'Đã xóa người khỏi danh sách.']);
+}
+
+if ($method === 'POST' && $action === 'add-person') {
+    tranphu_require_admin();
+    $data = json_body();
+    $code = trim((string)($data['list_code'] ?? ''));
+    $list = tranphu_list($pdo, $code);
+    if (!$list) respond(['error' => 'Danh sách không hợp lệ.'], 422);
+    $fullName = trim((string)($data['full_name'] ?? ''));
+    if ($fullName === '') respond(['error' => 'Vui lòng nhập Họ và tên.'], 422);
+    $groupName = trim((string)($data['group_name'] ?? ''));
+    $roleLabel = trim((string)($data['role_label'] ?? ''));
+    $contact = trim((string)($data['contact'] ?? ''));
+    $extra = is_array($data['extra'] ?? null) ? $data['extra'] : [];
+
+    try {
+        $stmt = $pdo->prepare('INSERT INTO school_reference_people (list_id, full_name, group_name, role_label, contact, data_json, source_row) VALUES (?, ?, ?, ?, ?, ?, 0)');
+        $stmt->execute([
+            (int)$list['id'],
+            function_exists('mb_substr') ? mb_substr($fullName, 0, 180) : substr($fullName, 0, 180),
+            $groupName !== '' ? (function_exists('mb_substr') ? mb_substr($groupName, 0, 180) : substr($groupName, 0, 180)) : null,
+            $roleLabel !== '' ? (function_exists('mb_substr') ? mb_substr($roleLabel, 0, 160) : substr($roleLabel, 0, 160)) : null,
+            $contact !== '' ? (function_exists('mb_substr') ? mb_substr($contact, 0, 180) : substr($contact, 0, 180)) : null,
+            json_encode($extra, JSON_UNESCAPED_UNICODE)
+        ]);
+        respond(['ok' => true, 'id' => (int)$pdo->lastInsertId(), 'message' => 'Đã thêm thành viên.']);
+    } catch (PDOException $e) {
+        if ((int)$e->getCode() === 23000 || strpos($e->getMessage(), 'Duplicate entry') !== false) {
+            respond(['error' => 'Người này đã tồn tại trong danh sách (trùng họ tên và tổ/đơn vị).'], 409);
+        }
+        throw $e;
+    }
 }
 
 if ($method === 'POST' && $action === 'clear') {
