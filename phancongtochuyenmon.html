@@ -327,6 +327,7 @@
 
         .stat-chip.full { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
         .stat-chip.partial { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+        .stat-chip.optional { background: #f5f3ff; border-color: #ddd6fe; color: #5b21b6; }
 
         .btn-view-matrix {
             background: #4338ca;
@@ -425,7 +426,7 @@
         }
 
         .assigned-row { display: flex; align-items: flex-start; gap: 6px; }
-        .assigned-label { width: 80px; font-size: 0.76rem; font-weight: 800; color: #64748b; padding-top: 3px; flex-shrink: 0; }
+        .assigned-label { width: 85px; font-size: 0.76rem; font-weight: 800; color: #64748b; padding-top: 3px; flex-shrink: 0; }
         .assigned-pills { flex: 1; display: flex; flex-wrap: wrap; gap: 5px; }
 
         .pill-assigned {
@@ -567,10 +568,7 @@
             min-width: 68px;
             transition: all 0.15s ease;
         }
-        .att-week-select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15);
-        }
+        .att-week-select:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15); }
         .att-week-select[data-val="Đủ"] { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
         .att-week-select[data-val="DT"] { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
         .att-week-select[data-val="DB"] { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
@@ -979,7 +977,7 @@
         </div>
     </div>
 
-    <!-- MODAL SỔ NHẬT KÝ DẠY THAY - DẠY BÙ (THEO THÁNG & BUỔI SÁNG/CHIỀU) -->
+    <!-- MODAL SỔ NHẬT KÝ DẠY THAY - DẠY BÙ -->
     <div class="modal-overlay" id="substitute-modal">
         <div class="modal-card" style="max-width: 1080px;">
             <div class="modal-header">
@@ -987,7 +985,6 @@
                 <button class="modal-close" onclick="closeSubstituteModal()">&times;</button>
             </div>
             <div class="modal-body" style="padding: 18px;">
-                <!-- FORM THÊM LƯỢT DẠY THAY / DẠY BÙ -->
                 <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
                     <h4 style="margin: 0 0 10px 0; font-size: 0.88rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 6px;">
                         <i class="fas fa-plus-circle text-indigo-600"></i> Ghi nhận lượt Dạy Thay / Dạy Bù mới
@@ -1049,7 +1046,6 @@
                     </div>
                 </div>
 
-                <!-- DANH SÁCH CÁC LƯỢT DẠY THAY/BÙ TRONG THÁNG -->
                 <div class="action-bar-sub">
                     <span style="font-size: 0.88rem; font-weight: 800; color: #1e293b;">
                         <i class="fas fa-list-check text-indigo-600"></i> Danh sách các lượt trong tháng (<span id="sub-table-count">0</span> lượt):
@@ -1087,7 +1083,7 @@
 
     <!-- MODAL MA TRẬN & THỐNG KÊ PHÂN CÔNG TOÀN DIỆN -->
     <div class="modal-overlay" id="matrix-modal">
-        <div class="modal-card" style="max-width: 1050px;">
+        <div class="modal-card" style="max-width: 1080px;">
             <div class="modal-header">
                 <h2><i class="fas fa-chart-column text-indigo-600"></i> Bảng Thống Kê &amp; Ma Trận Phân Công Toàn Tổ</h2>
                 <button class="modal-close" onclick="closeMatrixModal()">&times;</button>
@@ -1108,6 +1104,9 @@
 
                 <!-- TAB 2: MA TRẬN THEO LỚP HỌC -->
                 <div class="tab-pane" id="mtx-classes">
+                    <div style="margin-bottom: 10px; font-size: 0.8rem; color: #64748b; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <i class="fas fa-circle-info text-indigo-500"></i> <b>Lưu ý:</b> Cột <b>Tình trạng lớp</b> chỉ đánh giá các <b>Môn chuyên môn chính</b> của tổ. Các nhiệm vụ kiêm nhiệm (như Chủ nhiệm, HĐTN...) nếu lớp đó do GV tổ khác đảm nhiệm sẽ hiển thị <code>—</code> và không tính là thiếu sót.
+                    </div>
                     <div style="overflow-x: auto;">
                         <table class="data-table" id="matrix-classes-table">
                             <!-- Render từ JS -->
@@ -1208,17 +1207,18 @@
                             <button class="btn-small" onclick="applyPresetSubjects('khtn')">Mẫu KHTN</button>
                             <button class="btn-small" onclick="applyPresetSubjects('khxh')">Mẫu KHXH</button>
                         </div>
-                        <span style="font-size: 0.8rem; color: #64748b;">Số tiết / lớp / tuần áp dụng để tính định mức</span>
+                        <span style="font-size: 0.8rem; color: #64748b;">Phân biệt môn chính toàn trường và nhiệm vụ kiêm nhiệm (chỉ một số lớp)</span>
                     </div>
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th style="width: 40px; text-align:center;">STT</th>
-                                <th style="width: 100px;">Mã môn</th>
+                                <th style="width: 35px; text-align:center;">STT</th>
+                                <th style="width: 90px;">Mã môn</th>
                                 <th>Tên Môn học</th>
-                                <th style="width: 130px; text-align:center;">Số tiết/lớp/tuần</th>
-                                <th style="width: 80px; text-align:center;">Màu sắc</th>
-                                <th style="width: 50px; text-align:center;">Xóa</th>
+                                <th style="width: 170px;">Loại nhiệm vụ</th>
+                                <th style="width: 100px; text-align:center;">Số tiết/lớp/tuần</th>
+                                <th style="width: 65px; text-align:center;">Màu</th>
+                                <th style="width: 45px; text-align:center;">Xóa</th>
                             </tr>
                         </thead>
                         <tbody id="subjects-table-body">
@@ -1281,6 +1281,8 @@
         ];
 
         // DỮ LIỆU KHỞI TẠO MẪU
+        // is_core = true: Môn chuyên môn chính của tổ (phụ trách toàn trường, bắt buộc đủ 100% lớp)
+        // is_core = false: Môn kiêm nhiệm / tùy chọn (chỉ một số GV đảm nhiệm vài lớp cụ thể, các lớp còn lại do tổ khác làm, không bắt buộc cả trường)
         const defaultState = {
             info: {
                 title: 'Tổ Toán - Tin học',
@@ -1289,10 +1291,10 @@
                 plan_key: 'default'
             },
             subjects: [
-                { key: 'math', name: 'Toán', periods: 4, color: '#2563eb' },
-                { key: 'it', name: 'Tin học', periods: 1, color: '#059669' },
-                { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706' },
-                { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed' }
+                { key: 'math', name: 'Toán', periods: 4, color: '#2563eb', is_core: true },
+                { key: 'it', name: 'Tin học', periods: 1, color: '#059669', is_core: true },
+                { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false },
+                { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed', is_core: false }
             ],
             classes: ['61', '62', '63', '64', '65', '66', '71', '72', '73', '74', '75', '76', '81', '82', '83', '84', '85', '86', '91', '92', '93', '94', '95', '96', '97'],
             unassigned: {},
@@ -1311,7 +1313,7 @@
             attendance: {
                 current_month: '9',
                 records: {},
-                substitutes: {} // 'm_9': [ { id, type, date, session: 'morning'|'afternoon', period, period_count, class_name, teacher_id, for_teacher_id, reason } ]
+                substitutes: {}
             }
         };
 
@@ -1330,6 +1332,11 @@
             if (!s.attendance.substitutes) s.attendance.substitutes = {};
 
             s.subjects.forEach(sub => {
+                // Mặc định is_core
+                if (typeof sub.is_core !== 'boolean') {
+                    sub.is_core = (sub.key !== 'gvcn' && sub.key !== 'hdtn');
+                }
+
                 if (!Array.isArray(s.unassigned[sub.key])) {
                     s.unassigned[sub.key] = [...s.classes];
                 }
@@ -1645,16 +1652,28 @@
             let chipsHtml = '';
 
             state.subjects.forEach(sub => {
-                const remaining = (state.unassigned[sub.key] || []).length;
-                const assigned = Math.max(0, totalClasses - remaining);
-                const isFull = (remaining === 0 && totalClasses > 0);
+                const assignedCount = state.teachers.reduce((sum, t) => sum + ((t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key].length : 0), 0);
 
-                chipsHtml += `
-                    <span class="stat-chip ${isFull ? 'full' : 'partial'}" title="Đã phân công ${assigned}/${totalClasses} lớp">
-                        <i class="fas ${isFull ? 'fa-check-circle text-emerald-600' : 'fa-circle-notch fa-spin text-amber-500'}"></i>
-                        <b style="color:${sub.color};">${sub.name}:</b> ${assigned}/${totalClasses} lớp
-                    </span>
-                `;
+                if (sub.is_core !== false) {
+                    // Môn chính của tổ: Cần 100% lớp
+                    const remaining = (state.unassigned[sub.key] || []).length;
+                    const isFull = (remaining === 0 && totalClasses > 0);
+
+                    chipsHtml += `
+                        <span class="stat-chip ${isFull ? 'full' : 'partial'}" title="Bộ môn chính: Đã phân công ${assignedCount}/${totalClasses} lớp">
+                            <i class="fas ${isFull ? 'fa-check-circle text-emerald-600' : 'fa-circle-notch fa-spin text-amber-500'}"></i>
+                            <b style="color:${sub.color};">${sub.name}:</b> ${assignedCount}/${totalClasses} lớp
+                        </span>
+                    `;
+                } else {
+                    // Môn kiêm nhiệm / tùy chọn: Chỉ hiển thị số lớp GV trong tổ nhận
+                    chipsHtml += `
+                        <span class="stat-chip optional" title="Nhiệm vụ kiêm nhiệm trong tổ: ${assignedCount} lớp">
+                            <i class="fas fa-tag text-purple-600"></i>
+                            <b style="color:${sub.color};">${sub.name}:</b> ${assignedCount} lớp (trong tổ)
+                        </span>
+                    `;
+                }
             });
 
             container.innerHTML = chipsHtml;
@@ -1674,11 +1693,14 @@
                 }
 
                 const countAll = (state.unassigned[sub.key] || []).length;
+                const isCore = sub.is_core !== false;
+                const typeHint = isCore ? `Môn chính (${sub.periods}t/lớp)` : `Kiêm nhiệm (${sub.periods}t/lớp)`;
+
                 const html = `
                     <div class="subject-group" style="border-left: 4px solid ${sub.color};">
                         <div class="subject-title" style="color: ${sub.color};">
-                            <span><b>${sub.name}</b> (${sub.periods}t/lớp)</span>
-                            <span class="count-badge">Còn: ${countAll} lớp</span>
+                            <span><b>${sub.name}</b> <small style="font-size:0.7rem; color:#64748b; font-weight:normal;">[${typeHint}]</small></span>
+                            <span class="count-badge">${isCore ? `Còn: ${countAll} lớp` : `Kho: ${countAll}`}</span>
                         </div>
                         <div class="pill-container">
                             ${arr.map(c => `
@@ -1901,7 +1923,12 @@
                         <tr>
                             <th style="width:50px; text-align:center;">STT</th>
                             <th style="width:100px; text-align:center;">Lớp học</th>
-                            ${state.subjects.map(s => `<th style="text-align:center; color:${s.color};">${s.name} (${s.periods}t)</th>`).join('')}
+                            ${state.subjects.map(s => `
+                                <th style="text-align:center; color:${s.color};">
+                                    ${s.name} (${s.periods}t)
+                                    ${s.is_core !== false ? '<br><small style="font-size:0.68rem; color:#059669; font-weight:normal;">(Môn chính)</small>' : '<br><small style="font-size:0.68rem; color:#7c3aed; font-weight:normal;">(Kiêm nhiệm)</small>'}
+                                </th>
+                            `).join('')}
                             <th style="text-align:center;">Tình trạng lớp</th>
                         </tr>
                     </thead>
@@ -1910,21 +1937,28 @@
 
                 let tbody = '';
                 state.classes.forEach((cName, idx) => {
-                    let missingSubs = [];
+                    let missingCoreSubs = [];
 
                     const cells = state.subjects.map(sub => {
                         const assignedTeacher = state.teachers.find(t => t.assignments && t.assignments[sub.key] && t.assignments[sub.key].includes(cName));
+                        const isCore = (sub.is_core !== false);
+
                         if (assignedTeacher) {
                             return `<td style="text-align:center; font-weight:700; color:#0f172a;">${escapeHtml(assignedTeacher.name)}</td>`;
                         } else {
-                            missingSubs.push(sub.name);
-                            return `<td style="text-align:center; color:#ef4444; font-size:0.75rem; font-style:italic;">Chưa phân công</td>`;
+                            if (isCore) {
+                                missingCoreSubs.push(sub.name);
+                                return `<td style="text-align:center; color:#ef4444; font-size:0.75rem; font-style:italic;">Chưa phân công</td>`;
+                            } else {
+                                // Môn kiêm nhiệm (như CN, HĐTN) do tổ khác phụ trách
+                                return `<td style="text-align:center; color:#94a3b8; font-size:0.75rem;">—</td>`;
+                            }
                         }
                     }).join('');
 
-                    const statusHtml = missingSubs.length === 0
+                    const statusHtml = missingCoreSubs.length === 0
                         ? `<span style="background:#ecfdf5; color:#065f46; padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.75rem;"><i class="fas fa-check"></i> Đủ GV bộ môn</span>`
-                        : `<span style="background:#fff1f2; color:#9f1239; padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i> Thiếu: ${missingSubs.join(', ')}</span>`;
+                        : `<span style="background:#fff1f2; color:#9f1239; padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.75rem;"><i class="fas fa-triangle-exclamation"></i> Thiếu: ${missingCoreSubs.join(', ')}</span>`;
 
                     tbody += `
                         <tr>
@@ -1977,7 +2011,6 @@
             const monthRecords = state.attendance.records[mKey];
             const subList = state.attendance.substitutes[mKey];
 
-            // Cập nhật số lượt trên badge nút sổ dạy thay
             const btnCount = document.getElementById('btn-sub-count');
             if (btnCount) btnCount.textContent = subList.length;
 
@@ -2060,7 +2093,6 @@
             document.getElementById('sub-modal-month-label').textContent = `Tháng ${m}`;
             document.getElementById('new-sub-date').value = new Date().toISOString().slice(0, 10);
 
-            // Nạp options giáo viên & lớp học vào modal
             const tSel = document.getElementById('new-sub-teacher');
             const forTSel = document.getElementById('new-sub-for-teacher');
             const cSel = document.getElementById('new-sub-class');
@@ -2193,13 +2225,11 @@
             }
         }
 
-        // Tự động cộng tổng số tiết Dạy thay / Dạy bù từ Sổ vào Bảng chấm công của từng GV
         function autoSyncSubstitutePeriods() {
             const mKey = getMonthKey();
             const list = state.attendance.substitutes[mKey] || [];
             if (!state.attendance.records[mKey]) state.attendance.records[mKey] = {};
 
-            // Khởi tạo map đếm
             const replaceMap = {};
             const makeupMap = {};
 
@@ -2427,12 +2457,11 @@
 
             table += `</tbody></table>`;
 
-            // Kèm thêm bảng Nhật ký chi tiết Dạy thay / Dạy bù nếu có
             if (subList.length > 0) {
                 table += `<br><br><table border="1" style="border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;">
                     <thead>
                         <tr>
-                            <th colspan="9" style="background-color: #4338ca; color: white; font-size: 15px; padding: 8px; text-align: center;">
+                            <th colspan="10" style="background-color: #4338ca; color: white; font-size: 15px; padding: 8px; text-align: center;">
                                 NHẬT KÝ CHI TIẾT DẠY THAY & DẠY BÙ (BUỔI SÁNG / CHIỀU) - THÁNG ${monthNum}
                             </th>
                         </tr>
@@ -2680,6 +2709,7 @@
             tbody.innerHTML = '';
 
             editingConfig.subjects.forEach((sub, index) => {
+                const isCore = sub.is_core !== false;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td style="text-align:center;">${index + 1}</td>
@@ -2690,10 +2720,16 @@
                         <input type="text" class="form-control" style="padding:4px 8px;" value="${escapeHtml(sub.name)}" onchange="updateEditingSubject(${index}, 'name', this.value)">
                     </td>
                     <td>
-                        <input type="number" class="form-control" style="padding:4px 8px; width:80px; text-align:center;" value="${sub.periods || 1}" min="1" onchange="updateEditingSubject(${index}, 'periods', parseInt(this.value)||1)">
+                        <select class="form-control" style="padding:4px 8px; font-weight:700;" onchange="updateEditingSubject(${index}, 'is_core', this.value === 'true')">
+                            <option value="true" ${isCore ? 'selected' : ''}>Môn chính (Toàn trường)</option>
+                            <option value="false" ${!isCore ? 'selected' : ''}>Kiêm nhiệm (Chỉ vài lớp)</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" class="form-control" style="padding:4px 8px; width:75px; text-align:center;" value="${sub.periods || 1}" min="1" onchange="updateEditingSubject(${index}, 'periods', parseInt(this.value)||1)">
                     </td>
                     <td style="text-align:center;">
-                        <input type="color" value="${sub.color || '#2563eb'}" style="width:34px; height:28px; border:none; cursor:pointer;" onchange="updateEditingSubject(${index}, 'color', this.value)">
+                        <input type="color" value="${sub.color || '#2563eb'}" style="width:32px; height:26px; border:none; cursor:pointer;" onchange="updateEditingSubject(${index}, 'color', this.value)">
                     </td>
                     <td style="text-align:center;">
                         <button class="table-btn" onclick="removeEditingSubject(${index})" title="Xóa"><i class="fas fa-trash"></i></button>
@@ -2711,7 +2747,8 @@
                 key: 'mon_' + count,
                 name: 'Môn học ' + count,
                 periods: 2,
-                color: colors[count % colors.length]
+                color: colors[count % colors.length],
+                is_core: true
             });
             renderConfigSubjectsTable();
         }
@@ -2732,24 +2769,24 @@
         function applyPresetSubjects(type) {
             if (type === 'toan_tin') {
                 editingConfig.subjects = [
-                    { key: 'math', name: 'Toán', periods: 4, color: '#2563eb' },
-                    { key: 'it', name: 'Tin học', periods: 1, color: '#059669' },
-                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706' },
-                    { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed' }
+                    { key: 'math', name: 'Toán', periods: 4, color: '#2563eb', is_core: true },
+                    { key: 'it', name: 'Tin học', periods: 1, color: '#059669', is_core: true },
+                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false },
+                    { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed', is_core: false }
                 ];
             } else if (type === 'khtn') {
                 editingConfig.subjects = [
-                    { key: 'khtn', name: 'KHTN', periods: 4, color: '#059669' },
-                    { key: 'congnghe', name: 'Công nghệ', periods: 1, color: '#0891b2' },
-                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706' },
-                    { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed' }
+                    { key: 'khtn', name: 'KHTN', periods: 4, color: '#059669', is_core: true },
+                    { key: 'congnghe', name: 'Công nghệ', periods: 1, color: '#0891b2', is_core: true },
+                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false },
+                    { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed', is_core: false }
                 ];
             } else if (type === 'khxh') {
                 editingConfig.subjects = [
-                    { key: 'van', name: 'Ngữ văn', periods: 4, color: '#db2777' },
-                    { key: 'sudi', name: 'Lịch sử & Địa lí', periods: 3, color: '#ea580c' },
-                    { key: 'gdcd', name: 'GDCD', periods: 1, color: '#2563eb' },
-                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706' }
+                    { key: 'van', name: 'Ngữ văn', periods: 4, color: '#db2777', is_core: true },
+                    { key: 'sudi', name: 'Lịch sử & Địa lí', periods: 3, color: '#ea580c', is_core: true },
+                    { key: 'gdcd', name: 'GDCD', periods: 1, color: '#2563eb', is_core: true },
+                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false }
                 ];
             }
             renderConfigSubjectsTable();
