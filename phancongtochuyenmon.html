@@ -822,21 +822,24 @@
         </main>
     </div>
 
-    <!-- 2. VIEW CHẤM CÔNG & THEO DÕI GIÁO VIÊN -->
+    <!-- 2. VIEW CHẤM CÔNG & THEO DÕI GIÁO VIÊN (12 THÁNG ĐẦY ĐỦ) -->
     <div class="app-view" id="view-chamcong">
         <div class="attendance-toolbar">
             <div class="attendance-filter">
-                <label style="font-size: 0.85rem; font-weight: 800; color: #1e293b;">Tháng chấm công:</label>
-                <select class="form-control" id="att-month-select" style="padding: 5px 12px; width: 140px;" onchange="changeAttendanceMonth(this.value)">
-                    <option value="9">Tháng 9</option>
-                    <option value="10">Tháng 10</option>
-                    <option value="11">Tháng 11</option>
-                    <option value="12">Tháng 12</option>
+                <label style="font-size: 0.85rem; font-weight: 800; color: #1e293b;"><i class="fas fa-calendar-days text-indigo-600"></i> Chọn tháng:</label>
+                <select class="form-control" id="att-month-select" style="padding: 5px 12px; width: 140px; font-weight: 700;" onchange="changeAttendanceMonth(this.value)">
                     <option value="1">Tháng 1</option>
                     <option value="2">Tháng 2</option>
                     <option value="3">Tháng 3</option>
                     <option value="4">Tháng 4</option>
                     <option value="5">Tháng 5</option>
+                    <option value="6">Tháng 6</option>
+                    <option value="7">Tháng 7</option>
+                    <option value="8">Tháng 8</option>
+                    <option value="9" selected>Tháng 9</option>
+                    <option value="10">Tháng 10</option>
+                    <option value="11">Tháng 11</option>
+                    <option value="12">Tháng 12</option>
                 </select>
                 <button class="btn-small btn-small-primary" onclick="autoFillAttendance()"><i class="fas fa-wand-magic-sparkles"></i> Điền chuẩn theo phân công</button>
             </div>
@@ -1108,11 +1111,6 @@
 
     <script>
         // QUY CHUẨN ĐỊNH MỨC THCS (THÔNG TƯ 28/2009/TT-BGDĐT)
-        // - Giáo viên THCS: Định mức chuẩn = 19 tiết / tuần
-        // - Tổ trưởng CM: Định mức chuẩn = 19 tiết, Giảm trừ 3 tiết/tuần (Thực dạy 16t)
-        // - Tổ phó CM: Định mức chuẩn = 19 tiết, Giảm trừ 1 tiết/tuần (Thực dạy 18t)
-        // - Phó Hiệu trưởng (PHT/HP): Định mức chuẩn = 4 tiết/tuần
-        // - Hiệu trưởng (HT): Định mức chuẩn = 2 tiết/tuần
         const ROLE_DEFAULTS = {
             'GV':   { label: 'Giáo viên (ĐM 19t)', quota: 19, allowance: 0 },
             'TTCM': { label: 'Tổ trưởng CM (ĐM 19t, giảm 3t)', quota: 19, allowance: 3 },
@@ -1179,7 +1177,6 @@
 
             s.teachers.forEach(t => {
                 if (!t.assignments) t.assignments = {};
-                // Đảm bảo có trường quota
                 if (typeof t.quota !== 'number') {
                     t.quota = (t.role === 'HT' ? 2 : ((t.role === 'HP' || t.role === 'PHT') ? 4 : 19));
                 }
@@ -1441,7 +1438,6 @@
             }
         }
 
-        // Tính tổng số tiết dạy trực tiếp trên lớp
         function calcTeachingPeriods(t) {
             let sum = 0;
             state.subjects.forEach(sub => {
@@ -1451,14 +1447,12 @@
             return sum;
         }
 
-        // Tính tổng số tiết quy đổi (thực dạy + giảm trừ + kiêm nhiệm)
         function calcTeacherTotalPeriods(t) {
             const teaching = calcTeachingPeriods(t);
             const qlpmPeriods = t.qlpm ? PERIOD_QLPM : 0;
             return teaching + (t.allowance || 0) + qlpmPeriods;
         }
 
-        // Lấy định mức chuẩn (GV/TTCM/TPCM: 19t, HP: 4t, HT: 2t)
         function getTeacherQuota(t) {
             if (typeof t.quota === 'number') return t.quota;
             return (t.role === 'HT' ? 2 : ((t.role === 'HP' || t.role === 'PHT') ? 4 : 19));
@@ -1483,7 +1477,6 @@
             renderReports();
         }
 
-        // THỐNG KÊ TIẾN ĐỘ TRỰC QUAN LIVE BANNER
         function renderLiveStatsBanner() {
             const container = document.getElementById('live-subject-chips');
             if (!container) return;
@@ -1787,7 +1780,7 @@
             }
         }
 
-        // ================= 2. CHẤM CÔNG & THEO DÕI GIÁO VIÊN =================
+        // ================= 2. CHẤM CÔNG & THEO DÕI GIÁO VIÊN (12 THÁNG) =================
         function getMonthKey() {
             const m = document.getElementById('att-month-select')?.value || state.attendance?.current_month || '9';
             return `m_${m}`;
