@@ -50,7 +50,7 @@ function page_catalog(): array
         'theodoiai' => ['title' => 'Theo dõi AI lộ trình', 'url' => 'theodoi-ai.html'],
         'thanhtich' => ['title' => 'Thống kê thành tích', 'url' => 'thanhtich.html'],
         'thoikhoabieu' => ['title' => 'Xếp thời khóa biểu', 'url' => 'thoikhoabieu.html'],
-        'phancongtochuyenmon' => ['title' => 'Phân công chuyên môn', 'url' => 'phancongtochuyenmon.html'],
+        'phancongtochuyenmon' => ['title' => 'Quản lý tổ chuyên môn', 'url' => 'phancongtochuyenmon.html'],
     ];
 }
 
@@ -79,7 +79,7 @@ function teacher_workspace_page_ids(): array
 
 function teacher_default_workspace_extras(): array
 {
-    return ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu'];
+    return ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon'];
 }
 
 function teacher_all_page_ids(): array

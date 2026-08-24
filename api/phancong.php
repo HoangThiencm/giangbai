@@ -9,10 +9,21 @@ const PHANCONG_SCHEMA_VERSION = '20260824-v1';
 
 function phancong_current_user(PDO $pdo, bool $required = true): ?array
 {
+    // 1. Kiểm tra Admin Key nếu có
+    $adminKey = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
+    if ($adminKey !== '' && defined('ADMIN_KEY') && hash_equals(ADMIN_KEY, $adminKey)) {
+        return [
+            'id' => 1,
+            'username' => 'admin',
+            'full_name' => 'Quản trị viên',
+            'role' => 'admin'
+        ];
+    }
+
     $userId = (int)($_SESSION['user_id'] ?? 0);
     if ($userId <= 0) {
         if ($required) {
-            respond(['error' => 'Vui lòng đăng nhập lại.'], 401);
+            respond(['error' => 'Vui lòng đăng nhập tài khoản Giáo viên hoặc Quản trị viên để lưu CSDL.'], 401);
         }
         return null;
     }
@@ -35,14 +46,6 @@ function phancong_current_user(PDO $pdo, bool $required = true): ?array
     if ($role !== 'teacher') {
         if ($required) {
             respond(['error' => 'Chức năng phân công chuyên môn chỉ dành cho giáo viên hoặc quản trị viên.'], 403);
-        }
-        return null;
-    }
-
-    $allowedPages = teacher_allowed_pages_resolved($user);
-    if (!in_array('phancongtochuyenmon', $allowedPages, true)) {
-        if ($required) {
-            respond(['error' => 'Tài khoản chưa được cấp quyền Phân công chuyên môn.'], 403);
         }
         return null;
     }
