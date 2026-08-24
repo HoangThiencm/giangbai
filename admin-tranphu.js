@@ -65,7 +65,12 @@
             <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                     <label class="text-sm font-bold text-slate-700">Danh sách đang chọn để quản lý
-                        <select id="tranPhuListSelect" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-base font-bold text-slate-800 outline-none focus:ring-2 focus:ring-sky-500 shadow-sm"></select>
+                        <div class="mt-1 flex items-center gap-2">
+                            <select id="tranPhuListSelect" class="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-base font-bold text-slate-800 outline-none focus:ring-2 focus:ring-sky-500 shadow-sm"></select>
+                            <button type="button" id="tranPhuRenameListBtn" class="flex-shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm" title="Đổi tên danh sách">
+                                <i class="fas fa-pen text-slate-600 mr-1.5"></i>Đổi tên
+                            </button>
+                        </div>
                     </label>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" id="tranPhuTemplateBtn" class="rounded-lg border border-sky-300 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-800 hover:bg-sky-100 transition"><i class="fas fa-download mr-1.5"></i>Tải mẫu Excel</button>
@@ -200,12 +205,53 @@
                 </div>
 
                 <div id="tranPhuMessage" class="mt-4 hidden"></div>
+            </div>
+
+            <!-- Modal Chỉnh sửa thành viên -->
+            <div id="tranPhuEditPersonModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 hidden">
+                <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-150">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-black text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-pen-to-square text-sky-600"></i>Chỉnh sửa thông tin thành viên
+                        </h3>
+                        <button type="button" id="tranPhuCloseEditModalBtn" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition">
+                            <i class="fas fa-times text-base"></i>
+                        </button>
+                    </div>
+                    <form id="tranPhuEditPersonForm" class="mt-4 space-y-3.5" onsubmit="return false;">
+                        <input type="hidden" id="tranPhuEditPersonId">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Họ và tên *</label>
+                            <input id="tranPhuEditFullName" type="text" required class="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-sky-500 font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Tổ / Đơn vị / Lớp</label>
+                            <input id="tranPhuEditGroupName" type="text" class="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-sky-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Chức vụ / Vai trò</label>
+                            <input id="tranPhuEditRoleLabel" type="text" class="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-sky-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">SĐT / Email / Liên hệ</label>
+                            <input id="tranPhuEditContact" type="text" class="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-sky-500">
+                        </div>
+                        <div id="tranPhuEditError" class="hidden rounded-lg bg-red-50 p-2.5 text-xs font-semibold text-red-600 border border-red-200"></div>
+                        <div class="mt-5 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+                            <button type="button" id="tranPhuCancelEditBtn" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition">Hủy</button>
+                            <button type="button" id="tranPhuSaveEditPersonBtn" class="rounded-lg bg-sky-600 px-5 py-2 text-sm font-bold text-white shadow hover:bg-sky-700 transition">
+                                <i class="fas fa-floppy-disk mr-1.5"></i>Lưu thay đổi
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>`;
 
         dashboard.appendChild(node);
 
         // Event listeners
         node.querySelector('#tranPhuListSelect').addEventListener('change', onListSelectChange);
+        node.querySelector('#tranPhuRenameListBtn').addEventListener('click', renameList);
         node.querySelector('#tranPhuTemplateBtn').addEventListener('click', downloadTemplate);
         node.querySelector('#tranPhuClearBtn').addEventListener('click', clearRows);
         node.querySelector('#tranPhuCreateListBtn').addEventListener('click', createList);
@@ -241,6 +287,22 @@
             if (e.key === 'Enter') {
                 e.preventDefault();
                 addSinglePerson();
+            }
+        });
+
+        // Edit person modal listeners
+        node.querySelector('#tranPhuCloseEditModalBtn').addEventListener('click', closeEditPersonModal);
+        node.querySelector('#tranPhuCancelEditBtn').addEventListener('click', closeEditPersonModal);
+        node.querySelector('#tranPhuSaveEditPersonBtn').addEventListener('click', saveEditPerson);
+        node.querySelector('#tranPhuEditPersonForm').addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveEditPerson();
+            }
+        });
+        node.querySelector('#tranPhuEditPersonModal').addEventListener('click', e => {
+            if (e.target.id === 'tranPhuEditPersonModal') {
+                closeEditPersonModal();
             }
         });
 
@@ -315,19 +377,74 @@
 
     function mapHeader(header) {
         const value = norm(header);
-        if (!value || value === 'stt' || value === 'no' || value === 'tt') return 'stt';
-        if (value.includes('ho va ten') || value.includes('ho ten') || value === 'hoten' || value === 'ten' || value.includes('full name') || (value.includes('ho') && value.includes('ten'))) {
-            return 'full_name';
+        if (!value) return '';
+
+        // 1. STT / No / TT
+        if (value === 'stt' || value === 'no' || value === 'tt' || value === 'so thu tu' || value === 'so tt' || value === 'sott' || value === 'thu tu') {
+            return 'stt';
         }
-        if (value.includes('to don vi') || value.includes('lop nhom') || value.includes('lop chu nhiem') || value === 'lop' || value.includes('nhom') || value.includes('don vi') || value.includes('to bo mon') || value.includes('to chuyen mon') || value === 'to') {
-            return 'group_name';
-        }
-        if (value.includes('chuc vu') || value.includes('vai tro') || value.includes('ghi chu') || value.includes('chuc danh') || value.includes('role') || value.includes('nhiem vu')) {
+
+        // 2. Chức vụ / Vai trò / Ghi chú (Check specific role keywords first before general org keywords)
+        const roleKeywords = [
+            'chuc vu', 'vai tro', 'chuc danh', 'nhiem vu', 'vi tri', 'role', 'position',
+            'ghi chu', 'phan cong', 'trach nhiem', 'to truong', 'to pho', 'truong ban',
+            'pho ban', 'truong phong', 'pho phong', 'truong khoa', 'pho khoa', 'chu tich',
+            'pho chu tich', 'hieu truong', 'hieu pho', 'bi thu', 'pho bi thu'
+        ];
+        if (roleKeywords.some(k => value === k || value.includes(k))) {
             return 'role_label';
         }
-        if (value.includes('email') || value.includes('dien thoai') || value.includes('sdt') || value.includes('lien he') || value.includes('phone') || value.includes('so dien thoai')) {
+
+        // 3. Liên hệ / Phone / Email
+        const contactKeywords = [
+            'email', 'thu dien tu', 'dien thoai', 'sdt', 'so dien thoai',
+            'phone', 'tel', 'mobile', 'lien he', 'thong tin lien he', 'zalo'
+        ];
+        if (contactKeywords.some(k => value === k || value.includes(k))) {
             return 'contact';
         }
+
+        // 4. Họ và tên
+        if (
+            value.includes('ho va ten') || value.includes('ho ten') || value === 'hoten' ||
+            value.includes('ho va chu lot') || value.includes('ho chu lot') ||
+            value.includes('full name') || value.includes('fullname') ||
+            value.includes('ten can bo') || value.includes('ten giao vien') ||
+            value.includes('ten nhan vien') || value.includes('ten thanh vien') ||
+            value.includes('nguoi nop') || value.includes('nguoi thuc hien') ||
+            value === 'ten' || value === 'ho' || value === 'can bo' ||
+            value === 'giao vien' || value === 'nhan vien' || value === 'thanh vien' ||
+            (value.includes('ho') && value.includes('ten'))
+        ) {
+            return 'full_name';
+        }
+
+        // 5. Tổ / Đơn vị / Lớp / Ban / Phòng / Khoa
+        if (
+            value.startsWith('to ') ||
+            value.startsWith('lop ') ||
+            value.startsWith('khoi ') ||
+            value.startsWith('phong ') ||
+            value.startsWith('ban ') ||
+            value.startsWith('khoa ') ||
+            value === 'to' || value === 'lop' || value === 'khoi' || value === 'phong' ||
+            value === 'ban' || value === 'khoa' || value === 'dv' || value === 'dvct' ||
+            value === 'tcm' || value === 'tbm' || value === 'to cm' || value === 'to bm' ||
+            value.includes('don vi') || value.includes('noi cong tac') ||
+            value.includes('to don vi') || value.includes('to chuyen mon') ||
+            value.includes('to bo mon') || value.includes('bo mon') ||
+            value.includes('phong ban') || value.includes('co quan') ||
+            value.includes('lop chu nhiem') || value.includes('lop hoc') ||
+            value.includes('khoi lop') || value.includes('chi bo') ||
+            value.includes('dang bo') || value.includes('to nhom') ||
+            value.includes('ban chuyen mon') || value.includes('toan truong') ||
+            value.includes('phan ban') || value.includes('to giam thi') ||
+            value.includes('to bao ve') || value.includes('to phuc vu') ||
+            value.includes('to khao thi') || value.includes('nhom')
+        ) {
+            return 'group_name';
+        }
+
         return '';
     }
 
@@ -409,6 +526,49 @@
         return [line.trim()];
     }
 
+    function classifyDirectToken(token) {
+        if (!token || typeof token !== 'string') return null;
+        const clean = token.trim();
+        if (!clean) return null;
+        const v = norm(clean);
+
+        // Contact check: email or phone
+        if (clean.includes('@') || /^(?:\+84|0|\(0\))[0-9\.\-\s]{8,15}$/.test(clean.replace(/\s+/g, '')) || (/^[0-9\+\(\)\.\-\s]{9,15}$/.test(clean) && (clean.match(/\d/g) || []).length >= 9)) {
+            return { type: 'contact', value: clean };
+        }
+
+        // Role check
+        const roleKeywords = [
+            'hieu truong', 'hieu pho', 'to truong', 'to pho', 'bi thu', 'pho bi thu',
+            'giao vien', 'gvcn', 'gvbm', 'nhan vien', 'ke toan', 'thu quy', 'van thu',
+            'y te', 'bao ve', 'tong phu trach', 'tpt', 'dang vien', 'truong ban',
+            'pho ban', 'truong phong', 'pho phong', 'truong khoa', 'pho khoa',
+            'chu tich', 'pho chu tich', 'pho hieu truong', 'can bo', 'doan vien',
+            'chuyen vien', 'thu vien', 'tap vu', 'phuc vu', 'giam thi'
+        ];
+        if (roleKeywords.some(k => v === k || v.includes(k))) {
+            return { type: 'role_label', value: clean };
+        }
+
+        // Group / Org check
+        const groupPrefixes = ['to ', 'lop ', 'khoi ', 'phong ', 'ban ', 'khoa '];
+        const groupMatches = [
+            'chi bo', 'dang bo', 'bgh', 'ban giam hieu', 'toan truong', 'khtn', 'khxh',
+            'van phong', 'su dia', 'toan tin', 'toan', 'ly', 'hoa', 'sinh', 'van',
+            'su', 'dia', 'gdcd', 'the duc', 'am nhac', 'my thuat', 'tin hoc',
+            'tieng anh', 'ngoai ngu', 'giam thi', 'bao ve', 'khao thi', 'doan doi'
+        ];
+        if (
+            groupPrefixes.some(p => v.startsWith(p)) ||
+            groupMatches.some(k => v === k || v.includes(k)) ||
+            /^[1-9][0-2]?[a-z0-9\/\-\.]+$/i.test(clean)
+        ) {
+            return { type: 'group_name', value: clean };
+        }
+
+        return null;
+    }
+
     function parseDirectText(rawText, listCode = '') {
         if (!rawText || typeof rawText !== 'string') return [];
         const lines = rawText.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
@@ -463,24 +623,44 @@
 
                 fullName = tokens[0] || '';
 
-                if (listCode === 'party') {
-                    roleLabel = tokens[1] || '';
-                    groupName = tokens[2] || '';
-                    contact = tokens[3] || '';
-                } else if (listCode === 'teachers') {
-                    groupName = tokens[1] || '';
-                    roleLabel = tokens[2] || '';
-                    contact = tokens[3] || '';
-                } else {
-                    groupName = tokens[1] || '';
-                    roleLabel = tokens[2] || '';
-                    contact = tokens[3] || '';
+                const remainingTokens = tokens.slice(1);
+                const unclassified = [];
+
+                for (const tok of remainingTokens) {
+                    const classified = classifyDirectToken(tok);
+                    if (classified) {
+                        if (classified.type === 'contact' && !contact) {
+                            contact = classified.value;
+                        } else if (classified.type === 'role_label' && !roleLabel) {
+                            roleLabel = classified.value;
+                        } else if (classified.type === 'group_name' && !groupName) {
+                            groupName = classified.value;
+                        } else {
+                            unclassified.push(tok);
+                        }
+                    } else {
+                        unclassified.push(tok);
+                    }
                 }
 
-                if (tokens.length > 4) {
-                    for (let k = 4; k < tokens.length; k++) {
-                        extra[`Cột ${k + 1}`] = tokens[k];
-                    }
+                if (listCode === 'party') {
+                    if (!roleLabel && unclassified.length > 0) roleLabel = unclassified.shift();
+                    if (!groupName && unclassified.length > 0) groupName = unclassified.shift();
+                    if (!contact && unclassified.length > 0) contact = unclassified.shift();
+                } else if (listCode === 'teachers') {
+                    if (!groupName && unclassified.length > 0) groupName = unclassified.shift();
+                    if (!roleLabel && unclassified.length > 0) roleLabel = unclassified.shift();
+                    if (!contact && unclassified.length > 0) contact = unclassified.shift();
+                } else {
+                    if (!groupName && unclassified.length > 0) groupName = unclassified.shift();
+                    if (!roleLabel && unclassified.length > 0) roleLabel = unclassified.shift();
+                    if (!contact && unclassified.length > 0) contact = unclassified.shift();
+                }
+
+                if (unclassified.length > 0) {
+                    unclassified.forEach((tok, uIdx) => {
+                        extra[`Cột bổ sung ${uIdx + 1}`] = tok;
+                    });
                 }
             }
 
@@ -738,6 +918,133 @@ Hoàng Minh Đức | Ban Chuyên Môn | Thành viên | 0976543210`;
         }
     }
 
+    async function renameList() {
+        const list = selectedList();
+        if (!list) return;
+        const newTitle = prompt(`Nhập tên mới cho danh sách "${list.title}":`, list.title);
+        if (newTitle === null) return;
+        const trimmed = newTitle.trim();
+        if (!trimmed) {
+            return show('Tên danh sách không được để trống.', true);
+        }
+        if (trimmed === list.title) return;
+
+        try {
+            const data = await request(`${API}?action=update-list-title`, {
+                method: 'POST',
+                headers: adminHeaders(),
+                body: JSON.stringify({ list_code: list.list_code, title: trimmed })
+            });
+            show(data.message || 'Đã cập nhật tên danh sách.');
+            await loadLists();
+            const select = document.getElementById('tranPhuListSelect');
+            if (select) select.value = list.list_code;
+            onListSelectChange();
+        } catch (error) {
+            show(error.message, true);
+        }
+    }
+
+    function openEditPersonModal(personId) {
+        const person = currentPeople.find(p => p.id === personId);
+        if (!person) return;
+
+        const modal = document.getElementById('tranPhuEditPersonModal');
+        const idInput = document.getElementById('tranPhuEditPersonId');
+        const nameInput = document.getElementById('tranPhuEditFullName');
+        const groupInput = document.getElementById('tranPhuEditGroupName');
+        const roleInput = document.getElementById('tranPhuEditRoleLabel');
+        const contactInput = document.getElementById('tranPhuEditContact');
+        const errorBox = document.getElementById('tranPhuEditError');
+
+        if (!modal || !idInput || !nameInput || !groupInput || !roleInput || !contactInput) return;
+
+        idInput.value = person.id;
+        nameInput.value = person.full_name || '';
+        groupInput.value = person.group_name || '';
+        roleInput.value = person.role_label || '';
+        contactInput.value = person.contact || '';
+
+        if (errorBox) {
+            errorBox.textContent = '';
+            errorBox.classList.add('hidden');
+        }
+
+        modal.classList.remove('hidden');
+        nameInput.focus();
+    }
+
+    function closeEditPersonModal() {
+        const modal = document.getElementById('tranPhuEditPersonModal');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    async function saveEditPerson() {
+        const idInput = document.getElementById('tranPhuEditPersonId');
+        const nameInput = document.getElementById('tranPhuEditFullName');
+        const groupInput = document.getElementById('tranPhuEditGroupName');
+        const roleInput = document.getElementById('tranPhuEditRoleLabel');
+        const contactInput = document.getElementById('tranPhuEditContact');
+        const errorBox = document.getElementById('tranPhuEditError');
+        const btn = document.getElementById('tranPhuSaveEditPersonBtn');
+
+        const personId = parseInt(idInput?.value || '0', 10);
+        const fullName = nameInput?.value.trim() || '';
+        const groupName = groupInput?.value.trim() || '';
+        const roleLabel = roleInput?.value.trim() || '';
+        const contact = contactInput?.value.trim() || '';
+
+        if (personId <= 0) return;
+        if (!fullName) {
+            if (errorBox) {
+                errorBox.textContent = 'Vui lòng nhập Họ và tên.';
+                errorBox.classList.remove('hidden');
+            }
+            return;
+        }
+
+        if (errorBox) {
+            errorBox.textContent = '';
+            errorBox.classList.add('hidden');
+        }
+
+        const original = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i>Đang lưu...';
+        }
+
+        try {
+            const data = await request(`${API}?action=update-person`, {
+                method: 'POST',
+                headers: adminHeaders(),
+                body: JSON.stringify({
+                    person_id: personId,
+                    full_name: fullName,
+                    group_name: groupName,
+                    role_label: roleLabel,
+                    contact: contact
+                })
+            });
+            closeEditPersonModal();
+            show(data.message || 'Đã cập nhật thông tin thành viên.');
+            await loadLists();
+            await loadCurrentPeople();
+        } catch (error) {
+            if (errorBox) {
+                errorBox.textContent = error.message;
+                errorBox.classList.remove('hidden');
+            } else {
+                show(error.message, true);
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        }
+    }
+
     function renderPeopleTable() {
         const container = document.getElementById('tranPhuPeopleTableContainer');
         if (!container) return;
@@ -782,7 +1089,7 @@ Hoàng Minh Đức | Ban Chuyên Môn | Thành viên | 0976543210`;
                         <th class="p-3">Tổ / Đơn vị / Lớp</th>
                         <th class="p-3">Vai trò / Chức vụ</th>
                         <th class="p-3">Liên hệ / Ghi chú</th>
-                        <th class="p-3 w-20 text-center">Thao tác</th>
+                        <th class="p-3 w-24 text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -793,7 +1100,10 @@ Hoàng Minh Đức | Ban Chuyên Môn | Thành viên | 0976543210`;
                             <td class="p-3 text-slate-700">${esc(person.group_name || '—')}</td>
                             <td class="p-3 text-slate-700">${esc(person.role_label || '—')}</td>
                             <td class="p-3 text-slate-700">${esc(person.contact || '—')}</td>
-                            <td class="p-3 text-center">
+                            <td class="p-3 text-center whitespace-nowrap">
+                                <button type="button" data-person-id="${person.id}" class="tranphu-edit-person-btn rounded p-1.5 text-sky-600 hover:bg-sky-50 hover:text-sky-800 transition mr-1" title="Chỉnh sửa thông tin">
+                                    <i class="fas fa-pen-to-square text-sm"></i>
+                                </button>
                                 <button type="button" data-person-id="${person.id}" data-person-name="${esc(person.full_name)}" class="tranphu-del-person-btn rounded p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 transition" title="Xóa người này">
                                     <i class="fas fa-trash-can text-sm"></i>
                                 </button>
@@ -807,6 +1117,13 @@ Hoàng Minh Đức | Ban Chuyên Môn | Thành viên | 0976543210`;
                 ${peopleSearchQuery ? `<span>Hiển thị: ${filtered.length} kết quả</span>` : ''}
             </div>
         `;
+
+        container.querySelectorAll('.tranphu-edit-person-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.personId, 10);
+                openEditPersonModal(id);
+            });
+        });
 
         container.querySelectorAll('.tranphu-del-person-btn').forEach(btn => {
             btn.addEventListener('click', () => {

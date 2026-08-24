@@ -143,11 +143,11 @@ function tranphu_normalize_rows($rows): array
     $seen = [];
     foreach (array_slice($rows, 0, 5000) as $rowIndex => $row) {
         if (!is_array($row)) continue;
-        $fullName = trim((string)($row['full_name'] ?? $row['name'] ?? ''));
+        $fullName = trim((string)($row['full_name'] ?? $row['name'] ?? $row['ho_ten'] ?? $row['hoten'] ?? ''));
         if ($fullName === '') continue;
-        $group = trim((string)($row['group_name'] ?? $row['group'] ?? ''));
-        $role = trim((string)($row['role_label'] ?? $row['role'] ?? ''));
-        $contact = trim((string)($row['contact'] ?? ''));
+        $group = trim((string)($row['group_name'] ?? $row['group'] ?? $row['don_vi'] ?? $row['donvi'] ?? $row['to'] ?? $row['lop'] ?? $row['department'] ?? ''));
+        $role = trim((string)($row['role_label'] ?? $row['role'] ?? $row['chuc_vu'] ?? $row['chucvu'] ?? $row['vai_tro'] ?? $row['position'] ?? ''));
+        $contact = trim((string)($row['contact'] ?? $row['phone'] ?? $row['email'] ?? $row['sdt'] ?? $row['lien_he'] ?? ''));
         $key = function_exists('mb_strtolower') ? mb_strtolower($fullName . '|' . $group, 'UTF-8') : strtolower($fullName . '|' . $group);
         if (isset($seen[$key])) continue;
         $seen[$key] = true;
@@ -275,6 +275,35 @@ if ($method === 'POST' && $action === 'delete-person') {
     respond(['ok' => true, 'message' => 'Đã xóa người khỏi danh sách.']);
 }
 
+if ($method === 'POST' && $action === 'update-person') {
+    tranphu_require_admin();
+    $data = json_body();
+    $personId = (int)($data['person_id'] ?? 0);
+    if ($personId <= 0) respond(['error' => 'ID người không hợp lệ.'], 422);
+    $fullName = trim((string)($data['full_name'] ?? ''));
+    if ($fullName === '') respond(['error' => 'Vui lòng nhập Họ và tên.'], 422);
+    $groupName = trim((string)($data['group_name'] ?? ''));
+    $roleLabel = trim((string)($data['role_label'] ?? ''));
+    $contact = trim((string)($data['contact'] ?? ''));
+
+    try {
+        $stmt = $pdo->prepare('UPDATE school_reference_people SET full_name = ?, group_name = ?, role_label = ?, contact = ?, updated_at = NOW() WHERE id = ?');
+        $stmt->execute([
+            function_exists('mb_substr') ? mb_substr($fullName, 0, 180) : substr($fullName, 0, 180),
+            $groupName !== '' ? (function_exists('mb_substr') ? mb_substr($groupName, 0, 180) : substr($groupName, 0, 180)) : null,
+            $roleLabel !== '' ? (function_exists('mb_substr') ? mb_substr($roleLabel, 0, 160) : substr($roleLabel, 0, 160)) : null,
+            $contact !== '' ? (function_exists('mb_substr') ? mb_substr($contact, 0, 180) : substr($contact, 0, 180)) : null,
+            $personId
+        ]);
+        respond(['ok' => true, 'message' => 'Đã cập nhật thông tin thành viên.']);
+    } catch (PDOException $e) {
+        if ((int)$e->getCode() === 23000 || strpos($e->getMessage(), 'Duplicate entry') !== false) {
+            respond(['error' => 'Người này đã tồn tại trong danh sách (trùng họ tên và tổ/đơn vị).'], 409);
+        }
+        throw $e;
+    }
+}
+
 if ($method === 'POST' && $action === 'add-person') {
     tranphu_require_admin();
     $data = json_body();
@@ -340,6 +369,21 @@ if ($method === 'POST' && $action === 'create-list') {
             'fields' => json_decode((string)$list['fields_json'], true) ?: [],
         ],
     ]);
+}
+
+if ($method === 'POST' && $action === 'update-list-title') {
+    tranphu_require_admin();
+    $data = json_body();
+    $code = trim((string)($data['list_code'] ?? ''));
+    $title = trim((string)($data['title'] ?? ''));
+    if ($title === '') respond(['error' => 'Vui lòng nhập tên danh sách.'], 422);
+    $list = tranphu_list($pdo, $code);
+    if (!$list) respond(['error' => 'Danh sách không hợp lệ.'], 422);
+
+    $cleanTitle = function_exists('mb_substr') ? mb_substr($title, 0, 160) : substr($title, 0, 160);
+    $stmt = $pdo->prepare('UPDATE school_reference_lists SET title = ?, updated_at = NOW() WHERE list_code = ?');
+    $stmt->execute([$cleanTitle, $code]);
+    respond(['ok' => true, 'message' => 'Đã cập nhật tên danh sách.', 'title' => $cleanTitle]);
 }
 
 if ($method === 'POST' && $action === 'delete-list') {
