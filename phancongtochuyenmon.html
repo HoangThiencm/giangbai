@@ -571,36 +571,24 @@
             border-color: var(--primary);
             box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15);
         }
-        .att-week-select[data-val="Đủ"] {
-            background: #ecfdf5;
-            color: #065f46;
-            border-color: #a7f3d0;
+        .att-week-select[data-val="Đủ"] { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+        .att-week-select[data-val="DT"] { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+        .att-week-select[data-val="DB"] { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+        .att-week-select[data-val="CT"] { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+        .att-week-select[data-val="P"]  { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+        .att-week-select[data-val="KP"] { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+
+        .session-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 800;
         }
-        .att-week-select[data-val="DT"] {
-            background: #eff6ff;
-            color: #1e40af;
-            border-color: #bfdbfe;
-        }
-        .att-week-select[data-val="DB"] {
-            background: #f5f3ff;
-            color: #6d28d9;
-            border-color: #ddd6fe;
-        }
-        .att-week-select[data-val="CT"] {
-            background: #f0fdfa;
-            color: #0f766e;
-            border-color: #99f6e4;
-        }
-        .att-week-select[data-val="P"] {
-            background: #fffbeb;
-            color: #b45309;
-            border-color: #fde68a;
-        }
-        .att-week-select[data-val="KP"] {
-            background: #fff1f2;
-            color: #be123c;
-            border-color: #fecdd3;
-        }
+        .session-morning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .session-afternoon { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
 
         /* 3. VIEW BÁO CÁO TỔ */
         #view-baocao {
@@ -641,7 +629,7 @@
         .stat-card-info h3 { margin: 0; font-size: 1.4rem; font-weight: 800; color: #0f172a; }
         .stat-card-info p { margin: 2px 0 0 0; font-size: 0.78rem; color: #64748b; font-weight: 600; }
 
-        /* MODAL KHAI BÁO & MODAL MA TRẬN */
+        /* MODAL KHAI BÁO, MA TRẬN & NHẬT KÝ DẠY THAY */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -704,7 +692,7 @@
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
 
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px; }
         .form-group { display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 0.8rem; font-weight: 700; color: #334155; }
         .form-control { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.85rem; outline: none; }
@@ -717,7 +705,7 @@
         .table-btn { background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; font-size: 0.85rem; }
         .table-btn:hover { color: #b91c1c; }
 
-        .action-bar-sub { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .action-bar-sub { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
 
         .btn-small {
             padding: 5px 10px;
@@ -872,7 +860,7 @@
         </main>
     </div>
 
-    <!-- 2. VIEW CHẤM CÔNG & THEO DÕI GIÁO VIÊN (LIST CHỌN NHANH) -->
+    <!-- 2. VIEW CHẤM CÔNG & THEO DÕI GIÁO VIÊN -->
     <div class="app-view" id="view-chamcong">
         <div class="attendance-toolbar">
             <div class="attendance-filter">
@@ -891,10 +879,11 @@
                     <option value="11">Tháng 11</option>
                     <option value="12">Tháng 12</option>
                 </select>
-                <button class="btn-small btn-small-primary" onclick="autoFillAttendance()"><i class="fas fa-wand-magic-sparkles"></i> Điền chuẩn theo phân công</button>
+                <button class="btn-small btn-small-primary" onclick="openSubstituteModal()"><i class="fas fa-book-bookmark"></i> Sổ Dạy Thay - Dạy Bù (<span id="btn-sub-count">0</span> lượt)</button>
+                <button class="btn-small" onclick="autoFillAttendance()"><i class="fas fa-wand-magic-sparkles"></i> Điền chuẩn theo phân công</button>
             </div>
             <div style="font-size: 0.8rem; color: #64748b; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <span style="display:inline-flex; align-items:center; gap:4px; color:#065f46; font-weight:700;"><i class="fas fa-circle-check text-emerald-600"></i> Đ: Đủ tiết</span>
+                <span style="display:inline-flex; align-items:center; gap:4px; color:#065f46; font-weight:700;"><i class="fas fa-circle-check text-emerald-600"></i> Đ: Đủ</span>
                 <span style="display:inline-flex; align-items:center; gap:4px; color:#1e40af; font-weight:700;"><i class="fas fa-user-clock text-blue-600"></i> DT: Dạy thay</span>
                 <span style="display:inline-flex; align-items:center; gap:4px; color:#6d28d9; font-weight:700;"><i class="fas fa-rotate text-purple-600"></i> DB: Dạy bù</span>
                 <span style="display:inline-flex; align-items:center; gap:4px; color:#0f766e; font-weight:700;"><i class="fas fa-briefcase text-teal-600"></i> CT: Công tác</span>
@@ -915,10 +904,11 @@
                         <th style="width: 90px;">Tuần 2</th>
                         <th style="width: 90px;">Tuần 3</th>
                         <th style="width: 90px;">Tuần 4</th>
-                        <th style="width: 80px; color: #2563eb;">Dạy thay (t)</th>
-                        <th style="width: 80px; color: #7c3aed;">Dự giờ (t)</th>
-                        <th style="width: 80px; color: #d97706;">SHCM (b)</th>
-                        <th style="width: 80px; color: #dc2626;">Nghỉ (t)</th>
+                        <th style="width: 85px; color: #2563eb;">Dạy thay (tiết)</th>
+                        <th style="width: 85px; color: #7c3aed;">Dạy bù (tiết)</th>
+                        <th style="width: 80px; color: #0891b2;">Dự giờ (tiết)</th>
+                        <th style="width: 80px; color: #d97706;">SHCM (buổi)</th>
+                        <th style="width: 80px; color: #dc2626;">Nghỉ (tiết)</th>
                         <th style="width: 110px;">Đánh giá tháng</th>
                         <th>Ghi chú</th>
                     </tr>
@@ -985,6 +975,112 @@
                 <table class="data-table" id="summary-report-table">
                     <!-- Render từ JS -->
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SỔ NHẬT KÝ DẠY THAY - DẠY BÙ (THEO THÁNG & BUỔI SÁNG/CHIỀU) -->
+    <div class="modal-overlay" id="substitute-modal">
+        <div class="modal-card" style="max-width: 1080px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-book-bookmark text-indigo-600"></i> Sổ Theo Dõi Dạy Thay - Dạy Bù (<span id="sub-modal-month-label">Tháng 9</span>)</h2>
+                <button class="modal-close" onclick="closeSubstituteModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 18px;">
+                <!-- FORM THÊM LƯỢT DẠY THAY / DẠY BÙ -->
+                <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 0.88rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-plus-circle text-indigo-600"></i> Ghi nhận lượt Dạy Thay / Dạy Bù mới
+                    </h4>
+                    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 10px;">
+                        <div class="form-group">
+                            <label>Loại hình:</label>
+                            <select class="form-control" id="new-sub-type" onchange="toggleSubTypeLabel(this.value)">
+                                <option value="replacement">Dạy thay (cho GV khác)</option>
+                                <option value="makeup">Dạy bù (cho lớp của mình)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Ngày dạy:</label>
+                            <input type="date" class="form-control" id="new-sub-date">
+                        </div>
+                        <div class="form-group">
+                            <label>Buổi:</label>
+                            <select class="form-control" id="new-sub-session">
+                                <option value="morning">Sáng (tiết 1 - 5)</option>
+                                <option value="afternoon">Chiều (tiết 1 - 5)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tiết dạy:</label>
+                            <input type="text" class="form-control" id="new-sub-period" placeholder="VD: Tiết 1-2, Tiết 3...">
+                        </div>
+                        <div class="form-group">
+                            <label>Số tiết:</label>
+                            <input type="number" class="form-control" id="new-sub-period-count" min="1" max="5" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Lớp học:</label>
+                            <select class="form-control" id="new-sub-class">
+                                <!-- Render từ classes -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 10px;">
+                        <div class="form-group">
+                            <label>Giáo viên thực dạy:</label>
+                            <select class="form-control" id="new-sub-teacher">
+                                <!-- Render từ teachers -->
+                            </select>
+                        </div>
+                        <div class="form-group" id="group-for-teacher">
+                            <label id="label-for-teacher">Dạy thay cho Giáo viên:</label>
+                            <select class="form-control" id="new-sub-for-teacher">
+                                <!-- Render từ teachers -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Lý do / Ghi chú:</label>
+                            <input type="text" class="form-control" id="new-sub-reason" placeholder="VD: Nghỉ ốm, Đi công tác, Dạy bù do lễ...">
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button class="btn-small btn-small-primary" onclick="addSubstituteRecord()"><i class="fas fa-check"></i> Lưu vào sổ dạy thay</button>
+                    </div>
+                </div>
+
+                <!-- DANH SÁCH CÁC LƯỢT DẠY THAY/BÙ TRONG THÁNG -->
+                <div class="action-bar-sub">
+                    <span style="font-size: 0.88rem; font-weight: 800; color: #1e293b;">
+                        <i class="fas fa-list-check text-indigo-600"></i> Danh sách các lượt trong tháng (<span id="sub-table-count">0</span> lượt):
+                    </span>
+                    <button class="btn-small" onclick="autoSyncSubstitutePeriods()"><i class="fas fa-rotate text-emerald-600"></i> Cập nhật tổng tiết vào Chấm công</button>
+                </div>
+                <div style="overflow-x: auto; max-height: 320px; border: 1px solid var(--border-color); border-radius: 8px;">
+                    <table class="data-table" id="substitute-records-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 35px; text-align:center;">STT</th>
+                                <th style="width: 90px;">Loại</th>
+                                <th style="width: 95px;">Ngày</th>
+                                <th style="width: 75px; text-align:center;">Buổi</th>
+                                <th style="width: 85px;">Tiết</th>
+                                <th style="width: 60px; text-align:center;">Lớp</th>
+                                <th>Giáo viên dạy</th>
+                                <th>Thay cho / Đối tượng</th>
+                                <th style="width: 60px; text-align:center;">Số tiết</th>
+                                <th>Lý do</th>
+                                <th style="width: 45px; text-align:center;">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="substitute-table-body">
+                            <!-- Render từ JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-small" onclick="closeSubstituteModal()">Đóng</button>
             </div>
         </div>
     </div>
@@ -1214,7 +1310,8 @@
             ],
             attendance: {
                 current_month: '9',
-                records: {}
+                records: {},
+                substitutes: {} // 'm_9': [ { id, type, date, session: 'morning'|'afternoon', period, period_count, class_name, teacher_id, for_teacher_id, reason } ]
             }
         };
 
@@ -1228,8 +1325,9 @@
             if (!Array.isArray(s.classes)) s.classes = [...defaultState.classes];
             if (!Array.isArray(s.teachers)) s.teachers = [];
             if (!s.unassigned) s.unassigned = {};
-            if (!s.attendance) s.attendance = { current_month: '9', records: {} };
+            if (!s.attendance) s.attendance = { current_month: '9', records: {}, substitutes: {} };
             if (!s.attendance.records) s.attendance.records = {};
+            if (!s.attendance.substitutes) s.attendance.substitutes = {};
 
             s.subjects.forEach(sub => {
                 if (!Array.isArray(s.unassigned[sub.key])) {
@@ -1842,14 +1940,14 @@
             }
         }
 
-        // ================= 2. CHẤM CÔNG & THEO DÕI GIÁO VIÊN (12 THÁNG) =================
+        // ================= 2. CHẤM CÔNG & SỔ DẠY THAY / DẠY BÙ =================
         function getMonthKey() {
             const m = document.getElementById('att-month-select')?.value || state.attendance?.current_month || '9';
             return `m_${m}`;
         }
 
         function changeAttendanceMonth(val) {
-            if (!state.attendance) state.attendance = { current_month: val, records: {} };
+            if (!state.attendance) state.attendance = { current_month: val, records: {}, substitutes: {} };
             state.attendance.current_month = val;
             renderAttendance();
         }
@@ -1874,10 +1972,17 @@
 
             const mKey = getMonthKey();
             if (!state.attendance.records[mKey]) state.attendance.records[mKey] = {};
+            if (!state.attendance.substitutes[mKey]) state.attendance.substitutes[mKey] = [];
+
             const monthRecords = state.attendance.records[mKey];
+            const subList = state.attendance.substitutes[mKey];
+
+            // Cập nhật số lượt trên badge nút sổ dạy thay
+            const btnCount = document.getElementById('btn-sub-count');
+            if (btnCount) btnCount.textContent = subList.length;
 
             if (state.teachers.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="14" style="padding: 24px; color: #94a3b8;">Chưa có giáo viên nào trong tổ để chấm công.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="15" style="padding: 24px; color: #94a3b8;">Chưa có giáo viên nào trong tổ để chấm công.</td></tr>`;
                 return;
             }
 
@@ -1886,7 +1991,7 @@
                 const quota = getTeacherQuota(t);
                 const rec = monthRecords[t.id] || {
                     w1: 'Đủ', w2: 'Đủ', w3: 'Đủ', w4: 'Đủ',
-                    teach_replace: 0, observe: 0, meeting: 2, leave_p: 0,
+                    teach_replace: 0, makeup_periods: 0, observe: 0, meeting: 2, leave_p: 0,
                     rating: 'Tốt', note: ''
                 };
 
@@ -1900,7 +2005,8 @@
                     <td>${renderWeekSelect(t.id, 'w2', rec.w2)}</td>
                     <td>${renderWeekSelect(t.id, 'w3', rec.w3)}</td>
                     <td>${renderWeekSelect(t.id, 'w4', rec.w4)}</td>
-                    <td><input type="number" class="att-input" min="0" value="${rec.teach_replace || 0}" onchange="updateAttRecord('${t.id}', 'teach_replace', parseInt(this.value)||0)"></td>
+                    <td><input type="number" class="att-input" style="color:#2563eb; font-weight:bold;" min="0" value="${rec.teach_replace || 0}" onchange="updateAttRecord('${t.id}', 'teach_replace', parseInt(this.value)||0)"></td>
+                    <td><input type="number" class="att-input" style="color:#7c3aed; font-weight:bold;" min="0" value="${rec.makeup_periods || 0}" onchange="updateAttRecord('${t.id}', 'makeup_periods', parseInt(this.value)||0)"></td>
                     <td><input type="number" class="att-input" min="0" value="${rec.observe || 0}" onchange="updateAttRecord('${t.id}', 'observe', parseInt(this.value)||0)"></td>
                     <td><input type="number" class="att-input" min="0" value="${rec.meeting || 0}" onchange="updateAttRecord('${t.id}', 'meeting', parseInt(this.value)||0)"></td>
                     <td><input type="number" class="att-input" min="0" value="${rec.leave_p || 0}" onchange="updateAttRecord('${t.id}', 'leave_p', parseInt(this.value)||0)"></td>
@@ -1924,7 +2030,7 @@
             if (!state.attendance.records[mKey][teacherId]) {
                 state.attendance.records[mKey][teacherId] = {
                     w1: 'Đủ', w2: 'Đủ', w3: 'Đủ', w4: 'Đủ',
-                    teach_replace: 0, observe: 0, meeting: 2, leave_p: 0,
+                    teach_replace: 0, makeup_periods: 0, observe: 0, meeting: 2, leave_p: 0,
                     rating: 'Tốt', note: ''
                 };
             }
@@ -1939,13 +2045,188 @@
             state.teachers.forEach(t => {
                 state.attendance.records[mKey][t.id] = {
                     w1: 'Đủ', w2: 'Đủ', w3: 'Đủ', w4: 'Đủ',
-                    teach_replace: 0, observe: 1, meeting: 2, leave_p: 0,
+                    teach_replace: 0, makeup_periods: 0, observe: 1, meeting: 2, leave_p: 0,
                     rating: 'Tốt', note: 'Thực hiện đầy đủ kế hoạch'
                 };
             });
             saveToLocal();
             renderAttendance();
             showToast("Đã điền chấm công chuẩn theo phân công chuyên môn!", "success");
+        }
+
+        // ================= SỔ DẠY THAY & DẠY BÙ (MODAL LOGIC) =================
+        function openSubstituteModal() {
+            const m = document.getElementById('att-month-select')?.value || '9';
+            document.getElementById('sub-modal-month-label').textContent = `Tháng ${m}`;
+            document.getElementById('new-sub-date').value = new Date().toISOString().slice(0, 10);
+
+            // Nạp options giáo viên & lớp học vào modal
+            const tSel = document.getElementById('new-sub-teacher');
+            const forTSel = document.getElementById('new-sub-for-teacher');
+            const cSel = document.getElementById('new-sub-class');
+
+            if (tSel) {
+                tSel.innerHTML = state.teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.role})</option>`).join('');
+            }
+            if (forTSel) {
+                forTSel.innerHTML = `<option value="">-- Chọn GV được thay --</option>` + state.teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.role})</option>`).join('');
+            }
+            if (cSel) {
+                cSel.innerHTML = state.classes.map(c => `<option value="${c}">${c}</option>`).join('');
+            }
+
+            renderSubstituteRecordsTable();
+            document.getElementById('substitute-modal').classList.add('active');
+        }
+
+        function closeSubstituteModal() {
+            document.getElementById('substitute-modal').classList.remove('active');
+            renderAttendance();
+        }
+
+        function toggleSubTypeLabel(type) {
+            const group = document.getElementById('group-for-teacher');
+            const label = document.getElementById('label-for-teacher');
+            if (type === 'makeup') {
+                if (label) label.textContent = 'Dạy bù cho lớp/tiết nào:';
+                if (group) group.style.opacity = '0.5';
+            } else {
+                if (label) label.textContent = 'Dạy thay cho Giáo viên:';
+                if (group) group.style.opacity = '1';
+            }
+        }
+
+        function renderSubstituteRecordsTable() {
+            const tbody = document.getElementById('substitute-table-body');
+            const countLabel = document.getElementById('sub-table-count');
+            if (!tbody) return;
+
+            const mKey = getMonthKey();
+            if (!state.attendance.substitutes[mKey]) state.attendance.substitutes[mKey] = [];
+            const list = state.attendance.substitutes[mKey];
+
+            if (countLabel) countLabel.textContent = list.length;
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" style="padding: 20px; text-align:center; color: #94a3b8; font-style:italic;">Chưa có lượt dạy thay hoặc dạy bù nào trong tháng này. Hãy nhập ở form phía trên.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map((item, index) => {
+                const t = state.teachers.find(x => x.id === item.teacher_id);
+                const forT = state.teachers.find(x => x.id === item.for_teacher_id);
+
+                const typeBadge = item.type === 'replacement'
+                    ? `<span style="background:#eff6ff; color:#1e40af; padding:2px 7px; border-radius:5px; font-weight:800; font-size:0.72rem;"><i class="fas fa-user-clock"></i> Dạy thay</span>`
+                    : `<span style="background:#f5f3ff; color:#6d28d9; padding:2px 7px; border-radius:5px; font-weight:800; font-size:0.72rem;"><i class="fas fa-rotate"></i> Dạy bù</span>`;
+
+                const sessionBadge = item.session === 'morning'
+                    ? `<span class="session-badge session-morning"><i class="fas fa-sun"></i> Sáng</span>`
+                    : `<span class="session-badge session-afternoon"><i class="fas fa-moon"></i> Chiều</span>`;
+
+                return `
+                    <tr>
+                        <td style="text-align:center;">${index + 1}</td>
+                        <td>${typeBadge}</td>
+                        <td>${escapeHtml(item.date)}</td>
+                        <td style="text-align:center;">${sessionBadge}</td>
+                        <td><b>${escapeHtml(item.period || '—')}</b></td>
+                        <td style="text-align:center; font-weight:800; color:#4338ca;">${escapeHtml(item.class_name || '—')}</td>
+                        <td><b>${t ? escapeHtml(t.name) : '—'}</b></td>
+                        <td>${forT ? escapeHtml(forT.name) : (item.for_other || '—')}</td>
+                        <td style="text-align:center; font-weight:bold; color:#2563eb;">${item.period_count || 1}t</td>
+                        <td>${escapeHtml(item.reason || '')}</td>
+                        <td style="text-align:center;">
+                            <button class="table-btn" onclick="removeSubstituteRecord(${index})" title="Xóa"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function addSubstituteRecord() {
+            const mKey = getMonthKey();
+            if (!state.attendance.substitutes[mKey]) state.attendance.substitutes[mKey] = [];
+
+            const type = document.getElementById('new-sub-type').value;
+            const date = document.getElementById('new-sub-date').value || new Date().toISOString().slice(0, 10);
+            const session = document.getElementById('new-sub-session').value;
+            const period = document.getElementById('new-sub-period').value.trim() || 'Tiết 1';
+            const period_count = parseInt(document.getElementById('new-sub-period-count').value) || 1;
+            const class_name = document.getElementById('new-sub-class').value;
+            const teacher_id = document.getElementById('new-sub-teacher').value;
+            const for_teacher_id = document.getElementById('new-sub-for-teacher').value;
+            const reason = document.getElementById('new-sub-reason').value.trim();
+
+            if (!teacher_id) {
+                alert("Vui lòng chọn giáo viên thực dạy!");
+                return;
+            }
+
+            state.attendance.substitutes[mKey].push({
+                id: 'sub_' + Date.now(),
+                type,
+                date,
+                session,
+                period,
+                period_count,
+                class_name,
+                teacher_id,
+                for_teacher_id,
+                for_other: type === 'makeup' ? 'Tự dạy bù lớp' : '',
+                reason
+            });
+
+            saveToLocal();
+            renderSubstituteRecordsTable();
+            autoSyncSubstitutePeriods();
+            showToast("Đã thêm lượt dạy thay/dạy bù thành công!", "success");
+        }
+
+        function removeSubstituteRecord(index) {
+            const mKey = getMonthKey();
+            if (confirm("Xóa bản ghi dạy thay/dạy bù này?")) {
+                state.attendance.substitutes[mKey].splice(index, 1);
+                saveToLocal();
+                renderSubstituteRecordsTable();
+                autoSyncSubstitutePeriods();
+            }
+        }
+
+        // Tự động cộng tổng số tiết Dạy thay / Dạy bù từ Sổ vào Bảng chấm công của từng GV
+        function autoSyncSubstitutePeriods() {
+            const mKey = getMonthKey();
+            const list = state.attendance.substitutes[mKey] || [];
+            if (!state.attendance.records[mKey]) state.attendance.records[mKey] = {};
+
+            // Khởi tạo map đếm
+            const replaceMap = {};
+            const makeupMap = {};
+
+            list.forEach(item => {
+                const count = item.period_count || 1;
+                if (item.type === 'replacement') {
+                    replaceMap[item.teacher_id] = (replaceMap[item.teacher_id] || 0) + count;
+                } else if (item.type === 'makeup') {
+                    makeupMap[item.teacher_id] = (makeupMap[item.teacher_id] || 0) + count;
+                }
+            });
+
+            state.teachers.forEach(t => {
+                if (!state.attendance.records[mKey][t.id]) {
+                    state.attendance.records[mKey][t.id] = {
+                        w1: 'Đủ', w2: 'Đủ', w3: 'Đủ', w4: 'Đủ',
+                        teach_replace: 0, makeup_periods: 0, observe: 0, meeting: 2, leave_p: 0,
+                        rating: 'Tốt', note: ''
+                    };
+                }
+                state.attendance.records[mKey][t.id].teach_replace = replaceMap[t.id] || 0;
+                state.attendance.records[mKey][t.id].makeup_periods = makeupMap[t.id] || 0;
+            });
+
+            saveToLocal();
+            renderAttendance();
+            showToast("Đã đồng bộ số tiết Dạy thay & Dạy bù vào Bảng Chấm Công!", "success");
         }
 
         // ================= 3. BÁO CÁO & THỐNG KÊ TỔ =================
@@ -2091,11 +2372,12 @@
             const mKey = getMonthKey();
             const monthNum = mKey.replace('m_', '');
             const monthRecords = state.attendance?.records?.[mKey] || {};
+            const subList = state.attendance?.substitutes?.[mKey] || [];
 
             let table = `<table border="1" style="border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;">
                 <thead>
                     <tr>
-                        <th colspan="14" style="background-color: #1e3a8a; color: white; font-size: 16px; padding: 10px; text-align: center;">
+                        <th colspan="15" style="background-color: #1e3a8a; color: white; font-size: 16px; padding: 10px; text-align: center;">
                             BẢNG CHẤM CÔNG & THEO DÕI CHUYÊN MÔN THÁNG ${monthNum} - ${state.info.title.toUpperCase()} (${state.info.school_year || ''})
                         </th>
                     </tr>
@@ -2108,7 +2390,8 @@
                         <th style="padding: 8px;">Tuần 2</th>
                         <th style="padding: 8px;">Tuần 3</th>
                         <th style="padding: 8px;">Tuần 4</th>
-                        <th style="padding: 8px;">Dạy thay (tiết)</th>
+                        <th style="padding: 8px; color: #2563eb;">Dạy thay (tiết)</th>
+                        <th style="padding: 8px; color: #7c3aed;">Dạy bù (tiết)</th>
                         <th style="padding: 8px;">Dự giờ (tiết)</th>
                         <th style="padding: 8px;">SHCM (buổi)</th>
                         <th style="padding: 8px;">Nghỉ (tiết)</th>
@@ -2121,7 +2404,7 @@
             state.teachers.forEach((t, index) => {
                 const totalPerWeek = calcTeacherTotalPeriods(t);
                 const quota = getTeacherQuota(t);
-                const rec = monthRecords[t.id] || { w1: 'Đủ', w2: 'Đủ', w3: 'Đủ', w4: 'Đủ', teach_replace: 0, observe: 0, meeting: 2, leave_p: 0, rating: 'Tốt', note: '' };
+                const rec = monthRecords[t.id] || { w1: 'Đủ', w2: 'Đủ', w3: 'Đủ', w4: 'Đủ', teach_replace: 0, makeup_periods: 0, observe: 0, meeting: 2, leave_p: 0, rating: 'Tốt', note: '' };
 
                 table += `<tr>
                     <td style="padding: 6px; text-align: center;">${index + 1}</td>
@@ -2132,7 +2415,8 @@
                     <td style="padding: 6px; text-align: center;">${rec.w2 || 'Đủ'}</td>
                     <td style="padding: 6px; text-align: center;">${rec.w3 || 'Đủ'}</td>
                     <td style="padding: 6px; text-align: center;">${rec.w4 || 'Đủ'}</td>
-                    <td style="padding: 6px; text-align: center;">${rec.teach_replace || 0}</td>
+                    <td style="padding: 6px; text-align: center; font-weight: bold; color: #2563eb;">${rec.teach_replace || 0}</td>
+                    <td style="padding: 6px; text-align: center; font-weight: bold; color: #7c3aed;">${rec.makeup_periods || 0}</td>
                     <td style="padding: 6px; text-align: center;">${rec.observe || 0}</td>
                     <td style="padding: 6px; text-align: center;">${rec.meeting || 0}</td>
                     <td style="padding: 6px; text-align: center;">${rec.leave_p || 0}</td>
@@ -2142,6 +2426,49 @@
             });
 
             table += `</tbody></table>`;
+
+            // Kèm thêm bảng Nhật ký chi tiết Dạy thay / Dạy bù nếu có
+            if (subList.length > 0) {
+                table += `<br><br><table border="1" style="border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;">
+                    <thead>
+                        <tr>
+                            <th colspan="9" style="background-color: #4338ca; color: white; font-size: 15px; padding: 8px; text-align: center;">
+                                NHẬT KÝ CHI TIẾT DẠY THAY & DẠY BÙ (BUỔI SÁNG / CHIỀU) - THÁNG ${monthNum}
+                            </th>
+                        </tr>
+                        <tr style="background-color: #f1f5f9; font-weight: bold; text-align: center;">
+                            <th style="padding: 6px;">STT</th>
+                            <th style="padding: 6px;">Loại</th>
+                            <th style="padding: 6px;">Ngày thực hiện</th>
+                            <th style="padding: 6px;">Buổi</th>
+                            <th style="padding: 6px;">Tiết</th>
+                            <th style="padding: 6px;">Lớp</th>
+                            <th style="padding: 6px;">Giáo viên dạy</th>
+                            <th style="padding: 6px;">Thay cho / Đối tượng</th>
+                            <th style="padding: 6px;">Số tiết</th>
+                            <th style="padding: 6px;">Lý do</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                subList.forEach((item, idx) => {
+                    const t = state.teachers.find(x => x.id === item.teacher_id);
+                    const forT = state.teachers.find(x => x.id === item.for_teacher_id);
+                    table += `<tr>
+                        <td style="padding: 5px; text-align: center;">${idx + 1}</td>
+                        <td style="padding: 5px; text-align: center;">${item.type === 'replacement' ? 'Dạy thay' : 'Dạy bù'}</td>
+                        <td style="padding: 5px; text-align: center;">${item.date}</td>
+                        <td style="padding: 5px; text-align: center;">${item.session === 'morning' ? 'Sáng' : 'Chiều'}</td>
+                        <td style="padding: 5px; text-align: center;">${item.period || '—'}</td>
+                        <td style="padding: 5px; text-align: center; font-weight: bold;">${item.class_name || '—'}</td>
+                        <td style="padding: 5px; font-weight: bold;">${t ? t.name : '—'}</td>
+                        <td style="padding: 5px;">${forT ? forT.name : (item.for_other || '—')}</td>
+                        <td style="padding: 5px; text-align: center; font-weight: bold;">${item.period_count || 1}</td>
+                        <td style="padding: 5px;">${item.reason || ''}</td>
+                    </tr>`;
+                });
+                table += `</tbody></table>`;
+            }
 
             downloadExcelFile(table, `Cham_Cong_Thang_${monthNum}_${state.info.title}`);
         }
