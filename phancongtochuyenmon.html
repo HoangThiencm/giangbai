@@ -36,7 +36,7 @@
 
         /* TOP NAVBAR */
         #top-navbar {
-            height: 62px;
+            height: 64px;
             background: #ffffff;
             border-bottom: 1px solid var(--border-color);
             display: flex;
@@ -66,13 +66,14 @@
 
         .brand-text h1 {
             margin: 0;
-            font-size: 1.02rem;
+            font-size: 0.96rem;
             font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.02em;
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         .brand-text p { margin: 0; font-size: 0.72rem; color: #64748b; font-weight: 600; }
@@ -83,12 +84,52 @@
             border: 1px solid #c7d2fe;
             padding: 2px 8px;
             border-radius: 6px;
-            font-size: 0.76rem;
+            font-size: 0.75rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.15s;
         }
         .plan-title-badge:hover { background: #e0e7ff; }
+
+        /* PHASE SELECTOR & QUICK ADD ON TOP */
+        .phase-selector-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            padding: 3px 8px;
+            border-radius: 8px;
+        }
+
+        .phase-select {
+            border: none;
+            background: transparent;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #92400e;
+            outline: none;
+            cursor: pointer;
+            font-family: inherit;
+            max-width: 210px;
+        }
+
+        .btn-quick-new-phase {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #ffffff !important;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 3px rgba(217, 119, 6, 0.25);
+        }
+        .btn-quick-new-phase:hover { background: linear-gradient(135deg, #d97706, #b45309); transform: translateY(-1px); }
 
         /* VIEW SWITCHER TABS */
         .view-switcher {
@@ -103,9 +144,9 @@
         .view-tab-btn {
             background: none;
             border: none;
-            padding: 6px 14px;
+            padding: 6px 12px;
             border-radius: 8px;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             font-weight: 700;
             color: #64748b;
             cursor: pointer;
@@ -598,8 +639,8 @@
         .session-morning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
         .session-afternoon { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
 
-        /* 3. VIEW BÁO CÁO TỔ */
-        #view-baocao {
+        /* 3. VIEW TĂNG GIỜ & 4. VIEW BÁO CÁO */
+        #view-baocao, #view-tanggio {
             flex-direction: column;
             background: #f8fafc;
             padding: 24px;
@@ -657,7 +698,7 @@
         .modal-card {
             background: #ffffff;
             width: 100%;
-            max-width: 980px;
+            max-width: 1050px;
             max-height: 90vh;
             border-radius: 16px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.25);
@@ -783,8 +824,18 @@
                     <span class="plan-title-badge" onclick="openConfigModal('tab-info')" title="Nhấn để đổi tên tổ / năm học">
                         <i class="fas fa-pen-to-square"></i> <span id="display-plan-year">2025-2026 (HK1)</span>
                     </span>
+                    <!-- CHỌN ĐỢT PHÂN CÔNG & TẠO ĐỢT MỚI KHI THAY ĐỔI -->
+                    <div class="phase-selector-wrapper" title="Đang xem & phân công theo đợt này">
+                        <i class="fas fa-clock-rotate-left text-amber-600"></i>
+                        <select class="phase-select" id="nav-phase-select" onchange="switchPhase(this.value)">
+                            <!-- Render từ JS -->
+                        </select>
+                        <button class="btn-quick-new-phase" onclick="openQuickNewPhaseModal()" title="Tạo ngay một đợt phân công mới khi có thay đổi trong tuần/kỳ">
+                            <i class="fas fa-plus"></i> Đợt mới
+                        </button>
+                    </div>
                 </h1>
-                <p>Quản lý Tổ Chuyên Môn · Phân công &amp; Chấm công Giáo viên</p>
+                <p>Quản lý Tổ Chuyên Môn · Phân công theo Đợt Thay Đổi · Chấm công &amp; Quyết toán Tăng Giờ</p>
             </div>
             <div id="db-status-badge" class="db-status-badge">
                 <span class="status-dot"></span>
@@ -795,21 +846,24 @@
         <!-- VIEW SWITCHER -->
         <div class="view-switcher">
             <button class="view-tab-btn active" id="tab-nav-phancong" onclick="switchAppView('view-phancong')">
-                <i class="fas fa-clipboard-list"></i> 1. Phân công giảng dạy
+                <i class="fas fa-clipboard-list"></i> 1. Phân công theo Đợt
             </button>
             <button class="view-tab-btn" id="tab-nav-chamcong" onclick="switchAppView('view-chamcong')">
                 <i class="fas fa-calendar-check"></i> 2. Chấm công GV
             </button>
+            <button class="view-tab-btn" id="tab-nav-tanggio" onclick="switchAppView('view-tanggio')">
+                <i class="fas fa-calculator text-amber-600"></i> 3. Quyết toán Tăng Giờ
+            </button>
             <button class="view-tab-btn" id="tab-nav-baocao" onclick="switchAppView('view-baocao')">
-                <i class="fas fa-chart-pie"></i> 3. Báo cáo &amp; Thống kê
+                <i class="fas fa-chart-pie"></i> 4. Báo cáo &amp; Thống kê
             </button>
         </div>
 
         <div class="nav-actions">
-            <button class="btn-toolbar btn-config" onclick="openConfigModal('tab-info')" title="Cài đặt tổ, môn học, lớp học và giáo viên">
+            <button class="btn-toolbar btn-config" onclick="openConfigModal('tab-info')" title="Cài đặt tổ, đợt phân công, môn học, lớp học và giáo viên">
                 <i class="fas fa-gear text-indigo-600"></i> Khai báo Tổ
             </button>
-            <button class="btn-toolbar btn-db-save" id="btn-save-db" onclick="saveToDB()" title="Lưu toàn bộ dữ liệu phân công & chấm công lên CSDL MySQL">
+            <button class="btn-toolbar btn-db-save" id="btn-save-db" onclick="saveToDB()" title="Lưu toàn bộ dữ liệu phân công các đợt & chấm công lên CSDL MySQL">
                 <i class="fas fa-cloud-arrow-up"></i> Lưu CSDL
             </button>
             <button class="btn-toolbar btn-db-reload" onclick="loadFromDB(true)" title="Nạp lại dữ liệu từ CSDL">
@@ -831,7 +885,7 @@
         </div>
     </header>
 
-    <!-- 1. VIEW PHÂN CÔNG GIẢNG DẠY -->
+    <!-- 1. VIEW PHÂN CÔNG GIẢNG DẠY THEO ĐỢT -->
     <div class="app-view active" id="view-phancong">
         <!-- CỘT TRÁI: KHO LỚP HỌC -->
         <aside id="left-panel">
@@ -859,9 +913,17 @@
                 <div class="live-chips-list" id="live-subject-chips">
                     <!-- Render từ JS -->
                 </div>
-                <button class="btn-view-matrix" onclick="openMatrixModal()" title="Mở bảng ma trận tổng hợp toàn diện">
-                    <i class="fas fa-table-cells"></i> Xem Thống kê &amp; Ma trận
-                </button>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn-small" onclick="openQuickNewPhaseModal()" title="Tạo một đợt phân công mới khi có thay đổi">
+                        <i class="fas fa-plus-circle text-amber-600"></i> Tạo đợt mới
+                    </button>
+                    <button class="btn-small" onclick="cloneCurrentPhaseAssignments()" title="Sao chép phân công từ đợt khác sang đợt này">
+                        <i class="fas fa-copy text-indigo-600"></i> Sao chép đợt khác
+                    </button>
+                    <button class="btn-view-matrix" onclick="openMatrixModal()" title="Mở bảng ma trận tổng hợp toàn diện">
+                        <i class="fas fa-table-cells"></i> Xem Ma trận Đợt này
+                    </button>
+                </div>
             </div>
 
             <div class="teachers-grid" id="teachers-grid">
@@ -930,7 +992,43 @@
         </div>
     </div>
 
-    <!-- 3. VIEW BÁO CÁO & THỐNG KÊ TỔ -->
+    <!-- 3. VIEW TỔNG HỢP & QUYẾT TOÁN TĂNG GIỜ (CUỐI HK1, CUỐI HK2, CẢ NĂM) -->
+    <div class="app-view" id="view-tanggio">
+        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 14px; padding: 18px 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                <div>
+                    <h3 style="margin: 0 0 4px 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-calculator text-amber-600"></i> Bảng Quyết Toán Tăng Giờ / Thừa Giờ
+                    </h3>
+                    <p style="margin: 0; font-size: 0.78rem; color: #64748b;">
+                        Tổng hợp số tiết thực dạy theo các đợt ($\times$ số tuần của đợt) + Dạy thay phát sinh đối chiếu với Định mức quy chuẩn.
+                    </p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <label style="font-size: 0.82rem; font-weight: 800; color: #1e293b;">Kỳ quyết toán:</label>
+                    <select class="form-control" id="overtime-period-filter" style="padding: 6px 12px; font-weight: 800; color: #4338ca; width: 220px;" onchange="renderOvertimeSummary()">
+                        <option value="HK1" selected>📌 Cuối Học Kỳ 1 (HK1)</option>
+                        <option value="HK2">📌 Cuối Học Kỳ 2 (HK2)</option>
+                        <option value="ALL">🏆 Toàn bộ Năm Học (Cả Năm)</option>
+                    </select>
+                    <button class="btn-small btn-export-excel" onclick="exportOvertimeToExcel()"><i class="fas fa-file-excel"></i> Xuất Excel Quyết Toán</button>
+                </div>
+            </div>
+
+            <!-- SUMMARY STATS CHIPS FOR OVERTIME -->
+            <div class="live-chips-list" id="overtime-summary-chips" style="margin-bottom: 14px; background:#f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                <!-- Render từ JS -->
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="overtime-summary-table">
+                    <!-- Render từ JS -->
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. VIEW BÁO CÁO & THỐNG KÊ TỔ -->
     <div class="app-view" id="view-baocao">
         <div class="stats-cards-grid">
             <div class="stat-card">
@@ -949,7 +1047,7 @@
                 </div>
                 <div class="stat-card-info">
                     <h3 id="rep-total-periods">0</h3>
-                    <p>Tổng số tiết dạy / tuần</p>
+                    <p>Tổng số tiết dạy / tuần (đợt hiện tại)</p>
                 </div>
             </div>
 
@@ -977,7 +1075,7 @@
         <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                 <h3 style="margin: 0; font-size: 1rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-table-list text-indigo-600"></i> Bảng Tổng Hợp Chuyên Môn Của Tổ
+                    <i class="fas fa-table-list text-indigo-600"></i> Bảng Tổng Hợp Chuyên Môn Của Tổ (Theo Đợt Đang Chọn)
                 </h3>
                 <button class="btn-small btn-small-primary" onclick="openMatrixModal()"><i class="fas fa-eye"></i> Xem Ma Trận Theo Lớp</button>
             </div>
@@ -985,6 +1083,64 @@
                 <table class="data-table" id="summary-report-table">
                     <!-- Render từ JS -->
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TẠO NHANH ĐỢT PHÂN CÔNG MỚI (QUICK CREATE PHASE) -->
+    <div class="modal-overlay" id="quick-phase-modal">
+        <div class="modal-card" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-plus-circle text-amber-600"></i> Tạo Đợt Phân Công Mới (Khi Có Thay Đổi)</h2>
+                <button class="modal-close" onclick="closeQuickNewPhaseModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p style="margin: 0 0 14px 0; font-size: 0.82rem; color: #64748b;">
+                    Khi có thay đổi giáo viên, lớp dạy trong tuần hoặc tháng, hãy tạo đợt mới để lưu lại mốc thời gian và tính chính xác số tiết tăng giờ cuối kỳ.
+                </p>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Tên Đợt phân công:</label>
+                    <input type="text" class="form-control" id="qp-name" placeholder="VD: Đợt 2 (Từ Tuần 5 - Thầy Tùng nghỉ sinh, cô Thảo dạy thay)">
+                </div>
+                <div class="form-grid" style="margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label>Thuộc Học kỳ:</label>
+                        <select class="form-control" id="qp-semester">
+                            <option value="HK1">Học kỳ 1 (HK1)</option>
+                            <option value="HK2">Học kỳ 2 (HK2)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Số tuần áp dụng đợt này:</label>
+                        <input type="number" class="form-control" id="qp-weeks" min="1" max="25" value="4" style="font-weight: bold; color: #4338ca;">
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label>Từ ngày (tùy chọn):</label>
+                        <input type="date" class="form-control" id="qp-date-start">
+                    </div>
+                    <div class="form-group">
+                        <label>Đến ngày (tùy chọn):</label>
+                        <input type="date" class="form-control" id="qp-date-end">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>Lý do / Ghi chú thay đổi:</label>
+                    <input type="text" class="form-control" id="qp-note" placeholder="VD: Đổi TKB toàn trường / GV bồi dưỡng chuyên môn...">
+                </div>
+                <div style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <label class="checkbox-group" style="width:100%; font-size: 0.82rem; background:transparent; border:none; padding:0;">
+                        <input type="checkbox" id="qp-inherit-assignments" checked>
+                        <span><b>Kế thừa phân công từ đợt hiện tại</b> (khuyên dùng để chỉ cần chỉnh sửa các lớp thay đổi)</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-small" onclick="closeQuickNewPhaseModal()">Hủy</button>
+                <button class="btn-small btn-small-primary" onclick="submitQuickNewPhase()">
+                    <i class="fas fa-rocket"></i> Tạo đợt &amp; Chuyển phân công ngay
+                </button>
             </div>
         </div>
     </div>
@@ -1097,7 +1253,7 @@
     <div class="modal-overlay" id="matrix-modal">
         <div class="modal-card" style="max-width: 1080px;">
             <div class="modal-header">
-                <h2><i class="fas fa-chart-column text-indigo-600"></i> Bảng Thống Kê &amp; Ma Trận Phân Công Toàn Tổ</h2>
+                <h2><i class="fas fa-chart-column text-indigo-600"></i> Bảng Thống Kê &amp; Ma Trận Phân Công (<span id="matrix-modal-phase-label">Đợt 1</span>)</h2>
                 <button class="modal-close" onclick="closeMatrixModal()">&times;</button>
             </div>
             <div class="modal-tabs">
@@ -1142,9 +1298,10 @@
             </div>
             <div class="modal-tabs">
                 <button class="modal-tab-btn active" id="tab-btn-info" onclick="switchModalTab('tab-info')"><i class="fas fa-school"></i> 1. Tổ &amp; Năm học</button>
-                <button class="modal-tab-btn" id="tab-btn-teachers" onclick="switchModalTab('tab-teachers')"><i class="fas fa-user-tie"></i> 2. Giáo viên (<span id="tab-badge-teachers">0</span>)</button>
-                <button class="modal-tab-btn" id="tab-btn-subjects" onclick="switchModalTab('tab-subjects')"><i class="fas fa-book-open"></i> 3. Môn học &amp; Định mức (<span id="tab-badge-subjects">0</span>)</button>
-                <button class="modal-tab-btn" id="tab-btn-classes" onclick="switchModalTab('tab-classes')"><i class="fas fa-users-rectangle"></i> 4. Danh sách Lớp (<span id="tab-badge-classes">0</span>)</button>
+                <button class="modal-tab-btn" id="tab-btn-phases" onclick="switchModalTab('tab-phases')"><i class="fas fa-clock-rotate-left"></i> 2. Các Đợt Phân Công (<span id="tab-badge-phases">0</span>)</button>
+                <button class="modal-tab-btn" id="tab-btn-teachers" onclick="switchModalTab('tab-teachers')"><i class="fas fa-user-tie"></i> 3. Giáo viên (<span id="tab-badge-teachers">0</span>)</button>
+                <button class="modal-tab-btn" id="tab-btn-subjects" onclick="switchModalTab('tab-subjects')"><i class="fas fa-book-open"></i> 4. Môn học (<span id="tab-badge-subjects">0</span>)</button>
+                <button class="modal-tab-btn" id="tab-btn-classes" onclick="switchModalTab('tab-classes')"><i class="fas fa-users-rectangle"></i> 5. Danh sách Lớp (<span id="tab-badge-classes">0</span>)</button>
             </div>
 
             <div class="modal-body">
@@ -1160,7 +1317,7 @@
                             <input type="text" class="form-control" id="cfg-school-year" placeholder="VD: 2025 - 2026">
                         </div>
                         <div class="form-group">
-                            <label>Học kỳ:</label>
+                            <label>Học kỳ mặc định:</label>
                             <select class="form-control" id="cfg-semester">
                                 <option value="HK1">Học kỳ 1</option>
                                 <option value="HK2">Học kỳ 2</option>
@@ -1183,7 +1340,35 @@
                     </div>
                 </div>
 
-                <!-- TAB 2: KHAI BÁO GIÁO VIÊN -->
+                <!-- TAB 2: KHAI BÁO CÁC ĐỢT PHÂN CÔNG -->
+                <div class="tab-pane" id="tab-phases">
+                    <div class="action-bar-sub">
+                        <div>
+                            <button class="btn-small btn-small-primary" onclick="addPhaseRow()"><i class="fas fa-plus"></i> Thêm Đợt mới</button>
+                            <button class="btn-small" onclick="generateDefaultPhases()"><i class="fas fa-wand-magic-sparkles"></i> Tạo 4 đợt chuẩn năm học</button>
+                        </div>
+                        <span style="font-size: 0.78rem; color: #64748b;">Khai báo số tuần thực dạy của từng đợt để quyết toán tăng giờ cuối HK1, HK2 &amp; Cả năm</span>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 35px; text-align:center;">STT</th>
+                                <th>Tên Đợt phân công</th>
+                                <th style="width: 90px; text-align:center;">Học kỳ</th>
+                                <th style="width: 90px; text-align:center;">Số tuần</th>
+                                <th style="width: 130px;">Từ ngày</th>
+                                <th style="width: 130px;">Đến ngày</th>
+                                <th>Ghi chú</th>
+                                <th style="width: 45px; text-align:center;">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="phases-table-body">
+                            <!-- Render từ JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TAB 3: KHAI BÁO GIÁO VIÊN -->
                 <div class="tab-pane" id="tab-teachers">
                     <div class="action-bar-sub">
                         <div>
@@ -1210,7 +1395,7 @@
                     </table>
                 </div>
 
-                <!-- TAB 3: KHAI BÁO MÔN HỌC & ĐỊNH MỨC -->
+                <!-- TAB 4: KHAI BÁO MÔN HỌC & ĐỊNH MỨC -->
                 <div class="tab-pane" id="tab-subjects">
                     <div class="action-bar-sub">
                         <div>
@@ -1239,7 +1424,7 @@
                     </table>
                 </div>
 
-                <!-- TAB 4: KHAI BÁO LỚP HỌC -->
+                <!-- TAB 5: KHAI BÁO LỚP HỌC -->
                 <div class="tab-pane" id="tab-classes">
                     <div class="action-bar-sub">
                         <div>
@@ -1292,14 +1477,24 @@
             { value: 'KP', label: 'KP (Không phép)' }
         ];
 
+        // 4 ĐỢT MẪU TRONG NĂM HỌC
+        const DEFAULT_PHASES = [
+            { id: 'phase_hk1_d1', name: 'Đợt 1 (Đầu HK1)', semester: 'HK1', weeks_count: 9, date_start: '2025-09-05', date_end: '2025-11-05', note: 'Từ đầu năm đến giữa HK1' },
+            { id: 'phase_hk1_d2', name: 'Đợt 2 (Cuối HK1)', semester: 'HK1', weeks_count: 9, date_start: '2025-11-06', date_end: '2026-01-10', note: 'Từ giữa kỳ đến hết HK1' },
+            { id: 'phase_hk2_d1', name: 'Đợt 3 (Đầu HK2)', semester: 'HK2', weeks_count: 9, date_start: '2026-01-12', date_end: '2026-03-20', note: 'Bắt đầu học kỳ 2' },
+            { id: 'phase_hk2_d2', name: 'Đợt 4 (Cuối HK2 / Ôn thi)', semester: 'HK2', weeks_count: 8, date_start: '2026-03-23', date_end: '2026-05-25', note: 'Ôn tập và bế giảng' }
+        ];
+
         // DỮ LIỆU KHỞI TẠO MẪU
         const defaultState = {
             info: {
                 title: 'Tổ Toán - Tin học',
                 school_year: '2025 - 2026',
                 semester: 'HK1',
-                plan_key: 'default'
+                plan_key: 'default',
+                current_phase_id: 'phase_hk1_d1'
             },
+            phases: JSON.parse(JSON.stringify(DEFAULT_PHASES)),
             subjects: [
                 { key: 'math', name: 'Toán', periods: 4, color: '#2563eb', is_core: true },
                 { key: 'it', name: 'Tin học', periods: 1, color: '#059669', is_core: true },
@@ -1307,7 +1502,7 @@
                 { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed', is_core: false }
             ],
             classes: ['61', '62', '63', '64', '65', '66', '71', '72', '73', '74', '75', '76', '81', '82', '83', '84', '85', '86', '91', '92', '93', '94', '95', '96', '97'],
-            unassigned: {},
+            phase_assignments: {}, // Lưu phân công riêng theo từng phase_id
             teachers: [
                 { id: 't1', name: 'T.Thiên', role: 'TTCM', quota: 19, allowance: 3, qlpm: false, assignments: {} },
                 { id: 't2', name: 'T.Sáng', role: 'TPCM', quota: 19, allowance: 1, qlpm: false, assignments: {} },
@@ -1320,6 +1515,7 @@
                 { id: 't9', name: 'T. Tính', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
                 { id: 't10', name: 'T. Tùng', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} }
             ],
+            unassigned: {},
             attendance: {
                 current_month: '9',
                 records: {},
@@ -1333,10 +1529,16 @@
 
         function normalizeState(s) {
             if (!s.info) s.info = { ...defaultState.info };
+            if (!Array.isArray(s.phases) || s.phases.length === 0) s.phases = JSON.parse(JSON.stringify(DEFAULT_PHASES));
+            if (!s.info.current_phase_id || !s.phases.some(p => p.id === s.info.current_phase_id)) {
+                s.info.current_phase_id = s.phases[0].id;
+            }
+
             if (!Array.isArray(s.subjects) || s.subjects.length === 0) s.subjects = [...defaultState.subjects];
             if (!Array.isArray(s.classes)) s.classes = [...defaultState.classes];
             if (!Array.isArray(s.teachers)) s.teachers = [];
             if (!s.unassigned) s.unassigned = {};
+            if (!s.phase_assignments) s.phase_assignments = {};
             if (!s.attendance) s.attendance = { current_month: '9', records: {}, substitutes: {} };
             if (!s.attendance.records) s.attendance.records = {};
             if (!s.attendance.substitutes) s.attendance.substitutes = {};
@@ -1345,7 +1547,6 @@
                 if (typeof sub.is_core !== 'boolean') {
                     sub.is_core = (sub.key !== 'gvcn' && sub.key !== 'hdtn');
                 }
-
                 if (!Array.isArray(s.unassigned[sub.key])) {
                     s.unassigned[sub.key] = [...s.classes];
                 }
@@ -1366,6 +1567,15 @@
                     }
                 });
             });
+
+            // Đồng bộ phase_assignments nếu chưa có đợt hiện tại
+            const curPhase = s.info.current_phase_id;
+            if (!s.phase_assignments[curPhase]) {
+                s.phase_assignments[curPhase] = {
+                    teachers: JSON.parse(JSON.stringify(s.teachers)),
+                    unassigned: JSON.parse(JSON.stringify(s.unassigned))
+                };
+            }
 
             s.subjects.forEach(sub => {
                 const assigned = new Set();
@@ -1389,13 +1599,174 @@
 
             if (viewId === 'view-chamcong') {
                 renderAttendance();
+            } else if (viewId === 'view-tanggio') {
+                renderOvertimeSummary();
             } else if (viewId === 'view-baocao') {
                 renderReports();
             }
         }
 
+        // ================= QUẢN LÝ & CHUYỂN ĐỔI ĐỢT (PHASES) =================
+        function getCurrentPhase() {
+            const pid = state.info?.current_phase_id || (state.phases[0] ? state.phases[0].id : 'default');
+            return state.phases.find(p => p.id === pid) || state.phases[0] || { id: pid, name: 'Đợt 1', semester: 'HK1', weeks_count: 9 };
+        }
+
+        function switchPhase(phaseId) {
+            // 1. Lưu snapshot phân công của đợt hiện tại
+            saveCurrentPhaseSnapshot();
+
+            // 2. Chuyển sang đợt mới
+            state.info.current_phase_id = phaseId;
+
+            // 3. Nạp snapshot của đợt mới (nếu có) hoặc copy từ đợt hiện tại
+            if (state.phase_assignments && state.phase_assignments[phaseId]) {
+                const snap = state.phase_assignments[phaseId];
+                state.teachers = JSON.parse(JSON.stringify(snap.teachers || state.teachers));
+                state.unassigned = JSON.parse(JSON.stringify(snap.unassigned || state.unassigned));
+            } else {
+                // Tạo mới snapshot cho đợt này
+                if (!state.phase_assignments) state.phase_assignments = {};
+                state.phase_assignments[phaseId] = {
+                    teachers: JSON.parse(JSON.stringify(state.teachers)),
+                    unassigned: JSON.parse(JSON.stringify(state.unassigned))
+                };
+            }
+
+            saveToLocal();
+            render();
+            const curP = getCurrentPhase();
+            showToast(`Đã chuyển sang: ${curP.name} (${curP.weeks_count} tuần)`, "info");
+        }
+
+        function saveCurrentPhaseSnapshot() {
+            const curPid = state.info?.current_phase_id;
+            if (!curPid) return;
+            if (!state.phase_assignments) state.phase_assignments = {};
+            state.phase_assignments[curPid] = {
+                teachers: JSON.parse(JSON.stringify(state.teachers)),
+                unassigned: JSON.parse(JSON.stringify(state.unassigned))
+            };
+        }
+
+        function cloneCurrentPhaseAssignments() {
+            const otherPhases = state.phases.filter(p => p.id !== state.info.current_phase_id);
+            if (otherPhases.length === 0) {
+                alert("Chưa có đợt phân công khác để sao chép!");
+                return;
+            }
+
+            const phaseOptions = otherPhases.map(p => `• [${p.id}]: ${p.name} (${p.weeks_count} tuần)`).join('\n');
+            const targetId = prompt(`Nhập mã đợt nguồn bạn muốn sao chép phân công vào đợt hiện tại:\n${phaseOptions}`, otherPhases[0].id);
+
+            if (targetId && state.phase_assignments && state.phase_assignments[targetId]) {
+                const snap = state.phase_assignments[targetId];
+                state.teachers = JSON.parse(JSON.stringify(snap.teachers));
+                state.unassigned = JSON.parse(JSON.stringify(snap.unassigned));
+                saveCurrentPhaseSnapshot();
+                saveToLocal();
+                render();
+                showToast(`Đã sao chép phân công từ đợt [${targetId}] thành công!`, "success");
+            } else if (targetId) {
+                alert("Không tìm thấy dữ liệu phân công của đợt này!");
+            }
+        }
+
+        function renderPhaseSelector() {
+            const sel = document.getElementById('nav-phase-select');
+            if (!sel) return;
+            const curId = state.info?.current_phase_id;
+
+            sel.innerHTML = state.phases.map(p => `
+                <option value="${p.id}" ${p.id === curId ? 'selected' : ''}>
+                    ${escapeHtml(p.name)} (${p.weeks_count} tuần - ${p.semester})
+                </option>
+            `).join('');
+        }
+
+        // ================= TẠO NHANH ĐỢT MỚI KHI CÓ THAY ĐỔI =================
+        function openQuickNewPhaseModal() {
+            const nextIdx = state.phases.length + 1;
+            const curPhase = getCurrentPhase();
+            document.getElementById('qp-name').value = `Đợt ${nextIdx} (Từ tuần ...)`;
+            document.getElementById('qp-semester').value = curPhase.semester || 'HK1';
+            document.getElementById('qp-weeks').value = 4;
+            document.getElementById('qp-date-start').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('qp-date-end').value = '';
+            document.getElementById('qp-note').value = 'Điều chỉnh phân công khi có thay đổi GV/Lớp';
+            document.getElementById('qp-inherit-assignments').checked = true;
+
+            document.getElementById('quick-phase-modal').classList.add('active');
+        }
+
+        function closeQuickNewPhaseModal() {
+            document.getElementById('quick-phase-modal').classList.remove('active');
+        }
+
+        function submitQuickNewPhase() {
+            const name = document.getElementById('qp-name').value.trim();
+            const semester = document.getElementById('qp-semester').value || 'HK1';
+            const weeks_count = parseInt(document.getElementById('qp-weeks').value) || 1;
+            const date_start = document.getElementById('qp-date-start').value;
+            const date_end = document.getElementById('qp-date-end').value;
+            const note = document.getElementById('qp-note').value.trim();
+            const inherit = document.getElementById('qp-inherit-assignments').checked;
+
+            if (!name) {
+                alert("Vui lòng nhập tên đợt phân công!");
+                return;
+            }
+
+            // 1. Lưu snapshot đợt hiện tại
+            saveCurrentPhaseSnapshot();
+
+            // 2. Tạo phase ID mới
+            const newPhaseId = 'phase_' + Date.now();
+            const newPhaseObj = {
+                id: newPhaseId,
+                name,
+                semester,
+                weeks_count,
+                date_start,
+                date_end,
+                note
+            };
+
+            state.phases.push(newPhaseObj);
+
+            // 3. Kế thừa phân công
+            if (inherit) {
+                state.phase_assignments[newPhaseId] = {
+                    teachers: JSON.parse(JSON.stringify(state.teachers)),
+                    unassigned: JSON.parse(JSON.stringify(state.unassigned))
+                };
+            } else {
+                // Làm mới phân công
+                const freshTeachers = state.teachers.map(t => ({ ...t, assignments: {} }));
+                const freshUnassigned = {};
+                state.subjects.forEach(sub => {
+                    freshUnassigned[sub.key] = [...state.classes];
+                });
+                state.phase_assignments[newPhaseId] = {
+                    teachers: freshTeachers,
+                    unassigned: freshUnassigned
+                };
+            }
+
+            // 4. Chuyển sang đợt mới
+            state.info.current_phase_id = newPhaseId;
+            state.teachers = JSON.parse(JSON.stringify(state.phase_assignments[newPhaseId].teachers));
+            state.unassigned = JSON.parse(JSON.stringify(state.phase_assignments[newPhaseId].unassigned));
+
+            saveToLocal();
+            closeQuickNewPhaseModal();
+            render();
+            showToast(`Đã tạo và chuyển sang ${name}! Hãy chỉnh sửa các lớp thay đổi.`, "success");
+        }
+
         // ================= CSDL & LOCAL STORAGE =================
         function saveToLocal() {
+            saveCurrentPhaseSnapshot();
             localStorage.setItem('phanCongData', JSON.stringify(state));
         }
 
@@ -1449,6 +1820,7 @@
         }
 
         async function saveToDB() {
+            saveCurrentPhaseSnapshot();
             const saveBtn = document.getElementById('btn-save-db');
             if (saveBtn) {
                 saveBtn.disabled = true;
@@ -1638,19 +2010,18 @@
         function render() {
             const titleEl = document.getElementById('display-plan-title');
             const yearEl = document.getElementById('display-plan-year');
+            const curPhase = getCurrentPhase();
+
             if (titleEl) titleEl.textContent = state.info.title || 'Tổ Chuyên Môn';
             if (yearEl) yearEl.textContent = `${state.info.school_year || ''} (${state.info.semester || 'HK1'})`;
 
-            const statT = document.getElementById('stat-teachers-count');
-            const statC = document.getElementById('stat-classes-count');
-            if (statT) statT.textContent = state.teachers.length;
-            if (statC) statC.textContent = state.classes.length;
-
+            renderPhaseSelector();
             renderLiveStatsBanner();
             renderPool();
             renderTeachers();
             renderAttendance();
             renderReports();
+            renderOvertimeSummary();
         }
 
         function renderLiveStatsBanner() {
@@ -1658,7 +2029,12 @@
             if (!container) return;
 
             const totalClasses = state.classes.length;
-            let chipsHtml = '';
+            const curPhase = getCurrentPhase();
+            let chipsHtml = `
+                <span class="stat-chip" style="background:#fef3c7; color:#92400e; border-color:#fde68a;">
+                    <i class="fas fa-calendar-check"></i> <b>Đợt:</b> ${escapeHtml(curPhase.name)} (${curPhase.weeks_count} tuần)
+                </span>
+            `;
 
             state.subjects.forEach(sub => {
                 const assignedCount = state.teachers.reduce((sum, t) => sum + ((t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key].length : 0), 0);
@@ -1829,6 +2205,8 @@
 
         // ================= MA TRẬN PHÂN CÔNG TOÀN DIỆN (MODAL) =================
         function openMatrixModal() {
+            const curP = getCurrentPhase();
+            document.getElementById('matrix-modal-phase-label').textContent = `${curP.name} (${curP.weeks_count} tuần)`;
             renderMatrixModalTables();
             document.getElementById('matrix-modal').classList.add('active');
         }
@@ -1914,7 +2292,7 @@
                         <td colspan="${3 + state.subjects.length}" style="text-align:right;">TỔNG CỘNG TOÀN TỔ:</td>
                         <td style="text-align:center; color:#2563eb;">${grandTeaching}t</td>
                         <td style="text-align:center;">—</td>
-                        <td style="text-align:center; color:#dc2626; font-size:1.05rem;">${grandTotal}t</td>
+                        <td style="text-align:color:#dc2626; font-size:1.05rem; text-align:center;">${grandTotal}t</td>
                         <td colspan="2" style="text-align:center;">Trung bình: ${(grandTotal / (state.teachers.length || 1)).toFixed(1)}t/GV</td>
                     </tr>
                 `;
@@ -1978,6 +2356,257 @@
 
                 cTable.innerHTML = thead + tbody + `</tbody>`;
             }
+        }
+
+        // ================= 3. PHÂN HỆ QUYẾT TOÁN TĂNG GIỜ (CUỐI HK1, CUỐI HK2, CẢ NĂM) =================
+        function getPhasesForPeriod(periodType) {
+            if (periodType === 'HK1') {
+                return state.phases.filter(p => p.semester === 'HK1');
+            } else if (periodType === 'HK2') {
+                return state.phases.filter(p => p.semester === 'HK2');
+            }
+            return state.phases; // 'ALL' - Cả năm
+        }
+
+        function getMonthsForPeriod(periodType) {
+            if (periodType === 'HK1') {
+                return ['9', '10', '11', '12', '1'];
+            } else if (periodType === 'HK2') {
+                return ['1', '2', '3', '4', '5'];
+            }
+            return ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+        }
+
+        function renderOvertimeSummary() {
+            const table = document.getElementById('overtime-summary-table');
+            const chips = document.getElementById('overtime-summary-chips');
+            if (!table) return;
+
+            const periodType = document.getElementById('overtime-period-filter')?.value || 'HK1';
+            const relevantPhases = getPhasesForPeriod(periodType);
+            const totalWeeks = relevantPhases.reduce((sum, p) => sum + (parseInt(p.weeks_count) || 0), 0);
+            const relevantMonths = getMonthsForPeriod(periodType);
+
+            // Render summary chips
+            if (chips) {
+                const periodLabel = periodType === 'HK1' ? 'Học kỳ 1' : (periodType === 'HK2' ? 'Học kỳ 2' : 'Cả Năm Học');
+                chips.innerHTML = `
+                    <span class="stat-chip" style="background:#e0e7ff; color:#3730a3; border-color:#c7d2fe;">
+                        <i class="fas fa-calendar-week"></i> <b>${periodLabel}:</b> ${relevantPhases.length} đợt (${totalWeeks} tuần thực dạy)
+                    </span>
+                    ${relevantPhases.map(p => `<span class="stat-chip"><b>${p.name}:</b> ${p.weeks_count} tuần</span>`).join('')}
+                    <span class="stat-chip" style="background:#fef3c7; color:#92400e; border-color:#fde68a;">
+                        <i class="fas fa-scale-balanced"></i> Chuẩn BGDĐT: GV 19t, TTCM 16t, TPCM 18t, PHT 4t, HT 2t
+                    </span>
+                `;
+            }
+
+            // Xây dựng Bảng Quyết Toán Tăng Giờ
+            let thead = `
+                <thead>
+                    <tr>
+                        <th style="width:35px; text-align:center;" rowspan="2">STT</th>
+                        <th rowspan="2">Họ và Tên Giáo viên</th>
+                        <th style="text-align:center; width:75px;" rowspan="2">Chức vụ</th>
+                        <th style="text-align:center; width:80px;" rowspan="2">Định mức/tuần</th>
+                        <th style="text-align:center; background:#e0e7ff; color:#3730a3;" colspan="${relevantPhases.length}">Tiết/tuần theo từng đợt</th>
+                        <th style="text-align:center; width:90px;" rowspan="2">Tổng tiết phân công</th>
+                        <th style="text-align:center; width:80px; color:#2563eb;" rowspan="2">Dạy thay (+)</th>
+                        <th style="text-align:center; width:80px; color:#dc2626;" rowspan="2">Nghỉ (-)</th>
+                        <th style="text-align:center; width:95px; font-weight:800;" rowspan="2">Tổng thực hiện</th>
+                        <th style="text-align:center; width:95px;" rowspan="2">Định mức kỳ (${totalWeeks}t)</th>
+                        <th style="text-align:center; width:110px; color:#dc2626; font-size:0.9rem;" rowspan="2">TĂNG GIỜ (Thừa)</th>
+                        <th style="text-align:center; width:100px;" rowspan="2">Thanh toán</th>
+                    </tr>
+                    <tr>
+                        ${relevantPhases.map(p => `<th style="text-align:center; font-size:0.75rem; background:#eef2ff;">${p.name}<br><small>(${p.weeks_count} tuần)</small></th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            let tbody = '';
+            let grandTotalOvertime = 0;
+            let grandTeachingTotal = 0;
+
+            state.teachers.forEach((t, index) => {
+                const weeklyQuota = getTeacherQuota(t);
+                const periodStandardQuota = weeklyQuota * totalWeeks;
+
+                let phaseWeeklyPeriods = [];
+                let totalPhanCongPeriods = 0;
+
+                relevantPhases.forEach(p => {
+                    const snap = state.phase_assignments?.[p.id];
+                    let tInPhase = t;
+                    if (snap && Array.isArray(snap.teachers)) {
+                        tInPhase = snap.teachers.find(x => x.id === t.id) || t;
+                    }
+                    const periodsInPhase = calcTeacherTotalPeriods(tInPhase);
+                    phaseWeeklyPeriods.push(periodsInPhase);
+                    totalPhanCongPeriods += periodsInPhase * (parseInt(p.weeks_count) || 0);
+                });
+
+                // Tính tổng dạy thay & nghỉ phép từ Attendance
+                let totalTeachReplace = 0;
+                let totalLeave = 0;
+
+                relevantMonths.forEach(m => {
+                    const rec = state.attendance?.records?.[`m_${m}`]?.[t.id];
+                    if (rec) {
+                        totalTeachReplace += (parseInt(rec.teach_replace) || 0);
+                        totalLeave += (parseInt(rec.leave_p) || 0);
+                    }
+                });
+
+                const totalActualExecuted = totalPhanCongPeriods + totalTeachReplace - totalLeave;
+                const overtime = Math.max(0, totalActualExecuted - periodStandardQuota);
+                const under = Math.max(0, periodStandardQuota - totalActualExecuted);
+
+                grandTotalOvertime += overtime;
+                grandTeachingTotal += totalActualExecuted;
+
+                let overtimeBadge = `<span style="color:#059669; font-weight:800;">0 tiết</span>`;
+                let paymentBadge = `<span style="background:#f1f5f9; color:#64748b; padding:2px 6px; border-radius:4px; font-size:0.75rem;">Đủ chuẩn</span>`;
+
+                if (overtime > 0) {
+                    overtimeBadge = `<span style="color:#dc2626; font-weight:800; font-size:0.95rem;">+${overtime} tiết</span>`;
+                    paymentBadge = `<span style="background:#ecfdf5; color:#065f46; padding:3px 8px; border-radius:6px; font-weight:800; font-size:0.75rem;"><i class="fas fa-money-bill-wave"></i> Nhận ${overtime}t</span>`;
+                } else if (under > 0) {
+                    overtimeBadge = `<span style="color:#2563eb; font-weight:700;">-${under} tiết</span>`;
+                    paymentBadge = `<span style="background:#eff6ff; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.75rem;">Thiếu ${under}t</span>`;
+                }
+
+                tbody += `
+                    <tr>
+                        <td style="text-align:center;">${index + 1}</td>
+                        <td><b>${escapeHtml(t.name)}</b></td>
+                        <td style="text-align:center;"><span style="font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:700;">${t.role}</span></td>
+                        <td style="text-align:center;"><b>${weeklyQuota}</b>t/tuần</td>
+                        ${phaseWeeklyPeriods.map(p => `<td style="text-align:center; font-weight:700;">${p}t</td>`).join('')}
+                        <td style="text-align:center; font-weight:700;">${totalPhanCongPeriods}t</td>
+                        <td style="text-align:center; color:#2563eb; font-weight:bold;">${totalTeachReplace > 0 ? `+${totalTeachReplace}` : '0'}</td>
+                        <td style="text-align:center; color:#dc2626;">${totalLeave > 0 ? `-${totalLeave}` : '0'}</td>
+                        <td style="text-align:center; font-weight:800; font-size:0.95rem; color:#0f172a;">${totalActualExecuted}t</td>
+                        <td style="text-align:center; font-weight:700;">${periodStandardQuota}t</td>
+                        <td style="text-align:center;">${overtimeBadge}</td>
+                        <td style="text-align:center;">${paymentBadge}</td>
+                    </tr>
+                `;
+            });
+
+            tbody += `
+                <tr style="background:#f8fafc; font-weight:bold;">
+                    <td colspan="${4 + relevantPhases.length}" style="text-align:right;">TỔNG CỘNG TOÀN TỔ:</td>
+                    <td style="text-align:center;">—</td>
+                    <td style="text-align:center;">—</td>
+                    <td style="text-align:center;">—</td>
+                    <td style="text-align:center; color:#2563eb; font-size:1.05rem;">${grandTeachingTotal}t</td>
+                    <td style="text-align:center;">—</td>
+                    <td style="text-align:center; color:#dc2626; font-size:1.15rem;">+${grandTotalOvertime} tiết</td>
+                    <td style="text-align:center; color:#059669; font-weight:800;">Quyết toán</td>
+                </tr>
+            `;
+
+            table.innerHTML = thead + tbody + `</tbody>`;
+        }
+
+        function exportOvertimeToExcel() {
+            const periodType = document.getElementById('overtime-period-filter')?.value || 'HK1';
+            const relevantPhases = getPhasesForPeriod(periodType);
+            const totalWeeks = relevantPhases.reduce((sum, p) => sum + (parseInt(p.weeks_count) || 0), 0);
+            const relevantMonths = getMonthsForPeriod(periodType);
+            const periodLabel = periodType === 'HK1' ? 'HỌC KỲ 1' : (periodType === 'HK2' ? 'HỌC KỲ 2' : 'CẢ NĂM HỌC');
+
+            let table = `<table border="1" style="border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;">
+                <thead>
+                    <tr>
+                        <th colspan="${10 + relevantPhases.length}" style="background-color: #1e3a8a; color: white; font-size: 16px; padding: 10px; text-align: center;">
+                            BẢNG QUYẾT TOÁN TĂNG GIỜ / THỪA GIỜ - ${periodLabel} (NĂM HỌC ${state.info.school_year || ''})
+                            <br><small style="font-size:12px; font-weight:normal;">Đơn vị: ${state.info.title.toUpperCase()} · Tổng số tuần thực dạy: ${totalWeeks} tuần</small>
+                        </th>
+                    </tr>
+                    <tr style="background-color: #f1f5f9; color: #0f172a; font-weight: bold; text-align: center;">
+                        <th style="padding: 8px;">STT</th>
+                        <th style="padding: 8px;">Họ và Tên Giáo viên</th>
+                        <th style="padding: 8px;">Chức vụ</th>
+                        <th style="padding: 8px;">Định mức/tuần</th>
+                        ${relevantPhases.map(p => `<th style="padding: 8px; color: #3730a3;">${p.name} (${p.weeks_count}t)</th>`).join('')}
+                        <th style="padding: 8px;">Tổng Tiết Phân Công</th>
+                        <th style="padding: 8px; color: #2563eb;">Dạy thay (+)</th>
+                        <th style="padding: 8px; color: #dc2626;">Nghỉ (-)</th>
+                        <th style="padding: 8px; font-weight: bold;">Tổng Thực Hiện</th>
+                        <th style="padding: 8px;">Định Mức Kỳ (${totalWeeks} tuần)</th>
+                        <th style="padding: 8px; color: #dc2626; font-size: 14px;">TĂNG GIỜ (Thừa)</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            let grandTotalOvertime = 0;
+            let grandTeachingTotal = 0;
+
+            state.teachers.forEach((t, index) => {
+                const weeklyQuota = getTeacherQuota(t);
+                const periodStandardQuota = weeklyQuota * totalWeeks;
+
+                let phaseWeeklyPeriods = [];
+                let totalPhanCongPeriods = 0;
+
+                relevantPhases.forEach(p => {
+                    const snap = state.phase_assignments?.[p.id];
+                    let tInPhase = t;
+                    if (snap && Array.isArray(snap.teachers)) {
+                        tInPhase = snap.teachers.find(x => x.id === t.id) || t;
+                    }
+                    const periodsInPhase = calcTeacherTotalPeriods(tInPhase);
+                    phaseWeeklyPeriods.push(periodsInPhase);
+                    totalPhanCongPeriods += periodsInPhase * (parseInt(p.weeks_count) || 0);
+                });
+
+                let totalTeachReplace = 0;
+                let totalLeave = 0;
+
+                relevantMonths.forEach(m => {
+                    const rec = state.attendance?.records?.[`m_${m}`]?.[t.id];
+                    if (rec) {
+                        totalTeachReplace += (parseInt(rec.teach_replace) || 0);
+                        totalLeave += (parseInt(rec.leave_p) || 0);
+                    }
+                });
+
+                const totalActualExecuted = totalPhanCongPeriods + totalTeachReplace - totalLeave;
+                const overtime = Math.max(0, totalActualExecuted - periodStandardQuota);
+                grandTotalOvertime += overtime;
+                grandTeachingTotal += totalActualExecuted;
+
+                table += `<tr>
+                    <td style="padding: 6px; text-align: center;">${index + 1}</td>
+                    <td style="padding: 6px; font-weight: bold;">${t.name}</td>
+                    <td style="padding: 6px; text-align: center;">${t.role}</td>
+                    <td style="padding: 6px; text-align: center;">${weeklyQuota}t/tuần</td>
+                    ${phaseWeeklyPeriods.map(p => `<td style="padding: 6px; text-align: center;">${p}t</td>`).join('')}
+                    <td style="padding: 6px; text-align: center; font-weight: bold;">${totalPhanCongPeriods}t</td>
+                    <td style="padding: 6px; text-align: center; color: #2563eb;">${totalTeachReplace}</td>
+                    <td style="padding: 6px; text-align: center; color: #dc2626;">${totalLeave}</td>
+                    <td style="padding: 6px; text-align: center; font-weight: bold; font-size: 14px;">${totalActualExecuted}t</td>
+                    <td style="padding: 6px; text-align: center;">${periodStandardQuota}t</td>
+                    <td style="padding: 6px; text-align: center; font-weight: bold; color: #dc2626; font-size: 14px;">${overtime > 0 ? `+${overtime} tiết` : '0'}</td>
+                </tr>`;
+            });
+
+            table += `<tr style="background-color: #f8fafc; font-weight: bold; text-align: center;">
+                <td colspan="${4 + relevantPhases.length}" style="padding: 8px; text-align: right;">TỔNG CỘNG:</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td style="padding: 8px; color: #2563eb; font-size: 15px;">${grandTeachingTotal}t</td>
+                <td>—</td>
+                <td style="padding: 8px; color: #dc2626; font-size: 16px;">+${grandTotalOvertime} tiết</td>
+            </tr>`;
+
+            table += `</tbody></table>`;
+
+            downloadExcelFile(table, `Quyet_Toan_Tang_Gio_${periodType}_${state.info.title}`);
         }
 
         // ================= 2. CHẤM CÔNG & SỔ DẠY THAY / DẠY BÙ =================
@@ -2265,7 +2894,7 @@
             showToast("Đã đồng bộ số tiết Dạy thay & Dạy bù vào Bảng Chấm Công!", "success");
         }
 
-        // ================= 3. BÁO CÁO & THỐNG KÊ TỔ =================
+        // ================= 4. BÁO CÁO & THỐNG KÊ TỔ =================
         function renderReports() {
             const repTeachers = document.getElementById('rep-teachers-count');
             const repPeriods = document.getElementById('rep-total-periods');
@@ -2345,17 +2974,20 @@
             const currentTab = document.querySelector('.view-tab-btn.active')?.id;
             if (currentTab === 'tab-nav-chamcong') {
                 exportAttendanceToExcel();
+            } else if (currentTab === 'tab-nav-tanggio') {
+                exportOvertimeToExcel();
             } else {
                 exportPhanCongToExcel();
             }
         }
 
         function exportPhanCongToExcel() {
+            const curP = getCurrentPhase();
             let table = `<table border="1" style="border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;">
                 <thead>
                     <tr>
                         <th colspan="${7 + state.subjects.length}" style="background-color: #1e3a8a; color: white; font-size: 16px; padding: 10px; text-align: center;">
-                            BẢNG PHÂN CÔNG CHUYÊN MÔN - ${state.info.title.toUpperCase()} (NĂM HỌC ${state.info.school_year || ''} - ${state.info.semester || ''})
+                            BẢNG PHÂN CÔNG CHUYÊN MÔN - ${state.info.title.toUpperCase()} (${curP.name.toUpperCase()} - NĂM HỌC ${state.info.school_year || ''})
                         </th>
                     </tr>
                     <tr style="background-color: #f1f5f9; color: #0f172a; font-weight: bold; text-align: center;">
@@ -2401,7 +3033,7 @@
 
             table += `</tbody></table>`;
 
-            downloadExcelFile(table, `Phan_Cong_Chuyen_Mon_${state.info.title}`);
+            downloadExcelFile(table, `Phan_Cong_${curP.id}_${state.info.title}`);
         }
 
         function exportAttendanceToExcel() {
@@ -2526,6 +3158,7 @@
         }
 
         function saveToFile() {
+            saveCurrentPhaseSnapshot();
             const dataStr = JSON.stringify(state, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
@@ -2546,7 +3179,7 @@
             reader.onload = function(e) {
                 try {
                     const importedState = JSON.parse(e.target.result);
-                    if (importedState && (importedState.teachers || importedState.classes)) {
+                    if (importedState && (importedState.teachers || importedState.classes || importedState.phases)) {
                         state = normalizeState(importedState);
                         saveToLocal();
                         render();
@@ -2566,6 +3199,7 @@
         let editingConfig = null;
 
         function openConfigModal(tabId = 'tab-info') {
+            saveCurrentPhaseSnapshot();
             editingConfig = JSON.parse(JSON.stringify(state));
 
             document.getElementById('cfg-plan-title').value = editingConfig.info?.title || '';
@@ -2576,6 +3210,7 @@
             document.getElementById('cfg-classes-text').value = (editingConfig.classes || []).join(', ');
             updateClassesPreview();
 
+            renderConfigPhasesTable();
             renderConfigTeachersTable();
             renderConfigSubjectsTable();
             switchModalTab(tabId);
@@ -2597,12 +3232,91 @@
             if (btn) btn.classList.add('active');
             if (pane) pane.classList.add('active');
 
+            document.getElementById('tab-badge-phases').textContent = editingConfig?.phases?.length || 0;
             document.getElementById('tab-badge-teachers').textContent = editingConfig?.teachers?.length || 0;
             document.getElementById('tab-badge-subjects').textContent = editingConfig?.subjects?.length || 0;
             document.getElementById('tab-badge-classes').textContent = editingConfig?.classes?.length || 0;
         }
 
-        // --- Tab 2: Teachers Table ---
+        // --- Tab 2: Phases Table ---
+        function renderConfigPhasesTable() {
+            const tbody = document.getElementById('phases-table-body');
+            if (!tbody || !editingConfig) return;
+            tbody.innerHTML = '';
+
+            editingConfig.phases.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;">${index + 1}</td>
+                    <td>
+                        <input type="text" class="form-control" style="padding:4px 8px; font-weight:700;" value="${escapeHtml(p.name)}" onchange="updateEditingPhase(${index}, 'name', this.value)">
+                    </td>
+                    <td style="text-align:center;">
+                        <select class="form-control" style="padding:4px 6px; font-weight:700;" onchange="updateEditingPhase(${index}, 'semester', this.value)">
+                            <option value="HK1" ${p.semester === 'HK1' ? 'selected' : ''}>HK1</option>
+                            <option value="HK2" ${p.semester === 'HK2' ? 'selected' : ''}>HK2</option>
+                        </select>
+                    </td>
+                    <td style="text-align:center;">
+                        <input type="number" class="form-control" style="padding:4px 8px; width:70px; text-align:center; font-weight:bold; color:#4338ca;" value="${p.weeks_count ?? 9}" min="1" max="25" onchange="updateEditingPhase(${index}, 'weeks_count', parseInt(this.value)||1)">
+                    </td>
+                    <td>
+                        <input type="date" class="form-control" style="padding:4px 6px;" value="${p.date_start || ''}" onchange="updateEditingPhase(${index}, 'date_start', this.value)">
+                    </td>
+                    <td>
+                        <input type="date" class="form-control" style="padding:4px 6px;" value="${p.date_end || ''}" onchange="updateEditingPhase(${index}, 'date_end', this.value)">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" style="padding:4px 8px;" placeholder="Ghi chú..." value="${escapeHtml(p.note || '')}" onchange="updateEditingPhase(${index}, 'note', this.value)">
+                    </td>
+                    <td style="text-align:center;">
+                        <button class="table-btn" onclick="removeEditingPhase(${index})" title="Xóa"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('tab-badge-phases').textContent = editingConfig.phases.length;
+        }
+
+        function addPhaseRow() {
+            const count = editingConfig.phases.length + 1;
+            const newId = 'phase_custom_' + Date.now();
+            editingConfig.phases.push({
+                id: newId,
+                name: `Đợt ${count}`,
+                semester: count <= 2 ? 'HK1' : 'HK2',
+                weeks_count: 9,
+                date_start: '',
+                date_end: '',
+                note: ''
+            });
+            renderConfigPhasesTable();
+        }
+
+        function removeEditingPhase(index) {
+            if (editingConfig.phases.length <= 1) {
+                alert("Cần có ít nhất 1 đợt phân công trong năm!");
+                return;
+            }
+            if (confirm("Xóa đợt phân công này?")) {
+                editingConfig.phases.splice(index, 1);
+                renderConfigPhasesTable();
+            }
+        }
+
+        function updateEditingPhase(index, field, value) {
+            if (editingConfig.phases[index]) {
+                editingConfig.phases[index][field] = value;
+            }
+        }
+
+        function generateDefaultPhases() {
+            editingConfig.phases = JSON.parse(JSON.stringify(DEFAULT_PHASES));
+            renderConfigPhasesTable();
+            showToast("Đã tạo 4 đợt chuẩn theo năm học!", "info");
+        }
+
+        // --- Tab 3: Teachers Table ---
         function renderConfigTeachersTable() {
             const tbody = document.getElementById('teachers-table-body');
             if (!tbody || !editingConfig) return;
@@ -2708,7 +3422,7 @@
             showToast(`Đã đồng bộ thêm ${addedCount} giáo viên từ CSDL!`, "success");
         }
 
-        // --- Tab 3: Subjects Table ---
+        // --- Tab 4: Subjects Table ---
         function renderConfigSubjectsTable() {
             const tbody = document.getElementById('subjects-table-body');
             if (!tbody || !editingConfig) return;
@@ -2799,7 +3513,7 @@
             showToast("Đã áp dụng bộ môn mẫu!", "info");
         }
 
-        // --- Tab 4: Classes ---
+        // --- Tab 5: Classes ---
         document.getElementById('cfg-classes-text')?.addEventListener('input', updateClassesPreview);
 
         function updateClassesPreview() {
