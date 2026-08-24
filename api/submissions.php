@@ -389,7 +389,6 @@ function submission_normalize_people($people): array
 
 function submission_school_list_people(PDO $pdo, string $listCode): array
 {
-    tranphu_schema($pdo);
     $stmt = $pdo->prepare("SELECT p.id, p.full_name, p.group_name, p.role_label, p.contact
         FROM school_reference_people p JOIN school_reference_lists l ON l.id = p.list_id
         WHERE l.list_code = ? ORDER BY p.group_name, p.full_name");
@@ -417,7 +416,10 @@ function submission_build_participants(PDO $pdo, string $mode, string $className
         try {
             $schoolPeople = submission_school_list_people($pdo, $schoolListCode);
         } catch (Throwable $e) {
-            respond(['error' => 'Danh sách THCS Trần Phú chưa được khai báo.'], 422);
+            respond(['error' => 'Danh mục dùng chung chưa được khởi tạo hoặc không tồn tại.'], 422);
+        }
+        if (empty($schoolPeople)) {
+            respond(['error' => 'Danh mục được chọn hiện chưa có thành viên.'], 422);
         }
         $selectedSchoolIds = isset($data['selected_school_people_ids']) && is_array($data['selected_school_people_ids'])
             ? array_values(array_filter(array_map('intval', $data['selected_school_people_ids'])))
