@@ -144,6 +144,55 @@ try {
         ]);
     }
 
+    if ($action === 'system_data') {
+        $currentUser = phancong_current_user($pdo, false);
+
+        // 1. Lấy danh sách giáo viên từ bảng users
+        $teachersStmt = $pdo->query("SELECT id, username, full_name, class_name, allowed_pages_json FROM users WHERE role = 'teacher' AND is_active = 1 ORDER BY full_name ASC");
+        $dbTeachers = [];
+        while ($t = $teachersStmt->fetch()) {
+            $dbTeachers[] = [
+                'id' => 'u_' . $t['id'],
+                'user_id' => (int)$t['id'],
+                'username' => $t['username'],
+                'name' => $t['full_name'],
+                'class_name' => $t['class_name'] ?? '',
+                'role' => 'GV',
+                'allowance' => 0,
+                'qlpm' => false
+            ];
+        }
+
+        // 2. Lấy danh sách lớp học thực tế từ học sinh trong users
+        $classesStmt = $pdo->query("SELECT DISTINCT class_name FROM users WHERE role = 'student' AND is_active = 1 AND class_name IS NOT NULL AND TRIM(class_name) != '' ORDER BY class_name ASC");
+        $dbClasses = [];
+        while ($c = $classesStmt->fetch()) {
+            $name = trim((string)$c['class_name']);
+            if ($name !== '' && !in_array($name, $dbClasses, true)) {
+                $dbClasses[] = $name;
+            }
+        }
+        natsort($dbClasses);
+        $dbClasses = array_values($dbClasses);
+
+        // 3. Lấy danh sách các kế hoạch phân công đã lưu
+        $plansStmt = $pdo->query("SELECT id, plan_key, title, school_year, semester, updated_at FROM phancong_chuyenmon ORDER BY updated_at DESC");
+        $plans = $plansStmt->fetchAll();
+
+        respond([
+            'ok' => true,
+            'teachers' => $dbTeachers,
+            'classes' => $dbClasses,
+            'plans' => $plans,
+            'current_user' => $currentUser ? [
+                'id' => (int)$currentUser['id'],
+                'username' => $currentUser['username'],
+                'full_name' => $currentUser['full_name'],
+                'role' => $currentUser['role']
+            ] : null
+        ]);
+    }
+
     if ($action === 'save') {
         $currentUser = phancong_current_user($pdo, true);
         $body = json_body();

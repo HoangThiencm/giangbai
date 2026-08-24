@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phân công Chuyên môn - Tổ Toán Tin</title>
+    <title>Phân công Chuyên môn - Tổ Bộ môn</title>
     <script src="access-control.js?v=20260824"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,22 +11,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --math-color: #2563eb;
-            --math-bg: #eff6ff;
-            --it-color: #059669;
-            --it-bg: #ecfdf5;
-            --gvcn-color: #d97706;
-            --gvcn-bg: #fffbeb;
-            --hdtn-color: #7c3aed;
-            --hdtn-bg: #f5f3ff;
-            --bg-color: #f1f5f9;
+            --bg-color: #f8fafc;
             --card-bg: #ffffff;
             --border-color: #e2e8f0;
+            --primary: #4338ca;
+            --primary-hover: #3730a3;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -39,17 +31,17 @@
             overflow: hidden;
         }
 
-        /* TOP NAVIGATION / TOOLBAR */
+        /* TOP NAVBAR */
         #top-navbar {
-            height: 60px;
+            height: 62px;
             background: #ffffff;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
+            padding: 0 18px;
             z-index: 30;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
             flex-shrink: 0;
         }
 
@@ -60,16 +52,17 @@
         }
 
         .brand-icon {
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 50%, #7c3aed 100%);
             color: white;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             box-shadow: 0 4px 10px rgba(99, 102, 241, 0.25);
+            flex-shrink: 0;
         }
 
         .brand-text h1 {
@@ -78,14 +71,30 @@
             font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .brand-text p {
             margin: 0;
             font-size: 0.75rem;
             color: #64748b;
-            font-weight: 500;
+            font-weight: 600;
         }
+
+        .plan-title-badge {
+            background: #eef2ff;
+            color: #4338ca;
+            border: 1px solid #c7d2fe;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .plan-title-badge:hover { background: #e0e7ff; }
 
         .db-status-badge {
             display: inline-flex;
@@ -93,112 +102,84 @@
             gap: 6px;
             padding: 4px 10px;
             border-radius: 999px;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 700;
             background: #f1f5f9;
             color: #475569;
             border: 1px solid #cbd5e1;
+            margin-left: 6px;
         }
 
-        .db-status-badge.connected {
-            background: #ecfdf5;
-            color: #065f46;
-            border-color: #a7f3d0;
-        }
-
-        .db-status-badge.saving {
-            background: #eff6ff;
-            color: #1e40af;
-            border-color: #bfdbfe;
-        }
-
-        .db-status-badge.error {
-            background: #fef2f2;
-            color: #991b1b;
-            border-color: #fecaca;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
+        .db-status-badge .status-dot {
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
             background: #94a3b8;
         }
 
-        .db-status-badge.connected .status-dot {
-            background: #10b981;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
-        }
+        .db-status-badge.connected { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+        .db-status-badge.connected .status-dot { background: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.2); }
+        .db-status-badge.saving { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+        .db-status-badge.saving .status-dot { background: #3b82f6; animation: pulse 1s infinite; }
+        .db-status-badge.offline { background: #fff1f2; color: #9f1239; border-color: #fecdd3; }
+        .db-status-badge.offline .status-dot { background: #f43f5e; }
 
-        .db-status-badge.saving .status-dot {
-            background: #3b82f6;
-            animation: pulse 1s infinite;
-        }
-
-        .db-status-badge.error .status-dot {
-            background: #ef4444;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
 
         .nav-actions {
             display: flex;
             align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
+            gap: 6px;
         }
 
         .btn-toolbar {
+            border: 1px solid transparent;
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 7px 12px;
-            border-radius: 8px;
-            font-size: 0.82rem;
-            font-weight: 700;
-            border: 1px solid transparent;
-            cursor: pointer;
             transition: all 0.15s ease;
             text-decoration: none;
         }
 
-        .btn-home {
+        .btn-config {
             background: #f8fafc;
             color: #334155;
             border-color: #cbd5e1;
         }
-        .btn-home:hover { background: #f1f5f9; color: #0f172a; }
+        .btn-config:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+
+        .btn-home {
+            background: #ffffff;
+            color: #334155;
+            border-color: #cbd5e1;
+        }
+        .btn-home:hover { background: #f8fafc; color: #0f172a; }
 
         .btn-db-save {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #ffffff;
-            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+            background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
+            color: white;
+            box-shadow: 0 2px 6px rgba(67, 56, 202, 0.25);
         }
-        .btn-db-save:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); transform: translateY(-1px); }
+        .btn-db-save:hover { background: linear-gradient(135deg, #3730a3 0%, #312e81 100%); transform: translateY(-1px); }
 
         .btn-db-reload {
-            background: #f0fdf4;
-            color: #15803d;
-            border-color: #bbf7d0;
+            background: #f1f5f9;
+            color: #475569;
+            border-color: #cbd5e1;
         }
-        .btn-db-reload:hover { background: #dcfce7; }
+        .btn-db-reload:hover { background: #e2e8f0; color: #0f172a; }
 
-        .btn-file-open {
+        .btn-file-open, .btn-file-save {
             background: #f8fafc;
             color: #475569;
             border-color: #cbd5e1;
         }
-        .btn-file-open:hover { background: #e2e8f0; color: #0f172a; }
-
-        .btn-file-save {
-            background: #f8fafc;
-            color: #475569;
-            border-color: #cbd5e1;
-        }
-        .btn-file-save:hover { background: #e2e8f0; color: #0f172a; }
+        .btn-file-open:hover, .btn-file-save:hover { background: #e2e8f0; color: #0f172a; }
 
         .btn-export-excel {
             background: linear-gradient(135deg, #10b981, #059669);
@@ -216,7 +197,7 @@
 
         /* CỘT TRÁI - KHO LỚP HỌC */
         #left-panel {
-            width: 360px;
+            width: 380px;
             background: var(--card-bg);
             border-right: 1px solid var(--border-color);
             display: flex;
@@ -231,11 +212,10 @@
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: white;
             font-weight: 800;
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            letter-spacing: -0.01em;
         }
 
         .panel-header-title {
@@ -244,30 +224,32 @@
             gap: 8px;
         }
 
-        .btn-reset {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            transition: background 0.15s;
+        .search-box-container {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            background: #f8fafc;
         }
-        .btn-reset:hover { background: #dc2626; }
+
+        .search-input {
+            width: 100%;
+            padding: 6px 12px 6px 32px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-family: inherit;
+            outline: none;
+            background: #ffffff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat 10px center;
+        }
+        .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15); }
 
         .pool-container {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 14px;
         }
 
         .subject-group {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             background: #f8fafc;
             border: 1px solid var(--border-color);
             border-radius: 12px;
@@ -285,15 +267,10 @@
             border-bottom: 1.5px solid transparent;
         }
 
-        .subject-title.math { color: var(--math-color); border-color: rgba(37, 99, 235, 0.2); }
-        .subject-title.it { color: var(--it-color); border-color: rgba(5, 150, 105, 0.2); }
-        .subject-title.gvcn { color: var(--gvcn-color); border-color: rgba(217, 119, 6, 0.2); }
-        .subject-title.hdtn { color: var(--hdtn-color); border-color: rgba(124, 58, 237, 0.2); }
-
         .count-badge {
             font-size: 0.75rem;
             font-weight: 700;
-            padding: 2px 7px;
+            padding: 2px 8px;
             border-radius: 10px;
             background: #ffffff;
             border: 1px solid var(--border-color);
@@ -321,16 +298,8 @@
             align-items: center;
             gap: 4px;
         }
-        .pill:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
-        }
+        .pill:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
         .pill:active { cursor: grabbing; transform: scale(0.96); }
-
-        .pill.math { background-color: var(--math-color); }
-        .pill.it { background-color: var(--it-color); }
-        .pill.gvcn { background-color: var(--gvcn-color); }
-        .pill.hdtn { background-color: var(--hdtn-color); }
 
         /* CỘT PHẢI - DANH SÁCH GIÁO VIÊN */
         #right-panel {
@@ -348,24 +317,18 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-size: 0.85rem;
+            color: #64748b;
         }
 
-        .right-toolbar-sub h2 {
-            margin: 0;
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: #334155;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+        .right-toolbar-sub b { color: #0f172a; }
 
         .teachers-grid {
-            padding: 20px;
+            padding: 18px;
             overflow-y: auto;
             flex: 1;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
             gap: 16px;
             align-content: flex-start;
         }
@@ -373,23 +336,23 @@
         .teacher-card {
             background: var(--card-bg);
             border-radius: 14px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
             border: 2px dashed transparent;
             transition: all 0.2s ease;
             display: flex;
             flex-direction: column;
-            border: 1px solid var(--border-color);
+            position: relative;
         }
 
         .teacher-card.drag-over {
-            border-color: #6366f1;
-            background-color: #e0e7ff;
+            border-color: var(--primary);
+            background-color: #eef2ff;
             transform: scale(1.015);
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+            box-shadow: 0 8px 20px rgba(67, 56, 202, 0.15);
         }
 
         .teacher-header {
-            padding: 12px 14px;
+            padding: 10px 14px;
             background: #f8fafc;
             border-bottom: 1px solid var(--border-color);
             border-radius: 14px 14px 0 0;
@@ -402,7 +365,7 @@
         }
 
         .teacher-name {
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 800;
             color: #0f172a;
             display: flex;
@@ -410,21 +373,8 @@
             gap: 8px;
         }
 
-        .teacher-avatar {
-            width: 28px;
-            height: 28px;
-            border-radius: 8px;
-            background: #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            color: #475569;
-            font-weight: 800;
-        }
-
         .role-select {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             font-weight: 700;
             padding: 3px 6px;
             border-radius: 6px;
@@ -434,19 +384,19 @@
             cursor: pointer;
             outline: none;
         }
-        .role-select:focus { border-color: #6366f1; }
+        .role-select:focus { border-color: var(--primary); }
 
         .checkbox-group {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             font-weight: 700;
             color: #475569;
             cursor: pointer;
             user-select: none;
             background: #ffffff;
-            padding: 3px 8px;
+            padding: 3px 7px;
             border-radius: 6px;
             border: 1px solid #cbd5e1;
         }
@@ -455,7 +405,7 @@
         .teacher-body {
             padding: 12px 14px;
             flex: 1;
-            min-height: 110px;
+            min-height: 100px;
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -468,8 +418,8 @@
         }
 
         .assigned-label {
-            width: 72px;
-            font-size: 0.78rem;
+            width: 80px;
+            font-size: 0.76rem;
             font-weight: 800;
             color: #64748b;
             padding-top: 3px;
@@ -495,7 +445,7 @@
             top: 50%;
             right: 6px;
             transform: translateY(-50%);
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.25);
             color: white;
             border-radius: 50%;
             width: 13px;
@@ -508,20 +458,16 @@
             font-weight: 900;
             transition: background 0.15s;
         }
-        .pill-assigned:hover::after {
-            background: #ef4444;
-        }
-        .pill-assigned:hover {
-            opacity: 0.9;
-        }
+        .pill-assigned:hover::after { background: #ef4444; }
+        .pill-assigned:hover { opacity: 0.9; }
 
         .empty-hint {
             color: #94a3b8;
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             font-style: italic;
             text-align: center;
             margin: auto 0;
-            padding: 20px 0;
+            padding: 16px 0;
         }
 
         .teacher-footer {
@@ -537,13 +483,13 @@
         .footer-row {
             display: flex;
             justify-content: space-between;
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             font-weight: 600;
             color: #64748b;
         }
 
         .footer-row.total-row {
-            font-size: 0.92rem;
+            font-size: 0.9rem;
             font-weight: 800;
             color: #0f172a;
             padding-top: 4px;
@@ -552,8 +498,195 @@
 
         .total-periods {
             color: #dc2626;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             font-weight: 900;
+        }
+
+        /* MODAL KHAI BÁO & CÀI ĐẶT */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 880px;
+            max-height: 90vh;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 16px 22px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: #64748b;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .modal-close:hover { color: #0f172a; }
+
+        .modal-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: #f8fafc;
+            padding: 0 20px;
+            gap: 6px;
+        }
+
+        .modal-tab-btn {
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #64748b;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .modal-tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: #ffffff;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #334155;
+        }
+        .form-control {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .form-control:focus { border-color: var(--primary); }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            margin-top: 10px;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        .data-table th {
+            background: #f8fafc;
+            font-weight: 800;
+            color: #334155;
+        }
+
+        .table-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            padding: 4px;
+            font-size: 0.85rem;
+        }
+        .table-btn:hover { color: #b91c1c; }
+
+        .action-bar-sub {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-small:hover { background: #f1f5f9; }
+        .btn-small-primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .btn-small-primary:hover { background: var(--primary-hover); }
+
+        .modal-footer {
+            padding: 12px 20px;
+            background: #f8fafc;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
         }
 
         /* TOAST NOTIFICATION */
@@ -578,34 +711,16 @@
             gap: 8px;
         }
 
-        #toast.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
+        #toast.visible { opacity: 1; transform: translateY(0); }
         #toast.success { background: #065f46; border: 1px solid #059669; }
         #toast.error { background: #991b1b; border: 1px solid #dc2626; }
         #toast.info { background: #1e293b; border: 1px solid #475569; }
 
         @media (max-width: 900px) {
-            #workspace-container {
-                flex-direction: column;
-            }
-            #left-panel {
-                width: 100%;
-                height: 240px;
-            }
-            #top-navbar {
-                height: auto;
-                padding: 10px 15px;
-                flex-direction: column;
-                gap: 10px;
-            }
-            .nav-actions {
-                width: 100%;
-                justify-content: flex-start;
-                overflow-x: auto;
-            }
+            #workspace-container { flex-direction: column; }
+            #left-panel { width: 100%; height: 260px; }
+            #top-navbar { height: auto; padding: 10px 15px; flex-direction: column; gap: 8px; }
+            .nav-actions { width: 100%; justify-content: flex-start; overflow-x: auto; }
         }
     </style>
 </head>
@@ -618,8 +733,13 @@
                 <i class="fas fa-people-roof"></i>
             </div>
             <div class="brand-text">
-                <h1>Phân công Chuyên môn</h1>
-                <p>Tổ Toán - Tin học · Kéo thả phân công &amp; tính tiết</p>
+                <h1>
+                    <span id="display-plan-title">Tổ Toán - Tin học</span>
+                    <span class="plan-title-badge" onclick="openConfigModal('tab-info')" title="Nhấn để đổi tên tổ / năm học">
+                        <i class="fas fa-pen-to-square"></i> <span id="display-plan-year">2025-2026 (HK1)</span>
+                    </span>
+                </h1>
+                <p>Khai báo &amp; Phân công chuyên môn giảng dạy</p>
             </div>
             <div id="db-status-badge" class="db-status-badge">
                 <span class="status-dot"></span>
@@ -628,288 +748,427 @@
         </div>
 
         <div class="nav-actions">
-            <a href="index.html" class="btn-toolbar btn-home" title="Trở về trang chủ">
-                <i class="fas fa-home text-slate-500"></i> Trang chủ
-            </a>
-            <button class="btn-toolbar btn-db-save" id="btn-save-db" onclick="saveToDB()" title="Lưu phân công lên CSDL MySQL">
+            <button class="btn-toolbar btn-config" onclick="openConfigModal('tab-info')" title="Cài đặt tổ, môn học, lớp học và giáo viên">
+                <i class="fas fa-gear text-indigo-600"></i> Khai báo &amp; Cài đặt
+            </button>
+            <button class="btn-toolbar btn-db-save" id="btn-save-db" onclick="saveToDB()" title="Lưu toàn bộ phân công lên CSDL MySQL">
                 <i class="fas fa-cloud-arrow-up"></i> Lưu CSDL
             </button>
-            <button class="btn-toolbar btn-db-reload" onclick="loadFromDB(true)" title="Nạp dữ liệu mới nhất từ CSDL">
-                <i class="fas fa-rotate"></i> Nạp lại
+            <button class="btn-toolbar btn-db-reload" onclick="loadFromDB(true)" title="Nạp lại dữ liệu từ CSDL">
+                <i class="fas fa-rotate"></i> Nạp CSDL
             </button>
             <input type="file" id="file-input" style="display:none" accept=".json" onchange="loadFromFile(event)">
-            <button class="btn-toolbar btn-file-open" onclick="document.getElementById('file-input').click()" title="Mở file JSON từ máy tính">
+            <button class="btn-toolbar btn-file-open" onclick="document.getElementById('file-input').click()" title="Mở file JSON">
                 <i class="fas fa-folder-open text-indigo-500"></i> Mở JSON
             </button>
-            <button class="btn-toolbar btn-file-save" onclick="saveToFile()" title="Tải file JSON về máy tính">
+            <button class="btn-toolbar btn-file-save" onclick="saveToFile()" title="Lưu file JSON về máy">
                 <i class="fas fa-floppy-disk text-sky-600"></i> Xuất JSON
             </button>
             <button class="btn-toolbar btn-export-excel" onclick="exportToExcel()" title="Xuất bảng phân công ra Excel">
                 <i class="fas fa-file-excel"></i> Xuất Excel
             </button>
+            <a href="index.html" class="btn-toolbar btn-home" title="Trở về trang chủ">
+                <i class="fas fa-home text-slate-500"></i> Trang chủ
+            </a>
         </div>
     </header>
 
     <!-- WORKSPACE -->
     <div id="workspace-container">
-        <!-- CỘT TRÁI - KHO LỚP HỌC -->
-        <div id="left-panel">
+        <!-- CỘT TRÁI: KHO LỚP HỌC -->
+        <aside id="left-panel">
             <div class="panel-header">
                 <div class="panel-header-title">
-                    <i class="fas fa-boxes-stacked"></i> KHO LỚP HỌC
+                    <i class="fas fa-boxes-stacked"></i>
+                    <span>KHO LỚP CẦN PHÂN CÔNG</span>
                 </div>
-                <button class="btn-reset" onclick="resetData()" title="Khôi phục lại phân công từ đầu">
-                    <i class="fas fa-arrow-rotate-left"></i> Làm mới
+                <button class="btn-small" onclick="openConfigModal('tab-classes')" title="Thêm/sửa danh sách lớp học">
+                    <i class="fas fa-plus"></i> Sửa lớp
                 </button>
+            </div>
+            <div class="search-box-container">
+                <input type="text" class="search-input" id="class-search" placeholder="Tìm kiếm lớp..." oninput="filterClasses(this.value)">
             </div>
             <div class="pool-container" id="pool-container">
                 <!-- Render từ JS -->
             </div>
-        </div>
+        </aside>
 
-        <!-- CỘT PHẢI - GIÁO VIÊN -->
-        <div id="right-panel">
+        <!-- CỘT PHẢI: LƯỚI GIÁO VIÊN -->
+        <main id="right-panel">
             <div class="right-toolbar-sub">
-                <h2><i class="fas fa-hand-pointer text-indigo-600"></i> Kéo lớp học từ kho bên trái vào thẻ giáo viên</h2>
-                <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Click vào lớp đã gán để hủy phân công</span>
+                <div>
+                    <span>Kéo thả lớp vào thẻ giáo viên · Click vào lớp để hủy phân công</span>
+                </div>
+                <div>
+                    <span>Tổng số GV: <b id="stat-teachers-count">0</b></span> ·
+                    <span>Tổng lớp học: <b id="stat-classes-count">0</b></span>
+                </div>
             </div>
             <div class="teachers-grid" id="teachers-grid">
                 <!-- Render từ JS -->
             </div>
+        </main>
+    </div>
+
+    <!-- MODAL KHAI BÁO & CÀI ĐẶT -->
+    <div class="modal-overlay" id="config-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2><i class="fas fa-sliders text-indigo-600"></i> Khai báo &amp; Cài đặt Tổ Chuyên Môn</h2>
+                <button class="modal-close" onclick="closeConfigModal()">&times;</button>
+            </div>
+            <div class="modal-tabs">
+                <button class="modal-tab-btn active" id="tab-btn-info" onclick="switchModalTab('tab-info')"><i class="fas fa-school"></i> 1. Tổ &amp; Năm học</button>
+                <button class="modal-tab-btn" id="tab-btn-teachers" onclick="switchModalTab('tab-teachers')"><i class="fas fa-user-tie"></i> 2. Giáo viên (<span id="tab-badge-teachers">0</span>)</button>
+                <button class="modal-tab-btn" id="tab-btn-subjects" onclick="switchModalTab('tab-subjects')"><i class="fas fa-book-open"></i> 3. Môn học &amp; Định mức (<span id="tab-badge-subjects">0</span>)</button>
+                <button class="modal-tab-btn" id="tab-btn-classes" onclick="switchModalTab('tab-classes')"><i class="fas fa-users-rectangle"></i> 4. Danh sách Lớp (<span id="tab-badge-classes">0</span>)</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- TAB 1: THÔNG TIN TỔ & NĂM HỌC -->
+                <div class="tab-pane active" id="tab-info">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Tên Tổ chuyên môn / Đơn vị:</label>
+                            <input type="text" class="form-control" id="cfg-plan-title" placeholder="VD: Tổ Toán - Tin học">
+                        </div>
+                        <div class="form-group">
+                            <label>Năm học:</label>
+                            <input type="text" class="form-control" id="cfg-school-year" placeholder="VD: 2025 - 2026">
+                        </div>
+                        <div class="form-group">
+                            <label>Học kỳ:</label>
+                            <select class="form-control" id="cfg-semester">
+                                <option value="HK1">Học kỳ 1</option>
+                                <option value="HK2">Học kỳ 2</option>
+                                <option value="Cả năm">Cả năm</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Mã kế hoạch (Key):</label>
+                            <input type="text" class="form-control" id="cfg-plan-key" placeholder="default" value="default">
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 0.88rem; font-weight: 800; color: #334155;">
+                            <i class="fas fa-database text-indigo-500"></i> Các kế hoạch phân công đã lưu trên CSDL:
+                        </h4>
+                        <div id="db-plans-list" style="max-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px;">
+                            <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px; text-align: center;">Đang tải danh sách...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: KHAI BÁO GIÁO VIÊN -->
+                <div class="tab-pane" id="tab-teachers">
+                    <div class="action-bar-sub">
+                        <div>
+                            <button class="btn-small btn-small-primary" onclick="addTeacherRow()"><i class="fas fa-plus"></i> Thêm Giáo viên</button>
+                            <button class="btn-small" onclick="syncTeachersFromDB()"><i class="fas fa-rotate text-indigo-600"></i> Lấy GV từ CSDL Hệ thống</button>
+                        </div>
+                        <span style="font-size: 0.8rem; color: #64748b;">Khai báo họ tên, chức vụ và định mức giảm trừ</span>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">STT</th>
+                                <th>Họ và Tên Giáo viên</th>
+                                <th style="width: 140px;">Chức vụ</th>
+                                <th style="width: 100px;">Giảm trừ (tiết)</th>
+                                <th style="width: 110px;">QL Máy</th>
+                                <th style="width: 50px;">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teachers-table-body">
+                            <!-- Render từ JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TAB 3: KHAI BÁO MÔN HỌC & ĐỊNH MỨC -->
+                <div class="tab-pane" id="tab-subjects">
+                    <div class="action-bar-sub">
+                        <div>
+                            <button class="btn-small btn-small-primary" onclick="addSubjectRow()"><i class="fas fa-plus"></i> Thêm Môn học</button>
+                            <button class="btn-small" onclick="applyPresetSubjects('toan_tin')">Mẫu Toán - Tin</button>
+                            <button class="btn-small" onclick="applyPresetSubjects('khtn')">Mẫu KHTN</button>
+                            <button class="btn-small" onclick="applyPresetSubjects('khxh')">Mẫu KHXH</button>
+                        </div>
+                        <span style="font-size: 0.8rem; color: #64748b;">Số tiết / lớp / tuần áp dụng để tính định mức</span>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">STT</th>
+                                <th style="width: 100px;">Mã môn</th>
+                                <th>Tên Môn học</th>
+                                <th style="width: 130px;">Số tiết/lớp/tuần</th>
+                                <th style="width: 80px;">Màu sắc</th>
+                                <th style="width: 50px;">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subjects-table-body">
+                            <!-- Render từ JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TAB 4: KHAI BÁO LỚP HỌC -->
+                <div class="tab-pane" id="tab-classes">
+                    <div class="action-bar-sub">
+                        <div>
+                            <button class="btn-small btn-small-primary" onclick="syncClassesFromDB()"><i class="fas fa-rotate"></i> Lấy Lớp từ CSDL Học sinh</button>
+                            <button class="btn-small" onclick="generateDefaultClasses()">Tạo mẫu khối 6-9</button>
+                        </div>
+                        <span style="font-size: 0.8rem; color: #64748b;">Nhập tên các lớp cách nhau bằng dấu phẩy</span>
+                    </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label>Danh sách lớp học (ngăn cách bằng dấu phẩy):</label>
+                        <textarea class="form-control" id="cfg-classes-text" rows="4" placeholder="VD: 61, 62, 63, 64, 71, 72, 73, 81, 82, 91, 92..."></textarea>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label style="font-size: 0.8rem; font-weight: 700; color: #334155;">Xem trước danh sách lớp (<span id="classes-preview-count">0</span> lớp):</label>
+                        <div id="classes-preview-pills" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; max-height: 120px; overflow-y: auto; padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-small" onclick="closeConfigModal()">Hủy</button>
+                <button class="btn-small btn-small-primary" onclick="applyConfigChanges()"><i class="fas fa-check"></i> Áp dụng cấu hình</button>
+            </div>
         </div>
     </div>
 
-    <!-- TOAST NOTIFICATION -->
-    <div id="toast">
-        <i class="fas fa-circle-check"></i>
-        <span id="toast-message">Đã lưu tự động!</span>
-    </div>
+    <!-- TOAST -->
+    <div id="toast"><i class="fas fa-circle-check"></i> <span>Thông báo</span></div>
 
     <script>
-        const PERIODS = { math: 4, it: 1, gvcn: 4, hdtn: 3, qlpm: 3 };
-        const classList = ['61', '62', '63', '64', '65', '66', '71', '72', '73', '74', '75', '76', '81', '82', '83', '84', '85', '86', '91', '92', '93', '94', '95', '96', '97'];
+        // CẤU HÌNH ĐỊNH MỨC CHUẨN MẶC ĐỊNH
+        const ROLE_ALLOWANCES = { 'TTCM': 3, 'TPCM': 1, 'HP': 0, 'GV': 0, 'TP': 1, 'TT': 3 };
+        const PERIOD_QLPM = 3;
 
+        // DỮ LIỆU KHỞI TẠO MẪU
         const defaultState = {
-            unassigned: {
-                math: [...classList],
-                it: [...classList],
-                gvcn: [...classList],
-                hdtn: [...classList]
+            info: {
+                title: 'Tổ Toán - Tin học',
+                school_year: '2025 - 2026',
+                semester: 'HK1',
+                plan_key: 'default'
             },
+            subjects: [
+                { key: 'math', name: 'Toán', periods: 4, color: '#2563eb' },
+                { key: 'it', name: 'Tin học', periods: 1, color: '#059669' },
+                { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706' },
+                { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed' }
+            ],
+            classes: ['61', '62', '63', '64', '65', '66', '71', '72', '73', '74', '75', '76', '81', '82', '83', '84', '85', '86', '91', '92', '93', '94', '95', '96', '97'],
+            unassigned: {},
             teachers: [
-                { id: 't1', name: 'T.Thiên', role: 'TTCM', allowance: 3, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
-                { id: 't2', name: 'T.Sáng', role: 'TPCM', allowance: 1, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
-                { id: 't3', name: 'T.Đông', role: 'HP', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
-                { id: 't4', name: 'T.Danh', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
-                { id: 't5', name: 'T.Ánh', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
-                { id: 't6', name: 'T. Hải', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
-                { id: 't7', name: 'C. Bình', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
-                { id: 't8', name: 'C.Thảo', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
-                { id: 't9', name: 'T. Tính', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] },
-                { id: 't10', name: 'T. Tùng', role: 'GV', allowance: 0, qlpm: false, math: [], it: [], gvcn: [], hdtn: [] }
+                { id: 't1', name: 'T.Thiên', role: 'TTCM', allowance: 3, qlpm: false, assignments: {} },
+                { id: 't2', name: 'T.Sáng', role: 'TPCM', allowance: 1, qlpm: false, assignments: {} },
+                { id: 't3', name: 'T.Đông', role: 'HP', allowance: 0, qlpm: false, assignments: {} },
+                { id: 't4', name: 'T.Danh', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
+                { id: 't5', name: 'T.Ánh', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
+                { id: 't6', name: 'T. Hải', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
+                { id: 't7', name: 'C. Bình', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
+                { id: 't8', name: 'C.Thảo', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
+                { id: 't9', name: 'T. Tính', role: 'GV', allowance: 0, qlpm: false, assignments: {} },
+                { id: 't10', name: 'T. Tùng', role: 'GV', allowance: 0, qlpm: false, assignments: {} }
             ]
         };
 
+        // State hiện tại trong ứng dụng
         let state = JSON.parse(JSON.stringify(defaultState));
-        let isSaving = false;
+        let systemData = { teachers: [], classes: [], plans: [] };
 
-        // Cập nhật trạng thái CSDL
-        function updateDbStatus(status, text) {
-            const badge = document.getElementById('db-status-badge');
-            const statusText = document.getElementById('db-status-text');
-            if (!badge || !statusText) return;
+        // Chuẩn hóa cấu trúc state để tương thích
+        function normalizeState(s) {
+            if (!s.info) s.info = { ...defaultState.info };
+            if (!Array.isArray(s.subjects) || s.subjects.length === 0) s.subjects = [...defaultState.subjects];
+            if (!Array.isArray(s.classes)) s.classes = [...defaultState.classes];
+            if (!Array.isArray(s.teachers)) s.teachers = [];
+            if (!s.unassigned) s.unassigned = {};
 
-            badge.className = 'db-status-badge ' + status;
-            statusText.textContent = text;
+            // Đảm bảo mỗi môn có mảng unassigned
+            s.subjects.forEach(sub => {
+                if (!Array.isArray(s.unassigned[sub.key])) {
+                    s.unassigned[sub.key] = [...s.classes];
+                }
+            });
+
+            // Đảm bảo cấu trúc assignments của từng giáo viên
+            s.teachers.forEach(t => {
+                if (!t.assignments) t.assignments = {};
+                // Tương thích ngược với các trường cũ nếu có (math, it, gvcn, hdtn)
+                s.subjects.forEach(sub => {
+                    if (!Array.isArray(t.assignments[sub.key])) {
+                        if (Array.isArray(t[sub.key])) {
+                            t.assignments[sub.key] = t[sub.key];
+                        } else {
+                            t.assignments[sub.key] = [];
+                        }
+                    }
+                });
+            });
+
+            // Loại bỏ những lớp đã được phân công khỏi kho unassigned
+            s.subjects.forEach(sub => {
+                const assigned = new Set();
+                s.teachers.forEach(t => {
+                    (t.assignments[sub.key] || []).forEach(c => assigned.add(c));
+                });
+                s.unassigned[sub.key] = s.classes.filter(c => !assigned.has(c));
+            });
+
+            return s;
         }
 
-        // Lưu & Đọc LocalStorage
+        // ================= CSDL & LOCAL STORAGE =================
         function saveToLocal() {
-            try {
-                localStorage.setItem('phanCongData', JSON.stringify(state));
-            } catch (e) {
-                console.error("Lỗi khi lưu localStorage:", e);
-            }
+            localStorage.setItem('phanCongData', JSON.stringify(state));
         }
 
         function loadFromLocal() {
             const savedData = localStorage.getItem('phanCongData');
             if (savedData) {
                 try {
-                    const parsed = JSON.parse(savedData);
-                    if (parsed && parsed.teachers && parsed.unassigned) {
-                        state = parsed;
-                        return true;
-                    }
+                    state = normalizeState(JSON.parse(savedData));
                 } catch (e) {
-                    console.error("Lỗi khi đọc localStorage:", e);
+                    console.error('Lỗi đọc local:', e);
                 }
             }
-            return false;
         }
 
-        // Nạp dữ liệu từ CSDL
-        async function loadFromDB(manual = false) {
-            updateDbStatus('saving', 'Đang tải từ CSDL...');
+        async function loadFromDB(showToastNotice = false) {
+            updateDBStatus('saving', 'Đang tải từ CSDL...');
+            const planKey = state.info?.plan_key || 'default';
             try {
-                const res = await fetch('api/phancong.php?action=get', {
-                    cache: 'no-store',
-                    credentials: 'include'
+                const res = await fetch(`api/phancong.php?action=get&plan_key=${encodeURIComponent(planKey)}`, {
+                    credentials: 'include',
+                    cache: 'no-store'
                 });
+                const result = await res.json().catch(() => ({}));
 
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json.ok && json.data && json.data.teachers && json.data.unassigned) {
-                        state = json.data;
-                        saveToLocal();
-                        render();
-                        const timeStr = json.plan?.updated_at ? ` (${json.plan.updated_at})` : '';
-                        updateDbStatus('connected', 'Đã nạp CSDL' + timeStr);
-                        if (manual) showToast('Đã nạp dữ liệu mới nhất từ CSDL!', 'success');
-                        return;
-                    } else {
-                        // DB rỗng, fallback sang local
-                        const hasLocal = loadFromLocal();
-                        render();
-                        updateDbStatus('connected', hasLocal ? 'Dữ liệu cục bộ (Chưa lưu CSDL)' : 'Mặc định (Chưa lưu CSDL)');
-                        if (manual) showToast('Chưa có dữ liệu trên CSDL, đang dùng dữ liệu hiện tại.', 'info');
-                        return;
+                if (result.ok && result.data) {
+                    state = normalizeState(result.data);
+                    if (result.plan) {
+                        state.info.title = result.plan.title || state.info.title;
+                        state.info.school_year = result.plan.school_year || state.info.school_year;
+                        state.info.semester = result.plan.semester || state.info.semester;
                     }
+                    saveToLocal();
+                    render();
+                    const timeStr = result.plan?.updated_at ? formatTime(result.plan.updated_at) : 'Mới';
+                    updateDBStatus('connected', `Đã nạp CSDL (${timeStr})`);
+                    if (showToastNotice) showToast("Đã tải dữ liệu từ CSDL thành công!", "success");
                 } else {
-                    throw new Error('Mã lỗi HTTP ' + res.status);
+                    loadFromLocal();
+                    render();
+                    updateDBStatus('connected', 'CSDL trống (dùng local)');
+                    if (showToastNotice) showToast("CSDL chưa có dữ liệu, dùng dữ liệu tạm!", "info");
                 }
             } catch (err) {
-                console.warn('Không thể kết nối API phancong.php, chuyển sang bộ nhớ cục bộ:', err);
+                console.warn('Lỗi kết nối API CSDL, fallback sang local storage:', err);
                 loadFromLocal();
                 render();
-                updateDbStatus('error', 'Chế độ offline (bộ nhớ máy)');
-                if (manual) showToast('Không thể kết nối CSDL máy chủ!', 'error');
+                updateDBStatus('offline', 'Chế độ Offline');
             }
+
+            // Tải thêm dữ liệu hệ thống (GV, lớp, danh sách kế hoạch)
+            fetchSystemData();
         }
 
-        // Lưu dữ liệu vào CSDL
         async function saveToDB() {
-            if (isSaving) return;
-            isSaving = true;
-
             const saveBtn = document.getElementById('btn-save-db');
-            const originalBtnHtml = saveBtn ? saveBtn.innerHTML : '';
             if (saveBtn) {
                 saveBtn.disabled = true;
                 saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
             }
-            updateDbStatus('saving', 'Đang lưu vào CSDL...');
+            updateDBStatus('saving', 'Đang lưu vào CSDL...');
 
             try {
+                const planKey = state.info?.plan_key || 'default';
                 const payload = {
-                    plan_key: 'default',
-                    title: 'Phân công chuyên môn',
+                    plan_key: planKey,
+                    title: state.info?.title || 'Tổ Toán - Tin học',
+                    school_year: state.info?.school_year || '',
+                    semester: state.info?.semester || 'HK1',
                     data: state
                 };
 
                 const res = await fetch('api/phancong.php?action=save', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify(payload)
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
                 });
 
-                const json = await res.json().catch(() => ({}));
-                if (res.ok && json.ok) {
+                const result = await res.json().catch(() => ({}));
+
+                if (result.ok) {
                     saveToLocal();
-                    const updatedTime = json.updated_at || new Date().toLocaleTimeString('vi-VN');
-                    updateDbStatus('connected', 'Đã lưu CSDL (' + updatedTime + ')');
-                    showToast('Đã lưu vào CSDL thành công!', 'success');
+                    const timeStr = result.updated_at ? formatTime(result.updated_at) : new Date().toLocaleTimeString('vi-VN');
+                    updateDBStatus('connected', `Đã lưu CSDL (${timeStr})`);
+                    showToast("Đã lưu vào CSDL thành công!", "success");
+                    fetchSystemData();
                 } else {
-                    throw new Error(json.error || 'Lỗi không xác định khi lưu CSDL.');
+                    throw new Error(result.error || 'Không thể lưu vào CSDL');
                 }
             } catch (err) {
-                console.error('Lỗi khi lưu CSDL:', err);
-                updateDbStatus('error', 'Lưu CSDL thất bại');
-                showToast('Lỗi khi lưu CSDL: ' + (err.message || 'Lỗi kết nối'), 'error');
+                console.error('Lỗi lưu CSDL:', err);
+                saveToLocal();
+                updateDBStatus('offline', 'Lưu CSDL lỗi (đã lưu tạm)');
+                showToast(err.message || "Lỗi lưu CSDL, đã lưu tạm vào máy!", "error");
             } finally {
-                isSaving = false;
                 if (saveBtn) {
                     saveBtn.disabled = false;
-                    saveBtn.innerHTML = originalBtnHtml;
+                    saveBtn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Lưu CSDL';
                 }
             }
         }
 
-        // Lưu và mở File JSON
-        function saveToFile() {
-            const dataStr = JSON.stringify(state, null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `Phan_Cong_Chuyen_Mon_${new Date().toISOString().slice(0,10)}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showToast("Đã tải file JSON về máy!", "success");
-        }
-
-        function loadFromFile(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedState = JSON.parse(e.target.result);
-                    if (importedState && importedState.teachers && importedState.unassigned) {
-                        state = importedState;
-                        saveToLocal();
-                        render();
-                        showToast("Đã mở file JSON thành công!", "success");
-                    } else {
-                        alert("File JSON không đúng cấu trúc phân công chuyên môn!");
-                    }
-                } catch (error) {
-                    alert("Lỗi định dạng file JSON: " + error.message);
+        async function fetchSystemData() {
+            try {
+                const res = await fetch('api/phancong.php?action=system_data', { credentials: 'include' });
+                const data = await res.json().catch(() => ({}));
+                if (data.ok) {
+                    systemData = data;
+                    renderPlansList(data.plans || []);
                 }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-
-        // Làm mới dữ liệu
-        function resetData() {
-            if (confirm("XÓA TOÀN BỘ phân công hiện tại và làm lại từ đầu?")) {
-                state = JSON.parse(JSON.stringify(defaultState));
-                saveToLocal();
-                render();
-                updateDbStatus('connected', 'Đã đặt lại mặc định (Bấm Lưu CSDL để đồng bộ)');
-                showToast("Đã làm mới dữ liệu về mặc định!", "info");
+            } catch (e) {
+                console.warn('Không tải được system data:', e);
             }
         }
 
-        // Toast thông báo
-        let toastTimeout = null;
-        function showToast(msg, type = 'info') {
+        function updateDBStatus(type, text) {
+            const badge = document.getElementById('db-status-badge');
+            const statusText = document.getElementById('db-status-text');
+            if (!badge || !statusText) return;
+            badge.className = `db-status-badge ${type}`;
+            statusText.textContent = text;
+        }
+
+        function formatTime(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return isNaN(d) ? dateStr : `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        }
+
+        function showToast(msg, type = "info") {
             const toast = document.getElementById("toast");
-            const messageEl = document.getElementById("toast-message");
-            if (!toast || !messageEl) return;
-
-            messageEl.textContent = msg;
-            toast.className = 'visible ' + type;
-
-            const iconEl = toast.querySelector('i');
-            if (iconEl) {
-                if (type === 'success') iconEl.className = 'fas fa-circle-check';
-                else if (type === 'error') iconEl.className = 'fas fa-circle-exclamation';
-                else iconEl.className = 'fas fa-circle-info';
-            }
-
-            clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.classList.remove('visible');
-            }, 2800);
+            if (!toast) return;
+            toast.className = `visible ${type}`;
+            const icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info');
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${msg}</span>`;
+            setTimeout(() => { toast.className = ""; }, 2500);
         }
 
-        // Kéo thả & Cập nhật chức vụ
-        function dragStart(e, subject, className) {
-            e.dataTransfer.setData('text/plain', JSON.stringify({ subject, className }));
+        // ================= KÉO THẢ & PHÂN CÔNG =================
+        function dragStart(e, subjectKey, className) {
+            e.dataTransfer.setData('text/plain', JSON.stringify({ subject: subjectKey, className }));
         }
 
         function allowDrop(e) {
@@ -932,37 +1191,36 @@
                 try {
                     const data = JSON.parse(dataStr);
                     assignClass(data.subject, data.className, teacherId);
-                } catch (err) {
-                    console.error("Drop parse error:", err);
-                }
+                } catch (err) { console.error(err); }
             }
         }
 
-        function assignClass(subject, className, teacherId) {
-            if (!state.unassigned[subject]) state.unassigned[subject] = [];
-            state.unassigned[subject] = state.unassigned[subject].filter(c => c !== className);
+        function assignClass(subjectKey, className, teacherId) {
+            if (!state.unassigned[subjectKey]) state.unassigned[subjectKey] = [];
+            state.unassigned[subjectKey] = state.unassigned[subjectKey].filter(c => c !== className);
 
             const teacher = state.teachers.find(t => t.id === teacherId);
             if (teacher) {
-                if (!teacher[subject]) teacher[subject] = [];
-                if (!teacher[subject].includes(className)) {
-                    teacher[subject].push(className);
-                    teacher[subject].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+                if (!teacher.assignments) teacher.assignments = {};
+                if (!teacher.assignments[subjectKey]) teacher.assignments[subjectKey] = [];
+                if (!teacher.assignments[subjectKey].includes(className)) {
+                    teacher.assignments[subjectKey].push(className);
+                    teacher.assignments[subjectKey].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
                 }
             }
             saveToLocal();
             render();
         }
 
-        function unassignClass(subject, className, teacherId) {
+        function unassignClass(subjectKey, className, teacherId) {
             const teacher = state.teachers.find(t => t.id === teacherId);
-            if (teacher && teacher[subject]) {
-                teacher[subject] = teacher[subject].filter(c => c !== className);
+            if (teacher && teacher.assignments && teacher.assignments[subjectKey]) {
+                teacher.assignments[subjectKey] = teacher.assignments[subjectKey].filter(c => c !== className);
             }
-            if (!state.unassigned[subject]) state.unassigned[subject] = [];
-            if (!state.unassigned[subject].includes(className)) {
-                state.unassigned[subject].push(className);
-                state.unassigned[subject].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+            if (!state.unassigned[subjectKey]) state.unassigned[subjectKey] = [];
+            if (!state.unassigned[subjectKey].includes(className)) {
+                state.unassigned[subjectKey].push(className);
+                state.unassigned[subjectKey].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
             }
             saveToLocal();
             render();
@@ -981,18 +1239,26 @@
             const teacher = state.teachers.find(t => t.id === teacherId);
             if (teacher) {
                 teacher.role = newRole;
-                // Áp dụng định mức giảm trừ theo chức vụ
-                if (newRole === 'TTCM') teacher.allowance = 3;
-                else if (newRole === 'TPCM') teacher.allowance = 1;
-                else teacher.allowance = 0; // GV, HP...
-
+                teacher.allowance = ROLE_ALLOWANCES[newRole] ?? 0;
                 saveToLocal();
                 render();
             }
         }
 
-        // Vẽ giao diện
+        // ================= VẼ GIAO DIỆN (RENDER) =================
         function render() {
+            // Cập nhật tiêu đề & năm học
+            const titleEl = document.getElementById('display-plan-title');
+            const yearEl = document.getElementById('display-plan-year');
+            if (titleEl) titleEl.textContent = state.info.title || 'Tổ Chuyên Môn';
+            if (yearEl) yearEl.textContent = `${state.info.school_year || ''} (${state.info.semester || 'HK1'})`;
+
+            // Cập nhật thống kê
+            const statT = document.getElementById('stat-teachers-count');
+            const statC = document.getElementById('stat-classes-count');
+            if (statT) statT.textContent = state.teachers.length;
+            if (statC) statC.textContent = state.classes.length;
+
             renderPool();
             renderTeachers();
         }
@@ -1002,30 +1268,28 @@
             if (!pool) return;
             pool.innerHTML = '';
 
-            const subjects = [
-                { key: 'math', name: 'Toán', val: PERIODS.math, icon: 'fa-calculator' },
-                { key: 'it', name: 'Tin học', val: PERIODS.it, icon: 'fa-laptop-code' },
-                { key: 'gvcn', name: 'Chủ nhiệm', val: PERIODS.gvcn, icon: 'fa-user-tie' },
-                { key: 'hdtn', name: 'HĐTN', val: PERIODS.hdtn, icon: 'fa-compass' }
-            ];
+            const searchVal = (document.getElementById('class-search')?.value || '').trim().toLowerCase();
 
-            subjects.forEach(sub => {
-                const arr = state.unassigned[sub.key] || [];
-                const pillsHtml = arr.map(c => `
-                    <div class="pill ${sub.key}" draggable="true" ondragstart="dragStart(event, '${sub.key}', '${c}')">
-                        ${c}
-                    </div>
-                `).join('');
+            state.subjects.forEach(sub => {
+                let arr = state.unassigned[sub.key] || [];
+                if (searchVal) {
+                    arr = arr.filter(c => c.toLowerCase().includes(searchVal));
+                }
 
+                const countAll = (state.unassigned[sub.key] || []).length;
                 const html = `
-                    <div class="subject-group">
-                        <div class="subject-title ${sub.key}">
-                            <span><i class="fas ${sub.icon} mr-1"></i> ${sub.name} (${sub.val}t/lớp)</span>
-                            <span class="count-badge">Còn: ${arr.length}</span>
+                    <div class="subject-group" style="border-left: 4px solid ${sub.color};">
+                        <div class="subject-title" style="color: ${sub.color};">
+                            <span><b>${sub.name}</b> (${sub.periods}t/lớp)</span>
+                            <span class="count-badge">Còn: ${countAll} lớp</span>
                         </div>
                         <div class="pill-container">
-                            ${pillsHtml}
-                            ${arr.length === 0 ? '<div style="color: #94a3b8; font-size: 0.8rem; font-style: italic; padding: 4px 0;">Đã phân công hết lớp</div>' : ''}
+                            ${arr.map(c => `
+                                <div class="pill" style="background-color: ${sub.color};" draggable="true" ondragstart="dragStart(event, '${sub.key}', '${c}')">
+                                    <span>${c}</span>
+                                </div>
+                            `).join('')}
+                            ${arr.length === 0 ? '<div style="color: #94a3b8; font-size: 0.8rem; font-style: italic; padding: 4px 0;">' + (countAll === 0 ? 'Đã phân công hết' : 'Không khớp tìm kiếm') + '</div>' : ''}
                         </div>
                     </div>
                 `;
@@ -1038,36 +1302,62 @@
             if (!grid) return;
             grid.innerHTML = '';
 
+            if (state.teachers.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: #ffffff; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                        <i class="fas fa-user-plus" style="font-size: 2.5rem; color: #94a3b8; margin-bottom: 12px;"></i>
+                        <h3 style="margin: 0 0 6px 0; color: #334155;">Chưa có Giáo viên nào</h3>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 14px;">Hãy nhấn nút Khai báo để thêm giáo viên hoặc đồng bộ từ CSDL hệ thống.</p>
+                        <button class="btn-small btn-small-primary" onclick="openConfigModal('tab-teachers')"><i class="fas fa-plus"></i> Khai báo Giáo viên</button>
+                    </div>
+                `;
+                return;
+            }
+
             state.teachers.forEach(t => {
-                const qlpmPeriods = t.qlpm ? PERIODS.qlpm : 0;
-                const mathPeriods = (t.math?.length || 0) * PERIODS.math;
-                const itPeriods = (t.it?.length || 0) * PERIODS.it;
-                const gvcnPeriods = (t.gvcn?.length || 0) * PERIODS.gvcn;
-                const hdtnPeriods = (t.hdtn?.length || 0) * PERIODS.hdtn;
-                const total = mathPeriods + itPeriods + gvcnPeriods + hdtnPeriods + (t.allowance || 0) + qlpmPeriods;
+                const qlpmPeriods = t.qlpm ? PERIOD_QLPM : 0;
+                let subjectTotal = 0;
+                let rowsHtml = '';
+                let totalAssignedClasses = 0;
 
-                const mathHtml = (t.math || []).map(c => `<div class="pill math pill-assigned" onclick="unassignClass('math', '${c}', '${t.id}')" title="Bấm để hủy phân công">${c}</div>`).join('');
-                const itHtml = (t.it || []).map(c => `<div class="pill it pill-assigned" onclick="unassignClass('it', '${c}', '${t.id}')" title="Bấm để hủy phân công">${c}</div>`).join('');
-                const gvcnHtml = (t.gvcn || []).map(c => `<div class="pill gvcn pill-assigned" onclick="unassignClass('gvcn', '${c}', '${t.id}')" title="Bấm để hủy phân công">${c}</div>`).join('');
-                const hdtnHtml = (t.hdtn || []).map(c => `<div class="pill hdtn pill-assigned" onclick="unassignClass('hdtn', '${c}', '${t.id}')" title="Bấm để hủy phân công">${c}</div>`).join('');
+                state.subjects.forEach(sub => {
+                    const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
+                    subjectTotal += assigned.length * (sub.periods || 0);
+                    totalAssignedClasses += assigned.length;
 
-                const isEmpty = (t.math?.length || 0) === 0 && (t.it?.length || 0) === 0 && (t.gvcn?.length || 0) === 0 && (t.hdtn?.length || 0) === 0;
+                    if (assigned.length > 0) {
+                        const pillsHtml = assigned.map(c => `
+                            <div class="pill pill-assigned" style="background-color: ${sub.color};" onclick="unassignClass('${sub.key}', '${c}', '${t.id}')" title="Bấm để hủy phân công">
+                                <span>${c}</span>
+                            </div>
+                        `).join('');
+
+                        rowsHtml += `
+                            <div class="assigned-row">
+                                <div class="assigned-label" style="color: ${sub.color};">${sub.name}:</div>
+                                <div class="assigned-pills">${pillsHtml}</div>
+                            </div>
+                        `;
+                    }
+                });
+
+                const total = subjectTotal + (t.allowance || 0) + qlpmPeriods;
+                const isEmpty = totalAssignedClasses === 0;
 
                 const cardHtml = `
                     <div class="teacher-card" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, '${t.id}')">
                         <div class="teacher-header">
                             <div class="teacher-title-row">
                                 <div class="teacher-name">
-                                    <span class="teacher-avatar"><i class="fas fa-chalkboard-user"></i></span>
                                     <span>${t.name}</span>
                                     <select class="role-select" onchange="changeRole('${t.id}', this.value)">
                                         <option value="GV" ${t.role === 'GV' ? 'selected' : ''}>Giáo viên</option>
-                                        <option value="TTCM" ${t.role === 'TTCM' ? 'selected' : ''}>TTCM</option>
-                                        <option value="TPCM" ${t.role === 'TPCM' ? 'selected' : ''}>TPCM</option>
+                                        <option value="TTCM" ${t.role === 'TTCM' ? 'selected' : ''}>TTCM (-3t)</option>
+                                        <option value="TPCM" ${t.role === 'TPCM' ? 'selected' : ''}>TPCM (-1t)</option>
                                         <option value="HP" ${t.role === 'HP' ? 'selected' : ''}>Hiệu phó</option>
                                     </select>
                                 </div>
-                                <label class="checkbox-group" title="Kiêm nhiệm Quản lý phòng máy (+3 tiết)">
+                                <label class="checkbox-group">
                                     <input type="checkbox" ${t.qlpm ? 'checked' : ''} onchange="toggleQLPM('${t.id}', this.checked)">
                                     QL Máy
                                 </label>
@@ -1075,20 +1365,16 @@
                         </div>
 
                         <div class="teacher-body">
-                            ${isEmpty ? '<div class="empty-hint"><i class="fas fa-hand-pointer mr-1"></i> Kéo thả lớp vào đây...</div>' : ''}
-                            ${(t.math && t.math.length > 0) ? `<div class="assigned-row"><div class="assigned-label">Toán:</div><div class="assigned-pills">${mathHtml}</div></div>` : ''}
-                            ${(t.it && t.it.length > 0) ? `<div class="assigned-row"><div class="assigned-label">Tin học:</div><div class="assigned-pills">${itHtml}</div></div>` : ''}
-                            ${(t.gvcn && t.gvcn.length > 0) ? `<div class="assigned-row"><div class="assigned-label">Chủ nhiệm:</div><div class="assigned-pills">${gvcnHtml}</div></div>` : ''}
-                            ${(t.hdtn && t.hdtn.length > 0) ? `<div class="assigned-row"><div class="assigned-label">HĐTN:</div><div class="assigned-pills">${hdtnHtml}</div></div>` : ''}
+                            ${isEmpty ? '<div class="empty-hint">Kéo lớp học từ kho bên trái thả vào đây...</div>' : rowsHtml}
                         </div>
 
                         <div class="teacher-footer">
                             <div class="footer-row">
-                                <span>Giảm trừ / Kiêm nhiệm:</span>
-                                <span>${(t.allowance || 0) + qlpmPeriods} tiết</span>
+                                <span>Giảm trừ &amp; Kiêm nhiệm:</span>
+                                <span><b>${(t.allowance || 0) + qlpmPeriods}</b> tiết</span>
                             </div>
                             <div class="footer-row total-row">
-                                <span>Tổng cộng:</span>
+                                <span>Tổng cộng thực dạy:</span>
                                 <span class="total-periods">${total} tiết</span>
                             </div>
                         </div>
@@ -1098,66 +1384,433 @@
             });
         }
 
-        // Xuất bảng phân công ra Excel chuẩn UTF-8
+        function filterClasses(val) {
+            renderPool();
+        }
+
+        // ================= XUẤT/NHẬP FILE & EXCEL =================
+        function saveToFile() {
+            const dataStr = JSON.stringify(state, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            const safeTitle = (state.info.title || 'Phan_Cong').replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1EA0-\u1EF9]+/g, '_');
+            link.download = `${safeTitle}_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Đã tải file JSON về máy!", "success");
+        }
+
+        function loadFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    if (importedState && (importedState.teachers || importedState.classes)) {
+                        state = normalizeState(importedState);
+                        saveToLocal();
+                        render();
+                        showToast("Đã nạp file JSON thành công!", "success");
+                    } else {
+                        showToast("File không đúng cấu trúc phân công!", "error");
+                    }
+                } catch (error) {
+                    alert("Lỗi đọc file JSON!");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
         function exportToExcel() {
-            let table = `<table border="1" style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px;">
+            let table = `<table border="1" style="border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;">
                 <thead>
-                    <tr style="background-color: #1e3a8a; color: #ffffff; text-align: center; font-weight: bold; height: 36px;">
-                        <th style="padding: 6px 12px;">STT</th>
-                        <th style="padding: 6px 16px;">Họ và Tên</th>
-                        <th style="padding: 6px 12px;">Chức vụ</th>
-                        <th style="padding: 6px 14px; background-color: #2563eb;">Lớp dạy Toán</th>
-                        <th style="padding: 6px 14px; background-color: #059669;">Lớp dạy Tin</th>
-                        <th style="padding: 6px 14px; background-color: #d97706;">Lớp Chủ nhiệm</th>
-                        <th style="padding: 6px 14px; background-color: #7c3aed;">Lớp dạy HĐTN</th>
-                        <th style="padding: 6px 12px; background-color: #475569;">Kiêm nhiệm / Giảm trừ</th>
-                        <th style="padding: 6px 14px; background-color: #dc2626;">Tổng Số Tiết</th>
+                    <tr>
+                        <th colspan="${6 + state.subjects.length}" style="background-color: #1e3a8a; color: white; font-size: 16px; padding: 10px; text-align: center;">
+                            BẢNG PHÂN CÔNG CHUYÊN MÔN - ${state.info.title.toUpperCase()} (NĂM HỌC ${state.info.school_year || ''} - ${state.info.semester || ''})
+                        </th>
+                    </tr>
+                    <tr style="background-color: #f1f5f9; color: #0f172a; font-weight: bold; text-align: center;">
+                        <th style="padding: 8px;">STT</th>
+                        <th style="padding: 8px;">Họ và Tên</th>
+                        <th style="padding: 8px;">Chức vụ</th>
+                        ${state.subjects.map(s => `<th style="padding: 8px; color: ${s.color};">${s.name} (${s.periods}t)</th>`).join('')}
+                        <th style="padding: 8px;">Giảm trừ / Kiêm nhiệm</th>
+                        <th style="padding: 8px; color: #dc2626;">Tổng Số Tiết</th>
                     </tr>
                 </thead>
                 <tbody>`;
 
             state.teachers.forEach((t, index) => {
-                const qlpmPeriods = t.qlpm ? PERIODS.qlpm : 0;
-                const total = ((t.math?.length || 0) * PERIODS.math) +
-                              ((t.it?.length || 0) * PERIODS.it) +
-                              ((t.gvcn?.length || 0) * PERIODS.gvcn) +
-                              ((t.hdtn?.length || 0) * PERIODS.hdtn) +
-                              (t.allowance || 0) + qlpmPeriods;
+                const qlpmPeriods = t.qlpm ? PERIOD_QLPM : 0;
+                let subTotals = 0;
+
+                const subjectCells = state.subjects.map(sub => {
+                    const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
+                    subTotals += assigned.length * (sub.periods || 0);
+                    return `<td style="padding: 6px; text-align: center;">${assigned.join(', ') || '—'}</td>`;
+                }).join('');
+
+                const total = subTotals + (t.allowance || 0) + qlpmPeriods;
 
                 let kn_text = [];
-                if ((t.allowance || 0) > 0) kn_text.push(`${t.role} (${t.allowance})`);
-                if (t.qlpm) kn_text.push(`QL Máy (${PERIODS.qlpm})`);
+                if (t.allowance > 0) kn_text.push(`${t.role} (${t.allowance}t)`);
+                if (t.qlpm) kn_text.push(`QL Máy (${PERIOD_QLPM}t)`);
 
-                const bgRow = index % 2 === 0 ? '#ffffff' : '#f8fafc';
-
-                table += `<tr style="background-color: ${bgRow}; text-align: center; height: 30px;">
-                    <td style="padding: 6px;">${index + 1}</td>
-                    <td style="padding: 6px 12px; text-align: left; font-weight: bold;">${t.name}</td>
-                    <td style="padding: 6px;">${t.role}</td>
-                    <td style="padding: 6px;">${(t.math || []).join(', ')}</td>
-                    <td style="padding: 6px;">${(t.it || []).join(', ')}</td>
-                    <td style="padding: 6px;">${(t.gvcn || []).join(', ')}</td>
-                    <td style="padding: 6px;">${(t.hdtn || []).join(', ')}</td>
-                    <td style="padding: 6px;">${kn_text.join(' + ') || '—'}</td>
-                    <td style="padding: 6px; font-weight: bold; color: #dc2626; font-size: 14px;">${total}</td>
+                table += `<tr>
+                    <td style="padding: 6px; text-align: center;">${index + 1}</td>
+                    <td style="padding: 6px; font-weight: bold;">${t.name}</td>
+                    <td style="padding: 6px; text-align: center;">${t.role}</td>
+                    ${subjectCells}
+                    <td style="padding: 6px;">${kn_text.join(' + ') || '0'}</td>
+                    <td style="padding: 6px; text-align: center; font-weight: bold; color: #dc2626; font-size: 14px;">${total}</td>
                 </tr>`;
             });
 
             table += `</tbody></table>`;
 
             const uri = 'data:application/vnd.ms-excel;base64,';
-            const template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>PhanCongChuyenMon</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>{table}</body></html>';
+            const template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>PhanCong</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>{table}</body></html>';
             const base64 = function(s) { return window.btoa(unescape(encodeURIComponent(s))) };
-            const format = function(s, c) { return s.replace(/{(\w+)}/g, function(m, p) { return c[p]; }) };
+            const format = function(s, c) { return s.replace(/{(\\w+)}/g, function(m, p) { return c[p]; }) };
             const ctx = { worksheet: 'Phân Công', table: table };
 
             const link = document.createElement("a");
             link.href = uri + base64(format(template, ctx));
-            link.download = `Phan_Cong_Chuyen_Mon_${new Date().toISOString().slice(0,10)}.xls`;
+            const safeTitle = (state.info.title || 'Phan_Cong').replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1EA0-\u1EF9]+/g, '_');
+            link.download = `${safeTitle}_${new Date().toISOString().slice(0, 10)}.xls`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             showToast("Đã xuất file Excel thành công!", "success");
+        }
+
+        // ================= MODAL CÀI ĐẶT & KHAI BÁO =================
+        let editingConfig = null;
+
+        function openConfigModal(tabId = 'tab-info') {
+            editingConfig = JSON.parse(JSON.stringify(state));
+
+            // Điền tab 1
+            document.getElementById('cfg-plan-title').value = editingConfig.info?.title || '';
+            document.getElementById('cfg-school-year').value = editingConfig.info?.school_year || '';
+            document.getElementById('cfg-semester').value = editingConfig.info?.semester || 'HK1';
+            document.getElementById('cfg-plan-key').value = editingConfig.info?.plan_key || 'default';
+
+            // Điền tab 4
+            document.getElementById('cfg-classes-text').value = (editingConfig.classes || []).join(', ');
+            updateClassesPreview();
+
+            renderConfigTeachersTable();
+            renderConfigSubjectsTable();
+            switchModalTab(tabId);
+
+            document.getElementById('config-modal').classList.add('active');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('config-modal').classList.remove('active');
+            editingConfig = null;
+        }
+
+        function switchModalTab(tabId) {
+            document.querySelectorAll('.modal-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+            const btn = document.getElementById(`tab-btn-${tabId.replace('tab-', '')}`);
+            const pane = document.getElementById(tabId);
+            if (btn) btn.classList.add('active');
+            if (pane) pane.classList.add('active');
+
+            // Cập nhật badge số lượng
+            document.getElementById('tab-badge-teachers').textContent = editingConfig?.teachers?.length || 0;
+            document.getElementById('tab-badge-subjects').textContent = editingConfig?.subjects?.length || 0;
+            document.getElementById('tab-badge-classes').textContent = editingConfig?.classes?.length || 0;
+        }
+
+        // --- Tab 2: Teachers Table ---
+        function renderConfigTeachersTable() {
+            const tbody = document.getElementById('teachers-table-body');
+            if (!tbody || !editingConfig) return;
+            tbody.innerHTML = '';
+
+            editingConfig.teachers.forEach((t, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;">${index + 1}</td>
+                    <td>
+                        <input type="text" class="form-control" style="padding:4px 8px;" value="${escapeHtml(t.name)}" onchange="updateEditingTeacher(${index}, 'name', this.value)">
+                    </td>
+                    <td>
+                        <select class="form-control" style="padding:4px 8px;" onchange="updateEditingTeacherRole(${index}, this.value)">
+                            <option value="GV" ${t.role === 'GV' ? 'selected' : ''}>Giáo viên (0t)</option>
+                            <option value="TTCM" ${t.role === 'TTCM' ? 'selected' : ''}>TTCM (-3t)</option>
+                            <option value="TPCM" ${t.role === 'TPCM' ? 'selected' : ''}>TPCM (-1t)</option>
+                            <option value="HP" ${t.role === 'HP' ? 'selected' : ''}>Hiệu phó (0t)</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" class="form-control" style="padding:4px 8px; width:70px;" value="${t.allowance || 0}" min="0" onchange="updateEditingTeacher(${index}, 'allowance', parseInt(this.value)||0)">
+                    </td>
+                    <td style="text-align:center;">
+                        <input type="checkbox" ${t.qlpm ? 'checked' : ''} onchange="updateEditingTeacher(${index}, 'qlpm', this.checked)">
+                    </td>
+                    <td style="text-align:center;">
+                        <button class="table-btn" onclick="removeEditingTeacher(${index})" title="Xóa"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('tab-badge-teachers').textContent = editingConfig.teachers.length;
+        }
+
+        function addTeacherRow() {
+            const newId = 't_' + Date.now();
+            editingConfig.teachers.push({
+                id: newId,
+                name: 'Giáo viên mới',
+                role: 'GV',
+                allowance: 0,
+                qlpm: false,
+                assignments: {}
+            });
+            renderConfigTeachersTable();
+        }
+
+        function removeEditingTeacher(index) {
+            if (confirm("Xóa giáo viên này khỏi danh sách phân công?")) {
+                editingConfig.teachers.splice(index, 1);
+                renderConfigTeachersTable();
+            }
+        }
+
+        function updateEditingTeacher(index, field, value) {
+            if (editingConfig.teachers[index]) {
+                editingConfig.teachers[index][field] = value;
+            }
+        }
+
+        function updateEditingTeacherRole(index, newRole) {
+            if (editingConfig.teachers[index]) {
+                editingConfig.teachers[index].role = newRole;
+                editingConfig.teachers[index].allowance = ROLE_ALLOWANCES[newRole] ?? 0;
+                renderConfigTeachersTable();
+            }
+        }
+
+        function syncTeachersFromDB() {
+            if (!systemData.teachers || systemData.teachers.length === 0) {
+                alert("Không tìm thấy danh sách giáo viên trong CSDL users hoặc chưa có kết nối!");
+                return;
+            }
+
+            const existingNames = new Set(editingConfig.teachers.map(t => t.name.trim().toLowerCase()));
+            let addedCount = 0;
+
+            systemData.teachers.forEach(st => {
+                if (!existingNames.has(st.name.trim().toLowerCase())) {
+                    editingConfig.teachers.push({
+                        id: st.id || ('t_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
+                        name: st.name,
+                        role: 'GV',
+                        allowance: 0,
+                        qlpm: false,
+                        assignments: {}
+                    });
+                    addedCount++;
+                }
+            });
+
+            renderConfigTeachersTable();
+            showToast(`Đã đồng bộ thêm ${addedCount} giáo viên từ CSDL!`, "success");
+        }
+
+        // --- Tab 3: Subjects Table ---
+        function renderConfigSubjectsTable() {
+            const tbody = document.getElementById('subjects-table-body');
+            if (!tbody || !editingConfig) return;
+            tbody.innerHTML = '';
+
+            editingConfig.subjects.forEach((sub, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;">${index + 1}</td>
+                    <td>
+                        <input type="text" class="form-control" style="padding:4px 8px;" value="${escapeHtml(sub.key)}" onchange="updateEditingSubject(${index}, 'key', this.value)">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" style="padding:4px 8px;" value="${escapeHtml(sub.name)}" onchange="updateEditingSubject(${index}, 'name', this.value)">
+                    </td>
+                    <td>
+                        <input type="number" class="form-control" style="padding:4px 8px; width:80px;" value="${sub.periods || 1}" min="1" onchange="updateEditingSubject(${index}, 'periods', parseInt(this.value)||1)">
+                    </td>
+                    <td style="text-align:center;">
+                        <input type="color" value="${sub.color || '#2563eb'}" style="width:34px; height:28px; border:none; cursor:pointer;" onchange="updateEditingSubject(${index}, 'color', this.value)">
+                    </td>
+                    <td style="text-align:center;">
+                        <button class="table-btn" onclick="removeEditingSubject(${index})" title="Xóa"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('tab-badge-subjects').textContent = editingConfig.subjects.length;
+        }
+
+        function addSubjectRow() {
+            const count = editingConfig.subjects.length + 1;
+            const colors = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#ea580c'];
+            editingConfig.subjects.push({
+                key: 'mon_' + count,
+                name: 'Môn học ' + count,
+                periods: 2,
+                color: colors[count % colors.length]
+            });
+            renderConfigSubjectsTable();
+        }
+
+        function removeEditingSubject(index) {
+            if (confirm("Xóa môn học này? Các phân công thuộc môn này sẽ được dọn dẹp.")) {
+                editingConfig.subjects.splice(index, 1);
+                renderConfigSubjectsTable();
+            }
+        }
+
+        function updateEditingSubject(index, field, value) {
+            if (editingConfig.subjects[index]) {
+                editingConfig.subjects[index][field] = value;
+            }
+        }
+
+        function applyPresetSubjects(type) {
+            if (type === 'toan_tin') {
+                editingConfig.subjects = [
+                    { key: 'math', name: 'Toán', periods: 4, color: '#2563eb' },
+                    { key: 'it', name: 'Tin học', periods: 1, color: '#059669' },
+                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706' },
+                    { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed' }
+                ];
+            } else if (type === 'khtn') {
+                editingConfig.subjects = [
+                    { key: 'khtn', name: 'KHTN', periods: 4, color: '#059669' },
+                    { key: 'congnghe', name: 'Công nghệ', periods: 1, color: '#0891b2' },
+                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706' },
+                    { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed' }
+                ];
+            } else if (type === 'khxh') {
+                editingConfig.subjects = [
+                    { key: 'van', name: 'Ngữ văn', periods: 4, color: '#db2777' },
+                    { key: 'sudi', name: 'Lịch sử & Địa lí', periods: 3, color: '#ea580c' },
+                    { key: 'gdcd', name: 'GDCD', periods: 1, color: '#2563eb' },
+                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706' }
+                ];
+            }
+            renderConfigSubjectsTable();
+            showToast("Đã áp dụng bộ môn mẫu!", "info");
+        }
+
+        // --- Tab 4: Classes ---
+        document.getElementById('cfg-classes-text')?.addEventListener('input', updateClassesPreview);
+
+        function updateClassesPreview() {
+            const raw = document.getElementById('cfg-classes-text')?.value || '';
+            const classes = parseClassesList(raw);
+            if (editingConfig) editingConfig.classes = classes;
+
+            const countEl = document.getElementById('classes-preview-count');
+            const pillsEl = document.getElementById('classes-preview-pills');
+            if (countEl) countEl.textContent = classes.length;
+            if (pillsEl) {
+                pillsEl.innerHTML = classes.map(c => `
+                    <span style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">${c}</span>
+                `).join('');
+                if (classes.length === 0) {
+                    pillsEl.innerHTML = '<span style="color: #94a3b8; font-size: 0.8rem; font-style: italic;">Chưa có lớp nào</span>';
+                }
+            }
+            document.getElementById('tab-badge-classes').textContent = classes.length;
+        }
+
+        function parseClassesList(text) {
+            return text.split(/[,;\n]+/)
+                .map(c => c.trim())
+                .filter(Boolean)
+                .filter((v, i, a) => a.indexOf(v) === i)
+                .sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+        }
+
+        function syncClassesFromDB() {
+            if (!systemData.classes || systemData.classes.length === 0) {
+                alert("Không tìm thấy danh sách lớp từ tài khoản học sinh trong CSDL!");
+                return;
+            }
+            document.getElementById('cfg-classes-text').value = systemData.classes.join(', ');
+            updateClassesPreview();
+            showToast(`Đã lấy ${systemData.classes.length} lớp học từ CSDL!`, "success");
+        }
+
+        function generateDefaultClasses() {
+            const list = ['61', '62', '63', '64', '65', '66', '71', '72', '73', '74', '75', '76', '81', '82', '83', '84', '85', '86', '91', '92', '93', '94', '95', '96', '97'];
+            document.getElementById('cfg-classes-text').value = list.join(', ');
+            updateClassesPreview();
+            showToast("Đã tạo 25 lớp khối 6 - 9!", "info");
+        }
+
+        // --- Áp dụng cấu hình thay đổi ---
+        function applyConfigChanges() {
+            if (!editingConfig) return;
+
+            // Đọc lại thông tin chung
+            editingConfig.info.title = document.getElementById('cfg-plan-title').value.trim() || 'Tổ Chuyên Môn';
+            editingConfig.info.school_year = document.getElementById('cfg-school-year').value.trim() || '';
+            editingConfig.info.semester = document.getElementById('cfg-semester').value || 'HK1';
+            editingConfig.info.plan_key = document.getElementById('cfg-plan-key').value.trim() || 'default';
+
+            // Đọc lại danh sách lớp
+            editingConfig.classes = parseClassesList(document.getElementById('cfg-classes-text').value);
+
+            // Cập nhật vào state chính
+            state = normalizeState(editingConfig);
+            saveToLocal();
+            render();
+            closeConfigModal();
+            showToast("Đã cập nhật cấu hình tổ chuyên môn!", "success");
+        }
+
+        // --- Danh sách kế hoạch đã lưu ---
+        function renderPlansList(plans) {
+            const container = document.getElementById('db-plans-list');
+            if (!container) return;
+
+            if (!plans || plans.length === 0) {
+                container.innerHTML = '<div style="color: #94a3b8; font-size: 0.8rem; padding: 8px; text-align: center;">Chưa có bản phân công nào trên CSDL</div>';
+                return;
+            }
+
+            container.innerHTML = plans.map(p => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 0.82rem;">
+                    <div>
+                        <b>${escapeHtml(p.title || 'Phân công')}</b>
+                        <span style="color: #64748b; font-size: 0.75rem;">(${p.school_year || ''} - ${p.semester || ''} | key: <code>${p.plan_key}</code>)</span>
+                    </div>
+                    <button class="btn-small" onclick="switchPlanKey('${escapeHtml(p.plan_key)}')">
+                        <i class="fas fa-folder-open text-indigo-600"></i> Mở
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function switchPlanKey(key) {
+            state.info.plan_key = key;
+            closeConfigModal();
+            loadFromDB(true);
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
         // Khởi động trang
