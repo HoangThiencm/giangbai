@@ -12,8 +12,8 @@ const PROMPTS = {
 1. Chương trình Giáo dục Phổ thông (GDPT) 2018 môn Toán (Lớp 6, 7, 8, 9) theo bộ sách Kết Nối Tri Thức Với Cuộc Sống.
 2. Công văn số 5512/BGDĐT-GDTrH của Bộ Giáo dục và Đào tạo về xây dựng Kế hoạch bài dạy (Giáo án).
 3. Khung năng lực đặc thù môn Toán (Tư duy và lập luận toán học; Mô hình hoá toán học; Giải quyết vấn đề toán học; Giao tiếp toán học; Sử dụng công cụ, phương tiện học toán).
-4. Khung năng lực Trí tuệ Nhân tạo (AI) cho học sinh THCS theo Quyết định số 2422/QĐ-BGDĐT.
-5. Khung năng lực Số cho người học theo Thông tư số 02/2025/TT-BGDĐT.
+4. Khung năng lực Trí tuệ Nhân tạo (AI) cho học sinh THCS theo Quyết định số 2422/QĐ-BGDĐT, khi giáo viên chủ động yêu cầu tích hợp.
+5. Khung năng lực Số cho người học theo Thông tư số 02/2025/TT-BGDĐT, khi giáo viên chủ động yêu cầu tích hợp.
 6. 5 phẩm chất chủ yếu (Yêu nước, Nhân ái, Chăm chỉ, Trung thực, Trách nhiệm) và phương pháp dạy học hòa nhập cho học sinh khó khăn/chậm tiến độ.
 
 QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
@@ -21,7 +21,15 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Sử dụng tiếng Việt chuẩn mực, sư phạm, trang trọng.
 - Định dạng Markdown rõ ràng, phân cấp tiêu đề bằng #, ##, ###, #### hợp lý.
 - Công thức toán học PHẢI được viết bằng mã LaTeX chuẩn: công thức trong dòng dùng $công_thức$, công thức khối dùng $$công_thức$$. Ví dụ: $x^2 + 2x + 1 = 0$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\Delta = b^2 - 4ac$, $\\triangle ABC = \\triangle A'B'C'$.
-- Nội dung phải chi tiết, đầy đủ, thiết thực cho giáo viên lên lớp, tuyệt đối KHÔNG viết tóm tắt qua loa, KHÔNG để dấu '...' hoặc 'tương tự'.`,
+- Nội dung phải chi tiết, đầy đủ, thiết thực cho giáo viên lên lớp, tuyệt đối KHÔNG viết tóm tắt qua loa, KHÔNG để dấu '...' hoặc 'tương tự'.
+- Tuân thủ tuyệt đối bối cảnh và ràng buộc sư phạm được cung cấp trong từng yêu cầu; không tự bổ sung năng lực số, AI, ngoại ngữ hoặc hỗ trợ hòa nhập nếu không được chọn.`,
+
+  OUTPUT_CONTRACT: `HỢP ĐỒNG ĐẦU RA BẮT BUỘC:
+- Chỉ xuất Markdown của đúng mục Kế hoạch bài dạy đang được yêu cầu; bắt đầu ngay bằng tiêu đề/mục chuyên môn phù hợp.
+- CẤM lời chào, khen ngợi, giới thiệu, nhận xét quá trình, meta commentary và các câu như “Tuyệt vời”, “Xin chào”, “Dưới đây”, “Sau đây”.
+- CẤM dùng code fence (\`\`\`). Không giải thích cách bạn đã soạn; không viết nội dung ngoài KHBD.`,
+
+  OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ nội dung KHBD. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary và mọi code fence. Không thêm lời dẫn mới.`,
 
   // TAB 1: PHÂN TÍCH ẢNH SGK (VISION)
   ANALYZE_TEXTBOOK: `Bạn hãy quan sát và phân tích toàn diện các hình ảnh trang Sách Giáo Khoa (SGK) Toán - Bộ sách "Kết Nối Tri Thức Với Cuộc Sống" được cung cấp.
@@ -42,7 +50,7 @@ HÃY PHÂN TÍCH VÀ TRÍCH XUẤT NỘI DUNG VỚI CÁC MỤC SAU:
    - Tóm tắt đề bài các bài tập cơ bản và nâng cao trong SGK.
 5. **Đề xuất của Chuyên gia Sư phạm:**
    - Những điểm học sinh dễ mắc sai lầm, hiểu sai bản chất.
-   - Cơ hội tích hợp Năng lực số (phần mềm GeoGebra, máy tính cầm tay...) và Năng lực AI (đối chiếu, tự học) trong bài học này.
+   - Cơ hội tích hợp các thành phần số/AI nếu và chỉ nếu được bật trong bối cảnh sư phạm.
 
 Hãy trình bày rõ ràng, mạch lạc, giữ nguyên vẹn các công thức toán bằng định dạng LaTeX.`,
 
@@ -80,17 +88,17 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
 - **Năng lực Giao tiếp toán học (GTTH):** (Nêu rõ cách HS đọc hiểu, sử dụng thuật ngữ, kí hiệu toán học $...$ để trình bày lời giải và thảo luận).
 - **Năng lực Sử dụng công cụ, phương tiện học toán (CCPT):** (Sử dụng máy tính cầm tay, thước kẻ, compa, êke, thước đo góc, phần mềm mô phỏng GeoGebra/Desmos...).
 
-### c) Năng lực số (Theo Thông tư 02/2025/TT-BGDĐT)
+### c) Năng lực số (CHỈ viết khi bối cảnh sư phạm bật năng lực số; nếu không bật thì bỏ toàn bộ mục này)
 - **Vận hành thiết bị và phần mềm số:** Sử dụng máy tính cầm tay, phần mềm hình học động GeoGebra/Desmos hoặc bảng tính để hỗ trợ tính toán, kiểm tra kết quả hoặc trực quan hóa hình vẽ.
 - **Khai thác dữ liệu số:** Biết tra cứu thông tin, dữ liệu toán học bổ trợ từ các nguồn số hóa tin cậy.
 - **Hợp tác trong không gian số:** Trình bày và chia sẻ bài tập/sản phẩm học tập qua nền tảng số (nếu có).
 
-### d) Năng lực AI (Theo Quyết định 2422/QĐ-BGDĐT)
+### d) Năng lực AI (CHỈ viết khi bối cảnh sư phạm bật năng lực AI; nếu không bật thì bỏ toàn bộ mục này)
 - **Nhận thức và sử dụng công cụ AI:** Biết đặt câu hỏi (prompt) phù hợp cho trợ lý AI để giải thích thêm các khái niệm toán học hoặc tìm gợi ý phương pháp giải khi tự học.
 - **Phản biện và kiểm chứng kết quả AI:** Rèn luyện kĩ năng kiểm tra, đối chiếu lời giải do AI đề xuất với kiến thức chuẩn trong SGK, nhận biết các lỗi suy luận toán học mà AI có thể gặp phải.
 - **Liêm chính và an toàn AI:** Sử dụng AI như người bạn đồng hành hỗ trợ tư duy, không sao chép máy móc kết quả.
 
-## 3. Về phẩm chất & Giáo dục hòa nhập
+## 3. Về phẩm chất & Giáo dục hòa nhập (chỉ nêu hỗ trợ HS khuyết tật/hòa nhập khi bối cảnh sư phạm bật)
 - **Yêu nước:** Thấy được vẻ đẹp và ứng dụng thực tiễn của Toán học trong xây dựng quê hương, đất nước.
 - **Nhân ái:** Tôn trọng, lắng nghe và chia sẻ, sẵn sàng hỗ trợ bạn học gặp khó khăn khi làm việc nhóm.
 - **Chăm chỉ:** Tích cực phát biểu xây dựng bài, kiên trì suy nghĩ tìm tòi lời giải cho các bài toán khó.
@@ -108,7 +116,7 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
 {textbook_content}
 """
 
-YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 2 MỤC CHÍNH KÈM THIẾT BỊ SỐ/AI:
+YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 2 MỤC CHÍNH; chỉ thêm thiết bị số/AI khi bối cảnh sư phạm bật thành phần tương ứng:
 
 # II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
 
@@ -119,7 +127,7 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 2 MỤC CHÍNH KÈM THIẾT BỊ SỐ/AI:
   + Thước thẳng có chia vạch, compa bảng, êke, thước đo góc chuyên dụng cho GV.
   + Các mô hình trực quan, tranh ảnh hoặc video thực tế liên quan đến bài học.
   + Hệ thống Phiếu học tập (PHT số 1, PHT số 2,...) in sẵn cho các nhóm hoặc từng học sinh.
-- **Học liệu số và Ứng dụng AI:**
+- **Học liệu số và Ứng dụng AI (chỉ khi được bật):**
   + File mô phỏng hình học động / đồ thị hàm số trên phần mềm **GeoGebra** hoặc **Desmos**.
   + Các câu hỏi tương tác trên Quizizz, Kahoot hoặc Google Forms (nếu có).
   + Khung câu lệnh (Prompt) chuẩn bị sẵn để minh họa hoặc hướng dẫn HS tra cứu trên các công cụ AI.
@@ -268,7 +276,7 @@ CẤU TRÚC:
 
 YÊU CẦU BIÊN SOẠN:
 - Thiết kế 1 đến 2 bài toán vận dụng thực tiễn thể hiện đúng tinh thần "Kết nối tri thức với cuộc sống", gắn liền với đời sống hàng ngày của học sinh THCS (đo đạc, tài chính gia đình, kiến trúc, môi trường, số liệu thống kê...) hoặc tích hợp liên môn (Vật lý, Địa lý, Công nghệ...).
-- Tích hợp hướng dẫn HS ứng dụng Công cụ số / AI để kiểm chứng lời giải.
+- Chỉ tích hợp hướng dẫn HS ứng dụng công cụ số/AI để kiểm chứng lời giải khi bối cảnh sư phạm bật thành phần tương ứng.
 - Đầy đủ 4 thành phần a, b, c, d theo CV 5512 kèm LỜI GIẢI CHI TIẾT ĐẦY ĐỦ.
 
 CẤU TRÚC:
@@ -324,7 +332,9 @@ YÊU CẦU XÂY DỰNG 2 BẢNG ĐÁNH GIÁ CHUYÊN NGHIỆP DƯỚI DẠNG BẢ
 | **1. Nắm vững kiến thức toán học** | Chưa nhớ định nghĩa, công thức; còn nhầm lẫn nhiều | Nhớ định nghĩa, công thức cơ bản nhưng áp dụng còn lúng túng | Nắm vững định nghĩa, vận dụng đúng công thức vào các bài toán quen thuộc | Hiểu sâu sắc bản chất, giải thích mạch lạc, vận dụng linh hoạt |
 | **2. Kĩ năng tính toán và lập luận** | Tính toán sai nhiều, trình bày lộn xộn, thiếu bước | Tính toán cơ bản đúng, trình bày còn sơ sài | Tính toán chuẩn xác, lập luận có căn cứ, trình bày sạch đẹp | Tính toán nhanh, lập luận chặt chẽ, tối ưu hóa cách giải |
 | **3. Tinh thần hợp tác và thảo luận** | Thụ động, không tham gia cùng nhóm | Có tham gia nhưng còn ỷ lại vào bạn khác | Tích cực trao đổi, hoàn thành tốt phần việc được phân công | Đóng vai trò nòng cốt, hỗ trợ các bạn khác, dẫn dắt nhóm |
-| **4. Năng lực ứng dụng Số / AI** | Chưa biết sử dụng máy tính/phần mềm | Sử dụng máy tính cầm tay mức độ cơ bản | Sử dụng tốt máy tính cầm tay, biết dùng GeoGebra/AI tra cứu | Sử dụng thành thạo thiết bị số, biết phản biện và kiểm chứng kết quả AI |`,
+| **4. Năng lực ứng dụng Số / AI** | Chưa biết sử dụng máy tính/phần mềm | Sử dụng máy tính cầm tay mức độ cơ bản | Sử dụng tốt máy tính cầm tay, biết dùng GeoGebra/AI tra cứu | Sử dụng thành thạo thiết bị số, biết phản biện và kiểm chứng kết quả AI |
+
+Chỉ đưa hàng Rubrics về năng lực Số/AI khi thành phần tương ứng được bật trong bối cảnh sư phạm; nếu không thì bỏ hàng này.`,
 
   // TAB 4.F: HỒ SƠ DẠY HỌC (PHIẾU HỌC TẬP CÓ ĐÁP ÁN)
   GENERATE_PORTFOLIO: `Hãy thiết kế **F. HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP)** cho Kế hoạch bài dạy môn Toán THCS (Bộ sách Kết Nối Tri Thức Với Cuộc Sống).
@@ -406,7 +416,7 @@ YÊU CẦU XÂY DỰNG 4 MỤC CHI TIẾT:
 - Chuẩn bị đầy đủ dụng cụ học tập: thước đo góc, compa, bảng nhóm... cho tiết học sau.
 - Tìm hiểu các ví dụ thực tế liên quan đến bài học tiếp theo.
 
-## 4. Gợi ý Câu lệnh Prompt AI hỗ trợ học sinh tự học tại nhà an toàn
+## 4. Gợi ý Câu lệnh Prompt AI hỗ trợ học sinh tự học tại nhà an toàn (CHỈ tạo khi bối cảnh sư phạm bật năng lực AI)
 (Cung cấp 2-3 mẫu câu lệnh mẫu để HS có thể hỏi trợ lý AI như Gemini/ChatGPT/NotebookLM khi gặp khó khăn lúc tự học ở nhà, nhưng rèn luyện tính tư duy chứ không hỏi thẳng đáp án).
 - *Mẫu Prompt 1 (Giải thích lại khái niệm):* "Em là học sinh lớp {grade}, em chưa hiểu rõ về [khái niệm trong bài]. Bạn hãy giải thích lại bằng một ví dụ thực tế gần gũi, đơn giản nhất nhé!"
 - *Mẫu Prompt 2 (Gợi ý từng bước):* "Em đang giải bài toán [chép đề bài]. Em chưa biết bắt đầu từ đâu, bạn hãy cho em 2 câu hỏi gợi ý để em tự tìm ra hướng giải, đừng giải hộ em nhé!"

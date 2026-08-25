@@ -193,6 +193,54 @@
           </div>
         </div>
 
+        <div style="margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #f8fafc;">
+          <h3 style="margin: 0 0 .75rem; font-size: 1rem;"><i data-lucide="users-round"></i> Bối cảnh lớp và định hướng dạy học</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+            <div class="tool-group">
+              <label for="inputClassProfile">Trình độ và đặc điểm lớp:</label>
+              <textarea id="inputClassProfile" maxlength="600" rows="3" placeholder="Ví dụ: Lớp có trình độ không đồng đều; đa số đã nắm phép tính cơ bản, một số em cần thêm thời gian lập luận..."></textarea>
+            </div>
+            <div class="tool-group">
+              <label for="inputSupportNeeds">Học sinh cần hỗ trợ (nếu có):</label>
+              <textarea id="inputSupportNeeds" maxlength="500" rows="3" placeholder="Nêu nhu cầu hỗ trợ, cách tiếp cận hoặc điều chỉnh phù hợp; để trống nếu không có yêu cầu riêng."></textarea>
+            </div>
+            <div class="tool-group">
+              <label for="selectTeachingMethods">Phương pháp dạy học ưu tiên:</label>
+              <select id="selectTeachingMethods" multiple size="5" aria-label="Phương pháp dạy học ưu tiên">
+                <option value="Dạy học giải quyết vấn đề">Dạy học giải quyết vấn đề</option>
+                <option value="Dạy học khám phá có hướng dẫn">Dạy học khám phá có hướng dẫn</option>
+                <option value="Dạy học hợp tác">Dạy học hợp tác</option>
+                <option value="Dạy học trực quan">Dạy học trực quan</option>
+                <option value="Dạy học phân hóa">Dạy học phân hóa</option>
+                <option value="Luyện tập - thực hành">Luyện tập - thực hành</option>
+              </select>
+              <small class="text-muted">Giữ Ctrl/Cmd để chọn nhiều mục.</small>
+            </div>
+            <div class="tool-group">
+              <label for="selectTeachingTechniques">Kỹ thuật dạy học ưu tiên:</label>
+              <select id="selectTeachingTechniques" multiple size="5" aria-label="Kỹ thuật dạy học ưu tiên">
+                <option value="Think-Pair-Share">Think-Pair-Share</option>
+                <option value="Khăn trải bàn">Khăn trải bàn</option>
+                <option value="Mảnh ghép">Mảnh ghép</option>
+                <option value="Kỹ thuật hỏi đáp">Kỹ thuật hỏi đáp</option>
+                <option value="Trạm học tập">Trạm học tập</option>
+                <option value="Sơ đồ tư duy">Sơ đồ tư duy</option>
+              </select>
+              <small class="text-muted">Không chọn mục nào nếu không muốn ràng buộc kỹ thuật.</small>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0;">
+            <label><input type="checkbox" id="toggleDigitalCompetency"> Tích hợp năng lực số</label>
+            <label><input type="checkbox" id="toggleAiCompetency"> Tích hợp năng lực AI</label>
+            <label><input type="checkbox" id="toggleForeignLanguage"> Tích hợp ngoại ngữ</label>
+            <label><input type="checkbox" id="toggleInclusiveSupport"> Tích hợp hỗ trợ HS khuyết tật/hòa nhập</label>
+          </div>
+          <div class="tool-group">
+            <label for="inputSpecialRequirements">Yêu cầu hoặc hoạt động đặc thù:</label>
+            <textarea id="inputSpecialRequirements" maxlength="600" rows="3" placeholder="Ví dụ: Có hoạt động đo đạc ở sân trường; ưu tiên nhiệm vụ theo nhóm 4; không sử dụng điện thoại trong giờ học."></textarea>
+          </div>
+        </div>
+
         <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
           <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn giáo án KNTT:</h4>
           <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">

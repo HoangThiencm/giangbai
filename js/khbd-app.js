@@ -17,6 +17,14 @@ const appState = {
   teacher: "Giáo viên Môn Toán",
   subject: "TOÁN",
   duration: "02 tiết (90 phút)",
+  teachingContext: {
+    classProfile: "",
+    supportNeeds: "",
+    integrations: { digital: false, ai: false, foreignLanguage: false, inclusive: false },
+    methods: [],
+    techniques: [],
+    specialRequirements: ""
+  },
   
   // Danh sách ảnh SGK KNTT (Mảng phẳng trực quan)
   images: [],
@@ -106,6 +114,7 @@ function saveStateToLocalStorage() {
       teacher: appState.teacher,
       subject: appState.subject,
       duration: appState.duration,
+      teachingContext: appState.teachingContext,
       content: appState.content
     };
     localStorage.setItem("khbd_kntt_saved_state", JSON.stringify(dataToSave));
@@ -127,6 +136,7 @@ function loadStateFromLocalStorage() {
       appState.teacher = data.teacher || "Giáo viên Môn Toán";
       appState.subject = data.subject || "TOÁN";
       appState.duration = data.duration || "02 tiết (90 phút)";
+      appState.teachingContext = normalizeTeachingContext(data.teachingContext);
       if (data.content && typeof data.content === "object") {
         const savedActivities = data.content.activities && typeof data.content.activities === "object"
           ? data.content.activities : {};
@@ -148,6 +158,15 @@ function loadStateFromLocalStorage() {
       document.getElementById("inputSubject").value = appState.subject;
       document.getElementById("inputTopicCustom").value = appState.customTopic;
       document.getElementById("inputDuration").value = appState.duration;
+      document.getElementById("inputClassProfile").value = appState.teachingContext.classProfile;
+      document.getElementById("inputSupportNeeds").value = appState.teachingContext.supportNeeds;
+      document.getElementById("inputSpecialRequirements").value = appState.teachingContext.specialRequirements;
+      document.getElementById("toggleDigitalCompetency").checked = appState.teachingContext.integrations.digital;
+      document.getElementById("toggleAiCompetency").checked = appState.teachingContext.integrations.ai;
+      document.getElementById("toggleForeignLanguage").checked = appState.teachingContext.integrations.foreignLanguage;
+      document.getElementById("toggleInclusiveSupport").checked = appState.teachingContext.integrations.inclusive;
+      setMultiSelectValues("selectTeachingMethods", appState.teachingContext.methods);
+      setMultiSelectValues("selectTeachingTechniques", appState.teachingContext.techniques);
 
       // Cập nhật các textareas
       document.getElementById("editorVision").value = appState.content.vision || "";
@@ -159,6 +178,31 @@ function loadStateFromLocalStorage() {
     console.warn("Lỗi đọc state từ localStorage:", e);
     localStorage.removeItem("khbd_kntt_saved_state");
   }
+}
+
+function normalizeTeachingContext(context) {
+  const source = context && typeof context === "object" ? context : {};
+  const integrations = source.integrations && typeof source.integrations === "object" ? source.integrations : {};
+  return {
+    classProfile: typeof source.classProfile === "string" ? source.classProfile.slice(0, 600) : "",
+    supportNeeds: typeof source.supportNeeds === "string" ? source.supportNeeds.slice(0, 500) : "",
+    integrations: {
+      digital: Boolean(integrations.digital),
+      ai: Boolean(integrations.ai),
+      foreignLanguage: Boolean(integrations.foreignLanguage),
+      inclusive: Boolean(integrations.inclusive)
+    },
+    methods: Array.isArray(source.methods) ? source.methods.filter(value => typeof value === "string").slice(0, 6) : [],
+    techniques: Array.isArray(source.techniques) ? source.techniques.filter(value => typeof value === "string").slice(0, 6) : [],
+    specialRequirements: typeof source.specialRequirements === "string" ? source.specialRequirements.slice(0, 600) : ""
+  };
+}
+
+function setMultiSelectValues(id, values) {
+  const select = document.getElementById(id);
+  if (!select) return;
+  const selected = new Set(values || []);
+  Array.from(select.options).forEach(option => { option.selected = selected.has(option.value); });
 }
 
 // =============================================================================
@@ -205,6 +249,29 @@ function setupEventListeners() {
     document.getElementById(id).addEventListener("input", (e) => {
       const key = id.replace("input", "").toLowerCase();
       appState[key] = e.target.value;
+      saveStateToLocalStorage();
+    });
+  });
+
+  ["inputClassProfile", "inputSupportNeeds", "inputSpecialRequirements"].forEach(id => {
+    document.getElementById(id).addEventListener("input", (e) => {
+      const key = id === "inputClassProfile" ? "classProfile" : (id === "inputSupportNeeds" ? "supportNeeds" : "specialRequirements");
+      appState.teachingContext[key] = e.target.value;
+      saveStateToLocalStorage();
+    });
+  });
+  [
+    ["toggleDigitalCompetency", "digital"], ["toggleAiCompetency", "ai"],
+    ["toggleForeignLanguage", "foreignLanguage"], ["toggleInclusiveSupport", "inclusive"]
+  ].forEach(([id, key]) => {
+    document.getElementById(id).addEventListener("change", (e) => {
+      appState.teachingContext.integrations[key] = e.target.checked;
+      saveStateToLocalStorage();
+    });
+  });
+  [["selectTeachingMethods", "methods"], ["selectTeachingTechniques", "techniques"]].forEach(([id, key]) => {
+    document.getElementById(id).addEventListener("change", (e) => {
+      appState.teachingContext[key] = Array.from(e.target.selectedOptions).map(option => option.value);
       saveStateToLocalStorage();
     });
   });
@@ -886,6 +953,50 @@ function renderFullLessonPreview() {
 // =============================================================================
 // CÁC HÀM SINH NỘI DUNG AI CHO TỪNG TAB
 // =============================================================================
+function buildPedagogicalContext() {
+  const context = normalizeTeachingContext(appState.teachingContext);
+  const enabledIntegrations = [];
+  if (context.integrations.digital) enabledIntegrations.push("năng lực số");
+  if (context.integrations.ai) enabledIntegrations.push("năng lực AI");
+  if (context.integrations.foreignLanguage) enabledIntegrations.push("ngoại ngữ");
+  if (context.integrations.inclusive) enabledIntegrations.push("hỗ trợ HS khuyết tật/hòa nhập");
+  return `BỐI CẢNH VÀ RÀNG BUỘC SƯ PHẠM BẮT BUỘC:
+- Môn học: Toán THCS; khối/lớp: ${appState.selectedGrade}; tên bài: ${getTopicDisplayName()}; thời lượng: ${appState.duration || "chưa xác định"}.
+- Trình độ/đặc điểm lớp: ${context.classProfile || "Chưa cung cấp; thiết kế mức độ phù hợp học sinh THCS và có phân hóa vừa sức."}
+- Học sinh cần hỗ trợ: ${context.supportNeeds || "Không có yêu cầu riêng được chọn."}
+- Phương pháp dạy học được chọn: ${context.methods.length ? context.methods.join("; ") : "Không ràng buộc; chọn cách phù hợp bài Toán."}
+- Kỹ thuật dạy học được chọn: ${context.techniques.length ? context.techniques.join("; ") : "Không ràng buộc; không tự thêm kỹ thuật hình thức."}
+- Yêu cầu/hoạt động đặc thù: ${context.specialRequirements || "Không có."}
+- Chỉ được tích hợp các thành phần đã bật: ${enabledIntegrations.length ? enabledIntegrations.join("; ") : "không có thành phần tích hợp bổ sung"}.
+- Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.`;
+}
+
+function buildPedagogicalPrompt(prompt) {
+  return `${prompt}\n\n${buildPedagogicalContext()}\n\n${PROMPTS.OUTPUT_CONTRACT}`;
+}
+
+function normalizeGeminiLessonOutput(rawOutput) {
+  let text = String(rawOutput || "").replace(/^\uFEFF/, "").trim();
+  text = text.replace(/^```(?:markdown|md|text)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+  const conversationalPrefix = /^(?:tuyệt vời[!,.…\s]*|xin chào(?:[^\n]*)|chào bạn(?:[^\n]*)|dưới đây(?:[^\n]*)|sau đây(?:[^\n]*)|tôi (?:sẽ|đã)(?:[^\n]*)|với vai trò(?:[^\n]*))\n+/i;
+  while (conversationalPrefix.test(text)) text = text.replace(conversationalPrefix, "").trimStart();
+  const opening = text.slice(0, 400);
+  const hasResidualMeta = /(?:tuyệt vời|xin chào|chào bạn|dưới đây|sau đây|tôi (?:sẽ|đã)|với vai trò|mình sẽ)/i.test(opening) || /```/.test(text);
+  return { text, valid: Boolean(text) && !hasResidualMeta };
+}
+
+async function guardGeminiLessonOutput(rawOutput, signal) {
+  const normalized = normalizeGeminiLessonOutput(rawOutput);
+  if (normalized.valid) return normalized.text;
+  const repairPrompt = buildPedagogicalPrompt(`${PROMPTS.OUTPUT_REPAIR}\n\nNỘI DUNG CẦN SỬA:\n${normalized.text || String(rawOutput || "")}`);
+  const repaired = await geminiAPI.generateContent(repairPrompt, [], PROMPTS.SYSTEM_ROLE, 0.2, signal);
+  const repairedNormalized = normalizeGeminiLessonOutput(repaired);
+  if (!repairedNormalized.valid) {
+    throw new Error("Gemini vẫn trả lời kèm lời dẫn hoặc định dạng không hợp lệ; nội dung chưa được lưu. Vui lòng thử lại.");
+  }
+  return repairedNormalized.text;
+}
+
 async function handleGenerateVision() {
   if (appState.images.length === 0) {
     showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh trang SGK Kết Nối Tri Thức!", "warning");
@@ -1026,7 +1137,8 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
     updateProgress(50, `Đang ${operationName}...`);
     document.getElementById("statusFooterText").textContent = `Đang ${operationName}...`;
 
-    const result = await geminiAPI.generateContent(prompt, images, PROMPTS.SYSTEM_ROLE);
+    const rawResult = await geminiAPI.generateContent(buildPedagogicalPrompt(prompt), images, PROMPTS.SYSTEM_ROLE);
+    const result = await guardGeminiLessonOutput(rawResult);
 
     if (editor) editor.value = result;
     if (targetPreviewId) renderMathPreview(result, targetPreviewId);
@@ -1069,7 +1181,9 @@ function throwIfGenerationCancelled() {
 
 async function generateOneClickContent(prompt, images = []) {
   throwIfGenerationCancelled();
-  const result = await geminiAPI.generateContent(prompt, images, PROMPTS.SYSTEM_ROLE, 0.3, appState.generationController.signal);
+  const rawResult = await geminiAPI.generateContent(buildPedagogicalPrompt(prompt), images, PROMPTS.SYSTEM_ROLE, 0.3, appState.generationController.signal);
+  throwIfGenerationCancelled();
+  const result = await guardGeminiLessonOutput(rawResult, appState.generationController.signal);
   throwIfGenerationCancelled();
   return result;
 }
