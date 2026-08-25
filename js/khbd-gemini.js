@@ -8,14 +8,13 @@ class GeminiAPIManager {
   constructor() {
     this.apiKeys = [];
     this.currentKeyIndex = 0;
-    this.selectedModel = "gemini-2.5-flash";
+    this.selectedModel = "gemini-3.7-flash";
     this.availableModels = [
-      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Nhanh & Tối ưu nhất - Mặc định)", recommended: true },
-      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro (Tư duy sâu & Phức tạp)", recommended: false },
-      { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash (Ổn định)", recommended: false },
-      { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview (Thử nghiệm)", recommended: false },
-      { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash (Tiêu chuẩn)", recommended: false },
-      { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro (Bản lớn 1.5)", recommended: false }
+      { id: "gemini-3.7-flash", name: "Gemini 3.7 Flash (Mới nhất & Tối ưu nhất - Mặc định)", recommended: true },
+      { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash", recommended: false },
+      { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", recommended: false },
+      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Nhẹ & Nhanh)", recommended: false },
+      { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview (Thử nghiệm)", recommended: false }
     ];
 
     this.onKeyRotatedCallback = null;
@@ -65,6 +64,8 @@ class GeminiAPIManager {
     const savedModel = localStorage.getItem("khbd_gemini_model") || localStorage.getItem("default_gemini_module");
     if (savedModel && this.availableModels.some(m => m.id === savedModel)) {
       this.selectedModel = savedModel;
+    } else {
+      this.selectedModel = "gemini-3.7-flash";
     }
   }
 
@@ -119,7 +120,7 @@ class GeminiAPIManager {
   }
 
   // Kiểm tra tính hợp lệ của 1 API Key
-  async testApiKey(key, model = "gemini-2.5-flash") {
+  async testApiKey(key, model = "gemini-3.7-flash") {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
     const payload = {
       contents: [{ role: "user", parts: [{ text: "Xin chào, hãy trả lời 'OK'." }] }],
@@ -166,17 +167,19 @@ class GeminiAPIManager {
     // Thêm các ảnh trước nếu có
     if (Array.isArray(images) && images.length > 0) {
       images.forEach(img => {
-        let b64 = img.base64 || img.data;
-        // Bỏ header data:image/...;base64, nếu có
-        if (b64.includes(",")) {
-          b64 = b64.split(",")[1];
-        }
-        parts.push({
-          inlineData: {
-            mimeType: img.mimeType || "image/jpeg",
-            data: b64
+        let b64 = img.dataUrl || img.base64 || img.data || (typeof img === "string" ? img : "");
+        if (b64 && typeof b64 === "string") {
+          // Bỏ header data:image/...;base64, nếu có
+          if (b64.includes(",")) {
+            b64 = b64.split(",")[1];
           }
-        });
+          parts.push({
+            inlineData: {
+              mimeType: img.mimeType || "image/jpeg",
+              data: b64
+            }
+          });
+        }
       });
     }
 
