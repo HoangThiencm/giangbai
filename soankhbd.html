@@ -23,6 +23,14 @@
   <!-- Marked.js (Phân tích cú pháp Markdown) -->
   <script src="https://cdn.jsdelivr.net/npm/marked@9.1.2/marked.min.js"></script>
 
+  <!-- PDF.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+
   <!-- docx.js (Xuất file Word .docx chuyên nghiệp) -->
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
   
@@ -219,10 +227,10 @@
         <div id="dropzoneContainer" class="dropzone-container">
           <div class="dropzone-icon">📋</div>
           <div class="dropzone-text">
-            <h4>Dán ảnh trang SGK KNTT từ Clipboard (Ctrl + V) hoặc Kéo & Thả ảnh vào đây</h4>
-            <p>Hỗ trợ chụp màn hình các trang SGK Kết Nối Tri Thức và dán trực tiếp. Nhấn để chọn file từ máy tính.</p>
+            <h4>Dán ảnh SGK từ Clipboard (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
+            <p>Hỗ trợ chụp màn hình các trang SGK Kết Nối Tri Thức và dán trực tiếp, hoặc tải file PDF SGK (tự động chuyển trang thành ảnh).</p>
           </div>
-          <input type="file" id="fileInputImages" multiple accept="image/*" style="display: none;">
+          <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
         </div>
 
         <!-- Image Gallery Grid -->
@@ -411,7 +419,7 @@
       </div>
       <div class="modal-body">
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-          Nhập một hoặc nhiều API Key (mỗi dòng 1 key). Ứng dụng sẽ tự động <b>xoay vòng Key (Key Rotation)</b> khi gặp lỗi hết quota (HTTP 429).
+          Mỗi tài khoản tự quản lý và bảo mật API Key riêng trên máy tính cá nhân. Hệ thống tự động xoay vòng qua key tiếp theo nếu gặp giới hạn lượt dùng.
         </p>
         <textarea id="textareaApiKeys" rows="7" style="width: 100%; padding: 0.6rem; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px;" placeholder="AIzaSy...&#10;AIzaSy..."></textarea>
         
@@ -423,6 +431,10 @@
         </div>
       </div>
       <div class="modal-footer">
+        <label class="btn btn-outline-dark btn-sm" style="cursor: pointer; margin-right: auto;">
+          <i data-lucide="file-up"></i> Chọn file Keys (.txt)
+          <input type="file" id="fileInputApiKeyTxt" accept=".txt,text/plain" style="display: none;">
+        </label>
         <button class="btn btn-outline-dark" data-close-modal="modalApiKeys">Đóng</button>
         <button id="btnSaveApiKeys" class="btn btn-primary">Lưu danh sách Key</button>
       </div>
@@ -438,6 +450,48 @@
       </div>
       <div class="modal-body" style="background: #0f172a; padding: 1rem; text-align: center;">
         <img id="zoomImageSrc" src="" alt="Zoom Image">
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Chọn trang PDF SGK -->
+  <div id="modalPdfPageSelect" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3><i data-lucide="file-text"></i> Chọn trang PDF cần phân tích</h3>
+        <button class="modal-close-btn" data-close-modal="modalPdfPageSelect">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="pdfFileInfo" style="font-size: 0.9rem; margin-bottom: 1rem; color: var(--text-muted); font-weight: 600;"></p>
+        <div style="margin-bottom: 1rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; cursor: pointer;">
+            <input type="radio" name="pdfPageOption" value="all" checked id="pdfRadioAll">
+            <b>Tất cả các trang</b> <span id="pdfTotalPagesBadge" class="tab-badge" style="background:#e0f2fe; color:#0369a1;"></span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="radio" name="pdfPageOption" value="range" id="pdfRadioRange">
+            <b>Chọn khoảng trang bài dạy:</b>
+          </label>
+          <input type="text" id="inputPdfPageRange" class="input-control" placeholder="Ví dụ: 1-3 hoặc 1, 2, 4" style="margin-top: 0.5rem; margin-left: 1.5rem; width: calc(100% - 1.5rem);" disabled>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.35rem; margin-left: 1.5rem;">
+            💡 Khuyên dùng: Chỉ chọn các trang của bài học (khoảng 1 - 4 trang) để AI phân tích nhanh và chuẩn xác nhất.
+          </p>
+        </div>
+        <div id="pdfRenderProgress" style="display: none; margin-top: 1rem;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.3rem;">
+            <span id="pdfRenderStatus">Đang chuyển đổi PDF sang ảnh...</span>
+            <span id="pdfRenderPercent">0%</span>
+          </div>
+          <div class="progress-bar-outer">
+            <div id="pdfRenderProgressBar" class="progress-bar-inner" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-dark" data-close-modal="modalPdfPageSelect">Hủy</button>
+        <button id="btnConfirmPdfPages" class="btn btn-primary">
+          <i data-lucide="check"></i> Bắt đầu nạp trang
+        </button>
       </div>
     </div>
   </div>

@@ -27,10 +27,15 @@ class GeminiAPIManager {
     this.loadModelFromLocalStorage();
   }
 
-  // Tải danh sách keys từ localStorage (ưu tiên khbd_gemini_api_keys, fallback sang global_gemini_keys)
+  getStorageKey() {
+    return 'khbd_user_gemini_keys_' + (localStorage.getItem('userEmail') || 'default');
+  }
+
+  // Tải danh sách keys từ localStorage theo tài khoản cá nhân
   loadKeysFromLocalStorage() {
     try {
-      const saved = localStorage.getItem("khbd_gemini_api_keys");
+      const storageKey = this.getStorageKey();
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -38,24 +43,18 @@ class GeminiAPIManager {
           return;
         }
       }
-      
-      // Fallback: Tự động nạp keys từ cấu hình toàn cục global_gemini_keys do Admin quản trị
-      const globalKeys = localStorage.getItem("global_gemini_keys");
-      if (globalKeys) {
-        const parsedGlobal = JSON.parse(globalKeys);
-        if (Array.isArray(parsedGlobal) && parsedGlobal.length > 0) {
-          this.apiKeys = parsedGlobal.map(k => k.trim()).filter(k => k.length > 0);
-        }
-      }
+      this.apiKeys = [];
     } catch (e) {
       console.warn("Lỗi đọc keys từ localStorage:", e);
+      this.apiKeys = [];
     }
   }
 
-  // Lưu danh sách keys vào localStorage
+  // Lưu danh sách keys vào localStorage theo tài khoản cá nhân
   saveKeysToLocalStorage() {
     try {
-      localStorage.setItem("khbd_gemini_api_keys", JSON.stringify(this.apiKeys));
+      const storageKey = this.getStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(this.apiKeys));
     } catch (e) {
       console.error("Lỗi lưu keys vào localStorage:", e);
     }
@@ -154,7 +153,7 @@ class GeminiAPIManager {
     }
 
     if (!this.apiKeys || this.apiKeys.length === 0) {
-      throw new Error("Chưa có API Key nào được cấu hình. Vui lòng bấm vào nút 'Quản lý API Key' trên thanh công cụ để nhập ít nhất 1 key, hoặc nhờ Quản trị viên nạp key trong Admin Panel.");
+      throw new Error("Bạn chưa cấu hình Gemini API Key cá nhân. Vui lòng bấm 'Quản lý API Key' để dán key hoặc nạp file .txt của bạn.");
     }
 
     const totalKeys = this.apiKeys.length;

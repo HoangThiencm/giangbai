@@ -49,6 +49,10 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
+// Biến lưu trữ tài liệu PDF tạm thời
+let currentPdfFile = null;
+let currentPdfDoc = null;
+
 // CÁC TÊN TIÊU ĐỀ HOẠT ĐỘNG
 const ACTIVITY_TITLES = {
   A: { short: "A. Khởi động", full: "A. HOẠT ĐỘNG KHỞI ĐỘNG (MỞ ĐẦU / TIẾP CẬN VẤN ĐỀ)" },
@@ -289,7 +293,10 @@ function setupEventListeners() {
   // 12. Quản lý API Key Modal
   setupApiKeyModal();
 
-  // 13. Key Rotation Callback từ geminiAPI
+  // 13. Quản lý Modal Chọn trang PDF SGK
+  setupPdfModal();
+
+  // 14. Key Rotation Callback từ geminiAPI
   geminiAPI.onKeyRotatedCallback = ({ prevIndex, newIndex, totalKeys, reason }) => {
     showToast(`Đã tự động chuyển sang Key #${newIndex + 1}/${totalKeys}. Lý do: ${reason}`, "warning", 4500);
   };
@@ -370,7 +377,7 @@ function switchActivitySubtab(actKey) {
 }
 
 // =============================================================================
-// XỬ LÝ ẢNH SGK KNTT (DÁN CTRL+V, KÉO THẢ, QUẢN LÝ)
+// XỬ LÝ ẢNH SGK KNTT & PDF (DÁN CTRL+V, KÉO THẢ, QUẢN LÝ)
 // =============================================================================
 function handleGlobalPaste(e) {
   const clipboardData = e.clipboardData || window.clipboardData;
@@ -382,7 +389,10 @@ function handleGlobalPaste(e) {
   for (let i = 0; i < items.length; i++) {
     if (items[i].type.indexOf("image") !== -1) {
       const file = items[i].getAsFile();
-      if (file) imageFiles.push(file);
+      if (file) {
+        file._isPasted = true;
+        imageFiles.push(file);
+      }
     }
   }
 
@@ -403,13 +413,23 @@ function handleFileSelect(e) {
 }
 
 function handleFiles(files) {
+  const pdfFiles = files.filter(f => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
+  const imgFiles = files.filter(f => f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf"));
+
+  // Nếu có file PDF, kích hoạt quy trình nạp PDF
+  if (pdfFiles.length > 0) {
+    handlePdfFile(pdfFiles[0]);
+  }
+
+  if (imgFiles.length === 0) return;
+
   const availableSlots = MAX_IMAGES - appState.images.length;
   const currentBytes = appState.images.reduce((total, image) => total + (image.size || 0), 0);
   let accepted = 0;
   let addedBytes = 0;
   let rejected = 0;
 
-  files.forEach(file => {
+  imgFiles.forEach(file => {
     if (!ALLOWED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES || accepted >= availableSlots || currentBytes + addedBytes + file.size > MAX_TOTAL_IMAGE_BYTES) {
       rejected++;
       return;
@@ -417,14 +437,16 @@ function handleFiles(files) {
     accepted++;
     addedBytes += file.size;
 
+    const isPasted = !!file._isPasted;
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64Data = e.target.result;
       appState.images.push({
         id: "img_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
-        name: file.name || `Trang SGK ${appState.images.length + 1}`,
+        name: isPasted ? `[Ảnh dán] ${new Date().toLocaleTimeString()}` : (file.name || `Trang SGK ${appState.images.length + 1}`),
         mimeType: file.type || "image/jpeg",
         size: file.size,
+        sourceType: isPasted ? "paste" : "upload",
         dataUrl: base64Data
       });
 
@@ -439,6 +461,201 @@ function handleFiles(files) {
   }
 }
 
+// Xử lý mở tài liệu PDF và hiển thị modal chọn trang
+async function handlePdfFile(file) {
+  if (!window.pdfjsLib) {
+    showToast("Thư viện PDF.js chưa sẵn sàng. Vui lòng kiểm tra kết nối mạng và thử lại.", "danger");
+    return;
+  }
+
+  try {
+    showToast(`Đang đọc file PDF: ${file.name}...`, "info");
+    currentPdfFile = file;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = window.pdfjsLib.getDocument({ data: arrayBuffer });
+    currentPdfDoc = await loadingTask.promise;
+
+    const totalPages = currentPdfDoc.numPages;
+    const fileInfo = document.getElementById("pdfFileInfo");
+    const pagesBadge = document.getElementById("pdfTotalPagesBadge");
+    const radioAll = document.getElementById("pdfRadioAll");
+    const inputRange = document.getElementById("inputPdfPageRange");
+    const renderProgress = document.getElementById("pdfRenderProgress");
+    const btnConfirm = document.getElementById("btnConfirmPdfPages");
+
+    if (fileInfo) fileInfo.textContent = `📄 File: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+    if (pagesBadge) pagesBadge.textContent = `${totalPages} trang`;
+    if (radioAll) radioAll.checked = true;
+    if (inputRange) {
+      inputRange.disabled = true;
+      inputRange.value = "";
+    }
+    if (renderProgress) renderProgress.style.display = "none";
+    if (btnConfirm) btnConfirm.disabled = false;
+
+    openModal("modalPdfPageSelect");
+  } catch (err) {
+    console.error("Lỗi khi đọc file PDF:", err);
+    showToast(`Không thể mở file PDF: ${err.message}`, "danger", 5000);
+  }
+}
+
+// Phân tích chuỗi khoảng trang PDF người dùng nhập (ví dụ: "1-3, 5")
+function parsePdfPageRanges(rangeStr, maxPages) {
+  const pages = new Set();
+  const parts = rangeStr.split(/[,;\s]+/);
+
+  for (const part of parts) {
+    if (!part) continue;
+    if (part.includes("-")) {
+      const [startStr, endStr] = part.split("-");
+      const start = parseInt(startStr, 10);
+      const end = parseInt(endStr, 10);
+      if (!isNaN(start) && !isNaN(end)) {
+        const min = Math.min(start, end);
+        const max = Math.max(start, end);
+        for (let p = min; p <= max; p++) {
+          if (p >= 1 && p <= maxPages) {
+            pages.add(p);
+          }
+        }
+      }
+    } else {
+      const p = parseInt(part, 10);
+      if (!isNaN(p) && p >= 1 && p <= maxPages) {
+        pages.add(p);
+      }
+    }
+  }
+
+  return Array.from(pages).sort((a, b) => a - b);
+}
+
+// Khởi tạo các sự kiện trong Modal chọn trang PDF
+function setupPdfModal() {
+  const radioAll = document.getElementById("pdfRadioAll");
+  const radioRange = document.getElementById("pdfRadioRange");
+  const inputRange = document.getElementById("inputPdfPageRange");
+  const btnConfirm = document.getElementById("btnConfirmPdfPages");
+
+  if (radioAll && radioRange && inputRange) {
+    radioAll.addEventListener("change", () => {
+      if (radioAll.checked) {
+        inputRange.disabled = true;
+      }
+    });
+    radioRange.addEventListener("change", () => {
+      if (radioRange.checked) {
+        inputRange.disabled = false;
+        inputRange.focus();
+      }
+    });
+  }
+
+  if (btnConfirm) {
+    btnConfirm.addEventListener("click", handleConfirmPdfPages);
+  }
+}
+
+// Xử lý nạp các trang PDF đã chọn thành ảnh JPG chất lượng cao
+async function handleConfirmPdfPages() {
+  if (!currentPdfDoc || !currentPdfFile) {
+    showToast("Không tìm thấy tài liệu PDF để xử lý.", "warning");
+    closeModal("modalPdfPageSelect");
+    return;
+  }
+
+  const isAll = document.getElementById("pdfRadioAll").checked;
+  const rangeStr = document.getElementById("inputPdfPageRange").value.trim();
+  const totalPages = currentPdfDoc.numPages;
+
+  let pagesToRender = [];
+  if (isAll) {
+    for (let i = 1; i <= totalPages; i++) pagesToRender.push(i);
+  } else {
+    if (!rangeStr) {
+      showToast("Vui lòng nhập khoảng trang cần trích xuất (Ví dụ: 1-3 hoặc 1, 2, 4)!", "warning");
+      document.getElementById("inputPdfPageRange").focus();
+      return;
+    }
+    pagesToRender = parsePdfPageRanges(rangeStr, totalPages);
+    if (pagesToRender.length === 0) {
+      showToast(`Khoảng trang không hợp lệ. Vui lòng nhập từ 1 đến ${totalPages}.`, "warning");
+      return;
+    }
+  }
+
+  // Kiểm tra giới hạn số lượng ảnh
+  const availableSlots = MAX_IMAGES - appState.images.length;
+  if (pagesToRender.length > availableSlots) {
+    if (availableSlots <= 0) {
+      showToast(`Bộ sưu tập đã đủ ${MAX_IMAGES} ảnh. Hãy xóa bớt ảnh trước khi nạp thêm trang mới.`, "warning");
+      closeModal("modalPdfPageSelect");
+      return;
+    }
+    showToast(`Chỉ còn nạp thêm được ${availableSlots} ảnh nữa. Hệ thống sẽ lấy ${availableSlots} trang đầu tiên được chọn.`, "info", 5000);
+    pagesToRender = pagesToRender.slice(0, availableSlots);
+  }
+
+  const btnConfirm = document.getElementById("btnConfirmPdfPages");
+  const progressContainer = document.getElementById("pdfRenderProgress");
+  const statusElem = document.getElementById("pdfRenderStatus");
+  const percentElem = document.getElementById("pdfRenderPercent");
+  const barElem = document.getElementById("pdfRenderProgressBar");
+
+  btnConfirm.disabled = true;
+  progressContainer.style.display = "block";
+
+  try {
+    for (let idx = 0; idx < pagesToRender.length; idx++) {
+      const pageNum = pagesToRender[idx];
+      const percent = Math.round(((idx + 1) / pagesToRender.length) * 100);
+      statusElem.textContent = `Đang chuyển đổi trang ${pageNum} (${idx + 1}/${pagesToRender.length})...`;
+      percentElem.textContent = `${percent}%`;
+      barElem.style.width = `${percent}%`;
+
+      const page = await currentPdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      // Đổ nền trắng cho trang
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+      appState.images.push({
+        id: "pdf_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+        name: `[PDF Trang ${pageNum}] ${currentPdfFile.name}`,
+        mimeType: "image/jpeg",
+        size: Math.round(dataUrl.length * 0.75),
+        sourceType: "pdf",
+        pageNum: pageNum,
+        dataUrl: dataUrl
+      });
+    }
+
+    updateImageCounts();
+    renderImageGallery();
+    closeModal("modalPdfPageSelect");
+    showToast(`Đã nạp thành công ${pagesToRender.length} trang PDF thành ảnh chất lượng cao!`, "success");
+    if (appState.activeTab !== "tabVision") {
+      switchMainTab("tabVision");
+    }
+  } catch (err) {
+    console.error("Lỗi khi chuyển PDF sang ảnh:", err);
+    showToast(`Lỗi khi trích xuất trang PDF: ${err.message}`, "danger");
+  } finally {
+    btnConfirm.disabled = false;
+    progressContainer.style.display = "none";
+  }
+}
+
 function updateImageCounts() {
   const total = appState.images.length;
   document.getElementById("imgCountBadge").textContent = `${total} ảnh`;
@@ -450,31 +667,45 @@ function renderImageGallery() {
   gallery.innerHTML = "";
 
   if (list.length === 0) {
-    gallery.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Chưa có ảnh nào. Chụp ảnh trang SGK Kết Nối Tri Thức và nhấn Ctrl + V hoặc kéo thả ảnh vào ô phía trên.</p>`;
+    gallery.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Chưa có ảnh nào. Chụp ảnh trang SGK Kết Nối Tri Thức và nhấn Ctrl + V hoặc tải file Ảnh/PDF vào ô phía trên.</p>`;
     return;
   }
 
   list.forEach((img, idx) => {
     const card = document.createElement("div");
     card.className = "image-thumb-card";
+    
     const image = document.createElement("img");
     image.src = img.dataUrl;
     image.alt = img.name;
+    
     const badge = document.createElement("span");
     badge.className = "thumb-badge";
-    badge.textContent = `Trang #${idx + 1}`;
+    if (img.sourceType === "pdf" || img.name.startsWith("[PDF")) {
+      badge.classList.add("badge-pdf");
+      badge.textContent = `📄 PDF Trang ${img.pageNum || (idx + 1)}`;
+    } else if (img.sourceType === "paste" || img.name.startsWith("[Ảnh dán")) {
+      badge.classList.add("badge-paste");
+      badge.textContent = `📋 Dán Ctrl+V`;
+    } else {
+      badge.textContent = `Trang #${idx + 1}`;
+    }
+
     const overlay = document.createElement("div");
     overlay.className = "thumb-overlay";
+    
     const zoomButton = document.createElement("button");
     zoomButton.className = "thumb-btn";
     zoomButton.title = "Xem phóng to";
     zoomButton.textContent = "🔍";
     zoomButton.addEventListener("click", () => zoomImage(img.dataUrl, img.name));
+    
     const deleteButton = document.createElement("button");
     deleteButton.className = "thumb-btn";
     deleteButton.title = "Xóa ảnh này";
     deleteButton.textContent = "🗑️";
     deleteButton.addEventListener("click", () => deleteImage(img.id));
+    
     overlay.append(zoomButton, deleteButton);
     card.append(image, badge, overlay);
     gallery.appendChild(card);
@@ -1160,6 +1391,37 @@ function setupApiKeyModal() {
     document.getElementById("keyValidationStatus").textContent = "";
     openModal("modalApiKeys");
   });
+
+  // Xử lý nạp file Keys (.txt)
+  const fileInputTxt = document.getElementById("fileInputApiKeyTxt");
+  if (fileInputTxt) {
+    fileInputTxt.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target.result || "";
+        const keys = text
+          .split(/[\r\n,;]+/)
+          .map(k => k.trim())
+          .filter(k => k.length > 10);
+
+        if (keys.length === 0) {
+          showToast("Không tìm thấy API Key hợp lệ (> 10 ký tự) trong file txt!", "warning");
+          return;
+        }
+
+        const textarea = document.getElementById("textareaApiKeys");
+        textarea.value = keys.join("\n");
+        geminiAPI.setApiKeys(keys);
+        updateKeyCountDisplay();
+        showToast(`Đã nạp thành công ${keys.length} API Keys từ file "${file.name}"!`, "success");
+      };
+      reader.readAsText(file);
+      e.target.value = ""; // Reset
+    });
+  }
 
   document.getElementById("btnSaveApiKeys").addEventListener("click", () => {
     const text = document.getElementById("textareaApiKeys").value;
