@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trợ lý Soạn Kế hoạch Bài dạy AI (Toán THCS - Kết Nối Tri Thức Với Cuộc Sống)</title>
+  <title>Trợ lý Soạn Kế hoạch Bài dạy AI (Toán THCS)</title>
   
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📐</text></svg>">
@@ -54,7 +54,7 @@
         <div class="brand-icon">📐</div>
         <div>
           <h1>Trợ lý Soạn Kế hoạch Bài dạy AI (Toán THCS)</h1>
-          <p>Bộ sách <b>Kết Nối Tri Thức Với Cuộc Sống</b> • Chuẩn CV 5512 • Tích hợp Khung Năng lực Toán, Khung AI (QĐ 2422) & Năng lực Số (TT 02/2025)</p>
+          <p>SGK Toán • Chuẩn CV 5512 • Tích hợp Khung Năng lực Toán, Khung AI (QĐ 2422) & Năng lực Số (TT 02/2025)</p>
         </div>
       </div>
       <div class="header-actions">
@@ -78,27 +78,18 @@
 
     <!-- Quick Select Toolbar -->
     <div class="toolbar-grid">
-      <div class="tool-group">
-        <label>Bộ Sách SGK (Cố định):</label>
-        <div class="book-badge-fixed">
-          <i data-lucide="book-open-check"></i> <span>Kết Nối Tri Thức Với Cuộc Sống</span>
-        </div>
-      </div>
 
       <div class="tool-group">
         <label for="selectGrade">Khối Lớp:</label>
         <select id="selectGrade">
-          <option value="6">Toán 6 (KNTT)</option>
-          <option value="7">Toán 7 (KNTT)</option>
-          <option value="8">Toán 8 (KNTT)</option>
-          <option value="9">Toán 9 (KNTT)</option>
+          <option value="6">Toán 6</option><option value="7">Toán 7</option><option value="8">Toán 8</option><option value="9">Toán 9</option>
         </select>
       </div>
 
       <div class="tool-group" style="grid-column: span 2;">
-        <label for="selectLesson">Chương & Bài học (Mục lục chuẩn KNTT):</label>
+        <label for="selectLesson">Danh mục bài học:</label>
         <select id="selectLesson">
-          <option value="">-- Chọn bài học từ SGK Kết Nối Tri Thức --</option>
+          <option value="">-- Chọn bài học từ SGK Toán --</option>
         </select>
       </div>
 
@@ -136,7 +127,7 @@
       <i data-lucide="sliders"></i> 0. Thiết lập chung
     </button>
     <button class="nav-tab-btn" data-tab="tabVision">
-      <i data-lucide="image"></i> 1. Phân tích ảnh SGK KNTT <span id="imgCountBadge" class="tab-badge">0 ảnh</span>
+      <i data-lucide="image"></i> 1. Phân tích ảnh/trang SGK <span id="imgCountBadge" class="tab-badge">0 ảnh</span>
     </button>
     <button class="nav-tab-btn" data-tab="tabObjectives">
       <i data-lucide="target"></i> 2. I. Mục tiêu
@@ -164,7 +155,7 @@
       <div class="card">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="settings"></i> Thông tin Kế hoạch Bài dạy (Chuẩn Công văn 5512)</h2>
-          <span class="text-muted" style="font-size: 0.85rem;">Bộ sách: <b>Kết Nối Tri Thức Với Cuộc Sống</b></span>
+          <span class="text-muted" style="font-size: 0.85rem;">SGK Toán do giáo viên cung cấp</span>
           <div class="card-actions"><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
@@ -261,10 +252,10 @@
         </div>
 
         <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
-          <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn giáo án KNTT:</h4>
+          <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn KHBD:</h4>
           <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
-            <li><b>Bước 1:</b> Chọn Khối lớp (Toán 6, 7, 8, 9) và chọn Bài học KNTT từ thanh chọn nhanh phía trên.</li>
-            <li><b>Bước 2 (Tùy chọn):</b> Sang Tab 1 để <i>Dán ảnh chụp trang SGK Kết Nối Tri Thức (Ctrl + V)</i> giúp AI đọc chính xác nội dung sách.</li>
+            <li><b>Bước 1:</b> Chọn Khối lớp và bài học từ danh mục phía trên.</li>
+            <li><b>Bước 2 (Tùy chọn):</b> Sang Tab 1 để <i>dán ảnh chụp trang SGK (Ctrl + V)</i> giúp AI đọc chính xác nội dung.</li>
             <li><b>Bước 3:</b> Bấm nút <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b> ở góc trên để AI tự động tạo từ A đến Z, hoặc tạo từng phần riêng lẻ trong từng Tab.</li>
             <li><b>Bước 4:</b> Sang Tab 5 kiểm tra và bấm <b>Xuất Toàn bộ Giáo án (.DOCX)</b> để tải file Word chuẩn đẹp về máy!</li>
           </ol>
@@ -273,15 +264,15 @@
     </section>
 
     <!-- -----------------------------------------------------------------------
-         TAB 1: PHÂN TÍCH ẢNH SGK KNTT (VISION)
+         TAB 1: PHÂN TÍCH ẢNH SGK (VISION)
          ----------------------------------------------------------------------- -->
     <section id="tabVision" class="tab-pane">
       <div class="card">
         <div class="card-header">
-          <h2 class="card-title"><i data-lucide="camera"></i> Dán & Quản lý Ảnh trang SGK Kết Nối Tri Thức</h2>
+          <h2 class="card-title"><i data-lucide="camera"></i> Dán & Quản lý ảnh/trang SGK</h2>
           <div class="card-actions">
             <button id="btnAnalyzeVision" class="btn btn-primary">
-              <i data-lucide="sparkles"></i> Đọc và Phân tích nội dung SGK KNTT
+              <i data-lucide="sparkles"></i> Đọc và phân tích nội dung SGK
             </button>
             <button id="btnClearVisionImages" class="btn btn-outline-dark">
               <i data-lucide="trash"></i> Xóa tất cả ảnh
@@ -294,7 +285,7 @@
           <div class="dropzone-icon">📋</div>
           <div class="dropzone-text">
             <h4>Dán ảnh SGK từ Clipboard (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
-            <p>Hỗ trợ chụp màn hình các trang SGK Kết Nối Tri Thức và dán trực tiếp, hoặc tải file PDF SGK (tự động chuyển trang thành ảnh).</p>
+            <p>Hỗ trợ chụp màn hình các trang SGK và dán trực tiếp, hoặc tải file PDF SGK (tự động chuyển trang thành ảnh).</p>
           </div>
           <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
         </div>
@@ -306,7 +297,7 @@
       <!-- Result Panel (Split View) -->
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title"><i data-lucide="file-check"></i> Kết quả Phân tích Nội dung SGK Kết Nối Tri Thức</h3>
+          <h3 class="card-title"><i data-lucide="file-check"></i> Kết quả phân tích nội dung SGK</h3>
           <div class="card-actions">
             <button class="btn btn-outline-dark btn-sm toggle-preview-btn" data-target="editorVision">
               <i data-lucide="eye"></i> Toggle Preview KaTeX
@@ -316,7 +307,7 @@
         <div class="editor-preview-container">
           <div class="panel-box">
             <div class="panel-header"><span>Nội dung Markdown (Có thể chỉnh sửa)</span></div>
-            <textarea id="editorVision" class="markdown-editor" placeholder="Nội dung phân tích SGK KNTT sẽ hiển thị ở đây sau khi AI xử lý..."></textarea>
+            <textarea id="editorVision" class="markdown-editor" placeholder="Nội dung phân tích SGK sẽ hiển thị ở đây sau khi AI xử lý..."></textarea>
           </div>
           <div class="panel-box">
             <div class="panel-header"><span>Xem trước KaTeX & Bảng biểu</span></div>
@@ -345,7 +336,7 @@
         <div class="editor-preview-container">
           <div class="panel-box">
             <div class="panel-header"><span>Biên soạn Markdown</span></div>
-            <textarea id="editorObjectives" class="markdown-editor" placeholder="Bấm 'Tạo Mục tiêu Bài học' để AI sinh nội dung theo chuẩn CV 5512 bám sát SGK KNTT..."></textarea>
+            <textarea id="editorObjectives" class="markdown-editor" placeholder="Bấm 'Tạo Mục tiêu Bài học' để AI sinh nội dung theo chuẩn CV 5512 bám sát SGK..."></textarea>
           </div>
           <div class="panel-box">
             <div class="panel-header"><span>Xem trước Trực quan KaTeX</span></div>
@@ -374,7 +365,7 @@
         <div class="editor-preview-container">
           <div class="panel-box">
             <div class="panel-header"><span>Biên soạn Markdown</span></div>
-            <textarea id="editorMaterials" class="markdown-editor" placeholder="Bấm 'Tạo Thiết bị & Học liệu' để tạo danh mục đồ dùng và học liệu số KNTT..."></textarea>
+            <textarea id="editorMaterials" class="markdown-editor" placeholder="Bấm 'Tạo Thiết bị & Học liệu' để tạo danh mục đồ dùng và học liệu số..."></textarea>
           </div>
           <div class="panel-box">
             <div class="panel-header"><span>Xem trước Trực quan</span></div>
@@ -462,7 +453,7 @@
        ========================================================================= -->
   <footer class="app-footer">
     <div>
-      <b>Trợ lý Soạn Kế hoạch Bài dạy AI (Môn Toán THCS - Bộ Kết Nối Tri Thức Với Cuộc Sống)</b> • GDPT 2018
+      <b>Trợ lý Soạn Kế hoạch Bài dạy AI (Môn Toán THCS)</b> • GDPT 2018
     </div>
     <div id="statusFooterText">
       Sẵn sàng. (Model: <span id="footerModelName">gemini-2.5-flash</span>)

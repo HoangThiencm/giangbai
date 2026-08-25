@@ -1,7 +1,7 @@
 /**
  * js/khbd-prompts.js
  * Hệ thống Siêu Prompt Sư phạm Môn Toán THCS chuẩn Công văn 5512/BGDĐT-GDTrH,
- * Chuyên biệt hóa cho bộ sách: KẾT NỐI TRI THỨC VỚI CUỘC SỐNG (KNTT)
+ * Dùng cho SGK Toán do giáo viên cung cấp.
  * Tích hợp Khung Năng lực Đặc thù Toán, Khung Năng lực AI (QĐ 2422/QĐ-BGDĐT)
  * và Khung Năng lực Số (TT 02/2025/TT-BGDĐT).
  */
@@ -15,8 +15,8 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU HÌNH THỨC BẮT BUỘC:
 
 const PROMPTS = {
   // SYSTEM INSTRUCTION
-  SYSTEM_ROLE: `Bạn là Chuyên gia Sư phạm Môn Toán Cấp Trung học Cơ sở (THCS) hàng đầu tại Việt Nam, đặc biệt am hiểu sâu sắc bộ sách giáo khoa "Kết Nối Tri Thức Với Cuộc Sống" (KNTT) của Nhà xuất bản Giáo dục Việt Nam, và nắm vững:
-1. Chương trình Giáo dục Phổ thông (GDPT) 2018 môn Toán (Lớp 6, 7, 8, 9) theo bộ sách Kết Nối Tri Thức Với Cuộc Sống.
+  SYSTEM_ROLE: `Bạn là Chuyên gia Sư phạm Môn Toán Cấp Trung học Cơ sở (THCS), nắm vững:
+1. Chương trình Giáo dục Phổ thông (GDPT) 2018 môn Toán (Lớp 6, 7, 8, 9).
 2. Công văn số 5512/BGDĐT-GDTrH của Bộ Giáo dục và Đào tạo về xây dựng Kế hoạch bài dạy (Giáo án).
 3. Khung năng lực đặc thù môn Toán (Tư duy và lập luận toán học; Mô hình hoá toán học; Giải quyết vấn đề toán học; Giao tiếp toán học; Sử dụng công cụ, phương tiện học toán).
 4. Khung năng lực Trí tuệ Nhân tạo (AI) cho học sinh THCS theo Quyết định số 2422/QĐ-BGDĐT, khi giáo viên chủ động yêu cầu tích hợp.
@@ -24,7 +24,7 @@ const PROMPTS = {
 6. 5 phẩm chất chủ yếu (Yêu nước, Nhân ái, Chăm chỉ, Trung thực, Trách nhiệm) và phương pháp dạy học hòa nhập cho học sinh khó khăn/chậm tiến độ.
 
 QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
-- Bộ sách áp dụng: KẾT NỐI TRI THỨC VỚI CUỘC SỐNG.
+- Bám sát GDPT 2018 và nội dung SGK/trang SGK, dữ liệu bài học do giáo viên cung cấp; không tự gán nhà xuất bản hay bộ sách.
 - Sử dụng tiếng Việt chuẩn mực, sư phạm, trang trọng.
 - Định dạng Markdown rõ ràng, phân cấp tiêu đề bằng #, ##, ###, #### hợp lý.
 - Công thức toán học PHẢI được viết bằng mã LaTeX chuẩn: công thức trong dòng dùng $công_thức$, công thức khối dùng $$công_thức$$. Ví dụ: $x^2 + 2x + 1 = 0$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\Delta = b^2 - 4ac$, $\\triangle ABC = \\triangle A'B'C'$.
@@ -40,16 +40,16 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ nội dung KHBD. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary và mọi code fence. Không thêm lời dẫn mới.`,
 
   // TAB 1: PHÂN TÍCH ẢNH SGK (VISION)
-  ANALYZE_TEXTBOOK: `Bạn hãy quan sát và phân tích toàn diện các hình ảnh trang Sách Giáo Khoa (SGK) Toán - Bộ sách "Kết Nối Tri Thức Với Cuộc Sống" được cung cấp.
+  ANALYZE_TEXTBOOK: `Bạn hãy quan sát và phân tích toàn diện các hình ảnh/trang SGK Toán được giáo viên cung cấp.
 Chủ đề bài học: "{topic}" (Môn học: {subject}).
 
 HÃY PHÂN TÍCH VÀ TRÍCH XUẤT NỘI DUNG VỚI CÁC MỤC SAU:
-1. **Tổng quan bài học:** Tên bài, vị trí trong chương trình SGK Kết Nối Tri Thức Với Cuộc Sống, mục tiêu cần đạt cốt lõi theo SGK.
+1. **Tổng quan bài học:** Tên bài, vị trí trong chương trình và mục tiêu cần đạt cốt lõi theo SGK.
 2. **Khung kiến thức trọng tâm:**
-   - Các định nghĩa, khái niệm, thuật ngữ mới theo cách tiếp cận của bộ sách Kết Nối Tri Thức.
+   - Các định nghĩa, khái niệm, thuật ngữ mới theo SGK cung cấp.
    - Các quy tắc, công thức toán học, định lí, tính chất (viết bằng LaTeX $...$).
    - Các quy ước, chú ý sư phạm quan trọng.
-3. **Chuỗi hoạt động khám phá trong SGK Kết Nối Tri Thức:**
+3. **Chuỗi hoạt động khám phá trong SGK:**
    - Hoạt động mở đầu (tình huống, hình ảnh thực tế gắn với cuộc sống).
    - Các hoạt động hình thành kiến thức (HĐ khám phá 1, HĐ 2, các câu hỏi gợi mở, ví dụ mẫu kèm lời giải).
    - Hoạt động luyện tập (các bài Luyện tập, Tranh luận, Thử thách nhỏ trong SGK).
@@ -63,11 +63,10 @@ HÃY PHÂN TÍCH VÀ TRÍCH XUẤT NỘI DUNG VỚI CÁC MỤC SAU:
 Hãy trình bày rõ ràng, mạch lạc, giữ nguyên vẹn các công thức toán bằng định dạng LaTeX.`,
 
   // TAB 2: MỤC TIÊU BÀI HỌC (I. MỤC TIÊU)
-  GENERATE_OBJECTIVES: `Hãy xây dựng phần **I. MỤC TIÊU** cho Kế hoạch bài dạy (Giáo án) môn Toán THCS chuẩn Công văn 5512/BGDĐT-GDTrH theo bộ sách **Kết Nối Tri Thức Với Cuộc Sống**.
+  GENERATE_OBJECTIVES: `Hãy xây dựng phần **I. MỤC TIÊU** cho Kế hoạch bài dạy môn Toán THCS chuẩn Công văn 5512/BGDĐT-GDTrH theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Thời lượng dự kiến: {duration}
-- Bộ sách giáo khoa: Kết Nối Tri Thức Với Cuộc Sống
 - Dữ liệu nội dung SGK (nếu có):
 """
 {textbook_content}
@@ -83,7 +82,7 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
 # I. MỤC TIÊU
 
 ## 1. Về kiến thức
-(Nêu rõ các mức độ nhận thức: Nhận biết, Thông hiểu, Vận dụng mà học sinh cần đạt được sau bài học, bám sát các khái niệm, công thức, quy tắc trong SGK Kết Nối Tri Thức Với Cuộc Sống).
+(Nêu rõ các mức độ nhận thức: Nhận biết, Thông hiểu, Vận dụng mà học sinh cần đạt được sau bài học, bám sát SGK được cung cấp).
 - Nhận biết được...
 - Hiểu và giải thích được...
 - Vận dụng được... để giải các bài toán...
@@ -106,10 +105,9 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
 - **Hỗ trợ học sinh giáo dục hòa nhập (nếu có):** Chỉ khi được bật, nêu điều chỉnh vừa sức và cách hỗ trợ để HS tham gia nhiệm vụ của bài.`,
 
   // TAB 3: THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU (II. THIẾT BỊ & HỌC LIỆU)
-  GENERATE_MATERIALS: `Hãy xây dựng phần **II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU** cho Kế hoạch bài dạy môn Toán THCS chuẩn Công văn 5512 theo bộ sách **Kết Nối Tri Thức Với Cuộc Sống**.
+  GENERATE_MATERIALS: `Hãy xây dựng phần **II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU** cho Kế hoạch bài dạy môn Toán THCS chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
-- Bộ sách giáo khoa: Kết Nối Tri Thức Với Cuộc Sống
 - Dữ liệu nội dung SGK (nếu có):
 """
 {textbook_content}
@@ -120,7 +118,7 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 2 MỤC CHÍNH; chỉ thêm thiết bị s�
 # II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
 
 ## 1. Đối với Giáo viên
-- **Hồ sơ dạy học:** Kế hoạch bài dạy (Giáo án) được biên soạn chu đáo; Sách giáo khoa, Sách giáo viên môn Toán (Bộ Kết Nối Tri Thức Với Cuộc Sống).
+- **Hồ sơ dạy học:** Kế hoạch bài dạy được biên soạn chu đáo; SGK và tài liệu dạy học môn Toán do giáo viên sử dụng.
 - **Phương tiện và Đồ dùng dạy học:**
   + Máy tính, máy chiếu/Tivi thông minh phục vụ trình chiếu bài giảng điện tử (PowerPoint/Canva).
   + Thước thẳng có chia vạch, compa bảng, êke, thước đo góc chuyên dụng cho GV.
@@ -133,19 +131,18 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 2 MỤC CHÍNH; chỉ thêm thiết bị s�
 
 ## 2. Đối với Học sinh
 - **Đồ dùng học tập cá nhân:**
-  + Sách giáo khoa Toán (Bộ Kết Nối Tri Thức Với Cuộc Sống), vở ghi bài, vở bài tập môn Toán.
+  + Sách giáo khoa Toán, vở ghi bài, vở bài tập môn Toán.
   + Thước kẻ có chia khoảng cách, compa, êke, thước đo góc, bút chì, tẩy.
   + Máy tính cầm tay (Casio fx-580VN X, Casio fx-880BTG hoặc tương đương) đã được phép mang vào phòng thi.
   + Bảng nhóm (bảng phụ), bút lông viết bảng nhóm.
 - **Nhiệm vụ chuẩn bị bài trước ở nhà:**
-  + Đọc trước nội dung bài mới trong SGK Kết Nối Tri Thức Với Cuộc Sống, chuẩn bị câu hỏi thắc mắc.
+  + Đọc trước nội dung bài mới trong SGK, chuẩn bị câu hỏi thắc mắc.
   + Hoàn thành nhiệm vụ tự học/khảo sát thực tế được giao từ tiết trước.`,
 
   // TAB 4.A: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG MỞ ĐẦU
-  GENERATE_ACTIVITY_A: `Hãy biên soạn chi tiết **HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo bộ sách **Kết Nối Tri Thức Với Cuộc Sống**.
+  GENERATE_ACTIVITY_A: `Hãy biên soạn chi tiết **HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
-- Bộ sách giáo khoa: Kết Nối Tri Thức Với Cuộc Sống
 - Mục tiêu bài học:
 """
 {objectives_content}
@@ -163,7 +160,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 ## A. HOẠT ĐỘNG 1: MỞ ĐẦU (Khoảng 5 - 7 phút)
 
 ### a) Mục tiêu:
-- Tạo tâm thế hứng thú, kích thích trí tò mò, tạo mâu thuẫn nhận thức hoặc nhu cầu tìm hiểu kiến thức mới của học sinh bám sát tình huống mở đầu của SGK Kết Nối Tri Thức Với Cuộc Sống.
+- Tạo tâm thế hứng thú, kích thích trí tò mò, tạo mâu thuẫn nhận thức hoặc nhu cầu tìm hiểu kiến thức mới bám sát tình huống mở đầu của SGK được cung cấp.
 - Huy động các kiến thức, kĩ năng đã học có liên quan đến nội dung bài mới.
 
 ### b) Nội dung:
@@ -179,10 +176,9 @@ ${ACTIVITY_TABLE_CONTRACT}
 - **Bước 4: Kết luận, nhận định & Dẫn dắt vào bài mới:** (GV nhận xét tinh thần học tập, khéo léo dẫn dắt từ mâu thuẫn nhận thức/kết quả khởi động để giới thiệu vào bài học mới).`,
 
   // TAB 4.B: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI
-  GENERATE_ACTIVITY_B: `Hãy biên soạn chi tiết toàn bộ **HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo bộ sách **Kết Nối Tri Thức Với Cuộc Sống**.
+  GENERATE_ACTIVITY_B: `Hãy biên soạn chi tiết toàn bộ **HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
-- Bộ sách: Kết Nối Tri Thức Với Cuộc Sống
 - Mục tiêu bài học:
 """
 {objectives_content}
@@ -194,7 +190,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 
 YÊU CẦU QUAN TRỌNG:
 ${ACTIVITY_TABLE_CONTRACT}
-- Bám sát mạch kiến thức và các Hoạt động khám phá trong SGK Kết Nối Tri Thức Với Cuộc Sống.
+- Bám sát mạch kiến thức và các hoạt động khám phá trong SGK, dữ liệu bài học do giáo viên cung cấp.
 - Chia bài học thành các đơn vị kiến thức nhỏ rõ ràng (ví dụ: Hoạt động 2.1: Khái niệm...; Hoạt động 2.2: Định lí/Tính chất...; Hoạt động 2.3: Quy tắc...).
 - MỖI ĐƠN VỊ KIẾN THỨC ĐỀU PHẢI CÓ ĐẦY ĐỦ 4 THÀNH PHẦN: a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (4 bước: Chuyển giao -> Thực hiện -> Báo cáo thảo luận -> Kết luận nhận định).
 - Sản phẩm và Kết luận nhận định PHẢI CÓ LỜI GIẢI TOÁN HỌC CHI TIẾT, CÔNG THỨC LATEX HOÀN CHỈNH, ĐỊNH NGHĨA/ĐỊNH LÍ CHÍNH XÁC ĐỂ HS GHI VỞ.
@@ -207,7 +203,7 @@ CẤU TRÚC MẪU:
 #### a) Mục tiêu:
 - Học sinh hình thành được khái niệm / nhận biết được...
 #### b) Nội dung:
-- Học sinh thực hiện Hoạt động khám phá / Phiếu học tập số 1 / Đọc hiểu thông tin trong SGK Kết Nối Tri Thức...
+- Học sinh thực hiện hoạt động khám phá / đọc hiểu thông tin trong SGK.
 #### c) Sản phẩm:
 - Kết quả câu trả lời, lời giải chi tiết cho các câu hỏi khám phá:
   + (Trình bày chi tiết các phép toán, công thức LaTeX $...$).
@@ -223,10 +219,9 @@ CẤU TRÚC MẪU:
 ### 3. Hoạt động 2.3: [Nếu bài có thêm đơn vị kiến thức 3...]`,
 
   // TAB 4.C: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG LUYỆN TẬP
-  GENERATE_ACTIVITY_C: `Hãy biên soạn chi tiết **HOẠT ĐỘNG LUYỆN TẬP** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo bộ sách **Kết Nối Tri Thức Với Cuộc Sống**.
+  GENERATE_ACTIVITY_C: `Hãy biên soạn chi tiết **HOẠT ĐỘNG LUYỆN TẬP** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
-- Bộ sách: Kết Nối Tri Thức Với Cuộc Sống
 - Mục tiêu và Kiến thức trọng tâm:
 """
 {objectives_content}
@@ -234,9 +229,9 @@ CẤU TRÚC MẪU:
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
-- Xây dựng hệ thống bài tập luyện tập bám sát các dạng bài trong SGK Kết Nối Tri Thức Với Cuộc Sống:
+- Xây dựng hệ thống bài tập luyện tập bám sát SGK và dữ liệu bài học do giáo viên cung cấp:
   + Dạng 1: Bài tập nhận biết và thông hiểu (rèn kĩ năng tính toán, áp dụng trực tiếp công thức).
-  + Dạng 2: Bài tập vận dụng / Tranh luận / Thử thách nhỏ theo phong cách KNTT.
+  + Dạng 2: Bài tập vận dụng / tranh luận / thử thách nhỏ phù hợp bài học.
   + Dạng 3: Bài tập trắc nghiệm khách quan củng cố nhanh (4 câu trắc nghiệm 4 lựa chọn A, B, C, D).
 - TẤT CẢ CÁC BÀI TẬP ĐỀU BẮT BUỘC CÓ LỜI GIẢI CHI TIẾT TỪNG BƯỚC kèm công thức LaTeX $...$.
 - Tuân thủ đủ 4 thành phần theo CV 5512: a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện.
@@ -246,7 +241,7 @@ CẤU TRÚC:
 ## C. HOẠT ĐỘNG 3: LUYỆN TẬP (Khoảng 12 - 15 phút)
 
 ### a) Mục tiêu:
-- Củng cố, khắc sâu kiến thức vừa học thông qua việc giải các bài tập cụ thể trong SGK Kết Nối Tri Thức Với Cuộc Sống.
+- Củng cố, khắc sâu kiến thức vừa học thông qua các bài tập cụ thể từ SGK hoặc dữ liệu bài học cung cấp.
 - Rèn luyện kĩ năng tính toán, vẽ hình, biến đổi đại số, lập luận toán học và sử dụng máy tính cầm tay.
 
 ### b) Nội dung:
@@ -267,10 +262,9 @@ CẤU TRÚC:
 - **Bước 4: Kết luận, nhận định:** (GV chữa bài, chỉ ra các lỗi sai thường gặp, chốt kĩ năng và phương pháp giải chuẩn).`,
 
   // TAB 4.D: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG VẬN DỤNG
-  GENERATE_ACTIVITY_D: `Hãy biên soạn chi tiết **HOẠT ĐỘNG VẬN DỤNG** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo bộ sách **Kết Nối Tri Thức Với Cuộc Sống**.
+  GENERATE_ACTIVITY_D: `Hãy biên soạn chi tiết **HOẠT ĐỘNG VẬN DỤNG** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
-- Bộ sách: Kết Nối Tri Thức Với Cuộc Sống
 - Mục tiêu bài học:
 """
 {objectives_content}
@@ -278,7 +272,7 @@ CẤU TRÚC:
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
-- Thiết kế 1 đến 2 bài toán vận dụng thực tiễn thể hiện đúng tinh thần "Kết nối tri thức với cuộc sống", gắn liền với đời sống hàng ngày của học sinh THCS (đo đạc, tài chính gia đình, kiến trúc, môi trường, số liệu thống kê...) hoặc tích hợp liên môn (Vật lý, Địa lý, Công nghệ...).
+- Thiết kế 1 đến 2 bài toán vận dụng thực tiễn gắn liền với đời sống hàng ngày của học sinh THCS (đo đạc, tài chính gia đình, kiến trúc, môi trường, số liệu thống kê...) hoặc tích hợp liên môn (Vật lý, Địa lý, Công nghệ...).
 - Chỉ tích hợp hướng dẫn HS ứng dụng công cụ số/AI để kiểm chứng lời giải khi bối cảnh sư phạm bật thành phần tương ứng.
 - Đầy đủ 4 thành phần a, b, c, d theo CV 5512 kèm LỜI GIẢI CHI TIẾT ĐẦY ĐỦ.
 
@@ -287,7 +281,7 @@ CẤU TRÚC:
 ## D. HOẠT ĐỘNG 4: VẬN DỤNG (Khoảng 5 - 8 phút hoặc giao về nhà)
 
 ### a) Mục tiêu:
-- Giúp học sinh thấy được ý nghĩa thực tiễn của bài học, biết mô hình hoá toán học để giải quyết các vấn đề trong đời sống theo định hướng bộ sách Kết Nối Tri Thức Với Cuộc Sống.
+- Giúp học sinh thấy được ý nghĩa thực tiễn của bài học, biết mô hình hoá toán học để giải quyết các vấn đề trong đời sống.
 - Phát triển năng lực giải quyết vấn đề, tư duy sáng tạo và năng lực ứng dụng công nghệ.
 
 ### b) Nội dung:
@@ -303,10 +297,9 @@ CẤU TRÚC:
 - **Bước 4: Kết luận, nhận định:** (GV đánh giá, tổng kết bài học, khích lệ tinh thần vận dụng toán học vào đời sống).`,
 
   // TAB 4.E: KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ (MA TRẬN & RUBRICS)
-  GENERATE_ASSESSMENT: `Hãy biên soạn **E. KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ** cho Kế hoạch bài dạy môn Toán THCS chuẩn CV 5512 (Bộ sách Kết Nối Tri Thức Với Cuộc Sống).
+  GENERATE_ASSESSMENT: `Hãy biên soạn **E. KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ** cho Kế hoạch bài dạy môn Toán THCS chuẩn CV 5512.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
-- Bộ sách: Kết Nối Tri Thức Với Cuộc Sống
 - Mục tiêu và Tiến trình dạy học:
 """
 {objectives_content}
@@ -340,10 +333,9 @@ YÊU CẦU XÂY DỰNG 2 BẢNG ĐÁNH GIÁ CHUYÊN NGHIỆP DƯỚI DẠNG BẢ
 Chỉ đưa hàng Rubrics về năng lực Số/AI khi thành phần tương ứng được bật trong bối cảnh sư phạm; nếu không thì bỏ hàng này.`,
 
   // TAB 4.F: HỒ SƠ DẠY HỌC (PHIẾU HỌC TẬP CÓ ĐÁP ÁN)
-  GENERATE_PORTFOLIO: `Hãy thiết kế **F. HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP)** cho Kế hoạch bài dạy môn Toán THCS (Bộ sách Kết Nối Tri Thức Với Cuộc Sống).
+  GENERATE_PORTFOLIO: `Hãy thiết kế **F. HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP)** cho Kế hoạch bài dạy môn Toán THCS.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
-- Bộ sách: Kết Nối Tri Thức Với Cuộc Sống
 - Dữ liệu bài học:
 """
 {objectives_content}
@@ -363,7 +355,7 @@ CẤU TRÚC:
 **TRƯỜNG THCS: .......................................**  
 **LỚP: .............. NHÓM: ..............................**  
 **HỌ VÀ TÊN THÀNH VIÊN: .....................................................................................**  
-### BÀI HỌC: {topic} (Sách Kết Nối Tri Thức Với Cuộc Sống)
+### BÀI HỌC: {topic} (SGK Toán do giáo viên cung cấp)
 
 | Nhiệm vụ | Nội dung câu hỏi / Bài tập | Dự kiến kết quả của Học sinh |
 | :--- | :--- | :--- |
@@ -391,10 +383,9 @@ CẤU TRÚC:
 [Lời giải chi tiết từng bài...]`,
 
   // TAB 4.G: HƯỚNG DẪN VỀ NHÀ
-  GENERATE_HOMEWORK: `Hãy biên soạn chi tiết **G. HƯỚNG DẪN VỀ NHÀ** trong Kế hoạch bài dạy môn Toán THCS chuẩn CV 5512 (Bộ sách Kết Nối Tri Thức Với Cuộc Sống).
+  GENERATE_HOMEWORK: `Hãy biên soạn chi tiết **G. HƯỚNG DẪN VỀ NHÀ** trong Kế hoạch bài dạy môn Toán THCS chuẩn CV 5512.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
-- Bộ sách: Kết Nối Tri Thức Với Cuộc Sống
 - Nội dung bài học:
 """
 {objectives_content}
@@ -410,12 +401,12 @@ YÊU CẦU XÂY DỰNG 4 MỤC CHI TIẾT:
 - Vẽ sơ đồ tư duy (Mindmap) tóm tắt toàn bộ nội dung bài học vào vở ghi.
 
 ## 2. Bài tập tự luyện tại nhà
-- Hoàn thành các bài tập trong SGK Kết Nối Tri Thức Với Cuộc Sống: Bài ... trang ...
-- Hoàn thành bài tập trong Sách bài tập (SBT) Toán Kết Nối Tri Thức: Bài ... trang ...
+- Hoàn thành các bài tập trong SGK Toán: Bài ... trang ...
+- Hoàn thành bài tập trong Sách bài tập Toán: Bài ... trang ...
 - **Bài tập mở rộng / Nâng cao (Dành cho HS khá, giỏi):** (Đưa ra 1 bài toán mở rộng có tính tư duy cao kèm gợi ý ngắn gọn).
 
 ## 3. Nhiệm vụ chuẩn bị cho bài học tiếp theo
-- Đọc trước bài mới: "[Tên bài học tiếp theo theo phân phối chương trình SGK Kết Nối Tri Thức Với Cuộc Sống]".
+- Đọc trước bài mới theo SGK Toán do giáo viên sử dụng.
 - Chuẩn bị đầy đủ dụng cụ học tập: thước đo góc, compa, bảng nhóm... cho tiết học sau.
 - Tìm hiểu các ví dụ thực tế liên quan đến bài học tiếp theo.
 

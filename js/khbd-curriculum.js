@@ -1,27 +1,18 @@
 /**
  * js/khbd-curriculum.js
  * Cơ sở dữ liệu Mục lục SGK Toán THCS (Lớp 6, 7, 8, 9)
- * Chuyên biệt hóa 100% cho bộ sách: KẾT NỐI TRI THỨC VỚI CUỘC SỐNG (KNTT)
+ * Danh mục bài học Toán THCS.
  * Tích hợp Khung Năng lực Đặc thù Toán, Khung Năng lực AI (QĐ 2422), Khung Năng lực Số (TT 02/2025).
  */
 
 const CURRICULUM_DATA = {
-  // THÔNG TIN BỘ SÁCH CỐ ĐỊNH
-  book: {
-    id: "kntt",
-    name: "Kết Nối Tri Thức Với Cuộc Sống",
-    shortName: "KNTT"
-  },
 
   // DANH MỤC KHỐI LỚP
   grades: [
-    { id: "6", name: "Toán 6 (KNTT)" },
-    { id: "7", name: "Toán 7 (KNTT)" },
-    { id: "8", name: "Toán 8 (KNTT)" },
-    { id: "9", name: "Toán 9 (KNTT)" }
+    { id: "6", name: "Toán 6" }, { id: "7", name: "Toán 7" }, { id: "8", name: "Toán 8" }, { id: "9", name: "Toán 9" }
   ],
 
-  // MỤC LỤC CHI TIẾT THEO TỪNG KHỐI LỚP (BỘ KẾT NỐI TRI THỨC VỚI CUỘC SỐNG)
+  // MỤC LỤC CHI TIẾT THEO TỪNG KHỐI LỚP
   lessons: {
     "6": [
       {

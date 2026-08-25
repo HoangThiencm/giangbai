@@ -595,7 +595,6 @@ class DocxGenerator {
     const topic = (lessonInfo.topic || "KẾ HOẠCH BÀI DẠY").toUpperCase();
     const grade = lessonInfo.grade ? `LỚP ${lessonInfo.grade}` : "";
     const duration = lessonInfo.duration || "Thời lượng: 02 tiết";
-    const bookName = lessonInfo.bookName ? `Bộ sách: ${lessonInfo.bookName}` : "";
 
     const headers = [];
 
@@ -632,8 +631,8 @@ class DocxGenerator {
       ]
     }));
 
-    // Thông tin môn, lớp, thời lượng, bộ sách
-    const subInfo = [subject, grade, duration, bookName].filter(x => x.length > 0).join("  |  ");
+    // Thông tin môn, lớp và thời lượng
+    const subInfo = [subject, grade, duration].filter(x => x.length > 0).join("  |  ");
     headers.push(new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 0, after: 120 },

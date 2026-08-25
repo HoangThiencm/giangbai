@@ -3,12 +3,11 @@
  * Quản lý logic giao diện, luồng dữ liệu, tương tác người dùng,
  * Dán/Kéo thả ảnh SGK, Render KaTeX trực quan, Tự động hóa 1-Click
  * và Tích hợp xuất Word .docx hoàn chỉnh.
- * Chuyên biệt hóa 100% cho bộ sách: KẾT NỐI TRI THỨC VỚI CUỘC SỐNG (KNTT).
+ * Soạn KHBD môn Toán THCS theo SGK do giáo viên cung cấp.
  */
 
 // STATE TOÀN CỤC CỦA ỨNG DỤNG
 const appState = {
-  selectedBookName: "Kết Nối Tri Thức Với Cuộc Sống",
   selectedGrade: "6",
   selectedLesson: "",
   customTopic: "",
@@ -26,7 +25,7 @@ const appState = {
     specialRequirements: ""
   },
   
-  // Danh sách ảnh SGK KNTT (Mảng phẳng trực quan)
+  // Danh sách ảnh SGK (Mảng phẳng trực quan)
   images: [],
 
   // Nội dung đã biên soạn
@@ -417,7 +416,7 @@ function setupEventListeners() {
 
   document.getElementById("btnClearVisionImages").addEventListener("click", () => {
     if (appState.images.length === 0) return;
-    if (confirm(`Bạn có chắc muốn xóa tất cả ảnh trang SGK KNTT đã tải lên?`)) {
+    if (confirm(`Bạn có chắc muốn xóa tất cả ảnh trang SGK đã tải lên?`)) {
       appState.images = [];
       updateImageCounts();
       renderImageGallery();
@@ -489,11 +488,11 @@ function setupEventListeners() {
 }
 
 // =============================================================================
-// CẬP NHẬT DANH SÁCH BÀI HỌC KNTT TỪ CURRICULUM DATA
+// CẬP NHẬT DANH SÁCH BÀI HỌC TỪ CURRICULUM DATA
 // =============================================================================
 function populateLessonDropdown() {
   const select = document.getElementById("selectLesson");
-  select.innerHTML = `<option value="">-- Chọn bài học từ SGK Kết Nối Tri Thức --</option>`;
+  select.innerHTML = `<option value="">-- Chọn bài học từ SGK Toán --</option>`;
 
   const gradeId = appState.selectedGrade;
   const chapters = getCurriculumLessons(gradeId);
@@ -564,7 +563,7 @@ function switchActivitySubtab(actKey) {
 }
 
 // =============================================================================
-// XỬ LÝ ẢNH SGK KNTT & PDF (DÁN CTRL+V, KÉO THẢ, QUẢN LÝ)
+// XỬ LÝ ẢNH SGK & PDF (DÁN CTRL+V, KÉO THẢ, QUẢN LÝ)
 // =============================================================================
 function handleGlobalPaste(e) {
   const clipboardData = e.clipboardData || window.clipboardData;
@@ -588,7 +587,7 @@ function handleGlobalPaste(e) {
       switchMainTab("tabVision");
     }
     handleFiles(imageFiles);
-    showToast(`Đã dán thành công ${imageFiles.length} ảnh trang SGK KNTT!`, "success");
+    showToast(`Đã dán thành công ${imageFiles.length} ảnh trang SGK!`, "success");
   }
 }
 
@@ -854,7 +853,7 @@ function renderImageGallery() {
   gallery.innerHTML = "";
 
   if (list.length === 0) {
-    gallery.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Chưa có ảnh nào. Chụp ảnh trang SGK Kết Nối Tri Thức và nhấn Ctrl + V hoặc tải file Ảnh/PDF vào ô phía trên.</p>`;
+    gallery.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Chưa có ảnh nào. Chụp ảnh trang SGK và nhấn Ctrl + V hoặc tải file Ảnh/PDF vào ô phía trên.</p>`;
     return;
   }
 
@@ -1067,7 +1066,6 @@ function getFullLessonPlanMarkdown() {
   const subject = appState.subject || "TOÁN";
   const grade = appState.selectedGrade ? `Lớp ${appState.selectedGrade}` : "";
   const duration = appState.duration || "02 tiết";
-  const book = appState.selectedBookName;
 
   const c = appState.content;
 
@@ -1084,7 +1082,7 @@ function getFullLessonPlanMarkdown() {
 
   const md = [
     `# KẾ HOẠCH BÀI DẠY: ${topic.toUpperCase()}`,
-    `**MÔN HỌC:** ${subject.toUpperCase()} ${grade.toUpperCase()} | **THỜI LƯỢNG:** ${duration} | **BỘ SÁCH:** ${book.toUpperCase()}`,
+    `**MÔN HỌC:** ${subject.toUpperCase()} ${grade.toUpperCase()} | **THỜI LƯỢNG:** ${duration}`,
     `\n---\n`,
     c.objectives || "*[Chưa tạo I. Mục tiêu]*",
     `\n---\n`,
@@ -1155,7 +1153,7 @@ async function guardGeminiLessonOutput(rawOutput, signal) {
 
 async function handleGenerateVision() {
   if (appState.images.length === 0) {
-    showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh trang SGK Kết Nối Tri Thức!", "warning");
+    showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh/trang SGK!", "warning");
     return;
   }
 
@@ -1169,7 +1167,7 @@ async function handleGenerateVision() {
     buttonId: "btnAnalyzeVision",
     targetEditorId: "editorVision",
     targetPreviewId: "previewVision",
-    operationName: "Phân tích ảnh SGK KNTT",
+    operationName: "Phân tích ảnh SGK",
     prompt,
     images: appState.images,
     onSuccess: (result) => {
@@ -1183,7 +1181,7 @@ async function handleGenerateObjectives() {
   const topic = getTopicDisplayName();
   const subject = appState.subject;
   const duration = appState.duration;
-  const textbookContent = appState.content.vision || "Dựa trên nội dung chuẩn SGK Toán Kết Nối Tri Thức Với Cuộc Sống.";
+  const textbookContent = appState.content.vision || "Dựa trên nội dung SGK Toán do giáo viên cung cấp.";
 
   const prompt = PROMPTS.GENERATE_OBJECTIVES
     .replace(/{topic}/g, topic)
@@ -1195,7 +1193,7 @@ async function handleGenerateObjectives() {
     buttonId: "btnGenerateObjectives",
     targetEditorId: "editorObjectives",
     targetPreviewId: "previewObjectives",
-    operationName: "Tạo I. Mục tiêu KNTT",
+    operationName: "Tạo I. Mục tiêu",
     prompt,
     onSuccess: (result) => {
       appState.content.objectives = result;
@@ -1218,7 +1216,7 @@ async function handleGenerateMaterials() {
     buttonId: "btnGenerateMaterials",
     targetEditorId: "editorMaterials",
     targetPreviewId: "previewMaterials",
-    operationName: "Tạo II. Thiết bị & Học liệu KNTT",
+    operationName: "Tạo II. Thiết bị & Học liệu",
     prompt,
     onSuccess: (result) => {
       appState.content.materials = result;
@@ -1361,7 +1359,7 @@ async function handle1ClickGenerate() {
   }
 
   const topic = getTopicDisplayName();
-  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Kết Nối Tri Thức - Lớp ${appState.selectedGrade})?\n\nTiến trình sẽ chạy tuần tự qua các mục I. Mục tiêu, II. Thiết bị & học liệu và III. Hoạt động A -> D.`;
+  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nTiến trình sẽ chạy tuần tự qua các mục I. Mục tiêu, II. Thiết bị & học liệu và III. Hoạt động A -> D.`;
   
   if (!confirm(confirmMsg)) return;
 
@@ -1381,7 +1379,7 @@ async function handle1ClickGenerate() {
 
     // BƯỚC 1: Phân tích ảnh SGK (nếu có ảnh và chưa phân tích)
     if (appState.images.length > 0 && !appState.content.vision) {
-      updateProgress(10, "Bước 1/7: Đang đọc và phân tích ảnh SGK KNTT...");
+      updateProgress(10, "Bước 1/7: Đang đọc và phân tích ảnh SGK...");
       const promptVision = PROMPTS.ANALYZE_TEXTBOOK.replace(/{topic}/g, topic).replace(/{subject}/g, subject);
       const resVision = await generateOneClickContent(promptVision, appState.images);
       appState.content.vision = resVision;
@@ -1390,7 +1388,7 @@ async function handle1ClickGenerate() {
       await delay(800, appState.generationController.signal);
     }
 
-    const textbookContent = appState.content.vision || "Dựa trên nội dung chuẩn SGK Toán Kết Nối Tri Thức Với Cuộc Sống.";
+    const textbookContent = appState.content.vision || "Dựa trên nội dung SGK Toán do giáo viên cung cấp.";
 
     // BƯỚC 2: Tạo I. Mục tiêu
     updateProgress(25, "Bước 2/7: Đang tạo I. Mục tiêu bài học...");
@@ -1530,10 +1528,9 @@ async function handleExportFullDocx() {
     topic: getTopicDisplayName(),
     grade: appState.selectedGrade,
     duration: appState.duration,
-    bookName: appState.selectedBookName
   };
 
-  const fileName = `KHBD_${getSafeTopicName()}_Toan${appState.selectedGrade}_KNTT.docx`;
+  const fileName = `KHBD_${getSafeTopicName()}_Toan${appState.selectedGrade}.docx`;
 
   try {
     showToast("Đang biên soạn và định dạng toàn bộ Giáo án sang Word...", "info");
