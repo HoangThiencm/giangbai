@@ -110,14 +110,18 @@ function phancong_table_exists(PDO $pdo, string $table): bool
 
 function phancong_column_exists(PDO $pdo, string $column): bool
 {
-    $stmt = $pdo->prepare('SHOW COLUMNS FROM phancong_chuyenmon LIKE ?');
+    $stmt = $pdo->prepare("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'phancong_chuyenmon' AND COLUMN_NAME = ?
+        LIMIT 1");
     $stmt->execute([$column]);
     return (bool)$stmt->fetch();
 }
 
 function phancong_index_exists(PDO $pdo, string $indexName): bool
 {
-    $stmt = $pdo->prepare('SHOW INDEX FROM phancong_chuyenmon WHERE Key_name = ?');
+    $stmt = $pdo->prepare("SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'phancong_chuyenmon' AND INDEX_NAME = ?
+        LIMIT 1");
     $stmt->execute([$indexName]);
     return (bool)$stmt->fetch();
 }
