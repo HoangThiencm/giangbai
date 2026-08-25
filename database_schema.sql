@@ -406,6 +406,7 @@ CREATE TABLE IF NOT EXISTS timetable_projects (
 
 CREATE TABLE IF NOT EXISTS phancong_chuyenmon (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    owner_id INT DEFAULT NULL,
     plan_key VARCHAR(80) NOT NULL DEFAULT 'default',
     title VARCHAR(200) NOT NULL DEFAULT 'Phân công chuyên môn',
     school_year VARCHAR(40) NOT NULL DEFAULT '',
@@ -416,6 +417,8 @@ CREATE TABLE IF NOT EXISTS phancong_chuyenmon (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_phancong_key (plan_key),
+    INDEX idx_phancong_owner_plan (owner_id, plan_key),
+    UNIQUE KEY uq_phancong_owner_plan (owner_id, plan_key),
     INDEX idx_phancong_updated (updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

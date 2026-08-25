@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-const PHANCONG_SCHEMA_VERSION = '20260825-v2';
+const PHANCONG_SCHEMA_VERSION = '20260825-v3';
 
 function phancong_current_user(PDO $pdo, bool $required = true): ?array
 {
@@ -146,9 +146,6 @@ function phancong_ensure_schema(PDO $pdo): void
         $pdo->exec('ALTER TABLE phancong_chuyenmon ADD COLUMN owner_id INT DEFAULT NULL AFTER id');
     }
 
-    // Dữ liệu cũ chỉ được gắn với chủ đã có trong audit; dữ liệu vô chủ vẫn giữ owner_id = NULL.
-    $pdo->exec('UPDATE phancong_chuyenmon SET owner_id = created_by WHERE owner_id IS NULL AND created_by IS NOT NULL AND created_by > 0');
-
     if (!phancong_index_exists($pdo, 'idx_phancong_owner_plan')) {
         $pdo->exec('ALTER TABLE phancong_chuyenmon ADD INDEX idx_phancong_owner_plan (owner_id, plan_key)');
     }
@@ -257,6 +254,79 @@ try {
             'plans' => $plans,
             'current_user' => phancong_public_user($currentUser)
         ]);
+    }
+
+    if ($action === 'legacy_candidates') {
+        $currentUser = phancong_current_user($pdo, true);
+        $ownerId = phancong_owner_id($currentUser);
+        $stmt = $pdo->prepare("SELECT id, plan_key, title, school_year, semester, created_at, updated_at,
+            CASE WHEN created_by = ? THEN 'created_by' ELSE 'updated_by_only' END AS recovery_type
+            FROM phancong_chuyenmon
+            WHERE owner_id IS NULL AND (created_by = ? OR updated_by = ?)
+            ORDER BY updated_at DESC, id DESC");
+        $stmt->execute([$ownerId, $ownerId, $ownerId]);
+        $candidates = $stmt->fetchAll();
+
+        respond([
+            'ok' => true,
+            'candidates' => $candidates,
+            'current_user' => phancong_public_user($currentUser),
+        ]);
+    }
+
+    if ($action === 'recover_legacy') {
+        $currentUser = phancong_current_user($pdo, true);
+        $ownerId = phancong_owner_id($currentUser);
+        $body = json_body();
+        $legacyId = (int)($body['id'] ?? $_POST['id'] ?? 0);
+        if ($legacyId <= 0) {
+            respond(['error' => 'Thiếu mã dữ liệu cũ cần khôi phục.'], 422);
+        }
+
+        try {
+            $pdo->beginTransaction();
+            $candidateStmt = $pdo->prepare("SELECT id, plan_key, created_by, updated_by
+                FROM phancong_chuyenmon
+                WHERE id = ? AND owner_id IS NULL AND (created_by = ? OR updated_by = ?)
+                FOR UPDATE");
+            $candidateStmt->execute([$legacyId, $ownerId, $ownerId]);
+            $candidate = $candidateStmt->fetch();
+            if (!$candidate) {
+                $pdo->rollBack();
+                respond(['error' => 'Không tìm thấy dữ liệu cũ phù hợp để khôi phục.'], 404);
+            }
+
+            $conflictStmt = $pdo->prepare('SELECT id FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ? LIMIT 1');
+            $conflictStmt->execute([$ownerId, $candidate['plan_key']]);
+            if ($conflictStmt->fetch()) {
+                $pdo->rollBack();
+                respond(['error' => 'Đã có kế hoạch cùng mã trong tài khoản này; dữ liệu cũ chưa được khôi phục.'], 409);
+            }
+
+            $recoverStmt = $pdo->prepare('UPDATE phancong_chuyenmon SET owner_id = ? WHERE id = ? AND owner_id IS NULL');
+            $recoverStmt->execute([$ownerId, $legacyId]);
+            if ($recoverStmt->rowCount() !== 1) {
+                $pdo->rollBack();
+                respond(['error' => 'Dữ liệu cũ đã thay đổi, vui lòng tải lại danh sách.'], 409);
+            }
+            $pdo->commit();
+
+            respond([
+                'ok' => true,
+                'message' => 'Đã khôi phục kế hoạch cũ vào tài khoản của bạn.',
+                'id' => $legacyId,
+                'plan_key' => $candidate['plan_key'],
+            ]);
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            if ($e->getCode() === '23000') {
+                respond(['error' => 'Đã có kế hoạch cùng mã trong tài khoản này; dữ liệu cũ chưa được khôi phục.'], 409);
+            }
+            throw $e;
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
     }
 
     if ($action === 'save') {

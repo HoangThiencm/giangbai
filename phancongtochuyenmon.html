@@ -1467,6 +1467,14 @@
                             <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px; text-align: center;">Đang tải danh sách...</div>
                         </div>
                     </div>
+                    <div style="margin-top: 16px;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 0.88rem; font-weight: 800; color: #334155;">
+                            <i class="fas fa-clock-rotate-left text-amber-500"></i> Dữ liệu cũ có thể khôi phục:
+                        </h4>
+                        <div id="legacy-plans-list" style="max-height: 150px; overflow-y: auto; border: 1px solid #fde68a; border-radius: 8px; padding: 6px;">
+                            <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px; text-align: center;">Đang kiểm tra dữ liệu cũ...</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- TAB 2: KHAI BÁO CÁC ĐỢT PHÂN CÔNG -->
@@ -2029,9 +2037,63 @@
                     systemData = data;
                     setLocalStorageScope(data.current_user);
                     renderPlansList(data.plans || []);
+                    fetchLegacyCandidates();
                 }
             } catch (e) {
                 console.warn('Không tải được system data:', e);
+            }
+        }
+
+        async function fetchLegacyCandidates() {
+            const container = document.getElementById('legacy-plans-list');
+            if (!container) return;
+            try {
+                const res = await fetch('api/phancong.php?action=legacy_candidates', { credentials: 'include', cache: 'no-store' });
+                const data = await res.json().catch(() => ({}));
+                if (!data.ok) throw new Error(data.error || 'Không thể kiểm tra dữ liệu cũ.');
+                renderLegacyCandidates(data.candidates || []);
+            } catch (error) {
+                container.innerHTML = `<div style="color: #b45309; font-size: 0.8rem; padding: 8px;">${escapeHtml(error.message || 'Không thể kiểm tra dữ liệu cũ.')}</div>`;
+            }
+        }
+
+        function renderLegacyCandidates(candidates) {
+            const container = document.getElementById('legacy-plans-list');
+            if (!container) return;
+            if (!candidates.length) {
+                container.innerHTML = '<div style="color: #94a3b8; font-size: 0.8rem; padding: 8px; text-align: center;">Không có dữ liệu cũ phù hợp.</div>';
+                return;
+            }
+            container.innerHTML = candidates.map(candidate => {
+                const source = candidate.recovery_type === 'created_by'
+                    ? 'Bạn đã tạo bản này'
+                    : 'Bạn chỉ từng cập nhật bản này — hãy kiểm tra kỹ trước khi nhận';
+                return `
+                    <div style="padding: 8px; border-bottom: 1px solid #fef3c7; font-size: 0.8rem;">
+                        <b>${escapeHtml(candidate.title || 'Kế hoạch')}</b>
+                        <div style="color: #64748b; margin-top: 2px;">${escapeHtml(candidate.school_year || '')} · ${escapeHtml(candidate.semester || '')} · key: <code>${escapeHtml(candidate.plan_key)}</code></div>
+                        <div style="color: ${candidate.recovery_type === 'created_by' ? '#047857' : '#b45309'}; margin-top: 3px;">${source}</div>
+                        <button class="btn-small" style="margin-top: 6px;" onclick="recoverLegacyPlan(${Number(candidate.id)})"><i class="fas fa-arrow-rotate-left text-amber-600"></i> Khôi phục vào tài khoản của tôi</button>
+                    </div>`;
+            }).join('');
+        }
+
+        async function recoverLegacyPlan(id) {
+            if (!Number.isInteger(id) || id <= 0) return;
+            if (!confirm('Khôi phục kế hoạch cũ này vào tài khoản của bạn? Kế hoạch cùng mã hiện có sẽ không bị ghi đè.')) return;
+            try {
+                const res = await fetch('api/phancong.php?action=recover_legacy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    credentials: 'include',
+                    body: JSON.stringify({ id })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!data.ok) throw new Error(data.error || 'Không thể khôi phục dữ liệu cũ.');
+                showToast(data.message || 'Đã khôi phục dữ liệu cũ.', 'success');
+                fetchSystemData();
+            } catch (error) {
+                showToast(error.message || 'Không thể khôi phục dữ liệu cũ.', 'error');
             }
         }
 
