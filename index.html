@@ -892,9 +892,9 @@
             if (!userFeat || typeof userFeat !== 'object') {
                 return set;
             }
-            Object.entries(TOOL_PAGE_LINKS).forEach(([tool, pageKey]) => {
+            Object.entries(TOOL_PAGE_LINKS).forEach(([tool]) => {
                 if (userFeat[tool]) {
-                    set.add(pageKey);
+                    set.add(tool);
                 }
             });
             return set;
@@ -928,8 +928,8 @@
         function applyTeacherAllowedPagesVisibility(allowedSet, features) {
             if (localStorage.getItem('userRole') !== 'teacher' || !allowedSet.size) return;
             const grantWorkspaceTools = teacherHasWorkspaceHub(allowedSet) && !teacherHasAnyToolPage(allowedSet);
-            Object.entries(TOOL_PAGE_LINKS).forEach(([tool, pageKey]) => {
-                const allowed = allowedSet.has(pageKey) || grantWorkspaceTools;
+            Object.entries(TOOL_PAGE_LINKS).forEach(([tool]) => {
+                const allowed = allowedSet.has(tool) || grantWorkspaceTools;
                 const visible = allowed && features[tool] !== false;
                 setToolCardsVisible(`#mainToolsGrid > [data-tool="${tool}"]`, visible);
             });
