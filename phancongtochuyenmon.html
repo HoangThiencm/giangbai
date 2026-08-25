@@ -36,58 +36,90 @@
 
         /* TOP NAVBAR */
         #top-navbar {
-            height: 64px;
+            min-height: 56px;
+            height: auto;
             background: #ffffff;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 16px;
+            padding: 6px 16px;
             z-index: 30;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
             flex-shrink: 0;
+            gap: 8px 12px;
+            flex-wrap: wrap;
         }
 
-        .brand-section { display: flex; align-items: center; gap: 12px; }
-
-        .brand-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 50%, #7c3aed 100%);
-            color: white;
-            border-radius: 10px;
+        .brand-section {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 1.15rem;
-            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.25);
+            gap: 10px;
             flex-shrink: 0;
         }
 
-        .brand-text h1 {
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 50%, #7c3aed 100%);
+            color: white;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            box-shadow: 0 3px 8px rgba(99, 102, 241, 0.25);
+            flex-shrink: 0;
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .brand-title-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .brand-title-row h1 {
             margin: 0;
-            font-size: 0.96rem;
+            font-size: 0.92rem;
             font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.02em;
             display: flex;
             align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
+            gap: 6px;
+            white-space: nowrap;
         }
 
-        .brand-text p { margin: 0; font-size: 0.72rem; color: #64748b; font-weight: 600; }
+        .brand-sub-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.7rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .brand-desc {
+            white-space: nowrap;
+        }
 
         .plan-title-badge {
             background: #eef2ff;
             color: #4338ca;
             border: 1px solid #c7d2fe;
-            padding: 2px 8px;
+            padding: 2px 7px;
             border-radius: 6px;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.15s;
+            white-space: nowrap;
         }
         .plan-title-badge:hover { background: #e0e7ff; }
 
@@ -95,11 +127,19 @@
         .phase-selector-wrapper {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
             background: #fffbeb;
             border: 1px solid #fde68a;
             padding: 3px 8px;
             border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .phase-selector-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #b45309;
+            white-space: nowrap;
         }
 
         .phase-select {
@@ -111,7 +151,7 @@
             outline: none;
             cursor: pointer;
             font-family: inherit;
-            max-width: 210px;
+            max-width: 220px;
         }
 
         .btn-quick-new-phase {
@@ -128,6 +168,7 @@
             gap: 4px;
             transition: all 0.15s ease;
             box-shadow: 0 1px 3px rgba(217, 119, 6, 0.25);
+            white-space: nowrap;
         }
         .btn-quick-new-phase:hover { background: linear-gradient(135deg, #d97706, #b45309); transform: translateY(-1px); }
 
@@ -136,24 +177,26 @@
             display: flex;
             background: #f1f5f9;
             padding: 3px;
-            border-radius: 10px;
-            gap: 3px;
+            border-radius: 9px;
+            gap: 2px;
             border: 1px solid var(--border-color);
+            flex-shrink: 0;
         }
 
         .view-tab-btn {
             background: none;
             border: none;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.78rem;
+            padding: 5px 10px;
+            border-radius: 7px;
+            font-size: 0.76rem;
             font-weight: 700;
             color: #64748b;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             transition: all 0.15s ease;
+            white-space: nowrap;
         }
 
         .view-tab-btn.active {
@@ -165,17 +208,18 @@
         .db-status-badge {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
+            gap: 5px;
+            padding: 2px 7px;
             border-radius: 999px;
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             font-weight: 700;
             background: #f1f5f9;
             color: #475569;
             border: 1px solid #cbd5e1;
+            white-space: nowrap;
         }
 
-        .db-status-badge .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; }
+        .db-status-badge .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; }
         .db-status-badge.connected { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
         .db-status-badge.connected .status-dot { background: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.2); }
         .db-status-badge.saving { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
@@ -185,20 +229,45 @@
 
         @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
 
-        .nav-actions { display: flex; align-items: center; gap: 6px; }
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-group-wrapper {
+            display: inline-flex;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+
+        .btn-group-wrapper .btn-toolbar {
+            border: none;
+            border-radius: 0;
+            padding: 5px 8px;
+        }
+
+        .btn-group-wrapper .btn-toolbar:not(:last-child) {
+            border-right: 1px solid #e2e8f0;
+        }
 
         .btn-toolbar {
             border: 1px solid transparent;
-            padding: 7px 11px;
-            border-radius: 8px;
-            font-size: 0.78rem;
+            padding: 5px 9px;
+            border-radius: 7px;
+            font-size: 0.75rem;
             font-weight: 700;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
             transition: all 0.15s ease;
             text-decoration: none;
+            white-space: nowrap;
         }
 
         .btn-config { background: #f8fafc; color: #334155; border-color: #cbd5e1; }
@@ -209,16 +278,16 @@
 
         .btn-db-save {
             background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
-            color: white;
-            box-shadow: 0 2px 6px rgba(67, 56, 202, 0.25);
+            color: white !important;
+            box-shadow: 0 2px 5px rgba(67, 56, 202, 0.2);
         }
         .btn-db-save:hover { background: linear-gradient(135deg, #3730a3 0%, #312e81 100%); transform: translateY(-1px); }
 
-        .btn-db-reload { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+        .btn-db-reload { background: #f8fafc; color: #475569; border-color: #cbd5e1; }
         .btn-db-reload:hover { background: #e2e8f0; color: #0f172a; }
 
-        .btn-file-open, .btn-file-save { background: #f8fafc; color: #475569; border-color: #cbd5e1; }
-        .btn-file-open:hover, .btn-file-save:hover { background: #e2e8f0; color: #0f172a; }
+        .btn-file-open, .btn-file-save { background: #ffffff; color: #475569; }
+        .btn-file-open:hover, .btn-file-save:hover { background: #f1f5f9; color: #0f172a; }
 
         .btn-export-excel,
         .btn-small.btn-export-excel,
@@ -226,7 +295,7 @@
             background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
             color: #ffffff !important;
             border: 1px solid #059669 !important;
-            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3) !important;
+            box-shadow: 0 2px 5px rgba(16, 185, 129, 0.25) !important;
             font-weight: 800 !important;
         }
         .btn-export-excel:hover,
@@ -832,40 +901,44 @@
                 <i class="fas fa-people-roof"></i>
             </div>
             <div class="brand-text">
-                <h1>
-                    <span id="display-plan-title">Tổ Toán - Tin học</span>
+                <div class="brand-title-row">
+                    <h1><span id="display-plan-title">Tổ Toán - Tin học</span></h1>
                     <span class="plan-title-badge" onclick="openConfigModal('tab-info')" title="Nhấn để đổi tên tổ / năm học">
                         <i class="fas fa-pen-to-square"></i> <span id="display-plan-year">2025-2026 (HK1)</span>
                     </span>
-                    <!-- CHỌN ĐỢT PHÂN CÔNG & TẠO ĐỢT MỚI KHI THAY ĐỔI -->
-                    <div class="phase-selector-wrapper" title="Đang xem & phân công theo đợt này">
-                        <i class="fas fa-clock-rotate-left text-amber-600"></i>
-                        <select class="phase-select" id="nav-phase-select" onchange="switchPhase(this.value)">
-                            <!-- Render từ JS -->
-                        </select>
-                        <button class="btn-quick-new-phase" onclick="openQuickNewPhaseModal()" title="Tạo ngay một đợt phân công mới khi có thay đổi trong tuần/kỳ">
-                            <i class="fas fa-plus"></i> Đợt mới
-                        </button>
+                </div>
+                <div class="brand-sub-row">
+                    <span class="brand-desc">Phân công · Chấm công · Tăng giờ</span>
+                    <div id="db-status-badge" class="db-status-badge">
+                        <span class="status-dot"></span>
+                        <span id="db-status-text">Đang kiểm tra CSDL...</span>
                     </div>
-                </h1>
-                <p>Quản lý Tổ Chuyên Môn · Phân công theo Đợt Thay Đổi · Chấm công &amp; Quyết toán Tăng Giờ</p>
+                </div>
             </div>
-            <div id="db-status-badge" class="db-status-badge">
-                <span class="status-dot"></span>
-                <span id="db-status-text">Đang kiểm tra CSDL...</span>
-            </div>
+        </div>
+
+        <!-- CHỌN ĐỢT PHÂN CÔNG & TẠO ĐỢT MỚI KHI THAY ĐỔI -->
+        <div class="phase-selector-wrapper" title="Đang xem & phân công theo đợt này">
+            <i class="fas fa-clock-rotate-left text-amber-600"></i>
+            <span class="phase-selector-label">Đợt:</span>
+            <select class="phase-select" id="nav-phase-select" onchange="switchPhase(this.value)">
+                <!-- Render từ JS -->
+            </select>
+            <button class="btn-quick-new-phase" onclick="openQuickNewPhaseModal()" title="Tạo ngay một đợt phân công mới khi có thay đổi trong tuần/kỳ">
+                <i class="fas fa-plus"></i> Đợt mới
+            </button>
         </div>
 
         <!-- VIEW SWITCHER -->
         <div class="view-switcher">
             <button class="view-tab-btn active" id="tab-nav-phancong" onclick="switchAppView('view-phancong')">
-                <i class="fas fa-clipboard-list"></i> 1. Phân công theo Đợt
+                <i class="fas fa-clipboard-list"></i> 1. Phân công
             </button>
             <button class="view-tab-btn" id="tab-nav-chamcong" onclick="switchAppView('view-chamcong')">
                 <i class="fas fa-calendar-check"></i> 2. Chấm công GV
             </button>
             <button class="view-tab-btn" id="tab-nav-tanggio" onclick="switchAppView('view-tanggio')">
-                <i class="fas fa-calculator text-amber-600"></i> 3. Quyết toán Tăng Giờ
+                <i class="fas fa-calculator text-amber-600"></i> 3. Tăng Giờ
             </button>
             <button class="view-tab-btn" id="tab-nav-baocao" onclick="switchAppView('view-baocao')">
                 <i class="fas fa-chart-pie"></i> 4. Báo cáo &amp; Thống kê
@@ -876,22 +949,30 @@
             <button class="btn-toolbar btn-config" onclick="openConfigModal('tab-info')" title="Cài đặt tổ, đợt phân công, môn học, lớp học và giáo viên">
                 <i class="fas fa-gear text-indigo-600"></i> Khai báo Tổ
             </button>
-            <button class="btn-toolbar btn-db-save" id="btn-save-db" onclick="saveToDB()" title="Lưu toàn bộ dữ liệu phân công các đợt & chấm công lên CSDL MySQL">
-                <i class="fas fa-cloud-arrow-up"></i> Lưu CSDL
-            </button>
-            <button class="btn-toolbar btn-db-reload" onclick="loadFromDB(true)" title="Nạp lại dữ liệu từ CSDL">
-                <i class="fas fa-rotate"></i> Nạp CSDL
-            </button>
+            
+            <div class="btn-group-wrapper">
+                <button class="btn-toolbar btn-db-save" id="btn-save-db" onclick="saveToDB()" title="Lưu toàn bộ dữ liệu phân công các đợt & chấm công lên CSDL MySQL">
+                    <i class="fas fa-cloud-arrow-up"></i> Lưu CSDL
+                </button>
+                <button class="btn-toolbar btn-db-reload" onclick="loadFromDB(true)" title="Nạp lại dữ liệu từ CSDL">
+                    <i class="fas fa-rotate"></i> Nạp CSDL
+                </button>
+            </div>
+
             <input type="file" id="file-input" style="display:none" accept=".json" onchange="loadFromFile(event)">
-            <button class="btn-toolbar btn-file-open" onclick="document.getElementById('file-input').click()" title="Mở file JSON">
-                <i class="fas fa-folder-open text-indigo-500"></i> Mở JSON
-            </button>
-            <button class="btn-toolbar btn-file-save" onclick="saveToFile()" title="Lưu file JSON về máy">
-                <i class="fas fa-floppy-disk text-sky-600"></i> Xuất JSON
-            </button>
+            <div class="btn-group-wrapper">
+                <button class="btn-toolbar btn-file-open" onclick="document.getElementById('file-input').click()" title="Mở file JSON">
+                    <i class="fas fa-folder-open text-indigo-500"></i> Mở
+                </button>
+                <button class="btn-toolbar btn-file-save" onclick="saveToFile()" title="Lưu file JSON về máy">
+                    <i class="fas fa-floppy-disk text-sky-600"></i> Xuất
+                </button>
+            </div>
+
             <button class="btn-toolbar btn-export-excel" onclick="handleExportExcel()" title="Xuất dữ liệu ra Excel">
                 <i class="fas fa-file-excel"></i> Xuất Excel
             </button>
+            
             <a href="index.html" class="btn-toolbar btn-home" title="Trở về trang chủ">
                 <i class="fas fa-home text-slate-500"></i> Trang chủ
             </a>
