@@ -1649,6 +1649,27 @@
         // State hiện tại
         let state = JSON.parse(JSON.stringify(defaultState));
         let systemData = { teachers: [], classes: [], plans: [] };
+        let localStorageScope = '';
+
+        function setLocalStorageScope(currentUser) {
+            const userId = Number(currentUser?.id || 0);
+            const username = String(currentUser?.username || '').trim().toLowerCase();
+            if (userId > 0) {
+                localStorageScope = `user-${userId}`;
+            } else if (username) {
+                localStorageScope = `account-${encodeURIComponent(username)}`;
+            }
+        }
+
+        function localPlanStorageKey() {
+            if (localStorageScope) return `phanCongData:${localStorageScope}`;
+            let fallbackScope = sessionStorage.getItem('phanCongLocalFallbackScope');
+            if (!fallbackScope) {
+                fallbackScope = `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                sessionStorage.setItem('phanCongLocalFallbackScope', fallbackScope);
+            }
+            return `phanCongData:${fallbackScope}`;
+        }
 
         function normalizeState(s) {
             if (!s.info) s.info = { ...defaultState.info };
@@ -1901,11 +1922,11 @@
         // ================= CSDL & LOCAL STORAGE =================
         function saveToLocal() {
             saveCurrentPhaseSnapshot();
-            localStorage.setItem('phanCongData', JSON.stringify(state));
+            localStorage.setItem(localPlanStorageKey(), JSON.stringify(state));
         }
 
         function loadFromLocal() {
-            const savedData = localStorage.getItem('phanCongData');
+            const savedData = localStorage.getItem(localPlanStorageKey());
             if (savedData) {
                 try {
                     state = normalizeState(JSON.parse(savedData));
@@ -1924,6 +1945,7 @@
                     cache: 'no-store'
                 });
                 const result = await res.json().catch(() => ({}));
+                setLocalStorageScope(result.current_user);
 
                 if (result.ok && result.data) {
                     state = normalizeState(result.data);
@@ -2009,6 +2031,7 @@
                 const data = await res.json().catch(() => ({}));
                 if (data.ok) {
                     systemData = data;
+                    setLocalStorageScope(data.current_user);
                     renderPlansList(data.plans || []);
                 }
             } catch (e) {

@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-const PHANCONG_SCHEMA_VERSION = '20260824-v1';
+const PHANCONG_SCHEMA_VERSION = '20260825-v2';
 
 function phancong_current_user(PDO $pdo, bool $required = true): ?array
 {
@@ -13,10 +13,11 @@ function phancong_current_user(PDO $pdo, bool $required = true): ?array
     $adminKey = $_SERVER['HTTP_X_ADMIN_KEY'] ?? ($_GET['admin_key'] ?? '');
     if ($adminKey !== '' && defined('ADMIN_KEY') && hash_equals(ADMIN_KEY, $adminKey)) {
         return [
-            'id' => 1,
+            'id' => 0,
             'username' => 'admin',
             'full_name' => 'Quản trị viên',
-            'role' => 'admin'
+            'role' => 'admin',
+            'is_admin_key' => true
         ];
     }
 
@@ -61,6 +62,25 @@ function phancong_current_user(PDO $pdo, bool $required = true): ?array
     return $user;
 }
 
+function phancong_owner_id(array $currentUser): int
+{
+    $ownerId = (int)($currentUser['id'] ?? 0);
+    if ($ownerId <= 0) {
+        respond(['error' => 'Cần đăng nhập bằng tài khoản có phiên hợp lệ để dùng dữ liệu phân công riêng.'], 403);
+    }
+    return $ownerId;
+}
+
+function phancong_public_user(array $currentUser): array
+{
+    return [
+        'id' => (int)$currentUser['id'],
+        'username' => (string)$currentUser['username'],
+        'full_name' => (string)$currentUser['full_name'],
+        'role' => (string)$currentUser['role'],
+    ];
+}
+
 function phancong_maybe_ensure_schema(PDO $pdo): void
 {
     if (schema_is_ready('phancong_chuyenmon', PHANCONG_SCHEMA_VERSION)) {
@@ -88,10 +108,25 @@ function phancong_table_exists(PDO $pdo, string $table): bool
     }
 }
 
+function phancong_column_exists(PDO $pdo, string $column): bool
+{
+    $stmt = $pdo->prepare('SHOW COLUMNS FROM phancong_chuyenmon LIKE ?');
+    $stmt->execute([$column]);
+    return (bool)$stmt->fetch();
+}
+
+function phancong_index_exists(PDO $pdo, string $indexName): bool
+{
+    $stmt = $pdo->prepare('SHOW INDEX FROM phancong_chuyenmon WHERE Key_name = ?');
+    $stmt->execute([$indexName]);
+    return (bool)$stmt->fetch();
+}
+
 function phancong_ensure_schema(PDO $pdo): void
 {
     $pdo->exec("CREATE TABLE IF NOT EXISTS phancong_chuyenmon (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        owner_id INT DEFAULT NULL,
         plan_key VARCHAR(80) NOT NULL DEFAULT 'default',
         title VARCHAR(200) NOT NULL DEFAULT 'Phân công chuyên môn',
         school_year VARCHAR(40) NOT NULL DEFAULT '',
@@ -102,8 +137,28 @@ function phancong_ensure_schema(PDO $pdo): void
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_phancong_key (plan_key),
+        INDEX idx_phancong_owner_plan (owner_id, plan_key),
+        UNIQUE KEY uq_phancong_owner_plan (owner_id, plan_key),
         INDEX idx_phancong_updated (updated_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    if (!phancong_column_exists($pdo, 'owner_id')) {
+        $pdo->exec('ALTER TABLE phancong_chuyenmon ADD COLUMN owner_id INT DEFAULT NULL AFTER id');
+    }
+
+    // Dữ liệu cũ chỉ được gắn với chủ đã có trong audit; dữ liệu vô chủ vẫn giữ owner_id = NULL.
+    $pdo->exec('UPDATE phancong_chuyenmon SET owner_id = created_by WHERE owner_id IS NULL AND created_by IS NOT NULL AND created_by > 0');
+
+    if (!phancong_index_exists($pdo, 'idx_phancong_owner_plan')) {
+        $pdo->exec('ALTER TABLE phancong_chuyenmon ADD INDEX idx_phancong_owner_plan (owner_id, plan_key)');
+    }
+
+    if (!phancong_index_exists($pdo, 'uq_phancong_owner_plan')) {
+        $duplicates = $pdo->query('SELECT COUNT(*) FROM (SELECT owner_id, plan_key FROM phancong_chuyenmon WHERE owner_id IS NOT NULL GROUP BY owner_id, plan_key HAVING COUNT(*) > 1) AS duplicate_owner_plans')->fetchColumn();
+        if ((int)$duplicates === 0) {
+            $pdo->exec('ALTER TABLE phancong_chuyenmon ADD UNIQUE INDEX uq_phancong_owner_plan (owner_id, plan_key)');
+        }
+    }
 }
 
 try {
@@ -117,13 +172,14 @@ try {
 
     if ($action === 'get') {
         $currentUser = phancong_current_user($pdo, true);
+        $ownerId = phancong_owner_id($currentUser);
         $planKey = trim((string)($_GET['plan_key'] ?? 'default'));
         if ($planKey === '') {
             $planKey = 'default';
         }
 
-        $stmt = $pdo->prepare("SELECT id, plan_key, title, school_year, semester, data_json, created_by, updated_by, created_at, updated_at FROM phancong_chuyenmon WHERE plan_key = ? ORDER BY updated_at DESC LIMIT 1");
-        $stmt->execute([$planKey]);
+        $stmt = $pdo->prepare("SELECT id, plan_key, title, school_year, semester, data_json, created_by, updated_by, created_at, updated_at FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ? ORDER BY updated_at DESC LIMIT 1");
+        $stmt->execute([$ownerId, $planKey]);
         $row = $stmt->fetch();
 
         if (!$row || empty($row['data_json'])) {
@@ -131,6 +187,7 @@ try {
                 'ok' => true,
                 'data' => null,
                 'plan' => null,
+                'current_user' => phancong_public_user($currentUser),
                 'message' => 'Chưa có dữ liệu phân công trên CSDL.'
             ]);
         }
@@ -143,6 +200,7 @@ try {
         respond([
             'ok' => true,
             'data' => $parsedData,
+            'current_user' => phancong_public_user($currentUser),
             'plan' => [
                 'id' => (int)$row['id'],
                 'plan_key' => $row['plan_key'],
@@ -157,6 +215,7 @@ try {
 
     if ($action === 'system_data') {
         $currentUser = phancong_current_user($pdo, true);
+        $ownerId = phancong_owner_id($currentUser);
 
         // 1. Lấy danh sách giáo viên từ bảng users
         $teachersStmt = $pdo->query("SELECT id, username, full_name, class_name, allowed_pages_json FROM users WHERE role = 'teacher' AND is_active = 1 ORDER BY full_name ASC");
@@ -187,7 +246,8 @@ try {
         $dbClasses = array_values($dbClasses);
 
         // 3. Lấy danh sách các kế hoạch phân công đã lưu
-        $plansStmt = $pdo->query("SELECT id, plan_key, title, school_year, semester, updated_at FROM phancong_chuyenmon ORDER BY updated_at DESC");
+        $plansStmt = $pdo->prepare("SELECT id, plan_key, title, school_year, semester, updated_at FROM phancong_chuyenmon WHERE owner_id = ? ORDER BY updated_at DESC");
+        $plansStmt->execute([$ownerId]);
         $plans = $plansStmt->fetchAll();
 
         respond([
@@ -195,17 +255,13 @@ try {
             'teachers' => $dbTeachers,
             'classes' => $dbClasses,
             'plans' => $plans,
-            'current_user' => $currentUser ? [
-                'id' => (int)$currentUser['id'],
-                'username' => $currentUser['username'],
-                'full_name' => $currentUser['full_name'],
-                'role' => $currentUser['role']
-            ] : null
+            'current_user' => phancong_public_user($currentUser)
         ]);
     }
 
     if ($action === 'save') {
         $currentUser = phancong_current_user($pdo, true);
+        $ownerId = phancong_owner_id($currentUser);
         $body = json_body();
         if (empty($body) && !empty($_POST)) {
             $body = $_POST;
@@ -237,21 +293,21 @@ try {
         $userId = (int)($currentUser['id'] ?? 0);
 
         // Check if plan_key exists
-        $checkStmt = $pdo->prepare("SELECT id FROM phancong_chuyenmon WHERE plan_key = ? LIMIT 1");
-        $checkStmt->execute([$planKey]);
+        $checkStmt = $pdo->prepare("SELECT id FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ? LIMIT 1");
+        $checkStmt->execute([$ownerId, $planKey]);
         $existing = $checkStmt->fetch();
 
         if ($existing) {
-            $updateStmt = $pdo->prepare("UPDATE phancong_chuyenmon SET title = ?, school_year = ?, semester = ?, data_json = ?, updated_by = ?, updated_at = NOW() WHERE id = ?");
-            $updateStmt->execute([$title, $schoolYear, $semester, $dataJson, $userId, (int)$existing['id']]);
+            $updateStmt = $pdo->prepare("UPDATE phancong_chuyenmon SET title = ?, school_year = ?, semester = ?, data_json = ?, updated_by = ?, updated_at = NOW() WHERE id = ? AND owner_id = ?");
+            $updateStmt->execute([$title, $schoolYear, $semester, $dataJson, $userId, (int)$existing['id'], $ownerId]);
         } else {
-            $insertStmt = $pdo->prepare("INSERT INTO phancong_chuyenmon (plan_key, title, school_year, semester, data_json, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $insertStmt->execute([$planKey, $title, $schoolYear, $semester, $dataJson, $userId, $userId]);
+            $insertStmt = $pdo->prepare("INSERT INTO phancong_chuyenmon (owner_id, plan_key, title, school_year, semester, data_json, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $insertStmt->execute([$ownerId, $planKey, $title, $schoolYear, $semester, $dataJson, $userId, $userId]);
         }
 
         // Fetch updated record info
-        $fetchStmt = $pdo->prepare("SELECT updated_at FROM phancong_chuyenmon WHERE plan_key = ? LIMIT 1");
-        $fetchStmt->execute([$planKey]);
+        $fetchStmt = $pdo->prepare("SELECT updated_at FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ? LIMIT 1");
+        $fetchStmt->execute([$ownerId, $planKey]);
         $updatedRow = $fetchStmt->fetch();
         $updatedAt = $updatedRow['updated_at'] ?? date('Y-m-d H:i:s');
 
@@ -265,14 +321,15 @@ try {
 
     if ($action === 'reset') {
         $currentUser = phancong_current_user($pdo, true);
+        $ownerId = phancong_owner_id($currentUser);
         $body = json_body();
         $planKey = trim((string)($body['plan_key'] ?? $_GET['plan_key'] ?? 'default'));
         if ($planKey === '') {
             $planKey = 'default';
         }
 
-        $stmt = $pdo->prepare("DELETE FROM phancong_chuyenmon WHERE plan_key = ?");
-        $stmt->execute([$planKey]);
+        $stmt = $pdo->prepare("DELETE FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ?");
+        $stmt->execute([$ownerId, $planKey]);
 
         respond([
             'ok' => true,
