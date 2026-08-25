@@ -50,7 +50,7 @@ HÃY PHÂN TÍCH VÀ TRÍCH XUẤT NỘI DUNG VỚI CÁC MỤC SAU:
    - Các quy tắc, công thức toán học, định lí, tính chất (viết bằng LaTeX $...$).
    - Các quy ước, chú ý sư phạm quan trọng.
 3. **Chuỗi hoạt động khám phá trong SGK Kết Nối Tri Thức:**
-   - Hoạt động mở đầu / khởi động (tình huống, hình ảnh thực tế gắn với cuộc sống).
+   - Hoạt động mở đầu (tình huống, hình ảnh thực tế gắn với cuộc sống).
    - Các hoạt động hình thành kiến thức (HĐ khám phá 1, HĐ 2, các câu hỏi gợi mở, ví dụ mẫu kèm lời giải).
    - Hoạt động luyện tập (các bài Luyện tập, Tranh luận, Thử thách nhỏ trong SGK).
    - Hoạt động vận dụng (các bài toán thực tế, dự án gắn kết tri thức với cuộc sống).
@@ -141,8 +141,8 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 2 MỤC CHÍNH; chỉ thêm thiết bị s�
   + Đọc trước nội dung bài mới trong SGK Kết Nối Tri Thức Với Cuộc Sống, chuẩn bị câu hỏi thắc mắc.
   + Hoàn thành nhiệm vụ tự học/khảo sát thực tế được giao từ tiết trước.`,
 
-  // TAB 4.A: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG KHỞI ĐỘNG
-  GENERATE_ACTIVITY_A: `Hãy biên soạn chi tiết **HOẠT ĐỘNG KHỞI ĐỘNG (MỞ ĐẦU / TIẾP CẬN VẤN ĐỀ)** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo bộ sách **Kết Nối Tri Thức Với Cuộc Sống**.
+  // TAB 4.A: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG MỞ ĐẦU
+  GENERATE_ACTIVITY_A: `Hãy biên soạn chi tiết **HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo bộ sách **Kết Nối Tri Thức Với Cuộc Sống**.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Bộ sách giáo khoa: Kết Nối Tri Thức Với Cuộc Sống
@@ -160,7 +160,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 
 # III. TIẾN TRÌNH DẠY HỌC
 
-## A. HOẠT ĐỘNG 1: MỞ ĐẦU / KHỞI ĐỘNG (Khoảng 5 - 7 phút)
+## A. HOẠT ĐỘNG 1: MỞ ĐẦU (Khoảng 5 - 7 phút)
 
 ### a) Mục tiêu:
 - Tạo tâm thế hứng thú, kích thích trí tò mò, tạo mâu thuẫn nhận thức hoặc nhu cầu tìm hiểu kiến thức mới của học sinh bám sát tình huống mở đầu của SGK Kết Nối Tri Thức Với Cuộc Sống.
@@ -322,7 +322,7 @@ YÊU CẦU XÂY DỰNG 2 BẢNG ĐÁNH GIÁ CHUYÊN NGHIỆP DƯỚI DẠNG BẢ
 
 | Hoạt động học | Mục tiêu đánh giá | Phương pháp đánh giá | Công cụ đánh giá | Người đánh giá |
 | :--- | :--- | :--- | :--- | :--- |
-| **A. Khởi động** | Sự hứng thú, khả năng huy động kiến thức nền | Quan sát, vấn đáp | Câu hỏi mở đầu, thái độ tham gia | Giáo viên |
+| **A. Mở đầu** | Sự hứng thú, khả năng huy động kiến thức nền | Quan sát, vấn đáp | Câu hỏi mở đầu, thái độ tham gia | Giáo viên |
 | **B. Hình thành kiến thức** | Khả năng khám phá, chiếm lĩnh khái niệm, công thức mới | Quan sát, đánh giá sản phẩm | Phiếu học tập, câu trả lời cá nhân/nhóm | GV & Học sinh (đánh giá đồng đẳng) |
 | **C. Luyện tập** | Kĩ năng tính toán, biến đổi, giải bài tập mẫu | Đánh giá qua sản phẩm viết | Vở ghi, bảng phụ, câu hỏi trắc nghiệm | Giáo viên & Tự đánh giá |
 | **D. Vận dụng** | Năng lực mô hình hoá toán học vào thực tế | Đánh giá sản phẩm dự án/bài viết | Báo cáo bài tập vận dụng thực tiễn | Giáo viên |

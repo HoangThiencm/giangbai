@@ -9,12 +9,12 @@
 class DocxGenerator {
   constructor() {
     this.fontFamily = "Times New Roman";
-    this.fontSizeBody = 26; // 13pt in half-points
-    this.fontSizeH1 = 32;   // 16pt
-    this.fontSizeH2 = 28;   // 14pt
-    this.fontSizeH3 = 26;   // 13pt bold
+    this.fontSizeBody = 28; // 14pt in half-points
+    this.fontSizeH1 = 28;   // 14pt bold
+    this.fontSizeH2 = 28;   // 14pt bold
+    this.fontSizeH3 = 28;   // 14pt bold
     this.lineSpacing = 288; // 1.2 line spacing (240 is single, 288 is 1.2)
-    this.spaceAfter = 100;  // 5pt
+    this.spaceAfter = 120;  // 6pt
     this.spaceBefore = 60;  // 3pt
 
     // Chuẩn lề trang A4 Việt Nam (đơn vị dxa: 1cm = 567 dxa)
@@ -22,8 +22,9 @@ class DocxGenerator {
       top: 1134,    // 2.0 cm
       bottom: 1134, // 2.0 cm
       left: 1701,   // 3.0 cm (lề trái đóng gáy)
-      right: 1134   // 2.0 cm
+      right: 851    // 1.5 cm
     };
+    this.pageSize = { width: 11906, height: 16838, orientation: "portrait" };
   }
 
   /**
@@ -234,8 +235,8 @@ class DocxGenerator {
         const codeText = token.substring(1, token.length - 1);
         runs.push(new TextRun({
           text: codeText,
-          font: "Consolas",
-          size: this.fontSizeBody - 2,
+          font: this.fontFamily,
+          size: this.fontSizeBody,
           color: "A020F0"
         }));
       }
@@ -332,7 +333,7 @@ class DocxGenerator {
         elements.push(new Paragraph({
           heading: HeadingLevel.HEADING_2,
           alignment: AlignmentType.LEFT,
-          spacing: { before: 160, after: 80, line: this.lineSpacing },
+          spacing: { before: 160, after: 120, line: this.lineSpacing },
           children: [
             new TextRun({
               text: trimmed.substring(3).trim(),
@@ -350,7 +351,7 @@ class DocxGenerator {
       if (trimmed.startsWith("### ")) {
         elements.push(new Paragraph({
           heading: HeadingLevel.HEADING_3,
-          spacing: { before: 120, after: 60, line: this.lineSpacing },
+          spacing: { before: 120, after: 120, line: this.lineSpacing },
           children: [
             new TextRun({
               text: trimmed.substring(4).trim(),
@@ -367,7 +368,7 @@ class DocxGenerator {
 
       if (trimmed.startsWith("#### ")) {
         elements.push(new Paragraph({
-          spacing: { before: 100, after: 40, line: this.lineSpacing },
+          spacing: { before: 100, after: 120, line: this.lineSpacing },
           children: [
             new TextRun({
               text: trimmed.substring(5).trim(),
@@ -407,7 +408,7 @@ class DocxGenerator {
         const runs = this.parseInlineTextToRuns(`${marker} ${contentText}`);
         elements.push(new Paragraph({
           indent: marker === "+" ? { left: Math.max(360, indent.length * 180) } : undefined,
-          spacing: { before: 40, after: 40, line: this.lineSpacing },
+          spacing: { before: 40, after: 120, line: this.lineSpacing },
           children: runs
         }));
         i++;
@@ -420,7 +421,7 @@ class DocxGenerator {
         const runs = this.parseInlineTextToRuns(bulletText);
         elements.push(new Paragraph({
           bullet: { level: 0 },
-          spacing: { before: 40, after: 40, line: this.lineSpacing },
+          spacing: { before: 40, after: 120, line: this.lineSpacing },
           children: runs
         }));
         i++;
@@ -435,7 +436,7 @@ class DocxGenerator {
         const runs = this.parseInlineTextToRuns(contentText);
 
         elements.push(new Paragraph({
-          spacing: { before: 40, after: 40, line: this.lineSpacing },
+          spacing: { before: 40, after: 120, line: this.lineSpacing },
           children: [
             new TextRun({
               text: prefix + " ",
@@ -455,7 +456,7 @@ class DocxGenerator {
         const quoteText = trimmed.substring(2).trim();
         const runs = this.parseInlineTextToRuns(quoteText);
         elements.push(new Paragraph({
-          spacing: { before: 80, after: 80, line: this.lineSpacing },
+          spacing: { before: 80, after: 120, line: this.lineSpacing },
           indent: { left: 567 }, // lùi 1cm
           children: runs
         }));
@@ -509,7 +510,7 @@ class DocxGenerator {
         return new TableCell({
           children: [
             new Paragraph({
-              spacing: { before: 80, after: 80, line: 240 },
+              spacing: { before: 80, after: 120, line: 240 },
               children: runs
             })
           ],
@@ -601,7 +602,7 @@ class DocxGenerator {
     // Tiêu ngữ trường & tổ
     headers.push(new Paragraph({
       alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: 40 },
+      spacing: { before: 0, after: 120 },
       children: [
         new TextRun({ text: schoolName, font: this.fontFamily, size: this.fontSizeBody, bold: true }),
         new TextRun({ text: `\t\t${groupName}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })
@@ -619,12 +620,12 @@ class DocxGenerator {
     // TÊN BÀI GIÁO ÁN TO ĐẬM Ở GIỮA
     headers.push(new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 160, after: 60 },
+      spacing: { before: 160, after: 120 },
       children: [
         new TextRun({
           text: `KẾ HOẠCH BÀI DẠY: ${topic}`,
           font: this.fontFamily,
-          size: this.fontSizeH1 + 2,
+          size: this.fontSizeH1,
           bold: true,
           color: "002B49"
         })
@@ -635,7 +636,7 @@ class DocxGenerator {
     const subInfo = [subject, grade, duration, bookName].filter(x => x.length > 0).join("  |  ");
     headers.push(new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 0, after: 160 },
+      spacing: { before: 0, after: 120 },
       children: [
         new TextRun({
           text: subInfo,
@@ -649,7 +650,7 @@ class DocxGenerator {
 
     // Đường kẻ phân cách
     headers.push(new Paragraph({
-      spacing: { before: 60, after: 200 },
+      spacing: { before: 60, after: 120 },
       border: {
         bottom: {
           color: "0A4D68",
@@ -681,6 +682,7 @@ class DocxGenerator {
       sections: [{
         properties: {
           page: {
+            size: this.pageSize,
             margin: this.pageMargins
           }
         },
@@ -717,6 +719,7 @@ class DocxGenerator {
       sections: [{
         properties: {
           page: {
+            size: this.pageSize,
             margin: this.pageMargins
           }
         },

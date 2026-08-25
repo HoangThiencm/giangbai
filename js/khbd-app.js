@@ -63,7 +63,7 @@ let currentPdfDoc = null;
 
 // CÁC TÊN TIÊU ĐỀ HOẠT ĐỘNG
 const ACTIVITY_TITLES = {
-  A: { short: "A. Khởi động", full: "A. HOẠT ĐỘNG KHỞI ĐỘNG (MỞ ĐẦU / TIẾP CẬN VẤN ĐỀ)" },
+  A: { short: "A. Mở đầu", full: "A. HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)" },
   B: { short: "B. Hình thành KT", full: "B. HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI" },
   C: { short: "C. Luyện tập", full: "C. HOẠT ĐỘNG LUYỆN TẬP" },
   D: { short: "D. Vận dụng", full: "D. HOẠT ĐỘNG VẬN DỤNG" }
