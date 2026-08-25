@@ -224,6 +224,9 @@
                 localStorage.setItem('userRole', data.user.role);
                 localStorage.setItem('allowedPages', JSON.stringify(data.user.allowed_pages || []));
                 localStorage.setItem('userClassName', data.user.class_name || '');
+                if (Array.isArray(data.user.gemini_keys) && data.user.gemini_keys.length > 0) {
+                    localStorage.setItem('khbd_user_gemini_keys_' + (data.user.username || data.user.email || 'default'), JSON.stringify(data.user.gemini_keys));
+                }
                 sessionStorage.setItem('lotrinh_force_notification_popup', '1');
                 window.location.href = landingPageFor(data.user);
             } catch {
@@ -287,6 +290,9 @@
                 localStorage.setItem('userRole', data.user.role);
                 localStorage.setItem('allowedPages', JSON.stringify(data.user.allowed_pages || []));
                 localStorage.setItem('userClassName', data.user.class_name || '');
+                if (Array.isArray(data.user.gemini_keys) && data.user.gemini_keys.length > 0) {
+                    localStorage.setItem('khbd_user_gemini_keys_' + (data.user.username || data.user.email || 'default'), JSON.stringify(data.user.gemini_keys));
+                }
                 sessionStorage.setItem('lotrinh_force_notification_popup', '1');
 
                 window.location.href = landingPageFor(data.user);

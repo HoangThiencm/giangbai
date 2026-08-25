@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('teacher', 'student') NOT NULL DEFAULT 'student',
     class_name VARCHAR(80) DEFAULT NULL,
     allowed_pages_json TEXT DEFAULT NULL,
+    gemini_keys TEXT DEFAULT NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     expires_at DATETIME DEFAULT NULL,
     expires_option VARCHAR(20) NOT NULL DEFAULT 'forever',

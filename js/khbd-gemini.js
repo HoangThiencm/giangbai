@@ -59,6 +59,62 @@ class GeminiAPIManager {
     }
   }
 
+  // Đồng bộ danh sách keys từ máy chủ CSDL
+  async syncKeysFromServer() {
+    try {
+      const res = await fetch('api/user_gemini_keys.php', {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.keys)) {
+          if (data.keys.length > 0) {
+            this.apiKeys = data.keys.map(k => k.trim()).filter(k => k.length > 10);
+            this.saveKeysToLocalStorage();
+          } else if (this.apiKeys && this.apiKeys.length > 0) {
+            // Tự động migrate keys cũ từ localStorage lên CSDL máy chủ
+            await this.saveKeysToServer(this.apiKeys);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Không thể đồng bộ keys từ server:", e);
+    }
+    return this.apiKeys;
+  }
+
+  // Lưu danh sách keys lên máy chủ CSDL và localStorage
+  async saveKeysToServer(keysArray) {
+    const cleanKeys = Array.from(new Set((Array.isArray(keysArray) ? keysArray : [])
+      .map(k => String(k || '').trim())
+      .filter(k => k.length > 10)));
+    this.apiKeys = cleanKeys;
+    this.currentKeyIndex = 0;
+    this.saveKeysToLocalStorage();
+
+    try {
+      const res = await fetch('api/user_gemini_keys.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ keys: this.apiKeys })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.keys)) {
+          this.apiKeys = data.keys;
+          this.saveKeysToLocalStorage();
+        }
+        return data;
+      }
+    } catch (e) {
+      console.error("Lỗi khi lưu keys lên máy chủ:", e);
+    }
+    return { ok: false, keys: this.apiKeys, count: this.apiKeys.length };
+  }
+
   // Tải Model đã chọn (hoặc lấy mặc định từ hệ thống)
   loadModelFromLocalStorage() {
     const savedModel = localStorage.getItem("khbd_gemini_model") || localStorage.getItem("default_gemini_module");
@@ -76,9 +132,9 @@ class GeminiAPIManager {
 
   // Cập nhật danh sách API Keys
   setApiKeys(keysArray) {
-    this.apiKeys = keysArray
+    this.apiKeys = Array.from(new Set(keysArray
       .map(k => k.trim())
-      .filter(k => k.length > 10);
+      .filter(k => k.length > 10)));
     this.currentKeyIndex = 0;
     this.saveKeysToLocalStorage();
   }

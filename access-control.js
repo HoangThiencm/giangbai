@@ -143,6 +143,9 @@ async function accessControlMain() {
             if (user.full_name) localStorage.setItem('userName', user.full_name);
             if (user.username) localStorage.setItem('userEmail', user.username);
             if (user.class_name !== undefined) localStorage.setItem('userClassName', user.class_name || '');
+            if (Array.isArray(user.gemini_keys) && user.gemini_keys.length > 0) {
+                localStorage.setItem('khbd_user_gemini_keys_' + (user.username || user.email || 'default'), JSON.stringify(user.gemini_keys));
+            }
             return pages;
         } catch {
             return getAllowedPages();

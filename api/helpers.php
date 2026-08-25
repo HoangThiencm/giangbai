@@ -559,6 +559,18 @@ function ensure_users_expires_option_column(PDO $pdo): void
     }
 }
 
+function ensure_users_gemini_keys_column(PDO $pdo): void
+{
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'gemini_keys'");
+        if (!$stmt->fetch()) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN gemini_keys TEXT NULL DEFAULT NULL AFTER allowed_pages_json");
+        }
+    } catch (Throwable $e) {
+        // Column migration is best-effort for older databases.
+    }
+}
+
 function schema_marker_path(string $name): string
 {
     $safe = preg_replace('/[^a-z0-9_-]/i', '', $name);
@@ -596,6 +608,27 @@ function progress_state_summary(array $state): array
 function public_user(array $user): array
 {
     $pages = teacher_allowed_pages_resolved($user);
+    $rawKeys = $user['gemini_keys'] ?? null;
+    $geminiKeys = [];
+    if (is_string($rawKeys) && trim($rawKeys) !== '') {
+        $decoded = json_decode($rawKeys, true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $k) {
+                $k = trim((string)$k);
+                if (strlen($k) > 10 && !in_array($k, $geminiKeys, true)) {
+                    $geminiKeys[] = $k;
+                }
+            }
+        }
+    } elseif (is_array($rawKeys)) {
+        foreach ($rawKeys as $k) {
+            $k = trim((string)$k);
+            if (strlen($k) > 10 && !in_array($k, $geminiKeys, true)) {
+                $geminiKeys[] = $k;
+            }
+        }
+    }
+
     return [
         'id' => (int)$user['id'],
         'username' => $user['username'],
@@ -603,6 +636,7 @@ function public_user(array $user): array
         'role' => $user['role'],
         'class_name' => $user['class_name'],
         'allowed_pages' => $pages,
+        'gemini_keys' => $geminiKeys,
         'is_active' => (bool)$user['is_active'],
         'expires_at' => $user['expires_at'],
         'expires_option' => normalize_duration_option($user['expires_option'] ?? 'forever'),

@@ -67,7 +67,7 @@ const ACTIVITY_TITLES = {
 // =============================================================================
 // KHỞI CHẠY KHI TRANG SẴN SÀNG
 // =============================================================================
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   initLucideIcons();
   loadStateFromLocalStorage();
   setupEventListeners();
@@ -77,6 +77,13 @@ document.addEventListener("DOMContentLoaded", () => {
   updateImageCounts();
   renderImageGallery();
   renderAllTabsPreview();
+
+  try {
+    await geminiAPI.syncKeysFromServer();
+    updateKeyCountDisplay();
+  } catch (e) {
+    console.warn("Lỗi sync keys khi khởi tạo:", e);
+  }
 });
 
 function initLucideIcons() {
@@ -1400,7 +1407,7 @@ function setupApiKeyModal() {
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const text = event.target.result || "";
         const keys = text
           .split(/[\r\n,;]+/)
@@ -1414,22 +1421,26 @@ function setupApiKeyModal() {
 
         const textarea = document.getElementById("textareaApiKeys");
         textarea.value = keys.join("\n");
-        geminiAPI.setApiKeys(keys);
+        await geminiAPI.saveKeysToServer(keys);
         updateKeyCountDisplay();
-        showToast(`Đã nạp thành công ${keys.length} API Keys từ file "${file.name}"!`, "success");
+        showToast(`Đã nạp và lưu ${keys.length} API Keys lên CSDL máy chủ!`, "success");
       };
       reader.readAsText(file);
       e.target.value = ""; // Reset
     });
   }
 
-  document.getElementById("btnSaveApiKeys").addEventListener("click", () => {
+  document.getElementById("btnSaveApiKeys").addEventListener("click", async () => {
     const text = document.getElementById("textareaApiKeys").value;
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-    geminiAPI.setApiKeys(lines);
+    await geminiAPI.saveKeysToServer(lines);
     updateKeyCountDisplay();
     closeModal("modalApiKeys");
-    showToast(`Đã lưu ${geminiAPI.apiKeys.length} API Keys thành công!`, "success");
+    if (geminiAPI.apiKeys.length > 0) {
+      showToast(`Đã lưu ${geminiAPI.apiKeys.length} API Keys lên CSDL máy chủ!`, "success");
+    } else {
+      showToast(`Đã xóa danh sách API Keys trên CSDL`, "info");
+    }
   });
 
   document.getElementById("btnTestApiKey").addEventListener("click", async () => {
