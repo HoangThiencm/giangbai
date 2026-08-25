@@ -50,6 +50,14 @@ function phancong_current_user(PDO $pdo, bool $required = true): ?array
         return null;
     }
 
+    $allowedPages = json_decode((string)($user['allowed_pages_json'] ?? '[]'), true);
+    if (!is_array($allowedPages) || !in_array('phancongtochuyenmon', $allowedPages, true)) {
+        if ($required) {
+            respond(['error' => 'Tài khoản chưa được cấp quyền Quản lý tổ chuyên môn.'], 403);
+        }
+        return null;
+    }
+
     return $user;
 }
 
@@ -108,7 +116,7 @@ try {
     }
 
     if ($action === 'get') {
-        $currentUser = phancong_current_user($pdo, false);
+        $currentUser = phancong_current_user($pdo, true);
         $planKey = trim((string)($_GET['plan_key'] ?? 'default'));
         if ($planKey === '') {
             $planKey = 'default';
@@ -148,7 +156,7 @@ try {
     }
 
     if ($action === 'system_data') {
-        $currentUser = phancong_current_user($pdo, false);
+        $currentUser = phancong_current_user($pdo, true);
 
         // 1. Lấy danh sách giáo viên từ bảng users
         $teachersStmt = $pdo->query("SELECT id, username, full_name, class_name, allowed_pages_json FROM users WHERE role = 'teacher' AND is_active = 1 ORDER BY full_name ASC");

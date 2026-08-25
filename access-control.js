@@ -255,6 +255,14 @@ async function accessControlMain() {
         return;
     }
 
+    if (role === 'teacher' && pageKey === 'phancongtochuyenmon') {
+        if (!canOpenPage('phancongtochuyenmon', allowedPages)) {
+            alert('Tài khoản chưa được admin cấp quyền Quản lý tổ chuyên môn.');
+            window.location.href = 'index.html';
+        }
+        return;
+    }
+
     const teacherWorkspaceTools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thoikhoabieu'];
     if (role === 'teacher' && teacherWorkspaceTools.includes(pageKey)) {
         if (!canOpenPage(pageKey, allowedPages)) {

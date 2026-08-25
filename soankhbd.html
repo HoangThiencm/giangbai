@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trợ lý Soạn Kế hoạch Bài dạy AI (Toán THCS - Kết Nối Tri Thức Với Cuộc Sống)</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📐</text></svg>">
+
+  <!-- Authentication Check -->
+  <script>
+    if (!localStorage.getItem('authToken')) {
+      window.location.href = 'login.html';
+    }
+  </script>
+
+  <!-- KaTeX CSS & JS (Hỗ trợ công thức Toán học sắc nét) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Marked.js (Phân tích cú pháp Markdown) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@9.1.2/marked.min.js"></script>
+
+  <!-- docx.js (Xuất file Word .docx chuyên nghiệp) -->
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
+  
+  <!-- FileSaver.js (Lưu file trên trình duyệt) -->
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/khbd-styles.css">
+</head>
+<body>
+
+  <!-- =========================================================================
+       APP HEADER & TOOLBAR
+       ========================================================================= -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="app-brand">
+        <div class="brand-icon">📐</div>
+        <div>
+          <h1>Trợ lý Soạn Kế hoạch Bài dạy AI (Toán THCS)</h1>
+          <p>Bộ sách <b>Kết Nối Tri Thức Với Cuộc Sống</b> • Chuẩn CV 5512 • Tích hợp Khung Năng lực Toán, Khung AI (QĐ 2422) & Năng lực Số (TT 02/2025)</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" class="btn btn-outline" style="text-decoration: none;" title="Quay về Hub Trang chủ">
+          <i data-lucide="home"></i> Trang chủ
+        </a>
+        <button id="btn1ClickGenerate" class="btn btn-special" title="Tự động tạo lần lượt toàn bộ giáo án từ đầu đến cuối">
+          <i data-lucide="zap"></i> ⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)
+        </button>
+        <button id="btnCancelGeneration" class="btn btn-outline-dark" disabled title="Dừng tác vụ AI đang chạy">
+          <i data-lucide="circle-stop"></i> Hủy tạo
+        </button>
+        <button id="btnManageKeys" class="btn btn-outline" title="Quản lý và nạp danh sách Gemini API Keys">
+          <i data-lucide="key"></i> Quản lý API Key (<span id="keyCountBadge">0</span>)
+        </button>
+        <button id="btnClearAll" class="btn btn-danger" title="Xóa toàn bộ nội dung đã soạn">
+          <i data-lucide="trash-2"></i> Xóa tất cả
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Select Toolbar -->
+    <div class="toolbar-grid">
+      <div class="tool-group">
+        <label>Bộ Sách SGK (Cố định):</label>
+        <div class="book-badge-fixed">
+          <i data-lucide="book-open-check"></i> <span>Kết Nối Tri Thức Với Cuộc Sống</span>
+        </div>
+      </div>
+
+      <div class="tool-group">
+        <label for="selectGrade">Khối Lớp:</label>
+        <select id="selectGrade">
+          <option value="6">Toán 6 (KNTT)</option>
+          <option value="7">Toán 7 (KNTT)</option>
+          <option value="8">Toán 8 (KNTT)</option>
+          <option value="9">Toán 9 (KNTT)</option>
+        </select>
+      </div>
+
+      <div class="tool-group" style="grid-column: span 2;">
+        <label for="selectLesson">Chương & Bài học (Mục lục chuẩn KNTT):</label>
+        <select id="selectLesson">
+          <option value="">-- Chọn bài học từ SGK Kết Nối Tri Thức --</option>
+        </select>
+      </div>
+
+      <div class="tool-group">
+        <label for="selectModel">Model AI:</label>
+        <select id="selectModel">
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash (Nhanh & Tối ưu)</option>
+          <option value="gemini-2.5-pro">Gemini 2.5 Pro (Tư duy sâu)</option>
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       PROGRESS BAR (TỰ ĐỘNG HIỂN THỊ KHI CHẠY 1-CLICK HOẶC TÁC VỤ AI)
+       ========================================================================= -->
+  <div id="progressContainer" class="progress-container">
+    <div class="progress-header">
+      <span id="progressStepTitle">Đang chuẩn bị...</span>
+      <span id="progressPercent">0%</span>
+    </div>
+    <div class="progress-bar-outer">
+      <div id="progressBarInner" class="progress-bar-inner"></div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MAIN NAVIGATION TABS
+       ========================================================================= -->
+  <nav class="main-nav">
+    <button class="nav-tab-btn active" data-tab="tabConfig">
+      <i data-lucide="sliders"></i> 0. Thiết lập chung
+    </button>
+    <button class="nav-tab-btn" data-tab="tabVision">
+      <i data-lucide="image"></i> 1. Phân tích ảnh SGK KNTT <span id="imgCountBadge" class="tab-badge">0 ảnh</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="tabObjectives">
+      <i data-lucide="target"></i> 2. I. Mục tiêu
+    </button>
+    <button class="nav-tab-btn" data-tab="tabMaterials">
+      <i data-lucide="package"></i> 3. II. Thiết bị & Học liệu
+    </button>
+    <button class="nav-tab-btn" data-tab="tabActivities">
+      <i data-lucide="layers"></i> 4. III. Tiến trình Dạy học
+    </button>
+    <button class="nav-tab-btn" data-tab="tabFullPreview">
+      <i data-lucide="file-text"></i> 5. Toàn bộ Giáo án (.DOCX)
+    </button>
+  </nav>
+
+  <!-- =========================================================================
+       APP MAIN CONTENT
+       ========================================================================= -->
+  <main class="app-body">
+
+    <!-- -----------------------------------------------------------------------
+         TAB 0: THIẾT LẬP CHUNG & THÔNG TIN BÀI DẠY
+         ----------------------------------------------------------------------- -->
+    <section id="tabConfig" class="tab-pane active">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="settings"></i> Thông tin Kế hoạch Bài dạy (Chuẩn Công văn 5512)</h2>
+          <span class="text-muted" style="font-size: 0.85rem;">Bộ sách: <b>Kết Nối Tri Thức Với Cuộc Sống</b></span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+          <div class="tool-group">
+            <label for="inputSchool">Tên Trường THCS:</label>
+            <input type="text" id="inputSchool" placeholder="Ví dụ: Trường THCS Nguyễn Du" value="TRƯỜNG THCS NGUYỄN DU">
+          </div>
+          <div class="tool-group">
+            <label for="inputGroup">Tổ Bộ môn:</label>
+            <input type="text" id="inputGroup" placeholder="Ví dụ: Tổ Toán - Tin học" value="TỔ TOÁN - TIN HỌC">
+          </div>
+          <div class="tool-group">
+            <label for="inputTeacher">Họ và tên Giáo viên:</label>
+            <input type="text" id="inputTeacher" placeholder="Ví dụ: ThS. Nguyễn Văn A" value="Giáo viên Môn Toán">
+          </div>
+          <div class="tool-group">
+            <label for="inputSubject">Môn học:</label>
+            <input type="text" id="inputSubject" value="TOÁN">
+          </div>
+          <div class="tool-group">
+            <label for="inputTopicCustom">Tên Bài học (Có thể nhập hoặc chọn ở trên):</label>
+            <input type="text" id="inputTopicCustom" placeholder="Nhập tên bài học cụ thể...">
+          </div>
+          <div class="tool-group">
+            <label for="inputDuration">Thời lượng dạy học:</label>
+            <input type="text" id="inputDuration" value="02 tiết (90 phút)">
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
+          <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn giáo án KNTT:</h4>
+          <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
+            <li><b>Bước 1:</b> Chọn Khối lớp (Toán 6, 7, 8, 9) và chọn Bài học KNTT từ thanh chọn nhanh phía trên.</li>
+            <li><b>Bước 2 (Tùy chọn):</b> Sang Tab 1 để <i>Dán ảnh chụp trang SGK Kết Nối Tri Thức (Ctrl + V)</i> giúp AI đọc chính xác nội dung sách.</li>
+            <li><b>Bước 3:</b> Bấm nút <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b> ở góc trên để AI tự động tạo từ A đến Z, hoặc tạo từng phần riêng lẻ trong từng Tab.</li>
+            <li><b>Bước 4:</b> Sang Tab 5 kiểm tra và bấm <b>Xuất Toàn bộ Giáo án (.DOCX)</b> để tải file Word chuẩn đẹp về máy!</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 1: PHÂN TÍCH ẢNH SGK KNTT (VISION)
+         ----------------------------------------------------------------------- -->
+    <section id="tabVision" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="camera"></i> Dán & Quản lý Ảnh trang SGK Kết Nối Tri Thức</h2>
+          <div class="card-actions">
+            <button id="btnAnalyzeVision" class="btn btn-primary">
+              <i data-lucide="sparkles"></i> Đọc và Phân tích nội dung SGK KNTT
+            </button>
+            <button id="btnClearVisionImages" class="btn btn-outline-dark">
+              <i data-lucide="trash"></i> Xóa tất cả ảnh
+            </button>
+          </div>
+        </div>
+
+        <!-- Dropzone & Paste Area -->
+        <div id="dropzoneContainer" class="dropzone-container">
+          <div class="dropzone-icon">📋</div>
+          <div class="dropzone-text">
+            <h4>Dán ảnh trang SGK KNTT từ Clipboard (Ctrl + V) hoặc Kéo & Thả ảnh vào đây</h4>
+            <p>Hỗ trợ chụp màn hình các trang SGK Kết Nối Tri Thức và dán trực tiếp. Nhấn để chọn file từ máy tính.</p>
+          </div>
+          <input type="file" id="fileInputImages" multiple accept="image/*" style="display: none;">
+        </div>
+
+        <!-- Image Gallery Grid -->
+        <div id="imageGallery" class="image-gallery"></div>
+      </div>
+
+      <!-- Result Panel (Split View) -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i data-lucide="file-check"></i> Kết quả Phân tích Nội dung SGK Kết Nối Tri Thức</h3>
+          <div class="card-actions">
+            <button class="btn btn-outline-dark btn-sm toggle-preview-btn" data-target="editorVision">
+              <i data-lucide="eye"></i> Toggle Preview KaTeX
+            </button>
+          </div>
+        </div>
+        <div class="editor-preview-container">
+          <div class="panel-box">
+            <div class="panel-header"><span>Nội dung Markdown (Có thể chỉnh sửa)</span></div>
+            <textarea id="editorVision" class="markdown-editor" placeholder="Nội dung phân tích SGK KNTT sẽ hiển thị ở đây sau khi AI xử lý..."></textarea>
+          </div>
+          <div class="panel-box">
+            <div class="panel-header"><span>Xem trước KaTeX & Bảng biểu</span></div>
+            <div id="previewVision" class="preview-rendered"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 2: I. MỤC TIÊU (OBJECTIVES)
+         ----------------------------------------------------------------------- -->
+    <section id="tabObjectives" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="target"></i> I. Mục tiêu Bài học (Chuẩn CV 5512, Năng lực Toán, AI & Số)</h2>
+          <div class="card-actions">
+            <button id="btnGenerateObjectives" class="btn btn-primary">
+              <i data-lucide="sparkles"></i> Tạo Mục tiêu Bài học
+            </button>
+            <button id="btnExportObjectivesDocx" class="btn btn-success">
+              <i data-lucide="download"></i> Xuất Word (.docx)
+            </button>
+          </div>
+        </div>
+        <div class="editor-preview-container">
+          <div class="panel-box">
+            <div class="panel-header"><span>Biên soạn Markdown</span></div>
+            <textarea id="editorObjectives" class="markdown-editor" placeholder="Bấm 'Tạo Mục tiêu Bài học' để AI sinh nội dung theo chuẩn CV 5512 bám sát SGK KNTT..."></textarea>
+          </div>
+          <div class="panel-box">
+            <div class="panel-header"><span>Xem trước Trực quan KaTeX</span></div>
+            <div id="previewObjectives" class="preview-rendered"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 3: II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
+         ----------------------------------------------------------------------- -->
+    <section id="tabMaterials" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="package"></i> II. Thiết bị Dạy học & Học liệu (Giáo viên, Học sinh, Ứng dụng Số/AI)</h2>
+          <div class="card-actions">
+            <button id="btnGenerateMaterials" class="btn btn-primary">
+              <i data-lucide="sparkles"></i> Tạo Thiết bị & Học liệu
+            </button>
+            <button id="btnExportMaterialsDocx" class="btn btn-success">
+              <i data-lucide="download"></i> Xuất Word (.docx)
+            </button>
+          </div>
+        </div>
+        <div class="editor-preview-container">
+          <div class="panel-box">
+            <div class="panel-header"><span>Biên soạn Markdown</span></div>
+            <textarea id="editorMaterials" class="markdown-editor" placeholder="Bấm 'Tạo Thiết bị & Học liệu' để tạo danh mục đồ dùng và học liệu số KNTT..."></textarea>
+          </div>
+          <div class="panel-box">
+            <div class="panel-header"><span>Xem trước Trực quan</span></div>
+            <div id="previewMaterials" class="preview-rendered"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 4: III. TIẾN TRÌNH DẠY HỌC (SUB-TABS A -> G)
+         ----------------------------------------------------------------------- -->
+    <section id="tabActivities" class="tab-pane">
+      <div class="card" style="padding-bottom: 0.5rem;">
+        <!-- Subtabs A -> G -->
+        <div class="activities-nav">
+          <button class="act-tab-btn active" data-act="A">A. Khởi động</button>
+          <button class="act-tab-btn" data-act="B">B. Hình thành Kiến thức</button>
+          <button class="act-tab-btn" data-act="C">C. Luyện tập</button>
+          <button class="act-tab-btn" data-act="D">D. Vận dụng</button>
+          <button class="act-tab-btn" data-act="E">E. Kế hoạch Đánh giá</button>
+          <button class="act-tab-btn" data-act="F">F. Hồ sơ Dạy học (PHT)</button>
+          <button class="act-tab-btn" data-act="G">G. Hướng dẫn Về nhà</button>
+        </div>
+
+        <div class="card-header" style="margin-bottom: 0.5rem;">
+          <h3 id="currentActTitle" class="card-title">A. Hoạt động Khởi động (Mở đầu / Tiếp cận vấn đề)</h3>
+          <div class="card-actions">
+            <button id="btnGenerateCurrentAct" class="btn btn-primary">
+              <i data-lucide="sparkles"></i> Tạo nội dung mục này
+            </button>
+            <button id="btnExportCurrentActDocx" class="btn btn-success">
+              <i data-lucide="download"></i> Xuất Word mục này
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Editor/Preview Pane -->
+      <div class="card">
+        <div class="editor-preview-container">
+          <div class="panel-box">
+            <div class="panel-header"><span id="editorActLabel">Nội dung Markdown Hoạt động</span></div>
+            <textarea id="editorActivity" class="markdown-editor" placeholder="Bấm 'Tạo nội dung mục này' để AI biên soạn đủ 4 bước sư phạm: a. Mục tiêu, b. Nội dung, c. Sản phẩm, d. Tổ chức thực hiện..."></textarea>
+          </div>
+          <div class="panel-box">
+            <div class="panel-header"><span>Xem trước KaTeX & Bảng biểu</span></div>
+            <div id="previewActivity" class="preview-rendered"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 5: TOÀN BỘ GIÁO ÁN (XEM TRƯỚC & XUẤT .DOCX HOÀN CHỈNH)
+         ----------------------------------------------------------------------- -->
+    <section id="tabFullPreview" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="file-text"></i> Toàn bộ Kế hoạch Bài dạy KNTT (Tổng hợp các mục I, II, III.A-G)</h2>
+          <div class="card-actions">
+            <button id="btnExportFullDocx" class="btn btn-special">
+              <i data-lucide="download"></i> 📥 XUẤT TOÀN BỘ GIÁO ÁN (.DOCX)
+            </button>
+            <button id="btnCopyFullMarkdown" class="btn btn-outline-dark">
+              <i data-lucide="copy"></i> Sao chép Markdown
+            </button>
+            <button id="btnPrintPlan" class="btn btn-outline-dark">
+              <i data-lucide="printer"></i> In ấn
+            </button>
+          </div>
+        </div>
+
+        <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; min-height: 500px;">
+          <div id="fullLessonPreview" class="preview-rendered" style="max-height: none;">
+            <p style="text-align: center; color: var(--text-muted); font-style: italic;">
+              Chưa có nội dung giáo án. Hãy tạo nội dung ở các Tab 2, 3, 4 hoặc bấm nút <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b>!
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================================
+       APP FOOTER
+       ========================================================================= -->
+  <footer class="app-footer">
+    <div>
+      <b>Trợ lý Soạn Kế hoạch Bài dạy AI (Môn Toán THCS - Bộ Kết Nối Tri Thức Với Cuộc Sống)</b> • GDPT 2018
+    </div>
+    <div id="statusFooterText">
+      Sẵn sàng. (Model: <span id="footerModelName">gemini-2.5-flash</span>)
+    </div>
+  </footer>
+
+  <!-- =========================================================================
+       MODALS
+       ========================================================================= -->
+
+  <!-- Modal 1: Quản lý API Key -->
+  <div id="modalApiKeys" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3><i data-lucide="key"></i> Quản lý Gemini API Keys</h3>
+        <button class="modal-close-btn" data-close-modal="modalApiKeys">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+          Nhập một hoặc nhiều API Key (mỗi dòng 1 key). Ứng dụng sẽ tự động <b>xoay vòng Key (Key Rotation)</b> khi gặp lỗi hết quota (HTTP 429).
+        </p>
+        <textarea id="textareaApiKeys" rows="7" style="width: 100%; padding: 0.6rem; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px;" placeholder="AIzaSy...&#10;AIzaSy..."></textarea>
+        
+        <div style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+          <span id="keyValidationStatus" style="font-size: 0.82rem; font-weight: 600;"></span>
+          <button id="btnTestApiKey" class="btn btn-outline-dark btn-sm">
+            <i data-lucide="check-circle"></i> Kiểm tra Key
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-dark" data-close-modal="modalApiKeys">Đóng</button>
+        <button id="btnSaveApiKeys" class="btn btn-primary">Lưu danh sách Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Phóng to ảnh (Image Zoom) -->
+  <div id="modalImageZoom" class="modal-backdrop modal-zoom">
+    <div class="modal-dialog">
+      <div class="modal-header" style="background: #1e293b; color: white; border-bottom: 1px solid #334155;">
+        <h3 id="zoomImageTitle">Xem ảnh chi tiết</h3>
+        <button class="modal-close-btn" data-close-modal="modalImageZoom" style="color: #cbd5e1;">&times;</button>
+      </div>
+      <div class="modal-body" style="background: #0f172a; padding: 1rem; text-align: center;">
+        <img id="zoomImageSrc" src="" alt="Zoom Image">
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- =========================================================================
+       SCRIPTS
+       ========================================================================= -->
+  <script src="js/khbd-curriculum.js"></script>
+  <script src="js/khbd-prompts.js"></script>
+  <script src="js/khbd-gemini.js"></script>
+  <script src="js/khbd-docx.js"></script>
+  <script src="js/khbd-app.js"></script>
+</body>
+</html>

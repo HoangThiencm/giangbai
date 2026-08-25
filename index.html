@@ -334,6 +334,19 @@
             background: rgba(251, 191, 36, 0.45);
         }
 
+        .tool-tile--soankhbd {
+            background: linear-gradient(145deg, #1e1b4b 0%, #4338ca 52%, #06b6d4 100%);
+            box-shadow: 0 14px 36px rgba(6, 182, 212, 0.22);
+        }
+
+        .tool-tile--soankhbd .tool-tile-glow {
+            width: 160px;
+            height: 160px;
+            right: -28px;
+            bottom: -50px;
+            background: rgba(34, 211, 238, 0.45);
+        }
+
         .tool-tile--vehinh {
             background: linear-gradient(145deg, #1e1b4b 0%, #4338ca 52%, #6366f1 100%);
             box-shadow: 0 14px 36px rgba(99, 102, 241, 0.22);
@@ -837,7 +850,8 @@
             thanhtich: 'thanhtich.html',
             thoikhoabieu: 'thoikhoabieu.html',
             phancongtochuyenmon: 'phancongtochuyenmon.html',
-            rutgon: 'rutgon.html'
+            rutgon: 'rutgon.html',
+            soankhbd: 'soankhbd.html'
         };
         const LOTRINH_PAGE_KEYS = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
 
@@ -908,7 +922,7 @@
         }
 
         function teacherHasAnyToolPage(allowedSet) {
-            return Object.values(TOOL_PAGE_LINKS).some(pageKey => allowedSet.has(pageKey));
+            return Object.keys(TOOL_PAGE_LINKS).some(pageKey => allowedSet.has(pageKey));
         }
 
         function applyTeacherAllowedPagesVisibility(allowedSet, features) {
@@ -1075,6 +1089,7 @@
                         <div>
                             <h4 class="mb-2 font-bold text-slate-900">2. Các tính năng chính</h4>
                             <ul class="list-disc space-y-1 pl-5">
+                                <li><b>Soạn KHBD (Kế hoạch bài dạy):</b> Soạn giáo án môn Toán Kết Nối Tri Thức chuẩn Công văn 5512, tích hợp năng lực số &amp; AI, xuất file Word docx 1-Click.</li>
                                 <li><b>Dạy học từ Google Slide:</b> Tích hợp Google Slides vào hệ thống để giảng dạy trực tiếp không cần chuyển tab.</li>
                                 <li><b>Dùng AI để vẽ hình học:</b> Nhập đề bài, AI sẽ hỗ trợ vẽ hình.</li>
                                 <li><b>Tạo Đề Ma Trận:</b> Upload ảnh bảng ma trận, AI tự động đọc rồi sinh đề thi chuẩn.</li>
@@ -1120,6 +1135,17 @@
                             <span class="tool-tile-eyebrow">CV 7991-BGDĐT</span>
                             <h3 class="tool-tile-title">Đề từ ma trận</h3>
                             <p class="tool-tile-desc">Quét ma trận / bảng đặc tả → sinh đề TN &amp; TL → xuất Word.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
+                    <a href="soankhbd.html" data-tool="soankhbd" class="tool-tile tool-tile--colored tool-tile--soankhbd">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-book-bookmark"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">CV 5512 · Khung AI &amp; Số</span>
+                            <h3 class="tool-tile-title">Soạn KHBD</h3>
+                            <p class="tool-tile-desc">Soạn kế hoạch bài dạy AI môn Toán SGK Kết Nối Tri Thức, tự động 1-Click và xuất Word .docx.</p>
                         </div>
                         <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                     </a>
@@ -1307,8 +1333,6 @@
     <script src="ai-stats-panel.js?v=20260708"></script>
     <script>
         (async function setupTeacherLotrinhHub() {
-            if (localStorage.getItem('userRole') !== 'teacher') return;
-
             let accountFeatures = {};
             let globalConfig = null;
             let teacherTabs = {
@@ -1316,6 +1340,31 @@
                 progress_stats: true,
                 ai_stats: true,
             };
+            let allowedPages = [];
+            try {
+                const res = await fetch('api/me.php', { cache: 'no-store', credentials: 'include' });
+                if (res.status === 401) {
+                    localStorage.removeItem('authToken');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                if (res.ok) {
+                    const user = (await res.json()).user || {};
+                    allowedPages = Array.isArray(user.allowed_pages) ? user.allowed_pages : [];
+                    localStorage.setItem('allowedPages', JSON.stringify(allowedPages));
+                    if (user.role) localStorage.setItem('userRole', user.role);
+                    if (user.full_name) localStorage.setItem('userName', user.full_name);
+                    if (user.username) localStorage.setItem('userEmail', user.username);
+                    if (user.class_name !== undefined) localStorage.setItem('userClassName', user.class_name || '');
+                } else {
+                    allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]');
+                }
+            } catch {
+                try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
+            }
+
+            if (localStorage.getItem('userRole') !== 'teacher') return;
+
             try {
                 const cfgRes = await fetch('global_config.json', { cache: 'no-store' });
                 if (cfgRes.ok) {
@@ -1327,28 +1376,6 @@
                     storeTeacherTabFlags(accountFeatures);
                 }
             } catch {}
-
-            let allowedPages = [];
-            try {
-                const res = await fetch('api/me.php', { cache: 'no-store', credentials: 'include' });
-                if (res.status === 401) {
-                    localStorage.removeItem('authToken');
-                    window.location.href = 'login.html';
-                    return;
-                }
-                if (res.ok) {
-                    const data = await res.json();
-                    allowedPages = data.user?.allowed_pages || [];
-                    localStorage.setItem('allowedPages', JSON.stringify(allowedPages));
-                    if (data.user?.class_name) {
-                        localStorage.setItem('userClassName', data.user.class_name);
-                    }
-                } else {
-                    allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]');
-                }
-            } catch {
-                try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
-            }
 
             const routeMap = {
                 lotrinh: { url: 'lotrinhtoan6.html', label: 'Toán 6', grade: 6 },
@@ -1374,7 +1401,7 @@
             const canViewStats = teacherTabs.progress_stats && allowedSet.has('thongketientrinh');
             const canViewDocuments = allowedSet.has('quanlyvanban');
             const canViewDesign = teacherTabs.design && lotrinhPages.length > 0;
-            const hasTeacherWorkspace = canViewDesign || canViewStats || canViewDocuments || (teacherTabs.ai_stats && allowedSet.has('theodoiai'));
+            const hasTeacherWorkspace = canViewDesign || canViewStats || canViewDocuments || (teacherTabs.ai_stats && allowedSet.has('theodoiai')) || teacherHasAnyToolPage(allowedSet);
 
             const mainToolsGridEarly = document.getElementById('mainToolsGrid');
             if (mainToolsGridEarly) {
