@@ -33,9 +33,6 @@ if ($action === 'create') {
     if ($username === '' || $password === '' || $fullName === '') {
         respond(['error' => 'Thieu tai khoan, mat khau hoac ho ten.'], 422);
     }
-    if ($role === 'teacher' && $className === '') {
-        respond(['error' => 'Giao vien can co lop phu trach (vd. 6A).'], 422);
-    }
     if ($role === 'teacher' && !$allowedPages) {
         respond(['error' => 'Giao vien can duoc mo it nhat mot chuc nang.'], 422);
     }
@@ -99,9 +96,6 @@ if ($action === 'update') {
     $isActive = !empty($data['is_active']) ? 1 : 0;
     $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6']);
 
-    if ($role === 'teacher' && $className === '') {
-        respond(['error' => 'Giao vien can co lop phu trach (vd. 6A).'], 422);
-    }
     if ($role === 'teacher' && !$allowedPages) {
         respond(['error' => 'Giao vien can duoc mo it nhat mot chuc nang.'], 422);
     }

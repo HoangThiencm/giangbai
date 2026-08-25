@@ -2430,10 +2430,10 @@
             }
             const classes = studentClassCatalog();
             if (!classes.length) {
-                hint.textContent = 'Chưa có học sinh nào được xếp lớp. Import/tạo học sinh có Lớp/Nhóm (vd. 6A) trước, hoặc nhập tên lớp phụ trách (cách nhau bằng dấu phẩy).';
+                hint.textContent = 'Không bắt buộc. Chỉ chọn hoặc nhập lớp khi giáo viên cần quản lý học sinh theo lớp.';
                 return;
             }
-            hint.textContent = `Có ${classes.length} lớp từ học sinh. Tick một hoặc nhiều lớp phụ trách — tên phải trùng Lớp/Nhóm của học sinh để giám sát tiến độ.`;
+            hint.textContent = `Không bắt buộc. Có ${classes.length} lớp từ học sinh; chỉ tick hoặc nhập lớp phụ trách khi cần giám sát tiến độ theo lớp.`;
         }
 
         function renderTeacherClassCheckboxes(prefix, currentValue = '') {
@@ -2459,7 +2459,7 @@
                 }
                 input.classList.remove('hidden');
                 input.value = joinTeacherClassNames([...selected]);
-                input.placeholder = 'Nhập lớp phụ trách, vd. 6A, 6B';
+                input.placeholder = 'Không bắt buộc — nhập lớp, vd. 6A, 6B';
                 return;
             }
 
@@ -2510,14 +2510,14 @@
             const isTeacher = role === 'teacher';
             const createLabel = document.getElementById('createClassNameLabel');
             const createInput = document.getElementById('createClassNameInput');
-            if (createLabel) createLabel.textContent = isTeacher ? 'Lớp phụ trách' : 'Lớp/Nhóm';
-            if (createInput) createInput.placeholder = isTeacher ? '6A' : '6A hoặc Toán 6 tối T3-T5';
+            if (createLabel) createLabel.textContent = isTeacher ? 'Lớp phụ trách (không bắt buộc)' : 'Lớp/Nhóm';
+            if (createInput) createInput.placeholder = isTeacher ? 'Không bắt buộc — vd. 6A' : '6A hoặc Toán 6 tối T3-T5';
             applyClassFieldForRole('create', role, createInput?.value || currentValue);
 
             const editLabel = document.getElementById('editClassNameLabel');
             const editInput = document.getElementById('editClassNameInput');
-            if (editLabel) editLabel.textContent = isTeacher ? 'Lớp phụ trách' : 'Lớp/Nhóm';
-            if (editInput) editInput.placeholder = isTeacher ? '6A' : '6A hoặc Toán 6 tối T3-T5';
+            if (editLabel) editLabel.textContent = isTeacher ? 'Lớp phụ trách (không bắt buộc)' : 'Lớp/Nhóm';
+            if (editInput) editInput.placeholder = isTeacher ? 'Không bắt buộc — vd. 6A' : '6A hoặc Toán 6 tối T3-T5';
             if (document.getElementById('editClassNameSelect')) {
                 applyClassFieldForRole('edit', role, currentValue || editInput?.value || '');
             }
@@ -2994,10 +2994,6 @@
             if (role === 'teacher' && !allowedPages.length) {
                 return alert('Bật ít nhất một chức năng cho giáo viên.');
             }
-            if (role === 'teacher' && !className) {
-                return alert('Giáo viên cần tick chọn hoặc nhập ít nhất một lớp phụ trách (vd. 6A, 6B). Tên lớp phải trùng với Lớp/Nhóm của học sinh.');
-            }
-
             try {
                 const res = await fetch('api/admin_students.php', {
                     method: 'POST',
@@ -3117,9 +3113,6 @@
             const className = readClassNameFromForm('edit');
             if (role === 'teacher' && !allowedPages.length) {
                 return alert('Bật ít nhất một chức năng cho giáo viên.');
-            }
-            if (role === 'teacher' && !className) {
-                return alert('Giáo viên cần tick chọn hoặc nhập ít nhất một lớp phụ trách (vd. 6A, 6B). Tên lớp phải trùng với Lớp/Nhóm của học sinh.');
             }
             const payload = {
                 action: 'update',
