@@ -902,9 +902,9 @@
             </div>
             <div class="brand-text">
                 <div class="brand-title-row">
-                    <h1><span id="display-plan-title">Tổ Toán - Tin học</span></h1>
+                    <h1><span id="display-plan-title">Chưa khai báo tổ</span></h1>
                     <span class="plan-title-badge" onclick="openConfigModal('tab-info')" title="Nhấn để đổi tên tổ / năm học">
-                        <i class="fas fa-pen-to-square"></i> <span id="display-plan-year">2025-2026 (HK1)</span>
+                        <i class="fas fa-pen-to-square"></i> <span id="display-plan-year">Khai báo để bắt đầu</span>
                     </span>
                 </div>
                 <div class="brand-sub-row">
@@ -1002,6 +1002,12 @@
 
         <!-- CỘT PHẢI: LƯỚI GIÁO VIÊN & LIVE STATS BANNER -->
         <main id="right-panel">
+            <section id="plan-onboarding" class="hidden" style="margin-bottom: 16px; padding: 24px; border: 1px dashed #818cf8; border-radius: 14px; background: #eef2ff; text-align: center;">
+                <i class="fas fa-people-roof" style="font-size: 2rem; color: #4f46e5;"></i>
+                <h2 style="margin: 10px 0 6px; color: #312e81; font-size: 1.2rem;">Bắt đầu khai báo tổ chuyên môn</h2>
+                <p style="margin: 0 0 14px; color: #475569;">Chưa có dữ liệu cho kế hoạch này. Hãy khai báo tổ, đợt, môn học, lớp và giáo viên; hoặc chọn bộ mẫu/đồng bộ trong phần khai báo.</p>
+                <button class="btn-small btn-small-primary" onclick="openConfigModal('tab-info')"><i class="fas fa-gear"></i> Khai báo tổ</button>
+            </section>
             <!-- THANH THỐNG KÊ TIẾN ĐỘ TRỰC QUAN (LIVE STATS) -->
             <div class="live-stats-banner">
                 <div class="live-chips-list" id="live-subject-chips">
@@ -1608,39 +1614,23 @@
             { id: 'phase_hk2_d2', name: 'Đợt 4 (Cuối HK2 / Ôn thi)', semester: 'HK2', weeks_count: 8, date_start: '2026-03-23', date_end: '2026-05-25', note: 'Ôn tập và bế giảng' }
         ];
 
-        // DỮ LIỆU KHỞI TẠO MẪU
+        // Trạng thái khởi tạo không chứa dữ liệu mẫu; các bộ mẫu chỉ được áp dụng theo thao tác người dùng.
         const defaultState = {
             info: {
-                title: 'Tổ Toán - Tin học',
-                school_year: '2025 - 2026',
-                semester: 'HK1',
+                title: '',
+                school_year: '',
+                semester: '',
                 plan_key: 'default',
-                current_phase_id: 'phase_hk1_d1'
+                current_phase_id: ''
             },
-            phases: JSON.parse(JSON.stringify(DEFAULT_PHASES)),
-            subjects: [
-                { key: 'math', name: 'Toán', periods: 4, color: '#2563eb', is_core: true },
-                { key: 'it', name: 'Tin học', periods: 1, color: '#059669', is_core: true },
-                { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false },
-                { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed', is_core: false }
-            ],
-            classes: ['61', '62', '63', '64', '65', '66', '71', '72', '73', '74', '75', '76', '81', '82', '83', '84', '85', '86', '91', '92', '93', '94', '95', '96', '97'],
+            phases: [],
+            subjects: [],
+            classes: [],
             phase_assignments: {},
-            teachers: [
-                { id: 't1', name: 'T.Thiên', role: 'TTCM', quota: 19, allowance: 3, qlpm: false, assignments: {} },
-                { id: 't2', name: 'T.Sáng', role: 'TPCM', quota: 19, allowance: 1, qlpm: false, assignments: {} },
-                { id: 't3', name: 'T.Đông', role: 'HP', quota: 4, allowance: 0, qlpm: false, assignments: {} },
-                { id: 't4', name: 'T.Danh', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
-                { id: 't5', name: 'T.Ánh', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
-                { id: 't6', name: 'T. Hải', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
-                { id: 't7', name: 'C. Bình', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
-                { id: 't8', name: 'C.Thảo', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
-                { id: 't9', name: 'T. Tính', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} },
-                { id: 't10', name: 'T. Tùng', role: 'GV', quota: 19, allowance: 0, qlpm: false, assignments: {} }
-            ],
+            teachers: [],
             unassigned: {},
             attendance: {
-                current_month: '9',
+                current_month: '',
                 records: {},
                 substitutes: {}
             }
@@ -1672,14 +1662,18 @@
         }
 
         function normalizeState(s) {
-            if (!s.info) s.info = { ...defaultState.info };
-            if (!Array.isArray(s.phases) || s.phases.length === 0) s.phases = JSON.parse(JSON.stringify(DEFAULT_PHASES));
-            if (!s.info.current_phase_id || !s.phases.some(p => p.id === s.info.current_phase_id)) {
+            if (!s || typeof s !== 'object') s = {};
+            if (!s.info || typeof s.info !== 'object') s.info = { ...defaultState.info };
+            s.info = { ...defaultState.info, ...s.info };
+            if (!Array.isArray(s.phases)) s.phases = [];
+            if (s.phases.length && !s.phases.some(p => p.id === s.info.current_phase_id)) {
                 s.info.current_phase_id = s.phases[0].id;
+            } else if (!s.phases.length) {
+                s.info.current_phase_id = '';
             }
 
-            if (!Array.isArray(s.subjects) || s.subjects.length === 0) s.subjects = [...defaultState.subjects];
-            if (!Array.isArray(s.classes)) s.classes = [...defaultState.classes];
+            if (!Array.isArray(s.subjects)) s.subjects = [];
+            if (!Array.isArray(s.classes)) s.classes = [];
             if (!Array.isArray(s.teachers)) s.teachers = [];
             if (!s.unassigned) s.unassigned = {};
             if (!s.phase_assignments) s.phase_assignments = {};
@@ -1713,7 +1707,7 @@
             });
 
             const curPhase = s.info.current_phase_id;
-            if (!s.phase_assignments[curPhase]) {
+            if (curPhase && !s.phase_assignments[curPhase]) {
                 s.phase_assignments[curPhase] = {
                     teachers: JSON.parse(JSON.stringify(s.teachers)),
                     unassigned: JSON.parse(JSON.stringify(s.unassigned))
@@ -1751,8 +1745,8 @@
 
         // ================= QUẢN LÝ & CHUYỂN ĐỔI ĐỢT (PHASES) =================
         function getCurrentPhase() {
-            const pid = state.info?.current_phase_id || (state.phases[0] ? state.phases[0].id : 'default');
-            return state.phases.find(p => p.id === pid) || state.phases[0] || { id: pid, name: 'Đợt 1', semester: 'HK1', weeks_count: 9 };
+            const pid = state.info?.current_phase_id || (state.phases[0] ? state.phases[0].id : '');
+            return state.phases.find(p => p.id === pid) || state.phases[0] || { id: '', name: 'Chưa có đợt', semester: '', weeks_count: 0 };
         }
 
         function switchPhase(phaseId) {
@@ -1815,15 +1809,16 @@
             if (!sel) return;
             const curId = state.info?.current_phase_id;
 
-            sel.innerHTML = state.phases.map(p => `
+            sel.innerHTML = state.phases.length ? state.phases.map(p => `
                 <option value="${p.id}" ${p.id === curId ? 'selected' : ''}>
                     ${escapeHtml(p.name)} (${p.weeks_count} tuần - ${p.semester})
                 </option>
-            `).join('');
+            `).join('') : '<option value="">Chưa có đợt phân công</option>';
         }
 
         // ================= TẠO NHANH ĐỢT MỚI KHI CÓ THAY ĐỔI (SỐ TUẦN TỰ DO) =================
         function openQuickNewPhaseModal() {
+            if (!requirePlanConfiguration()) return;
             const nextIdx = state.phases.length + 1;
             const curPhase = getCurrentPhase();
             document.getElementById('qp-name').value = `Đợt ${nextIdx}_${state.info.school_year || '2025-2026'}`;
@@ -1976,6 +1971,7 @@
         }
 
         async function saveToDB() {
+            if (!requirePlanConfiguration()) return;
             saveCurrentPhaseSnapshot();
             const saveBtn = document.getElementById('btn-save-db');
             if (saveBtn) {
@@ -2168,9 +2164,10 @@
             const titleEl = document.getElementById('display-plan-title');
             const yearEl = document.getElementById('display-plan-year');
 
-            if (titleEl) titleEl.textContent = state.info.title || 'Tổ Chuyên Môn';
-            if (yearEl) yearEl.textContent = `${state.info.school_year || ''} (${state.info.semester || 'HK1'})`;
+            if (titleEl) titleEl.textContent = state.info.title || 'Chưa khai báo tổ';
+            if (yearEl) yearEl.textContent = state.info.school_year ? `${state.info.school_year}${state.info.semester ? ` (${state.info.semester})` : ''}` : 'Khai báo để bắt đầu';
 
+            renderOnboarding();
             renderPhaseSelector();
             renderLiveStatsBanner();
             renderPool();
@@ -2178,6 +2175,20 @@
             renderAttendance();
             renderReports();
             renderOvertimeSummary();
+        }
+
+        function hasPlanConfiguration() {
+            return Boolean(state.info?.title || state.info?.school_year || state.phases.length || state.subjects.length || state.classes.length || state.teachers.length);
+        }
+
+        function renderOnboarding() {
+            document.getElementById('plan-onboarding')?.classList.toggle('hidden', hasPlanConfiguration());
+        }
+
+        function requirePlanConfiguration() {
+            if (hasPlanConfiguration()) return true;
+            openConfigModal('tab-info');
+            return false;
         }
 
         function renderLiveStatsBanner() {
@@ -2222,6 +2233,11 @@
             const pool = document.getElementById('pool-container');
             if (!pool) return;
             pool.innerHTML = '';
+
+            if (!state.subjects.length) {
+                pool.innerHTML = '<div style="color: #94a3b8; font-size: 0.85rem; padding: 12px 4px;">Khai báo môn học và lớp để bắt đầu phân công.</div>';
+                return;
+            }
 
             const searchVal = (document.getElementById('class-search')?.value || '').trim().toLowerCase();
 
@@ -2361,6 +2377,7 @@
 
         // ================= MA TRẬN PHÂN CÔNG TOÀN DIỆN (MODAL) =================
         function openMatrixModal() {
+            if (!requirePlanConfiguration()) return;
             const curP = getCurrentPhase();
             document.getElementById('matrix-modal-phase-label').textContent = `${curP.name} (${curP.weeks_count} tuần)`;
             renderMatrixModalTables();
@@ -3124,6 +3141,7 @@
 
         // ================= XUẤT EXCEL & JSON =================
         function handleExportExcel() {
+            if (!requirePlanConfiguration()) return;
             const currentTab = document.querySelector('.view-tab-btn.active')?.id;
             if (currentTab === 'tab-nav-chamcong') {
                 exportAttendanceToExcel();
