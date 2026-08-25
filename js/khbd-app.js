@@ -66,10 +66,7 @@ const ACTIVITY_TITLES = {
   A: { short: "A. Khởi động", full: "A. HOẠT ĐỘNG KHỞI ĐỘNG (MỞ ĐẦU / TIẾP CẬN VẤN ĐỀ)" },
   B: { short: "B. Hình thành KT", full: "B. HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI" },
   C: { short: "C. Luyện tập", full: "C. HOẠT ĐỘNG LUYỆN TẬP" },
-  D: { short: "D. Vận dụng", full: "D. HOẠT ĐỘNG VẬN DỤNG" },
-  E: { short: "E. Đánh giá", full: "E. KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ (MA TRẬN & RUBRICS)" },
-  F: { short: "F. Hồ sơ DH", full: "F. HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP CÓ ĐÁP ÁN)" },
-  G: { short: "G. Về nhà", full: "G. HƯỚNG DẪN VỀ NHÀ" }
+  D: { short: "D. Vận dụng", full: "D. HOẠT ĐỘNG VẬN DỤNG" }
 };
 
 // =============================================================================
@@ -165,8 +162,8 @@ function loadStateFromLocalStorage() {
       document.getElementById("toggleAiCompetency").checked = appState.teachingContext.integrations.ai;
       document.getElementById("toggleForeignLanguage").checked = appState.teachingContext.integrations.foreignLanguage;
       document.getElementById("toggleInclusiveSupport").checked = appState.teachingContext.integrations.inclusive;
-      setMultiSelectValues("selectTeachingMethods", appState.teachingContext.methods);
-      setMultiSelectValues("selectTeachingTechniques", appState.teachingContext.techniques);
+      setCheckboxGroupValues(".teaching-method-choice", appState.teachingContext.methods);
+      setCheckboxGroupValues(".teaching-technique-choice", appState.teachingContext.techniques);
 
       // Cập nhật các textareas
       document.getElementById("editorVision").value = appState.content.vision || "";
@@ -198,11 +195,9 @@ function normalizeTeachingContext(context) {
   };
 }
 
-function setMultiSelectValues(id, values) {
-  const select = document.getElementById(id);
-  if (!select) return;
+function setCheckboxGroupValues(selector, values) {
   const selected = new Set(values || []);
-  Array.from(select.options).forEach(option => { option.selected = selected.has(option.value); });
+  document.querySelectorAll(selector).forEach(input => { input.checked = selected.has(input.value); });
 }
 
 // =============================================================================
@@ -269,11 +264,11 @@ function setupEventListeners() {
       saveStateToLocalStorage();
     });
   });
-  [["selectTeachingMethods", "methods"], ["selectTeachingTechniques", "techniques"]].forEach(([id, key]) => {
-    document.getElementById(id).addEventListener("change", (e) => {
-      appState.teachingContext[key] = Array.from(e.target.selectedOptions).map(option => option.value);
+  [[".teaching-method-choice", "methods"], [".teaching-technique-choice", "techniques"]].forEach(([selector, key]) => {
+    document.querySelectorAll(selector).forEach(input => input.addEventListener("change", () => {
+      appState.teachingContext[key] = Array.from(document.querySelectorAll(`${selector}:checked`)).map(choice => choice.value);
       saveStateToLocalStorage();
-    });
+    }));
   });
 
   // 4. Dropzone & Paste ảnh toàn cục
@@ -435,6 +430,7 @@ function switchMainTab(tabId) {
 }
 
 function switchActivitySubtab(actKey) {
+  if (!ACTIVITY_TITLES[actKey]) return;
   document.querySelectorAll(".act-tab-btn").forEach(b => b.classList.remove("active"));
   const targetBtn = document.querySelector(`.act-tab-btn[data-act="${actKey}"]`);
   if (targetBtn) targetBtn.classList.add("active");
@@ -836,12 +832,14 @@ function renderMathPreview(markdownText, targetElementId) {
   if (window.marked) {
     const renderer = new window.marked.Renderer();
     renderer.html = rawHtml => escapeHtml(rawHtml);
-    html = window.marked.parse(markdownText, { breaks: true, gfm: true, renderer });
+    html = window.marked.parse(prepareLiteralListMarkers(markdownText), { breaks: true, gfm: true, renderer });
   } else {
     html = escapeHtml(markdownText).replace(/\n/g, "<br>");
   }
 
-  container.replaceChildren(sanitizePreviewHtml(html));
+  const previewContent = sanitizePreviewHtml(html);
+  applyLiteralListMarkers(previewContent);
+  container.replaceChildren(previewContent);
 
   // 2. Render công thức Toán học bằng KaTeX Auto-Render
   if (window.renderMathInElement) {
@@ -859,6 +857,43 @@ function renderMathPreview(markdownText, targetElementId) {
       console.warn("KaTeX render error:", e);
     }
   }
+}
+
+const KHBD_MAJOR_LIST_MARKER = "[[KHBD_MAJOR_LIST_MARKER]]";
+const KHBD_MINOR_LIST_MARKER = "[[KHBD_MINOR_LIST_MARKER]]";
+
+function prepareLiteralListMarkers(markdownText) {
+  let inCodeFence = false;
+  return String(markdownText || "").split(/\r?\n/).map(line => {
+    if (/^\s*```/.test(line)) {
+      inCodeFence = !inCodeFence;
+      return line;
+    }
+    if (inCodeFence) return line;
+    if (/^\s*-\s+/.test(line)) return line.replace(/^(\s*)-\s+/, `$1- ${KHBD_MAJOR_LIST_MARKER} `);
+    if (/^\s*\+\s+/.test(line)) return line.replace(/^(\s*)\+\s+/, `$1+ ${KHBD_MINOR_LIST_MARKER} `);
+    return line;
+  }).join("\n");
+}
+
+function applyLiteralListMarkers(documentFragment) {
+  documentFragment.querySelectorAll("li").forEach(listItem => {
+    const walker = document.createTreeWalker(listItem, NodeFilter.SHOW_TEXT);
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+      const marker = textNode.nodeValue.includes(KHBD_MAJOR_LIST_MARKER)
+        ? KHBD_MAJOR_LIST_MARKER
+        : textNode.nodeValue.includes(KHBD_MINOR_LIST_MARKER)
+          ? KHBD_MINOR_LIST_MARKER
+          : null;
+      if (!marker) continue;
+      const symbol = marker === KHBD_MAJOR_LIST_MARKER ? "-" : "+";
+      textNode.nodeValue = textNode.nodeValue.replace(marker, "");
+      listItem.style.listStyleType = "none";
+      listItem.insertBefore(document.createTextNode(`${symbol} `), listItem.firstChild);
+      break;
+    }
+  });
 }
 
 function escapeHtml(value) {
@@ -919,9 +954,9 @@ function getFullLessonPlanMarkdown() {
 
   const c = appState.content;
 
-  // Ghép các hoạt động A -> G
+  // Chỉ ghép bốn hoạt động lõi; E/F/G legacy vẫn được giữ trong localStorage.
   const actParts = [];
-  const actKeys = ["A", "B", "C", "D", "E", "F", "G"];
+  const actKeys = ["A", "B", "C", "D"];
   actKeys.forEach(k => {
     if (c.activities[k] && c.activities[k].trim()) {
       actParts.push(c.activities[k].trim());
@@ -939,7 +974,7 @@ function getFullLessonPlanMarkdown() {
     c.materials || "*[Chưa tạo II. Thiết bị dạy học và học liệu]*",
     `\n---\n`,
     `# III. TIẾN TRÌNH DẠY HỌC`,
-    fullActMarkdown || "*[Chưa tạo các hoạt động dạy học III.A - G]*"
+    fullActMarkdown || "*[Chưa tạo các hoạt động dạy học III.A - D]*"
   ].join("\n\n");
 
   return md;
@@ -1084,9 +1119,7 @@ async function handleGenerateCurrentActivity() {
   else if (actKey === "B") promptTemplate = PROMPTS.GENERATE_ACTIVITY_B;
   else if (actKey === "C") promptTemplate = PROMPTS.GENERATE_ACTIVITY_C;
   else if (actKey === "D") promptTemplate = PROMPTS.GENERATE_ACTIVITY_D;
-  else if (actKey === "E") promptTemplate = PROMPTS.GENERATE_ASSESSMENT;
-  else if (actKey === "F") promptTemplate = PROMPTS.GENERATE_PORTFOLIO;
-  else if (actKey === "G") promptTemplate = PROMPTS.GENERATE_HOMEWORK;
+  else return;
 
   // Lấy nội dung các hoạt động trước nếu có
   const prevActs = [];
@@ -1202,7 +1235,7 @@ async function handle1ClickGenerate() {
   }
 
   const topic = getTopicDisplayName();
-  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO TOÀN BỘ GIÁO ÁN cho bài:\n"${topic}" (Kết Nối Tri Thức - Lớp ${appState.selectedGrade})?\n\nTiến trình sẽ chạy tuần tự qua tất cả các bước (Mục tiêu -> Thiết bị -> HĐ A -> B -> C -> D -> Đánh giá -> PHT -> Về nhà).`;
+  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Kết Nối Tri Thức - Lớp ${appState.selectedGrade})?\n\nTiến trình sẽ chạy tuần tự qua các mục I. Mục tiêu, II. Thiết bị & học liệu và III. Hoạt động A -> D.`;
   
   if (!confirm(confirmMsg)) return;
 
@@ -1222,7 +1255,7 @@ async function handle1ClickGenerate() {
 
     // BƯỚC 1: Phân tích ảnh SGK (nếu có ảnh và chưa phân tích)
     if (appState.images.length > 0 && !appState.content.vision) {
-      updateProgress(10, "Bước 1/10: Đang đọc và phân tích ảnh SGK KNTT (Vision)...");
+      updateProgress(10, "Bước 1/7: Đang đọc và phân tích ảnh SGK KNTT...");
       const promptVision = PROMPTS.ANALYZE_TEXTBOOK.replace(/{topic}/g, topic).replace(/{subject}/g, subject);
       const resVision = await generateOneClickContent(promptVision, appState.images);
       appState.content.vision = resVision;
@@ -1234,7 +1267,7 @@ async function handle1ClickGenerate() {
     const textbookContent = appState.content.vision || "Dựa trên nội dung chuẩn SGK Toán Kết Nối Tri Thức Với Cuộc Sống.";
 
     // BƯỚC 2: Tạo I. Mục tiêu
-    updateProgress(20, "Bước 2/10: Đang tạo I. Mục tiêu bài học (Chuẩn CV 5512 & Khung AI/Số)...");
+    updateProgress(25, "Bước 2/7: Đang tạo I. Mục tiêu bài học...");
     const promptObj = PROMPTS.GENERATE_OBJECTIVES
       .replace(/{topic}/g, topic)
       .replace(/{subject}/g, subject)
@@ -1247,7 +1280,7 @@ async function handle1ClickGenerate() {
     await delay(800, appState.generationController.signal);
 
     // BƯỚC 3: Tạo II. Thiết bị dạy học và học liệu
-    updateProgress(30, "Bước 3/10: Đang tạo II. Thiết bị dạy học & Học liệu số...");
+    updateProgress(40, "Bước 3/7: Đang tạo II. Thiết bị dạy học & học liệu...");
     const promptMat = PROMPTS.GENERATE_MATERIALS
       .replace(/{topic}/g, topic)
       .replace(/{subject}/g, subject)
@@ -1259,7 +1292,7 @@ async function handle1ClickGenerate() {
     await delay(800, appState.generationController.signal);
 
     // BƯỚC 4: Tạo III.A Khởi động
-    updateProgress(40, "Bước 4/10: Đang tạo III.A Hoạt động Khởi động KNTT...");
+    updateProgress(55, "Bước 4/7: Đang tạo III.A Hoạt động Mở đầu...");
     const promptA = PROMPTS.GENERATE_ACTIVITY_A
       .replace(/{topic}/g, topic)
       .replace(/{subject}/g, subject)
@@ -1270,7 +1303,7 @@ async function handle1ClickGenerate() {
     await delay(800, appState.generationController.signal);
 
     // BƯỚC 5: Tạo III.B Hình thành kiến thức mới
-    updateProgress(55, "Bước 5/10: Đang tạo III.B Hoạt động Hình thành Kiến thức (Đầy đủ 4 bước)...");
+    updateProgress(70, "Bước 5/7: Đang tạo III.B Hoạt động Hình thành kiến thức...");
     const promptB = PROMPTS.GENERATE_ACTIVITY_B
       .replace(/{topic}/g, topic)
       .replace(/{subject}/g, subject)
@@ -1281,7 +1314,7 @@ async function handle1ClickGenerate() {
     await delay(800, appState.generationController.signal);
 
     // BƯỚC 6: Tạo III.C Luyện tập
-    updateProgress(68, "Bước 6/10: Đang tạo III.C Hoạt động Luyện tập (Kèm lời giải chi tiết)...");
+    updateProgress(82, "Bước 6/7: Đang tạo III.C Hoạt động Luyện tập...");
     const promptC = PROMPTS.GENERATE_ACTIVITY_C
       .replace(/{topic}/g, topic)
       .replace(/{subject}/g, subject)
@@ -1291,7 +1324,7 @@ async function handle1ClickGenerate() {
     await delay(800, appState.generationController.signal);
 
     // BƯỚC 7: Tạo III.D Vận dụng
-    updateProgress(78, "Bước 7/10: Đang tạo III.D Hoạt động Vận dụng thực tế...");
+    updateProgress(94, "Bước 7/7: Đang tạo III.D Hoạt động Vận dụng...");
     const promptD = PROMPTS.GENERATE_ACTIVITY_D
       .replace(/{topic}/g, topic)
       .replace(/{subject}/g, subject)
@@ -1300,41 +1333,6 @@ async function handle1ClickGenerate() {
     appState.content.activities.D = resD;
     await delay(800, appState.generationController.signal);
 
-    const actsABCD = [resA, resB, resC, resD].join("\n\n---\n\n");
-
-    // BƯỚC 8: Tạo III.E Kế hoạch kiểm tra - đánh giá
-    updateProgress(85, "Bước 8/10: Đang tạo III.E Ma trận Đánh giá & Bảng Rubrics...");
-    const promptE = PROMPTS.GENERATE_ASSESSMENT
-      .replace(/{topic}/g, topic)
-      .replace(/{subject}/g, subject)
-      .replace(/{objectives_content}/g, resObj)
-      .replace(/{activities_content}/g, actsABCD);
-    const resE = await generateOneClickContent(promptE);
-    appState.content.activities.E = resE;
-    await delay(800, appState.generationController.signal);
-
-    // BƯỚC 9: Tạo III.F Hồ sơ dạy học (Phiếu học tập)
-    updateProgress(92, "Bước 9/10: Đang thiết kế III.F Các Phiếu học tập & Hướng dẫn chấm...");
-    const promptF = PROMPTS.GENERATE_PORTFOLIO
-      .replace(/{topic}/g, topic)
-      .replace(/{subject}/g, subject)
-      .replace(/{objectives_content}/g, resObj)
-      .replace(/{activities_content}/g, actsABCD);
-    const resF = await generateOneClickContent(promptF);
-    appState.content.activities.F = resF;
-    await delay(800, appState.generationController.signal);
-
-    // BƯỚC 10: Tạo III.G Hướng dẫn về nhà
-    updateProgress(98, "Bước 10/10: Đang tạo III.G Hướng dẫn về nhà & Prompt AI tự học...");
-    const promptG = PROMPTS.GENERATE_HOMEWORK
-      .replace(/{topic}/g, topic)
-      .replace(/{subject}/g, subject)
-      .replace(/{grade}/g, grade)
-      .replace(/{objectives_content}/g, resObj)
-      .replace(/{activities_content}/g, actsABCD);
-    const resG = await generateOneClickContent(promptG);
-    appState.content.activities.G = resG;
-
     // Lưu toàn bộ vào localStorage
     saveStateToLocalStorage();
 
@@ -1342,11 +1340,11 @@ async function handle1ClickGenerate() {
     document.getElementById("editorActivity").value = appState.content.activities[appState.activeActSubtab];
     renderMathPreview(appState.content.activities[appState.activeActSubtab], "previewActivity");
 
-    updateProgress(100, "🎉 ĐÃ TẠO XONG TOÀN BỘ GIÁO ÁN KNTT!");
+    updateProgress(100, "🎉 ĐÃ TẠO XONG KẾ HOẠCH BÀI DẠY LÕI!");
     setTimeout(() => {
       hideProgress();
       switchMainTab("tabFullPreview");
-      showToast("Toàn bộ Kế hoạch bài dạy KNTT đã được tạo thành công! Bạn có thể bấm 'Xuất Toàn bộ Giáo án (.DOCX)'.", "success", 6000);
+      showToast("Kế hoạch bài dạy lõi I, II và III.A-D đã được tạo. Bạn có thể xuất Word.", "success", 6000);
     }, 1200);
 
   } catch (err) {
@@ -1439,7 +1437,12 @@ function handleClearAllContent() {
       vision: "",
       objectives: "",
       materials: "",
-      activities: { A: "", B: "", C: "", D: "", E: "", F: "", G: "" }
+      activities: {
+        A: "", B: "", C: "", D: "",
+        E: appState.content.activities.E || "",
+        F: appState.content.activities.F || "",
+        G: appState.content.activities.G || ""
+      }
     };
     appState.images = [];
 

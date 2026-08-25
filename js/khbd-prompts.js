@@ -6,6 +6,13 @@
  * và Khung Năng lực Số (TT 02/2025/TT-BGDĐT).
  */
 
+const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU HÌNH THỨC BẮT BUỘC:
+- Hoạt động này luôn có đúng bốn mục: ### a) Mục tiêu, ### b) Nội dung, ### c) Sản phẩm, ### d) Tổ chức thực hiện.
+- Trong mục d), xuất một bảng Markdown hai cột đúng tiêu đề: | Hoạt động của GV và HS | Nội dung |. Bảng luôn có bốn hàng theo thứ tự: **Chuyển giao nhiệm vụ**, **Thực hiện nhiệm vụ**, **Báo cáo, thảo luận**, **Kết luận, nhận định**.
+- Cột trái mô tả việc của GV và HS ở từng bước. Cột phải ghi nhiệm vụ/câu hỏi cụ thể và sản phẩm hoặc đáp án chuẩn tương ứng; không để cột nào trống.
+- Riêng Hoạt động B, mỗi đơn vị kiến thức có đầy đủ a, b, c, d và một bảng hai cột riêng.
+- Với bảng Markdown, escape mọi dấu pipe trong nội dung hoặc LaTeX thành \\|; không chèn dấu pipe chưa escape trong ô bảng.`;
+
 const PROMPTS = {
   // SYSTEM INSTRUCTION
   SYSTEM_ROLE: `Bạn là Chuyên gia Sư phạm Môn Toán Cấp Trung học Cơ sở (THCS) hàng đầu tại Việt Nam, đặc biệt am hiểu sâu sắc bộ sách giáo khoa "Kết Nối Tri Thức Với Cuộc Sống" (KNTT) của Nhà xuất bản Giáo dục Việt Nam, và nắm vững:
@@ -26,6 +33,7 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 
   OUTPUT_CONTRACT: `HỢP ĐỒNG ĐẦU RA BẮT BUỘC:
 - Chỉ xuất Markdown của đúng mục Kế hoạch bài dạy đang được yêu cầu; bắt đầu ngay bằng tiêu đề/mục chuyên môn phù hợp.
+- Danh sách nội dung: ý lớn PHẢI bắt đầu bằng \`- \`; ý con phải thụt đầu dòng và bắt đầu bằng \`+ \`. Không dùng \`1.\`, \`2.\`... làm danh sách nội dung; chỉ dùng số khi là cấu trúc bắt buộc như mục Công văn 5512, Bước hoặc Bài.
 - CẤM lời chào, khen ngợi, giới thiệu, nhận xét quá trình, meta commentary và các câu như “Tuyệt vời”, “Xin chào”, “Dưới đây”, “Sau đây”.
 - CẤM dùng code fence (\`\`\`). Không giải thích cách bạn đã soạn; không viết nội dung ngoài KHBD.`,
 
@@ -66,6 +74,11 @@ Hãy trình bày rõ ràng, mạch lạc, giữ nguyên vẹn các công thức 
 """
 
 YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
+- Đọc đúng thời lượng trong BỐI CẢNH SƯ PHẠM đi kèm yêu cầu. Với bài 2 tiết hoặc thời lượng ngắn, chỉ chọn 1–2 năng lực chung và 2–3 năng lực đặc thù môn Toán nổi trội, khả thi; không liệt kê dàn trải tất cả năng lực.
+- Mỗi năng lực được chọn phải nêu minh chứng cụ thể: kiến thức, nhiệm vụ học tập hoặc sản phẩm của chính bài này; không dùng mô tả chung chung.
+- Năng lực số hoặc AI chỉ xuất hiện khi thành phần tương ứng được bật trong BỐI CẢNH SƯ PHẠM, và mỗi thành phần chỉ chọn một biểu hiện thực sự triển khai được. Nếu không bật, bỏ toàn bộ mục đó.
+- Phẩm chất chỉ chọn những phẩm chất có hành vi quan sát được trong bài; không mặc định liệt kê đủ 5 phẩm chất. Hỗ trợ HS hòa nhập chỉ nêu khi được bật trong BỐI CẢNH SƯ PHẠM.
+- Trong các danh sách dưới đây, dùng \`- \` cho ý lớn và \`  + \` cho ý con; không dùng đánh số thay cho danh sách nội dung.
 
 # I. MỤC TIÊU
 
@@ -77,34 +90,20 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
 
 ## 2. Về năng lực
 ### a) Năng lực chung
-- **Năng lực Tự chủ và tự học:** Tự giác tìm hiểu bài học, chủ động thực hiện các nhiệm vụ được giao trên lớp và ở nhà.
-- **Năng lực Giao tiếp và hợp tác:** Tương tác tích cực với giáo viên và các bạn trong thảo luận nhóm, trình bày rõ ràng ý tưởng toán học, tôn trọng ý kiến phản biện.
-- **Năng lực Giải quyết vấn đề và sáng tạo:** Phân tích tình huống toán học, linh hoạt tìm kiếm các phương án giải quyết khác nhau.
+- Chỉ chọn 1–2 năng lực chung phù hợp nhất; với từng năng lực, gắn rõ nhiệm vụ hoặc sản phẩm của bài học.
 
 ### b) Năng lực đặc thù môn Toán (Gắn cụ thể với nội dung bài học)
-- **Năng lực Tư duy và lập luận toán học (TDLL):** (Nêu rõ HS thực hiện thao tác tư duy nào, so sánh, chứng minh hoặc giải thích điều gì trong bài học).
-- **Năng lực Mô hình hoá toán học (MHH):** (Nêu rõ HS chuyển đổi bài toán thực tế nào thành mô hình/công thức/phương trình toán học).
-- **Năng lực Giải quyết vấn đề toán học (GQVĐ):** (Nêu rõ cách HS phát hiện và thực hiện quy trình các bước giải quyết bài toán).
-- **Năng lực Giao tiếp toán học (GTTH):** (Nêu rõ cách HS đọc hiểu, sử dụng thuật ngữ, kí hiệu toán học $...$ để trình bày lời giải và thảo luận).
-- **Năng lực Sử dụng công cụ, phương tiện học toán (CCPT):** (Sử dụng máy tính cầm tay, thước kẻ, compa, êke, thước đo góc, phần mềm mô phỏng GeoGebra/Desmos...).
+- Chỉ chọn 2–3 năng lực đặc thù nổi trội; với từng năng lực, gắn rõ kiến thức, nhiệm vụ hoặc sản phẩm của bài học.
 
 ### c) Năng lực số (CHỈ viết khi bối cảnh sư phạm bật năng lực số; nếu không bật thì bỏ toàn bộ mục này)
-- **Vận hành thiết bị và phần mềm số:** Sử dụng máy tính cầm tay, phần mềm hình học động GeoGebra/Desmos hoặc bảng tính để hỗ trợ tính toán, kiểm tra kết quả hoặc trực quan hóa hình vẽ.
-- **Khai thác dữ liệu số:** Biết tra cứu thông tin, dữ liệu toán học bổ trợ từ các nguồn số hóa tin cậy.
-- **Hợp tác trong không gian số:** Trình bày và chia sẻ bài tập/sản phẩm học tập qua nền tảng số (nếu có).
+- Chỉ chọn một biểu hiện năng lực số được triển khai thật sự trong nhiệm vụ hoặc sản phẩm của bài học.
 
 ### d) Năng lực AI (CHỈ viết khi bối cảnh sư phạm bật năng lực AI; nếu không bật thì bỏ toàn bộ mục này)
-- **Nhận thức và sử dụng công cụ AI:** Biết đặt câu hỏi (prompt) phù hợp cho trợ lý AI để giải thích thêm các khái niệm toán học hoặc tìm gợi ý phương pháp giải khi tự học.
-- **Phản biện và kiểm chứng kết quả AI:** Rèn luyện kĩ năng kiểm tra, đối chiếu lời giải do AI đề xuất với kiến thức chuẩn trong SGK, nhận biết các lỗi suy luận toán học mà AI có thể gặp phải.
-- **Liêm chính và an toàn AI:** Sử dụng AI như người bạn đồng hành hỗ trợ tư duy, không sao chép máy móc kết quả.
+- Chỉ chọn một biểu hiện năng lực AI được triển khai thật sự trong nhiệm vụ hoặc sản phẩm của bài học.
 
 ## 3. Về phẩm chất & Giáo dục hòa nhập (chỉ nêu hỗ trợ HS khuyết tật/hòa nhập khi bối cảnh sư phạm bật)
-- **Yêu nước:** Thấy được vẻ đẹp và ứng dụng thực tiễn của Toán học trong xây dựng quê hương, đất nước.
-- **Nhân ái:** Tôn trọng, lắng nghe và chia sẻ, sẵn sàng hỗ trợ bạn học gặp khó khăn khi làm việc nhóm.
-- **Chăm chỉ:** Tích cực phát biểu xây dựng bài, kiên trì suy nghĩ tìm tòi lời giải cho các bài toán khó.
-- **Trung thực:** Trung thực trong làm bài tập, tự đánh giá và đánh giá kết quả của bạn bè một cách khách quan.
-- **Trách nhiệm:** Có ý thức hoàn thành tốt nhiệm vụ cá nhân và nhiệm vụ nhóm được phân công; giữ gìn đồ dùng học tập.
-- **Hỗ trợ học sinh giáo dục hòa nhập (nếu có):** Tạo điều kiện cho học sinh khuyết tật/học sinh chậm tiến độ tham gia ở mức độ nhận biết cơ bản, giao các nhiệm vụ vừa sức, bố trí bạn học hỗ trợ kèm cặp để các em tự tin hòa nhập cùng lớp.`,
+- Chỉ chọn các phẩm chất có hành vi quan sát được trong nhiệm vụ/sản phẩm của bài; nêu ngắn gọn minh chứng đó.
+- **Hỗ trợ học sinh giáo dục hòa nhập (nếu có):** Chỉ khi được bật, nêu điều chỉnh vừa sức và cách hỗ trợ để HS tham gia nhiệm vụ của bài.`,
 
   // TAB 3: THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU (II. THIẾT BỊ & HỌC LIỆU)
   GENERATE_MATERIALS: `Hãy xây dựng phần **II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU** cho Kế hoạch bài dạy môn Toán THCS chuẩn Công văn 5512 theo bộ sách **Kết Nối Tri Thức Với Cuộc Sống**.
@@ -157,6 +156,7 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 2 MỤC CHÍNH; chỉ thêm thiết bị s�
 """
 
 YÊU CẦU BẮT BUỘC ĐỦ 4 THÀNH PHẦN THEO CV 5512:
+${ACTIVITY_TABLE_CONTRACT}
 
 # III. TIẾN TRÌNH DẠY HỌC
 
@@ -193,6 +193,7 @@ YÊU CẦU BẮT BUỘC ĐỦ 4 THÀNH PHẦN THEO CV 5512:
 """
 
 YÊU CẦU QUAN TRỌNG:
+${ACTIVITY_TABLE_CONTRACT}
 - Bám sát mạch kiến thức và các Hoạt động khám phá trong SGK Kết Nối Tri Thức Với Cuộc Sống.
 - Chia bài học thành các đơn vị kiến thức nhỏ rõ ràng (ví dụ: Hoạt động 2.1: Khái niệm...; Hoạt động 2.2: Định lí/Tính chất...; Hoạt động 2.3: Quy tắc...).
 - MỖI ĐƠN VỊ KIẾN THỨC ĐỀU PHẢI CÓ ĐẦY ĐỦ 4 THÀNH PHẦN: a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (4 bước: Chuyển giao -> Thực hiện -> Báo cáo thảo luận -> Kết luận nhận định).
@@ -232,6 +233,7 @@ CẤU TRÚC MẪU:
 """
 
 YÊU CẦU BIÊN SOẠN:
+${ACTIVITY_TABLE_CONTRACT}
 - Xây dựng hệ thống bài tập luyện tập bám sát các dạng bài trong SGK Kết Nối Tri Thức Với Cuộc Sống:
   + Dạng 1: Bài tập nhận biết và thông hiểu (rèn kĩ năng tính toán, áp dụng trực tiếp công thức).
   + Dạng 2: Bài tập vận dụng / Tranh luận / Thử thách nhỏ theo phong cách KNTT.
@@ -275,6 +277,7 @@ CẤU TRÚC:
 """
 
 YÊU CẦU BIÊN SOẠN:
+${ACTIVITY_TABLE_CONTRACT}
 - Thiết kế 1 đến 2 bài toán vận dụng thực tiễn thể hiện đúng tinh thần "Kết nối tri thức với cuộc sống", gắn liền với đời sống hàng ngày của học sinh THCS (đo đạc, tài chính gia đình, kiến trúc, môi trường, số liệu thống kê...) hoặc tích hợp liên môn (Vật lý, Địa lý, Công nghệ...).
 - Chỉ tích hợp hướng dẫn HS ứng dụng công cụ số/AI để kiểm chứng lời giải khi bối cảnh sư phạm bật thành phần tương ứng.
 - Đầy đủ 4 thành phần a, b, c, d theo CV 5512 kèm LỜI GIẢI CHI TIẾT ĐẦY ĐỦ.

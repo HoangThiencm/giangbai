@@ -80,6 +80,98 @@ class DocxGenerator {
     return s.trim();
   }
 
+  /** Chuyển tập LaTeX thường gặp trong KHBD thành đối tượng OMML native của docx.js. */
+  createNativeMath(latex) {
+    const mathApi = window.docx;
+    const required = ["Math", "MathRun", "MathFraction", "MathSuperScript", "MathSubScript", "MathSubSuperScript", "MathRadical"];
+    if (!required.every(name => typeof mathApi[name] === "function")) return null;
+
+    const source = String(latex || "").replace(/^\$\$?|\$\$?$/g, "").trim();
+    if (!source) return null;
+    const commandMap = {
+      alpha: "α", beta: "β", gamma: "γ", delta: "δ", Delta: "Δ", epsilon: "ε", theta: "θ", lambda: "λ", pi: "π", sigma: "σ", omega: "ω", Omega: "Ω",
+      in: "∈", notin: "∉", neq: "≠", ne: "≠", le: "≤", leq: "≤", ge: "≥", geq: "≥", times: "×", cdot: "·", div: "÷", pm: "±", mp: "∓",
+      to: "→", rightarrow: "→", Rightarrow: "⇒", Leftrightarrow: "⇔", triangle: "△", angle: "∠", parallel: "∥", perp: "⊥", cup: "∪", cap: "∩", emptyset: "∅", infty: "∞"
+    };
+    let index = 0;
+    let unsupported = false;
+    const run = value => new mathApi.MathRun(value);
+    const readGroup = () => {
+      if (source[index] !== "{") { unsupported = true; return [run(source[index++] || "")]; }
+      index++;
+      const group = readSequence("}");
+      if (source[index] !== "}") { unsupported = true; return group; }
+      index++;
+      return group;
+    };
+    const readAtom = () => {
+      let nodes;
+      if (source[index] === "{") {
+        nodes = readGroup();
+      } else if (source[index] === "\\") {
+        index++;
+        const commandMatch = source.slice(index).match(/^[A-Za-z]+/);
+        const command = commandMatch ? commandMatch[0] : source[index++];
+        if (commandMatch) index += command.length;
+        if (command === "frac") {
+          const numerator = readGroup();
+          const denominator = readGroup();
+          nodes = [new mathApi.MathFraction({ numerator, denominator })];
+        } else if (command === "sqrt") {
+          let degree;
+          if (source[index] === "[") {
+            index++;
+            degree = readSequence("]");
+            if (source[index] === "]") index++; else unsupported = true;
+          }
+          nodes = [new mathApi.MathRadical({ children: readGroup(), degree })];
+        } else if (command === "mathbb") {
+          const groupEnd = source.indexOf("}", index + 1);
+          const groupText = source[index] === "{" && groupEnd > index ? source.slice(index + 1, groupEnd).trim() : "";
+          readGroup();
+          nodes = [run({ N: "ℕ", Z: "ℤ", Q: "ℚ", R: "ℝ" }[groupText] || groupText || "mathbb")];
+        } else if (command === "left" || command === "right") {
+          nodes = [];
+        } else if (command === "{" || command === "}") {
+          nodes = [run(command)];
+        } else if (commandMap[command]) {
+          nodes = [run(commandMap[command])];
+        } else {
+          unsupported = true;
+          nodes = [run(`\\${command}`)];
+        }
+      } else {
+        nodes = [run(source[index++])];
+      }
+
+      let subScript = null;
+      let superScript = null;
+      while (source[index] === "^" || source[index] === "_") {
+        const kind = source[index++];
+        const script = source[index] === "{" ? readGroup() : [run(source[index++] || "")];
+        if (kind === "^") superScript = script; else subScript = script;
+      }
+      if (subScript && superScript) return [new mathApi.MathSubSuperScript({ children: nodes, subScript, superScript })];
+      if (superScript) return [new mathApi.MathSuperScript({ children: nodes, superScript })];
+      if (subScript) return [new mathApi.MathSubScript({ children: nodes, subScript })];
+      return nodes;
+    };
+    const readSequence = stop => {
+      const nodes = [];
+      while (index < source.length && source[index] !== stop) nodes.push(...readAtom());
+      return nodes;
+    };
+
+    try {
+      const children = readSequence("");
+      if (index < source.length || unsupported) console.warn("LaTeX KHBD có phần chưa hỗ trợ đầy đủ; giữ nguyên phần văn bản có thể đọc được:", source);
+      return new mathApi.Math({ children: children.length ? children : [run(source)] });
+    } catch (error) {
+      console.warn("Không thể chuyển LaTeX sang OMML; giữ nguyên LaTeX:", source, error);
+      return new mathApi.Math({ children: [run(source)] });
+    }
+  }
+
   /**
    * Tách một dòng văn bản chứa các công thức $...$ thành danh sách các docx TextRun
    */
@@ -107,26 +199,11 @@ class DocxGenerator {
       const token = match[0];
 
       if (token.startsWith("$$") && token.endsWith("$$")) {
-        // Công thức khối
-        const mathClean = this.latexToUnicodeMath(token);
-        runs.push(new TextRun({
-          text: ` ${mathClean} `,
-          font: "Cambria Math",
-          italics: true,
-          bold: true,
-          size: this.fontSizeBody,
-          color: "003366"
-        }));
+        const math = this.createNativeMath(token);
+        runs.push(math || new TextRun({ text: ` ${this.latexToUnicodeMath(token)} `, font: "Cambria Math", italics: true, bold: true, size: this.fontSizeBody, color: "003366" }));
       } else if (token.startsWith("$") && token.endsWith("$")) {
-        // Công thức inline
-        const mathClean = this.latexToUnicodeMath(token);
-        runs.push(new TextRun({
-          text: mathClean,
-          font: "Cambria Math",
-          italics: true,
-          size: this.fontSizeBody,
-          color: "002244"
-        }));
+        const math = this.createNativeMath(token);
+        runs.push(math || new TextRun({ text: this.latexToUnicodeMath(token), font: "Cambria Math", italics: true, size: this.fontSizeBody, color: "002244" }));
       } else if (token.startsWith("**") && token.endsWith("**")) {
         // Chữ in đậm
         const boldText = token.substring(2, token.length - 2);
@@ -323,9 +400,23 @@ class DocxGenerator {
         continue;
       }
 
-      // 4. Phân tích DANH SÁCH ĐẦU DÒNG (- hoặc * hoặc +)
-      if (/^[-*+]\s+/.test(trimmed)) {
-        const bulletText = trimmed.replace(/^[-*+]\s+/, "");
+      // 4. Danh sách KHBD: giữ nguyên ký tự - (ý lớn) và + (ý con) thay vì Word bullet.
+      const literalListMatch = line.match(/^(\s*)([-+])\s+(.+)$/);
+      if (literalListMatch) {
+        const [, indent, marker, contentText] = literalListMatch;
+        const runs = this.parseInlineTextToRuns(`${marker} ${contentText}`);
+        elements.push(new Paragraph({
+          indent: marker === "+" ? { left: Math.max(360, indent.length * 180) } : undefined,
+          spacing: { before: 40, after: 40, line: this.lineSpacing },
+          children: runs
+        }));
+        i++;
+        continue;
+      }
+
+      // 4b. Danh sách legacy dùng dấu * vẫn giữ Word bullet.
+      if (/^\*\s+/.test(trimmed)) {
+        const bulletText = trimmed.replace(/^\*\s+/, "");
         const runs = this.parseInlineTextToRuns(bulletText);
         elements.push(new Paragraph({
           bullet: { level: 0 },
@@ -391,22 +482,25 @@ class DocxGenerator {
    */
   createDocxTableFromMarkdown(tableLines) {
     if (!window.docx || tableLines.length < 2) return null;
-    const { Table, TableRow, TableCell, Paragraph, TextRun, WidthType, BorderStyle } = window.docx;
+    const { Table, TableRow, TableCell, Paragraph, TextRun, WidthType, BorderStyle, VerticalAlign } = window.docx;
 
     // Lọc bỏ dòng phân cách (|:---|:---:|)
     const validLines = tableLines.filter(line => !/^[|\s-:]+$/.test(line));
     if (validLines.length === 0) return null;
 
     const rows = [];
+    const tableWidth = 9000;
+    const columnCount = Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
+    const columnWidths = Array.from({ length: columnCount }, () => Math.floor(tableWidth / columnCount));
 
     validLines.forEach((line, rowIndex) => {
-      // Tách các ô giữa các dấu |
-      const rawCells = line.split("|").slice(1, -1);
+      const rawCells = this.splitMarkdownTableRow(line);
       const isHeader = (rowIndex === 0);
 
-      const tableCells = rawCells.map(cellText => {
+      const tableCells = Array.from({ length: columnCount }, (_, columnIndex) => {
+        const cellText = rawCells[columnIndex] || "";
         const textClean = cellText.trim();
-        const runs = this.parseInlineTextToRuns(textClean);
+        const runs = this.parseTableCellRuns(textClean);
 
         if (isHeader) {
           runs.forEach(r => r.bold = true);
@@ -420,13 +514,16 @@ class DocxGenerator {
             })
           ],
           shading: isHeader ? { fill: "E8EEF5" } : undefined,
-          margins: { top: 120, bottom: 120, left: 160, right: 160 }
+          margins: { top: 120, bottom: 120, left: 160, right: 160 },
+          verticalAlign: VerticalAlign?.TOP,
+          width: { size: columnWidths[columnIndex], type: WidthType.DXA }
         });
       });
 
       rows.push(new TableRow({
         children: tableCells,
-        tableHeader: isHeader
+        tableHeader: isHeader,
+        cantSplit: true
       }));
     });
 
@@ -438,7 +535,8 @@ class DocxGenerator {
 
     return new Table({
       rows: rows,
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      width: { size: tableWidth, type: WidthType.DXA },
+      columnWidths,
       borders: {
         top: borderStyle,
         bottom: borderStyle,
@@ -447,6 +545,38 @@ class DocxGenerator {
         insideHorizontal: borderStyle,
         insideVertical: borderStyle
       }
+    });
+  }
+
+  splitMarkdownTableRow(line) {
+    const cells = [];
+    let cell = "";
+    let escaped = false;
+    const content = String(line || "").trim().replace(/^\||\|$/g, "");
+    for (const character of content) {
+      if (escaped) {
+        cell += character;
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === "|") {
+        cells.push(cell.trim());
+        cell = "";
+      } else {
+        cell += character;
+      }
+    }
+    cells.push(cell.trim());
+    return cells;
+  }
+
+  parseTableCellRuns(text) {
+    const { TextRun } = window.docx;
+    const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n");
+    return lines.flatMap((line, index) => {
+      const runs = this.parseInlineTextToRuns(line);
+      if (index < lines.length - 1) runs.push(new TextRun({ break: 1 }));
+      return runs;
     });
   }
 

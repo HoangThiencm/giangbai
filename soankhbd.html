@@ -204,30 +204,30 @@
               <label for="inputSupportNeeds">Học sinh cần hỗ trợ (nếu có):</label>
               <textarea id="inputSupportNeeds" maxlength="500" rows="3" placeholder="Nêu nhu cầu hỗ trợ, cách tiếp cận hoặc điều chỉnh phù hợp; để trống nếu không có yêu cầu riêng."></textarea>
             </div>
-            <div class="tool-group">
-              <label for="selectTeachingMethods">Phương pháp dạy học ưu tiên:</label>
-              <select id="selectTeachingMethods" multiple size="5" aria-label="Phương pháp dạy học ưu tiên">
-                <option value="Dạy học giải quyết vấn đề">Dạy học giải quyết vấn đề</option>
-                <option value="Dạy học khám phá có hướng dẫn">Dạy học khám phá có hướng dẫn</option>
-                <option value="Dạy học hợp tác">Dạy học hợp tác</option>
-                <option value="Dạy học trực quan">Dạy học trực quan</option>
-                <option value="Dạy học phân hóa">Dạy học phân hóa</option>
-                <option value="Luyện tập - thực hành">Luyện tập - thực hành</option>
-              </select>
-              <small class="text-muted">Giữ Ctrl/Cmd để chọn nhiều mục.</small>
-            </div>
-            <div class="tool-group">
-              <label for="selectTeachingTechniques">Kỹ thuật dạy học ưu tiên:</label>
-              <select id="selectTeachingTechniques" multiple size="5" aria-label="Kỹ thuật dạy học ưu tiên">
-                <option value="Think-Pair-Share">Think-Pair-Share</option>
-                <option value="Khăn trải bàn">Khăn trải bàn</option>
-                <option value="Mảnh ghép">Mảnh ghép</option>
-                <option value="Kỹ thuật hỏi đáp">Kỹ thuật hỏi đáp</option>
-                <option value="Trạm học tập">Trạm học tập</option>
-                <option value="Sơ đồ tư duy">Sơ đồ tư duy</option>
-              </select>
-              <small class="text-muted">Không chọn mục nào nếu không muốn ràng buộc kỹ thuật.</small>
-            </div>
+            <fieldset class="tool-group" data-choice-group="methods" style="min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: .75rem;">
+              <legend style="padding: 0 .35rem; font-weight: 600;">Phương pháp dạy học ưu tiên</legend>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .5rem;">
+                <label><input type="checkbox" class="teaching-method-choice" value="Dạy học giải quyết vấn đề"> Dạy học giải quyết vấn đề</label>
+                <label><input type="checkbox" class="teaching-method-choice" value="Dạy học khám phá có hướng dẫn"> Dạy học khám phá có hướng dẫn</label>
+                <label><input type="checkbox" class="teaching-method-choice" value="Dạy học hợp tác"> Dạy học hợp tác</label>
+                <label><input type="checkbox" class="teaching-method-choice" value="Dạy học trực quan"> Dạy học trực quan</label>
+                <label><input type="checkbox" class="teaching-method-choice" value="Dạy học phân hóa"> Dạy học phân hóa</label>
+                <label><input type="checkbox" class="teaching-method-choice" value="Luyện tập - thực hành"> Luyện tập - thực hành</label>
+              </div>
+              <small class="text-muted">Có thể chọn nhiều mục.</small>
+            </fieldset>
+            <fieldset class="tool-group" data-choice-group="techniques" style="min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: .75rem;">
+              <legend style="padding: 0 .35rem; font-weight: 600;">Kỹ thuật dạy học ưu tiên</legend>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .5rem;">
+                <label><input type="checkbox" class="teaching-technique-choice" value="Think-Pair-Share"> Think-Pair-Share</label>
+                <label><input type="checkbox" class="teaching-technique-choice" value="Khăn trải bàn"> Khăn trải bàn</label>
+                <label><input type="checkbox" class="teaching-technique-choice" value="Mảnh ghép"> Mảnh ghép</label>
+                <label><input type="checkbox" class="teaching-technique-choice" value="Kỹ thuật hỏi đáp"> Kỹ thuật hỏi đáp</label>
+                <label><input type="checkbox" class="teaching-technique-choice" value="Trạm học tập"> Trạm học tập</label>
+                <label><input type="checkbox" class="teaching-technique-choice" value="Sơ đồ tư duy"> Sơ đồ tư duy</label>
+              </div>
+              <small class="text-muted">Có thể chọn nhiều mục; để trống nếu không muốn ràng buộc kỹ thuật.</small>
+            </fieldset>
           </div>
           <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0;">
             <label><input type="checkbox" id="toggleDigitalCompetency"> Tích hợp năng lực số</label>
@@ -376,9 +376,6 @@
           <button class="act-tab-btn" data-act="B">B. Hình thành Kiến thức</button>
           <button class="act-tab-btn" data-act="C">C. Luyện tập</button>
           <button class="act-tab-btn" data-act="D">D. Vận dụng</button>
-          <button class="act-tab-btn" data-act="E">E. Kế hoạch Đánh giá</button>
-          <button class="act-tab-btn" data-act="F">F. Hồ sơ Dạy học (PHT)</button>
-          <button class="act-tab-btn" data-act="G">G. Hướng dẫn Về nhà</button>
         </div>
 
         <div class="card-header" style="margin-bottom: 0.5rem;">
@@ -415,7 +412,7 @@
     <section id="tabFullPreview" class="tab-pane">
       <div class="card">
         <div class="card-header">
-          <h2 class="card-title"><i data-lucide="file-text"></i> Toàn bộ Kế hoạch Bài dạy KNTT (Tổng hợp các mục I, II, III.A-G)</h2>
+          <h2 class="card-title"><i data-lucide="file-text"></i> Kế hoạch Bài dạy lõi (I, II và III.A-D)</h2>
           <div class="card-actions">
             <button id="btnExportFullDocx" class="btn btn-special">
               <i data-lucide="download"></i> 📥 XUẤT TOÀN BỘ GIÁO ÁN (.DOCX)
