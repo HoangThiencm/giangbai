@@ -1355,6 +1355,7 @@
                     if (user.role) localStorage.setItem('userRole', user.role);
                     if (user.full_name) localStorage.setItem('userName', user.full_name);
                     if (user.username) localStorage.setItem('userEmail', user.username);
+                    if (user.id != null) localStorage.setItem('userId', String(user.id));
                     if (user.class_name !== undefined) localStorage.setItem('userClassName', user.class_name || '');
                 } else {
                     allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]');

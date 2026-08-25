@@ -77,10 +77,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadStateFromLocalStorage();
   setupEventListeners();
   populateLessonDropdown();
+  syncDraftDom();
   updateKeyCountDisplay();
   syncGeminiConfigToUI();
   updateImageCounts();
   renderImageGallery();
+  renderStandardsCatalog();
   renderAllTabsPreview();
 
   try {
@@ -97,34 +99,87 @@ function initLucideIcons() {
   }
 }
 
+function syncDraftDom() {
+  const values = { selectGrade: appState.selectedGrade, inputSchool: appState.school, inputGroup: appState.group, inputTeacher: appState.teacher, inputSubject: appState.subject, inputTopicCustom: appState.customTopic, inputDuration: appState.duration, inputClassProfileNote: appState.teachingContext.classProfileNote, inputSupportNote: appState.teachingContext.supportNote, inputSpecialRequirements: appState.teachingContext.specialRequirements, editorVision: appState.content.vision, editorObjectives: appState.content.objectives, editorMaterials: appState.content.materials, editorActivity: appState.content.activities.A };
+  Object.entries(values).forEach(([id, value]) => { const el = document.getElementById(id); if (el) el.value = value || ""; });
+  const lessonSelect = document.getElementById("selectLesson");
+  if (lessonSelect) lessonSelect.value = appState.selectedLesson || "";
+  setCheckboxGroupValues(".class-profile-choice", appState.teachingContext.classProfileChoices);
+  setCheckboxGroupValues(".support-choice", appState.teachingContext.supportChoices);
+  renderDraftControls();
+}
+
 // =============================================================================
 // LƯU TRỮ VÀ KHÔI PHỤC TRẠNG THÁI (LOCALSTORAGE)
 // =============================================================================
+function getDraftScope() {
+  const candidates = ["currentUser", "user", "authUser", "userInfo"];
+  for (const key of candidates) try {
+    const user = JSON.parse(localStorage.getItem(key) || "null");
+    if (user?.id != null) return `user-${String(user.id).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+  } catch (_) { /* ignore malformed session cache */ }
+  const token = localStorage.getItem("authToken");
+  return token ? `user-${String(localStorage.getItem("userId") || localStorage.getItem("userEmail") || "authenticated").replace(/[^a-zA-Z0-9_-]/g, "_")}` : "anonymous";
+}
+function normalizeDraftPart(value) { return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+function buildDraftId(grade, lesson, topic) { return ["kntt", grade, normalizeDraftPart(lesson), normalizeDraftPart(topic)].join(":"); }
+function getDraftId() { return buildDraftId(appState.selectedGrade, appState.selectedLesson, appState.customTopic); }
+function getDraftIndexKey() { return `khbd_drafts_v2:${getDraftScope()}:index`; }
+function getDraftKey(id = getDraftId()) { return `khbd_drafts_v2:${getDraftScope()}:${id}`; }
+function currentDraftData() {
+  return { selectedGrade: appState.selectedGrade, selectedLesson: appState.selectedLesson, customTopic: appState.customTopic, school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration, teachingContext: appState.teachingContext, content: appState.content };
+}
 function saveStateToLocalStorage() {
   try {
-    const dataToSave = {
-      selectedGrade: appState.selectedGrade,
-      selectedLesson: appState.selectedLesson,
-      customTopic: appState.customTopic,
-      school: appState.school,
-      group: appState.group,
-      teacher: appState.teacher,
-      subject: appState.subject,
-      duration: appState.duration,
-      teachingContext: appState.teachingContext,
-      content: appState.content
-    };
-    localStorage.setItem("khbd_kntt_saved_state", JSON.stringify(dataToSave));
+    const id = getDraftId(), dataToSave = currentDraftData();
+    localStorage.setItem(getDraftKey(id), JSON.stringify(dataToSave));
+    localStorage.setItem(`khbd_drafts_v2:${getDraftScope()}:active`, id);
+    const index = JSON.parse(localStorage.getItem(getDraftIndexKey()) || "[]").filter(item => item.id !== id);
+    index.unshift({ id, label: appState.customTopic || appState.selectedLesson || `Toán ${appState.selectedGrade}`, updatedAt: Date.now() });
+    localStorage.setItem(getDraftIndexKey(), JSON.stringify(index.slice(0, 50)));
+    renderDraftControls();
   } catch (e) {
     console.warn("Lỗi lưu state vào localStorage:", e);
   }
 }
 
+function applyDraftData(data) {
+  if (!data) return;
+  Object.assign(appState, { selectedGrade: data.selectedGrade || "6", selectedLesson: data.selectedLesson || "", customTopic: data.customTopic || "", school: data.school || appState.school, group: data.group || appState.group, teacher: data.teacher || appState.teacher, subject: data.subject || appState.subject, duration: data.duration || appState.duration });
+  appState.teachingContext = normalizeTeachingContext(data.teachingContext);
+  if (data.content) { const a = data.content.activities || {}; appState.content = { vision: data.content.vision || "", objectives: data.content.objectives || "", materials: data.content.materials || "", activities: Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""])) }; }
+}
+function renderDraftControls() {
+  const select = document.getElementById("selectMyDraft"); if (!select) return;
+  const index = JSON.parse(localStorage.getItem(getDraftIndexKey()) || "[]");
+  select.innerHTML = index.map(item => `<option value="${item.id}">${item.label}</option>`).join("");
+  select.value = getDraftId();
+  document.getElementById("btnImportLegacyDraft").hidden = !(localStorage.getItem("khbd_kntt_saved_state") || localStorage.getItem("khbd_app_saved_state"));
+}
+function emptyDraftForTarget({ grade, lesson, topic }) {
+  const common = { school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration };
+  appState.selectedGrade = grade; appState.selectedLesson = lesson; appState.customTopic = topic;
+  Object.assign(appState, common);
+  appState.teachingContext = normalizeTeachingContext({});
+  appState.content = { vision: "", objectives: "", materials: "", activities: { A: "", B: "", C: "", D: "", E: "", F: "", G: "" } };
+  appState.images = [];
+}
+function switchDraft(target) {
+  saveStateToLocalStorage();
+  const id = buildDraftId(target.grade, target.lesson, target.topic);
+  const saved = localStorage.getItem(getDraftKey(id));
+  if (saved) applyDraftData(JSON.parse(saved)); else { emptyDraftForTarget(target); saveStateToLocalStorage(); }
+  localStorage.setItem(`khbd_drafts_v2:${getDraftScope()}:active`, id);
+  populateLessonDropdown(); syncDraftDom(); renderAllTabsPreview(); renderImageGallery();
+}
 function loadStateFromLocalStorage() {
   try {
-    const saved = localStorage.getItem("khbd_kntt_saved_state") || localStorage.getItem("khbd_app_saved_state");
+    const active = localStorage.getItem(`khbd_drafts_v2:${getDraftScope()}:active`);
+    const saved = active && localStorage.getItem(getDraftKey(active));
     if (saved) {
       const data = JSON.parse(saved);
+      applyDraftData(data);
+      /*
       appState.selectedGrade = data.selectedGrade || "6";
       appState.selectedLesson = data.selectedLesson || "";
       appState.customTopic = data.customTopic || "";
@@ -155,8 +210,8 @@ function loadStateFromLocalStorage() {
       document.getElementById("inputSubject").value = appState.subject;
       document.getElementById("inputTopicCustom").value = appState.customTopic;
       document.getElementById("inputDuration").value = appState.duration;
-      document.getElementById("inputClassProfile").value = appState.teachingContext.classProfile;
-      document.getElementById("inputSupportNeeds").value = appState.teachingContext.supportNeeds;
+      document.getElementById("inputClassProfileNote").value = appState.teachingContext.classProfileNote;
+      document.getElementById("inputSupportNote").value = appState.teachingContext.supportNote;
       document.getElementById("inputSpecialRequirements").value = appState.teachingContext.specialRequirements;
       document.getElementById("toggleDigitalCompetency").checked = appState.teachingContext.integrations.digital;
       document.getElementById("toggleAiCompetency").checked = appState.teachingContext.integrations.ai;
@@ -164,16 +219,19 @@ function loadStateFromLocalStorage() {
       document.getElementById("toggleInclusiveSupport").checked = appState.teachingContext.integrations.inclusive;
       setCheckboxGroupValues(".teaching-method-choice", appState.teachingContext.methods);
       setCheckboxGroupValues(".teaching-technique-choice", appState.teachingContext.techniques);
+      setCheckboxGroupValues(".class-profile-choice", appState.teachingContext.classProfileChoices);
+      setCheckboxGroupValues(".support-choice", appState.teachingContext.supportChoices);
 
       // Cập nhật các textareas
       document.getElementById("editorVision").value = appState.content.vision || "";
       document.getElementById("editorObjectives").value = appState.content.objectives || "";
       document.getElementById("editorMaterials").value = appState.content.materials || "";
       document.getElementById("editorActivity").value = appState.content.activities[appState.activeActSubtab] || "";
+      */
     }
   } catch (e) {
     console.warn("Lỗi đọc state từ localStorage:", e);
-    localStorage.removeItem("khbd_kntt_saved_state");
+    console.warn("Không thể đọc bản nháp hiện tại; dữ liệu cũ không bị xóa.");
   }
 }
 
@@ -181,8 +239,10 @@ function normalizeTeachingContext(context) {
   const source = context && typeof context === "object" ? context : {};
   const integrations = source.integrations && typeof source.integrations === "object" ? source.integrations : {};
   return {
-    classProfile: typeof source.classProfile === "string" ? source.classProfile.slice(0, 600) : "",
-    supportNeeds: typeof source.supportNeeds === "string" ? source.supportNeeds.slice(0, 500) : "",
+    classProfileChoices: Array.isArray(source.classProfileChoices) ? source.classProfileChoices.filter(value => typeof value === "string").slice(0, 7) : [],
+    classProfileNote: typeof source.classProfileNote === "string" ? source.classProfileNote.slice(0, 300) : (typeof source.classProfile === "string" ? source.classProfile.slice(0, 300) : ""),
+    supportChoices: Array.isArray(source.supportChoices) ? source.supportChoices.filter(value => typeof value === "string").slice(0, 7) : [],
+    supportNote: typeof source.supportNote === "string" ? source.supportNote.slice(0, 300) : (typeof source.supportNeeds === "string" ? source.supportNeeds.slice(0, 300) : ""),
     integrations: {
       digital: Boolean(integrations.digital),
       ai: Boolean(integrations.ai),
@@ -191,6 +251,7 @@ function normalizeTeachingContext(context) {
     },
     methods: Array.isArray(source.methods) ? source.methods.filter(value => typeof value === "string").slice(0, 6) : [],
     techniques: Array.isArray(source.techniques) ? source.techniques.filter(value => typeof value === "string").slice(0, 6) : [],
+    standards: Array.isArray(source.standards) ? source.standards.filter(item => item && typeof item === "object") : [],
     specialRequirements: typeof source.specialRequirements === "string" ? source.specialRequirements.slice(0, 600) : ""
   };
 }
@@ -198,6 +259,28 @@ function normalizeTeachingContext(context) {
 function setCheckboxGroupValues(selector, values) {
   const selected = new Set(values || []);
   document.querySelectorAll(selector).forEach(input => { input.checked = selected.has(input.value); });
+}
+
+function renderStandardsCatalog() {
+  const grade = Number(appState.selectedGrade);
+  ["digital", "ai"].forEach(kind => {
+    const panel = document.getElementById(`${kind}StandardsPanel`);
+    const enabled = appState.teachingContext.integrations[kind === "digital" ? "digital" : "ai"];
+    const catalog = KHBD_STANDARDS?.[kind];
+    if (!panel || !catalog) return;
+    panel.hidden = !enabled;
+    if (!enabled) return;
+    const entries = catalog.entries.filter(entry => entry.grades.includes(grade));
+    panel.innerHTML = `<fieldset class="tool-group"><legend>${catalog.framework} (${catalog.date})</legend><small>${catalog.source}. Chọn ít nhất một mục.</small>${entries.map(entry => `<label style="display:block"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}"> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}</label>`).join("")}</fieldset>`;
+    panel.querySelectorAll(".standard-choice").forEach(input => input.addEventListener("change", () => {
+      const selected = Array.from(document.querySelectorAll(`.standard-choice[data-kind="${kind}"]:checked`)).map(choice => {
+        const entry = entries.find(item => item.id === choice.value);
+        return { framework: catalog.framework, source: catalog.source, date: catalog.date, catalogId: entry.id, officialCode: entry.code || null, officialLabel: entry.label, grade, level: kind === "digital" ? (grade <= 7 ? 3 : 4) : null, loci: ["Mục tiêu", "Hoạt động", "Sản phẩm"] };
+      });
+      appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item.framework !== catalog.framework).concat(selected);
+      saveStateToLocalStorage();
+    }));
+  });
 }
 
 // =============================================================================
@@ -214,23 +297,51 @@ function setupEventListeners() {
 
   // 2. Thay đổi Khối lớp / Bài học
   document.getElementById("selectGrade").addEventListener("change", (e) => {
+    const nextGrade = e.target.value;
+    const before = appState.teachingContext.standards.length;
+    switchDraft({ grade: nextGrade, lesson: "", topic: "" });
+    const after = appState.teachingContext.standards.length;
+    renderStandardsCatalog();
+    if (before !== after) showToast("Đã bỏ lựa chọn tiêu chuẩn không áp dụng cho khối lớp mới.", "info");
+    /*
     appState.selectedGrade = e.target.value;
     populateLessonDropdown();
+    const before = appState.teachingContext.standards.length;
+    appState.teachingContext.standards = appState.teachingContext.standards.filter(item => !item.grade || item.grade === Number(e.target.value));
+    renderStandardsCatalog();
+    if (before !== appState.teachingContext.standards.length) showToast("Đã bỏ lựa chọn tiêu chuẩn không áp dụng cho khối lớp mới.", "info");
     saveStateToLocalStorage();
+    */
+  });
+
+  document.getElementById("selectMyDraft").addEventListener("change", e => {
+    saveStateToLocalStorage();
+    const saved = localStorage.getItem(getDraftKey(e.target.value));
+    if (saved) { applyDraftData(JSON.parse(saved)); localStorage.setItem(`khbd_drafts_v2:${getDraftScope()}:active`, e.target.value); location.reload(); }
+  });
+  document.getElementById("btnClearCurrentDraft").addEventListener("click", () => {
+    const id = getDraftId(); localStorage.removeItem(getDraftKey(id));
+    const index = JSON.parse(localStorage.getItem(getDraftIndexKey()) || "[]").filter(item => item.id !== id);
+    localStorage.setItem(getDraftIndexKey(), JSON.stringify(index));
+    showToast("Đã xóa bản nháp hiện tại.", "info"); renderDraftControls();
+  });
+  document.getElementById("btnImportLegacyDraft").addEventListener("click", () => {
+    const legacy = localStorage.getItem("khbd_kntt_saved_state") || localStorage.getItem("khbd_app_saved_state");
+    if (!legacy || !confirm("Nhập bản nháp cũ trên trình duyệt này vào tài khoản hiện tại?")) return;
+    applyDraftData(JSON.parse(legacy)); saveStateToLocalStorage(); location.reload();
   });
 
   document.getElementById("selectLesson").addEventListener("change", (e) => {
-    appState.selectedLesson = e.target.value;
-    if (e.target.value) {
-      document.getElementById("inputTopicCustom").value = e.target.value;
-      appState.customTopic = e.target.value;
-    }
-    saveStateToLocalStorage();
+    const lesson = e.target.value;
+    switchDraft({ grade: appState.selectedGrade, lesson, topic: lesson });
   });
 
   document.getElementById("inputTopicCustom").addEventListener("input", (e) => {
-    appState.customTopic = e.target.value;
-    saveStateToLocalStorage();
+    e.target.dataset.pendingTopic = e.target.value;
+  });
+  document.getElementById("inputTopicCustom").addEventListener("blur", e => {
+    const topic = (e.target.dataset.pendingTopic ?? e.target.value).trim();
+    if (topic && topic !== appState.customTopic) switchDraft({ grade: appState.selectedGrade, lesson: "", topic });
   });
 
   document.getElementById("selectModel").addEventListener("change", (e) => {
@@ -248,9 +359,8 @@ function setupEventListeners() {
     });
   });
 
-  ["inputClassProfile", "inputSupportNeeds", "inputSpecialRequirements"].forEach(id => {
+  [["inputClassProfileNote", "classProfileNote"], ["inputSupportNote", "supportNote"], ["inputSpecialRequirements", "specialRequirements"]].forEach(([id, key]) => {
     document.getElementById(id).addEventListener("input", (e) => {
-      const key = id === "inputClassProfile" ? "classProfile" : (id === "inputSupportNeeds" ? "supportNeeds" : "specialRequirements");
       appState.teachingContext[key] = e.target.value;
       saveStateToLocalStorage();
     });
@@ -261,10 +371,17 @@ function setupEventListeners() {
   ].forEach(([id, key]) => {
     document.getElementById(id).addEventListener("change", (e) => {
       appState.teachingContext.integrations[key] = e.target.checked;
+      if (key === "digital" || key === "ai") renderStandardsCatalog();
       saveStateToLocalStorage();
     });
   });
   [[".teaching-method-choice", "methods"], [".teaching-technique-choice", "techniques"]].forEach(([selector, key]) => {
+    document.querySelectorAll(selector).forEach(input => input.addEventListener("change", () => {
+      appState.teachingContext[key] = Array.from(document.querySelectorAll(`${selector}:checked`)).map(choice => choice.value);
+      saveStateToLocalStorage();
+    }));
+  });
+  [[".class-profile-choice", "classProfileChoices"], [".support-choice", "supportChoices"]].forEach(([selector, key]) => {
     document.querySelectorAll(selector).forEach(input => input.addEventListener("change", () => {
       appState.teachingContext[key] = Array.from(document.querySelectorAll(`${selector}:checked`)).map(choice => choice.value);
       saveStateToLocalStorage();
@@ -995,14 +1112,18 @@ function buildPedagogicalContext() {
   if (context.integrations.ai) enabledIntegrations.push("năng lực AI");
   if (context.integrations.foreignLanguage) enabledIntegrations.push("ngoại ngữ");
   if (context.integrations.inclusive) enabledIntegrations.push("hỗ trợ HS khuyết tật/hòa nhập");
+  const classProfile = [...context.classProfileChoices, context.classProfileNote].filter(Boolean).join("; ");
+  const support = [...context.supportChoices, context.supportNote].filter(Boolean).join("; ");
+  const selectedStandards = context.standards.map(item => `${item.officialCode ? `${item.officialCode}: ` : "Miền NLS: "}${item.officialLabel}`).join("; ");
   return `BỐI CẢNH VÀ RÀNG BUỘC SƯ PHẠM BẮT BUỘC:
 - Môn học: Toán THCS; khối/lớp: ${appState.selectedGrade}; tên bài: ${getTopicDisplayName()}; thời lượng: ${appState.duration || "chưa xác định"}.
-- Trình độ/đặc điểm lớp: ${context.classProfile || "Chưa cung cấp; thiết kế mức độ phù hợp học sinh THCS và có phân hóa vừa sức."}
-- Học sinh cần hỗ trợ: ${context.supportNeeds || "Không có yêu cầu riêng được chọn."}
+- Trình độ/đặc điểm lớp: ${classProfile || "Chưa cung cấp; thiết kế mức độ phù hợp học sinh THCS và có phân hóa vừa sức."}
+- Hỗ trợ chức năng được chọn: ${support || "Không có yêu cầu riêng được chọn."}
 - Phương pháp dạy học được chọn: ${context.methods.length ? context.methods.join("; ") : "Không ràng buộc; chọn cách phù hợp bài Toán."}
 - Kỹ thuật dạy học được chọn: ${context.techniques.length ? context.techniques.join("; ") : "Không ràng buộc; không tự thêm kỹ thuật hình thức."}
 - Yêu cầu/hoạt động đặc thù: ${context.specialRequirements || "Không có."}
 - Chỉ được tích hợp các thành phần đã bật: ${enabledIntegrations.length ? enabledIntegrations.join("; ") : "không có thành phần tích hợp bổ sung"}.
+- Chuẩn NLS/AI đã chọn: ${selectedStandards || "Không có"}. Chỉ được dùng đúng mục đã chọn; mỗi mục phải gắn một nhiệm vụ Toán, sản phẩm và minh chứng quan sát được. NLS chỉ là MIỀN được chọn, không phải mã năng lực thành phần. AI chỉ hỗ trợ/củng cố học Toán, phải có kiểm chứng của con người, bảo vệ riêng tư và không biến bài Toán thành bài AI độc lập.
 - Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.`;
 }
 
@@ -1155,6 +1276,11 @@ async function handleGenerateCurrentActivity() {
  * Hàm thực thi gọi AI tổng quát với giao diện khóa nút và hiển thị trạng thái
  */
 async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, operationName, prompt, images = [], onSuccess }) {
+  const context = normalizeTeachingContext(appState.teachingContext);
+  if ((context.integrations.digital || context.integrations.ai) && !context.standards.length) {
+    showToast("Khi bật NLS hoặc AI, hãy chọn ít nhất một chuẩn phù hợp trước khi tạo nội dung.", "warning");
+    return;
+  }
   if (appState.isGenerating) {
     showToast("Một tác vụ AI khác đang được xử lý, vui lòng chờ trong giây lát...", "warning");
     return;

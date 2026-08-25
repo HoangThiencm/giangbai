@@ -165,6 +165,7 @@
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="settings"></i> Thông tin Kế hoạch Bài dạy (Chuẩn Công văn 5512)</h2>
           <span class="text-muted" style="font-size: 0.85rem;">Bộ sách: <b>Kết Nối Tri Thức Với Cuộc Sống</b></span>
+          <div class="card-actions"><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
           <div class="tool-group">
@@ -196,14 +197,30 @@
         <div style="margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #f8fafc;">
           <h3 style="margin: 0 0 .75rem; font-size: 1rem;"><i data-lucide="users-round"></i> Bối cảnh lớp và định hướng dạy học</h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-            <div class="tool-group">
-              <label for="inputClassProfile">Trình độ và đặc điểm lớp:</label>
-              <textarea id="inputClassProfile" maxlength="600" rows="3" placeholder="Ví dụ: Lớp có trình độ không đồng đều; đa số đã nắm phép tính cơ bản, một số em cần thêm thời gian lập luận..."></textarea>
-            </div>
-            <div class="tool-group">
-              <label for="inputSupportNeeds">Học sinh cần hỗ trợ (nếu có):</label>
-              <textarea id="inputSupportNeeds" maxlength="500" rows="3" placeholder="Nêu nhu cầu hỗ trợ, cách tiếp cận hoặc điều chỉnh phù hợp; để trống nếu không có yêu cầu riêng."></textarea>
-            </div>
+            <fieldset class="tool-group" style="min-width:0;border:1px solid var(--border);border-radius:8px;padding:.75rem;">
+              <legend>Đặc điểm lớp</legend>
+              <label><input type="checkbox" class="class-profile-choice" value="Trình độ không đồng đều"> Trình độ không đồng đều</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Cần củng cố nền tảng"> Cần củng cố nền tảng</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Đa số đạt yêu cầu"> Đa số đạt yêu cầu</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Nhiều HS khá/giỏi"> Nhiều HS khá/giỏi</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Cần trực quan hóa"> Cần trực quan hóa</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Cần tăng thời gian suy luận"> Cần tăng thời gian suy luận</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Tích cực hợp tác/thảo luận"> Tích cực hợp tác/thảo luận</label>
+              <label for="inputClassProfileNote">Ghi chú ngắn (không nhập tên/thông tin sức khỏe nhạy cảm):</label>
+              <textarea id="inputClassProfileNote" maxlength="300" rows="2"></textarea>
+            </fieldset>
+            <fieldset class="tool-group" style="min-width:0;border:1px solid var(--border);border-radius:8px;padding:.75rem;">
+              <legend>Hỗ trợ chức năng (không chẩn đoán)</legend>
+              <label><input type="checkbox" class="support-choice" value="Nhiệm vụ chia nhỏ"> Nhiệm vụ chia nhỏ</label><br>
+              <label><input type="checkbox" class="support-choice" value="Thêm thời gian"> Thêm thời gian</label><br>
+              <label><input type="checkbox" class="support-choice" value="Học liệu trực quan/chữ lớn"> Học liệu trực quan/chữ lớn</label><br>
+              <label><input type="checkbox" class="support-choice" value="Đọc/nhắc lại yêu cầu"> Đọc/nhắc lại yêu cầu</label><br>
+              <label><input type="checkbox" class="support-choice" value="Hỗ trợ giao tiếp/thảo luận"> Hỗ trợ giao tiếp/thảo luận</label><br>
+              <label><input type="checkbox" class="support-choice" value="Bố trí vai trò phù hợp"> Bố trí vai trò phù hợp</label><br>
+              <label><input type="checkbox" class="support-choice" value="Bạn đồng hành"> Bạn đồng hành</label>
+              <label for="inputSupportNote">Ghi chú ngắn (không nhập tên/thông tin sức khỏe nhạy cảm):</label>
+              <textarea id="inputSupportNote" maxlength="300" rows="2"></textarea>
+            </fieldset>
             <fieldset class="tool-group" data-choice-group="methods" style="min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: .75rem;">
               <legend style="padding: 0 .35rem; font-weight: 600;">Phương pháp dạy học ưu tiên</legend>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .5rem;">
@@ -235,6 +252,8 @@
             <label><input type="checkbox" id="toggleForeignLanguage"> Tích hợp ngoại ngữ</label>
             <label><input type="checkbox" id="toggleInclusiveSupport"> Tích hợp hỗ trợ HS khuyết tật/hòa nhập</label>
           </div>
+          <div id="digitalStandardsPanel" hidden></div>
+          <div id="aiStandardsPanel" hidden></div>
           <div class="tool-group">
             <label for="inputSpecialRequirements">Yêu cầu hoặc hoạt động đặc thù:</label>
             <textarea id="inputSpecialRequirements" maxlength="600" rows="3" placeholder="Ví dụ: Có hoạt động đo đạc ở sân trường; ưu tiên nhiệm vụ theo nhóm 4; không sử dụng điện thoại trong giờ học."></textarea>
@@ -550,6 +569,7 @@
   <script src="js/khbd-prompts.js"></script>
   <script src="js/khbd-gemini.js"></script>
   <script src="js/khbd-docx.js"></script>
+  <script src="js/khbd-standards.js"></script>
   <script src="js/khbd-app.js"></script>
 </body>
 </html>
