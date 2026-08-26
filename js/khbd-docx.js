@@ -81,95 +81,226 @@ class DocxGenerator {
     return s.trim();
   }
 
-  /** Chuyển tập LaTeX thường gặp trong KHBD thành đối tượng OMML native của docx.js. */
+  /** Chuyển LaTeX ($...$, $$...$$, \\(...\\)) thành Equation Word (OMML). Thất bại thì trả null để fallback Unicode. */
   createNativeMath(latex) {
     const mathApi = window.docx;
     const required = ["Math", "MathRun", "MathFraction", "MathSuperScript", "MathSubScript", "MathSubSuperScript", "MathRadical"];
     if (!required.every(name => typeof mathApi[name] === "function")) return null;
 
-    const source = String(latex || "").replace(/^\$\$?|\$\$?$/g, "").trim();
+    let source = String(latex || "").trim();
+    source = source.replace(/^\$\$([\s\S]*)\$\$$/, "$1").replace(/^\$([\s\S]*)\$$/, "$1");
+    source = source.replace(/^\\\(([\s\S]*)\\\)$/, "$1").replace(/^\\\[([\s\S]*)\\\]$/, "$1").trim();
     if (!source) return null;
+    source = source
+      .replace(/\\dfrac\b/g, "\\frac")
+      .replace(/\\tfrac\b/g, "\\frac")
+      .replace(/\\cfrac\b/g, "\\frac")
+      .replace(/\\displaystyle\b/g, "")
+      .replace(/\\nolimits\b/g, "")
+      .replace(/\\limits\b/g, "");
+
     const commandMap = {
-      alpha: "α", beta: "β", gamma: "γ", delta: "δ", Delta: "Δ", epsilon: "ε", theta: "θ", lambda: "λ", pi: "π", sigma: "σ", omega: "ω", Omega: "Ω",
-      in: "∈", notin: "∉", neq: "≠", ne: "≠", le: "≤", leq: "≤", ge: "≥", geq: "≥", times: "×", cdot: "·", div: "÷", pm: "±", mp: "∓",
-      to: "→", rightarrow: "→", Rightarrow: "⇒", Leftrightarrow: "⇔", triangle: "△", angle: "∠", parallel: "∥", perp: "⊥", cup: "∪", cap: "∩", emptyset: "∅", infty: "∞"
+      alpha: "α", beta: "β", gamma: "γ", delta: "δ", Delta: "Δ", epsilon: "ε", varepsilon: "ε",
+      theta: "θ", Theta: "Θ", lambda: "λ", pi: "π", Pi: "Π", sigma: "σ", Sigma: "Σ",
+      omega: "ω", Omega: "Ω", phi: "φ", Phi: "Φ", psi: "ψ", rho: "ρ", mu: "μ", nu: "ν",
+      in: "∈", notin: "∉", ni: "∋", neq: "≠", ne: "≠", le: "≤", leq: "≤", ge: "≥", geq: "≥",
+      times: "×", cdot: "·", div: "÷", pm: "±", mp: "∓", ast: "∗", circ: "∘", bullet: "•",
+      to: "→", rightarrow: "→", leftarrow: "←", Rightarrow: "⇒", Leftrightarrow: "⇔",
+      triangle: "△", angle: "∠", parallel: "∥", perp: "⊥", cup: "∪", cap: "∩",
+      emptyset: "∅", infty: "∞", forall: "∀", exists: "∃", partial: "∂", nabla: "∇",
+      subset: "⊂", subseteq: "⊆", supset: "⊃", sim: "∼", approx: "≈", equiv: "≡",
+      cdots: "⋯", ldots: "…", dots: "…", degree: "°", ell: "ℓ", hbar: "ℏ",
+      lbrack: "[", rbrack: "]", lbrace: "{", rbrace: "}", lparen: "(", rparen: ")"
     };
+    const functions = new Set(["sin", "cos", "tan", "cot", "sec", "csc", "log", "ln", "lg", "lim", "max", "min", "gcd", "lcm", "det", "dim", "ker", "hom", "arg", "exp", "sinh", "cosh", "tanh"]);
+    const blackboard = { N: "ℕ", Z: "ℤ", Q: "ℚ", R: "ℝ", C: "ℂ", P: "ℙ" };
     let index = 0;
-    let unsupported = false;
-    const run = value => new mathApi.MathRun(value);
+    const run = value => new mathApi.MathRun(String(value ?? ""));
+    const skipSpace = () => { while (index < source.length && /\s/.test(source[index])) index++; };
+    const peek = () => source[index];
+
+    const wrapBrackets = (open, inner) => {
+      if (open === "(" && typeof mathApi.MathRoundBrackets === "function") return [new mathApi.MathRoundBrackets({ children: inner })];
+      if (open === "[" && typeof mathApi.MathSquareBrackets === "function") return [new mathApi.MathSquareBrackets({ children: inner })];
+      if ((open === "{" || open === "\\{") && typeof mathApi.MathCurlyBrackets === "function") return [new mathApi.MathCurlyBrackets({ children: inner })];
+      const close = { "(": ")", "[": "]", "{": "}" }[open] || "";
+      return [run(open === "\\{" ? "{" : open), ...inner, run(close)];
+    };
+
     const readGroup = () => {
-      if (source[index] !== "{") { unsupported = true; return [run(source[index++] || "")]; }
+      skipSpace();
+      if (peek() !== "{") return readAtom(true);
       index++;
       const group = readSequence("}");
-      if (source[index] !== "}") { unsupported = true; return group; }
+      if (peek() === "}") index++;
+      return group.length ? group : [run("")];
+    };
+
+    const readOptionalBracket = (open, close) => {
+      skipSpace();
+      if (peek() !== open) return null;
       index++;
+      const group = readSequence(close);
+      if (peek() === close) index++;
       return group;
     };
-    const readAtom = () => {
-      let nodes;
-      if (source[index] === "{") {
-        nodes = readGroup();
-      } else if (source[index] === "\\") {
-        index++;
-        const commandMatch = source.slice(index).match(/^[A-Za-z]+/);
-        const command = commandMatch ? commandMatch[0] : source[index++];
-        if (commandMatch) index += command.length;
-        if (command === "frac") {
-          const numerator = readGroup();
-          const denominator = readGroup();
-          nodes = [new mathApi.MathFraction({ numerator, denominator })];
-        } else if (command === "sqrt") {
-          let degree;
-          if (source[index] === "[") {
-            index++;
-            degree = readSequence("]");
-            if (source[index] === "]") index++; else unsupported = true;
-          }
-          nodes = [new mathApi.MathRadical({ children: readGroup(), degree })];
-        } else if (command === "mathbb") {
-          const groupEnd = source.indexOf("}", index + 1);
-          const groupText = source[index] === "{" && groupEnd > index ? source.slice(index + 1, groupEnd).trim() : "";
-          readGroup();
-          nodes = [run({ N: "ℕ", Z: "ℤ", Q: "ℚ", R: "ℝ" }[groupText] || groupText || "mathbb")];
-        } else if (command === "left" || command === "right") {
-          nodes = [];
-        } else if (command === "{" || command === "}") {
-          nodes = [run(command)];
-        } else if (commandMap[command]) {
-          nodes = [run(commandMap[command])];
-        } else {
-          unsupported = true;
-          nodes = [run(`\\${command}`)];
-        }
-      } else {
-        nodes = [run(source[index++])];
-      }
 
+    const readScriptAtom = () => {
+      skipSpace();
+      if (peek() === "{") return readGroup();
+      if (peek() === "\\") return readAtom(true);
+      if (index < source.length) return [run(source[index++])];
+      return [run("")];
+    };
+
+    const applyScripts = nodes => {
+      skipSpace();
       let subScript = null;
       let superScript = null;
-      while (source[index] === "^" || source[index] === "_") {
+      while (peek() === "^" || peek() === "_") {
         const kind = source[index++];
-        const script = source[index] === "{" ? readGroup() : [run(source[index++] || "")];
+        const script = readScriptAtom();
         if (kind === "^") superScript = script; else subScript = script;
+        skipSpace();
       }
       if (subScript && superScript) return [new mathApi.MathSubSuperScript({ children: nodes, subScript, superScript })];
       if (superScript) return [new mathApi.MathSuperScript({ children: nodes, superScript })];
       if (subScript) return [new mathApi.MathSubScript({ children: nodes, subScript })];
       return nodes;
     };
-    const readSequence = stop => {
+
+    const readCommandName = () => {
+      const match = source.slice(index).match(/^[A-Za-z]+/);
+      if (match) {
+        index += match[0].length;
+        return match[0];
+      }
+      return source[index++] || "";
+    };
+
+    const readAtom = (bare = false) => {
+      skipSpace();
+      if (index >= source.length) return [];
+      let nodes;
+      if (peek() === "{") {
+        nodes = readGroup();
+      } else if (peek() === "\\") {
+        index++;
+        const command = readCommandName();
+        if (command === "frac") {
+          nodes = [new mathApi.MathFraction({ numerator: readGroup(), denominator: readGroup() })];
+        } else if (command === "sqrt") {
+          const degree = readOptionalBracket("[", "]");
+          nodes = [new mathApi.MathRadical(degree ? { children: readGroup(), degree } : { children: readGroup() })];
+        } else if (command === "mathbb" || command === "mathcal" || command === "mathfrak") {
+          skipSpace();
+          let letter = "";
+          if (peek() === "{") {
+            index++;
+            while (index < source.length && peek() !== "}") letter += source[index++];
+            if (peek() === "}") index++;
+            letter = letter.trim();
+          } else if (index < source.length) {
+            letter = source[index++];
+          }
+          nodes = [run(command === "mathbb" ? (blackboard[letter] || letter || "ℕ") : letter || command)];
+        } else if (command === "text" || command === "mathrm" || command === "mathbf" || command === "textrm" || command === "textit" || command === "textbf") {
+          skipSpace();
+          if (peek() === "{") {
+            index++;
+            let text = "";
+            let depth = 1;
+            while (index < source.length && depth > 0) {
+              const ch = source[index++];
+              if (ch === "{") depth++;
+              else if (ch === "}") depth--;
+              if (depth > 0) text += ch;
+            }
+            nodes = [run(text.replace(/\\,/g, " ").replace(/\\/g, ""))];
+          } else {
+            nodes = [run("")];
+          }
+        } else if (command === "left") {
+          skipSpace();
+          let open = peek() || "(";
+          if (open === "\\") {
+            index++;
+            open = "\\" + readCommandName();
+            if (open === "\\{") open = "{";
+            if (open === "\\}") open = "}";
+          } else {
+            index++;
+            if (open === ".") open = "";
+          }
+          const inner = readSequence(null, true);
+          nodes = open ? wrapBrackets(open, inner) : inner;
+        } else if (command === "right") {
+          skipSpace();
+          if (peek() === "\\") {
+            index++;
+            readCommandName();
+          } else if (index < source.length) {
+            index++;
+          }
+          nodes = [];
+        } else if (command === "{" || command === "}") {
+          nodes = [run(command)];
+        } else if (command === "," || command === ";" || command === "!" || command === " " || command === "quad" || command === "qquad") {
+          nodes = [run(" ")];
+        } else if (command === "overline" || command === "hat" || command === "widehat" || command === "vec" || command === "overrightarrow" || command === "underline") {
+          nodes = readGroup();
+        } else if (commandMap[command]) {
+          nodes = [run(commandMap[command])];
+        } else if (functions.has(command)) {
+          nodes = [run(command)];
+        } else {
+          const uni = this.latexToUnicodeMath("\\" + command);
+          nodes = [run(uni && uni !== "\\" + command ? uni : command)];
+        }
+      } else if (peek() === "}" || peek() === "]" || peek() === ")") {
+        return [];
+      } else if (/\d/.test(peek())) {
+        let num = "";
+        while (index < source.length && /[0-9.]/.test(peek())) num += source[index++];
+        nodes = [run(num)];
+      } else if (/[A-Za-z]/.test(peek())) {
+        nodes = [run(source[index++])];
+      } else {
+        const ch = source[index++];
+        if (ch === "(" || ch === "[") {
+          const close = ch === "(" ? ")" : "]";
+          const inner = readSequence(close);
+          if (peek() === close) index++;
+          nodes = wrapBrackets(ch, inner);
+        } else {
+          nodes = [run(ch)];
+        }
+      }
+
+      return bare ? nodes : applyScripts(nodes);
+    };
+
+    const readSequence = (stop, stopAtRight = false) => {
       const nodes = [];
-      while (index < source.length && source[index] !== stop) nodes.push(...readAtom());
+      while (index < source.length) {
+        skipSpace();
+        if (stop && peek() === stop) break;
+        if (stopAtRight && source.slice(index, index + 6) === "\\right") break;
+        if (peek() === "}" && stop !== "}") break;
+        const next = readAtom();
+        if (!next.length) break;
+        nodes.push(...next);
+      }
       return nodes;
     };
 
     try {
-      const children = readSequence("");
-      if (index < source.length || unsupported) console.warn("LaTeX KHBD có phần chưa hỗ trợ đầy đủ; giữ nguyên phần văn bản có thể đọc được:", source);
-      return new mathApi.Math({ children: children.length ? children : [run(source)] });
+      const children = readSequence(null).filter(Boolean);
+      if (!children.length) return null;
+      return new mathApi.Math({ children });
     } catch (error) {
-      console.warn("Không thể chuyển LaTeX sang OMML; giữ nguyên LaTeX:", source, error);
-      return new mathApi.Math({ children: [run(source)] });
+      console.warn("Không thể chuyển LaTeX sang Equation Word:", source, error);
+      return null;
     }
   }
 
@@ -181,13 +312,26 @@ class DocxGenerator {
     const { TextRun } = window.docx;
 
     const runs = [];
-    // Regex tìm các khối $...$ hoặc **in đậm** hoặc *in nghiêng*
-    const regex = /(\$\$[\s\S]*?\$\$|\$.*?\$|\*\*.*?\*\*|\*.*?\*|`.*?`)/g;
+    const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*[\s\S]+?\*\*|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|`[^`]+?`)/g;
     let lastIndex = 0;
     let match;
 
+    const pushMath = (token, display) => {
+      const math = this.createNativeMath(token);
+      if (math) {
+        runs.push(math);
+        return;
+      }
+      runs.push(new TextRun({
+        text: this.latexToUnicodeMath(token),
+        font: "Cambria Math",
+        italics: true,
+        bold: Boolean(display),
+        size: this.fontSizeBody
+      }));
+    };
+
     while ((match = regex.exec(text)) !== null) {
-      // Phần văn bản thường trước match
       if (match.index > lastIndex) {
         const plain = text.substring(lastIndex, match.index);
         runs.push(new TextRun({
@@ -199,28 +343,17 @@ class DocxGenerator {
 
       const token = match[0];
 
-      if (token.startsWith("$$") && token.endsWith("$$")) {
-        const math = this.createNativeMath(token);
-        runs.push(math || new TextRun({ text: ` ${this.latexToUnicodeMath(token)} `, font: "Cambria Math", italics: true, bold: true, size: this.fontSizeBody, color: "003366" }));
-      } else if (token.startsWith("$") && token.endsWith("$")) {
-        const math = this.createNativeMath(token);
-        runs.push(math || new TextRun({ text: this.latexToUnicodeMath(token), font: "Cambria Math", italics: true, size: this.fontSizeBody, color: "002244" }));
+      if ((token.startsWith("$$") && token.endsWith("$$")) || (token.startsWith("\\[") && token.endsWith("\\]"))) {
+        pushMath(token, true);
+      } else if ((token.startsWith("$") && token.endsWith("$")) || (token.startsWith("\\(") && token.endsWith("\\)"))) {
+        pushMath(token, false);
       } else if (token.startsWith("**") && token.endsWith("**")) {
-        // Chữ in đậm
         const boldText = token.substring(2, token.length - 2);
-        // Có thể chứa math bên trong bold
-        if (boldText.includes("$")) {
-          const subRuns = this.parseInlineTextToRuns(boldText);
-          subRuns.forEach(r => r.bold = true);
-          runs.push(...subRuns);
-        } else {
-          runs.push(new TextRun({
-            text: boldText,
-            font: this.fontFamily,
-            size: this.fontSizeBody,
-            bold: true
-          }));
-        }
+        const subRuns = this.parseInlineTextToRuns(boldText);
+        subRuns.forEach(r => {
+          if (r instanceof TextRun) r.bold = true;
+        });
+        runs.push(...subRuns);
       } else if (token.startsWith("*") && token.endsWith("*")) {
         // Chữ in nghiêng
         const italicText = token.substring(1, token.length - 1);
