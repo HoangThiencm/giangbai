@@ -22,6 +22,7 @@
         }
 
         * { box-sizing: border-box; }
+        .hidden { display: none !important; }
 
         body {
             font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -1002,7 +1003,7 @@
 
         <!-- CỘT PHẢI: LƯỚI GIÁO VIÊN & LIVE STATS BANNER -->
         <main id="right-panel">
-            <section id="plan-onboarding" class="hidden" style="margin-bottom: 16px; padding: 24px; border: 1px dashed #818cf8; border-radius: 14px; background: #eef2ff; text-align: center;">
+            <section id="plan-onboarding" class="hidden" style="display: none; margin-bottom: 16px; padding: 24px; border: 1px dashed #818cf8; border-radius: 14px; background: #eef2ff; text-align: center;">
                 <i class="fas fa-people-roof" style="font-size: 2rem; color: #4f46e5;"></i>
                 <h2 style="margin: 10px 0 6px; color: #312e81; font-size: 1.2rem;">Bắt đầu khai báo tổ chuyên môn</h2>
                 <p style="margin: 0 0 14px; color: #475569;">Chưa có dữ liệu cho kế hoạch này. Hãy khai báo tổ, đợt, môn học, lớp và giáo viên; hoặc chọn bộ mẫu/đồng bộ trong phần khai báo.</p>
@@ -2244,7 +2245,11 @@
         }
 
         function renderOnboarding() {
-            document.getElementById('plan-onboarding')?.classList.toggle('hidden', hasPlanConfiguration());
+            const ob = document.getElementById('plan-onboarding');
+            if (!ob) return;
+            const hasConfig = hasPlanConfiguration();
+            ob.classList.toggle('hidden', hasConfig);
+            ob.style.display = hasConfig ? 'none' : 'block';
         }
 
         function requirePlanConfiguration() {
