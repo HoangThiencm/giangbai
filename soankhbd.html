@@ -264,7 +264,7 @@
           <h2 class="card-title"><i data-lucide="camera"></i> Bước 0 — Dán & phân tích ảnh/trang SGK</h2>
           <div class="card-actions">
             <button id="btnAnalyzeVision" class="btn btn-primary">
-              <i data-lucide="sparkles"></i> Đọc và phân tích nội dung SGK
+              <i data-lucide="scan-text"></i> Trích nội dung SGK (không dùng AI)
             </button>
             <button id="btnClearVisionImages" class="btn btn-outline-dark">
               <i data-lucide="trash"></i> Xóa tất cả ảnh
@@ -277,7 +277,7 @@
           <div class="dropzone-icon">📋</div>
           <div class="dropzone-text">
             <h4>Dán ảnh SGK từ Clipboard (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
-            <p>Làm bước này trước. Hỗ trợ chụp màn hình trang SGK (Ctrl + V), kéo thả ảnh, hoặc tải PDF (chọn trang rồi chuyển thành ảnh). Sau khi AI đọc xong, hệ thống mới đề xuất PPDH và NLS/AI.</p>
+            <p>Làm bước này trước. PDF: lấy chữ sẵn có trên file. Ảnh chụp: OCR ngay trên máy (Tesseract), không gọi Gemini nên không tốn quota. Sau khi trích xong, hệ thống đề xuất PPDH và NLS/AI.</p>
           </div>
           <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
         </div>

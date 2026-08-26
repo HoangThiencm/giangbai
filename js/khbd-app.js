@@ -1103,6 +1103,7 @@ async function handleConfirmPdfPages() {
 
       await page.render({ canvasContext: ctx, viewport }).promise;
       const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const pdfText = await extractPdfPageText(page);
 
       appState.images.push({
         id: "pdf_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
@@ -1111,7 +1112,8 @@ async function handleConfirmPdfPages() {
         size: Math.round(dataUrl.length * 0.75),
         sourceType: "pdf",
         pageNum: pageNum,
-        dataUrl: dataUrl
+        dataUrl: dataUrl,
+        pdfText
       });
     }
 
@@ -1426,7 +1428,7 @@ function buildPedagogicalContext() {
 - Hoạt động đặc thù môn học được chọn: ${activityLabels.length ? activityLabels.join("; ") : `Chưa chọn; chỉ dùng 1–2 hoạt động catalog phù hợp môn ${subjectName}.`}
 - Yêu cầu/hoạt động đặc thù: ${context.specialRequirements || "Không có."}
 - Chỉ được tích hợp các thành phần đã bật: ${enabledIntegrations.length ? enabledIntegrations.join("; ") : "không có thành phần tích hợp bổ sung"}.
-- Chuẩn NLS/AI đã chọn (chỉ các mục chính thức): ${selectedStandards || "Không có"}. Một bài chỉ 2–3 miền NLS (TT 02/2025) và/hoặc 2–3 mã AI (QĐ 2422) đã chọn. CẤM bịa mã/thành phần ngoài danh sách. Mỗi mục phải gắn một nhiệm vụ ${subjectName}, sản phẩm và minh chứng quan sát được. NLS chỉ là MIỀN, không phải mã thành phần chưa có trong catalog. AI chỉ hỗ trợ học ${subjectName}, phải có kiểm chứng của con người, bảo vệ riêng tư, không biến bài ${subjectName} thành bài AI độc lập.
+- Chuẩn NLS/AI đã chọn (chỉ các mục chính thức): ${selectedStandards || "Không có"}. Một bài chỉ 2–3 miền NLS (TT 02/2025) và/hoặc 2–3 mã AI (QĐ 2422) đã chọn. CẤM bịa mã ngoài danh sách. Khi viết mục tiêu: chỉ mô tả năng lực một dòng, CẤM nhãn Biểu hiện / Nhiệm vụ / Minh chứng. AI chỉ hỗ trợ học ${subjectName}, có kiểm chứng của con người, không biến thành bài AI độc lập.
 - Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.`;
 }
 
@@ -1512,28 +1514,122 @@ async function guardGeminiLessonOutput(rawOutput, signal) {
   return repairedNormalized.text;
 }
 
+async function extractPdfPageText(page) {
+  const content = await page.getTextContent();
+  let lastY = null;
+  const parts = [];
+  content.items.forEach(item => {
+    const y = item.transform ? item.transform[5] : null;
+    if (lastY !== null && y !== null && Math.abs(lastY - y) > 5) parts.push("\n");
+    else if (parts.length) parts.push(" ");
+    parts.push(item.str || "");
+    lastY = y;
+  });
+  return parts.join("").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Không tải được thư viện OCR."));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureTesseract() {
+  if (window.Tesseract) return window.Tesseract;
+  await loadScriptOnce("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js");
+  if (!window.Tesseract) throw new Error("Tesseract.js chưa sẵn sàng.");
+  return window.Tesseract;
+}
+
+async function ocrImageDataUrl(dataUrl, onProgress) {
+  const Tesseract = await ensureTesseract();
+  const worker = await Tesseract.createWorker("vie+eng", 1, {
+    logger: message => {
+      if (typeof onProgress === "function" && message.status === "recognizing text") {
+        onProgress(message.progress || 0);
+      }
+    }
+  });
+  try {
+    const { data } = await worker.recognize(dataUrl);
+    return String(data?.text || "").trim();
+  } finally {
+    await worker.terminate();
+  }
+}
+
+async function extractTextbookLocally() {
+  const images = appState.images || [];
+  if (!images.length) throw new Error("Chưa có ảnh/trang SGK.");
+  const sections = [];
+  for (let i = 0; i < images.length; i++) {
+    const image = images[i];
+    const title = image.pageNum ? `Trang PDF ${image.pageNum}` : (image.name || `Ảnh ${i + 1}`);
+    updateProgress(Math.round(((i) / images.length) * 90), `Đang trích nội dung ${title} (${i + 1}/${images.length}) — không dùng Gemini...`);
+    let text = String(image.pdfText || "").trim();
+    if (text.length < 80 && image.sourceType === "pdf" && currentPdfDoc && image.pageNum) {
+      try {
+        const page = await currentPdfDoc.getPage(image.pageNum);
+        text = await extractPdfPageText(page);
+        image.pdfText = text;
+      } catch (error) {
+        console.warn("Không lấy được lớp chữ PDF:", error);
+      }
+    }
+    if (text.length < 80 && image.dataUrl) {
+      text = await ocrImageDataUrl(image.dataUrl, progress => {
+        const overall = Math.round(((i + progress) / images.length) * 90);
+        updateProgress(overall, `OCR ${title} (${i + 1}/${images.length})...`);
+      });
+      image.ocrText = text;
+    }
+    sections.push(`## ${title}\n\n${text || "[Không trích được chữ trên trang này]"}`);
+  }
+  return `# Nội dung SGK (trích cục bộ, không dùng Gemini)\n\n${sections.join("\n\n---\n\n")}`;
+}
+
 async function handleGenerateVision() {
   if (appState.images.length === 0) {
     showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh/trang SGK!", "warning");
     return;
   }
+  if (appState.isGenerating) {
+    showToast("Một tác vụ khác đang chạy, vui lòng chờ.", "warning");
+    return;
+  }
 
-  const context = getGenerationPromptContext();
-  const prompt = getPromptTemplate('ANALYZE_TEXTBOOK', context);
-
-  await executeAIGeneration({
-    buttonId: "btnAnalyzeVision",
-    targetEditorId: "editorVision",
-    targetPreviewId: "previewVision",
-    operationName: "Phân tích ảnh SGK",
-    prompt,
-    images: appState.images,
-    onSuccess: (result) => {
-      appState.content.vision = result;
-      saveStateToLocalStorage();
-      applyLessonBasedRecommendations({ silent: false });
-    }
-  });
+  const btn = document.getElementById("btnAnalyzeVision");
+  try {
+    appState.isGenerating = true;
+    if (btn) btn.disabled = true;
+    updateProgress(5, "Đang trích nội dung SGK trên máy (PDF chữ / OCR)...");
+    const result = await extractTextbookLocally();
+    appState.content.vision = result;
+    const editor = document.getElementById("editorVision");
+    if (editor) editor.value = result;
+    renderMathPreview(result, "previewVision");
+    saveStateToLocalStorage();
+    updateProgress(100, "Đã trích nội dung SGK!");
+    setTimeout(() => hideProgress(), 1200);
+    showToast("Đã trích nội dung SGK trên máy, không dùng quota Gemini.", "success");
+    applyLessonBasedRecommendations({ silent: false });
+  } catch (error) {
+    console.error(error);
+    hideProgress();
+    showToast(`Lỗi trích nội dung SGK: ${error.message}`, "danger", 6000);
+  } finally {
+    appState.isGenerating = false;
+    if (btn) btn.disabled = false;
+  }
 }
 
 function hasTextbookSource() {
@@ -1746,15 +1842,16 @@ async function handle1ClickGenerate() {
   try {
     const context = getGenerationPromptContext();
     
-    // BƯỚC 1: Phân tích ảnh SGK (nếu có ảnh và chưa phân tích)
-    if (appState.images.length > 0 && !appState.content.vision) {
-      updateProgress(10, "Bước 1/7: Đang đọc và phân tích ảnh SGK...");
-      const promptVision = getPromptTemplate('ANALYZE_TEXTBOOK', context);
-      const resVision = await generateOneClickContent(promptVision, appState.images);
+    // BƯỚC 1: Trích nội dung SGK trên máy (không gọi Gemini)
+    if (appState.images.length > 0 && !String(appState.content.vision || "").trim()) {
+      updateProgress(10, "Bước 1/7: Đang trích nội dung SGK trên máy (không dùng Gemini)...");
+      const resVision = await extractTextbookLocally();
+      throwIfGenerationCancelled();
       appState.content.vision = resVision;
       document.getElementById("editorVision").value = resVision;
       renderMathPreview(resVision, "previewVision");
-      await delay(800, appState.generationController.signal);
+      saveStateToLocalStorage();
+      await delay(400, appState.generationController.signal);
     }
 
     context.textbook_content = appState.content.vision || "";

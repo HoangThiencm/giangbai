@@ -93,39 +93,37 @@ QUY TẮC MỤC TIÊU KIẾN THỨC (KHÔNG TỰ TẠO):
 - Nếu khối YCCĐ trống: chỉ lấy YCCĐ in trên SGK/nguồn Tab 1. Nếu nguồn không nêu YCCĐ, ghi các ý kiến thức có trong nguồn và thêm dòng "Cần đối chiếu YCCĐ CT GDPT 2018 (TT 32) cho bài này" — CẤM bịa thang Bloom Nhận biết/Thông hiểu/Vận dụng không có trong nguồn.
 
 QUY TẮC BẮT BUỘC VỀ SỐ LƯỢNG NĂNG LỰC VÀ PHẨM CHẤT (Bài dạy 1–2 tiết):
-- Mục 2.a (Năng lực chung): CHỈ ĐƯỢC CHỌN 1–2 năng lực chung phù hợp nhất (ví dụ: Tự chủ và tự học, hoặc Giao tiếp và hợp tác). Nêu biểu hiện và nhiệm vụ/sản phẩm cụ thể. CẤM liệt kê cả 3 năng lực chung.
-- Mục 2.b (Năng lực đặc thù môn học): CHỈ ĐƯỢC CHỌN ĐÚNG 2–3 năng lực đặc thù thực sự nổi trội nhất của bài học này (gắn với hoạt động, nhiệm vụ, sản phẩm của bài). TUYỆT ĐỐI KHÔNG liệt kê toàn bộ khung năng lực đặc thù (ví dụ: môn Toán chỉ chọn 2–3 trong 5 năng lực; môn Ngữ văn/KHTN... cũng chỉ chọn 2–3 năng lực).
-- Mục 3 (Phẩm chất): CHỈ ĐƯỢC CHỌN 1–2 phẩm chất cốt lõi có hành vi quan sát rõ ràng nhất trong các hoạt động của bài học. CẤM liệt kê đủ cả 5 phẩm chất.
-- Năng lực số / AI: chỉ khi được bật; CHỈ 2–3 miền TT 02/2025 hoặc 2–3 mã QĐ 2422 đã chọn, CẤM bịa mã. Hòa nhập chỉ khi được bật. Nếu không bật, BỎ TOÀN BỘ mục đó.
+- Mục 2.a (Năng lực chung): CHỈ 1–2 năng lực chung. CẤM liệt kê cả 3.
+- Mục 2.b (Năng lực đặc thù môn học): CHỈ 2–3 năng lực đặc thù nổi trội. CẤM liệt kê hết khung.
+- Mục 3 (Phẩm chất): CHỈ 1–2 phẩm chất. CẤM đủ 5 phẩm chất.
+- Năng lực số / AI: chỉ khi được bật; CHỈ 2–3 miền TT 02/2025 hoặc 2–3 mã QĐ 2422 đã chọn, CẤM bịa mã.
 
-YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
-- Đọc đúng thời lượng trong BỐI CẢNH SƯ PHẠM đi kèm yêu cầu. Với bài 2 tiết hoặc thời lượng ngắn, chỉ chọn 1–2 năng lực chung và 2–3 năng lực đặc thù môn Toán nổi trội, khả thi; không liệt kê dàn trải tất cả năng lực.
-- Mỗi năng lực được chọn phải nêu minh chứng cụ thể: kiến thức, nhiệm vụ học tập hoặc sản phẩm của chính bài này; không dùng mô tả chung chung.
-- Năng lực số hoặc AI chỉ xuất hiện khi thành phần tương ứng được bật; chỉ dùng đúng 2–3 mục đã chọn theo TT 02/2025 hoặc QĐ 2422. Nếu không bật, bỏ toàn bộ mục đó.
-- Phẩm chất chỉ chọn những phẩm chất có hành vi quan sát được trong bài; không mặc định liệt kê đủ 5 phẩm chất. Hỗ trợ HS hòa nhập chỉ nêu khi được bật trong BỐI CẢNH SƯ PHẠM.
-- Trong các danh sách dưới đây, dùng \`- \` cho ý lớn và \`  + \` cho ý con; không dùng đánh số thay cho danh sách nội dung.
+CÁCH VIẾT NĂNG LỰC VÀ PHẨM CHẤT (BẮT BUỘC):
+- Chỉ MÔ TẢ năng lực/phẩm chất bằng một dòng cho mỗi mục: \`- Tên năng lực: mô tả ngắn gắn đúng bài học.\`
+- CẤM các nhãn **Biểu hiện**, **Nhiệm vụ/Sản phẩm**, **Minh chứng**. Không dùng ý con \`+ \`. Không tách thành 2–3 gạch con dưới mỗi năng lực.
+- Không liệt kê hết bài tập SGK; không viết công thức/tên tập hợp rời từng dòng.
 
 # I. MỤC TIÊU
 
 ## 1. Về kiến thức
-(Viết các YCCĐ CT GDPT 2018 / TT 32 hoặc YCCĐ in trên SGK của đúng bài này; mỗi ý một gạch đầu dòng, giữ động từ YCCĐ: nhận biết được, nêu được, thực hiện được, vận dụng được,...).
+(Viết các YCCĐ CT GDPT 2018 / TT 32 hoặc YCCĐ in trên SGK; mỗi ý một gạch đầu dòng, giữ động từ YCCĐ.)
 
 ## 2. Về năng lực
 ### a) Năng lực chung
-- Chỉ chọn 1–2 năng lực chung phù hợp nhất; với từng năng lực, gắn rõ nhiệm vụ hoặc sản phẩm của bài học.
+- Tự chủ và tự học: ...
+- Giao tiếp và hợp tác: ...
 
-### b) Năng lực đặc thù môn Toán (Gắn cụ thể với nội dung bài học)
-- Chỉ chọn 2–3 năng lực đặc thù nổi trội; với từng năng lực, gắn rõ kiến thức, nhiệm vụ hoặc sản phẩm của bài học.
+### b) Năng lực đặc thù môn học
+- [Tên năng lực đặc thù]: ...
 
-### c) Năng lực số (CHỈ viết khi bối cảnh sư phạm bật năng lực số; nếu không bật thì bỏ toàn bộ mục này)
-- CHỈ viết 2–3 miền NLS đã chọn trong bối cảnh, đúng tên miền Thông tư 02/2025/TT-BGDĐT. CẤM bịa mã thành phần. Mỗi miền gắn một nhiệm vụ/sản phẩm của bài.
+### c) Năng lực số (CHỈ khi bối cảnh bật; đúng miền TT 02 đã chọn)
+- [Tên miền]: ...
 
-### d) Năng lực AI (CHỈ viết khi bối cảnh sư phạm bật năng lực AI; nếu không bật thì bỏ toàn bộ mục này)
-- CHỈ viết 2–3 mã/biểu hiện AI đã chọn trong bối cảnh, đúng nguyên văn QĐ 2422/QĐ-BGDĐT. CẤM bịa mã khác. Mỗi mã gắn nhiệm vụ kiểm chứng/khai báo AI trong bài môn học, không biến thành bài AI độc lập.
+### d) Năng lực AI (CHỈ khi bối cảnh bật; đúng mã QĐ 2422 đã chọn)
+- [Mã]: ...
 
-## 3. Về phẩm chất & Giáo dục hòa nhập (chỉ nêu hỗ trợ HS khuyết tật/hòa nhập khi bối cảnh sư phạm bật)
-- Chỉ chọn các phẩm chất có hành vi quan sát được trong nhiệm vụ/sản phẩm của bài; nêu ngắn gọn minh chứng đó.
-- **Hỗ trợ học sinh giáo dục hòa nhập (nếu có):** Chỉ khi được bật, nêu điều chỉnh vừa sức và cách hỗ trợ để HS tham gia nhiệm vụ của bài.`,
+## 3. Về phẩm chất & Giáo dục hòa nhập (hòa nhập chỉ khi được bật)
+- [Tên phẩm chất]: mô tả ngắn gắn bài.`,
 
   // TAB 3: THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU (II. THIẾT BỊ & HỌC LIỆU)
   GENERATE_MATERIALS: `Hãy xây dựng phần **II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU** cho Kế hoạch bài dạy môn Toán THCS chuẩn Công văn 5512 theo GDPT 2018.
@@ -524,13 +522,10 @@ function getPromptTemplate(templateKey, context) {
   }
 
   if (templateKey === 'GENERATE_OBJECTIVES') {
-    result += `\n\nQUY TẮC BẮT BUỘC VỀ SỐ LƯỢNG NĂNG LỰC VÀ PHẨM CHẤT (Bài dạy 1–2 tiết):
-- Mục 2.a (Năng lực chung): CHỈ ĐƯỢC CHỌN 1–2 năng lực chung phù hợp nhất (ví dụ: Tự chủ và tự học, hoặc Giao tiếp và hợp tác). Nêu biểu hiện và nhiệm vụ/sản phẩm cụ thể. CẤM liệt kê cả 3 năng lực chung.
-- Mục 2.b (Năng lực đặc thù môn học): CHỈ ĐƯỢC CHỌN ĐÚNG 2–3 năng lực đặc thù thực sự nổi trội nhất của bài học này (gắn với hoạt động, nhiệm vụ, sản phẩm của bài). TUYỆT ĐỐI KHÔNG liệt kê toàn bộ khung năng lực đặc thù (ví dụ: môn Toán chỉ chọn 2–3 trong 5 năng lực; môn Ngữ văn/KHTN... cũng chỉ chọn 2–3 năng lực).
-- Mục 3 (Phẩm chất): CHỈ ĐƯỢC CHỌN 1–2 phẩm chất cốt lõi có hành vi quan sát rõ ràng nhất trong các hoạt động của bài học. CẤM liệt kê đủ cả 5 phẩm chất.
-- Năng lực số: nếu bật, CHỈ 2–3 miền TT 02/2025 đã chọn; CẤM bịa mã thành phần.
-- Năng lực AI: nếu bật, CHỈ 2–3 mã QĐ 2422 đã chọn; CẤM bịa mã khác.
-- Giáo dục hòa nhập: chỉ khi được bật trong BỐI CẢNH SƯ PHẠM. Nếu không bật, BỎ TOÀN BỘ mục đó.`;
+    result += `\n\nQUY TẮC VIẾT NĂNG LỰC / PHẨM CHẤT:
+- Mỗi năng lực hoặc phẩm chất chỉ MỘT dòng: \`- Tên: mô tả ngắn gắn bài.\`
+- CẤM nhãn Biểu hiện, Nhiệm vụ/Sản phẩm, Minh chứng. CẤM ý con bắt đầu bằng + .
+- Năng lực chung 1–2; đặc thù 2–3; phẩm chất 1–2; NLS/AI chỉ 2–3 mục đã chọn theo văn bản.`;
   }
 
   return result;
