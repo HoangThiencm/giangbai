@@ -686,6 +686,7 @@ function setupEventListeners() {
     document.getElementById(id).addEventListener("change", (e) => {
       appState.teachingContext.integrations[key] = e.target.checked;
       if (key === "digital" || key === "ai") {
+        if (!e.target.checked) removeDisabledObjectivesStandardSections();
         if (e.target.checked && !hasAnalyzedLessonContent()) {
           renderStandardsCatalog();
           showToast("Hãy phân tích SGK ở Bước 0 trước. Sau khi có nội dung bài, hệ thống sẽ đề xuất 2–3 mục đúng văn bản.", "info", 5000);
@@ -1423,7 +1424,7 @@ function prepareLiteralListMarkers(markdownText) {
     if (trimmedStart.startsWith("|")) return line;
     if (/^-\s+/.test(trimmedStart)) return trimmedStart.replace(/^-\s+/, `- ${KHBD_MAJOR_LIST_MARKER} `);
     if (/^\+\s+/.test(trimmedStart)) return trimmedStart.replace(/^\+\s+/, `  + ${KHBD_MINOR_LIST_MARKER} `);
-    if (/^•\s+/.test(trimmedStart)) return trimmedStart.replace(/^•\s+/, `    - ${KHBD_DETAIL_LIST_MARKER} `);
+    if (/^[.•]\s+/.test(trimmedStart)) return trimmedStart.replace(/^[.•]\s+/, `    - ${KHBD_DETAIL_LIST_MARKER} `);
     return line;
   }).join("\n");
 }
@@ -1442,7 +1443,7 @@ function applyLiteralListMarkers(documentFragment) {
             ? KHBD_DETAIL_LIST_MARKER
             : null;
       if (!marker) continue;
-      const symbol = marker === KHBD_MAJOR_LIST_MARKER ? "-" : marker === KHBD_MINOR_LIST_MARKER ? "+" : "•";
+      const symbol = marker === KHBD_MAJOR_LIST_MARKER ? "-" : marker === KHBD_MINOR_LIST_MARKER ? "+" : ".";
       const className = marker === KHBD_MAJOR_LIST_MARKER
         ? "khbd-li-major"
         : marker === KHBD_MINOR_LIST_MARKER
@@ -1649,8 +1650,10 @@ function buildPedagogicalContext() {
   if (context.integrations.inclusive) enabledIntegrations.push("hỗ trợ HS khuyết tật/hòa nhập");
   const classProfile = [...context.classProfileChoices, context.classProfileNote].filter(Boolean).join("; ");
   const support = [...context.supportChoices, context.supportNote].filter(Boolean).join("; ");
-  const nlsLines = (context.standards || []).filter(item => !item.officialCode).map(item => `NLS: ${item.officialLabel}`);
-  const aiLines = (context.standards || []).filter(item => item.officialCode).map(item => `AI: ${item.officialCode}: ${item.officialLabel}`);
+  const digitalOn = Boolean(context.integrations.digital);
+  const aiOn = Boolean(context.integrations.ai);
+  const nlsLines = digitalOn ? (context.standards || []).filter(item => !item.officialCode).map(item => `NLS: ${item.officialLabel}`) : [];
+  const aiLines = aiOn ? (context.standards || []).filter(item => item.officialCode).map(item => `AI: ${item.officialCode}: ${item.officialLabel}`) : [];
   const selectedStandards = [...nlsLines, ...aiLines].join("\n  ");
   const methodLabels = (context.methods || []).map(id => pedagogyLabel("methods", id));
   const activityLabels = (context.subjectActivities || []).map(id => pedagogyLabel("activities", id));
@@ -1717,6 +1720,8 @@ function getGenerationPromptContext(params = {}) {
     activities_content: params.activitiesContent || prevActs.join("\n\n---\n\n"),
     methods: (appState.teachingContext && appState.teachingContext.methods) || [],
     techniques: ["A", "B", "C", "D"].flatMap(phase => (appState.teachingContext && appState.teachingContext.phasePedagogy?.[phase]?.techniques) || []),
+    digitalCompetencyEnabled: Boolean(appState.teachingContext?.integrations?.digital),
+    aiCompetencyEnabled: Boolean(appState.teachingContext?.integrations?.ai),
     yccd_official: typeof getOfficialYccd === "function" ? getOfficialYccd({
       subjectId: currentSubjectId(),
       grade: appState.selectedGrade,
@@ -1866,15 +1871,51 @@ function assertPhasePedagogyOutput(phase, output) {
 
 function assertObjectivesStandards(text) {
   const hay = String(text || "");
+  const integrations = normalizeTeachingContext(appState.teachingContext).integrations;
   const missing = [];
-  standardsOfKind("digital").forEach(item => {
+  if (integrations.digital) standardsOfKind("digital").forEach(item => {
     if (!pedagogyLabelInText(hay, item.officialLabel)) missing.push({ kind: "digital", item });
   });
-  standardsOfKind("ai").forEach(item => {
+  if (integrations.ai) standardsOfKind("ai").forEach(item => {
     const code = String(item.officialCode || "");
     if (!code || !hay.includes(code)) missing.push({ kind: "ai", item });
   });
   return missing;
+}
+
+function stripObjectivesStandardSection(markdown, matchRe) {
+  const lines = String(markdown || "").split("\n");
+  let headingIdx = lines.findIndex(line => matchRe.test(line.trim()));
+  while (headingIdx >= 0) {
+    const level = (lines[headingIdx].trim().match(/^#+/) || ["###"])[0].length;
+    let end = headingIdx + 1;
+    while (end < lines.length) {
+      const next = lines[end].trim().match(/^(#{1,6})\s+/);
+      if (next && next[1].length <= level) break;
+      end++;
+    }
+    lines.splice(headingIdx, end - headingIdx);
+    headingIdx = lines.findIndex(line => matchRe.test(line.trim()));
+  }
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function stripDisabledObjectivesStandardSections(markdown) {
+  const integrations = normalizeTeachingContext(appState.teachingContext).integrations;
+  let result = String(markdown || "");
+  if (!integrations.digital) result = stripObjectivesStandardSection(result, /^#{1,6}\s*(?:c\)\s*)?năng lực số\b/i);
+  if (!integrations.ai) result = stripObjectivesStandardSection(result, /^#{1,6}\s*(?:d\)\s*)?năng lực\s*AI\b/i);
+  return result;
+}
+
+function removeDisabledObjectivesStandardSections() {
+  const cleaned = stripDisabledObjectivesStandardSections(appState.content.objectives);
+  if (cleaned === appState.content.objectives) return;
+  appState.content.objectives = cleaned;
+  const editor = document.getElementById("editorObjectives");
+  if (editor) editor.value = cleaned;
+  renderMathPreview(cleaned, "previewObjectives");
+  renderFullLessonPreview();
 }
 
 function upsertObjectivesStandardSection(markdown, { matchRe, headingLine, bulletLines }) {
@@ -2495,7 +2536,7 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
 
 async function applyObjectivesOutput(result, signal, options = {}) {
   const repairWithGemini = options.repairWithGemini !== false;
-  let finalResult = result;
+  let finalResult = stripDisabledObjectivesStandardSections(result);
   let missing = assertObjectivesStandards(finalResult);
   if (missing.length && repairWithGemini) {
     try {
@@ -2504,6 +2545,7 @@ async function applyObjectivesOutput(result, signal, options = {}) {
         : row.item.officialLabel).join("; ");
       const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần phần I. Mục tiêu sau. Giữ nguyên Markdown và các dòng đã có. Chỉ bổ sung đúng các dòng còn thiếu vào ### c) Năng lực số / ### d) Năng lực AI. CẤM xóa dòng đã có. CẤM HTML/span/style/màu. Các mục còn thiếu: ${missingDesc}\n\n${finalResult}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
       finalResult = await guardGeminiLessonOutput(repair, signal);
+      finalResult = stripDisabledObjectivesStandardSections(finalResult);
       missing = assertObjectivesStandards(finalResult);
     } catch (error) {
       console.warn("Repair mục tiêu NLS/AI thất bại, sẽ chèn programmatic:", error);
@@ -2512,6 +2554,7 @@ async function applyObjectivesOutput(result, signal, options = {}) {
   if (missing.length) {
     finalResult = insertObjectivesMissingStandards(finalResult, missing);
   }
+  finalResult = stripDisabledObjectivesStandardSections(finalResult);
   appState.content.objectives = finalResult;
   saveStateToLocalStorage();
   return finalResult;

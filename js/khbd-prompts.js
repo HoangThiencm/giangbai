@@ -85,7 +85,7 @@ function formatGeneralCompetenciesGuide(subjectId, context) {
 }
 
 const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠM THỰC CHIẾN TRONG BẢNG 2 CỘT (Chuẩn CV 5512 & GDPT 2018):
-- Mục a) Mục tiêu, b) Nội dung, c) Sản phẩm: dùng 3 cấp danh sách: ý lớn \`-\`, ý con \`+\`, ý chi tiết \`•\`.
+- Mục a) Mục tiêu, b) Nội dung, c) Sản phẩm: dùng 3 cấp danh sách: ý lớn \`-\`, ý con \`+\`, ý chi tiết \`.\`.
 - Mục d) Tổ chức thực hiện: BẮT BUỘC ĐÚNG MỘT bảng Markdown 2 cột, tiêu đề:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
@@ -104,7 +104,7 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
     * **HS (Học sinh):** 
       - Hành động cụ thể theo 3 pha: (1) Thao tác cá nhân theo phút vào vở/nháp/phiếu -> (2) Thảo luận cặp/nhóm theo phút tạo **sản phẩm trung gian** (bảng phụ, phiếu học tập, sơ đồ tư duy, giấy A0, sticky note) -> (3) Đại diện báo cáo và phản biện trước lớp.
 - CỘT PHẢI — NỘI DUNG GHI BẢNG (Kiến thức chuẩn mực chốt cho HS chép vào vở):
-  + Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức LaTeX ($...$, $$...$$), chú ý quan trọng, ví dụ mẫu kèm đề bài và lời giải chi tiết từng bước. Dùng \`-\`, \`+\`, \`•\`; ngăn các dòng bằng \`<br>\`.
+  + Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức LaTeX ($...$, $$...$$), chú ý quan trọng, ví dụ mẫu kèm đề bài và lời giải chi tiết từng bước. Dùng \`-\`, \`+\`, \`.\`; ngăn các dòng bằng \`<br>\`.
   + CỘT PHẢI CẤM: mô tả hành vi GV/HS, CẤM viết "GV yêu cầu", "HS thảo luận", CẤM để trống, CẤM để dấu "..." hay "[...]".
 - CẤM để trống ô. Escape dấu | trong văn bản thành \\|.
 - Hoạt động B: Mỗi tiểu mục/nội dung kiến thức dùng một bảng 2 cột (1 hàng) độc lập như trên.`;
@@ -135,10 +135,10 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - TUYỆT ĐỐI CẤM: lời chào hỏi, khen ngợi, giới thiệu, nhận xét ngoài lề (meta-commentary), lời chúc ở cuối bài (như "Chào thầy cô", "Dưới đây là", "Hy vọng giáo án giúp ích", "Chúc thầy cô thành công", "--- Kết thúc ---").
 - TUYỆT ĐỐI CẤM dùng code block fence (\`\`\`markdown hoặc \`\`\`). Chỉ xuất Markdown thuần túy.
 - TUYỆT ĐỐI CẤM để lại dấu ba chấm "..." hoặc ngoặc vuông "[...]" chưa điền. Mọi đề bài, câu hỏi, công thức, ví dụ mẫu và lời giải PHẢI ĐƯỢC VIẾT ĐẦY ĐỦ CHI TIẾT.
-- Danh sách nội dung có đúng 3 cấp: ý lớn bắt đầu bằng "- ", ý con "+ ", ý chi tiết "• ". Không dùng "1.", "2." làm danh sách nội dung trừ khi là số thứ tự bài tập hoặc bước CV 5512.
+- Danh sách nội dung có đúng 3 cấp: ý lớn bắt đầu bằng "- ", ý con "+ ", ý chi tiết ". ". Không dùng "1.", "2." làm danh sách nội dung trừ khi là số thứ tự bài tập hoặc bước CV 5512.
 - CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu. Màu sắc và font chữ do ứng dụng xử lý.`,
 
-  OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy chuẩn CV 5512. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ lại nội dung giáo án. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary, lời chúc ở cuối và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng "-", "+", "•". Không đổi tiêu đề mục khung như "I.", "## 1.", "a)", "Bước", "Bài".`,
+  OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy chuẩn CV 5512. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ lại nội dung giáo án. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary, lời chúc ở cuối và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng "-", "+", ".". Không đổi tiêu đề mục khung như "I.", "## 1.", "a)", "Bước", "Bài".`,
 
   SOURCE_LOCK: `KHÓA NGUỒN BẮT BUỘC:
 - Nguồn chính = văn bản SGK đã nhận diện (Mistral OCR / tóm tắt Bước 0) và/hoặc file PDF/ảnh đính kèm đúng request này.
@@ -204,11 +204,8 @@ QUY TẮC NĂNG LỰC ĐẶC THÙ & PHẨM CHẤT:
 - [Tên năng lực đặc thù 1]: [Mô tả hành vi gắn với bài]
 - [Tên năng lực đặc thù 2]: [Mô tả hành vi gắn với bài]
 
-### c) Năng lực số (CHỈ khi bối cảnh bật; đủ từng miền đã chọn)
-- [Tên miền 1]: [Mô tả nhiệm vụ số gắn với bài]
-
-### d) Năng lực AI (CHỈ khi bối cảnh bật; đủ từng mã đã chọn)
-- [Mã AI 1]: [Mô tả nhiệm vụ AI gắn với bài]
+{digital_objectives_section}
+{ai_objectives_section}
 
 ## 3. Về phẩm chất & Giáo dục hòa nhập (hòa nhập chỉ khi được bật)
 - [Tên phẩm chất]: [Mô tả hành vi quan sát được của học sinh trong bài]`,
@@ -260,7 +257,7 @@ QUY TẮC MỤC TIÊU:
 - Mục 1. Về kiến thức: YCCĐ chuẩn CT GDPT 2018 cho bài học.
 - Mục 2.a (Năng lực chung): CHỈ 1–2 năng lực chung phù hợp đặc thù môn {subject} và bài dạy này; mỗi mục đúng 1 dòng mô tả hành vi.
 - Mục 2.b (Năng lực đặc thù): 2–3 năng lực đặc thù của môn {subject}.
-- Mục 2.c / 2.d (NLS / AI): Đúng miền/mã đã chọn (mỗi mục 1 dòng).
+- Mục 2.c / 2.d (NLS / AI): Chỉ tạo mục đang bật và chỉ theo đúng miền/mã đã chọn (mỗi mục 1 dòng).
 - Mục 3 (Phẩm chất): 1–2 phẩm chất gắn liền bài học.
 - Mục II: Cụ thể hóa đồ dùng dạy học thực tế cho GV và HS, không để lại dấu [...] hay "...".`,
 
@@ -298,7 +295,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Trình chiếu tình huống mở đầu trong SGK và nêu câu lệnh trực tiếp: "Quan sát tình huống sau, các em hãy suy nghĩ và đưa ra dự đoán...". **HS:** Tiếp nhận nhiệm vụ, quan sát và chuẩn bị giấy nháp.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Suy nghĩ cá nhân (1-2 phút) ghi câu trả lời vào nháp -> Trao đổi nhanh theo cặp (1-2 phút) thống nhất ý kiến. **GV:** Bao quát lớp, phát hiện các dự đoán khác nhau hoặc ngộ nhận ban đầu của HS về vấn đề, gợi mở tư duy.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện 1-2 cặp xung phong phát biểu dự đoán; cả lớp nhận xét, lắng nghe các ý kiến khác biệt. **GV:** Điều hành thảo luận, đặt câu hỏi dẫn dắt: "Vì sao em lại đưa ra dự đoán này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần phát biểu, khéo léo tạo mâu thuẫn nhận thức và dẫn dắt vào bài mới: "Để kiểm chứng dự đoán trên và tìm câu trả lời chính xác, chúng ta cùng vào bài học hôm nay...". **HS:** Ghi tên bài vào vở. | **Tình huống mở đầu**<br>- Vấn đề thực tế từ SGK.<br>- Dự đoán ban đầu của học sinh.<br>• Ghi nhận vấn đề cần giải quyết trong bài học. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Trình chiếu tình huống mở đầu trong SGK và nêu câu lệnh trực tiếp: "Quan sát tình huống sau, các em hãy suy nghĩ và đưa ra dự đoán...". **HS:** Tiếp nhận nhiệm vụ, quan sát và chuẩn bị giấy nháp.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Suy nghĩ cá nhân (1-2 phút) ghi câu trả lời vào nháp -> Trao đổi nhanh theo cặp (1-2 phút) thống nhất ý kiến. **GV:** Bao quát lớp, phát hiện các dự đoán khác nhau hoặc ngộ nhận ban đầu của HS về vấn đề, gợi mở tư duy.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện 1-2 cặp xung phong phát biểu dự đoán; cả lớp nhận xét, lắng nghe các ý kiến khác biệt. **GV:** Điều hành thảo luận, đặt câu hỏi dẫn dắt: "Vì sao em lại đưa ra dự đoán này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần phát biểu, khéo léo tạo mâu thuẫn nhận thức và dẫn dắt vào bài mới: "Để kiểm chứng dự đoán trên và tìm câu trả lời chính xác, chúng ta cùng vào bài học hôm nay...". **HS:** Ghi tên bài vào vở. | **Tình huống mở đầu**<br>- Vấn đề thực tế từ SGK.<br>- Dự đoán ban đầu của học sinh.<br>. Ghi nhận vấn đề cần giải quyết trong bài học. |`,
 
   // TAB 4.B: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI
   GENERATE_ACTIVITY_B: `Hãy biên soạn chi tiết toàn bộ **HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
@@ -344,7 +341,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 #### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao hoạt động khám phá trong SGK: "Các em có 3 phút làm việc cá nhân vào phiếu học tập và 4 phút thảo luận nhóm hoàn thành bảng phụ...". **HS:** Nhận phiếu học tập, phân công nhiệm vụ trong nhóm.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân (3 phút) ghi kết quả vào nháp -> Thảo luận nhóm (4 phút) thống nhất sản phẩm trung gian lên bảng nhóm. **GV:** Di chuyển bao quát, phát hiện lỗi sai điển hình của học sinh trong bài: (chỉ rõ lỗi sai cụ thể), can thiệp hỗ trợ phân hóa (gợi ý cho nhóm gặp khó khăn, đặt câu hỏi nâng cao cho nhóm khá giỏi).<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện một nhóm lên bảng trình bày sản phẩm; các nhóm khác đối chiếu, nhận xét và phản biện. **GV:** Điều hành báo cáo, đặt câu hỏi kiểm tra độ hiểu sâu: "Tại sao nhóm em lại suy ra được kết luận/công thức này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét quá trình làm việc của các nhóm, chuẩn hóa kiến thức, giảng giải bản chất quy tắc và hướng dẫn ghi bảng. **HS:** Sửa bài vào vở, ghi nhận kiến thức chuẩn mực. | **1. [Tên kiến thức tiểu mục 1]**<br>- Định nghĩa / Khái niệm chuẩn xác.<br>- Quy tắc / Công thức: $...$<br>+ Chú ý quan trọng.<br>• Ví dụ mẫu 1: Đề bài và Lời giải chi tiết từng bước. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao hoạt động khám phá trong SGK: "Các em có 3 phút làm việc cá nhân vào phiếu học tập và 4 phút thảo luận nhóm hoàn thành bảng phụ...". **HS:** Nhận phiếu học tập, phân công nhiệm vụ trong nhóm.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân (3 phút) ghi kết quả vào nháp -> Thảo luận nhóm (4 phút) thống nhất sản phẩm trung gian lên bảng nhóm. **GV:** Di chuyển bao quát, phát hiện lỗi sai điển hình của học sinh trong bài: (chỉ rõ lỗi sai cụ thể), can thiệp hỗ trợ phân hóa (gợi ý cho nhóm gặp khó khăn, đặt câu hỏi nâng cao cho nhóm khá giỏi).<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện một nhóm lên bảng trình bày sản phẩm; các nhóm khác đối chiếu, nhận xét và phản biện. **GV:** Điều hành báo cáo, đặt câu hỏi kiểm tra độ hiểu sâu: "Tại sao nhóm em lại suy ra được kết luận/công thức này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét quá trình làm việc của các nhóm, chuẩn hóa kiến thức, giảng giải bản chất quy tắc và hướng dẫn ghi bảng. **HS:** Sửa bài vào vở, ghi nhận kiến thức chuẩn mực. | **1. [Tên kiến thức tiểu mục 1]**<br>- Định nghĩa / Khái niệm chuẩn xác.<br>- Quy tắc / Công thức: $...$<br>+ Chú ý quan trọng.<br>. Ví dụ mẫu 1: Đề bài và Lời giải chi tiết từng bước. |`,
 
   // TAB 4.C: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG LUYỆN TẬP
   GENERATE_ACTIVITY_C: `Hãy biên soạn chi tiết **HOẠT ĐỘNG LUYỆN TẬP** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
@@ -383,7 +380,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao bài tập trong SGK: "Các em hoàn thành các bài tập sau vào vở trong 7 phút, sau đó đổi vở kiểm tra chéo...". **HS:** Đọc kĩ đề bài, xác định công thức/quy tắc áp dụng.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm bài cá nhân vào vở (7 phút) -> Đổi vở kiểm tra chéo theo cặp (2 phút). **GV:** Quan sát, phát hiện các lỗi sai điển hình trong biến đổi/tính toán: (chỉ rõ lỗi sai thường gặp), trực tiếp hướng dẫn học sinh còn lúng túng.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** 2 học sinh lên bảng trình bày lời giải; cả lớp đối chiếu bài làm, nhận xét và phát hiện các cách giải khác. **GV:** Đặt câu hỏi chất vấn: "Có lưu ý gì quan trọng khi thực hiện bước này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt lời giải chuẩn xác, chỉ rõ các bẫy sai lầm cần tránh khi làm bài kiểm tra. **HS:** Chữa bài chuẩn mực vào vở ghi. | **Luyện tập**<br>- Bài 1: Đề bài và Lời giải chi tiết.<br>- Bài 2: Đề bài và Lời giải chi tiết.<br>• Lưu ý phương pháp giải chuẩn mực. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao bài tập trong SGK: "Các em hoàn thành các bài tập sau vào vở trong 7 phút, sau đó đổi vở kiểm tra chéo...". **HS:** Đọc kĩ đề bài, xác định công thức/quy tắc áp dụng.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm bài cá nhân vào vở (7 phút) -> Đổi vở kiểm tra chéo theo cặp (2 phút). **GV:** Quan sát, phát hiện các lỗi sai điển hình trong biến đổi/tính toán: (chỉ rõ lỗi sai thường gặp), trực tiếp hướng dẫn học sinh còn lúng túng.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** 2 học sinh lên bảng trình bày lời giải; cả lớp đối chiếu bài làm, nhận xét và phát hiện các cách giải khác. **GV:** Đặt câu hỏi chất vấn: "Có lưu ý gì quan trọng khi thực hiện bước này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt lời giải chuẩn xác, chỉ rõ các bẫy sai lầm cần tránh khi làm bài kiểm tra. **HS:** Chữa bài chuẩn mực vào vở ghi. | **Luyện tập**<br>- Bài 1: Đề bài và Lời giải chi tiết.<br>- Bài 2: Đề bài và Lời giải chi tiết.<br>. Lưu ý phương pháp giải chuẩn mực. |`,
 
   // TAB 4.D: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG VẬN DỤNG
   GENERATE_ACTIVITY_D: `Hãy biên soạn chi tiết **HOẠT ĐỘNG VẬN DỤNG** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
@@ -422,7 +419,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao nhiệm vụ vận dụng thực tế: "Hãy vận dụng kiến thức vừa học để giải quyết bài toán thực tiễn sau...". **HS:** Tiếp nhận nhiệm vụ, phân tích số liệu thực tế.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Thảo luận cặp/nhóm (4 phút) mô hình hóa vấn đề và tính toán kết quả. **GV:** Quan sát, gợi mở cách chuyển đổi từ ngôn ngữ thực tế sang biểu thức chuyên môn.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện nhóm trình bày mô hình và kết quả; các nhóm khác nhận xét tính hợp lý của đáp số thực tế. **GV:** Đặt câu hỏi mở rộng liên hệ đời sống.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét, đánh giá khả năng vận dụng của HS, chốt lại ý nghĩa thực tiễn của bài học. **HS:** Ghi nhận lời giải hoàn chỉnh vào vở. | **Vận dụng**<br>- Tình huống thực tế từ SGK.<br>- Mô hình hóa & Lời giải chuẩn xác.<br>• Ý nghĩa thực tiễn của bài học. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao nhiệm vụ vận dụng thực tế: "Hãy vận dụng kiến thức vừa học để giải quyết bài toán thực tiễn sau...". **HS:** Tiếp nhận nhiệm vụ, phân tích số liệu thực tế.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Thảo luận cặp/nhóm (4 phút) mô hình hóa vấn đề và tính toán kết quả. **GV:** Quan sát, gợi mở cách chuyển đổi từ ngôn ngữ thực tế sang biểu thức chuyên môn.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện nhóm trình bày mô hình và kết quả; các nhóm khác nhận xét tính hợp lý của đáp số thực tế. **GV:** Đặt câu hỏi mở rộng liên hệ đời sống.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét, đánh giá khả năng vận dụng của HS, chốt lại ý nghĩa thực tiễn của bài học. **HS:** Ghi nhận lời giải hoàn chỉnh vào vở. | **Vận dụng**<br>- Tình huống thực tế từ SGK.<br>- Mô hình hóa & Lời giải chuẩn xác.<br>. Ý nghĩa thực tiễn của bài học. |`,
 
   // 1-CLICK HOẠT ĐỘNG A -> D (ACTIVITIES AD)
   GENERATE_ACTIVITIES_AD: `Đọc PDF/ảnh SGK đính kèm và soạn toàn bộ hoạt động A–D môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512.
@@ -723,6 +720,12 @@ function getPromptTemplate(templateKey, context) {
 
   // Insert competencies
   const competencies = context.competencies ? context.competencies.join('; ') : '';
+  const digitalObjectivesSection = context.digitalCompetencyEnabled
+    ? `### c) Năng lực số\n- [Tên miền đã chọn]: [Mô tả nhiệm vụ số gắn với bài]`
+    : '';
+  const aiObjectivesSection = context.aiCompetencyEnabled
+    ? `### d) Năng lực AI\n- [Mã AI đã chọn]: [Mô tả nhiệm vụ AI gắn với bài]`
+    : '';
   
   // Replace placeholders an toàn
   let result = baseTemplate
@@ -736,6 +739,8 @@ function getPromptTemplate(templateKey, context) {
     .replace(/\{yccd_official\}/g, context.yccd_official || '')
     .replace(/\{grade\}/g, context.grade || '6')
     .replace(/\{competencies\}/g, competencies)
+    .replace(/\{digital_objectives_section\}/g, digitalObjectivesSection)
+    .replace(/\{ai_objectives_section\}/g, aiObjectivesSection)
     .replace(/\{general_competencies_guide\}/g, genCompsGuide);
 
   if (PROMPTS.SOURCE_LOCK) {
@@ -748,11 +753,15 @@ function getPromptTemplate(templateKey, context) {
   }
 
   if (templateKey === 'GENERATE_OBJECTIVES' || templateKey === 'GENERATE_CORE_LESSON') {
+    const integrationRules = [
+      context.digitalCompetencyEnabled && 'NLS: chỉ tạo ### c) và liệt kê đủ từng miền đã chọn.',
+      context.aiCompetencyEnabled && 'AI: chỉ tạo ### d) và liệt kê đủ từng mã đã chọn.'
+    ].filter(Boolean).join(' ');
     result += `\n\nQUY TẮC VIẾT NĂNG LỰC / PHẨM CHẤT:
 - Năng lực chung: CHỌN 1–2 năng lực phù hợp nhất với môn ${subjectName} từ danh sách gợi ý trên. Mỗi năng lực đúng 1 dòng: \`- [Tên năng lực]: [mô tả hành vi cụ thể trong bài]\`.
 - CẤM nhãn Biểu hiện, Nhiệm vụ/Sản phẩm, Minh chứng. CẤM ý con bắt đầu bằng + .
 - Năng lực đặc thù: 2–3 năng lực nổi trội của môn ${subjectName}. Phẩm chất: 1–2 phẩm chất.
-- NLS phải liệt kê đủ từng miền đã chọn; AI phải liệt kê đủ từng mã đã chọn; mỗi mục 1 dòng \`- Tên/Mã: mô tả ngắn gắn bài\`. CẤM bỏ mục đã chọn. CẤM gộp NLS+AI thành một hạn ngạch.`;
+- ${integrationRules || 'Không tạo mục NLS hoặc AI.'} Mỗi mục 1 dòng \`- Tên/Mã: mô tả ngắn gắn bài\`. CẤM tạo NLS/AI không được chọn hoặc gộp hai nhóm thành một hạn ngạch.`;
   }
 
   if (templateKey === 'GENERATE_ACTIVITY_B' || templateKey === 'GENERATE_ACTIVITIES_AD') {

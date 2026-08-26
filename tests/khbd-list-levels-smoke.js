@@ -57,21 +57,25 @@ async function main() {
   global.window = { docx };
   const { DocxGenerator } = require("../js/khbd-docx.js");
   const generator = new DocxGenerator();
-  const content = "- Thiết bị dạy học\n  + Máy chiếu\n    • Dùng khi trình chiếu hình minh họa";
+  const content = "- Thiết bị dạy học\n  + Máy chiếu\n    . Dùng khi trình chiếu hình minh họa";
   const xml = await xmlFromMarkdown(generator, docx, content);
 
   assert.match(xml, /<w:t xml:space="preserve">- Thiết bị dạy học<\/w:t>/);
   assert.match(xml, /<w:t xml:space="preserve">\+ Máy chiếu<\/w:t>/);
-  assert.match(xml, /<w:t xml:space="preserve">• Dùng khi trình chiếu hình minh họa<\/w:t>/);
+  assert.match(xml, /<w:t xml:space="preserve">\. Dùng khi trình chiếu hình minh họa<\/w:t>/);
   assert.match(xml, /<w:ind w:left="360"\/>/, "Cấp + phải thụt 360 dxa");
-  assert.match(xml, /<w:ind w:left="720"\/>/, "Cấp • phải thụt 720 dxa");
+  assert.match(xml, /<w:ind w:left="720"\/>/, "Cấp . phải thụt 720 dxa");
 
-  const unindented = await xmlFromMarkdown(generator, docx, "- A\n+ B\n• C");
+  const unindented = await xmlFromMarkdown(generator, docx, "- A\n+ B\n. C");
   assert.match(unindented, /<w:ind w:left="360"\/>/, "Nguồn không thụt: cấp + vẫn 360 dxa");
-  assert.match(unindented, /<w:ind w:left="720"\/>/, "Nguồn không thụt: cấp • vẫn 720 dxa");
+  assert.match(unindented, /<w:ind w:left="720"\/>/, "Nguồn không thụt: cấp . vẫn 720 dxa");
   assert.match(unindented, /<w:t xml:space="preserve">- A<\/w:t>/);
   assert.match(unindented, /<w:t xml:space="preserve">\+ B<\/w:t>/);
-  assert.match(unindented, /<w:t xml:space="preserve">• C<\/w:t>/);
+  assert.match(unindented, /<w:t xml:space="preserve">\. C<\/w:t>/);
+
+  const legacyBullet = await xmlFromMarkdown(generator, docx, "• Bản nháp cũ");
+  assert.match(legacyBullet, /<w:t xml:space="preserve">• Bản nháp cũ<\/w:t>/, "Bản nháp cũ dùng • vẫn được đọc");
+  assert.match(legacyBullet, /<w:ind w:left="720"\/>/, "Bản nháp cũ dùng • vẫn là cấp 3");
 
   const heading = await xmlFromMarkdown(generator, docx, "### a) Mục tiêu:");
   assert.match(heading, /a\) Mục tiêu:/, "### a) Mục tiêu: phải còn là heading");
@@ -83,14 +87,14 @@ async function main() {
   const tableMarkdown = [
     "| Hoạt động của GV và HS | Nội dung |",
     "| :--- | :--- |",
-    "| + Bước 1: Chuyển giao |  - Định nghĩa<br>+ Chú ý<br>• Ví dụ |"
+    "| + Bước 1: Chuyển giao |  - Định nghĩa<br>+ Chú ý<br>. Ví dụ |"
   ].join("\n");
   const tableXml = await xmlFromMarkdown(generator, docx, tableMarkdown);
   assert.match(tableXml, /- /, "Ô bảng phải giữ marker - ");
   assert.match(tableXml, /\+ /, "Ô bảng phải giữ marker + ");
-  assert.match(tableXml, /• /, "Ô bảng phải giữ marker • ");
+  assert.match(tableXml, /\. /, "Ô bảng phải giữ marker . ");
   assert.match(tableXml, /<w:ind w:left="360"\/>/, "Ô bảng cấp + phải thụt 360 dxa");
-  assert.match(tableXml, /<w:ind w:left="720"\/>/, "Ô bảng cấp • phải thụt 720 dxa");
+  assert.match(tableXml, /<w:ind w:left="720"\/>/, "Ô bảng cấp . phải thụt 720 dxa");
 
   console.log("khbd list levels smoke: passed");
 }

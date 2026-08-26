@@ -583,8 +583,8 @@ class DocxGenerator {
         continue;
       }
 
-      // 4. Danh sách KHBD ba cấp: - (ý lớn), + (ý con), • (ý chi tiết).
-      const literalListMatch = line.match(/^(\s*)([-+•])\s+(.+)$/);
+      // 4. Danh sách KHBD ba cấp: - (ý lớn), + (ý con), . (ý chi tiết); vẫn đọc • cũ.
+      const literalListMatch = line.match(/^(\s*)([-+.•])\s+(.+)$/);
       if (literalListMatch) {
         const [, indent, marker, contentText] = literalListMatch;
         const level = marker === "-" ? 0 : marker === "+" ? 1 : 2;
@@ -779,11 +779,11 @@ class DocxGenerator {
     const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
     const usable = lines.length ? lines : [""];
     return usable.map(line => {
-      const listMatch = !isHeader ? line.match(/^([-+•])\s+(.+)$/) : null;
+      const listMatch = !isHeader ? line.match(/^([-+.•])\s+(.+)$/) : null;
       const marker = listMatch ? listMatch[1] : "";
       const contentText = listMatch ? listMatch[2] : line;
       const displayLine = listMatch ? `${marker} ${contentText}` : (line || " ");
-      const indentLeft = marker === "+" ? 360 : marker === "•" ? 720 : 0;
+      const indentLeft = marker === "+" ? 360 : (marker === "." || marker === "•") ? 720 : 0;
       const lineColor = isHeader ? undefined : this.lineIntegrationColor(displayLine, null);
       const runs = isHeader
         ? [this.coloredTextRun(line || " ", { bold: true })]
