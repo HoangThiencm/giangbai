@@ -5,12 +5,74 @@
  * Tích hợp Khung Năng lực Đặc thù Toán, Khung Năng lực AI (QĐ 2422), Khung Năng lực Số (TT 02/2025).
  */
 
+const BOOK_SETS = [
+  { id: 'kntt', name: 'Kết nối tri thức với cuộc sống' },
+  { id: 'canhdieu', name: 'Cánh Diều' },
+  { id: 'ctst', name: 'Chân trời sáng tạo' },
+  { id: 'khac', name: 'Bộ sách khác / Tự biên soạn' }
+];
+
+const SUBJECT_COMPETENCIES = {
+  toan: ['Tư duy và lập luận toán học', 'Mô hình hoá toán học', 'Giải quyết vấn đề toán học', 'Giao tiếp toán học', 'Sử dụng công cụ, phương tiện toán học'],
+  nguvan: ['Năng lực ngôn ngữ (Đọc, Viết, Nói, Nghe)', 'Năng lực văn học (Cảm thụ và thưởng thức thẩm mĩ)'],
+  tiengviet: ['Năng lực ngôn ngữ (Đọc, Viết, Nói, Nghe)', 'Năng lực văn học (Cảm thụ thẩm mĩ)'],
+  tienganh: ['Năng lực giao tiếp (Nghe, Nói, Đọc, Viết)', 'Năng lực tiếp nhận ngôn ngữ', 'Năng lực sản sinh ngôn ngữ'],
+  khtn: ['Nhận thức khoa học tự nhiên', 'Tìm hiểu tự nhiên', 'Vận dụng kiến thức, kĩ năng đã học'],
+  vatly: ['Nhận thức vật lí', 'Tìm hiểu tự nhiên dưới góc độ vật lí', 'Vận dụng kiến thức, kĩ năng vật lí'],
+  hoahoc: ['Nhận thức hóa học', 'Tìm hiểu tự nhiên dưới góc độ hóa học', 'Vận dụng kiến thức, kĩ năng hóa học'],
+  sinhhoc: ['Nhận thức sinh học', 'Tìm hiểu tự nhiên dưới góc độ sinh học', 'Vận dụng kiến thức, kĩ năng sinh học'],
+  lichsudialy: ['Nhận thức lịch sử và địa lí', 'Tìm hiểu lịch sử và địa lí', 'Vận dụng kiến thức, kĩ năng lịch sử và địa lí'],
+  'lichsudialy-th': ['Nhận thức lịch sử và địa lí', 'Tìm hiểu lịch sử và địa lí', 'Vận dụng kiến thức, kĩ năng'],
+  lichsu: ['Tìm hiểu lịch sử', 'Nhận thức và tư duy lịch sử', 'Vận dụng kiến thức, kĩ năng lịch sử'],
+  dialy: ['Nhận thức khoa học địa lí', 'Tìm hiểu địa lí', 'Vận dụng kiến thức, kĩ năng địa lí'],
+  gdcd: ['Nhận thức chuẩn mực đạo đức, pháp luật', 'Đánh giá hành vi của bản thân và người khác', 'Điều chỉnh hành vi'],
+  daoduc: ['Nhận thức chuẩn mực đạo đức', 'Đánh giá hành vi', 'Điều chỉnh hành vi'],
+  gdktpl: ['Nhận thức kinh tế, pháp luật', 'Tìm hiểu và tham gia hoạt động kinh tế – xã hội', 'Vận dụng kiến thức kinh tế, pháp luật'],
+  tinhoc: ['Sử dụng và quản lí các phương tiện công nghệ thông tin và truyền thông', 'Ứng xử phù hợp trong môi trường số', 'Giải quyết vấn đề với sự hỗ trợ của công nghệ thông tin và truyền thông', 'Ứng dụng công nghệ thông tin và truyền thông trong học và tự học', 'Hợp tác trong môi trường số'],
+  congnghe: ['Nhận thức công nghệ', 'Giao tiếp công nghệ', 'Sử dụng công nghệ', 'Đánh giá công nghệ', 'Thiết kế kĩ thuật'],
+  amnhac: ['Thể hiện âm nhạc', 'Cảm thụ và hiểu biết âm nhạc', 'Ứng dụng và sáng tạo âm nhạc'],
+  mithuat: ['Quan sát và nhận thức thẩm mĩ', 'Sáng tạo và ứng dụng thẩm mĩ', 'Phân tích và đánh giá thẩm mĩ'],
+  gdtc: ['Chăm sóc sức khỏe', 'Vận động cơ bản', 'Hoạt động thể dục thể thao'],
+  tnxh: ['Nhận thức khoa học', 'Tìm hiểu môi trường tự nhiên và xã hội xung quanh', 'Vận dụng kiến thức, kĩ năng đã học'],
+  khoahoc: ['Nhận thức khoa học', 'Tìm hiểu môi trường tự nhiên', 'Vận dụng kiến thức, kĩ năng khoa học'],
+  hdtn: ['Thích ứng với cuộc sống', 'Thiết kế và tổ chức hoạt động', 'Định hướng nghề nghiệp (từ THCS)'],
+  'hdtn-hn': ['Thích ứng với cuộc sống', 'Thiết kế và tổ chức hoạt động', 'Định hướng nghề nghiệp'],
+  gdqpan: ['Nhận thức quốc phòng và an ninh', 'Kĩ năng quân sự, an ninh cơ bản']
+};
+
 const CURRICULUM_DATA = {
 
   // DANH MỤC KHỐI LỚP
-  grades: [
-    { id: "6", name: "Toán 6" }, { id: "7", name: "Toán 7" }, { id: "8", name: "Toán 8" }, { id: "9", name: "Toán 9" }
+  version: "nxbgd-snapshot-2026-08", sourceUrl: "https://taphuan.nxbgd.vn/tap-huan/doc-sach/",
+  grades: Array.from({ length: 12 }, (_, i) => ({ id: String(i + 1), name: `Lớp ${i + 1}` })),
+  subjects: [
+    { id: 'tiengviet', name: 'Tiếng Việt', grades: [1, 2, 3, 4, 5] },
+    { id: 'toan', name: 'Toán', grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { id: 'daoduc', name: 'Đạo đức', grades: [1, 2, 3, 4, 5] },
+    { id: 'tnxh', name: 'Tự nhiên và Xã hội', grades: [1, 2, 3] },
+    { id: 'khoahoc', name: 'Khoa học', grades: [4, 5] },
+    { id: 'lichsudialy-th', name: 'Lịch sử và Địa lí', grades: [4, 5] },
+    { id: 'tinhoc', name: 'Tin học', grades: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { id: 'congnghe', name: 'Công nghệ', grades: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { id: 'amnhac', name: 'Âm nhạc', grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { id: 'mithuat', name: 'Mĩ thuật', grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { id: 'gdtc', name: 'Giáo dục thể chất', grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { id: 'hdtn', name: 'Hoạt động trải nghiệm', grades: [1, 2, 3, 4, 5] },
+    { id: 'tienganh', name: 'Tiếng Anh', grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { id: 'nguvan', name: 'Ngữ văn', grades: [6, 7, 8, 9, 10, 11, 12] },
+    { id: 'khtn', name: 'Khoa học tự nhiên', grades: [6, 7, 8, 9] },
+    { id: 'lichsudialy', name: 'Lịch sử và Địa lí', grades: [6, 7, 8, 9] },
+    { id: 'gdcd', name: 'Giáo dục công dân', grades: [6, 7, 8, 9] },
+    { id: 'hdtn-hn', name: 'Hoạt động trải nghiệm, hướng nghiệp', grades: [6, 7, 8, 9, 10, 11, 12] },
+    { id: 'vatly', name: 'Vật lí', grades: [10, 11, 12] },
+    { id: 'hoahoc', name: 'Hóa học', grades: [10, 11, 12] },
+    { id: 'sinhhoc', name: 'Sinh học', grades: [10, 11, 12] },
+    { id: 'lichsu', name: 'Lịch sử', grades: [10, 11, 12] },
+    { id: 'dialy', name: 'Địa lí', grades: [10, 11, 12] },
+    { id: 'gdktpl', name: 'Giáo dục kinh tế và pháp luật', grades: [10, 11, 12] },
+    { id: 'gdqpan', name: 'Giáo dục quốc phòng và an ninh', grades: [10, 11, 12] }
   ],
+  books: [{ id: "math-imported", subject: "toan", grades: [6,7,8,9], label: "Danh mục Toán đã kiểm duyệt", sourceUrl: "https://taphuan.nxbgd.vn/tap-huan/doc-sach/", catalogVersion: "migrated-math-6-9" }],
 
   // MỤC LỤC CHI TIẾT THEO TỪNG KHỐI LỚP
   lessons: {
@@ -586,6 +648,66 @@ function getAllLessonsFlat(gradeId) {
   return result;
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CURRICULUM_DATA, getCurriculumLessons, getAllLessonsFlat };
+function getSubjectsForGrade(grade) {
+  const g = parseInt(grade, 10);
+  return CURRICULUM_DATA.subjects.filter(s => s.grades.includes(g));
 }
+
+function getBooksForSubjectGrade(subjectId, grade) {
+  // If the selected subject is math and grades 6-9, return math-imported as a special case
+  // Wait, the plan says return BOOK_SETS, marking which one has a catalog.
+  // We can just return BOOK_SETS for everything, and let the app handle if there are predefined lessons.
+  return BOOK_SETS.map(book => {
+    // Check if we have lessons for this subject, book, and grade
+    const hasLessons = (subjectId === 'toan' && book.id === 'kntt' && [6, 7, 8, 9].includes(parseInt(grade, 10)));
+    return {
+      ...book,
+      hasLessons: hasLessons
+    };
+  });
+}
+
+function getLessonsForBook(subjectId, bookId, grade) {
+  // For now, we only have lessons for toan 6-9 kntt
+  if (subjectId === 'toan' && bookId === 'kntt' && [6, 7, 8, 9].includes(parseInt(grade, 10))) {
+    return getCurriculumLessons(grade);
+  }
+  return [];
+}
+
+function getSubjectCompetencies(subjectId) {
+  return SUBJECT_COMPETENCIES[subjectId] || [];
+}
+
+function getGradeLevel(grade) {
+  const g = parseInt(grade, 10);
+  if (g >= 1 && g <= 5) return 'tieu-hoc';
+  if (g >= 6 && g <= 9) return 'thcs';
+  if (g >= 10 && g <= 12) return 'thpt';
+  return 'thcs';
+}
+
+function getGradeLevelName(grade) {
+  const g = parseInt(grade, 10);
+  if (g >= 1 && g <= 5) return 'Tiểu học';
+  if (g >= 6 && g <= 9) return 'THCS';
+  if (g >= 10 && g <= 12) return 'THPT';
+  return 'THCS';
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { 
+    BOOK_SETS,
+    SUBJECT_COMPETENCIES,
+    CURRICULUM_DATA, 
+    getCurriculumLessons, 
+    getAllLessonsFlat,
+    getSubjectsForGrade,
+    getBooksForSubjectGrade,
+    getLessonsForBook,
+    getSubjectCompetencies,
+    getGradeLevel,
+    getGradeLevelName
+  };
+}
+

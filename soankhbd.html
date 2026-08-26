@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trợ lý Soạn Kế hoạch Bài dạy AI (Toán THCS)</title>
+  <title>Soạn Kế hoạch Bài dạy AI — GDPT 2018 • Lớp 1–12</title>
   
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📐</text></svg>">
@@ -51,10 +51,10 @@
   <header class="app-header">
     <div class="header-top">
       <div class="app-brand">
-        <div class="brand-icon">📐</div>
+        <div class="brand-icon">✨</div>
         <div>
-          <h1>Trợ lý Soạn Kế hoạch Bài dạy AI (Toán THCS)</h1>
-          <p>SGK Toán • Chuẩn CV 5512 • Tích hợp Khung Năng lực Toán, Khung AI (QĐ 2422) & Năng lực Số (TT 02/2025)</p>
+          <h1>Soạn Kế hoạch Bài dạy AI — GDPT 2018 • Lớp 1–12</h1>
+          <p>Đa Môn Học • Chuẩn CV 5512 • Tích hợp Khung Năng lực Đặc thù, Khung AI (QĐ 2422) & Năng lực Số (TT 02/2025)</p>
         </div>
       </div>
       <div class="header-actions">
@@ -76,20 +76,22 @@
       </div>
     </div>
 
-    <!-- Quick Select Toolbar -->
     <div class="toolbar-grid">
 
       <div class="tool-group">
         <label for="selectGrade">Khối Lớp:</label>
         <select id="selectGrade">
-          <option value="6">Toán 6</option><option value="7">Toán 7</option><option value="8">Toán 8</option><option value="9">Toán 9</option>
+          <option value="1">Lớp 1</option><option value="2">Lớp 2</option><option value="3">Lớp 3</option><option value="4">Lớp 4</option><option value="5">Lớp 5</option><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8">Lớp 8</option><option value="9">Lớp 9</option><option value="10">Lớp 10</option><option value="11">Lớp 11</option><option value="12">Lớp 12</option>
         </select>
       </div>
+
+      <div class="tool-group"><label for="selectSubject">Môn học:</label><select id="selectSubject"></select></div>
+      <div class="tool-group"><label for="selectBook">Sách:</label><select id="selectBook"></select><small id="catalogSourceNote"></small></div>
 
       <div class="tool-group" style="grid-column: span 2;">
         <label for="selectLesson">Danh mục bài học:</label>
         <select id="selectLesson">
-          <option value="">-- Chọn bài học từ SGK Toán --</option>
+          <option value="">-- Chọn bài học từ SGK --</option>
         </select>
       </div>
 
@@ -155,7 +157,7 @@
       <div class="card">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="settings"></i> Thông tin Kế hoạch Bài dạy (Chuẩn Công văn 5512)</h2>
-          <span class="text-muted" style="font-size: 0.85rem;">SGK Toán do giáo viên cung cấp</span>
+          <span class="text-muted" style="font-size: 0.85rem;">SGK do giáo viên cung cấp</span>
           <div class="card-actions"><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
@@ -183,6 +185,10 @@
             <label for="inputDuration">Thời lượng dạy học:</label>
             <input type="text" id="inputDuration" value="02 tiết (90 phút)">
           </div>
+          <div class="tool-group"><label for="inputClassSize">Sĩ số lớp:</label><input id="inputClassSize" type="number" min="1" max="60" value="40"></div>
+          <div class="tool-group"><label for="selectReadiness">Mức sẵn sàng:</label><select id="selectReadiness"><option value="Không đồng đều">Không đồng đều</option><option value="Cơ bản">Cơ bản</option><option value="Đạt yêu cầu">Đạt yêu cầu</option><option value="Nâng cao">Nâng cao</option></select></div>
+          <div class="tool-group"><label for="selectGrouping">Tổ chức nhóm:</label><select id="selectGrouping"><option value="Cá nhân/cặp đôi">Cá nhân/cặp đôi</option><option value="Nhóm 4 có phân vai">Nhóm 4 có phân vai</option><option value="Nhóm 6 có phân vai">Nhóm 6 có phân vai</option></select></div>
+          <div class="tool-group"><label><input id="hasProjector" type="checkbox"> Máy chiếu</label><label><input id="hasInternet" type="checkbox"> Internet</label><label><input id="hasDevices" type="checkbox"> Thiết bị học sinh</label></div>
         </div>
 
         <div style="margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #f8fafc;">
@@ -249,6 +255,7 @@
             <label for="inputSpecialRequirements">Yêu cầu hoặc hoạt động đặc thù:</label>
             <textarea id="inputSpecialRequirements" maxlength="600" rows="3" placeholder="Ví dụ: Có hoạt động đo đạc ở sân trường; ưu tiên nhiệm vụ theo nhóm 4; không sử dụng điện thoại trong giờ học."></textarea>
           </div>
+          <div id="phasePedagogyPanel" style="margin-top:1rem"></div>
         </div>
 
         <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
@@ -453,7 +460,7 @@
        ========================================================================= -->
   <footer class="app-footer">
     <div>
-      <b>Trợ lý Soạn Kế hoạch Bài dạy AI (Môn Toán THCS)</b> • GDPT 2018
+      <b>Trợ lý Soạn Kế hoạch Bài dạy AI</b> • GDPT 2018 Lớp 1–12
     </div>
     <div id="statusFooterText">
       Sẵn sàng. (Model: <span id="footerModelName">gemini-2.5-flash</span>)
@@ -561,6 +568,7 @@
   <script src="js/khbd-gemini.js"></script>
   <script src="js/khbd-docx.js"></script>
   <script src="js/khbd-standards.js"></script>
+  <script src="js/khbd-pedagogy-catalog.js"></script>
   <script src="js/khbd-app.js"></script>
 </body>
 </html>

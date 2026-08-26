@@ -417,6 +417,88 @@ YÊU CẦU XÂY DỰNG 4 MỤC CHI TIẾT:
 - *Mẫu Prompt 3 (Kiểm tra lời giải):* "Đây là lời giải của em cho bài toán [bài toán]: [lời giải]. Bạn hãy nhận xét xem em đã làm đúng chưa và chỉ ra bước nào cần khắc phục nhé!"`
 };
 
+function getSystemRole(subjectId, grade) {
+  const subjectNameObj = (typeof CURRICULUM_DATA !== 'undefined' ? CURRICULUM_DATA.subjects.find(s => s.id === subjectId) : null) || { name: 'Môn học' };
+  const subjectName = subjectNameObj.name;
+  
+  let gradeLevelName = 'THCS';
+  let isPrimary = false;
+  if (typeof getGradeLevelName !== 'undefined') {
+    gradeLevelName = getGradeLevelName(grade);
+    isPrimary = getGradeLevel(grade) === 'tieu-hoc';
+  }
+  const cvDoc = isPrimary ? 'CV 2345' : 'Công văn 5512/BGDĐT';
+  
+  let compList = '';
+  if (typeof SUBJECT_COMPETENCIES !== 'undefined' && SUBJECT_COMPETENCIES[subjectId]) {
+    compList = SUBJECT_COMPETENCIES[subjectId].join('; ');
+  }
+  
+  const latexSubjects = ['toan', 'vatly', 'hoahoc', 'tinhoc'];
+  const needsLatex = latexSubjects.includes(subjectId);
+  const latexRule = needsLatex 
+    ? "- Công thức, phương trình PHẢI được viết bằng mã LaTeX chuẩn: công thức trong dòng dùng $công_thức$, công thức khối dùng $$công_thức$$. Ví dụ: $x^2 + 2x + 1 = 0$, $\\frac{a}{b}$, $\\sqrt{x}$."
+    : "- Trình bày văn bản thuần túy, rõ ràng. Không dùng LaTeX trừ khi thật sự cần thiết.";
+
+  return `Bạn là Chuyên gia Sư phạm Môn ${subjectName}, Cấp ${gradeLevelName}, nắm vững:
+- Chương trình GDPT 2018 (${cvDoc} cho cấp ${gradeLevelName})
+- Khung Năng lực đặc thù: ${compList}
+- 5 phẩm chất chủ yếu và phương pháp dạy học hòa nhập cho học sinh khó khăn/chậm tiến độ.
+
+QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
+- Bám sát GDPT 2018 và nội dung bài học do giáo viên cung cấp.
+- Định dạng Markdown rõ ràng, phân cấp tiêu đề bằng #, ##, ###, #### hợp lý.
+${latexRule}
+- Nội dung phải chi tiết, đầy đủ, thiết thực cho giáo viên lên lớp, tuyệt đối KHÔNG viết tóm tắt qua loa, KHÔNG để dấu '...' hoặc 'tương tự'.
+- Tuân thủ tuyệt đối bối cảnh và ràng buộc sư phạm được cung cấp trong từng yêu cầu; không tự bổ sung năng lực số, AI, ngoại ngữ hoặc hỗ trợ hòa nhập nếu không được chọn.`;
+}
+
+function getPromptTemplate(templateKey, context) {
+  // Use PROMPTS[templateKey] as base, but replace hardcoded "Toán" with subject name
+  let baseTemplate = PROMPTS[templateKey];
+  if (!baseTemplate) return '';
+
+  const subjectName = context.subjectName || 'Môn học';
+  const gradeLevelName = context.gradeLevelName || 'THCS';
+  
+  // Replace hardcoded strings to make it generic
+  baseTemplate = baseTemplate
+    .replace(/môn Toán THCS/g, `môn ${subjectName} ${gradeLevelName}`)
+    .replace(/Môn Toán THCS/g, `Môn ${subjectName} ${gradeLevelName}`)
+    .replace(/môn Toán/g, `môn ${subjectName}`)
+    .replace(/Môn Toán/g, `Môn ${subjectName}`)
+    .replace(/Toán học/g, `${subjectName}`)
+    .replace(/toán học/g, `${subjectName}`)
+    .replace(/bài toán/g, `bài tập/nhiệm vụ`)
+    .replace(/SGK Toán/g, `SGK ${subjectName}`)
+    .replace(/Sách bài tập Toán/g, `Sách bài tập ${subjectName}`)
+    .replace(/toán/g, `bài tập`) // be careful with this, but it's ok for fallback
+    .replace(/GeoGebra/g, context.subject === 'toan' ? 'GeoGebra' : 'phần mềm mô phỏng phù hợp')
+    .replace(/Casio fx-580VN X/g, context.subject === 'toan' || context.subject === 'vatly' || context.subject === 'hoahoc' ? 'Máy tính cầm tay' : 'thiết bị phù hợp')
+    .replace(/vẽ hình, biến đổi đại số/g, 'kĩ năng đặc thù của môn học');
+
+  // Insert competencies
+  const competencies = context.competencies ? context.competencies.join('; ') : '';
+  
+  // Replace placeholders
+  let result = baseTemplate
+    .replace(/\{subject\}/g, subjectName)
+    .replace(/\{topic\}/g, context.topic || '')
+    .replace(/\{duration\}/g, context.duration || '')
+    .replace(/\{textbook_content\}/g, context.textbook_content || '')
+    .replace(/\{objectives_content\}/g, context.objectives_content || '')
+    .replace(/\{activities_content\}/g, context.activities_content || '')
+    .replace(/\{grade\}/g, context.grade || '')
+    .replace(/\{competencies\}/g, competencies);
+
+  // Append pedagogical context if provided
+  if (context.pedagogical_context) {
+    result += `\n\nBỐI CẢNH SƯ PHẠM VÀ RÀNG BUỘC BẮT BUỘC:\n${context.pedagogical_context}`;
+  }
+
+  return result;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { PROMPTS };
+  module.exports = { PROMPTS, getSystemRole, getPromptTemplate };
 }

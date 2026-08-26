@@ -588,10 +588,10 @@ class DocxGenerator {
     if (!window.docx) return [];
     const { Paragraph, TextRun, AlignmentType, BorderStyle } = window.docx;
 
-    const schoolName = lessonInfo.school || "TRƯỜNG THCS ....................................................";
-    const groupName = lessonInfo.subjectGroup || "TỔ: TOÁN - TIN HỌC";
+    const schoolName = lessonInfo.school || "TRƯỜNG ....................................................";
+    const groupName = lessonInfo.subjectGroup || "TỔ: ................................................";
     const teacherName = lessonInfo.teacher || "Họ và tên giáo viên: ................................................";
-    const subject = (lessonInfo.subject || "TOÁN THCS").toUpperCase();
+    const subject = (lessonInfo.subject || "MÔN HỌC").toUpperCase();
     const topic = (lessonInfo.topic || "KẾ HOẠCH BÀI DẠY").toUpperCase();
     const grade = lessonInfo.grade ? `LỚP ${lessonInfo.grade}` : "";
     const duration = lessonInfo.duration || "Thời lượng: 02 tiết";
@@ -675,7 +675,7 @@ class DocxGenerator {
     const bodyElements = this.parseMarkdownToDocxElements(markdownContent);
 
     const doc = new Document({
-      creator: "Trợ lý Soạn Kế hoạch Bài dạy AI (Môn Toán THCS)",
+      creator: "Trợ lý Soạn Kế hoạch Bài dạy AI",
       title: tabTitle,
       description: `Xuất phần ${tabTitle} chuẩn Công văn 5512`,
       sections: [{
@@ -696,7 +696,7 @@ class DocxGenerator {
   /**
    * Xuất toàn bộ Giáo án hoàn chỉnh thành 1 file Word .docx duy nhất
    */
-  async exportFullLessonPlan(lessonInfo, fullMarkdownContent, fileName = "Giao_An_Toan_THCS.docx") {
+  async exportFullLessonPlan(lessonInfo, fullMarkdownContent, fileName = "Giao_An.docx") {
     if (!window.docx || !window.saveAs) {
       throw new Error("Thư viện docx hoặc FileSaver chưa sẵn sàng. Vui lòng kiểm tra kết nối mạng CDN.");
     }
@@ -712,9 +712,9 @@ class DocxGenerator {
     const allChildren = [...headerElements, ...bodyElements];
 
     const doc = new Document({
-      creator: "Trợ lý Soạn Kế hoạch Bài dạy AI (Môn Toán THCS)",
-      title: `KHBD_${lessonInfo.topic || "Toan_THCS"}`,
-      description: "Kế hoạch bài dạy môn Toán THCS chuẩn Công văn 5512",
+      creator: "Trợ lý Soạn Kế hoạch Bài dạy AI",
+      title: `KHBD_${lessonInfo.topic || "Bai_Day"}`,
+      description: "Kế hoạch bài dạy chuẩn Công văn 5512",
       sections: [{
         properties: {
           page: {
