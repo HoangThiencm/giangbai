@@ -338,7 +338,9 @@ function autoPedagogyState() {
 }
 
 function renderPedagogyItem(item, className, extraAttrs, checked, autoIds) {
-  const rec = typeof isPedagogyRecommended === "function" && isPedagogyRecommended(item, pedagogyRecommendCtx());
+  const rec = hasAnalyzedLessonContent()
+    && typeof isPedagogyRecommended === "function"
+    && isPedagogyRecommended(item, pedagogyRecommendCtx());
   const auto = (autoIds || []).includes(item.id);
   const badge = auto ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : (rec ? ' <small class="pedagogy-fit">Phù hợp môn này</small>' : "");
   return `<label class="pedagogy-item${auto || rec ? " is-recommended" : ""}"><input type="checkbox" class="${className}" ${extraAttrs} value="${item.id}" ${checked ? "checked" : ""}> <span><strong>${item.label}</strong><br><small>${item.description || ""}${badge}</small></span></label>`;
