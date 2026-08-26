@@ -1487,13 +1487,25 @@ function buildPhasePedagogyContext(phase) {
     : `\nRÀNG BUỘC PHA ${phase}: không có kỹ thuật pha được chọn; không tự gắn tên kỹ thuật chính thức ngoài catalog.`;
 }
 
+function pedagogyLabelInText(haystack, label) {
+  const fold = value => String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  const hay = fold(haystack);
+  if (!hay) return false;
+  if (hay.includes(fold(label))) return true;
+  return String(label).split(/[\/()–—-]+/).map(fold).filter(part => part.length >= 5).some(part => hay.includes(part));
+}
+
 function assertPhasePedagogyOutput(phase, output) {
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
+  const autoIds = new Set((autoPedagogyState().techniques && autoPedagogyState().techniques[phase]) || []);
   const labels = (selected.techniques || []).map(id => pedagogyLabel("techniques", id)).filter(Boolean);
   if (!labels.length) return;
   const tablePart = String(output || "").split("### d)")[1] || String(output || "");
-  const missing = labels.filter(label => !tablePart.includes(label));
-  if (missing.length) throw new Error(`Nội dung chưa triển khai đúng trong bảng tổ chức thực hiện: ${missing.join(", ")}. Nội dung chưa được lưu.`);
+  const missing = labels.filter(label => !pedagogyLabelInText(tablePart, label) && !pedagogyLabelInText(output, label));
+  if (!missing.length) return;
+  const onlyAuto = (selected.techniques || []).every(id => autoIds.has(id));
+  if (onlyAuto) return;
+  throw new Error(`Nội dung chưa triển khai đúng trong bảng tổ chức thực hiện: ${missing.join(", ")}.`);
 }
 
 function normalizeGeminiLessonOutput(rawOutput) {
@@ -1656,9 +1668,14 @@ async function applyActivityOutput(actKey, result, signal) {
   let finalResult = result;
   try { assertPhasePedagogyOutput(actKey, finalResult); }
   catch (error) {
-    const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần nội dung pha ${actKey} sau. Giữ Markdown KHBD, bổ sung các lựa chọn đã chọn vào bảng d) Tổ chức thực hiện với bước, vai trò, nhiệm vụ, sản phẩm/minh chứng; không thêm kỹ thuật không chọn.\n\n${finalResult}${buildPhasePedagogyContext(actKey)}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
-    finalResult = await guardGeminiLessonOutput(repair, signal);
-    assertPhasePedagogyOutput(actKey, finalResult);
+    try {
+      const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần nội dung pha ${actKey} sau. Giữ Markdown KHBD, bổ sung các lựa chọn đã chọn vào bảng d) Tổ chức thực hiện với bước, vai trò, nhiệm vụ, sản phẩm; không thêm kỹ thuật không chọn.\n\n${finalResult}${buildPhasePedagogyContext(actKey)}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
+      finalResult = await guardGeminiLessonOutput(repair, signal);
+      assertPhasePedagogyOutput(actKey, finalResult);
+    } catch (repairError) {
+      console.warn(`Giữ nội dung pha ${actKey} dù kỹ thuật chưa khớp đủ:`, repairError);
+      showToast(`Đã lưu hoạt động ${actKey}; một kỹ thuật đề xuất chưa ghi đúng tên. Bạn có thể sửa tay.`, "warning", 5000);
+    }
   }
   appState.content.activities[actKey] = finalResult;
   saveStateToLocalStorage();

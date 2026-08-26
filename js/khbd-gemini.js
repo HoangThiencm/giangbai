@@ -257,7 +257,8 @@ class GeminiAPIManager {
       };
     }
 
-    while (attempts < totalKeys) {
+    const maxAttempts = Math.max(totalKeys + 2, 3);
+    while (attempts < maxAttempts) {
       if (signal?.aborted) throw new DOMException("Yêu cầu đã bị hủy.", "AbortError");
       const currentKey = this.getCurrentKey();
       const model = this.selectedModel;
@@ -290,15 +291,24 @@ class GeminiAPIManager {
         const errJson = await response.json().catch(() => ({}));
         const errMsg = errJson.error?.message || `HTTP ${response.status}: ${response.statusText}`;
 
-        // Lỗi 429 (Rate Limit / Quota) hoặc 403 (Invalid Key / Permission)
         if (response.status === 429 || response.status === 403 || errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("exhausted")) {
-          console.warn(`Key #${this.currentKeyIndex + 1} gặp lỗi: ${errMsg}. Đang xoay key...`);
-          this.rotateKey(`Lỗi HTTP ${response.status}: ${errMsg.substring(0, 80)}...`);
-          attempts++;
           lastError = new Error(errMsg);
-          // Chờ 500ms trước khi retry key tiếp theo
-          await this.waitForRetry(500, signal);
-          continue;
+          const retryMatch = errMsg.match(/retry in ([\d.]+)\s*s/i);
+          const retryMs = retryMatch ? Math.min(25000, Math.max(2000, Math.ceil(parseFloat(retryMatch[1]) * 1000) + 400)) : 2500;
+          if (this.apiKeys.length > 1 && attempts < this.apiKeys.length - 1) {
+            console.warn(`Key #${this.currentKeyIndex + 1} lỗi 429/quota. Chuyển key và thử lại.`);
+            this.rotateKey(`Lỗi HTTP ${response.status}: ${errMsg.substring(0, 80)}...`);
+            attempts++;
+            await this.waitForRetry(800, signal);
+            continue;
+          }
+          attempts++;
+          if (attempts < Math.max(3, this.apiKeys.length + 2)) {
+            console.warn(`Quota/429. Chờ ${Math.round(retryMs / 1000)}s rồi thử lại (key hiện tại).`);
+            await this.waitForRetry(retryMs, signal);
+            continue;
+          }
+          throw new Error(`Hết hạn mức Gemini (429). ${errMsg}`);
         }
 
         // Lỗi khác không phụ thuộc key (ví dụ prompt sai/quá dài): dừng ngay.
