@@ -113,6 +113,7 @@ function syncDraftDom() {
   if (document.getElementById("selectGrouping")) document.getElementById("selectGrouping").value = context.grouping;
   [["hasProjector","projector"],["hasInternet","internet"],["hasDevices","devices"]].forEach(([id,key]) => { const input = document.getElementById(id); if (input) input.checked = Boolean(context.facilities?.[key]); });
   renderDraftControls();
+  renderPedagogyCatalogs();
 }
 
 // =============================================================================
@@ -255,8 +256,9 @@ function normalizeTeachingContext(context) {
       foreignLanguage: Boolean(integrations.foreignLanguage),
       inclusive: Boolean(integrations.inclusive)
     },
-    methods: Array.isArray(source.methods) ? source.methods.filter(value => typeof value === "string").slice(0, 6) : [],
-    techniques: Array.isArray(source.techniques) ? source.techniques.filter(value => typeof value === "string").slice(0, 6) : [],
+    methods: Array.isArray(source.methods) ? source.methods.filter(value => typeof value === "string").slice(0, 20) : [],
+    techniques: Array.isArray(source.techniques) ? source.techniques.filter(value => typeof value === "string").slice(0, 20) : [],
+    subjectActivities: Array.isArray(source.subjectActivities) ? source.subjectActivities.filter(value => typeof value === "string").slice(0, 20) : [],
     standards: Array.isArray(source.standards) ? source.standards.filter(item => item && typeof item === "object") : [],
     phasePedagogy: source.phasePedagogy && typeof source.phasePedagogy === "object" ? source.phasePedagogy : { A: {}, B: {}, C: {}, D: {} },
     classSize: Math.max(1, Math.min(60, Number(source.classSize) || 40)), readiness: typeof source.readiness === "string" ? source.readiness : "Không đồng đều", grouping: typeof source.grouping === "string" ? source.grouping : "Cá nhân/cặp đôi", facilities: source.facilities && typeof source.facilities === "object" ? source.facilities : { projector:false, internet:false, devices:false },
@@ -269,17 +271,82 @@ function setCheckboxGroupValues(selector, values) {
   document.querySelectorAll(selector).forEach(input => { input.checked = selected.has(input.value); });
 }
 
+function currentSubjectId() {
+  return String(appState.selectedSubject || "").toLowerCase();
+}
+
+function pedagogyRecommendCtx() {
+  const context = normalizeTeachingContext(appState.teachingContext);
+  return { subjectId: currentSubjectId(), grade: appState.selectedGrade, classSize: context.classSize, facilities: context.facilities };
+}
+
+function pedagogyLabel(group, id) {
+  const list = (typeof KHBD_PEDAGOGY_CATALOG !== "undefined" && KHBD_PEDAGOGY_CATALOG[group]) || [];
+  return list.find(item => item.id === id || item.label === id)?.label || id;
+}
+
+function renderPedagogyItem(item, className, extraAttrs, checked) {
+  const rec = typeof isPedagogyRecommended === "function" && isPedagogyRecommended(item, pedagogyRecommendCtx());
+  const badge = rec ? ' <small class="pedagogy-fit">Phù hợp môn này</small>' : "";
+  return `<label class="pedagogy-item${rec ? " is-recommended" : ""}"><input type="checkbox" class="${className}" ${extraAttrs} value="${item.id}" ${checked ? "checked" : ""}> <span><strong>${item.label}</strong><br><small>${item.description || ""}${badge}</small></span></label>`;
+}
+
+function isChoiceSelected(selected, item) {
+  const set = selected instanceof Set ? selected : new Set(selected || []);
+  return set.has(item.id) || set.has(item.label);
+}
+
+function renderPedagogyCatalogs() {
+  if (typeof KHBD_PEDAGOGY_CATALOG === "undefined") return;
+  const catalog = KHBD_PEDAGOGY_CATALOG;
+  appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+  const context = appState.teachingContext;
+  const methods = new Set(context.methods || []);
+  const activities = new Set(context.subjectActivities || []);
+  const phase = context.phasePedagogy || (appState.teachingContext.phasePedagogy = { A: {}, B: {}, C: {}, D: {} });
+
+  const methodsPanel = document.getElementById("methodsCatalogPanel");
+  if (methodsPanel) {
+    methodsPanel.innerHTML = `<details class="pedagogy-block" open><summary>Phương pháp dạy học hiện đại</summary><div class="pedagogy-grid">${catalog.methods.map(item => renderPedagogyItem(item, "pedagogy-method", "", isChoiceSelected(methods, item))).join("")}</div></details>`;
+    methodsPanel.querySelectorAll(".pedagogy-method").forEach(input => input.addEventListener("change", () => {
+      appState.teachingContext.methods = Array.from(document.querySelectorAll(".pedagogy-method:checked")).map(el => el.value);
+      saveStateToLocalStorage();
+    }));
+  }
+
+  const techPanel = document.getElementById("techniquesCatalogPanel");
+  if (techPanel) {
+    const groups = [
+      { phase: "A", title: "KỸ THUẬT KHỞI ĐỘNG" },
+      { phase: "B", title: "KỸ THUẬT HÌNH THÀNH KIẾN THỨC" },
+      { phase: "C", title: "KỸ THUẬT LUYỆN TẬP" },
+      { phase: "D", title: "KỸ THUẬT VẬN DỤNG" }
+    ];
+    techPanel.innerHTML = `<details class="pedagogy-block" open><summary>Kĩ thuật dạy học tích cực</summary>${groups.map(g => {
+      const chosen = new Set(phase[g.phase]?.techniques || []);
+      const items = catalog.techniques.filter(item => (item.phases || []).includes(g.phase));
+      return `<h4 class="pedagogy-subgroup">${g.title}</h4><div class="pedagogy-grid">${items.map(item => renderPedagogyItem(item, "pedagogy-technique", `data-phase="${g.phase}"`, isChoiceSelected(chosen, item))).join("")}</div>`;
+    }).join("")}</details>`;
+    techPanel.querySelectorAll(".pedagogy-technique").forEach(input => input.addEventListener("change", () => {
+      const p = input.dataset.phase;
+      appState.teachingContext.phasePedagogy[p] ||= {};
+      appState.teachingContext.phasePedagogy[p].techniques = Array.from(document.querySelectorAll(`.pedagogy-technique[data-phase="${p}"]:checked`)).map(el => el.value);
+      saveStateToLocalStorage();
+    }));
+  }
+
+  const actPanel = document.getElementById("activitiesCatalogPanel");
+  if (actPanel) {
+    actPanel.innerHTML = `<details class="pedagogy-block" open><summary>Hoạt động đặc thù môn học</summary><div class="pedagogy-grid">${catalog.activities.map(item => renderPedagogyItem(item, "pedagogy-activity", "", isChoiceSelected(activities, item))).join("")}</div></details>`;
+    actPanel.querySelectorAll(".pedagogy-activity").forEach(input => input.addEventListener("change", () => {
+      appState.teachingContext.subjectActivities = Array.from(document.querySelectorAll(".pedagogy-activity:checked")).map(el => el.value);
+      saveStateToLocalStorage();
+    }));
+  }
+}
+
 function renderPhasePedagogy() {
-  const panel = document.getElementById("phasePedagogyPanel"); if (!panel || !window.KHBD_PEDAGOGY_CATALOG && !KHBD_PEDAGOGY_CATALOG) return;
-  const catalog = KHBD_PEDAGOGY_CATALOG, context = normalizeTeachingContext(appState.teachingContext), state = appState.teachingContext.phasePedagogy || (appState.teachingContext.phasePedagogy = { A:{},B:{},C:{},D:{} });
-  const activityGroup = appState.selectedSubject === "TOAN" ? "mathActivities" : "genericActivities";
-  const warningFor = item => item.id === "station" && context.classSize > 45 ? " ⚠ Sĩ số lớn: cần đủ không gian/trạm." : item.id === "math-geogebra" && !(context.facilities.devices && context.facilities.internet) ? " ⚠ Cần thiết bị và Internet hoặc phương án thay thế." : item.id === "pbl" && !/2|3|4|5|6|7|8|9/.test(String(appState.duration)) ? " ⚠ Cần đủ thời gian cho chu trình vấn đề." : "";
-  panel.innerHTML = ["A","B","C","D"].map(phase => `<details><summary>${phase}. ${ACTIVITY_TITLES[phase].short}</summary>${["methods","techniques", activityGroup].map(group => `<strong>${group === "methods" ? "Phương pháp" : group === "techniques" ? "Kỹ thuật" : "Hoạt động"}</strong>${catalog[group].filter(item => item.phases.includes(phase)).map(item => `<label style="display:block"><input type="checkbox" class="phase-pedagogy" data-phase="${phase}" data-group="${group}" value="${item.id}" ${(state[phase]?.[group] || []).includes(item.id) ? "checked" : ""}> ${item.label} — <small>${item.description}${warningFor(item)}</small></label>`).join("")}`).join("")}</details>`).join("");
-  panel.querySelectorAll(".phase-pedagogy").forEach(input => input.addEventListener("change", () => {
-    const { phase, group } = input.dataset; const chosen = Array.from(panel.querySelectorAll(`.phase-pedagogy[data-phase="${phase}"][data-group="${group}"]:checked`));
-    if (chosen.length > 2) { input.checked = false; showToast("Mỗi pha tối đa 2 lựa chọn cho từng nhóm.", "warning"); return; }
-    state[phase] ||= {}; state[phase][group] = chosen.map(item => item.value); saveStateToLocalStorage();
-  }));
+  renderPedagogyCatalogs();
 }
 
 function renderStandardsCatalog() {
@@ -330,6 +397,7 @@ function setupEventListeners() {
     switchDraft({ grade: nextGrade, lesson: "", topic: "" });
     const after = appState.teachingContext.standards.length;
     renderStandardsCatalog();
+    renderPedagogyCatalogs();
     if (before !== after) showToast("Đã bỏ lựa chọn tiêu chuẩn không áp dụng cho khối lớp mới.", "info");
   });
 
@@ -363,7 +431,8 @@ function setupEventListeners() {
     appState.selectedLesson = ""; 
     appState.customTopic = ""; 
     populateLessonDropdown(); 
-    switchDraft({ grade: appState.selectedGrade, lesson: "", topic: "" }); 
+    switchDraft({ grade: appState.selectedGrade, lesson: "", topic: "" });
+    renderPedagogyCatalogs();
   });
 
 
@@ -406,12 +475,7 @@ function setupEventListeners() {
       saveStateToLocalStorage();
     });
   });
-  [[".teaching-method-choice", "methods"], [".teaching-technique-choice", "techniques"]].forEach(([selector, key]) => {
-    document.querySelectorAll(selector).forEach(input => input.addEventListener("change", () => {
-      appState.teachingContext[key] = Array.from(document.querySelectorAll(`${selector}:checked`)).map(choice => choice.value);
-      saveStateToLocalStorage();
-    }));
-  });
+
   [[".class-profile-choice", "classProfileChoices"], [".support-choice", "supportChoices"]].forEach(([selector, key]) => {
     document.querySelectorAll(selector).forEach(input => input.addEventListener("change", () => {
       appState.teachingContext[key] = Array.from(document.querySelectorAll(`${selector}:checked`)).map(choice => choice.value);
@@ -1104,38 +1168,40 @@ function renderAllTabsPreview() {
 // =============================================================================
 // XEM TRƯỚC TOÀN BỘ GIÁO ÁN (TAB 5)
 // =============================================================================
-function getFullLessonPlanMarkdown() {
+function getFullLessonPlanMarkdown(options = {}) {
   const topic = getTopicDisplayName();
   const subject = appState.subject || "TOÁN";
-  const grade = appState.selectedGrade ? `Lớp ${appState.selectedGrade}` : "";
+  const grade = appState.selectedGrade || "";
   const duration = appState.duration || "02 tiết";
-
   const c = appState.content;
-
-  // Chỉ ghép bốn hoạt động lõi; E/F/G legacy vẫn được giữ trong localStorage.
   const actParts = [];
-  const actKeys = ["A", "B", "C", "D"];
-  actKeys.forEach(k => {
-    if (c.activities[k] && c.activities[k].trim()) {
-      actParts.push(c.activities[k].trim());
-    }
+  ["A", "B", "C", "D"].forEach(k => {
+    if (c.activities[k] && c.activities[k].trim()) actParts.push(c.activities[k].trim());
   });
-
   const fullActMarkdown = actParts.join("\n\n---\n\n");
-
-  const md = [
-    `# KẾ HOẠCH BÀI DẠY: ${topic.toUpperCase()}`,
-    `**MÔN HỌC:** ${subject.toUpperCase()} ${grade.toUpperCase()} | **THỜI LƯỢNG:** ${duration}`,
-    `\n---\n`,
+  const body = [
     c.objectives || "*[Chưa tạo I. Mục tiêu]*",
     `\n---\n`,
     c.materials || "*[Chưa tạo II. Thiết bị dạy học và học liệu]*",
     `\n---\n`,
     `# III. TIẾN TRÌNH DẠY HỌC`,
     fullActMarkdown || "*[Chưa tạo các hoạt động dạy học III.A - D]*"
-  ].join("\n\n");
-
-  return md;
+  ];
+  if (options.includeHeader === false) return body.join("\n\n");
+  const header = [
+    `**TRƯỜNG:** ${appState.school || "................................................"}`,
+    `**TỔ CHUYÊN MÔN:** ${appState.group || "................................"}`,
+    `**HỌ VÀ TÊN GIÁO VIÊN:** ${appState.teacher || "................................"}`,
+    `**Ngày soạn:** .../.../...  **Ngày dạy:** .../.../...`,
+    ``,
+    `# KẾ HOẠCH BÀI DẠY`,
+    `**TÊN BÀI SOẠN:** ${topic.toUpperCase()}`,
+    `**MÔN HỌC:** ${subject.toUpperCase()} - **LỚP:** ${grade}`,
+    `**BỘ SÁCH:** SGK do giáo viên cung cấp`,
+    `**THỜI LƯỢNG THỰC HIỆN:** ${duration}`,
+    `\n---\n`
+  ];
+  return [...header, ...body].join("\n\n");
 }
 
 function renderFullLessonPreview() {
@@ -1156,18 +1222,26 @@ function buildPedagogicalContext() {
   const classProfile = [...context.classProfileChoices, context.classProfileNote].filter(Boolean).join("; ");
   const support = [...context.supportChoices, context.supportNote].filter(Boolean).join("; ");
   const selectedStandards = context.standards.map(item => `${item.officialCode ? `${item.officialCode}: ` : "Miền NLS: "}${item.officialLabel}`).join("; ");
-  
+  const methodLabels = (context.methods || []).map(id => pedagogyLabel("methods", id));
+  const activityLabels = (context.subjectActivities || []).map(id => pedagogyLabel("activities", id));
+  const techniqueByPhase = ["A", "B", "C", "D"].map(phase => {
+    const ids = context.phasePedagogy?.[phase]?.techniques || [];
+    const labels = ids.map(id => pedagogyLabel("techniques", id));
+    return labels.length ? `${phase}: ${labels.join(", ")}` : "";
+  }).filter(Boolean);
+
   const subjectName = appState.subjectName || "Toán";
   const gradeLevel = getGradeLevelName(appState.selectedGrade);
-  
+
   return `BỐI CẢNH VÀ RÀNG BUỘC SƯ PHẠM BẮT BUỘC:
 - Môn học: ${subjectName} ${gradeLevel}; khối/lớp: ${appState.selectedGrade}; tên bài: ${getTopicDisplayName()}; thời lượng: ${appState.duration || "chưa xác định"}.
 - Giới hạn năng lực & phẩm chất: Bài dạy 1–2 tiết CHỈ ĐƯỢC CHỌN 1–2 Năng lực chung, 2–3 Năng lực đặc thù nổi trội nhất (gắn với nhiệm vụ/sản phẩm cụ thể), 1–2 Phẩm chất có hành vi quan sát rõ. CẤM liệt kê dàn trải toàn bộ khung năng lực hay đủ 5 phẩm chất.
 - Trình độ/đặc điểm lớp: ${classProfile || `Chưa cung cấp; thiết kế mức độ phù hợp học sinh ${gradeLevel} và có phân hóa vừa sức.`}
 - Hỗ trợ chức năng được chọn: ${support || "Không có yêu cầu riêng được chọn."}
 - Sĩ số: ${context.classSize}; mức sẵn sàng: ${context.readiness}; tổ chức: ${context.grouping}; điều kiện: ${Object.entries(context.facilities).filter(([, value]) => value).map(([key]) => key).join(", ") || "thiết bị cơ bản"}.
-- Phương pháp dạy học được chọn: ${context.methods.length ? context.methods.join("; ") : `Không ràng buộc; chọn cách phù hợp bài ${subjectName}.`}
-- Kỹ thuật dạy học được chọn: ${context.techniques.length ? context.techniques.join("; ") : "Không ràng buộc; không tự thêm kỹ thuật hình thức."}
+- Phương pháp dạy học được chọn: ${methodLabels.length ? methodLabels.join("; ") : `Chưa chọn; khi soạn chỉ được lấy 1–2 phương pháp phù hợp môn ${subjectName} lớp ${appState.selectedGrade} từ catalog, đúng nguyên nhãn, không bịa tên PPDH ngoài catalog.`}
+- Kỹ thuật dạy học theo pha: ${techniqueByPhase.length ? techniqueByPhase.join(" | ") : "Chưa chọn; chỉ dùng kỹ thuật catalog đúng pha A–D phù hợp môn/lớp, đúng nhãn."}
+- Hoạt động đặc thù môn học được chọn: ${activityLabels.length ? activityLabels.join("; ") : `Chưa chọn; chỉ dùng 1–2 hoạt động catalog phù hợp môn ${subjectName}.`}
 - Yêu cầu/hoạt động đặc thù: ${context.specialRequirements || "Không có."}
 - Chỉ được tích hợp các thành phần đã bật: ${enabledIntegrations.length ? enabledIntegrations.join("; ") : "không có thành phần tích hợp bổ sung"}.
 - Chuẩn NLS/AI đã chọn: ${selectedStandards || "Không có"}. Chỉ được dùng đúng mục đã chọn; mỗi mục phải gắn một nhiệm vụ ${subjectName}, sản phẩm và minh chứng quan sát được. NLS chỉ là MIỀN được chọn, không phải mã năng lực thành phần. AI chỉ hỗ trợ/củng cố học ${subjectName}, phải có kiểm chứng của con người, bảo vệ riêng tư và không biến bài ${subjectName} thành bài AI độc lập.
@@ -1197,22 +1271,35 @@ function getGenerationPromptContext(params = {}) {
     textbook_content: appState.content.vision || "",
     objectives_content: appState.content.objectives || "",
     activities_content: params.activitiesContent || prevActs.join("\n\n---\n\n"),
+    yccd_official: typeof getOfficialYccd === "function" ? getOfficialYccd({
+      subjectId: currentSubjectId(),
+      grade: appState.selectedGrade,
+      topic: params.topic || getTopicDisplayName(),
+      visionText: appState.content.vision || ""
+    }) : "",
     pedagogical_context: buildPedagogicalContext()
   };
 }
 
 function buildPhasePedagogyContext(phase) {
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
-  const lookup = group => (selected[group] || []).map(id => KHBD_PEDAGOGY_CATALOG[group]?.find(item => item.id === id)?.label).filter(Boolean);
-  const items = [...lookup("methods"), ...lookup("techniques"), ...lookup("mathActivities"), ...lookup("genericActivities")];
-  return items.length ? `\nRÀNG BUỘC PHA ${phase}: chỉ triển khai các lựa chọn chính thức sau: ${items.join("; ")}. Mỗi lựa chọn phải xuất hiện cụ thể trong bảng d) Tổ chức thực hiện với bước, vai trò, nhiệm vụ, sản phẩm/minh chứng. Không nêu kỹ thuật/hoạt động danh mục nào khác như một kỹ thuật chính thức.` : `\nRÀNG BUỘC PHA ${phase}: không có phương pháp/kỹ thuật/hoạt động danh mục được chọn; không tự gắn tên kỹ thuật chính thức.`;
+  const techLabels = (selected.techniques || []).map(id => pedagogyLabel("techniques", id)).filter(Boolean);
+  const activityLabels = (appState.teachingContext.subjectActivities || []).map(id => pedagogyLabel("activities", id)).filter(Boolean);
+  const methodLabels = (appState.teachingContext.methods || []).map(id => pedagogyLabel("methods", id)).filter(Boolean);
+  const parts = [];
+  if (methodLabels.length) parts.push(`Phương pháp định hướng (không bắt phải xuất hiện mọi bảng): ${methodLabels.join("; ")}`);
+  if (techLabels.length) parts.push(`Kỹ thuật bắt buộc của pha ${phase}: ${techLabels.join("; ")}. Mỗi kỹ thuật phải xuất hiện trong bảng d) Tổ chức thực hiện.`);
+  if (activityLabels.length) parts.push(`Hoạt động đặc thù đã chọn: ${activityLabels.join("; ")}. Chỉ triển khai nếu phù hợp pha ${phase}.`);
+  return parts.length
+    ? `\nRÀNG BUỘC PHA ${phase}: ${parts.join(" ")} Không nêu kỹ thuật/hoạt động ngoài catalog như kỹ thuật chính thức.`
+    : `\nRÀNG BUỘC PHA ${phase}: không có kỹ thuật pha được chọn; không tự gắn tên kỹ thuật chính thức ngoài catalog.`;
 }
 
 function assertPhasePedagogyOutput(phase, output) {
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
-  const ids = [...(selected.methods || []), ...(selected.techniques || []), ...(selected.mathActivities || []), ...(selected.genericActivities || [])];
-  const labels = Object.values(KHBD_PEDAGOGY_CATALOG).filter(Array.isArray).flat().filter(item => ids.includes(item.id)).map(item => item.label);
-  const tablePart = String(output || "").split("### d)")[1] || "";
+  const labels = (selected.techniques || []).map(id => pedagogyLabel("techniques", id)).filter(Boolean);
+  if (!labels.length) return;
+  const tablePart = String(output || "").split("### d)")[1] || String(output || "");
   const missing = labels.filter(label => !tablePart.includes(label));
   if (missing.length) throw new Error(`Nội dung chưa triển khai đúng trong bảng tổ chức thực hiện: ${missing.join(", ")}. Nội dung chưa được lưu.`);
 }
@@ -1262,12 +1349,44 @@ async function handleGenerateVision() {
   });
 }
 
+function hasTextbookSource() {
+  return (Array.isArray(appState.images) && appState.images.length > 0) || Boolean(String(appState.content.vision || "").trim());
+}
+
+function hasOfficialYccdSource() {
+  if (typeof getOfficialYccd !== "function") return false;
+  return Boolean(getOfficialYccd({
+    subjectId: currentSubjectId(),
+    grade: appState.selectedGrade,
+    topic: getTopicDisplayName(),
+    visionText: appState.content.vision || ""
+  }).trim());
+}
+
+function hasLessonSource() {
+  return hasTextbookSource() || hasOfficialYccdSource();
+}
+
+async function applyActivityOutput(actKey, result, signal) {
+  let finalResult = result;
+  try { assertPhasePedagogyOutput(actKey, finalResult); }
+  catch (error) {
+    const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần nội dung pha ${actKey} sau. Giữ Markdown KHBD, bổ sung các lựa chọn đã chọn vào bảng d) Tổ chức thực hiện với bước, vai trò, nhiệm vụ, sản phẩm/minh chứng; không thêm kỹ thuật không chọn.\n\n${finalResult}${buildPhasePedagogyContext(actKey)}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
+    finalResult = await guardGeminiLessonOutput(repair, signal);
+    assertPhasePedagogyOutput(actKey, finalResult);
+  }
+  appState.content.activities[actKey] = finalResult;
+  saveStateToLocalStorage();
+  return finalResult;
+}
+
 async function handleGenerateObjectives() {
   const context = getGenerationPromptContext();
   const prompt = getPromptTemplate('GENERATE_OBJECTIVES', context);
 
   await executeAIGeneration({
     buttonId: "btnGenerateObjectives",
+    requireSource: true,
     targetEditorId: "editorObjectives",
     targetPreviewId: "previewObjectives",
     operationName: "Tạo I. Mục tiêu",
@@ -1312,25 +1431,23 @@ async function handleGenerateCurrentActivity() {
     targetPreviewId: "previewActivity",
     operationName: `Tạo ${actInfo.short}`,
     prompt,
-    onSuccess: async (result) => {
-      let finalResult = result;
-      try { assertPhasePedagogyOutput(actKey, finalResult); }
-      catch (error) {
-        const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần nội dung pha ${actKey} sau. Giữ Markdown KHBD, bổ sung các lựa chọn đã chọn vào bảng d) Tổ chức thực hiện với bước, vai trò, nhiệm vụ, sản phẩm/minh chứng; không thêm kỹ thuật không chọn.\n\n${finalResult}${buildPhasePedagogyContext(actKey)}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2);
-        finalResult = await guardGeminiLessonOutput(repair);
-        assertPhasePedagogyOutput(actKey, finalResult);
-      }
-      appState.content.activities[actKey] = finalResult;
-      saveStateToLocalStorage();
-      return finalResult;
-    }
+    requireTextbook: true,
+    onSuccess: async (result) => applyActivityOutput(actKey, result)
   });
 }
 
 /**
  * Hàm thực thi gọi AI tổng quát với giao diện khóa nút và hiển thị trạng thái
  */
-async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, operationName, prompt, images = [], onSuccess }) {
+async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, operationName, prompt, images = [], onSuccess, requireTextbook = false, requireSource = false }) {
+  if (requireTextbook && !hasTextbookSource()) {
+    showToast("Cần dán ảnh/PDF SGK hoặc có nội dung phân tích Tab 1 trước khi soạn hoạt động. Không tự thêm nội dung ngoài nguồn.", "warning");
+    return;
+  }
+  if (requireSource && !hasLessonSource()) {
+    showToast("Cần nguồn bài học (ảnh SGK, phân tích Tab 1, hoặc YCCĐ TT 32). Không tự tạo mục tiêu kiến thức.", "warning");
+    return;
+  }
   const context = normalizeTeachingContext(appState.teachingContext);
   if ((context.integrations.digital || context.integrations.ai) && !context.standards.length) {
     showToast("Khi bật NLS hoặc AI, hãy chọn ít nhất một chuẩn phù hợp trước khi tạo nội dung.", "warning");
@@ -1414,6 +1531,11 @@ async function handle1ClickGenerate() {
     openModal("modalApiKeys");
     return;
   }
+  if (!hasTextbookSource()) {
+    showToast("Cần dán ảnh/PDF SGK hoặc có nội dung phân tích Tab 1 trước khi tạo toàn bộ giáo án. Không tự thêm nội dung ngoài nguồn.", "warning");
+    switchMainTab("tabVision");
+    return;
+  }
 
   const topic = getTopicDisplayName();
   const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nTiến trình sẽ chạy tuần tự qua các mục I. Mục tiêu, II. Thiết bị & học liệu và III. Hoạt động A -> D.`;
@@ -1443,7 +1565,18 @@ async function handle1ClickGenerate() {
       await delay(800, appState.generationController.signal);
     }
 
-    context.textbook_content = appState.content.vision || "Dựa trên nội dung SGK do giáo viên cung cấp.";
+    context.textbook_content = appState.content.vision || "";
+    if (!context.textbook_content.trim()) {
+      throw new Error("Chưa có nội dung SGK trong nguồn. Hãy phân tích ảnh/PDF trước.");
+    }
+    if (typeof getOfficialYccd === "function") {
+      context.yccd_official = getOfficialYccd({
+        subjectId: currentSubjectId(),
+        grade: appState.selectedGrade,
+        topic: getTopicDisplayName(),
+        visionText: context.textbook_content
+      });
+    }
 
     // BƯỚC 2: Tạo I. Mục tiêu
     updateProgress(25, "Bước 2/7: Đang tạo I. Mục tiêu bài học...");
@@ -1468,7 +1601,7 @@ async function handle1ClickGenerate() {
     updateProgress(55, "Bước 4/7: Đang tạo III.A Hoạt động Mở đầu...");
     const promptA = getPromptTemplate('GENERATE_ACTIVITY_A', context) + buildPhasePedagogyContext('A');
     const resA = await generateOneClickContent(promptA);
-    appState.content.activities.A = resA;
+    await applyActivityOutput("A", resA, appState.generationController.signal);
     await delay(800, appState.generationController.signal);
 
     // BƯỚC 5: Tạo III.B Hình thành kiến thức mới
@@ -1476,7 +1609,7 @@ async function handle1ClickGenerate() {
     context.activities_content = appState.content.activities.A;
     const promptB = getPromptTemplate('GENERATE_ACTIVITY_B', context) + buildPhasePedagogyContext('B');
     const resB = await generateOneClickContent(promptB);
-    appState.content.activities.B = resB;
+    await applyActivityOutput("B", resB, appState.generationController.signal);
     await delay(800, appState.generationController.signal);
 
     // BƯỚC 6: Tạo III.C Luyện tập
@@ -1484,7 +1617,7 @@ async function handle1ClickGenerate() {
     context.activities_content = appState.content.activities.A + "\n\n---\n\n" + appState.content.activities.B;
     const promptC = getPromptTemplate('GENERATE_ACTIVITY_C', context) + buildPhasePedagogyContext('C');
     const resC = await generateOneClickContent(promptC);
-    appState.content.activities.C = resC;
+    await applyActivityOutput("C", resC, appState.generationController.signal);
     await delay(800, appState.generationController.signal);
 
     // BƯỚC 7: Tạo III.D Vận dụng
@@ -1492,7 +1625,7 @@ async function handle1ClickGenerate() {
     context.activities_content += "\n\n---\n\n" + appState.content.activities.C;
     const promptD = getPromptTemplate('GENERATE_ACTIVITY_D', context) + buildPhasePedagogyContext('D');
     const resD = await generateOneClickContent(promptD);
-    appState.content.activities.D = resD;
+    await applyActivityOutput("D", resD, appState.generationController.signal);
     await delay(800, appState.generationController.signal);
 
     // Lưu toàn bộ vào localStorage
@@ -1568,11 +1701,11 @@ async function handleExportFullDocx() {
     duration: appState.duration,
   };
 
-  const fileName = `KHBD_${getSafeTopicName()}_Toan${appState.selectedGrade}.docx`;
+  const fileName = `KHBD_${getSafeTopicName()}_${currentSubjectId() || "mon"}${appState.selectedGrade}.docx`;
 
   try {
     showToast("Đang biên soạn và định dạng toàn bộ Giáo án sang Word...", "info");
-    await docxGenerator.exportFullLessonPlan(lessonInfo, fullMd, fileName);
+    await docxGenerator.exportFullLessonPlan(lessonInfo, getFullLessonPlanMarkdown({ includeHeader: false }), fileName);
     showToast("Đã xuất toàn bộ Giáo án thành công!", "success");
   } catch (e) {
     console.error("Lỗi xuất toàn bộ Giáo án:", e);

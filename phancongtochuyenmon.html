@@ -1650,6 +1650,12 @@
         let systemData = { teachers: [], classes: [], plans: [] };
         let localStorageScope = '';
 
+        // Cấu hình & trạng thái Debounced Auto-save
+        const AUTOSAVE_DEBOUNCE_MS = 1500;
+        let autoSaveTimer = null;
+        let isSavingInProgress = false;
+        let hasUnsavedChanges = false;
+
         function setLocalStorageScope(currentUser) {
             const userId = Number(currentUser?.id || 0);
             const username = String(currentUser?.username || '').trim().toLowerCase();
@@ -1924,9 +1930,21 @@
         }
 
         // ================= CSDL & LOCAL STORAGE =================
-        function saveToLocal() {
+        function saveToLocal(options = { autoSave: true }) {
             saveCurrentPhaseSnapshot();
             localStorage.setItem(localPlanStorageKey(), JSON.stringify(state));
+            if (options && options.autoSave !== false && hasPlanConfiguration()) {
+                scheduleAutoSave();
+            }
+        }
+
+        function scheduleAutoSave() {
+            hasUnsavedChanges = true;
+            updateDBStatus('saving', 'Chờ tự động lưu...');
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                performSaveToDB({ isAuto: true });
+            }, AUTOSAVE_DEBOUNCE_MS);
         }
 
         function loadFromLocal() {
@@ -1958,7 +1976,7 @@
                         state.info.school_year = result.plan.school_year || state.info.school_year;
                         state.info.semester = result.plan.semester || state.info.semester;
                     }
-                    saveToLocal();
+                    saveToLocal({ autoSave: false });
                     render();
                     const timeStr = result.plan?.updated_at ? formatTime(result.plan.updated_at) : 'Mới';
                     updateDBStatus('connected', `Đã nạp CSDL (${timeStr})`);
@@ -1979,15 +1997,30 @@
             fetchSystemData();
         }
 
-        async function saveToDB() {
-            if (!requirePlanConfiguration()) return;
-            saveCurrentPhaseSnapshot();
-            const saveBtn = document.getElementById('btn-save-db');
-            if (saveBtn) {
-                saveBtn.disabled = true;
-                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+        async function performSaveToDB(options = { isAuto: false }) {
+            clearTimeout(autoSaveTimer);
+            if (!hasPlanConfiguration()) return;
+
+            if (isSavingInProgress) {
+                hasUnsavedChanges = true;
+                return;
             }
-            updateDBStatus('saving', 'Đang lưu vào CSDL...');
+
+            isSavingInProgress = true;
+            saveCurrentPhaseSnapshot();
+
+            const isAuto = Boolean(options && options.isAuto);
+            const saveBtn = document.getElementById('btn-save-db');
+
+            if (!isAuto) {
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+                }
+                updateDBStatus('saving', 'Đang lưu vào CSDL...');
+            } else {
+                updateDBStatus('saving', 'Đang tự động lưu...');
+            }
 
             try {
                 const planKey = state.info?.plan_key || 'default';
@@ -2009,25 +2042,39 @@
                 const result = await res.json().catch(() => ({}));
 
                 if (result.ok) {
-                    saveToLocal();
+                    hasUnsavedChanges = false;
+                    saveToLocal({ autoSave: false });
                     const timeStr = result.updated_at ? formatTime(result.updated_at) : new Date().toLocaleTimeString('vi-VN');
                     updateDBStatus('connected', `Đã lưu CSDL (${timeStr})`);
-                    showToast("Đã lưu vào CSDL thành công!", "success");
+                    if (!isAuto) {
+                        showToast("Đã lưu vào CSDL thành công!", "success");
+                    }
                     fetchSystemData();
                 } else {
                     throw new Error(result.error || 'Không thể lưu vào CSDL');
                 }
             } catch (err) {
                 console.error('Lỗi lưu CSDL:', err);
-                saveToLocal();
-                updateDBStatus('offline', 'Lưu CSDL lỗi (đã lưu tạm)');
-                showToast(err.message || "Lỗi lưu CSDL, đã lưu tạm vào máy!", "error");
+                saveToLocal({ autoSave: false });
+                updateDBStatus('offline', isAuto ? 'Tự động lưu lỗi (đã lưu tạm)' : 'Lưu CSDL lỗi (đã lưu tạm)');
+                if (!isAuto) {
+                    showToast(err.message || "Lỗi lưu CSDL, đã lưu tạm vào máy!", "error");
+                }
             } finally {
-                if (saveBtn) {
+                isSavingInProgress = false;
+                if (!isAuto && saveBtn) {
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Lưu CSDL';
                 }
+                if (hasUnsavedChanges) {
+                    scheduleAutoSave();
+                }
             }
+        }
+
+        async function saveToDB() {
+            if (!requirePlanConfiguration()) return;
+            return performSaveToDB({ isAuto: false });
         }
 
         async function fetchSystemData() {
@@ -3847,6 +3894,40 @@
         function escapeHtml(str) {
             return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
+
+        // Tự động lưu ngầm khi chuyển tab hoặc rời trang nếu còn dữ liệu chưa lưu
+        function flushUnsavedChangesBeforeUnload() {
+            if (!hasUnsavedChanges || !hasPlanConfiguration()) return;
+            saveCurrentPhaseSnapshot();
+            const planKey = state.info?.plan_key || 'default';
+            const payload = {
+                plan_key: planKey,
+                title: state.info?.title || 'Tổ Toán - Tin học',
+                school_year: state.info?.school_year || '',
+                semester: state.info?.semester || 'HK1',
+                data: state
+            };
+            try {
+                fetch('api/phancong.php?action=save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include',
+                    keepalive: true
+                });
+                hasUnsavedChanges = false;
+            } catch (e) {
+                console.warn('Lỗi lưu ngầm khi rời trang:', e);
+            }
+        }
+
+        window.addEventListener('pagehide', flushUnsavedChangesBeforeUnload);
+        window.addEventListener('beforeunload', flushUnsavedChangesBeforeUnload);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                flushUnsavedChangesBeforeUnload();
+            }
+        });
 
         // Khởi động trang
         document.addEventListener('DOMContentLoaded', () => {

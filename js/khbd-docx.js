@@ -492,7 +492,11 @@ class DocxGenerator {
     const rows = [];
     const tableWidth = 9000;
     const columnCount = Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
-    const columnWidths = Array.from({ length: columnCount }, () => Math.floor(tableWidth / columnCount));
+    const headerCells = this.splitMarkdownTableRow(validLines[0]).map(cell => cell.toLowerCase());
+    const isActivityTwoCol = columnCount === 2 && headerCells.some(cell => cell.includes("hoạt động của gv"));
+    const columnWidths = isActivityTwoCol
+      ? [4500, 4500]
+      : Array.from({ length: columnCount }, () => Math.floor(tableWidth / columnCount));
 
     validLines.forEach((line, rowIndex) => {
       const rawCells = this.splitMarkdownTableRow(line);
@@ -589,40 +593,52 @@ class DocxGenerator {
     const { Paragraph, TextRun, AlignmentType, BorderStyle } = window.docx;
 
     const schoolName = lessonInfo.school || "TRƯỜNG ....................................................";
-    const groupName = lessonInfo.subjectGroup || "TỔ: ................................................";
-    const teacherName = lessonInfo.teacher || "Họ và tên giáo viên: ................................................";
+    const groupName = lessonInfo.subjectGroup || "TỔ CHUYÊN MÔN: ................................................";
+    const teacherName = lessonInfo.teacher || "................................................";
     const subject = (lessonInfo.subject || "MÔN HỌC").toUpperCase();
     const topic = (lessonInfo.topic || "KẾ HOẠCH BÀI DẠY").toUpperCase();
-    const grade = lessonInfo.grade ? `LỚP ${lessonInfo.grade}` : "";
-    const duration = lessonInfo.duration || "Thời lượng: 02 tiết";
+    const grade = lessonInfo.grade ? String(lessonInfo.grade) : "";
+    const duration = lessonInfo.duration || "02 tiết";
+    const dateDraft = lessonInfo.dateDraft || ".../.../...";
+    const dateTeach = lessonInfo.dateTeach || ".../.../...";
 
     const headers = [];
 
-    // Tiêu ngữ trường & tổ
+    headers.push(new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 0, after: 80 },
+      children: [
+        new TextRun({ text: `TRƯỜNG: ${schoolName}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })
+      ]
+    }));
+    headers.push(new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 0, after: 80 },
+      children: [
+        new TextRun({ text: `TỔ CHUYÊN MÔN: ${groupName}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })
+      ]
+    }));
+    headers.push(new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 0, after: 80 },
+      children: [
+        new TextRun({ text: `HỌ VÀ TÊN GIÁO VIÊN: ${teacherName}`, font: this.fontFamily, size: this.fontSizeBody, italics: true })
+      ]
+    }));
     headers.push(new Paragraph({
       alignment: AlignmentType.LEFT,
       spacing: { before: 0, after: 120 },
       children: [
-        new TextRun({ text: schoolName, font: this.fontFamily, size: this.fontSizeBody, bold: true }),
-        new TextRun({ text: `\t\t${groupName}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })
+        new TextRun({ text: `Ngày soạn: ${dateDraft}     Ngày dạy: ${dateTeach}`, font: this.fontFamily, size: this.fontSizeBody })
       ]
     }));
 
-    headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: 120 },
-      children: [
-        new TextRun({ text: teacherName, font: this.fontFamily, size: this.fontSizeBody, italics: true })
-      ]
-    }));
-
-    // TÊN BÀI GIÁO ÁN TO ĐẬM Ở GIỮA
     headers.push(new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 160, after: 120 },
+      spacing: { before: 160, after: 80 },
       children: [
         new TextRun({
-          text: `KẾ HOẠCH BÀI DẠY: ${topic}`,
+          text: "KẾ HOẠCH BÀI DẠY",
           font: this.fontFamily,
           size: this.fontSizeH1,
           bold: true,
@@ -630,21 +646,25 @@ class DocxGenerator {
         })
       ]
     }));
-
-    // Thông tin môn, lớp và thời lượng
-    const subInfo = [subject, grade, duration].filter(x => x.length > 0).join("  |  ");
     headers.push(new Paragraph({
-      alignment: AlignmentType.CENTER,
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 80, after: 40 },
+      children: [new TextRun({ text: `TÊN BÀI SOẠN: ${topic}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })]
+    }));
+    headers.push(new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 0, after: 40 },
+      children: [new TextRun({ text: `MÔN HỌC: ${subject} - LỚP: ${grade}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })]
+    }));
+    headers.push(new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 0, after: 40 },
+      children: [new TextRun({ text: "BỘ SÁCH: SGK do giáo viên cung cấp", font: this.fontFamily, size: this.fontSizeBody })]
+    }));
+    headers.push(new Paragraph({
+      alignment: AlignmentType.LEFT,
       spacing: { before: 0, after: 120 },
-      children: [
-        new TextRun({
-          text: subInfo,
-          font: this.fontFamily,
-          size: this.fontSizeBody,
-          italics: true,
-          bold: true
-        })
-      ]
+      children: [new TextRun({ text: `THỜI LƯỢNG THỰC HIỆN: ${duration}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })]
     }));
 
     // Đường kẻ phân cách

@@ -220,30 +220,13 @@
               <label for="inputSupportNote">Ghi chú ngắn (không nhập tên/thông tin sức khỏe nhạy cảm):</label>
               <textarea id="inputSupportNote" maxlength="300" rows="2"></textarea>
             </fieldset>
-            <fieldset class="tool-group" data-choice-group="methods" style="min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: .75rem;">
-              <legend style="padding: 0 .35rem; font-weight: 600;">Phương pháp dạy học ưu tiên</legend>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .5rem;">
-                <label><input type="checkbox" class="teaching-method-choice" value="Dạy học giải quyết vấn đề"> Dạy học giải quyết vấn đề</label>
-                <label><input type="checkbox" class="teaching-method-choice" value="Dạy học khám phá có hướng dẫn"> Dạy học khám phá có hướng dẫn</label>
-                <label><input type="checkbox" class="teaching-method-choice" value="Dạy học hợp tác"> Dạy học hợp tác</label>
-                <label><input type="checkbox" class="teaching-method-choice" value="Dạy học trực quan"> Dạy học trực quan</label>
-                <label><input type="checkbox" class="teaching-method-choice" value="Dạy học phân hóa"> Dạy học phân hóa</label>
-                <label><input type="checkbox" class="teaching-method-choice" value="Luyện tập - thực hành"> Luyện tập - thực hành</label>
-              </div>
-              <small class="text-muted">Có thể chọn nhiều mục.</small>
-            </fieldset>
-            <fieldset class="tool-group" data-choice-group="techniques" style="min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: .75rem;">
-              <legend style="padding: 0 .35rem; font-weight: 600;">Kỹ thuật dạy học ưu tiên</legend>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .5rem;">
-                <label><input type="checkbox" class="teaching-technique-choice" value="Think-Pair-Share"> Think-Pair-Share</label>
-                <label><input type="checkbox" class="teaching-technique-choice" value="Khăn trải bàn"> Khăn trải bàn</label>
-                <label><input type="checkbox" class="teaching-technique-choice" value="Mảnh ghép"> Mảnh ghép</label>
-                <label><input type="checkbox" class="teaching-technique-choice" value="Kỹ thuật hỏi đáp"> Kỹ thuật hỏi đáp</label>
-                <label><input type="checkbox" class="teaching-technique-choice" value="Trạm học tập"> Trạm học tập</label>
-                <label><input type="checkbox" class="teaching-technique-choice" value="Sơ đồ tư duy"> Sơ đồ tư duy</label>
-              </div>
-              <small class="text-muted">Có thể chọn nhiều mục; để trống nếu không muốn ràng buộc kỹ thuật.</small>
-            </fieldset>
+          </div>
+          <div class="pedagogy-section">
+            <h3>Phương pháp & Kĩ thuật dạy học</h3>
+            <p class="text-muted">Tùy chọn, AI sẽ tích hợp vào giáo án. Gợi ý theo môn/lớp được đánh dấu.</p>
+            <div id="methodsCatalogPanel"></div>
+            <div id="techniquesCatalogPanel"></div>
+            <div id="activitiesCatalogPanel"></div>
           </div>
           <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0;">
             <label><input type="checkbox" id="toggleDigitalCompetency"> Tích hợp năng lực số</label>
@@ -257,7 +240,6 @@
             <label for="inputSpecialRequirements">Yêu cầu hoặc hoạt động đặc thù:</label>
             <textarea id="inputSpecialRequirements" maxlength="600" rows="3" placeholder="Ví dụ: Có hoạt động đo đạc ở sân trường; ưu tiên nhiệm vụ theo nhóm 4; không sử dụng điện thoại trong giờ học."></textarea>
           </div>
-          <div id="phasePedagogyPanel" style="margin-top:1rem"></div>
         </div>
 
         <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
@@ -571,6 +553,7 @@
   <script src="js/khbd-docx.js"></script>
   <script src="js/khbd-standards.js"></script>
   <script src="js/khbd-pedagogy-catalog.js"></script>
+  <script src="js/khbd-yccd.js"></script>
   <script src="js/khbd-app.js"></script>
 </body>
 </html>

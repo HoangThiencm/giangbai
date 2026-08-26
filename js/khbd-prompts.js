@@ -6,10 +6,14 @@
  * và Khung Năng lực Số (TT 02/2025/TT-BGDĐT).
  */
 
-const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU HÌNH THỨC BẮT BUỘC:
+const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU HÌNH THỨC BẮT BUỘC (form mẫu demo.docx, bảng 2 cột):
 - Hoạt động này luôn có đúng bốn mục: ### a) Mục tiêu, ### b) Nội dung, ### c) Sản phẩm, ### d) Tổ chức thực hiện.
-- Trong mục d), xuất một bảng Markdown hai cột đúng tiêu đề: | Hoạt động của GV và HS | Nội dung |. Bảng luôn có bốn hàng theo thứ tự: **Chuyển giao nhiệm vụ**, **Thực hiện nhiệm vụ**, **Báo cáo, thảo luận**, **Kết luận, nhận định**.
-- Cột trái mô tả việc của GV và HS ở từng bước. Cột phải ghi nhiệm vụ/câu hỏi cụ thể và sản phẩm hoặc đáp án chuẩn tương ứng; không để cột nào trống.
+- Mục d) CHỈ xuất một bảng Markdown hai cột, đúng tiêu đề:
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+- Bảng luôn có bốn hàng theo thứ tự, cột trái bắt đầu bằng: **Chuyển giao nhiệm vụ:** / **Thực hiện nhiệm vụ:** / **Báo cáo, thảo luận:** / **Kết luận, nhận định:**
+- Cột trái: việc của GV và HS ở từng bước. Cột phải: nhiệm vụ, câu hỏi, sản phẩm, đáp án hoặc kiến thức chốt LẤY TỪ NGUỒN ĐÃ CUNG CẤP; không để cột nào trống.
+- Không viết lại 4 bước bằng danh sách gạch đầu dòng ngoài bảng.
 - Riêng Hoạt động B, mỗi đơn vị kiến thức có đầy đủ a, b, c, d và một bảng hai cột riêng.
 - Với bảng Markdown, escape mọi dấu pipe trong nội dung hoặc LaTeX thành \\|; không chèn dấu pipe chưa escape trong ô bảng.`;
 
@@ -40,6 +44,12 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ nội dung KHBD. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary và mọi code fence. Không thêm lời dẫn mới.`,
 
+  SOURCE_LOCK: `KHÓA NGUỒN BẮT BUỘC:
+- Chỉ dùng: ảnh/PDF SGK, nội dung phân tích Tab 1, tên bài/môn/lớp giáo viên chọn, YCCĐ chính thức (TT 32/2018/TT-BGDĐT — CT GDPT 2018) nếu được cung cấp, và bối cảnh lớp.
+- CẤM bịa định nghĩa, định lý, công thức, số liệu, đề bài, đáp án, số trang, hình minh họa hoặc nhiệm vụ không có trong nguồn.
+- Luyện tập/vận dụng: CHỈ dùng bài, câu, hoạt động có trong nguồn. Nếu thiếu, ghi "[Không có trong tài liệu đã cung cấp]" — không invent trắc nghiệm 4 lựa chọn, không invent bài thực tiễn có số liệu, không bịa "SBT trang …".
+- Mục tiêu kiến thức phải là Yêu cầu cần đạt của CT GDPT 2018 ban hành kèm Thông tư 32/2018/TT-BGDĐT (hoặc YCCĐ in trên SGK/nguồn). Không tự tạo thang Bloom nếu không có trong nguồn.`,
+
   // TAB 1: PHÂN TÍCH ẢNH SGK (VISION)
   ANALYZE_TEXTBOOK: `Bạn hãy quan sát và phân tích toàn diện các hình ảnh/trang SGK Toán được giáo viên cung cấp.
 Chủ đề bài học: "{topic}" (Môn học: {subject}).
@@ -57,14 +67,14 @@ HÃY PHÂN TÍCH VÀ TRÍCH XUẤT NỘI DUNG VỚI CÁC MỤC SAU:
    - Hoạt động vận dụng (các bài toán thực tế, dự án gắn kết tri thức với cuộc sống).
 4. **Hệ thống bài tập cuối bài:**
    - Tóm tắt đề bài các bài tập cơ bản và nâng cao trong SGK.
-5. **Đề xuất của Chuyên gia Sư phạm:**
-   - Những điểm học sinh dễ mắc sai lầm, hiểu sai bản chất.
-   - Cơ hội tích hợp các thành phần số/AI nếu và chỉ nếu được bật trong bối cảnh sư phạm.
+5. **Đề xuất của Chuyên gia Sư phạm (chỉ gắn đúng nội dung đã đọc, không thêm kiến thức mới):**
+   - Những điểm học sinh dễ mắc sai lầm, hiểu sai bản chất ngay trên các khái niệm/bài tập vừa trích.
+   - Cơ hội tích hợp số/AI chỉ khi thành phần đó được bật trong bối cảnh sư phạm.
 
 Hãy trình bày rõ ràng, mạch lạc, giữ nguyên vẹn các công thức toán bằng định dạng LaTeX.`,
 
   // TAB 2: MỤC TIÊU BÀI HỌC (I. MỤC TIÊU)
-  GENERATE_OBJECTIVES: `Hãy xây dựng phần **I. MỤC TIÊU** cho Kế hoạch bài dạy môn Toán THCS chuẩn Công văn 5512/BGDĐT-GDTrH theo GDPT 2018.
+  GENERATE_OBJECTIVES: `Hãy xây dựng phần **I. MỤC TIÊU** cho Kế hoạch bài dạy chuẩn Công văn 5512/BGDĐT-GDTrH, bám CT GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Thời lượng dự kiến: {duration}
@@ -72,6 +82,15 @@ Hãy trình bày rõ ràng, mạch lạc, giữ nguyên vẹn các công thức 
 """
 {textbook_content}
 """
+- YCCĐ chính thức CT GDPT 2018 / Thông tư 32/2018/TT-BGDĐT (nếu có):
+"""
+{yccd_official}
+"""
+
+QUY TẮC MỤC TIÊU KIẾN THỨC (KHÔNG TỰ TẠO):
+- Mục ## 1. Về kiến thức PHẢI là Yêu cầu cần đạt của CT GDPT 2018 ban hành kèm Thông tư 32/2018/TT-BGDĐT cho đúng môn/lớp/bài.
+- Nếu khối {yccd_official} có nội dung: chỉ chọn và viết lại nguyên ý các YCCĐ khớp bài; không thêm kiến thức ngoài danh sách.
+- Nếu khối YCCĐ trống: chỉ lấy YCCĐ in trên SGK/nguồn Tab 1. Nếu nguồn không nêu YCCĐ, ghi các ý kiến thức có trong nguồn và thêm dòng "Cần đối chiếu YCCĐ CT GDPT 2018 (TT 32) cho bài này" — CẤM bịa thang Bloom Nhận biết/Thông hiểu/Vận dụng không có trong nguồn.
 
 QUY TẮC BẮT BUỘC VỀ SỐ LƯỢNG NĂNG LỰC VÀ PHẨM CHẤT (Bài dạy 1–2 tiết):
 - Mục 2.a (Năng lực chung): CHỈ ĐƯỢC CHỌN 1–2 năng lực chung phù hợp nhất (ví dụ: Tự chủ và tự học, hoặc Giao tiếp và hợp tác). Nêu biểu hiện và nhiệm vụ/sản phẩm cụ thể. CẤM liệt kê cả 3 năng lực chung.
@@ -89,10 +108,7 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
 # I. MỤC TIÊU
 
 ## 1. Về kiến thức
-(Nêu rõ các mức độ nhận thức: Nhận biết, Thông hiểu, Vận dụng mà học sinh cần đạt được sau bài học, bám sát SGK được cung cấp).
-- Nhận biết được...
-- Hiểu và giải thích được...
-- Vận dụng được... để giải các bài toán...
+(Viết các YCCĐ CT GDPT 2018 / TT 32 hoặc YCCĐ in trên SGK của đúng bài này; mỗi ý một gạch đầu dòng, giữ động từ YCCĐ: nhận biết được, nêu được, thực hiện được, vận dụng được,...).
 
 ## 2. Về năng lực
 ### a) Năng lực chung
@@ -177,10 +193,12 @@ ${ACTIVITY_TABLE_CONTRACT}
 (Mô tả cụ thể câu trả lời, kết quả dự đoán, sản phẩm tính toán ban đầu hoặc câu hỏi băn khoăn của học sinh khi đối diện tình huống).
 
 ### d) Tổ chức thực hiện:
-- **Bước 1: Chuyển giao nhiệm vụ:** (GV nêu luật chơi / trình chiếu hình ảnh / phát phiếu khởi động / giao nhiệm vụ cụ thể cho cá nhân hoặc nhóm).
-- **Bước 2: Thực hiện nhiệm vụ:** (HS quan sát, thảo luận, tính toán, dự đoán dưới sự bao quát của GV; GV hỗ trợ học sinh khó khăn).
-- **Bước 3: Báo cáo, thảo luận:** (Đại diện 1-2 HS hoặc nhóm phát biểu câu trả lời; các HS khác lắng nghe, nhận xét, đưa ra ý kiến phản biện).
-- **Bước 4: Kết luận, nhận định & Dẫn dắt vào bài mới:** (GV nhận xét tinh thần học tập, khéo léo dẫn dắt từ mâu thuẫn nhận thức/kết quả khởi động để giới thiệu vào bài học mới).`,
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| **Chuyển giao nhiệm vụ:** GV giao nhiệm vụ mở đầu lấy từ tình huống/hình/câu hỏi có trong nguồn. | Nhiệm vụ/câu hỏi đúng nguồn. |
+| **Thực hiện nhiệm vụ:** HS làm việc; GV hỗ trợ. | Sản phẩm dự kiến theo nguồn. |
+| **Báo cáo, thảo luận:** HS trình bày; lớp nhận xét. | Ý kiến/đáp án có trong nguồn. |
+| **Kết luận, nhận định:** GV chốt và dẫn vào bài mới. | Kiến thức chốt đúng nguồn. |`
 
   // TAB 4.B: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI
   GENERATE_ACTIVITY_B: `Hãy biên soạn chi tiết toàn bộ **HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
@@ -215,10 +233,12 @@ CẤU TRÚC MẪU:
 - Kết quả câu trả lời, lời giải chi tiết cho các câu hỏi khám phá:
   + (Trình bày chi tiết các phép toán, công thức LaTeX $...$).
 #### d) Tổ chức thực hiện:
-- **Bước 1: Chuyển giao nhiệm vụ:** (GV chia nhóm, giao PHT, đặt câu hỏi...).
-- **Bước 2: Thực hiện nhiệm vụ:** (HS làm việc cá nhân kết hợp thảo luận nhóm, GV quan sát hướng dẫn).
-- **Bước 3: Báo cáo, thảo luận:** (Đại diện nhóm trình bày, các nhóm khác phản biện).
-- **Bước 4: Kết luận, nhận định:** (GV chuẩn hóa kiến thức, chốt nội dung trọng tâm ghi bảng: Định nghĩa, Chú ý, Ví dụ mẫu 1 có giải chi tiết).
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| **Chuyển giao nhiệm vụ:** GV giao HĐ/câu hỏi khám phá đúng SGK. | Câu hỏi/HĐ đúng nguồn. |
+| **Thực hiện nhiệm vụ:** HS khám phá; GV hỗ trợ. | Kết quả HS dự kiến theo nguồn. |
+| **Báo cáo, thảo luận:** Đại diện trình bày; lớp phản biện. | Đáp án/lời giải có trong nguồn. |
+| **Kết luận, nhận định:** GV chốt kiến thức ghi bảng. | Định nghĩa/công thức/chú ý đúng nguồn. |
 
 ### 2. Hoạt động 2.2: [Tên đơn vị kiến thức 2]
 (Tương tự đầy đủ 4 phần a, b, c, d với các bước chi tiết và ví dụ áp dụng...)
@@ -236,37 +256,30 @@ CẤU TRÚC MẪU:
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
-- Xây dựng hệ thống bài tập luyện tập bám sát SGK và dữ liệu bài học do giáo viên cung cấp:
-  + Dạng 1: Bài tập nhận biết và thông hiểu (rèn kĩ năng tính toán, áp dụng trực tiếp công thức).
-  + Dạng 2: Bài tập vận dụng / tranh luận / thử thách nhỏ phù hợp bài học.
-  + Dạng 3: Bài tập trắc nghiệm khách quan củng cố nhanh (4 câu trắc nghiệm 4 lựa chọn A, B, C, D).
-- TẤT CẢ CÁC BÀI TẬP ĐỀU BẮT BUỘC CÓ LỜI GIẢI CHI TIẾT TỪNG BƯỚC kèm công thức LaTeX $...$.
-- Tuân thủ đủ 4 thành phần theo CV 5512: a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện.
+- CHỈ dùng bài luyện tập / câu hỏi / HĐ có trong SGK hoặc dữ liệu giáo viên cung cấp. CẤM invent trắc nghiệm 4 lựa chọn, cấm bịa đề không có trong nguồn.
+- Nếu nguồn không có bài luyện tập: ghi "[Không có trong tài liệu đã cung cấp]" ở mục b) và c); vẫn xuất bảng d) với nhiệm vụ đối chiếu vở/SGK.
+- Lời giải chi tiết chỉ viết khi nguồn có dữ liệu đủ để giải; không bịa số liệu.
 
 CẤU TRÚC:
 
 ## C. HOẠT ĐỘNG 3: LUYỆN TẬP (Khoảng 12 - 15 phút)
 
 ### a) Mục tiêu:
-- Củng cố, khắc sâu kiến thức vừa học thông qua các bài tập cụ thể từ SGK hoặc dữ liệu bài học cung cấp.
-- Rèn luyện kĩ năng tính toán, vẽ hình, biến đổi đại số, lập luận toán học và sử dụng máy tính cầm tay.
+- Củng cố kiến thức vừa học bằng đúng các bài/câu có trong nguồn.
 
 ### b) Nội dung:
-- **Bài tập 1 (Mức độ Nhận biết - Thông hiểu):** [Đề bài cụ thể...]
-- **Bài tập 2 (Mức độ Thông hiểu - Vận dụng):** [Đề bài cụ thể...]
-- **Bài tập 3 (Trắc nghiệm nhanh củng cố):** [4 câu hỏi trắc nghiệm A, B, C, D...]
+- Liệt kê nguyên đề các bài/câu luyện tập có trong nguồn (kèm số bài/trang nếu nguồn có).
 
 ### c) Sản phẩm:
-(Lời giải chi tiết đầy đủ cho từng bài tập ở mục Nội dung).
-- **Lời giải Bài tập 1:** (Trình bày chi tiết từng bước bằng LaTeX $...$).
-- **Lời giải Bài tập 2:** (Trình bày chi tiết từng bước bằng LaTeX $...$).
-- **Đáp án Bài tập 3:** (Đáp án và giải thích ngắn gọn).
+- Lời giải/đáp án chỉ khi có trong nguồn hoặc suy ra trực tiếp từ kiến thức nguồn.
 
 ### d) Tổ chức thực hiện:
-- **Bước 1: Chuyển giao nhiệm vụ:** (GV giao bài tập cho cả lớp làm việc cá nhân / bắt cặp đôi).
-- **Bước 2: Thực hiện nhiệm vụ:** (HS giải bài vào vở/phiếu; GV hỗ trợ học sinh còn lúng túng).
-- **Bước 3: Báo cáo, thảo luận:** (Gọi HS lên bảng trình bày, cả lớp nhận xét đối chiếu bài làm).
-- **Bước 4: Kết luận, nhận định:** (GV chữa bài, chỉ ra các lỗi sai thường gặp, chốt kĩ năng và phương pháp giải chuẩn).`,
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| **Chuyển giao nhiệm vụ:** GV giao đúng các bài/câu có trong nguồn. | Số bài/câu theo nguồn. |
+| **Thực hiện nhiệm vụ:** HS làm bài; GV hỗ trợ. | Sản phẩm vở/phiếu. |
+| **Báo cáo, thảo luận:** HS trình bày; lớp nhận xét. | Đáp án theo nguồn. |
+| **Kết luận, nhận định:** GV chốt lỗi sai và kĩ năng. | Kiến thức/kĩ năng chốt đúng nguồn. |`
 
   // TAB 4.D: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG VẬN DỤNG
   GENERATE_ACTIVITY_D: `Hãy biên soạn chi tiết **HOẠT ĐỘNG VẬN DỤNG** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
@@ -279,29 +292,30 @@ CẤU TRÚC:
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
-- Thiết kế 1 đến 2 bài toán vận dụng thực tiễn gắn liền với đời sống hàng ngày của học sinh THCS (đo đạc, tài chính gia đình, kiến trúc, môi trường, số liệu thống kê...) hoặc tích hợp liên môn (Vật lý, Địa lý, Công nghệ...).
-- Chỉ tích hợp hướng dẫn HS ứng dụng công cụ số/AI để kiểm chứng lời giải khi bối cảnh sư phạm bật thành phần tương ứng.
-- Đầy đủ 4 thành phần a, b, c, d theo CV 5512 kèm LỜI GIẢI CHI TIẾT ĐẦY ĐỦ.
+- CHỈ dùng bài vận dụng / tình huống / dự án có trong SGK hoặc dữ liệu giáo viên. CẤM invent số liệu, đề thực tiễn hay bài liên môn không có trong nguồn.
+- Nếu nguồn không có phần vận dụng: ghi "[Không có trong tài liệu đã cung cấp]".
+- Chỉ tích hợp công cụ số/AI khi bối cảnh sư phạm bật thành phần tương ứng.
 
 CẤU TRÚC:
 
 ## D. HOẠT ĐỘNG 4: VẬN DỤNG (Khoảng 5 - 8 phút hoặc giao về nhà)
 
 ### a) Mục tiêu:
-- Giúp học sinh thấy được ý nghĩa thực tiễn của bài học, biết mô hình hoá toán học để giải quyết các vấn đề trong đời sống.
-- Phát triển năng lực giải quyết vấn đề, tư duy sáng tạo và năng lực ứng dụng công nghệ.
+- Vận dụng đúng nội dung bài theo nhiệm vụ có trong nguồn.
 
 ### b) Nội dung:
-- **Tình huống thực tế:** (Mô tả bài toán thực tế sinh động, có số liệu cụ thể...).
+- Tình huống/bài vận dụng nguyên văn hoặc tóm tắt sát nguồn.
 
 ### c) Sản phẩm:
-- Lời giải bài toán thực tế hoàn chỉnh, có giải thích rõ ràng từng bước mô hình hóa toán học và đơn vị đo.
+- Sản phẩm/lời giải chỉ khi nguồn cho phép; không bịa số liệu.
 
 ### d) Tổ chức thực hiện:
-- **Bước 1: Chuyển giao nhiệm vụ:** (GV nêu tình huống, có thể giao làm nhóm tại lớp hoặc hoàn thiện thành dự án nhỏ tại nhà).
-- **Bước 2: Thực hiện nhiệm vụ:** (HS phân tích đề bài, vẽ sơ đồ, thiết lập công thức/phương trình toán học).
-- **Bước 3: Báo cáo, thảo luận:** (Đại diện trình bày phương án giải quyết và ý nghĩa thực tế).
-- **Bước 4: Kết luận, nhận định:** (GV đánh giá, tổng kết bài học, khích lệ tinh thần vận dụng toán học vào đời sống).`,
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| **Chuyển giao nhiệm vụ:** GV giao đúng nhiệm vụ vận dụng có trong nguồn. | Đề/tình huống theo nguồn. |
+| **Thực hiện nhiệm vụ:** HS thực hiện; GV hỗ trợ. | Sản phẩm dự kiến theo nguồn. |
+| **Báo cáo, thảo luận:** Đại diện trình bày. | Kết quả theo nguồn. |
+| **Kết luận, nhận định:** GV chốt ý nghĩa bài học. | Kiến thức chốt đúng nguồn. |`
 
   // TAB 4.E: KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ (MA TRẬN & RUBRICS)
   GENERATE_ASSESSMENT: `Hãy biên soạn **E. KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ** cho Kế hoạch bài dạy môn Toán THCS chuẩn CV 5512.
@@ -457,7 +471,8 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Định dạng Markdown rõ ràng, phân cấp tiêu đề bằng #, ##, ###, #### hợp lý.
 ${latexRule}
 - Nội dung phải chi tiết, đầy đủ, thiết thực cho giáo viên lên lớp, tuyệt đối KHÔNG viết tóm tắt qua loa, KHÔNG để dấu '...' hoặc 'tương tự'.
-- Tuân thủ tuyệt đối bối cảnh và ràng buộc sư phạm được cung cấp trong từng yêu cầu; không tự bổ sung năng lực số, AI, ngoại ngữ hoặc hỗ trợ hòa nhập nếu không được chọn.`;
+- Tuân thủ tuyệt đối bối cảnh và ràng buộc sư phạm được cung cấp trong từng yêu cầu; không tự bổ sung năng lực số, AI, ngoại ngữ hoặc hỗ trợ hòa nhập nếu không được chọn.
+- Mục tiêu kiến thức phải bám YCCĐ CT GDPT 2018 / Thông tư 32/2018/TT-BGDĐT; không tự tạo kiến thức ngoài nguồn.`;
 }
 
 function getPromptTemplate(templateKey, context) {
@@ -495,8 +510,13 @@ function getPromptTemplate(templateKey, context) {
     .replace(/\{textbook_content\}/g, context.textbook_content || '')
     .replace(/\{objectives_content\}/g, context.objectives_content || '')
     .replace(/\{activities_content\}/g, context.activities_content || '')
+    .replace(/\{yccd_official\}/g, context.yccd_official || '')
     .replace(/\{grade\}/g, context.grade || '')
     .replace(/\{competencies\}/g, competencies);
+
+  if (PROMPTS.SOURCE_LOCK) {
+    result += `\n\n${PROMPTS.SOURCE_LOCK}`;
+  }
 
   // Append pedagogical context if provided
   if (context.pedagogical_context) {
