@@ -1,122 +1,163 @@
-# Tổng hợp hệ thống Soạn KHBD (sau đợt chỉnh 2026-08-26)
+# Tổng hợp hệ thống Soạn KHBD (hiện trạng)
 
-Tài liệu này mô tả **đúng những gì đã thay**, để AI khác phản biện. Không phải hướng dẫn quảng cáo.
+Tài liệu để AI khác phản biện. Mô tả **đúng code đang chạy**, không quảng cáo.
 
-## 1. Yêu cầu gốc
+Ứng dụng: `soankhbd.html` + `js/khbd-*.js` + `css/khbd-styles.css`. SPA client-side, Gemini REST v1beta, bản nháp `localStorage`.
 
-0. Giữ nguyên code không đụng tới.
-1. Mục tiêu kiến thức bám CT GDPT 2018 / Thông tư 32/2018/TT-BGDĐT, không tự tạo.
-2. Giáo án 2 cột, form mẫu `GIAO AN/demo.docx`.
-3. Tích hợp PPDH, kỹ thuật, hoạt động đặc thù theo 3 ảnh; khi soạn chọn mục phù hợp môn/lớp.
-4. Bám sát tuyệt đối nội dung giáo viên cung cấp, không tự thêm.
-5. File này để phản biện.
+---
 
-## 2. File đã đụng / không đụng
+## 1. Mục tiêu đã chốt với người dùng
 
-**Đã sửa hoặc tạo**
+1. Mục tiêu kiến thức bám CT GDPT 2018 / Thông tư 32/2018/TT-BGDĐT, không tự bịa Bloom.
+2. Form giáo án 2 cột theo `GIAO AN/demo.docx`.
+3. Catalog PPDH / kỹ thuật / HĐ đặc thù theo 3 ảnh mockup; đề xuất theo bài sau khi có nội dung SGK.
+4. Bám nguồn SGK giáo viên cung cấp; không invent bài tập, số liệu, số trang.
+5. NLS (TT 02/2025) và AI (QĐ 2422): đề xuất 2–3 mục đúng văn bản, không bịa mã.
+6. User thường **một Gemini key**; đọc SGK bằng Gemini nhưng phải tiết kiệm quota.
+7. Mục tiêu năng lực: **chỉ mô tả**, không nhãn Biểu hiện / Nhiệm vụ–Sản phẩm / Minh chứng.
+8. Giữ danh sách `-` / `+` và đánh số; không đổi sang Word bullet cho các ý đó.
 
-| File | Việc |
+---
+
+## 2. File
+
+| File | Vai trò hiện tại |
 |---|---|
-| `soankhbd.html` | Tab 0: 3 panel catalog (PP / KT / HĐ); nạp `js/khbd-yccd.js` |
-| `js/khbd-pedagogy-catalog.js` | Catalog đúng 3 ảnh + `isPedagogyRecommended` |
-| `js/khbd-yccd.js` | **Mới.** YCCĐ Toán 6–9 nguyên văn từ `GIAO AN/yeucau.docx` |
-| `js/khbd-prompts.js` | TT 32, `SOURCE_LOCK`, bảng 2 cột, bỏ lệnh invent bài tập |
-| `js/khbd-app.js` | Render catalog, state, khóa nguồn, assert 1-Click, header form |
-| `js/khbd-docx.js` | Header hành chính demo; bảng 2 cột hoạt động 50/50 |
-| `css/khbd-styles.css` | Lưới 2 cột pedagogy, không uppercase label catalog |
-| `tonghopKHBD.md` | File này |
+| `soankhbd.html` | UI; tab mặc định Bước 0 = ảnh/PDF SGK |
+| `css/khbd-styles.css` | Giao diện; lưới 2 cột pedagogy |
+| `js/khbd-app.js` | Controller: ảnh, 1-Click, đề xuất, khóa nguồn |
+| `js/khbd-prompts.js` | Prompt + `ACTIVITY_TABLE_CONTRACT` + `SOURCE_LOCK` |
+| `js/khbd-gemini.js` | Gọi Gemini, xoay key, chờ 429 |
+| `js/khbd-docx.js` | Xuất Word, OMML, bảng 2 cột |
+| `js/khbd-curriculum.js` | Môn 1–12; mục lục bài **chỉ Toán 6–9** |
+| `js/khbd-yccd.js` | YCCĐ Toán 6–9 từ `GIAO AN/yeucau.docx` |
+| `js/khbd-standards.js` | 6 miền TT 02 + 4 mã QĐ 2422; hàm đề xuất |
+| `js/khbd-pedagogy-catalog.js` | Catalog 3 ảnh; đề xuất PPDH theo nội dung bài |
+| `api/user_gemini_keys.php` | Lưu key theo tài khoản |
+| `GIAO AN/demo.docx` | Form mẫu (chỉ đọc) |
+| `GIAO AN/yeucau.docx` | Nguồn YCCĐ Toán 6–9 (chỉ đọc) |
 
-**Không đụng**
+Không đụng: `GIAO AN/js/*`, TKB, kttx, matrande, login.
 
-- `GIAO AN/**` (chỉ đọc `demo.docx`, `yeucau.docx`)
-- `js/khbd-gemini.js`, `js/khbd-standards.js`, `js/khbd-curriculum.js` (mục lục)
-- Login, TKB, kttx, matrande, admin, API khác ngoài luồng KHBD
+---
 
-## 3. Form 2 cột (đã đối chiếu `demo.docx`)
+## 3. Thứ tự tab (đã đảo)
 
-File mẫu **không** dùng cột “Hoạt động của giáo viên | Hoạt động của học sinh”.
+0. **Phân tích ảnh/trang SGK** (mở đầu) — dán/PDF, Gemini đọc tối đa 4 trang đã nén.
+1. **Thiết lập chung** — trường, lớp, NLS/AI, PPDH.
+2. I. Mục tiêu
+3. II. Thiết bị
+4. III. Tiến trình A–D
+5. Toàn bộ + xuất DOCX
 
-Tiêu đề cột thật:
+Đề xuất NLS/AI/PPDH **chỉ sau khi** `editorVision` có ≥ ~80 ký tự (đã đọc SGK). Tick NLS/AI trước khi có nội dung: hiện panel, **không** tự tick miền.
 
-| Hoạt động của GV và HS | Nội dung |
+---
 
-Triển khai:
+## 4. Đọc SGK và quota 1 key
 
-- Markdown: đúng 4 hàng (Chuyển giao / Thực hiện / Báo cáo, thảo luận / Kết luận, nhận định).
-- Cột trái: việc GV và HS. Cột phải: nhiệm vụ, câu hỏi, đáp án, kiến thức chốt **lấy từ nguồn**.
-- Hoạt động B: mỗi đơn vị kiến thức một bảng riêng.
-- DOCX: nếu header chứa “Hoạt động của GV” thì 2 cột 4500/4500 DXA.
+- Đọc SGK = **Gemini Vision** (đã bỏ Tesseract và Mistral OCR).
+- Gửi tối đa **4 ảnh**, nén cạnh dài ≤ 1280px, JPEG ~0.72.
+- `maxOutputTokens` lúc đọc ảnh: 4096; soạn chữ: 8192.
+- 1-Click **không đọc lại** nếu đã có nội dung Tab 0.
+- Các bước I–III **không gửi ảnh**.
+- 1 key: nghỉ ~2,2s giữa lệnh; 429: chờ đúng số giây Google báo, hoặc xoay key nếu có nhiều key.
+- Lỗi bắt nhãn PPDH **không hủy** 1-Click; vẫn lưu, cảnh báo.
 
-Header hành chính (Tab 5 + Word): Trường, Tổ chuyên môn, Họ tên GV, Ngày soạn, Ngày dạy, KẾ HOẠCH BÀI DẠY, Tên bài soạn, Môn-Lớp, Bộ sách = “SGK do giáo viên cung cấp”, Thời lượng.
+Hạn mức free tier Gemini (ví dụ 20 request/ngày với một model) vẫn có thể hết nếu GV tạo nhiều lần trong ngày.
 
-Không thêm lại tab E/F/G hay IV. Kết luận/dặn dò trong demo chưa được đưa vào UI.
+---
 
-## 4. Mục tiêu kiến thức / TT 32
+## 5. Form 2 cột (`demo.docx`)
 
-- `GIAO AN/yeucau.docx` là YCCĐ môn **Toán lớp 6–9** (CT GDPT 2018 / TT 32).
-- `getOfficialYccd({ subjectId, grade, topic, visionText })` chọn tối đa 3 khối YCCĐ khớp từ khóa bài.
-- Prompt mục tiêu: chỉ viết YCCĐ đó (hoặc YCCĐ in trên SGK/Tab 1). Cấm bịa thang Bloom nếu không có trong nguồn.
-- Môn khác / lớp 1–5, 10–12: **chưa có CSDL YCCĐ**. Hệ thống yêu cầu nguồn SGK/vision; nếu không có YCCĐ in trên nguồn thì ghi “Cần đối chiếu YCCĐ CT GDPT 2018 (TT 32)”.
+**Không** dùng cột “Hoạt động của giáo viên | Hoạt động của học sinh”.
 
-Hạn chế parser: một số dòng bảng Word bị dính (ví dụ ghép ô “ước chung và bội chung”). Phản biện nên so mẫu YCCĐ với `yeucau.docx` gốc.
+Bảng **d) Tổ chức thực hiện**:
 
-## 5. Catalog 3 ảnh
+| Hoạt động của GV và HS (cột trái) | Nội dung (cột phải) |
+|---|---|
+| Việc tổ chức lớp: 4 bước trong **một ô** (`+ Bước 1` … `+ Bước 4`), cách dòng `<br>` | **Chỉ kiến thức ghi bảng**: định nghĩa, quy tắc, công thức, chú ý, ví dụ. Dùng `-` / `+`. **Cấm** lặp việc GV/HS |
 
-**Phương pháp dạy học hiện đại (15):** PBL, STEM/STEAM, Lớp học đảo ngược, Dạy học hợp tác, Học qua trò chơi, Dạy học phân hóa, Kỹ thuật Socratic, Bản đồ tư duy, Học tập trải nghiệm, 5W1H, Think-Pair-Share, Jigsaw, Gallery Walk, KWL, Mô hình 5E.
+- Một hàng dữ liệu, không 4 hàng.
+- Hoạt động B: mỗi đơn vị kiến thức một bảng như trên.
+- Word: cột ~4000 / 5000 DXA; mỗi dòng trong ô một đoạn; hàng nội dung được phép tách trang.
 
-**Kĩ thuật dạy học tích cực theo pha**
+Danh sách ngoài bảng: ý lớn `- `, ý con `+ ` (giữ nguyên ký tự khi xuất Word).
 
-- A Khởi động: Động não, KWL, Câu hỏi kích thích tư duy, Ô chữ/đố vui
-- B Hình thành: TPS, Jigsaw, Gallery Walk, Trạm học tập, Sơ đồ tư duy, Khăn trải bàn
-- C Luyện tập: Bài tập phân hóa 3 mức, Peer Assessment, Tranh luận, Case Study, Role-play
-- D Vận dụng: Dự án mini, Nhật ký học tập, Exit Ticket, Bài tập mở
+Header Word: Trường, Tổ, GV, Ngày soạn/dạy, KẾ HOẠCH BÀI DẠY, Tên bài, Môn–Lớp, Bộ sách = “SGK do giáo viên cung cấp”, Thời lượng.
 
-**Hoạt động đặc thù môn học (12, generic):** thảo luận nhóm chuyên đề; thực hành/thí nghiệm; phân tích tình huống; trò chơi khởi động; tập luyện kỹ năng theo nhóm; thi đấu nhóm; phân tích video/hình; peer coaching; trạm xoay vòng; sản phẩm/dự án mini; thuyết trình; thực hành công nghệ số.
+Không có tab E/F/G hay IV. Kết luận/dặn dò trong demo chưa có trên UI.
 
-Gợi ý môn/lớp: badge “Phù hợp môn này” (STEM/thí nghiệm → Toán-KHTN; 5E → khoa học; role-play/tranh luận → văn, ngoại ngữ, GDCD…). **Không ẩn** mục khác. **Không tự tick.**
+---
 
-Khi GV không chọn: prompt chỉ cho phép 1–2 mục catalog đúng nhãn, phù hợp môn/lớp; không bịa tên PPDH.
+## 6. Mục tiêu
 
-`assertPhasePedagogyOutput` chỉ bắt kỹ thuật **đã chọn của đúng pha** có mặt trong bảng d). 1-Click cũng assert + 1 lần sửa.
+**Kiến thức:** YCCĐ TT 32. `getOfficialYccd` lọc Toán 6–9. Môn/khối khác: chỉ YCCĐ in trên SGK; thiếu thì ghi cần đối chiếu TT 32, cấm bịa Bloom.
 
-## 6. SOURCE_LOCK
+**Năng lực / phẩm chất — chỉ mô tả một dòng:**
 
-Mọi prompt (`getPromptTemplate`) gắn `PROMPTS.SOURCE_LOCK`:
+```
+- Tự chủ và tự học: …
+- Tư duy và lập luận toán học: …
+```
 
-- Chỉ dùng ảnh/PDF, Tab 1, tên bài/môn/lớp, YCCĐ official, bối cảnh lớp.
-- Cấm bịa định nghĩa, định lý, số liệu, đề, đáp án, số trang.
-- Luyện tập/vận dụng: chỉ bài có trong nguồn; thiếu thì `[Không có trong tài liệu đã cung cấp]`.
-- Đã xóa lệnh invent 4 câu TN / bài thực tiễn có số liệu ở HĐ C và D.
+Cấm nhãn **Biểu hiện**, **Nhiệm vụ/Sản phẩm**, **Minh chứng**. Cấm ý con `+` trong khối này.
 
-Chặn UI:
+Số lượng: chung 1–2; đặc thù 2–3; phẩm chất 1–2.
 
-- Tạo I. Mục tiêu: cần ảnh/vision **hoặc** YCCĐ Toán 6–9.
-- Tạo HĐ A–D và 1-Click: cần ảnh hoặc vision. Bỏ fallback “Dựa trên nội dung SGK do giáo viên cung cấp.”
+**NLS:** nếu bật, 2–3 **miền** TT 02/2025 đã chọn (6 miền catalog, không bịa mã thành phần).
 
-## 7. Lỗ hổng còn lại (cần phản biện)
+**AI:** nếu bật, 2–3 **mã** QĐ 2422 đã rà: `6.A1.3`, `7.A1.2`, `8.A1.2`, `9.B2.1`. Cấm bịa mã khác.
 
-1. YCCĐ mới số hóa Toán 6–9; các môn/khối khác chưa có corpus chính thức.
-2. Parser `yeucau.docx` không hoàn hảo (bảng Word bị vỡ ô).
-3. Không có test tự động (Playwright/Jest) cho 1-Click hay xuất DOCX.
-4. Tab E/F/G và IV demo không còn trên UI; prompt E/F/G vẫn nằm trong `khbd-prompts.js` (legacy).
-5. `assertPhasePedagogyOutput` so khớp chuỗi nhãn — model đổi wording có thể fail oan hoặc lọt.
-6. Gemini vẫn có thể bịa nếu bỏ qua prompt; khóa nguồn là ràng buộc mềm + chặn khi không có file nguồn.
-7. Header Word và preview Markdown là hai đường; lệch format nhỏ vẫn có thể xảy ra.
-8. Draft cũ lưu `methods` theo nhãn tiếng Việt 6 mục cũ / `phasePedagogy` id cũ — UI mới nhận id; lựa chọn cũ có thể không tick lại.
+---
 
-## 8. Checklist phản biện
+## 7. Catalog PPDH (3 ảnh)
 
-- [ ] Tab 0: đủ 15 PP, 4 nhóm KT, 12 HĐ; lưới 2 cột desktop / 1 cột mobile.
-- [ ] Đổi môn Ngữ văn vs Toán: badge gợi ý đổi, catalog không mất.
-- [ ] Tick >6 PP, reload: không bị cắt còn 6.
-- [ ] Không ảnh/vision: 1-Click và tạo HĐ bị chặn; Toán 6 “Tập hợp” vẫn tạo được mục tiêu từ YCCĐ TT 32.
-- [ ] Có ảnh SGK: mục tiêu kiến thức trích YCCĐ, không bịa Bloom; HĐ C không invent TN 4 lựa chọn.
-- [ ] Bảng d) đúng 2 cột demo, 4 hàng; HĐ B nhiều bảng.
-- [ ] Xuất DOCX: header hành chính + bảng 2 cột không dồn 1 cột.
-- [ ] Tick Think-Pair-Share ở Khởi động → bảng A chứa đúng nhãn; không nhét Jigsaw nếu không chọn.
+**Phương pháp (15):** PBL, STEM/STEAM, Lớp học đảo ngược, Hợp tác, Học qua trò chơi, Phân hóa, Socratic, Bản đồ tư duy, Trải nghiệm, 5W1H, Think-Pair-Share, Jigsaw, Gallery Walk, KWL, 5E.
 
-## 9. Luồng chạy (không đổi kiến trúc)
+**Kỹ thuật theo pha**
 
-`soankhbd.html` → curriculum → prompts → gemini → docx → standards → pedagogy-catalog → **yccd** → app.
+- A: Động não, KWL, Câu hỏi kích thích tư duy, Ô chữ/đố vui
+- B: TPS, Jigsaw, Gallery Walk, Trạm học tập, Sơ đồ tư duy, Khăn trải bàn
+- C: Bài tập phân hóa 3 mức, Peer Assessment, Tranh luận, Case Study, Role-play
+- D: Dự án mini, Nhật ký học tập, Exit Ticket, Bài tập mở
 
-1-Click: Vision (nếu có ảnh) → I. Mục tiêu → II. Thiết bị → A → B → C → D (assert từng pha) → Tab 5.
+**HĐ đặc thù (12):** thảo luận nhóm; thí nghiệm; tình huống; trò chơi khởi động; luyện kỹ năng nhóm; thi đấu; video/hình; peer coaching; trạm xoay vòng; sản phẩm mini; thuyết trình; công nghệ số.
+
+Sau khi có nội dung SGK, nếu GV **không chọn**: tự đề xuất ~2 PPDH, 1 kỹ thuật/pha, 2 HĐ; badge “Đề xuất theo bài”. Đã chọn tay thì không ghi đè. Assert nhãn: khớp gần đúng; kỹ thuật tự đề xuất không làm fail 1-Click.
+
+---
+
+## 8. SOURCE_LOCK
+
+Mọi prompt gắn `PROMPTS.SOURCE_LOCK`: chỉ dùng ảnh/PDF, Tab 0, tên bài/môn/lớp, YCCĐ official, bối cảnh lớp. Cấm bịa định nghĩa, số liệu, đề, đáp án, số trang. Luyện tập/vận dụng: chỉ bài có trong nguồn; thiếu thì `[Không có trong tài liệu đã cung cấp]`.
+
+1-Click / HĐ A–D: cần ảnh hoặc nội dung đã trích. Mục tiêu: ảnh/vision hoặc YCCĐ Toán 6–9.
+
+---
+
+## 9. Lỗ hổng còn lại
+
+1. YCCĐ số hóa mới Toán 6–9; môn/khối khác chưa có CSDL.
+2. Parser `yeucau.docx` có chỗ dính ô Word.
+3. Không có test tự động cho 1-Click / DOCX.
+4. Prompt E/F/G còn trong `khbd-prompts.js` nhưng không còn tab.
+5. Gemini Vision 4 trang nén vẫn có thể lệch công thức/hình; free tier 20 request/ngày dễ hết.
+6. Model mặc định trên UI có thể là Gemini 3.x trong khi 429 log từng gặp `gemini-2.5-flash` — phụ thuộc key/model GV chọn.
+7. Bảng Markdown 1 hàng + `<br>`: nếu model vẫn xuất 4 hàng, Word vẫn ra 2 cột nhưng không đúng demo.
+8. Draft cũ (PPDH id/label cũ, bảng 4 hàng) không tự chuyển form mới.
+9. Tab IV / phụ lục demo chưa làm.
+
+---
+
+## 10. Checklist phản biện
+
+- [ ] Tab mở đầu là Bước 0 SGK; chưa đọc SGK thì NLS/AI không tự tick.
+- [ ] Đọc SGK = Gemini, tối đa 4 ảnh nén; 1-Click không đọc lại nếu đã có vision.
+- [ ] 429: xoay key hoặc chờ retry; không abort cả 1-Click vì thiếu đúng chuỗi PPDH.
+- [ ] Mục tiêu kiến thức: YCCĐ TT 32 / SGK, không Bloom bịa.
+- [ ] Năng lực: một dòng mô tả, không Biểu hiện/Minh chứng.
+- [ ] NLS 2–3 miền TT 02; AI 2–3 mã QĐ 2422; không mã lạ.
+- [ ] Bảng d): 1 hàng, 2 cột; phải = ghi bảng, không lặp GV/HS.
+- [ ] Danh sách `-` / `+` giữ nguyên khi xuất Word.
+- [ ] HĐ C/D không invent TN 4 lựa chọn hay bài thực tiễn ngoài nguồn.
