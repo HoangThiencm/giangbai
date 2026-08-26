@@ -75,6 +75,56 @@ function isPedagogyRecommended(item, ctx = {}) {
   return true;
 }
 
+function foldPedagogyText(value) {
+  return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function scorePedagogyItem(item, ctx) {
+  const hay = foldPedagogyText([ctx.vision, ctx.topic, ctx.subjectName].join(" "));
+  const recCtx = { subjectId: ctx.subjectId, grade: ctx.grade, classSize: ctx.classSize, facilities: ctx.facilities };
+  let score = isPedagogyRecommended(item, recCtx) ? 4 : 1;
+  const id = item.id;
+  if (/nhom|thao luan|hop tac/.test(hay) && ["cooperative", "discuss", "tps", "tps-tech", "tablecloth", "jigsaw", "jigsaw-tech"].includes(id)) score += 3;
+  if (/du an|van de thuc tien|van dung|thuc tien/.test(hay) && ["pbl", "mini-project", "product", "experiential", "situation", "case", "open-ex"].includes(id)) score += 3;
+  if (/do dac|thi nghiem|hinh hoc|mo hinh/.test(hay) && ["steam", "experiment", "experiential"].includes(id)) score += 3;
+  if ((ctx.readiness === "Không đồng đều" || /phan hoa|muc do/.test(hay)) && ["differentiation", "diff-ex"].includes(id)) score += 3;
+  if (/tro choi|khoi dong/.test(hay) && ["game", "starter-game", "wordgame"].includes(id)) score += 2;
+  if (/tom tat|so do|khai niem|dinh nghia/.test(hay) && ["mindmap", "mindmap-tech", "kwl", "kwl-tech"].includes(id)) score += 2;
+  if (/cau hoi|kham pha/.test(hay) && ["socratic", "stim-question", "5w1h"].includes(id)) score += 2;
+  if (/tinh huong|vi du/.test(hay) && ["case", "situation", "5w1h"].includes(id)) score += 2;
+  if (["khtn", "vatly", "hoahoc", "sinhhoc", "khoahoc"].includes(String(ctx.subjectId || "")) && id === "5e") score += 3;
+  if (["nguvan", "tiengviet", "tienganh", "gdcd", "daoduc"].includes(String(ctx.subjectId || "")) && ["debate", "roleplay"].includes(id)) score += 3;
+  if (["tps", "tps-tech", "stim-question", "exit", "skill-group", "present"].includes(id)) score += 1;
+  if (item.recommendFor && item.recommendFor.needsFacilities) {
+    const facilities = ctx.facilities || {};
+    if (!item.recommendFor.needsFacilities.some(key => facilities[key])) score = 0;
+  }
+  if (item.recommendFor && typeof item.recommendFor.maxClassSize === "number" && Number(ctx.classSize) > item.recommendFor.maxClassSize) score -= 3;
+  return score;
+}
+
+function pickTopPedagogy(list, ctx, n) {
+  return (list || [])
+    .map(item => ({ item, score: scorePedagogyItem(item, ctx) }))
+    .filter(row => row.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, n)
+    .map(row => row.item.id);
+}
+
+function recommendPedagogyFromLesson(ctx) {
+  const catalog = KHBD_PEDAGOGY_CATALOG;
+  const techniques = { A: [], B: [], C: [], D: [] };
+  ["A", "B", "C", "D"].forEach(phase => {
+    techniques[phase] = pickTopPedagogy(catalog.techniques.filter(item => (item.phases || []).includes(phase)), ctx, 1);
+  });
+  return {
+    methods: pickTopPedagogy(catalog.methods, ctx, 2),
+    techniques,
+    activities: pickTopPedagogy(catalog.activities, ctx, 2)
+  };
+}
+
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { KHBD_PEDAGOGY_CATALOG, isPedagogyRecommended };
+  module.exports = { KHBD_PEDAGOGY_CATALOG, isPedagogyRecommended, recommendPedagogyFromLesson };
 }

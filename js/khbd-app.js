@@ -83,7 +83,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateImageCounts();
   renderImageGallery();
   renderStandardsCatalog();
-  ensureIntegrationStandards({ silent: true });
   renderPhasePedagogy();
   renderAllTabsPreview();
 
@@ -263,7 +262,8 @@ function normalizeTeachingContext(context) {
     standards: Array.isArray(source.standards) ? source.standards.filter(item => item && typeof item === "object") : [],
     phasePedagogy: source.phasePedagogy && typeof source.phasePedagogy === "object" ? source.phasePedagogy : { A: {}, B: {}, C: {}, D: {} },
     classSize: Math.max(1, Math.min(60, Number(source.classSize) || 40)), readiness: typeof source.readiness === "string" ? source.readiness : "Không đồng đều", grouping: typeof source.grouping === "string" ? source.grouping : "Cá nhân/cặp đôi", facilities: source.facilities && typeof source.facilities === "object" ? source.facilities : { projector:false, internet:false, devices:false },
-    specialRequirements: typeof source.specialRequirements === "string" ? source.specialRequirements.slice(0, 600) : ""
+    specialRequirements: typeof source.specialRequirements === "string" ? source.specialRequirements.slice(0, 600) : "",
+    autoPedagogy: source.autoPedagogy && typeof source.autoPedagogy === "object" ? source.autoPedagogy : { methods: [], techniques: { A: [], B: [], C: [], D: [] }, activities: [] }
   };
 }
 
@@ -286,10 +286,20 @@ function pedagogyLabel(group, id) {
   return list.find(item => item.id === id || item.label === id)?.label || id;
 }
 
-function renderPedagogyItem(item, className, extraAttrs, checked) {
+function autoPedagogyState() {
+  const source = appState.teachingContext.autoPedagogy || {};
+  return {
+    methods: Array.isArray(source.methods) ? source.methods : [],
+    techniques: source.techniques && typeof source.techniques === "object" ? source.techniques : { A: [], B: [], C: [], D: [] },
+    activities: Array.isArray(source.activities) ? source.activities : []
+  };
+}
+
+function renderPedagogyItem(item, className, extraAttrs, checked, autoIds) {
   const rec = typeof isPedagogyRecommended === "function" && isPedagogyRecommended(item, pedagogyRecommendCtx());
-  const badge = rec ? ' <small class="pedagogy-fit">Phù hợp môn này</small>' : "";
-  return `<label class="pedagogy-item${rec ? " is-recommended" : ""}"><input type="checkbox" class="${className}" ${extraAttrs} value="${item.id}" ${checked ? "checked" : ""}> <span><strong>${item.label}</strong><br><small>${item.description || ""}${badge}</small></span></label>`;
+  const auto = (autoIds || []).includes(item.id);
+  const badge = auto ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : (rec ? ' <small class="pedagogy-fit">Phù hợp môn này</small>' : "");
+  return `<label class="pedagogy-item${auto || rec ? " is-recommended" : ""}"><input type="checkbox" class="${className}" ${extraAttrs} value="${item.id}" ${checked ? "checked" : ""}> <span><strong>${item.label}</strong><br><small>${item.description || ""}${badge}</small></span></label>`;
 }
 
 function isChoiceSelected(selected, item) {
@@ -302,15 +312,18 @@ function renderPedagogyCatalogs() {
   const catalog = KHBD_PEDAGOGY_CATALOG;
   appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
   const context = appState.teachingContext;
+  const auto = autoPedagogyState();
   const methods = new Set(context.methods || []);
   const activities = new Set(context.subjectActivities || []);
   const phase = context.phasePedagogy || (appState.teachingContext.phasePedagogy = { A: {}, B: {}, C: {}, D: {} });
 
   const methodsPanel = document.getElementById("methodsCatalogPanel");
   if (methodsPanel) {
-    methodsPanel.innerHTML = `<details class="pedagogy-block" open><summary>Phương pháp dạy học hiện đại</summary><div class="pedagogy-grid">${catalog.methods.map(item => renderPedagogyItem(item, "pedagogy-method", "", isChoiceSelected(methods, item))).join("")}</div></details>`;
+    methodsPanel.innerHTML = `<details class="pedagogy-block" open><summary>Phương pháp dạy học hiện đại</summary><div class="pedagogy-grid">${catalog.methods.map(item => renderPedagogyItem(item, "pedagogy-method", "", isChoiceSelected(methods, item), auto.methods)).join("")}</div></details>`;
     methodsPanel.querySelectorAll(".pedagogy-method").forEach(input => input.addEventListener("change", () => {
       appState.teachingContext.methods = Array.from(document.querySelectorAll(".pedagogy-method:checked")).map(el => el.value);
+      appState.teachingContext.autoPedagogy = autoPedagogyState();
+      appState.teachingContext.autoPedagogy.methods = [];
       saveStateToLocalStorage();
     }));
   }
@@ -326,21 +339,26 @@ function renderPedagogyCatalogs() {
     techPanel.innerHTML = `<details class="pedagogy-block" open><summary>Kĩ thuật dạy học tích cực</summary>${groups.map(g => {
       const chosen = new Set(phase[g.phase]?.techniques || []);
       const items = catalog.techniques.filter(item => (item.phases || []).includes(g.phase));
-      return `<h4 class="pedagogy-subgroup">${g.title}</h4><div class="pedagogy-grid">${items.map(item => renderPedagogyItem(item, "pedagogy-technique", `data-phase="${g.phase}"`, isChoiceSelected(chosen, item))).join("")}</div>`;
+      return `<h4 class="pedagogy-subgroup">${g.title}</h4><div class="pedagogy-grid">${items.map(item => renderPedagogyItem(item, "pedagogy-technique", `data-phase="${g.phase}"`, isChoiceSelected(chosen, item), auto.techniques[g.phase] || [])).join("")}</div>`;
     }).join("")}</details>`;
     techPanel.querySelectorAll(".pedagogy-technique").forEach(input => input.addEventListener("change", () => {
       const p = input.dataset.phase;
       appState.teachingContext.phasePedagogy[p] ||= {};
       appState.teachingContext.phasePedagogy[p].techniques = Array.from(document.querySelectorAll(`.pedagogy-technique[data-phase="${p}"]:checked`)).map(el => el.value);
+      appState.teachingContext.autoPedagogy = autoPedagogyState();
+      appState.teachingContext.autoPedagogy.techniques = appState.teachingContext.autoPedagogy.techniques || { A: [], B: [], C: [], D: [] };
+      appState.teachingContext.autoPedagogy.techniques[p] = [];
       saveStateToLocalStorage();
     }));
   }
 
   const actPanel = document.getElementById("activitiesCatalogPanel");
   if (actPanel) {
-    actPanel.innerHTML = `<details class="pedagogy-block" open><summary>Hoạt động đặc thù môn học</summary><div class="pedagogy-grid">${catalog.activities.map(item => renderPedagogyItem(item, "pedagogy-activity", "", isChoiceSelected(activities, item))).join("")}</div></details>`;
+    actPanel.innerHTML = `<details class="pedagogy-block" open><summary>Hoạt động đặc thù môn học</summary><div class="pedagogy-grid">${catalog.activities.map(item => renderPedagogyItem(item, "pedagogy-activity", "", isChoiceSelected(activities, item), auto.activities)).join("")}</div></details>`;
     actPanel.querySelectorAll(".pedagogy-activity").forEach(input => input.addEventListener("change", () => {
       appState.teachingContext.subjectActivities = Array.from(document.querySelectorAll(".pedagogy-activity:checked")).map(el => el.value);
+      appState.teachingContext.autoPedagogy = autoPedagogyState();
+      appState.teachingContext.autoPedagogy.activities = [];
       saveStateToLocalStorage();
     }));
   }
@@ -372,6 +390,24 @@ function standardsOfKind(kind) {
   return (appState.teachingContext.standards || []).filter(item => item.framework === catalog.framework);
 }
 
+function hasAnalyzedLessonContent() {
+  return String(appState.content.vision || "").replace(/\s+/g, " ").trim().length >= 80;
+}
+
+function pedagogyRecommendFullCtx() {
+  const context = normalizeTeachingContext(appState.teachingContext);
+  return {
+    vision: appState.content.vision || "",
+    topic: getTopicDisplayName(),
+    subjectName: appState.subjectName || appState.subject || "",
+    subjectId: currentSubjectId(),
+    grade: appState.selectedGrade,
+    classSize: context.classSize,
+    readiness: context.readiness,
+    facilities: context.facilities
+  };
+}
+
 function ensureIntegrationStandards({ force = false, silent = false } = {}) {
   if (typeof recommendOfficialStandards !== "function") return false;
   let changed = false;
@@ -387,7 +423,9 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
       return;
     }
     const current = standardsOfKind(kind);
-    if (!force && current.length) return;
+    const onlyAuto = current.length && current.every(item => item.autoSuggested);
+    if (!force && current.length && !onlyAuto) return;
+    if (!hasAnalyzedLessonContent()) return;
     const recommended = recommendOfficialStandards(kind, integrationRecommendContext());
     appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item.framework !== catalog.framework).concat(recommended);
     changed = true;
@@ -399,9 +437,61 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
   if (changed) {
     saveStateToLocalStorage();
     renderStandardsCatalog();
-    if (!silent && notices.length) showToast(`Đã đề xuất theo văn bản: ${notices.join(". ")}. Bạn có thể sửa, tối đa 3 mục/nhóm.`, "info", 5000);
+    if (!silent && notices.length) showToast(`Đã đề xuất theo nội dung bài: ${notices.join(". ")}. Bạn có thể sửa, tối đa 3 mục/nhóm.`, "info", 5000);
   }
   return changed;
+}
+
+function ensurePedagogyFromLesson({ force = false, silent = false } = {}) {
+  if (typeof recommendPedagogyFromLesson !== "function") return false;
+  if (!hasAnalyzedLessonContent()) return false;
+  const rec = recommendPedagogyFromLesson(pedagogyRecommendFullCtx());
+  const auto = autoPedagogyState();
+  let changed = false;
+  const notices = [];
+  if (force || !(appState.teachingContext.methods || []).length) {
+    appState.teachingContext.methods = rec.methods;
+    auto.methods = rec.methods;
+    changed = true;
+    notices.push(`PPDH: ${rec.methods.map(id => pedagogyLabel("methods", id)).join(", ") || "không"}`);
+  }
+  appState.teachingContext.phasePedagogy ||= { A: {}, B: {}, C: {}, D: {} };
+  auto.techniques ||= { A: [], B: [], C: [], D: [] };
+  ["A", "B", "C", "D"].forEach(phase => {
+    const current = appState.teachingContext.phasePedagogy[phase]?.techniques || [];
+    if (force || !current.length) {
+      appState.teachingContext.phasePedagogy[phase] ||= {};
+      appState.teachingContext.phasePedagogy[phase].techniques = rec.techniques[phase] || [];
+      auto.techniques[phase] = rec.techniques[phase] || [];
+      changed = true;
+    }
+  });
+  if (force || !(appState.teachingContext.subjectActivities || []).length) {
+    appState.teachingContext.subjectActivities = rec.activities;
+    auto.activities = rec.activities;
+    changed = true;
+    notices.push(`HĐ đặc thù: ${rec.activities.map(id => pedagogyLabel("activities", id)).join(", ") || "không"}`);
+  }
+  if (changed) {
+    appState.teachingContext.autoPedagogy = auto;
+    saveStateToLocalStorage();
+    renderPedagogyCatalogs();
+    if (!silent) showToast(`Đã đề xuất PPDH/kỹ thuật theo nội dung SGK. ${notices.join(". ")}. Bạn có thể sửa.`, "info", 5000);
+  }
+  return changed;
+}
+
+function applyLessonBasedRecommendations({ force = false, silent = false } = {}) {
+  if (!hasAnalyzedLessonContent()) {
+    if (!silent) showToast("Cần phân tích hoặc dán nội dung SGK ở Tab 1 trước khi đề xuất NLS/AI và PPDH.", "warning");
+    return false;
+  }
+  const ped = ensurePedagogyFromLesson({ force, silent: true });
+  const std = ensureIntegrationStandards({ force, silent: true });
+  if (!silent && (ped || std)) {
+    showToast("Đã đề xuất PPDH và NLS/AI theo nội dung bài đã phân tích. Bạn có thể sửa trên Tab 0.", "success", 5000);
+  }
+  return ped || std;
 }
 
 function renderStandardsCatalog() {
@@ -417,7 +507,10 @@ function renderStandardsCatalog() {
     const selectedIds = new Set(standardsOfKind(kind).map(item => item.catalogId));
     const suggestedIds = new Set(standardsOfKind(kind).filter(item => item.autoSuggested).map(item => item.catalogId));
     const maxSelect = catalog.maxSelect || 3;
-    panel.innerHTML = `<fieldset class="tool-group"><legend>${catalog.framework} (${catalog.date})</legend><small>${catalog.source}. Hệ thống đề xuất 2–3 mục đúng văn bản theo bài học; bạn có thể đổi, tối đa ${maxSelect} mục.</small>${entries.map(entry => {
+    const waitHint = hasAnalyzedLessonContent()
+      ? `Hệ thống đề xuất 2–3 mục đúng văn bản theo nội dung SGK đã phân tích; bạn có thể đổi, tối đa ${maxSelect} mục.`
+      : "Chưa có nội dung bài. Hãy phân tích ảnh/PDF SGK ở Tab 1, sau đó hệ thống mới đề xuất 2–3 mục.";
+    panel.innerHTML = `<fieldset class="tool-group"><legend>${catalog.framework} (${catalog.date})</legend><small>${catalog.source}. ${waitHint}</small>${entries.map(entry => {
       const rec = suggestedIds.has(entry.id);
       return `<label style="display:block"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selectedIds.has(entry.id) ? "checked" : ""}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : ""}</label>`;
     }).join("")}</fieldset>`;
@@ -542,8 +635,13 @@ function setupEventListeners() {
     document.getElementById(id).addEventListener("change", (e) => {
       appState.teachingContext.integrations[key] = e.target.checked;
       if (key === "digital" || key === "ai") {
-        ensureIntegrationStandards({ force: e.target.checked && !standardsOfKind(key).length });
-        renderStandardsCatalog();
+        if (e.target.checked && !hasAnalyzedLessonContent()) {
+          renderStandardsCatalog();
+          showToast("Hãy phân tích SGK ở Tab 1 trước. Sau khi có nội dung bài, hệ thống sẽ đề xuất 2–3 mục đúng văn bản.", "info", 5000);
+        } else {
+          ensureIntegrationStandards({ force: e.target.checked && (!standardsOfKind(key).length || standardsOfKind(key).every(item => item.autoSuggested)) });
+          renderStandardsCatalog();
+        }
       }
       saveStateToLocalStorage();
     });
@@ -612,6 +710,10 @@ function setupEventListeners() {
 
   // 6. Đồng bộ Textarea với KaTeX Preview khi người dùng chỉnh sửa
   setupEditorPreviewSync("editorVision", "previewVision", (val) => { appState.content.vision = val; saveStateToLocalStorage(); });
+  const visionEditor = document.getElementById("editorVision");
+  if (visionEditor) visionEditor.addEventListener("blur", () => {
+    if (hasAnalyzedLessonContent()) applyLessonBasedRecommendations({ silent: true });
+  });
   setupEditorPreviewSync("editorObjectives", "previewObjectives", (val) => { appState.content.objectives = val; saveStateToLocalStorage(); });
   setupEditorPreviewSync("editorMaterials", "previewMaterials", (val) => { appState.content.materials = val; saveStateToLocalStorage(); });
   setupEditorPreviewSync("editorActivity", "previewActivity", (val) => { 
@@ -1334,7 +1436,10 @@ function buildPedagogicalPrompt(prompt) {
 }
 
 function getGenerationPromptContext(params = {}) {
-  ensureIntegrationStandards({ silent: true });
+  if (hasAnalyzedLessonContent()) {
+    ensurePedagogyFromLesson({ silent: true });
+    ensureIntegrationStandards({ silent: true });
+  }
   const prevActs = [];
   ["A", "B", "C", "D"].forEach(k => {
     if (appState.content.activities[k]) prevActs.push(appState.content.activities[k]);
@@ -1426,6 +1531,7 @@ async function handleGenerateVision() {
     onSuccess: (result) => {
       appState.content.vision = result;
       saveStateToLocalStorage();
+      applyLessonBasedRecommendations({ silent: false });
     }
   });
 }
@@ -1663,6 +1769,9 @@ async function handle1ClickGenerate() {
         visionText: context.textbook_content
       });
     }
+    applyLessonBasedRecommendations({ silent: true });
+    Object.assign(context, getGenerationPromptContext());
+    context.textbook_content = appState.content.vision || context.textbook_content;
 
     // BƯỚC 2: Tạo I. Mục tiêu
     updateProgress(25, "Bước 2/7: Đang tạo I. Mục tiêu bài học...");
