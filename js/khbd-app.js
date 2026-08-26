@@ -1515,17 +1515,51 @@ async function guardGeminiLessonOutput(rawOutput, signal) {
 }
 
 async function extractPdfPageText(page) {
-  const content = await page.getTextContent();
-  let lastY = null;
-  const parts = [];
-  content.items.forEach(item => {
-    const y = item.transform ? item.transform[5] : null;
-    if (lastY !== null && y !== null && Math.abs(lastY - y) > 5) parts.push("\n");
-    else if (parts.length) parts.push(" ");
-    parts.push(item.str || "");
-    lastY = y;
+  const content = await page.getTextContent({ disableCombineTextItems: false });
+  const items = (content.items || [])
+    .filter(item => item && typeof item.str === "string" && item.str.trim())
+    .map(item => {
+      const t = item.transform || [1, 0, 0, 1, 0, 0];
+      return { str: item.str, x: t[4], y: t[5], width: item.width || 0, height: item.height || 0 };
+    })
+    .sort((a, b) => (b.y - a.y) || (a.x - b.x));
+  if (!items.length) return "";
+  const lines = [];
+  let current = { y: items[0].y, parts: [{ x: items[0].x, str: items[0].str, width: items[0].width }] };
+  const lineTol = Math.max(3, (items[0].height || 10) * 0.45);
+  items.slice(1).forEach(item => {
+    if (Math.abs(item.y - current.y) > lineTol) {
+      lines.push(current);
+      current = { y: item.y, parts: [{ x: item.x, str: item.str, width: item.width }] };
+    } else {
+      current.parts.push({ x: item.x, str: item.str, width: item.width });
+    }
   });
-  return parts.join("").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  lines.push(current);
+  return lines.map(line => {
+    const parts = line.parts.sort((a, b) => a.x - b.x);
+    let out = parts[0].str;
+    for (let i = 1; i < parts.length; i++) {
+      const gap = parts[i].x - (parts[i - 1].x + parts[i - 1].width);
+      out += gap > 2.5 ? " " : "";
+      out += parts[i].str;
+    }
+    return out.replace(/\s+/g, " ").trim();
+  }).filter(Boolean).join("\n");
+}
+
+function isGarbledTextbookText(text) {
+  const s = String(text || "").trim();
+  if (s.length < 80) return true;
+  const vietHits = (s.match(/tập hợp|phần tử|học sinh|bài học|khái niệm|nhận biết|kí hiệu|thuộc|không thuộc|hình |luyện tập|của |và |các |một /gi) || []).length;
+  const slash = (s.match(/\\/g) || []).length;
+  const pipes = (s.match(/\|/g) || []).length;
+  const singles = (s.match(/(^|\s)[^A-Za-zÀ-ỹ0-9\s]{0,2}[A-Za-zÀ-ỹ](\s|$)/g) || []).length;
+  if (slash / s.length > 0.015) return true;
+  if (pipes > 15 && vietHits < 6) return true;
+  if (s.length > 250 && vietHits < 4) return true;
+  if (singles > 25 && vietHits < 8) return true;
+  return false;
 }
 
 function loadScriptOnce(src) {
@@ -1550,9 +1584,10 @@ async function ensureTesseract() {
   return window.Tesseract;
 }
 
-async function ocrImageDataUrl(dataUrl, onProgress) {
+async function ocrImageDataUrl(dataUrl, onProgress, worker) {
+  const ownWorker = !worker;
   const Tesseract = await ensureTesseract();
-  const worker = await Tesseract.createWorker("vie+eng", 1, {
+  const active = worker || await Tesseract.createWorker("vie+eng", 1, {
     logger: message => {
       if (typeof onProgress === "function" && message.status === "recognizing text") {
         onProgress(message.progress || 0);
@@ -1560,39 +1595,59 @@ async function ocrImageDataUrl(dataUrl, onProgress) {
     }
   });
   try {
-    const { data } = await worker.recognize(dataUrl);
+    const { data } = await active.recognize(dataUrl);
     return String(data?.text || "").trim();
   } finally {
-    await worker.terminate();
+    if (ownWorker) await active.terminate();
   }
 }
 
 async function extractTextbookLocally() {
   const images = appState.images || [];
   if (!images.length) throw new Error("Chưa có ảnh/trang SGK.");
-  const sections = [];
-  for (let i = 0; i < images.length; i++) {
-    const image = images[i];
-    const title = image.pageNum ? `Trang PDF ${image.pageNum}` : (image.name || `Ảnh ${i + 1}`);
-    updateProgress(Math.round(((i) / images.length) * 90), `Đang trích nội dung ${title} (${i + 1}/${images.length}) — không dùng Gemini...`);
-    let text = String(image.pdfText || "").trim();
-    if (text.length < 80 && image.sourceType === "pdf" && currentPdfDoc && image.pageNum) {
-      try {
-        const page = await currentPdfDoc.getPage(image.pageNum);
-        text = await extractPdfPageText(page);
-        image.pdfText = text;
-      } catch (error) {
-        console.warn("Không lấy được lớp chữ PDF:", error);
+  const needOcr = images.some(image => isGarbledTextbookText(image.pdfText || image.ocrText || "") || !(image.pdfText || "").trim());
+  let worker = null;
+  if (needOcr) {
+    updateProgress(8, "Đang tải OCR tiếng Việt trên máy (không dùng Gemini)...");
+    const Tesseract = await ensureTesseract();
+    worker = await Tesseract.createWorker("vie+eng", 1, {
+      logger: message => {
+        if (message.status === "loading language traineddata") {
+          updateProgress(10, "Đang tải gói ngôn ngữ OCR (lần đầu)...");
+        }
       }
+    });
+  }
+  const sections = [];
+  try {
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      const title = image.pageNum ? `Trang PDF ${image.pageNum}` : (image.name || `Ảnh ${i + 1}`);
+      updateProgress(Math.round(12 + (i / images.length) * 80), `Đang đọc ${title} (${i + 1}/${images.length})...`);
+      let text = String(image.pdfText || "").trim();
+      if ((!text || isGarbledTextbookText(text)) && image.sourceType === "pdf" && currentPdfDoc && image.pageNum) {
+        try {
+          const page = await currentPdfDoc.getPage(image.pageNum);
+          const rebuilt = await extractPdfPageText(page);
+          if (rebuilt && !isGarbledTextbookText(rebuilt)) {
+            text = rebuilt;
+            image.pdfText = rebuilt;
+          }
+        } catch (error) {
+          console.warn("Không lấy được lớp chữ PDF:", error);
+        }
+      }
+      if (isGarbledTextbookText(text) && image.dataUrl && worker) {
+        text = await ocrImageDataUrl(image.dataUrl, progress => {
+          const overall = Math.round(12 + ((i + progress) / images.length) * 80);
+          updateProgress(overall, `OCR tiếng Việt ${title} (${i + 1}/${images.length})...`);
+        }, worker);
+        image.ocrText = text;
+      }
+      sections.push(`## ${title}\n\n${text || "[Không trích được chữ trên trang này]"}`);
     }
-    if (text.length < 80 && image.dataUrl) {
-      text = await ocrImageDataUrl(image.dataUrl, progress => {
-        const overall = Math.round(((i + progress) / images.length) * 90);
-        updateProgress(overall, `OCR ${title} (${i + 1}/${images.length})...`);
-      });
-      image.ocrText = text;
-    }
-    sections.push(`## ${title}\n\n${text || "[Không trích được chữ trên trang này]"}`);
+  } finally {
+    if (worker) await worker.terminate();
   }
   return `# Nội dung SGK (trích cục bộ, không dùng Gemini)\n\n${sections.join("\n\n---\n\n")}`;
 }
