@@ -567,13 +567,14 @@ class DocxGenerator {
         continue;
       }
 
-      // 4. Danh sách KHBD: giữ nguyên ký tự - (ý lớn) và + (ý con) thay vì Word bullet.
-      const literalListMatch = line.match(/^(\s*)([-+])\s+(.+)$/);
+      // 4. Danh sách KHBD ba cấp: - (ý lớn), + (ý con), • (ý chi tiết).
+      const literalListMatch = line.match(/^(\s*)([-+•])\s+(.+)$/);
       if (literalListMatch) {
         const [, indent, marker, contentText] = literalListMatch;
+        const level = marker === "-" ? 0 : marker === "+" ? 1 : 2;
         const runs = this.parseInlineTextToRuns(`${marker} ${contentText}`);
         elements.push(new Paragraph({
-          indent: marker === "+" ? { left: Math.max(360, indent.length * 180) } : undefined,
+          indent: level ? { left: Math.max(level * 360, indent.length * 180) } : undefined,
           spacing: { before: 40, after: 120, line: this.lineSpacing },
           children: runs
         }));

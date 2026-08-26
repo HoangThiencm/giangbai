@@ -43,7 +43,7 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 
   OUTPUT_CONTRACT: `HỢP ĐỒNG ĐẦU RA BẮT BUỘC:
 - Chỉ xuất Markdown của đúng mục Kế hoạch bài dạy đang được yêu cầu; bắt đầu ngay bằng tiêu đề/mục chuyên môn phù hợp.
-- Danh sách nội dung: ý lớn PHẢI bắt đầu bằng \`- \`; ý con phải thụt đầu dòng và bắt đầu bằng \`+ \`. Không dùng \`1.\`, \`2.\`... làm danh sách nội dung; chỉ dùng số khi là cấu trúc bắt buộc như mục Công văn 5512, Bước hoặc Bài.
+- Danh sách nội dung có đúng ba cấp: ý lớn bắt đầu bằng \`- \`; ý con thụt đầu dòng và bắt đầu bằng \`+ \`; ý chi tiết thụt thêm một cấp và bắt đầu bằng \`• \`. Không dùng \`1.\`, \`2.\`... làm danh sách nội dung; chỉ dùng số khi là cấu trúc bắt buộc như mục Công văn 5512, Bước hoặc Bài.
 - CẤM lời chào, khen ngợi, giới thiệu, nhận xét quá trình, meta commentary và các câu như “Tuyệt vời”, “Xin chào”, “Dưới đây”, “Sau đây”.
 - CẤM dùng code fence (\`\`\`). Không giải thích cách bạn đã soạn; không viết nội dung ngoài KHBD.`,
 
@@ -139,31 +139,24 @@ CÁCH VIẾT NĂNG LỰC VÀ PHẨM CHẤT (BẮT BUỘC):
 {textbook_content}
 """
 
-YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 2 MỤC CHÍNH; chỉ thêm thiết bị số/AI khi bối cảnh sư phạm bật thành phần tương ứng:
+CHỈ tạo danh mục thiết yếu, ngắn gọn để GV và HS chuẩn bị cho đúng bài: tối đa 2 ý lớn cho mỗi đối tượng, mỗi ý lớn tối đa 3 ý con. Không liệt kê nhãn hiệu, thiết bị thay thế, công cụ số/AI, hoặc học liệu không cần trực tiếp cho bài; chỉ thêm thiết bị số/AI khi bối cảnh sư phạm bật thành phần tương ứng.
 
 # II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
 
 ## 1. Đối với Giáo viên
-- **Hồ sơ dạy học:** Kế hoạch bài dạy được biên soạn chu đáo; SGK và tài liệu dạy học môn Toán do giáo viên sử dụng.
-- **Phương tiện và Đồ dùng dạy học:**
-  + Máy tính, máy chiếu/Tivi thông minh phục vụ trình chiếu bài giảng điện tử (PowerPoint/Canva).
-  + Thước thẳng có chia vạch, compa bảng, êke, thước đo góc chuyên dụng cho GV.
-  + Các mô hình trực quan, tranh ảnh hoặc video thực tế liên quan đến bài học.
-  + Hệ thống Phiếu học tập (PHT số 1, PHT số 2,...) in sẵn cho các nhóm hoặc từng học sinh.
-- **Học liệu số và Ứng dụng AI (chỉ khi được bật):**
-  + File mô phỏng hình học động / đồ thị hàm số trên phần mềm **GeoGebra** hoặc **Desmos**.
-  + Các câu hỏi tương tác trên Quizizz, Kahoot hoặc Google Forms (nếu có).
-  + Khung câu lệnh (Prompt) chuẩn bị sẵn để minh họa hoặc hướng dẫn HS tra cứu trên các công cụ AI.
+- SGK, kế hoạch bài dạy và học liệu bám sát nội dung bài.
+  + [Tài liệu/hình ảnh/phiếu học tập thực sự cần dùng].
+    • [Chi tiết ngắn khi cần phân biệt loại học liệu].
+- Thiết bị tổ chức dạy học.
+  + [Dụng cụ toán học hoặc thiết bị trình chiếu thực sự dùng trong bài].
 
 ## 2. Đối với Học sinh
-- **Đồ dùng học tập cá nhân:**
-  + Sách giáo khoa Toán, vở ghi bài, vở bài tập môn Toán.
-  + Thước kẻ có chia khoảng cách, compa, êke, thước đo góc, bút chì, tẩy.
-  + Máy tính cầm tay (Casio fx-580VN X, Casio fx-880BTG hoặc tương đương) đã được phép mang vào phòng thi.
-  + Bảng nhóm (bảng phụ), bút lông viết bảng nhóm.
-- **Nhiệm vụ chuẩn bị bài trước ở nhà:**
-  + Đọc trước nội dung bài mới trong SGK, chuẩn bị câu hỏi thắc mắc.
-  + Hoàn thành nhiệm vụ tự học/khảo sát thực tế được giao từ tiết trước.`,
+- SGK, vở ghi và dụng cụ học tập thiết yếu.
+  + [Dụng cụ toán học đúng nội dung bài].
+- Chuẩn bị trước ở nhà (chỉ khi bài có yêu cầu).
+  + [Nhiệm vụ ngắn bám SGK].
+
+Chỉ xuất hai mục trên; thay nội dung trong ngoặc vuông bằng danh mục cụ thể, không giữ nguyên dấu ngoặc vuông.`,
 
   // TAB 4.A: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG MỞ ĐẦU
   GENERATE_ACTIVITY_A: `Hãy biên soạn chi tiết **HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.

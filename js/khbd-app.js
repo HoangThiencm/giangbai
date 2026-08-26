@@ -1286,6 +1286,7 @@ function renderMathPreview(markdownText, targetElementId) {
 
 const KHBD_MAJOR_LIST_MARKER = "[[KHBD_MAJOR_LIST_MARKER]]";
 const KHBD_MINOR_LIST_MARKER = "[[KHBD_MINOR_LIST_MARKER]]";
+const KHBD_DETAIL_LIST_MARKER = "[[KHBD_DETAIL_LIST_MARKER]]";
 
 function prepareLiteralListMarkers(markdownText) {
   let inCodeFence = false;
@@ -1297,27 +1298,26 @@ function prepareLiteralListMarkers(markdownText) {
     if (inCodeFence) return line;
     if (/^\s*-\s+/.test(line)) return line.replace(/^(\s*)-\s+/, `$1- ${KHBD_MAJOR_LIST_MARKER} `);
     if (/^\s*\+\s+/.test(line)) return line.replace(/^(\s*)\+\s+/, `$1+ ${KHBD_MINOR_LIST_MARKER} `);
+    if (/^\s*•\s+/.test(line)) return line.replace(/^(\s*)•\s+/, `$1- ${KHBD_DETAIL_LIST_MARKER} `);
     return line;
   }).join("\n");
 }
 
 function applyLiteralListMarkers(documentFragment) {
   documentFragment.querySelectorAll("li").forEach(listItem => {
-    const walker = document.createTreeWalker(listItem, NodeFilter.SHOW_TEXT);
-    let textNode;
-    while ((textNode = walker.nextNode())) {
-      const marker = textNode.nodeValue.includes(KHBD_MAJOR_LIST_MARKER)
-        ? KHBD_MAJOR_LIST_MARKER
-        : textNode.nodeValue.includes(KHBD_MINOR_LIST_MARKER)
-          ? KHBD_MINOR_LIST_MARKER
-          : null;
-      if (!marker) continue;
-      const symbol = marker === KHBD_MAJOR_LIST_MARKER ? "-" : "+";
-      textNode.nodeValue = textNode.nodeValue.replace(marker, "");
-      listItem.style.listStyleType = "none";
-      listItem.insertBefore(document.createTextNode(`${symbol} `), listItem.firstChild);
-      break;
-    }
+    const textNode = Array.from(listItem.childNodes).find(node =>
+      node.nodeType === Node.TEXT_NODE && /\[\[KHBD_(?:MAJOR|MINOR|DETAIL)_LIST_MARKER\]\]/.test(node.nodeValue)
+    );
+    if (!textNode) return;
+    const marker = textNode.nodeValue.includes(KHBD_MAJOR_LIST_MARKER)
+      ? KHBD_MAJOR_LIST_MARKER
+      : textNode.nodeValue.includes(KHBD_MINOR_LIST_MARKER)
+        ? KHBD_MINOR_LIST_MARKER
+        : KHBD_DETAIL_LIST_MARKER;
+    const symbol = marker === KHBD_MAJOR_LIST_MARKER ? "-" : marker === KHBD_MINOR_LIST_MARKER ? "+" : "•";
+    textNode.nodeValue = textNode.nodeValue.replace(marker, "");
+    listItem.style.listStyleType = "none";
+    listItem.insertBefore(document.createTextNode(`${symbol} `), listItem.firstChild);
   });
 }
 
