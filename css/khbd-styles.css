@@ -727,6 +727,34 @@ body {
   background: #f8fafc;
 }
 
+.preview-rendered .khbd-nls,
+.preview-rendered .khbd-nls * {
+  color: #0b3d91;
+}
+
+.preview-rendered h1.khbd-nls,
+.preview-rendered h2.khbd-nls,
+.preview-rendered h3.khbd-nls,
+.preview-rendered h4.khbd-nls,
+.preview-rendered h5.khbd-nls,
+.preview-rendered h6.khbd-nls {
+  color: #0b3d91;
+}
+
+.preview-rendered .khbd-ai,
+.preview-rendered .khbd-ai * {
+  color: #15803d;
+}
+
+.preview-rendered h1.khbd-ai,
+.preview-rendered h2.khbd-ai,
+.preview-rendered h3.khbd-ai,
+.preview-rendered h4.khbd-ai,
+.preview-rendered h5.khbd-ai,
+.preview-rendered h6.khbd-ai {
+  color: #15803d;
+}
+
 /* KaTeX formula containers */
 .preview-rendered .katex-display {
   margin: 0.6rem 0;

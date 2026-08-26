@@ -45,14 +45,15 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Chỉ xuất Markdown của đúng mục Kế hoạch bài dạy đang được yêu cầu; bắt đầu ngay bằng tiêu đề/mục chuyên môn phù hợp.
 - Danh sách nội dung có đúng ba cấp: ý lớn bắt đầu bằng \`- \`; ý con thụt đầu dòng và bắt đầu bằng \`+ \`; ý chi tiết thụt thêm một cấp và bắt đầu bằng \`• \`. Không dùng \`1.\`, \`2.\`... làm danh sách nội dung; chỉ dùng số khi là cấu trúc bắt buộc như mục Công văn 5512, Bước hoặc Bài.
 - CẤM lời chào, khen ngợi, giới thiệu, nhận xét quá trình, meta commentary và các câu như “Tuyệt vời”, “Xin chào”, “Dưới đây”, “Sau đây”.
-- CẤM dùng code fence (\`\`\`). Không giải thích cách bạn đã soạn; không viết nội dung ngoài KHBD.`,
+- CẤM dùng code fence (\`\`\`). Không giải thích cách bạn đã soạn; không viết nội dung ngoài KHBD.
+- CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu. Chỉ Markdown thuần. Màu chữ do ứng dụng xử lý.`,
 
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ nội dung KHBD. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary và mọi code fence. Không thêm lời dẫn mới.`,
 
   SOURCE_LOCK: `KHÓA NGUỒN BẮT BUỘC:
 - Chỉ dùng: ảnh/PDF SGK, nội dung phân tích Tab 1, tên bài/môn/lớp giáo viên chọn, YCCĐ chính thức (TT 32/2018/TT-BGDĐT — CT GDPT 2018) nếu được cung cấp, và bối cảnh lớp.
 - CẤM bịa định nghĩa, định lý, công thức, số liệu, đề bài, đáp án, số trang, hình minh họa hoặc nhiệm vụ không có trong nguồn.
-- Luyện tập/vận dụng: CHỈ dùng bài, câu, hoạt động có trong nguồn. Nếu thiếu, ghi "[Không có trong tài liệu đã cung cấp]" — không invent trắc nghiệm 4 lựa chọn, không invent bài thực tiễn có số liệu, không bịa "SBT trang …".
+- Luyện tập/vận dụng: CHỈ dùng bài, câu, hoạt động có trong nguồn đã đưa vào prompt (khối dữ liệu SGK / bài tập nguồn). Phải đọc khối đó trước khi kết luận. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" khi đã đọc khối nguồn mà vẫn không có bài/câu/luyện tập/vận dụng. CẤM kết luận thiếu nguồn khi chưa đọc dữ liệu SGK. CẤM invent trắc nghiệm 4 lựa chọn, không invent bài thực tiễn có số liệu, không bịa "SBT trang …".
 - Mục tiêu kiến thức phải là Yêu cầu cần đạt của CT GDPT 2018 ban hành kèm Thông tư 32/2018/TT-BGDĐT (hoặc YCCĐ in trên SGK/nguồn). Không tự tạo thang Bloom nếu không có trong nguồn.`,
 
   // TAB 1: PHÂN TÍCH ẢNH SGK (VISION)
@@ -101,7 +102,9 @@ QUY TẮC BẮT BUỘC VỀ SỐ LƯỢNG NĂNG LỰC VÀ PHẨM CHẤT (Bài d�
 - Mục 2.a (Năng lực chung): CHỈ 1–2 năng lực chung. CẤM liệt kê cả 3.
 - Mục 2.b (Năng lực đặc thù môn học): CHỈ 2–3 năng lực đặc thù nổi trội. CẤM liệt kê hết khung.
 - Mục 3 (Phẩm chất): CHỈ 1–2 phẩm chất. CẤM đủ 5 phẩm chất.
-- Năng lực số / AI: chỉ khi được bật; CHỈ 2–3 miền TT 02/2025 hoặc 2–3 mã QĐ 2422 đã chọn, CẤM bịa mã.
+- Năng lực số: chỉ khi được bật; PHẢI liệt kê đủ từng miền đã chọn; mỗi mục 1 dòng \`- Tên miền: mô tả ngắn gắn bài\`. CẤM bỏ miền đã chọn. CẤM gộp NLS+AI thành một hạn ngạch. CẤM bịa miền ngoài danh sách.
+- Năng lực AI: chỉ khi được bật; PHẢI liệt kê đủ từng mã đã chọn; mỗi mục 1 dòng \`- Mã: mô tả ngắn gắn bài\`. CẤM bỏ mã đã chọn. CẤM gộp NLS+AI thành một hạn ngạch. CẤM bịa mã ngoài danh sách.
+- CẤM xuất HTML, span, style, mã màu. Chỉ Markdown.
 
 CÁCH VIẾT NĂNG LỰC VÀ PHẨM CHẤT (BẮT BUỘC):
 - Chỉ MÔ TẢ năng lực/phẩm chất bằng một dòng cho mỗi mục: \`- Tên năng lực: mô tả ngắn gắn đúng bài học.\`
@@ -121,11 +124,15 @@ CÁCH VIẾT NĂNG LỰC VÀ PHẨM CHẤT (BẮT BUỘC):
 ### b) Năng lực đặc thù môn học
 - [Tên năng lực đặc thù]: ...
 
-### c) Năng lực số (CHỈ khi bối cảnh bật; đúng miền TT 02 đã chọn)
-- [Tên miền]: ...
+### c) Năng lực số (CHỈ khi bối cảnh bật; đúng miền TT 02 đã chọn — đủ từng miền)
+- [Tên miền 1]: ...
+- [Tên miền 2]: ...
+- [Tên miền 3 nếu đã chọn]: ...
 
-### d) Năng lực AI (CHỈ khi bối cảnh bật; đúng mã QĐ 2422 đã chọn)
-- [Mã]: ...
+### d) Năng lực AI (CHỈ khi bối cảnh bật; đúng mã QĐ 2422 đã chọn — đủ từng mã)
+- [Mã 1]: ...
+- [Mã 2]: ...
+- [Mã 3 nếu đã chọn]: ...
 
 ## 3. Về phẩm chất & Giáo dục hòa nhập (hòa nhập chỉ khi được bật)
 - [Tên phẩm chất]: mô tả ngắn gắn bài.`,
@@ -243,11 +250,16 @@ CẤU TRÚC MẪU:
 """
 {objectives_content}
 """
+- Dữ liệu SGK / bài tập nguồn:
+"""
+{textbook_content}
+"""
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
 - CHỈ dùng bài luyện tập / câu hỏi / HĐ có trong SGK hoặc dữ liệu giáo viên cung cấp. CẤM invent trắc nghiệm 4 lựa chọn, cấm bịa đề không có trong nguồn.
-- Nếu nguồn không có bài luyện tập: ghi "[Không có trong tài liệu đã cung cấp]" ở mục b) và c); vẫn xuất bảng d) với nhiệm vụ đối chiếu vở/SGK.
+- Phải đọc khối dữ liệu SGK ở trên trước. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" ở mục b) và c) khi khối đó không có bài/câu/luyện tập; vẫn xuất bảng d) với nhiệm vụ đối chiếu vở/SGK.
+- Nếu khối dữ liệu SGK trên có “Bài”, “Luyện tập”, đề toán thì CẤM ghi "[Không có trong tài liệu đã cung cấp]"; phải chép hoặc tóm tắt đề có trong nguồn.
 - Lời giải chi tiết chỉ viết khi nguồn có dữ liệu đủ để giải; không bịa số liệu.
 
 CẤU TRÚC:
@@ -276,11 +288,16 @@ CẤU TRÚC:
 """
 {objectives_content}
 """
+- Dữ liệu SGK / bài tập nguồn:
+"""
+{textbook_content}
+"""
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
 - CHỈ dùng bài vận dụng / tình huống / dự án có trong SGK hoặc dữ liệu giáo viên. CẤM invent số liệu, đề thực tiễn hay bài liên môn không có trong nguồn.
-- Nếu nguồn không có phần vận dụng: ghi "[Không có trong tài liệu đã cung cấp]".
+- Phải đọc khối dữ liệu SGK ở trên trước. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" khi khối đó không có bài/câu/vận dụng.
+- Nếu khối dữ liệu SGK trên có “Bài”, “Luyện tập”, “Vận dụng”, đề toán thì CẤM ghi "[Không có trong tài liệu đã cung cấp]"; phải chép hoặc tóm tắt đề có trong nguồn.
 - Chỉ tích hợp công cụ số/AI khi bối cảnh sư phạm bật thành phần tương ứng.
 
 CẤU TRÚC:
@@ -511,7 +528,8 @@ function getPromptTemplate(templateKey, context) {
     result += `\n\nQUY TẮC VIẾT NĂNG LỰC / PHẨM CHẤT:
 - Mỗi năng lực hoặc phẩm chất chỉ MỘT dòng: \`- Tên: mô tả ngắn gắn bài.\`
 - CẤM nhãn Biểu hiện, Nhiệm vụ/Sản phẩm, Minh chứng. CẤM ý con bắt đầu bằng + .
-- Năng lực chung 1–2; đặc thù 2–3; phẩm chất 1–2; NLS/AI chỉ 2–3 mục đã chọn theo văn bản.`;
+- Năng lực chung 1–2; đặc thù 2–3; phẩm chất 1–2.
+- NLS phải liệt kê đủ từng miền đã chọn; AI phải liệt kê đủ từng mã đã chọn; mỗi mục 1 dòng \`- Tên/Mã: mô tả ngắn gắn bài\`. CẤM bỏ mục đã chọn. CẤM gộp NLS+AI thành một hạn ngạch.`;
   }
 
   return result;

@@ -285,9 +285,13 @@ function pedagogyRecommendCtx() {
   return { subjectId: currentSubjectId(), grade: appState.selectedGrade, classSize: context.classSize, facilities: context.facilities };
 }
 
-function pedagogyLabel(group, id) {
+function pedagogyCatalogItem(group, id) {
   const list = (typeof KHBD_PEDAGOGY_CATALOG !== "undefined" && KHBD_PEDAGOGY_CATALOG[group]) || [];
-  return list.find(item => item.id === id || item.label === id)?.label || id;
+  return list.find(item => item.id === id || item.label === id) || null;
+}
+
+function pedagogyLabel(group, id) {
+  return pedagogyCatalogItem(group, id)?.label || id;
 }
 
 function autoPedagogyState() {
@@ -1264,6 +1268,7 @@ function renderMathPreview(markdownText, targetElementId) {
 
   const previewContent = sanitizePreviewHtml(html);
   applyLiteralListMarkers(previewContent);
+  applyIntegrationPreviewColors(previewContent);
   container.replaceChildren(previewContent);
 
   // 2. Render công thức Toán học bằng KaTeX Auto-Render
@@ -1305,19 +1310,23 @@ function prepareLiteralListMarkers(markdownText) {
 
 function applyLiteralListMarkers(documentFragment) {
   documentFragment.querySelectorAll("li").forEach(listItem => {
-    const textNode = Array.from(listItem.childNodes).find(node =>
-      node.nodeType === Node.TEXT_NODE && /\[\[KHBD_(?:MAJOR|MINOR|DETAIL)_LIST_MARKER\]\]/.test(node.nodeValue)
-    );
-    if (!textNode) return;
-    const marker = textNode.nodeValue.includes(KHBD_MAJOR_LIST_MARKER)
-      ? KHBD_MAJOR_LIST_MARKER
-      : textNode.nodeValue.includes(KHBD_MINOR_LIST_MARKER)
-        ? KHBD_MINOR_LIST_MARKER
-        : KHBD_DETAIL_LIST_MARKER;
-    const symbol = marker === KHBD_MAJOR_LIST_MARKER ? "-" : marker === KHBD_MINOR_LIST_MARKER ? "+" : "•";
-    textNode.nodeValue = textNode.nodeValue.replace(marker, "");
-    listItem.style.listStyleType = "none";
-    listItem.insertBefore(document.createTextNode(`${symbol} `), listItem.firstChild);
+    const walker = document.createTreeWalker(listItem, NodeFilter.SHOW_TEXT);
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+      const marker = textNode.nodeValue.includes(KHBD_MAJOR_LIST_MARKER)
+        ? KHBD_MAJOR_LIST_MARKER
+        : textNode.nodeValue.includes(KHBD_MINOR_LIST_MARKER)
+          ? KHBD_MINOR_LIST_MARKER
+          : textNode.nodeValue.includes(KHBD_DETAIL_LIST_MARKER)
+            ? KHBD_DETAIL_LIST_MARKER
+            : null;
+      if (!marker) continue;
+      const symbol = marker === KHBD_MAJOR_LIST_MARKER ? "-" : marker === KHBD_MINOR_LIST_MARKER ? "+" : "•";
+      textNode.nodeValue = textNode.nodeValue.replace(marker, "");
+      listItem.style.listStyleType = "none";
+      listItem.insertBefore(document.createTextNode(`${symbol} `), listItem.firstChild);
+      break;
+    }
   });
 }
 
@@ -1327,8 +1336,13 @@ function escapeHtml(value) {
   return div.innerHTML;
 }
 
+function isAllowedKhbdClass(value) {
+  return /^khbd-(nls|ai)(?:\s+khbd-(nls|ai))?$/.test(String(value || "").trim());
+}
+
 function sanitizePreviewHtml(html) {
-  const allowedTags = new Set(["A", "B", "BLOCKQUOTE", "BR", "CODE", "DEL", "EM", "H1", "H2", "H3", "H4", "H5", "H6", "HR", "I", "LI", "OL", "P", "PRE", "STRONG", "TABLE", "TBODY", "TD", "TH", "THEAD", "TR", "UL"]);
+  const allowedTags = new Set(["A", "B", "BLOCKQUOTE", "BR", "CODE", "DEL", "EM", "H1", "H2", "H3", "H4", "H5", "H6", "HR", "I", "LI", "OL", "P", "PRE", "SPAN", "STRONG", "TABLE", "TBODY", "TD", "TH", "THEAD", "TR", "UL"]);
+  const classTags = new Set(["H1", "H2", "H3", "H4", "H5", "H6", "P", "LI", "STRONG", "SPAN"]);
   const documentFragment = document.createDocumentFragment();
   const parsed = new DOMParser().parseFromString(html, "text/html");
   const copyNode = (node) => {
@@ -1341,6 +1355,10 @@ function sanitizePreviewHtml(html) {
       clean.rel = "noopener noreferrer";
       clean.target = "_blank";
     }
+    if (classTags.has(node.tagName)) {
+      const cls = (node.getAttribute("class") || "").trim();
+      if (isAllowedKhbdClass(cls)) clean.setAttribute("class", cls);
+    }
     ["colspan", "rowspan"].forEach(attribute => {
       if (node.hasAttribute(attribute)) clean.setAttribute(attribute, node.getAttribute(attribute));
     });
@@ -1349,6 +1367,68 @@ function sanitizePreviewHtml(html) {
   };
   parsed.body.childNodes.forEach(node => documentFragment.appendChild(copyNode(node)));
   return documentFragment;
+}
+
+function paintPreviewIntegrationNode(node, cls) {
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
+  if (["TABLE", "THEAD", "TBODY"].includes(node.tagName)) return;
+  if (["P", "LI", "STRONG", "SPAN"].includes(node.tagName)) node.classList.add(cls);
+  if (["UL", "OL", "DIV", "BLOCKQUOTE"].includes(node.tagName)) {
+    node.querySelectorAll("p, li, strong, span").forEach(el => {
+      if (!el.closest("table")) el.classList.add(cls);
+    });
+  }
+}
+
+function applyIntegrationSectionColors(fragment, heading, cls, kind) {
+  heading.classList.add(cls);
+  const rank = Number(heading.tagName.slice(1));
+  let node = heading.nextElementSibling;
+  while (node) {
+    if (/^H[1-6]$/.test(node.tagName)) {
+      const nextRank = Number(node.tagName.slice(1));
+      const text = node.textContent || "";
+      const sameKind = kind === "nls" ? /năng lực số/i.test(text) : /năng lực\s*AI/i.test(text);
+      if (nextRank <= rank && !sameKind) break;
+      if (nextRank <= rank) break;
+    }
+    paintPreviewIntegrationNode(node, cls);
+    node = node.nextElementSibling;
+  }
+}
+
+function applyIntegrationPreviewColors(fragment) {
+  if (!fragment || typeof fragment.querySelectorAll !== "function") return fragment;
+  fragment.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach(heading => {
+    const text = heading.textContent || "";
+    if (/năng lực số/i.test(text)) applyIntegrationSectionColors(fragment, heading, "khbd-nls", "nls");
+    else if (/năng lực\s*AI/i.test(text)) applyIntegrationSectionColors(fragment, heading, "khbd-ai", "ai");
+  });
+
+  const aiCodeRe = /\d+\.[A-Z]\d+\.\d+/;
+  fragment.querySelectorAll("strong, li, p").forEach(el => {
+    const text = el.textContent || "";
+    const inTable = Boolean(el.closest("table"));
+    const strongText = el.tagName === "STRONG" ? text.trim() : "";
+    const hasNls = /\bNLS\b/.test(text) || /^NLS$/i.test(strongText);
+    const hasAiMarker = /\bAI\b/.test(text) || /^AI$/i.test(strongText) || /năng lực\s*AI/i.test(text);
+    const inAiContext = hasAiMarker || Boolean(el.closest(".khbd-ai"));
+    if (hasNls) {
+      el.classList.add("khbd-nls");
+      if (!inTable) {
+        const host = el.closest("li, p");
+        if (host) host.classList.add("khbd-nls");
+      }
+    }
+    if (hasAiMarker || (aiCodeRe.test(text) && inAiContext)) {
+      el.classList.add("khbd-ai");
+      if (!inTable && hasAiMarker) {
+        const host = el.closest("li, p");
+        if (host) host.classList.add("khbd-ai");
+      }
+    }
+  });
+  return fragment;
 }
 
 function togglePreviewPanel(button) {
@@ -1432,7 +1512,9 @@ function buildPedagogicalContext() {
   if (context.integrations.inclusive) enabledIntegrations.push("hỗ trợ HS khuyết tật/hòa nhập");
   const classProfile = [...context.classProfileChoices, context.classProfileNote].filter(Boolean).join("; ");
   const support = [...context.supportChoices, context.supportNote].filter(Boolean).join("; ");
-  const selectedStandards = context.standards.map(item => `${item.officialCode ? `${item.officialCode}: ` : "Miền NLS: "}${item.officialLabel}`).join("; ");
+  const nlsLines = (context.standards || []).filter(item => !item.officialCode).map(item => `NLS: ${item.officialLabel}`);
+  const aiLines = (context.standards || []).filter(item => item.officialCode).map(item => `AI: ${item.officialCode}: ${item.officialLabel}`);
+  const selectedStandards = [...nlsLines, ...aiLines].join("\n  ");
   const methodLabels = (context.methods || []).map(id => pedagogyLabel("methods", id));
   const activityLabels = (context.subjectActivities || []).map(id => pedagogyLabel("activities", id));
   const techniqueByPhase = ["A", "B", "C", "D"].map(phase => {
@@ -1455,7 +1537,9 @@ function buildPedagogicalContext() {
 - Hoạt động đặc thù môn học được chọn: ${activityLabels.length ? activityLabels.join("; ") : `Chưa chọn; chỉ dùng 1–2 hoạt động catalog phù hợp môn ${subjectName}.`}
 - Yêu cầu/hoạt động đặc thù: ${context.specialRequirements || "Không có."}
 - Chỉ được tích hợp các thành phần đã bật: ${enabledIntegrations.length ? enabledIntegrations.join("; ") : "không có thành phần tích hợp bổ sung"}.
-- Chuẩn NLS/AI đã chọn (chỉ các mục chính thức): ${selectedStandards || "Không có"}. Một bài chỉ 2–3 miền NLS (TT 02/2025) và/hoặc 2–3 mã AI (QĐ 2422) đã chọn. CẤM bịa mã ngoài danh sách. Khi viết mục tiêu: chỉ mô tả năng lực một dòng, CẤM nhãn Biểu hiện / Nhiệm vụ / Minh chứng. AI chỉ hỗ trợ học ${subjectName}, có kiểm chứng của con người, không biến thành bài AI độc lập.
+- Chuẩn NLS/AI đã chọn (mỗi mục một dòng; PHẢI xuất hiện đủ trong I.2.c và I.2.d; không được bỏ miền/mã đã chọn):
+  ${selectedStandards || "Không có"}
+- CẤM bịa mã ngoài danh sách. Khi viết mục tiêu: chỉ mô tả năng lực một dòng, CẤM nhãn Biểu hiện / Nhiệm vụ / Minh chứng. AI chỉ hỗ trợ học ${subjectName}, có kiểm chứng của con người, không biến thành bài AI độc lập.
 - Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.`;
 }
 
@@ -1483,7 +1567,7 @@ function getGenerationPromptContext(params = {}) {
     topic: params.topic || getTopicDisplayName(),
     duration: appState.duration,
     competencies: getSubjectCompetencies(appState.selectedSubject),
-    textbook_content: appState.content.vision || "",
+    textbook_content: resolveTextbookContent(),
     objectives_content: appState.content.objectives || "",
     activities_content: params.activitiesContent || prevActs.join("\n\n---\n\n"),
     yccd_official: typeof getOfficialYccd === "function" ? getOfficialYccd({
@@ -1496,18 +1580,48 @@ function getGenerationPromptContext(params = {}) {
   };
 }
 
+function buildIntegrationActivityConstraint(phase) {
+  const context = normalizeTeachingContext(appState.teachingContext);
+  const digitalOn = Boolean(context.integrations.digital);
+  const aiOn = Boolean(context.integrations.ai);
+  if (!digitalOn && !aiOn) return "";
+  const nls = standardsOfKind("digital").map(item => item.officialLabel).filter(Boolean);
+  const ai = standardsOfKind("ai").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
+  const lines = [
+    `TÍCH HỢP NLS/AI PHA ${phase}: lồng vào cách tổ chức bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu; dùng marker markdown **NLS** và **AI** trước nhiệm vụ tích hợp.`
+  ];
+  if (phase === "A") {
+    if (digitalOn) lines.push(`NLS đã chọn: ${nls.join("; ") || "năng lực số"}. Thêm 1 móc ngắn (không bắt đủ mọi miền).`);
+    if (aiOn) lines.push(`AI đã chọn: ${ai.join("; ") || "năng lực AI"}. Thêm 1 móc ngắn (không bắt đủ mọi mã).`);
+  } else {
+    if (digitalOn) {
+      lines.push(`NLS đã chọn: ${nls.join("; ") || "năng lực số"}. Mỗi pha B/C/D phải có ÍT NHẤT một nhiệm vụ GV VÀ một nhiệm vụ HS gắn NLS trên bài SGK (ưu tiên miền đã chọn).`);
+    }
+    if (aiOn) {
+      lines.push(`AI đã chọn: ${ai.join("; ") || "năng lực AI"}. Mỗi pha B/C/D phải có ÍT NHẤT một nhiệm vụ GV VÀ HS gắn AI (ưu tiên mã đã chọn: kiểm chứng kết quả AI, hậu quả không xác thực, rủi ro lạm dụng).`);
+    }
+  }
+  return `\n${lines.join(" ")}`;
+}
+
 function buildPhasePedagogyContext(phase) {
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
-  const techLabels = (selected.techniques || []).map(id => pedagogyLabel("techniques", id)).filter(Boolean);
+  const techItems = (selected.techniques || []).map(id => pedagogyCatalogItem("techniques", id) || { label: pedagogyLabel("techniques", id), description: "" });
   const activityLabels = (appState.teachingContext.subjectActivities || []).map(id => pedagogyLabel("activities", id)).filter(Boolean);
-  const methodLabels = (appState.teachingContext.methods || []).map(id => pedagogyLabel("methods", id)).filter(Boolean);
+  const methodItems = (appState.teachingContext.methods || []).map(id => pedagogyCatalogItem("methods", id) || { label: pedagogyLabel("methods", id), description: "" });
   const parts = [];
-  if (methodLabels.length) parts.push(`Phương pháp định hướng (không bắt phải xuất hiện mọi bảng): ${methodLabels.join("; ")}`);
-  if (techLabels.length) parts.push(`Kỹ thuật bắt buộc của pha ${phase}: ${techLabels.join("; ")}. Mỗi kỹ thuật phải xuất hiện trong bảng d) Tổ chức thực hiện.`);
+  if (methodItems.length) {
+    parts.push(`PPDH đã chọn: ${methodItems.map(item => `${item.label}${item.description ? ` — ${item.description}` : ""}`).join("; ")}. Nêu cách vận hành ngắn trong Bước 1–2 nếu phù hợp pha ${phase}.`);
+  }
+  if (techItems.length) {
+    parts.push(`Kỹ thuật bắt buộc của pha ${phase} (CẤM chỉ liệt kê tên): ${techItems.map(item => `${item.label}${item.description ? ` — ${item.description}` : ""}`).join("; ")}. Cột TRÁI bảng d): nêu TÊN kỹ thuật và viết CÁCH TIẾN HÀNH theo 4 bước (GV giao gì theo kỹ thuật, HS làm gì, báo cáo, chốt).`);
+  }
   if (activityLabels.length) parts.push(`Hoạt động đặc thù đã chọn: ${activityLabels.join("; ")}. Chỉ triển khai nếu phù hợp pha ${phase}.`);
-  return parts.length
+  const integration = buildIntegrationActivityConstraint(phase);
+  const base = parts.length
     ? `\nRÀNG BUỘC PHA ${phase}: ${parts.join(" ")} Không nêu kỹ thuật/hoạt động ngoài catalog như kỹ thuật chính thức.`
     : `\nRÀNG BUỘC PHA ${phase}: không có kỹ thuật pha được chọn; không tự gắn tên kỹ thuật chính thức ngoài catalog.`;
+  return base + integration;
 }
 
 function pedagogyLabelInText(haystack, label) {
@@ -1520,15 +1634,108 @@ function pedagogyLabelInText(haystack, label) {
 
 function assertPhasePedagogyOutput(phase, output) {
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
-  const autoIds = new Set((autoPedagogyState().techniques && autoPedagogyState().techniques[phase]) || []);
   const labels = (selected.techniques || []).map(id => pedagogyLabel("techniques", id)).filter(Boolean);
   if (!labels.length) return;
   const tablePart = String(output || "").split("### d)")[1] || String(output || "");
   const missing = labels.filter(label => !pedagogyLabelInText(tablePart, label) && !pedagogyLabelInText(output, label));
-  if (!missing.length) return;
-  const onlyAuto = (selected.techniques || []).every(id => autoIds.has(id));
-  if (onlyAuto) return;
-  throw new Error(`Nội dung chưa triển khai đúng trong bảng tổ chức thực hiện: ${missing.join(", ")}.`);
+  if (missing.length) throw new Error(`Nội dung chưa triển khai đúng trong bảng tổ chức thực hiện: ${missing.join(", ")}.`);
+  const howToRe = /bước\s*1|chuyển giao|giáo viên|\bGV\b|học sinh|\bHS\b|thảo luận cặp|thảo luận nhóm|báo cáo|kết luận/i;
+  if (!howToRe.test(tablePart) && !howToRe.test(String(output || ""))) {
+    throw new Error("Bảng tổ chức thực hiện chưa có cách thức tiến hành kỹ thuật (Bước 1 / GV / HS).");
+  }
+}
+
+function assertObjectivesStandards(text) {
+  const hay = String(text || "");
+  const missing = [];
+  standardsOfKind("digital").forEach(item => {
+    if (!pedagogyLabelInText(hay, item.officialLabel)) missing.push({ kind: "digital", item });
+  });
+  standardsOfKind("ai").forEach(item => {
+    const code = String(item.officialCode || "");
+    if (!code || !hay.includes(code)) missing.push({ kind: "ai", item });
+  });
+  return missing;
+}
+
+function upsertObjectivesStandardSection(markdown, { matchRe, headingLine, bulletLines }) {
+  const lines = String(markdown || "").split("\n");
+  let headingIdx = lines.findIndex(line => matchRe.test(line.trim()));
+  if (headingIdx < 0) {
+    let insertAt = lines.findIndex(line => /^##\s*3(\.|[\s:]|$)/.test(line.trim()));
+    if (insertAt < 0) insertAt = lines.length;
+    const block = [headingLine, ...bulletLines, ""];
+    lines.splice(insertAt, 0, ...block);
+    return lines.join("\n");
+  }
+  const level = (lines[headingIdx].trim().match(/^#+/) || ["###"])[0].length;
+  let end = headingIdx + 1;
+  while (end < lines.length) {
+    const m = lines[end].trim().match(/^(#{1,6})\s+/);
+    if (m && m[1].length <= level) break;
+    end++;
+  }
+  const sectionText = lines.slice(headingIdx, end).join("\n");
+  const extras = bulletLines.filter(line => {
+    const key = line.replace(/^\-\s+/, "").split(":")[0].trim();
+    return key && !pedagogyLabelInText(sectionText, key) && !sectionText.includes(key);
+  });
+  if (extras.length) lines.splice(end, 0, ...extras);
+  return lines.join("\n");
+}
+
+function insertObjectivesMissingStandards(text, missing) {
+  let result = String(text || "");
+  const digital = missing.filter(row => row.kind === "digital");
+  const ai = missing.filter(row => row.kind === "ai");
+  if (digital.length) {
+    result = upsertObjectivesStandardSection(result, {
+      matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực số\b/i,
+      headingLine: "### c) Năng lực số",
+      bulletLines: digital.map(row => `- ${row.item.officialLabel}: ${row.item.officialLabel}`)
+    });
+  }
+  if (ai.length) {
+    result = upsertObjectivesStandardSection(result, {
+      matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực\s*AI\b/i,
+      headingLine: "### d) Năng lực AI",
+      bulletLines: ai.map(row => `- ${row.item.officialCode}: ${row.item.officialLabel}`)
+    });
+  }
+  return result;
+}
+
+function hasRoleNearMarker(text, markerRe) {
+  const hay = String(text || "");
+  const match = markerRe.exec(hay);
+  if (!match) return /(?:\bGV\b|giáo viên)/i.test(hay) && /(?:\bHS\b|học sinh)/i.test(hay);
+  const start = Math.max(0, match.index - 600);
+  const end = Math.min(hay.length, match.index + match[0].length + 600);
+  const window = hay.slice(start, end);
+  return /(?:\bGV\b|giáo viên)/i.test(window) && /(?:\bHS\b|học sinh)/i.test(window);
+}
+
+function assertActivityIntegrations(phase, text) {
+  const context = normalizeTeachingContext(appState.teachingContext);
+  const digitalOn = Boolean(context.integrations.digital);
+  const aiOn = Boolean(context.integrations.ai);
+  if (!digitalOn && !aiOn) return;
+  const raw = String(text || "");
+  const nlsOk = /\*\*NLS\*\*|\bNLS\b/.test(raw) || standardsOfKind("digital").some(item => pedagogyLabelInText(raw, item.officialLabel));
+  const aiOk = /\*\*AI\*\*/.test(raw) || standardsOfKind("ai").some(item => item.officialCode && raw.includes(item.officialCode));
+  if (phase === "A") {
+    if (digitalOn && !nlsOk && !/năng lực số/i.test(raw)) throw new Error("Pha A chưa có móc NLS.");
+    if (aiOn && !aiOk && !/\bAI\b|năng lực\s*AI/i.test(raw)) throw new Error("Pha A chưa có móc AI.");
+    return;
+  }
+  if (digitalOn && !nlsOk) throw new Error("Chưa có nhiệm vụ NLS.");
+  if (aiOn && !aiOk) throw new Error("Chưa có nhiệm vụ AI.");
+  if (digitalOn && nlsOk && !hasRoleNearMarker(raw, /\*\*NLS\*\*|\bNLS\b|năng lực số/i)) {
+    throw new Error("NLS chưa gắn nhiệm vụ GV và HS.");
+  }
+  if (aiOn && aiOk && !hasRoleNearMarker(raw, /\*\*AI\*\*|năng lực\s*AI|\d+\.[A-Z]\d+\.\d+/i)) {
+    throw new Error("AI chưa gắn nhiệm vụ GV và HS.");
+  }
 }
 
 function normalizeGeminiLessonOutput(rawOutput) {
@@ -1654,6 +1861,36 @@ function buildVisionPdfTextBlock() {
   return `NỘI DUNG CHỮ TRÍCH TỪ PDF (không gửi ảnh vì PDF có chữ rõ):\n"""\n${body}\n"""`;
 }
 
+function collectPdfTextbookText() {
+  const source = (appState.images || []).slice(0, MAX_VISION_IMAGES);
+  const pages = [];
+  for (const image of source) {
+    const text = String(image.pdfText || "").trim();
+    if (!text || isGarbledTextbookText(text)) continue;
+    const n = image.pageNum != null ? image.pageNum : (pages.length + 1);
+    pages.push(`--- Trang ${n} ---\n${text}`);
+  }
+  return pages.join("\n\n");
+}
+
+function visionHasExerciseMaterial(vision) {
+  const s = String(vision || "");
+  return /\bbài\s*\d+|\bcâu\s*\d+|luyện tập\s*[:.\-].{8,}|vận dụng\s*[:.\-].{8,}/i.test(s);
+}
+
+function resolveTextbookContent() {
+  const vision = String(appState.content.vision || "").trim();
+  const pdfText = collectPdfTextbookText();
+  if (vision.length > 2500 && visionHasExerciseMaterial(vision)) return vision;
+  if (pdfText) {
+    const sample = pdfText.slice(0, Math.min(80, pdfText.length));
+    if (vision && sample && vision.includes(sample)) return vision;
+    if (vision) return `${vision}\n\nNỘI DUNG CHỮ TRÍCH TỪ PDF:\n"""\n${pdfText}\n"""`;
+    return pdfText;
+  }
+  return vision;
+}
+
 async function resolveVisionRequest(basePrompt) {
   const pdfBlock = buildVisionPdfTextBlock();
   if (pdfBlock) {
@@ -1720,20 +1957,54 @@ function hasLessonSource() {
   return hasTextbookSource() || hasOfficialYccdSource();
 }
 
+function activityOutputProblem(actKey, output) {
+  try { assertPhasePedagogyOutput(actKey, output); }
+  catch (error) { return error; }
+  try { assertActivityIntegrations(actKey, output); }
+  catch (error) { return error; }
+  return null;
+}
+
 async function applyActivityOutput(actKey, result, signal) {
   let finalResult = result;
-  try { assertPhasePedagogyOutput(actKey, finalResult); }
-  catch (error) {
+  let problem = activityOutputProblem(actKey, finalResult);
+  if (problem) {
     try {
-      const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần nội dung pha ${actKey} sau. Giữ Markdown KHBD, bổ sung các lựa chọn đã chọn vào bảng d) Tổ chức thực hiện với bước, vai trò, nhiệm vụ, sản phẩm; không thêm kỹ thuật không chọn.\n\n${finalResult}${buildPhasePedagogyContext(actKey)}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
+      const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần nội dung pha ${actKey} sau. Giữ Markdown KHBD. Bổ sung các kỹ thuật đã chọn vào bảng d) Tổ chức thực hiện: nêu tên và viết cách thức tiến hành kỹ thuật trong cột trái, không chỉ nêu tên; không thêm kỹ thuật không chọn. Nếu bật NLS/AI: thêm nhiệm vụ GV và HS với marker **NLS** / **AI** lồng vào bài/câu SGK đã có; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.\n\n${finalResult}${buildPhasePedagogyContext(actKey)}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
       finalResult = await guardGeminiLessonOutput(repair, signal);
-      assertPhasePedagogyOutput(actKey, finalResult);
+      problem = activityOutputProblem(actKey, finalResult);
     } catch (repairError) {
-      console.warn(`Giữ nội dung pha ${actKey} dù kỹ thuật chưa khớp đủ:`, repairError);
-      showToast(`Đã lưu hoạt động ${actKey}; một kỹ thuật đề xuất chưa ghi đúng tên. Bạn có thể sửa tay.`, "warning", 5000);
+      console.warn(`Giữ nội dung pha ${actKey} dù kỹ thuật/tích hợp chưa khớp đủ:`, repairError);
+      problem = repairError;
     }
   }
+  if (problem) {
+    showToast(`Đã lưu hoạt động ${actKey}; kỹ thuật hoặc tích hợp NLS/AI chưa ghi đủ. Bạn có thể sửa tay.`, "warning", 5000);
+  }
   appState.content.activities[actKey] = finalResult;
+  saveStateToLocalStorage();
+  return finalResult;
+}
+
+async function applyObjectivesOutput(result, signal) {
+  let finalResult = result;
+  let missing = assertObjectivesStandards(finalResult);
+  if (missing.length) {
+    try {
+      const missingDesc = missing.map(row => row.kind === "ai"
+        ? `${row.item.officialCode}: ${row.item.officialLabel}`
+        : row.item.officialLabel).join("; ");
+      const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần phần I. Mục tiêu sau. Giữ nguyên Markdown và các dòng đã có. Chỉ bổ sung đúng các dòng còn thiếu vào ### c) Năng lực số / ### d) Năng lực AI. CẤM xóa dòng đã có. CẤM HTML/span/style/màu. Các mục còn thiếu: ${missingDesc}\n\n${finalResult}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
+      finalResult = await guardGeminiLessonOutput(repair, signal);
+      missing = assertObjectivesStandards(finalResult);
+    } catch (error) {
+      console.warn("Repair mục tiêu NLS/AI thất bại, sẽ chèn programmatic:", error);
+    }
+  }
+  if (missing.length) {
+    finalResult = insertObjectivesMissingStandards(finalResult, missing);
+  }
+  appState.content.objectives = finalResult;
   saveStateToLocalStorage();
   return finalResult;
 }
@@ -1749,10 +2020,7 @@ async function handleGenerateObjectives() {
     targetPreviewId: "previewObjectives",
     operationName: "Tạo I. Mục tiêu",
     prompt,
-    onSuccess: (result) => {
-      appState.content.objectives = result;
-      saveStateToLocalStorage();
-    }
+    onSuccess: (result) => applyObjectivesOutput(result)
   });
 }
 
@@ -1947,31 +2215,21 @@ async function handle1ClickGenerate() {
       await delay(generationPauseMs(), appState.generationController.signal);
     }
 
-    context.textbook_content = appState.content.vision || "";
-    if (!context.textbook_content.trim()) {
+    if (!String(appState.content.vision || "").trim()) {
       throw new Error("Chưa có nội dung SGK trong nguồn. Hãy phân tích ảnh/PDF trước.");
-    }
-    if (typeof getOfficialYccd === "function") {
-      context.yccd_official = getOfficialYccd({
-        subjectId: currentSubjectId(),
-        grade: appState.selectedGrade,
-        topic: getTopicDisplayName(),
-        visionText: context.textbook_content
-      });
     }
     applyLessonBasedRecommendations({ silent: true });
     Object.assign(context, getGenerationPromptContext());
-    context.textbook_content = appState.content.vision || context.textbook_content;
 
     // BƯỚC 2: Tạo I. Mục tiêu
     updateProgress(25, "Bước 2/7: Đang tạo I. Mục tiêu bài học...");
     const promptObj = getPromptTemplate('GENERATE_OBJECTIVES', context);
     const resObj = await generateOneClickContent(promptObj);
-    appState.content.objectives = resObj;
-    document.getElementById("editorObjectives").value = resObj;
-    renderMathPreview(resObj, "previewObjectives");
+    const finalObj = await applyObjectivesOutput(resObj, appState.generationController.signal);
+    document.getElementById("editorObjectives").value = finalObj;
+    renderMathPreview(finalObj, "previewObjectives");
     await delay(generationPauseMs(), appState.generationController.signal);
-    context.objectives_content = resObj;
+    context.objectives_content = finalObj;
 
     // BƯỚC 3: Tạo II. Thiết bị dạy học và học liệu
     updateProgress(40, "Bước 3/7: Đang tạo II. Thiết bị dạy học & học liệu...");

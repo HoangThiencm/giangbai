@@ -345,10 +345,48 @@ class DocxGenerator {
     }
   }
 
+  headingIntegrationColor(title) {
+    const text = String(title || "");
+    if (/năng lực số/i.test(text)) return "0B3D91";
+    if (/năng lực\s*AI/i.test(text)) return "15803D";
+    return null;
+  }
+
+  markerRunColor(text) {
+    const t = String(text || "").trim();
+    if (/^NLS$/i.test(t)) return "0B3D91";
+    if (/^AI$/i.test(t)) return "15803D";
+    return null;
+  }
+
+  lineIntegrationColor(text, inherited) {
+    const raw = String(text || "");
+    const nls = /\*\*NLS\*\*|\bNLS\b/.test(raw);
+    const aiMarker = /\*\*AI\*\*/.test(raw);
+    const aiCode = /\d+\.[A-Z]\d+\.\d+/.test(raw) && (/\bAI\b|năng lực\s*AI/i.test(raw) || inherited === "15803D");
+    const ai = aiMarker || aiCode;
+    if (nls && !ai) return "0B3D91";
+    if (ai && !nls) return "15803D";
+    return inherited || undefined;
+  }
+
+  coloredTextRun(text, extras = {}) {
+    const { TextRun } = window.docx;
+    const props = {
+      text,
+      font: extras.font || this.fontFamily,
+      size: extras.size || this.fontSizeBody
+    };
+    if (extras.bold) props.bold = true;
+    if (extras.italics) props.italics = true;
+    if (extras.color) props.color = extras.color;
+    return new TextRun(props);
+  }
+
   /**
    * Tách một dòng văn bản chứa các công thức $...$ thành danh sách các docx TextRun
    */
-  parseInlineTextToRuns(text) {
+  parseInlineTextToRuns(text, color) {
     if (!window.docx) return [];
     const { TextRun } = window.docx;
 
@@ -375,11 +413,7 @@ class DocxGenerator {
     while ((match = regex.exec(text)) !== null) {
       if (match.index > lastIndex) {
         const plain = text.substring(lastIndex, match.index);
-        runs.push(new TextRun({
-          text: plain,
-          font: this.fontFamily,
-          size: this.fontSizeBody
-        }));
+        runs.push(this.coloredTextRun(plain, { color }));
       }
 
       const token = match[0];
@@ -390,22 +424,16 @@ class DocxGenerator {
         pushMath(token, false);
       } else if (token.startsWith("**") && token.endsWith("**")) {
         const boldText = token.substring(2, token.length - 2);
-        const subRuns = this.parseInlineTextToRuns(boldText);
+        const innerColor = this.markerRunColor(boldText) || color;
+        const subRuns = this.parseInlineTextToRuns(boldText, innerColor);
         subRuns.forEach(r => {
           if (r instanceof TextRun) r.bold = true;
         });
         runs.push(...subRuns);
       } else if (token.startsWith("*") && token.endsWith("*")) {
-        // Chữ in nghiêng
         const italicText = token.substring(1, token.length - 1);
-        runs.push(new TextRun({
-          text: italicText,
-          font: this.fontFamily,
-          size: this.fontSizeBody,
-          italics: true
-        }));
+        runs.push(this.coloredTextRun(italicText, { italics: true, color }));
       } else if (token.startsWith("`") && token.endsWith("`")) {
-        // Code snippet
         const codeText = token.substring(1, token.length - 1);
         runs.push(new TextRun({
           text: codeText,
@@ -418,18 +446,13 @@ class DocxGenerator {
       lastIndex = regex.lastIndex;
     }
 
-    // Phần văn bản còn lại sau match cuối
     if (lastIndex < text.length) {
       const remaining = text.substring(lastIndex);
-      runs.push(new TextRun({
-        text: remaining,
-        font: this.fontFamily,
-        size: this.fontSizeBody
-      }));
+      runs.push(this.coloredTextRun(remaining, { color }));
     }
 
     if (runs.length === 0) {
-      runs.push(new TextRun({ text: "", font: this.fontFamily, size: this.fontSizeBody }));
+      runs.push(this.coloredTextRun("", { color }));
     }
 
     return runs;
@@ -451,6 +474,7 @@ class DocxGenerator {
     const elements = [];
     const lines = markdown.split(/\r?\n/);
     let i = 0;
+    let runColor = null;
 
     while (i < lines.length) {
       const line = lines[i];
@@ -485,15 +509,12 @@ class DocxGenerator {
 
       // 2. Phân tích TIÊU ĐỀ (# H1, ## H2, ### H3, #### H4)
       if (trimmed.startsWith("# ")) {
+        const headingText = trimmed.substring(2).trim();
+        runColor = this.headingIntegrationColor(headingText);
         elements.push(new Paragraph({
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
           children: [
-            new TextRun({
-              text: trimmed.substring(2).trim(),
-              font: this.fontFamily,
-              size: this.fontSizeH1,
-              bold: true
-            })
+            this.coloredTextRun(headingText, { size: this.fontSizeH1, bold: true, color: runColor })
           ]
         }));
         i++;
@@ -501,15 +522,12 @@ class DocxGenerator {
       }
 
       if (trimmed.startsWith("## ")) {
+        const headingText = trimmed.substring(3).trim();
+        runColor = this.headingIntegrationColor(headingText);
         elements.push(new Paragraph({
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
           children: [
-            new TextRun({
-              text: trimmed.substring(3).trim(),
-              font: this.fontFamily,
-              size: this.fontSizeH2,
-              bold: true
-            })
+            this.coloredTextRun(headingText, { size: this.fontSizeH2, bold: true, color: runColor })
           ]
         }));
         i++;
@@ -517,15 +535,12 @@ class DocxGenerator {
       }
 
       if (trimmed.startsWith("### ")) {
+        const headingText = trimmed.substring(4).trim();
+        runColor = this.headingIntegrationColor(headingText);
         elements.push(new Paragraph({
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
           children: [
-            new TextRun({
-              text: trimmed.substring(4).trim(),
-              font: this.fontFamily,
-              size: this.fontSizeH3,
-              bold: true
-            })
+            this.coloredTextRun(headingText, { size: this.fontSizeH3, bold: true, color: runColor })
           ]
         }));
         i++;
@@ -533,16 +548,16 @@ class DocxGenerator {
       }
 
       if (trimmed.startsWith("#### ")) {
+        const headingText = trimmed.substring(5).trim();
+        runColor = this.headingIntegrationColor(headingText);
         elements.push(new Paragraph({
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
           children: [
-            new TextRun({
-              text: trimmed.substring(5).trim(),
-              font: this.fontFamily,
+            this.coloredTextRun(headingText, {
               size: this.fontSizeBody,
               bold: true,
               italics: true,
-              color: "111111"
+              color: runColor || "111111"
             })
           ]
         }));
@@ -572,7 +587,8 @@ class DocxGenerator {
       if (literalListMatch) {
         const [, indent, marker, contentText] = literalListMatch;
         const level = marker === "-" ? 0 : marker === "+" ? 1 : 2;
-        const runs = this.parseInlineTextToRuns(`${marker} ${contentText}`);
+        const lineColor = this.lineIntegrationColor(contentText, runColor);
+        const runs = this.parseInlineTextToRuns(`${marker} ${contentText}`, lineColor);
         elements.push(new Paragraph({
           indent: level ? { left: Math.max(level * 360, indent.length * 180) } : undefined,
           spacing: { before: 40, after: 120, line: this.lineSpacing },
@@ -585,7 +601,8 @@ class DocxGenerator {
       // 4b. Danh sách legacy dùng dấu * vẫn giữ Word bullet.
       if (/^\*\s+/.test(trimmed)) {
         const bulletText = trimmed.replace(/^\*\s+/, "");
-        const runs = this.parseInlineTextToRuns(bulletText);
+        const lineColor = this.lineIntegrationColor(bulletText, runColor);
+        const runs = this.parseInlineTextToRuns(bulletText, lineColor);
         elements.push(new Paragraph({
           bullet: { level: 0 },
           spacing: { before: 40, after: 120, line: this.lineSpacing },
@@ -600,17 +617,16 @@ class DocxGenerator {
         const matchNum = trimmed.match(/^(\d+\.|\b[a-z]\))\s+/);
         const prefix = matchNum[0];
         const contentText = trimmed.substring(prefix.length);
-        const runs = this.parseInlineTextToRuns(contentText);
+        const headingColor = this.headingIntegrationColor(contentText);
+        if (headingColor) runColor = headingColor;
+        else if (/^\d+\./.test(trimmed)) runColor = null;
+        const lineColor = this.lineIntegrationColor(contentText, runColor);
+        const runs = this.parseInlineTextToRuns(contentText, lineColor);
 
         elements.push(new Paragraph({
           spacing: { before: 40, after: 120, line: this.lineSpacing },
           children: [
-            new TextRun({
-              text: prefix + " ",
-              font: this.fontFamily,
-              size: this.fontSizeBody,
-              bold: true
-            }),
+            this.coloredTextRun(prefix + " ", { bold: true, color: lineColor }),
             ...runs
           ]
         }));
@@ -621,7 +637,8 @@ class DocxGenerator {
       // 6. Phân tích BLOCKQUOTE (> ...)
       if (trimmed.startsWith("> ")) {
         const quoteText = trimmed.substring(2).trim();
-        const runs = this.parseInlineTextToRuns(quoteText);
+        const lineColor = this.lineIntegrationColor(quoteText, runColor);
+        const runs = this.parseInlineTextToRuns(quoteText, lineColor);
         elements.push(new Paragraph({
           spacing: { before: 80, after: 120, line: this.lineSpacing },
           indent: { left: 567 }, // lùi 1cm
@@ -632,7 +649,8 @@ class DocxGenerator {
       }
 
       // 7. ĐOẠN VĂN BẢN BÌNH THƯỜNG
-      const runs = this.parseInlineTextToRuns(trimmed);
+      const lineColor = this.lineIntegrationColor(trimmed, runColor);
+      const runs = this.parseInlineTextToRuns(trimmed, lineColor);
       elements.push(new Paragraph({
         spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing },
         children: runs
@@ -737,7 +755,8 @@ class DocxGenerator {
     const { TextRun } = window.docx;
     const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n");
     return lines.flatMap((line, index) => {
-      const runs = this.parseInlineTextToRuns(line);
+      const lineColor = this.lineIntegrationColor(line, null);
+      const runs = this.parseInlineTextToRuns(line, lineColor);
       if (index < lines.length - 1) runs.push(new TextRun({ break: 1 }));
       return runs;
     });
@@ -748,14 +767,13 @@ class DocxGenerator {
     const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
     const usable = lines.length ? lines : [""];
     return usable.map(line => {
-      // TextRun không hỗ trợ đổi trực tiếp thuộc tính sau khi tạo; tạo riêng cho ô tiêu đề
-      // để giữ đúng kiểu đậm của hàng đầu trong demo.docx.
+      const lineColor = isHeader ? undefined : this.lineIntegrationColor(line, null);
       const runs = isHeader
-        ? [new TextRun({ text: line || " ", font: this.fontFamily, size: this.fontSizeBody, bold: true })]
-        : this.parseInlineTextToRuns(line || " ");
+        ? [this.coloredTextRun(line || " ", { bold: true })]
+        : this.parseInlineTextToRuns(line || " ", lineColor);
       return new Paragraph({
         spacing: { before: 40, after: 40, line: 240 },
-        children: runs.length ? runs : [new TextRun({ text: line || "", font: this.fontFamily, size: this.fontSizeBody, bold: isHeader })]
+        children: runs.length ? runs : [this.coloredTextRun(line || "", { bold: isHeader, color: lineColor })]
       });
     });
   }
