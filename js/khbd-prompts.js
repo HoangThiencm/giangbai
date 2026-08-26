@@ -57,35 +57,23 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ nội dung KHBD. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng \`-\`, \`+\`, \`•\`. Không đổi tiêu đề/mục khung như \`I.\`, \`## 1.\`, \`a)\`, \`Bước\`, \`Bài\`.`,
 
   SOURCE_LOCK: `KHÓA NGUỒN BẮT BUỘC:
-- Chỉ dùng: ảnh/PDF SGK, nội dung phân tích Tab 1, tên bài/môn/lớp giáo viên chọn, YCCĐ chính thức (TT 32/2018/TT-BGDĐT — CT GDPT 2018) nếu được cung cấp, và bối cảnh lớp.
+- Nguồn chính = file PDF/ảnh đính kèm đúng request này. Nội dung phân tích Tab 1 (nếu có) chỉ là phụ trợ, không thay thế PDF/ảnh.
+- CHỈ dùng các trang PDF đã chọn (xem gợi ý nguồn). CẤM dùng trang ngoài danh sách đã chọn.
+- Chỉ dùng thêm: tên bài/môn/lớp giáo viên chọn, YCCĐ chính thức (TT 32/2018/TT-BGDĐT — CT GDPT 2018) nếu được cung cấp, và bối cảnh lớp.
 - CẤM bịa định nghĩa, định lý, công thức, số liệu, đề bài, đáp án, số trang, hình minh họa hoặc nhiệm vụ không có trong nguồn.
-- Luyện tập/vận dụng: CHỈ dùng bài, câu, hoạt động có trong nguồn đã đưa vào prompt (khối dữ liệu SGK / bài tập nguồn). Phải đọc khối đó trước khi kết luận. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" khi đã đọc khối nguồn mà vẫn không có bài/câu/luyện tập/vận dụng. CẤM kết luận thiếu nguồn khi chưa đọc dữ liệu SGK. CẤM invent trắc nghiệm 4 lựa chọn, không invent bài thực tiễn có số liệu, không bịa "SBT trang …".
+- Luyện tập/vận dụng: CHỈ dùng bài, câu, hoạt động có trong PDF/ảnh đính kèm hoặc khối dữ liệu SGK. Phải đọc nguồn đính kèm trước khi kết luận. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" khi đã đọc nguồn mà vẫn không có bài/câu/luyện tập/vận dụng. CẤM kết luận thiếu nguồn khi chưa đọc PDF/ảnh. CẤM invent trắc nghiệm 4 lựa chọn, không invent bài thực tiễn có số liệu, không bịa "SBT trang …".
 - Mục tiêu kiến thức phải là Yêu cầu cần đạt của CT GDPT 2018 ban hành kèm Thông tư 32/2018/TT-BGDĐT (hoặc YCCĐ in trên SGK/nguồn). Không tự tạo thang Bloom nếu không có trong nguồn.`,
 
-  // TAB 1: PHÂN TÍCH ẢNH SGK (VISION)
-  ANALYZE_TEXTBOOK: `Bạn hãy quan sát và phân tích toàn diện các hình ảnh/trang SGK Toán được giáo viên cung cấp.
+  // TAB 1: TÓM TẮT SGK (tùy chọn, không dump toàn văn)
+  ANALYZE_TEXTBOOK: `Hãy đọc PDF/ảnh SGK đính kèm và tóm tắt có cấu trúc cho giáo viên.
 Chủ đề bài học: "{topic}" (Môn học: {subject}).
 
-HÃY PHÂN TÍCH VÀ TRÍCH XUẤT ĐẦY ĐỦ, TRỌN VẸN TOÀN BỘ NỘI DUNG TỪ ĐẦU ĐẾN CUỐI CÁC TRANG (TUYỆT ĐỐI KHÔNG CẮT NGẮN, KHÔNG DỪNG GIỮA CHỪNG):
-1. **Tổng quan bài học:** Tên bài, vị trí trong chương trình và mục tiêu cần đạt cốt lõi theo SGK.
-2. **Khung kiến thức trọng tâm (Bóc tách rõ ràng theo từng tiểu mục SGK để ánh xạ 1-1 sang hoạt động dạy học):**
-   - Đánh số và nêu rõ tiêu đề từng tiểu mục trong SGK: \`Mục 1: [Tên tiểu mục 1]\`, \`Mục 2: [Tên tiểu mục 2]\`... (nếu bài có N tiểu mục thì đánh số đủ từ 1 đến N).
-   - Với mỗi tiểu mục, trích xuất đầy đủ:
-     + Các định nghĩa, khái niệm, thuật ngữ mới theo SGK cung cấp (trích xuất đầy đủ từng khái niệm, câu chữ chính xác).
-     + Các quy tắc, công thức toán học, định lí, tính chất (viết đầy đủ bằng mã LaTeX $...$).
-     + Các quy ước, chú ý sư phạm quan trọng.
-3. **Chuỗi hoạt động khám phá trong SGK:**
-   - Hoạt động mở đầu (tình huống, hình ảnh thực tế gắn với cuộc sống).
-   - Các hoạt động hình thành kiến thức (HĐ khám phá 1, HĐ 2, các câu hỏi gợi mở, ví dụ mẫu kèm lời giải).
-   - Hoạt động luyện tập (các bài Luyện tập, Tranh luận, Thử thách nhỏ trong SGK).
-   - Hoạt động vận dụng (các bài toán thực tế, dự án gắn kết tri thức với cuộc sống).
-4. **Hệ thống bài tập cuối bài:**
-   - Liệt kê đầy đủ đề bài các bài tập cơ bản và nâng cao trong SGK (Bài 1, Bài 2, Bài 3... kèm số liệu/câu hỏi chi tiết).
-5. **Đề xuất của Chuyên gia Sư phạm (chỉ gắn đúng nội dung đã đọc, không thêm kiến thức mới):**
-   - Những điểm học sinh dễ mắc sai lầm, hiểu sai bản chất ngay trên các khái niệm/bài tập vừa trích.
-   - Cơ hội tích hợp số/AI chỉ khi thành phần đó được bật trong bối cảnh sư phạm.
+XUẤT TÓM TẮT NGẮN, CÓ CẤU TRÚC:
+1. **Tên bài** và mục tiêu cốt lõi (nếu nguồn có).
+2. **Tiểu mục kiến thức:** liệt kê tên từng tiểu mục (\`Mục 1: ...\`, \`Mục 2: ...\`); với mỗi mục chỉ nêu loại nội dung (định nghĩa / quy tắc / ví dụ / HĐ), không chép nguyên văn.
+3. **Loại hoạt động/bài tập:** mở đầu, hình thành kiến thức, luyện tập, vận dụng — ghi số bài/câu nếu nguồn có.
 
-YÊU CẦU: Trình bày rõ ràng, đầy đủ từng mục từ Mục 1 đến Mục 5, giữ nguyên vẹn các công thức toán bằng định dạng LaTeX, không bỏ dở giữa chừng.`,
+CẤM trích nguyên văn toàn bộ SGK. CẤM chép hết đề bài. CẤM dump trang. Tóm tắt ngắn gọn, đủ để giáo viên đối chiếu và sửa.`,
 
   // TAB 2: MỤC TIÊU BÀI HỌC (I. MỤC TIÊU)
   GENERATE_OBJECTIVES: `Hãy xây dựng phần **I. MỤC TIÊU** cho Kế hoạch bài dạy chuẩn Công văn 5512/BGDĐT-GDTrH, bám CT GDPT 2018.
@@ -172,6 +160,73 @@ CHỈ tạo danh mục thiết yếu, ngắn gọn để GV và HS chuẩn bị 
   + [Nhiệm vụ ngắn bám SGK].
 
 Chỉ xuất hai mục trên; thay nội dung trong ngoặc vuông bằng danh mục cụ thể, không giữ nguyên dấu ngoặc vuông.`,
+
+  GENERATE_CORE_LESSON: `Đọc PDF/ảnh SGK đính kèm và soạn phần I + II của Kế hoạch bài dạy chuẩn Công văn 5512/BGDĐT-GDTrH, bám CT GDPT 2018.
+- Môn học: {subject}
+- Tên bài dạy: {topic}
+- Thời lượng dự kiến: {duration}
+- Dữ liệu nội dung SGK (nếu có, chỉ phụ trợ):
+"""
+{textbook_content}
+"""
+- YCCĐ chính thức CT GDPT 2018 / Thông tư 32/2018/TT-BGDĐT (nếu có):
+"""
+{yccd_official}
+"""
+
+BẮT BUỘC xuất đúng 2 khối, mỗi khối bắt đầu bằng marker (có thể sát nội dung, không thêm lời dẫn):
+<<<KHBD_I>>>
+(toàn bộ I. Mục tiêu — cấu trúc bên dưới)
+<<<KHBD_II>>>
+(toàn bộ II. Thiết bị — cấu trúc bên dưới)
+
+QUY TẮC MỤC TIÊU KIẾN THỨC (KHÔNG TỰ TẠO):
+- Mục ## 1. Về kiến thức PHẢI là Yêu cầu cần đạt của CT GDPT 2018 ban hành kèm Thông tư 32/2018/TT-BGDĐT cho đúng môn/lớp/bài.
+- Nếu khối {yccd_official} có nội dung: chỉ chọn và viết lại nguyên ý các YCCĐ khớp bài; không thêm kiến thức ngoài danh sách.
+- Nếu khối YCCĐ trống: chỉ lấy YCCĐ in trên SGK/nguồn. Nếu nguồn không nêu YCCĐ, ghi các ý kiến thức có trong nguồn và thêm dòng "Cần đối chiếu YCCĐ CT GDPT 2018 (TT 32) cho bài này" — CẤM bịa thang Bloom Nhận biết/Thông hiểu/Vận dụng không có trong nguồn.
+
+QUY TẮC BẮT BUỘC VỀ SỐ LƯỢNG NĂNG LỰC VÀ PHẨM CHẤT (Bài dạy 1–2 tiết):
+- Mục 2.a (Năng lực chung): CHỈ 1–2 năng lực chung. CẤM liệt kê cả 3.
+- Mục 2.b (Năng lực đặc thù môn học): CHỈ 2–3 năng lực đặc thù nổi trội. CẤM liệt kê hết khung.
+- Mục 3 (Phẩm chất): CHỈ 1–2 phẩm chất. CẤM đủ 5 phẩm chất.
+- Năng lực số: chỉ khi được bật; PHẢI liệt kê đủ từng miền đã chọn; mỗi mục 1 dòng \`- Tên miền: mô tả ngắn gắn bài\`. CẤM bỏ miền đã chọn. CẤM gộp NLS+AI thành một hạn ngạch. CẤM bịa miền ngoài danh sách.
+- Năng lực AI: chỉ khi được bật; PHẢI liệt kê đủ từng mã đã chọn; mỗi mục 1 dòng \`- Mã: mô tả ngắn gắn bài\`. CẤM bỏ mã đã chọn. CẤM gộp NLS+AI thành một hạn ngạch. CẤM bịa mã ngoài danh sách.
+- CẤM xuất HTML, span, style, mã màu. Chỉ Markdown.
+
+CÁCH VIẾT NĂNG LỰC VÀ PHẨM CHẤT (BẮT BUỘC):
+- Chỉ MÔ TẢ năng lực/phẩm chất bằng một dòng cho mỗi mục: \`- Tên năng lực: mô tả ngắn gắn đúng bài học.\`
+- CẤM các nhãn **Biểu hiện**, **Nhiệm vụ/Sản phẩm**, **Minh chứng**. Không dùng ý con \`+ \`. Không tách thành 2–3 gạch con dưới mỗi năng lực.
+
+# I. MỤC TIÊU
+
+## 1. Về kiến thức
+(Viết các YCCĐ CT GDPT 2018 / TT 32 hoặc YCCĐ in trên SGK; mỗi ý một gạch đầu dòng, giữ động từ YCCĐ.)
+
+## 2. Về năng lực
+### a) Năng lực chung
+- Tự chủ và tự học: ...
+- Giao tiếp và hợp tác: ...
+
+### b) Năng lực đặc thù môn học
+- [Tên năng lực đặc thù]: ...
+
+### c) Năng lực số (CHỈ khi bối cảnh bật; đúng miền TT 02 đã chọn — đủ từng miền)
+- [Tên miền 1]: ...
+
+### d) Năng lực AI (CHỈ khi bối cảnh bật; đúng mã QĐ 2422 đã chọn — đủ từng mã)
+- [Mã 1]: ...
+
+## 3. Về phẩm chất & Giáo dục hòa nhập (hòa nhập chỉ khi được bật)
+- [Tên phẩm chất]: mô tả ngắn gắn bài.
+
+# II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
+CHỈ tạo danh mục thiết yếu, ngắn gọn: tối đa 2 ý lớn cho mỗi đối tượng, mỗi ý lớn tối đa 3 ý con. Không liệt kê nhãn hiệu hay học liệu không cần trực tiếp cho bài; chỉ thêm thiết bị số/AI khi bối cảnh sư phạm bật thành phần tương ứng.
+
+## 1. Đối với Giáo viên
+- SGK, kế hoạch bài dạy và học liệu bám sát nội dung bài.
+
+## 2. Đối với Học sinh
+- SGK, vở ghi và dụng cụ học tập thiết yếu.`,
 
   // TAB 4.A: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG MỞ ĐẦU
   GENERATE_ACTIVITY_A: `Hãy biên soạn chi tiết **HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
@@ -344,6 +399,50 @@ CẤU TRÚC:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
 | + Bước 1: Chuyển giao nhiệm vụ: **GV:** Giao bài toán thực tiễn trong SGK: "Hãy vận dụng kiến thức vừa học để giải quyết bài toán thực tế...". **HS:** Tiếp nhận nhiệm vụ, phân tích số liệu thực tế.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Thảo luận cặp/nhóm (4 phút) mô hình hóa toán học và tính toán ra kết quả. **GV:** Quan sát, gợi mở cách chuyển ngôn ngữ thực tế sang biểu thức toán học.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện nhóm trình bày mô hình toán và kết quả; các nhóm khác nhận xét tính hợp lý của đáp án thực tế. **GV:** Đặt câu hỏi mở rộng liên hệ đời sống.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét, đánh giá khả năng vận dụng của HS, chốt lại ý nghĩa thực tiễn của bài học. **HS:** Ghi nhận lời giải hoàn chỉnh vào vở. | **Vận dụng**<br>- Tình huống thực tế (đúng SGK).<br>- Mô hình toán học & Lời giải chuẩn: $...$<br>• Ý nghĩa thực tiễn bài học. |`,
+
+  GENERATE_ACTIVITIES_AD: `Đọc PDF/ảnh SGK đính kèm và soạn toàn bộ hoạt động A–D chuẩn Công văn 5512.
+- Môn học: {subject}
+- Tên bài dạy: {topic}
+- Mục tiêu bài học:
+"""
+{objectives_content}
+"""
+- Dữ liệu SGK (nếu có, chỉ phụ trợ):
+"""
+{textbook_content}
+"""
+
+BẮT BUỘC xuất đúng 4 khối, mỗi khối bắt đầu bằng marker (có thể sát nội dung):
+<<<KHBD_A>>>
+(toàn bộ ## A. HOẠT ĐỘNG 1: MỞ ĐẦU)
+<<<KHBD_B>>>
+(toàn bộ ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI)
+<<<KHBD_C>>>
+(toàn bộ ## C. HOẠT ĐỘNG 3: LUYỆN TẬP)
+<<<KHBD_D>>>
+(toàn bộ ## D. HOẠT ĐỘNG 4: VẬN DỤNG)
+
+YÊU CẦU HÌNH THỨC (áp dụng mọi pha A–D):
+${ACTIVITY_TABLE_CONTRACT}
+
+PHA A — MỞ ĐẦU:
+- Đủ a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột).
+- Bám tình huống mở đầu có trên PDF/ảnh; không bịa tình huống ngoài nguồn.
+
+PHA B — HÌNH THÀNH KIẾN THỨC:
+- Đọc PDF/ảnh đính kèm, đếm tiểu mục kiến thức trên nguồn.
+- Mỗi tiểu mục đúng 1 hoạt động ### k. Hoạt động 2.k: [tên tiểu mục], đủ #### a) b) c) d) + đúng 1 bảng 2 cột.
+- TUYỆT ĐỐI CẤM GỘP tiểu mục. TUYỆT ĐỐI CẤM BỊA thêm hoạt động ngoài nguồn.
+
+PHA C — LUYỆN TẬP:
+- CHỈ dùng bài/câu/HĐ có trong nguồn. CẤM invent trắc nghiệm 4 lựa chọn, cấm bịa đề không có trong nguồn.
+- Nếu nguồn đã có bài/câu/luyện tập thì CẤM ghi "[Không có trong tài liệu đã cung cấp]"; phải chép hoặc tóm tắt đề có trong nguồn.
+- Chỉ ghi "[Không có trong tài liệu đã cung cấp]" ở mục b) và c) khi đã đọc PDF/ảnh mà vẫn không có bài; vẫn xuất bảng d).
+
+PHA D — VẬN DỤNG:
+- CHỈ dùng bài vận dụng / tình huống có trong nguồn. CẤM invent số liệu hay đề thực tiễn không có trong nguồn.
+- Nếu nguồn đã có bài/câu/vận dụng thì CẤM ghi "[Không có trong tài liệu đã cung cấp]".
+- CẤM xuất HTML, span, style, mã màu.`,
 
   // TAB 4.E: KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ (MA TRẬN & RUBRICS)
   GENERATE_ASSESSMENT: `Hãy biên soạn **E. KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ** cho Kế hoạch bài dạy môn Toán THCS chuẩn CV 5512.
@@ -656,7 +755,7 @@ function getPromptTemplate(templateKey, context) {
     result += `\n\nBỐI CẢNH SƯ PHẠM VÀ RÀNG BUỘC BẮT BUỘC:\n${context.pedagogical_context}`;
   }
 
-  if (templateKey === 'GENERATE_OBJECTIVES') {
+  if (templateKey === 'GENERATE_OBJECTIVES' || templateKey === 'GENERATE_CORE_LESSON') {
     result += `\n\nQUY TẮC VIẾT NĂNG LỰC / PHẨM CHẤT:
 - Mỗi năng lực hoặc phẩm chất chỉ MỘT dòng: \`- Tên: mô tả ngắn gắn bài.\`
 - CẤM nhãn Biểu hiện, Nhiệm vụ/Sản phẩm, Minh chứng. CẤM ý con bắt đầu bằng + .
@@ -664,7 +763,7 @@ function getPromptTemplate(templateKey, context) {
 - NLS phải liệt kê đủ từng miền đã chọn; AI phải liệt kê đủ từng mã đã chọn; mỗi mục 1 dòng \`- Tên/Mã: mô tả ngắn gắn bài\`. CẤM bỏ mục đã chọn. CẤM gộp NLS+AI thành một hạn ngạch.`;
   }
 
-  if (templateKey === 'GENERATE_ACTIVITY_B') {
+  if (templateKey === 'GENERATE_ACTIVITY_B' || templateKey === 'GENERATE_ACTIVITIES_AD') {
     const rawTextbook = context.textbook_content || '';
     const subsections = extractTextbookSubsections(rawTextbook);
     if (subsections && subsections.length > 0) {

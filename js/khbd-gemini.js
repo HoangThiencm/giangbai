@@ -267,7 +267,7 @@ class GeminiAPIManager {
   /**
    * Gửi yêu cầu sinh nội dung (Content Generation)
    * @param {string} prompt Nội dung câu lệnh
-   * @param {Array<{mimeType: string, base64: string}>} images Danh sách ảnh (nếu có)
+   * @param {Array<{mimeType: string, dataUrl?: string, base64?: string}>} images Ảnh image/* hoặc PDF application/pdf
    * @param {string} systemRole Chỉ dẫn hệ thống
    * @param {number} temperature Độ sáng tạo (0.0 - 1.0)
    */

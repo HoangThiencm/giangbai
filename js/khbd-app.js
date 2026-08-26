@@ -537,18 +537,19 @@ function applyLessonBasedRecommendations({ force = false, silent = false } = {})
 }
 
 function renderStandardsCatalog() {
-  if (typeof KHBD_STANDARDS === "undefined") return;
   const grade = Number(appState.selectedGrade);
   ["digital", "ai"].forEach(kind => {
     const panel = document.getElementById(`${kind}StandardsPanel`);
-    const enabled = appState.teachingContext.integrations[kind === "digital" ? "digital" : "ai"];
-    const catalog = KHBD_STANDARDS?.[kind];
-    if (!panel || !catalog) return;
-    panel.hidden = !enabled;
-    if (!enabled) {
-      panel.innerHTML = "";
-      return;
+    const enabled = Boolean(appState.teachingContext?.integrations?.[kind === "digital" ? "digital" : "ai"]);
+    if (panel) {
+      panel.hidden = !enabled;
+      if (!enabled) {
+        panel.innerHTML = "";
+        return;
+      }
     }
+    const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS?.[kind] : null;
+    if (!panel || !catalog) return;
     const entries = catalog.entries.filter(entry => entry.grades.includes(grade));
     const selectedIds = new Set(standardsOfKind(kind).map(item => item.catalogId));
     const suggestedIds = new Set(standardsOfKind(kind).filter(item => item.autoSuggested).map(item => item.catalogId));
@@ -655,7 +656,8 @@ function setupEventListeners() {
 
   document.getElementById("selectModel").addEventListener("change", (e) => {
     geminiAPI.setModel(e.target.value);
-    document.getElementById("footerModelName").textContent = e.target.value;
+    const footerModel = document.getElementById("footerModelName");
+    if (footerModel) footerModel.textContent = e.target.value;
     showToast(`Đã chuyển Model sang: ${e.target.value}`, "info");
   });
 
@@ -1349,6 +1351,7 @@ function prepareLiteralListMarkers(markdownText) {
 }
 
 function applyLiteralListMarkers(documentFragment) {
+  if (!documentFragment || typeof documentFragment.querySelectorAll !== "function") return;
   documentFragment.querySelectorAll("li").forEach(listItem => {
     const walker = document.createTreeWalker(listItem, NodeFilter.SHOW_TEXT);
     let textNode;
@@ -1396,6 +1399,7 @@ function isAllowedKhbdClass(value) {
 }
 
 function sanitizePreviewHtml(html) {
+  if (typeof DOMParser === "undefined" || typeof document === "undefined") return html;
   const allowedTags = new Set(["A", "B", "BLOCKQUOTE", "BR", "CODE", "DEL", "EM", "H1", "H2", "H3", "H4", "H5", "H6", "HR", "I", "LI", "OL", "P", "PRE", "SPAN", "STRONG", "TABLE", "TBODY", "TD", "TH", "THEAD", "TR", "UL"]);
   const classTags = new Set(["H1", "H2", "H3", "H4", "H5", "H6", "P", "LI", "STRONG", "SPAN"]);
   const documentFragment = document.createDocumentFragment();
@@ -2620,7 +2624,10 @@ function showToast(message, type = "info", duration = 3500) {
 
   setTimeout(() => {
     toast.style.opacity = "0";
-    setTimeout(() => toast.remove(), 300);
+    setTimeout(() => {
+      if (typeof toast.remove === "function") toast.remove();
+      else if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
   }, duration);
 }
 

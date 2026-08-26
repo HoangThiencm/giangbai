@@ -73,6 +73,12 @@ function createMockDOM() {
         items.forEach(item => el.appendChild(item));
       },
       addEventListener(event, handler) {},
+      remove() {
+        if (el.parentNode) {
+          el.parentNode.children = el.parentNode.children.filter(c => c !== el);
+          el.parentNode.childNodes = el.parentNode.childNodes.filter(c => c !== el);
+        }
+      },
       querySelectorAll(selector) {
         return mockDoc.querySelectorAll(selector, el);
       },

@@ -30,6 +30,7 @@
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
   <!-- docx.js (Xuất file Word .docx chuyên nghiệp) -->
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
@@ -249,7 +250,7 @@
         <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
           <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn KHBD:</h4>
           <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
-            <li><b>Bước 0:</b> Dán ảnh/PDF SGK (Ctrl + V) và bấm <b>Đọc và phân tích nội dung SGK</b> — AI cần nội dung này trước khi đề xuất PPDH/NLS/AI.</li>
+            <li><b>Bước 0:</b> Dán PDF/ảnh SGK là đủ để 1-click. Nút <b>Đọc nội dung SGK</b> là tùy chọn để giáo viên xem/sửa tóm tắt; không chặn 1-click.</li>
             <li><b>Bước 1:</b> Chọn khối, môn, bài; bật NLS/AI nếu cần. Hệ thống đề xuất 2–3 mục theo bài.</li>
             <li><b>Bước 2:</b> Bấm <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b> hoặc tạo từng phần ở Tab 2–4.</li>
             <li><b>Bước 3:</b> Tab 5 kiểm tra và <b>Xuất Toàn bộ Giáo án (.DOCX)</b>.</li>
@@ -279,7 +280,7 @@
           <div class="dropzone-icon">📋</div>
           <div class="dropzone-text">
             <h4>Dán ảnh SGK từ Clipboard (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
-            <p>Chọn ảnh hoặc PDF của bài học. Mọi trang đã chọn được xử lý theo từng đợt; bản sao gửi Gemini được nén đủ rõ chữ, bảng và công thức. Sau khi đọc xong, hệ thống đề xuất PPDH và NLS/AI nhưng giữ lựa chọn giáo viên đã chỉnh.</p>
+            <p>Gemini nhận PDF gốc (trang đã chọn); gallery JPEG chỉ xem trước. Ảnh chụp hoặc Ctrl+V gửi ảnh đã nén. Nút Đọc nội dung SGK là tùy chọn để xem/sửa tóm tắt; 1-click không bắt buộc bước này.</p>
           </div>
           <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
         </div>
@@ -450,8 +451,8 @@
     <div>
       <b>Trợ lý Soạn Kế hoạch Bài dạy AI</b> • GDPT 2018 Lớp 1–12
     </div>
-    <div id="statusFooterText">
-      Sẵn sàng. (Model: <span id="footerModelName">gemini-2.5-flash</span>)
+    <div>
+      <span id="statusFooterText">Sẵn sàng.</span> (Model: <span id="footerModelName">gemini-3.7-flash</span>)
     </div>
   </footer>
 
@@ -523,12 +524,12 @@
           </label>
           <input type="text" id="inputPdfPageRange" class="input-control" placeholder="Ví dụ: 1-3 hoặc 1, 2, 4" style="margin-top: 0.5rem; margin-left: 1.5rem; width: calc(100% - 1.5rem);" disabled>
           <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.35rem; margin-left: 1.5rem;">
-            💡 Có thể chọn toàn bộ hoặc một khoảng trang. Hệ thống xử lý tất cả trang đã chọn theo từng đợt để giữ ổn định hạn mức.
+            💡 Nạp trang đã chọn để xem trước. Gemini nhận PDF các trang đó (không JPEG-hóa khi gửi API).
           </p>
         </div>
         <div id="pdfRenderProgress" style="display: none; margin-top: 1rem;">
           <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.3rem;">
-            <span id="pdfRenderStatus">Đang chuyển đổi PDF sang ảnh...</span>
+            <span id="pdfRenderStatus">Đang nạp trang xem trước...</span>
             <span id="pdfRenderPercent">0%</span>
           </div>
           <div class="progress-bar-outer">
