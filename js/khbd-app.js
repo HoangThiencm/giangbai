@@ -28,6 +28,7 @@ const appState = {
   
   // Danh sách ảnh SGK (Mảng phẳng trực quan)
   images: [],
+  pdfAttachments: [],
 
   // Nội dung đã biên soạn
   content: {
@@ -54,7 +55,6 @@ const appState = {
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024;
-const VISION_BATCH_SIZE = 4;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 // Biến lưu trữ tài liệu PDF tạm thời
@@ -207,6 +207,7 @@ function emptyDraftForTarget({ grade, lesson, topic }) {
   appState.teachingContext = normalizeTeachingContext({});
   appState.content = { vision: "", objectives: "", materials: "", activities: { A: "", B: "", C: "", D: "", E: "", F: "", G: "" } };
   appState.images = [];
+  appState.pdfAttachments = [];
 }
 function switchDraft(target) {
   saveStateToLocalStorage();
@@ -739,9 +740,10 @@ function setupEventListeners() {
   window.addEventListener("paste", handleGlobalPaste);
 
   document.getElementById("btnClearVisionImages").addEventListener("click", () => {
-    if (appState.images.length === 0) return;
+    if (appState.images.length === 0 && !(appState.pdfAttachments || []).length) return;
     if (confirm(`Bạn có chắc muốn xóa tất cả ảnh trang SGK đã tải lên?`)) {
       appState.images = [];
+      appState.pdfAttachments = [];
       updateImageCounts();
       renderImageGallery();
       showToast("Đã xóa toàn bộ ảnh.", "info");
@@ -1099,7 +1101,15 @@ function setupPdfModal() {
   }
 }
 
-// Xử lý nạp các trang PDF đã chọn thành ảnh JPG chất lượng cao
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error("Không đọc được file."));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function handleConfirmPdfPages() {
   if (!currentPdfDoc || !currentPdfFile) {
     showToast("Không tìm thấy tài liệu PDF để xử lý.", "warning");
@@ -1135,12 +1145,26 @@ async function handleConfirmPdfPages() {
 
   btnConfirm.disabled = true;
   progressContainer.style.display = "block";
+  if (statusElem) statusElem.textContent = "Đang nạp trang xem trước...";
 
   try {
+    const pdfDataUrl = await fileToDataUrl(currentPdfFile);
+    const pdfAttachmentId = "pdfatt_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
+    if (!Array.isArray(appState.pdfAttachments)) appState.pdfAttachments = [];
+    appState.pdfAttachments.push({
+      id: pdfAttachmentId,
+      name: currentPdfFile.name,
+      mimeType: "application/pdf",
+      dataUrl: pdfDataUrl,
+      size: currentPdfFile.size,
+      pageCount: totalPages,
+      selectedPages: pagesToRender.slice()
+    });
+
     for (let idx = 0; idx < pagesToRender.length; idx++) {
       const pageNum = pagesToRender[idx];
       const percent = Math.round(((idx + 1) / pagesToRender.length) * 100);
-      statusElem.textContent = `Đang chuyển đổi trang ${pageNum} (${idx + 1}/${pagesToRender.length})...`;
+      statusElem.textContent = `Đang nạp trang xem trước ${pageNum} (${idx + 1}/${pagesToRender.length})...`;
       percentElem.textContent = `${percent}%`;
       barElem.style.width = `${percent}%`;
 
@@ -1151,18 +1175,16 @@ async function handleConfirmPdfPages() {
       canvas.width = viewport.width;
       canvas.height = viewport.height;
 
-      // Đổ nền trắng cho trang
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       await page.render({ canvasContext: ctx, viewport }).promise;
       const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-      const pdfText = await extractPdfPageText(page);
 
       const renderedSize = Math.round(dataUrl.length * 0.75);
       const totalBytes = appState.images.reduce((sum, image) => sum + (image.size || 0), 0);
       if (totalBytes + renderedSize > MAX_TOTAL_IMAGE_BYTES) {
-        showToast(`Trang ${pageNum} đã chuyển đổi nhưng không được giữ vì vượt tổng dung lượng an toàn.`, "warning", 4500);
+        showToast(`Trang ${pageNum} đã nạp PDF nhưng không giữ ảnh xem trước vì vượt tổng dung lượng.`, "warning", 4500);
         continue;
       }
       appState.images.push({
@@ -1172,21 +1194,21 @@ async function handleConfirmPdfPages() {
         size: renderedSize,
         sourceType: "pdf",
         pageNum: pageNum,
-        dataUrl: dataUrl,
-        pdfText
+        pdfAttachmentId,
+        dataUrl: dataUrl
       });
     }
 
     updateImageCounts();
     renderImageGallery();
     closeModal("modalPdfPageSelect");
-    showToast(`Đã nạp thành công ${pagesToRender.length} trang PDF thành ảnh chất lượng cao!`, "success");
+    showToast(`Đã nạp ${pagesToRender.length} trang PDF để xem trước. Gemini nhận PDF các trang đã chọn.`, "success");
     if (appState.activeTab !== "tabVision") {
       switchMainTab("tabVision");
     }
   } catch (err) {
-    console.error("Lỗi khi chuyển PDF sang ảnh:", err);
-    showToast(`Lỗi khi trích xuất trang PDF: ${err.message}`, "danger");
+    console.error("Lỗi khi nạp PDF:", err);
+    showToast(`Lỗi khi nạp trang PDF: ${err.message}`, "danger");
   } finally {
     btnConfirm.disabled = false;
     progressContainer.style.display = "none";
@@ -1257,7 +1279,17 @@ if (typeof window !== "undefined") {
   };
 
   window.deleteImage = (imgId) => {
+    const img = (appState.images || []).find(i => i.id === imgId);
     appState.images = appState.images.filter(i => i.id !== imgId);
+    if (img && img.pdfAttachmentId) {
+      const att = (appState.pdfAttachments || []).find(a => a.id === img.pdfAttachmentId);
+      if (att) {
+        att.selectedPages = (att.selectedPages || []).filter(p => p !== img.pageNum);
+        if (!att.selectedPages.length) {
+          appState.pdfAttachments = appState.pdfAttachments.filter(a => a.id !== att.id);
+        }
+      }
+    }
     updateImageCounts();
     renderImageGallery();
     showToast("Đã xóa 1 ảnh.", "info");
@@ -1891,54 +1923,6 @@ async function guardGeminiLessonOutput(rawOutput, signal) {
   return repairedNormalized.text;
 }
 
-async function extractPdfPageText(page) {
-  const content = await page.getTextContent({ disableCombineTextItems: false });
-  const items = (content.items || [])
-    .filter(item => item && typeof item.str === "string" && item.str.trim())
-    .map(item => {
-      const t = item.transform || [1, 0, 0, 1, 0, 0];
-      return { str: item.str, x: t[4], y: t[5], width: item.width || 0, height: item.height || 0 };
-    })
-    .sort((a, b) => (b.y - a.y) || (a.x - b.x));
-  if (!items.length) return "";
-  const lines = [];
-  let current = { y: items[0].y, parts: [{ x: items[0].x, str: items[0].str, width: items[0].width }] };
-  const lineTol = Math.max(3, (items[0].height || 10) * 0.45);
-  items.slice(1).forEach(item => {
-    if (Math.abs(item.y - current.y) > lineTol) {
-      lines.push(current);
-      current = { y: item.y, parts: [{ x: item.x, str: item.str, width: item.width }] };
-    } else {
-      current.parts.push({ x: item.x, str: item.str, width: item.width });
-    }
-  });
-  lines.push(current);
-  return lines.map(line => {
-    const parts = line.parts.sort((a, b) => a.x - b.x);
-    let out = parts[0].str;
-    for (let i = 1; i < parts.length; i++) {
-      const gap = parts[i].x - (parts[i - 1].x + parts[i - 1].width);
-      out += gap > 2.5 ? " " : "";
-      out += parts[i].str;
-    }
-    return out.replace(/\s+/g, " ").trim();
-  }).filter(Boolean).join("\n");
-}
-
-function isGarbledTextbookText(text) {
-  const s = String(text || "").trim();
-  if (s.length < 80) return true;
-  const vietHits = (s.match(/tập hợp|phần tử|học sinh|bài học|khái niệm|nhận biết|kí hiệu|thuộc|không thuộc|hình |luyện tập|của |và |các |một /gi) || []).length;
-  const slash = (s.match(/\\/g) || []).length;
-  const pipes = (s.match(/\|/g) || []).length;
-  const singles = (s.match(/(^|\s)[^A-Za-zÀ-ỹ0-9\s]{0,2}[A-Za-zÀ-ỹ](\s|$)/g) || []).length;
-  if (slash / s.length > 0.015) return true;
-  if (pipes > 15 && vietHits < 6) return true;
-  if (s.length > 250 && vietHits < 4) return true;
-  if (singles > 25 && vietHits < 8) return true;
-  return false;
-}
-
 function compressDataUrl(dataUrl, maxEdge = 1600, quality = 0.85) {
   return new Promise(resolve => {
     const img = new Image();
@@ -1960,99 +1944,114 @@ function compressDataUrl(dataUrl, maxEdge = 1600, quality = 0.85) {
   });
 }
 
-function chunkVisionPages(pages, batchSize = VISION_BATCH_SIZE) {
-  const batches = [];
-  for (let index = 0; index < pages.length; index += batchSize) batches.push(pages.slice(index, index + batchSize));
-  return batches;
+function dataUrlToUint8Array(dataUrl) {
+  const base64 = String(dataUrl || "").split(",")[1] || "";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }
 
-async function prepareVisionImages(source = appState.images || []) {
-  const prepared = [];
-  for (const image of source) {
-    if (!image.dataUrl) continue;
+async function buildPdfMediaPart(attachment) {
+  const selected = Array.isArray(attachment.selectedPages) ? attachment.selectedPages : [];
+  const pageCount = Number(attachment.pageCount) || 0;
+  const wantSubset = selected.length > 0 && pageCount > 0 && selected.length < pageCount;
+  const pdfLib = (typeof PDFLib !== "undefined" && PDFLib) || (typeof window !== "undefined" && window.PDFLib);
+  if (!wantSubset || !pdfLib?.PDFDocument || !attachment.dataUrl) {
+    return { mimeType: "application/pdf", dataUrl: attachment.dataUrl };
+  }
+  try {
+    const src = await pdfLib.PDFDocument.load(dataUrlToUint8Array(attachment.dataUrl));
+    const dest = await pdfLib.PDFDocument.create();
+    const indices = selected.map(p => Number(p) - 1).filter(i => i >= 0 && i < src.getPageCount());
+    if (!indices.length) return { mimeType: "application/pdf", dataUrl: attachment.dataUrl };
+    const copied = await dest.copyPages(src, indices);
+    copied.forEach(page => dest.addPage(page));
+    const dataUri = await dest.saveAsBase64({ dataUri: true });
+    return { mimeType: "application/pdf", dataUrl: dataUri };
+  } catch (err) {
+    console.warn("Không cắt subset PDF, gửi file gốc:", err);
+    return { mimeType: "application/pdf", dataUrl: attachment.dataUrl };
+  }
+}
+
+function buildTextbookSourceHint() {
+  const lines = [];
+  (appState.pdfAttachments || []).forEach(att => {
+    const pages = (att.selectedPages || []).join(", ");
+    lines.push(`PDF "${att.name || "SGK"}": CHỈ dùng các trang ${pages || "đã chọn"}. Bỏ trang khác nếu file còn trang ngoài danh sách.`);
+  });
+  const photos = (appState.images || []).filter(img => img.sourceType !== "pdf");
+  if (photos.length) lines.push(`${photos.length} ảnh SGK chụp/dán đính kèm.`);
+  if (!lines.length) return "";
+  return `GỢI Ý NGUỒN ĐÍNH KÈM:\n${lines.join("\n")}`;
+}
+
+async function prepareGeminiMedia() {
+  const media = [];
+  for (const att of (appState.pdfAttachments || [])) {
+    if (!att?.dataUrl) continue;
+    media.push(await buildPdfMediaPart(att));
+  }
+  for (const image of (appState.images || [])) {
+    if (image.sourceType === "pdf" || !image.dataUrl) continue;
     const compressed = await compressDataUrl(image.dataUrl);
-    prepared.push({
-      mimeType: compressed.mimeType,
-      dataUrl: compressed.dataUrl
-    });
+    media.push({ mimeType: compressed.mimeType, dataUrl: compressed.dataUrl });
   }
-  return prepared;
-}
-
-function buildVisionPdfTextBlock(source = appState.images || []) {
-  if (!source.length) return "";
-  const pages = [];
-  for (const image of source) {
-    const text = String(image.pdfText || "").trim();
-    if (!text) return "";
-    pages.push({ pageNum: image.pageNum, text });
-  }
-  const combined = pages.map(p => p.text).join("\n\n");
-  if (isGarbledTextbookText(combined)) return "";
-  const body = pages.map((p, i) => {
-    const n = p.pageNum != null ? p.pageNum : (i + 1);
-    return `--- Trang ${n} ---\n${p.text}`;
-  }).join("\n\n");
-  return `NỘI DUNG CHỮ TRÍCH TỪ PDF (không gửi ảnh vì PDF có chữ rõ):\n"""\n${body}\n"""`;
-}
-
-function collectPdfTextbookText() {
-  const source = appState.images || [];
-  const pages = [];
-  for (const image of source) {
-    const text = String(image.pdfText || "").trim();
-    if (!text || isGarbledTextbookText(text)) continue;
-    const n = image.pageNum != null ? image.pageNum : (pages.length + 1);
-    pages.push(`--- Trang ${n} ---\n${text}`);
-  }
-  return pages.join("\n\n");
-}
-
-function visionHasExerciseMaterial(vision) {
-  const s = String(vision || "");
-  return /\bbài\s*\d+|\bcâu\s*\d+|luyện tập\s*[:.\-].{8,}|vận dụng\s*[:.\-].{8,}/i.test(s);
+  return media;
 }
 
 function resolveTextbookContent() {
   const vision = String(appState.content.vision || "").trim();
-  const pdfText = collectPdfTextbookText();
-  if (vision.length > 2500 && visionHasExerciseMaterial(vision)) return vision;
-  if (pdfText) {
-    const sample = pdfText.slice(0, Math.min(80, pdfText.length));
-    if (vision && sample && vision.includes(sample)) return vision;
-    if (vision) return `${vision}\n\nNỘI DUNG CHỮ TRÍCH TỪ PDF:\n"""\n${pdfText}\n"""`;
-    return pdfText;
-  }
-  return vision;
+  const hint = buildTextbookSourceHint();
+  if (vision && hint) return `${vision}\n\n${hint}`;
+  return vision || hint;
 }
 
-async function resolveVisionRequest(basePrompt, source = appState.images || []) {
-  const pdfBlock = buildVisionPdfTextBlock(source);
-  if (pdfBlock) {
-    return { prompt: `${basePrompt}\n\n${pdfBlock}`, images: [], usedPdfText: true };
+function parseKhbdSections(text, keys) {
+  const source = String(text || "");
+  const result = {};
+  (keys || []).forEach(key => { result[key] = ""; });
+  const hits = [];
+  const markerRe = /<<<\s*KHBD_([A-Z]+)\s*>>>/gi;
+  let match;
+  while ((match = markerRe.exec(source))) {
+    hits.push({ key: match[1].toUpperCase(), start: match.index + match[0].length, markerAt: match.index });
   }
-  return { prompt: basePrompt, images: await prepareVisionImages(source), usedPdfText: false };
+  if (hits.length) {
+    hits.forEach((hit, i) => {
+      const end = i + 1 < hits.length ? hits[i + 1].markerAt : source.length;
+      if (Object.prototype.hasOwnProperty.call(result, hit.key)) {
+        result[hit.key] = source.slice(hit.start, end).trim();
+      }
+    });
+    return result;
+  }
+  const headingMap = {
+    I: /(?:^|\n)\s*#{0,3}\s*I[\.\s:][^\n]*/i,
+    II: /(?:^|\n)\s*#{0,3}\s*II[\.\s:][^\n]*/i,
+    A: /(?:^|\n)\s*#{1,3}\s*A[\.\s:][^\n]*/i,
+    B: /(?:^|\n)\s*#{1,3}\s*B[\.\s:][^\n]*/i,
+    C: /(?:^|\n)\s*#{1,3}\s*C[\.\s:][^\n]*/i,
+    D: /(?:^|\n)\s*#{1,3}\s*D[\.\s:][^\n]*/i
+  };
+  const found = [];
+  (keys || []).forEach(key => {
+    const re = headingMap[key];
+    if (!re) return;
+    const hit = re.exec(source);
+    if (hit) found.push({ key, at: hit.index + (hit[0].startsWith("\n") ? 1 : 0) });
+  });
+  found.sort((a, b) => a.at - b.at);
+  found.forEach((hit, i) => {
+    const end = i + 1 < found.length ? found[i + 1].at : source.length;
+    result[hit.key] = source.slice(hit.at, end).trim();
+  });
+  return result;
 }
 
-async function analyzeTextbookInBatches(basePrompt, { signal = null, onProgress = null } = {}) {
-  const batches = chunkVisionPages(appState.images || []);
-  const results = [];
-  for (let index = 0; index < batches.length; index++) {
-    if (signal?.aborted) throw new DOMException("Đã hủy theo yêu cầu của bạn.", "AbortError");
-    const request = await resolveVisionRequest(basePrompt, batches[index]);
-    if (onProgress) onProgress(index + 1, batches.length, request.usedPdfText);
-    const raw = await geminiAPI.generateContent(
-      buildPedagogicalPrompt(`${request.prompt}\n\nĐợt trang ${index + 1}/${batches.length}: chỉ phân tích các trang của đợt này.`),
-      request.images,
-      getSystemRole(appState.selectedSubject, appState.selectedGrade),
-      0.2,
-      signal,
-      { maxOutputTokens: 16384 }
-    );
-    if (signal?.aborted) throw new DOMException("Đã hủy theo yêu cầu của bạn.", "AbortError");
-    results.push(normalizeGeminiLessonOutput(raw).text || raw);
-  }
-  return results.join("\n\n---\n\n");
+function buildAllPhasePedagogyContext() {
+  return ["A", "B", "C", "D"].map(key => buildPhasePedagogyContext(key)).filter(Boolean).join("\n");
 }
 
 function generationPauseMs() {
@@ -2064,7 +2063,7 @@ function isGeminiOverloadError(error) {
 }
 
 async function handleGenerateVision() {
-  if (appState.images.length === 0) {
+  if (!hasTextbookMedia()) {
     showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh/trang SGK!", "warning");
     return;
   }
@@ -2079,8 +2078,7 @@ async function handleGenerateVision() {
     operationName: "Đọc nội dung SGK",
     prompt: getPromptTemplate("ANALYZE_TEXTBOOK", context),
     skipGuard: true,
-    visionBatches: true,
-    maxOutputTokens: 16384,
+    maxOutputTokens: 4096,
     onSuccess: (result) => {
       appState.content.vision = result;
       saveStateToLocalStorage();
@@ -2089,8 +2087,13 @@ async function handleGenerateVision() {
   });
 }
 
+function hasTextbookMedia() {
+  return (Array.isArray(appState.pdfAttachments) && appState.pdfAttachments.length > 0)
+    || (Array.isArray(appState.images) && appState.images.length > 0);
+}
+
 function hasTextbookSource() {
-  return (Array.isArray(appState.images) && appState.images.length > 0) || Boolean(String(appState.content.vision || "").trim());
+  return hasTextbookMedia() || Boolean(String(appState.content.vision || "").trim());
 }
 
 function hasOfficialYccdSource() {
@@ -2115,10 +2118,11 @@ function activityOutputProblem(actKey, output) {
   return null;
 }
 
-async function applyActivityOutput(actKey, result, signal) {
+async function applyActivityOutput(actKey, result, signal, options = {}) {
+  const repairWithGemini = options.repairWithGemini !== false;
   let finalResult = result;
   let problem = activityOutputProblem(actKey, finalResult);
-  if (problem) {
+  if (problem && repairWithGemini) {
     try {
       const repairPrompt = buildPedagogicalPrompt(`Sửa đúng một lần nội dung pha ${actKey} sau thành Kịch bản Sư phạm Thực chiến chuẩn CV 5512.
 Giữ nguyên định dạng Markdown KHBD và bảng 2 cột mục d).
@@ -2146,10 +2150,11 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
   return finalResult;
 }
 
-async function applyObjectivesOutput(result, signal) {
+async function applyObjectivesOutput(result, signal, options = {}) {
+  const repairWithGemini = options.repairWithGemini !== false;
   let finalResult = result;
   let missing = assertObjectivesStandards(finalResult);
-  if (missing.length) {
+  if (missing.length && repairWithGemini) {
     try {
       const missingDesc = missing.map(row => row.kind === "ai"
         ? `${row.item.officialCode}: ${row.item.officialLabel}`
@@ -2225,7 +2230,7 @@ async function handleGenerateCurrentActivity() {
 /**
  * Hàm thực thi gọi AI tổng quát với giao diện khóa nút và hiển thị trạng thái
  */
-async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, operationName, prompt, images = [], onSuccess, requireTextbook = false, requireSource = false, skipGuard = false, maxOutputTokens = null, visionBatches = false }) {
+async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, operationName, prompt, images = [], onSuccess, requireTextbook = false, requireSource = false, skipGuard = false, skipMedia = false, maxOutputTokens = null }) {
   if (requireTextbook && !hasTextbookSource()) {
     showToast("Cần dán ảnh/PDF SGK hoặc có nội dung phân tích Bước 0 trước khi soạn hoạt động. Không tự thêm nội dung ngoài nguồn.", "warning");
     return;
@@ -2254,23 +2259,20 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
 
   try {
     appState.isGenerating = true;
-    if (visionBatches) {
-      appState.cancelRequested = false;
-      appState.generationController = new AbortController();
-      const cancelButton = document.getElementById("btnCancelGeneration");
-      if (cancelButton) cancelButton.disabled = false;
-    }
     if (btn) btn.disabled = true;
 
     updateProgress(50, `Đang ${operationName}...`);
     document.getElementById("statusFooterText").textContent = `Đang ${operationName}...`;
 
-    const rawResult = visionBatches
-      ? await analyzeTextbookInBatches(prompt, {
-        signal: appState.generationController.signal,
-        onProgress: (done, total, usedPdfText) => updateProgress(Math.round((done / total) * 100), `Đang đọc SGK theo đợt ${done}/${total} (${usedPdfText ? "chữ PDF" : "ảnh đã nén"})...`)
-      })
-      : await geminiAPI.generateContent(buildPedagogicalPrompt(prompt), images, getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.3, null, maxOutputTokens ? { maxOutputTokens } : {});
+    const media = skipMedia ? images : (images.length ? images : await prepareGeminiMedia());
+    const rawResult = await geminiAPI.generateContent(
+      buildPedagogicalPrompt(prompt),
+      media,
+      getSystemRole(appState.selectedSubject, appState.selectedGrade),
+      0.3,
+      null,
+      maxOutputTokens ? { maxOutputTokens } : {}
+    );
     const result = skipGuard ? (normalizeGeminiLessonOutput(rawResult).text || rawResult) : await guardGeminiLessonOutput(rawResult);
 
     let finalResult = result;
@@ -2296,11 +2298,6 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
     document.getElementById("statusFooterText").textContent = `Lỗi khi ${operationName}.`;
   } finally {
     appState.isGenerating = false;
-    if (visionBatches) {
-      appState.generationController = null;
-      const cancelButton = document.getElementById("btnCancelGeneration");
-      if (cancelButton) cancelButton.disabled = true;
-    }
     if (btn) btn.disabled = false;
   }
 }
@@ -2321,9 +2318,16 @@ function throwIfGenerationCancelled() {
   }
 }
 
-async function generateOneClickContent(prompt, images = []) {
+async function generateOneClickContent(prompt, images = [], options = {}) {
   throwIfGenerationCancelled();
-  const rawResult = await geminiAPI.generateContent(buildPedagogicalPrompt(prompt), images, getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.3, appState.generationController.signal);
+  const rawResult = await geminiAPI.generateContent(
+    buildPedagogicalPrompt(prompt),
+    images,
+    getSystemRole(appState.selectedSubject, appState.selectedGrade),
+    0.3,
+    appState.generationController.signal,
+    options
+  );
   throwIfGenerationCancelled();
   const result = await guardGeminiLessonOutput(rawResult, appState.generationController.signal);
   throwIfGenerationCancelled();
@@ -2349,8 +2353,8 @@ async function handle1ClickGenerate() {
   }
 
   const topic = getTopicDisplayName();
-  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nTiến trình sẽ chạy tuần tự qua các mục I. Mục tiêu, II. Thiết bị & học liệu và III. Hoạt động A -> D.`;
-  
+  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nHệ thống gửi PDF/ảnh native và soạn 2 lần: I+II rồi A–D. File nguồn chỉ trong phiên này (F5 sẽ mất nếu chưa Đọc SGK).`;
+
   if (!confirm(confirmMsg)) return;
 
   appState.isGenerating = true;
@@ -2363,94 +2367,64 @@ async function handle1ClickGenerate() {
   if (btnCancel) btnCancel.disabled = false;
 
   try {
+    const media = await prepareGeminiMedia();
+    if (!media.length && !hasAnalyzedLessonContent()) {
+      throw new Error("Chưa có PDF/ảnh SGK trong phiên này. Hãy dán PDF hoặc ảnh trước khi 1-click.");
+    }
+    if (hasAnalyzedLessonContent()) applyLessonBasedRecommendations({ silent: true });
     const context = getGenerationPromptContext();
-    
-    // BƯỚC 1: Đọc SGK (chữ PDF nếu rõ, không thì ảnh đã nén)
-    if (appState.images.length > 0 && !String(appState.content.vision || "").trim()) {
-      const promptVision = getPromptTemplate("ANALYZE_TEXTBOOK", context);
-      const resVision = await analyzeTextbookInBatches(promptVision, {
-        signal: appState.generationController.signal,
-        onProgress: (done, total, usedPdfText) => updateProgress(
-          Math.round(5 + (done / total) * 18),
-          `Bước 1/7: Đang đọc SGK theo đợt ${done}/${total} (${usedPdfText ? "chữ PDF" : "ảnh đã nén"})...`
-        )
-      });
-      throwIfGenerationCancelled();
-      appState.content.vision = normalizeGeminiLessonOutput(resVision).text || resVision;
-      document.getElementById("editorVision").value = appState.content.vision;
-      renderMathPreview(appState.content.vision, "previewVision");
-      saveStateToLocalStorage();
-      await delay(generationPauseMs(), appState.generationController.signal);
-    }
 
-    if (!String(appState.content.vision || "").trim()) {
-      throw new Error("Chưa có nội dung SGK trong nguồn. Hãy phân tích ảnh/PDF trước.");
+    updateProgress(20, "Bước 1/2: Đang soạn I. Mục tiêu và II. Thiết bị (PDF/ảnh đính kèm)...");
+    const promptCore = getPromptTemplate("GENERATE_CORE_LESSON", context);
+    const rawCore = await generateOneClickContent(promptCore, media, { maxOutputTokens: 16384 });
+    const coreParts = parseKhbdSections(rawCore, ["I", "II"]);
+    const objectivesRaw = coreParts.I || rawCore;
+    const materialsRaw = coreParts.II || "";
+    if (!String(objectivesRaw).trim()) {
+      throw new Error("Gemini không trả được phần I. Mục tiêu. Hãy thử lại hoặc soạn từng tab.");
     }
-    applyLessonBasedRecommendations({ silent: true });
-    Object.assign(context, getGenerationPromptContext());
-
-    // BƯỚC 2: Tạo I. Mục tiêu
-    updateProgress(25, "Bước 2/7: Đang tạo I. Mục tiêu bài học...");
-    const promptObj = getPromptTemplate('GENERATE_OBJECTIVES', context);
-    const resObj = await generateOneClickContent(promptObj);
-    const finalObj = await applyObjectivesOutput(resObj, appState.generationController.signal);
+    const finalObj = await applyObjectivesOutput(objectivesRaw, appState.generationController.signal, { repairWithGemini: false });
     document.getElementById("editorObjectives").value = finalObj;
     renderMathPreview(finalObj, "previewObjectives");
+    appState.content.materials = materialsRaw;
+    document.getElementById("editorMaterials").value = materialsRaw;
+    renderMathPreview(materialsRaw, "previewMaterials");
+    if (!String(materialsRaw).trim()) {
+      showToast("Phần II bị thiếu hoặc cắt. Bạn có thể soạn tab Thiết bị.", "warning", 5000);
+    }
     await delay(generationPauseMs(), appState.generationController.signal);
+
+    context.objectives_content = finalObj;
+    Object.assign(context, getGenerationPromptContext());
     context.objectives_content = finalObj;
 
-    // BƯỚC 3: Tạo II. Thiết bị dạy học và học liệu
-    updateProgress(40, "Bước 3/7: Đang tạo II. Thiết bị dạy học & học liệu...");
-    const promptMat = getPromptTemplate('GENERATE_MATERIALS', context);
-    const resMat = await generateOneClickContent(promptMat);
-    appState.content.materials = resMat;
-    document.getElementById("editorMaterials").value = resMat;
-    renderMathPreview(resMat, "previewMaterials");
-    await delay(generationPauseMs(), appState.generationController.signal);
+    updateProgress(60, "Bước 2/2: Đang soạn hoạt động A–D (PDF/ảnh đính kèm)...");
+    const promptAD = getPromptTemplate("GENERATE_ACTIVITIES_AD", context) + buildAllPhasePedagogyContext();
+    const rawAD = await generateOneClickContent(promptAD, media, { maxOutputTokens: 32768 });
+    const actParts = parseKhbdSections(rawAD, ["A", "B", "C", "D"]);
+    const missingActs = [];
+    for (const key of ["A", "B", "C", "D"]) {
+      const body = actParts[key];
+      if (!String(body || "").trim()) {
+        missingActs.push(key);
+        continue;
+      }
+      await applyActivityOutput(key, body, appState.generationController.signal, { repairWithGemini: false });
+    }
+    if (missingActs.length) {
+      showToast(`Phần ${missingActs.join(", ")} bị cắt hoặc thiếu marker. Hãy soạn tab còn thiếu.`, "warning", 7000);
+    }
 
-    // BƯỚC 4: Tạo III.A Khởi động
-    updateProgress(55, "Bước 4/7: Đang tạo III.A Hoạt động Mở đầu...");
-    const promptA = getPromptTemplate('GENERATE_ACTIVITY_A', context) + buildPhasePedagogyContext('A');
-    const resA = await generateOneClickContent(promptA);
-    await applyActivityOutput("A", resA, appState.generationController.signal);
-    await delay(generationPauseMs(), appState.generationController.signal);
-
-    // BƯỚC 5: Tạo III.B Hình thành kiến thức mới
-    updateProgress(70, "Bước 5/7: Đang tạo III.B Hoạt động Hình thành kiến thức...");
-    context.activities_content = appState.content.activities.A;
-    const promptB = getPromptTemplate('GENERATE_ACTIVITY_B', context) + buildPhasePedagogyContext('B');
-    const resB = await generateOneClickContent(promptB);
-    await applyActivityOutput("B", resB, appState.generationController.signal);
-    await delay(generationPauseMs(), appState.generationController.signal);
-
-    // BƯỚC 6: Tạo III.C Luyện tập
-    updateProgress(82, "Bước 6/7: Đang tạo III.C Hoạt động Luyện tập...");
-    context.activities_content = appState.content.activities.A + "\n\n---\n\n" + appState.content.activities.B;
-    const promptC = getPromptTemplate('GENERATE_ACTIVITY_C', context) + buildPhasePedagogyContext('C');
-    const resC = await generateOneClickContent(promptC);
-    await applyActivityOutput("C", resC, appState.generationController.signal);
-    await delay(generationPauseMs(), appState.generationController.signal);
-
-    // BƯỚC 7: Tạo III.D Vận dụng
-    updateProgress(94, "Bước 7/7: Đang tạo III.D Hoạt động Vận dụng...");
-    context.activities_content += "\n\n---\n\n" + appState.content.activities.C;
-    const promptD = getPromptTemplate('GENERATE_ACTIVITY_D', context) + buildPhasePedagogyContext('D');
-    const resD = await generateOneClickContent(promptD);
-    await applyActivityOutput("D", resD, appState.generationController.signal);
-    await delay(generationPauseMs(), appState.generationController.signal);
-
-    // Lưu toàn bộ vào localStorage
     saveStateToLocalStorage();
 
-    // Cập nhật giao diện hoạt động hiện tại
     document.getElementById("editorActivity").value = appState.content.activities[appState.activeActSubtab];
     renderMathPreview(appState.content.activities[appState.activeActSubtab], "previewActivity");
 
-    updateProgress(100, "🎉 ĐÃ TẠO XONG KẾ HOẠCH BÀI DẠY LÕI!");
+    updateProgress(100, "ĐÃ TẠO XONG KẾ HOẠCH BÀI DẠY LÕI!");
     setTimeout(() => {
       hideProgress();
       switchMainTab("tabFullPreview");
-      showToast("Kế hoạch bài dạy lõi I, II và III.A-D đã được tạo. Bạn có thể xuất Word.", "success", 6000);
+      showToast("Đã soạn I, II và III.A–D (2 lần gọi). File PDF/ảnh chỉ trong phiên này.", "success", 6000);
     }, 1200);
 
   } catch (err) {
@@ -2555,6 +2529,7 @@ function handleClearAllContent() {
       }
     };
     appState.images = [];
+    appState.pdfAttachments = [];
     appState.teachingContext = normalizeTeachingContext({});
 
     const fileInput = document.getElementById("fileInputImages");
@@ -2752,6 +2727,9 @@ if (typeof module !== 'undefined' && module.exports) {
     syncDraftDom,
     emptyDraftForTarget,
     normalizeTeachingContext,
+    prepareGeminiMedia,
+    parseKhbdSections,
+    buildTextbookSourceHint,
     assertPhasePedagogyOutput,
     assertActivityIntegrations,
     assertObjectivesStandards
