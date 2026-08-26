@@ -14,6 +14,8 @@ if ($username === '' || $password === '') {
     respond(['error' => 'Vui lòng nhập tài khoản và mật khẩu.'], 422);
 }
 
+ensure_users_ai_key_columns($pdo);
+
 $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ? LIMIT 1');
 $stmt->execute([$username]);
 $user = $stmt->fetch();

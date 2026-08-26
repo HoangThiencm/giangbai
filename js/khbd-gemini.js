@@ -7,6 +7,7 @@
 class GeminiAPIManager {
   constructor() {
     this.apiKeys = [];
+    this.mistralKeys = [];
     this.currentKeyIndex = 0;
     this.selectedModel = "gemini-3.7-flash";
     this.availableModels = [
@@ -26,11 +27,22 @@ class GeminiAPIManager {
 
   init() {
     this.loadKeysFromLocalStorage();
+    this.loadMistralKeysFromLocalStorage();
     this.loadModelFromLocalStorage();
   }
 
   getStorageKey() {
     return 'khbd_user_gemini_keys_' + (localStorage.getItem('userEmail') || 'default');
+  }
+
+  getMistralStorageKey() {
+    return 'khbd_user_mistral_keys_' + (localStorage.getItem('userEmail') || 'default');
+  }
+
+  static cleanKeyList(keysArray) {
+    return Array.from(new Set((Array.isArray(keysArray) ? keysArray : [])
+      .map(k => String(k || "").trim())
+      .filter(k => k.length > 10)));
   }
 
   // Tải danh sách keys từ localStorage theo tài khoản cá nhân
@@ -62,6 +74,44 @@ class GeminiAPIManager {
     }
   }
 
+  loadMistralKeysFromLocalStorage() {
+    try {
+      const saved = localStorage.getItem(this.getMistralStorageKey());
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.mistralKeys = GeminiAPIManager.cleanKeyList(parsed);
+          return;
+        }
+      }
+      this.mistralKeys = [];
+    } catch (e) {
+      console.warn("Lỗi đọc Mistral keys từ localStorage:", e);
+      this.mistralKeys = [];
+    }
+  }
+
+  saveMistralKeysToLocalStorage() {
+    try {
+      localStorage.setItem(this.getMistralStorageKey(), JSON.stringify(this.mistralKeys || []));
+    } catch (e) {
+      console.error("Lỗi lưu Mistral keys vào localStorage:", e);
+    }
+  }
+
+  applyServerKeyPayload(data) {
+    if (!data || typeof data !== "object") return;
+    if (Array.isArray(data.keys)) {
+      this.apiKeys = GeminiAPIManager.cleanKeyList(data.keys);
+      this.currentKeyIndex = 0;
+      this.saveKeysToLocalStorage();
+    }
+    if (Array.isArray(data.mistral_keys)) {
+      this.mistralKeys = GeminiAPIManager.cleanKeyList(data.mistral_keys);
+      this.saveMistralKeysToLocalStorage();
+    }
+  }
+
   // Đồng bộ danh sách keys từ máy chủ CSDL
   async syncKeysFromServer() {
     try {
@@ -72,13 +122,24 @@ class GeminiAPIManager {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.ok && Array.isArray(data.keys)) {
-          if (data.keys.length > 0) {
-            this.apiKeys = data.keys.map(k => k.trim()).filter(k => k.length > 10);
+        if (data.ok) {
+          const serverGemini = Array.isArray(data.keys) ? data.keys : [];
+          const serverMistral = Array.isArray(data.mistral_keys) ? data.mistral_keys : [];
+          const payload = {};
+          if (serverGemini.length > 0) {
+            this.apiKeys = GeminiAPIManager.cleanKeyList(serverGemini);
             this.saveKeysToLocalStorage();
           } else if (this.apiKeys && this.apiKeys.length > 0) {
-            // Tự động migrate keys cũ từ localStorage lên CSDL máy chủ
-            await this.saveKeysToServer(this.apiKeys);
+            payload.keys = this.apiKeys;
+          }
+          if (serverMistral.length > 0) {
+            this.mistralKeys = GeminiAPIManager.cleanKeyList(serverMistral);
+            this.saveMistralKeysToLocalStorage();
+          } else if (this.mistralKeys && this.mistralKeys.length > 0) {
+            payload.mistral_keys = this.mistralKeys;
+          }
+          if (Object.keys(payload).length) {
+            await this.saveUserAiKeysToServer(payload);
           }
         }
       }
@@ -88,34 +149,48 @@ class GeminiAPIManager {
     return this.apiKeys;
   }
 
-  // Lưu danh sách keys lên máy chủ CSDL và localStorage
-  async saveKeysToServer(keysArray) {
-    const cleanKeys = Array.from(new Set((Array.isArray(keysArray) ? keysArray : [])
-      .map(k => String(k || '').trim())
-      .filter(k => k.length > 10)));
-    this.apiKeys = cleanKeys;
-    this.currentKeyIndex = 0;
-    this.saveKeysToLocalStorage();
+  async saveUserAiKeysToServer(payload) {
+    const body = {};
+    if (Array.isArray(payload?.keys)) {
+      this.apiKeys = GeminiAPIManager.cleanKeyList(payload.keys);
+      this.currentKeyIndex = 0;
+      this.saveKeysToLocalStorage();
+      body.keys = this.apiKeys;
+    }
+    if (Array.isArray(payload?.mistral_keys)) {
+      this.mistralKeys = GeminiAPIManager.cleanKeyList(payload.mistral_keys);
+      this.saveMistralKeysToLocalStorage();
+      body.mistral_keys = this.mistralKeys;
+    }
+    if (!Object.keys(body).length) {
+      return { ok: false, keys: this.apiKeys, mistral_keys: this.mistralKeys, count: this.apiKeys.length, mistral_count: this.mistralKeys.length };
+    }
 
     try {
       const res = await fetch('api/user_gemini_keys.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ keys: this.apiKeys })
+        body: JSON.stringify(body)
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.ok && Array.isArray(data.keys)) {
-          this.apiKeys = data.keys;
-          this.saveKeysToLocalStorage();
-        }
+        if (data.ok) this.applyServerKeyPayload(data);
         return data;
       }
     } catch (e) {
       console.error("Lỗi khi lưu keys lên máy chủ:", e);
     }
-    return { ok: false, keys: this.apiKeys, count: this.apiKeys.length };
+    return { ok: false, keys: this.apiKeys, mistral_keys: this.mistralKeys, count: this.apiKeys.length, mistral_count: this.mistralKeys.length };
+  }
+
+  // Lưu danh sách Gemini keys lên máy chủ CSDL và localStorage
+  async saveKeysToServer(keysArray) {
+    return this.saveUserAiKeysToServer({ keys: keysArray });
+  }
+
+  async saveMistralKeysToServer(keysArray) {
+    return this.saveUserAiKeysToServer({ mistral_keys: keysArray });
   }
 
   // Tải Model đã chọn (hoặc lấy mặc định từ hệ thống)
@@ -260,6 +335,18 @@ class GeminiAPIManager {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error?.message || `HTTP ${res.status}: ${res.statusText}`);
+    }
+    return true;
+  }
+
+  async testMistralApiKey(key) {
+    const res = await fetch("https://api.mistral.ai/v1/models", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${key}` }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.error?.message || `HTTP ${res.status}: ${res.statusText}`);
     }
     return true;
   }

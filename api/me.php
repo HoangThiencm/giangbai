@@ -6,6 +6,8 @@ if (empty($_SESSION['user_id'])) {
     respond(['error' => 'Chưa đăng nhập.'], 401);
 }
 
+ensure_users_ai_key_columns($pdo);
+
 $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
 $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch();

@@ -146,6 +146,9 @@ async function accessControlMain() {
             if (Array.isArray(user.gemini_keys) && user.gemini_keys.length > 0) {
                 localStorage.setItem('khbd_user_gemini_keys_' + (user.username || user.email || 'default'), JSON.stringify(user.gemini_keys));
             }
+            if (Array.isArray(user.mistral_keys) && user.mistral_keys.length > 0) {
+                localStorage.setItem('khbd_user_mistral_keys_' + (user.username || user.email || 'default'), JSON.stringify(user.mistral_keys));
+            }
             return pages;
         } catch {
             return getAllowedPages();

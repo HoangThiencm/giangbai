@@ -54,11 +54,11 @@
         return btoa(binary);
     }
 
-    function reportMistral(model, ok, error) {
+    function reportMistral(model, ok, error, moduleName) {
         if (!global.AiUsageReporter) return;
         AiUsageReporter.report({
             provider: 'mistral_ocr',
-            module: 'thitructuyen',
+            module: moduleName || 'thitructuyen',
             mode: 'ocr',
             model: model || '',
             ok,
@@ -66,12 +66,42 @@
         });
     }
 
-    async function ocrDocument(documentUrl, keys, model) {
+    function normalizeOptions(model, options) {
+        if (model && typeof model === 'object' && !options) {
+            return { model: undefined, options: model };
+        }
+        return { model, options: options && typeof options === 'object' ? options : {} };
+    }
+
+    function buildDocumentPayload(documentUrl) {
+        if (/^data:image\//i.test(documentUrl) || /\.(png|jpe?g|webp|gif)(\?|$)/i.test(documentUrl)) {
+            return { type: 'image_url', image_url: documentUrl };
+        }
+        return { type: 'document_url', document_url: documentUrl };
+    }
+
+    function isReady() {
+        return isOcrEnabled() && getKeys().length > 0;
+    }
+
+    async function ocrDocument(documentUrl, keys, model, options) {
+        const normalized = normalizeOptions(model, options);
+        const opts = normalized.options;
+        const moduleName = opts.module || 'thitructuyen';
         if (!isOcrEnabled()) throw new Error('Mistral OCR đang tắt trong Admin. Chỉ bật khi cần quét PDF.');
         const apiKeys = getKeys(keys);
         if (!apiKeys.length) throw new Error('Thiếu Mistral API Key. Bấm Cấu hình AI trên trang này.');
-        const currentModel = getModel(model);
+        const currentModel = getModel(normalized.model);
         let lastError = 'Mistral OCR không phản hồi.';
+
+        const payload = {
+            model: currentModel,
+            document: buildDocumentPayload(documentUrl),
+            include_image_base64: false,
+        };
+        if (Array.isArray(opts.pages) && opts.pages.length) {
+            payload.pages = opts.pages.map(Number).filter((n) => Number.isInteger(n) && n >= 0);
+        }
 
         for (let i = 0; i < Math.min(apiKeys.length, 4); i++) {
             const key = apiKeys[i];
@@ -82,13 +112,7 @@
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${key}`,
                     },
-                    body: JSON.stringify({
-                        model: currentModel,
-                        document: {
-                            type: 'document_url',
-                            document_url: documentUrl,
-                        },
-                    }),
+                    body: JSON.stringify(payload),
                 });
                 const raw = await res.json().catch(() => ({}));
                 if (!res.ok) {
@@ -96,21 +120,21 @@
                     if (res.status === 429 || res.status >= 500) continue;
                     throw new Error(lastError);
                 }
-                reportMistral(currentModel, true);
+                reportMistral(currentModel, true, '', moduleName);
                 return { status: 'ok', data: raw, source: 'mistral-ocr' };
             } catch (err) {
                 lastError = err.message || lastError;
             }
         }
-        reportMistral(getModel(model), false, lastError);
+        reportMistral(getModel(normalized.model), false, lastError, moduleName);
         throw new Error(lastError);
     }
 
-    async function ocrPdfFile(file, keys, model) {
+    async function ocrPdfFile(file, keys, model, options) {
         const mime = file.type || 'application/pdf';
         const b64 = await fileToBase64(file);
         const documentUrl = `data:${mime};base64,${b64}`;
-        const result = await ocrDocument(documentUrl, keys, model);
+        const result = await ocrDocument(documentUrl, keys, model, options);
         const ocrPages = result.data?.pages || [];
         const pages = ocrPages.map((p, idx) => ({
             id: `mistral-${Date.now()}-${idx + 1}`,
@@ -123,9 +147,9 @@
         return { status: 'ok', pages, raw: result.data, source: 'mistral-ocr' };
     }
 
-    async function ocrImageDataUrl(dataUrl, keys, model) {
+    async function ocrImageDataUrl(dataUrl, keys, model, options) {
         const documentUrl = dataUrl.startsWith('data:') ? dataUrl : `data:image/jpeg;base64,${dataUrl}`;
-        const result = await ocrDocument(documentUrl, keys, model);
+        const result = await ocrDocument(documentUrl, keys, model, options);
         const ocrPages = result.data?.pages || [];
         const text = ocrPages.map((p) => p.markdown || p.text || '').join('\n\n');
         return { status: 'ok', text, raw: result.data, source: 'mistral-ocr' };
@@ -135,5 +159,6 @@
         ocrPdfFile,
         ocrImageDataUrl,
         ocrDocument,
+        isReady,
     };
 })(window);

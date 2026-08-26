@@ -141,11 +141,11 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy chuẩn CV 5512. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ lại nội dung giáo án. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary, lời chúc ở cuối và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng "-", "+", "•". Không đổi tiêu đề mục khung như "I.", "## 1.", "a)", "Bước", "Bài".`,
 
   SOURCE_LOCK: `KHÓA NGUỒN BẮT BUỘC:
-- Nguồn chính = file PDF/ảnh đính kèm đúng request này. Nội dung phân tích Tab 1 (nếu có) chỉ là phụ trợ.
-- CHỈ dùng các trang PDF/ảnh đã chọn. CẤM dùng trang ngoài danh sách.
+- Nguồn chính = văn bản SGK đã nhận diện (Mistral OCR / tóm tắt Bước 0) và/hoặc file PDF/ảnh đính kèm đúng request này.
+- CHỈ dùng các trang PDF/ảnh đã chọn (hoặc đúng văn bản OCR của các trang đó). CẤM dùng trang ngoài danh sách.
 - Chỉ dùng thêm: tên bài/môn/lớp giáo viên chọn, YCCĐ chính thức (TT 32/2018/TT-BGDĐT — CT GDPT 2018) và bối cảnh lớp học.
 - CẤM bịa định nghĩa, định lý, công thức, số liệu, đề bài, đáp án, số trang hoặc nhiệm vụ không có trong nguồn.
-- Luyện tập/vận dụng: CHỈ dùng bài, câu, hoạt động có trong PDF/ảnh đính kèm hoặc dữ liệu SGK. Phải đọc nguồn trước khi giải. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" khi đã đọc kỹ nguồn mà vẫn không có bài/câu vận dụng. CẤM invent trắc nghiệm 4 lựa chọn không có trong sách, không bịa "SBT trang...".
+- Luyện tập/vận dụng: CHỈ dùng bài, câu, hoạt động có trong PDF/ảnh/OCR đính kèm hoặc dữ liệu SGK. Phải đọc nguồn trước khi giải. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" khi đã đọc kỹ nguồn mà vẫn không có bài/câu vận dụng. CẤM invent trắc nghiệm 4 lựa chọn không có trong sách, không bịa "SBT trang...".
 - Mục tiêu kiến thức phải là Yêu cầu cần đạt của CT GDPT 2018 (hoặc YCCĐ in trên đầu bài SGK). Không tự chế thang Bloom ngoài nguồn.`,
 
   // TAB 1: TÓM TẮT SGK
@@ -235,7 +235,7 @@ YÊU CẦU: Tạo danh mục thiết bị và học liệu thiết yếu, cụ t
 - Đọc trước bài trong SGK và chuẩn bị các nhiệm vụ được giao ở tiết trước.`,
 
   // 1-CLICK PHẦN I + II (CORE LESSON)
-  GENERATE_CORE_LESSON: `Đọc PDF/ảnh SGK đính kèm và soạn phần I + II của Kế hoạch bài dạy môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512/BGDĐT-GDTrH, bám CT GDPT 2018.
+  GENERATE_CORE_LESSON: `Đọc nguồn SGK (văn bản OCR/tóm tắt và PDF/ảnh nếu đính kèm) và soạn phần I + II của Kế hoạch bài dạy môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512/BGDĐT-GDTrH, bám CT GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Thời lượng dự kiến: {duration}

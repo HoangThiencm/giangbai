@@ -559,12 +559,59 @@ function ensure_users_expires_option_column(PDO $pdo): void
     }
 }
 
+function parse_stored_api_keys($raw): array
+{
+    $keys = [];
+    if (is_string($raw) && trim($raw) !== '') {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            $raw = $decoded;
+        } else {
+            $raw = preg_split('/[\r\n,;]+/', $raw) ?: [];
+        }
+    }
+    if (!is_array($raw)) {
+        return [];
+    }
+    foreach ($raw as $item) {
+        $k = trim((string)$item);
+        if (strlen($k) > 10 && !in_array($k, $keys, true)) {
+            $keys[] = $k;
+        }
+    }
+    return $keys;
+}
+
+function collect_api_keys_from_input($rawInput): array
+{
+    $inputItems = [];
+    if (is_array($rawInput)) {
+        $inputItems = $rawInput;
+    } elseif (is_string($rawInput)) {
+        $inputItems = preg_split('/[\r\n,;]+/', $rawInput) ?: [];
+    }
+    return parse_stored_api_keys($inputItems);
+}
+
 function ensure_users_gemini_keys_column(PDO $pdo): void
 {
     try {
         $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'gemini_keys'");
         if (!$stmt->fetch()) {
             $pdo->exec("ALTER TABLE users ADD COLUMN gemini_keys TEXT NULL DEFAULT NULL AFTER allowed_pages_json");
+        }
+    } catch (Throwable $e) {
+        // Column migration is best-effort for older databases.
+    }
+}
+
+function ensure_users_ai_key_columns(PDO $pdo): void
+{
+    ensure_users_gemini_keys_column($pdo);
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'mistral_keys'");
+        if (!$stmt->fetch()) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN mistral_keys TEXT NULL DEFAULT NULL AFTER gemini_keys");
         }
     } catch (Throwable $e) {
         // Column migration is best-effort for older databases.
@@ -608,26 +655,6 @@ function progress_state_summary(array $state): array
 function public_user(array $user): array
 {
     $pages = teacher_allowed_pages_resolved($user);
-    $rawKeys = $user['gemini_keys'] ?? null;
-    $geminiKeys = [];
-    if (is_string($rawKeys) && trim($rawKeys) !== '') {
-        $decoded = json_decode($rawKeys, true);
-        if (is_array($decoded)) {
-            foreach ($decoded as $k) {
-                $k = trim((string)$k);
-                if (strlen($k) > 10 && !in_array($k, $geminiKeys, true)) {
-                    $geminiKeys[] = $k;
-                }
-            }
-        }
-    } elseif (is_array($rawKeys)) {
-        foreach ($rawKeys as $k) {
-            $k = trim((string)$k);
-            if (strlen($k) > 10 && !in_array($k, $geminiKeys, true)) {
-                $geminiKeys[] = $k;
-            }
-        }
-    }
 
     return [
         'id' => (int)$user['id'],
@@ -636,7 +663,8 @@ function public_user(array $user): array
         'role' => $user['role'],
         'class_name' => $user['class_name'],
         'allowed_pages' => $pages,
-        'gemini_keys' => $geminiKeys,
+        'gemini_keys' => parse_stored_api_keys($user['gemini_keys'] ?? null),
+        'mistral_keys' => parse_stored_api_keys($user['mistral_keys'] ?? null),
         'is_active' => (bool)$user['is_active'],
         'expires_at' => $user['expires_at'],
         'expires_option' => normalize_duration_option($user['expires_option'] ?? 'forever'),

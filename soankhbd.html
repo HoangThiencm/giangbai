@@ -68,8 +68,8 @@
         <button id="btnCancelGeneration" class="btn btn-outline-dark" disabled title="Dừng tác vụ AI đang chạy">
           <i data-lucide="circle-stop"></i> Hủy tạo
         </button>
-        <button id="btnManageKeys" class="btn btn-outline" title="Quản lý và nạp danh sách Gemini API Keys">
-          <i data-lucide="key"></i> Quản lý API Key (<span id="keyCountBadge">0</span>)
+        <button id="btnManageKeys" class="btn btn-outline" title="Quản lý API Key Gemini (soạn KHBD) và Mistral (đọc SGK) của tài khoản này">
+          <i data-lucide="key"></i> Quản lý API Key (<span id="keyCountBadge">G0 · M0</span>)
         </button>
         <button id="btnClearAll" class="btn btn-danger" title="Xóa toàn bộ nội dung đã soạn">
           <i data-lucide="trash-2"></i> Xóa tất cả
@@ -250,7 +250,7 @@
         <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
           <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn KHBD:</h4>
           <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
-            <li><b>Bước 0:</b> Dán PDF/ảnh SGK là đủ để 1-click. Nút <b>Đọc nội dung SGK</b> là tùy chọn để giáo viên xem/sửa tóm tắt; không chặn 1-click.</li>
+            <li><b>Bước 0:</b> Dán PDF/ảnh SGK là đủ để 1-click. Nút <b>Đọc nội dung SGK</b> dùng Mistral OCR (nhanh); Gemini chỉ còn dự phòng nếu thiếu key Mistral.</li>
             <li><b>Bước 1:</b> Chọn khối, môn, bài; bật NLS/AI nếu cần. Hệ thống đề xuất 2–3 mục theo bài.</li>
             <li><b>Bước 2:</b> Bấm <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b> hoặc tạo từng phần ở Tab 2–4.</li>
             <li><b>Bước 3:</b> Tab 5 kiểm tra và <b>Xuất Toàn bộ Giáo án (.DOCX)</b>.</li>
@@ -267,7 +267,7 @@
           <h2 class="card-title"><i data-lucide="camera"></i> Bước 0 — Dán & phân tích ảnh/trang SGK</h2>
           <div class="card-actions">
             <button id="btnAnalyzeVision" class="btn btn-primary">
-              <i data-lucide="sparkles"></i> Đọc nội dung SGK (Gemini)
+              <i data-lucide="sparkles"></i> Đọc nội dung SGK (Mistral OCR)
             </button>
             <button id="btnClearVisionImages" class="btn btn-outline-dark">
               <i data-lucide="trash"></i> Xóa tất cả ảnh
@@ -280,7 +280,7 @@
           <div class="dropzone-icon">📋</div>
           <div class="dropzone-text">
             <h4>Dán ảnh SGK từ Clipboard (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
-            <p>Gemini nhận PDF gốc (trang đã chọn); gallery JPEG chỉ xem trước. Ảnh chụp hoặc Ctrl+V gửi ảnh đã nén. Nút Đọc nội dung SGK là tùy chọn để xem/sửa tóm tắt; 1-click không bắt buộc bước này.</p>
+            <p>Mistral OCR nhận diện chữ/công thức trên PDF/ảnh đã chọn (thường vài giây đến ~1 phút). Gallery JPEG chỉ xem trước. Gemini vẫn soạn giáo án từ văn bản đã nhận diện; không bắt buộc bước này trước 1-click.</p>
           </div>
           <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
         </div>
@@ -464,29 +464,47 @@
   <div id="modalApiKeys" class="modal-backdrop">
     <div class="modal-dialog">
       <div class="modal-header">
-        <h3><i data-lucide="key"></i> Quản lý Gemini API Keys</h3>
+        <h3><i data-lucide="key"></i> Quản lý API Key cá nhân</h3>
         <button class="modal-close-btn" data-close-modal="modalApiKeys">&times;</button>
       </div>
       <div class="modal-body">
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-          Mỗi tài khoản tự quản lý và bảo mật API Key riêng trên máy tính cá nhân. Hệ thống tự động xoay vòng qua key tiếp theo nếu gặp giới hạn lượt dùng.
+          Mỗi tài khoản tự lưu key trên CSDL. <b>Đọc nội dung SGK</b> dùng Mistral OCR; <b>soạn KHBD</b> dùng Gemini. Key của bạn, không dùng chung key hệ thống.
         </p>
-        <textarea id="textareaApiKeys" rows="7" style="width: 100%; padding: 0.6rem; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px;" placeholder="AIzaSy...&#10;AIzaSy..."></textarea>
-        
-        <div style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+
+        <label for="textareaApiKeys" style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem;">Gemini — soạn kế hoạch bài dạy</label>
+        <textarea id="textareaApiKeys" rows="4" style="width: 100%; padding: 0.6rem; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px;" placeholder="AIzaSy...&#10;AIzaSy..."></textarea>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <span id="keyValidationStatus" style="font-size: 0.82rem; font-weight: 600;"></span>
-          <button id="btnTestApiKey" class="btn btn-outline-dark btn-sm">
-            <i data-lucide="check-circle"></i> Kiểm tra Key
-          </button>
+          <div style="display:flex; gap:0.4rem; align-items:center;">
+            <label class="btn btn-outline-dark btn-sm" style="cursor: pointer;">
+              <i data-lucide="file-up"></i> File Gemini
+              <input type="file" id="fileInputApiKeyTxt" accept=".txt,text/plain" style="display: none;">
+            </label>
+            <button id="btnTestApiKey" class="btn btn-outline-dark btn-sm">
+              <i data-lucide="check-circle"></i> Kiểm tra Gemini
+            </button>
+          </div>
+        </div>
+
+        <label for="textareaMistralKeys" style="display:block; font-size:0.82rem; font-weight:700; margin:1rem 0 0.35rem;">Mistral OCR — đọc nội dung SGK</label>
+        <textarea id="textareaMistralKeys" rows="4" style="width: 100%; padding: 0.6rem; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px;" placeholder="Key Mistral (console.mistral.ai)&#10;Mỗi key một dòng"></textarea>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <span id="mistralKeyValidationStatus" style="font-size: 0.82rem; font-weight: 600;"></span>
+          <div style="display:flex; gap:0.4rem; align-items:center;">
+            <label class="btn btn-outline-dark btn-sm" style="cursor: pointer;">
+              <i data-lucide="file-up"></i> File Mistral
+              <input type="file" id="fileInputMistralKeyTxt" accept=".txt,text/plain" style="display: none;">
+            </label>
+            <button id="btnTestMistralKey" class="btn btn-outline-dark btn-sm">
+              <i data-lucide="check-circle"></i> Kiểm tra Mistral
+            </button>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
-        <label class="btn btn-outline-dark btn-sm" style="cursor: pointer; margin-right: auto;">
-          <i data-lucide="file-up"></i> Chọn file Keys (.txt)
-          <input type="file" id="fileInputApiKeyTxt" accept=".txt,text/plain" style="display: none;">
-        </label>
         <button class="btn btn-outline-dark" data-close-modal="modalApiKeys">Đóng</button>
-        <button id="btnSaveApiKeys" class="btn btn-primary">Lưu danh sách Key</button>
+        <button id="btnSaveApiKeys" class="btn btn-primary">Lưu lên CSDL</button>
       </div>
     </div>
   </div>
@@ -553,6 +571,8 @@
        SCRIPTS
        ========================================================================= -->
   <script src="ai-design-config.js"></script>
+  <script src="ai-usage-reporter.js"></script>
+  <script src="mistral-ocr-client.js?v=20260826-khbd"></script>
   <script src="js/khbd-curriculum.js"></script>
   <script src="js/khbd-prompts.js"></script>
   <script src="js/khbd-gemini.js"></script>

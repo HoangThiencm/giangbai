@@ -1202,7 +1202,7 @@ async function handleConfirmPdfPages() {
     updateImageCounts();
     renderImageGallery();
     closeModal("modalPdfPageSelect");
-    showToast(`Đã nạp ${pagesToRender.length} trang PDF để xem trước. Gemini nhận PDF các trang đã chọn.`, "success");
+    showToast(`Đã nạp ${pagesToRender.length} trang PDF để xem trước. Bấm Đọc nội dung SGK để nhận diện bằng Mistral OCR.`, "success");
     if (appState.activeTab !== "tabVision") {
       switchMainTab("tabVision");
     }
@@ -1314,6 +1314,46 @@ function setupEditorPreviewSync(editorId, previewId, onSave) {
   });
 }
 
+const VN_LETTER_RE = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+
+function rewriteMathSpanForVietnamese(inner, display) {
+  const wrap = (value) => {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return "";
+    return display ? `$$${trimmed}$$` : `$${trimmed}$`;
+  };
+  const pieces = [];
+  const re = /\\text(?:rm|tt|sf|it|bf)?\{([^{}]*)\}/g;
+  let last = 0;
+  let match;
+  while ((match = re.exec(inner))) {
+    const before = inner.slice(last, match.index);
+    if (before) pieces.push({ math: true, text: before });
+    const innerText = match[1];
+    if (VN_LETTER_RE.test(innerText)) pieces.push({ math: false, text: innerText });
+    else pieces.push({ math: true, text: match[0] });
+    last = match.index + match[0].length;
+  }
+  const rest = inner.slice(last);
+  if (rest) {
+    if (VN_LETTER_RE.test(rest) && !/\\[a-zA-Z]+/.test(rest)) pieces.push({ math: false, text: rest });
+    else pieces.push({ math: true, text: rest });
+  }
+  return pieces.map(part => part.math ? wrap(part.text) : part.text).join(" ");
+}
+
+function unwrapVietnameseMathForKatex(markdown) {
+  let text = String(markdown || "");
+  text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, inner) => rewriteMathSpanForVietnamese(inner, true));
+  text = text.replace(/\\\[([\s\S]+?)\\\]/g, (_, inner) => rewriteMathSpanForVietnamese(inner, true));
+  text = text.replace(/\\\(([\s\S]+?)\\\)/g, (_, inner) => rewriteMathSpanForVietnamese(inner, false));
+  text = text.replace(/\$([^$\n]+)\$/g, (full, inner) => {
+    if (!VN_LETTER_RE.test(inner)) return full;
+    return rewriteMathSpanForVietnamese(inner, false);
+  });
+  return text;
+}
+
 function renderMathPreview(markdownText, targetElementId) {
   const container = document.getElementById(targetElementId);
   if (!container) return;
@@ -1328,14 +1368,16 @@ function renderMathPreview(markdownText, targetElementId) {
     return;
   }
 
+  const katexSafeMarkdown = unwrapVietnameseMathForKatex(markdownText);
+
   // 1. Phân tích Markdown sang HTML bằng Marked.js
   let html = "";
   if (window.marked) {
     const renderer = new window.marked.Renderer();
     renderer.html = rawHtml => allowPreviewBreakHtml(rawHtml);
-    html = window.marked.parse(prepareLiteralListMarkers(markdownText), { breaks: true, gfm: true, renderer });
+    html = window.marked.parse(prepareLiteralListMarkers(katexSafeMarkdown), { breaks: true, gfm: true, renderer });
   } else {
-    html = escapeHtml(markdownText).replace(/\n/g, "<br>");
+    html = escapeHtml(katexSafeMarkdown).replace(/\n/g, "<br>");
   }
 
   const previewContent = sanitizePreviewHtml(html);
@@ -1353,7 +1395,9 @@ function renderMathPreview(markdownText, targetElementId) {
           { left: "\\(", right: "\\)", display: false },
           { left: "\\[", right: "\\]", display: true }
         ],
-        throwOnError: false
+        throwOnError: false,
+        strict: "ignore",
+        errorColor: "#64748b"
       });
     } catch (e) {
       console.warn("KaTeX render error:", e);
@@ -2227,29 +2271,161 @@ function isGeminiOverloadError(error) {
   return /503|high demand/i.test(String(error?.message || error || ""));
 }
 
+function getUserMistralKeys() {
+  if (typeof geminiAPI !== "undefined" && Array.isArray(geminiAPI.mistralKeys)) {
+    return geminiAPI.mistralKeys.filter(Boolean);
+  }
+  try {
+    const id = (typeof localStorage !== "undefined" && localStorage.getItem("userEmail")) || "default";
+    return JSON.parse(localStorage.getItem("khbd_user_mistral_keys_" + id) || "[]").filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function canUseMistralOcr() {
+  if (typeof window === "undefined" || !window.MistralOcr || typeof window.MistralOcr.ocrDocument !== "function") {
+    return false;
+  }
+  return getUserMistralKeys().length > 0;
+}
+
+function formatOcrPages(pages, label, selectedPages) {
+  const list = Array.isArray(pages) ? pages : [];
+  return list.map((page, idx) => {
+    const text = String(page.markdown || page.text || "").trim();
+    if (!text) return "";
+    const pageNum = (Array.isArray(selectedPages) && selectedPages[idx])
+      || (page.index != null ? Number(page.index) + 1 : idx + 1);
+    return `### ${label} — trang ${pageNum}\n\n${text}`;
+  }).filter(Boolean).join("\n\n");
+}
+
+async function photosToPdfDataUrl(photos) {
+  const pdfLib = (typeof PDFLib !== "undefined" && PDFLib) || (typeof window !== "undefined" && window.PDFLib);
+  if (!pdfLib?.PDFDocument || !photos.length) return null;
+  try {
+    const dest = await pdfLib.PDFDocument.create();
+    for (const image of photos) {
+      const bytes = dataUrlToUint8Array(image.dataUrl);
+      const mime = String(image.mimeType || "");
+      let embedded;
+      if (/png/i.test(mime)) embedded = await dest.embedPng(bytes);
+      else if (/jpe?g/i.test(mime) || !mime) embedded = await dest.embedJpg(bytes);
+      else continue;
+      const page = dest.addPage([embedded.width, embedded.height]);
+      page.drawImage(embedded, { x: 0, y: 0, width: embedded.width, height: embedded.height });
+    }
+    if (!dest.getPageCount()) return null;
+    return dest.saveAsBase64({ dataUri: true });
+  } catch (err) {
+    console.warn("Không gộp ảnh thành PDF cho Mistral OCR:", err);
+    return null;
+  }
+}
+
+async function extractTextbookOcrText(onProgress) {
+  const mistralKeys = getUserMistralKeys();
+  if (!mistralKeys.length) throw new Error("Thiếu Mistral API Key cá nhân. Bấm Quản lý API Key để nhập key Mistral của bạn.");
+  const chunks = [];
+  const pdfs = (appState.pdfAttachments || []).filter(att => att && att.dataUrl);
+  const photos = (appState.images || []).filter(img => img.sourceType !== "pdf" && img.dataUrl);
+  const totalUnits = pdfs.length + (photos.length ? 1 : 0);
+  let done = 0;
+  const report = (msg) => {
+    if (typeof onProgress === "function") {
+      const pct = totalUnits ? Math.min(90, Math.round(((done + 0.4) / totalUnits) * 80) + 10) : 20;
+      onProgress(msg, pct);
+    }
+  };
+
+  for (const att of pdfs) {
+    report(`Đang nhận diện PDF "${att.name || "SGK"}" bằng Mistral OCR...`);
+    const part = await buildPdfMediaPart(att);
+    const result = await window.MistralOcr.ocrDocument(part.dataUrl, mistralKeys, null, { module: "soankhbd" });
+    const text = formatOcrPages(result.data?.pages || [], att.name || "PDF SGK", att.selectedPages);
+    if (text) chunks.push(text);
+    done++;
+  }
+
+  if (photos.length) {
+    report(`Đang nhận diện ${photos.length} ảnh SGK bằng Mistral OCR...`);
+    const combined = await photosToPdfDataUrl(photos);
+    if (combined) {
+      const result = await window.MistralOcr.ocrDocument(combined, mistralKeys, null, { module: "soankhbd" });
+      const text = formatOcrPages(result.data?.pages || [], "Ảnh SGK");
+      if (text) chunks.push(text);
+    } else {
+      for (let i = 0; i < photos.length; i++) {
+        report(`Đang nhận diện ảnh ${i + 1}/${photos.length} bằng Mistral OCR...`);
+        const res = await window.MistralOcr.ocrImageDataUrl(photos[i].dataUrl, mistralKeys, null, { module: "soankhbd" });
+        const text = String(res.text || "").trim();
+        if (text) chunks.push(`### ${photos[i].name || `Ảnh SGK ${i + 1}`}\n\n${text}`);
+      }
+    }
+    done++;
+  }
+
+  return chunks.join("\n\n");
+}
+
+function applyTextbookOcrResult(ocrText, { silent = false } = {}) {
+  appState.content.vision = ocrText;
+  saveStateToLocalStorage();
+  const editor = document.getElementById("editorVision");
+  if (editor) editor.value = ocrText;
+  renderMathPreview(ocrText, "previewVision");
+  applyLessonBasedRecommendations({ silent });
+}
+
+async function readTextbookWithMistral() {
+  if (appState.isGenerating) {
+    showToast("Một tác vụ AI khác đang được xử lý, vui lòng chờ trong giây lát...", "warning");
+    return;
+  }
+  const btn = document.getElementById("btnAnalyzeVision");
+  try {
+    appState.isGenerating = true;
+    if (btn) btn.disabled = true;
+    updateProgress(15, "Đang nhận diện SGK bằng Mistral OCR...");
+    const status = document.getElementById("statusFooterText");
+    if (status) status.textContent = "Đang nhận diện SGK bằng Mistral OCR...";
+    const ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(pct, msg));
+    if (!ocrText.replace(/\s+/g, " ").trim()) {
+      throw new Error("Mistral OCR không đọc được chữ trên trang đã chọn.");
+    }
+    applyTextbookOcrResult(ocrText, { silent: false });
+    updateProgress(100, "Đã đọc nội dung SGK (Mistral OCR)!");
+    setTimeout(() => hideProgress(), 1500);
+    showToast("Đã nhận diện SGK bằng Mistral OCR. Có thể sửa nội dung trước khi soạn giáo án.", "success", 5000);
+    if (status) status.textContent = "Sẵn sàng.";
+  } catch (error) {
+    console.error("Mistral OCR:", error);
+    hideProgress();
+    showToast(`Mistral OCR lỗi (${error.message}). Kiểm tra Mistral API Key trong Quản lý API Key.`, "danger", 7000);
+    const status = document.getElementById("statusFooterText");
+    if (status) status.textContent = "Lỗi nhận diện SGK.";
+    openModal("modalApiKeys");
+  } finally {
+    appState.isGenerating = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function handleGenerateVision() {
   if (!hasTextbookMedia()) {
     showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh/trang SGK!", "warning");
     return;
   }
   if (String(appState.content.vision || "").trim().length >= 80) {
-    if (!confirm("Đã có nội dung phân tích SGK. Đọc lại sẽ tốn hạn mức Gemini. Tiếp tục?")) return;
+    if (!confirm("Đã có nội dung phân tích SGK. Đọc lại sẽ tốn hạn mức OCR. Tiếp tục?")) return;
   }
-  const context = getGenerationPromptContext();
-  await executeAIGeneration({
-    buttonId: "btnAnalyzeVision",
-    targetEditorId: "editorVision",
-    targetPreviewId: "previewVision",
-    operationName: "Đọc nội dung SGK",
-    prompt: getPromptTemplate("ANALYZE_TEXTBOOK", context),
-    skipGuard: true,
-    maxOutputTokens: 4096,
-    onSuccess: (result) => {
-      appState.content.vision = result;
-      saveStateToLocalStorage();
-      applyLessonBasedRecommendations({ silent: false });
-    }
-  });
+  if (canUseMistralOcr()) {
+    await readTextbookWithMistral();
+    return;
+  }
+  showToast("Đọc SGK dùng Mistral OCR của tài khoản này. Hãy nhập Mistral API Key trong Quản lý API Key.", "warning", 7000);
+  openModal("modalApiKeys");
 }
 
 function hasTextbookMedia() {
@@ -2518,7 +2694,7 @@ async function handle1ClickGenerate() {
   }
 
   const topic = getTopicDisplayName();
-  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nHệ thống gửi PDF/ảnh native và soạn 2 lần: I+II rồi A–D. File nguồn chỉ trong phiên này (F5 sẽ mất nếu chưa Đọc SGK).`;
+  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nHệ thống nhận diện SGK bằng Mistral OCR (nếu có) rồi soạn 2 lần: I+II rồi A–D. File PDF/ảnh chỉ trong phiên này (F5 sẽ mất nếu chưa Đọc SGK).`;
 
   if (!confirm(confirmMsg)) return;
 
@@ -2532,14 +2708,32 @@ async function handle1ClickGenerate() {
   if (btnCancel) btnCancel.disabled = false;
 
   try {
-    const media = await prepareGeminiMedia();
+    if (!canUseMistralOcr() && hasTextbookMedia() && !hasAnalyzedLessonContent()) {
+      showToast("Chưa có Mistral key cá nhân — 1-click sẽ soạn bằng Gemini từ PDF (chậm hơn). Nên nhập Mistral để đọc SGK nhanh.", "warning", 6000);
+    }
+    if (canUseMistralOcr() && hasTextbookMedia() && !hasAnalyzedLessonContent()) {
+      updateProgress(8, "Đang nhận diện SGK bằng Mistral OCR...");
+      try {
+        const ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(Math.min(18, pct), msg));
+        if (ocrText.replace(/\s+/g, " ").trim().length >= 80) {
+          applyTextbookOcrResult(ocrText, { silent: true });
+        }
+      } catch (ocrErr) {
+        console.warn("1-click Mistral OCR:", ocrErr);
+        showToast("Mistral OCR chưa xong, sẽ gửi PDF/ảnh cho Gemini.", "warning", 4500);
+      }
+    }
+    const skipMedia = hasAnalyzedLessonContent();
+    const media = skipMedia ? [] : await prepareGeminiMedia();
     if (!media.length && !hasAnalyzedLessonContent()) {
       throw new Error("Chưa có PDF/ảnh SGK trong phiên này. Hãy dán PDF hoặc ảnh trước khi 1-click.");
     }
     if (hasAnalyzedLessonContent()) applyLessonBasedRecommendations({ silent: true });
     const context = getGenerationPromptContext();
 
-    updateProgress(20, "Bước 1/2: Đang soạn I. Mục tiêu và II. Thiết bị (PDF/ảnh đính kèm)...");
+    updateProgress(20, skipMedia
+      ? "Bước 1/2: Đang soạn I. Mục tiêu và II. Thiết bị (từ văn bản OCR)..."
+      : "Bước 1/2: Đang soạn I. Mục tiêu và II. Thiết bị (PDF/ảnh đính kèm)...");
     const promptCore = getPromptTemplate("GENERATE_CORE_LESSON", context);
     const rawCore = await generateOneClickContent(promptCore, media, { maxOutputTokens: 16384 });
     const coreParts = parseKhbdSections(rawCore, ["I", "II"]);
@@ -2563,7 +2757,9 @@ async function handle1ClickGenerate() {
     Object.assign(context, getGenerationPromptContext());
     context.objectives_content = finalObj;
 
-    updateProgress(60, "Bước 2/2: Đang soạn hoạt động A–D (PDF/ảnh đính kèm)...");
+    updateProgress(60, skipMedia
+      ? "Bước 2/2: Đang soạn hoạt động A–D (từ văn bản OCR)..."
+      : "Bước 2/2: Đang soạn hoạt động A–D (PDF/ảnh đính kèm)...");
     const promptAD = getPromptTemplate("GENERATE_ACTIVITIES_AD", context) + buildAllPhasePedagogyContext();
     const rawAD = await generateOneClickContent(promptAD, media, { maxOutputTokens: 32768 });
     const actParts = parseKhbdSections(rawAD, ["A", "B", "C", "D"]);
@@ -2589,7 +2785,9 @@ async function handle1ClickGenerate() {
     setTimeout(() => {
       hideProgress();
       switchMainTab("tabFullPreview");
-      showToast("Đã soạn I, II và III.A–D (2 lần gọi). File PDF/ảnh chỉ trong phiên này.", "success", 6000);
+      showToast(skipMedia
+        ? "Đã soạn I, II và III.A–D (2 lần gọi) từ văn bản Mistral OCR."
+        : "Đã soạn I, II và III.A–D (2 lần gọi). File PDF/ảnh chỉ trong phiên này.", "success", 6000);
     }, 1200);
 
   } catch (err) {
@@ -2774,80 +2972,113 @@ function showToast(message, type = "info", duration = 3500) {
 // =============================================================================
 // MODAL MANAGEMENT & QUẢN LÝ API KEYS
 // =============================================================================
+function parseKeysFromTextarea(text) {
+  return String(text || "")
+    .split(/[\r\n,;]+/)
+    .map(k => k.trim())
+    .filter(k => k.length > 10);
+}
+
+function bindKeyFileInput(inputId, textareaId, onLoaded) {
+  const fileInput = document.getElementById(inputId);
+  if (!fileInput) return;
+  fileInput.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const keys = parseKeysFromTextarea(event.target.result || "");
+      if (keys.length === 0) {
+        showToast("Không tìm thấy API Key hợp lệ (> 10 ký tự) trong file txt!", "warning");
+        return;
+      }
+      const textarea = document.getElementById(textareaId);
+      if (textarea) textarea.value = keys.join("\n");
+      if (typeof onLoaded === "function") await onLoaded(keys);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+}
+
 function setupApiKeyModal() {
   document.getElementById("btnManageKeys").addEventListener("click", () => {
-    document.getElementById("textareaApiKeys").value = geminiAPI.apiKeys.join("\n");
+    document.getElementById("textareaApiKeys").value = (geminiAPI.apiKeys || []).join("\n");
+    const mistralArea = document.getElementById("textareaMistralKeys");
+    if (mistralArea) mistralArea.value = (geminiAPI.mistralKeys || []).join("\n");
     document.getElementById("keyValidationStatus").textContent = "";
+    const mistralStatus = document.getElementById("mistralKeyValidationStatus");
+    if (mistralStatus) mistralStatus.textContent = "";
     openModal("modalApiKeys");
   });
 
-  // Xử lý nạp file Keys (.txt)
-  const fileInputTxt = document.getElementById("fileInputApiKeyTxt");
-  if (fileInputTxt) {
-    fileInputTxt.addEventListener("change", (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const text = event.target.result || "";
-        const keys = text
-          .split(/[\r\n,;]+/)
-          .map(k => k.trim())
-          .filter(k => k.length > 10);
-
-        if (keys.length === 0) {
-          showToast("Không tìm thấy API Key hợp lệ (> 10 ký tự) trong file txt!", "warning");
-          return;
-        }
-
-        const textarea = document.getElementById("textareaApiKeys");
-        textarea.value = keys.join("\n");
-        await geminiAPI.saveKeysToServer(keys);
-        updateKeyCountDisplay();
-        showToast(`Đã nạp và lưu ${keys.length} API Keys lên CSDL máy chủ!`, "success");
-      };
-      reader.readAsText(file);
-      e.target.value = ""; // Reset
-    });
-  }
+  bindKeyFileInput("fileInputApiKeyTxt", "textareaApiKeys", async (keys) => {
+    await geminiAPI.saveKeysToServer(keys);
+    updateKeyCountDisplay();
+    showToast(`Đã nạp và lưu ${keys.length} Gemini key lên CSDL!`, "success");
+  });
+  bindKeyFileInput("fileInputMistralKeyTxt", "textareaMistralKeys", async (keys) => {
+    await geminiAPI.saveMistralKeysToServer(keys);
+    updateKeyCountDisplay();
+    showToast(`Đã nạp và lưu ${keys.length} Mistral key lên CSDL!`, "success");
+  });
 
   document.getElementById("btnSaveApiKeys").addEventListener("click", async () => {
-    const text = document.getElementById("textareaApiKeys").value;
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-    await geminiAPI.saveKeysToServer(lines);
+    const geminiLines = parseKeysFromTextarea(document.getElementById("textareaApiKeys").value);
+    const mistralArea = document.getElementById("textareaMistralKeys");
+    const mistralLines = parseKeysFromTextarea(mistralArea ? mistralArea.value : "");
+    await geminiAPI.saveUserAiKeysToServer({ keys: geminiLines, mistral_keys: mistralLines });
     updateKeyCountDisplay();
     closeModal("modalApiKeys");
-    if (geminiAPI.apiKeys.length > 0) {
-      showToast(`Đã lưu ${geminiAPI.apiKeys.length} API Keys lên CSDL máy chủ!`, "success");
-    } else {
-      showToast(`Đã xóa danh sách API Keys trên CSDL`, "info");
-    }
+    showToast(`Đã lưu lên CSDL: Gemini ${geminiAPI.apiKeys.length} key, Mistral ${(geminiAPI.mistralKeys || []).length} key.`, "success");
   });
 
   document.getElementById("btnTestApiKey").addEventListener("click", async () => {
-    const text = document.getElementById("textareaApiKeys").value;
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const lines = parseKeysFromTextarea(document.getElementById("textareaApiKeys").value);
     const statusElem = document.getElementById("keyValidationStatus");
 
     if (lines.length === 0) {
-      statusElem.textContent = "Chưa có key để kiểm tra!";
+      statusElem.textContent = "Chưa có Gemini key để kiểm tra!";
       statusElem.style.color = "var(--danger)";
       return;
     }
 
-    statusElem.textContent = "Đang kiểm tra Key đầu tiên...";
+    statusElem.textContent = "Đang kiểm tra Gemini key đầu tiên...";
     statusElem.style.color = "var(--primary)";
 
     try {
       await geminiAPI.testApiKey(lines[0], geminiAPI.selectedModel);
-      statusElem.textContent = "✅ Key hợp lệ và hoạt động tốt!";
+      statusElem.textContent = "✅ Gemini key hợp lệ!";
       statusElem.style.color = "var(--success)";
     } catch (e) {
-      statusElem.textContent = `❌ Lỗi: ${e.message}`;
+      statusElem.textContent = `❌ Gemini: ${e.message}`;
       statusElem.style.color = "var(--danger)";
     }
   });
+
+  const btnTestMistral = document.getElementById("btnTestMistralKey");
+  if (btnTestMistral) {
+    btnTestMistral.addEventListener("click", async () => {
+      const lines = parseKeysFromTextarea(document.getElementById("textareaMistralKeys")?.value || "");
+      const statusElem = document.getElementById("mistralKeyValidationStatus");
+      if (!statusElem) return;
+      if (lines.length === 0) {
+        statusElem.textContent = "Chưa có Mistral key để kiểm tra!";
+        statusElem.style.color = "var(--danger)";
+        return;
+      }
+      statusElem.textContent = "Đang kiểm tra Mistral key đầu tiên...";
+      statusElem.style.color = "var(--primary)";
+      try {
+        await geminiAPI.testMistralApiKey(lines[0]);
+        statusElem.textContent = "✅ Mistral key hợp lệ!";
+        statusElem.style.color = "var(--success)";
+      } catch (e) {
+        statusElem.textContent = `❌ Mistral: ${e.message}`;
+        statusElem.style.color = "var(--danger)";
+      }
+    });
+  }
 
   // Nút đóng modal chung
   document.querySelectorAll("[data-close-modal]").forEach(btn => {
@@ -2859,9 +3090,10 @@ function setupApiKeyModal() {
 }
 
 function updateKeyCountDisplay() {
-  const count = geminiAPI.apiKeys.length;
+  const geminiCount = (geminiAPI.apiKeys || []).length;
+  const mistralCount = (geminiAPI.mistralKeys || []).length;
   const badge = document.getElementById("keyCountBadge");
-  if (badge) badge.textContent = count;
+  if (badge) badge.textContent = `G${geminiCount} · M${mistralCount}`;
 }
 
 function syncGeminiConfigToUI() {
@@ -2885,6 +3117,7 @@ if (typeof window !== 'undefined') {
   window.assertPhasePedagogyOutput = assertPhasePedagogyOutput;
   window.sanitizeLessonMarkdown = sanitizeLessonMarkdown;
   window.splitKhbdMarkdownTableRow = splitKhbdMarkdownTableRow;
+  window.unwrapVietnameseMathForKatex = unwrapVietnameseMathForKatex;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -2902,6 +3135,9 @@ if (typeof module !== 'undefined' && module.exports) {
     assertObjectivesStandards,
     sanitizeLessonMarkdown,
     splitKhbdMarkdownTableRow,
-    mergeSplitActivityTables
+    mergeSplitActivityTables,
+    unwrapVietnameseMathForKatex,
+    canUseMistralOcr,
+    getUserMistralKeys
   };
 }
