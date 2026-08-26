@@ -68,6 +68,8 @@ Manager tạo Coder, chuyển toàn bộ kế hoạch đã duyệt và yêu cầ
 ### Bước 5 – Manager nghiệm thu
 
 Manager kiểm tra thay đổi và kết quả kiểm thử. Nếu chưa đạt, giao Coder sửa tiếp. Chỉ báo hoàn thành khi có bằng chứng phù hợp.
+### Bước 6 - Đẩy lên github (nếu có).
+Nếu nghiệm thu tốt thì sẽ đẩy lên github.
 
 ## Quy tắc an toàn
 
