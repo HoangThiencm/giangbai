@@ -203,7 +203,7 @@ class GeminiAPIManager {
    * @param {string} systemRole Chỉ dẫn hệ thống
    * @param {number} temperature Độ sáng tạo (0.0 - 1.0)
    */
-  async generateContent(prompt, images = [], systemRole = null, temperature = 0.3, signal = null) {
+  async generateContent(prompt, images = [], systemRole = null, temperature = 0.3, signal = null, options = {}) {
     // Luôn đảm bảo nạp keys mới nhất nếu trước đó chưa có
     if (!this.apiKeys || this.apiKeys.length === 0) {
       this.loadKeysFromLocalStorage();
@@ -247,7 +247,7 @@ class GeminiAPIManager {
       generationConfig: {
         temperature: temperature,
         topP: 0.95,
-        maxOutputTokens: 8192
+        maxOutputTokens: options.maxOutputTokens || (images.length ? 4096 : 8192)
       }
     };
 
