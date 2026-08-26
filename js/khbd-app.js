@@ -45,7 +45,7 @@ const appState = {
     }
   },
 
-  activeTab: "tabConfig",
+  activeTab: "tabVision",
   activeActSubtab: "A",
   isGenerating: false,
   cancelRequested: false,
@@ -483,7 +483,7 @@ function ensurePedagogyFromLesson({ force = false, silent = false } = {}) {
 
 function applyLessonBasedRecommendations({ force = false, silent = false } = {}) {
   if (!hasAnalyzedLessonContent()) {
-    if (!silent) showToast("Cần phân tích hoặc dán nội dung SGK ở Tab 1 trước khi đề xuất NLS/AI và PPDH.", "warning");
+    if (!silent) showToast("Cần phân tích hoặc dán nội dung SGK ở Bước 0 trước khi đề xuất NLS/AI và PPDH.", "warning");
     return false;
   }
   const ped = ensurePedagogyFromLesson({ force, silent: true });
@@ -509,7 +509,7 @@ function renderStandardsCatalog() {
     const maxSelect = catalog.maxSelect || 3;
     const waitHint = hasAnalyzedLessonContent()
       ? `Hệ thống đề xuất 2–3 mục đúng văn bản theo nội dung SGK đã phân tích; bạn có thể đổi, tối đa ${maxSelect} mục.`
-      : "Chưa có nội dung bài. Hãy phân tích ảnh/PDF SGK ở Tab 1, sau đó hệ thống mới đề xuất 2–3 mục.";
+      : "Chưa có nội dung bài. Hãy phân tích ảnh/PDF SGK ở Bước 0, sau đó hệ thống mới đề xuất 2–3 mục.";
     panel.innerHTML = `<fieldset class="tool-group"><legend>${catalog.framework} (${catalog.date})</legend><small>${catalog.source}. ${waitHint}</small>${entries.map(entry => {
       const rec = suggestedIds.has(entry.id);
       return `<label style="display:block"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selectedIds.has(entry.id) ? "checked" : ""}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : ""}</label>`;
@@ -637,7 +637,7 @@ function setupEventListeners() {
       if (key === "digital" || key === "ai") {
         if (e.target.checked && !hasAnalyzedLessonContent()) {
           renderStandardsCatalog();
-          showToast("Hãy phân tích SGK ở Tab 1 trước. Sau khi có nội dung bài, hệ thống sẽ đề xuất 2–3 mục đúng văn bản.", "info", 5000);
+          showToast("Hãy phân tích SGK ở Bước 0 trước. Sau khi có nội dung bài, hệ thống sẽ đề xuất 2–3 mục đúng văn bản.", "info", 5000);
         } else {
           ensureIntegrationStandards({ force: e.target.checked && (!standardsOfKind(key).length || standardsOfKind(key).every(item => item.autoSuggested)) });
           renderStandardsCatalog();
@@ -1628,11 +1628,11 @@ async function handleGenerateCurrentActivity() {
  */
 async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, operationName, prompt, images = [], onSuccess, requireTextbook = false, requireSource = false }) {
   if (requireTextbook && !hasTextbookSource()) {
-    showToast("Cần dán ảnh/PDF SGK hoặc có nội dung phân tích Tab 1 trước khi soạn hoạt động. Không tự thêm nội dung ngoài nguồn.", "warning");
+    showToast("Cần dán ảnh/PDF SGK hoặc có nội dung phân tích Bước 0 trước khi soạn hoạt động. Không tự thêm nội dung ngoài nguồn.", "warning");
     return;
   }
   if (requireSource && !hasLessonSource()) {
-    showToast("Cần nguồn bài học (ảnh SGK, phân tích Tab 1, hoặc YCCĐ TT 32). Không tự tạo mục tiêu kiến thức.", "warning");
+    showToast("Cần nguồn bài học (ảnh SGK, phân tích Bước 0, hoặc YCCĐ TT 32). Không tự tạo mục tiêu kiến thức.", "warning");
     return;
   }
   const context = normalizeTeachingContext(appState.teachingContext);
@@ -1724,7 +1724,7 @@ async function handle1ClickGenerate() {
     return;
   }
   if (!hasTextbookSource()) {
-    showToast("Cần dán ảnh/PDF SGK hoặc có nội dung phân tích Tab 1 trước khi tạo toàn bộ giáo án. Không tự thêm nội dung ngoài nguồn.", "warning");
+    showToast("Cần dán ảnh/PDF SGK hoặc có nội dung phân tích Bước 0 trước khi tạo toàn bộ giáo án. Không tự thêm nội dung ngoài nguồn.", "warning");
     switchMainTab("tabVision");
     return;
   }
