@@ -82,13 +82,53 @@ class DocxGenerator {
     return s.trim();
   }
 
+  /**
+   * Chuẩn hoá các lệnh toán thường gặp trước khi bộ đọc Equation xử lý.
+   * Chỉ rút gọn dấu gạch chéo kép khi ngay sau đó là một lệnh toán đã biết;
+   * vì vậy lệnh xuống dòng LaTex `\\` vẫn được giữ nguyên.
+   */
+  normalizeLatexForMath(latex) {
+    let source = String(latex || "");
+    const supportedCommands = [
+      "Leftrightarrow", "Rightarrow", "leftarrow", "rightarrow", "overrightarrow", "subseteq", "supseteq",
+      "emptyset", "parallel", "triangle", "varepsilon", "displaystyle", "overline", "widehat",
+      "mathbb", "mathcal", "mathfrak", "mathrm", "mathbf", "textrm", "textit", "textbf",
+      "nolimits", "limits", "dfrac", "tfrac", "cfrac", "notin", "subset", "supset", "forall",
+      "exists", "approx", "equiv", "cdots", "ldots", "times", "cdot", "lbrack", "rbrack",
+      "lparen", "rparen", "lbrace", "rbrace", "alpha", "gamma", "delta", "Delta", "theta",
+      "Theta", "lambda", "sigma", "Sigma", "omega", "Omega", "nabla", "partial", "infty",
+      "angle", "perp", "bullet", "degree", "right", "left", "frac", "sqrt", "beta", "epsilon",
+      "varepsilon", "pi", "Pi", "phi", "Phi", "psi", "rho", "mu", "nu", "neq", "leq", "geq",
+      "dots", "circ", "hbar", "not", "in", "ni", "ne", "le", "ge", "pm", "mp", "ast", "div",
+      "cup", "cap", "sim", "to", "ell", "sin", "cos", "tan", "cot", "sec", "csc", "log", "ln",
+      "lg", "lim", "max", "min", "gcd", "lcm", "det", "dim", "ker", "hom", "arg", "exp", "sinh",
+      "cosh", "tanh", "vec", "hat", "underline", "quad", "qquad", "text"
+    ].sort((a, b) => b.length - a.length);
+    const isKnownCommand = value => supportedCommands.some(command => value.startsWith(command));
+
+    // Dữ liệu Markdown có thể giữ nguyên escape kép (\\\\notin). Không đụng tới \\ độc lập.
+    source = source.replace(/\\{2,}([A-Za-z]+)/g, (match, commandText) => (
+      isKnownCommand(commandText) ? `\\${commandText}` : match
+    ));
+
+    // Tách theo lệnh dài nhất: \\notinA -> \\notin A, thay vì coi "notinA" là một lệnh lạ.
+    source = source.replace(/\\([A-Za-z]+)/g, (match, commandText) => {
+      const command = supportedCommands.find(candidate => commandText.startsWith(candidate));
+      if (!command) return match;
+      const suffix = commandText.slice(command.length);
+      return suffix ? `\\${command} ${suffix}` : match;
+    });
+
+    return source;
+  }
+
   /** Chuyển LaTeX ($...$, $$...$$, \\(...\\)) thành Equation Word (OMML). Thất bại thì trả null để fallback Unicode. */
   createNativeMath(latex) {
     const mathApi = window.docx;
     const required = ["Math", "MathRun", "MathFraction", "MathSuperScript", "MathSubScript", "MathSubSuperScript", "MathRadical"];
     if (!required.every(name => typeof mathApi[name] === "function")) return null;
 
-    let source = String(latex || "").trim();
+    let source = this.normalizeLatexForMath(latex).trim();
     source = source.replace(/^\$\$([\s\S]*)\$\$$/, "$1").replace(/^\$([\s\S]*)\$$/, "$1");
     source = source.replace(/^\\\(([\s\S]*)\\\)$/, "$1").replace(/^\\\[([\s\S]*)\\\]$/, "$1").trim();
     if (!source) return null;
@@ -673,11 +713,13 @@ class DocxGenerator {
     let cell = "";
     let escaped = false;
     const content = String(line || "").trim().replace(/^\||\|$/g, "");
-    for (const character of content) {
+    for (let index = 0; index < content.length; index++) {
+      const character = content[index];
       if (escaped) {
         cell += character;
         escaped = false;
-      } else if (character === "\\") {
+      } else if (character === "\\" && content[index + 1] === "|") {
+        // Chỉ dùng backslash để escape dấu phân cách bảng; giữ nguyên \notin, \frac... cho Equation.
         escaped = true;
       } else if (character === "|") {
         cells.push(cell.trim());
