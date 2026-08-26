@@ -68,10 +68,12 @@ Chủ đề bài học: "{topic}" (Môn học: {subject}).
 
 HÃY PHÂN TÍCH VÀ TRÍCH XUẤT ĐẦY ĐỦ, TRỌN VẸN TOÀN BỘ NỘI DUNG TỪ ĐẦU ĐẾN CUỐI CÁC TRANG (TUYỆT ĐỐI KHÔNG CẮT NGẮN, KHÔNG DỪNG GIỮA CHỪNG):
 1. **Tổng quan bài học:** Tên bài, vị trí trong chương trình và mục tiêu cần đạt cốt lõi theo SGK.
-2. **Khung kiến thức trọng tâm:**
-   - Các định nghĩa, khái niệm, thuật ngữ mới theo SGK cung cấp (trích xuất đầy đủ từng khái niệm, câu chữ chính xác).
-   - Các quy tắc, công thức toán học, định lí, tính chất (viết đầy đủ bằng mã LaTeX $...$).
-   - Các quy ước, chú ý sư phạm quan trọng.
+2. **Khung kiến thức trọng tâm (Bóc tách rõ ràng theo từng tiểu mục SGK để ánh xạ 1-1 sang hoạt động dạy học):**
+   - Đánh số và nêu rõ tiêu đề từng tiểu mục trong SGK: \`Mục 1: [Tên tiểu mục 1]\`, \`Mục 2: [Tên tiểu mục 2]\`... (nếu bài có N tiểu mục thì đánh số đủ từ 1 đến N).
+   - Với mỗi tiểu mục, trích xuất đầy đủ:
+     + Các định nghĩa, khái niệm, thuật ngữ mới theo SGK cung cấp (trích xuất đầy đủ từng khái niệm, câu chữ chính xác).
+     + Các quy tắc, công thức toán học, định lí, tính chất (viết đầy đủ bằng mã LaTeX $...$).
+     + Các quy ước, chú ý sư phạm quan trọng.
 3. **Chuỗi hoạt động khám phá trong SGK:**
    - Hoạt động mở đầu (tình huống, hình ảnh thực tế gắn với cuộc sống).
    - Các hoạt động hình thành kiến thức (HĐ khám phá 1, HĐ 2, các câu hỏi gợi mở, ví dụ mẫu kèm lời giải).
@@ -223,16 +225,30 @@ ${ACTIVITY_TABLE_CONTRACT}
 YÊU CẦU QUAN TRỌNG:
 ${ACTIVITY_TABLE_CONTRACT}
 - Bám sát mạch kiến thức và các hoạt động khám phá trong SGK, dữ liệu bài học do giáo viên cung cấp.
-- Chia bài học thành các đơn vị kiến thức nhỏ rõ ràng (ví dụ: Hoạt động 2.1: Khái niệm...; Hoạt động 2.2: Định lí/Tính chất...; Hoạt động 2.3: Quy tắc...).
-- MỖI ĐƠN VỊ KIẾN THỨC ĐỀU PHẢI CÓ ĐẦY ĐỦ 4 THÀNH PHẦN: a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (4 bước: Chuyển giao -> Thực hiện -> Báo cáo thảo luận -> Kết luận nhận định).
-- Cột TRÁI mục d) BẮT BUỘC tuân thủ Kịch bản thực chiến phân vai: **GV:** nói câu gì cụ thể trong ngoặc kép "...", hành động gì (phát phiếu, quan sát lỗi sai điển hình, can thiệp phân hóa); **HS:** làm gì (cá nhân X phút -> nhóm Y phút -> sản phẩm trung gian trên bảng phụ/phiếu), báo cáo và phản biện thế nào.
+- NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO TIỂU MỤC SGK:
+  + Nếu dữ liệu SGK có N tiểu mục kiến thức (Mục 1, Mục 2, ..., Mục N hoặc HĐ Khám phá 1, 2, ..., N), bạn BẮT BUỘC PHẢI chia Hoạt động B thành đúng N hoạt động con tương ứng 1-1:
+    * ### 1. Hoạt động 2.1: [Tên tiểu mục 1 trong SGK]
+    * ### 2. Hoạt động 2.2: [Tên tiểu mục 2 trong SGK]
+    * ...
+    * ### N. Hoạt động 2.N: [Tên tiểu mục N trong SGK]
+  + TUYỆT ĐỐI CẤM GỘP: Không được tự ý gộp N tiểu mục thành 1 hoạt động chung chung.
+  + TUYỆT ĐỐI CẤM BỊA THÊM: Không được tự ý bịa thêm các hoạt động con ngoài số lượng tiểu mục thực tế trong SGK.
+- TÍNH ĐẦY ĐỦ CỦA TỪNG HOẠT ĐỘNG NHÁNH:
+  + MỖI HOẠT ĐỘNG 2.k (2.1, 2.2, ..., 2.N) ĐỀU PHẢI CÓ ĐẦY ĐỦ 4 THÀNH PHẦN:
+    * #### a) Mục tiêu:
+    * #### b) Nội dung:
+    * #### c) Sản phẩm:
+    * #### d) Tổ chức thực hiện:
+  + Bắt buộc mục d) của từng hoạt động 2.k phải là ĐÚNG 1 BẢNG MARKDOWN 2 CỘT (1 hàng dữ liệu duy nhất), với kịch bản thực chiến phân vai rõ ràng:
+    * CỘT TRÁI: Đủ 4 bước (Bước 1: Chuyển giao -> Bước 2: Thực hiện -> Bước 3: Báo cáo thảo luận -> Bước 4: Kết luận nhận định), phân định rõ vai trò **GV:** (nói câu gì trong ngoặc kép "...", hành động gì, phát hiện lỗi sai điển hình: ..., can thiệp phân hóa) và **HS:** (làm việc cá nhân X phút vào nháp -> thảo luận nhóm Y phút -> tạo sản phẩm trung gian trên bảng nhóm/phiếu, báo cáo và phản biện thế nào).
+    * CỘT PHẢI: NỘI DUNG GHI BẢNG (kiến thức chốt cho HS chép vào vở: định nghĩa, quy tắc, định lý, công thức toán LaTeX $...$, chú ý, ví dụ mẫu kèm đề bài và lời giải chi tiết). CẤM mô tả việc GV/HS ở cột phải.
 - Sản phẩm và Cột PHẢI mục d) PHẢI CÓ LỜI GIẢI TOÁN HỌC CHI TIẾT, CÔNG THỨC LATEX HOÀN CHỈNH, ĐỊNH NGHĨA/ĐỊNH LÍ CHÍNH XÁC ĐỂ HS GHI VỞ.
 
 CẤU TRÚC MẪU:
 
 ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI
 
-### 1. Hoạt động 2.1: [Tên đơn vị kiến thức 1]
+### 1. Hoạt động 2.1: [Tên tiểu mục 1 trong SGK]
 #### a) Mục tiêu:
 - Học sinh hình thành được khái niệm / nhận biết được...
 #### b) Nội dung:
@@ -245,10 +261,11 @@ CẤU TRÚC MẪU:
 | :--- | :--- |
 | + Bước 1: Chuyển giao nhiệm vụ: **GV:** Phát Phiếu học tập / giao hoạt động khám phá trong SGK: "Các em có 3 phút làm việc cá nhân và 4 phút thảo luận nhóm hoàn thành nhiệm vụ...". **HS:** Nhận phiếu học tập, phân công nhiệm vụ trong nhóm.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân (3 phút) ghi kết quả vào nháp -> Thảo luận nhóm (4 phút) thống nhất sản phẩm trung gian lên bảng nhóm. **GV:** Di chuyển bao quát lớp, phát hiện lỗi sai điển hình: ..., can thiệp hỗ trợ phân hóa (gợi mở cho HS yếu, đặt câu hỏi nâng cao cho HS khá giỏi).<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện một nhóm lên bảng trình bày sản phẩm; các nhóm khác nhận xét, đối chiếu và phản biện. **GV:** Điều hành báo cáo, đặt câu hỏi kiểm tra độ hiểu sâu: "Tại sao nhóm em lại suy ra được công thức này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét quá trình làm việc của các nhóm, chuẩn hóa kiến thức, giảng giải bản chất định nghĩa/quy tắc và hướng dẫn ghi bảng. **HS:** Sửa bài vào vở, ghi nhận định nghĩa/công thức chuẩn mực. | **1. [Tên kiến thức]**<br>- Định nghĩa / Khái niệm: ...<br>- Quy tắc / Công thức: $...$<br>+ Chú ý: ...<br>• Ví dụ mẫu 1: (Đề bài và Lời giải chi tiết). |
 
-### 2. Hoạt động 2.2: [Tên đơn vị kiến thức 2]
-(Tương tự đầy đủ 4 phần a, b, c, d với kịch bản thực chiến phân vai GV-HS và ví dụ áp dụng...)
+### 2. Hoạt động 2.2: [Tên tiểu mục 2 trong SGK]
+(Đầy đủ 4 phần a, b, c, d với đúng 1 bảng 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng tương tự Hoạt động 2.1)
 
-### 3. Hoạt động 2.3: [Nếu bài có thêm đơn vị kiến thức 3...]`,
+### N. Hoạt động 2.N: [Tên tiểu mục N trong SGK]
+(Nếu SGK có N tiểu mục, tạo đủ N hoạt động tương ứng từ 2.1 đến 2.N)`,
 
   // TAB 4.C: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG LUYỆN TẬP
   GENERATE_ACTIVITY_C: `Hãy biên soạn chi tiết **HOẠT ĐỘNG LUYỆN TẬP** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
@@ -486,6 +503,111 @@ ${latexRule}
 - Mục tiêu kiến thức phải bám YCCĐ CT GDPT 2018 / Thông tư 32/2018/TT-BGDĐT; không tự tạo kiến thức ngoài nguồn.`;
 }
 
+/**
+ * Trích xuất danh sách các tiểu mục kiến thức từ nội dung phân tích SGK (Tab 1/Bước 0).
+ * Bóc tách theo các mẫu: Mục 1, Mục 2, 1. [Tiêu đề], 2. [Tiêu đề], Hoạt động khám phá 1, HĐ1, v.v.
+ * @param {string} content - Nội dung phân tích SGK
+ * @returns {Array<{index: number, title: string}>} Danh sách tiểu mục đã chuẩn hóa
+ */
+function extractTextbookSubsections(content) {
+  if (!content || typeof content !== 'string') return [];
+  const text = content.trim();
+  if (!text) return [];
+
+  const results = [];
+  const seenTitles = new Set();
+
+  const ignorePatterns = [
+    /^tổng quan\b/i,
+    /^khung kiến thức\b/i,
+    /^chuỗi hoạt động\b/i,
+    /^hệ thống bài tập\b/i,
+    /^đề xuất của\b/i,
+    /^yêu cầu cần đạt\b/i,
+    /^tiến trình dạy học\b/i,
+    /^thiết bị\b/i,
+    /^hoạt động mở đầu\b/i,
+    /^hoạt động luyện tập\b/i,
+    /^hoạt động vận dụng\b/i,
+    /^bài tập cuối bài\b/i,
+    /^(?:định nghĩa|khái niệm|quy tắc|công thức|chú ý|ví dụ|bài tập|nhiệm vụ|bước\s*\d+|phương pháp|kỹ thuật)$/i
+  ];
+
+  function cleanTitle(raw) {
+    if (!raw) return '';
+    let t = raw
+      .replace(/^[\s*#\-+•:|`]+/, '')
+      .replace(/[\s*#\-+•:|`]+$/, '')
+      .replace(/\s*\(.*?\)\s*$/, '')
+      .replace(/^[*_~`]+/, '')
+      .replace(/[*_~`]+$/, '')
+      .trim();
+    return t;
+  }
+
+  function isIgnored(title) {
+    if (!title || title.length < 2) return true;
+    return ignorePatterns.some(p => p.test(title));
+  }
+
+  function addSub(idx, title) {
+    const cleaned = cleanTitle(title);
+    if (!cleaned || isIgnored(cleaned)) return;
+    const key = cleaned.toLowerCase();
+    if (seenTitles.has(key)) return;
+    seenTitles.add(key);
+    results.push({ index: idx, title: cleaned });
+  }
+
+  // Chiến lược 1: Tìm các mẫu "Mục 1:", "Mục 2:", "Phần 1:", "Phần 2:"
+  const mucRegex = /(?:^|\n)\s*(?:[-*+•]\s+)?(?:#{1,6}\s+)?(?:\*\*)?(?:Mục|Phần)\s*(\d+)[\s.:\-]+([^\r\n]+)/gi;
+  let match;
+  while ((match = mucRegex.exec(text)) !== null) {
+    const num = parseInt(match[1], 10);
+    const title = match[2];
+    addSub(num, title);
+  }
+
+  if (results.length > 0) {
+    return results.map((item, i) => ({ index: i + 1, title: item.title }));
+  }
+
+  // Chiến lược 2: Tìm theo "HĐ khám phá 1:", "Hoạt động khám phá 1:", "HĐ 1:", "Khám phá 1:"
+  const hdRegex = /(?:^|\n)\s*(?:[-*+•]\s+)?(?:#{1,6}\s+)?(?:\*\*)?(?:Hoạt động khám phá|HĐ khám phá|Hoạt động|HĐ|Khám phá)\s*(\d+)[\s.:\-]+([^\r\n]+)/gi;
+  while ((match = hdRegex.exec(text)) !== null) {
+    const num = parseInt(match[1], 10);
+    const title = match[2];
+    addSub(num, title);
+  }
+
+  if (results.length > 0) {
+    return results.map((item, i) => ({ index: i + 1, title: item.title }));
+  }
+
+  // Chiến lược 3: Tìm trong phạm vi mục 2 "Khung kiến thức trọng tâm" hoặc toàn văn
+  let searchBlock = text;
+  const section2Match = text.match(/2\.\s*(?:\*\*)?Khung kiến thức trọng tâm[\s\S]*?(?=(?:\n\s*(?:#{1,3}\s*)?3\.\s*(?:\*\*)?Chuỗi hoạt động|\n\s*(?:#{1,2}\s*)?[3-9]\.|$))/i);
+  if (section2Match) {
+    searchBlock = section2Match[0];
+  }
+
+  const numRegex = /(?:^|\n)\s*(?:[-*+•]\s+)?(?:#{1,6}\s+)?(?:\*\*)?(\d+)[\s.)\-]+(?:\*\*)?\s*([A-ZÀ-Ỹ0-9][^\r\n]+)/g;
+  while ((match = numRegex.exec(searchBlock)) !== null) {
+    const num = parseInt(match[1], 10);
+    const title = match[2];
+    if (section2Match && (num >= 1 && num <= 5) && isIgnored(title)) {
+      continue;
+    }
+    addSub(num, title);
+  }
+
+  if (results.length > 0) {
+    return results.map((item, i) => ({ index: i + 1, title: item.title }));
+  }
+
+  return [];
+}
+
 function getPromptTemplate(templateKey, context) {
   // Use PROMPTS[templateKey] as base, but replace hardcoded "Toán" with subject name
   let baseTemplate = PROMPTS[templateKey];
@@ -542,9 +664,25 @@ function getPromptTemplate(templateKey, context) {
 - NLS phải liệt kê đủ từng miền đã chọn; AI phải liệt kê đủ từng mã đã chọn; mỗi mục 1 dòng \`- Tên/Mã: mô tả ngắn gắn bài\`. CẤM bỏ mục đã chọn. CẤM gộp NLS+AI thành một hạn ngạch.`;
   }
 
+  if (templateKey === 'GENERATE_ACTIVITY_B') {
+    const rawTextbook = context.textbook_content || '';
+    const subsections = extractTextbookSubsections(rawTextbook);
+    if (subsections && subsections.length > 0) {
+      const subListStr = subsections.map(s => `+ Tiểu mục ${s.index}: "${s.title}" -> BẮT BUỘC sinh: ### ${s.index}. Hoạt động 2.${s.index}: ${s.title}`).join('\n');
+      result += `\n\nDANH SÁCH TIỂU MỤC SGK BẮT BUỘC ÁP DỤNG (ĐÚNG ${subsections.length} HOẠT ĐỘNG NHÁNH):
+Từ dữ liệu SGK được cung cấp, xác định chính xác ${subsections.length} tiểu mục kiến thức sau. Bạn PHẢI tạo đúng ${subsections.length} hoạt động nhánh tương ứng 1-1, KHÔNG ĐƯỢC GỘP, KHÔNG ĐƯỢC BỎ BỚT, KHÔNG ĐƯỢC BỊA THÊM:
+${subListStr}
+Mỗi hoạt động 2.k trên BẮT BUỘC phải có đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng).`;
+    }
+  }
+
   return result;
 }
 
+if (typeof window !== 'undefined') {
+  window.extractTextbookSubsections = extractTextbookSubsections;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { PROMPTS, getSystemRole, getPromptTemplate };
+  module.exports = { PROMPTS, getSystemRole, getPromptTemplate, extractTextbookSubsections };
 }

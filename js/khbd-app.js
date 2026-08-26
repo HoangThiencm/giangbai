@@ -72,30 +72,33 @@ const ACTIVITY_TITLES = {
 // =============================================================================
 // KHỞI CHẠY KHI TRANG SẴN SÀNG
 // =============================================================================
-document.addEventListener("DOMContentLoaded", async () => {
-  initLucideIcons();
-  loadStateFromLocalStorage();
-  setupEventListeners();
-  populateLessonDropdown();
-  syncDraftDom();
-  updateKeyCountDisplay();
-  syncGeminiConfigToUI();
-  updateImageCounts();
-  renderImageGallery();
-  renderStandardsCatalog();
-  renderPhasePedagogy();
-  renderAllTabsPreview();
-
-  try {
-    if (window.AiDesignConfig && typeof AiDesignConfig.loadHostingFallbackConfig === "function") {
-      await AiDesignConfig.loadHostingFallbackConfig();
-    }
-    await geminiAPI.syncKeysFromServer();
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", async () => {
+    initLucideIcons();
+    loadStateFromLocalStorage();
+    appState.selectedGrade = clampKhbdGrade(appState.selectedGrade);
+    setupEventListeners();
+    populateLessonDropdown();
+    syncDraftDom();
     updateKeyCountDisplay();
-  } catch (e) {
-    console.warn("Lỗi sync keys khi khởi tạo:", e);
-  }
-});
+    syncGeminiConfigToUI();
+    updateImageCounts();
+    renderImageGallery();
+    renderStandardsCatalog();
+    renderPhasePedagogy();
+    renderAllTabsPreview();
+
+    try {
+      if (window.AiDesignConfig && typeof AiDesignConfig.loadHostingFallbackConfig === "function") {
+        await AiDesignConfig.loadHostingFallbackConfig();
+      }
+      await geminiAPI.syncKeysFromServer();
+      updateKeyCountDisplay();
+    } catch (e) {
+      console.warn("Lỗi sync keys khi khởi tạo:", e);
+    }
+  });
+}
 
 function initLucideIcons() {
   if (window.lucide) {
@@ -153,9 +156,14 @@ function saveStateToLocalStorage() {
   }
 }
 
+function clampKhbdGrade(grade) {
+  const g = String(grade || "6");
+  return ["6", "7", "8", "9"].includes(g) ? g : "6";
+}
+
 function applyDraftData(data) {
   if (!data) return;
-  Object.assign(appState, { selectedGrade: data.selectedGrade || "6", selectedSubject: data.selectedSubject || "TOAN", selectedLesson: data.selectedLesson || "", customTopic: data.customTopic || "", school: data.school || appState.school, group: data.group || appState.group, teacher: data.teacher || appState.teacher, subject: data.subject || appState.subject, duration: data.duration || appState.duration });
+  Object.assign(appState, { selectedGrade: clampKhbdGrade(data.selectedGrade || "6"), selectedSubject: data.selectedSubject || "TOAN", selectedLesson: data.selectedLesson || "", customTopic: data.customTopic || "", school: data.school || appState.school, group: data.group || appState.group, teacher: data.teacher || appState.teacher, subject: data.subject || appState.subject, duration: data.duration || appState.duration });
   appState.teachingContext = normalizeTeachingContext(data.teachingContext);
   if (data.content) { const a = data.content.activities || {}; appState.content = { vision: data.content.vision || "", objectives: data.content.objectives || "", materials: data.content.materials || "", activities: Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""])) }; }
 }
@@ -168,7 +176,7 @@ function renderDraftControls() {
 }
 function emptyDraftForTarget({ grade, lesson, topic }) {
   const common = { school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration };
-  appState.selectedGrade = grade; appState.selectedLesson = lesson; appState.customTopic = topic;
+  appState.selectedGrade = clampKhbdGrade(grade); appState.selectedLesson = lesson; appState.customTopic = topic;
   Object.assign(appState, common);
   appState.teachingContext = normalizeTeachingContext({});
   appState.content = { vision: "", objectives: "", materials: "", activities: { A: "", B: "", C: "", D: "", E: "", F: "", G: "" } };
@@ -1208,18 +1216,20 @@ function renderImageGallery() {
   });
 }
 
-window.zoomImage = (src, title) => {
-  document.getElementById("zoomImageSrc").src = src;
-  document.getElementById("zoomImageTitle").textContent = title || "Xem ảnh chi tiết";
-  openModal("modalImageZoom");
-};
+if (typeof window !== "undefined") {
+  window.zoomImage = (src, title) => {
+    document.getElementById("zoomImageSrc").src = src;
+    document.getElementById("zoomImageTitle").textContent = title || "Xem ảnh chi tiết";
+    openModal("modalImageZoom");
+  };
 
-window.deleteImage = (imgId) => {
-  appState.images = appState.images.filter(i => i.id !== imgId);
-  updateImageCounts();
-  renderImageGallery();
-  showToast("Đã xóa 1 ảnh.", "info");
-};
+  window.deleteImage = (imgId) => {
+    appState.images = appState.images.filter(i => i.id !== imgId);
+    updateImageCounts();
+    renderImageGallery();
+    showToast("Đã xóa 1 ảnh.", "info");
+  };
+}
 
 // =============================================================================
 // KATEX & MARKDOWN PREVIEW ENGINE
@@ -1661,17 +1671,59 @@ function pedagogyLabelInText(haystack, label) {
 
 function assertPhasePedagogyOutput(phase, output) {
   const text = String(output || "");
-  const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
+  const selected = (appState && appState.teachingContext && appState.teachingContext.phasePedagogy?.[phase]) || {};
   const labels = (selected.techniques || []).map(id => pedagogyLabel("techniques", id)).filter(Boolean);
-  const tablePart = text.split("### d)")[1] || text;
 
   // 1. Kiểm tra kỹ thuật đã chọn
   if (labels.length) {
-    const missing = labels.filter(label => !pedagogyLabelInText(tablePart, label) && !pedagogyLabelInText(text, label));
+    const missing = labels.filter(label => !pedagogyLabelInText(text, label));
     if (missing.length) throw new Error(`Nội dung chưa triển khai đúng trong bảng tổ chức thực hiện: ${missing.join(", ")}.`);
   }
 
-  // 2. Kiểm tra đủ 4 bước CV 5512
+  // 2. Với Pha B: Kiểm tra từng hoạt động con (2.1, 2.2, ...)
+  if (phase === "B") {
+    const branchRegex = /(?:^|\n)###\s*(?:\d+\.\s*)?Hoạt động\s*2\.\d+[\s\S]*?(?=(?:\n###\s*(?:\d+\.\s*)?Hoạt động\s*2\.\d+|\n##\s+[A-Z]|\n#\s+[IVXLCDM]+|$))/gi;
+    const branches = text.match(branchRegex);
+
+    if (branches && branches.length > 0) {
+      branches.forEach((branch, idx) => {
+        const headerMatch = branch.match(/###\s*(?:\d+\.\s*)?(Hoạt động\s*2\.\d+[^#\n]*)/i);
+        const branchName = headerMatch ? headerMatch[1].trim() : `Hoạt động 2.${idx + 1}`;
+        
+        // Tìm phần d) Tổ chức thực hiện trong nhánh này
+        const dPartMatch = branch.match(/#{3,4}\s*d\)\s*Tổ chức thực hiện[\s\S]*/i) || branch.match(/d\)\s*Tổ chức thực hiện[\s\S]*/i);
+        const dPart = dPartMatch ? dPartMatch[0] : branch;
+
+        // Bắt buộc có bảng Markdown
+        if (!/\|\s*Hoạt động của GV và HS\s*\|\s*Nội dung\s*\|/i.test(dPart) && !/\|[\s\S]*?\|[\s\S]*?\n\|[\s:-]+\|/i.test(dPart)) {
+          throw new Error(`Nhánh "${branchName}" chưa có bảng 2 cột ở mục d) Tổ chức thực hiện.`);
+        }
+
+        // Kiểm tra đủ 4 bước
+        const hasStep1 = /bước\s*1|chuyển giao/i.test(dPart);
+        const hasStep2 = /bước\s*2|thực hiện/i.test(dPart);
+        const hasStep3 = /bước\s*3|báo cáo|thảo luận/i.test(dPart);
+        const hasStep4 = /bước\s*4|kết luận|nhận định/i.test(dPart);
+        if (!hasStep1 || !hasStep2 || !hasStep3 || !hasStep4) {
+          throw new Error(`Nhánh "${branchName}" chưa có đủ 4 bước trong bảng tổ chức thực hiện.`);
+        }
+
+        // Kiểm tra phân vai GV và HS (bỏ qua tiêu đề cột bảng)
+        const cellData = dPart.replace(/\|\s*Hoạt động của GV và HS\s*\|\s*Nội dung\s*\|/i, "");
+        const hasGv = /(?:\*\*GV\b|\bGV\s*:|giáo viên)/i.test(cellData);
+        const hasHs = /(?:\*\*HS\b|\bHS\s*:|học sinh)/i.test(cellData);
+        if (!hasGv || !hasHs) {
+          throw new Error(`Nhánh "${branchName}" chưa phân định rõ ràng vai trò GV và HS trong bảng tổ chức thực hiện.`);
+        }
+      });
+      return;
+    }
+  }
+
+  // Với các pha khác (A, C, D) hoặc fallback khi B không có chia nhánh:
+  const tablePart = text.split(/#{3,4}\s*d\)/i)[1] || text.split("### d)")[1] || text;
+
+  // Kiểm tra đủ 4 bước CV 5512
   const hasStep1 = /bước\s*1|chuyển giao/i.test(tablePart);
   const hasStep2 = /bước\s*2|thực hiện/i.test(tablePart);
   const hasStep3 = /bước\s*3|báo cáo|thảo luận/i.test(tablePart);
@@ -1680,9 +1732,10 @@ function assertPhasePedagogyOutput(phase, output) {
     throw new Error("Bảng tổ chức thực hiện chưa có đủ 4 bước (Bước 1: Chuyển giao -> Bước 2: Thực hiện -> Bước 3: Báo cáo -> Bước 4: Kết luận).");
   }
 
-  // 3. Kiểm tra phân vai GV và HS
-  const hasGv = /(?:\bGV\b|giáo viên)/i.test(tablePart);
-  const hasHs = /(?:\bHS\b|học sinh)/i.test(tablePart);
+  // Kiểm tra phân vai GV và HS (bỏ qua tiêu đề cột bảng)
+  const cellData = tablePart.replace(/\|\s*Hoạt động của GV và HS\s*\|\s*Nội dung\s*\|/i, "");
+  const hasGv = /(?:\*\*GV\b|\bGV\s*:|giáo viên)/i.test(cellData);
+  const hasHs = /(?:\*\*HS\b|\bHS\s*:|học sinh)/i.test(cellData);
   if (!hasGv || !hasHs) {
     throw new Error("Bảng tổ chức thực hiện chưa phân định rõ ràng vai trò GV (câu nói, hành động) và HS (cá nhân, nhóm, sản phẩm).");
   }
@@ -2650,4 +2703,18 @@ function openModal(modalId) {
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) modal.classList.remove("active");
+}
+
+if (typeof window !== 'undefined') {
+  window.assertPhasePedagogyOutput = assertPhasePedagogyOutput;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    appState,
+    assertPhasePedagogyOutput,
+    assertActivityIntegrations,
+    assertObjectivesStandards,
+    normalizeTeachingContext
+  };
 }
