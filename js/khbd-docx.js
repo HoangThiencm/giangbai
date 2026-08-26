@@ -471,8 +471,9 @@ class DocxGenerator {
       AlignmentType, BorderStyle, ShadingType
     } = window.docx;
 
+    const cleanMarkdown = typeof sanitizeLessonMarkdown === "function" ? sanitizeLessonMarkdown(markdown) : String(markdown || "");
     const elements = [];
-    const lines = markdown.split(/\r?\n/);
+    const lines = cleanMarkdown.split(/\r?\n/);
     let i = 0;
     let runColor = null;
 
@@ -728,19 +729,30 @@ class DocxGenerator {
   }
 
   splitMarkdownTableRow(line) {
+    if (typeof splitKhbdMarkdownTableRow === "function") return splitKhbdMarkdownTableRow(line);
     const cells = [];
     let cell = "";
     let escaped = false;
+    let math = 0;
     const content = String(line || "").trim().replace(/^\||\|$/g, "");
     for (let index = 0; index < content.length; index++) {
       const character = content[index];
+      const next = content[index + 1];
       if (escaped) {
         cell += character;
         escaped = false;
-      } else if (character === "\\" && content[index + 1] === "|") {
-        // Chỉ dùng backslash để escape dấu phân cách bảng; giữ nguyên \notin, \frac... cho Equation.
+      } else if (character === "\\" && next === "|") {
         escaped = true;
-      } else if (character === "|") {
+      } else if (character === "$") {
+        if (next === "$") {
+          cell += "$$";
+          index++;
+          math = math === 2 ? 0 : 2;
+        } else {
+          cell += "$";
+          math = math === 1 ? 0 : 1;
+        }
+      } else if (character === "|" && math === 0) {
         cells.push(cell.trim());
         cell = "";
       } else {

@@ -1617,9 +1617,17 @@ function buildPedagogicalContext() {
   const subjectName = appState.subjectName || "Toán";
   const gradeLevel = getGradeLevelName(appState.selectedGrade);
 
+  // Lấy gợi ý năng lực chung theo môn học
+  const genComps = typeof getGeneralCompetenciesForSubject === "function"
+    ? getGeneralCompetenciesForSubject(appState.selectedSubject)
+    : [];
+  const genCompHint = genComps.length
+    ? `Ưu tiên môn ${subjectName}: ${genComps.map(c => c.name).join(", ")}.`
+    : "";
+
   return `BỐI CẢNH VÀ RÀNG BUỘC SƯ PHẠM BẮT BUỘC:
 - Môn học: ${subjectName} ${gradeLevel}; khối/lớp: ${appState.selectedGrade}; tên bài: ${getTopicDisplayName()}; thời lượng: ${appState.duration || "chưa xác định"}.
-- Giới hạn năng lực & phẩm chất: Bài dạy 1–2 tiết CHỈ ĐƯỢC CHỌN 1–2 Năng lực chung, 2–3 Năng lực đặc thù nổi trội nhất (gắn với nhiệm vụ/sản phẩm cụ thể), 1–2 Phẩm chất có hành vi quan sát rõ. CẤM liệt kê dàn trải toàn bộ khung năng lực hay đủ 5 phẩm chất.
+- Giới hạn năng lực & phẩm chất: Bài dạy 1–2 tiết CHỈ ĐƯỢC CHỌN 1–2 Năng lực chung phù hợp đặc thù môn học (${genCompHint}), 2–3 Năng lực đặc thù nổi trội nhất (gắn với nhiệm vụ/sản phẩm cụ thể), 1–2 Phẩm chất có hành vi quan sát rõ. CẤM liệt kê dàn trải toàn bộ khung năng lực hay đủ 5 phẩm chất.
 - Trình độ/đặc điểm lớp: ${classProfile || `Chưa cung cấp; thiết kế mức độ phù hợp học sinh ${gradeLevel} và có phân hóa vừa sức.`}
 - Hỗ trợ chức năng được chọn: ${support || "Không có yêu cầu riêng được chọn."}
 - Sĩ số: ${context.classSize}; mức sẵn sàng: ${context.readiness}; tổ chức: ${context.grouping}; điều kiện: ${Object.entries(context.facilities).filter(([, value]) => value).map(([key]) => key).join(", ") || "thiết bị cơ bản"}.
@@ -1661,6 +1669,8 @@ function getGenerationPromptContext(params = {}) {
     textbook_content: resolveTextbookContent(),
     objectives_content: appState.content.objectives || "",
     activities_content: params.activitiesContent || prevActs.join("\n\n---\n\n"),
+    methods: (appState.teachingContext && appState.teachingContext.methods) || [],
+    techniques: ["A", "B", "C", "D"].flatMap(phase => (appState.teachingContext && appState.teachingContext.phasePedagogy?.[phase]?.techniques) || []),
     yccd_official: typeof getOfficialYccd === "function" ? getOfficialYccd({
       subjectId: currentSubjectId(),
       grade: appState.selectedGrade,
@@ -1901,26 +1911,181 @@ function assertActivityIntegrations(phase, text) {
   }
 }
 
-function normalizeGeminiLessonOutput(rawOutput) {
-  let text = String(rawOutput || "").replace(/^\uFEFF/, "").trim();
+function splitKhbdMarkdownTableRow(line) {
+  const cells = [];
+  let cell = "";
+  let escaped = false;
+  let math = 0;
+  const content = String(line || "").trim().replace(/^\||\|$/g, "");
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    const next = content[i + 1];
+    if (escaped) {
+      cell += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && next === "|") {
+      escaped = true;
+      continue;
+    }
+    if (ch === "$") {
+      if (next === "$") {
+        cell += "$$";
+        i++;
+        math = math === 2 ? 0 : 2;
+        continue;
+      }
+      cell += "$";
+      math = math === 1 ? 0 : 1;
+      continue;
+    }
+    if (ch === "|" && math === 0) {
+      cells.push(cell.trim());
+      cell = "";
+      continue;
+    }
+    cell += ch;
+  }
+  cells.push(cell.trim());
+  return cells;
+}
+
+function stripClosingChitchat(text) {
+  const lines = String(text || "").split("\n");
+  if (!lines.length) return String(text || "");
+  const closingLine = /^(?:[-*]{3,}|---\s*kết thúc.*|kết thúc\s*[-–—.]*(?:\s.*)?|(?:hy vọng giáo án|hy vọng kế hoạch|chúc thầy cô|chúc quý thầy cô|chúc bạn(?:\s+thành công)?|chúc các em thành công|kính chúc|chúc buổi dạy|chúc tiết dạy|rất mong nhận được góp ý|trên đây là (?:kế hoạch|giáo án|nội dung tôi)).*)$/i;
+  let end = lines.length;
+  let removed = 0;
+  while (end > 0 && removed < 12) {
+    const line = lines[end - 1].trim();
+    if (!line) {
+      end--;
+      removed++;
+      continue;
+    }
+    if (closingLine.test(line)) {
+      end--;
+      removed++;
+      continue;
+    }
+    break;
+  }
+  if (end < lines.length) return lines.slice(0, end).join("\n").replace(/\s+$/, "");
+  return String(text || "");
+}
+
+function mergeSplitActivityTables(text) {
+  const headerPat = /\|[\s]*Hoạt động của GV và HS[\s]*\|[\s]*Nội dung[\s]*\|\s*\n\|[\s]*:?---:?[\s]*\|[\s]*:?---:?[\s]*\|/i;
+  const chunks = [];
+  let rest = String(text || "");
+  while (true) {
+    const match = rest.match(headerPat);
+    if (!match) {
+      chunks.push(rest);
+      break;
+    }
+    chunks.push(rest.slice(0, match.index));
+    const afterHeader = rest.slice(match.index + match[0].length).replace(/^\n/, "");
+    const lines = afterHeader.split("\n");
+    const rowLines = [];
+    let consumed = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (/^\|[\s]*Hoạt động của GV và HS[\s]*\|/i.test(trimmed) || /^#{1,4}\s/.test(trimmed)) break;
+      if (trimmed.startsWith("|")) {
+        rowLines.push(trimmed);
+        consumed = i + 1;
+        continue;
+      }
+      break;
+    }
+    const header = `${match[0]}\n`;
+    if (rowLines.length <= 1) {
+      chunks.push(header + (rowLines[0] ? `${rowLines[0]}\n` : ""));
+    } else {
+      const leftParts = [];
+      const rightParts = [];
+      rowLines.forEach(row => {
+        const cells = splitKhbdMarkdownTableRow(row);
+        if (cells.length >= 2) {
+          if (cells[0]) leftParts.push(cells[0]);
+          if (cells[1]) rightParts.push(cells[1]);
+        }
+      });
+      chunks.push(`${header}| ${leftParts.join("<br>")} | ${rightParts.join("<br>")} |\n`);
+    }
+    rest = lines.slice(consumed).join("\n");
+  }
+  return chunks.join("");
+}
+
+function sanitizeLessonMarkdown(rawOutput) {
+  if (!rawOutput) return "";
+  let text = String(rawOutput).replace(/^\uFEFF/, "").trim();
+
   text = text.replace(/^```(?:markdown|md|text)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
-  const conversationalPrefix = /^(?:tuyệt vời[!,.…\s]*|xin chào(?:[^\n]*)|chào bạn(?:[^\n]*)|dưới đây(?:[^\n]*)|sau đây(?:[^\n]*)|tôi (?:sẽ|đã)(?:[^\n]*)|với vai trò(?:[^\n]*))\n+/i;
-  while (conversationalPrefix.test(text)) text = text.replace(conversationalPrefix, "").trimStart();
-  const opening = text.slice(0, 400);
-  const hasResidualMeta = /(?:tuyệt vời|xin chào|chào bạn|dưới đây|sau đây|tôi (?:sẽ|đã)|với vai trò|mình sẽ)/i.test(opening) || /```/.test(text);
-  return { text, valid: Boolean(text) && !hasResidualMeta };
+
+  const conversationalPrefixes = [
+    /^(?:tuyệt vời[!,.…\s]*|rất vui[!,.…\s]*|chắc chắn rồi[!,.…\s]*|dạ[!,.…\s]*)\n*/i,
+    /^(?:xin chào(?:[^\n]*)|chào thầy(?:\s*cô)?(?:[^\n]*)|chào quý thầy cô(?:[^\n]*)|chào bạn(?:[^\n]*)|kính chào(?:[^\n]*))\n*/i,
+    /^(?:dưới đây là(?:[^\n]*)|sau đây là(?:[^\n]*)|tôi xin gửi(?:[^\n]*)|tôi xin phép(?:[^\n]*)|tôi sẽ(?:[^\n]*)|với vai trò(?:[^\n]*)|theo yêu cầu(?:[^\n]*)|dựa trên(?:[^\n]*))\n*/i,
+    /^(?:giáo án (?:được|này)(?:[^\n]*)|kế hoạch bài dạy (?:được|này)(?:[^\n]*))\n*/i
+  ];
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const pattern of conversationalPrefixes) {
+      if (pattern.test(text)) {
+        text = text.replace(pattern, "").trimStart();
+        changed = true;
+      }
+    }
+  }
+
+  const firstLineMatch = text.match(/^([^\n]+)\n/);
+  if (firstLineMatch) {
+    const firstLine = firstLineMatch[1].trim();
+    if (!firstLine.startsWith("#") &&
+        !firstLine.startsWith("|") &&
+        !firstLine.startsWith("<<<") &&
+        !/^(?:I{1,3}|IV|V|VI|VII|VIII|IX|X|[A-D])\./i.test(firstLine) &&
+        !/^(?:1\.|2\.|3\.|4\.|5\.|a\)|b\)|c\)|d\))/i.test(firstLine) &&
+        /(?:chào|dưới đây|sau đây|biên soạn|kế hoạch bài dạy|thầy cô|chúc|xin gửi)/i.test(firstLine)) {
+      text = text.slice(firstLineMatch[0].length).trimStart();
+    }
+  }
+
+  text = text.replace(/\n\s*\*(?:Lưu ý của AI|Ghi chú của AI|Nhận xét của AI)[^*]*\*\s*\n/gi, "\n\n");
+  text = text.replace(/\n\s*\((?:Lưu ý của AI|Ghi chú của AI|Nhận xét của AI)[^)]*\)\s*\n/gi, "\n\n");
+
+  text = stripClosingChitchat(text);
+  text = mergeSplitActivityTables(text);
+
+  return text.trim();
+}
+
+function normalizeGeminiLessonOutput(rawOutput) {
+  const sanitized = sanitizeLessonMarkdown(rawOutput);
+  const opening = sanitized.slice(0, 400);
+  const hasResidualMeta = /(?:tuyệt vời|xin chào|chào bạn|dưới đây|sau đây|với vai trò|mình sẽ)/i.test(opening) || /```/.test(sanitized);
+  return { text: sanitized, valid: Boolean(sanitized) && !hasResidualMeta };
 }
 
 async function guardGeminiLessonOutput(rawOutput, signal) {
-  const normalized = normalizeGeminiLessonOutput(rawOutput);
-  if (normalized.valid) return normalized.text;
-  const repairPrompt = buildPedagogicalPrompt(`${PROMPTS.OUTPUT_REPAIR}\n\nNỘI DUNG CẦN SỬA:\n${normalized.text || String(rawOutput || "")}`);
-  const repaired = await geminiAPI.generateContent(repairPrompt, [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
-  const repairedNormalized = normalizeGeminiLessonOutput(repaired);
-  if (!repairedNormalized.valid) {
-    throw new Error("Gemini vẫn trả lời kèm lời dẫn hoặc định dạng không hợp lệ; nội dung chưa được lưu. Vui lòng thử lại.");
+  const sanitized = sanitizeLessonMarkdown(rawOutput);
+  const normalized = normalizeGeminiLessonOutput(sanitized);
+  // Nếu đã sanitize sạch và có độ dài hợp lệ, trả về luôn để tiết kiệm token và tránh lỗi quá tải 429
+  if (normalized.valid && normalized.text.length > 30) {
+    return normalized.text;
   }
-  return repairedNormalized.text;
+  // Nếu vẫn còn rác hoặc code block, lọc trực tiếp trên client
+  if (normalized.text && normalized.text.length > 30) {
+    const directClean = normalized.text.replace(/```(?:markdown|md|text)?/gi, "").replace(/```/g, "").trim();
+    if (directClean.length > 30) return directClean;
+  }
+  return normalized.text || String(rawOutput || "").trim();
 }
 
 function compressDataUrl(dataUrl, maxEdge = 1600, quality = 0.85) {
@@ -2022,18 +2187,18 @@ function parseKhbdSections(text, keys) {
     hits.forEach((hit, i) => {
       const end = i + 1 < hits.length ? hits[i + 1].markerAt : source.length;
       if (Object.prototype.hasOwnProperty.call(result, hit.key)) {
-        result[hit.key] = source.slice(hit.start, end).trim();
+        result[hit.key] = sanitizeLessonMarkdown(source.slice(hit.start, end));
       }
     });
     return result;
   }
   const headingMap = {
-    I: /(?:^|\n)\s*#{0,3}\s*I[\.\s:][^\n]*/i,
-    II: /(?:^|\n)\s*#{0,3}\s*II[\.\s:][^\n]*/i,
-    A: /(?:^|\n)\s*#{1,3}\s*A[\.\s:][^\n]*/i,
-    B: /(?:^|\n)\s*#{1,3}\s*B[\.\s:][^\n]*/i,
-    C: /(?:^|\n)\s*#{1,3}\s*C[\.\s:][^\n]*/i,
-    D: /(?:^|\n)\s*#{1,3}\s*D[\.\s:][^\n]*/i
+    I: /(?:^|\n)\s*#{0,3}\s*(?:I[\.\s:]|MỤC TIÊU\b)[^\n]*/i,
+    II: /(?:^|\n)\s*#{0,3}\s*(?:II[\.\s:]|THIẾT BỊ\b)[^\n]*/i,
+    A: /(?:^|\n)\s*#{1,3}\s*(?:A[\.\s:]|HOẠT ĐỘNG 1\b|MỞ ĐẦU\b|KHỞI ĐỘNG\b)[^\n]*/i,
+    B: /(?:^|\n)\s*#{1,3}\s*(?:B[\.\s:]|HOẠT ĐỘNG 2\b|HÌNH THÀNH KIẾN THỨC\b)[^\n]*/i,
+    C: /(?:^|\n)\s*#{1,3}\s*(?:C[\.\s:]|HOẠT ĐỘNG 3\b|LUYỆN TẬP\b)[^\n]*/i,
+    D: /(?:^|\n)\s*#{1,3}\s*(?:D[\.\s:]|HOẠT ĐỘNG 4\b|VẬN DỤNG\b)[^\n]*/i
   };
   const found = [];
   (keys || []).forEach(key => {
@@ -2045,7 +2210,7 @@ function parseKhbdSections(text, keys) {
   found.sort((a, b) => a.at - b.at);
   found.forEach((hit, i) => {
     const end = i + 1 < found.length ? found[i + 1].at : source.length;
-    result[hit.key] = source.slice(hit.at, end).trim();
+    result[hit.key] = sanitizeLessonMarkdown(source.slice(hit.at, end));
   });
   return result;
 }
@@ -2718,6 +2883,8 @@ function closeModal(modalId) {
 
 if (typeof window !== 'undefined') {
   window.assertPhasePedagogyOutput = assertPhasePedagogyOutput;
+  window.sanitizeLessonMarkdown = sanitizeLessonMarkdown;
+  window.splitKhbdMarkdownTableRow = splitKhbdMarkdownTableRow;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -2732,6 +2899,9 @@ if (typeof module !== 'undefined' && module.exports) {
     buildTextbookSourceHint,
     assertPhasePedagogyOutput,
     assertActivityIntegrations,
-    assertObjectivesStandards
+    assertObjectivesStandards,
+    sanitizeLessonMarkdown,
+    splitKhbdMarkdownTableRow,
+    mergeSplitActivityTables
   };
 }
