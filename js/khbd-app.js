@@ -107,19 +107,45 @@ function initLucideIcons() {
 }
 
 function syncDraftDom() {
-  const values = { selectGrade: appState.selectedGrade, inputSchool: appState.school, inputGroup: appState.group, inputTeacher: appState.teacher, inputSubject: appState.subject, inputTopicCustom: appState.customTopic, inputDuration: appState.duration, inputClassProfileNote: appState.teachingContext.classProfileNote, inputSupportNote: appState.teachingContext.supportNote, inputSpecialRequirements: appState.teachingContext.specialRequirements, editorVision: appState.content.vision, editorObjectives: appState.content.objectives, editorMaterials: appState.content.materials, editorActivity: appState.content.activities.A };
-  Object.entries(values).forEach(([id, value]) => { const el = document.getElementById(id); if (el) el.value = value || ""; });
+  const context = appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+  const values = {
+    selectGrade: appState.selectedGrade,
+    inputSchool: appState.school,
+    inputGroup: appState.group,
+    inputTeacher: appState.teacher,
+    inputSubject: appState.subject,
+    inputTopicCustom: appState.customTopic,
+    inputDuration: appState.duration,
+    inputClassProfileNote: context.classProfileNote,
+    inputSupportNote: context.supportNote,
+    inputSpecialRequirements: context.specialRequirements,
+    editorVision: appState.content.vision,
+    editorObjectives: appState.content.objectives,
+    editorMaterials: appState.content.materials,
+    editorActivity: appState.content.activities[appState.activeActSubtab] || ""
+  };
+  Object.entries(values).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || "";
+  });
   const lessonSelect = document.getElementById("selectLesson");
   if (lessonSelect) lessonSelect.value = appState.selectedLesson || "";
-  setCheckboxGroupValues(".class-profile-choice", appState.teachingContext.classProfileChoices);
-  setCheckboxGroupValues(".support-choice", appState.teachingContext.supportChoices);
-  const context = appState.teachingContext;
+  setCheckboxGroupValues(".class-profile-choice", context.classProfileChoices);
+  setCheckboxGroupValues(".support-choice", context.supportChoices);
   if (document.getElementById("inputClassSize")) document.getElementById("inputClassSize").value = context.classSize;
   if (document.getElementById("selectReadiness")) document.getElementById("selectReadiness").value = context.readiness;
   if (document.getElementById("selectGrouping")) document.getElementById("selectGrouping").value = context.grouping;
-  [["hasProjector","projector"],["hasInternet","internet"],["hasDevices","devices"]].forEach(([id,key]) => { const input = document.getElementById(id); if (input) input.checked = Boolean(context.facilities?.[key]); });
+  [["hasProjector","projector"],["hasInternet","internet"],["hasDevices","devices"]].forEach(([id,key]) => {
+    const input = document.getElementById(id);
+    if (input) input.checked = Boolean(context.facilities?.[key]);
+  });
+  [["toggleDigitalCompetency", "digital"], ["toggleAiCompetency", "ai"], ["toggleForeignLanguage", "foreignLanguage"], ["toggleInclusiveSupport", "inclusive"]].forEach(([id, key]) => {
+    const input = document.getElementById(id);
+    if (input) input.checked = Boolean(context.integrations?.[key]);
+  });
   renderDraftControls();
   renderPedagogyCatalogs();
+  renderStandardsCatalog();
 }
 
 // =============================================================================
@@ -400,6 +426,7 @@ function integrationRecommendContext() {
 }
 
 function standardsOfKind(kind) {
+  if (typeof KHBD_STANDARDS === "undefined") return [];
   const catalog = KHBD_STANDARDS?.[kind];
   if (!catalog) return [];
   return (appState.teachingContext.standards || []).filter(item => item.framework === catalog.framework);
@@ -510,6 +537,7 @@ function applyLessonBasedRecommendations({ force = false, silent = false } = {})
 }
 
 function renderStandardsCatalog() {
+  if (typeof KHBD_STANDARDS === "undefined") return;
   const grade = Number(appState.selectedGrade);
   ["digital", "ai"].forEach(kind => {
     const panel = document.getElementById(`${kind}StandardsPanel`);
@@ -517,7 +545,10 @@ function renderStandardsCatalog() {
     const catalog = KHBD_STANDARDS?.[kind];
     if (!panel || !catalog) return;
     panel.hidden = !enabled;
-    if (!enabled) return;
+    if (!enabled) {
+      panel.innerHTML = "";
+      return;
+    }
     const entries = catalog.entries.filter(entry => entry.grades.includes(grade));
     const selectedIds = new Set(standardsOfKind(kind).map(item => item.catalogId));
     const suggestedIds = new Set(standardsOfKind(kind).filter(item => item.autoSuggested).map(item => item.catalogId));
@@ -2509,32 +2540,30 @@ function handleCopyFullMarkdown() {
 // XÓA TOÀN BỘ DỮ LIỆU (CÓ XÁC NHẬN)
 // =============================================================================
 function handleClearAllContent() {
-  if (confirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ nội dung giáo án đã soạn và ảnh đã tải lên không? Thao tác này không thể hoàn tác.")) {
+  if (confirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ nội dung giáo án đã soạn, ảnh SGK và toàn bộ thiết lập bối cảnh sư phạm không? Thao tác này không thể hoàn tác.")) {
     appState.content = {
       vision: "",
       objectives: "",
       materials: "",
       activities: {
         A: "", B: "", C: "", D: "",
-        E: appState.content.activities.E || "",
-        F: appState.content.activities.F || "",
-        G: appState.content.activities.G || ""
+        E: "", F: "", G: ""
       }
     };
     appState.images = [];
+    appState.teachingContext = normalizeTeachingContext({});
 
-    document.getElementById("editorVision").value = "";
-    document.getElementById("editorObjectives").value = "";
-    document.getElementById("editorMaterials").value = "";
-    document.getElementById("editorActivity").value = "";
+    const fileInput = document.getElementById("fileInputImages");
+    if (fileInput) fileInput.value = "";
 
+    syncDraftDom();
     updateImageCounts();
     renderImageGallery();
     renderAllTabsPreview();
     renderFullLessonPreview();
     saveStateToLocalStorage();
 
-    showToast("Đã xóa toàn bộ nội dung thành công!", "info");
+    showToast("Đã xóa toàn bộ nội dung và thiết lập bối cảnh dạy học thành công!", "info");
   }
 }
 
@@ -2712,9 +2741,12 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     appState,
+    handleClearAllContent,
+    syncDraftDom,
+    emptyDraftForTarget,
+    normalizeTeachingContext,
     assertPhasePedagogyOutput,
     assertActivityIntegrations,
-    assertObjectivesStandards,
-    normalizeTeachingContext
+    assertObjectivesStandards
   };
 }
