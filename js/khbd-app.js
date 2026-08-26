@@ -1620,22 +1620,35 @@ function buildIntegrationActivityConstraint(phase) {
 
 function buildPhasePedagogyContext(phase) {
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
-  const techItems = (selected.techniques || []).map(id => pedagogyCatalogItem("techniques", id) || { label: pedagogyLabel("techniques", id), description: "" });
+  const techItems = (selected.techniques || []).map(id => pedagogyCatalogItem("techniques", id) || { id, label: pedagogyLabel("techniques", id), description: "" });
   const activityLabels = (appState.teachingContext.subjectActivities || []).map(id => pedagogyLabel("activities", id)).filter(Boolean);
-  const methodItems = (appState.teachingContext.methods || []).map(id => pedagogyCatalogItem("methods", id) || { label: pedagogyLabel("methods", id), description: "" });
+  const methodItems = (appState.teachingContext.methods || []).map(id => pedagogyCatalogItem("methods", id) || { id, label: pedagogyLabel("methods", id), description: "" });
   const parts = [];
+
+  // Nhúng kịch bản sư phạm thực chiến chuẩn từ catalog
+  const pedagogyGuide = typeof buildDetailedPedagogyGuide === "function"
+    ? buildDetailedPedagogyGuide(phase, appState.teachingContext)
+    : "";
+
   if (methodItems.length) {
     parts.push(`PPDH đã chọn: ${methodItems.map(item => `${item.label}${item.description ? ` — ${item.description}` : ""}`).join("; ")}. Nêu cách vận hành ngắn trong Bước 1–2 nếu phù hợp pha ${phase}.`);
   }
   if (techItems.length) {
-    parts.push(`Kỹ thuật bắt buộc của pha ${phase} (CẤM chỉ liệt kê tên): ${techItems.map(item => `${item.label}${item.description ? ` — ${item.description}` : ""}`).join("; ")}. Cột TRÁI bảng d): nêu TÊN kỹ thuật và viết CÁCH TIẾN HÀNH theo 4 bước (GV giao gì theo kỹ thuật, HS làm gì, báo cáo, chốt).`);
+    parts.push(`Kỹ thuật bắt buộc của pha ${phase} (CẤM chỉ liệt kê tên): ${techItems.map(item => `${item.label}${item.description ? ` — ${item.description}` : ""}`).join("; ")}. Cột TRÁI bảng d): nêu TÊN kỹ thuật và viết CÁCH TIẾN HÀNH theo đúng 4 bước CV 5512.`);
   }
   if (activityLabels.length) parts.push(`Hoạt động đặc thù đã chọn: ${activityLabels.join("; ")}. Chỉ triển khai nếu phù hợp pha ${phase}.`);
+
+  const scriptRequirement = `\nYÊU CẦU KỊCH BẢN THỰC CHIẾN CỘT TRÁI BẢNG d) (Pha ${phase}):
+- Bắt buộc đủ 4 bước CV 5512 (ngăn các bước bằng <br>):
+  + **GV:** Nói câu gì cụ thể trong ngoặc kép "..." (câu lệnh giao nhiệm vụ, câu hỏi dẫn dắt, câu hỏi gợi mở, câu hỏi phân hóa); Làm gì cụ thể (phát đồ dùng/phiếu học tập, chia nhóm, quan sát phát hiện lỗi sai điển hình: ..., can thiệp hỗ trợ phân hóa).
+  + **HS:** Làm gì cụ thể theo từng pha (thao tác cá nhân X phút vào nháp/phiếu -> thảo luận cặp/nhóm Y phút -> tạo sản phẩm trung gian: bảng phụ, sơ đồ, phiếu học tập, sticky note...); Báo cáo và phản biện thế nào.
+- CỘT PHẢI BẢNG d): Chỉ ghi kiến thức chốt cho HS chép vào vở (định nghĩa, công thức LaTeX, ví dụ mẫu). CẤM mô tả việc GV/HS ở cột phải.`;
+
   const integration = buildIntegrationActivityConstraint(phase);
   const base = parts.length
     ? `\nRÀNG BUỘC PHA ${phase}: ${parts.join(" ")} Không nêu kỹ thuật/hoạt động ngoài catalog như kỹ thuật chính thức.`
     : `\nRÀNG BUỘC PHA ${phase}: không có kỹ thuật pha được chọn; không tự gắn tên kỹ thuật chính thức ngoài catalog.`;
-  return base + integration;
+  return base + (pedagogyGuide ? `\n${pedagogyGuide}` : "") + scriptRequirement + integration;
 }
 
 function pedagogyLabelInText(haystack, label) {
@@ -1647,15 +1660,31 @@ function pedagogyLabelInText(haystack, label) {
 }
 
 function assertPhasePedagogyOutput(phase, output) {
+  const text = String(output || "");
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
   const labels = (selected.techniques || []).map(id => pedagogyLabel("techniques", id)).filter(Boolean);
-  if (!labels.length) return;
-  const tablePart = String(output || "").split("### d)")[1] || String(output || "");
-  const missing = labels.filter(label => !pedagogyLabelInText(tablePart, label) && !pedagogyLabelInText(output, label));
-  if (missing.length) throw new Error(`Nội dung chưa triển khai đúng trong bảng tổ chức thực hiện: ${missing.join(", ")}.`);
-  const howToRe = /bước\s*1|chuyển giao|giáo viên|\bGV\b|học sinh|\bHS\b|thảo luận cặp|thảo luận nhóm|báo cáo|kết luận/i;
-  if (!howToRe.test(tablePart) && !howToRe.test(String(output || ""))) {
-    throw new Error("Bảng tổ chức thực hiện chưa có cách thức tiến hành kỹ thuật (Bước 1 / GV / HS).");
+  const tablePart = text.split("### d)")[1] || text;
+
+  // 1. Kiểm tra kỹ thuật đã chọn
+  if (labels.length) {
+    const missing = labels.filter(label => !pedagogyLabelInText(tablePart, label) && !pedagogyLabelInText(text, label));
+    if (missing.length) throw new Error(`Nội dung chưa triển khai đúng trong bảng tổ chức thực hiện: ${missing.join(", ")}.`);
+  }
+
+  // 2. Kiểm tra đủ 4 bước CV 5512
+  const hasStep1 = /bước\s*1|chuyển giao/i.test(tablePart);
+  const hasStep2 = /bước\s*2|thực hiện/i.test(tablePart);
+  const hasStep3 = /bước\s*3|báo cáo|thảo luận/i.test(tablePart);
+  const hasStep4 = /bước\s*4|kết luận|nhận định/i.test(tablePart);
+  if (!hasStep1 || !hasStep2 || !hasStep3 || !hasStep4) {
+    throw new Error("Bảng tổ chức thực hiện chưa có đủ 4 bước (Bước 1: Chuyển giao -> Bước 2: Thực hiện -> Bước 3: Báo cáo -> Bước 4: Kết luận).");
+  }
+
+  // 3. Kiểm tra phân vai GV và HS
+  const hasGv = /(?:\bGV\b|giáo viên)/i.test(tablePart);
+  const hasHs = /(?:\bHS\b|học sinh)/i.test(tablePart);
+  if (!hasGv || !hasHs) {
+    throw new Error("Bảng tổ chức thực hiện chưa phân định rõ ràng vai trò GV (câu nói, hành động) và HS (cá nhân, nhóm, sản phẩm).");
   }
 }
 
@@ -2003,7 +2032,17 @@ async function applyActivityOutput(actKey, result, signal) {
   let problem = activityOutputProblem(actKey, finalResult);
   if (problem) {
     try {
-      const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần nội dung pha ${actKey} sau. Giữ Markdown KHBD. Bổ sung các kỹ thuật đã chọn vào bảng d) Tổ chức thực hiện: nêu tên và viết cách thức tiến hành kỹ thuật trong cột trái, không chỉ nêu tên; không thêm kỹ thuật không chọn. Nếu bật NLS/AI: thêm nhiệm vụ GV và HS với marker **NLS** / **AI** lồng vào bài/câu SGK đã có; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.\n\n${finalResult}${buildPhasePedagogyContext(actKey)}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
+      const repairPrompt = buildPedagogicalPrompt(`Sửa đúng một lần nội dung pha ${actKey} sau thành Kịch bản Sư phạm Thực chiến chuẩn CV 5512.
+Giữ nguyên định dạng Markdown KHBD và bảng 2 cột mục d).
+Yêu cầu sửa:
+- Cột TRÁI bảng d): Bắt buộc đủ 4 bước (ngăn bằng <br>), phân định rõ vai trò **GV:** (nói câu cụ thể trong ngoặc kép "...", hành động cụ thể, phát hiện lỗi sai điển hình, can thiệp phân hóa) và **HS:** (làm việc cá nhân -> thảo luận nhóm -> tạo sản phẩm trung gian, báo cáo và phản biện) theo đúng kỹ thuật dạy học đã chọn.
+- Cột PHẢI bảng d): Chỉ ghi nội dung bảng/vở chốt cho HS chép (công thức LaTeX, định nghĩa, ví dụ). CẤM mô tả việc GV/HS ở cột phải.
+- Nếu bật NLS/AI: lồng nhiệm vụ GV và HS với marker **NLS** / **AI** vào bài SGK đã có; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.
+Lỗi cần sửa: ${problem.message}
+
+${finalResult}${buildPhasePedagogyContext(actKey)}`);
+
+      const repair = await geminiAPI.generateContent(repairPrompt, [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
       finalResult = await guardGeminiLessonOutput(repair, signal);
       problem = activityOutputProblem(actKey, finalResult);
     } catch (repairError) {
@@ -2012,7 +2051,7 @@ async function applyActivityOutput(actKey, result, signal) {
     }
   }
   if (problem) {
-    showToast(`Đã lưu hoạt động ${actKey}; kỹ thuật hoặc tích hợp NLS/AI chưa ghi đủ. Bạn có thể sửa tay.`, "warning", 5000);
+    showToast(`Đã lưu hoạt động ${actKey}; kịch bản phân vai GV-HS hoặc kỹ thuật dạy học chưa ghi đủ. Bạn có thể sửa tay.`, "warning", 5000);
   }
   appState.content.activities[actKey] = finalResult;
   saveStateToLocalStorage();

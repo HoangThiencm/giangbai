@@ -6,21 +6,27 @@
  * và Khung Năng lực Số (TT 02/2025/TT-BGDĐT).
  */
 
-const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU HÌNH THỨC BẢNG 2 CỘT (đúng mẫu demo.docx):
+const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU HÌNH THỨC BẢNG 2 CỘT — KỊCH BẢN SƯ PHẠM THỰC CHIẾN (chuẩn CV 5512 & demo.docx):
 - Mục a), b), c) dùng 3 cấp danh sách: ý lớn \`-\`, ý con \`+\`, ý chi tiết \`•\`.
 - Mục d) Tổ chức thực hiện: ĐÚNG MỘT bảng Markdown 2 cột, tiêu đề:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-- Chỉ 1 hàng dữ liệu (không tách 4 hàng).
-- Cột TRÁI — việc tổ chức lớp: đủ 4 bước, mỗi bước một dòng, ngăn bằng <br>
-  + Bước 1: Chuyển giao nhiệm vụ: ...
-  + Bước 2: Thực hiện nhiệm vụ: ...
-  + Bước 3: Báo cáo, thảo luận: ...
-  + Bước 4: Kết luận, nhận định: ...
-- Cột PHẢI — chỉ NỘI DUNG GHI BẢNG (kiến thức chốt cho HS chép): tên mục kiến thức, định nghĩa, quy tắc, công thức LaTeX, chú ý, ví dụ mẫu. Dùng \`-\`, \`+\`, \`•\`; ngăn bằng \`<br>\`
-- Cột phải CẤM: mô tả việc của GV/HS, CẤM lặp lại 4 bước, CẤM viết "GV yêu cầu", "HS thảo luận", thời gian, kỹ thuật tổ chức.
-- Cấm để trống cột. Escape dấu | trong ô thành \\|.
-- Hoạt động B: mỗi đơn vị kiến thức một bảng 2 cột (1 hàng) như trên.`;
+- Bảng Markdown chỉ gồm đúng 1 hàng dữ liệu duy nhất (CẤM tách thành 4 hàng riêng).
+- CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG (ngăn các bước bằng <br>):
+  + Đủ 4 bước chuẩn Công văn 5512:
+    * + Bước 1: Chuyển giao nhiệm vụ: ...
+    * + Bước 2: Thực hiện nhiệm vụ: ...
+    * + Bước 3: Báo cáo, thảo luận: ...
+    * + Bước 4: Kết luận, nhận định: ...
+  + Trong từng bước, BẮT BUỘC phân định rõ ràng vai trò **GV:** và **HS:**:
+    * **GV (Giáo viên):** Nói câu cụ thể trong ngoặc kép "..." (câu lệnh giao việc, câu hỏi dẫn dắt, gợi mở hoặc phân hóa); Hành động cụ thể (phát đồ dùng/phiếu học tập, chia nhóm, quan sát phát hiện lỗi sai điển hình, can thiệp hỗ trợ phân hóa).
+    * **HS (Học sinh):** Hành động cụ thể theo từng pha (thao tác cá nhân X phút vào nháp/phiếu -> thảo luận cặp/nhóm Y phút -> tạo sản phẩm trung gian: bảng phụ, sơ đồ, phiếu học tập, sticky note...); Báo cáo và phản biện thế nào.
+  + Tuân thủ chính xác quy trình 4 bước của kỹ thuật dạy học được chọn (VD: Think-Pair-Share, Khăn trải bàn, Mảnh ghép, Trạm học tập, Gallery Walk...).
+- CỘT PHẢI — NỘI DUNG GHI BẢNG (kiến thức chốt cho HS chép vào vở):
+  + Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức toán LaTeX ($...$, $$...$$), chú ý, ví dụ mẫu chi tiết. Dùng \`-\`, \`+\`, \`•\`; ngăn các dòng bằng \`<br>\`.
+  + Cột phải CẤM: mô tả việc GV/HS, CẤM lặp lại 4 bước, CẤM viết "GV yêu cầu", "HS thảo luận", thời gian, kỹ thuật tổ chức.
+- Cấm để trống cột. Escape dấu | trong ô bảng thành \\|.
+- Hoạt động B: mỗi đơn vị kiến thức dùng một bảng 2 cột (1 hàng) như trên.`;
 
 const PROMPTS = {
   // SYSTEM INSTRUCTION
@@ -190,15 +196,16 @@ ${ACTIVITY_TABLE_CONTRACT}
 - Huy động các kiến thức, kĩ năng đã học có liên quan đến nội dung bài mới.
 
 ### b) Nội dung:
-(Mô tả chi tiết tình huống thực tiễn / câu đố / trò chơi học tập / bài toán mở đầu / hình ảnh trực quan gắn liền với cuộc sống mà GV đưa ra cho HS thực hiện).
+- Giáo viên đưa ra tình huống thực tiễn / câu đố / trò chơi học tập / bài toán mở đầu / hình ảnh trực quan từ SGK: (mô tả cụ thể nội dung tình huống).
+- Học sinh quan sát, suy nghĩ độc lập và trao đổi để dự đoán kết quả hoặc nêu thắc mắc ban đầu.
 
 ### c) Sản phẩm:
-(Mô tả cụ thể câu trả lời, kết quả dự đoán, sản phẩm tính toán ban đầu hoặc câu hỏi băn khoăn của học sinh khi đối diện tình huống).
+- Câu trả lời, kết quả tính toán ban đầu hoặc dự đoán của học sinh đối với tình huống mở đầu.
 
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: GV giao tình huống/hình/câu hỏi đúng nguồn.<br>+ Bước 2: Thực hiện nhiệm vụ: HS quan sát, thảo luận; GV hỗ trợ.<br>+ Bước 3: Báo cáo, thảo luận: HS phát biểu; lớp nhận xét; GV chuẩn hóa.<br>+ Bước 4: Kết luận, nhận định: GV chốt và dẫn vào bài mới. | - Trong Toán học, nhóm các đối tượng xác định được gọi là tập hợp.<br>- Bài học hôm nay nghiên cứu khái niệm tập hợp.<br>• Ví dụ: tập hợp học sinh trong lớp. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: **GV:** Trình chiếu tình huống mở đầu trong SGK và nêu câu hỏi kích thích: "Quan sát tình huống sau, các em hãy dự đoán/trả lời...". **HS:** Quan sát, lắng nghe và tiếp nhận nhiệm vụ.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Suy nghĩ cá nhân (1-2 phút) ghi câu trả lời vào nháp -> Trao đổi nhanh theo cặp (1-2 phút) thống nhất ý kiến. **GV:** Quan sát, phát hiện các dự đoán khác nhau hoặc ngộ nhận ban đầu: ..., gợi mở tư duy.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện 1-2 cặp xung phong phát biểu dự đoán; lớp nhận xét và tranh luận. **GV:** Điều hành thảo luận, đặt câu hỏi dẫn dắt: "Vì sao em lại đưa ra dự đoán này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần phát biểu, tạo mâu thuẫn nhận thức và dẫn dắt vào bài mới: "Để tìm câu trả lời chính xác và kiểm chứng dự đoán trên, chúng ta cùng vào bài hôm nay...". **HS:** Ghi tên bài vào vở. | **Tình huống mở đầu**<br>- Vấn đề thực tế: ...<br>- Dự đoán ban đầu của học sinh.<br>• Ghi nhận vấn đề cần giải quyết trong bài học. |`,
 
   // TAB 4.B: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI
   GENERATE_ACTIVITY_B: `Hãy biên soạn chi tiết toàn bộ **HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
@@ -218,7 +225,8 @@ ${ACTIVITY_TABLE_CONTRACT}
 - Bám sát mạch kiến thức và các hoạt động khám phá trong SGK, dữ liệu bài học do giáo viên cung cấp.
 - Chia bài học thành các đơn vị kiến thức nhỏ rõ ràng (ví dụ: Hoạt động 2.1: Khái niệm...; Hoạt động 2.2: Định lí/Tính chất...; Hoạt động 2.3: Quy tắc...).
 - MỖI ĐƠN VỊ KIẾN THỨC ĐỀU PHẢI CÓ ĐẦY ĐỦ 4 THÀNH PHẦN: a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (4 bước: Chuyển giao -> Thực hiện -> Báo cáo thảo luận -> Kết luận nhận định).
-- Sản phẩm và Kết luận nhận định PHẢI CÓ LỜI GIẢI TOÁN HỌC CHI TIẾT, CÔNG THỨC LATEX HOÀN CHỈNH, ĐỊNH NGHĨA/ĐỊNH LÍ CHÍNH XÁC ĐỂ HS GHI VỞ.
+- Cột TRÁI mục d) BẮT BUỘC tuân thủ Kịch bản thực chiến phân vai: **GV:** nói câu gì cụ thể trong ngoặc kép "...", hành động gì (phát phiếu, quan sát lỗi sai điển hình, can thiệp phân hóa); **HS:** làm gì (cá nhân X phút -> nhóm Y phút -> sản phẩm trung gian trên bảng phụ/phiếu), báo cáo và phản biện thế nào.
+- Sản phẩm và Cột PHẢI mục d) PHẢI CÓ LỜI GIẢI TOÁN HỌC CHI TIẾT, CÔNG THỨC LATEX HOÀN CHỈNH, ĐỊNH NGHĨA/ĐỊNH LÍ CHÍNH XÁC ĐỂ HS GHI VỞ.
 
 CẤU TRÚC MẪU:
 
@@ -228,17 +236,17 @@ CẤU TRÚC MẪU:
 #### a) Mục tiêu:
 - Học sinh hình thành được khái niệm / nhận biết được...
 #### b) Nội dung:
-- Học sinh thực hiện hoạt động khám phá / đọc hiểu thông tin trong SGK.
+- Học sinh thực hiện hoạt động khám phá trong SGK, trả lời câu hỏi và làm bài tập mẫu.
 #### c) Sản phẩm:
-- Kết quả câu trả lời, lời giải chi tiết cho các câu hỏi khám phá:
+- Kết quả câu trả lời, lời giải chi tiết cho hoạt động khám phá:
   + (Trình bày chi tiết các phép toán, công thức LaTeX $...$).
 #### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: GV giao HĐ/câu hỏi khám phá đúng SGK.<br>+ Bước 2: Thực hiện nhiệm vụ: HS khám phá; GV hỗ trợ.<br>+ Bước 3: Báo cáo, thảo luận: Đại diện trình bày; lớp phản biện; GV chuẩn hóa.<br>+ Bước 4: Kết luận, nhận định: GV chốt kiến thức ghi bảng. | **1. [Tên kiến thức]**<br>- Định nghĩa: ...<br>- Ký hiệu / công thức: $...$<br>+ Chú ý: ...<br>• Ví dụ: ... |
+| + Bước 1: Chuyển giao nhiệm vụ: **GV:** Phát Phiếu học tập / giao hoạt động khám phá trong SGK: "Các em có 3 phút làm việc cá nhân và 4 phút thảo luận nhóm hoàn thành nhiệm vụ...". **HS:** Nhận phiếu học tập, phân công nhiệm vụ trong nhóm.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân (3 phút) ghi kết quả vào nháp -> Thảo luận nhóm (4 phút) thống nhất sản phẩm trung gian lên bảng nhóm. **GV:** Di chuyển bao quát lớp, phát hiện lỗi sai điển hình: ..., can thiệp hỗ trợ phân hóa (gợi mở cho HS yếu, đặt câu hỏi nâng cao cho HS khá giỏi).<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện một nhóm lên bảng trình bày sản phẩm; các nhóm khác nhận xét, đối chiếu và phản biện. **GV:** Điều hành báo cáo, đặt câu hỏi kiểm tra độ hiểu sâu: "Tại sao nhóm em lại suy ra được công thức này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét quá trình làm việc của các nhóm, chuẩn hóa kiến thức, giảng giải bản chất định nghĩa/quy tắc và hướng dẫn ghi bảng. **HS:** Sửa bài vào vở, ghi nhận định nghĩa/công thức chuẩn mực. | **1. [Tên kiến thức]**<br>- Định nghĩa / Khái niệm: ...<br>- Quy tắc / Công thức: $...$<br>+ Chú ý: ...<br>• Ví dụ mẫu 1: (Đề bài và Lời giải chi tiết). |
 
 ### 2. Hoạt động 2.2: [Tên đơn vị kiến thức 2]
-(Tương tự đầy đủ 4 phần a, b, c, d với các bước chi tiết và ví dụ áp dụng...)
+(Tương tự đầy đủ 4 phần a, b, c, d với kịch bản thực chiến phân vai GV-HS và ví dụ áp dụng...)
 
 ### 3. Hoạt động 2.3: [Nếu bài có thêm đơn vị kiến thức 3...]`,
 
@@ -260,6 +268,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 - CHỈ dùng bài luyện tập / câu hỏi / HĐ có trong SGK hoặc dữ liệu giáo viên cung cấp. CẤM invent trắc nghiệm 4 lựa chọn, cấm bịa đề không có trong nguồn.
 - Phải đọc khối dữ liệu SGK ở trên trước. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" ở mục b) và c) khi khối đó không có bài/câu/luyện tập; vẫn xuất bảng d) với nhiệm vụ đối chiếu vở/SGK.
 - Nếu khối dữ liệu SGK trên có “Bài”, “Luyện tập”, đề toán thì CẤM ghi "[Không có trong tài liệu đã cung cấp]"; phải chép hoặc tóm tắt đề có trong nguồn.
+- Cột TRÁI mục d): Phân vai rõ ràng **GV:** nói câu giao việc "...", quan sát phát hiện lỗi sai tính toán/lập luận điển hình, hướng dẫn phân hóa; **HS:** giải cá nhân vào vở -> đổi vở chấm chéo/thảo luận -> lên bảng trình bày, lớp phản biện.
 - Lời giải chi tiết chỉ viết khi nguồn có dữ liệu đủ để giải; không bịa số liệu.
 
 CẤU TRÚC:
@@ -273,12 +282,12 @@ CẤU TRÚC:
 - Liệt kê nguyên đề các bài/câu luyện tập có trong nguồn (kèm số bài/trang nếu nguồn có).
 
 ### c) Sản phẩm:
-- Lời giải/đáp án chỉ khi có trong nguồn hoặc suy ra trực tiếp từ kiến thức nguồn.
+- Lời giải/đáp án chi tiết các bài tập có trong nguồn.
 
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: GV giao đúng các bài/câu có trong nguồn.<br>+ Bước 2: Thực hiện nhiệm vụ: HS làm bài; GV hỗ trợ.<br>+ Bước 3: Báo cáo, thảo luận: HS trình bày; lớp nhận xét.<br>+ Bước 4: Kết luận, nhận định: GV chốt lỗi sai và kĩ năng. | **Luyện tập**<br>- Đề bài (đúng SGK).<br>- Đáp án chốt: $...$<br>• Ví dụ lời giải chốt. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: **GV:** Giao bài tập trong SGK: "Các em hoàn thành Bài... trang... vào vở trong 7 phút, sau đó đổi vở kiểm tra chéo". **HS:** Đọc kĩ đề bài, xác định công thức áp dụng.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Giải toán cá nhân vào vở (7 phút) -> Đổi vở kiểm tra chéo theo cặp (2 phút). **GV:** Quan sát, phát hiện lỗi sai điển hình trong biến đổi/tính toán: ..., trực tiếp hướng dẫn HS còn lúng túng.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** 2 học sinh lên bảng trình bày lời giải; cả lớp đối chiếu bài làm, nhận xét và phản biện các bước làm. **GV:** Đặt câu hỏi chất vấn: "Có cách giải nào ngắn gọn hơn không?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt lời giải chuẩn, chỉ rõ bẫy sai lầm cần tránh khi làm bài kiểm tra. **HS:** Chữa bài chuẩn xác vào vở ghi. | **Luyện tập**<br>- Bài 1 (trang ... SGK):<br>+ Lời giải: $...$<br>- Bài 2 (trang ... SGK):<br>+ Lời giải: $...$<br>• Chú ý phương pháp giải chuẩn. |`,
 
   // TAB 4.D: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG VẬN DỤNG
   GENERATE_ACTIVITY_D: `Hãy biên soạn chi tiết **HOẠT ĐỘNG VẬN DỤNG** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
@@ -298,6 +307,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 - CHỈ dùng bài vận dụng / tình huống / dự án có trong SGK hoặc dữ liệu giáo viên. CẤM invent số liệu, đề thực tiễn hay bài liên môn không có trong nguồn.
 - Phải đọc khối dữ liệu SGK ở trên trước. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" khi khối đó không có bài/câu/vận dụng.
 - Nếu khối dữ liệu SGK trên có “Bài”, “Luyện tập”, “Vận dụng”, đề toán thì CẤM ghi "[Không có trong tài liệu đã cung cấp]"; phải chép hoặc tóm tắt đề có trong nguồn.
+- Cột TRÁI mục d): Kịch bản thực chiến phân vai **GV:** nói câu định hướng "...", hỗ trợ mô hình hóa toán học; **HS:** thảo luận cặp/nhóm giải quyết bài toán thực tế -> báo cáo giải pháp, lớp phản biện tính khả thi.
 - Chỉ tích hợp công cụ số/AI khi bối cảnh sư phạm bật thành phần tương ứng.
 
 CẤU TRÚC:
@@ -305,18 +315,18 @@ CẤU TRÚC:
 ## D. HOẠT ĐỘNG 4: VẬN DỤNG (Khoảng 5 - 8 phút hoặc giao về nhà)
 
 ### a) Mục tiêu:
-- Vận dụng đúng nội dung bài theo nhiệm vụ có trong nguồn.
+- Vận dụng đúng nội dung bài theo nhiệm vụ có trong nguồn vào giải quyết vấn đề thực tế.
 
 ### b) Nội dung:
 - Tình huống/bài vận dụng nguyên văn hoặc tóm tắt sát nguồn.
 
 ### c) Sản phẩm:
-- Sản phẩm/lời giải chỉ khi nguồn cho phép; không bịa số liệu.
+- Sản phẩm/lời giải mô hình hóa toán học từ bài toán thực tế của học sinh.
 
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: GV giao đúng nhiệm vụ vận dụng có trong nguồn.<br>+ Bước 2: Thực hiện nhiệm vụ: HS thực hiện; GV hỗ trợ.<br>+ Bước 3: Báo cáo, thảo luận: Đại diện trình bày.<br>+ Bước 4: Kết luận, nhận định: GV chốt ý nghĩa bài học. | **Vận dụng**<br>- Đề/tình huống (đúng SGK).<br>- Kết quả/đáp án chốt ghi bảng.<br>• Ví dụ sản phẩm HS. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: **GV:** Giao bài toán thực tiễn trong SGK: "Hãy vận dụng kiến thức vừa học để giải quyết bài toán thực tế...". **HS:** Tiếp nhận nhiệm vụ, phân tích số liệu thực tế.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Thảo luận cặp/nhóm (4 phút) mô hình hóa toán học và tính toán ra kết quả. **GV:** Quan sát, gợi mở cách chuyển ngôn ngữ thực tế sang biểu thức toán học.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện nhóm trình bày mô hình toán và kết quả; các nhóm khác nhận xét tính hợp lý của đáp án thực tế. **GV:** Đặt câu hỏi mở rộng liên hệ đời sống.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét, đánh giá khả năng vận dụng của HS, chốt lại ý nghĩa thực tiễn của bài học. **HS:** Ghi nhận lời giải hoàn chỉnh vào vở. | **Vận dụng**<br>- Tình huống thực tế (đúng SGK).<br>- Mô hình toán học & Lời giải chuẩn: $...$<br>• Ý nghĩa thực tiễn bài học. |`,
 
   // TAB 4.E: KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ (MA TRẬN & RUBRICS)
   GENERATE_ASSESSMENT: `Hãy biên soạn **E. KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ** cho Kế hoạch bài dạy môn Toán THCS chuẩn CV 5512.
