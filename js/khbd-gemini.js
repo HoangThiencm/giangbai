@@ -318,20 +318,105 @@ class GeminiAPIManager {
     return "gemini-2.5-flash";
   }
 
+  isUserAbort(err, signal) {
+    return err?.name === "AbortError" && signal?.aborted;
+  }
+
+  async fetchWithTimeout(url, init = {}, timeoutMs = 0) {
+    if (!timeoutMs || timeoutMs <= 0) {
+      return fetch(url, init);
+    }
+    const ctrl = new AbortController();
+    const external = init.signal;
+    let timedOut = false;
+    const onExternalAbort = () => ctrl.abort();
+    if (external) {
+      if (external.aborted) {
+        throw new DOMException("Yêu cầu đã bị hủy.", "AbortError");
+      }
+      external.addEventListener("abort", onExternalAbort, { once: true });
+    }
+    const timer = setTimeout(() => {
+      timedOut = true;
+      ctrl.abort();
+    }, timeoutMs);
+    try {
+      return await fetch(url, { ...init, signal: ctrl.signal });
+    } catch (err) {
+      if (err?.name === "AbortError" && timedOut && !external?.aborted) {
+        const timeoutErr = new Error(`Hết thời gian chờ ${Math.round(timeoutMs / 1000)}s khi gọi Gemini.`);
+        timeoutErr.name = "TimeoutError";
+        throw timeoutErr;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+      if (external) external.removeEventListener("abort", onExternalAbort);
+    }
+  }
+
+  wrapProxyAsResponse(data, httpStatus) {
+    const status = Number(data?.status || httpStatus || 0) || 0;
+    const body = data?.body && typeof data.body === "object" ? data.body : { error: { message: data?.error || "Gemini proxy lỗi" } };
+    return {
+      ok: status >= 200 && status < 300,
+      status: status || httpStatus || 502,
+      statusText: status ? String(status) : "Proxy Error",
+      json: async () => body,
+      headers: { get: () => null }
+    };
+  }
+
+  async fetchViaKhbdProxy(model, key, payload, timeoutSec, signal) {
+    const res = await this.fetchWithTimeout("api/khbd_gemini.php", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        key,
+        payload,
+        timeout: timeoutSec
+      }),
+      signal
+    }, Math.max(12000, (timeoutSec + 8) * 1000));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok && !data.body) {
+      throw new Error(data.error || `Máy chủ không gọi được Gemini (HTTP ${res.status}).`);
+    }
+    return this.wrapProxyAsResponse(data, res.status);
+  }
+
+  async fetchGeminiGenerate(model, key, payload, signal, timeoutMs, options = {}) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+    try {
+      return await this.fetchWithTimeout(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal
+      }, timeoutMs);
+    } catch (err) {
+      if (this.isUserAbort(err, signal)) throw err;
+      const isNet = err?.name === "TimeoutError"
+        || err?.name === "TypeError"
+        || /failed to fetch|network|timeout|hết thời gian/i.test(String(err?.message || ""));
+      if (!isNet || options._testFastRetry) throw err;
+      this.emitGeminiStatus({
+        type: "proxy",
+        message: "Trình duyệt không tới được Gemini, đang gọi qua máy chủ hosting..."
+      }, options);
+      return this.fetchViaKhbdProxy(model, key, payload, Math.max(15, Math.round((timeoutMs || 60000) / 1000)), signal);
+    }
+  }
+
   // Kiểm tra tính hợp lệ của 1 API Key
   async testApiKey(key, model = "gemini-3.7-flash") {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
     const payload = {
       contents: [{ role: "user", parts: [{ text: "Xin chào, hãy trả lời 'OK'." }] }],
       generationConfig: { maxOutputTokens: 10 }
     };
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
+    const res = await this.fetchGeminiGenerate(model, key, payload, null, 15000);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error?.message || `HTTP ${res.status}: ${res.statusText}`);
@@ -340,10 +425,10 @@ class GeminiAPIManager {
   }
 
   async testMistralApiKey(key) {
-    const res = await fetch("https://api.mistral.ai/v1/models", {
+    const res = await this.fetchWithTimeout("https://api.mistral.ai/v1/models", {
       method: "GET",
       headers: { Authorization: `Bearer ${key}` }
-    });
+    }, 15000);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || err.error?.message || `HTTP ${res.status}: ${res.statusText}`);
@@ -447,15 +532,22 @@ class GeminiAPIManager {
       while (attempts < maxAttempts) {
         if (signal?.aborted) throw new DOMException("Yêu cầu đã bị hủy.", "AbortError");
         const currentKey = this.getCurrentKey();
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${currentKey}`;
+        const timeoutMs = options._testFastRetry ? 0 : (options.timeoutMs || 75000);
 
         try {
-          const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            signal
-          });
+          this.emitGeminiStatus({
+            type: "call",
+            message: `Đang gọi Gemini (${activeModel})...`,
+            model: activeModel
+          }, options);
+          const response = await this.fetchGeminiGenerate(
+            activeModel,
+            currentKey,
+            payload,
+            signal,
+            timeoutMs,
+            options
+          );
 
           if (response.ok) {
             const data = await response.json();
@@ -543,11 +635,22 @@ class GeminiAPIManager {
 
         } catch (err) {
           if (err?.name === "AbortError") throw err;
-          if (err.name === "TypeError" && String(err.message).includes("fetch")) {
-            throw new Error(`Lỗi kết nối mạng: Không thể gọi đến máy chủ Gemini API. Vui lòng kiểm tra Internet hoặc thử lại.`);
+          if (err?.name === "TimeoutError" || (err.name === "TypeError" && /fetch/i.test(String(err.message || "")))) {
+            lastError = new Error(`Không kết nối được Gemini: ${err.message}. Thử VPN, đổi mạng, hoặc chọn Gemini 2.5 Flash.`);
+            attempts++;
+            if (attempts < maxAttempts) {
+              this.emitGeminiStatus({
+                type: "retry",
+                message: lastError.message,
+                model: activeModel
+              }, options);
+              maybeFallback("không kết nối được");
+              await this.waitForRetry(waitMs(1200), signal);
+              continue;
+            }
+            throw lastError;
           }
           lastError = err;
-          // Transient 5xx đã continue trong nhánh HTTP; các lỗi còn lại (400, hết hạn mức, ...) ném ra.
           throw err;
         }
       }

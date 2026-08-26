@@ -2597,22 +2597,44 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
 
   const btn = document.getElementById(buttonId);
   const editor = document.getElementById(targetEditorId);
+  const btnCancel = document.getElementById("btnCancelGeneration");
 
   try {
     appState.isGenerating = true;
+    appState.cancelRequested = false;
+    appState.generationController = new AbortController();
     if (btn) btn.disabled = true;
+    if (btnCancel) btnCancel.disabled = false;
 
-    updateProgress(50, `Đang ${operationName}...`);
+    updateProgress(20, `Đang ${operationName}...`);
     document.getElementById("statusFooterText").textContent = `Đang ${operationName}...`;
 
-    const media = skipMedia ? images : (images.length ? images : await prepareGeminiMedia());
+    if (!skipMedia && !hasAnalyzedLessonContent() && canUseMistralOcr() && hasTextbookMedia()) {
+      updateProgress(25, "Đang nhận diện SGK bằng Mistral OCR trước khi soạn...");
+      try {
+        const ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(Math.min(40, pct), msg));
+        if (ocrText.replace(/\s+/g, " ").trim().length >= 80) {
+          applyTextbookOcrResult(ocrText, { silent: true });
+        }
+      } catch (ocrErr) {
+        console.warn("OCR trước khi soạn:", ocrErr);
+      }
+    }
+
+    const useTextOnly = skipMedia || hasAnalyzedLessonContent();
+    const media = useTextOnly ? images : (images.length ? images : await prepareGeminiMedia());
+    if (media.length) {
+      updateProgress(50, `Đang gửi PDF/ảnh tới Gemini (có thể chậm)...`);
+    } else {
+      updateProgress(55, `Đang gọi Gemini soạn ${operationName}...`);
+    }
     const rawResult = await geminiAPI.generateContent(
       buildPedagogicalPrompt(prompt),
       media,
       getSystemRole(appState.selectedSubject, appState.selectedGrade),
       0.3,
-      null,
-      maxOutputTokens ? { maxOutputTokens } : {}
+      appState.generationController.signal,
+      maxOutputTokens ? { maxOutputTokens, timeoutMs: 75000 } : { timeoutMs: 75000 }
     );
     const result = skipGuard ? (normalizeGeminiLessonOutput(rawResult).text || rawResult) : await guardGeminiLessonOutput(rawResult);
 
@@ -2630,16 +2652,21 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
 
   } catch (error) {
     console.error(`Lỗi khi ${operationName}:`, error);
-    if (isGeminiOverloadError(error)) {
+    const cancelled = error?.name === "AbortError" || appState.cancelRequested;
+    if (cancelled) {
+      showToast("Đã hủy yêu cầu AI.", "info");
+    } else if (isGeminiOverloadError(error)) {
       showToast("Gemini đang quá tải, hệ thống đã thử lại/đổi model nhưng vẫn lỗi. Thử lại sau hoặc chọn Gemini 2.5 Flash.", "danger", 7000);
     } else {
-      showToast(`Lỗi khi ${operationName}: ${error.message}`, "danger", 6000);
+      showToast(`Lỗi khi ${operationName}: ${error.message}`, "danger", 7000);
     }
     hideProgress();
-    document.getElementById("statusFooterText").textContent = `Lỗi khi ${operationName}.`;
+    document.getElementById("statusFooterText").textContent = cancelled ? "Đã hủy." : `Lỗi khi ${operationName}.`;
   } finally {
     appState.isGenerating = false;
+    appState.generationController = null;
     if (btn) btn.disabled = false;
+    if (btnCancel) btnCancel.disabled = true;
   }
 }
 
@@ -2735,7 +2762,7 @@ async function handle1ClickGenerate() {
       ? "Bước 1/2: Đang soạn I. Mục tiêu và II. Thiết bị (từ văn bản OCR)..."
       : "Bước 1/2: Đang soạn I. Mục tiêu và II. Thiết bị (PDF/ảnh đính kèm)...");
     const promptCore = getPromptTemplate("GENERATE_CORE_LESSON", context);
-    const rawCore = await generateOneClickContent(promptCore, media, { maxOutputTokens: 16384 });
+    const rawCore = await generateOneClickContent(promptCore, media, { maxOutputTokens: 16384, timeoutMs: 75000 });
     const coreParts = parseKhbdSections(rawCore, ["I", "II"]);
     const objectivesRaw = coreParts.I || rawCore;
     const materialsRaw = coreParts.II || "";
@@ -2761,7 +2788,7 @@ async function handle1ClickGenerate() {
       ? "Bước 2/2: Đang soạn hoạt động A–D (từ văn bản OCR)..."
       : "Bước 2/2: Đang soạn hoạt động A–D (PDF/ảnh đính kèm)...");
     const promptAD = getPromptTemplate("GENERATE_ACTIVITIES_AD", context) + buildAllPhasePedagogyContext();
-    const rawAD = await generateOneClickContent(promptAD, media, { maxOutputTokens: 32768 });
+    const rawAD = await generateOneClickContent(promptAD, media, { maxOutputTokens: 32768, timeoutMs: 90000 });
     const actParts = parseKhbdSections(rawAD, ["A", "B", "C", "D"]);
     const missingActs = [];
     for (const key of ["A", "B", "C", "D"]) {

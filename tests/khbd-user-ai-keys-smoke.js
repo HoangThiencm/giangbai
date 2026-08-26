@@ -20,4 +20,9 @@ assert.match(gemini, /saveUserAiKeysToServer/, "Lưu Gemini + Mistral lên CSDL 
 assert.match(gemini, /async testMistralApiKey/, "Có kiểm tra Mistral key");
 assert.match(login, /khbd_user_mistral_keys_/, "Login nạp Mistral key user vào localStorage");
 
+const geminiProxy = fs.readFileSync(path.join(root, "api", "khbd_gemini.php"), "utf8");
+assert.match(geminiProxy, /generativelanguage\.googleapis\.com/, "Proxy máy chủ gọi Gemini");
+assert.match(gemini, /fetchViaKhbdProxy/, "Trình duyệt fallback proxy khi không tới Google");
+assert.match(gemini, /fetchWithTimeout/, "Không để fetch Gemini treo vô hạn");
+
 console.log("khbd user AI keys smoke: passed");
