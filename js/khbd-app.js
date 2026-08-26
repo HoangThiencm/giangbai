@@ -1566,49 +1566,44 @@ function isGarbledTextbookText(text) {
   return false;
 }
 
-function hasMistralOcr() {
-  return Boolean(window.MistralOcr && typeof window.MistralOcr.ocrImageDataUrl === "function");
+function compressDataUrl(dataUrl, maxEdge = 1280, quality = 0.72) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxEdge / Math.max(img.width || 1, img.height || 1));
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve({ dataUrl: canvas.toDataURL("image/jpeg", quality), mimeType: "image/jpeg" });
+    };
+    img.onerror = () => resolve({ dataUrl, mimeType: "image/jpeg" });
+    img.src = dataUrl;
+  });
 }
 
-async function extractPageWithMistral(dataUrl) {
-  const result = await window.MistralOcr.ocrImageDataUrl(dataUrl);
-  return String(result?.text || "").trim();
+async function prepareVisionImages() {
+  const source = (appState.images || []).slice(0, MAX_VISION_IMAGES);
+  const prepared = [];
+  for (const image of source) {
+    if (!image.dataUrl) continue;
+    const compressed = await compressDataUrl(image.dataUrl);
+    prepared.push({
+      mimeType: compressed.mimeType,
+      dataUrl: compressed.dataUrl
+    });
+  }
+  return prepared;
 }
 
-async function extractTextbookLocally() {
-  const images = appState.images || [];
-  if (!images.length) throw new Error("Chưa có ảnh/trang SGK.");
-  if (window.AiDesignConfig && typeof AiDesignConfig.loadHostingFallbackConfig === "function") {
-    await AiDesignConfig.loadHostingFallbackConfig();
-  }
-  const sections = [];
-  for (let i = 0; i < images.length; i++) {
-    const image = images[i];
-    const title = image.pageNum ? `Trang PDF ${image.pageNum}` : (image.name || `Ảnh ${i + 1}`);
-    updateProgress(Math.round(((i) / images.length) * 90), `Đang đọc ${title} (${i + 1}/${images.length}) bằng Mistral OCR...`);
-    let text = String(image.pdfText || image.ocrText || "").trim();
-    if ((!text || isGarbledTextbookText(text)) && image.sourceType === "pdf" && currentPdfDoc && image.pageNum) {
-      try {
-        const page = await currentPdfDoc.getPage(image.pageNum);
-        const rebuilt = await extractPdfPageText(page);
-        if (rebuilt && !isGarbledTextbookText(rebuilt)) {
-          text = rebuilt;
-          image.pdfText = rebuilt;
-        }
-      } catch (error) {
-        console.warn("Không lấy được lớp chữ PDF:", error);
-      }
-    }
-    if (isGarbledTextbookText(text) && image.dataUrl) {
-      if (!hasMistralOcr()) {
-        throw new Error("Chưa có Mistral OCR. Vào Admin bật Mistral và thêm mistral_keys (cùng cấu hình với Thi trực tuyến).");
-      }
-      text = await extractPageWithMistral(image.dataUrl);
-      image.ocrText = text;
-    }
-    sections.push(`## ${title}\n\n${text || "[Không trích được chữ trên trang này]"}`);
-  }
-  return `# Nội dung SGK (Mistral OCR, không dùng Gemini)\n\n${sections.join("\n\n---\n\n")}`;
+function generationPauseMs() {
+  const n = (geminiAPI.apiKeys || []).length;
+  return n <= 1 ? 2200 : 800;
 }
 
 async function handleGenerateVision() {
@@ -1616,34 +1611,27 @@ async function handleGenerateVision() {
     showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh/trang SGK!", "warning");
     return;
   }
-  if (appState.isGenerating) {
-    showToast("Một tác vụ khác đang chạy, vui lòng chờ.", "warning");
-    return;
+  if (appState.images.length > MAX_VISION_IMAGES) {
+    showToast(`Để 1 key chạy ổn, chỉ gửi ${MAX_VISION_IMAGES} trang đầu. Hãy chọn đúng trang bài (không nạp cả cuốn).`, "info", 5000);
   }
-
-  const btn = document.getElementById("btnAnalyzeVision");
-  try {
-    appState.isGenerating = true;
-    if (btn) btn.disabled = true;
-    updateProgress(5, "Đang trích nội dung SGK bằng Mistral OCR (không dùng Gemini)...");
-    const result = await extractTextbookLocally();
-    appState.content.vision = result;
-    const editor = document.getElementById("editorVision");
-    if (editor) editor.value = result;
-    renderMathPreview(result, "previewVision");
-    saveStateToLocalStorage();
-    updateProgress(100, "Đã trích nội dung SGK!");
-    setTimeout(() => hideProgress(), 1200);
-    showToast("Đã trích nội dung SGK bằng Mistral OCR, không dùng quota Gemini.", "success");
-    applyLessonBasedRecommendations({ silent: false });
-  } catch (error) {
-    console.error(error);
-    hideProgress();
-    showToast(`Lỗi trích nội dung SGK: ${error.message}`, "danger", 6000);
-  } finally {
-    appState.isGenerating = false;
-    if (btn) btn.disabled = false;
-  }
+  const images = await prepareVisionImages();
+  const context = getGenerationPromptContext();
+  const prompt = getPromptTemplate("ANALYZE_TEXTBOOK", context);
+  await executeAIGeneration({
+    buttonId: "btnAnalyzeVision",
+    targetEditorId: "editorVision",
+    targetPreviewId: "previewVision",
+    operationName: "Đọc nội dung SGK",
+    prompt,
+    images,
+    skipGuard: true,
+    maxOutputTokens: 4096,
+    onSuccess: (result) => {
+      appState.content.vision = result;
+      saveStateToLocalStorage();
+      applyLessonBasedRecommendations({ silent: false });
+    }
+  });
 }
 
 function hasTextbookSource() {
@@ -1736,7 +1724,7 @@ async function handleGenerateCurrentActivity() {
 /**
  * Hàm thực thi gọi AI tổng quát với giao diện khóa nút và hiển thị trạng thái
  */
-async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, operationName, prompt, images = [], onSuccess, requireTextbook = false, requireSource = false }) {
+async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, operationName, prompt, images = [], onSuccess, requireTextbook = false, requireSource = false, skipGuard = false, maxOutputTokens = null }) {
   if (requireTextbook && !hasTextbookSource()) {
     showToast("Cần dán ảnh/PDF SGK hoặc có nội dung phân tích Bước 0 trước khi soạn hoạt động. Không tự thêm nội dung ngoài nguồn.", "warning");
     return;
@@ -1770,8 +1758,8 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
     updateProgress(50, `Đang ${operationName}...`);
     document.getElementById("statusFooterText").textContent = `Đang ${operationName}...`;
 
-    const rawResult = await geminiAPI.generateContent(buildPedagogicalPrompt(prompt), images, getSystemRole(appState.selectedSubject, appState.selectedGrade));
-    const result = await guardGeminiLessonOutput(rawResult);
+    const rawResult = await geminiAPI.generateContent(buildPedagogicalPrompt(prompt), images, getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.3, null, maxOutputTokens ? { maxOutputTokens } : {});
+    const result = skipGuard ? (normalizeGeminiLessonOutput(rawResult).text || rawResult) : await guardGeminiLessonOutput(rawResult);
 
     let finalResult = result;
     if (typeof onSuccess === "function") {
@@ -1858,14 +1846,26 @@ async function handle1ClickGenerate() {
     
     // BƯỚC 1: Trích nội dung SGK trên máy (không gọi Gemini)
     if (appState.images.length > 0 && !String(appState.content.vision || "").trim()) {
-      updateProgress(10, "Bước 1/7: Đang trích nội dung SGK bằng Mistral OCR...");
-      const resVision = await extractTextbookLocally();
+      if (appState.images.length > MAX_VISION_IMAGES) {
+        showToast(`Chỉ gửi ${MAX_VISION_IMAGES} trang đầu để 1 key không bị quá tải.`, "info", 4500);
+      }
+      updateProgress(10, "Bước 1/7: Đang đọc SGK bằng Gemini (ảnh đã nén)...");
+      const visionImages = await prepareVisionImages();
+      const promptVision = getPromptTemplate("ANALYZE_TEXTBOOK", context);
+      const resVision = await geminiAPI.generateContent(
+        buildPedagogicalPrompt(promptVision),
+        visionImages,
+        getSystemRole(appState.selectedSubject, appState.selectedGrade),
+        0.2,
+        appState.generationController.signal,
+        { maxOutputTokens: 4096 }
+      );
       throwIfGenerationCancelled();
-      appState.content.vision = resVision;
-      document.getElementById("editorVision").value = resVision;
-      renderMathPreview(resVision, "previewVision");
+      appState.content.vision = normalizeGeminiLessonOutput(resVision).text || resVision;
+      document.getElementById("editorVision").value = appState.content.vision;
+      renderMathPreview(appState.content.vision, "previewVision");
       saveStateToLocalStorage();
-      await delay(400, appState.generationController.signal);
+      await delay(generationPauseMs(), appState.generationController.signal);
     }
 
     context.textbook_content = appState.content.vision || "";
@@ -1891,7 +1891,7 @@ async function handle1ClickGenerate() {
     appState.content.objectives = resObj;
     document.getElementById("editorObjectives").value = resObj;
     renderMathPreview(resObj, "previewObjectives");
-    await delay(800, appState.generationController.signal);
+    await delay(generationPauseMs(), appState.generationController.signal);
     context.objectives_content = resObj;
 
     // BƯỚC 3: Tạo II. Thiết bị dạy học và học liệu
@@ -1901,14 +1901,14 @@ async function handle1ClickGenerate() {
     appState.content.materials = resMat;
     document.getElementById("editorMaterials").value = resMat;
     renderMathPreview(resMat, "previewMaterials");
-    await delay(800, appState.generationController.signal);
+    await delay(generationPauseMs(), appState.generationController.signal);
 
     // BƯỚC 4: Tạo III.A Khởi động
     updateProgress(55, "Bước 4/7: Đang tạo III.A Hoạt động Mở đầu...");
     const promptA = getPromptTemplate('GENERATE_ACTIVITY_A', context) + buildPhasePedagogyContext('A');
     const resA = await generateOneClickContent(promptA);
     await applyActivityOutput("A", resA, appState.generationController.signal);
-    await delay(800, appState.generationController.signal);
+    await delay(generationPauseMs(), appState.generationController.signal);
 
     // BƯỚC 5: Tạo III.B Hình thành kiến thức mới
     updateProgress(70, "Bước 5/7: Đang tạo III.B Hoạt động Hình thành kiến thức...");
@@ -1916,7 +1916,7 @@ async function handle1ClickGenerate() {
     const promptB = getPromptTemplate('GENERATE_ACTIVITY_B', context) + buildPhasePedagogyContext('B');
     const resB = await generateOneClickContent(promptB);
     await applyActivityOutput("B", resB, appState.generationController.signal);
-    await delay(800, appState.generationController.signal);
+    await delay(generationPauseMs(), appState.generationController.signal);
 
     // BƯỚC 6: Tạo III.C Luyện tập
     updateProgress(82, "Bước 6/7: Đang tạo III.C Hoạt động Luyện tập...");
@@ -1924,7 +1924,7 @@ async function handle1ClickGenerate() {
     const promptC = getPromptTemplate('GENERATE_ACTIVITY_C', context) + buildPhasePedagogyContext('C');
     const resC = await generateOneClickContent(promptC);
     await applyActivityOutput("C", resC, appState.generationController.signal);
-    await delay(800, appState.generationController.signal);
+    await delay(generationPauseMs(), appState.generationController.signal);
 
     // BƯỚC 7: Tạo III.D Vận dụng
     updateProgress(94, "Bước 7/7: Đang tạo III.D Hoạt động Vận dụng...");
@@ -1932,7 +1932,7 @@ async function handle1ClickGenerate() {
     const promptD = getPromptTemplate('GENERATE_ACTIVITY_D', context) + buildPhasePedagogyContext('D');
     const resD = await generateOneClickContent(promptD);
     await applyActivityOutput("D", resD, appState.generationController.signal);
-    await delay(800, appState.generationController.signal);
+    await delay(generationPauseMs(), appState.generationController.signal);
 
     // Lưu toàn bộ vào localStorage
     saveStateToLocalStorage();
