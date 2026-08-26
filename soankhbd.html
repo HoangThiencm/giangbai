@@ -111,12 +111,15 @@
   </header>
 
   <!-- =========================================================================
-       PROGRESS BAR (TỰ ĐỘNG HIỂN THỊ KHI CHẠY 1-CLICK HOẶC TÁC VỤ AI)
+       FLOATING PROGRESS BAR (THỜI GIAN THỰC NỔI PHÍA DƯỚI)
        ========================================================================= -->
   <div id="progressContainer" class="progress-container">
     <div class="progress-header">
-      <span id="progressStepTitle">Đang chuẩn bị...</span>
-      <span id="progressPercent">0%</span>
+      <div class="progress-header-left">
+        <span class="progress-spinner"></span>
+        <span id="progressStepTitle">Đang chuẩn bị...</span>
+      </div>
+      <span id="progressPercent" class="progress-percent-badge">0%</span>
     </div>
     <div class="progress-bar-outer">
       <div id="progressBarInner" class="progress-bar-inner"></div>

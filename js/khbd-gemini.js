@@ -344,7 +344,7 @@ class GeminiAPIManager {
       generationConfig: {
         temperature: temperature,
         topP: 0.95,
-        maxOutputTokens: options.maxOutputTokens || (images.length ? 4096 : 8192)
+        maxOutputTokens: options.maxOutputTokens || (images.length ? 16384 : 8192)
       }
     };
 
@@ -376,6 +376,10 @@ class GeminiAPIManager {
 
             if (!candidate) {
               throw new Error("Không nhận được phản hồi hợp lệ từ Gemini API.");
+            }
+
+            if (candidate.finishReason === "MAX_TOKENS") {
+              console.warn("[Gemini] Phản hồi chạm giới hạn token (MAX_TOKENS). Đã tăng hạn mức output để đảm bảo trích xuất trọn vẹn.");
             }
 
             const textParts = candidate.content?.parts?.map(p => p.text || "").join("").trim();

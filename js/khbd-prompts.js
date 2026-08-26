@@ -66,11 +66,11 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
   ANALYZE_TEXTBOOK: `Bạn hãy quan sát và phân tích toàn diện các hình ảnh/trang SGK Toán được giáo viên cung cấp.
 Chủ đề bài học: "{topic}" (Môn học: {subject}).
 
-HÃY PHÂN TÍCH VÀ TRÍCH XUẤT NỘI DUNG VỚI CÁC MỤC SAU:
+HÃY PHÂN TÍCH VÀ TRÍCH XUẤT ĐẦY ĐỦ, TRỌN VẸN TOÀN BỘ NỘI DUNG TỪ ĐẦU ĐẾN CUỐI CÁC TRANG (TUYỆT ĐỐI KHÔNG CẮT NGẮN, KHÔNG DỪNG GIỮA CHỪNG):
 1. **Tổng quan bài học:** Tên bài, vị trí trong chương trình và mục tiêu cần đạt cốt lõi theo SGK.
 2. **Khung kiến thức trọng tâm:**
-   - Các định nghĩa, khái niệm, thuật ngữ mới theo SGK cung cấp.
-   - Các quy tắc, công thức toán học, định lí, tính chất (viết bằng LaTeX $...$).
+   - Các định nghĩa, khái niệm, thuật ngữ mới theo SGK cung cấp (trích xuất đầy đủ từng khái niệm, câu chữ chính xác).
+   - Các quy tắc, công thức toán học, định lí, tính chất (viết đầy đủ bằng mã LaTeX $...$).
    - Các quy ước, chú ý sư phạm quan trọng.
 3. **Chuỗi hoạt động khám phá trong SGK:**
    - Hoạt động mở đầu (tình huống, hình ảnh thực tế gắn với cuộc sống).
@@ -78,12 +78,12 @@ HÃY PHÂN TÍCH VÀ TRÍCH XUẤT NỘI DUNG VỚI CÁC MỤC SAU:
    - Hoạt động luyện tập (các bài Luyện tập, Tranh luận, Thử thách nhỏ trong SGK).
    - Hoạt động vận dụng (các bài toán thực tế, dự án gắn kết tri thức với cuộc sống).
 4. **Hệ thống bài tập cuối bài:**
-   - Tóm tắt đề bài các bài tập cơ bản và nâng cao trong SGK.
+   - Liệt kê đầy đủ đề bài các bài tập cơ bản và nâng cao trong SGK (Bài 1, Bài 2, Bài 3... kèm số liệu/câu hỏi chi tiết).
 5. **Đề xuất của Chuyên gia Sư phạm (chỉ gắn đúng nội dung đã đọc, không thêm kiến thức mới):**
    - Những điểm học sinh dễ mắc sai lầm, hiểu sai bản chất ngay trên các khái niệm/bài tập vừa trích.
    - Cơ hội tích hợp số/AI chỉ khi thành phần đó được bật trong bối cảnh sư phạm.
 
-Hãy trình bày rõ ràng, mạch lạc, giữ nguyên vẹn các công thức toán bằng định dạng LaTeX.`,
+YÊU CẦU: Trình bày rõ ràng, đầy đủ từng mục từ Mục 1 đến Mục 5, giữ nguyên vẹn các công thức toán bằng định dạng LaTeX, không bỏ dở giữa chừng.`,
 
   // TAB 2: MỤC TIÊU BÀI HỌC (I. MỤC TIÊU)
   GENERATE_OBJECTIVES: `Hãy xây dựng phần **I. MỤC TIÊU** cho Kế hoạch bài dạy chuẩn Công văn 5512/BGDĐT-GDTrH, bám CT GDPT 2018.

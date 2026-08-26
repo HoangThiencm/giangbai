@@ -1851,7 +1851,7 @@ function isGarbledTextbookText(text) {
   return false;
 }
 
-function compressDataUrl(dataUrl, maxEdge = 1280, quality = 0.72) {
+function compressDataUrl(dataUrl, maxEdge = 1600, quality = 0.85) {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
@@ -1959,7 +1959,7 @@ async function analyzeTextbookInBatches(basePrompt, { signal = null, onProgress 
       getSystemRole(appState.selectedSubject, appState.selectedGrade),
       0.2,
       signal,
-      { maxOutputTokens: 4096 }
+      { maxOutputTokens: 16384 }
     );
     if (signal?.aborted) throw new DOMException("Đã hủy theo yêu cầu của bạn.", "AbortError");
     results.push(normalizeGeminiLessonOutput(raw).text || raw);
@@ -1992,7 +1992,7 @@ async function handleGenerateVision() {
     prompt: getPromptTemplate("ANALYZE_TEXTBOOK", context),
     skipGuard: true,
     visionBatches: true,
-    maxOutputTokens: 4096,
+    maxOutputTokens: 16384,
     onSuccess: (result) => {
       appState.content.vision = result;
       saveStateToLocalStorage();
@@ -2494,7 +2494,12 @@ function updateProgress(percent, title) {
   const titleElem = document.getElementById("progressStepTitle");
   const percentElem = document.getElementById("progressPercent");
 
-  if (container) container.style.display = "block";
+  if (container) {
+    container.style.display = "block";
+    requestAnimationFrame(() => {
+      container.classList.add("show");
+    });
+  }
   if (bar) bar.style.width = `${percent}%`;
   if (titleElem) titleElem.textContent = title;
   if (percentElem) percentElem.textContent = `${percent}%`;
@@ -2502,7 +2507,14 @@ function updateProgress(percent, title) {
 
 function hideProgress() {
   const container = document.getElementById("progressContainer");
-  if (container) container.style.display = "none";
+  if (container) {
+    container.classList.remove("show");
+    setTimeout(() => {
+      if (!container.classList.contains("show")) {
+        container.style.display = "none";
+      }
+    }, 350);
+  }
 }
 
 function showToast(message, type = "info", duration = 3500) {
