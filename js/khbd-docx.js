@@ -615,8 +615,8 @@ class DocxGenerator {
       // 5. Phân tích DANH SÁCH ĐÁNH SỐ (1. 2. a) b)...)
       if (/^(\d+\.|\b[a-z]\))\s+/.test(trimmed)) {
         const matchNum = trimmed.match(/^(\d+\.|\b[a-z]\))\s+/);
-        const prefix = matchNum[0];
-        const contentText = trimmed.substring(prefix.length);
+        const prefix = matchNum[0].trimEnd() + " ";
+        const contentText = trimmed.substring(matchNum[0].length);
         const headingColor = this.headingIntegrationColor(contentText);
         if (headingColor) runColor = headingColor;
         else if (/^\d+\./.test(trimmed)) runColor = null;
@@ -626,7 +626,7 @@ class DocxGenerator {
         elements.push(new Paragraph({
           spacing: { before: 40, after: 120, line: this.lineSpacing },
           children: [
-            this.coloredTextRun(prefix + " ", { bold: true, color: lineColor }),
+            this.coloredTextRun(prefix, { bold: true, color: lineColor }),
             ...runs
           ]
         }));
@@ -763,17 +763,23 @@ class DocxGenerator {
   }
 
   parseTableCellParagraphs(text, isHeader = false) {
-    const { Paragraph, TextRun } = window.docx;
+    const { Paragraph } = window.docx;
     const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
     const usable = lines.length ? lines : [""];
     return usable.map(line => {
-      const lineColor = isHeader ? undefined : this.lineIntegrationColor(line, null);
+      const listMatch = !isHeader ? line.match(/^([-+•])\s+(.+)$/) : null;
+      const marker = listMatch ? listMatch[1] : "";
+      const contentText = listMatch ? listMatch[2] : line;
+      const displayLine = listMatch ? `${marker} ${contentText}` : (line || " ");
+      const indentLeft = marker === "+" ? 360 : marker === "•" ? 720 : 0;
+      const lineColor = isHeader ? undefined : this.lineIntegrationColor(displayLine, null);
       const runs = isHeader
         ? [this.coloredTextRun(line || " ", { bold: true })]
-        : this.parseInlineTextToRuns(line || " ", lineColor);
+        : this.parseInlineTextToRuns(displayLine, lineColor);
       return new Paragraph({
+        indent: indentLeft ? { left: indentLeft } : undefined,
         spacing: { before: 40, after: 40, line: 240 },
-        children: runs.length ? runs : [this.coloredTextRun(line || "", { bold: isHeader, color: lineColor })]
+        children: runs.length ? runs : [this.coloredTextRun(displayLine || "", { bold: isHeader, color: lineColor })]
       });
     });
   }

@@ -128,10 +128,7 @@
        ========================================================================= -->
   <nav class="main-nav">
     <button class="nav-tab-btn active" data-tab="tabVision">
-      <i data-lucide="image"></i> 0. Phân tích ảnh/trang SGK <span id="imgCountBadge" class="tab-badge">0 ảnh</span>
-    </button>
-    <button class="nav-tab-btn" data-tab="tabConfig">
-      <i data-lucide="sliders"></i> 1. Thiết lập chung
+      <i data-lucide="book-open-check"></i> Thiết lập bài dạy từ SGK <span id="imgCountBadge" class="tab-badge">0 ảnh</span>
     </button>
     <button class="nav-tab-btn" data-tab="tabObjectives">
       <i data-lucide="target"></i> 2. I. Mục tiêu
@@ -155,10 +152,10 @@
     <!-- -----------------------------------------------------------------------
          TAB 0: THIẾT LẬP CHUNG & THÔNG TIN BÀI DẠY
          ----------------------------------------------------------------------- -->
-    <section id="tabConfig" class="tab-pane">
+    <section id="tabVision" class="tab-pane active">
       <div class="card">
         <div class="card-header">
-          <h2 class="card-title"><i data-lucide="settings"></i> Thông tin Kế hoạch Bài dạy (Chuẩn Công văn 5512)</h2>
+          <h2 class="card-title"><i data-lucide="settings"></i> Thiết lập bài dạy từ SGK</h2>
           <span class="text-muted" style="font-size: 0.85rem;">SGK do giáo viên cung cấp</span>
           <div class="card-actions"><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
         </div>
@@ -253,12 +250,11 @@
           </ol>
         </div>
       </div>
-    </section>
 
     <!-- -----------------------------------------------------------------------
          TAB 0: PHÂN TÍCH ẢNH SGK (VISION) — LÀM TRƯỚC
          ----------------------------------------------------------------------- -->
-    <section id="tabVision" class="tab-pane active">
+    <div id="lessonTextbookAnalysis">
       <div class="card">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="camera"></i> Bước 0 — Dán & phân tích ảnh/trang SGK</h2>
@@ -277,7 +273,7 @@
           <div class="dropzone-icon">📋</div>
           <div class="dropzone-text">
             <h4>Dán ảnh SGK từ Clipboard (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
-            <p>Làm bước này trước. Chỉ chọn <b>1–4 trang của đúng bài</b> (không nạp cả cuốn). Ảnh được nén trước khi gửi Gemini để 1 API key vẫn chạy ổn. Sau khi đọc xong, hệ thống đề xuất PPDH và NLS/AI.</p>
+            <p>Chọn ảnh hoặc PDF của bài học. Mọi trang đã chọn được xử lý theo từng đợt; bản sao gửi Gemini được nén đủ rõ chữ, bảng và công thức. Sau khi đọc xong, hệ thống đề xuất PPDH và NLS/AI nhưng giữ lựa chọn giáo viên đã chỉnh.</p>
           </div>
           <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
         </div>
@@ -307,6 +303,7 @@
           </div>
         </div>
       </div>
+    </div>
     </section>
 
     <!-- -----------------------------------------------------------------------
@@ -520,7 +517,7 @@
           </label>
           <input type="text" id="inputPdfPageRange" class="input-control" placeholder="Ví dụ: 1-3 hoặc 1, 2, 4" style="margin-top: 0.5rem; margin-left: 1.5rem; width: calc(100% - 1.5rem);" disabled>
           <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.35rem; margin-left: 1.5rem;">
-            💡 Khuyên dùng: Chỉ chọn các trang của bài học (khoảng 1 - 4 trang) để AI phân tích nhanh và chuẩn xác nhất.
+            💡 Có thể chọn toàn bộ hoặc một khoảng trang. Hệ thống xử lý tất cả trang đã chọn theo từng đợt để giữ ổn định hạn mức.
           </p>
         </div>
         <div id="pdfRenderProgress" style="display: none; margin-top: 1rem;">

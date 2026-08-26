@@ -52,10 +52,9 @@ const appState = {
   generationController: null
 };
 
-const MAX_IMAGES = 10;
-const MAX_VISION_IMAGES = 4;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024;
+const VISION_BATCH_SIZE = 4;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 // Biến lưu trữ tài liệu PDF tạm thời
@@ -915,19 +914,23 @@ function handleFiles(files) {
 
   // Nếu có file PDF, kích hoạt quy trình nạp PDF
   if (pdfFiles.length > 0) {
-    handlePdfFile(pdfFiles[0]);
+    const validPdf = pdfFiles.find(file => file.size <= MAX_IMAGE_BYTES);
+    if (!validPdf) {
+      showToast(`PDF vượt giới hạn ${MAX_IMAGE_BYTES / 1024 / 1024} MB/tệp.`, "warning");
+    } else {
+      handlePdfFile(validPdf);
+    }
   }
 
   if (imgFiles.length === 0) return;
 
-  const availableSlots = MAX_IMAGES - appState.images.length;
   const currentBytes = appState.images.reduce((total, image) => total + (image.size || 0), 0);
   let accepted = 0;
   let addedBytes = 0;
   let rejected = 0;
 
   imgFiles.forEach(file => {
-    if (!ALLOWED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES || accepted >= availableSlots || currentBytes + addedBytes + file.size > MAX_TOTAL_IMAGE_BYTES) {
+    if (!ALLOWED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES || currentBytes + addedBytes + file.size > MAX_TOTAL_IMAGE_BYTES) {
       rejected++;
       return;
     }
@@ -954,7 +957,7 @@ function handleFiles(files) {
   });
 
   if (rejected > 0) {
-    showToast(`Bỏ qua ${rejected} ảnh. Tối đa ${MAX_IMAGES} ảnh, mỗi ảnh ${MAX_IMAGE_BYTES / 1024 / 1024} MB, tổng ${MAX_TOTAL_IMAGE_BYTES / 1024 / 1024} MB; chỉ nhận JPG, PNG, WebP hoặc GIF.`, "warning", 6000);
+    showToast(`Bỏ qua ${rejected} tệp do không đúng định dạng, vượt ${MAX_IMAGE_BYTES / 1024 / 1024} MB/tệp hoặc vượt tổng ${MAX_TOTAL_IMAGE_BYTES / 1024 / 1024} MB.`, "warning", 6000);
   }
 }
 
@@ -1083,18 +1086,6 @@ async function handleConfirmPdfPages() {
     }
   }
 
-  // Kiểm tra giới hạn số lượng ảnh
-  const availableSlots = MAX_IMAGES - appState.images.length;
-  if (pagesToRender.length > availableSlots) {
-    if (availableSlots <= 0) {
-      showToast(`Bộ sưu tập đã đủ ${MAX_IMAGES} ảnh. Hãy xóa bớt ảnh trước khi nạp thêm trang mới.`, "warning");
-      closeModal("modalPdfPageSelect");
-      return;
-    }
-    showToast(`Chỉ còn nạp thêm được ${availableSlots} ảnh nữa. Hệ thống sẽ lấy ${availableSlots} trang đầu tiên được chọn.`, "info", 5000);
-    pagesToRender = pagesToRender.slice(0, availableSlots);
-  }
-
   const btnConfirm = document.getElementById("btnConfirmPdfPages");
   const progressContainer = document.getElementById("pdfRenderProgress");
   const statusElem = document.getElementById("pdfRenderStatus");
@@ -1127,11 +1118,17 @@ async function handleConfirmPdfPages() {
       const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
       const pdfText = await extractPdfPageText(page);
 
+      const renderedSize = Math.round(dataUrl.length * 0.75);
+      const totalBytes = appState.images.reduce((sum, image) => sum + (image.size || 0), 0);
+      if (totalBytes + renderedSize > MAX_TOTAL_IMAGE_BYTES) {
+        showToast(`Trang ${pageNum} đã chuyển đổi nhưng không được giữ vì vượt tổng dung lượng an toàn.`, "warning", 4500);
+        continue;
+      }
       appState.images.push({
         id: "pdf_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
         name: `[PDF Trang ${pageNum}] ${currentPdfFile.name}`,
         mimeType: "image/jpeg",
-        size: Math.round(dataUrl.length * 0.75),
+        size: renderedSize,
         sourceType: "pdf",
         pageNum: pageNum,
         dataUrl: dataUrl,
@@ -1260,7 +1257,7 @@ function renderMathPreview(markdownText, targetElementId) {
   let html = "";
   if (window.marked) {
     const renderer = new window.marked.Renderer();
-    renderer.html = rawHtml => escapeHtml(rawHtml);
+    renderer.html = rawHtml => allowPreviewBreakHtml(rawHtml);
     html = window.marked.parse(prepareLiteralListMarkers(markdownText), { breaks: true, gfm: true, renderer });
   } else {
     html = escapeHtml(markdownText).replace(/\n/g, "<br>");
@@ -1301,9 +1298,11 @@ function prepareLiteralListMarkers(markdownText) {
       return line;
     }
     if (inCodeFence) return line;
-    if (/^\s*-\s+/.test(line)) return line.replace(/^(\s*)-\s+/, `$1- ${KHBD_MAJOR_LIST_MARKER} `);
-    if (/^\s*\+\s+/.test(line)) return line.replace(/^(\s*)\+\s+/, `$1+ ${KHBD_MINOR_LIST_MARKER} `);
-    if (/^\s*•\s+/.test(line)) return line.replace(/^(\s*)•\s+/, `$1- ${KHBD_DETAIL_LIST_MARKER} `);
+    const trimmedStart = line.trimStart();
+    if (trimmedStart.startsWith("|")) return line;
+    if (/^-\s+/.test(trimmedStart)) return trimmedStart.replace(/^-\s+/, `- ${KHBD_MAJOR_LIST_MARKER} `);
+    if (/^\+\s+/.test(trimmedStart)) return trimmedStart.replace(/^\+\s+/, `  + ${KHBD_MINOR_LIST_MARKER} `);
+    if (/^•\s+/.test(trimmedStart)) return trimmedStart.replace(/^•\s+/, `    - ${KHBD_DETAIL_LIST_MARKER} `);
     return line;
   }).join("\n");
 }
@@ -1322,7 +1321,13 @@ function applyLiteralListMarkers(documentFragment) {
             : null;
       if (!marker) continue;
       const symbol = marker === KHBD_MAJOR_LIST_MARKER ? "-" : marker === KHBD_MINOR_LIST_MARKER ? "+" : "•";
+      const className = marker === KHBD_MAJOR_LIST_MARKER
+        ? "khbd-li-major"
+        : marker === KHBD_MINOR_LIST_MARKER
+          ? "khbd-li-minor"
+          : "khbd-li-detail";
       textNode.nodeValue = textNode.nodeValue.replace(marker, "");
+      listItem.classList.add(className);
       listItem.style.listStyleType = "none";
       listItem.insertBefore(document.createTextNode(`${symbol} `), listItem.firstChild);
       break;
@@ -1334,6 +1339,15 @@ function escapeHtml(value) {
   const div = document.createElement("div");
   div.textContent = value;
   return div.innerHTML;
+}
+
+function allowPreviewBreakHtml(rawHtml) {
+  const placeholder = "[[KHBD_ALLOWED_BR]]";
+  return String(rawHtml || "")
+    .replace(/<br\s*\/?>/gi, placeholder)
+    .split(placeholder)
+    .map(part => escapeHtml(part))
+    .join("<br>");
 }
 
 function isAllowedKhbdClass(value) {
@@ -1829,8 +1843,13 @@ function compressDataUrl(dataUrl, maxEdge = 1280, quality = 0.72) {
   });
 }
 
-async function prepareVisionImages() {
-  const source = (appState.images || []).slice(0, MAX_VISION_IMAGES);
+function chunkVisionPages(pages, batchSize = VISION_BATCH_SIZE) {
+  const batches = [];
+  for (let index = 0; index < pages.length; index += batchSize) batches.push(pages.slice(index, index + batchSize));
+  return batches;
+}
+
+async function prepareVisionImages(source = appState.images || []) {
   const prepared = [];
   for (const image of source) {
     if (!image.dataUrl) continue;
@@ -1843,8 +1862,7 @@ async function prepareVisionImages() {
   return prepared;
 }
 
-function buildVisionPdfTextBlock() {
-  const source = (appState.images || []).slice(0, MAX_VISION_IMAGES);
+function buildVisionPdfTextBlock(source = appState.images || []) {
   if (!source.length) return "";
   const pages = [];
   for (const image of source) {
@@ -1862,7 +1880,7 @@ function buildVisionPdfTextBlock() {
 }
 
 function collectPdfTextbookText() {
-  const source = (appState.images || []).slice(0, MAX_VISION_IMAGES);
+  const source = appState.images || [];
   const pages = [];
   for (const image of source) {
     const text = String(image.pdfText || "").trim();
@@ -1891,12 +1909,33 @@ function resolveTextbookContent() {
   return vision;
 }
 
-async function resolveVisionRequest(basePrompt) {
-  const pdfBlock = buildVisionPdfTextBlock();
+async function resolveVisionRequest(basePrompt, source = appState.images || []) {
+  const pdfBlock = buildVisionPdfTextBlock(source);
   if (pdfBlock) {
     return { prompt: `${basePrompt}\n\n${pdfBlock}`, images: [], usedPdfText: true };
   }
-  return { prompt: basePrompt, images: await prepareVisionImages(), usedPdfText: false };
+  return { prompt: basePrompt, images: await prepareVisionImages(source), usedPdfText: false };
+}
+
+async function analyzeTextbookInBatches(basePrompt, { signal = null, onProgress = null } = {}) {
+  const batches = chunkVisionPages(appState.images || []);
+  const results = [];
+  for (let index = 0; index < batches.length; index++) {
+    if (signal?.aborted) throw new DOMException("Đã hủy theo yêu cầu của bạn.", "AbortError");
+    const request = await resolveVisionRequest(basePrompt, batches[index]);
+    if (onProgress) onProgress(index + 1, batches.length, request.usedPdfText);
+    const raw = await geminiAPI.generateContent(
+      buildPedagogicalPrompt(`${request.prompt}\n\nĐợt trang ${index + 1}/${batches.length}: chỉ phân tích các trang của đợt này.`),
+      request.images,
+      getSystemRole(appState.selectedSubject, appState.selectedGrade),
+      0.2,
+      signal,
+      { maxOutputTokens: 4096 }
+    );
+    if (signal?.aborted) throw new DOMException("Đã hủy theo yêu cầu của bạn.", "AbortError");
+    results.push(normalizeGeminiLessonOutput(raw).text || raw);
+  }
+  return results.join("\n\n---\n\n");
 }
 
 function generationPauseMs() {
@@ -1915,21 +1954,15 @@ async function handleGenerateVision() {
   if (String(appState.content.vision || "").trim().length >= 80) {
     if (!confirm("Đã có nội dung phân tích SGK. Đọc lại sẽ tốn hạn mức Gemini. Tiếp tục?")) return;
   }
-  if (appState.images.length > MAX_VISION_IMAGES) {
-    showToast(`Để 1 key chạy ổn, chỉ gửi ${MAX_VISION_IMAGES} trang đầu. Hãy chọn đúng trang bài (không nạp cả cuốn).`, "info", 5000);
-  }
   const context = getGenerationPromptContext();
-  const visionReq = await resolveVisionRequest(getPromptTemplate("ANALYZE_TEXTBOOK", context));
-  const prompt = visionReq.prompt;
-  const images = visionReq.images;
   await executeAIGeneration({
     buttonId: "btnAnalyzeVision",
     targetEditorId: "editorVision",
     targetPreviewId: "previewVision",
     operationName: "Đọc nội dung SGK",
-    prompt,
-    images,
+    prompt: getPromptTemplate("ANALYZE_TEXTBOOK", context),
     skipGuard: true,
+    visionBatches: true,
     maxOutputTokens: 4096,
     onSuccess: (result) => {
       appState.content.vision = result;
@@ -2065,7 +2098,7 @@ async function handleGenerateCurrentActivity() {
 /**
  * Hàm thực thi gọi AI tổng quát với giao diện khóa nút và hiển thị trạng thái
  */
-async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, operationName, prompt, images = [], onSuccess, requireTextbook = false, requireSource = false, skipGuard = false, maxOutputTokens = null }) {
+async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, operationName, prompt, images = [], onSuccess, requireTextbook = false, requireSource = false, skipGuard = false, maxOutputTokens = null, visionBatches = false }) {
   if (requireTextbook && !hasTextbookSource()) {
     showToast("Cần dán ảnh/PDF SGK hoặc có nội dung phân tích Bước 0 trước khi soạn hoạt động. Không tự thêm nội dung ngoài nguồn.", "warning");
     return;
@@ -2094,12 +2127,23 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
 
   try {
     appState.isGenerating = true;
+    if (visionBatches) {
+      appState.cancelRequested = false;
+      appState.generationController = new AbortController();
+      const cancelButton = document.getElementById("btnCancelGeneration");
+      if (cancelButton) cancelButton.disabled = false;
+    }
     if (btn) btn.disabled = true;
 
     updateProgress(50, `Đang ${operationName}...`);
     document.getElementById("statusFooterText").textContent = `Đang ${operationName}...`;
 
-    const rawResult = await geminiAPI.generateContent(buildPedagogicalPrompt(prompt), images, getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.3, null, maxOutputTokens ? { maxOutputTokens } : {});
+    const rawResult = visionBatches
+      ? await analyzeTextbookInBatches(prompt, {
+        signal: appState.generationController.signal,
+        onProgress: (done, total, usedPdfText) => updateProgress(Math.round((done / total) * 100), `Đang đọc SGK theo đợt ${done}/${total} (${usedPdfText ? "chữ PDF" : "ảnh đã nén"})...`)
+      })
+      : await geminiAPI.generateContent(buildPedagogicalPrompt(prompt), images, getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.3, null, maxOutputTokens ? { maxOutputTokens } : {});
     const result = skipGuard ? (normalizeGeminiLessonOutput(rawResult).text || rawResult) : await guardGeminiLessonOutput(rawResult);
 
     let finalResult = result;
@@ -2125,6 +2169,11 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
     document.getElementById("statusFooterText").textContent = `Lỗi khi ${operationName}.`;
   } finally {
     appState.isGenerating = false;
+    if (visionBatches) {
+      appState.generationController = null;
+      const cancelButton = document.getElementById("btnCancelGeneration");
+      if (cancelButton) cancelButton.disabled = true;
+    }
     if (btn) btn.disabled = false;
   }
 }
@@ -2191,22 +2240,14 @@ async function handle1ClickGenerate() {
     
     // BƯỚC 1: Đọc SGK (chữ PDF nếu rõ, không thì ảnh đã nén)
     if (appState.images.length > 0 && !String(appState.content.vision || "").trim()) {
-      if (appState.images.length > MAX_VISION_IMAGES) {
-        showToast(`Chỉ gửi ${MAX_VISION_IMAGES} trang đầu để 1 key không bị quá tải.`, "info", 4500);
-      }
       const promptVision = getPromptTemplate("ANALYZE_TEXTBOOK", context);
-      const visionReq = await resolveVisionRequest(promptVision);
-      updateProgress(10, visionReq.usedPdfText
-        ? "Bước 1/7: Đang đọc SGK bằng Gemini (chữ PDF)..."
-        : "Bước 1/7: Đang đọc SGK bằng Gemini (ảnh đã nén)...");
-      const resVision = await geminiAPI.generateContent(
-        buildPedagogicalPrompt(visionReq.prompt),
-        visionReq.images,
-        getSystemRole(appState.selectedSubject, appState.selectedGrade),
-        0.2,
-        appState.generationController.signal,
-        { maxOutputTokens: 4096 }
-      );
+      const resVision = await analyzeTextbookInBatches(promptVision, {
+        signal: appState.generationController.signal,
+        onProgress: (done, total, usedPdfText) => updateProgress(
+          Math.round(5 + (done / total) * 18),
+          `Bước 1/7: Đang đọc SGK theo đợt ${done}/${total} (${usedPdfText ? "chữ PDF" : "ảnh đã nén"})...`
+        )
+      });
       throwIfGenerationCancelled();
       appState.content.vision = normalizeGeminiLessonOutput(resVision).text || resVision;
       document.getElementById("editorVision").value = appState.content.vision;

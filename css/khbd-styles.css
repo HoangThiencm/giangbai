@@ -688,7 +688,17 @@ body {
   text-align: justify;
 }
 
-.preview-rendered ul,
+.preview-rendered ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0 0 0.6rem;
+}
+
+.preview-rendered ul ul,
+.preview-rendered ul ul ul {
+  padding-left: 0;
+}
+
 .preview-rendered ol {
   padding-left: 1.4rem;
   margin-bottom: 0.6rem;
@@ -696,6 +706,18 @@ body {
 
 .preview-rendered li {
   margin-bottom: 0.25rem;
+}
+
+.preview-rendered .khbd-li-major {
+  padding-left: 0;
+}
+
+.preview-rendered .khbd-li-minor {
+  padding-left: 1.25rem;
+}
+
+.preview-rendered .khbd-li-detail {
+  padding-left: 2.5rem;
 }
 
 .preview-rendered table {
