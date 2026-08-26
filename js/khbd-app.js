@@ -83,6 +83,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateImageCounts();
   renderImageGallery();
   renderStandardsCatalog();
+  ensureIntegrationStandards({ silent: true });
   renderPhasePedagogy();
   renderAllTabsPreview();
 
@@ -349,6 +350,60 @@ function renderPhasePedagogy() {
   renderPedagogyCatalogs();
 }
 
+function integrationRecommendContext() {
+  return {
+    topic: getTopicDisplayName(),
+    vision: appState.content.vision || "",
+    subjectName: appState.subjectName || appState.subject || "",
+    subjectId: currentSubjectId(),
+    grade: appState.selectedGrade,
+    methods: appState.teachingContext.methods,
+    activities: appState.teachingContext.subjectActivities,
+    specialRequirements: appState.teachingContext.specialRequirements,
+    grouping: appState.teachingContext.grouping,
+    facilities: appState.teachingContext.facilities,
+    aiOn: Boolean(appState.teachingContext.integrations.ai)
+  };
+}
+
+function standardsOfKind(kind) {
+  const catalog = KHBD_STANDARDS?.[kind];
+  if (!catalog) return [];
+  return (appState.teachingContext.standards || []).filter(item => item.framework === catalog.framework);
+}
+
+function ensureIntegrationStandards({ force = false, silent = false } = {}) {
+  if (typeof recommendOfficialStandards !== "function") return false;
+  let changed = false;
+  const notices = [];
+  ["digital", "ai"].forEach(kind => {
+    const enabled = appState.teachingContext.integrations[kind];
+    const catalog = KHBD_STANDARDS[kind];
+    if (!catalog) return;
+    if (!enabled) {
+      const before = appState.teachingContext.standards.length;
+      appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item.framework !== catalog.framework);
+      if (appState.teachingContext.standards.length !== before) changed = true;
+      return;
+    }
+    const current = standardsOfKind(kind);
+    if (!force && current.length) return;
+    const recommended = recommendOfficialStandards(kind, integrationRecommendContext());
+    appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item.framework !== catalog.framework).concat(recommended);
+    changed = true;
+    const names = recommended.map(item => item.officialCode ? `${item.officialCode}` : item.officialLabel).join("; ");
+    notices.push(kind === "digital"
+      ? `NLS (TT 02/2025): ${recommended.length} miền — ${names}`
+      : `AI (QĐ 2422): ${recommended.length} mã — ${names}`);
+  });
+  if (changed) {
+    saveStateToLocalStorage();
+    renderStandardsCatalog();
+    if (!silent && notices.length) showToast(`Đã đề xuất theo văn bản: ${notices.join(". ")}. Bạn có thể sửa, tối đa 3 mục/nhóm.`, "info", 5000);
+  }
+  return changed;
+}
+
 function renderStandardsCatalog() {
   const grade = Number(appState.selectedGrade);
   ["digital", "ai"].forEach(kind => {
@@ -359,11 +414,23 @@ function renderStandardsCatalog() {
     panel.hidden = !enabled;
     if (!enabled) return;
     const entries = catalog.entries.filter(entry => entry.grades.includes(grade));
-    panel.innerHTML = `<fieldset class="tool-group"><legend>${catalog.framework} (${catalog.date})</legend><small>${catalog.source}. Chọn ít nhất một mục.</small>${entries.map(entry => `<label style="display:block"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}"> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}</label>`).join("")}</fieldset>`;
+    const selectedIds = new Set(standardsOfKind(kind).map(item => item.catalogId));
+    const suggestedIds = new Set(standardsOfKind(kind).filter(item => item.autoSuggested).map(item => item.catalogId));
+    const maxSelect = catalog.maxSelect || 3;
+    panel.innerHTML = `<fieldset class="tool-group"><legend>${catalog.framework} (${catalog.date})</legend><small>${catalog.source}. Hệ thống đề xuất 2–3 mục đúng văn bản theo bài học; bạn có thể đổi, tối đa ${maxSelect} mục.</small>${entries.map(entry => {
+      const rec = suggestedIds.has(entry.id);
+      return `<label style="display:block"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selectedIds.has(entry.id) ? "checked" : ""}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : ""}</label>`;
+    }).join("")}</fieldset>`;
     panel.querySelectorAll(".standard-choice").forEach(input => input.addEventListener("change", () => {
-      const selected = Array.from(document.querySelectorAll(`.standard-choice[data-kind="${kind}"]:checked`)).map(choice => {
+      const checked = Array.from(document.querySelectorAll(`.standard-choice[data-kind="${kind}"]:checked`));
+      if (checked.length > maxSelect) {
+        input.checked = false;
+        showToast(`Một bài chỉ chọn ${maxSelect} mục ${kind === "digital" ? "năng lực số (TT 02)" : "năng lực AI (QĐ 2422)"}.`, "warning");
+        return;
+      }
+      const selected = checked.map(choice => {
         const entry = entries.find(item => item.id === choice.value);
-        return { framework: catalog.framework, source: catalog.source, date: catalog.date, catalogId: entry.id, officialCode: entry.code || null, officialLabel: entry.label, grade, level: kind === "digital" ? (grade <= 7 ? 3 : 4) : null, loci: ["Mục tiêu", "Hoạt động", "Sản phẩm"] };
+        return standardToRecord(kind, entry, grade, false);
       });
       appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item.framework !== catalog.framework).concat(selected);
       saveStateToLocalStorage();
@@ -433,6 +500,9 @@ function setupEventListeners() {
     populateLessonDropdown(); 
     switchDraft({ grade: appState.selectedGrade, lesson: "", topic: "" });
     renderPedagogyCatalogs();
+    if ((appState.teachingContext.standards || []).every(item => item.autoSuggested)) {
+      ensureIntegrationStandards({ force: true, silent: true });
+    }
   });
 
 
@@ -471,7 +541,10 @@ function setupEventListeners() {
   ].forEach(([id, key]) => {
     document.getElementById(id).addEventListener("change", (e) => {
       appState.teachingContext.integrations[key] = e.target.checked;
-      if (key === "digital" || key === "ai") renderStandardsCatalog();
+      if (key === "digital" || key === "ai") {
+        ensureIntegrationStandards({ force: e.target.checked && !standardsOfKind(key).length });
+        renderStandardsCatalog();
+      }
       saveStateToLocalStorage();
     });
   });
@@ -483,7 +556,14 @@ function setupEventListeners() {
     }));
   });
   [["inputClassSize", "classSize"], ["selectReadiness", "readiness"], ["selectGrouping", "grouping"]].forEach(([id, key]) => document.getElementById(id).addEventListener("change", e => { appState.teachingContext[key] = e.target.value; saveStateToLocalStorage(); }));
-  [["hasProjector", "projector"], ["hasInternet", "internet"], ["hasDevices", "devices"]].forEach(([id, key]) => document.getElementById(id).addEventListener("change", e => { appState.teachingContext.facilities[key] = e.target.checked; saveStateToLocalStorage(); }));
+  [["hasProjector", "projector"], ["hasInternet", "internet"], ["hasDevices", "devices"]].forEach(([id, key]) => document.getElementById(id).addEventListener("change", e => {
+    appState.teachingContext.facilities[key] = e.target.checked;
+    if ((appState.teachingContext.integrations.digital || appState.teachingContext.integrations.ai) &&
+        (appState.teachingContext.standards || []).every(item => item.autoSuggested)) {
+      ensureIntegrationStandards({ force: true, silent: true });
+    }
+    saveStateToLocalStorage();
+  }));
 
   // 4. Dropzone & Paste ảnh toàn cục
   const dropzone = document.getElementById("dropzoneContainer");
@@ -1244,7 +1324,7 @@ function buildPedagogicalContext() {
 - Hoạt động đặc thù môn học được chọn: ${activityLabels.length ? activityLabels.join("; ") : `Chưa chọn; chỉ dùng 1–2 hoạt động catalog phù hợp môn ${subjectName}.`}
 - Yêu cầu/hoạt động đặc thù: ${context.specialRequirements || "Không có."}
 - Chỉ được tích hợp các thành phần đã bật: ${enabledIntegrations.length ? enabledIntegrations.join("; ") : "không có thành phần tích hợp bổ sung"}.
-- Chuẩn NLS/AI đã chọn: ${selectedStandards || "Không có"}. Chỉ được dùng đúng mục đã chọn; mỗi mục phải gắn một nhiệm vụ ${subjectName}, sản phẩm và minh chứng quan sát được. NLS chỉ là MIỀN được chọn, không phải mã năng lực thành phần. AI chỉ hỗ trợ/củng cố học ${subjectName}, phải có kiểm chứng của con người, bảo vệ riêng tư và không biến bài ${subjectName} thành bài AI độc lập.
+- Chuẩn NLS/AI đã chọn (chỉ các mục chính thức): ${selectedStandards || "Không có"}. Một bài chỉ 2–3 miền NLS (TT 02/2025) và/hoặc 2–3 mã AI (QĐ 2422) đã chọn. CẤM bịa mã/thành phần ngoài danh sách. Mỗi mục phải gắn một nhiệm vụ ${subjectName}, sản phẩm và minh chứng quan sát được. NLS chỉ là MIỀN, không phải mã thành phần chưa có trong catalog. AI chỉ hỗ trợ học ${subjectName}, phải có kiểm chứng của con người, bảo vệ riêng tư, không biến bài ${subjectName} thành bài AI độc lập.
 - Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.`;
 }
 
@@ -1254,6 +1334,7 @@ function buildPedagogicalPrompt(prompt) {
 }
 
 function getGenerationPromptContext(params = {}) {
+  ensureIntegrationStandards({ silent: true });
   const prevActs = [];
   ["A", "B", "C", "D"].forEach(k => {
     if (appState.content.activities[k]) prevActs.push(appState.content.activities[k]);
@@ -1449,9 +1530,14 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
     return;
   }
   const context = normalizeTeachingContext(appState.teachingContext);
-  if ((context.integrations.digital || context.integrations.ai) && !context.standards.length) {
-    showToast("Khi bật NLS hoặc AI, hãy chọn ít nhất một chuẩn phù hợp trước khi tạo nội dung.", "warning");
-    return;
+  if (context.integrations.digital || context.integrations.ai) {
+    ensureIntegrationStandards({ force: false });
+    if (!standardsOfKind("digital").length && context.integrations.digital) {
+      ensureIntegrationStandards({ force: true });
+    }
+    if (!standardsOfKind("ai").length && context.integrations.ai) {
+      ensureIntegrationStandards({ force: true });
+    }
   }
   if (appState.isGenerating) {
     showToast("Một tác vụ AI khác đang được xử lý, vui lòng chờ trong giây lát...", "warning");

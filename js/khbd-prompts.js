@@ -96,12 +96,12 @@ QUY TẮC BẮT BUỘC VỀ SỐ LƯỢNG NĂNG LỰC VÀ PHẨM CHẤT (Bài d�
 - Mục 2.a (Năng lực chung): CHỈ ĐƯỢC CHỌN 1–2 năng lực chung phù hợp nhất (ví dụ: Tự chủ và tự học, hoặc Giao tiếp và hợp tác). Nêu biểu hiện và nhiệm vụ/sản phẩm cụ thể. CẤM liệt kê cả 3 năng lực chung.
 - Mục 2.b (Năng lực đặc thù môn học): CHỈ ĐƯỢC CHỌN ĐÚNG 2–3 năng lực đặc thù thực sự nổi trội nhất của bài học này (gắn với hoạt động, nhiệm vụ, sản phẩm của bài). TUYỆT ĐỐI KHÔNG liệt kê toàn bộ khung năng lực đặc thù (ví dụ: môn Toán chỉ chọn 2–3 trong 5 năng lực; môn Ngữ văn/KHTN... cũng chỉ chọn 2–3 năng lực).
 - Mục 3 (Phẩm chất): CHỈ ĐƯỢC CHỌN 1–2 phẩm chất cốt lõi có hành vi quan sát rõ ràng nhất trong các hoạt động của bài học. CẤM liệt kê đủ cả 5 phẩm chất.
-- Năng lực số / AI / Giáo dục hòa nhập: Chỉ xuất hiện khi được bật trong BỐI CẢNH SƯ PHẠM. Nếu không bật, BỎ TOÀN BỘ mục đó.
+- Năng lực số / AI: chỉ khi được bật; CHỈ 2–3 miền TT 02/2025 hoặc 2–3 mã QĐ 2422 đã chọn, CẤM bịa mã. Hòa nhập chỉ khi được bật. Nếu không bật, BỎ TOÀN BỘ mục đó.
 
 YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
 - Đọc đúng thời lượng trong BỐI CẢNH SƯ PHẠM đi kèm yêu cầu. Với bài 2 tiết hoặc thời lượng ngắn, chỉ chọn 1–2 năng lực chung và 2–3 năng lực đặc thù môn Toán nổi trội, khả thi; không liệt kê dàn trải tất cả năng lực.
 - Mỗi năng lực được chọn phải nêu minh chứng cụ thể: kiến thức, nhiệm vụ học tập hoặc sản phẩm của chính bài này; không dùng mô tả chung chung.
-- Năng lực số hoặc AI chỉ xuất hiện khi thành phần tương ứng được bật trong BỐI CẢNH SƯ PHẠM, và mỗi thành phần chỉ chọn một biểu hiện thực sự triển khai được. Nếu không bật, bỏ toàn bộ mục đó.
+- Năng lực số hoặc AI chỉ xuất hiện khi thành phần tương ứng được bật; chỉ dùng đúng 2–3 mục đã chọn theo TT 02/2025 hoặc QĐ 2422. Nếu không bật, bỏ toàn bộ mục đó.
 - Phẩm chất chỉ chọn những phẩm chất có hành vi quan sát được trong bài; không mặc định liệt kê đủ 5 phẩm chất. Hỗ trợ HS hòa nhập chỉ nêu khi được bật trong BỐI CẢNH SƯ PHẠM.
 - Trong các danh sách dưới đây, dùng \`- \` cho ý lớn và \`  + \` cho ý con; không dùng đánh số thay cho danh sách nội dung.
 
@@ -118,10 +118,10 @@ YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
 - Chỉ chọn 2–3 năng lực đặc thù nổi trội; với từng năng lực, gắn rõ kiến thức, nhiệm vụ hoặc sản phẩm của bài học.
 
 ### c) Năng lực số (CHỈ viết khi bối cảnh sư phạm bật năng lực số; nếu không bật thì bỏ toàn bộ mục này)
-- Chỉ chọn một biểu hiện năng lực số được triển khai thật sự trong nhiệm vụ hoặc sản phẩm của bài học.
+- CHỈ viết 2–3 miền NLS đã chọn trong bối cảnh, đúng tên miền Thông tư 02/2025/TT-BGDĐT. CẤM bịa mã thành phần. Mỗi miền gắn một nhiệm vụ/sản phẩm của bài.
 
 ### d) Năng lực AI (CHỈ viết khi bối cảnh sư phạm bật năng lực AI; nếu không bật thì bỏ toàn bộ mục này)
-- Chỉ chọn một biểu hiện năng lực AI được triển khai thật sự trong nhiệm vụ hoặc sản phẩm của bài học.
+- CHỈ viết 2–3 mã/biểu hiện AI đã chọn trong bối cảnh, đúng nguyên văn QĐ 2422/QĐ-BGDĐT. CẤM bịa mã khác. Mỗi mã gắn nhiệm vụ kiểm chứng/khai báo AI trong bài môn học, không biến thành bài AI độc lập.
 
 ## 3. Về phẩm chất & Giáo dục hòa nhập (chỉ nêu hỗ trợ HS khuyết tật/hòa nhập khi bối cảnh sư phạm bật)
 - Chỉ chọn các phẩm chất có hành vi quan sát được trong nhiệm vụ/sản phẩm của bài; nêu ngắn gọn minh chứng đó.
@@ -528,7 +528,9 @@ function getPromptTemplate(templateKey, context) {
 - Mục 2.a (Năng lực chung): CHỈ ĐƯỢC CHỌN 1–2 năng lực chung phù hợp nhất (ví dụ: Tự chủ và tự học, hoặc Giao tiếp và hợp tác). Nêu biểu hiện và nhiệm vụ/sản phẩm cụ thể. CẤM liệt kê cả 3 năng lực chung.
 - Mục 2.b (Năng lực đặc thù môn học): CHỈ ĐƯỢC CHỌN ĐÚNG 2–3 năng lực đặc thù thực sự nổi trội nhất của bài học này (gắn với hoạt động, nhiệm vụ, sản phẩm của bài). TUYỆT ĐỐI KHÔNG liệt kê toàn bộ khung năng lực đặc thù (ví dụ: môn Toán chỉ chọn 2–3 trong 5 năng lực; môn Ngữ văn/KHTN... cũng chỉ chọn 2–3 năng lực).
 - Mục 3 (Phẩm chất): CHỈ ĐƯỢC CHỌN 1–2 phẩm chất cốt lõi có hành vi quan sát rõ ràng nhất trong các hoạt động của bài học. CẤM liệt kê đủ cả 5 phẩm chất.
-- Năng lực số / AI / Giáo dục hòa nhập: Chỉ xuất hiện khi được bật trong BỐI CẢNH SƯ PHẠM. Nếu không bật, BỎ TOÀN BỘ mục đó.`;
+- Năng lực số: nếu bật, CHỈ 2–3 miền TT 02/2025 đã chọn; CẤM bịa mã thành phần.
+- Năng lực AI: nếu bật, CHỈ 2–3 mã QĐ 2422 đã chọn; CẤM bịa mã khác.
+- Giáo dục hòa nhập: chỉ khi được bật trong BỐI CẢNH SƯ PHẠM. Nếu không bật, BỎ TOÀN BỘ mục đó.`;
   }
 
   return result;
