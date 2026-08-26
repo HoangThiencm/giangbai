@@ -53,6 +53,7 @@ const appState = {
 };
 
 const MAX_IMAGES = 10;
+const MAX_VISION_IMAGES = 4;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -87,6 +88,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderAllTabsPreview();
 
   try {
+    if (window.AiDesignConfig && typeof AiDesignConfig.loadHostingFallbackConfig === "function") {
+      await AiDesignConfig.loadHostingFallbackConfig();
+    }
     await geminiAPI.syncKeysFromServer();
     updateKeyCountDisplay();
   } catch (e) {
@@ -1562,94 +1566,49 @@ function isGarbledTextbookText(text) {
   return false;
 }
 
-function loadScriptOnce(src) {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve();
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Không tải được thư viện OCR."));
-    document.head.appendChild(script);
-  });
+function hasMistralOcr() {
+  return Boolean(window.MistralOcr && typeof window.MistralOcr.ocrImageDataUrl === "function");
 }
 
-async function ensureTesseract() {
-  if (window.Tesseract) return window.Tesseract;
-  await loadScriptOnce("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js");
-  if (!window.Tesseract) throw new Error("Tesseract.js chưa sẵn sàng.");
-  return window.Tesseract;
-}
-
-async function ocrImageDataUrl(dataUrl, onProgress, worker) {
-  const ownWorker = !worker;
-  const Tesseract = await ensureTesseract();
-  const active = worker || await Tesseract.createWorker("vie+eng", 1, {
-    logger: message => {
-      if (typeof onProgress === "function" && message.status === "recognizing text") {
-        onProgress(message.progress || 0);
-      }
-    }
-  });
-  try {
-    const { data } = await active.recognize(dataUrl);
-    return String(data?.text || "").trim();
-  } finally {
-    if (ownWorker) await active.terminate();
-  }
+async function extractPageWithMistral(dataUrl) {
+  const result = await window.MistralOcr.ocrImageDataUrl(dataUrl);
+  return String(result?.text || "").trim();
 }
 
 async function extractTextbookLocally() {
   const images = appState.images || [];
   if (!images.length) throw new Error("Chưa có ảnh/trang SGK.");
-  const needOcr = images.some(image => isGarbledTextbookText(image.pdfText || image.ocrText || "") || !(image.pdfText || "").trim());
-  let worker = null;
-  if (needOcr) {
-    updateProgress(8, "Đang tải OCR tiếng Việt trên máy (không dùng Gemini)...");
-    const Tesseract = await ensureTesseract();
-    worker = await Tesseract.createWorker("vie+eng", 1, {
-      logger: message => {
-        if (message.status === "loading language traineddata") {
-          updateProgress(10, "Đang tải gói ngôn ngữ OCR (lần đầu)...");
-        }
-      }
-    });
+  if (window.AiDesignConfig && typeof AiDesignConfig.loadHostingFallbackConfig === "function") {
+    await AiDesignConfig.loadHostingFallbackConfig();
   }
   const sections = [];
-  try {
-    for (let i = 0; i < images.length; i++) {
-      const image = images[i];
-      const title = image.pageNum ? `Trang PDF ${image.pageNum}` : (image.name || `Ảnh ${i + 1}`);
-      updateProgress(Math.round(12 + (i / images.length) * 80), `Đang đọc ${title} (${i + 1}/${images.length})...`);
-      let text = String(image.pdfText || "").trim();
-      if ((!text || isGarbledTextbookText(text)) && image.sourceType === "pdf" && currentPdfDoc && image.pageNum) {
-        try {
-          const page = await currentPdfDoc.getPage(image.pageNum);
-          const rebuilt = await extractPdfPageText(page);
-          if (rebuilt && !isGarbledTextbookText(rebuilt)) {
-            text = rebuilt;
-            image.pdfText = rebuilt;
-          }
-        } catch (error) {
-          console.warn("Không lấy được lớp chữ PDF:", error);
+  for (let i = 0; i < images.length; i++) {
+    const image = images[i];
+    const title = image.pageNum ? `Trang PDF ${image.pageNum}` : (image.name || `Ảnh ${i + 1}`);
+    updateProgress(Math.round(((i) / images.length) * 90), `Đang đọc ${title} (${i + 1}/${images.length}) bằng Mistral OCR...`);
+    let text = String(image.pdfText || image.ocrText || "").trim();
+    if ((!text || isGarbledTextbookText(text)) && image.sourceType === "pdf" && currentPdfDoc && image.pageNum) {
+      try {
+        const page = await currentPdfDoc.getPage(image.pageNum);
+        const rebuilt = await extractPdfPageText(page);
+        if (rebuilt && !isGarbledTextbookText(rebuilt)) {
+          text = rebuilt;
+          image.pdfText = rebuilt;
         }
+      } catch (error) {
+        console.warn("Không lấy được lớp chữ PDF:", error);
       }
-      if (isGarbledTextbookText(text) && image.dataUrl && worker) {
-        text = await ocrImageDataUrl(image.dataUrl, progress => {
-          const overall = Math.round(12 + ((i + progress) / images.length) * 80);
-          updateProgress(overall, `OCR tiếng Việt ${title} (${i + 1}/${images.length})...`);
-        }, worker);
-        image.ocrText = text;
-      }
-      sections.push(`## ${title}\n\n${text || "[Không trích được chữ trên trang này]"}`);
     }
-  } finally {
-    if (worker) await worker.terminate();
+    if (isGarbledTextbookText(text) && image.dataUrl) {
+      if (!hasMistralOcr()) {
+        throw new Error("Chưa có Mistral OCR. Vào Admin bật Mistral và thêm mistral_keys (cùng cấu hình với Thi trực tuyến).");
+      }
+      text = await extractPageWithMistral(image.dataUrl);
+      image.ocrText = text;
+    }
+    sections.push(`## ${title}\n\n${text || "[Không trích được chữ trên trang này]"}`);
   }
-  return `# Nội dung SGK (trích cục bộ, không dùng Gemini)\n\n${sections.join("\n\n---\n\n")}`;
+  return `# Nội dung SGK (Mistral OCR, không dùng Gemini)\n\n${sections.join("\n\n---\n\n")}`;
 }
 
 async function handleGenerateVision() {
@@ -1666,7 +1625,7 @@ async function handleGenerateVision() {
   try {
     appState.isGenerating = true;
     if (btn) btn.disabled = true;
-    updateProgress(5, "Đang trích nội dung SGK trên máy (PDF chữ / OCR)...");
+    updateProgress(5, "Đang trích nội dung SGK bằng Mistral OCR (không dùng Gemini)...");
     const result = await extractTextbookLocally();
     appState.content.vision = result;
     const editor = document.getElementById("editorVision");
@@ -1675,7 +1634,7 @@ async function handleGenerateVision() {
     saveStateToLocalStorage();
     updateProgress(100, "Đã trích nội dung SGK!");
     setTimeout(() => hideProgress(), 1200);
-    showToast("Đã trích nội dung SGK trên máy, không dùng quota Gemini.", "success");
+    showToast("Đã trích nội dung SGK bằng Mistral OCR, không dùng quota Gemini.", "success");
     applyLessonBasedRecommendations({ silent: false });
   } catch (error) {
     console.error(error);
@@ -1899,7 +1858,7 @@ async function handle1ClickGenerate() {
     
     // BƯỚC 1: Trích nội dung SGK trên máy (không gọi Gemini)
     if (appState.images.length > 0 && !String(appState.content.vision || "").trim()) {
-      updateProgress(10, "Bước 1/7: Đang trích nội dung SGK trên máy (không dùng Gemini)...");
+      updateProgress(10, "Bước 1/7: Đang trích nội dung SGK bằng Mistral OCR...");
       const resVision = await extractTextbookLocally();
       throwIfGenerationCancelled();
       appState.content.vision = resVision;

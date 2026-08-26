@@ -264,7 +264,7 @@
           <h2 class="card-title"><i data-lucide="camera"></i> Bước 0 — Dán & phân tích ảnh/trang SGK</h2>
           <div class="card-actions">
             <button id="btnAnalyzeVision" class="btn btn-primary">
-              <i data-lucide="scan-text"></i> Trích nội dung SGK (không dùng AI)
+              <i data-lucide="sparkles"></i> Đọc nội dung SGK (Gemini)
             </button>
             <button id="btnClearVisionImages" class="btn btn-outline-dark">
               <i data-lucide="trash"></i> Xóa tất cả ảnh
@@ -277,7 +277,7 @@
           <div class="dropzone-icon">📋</div>
           <div class="dropzone-text">
             <h4>Dán ảnh SGK từ Clipboard (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
-            <p>Làm bước này trước. PDF: lấy chữ sẵn có trên file. Ảnh chụp: OCR ngay trên máy (Tesseract), không gọi Gemini nên không tốn quota. Sau khi trích xong, hệ thống đề xuất PPDH và NLS/AI.</p>
+            <p>Làm bước này trước. Chỉ chọn <b>1–4 trang của đúng bài</b> (không nạp cả cuốn). Ảnh được nén trước khi gửi Gemini để 1 API key vẫn chạy ổn. Sau khi đọc xong, hệ thống đề xuất PPDH và NLS/AI.</p>
           </div>
           <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
         </div>
@@ -548,6 +548,8 @@
   <!-- =========================================================================
        SCRIPTS
        ========================================================================= -->
+  <script src="ai-design-config.js"></script>
+  <script src="mistral-ocr-client.js"></script>
   <script src="js/khbd-curriculum.js"></script>
   <script src="js/khbd-prompts.js"></script>
   <script src="js/khbd-gemini.js"></script>
