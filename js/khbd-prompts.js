@@ -6,16 +6,16 @@
  * và Khung Năng lực Số (TT 02/2025/TT-BGDĐT).
  */
 
-const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU HÌNH THỨC BẮT BUỘC (form mẫu demo.docx, bảng 2 cột):
-- Hoạt động này luôn có đúng bốn mục: ### a) Mục tiêu, ### b) Nội dung, ### c) Sản phẩm, ### d) Tổ chức thực hiện.
-- Mục d) CHỈ xuất một bảng Markdown hai cột, đúng tiêu đề:
+const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU HÌNH THỨC BẢNG 2 CỘT (đúng mẫu demo.docx):
+- Mục a), b), c) viết bằng gạch đầu dòng - và ý con + như bình thường. Không đổi kiểu danh sách.
+- Mục d) Tổ chức thực hiện: ĐÚNG MỘT bảng Markdown 2 cột. Tiêu đề cột bắt buộc:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-- Bảng luôn có bốn hàng theo thứ tự, cột trái bắt đầu bằng: **Chuyển giao nhiệm vụ:** / **Thực hiện nhiệm vụ:** / **Báo cáo, thảo luận:** / **Kết luận, nhận định:**
-- Cột trái: việc của GV và HS ở từng bước. Cột phải: nhiệm vụ, câu hỏi, sản phẩm, đáp án hoặc kiến thức chốt LẤY TỪ NGUỒN ĐÃ CUNG CẤP; không để cột nào trống.
-- Không viết lại 4 bước bằng danh sách gạch đầu dòng ngoài bảng.
-- Riêng Hoạt động B, mỗi đơn vị kiến thức có đầy đủ a, b, c, d và một bảng hai cột riêng.
-- Với bảng Markdown, escape mọi dấu pipe trong nội dung hoặc LaTeX thành \\|; không chèn dấu pipe chưa escape trong ô bảng.`;
+- Bảng chỉ có 1 hàng dữ liệu (không tách 4 hàng, mỗi bước một hàng).
+- Cột trái (cùng một ô): đủ 4 bước, mỗi bước một dòng bắt đầu bằng + Bước 1: Chuyển giao nhiệm vụ: ... rồi + Bước 2: Thực hiện nhiệm vụ: ... + Bước 3: Báo cáo, thảo luận: ... + Bước 4: Kết luận, nhận định: ... Ngăn cách các bước bằng <br>
+- Cột phải (cùng một ô): kiến thức chốt / đề bài / đáp án ghi bảng, dùng - và + , ngăn cách dòng bằng <br>
+- Cấm để trống một trong hai cột. Cấm viết 4 bước ở ngoài bảng. Escape dấu | trong ô thành \\|.
+- Hoạt động B: mỗi đơn vị kiến thức một bảng 2 cột (1 hàng) như trên.`;
 
 const PROMPTS = {
   // SYSTEM INSTRUCTION
@@ -193,10 +193,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| **Chuyển giao nhiệm vụ:** GV giao nhiệm vụ mở đầu lấy từ tình huống/hình/câu hỏi có trong nguồn. | Nhiệm vụ/câu hỏi đúng nguồn. |
-| **Thực hiện nhiệm vụ:** HS làm việc; GV hỗ trợ. | Sản phẩm dự kiến theo nguồn. |
-| **Báo cáo, thảo luận:** HS trình bày; lớp nhận xét. | Ý kiến/đáp án có trong nguồn. |
-| **Kết luận, nhận định:** GV chốt và dẫn vào bài mới. | Kiến thức chốt đúng nguồn. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: GV giao tình huống/hình/câu hỏi đúng nguồn.<br>+ Bước 2: Thực hiện nhiệm vụ: HS quan sát, thảo luận; GV hỗ trợ.<br>+ Bước 3: Báo cáo, thảo luận: HS phát biểu; lớp nhận xét; GV chuẩn hóa.<br>+ Bước 4: Kết luận, nhận định: GV chốt và dẫn vào bài mới. | - Tình huống/câu hỏi đúng SGK.<br>- Câu trả lời/sản phẩm dự kiến.<br>- Câu dẫn dắt vào bài. |`,
 
   // TAB 4.B: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI
   GENERATE_ACTIVITY_B: `Hãy biên soạn chi tiết toàn bộ **HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
@@ -233,10 +230,7 @@ CẤU TRÚC MẪU:
 #### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| **Chuyển giao nhiệm vụ:** GV giao HĐ/câu hỏi khám phá đúng SGK. | Câu hỏi/HĐ đúng nguồn. |
-| **Thực hiện nhiệm vụ:** HS khám phá; GV hỗ trợ. | Kết quả HS dự kiến theo nguồn. |
-| **Báo cáo, thảo luận:** Đại diện trình bày; lớp phản biện. | Đáp án/lời giải có trong nguồn. |
-| **Kết luận, nhận định:** GV chốt kiến thức ghi bảng. | Định nghĩa/công thức/chú ý đúng nguồn. |
+| + Bước 1: Chuyển giao nhiệm vụ: GV giao HĐ/câu hỏi khám phá đúng SGK.<br>+ Bước 2: Thực hiện nhiệm vụ: HS khám phá; GV hỗ trợ.<br>+ Bước 3: Báo cáo, thảo luận: Đại diện trình bày; lớp phản biện; GV chuẩn hóa.<br>+ Bước 4: Kết luận, nhận định: GV chốt kiến thức ghi bảng. | **1. [Tên kiến thức]**<br>- Định nghĩa/quy tắc/công thức đúng nguồn (LaTeX $...$).<br>+ Chú ý / ví dụ mẫu ghi bảng. |
 
 ### 2. Hoạt động 2.2: [Tên đơn vị kiến thức 2]
 (Tương tự đầy đủ 4 phần a, b, c, d với các bước chi tiết và ví dụ áp dụng...)
@@ -274,10 +268,7 @@ CẤU TRÚC:
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| **Chuyển giao nhiệm vụ:** GV giao đúng các bài/câu có trong nguồn. | Số bài/câu theo nguồn. |
-| **Thực hiện nhiệm vụ:** HS làm bài; GV hỗ trợ. | Sản phẩm vở/phiếu. |
-| **Báo cáo, thảo luận:** HS trình bày; lớp nhận xét. | Đáp án theo nguồn. |
-| **Kết luận, nhận định:** GV chốt lỗi sai và kĩ năng. | Kiến thức/kĩ năng chốt đúng nguồn. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: GV giao đúng các bài/câu có trong nguồn.<br>+ Bước 2: Thực hiện nhiệm vụ: HS làm bài; GV hỗ trợ.<br>+ Bước 3: Báo cáo, thảo luận: HS trình bày; lớp nhận xét.<br>+ Bước 4: Kết luận, nhận định: GV chốt lỗi sai và kĩ năng. | - Đề bài/câu luyện tập đúng nguồn.<br>- Đáp án/lời giải chốt (nếu nguồn đủ). |`,
 
   // TAB 4.D: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG VẬN DỤNG
   GENERATE_ACTIVITY_D: `Hãy biên soạn chi tiết **HOẠT ĐỘNG VẬN DỤNG** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
@@ -310,10 +301,7 @@ CẤU TRÚC:
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| **Chuyển giao nhiệm vụ:** GV giao đúng nhiệm vụ vận dụng có trong nguồn. | Đề/tình huống theo nguồn. |
-| **Thực hiện nhiệm vụ:** HS thực hiện; GV hỗ trợ. | Sản phẩm dự kiến theo nguồn. |
-| **Báo cáo, thảo luận:** Đại diện trình bày. | Kết quả theo nguồn. |
-| **Kết luận, nhận định:** GV chốt ý nghĩa bài học. | Kiến thức chốt đúng nguồn. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: GV giao đúng nhiệm vụ vận dụng có trong nguồn.<br>+ Bước 2: Thực hiện nhiệm vụ: HS thực hiện; GV hỗ trợ.<br>+ Bước 3: Báo cáo, thảo luận: Đại diện trình bày.<br>+ Bước 4: Kết luận, nhận định: GV chốt ý nghĩa bài học. | - Tình huống/đề vận dụng đúng nguồn.<br>- Sản phẩm/đáp án chốt. |`,
 
   // TAB 4.E: KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ (MA TRẬN & RUBRICS)
   GENERATE_ASSESSMENT: `Hãy biên soạn **E. KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ** cho Kế hoạch bài dạy môn Toán THCS chuẩn CV 5512.

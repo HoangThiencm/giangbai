@@ -626,9 +626,9 @@ class DocxGenerator {
     const tableWidth = 9000;
     const columnCount = Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
     const headerCells = this.splitMarkdownTableRow(validLines[0]).map(cell => cell.toLowerCase());
-    const isActivityTwoCol = columnCount === 2 && headerCells.some(cell => cell.includes("hoạt động của gv"));
+    const isActivityTwoCol = columnCount === 2 && headerCells.some(cell => cell.includes("hoạt động của gv") || cell.includes("nội dung"));
     const columnWidths = isActivityTwoCol
-      ? [4500, 4500]
+      ? [4000, 5000]
       : Array.from({ length: columnCount }, () => Math.floor(tableWidth / columnCount));
 
     validLines.forEach((line, rowIndex) => {
@@ -637,22 +637,11 @@ class DocxGenerator {
 
       const tableCells = Array.from({ length: columnCount }, (_, columnIndex) => {
         const cellText = rawCells[columnIndex] || "";
-        const textClean = cellText.trim();
-        const runs = this.parseTableCellRuns(textClean);
-
-        if (isHeader) {
-          runs.forEach(r => r.bold = true);
-        }
-
+        const paragraphs = this.parseTableCellParagraphs(cellText, isHeader);
         return new TableCell({
-          children: [
-            new Paragraph({
-              spacing: { before: 80, after: 120, line: 240 },
-              children: runs
-            })
-          ],
-          shading: isHeader ? { fill: "E8EEF5" } : undefined,
-          margins: { top: 120, bottom: 120, left: 160, right: 160 },
+          children: paragraphs.length ? paragraphs : [new Paragraph({ children: [new TextRun({ text: "", font: this.fontFamily, size: this.fontSizeBody })] })],
+          shading: isHeader ? { fill: "D9E2F3" } : undefined,
+          margins: { top: 80, bottom: 80, left: 100, right: 100 },
           verticalAlign: VerticalAlign?.TOP,
           width: { size: columnWidths[columnIndex], type: WidthType.DXA }
         });
@@ -661,7 +650,7 @@ class DocxGenerator {
       rows.push(new TableRow({
         children: tableCells,
         tableHeader: isHeader,
-        cantSplit: true
+        cantSplit: isHeader
       }));
     });
 
@@ -715,6 +704,20 @@ class DocxGenerator {
       const runs = this.parseInlineTextToRuns(line);
       if (index < lines.length - 1) runs.push(new TextRun({ break: 1 }));
       return runs;
+    });
+  }
+
+  parseTableCellParagraphs(text, isHeader = false) {
+    const { Paragraph, TextRun } = window.docx;
+    const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
+    const usable = lines.length ? lines : [""];
+    return usable.map(line => {
+      const runs = this.parseInlineTextToRuns(line || " ");
+      if (isHeader) runs.forEach(run => { if (run && typeof run === "object" && "bold" in run) run.bold = true; });
+      return new Paragraph({
+        spacing: { before: 40, after: 40, line: 240 },
+        children: runs.length ? runs : [new TextRun({ text: line || "", font: this.fontFamily, size: this.fontSizeBody, bold: isHeader })]
+      });
     });
   }
 
