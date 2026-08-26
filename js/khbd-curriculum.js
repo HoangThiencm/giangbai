@@ -5,12 +5,6 @@
  * Tích hợp Khung Năng lực Đặc thù Toán, Khung Năng lực AI (QĐ 2422), Khung Năng lực Số (TT 02/2025).
  */
 
-const BOOK_SETS = [
-  { id: 'kntt', name: 'Kết nối tri thức với cuộc sống' },
-  { id: 'canhdieu', name: 'Cánh Diều' },
-  { id: 'ctst', name: 'Chân trời sáng tạo' },
-  { id: 'khac', name: 'Bộ sách khác / Tự biên soạn' }
-];
 
 const SUBJECT_COMPETENCIES = {
   toan: ['Tư duy và lập luận toán học', 'Mô hình hoá toán học', 'Giải quyết vấn đề toán học', 'Giao tiếp toán học', 'Sử dụng công cụ, phương tiện toán học'],
@@ -653,23 +647,9 @@ function getSubjectsForGrade(grade) {
   return CURRICULUM_DATA.subjects.filter(s => s.grades.includes(g));
 }
 
-function getBooksForSubjectGrade(subjectId, grade) {
-  // If the selected subject is math and grades 6-9, return math-imported as a special case
-  // Wait, the plan says return BOOK_SETS, marking which one has a catalog.
-  // We can just return BOOK_SETS for everything, and let the app handle if there are predefined lessons.
-  return BOOK_SETS.map(book => {
-    // Check if we have lessons for this subject, book, and grade
-    const hasLessons = (subjectId === 'toan' && book.id === 'kntt' && [6, 7, 8, 9].includes(parseInt(grade, 10)));
-    return {
-      ...book,
-      hasLessons: hasLessons
-    };
-  });
-}
-
 function getLessonsForBook(subjectId, bookId, grade) {
-  // For now, we only have lessons for toan 6-9 kntt
-  if (subjectId === 'toan' && bookId === 'kntt' && [6, 7, 8, 9].includes(parseInt(grade, 10))) {
+  // Ngầm định bộ sách chuẩn duy nhất
+  if (subjectId === 'toan' && [6, 7, 8, 9].includes(parseInt(grade, 10))) {
     return getCurriculumLessons(grade);
   }
   return [];
@@ -697,13 +677,11 @@ function getGradeLevelName(grade) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { 
-    BOOK_SETS,
     SUBJECT_COMPETENCIES,
     CURRICULUM_DATA, 
     getCurriculumLessons, 
     getAllLessonsFlat,
     getSubjectsForGrade,
-    getBooksForSubjectGrade,
     getLessonsForBook,
     getSubjectCompetencies,
     getGradeLevel,

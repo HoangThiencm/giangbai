@@ -10,7 +10,6 @@
 const appState = {
   selectedGrade: "6",
   selectedSubject: "TOAN",
-  selectedBook: "math-imported",
   selectedLesson: "",
   customTopic: "",
   school: "TRƯỜNG THCS NGUYỄN DU",
@@ -129,12 +128,12 @@ function getDraftScope() {
   return token ? `user-${String(localStorage.getItem("userId") || localStorage.getItem("userEmail") || "authenticated").replace(/[^a-zA-Z0-9_-]/g, "_")}` : "anonymous";
 }
 function normalizeDraftPart(value) { return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
-function buildDraftId(grade, lesson, topic) { return ["kntt", appState.selectedSubject || "TOAN", appState.selectedBook || "none", grade, normalizeDraftPart(lesson), normalizeDraftPart(topic)].join(":"); }
+function buildDraftId(grade, lesson, topic) { return ["kntt", appState.selectedSubject || "TOAN", "none", grade, normalizeDraftPart(lesson), normalizeDraftPart(topic)].join(":"); }
 function getDraftId() { return buildDraftId(appState.selectedGrade, appState.selectedLesson, appState.customTopic); }
 function getDraftIndexKey() { return `khbd_drafts_v2:${getDraftScope()}:index`; }
 function getDraftKey(id = getDraftId()) { return `khbd_drafts_v2:${getDraftScope()}:${id}`; }
 function currentDraftData() {
-  return { selectedGrade: appState.selectedGrade, selectedSubject: appState.selectedSubject, selectedBook: appState.selectedBook, selectedLesson: appState.selectedLesson, customTopic: appState.customTopic, school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration, teachingContext: appState.teachingContext, content: appState.content };
+  return { selectedGrade: appState.selectedGrade, selectedSubject: appState.selectedSubject, selectedLesson: appState.selectedLesson, customTopic: appState.customTopic, school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration, teachingContext: appState.teachingContext, content: appState.content };
 }
 function saveStateToLocalStorage() {
   try {
@@ -152,7 +151,7 @@ function saveStateToLocalStorage() {
 
 function applyDraftData(data) {
   if (!data) return;
-  Object.assign(appState, { selectedGrade: data.selectedGrade || "6", selectedSubject: data.selectedSubject || "TOAN", selectedBook: data.selectedBook || "math-imported", selectedLesson: data.selectedLesson || "", customTopic: data.customTopic || "", school: data.school || appState.school, group: data.group || appState.group, teacher: data.teacher || appState.teacher, subject: data.subject || appState.subject, duration: data.duration || appState.duration });
+  Object.assign(appState, { selectedGrade: data.selectedGrade || "6", selectedSubject: data.selectedSubject || "TOAN", selectedLesson: data.selectedLesson || "", customTopic: data.customTopic || "", school: data.school || appState.school, group: data.group || appState.group, teacher: data.teacher || appState.teacher, subject: data.subject || appState.subject, duration: data.duration || appState.duration });
   appState.teachingContext = normalizeTeachingContext(data.teachingContext);
   if (data.content) { const a = data.content.activities || {}; appState.content = { vision: data.content.vision || "", objectives: data.content.objectives || "", materials: data.content.materials || "", activities: Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""])) }; }
 }
@@ -361,21 +360,12 @@ function setupEventListeners() {
     appState.selectedSubject = e.target.value; 
     appState.subjectName = CURRICULUM_DATA.subjects.find(item => item.id === e.target.value)?.name || "Môn học"; 
     appState.subject = appState.subjectName; 
-    appState.selectedBook = "none"; 
     appState.selectedLesson = ""; 
     appState.customTopic = ""; 
     populateLessonDropdown(); 
     switchDraft({ grade: appState.selectedGrade, lesson: "", topic: "" }); 
   });
-  
-  document.getElementById("selectBook").addEventListener("change", e => { 
-    saveStateToLocalStorage(); 
-    appState.selectedBook = e.target.value; 
-    appState.selectedLesson = ""; 
-    appState.customTopic = ""; 
-    populateLessonDropdown();
-    switchDraft({ grade: appState.selectedGrade, lesson: "", topic: "" }); 
-  });
+
 
   document.getElementById("inputTopicCustom").addEventListener("input", (e) => {
     e.target.dataset.pendingTopic = e.target.value;
@@ -536,13 +526,11 @@ function setupEventListeners() {
 // =============================================================================
 function populateLessonDropdown() {
   const subjectSelect = document.getElementById("selectSubject");
-  const bookSelect = document.getElementById("selectBook");
   const grade = Number(appState.selectedGrade);
   
   if (subjectSelect) {
     const validSubjects = getSubjectsForGrade(grade);
     subjectSelect.innerHTML = validSubjects.map(item => `<option value="${item.id}">${item.name}</option>`).join("");
-    // Ensure selectedSubject is valid
     if (!validSubjects.some(s => s.id === appState.selectedSubject)) {
       appState.selectedSubject = validSubjects[0]?.id || "toan";
       appState.subjectName = validSubjects[0]?.name || "Toán";
@@ -551,24 +539,10 @@ function populateLessonDropdown() {
     subjectSelect.value = appState.selectedSubject;
   }
   
-  if (bookSelect) {
-    const validBooks = getBooksForSubjectGrade(appState.selectedSubject, grade);
-    bookSelect.innerHTML = validBooks.map(item => `<option value="${item.id}">${item.name}</option>`).join("");
-    if (!validBooks.some(b => b.id === appState.selectedBook)) {
-      appState.selectedBook = validBooks[0]?.id || "kntt";
-    }
-    bookSelect.value = appState.selectedBook;
-    const currentBook = validBooks.find(b => b.id === appState.selectedBook);
-    const catalogSourceNote = document.getElementById("catalogSourceNote");
-    if (catalogSourceNote) {
-      catalogSourceNote.textContent = currentBook?.hasLessons ? "Đã nạp mục lục mẫu." : "Chưa có mục lục, vui lòng tự nhập tên bài.";
-    }
-  }
-  
   const select = document.getElementById("selectLesson");
-  const chapters = getLessonsForBook(appState.selectedSubject, appState.selectedBook, appState.selectedGrade);
+  const chapters = getLessonsForBook(appState.selectedSubject, "standard", appState.selectedGrade);
   
-  select.innerHTML = `<option value="">${chapters.length ? "-- Chọn bài học --" : "-- Nhập tên bài ở ô bên dưới --"}</option>`;
+  select.innerHTML = `<option value="">${chapters.length ? "-- Chọn bài học từ SGK --" : "-- Tự nhập tên bài ở ô bên dưới --"}</option>`;
 
   chapters.forEach(ch => {
     const optgroup = document.createElement("optgroup");
@@ -1188,6 +1162,7 @@ function buildPedagogicalContext() {
   
   return `BỐI CẢNH VÀ RÀNG BUỘC SƯ PHẠM BẮT BUỘC:
 - Môn học: ${subjectName} ${gradeLevel}; khối/lớp: ${appState.selectedGrade}; tên bài: ${getTopicDisplayName()}; thời lượng: ${appState.duration || "chưa xác định"}.
+- Giới hạn năng lực & phẩm chất: Bài dạy 1–2 tiết CHỈ ĐƯỢC CHỌN 1–2 Năng lực chung, 2–3 Năng lực đặc thù nổi trội nhất (gắn với nhiệm vụ/sản phẩm cụ thể), 1–2 Phẩm chất có hành vi quan sát rõ. CẤM liệt kê dàn trải toàn bộ khung năng lực hay đủ 5 phẩm chất.
 - Trình độ/đặc điểm lớp: ${classProfile || `Chưa cung cấp; thiết kế mức độ phù hợp học sinh ${gradeLevel} và có phân hóa vừa sức.`}
 - Hỗ trợ chức năng được chọn: ${support || "Không có yêu cầu riêng được chọn."}
 - Sĩ số: ${context.classSize}; mức sẵn sàng: ${context.readiness}; tổ chức: ${context.grouping}; điều kiện: ${Object.entries(context.facilities).filter(([, value]) => value).map(([key]) => key).join(", ") || "thiết bị cơ bản"}.

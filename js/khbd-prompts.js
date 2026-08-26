@@ -25,6 +25,7 @@ const PROMPTS = {
 
 QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Bám sát GDPT 2018 và nội dung SGK/trang SGK, dữ liệu bài học do giáo viên cung cấp; không tự gán nhà xuất bản hay bộ sách.
+- Luôn thiết kế mục tiêu bài dạy tinh gọn, thiết thực cho 1–2 tiết học (chỉ chọn 1–2 năng lực chung, 2–3 năng lực đặc thù nổi trội, 1–2 phẩm chất; tuyệt đối không liệt kê dàn trải).
 - Sử dụng tiếng Việt chuẩn mực, sư phạm, trang trọng.
 - Định dạng Markdown rõ ràng, phân cấp tiêu đề bằng #, ##, ###, #### hợp lý.
 - Công thức toán học PHẢI được viết bằng mã LaTeX chuẩn: công thức trong dòng dùng $công_thức$, công thức khối dùng $$công_thức$$. Ví dụ: $x^2 + 2x + 1 = 0$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\Delta = b^2 - 4ac$, $\\triangle ABC = \\triangle A'B'C'$.
@@ -71,6 +72,12 @@ Hãy trình bày rõ ràng, mạch lạc, giữ nguyên vẹn các công thức 
 """
 {textbook_content}
 """
+
+QUY TẮC BẮT BUỘC VỀ SỐ LƯỢNG NĂNG LỰC VÀ PHẨM CHẤT (Bài dạy 1–2 tiết):
+- Mục 2.a (Năng lực chung): CHỈ ĐƯỢC CHỌN 1–2 năng lực chung phù hợp nhất (ví dụ: Tự chủ và tự học, hoặc Giao tiếp và hợp tác). Nêu biểu hiện và nhiệm vụ/sản phẩm cụ thể. CẤM liệt kê cả 3 năng lực chung.
+- Mục 2.b (Năng lực đặc thù môn học): CHỈ ĐƯỢC CHỌN ĐÚNG 2–3 năng lực đặc thù thực sự nổi trội nhất của bài học này (gắn với hoạt động, nhiệm vụ, sản phẩm của bài). TUYỆT ĐỐI KHÔNG liệt kê toàn bộ khung năng lực đặc thù (ví dụ: môn Toán chỉ chọn 2–3 trong 5 năng lực; môn Ngữ văn/KHTN... cũng chỉ chọn 2–3 năng lực).
+- Mục 3 (Phẩm chất): CHỈ ĐƯỢC CHỌN 1–2 phẩm chất cốt lõi có hành vi quan sát rõ ràng nhất trong các hoạt động của bài học. CẤM liệt kê đủ cả 5 phẩm chất.
+- Năng lực số / AI / Giáo dục hòa nhập: Chỉ xuất hiện khi được bật trong BỐI CẢNH SƯ PHẠM. Nếu không bật, BỎ TOÀN BỘ mục đó.
 
 YÊU CẦU XÂY DỰNG ĐẦY ĐỦ 3 PHẦN THEO CẤU TRÚC SAU:
 - Đọc đúng thời lượng trong BỐI CẢNH SƯ PHẠM đi kèm yêu cầu. Với bài 2 tiết hoặc thời lượng ngắn, chỉ chọn 1–2 năng lực chung và 2–3 năng lực đặc thù môn Toán nổi trội, khả thi; không liệt kê dàn trải tất cả năng lực.
@@ -494,6 +501,14 @@ function getPromptTemplate(templateKey, context) {
   // Append pedagogical context if provided
   if (context.pedagogical_context) {
     result += `\n\nBỐI CẢNH SƯ PHẠM VÀ RÀNG BUỘC BẮT BUỘC:\n${context.pedagogical_context}`;
+  }
+
+  if (templateKey === 'GENERATE_OBJECTIVES') {
+    result += `\n\nQUY TẮC BẮT BUỘC VỀ SỐ LƯỢNG NĂNG LỰC VÀ PHẨM CHẤT (Bài dạy 1–2 tiết):
+- Mục 2.a (Năng lực chung): CHỈ ĐƯỢC CHỌN 1–2 năng lực chung phù hợp nhất (ví dụ: Tự chủ và tự học, hoặc Giao tiếp và hợp tác). Nêu biểu hiện và nhiệm vụ/sản phẩm cụ thể. CẤM liệt kê cả 3 năng lực chung.
+- Mục 2.b (Năng lực đặc thù môn học): CHỈ ĐƯỢC CHỌN ĐÚNG 2–3 năng lực đặc thù thực sự nổi trội nhất của bài học này (gắn với hoạt động, nhiệm vụ, sản phẩm của bài). TUYỆT ĐỐI KHÔNG liệt kê toàn bộ khung năng lực đặc thù (ví dụ: môn Toán chỉ chọn 2–3 trong 5 năng lực; môn Ngữ văn/KHTN... cũng chỉ chọn 2–3 năng lực).
+- Mục 3 (Phẩm chất): CHỈ ĐƯỢC CHỌN 1–2 phẩm chất cốt lõi có hành vi quan sát rõ ràng nhất trong các hoạt động của bài học. CẤM liệt kê đủ cả 5 phẩm chất.
+- Năng lực số / AI / Giáo dục hòa nhập: Chỉ xuất hiện khi được bật trong BỐI CẢNH SƯ PHẠM. Nếu không bật, BỎ TOÀN BỘ mục đó.`;
   }
 
   return result;
