@@ -198,7 +198,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 | **Chuyển giao nhiệm vụ:** GV giao nhiệm vụ mở đầu lấy từ tình huống/hình/câu hỏi có trong nguồn. | Nhiệm vụ/câu hỏi đúng nguồn. |
 | **Thực hiện nhiệm vụ:** HS làm việc; GV hỗ trợ. | Sản phẩm dự kiến theo nguồn. |
 | **Báo cáo, thảo luận:** HS trình bày; lớp nhận xét. | Ý kiến/đáp án có trong nguồn. |
-| **Kết luận, nhận định:** GV chốt và dẫn vào bài mới. | Kiến thức chốt đúng nguồn. |`
+| **Kết luận, nhận định:** GV chốt và dẫn vào bài mới. | Kiến thức chốt đúng nguồn. |`,
 
   // TAB 4.B: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI
   GENERATE_ACTIVITY_B: `Hãy biên soạn chi tiết toàn bộ **HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
@@ -279,7 +279,7 @@ CẤU TRÚC:
 | **Chuyển giao nhiệm vụ:** GV giao đúng các bài/câu có trong nguồn. | Số bài/câu theo nguồn. |
 | **Thực hiện nhiệm vụ:** HS làm bài; GV hỗ trợ. | Sản phẩm vở/phiếu. |
 | **Báo cáo, thảo luận:** HS trình bày; lớp nhận xét. | Đáp án theo nguồn. |
-| **Kết luận, nhận định:** GV chốt lỗi sai và kĩ năng. | Kiến thức/kĩ năng chốt đúng nguồn. |`
+| **Kết luận, nhận định:** GV chốt lỗi sai và kĩ năng. | Kiến thức/kĩ năng chốt đúng nguồn. |`,
 
   // TAB 4.D: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG VẬN DỤNG
   GENERATE_ACTIVITY_D: `Hãy biên soạn chi tiết **HOẠT ĐỘNG VẬN DỤNG** trong mục III. Tiến trình dạy học chuẩn Công văn 5512 theo GDPT 2018.
@@ -315,7 +315,7 @@ CẤU TRÚC:
 | **Chuyển giao nhiệm vụ:** GV giao đúng nhiệm vụ vận dụng có trong nguồn. | Đề/tình huống theo nguồn. |
 | **Thực hiện nhiệm vụ:** HS thực hiện; GV hỗ trợ. | Sản phẩm dự kiến theo nguồn. |
 | **Báo cáo, thảo luận:** Đại diện trình bày. | Kết quả theo nguồn. |
-| **Kết luận, nhận định:** GV chốt ý nghĩa bài học. | Kiến thức chốt đúng nguồn. |`
+| **Kết luận, nhận định:** GV chốt ý nghĩa bài học. | Kiến thức chốt đúng nguồn. |`,
 
   // TAB 4.E: KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ (MA TRẬN & RUBRICS)
   GENERATE_ASSESSMENT: `Hãy biên soạn **E. KẾ HOẠCH KIỂM TRA - ĐÁNH GIÁ** cho Kế hoạch bài dạy môn Toán THCS chuẩn CV 5512.
