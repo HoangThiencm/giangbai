@@ -9,22 +9,23 @@
 class DocxGenerator {
   constructor() {
     this.fontFamily = "Times New Roman";
-    this.fontSizeBody = 28; // 14pt in half-points
-    this.fontSizeH1 = 28;   // 14pt bold
-    this.fontSizeH2 = 28;   // 14pt bold
-    this.fontSizeH3 = 28;   // 14pt bold
-    this.lineSpacing = 288; // 1.2 line spacing (240 is single, 288 is 1.2)
+    // demo.docx uses Times New Roman 13 pt, single spacing, on Letter paper.
+    this.fontSizeBody = 26;
+    this.fontSizeH1 = 26;
+    this.fontSizeH2 = 26;
+    this.fontSizeH3 = 26;
+    this.lineSpacing = 240;
     this.spaceAfter = 120;  // 6pt
-    this.spaceBefore = 60;  // 3pt
+    this.spaceBefore = 0;
 
-    // Chuẩn lề trang A4 Việt Nam (đơn vị dxa: 1cm = 567 dxa)
+    // Khớp khổ giấy và lề 1 inch của demo.docx (đơn vị dxa).
     this.pageMargins = {
-      top: 1134,    // 2.0 cm
-      bottom: 1134, // 2.0 cm
-      left: 1701,   // 3.0 cm (lề trái đóng gáy)
-      right: 851    // 1.5 cm
+      top: 1440,
+      bottom: 1440,
+      left: 1440,
+      right: 1440
     };
-    this.pageSize = { width: 11906, height: 16838, orientation: "portrait" };
+    this.pageSize = { width: 12240, height: 15840, orientation: "portrait" };
   }
 
   /**
@@ -404,7 +405,7 @@ class DocxGenerator {
 
     const {
       Paragraph, TextRun, Table, TableRow, TableCell, WidthType,
-      AlignmentType, HeadingLevel, BorderStyle, ShadingType
+      AlignmentType, BorderStyle, ShadingType
     } = window.docx;
 
     const elements = [];
@@ -445,16 +446,13 @@ class DocxGenerator {
       // 2. Phân tích TIÊU ĐỀ (# H1, ## H2, ### H3, #### H4)
       if (trimmed.startsWith("# ")) {
         elements.push(new Paragraph({
-          heading: HeadingLevel.HEADING_1,
-          alignment: AlignmentType.LEFT,
-          spacing: { before: 200, after: 120, line: this.lineSpacing },
+          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
           children: [
             new TextRun({
               text: trimmed.substring(2).trim(),
               font: this.fontFamily,
               size: this.fontSizeH1,
-              bold: true,
-              color: "002B49"
+              bold: true
             })
           ]
         }));
@@ -464,16 +462,13 @@ class DocxGenerator {
 
       if (trimmed.startsWith("## ")) {
         elements.push(new Paragraph({
-          heading: HeadingLevel.HEADING_2,
-          alignment: AlignmentType.LEFT,
-          spacing: { before: 160, after: 120, line: this.lineSpacing },
+          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
           children: [
             new TextRun({
               text: trimmed.substring(3).trim(),
               font: this.fontFamily,
               size: this.fontSizeH2,
-              bold: true,
-              color: "0A4D68"
+              bold: true
             })
           ]
         }));
@@ -483,15 +478,13 @@ class DocxGenerator {
 
       if (trimmed.startsWith("### ")) {
         elements.push(new Paragraph({
-          heading: HeadingLevel.HEADING_3,
-          spacing: { before: 120, after: 120, line: this.lineSpacing },
+          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
           children: [
             new TextRun({
               text: trimmed.substring(4).trim(),
               font: this.fontFamily,
               size: this.fontSizeH3,
-              bold: true,
-              color: "088395"
+              bold: true
             })
           ]
         }));
@@ -501,7 +494,7 @@ class DocxGenerator {
 
       if (trimmed.startsWith("#### ")) {
         elements.push(new Paragraph({
-          spacing: { before: 100, after: 120, line: this.lineSpacing },
+          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
           children: [
             new TextRun({
               text: trimmed.substring(5).trim(),
@@ -601,7 +594,6 @@ class DocxGenerator {
       const runs = this.parseInlineTextToRuns(trimmed);
       elements.push(new Paragraph({
         spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing },
-        alignment: AlignmentType.BOTH, // Căn đều 2 bên chuẩn hành chính
         children: runs
       }));
 
@@ -616,19 +608,20 @@ class DocxGenerator {
    */
   createDocxTableFromMarkdown(tableLines) {
     if (!window.docx || tableLines.length < 2) return null;
-    const { Table, TableRow, TableCell, Paragraph, TextRun, WidthType, BorderStyle, VerticalAlign } = window.docx;
+    const { Table, TableRow, TableCell, Paragraph, TextRun, WidthType, BorderStyle, VerticalAlign, TableLayoutType } = window.docx;
 
     // Lọc bỏ dòng phân cách (|:---|:---:|)
     const validLines = tableLines.filter(line => !/^[|\s-:]+$/.test(line));
     if (validLines.length === 0) return null;
 
     const rows = [];
-    const tableWidth = 9000;
+    // Vùng nội dung của Letter với lề 1 inch là 9.360 dxa, đúng demo.docx.
+    const tableWidth = 9360;
     const columnCount = Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
     const headerCells = this.splitMarkdownTableRow(validLines[0]).map(cell => cell.toLowerCase());
     const isActivityTwoCol = columnCount === 2 && headerCells.some(cell => cell.includes("hoạt động của gv") || cell.includes("nội dung"));
     const columnWidths = isActivityTwoCol
-      ? [4000, 5000]
+      ? [4680, 4680]
       : Array.from({ length: columnCount }, () => Math.floor(tableWidth / columnCount));
 
     validLines.forEach((line, rowIndex) => {
@@ -640,8 +633,7 @@ class DocxGenerator {
         const paragraphs = this.parseTableCellParagraphs(cellText, isHeader);
         return new TableCell({
           children: paragraphs.length ? paragraphs : [new Paragraph({ children: [new TextRun({ text: "", font: this.fontFamily, size: this.fontSizeBody })] })],
-          shading: isHeader ? { fill: "D9E2F3" } : undefined,
-          margins: { top: 80, bottom: 80, left: 100, right: 100 },
+          margins: { top: 50, bottom: 50, left: 50, right: 50 },
           verticalAlign: VerticalAlign?.TOP,
           width: { size: columnWidths[columnIndex], type: WidthType.DXA }
         });
@@ -656,14 +648,15 @@ class DocxGenerator {
 
     const borderStyle = {
       style: BorderStyle.SINGLE,
-      size: 4,
-      color: "888888"
+      size: 6,
+      color: "000000"
     };
 
     return new Table({
       rows: rows,
       width: { size: tableWidth, type: WidthType.DXA },
       columnWidths,
+      layout: TableLayoutType?.FIXED,
       borders: {
         top: borderStyle,
         bottom: borderStyle,
@@ -712,8 +705,11 @@ class DocxGenerator {
     const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
     const usable = lines.length ? lines : [""];
     return usable.map(line => {
-      const runs = this.parseInlineTextToRuns(line || " ");
-      if (isHeader) runs.forEach(run => { if (run && typeof run === "object" && "bold" in run) run.bold = true; });
+      // TextRun không hỗ trợ đổi trực tiếp thuộc tính sau khi tạo; tạo riêng cho ô tiêu đề
+      // để giữ đúng kiểu đậm của hàng đầu trong demo.docx.
+      const runs = isHeader
+        ? [new TextRun({ text: line || " ", font: this.fontFamily, size: this.fontSizeBody, bold: true })]
+        : this.parseInlineTextToRuns(line || " ");
       return new Paragraph({
         spacing: { before: 40, after: 40, line: 240 },
         children: runs.length ? runs : [new TextRun({ text: line || "", font: this.fontFamily, size: this.fontSizeBody, bold: isHeader })]
@@ -726,7 +722,7 @@ class DocxGenerator {
    */
   createDocumentHeader(lessonInfo = {}) {
     if (!window.docx) return [];
-    const { Paragraph, TextRun, AlignmentType, BorderStyle } = window.docx;
+    const { Paragraph, TextRun, AlignmentType } = window.docx;
 
     const schoolName = lessonInfo.school || "TRƯỜNG ....................................................";
     const groupName = lessonInfo.subjectGroup || "TỔ CHUYÊN MÔN: ................................................";
@@ -742,78 +738,66 @@ class DocxGenerator {
 
     headers.push(new Paragraph({
       alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: 80 },
+      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
       children: [
-        new TextRun({ text: `TRƯỜNG: ${schoolName}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })
+        new TextRun({ text: `TRƯỜNG: ${schoolName}`, font: this.fontFamily, size: this.fontSizeBody })
       ]
     }));
     headers.push(new Paragraph({
       alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: 80 },
+      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
       children: [
-        new TextRun({ text: `TỔ CHUYÊN MÔN: ${groupName}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })
+        new TextRun({ text: `TỔ CHUYÊN MÔN: ${groupName}`, font: this.fontFamily, size: this.fontSizeBody })
       ]
     }));
     headers.push(new Paragraph({
       alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: 80 },
+      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
       children: [
-        new TextRun({ text: `HỌ VÀ TÊN GIÁO VIÊN: ${teacherName}`, font: this.fontFamily, size: this.fontSizeBody, italics: true })
+        new TextRun({ text: `HỌ VÀ TÊN GIÁO VIÊN: ${teacherName}`, font: this.fontFamily, size: this.fontSizeBody })
       ]
     }));
     headers.push(new Paragraph({
       alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: 120 },
+      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
       children: [
-        new TextRun({ text: `Ngày soạn: ${dateDraft}     Ngày dạy: ${dateTeach}`, font: this.fontFamily, size: this.fontSizeBody })
+        new TextRun({ text: `Ngày soạn: ${dateDraft}`, font: this.fontFamily, size: this.fontSizeBody })
+      ]
+    }));
+    headers.push(new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
+      children: [
+        new TextRun({ text: `Ngày dạy: ${dateTeach}`, font: this.fontFamily, size: this.fontSizeBody })
       ]
     }));
 
     headers.push(new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 160, after: 80 },
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
       children: [
         new TextRun({
           text: "KẾ HOẠCH BÀI DẠY",
           font: this.fontFamily,
           size: this.fontSizeH1,
-          bold: true,
-          color: "002B49"
+          bold: true
         })
       ]
     }));
     headers.push(new Paragraph({
       alignment: AlignmentType.LEFT,
-      spacing: { before: 80, after: 40 },
+      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
       children: [new TextRun({ text: `TÊN BÀI SOẠN: ${topic}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })]
     }));
     headers.push(new Paragraph({
       alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: 40 },
+      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
       children: [new TextRun({ text: `MÔN HỌC: ${subject} - LỚP: ${grade}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })]
     }));
     headers.push(new Paragraph({
       alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: 40 },
-      children: [new TextRun({ text: "BỘ SÁCH: SGK do giáo viên cung cấp", font: this.fontFamily, size: this.fontSizeBody })]
-    }));
-    headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: 120 },
+      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing },
       children: [new TextRun({ text: `THỜI LƯỢNG THỰC HIỆN: ${duration}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })]
-    }));
-
-    // Đường kẻ phân cách
-    headers.push(new Paragraph({
-      spacing: { before: 60, after: 120 },
-      border: {
-        bottom: {
-          color: "0A4D68",
-          space: 2,
-          style: BorderStyle.SINGLE,
-          size: 12
-        }
-      }
     }));
 
     return headers;

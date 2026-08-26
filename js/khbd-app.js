@@ -769,6 +769,20 @@ function setupEventListeners() {
   geminiAPI.onKeyRotatedCallback = ({ prevIndex, newIndex, totalKeys, reason }) => {
     showToast(`Đã tự động chuyển sang Key #${newIndex + 1}/${totalKeys}. Lý do: ${reason}`, "warning", 4500);
   };
+  geminiAPI.onStatusCallback = (info) => {
+    const waitSeconds = info?.waitSeconds;
+    const text = info?.message || (waitSeconds
+      ? `Đang chờ Gemini (quá tải), thử lại sau ${waitSeconds}s...`
+      : "");
+    if (!text) return;
+    const statusEl = document.getElementById("statusFooterText");
+    if (statusEl) statusEl.textContent = text;
+    const container = document.getElementById("progressContainer");
+    const titleElem = document.getElementById("progressStepTitle");
+    if (container && container.style.display === "block" && titleElem) {
+      titleElem.textContent = text;
+    }
+  };
 }
 
 // =============================================================================
@@ -1356,11 +1370,20 @@ function renderAllTabsPreview() {
 // =============================================================================
 // XEM TRƯỚC TOÀN BỘ GIÁO ÁN (TAB 5)
 // =============================================================================
+function getLessonPlanMetadata() {
+  // Chưa có màn hình nhập metadata riêng, nên dùng đúng thông tin cố định của mẫu.
+  return {
+    dateDraft: ".../.../...",
+    dateTeach: ".../.../..."
+  };
+}
+
 function getFullLessonPlanMarkdown(options = {}) {
   const topic = getTopicDisplayName();
   const subject = appState.subject || "TOÁN";
   const grade = appState.selectedGrade || "";
   const duration = appState.duration || "02 tiết";
+  const metadata = getLessonPlanMetadata();
   const c = appState.content;
   const actParts = [];
   ["A", "B", "C", "D"].forEach(k => {
@@ -1380,12 +1403,12 @@ function getFullLessonPlanMarkdown(options = {}) {
     `**TRƯỜNG:** ${appState.school || "................................................"}`,
     `**TỔ CHUYÊN MÔN:** ${appState.group || "................................"}`,
     `**HỌ VÀ TÊN GIÁO VIÊN:** ${appState.teacher || "................................"}`,
-    `**Ngày soạn:** .../.../...  **Ngày dạy:** .../.../...`,
+    `**Ngày soạn:** ${metadata.dateDraft}`,
+    `**Ngày dạy:** ${metadata.dateTeach}`,
     ``,
     `# KẾ HOẠCH BÀI DẠY`,
     `**TÊN BÀI SOẠN:** ${topic.toUpperCase()}`,
     `**MÔN HỌC:** ${subject.toUpperCase()} - **LỚP:** ${grade}`,
-    `**BỘ SÁCH:** SGK do giáo viên cung cấp`,
     `**THỜI LƯỢNG THỰC HIỆN:** ${duration}`,
     `\n---\n`
   ];
@@ -1613,9 +1636,38 @@ async function prepareVisionImages() {
   return prepared;
 }
 
+function buildVisionPdfTextBlock() {
+  const source = (appState.images || []).slice(0, MAX_VISION_IMAGES);
+  if (!source.length) return "";
+  const pages = [];
+  for (const image of source) {
+    const text = String(image.pdfText || "").trim();
+    if (!text) return "";
+    pages.push({ pageNum: image.pageNum, text });
+  }
+  const combined = pages.map(p => p.text).join("\n\n");
+  if (isGarbledTextbookText(combined)) return "";
+  const body = pages.map((p, i) => {
+    const n = p.pageNum != null ? p.pageNum : (i + 1);
+    return `--- Trang ${n} ---\n${p.text}`;
+  }).join("\n\n");
+  return `NỘI DUNG CHỮ TRÍCH TỪ PDF (không gửi ảnh vì PDF có chữ rõ):\n"""\n${body}\n"""`;
+}
+
+async function resolveVisionRequest(basePrompt) {
+  const pdfBlock = buildVisionPdfTextBlock();
+  if (pdfBlock) {
+    return { prompt: `${basePrompt}\n\n${pdfBlock}`, images: [], usedPdfText: true };
+  }
+  return { prompt: basePrompt, images: await prepareVisionImages(), usedPdfText: false };
+}
+
 function generationPauseMs() {
-  const n = (geminiAPI.apiKeys || []).length;
-  return n <= 1 ? 2200 : 800;
+  return 1500;
+}
+
+function isGeminiOverloadError(error) {
+  return /503|high demand/i.test(String(error?.message || error || ""));
 }
 
 async function handleGenerateVision() {
@@ -1623,12 +1675,16 @@ async function handleGenerateVision() {
     showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh/trang SGK!", "warning");
     return;
   }
+  if (String(appState.content.vision || "").trim().length >= 80) {
+    if (!confirm("Đã có nội dung phân tích SGK. Đọc lại sẽ tốn hạn mức Gemini. Tiếp tục?")) return;
+  }
   if (appState.images.length > MAX_VISION_IMAGES) {
     showToast(`Để 1 key chạy ổn, chỉ gửi ${MAX_VISION_IMAGES} trang đầu. Hãy chọn đúng trang bài (không nạp cả cuốn).`, "info", 5000);
   }
-  const images = await prepareVisionImages();
   const context = getGenerationPromptContext();
-  const prompt = getPromptTemplate("ANALYZE_TEXTBOOK", context);
+  const visionReq = await resolveVisionRequest(getPromptTemplate("ANALYZE_TEXTBOOK", context));
+  const prompt = visionReq.prompt;
+  const images = visionReq.images;
   await executeAIGeneration({
     buttonId: "btnAnalyzeVision",
     targetEditorId: "editorVision",
@@ -1792,7 +1848,11 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
 
   } catch (error) {
     console.error(`Lỗi khi ${operationName}:`, error);
-    showToast(`Lỗi khi ${operationName}: ${error.message}`, "danger", 6000);
+    if (isGeminiOverloadError(error)) {
+      showToast("Gemini đang quá tải, hệ thống đã thử lại/đổi model nhưng vẫn lỗi. Thử lại sau hoặc chọn Gemini 2.5 Flash.", "danger", 7000);
+    } else {
+      showToast(`Lỗi khi ${operationName}: ${error.message}`, "danger", 6000);
+    }
     hideProgress();
     document.getElementById("statusFooterText").textContent = `Lỗi khi ${operationName}.`;
   } finally {
@@ -1861,17 +1921,19 @@ async function handle1ClickGenerate() {
   try {
     const context = getGenerationPromptContext();
     
-    // BƯỚC 1: Trích nội dung SGK trên máy (không gọi Gemini)
+    // BƯỚC 1: Đọc SGK (chữ PDF nếu rõ, không thì ảnh đã nén)
     if (appState.images.length > 0 && !String(appState.content.vision || "").trim()) {
       if (appState.images.length > MAX_VISION_IMAGES) {
         showToast(`Chỉ gửi ${MAX_VISION_IMAGES} trang đầu để 1 key không bị quá tải.`, "info", 4500);
       }
-      updateProgress(10, "Bước 1/7: Đang đọc SGK bằng Gemini (ảnh đã nén)...");
-      const visionImages = await prepareVisionImages();
       const promptVision = getPromptTemplate("ANALYZE_TEXTBOOK", context);
+      const visionReq = await resolveVisionRequest(promptVision);
+      updateProgress(10, visionReq.usedPdfText
+        ? "Bước 1/7: Đang đọc SGK bằng Gemini (chữ PDF)..."
+        : "Bước 1/7: Đang đọc SGK bằng Gemini (ảnh đã nén)...");
       const resVision = await geminiAPI.generateContent(
-        buildPedagogicalPrompt(promptVision),
-        visionImages,
+        buildPedagogicalPrompt(visionReq.prompt),
+        visionReq.images,
         getSystemRole(appState.selectedSubject, appState.selectedGrade),
         0.2,
         appState.generationController.signal,
@@ -1968,7 +2030,13 @@ async function handle1ClickGenerate() {
   } catch (err) {
     console.error("Lỗi quy trình 1-Click:", err);
     const cancelled = err?.name === "AbortError" || appState.cancelRequested;
-    showToast(cancelled ? "Đã hủy quá trình tạo tự động. Nội dung đã hoàn tất trước đó vẫn được giữ lại." : `Quá trình tạo tự động bị gián đoạn: ${err.message}`, cancelled ? "info" : "danger", 7000);
+    if (cancelled) {
+      showToast("Đã hủy quá trình tạo tự động. Nội dung đã hoàn tất trước đó vẫn được giữ lại.", "info", 7000);
+    } else if (isGeminiOverloadError(err)) {
+      showToast("Gemini đang quá tải, hệ thống đã thử lại/đổi model nhưng vẫn lỗi. Thử lại sau hoặc chọn Gemini 2.5 Flash.", "danger", 7000);
+    } else {
+      showToast(`Quá trình tạo tự động bị gián đoạn: ${err.message}`, "danger", 7000);
+    }
     hideProgress();
   } finally {
     appState.isGenerating = false;
@@ -2022,6 +2090,7 @@ async function handleExportFullDocx() {
     topic: getTopicDisplayName(),
     grade: appState.selectedGrade,
     duration: appState.duration,
+    ...getLessonPlanMetadata(),
   };
 
   const fileName = `KHBD_${getSafeTopicName()}_${currentSubjectId() || "mon"}${appState.selectedGrade}.docx`;
