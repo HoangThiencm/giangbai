@@ -66,7 +66,8 @@ const ACTIVITY_TITLES = {
   A: { short: "A. Mở đầu", full: "A. HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)" },
   B: { short: "B. Hình thành KT", full: "B. HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI" },
   C: { short: "C. Luyện tập", full: "C. HOẠT ĐỘNG LUYỆN TẬP" },
-  D: { short: "D. Vận dụng", full: "D. HOẠT ĐỘNG VẬN DỤNG" }
+  D: { short: "D. Vận dụng", full: "D. HOẠT ĐỘNG VẬN DỤNG" },
+  E: { short: "E. Hướng dẫn về nhà", full: "E. HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ" }
 };
 
 // =============================================================================
@@ -1804,7 +1805,7 @@ function getFullLessonPlanMarkdown(options = {}) {
   const metadata = getLessonPlanMetadata();
   const c = appState.content;
   const actParts = [];
-  ["A", "B", "C", "D"].forEach(k => {
+  ["A", "B", "C", "D", "E"].forEach(k => {
     if (c.activities[k] && c.activities[k].trim()) actParts.push(c.activities[k].trim());
   });
   const fullActMarkdown = actParts.join("\n\n---\n\n");
@@ -1814,7 +1815,7 @@ function getFullLessonPlanMarkdown(options = {}) {
     c.materials || "*[Chưa tạo II. Thiết bị dạy học và học liệu]*",
     `\n---\n`,
     `# III. TIẾN TRÌNH DẠY HỌC`,
-    fullActMarkdown || "*[Chưa tạo các hoạt động dạy học III.A - D]*"
+    fullActMarkdown || "*[Chưa tạo các hoạt động dạy học III.A - E]*"
   ];
   if (options.includeHeader === false) return body.join("\n\n");
   const header = [
@@ -1857,7 +1858,7 @@ function buildPedagogicalContext() {
   const selectedStandards = [...nlsLines, ...aiLines].join("\n  ");
   const methodLabels = (context.methods || []).map(id => pedagogyLabel("methods", id));
   const activityLabels = (context.subjectActivities || []).map(id => pedagogyLabel("activities", id));
-  const techniqueByPhase = ["A", "B", "C", "D"].map(phase => {
+  const techniqueByPhase = ["A", "B", "C", "D", "E"].map(phase => {
     const ids = context.phasePedagogy?.[phase]?.techniques || [];
     const labels = ids.map(id => pedagogyLabel("techniques", id));
     return labels.length ? `${phase}: ${labels.join(", ")}` : "";
@@ -1881,7 +1882,7 @@ function buildPedagogicalContext() {
 - Hỗ trợ chức năng được chọn: ${support || "Không có yêu cầu riêng được chọn."}
 - Sĩ số: ${context.classSize}; mức sẵn sàng: ${context.readiness}; tổ chức: ${context.grouping}; điều kiện: ${Object.entries(context.facilities).filter(([, value]) => value).map(([key]) => key).join(", ") || "thiết bị cơ bản"}.
 - Phương pháp dạy học được chọn: ${methodLabels.length ? methodLabels.join("; ") : `Chưa chọn; khi soạn chỉ được lấy 1–2 phương pháp phù hợp môn ${subjectName} lớp ${appState.selectedGrade} từ catalog, đúng nguyên nhãn, không bịa tên PPDH ngoài catalog.`}
-- Kỹ thuật dạy học theo pha: ${techniqueByPhase.length ? techniqueByPhase.join(" | ") : "Chưa chọn; chỉ dùng kỹ thuật catalog đúng pha A–D phù hợp môn/lớp, đúng nhãn."}
+- Kỹ thuật dạy học theo pha: ${techniqueByPhase.length ? techniqueByPhase.join(" | ") : "Chưa chọn; chỉ dùng kỹ thuật catalog đúng pha A–E phù hợp môn/lớp, đúng nhãn."}
 - Hoạt động đặc thù môn học được chọn: ${activityLabels.length ? activityLabels.join("; ") : `Chưa chọn; chỉ dùng 1–2 hoạt động catalog phù hợp môn ${subjectName}.`}
 - Yêu cầu/hoạt động đặc thù: ${context.specialRequirements || "Không có."}
 - Chỉ được tích hợp các thành phần đã bật: ${enabledIntegrations.length ? enabledIntegrations.join("; ") : "không có thành phần tích hợp bổ sung"}.
@@ -1902,7 +1903,7 @@ function getGenerationPromptContext(params = {}) {
     ensureIntegrationStandards({ silent: true });
   }
   const prevActs = [];
-  ["A", "B", "C", "D"].forEach(k => {
+  ["A", "B", "C", "D", "E"].forEach(k => {
     if (appState.content.activities[k]) prevActs.push(appState.content.activities[k]);
   });
   
@@ -1919,7 +1920,7 @@ function getGenerationPromptContext(params = {}) {
     objectives_content: appState.content.objectives || "",
     activities_content: params.activitiesContent || prevActs.join("\n\n---\n\n"),
     methods: (appState.teachingContext && appState.teachingContext.methods) || [],
-    techniques: ["A", "B", "C", "D"].flatMap(phase => (appState.teachingContext && appState.teachingContext.phasePedagogy?.[phase]?.techniques) || []),
+    techniques: ["A", "B", "C", "D", "E"].flatMap(phase => (appState.teachingContext && appState.teachingContext.phasePedagogy?.[phase]?.techniques) || []),
     digitalCompetencyEnabled: Boolean(appState.teachingContext?.integrations?.digital),
     aiCompetencyEnabled: Boolean(appState.teachingContext?.integrations?.ai),
     yccd_official: typeof getOfficialYccd === "function" ? getOfficialYccd({
@@ -1976,7 +1977,17 @@ function buildPhasePedagogyContext(phase) {
   }
   if (activityLabels.length) parts.push(`Hoạt động đặc thù đã chọn: ${activityLabels.join("; ")}. Chỉ triển khai nếu phù hợp pha ${phase}.`);
 
-  const scriptRequirement = `\nYÊU CẦU KỊCH BẢN THỰC CHIẾN CỘT TRÁI BẢNG d) (Pha ${phase}):
+  const scriptRequirement = phase === "E"
+    ? `\nYÊU CẦU ĐẶC THÙ CHO HOẠT ĐỘNG E (HƯỚNG DẪN VỀ NHÀ):
+- Mục b) Nội dung và Cột Phải Bảng d) BẮT BUỘC có đủ 4 phần rõ nét:
+  1. Học cái gì: Ôn tập kiến thức cốt lõi và tóm tắt bằng sơ đồ tư duy (mindmap) vào vở ghi.
+  2. Làm bài tập gì: Hoàn thành bài tập SGK & SBT (nêu số bài, trang cụ thể).
+  3. Cho thêm bài tập nào: 1–2 bài toán/nhiệm vụ mở rộng, nâng cao phân hóa dành cho HS khá/giỏi kèm gợi ý ngắn gọn.
+  4. Chuẩn bị bài sau: Đọc trước bài mới trong SGK và chuẩn bị đồ dùng/dụng cụ học tập.
+- Cột Trái Bảng d): Đủ 4 bước CV 5512 phân vai rõ ràng:
+  + **GV:** Nói câu lệnh giao việc trong ngoặc kép "...", hướng dẫn cách hoàn thành, thời hạn nộp.
+  + **HS:** Lắng nghe, ghi nhận nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.`
+    : `\nYÊU CẦU KỊCH BẢN THỰC CHIẾN CỘT TRÁI BẢNG d) (Pha ${phase}):
 - Bắt buộc đủ 4 bước CV 5512 (ngăn các bước bằng <br>):
   + **GV:** Nói câu gì cụ thể trong ngoặc kép "..." (câu lệnh giao nhiệm vụ, câu hỏi dẫn dắt, câu hỏi gợi mở, câu hỏi phân hóa); Làm gì cụ thể (phát đồ dùng/phiếu học tập, chia nhóm, quan sát phát hiện lỗi sai điển hình: ..., can thiệp hỗ trợ phân hóa).
   + **HS:** Làm gì cụ thể theo từng pha (thao tác cá nhân X phút vào nháp/phiếu -> thảo luận cặp/nhóm Y phút -> tạo sản phẩm trung gian: bảng phụ, sơ đồ, phiếu học tập, sticky note...); Báo cáo và phản biện thế nào.
@@ -2046,6 +2057,25 @@ function assertPhasePedagogyOutput(phase, output) {
       });
       return;
     }
+  }
+
+  // 3. Với Pha E (Hướng dẫn về nhà)
+  if (phase === "E") {
+    const tablePart = text.split(/#{3,4}\s*d\)/i)[1] || text.split("### d)")[1] || text;
+    const hasStep1 = /bước\s*1|chuyển giao/i.test(tablePart);
+    const hasStep2 = /bước\s*2|thực hiện/i.test(tablePart);
+    const hasStep3 = /bước\s*3|báo cáo|thảo luận/i.test(tablePart);
+    const hasStep4 = /bước\s*4|kết luận|nhận định/i.test(tablePart);
+    if (!hasStep1 || !hasStep2 || !hasStep3 || !hasStep4) {
+      throw new Error("Hoạt động E: Bảng tổ chức thực hiện chưa có đủ 4 bước CV 5512 (Bước 1: Chuyển giao -> Bước 2: Thực hiện -> Bước 3: Báo cáo -> Bước 4: Kết luận).");
+    }
+    const cellData = tablePart.replace(/\|\s*Hoạt động của GV và HS\s*\|\s*Nội dung\s*\|/i, "");
+    const hasGv = /(?:\*\*GV\b|\bGV\s*:|giáo viên)/i.test(cellData);
+    const hasHs = /(?:\*\*HS\b|\bHS\s*:|học sinh)/i.test(cellData);
+    if (!hasGv || !hasHs) {
+      throw new Error("Hoạt động E: Bảng tổ chức thực hiện chưa phân định rõ ràng vai trò GV (giao việc, hướng dẫn) và HS (ghi nhận, tự học tại nhà).");
+    }
+    return;
   }
 
   // Với các pha khác (A, C, D) hoặc fallback khi B không có chia nhánh:
@@ -2344,8 +2374,8 @@ function sanitizeLessonMarkdown(rawOutput) {
     }
   }
 
-  text = text.replace(/\n\s*\*(?:Lưu ý của AI|Ghi chú của AI|Nhận xét của AI)[^*]*\*\s*\n/gi, "\n\n");
-  text = text.replace(/\n\s*\((?:Lưu ý của AI|Ghi chú của AI|Nhận xét của AI)[^)]*\)\s*\n/gi, "\n\n");
+  text = text.replace(/(?:^|\n)\s*\*(?:Lưu ý của AI|Ghi chú của AI|Nhận xét của AI)[^*]*\*(?:\s*\n|\s*$)/gi, "\n\n");
+  text = text.replace(/(?:^|\n)\s*\((?:Lưu ý của AI|Ghi chú của AI|Nhận xét của AI)[^)]*\)(?:\s*\n|\s*$)/gi, "\n\n");
 
   text = stripClosingChitchat(text);
   text = mergeSplitActivityTables(text);
@@ -2485,7 +2515,8 @@ function parseKhbdSections(text, keys) {
     A: /(?:^|\n)\s*#{1,3}\s*(?:A[\.\s:]|HOẠT ĐỘNG 1\b|MỞ ĐẦU\b|KHỞI ĐỘNG\b)[^\n]*/i,
     B: /(?:^|\n)\s*#{1,3}\s*(?:B[\.\s:]|HOẠT ĐỘNG 2\b|HÌNH THÀNH KIẾN THỨC\b)[^\n]*/i,
     C: /(?:^|\n)\s*#{1,3}\s*(?:C[\.\s:]|HOẠT ĐỘNG 3\b|LUYỆN TẬP\b)[^\n]*/i,
-    D: /(?:^|\n)\s*#{1,3}\s*(?:D[\.\s:]|HOẠT ĐỘNG 4\b|VẬN DỤNG\b)[^\n]*/i
+    D: /(?:^|\n)\s*#{1,3}\s*(?:D[\.\s:]|HOẠT ĐỘNG 4\b|VẬN DỤNG\b)[^\n]*/i,
+    E: /(?:^|\n)\s*#{1,3}\s*(?:E[\.\s:]|HOẠT ĐỘNG 5\b|HƯỚNG DẪN VỀ NHÀ\b)[^\n]*/i
   };
   const found = [];
   (keys || []).forEach(key => {
@@ -2503,7 +2534,7 @@ function parseKhbdSections(text, keys) {
 }
 
 function buildAllPhasePedagogyContext() {
-  return ["A", "B", "C", "D"].map(key => buildPhasePedagogyContext(key)).filter(Boolean).join("\n");
+  return ["A", "B", "C", "D", "E"].map(key => buildPhasePedagogyContext(key)).filter(Boolean).join("\n");
 }
 
 function generationPauseMs() {
@@ -3047,13 +3078,13 @@ async function handle1ClickGenerate() {
     context.objectives_content = finalObj;
 
     updateProgress(60, skipMedia
-      ? "Bước 2/2: Đang soạn hoạt động A–D (từ văn bản OCR)..."
-      : "Bước 2/2: Đang soạn hoạt động A–D (PDF/ảnh đính kèm)...");
-    const promptAD = getPromptTemplate("GENERATE_ACTIVITIES_AD", context) + buildAllPhasePedagogyContext();
-    const rawAD = await generateOneClickContent(promptAD, media, { maxOutputTokens: 32768, timeoutMs: 90000 });
-    const actParts = parseKhbdSections(rawAD, ["A", "B", "C", "D"]);
+      ? "Bước 2/2: Đang soạn hoạt động A–E (từ văn bản OCR)..."
+      : "Bước 2/2: Đang soạn hoạt động A–E (PDF/ảnh đính kèm)...");
+    const promptAE = getPromptTemplate("GENERATE_ACTIVITIES_AE", context) + buildAllPhasePedagogyContext();
+    const rawAE = await generateOneClickContent(promptAE, media, { maxOutputTokens: 32768, timeoutMs: 90000 });
+    const actParts = parseKhbdSections(rawAE, ["A", "B", "C", "D", "E"]);
     const missingActs = [];
-    for (const key of ["A", "B", "C", "D"]) {
+    for (const key of ["A", "B", "C", "D", "E"]) {
       const body = actParts[key];
       if (!String(body || "").trim()) {
         missingActs.push(key);
@@ -3075,8 +3106,8 @@ async function handle1ClickGenerate() {
       hideProgress();
       switchMainTab("tabFullPreview");
       showToast(skipMedia
-        ? "Đã soạn I, II và III.A–D (2 lần gọi) từ văn bản Mistral OCR."
-        : "Đã soạn I, II và III.A–D (2 lần gọi). File PDF/ảnh chỉ trong phiên này.", "success", 6000);
+        ? "Đã soạn I, II và III.A–E (2 lần gọi) từ văn bản Mistral OCR."
+        : "Đã soạn I, II và III.A–E (2 lần gọi). File PDF/ảnh chỉ trong phiên này.", "success", 6000);
     }, 1200);
 
   } catch (err) {
