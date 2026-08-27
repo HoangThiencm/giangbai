@@ -790,7 +790,15 @@ YÊU CẦU: Tạo 2 đến 3 Phiếu Học Tập (PHT) hoàn chỉnh với bản
 };
 
 function getSystemRole(subjectId, grade) {
-  const subjectName = subjectNameObj.name;
+  let subjectName = 'Toán';
+  if (typeof CURRICULUM_DATA !== 'undefined' && Array.isArray(CURRICULUM_DATA.subjects)) {
+    const found = CURRICULUM_DATA.subjects.find(s => s.id === subjectId || s.code === subjectId || String(s.name || '').toLowerCase() === String(subjectId || '').toLowerCase());
+    if (found && found.name) subjectName = found.name;
+  }
+  if (!subjectName && typeof getSubjectDisplayName === 'function') {
+    subjectName = getSubjectDisplayName(subjectId);
+  }
+  if (!subjectName) subjectName = 'Toán';
   
   let gradeLevelName = 'THCS';
   let isPrimary = false;
@@ -1041,6 +1049,8 @@ Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có
 }
 
 if (typeof window !== 'undefined') {
+  window.getSystemRole = getSystemRole;
+  window.getPromptTemplate = getPromptTemplate;
   window.calculateActivityTimeBudgets = calculateActivityTimeBudgets;
   window.extractTextbookSubsections = extractTextbookSubsections;
   window.getGeneralCompetenciesForSubject = getGeneralCompetenciesForSubject;
