@@ -640,11 +640,152 @@ async function requestStructuredIntegrationCandidatesForEnabled({ silent = false
 }
 
 function illustrationKindLabel(kind) {
-  return kind === "thuc_te" ? "Hình thực tế" : "Hình chuẩn SGK";
+  return kind === "thuc_te" ? "Hình thực tế" : "Hình chuẩn SGK (SVG)";
 }
 
 function illustrationMarker(ill) {
   return `![${ill.caption || ill.title || ill.id}](khbd-ill:${ill.id})`;
+}
+
+/**
+ * Trích xuất chuỗi mã <svg>...</svg> từ phản hồi text của AI
+ */
+function extractSvgCode(rawAiText) {
+  if (!rawAiText || typeof rawAiText !== "string") return "";
+  let text = rawAiText.trim();
+  const match = text.match(/<svg[\s\S]*?<\/svg>/i);
+  if (match) {
+    return match[0].trim();
+  }
+  return "";
+}
+
+/**
+ * Làm sạch mã SVG để bảo mật XSS và chuẩn hóa hiển thị
+ */
+function sanitizeSvg(svgText) {
+  if (!svgText || typeof svgText !== "string") return "";
+  let clean = svgText.trim();
+  
+  // Loại bỏ các thẻ độc hại: script, foreignObject
+  clean = clean.replace(/<script[\s\S]*?<\/script>/gi, "");
+  clean = clean.replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, "");
+  
+  // Loại bỏ các thuộc tính event handler: onclick, onload, onerror, v.v.
+  clean = clean.replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  
+  // Loại bỏ href / xlink:href chứa javascript:
+  clean = clean.replace(/\s+(?:href|xlink:href)\s*=\s*["']\s*javascript:[^"']*["']/gi, "");
+  
+  // Đảm bảo có namespace xmlns
+  if (!/xmlns\s*=/i.test(clean)) {
+    clean = clean.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  
+  // Đảm bảo có viewBox
+  if (!/viewBox\s*=/i.test(clean)) {
+    clean = clean.replace(/<svg\b/i, '<svg viewBox="0 0 500 400"');
+  }
+
+  // Đảm bảo có class khbd-svg-draw
+  if (!/class\s*=/i.test(clean)) {
+    clean = clean.replace(/<svg\b/i, '<svg class="khbd-svg-draw"');
+  } else if (!/khbd-svg-draw/i.test(clean)) {
+    clean = clean.replace(/class=["']([^"']*)["']/i, 'class="$1 khbd-svg-draw"');
+  }
+
+  return clean;
+}
+
+/**
+ * Chuyển đổi chuỗi SVG sang PNG Data URL (độ phân giải cao 2x cho Word)
+ */
+function svgToPngDataUrl(svgText, scale = 2) {
+  return new Promise((resolve) => {
+    const cleanSvg = sanitizeSvg(svgText);
+    if (!cleanSvg) {
+      resolve(null);
+      return;
+    }
+
+    if (typeof window === "undefined" || typeof document === "undefined" || typeof Image === "undefined") {
+      // Môi trường Node.js test: Fallback SVG dataUrl
+      const base64 = typeof Buffer !== "undefined" ? Buffer.from(cleanSvg).toString("base64") : btoa(unescape(encodeURIComponent(cleanSvg)));
+      resolve(`data:image/svg+xml;base64,${base64}`);
+      return;
+    }
+
+    try {
+      const blob = new Blob([cleanSvg], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+
+      img.onload = () => {
+        try {
+          const width = Math.round((img.naturalWidth || img.width || 500) * scale);
+          const height = Math.round((img.naturalHeight || img.height || 400) * scale);
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(100, width);
+          canvas.height = Math.max(100, height);
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          const pngDataUrl = canvas.toDataURL("image/png");
+          resolve(pngDataUrl);
+        } catch (canvasErr) {
+          console.warn("Lỗi canvas render SVG sang PNG:", canvasErr);
+          URL.revokeObjectURL(url);
+          const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanSvg)}`;
+          resolve(svgDataUrl);
+        }
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanSvg)}`;
+        resolve(svgDataUrl);
+      };
+
+      img.src = url;
+    } catch (e) {
+      console.warn("Lỗi chuyển SVG sang PNG dataUrl:", e);
+      resolve(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanSvg)}`);
+    }
+  });
+}
+
+/**
+ * Sinh mã SVG toán học bằng Gemini Text Model thông thường
+ */
+async function generateSvgDrawing(drawingPrompt, drawingTitle) {
+  if (typeof geminiAPI === "undefined" || typeof geminiAPI.generateContent !== "function") {
+    throw new Error("Gemini API chưa sẵn sàng.");
+  }
+  const context = {
+    ...getGenerationPromptContext(),
+    drawing_prompt: drawingPrompt,
+    drawing_title: drawingTitle || getTopicDisplayName()
+  };
+  const prompt = typeof getPromptTemplate === "function"
+    ? getPromptTemplate("GENERATE_SVG_DRAWING", context)
+    : `Vẽ mã SVG toán học chuẩn SGK cho yêu cầu: ${drawingPrompt}`;
+
+  const raw = await geminiAPI.generateContent(
+    prompt,
+    [],
+    getSystemRole(appState.selectedSubject, appState.selectedGrade),
+    0.1,
+    appState.generationController?.signal,
+    { maxOutputTokens: 8192, timeoutMs: 60000 }
+  );
+
+  const svgCode = extractSvgCode(raw);
+  if (!svgCode) {
+    throw new Error("AI không trả về mã SVG hợp lệ.");
+  }
+  return sanitizeSvg(svgCode);
 }
 
 function parseIllustrationSpecs(raw) {
@@ -677,6 +818,7 @@ function parseIllustrationSpecs(raw) {
       title: title || (kind === "thuc_te" ? "Tình huống thực tế" : "Hình toán"),
       caption: String(row?.caption || title || "").trim(),
       locus: locus === "MATERIALS" ? "materials" : locus,
+      subsection: String(row?.subsection || row?.sgkSection || row?.anchor || "").trim(),
       prompt
     });
     if (specs.length >= 4) break;
@@ -705,31 +847,255 @@ function rewriteIllustrationMarkdown(markdown) {
   const list = appState.content.illustrations || [];
   return String(markdown || "").replace(/!\[([^\]]*)\]\(khbd-ill:([^)]+)\)/g, (full, alt, id) => {
     const ill = list.find(item => item.id === id);
-    if (!ill || !ill.dataUrl) return full;
+    if (!ill || (!ill.dataUrl && !ill.svgContent)) return full;
     const caption = alt || ill.caption || ill.title || id;
     const kind = illustrationKindLabel(ill.kind);
+    if (ill.svgContent) {
+      return `<figure class="khbd-illustration"><div class="khbd-svg-container">${ill.svgContent}</div><figcaption>${escapeHtml(kind)}. ${escapeHtml(caption)}</figcaption></figure>`;
+    }
     return `<figure class="khbd-illustration"><img src="${ill.dataUrl}" alt="${escapeHtml(caption)}"><figcaption>${escapeHtml(kind)}. ${escapeHtml(caption)}</figcaption></figure>`;
   });
 }
 
-function appendIllustrationToLocus(ill) {
-  const marker = illustrationMarker(ill);
-  const heading = `\n\n**${illustrationKindLabel(ill.kind)}:**\n${marker}\n`;
-  if (ill.locus === "materials") {
-    const current = String(appState.content.materials || "");
-    if (current.includes(`khbd-ill:${ill.id}`)) return;
-    appState.content.materials = (current.trim() + heading).trim();
-    const editor = document.getElementById("editorMaterials");
-    if (editor) editor.value = appState.content.materials;
+function foldForMatch(value) {
+  return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function illustrationInsertBlock(ill) {
+  return `**${illustrationKindLabel(ill.kind)}:** ${ill.caption || ill.title || ""}\n${illustrationMarker(ill)}`;
+}
+
+function insertIllustrationIntoMarkdown(markdown, ill) {
+  const md = String(markdown || "");
+  if (!md.trim()) return { markdown: md, placed: false };
+  if (md.includes(`khbd-ill:${ill.id}`)) return { markdown: md, placed: true };
+  const block = illustrationInsertBlock(ill);
+  const lines = md.split("\n");
+  const needles = [ill.subsection, ill.title, ill.caption]
+    .map(foldForMatch)
+    .filter(text => text.length >= 4);
+
+  let headingIdx = -1;
+  if (needles.length) {
+    for (let i = 0; i < lines.length; i++) {
+      if (!/^#{2,4}\s+/.test(lines[i])) continue;
+      const folded = foldForMatch(lines[i]);
+      if (needles.some(needle => folded.includes(needle) || needle.includes(folded.slice(0, 48)))) {
+        headingIdx = i;
+        break;
+      }
+    }
+  }
+
+  const insertAfter = idx => {
+    const next = lines.slice();
+    next.splice(idx + 1, 0, "", block, "");
+    return next.join("\n");
+  };
+
+  if (headingIdx >= 0) {
+    const headingLevel = (lines[headingIdx].match(/^#+/) || ["###"])[0].length;
+    let end = lines.length;
+    for (let i = headingIdx + 1; i < lines.length; i++) {
+      const marks = lines[i].match(/^(#{1,4})\s+/);
+      if (!marks) continue;
+      if (marks[1].length <= headingLevel && (/hoạt động|luyện tập|vận dụng|^#{2}\s+[A-E][\.\s]/i.test(lines[i]) || /^\s*#{2,3}\s+\d+\./.test(lines[i]))) {
+        end = i;
+        break;
+      }
+    }
+    for (let i = headingIdx; i < end; i++) {
+      if (/^#{3,4}\s*b\)\s*Nội dung/i.test(lines[i].trim())) return { markdown: insertAfter(i), placed: true };
+    }
+    return { markdown: insertAfter(headingIdx), placed: true };
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    if (/^#{3,4}\s*b\)\s*Nội dung/i.test(lines[i].trim())) return { markdown: insertAfter(i), placed: true };
+  }
+  return { markdown: md, placed: false };
+}
+
+function syncIllustrationsIntoContent() {
+  const list = appState.content.illustrations || [];
+  let changed = false;
+  for (const ill of list) {
+    if (!(ill.dataUrl || ill.svgContent)) continue;
+    if (ill.locus === "materials") {
+      const current = String(appState.content.materials || "");
+      if (!current.trim() || current.includes(`khbd-ill:${ill.id}`)) continue;
+      const result = insertIllustrationIntoMarkdown(current, ill);
+      if (result.placed) {
+        appState.content.materials = result.markdown.trim();
+        changed = true;
+      }
+      continue;
+    }
+    const key = ["A", "B", "C", "D", "E"].includes(ill.locus) ? ill.locus : "B";
+    const current = String(appState.content.activities[key] || "");
+    if (!current.trim() || current.includes(`khbd-ill:${ill.id}`)) continue;
+    const result = insertIllustrationIntoMarkdown(current, ill);
+    if (result.placed) {
+      appState.content.activities[key] = result.markdown.trim();
+      changed = true;
+    }
+  }
+  if (changed) {
+    const editorAct = document.getElementById("editorActivity");
+    if (editorAct) editorAct.value = appState.content.activities[appState.activeActSubtab] || "";
+    const editorMat = document.getElementById("editorMaterials");
+    if (editorMat) editorMat.value = appState.content.materials || "";
+  }
+  return changed;
+}
+
+function zoomIllustration(illId) {
+  const list = appState.content.illustrations || [];
+  const ill = list.find(item => item.id === illId);
+  if (!ill) return;
+
+  const modal = document.getElementById("modalImageZoom");
+  const zoomTitle = document.getElementById("zoomImageTitle");
+  const zoomImg = document.getElementById("zoomImageSrc");
+  if (!modal || !zoomTitle) return;
+
+  zoomTitle.textContent = `${illustrationKindLabel(ill.kind)}: ${ill.caption || ill.title || ill.id}`;
+
+  let svgZoomContainer = document.getElementById("zoomSvgContainer");
+  if (!svgZoomContainer) {
+    svgZoomContainer = document.createElement("div");
+    svgZoomContainer.id = "zoomSvgContainer";
+    svgZoomContainer.className = "khbd-svg-zoom-box";
+    if (zoomImg && zoomImg.parentNode) {
+      zoomImg.parentNode.appendChild(svgZoomContainer);
+    }
+  }
+
+  if (ill.svgContent) {
+    if (zoomImg) zoomImg.style.display = "none";
+    svgZoomContainer.style.display = "flex";
+    svgZoomContainer.innerHTML = ill.svgContent;
+  } else if (ill.dataUrl) {
+    svgZoomContainer.style.display = "none";
+    if (zoomImg) {
+      zoomImg.style.display = "block";
+      zoomImg.src = ill.dataUrl;
+    }
+  }
+
+  openModal("modalImageZoom");
+}
+
+function downloadIllustration(illId, format = "svg") {
+  const list = appState.content.illustrations || [];
+  const ill = list.find(item => item.id === illId);
+  if (!ill) return;
+
+  const safeTitle = (ill.title || ill.id).replace(/[^a-zA-Z0-9_\u00C0-\u1EF9]/g, "_").substring(0, 30);
+  const fileName = `Hinh_${safeTitle}_${ill.id}.${format}`;
+
+  if (format === "svg" && ill.svgContent) {
+    const blob = new Blob([ill.svgContent], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 150);
+    showToast(`Đã tải xuống file Vector SVG: ${fileName}`, "success");
     return;
   }
-  const key = ill.locus || "B";
-  const current = String(appState.content.activities[key] || "");
-  if (current.includes(`khbd-ill:${ill.id}`)) return;
-  appState.content.activities[key] = (current.trim() + heading).trim();
-  if (appState.activeActSubtab === key) {
-    const editor = document.getElementById("editorActivity");
-    if (editor) editor.value = appState.content.activities[key];
+
+  if (ill.dataUrl) {
+    const a = document.createElement("a");
+    a.href = ill.dataUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+    }, 150);
+    showToast(`Đã tải xuống hình ảnh: ${fileName}`, "success");
+  } else if (ill.svgContent) {
+    // Chuyển SVG sang PNG để tải
+    svgToPngDataUrl(ill.svgContent, 3).then(pngDataUrl => {
+      if (pngDataUrl) {
+        const a = document.createElement("a");
+        a.href = pngDataUrl;
+        a.download = fileName.replace(/\.svg$/i, ".png");
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 150);
+        showToast(`Đã xuất PNG siêu nét: ${a.download}`, "success");
+      }
+    });
+  } else {
+    showToast("Không tìm thấy dữ liệu hình để tải xuống.", "warning");
+  }
+}
+
+async function generateSingleIllustration(illId) {
+  const list = appState.content.illustrations || [];
+  const ill = list.find(item => item.id === illId);
+  if (!ill) return;
+
+  if (appState.isGenerating) {
+    showToast("Một tác vụ AI khác đang chạy, vui lòng chờ trong giây lát.", "warning");
+    return;
+  }
+
+  appState.isGenerating = true;
+  updateProgress(30, `Đang vẽ lại ${illustrationKindLabel(ill.kind)}...`);
+  try {
+    if (ill.kind === "sgk") {
+      const svgCode = await generateSvgDrawing(ill.prompt, ill.title);
+      ill.svgContent = svgCode;
+      ill.dataUrl = await svgToPngDataUrl(svgCode, 2);
+      delete ill.error;
+    } else {
+      let created = false;
+      if (typeof geminiAPI.generateImage === "function") {
+        try {
+          let dataUrl = await geminiAPI.generateImage(buildIllustrationImagePrompt(ill), {
+            signal: appState.generationController?.signal,
+            timeoutMs: 90000
+          });
+          if (typeof compressDataUrl === "function" && dataUrl && !/^data:application\/pdf/i.test(dataUrl)) {
+            const compressed = await compressDataUrl(dataUrl, 1280, 0.82);
+            if (compressed?.dataUrl) dataUrl = compressed.dataUrl;
+          }
+          ill.dataUrl = dataUrl;
+          created = true;
+        } catch (imgErr) {
+          console.warn("Fallback SVG cho hình thực tế:", imgErr);
+        }
+      }
+      if (!created) {
+        const svgCode = await generateSvgDrawing(ill.prompt + " (sơ đồ minh họa toán học thực tế chuẩn SGK)", ill.title);
+        ill.svgContent = svgCode;
+        ill.dataUrl = await svgToPngDataUrl(svgCode, 2);
+      }
+      delete ill.error;
+    }
+
+    syncIllustrationsIntoContent();
+    saveStateToLocalStorage();
+    renderIllustrationGallery();
+    renderAllTabsPreview();
+    renderFullLessonPreview();
+    updateProgress(100, `Đã vẽ lại xong hình: ${ill.title || ill.id}`);
+    setTimeout(() => hideProgress(), 1200);
+    showToast(`Đã vẽ lại thành công ${illustrationKindLabel(ill.kind)}!`, "success");
+  } catch (err) {
+    console.error("Lỗi vẽ lại hình:", err);
+    hideProgress();
+    showToast(`Lỗi khi vẽ lại hình: ${err.message}`, "danger", 6000);
+  } finally {
+    appState.isGenerating = false;
   }
 }
 
@@ -738,20 +1104,46 @@ function renderIllustrationGallery() {
   if (!panel) return;
   const list = appState.content.illustrations || [];
   if (!list.length) {
-    panel.innerHTML = `<p class="text-muted" style="font-size:.85rem;margin:0">Chưa có hình minh họa. Bấm tạo sau khi đã đọc SGK — hệ thống vẽ hình chuẩn SGK (toán thuần) và hình thực tế khi bài cần.</p>`;
+    panel.innerHTML = `<p class="text-muted" style="font-size:.85rem;margin:0">Chưa có hình minh họa. Bấm tạo sau khi đã đọc SGK — hệ thống tự động sinh Vector SVG toán học chuẩn SGK và hình ảnh thực tế trực quan.</p>`;
     return;
   }
   panel.innerHTML = list.map(ill => {
-    const img = ill.dataUrl
-      ? `<img src="${ill.dataUrl}" alt="${escapeHtml(ill.caption || ill.title || "")}">`
-      : `<div class="khbd-illustration-empty">Chưa tạo được ảnh. Có thể copy prompt bên dưới.</div>`;
+    let previewContent = "";
+    if (ill.svgContent) {
+      previewContent = `<div class="khbd-svg-preview-wrap" onclick="zoomIllustration('${ill.id}')" title="Bấm để xem phóng to SVG">${ill.svgContent}</div>`;
+    } else if (ill.dataUrl) {
+      previewContent = `<img src="${ill.dataUrl}" alt="${escapeHtml(ill.caption || ill.title || "")}" onclick="zoomIllustration('${ill.id}')" title="Bấm để xem phóng to">`;
+    } else {
+      previewContent = `<div class="khbd-illustration-empty">Chưa tạo được ảnh.<br><small class="text-muted">${escapeHtml(ill.error || "Bấm vẽ lại bên dưới")}</small></div>`;
+    }
+
+    const svgDownloadBtn = ill.svgContent
+      ? `<button class="btn btn-outline-dark btn-xs" onclick="downloadIllustration('${ill.id}', 'svg')" title="Tải file Vector SVG"><i data-lucide="file-code"></i> SVG</button>`
+      : "";
+    const pngDownloadBtn = (ill.dataUrl || ill.svgContent)
+      ? `<button class="btn btn-outline-dark btn-xs" onclick="downloadIllustration('${ill.id}', 'png')" title="Tải file ảnh PNG HD"><i data-lucide="image"></i> PNG</button>`
+      : "";
+
     return `<article class="khbd-illustration-card" data-id="${ill.id}">
-      <span class="khbd-illustration-badge ${ill.kind === "thuc_te" ? "is-real" : "is-sgk"}">${illustrationKindLabel(ill.kind)}</span>
-      ${img}
-      <p>${escapeHtml(ill.caption || ill.title || ill.id)}</p>
-      <small>Gắn vào ${ill.locus === "materials" ? "II. Học liệu" : "Hoạt động " + ill.locus}</small>
+      <div class="khbd-illustration-card-header">
+        <span class="khbd-illustration-badge ${ill.kind === "thuc_te" ? "is-real" : "is-sgk"}">${illustrationKindLabel(ill.kind)}</span>
+        <span class="khbd-illustration-locus-badge">Mục ${ill.locus === "materials" ? "II" : ill.locus}</span>
+      </div>
+      ${previewContent}
+      <div class="khbd-illustration-card-body">
+        <p class="khbd-illustration-title" title="${escapeHtml(ill.caption || ill.title || ill.id)}">${escapeHtml(ill.caption || ill.title || ill.id)}</p>
+        <small class="khbd-illustration-prompt text-muted" title="${escapeHtml(ill.prompt || "")}">${escapeHtml(ill.prompt || "")}</small>
+      </div>
+      <div class="khbd-illustration-actions">
+        <button class="btn btn-outline-dark btn-xs" onclick="zoomIllustration('${ill.id}')" title="Xem chi tiết phóng to"><i data-lucide="zoom-in"></i> Phóng to</button>
+        ${svgDownloadBtn}
+        ${pngDownloadBtn}
+        <button class="btn btn-primary btn-xs" onclick="generateSingleIllustration('${ill.id}')" title="AI vẽ lại hình này"><i data-lucide="refresh-cw"></i> Vẽ lại</button>
+      </div>
     </article>`;
   }).join("");
+
+  initLucideIcons();
 }
 
 async function generateLessonIllustrations({ silent = false } = {}) {
@@ -768,7 +1160,7 @@ async function generateLessonIllustrations({ silent = false } = {}) {
     ? getPromptTemplate("GENERATE_ILLUSTRATIONS", context)
     : "";
   try {
-    updateProgress(88, "Đang chọn hình minh họa theo SGK...");
+    updateProgress(88, "Đang phân tích hình vẽ toán học & minh họa theo SGK...");
     const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, appState.generationController?.signal, { maxOutputTokens: 2048 });
     const specs = parseIllustrationSpecs(raw);
     if (!specs.length) {
@@ -780,33 +1172,65 @@ async function generateLessonIllustrations({ silent = false } = {}) {
     const created = [];
     for (let i = 0; i < specs.length; i++) {
       const spec = specs[i];
-      updateProgress(90 + Math.round((i / specs.length) * 8), `Đang vẽ ${illustrationKindLabel(spec.kind)} (${i + 1}/${specs.length})...`);
+      const stepPct = 90 + Math.round((i / specs.length) * 8);
+      updateProgress(stepPct, `Đang vẽ ${illustrationKindLabel(spec.kind)} (${i + 1}/${specs.length})...`);
+      
       try {
-        if (typeof geminiAPI.generateImage !== "function") throw new Error("API tạo ảnh chưa có");
-        let dataUrl = await geminiAPI.generateImage(buildIllustrationImagePrompt(spec), {
-          signal: appState.generationController?.signal,
-          timeoutMs: 90000
-        });
-        if (typeof compressDataUrl === "function" && dataUrl && !/^data:application\/pdf/i.test(dataUrl)) {
-          const compressed = await compressDataUrl(dataUrl, 1280, 0.82);
-          if (compressed?.dataUrl) dataUrl = compressed.dataUrl;
+        if (spec.kind === "sgk") {
+          // Sinh SVG Vector toán học siêu nét chuẩn SGK
+          const svgCode = await generateSvgDrawing(spec.prompt, spec.title);
+          const pngDataUrl = await svgToPngDataUrl(svgCode, 2);
+          created.push({
+            ...spec,
+            svgContent: svgCode,
+            dataUrl: pngDataUrl,
+            caption: spec.caption || spec.title
+          });
+        } else {
+          // kind === "thuc_te": Thử sinh ảnh đời sống thật hoặc fallback SVG sơ đồ thực tế
+          let imgCreated = false;
+          if (typeof geminiAPI.generateImage === "function") {
+            try {
+              let dataUrl = await geminiAPI.generateImage(buildIllustrationImagePrompt(spec), {
+                signal: appState.generationController?.signal,
+                timeoutMs: 90000
+              });
+              if (typeof compressDataUrl === "function" && dataUrl && !/^data:application\/pdf/i.test(dataUrl)) {
+                const compressed = await compressDataUrl(dataUrl, 1280, 0.82);
+                if (compressed?.dataUrl) dataUrl = compressed.dataUrl;
+              }
+              created.push({ ...spec, dataUrl, caption: spec.caption || spec.title });
+              imgCreated = true;
+            } catch (imageErr) {
+              console.warn("Không tạo được ảnh thực tế qua Image API, fallback sang SVG:", imageErr);
+            }
+          }
+          if (!imgCreated) {
+            const svgCode = await generateSvgDrawing(spec.prompt + " (vẽ sơ đồ minh họa toán học thực tế chuẩn SGK)", spec.title);
+            const pngDataUrl = await svgToPngDataUrl(svgCode, 2);
+            created.push({
+              ...spec,
+              svgContent: svgCode,
+              dataUrl: pngDataUrl,
+              caption: spec.caption || spec.title
+            });
+          }
         }
-        created.push({ ...spec, dataUrl, caption: spec.caption || spec.title });
       } catch (error) {
-        console.warn("Không tạo được ảnh", spec.id, error);
+        console.warn("Không tạo được hình", spec.id, error);
         created.push({ ...spec, dataUrl: "", error: error.message });
       }
     }
     appState.content.illustrations = created;
-    created.filter(item => item.dataUrl).forEach(appendIllustrationToLocus);
+    syncIllustrationsIntoContent();
     saveStateToLocalStorage();
     renderIllustrationGallery();
     renderAllTabsPreview();
     renderFullLessonPreview();
-    const ok = created.filter(item => item.dataUrl).length;
+    const ok = created.filter(item => item.dataUrl || item.svgContent).length;
     if (!silent) {
-      if (ok) showToast(`Đã tạo ${ok} hình minh họa (${created.filter(i => i.kind === "sgk").length} chuẩn SGK, ${created.filter(i => i.kind === "thuc_te").length} thực tế).`, "success", 6000);
-      else showToast("Chưa tạo được ảnh (phiên có thể chặn model ảnh). Prompt hình vẫn giữ trong khung, bạn có thể tạo tay.", "warning", 7000);
+      if (ok) showToast(`Đã tạo ${ok} hình minh họa (${created.filter(i => i.kind === "sgk").length} SVG toán học chuẩn SGK, ${created.filter(i => i.kind === "thuc_te").length} thực tế).`, "success", 6000);
+      else showToast("Chưa tạo được hình (có thể do kết nối mạng). Bạn có thể bấm vẽ lại từng hình.", "warning", 7000);
     }
     return ok > 0;
   } catch (error) {
@@ -2029,7 +2453,8 @@ function getFullLessonPlanMarkdown(options = {}) {
     `# III. TIẾN TRÌNH DẠY HỌC`,
     fullActMarkdown || "*[Chưa tạo các hoạt động dạy học III.A - E]*"
   ];
-  const illustrations = (c.illustrations || []).filter(item => item && item.dataUrl);
+  const planSoFar = body.join("\n\n");
+  const illustrations = (c.illustrations || []).filter(item => item && (item.dataUrl || item.svgContent) && !planSoFar.includes(`khbd-ill:${item.id}`));
   if (illustrations.length) {
     body.push(`\n---\n`, `# Hình minh họa`);
     illustrations.forEach(ill => {
@@ -2987,6 +3412,7 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
     showToast(`Đã lưu hoạt động ${actKey}; kịch bản phân vai GV-HS hoặc kỹ thuật dạy học chưa ghi đủ. Bạn có thể sửa tay.`, "warning", 5000);
   }
   appState.content.activities[actKey] = finalResult;
+  syncIllustrationsIntoContent();
   saveStateToLocalStorage();
   return finalResult;
 }
@@ -3044,6 +3470,7 @@ async function handleGenerateMaterials() {
     prompt,
     onSuccess: (result) => {
       appState.content.materials = result;
+      syncIllustrationsIntoContent();
       saveStateToLocalStorage();
     }
   });
@@ -3741,6 +4168,14 @@ if (typeof window !== 'undefined') {
   window.sanitizeLessonMarkdown = sanitizeLessonMarkdown;
   window.splitKhbdMarkdownTableRow = splitKhbdMarkdownTableRow;
   window.unwrapVietnameseMathForKatex = unwrapVietnameseMathForKatex;
+  window.extractSvgCode = extractSvgCode;
+  window.sanitizeSvg = sanitizeSvg;
+  window.svgToPngDataUrl = svgToPngDataUrl;
+  window.generateSvgDrawing = generateSvgDrawing;
+  window.generateLessonIllustrations = generateLessonIllustrations;
+  window.generateSingleIllustration = generateSingleIllustration;
+  window.zoomIllustration = zoomIllustration;
+  window.downloadIllustration = downloadIllustration;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -3765,7 +4200,16 @@ if (typeof module !== 'undefined' && module.exports) {
     requestStructuredIntegrationCandidates,
     parseStructuredCandidates,
     parseIllustrationSpecs,
+    insertIllustrationIntoMarkdown,
+    syncIllustrationsIntoContent,
+    extractSvgCode,
+    sanitizeSvg,
+    svgToPngDataUrl,
+    generateSvgDrawing,
     generateLessonIllustrations,
+    generateSingleIllustration,
+    zoomIllustration,
+    downloadIllustration,
     applyTextbookOcrResult,
     handle1ClickGenerate,
     generateOneClickContent,

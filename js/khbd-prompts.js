@@ -333,12 +333,14 @@ YÊU CẦU: Tạo danh mục thiết bị và học liệu thiết yếu, cụ t
   GENERATE_ILLUSTRATIONS: `Bạn là họa sĩ SGK Toán Việt Nam. Đọc NỘI DUNG BÀI và liệt kê hình minh họa CẦN vẽ cho kế hoạch bài dạy lớp {grade}, môn {subject}, bài "{topic}".
 
 Trả về DUY NHẤT JSON:
-{"illustrations":[{"kind":"sgk hoặc thuc_te","title":"tên hình ngắn","caption":"Hình n. chú thích dưới hình","locus":"B hoặc C hoặc D hoặc materials","prompt":"mô tả chính xác hình cần vẽ, đủ nhãn đỉnh/cạnh/số đo nếu là hình học"}]}
+{"illustrations":[{"kind":"sgk hoặc thuc_te","title":"tên hình ngắn","caption":"Hình n. chú thích dưới hình","locus":"A hoặc B hoặc C hoặc D","subsection":"đúng tên mục SGK / Hoạt động 2.k","prompt":"mô tả chính xác hình cần vẽ, đủ nhãn đỉnh/cạnh/số đo nếu là hình học"}]}
 
 Quy tắc:
-- kind "sgk": hình toán thuần (hình học, đồ thị, sơ đồ, trục số) phong cách in SGK: nền trắng, nét mực đen, nhãn A B C, không nhân vật, không ảnh chụp.
-- kind "thuc_te": cảnh đời sống Việt Nam minh họa bài toán thực tế (sân trường, chợ, thước đo, xếp hàng...), ảnh chân thực, không cartoon.
-- Chỉ tạo hình khi bài THỰC SỰ cần. Hình học/đo đạc/đồ thị: ưu tiên 1–2 hình sgk. Có bài toán thực tế: thêm 1 hình thuc_te.
+- kind "sgk": hình toán thuần (hình học phẳng, hình không gian nét đứt nét liền, đồ thị hàm số, hệ trục Oxy, trục số, sơ đồ Ven, góc...) phong cách in SGK: nền trắng, nét mực đen, nhãn đỉnh A, B, C in nghiêng, góc vuông, vạch bằng nhau, không nhân vật, không ảnh chụp.
+- kind "thuc_te": cảnh đời sống Việt Nam minh họa bài toán thực tế (sân trường, chợ, đo đạc, công trình...), ảnh chân thực hoặc sơ đồ thực tế trực quan.
+- locus + subsection phải ánh xạ đúng chỗ dùng hình: hình khái niệm/định lý → B và tên tiểu mục kiến thức SGK; hình bài luyện tập → C; hình bài vận dụng/thực tế → D.
+- subsection phải copy đúng tên mục trong SGK (ví dụ "Đường trung trực của đoạn thẳng"), không ghi chung "Hoạt động B".
+- Chỉ tạo hình khi bài THỰC SỰ cần. Hình học/đo đạc/đồ thị/hàm số/trục số: ưu tiên 1–3 hình sgk. Có bài toán thực tế: thêm 1 hình thuc_te.
 - Tối đa 4 hình. Không bịa số đo trái SGK. Nếu bài chỉ chữ/số đại số không cần hình: {"illustrations":[]}.
 - Không markdown, không lời dẫn.
 
@@ -348,6 +350,44 @@ NỘI DUNG BÀI (OCR SGK + hoạt động đã soạn):
 
 {activities_content}
 """`,
+
+  // VẼ HÌNH TOÁN HỌC CHUẨN SGK (VECTOR SVG)
+  GENERATE_SVG_DRAWING: `Bạn là chuyên gia đồ họa Vector SVG và họa sĩ vẽ hình Toán học & KHTN SGK Việt Nam.
+Nhiệm vụ: Tạo mã SVG thuần túy (Vector) vẽ chính xác hình vẽ toán học theo yêu cầu sau:
+Yêu cầu vẽ: "{drawing_prompt}"
+Tiêu đề/Chủ đề: "{drawing_title}" ({subject} Lớp {grade})
+
+QUY CHUẨN KỸ THUẬT VẼ SVG CHUẨN SGK VIỆT NAM BẮT BUỘC:
+1. Thẻ SVG gốc:
+   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 400" width="100%" height="100%" style="background-color: #ffffff;">
+   BẮT BUỘC có hình chữ nhật nền trắng: <rect width="500" height="400" fill="#ffffff"/>
+2. Thẻ <defs> chứa định nghĩa mũi tên sắc nét cho trục tọa độ / vector:
+   <defs>
+     <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+       <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#000000"/>
+     </marker>
+     <marker id="arrow-start" viewBox="0 0 10 10" refX="4" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+       <path d="M 8 1.5 L 0 5 L 8 8.5 z" fill="#000000"/>
+     </marker>
+   </defs>
+3. Đường nét và Ký hiệu chuẩn SGK:
+   - Nét vẽ chính: stroke="#000000", stroke-width="1.8", stroke-linecap="round", stroke-linejoin="round", fill="none" (hoặc fill nhẹ #f8fafc nếu cần tô màu nền hình phẳng).
+   - Nét khuất / Đường phụ / Đường gióng: stroke="#000000", stroke-width="1.5", stroke-dasharray="5,4".
+   - Ký hiệu góc vuông: Đoạn gấp khúc vuông góc nhỏ (kích thước 10-14px) bằng thẻ <polyline points="..." fill="none" stroke="#000000" stroke-width="1.5"/> hoặc <path d="..." fill="none" stroke="#000000" stroke-width="1.5"/>.
+   - Ký hiệu góc / Cung tròn góc: <path d="M ... A ... 0 0 ... ..." fill="none" stroke="#000000" stroke-width="1.5"/> có thể kèm nhãn góc (ví dụ: 60°, α, β).
+   - Ký hiệu đoạn thẳng bằng nhau: Các vạch nhỏ cắt ngang cạnh (1 vạch, 2 vạch).
+   - Điểm và Đỉnh: Chấm tròn nhỏ <circle cx="..." cy="..." r="2.5" fill="#000000"/>.
+   - Nhãn chữ đỉnh / Tên điểm: Dùng thẻ <text font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold" fill="#000000" text-anchor="middle" dominant-baseline="central">A</text>. Đặt nhãn cách đỉnh 12–18px theo hướng ngoài hình, TUYỆT ĐỐI KHÔNG đè lên nét vẽ.
+4. Trục tọa độ Oxy / Trục số:
+   - Trục Ox nằm ngang có mũi tên (marker-end="url(#arrow)"), nhãn x ở đầu mút, nhãn O tại gốc tọa độ.
+   - Trục Oy thẳng đứng có mũi tên, nhãn y ở đầu mút.
+   - Vạch chia đơn vị (ticks) cách đều, nhãn số 1, 2, -1, -2... rõ ràng.
+5. Hình học không gian (Hình chóp, lăng trụ, lập phương, hình hộp, hình nón, hình trụ):
+   - Phối cảnh chuẩn SGK: Mặt đáy vẽ dạng hình bình hành, nét nhìn thấy nét liền, cạnh đáy phía sau/đường cao bên trong nét đứt stroke-dasharray="5,4".
+6. ĐẦU RA BẮT BUỘC:
+   - CHỈ trả về duy nhất chuỗi mã <svg ...>...</svg> hoàn chỉnh và hợp lệ.
+   - TUYỆT ĐỐI CẤM bọc trong code block markdown (\`\`\`xml hay \`\`\`svg).
+   - TUYỆT ĐỐI CẤM bất kỳ lời chào, lời giải thích hay nhận xét meta nào.`,
 
   // 1-CLICK PHẦN I + II (CORE LESSON)
   GENERATE_CORE_LESSON: `Đọc nguồn SGK (văn bản OCR/tóm tắt và PDF/ảnh nếu đính kèm) và soạn phần I + II của Kế hoạch bài dạy môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512/BGDĐT-GDTrH, bám CT GDPT 2018.
@@ -976,6 +1016,37 @@ function extractTextbookSubsections(content) {
   return [];
 }
 
+function extractTextbookBlock(content, startPattern, endPattern) {
+  const text = String(content || "");
+  const start = text.search(startPattern);
+  if (start < 0) return "";
+  let block = text.slice(start);
+  const rest = block.slice(12);
+  const end = rest.search(endPattern);
+  if (end >= 0) block = block.slice(0, end + 12);
+  return block.replace(/\s+/g, " ").trim().slice(0, 2500);
+}
+
+function extractTextbookLessonMap(content) {
+  const subsections = extractTextbookSubsections(content);
+  const practice = extractTextbookBlock(
+    content,
+    /(?:^|\n)\s*(?:#{1,6}\s+)?(?:\*\*)?(?:Luyện tập|Bài tập)\b/i,
+    /(?:^|\n)\s*(?:#{1,6}\s+)?(?:\*\*)?(?:Vận dụng|Bài toán thực tế|Hướng dẫn về nhà|Em có biết|Bạn có biết)\b/i
+  );
+  const application = extractTextbookBlock(
+    content,
+    /(?:^|\n)\s*(?:#{1,6}\s+)?(?:\*\*)?(?:Vận dụng|Bài toán thực tế)\b/i,
+    /(?:^|\n)\s*(?:#{1,6}\s+)?(?:\*\*)?(?:Hướng dẫn về nhà|Em có biết|Bạn có biết|Tổng kết)\b/i
+  );
+  const opening = extractTextbookBlock(
+    content,
+    /(?:^|\n)\s*(?:#{1,6}\s+)?(?:\*\*)?(?:Mở đầu|Khởi động|Khám phá|Tình huống)\b/i,
+    /(?:^|\n)\s*(?:#{1,6}\s+)?(?:\*\*)?(?:I[\.\s]|Mục\s*1|Luyện tập|Vận dụng)\b/i
+  );
+  return { subsections, practice, application, opening };
+}
+
 function getPromptTemplate(templateKey, context) {
   let baseTemplate = PROMPTS[templateKey];
   if (!baseTemplate) return '';
@@ -1022,7 +1093,13 @@ function getPromptTemplate(templateKey, context) {
     .replace(/\{time_budget_C\}/g, budgets.formatted.C)
     .replace(/\{time_budget_D\}/g, budgets.formatted.D)
     .replace(/\{time_budget_E\}/g, budgets.formatted.E)
-    .replace(/\{ai_homework_prompt_note\}/g, aiHomeworkPromptNote);
+    .replace(/\{ai_homework_prompt_note\}/g, aiHomeworkPromptNote)
+    .replace(/\{drawing_prompt\}/g, context.drawing_prompt || '')
+    .replace(/\{drawing_title\}/g, context.drawing_title || '');
+
+  if (templateKey === 'GENERATE_SVG_DRAWING') {
+    return result;
+  }
 
   if (PROMPTS.SOURCE_LOCK) {
     result += `\n\n${PROMPTS.SOURCE_LOCK}`;
@@ -1058,9 +1135,35 @@ Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có
     }
   }
 
+  const lessonMap = extractTextbookLessonMap(rawTextbook);
+
+  if (templateKey === 'GENERATE_ILLUSTRATIONS' && lessonMap.subsections.length) {
+    const names = lessonMap.subsections.map(s => `"${s.title}"`).join("; ");
+    result += `\n\nTÊN TIỂU MỤC KIẾN THỨC SGK (dùng đúng vào trường subsection khi hình thuộc hoạt động B): ${names}`;
+  }
+
+  if (templateKey === 'GENERATE_ACTIVITY_A' && lessonMap.opening) {
+    result += `\n\nTÌNH HUỐNG MỞ ĐẦU TRONG SGK (bắt buộc ánh xạ, không bịa tình huống ngoài sách):\n"""\n${lessonMap.opening}\n"""`;
+  }
+
   if (templateKey === 'GENERATE_ACTIVITY_C' || templateKey === 'GENERATE_ACTIVITY_D') {
     if (context.textbook_content && String(context.textbook_content).trim().length > 0) {
       result += `\n\nLƯU Ý QUAN TRỌNG VỀ NGUỒN BÀI TẬP: Vì dữ liệu SGK đã được cung cấp ở trên, CẤM ghi "[Không có trong tài liệu đã cung cấp]". BẮT BUỘC phải trích xuất và giải chi tiết các bài tập có trong nguồn.`;
+    }
+    if (templateKey === 'GENERATE_ACTIVITY_C' && lessonMap.practice) {
+      result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK (ánh xạ 1-1, không bỏ bài, không bịa đề):\n"""\n${lessonMap.practice}\n"""`;
+    }
+    if (templateKey === 'GENERATE_ACTIVITY_D' && lessonMap.application) {
+      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK (ánh xạ 1-1, không bịa tình huống ngoài sách):\n"""\n${lessonMap.application}\n"""`;
+    }
+  }
+
+  if (templateKey === 'GENERATE_ACTIVITIES_AD' || templateKey === 'GENERATE_ACTIVITIES_AE') {
+    if (lessonMap.practice) {
+      result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK cho pha C (ánh xạ 1-1):\n"""\n${lessonMap.practice}\n"""`;
+    }
+    if (lessonMap.application) {
+      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK cho pha D (ánh xạ 1-1):\n"""\n${lessonMap.application}\n"""`;
     }
   }
 
@@ -1072,10 +1175,11 @@ if (typeof window !== 'undefined') {
   window.getPromptTemplate = getPromptTemplate;
   window.calculateActivityTimeBudgets = calculateActivityTimeBudgets;
   window.extractTextbookSubsections = extractTextbookSubsections;
+  window.extractTextbookLessonMap = extractTextbookLessonMap;
   window.getGeneralCompetenciesForSubject = getGeneralCompetenciesForSubject;
   window.formatGeneralCompetenciesGuide = formatGeneralCompetenciesGuide;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { PROMPTS, calculateActivityTimeBudgets, getSystemRole, getPromptTemplate, extractTextbookSubsections, getGeneralCompetenciesForSubject, formatGeneralCompetenciesGuide };
+  module.exports = { PROMPTS, calculateActivityTimeBudgets, getSystemRole, getPromptTemplate, extractTextbookSubsections, extractTextbookLessonMap, getGeneralCompetenciesForSubject, formatGeneralCompetenciesGuide };
 }

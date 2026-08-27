@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { extractTextbookSubsections, getPromptTemplate } = require("../js/khbd-prompts.js");
+const { extractTextbookSubsections, extractTextbookLessonMap, getPromptTemplate } = require("../js/khbd-prompts.js");
 const { assertPhasePedagogyOutput } = require("../js/khbd-app.js");
 
 function testExtractSubsections() {
@@ -128,6 +128,22 @@ Mục 6: Nhân chia số hữu tỉ
   // Test 8: Input rỗng / null
   assert.deepStrictEqual(extractTextbookSubsections(""), []);
   assert.deepStrictEqual(extractTextbookSubsections(null), []);
+
+  const lessonMap = extractTextbookLessonMap(`
+Mở đầu: Quan sát hai đường thẳng trên sân trường.
+Mục 1: Dấu hiệu nhận biết hai đường thẳng song song
+Mục 2: Tiên đề Euclid về đường thẳng song song
+Luyện tập
+Bài 1. Cho hai đường thẳng a và b...
+Bài 2. Chứng minh hai đường thẳng song song.
+Vận dụng
+Bài toán thực tế: Dựng hàng rào song song với tường nhà.
+Hướng dẫn về nhà
+`);
+  assert.ok(lessonMap.practice.includes("Luyện tập"), "Phải tách được mục Luyện tập");
+  assert.ok(lessonMap.practice.includes("Bài 1"), "Mục Luyện tập phải giữ đề bài SGK");
+  assert.ok(lessonMap.application.includes("Vận dụng"), "Phải tách được mục Vận dụng");
+  assert.ok(lessonMap.opening.includes("Mở đầu"), "Phải tách được tình huống mở đầu");
 
   console.log("  -> extractTextbookSubsections: PASS");
 }
@@ -273,6 +289,35 @@ function testAssertPhasePedagogyOutput() {
   console.log("  -> assertPhasePedagogyOutput Activity B: PASS");
 }
 
+function testPromptTemplateActivityCD() {
+  console.log("-> 4. Kiểm tra ánh xạ Luyện tập / Vận dụng cho C và D...");
+  const stub = {
+    subjectName: "Toán",
+    gradeLevelName: "THCS",
+    topic: "Hai đường thẳng song song",
+    duration: "2 tiết",
+    objectives_content: "I. Mục tiêu",
+    textbook_content: `
+Mở đầu: Quan sát hai đường thẳng trên sân trường.
+Mục 1: Dấu hiệu nhận biết hai đường thẳng song song
+Luyện tập
+Bài 1. Cho hai đường thẳng a và b cắt đường thẳng c.
+Vận dụng
+Bài toán thực tế: Dựng hàng rào song song với tường nhà.
+Hướng dẫn về nhà
+`
+  };
+  const promptC = getPromptTemplate("GENERATE_ACTIVITY_C", stub);
+  const promptD = getPromptTemplate("GENERATE_ACTIVITY_D", stub);
+  const promptA = getPromptTemplate("GENERATE_ACTIVITY_A", stub);
+  assert.ok(promptC.includes("MỤC LUYỆN TẬP / BÀI TẬP TRONG SGK"), "Prompt C phải ánh xạ mục Luyện tập");
+  assert.ok(promptC.includes("Bài 1. Cho hai đường thẳng"), "Prompt C phải giữ đề bài luyện tập");
+  assert.ok(promptD.includes("MỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK"), "Prompt D phải ánh xạ mục Vận dụng");
+  assert.ok(promptD.includes("Dựng hàng rào song song"), "Prompt D phải giữ tình huống vận dụng");
+  assert.ok(promptA.includes("TÌNH HUỐNG MỞ ĐẦU TRONG SGK"), "Prompt A phải ánh xạ mở đầu SGK");
+  console.log("  -> getPromptTemplate Activity C/D/A: PASS");
+}
+
 function main() {
   console.log("==================================================");
   console.log("BẮT ĐẦU KIỂM THỬ ÁNH XẠ 1-1 TIỂU MỤC SGK & HOẠT ĐỘNG B");
@@ -281,6 +326,7 @@ function main() {
   testExtractSubsections();
   testPromptTemplateActivityB();
   testAssertPhasePedagogyOutput();
+  testPromptTemplateActivityCD();
 
   console.log("==================================================");
   console.log("TẤT CẢ TEST ÁNH XẠ 1-1 TIỂU MỤC HOẠT ĐỘNG B ĐỀU ĐẠT (PASS)!");
