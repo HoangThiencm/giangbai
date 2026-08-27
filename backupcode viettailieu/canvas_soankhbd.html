@@ -14,7 +14,7 @@
       window.__KHBD_CANVAS__ = {
         host: "https://hoangthiencm.id.vn",
         model: "gemini-3-flash-preview",
-        version: "20260828-locality",
+        version: "20260828-syntax",
         connected: false
       };
       try {
@@ -48,10 +48,10 @@
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
   <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.460.0"></script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260828-locality">
+  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260828-syntax">
   <style>
     #canvasHostBanner {
       position: sticky; top: 0; z-index: 2000; padding: .55rem 1rem;
@@ -693,15 +693,15 @@
   <!-- =========================================================================
        SCRIPTS — thuần từ host; Canvas tự cấp Gemini, không nạp Mistral client
        ========================================================================= -->
-  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260828-locality"></script>
-  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260828-locality"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260828-locality"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260828-locality"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260828-locality"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260828-locality"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260828-locality"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260828-locality"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260828-locality"></script>
+  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260828-syntax"></script>
+  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260828-syntax"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260828-syntax"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260828-syntax"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260828-syntax"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260828-syntax"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260828-syntax"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260828-syntax"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260828-syntax"></script>
   <script>
     /* Patch Gemini + OCR TRƯỚC khbd-app.js để DOMContentLoaded dùng runtime Canvas. */
     (function patchKhbdCanvasRuntime() {
@@ -780,7 +780,7 @@
       cfg.connected = true;
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-locality"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-syntax"></script>
   <script>
     (function notifyHostConnection() {
       const cfg = window.__KHBD_CANVAS__ || {};
@@ -869,7 +869,8 @@
         });
       }
       function parseJsonLoose(raw) {
-        let text = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
+        const fence = String.fromCharCode(96, 96, 96);
+        let text = String(raw || "").trim().replace(new RegExp("^" + fence + "(?:json)?\\s*|\\s*" + fence + "$", "gi"), "").trim();
         try { return JSON.parse(text); } catch (e) {}
         const start = text.search(/[\[{]/);
         const end = Math.max(text.lastIndexOf("}"), text.lastIndexOf("]"));
