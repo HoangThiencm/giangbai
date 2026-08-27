@@ -21,6 +21,7 @@ const appState = {
     classProfile: "",
     supportNeeds: "",
     integrations: { digital: false, ai: false, foreignLanguage: false, inclusive: false },
+    standards: [],
     methods: [],
     techniques: [],
     specialRequirements: ""
@@ -461,13 +462,16 @@ function pedagogyRecommendFullCtx() {
 
 function ensureIntegrationStandards({ force = false, silent = false } = {}) {
   let changed = false;
+  if (!Array.isArray(appState?.teachingContext?.standards)) {
+    if (appState?.teachingContext) appState.teachingContext.standards = [];
+  }
   ["digital", "ai"].forEach(kind => {
-    const enabled = appState.teachingContext.integrations[kind];
-    const catalog = KHBD_STANDARDS[kind];
+    const enabled = appState?.teachingContext?.integrations?.[kind];
+    const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS[kind] : null;
     if (!catalog) return;
     if (!enabled) {
       const before = appState.teachingContext.standards.length;
-      appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item.framework !== catalog.framework);
+      appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item && item.framework !== catalog.framework);
       if (appState.teachingContext.standards.length !== before) changed = true;
       return;
     }
@@ -3005,9 +3009,9 @@ async function handle1ClickGenerate() {
   }
 
   const topic = getTopicDisplayName();
-  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nHệ thống nhận diện SGK bằng Mistral OCR (nếu có) rồi soạn 2 lần: I+II rồi A–D. File PDF/ảnh chỉ trong phiên này (F5 sẽ mất nếu chưa Đọc SGK).`;
+  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nHệ thống nhận diện SGK bằng Mistral OCR (nếu có) rồi soạn 6 bước tuần tự: I+II, A, B, C, D, E. File PDF/ảnh chỉ trong phiên này (F5 sẽ mất nếu chưa Đọc SGK).`;
 
-  if (!confirm(confirmMsg)) return;
+  if (typeof confirm === "function" && !confirm(confirmMsg)) return;
 
   appState.isGenerating = true;
   appState.cancelRequested = false;
@@ -3051,9 +3055,8 @@ async function handle1ClickGenerate() {
     }
     const context = getGenerationPromptContext();
 
-    updateProgress(20, skipMedia
-      ? "Bước 1/2: Đang soạn I. Mục tiêu và II. Thiết bị (từ văn bản OCR)..."
-      : "Bước 1/2: Đang soạn I. Mục tiêu và II. Thiết bị (PDF/ảnh đính kèm)...");
+    // Bước 1/6 (15%): Sinh I. Mục tiêu & II. Thiết bị
+    updateProgress(15, "Bước 1/6: Đang soạn I. Mục tiêu & II. Thiết bị...");
     const promptCore = getPromptTemplate("GENERATE_CORE_LESSON", context);
     const rawCore = await generateOneClickContent(promptCore, media, { maxOutputTokens: 16384, timeoutMs: 75000 });
     const coreParts = parseKhbdSections(rawCore, ["I", "II"]);
@@ -3063,51 +3066,81 @@ async function handle1ClickGenerate() {
       throw new Error("Gemini không trả được phần I. Mục tiêu. Hãy thử lại hoặc soạn từng tab.");
     }
     const finalObj = await applyObjectivesOutput(objectivesRaw, appState.generationController.signal, { repairWithGemini: false });
-    document.getElementById("editorObjectives").value = finalObj;
+    const editorObj = document.getElementById("editorObjectives");
+    if (editorObj) editorObj.value = finalObj;
     renderMathPreview(finalObj, "previewObjectives");
     appState.content.materials = materialsRaw;
-    document.getElementById("editorMaterials").value = materialsRaw;
+    const editorMat = document.getElementById("editorMaterials");
+    if (editorMat) editorMat.value = materialsRaw;
     renderMathPreview(materialsRaw, "previewMaterials");
     if (!String(materialsRaw).trim()) {
       showToast("Phần II bị thiếu hoặc cắt. Bạn có thể soạn tab Thiết bị.", "warning", 5000);
     }
+    context.objectives_content = finalObj;
+    if (typeof geminiAPI !== "undefined" && typeof geminiAPI.rotateKey === "function") {
+      geminiAPI.rotateKey("Xoay key sau Bước 1");
+    }
     await delay(generationPauseMs(), appState.generationController.signal);
 
-    context.objectives_content = finalObj;
-    Object.assign(context, getGenerationPromptContext());
-    context.objectives_content = finalObj;
+    // Bước 2/6 (30%): Sinh A. Hoạt động Mở đầu
+    updateProgress(30, "Bước 2/6: Đang soạn A. Hoạt động Mở đầu...");
+    const promptA = getPromptTemplate("GENERATE_ACTIVITY_A", context) + buildPhasePedagogyContext('A');
+    const rawA = await generateOneClickContent(promptA, media, { maxOutputTokens: 8192, timeoutMs: 60000 });
+    await applyActivityOutput('A', rawA, appState.generationController.signal, { repairWithGemini: false });
+    if (typeof geminiAPI !== "undefined" && typeof geminiAPI.rotateKey === "function") {
+      geminiAPI.rotateKey("Xoay key sau Bước 2");
+    }
+    await delay(generationPauseMs(), appState.generationController.signal);
 
-    updateProgress(60, skipMedia
-      ? "Bước 2/2: Đang soạn hoạt động A–E (từ văn bản OCR)..."
-      : "Bước 2/2: Đang soạn hoạt động A–E (PDF/ảnh đính kèm)...");
-    const promptAE = getPromptTemplate("GENERATE_ACTIVITIES_AE", context) + buildAllPhasePedagogyContext();
-    const rawAE = await generateOneClickContent(promptAE, media, { maxOutputTokens: 32768, timeoutMs: 90000 });
-    const actParts = parseKhbdSections(rawAE, ["A", "B", "C", "D", "E"]);
-    const missingActs = [];
-    for (const key of ["A", "B", "C", "D", "E"]) {
-      const body = actParts[key];
-      if (!String(body || "").trim()) {
-        missingActs.push(key);
-        continue;
-      }
-      await applyActivityOutput(key, body, appState.generationController.signal, { repairWithGemini: false });
+    // Bước 3/6 (50%): Sinh B. Hoạt động Hình thành kiến thức (bám sát SGK)
+    updateProgress(50, "Bước 3/6: Đang soạn B. Hoạt động Hình thành kiến thức (bám sát SGK)...");
+    const promptB = getPromptTemplate("GENERATE_ACTIVITY_B", context) + buildPhasePedagogyContext('B');
+    const rawB = await generateOneClickContent(promptB, media, { maxOutputTokens: 16384, timeoutMs: 75000 });
+    await applyActivityOutput('B', rawB, appState.generationController.signal, { repairWithGemini: false });
+    if (typeof geminiAPI !== "undefined" && typeof geminiAPI.rotateKey === "function") {
+      geminiAPI.rotateKey("Xoay key sau Bước 3");
     }
-    if (missingActs.length) {
-      showToast(`Phần ${missingActs.join(", ")} bị cắt hoặc thiếu marker. Hãy soạn tab còn thiếu.`, "warning", 7000);
+    await delay(generationPauseMs(), appState.generationController.signal);
+
+    // Bước 4/6 (68%): Sinh C. Hoạt động Luyện tập (giải bài tập SGK)
+    updateProgress(68, "Bước 4/6: Đang soạn C. Hoạt động Luyện tập (giải bài tập SGK)...");
+    const promptC = getPromptTemplate("GENERATE_ACTIVITY_C", context) + buildPhasePedagogyContext('C');
+    const rawC = await generateOneClickContent(promptC, media, { maxOutputTokens: 8192, timeoutMs: 60000 });
+    await applyActivityOutput('C', rawC, appState.generationController.signal, { repairWithGemini: false });
+    if (typeof geminiAPI !== "undefined" && typeof geminiAPI.rotateKey === "function") {
+      geminiAPI.rotateKey("Xoay key sau Bước 4");
     }
+    await delay(generationPauseMs(), appState.generationController.signal);
+
+    // Bước 5/6 (84%): Sinh D. Hoạt động Vận dụng
+    updateProgress(84, "Bước 5/6: Đang soạn D. Hoạt động Vận dụng...");
+    const promptD = getPromptTemplate("GENERATE_ACTIVITY_D", context) + buildPhasePedagogyContext('D');
+    const rawD = await generateOneClickContent(promptD, media, { maxOutputTokens: 8192, timeoutMs: 60000 });
+    await applyActivityOutput('D', rawD, appState.generationController.signal, { repairWithGemini: false });
+    if (typeof geminiAPI !== "undefined" && typeof geminiAPI.rotateKey === "function") {
+      geminiAPI.rotateKey("Xoay key sau Bước 5");
+    }
+    await delay(generationPauseMs(), appState.generationController.signal);
+
+    // Bước 6/6 (95% -> 100%): Sinh E. Hoạt động Hướng dẫn về nhà
+    updateProgress(95, "Bước 6/6: Đang soạn E. Hoạt động Hướng dẫn về nhà...");
+    context.activities_content = getFullLessonPlanMarkdown();
+    const promptE = getPromptTemplate("GENERATE_ACTIVITY_E", context) + buildPhasePedagogyContext('E');
+    const rawE = await generateOneClickContent(promptE, media, { maxOutputTokens: 8192, timeoutMs: 60000 });
+    await applyActivityOutput('E', rawE, appState.generationController.signal, { repairWithGemini: false });
 
     saveStateToLocalStorage();
 
-    document.getElementById("editorActivity").value = appState.content.activities[appState.activeActSubtab];
+    const editorAct = document.getElementById("editorActivity");
+    if (editorAct) editorAct.value = appState.content.activities[appState.activeActSubtab];
     renderMathPreview(appState.content.activities[appState.activeActSubtab], "previewActivity");
+    renderFullLessonPreview();
 
-    updateProgress(100, "ĐÃ TẠO XONG KẾ HOẠCH BÀI DẠY LÕI!");
+    updateProgress(100, "ĐÃ TẠO XONG TOÀN BỘ KẾ HOẠCH BÀI DẠY (6/6 BƯỚC)!");
     setTimeout(() => {
       hideProgress();
       switchMainTab("tabFullPreview");
-      showToast(skipMedia
-        ? "Đã soạn I, II và III.A–E (2 lần gọi) từ văn bản Mistral OCR."
-        : "Đã soạn I, II và III.A–E (2 lần gọi). File PDF/ảnh chỉ trong phiên này.", "success", 6000);
+      showToast("Đã hoàn tất toàn bộ Kế hoạch bài dạy (6 bước tuần tự, sâu sắc 100%)!", "success", 6000);
     }, 1200);
 
   } catch (err) {
@@ -3233,6 +3266,9 @@ function handleClearAllContent() {
 // PROGRESS BAR & TOAST NOTIFICATIONS
 // =============================================================================
 function updateProgress(percent, title) {
+  if (typeof globalThis.onProgressUpdate === "function") {
+    globalThis.onProgressUpdate(percent, title);
+  }
   const container = document.getElementById("progressContainer");
   const bar = document.getElementById("progressBarInner");
   const titleElem = document.getElementById("progressStepTitle");
@@ -3240,9 +3276,13 @@ function updateProgress(percent, title) {
 
   if (container) {
     container.style.display = "block";
-    requestAnimationFrame(() => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => {
+        container.classList.add("show");
+      });
+    } else {
       container.classList.add("show");
-    });
+    }
   }
   if (bar) bar.style.width = `${percent}%`;
   if (titleElem) titleElem.textContent = title;
@@ -3461,6 +3501,10 @@ if (typeof module !== 'undefined' && module.exports) {
     getUserMistralKeys,
     requestStructuredIntegrationCandidates,
     parseStructuredCandidates,
-    applyTextbookOcrResult
+    applyTextbookOcrResult,
+    handle1ClickGenerate,
+    generateOneClickContent,
+    applyObjectivesOutput,
+    applyActivityOutput
   };
 }
