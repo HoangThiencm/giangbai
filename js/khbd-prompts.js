@@ -336,12 +336,12 @@ Trả về DUY NHẤT JSON:
 {"illustrations":[{"kind":"sgk hoặc thuc_te","title":"tên hình ngắn","caption":"Hình n. chú thích dưới hình","locus":"A hoặc B hoặc C hoặc D","subsection":"đúng tên mục SGK / Hoạt động 2.k","prompt":"mô tả chính xác hình cần vẽ, đủ nhãn đỉnh/cạnh/số đo nếu là hình học"}]}
 
 Quy tắc:
-- kind "sgk": hình toán thuần (hình học phẳng, hình không gian nét đứt nét liền, đồ thị hàm số, hệ trục Oxy, trục số, sơ đồ Ven, góc...) phong cách in SGK: nền trắng, nét mực đen, nhãn đỉnh A, B, C in nghiêng, góc vuông, vạch bằng nhau, không nhân vật, không ảnh chụp.
-- kind "thuc_te": cảnh đời sống Việt Nam minh họa bài toán thực tế (sân trường, chợ, đo đạc, công trình...), ảnh chân thực hoặc sơ đồ thực tế trực quan.
+- Mặc định CHỈ vẽ kind "sgk": hình toán thuần (hình học phẳng, hình không gian nét đứt nét liền, đồ thị hàm số, hệ trục Oxy, trục số, sơ đồ Ven, góc...) phong cách in SGK: nền trắng, nét mực đen, nhãn đỉnh A, B, C in nghiêng, góc vuông, vạch bằng nhau, không nhân vật, không ảnh chụp, không cảnh lớp học.
+- kind "thuc_te" CHỈ khi SGK có BÀI TOÁN ĐỜI SỐNG cụ thể cần nhìn thấy đồ vật/bối cảnh của đề (ví dụ đo chiều cao cây, hàng rào, thửa đất, mua bán ở chợ, bể nước). Tối đa 1 hình. Prompt phải mô tả đúng đồ vật/số liệu của đề, KHÔNG vẽ lớp học, giáo viên, học sinh ngồi bàn, thảo luận nhóm, bảng lớp.
+- CẤM thuc_te nếu bài không có bài toán thực tế. CẤM cảnh lớp học, CẤM "học sinh đang học", CẤM minh họa generic.
 - locus + subsection phải ánh xạ đúng chỗ dùng hình: hình khái niệm/định lý → B và tên tiểu mục kiến thức SGK; hình bài luyện tập → C; hình bài vận dụng/thực tế → D.
 - subsection phải copy đúng tên mục trong SGK (ví dụ "Đường trung trực của đoạn thẳng"), không ghi chung "Hoạt động B".
-- Chỉ tạo hình khi bài THỰC SỰ cần. Hình học/đo đạc/đồ thị/hàm số/trục số: ưu tiên 1–3 hình sgk. Có bài toán thực tế: thêm 1 hình thuc_te.
-- Tối đa 4 hình. Không bịa số đo trái SGK. Nếu bài chỉ chữ/số đại số không cần hình: {"illustrations":[]}.
+- Hình học/đồ thị/trục số: 1–3 hình sgk. Không bịa số đo trái SGK. Bài chỉ chữ/số đại số không cần hình: {"illustrations":[]}.
 - Không markdown, không lời dẫn.
 
 NỘI DUNG BÀI (OCR SGK + hoạt động đã soạn):
@@ -1139,9 +1139,18 @@ Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có
 
   const lessonMap = extractTextbookLessonMap(rawTextbook);
 
-  if (templateKey === 'GENERATE_ILLUSTRATIONS' && lessonMap.subsections.length) {
-    const names = lessonMap.subsections.map(s => `"${s.title}"`).join("; ");
-    result += `\n\nTÊN TIỂU MỤC KIẾN THỨC SGK (dùng đúng vào trường subsection khi hình thuộc hoạt động B): ${names}`;
+  if (templateKey === 'GENERATE_ILLUSTRATIONS') {
+    if (lessonMap.subsections.length) {
+      const names = lessonMap.subsections.map(s => `"${s.title}"`).join("; ");
+      result += `\n\nTÊN TIỂU MỤC KIẾN THỨC SGK (dùng đúng vào trường subsection khi hình thuộc hoạt động B): ${names}`;
+    }
+    const realHay = `${lessonMap.application || ""} ${rawTextbook}`;
+    const hasRealProblem = /bài toán thực tế|tình huống thực tế|đời sống|hàng rào|thửa đất|bể nước|đo chiều cao|đo khoảng cách|cửa hàng|siêu thị|chợ|mua bán|giá tiền/i.test(realHay);
+    if (hasRealProblem) {
+      result += `\n\nBài CÓ tình huống đời sống cụ thể. Cho phép tối đa 1 hình kind=thuc_te, phải vẽ đúng đồ vật/bối cảnh của đề. CẤM cảnh lớp học.`;
+    } else {
+      result += `\n\nBài KHÔNG có bài toán thực tế cần minh họa đời sống. CẤM kind=thuc_te. CHỈ vẽ kind=sgk nếu bài có hình học/đồ thị/trục số.`;
+    }
   }
 
   if (templateKey === 'GENERATE_ACTIVITY_A' && lessonMap.opening) {

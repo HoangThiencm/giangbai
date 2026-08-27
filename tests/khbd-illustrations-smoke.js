@@ -3,6 +3,7 @@ const fs = require("fs");
 const { getPromptTemplate, PROMPTS } = require("../js/khbd-prompts.js");
 const {
   parseIllustrationSpecs,
+  filterIllustrationSpecs,
   insertIllustrationIntoMarkdown,
   extractSvgCode,
   sanitizeSvg,
@@ -42,6 +43,8 @@ const promptIll = getPromptTemplate("GENERATE_ILLUSTRATIONS", {
 });
 assert.match(promptIll, /kind "sgk"/);
 assert.match(promptIll, /kind "thuc_te"/);
+assert.match(promptIll, /CẤM kind=thuc_te|CẤM thuc_te/);
+assert.match(promptIll, /CẤM cảnh lớp học|không vẽ lớp học|CẤM cảnh lớp/);
 assert.match(promptIll, /Cho tam giác ABC vuông tại A/);
 
 const promptSvg = getPromptTemplate("GENERATE_SVG_DRAWING", {
@@ -87,6 +90,19 @@ assert.deepStrictEqual(parseIllustrationSpecs('{"illustrations":[]}'), []);
 
 const specsWithSub = parseIllustrationSpecs('{"illustrations":[{"kind":"sgk","title":"Trung trực","caption":"Hình 1. Đường trung trực","locus":"B","subsection":"Đường trung trực của đoạn thẳng","prompt":"Vẽ đoạn AB và đường trung trực"}]}');
 assert.strictEqual(specsWithSub[0].subsection, "Đường trung trực của đoạn thẳng");
+
+const classroomDropped = filterIllustrationSpecs([
+  { id: "ill_thuc_te_1", kind: "thuc_te", title: "Cảnh lớp học", prompt: "Học sinh ngồi trong lớp học thảo luận nhóm", locus: "A" },
+  { id: "ill_sgk_1", kind: "sgk", title: "Tam giác ABC", prompt: "Tam giác ABC vuông tại A", locus: "B" }
+], { textbook_content: "Cho tam giác ABC vuông tại A. Không có bài toán thực tế." });
+assert.strictEqual(classroomDropped.length, 1);
+assert.strictEqual(classroomDropped[0].kind, "sgk");
+
+const realKept = filterIllustrationSpecs([
+  { id: "ill_thuc_te_1", kind: "thuc_te", title: "Đo cây", prompt: "Đo chiều cao cây bằng bóng trên sân trường", locus: "D" }
+], { textbook_content: "Bài toán thực tế: Đo chiều cao cây bằng bóng." });
+assert.strictEqual(realKept.length, 1);
+assert.strictEqual(realKept[0].kind, "thuc_te");
 
 const activityB = `## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI
 

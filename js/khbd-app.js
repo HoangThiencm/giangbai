@@ -826,13 +826,51 @@ function parseIllustrationSpecs(raw) {
   return specs;
 }
 
+function isGenericClassroomScene(text) {
+  return /lớp học|phòng học|cảnh lớp|học sinh ngồi|học sinh đang học|thầy cô|giáo viên đang dạy|giáo viên đứng|thảo luận nhóm|giơ tay|nghe giảng|bảng lớp|bảng đen|bàn ghế lớp/i.test(String(text || ""));
+}
+
+function looksLikeMathDiagram(text) {
+  return /tam giác|đường tròn|đồ thị|trục số|tọa độ|góc|trung trực|vuông góc|song song|hình chóp|lăng trụ|hình hộp|hình nón|hình trụ|đoạn thẳng|đường thẳng|hình bình hành|hình thang|đa giác|vector|tập hợp/i.test(String(text || ""));
+}
+
+function lessonNeedsRealWorldFigure(context) {
+  const map = typeof extractTextbookLessonMap === "function"
+    ? extractTextbookLessonMap(context?.textbook_content || "")
+    : { application: "" };
+  const hay = [context?.textbook_content, map.application].join("\n");
+  return /bài toán thực tế|tình huống thực tế|hàng rào|thửa đất|bể nước|đo chiều cao|đo khoảng cách|cửa hàng|siêu thị|chợ|mua bán|giá tiền|cây cao|bóng cây|sân bóng|tường nhà|công trình/i.test(hay);
+}
+
+function filterIllustrationSpecs(specs, context) {
+  const allowReal = lessonNeedsRealWorldFigure(context || {});
+  const out = [];
+  let realCount = 0;
+  for (const spec of specs || []) {
+    const blob = `${spec.title || ""} ${spec.caption || ""} ${spec.prompt || ""}`;
+    let kind = spec.kind;
+    if (kind === "thuc_te" && looksLikeMathDiagram(blob) && !/bài toán thực tế|đo chiều cao|hàng rào|chợ|thửa đất/i.test(blob)) {
+      kind = "sgk";
+    }
+    if (kind === "thuc_te") {
+      if (!allowReal || isGenericClassroomScene(blob) || realCount >= 1) continue;
+      realCount += 1;
+    }
+    if (kind === "sgk" && isGenericClassroomScene(blob) && !looksLikeMathDiagram(blob)) continue;
+    out.push({ ...spec, kind });
+    if (out.length >= 4) break;
+  }
+  return out;
+}
+
 function buildIllustrationImagePrompt(spec) {
   const detail = String(spec.prompt || spec.title || "").trim();
   if (spec.kind === "thuc_te") {
-    return `Photorealistic Vietnamese real-life scene illustrating a lower-secondary math problem.
-Natural lighting, everyday Vietnam setting such as schoolyard, market, classroom or street.
-No cartoon, no infographic, no comic, no long text overlay.
-The scene must match this situation exactly:
+    return `Photorealistic illustration of this specific real-life math situation in Vietnam.
+Show only the objects, places and quantities in the problem (tree, fence, market stall, tank, plot of land, etc.).
+Do NOT draw a classroom, teacher, students at desks, blackboard, or generic school interior.
+No cartoon, no infographic, no long text overlay.
+Situation:
 ${detail}`;
   }
   return `Vietnamese mathematics textbook geometry figure, official SGK print style.
@@ -1162,7 +1200,7 @@ async function generateLessonIllustrations({ silent = false } = {}) {
   try {
     updateProgress(88, "Đang phân tích hình vẽ toán học & minh họa theo SGK...");
     const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, appState.generationController?.signal, { maxOutputTokens: 2048 });
-    const specs = parseIllustrationSpecs(raw);
+    const specs = filterIllustrationSpecs(parseIllustrationSpecs(raw), context);
     if (!specs.length) {
       appState.content.illustrations = [];
       renderIllustrationGallery();
@@ -4267,6 +4305,8 @@ if (typeof module !== 'undefined' && module.exports) {
     requestStructuredIntegrationCandidates,
     parseStructuredCandidates,
     parseIllustrationSpecs,
+    filterIllustrationSpecs,
+    lessonNeedsRealWorldFigure,
     insertIllustrationIntoMarkdown,
     syncIllustrationsIntoContent,
     extractSvgCode,
