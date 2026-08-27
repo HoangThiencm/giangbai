@@ -14,7 +14,7 @@
       window.__KHBD_CANVAS__ = {
         host: "https://hoangthiencm.id.vn",
         model: "gemini-3-flash-preview",
-        version: "20260828-ppct-scope",
+        version: "20260828-ctxint",
         connected: false
       };
       try {
@@ -51,7 +51,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260828-ppct-scope">
+  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260828-ctxint">
   <style>
     #canvasHostBanner {
       position: sticky; top: 0; z-index: 2000; padding: .55rem 1rem;
@@ -74,6 +74,13 @@
     .ppct-chip { font-size: .75rem; background: #e0f2fe; color: #075985; border-radius: 999px; padding: .15rem .55rem; }
     .ppct-gallery { margin-top: .5rem; }
     .ppct-gallery:empty { display: none; }
+    #subjectIntegrationsPanel:not([hidden]) {
+      margin: 0 0 .75rem;
+      padding: .75rem .9rem;
+      border: 1px solid #fed7aa;
+      border-radius: 10px;
+      background: #fff7ed;
+    }
   </style>
 </head>
 <body>
@@ -271,6 +278,8 @@
             <label><input type="checkbox" id="toggleForeignLanguage"> Tích hợp ngoại ngữ</label>
             <label><input type="checkbox" id="toggleInclusiveSupport"> Tích hợp hỗ trợ HS khuyết tật/hòa nhập</label>
           </div>
+          <div id="subjectIntegrationsPanel" hidden></div>
+          <p id="nlsAiSubjectHint" class="text-muted" hidden style="font-size:0.82rem;margin:0 0 .5rem;"></p>
           <p class="text-muted" style="font-size:0.82rem;margin:0 0 .75rem;">Làm Bước 0 (phân tích SGK) trước, rồi bật NLS và/hoặc AI. Sau OCR, hệ thống tự tick tối đa 3 mục/loại khi có minh chứng trực tiếp trong nội dung bài. NLS theo dải TT 02 lớp 6–7 / 8–9; AI đúng từng lớp. Không tự bịa mã ngoài văn bản.</p>
           <div id="digitalStandardsPanel" hidden></div>
           <div id="aiStandardsPanel" hidden></div>
@@ -684,15 +693,15 @@
   <!-- =========================================================================
        SCRIPTS — thuần từ host; Canvas tự cấp Gemini, không nạp Mistral client
        ========================================================================= -->
-  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260828-ppct-scope"></script>
-  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260828-ppct-scope"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260828-ppct-scope"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260828-ppct-scope"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260828-ppct-scope"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260828-ppct-scope"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260828-ppct-scope"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260828-ppct-scope"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260828-ppct-scope"></script>
+  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260828-ctxint"></script>
+  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260828-ctxint"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260828-ctxint"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260828-ctxint"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260828-ctxint"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260828-ctxint"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260828-ctxint"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260828-ctxint"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260828-ctxint"></script>
   <script>
     /* Patch Gemini + OCR TRƯỚC khbd-app.js để DOMContentLoaded dùng runtime Canvas. */
     (function patchKhbdCanvasRuntime() {
@@ -771,7 +780,7 @@
       cfg.connected = true;
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-ppct-scope"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-ctxint"></script>
   <script>
     (function notifyHostConnection() {
       const cfg = window.__KHBD_CANVAS__ || {};
@@ -1285,6 +1294,219 @@
       }
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(boot, 400); });
       else setTimeout(boot, 400);
+    })();
+  </script>
+  <script>
+    (function setupCanvasSubjectIntegrations() {
+      const CATALOG = [
+        { id: "gdqpan", label: "Tích hợp GD Quốc phòng & An ninh", legal: "TT 08/2024/TT-BGDĐT", subjects: ["nguvan", "lichsudialy", "gdcd", "amnhac", "mithuat", "hdtn-hn"], marker: "[GDQPAN]", promptHint: "lòng yêu nước, chủ quyền biển đảo Hoàng Sa–Trường Sa, an ninh quốc gia; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "hcmThought", label: "Tích hợp Tư tưởng, đạo đức, phong cách Hồ Chí Minh", legal: "Chỉ thị 05-CT/TW, KL 01-KL/TW", subjects: ["nguvan", "gdcd", "lichsudialy", "hdtn-hn"], marker: "[HCM]", promptHint: "tư tưởng, đạo đức, phong cách Hồ Chí Minh; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên, không hô khẩu hiệu." },
+        { id: "humanRights", label: "Tích hợp Giáo dục Quyền con người", legal: "QĐ 1309/QĐ-TTg, QĐ 1404/QĐ-BGDĐT", subjects: ["nguvan", "lichsudialy", "gdcd"], marker: "[QCN]", promptHint: "nhân phẩm, bình đẳng, chống bạo lực học đường; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "localEnv", label: "GD địa phương & môi trường", legal: "Nội dung giáo dục địa phương & bảo vệ môi trường (CT GDPT 2018)", subjects: ["nguvan"], marker: "[GDĐP-MT]", promptHint: "gắn ngữ liệu địa phương và bảo vệ môi trường; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "climateSdgs", label: "Biến đổi khí hậu & phát triển bền vững (SDGs)", legal: "Biến đổi khí hậu & PTBV/SDGs trong Lịch sử và Địa lí (CT GDPT 2018)", subjects: ["lichsudialy"], marker: "[BĐKH-SDG]", promptHint: "biến đổi khí hậu, phát triển bền vững; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "localHeritage", label: "Di sản lịch sử địa phương", legal: "Di sản văn hóa/lịch sử địa phương (CT GDPT 2018)", subjects: ["lichsudialy"], marker: "[Di sản ĐP]", promptHint: "di sản lịch sử, văn hóa địa phương; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "clil", label: "CLIL (nội dung & ngôn ngữ)", legal: "CLIL — dạy nội dung gắn ngôn ngữ", subjects: ["tienganh"], marker: "[CLIL]", promptHint: "học nội dung gắn ngôn ngữ (CLIL); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "speechAiRoleplay", label: "Luyện phát âm AI / đóng vai giao tiếp", legal: "Bối cảnh luyện nói tiếng Anh (không phải mã NLS/AI QĐ 2422)", subjects: ["tienganh"], marker: "[Speech AI]", promptHint: "luyện phát âm hoặc đóng vai giao tiếp có hỗ trợ AI như bối cảnh; KHÔNG phải mã NLS/AI QĐ 2422; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "vnIdentity", label: "Bản sắc văn hóa Việt Nam ra quốc tế", legal: "Bản sắc văn hóa Việt Nam trong dạy tiếng Anh", subjects: ["tienganh"], marker: "[Bản sắc VN]", promptHint: "giới thiệu bản sắc văn hóa Việt Nam bằng tiếng Anh; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "globalCitizen", label: "Công dân toàn cầu & kỹ năng thế kỷ 21", legal: "Công dân toàn cầu & kỹ năng thế kỷ 21", subjects: ["tienganh"], marker: "[CDTG]", promptHint: "công dân toàn cầu, kỹ năng thế kỷ 21; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "financialEd", label: "Giáo dục tài chính", legal: "Giáo dục tài chính trong môn Toán (CT GDPT 2018)", subjects: ["toan"], marker: "[GDTC]", promptHint: "tình huống tài chính gắn toán (tiết kiệm, lãi suất, ngân sách); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "stemModeling", label: "Giáo dục STEM & mô hình hóa thực tiễn", legal: "Giáo dục STEM & mô hình hóa trong môn Toán", subjects: ["toan"], marker: "[STEM]", promptHint: "mô hình hóa toán học tình huống thực tiễn/STEM; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." }
+      ];
+      const hostHasRender = function () { return typeof renderSubjectIntegrations === "function"; };
+      function subjectId() {
+        if (typeof currentSubjectId === "function") return currentSubjectId();
+        return String((typeof appState !== "undefined" && appState.selectedSubject) || "").toLowerCase();
+      }
+      function itemsFor(sid) {
+        const id = String(sid || subjectId() || "").toLowerCase();
+        return CATALOG.filter(function (item) { return item.subjects.indexOf(id) !== -1; });
+      }
+      function toolHint(sid) {
+        const id = String(sid || subjectId() || "").toLowerCase();
+        if (id === "toan") return "Gợi ý công cụ NLS/AI theo môn Toán: GeoGebra, Desmos, máy tính cầm tay; kiểm chứng kết quả AI.";
+        if (id === "lichsudialy") return "Gợi ý công cụ NLS/AI theo môn Lịch sử và Địa lí: GIS, Google Earth, bảo tàng ảo; thẩm định tư liệu AI.";
+        if (id === "tienganh") return "Gợi ý công cụ NLS/AI theo môn Tiếng Anh: Speech AI, chatbot đóng vai (khác checkbox luyện phát âm AI / đóng vai giao tiếp).";
+        return "";
+      }
+      function enabledItems() {
+        const integ = (typeof appState !== "undefined" && appState.teachingContext && appState.teachingContext.integrations) || {};
+        return itemsFor(subjectId()).filter(function (item) { return Boolean(integ[item.id]); });
+      }
+      function pruneLocal() {
+        if (typeof appState === "undefined" || !appState.teachingContext || !appState.teachingContext.integrations) return;
+        const allowed = {};
+        itemsFor(subjectId()).forEach(function (item) { allowed[item.id] = true; });
+        CATALOG.forEach(function (item) {
+          if (!allowed[item.id] && appState.teachingContext.integrations[item.id]) {
+            appState.teachingContext.integrations[item.id] = false;
+          }
+        });
+      }
+      function promptBlock() {
+        const enabled = enabledItems();
+        const enabledIds = {};
+        enabled.forEach(function (item) { enabledIds[item.id] = true; });
+        const lines = ["TÍCH HỢP BỐI CẢNH (CHỈ mục GV đã tick; CẤM tự thêm mục khác):"];
+        if (enabled.length) {
+          enabled.forEach(function (item) {
+            lines.push("- " + item.label + " (" + item.legal + "): " + item.promptHint + " Đánh dấu **" + item.marker + "** đúng 1 lần tại B/C/D, không rải.");
+          });
+        } else {
+          lines.push("- Không có mục tích hợp bối cảnh nào được GV tick.");
+        }
+        const disabledNames = CATALOG.filter(function (item) { return !enabledIds[item.id]; }).map(function (item) {
+          if (item.id === "gdqpan") return "GDQPAN";
+          if (item.id === "hcmThought") return "HCM";
+          if (item.id === "humanRights") return "Quyền con người";
+          if (item.id === "clil") return "CLIL";
+          if (item.id === "stemModeling") return "STEM";
+          if (item.id === "financialEd") return "GD tài chính";
+          return String(item.label || "").replace(/^Tích hợp\s+/i, "");
+        });
+        lines.push("CÁC MỤC KHÔNG TICK (" + disabledNames.join(", ") + "): CẤM lồng, CẤM marker, CẤM mục tiêu/học liệu liên quan.");
+        lines.push("Không bịa mã NLS/AI. Tích hợp bối cảnh không phải mã TT 02 / QĐ 2422.");
+        const integ = (typeof appState !== "undefined" && appState.teachingContext && appState.teachingContext.integrations) || {};
+        if (integ.digital || integ.ai) {
+          lines.push(toolHint(subjectId()) || "Không thêm công cụ NLS/AI bịa ngoài các mục đã chọn.");
+        }
+        return lines.join("\n");
+      }
+      function esc(s) {
+        return String(s || "").replace(/[&<>"']/g, function (c) {
+          return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+        });
+      }
+      function ensurePanel() {
+        let panel = document.getElementById("subjectIntegrationsPanel");
+        if (!panel) {
+          panel = document.createElement("div");
+          panel.id = "subjectIntegrationsPanel";
+          panel.hidden = true;
+          const inclusive = document.getElementById("toggleInclusiveSupport");
+          const wrap = inclusive && inclusive.parentNode && inclusive.parentNode.parentNode
+            ? inclusive.parentNode.parentNode
+            : (inclusive && inclusive.parentNode);
+          if (wrap && wrap.parentNode) wrap.parentNode.insertBefore(panel, wrap.nextSibling);
+          else document.body.appendChild(panel);
+        }
+        if (!document.getElementById("nlsAiSubjectHint")) {
+          const hint = document.createElement("p");
+          hint.id = "nlsAiSubjectHint";
+          hint.className = "text-muted";
+          hint.hidden = true;
+          hint.style.fontSize = "0.82rem";
+          hint.style.margin = "0 0 .5rem";
+          if (panel.parentNode) panel.parentNode.insertBefore(hint, panel.nextSibling);
+        }
+        return panel;
+      }
+      function localRender() {
+        const panel = ensurePanel();
+        pruneLocal();
+        if (typeof appState !== "undefined") {
+          appState.teachingContext = appState.teachingContext || {};
+          appState.teachingContext.integrations = appState.teachingContext.integrations || {};
+        }
+        const integ = (typeof appState !== "undefined" && appState.teachingContext && appState.teachingContext.integrations) || {};
+        const items = itemsFor(subjectId());
+        if (!items.length) {
+          panel.hidden = true;
+          panel.innerHTML = "";
+        } else {
+          panel.hidden = false;
+          panel.innerHTML = '<h4 style="margin:0 0 .4rem;font-size:.9rem;">Tích hợp theo môn (chỉ hiện mục Bộ/chuyên môn bắt buộc)</h4>'
+            + items.map(function (item) {
+              const checked = integ[item.id] ? " checked" : "";
+              return '<label style="display:block;margin:.2rem 0;"><input type="checkbox" id="toggleCtx_' + esc(item.id) + '" data-integration="' + esc(item.id) + '"' + checked + "> "
+                + esc(item.label) + ' <span class="text-muted" style="font-size:.78rem;">(' + esc(item.legal) + ")</span></label>";
+            }).join("");
+        }
+        const hintEl = document.getElementById("nlsAiSubjectHint");
+        const hint = (integ.digital || integ.ai) ? toolHint(subjectId()) : "";
+        if (hintEl) {
+          hintEl.textContent = hint;
+          hintEl.hidden = !hint;
+        }
+      }
+      function bootRender() {
+        ensurePanel();
+        if (hostHasRender()) renderSubjectIntegrations();
+        else localRender();
+      }
+      function bindPanel() {
+        const panel = ensurePanel();
+        if (panel.dataset.ctxBound) return;
+        panel.dataset.ctxBound = "1";
+        panel.addEventListener("change", function (e) {
+          const input = e.target;
+          if (!input || input.type !== "checkbox") return;
+          const id = input.getAttribute("data-integration") || "";
+          if (!CATALOG.some(function (item) { return item.id === id; })) return;
+          if (typeof appState === "undefined") return;
+          if (!appState.teachingContext) appState.teachingContext = {};
+          if (!appState.teachingContext.integrations) appState.teachingContext.integrations = {};
+          appState.teachingContext.integrations[id] = Boolean(input.checked);
+          if (typeof saveStateToLocalStorage === "function") saveStateToLocalStorage();
+        });
+      }
+      function wrapHostFallback() {
+        if (typeof normalizeTeachingContext === "function") {
+          const origNorm = normalizeTeachingContext;
+          normalizeTeachingContext = function (context) {
+            const result = origNorm.apply(this, arguments);
+            result.integrations = result.integrations || {};
+            const src = context && context.integrations && typeof context.integrations === "object" ? context.integrations : {};
+            CATALOG.forEach(function (item) {
+              result.integrations[item.id] = Boolean(src[item.id] || result.integrations[item.id]);
+            });
+            return result;
+          };
+        }
+        if (typeof buildPedagogicalContext === "function") {
+          const origPed = buildPedagogicalContext;
+          buildPedagogicalContext = function () {
+            const text = origPed.apply(this, arguments);
+            if (String(text || "").indexOf("TÍCH HỢP BỐI CẢNH") >= 0) return text;
+            return String(text || "") + "\n" + promptBlock();
+          };
+        }
+        const select = document.getElementById("selectSubject");
+        if (select) {
+          select.addEventListener("change", function () {
+            pruneLocal();
+            localRender();
+          });
+        }
+        ["toggleDigitalCompetency", "toggleAiCompetency"].forEach(function (id) {
+          const el = document.getElementById(id);
+          if (el) el.addEventListener("change", function () { localRender(); });
+        });
+      }
+      function wrapPromptContext() {
+        if (typeof getGenerationPromptContext !== "function") return;
+        const orig = getGenerationPromptContext;
+        getGenerationPromptContext = function (params) {
+          const ctx = orig.apply(this, arguments) || {};
+          if (String(ctx.pedagogical_context || "").indexOf("TÍCH HỢP BỐI CẢNH") < 0) {
+            ctx.pedagogical_context = String(ctx.pedagogical_context || "") + "\n" + promptBlock();
+          }
+          if (!Array.isArray(ctx.contextIntegrationsEnabled)) {
+            ctx.contextIntegrationsEnabled = (typeof enabledContextIntegrations === "function"
+              ? enabledContextIntegrations()
+              : enabledItems()).map(function (item) { return item.id; });
+          }
+          return ctx;
+        };
+      }
+      function boot() {
+        ensurePanel();
+        bindPanel();
+        if (!hostHasRender()) wrapHostFallback();
+        wrapPromptContext();
+        bootRender();
+      }
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(boot, 700); });
+      else setTimeout(boot, 700);
     })();
   </script>
 </body>

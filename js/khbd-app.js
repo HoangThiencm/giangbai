@@ -78,6 +78,105 @@ const ACTIVITY_TITLES = {
   E: { short: "E. Hướng dẫn về nhà", full: "E. HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ" }
 };
 
+const SUBJECT_CONTEXT_INTEGRATIONS = [
+  {
+    id: "gdqpan",
+    label: "Tích hợp GD Quốc phòng & An ninh",
+    legal: "TT 08/2024/TT-BGDĐT",
+    subjects: ["nguvan", "lichsudialy", "gdcd", "amnhac", "mithuat", "hdtn-hn"],
+    marker: "[GDQPAN]",
+    promptHint: "lòng yêu nước, chủ quyền biển đảo Hoàng Sa–Trường Sa, an ninh quốc gia; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "hcmThought",
+    label: "Tích hợp Tư tưởng, đạo đức, phong cách Hồ Chí Minh",
+    legal: "Chỉ thị 05-CT/TW, KL 01-KL/TW",
+    subjects: ["nguvan", "gdcd", "lichsudialy", "hdtn-hn"],
+    marker: "[HCM]",
+    promptHint: "tư tưởng, đạo đức, phong cách Hồ Chí Minh; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên, không hô khẩu hiệu."
+  },
+  {
+    id: "humanRights",
+    label: "Tích hợp Giáo dục Quyền con người",
+    legal: "QĐ 1309/QĐ-TTg, QĐ 1404/QĐ-BGDĐT",
+    subjects: ["nguvan", "lichsudialy", "gdcd"],
+    marker: "[QCN]",
+    promptHint: "nhân phẩm, bình đẳng, chống bạo lực học đường; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "localEnv",
+    label: "GD địa phương & môi trường",
+    legal: "Nội dung giáo dục địa phương & bảo vệ môi trường (CT GDPT 2018)",
+    subjects: ["nguvan"],
+    marker: "[GDĐP-MT]",
+    promptHint: "gắn ngữ liệu địa phương và bảo vệ môi trường; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "climateSdgs",
+    label: "Biến đổi khí hậu & phát triển bền vững (SDGs)",
+    legal: "Biến đổi khí hậu & PTBV/SDGs trong Lịch sử và Địa lí (CT GDPT 2018)",
+    subjects: ["lichsudialy"],
+    marker: "[BĐKH-SDG]",
+    promptHint: "biến đổi khí hậu, phát triển bền vững; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "localHeritage",
+    label: "Di sản lịch sử địa phương",
+    legal: "Di sản văn hóa/lịch sử địa phương (CT GDPT 2018)",
+    subjects: ["lichsudialy"],
+    marker: "[Di sản ĐP]",
+    promptHint: "di sản lịch sử, văn hóa địa phương; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "clil",
+    label: "CLIL (nội dung & ngôn ngữ)",
+    legal: "CLIL — dạy nội dung gắn ngôn ngữ",
+    subjects: ["tienganh"],
+    marker: "[CLIL]",
+    promptHint: "học nội dung gắn ngôn ngữ (CLIL); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "speechAiRoleplay",
+    label: "Luyện phát âm AI / đóng vai giao tiếp",
+    legal: "Bối cảnh luyện nói tiếng Anh (không phải mã NLS/AI QĐ 2422)",
+    subjects: ["tienganh"],
+    marker: "[Speech AI]",
+    promptHint: "luyện phát âm hoặc đóng vai giao tiếp có hỗ trợ AI như bối cảnh; KHÔNG phải mã NLS/AI QĐ 2422; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "vnIdentity",
+    label: "Bản sắc văn hóa Việt Nam ra quốc tế",
+    legal: "Bản sắc văn hóa Việt Nam trong dạy tiếng Anh",
+    subjects: ["tienganh"],
+    marker: "[Bản sắc VN]",
+    promptHint: "giới thiệu bản sắc văn hóa Việt Nam bằng tiếng Anh; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "globalCitizen",
+    label: "Công dân toàn cầu & kỹ năng thế kỷ 21",
+    legal: "Công dân toàn cầu & kỹ năng thế kỷ 21",
+    subjects: ["tienganh"],
+    marker: "[CDTG]",
+    promptHint: "công dân toàn cầu, kỹ năng thế kỷ 21; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "financialEd",
+    label: "Giáo dục tài chính",
+    legal: "Giáo dục tài chính trong môn Toán (CT GDPT 2018)",
+    subjects: ["toan"],
+    marker: "[GDTC]",
+    promptHint: "tình huống tài chính gắn toán (tiết kiệm, lãi suất, ngân sách); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "stemModeling",
+    label: "Giáo dục STEM & mô hình hóa thực tiễn",
+    legal: "Giáo dục STEM & mô hình hóa trong môn Toán",
+    subjects: ["toan"],
+    marker: "[STEM]",
+    promptHint: "mô hình hóa toán học tình huống thực tiễn/STEM; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  }
+];
+
 // =============================================================================
 // KHỞI CHẠY KHI TRANG SẴN SÀNG
 // =============================================================================
@@ -107,6 +206,7 @@ if (typeof document !== "undefined") {
     } catch (e) {
       console.warn("Lỗi sync keys khi khởi tạo:", e);
     }
+    renderSubjectIntegrations();
   });
 }
 
@@ -155,6 +255,7 @@ function syncDraftDom() {
     const input = document.getElementById(id);
     if (input) input.checked = Boolean(context.integrations?.[key]);
   });
+  renderSubjectIntegrations();
   renderDraftControls();
   renderPedagogyCatalogs();
   renderStandardsCatalog();
@@ -305,12 +406,12 @@ function normalizeTeachingContext(context) {
     classProfileNote: typeof source.classProfileNote === "string" ? source.classProfileNote.slice(0, 300) : (typeof source.classProfile === "string" ? source.classProfile.slice(0, 300) : ""),
     supportChoices: Array.isArray(source.supportChoices) ? source.supportChoices.filter(value => typeof value === "string").slice(0, 7) : [],
     supportNote: typeof source.supportNote === "string" ? source.supportNote.slice(0, 300) : (typeof source.supportNeeds === "string" ? source.supportNeeds.slice(0, 300) : ""),
-    integrations: {
+    integrations: Object.assign({
       digital: Boolean(integrations.digital),
       ai: Boolean(integrations.ai),
       foreignLanguage: Boolean(integrations.foreignLanguage),
       inclusive: Boolean(integrations.inclusive)
-    },
+    }, Object.fromEntries(SUBJECT_CONTEXT_INTEGRATIONS.map(item => [item.id, Boolean(integrations[item.id])]))),
     methods: Array.isArray(source.methods) ? source.methods.filter(value => typeof value === "string").slice(0, 20) : [],
     techniques: Array.isArray(source.techniques) ? source.techniques.filter(value => typeof value === "string").slice(0, 20) : [],
     subjectActivities: Array.isArray(source.subjectActivities) ? source.subjectActivities.filter(value => typeof value === "string").slice(0, 20) : [],
@@ -330,6 +431,102 @@ function setCheckboxGroupValues(selector, values) {
 
 function currentSubjectId() {
   return String(appState.selectedSubject || "").toLowerCase();
+}
+
+function contextIntegrationsCatalog() {
+  return SUBJECT_CONTEXT_INTEGRATIONS;
+}
+
+function contextIntegrationsForSubject(subjectId) {
+  const sid = String(subjectId == null || subjectId === "" ? currentSubjectId() : subjectId).toLowerCase();
+  return SUBJECT_CONTEXT_INTEGRATIONS.filter(item => item.subjects.includes(sid));
+}
+
+function pruneContextIntegrationsForSubject(subjectId) {
+  const integ = appState.teachingContext && appState.teachingContext.integrations;
+  if (!integ) return false;
+  const allowed = new Set(contextIntegrationsForSubject(subjectId).map(item => item.id));
+  let changed = false;
+  SUBJECT_CONTEXT_INTEGRATIONS.forEach(item => {
+    if (!allowed.has(item.id) && integ[item.id]) {
+      integ[item.id] = false;
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+function enabledContextIntegrations() {
+  const integ = (appState.teachingContext && appState.teachingContext.integrations) || {};
+  return contextIntegrationsForSubject(currentSubjectId()).filter(item => Boolean(integ[item.id]));
+}
+
+function nlsAiToolHintForSubject(subjectId) {
+  const sid = String(subjectId == null || subjectId === "" ? currentSubjectId() : subjectId).toLowerCase();
+  if (sid === "toan") return "Gợi ý công cụ NLS/AI theo môn Toán: GeoGebra, Desmos, máy tính cầm tay; kiểm chứng kết quả AI.";
+  if (sid === "lichsudialy") return "Gợi ý công cụ NLS/AI theo môn Lịch sử và Địa lí: GIS, Google Earth, bảo tàng ảo; thẩm định tư liệu AI.";
+  if (sid === "tienganh") return "Gợi ý công cụ NLS/AI theo môn Tiếng Anh: Speech AI, chatbot đóng vai (khác checkbox luyện phát âm AI / đóng vai giao tiếp).";
+  return "";
+}
+
+function buildContextIntegrationsPromptBlock() {
+  const enabled = enabledContextIntegrations();
+  const enabledIds = new Set(enabled.map(item => item.id));
+  const disabled = SUBJECT_CONTEXT_INTEGRATIONS.filter(item => !enabledIds.has(item.id));
+  const lines = ["TÍCH HỢP BỐI CẢNH (CHỈ mục GV đã tick; CẤM tự thêm mục khác):"];
+  if (enabled.length) {
+    enabled.forEach(item => {
+      lines.push(`- ${item.label} (${item.legal}): ${item.promptHint} Đánh dấu **${item.marker}** đúng 1 lần tại B/C/D, không rải.`);
+    });
+  } else {
+    lines.push("- Không có mục tích hợp bối cảnh nào được GV tick.");
+  }
+  const disabledNames = disabled.map(item => {
+    if (item.id === "gdqpan") return "GDQPAN";
+    if (item.id === "hcmThought") return "HCM";
+    if (item.id === "humanRights") return "Quyền con người";
+    if (item.id === "clil") return "CLIL";
+    if (item.id === "stemModeling") return "STEM";
+    if (item.id === "financialEd") return "GD tài chính";
+    return item.label.replace(/^Tích hợp\s+/i, "");
+  });
+  lines.push(`CÁC MỤC KHÔNG TICK (${disabledNames.join(", ")}): CẤM lồng, CẤM marker, CẤM mục tiêu/học liệu liên quan.`);
+  lines.push("Không bịa mã NLS/AI. Tích hợp bối cảnh không phải mã TT 02 / QĐ 2422.");
+  const nlsOn = Boolean(appState.teachingContext?.integrations?.digital || appState.teachingContext?.integrations?.ai);
+  if (nlsOn) {
+    lines.push(nlsAiToolHintForSubject(currentSubjectId()) || "Không thêm công cụ NLS/AI bịa ngoài các mục đã chọn.");
+  }
+  return lines.join("\n");
+}
+
+function renderSubjectIntegrations() {
+  if (typeof document === "undefined") return;
+  appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+  pruneContextIntegrationsForSubject(currentSubjectId());
+  const panel = document.getElementById("subjectIntegrationsPanel");
+  const hintEl = document.getElementById("nlsAiSubjectHint");
+  const items = contextIntegrationsForSubject(currentSubjectId());
+  const integ = appState.teachingContext.integrations || {};
+  if (panel) {
+    if (!items.length) {
+      panel.hidden = true;
+      panel.innerHTML = "";
+    } else {
+      panel.hidden = false;
+      const boxes = items.map(item => {
+        const checked = integ[item.id] ? " checked" : "";
+        const legal = item.legal ? ` <span class="text-muted" style="font-size:.78rem;">(${escapeHtml(item.legal)})</span>` : "";
+        return `<label style="display:block;margin:.2rem 0;"><input type="checkbox" id="toggleCtx_${item.id}" data-integration="${item.id}"${checked}> ${escapeHtml(item.label)}${legal}</label>`;
+      }).join("");
+      panel.innerHTML = `<h4 style="margin:0 0 .4rem;font-size:.9rem;">Tích hợp theo môn (chỉ hiện mục Bộ/chuyên môn bắt buộc)</h4>${boxes}`;
+    }
+  }
+  const nlsOn = Boolean(integ.digital || integ.ai);
+  const toolHint = nlsOn ? nlsAiToolHintForSubject(currentSubjectId()) : "";
+  if (hintEl) {
+    hintEl.textContent = toolHint;
+    hintEl.hidden = !toolHint;
+  }
 }
 
 function pedagogyRecommendCtx() {
@@ -1455,6 +1652,9 @@ function setupEventListeners() {
     populateLessonDropdown(); 
     switchDraft({ grade: appState.selectedGrade, lesson: "", topic: "" });
     renderPedagogyCatalogs();
+    pruneContextIntegrationsForSubject(currentSubjectId());
+    renderSubjectIntegrations();
+    saveStateToLocalStorage();
     if ((appState.teachingContext.standards || []).every(item => item.autoSuggested)) {
       ensureIntegrationStandards({ force: true, silent: true });
     }
@@ -1516,9 +1716,23 @@ function setupEventListeners() {
           renderStandardsCatalog();
         }
       }
+      renderSubjectIntegrations();
       saveStateToLocalStorage();
     });
   });
+
+  const subjectIntegrationsPanel = document.getElementById("subjectIntegrationsPanel");
+  if (subjectIntegrationsPanel) {
+    subjectIntegrationsPanel.addEventListener("change", (e) => {
+      const input = e.target;
+      if (!input || input.type !== "checkbox") return;
+      const integrationId = input.getAttribute("data-integration") || "";
+      if (!SUBJECT_CONTEXT_INTEGRATIONS.some(item => item.id === integrationId)) return;
+      appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+      appState.teachingContext.integrations[integrationId] = Boolean(input.checked);
+      saveStateToLocalStorage();
+    });
+  }
 
   [[".class-profile-choice", "classProfileChoices"], [".support-choice", "supportChoices"]].forEach(([selector, key]) => {
     document.querySelectorAll(selector).forEach(input => input.addEventListener("change", () => {
@@ -2994,7 +3208,9 @@ function buildPedagogicalContext() {
   ${selectedStandards || "Không có"}
 - CẤM bịa mã ngoài danh sách. Khi viết mục tiêu: chỉ mô tả năng lực một dòng, CẤM nhãn Biểu hiện / Nhiệm vụ / Minh chứng.
 - TÍCH HỢP NLS & AI THỰC CHIẾN GẮN MÔN HỌC: NLS/AI chỉ là công cụ thực hành môn ${subjectName}, TUYỆT ĐỐI KHÔNG dạy lý thuyết Tin học hay hỏi lý thuyết AI suông trong giờ học (cấm GV hỏi: "AI là gì?", "Em hãy kể tên công cụ AI?", "Làm gì để kiểm chứng thông tin từ AI?"). CHỈ tích hợp tại 1–2 vị trí then chốt, đắc địa nhất theo 3 dạng: (1) Kiểm chứng phản biện lỗi sai AI, (2) Prompting gợi mở bước giải, (3) Thao tác phần mềm chuyên ngành (GeoGebra/Excel/PhET...). TUYỆT ĐỐI CẤM rải tag dồn dập nhiều mã [AI: ...].
-- Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.`;
+- Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.
+
+${buildContextIntegrationsPromptBlock()}`;
 }
 
 function buildPedagogicalPrompt(prompt) {
@@ -3030,6 +3246,7 @@ function getGenerationPromptContext(params = {}) {
     techniques: ["A", "B", "C", "D", "E"].flatMap(phase => (appState.teachingContext && appState.teachingContext.phasePedagogy?.[phase]?.techniques) || []),
     digitalCompetencyEnabled: Boolean(appState.teachingContext?.integrations?.digital),
     aiCompetencyEnabled: Boolean(appState.teachingContext?.integrations?.ai),
+    contextIntegrationsEnabled: enabledContextIntegrations().map(item => item.id),
     yccd_official: typeof getOfficialYccd === "function" ? getOfficialYccd({
       subjectId: currentSubjectId(),
       grade: appState.selectedGrade,
@@ -4754,6 +4971,13 @@ if (typeof module !== 'undefined' && module.exports) {
     extractPpctOcrText,
     handleGeneratePpctAnalysis,
     getGenerationPromptContext,
-    buildPedagogicalContext
+    buildPedagogicalContext,
+    SUBJECT_CONTEXT_INTEGRATIONS,
+    contextIntegrationsCatalog,
+    contextIntegrationsForSubject,
+    enabledContextIntegrations,
+    renderSubjectIntegrations,
+    pruneContextIntegrationsForSubject,
+    currentSubjectId
   };
 }

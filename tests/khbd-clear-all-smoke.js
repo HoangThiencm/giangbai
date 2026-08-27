@@ -156,7 +156,8 @@ global.localStorage = dom.localStorageMock;
   'selectMyDraft', 'btnImportLegacyDraft', 'fileInputImages', 'imgCountBadge',
   'imageGallery', 'fullLessonPreview', 'previewVision', 'previewObjectives',
   'previewMaterials', 'previewActivity', 'toastContainer', 'digitalStandardsPanel',
-  'aiStandardsPanel', 'methodsCatalogPanel', 'techniquesCatalogPanel', 'activitiesCatalogPanel'
+  'aiStandardsPanel', 'methodsCatalogPanel', 'techniquesCatalogPanel', 'activitiesCatalogPanel',
+  'subjectIntegrationsPanel', 'nlsAiSubjectHint'
 ].forEach(id => dom.registerElement(id));
 
 // Đăng ký checkbox groups
@@ -290,12 +291,23 @@ function testClearAllContent() {
   assert.strictEqual(appState.teachingContext.classProfileNote, '');
   assert.deepStrictEqual(appState.teachingContext.supportChoices, []);
   assert.strictEqual(appState.teachingContext.supportNote, '');
-  assert.deepStrictEqual(appState.teachingContext.integrations, {
-    digital: false,
-    ai: false,
-    foreignLanguage: false,
-    inclusive: false
-  }, '4 Tích hợp phải đều là false');
+  const integ = appState.teachingContext.integrations;
+  assert.strictEqual(integ.digital, false);
+  assert.strictEqual(integ.ai, false);
+  assert.strictEqual(integ.foreignLanguage, false);
+  assert.strictEqual(integ.inclusive, false);
+  assert.ok(!integ.gdqpan);
+  assert.ok(!integ.hcmThought);
+  assert.ok(!integ.humanRights);
+  assert.ok(!integ.localEnv);
+  assert.ok(!integ.climateSdgs);
+  assert.ok(!integ.localHeritage);
+  assert.ok(!integ.clil);
+  assert.ok(!integ.speechAiRoleplay);
+  assert.ok(!integ.vnIdentity);
+  assert.ok(!integ.globalCitizen);
+  assert.ok(!integ.financialEd);
+  assert.ok(!integ.stemModeling);
   assert.deepStrictEqual(appState.teachingContext.methods, []);
   assert.deepStrictEqual(appState.teachingContext.techniques, []);
   assert.deepStrictEqual(appState.teachingContext.subjectActivities, []);
