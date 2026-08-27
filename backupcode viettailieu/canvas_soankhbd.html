@@ -839,9 +839,17 @@
         clusterId: ""
       };
       window.__KHBD_PPCT__ = state;
+      const hostHasPpct = function () {
+        return typeof handlePpctFiles === "function" && typeof handleGeneratePpctAnalysis === "function";
+      };
 
       function toast(msg, type, ms) {
         if (typeof showToast === "function") showToast(msg, type || "info", ms || 4500);
+      }
+      function esc(s) {
+        return String(s || "").replace(/[&<>"']/g, function (c) {
+          return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+        });
       }
       function fileToDataUrl(file) {
         return new Promise(function (resolve, reject) {
@@ -865,19 +873,61 @@
         if (state.scope !== "cluster") return null;
         return state.clusters.find(function (c) { return c.id === state.clusterId; }) || null;
       }
-      function applyDuration(periods) {
+      function formatDuration(periods) {
         const n = Math.max(1, Number(periods) || 1);
-        const minutes = n * 45;
-        const text = (n < 10 ? "0" + n : String(n)) + " tiết (" + minutes + " phút)";
+        return (n < 10 ? "0" + n : String(n)) + " tiết (" + (n * 45) + " phút)";
+      }
+      function currentScopeLabel() {
+        const cluster = selectedCluster();
+        if (cluster) {
+          return "Tiết " + (cluster.lessons || "?") + " — " + (cluster.title || "cụm tiết")
+            + (cluster.periods ? (" (" + cluster.periods + " tiết)") : "");
+        }
+        if (state.topic || state.totalPeriods) {
+          return "Toàn bộ chủ đề" + (state.topic ? (": " + state.topic) : "")
+            + (state.totalPeriods ? (" (" + state.totalPeriods + " tiết)") : "");
+        }
+        return "";
+      }
+      function applyDuration(periods) {
+        const text = formatDuration(periods);
         if (typeof appState !== "undefined") appState.duration = text;
         const el = document.getElementById("inputDuration");
         if (el) el.value = text;
       }
+      function syncHost() {
+        const scope = currentScopeLabel();
+        const cluster = selectedCluster();
+        const periods = cluster ? cluster.periods : (state.totalPeriods || 0);
+        if (periods) applyDuration(periods);
+        if (typeof appState !== "undefined") {
+          if (!appState.teachingContext) appState.teachingContext = {};
+          appState.teachingContext.lessonScope = scope;
+          if (!appState.content) appState.content = {};
+          if (state.text) appState.content.ppctAnalysis = state.text;
+          if (state.topic && !appState.customTopic && !appState.selectedLesson) {
+            appState.customTopic = state.topic;
+          }
+        }
+        const scopeEl = document.getElementById("inputLessonScope");
+        if (scopeEl && scope) scopeEl.value = scope;
+        const topicEl = document.getElementById("inputTopicCustom");
+        if (topicEl && state.topic && !String(topicEl.value || "").trim()) topicEl.value = state.topic;
+        const editor = document.getElementById("editorPpct");
+        if (editor && state.text && editor.value !== state.text) {
+          editor.value = state.text;
+          if (typeof renderMathPreview === "function") renderMathPreview(state.text, "previewPpct");
+        }
+      }
       function renderFiles() {
         const box = document.getElementById("ppctFileList");
         if (!box) return;
+        if (hostHasPpct()) {
+          box.innerHTML = "";
+          return;
+        }
         box.innerHTML = state.files.map(function (f) {
-          return '<span class="ppct-chip">' + (f.name || "PPCT") + "</span>";
+          return '<span class="ppct-chip">' + esc(f.name || "PPCT") + "</span>";
         }).join("");
       }
       function renderScope() {
@@ -895,13 +945,14 @@
         panel.hidden = false;
         const topic = state.topic || "Chủ đề trong PPCT";
         const total = state.totalPeriods || state.clusters.reduce(function (s, c) { return s + (Number(c.periods) || 0); }, 0);
+        state.totalPeriods = total || state.totalPeriods;
         if (meta) meta.textContent = topic + (total ? (" — tổng " + total + " tiết") : "");
         if (allLabel) allLabel.textContent = "Soạn toàn bộ chủ đề" + (total ? (" (" + total + " tiết)") : "");
         if (select) {
           select.innerHTML = state.clusters.map(function (c) {
             const lessons = c.lessons ? ("Tiết " + c.lessons) : "";
             const per = c.periods ? (" — " + c.periods + " tiết") : "";
-            return '<option value="' + c.id + '">' + [lessons, c.title || "", per].filter(Boolean).join(" · ") + "</option>";
+            return '<option value="' + esc(c.id) + '">' + esc([lessons, c.title || "", per].filter(Boolean).join(" · ")) + "</option>";
           }).join("");
           if (state.clusterId) select.value = state.clusterId;
           else if (state.clusters[0]) state.clusterId = state.clusters[0].id;
@@ -916,14 +967,13 @@
             ? ("AI sẽ khóa đúng cụm này: " + (cluster.title || "") + (cluster.objective ? (". Mục tiêu PPCT: " + cluster.objective) : ""))
             : "Chọn một cụm tiết để khóa phạm vi SGK và thời lượng.";
         }
-        if (state.scope === "cluster" && cluster) applyDuration(cluster.periods);
-        else if (total) applyDuration(total);
+        syncHost();
       }
       function ppctLockText() {
-        if (!state.text) return "";
+        if (!state.text && !state.clusters.length) return "";
         const cluster = selectedCluster();
         const lines = [
-          "\nPHẠM VI SOẠN THEO PPCT / PHỤ LỤC 3 (ưu tiên hơn mục lục SGK khi mâu thuẫn):",
+          "PHẠM VI SOẠN THEO PPCT / PHỤ LỤC 3 (ưu tiên hơn mục lục SGK khi mâu thuẫn):",
           "- Chủ đề PPCT: " + (state.topic || "chưa rõ") + (state.totalPeriods ? (" (" + state.totalPeriods + " tiết)") : "") + "."
         ];
         if (cluster) {
@@ -931,16 +981,103 @@
           if (cluster.objective) lines.push("- Mục tiêu cụm tiết theo PPCT: " + cluster.objective);
           if (cluster.focus) lines.push("- Nội dung SGK tương ứng: " + cluster.focus);
           lines.push("- CHỈ soạn giáo án cho cụm tiết này. CẤM gom các tiết khác của chủ đề vào cùng một KHBD.");
-          lines.push("- Chỉ trích phần SGK thuộc cụm tiết đã chọn; bỏ phần thuộc tiết khác.");
+          lines.push("- Chỉ trích phần SGK thuộc cụm tiết đã chọn; bỏ phần thuộc tiết khác (Tiếng Việt / Viết / Nói-nghe / văn bản khác).");
           lines.push("- Phân bổ A–E theo đúng số phút của cụm tiết, không lấy thời lượng cả bài " + (state.totalPeriods || "") + " tiết.");
         } else {
           lines.push("- Giáo viên chọn soạn TOÀN BỘ chủ đề " + (state.totalPeriods || "") + " tiết. Phân bổ thời lượng theo tổng số tiết PPCT.");
           lines.push("- Vẫn bám cấu trúc cụm tiết trong PPCT (không gộp lung tung các mạch Đọc/Viết/Nói nghe/Tiếng Việt).");
         }
-        lines.push("- Nguyên văn PPCT đã đọc:\n\"\"\"\n" + String(state.text).slice(0, 6000) + "\n\"\"\"");
+        if (state.text) {
+          lines.push("- Nguyên văn PPCT đã đọc:\n\"\"\"\n" + String(state.text).slice(0, 6000) + "\n\"\"\"");
+        }
         return "\n" + lines.join("\n");
       }
+      function normalizeClusters(list) {
+        return (Array.isArray(list) ? list : []).map(function (c, idx) {
+          return {
+            id: String((c && c.id) || ("c" + (idx + 1))),
+            lessons: String((c && c.lessons) || "").trim(),
+            periods: Number(c && c.periods) || 1,
+            title: String((c && c.title) || "").trim(),
+            focus: String((c && c.focus) || "").trim(),
+            objective: String((c && c.objective) || "").trim()
+          };
+        }).filter(function (c) { return c.title || c.lessons; });
+      }
+      function clustersFromMarkdown(text) {
+        const out = [];
+        const re = /Tiết\s+([0-9]+(?:\s*(?:[,–\-]|và)\s*[0-9]+)*)\s*[:.\-–]\s*([^\n]+)/gi;
+        let m;
+        while ((m = re.exec(String(text || "")))) {
+          const rawLessons = m[1].replace(/\s+/g, " ").trim();
+          const title = m[2].replace(/\*+/g, "").replace(/^\s*[-+]\s*/, "").trim();
+          const nums = rawLessons.split(/[,–\-]|và/).map(function (x) { return parseInt(x, 10); }).filter(function (n) { return n > 0; });
+          const periods = nums.length ? (Math.max.apply(null, nums) - Math.min.apply(null, nums) + 1) : 1;
+          out.push({
+            id: "c" + (out.length + 1),
+            lessons: rawLessons.replace(/\s*và\s*/g, "-"),
+            periods: periods,
+            title: title,
+            focus: title,
+            objective: ""
+          });
+        }
+        return out;
+      }
+      function applyExtracted(data, fallbackText) {
+        const parsed = data || {};
+        state.topic = String(parsed.topic || state.topic || "").trim();
+        state.totalPeriods = Number(parsed.totalPeriods) || state.totalPeriods || 0;
+        state.clusters = normalizeClusters(parsed.clusters);
+        if (!state.clusters.length) state.clusters = clustersFromMarkdown(fallbackText || state.text);
+        if (!state.totalPeriods && state.clusters.length) {
+          state.totalPeriods = state.clusters.reduce(function (s, c) { return s + (Number(c.periods) || 0); }, 0);
+        }
+        if (!state.totalPeriods) {
+          const tm = String(fallbackText || state.text || "").match(/tổng[^\d]{0,24}(\d{1,2})\s*tiết/i)
+            || String(fallbackText || state.text || "").match(/(\d{1,2})\s*tiết/);
+          if (tm) state.totalPeriods = Number(tm[1]) || 0;
+        }
+        if (state.clusters.length) {
+          state.scope = "all";
+          state.clusterId = state.clusters[0].id;
+        }
+      }
+      async function extractClusters(sourceText) {
+        const text = String(sourceText || state.text || "").trim();
+        if (!text) return;
+        const topicHint = ((document.getElementById("inputTopicCustom") || {}).value
+          || (typeof getTopicDisplayName === "function" ? getTopicDisplayName() : "")
+          || "").trim();
+        const subjectHint = ((document.getElementById("inputSubject") || {}).value
+          || (typeof appState !== "undefined" ? appState.subjectName : "")
+          || "").trim();
+        if (typeof geminiAPI !== "undefined" && typeof geminiAPI.generateContent === "function") {
+          const extractPrompt = "Bạn đọc PHÂN PHỐI CHƯƠNG TRÌNH (Phụ lục 3) dưới đây và tách các cụm tiết của MỘT bài/chủ đề"
+            + (topicHint ? (' (ưu tiên bài: "' + topicHint + '")') : "")
+            + (subjectHint ? (" môn " + subjectHint) : "")
+            + ".\nTrả về DUY NHẤT JSON:\n{\"topic\":\"tên bài/chủ đề\",\"grade\":\"\",\"subject\":\"\",\"totalPeriods\":16,\"clusters\":[{\"id\":\"c1\",\"lessons\":\"1-2\",\"periods\":2,\"title\":\"tên cụm tiết\",\"focus\":\"phần SGK tương ứng\",\"objective\":\"mục tiêu cụm tiết\"}]}\nQuy tắc: gộp các tiết liên tiếp cùng nội dung thành một cụm (ví dụ tiết 3-5 đọc hiểu VB1). periods là số tiết của cụm. totalPeriods = tổng tiết của bài. Không markdown.\n\nPPCT:\n"
+            + text.slice(0, 12000);
+          try {
+            const raw = await geminiAPI.generateContent(extractPrompt, [], null, 0.1, null, { maxOutputTokens: 2048 });
+            applyExtracted(parseJsonLoose(raw) || {}, text);
+            if (state.clusters.length) return;
+          } catch (err) {
+            console.warn("PPCT extract:", err);
+          }
+        }
+        applyExtracted({}, text);
+      }
+      function hasPpctMedia() {
+        if (state.files.length) return true;
+        if (typeof appState === "undefined") return false;
+        return ((appState.ppctImages || []).length + (appState.ppctPdfAttachments || []).length) > 0;
+      }
       async function addFiles(fileList) {
+        if (typeof handlePpctFiles === "function") {
+          await handlePpctFiles(Array.from(fileList || []));
+          return;
+        }
         const files = Array.from(fileList || []).filter(function (f) {
           return f && (/pdf/i.test(f.type || f.name) || /^image\//.test(f.type));
         });
@@ -951,8 +1088,20 @@
         renderFiles();
         if (files.length) toast("Đã đính kèm " + files.length + " file PPCT. Bấm Đọc PPCT / Phụ lục 3.", "success");
       }
+      async function ocrOwnFiles() {
+        const chunks = [];
+        for (let i = 0; i < state.files.length; i++) {
+          const file = state.files[i];
+          if (typeof updateProgress === "function") updateProgress(20 + Math.round((i / Math.max(1, state.files.length)) * 40), "Đang nhận diện PPCT: " + (file.name || ""));
+          const ocr = typeof window.__canvasOcr === "function"
+            ? await window.__canvasOcr(file.dataUrl, file.mimeType)
+            : await geminiAPI.generateContent("Trích nguyên văn bảng phân phối chương trình (Phụ lục 3). Không tóm tắt.", [{ mimeType: file.mimeType || "application/pdf", dataUrl: file.dataUrl }], null, 0.1, null, { maxOutputTokens: 8192 });
+          if (ocr) chunks.push(ocr);
+        }
+        return chunks.join("\n\n");
+      }
       async function analyzePpct() {
-        if (!state.files.length) {
+        if (!hasPpctMedia()) {
           toast("Hãy chọn PDF/ảnh PPCT (Phụ lục 3) trước.", "warning");
           return;
         }
@@ -964,38 +1113,30 @@
         if (btn) btn.disabled = true;
         if (typeof updateProgress === "function") updateProgress(20, "Đang đọc PPCT / Phụ lục 3...");
         try {
-          const chunks = [];
-          for (let i = 0; i < state.files.length; i++) {
-            const file = state.files[i];
-            if (typeof updateProgress === "function") updateProgress(20 + Math.round((i / state.files.length) * 40), "Đang nhận diện PPCT: " + (file.name || ""));
-            const ocr = typeof window.__canvasOcr === "function"
-              ? await window.__canvasOcr(file.dataUrl, file.mimeType)
-              : await geminiAPI.generateContent("Trích nguyên văn bảng phân phối chương trình.", [{ mimeType: file.mimeType, dataUrl: file.dataUrl }], null, 0.1, null, { maxOutputTokens: 8192 });
-            if (ocr) chunks.push(ocr);
+          if (typeof handleGeneratePpctAnalysis === "function" && ((typeof appState !== "undefined" && ((appState.ppctImages || []).length || (appState.ppctPdfAttachments || []).length)))) {
+            await handleGeneratePpctAnalysis();
+            state.text = (typeof appState !== "undefined" && appState.content && appState.content.ppctAnalysis) || state.text;
+          } else {
+            if (!state.files.length) {
+              toast("Hãy chọn PDF/ảnh PPCT (Phụ lục 3) trước.", "warning");
+              return;
+            }
+            state.text = await ocrOwnFiles();
+            const editor = document.getElementById("editorPpct");
+            if (editor) editor.value = state.text;
+            if (typeof appState !== "undefined") {
+              if (!appState.content) appState.content = {};
+              appState.content.ppctAnalysis = state.text;
+            }
+            const details = document.getElementById("detailsPpctContent");
+            if (details) details.open = true;
           }
-          state.text = chunks.join("\n\n");
-          if (typeof updateProgress === "function") updateProgress(75, "Đang tách cụm tiết từ PPCT...");
-          const extractPrompt = "Bạn đọc PHÂN PHỐI CHƯƠNG TRÌNH (Phụ lục 3) dưới đây và tách các cụm tiết của MỘT bài/chủ đề.\nTrả về DUY NHẤT JSON:\n{\"topic\":\"tên bài/chủ đề\",\"grade\":\"\",\"subject\":\"\",\"totalPeriods\":16,\"clusters\":[{\"id\":\"c1\",\"lessons\":\"1-2\",\"periods\":2,\"title\":\"tên cụm tiết\",\"focus\":\"phần SGK tương ứng\",\"objective\":\"mục tiêu cụm tiết\"}]}\nQuy tắc: gộp các tiết liên tiếp cùng nội dung thành một cụm (ví dụ tiết 3-5 đọc hiểu VB1). periods là số tiết. totalPeriods = tổng tiết của bài. Không markdown.\n\nPPCT:\n" + state.text.slice(0, 12000);
-          const raw = await geminiAPI.generateContent(extractPrompt, [], null, 0.1, null, { maxOutputTokens: 2048 });
-          const data = parseJsonLoose(raw) || {};
-          state.topic = String(data.topic || "").trim();
-          state.totalPeriods = Number(data.totalPeriods) || 0;
-          state.clusters = Array.isArray(data.clusters) ? data.clusters.map(function (c, idx) {
-            return {
-              id: String(c.id || ("c" + (idx + 1))),
-              lessons: String(c.lessons || "").trim(),
-              periods: Number(c.periods) || 1,
-              title: String(c.title || "").trim(),
-              focus: String(c.focus || "").trim(),
-              objective: String(c.objective || "").trim()
-            };
-          }).filter(function (c) { return c.title || c.lessons; }) : [];
+          if (typeof updateProgress === "function") updateProgress(80, "Đang tách cụm tiết từ PPCT...");
+          await extractClusters(state.text);
+          renderScope();
           if (!state.clusters.length) {
             toast("Đã đọc PPCT nhưng chưa tách được cụm tiết. Bạn vẫn có thể soạn theo SGK.", "warning", 6000);
           } else {
-            state.scope = "all";
-            state.clusterId = state.clusters[0].id;
-            renderScope();
             toast("Đã phân tích PPCT: " + (state.topic || "chủ đề") + " — " + (state.totalPeriods || state.clusters.length) + " tiết. Hãy chọn phạm vi soạn.", "success", 6500);
           }
         } catch (err) {
@@ -1006,11 +1147,33 @@
           if (typeof hideProgress === "function") hideProgress();
         }
       }
+      function resetOverlay(clearFiles) {
+        if (clearFiles) state.files = [];
+        state.text = "";
+        state.topic = "";
+        state.totalPeriods = 0;
+        state.clusters = [];
+        state.scope = "all";
+        state.clusterId = "";
+        renderFiles();
+        renderScope();
+        const editor = document.getElementById("editorPpct");
+        if (editor) editor.value = "";
+        const preview = document.getElementById("previewPpct");
+        if (preview) preview.innerHTML = "";
+        const scopeEl = document.getElementById("inputLessonScope");
+        if (scopeEl) scopeEl.value = "";
+        if (typeof appState !== "undefined") {
+          if (appState.teachingContext) appState.teachingContext.lessonScope = "";
+          if (appState.content) appState.content.ppctAnalysis = "";
+        }
+      }
       function bindUi() {
-        const drop = document.getElementById("dropzonePpct");
+        const drop = document.getElementById("dropzoneContainerPpct");
         const input = document.getElementById("fileInputPpct");
         const btn = document.getElementById("btnAnalyzePpct");
-        if (drop && input) {
+        const btnClear = document.getElementById("btnClearPpctFiles");
+        if (!hostHasPpct() && drop && input) {
           drop.addEventListener("click", function (e) {
             if (e.target === input) return;
             input.click();
@@ -1028,10 +1191,21 @@
             input.value = "";
           });
         }
-        if (btn) btn.addEventListener("click", function (e) {
-          e.preventDefault();
-          analyzePpct();
-        });
+        if (btn) {
+          btn.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            analyzePpct();
+          }, true);
+        }
+        if (!hostHasPpct() && btnClear) {
+          btnClear.addEventListener("click", function (e) {
+            e.preventDefault();
+            if (!state.files.length) return;
+            resetOverlay(true);
+            toast("Đã xóa toàn bộ file PPCT.", "info");
+          });
+        }
         const allRadio = document.getElementById("ppctScopeAll");
         const clusterRadio = document.getElementById("ppctScopeCluster");
         const select = document.getElementById("ppctClusterSelect");
@@ -1044,44 +1218,63 @@
         if (select) select.addEventListener("change", function () {
           state.clusterId = select.value;
           state.scope = "cluster";
+          const clusterRadioEl = document.getElementById("ppctScopeCluster");
+          if (clusterRadioEl) clusterRadioEl.checked = true;
           renderScope();
         });
+        const editor = document.getElementById("editorPpct");
+        if (editor) {
+          editor.addEventListener("input", function () {
+            state.text = editor.value;
+            if (typeof appState !== "undefined" && appState.content) appState.content.ppctAnalysis = editor.value;
+          });
+        }
       }
       function patchHost() {
+        if (typeof renderPpctGallery === "function") {
+          const origGallery = renderPpctGallery;
+          renderPpctGallery = function () {
+            origGallery.apply(this, arguments);
+            const empty = !(typeof appState !== "undefined"
+              && ((appState.ppctImages || []).length || (appState.ppctPdfAttachments || []).length));
+            if (empty) resetOverlay(true);
+          };
+        }
         if (typeof getGenerationPromptContext === "function") {
           const orig = getGenerationPromptContext;
           getGenerationPromptContext = function (params) {
+            syncHost();
             const ctx = orig(params);
             const lock = ppctLockText();
-            if (lock) ctx.pedagogical_context = String(ctx.pedagogical_context || "") + lock;
-            const cluster = selectedCluster();
-            if (cluster && cluster.periods) {
-              ctx.duration = cluster.periods + " tiết (" + (cluster.periods * 45) + " phút)";
-            } else if (state.totalPeriods) {
-              ctx.duration = state.totalPeriods + " tiết (" + (state.totalPeriods * 45) + " phút)";
+            if (lock && String(ctx.pedagogical_context || "").indexOf("PHẠM VI SOẠN THEO PPCT") < 0) {
+              ctx.pedagogical_context = String(ctx.pedagogical_context || "") + lock;
             }
+            const scope = currentScopeLabel();
+            if (scope) ctx.lesson_scope = scope;
+            if (state.text) ctx.ppct_content = state.text;
+            const cluster = selectedCluster();
+            if (cluster && cluster.periods) ctx.duration = formatDuration(cluster.periods);
+            else if (state.totalPeriods) ctx.duration = formatDuration(state.totalPeriods);
             return ctx;
-          };
-        }
-        if (typeof buildPedagogicalContext === "function") {
-          const origPed = buildPedagogicalContext;
-          buildPedagogicalContext = function () {
-            return origPed() + ppctLockText();
           };
         }
         if (typeof handleClearAllContent === "function") {
           const origClear = handleClearAllContent;
           handleClearAllContent = function () {
-            origClear.apply(this, arguments);
-            state.files = [];
-            state.text = "";
-            state.topic = "";
-            state.totalPeriods = 0;
-            state.clusters = [];
-            state.scope = "all";
-            state.clusterId = "";
-            renderFiles();
-            renderScope();
+            const origConfirm = typeof userConfirm === "function" ? userConfirm : null;
+            let confirmed = !origConfirm;
+            if (origConfirm) {
+              userConfirm = function (msg, proceed) {
+                confirmed = origConfirm(msg, proceed);
+                return confirmed;
+              };
+            }
+            try {
+              origClear.apply(this, arguments);
+            } finally {
+              if (origConfirm) userConfirm = origConfirm;
+            }
+            if (confirmed) resetOverlay(true);
           };
         }
       }
