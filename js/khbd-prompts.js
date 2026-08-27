@@ -210,7 +210,8 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
   + Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức LaTeX ($...$, $$...$$), chú ý quan trọng, ví dụ mẫu kèm đề bài và lời giải chi tiết từng bước. Dùng \`-\`, \`+\`, \`.\`; ngăn các dòng bằng \`<br>\`.
   + CỘT PHẢI CẤM: mô tả hành vi GV/HS, CẤM viết "GV yêu cầu", "HS thảo luận", CẤM để trống, CẤM để dấu "..." hay "[...]".
 - CẤM để trống ô. Escape dấu | trong văn bản thành \\|.
-- Hoạt động B: Mỗi tiểu mục/nội dung kiến thức dùng một bảng 2 cột (1 hàng) độc lập như trên. Gộp toàn bộ ví dụ mẫu, câu hỏi khám phá con, thực hành của mục đó vào chung một hoạt động nhánh.`;
+- Hoạt động B: Mỗi tiểu mục/nội dung kiến thức dùng một bảng 2 cột (1 hàng) độc lập như trên. Gộp toàn bộ ví dụ mẫu, câu hỏi khám phá con, thực hành của mục đó vào chung một hoạt động nhánh.
+- GIỚI HẠN ĐỘ DÀI (mục tiêu ~10 trang Word 13pt): a) tối đa 2 ý; b) tối đa 3 ý, không chép nguyên SGK; c) tối đa 2 ý. Cột trái mỗi bước 1–2 câu (GV một câu lệnh + HS một thao tác). Cột phải: định nghĩa/công thức + tối đa 1 ví dụ đã giải. C: tối đa 2 bài luyện tập, lời giải gọn đủ bước. D: 1 tình huống vận dụng. E: mỗi mục Học bài / Làm bài / Chuẩn bị bài 1–2 dòng. CẤM lặp kiến thức đã chốt ở B sang C/D/E. CẤM đoạn văn dài, CẤM nhiều ví dụ mẫu.`;
 
 const PROMPTS = {
   // SYSTEM INSTRUCTION
@@ -240,7 +241,8 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - TUYỆT ĐỐI CẤM dùng code block fence (\`\`\`markdown hoặc \`\`\`). Chỉ xuất Markdown thuần túy.
 - TUYỆT ĐỐI CẤM để lại dấu ba chấm "..." hoặc ngoặc vuông "[...]" chưa điền. Mọi đề bài, câu hỏi, công thức, ví dụ mẫu và lời giải PHẢI ĐƯỢC VIẾT ĐẦY ĐỦ CHI TIẾT.
 - Danh sách nội dung có đúng 3 cấp: ý lớn bắt đầu bằng "- ", ý con "+ ", ý chi tiết ". ". Không dùng "1.", "2." làm danh sách nội dung trừ khi là số thứ tự bài tập hoặc bước CV 5512.
-- CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu. Màu sắc và font chữ do ứng dụng xử lý.`,
+- CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu. Màu sắc và font chữ do ứng dụng xử lý.
+- GIỚI HẠN ĐỘ DÀI: giáo án khoảng 8–12 trang Word. Viết cô đọng, đủ ý, không lan man.`,
 
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy chuẩn CV 5512. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ lại nội dung giáo án. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary, lời chúc ở cuối và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng "-", "+", ".". Không đổi tiêu đề mục khung như "I.", "## 1.", "a)", "Bước", "Bài".`,
 
@@ -1115,6 +1117,7 @@ function getPromptTemplate(templateKey, context) {
   if (PROMPTS.SOURCE_LOCK) {
     result += `\n\n${PROMPTS.SOURCE_LOCK}`;
   }
+  result += `\n\nGIỚI HẠN DUNG LƯỢNG: Viết cô đọng để giáo án in Word khoảng 8–12 trang (Times New Roman 13pt). Không viết lại lý thuyết đã có ở mục trước.`;
 
   // Append pedagogical context if provided
   if (context.pedagogical_context) {
