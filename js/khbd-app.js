@@ -488,70 +488,108 @@ function foldEvidenceLoose(value) {
   return normalizeEvidenceText(value).replace(/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~«»“”‘’…–—]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function resolveCandidateEntry(id, byId, byCode) {
-  if (byId.has(id)) return byId.get(id);
-  const codeMatches = byCode.get(id) || [];
-  return codeMatches.length === 1 ? codeMatches[0] : null;
+function resolveCandidateEntry(id, entries) {
+  const raw = String(id || "").trim().replace(/^["'`]+|["'`]+$/g, "");
+  if (!raw || !Array.isArray(entries) || !entries.length) return null;
+  const lower = raw.toLowerCase();
+  const exactId = entries.find(entry => entry.id === raw);
+  if (exactId) return exactId;
+  const idIgnoreCase = entries.filter(entry => String(entry.id).toLowerCase() === lower);
+  if (idIgnoreCase.length === 1) return idIgnoreCase[0];
+  const codeExact = entries.filter(entry => {
+    const code = String(entry.code || "");
+    return code && (code === raw || code.toLowerCase() === lower);
+  });
+  if (codeExact.length === 1) return codeExact[0];
+  const firstToken = raw.split(/[\s|:–—]+/)[0];
+  if (firstToken && firstToken !== raw) {
+    const nested = resolveCandidateEntry(firstToken, entries);
+    if (nested) return nested;
+  }
+  const prefix = entries.filter(entry => {
+    const code = String(entry.code || "");
+    return code && (raw.startsWith(`${code} `) || raw.startsWith(`${code}:`) || raw.startsWith(`${code}|`));
+  });
+  if (prefix.length === 1) return prefix[0];
+  return null;
 }
 
-function parseStructuredCandidates(raw, entries, ocrText, maxSelect) {
-  const source = normalizeEvidenceText(ocrText);
-  const foldedSource = foldEvidenceLoose(source);
-  const byId = new Map(entries.map(entry => [entry.id, entry]));
-  const byCode = new Map();
-  for (const entry of entries) {
-    const code = String(entry.code || "");
-    if (!code) continue;
-    if (!byCode.has(code)) byCode.set(code, []);
-    byCode.get(code).push(entry);
-  }
+function parseJsonCandidatePayload(raw) {
   let jsonText = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
   let data;
   try {
     data = JSON.parse(jsonText);
   } catch {
-    const start = jsonText.indexOf("{");
-    const end = jsonText.lastIndexOf("}");
+    const start = jsonText.search(/[\[{]/);
+    const end = Math.max(jsonText.lastIndexOf("}"), jsonText.lastIndexOf("]"));
     if (start < 0 || end <= start) return null;
     try { data = JSON.parse(jsonText.slice(start, end + 1)); } catch { return null; }
   }
+  if (Array.isArray(data)) return { candidates: data };
+  if (data && Array.isArray(data.candidates)) return data;
+  if (data && Array.isArray(data.items)) return { candidates: data.items };
+  return null;
+}
+
+function parseStructuredCandidates(raw, entries, ocrText, maxSelect) {
+  const source = normalizeEvidenceText(ocrText);
+  const foldedSource = foldEvidenceLoose(source);
+  const data = parseJsonCandidatePayload(raw);
   if (!data || !Array.isArray(data.candidates)) return null;
   const used = new Set();
-  const valid = [];
+  const matched = [];
+  const unmatched = [];
   for (const candidate of data.candidates) {
-    const id = String(candidate?.id || "").trim();
-    const lessonAnchor = String(candidate?.lessonAnchor || "").trim();
-    const fitRationale = String(candidate?.fitRationale || "").trim();
-    const proposedTask = String(candidate?.proposedTask || "").trim();
-    if (!id || !lessonAnchor || !fitRationale || !proposedTask) continue;
-    const entry = resolveCandidateEntry(id, byId, byCode);
+    const id = String(candidate?.id || candidate?.code || candidate?.officialCode || "").trim();
+    const lessonAnchor = String(candidate?.lessonAnchor || candidate?.anchor || "").trim();
+    const fitRationale = String(candidate?.fitRationale || candidate?.rationale || "").trim();
+    const proposedTask = String(candidate?.proposedTask || candidate?.task || "").trim();
+    if (!id) continue;
+    const entry = resolveCandidateEntry(id, entries);
     if (!entry || used.has(entry.id)) continue;
     const anchorText = normalizeEvidenceText(lessonAnchor);
-    let matchedAnchor = "";
-    let usedFold = false;
-    if (anchorText && source.includes(anchorText)) {
-      matchedAnchor = anchorText;
-    } else {
+    let hasAnchor = Boolean(anchorText && source.includes(anchorText));
+    if (!hasAnchor && anchorText) {
       const foldedAnchor = foldEvidenceLoose(anchorText);
-      if (foldedAnchor.length < 12 || !foldedSource.includes(foldedAnchor)) continue;
-      matchedAnchor = foldedAnchor;
-      usedFold = true;
+      if (foldedAnchor.length >= 12 && foldedSource.includes(foldedAnchor)) hasAnchor = true;
     }
-    const taskText = usedFold ? foldEvidenceLoose(proposedTask) : normalizeEvidenceText(proposedTask);
-    const anchorTerms = matchedAnchor.split(" ").filter(word => word.length >= 3);
-    if (!anchorTerms.some(word => taskText.includes(word))) continue;
     used.add(entry.id);
-    valid.push({ entry, lessonAnchor, fitRationale, proposedTask });
-    if (valid.length >= maxSelect) break;
+    const row = { entry, lessonAnchor, fitRationale, proposedTask };
+    if (hasAnchor) matched.push(row);
+    else unmatched.push(row);
+    if (matched.length + unmatched.length >= (maxSelect || 3) * 2) break;
   }
-  return valid;
+  return matched.concat(unmatched).slice(0, maxSelect || 3);
+}
+
+function catalogFallbackRecords(kind, grade, entries, maxSelect) {
+  const limit = maxSelect || 3;
+  if (typeof recommendOfficialStandards === "function") {
+    const rec = recommendOfficialStandards(kind, {
+      ...integrationRecommendContext(),
+      grade,
+      aiOn: kind === "ai" || Boolean(appState.teachingContext?.integrations?.ai)
+    });
+    if (rec.length) return rec.slice(0, limit);
+  }
+  const pool = Array.isArray(entries) && entries.length
+    ? entries
+    : (typeof entriesForGrade === "function" ? entriesForGrade(kind, grade) : []);
+  return pool.slice(0, limit).map(entry => standardToRecord(kind, entry, grade, true));
+}
+
+function applySuggestedStandardRecords(kind, catalog, records) {
+  appState.teachingContext.standards = appState.teachingContext.standards
+    .filter(item => item.framework !== catalog.framework)
+    .concat(records);
+  saveStateToLocalStorage();
+  renderStandardsCatalog();
 }
 
 async function requestStructuredIntegrationCandidates(kind, { silent = false } = {}) {
   const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS?.[kind] : null;
   const integrationKey = kind === "digital" ? "digital" : "ai";
   if (!catalog || !appState.teachingContext.integrations[integrationKey] || !hasOcrReadyLessonContent()) return false;
-  if (typeof geminiAPI === "undefined" || typeof geminiAPI.generateContent !== "function") return false;
   const grade = Number(appState.selectedGrade);
   const candidates = typeof entriesForGrade === "function"
     ? entriesForGrade(kind, grade)
@@ -559,28 +597,34 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
   const current = standardsOfKind(kind);
   // Giáo viên đã sửa/chọn tay: không có quyền ghi đè.
   if (current.length && !current.every(item => item.autoSuggested)) return false;
+  const maxSelect = catalog.maxSelect || 3;
   const candidateText = candidates.map(entry => `${entry.id} | ${entry.code || entry.label} | ${entry.label}`).join("\n");
-  const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chỉ chọn tối đa ${catalog.maxSelect || 3} mục phù hợp từ DANH MỤC CHO PHÉP.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id catalog (cột 1) hoặc mã chính thức (cột 2)","lessonAnchor":"đoạn OCR nguyên văn, liên tiếp về khái niệm, ví dụ hoặc bài tập của bài","fitRationale":"lý do ngắn giải thích vì sao mục phù hợp với neo SGK","proposedTask":"nhiệm vụ GV/HS ngắn gắn neo SGK, nêu sản phẩm"}]}.\n\nQuy tắc bắt buộc:\n- lessonAnchor là neo SGK, không phải minh chứng rằng OCR có chữ AI/NLS. Có thể là khái niệm, ví dụ hoặc bài tập; phải trích nguyên văn, liên tiếp từ OCR.\n- id là cột 1 (id catalog) hoặc cột 2 (mã chính thức) trong danh mục; proposedTask phải bám lessonAnchor, có hành động GV/HS và sản phẩm.\n- Nếu không có mục phù hợp, trả {"candidates":[]}.\n- Không bịa mã, không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${appState.content.vision}`;
-  try {
-    const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, grade), 0.1);
-    const selected = parseStructuredCandidates(raw, candidates, appState.content.vision, catalog.maxSelect || 3);
-    if (selected === null) throw new Error("Phản hồi đề xuất không đúng JSON");
-    const records = selected.map(({ entry, lessonAnchor, fitRationale, proposedTask }) => ({
-      ...standardToRecord(kind, entry, grade, true), lessonAnchor, fitRationale, proposedTask
-    }));
-    appState.teachingContext.standards = appState.teachingContext.standards
-      .filter(item => item.framework !== catalog.framework)
-      .concat(records);
-    saveStateToLocalStorage();
-    renderStandardsCatalog();
-    if (!silent) showToast(records.length ? `Đã đề xuất ${records.length} mục ${kind === "ai" ? "năng lực AI" : "năng lực số"} có minh chứng từ SGK.` : "Không tìm thấy mục tích hợp có minh chứng trực tiếp trong SGK.", "info", 5000);
-    return true;
-  } catch (error) {
-    console.warn(`Không thể đề xuất ${kind} theo minh chứng OCR:`, error);
-    // Lỗi Gemini/JSON không được thay bằng heuristic và không tạo tick mới.
-    if (!silent) showToast("Chưa thể đề xuất tự động; bạn có thể chọn thủ công từ khung chuẩn.", "warning", 5000);
+  const vision = String(appState.content.vision || "");
+  const visionForPrompt = vision.length > 14000 ? `${vision.slice(0, 10000)}\n...\n${vision.slice(-3000)}` : vision;
+  const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chọn từ 1 đến ${maxSelect} mục từ DANH MỤC CHO PHÉP để tích hợp vào bài này.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id catalog (cột 1) hoặc mã chính thức (cột 2)","lessonAnchor":"đoạn OCR về khái niệm, ví dụ hoặc bài tập","fitRationale":"lý do ngắn","proposedTask":"nhiệm vụ GV/HS ngắn gắn bài, nêu sản phẩm"}]}.\n\nQuy tắc bắt buộc:\n- Bài Toán/môn học không cần có chữ AI hay năng lực số. Hãy chọn mục có thể lồng vào bài tập/khái niệm đang có.\n- id là cột 1 (id catalog) hoặc cột 2 (mã chính thức). Không bịa mã ngoài danh mục.\n- lessonAnchor nên trích từ OCR; nếu không trích đúng nguyên văn vẫn phải trả id phù hợp.\n- Không trả mảng rỗng khi danh mục còn mục có thể tích hợp.\n- Không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${visionForPrompt}`;
+  const label = kind === "ai" ? "năng lực AI" : "năng lực số";
+  let records = [];
+  if (typeof geminiAPI !== "undefined" && typeof geminiAPI.generateContent === "function") {
+    try {
+      const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, grade), 0.1);
+      const selected = parseStructuredCandidates(raw, candidates, appState.content.vision, maxSelect);
+      if (selected && selected.length) {
+        records = selected.map(({ entry, lessonAnchor, fitRationale, proposedTask }) => ({
+          ...standardToRecord(kind, entry, grade, true), lessonAnchor, fitRationale, proposedTask
+        }));
+      }
+    } catch (error) {
+      console.warn(`Không thể đề xuất ${kind} theo minh chứng OCR:`, error);
+    }
+  }
+  if (!records.length) records = catalogFallbackRecords(kind, grade, candidates, maxSelect);
+  if (!records.length) {
+    if (!silent) showToast(`Chưa chọn được ${label} cho lớp ${grade}. Bạn có thể chọn thủ công từ khung chuẩn.`, "warning", 5000);
     return false;
   }
+  applySuggestedStandardRecords(kind, catalog, records);
+  if (!silent) showToast(`Đã đề xuất ${records.length} mục ${label} theo bài/khung lớp.`, "info", 5000);
+  return true;
 }
 
 async function requestStructuredIntegrationCandidatesForEnabled({ silent = false } = {}) {
@@ -2417,7 +2461,7 @@ function buildAllPhasePedagogyContext() {
 }
 
 function generationPauseMs() {
-  return 1500;
+  return 3000;
 }
 
 function isGeminiOverloadError(error) {
