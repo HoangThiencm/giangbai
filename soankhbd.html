@@ -193,6 +193,10 @@
             <label for="inputDuration">Thời lượng dạy học:</label>
             <input type="text" id="inputDuration" value="02 tiết (90 phút)">
           </div>
+          <div class="tool-group">
+            <label for="inputLessonScope">Phạm vi tiết dạy theo PPCT (Tùy chọn):</label>
+            <input type="text" id="inputLessonScope" placeholder="Ví dụ: Tiết 1-2 / Tiết 15 (Mục 1 + 2)...">
+          </div>
           <div class="tool-group"><label for="inputClassSize">Sĩ số lớp:</label><input id="inputClassSize" type="number" min="1" max="60" value="40"></div>
           <div class="tool-group"><label for="selectReadiness">Mức sẵn sàng:</label><select id="selectReadiness"><option value="Không đồng đều">Không đồng đều</option><option value="Cơ bản">Cơ bản</option><option value="Đạt yêu cầu">Đạt yêu cầu</option><option value="Nâng cao">Nâng cao</option></select></div>
           <div class="tool-group"><label for="selectGrouping">Tổ chức nhóm:</label><select id="selectGrouping"><option value="Cá nhân/cặp đôi">Cá nhân/cặp đôi</option><option value="Nhóm 4 có phân vai">Nhóm 4 có phân vai</option><option value="Nhóm 6 có phân vai">Nhóm 6 có phân vai</option></select></div>
@@ -252,13 +256,81 @@
         <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
           <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn KHBD:</h4>
           <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
-            <li><b>Bước 0:</b> Dán PDF/ảnh SGK là đủ để 1-click. Nút <b>Đọc nội dung SGK</b> dùng Mistral OCR (nhanh); Gemini chỉ còn dự phòng nếu thiếu key Mistral.</li>
+            <li><b>Bước 0:</b> Dán PDF/ảnh SGK & PPCT (nếu có) là đủ để 1-click. Nút <b>Đọc nội dung SGK</b> và <b>Đọc & Phân tích PPCT</b> dùng Mistral OCR (nhanh).</li>
             <li><b>Bước 1:</b> Chọn khối, môn, bài; bật NLS/AI nếu cần. Sau OCR, hệ thống đề xuất tối đa 3 mục có minh chứng theo bài.</li>
             <li><b>Bước 2:</b> Bấm <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b> hoặc tạo từng phần ở Tab 2–4.</li>
             <li><b>Bước 3:</b> Tab 5 kiểm tra và <b>Xuất Toàn bộ Giáo án (.DOCX)</b>.</li>
           </ol>
         </div>
       </div>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 0: PHÂN PHỐI CHƯƠNG TRÌNH (PPCT / PHỤ LỤC 3 CV 5512)
+         ----------------------------------------------------------------------- -->
+    <div id="lessonPpctAnalysis" style="margin-top: 1.5rem;">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="calendar-range"></i> Phân phối chương trình (PPCT / Phụ lục 3 CV 5512)</h2>
+          <div class="card-actions">
+            <button id="btnAnalyzePpct" class="btn btn-primary" type="button">
+              <i data-lucide="sparkles"></i> Đọc &amp; Phân tích PPCT (Mistral OCR)
+            </button>
+            <button id="btnClearPpctFiles" class="btn btn-outline-dark" type="button">
+              <i data-lucide="trash"></i> Xóa file PPCT
+            </button>
+          </div>
+        </div>
+
+        <!-- Dropzone & Upload Area for PPCT -->
+        <div id="dropzoneContainerPpct" class="dropzone-container dropzone-ppct">
+          <div class="dropzone-icon">📑</div>
+          <div class="dropzone-text">
+            <h4>Dán ảnh hoặc Chọn file PDF / Ảnh Phân phối chương trình (PPCT)</h4>
+            <p>Đính kèm tài liệu phân phối chương trình của tổ chuyên môn/nhà trường để AI khóa đúng số tiết, phạm vi kiến thức và tiến trình từng tiết theo Phụ lục 3 Công văn 5512.</p>
+          </div>
+          <input type="file" id="fileInputPpct" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
+        </div>
+
+        <!-- PPCT Gallery Grid -->
+        <div id="ppctGallery" class="image-gallery ppct-gallery"></div>
+      </div>
+
+      <!-- Result Panel (Accordion / Details thu gọn) -->
+      <details class="card vision-details-card ppct-details-card" id="detailsPpctContent">
+        <summary class="vision-details-summary">
+          <div class="vision-summary-left">
+            <span class="vision-summary-icon">📋</span>
+            <div class="vision-summary-text">
+              <span class="vision-summary-title">Xem chi tiết phân tích Phân phối chương trình (PPCT)</span>
+              <span class="vision-summary-subtitle">Bấm để mở rộng / kiểm tra bảng phân phối tiết và định hướng phân bổ từng tiết dạy</span>
+            </div>
+          </div>
+          <span class="vision-summary-chevron"><i data-lucide="chevron-down"></i></span>
+        </summary>
+
+        <div class="vision-details-body">
+          <div class="card-header vision-inner-header">
+            <span class="text-muted" style="font-size: 0.85rem;">Nội dung PPCT bóc tách dưới dạng Markdown chuẩn Phụ lục 3 Công văn 5512</span>
+            <div class="card-actions">
+              <button class="btn btn-outline-dark btn-sm toggle-preview-btn" data-target="editorPpct" type="button">
+                <i data-lucide="eye"></i> Toggle Preview KaTeX
+              </button>
+            </div>
+          </div>
+
+          <div class="editor-preview-container">
+            <div class="panel-box">
+              <div class="panel-header"><span>Nội dung Markdown PPCT (Có thể chỉnh sửa)</span></div>
+              <textarea id="editorPpct" class="markdown-editor" placeholder="Nội dung phân tích PPCT sẽ hiển thị ở đây sau khi xử lý..."></textarea>
+            </div>
+            <div class="panel-box">
+              <div class="panel-header"><span>Xem trước Bảng PPCT &amp; KaTeX</span></div>
+              <div id="previewPpct" class="preview-rendered"></div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
 
     <!-- -----------------------------------------------------------------------
          TAB 0: PHÂN TÍCH ẢNH SGK (VISION) — LÀM TRƯỚC

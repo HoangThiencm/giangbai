@@ -14,7 +14,7 @@
       window.__KHBD_CANVAS__ = {
         host: "https://hoangthiencm.id.vn",
         model: "gemini-3-flash-preview",
-        version: "20260828-docx10",
+        version: "20260828-ppct-scope",
         connected: false
       };
       try {
@@ -51,7 +51,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260828-docx10">
+  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260828-ppct-scope">
   <style>
     #canvasHostBanner {
       position: sticky; top: 0; z-index: 2000; padding: .55rem 1rem;
@@ -60,6 +60,20 @@
     }
     #canvasHostBanner.ok { background: #dcfce7; color: #166534; border-color: #86efac; }
     #canvasHostBanner.err { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+    .ppct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 900px) { .ppct-grid { grid-template-columns: 1fr; } }
+    .ppct-dropzone { min-height: 132px; border: 2px dashed #cbd5e1; border-radius: 10px; padding: .85rem; background: #f8fafc; cursor: pointer; }
+    .ppct-dropzone.dragover { border-color: #0284c7; background: #e0f2fe; }
+    .ppct-dropzone h4 { margin: .35rem 0 .2rem; font-size: .95rem; }
+    .ppct-dropzone p { margin: 0; font-size: .8rem; color: #64748b; }
+    .ppct-scope { margin-top: .85rem; padding: .85rem; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
+    .ppct-scope label { display: flex; gap: .5rem; align-items: flex-start; margin: .35rem 0; font-size: .88rem; cursor: pointer; }
+    .ppct-cluster { width: 100%; margin: .4rem 0 0 1.5rem; }
+    .ppct-meta { font-size: .8rem; color: #475569; margin: .25rem 0 0 1.5rem; }
+    .ppct-files { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+    .ppct-chip { font-size: .75rem; background: #e0f2fe; color: #075985; border-radius: 999px; padding: .15rem .55rem; }
+    .ppct-gallery { margin-top: .5rem; }
+    .ppct-gallery:empty { display: none; }
   </style>
 </head>
 <body>
@@ -206,6 +220,10 @@
             <label for="inputDuration">Thời lượng dạy học:</label>
             <input type="text" id="inputDuration" value="02 tiết (90 phút)">
           </div>
+          <div class="tool-group">
+            <label for="inputLessonScope">Phạm vi tiết dạy theo PPCT:</label>
+            <input type="text" id="inputLessonScope" placeholder="Ví dụ: Toàn bộ chủ đề 16 tiết / Tiết 3-5 Đọc hiểu VB1">
+          </div>
           <div class="tool-group"><label for="inputClassSize">Sĩ số lớp:</label><input id="inputClassSize" type="number" min="1" max="60" value="40"></div>
           <div class="tool-group"><label for="selectReadiness">Mức sẵn sàng:</label><select id="selectReadiness"><option value="Không đồng đều">Không đồng đều</option><option value="Cơ bản">Cơ bản</option><option value="Đạt yêu cầu">Đạt yêu cầu</option><option value="Nâng cao">Nâng cao</option></select></div>
           <div class="tool-group"><label for="selectGrouping">Tổ chức nhóm:</label><select id="selectGrouping"><option value="Cá nhân/cặp đôi">Cá nhân/cặp đôi</option><option value="Nhóm 4 có phân vai">Nhóm 4 có phân vai</option><option value="Nhóm 6 có phân vai">Nhóm 6 có phân vai</option></select></div>
@@ -265,7 +283,7 @@
         <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
           <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn KHBD:</h4>
           <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
-            <li><b>Bước 0:</b> Dán PDF/ảnh SGK là đủ để 1-click. Nút <b>Đọc nội dung SGK</b> dùng <b>gemini-3-flash-preview</b> của Gemini Canvas (không cần API key).</li>
+            <li><b>Bước 0:</b> Dán PDF/ảnh SGK (bắt buộc). Có thể đính kèm <b>PPCT / Phụ lục 3</b> để chọn soạn cả chủ đề hay đúng cụm tiết (ví dụ Tiết 3–5 trong bài 16 tiết).</li>
             <li><b>Bước 1:</b> Chọn khối, môn, bài; bật NLS/AI nếu cần. Sau OCR, hệ thống đề xuất tối đa 3 mục có minh chứng theo bài.</li>
             <li><b>Bước 2:</b> Bấm <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b> hoặc tạo từng phần ở Tab 2–4.</li>
             <li><b>Bước 3:</b> Tab 5 kiểm tra và <b>Xuất Toàn bộ Giáo án (.DOCX)</b>.</li>
@@ -279,30 +297,83 @@
     <div id="lessonTextbookAnalysis">
       <div class="card">
         <div class="card-header">
-          <h2 class="card-title"><i data-lucide="camera"></i> Bước 0 — Dán & phân tích ảnh/trang SGK</h2>
+          <h2 class="card-title"><i data-lucide="camera"></i> Bước 0 — Học liệu nguồn (SGK + PPCT)</h2>
           <div class="card-actions">
             <button id="btnAnalyzeVision" class="btn btn-primary">
               <i data-lucide="sparkles"></i> Đọc nội dung SGK (Gemini Canvas)
             </button>
+            <button id="btnAnalyzePpct" class="btn btn-outline" type="button">
+              <i data-lucide="list-checks"></i> Đọc PPCT / Phụ lục 3
+            </button>
+            <button id="btnClearPpctFiles" class="btn btn-outline-dark" type="button">
+              <i data-lucide="trash"></i> Xóa file PPCT
+            </button>
             <button id="btnClearVisionImages" class="btn btn-outline-dark">
-              <i data-lucide="trash"></i> Xóa tất cả ảnh
+              <i data-lucide="trash"></i> Xóa ảnh SGK
             </button>
           </div>
         </div>
 
-        <!-- Dropzone & Paste Area -->
-        <div id="dropzoneContainer" class="dropzone-container">
-          <div class="dropzone-icon">📋</div>
-          <div class="dropzone-text">
-            <h4>Dán ảnh SGK từ Clipboard (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
-            <p>Gemini Canvas nhận diện chữ/công thức trên PDF/ảnh đã chọn (không cần Mistral key). Gallery JPEG chỉ xem trước. Có thể soạn giáo án từ văn bản đã nhận diện hoặc 1-click.</p>
+        <div class="ppct-grid">
+          <div>
+            <h3 style="margin:0 0 .5rem;font-size:.95rem;">1. Sách giáo khoa (bắt buộc)</h3>
+            <div id="dropzoneContainer" class="dropzone-container">
+              <div class="dropzone-icon">📋</div>
+              <div class="dropzone-text">
+                <h4>Dán ảnh SGK (Ctrl + V) hoặc chọn PDF/ảnh</h4>
+                <p>Gemini Canvas nhận diện chữ/công thức trên PDF/ảnh đã chọn. Đây là nguồn bắt buộc để soạn KHBD.</p>
+              </div>
+              <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
+            </div>
+            <div id="imageGallery" class="image-gallery"></div>
           </div>
-          <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
+          <div>
+            <h3 style="margin:0 0 .5rem;font-size:.95rem;">2. PPCT / Phụ lục 3 (đính kèm, khuyến nghị)</h3>
+            <div id="dropzoneContainerPpct" class="ppct-dropzone dropzone-ppct">
+              <div class="dropzone-icon">📋</div>
+              <h4>Chọn PDF/ảnh Phân phối chương trình của trường</h4>
+              <p>Dùng khi một bài/chủ đề SGK kéo dài nhiều tiết (ví dụ Ngữ văn 16 tiết). AI đọc PPCT rồi cho chọn soạn cả bài hay đúng cụm tiết.</p>
+              <input type="file" id="fileInputPpct" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
+            </div>
+            <div id="ppctGallery" class="image-gallery ppct-gallery"></div>
+            <div id="ppctFileList" class="ppct-files"></div>
+          </div>
         </div>
 
-        <!-- Image Gallery Grid -->
-        <div id="imageGallery" class="image-gallery"></div>
+        <div id="ppctScopePanel" class="ppct-scope" hidden>
+          <strong>Phạm vi soạn theo PPCT</strong>
+          <p class="ppct-meta" id="ppctTopicMeta"></p>
+          <label><input type="radio" name="ppctScope" id="ppctScopeAll" value="all" checked> <span id="ppctScopeAllLabel">Soạn toàn bộ chủ đề</span></label>
+          <label><input type="radio" name="ppctScope" id="ppctScopeCluster" value="cluster"> Soạn theo tiết / cụm tiết cụ thể</label>
+          <select id="ppctClusterSelect" class="ppct-cluster" disabled></select>
+          <p class="ppct-meta" id="ppctClusterMeta"></p>
+        </div>
       </div>
+
+      <details class="card vision-details-card ppct-details-card" id="detailsPpctContent">
+        <summary class="vision-details-summary">
+          <div class="vision-summary-left">
+            <span class="vision-summary-icon">📋</span>
+            <div class="vision-summary-text">
+              <span class="vision-summary-title">Xem chi tiết phân tích PPCT / Phụ lục 3</span>
+              <span class="vision-summary-subtitle">Bấm để kiểm tra bảng phân tiết; có thể sửa trước khi soạn giáo án</span>
+            </div>
+          </div>
+          <span class="vision-summary-chevron"><i data-lucide="chevron-down"></i></span>
+        </summary>
+        <div class="vision-details-body">
+          <div class="editor-preview-container">
+            <div class="panel-box">
+              <div class="panel-header"><span>Nội dung Markdown PPCT (có thể chỉnh sửa)</span></div>
+              <textarea id="editorPpct" class="markdown-editor" placeholder="Nội dung phân tích PPCT sẽ hiện sau khi bấm Đọc PPCT / Phụ lục 3..."></textarea>
+            </div>
+            <div class="panel-box">
+              <div class="panel-header"><span>Xem trước PPCT</span></div>
+              <div id="previewPpct" class="preview-rendered"></div>
+            </div>
+          </div>
+        </div>
+      </details>
 
       <!-- Result Panel (Accordion / Details thu gọn nâng cao) -->
       <details class="card vision-details-card" id="detailsVisionContent">
@@ -613,15 +684,15 @@
   <!-- =========================================================================
        SCRIPTS — thuần từ host; Canvas tự cấp Gemini, không nạp Mistral client
        ========================================================================= -->
-  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260828-docx10"></script>
-  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260828-docx10"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260828-docx10"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260828-docx10"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260828-docx10"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260828-docx10"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260828-docx10"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260828-docx10"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260828-docx10"></script>
+  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260828-ppct-scope"></script>
+  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260828-ppct-scope"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260828-ppct-scope"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260828-ppct-scope"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260828-ppct-scope"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260828-ppct-scope"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260828-ppct-scope"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260828-ppct-scope"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260828-ppct-scope"></script>
   <script>
     /* Patch Gemini + OCR TRƯỚC khbd-app.js để DOMContentLoaded dùng runtime Canvas. */
     (function patchKhbdCanvasRuntime() {
@@ -695,11 +766,12 @@
         }
       };
 
+      window.__canvasOcr = canvasOcr;
       window.__KHBD_CANVAS_PATCHED__ = true;
       cfg.connected = true;
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-docx10"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-ppct-scope"></script>
   <script>
     (function notifyHostConnection() {
       const cfg = window.__KHBD_CANVAS__ || {};
@@ -753,6 +825,273 @@
       } else {
         setTimeout(ready, 250);
       }
+    })();
+  </script>
+  <script>
+    (function setupCanvasPpct() {
+      const state = {
+        files: [],
+        text: "",
+        topic: "",
+        totalPeriods: 0,
+        clusters: [],
+        scope: "all",
+        clusterId: ""
+      };
+      window.__KHBD_PPCT__ = state;
+
+      function toast(msg, type, ms) {
+        if (typeof showToast === "function") showToast(msg, type || "info", ms || 4500);
+      }
+      function fileToDataUrl(file) {
+        return new Promise(function (resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function () { resolve(reader.result); };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+      function parseJsonLoose(raw) {
+        let text = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
+        try { return JSON.parse(text); } catch (e) {}
+        const start = text.search(/[\[{]/);
+        const end = Math.max(text.lastIndexOf("}"), text.lastIndexOf("]"));
+        if (start >= 0 && end > start) {
+          try { return JSON.parse(text.slice(start, end + 1)); } catch (e2) {}
+        }
+        return null;
+      }
+      function selectedCluster() {
+        if (state.scope !== "cluster") return null;
+        return state.clusters.find(function (c) { return c.id === state.clusterId; }) || null;
+      }
+      function applyDuration(periods) {
+        const n = Math.max(1, Number(periods) || 1);
+        const minutes = n * 45;
+        const text = (n < 10 ? "0" + n : String(n)) + " tiết (" + minutes + " phút)";
+        if (typeof appState !== "undefined") appState.duration = text;
+        const el = document.getElementById("inputDuration");
+        if (el) el.value = text;
+      }
+      function renderFiles() {
+        const box = document.getElementById("ppctFileList");
+        if (!box) return;
+        box.innerHTML = state.files.map(function (f) {
+          return '<span class="ppct-chip">' + (f.name || "PPCT") + "</span>";
+        }).join("");
+      }
+      function renderScope() {
+        const panel = document.getElementById("ppctScopePanel");
+        const meta = document.getElementById("ppctTopicMeta");
+        const allLabel = document.getElementById("ppctScopeAllLabel");
+        const select = document.getElementById("ppctClusterSelect");
+        const clusterMeta = document.getElementById("ppctClusterMeta");
+        const clusterRadio = document.getElementById("ppctScopeCluster");
+        if (!panel) return;
+        if (!state.clusters.length) {
+          panel.hidden = true;
+          return;
+        }
+        panel.hidden = false;
+        const topic = state.topic || "Chủ đề trong PPCT";
+        const total = state.totalPeriods || state.clusters.reduce(function (s, c) { return s + (Number(c.periods) || 0); }, 0);
+        if (meta) meta.textContent = topic + (total ? (" — tổng " + total + " tiết") : "");
+        if (allLabel) allLabel.textContent = "Soạn toàn bộ chủ đề" + (total ? (" (" + total + " tiết)") : "");
+        if (select) {
+          select.innerHTML = state.clusters.map(function (c) {
+            const lessons = c.lessons ? ("Tiết " + c.lessons) : "";
+            const per = c.periods ? (" — " + c.periods + " tiết") : "";
+            return '<option value="' + c.id + '">' + [lessons, c.title || "", per].filter(Boolean).join(" · ") + "</option>";
+          }).join("");
+          if (state.clusterId) select.value = state.clusterId;
+          else if (state.clusters[0]) state.clusterId = state.clusters[0].id;
+          select.disabled = state.scope !== "cluster";
+        }
+        if (clusterRadio) clusterRadio.checked = state.scope === "cluster";
+        const allRadio = document.getElementById("ppctScopeAll");
+        if (allRadio) allRadio.checked = state.scope !== "cluster";
+        const cluster = selectedCluster();
+        if (clusterMeta) {
+          clusterMeta.textContent = cluster
+            ? ("AI sẽ khóa đúng cụm này: " + (cluster.title || "") + (cluster.objective ? (". Mục tiêu PPCT: " + cluster.objective) : ""))
+            : "Chọn một cụm tiết để khóa phạm vi SGK và thời lượng.";
+        }
+        if (state.scope === "cluster" && cluster) applyDuration(cluster.periods);
+        else if (total) applyDuration(total);
+      }
+      function ppctLockText() {
+        if (!state.text) return "";
+        const cluster = selectedCluster();
+        const lines = [
+          "\nPHẠM VI SOẠN THEO PPCT / PHỤ LỤC 3 (ưu tiên hơn mục lục SGK khi mâu thuẫn):",
+          "- Chủ đề PPCT: " + (state.topic || "chưa rõ") + (state.totalPeriods ? (" (" + state.totalPeriods + " tiết)") : "") + "."
+        ];
+        if (cluster) {
+          lines.push("- Giáo viên CHỌN SOẠN ĐÚNG CỤM TIẾT: Tiết " + (cluster.lessons || "?") + " — " + (cluster.title || "") + " (" + (cluster.periods || "?") + " tiết = " + ((Number(cluster.periods) || 1) * 45) + " phút).");
+          if (cluster.objective) lines.push("- Mục tiêu cụm tiết theo PPCT: " + cluster.objective);
+          if (cluster.focus) lines.push("- Nội dung SGK tương ứng: " + cluster.focus);
+          lines.push("- CHỈ soạn giáo án cho cụm tiết này. CẤM gom các tiết khác của chủ đề vào cùng một KHBD.");
+          lines.push("- Chỉ trích phần SGK thuộc cụm tiết đã chọn; bỏ phần thuộc tiết khác.");
+          lines.push("- Phân bổ A–E theo đúng số phút của cụm tiết, không lấy thời lượng cả bài " + (state.totalPeriods || "") + " tiết.");
+        } else {
+          lines.push("- Giáo viên chọn soạn TOÀN BỘ chủ đề " + (state.totalPeriods || "") + " tiết. Phân bổ thời lượng theo tổng số tiết PPCT.");
+          lines.push("- Vẫn bám cấu trúc cụm tiết trong PPCT (không gộp lung tung các mạch Đọc/Viết/Nói nghe/Tiếng Việt).");
+        }
+        lines.push("- Nguyên văn PPCT đã đọc:\n\"\"\"\n" + String(state.text).slice(0, 6000) + "\n\"\"\"");
+        return "\n" + lines.join("\n");
+      }
+      async function addFiles(fileList) {
+        const files = Array.from(fileList || []).filter(function (f) {
+          return f && (/pdf/i.test(f.type || f.name) || /^image\//.test(f.type));
+        });
+        for (const file of files) {
+          const dataUrl = await fileToDataUrl(file);
+          state.files.push({ name: file.name, mimeType: file.type || "application/pdf", dataUrl: dataUrl });
+        }
+        renderFiles();
+        if (files.length) toast("Đã đính kèm " + files.length + " file PPCT. Bấm Đọc PPCT / Phụ lục 3.", "success");
+      }
+      async function analyzePpct() {
+        if (!state.files.length) {
+          toast("Hãy chọn PDF/ảnh PPCT (Phụ lục 3) trước.", "warning");
+          return;
+        }
+        if (typeof geminiAPI === "undefined" || typeof geminiAPI.generateContent !== "function") {
+          toast("Gemini Canvas chưa sẵn sàng để đọc PPCT.", "warning");
+          return;
+        }
+        const btn = document.getElementById("btnAnalyzePpct");
+        if (btn) btn.disabled = true;
+        if (typeof updateProgress === "function") updateProgress(20, "Đang đọc PPCT / Phụ lục 3...");
+        try {
+          const chunks = [];
+          for (let i = 0; i < state.files.length; i++) {
+            const file = state.files[i];
+            if (typeof updateProgress === "function") updateProgress(20 + Math.round((i / state.files.length) * 40), "Đang nhận diện PPCT: " + (file.name || ""));
+            const ocr = typeof window.__canvasOcr === "function"
+              ? await window.__canvasOcr(file.dataUrl, file.mimeType)
+              : await geminiAPI.generateContent("Trích nguyên văn bảng phân phối chương trình.", [{ mimeType: file.mimeType, dataUrl: file.dataUrl }], null, 0.1, null, { maxOutputTokens: 8192 });
+            if (ocr) chunks.push(ocr);
+          }
+          state.text = chunks.join("\n\n");
+          if (typeof updateProgress === "function") updateProgress(75, "Đang tách cụm tiết từ PPCT...");
+          const extractPrompt = "Bạn đọc PHÂN PHỐI CHƯƠNG TRÌNH (Phụ lục 3) dưới đây và tách các cụm tiết của MỘT bài/chủ đề.\nTrả về DUY NHẤT JSON:\n{\"topic\":\"tên bài/chủ đề\",\"grade\":\"\",\"subject\":\"\",\"totalPeriods\":16,\"clusters\":[{\"id\":\"c1\",\"lessons\":\"1-2\",\"periods\":2,\"title\":\"tên cụm tiết\",\"focus\":\"phần SGK tương ứng\",\"objective\":\"mục tiêu cụm tiết\"}]}\nQuy tắc: gộp các tiết liên tiếp cùng nội dung thành một cụm (ví dụ tiết 3-5 đọc hiểu VB1). periods là số tiết. totalPeriods = tổng tiết của bài. Không markdown.\n\nPPCT:\n" + state.text.slice(0, 12000);
+          const raw = await geminiAPI.generateContent(extractPrompt, [], null, 0.1, null, { maxOutputTokens: 2048 });
+          const data = parseJsonLoose(raw) || {};
+          state.topic = String(data.topic || "").trim();
+          state.totalPeriods = Number(data.totalPeriods) || 0;
+          state.clusters = Array.isArray(data.clusters) ? data.clusters.map(function (c, idx) {
+            return {
+              id: String(c.id || ("c" + (idx + 1))),
+              lessons: String(c.lessons || "").trim(),
+              periods: Number(c.periods) || 1,
+              title: String(c.title || "").trim(),
+              focus: String(c.focus || "").trim(),
+              objective: String(c.objective || "").trim()
+            };
+          }).filter(function (c) { return c.title || c.lessons; }) : [];
+          if (!state.clusters.length) {
+            toast("Đã đọc PPCT nhưng chưa tách được cụm tiết. Bạn vẫn có thể soạn theo SGK.", "warning", 6000);
+          } else {
+            state.scope = "all";
+            state.clusterId = state.clusters[0].id;
+            renderScope();
+            toast("Đã phân tích PPCT: " + (state.topic || "chủ đề") + " — " + (state.totalPeriods || state.clusters.length) + " tiết. Hãy chọn phạm vi soạn.", "success", 6500);
+          }
+        } catch (err) {
+          console.warn("PPCT:", err);
+          toast("Không đọc được PPCT: " + (err && err.message ? err.message : err), "danger", 7000);
+        } finally {
+          if (btn) btn.disabled = false;
+          if (typeof hideProgress === "function") hideProgress();
+        }
+      }
+      function bindUi() {
+        const drop = document.getElementById("dropzonePpct");
+        const input = document.getElementById("fileInputPpct");
+        const btn = document.getElementById("btnAnalyzePpct");
+        if (drop && input) {
+          drop.addEventListener("click", function (e) {
+            if (e.target === input) return;
+            input.click();
+          });
+          drop.addEventListener("dragover", function (e) { e.preventDefault(); drop.classList.add("dragover"); });
+          drop.addEventListener("dragleave", function () { drop.classList.remove("dragover"); });
+          drop.addEventListener("drop", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            drop.classList.remove("dragover");
+            addFiles(e.dataTransfer && e.dataTransfer.files);
+          });
+          input.addEventListener("change", function () {
+            addFiles(input.files);
+            input.value = "";
+          });
+        }
+        if (btn) btn.addEventListener("click", function (e) {
+          e.preventDefault();
+          analyzePpct();
+        });
+        const allRadio = document.getElementById("ppctScopeAll");
+        const clusterRadio = document.getElementById("ppctScopeCluster");
+        const select = document.getElementById("ppctClusterSelect");
+        if (allRadio) allRadio.addEventListener("change", function () {
+          if (allRadio.checked) { state.scope = "all"; renderScope(); }
+        });
+        if (clusterRadio) clusterRadio.addEventListener("change", function () {
+          if (clusterRadio.checked) { state.scope = "cluster"; renderScope(); }
+        });
+        if (select) select.addEventListener("change", function () {
+          state.clusterId = select.value;
+          state.scope = "cluster";
+          renderScope();
+        });
+      }
+      function patchHost() {
+        if (typeof getGenerationPromptContext === "function") {
+          const orig = getGenerationPromptContext;
+          getGenerationPromptContext = function (params) {
+            const ctx = orig(params);
+            const lock = ppctLockText();
+            if (lock) ctx.pedagogical_context = String(ctx.pedagogical_context || "") + lock;
+            const cluster = selectedCluster();
+            if (cluster && cluster.periods) {
+              ctx.duration = cluster.periods + " tiết (" + (cluster.periods * 45) + " phút)";
+            } else if (state.totalPeriods) {
+              ctx.duration = state.totalPeriods + " tiết (" + (state.totalPeriods * 45) + " phút)";
+            }
+            return ctx;
+          };
+        }
+        if (typeof buildPedagogicalContext === "function") {
+          const origPed = buildPedagogicalContext;
+          buildPedagogicalContext = function () {
+            return origPed() + ppctLockText();
+          };
+        }
+        if (typeof handleClearAllContent === "function") {
+          const origClear = handleClearAllContent;
+          handleClearAllContent = function () {
+            origClear.apply(this, arguments);
+            state.files = [];
+            state.text = "";
+            state.topic = "";
+            state.totalPeriods = 0;
+            state.clusters = [];
+            state.scope = "all";
+            state.clusterId = "";
+            renderFiles();
+            renderScope();
+          };
+        }
+      }
+      function boot() {
+        bindUi();
+        patchHost();
+        if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+      }
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(boot, 400); });
+      else setTimeout(boot, 400);
     })();
   </script>
 </body>

@@ -245,11 +245,34 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 
   SOURCE_LOCK: `KHÓA NGUỒN BẮT BUỘC:
 - Nguồn chính = văn bản SGK đã nhận diện (Mistral OCR / tóm tắt Bước 0) và/hoặc file PDF/ảnh đính kèm đúng request này.
+- Kèm theo (nếu có): Tài liệu Phân phối chương trình (PPCT / Phụ lục 3 CV 5512) và phạm vi tiết dạy được phân công.
 - CHỈ dùng các trang PDF/ảnh đã chọn (hoặc đúng văn bản OCR của các trang đó). CẤM dùng trang ngoài danh sách.
-- Chỉ dùng thêm: tên bài/môn/lớp giáo viên chọn, YCCĐ chính thức (TT 32/2018/TT-BGDĐT — CT GDPT 2018) và bối cảnh lớp học.
+- Chỉ dùng thêm: tên bài/môn/lớp giáo viên chọn, YCCĐ chính thức (TT 32/2018/TT-BGDĐT — CT GDPT 2018), phạm vi tiết dạy theo PPCT và bối cảnh lớp học.
 - CẤM bịa định nghĩa, định lý, công thức, số liệu, đề bài, đáp án, số trang hoặc nhiệm vụ không có trong nguồn.
 - Luyện tập/vận dụng: CHỈ dùng bài, câu, hoạt động có trong PDF/ảnh/OCR đính kèm hoặc dữ liệu SGK. Phải đọc nguồn trước khi giải. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" khi đã đọc kỹ nguồn mà vẫn không có bài/câu vận dụng. CẤM invent trắc nghiệm 4 lựa chọn không có trong sách, không bịa "SBT trang...".
-- Mục tiêu kiến thức phải là Yêu cầu cần đạt của CT GDPT 2018 (hoặc YCCĐ in trên đầu bài SGK). Không tự chế thang Bloom ngoài nguồn.`,
+- Mục tiêu kiến thức phải là Yêu cầu cần đạt của CT GDPT 2018 (hoặc YCCĐ in trên đầu bài SGK). Không tự chế thang Bloom ngoài nguồn.
+- RÀNG BUỘC PPCT & PHẠM VI TIẾT DẠY: Nếu có phạm vi tiết dạy / PPCT được cung cấp, BẮT BUỘC khóa chặt mục tiêu và nội dung hoạt động đúng trong phạm vi số tiết / nội dung được phân công của tiết học đó, không dạy vượt sang phạm vi của tiết khác.`,
+
+  // TAB 0: PHÂN TÍCH PHÂN PHỐI CHƯƠNG TRÌNH (PPCT / PHỤ LỤC 3 CV 5512)
+  ANALYZE_PPCT: `Bạn là Chuyên gia Quản lý Giáo dục và Phương pháp dạy học môn {subject}.
+Hãy đọc tài liệu / hình ảnh / PDF Phân phối chương trình (PPCT) đính kèm và bóc tách cấu trúc phân phối chương trình môn học / bài dạy theo chuẩn Phụ lục 3 Công văn số 5512/BGDĐT-GDTrH.
+
+Chủ đề/Bài học quan tâm: "{topic}" (Môn học: {subject} - Khối {grade}).
+
+YÊU CẦU ĐẦU RA BẮT BUỘC:
+1. **Bảng Khung Phân phối chương trình (Chuẩn Phụ lục 3 Công văn 5512):**
+| STT | Bài học / Chủ đề | Số tiết | Thời điểm | Thiết bị dạy học | Địa điểm dạy học |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+
+2. **Bóc tách chi tiết phân bổ cho bài học "{topic}":**
+- **Tổng thời lượng:** [Số tiết] tiết.
+- **Tiến trình phân bổ từng tiết:**
+  + Tiết 1: [Nội dung / Tiểu mục kiến thức / Hoạt động trọng tâm theo PPCT].
+  + Tiết 2: [Nội dung / Tiểu mục kiến thức / Hoạt động trọng tâm theo PPCT (nếu có)].
+  + ...
+- **Mục tiêu & Thiết bị trọng tâm theo PPCT:** [Tóm tắt ngắn gọn].
+
+CẤM bịa đặt thông tin không có trong tài liệu PPCT. Trình bày Markdown súc tích, mạch lạc.`,
 
   // TAB 1: TÓM TẮT SGK
   ANALYZE_TEXTBOOK: `Hãy đọc PDF/ảnh SGK đính kèm và tóm tắt có cấu trúc cho giáo viên.
@@ -267,6 +290,11 @@ CẤM trích nguyên văn toàn bộ SGK. Tóm tắt ngắn gọn, mạch lạc 
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Thời lượng dự kiến: {duration}
+- Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
+- Dữ liệu Phân phối chương trình / Phụ lục 3 CV 5512 (nếu có):
+"""
+{ppct_content}
+"""
 - Dữ liệu nội dung SGK (nếu có):
 """
 {textbook_content}
@@ -280,6 +308,7 @@ CẤM trích nguyên văn toàn bộ SGK. Tóm tắt ngắn gọn, mạch lạc 
 
 QUY TẮC MỤC TIÊU KIẾN THỨC:
 - Mục ## 1. Về kiến thức PHẢI là Yêu cầu cần đạt (YCCĐ) của CT GDPT 2018 ban hành kèm Thông tư 32/2018/TT-BGDĐT cho đúng môn/lớp/bài.
+- Nếu có Phạm vi tiết dạy theo PPCT: CHỈ lấy các YCCĐ tương ứng với tiết/cụm tiết được phân công, không bao gồm YCCĐ của các tiết khác trong bài.
 - Nếu khối YCCĐ chính thức có nội dung: chọn và viết lại nguyên ý các YCCĐ khớp bài; giữ nguyên các động từ hành vi của YCCĐ.
 - Nếu khối YCCĐ trống: lấy YCCĐ in trên SGK/nguồn.
 
@@ -398,6 +427,11 @@ QUY CHUẨN KỸ THUẬT VẼ SVG CHUẨN SGK VIỆT NAM BẮT BUỘC:
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Thời lượng dự kiến: {duration}
+- Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
+- Dữ liệu Phân phối chương trình (PPCT nếu có):
+"""
+{ppct_content}
+"""
 - Dữ liệu nội dung SGK (nếu có):
 """
 {textbook_content}
@@ -416,7 +450,7 @@ BẮT BUỘC xuất đúng 2 khối, mỗi khối bắt đầu bằng marker:
 (toàn bộ II. Thiết bị và học liệu)
 
 QUY TẮC MỤC TIÊU:
-- Mục 1. Về kiến thức: YCCĐ chuẩn CT GDPT 2018 cho bài học.
+- Mục 1. Về kiến thức: YCCĐ chuẩn CT GDPT 2018 cho bài học (khóa theo phạm vi tiết dạy PPCT nếu có).
 - Mục 2.a (Năng lực chung): CHỈ 1–2 năng lực chung phù hợp đặc thù môn {subject} và bài dạy này; mỗi mục đúng 1 dòng mô tả hành vi.
 - Mục 2.b (Năng lực đặc thù): 2–3 năng lực đặc thù của môn {subject}.
 - Mục 2.c / 2.d (NLS / AI): Chỉ tạo mục đang bật và chỉ theo đúng miền/mã đã chọn (mỗi mục 1 dòng).
@@ -427,6 +461,11 @@ QUY TẮC MỤC TIÊU:
   GENERATE_ACTIVITY_A: `Hãy biên soạn chi tiết **HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
+- Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
+- Dữ liệu Phân phối chương trình (PPCT nếu có):
+"""
+{ppct_content}
+"""
 - Mục tiêu bài học:
 """
 {objectives_content}
@@ -463,6 +502,11 @@ ${ACTIVITY_TABLE_CONTRACT}
   GENERATE_ACTIVITY_B: `Hãy biên soạn chi tiết toàn bộ **HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
+- Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
+- Dữ liệu Phân phối chương trình (PPCT nếu có):
+"""
+{ppct_content}
+"""
 - Mục tiêu bài học:
 """
 {objectives_content}
@@ -512,6 +556,11 @@ ${ACTIVITY_TABLE_CONTRACT}
   GENERATE_ACTIVITY_C: `Hãy biên soạn chi tiết **HOẠT ĐỘNG LUYỆN TẬP** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
+- Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
+- Dữ liệu Phân phối chương trình (PPCT nếu có):
+"""
+{ppct_content}
+"""
 - Mục tiêu và Kiến thức trọng tâm:
 """
 {objectives_content}
@@ -523,7 +572,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
-- CHỈ dùng bài luyện tập / câu hỏi có trong SGK hoặc dữ liệu giáo viên cung cấp. CẤM invent bài tập trắc nghiệm ngoài sách nếu nguồn không có.
+- CHỈ dùng bài luyện tập / câu hỏi có trong SGK hoặc dữ liệu giáo viên cung cấp (khóa theo phạm vi tiết dạy PPCT nếu có). CẤM invent bài tập trắc nghiệm ngoài sách nếu nguồn không có.
 - Cột TRÁI mục d): Kịch bản phân vai rõ ràng:
   + Áp dụng Kỹ thuật dạy học (ví dụ: Bài tập phân hóa 3 mức, Đánh giá đồng đẳng, Sửa lỗi theo cặp...).
   + **GV:** Nói câu giao việc trong ngoặc kép "...", di chuyển quan sát phát hiện lỗi sai tính toán/lập luận điển hình, trực tiếp hướng dẫn phân hóa.
@@ -552,6 +601,11 @@ ${ACTIVITY_TABLE_CONTRACT}
   GENERATE_ACTIVITY_D: `Hãy biên soạn chi tiết **HOẠT ĐỘNG VẬN DỤNG** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
+- Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
+- Dữ liệu Phân phối chương trình (PPCT nếu có):
+"""
+{ppct_content}
+"""
 - Mục tiêu bài học:
 """
 {objectives_content}
@@ -593,6 +647,11 @@ ${ACTIVITY_TABLE_CONTRACT}
   GENERATE_ACTIVITY_E: `Hãy biên soạn chi tiết **HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
+- Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
+- Dữ liệu Phân phối chương trình (PPCT nếu có):
+"""
+{ppct_content}
+"""
 - Mục tiêu và Tiến trình dạy học:
 """
 {objectives_content}
@@ -641,6 +700,11 @@ ${ACTIVITY_TABLE_CONTRACT}
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Thời lượng: {duration}
+- Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
+- Dữ liệu Phân phối chương trình (PPCT nếu có):
+"""
+{ppct_content}
+"""
 - Mục tiêu bài học:
 """
 {objectives_content}
@@ -701,6 +765,11 @@ CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừ
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Thời lượng: {duration}
+- Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
+- Dữ liệu Phân phối chương trình (PPCT nếu có):
+"""
+{ppct_content}
+"""
 - Mục tiêu bài học:
 """
 {objectives_content}
@@ -1090,6 +1159,8 @@ function getPromptTemplate(templateKey, context) {
     .replace(/\{gradeLevelName\}/g, gradeLevelName)
     .replace(/\{topic\}/g, context.topic || '')
     .replace(/\{duration\}/g, context.duration || '02 tiết (90 phút)')
+    .replace(/\{lesson_scope\}/g, context.lesson_scope || '')
+    .replace(/\{ppct_content\}/g, context.ppct_content || '')
     .replace(/\{textbook_content\}/g, context.textbook_content || '')
     .replace(/\{objectives_content\}/g, context.objectives_content || '')
     .replace(/\{activities_content\}/g, context.activities_content || '')
@@ -1108,8 +1179,14 @@ function getPromptTemplate(templateKey, context) {
     .replace(/\{drawing_prompt\}/g, context.drawing_prompt || '')
     .replace(/\{drawing_title\}/g, context.drawing_title || '');
 
-  if (templateKey === 'GENERATE_SVG_DRAWING') {
+  if (templateKey === 'GENERATE_SVG_DRAWING' || templateKey === 'ANALYZE_PPCT') {
     return result;
+  }
+
+  if (context.lesson_scope || context.ppct_content) {
+    const scopeText = context.lesson_scope ? `\n- PHẠM VI TIẾT DẠY THEO PPCT: ${context.lesson_scope}` : '';
+    const ppctText = context.ppct_content ? `\n- NỘI DUNG PPCT (PHỤ LỤC 3 CV 5512):\n"""\n${context.ppct_content}\n"""` : '';
+    result += `\n\nĐỊNH HƯỚNG PHÂN PHỐI CHƯƠNG TRÌNH & PHẠM VI TIẾT HỌC:${scopeText}${ppctText}\nBẮT BUỘC: Bạn phải căn chỉnh tiến trình hoạt động, mục tiêu và lượng bài tập hoàn toàn khớp với phạm vi tiết dạy / phân phối chương trình ở trên, không soạn tràn sang nội dung của các tiết học khác.`;
   }
 
   if (PROMPTS.SOURCE_LOCK) {

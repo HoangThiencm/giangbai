@@ -794,6 +794,26 @@ body {
   color: #ffffff;
 }
 
+.thumb-badge.badge-ppct {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.dropzone-ppct {
+  border-color: #cbd5e1;
+  background: #fdfefe;
+}
+
+.dropzone-ppct:hover,
+.dropzone-ppct.dragover {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+}
+
+.dropzone-ppct .dropzone-icon {
+  color: #7c3aed;
+}
+
 .input-control {
   padding: 0.5rem 0.75rem;
   border-radius: 6px;

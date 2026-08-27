@@ -18,6 +18,7 @@ const appState = {
   subject: "TOÁN",
   duration: "02 tiết (90 phút)",
   teachingContext: {
+    lessonScope: "",
     classProfile: "",
     supportNeeds: "",
     integrations: { digital: false, ai: false, foreignLanguage: false, inclusive: false },
@@ -31,8 +32,13 @@ const appState = {
   images: [],
   pdfAttachments: [],
 
+  // Danh sách file/ảnh PPCT (Tách biệt hoàn toàn với SGK)
+  ppctImages: [],
+  ppctPdfAttachments: [],
+
   // Nội dung đã biên soạn
   content: {
+    ppctAnalysis: "",
     vision: "",
     objectives: "",
     materials: "",
@@ -120,9 +126,11 @@ function syncDraftDom() {
     inputSubject: appState.subject,
     inputTopicCustom: appState.customTopic,
     inputDuration: appState.duration,
+    inputLessonScope: context.lessonScope,
     inputClassProfileNote: context.classProfileNote,
     inputSupportNote: context.supportNote,
     inputSpecialRequirements: context.specialRequirements,
+    editorPpct: appState.content.ppctAnalysis,
     editorVision: appState.content.vision,
     editorObjectives: appState.content.objectives,
     editorMaterials: appState.content.materials,
@@ -151,6 +159,7 @@ function syncDraftDom() {
   renderPedagogyCatalogs();
   renderStandardsCatalog();
   renderIllustrationGallery();
+  renderPpctGallery();
 }
 
 // =============================================================================
@@ -196,7 +205,7 @@ function applyDraftData(data) {
   if (!data) return;
   Object.assign(appState, { selectedGrade: clampKhbdGrade(data.selectedGrade || "6"), selectedSubject: data.selectedSubject || "TOAN", selectedLesson: data.selectedLesson || "", customTopic: data.customTopic || "", school: data.school || appState.school, group: data.group || appState.group, teacher: data.teacher || appState.teacher, subject: data.subject || appState.subject, duration: data.duration || appState.duration });
   appState.teachingContext = normalizeTeachingContext(data.teachingContext);
-  if (data.content) { const a = data.content.activities || {}; appState.content = { vision: data.content.vision || "", objectives: data.content.objectives || "", materials: data.content.materials || "", activities: Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""])), illustrations: Array.isArray(data.content.illustrations) ? data.content.illustrations : [] }; }
+  if (data.content) { const a = data.content.activities || {}; appState.content = { ppctAnalysis: data.content.ppctAnalysis || "", vision: data.content.vision || "", objectives: data.content.objectives || "", materials: data.content.materials || "", activities: Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""])), illustrations: Array.isArray(data.content.illustrations) ? data.content.illustrations : [] }; }
 }
 function renderDraftControls() {
   const select = document.getElementById("selectMyDraft"); if (!select) return;
@@ -210,9 +219,11 @@ function emptyDraftForTarget({ grade, lesson, topic }) {
   appState.selectedGrade = clampKhbdGrade(grade); appState.selectedLesson = lesson; appState.customTopic = topic;
   Object.assign(appState, common);
   appState.teachingContext = normalizeTeachingContext({});
-  appState.content = { vision: "", objectives: "", materials: "", activities: { A: "", B: "", C: "", D: "", E: "", F: "", G: "" }, illustrations: [] };
+  appState.content = { ppctAnalysis: "", vision: "", objectives: "", materials: "", activities: { A: "", B: "", C: "", D: "", E: "", F: "", G: "" }, illustrations: [] };
   appState.images = [];
   appState.pdfAttachments = [];
+  appState.ppctImages = [];
+  appState.ppctPdfAttachments = [];
 }
 function switchDraft(target) {
   saveStateToLocalStorage();
@@ -220,7 +231,7 @@ function switchDraft(target) {
   const saved = localStorage.getItem(getDraftKey(id));
   if (saved) applyDraftData(JSON.parse(saved)); else { emptyDraftForTarget(target); saveStateToLocalStorage(); }
   localStorage.setItem(`khbd_drafts_v2:${getDraftScope()}:active`, id);
-  populateLessonDropdown(); syncDraftDom(); renderAllTabsPreview(); renderImageGallery();
+  populateLessonDropdown(); syncDraftDom(); renderAllTabsPreview(); renderImageGallery(); renderPpctGallery();
 }
 function loadStateFromLocalStorage() {
   try {
@@ -289,6 +300,7 @@ function normalizeTeachingContext(context) {
   const source = context && typeof context === "object" ? context : {};
   const integrations = source.integrations && typeof source.integrations === "object" ? source.integrations : {};
   return {
+    lessonScope: typeof source.lessonScope === "string" ? source.lessonScope.slice(0, 300) : "",
     classProfileChoices: Array.isArray(source.classProfileChoices) ? source.classProfileChoices.filter(value => typeof value === "string").slice(0, 7) : [],
     classProfileNote: typeof source.classProfileNote === "string" ? source.classProfileNote.slice(0, 300) : (typeof source.classProfile === "string" ? source.classProfile.slice(0, 300) : ""),
     supportChoices: Array.isArray(source.supportChoices) ? source.supportChoices.filter(value => typeof value === "string").slice(0, 7) : [],
@@ -1473,6 +1485,14 @@ function setupEventListeners() {
     });
   });
 
+  const inputScope = document.getElementById("inputLessonScope");
+  if (inputScope) {
+    inputScope.addEventListener("input", (e) => {
+      appState.teachingContext.lessonScope = e.target.value;
+      saveStateToLocalStorage();
+    });
+  }
+
   [["inputClassProfileNote", "classProfileNote"], ["inputSupportNote", "supportNote"], ["inputSpecialRequirements", "specialRequirements"]].forEach(([id, key]) => {
     document.getElementById(id).addEventListener("input", (e) => {
       appState.teachingContext[key] = e.target.value;
@@ -1516,43 +1536,87 @@ function setupEventListeners() {
     saveStateToLocalStorage();
   }));
 
-  // 4. Dropzone & Paste ảnh toàn cục
+  // 4. Dropzone & Paste ảnh toàn cục (SGK)
   const dropzone = document.getElementById("dropzoneContainer");
   const fileInput = document.getElementById("fileInputImages");
 
-  dropzone.addEventListener("click", () => fileInput.click());
-  fileInput.addEventListener("change", handleFileSelect);
+  if (dropzone && fileInput) {
+    dropzone.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", handleFileSelect);
 
-  dropzone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropzone.classList.add("dragover");
-  });
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
 
-  dropzone.addEventListener("dragleave", () => {
-    dropzone.classList.remove("dragover");
-  });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("dragover");
+    });
 
-  dropzone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropzone.classList.remove("dragover");
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(Array.from(e.dataTransfer.files));
-    }
-  });
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFiles(Array.from(e.dataTransfer.files));
+      }
+    });
+  }
+
+  // Dropzone & File Input cho PPCT
+  const dropzonePpct = document.getElementById("dropzoneContainerPpct");
+  const fileInputPpct = document.getElementById("fileInputPpct");
+
+  if (dropzonePpct && fileInputPpct) {
+    dropzonePpct.addEventListener("click", () => fileInputPpct.click());
+    fileInputPpct.addEventListener("change", handlePpctFileSelect);
+
+    dropzonePpct.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzonePpct.classList.add("dragover");
+    });
+
+    dropzonePpct.addEventListener("dragleave", () => {
+      dropzonePpct.classList.remove("dragover");
+    });
+
+    dropzonePpct.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzonePpct.classList.remove("dragover");
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handlePpctFiles(Array.from(e.dataTransfer.files));
+      }
+    });
+  }
 
   // Lắng nghe Paste ảnh (Ctrl + V)
   window.addEventListener("paste", handleGlobalPaste);
 
-  document.getElementById("btnClearVisionImages").addEventListener("click", () => {
-    if (appState.images.length === 0 && !(appState.pdfAttachments || []).length) return;
-    if (userConfirm(`Bạn có chắc muốn xóa tất cả ảnh trang SGK đã tải lên?`)) {
-      appState.images = [];
-      appState.pdfAttachments = [];
-      updateImageCounts();
-      renderImageGallery();
-      showToast("Đã xóa toàn bộ ảnh.", "info");
-    }
-  });
+  const btnClearVision = document.getElementById("btnClearVisionImages");
+  if (btnClearVision) {
+    btnClearVision.addEventListener("click", () => {
+      if (appState.images.length === 0 && !(appState.pdfAttachments || []).length) return;
+      if (userConfirm(`Bạn có chắc muốn xóa tất cả ảnh trang SGK đã tải lên?`)) {
+        appState.images = [];
+        appState.pdfAttachments = [];
+        updateImageCounts();
+        renderImageGallery();
+        showToast("Đã xóa toàn bộ ảnh SGK.", "info");
+      }
+    });
+  }
+
+  const btnClearPpct = document.getElementById("btnClearPpctFiles");
+  if (btnClearPpct) {
+    btnClearPpct.addEventListener("click", () => {
+      if ((appState.ppctImages || []).length === 0 && !(appState.ppctPdfAttachments || []).length) return;
+      if (userConfirm("Bạn có chắc muốn xóa tất cả file PPCT đã tải lên?")) {
+        appState.ppctImages = [];
+        appState.ppctPdfAttachments = [];
+        renderPpctGallery();
+        showToast("Đã xóa toàn bộ file PPCT.", "info");
+      }
+    });
+  }
 
   // 5. Subtabs Hoạt động A -> G trong Tab 4
   document.querySelectorAll(".act-tab-btn").forEach(btn => {
@@ -1563,6 +1627,10 @@ function setupEventListeners() {
   });
 
   // 6. Đồng bộ Textarea với KaTeX Preview khi người dùng chỉnh sửa
+  setupEditorPreviewSync("editorPpct", "previewPpct", (val) => {
+    appState.content.ppctAnalysis = val;
+    saveStateToLocalStorage();
+  });
   setupEditorPreviewSync("editorVision", "previewVision", (val) => { appState.content.vision = val; appState.teachingContext.ocrReady = false; saveStateToLocalStorage(); });
   const visionEditor = document.getElementById("editorVision");
   if (visionEditor) visionEditor.addEventListener("blur", () => {
@@ -1595,6 +1663,8 @@ function setupEventListeners() {
   }
 
   // 7. Các nút Tạo nội dung đơn lẻ
+  const btnAnalyzePpct = document.getElementById("btnAnalyzePpct");
+  if (btnAnalyzePpct) btnAnalyzePpct.addEventListener("click", handleGeneratePpctAnalysis);
   document.getElementById("btnAnalyzeVision").addEventListener("click", handleGenerateVision);
   document.getElementById("btnGenerateObjectives").addEventListener("click", handleGenerateObjectives);
   document.getElementById("btnGenerateMaterials").addEventListener("click", handleGenerateMaterials);
@@ -2117,6 +2187,348 @@ if (typeof window !== "undefined") {
     renderImageGallery();
     showToast("Đã xóa 1 ảnh.", "info");
   };
+
+  window.deletePpctImage = (imgId) => {
+    deletePpctImage(imgId);
+  };
+}
+
+// =============================================================================
+// XỬ LÝ FILE PHÂN PHỐI CHƯƠNG TRÌNH (PPCT / PHỤ LỤC 3 CV 5512)
+// =============================================================================
+function handlePpctFileSelect(e) {
+  if (e.target.files && e.target.files.length > 0) {
+    handlePpctFiles(Array.from(e.target.files));
+    e.target.value = "";
+  }
+}
+
+async function handlePpctFiles(files) {
+  const pdfFiles = files.filter(f => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
+  const imgFiles = files.filter(f => f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf"));
+
+  if (!Array.isArray(appState.ppctImages)) appState.ppctImages = [];
+  if (!Array.isArray(appState.ppctPdfAttachments)) appState.ppctPdfAttachments = [];
+
+  // Xử lý PDF PPCT
+  for (const pdfFile of pdfFiles) {
+    if (pdfFile.size > MAX_IMAGE_BYTES) {
+      showToast(`PDF PPCT vượt giới hạn ${MAX_IMAGE_BYTES / 1024 / 1024} MB.`, "warning");
+      continue;
+    }
+    try {
+      showToast(`Đang đọc file PDF PPCT: ${pdfFile.name}...`, "info");
+      const pdfDataUrl = await fileToDataUrl(pdfFile);
+      const pdfAttId = "ppctpdf_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
+      
+      let pageCount = 1;
+      let renderedPages = [];
+      if (window.pdfjsLib) {
+        try {
+          const arrayBuffer = await pdfFile.arrayBuffer();
+          const doc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          pageCount = doc.numPages;
+          // Render tối đa 6 trang đầu xem trước thumbnail
+          const maxRender = Math.min(pageCount, 6);
+          for (let p = 1; p <= maxRender; p++) {
+            const page = await doc.getPage(p);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+            renderedPages.push({ pageNum: p, dataUrl });
+          }
+        } catch (e) {
+          console.warn("Không render được preview PDF PPCT bằng PDF.js:", e);
+        }
+      }
+
+      appState.ppctPdfAttachments.push({
+        id: pdfAttId,
+        name: pdfFile.name,
+        mimeType: "application/pdf",
+        dataUrl: pdfDataUrl,
+        size: pdfFile.size,
+        pageCount: pageCount,
+        selectedPages: Array.from({ length: pageCount }, (_, i) => i + 1)
+      });
+
+      if (renderedPages.length > 0) {
+        renderedPages.forEach(rp => {
+          appState.ppctImages.push({
+            id: "ppct_img_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+            name: `[PPCT PDF Trang ${rp.pageNum}] ${pdfFile.name}`,
+            mimeType: "image/jpeg",
+            size: Math.round(rp.dataUrl.length * 0.75),
+            sourceType: "pdf",
+            pageNum: rp.pageNum,
+            pdfAttachmentId: pdfAttId,
+            dataUrl: rp.dataUrl
+          });
+        });
+      } else {
+        // Thumbnail fallback đại diện file PDF
+        appState.ppctImages.push({
+          id: "ppct_img_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+          name: `[PPCT PDF] ${pdfFile.name}`,
+          mimeType: "application/pdf",
+          size: pdfFile.size,
+          sourceType: "pdf",
+          pageNum: 1,
+          pdfAttachmentId: pdfAttId,
+          dataUrl: ""
+        });
+      }
+    } catch (err) {
+      console.error("Lỗi đọc PDF PPCT:", err);
+      showToast(`Không đọc được file PDF PPCT: ${err.message}`, "danger");
+    }
+  }
+
+  // Xử lý Ảnh PPCT
+  imgFiles.forEach(file => {
+    if (!ALLOWED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES) {
+      showToast(`Bỏ qua file ảnh PPCT không đúng định dạng hoặc vượt quá ${MAX_IMAGE_BYTES / 1024 / 1024} MB.`, "warning");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      appState.ppctImages.push({
+        id: "ppct_img_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+        name: file.name || `Ảnh PPCT ${appState.ppctImages.length + 1}`,
+        mimeType: file.type || "image/jpeg",
+        size: file.size,
+        sourceType: "upload",
+        dataUrl: e.target.result
+      });
+      renderPpctGallery();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  renderPpctGallery();
+  if (pdfFiles.length > 0 || imgFiles.length > 0) {
+    showToast(`Đã nạp ${pdfFiles.length + imgFiles.length} file PPCT thành công!`, "success");
+  }
+}
+
+function renderPpctGallery() {
+  const gallery = document.getElementById("ppctGallery");
+  if (!gallery) return;
+  const list = appState.ppctImages || [];
+  gallery.innerHTML = "";
+
+  if (list.length === 0) {
+    gallery.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 0.75rem;">Chưa có file PPCT nào. Chọn hoặc kéo thả file Ảnh / PDF Phân phối chương trình vào ô phía trên.</p>`;
+    return;
+  }
+
+  list.forEach((img, idx) => {
+    const card = document.createElement("div");
+    card.className = "image-thumb-card";
+
+    let imageEl;
+    if (img.dataUrl) {
+      imageEl = document.createElement("img");
+      imageEl.src = img.dataUrl;
+      imageEl.alt = img.name;
+    } else {
+      imageEl = document.createElement("div");
+      imageEl.style.cssText = "width:100%;height:100px;display:flex;align-items:center;justify-content:center;background:#f1f5f9;font-size:2rem;";
+      imageEl.textContent = "📄";
+    }
+
+    const badge = document.createElement("span");
+    badge.className = "thumb-badge badge-ppct";
+    if (img.sourceType === "pdf" || img.name.startsWith("[PPCT PDF")) {
+      badge.textContent = `📑 PPCT PDF ${img.pageNum ? `T.${img.pageNum}` : ""}`;
+    } else {
+      badge.textContent = `📑 PPCT #${idx + 1}`;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "thumb-overlay";
+
+    if (img.dataUrl) {
+      const zoomBtn = document.createElement("button");
+      zoomBtn.className = "thumb-btn";
+      zoomBtn.title = "Xem phóng to";
+      zoomBtn.textContent = "🔍";
+      zoomBtn.addEventListener("click", () => zoomImage(img.dataUrl, img.name));
+      overlay.appendChild(zoomBtn);
+    }
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "thumb-btn";
+    delBtn.title = "Xóa file này";
+    delBtn.textContent = "🗑️";
+    delBtn.addEventListener("click", () => deletePpctImage(img.id));
+    overlay.appendChild(delBtn);
+
+    card.append(imageEl, badge, overlay);
+    gallery.appendChild(card);
+  });
+}
+
+function deletePpctImage(imgId) {
+  const img = (appState.ppctImages || []).find(i => i.id === imgId);
+  appState.ppctImages = (appState.ppctImages || []).filter(i => i.id !== imgId);
+  if (img && img.pdfAttachmentId) {
+    const att = (appState.ppctPdfAttachments || []).find(a => a.id === img.pdfAttachmentId);
+    if (att) {
+      att.selectedPages = (att.selectedPages || []).filter(p => p !== img.pageNum);
+      if (!att.selectedPages.length) {
+        appState.ppctPdfAttachments = appState.ppctPdfAttachments.filter(a => a.id !== att.id);
+      }
+    }
+  }
+  renderPpctGallery();
+  showToast("Đã xóa 1 file PPCT.", "info");
+}
+
+async function extractPpctOcrText(onProgress) {
+  const mistralKeys = getUserMistralKeys();
+  if (!mistralKeys.length) throw new Error("Thiếu Mistral API Key cá nhân. Bấm Quản lý API Key để nhập key Mistral của bạn.");
+  const chunks = [];
+  const pdfs = (appState.ppctPdfAttachments || []).filter(att => att && att.dataUrl);
+  const photos = (appState.ppctImages || []).filter(img => img.sourceType !== "pdf" && img.dataUrl);
+  const totalUnits = pdfs.length + (photos.length ? 1 : 0);
+  let done = 0;
+  const report = (msg) => {
+    if (typeof onProgress === "function") {
+      const pct = totalUnits ? Math.min(90, Math.round(((done + 0.4) / totalUnits) * 80) + 10) : 20;
+      onProgress(msg, pct);
+    }
+  };
+
+  for (const att of pdfs) {
+    report(`Đang nhận diện PDF PPCT "${att.name || "PPCT"}" bằng Mistral OCR...`);
+    const part = await buildPdfMediaPart(att);
+    const result = await window.MistralOcr.ocrDocument(part.dataUrl, mistralKeys, null, { module: "soankhbd_ppct" });
+    const text = formatOcrPages(result.data?.pages || [], att.name || "PDF PPCT", att.selectedPages);
+    if (text) chunks.push(text);
+    done++;
+  }
+
+  if (photos.length) {
+    report(`Đang nhận diện ${photos.length} ảnh PPCT bằng Mistral OCR...`);
+    const combined = await photosToPdfDataUrl(photos);
+    if (combined) {
+      const result = await window.MistralOcr.ocrDocument(combined, mistralKeys, null, { module: "soankhbd_ppct" });
+      const text = formatOcrPages(result.data?.pages || [], "Ảnh PPCT");
+      if (text) chunks.push(text);
+    } else {
+      for (let i = 0; i < photos.length; i++) {
+        report(`Đang nhận diện ảnh PPCT ${i + 1}/${photos.length} bằng Mistral OCR...`);
+        const res = await window.MistralOcr.ocrImageDataUrl(photos[i].dataUrl, mistralKeys, null, { module: "soankhbd_ppct" });
+        const text = String(res.text || "").trim();
+        if (text) chunks.push(`### ${photos[i].name || `Ảnh PPCT ${i + 1}`}\n\n${text}`);
+      }
+    }
+    done++;
+  }
+
+  return chunks.join("\n\n");
+}
+
+async function prepareGeminiPpctMedia() {
+  const media = [];
+  for (const att of (appState.ppctPdfAttachments || [])) {
+    if (!att?.dataUrl) continue;
+    media.push(await buildPdfMediaPart(att));
+  }
+  for (const image of (appState.ppctImages || [])) {
+    if (image.sourceType === "pdf" || !image.dataUrl) continue;
+    const compressed = await compressDataUrl(image.dataUrl);
+    media.push({ mimeType: compressed.mimeType, dataUrl: compressed.dataUrl });
+  }
+  return media;
+}
+
+async function handleGeneratePpctAnalysis() {
+  const hasPpctMedia = (appState.ppctPdfAttachments && appState.ppctPdfAttachments.length > 0)
+    || (appState.ppctImages && appState.ppctImages.length > 0);
+
+  if (!hasPpctMedia) {
+    showToast("Vui lòng đính kèm ít nhất 1 ảnh hoặc file PDF Phân phối chương trình (PPCT) trước khi phân tích!", "warning");
+    return;
+  }
+
+  if (appState.isGenerating) {
+    showToast("Một tác vụ AI khác đang được xử lý, vui lòng chờ trong giây lát...", "warning");
+    return;
+  }
+
+  const btn = document.getElementById("btnAnalyzePpct");
+  const editor = document.getElementById("editorPpct");
+  const details = document.getElementById("detailsPpctContent");
+
+  try {
+    appState.isGenerating = true;
+    if (btn) btn.disabled = true;
+    updateProgress(20, "Đang đọc & phân tích Phân phối chương trình (PPCT)...");
+    const status = document.getElementById("statusFooterText");
+    if (status) status.textContent = "Đang đọc & phân tích PPCT...";
+
+    let rawOcrText = "";
+    if (canUseMistralOcr()) {
+      try {
+        rawOcrText = await extractPpctOcrText((msg, pct) => updateProgress(pct, msg));
+      } catch (ocrErr) {
+        console.warn("Lỗi OCR PPCT qua Mistral, fallback sang Gemini:", ocrErr);
+      }
+    }
+
+    updateProgress(60, "Đang trích xuất cấu trúc Phụ lục 3 CV 5512 bằng AI...");
+    const promptCtx = getGenerationPromptContext();
+    const prompt = getPromptTemplate('ANALYZE_PPCT', promptCtx) + (rawOcrText ? `\n\nVĂN BẢN OCR PPCT ĐÃ NHẬN DIỆN:\n"""\n${rawOcrText}\n"""` : '');
+    
+    let analysisResult = "";
+    if (rawOcrText) {
+      analysisResult = await geminiAPI.generateContent(
+        prompt,
+        [],
+        getSystemRole(appState.selectedSubject, appState.selectedGrade),
+        0.2
+      );
+    } else {
+      const media = await prepareGeminiPpctMedia();
+      analysisResult = await geminiAPI.generateContent(
+        prompt,
+        media,
+        getSystemRole(appState.selectedSubject, appState.selectedGrade),
+        0.2
+      );
+    }
+
+    const cleanedResult = sanitizeLessonMarkdown(analysisResult);
+    appState.content.ppctAnalysis = cleanedResult;
+    saveStateToLocalStorage();
+
+    if (editor) editor.value = cleanedResult;
+    renderMathPreview(cleanedResult, "previewPpct");
+
+    if (details) details.open = true;
+
+    updateProgress(100, "Đã hoàn thành phân tích PPCT!");
+    setTimeout(() => hideProgress(), 1500);
+    showToast("Đã phân tích Phân phối chương trình thành công theo Phụ lục 3 CV 5512!", "success", 5000);
+    if (status) status.textContent = "Sẵn sàng.";
+  } catch (error) {
+    console.error("Lỗi phân tích PPCT:", error);
+    hideProgress();
+    showToast(`Lỗi khi phân tích PPCT: ${error.message}`, "danger", 7000);
+    const status = document.getElementById("statusFooterText");
+    if (status) status.textContent = "Lỗi phân tích PPCT.";
+  } finally {
+    appState.isGenerating = false;
+    if (btn) btn.disabled = false;
+  }
 }
 
 // =============================================================================
@@ -2454,6 +2866,7 @@ function togglePreviewPanel(button) {
 }
 
 function renderAllTabsPreview() {
+  renderMathPreview(appState.content.ppctAnalysis, "previewPpct");
   renderMathPreview(appState.content.vision, "previewVision");
   renderMathPreview(appState.content.objectives, "previewObjectives");
   renderMathPreview(appState.content.materials, "previewMaterials");
@@ -2559,8 +2972,15 @@ function buildPedagogicalContext() {
     ? `Ưu tiên môn ${subjectName}: ${genComps.map(c => c.name).join(", ")}.`
     : "";
 
+  const lessonScopeLine = context.lessonScope
+    ? `\n- Phạm vi tiết dạy theo PPCT: ${context.lessonScope} (BẮT BUỘC chỉ soạn trong phạm vi số tiết/tiểu mục này).`
+    : "";
+  const ppctLine = appState.content.ppctAnalysis
+    ? `\n- Phân phối chương trình (PPCT / Phụ lục 3 CV 5512): Đã có phân tích cấu trúc phân tiết; BẮT BUỘC tuân thủ đúng phân bổ tiết học.`
+    : "";
+
   return `BỐI CẢNH VÀ RÀNG BUỘC SƯ PHẠM BẮT BUỘC:
-- Môn học: ${subjectName} ${gradeLevel}; khối/lớp: ${appState.selectedGrade}; tên bài: ${getTopicDisplayName()}; thời lượng: ${appState.duration || "chưa xác định"}.
+- Môn học: ${subjectName} ${gradeLevel}; khối/lớp: ${appState.selectedGrade}; tên bài: ${getTopicDisplayName()}; thời lượng: ${appState.duration || "chưa xác định"}.${lessonScopeLine}${ppctLine}
 - Giới hạn năng lực & phẩm chất: Bài dạy 1–2 tiết CHỈ ĐƯỢC CHỌN 1–2 Năng lực chung phù hợp đặc thù môn học (${genCompHint}), 2–3 Năng lực đặc thù nổi trội nhất (gắn với nhiệm vụ/sản phẩm cụ thể), 1–2 Phẩm chất có hành vi quan sát rõ. CẤM liệt kê dàn trải toàn bộ khung năng lực hay đủ 5 phẩm chất.
 - Trình độ/đặc điểm lớp: ${classProfile || `Chưa cung cấp; thiết kế mức độ phù hợp học sinh ${gradeLevel} và có phân hóa vừa sức.`}
 - Hỗ trợ chức năng được chọn: ${support || "Không có yêu cầu riêng được chọn."}
@@ -2600,6 +3020,8 @@ function getGenerationPromptContext(params = {}) {
     gradeLevelName: getGradeLevelName(appState.selectedGrade),
     topic: params.topic || getTopicDisplayName(),
     duration: appState.duration,
+    lesson_scope: (appState.teachingContext && appState.teachingContext.lessonScope) || '',
+    ppct_content: appState.content.ppctAnalysis || '',
     competencies: getSubjectCompetencies(appState.selectedSubject),
     textbook_content: resolveTextbookContent(),
     objectives_content: appState.content.objectives || "",
@@ -3985,8 +4407,9 @@ function handleCopyFullMarkdown() {
 // XÓA TOÀN BỘ DỮ LIỆU (CÓ XÁC NHẬN)
 // =============================================================================
 function handleClearAllContent() {
-  if (userConfirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ nội dung giáo án đã soạn, ảnh SGK và toàn bộ thiết lập bối cảnh sư phạm không? Thao tác này không thể hoàn tác.")) {
+  if (userConfirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ nội dung giáo án đã soạn, ảnh SGK, file PPCT và toàn bộ thiết lập bối cảnh sư phạm không? Thao tác này không thể hoàn tác.")) {
     appState.content = {
+      ppctAnalysis: "",
       vision: "",
       objectives: "",
       materials: "",
@@ -3998,14 +4421,19 @@ function handleClearAllContent() {
     };
     appState.images = [];
     appState.pdfAttachments = [];
+    appState.ppctImages = [];
+    appState.ppctPdfAttachments = [];
     appState.teachingContext = normalizeTeachingContext({});
 
     const fileInput = document.getElementById("fileInputImages");
     if (fileInput) fileInput.value = "";
+    const fileInputPpct = document.getElementById("fileInputPpct");
+    if (fileInputPpct) fileInputPpct.value = "";
 
     syncDraftDom();
     updateImageCounts();
     renderImageGallery();
+    renderPpctGallery();
     renderIllustrationGallery();
     renderAllTabsPreview();
     renderFullLessonPreview();
@@ -4319,6 +4747,13 @@ if (typeof module !== 'undefined' && module.exports) {
     handle1ClickGenerate,
     generateOneClickContent,
     applyObjectivesOutput,
-    applyActivityOutput
+    applyActivityOutput,
+    handlePpctFiles,
+    renderPpctGallery,
+    deletePpctImage,
+    extractPpctOcrText,
+    handleGeneratePpctAnalysis,
+    getGenerationPromptContext,
+    buildPedagogicalContext
   };
 }
