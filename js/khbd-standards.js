@@ -193,20 +193,35 @@ function scoreOfficialStandard(kind, entry, ctx) {
   return score;
 }
 
+function entriesForGrade(kind, grade) {
+  const catalog = KHBD_STANDARDS[kind];
+  if (!catalog) return [];
+  const g = Number(grade);
+  return catalog.entries.filter(entry => {
+    if (!entry.grades || !entry.grades.includes(g)) return false;
+    if (kind === "ai") return String(entry.code).startsWith(g + ".");
+    if (kind === "digital") {
+      const id = String(entry.id);
+      return g <= 7 ? id.startsWith("tt02-67-") : id.startsWith("tt02-89-");
+    }
+    return true;
+  });
+}
+
 function recommendOfficialStandards(kind, ctx) {
   const catalog = KHBD_STANDARDS[kind];
   if (!catalog) return [];
   const grade = Number(ctx.grade) || 6;
   const min = catalog.minSelect || 0;
   const max = catalog.maxSelect || 3;
-  const ranked = catalog.entries
-    .filter(entry => !entry.grades || entry.grades.includes(grade))
+  const pool = entriesForGrade(kind, grade);
+  const ranked = pool
     .map(entry => ({ entry, score: scoreOfficialStandard(kind, entry, ctx) }))
     .filter(row => row.score > 0)
     .sort((a, b) => b.score - a.score);
   const picked = ranked.slice(0, Math.min(max, Math.max(min, ranked.length)));
   if (min && picked.length < min) {
-    catalog.entries.filter(entry => !picked.some(row => row.entry.id === entry.id) && (!entry.grades || entry.grades.includes(grade)))
+    pool.filter(entry => !picked.some(row => row.entry.id === entry.id))
       .slice(0, min - picked.length)
       .forEach(entry => picked.push({ entry, score: 0 }));
   }
@@ -214,5 +229,5 @@ function recommendOfficialStandards(kind, ctx) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { KHBD_STANDARDS, recommendOfficialStandards, standardToRecord };
+  module.exports = { KHBD_STANDARDS, recommendOfficialStandards, standardToRecord, entriesForGrade };
 }

@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { KHBD_STANDARDS, recommendOfficialStandards } = require("../js/khbd-standards.js");
+const { KHBD_STANDARDS, recommendOfficialStandards, entriesForGrade } = require("../js/khbd-standards.js");
 
 const expectedCodes = {
   6: "A1.1 A1.2 A1.3 A3.1 A3.2 A3.3 A3.4 B1.1 B2.1 C1.1 C1.MR1 C1.MR2 C1.2 C1.MR3 C2.1 C2.2 C2.MR1 C3.1 C3.MR1 D1.1 D1.MR1 D2.1 D2.MR1 D2.MR2".split(" "),
@@ -25,6 +25,21 @@ assert.strictEqual(nls89.length, 24, "Lớp 8–9 phải hiện đủ 24 năng l
 assert.ok(nls67.every(entry => entry.band.includes("6–7") && entry.descriptor.includes("vấn đề đơn giản")), "Lớp 6 chỉ dùng mô tả Trung cấp 1");
 assert.ok(nls89.every(entry => entry.band.includes("8–9") && entry.descriptor.includes("không theo thông lệ")), "Lớp 8 chỉ dùng mô tả Trung cấp 2");
 assert.ok(nls67.every(entry => !nls89.some(other => other.id === entry.id)), "Không được dùng chung lựa chọn giữa hai dải NLS");
+
+const digitalGrade6 = entriesForGrade("digital", 6);
+assert.ok(digitalGrade6.length > 0, "Lớp 6 phải có mục NLS");
+assert.ok(digitalGrade6.every(entry => entry.id.startsWith("tt02-67-")), "NLS lớp 6 phải toàn tt02-67-");
+assert.ok(digitalGrade6.every(entry => !entry.id.startsWith("tt02-89-")), "NLS lớp 6 không được có tt02-89-");
+const aiGrade6 = entriesForGrade("ai", 6);
+assert.ok(aiGrade6.length > 0, "Lớp 6 phải có mục AI");
+assert.ok(aiGrade6.every(entry => entry.code.startsWith("6.")), "AI lớp 6 mọi code phải bắt đầu 6.");
+assert.ok(aiGrade6.every(entry => !entry.code.startsWith("7.") && !entry.code.startsWith("8.") && !entry.code.startsWith("9.")), "AI lớp 6 không được có mã lớp 7/8/9");
+const digitalGrade8 = entriesForGrade("digital", 8);
+assert.ok(digitalGrade8.every(entry => entry.id.startsWith("tt02-89-")), "NLS lớp 8 phải toàn tt02-89-");
+assert.ok(digitalGrade8.every(entry => !entry.id.startsWith("tt02-67-")), "NLS lớp 8 không được có tt02-67-");
+const aiGrade8 = entriesForGrade("ai", 8);
+assert.ok(aiGrade8.every(entry => entry.code.startsWith("8.")), "AI lớp 8 mọi code phải bắt đầu 8.");
+assert.ok(aiGrade8.every(entry => !entry.code.startsWith("6.") && !entry.code.startsWith("7.") && !entry.code.startsWith("9.")), "AI lớp 8 không được có mã lớp 6/7/9");
 
 const baseContext = { vision: "Bài tập về tập hợp", subjectName: "Toán", facilities: { internet: true }, methods: [], activities: [] };
 assert.deepStrictEqual(recommendOfficialStandards("ai", { ...baseContext, grade: 6, aiOn: false }), [], "Không tự đề xuất AI khi chưa chọn tích hợp và nội dung không có AI");

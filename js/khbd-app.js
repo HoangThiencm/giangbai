@@ -484,28 +484,64 @@ function normalizeEvidenceText(value) {
   return String(value || "").normalize("NFC").replace(/\s+/g, " ").trim().toLocaleLowerCase("vi-VN");
 }
 
+function foldEvidenceLoose(value) {
+  return normalizeEvidenceText(value).replace(/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~«»“”‘’…–—]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function resolveCandidateEntry(id, byId, byCode) {
+  if (byId.has(id)) return byId.get(id);
+  const codeMatches = byCode.get(id) || [];
+  return codeMatches.length === 1 ? codeMatches[0] : null;
+}
+
 function parseStructuredCandidates(raw, entries, ocrText, maxSelect) {
   const source = normalizeEvidenceText(ocrText);
+  const foldedSource = foldEvidenceLoose(source);
   const byId = new Map(entries.map(entry => [entry.id, entry]));
-  const jsonText = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "");
+  const byCode = new Map();
+  for (const entry of entries) {
+    const code = String(entry.code || "");
+    if (!code) continue;
+    if (!byCode.has(code)) byCode.set(code, []);
+    byCode.get(code).push(entry);
+  }
+  let jsonText = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
   let data;
-  try { data = JSON.parse(jsonText); } catch { return null; }
+  try {
+    data = JSON.parse(jsonText);
+  } catch {
+    const start = jsonText.indexOf("{");
+    const end = jsonText.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    try { data = JSON.parse(jsonText.slice(start, end + 1)); } catch { return null; }
+  }
   if (!data || !Array.isArray(data.candidates)) return null;
   const used = new Set();
   const valid = [];
   for (const candidate of data.candidates) {
-    const id = String(candidate?.id || "");
+    const id = String(candidate?.id || "").trim();
     const lessonAnchor = String(candidate?.lessonAnchor || "").trim();
     const fitRationale = String(candidate?.fitRationale || "").trim();
     const proposedTask = String(candidate?.proposedTask || "").trim();
-    if (!byId.has(id) || used.has(id) || !lessonAnchor || !fitRationale || !proposedTask) continue;
+    if (!id || !lessonAnchor || !fitRationale || !proposedTask) continue;
+    const entry = resolveCandidateEntry(id, byId, byCode);
+    if (!entry || used.has(entry.id)) continue;
     const anchorText = normalizeEvidenceText(lessonAnchor);
-    if (!source.includes(anchorText)) continue;
-    const anchorTerms = anchorText.split(" ").filter(word => word.length >= 3);
-    const taskText = normalizeEvidenceText(proposedTask);
+    let matchedAnchor = "";
+    let usedFold = false;
+    if (anchorText && source.includes(anchorText)) {
+      matchedAnchor = anchorText;
+    } else {
+      const foldedAnchor = foldEvidenceLoose(anchorText);
+      if (foldedAnchor.length < 12 || !foldedSource.includes(foldedAnchor)) continue;
+      matchedAnchor = foldedAnchor;
+      usedFold = true;
+    }
+    const taskText = usedFold ? foldEvidenceLoose(proposedTask) : normalizeEvidenceText(proposedTask);
+    const anchorTerms = matchedAnchor.split(" ").filter(word => word.length >= 3);
     if (!anchorTerms.some(word => taskText.includes(word))) continue;
-    used.add(id);
-    valid.push({ entry: byId.get(id), lessonAnchor, fitRationale, proposedTask });
+    used.add(entry.id);
+    valid.push({ entry, lessonAnchor, fitRationale, proposedTask });
     if (valid.length >= maxSelect) break;
   }
   return valid;
@@ -517,12 +553,14 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
   if (!catalog || !appState.teachingContext.integrations[integrationKey] || !hasOcrReadyLessonContent()) return false;
   if (typeof geminiAPI === "undefined" || typeof geminiAPI.generateContent !== "function") return false;
   const grade = Number(appState.selectedGrade);
-  const candidates = catalog.entries.filter(entry => entry.grades.includes(grade));
+  const candidates = typeof entriesForGrade === "function"
+    ? entriesForGrade(kind, grade)
+    : catalog.entries.filter(entry => entry.grades.includes(grade));
   const current = standardsOfKind(kind);
   // Giáo viên đã sửa/chọn tay: không có quyền ghi đè.
   if (current.length && !current.every(item => item.autoSuggested)) return false;
   const candidateText = candidates.map(entry => `${entry.id} | ${entry.code || entry.label} | ${entry.label}`).join("\n");
-  const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chỉ chọn tối đa ${catalog.maxSelect || 3} mục phù hợp từ DANH MỤC CHO PHÉP.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id đúng nguyên văn trong danh mục","lessonAnchor":"đoạn OCR nguyên văn, liên tiếp về khái niệm, ví dụ hoặc bài tập của bài","fitRationale":"lý do ngắn giải thích vì sao mục phù hợp với neo SGK","proposedTask":"nhiệm vụ GV/HS ngắn gắn neo SGK, nêu sản phẩm"}]}.\n\nQuy tắc bắt buộc:\n- lessonAnchor là neo SGK, không phải minh chứng rằng OCR có chữ AI/NLS. Có thể là khái niệm, ví dụ hoặc bài tập; phải trích nguyên văn, liên tiếp từ OCR.\n- id phải thuộc danh mục; proposedTask phải bám lessonAnchor, có hành động GV/HS và sản phẩm.\n- Nếu không có mục phù hợp, trả {"candidates":[]}.\n- Không bịa mã, không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${appState.content.vision}`;
+  const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chỉ chọn tối đa ${catalog.maxSelect || 3} mục phù hợp từ DANH MỤC CHO PHÉP.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id catalog (cột 1) hoặc mã chính thức (cột 2)","lessonAnchor":"đoạn OCR nguyên văn, liên tiếp về khái niệm, ví dụ hoặc bài tập của bài","fitRationale":"lý do ngắn giải thích vì sao mục phù hợp với neo SGK","proposedTask":"nhiệm vụ GV/HS ngắn gắn neo SGK, nêu sản phẩm"}]}.\n\nQuy tắc bắt buộc:\n- lessonAnchor là neo SGK, không phải minh chứng rằng OCR có chữ AI/NLS. Có thể là khái niệm, ví dụ hoặc bài tập; phải trích nguyên văn, liên tiếp từ OCR.\n- id là cột 1 (id catalog) hoặc cột 2 (mã chính thức) trong danh mục; proposedTask phải bám lessonAnchor, có hành động GV/HS và sản phẩm.\n- Nếu không có mục phù hợp, trả {"candidates":[]}.\n- Không bịa mã, không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${appState.content.vision}`;
   try {
     const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, grade), 0.1);
     const selected = parseStructuredCandidates(raw, candidates, appState.content.vision, catalog.maxSelect || 3);
@@ -606,17 +644,23 @@ function renderStandardsCatalog() {
   ["digital", "ai"].forEach(kind => {
     const panel = document.getElementById(`${kind}StandardsPanel`);
     const enabled = Boolean(appState.teachingContext?.integrations?.[kind === "digital" ? "digital" : "ai"]);
-    if (panel) panel.hidden = false;
+    if (panel) panel.hidden = !enabled;
     const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS?.[kind] : null;
     if (!panel || !catalog) return;
-    const entries = catalog.entries.filter(entry => entry.grades.includes(grade));
+    const entries = typeof entriesForGrade === "function"
+      ? entriesForGrade(kind, grade)
+      : catalog.entries.filter(entry => entry.grades.includes(grade));
     const selectedRecords = standardsOfKind(kind);
     const selectedIds = new Set(selectedRecords.map(item => item.catalogId));
     const suggestedIds = new Set(selectedRecords.filter(item => item.autoSuggested).map(item => item.catalogId));
     const proposedById = new Map(selectedRecords.filter(item => item.lessonAnchor).map(item => [item.catalogId, item]));
     const maxSelect = catalog.maxSelect || 3;
     const selectable = enabled && hasOcrReadyLessonContent();
-    const band = kind === "digital" ? (grade <= 7 ? "Lớp 6–7: Trung cấp 1 (bậc 3)" : "Lớp 8–9: Trung cấp 2 (bậc 4)") : `Lớp ${grade}`;
+    const band = kind === "digital"
+      ? (grade <= 7
+        ? `Lớp ${grade} — dải Trung cấp 1 (TT 02, chung lớp 6–7). Không dùng dải lớp 8–9.`
+        : `Lớp ${grade} — dải Trung cấp 2 (TT 02, chung lớp 8–9). Không dùng dải lớp 6–7.`)
+      : `Lớp ${grade}`;
     const waitHint = selectable
       ? `Khung áp dụng: ${band}. Chỉ tự đề xuất khi nội dung SGK có minh chứng; bạn có thể chọn thủ công, tối đa ${maxSelect} mục.`
       : `Khung áp dụng: ${band}. Hãy bật tích hợp tương ứng và hoàn thành Bước 0 để chọn hoặc nhận đề xuất.`;
@@ -2478,7 +2522,7 @@ async function extractTextbookOcrText(onProgress) {
   return chunks.join("\n\n");
 }
 
-function applyTextbookOcrResult(ocrText, { silent = false } = {}) {
+async function applyTextbookOcrResult(ocrText, { silent = false } = {}) {
   appState.content.vision = ocrText;
   appState.teachingContext.ocrReady = true;
   saveStateToLocalStorage();
@@ -2486,7 +2530,13 @@ function applyTextbookOcrResult(ocrText, { silent = false } = {}) {
   if (editor) editor.value = ocrText;
   renderMathPreview(ocrText, "previewVision");
   applyLessonBasedRecommendations({ silent });
-  void requestStructuredIntegrationCandidatesForEnabled({ silent });
+  const integrations = appState.teachingContext?.integrations || {};
+  if (integrations.digital || integrations.ai) {
+    updateProgress(92, "Đang đề xuất năng lực số/AI...");
+    const status = document.getElementById("statusFooterText");
+    if (status) status.textContent = "Đang đề xuất năng lực số/AI...";
+  }
+  await requestStructuredIntegrationCandidatesForEnabled({ silent });
 }
 
 async function readTextbookWithMistral() {
@@ -2505,7 +2555,7 @@ async function readTextbookWithMistral() {
     if (!ocrText.replace(/\s+/g, " ").trim()) {
       throw new Error("Mistral OCR không đọc được chữ trên trang đã chọn.");
     }
-    applyTextbookOcrResult(ocrText, { silent: false });
+    await applyTextbookOcrResult(ocrText, { silent: false });
     updateProgress(100, "Đã đọc nội dung SGK (Mistral OCR)!");
     setTimeout(() => hideProgress(), 1500);
     showToast("Đã nhận diện SGK bằng Mistral OCR. Có thể sửa nội dung trước khi soạn giáo án.", "success", 5000);
@@ -2727,7 +2777,7 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
       try {
         const ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(Math.min(40, pct), msg));
         if (ocrText.replace(/\s+/g, " ").trim().length >= 80) {
-          applyTextbookOcrResult(ocrText, { silent: true });
+          await applyTextbookOcrResult(ocrText, { silent: true });
         }
       } catch (ocrErr) {
         console.warn("OCR trước khi soạn:", ocrErr);
@@ -2856,7 +2906,7 @@ async function handle1ClickGenerate() {
       try {
         const ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(Math.min(18, pct), msg));
         if (ocrText.replace(/\s+/g, " ").trim().length >= 80) {
-          applyTextbookOcrResult(ocrText, { silent: true });
+          await applyTextbookOcrResult(ocrText, { silent: true });
         }
       } catch (ocrErr) {
         console.warn("1-click Mistral OCR:", ocrErr);
@@ -2869,6 +2919,15 @@ async function handle1ClickGenerate() {
       throw new Error("Chưa có PDF/ảnh SGK trong phiên này. Hãy dán PDF hoặc ảnh trước khi 1-click.");
     }
     if (hasAnalyzedLessonContent()) applyLessonBasedRecommendations({ silent: true });
+    const integrations = appState.teachingContext?.integrations || {};
+    if (integrations.digital || integrations.ai) {
+      const needDigital = integrations.digital && !standardsOfKind("digital").length;
+      const needAi = integrations.ai && !standardsOfKind("ai").length;
+      if (needDigital || needAi) {
+        updateProgress(18, "Đang đề xuất năng lực số/AI...");
+        await requestStructuredIntegrationCandidatesForEnabled({ silent: true });
+      }
+    }
     const context = getGenerationPromptContext();
 
     updateProgress(20, skipMedia
@@ -3279,6 +3338,8 @@ if (typeof module !== 'undefined' && module.exports) {
     unwrapVietnameseMathForKatex,
     canUseMistralOcr,
     getUserMistralKeys,
-    requestStructuredIntegrationCandidates
+    requestStructuredIntegrationCandidates,
+    parseStructuredCandidates,
+    applyTextbookOcrResult
   };
 }

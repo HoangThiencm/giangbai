@@ -336,11 +336,10 @@ function testClearAllContent() {
     assert.strictEqual(input.checked, false, `Checkbox hỗ trợ chức năng ${input.value} phải unchecked`);
   });
 
-  // 3.6. Sau reset vẫn giữ khung chuẩn theo lớp để người dùng xem;
-  // checkbox bị tắt nên trong ứng dụng thực tế các lựa chọn cũng bị vô hiệu hóa.
-  console.log('  -> Kiểm tra khung NLS & AI vẫn sẵn sàng sau reset...');
-  assert.strictEqual(dom.elementsById.digitalStandardsPanel.hidden, false);
-  assert.strictEqual(dom.elementsById.aiStandardsPanel.hidden, false);
+  // 3.6. Sau reset, NLS/AI unchecked nên panel khung phải ẩn.
+  console.log('  -> Kiểm tra khung NLS & AI ẩn khi chưa bật tích hợp...');
+  assert.strictEqual(dom.elementsById.digitalStandardsPanel.hidden, true);
+  assert.strictEqual(dom.elementsById.aiStandardsPanel.hidden, true);
 
   // 3.7. Kiểm tra file input
   console.log('  -> Kiểm tra fileInputImages...');
