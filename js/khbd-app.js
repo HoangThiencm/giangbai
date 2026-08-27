@@ -44,7 +44,8 @@ const appState = {
       E: "",
       F: "",
       G: ""
-    }
+    },
+    illustrations: []
   },
 
   activeTab: "tabVision",
@@ -86,6 +87,7 @@ if (typeof document !== "undefined") {
     syncGeminiConfigToUI();
     updateImageCounts();
     renderImageGallery();
+    renderIllustrationGallery();
     renderStandardsCatalog();
     renderPhasePedagogy();
     renderAllTabsPreview();
@@ -148,6 +150,7 @@ function syncDraftDom() {
   renderDraftControls();
   renderPedagogyCatalogs();
   renderStandardsCatalog();
+  renderIllustrationGallery();
 }
 
 // =============================================================================
@@ -193,7 +196,7 @@ function applyDraftData(data) {
   if (!data) return;
   Object.assign(appState, { selectedGrade: clampKhbdGrade(data.selectedGrade || "6"), selectedSubject: data.selectedSubject || "TOAN", selectedLesson: data.selectedLesson || "", customTopic: data.customTopic || "", school: data.school || appState.school, group: data.group || appState.group, teacher: data.teacher || appState.teacher, subject: data.subject || appState.subject, duration: data.duration || appState.duration });
   appState.teachingContext = normalizeTeachingContext(data.teachingContext);
-  if (data.content) { const a = data.content.activities || {}; appState.content = { vision: data.content.vision || "", objectives: data.content.objectives || "", materials: data.content.materials || "", activities: Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""])) }; }
+  if (data.content) { const a = data.content.activities || {}; appState.content = { vision: data.content.vision || "", objectives: data.content.objectives || "", materials: data.content.materials || "", activities: Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""])), illustrations: Array.isArray(data.content.illustrations) ? data.content.illustrations : [] }; }
 }
 function renderDraftControls() {
   const select = document.getElementById("selectMyDraft"); if (!select) return;
@@ -207,7 +210,7 @@ function emptyDraftForTarget({ grade, lesson, topic }) {
   appState.selectedGrade = clampKhbdGrade(grade); appState.selectedLesson = lesson; appState.customTopic = topic;
   Object.assign(appState, common);
   appState.teachingContext = normalizeTeachingContext({});
-  appState.content = { vision: "", objectives: "", materials: "", activities: { A: "", B: "", C: "", D: "", E: "", F: "", G: "" } };
+  appState.content = { vision: "", objectives: "", materials: "", activities: { A: "", B: "", C: "", D: "", E: "", F: "", G: "" }, illustrations: [] };
   appState.images = [];
   appState.pdfAttachments = [];
 }
@@ -636,6 +639,183 @@ async function requestStructuredIntegrationCandidatesForEnabled({ silent = false
   for (const kind of ["digital", "ai"]) await requestStructuredIntegrationCandidates(kind, { silent });
 }
 
+function illustrationKindLabel(kind) {
+  return kind === "thuc_te" ? "Hình thực tế" : "Hình chuẩn SGK";
+}
+
+function illustrationMarker(ill) {
+  return `![${ill.caption || ill.title || ill.id}](khbd-ill:${ill.id})`;
+}
+
+function parseIllustrationSpecs(raw) {
+  let jsonText = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
+  let data;
+  try { data = JSON.parse(jsonText); }
+  catch {
+    const start = jsonText.search(/[\[{]/);
+    const end = Math.max(jsonText.lastIndexOf("}"), jsonText.lastIndexOf("]"));
+    if (start < 0 || end <= start) return [];
+    try { data = JSON.parse(jsonText.slice(start, end + 1)); } catch { return []; }
+  }
+  const rows = Array.isArray(data) ? data : (data?.illustrations || data?.candidates || []);
+  if (!Array.isArray(rows)) return [];
+  const used = new Set();
+  const specs = [];
+  for (const row of rows) {
+    const kind = /thuc|thực|real/i.test(String(row?.kind || "")) ? "thuc_te" : "sgk";
+    const title = String(row?.title || row?.caption || "").trim();
+    const prompt = String(row?.prompt || row?.description || title).trim();
+    if (!prompt) continue;
+    let locus = String(row?.locus || "B").trim().toUpperCase();
+    if (!["A", "B", "C", "D", "E", "MATERIALS"].includes(locus)) locus = "B";
+    const idBase = `ill_${kind}_${specs.length + 1}`;
+    if (used.has(idBase)) continue;
+    used.add(idBase);
+    specs.push({
+      id: idBase,
+      kind,
+      title: title || (kind === "thuc_te" ? "Tình huống thực tế" : "Hình toán"),
+      caption: String(row?.caption || title || "").trim(),
+      locus: locus === "MATERIALS" ? "materials" : locus,
+      prompt
+    });
+    if (specs.length >= 4) break;
+  }
+  return specs;
+}
+
+function buildIllustrationImagePrompt(spec) {
+  const detail = String(spec.prompt || spec.title || "").trim();
+  if (spec.kind === "thuc_te") {
+    return `Photorealistic Vietnamese real-life scene illustrating a lower-secondary math problem.
+Natural lighting, everyday Vietnam setting such as schoolyard, market, classroom or street.
+No cartoon, no infographic, no comic, no long text overlay.
+The scene must match this situation exactly:
+${detail}`;
+  }
+  return `Vietnamese mathematics textbook geometry figure, official SGK print style.
+Pure white background, black thin ink lines, compass-and-ruler construction.
+Labeled vertices with italic capital letters, equal-length tick marks, right-angle square, dashed hidden lines if needed.
+No shading, no 3D render, no cartoon, no photography, no people, no decorative objects, no long paragraphs of text.
+Draw exactly this figure:
+${detail}`;
+}
+
+function rewriteIllustrationMarkdown(markdown) {
+  const list = appState.content.illustrations || [];
+  return String(markdown || "").replace(/!\[([^\]]*)\]\(khbd-ill:([^)]+)\)/g, (full, alt, id) => {
+    const ill = list.find(item => item.id === id);
+    if (!ill || !ill.dataUrl) return full;
+    const caption = alt || ill.caption || ill.title || id;
+    const kind = illustrationKindLabel(ill.kind);
+    return `<figure class="khbd-illustration"><img src="${ill.dataUrl}" alt="${escapeHtml(caption)}"><figcaption>${escapeHtml(kind)}. ${escapeHtml(caption)}</figcaption></figure>`;
+  });
+}
+
+function appendIllustrationToLocus(ill) {
+  const marker = illustrationMarker(ill);
+  const heading = `\n\n**${illustrationKindLabel(ill.kind)}:**\n${marker}\n`;
+  if (ill.locus === "materials") {
+    const current = String(appState.content.materials || "");
+    if (current.includes(`khbd-ill:${ill.id}`)) return;
+    appState.content.materials = (current.trim() + heading).trim();
+    const editor = document.getElementById("editorMaterials");
+    if (editor) editor.value = appState.content.materials;
+    return;
+  }
+  const key = ill.locus || "B";
+  const current = String(appState.content.activities[key] || "");
+  if (current.includes(`khbd-ill:${ill.id}`)) return;
+  appState.content.activities[key] = (current.trim() + heading).trim();
+  if (appState.activeActSubtab === key) {
+    const editor = document.getElementById("editorActivity");
+    if (editor) editor.value = appState.content.activities[key];
+  }
+}
+
+function renderIllustrationGallery() {
+  const panel = document.getElementById("illustrationGallery");
+  if (!panel) return;
+  const list = appState.content.illustrations || [];
+  if (!list.length) {
+    panel.innerHTML = `<p class="text-muted" style="font-size:.85rem;margin:0">Chưa có hình minh họa. Bấm tạo sau khi đã đọc SGK — hệ thống vẽ hình chuẩn SGK (toán thuần) và hình thực tế khi bài cần.</p>`;
+    return;
+  }
+  panel.innerHTML = list.map(ill => {
+    const img = ill.dataUrl
+      ? `<img src="${ill.dataUrl}" alt="${escapeHtml(ill.caption || ill.title || "")}">`
+      : `<div class="khbd-illustration-empty">Chưa tạo được ảnh. Có thể copy prompt bên dưới.</div>`;
+    return `<article class="khbd-illustration-card" data-id="${ill.id}">
+      <span class="khbd-illustration-badge ${ill.kind === "thuc_te" ? "is-real" : "is-sgk"}">${illustrationKindLabel(ill.kind)}</span>
+      ${img}
+      <p>${escapeHtml(ill.caption || ill.title || ill.id)}</p>
+      <small>Gắn vào ${ill.locus === "materials" ? "II. Học liệu" : "Hoạt động " + ill.locus}</small>
+    </article>`;
+  }).join("");
+}
+
+async function generateLessonIllustrations({ silent = false } = {}) {
+  if (!hasAnalyzedLessonContent() && !hasTextbookMedia()) {
+    if (!silent) showToast("Cần nội dung SGK (Bước 0) trước khi tạo hình minh họa.", "warning");
+    return false;
+  }
+  if (typeof geminiAPI === "undefined" || typeof geminiAPI.generateContent !== "function") {
+    if (!silent) showToast("Chưa sẵn sàng Gemini để tạo hình.", "warning");
+    return false;
+  }
+  const context = getGenerationPromptContext();
+  const prompt = typeof getPromptTemplate === "function"
+    ? getPromptTemplate("GENERATE_ILLUSTRATIONS", context)
+    : "";
+  try {
+    updateProgress(88, "Đang chọn hình minh họa theo SGK...");
+    const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, appState.generationController?.signal, { maxOutputTokens: 2048 });
+    const specs = parseIllustrationSpecs(raw);
+    if (!specs.length) {
+      appState.content.illustrations = [];
+      renderIllustrationGallery();
+      if (!silent) showToast("Bài này không cần hình minh họa (chủ yếu chữ/số). Bạn vẫn có thể soạn bình thường.", "info", 5000);
+      return true;
+    }
+    const created = [];
+    for (let i = 0; i < specs.length; i++) {
+      const spec = specs[i];
+      updateProgress(90 + Math.round((i / specs.length) * 8), `Đang vẽ ${illustrationKindLabel(spec.kind)} (${i + 1}/${specs.length})...`);
+      try {
+        if (typeof geminiAPI.generateImage !== "function") throw new Error("API tạo ảnh chưa có");
+        let dataUrl = await geminiAPI.generateImage(buildIllustrationImagePrompt(spec), {
+          signal: appState.generationController?.signal,
+          timeoutMs: 90000
+        });
+        if (typeof compressDataUrl === "function" && dataUrl && !/^data:application\/pdf/i.test(dataUrl)) {
+          const compressed = await compressDataUrl(dataUrl, 1280, 0.82);
+          if (compressed?.dataUrl) dataUrl = compressed.dataUrl;
+        }
+        created.push({ ...spec, dataUrl, caption: spec.caption || spec.title });
+      } catch (error) {
+        console.warn("Không tạo được ảnh", spec.id, error);
+        created.push({ ...spec, dataUrl: "", error: error.message });
+      }
+    }
+    appState.content.illustrations = created;
+    created.filter(item => item.dataUrl).forEach(appendIllustrationToLocus);
+    saveStateToLocalStorage();
+    renderIllustrationGallery();
+    renderAllTabsPreview();
+    renderFullLessonPreview();
+    const ok = created.filter(item => item.dataUrl).length;
+    if (!silent) {
+      if (ok) showToast(`Đã tạo ${ok} hình minh họa (${created.filter(i => i.kind === "sgk").length} chuẩn SGK, ${created.filter(i => i.kind === "thuc_te").length} thực tế).`, "success", 6000);
+      else showToast("Chưa tạo được ảnh (phiên có thể chặn model ảnh). Prompt hình vẫn giữ trong khung, bạn có thể tạo tay.", "warning", 7000);
+    }
+    return ok > 0;
+  } catch (error) {
+    console.warn("generateLessonIllustrations:", error);
+    if (!silent) showToast(`Không tạo được hình minh họa: ${error.message}`, "warning", 6000);
+    return false;
+  }
+}
+
 function ensurePedagogyFromLesson({ force = false, silent = false } = {}) {
   if (typeof recommendPedagogyFromLesson !== "function") return false;
   if (!hasAnalyzedLessonContent()) return false;
@@ -932,6 +1112,25 @@ function setupEventListeners() {
     appState.content.activities[appState.activeActSubtab] = val; 
     saveStateToLocalStorage(); 
   });
+
+  const btnIllustrations = document.getElementById("btnGenerateIllustrations");
+  if (btnIllustrations) {
+    btnIllustrations.addEventListener("click", async () => {
+      if (appState.isGenerating) {
+        showToast("Một tác vụ AI khác đang chạy, vui lòng chờ.", "warning");
+        return;
+      }
+      appState.isGenerating = true;
+      btnIllustrations.disabled = true;
+      try {
+        await generateLessonIllustrations({ silent: false });
+      } finally {
+        appState.isGenerating = false;
+        btnIllustrations.disabled = false;
+        hideProgress();
+      }
+    });
+  }
 
   // 7. Các nút Tạo nội dung đơn lẻ
   document.getElementById("btnAnalyzeVision").addEventListener("click", handleGenerateVision);
@@ -1530,7 +1729,7 @@ function renderMathPreview(markdownText, targetElementId) {
     return;
   }
 
-  const katexSafeMarkdown = unwrapVietnameseMathForKatex(markdownText);
+  const katexSafeMarkdown = rewriteIllustrationMarkdown(unwrapVietnameseMathForKatex(markdownText));
 
   // 1. Phân tích Markdown sang HTML bằng Marked.js
   let html = "";
@@ -1638,7 +1837,7 @@ function isAllowedKhbdClass(value) {
 
 function sanitizePreviewHtml(html) {
   if (typeof DOMParser === "undefined" || typeof document === "undefined") return html;
-  const allowedTags = new Set(["A", "B", "BLOCKQUOTE", "BR", "CODE", "DEL", "EM", "H1", "H2", "H3", "H4", "H5", "H6", "HR", "I", "LI", "OL", "P", "PRE", "SPAN", "STRONG", "TABLE", "TBODY", "TD", "TH", "THEAD", "TR", "UL"]);
+  const allowedTags = new Set(["A", "B", "BLOCKQUOTE", "BR", "CODE", "DEL", "EM", "FIGCAPTION", "FIGURE", "H1", "H2", "H3", "H4", "H5", "H6", "HR", "I", "IMG", "LI", "OL", "P", "PRE", "SPAN", "STRONG", "TABLE", "TBODY", "TD", "TH", "THEAD", "TR", "UL"]);
   const classTags = new Set(["H1", "H2", "H3", "H4", "H5", "H6", "P", "LI", "STRONG", "SPAN"]);
   const documentFragment = document.createDocumentFragment();
   const parsed = new DOMParser().parseFromString(html, "text/html");
@@ -1651,6 +1850,15 @@ function sanitizePreviewHtml(html) {
       if (/^(https?:|mailto:)/i.test(href)) clean.href = href;
       clean.rel = "noopener noreferrer";
       clean.target = "_blank";
+    }
+    if (node.tagName === "IMG") {
+      const src = node.getAttribute("src") || "";
+      if (/^(data:image\/|https?:|blob:)/i.test(src)) clean.setAttribute("src", src);
+      if (node.getAttribute("alt")) clean.setAttribute("alt", node.getAttribute("alt"));
+    }
+    if (node.tagName === "FIGURE" || node.tagName === "FIGCAPTION") {
+      const cls = (node.getAttribute("class") || "").trim();
+      if (cls) clean.setAttribute("class", cls);
     }
     if (classTags.has(node.tagName)) {
       const cls = (node.getAttribute("class") || "").trim();
@@ -1821,6 +2029,13 @@ function getFullLessonPlanMarkdown(options = {}) {
     `# III. TIẾN TRÌNH DẠY HỌC`,
     fullActMarkdown || "*[Chưa tạo các hoạt động dạy học III.A - E]*"
   ];
+  const illustrations = (c.illustrations || []).filter(item => item && item.dataUrl);
+  if (illustrations.length) {
+    body.push(`\n---\n`, `# Hình minh họa`);
+    illustrations.forEach(ill => {
+      body.push(`**${illustrationKindLabel(ill.kind)}.** ${ill.caption || ill.title || ill.id}`, illustrationMarker(ill));
+    });
+  }
   if (options.includeHeader === false) return body.join("\n\n");
   const header = [
     `**TRƯỜNG:** ${appState.school || "................................................"}`,
@@ -3136,6 +3351,13 @@ async function handle1ClickGenerate() {
     renderMathPreview(appState.content.activities[appState.activeActSubtab], "previewActivity");
     renderFullLessonPreview();
 
+    try {
+      updateProgress(97, "Đang tạo hình minh họa (chuẩn SGK + thực tế)...");
+      await generateLessonIllustrations({ silent: true });
+    } catch (illErr) {
+      console.warn("1-click minh họa:", illErr);
+    }
+
     updateProgress(100, "ĐÃ TẠO XONG TOÀN BỘ KẾ HOẠCH BÀI DẠY (6/6 BƯỚC)!");
     setTimeout(() => {
       hideProgress();
@@ -3242,7 +3464,8 @@ function handleClearAllContent() {
       activities: {
         A: "", B: "", C: "", D: "",
         E: "", F: "", G: ""
-      }
+      },
+      illustrations: []
     };
     appState.images = [];
     appState.pdfAttachments = [];
@@ -3254,6 +3477,7 @@ function handleClearAllContent() {
     syncDraftDom();
     updateImageCounts();
     renderImageGallery();
+    renderIllustrationGallery();
     renderAllTabsPreview();
     renderFullLessonPreview();
     saveStateToLocalStorage();
@@ -3501,6 +3725,8 @@ if (typeof module !== 'undefined' && module.exports) {
     getUserMistralKeys,
     requestStructuredIntegrationCandidates,
     parseStructuredCandidates,
+    parseIllustrationSpecs,
+    generateLessonIllustrations,
     applyTextbookOcrResult,
     handle1ClickGenerate,
     generateOneClickContent,

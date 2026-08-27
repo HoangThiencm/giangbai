@@ -592,6 +592,16 @@ class DocxGenerator {
         continue;
       }
 
+      const illustrationMatch = trimmed.match(/^!\[([^\]]*)\]\(khbd-ill:([^)]+)\)$/);
+      if (illustrationMatch) {
+        const imageBlock = this.createIllustrationParagraphs(illustrationMatch[1], illustrationMatch[2]);
+        if (imageBlock.length) {
+          elements.push(...imageBlock);
+          i++;
+          continue;
+        }
+      }
+
       // 3. Phân tích ĐƯỜNG KẺ NGANG (--- hoặc ***)
       if (trimmed === "---" || trimmed === "***" || trimmed === "___") {
         elements.push(new Paragraph({
@@ -906,6 +916,45 @@ class DocxGenerator {
     }));
 
     return headers;
+  }
+
+  illustrationCatalog() {
+    if (typeof appState !== "undefined" && Array.isArray(appState.content?.illustrations)) {
+      return appState.content.illustrations;
+    }
+    return [];
+  }
+
+  createIllustrationParagraphs(altText, illustrationId) {
+    const { Paragraph, ImageRun, AlignmentType } = window.docx || {};
+    const ill = this.illustrationCatalog().find(item => item && item.id === illustrationId);
+    if (!ill || !ill.dataUrl || typeof ImageRun !== "function") return [];
+    try {
+      const comma = String(ill.dataUrl).indexOf(",");
+      const header = comma >= 0 ? ill.dataUrl.slice(0, comma) : "";
+      const b64 = comma >= 0 ? ill.dataUrl.slice(comma + 1) : "";
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const type = /jpeg|jpg/i.test(header) ? "jpg" : "png";
+      const caption = altText || ill.caption || ill.title || illustrationId;
+      const kind = ill.kind === "thuc_te" ? "Hình thực tế" : "Hình chuẩn SGK";
+      return [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 120, after: 80 },
+          children: [new ImageRun({ data: bytes, transformation: { width: 420, height: 315 }, type })]
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 0, after: 160, line: this.lineSpacing },
+          children: [this.coloredTextRun(`${kind}. ${caption}`, { italics: true, size: 22, color: "475569" })]
+        })
+      ];
+    } catch (error) {
+      console.warn("Không nhúng được hình minh họa vào Word:", error);
+      return [];
+    }
   }
 
   /**

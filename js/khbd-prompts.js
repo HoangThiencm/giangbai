@@ -330,6 +330,25 @@ YÊU CẦU: Tạo danh mục thiết bị và học liệu thiết yếu, cụ t
 - SGK, vở ghi, đồ dùng học tập thiết yếu của môn học.
 - Đọc trước bài trong SGK và chuẩn bị các nhiệm vụ được giao ở tiết trước.`,
 
+  GENERATE_ILLUSTRATIONS: `Bạn là họa sĩ SGK Toán Việt Nam. Đọc NỘI DUNG BÀI và liệt kê hình minh họa CẦN vẽ cho kế hoạch bài dạy lớp {grade}, môn {subject}, bài "{topic}".
+
+Trả về DUY NHẤT JSON:
+{"illustrations":[{"kind":"sgk hoặc thuc_te","title":"tên hình ngắn","caption":"Hình n. chú thích dưới hình","locus":"B hoặc C hoặc D hoặc materials","prompt":"mô tả chính xác hình cần vẽ, đủ nhãn đỉnh/cạnh/số đo nếu là hình học"}]}
+
+Quy tắc:
+- kind "sgk": hình toán thuần (hình học, đồ thị, sơ đồ, trục số) phong cách in SGK: nền trắng, nét mực đen, nhãn A B C, không nhân vật, không ảnh chụp.
+- kind "thuc_te": cảnh đời sống Việt Nam minh họa bài toán thực tế (sân trường, chợ, thước đo, xếp hàng...), ảnh chân thực, không cartoon.
+- Chỉ tạo hình khi bài THỰC SỰ cần. Hình học/đo đạc/đồ thị: ưu tiên 1–2 hình sgk. Có bài toán thực tế: thêm 1 hình thuc_te.
+- Tối đa 4 hình. Không bịa số đo trái SGK. Nếu bài chỉ chữ/số đại số không cần hình: {"illustrations":[]}.
+- Không markdown, không lời dẫn.
+
+NỘI DUNG BÀI (OCR SGK + hoạt động đã soạn):
+"""
+{textbook_content}
+
+{activities_content}
+"""`,
+
   // 1-CLICK PHẦN I + II (CORE LESSON)
   GENERATE_CORE_LESSON: `Đọc nguồn SGK (văn bản OCR/tóm tắt và PDF/ảnh nếu đính kèm) và soạn phần I + II của Kế hoạch bài dạy môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512/BGDĐT-GDTrH, bám CT GDPT 2018.
 - Môn học: {subject}
@@ -534,16 +553,15 @@ ${ACTIVITY_TABLE_CONTRACT}
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
-- BỐ CỤC 4 PHẦN RÕ NÉT Ở MỤC b) NỘI DUNG VÀ CỘT PHẢI BẢNG d):
-  1. Học cái gì: Ôn tập các định nghĩa, quy tắc, công thức trọng tâm và tóm tắt kiến thức bằng sơ đồ tư duy (mindmap) vào vở ghi.
-  2. Làm bài tập gì: Hoàn thành các bài tập còn lại trong SGK và Sách bài tập (SBT) - ghi rõ số bài, trang cụ thể.
-  3. Bài tập mở rộng / Nâng cao: Đưa ra 1–2 bài toán/nhiệm vụ vận dụng phân hóa dành cho học sinh khá, giỏi kèm gợi ý phương pháp giải ngắn gọn.
-  4. Chuẩn bị bài sau: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, dụng cụ học tập cần thiết.
+- BỐ CỤC NỘI DUNG CHUẨN SƯ PHẠM Ở MỤC b) NỘI DUNG VÀ CỘT PHẢI BẢNG d):
+  1. Học bài: Ôn tập các định nghĩa, quy tắc, công thức trọng tâm và tóm tắt kiến thức bằng sơ đồ tư duy (mindmap) vào vở ghi.
+  2. Làm bài: Hoàn thành các bài tập trong SGK và Sách bài tập (SBT) môn {subject} (ghi rõ số bài, trang cụ thể); giải bài tập mở rộng / nâng cao phân hóa dành cho học sinh khá, giỏi kèm gợi ý ngắn gọn.
+  3. Chuẩn bị bài: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu cần thiết.
 - TÍCH HỢP PROMPT AI (Khi bối cảnh sư phạm bật năng lực AI): Thêm mẫu Prompt AI an toàn hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai gia sư gợi mở, không giải hộ).
 - Cột TRÁI mục d): Kịch bản phân vai rõ ràng đủ 4 bước CV 5512:
   + **GV:** Nói câu lệnh giao nhiệm vụ về nhà trực tiếp trong ngoặc kép "...", hướng dẫn cách hoàn thành, cách nộp sản phẩm ở tiết sau.
   + **HS:** Lắng nghe, ghi nhận nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.
-- Cột PHẢI mục d): Nội dung hướng dẫn học ở nhà chốt cho HS ghi vở.
+- Cột PHẢI mục d): Nội dung hướng dẫn học ở nhà chốt cho HS ghi vở (đánh số rõ ràng **1. Học bài:**, **2. Làm bài:**, **3. Chuẩn bị bài:**).
 
 ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})
 
@@ -552,10 +570,11 @@ ${ACTIVITY_TABLE_CONTRACT}
 - Rèn luyện kĩ năng giải bài tập, phát triển tư duy mở rộng và chuẩn bị tâm thế, học liệu cho bài học tiếp theo.
 
 ### b) Nội dung:
-- 1. Học cái gì: Ôn tập các định nghĩa, quy tắc, công thức trọng tâm và vẽ sơ đồ tư duy (mindmap) tóm tắt toàn bộ nội dung bài học vào vở ghi.
-- 2. Làm bài tập gì: Hoàn thành các bài tập còn lại trong SGK và Sách bài tập (SBT) môn {subject}.
-- 3. Bài tập mở rộng / Nâng cao: Giao 1–2 bài toán/nhiệm vụ mở rộng có tính tư duy cao dành cho học sinh khá, giỏi kèm gợi ý ngắn gọn.
-- 4. Chuẩn bị bài sau: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng học tập cần thiết.
+- 1. Học bài: Ôn tập các định nghĩa, quy tắc, công thức trọng tâm và vẽ sơ đồ tư duy (mindmap) tóm tắt toàn bộ nội dung bài học vào vở ghi.
+- 2. Làm bài:
+  + Hoàn thành các bài tập còn lại trong SGK và Sách bài tập (SBT) môn {subject}.
+  + Bài tập mở rộng / Nâng cao: Đưa ra 1–2 bài toán/nhiệm vụ mở rộng có tính tư duy cao dành cho học sinh khá, giỏi kèm gợi ý ngắn gọn.
+- 3. Chuẩn bị bài: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng học tập cần thiết.
 {ai_homework_prompt_note}
 
 ### c) Sản phẩm:
@@ -566,7 +585,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Trình chiếu slide hướng dẫn về nhà và nêu rõ câu lệnh trực tiếp: "Các em về nhà hoàn thành 4 nhiệm vụ: (1) Vẽ sơ đồ tư duy ôn bài, (2) Làm bài tập ..., (3) Thử sức bài tập mở rộng sau, (4) Đọc trước bài ...". **HS:** Lắng nghe, ghi nhận các nhiệm vụ và thời hạn hoàn thành vào vở.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Tự giác làm bài tập và chuẩn bị bài mới tại nhà theo hướng dẫn. **GV:** Theo dõi, hỗ trợ giải đáp thắc mắc qua kênh trực tuyến khi cần thiết.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Nộp vở bài tập và sơ đồ tư duy vào đầu tiết học sau; trao đổi, đối chiếu kết quả với bạn. **GV:** Kiểm tra xác suất hoặc giao cán sự lớp/tổ trưởng kiểm tra sản phẩm về nhà.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần tự học ở nhà, tuyên dương các bạn làm tốt bài tập nâng cao và giải đáp thắc mắc ở đầu tiết sau. **HS:** Rút kinh nghiệm và hoàn thiện sản phẩm học tập. | **Hướng dẫn học ở nhà**<br>- 1. Ôn tập kiến thức bài học và vẽ sơ đồ tư duy.<br>- 2. Hoàn thành bài tập SGK & SBT.<br>- 3. Bài tập mở rộng / Nâng cao (kèm gợi ý).<br>- 4. Chuẩn bị cho bài học tiếp theo. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Trình chiếu slide hướng dẫn về nhà và nêu rõ câu lệnh trực tiếp: "Các em về nhà hoàn thành các nhiệm vụ: (1) Học bài và vẽ sơ đồ tư duy ôn tập, (2) Làm bài tập trong SGK, SBT và bài tập mở rộng, (3) Chuẩn bị bài mới...". **HS:** Lắng nghe, ghi nhận các nhiệm vụ và thời hạn hoàn thành vào vở.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Tự giác học bài, làm bài tập và chuẩn bị bài mới tại nhà theo hướng dẫn. **GV:** Theo dõi, hỗ trợ giải đáp thắc mắc qua kênh trực tuyến khi cần thiết.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Nộp vở bài tập và sơ đồ tư duy vào đầu tiết học sau; trao đổi, đối chiếu kết quả với bạn. **GV:** Kiểm tra xác suất hoặc giao cán sự lớp/tổ trưởng kiểm tra sản phẩm về nhà.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần tự học ở nhà, tuyên dương các bạn làm tốt bài tập nâng cao và giải đáp thắc mắc ở đầu tiết sau. **HS:** Rút kinh nghiệm và hoàn thiện sản phẩm học tập. | **Hướng dẫn học ở nhà**<br>**1. Học bài:**<br>- Ôn tập kiến thức bài học và vẽ sơ đồ tư duy.<br>**2. Làm bài:**<br>- Hoàn thành bài tập SGK & SBT.<br>- Bài tập mở rộng / Nâng cao: (kèm gợi ý).<br>**3. Chuẩn bị bài:**<br>- Đọc trước bài mới và chuẩn bị học liệu. |`,
 
   // 1-CLICK HOẠT ĐỘNG A -> E (ACTIVITIES AE)
   GENERATE_ACTIVITIES_AE: `Đọc PDF/ảnh SGK đính kèm và soạn toàn bộ hoạt động A–E môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512.

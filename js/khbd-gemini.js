@@ -670,6 +670,69 @@ class GeminiAPIManager {
       this._lastRequestEndedAt = Date.now();
     }
   }
+
+  getImageModels() {
+    return ["gemini-2.5-flash-image", "gemini-2.0-flash-preview-image-generation"];
+  }
+
+  extractInlineImage(data) {
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    for (const part of parts) {
+      const inline = part.inlineData || part.inline_data;
+      if (inline && inline.data) {
+        const mime = inline.mimeType || inline.mime_type || "image/png";
+        return `data:${mime};base64,${inline.data}`;
+      }
+    }
+    return null;
+  }
+
+  async generateImage(prompt, options = {}) {
+    const run = this._requestQueue.then(() => this._generateImageInternal(prompt, options || {}));
+    this._requestQueue = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
+  async _generateImageInternal(prompt, options = {}) {
+    if (!this.apiKeys || this.apiKeys.length === 0) this.loadKeysFromLocalStorage();
+    if (!this.apiKeys || this.apiKeys.length === 0) {
+      throw new Error("Bạn chưa cấu hình Gemini API Key cá nhân. Vui lòng bấm 'Quản lý API Key'.");
+    }
+    const payload = {
+      contents: [{ role: "user", parts: [{ text: String(prompt || "").trim() }] }],
+      generationConfig: {
+        responseModalities: ["TEXT", "IMAGE"],
+        temperature: 0.35
+      }
+    };
+    let lastError = null;
+    const models = this.getImageModels();
+    for (const model of models) {
+      try {
+        this.emitGeminiStatus({ type: "call", message: `Đang tạo ảnh (${model})...`, model }, options);
+        const response = await this.fetchGeminiGenerate(
+          model,
+          this.getCurrentKey(),
+          payload,
+          options.signal || null,
+          options.timeoutMs || 90000,
+          options
+        );
+        if (!response.ok) {
+          const errJson = await response.json().catch(() => ({}));
+          throw new Error(errJson.error?.message || `HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        const image = this.extractInlineImage(data);
+        if (image) return image;
+        lastError = new Error(`${model} không trả về dữ liệu ảnh.`);
+      } catch (error) {
+        lastError = error;
+        console.warn(`[Gemini] Tạo ảnh bằng ${model} chưa thành công:`, error);
+      }
+    }
+    throw lastError || new Error("Không tạo được ảnh minh họa.");
+  }
 }
 
 // Khởi tạo instance toàn cục
