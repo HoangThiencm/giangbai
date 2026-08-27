@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soạn KHBD — Gemini Canvas (gemini-3-flash-preview)</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📐</text></svg>">
+
+  <!-- Canvas: không đăng nhập, không API key. Nội dung logic lấy từ host. -->
+  <script>
+    (function () {
+      window.__KHBD_CANVAS__ = {
+        host: "https://hoangthiencm.id.vn",
+        model: "gemini-3-flash-preview",
+        version: "20260827-canvas-khbd",
+        connected: false
+      };
+      try {
+        if (!localStorage.getItem("authToken")) localStorage.setItem("authToken", "canvas-session");
+        if (!localStorage.getItem("userEmail")) localStorage.setItem("userEmail", "canvas@gemini");
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- KaTeX CSS & JS (Hỗ trợ công thức Toán học sắc nét) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Marked.js (Phân tích cú pháp Markdown) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@9.1.2/marked.min.js"></script>
+
+  <!-- PDF.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <!-- docx.js (Xuất file Word .docx chuyên nghiệp) -->
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
+  
+  <!-- FileSaver.js (Lưu file trên trình duyệt) -->
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260827-canvas-khbd">
+  <style>
+    #canvasHostBanner {
+      position: sticky; top: 0; z-index: 2000; padding: .55rem 1rem;
+      font-size: .86rem; font-weight: 600; text-align: center;
+      background: #e0f2fe; color: #075985; border-bottom: 1px solid #7dd3fc;
+    }
+    #canvasHostBanner.ok { background: #dcfce7; color: #166534; border-color: #86efac; }
+    #canvasHostBanner.err { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+  </style>
+</head>
+<body>
+  <div id="canvasHostBanner">Đang kết nối host <code>hoangthiencm.id.vn</code>…</div>
+
+  <!-- =========================================================================
+       APP HEADER & TOOLBAR
+       ========================================================================= -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="app-brand">
+        <div class="brand-icon">✨</div>
+        <div>
+          <h1>Soạn Kế hoạch Bài dạy AI — Gemini Canvas</h1>
+          <p>Chạy trong Canvas với <b>gemini-3-flash-preview</b> của hệ thống • Không cần API key Gemini/Mistral • Logic lấy từ host</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="https://hoangthiencm.id.vn/" class="btn btn-outline" style="text-decoration: none;" title="Mở host hoangthiencm.id.vn" target="_blank" rel="noopener">
+          <i data-lucide="home"></i> Host
+        </a>
+        <button id="btn1ClickGenerate" class="btn btn-special" title="Tự động tạo lần lượt toàn bộ giáo án từ đầu đến cuối">
+          <i data-lucide="zap"></i> ⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)
+        </button>
+        <button id="btnCancelGeneration" class="btn btn-outline-dark" disabled title="Dừng tác vụ AI đang chạy">
+          <i data-lucide="circle-stop"></i> Hủy tạo
+        </button>
+        <button id="btnManageKeys" class="btn btn-outline" title="Gemini Canvas tự cấp quyền — không cần API key" style="pointer-events:none;opacity:.85">
+          <i data-lucide="sparkles"></i> Canvas · <span id="keyCountBadge">gemini-3-flash-preview</span>
+        </button>
+        <button id="btnClearAll" class="btn btn-danger" title="Xóa toàn bộ nội dung đã soạn">
+          <i data-lucide="trash-2"></i> Xóa tất cả
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar-grid">
+
+      <div class="tool-group">
+        <label for="selectGrade">Khối Lớp:</label>
+        <select id="selectGrade">
+          <option value="6" selected>Lớp 6</option>
+          <option value="7">Lớp 7</option>
+          <option value="8">Lớp 8</option>
+          <option value="9">Lớp 9</option>
+        </select>
+      </div>
+
+      <div class="tool-group">
+        <label for="selectSubject">Môn học:</label>
+        <select id="selectSubject"></select>
+      </div>
+
+      <div class="tool-group" style="grid-column: span 2;">
+        <label for="selectLesson">Danh mục bài học:</label>
+        <select id="selectLesson">
+          <option value="">-- Chọn bài học từ SGK --</option>
+        </select>
+      </div>
+
+      <div class="tool-group">
+        <label for="selectModel">Model AI:</label>
+        <select id="selectModel" disabled title="Canvas khóa model hệ thống gemini-3-flash-preview">
+          <option value="gemini-3-flash-preview" selected>gemini-3-flash-preview (Canvas)</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       FLOATING PROGRESS BAR (THỜI GIAN THỰC NỔI PHÍA DƯỚI)
+       ========================================================================= -->
+  <div id="progressContainer" class="progress-container">
+    <div class="progress-header">
+      <div class="progress-header-left">
+        <span class="progress-spinner"></span>
+        <span id="progressStepTitle">Đang chuẩn bị...</span>
+      </div>
+      <span id="progressPercent" class="progress-percent-badge">0%</span>
+    </div>
+    <div class="progress-bar-outer">
+      <div id="progressBarInner" class="progress-bar-inner"></div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MAIN NAVIGATION TABS
+       ========================================================================= -->
+  <nav class="main-nav">
+    <button class="nav-tab-btn active" data-tab="tabVision">
+      <i data-lucide="book-open-check"></i> Thiết lập bài dạy từ SGK <span id="imgCountBadge" class="tab-badge">0 ảnh</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="tabObjectives">
+      <i data-lucide="target"></i> 2. I. Mục tiêu
+    </button>
+    <button class="nav-tab-btn" data-tab="tabMaterials">
+      <i data-lucide="package"></i> 3. II. Thiết bị & Học liệu
+    </button>
+    <button class="nav-tab-btn" data-tab="tabActivities">
+      <i data-lucide="layers"></i> 4. III. Tiến trình Dạy học
+    </button>
+    <button class="nav-tab-btn" data-tab="tabFullPreview">
+      <i data-lucide="file-text"></i> 5. Toàn bộ Giáo án (.DOCX)
+    </button>
+  </nav>
+
+  <!-- =========================================================================
+       APP MAIN CONTENT
+       ========================================================================= -->
+  <main class="app-body">
+
+    <!-- -----------------------------------------------------------------------
+         TAB 0: THIẾT LẬP CHUNG & THÔNG TIN BÀI DẠY
+         ----------------------------------------------------------------------- -->
+    <section id="tabVision" class="tab-pane active">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="settings"></i> Thiết lập bài dạy từ SGK</h2>
+          <span class="text-muted" style="font-size: 0.85rem;">SGK do giáo viên cung cấp</span>
+          <div class="card-actions"><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+          <div class="tool-group">
+            <label for="inputSchool">Tên Trường THCS:</label>
+            <input type="text" id="inputSchool" placeholder="Ví dụ: Trường THCS Trần Phú" value="TRƯỜNG THCS TRẦN PHÚ">
+          </div>
+          <div class="tool-group">
+            <label for="inputGroup">Tổ Bộ môn:</label>
+            <input type="text" id="inputGroup" placeholder="Ví dụ: Tổ Toán - Tin học" value="TỔ TOÁN - TIN HỌC">
+          </div>
+          <div class="tool-group">
+            <label for="inputTeacher">Họ và tên Giáo viên:</label>
+            <input type="text" id="inputTeacher" placeholder="Ví dụ: ThS. Nguyễn Văn A" value="Giáo viên Môn Toán">
+          </div>
+          <div class="tool-group">
+            <label for="inputSubject">Môn học:</label>
+            <input type="text" id="inputSubject" value="TOÁN">
+          </div>
+          <div class="tool-group">
+            <label for="inputTopicCustom">Tên Bài học (Có thể nhập hoặc chọn ở trên):</label>
+            <input type="text" id="inputTopicCustom" placeholder="Nhập tên bài học cụ thể...">
+          </div>
+          <div class="tool-group">
+            <label for="inputDuration">Thời lượng dạy học:</label>
+            <input type="text" id="inputDuration" value="02 tiết (90 phút)">
+          </div>
+          <div class="tool-group"><label for="inputClassSize">Sĩ số lớp:</label><input id="inputClassSize" type="number" min="1" max="60" value="40"></div>
+          <div class="tool-group"><label for="selectReadiness">Mức sẵn sàng:</label><select id="selectReadiness"><option value="Không đồng đều">Không đồng đều</option><option value="Cơ bản">Cơ bản</option><option value="Đạt yêu cầu">Đạt yêu cầu</option><option value="Nâng cao">Nâng cao</option></select></div>
+          <div class="tool-group"><label for="selectGrouping">Tổ chức nhóm:</label><select id="selectGrouping"><option value="Cá nhân/cặp đôi">Cá nhân/cặp đôi</option><option value="Nhóm 4 có phân vai">Nhóm 4 có phân vai</option><option value="Nhóm 6 có phân vai">Nhóm 6 có phân vai</option></select></div>
+          <div class="tool-group"><label><input id="hasProjector" type="checkbox"> Máy chiếu</label><label><input id="hasInternet" type="checkbox"> Internet</label><label><input id="hasDevices" type="checkbox"> Thiết bị học sinh</label></div>
+        </div>
+
+        <div style="margin-top: 1.25rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #f8fafc;">
+          <h3 style="margin: 0 0 .75rem; font-size: 1rem;"><i data-lucide="users-round"></i> Bối cảnh lớp và định hướng dạy học</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+            <fieldset class="tool-group" style="min-width:0;border:1px solid var(--border);border-radius:8px;padding:.75rem;">
+              <legend>Đặc điểm lớp</legend>
+              <label><input type="checkbox" class="class-profile-choice" value="Trình độ không đồng đều"> Trình độ không đồng đều</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Cần củng cố nền tảng"> Cần củng cố nền tảng</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Đa số đạt yêu cầu"> Đa số đạt yêu cầu</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Nhiều HS khá/giỏi"> Nhiều HS khá/giỏi</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Cần trực quan hóa"> Cần trực quan hóa</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Cần tăng thời gian suy luận"> Cần tăng thời gian suy luận</label><br>
+              <label><input type="checkbox" class="class-profile-choice" value="Tích cực hợp tác/thảo luận"> Tích cực hợp tác/thảo luận</label>
+              <label for="inputClassProfileNote">Ghi chú ngắn (không nhập tên/thông tin sức khỏe nhạy cảm):</label>
+              <textarea id="inputClassProfileNote" maxlength="300" rows="2"></textarea>
+            </fieldset>
+            <fieldset class="tool-group" style="min-width:0;border:1px solid var(--border);border-radius:8px;padding:.75rem;">
+              <legend>Hỗ trợ chức năng (không chẩn đoán)</legend>
+              <label><input type="checkbox" class="support-choice" value="Nhiệm vụ chia nhỏ"> Nhiệm vụ chia nhỏ</label><br>
+              <label><input type="checkbox" class="support-choice" value="Thêm thời gian"> Thêm thời gian</label><br>
+              <label><input type="checkbox" class="support-choice" value="Học liệu trực quan/chữ lớn"> Học liệu trực quan/chữ lớn</label><br>
+              <label><input type="checkbox" class="support-choice" value="Đọc/nhắc lại yêu cầu"> Đọc/nhắc lại yêu cầu</label><br>
+              <label><input type="checkbox" class="support-choice" value="Hỗ trợ giao tiếp/thảo luận"> Hỗ trợ giao tiếp/thảo luận</label><br>
+              <label><input type="checkbox" class="support-choice" value="Bố trí vai trò phù hợp"> Bố trí vai trò phù hợp</label><br>
+              <label><input type="checkbox" class="support-choice" value="Bạn đồng hành"> Bạn đồng hành</label>
+              <label for="inputSupportNote">Ghi chú ngắn (không nhập tên/thông tin sức khỏe nhạy cảm):</label>
+              <textarea id="inputSupportNote" maxlength="300" rows="2"></textarea>
+            </fieldset>
+          </div>
+          <div class="pedagogy-section">
+            <h3>Phương pháp & Kĩ thuật dạy học</h3>
+            <p class="text-muted">Để trống nếu muốn hệ thống đề xuất sau khi đã phân tích nội dung SGK (Bước 0). Nếu bạn đã chọn thì giữ nguyên lựa chọn đó.</p>
+            <div id="methodsCatalogPanel"></div>
+            <div id="techniquesCatalogPanel"></div>
+            <div id="activitiesCatalogPanel"></div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0;">
+            <label><input type="checkbox" id="toggleDigitalCompetency"> Tích hợp năng lực số</label>
+            <label><input type="checkbox" id="toggleAiCompetency"> Tích hợp năng lực AI</label>
+            <label><input type="checkbox" id="toggleForeignLanguage"> Tích hợp ngoại ngữ</label>
+            <label><input type="checkbox" id="toggleInclusiveSupport"> Tích hợp hỗ trợ HS khuyết tật/hòa nhập</label>
+          </div>
+          <p class="text-muted" style="font-size:0.82rem;margin:0 0 .75rem;">Làm Bước 0 (phân tích SGK) trước, rồi bật NLS và/hoặc AI. Sau OCR, hệ thống tự tick tối đa 3 mục/loại khi có minh chứng trực tiếp trong nội dung bài. NLS theo dải TT 02 lớp 6–7 / 8–9; AI đúng từng lớp. Không tự bịa mã ngoài văn bản.</p>
+          <div id="digitalStandardsPanel" hidden></div>
+          <div id="aiStandardsPanel" hidden></div>
+          <div class="tool-group">
+            <label for="inputSpecialRequirements">Yêu cầu hoặc hoạt động đặc thù:</label>
+            <textarea id="inputSpecialRequirements" maxlength="600" rows="3" placeholder="Ví dụ: Có hoạt động đo đạc ở sân trường; ưu tiên nhiệm vụ theo nhóm 4; không sử dụng điện thoại trong giờ học."></textarea>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
+          <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn KHBD:</h4>
+          <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
+            <li><b>Bước 0:</b> Dán PDF/ảnh SGK là đủ để 1-click. Nút <b>Đọc nội dung SGK</b> dùng <b>gemini-3-flash-preview</b> của Gemini Canvas (không cần API key).</li>
+            <li><b>Bước 1:</b> Chọn khối, môn, bài; bật NLS/AI nếu cần. Sau OCR, hệ thống đề xuất tối đa 3 mục có minh chứng theo bài.</li>
+            <li><b>Bước 2:</b> Bấm <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b> hoặc tạo từng phần ở Tab 2–4.</li>
+            <li><b>Bước 3:</b> Tab 5 kiểm tra và <b>Xuất Toàn bộ Giáo án (.DOCX)</b>.</li>
+          </ol>
+        </div>
+      </div>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 0: PHÂN TÍCH ẢNH SGK (VISION) — LÀM TRƯỚC
+         ----------------------------------------------------------------------- -->
+    <div id="lessonTextbookAnalysis">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="camera"></i> Bước 0 — Dán & phân tích ảnh/trang SGK</h2>
+          <div class="card-actions">
+            <button id="btnAnalyzeVision" class="btn btn-primary">
+              <i data-lucide="sparkles"></i> Đọc nội dung SGK (Gemini Canvas)
+            </button>
+            <button id="btnClearVisionImages" class="btn btn-outline-dark">
+              <i data-lucide="trash"></i> Xóa tất cả ảnh
+            </button>
+          </div>
+        </div>
+
+        <!-- Dropzone & Paste Area -->
+        <div id="dropzoneContainer" class="dropzone-container">
+          <div class="dropzone-icon">📋</div>
+          <div class="dropzone-text">
+            <h4>Dán ảnh SGK từ Clipboard (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
+            <p>Gemini Canvas nhận diện chữ/công thức trên PDF/ảnh đã chọn (không cần Mistral key). Gallery JPEG chỉ xem trước. Có thể soạn giáo án từ văn bản đã nhận diện hoặc 1-click.</p>
+          </div>
+          <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
+        </div>
+
+        <!-- Image Gallery Grid -->
+        <div id="imageGallery" class="image-gallery"></div>
+      </div>
+
+      <!-- Result Panel (Accordion / Details thu gọn nâng cao) -->
+      <details class="card vision-details-card" id="detailsVisionContent">
+        <summary class="vision-details-summary">
+          <div class="vision-summary-left">
+            <span class="vision-summary-icon">👁️</span>
+            <div class="vision-summary-text">
+              <span class="vision-summary-title">Xem chi tiết văn bản trích xuất từ SGK (Nâng cao)</span>
+              <span class="vision-summary-subtitle">Bấm để mở rộng / kiểm tra và chỉnh sửa nội dung văn bản AI đã đọc từ ảnh SGK hoặc file PDF</span>
+            </div>
+          </div>
+          <span class="vision-summary-chevron"><i data-lucide="chevron-down"></i></span>
+        </summary>
+
+        <div class="vision-details-body">
+          <div class="card-header vision-inner-header">
+            <span class="text-muted" style="font-size: 0.85rem;">Bạn có thể chỉnh sửa nội dung văn bản trích xuất dưới dạng Markdown trước khi tạo giáo án</span>
+            <div class="card-actions">
+              <button class="btn btn-outline-dark btn-sm toggle-preview-btn" data-target="editorVision" type="button">
+                <i data-lucide="eye"></i> Toggle Preview KaTeX
+              </button>
+            </div>
+          </div>
+
+          <div class="editor-preview-container">
+            <div class="panel-box">
+              <div class="panel-header"><span>Nội dung Markdown (Có thể chỉnh sửa)</span></div>
+              <textarea id="editorVision" class="markdown-editor" placeholder="Nội dung phân tích SGK sẽ hiển thị ở đây sau khi AI xử lý..."></textarea>
+            </div>
+            <div class="panel-box">
+              <div class="panel-header"><span>Xem trước KaTeX & Bảng biểu</span></div>
+              <div id="previewVision" class="preview-rendered"></div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 2: I. MỤC TIÊU (OBJECTIVES)
+         ----------------------------------------------------------------------- -->
+    <section id="tabObjectives" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="target"></i> I. Mục tiêu Bài học (Chuẩn CV 5512, Năng lực Toán, AI & Số)</h2>
+          <div class="card-actions">
+            <button id="btnGenerateObjectives" class="btn btn-primary">
+              <i data-lucide="sparkles"></i> Tạo Mục tiêu Bài học
+            </button>
+            <button id="btnExportObjectivesDocx" class="btn btn-success">
+              <i data-lucide="download"></i> Xuất Word (.docx)
+            </button>
+          </div>
+        </div>
+        <div class="editor-preview-container">
+          <div class="panel-box">
+            <div class="panel-header"><span>Biên soạn Markdown</span></div>
+            <textarea id="editorObjectives" class="markdown-editor" placeholder="Bấm 'Tạo Mục tiêu Bài học' để AI sinh nội dung theo chuẩn CV 5512 bám sát SGK..."></textarea>
+          </div>
+          <div class="panel-box">
+            <div class="panel-header"><span>Xem trước Trực quan KaTeX</span></div>
+            <div id="previewObjectives" class="preview-rendered"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 3: II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
+         ----------------------------------------------------------------------- -->
+    <section id="tabMaterials" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="package"></i> II. Thiết bị Dạy học & Học liệu (Giáo viên, Học sinh, Ứng dụng Số/AI)</h2>
+          <div class="card-actions">
+            <button id="btnGenerateMaterials" class="btn btn-primary">
+              <i data-lucide="sparkles"></i> Tạo Thiết bị & Học liệu
+            </button>
+            <button id="btnExportMaterialsDocx" class="btn btn-success">
+              <i data-lucide="download"></i> Xuất Word (.docx)
+            </button>
+          </div>
+        </div>
+        <div class="editor-preview-container">
+          <div class="panel-box">
+            <div class="panel-header"><span>Biên soạn Markdown</span></div>
+            <textarea id="editorMaterials" class="markdown-editor" placeholder="Bấm 'Tạo Thiết bị & Học liệu' để tạo danh mục đồ dùng và học liệu số..."></textarea>
+          </div>
+          <div class="panel-box">
+            <div class="panel-header"><span>Xem trước Trực quan</span></div>
+            <div id="previewMaterials" class="preview-rendered"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 4: III. TIẾN TRÌNH DẠY HỌC (SUB-TABS A -> G)
+         ----------------------------------------------------------------------- -->
+    <section id="tabActivities" class="tab-pane">
+      <div class="card" style="padding-bottom: 0.5rem;">
+        <!-- Subtabs A -> E -->
+        <div class="activities-nav">
+          <button class="act-tab-btn active" data-act="A">A. Mở đầu</button>
+          <button class="act-tab-btn" data-act="B">B. Hình thành Kiến thức</button>
+          <button class="act-tab-btn" data-act="C">C. Luyện tập</button>
+          <button class="act-tab-btn" data-act="D">D. Vận dụng</button>
+          <button class="act-tab-btn" data-act="E">E. Hướng dẫn về nhà</button>
+        </div>
+
+        <div class="card-header" style="margin-bottom: 0.5rem;">
+          <h3 id="currentActTitle" class="card-title">A. Hoạt động Mở đầu (Tiếp cận vấn đề)</h3>
+          <div class="card-actions">
+            <button id="btnGenerateCurrentAct" class="btn btn-primary">
+              <i data-lucide="sparkles"></i> Tạo nội dung mục này
+            </button>
+            <button id="btnExportCurrentActDocx" class="btn btn-success">
+              <i data-lucide="download"></i> Xuất Word mục này
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Editor/Preview Pane -->
+      <div class="card">
+        <div class="editor-preview-container">
+          <div class="panel-box">
+            <div class="panel-header"><span id="editorActLabel">Nội dung Markdown Hoạt động</span></div>
+            <textarea id="editorActivity" class="markdown-editor" placeholder="Bấm 'Tạo nội dung mục này' để AI biên soạn đủ 4 bước sư phạm: a. Mục tiêu, b. Nội dung, c. Sản phẩm, d. Tổ chức thực hiện..."></textarea>
+          </div>
+          <div class="panel-box">
+            <div class="panel-header"><span>Xem trước KaTeX & Bảng biểu</span></div>
+            <div id="previewActivity" class="preview-rendered"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- -----------------------------------------------------------------------
+         TAB 5: TOÀN BỘ GIÁO ÁN (XEM TRƯỚC & XUẤT .DOCX HOÀN CHỈNH)
+         ----------------------------------------------------------------------- -->
+    <section id="tabFullPreview" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="file-text"></i> Kế hoạch Bài dạy lõi (I, II và III.A-E)</h2>
+          <div class="card-actions">
+            <button id="btnExportFullDocx" class="btn btn-special">
+              <i data-lucide="download"></i> 📥 XUẤT TOÀN BỘ GIÁO ÁN (.DOCX)
+            </button>
+            <button id="btnCopyFullMarkdown" class="btn btn-outline-dark">
+              <i data-lucide="copy"></i> Sao chép Markdown
+            </button>
+            <button id="btnPrintPlan" class="btn btn-outline-dark">
+              <i data-lucide="printer"></i> In ấn
+            </button>
+          </div>
+        </div>
+
+        <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; min-height: 500px;">
+          <div id="fullLessonPreview" class="preview-rendered" style="max-height: none;">
+            <p style="text-align: center; color: var(--text-muted); font-style: italic;">
+              Chưa có nội dung giáo án. Hãy tạo nội dung ở các Tab 2, 3, 4 hoặc bấm nút <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b>!
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================================
+       APP FOOTER
+       ========================================================================= -->
+  <footer class="app-footer">
+    <div>
+      <b>Trợ lý Soạn Kế hoạch Bài dạy AI</b> • GDPT 2018 Lớp 1–12
+    </div>
+    <div>
+      <span id="statusFooterText">Đang kết nối host…</span> (Model: <span id="footerModelName">gemini-3-flash-preview</span>)
+    </div>
+  </footer>
+
+  <!-- =========================================================================
+       MODALS
+       ========================================================================= -->
+
+  <!-- Modal 1: Quản lý API Key -->
+  <div id="modalApiKeys" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3><i data-lucide="key"></i> Quản lý API Key cá nhân</h3>
+        <button class="modal-close-btn" data-close-modal="modalApiKeys">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+          Mỗi tài khoản tự lưu key trên CSDL. <b>Đọc nội dung SGK</b> dùng Mistral OCR; <b>soạn KHBD</b> dùng Gemini. Nếu kiểm tra Gemini treo, máy có thể không tới Google — hệ thống sẽ thử gọi qua máy chủ (tối đa ~15 giây).
+        </p>
+
+        <label for="textareaApiKeys" style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem;">Gemini — soạn kế hoạch bài dạy</label>
+        <textarea id="textareaApiKeys" rows="4" style="width: 100%; padding: 0.6rem; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px;" placeholder="AIzaSy...&#10;AIzaSy..."></textarea>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <span id="keyValidationStatus" style="font-size: 0.82rem; font-weight: 600;"></span>
+          <div style="display:flex; gap:0.4rem; align-items:center;">
+            <label class="btn btn-outline-dark btn-sm" style="cursor: pointer;">
+              <i data-lucide="file-up"></i> File Gemini
+              <input type="file" id="fileInputApiKeyTxt" accept=".txt,text/plain" style="display: none;">
+            </label>
+            <button id="btnTestApiKey" class="btn btn-outline-dark btn-sm">
+              <i data-lucide="check-circle"></i> Kiểm tra Gemini
+            </button>
+          </div>
+        </div>
+
+        <label for="textareaMistralKeys" style="display:block; font-size:0.82rem; font-weight:700; margin:1rem 0 0.35rem;">Mistral OCR — đọc nội dung SGK</label>
+        <textarea id="textareaMistralKeys" rows="4" style="width: 100%; padding: 0.6rem; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px;" placeholder="Key Mistral (console.mistral.ai)&#10;Mỗi key một dòng"></textarea>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <span id="mistralKeyValidationStatus" style="font-size: 0.82rem; font-weight: 600;"></span>
+          <div style="display:flex; gap:0.4rem; align-items:center;">
+            <label class="btn btn-outline-dark btn-sm" style="cursor: pointer;">
+              <i data-lucide="file-up"></i> File Mistral
+              <input type="file" id="fileInputMistralKeyTxt" accept=".txt,text/plain" style="display: none;">
+            </label>
+            <button id="btnTestMistralKey" class="btn btn-outline-dark btn-sm">
+              <i data-lucide="check-circle"></i> Kiểm tra Mistral
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-dark" data-close-modal="modalApiKeys">Đóng</button>
+        <button id="btnSaveApiKeys" class="btn btn-primary">Lưu lên CSDL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Phóng to ảnh (Image Zoom) -->
+  <div id="modalImageZoom" class="modal-backdrop modal-zoom">
+    <div class="modal-dialog">
+      <div class="modal-header" style="background: #1e293b; color: white; border-bottom: 1px solid #334155;">
+        <h3 id="zoomImageTitle">Xem ảnh chi tiết</h3>
+        <button class="modal-close-btn" data-close-modal="modalImageZoom" style="color: #cbd5e1;">&times;</button>
+      </div>
+      <div class="modal-body" style="background: #0f172a; padding: 1rem; text-align: center;">
+        <img id="zoomImageSrc" src="" alt="Zoom Image">
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Chọn trang PDF SGK -->
+  <div id="modalPdfPageSelect" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3><i data-lucide="file-text"></i> Chọn trang PDF cần phân tích</h3>
+        <button class="modal-close-btn" data-close-modal="modalPdfPageSelect">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="pdfFileInfo" style="font-size: 0.9rem; margin-bottom: 1rem; color: var(--text-muted); font-weight: 600;"></p>
+        <div style="margin-bottom: 1rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; cursor: pointer;">
+            <input type="radio" name="pdfPageOption" value="all" checked id="pdfRadioAll">
+            <b>Tất cả các trang</b> <span id="pdfTotalPagesBadge" class="tab-badge" style="background:#e0f2fe; color:#0369a1;"></span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="radio" name="pdfPageOption" value="range" id="pdfRadioRange">
+            <b>Chọn khoảng trang bài dạy:</b>
+          </label>
+          <input type="text" id="inputPdfPageRange" class="input-control" placeholder="Ví dụ: 1-3 hoặc 1, 2, 4" style="margin-top: 0.5rem; margin-left: 1.5rem; width: calc(100% - 1.5rem);" disabled>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.35rem; margin-left: 1.5rem;">
+            💡 Nạp trang đã chọn để xem trước. Gemini nhận PDF các trang đó (không JPEG-hóa khi gửi API).
+          </p>
+        </div>
+        <div id="pdfRenderProgress" style="display: none; margin-top: 1rem;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.3rem;">
+            <span id="pdfRenderStatus">Đang nạp trang xem trước...</span>
+            <span id="pdfRenderPercent">0%</span>
+          </div>
+          <div class="progress-bar-outer">
+            <div id="pdfRenderProgressBar" class="progress-bar-inner" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-dark" data-close-modal="modalPdfPageSelect">Hủy</button>
+        <button id="btnConfirmPdfPages" class="btn btn-primary">
+          <i data-lucide="check"></i> Bắt đầu nạp trang
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- =========================================================================
+       SCRIPTS — thuần từ host; Canvas tự cấp Gemini, không nạp Mistral client
+       ========================================================================= -->
+  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260827-canvas-khbd"></script>
+  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260827-canvas-khbd"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260827-canvas-khbd"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260827-canvas-khbd"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260827-canvas-khbd"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260827-canvas-khbd"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260827-canvas-khbd"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260827-canvas-khbd"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260827-canvas-khbd"></script>
+  <script>
+    /* Patch Gemini + OCR TRƯỚC khbd-app.js để DOMContentLoaded dùng runtime Canvas. */
+    (function patchKhbdCanvasRuntime() {
+      const cfg = window.__KHBD_CANVAS__ || {};
+      const MODEL = cfg.model || "gemini-3-flash-preview";
+      const HOST = cfg.host || "https://hoangthiencm.id.vn";
+      const SESSION = "canvas-session";
+
+      function setBanner(text, state) {
+        const el = document.getElementById("canvasHostBanner");
+        if (!el) return;
+        el.textContent = text;
+        el.className = state || "";
+        el.id = "canvasHostBanner";
+      }
+
+      if (typeof geminiAPI === "undefined") {
+        setBanner("Chưa nạp được js/khbd-gemini.js từ host " + HOST + ". Kiểm tra mạng Canvas / CORS.", "err");
+        cfg.connected = false;
+        return;
+      }
+
+      geminiAPI.apiKeys = [SESSION];
+      geminiAPI.mistralKeys = [SESSION];
+      geminiAPI.selectedModel = MODEL;
+      geminiAPI.currentKeyIndex = 0;
+      geminiAPI.loadKeysFromLocalStorage = function () { this.apiKeys = [SESSION]; };
+      geminiAPI.loadMistralKeysFromLocalStorage = function () { this.mistralKeys = [SESSION]; };
+      geminiAPI.saveKeysToLocalStorage = function () {};
+      geminiAPI.saveMistralKeysToLocalStorage = function () {};
+      geminiAPI.setModel = function () { this.selectedModel = MODEL; };
+      geminiAPI.getCurrentKey = function () { return SESSION; };
+      geminiAPI.syncKeysFromServer = async function () {
+        this.apiKeys = [SESSION];
+        this.mistralKeys = [SESSION];
+      };
+      geminiAPI.fetchViaKhbdProxy = async function (model, key, payload, timeoutSec, signal) {
+        return this.fetchGeminiGenerate(MODEL, key, payload, signal, Math.max(15000, Number(timeoutSec || 75) * 1000), { _testFastRetry: true });
+      };
+      geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(MODEL) + ":generateContent";
+        return this.fetchWithTimeout(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+          signal
+        }, timeoutMs || 75000);
+      };
+
+      const OCR_PROMPT = "Đóng vai công cụ OCR tiếng Việt cho SGK. Trích nguyên văn chữ, công thức (LaTeX $...$), bảng. Không thêm lời dẫn, không tóm tắt. Chữ mờ ghi [...].";
+
+      async function canvasOcr(dataUrl, mimeHint) {
+        const data = String(dataUrl || "");
+        const mime = mimeHint
+          || (data.startsWith("data:application/pdf") ? "application/pdf"
+            : (data.match(/^data:([^;]+)/) || [])[1] || "image/jpeg");
+        const text = await geminiAPI.generateContent(OCR_PROMPT, [{ mimeType: mime, dataUrl: data }], null, 0.1, null, { maxOutputTokens: 8192 });
+        return String(text || "").trim();
+      }
+
+      window.MistralOcr = {
+        ocrDocument: async function (dataUrl) {
+          const markdown = await canvasOcr(dataUrl);
+          return { data: { pages: [{ markdown: markdown, text: markdown, index: 0 }] } };
+        },
+        ocrImageDataUrl: async function (dataUrl) {
+          const text = await canvasOcr(dataUrl, "image/jpeg");
+          return { text: text };
+        }
+      };
+
+      window.__KHBD_CANVAS_PATCHED__ = true;
+      cfg.connected = true;
+    })();
+  </script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260827-canvas-khbd"></script>
+  <script>
+    (function notifyHostConnection() {
+      const cfg = window.__KHBD_CANVAS__ || {};
+      const HOST = cfg.host || "https://hoangthiencm.id.vn";
+      const MODEL = cfg.model || "gemini-3-flash-preview";
+
+      function setBanner(text, state) {
+        const el = document.getElementById("canvasHostBanner");
+        if (!el) return;
+        el.textContent = text;
+        el.classList.remove("ok", "err");
+        if (state) el.classList.add(state);
+      }
+
+      function ready() {
+        const hostOk = typeof geminiAPI !== "undefined"
+          && typeof KHBD_STANDARDS !== "undefined"
+          && typeof CURRICULUM_DATA !== "undefined"
+          && window.__KHBD_CANVAS_PATCHED__;
+        const footer = document.getElementById("statusFooterText");
+        const footerModel = document.getElementById("footerModelName");
+        const badge = document.getElementById("keyCountBadge");
+        if (footerModel) footerModel.textContent = MODEL;
+        if (badge) badge.textContent = MODEL;
+        if (typeof updateKeyCountDisplay === "function") {
+          updateKeyCountDisplay = function () {
+            const el = document.getElementById("keyCountBadge");
+            if (el) el.textContent = MODEL;
+            if (footerModel) footerModel.textContent = MODEL;
+          };
+        }
+        if (hostOk) {
+          cfg.connected = true;
+          setBanner("Đã kết nối host " + HOST.replace(/^https:\/\//, "") + " — dùng " + MODEL + " của Gemini Canvas, không cần API key.", "ok");
+          if (footer) footer.textContent = "Đã kết nối host. Sẵn sàng.";
+          if (typeof showToast === "function") {
+            showToast("Đã kết nối host " + HOST + ". Model: " + MODEL + " (Canvas, không cần key).", "success", 6000);
+          }
+          return;
+        }
+        cfg.connected = false;
+        setBanner("Chưa kết nối đủ file từ host " + HOST + ". Hãy kiểm tra mạng Canvas rồi tải lại.", "err");
+        if (footer) footer.textContent = "Chưa kết nối host.";
+        if (typeof showToast === "function") {
+          showToast("Chưa tải được nội dung từ host. Mở lại Canvas khi có mạng.", "danger", 7000);
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function () { setTimeout(ready, 250); });
+      } else {
+        setTimeout(ready, 250);
+      }
+    })();
+  </script>
+</body>
+</html>
