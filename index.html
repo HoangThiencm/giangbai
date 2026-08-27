@@ -851,7 +851,8 @@
             thoikhoabieu: 'thoikhoabieu.html',
             phancongtochuyenmon: 'phancongtochuyenmon.html',
             rutgon: 'rutgon.html',
-            soankhbd: 'soankhbd.html'
+            soankhbd: 'soankhbd.html',
+            taovideo: 'taovideo/index.html'
         };
         const LOTRINH_PAGE_KEYS = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
 
@@ -902,6 +903,14 @@
 
         function hideToolCards(selector) {
             setToolCardsVisible(selector, false);
+        }
+
+        function applyVideoToolPermission(allowedPages, features = {}) {
+            const allowed = new Set(Array.isArray(allowedPages) ? allowedPages : []);
+            setToolCardsVisible(
+                '#mainToolsGrid > [data-tool="taovideo"]',
+                allowed.has('taovideo') && features.taovideo !== false
+            );
         }
 
         function applyFeatureToolVisibility(features) {
@@ -1012,6 +1021,7 @@
                         applyFeatureToolVisibility(features);
                         hideToolCards('[data-tool="rutgon"]');
                     }
+                    applyVideoToolPermission([...getAllowedPagesSet()], features);
                     // Giáo viên: chờ setupTeacherLotrinhHub tải api/me.php rồi mới lọc theo allowed_pages
 
                     storeTeacherTabFlags(features);
@@ -1282,6 +1292,17 @@
                         <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                     </a>
 
+                    <a href="taovideo/index.html" target="_blank" rel="noopener noreferrer" data-tool="taovideo" class="tool-tile tool-tile--colored tool-tile--slides hidden">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-video"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">V-TTS cục bộ</span>
+                            <h3 class="tool-tile-title">Tạo video bài giảng</h3>
+                            <p class="tool-tile-desc">Ghép ảnh, lời đọc Bắc/Nam và nhạc nền thành video.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-up-right-from-square"></i></span>
+                    </a>
+
                 </div>
 
                 <section id="studentLotrinhCategory" class="tools-lotrinh-strip">
@@ -1357,6 +1378,7 @@
                     if (user.username) localStorage.setItem('userEmail', user.username);
                     if (user.id != null) localStorage.setItem('userId', String(user.id));
                     if (user.class_name !== undefined) localStorage.setItem('userClassName', user.class_name || '');
+                    applyVideoToolPermission(allowedPages);
                 } else {
                     allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]');
                 }

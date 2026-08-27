@@ -1,0 +1,110 @@
+/* Custom styles for AI Video Maker Studio */
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Aspect Ratio Active Card */
+.ratio-card.active-ratio {
+    border-color: #8b5cf6 !important;
+    background: rgba(139, 92, 246, 0.15) !important;
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.25);
+}
+
+.ratio-card.active-ratio span {
+    color: #c4b5fd !important;
+}
+
+/* Slide Card Styles */
+.slide-card {
+    width: 220px;
+    height: 100%;
+    min-height: 180px;
+    flex-shrink: 0;
+    border: 1px solid #334155;
+    background: rgba(30, 41, 59, 0.7);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    display: flex;
+    flex-col;
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    cursor: grab;
+    user-select: none;
+}
+
+.slide-card:active {
+    cursor: grabbing;
+}
+
+.slide-card:hover {
+    border-color: #64748b;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.slide-card.active-playing {
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 18px rgba(139, 92, 246, 0.4) !important;
+}
+
+.slide-card.sortable-ghost {
+    opacity: 0.4;
+    border: 2px dashed #8b5cf6 !important;
+}
+
+.slide-card.sortable-drag {
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Range input accent styling */
+input[type="range"] {
+    accent-color: #8b5cf6;
+}
+
+/* Custom Animation Utilities */
+@keyframes pulse-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.animate-pulse-subtle {
+    animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Drag over highlight for dropzone */
+.drag-active {
+    border-color: #8b5cf6 !important;
+    background-color: rgba(139, 92, 246, 0.15) !important;
+}
+
+/* Modal animations */
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-modal {
+    animation: modalIn 0.2s ease-out forwards;
+}
