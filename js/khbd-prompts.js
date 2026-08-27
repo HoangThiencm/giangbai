@@ -563,6 +563,7 @@ ${ACTIVITY_TABLE_CONTRACT}
   + **GV:** Nói câu định hướng trong ngoặc kép "...", gợi mở cách liên hệ thực tế, hướng dẫn phân hóa.
   + **HS:** Thảo luận cặp/nhóm giải quyết bài toán thực tế -> Báo cáo giải pháp, lớp phản biện tính khả thi.
 - Cột PHẢI mục d): Tình huống thực tế và Lời giải mô hình hóa hoàn chỉnh.
+- CẤM viết mục E / Hướng dẫn về nhà trong pha D. Dừng ở hết hoạt động Vận dụng.
 
 ## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D})
 
@@ -602,6 +603,7 @@ ${ACTIVITY_TABLE_CONTRACT}
   + **GV:** Nói câu lệnh giao nhiệm vụ về nhà trực tiếp trong ngoặc kép "...", hướng dẫn cách hoàn thành, cách nộp sản phẩm ở tiết sau.
   + **HS:** Lắng nghe, ghi nhận nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.
 - Cột PHẢI mục d): Nội dung hướng dẫn học ở nhà chốt cho HS ghi vở (đánh số rõ ràng **1. Học bài:**, **2. Làm bài:**, **3. Chuẩn bị bài:**).
+- CHỈ xuất ĐÚNG MỘT khối \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\` với đủ a) b) c) d). CẤM lặp lại tiêu đề E. CẤM copy mục E có trong ngữ cảnh tiến trình dạy học.
 
 ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})
 

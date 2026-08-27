@@ -2442,7 +2442,9 @@ function getFullLessonPlanMarkdown(options = {}) {
   const c = appState.content;
   const actParts = [];
   ["A", "B", "C", "D", "E"].forEach(k => {
-    if (c.activities[k] && c.activities[k].trim()) actParts.push(c.activities[k].trim());
+    if (c.activities[k] && c.activities[k].trim()) {
+      actParts.push(clipKhbdActivityMarkdown(k, c.activities[k]));
+    }
   });
   const fullActMarkdown = actParts.join("\n\n---\n\n");
   const body = [
@@ -3133,6 +3135,70 @@ function resolveTextbookContent() {
   return vision || hint;
 }
 
+function activityHeadingRegex(key) {
+  const map = {
+    A: "A[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*1\\b|MỞ[ \\t]*ĐẦU\\b",
+    B: "B[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*2\\b|HÌNH[ \\t]*THÀNH",
+    C: "C[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*3\\b|LUYỆN[ \\t]*TẬP\\b",
+    D: "D[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*4\\b|VẬN[ \\t]*DỤNG\\b",
+    E: "E[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*5\\b|HƯỚNG[ \\t]*DẪN[ \\t]*VỀ[ \\t]*NHÀ\\b"
+  };
+  return new RegExp(`^#{1,3}\\s*(?:${map[key]})`, "i");
+}
+
+function scoreKhbdActivityBlock(block) {
+  const text = String(block || "");
+  let score = text.length;
+  if (/#{2,4}\s*a\)\s*Mục tiêu/i.test(text)) score += 1000;
+  if (/#{2,4}\s*b\)\s*Nội dung/i.test(text)) score += 1000;
+  if (/#{2,4}\s*c\)\s*Sản phẩm/i.test(text)) score += 800;
+  if (/#{2,4}\s*d\)\s*Tổ chức/i.test(text)) score += 800;
+  if (/Học bài/i.test(text) && /Làm bài/i.test(text) && /Chuẩn bị bài/i.test(text)) score += 500;
+  return score;
+}
+
+function keepBestActivityBlock(text, actKey) {
+  const source = String(text || "").trim();
+  if (!source) return source;
+  const headingRe = activityHeadingRegex(actKey);
+  const lines = source.split(/\r?\n/);
+  const starts = [];
+  lines.forEach((line, index) => {
+    if (headingRe.test(line.trim())) starts.push(index);
+  });
+  if (starts.length <= 1) return source;
+  const blocks = starts.map((start, idx) => {
+    const end = idx + 1 < starts.length ? starts[idx + 1] : lines.length;
+    return lines.slice(start, end).join("\n").trim();
+  });
+  return blocks.sort((a, b) => scoreKhbdActivityBlock(b) - scoreKhbdActivityBlock(a))[0];
+}
+
+function clipKhbdActivityMarkdown(actKey, text) {
+  const source = String(text || "").replace(/^\uFEFF/, "").trim();
+  if (!source) return source;
+  const keys = ["A", "B", "C", "D", "E"];
+  const lines = source.split(/\r?\n/);
+  const ownRe = activityHeadingRegex(actKey);
+  let start = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (ownRe.test(lines[i].trim())) {
+      start = i;
+      break;
+    }
+  }
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    const leaked = keys.find(key => key !== actKey && activityHeadingRegex(key).test(line));
+    if (leaked) {
+      end = i;
+      break;
+    }
+  }
+  return keepBestActivityBlock(lines.slice(start, end).join("\n").trim(), actKey);
+}
+
 function parseKhbdSections(text, keys) {
   const source = String(text || "");
   const result = {};
@@ -3411,10 +3477,10 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
   if (problem) {
     showToast(`Đã lưu hoạt động ${actKey}; kịch bản phân vai GV-HS hoặc kỹ thuật dạy học chưa ghi đủ. Bạn có thể sửa tay.`, "warning", 5000);
   }
-  appState.content.activities[actKey] = finalResult;
+  appState.content.activities[actKey] = clipKhbdActivityMarkdown(actKey, finalResult);
   syncIllustrationsIntoContent();
   saveStateToLocalStorage();
-  return finalResult;
+  return appState.content.activities[actKey];
 }
 
 async function applyObjectivesOutput(result, signal, options = {}) {
@@ -4187,6 +4253,7 @@ if (typeof module !== 'undefined' && module.exports) {
     normalizeTeachingContext,
     prepareGeminiMedia,
     parseKhbdSections,
+    clipKhbdActivityMarkdown,
     buildTextbookSourceHint,
     assertPhasePedagogyOutput,
     assertActivityIntegrations,
