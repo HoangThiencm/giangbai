@@ -238,15 +238,25 @@
             <div id="techniquesCatalogPanel"></div>
             <div id="activitiesCatalogPanel"></div>
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0;">
-            <label><input type="checkbox" id="toggleDigitalCompetency"> Tích hợp năng lực số</label>
-            <label><input type="checkbox" id="toggleAiCompetency"> Tích hợp năng lực AI</label>
-            <label><input type="checkbox" id="toggleForeignLanguage"> Tích hợp ngoại ngữ</label>
-            <label><input type="checkbox" id="toggleInclusiveSupport"> Tích hợp hỗ trợ HS khuyết tật/hòa nhập</label>
+          <div id="dynamicIntegrationsContainer" class="dynamic-integrations-panel" style="margin-top: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #ffffff;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-dark); display: flex; align-items: center; gap: 0.4rem;">
+                <i data-lucide="sparkles"></i> Tích hợp nội dung & Bối cảnh sư phạm chuyên sâu
+              </h4>
+              <span class="text-muted" style="font-size: 0.78rem;">Chuẩn TT 08/2024, CT 05-CT/TW, QĐ 1309, QĐ 149 & CV 3089</span>
+            </div>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.75rem;">
+              <label><input type="checkbox" id="toggleDigitalCompetency"> Tích hợp năng lực số (TT 02/2025)</label>
+              <label><input type="checkbox" id="toggleAiCompetency"> Tích hợp năng lực AI (CV 5588/QĐ 2422)</label>
+              <label><input type="checkbox" id="toggleForeignLanguage"> Tích hợp ngoại ngữ</label>
+              <label><input type="checkbox" id="toggleInclusiveSupport"> Tích hợp hỗ trợ HS khuyết tật/hòa nhập</label>
+            </div>
+            
+            <div id="subjectIntegrationsPanel" hidden style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border);"></div>
+            <p id="nlsAiSubjectHint" class="text-muted" hidden style="font-size:0.82rem;margin:0.5rem 0 0;"></p>
           </div>
-          <div id="subjectIntegrationsPanel" hidden></div>
-          <p id="nlsAiSubjectHint" class="text-muted" hidden style="font-size:0.82rem;margin:0 0 .5rem;"></p>
-          <p class="text-muted" style="font-size:0.82rem;margin:0 0 .75rem;">Làm Bước 0 (phân tích SGK) trước, rồi bật NLS và/hoặc AI. Sau OCR, hệ thống tự tick tối đa 3 mục/loại khi có minh chứng trực tiếp trong nội dung bài. NLS theo dải TT 02 lớp 6–7 / 8–9; AI đúng từng lớp. Không tự bịa mã ngoài văn bản.</p>
+          <p class="text-muted" style="font-size:0.82rem;margin:0.75rem 0;">Làm Bước 0 (phân tích SGK) trước, rồi bật NLS và/hoặc AI. Sau OCR, hệ thống tự tick tối đa 3 mục/loại khi có minh chứng trực tiếp trong nội dung bài. NLS theo dải TT 02 lớp 6–7 / 8–9; AI đúng từng lớp. Không tự bịa mã ngoài văn bản.</p>
           <div id="digitalStandardsPanel" hidden></div>
           <div id="aiStandardsPanel" hidden></div>
           <div class="tool-group">

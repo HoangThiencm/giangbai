@@ -83,7 +83,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     id: "gdqpan",
     label: "Tích hợp GD Quốc phòng & An ninh",
     legal: "TT 08/2024/TT-BGDĐT",
-    subjects: ["nguvan", "lichsudialy", "gdcd", "amnhac", "mithuat", "hdtn-hn"],
+    subjects: ["nguvan", "lichsudialy", "lichsu", "dialy", "gdcd", "gdktpl", "amnhac", "mithuat", "hdtn-hn", "hdtn"],
     marker: "[GDQPAN]",
     promptHint: "lòng yêu nước, chủ quyền biển đảo Hoàng Sa–Trường Sa, an ninh quốc gia; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
@@ -91,7 +91,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     id: "hcmThought",
     label: "Tích hợp Tư tưởng, đạo đức, phong cách Hồ Chí Minh",
     legal: "Chỉ thị 05-CT/TW, KL 01-KL/TW",
-    subjects: ["nguvan", "gdcd", "lichsudialy", "hdtn-hn"],
+    subjects: ["nguvan", "gdcd", "gdktpl", "lichsudialy", "lichsu", "dialy", "hdtn-hn", "hdtn"],
     marker: "[HCM]",
     promptHint: "tư tưởng, đạo đức, phong cách Hồ Chí Minh; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên, không hô khẩu hiệu."
   },
@@ -99,9 +99,49 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     id: "humanRights",
     label: "Tích hợp Giáo dục Quyền con người",
     legal: "QĐ 1309/QĐ-TTg, QĐ 1404/QĐ-BGDĐT",
-    subjects: ["nguvan", "lichsudialy", "gdcd"],
+    subjects: ["nguvan", "lichsudialy", "lichsu", "dialy", "gdcd", "gdktpl"],
     marker: "[QCN]",
     promptHint: "nhân phẩm, bình đẳng, chống bạo lực học đường; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "clil",
+    label: "CLIL (Tích hợp Nội dung & Ngôn ngữ)",
+    legal: "Dạy học tích hợp Nội dung & Ngôn ngữ CLIL",
+    subjects: ["tienganh"],
+    marker: "[CLIL]",
+    promptHint: "học nội dung chuyên môn gắn ngôn ngữ tiếng Anh (CLIL); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "financialEd",
+    label: "Tích hợp Giáo dục Tài chính",
+    legal: "QĐ 149/QĐ-TTg, CT GDPT 2018",
+    subjects: ["toan", "gdcd", "gdktpl", "hdtn-hn", "hdtn"],
+    marker: "[GDTC]",
+    promptHint: "tình huống tài chính thực tế (tiết kiệm, lập ngân sách cá nhân, chi tiêu thông minh, lãi suất); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "stemModeling",
+    label: "Giáo dục STEM & Mô hình hóa thực tiễn",
+    legal: "CV 3089/BGDĐT-GDTrH, CT GDPT 2018",
+    subjects: ["toan", "khtn", "vatly", "hoahoc", "sinhhoc", "congnghe", "tinhoc"],
+    marker: "[STEM]",
+    promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "virtualLab",
+    label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
+    legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
+    subjects: ["khtn", "vatly", "hoahoc", "sinhhoc", "toan", "congnghe", "tinhoc"],
+    marker: "[TN-AO]",
+    promptHint: "thao tác tương tác với mô phỏng trực quan PhET / GeoGebra / phần mềm chuyên ngành; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "greenEnergyEnv",
+    label: "Môi trường & Năng lượng xanh",
+    legal: "Giáo dục bảo vệ môi trường & PTBV (CT GDPT 2018)",
+    subjects: ["khtn", "vatly", "hoahoc", "sinhhoc", "congnghe", "lichsudialy", "dialy", "nguvan"],
+    marker: "[MT-NLX]",
+    promptHint: "bảo vệ môi trường, tiết kiệm năng lượng, năng lượng tái tạo, giảm rác thải nhựa; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
   {
     id: "localEnv",
@@ -115,7 +155,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     id: "climateSdgs",
     label: "Biến đổi khí hậu & phát triển bền vững (SDGs)",
     legal: "Biến đổi khí hậu & PTBV/SDGs trong Lịch sử và Địa lí (CT GDPT 2018)",
-    subjects: ["lichsudialy"],
+    subjects: ["lichsudialy", "dialy"],
     marker: "[BĐKH-SDG]",
     promptHint: "biến đổi khí hậu, phát triển bền vững; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
@@ -123,17 +163,9 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     id: "localHeritage",
     label: "Di sản lịch sử địa phương",
     legal: "Di sản văn hóa/lịch sử địa phương (CT GDPT 2018, theo tỉnh/thành)",
-    subjects: ["lichsudialy"],
+    subjects: ["lichsudialy", "lichsu"],
     marker: "[Di sản ĐP]",
     promptHint: "di sản lịch sử, văn hóa đúng tỉnh/thành đã chọn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
-  },
-  {
-    id: "clil",
-    label: "CLIL (nội dung & ngôn ngữ)",
-    legal: "CLIL — dạy nội dung gắn ngôn ngữ",
-    subjects: ["tienganh"],
-    marker: "[CLIL]",
-    promptHint: "học nội dung gắn ngôn ngữ (CLIL); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
   {
     id: "speechAiRoleplay",
@@ -158,22 +190,6 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     subjects: ["tienganh"],
     marker: "[CDTG]",
     promptHint: "công dân toàn cầu, kỹ năng thế kỷ 21; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
-  },
-  {
-    id: "financialEd",
-    label: "Giáo dục tài chính",
-    legal: "Giáo dục tài chính trong môn Toán (CT GDPT 2018)",
-    subjects: ["toan"],
-    marker: "[GDTC]",
-    promptHint: "tình huống tài chính gắn toán (tiết kiệm, lãi suất, ngân sách); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
-  },
-  {
-    id: "stemModeling",
-    label: "Giáo dục STEM & mô hình hóa thực tiễn",
-    legal: "Giáo dục STEM & mô hình hóa trong môn Toán",
-    subjects: ["toan"],
-    marker: "[STEM]",
-    promptHint: "mô hình hóa toán học tình huống thực tiễn/STEM; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   }
 ];
 
@@ -528,8 +544,10 @@ function buildContextIntegrationsPromptBlock() {
     if (item.id === "hcmThought") return "HCM";
     if (item.id === "humanRights") return "Quyền con người";
     if (item.id === "clil") return "CLIL";
-    if (item.id === "stemModeling") return "STEM";
     if (item.id === "financialEd") return "GD tài chính";
+    if (item.id === "stemModeling") return "STEM";
+    if (item.id === "virtualLab") return "Thí nghiệm ảo";
+    if (item.id === "greenEnergyEnv") return "Năng lượng xanh & MT";
     return item.label.replace(/^Tích hợp\s+/i, "");
   });
   lines.push(`CÁC MỤC KHÔNG TICK (${disabledNames.join(", ")}): CẤM lồng, CẤM marker, CẤM mục tiêu/học liệu liên quan.`);
@@ -558,10 +576,11 @@ function renderSubjectIntegrations() {
       const boxes = items.map(item => {
         const checked = integ[item.id] ? " checked" : "";
         const legal = item.legal ? ` <span class="text-muted" style="font-size:.78rem;">(${escapeHtml(item.legal)})</span>` : "";
-        return `<label style="display:block;margin:.2rem 0;"><input type="checkbox" id="toggleCtx_${item.id}" data-integration="${item.id}"${checked}> ${escapeHtml(item.label)}${legal}</label>`;
+        return `<label style="display:block;margin:.25rem 0;font-size:0.88rem;"><input type="checkbox" id="toggleCtx_${item.id}" data-integration="${item.id}"${checked}> <strong>${escapeHtml(item.label)}</strong>${legal}</label>`;
       }).join("");
-      const localityHtml = needsLocalityProvinceSelect(currentSubjectId()) ? localityProvinceSelectHtml() : "";
-      panel.innerHTML = `<h4 style="margin:0 0 .4rem;font-size:.9rem;">Tích hợp theo môn (chỉ hiện mục Bộ/chuyên môn bắt buộc)</h4>${boxes}${localityHtml}`;
+      const localityHtml = typeof needsLocalityProvinceSelect === "function" && needsLocalityProvinceSelect(currentSubjectId()) ? localityProvinceSelectHtml() : "";
+      panel.innerHTML = `<h5 style="margin:0 0 .5rem;font-size:.9rem;font-weight:700;color:var(--primary-dark);"><i data-lucide="filter"></i> Tích hợp chuyên sâu theo môn ${escapeHtml(appState.subject || appState.selectedSubject || "")} (Bộ GD&ĐT / Chuyên môn):</h5><div class="dynamic-integrations-grid">${boxes}</div>${localityHtml}`;
+      if (typeof initLucideIcons === "function") initLucideIcons();
     }
   }
   const nlsOn = Boolean(integ.digital || integ.ai);
@@ -3042,6 +3061,27 @@ function applyIntegrationSectionColors(fragment, heading, cls, kind) {
   }
 }
 
+function getIntegrationBadgeClass(tagText) {
+  const t = String(tagText || "").trim();
+  if (/^\[?NLS(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-nls";
+  if (/^\[?AI(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-ai";
+  if (/^\[?GDQPAN(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-gdqpan";
+  if (/^\[?HCM(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-hcm";
+  if (/^\[?QCN(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-qcn";
+  if (/^\[?CLIL(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-clil";
+  if (/^\[?(?:GDTC|TAICHINH)(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-taichinh";
+  if (/^\[?STEM(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-stem";
+  if (/^\[?(?:TN-AO|TNAO)(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-tnao";
+  if (/^\[?MT-NLX(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-green";
+  if (/^\[?GD(?:Đ|D)P-MT(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-gddp-mt";
+  if (/^\[?B(?:Đ|D)KH-SDG(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-bdkh-sdg";
+  if (/^\[?Di\s*s[aả]n\s*(?:Đ|D)P(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-heritage";
+  if (/^\[?Speech\s*AI(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-speechai";
+  if (/^\[?B[aả]n\s*s[aắ]c\s*VN(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-vnidentity";
+  if (/^\[?CDTG(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-globalcitizen";
+  return "";
+}
+
 function applyIntegrationPreviewColors(fragment) {
   if (!fragment || typeof fragment.querySelectorAll !== "function") return fragment;
   fragment.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach(heading => {
@@ -3050,7 +3090,7 @@ function applyIntegrationPreviewColors(fragment) {
     else if (/năng lực\s*AI/i.test(text)) applyIntegrationSectionColors(fragment, heading, "khbd-ai", "ai");
   });
 
-  // 1. Tìm và bọc các tag [NLS: ...] và [AI: ...] (kể cả [NLS], [AI]) thành badges trong text nodes
+  // 1. Tìm và bọc các tag tích hợp (NLS, AI, GDQPAN, HCM, QCN, CLIL, GDTC, STEM, TN-AO, MT-NLX...) thành badges trong text nodes
   if (typeof document !== "undefined") {
     const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
     const textNodes = [];
@@ -3058,12 +3098,12 @@ function applyIntegrationPreviewColors(fragment) {
     while ((textNode = walker.nextNode())) {
       textNodes.push(textNode);
     }
-    const tagRe = /(\[(?:NLS|AI)(?::\s*[^\]\r\n]+)?\])/gi;
+    const tagRe = /(\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
     textNodes.forEach(node => {
       const val = node.nodeValue;
       if (!val || !tagRe.test(val)) return;
       const parent = node.parentNode;
-      if (!parent || (parent.classList && (parent.classList.contains("khbd-badge") || parent.classList.contains("khbd-badge-nls") || parent.classList.contains("khbd-badge-ai")))) return;
+      if (!parent || (parent.classList && parent.classList.contains("khbd-badge"))) return;
       tagRe.lastIndex = 0;
       const doc = parent.ownerDocument || document;
       const frag = doc.createDocumentFragment();
@@ -3074,9 +3114,9 @@ function applyIntegrationPreviewColors(fragment) {
           frag.appendChild(doc.createTextNode(val.substring(lastIdx, m.index)));
         }
         const tagText = m[1];
-        const isNls = /^\[NLS/i.test(tagText);
+        const badgeCls = getIntegrationBadgeClass(tagText) || "khbd-badge";
         const span = doc.createElement("span");
-        span.className = isNls ? "khbd-badge khbd-badge-nls" : "khbd-badge khbd-badge-ai";
+        span.className = badgeCls;
         span.textContent = tagText;
         frag.appendChild(span);
         lastIdx = tagRe.lastIndex;
@@ -3088,17 +3128,16 @@ function applyIntegrationPreviewColors(fragment) {
     });
   }
 
-  // 2. Định dạng strong / đoạn văn có NLS / AI
+  // 2. Định dạng strong / đoạn văn có NLS / AI / Subject integrations
   const aiCodeRe = /\d+\.[A-Z]\d+\.\d+/;
   fragment.querySelectorAll("strong, li, p").forEach(el => {
     const text = el.textContent || "";
     const inTable = Boolean(el.closest("table"));
     const strongText = el.tagName === "STRONG" ? text.trim() : "";
     if (el.tagName === "STRONG") {
-      if (/^\[?NLS(?::\s*[^\]]+)?\]?$/i.test(strongText)) {
-        el.classList.add("khbd-badge", "khbd-badge-nls");
-      } else if (/^\[?AI(?::\s*[^\]]+)?\]?$/i.test(strongText)) {
-        el.classList.add("khbd-badge", "khbd-badge-ai");
+      const badgeCls = getIntegrationBadgeClass(strongText);
+      if (badgeCls) {
+        el.className = badgeCls;
       }
     }
     const hasNls = /\bNLS\b/.test(text) || /^NLS$/i.test(strongText);
@@ -5033,6 +5072,8 @@ if (typeof module !== 'undefined' && module.exports) {
     pruneContextIntegrationsForSubject,
     currentSubjectId,
     VN_PROVINCES_34,
-    localityProvinceOf
+    localityProvinceOf,
+    getIntegrationBadgeClass,
+    applyIntegrationPreviewColors
   };
 }

@@ -196,13 +196,22 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
   + Trong từng bước, BẮT BUỘC nêu tên Kỹ thuật/Phương pháp dạy học được áp dụng và PHÂN VAI RÕ RÀNG:
     * **GV (Giáo viên):** Nói câu lệnh/câu hỏi trực tiếp trong ngoặc kép "..." ngắn gọn, dự kiến lỗi sai điển hình / ngộ nhận gắn đúng khái niệm bài học SGK (CẤM lỗi generic lặp lại mọi bài; dạng: "Dự kiến: nhầm [thuật ngữ X trong SGK] với [thuật ngữ Y trong SGK]"), can thiệp hỗ trợ phân hóa súc tích.
     * **HS (Học sinh):** Hành động cụ thể: (1) Thao tác cá nhân X phút vào vở/nháp/phiếu -> (2) Thảo luận cặp/nhóm Y phút tạo **sản phẩm trung gian** -> (3) Đại diện báo cáo và phản biện trước lớp.
-  + KỊCH BẢN TÍCH HỢP NĂNG LỰC SỐ (NLS) VÀ NĂNG LỰC AI THỰC CHIẾN GẮN MÔN HỌC (chỉ khi được bật trong bối cảnh sư phạm):
-    * NGUYÊN TẮC CỐT LÕI: NLS và AI CHỈ LÀ CÔNG CỤ THỰC HÀNH MÔN HỌC, không dạy lý thuyết Tin học hay định nghĩa AI trong giờ học chuyên môn. CHỈ tích hợp tại 1 đến 2 vị trí then chốt, đắc địa nhất trong toàn bộ bài dạy (ở Hoạt động B hoặc C hoặc D), TUYỆT ĐỐI KHÔNG rải bừa bãi.
+  + KỊCH BẢN TÍCH HỢP NĂNG LỰC SỐ (NLS) VÀ NĂNG LỰC AI THỰC CHIẾN GẮN MÔN HỌC & TÍCH HỢP THEO MÔN (CHỈ khi được GV bật trong bối cảnh sư phạm):
+    * NGUYÊN TẮC CỐT LÕI: NLS, AI và Tích hợp môn học CHỈ LÀ CÔNG CỤ THỰC HÀNH MÔN HỌC, lồng ghép tự nhiên vào bài học SGK. CHỈ tích hợp tại 1 đến 2 vị trí then chốt, đắc địa nhất trong toàn bộ bài dạy (ở Hoạt động B hoặc C hoặc D), TUYỆT ĐỐI KHÔNG rải bừa bãi.
     * ĐIỀU KHOẢN CẤM NGHIÊM NGẶT: TUYỆT ĐỐI CẤM giáo viên hỏi miệng chung chung về định nghĩa hay lý thuyết AI (ví dụ cấm hỏi: "Em hãy kể tên công cụ AI?", "Khi AI đưa thông tin ta làm gì để kiểm chứng?", "Em có đề xuất gì về kết hợp AI?"). TUYỆT ĐỐI CẤM rải tag dồn dập nhiều mã [AI: ...] sau mỗi câu hỏi của giáo viên.
-    * BẮT BUỘC CHỌN ĐÚNG 1 TRONG 3 DẠNG KỊCH BẢN THỰC CHIẾN GẮN MÔN HỌC SAU:
+    * BẮT BUỘC CHỌN ĐÚNG 1 TRONG 3 DẠNG KỊCH BẢN NLS/AI THỰC CHIẾN (khi bật NLS/AI):
       - Dạng 1 (Kiểm chứng & Phản biện lỗi sai của AI): GV trình chiếu câu trả lời / lời giải do AI sinh ra có chứa lỗi sai / ngộ nhận kiến thức môn học cụ thể. GV yêu cầu HS dùng kiến thức SGK/bài học để đối chiếu, phát hiện lỗi sai và giải thích -> HS thảo luận, phản biện, sửa lại cho đúng. Marker: **[AI: {Mã} - Kiểm chứng phản hồi AI]** (hoặc **[AI]**).
       - Dạng 2 (Prompting tư duy môn học): GV hướng dẫn HS sử dụng câu lệnh Prompt cụ thể trong ngoặc kép "..." để AI gợi mở các bước giải mà không giải hộ -> HS thực hành prompt và tự giải bài tập. Marker: **[AI: {Mã} - Prompting gợi mở & Tự giải]** (hoặc **[AI]**).
       - Dạng 3 (Phần mềm chuyên dụng NLS): HS trực tiếp thao tác trên thiết bị với phần mềm chuyên ngành (GeoGebra, Desmos, bảng tính Excel, máy tính cầm tay, phần mềm mô phỏng PhET...) để vẽ hình, dựng đồ thị, xử lý số liệu hoặc kiểm chứng kết quả bài học. Marker: **[NLS: {Miền/Mã} - {Tên phần mềm}]** (hoặc **[NLS]**).
+    * KỊCH BẢN TÍCH HỢP THEO MÔN HỌC (CHỈ mục GV đã tick, lồng đúng 1 lần tại B/C/D):
+      - Giáo dục Quốc phòng & An ninh (TT 08/2024/TT-BGDĐT): Lồng ghép truyền thống yêu nước, tự hào dân tộc, chủ quyền biển đảo Tổ quốc; gắn marker **[GDQPAN]** hoặc **[GDQPAN: ...]**.
+      - Tư tưởng, đạo đức, phong cách Hồ Chí Minh (Chỉ thị 05-CT/TW): Gắn tấm gương Bác Hồ, tinh thần tự học, tiết kiệm, yêu thương con người qua bài học cụ thể; gắn marker **[HCM]** hoặc **[HCM: ...]**.
+      - Quyền con người (QĐ 1309/QĐ-TTg): Tôn trọng phẩm giá, bình đẳng, không phân biệt đối xử, phòng chống bạo lực; gắn marker **[QCN]** hoặc **[QCN: ...]**.
+      - Tích hợp CLIL: Sử dụng thuật ngữ song ngữ Anh - Việt, nhiệm vụ khám phá ngắn bằng tiếng Anh; gắn marker **[CLIL]** hoặc **[CLIL: ...]**.
+      - Giáo dục Tài chính (QĐ 149/QĐ-TTg): Tình huống tính toán chi tiêu thông minh, lập ngân sách cá nhân, tiết kiệm, bài toán lãi suất; gắn marker **[GDTC]** hoặc **[TAICHINH]**.
+      - Giáo dục STEM & Mô hình hóa: Quy trình thiết kế kỹ thuật, giải quyết bài toán thực nghiệm liên môn; gắn marker **[STEM]** hoặc **[STEM: ...]**.
+      - Thí nghiệm ảo & Mô phỏng số: Thao tác thí nghiệm ảo PhET, mô phỏng GeoGebra trực quan; gắn marker **[TN-AO]** hoặc **[TN-AO: ...]**.
+      - Môi trường & Năng lượng xanh: Liên hệ giảm rác thải nhựa, sử dụng năng lượng tái tạo, bảo vệ tài nguyên; gắn marker **[MT-NLX]** hoặc **[MT-NLX: ...]**.
 - CỘT PHẢI — NỘI DUNG GHI BẢNG (Kiến thức chuẩn mực chốt cho HS chép vào vở):
   + Trình bày đề cương kiến thức súc tích, cô đọng, đúng trọng tâm: Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức LaTeX ($...$, $$...$$), chú ý quan trọng, tối đa 1 ví dụ mẫu kèm đề bài và lời giải chuẩn. Dùng \`-\`, \`+\`, \`.\`; ngăn các dòng bằng \`<br>\`.
   + CỘT PHẢI CẤM: mô tả hành vi GV/HS, CẤM viết "GV yêu cầu", "HS thảo luận", CẤM để trống, CẤM để dấu "..." hay "[...]".

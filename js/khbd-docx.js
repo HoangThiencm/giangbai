@@ -359,6 +359,20 @@ class DocxGenerator {
     const t = String(text || "").trim();
     if (/^\[?NLS(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0369A1", shading: "E0F2FE", bold: true };
     if (/^\[?AI(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "6D28D9", shading: "F3E8FF", bold: true };
+    if (/^\[?GDQPAN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B91C1C", shading: "FEE2E2", bold: true };
+    if (/^\[?HCM(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B45309", shading: "FEF3C7", bold: true };
+    if (/^\[?QCN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "047857", shading: "D1FAE5", bold: true };
+    if (/^\[?CLIL(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "4338CA", shading: "E0E7FF", bold: true };
+    if (/^\[?(?:GDTC|TAICHINH)(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "15803D", shading: "DCFCE7", bold: true };
+    if (/^\[?STEM(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0E7490", shading: "CFFAFE", bold: true };
+    if (/^\[?(?:TN-AO|TNAO)(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0284C7", shading: "E0F2FE", bold: true };
+    if (/^\[?MT-NLX(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "4D7C0F", shading: "ECFCCB", bold: true };
+    if (/^\[?GD(?:Đ|D)P-MT(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "047857", shading: "D1FAE5", bold: true };
+    if (/^\[?B(?:Đ|D)KH-SDG(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0284C7", shading: "E0F2FE", bold: true };
+    if (/^\[?Di\s*s[aả]n\s*(?:Đ|D)P(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B45309", shading: "FEF3C7", bold: true };
+    if (/^\[?Speech\s*AI(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "4338CA", shading: "E0E7FF", bold: true };
+    if (/^\[?B[aả]n\s*s[aắ]c\s*VN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B91C1C", shading: "FEE2E2", bold: true };
+    if (/^\[?CDTG(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0E7490", shading: "CFFAFE", bold: true };
     return null;
   }
 
@@ -403,7 +417,7 @@ class DocxGenerator {
     const { TextRun } = window.docx;
 
     const runs = [];
-    const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*[\s\S]+?\*\*|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|`[^`]+?`|\[(?:NLS|AI)(?::\s*[^\]\r\n]+)?\])/g;
+    const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*[\s\S]+?\*\*|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|`[^`]+?`|\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
     let lastIndex = 0;
     let match;
 
@@ -450,7 +464,7 @@ class DocxGenerator {
           });
           runs.push(...subRuns);
         }
-      } else if (token.startsWith("[") && (token.startsWith("[NLS") || token.startsWith("[AI"))) {
+      } else if (token.startsWith("[")) {
         const markerInfo = this.markerRunColor(token);
         if (markerInfo) {
           runs.push(this.coloredTextRun(token, {
