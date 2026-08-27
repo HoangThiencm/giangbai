@@ -106,10 +106,10 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
   {
     id: "localEnv",
     label: "GD địa phương & môi trường",
-    legal: "Nội dung giáo dục địa phương & bảo vệ môi trường (CT GDPT 2018)",
+    legal: "Nội dung giáo dục địa phương (CT GDPT 2018, chương trình Sở GDĐT từng tỉnh/thành)",
     subjects: ["nguvan"],
     marker: "[GDĐP-MT]",
-    promptHint: "gắn ngữ liệu địa phương và bảo vệ môi trường; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+    promptHint: "gắn ngữ liệu và bảo vệ môi trường đúng tỉnh/thành đã chọn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
   {
     id: "climateSdgs",
@@ -122,10 +122,10 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
   {
     id: "localHeritage",
     label: "Di sản lịch sử địa phương",
-    legal: "Di sản văn hóa/lịch sử địa phương (CT GDPT 2018)",
+    legal: "Di sản văn hóa/lịch sử địa phương (CT GDPT 2018, theo tỉnh/thành)",
     subjects: ["lichsudialy"],
     marker: "[Di sản ĐP]",
-    promptHint: "di sản lịch sử, văn hóa địa phương; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+    promptHint: "di sản lịch sử, văn hóa đúng tỉnh/thành đã chọn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
   {
     id: "clil",
@@ -176,6 +176,40 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     promptHint: "mô hình hóa toán học tình huống thực tiễn/STEM; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   }
 ];
+
+/** 34 tỉnh/thành sau sắp xếp ĐVHC (Nghị quyết 202/2025/QH15, hiệu lực 01/7/2025). */
+const VN_PROVINCES_34 = [
+  "An Giang", "Bắc Ninh", "Cao Bằng", "Cà Mau", "Điện Biên", "Đắk Lắk", "Đồng Nai", "Đồng Tháp",
+  "Gia Lai", "Hà Tĩnh", "Hưng Yên", "Khánh Hòa", "Lai Châu", "Lào Cai", "Lâm Đồng", "Lạng Sơn",
+  "Nghệ An", "Ninh Bình", "Phú Thọ", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị", "Sơn La",
+  "Thanh Hóa", "Thái Nguyên", "Tây Ninh", "Tuyên Quang", "Vĩnh Long",
+  "Thành phố Cần Thơ", "Thành phố Huế", "Thành phố Hải Phòng", "Thành phố Hà Nội",
+  "Thành phố Đà Nẵng", "Thành phố Hồ Chí Minh"
+];
+
+function localityProvinceOf(context) {
+  const raw = String((context || (typeof appState !== "undefined" && appState.teachingContext) || {}).localityProvince || "").trim();
+  return raw.slice(0, 80);
+}
+
+function needsLocalityProvinceSelect(subjectId) {
+  return contextIntegrationsForSubject(subjectId).some(item => item.id === "localEnv" || item.id === "localHeritage");
+}
+
+function localityProvinceSelectHtml() {
+  const current = localityProvinceOf();
+  const options = ['<option value="">— Chọn tỉnh/thành phố —</option>'].concat(
+    VN_PROVINCES_34.map(name => {
+      const sel = name === current ? " selected" : "";
+      return `<option value="${escapeHtml(name)}"${sel}>${escapeHtml(name)}</option>`;
+    })
+  );
+  return `<div class="locality-province-row" style="margin:.55rem 0 0;">
+    <label for="selectLocalityProvince" style="display:block;font-size:.85rem;font-weight:600;">Tỉnh/thành cho Nội dung giáo dục địa phương:</label>
+    <select id="selectLocalityProvince" style="width:100%;margin-top:.25rem;padding:.35rem .5rem;">${options.join("")}</select>
+    <p class="text-muted" style="font-size:.75rem;margin:.25rem 0 0;">GD địa phương do Sở GDĐT từng tỉnh/thành ban hành (CT GDPT 2018). Phải chọn đúng nơi trường đang dạy; không lấy ngữ liệu tỉnh khác.</p>
+  </div>`;
+}
 
 // =============================================================================
 // KHỞI CHẠY KHI TRANG SẴN SÀNG
@@ -419,6 +453,7 @@ function normalizeTeachingContext(context) {
     phasePedagogy: source.phasePedagogy && typeof source.phasePedagogy === "object" ? source.phasePedagogy : { A: {}, B: {}, C: {}, D: {} },
     classSize: Math.max(1, Math.min(60, Number(source.classSize) || 40)), readiness: typeof source.readiness === "string" ? source.readiness : "Không đồng đều", grouping: typeof source.grouping === "string" ? source.grouping : "Cá nhân/cặp đôi", facilities: source.facilities && typeof source.facilities === "object" ? source.facilities : { projector:false, internet:false, devices:false },
     specialRequirements: typeof source.specialRequirements === "string" ? source.specialRequirements.slice(0, 600) : "",
+    localityProvince: localityProvinceOf(source),
     ocrReady: Boolean(source.ocrReady),
     autoPedagogy: source.autoPedagogy && typeof source.autoPedagogy === "object" ? source.autoPedagogy : { methods: [], techniques: { A: [], B: [], C: [], D: [] }, activities: [] }
   };
@@ -476,7 +511,14 @@ function buildContextIntegrationsPromptBlock() {
   const lines = ["TÍCH HỢP BỐI CẢNH (CHỈ mục GV đã tick; CẤM tự thêm mục khác):"];
   if (enabled.length) {
     enabled.forEach(item => {
-      lines.push(`- ${item.label} (${item.legal}): ${item.promptHint} Đánh dấu **${item.marker}** đúng 1 lần tại B/C/D, không rải.`);
+      let extra = "";
+      if (item.id === "localEnv" || item.id === "localHeritage") {
+        const province = localityProvinceOf();
+        extra = province
+          ? ` Địa phương: ${province}. CHỈ dùng chương trình GD địa phương / di sản, ngữ liệu của ${province}; CẤM tỉnh khác; CẤM bịa địa danh, lễ hội, di tích không thuộc ${province}.`
+          : " GV chưa chọn tỉnh/thành. CẤM lồng GD địa phương chung chung; CẤM bịa địa danh.";
+      }
+      lines.push(`- ${item.label} (${item.legal}): ${item.promptHint}${extra} Đánh dấu **${item.marker}** đúng 1 lần tại B/C/D, không rải.`);
     });
   } else {
     lines.push("- Không có mục tích hợp bối cảnh nào được GV tick.");
@@ -518,7 +560,8 @@ function renderSubjectIntegrations() {
         const legal = item.legal ? ` <span class="text-muted" style="font-size:.78rem;">(${escapeHtml(item.legal)})</span>` : "";
         return `<label style="display:block;margin:.2rem 0;"><input type="checkbox" id="toggleCtx_${item.id}" data-integration="${item.id}"${checked}> ${escapeHtml(item.label)}${legal}</label>`;
       }).join("");
-      panel.innerHTML = `<h4 style="margin:0 0 .4rem;font-size:.9rem;">Tích hợp theo môn (chỉ hiện mục Bộ/chuyên môn bắt buộc)</h4>${boxes}`;
+      const localityHtml = needsLocalityProvinceSelect(currentSubjectId()) ? localityProvinceSelectHtml() : "";
+      panel.innerHTML = `<h4 style="margin:0 0 .4rem;font-size:.9rem;">Tích hợp theo môn (chỉ hiện mục Bộ/chuyên môn bắt buộc)</h4>${boxes}${localityHtml}`;
     }
   }
   const nlsOn = Boolean(integ.digital || integ.ai);
@@ -1725,11 +1768,20 @@ function setupEventListeners() {
   if (subjectIntegrationsPanel) {
     subjectIntegrationsPanel.addEventListener("change", (e) => {
       const input = e.target;
-      if (!input || input.type !== "checkbox") return;
+      if (!input) return;
+      appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+      if (input.id === "selectLocalityProvince") {
+        appState.teachingContext.localityProvince = String(input.value || "").trim();
+        saveStateToLocalStorage();
+        return;
+      }
+      if (input.type !== "checkbox") return;
       const integrationId = input.getAttribute("data-integration") || "";
       if (!SUBJECT_CONTEXT_INTEGRATIONS.some(item => item.id === integrationId)) return;
-      appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
       appState.teachingContext.integrations[integrationId] = Boolean(input.checked);
+      if ((integrationId === "localEnv" || integrationId === "localHeritage") && input.checked && !localityProvinceOf()) {
+        showToast("Hãy chọn tỉnh/thành cho Nội dung giáo dục địa phương. Không soạn GD địa phương chung chung.", "warning", 5500);
+      }
       saveStateToLocalStorage();
     });
   }
@@ -3247,6 +3299,7 @@ function getGenerationPromptContext(params = {}) {
     digitalCompetencyEnabled: Boolean(appState.teachingContext?.integrations?.digital),
     aiCompetencyEnabled: Boolean(appState.teachingContext?.integrations?.ai),
     contextIntegrationsEnabled: enabledContextIntegrations().map(item => item.id),
+    locality_province: localityProvinceOf(),
     yccd_official: typeof getOfficialYccd === "function" ? getOfficialYccd({
       subjectId: currentSubjectId(),
       grade: appState.selectedGrade,
@@ -4978,6 +5031,8 @@ if (typeof module !== 'undefined' && module.exports) {
     enabledContextIntegrations,
     renderSubjectIntegrations,
     pruneContextIntegrationsForSubject,
-    currentSubjectId
+    currentSubjectId,
+    VN_PROVINCES_34,
+    localityProvinceOf
   };
 }

@@ -308,6 +308,7 @@ function testClearAllContent() {
   assert.ok(!integ.globalCitizen);
   assert.ok(!integ.financialEd);
   assert.ok(!integ.stemModeling);
+  assert.strictEqual(appState.teachingContext.localityProvince || '', '');
   assert.deepStrictEqual(appState.teachingContext.methods, []);
   assert.deepStrictEqual(appState.teachingContext.techniques, []);
   assert.deepStrictEqual(appState.teachingContext.subjectActivities, []);

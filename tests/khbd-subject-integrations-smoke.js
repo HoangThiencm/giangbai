@@ -159,7 +159,30 @@ assert.ok(!pedOff.includes('**[GDQPAN]**'), 'Không tick thì không đánh dấ
 assert.strictEqual(app.enabledContextIntegrations().length, 0);
 console.log('✓ Không tick thì cấm bịa, không bắt buộc thực hiện.');
 
-console.log('\n[TEST 5] Đổi môn prune: gdqpan không rò sang Toán...');
+console.log('\n[TEST 5] GD địa phương phải gắn tỉnh/thành...');
+assert.strictEqual(app.VN_PROVINCES_34.length, 34, 'Đủ 34 tỉnh/thành sau sáp nhập 2025');
+assert.ok(app.VN_PROVINCES_34.includes('Ninh Bình'));
+assert.ok(app.VN_PROVINCES_34.includes('Thành phố Hồ Chí Minh'));
+assert.ok(app.VN_PROVINCES_34.includes('An Giang'));
+assert.ok(!app.VN_PROVINCES_34.includes('Bà Rịa - Vũng Tàu'), 'không dùng danh sách 63 tỉnh cũ');
+app.appState.selectedSubject = 'nguvan';
+app.appState.teachingContext = app.normalizeTeachingContext({
+  integrations: { localEnv: true },
+  localityProvince: 'Ninh Bình'
+});
+const pedLocal = app.buildPedagogicalContext();
+assert.ok(pedLocal.includes('Ninh Bình'), 'Prompt phải khóa đúng tỉnh Ninh Bình');
+assert.ok(pedLocal.includes('CẤM tỉnh khác') || pedLocal.includes('CẤM bịa'), 'Phải cấm ngữ liệu tỉnh khác');
+assert.strictEqual(app.getGenerationPromptContext().locality_province, 'Ninh Bình');
+app.appState.teachingContext = app.normalizeTeachingContext({
+  integrations: { localEnv: true }
+});
+const pedNoProv = app.buildPedagogicalContext();
+assert.ok(pedNoProv.includes('chưa chọn tỉnh') || pedNoProv.includes('CẤM lồng GD địa phương chung chung'), 'Chưa chọn tỉnh thì cấm bịa địa danh');
+assert.ok(!pedNoProv.includes('Địa phương: Ninh Bình'), 'Không giữ tỉnh cũ khi đã xóa');
+console.log('✓ GD địa phương khóa đúng tỉnh/thành.');
+
+console.log('\n[TEST 6] Đổi môn prune: gdqpan không rò sang Toán...');
 app.appState.selectedSubject = 'nguvan';
 app.appState.teachingContext = app.normalizeTeachingContext({
   integrations: { gdqpan: true }

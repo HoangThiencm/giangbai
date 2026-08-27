@@ -14,7 +14,7 @@
       window.__KHBD_CANVAS__ = {
         host: "https://hoangthiencm.id.vn",
         model: "gemini-3-flash-preview",
-        version: "20260828-ctxint",
+        version: "20260828-locality",
         connected: false
       };
       try {
@@ -51,7 +51,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260828-ctxint">
+  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260828-locality">
   <style>
     #canvasHostBanner {
       position: sticky; top: 0; z-index: 2000; padding: .55rem 1rem;
@@ -693,15 +693,15 @@
   <!-- =========================================================================
        SCRIPTS — thuần từ host; Canvas tự cấp Gemini, không nạp Mistral client
        ========================================================================= -->
-  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260828-ctxint"></script>
-  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260828-ctxint"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260828-ctxint"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260828-ctxint"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260828-ctxint"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260828-ctxint"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260828-ctxint"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260828-ctxint"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260828-ctxint"></script>
+  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260828-locality"></script>
+  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260828-locality"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260828-locality"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260828-locality"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260828-locality"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260828-locality"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260828-locality"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260828-locality"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260828-locality"></script>
   <script>
     /* Patch Gemini + OCR TRƯỚC khbd-app.js để DOMContentLoaded dùng runtime Canvas. */
     (function patchKhbdCanvasRuntime() {
@@ -780,7 +780,7 @@
       cfg.connected = true;
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-ctxint"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-locality"></script>
   <script>
     (function notifyHostConnection() {
       const cfg = window.__KHBD_CANVAS__ || {};
@@ -1302,9 +1302,9 @@
         { id: "gdqpan", label: "Tích hợp GD Quốc phòng & An ninh", legal: "TT 08/2024/TT-BGDĐT", subjects: ["nguvan", "lichsudialy", "gdcd", "amnhac", "mithuat", "hdtn-hn"], marker: "[GDQPAN]", promptHint: "lòng yêu nước, chủ quyền biển đảo Hoàng Sa–Trường Sa, an ninh quốc gia; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
         { id: "hcmThought", label: "Tích hợp Tư tưởng, đạo đức, phong cách Hồ Chí Minh", legal: "Chỉ thị 05-CT/TW, KL 01-KL/TW", subjects: ["nguvan", "gdcd", "lichsudialy", "hdtn-hn"], marker: "[HCM]", promptHint: "tư tưởng, đạo đức, phong cách Hồ Chí Minh; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên, không hô khẩu hiệu." },
         { id: "humanRights", label: "Tích hợp Giáo dục Quyền con người", legal: "QĐ 1309/QĐ-TTg, QĐ 1404/QĐ-BGDĐT", subjects: ["nguvan", "lichsudialy", "gdcd"], marker: "[QCN]", promptHint: "nhân phẩm, bình đẳng, chống bạo lực học đường; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
-        { id: "localEnv", label: "GD địa phương & môi trường", legal: "Nội dung giáo dục địa phương & bảo vệ môi trường (CT GDPT 2018)", subjects: ["nguvan"], marker: "[GDĐP-MT]", promptHint: "gắn ngữ liệu địa phương và bảo vệ môi trường; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "localEnv", label: "GD địa phương & môi trường", legal: "Nội dung giáo dục địa phương (CT GDPT 2018, chương trình Sở GDĐT từng tỉnh/thành)", subjects: ["nguvan"], marker: "[GDĐP-MT]", promptHint: "gắn ngữ liệu và bảo vệ môi trường đúng tỉnh/thành đã chọn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
         { id: "climateSdgs", label: "Biến đổi khí hậu & phát triển bền vững (SDGs)", legal: "Biến đổi khí hậu & PTBV/SDGs trong Lịch sử và Địa lí (CT GDPT 2018)", subjects: ["lichsudialy"], marker: "[BĐKH-SDG]", promptHint: "biến đổi khí hậu, phát triển bền vững; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
-        { id: "localHeritage", label: "Di sản lịch sử địa phương", legal: "Di sản văn hóa/lịch sử địa phương (CT GDPT 2018)", subjects: ["lichsudialy"], marker: "[Di sản ĐP]", promptHint: "di sản lịch sử, văn hóa địa phương; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
+        { id: "localHeritage", label: "Di sản lịch sử địa phương", legal: "Di sản văn hóa/lịch sử địa phương (CT GDPT 2018, theo tỉnh/thành)", subjects: ["lichsudialy"], marker: "[Di sản ĐP]", promptHint: "di sản lịch sử, văn hóa đúng tỉnh/thành đã chọn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
         { id: "clil", label: "CLIL (nội dung & ngôn ngữ)", legal: "CLIL — dạy nội dung gắn ngôn ngữ", subjects: ["tienganh"], marker: "[CLIL]", promptHint: "học nội dung gắn ngôn ngữ (CLIL); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
         { id: "speechAiRoleplay", label: "Luyện phát âm AI / đóng vai giao tiếp", legal: "Bối cảnh luyện nói tiếng Anh (không phải mã NLS/AI QĐ 2422)", subjects: ["tienganh"], marker: "[Speech AI]", promptHint: "luyện phát âm hoặc đóng vai giao tiếp có hỗ trợ AI như bối cảnh; KHÔNG phải mã NLS/AI QĐ 2422; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
         { id: "vnIdentity", label: "Bản sắc văn hóa Việt Nam ra quốc tế", legal: "Bản sắc văn hóa Việt Nam trong dạy tiếng Anh", subjects: ["tienganh"], marker: "[Bản sắc VN]", promptHint: "giới thiệu bản sắc văn hóa Việt Nam bằng tiếng Anh; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
@@ -1312,7 +1312,12 @@
         { id: "financialEd", label: "Giáo dục tài chính", legal: "Giáo dục tài chính trong môn Toán (CT GDPT 2018)", subjects: ["toan"], marker: "[GDTC]", promptHint: "tình huống tài chính gắn toán (tiết kiệm, lãi suất, ngân sách); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." },
         { id: "stemModeling", label: "Giáo dục STEM & mô hình hóa thực tiễn", legal: "Giáo dục STEM & mô hình hóa trong môn Toán", subjects: ["toan"], marker: "[STEM]", promptHint: "mô hình hóa toán học tình huống thực tiễn/STEM; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên." }
       ];
+      const PROVINCES = ["An Giang", "Bắc Ninh", "Cao Bằng", "Cà Mau", "Điện Biên", "Đắk Lắk", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Tĩnh", "Hưng Yên", "Khánh Hòa", "Lai Châu", "Lào Cai", "Lâm Đồng", "Lạng Sơn", "Nghệ An", "Ninh Bình", "Phú Thọ", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị", "Sơn La", "Thanh Hóa", "Thái Nguyên", "Tây Ninh", "Tuyên Quang", "Vĩnh Long", "Thành phố Cần Thơ", "Thành phố Huế", "Thành phố Hải Phòng", "Thành phố Hà Nội", "Thành phố Đà Nẵng", "Thành phố Hồ Chí Minh"];
       const hostHasRender = function () { return typeof renderSubjectIntegrations === "function"; };
+      function provinceOf() {
+        if (typeof localityProvinceOf === "function") return localityProvinceOf();
+        return String((typeof appState !== "undefined" && appState.teachingContext && appState.teachingContext.localityProvince) || "").trim();
+      }
       function subjectId() {
         if (typeof currentSubjectId === "function") return currentSubjectId();
         return String((typeof appState !== "undefined" && appState.selectedSubject) || "").toLowerCase();
@@ -1349,7 +1354,14 @@
         const lines = ["TÍCH HỢP BỐI CẢNH (CHỈ mục GV đã tick; CẤM tự thêm mục khác):"];
         if (enabled.length) {
           enabled.forEach(function (item) {
-            lines.push("- " + item.label + " (" + item.legal + "): " + item.promptHint + " Đánh dấu **" + item.marker + "** đúng 1 lần tại B/C/D, không rải.");
+            let extra = "";
+            if (item.id === "localEnv" || item.id === "localHeritage") {
+              const p = provinceOf();
+              extra = p
+                ? (" Địa phương: " + p + ". CHỈ dùng chương trình GD địa phương / di sản, ngữ liệu của " + p + "; CẤM tỉnh khác; CẤM bịa địa danh, lễ hội, di tích không thuộc " + p + ".")
+                : " GV chưa chọn tỉnh/thành. CẤM lồng GD địa phương chung chung; CẤM bịa địa danh.";
+            }
+            lines.push("- " + item.label + " (" + item.legal + "): " + item.promptHint + extra + " Đánh dấu **" + item.marker + "** đúng 1 lần tại B/C/D, không rải.");
           });
         } else {
           lines.push("- Không có mục tích hợp bối cảnh nào được GV tick.");
@@ -1414,12 +1426,22 @@
           panel.innerHTML = "";
         } else {
           panel.hidden = false;
+          const needLocality = items.some(function (item) { return item.id === "localEnv" || item.id === "localHeritage"; });
+          const currentP = provinceOf();
+          const localityHtml = needLocality
+            ? ('<div class="locality-province-row" style="margin:.55rem 0 0;"><label for="selectLocalityProvince" style="display:block;font-size:.85rem;font-weight:600;">Tỉnh/thành cho Nội dung giáo dục địa phương:</label><select id="selectLocalityProvince" style="width:100%;margin-top:.25rem;padding:.35rem .5rem;"><option value="">— Chọn tỉnh/thành phố —</option>'
+              + PROVINCES.map(function (name) {
+                return '<option value="' + esc(name) + '"' + (name === currentP ? " selected" : "") + ">" + esc(name) + "</option>";
+              }).join("")
+              + '</select><p class="text-muted" style="font-size:.75rem;margin:.25rem 0 0;">GD địa phương do Sở GDĐT từng tỉnh/thành ban hành. Phải chọn đúng nơi trường đang dạy.</p></div>')
+            : "";
           panel.innerHTML = '<h4 style="margin:0 0 .4rem;font-size:.9rem;">Tích hợp theo môn (chỉ hiện mục Bộ/chuyên môn bắt buộc)</h4>'
             + items.map(function (item) {
               const checked = integ[item.id] ? " checked" : "";
               return '<label style="display:block;margin:.2rem 0;"><input type="checkbox" id="toggleCtx_' + esc(item.id) + '" data-integration="' + esc(item.id) + '"' + checked + "> "
                 + esc(item.label) + ' <span class="text-muted" style="font-size:.78rem;">(' + esc(item.legal) + ")</span></label>";
-            }).join("");
+            }).join("")
+            + localityHtml;
         }
         const hintEl = document.getElementById("nlsAiSubjectHint");
         const hint = (integ.digital || integ.ai) ? toolHint(subjectId()) : "";
@@ -1439,13 +1461,21 @@
         panel.dataset.ctxBound = "1";
         panel.addEventListener("change", function (e) {
           const input = e.target;
-          if (!input || input.type !== "checkbox") return;
-          const id = input.getAttribute("data-integration") || "";
-          if (!CATALOG.some(function (item) { return item.id === id; })) return;
-          if (typeof appState === "undefined") return;
+          if (!input || typeof appState === "undefined") return;
           if (!appState.teachingContext) appState.teachingContext = {};
           if (!appState.teachingContext.integrations) appState.teachingContext.integrations = {};
+          if (input.id === "selectLocalityProvince") {
+            appState.teachingContext.localityProvince = String(input.value || "").trim();
+            if (typeof saveStateToLocalStorage === "function") saveStateToLocalStorage();
+            return;
+          }
+          if (input.type !== "checkbox") return;
+          const id = input.getAttribute("data-integration") || "";
+          if (!CATALOG.some(function (item) { return item.id === id; })) return;
           appState.teachingContext.integrations[id] = Boolean(input.checked);
+          if ((id === "localEnv" || id === "localHeritage") && input.checked && !provinceOf() && typeof showToast === "function") {
+            showToast("Hãy chọn tỉnh/thành cho Nội dung giáo dục địa phương. Không soạn GD địa phương chung chung.", "warning", 5500);
+          }
           if (typeof saveStateToLocalStorage === "function") saveStateToLocalStorage();
         });
       }
@@ -1459,6 +1489,9 @@
             CATALOG.forEach(function (item) {
               result.integrations[item.id] = Boolean(src[item.id] || result.integrations[item.id]);
             });
+            if (!result.localityProvince) {
+              result.localityProvince = String((context && context.localityProvince) || "").trim().slice(0, 80);
+            }
             return result;
           };
         }
@@ -1495,6 +1528,7 @@
               ? enabledContextIntegrations()
               : enabledItems()).map(function (item) { return item.id; });
           }
+          if (!ctx.locality_province) ctx.locality_province = provinceOf();
           return ctx;
         };
       }
