@@ -371,7 +371,9 @@ class DocxGenerator {
   }
 
   coloredTextRun(text, extras = {}) {
-    const { TextRun, ShadingType } = window.docx;
+    const docxApi = (typeof window !== "undefined" && window.docx) || (typeof require !== "undefined" ? require("docx") : {});
+    const { TextRun, ShadingType } = docxApi || {};
+    if (typeof TextRun !== "function") return { text };
     const props = {
       text,
       font: extras.font || this.fontFamily,
@@ -922,33 +924,70 @@ class DocxGenerator {
     if (typeof appState !== "undefined" && Array.isArray(appState.content?.illustrations)) {
       return appState.content.illustrations;
     }
+    if (typeof window !== "undefined" && Array.isArray(window.appState?.content?.illustrations)) {
+      return window.appState.content.illustrations;
+    }
+    if (typeof global !== "undefined" && Array.isArray(global.appState?.content?.illustrations)) {
+      return global.appState.content.illustrations;
+    }
     return [];
   }
 
   createIllustrationParagraphs(altText, illustrationId) {
-    const { Paragraph, ImageRun, AlignmentType } = window.docx || {};
+    const docxApi = window.docx || (typeof require !== "undefined" ? require("docx") : {});
+    const { Paragraph, ImageRun, AlignmentType } = docxApi || {};
     const ill = this.illustrationCatalog().find(item => item && item.id === illustrationId);
-    if (!ill || !ill.dataUrl || typeof ImageRun !== "function") return [];
+    if (!ill || (!ill.dataUrl && !ill.svgContent) || typeof ImageRun !== "function") return [];
     try {
-      const comma = String(ill.dataUrl).indexOf(",");
-      const header = comma >= 0 ? ill.dataUrl.slice(0, comma) : "";
-      const b64 = comma >= 0 ? ill.dataUrl.slice(comma + 1) : "";
-      const binary = atob(b64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const type = /jpeg|jpg/i.test(header) ? "jpg" : "png";
+      let dataUrl = ill.dataUrl;
+      // Nếu chưa có dataUrl nhưng có svgContent dạng base64 trong môi trường Node.js
+      if (!dataUrl && ill.svgContent && typeof Buffer !== "undefined") {
+        const b64Svg = Buffer.from(ill.svgContent).toString("base64");
+        dataUrl = `data:image/svg+xml;base64,${b64Svg}`;
+      }
+      if (!dataUrl) return [];
+
+      const comma = String(dataUrl).indexOf(",");
+      const header = comma >= 0 ? dataUrl.slice(0, comma) : "";
+      const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : "";
+      
+      let bytes;
+      if (typeof atob === "function") {
+        const binary = atob(b64);
+        bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      } else if (typeof Buffer !== "undefined") {
+        bytes = Buffer.from(b64, "base64");
+      } else {
+        return [];
+      }
+
+      const type = /jpe?g/i.test(header) ? "jpg" : (/svg/i.test(header) ? "svg" : "png");
       const caption = altText || ill.caption || ill.title || illustrationId;
       const kind = ill.kind === "thuc_te" ? "Hình thực tế" : "Hình chuẩn SGK";
+
       return [
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { before: 120, after: 80 },
-          children: [new ImageRun({ data: bytes, transformation: { width: 420, height: 315 }, type })]
+          spacing: { before: 140, after: 80 },
+          children: [
+            new ImageRun({
+              data: bytes,
+              transformation: { width: 420, height: 315 },
+              type: type === "jpg" ? "jpg" : (type === "svg" ? "svg" : "png")
+            })
+          ]
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { before: 0, after: 160, line: this.lineSpacing },
-          children: [this.coloredTextRun(`${kind}. ${caption}`, { italics: true, size: 22, color: "475569" })]
+          children: [
+            this.coloredTextRun(`${kind}. ${caption}`, {
+              italics: true,
+              size: 22,
+              color: "475569"
+            })
+          ]
         })
       ];
     } catch (error) {
