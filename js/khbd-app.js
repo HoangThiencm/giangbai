@@ -301,6 +301,7 @@ function normalizeTeachingContext(context) {
     phasePedagogy: source.phasePedagogy && typeof source.phasePedagogy === "object" ? source.phasePedagogy : { A: {}, B: {}, C: {}, D: {} },
     classSize: Math.max(1, Math.min(60, Number(source.classSize) || 40)), readiness: typeof source.readiness === "string" ? source.readiness : "Không đồng đều", grouping: typeof source.grouping === "string" ? source.grouping : "Cá nhân/cặp đôi", facilities: source.facilities && typeof source.facilities === "object" ? source.facilities : { projector:false, internet:false, devices:false },
     specialRequirements: typeof source.specialRequirements === "string" ? source.specialRequirements.slice(0, 600) : "",
+    ocrReady: Boolean(source.ocrReady),
     autoPedagogy: source.autoPedagogy && typeof source.autoPedagogy === "object" ? source.autoPedagogy : { methods: [], techniques: { A: [], B: [], C: [], D: [] }, activities: [] }
   };
 }
@@ -439,6 +440,10 @@ function hasAnalyzedLessonContent() {
   return String(appState.content.vision || "").replace(/\s+/g, " ").trim().length >= 80;
 }
 
+function hasOcrReadyLessonContent() {
+  return Boolean(appState.teachingContext?.ocrReady) && hasAnalyzedLessonContent();
+}
+
 function pedagogyRecommendFullCtx() {
   const context = normalizeTeachingContext(appState.teachingContext);
   return {
@@ -454,9 +459,7 @@ function pedagogyRecommendFullCtx() {
 }
 
 function ensureIntegrationStandards({ force = false, silent = false } = {}) {
-  if (typeof recommendOfficialStandards !== "function") return false;
   let changed = false;
-  const notices = [];
   ["digital", "ai"].forEach(kind => {
     const enabled = appState.teachingContext.integrations[kind];
     const catalog = KHBD_STANDARDS[kind];
@@ -467,24 +470,78 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
       if (appState.teachingContext.standards.length !== before) changed = true;
       return;
     }
-    const current = standardsOfKind(kind);
-    const onlyAuto = current.length && current.every(item => item.autoSuggested);
-    if (!force && current.length && !onlyAuto) return;
-    if (!hasAnalyzedLessonContent()) return;
-    const recommended = recommendOfficialStandards(kind, integrationRecommendContext());
-    appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item.framework !== catalog.framework).concat(recommended);
-    changed = true;
-    const names = recommended.map(item => item.officialCode ? `${item.officialCode}` : item.officialLabel).join("; ");
-    notices.push(kind === "digital"
-      ? `NLS (TT 02/2025): ${recommended.length} miền — ${names}`
-      : `AI (QĐ 2422): ${recommended.length} mã — ${names}`);
+    // Không suy đoán để tự tick. Các đề xuất mới chỉ đến từ phản hồi có minh chứng OCR
+    // của Gemini trong requestStructuredIntegrationCandidates().
   });
   if (changed) {
     saveStateToLocalStorage();
     renderStandardsCatalog();
-    if (!silent && notices.length) showToast(`Đã đề xuất theo nội dung bài: ${notices.join(". ")}. Bạn có thể sửa, tối đa 3 mục/nhóm.`, "info", 5000);
   }
   return changed;
+}
+
+function normalizeEvidenceText(value) {
+  return String(value || "").normalize("NFC").replace(/\s+/g, " ").trim().toLocaleLowerCase("vi-VN");
+}
+
+function parseStructuredCandidates(raw, entries, ocrText, maxSelect) {
+  const source = normalizeEvidenceText(ocrText);
+  const byId = new Map(entries.map(entry => [entry.id, entry]));
+  const jsonText = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "");
+  let data;
+  try { data = JSON.parse(jsonText); } catch { return null; }
+  if (!data || !Array.isArray(data.candidates)) return null;
+  const used = new Set();
+  const valid = [];
+  for (const candidate of data.candidates) {
+    const id = String(candidate?.id || "");
+    const evidence = String(candidate?.evidence || "").trim();
+    const proposedTask = String(candidate?.proposedTask || "").trim();
+    if (!byId.has(id) || used.has(id) || !evidence || !proposedTask) continue;
+    if (!source.includes(normalizeEvidenceText(evidence))) continue;
+    used.add(id);
+    valid.push({ entry: byId.get(id), evidence, proposedTask });
+    if (valid.length >= maxSelect) break;
+  }
+  return valid;
+}
+
+async function requestStructuredIntegrationCandidates(kind, { silent = false } = {}) {
+  const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS?.[kind] : null;
+  const integrationKey = kind === "digital" ? "digital" : "ai";
+  if (!catalog || !appState.teachingContext.integrations[integrationKey] || !hasOcrReadyLessonContent()) return false;
+  if (typeof geminiAPI === "undefined" || typeof geminiAPI.generateContent !== "function") return false;
+  const grade = Number(appState.selectedGrade);
+  const candidates = catalog.entries.filter(entry => entry.grades.includes(grade));
+  const current = standardsOfKind(kind);
+  // Giáo viên đã sửa/chọn tay: không có quyền ghi đè.
+  if (current.length && !current.every(item => item.autoSuggested)) return false;
+  const candidateText = candidates.map(entry => `${entry.id} | ${entry.code || entry.label} | ${entry.label}`).join("\n");
+  const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chỉ chọn tối đa ${catalog.maxSelect || 3} mục phù hợp từ DANH MỤC CHO PHÉP.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id đúng nguyên văn trong danh mục","evidence":"trích dẫn nguyên văn, liên tiếp từ OCR làm minh chứng","proposedTask":"một nhiệm vụ ngắn, bám đúng bài"}]}.\n\nQuy tắc bắt buộc:\n- Chỉ chọn khi có trích dẫn minh chứng trực tiếp trong OCR; không suy đoán từ tên môn hay khối lớp.\n- id phải thuộc danh mục; evidence phải là trích dẫn nguyên văn, liên tiếp từ OCR.\n- Nếu không có mục phù hợp, trả {"candidates":[]}.\n- Không bịa mã, không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${appState.content.vision}`;
+  try {
+    const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, grade), 0.1);
+    const selected = parseStructuredCandidates(raw, candidates, appState.content.vision, catalog.maxSelect || 3);
+    if (selected === null) throw new Error("Phản hồi đề xuất không đúng JSON");
+    const records = selected.map(({ entry, evidence, proposedTask }) => ({
+      ...standardToRecord(kind, entry, grade, true), evidence, proposedTask
+    }));
+    appState.teachingContext.standards = appState.teachingContext.standards
+      .filter(item => item.framework !== catalog.framework)
+      .concat(records);
+    saveStateToLocalStorage();
+    renderStandardsCatalog();
+    if (!silent) showToast(records.length ? `Đã đề xuất ${records.length} mục ${kind === "ai" ? "năng lực AI" : "năng lực số"} có minh chứng từ SGK.` : "Không tìm thấy mục tích hợp có minh chứng trực tiếp trong SGK.", "info", 5000);
+    return true;
+  } catch (error) {
+    console.warn(`Không thể đề xuất ${kind} theo minh chứng OCR:`, error);
+    // Lỗi Gemini/JSON không được thay bằng heuristic và không tạo tick mới.
+    if (!silent) showToast("Chưa thể đề xuất tự động; bạn có thể chọn thủ công từ khung chuẩn.", "warning", 5000);
+    return false;
+  }
+}
+
+async function requestStructuredIntegrationCandidatesForEnabled({ silent = false } = {}) {
+  for (const kind of ["digital", "ai"]) await requestStructuredIntegrationCandidates(kind, { silent });
 }
 
 function ensurePedagogyFromLesson({ force = false, silent = false } = {}) {
@@ -544,26 +601,29 @@ function renderStandardsCatalog() {
   ["digital", "ai"].forEach(kind => {
     const panel = document.getElementById(`${kind}StandardsPanel`);
     const enabled = Boolean(appState.teachingContext?.integrations?.[kind === "digital" ? "digital" : "ai"]);
-    if (panel) {
-      panel.hidden = !enabled;
-      if (!enabled) {
-        panel.innerHTML = "";
-        return;
-      }
-    }
+    if (panel) panel.hidden = false;
     const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS?.[kind] : null;
     if (!panel || !catalog) return;
     const entries = catalog.entries.filter(entry => entry.grades.includes(grade));
-    const selectedIds = new Set(standardsOfKind(kind).map(item => item.catalogId));
-    const suggestedIds = new Set(standardsOfKind(kind).filter(item => item.autoSuggested).map(item => item.catalogId));
+    const selectedRecords = standardsOfKind(kind);
+    const selectedIds = new Set(selectedRecords.map(item => item.catalogId));
+    const suggestedIds = new Set(selectedRecords.filter(item => item.autoSuggested).map(item => item.catalogId));
+    const evidenceById = new Map(selectedRecords.filter(item => item.evidence).map(item => [item.catalogId, item.evidence]));
     const maxSelect = catalog.maxSelect || 3;
-    const waitHint = hasAnalyzedLessonContent()
-      ? `Hệ thống đề xuất 2–3 mục đúng văn bản theo nội dung SGK đã phân tích; bạn có thể đổi, tối đa ${maxSelect} mục.`
-      : "Chưa có nội dung bài. Hãy phân tích ảnh/PDF SGK ở Bước 0, sau đó hệ thống mới đề xuất 2–3 mục.";
-    panel.innerHTML = `<fieldset class="tool-group"><legend>${catalog.framework} (${catalog.date})</legend><small>${catalog.source}. ${waitHint}</small>${entries.map(entry => {
+    const selectable = enabled && hasOcrReadyLessonContent();
+    const band = kind === "digital" ? (grade <= 7 ? "Lớp 6–7: Trung cấp 1 (bậc 3)" : "Lớp 8–9: Trung cấp 2 (bậc 4)") : `Lớp ${grade}`;
+    const waitHint = selectable
+      ? `Khung áp dụng: ${band}. Chỉ tự đề xuất khi nội dung SGK có minh chứng; bạn có thể chọn thủ công, tối đa ${maxSelect} mục.`
+      : `Khung áp dụng: ${band}. Hãy bật tích hợp tương ứng và hoàn thành Bước 0 để chọn hoặc nhận đề xuất.`;
+    const renderChoice = entry => {
       const rec = suggestedIds.has(entry.id);
-      return `<label style="display:block"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selectedIds.has(entry.id) ? "checked" : ""}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : ""}</label>`;
-    }).join("")}</fieldset>`;
+      const evidence = evidenceById.get(entry.id);
+      return `<label style="display:block"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selectedIds.has(entry.id) ? "checked" : ""} ${selectable ? "" : "disabled"}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : ""}${evidence ? `<small class="text-muted" style="display:block;margin-left:1.5rem">Minh chứng OCR: “${escapeHtml(evidence)}”</small>` : ""}</label>`;
+    };
+    const choicesHtml = kind === "digital"
+      ? Object.entries(entries.reduce((groups, entry) => { (groups[entry.domain] ||= []).push(entry); return groups; }, {})).map(([domain, items]) => `<details class="pedagogy-block"><summary>${domain}</summary><small>${items[0].band}: ${items[0].descriptor}</small>${items.map(renderChoice).join("")}</details>`).join("")
+      : entries.map(renderChoice).join("");
+    panel.innerHTML = `<fieldset class="tool-group"><legend>${catalog.framework} (${catalog.date})</legend><small>${catalog.source}. ${waitHint}</small>${choicesHtml}</fieldset>`;
     panel.querySelectorAll(".standard-choice").forEach(input => input.addEventListener("change", () => {
       const checked = Array.from(document.querySelectorAll(`.standard-choice[data-kind="${kind}"]:checked`));
       if (checked.length > maxSelect) {
@@ -687,11 +747,12 @@ function setupEventListeners() {
       appState.teachingContext.integrations[key] = e.target.checked;
       if (key === "digital" || key === "ai") {
         if (!e.target.checked) removeDisabledObjectivesStandardSections();
-        if (e.target.checked && !hasAnalyzedLessonContent()) {
+        if (e.target.checked && !hasOcrReadyLessonContent()) {
           renderStandardsCatalog();
-          showToast("Hãy phân tích SGK ở Bước 0 trước. Sau khi có nội dung bài, hệ thống sẽ đề xuất 2–3 mục đúng văn bản.", "info", 5000);
+          showToast("Hãy phân tích SGK ở Bước 0 trước. Sau OCR, hệ thống chỉ đề xuất tối đa 3 mục có minh chứng đúng văn bản.", "info", 5000);
         } else {
           ensureIntegrationStandards({ force: e.target.checked && (!standardsOfKind(key).length || standardsOfKind(key).every(item => item.autoSuggested)) });
+          if (e.target.checked && hasOcrReadyLessonContent()) void requestStructuredIntegrationCandidates(key, { silent: false });
           renderStandardsCatalog();
         }
       }
@@ -762,7 +823,7 @@ function setupEventListeners() {
   });
 
   // 6. Đồng bộ Textarea với KaTeX Preview khi người dùng chỉnh sửa
-  setupEditorPreviewSync("editorVision", "previewVision", (val) => { appState.content.vision = val; saveStateToLocalStorage(); });
+  setupEditorPreviewSync("editorVision", "previewVision", (val) => { appState.content.vision = val; appState.teachingContext.ocrReady = false; saveStateToLocalStorage(); });
   const visionEditor = document.getElementById("editorVision");
   if (visionEditor) visionEditor.addEventListener("blur", () => {
     if (hasAnalyzedLessonContent()) applyLessonBasedRecommendations({ silent: true });
@@ -2414,11 +2475,13 @@ async function extractTextbookOcrText(onProgress) {
 
 function applyTextbookOcrResult(ocrText, { silent = false } = {}) {
   appState.content.vision = ocrText;
+  appState.teachingContext.ocrReady = true;
   saveStateToLocalStorage();
   const editor = document.getElementById("editorVision");
   if (editor) editor.value = ocrText;
   renderMathPreview(ocrText, "previewVision");
   applyLessonBasedRecommendations({ silent });
+  void requestStructuredIntegrationCandidatesForEnabled({ silent });
 }
 
 async function readTextbookWithMistral() {
@@ -3210,6 +3273,7 @@ if (typeof module !== 'undefined' && module.exports) {
     mergeSplitActivityTables,
     unwrapVietnameseMathForKatex,
     canUseMistralOcr,
-    getUserMistralKeys
+    getUserMistralKeys,
+    requestStructuredIntegrationCandidates
   };
 }
