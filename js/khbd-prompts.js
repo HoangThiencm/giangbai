@@ -310,13 +310,13 @@ ${ACTIVITY_TABLE_CONTRACT}
 {textbook_content}
 """
 
-YÊU CẦU KỊCH BẢN THỰC CHIẾN & NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC:
+YÊU CẦU KỊCH BẢN THỰC CHIẾN & NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO TIỂU MỤC SGK:
 ${ACTIVITY_TABLE_CONTRACT}
 - ĐẾM SỐ TIỂU MỤC KIẾN THỨC TRONG SGK: Nếu SGK có N tiểu mục (Mục 1, Mục 2... hoặc HĐ Khám phá 1, 2...), bạn BẮT BUỘC PHẢI chia Hoạt động B thành đúng N hoạt động con tương ứng 1-1:
   ### 1. Hoạt động 2.1: [Tên tiểu mục 1 trong SGK]
   ### 2. Hoạt động 2.2: [Tên tiểu mục 2 trong SGK]
   ...
-  TUYỆT ĐỐI CẤM GỘP các tiểu mục thành một mục chung. TUYỆT ĐỐI CẤM BỊA thêm mục ngoài SGK.
+  TUYỆT ĐỐI CẤM GỘP các tiểu mục thành một mục chung. TUYỆT ĐỐI CẤM BỊA THÊM hoạt động ngoài SGK.
 - TỪNG HOẠT ĐỘNG NHÁNH 2.k PHẢI CÓ ĐỦ 4 PHẦN:
   #### a) Mục tiêu:
   #### b) Nội dung:
@@ -776,6 +776,12 @@ Mỗi hoạt động 2.k trên BẮT BUỘC phải có đầy đủ 4 phần: ##
     }
   }
 
+  if (templateKey === 'GENERATE_ACTIVITY_C' || templateKey === 'GENERATE_ACTIVITY_D') {
+    if (context.textbook_content && String(context.textbook_content).trim().length > 0) {
+      result += `\n\nLƯU Ý QUAN TRỌNG VỀ NGUỒN BÀI TẬP: Vì dữ liệu SGK đã được cung cấp ở trên, CẤM ghi "[Không có trong tài liệu đã cung cấp]". BẮT BUỘC phải trích xuất và giải chi tiết các bài tập có trong nguồn.`;
+    }
+  }
+
   return result;
 }
 
@@ -788,4 +794,3 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { PROMPTS, getSystemRole, getPromptTemplate, extractTextbookSubsections, getGeneralCompetenciesForSubject, formatGeneralCompetenciesGuide };
 }
-

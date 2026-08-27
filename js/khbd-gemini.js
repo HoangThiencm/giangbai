@@ -14,7 +14,9 @@ class GeminiAPIManager {
       { id: "gemini-3.7-flash", name: "Gemini 3.7 Flash (Mới nhất & Tối ưu nhất - Mặc định)", recommended: true },
       { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash", recommended: false },
       { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", recommended: false },
+      { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite (Nhẹ, Nhanh & Tiết kiệm Token)", recommended: false },
       { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Nhẹ & Nhanh)", recommended: false },
+      { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite (Tối ưu Free Tier - Nhanh & Tiết kiệm Token)", recommended: false },
       { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview (Thử nghiệm)", recommended: false }
     ];
 
@@ -258,7 +260,7 @@ class GeminiAPIManager {
   }
 
   getMinRequestGapMs() {
-    return (this.apiKeys && this.apiKeys.length >= 2) ? 2500 : 6000;
+    return (this.apiKeys && this.apiKeys.length >= 2) ? 3500 : 7000;
   }
 
   emitGeminiStatus(info, options = {}) {
@@ -414,7 +416,12 @@ class GeminiAPIManager {
   async testApiKey(key, model = "gemini-3.7-flash") {
     const payload = {
       contents: [{ role: "user", parts: [{ text: "Xin chào, hãy trả lời 'OK'." }] }],
-      generationConfig: { maxOutputTokens: 10 }
+      generationConfig: {
+        maxOutputTokens: 10,
+        thinkingConfig: {
+          thinkingBudget: 0
+        }
+      }
     };
     const res = await this.fetchGeminiGenerate(model, key, payload, null, 15000);
     if (!res.ok) {
@@ -516,7 +523,10 @@ class GeminiAPIManager {
       generationConfig: {
         temperature: temperature,
         topP: 0.95,
-        maxOutputTokens: options.maxOutputTokens || (images.length ? 16384 : 8192)
+        maxOutputTokens: options.maxOutputTokens || (images.length ? 16384 : 8192),
+        thinkingConfig: {
+          thinkingBudget: (options.thinkingBudget !== undefined) ? options.thinkingBudget : 0
+        }
       }
     };
 
