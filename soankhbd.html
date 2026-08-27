@@ -291,27 +291,41 @@
         <div id="imageGallery" class="image-gallery"></div>
       </div>
 
-      <!-- Result Panel (Split View) -->
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title"><i data-lucide="file-check"></i> Kết quả phân tích nội dung SGK</h3>
-          <div class="card-actions">
-            <button class="btn btn-outline-dark btn-sm toggle-preview-btn" data-target="editorVision">
-              <i data-lucide="eye"></i> Toggle Preview KaTeX
-            </button>
+      <!-- Result Panel (Accordion / Details thu gọn nâng cao) -->
+      <details class="card vision-details-card" id="detailsVisionContent">
+        <summary class="vision-details-summary">
+          <div class="vision-summary-left">
+            <span class="vision-summary-icon">👁️</span>
+            <div class="vision-summary-text">
+              <span class="vision-summary-title">Xem chi tiết văn bản trích xuất từ SGK (Nâng cao)</span>
+              <span class="vision-summary-subtitle">Bấm để mở rộng / kiểm tra và chỉnh sửa nội dung văn bản AI đã đọc từ ảnh SGK hoặc file PDF</span>
+            </div>
+          </div>
+          <span class="vision-summary-chevron"><i data-lucide="chevron-down"></i></span>
+        </summary>
+
+        <div class="vision-details-body">
+          <div class="card-header vision-inner-header">
+            <span class="text-muted" style="font-size: 0.85rem;">Bạn có thể chỉnh sửa nội dung văn bản trích xuất dưới dạng Markdown trước khi tạo giáo án</span>
+            <div class="card-actions">
+              <button class="btn btn-outline-dark btn-sm toggle-preview-btn" data-target="editorVision" type="button">
+                <i data-lucide="eye"></i> Toggle Preview KaTeX
+              </button>
+            </div>
+          </div>
+
+          <div class="editor-preview-container">
+            <div class="panel-box">
+              <div class="panel-header"><span>Nội dung Markdown (Có thể chỉnh sửa)</span></div>
+              <textarea id="editorVision" class="markdown-editor" placeholder="Nội dung phân tích SGK sẽ hiển thị ở đây sau khi AI xử lý..."></textarea>
+            </div>
+            <div class="panel-box">
+              <div class="panel-header"><span>Xem trước KaTeX & Bảng biểu</span></div>
+              <div id="previewVision" class="preview-rendered"></div>
+            </div>
           </div>
         </div>
-        <div class="editor-preview-container">
-          <div class="panel-box">
-            <div class="panel-header"><span>Nội dung Markdown (Có thể chỉnh sửa)</span></div>
-            <textarea id="editorVision" class="markdown-editor" placeholder="Nội dung phân tích SGK sẽ hiển thị ở đây sau khi AI xử lý..."></textarea>
-          </div>
-          <div class="panel-box">
-            <div class="panel-header"><span>Xem trước KaTeX & Bảng biểu</span></div>
-            <div id="previewVision" class="preview-rendered"></div>
-          </div>
-        </div>
-      </div>
+      </details>
     </div>
     </section>
 

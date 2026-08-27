@@ -347,31 +347,31 @@ class DocxGenerator {
 
   headingIntegrationColor(title) {
     const text = String(title || "");
-    if (/năng lực số/i.test(text)) return "0B3D91";
-    if (/năng lực\s*AI/i.test(text)) return "15803D";
+    if (/năng lực số/i.test(text)) return "0369A1";
+    if (/năng lực\s*AI/i.test(text)) return "6D28D9";
     return null;
   }
 
   markerRunColor(text) {
     const t = String(text || "").trim();
-    if (/^NLS$/i.test(t)) return "0B3D91";
-    if (/^AI$/i.test(t)) return "15803D";
+    if (/^\[?NLS(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0369A1", shading: "E0F2FE", bold: true };
+    if (/^\[?AI(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "6D28D9", shading: "F3E8FF", bold: true };
     return null;
   }
 
   lineIntegrationColor(text, inherited) {
     const raw = String(text || "");
-    const nls = /\*\*NLS\*\*|\bNLS\b/.test(raw);
-    const aiMarker = /\*\*AI\*\*/.test(raw);
-    const aiCode = /\d+\.[A-Z]\d+\.\d+/.test(raw) && (/\bAI\b|năng lực\s*AI/i.test(raw) || inherited === "15803D");
+    const nls = /\*\*\[?NLS(?::[^\]\n]+)?\]?\*\*|\[NLS(?::[^\]\n]+)?\]|\bNLS\b/.test(raw);
+    const aiMarker = /\*\*\[?AI(?::[^\]\n]+)?\]?\*\*|\[AI(?::[^\]\n]+)?\]/.test(raw);
+    const aiCode = /\d+\.[A-Z]\d+\.\d+/.test(raw) && (/\bAI\b|năng lực\s*AI/i.test(raw) || inherited === "6D28D9");
     const ai = aiMarker || aiCode;
-    if (nls && !ai) return "0B3D91";
-    if (ai && !nls) return "15803D";
+    if (nls && !ai) return "0369A1";
+    if (ai && !nls) return "6D28D9";
     return inherited || undefined;
   }
 
   coloredTextRun(text, extras = {}) {
-    const { TextRun } = window.docx;
+    const { TextRun, ShadingType } = window.docx;
     const props = {
       text,
       font: extras.font || this.fontFamily,
@@ -380,6 +380,13 @@ class DocxGenerator {
     if (extras.bold) props.bold = true;
     if (extras.italics) props.italics = true;
     if (extras.color) props.color = extras.color;
+    if (extras.shading) {
+      const clearType = (ShadingType && ShadingType.CLEAR) || "clear";
+      props.shading = {
+        type: clearType,
+        fill: extras.shading
+      };
+    }
     return new TextRun(props);
   }
 
@@ -391,7 +398,7 @@ class DocxGenerator {
     const { TextRun } = window.docx;
 
     const runs = [];
-    const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*[\s\S]+?\*\*|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|`[^`]+?`)/g;
+    const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*[\s\S]+?\*\*|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|`[^`]+?`|\[(?:NLS|AI)(?::\s*[^\]\r\n]+)?\])/g;
     let lastIndex = 0;
     let match;
 
@@ -424,12 +431,31 @@ class DocxGenerator {
         pushMath(token, false);
       } else if (token.startsWith("**") && token.endsWith("**")) {
         const boldText = token.substring(2, token.length - 2);
-        const innerColor = this.markerRunColor(boldText) || color;
-        const subRuns = this.parseInlineTextToRuns(boldText, innerColor);
-        subRuns.forEach(r => {
-          if (r instanceof TextRun) r.bold = true;
-        });
-        runs.push(...subRuns);
+        const markerInfo = this.markerRunColor(boldText);
+        if (markerInfo) {
+          runs.push(this.coloredTextRun(boldText, {
+            bold: markerInfo.bold,
+            color: markerInfo.color,
+            shading: markerInfo.shading
+          }));
+        } else {
+          const subRuns = this.parseInlineTextToRuns(boldText, color);
+          subRuns.forEach(r => {
+            if (r instanceof TextRun) r.bold = true;
+          });
+          runs.push(...subRuns);
+        }
+      } else if (token.startsWith("[") && (token.startsWith("[NLS") || token.startsWith("[AI"))) {
+        const markerInfo = this.markerRunColor(token);
+        if (markerInfo) {
+          runs.push(this.coloredTextRun(token, {
+            bold: markerInfo.bold,
+            color: markerInfo.color,
+            shading: markerInfo.shading
+          }));
+        } else {
+          runs.push(this.coloredTextRun(token, { color }));
+        }
       } else if (token.startsWith("*") && token.endsWith("*")) {
         const italicText = token.substring(1, token.length - 1);
         runs.push(this.coloredTextRun(italicText, { italics: true, color }));

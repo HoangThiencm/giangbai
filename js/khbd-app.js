@@ -1628,7 +1628,7 @@ function allowPreviewBreakHtml(rawHtml) {
 }
 
 function isAllowedKhbdClass(value) {
-  return /^khbd-(nls|ai)(?:\s+khbd-(nls|ai))?$/.test(String(value || "").trim());
+  return /^khbd-[\w-]+(?:\s+khbd-[\w-]+)*$/.test(String(value || "").trim());
 }
 
 function sanitizePreviewHtml(html) {
@@ -1697,11 +1697,57 @@ function applyIntegrationPreviewColors(fragment) {
     else if (/năng lực\s*AI/i.test(text)) applyIntegrationSectionColors(fragment, heading, "khbd-ai", "ai");
   });
 
+  // 1. Tìm và bọc các tag [NLS: ...] và [AI: ...] (kể cả [NLS], [AI]) thành badges trong text nodes
+  if (typeof document !== "undefined") {
+    const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+      textNodes.push(textNode);
+    }
+    const tagRe = /(\[(?:NLS|AI)(?::\s*[^\]\r\n]+)?\])/gi;
+    textNodes.forEach(node => {
+      const val = node.nodeValue;
+      if (!val || !tagRe.test(val)) return;
+      const parent = node.parentNode;
+      if (!parent || (parent.classList && (parent.classList.contains("khbd-badge") || parent.classList.contains("khbd-badge-nls") || parent.classList.contains("khbd-badge-ai")))) return;
+      tagRe.lastIndex = 0;
+      const doc = parent.ownerDocument || document;
+      const frag = doc.createDocumentFragment();
+      let lastIdx = 0;
+      let m;
+      while ((m = tagRe.exec(val)) !== null) {
+        if (m.index > lastIdx) {
+          frag.appendChild(doc.createTextNode(val.substring(lastIdx, m.index)));
+        }
+        const tagText = m[1];
+        const isNls = /^\[NLS/i.test(tagText);
+        const span = doc.createElement("span");
+        span.className = isNls ? "khbd-badge khbd-badge-nls" : "khbd-badge khbd-badge-ai";
+        span.textContent = tagText;
+        frag.appendChild(span);
+        lastIdx = tagRe.lastIndex;
+      }
+      if (lastIdx < val.length) {
+        frag.appendChild(doc.createTextNode(val.substring(lastIdx)));
+      }
+      parent.replaceChild(frag, node);
+    });
+  }
+
+  // 2. Định dạng strong / đoạn văn có NLS / AI
   const aiCodeRe = /\d+\.[A-Z]\d+\.\d+/;
   fragment.querySelectorAll("strong, li, p").forEach(el => {
     const text = el.textContent || "";
     const inTable = Boolean(el.closest("table"));
     const strongText = el.tagName === "STRONG" ? text.trim() : "";
+    if (el.tagName === "STRONG") {
+      if (/^\[?NLS(?::\s*[^\]]+)?\]?$/i.test(strongText)) {
+        el.classList.add("khbd-badge", "khbd-badge-nls");
+      } else if (/^\[?AI(?::\s*[^\]]+)?\]?$/i.test(strongText)) {
+        el.classList.add("khbd-badge", "khbd-badge-ai");
+      }
+    }
     const hasNls = /\bNLS\b/.test(text) || /^NLS$/i.test(strongText);
     const hasAiMarker = /\bAI\b/.test(text) || /^AI$/i.test(strongText) || /năng lực\s*AI/i.test(text);
     const inAiContext = hasAiMarker || Boolean(el.closest(".khbd-ai"));
@@ -1894,17 +1940,17 @@ function buildIntegrationActivityConstraint(phase) {
   const nls = standardsOfKind("digital").map(item => item.officialLabel).filter(Boolean);
   const ai = standardsOfKind("ai").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
   const lines = [
-    `TÍCH HỢP NLS/AI PHA ${phase}: lồng vào cách tổ chức bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu; dùng marker markdown **NLS** và **AI** trước nhiệm vụ tích hợp.`
+    `TÍCH HỢP NLS/AI PHA ${phase}: lồng vào cách tổ chức bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu; dùng marker markdown **[NLS: {Miền/Mã} - {Công cụ}]** và **[AI: {Mã} - {Prompt/Kiểm chứng}]** (hoặc **[NLS]**, **[AI]**) trước nhiệm vụ tích hợp.`
   ];
   if (phase === "A") {
-    if (digitalOn) lines.push(`NLS đã chọn: ${nls.join("; ") || "năng lực số"}. Thêm 1 móc ngắn (không bắt đủ mọi miền).`);
-    if (aiOn) lines.push(`AI đã chọn: ${ai.join("; ") || "năng lực AI"}. Thêm 1 móc ngắn (không bắt đủ mọi mã).`);
+    if (digitalOn) lines.push(`NLS đã chọn: ${nls.join("; ") || "năng lực số"}. Thêm 1 móc ngắn kịch bản GV/HS thao tác số (marker **[NLS]** hoặc **[NLS: ...]**).`);
+    if (aiOn) lines.push(`AI đã chọn: ${ai.join("; ") || "năng lực AI"}. Thêm 1 móc ngắn kịch bản GV giao prompt "..." và HS kiểm chứng (marker **[AI]** hoặc **[AI: ...]**).`);
   } else {
     if (digitalOn) {
-      lines.push(`NLS đã chọn: ${nls.join("; ") || "năng lực số"}. Mỗi pha B/C/D phải có ÍT NHẤT một nhiệm vụ GV VÀ một nhiệm vụ HS gắn NLS trên bài SGK (ưu tiên miền đã chọn).`);
+      lines.push(`NLS đã chọn: ${nls.join("; ") || "năng lực số"}. Mỗi pha B/C/D phải có ÍT NHẤT một nhiệm vụ GV (hướng dẫn phần mềm GeoGebra/bảng tính/máy tính) VÀ một nhiệm vụ HS (thao tác số/khai thác) gắn marker **[NLS: ...]** hoặc **[NLS]**.`);
     }
     if (aiOn) {
-      lines.push(`AI đã chọn: ${ai.join("; ") || "năng lực AI"}. Mỗi pha B/C/D phải có ÍT NHẤT một nhiệm vụ GV VÀ HS gắn AI (ưu tiên mã đã chọn: kiểm chứng kết quả AI, hậu quả không xác thực, rủi ro lạm dụng).`);
+      lines.push(`AI đã chọn: ${ai.join("; ") || "năng lực AI"}. Mỗi pha B/C/D phải có ÍT NHẤT một nhiệm vụ GV (giao câu lệnh Prompt cụ thể trong ngoặc kép "...") VÀ HS (chạy prompt, BẮT BUỘC có bước so sánh, đối chiếu, kiểm chứng kết quả với SGK/toán học chuẩn mực) gắn marker **[AI: ...]** hoặc **[AI]**.`);
     }
   }
   return `\n${lines.join(" ")}`;
@@ -2135,8 +2181,8 @@ function assertActivityIntegrations(phase, text) {
   const aiOn = Boolean(context.integrations.ai);
   if (!digitalOn && !aiOn) return;
   const raw = String(text || "");
-  const nlsOk = /\*\*NLS\*\*|\bNLS\b/.test(raw) || standardsOfKind("digital").some(item => pedagogyLabelInText(raw, item.officialLabel));
-  const aiOk = /\*\*AI\*\*/.test(raw) || standardsOfKind("ai").some(item => item.officialCode && raw.includes(item.officialCode));
+  const nlsOk = /\*\*\[?NLS(?::[^\]\n]+)?\]?\*\*|\[NLS(?::[^\]\n]+)?\]|\bNLS\b/.test(raw) || standardsOfKind("digital").some(item => pedagogyLabelInText(raw, item.officialLabel));
+  const aiOk = /\*\*\[?AI(?::[^\]\n]+)?\]?\*\*|\[AI(?::[^\]\n]+)?\]|\bAI\b/.test(raw) || standardsOfKind("ai").some(item => item.officialCode && raw.includes(item.officialCode));
   if (phase === "A") {
     if (digitalOn && !nlsOk && !/năng lực số/i.test(raw)) throw new Error("Pha A chưa có móc NLS.");
     if (aiOn && !aiOk && !/\bAI\b|năng lực\s*AI/i.test(raw)) throw new Error("Pha A chưa có móc AI.");
@@ -2144,10 +2190,10 @@ function assertActivityIntegrations(phase, text) {
   }
   if (digitalOn && !nlsOk) throw new Error("Chưa có nhiệm vụ NLS.");
   if (aiOn && !aiOk) throw new Error("Chưa có nhiệm vụ AI.");
-  if (digitalOn && nlsOk && !hasRoleNearMarker(raw, /\*\*NLS\*\*|\bNLS\b|năng lực số/i)) {
+  if (digitalOn && nlsOk && !hasRoleNearMarker(raw, /\*\*\[?NLS(?::[^\]\n]+)?\]?\*\*|\[NLS(?::[^\]\n]+)?\]|\bNLS\b|năng lực số/i)) {
     throw new Error("NLS chưa gắn nhiệm vụ GV và HS.");
   }
-  if (aiOn && aiOk && !hasRoleNearMarker(raw, /\*\*AI\*\*|năng lực\s*AI|\d+\.[A-Z]\d+\.\d+/i)) {
+  if (aiOn && aiOk && !hasRoleNearMarker(raw, /\*\*\[?AI(?::[^\]\n]+)?\]?\*\*|\[AI(?::[^\]\n]+)?\]|\bAI\b|năng lực\s*AI|\d+\.[A-Z]\d+\.\d+/i)) {
     throw new Error("AI chưa gắn nhiệm vụ GV và HS.");
   }
 }

@@ -103,6 +103,9 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
       - **BẮT BUỘC dự kiến lỗi sai điển hình / ngộ nhận** gắn đúng khái niệm, ví dụ hoặc bài tập đang dạy trong PDF/ảnh SGK (nêu thuật ngữ hoặc số bài). CẤM lỗi generic lặp lại mọi bài. Nếu nguồn không cho thấy ngộ nhận điển hình, viết một câu: "Dự kiến: nhầm [thuật ngữ X trong SGK] với [thuật ngữ Y trong SGK]". Can thiệp hỗ trợ phân hóa: hướng dẫn HS gặp khó khăn, đặt câu hỏi mở rộng cho HS khá giỏi.
     * **HS (Học sinh):** 
       - Hành động cụ thể theo 3 pha: (1) Thao tác cá nhân theo phút vào vở/nháp/phiếu -> (2) Thảo luận cặp/nhóm theo phút tạo **sản phẩm trung gian** (bảng phụ, phiếu học tập, sơ đồ tư duy, giấy A0, sticky note) -> (3) Đại diện báo cáo và phản biện trước lớp.
+  + KỊCH BẢN TÍCH HỢP NĂNG LỰC SỐ (NLS) VÀ NĂNG LỰC AI (khi được bật trong bối cảnh sư phạm):
+    * **Khi có NLS (TT 02/2025):** Thể hiện rõ hành động của GV (hướng dẫn công cụ số/phần mềm: GeoGebra, bảng tính điện tử, máy tính cầm tay, phần mềm mô phỏng) và HS (trực tiếp thao tác trên thiết bị, khai thác dữ liệu số) kèm marker **[NLS: {Miền/Mã} - {Hành vi/Công cụ}]** (hoặc **[NLS]**).
+    * **Khi có AI (QĐ 2422):** Thể hiện rõ hành động của GV (giao câu lệnh Prompt AI cụ thể trong ngoặc kép "...", lưu ý giới hạn an toàn) và HS (thực hành chạy prompt, BẮT BUỘC có bước so sánh, đối chiếu, kiểm chứng kết quả của AI với SGK/toán học chuẩn mực để phát hiện sai lệch/ảo giác) kèm marker **[AI: {Mã} - {Câu lệnh/Kiểm chứng}]** (hoặc **[AI]**).
 - CỘT PHẢI — NỘI DUNG GHI BẢNG (Kiến thức chuẩn mực chốt cho HS chép vào vở):
   + Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức LaTeX ($...$, $$...$$), chú ý quan trọng, ví dụ mẫu kèm đề bài và lời giải chi tiết từng bước. Dùng \`-\`, \`+\`, \`.\`; ngăn các dòng bằng \`<br>\`.
   + CỘT PHẢI CẤM: mô tả hành vi GV/HS, CẤM viết "GV yêu cầu", "HS thảo luận", CẤM để trống, CẤM để dấu "..." hay "[...]".
@@ -450,18 +453,22 @@ ${ACTIVITY_TABLE_CONTRACT}
 PHA A — MỞ ĐẦU:
 - Đủ a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất).
 - Bám sát tình huống mở đầu trong SGK; không bịa tình huống ngoài nguồn.
+- Khi có NLS/AI: Tích hợp công cụ số hoặc câu hỏi/prompt AI mở đầu ngắn gọn (marker **[NLS: ...]** hoặc **[AI: ...]**).
 
 PHA B — HÌNH THÀNH KIẾN THỨC:
 - Đếm số tiểu mục kiến thức trong SGK: tạo đúng N hoạt động con (### 1. Hoạt động 2.1: ..., ### 2. Hoạt động 2.2: ...).
 - Mỗi hoạt động con đủ #### a) b) c) d) + đúng 1 bảng 2 cột duy nhất.
 - Cột Trái: Kịch bản phân vai GV (lời thoại trong "...", chỉ rõ lỗi sai điển hình) và HS (cá nhân -> nhóm -> báo cáo).
+- Khi có NLS/AI: Thể hiện GV hướng dẫn công cụ số / giao prompt AI trong "...", HS thao tác và BẮT BUỘC kiểm chứng đối chiếu kết quả với SGK (marker **[NLS: ...]** hoặc **[AI: ...]**).
 - Cột Phải: Nội dung ghi bảng chốt kiến thức, công thức LaTeX, ví dụ mẫu kèm đề và lời giải chi tiết. TUYỆT ĐỐI CẤM để dấu "...".
 
 PHA C — LUYỆN TẬP:
 - Chép rõ đề và giải chi tiết các bài tập có trong SGK vào Cột Phải. Cột Trái phân vai rõ ràng.
+- Khi có NLS/AI: Ứng dụng phần mềm/máy tính hoặc AI để gợi ý, HS kiểm tra và đối chiếu lời giải.
 
 PHA D — VẬN DỤNG:
 - Bám sát bài vận dụng trong SGK, trình bày mô hình hóa và lời giải chuẩn.
+- Khi có NLS/AI: Vận dụng công cụ số/AI giải quyết bài toán thực tế, đánh giá và kiểm chứng tính khả thi.
 
 CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừng ở đầu/cuối bài.`,
 
