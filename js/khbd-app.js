@@ -495,12 +495,17 @@ function parseStructuredCandidates(raw, entries, ocrText, maxSelect) {
   const valid = [];
   for (const candidate of data.candidates) {
     const id = String(candidate?.id || "");
-    const evidence = String(candidate?.evidence || "").trim();
+    const lessonAnchor = String(candidate?.lessonAnchor || "").trim();
+    const fitRationale = String(candidate?.fitRationale || "").trim();
     const proposedTask = String(candidate?.proposedTask || "").trim();
-    if (!byId.has(id) || used.has(id) || !evidence || !proposedTask) continue;
-    if (!source.includes(normalizeEvidenceText(evidence))) continue;
+    if (!byId.has(id) || used.has(id) || !lessonAnchor || !fitRationale || !proposedTask) continue;
+    const anchorText = normalizeEvidenceText(lessonAnchor);
+    if (!source.includes(anchorText)) continue;
+    const anchorTerms = anchorText.split(" ").filter(word => word.length >= 3);
+    const taskText = normalizeEvidenceText(proposedTask);
+    if (!anchorTerms.some(word => taskText.includes(word))) continue;
     used.add(id);
-    valid.push({ entry: byId.get(id), evidence, proposedTask });
+    valid.push({ entry: byId.get(id), lessonAnchor, fitRationale, proposedTask });
     if (valid.length >= maxSelect) break;
   }
   return valid;
@@ -517,13 +522,13 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
   // Giáo viên đã sửa/chọn tay: không có quyền ghi đè.
   if (current.length && !current.every(item => item.autoSuggested)) return false;
   const candidateText = candidates.map(entry => `${entry.id} | ${entry.code || entry.label} | ${entry.label}`).join("\n");
-  const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chỉ chọn tối đa ${catalog.maxSelect || 3} mục phù hợp từ DANH MỤC CHO PHÉP.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id đúng nguyên văn trong danh mục","evidence":"trích dẫn nguyên văn, liên tiếp từ OCR làm minh chứng","proposedTask":"một nhiệm vụ ngắn, bám đúng bài"}]}.\n\nQuy tắc bắt buộc:\n- Chỉ chọn khi có trích dẫn minh chứng trực tiếp trong OCR; không suy đoán từ tên môn hay khối lớp.\n- id phải thuộc danh mục; evidence phải là trích dẫn nguyên văn, liên tiếp từ OCR.\n- Nếu không có mục phù hợp, trả {"candidates":[]}.\n- Không bịa mã, không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${appState.content.vision}`;
+  const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chỉ chọn tối đa ${catalog.maxSelect || 3} mục phù hợp từ DANH MỤC CHO PHÉP.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id đúng nguyên văn trong danh mục","lessonAnchor":"đoạn OCR nguyên văn, liên tiếp về khái niệm, ví dụ hoặc bài tập của bài","fitRationale":"lý do ngắn giải thích vì sao mục phù hợp với neo SGK","proposedTask":"nhiệm vụ GV/HS ngắn gắn neo SGK, nêu sản phẩm"}]}.\n\nQuy tắc bắt buộc:\n- lessonAnchor là neo SGK, không phải minh chứng rằng OCR có chữ AI/NLS. Có thể là khái niệm, ví dụ hoặc bài tập; phải trích nguyên văn, liên tiếp từ OCR.\n- id phải thuộc danh mục; proposedTask phải bám lessonAnchor, có hành động GV/HS và sản phẩm.\n- Nếu không có mục phù hợp, trả {"candidates":[]}.\n- Không bịa mã, không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${appState.content.vision}`;
   try {
     const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, grade), 0.1);
     const selected = parseStructuredCandidates(raw, candidates, appState.content.vision, catalog.maxSelect || 3);
     if (selected === null) throw new Error("Phản hồi đề xuất không đúng JSON");
-    const records = selected.map(({ entry, evidence, proposedTask }) => ({
-      ...standardToRecord(kind, entry, grade, true), evidence, proposedTask
+    const records = selected.map(({ entry, lessonAnchor, fitRationale, proposedTask }) => ({
+      ...standardToRecord(kind, entry, grade, true), lessonAnchor, fitRationale, proposedTask
     }));
     appState.teachingContext.standards = appState.teachingContext.standards
       .filter(item => item.framework !== catalog.framework)
@@ -608,7 +613,7 @@ function renderStandardsCatalog() {
     const selectedRecords = standardsOfKind(kind);
     const selectedIds = new Set(selectedRecords.map(item => item.catalogId));
     const suggestedIds = new Set(selectedRecords.filter(item => item.autoSuggested).map(item => item.catalogId));
-    const evidenceById = new Map(selectedRecords.filter(item => item.evidence).map(item => [item.catalogId, item.evidence]));
+    const proposedById = new Map(selectedRecords.filter(item => item.lessonAnchor).map(item => [item.catalogId, item]));
     const maxSelect = catalog.maxSelect || 3;
     const selectable = enabled && hasOcrReadyLessonContent();
     const band = kind === "digital" ? (grade <= 7 ? "Lớp 6–7: Trung cấp 1 (bậc 3)" : "Lớp 8–9: Trung cấp 2 (bậc 4)") : `Lớp ${grade}`;
@@ -617,8 +622,8 @@ function renderStandardsCatalog() {
       : `Khung áp dụng: ${band}. Hãy bật tích hợp tương ứng và hoàn thành Bước 0 để chọn hoặc nhận đề xuất.`;
     const renderChoice = entry => {
       const rec = suggestedIds.has(entry.id);
-      const evidence = evidenceById.get(entry.id);
-      return `<label style="display:block"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selectedIds.has(entry.id) ? "checked" : ""} ${selectable ? "" : "disabled"}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : ""}${evidence ? `<small class="text-muted" style="display:block;margin-left:1.5rem">Minh chứng OCR: “${escapeHtml(evidence)}”</small>` : ""}</label>`;
+      const proposed = proposedById.get(entry.id);
+      return `<label style="display:block"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selectedIds.has(entry.id) ? "checked" : ""} ${selectable ? "" : "disabled"}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : ""}${proposed ? `<small class="text-muted" style="display:block;margin-left:1.5rem">Neo SGK: “${escapeHtml(proposed.lessonAnchor)}”<br>Lý do: ${escapeHtml(proposed.fitRationale)}<br>Nhiệm vụ: ${escapeHtml(proposed.proposedTask)}</small>` : ""}</label>`;
     };
     const choicesHtml = kind === "digital"
       ? Object.entries(entries.reduce((groups, entry) => { (groups[entry.domain] ||= []).push(entry); return groups; }, {})).map(([domain, items]) => `<details class="pedagogy-block"><summary>${domain}</summary><small>${items[0].band}: ${items[0].descriptor}</small>${items.map(renderChoice).join("")}</details>`).join("")
