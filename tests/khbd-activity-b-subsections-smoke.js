@@ -73,7 +73,59 @@ Hoạt động khám phá 3: Tính chất của phép cộng các số nguyên
   assert.strictEqual(res4[3].index, 4);
   assert.strictEqual(res4[3].title, "Áp dụng vào tam giác vuông");
 
-  // Test 5: Input rỗng / null
+  // Test 5: Văn bản SGK phức tạp chứa nhiều câu hỏi phát vấn ("4. Bằng cách...", "Thực hành 1", "Bài 1.1") -> Chỉ bóc đúng 2 mục La Mã
+  const input5 = `
+1. **Tổng quan bài học:** Bài 5: Phép nhân và phép chia số tự nhiên
+2. **Khung kiến thức trọng tâm:**
+I. Phép nhân số tự nhiên
+- 1.1. Tính chất giao hoán
+- Thực hành 1: Tính nhẩm $15 \\times 4$
+- 4. Bằng cách sử dụng tính chất kết hợp, hãy tính giá trị biểu thức sau
+- Luyện tập 1: Đặt tính rồi tính
+II. Phép chia hết và phép chia có dư
+- Bài 1.2: Thực hiện phép chia
+- Câu hỏi 1: Nêu điều kiện của số dư trong phép chia
+- Vận dụng 1: Bài toán chia kẹo thực tế
+`;
+  const res5 = extractTextbookSubsections(input5);
+  assert.strictEqual(res5.length, 2, "Phải trích xuất được đúng 2 mục lớn La Mã từ văn bản phức tạp");
+  assert.strictEqual(res5[0].index, 1);
+  assert.strictEqual(res5[0].title, "Phép nhân số tự nhiên");
+  assert.strictEqual(res5[1].index, 2);
+  assert.strictEqual(res5[1].title, "Phép chia hết và phép chia có dư");
+
+  // Test 6: Văn bản chứa đề mục số 1. 2. kết hợp câu hỏi phát vấn và bài tập con
+  const input6 = `
+1. **Tổng quan:**
+2. **Khung kiến thức trọng tâm:**
+1. Phép cộng và phép trừ phân số
+- Hãy nêu quy tắc quy đồng mẫu số
+- 4. Bằng cách áp dụng tính chất giao hoán...
+- Thực hành 1: Tính tổng hai phân số
+- Bài 1.1: Thực hiện phép tính
+2. Quy tắc dấu ngoặc trong biểu thức phân số
+- Nêu quy tắc bỏ dấu ngoặc
+- Luyện tập 1: Tính giá trị biểu thức
+- Bài 1.2: Rút gọn biểu thức
+`;
+  const res6 = extractTextbookSubsections(input6);
+  assert.strictEqual(res6.length, 2, "Phải trích xuất được đúng 2 mục lớn 1. và 2.");
+  assert.strictEqual(res6[0].title, "Phép cộng và phép trừ phân số");
+  assert.strictEqual(res6[1].title, "Quy tắc dấu ngoặc trong biểu thức phân số");
+
+  // Test 7: Safety clamp: Nếu có nhiều hơn 4 mục lớn thì chỉ lấy tối đa 4
+  const input7 = `
+Mục 1: Khái niệm số hữu tỉ
+Mục 2: Biểu diễn số hữu tỉ trên trục số
+Mục 3: Số đối của một số hữu tỉ
+Mục 4: So sánh các số hữu tỉ
+Mục 5: Cộng trừ số hữu tỉ
+Mục 6: Nhân chia số hữu tỉ
+`;
+  const res7 = extractTextbookSubsections(input7);
+  assert.strictEqual(res7.length, 4, "Safety clamp phải giới hạn tối đa 4 mục lớn");
+
+  // Test 8: Input rỗng / null
   assert.deepStrictEqual(extractTextbookSubsections(""), []);
   assert.deepStrictEqual(extractTextbookSubsections(null), []);
 
@@ -98,13 +150,13 @@ function testPromptTemplateActivityB() {
   };
 
   const promptB = getPromptTemplate("GENERATE_ACTIVITY_B", stubContext);
-  assert.ok(promptB.includes("NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO TIỂU MỤC SGK"), "Prompt B phải có nguyên tắc ánh xạ 1-1");
+  assert.ok(promptB.includes("NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO MỤC LỚN SGK"), "Prompt B phải có nguyên tắc ánh xạ 1-1 theo mục lớn");
   assert.ok(promptB.includes("TUYỆT ĐỐI CẤM GỘP"), "Prompt B phải cấm gộp tiểu mục");
   assert.ok(promptB.includes("TUYỆT ĐỐI CẤM BỊA THÊM"), "Prompt B phải cấm bịa thêm hoạt động");
   assert.ok(promptB.includes("DANH SÁCH TIỂU MỤC SGK BẮT BUỘC ÁP DỤNG (ĐÚNG 3 HOẠT ĐỘNG NHÁNH)"), "Prompt B phải nhúng danh sách đúng 3 tiểu mục");
-  assert.ok(promptB.includes("### 1. Hoạt động 2.1: Khái niệm tập hợp"), "Prompt B phải có chỉ định cho Hoạt động 2.1");
-  assert.ok(promptB.includes("### 2. Hoạt động 2.2: Phần tử của tập hợp"), "Prompt B phải có chỉ định cho Hoạt động 2.2");
-  assert.ok(promptB.includes("### 3. Hoạt động 2.3: Cách viết tập hợp"), "Prompt B phải có chỉ định cho Hoạt động 2.3");
+  assert.ok(promptB.includes("### 1. Hoạt động 2.1: Khái niệm tập hợp (15 phút)"), "Prompt B phải có chỉ định cho Hoạt động 2.1 có thời lượng cố định");
+  assert.ok(promptB.includes("### 2. Hoạt động 2.2: Phần tử của tập hợp (15 phút)"), "Prompt B phải có chỉ định cho Hoạt động 2.2 có thời lượng cố định");
+  assert.ok(promptB.includes("### 3. Hoạt động 2.3: Cách viết tập hợp (15 phút)"), "Prompt B phải có chỉ định cho Hoạt động 2.3 có thời lượng cố định");
 
   console.log("  -> getPromptTemplate Activity B: PASS");
 }
@@ -112,10 +164,11 @@ function testPromptTemplateActivityB() {
 function testAssertPhasePedagogyOutput() {
   console.log("-> 3. Kiểm tra assertPhasePedagogyOutput cho Pha B...");
 
+  // Định dạng 1: ### 1. Hoạt động 2.1: ... (15 phút)
   const validOutputB = `
 ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI
 
-### 1. Hoạt động 2.1: Khái niệm tập hợp
+### 1. Hoạt động 2.1: Khái niệm tập hợp (15 phút)
 #### a) Mục tiêu:
 - Nhận biết khái niệm tập hợp.
 #### b) Nội dung:
@@ -127,7 +180,7 @@ function testAssertPhasePedagogyOutput() {
 | :--- | :--- |
 | + Bước 1: Chuyển giao nhiệm vụ: **GV:** Giao HĐ 1: "Quan sát các đồ vật trên bàn...". **HS:** Tiếp nhận nhiệm vụ.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân (2 phút) ghi nháp -> Thảo luận cặp (3 phút). **GV:** Quan sát, phát hiện lỗi sai: nhầm lẫn ngoặc, hỗ trợ phân hóa.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện cặp trả lời. **GV:** Điều hành thảo luận.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt khái niệm. **HS:** Ghi bài vào vở. | **1. Khái niệm tập hợp**<br>- Tập hợp gồm các phần tử. |
 
-### 2. Hoạt động 2.2: Phần tử thuộc và không thuộc tập hợp
+### 2. Hoạt động 2.2: Phần tử thuộc và không thuộc tập hợp (15 phút)
 #### a) Mục tiêu:
 - Sử dụng đúng ký hiệu thuộc và không thuộc.
 #### b) Nội dung:
@@ -140,10 +193,42 @@ function testAssertPhasePedagogyOutput() {
 | + Bước 1: Chuyển giao nhiệm vụ: **GV:** Phát phiếu học tập: "Điền ký hiệu thích hợp...". **HS:** Nhận phiếu.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Cá nhân làm bài -> Nhóm chấm chéo. **GV:** Quan sát, hướng dẫn HS lúng túng.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** 2 nhóm lên bảng điền kết quả. **GV:** Đặt câu hỏi phản biện.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt quy tắc ký hiệu. **HS:** Chữa bài chuẩn xác vào vở. | **2. Phần tử của tập hợp**<br>- $x \\in A$: $x$ thuộc $A$.<br>- $y \\notin A$: $y$ không thuộc $A$. |
 `;
 
-  // 1. Output hợp lệ 2 nhánh -> PASS
-  assert.doesNotThrow(() => assertPhasePedagogyOutput("B", validOutputB), "Valid multi-branch Activity B phải pass");
+  // 1. Output hợp lệ 2 nhánh với định dạng Hoạt động 2.1 -> PASS
+  assert.doesNotThrow(() => assertPhasePedagogyOutput("B", validOutputB), "Valid multi-branch Hoạt động 2.k phải pass");
 
-  // 2. Nhánh 2.2 thiếu bảng 2 cột mục d -> Ném lỗi
+  // Định dạng 2: ### 1. Hoạt động 1: ... (15 phút)
+  const validOutputBFormat2 = `
+## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI
+
+### 1. Hoạt động 1: Khái niệm tập hợp (15 phút)
+#### a) Mục tiêu:
+- Nhận biết khái niệm tập hợp.
+#### b) Nội dung:
+- Học sinh làm việc cá nhân HĐ 1.
+#### c) Sản phẩm:
+- Kết quả HĐ 1: $A = \\{1, 2, 3\\}$.
+#### d) Tổ chức thực hiện:
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| + Bước 1: Chuyển giao nhiệm vụ: **GV:** Giao HĐ 1: "Quan sát các đồ vật trên bàn...". **HS:** Tiếp nhận nhiệm vụ.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân (2 phút) ghi nháp -> Thảo luận cặp (3 phút). **GV:** Quan sát, phát hiện lỗi sai: nhầm lẫn ngoặc, hỗ trợ phân hóa.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện cặp trả lời. **GV:** Điều hành thảo luận.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt khái niệm. **HS:** Ghi bài vào vở. | **1. Khái niệm tập hợp**<br>- Tập hợp gồm các phần tử. |
+
+### 2. Hoạt động 2: Phần tử thuộc và không thuộc tập hợp (15 phút)
+#### a) Mục tiêu:
+- Sử dụng đúng ký hiệu thuộc và không thuộc.
+#### b) Nội dung:
+- Học sinh làm việc nhóm hoàn thành Phiếu học tập số 1.
+#### c) Sản phẩm:
+- Ký hiệu: $a \\in A, b \\notin A$.
+#### d) Tổ chức thực hiện:
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| + Bước 1: Chuyển giao nhiệm vụ: **GV:** Phát phiếu học tập: "Điền ký hiệu thích hợp...". **HS:** Nhận phiếu.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Cá nhân làm bài -> Nhóm chấm chéo. **GV:** Quan sát, hướng dẫn HS lúng túng.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** 2 nhóm lên bảng điền kết quả. **GV:** Đặt câu hỏi phản biện.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt quy tắc ký hiệu. **HS:** Chữa bài chuẩn xác vào vở. | **2. Phần tử của tập hợp**<br>- $x \\in A$: $x$ thuộc $A$.<br>- $y \\notin A$: $y$ không thuộc $A$. |
+`;
+
+  // 2. Output hợp lệ 2 nhánh với định dạng Hoạt động 1 / Hoạt động 2 -> PASS
+  assert.doesNotThrow(() => assertPhasePedagogyOutput("B", validOutputBFormat2), "Valid multi-branch Hoạt động 1 / Hoạt động 2 phải pass");
+
+  // 3. Nhánh 2.2 thiếu bảng 2 cột mục d -> Ném lỗi
   const invalidMissingTable = validOutputB.replace(
     /\| Hoạt động của GV và HS \| Nội dung \|[\s\S]*?\|\s*\*\*2\. Phần tử của tập hợp\*\*[\s\S]*?\|/i,
     "GV yêu cầu HS làm bài tập."
@@ -154,7 +239,7 @@ function testAssertPhasePedagogyOutput() {
     "Nhánh thiếu bảng phải throw"
   );
 
-  // 3. Nhánh 2.1 thiếu Bước 4 -> Ném lỗi
+  // 4. Nhánh 2.1 thiếu Bước 4 -> Ném lỗi
   const invalidMissingStep4 = validOutputB.replace(
     /\+ Bước 4: Kết luận, nhận định: \*\*GV:\*\* Chốt khái niệm\. \*\*HS:\*\* Ghi bài vào vở\./i,
     ""
@@ -165,7 +250,7 @@ function testAssertPhasePedagogyOutput() {
     "Nhánh thiếu bước phải throw"
   );
 
-  // 4. Nhánh 2.1 thiếu vai trò HS -> Ném lỗi
+  // 5. Nhánh 2.1 thiếu vai trò HS -> Ném lỗi
   const invalidMissingHs = validOutputB.replace(
     /\+ Bước 1: Chuyển giao nhiệm vụ: \*\*GV:\*\* Giao HĐ 1: "Quan sát các đồ vật trên bàn\.\.\."\. \*\*HS:\*\* Tiếp nhận nhiệm vụ\./i,
     '+ Bước 1: Chuyển giao nhiệm vụ: **GV:** Giao HĐ 1: "Quan sát các đồ vật trên bàn...".'

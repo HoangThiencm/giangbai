@@ -2008,14 +2008,14 @@ function assertPhasePedagogyOutput(phase, output) {
     if (missing.length) throw new Error(`Nội dung chưa triển khai đúng trong bảng tổ chức thực hiện: ${missing.join(", ")}.`);
   }
 
-  // 2. Với Pha B: Kiểm tra từng hoạt động con (2.1, 2.2, ...)
+  // 2. Với Pha B: Kiểm tra từng hoạt động con (2.1, 2.2, ... hoặc Hoạt động 1, Hoạt động 2, ...)
   if (phase === "B") {
-    const branchRegex = /(?:^|\n)###\s*(?:\d+\.\s*)?Hoạt động\s*2\.\d+[\s\S]*?(?=(?:\n###\s*(?:\d+\.\s*)?Hoạt động\s*2\.\d+|\n##\s+[A-Z]|\n#\s+[IVXLCDM]+|$))/gi;
+    const branchRegex = /(?:^|\n)###\s*(?:\d+\.\s*)?Hoạt động\s*(?:2\.\d+|\d+)[\s\S]*?(?=(?:\n###\s*(?:\d+\.\s*)?Hoạt động\s*(?:2\.\d+|\d+)|\n##\s+[A-Z]|\n#\s+[IVXLCDM]+|$))/gi;
     const branches = text.match(branchRegex);
 
     if (branches && branches.length > 0) {
       branches.forEach((branch, idx) => {
-        const headerMatch = branch.match(/###\s*(?:\d+\.\s*)?(Hoạt động\s*2\.\d+[^#\n]*)/i);
+        const headerMatch = branch.match(/###\s*(?:\d+\.\s*)?(Hoạt động\s*(?:2\.\d+|\d+)[^#\n]*)/i);
         const branchName = headerMatch ? headerMatch[1].trim() : `Hoạt động 2.${idx + 1}`;
         
         // Tìm phần d) Tổ chức thực hiện trong nhánh này

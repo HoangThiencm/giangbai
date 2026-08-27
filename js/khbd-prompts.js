@@ -85,6 +85,7 @@ function formatGeneralCompetenciesGuide(subjectId, context) {
 }
 
 const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠM THỰC CHIẾN TRONG BẢNG 2 CỘT (Chuẩn CV 5512 & GDPT 2018):
+- THỜI LƯỢNG HOẠT ĐỘNG: BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề các Hoạt động (A, B, C, D) và từng hoạt động nhánh trong Mục B, ví dụ: \`## A. HOẠT ĐỘNG 1: MỞ ĐẦU (5 phút)\`, \`### 1. Hoạt động 2.1: [Tên mục] (15 phút)\`, \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP (10 phút)\`, \`## D. HOẠT ĐỘNG 4: VẬN DỤNG (5 phút)\`. CẤM TUYỆT ĐỐI ghi từ "Khoảng" hoặc dải thời gian dạng "X - Y phút".
 - Mục a) Mục tiêu, b) Nội dung, c) Sản phẩm: dùng 3 cấp danh sách: ý lớn \`-\`, ý con \`+\`, ý chi tiết \`.\`.
 - Mục d) Tổ chức thực hiện: BẮT BUỘC ĐÚNG MỘT bảng Markdown 2 cột, tiêu đề:
 | Hoạt động của GV và HS | Nội dung |
@@ -110,7 +111,7 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
   + Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức LaTeX ($...$, $$...$$), chú ý quan trọng, ví dụ mẫu kèm đề bài và lời giải chi tiết từng bước. Dùng \`-\`, \`+\`, \`.\`; ngăn các dòng bằng \`<br>\`.
   + CỘT PHẢI CẤM: mô tả hành vi GV/HS, CẤM viết "GV yêu cầu", "HS thảo luận", CẤM để trống, CẤM để dấu "..." hay "[...]".
 - CẤM để trống ô. Escape dấu | trong văn bản thành \\|.
-- Hoạt động B: Mỗi tiểu mục/nội dung kiến thức dùng một bảng 2 cột (1 hàng) độc lập như trên.`;
+- Hoạt động B: Mỗi tiểu mục/nội dung kiến thức dùng một bảng 2 cột (1 hàng) độc lập như trên. Gộp toàn bộ ví dụ mẫu, câu hỏi khám phá con, thực hành của mục đó vào chung một hoạt động nhánh.`;
 
 const PROMPTS = {
   // SYSTEM INSTRUCTION
@@ -157,7 +158,7 @@ Chủ đề bài học: "{topic}" (Môn học: {subject}).
 
 XUẤT TÓM TẮT NGẮN GỌN, RÕ RÀNG:
 1. **Tên bài** và mục tiêu cốt lõi (nếu nguồn có ghi).
-2. **Tiểu mục kiến thức:** liệt kê tên từng tiểu mục (\`Mục 1: ...\`, \`Mục 2: ...\`); với mỗi mục chỉ nêu loại nội dung (định nghĩa / quy tắc / ví dụ / HĐ khám phá), không chép nguyên văn.
+2. **Tiểu mục kiến thức:** Chỉ bóc tách 1–3 Mục kiến thức lớn theo đúng đề mục cốt lõi của SGK (thông thường 1–3 mục lớn, tối đa 4 mục; liệt kê theo dạng \`Mục 1: [Tên mục]\`, \`Mục 2: [Tên mục]\`). TUYỆT ĐỐI KHÔNG bóc tách các câu hỏi phát vấn (Hãy..., Nêu..., Bằng cách...), các bài tập/thực hành nhỏ (Bài 1.1, Thực hành 1, Luyện tập 1) thành mục riêng. Với mỗi mục lớn, chỉ nêu loại nội dung chính (định nghĩa / quy tắc / ví dụ / HĐ khám phá), không chép nguyên văn.
 3. **Loại hoạt động/bài tập:** mở đầu, khám phá, luyện tập, vận dụng — ghi rõ số bài/câu nếu nguồn có.
 
 CẤM trích nguyên văn toàn bộ SGK. Tóm tắt ngắn gọn, mạch lạc để giáo viên dễ đối chiếu và kiểm tra.`,
@@ -282,7 +283,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 
 # III. TIẾN TRÌNH DẠY HỌC
 
-## A. HOẠT ĐỘNG 1: MỞ ĐẦU (Khoảng 5 - 7 phút)
+## A. HOẠT ĐỘNG 1: MỞ ĐẦU (5 phút)
 
 ### a) Mục tiêu:
 - Tạo tâm thế hứng thú, kích thích trí tò mò, tạo mâu thuẫn nhận thức hoặc gợi mở nhu cầu tìm hiểu kiến thức mới bám sát tình huống mở đầu của bài học trong SGK.
@@ -313,14 +314,16 @@ ${ACTIVITY_TABLE_CONTRACT}
 {textbook_content}
 """
 
-YÊU CẦU KỊCH BẢN THỰC CHIẾN & NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO TIỂU MỤC SGK:
+YÊU CẦU KỊCH BẢN THỰC CHIẾN & NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO MỤC LỚN SGK:
 ${ACTIVITY_TABLE_CONTRACT}
-- ĐẾM SỐ TIỂU MỤC KIẾN THỨC TRONG SGK: Nếu SGK có N tiểu mục (Mục 1, Mục 2... hoặc HĐ Khám phá 1, 2...), bạn BẮT BUỘC PHẢI chia Hoạt động B thành đúng N hoạt động con tương ứng 1-1:
-  ### 1. Hoạt động 2.1: [Tên tiểu mục 1 trong SGK]
-  ### 2. Hoạt động 2.2: [Tên tiểu mục 2 trong SGK]
+- ĐẾM SỐ TIỂU MỤC KIẾN THỨC LỚN TRONG SGK: Chỉ ánh xạ đúng các Mục lớn (Đơn vị kiến thức cốt lõi chính thức trong mục lục SGK, thông thường 1–3 mục lớn, tối đa 4 mục). Bạn BẮT BUỘC PHẢI chia Hoạt động B thành đúng N hoạt động con tương ứng 1-1:
+  ### 1. Hoạt động 2.1: [Tên mục 1 trong SGK] (15 phút) (hoặc ### 1. Hoạt động 1: [Tên mục 1 trong SGK] (15 phút))
+  ### 2. Hoạt động 2.2: [Tên mục 2 trong SGK] (15 phút) (hoặc ### 2. Hoạt động 2: [Tên mục 2 trong SGK] (15 phút))
   ...
-  TUYỆT ĐỐI CẤM GỘP các tiểu mục thành một mục chung. TUYỆT ĐỐI CẤM BỊA THÊM hoạt động ngoài SGK.
-- TỪNG HOẠT ĐỘNG NHÁNH 2.k PHẢI CÓ ĐỦ 4 PHẦN:
+  TUYỆT ĐỐI CẤM GỘP các mục lớn thành một mục chung. TUYỆT ĐỐI CẤM BỊA THÊM hoạt động ngoài SGK.
+  TUYỆT ĐỐI LOẠI BỎ việc tách các câu hỏi phát vấn (Hãy..., Bằng cách..., Nêu...), các bài tập con (Bài 1.1, Thực hành 1, Luyện tập 1) thành các hoạt động riêng biệt. Toàn bộ ví dụ mẫu, câu hỏi khám phá, thực hành con của từng mục phải nằm trọn vẹn bên trong hoạt động của mục đó.
+  BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề từng hoạt động con (ví dụ: \`(15 phút)\`, \`(12 phút)\`). CẤM ghi "Khoảng" hoặc dải thời gian "X - Y phút".
+- TỪNG HOẠT ĐỘNG NHÁNH 2.k (hoặc Hoạt động k) PHẢI CÓ ĐỦ 4 PHẦN:
   #### a) Mục tiêu:
   #### b) Nội dung:
   #### c) Sản phẩm: (Ghi rõ lời giải chi tiết, công thức, định nghĩa hoàn chỉnh, không để dấu "...")
@@ -333,7 +336,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 
 ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI
 
-### 1. Hoạt động 2.1: [Tên tiểu mục 1 trong SGK]
+### 1. Hoạt động 2.1: [Tên tiểu mục 1 trong SGK] (15 phút)
 #### a) Mục tiêu:
 - Học sinh hình thành được kiến thức, hiểu rõ bản chất và vận dụng được quy tắc/định nghĩa của tiểu mục 1.
 #### b) Nội dung:
@@ -368,7 +371,7 @@ ${ACTIVITY_TABLE_CONTRACT}
   + **HS:** Giải bài cá nhân vào vở -> Đổi vở chấm chéo hoặc thảo luận cặp -> Lên bảng trình bày, lớp phản biện.
 - Cột PHẢI mục d): Chép rõ Đề bài và Lời giải chi tiết từng bước của các bài tập trong SGK (không để dấu "...").
 
-## C. HOẠT ĐỘNG 3: LUYỆN TẬP (Khoảng 12 - 15 phút)
+## C. HOẠT ĐỘNG 3: LUYỆN TẬP (10 phút)
 
 ### a) Mục tiêu:
 - Củng cố và khắc sâu kiến thức vừa học thông qua giải quyết các bài tập, câu hỏi cụ thể trong SGK.
@@ -407,7 +410,7 @@ ${ACTIVITY_TABLE_CONTRACT}
   + **HS:** Thảo luận cặp/nhóm giải quyết bài toán thực tế -> Báo cáo giải pháp, lớp phản biện tính khả thi.
 - Cột PHẢI mục d): Tình huống thực tế và Lời giải mô hình hóa hoàn chỉnh.
 
-## D. HOẠT ĐỘNG 4: VẬN DỤNG (Khoảng 5 - 8 phút hoặc giao về nhà)
+## D. HOẠT ĐỘNG 4: VẬN DỤNG (5 phút)
 
 ### a) Mục tiêu:
 - Vận dụng kiến thức, kĩ năng đã học vào giải quyết các bài toán, tình huống thực tế đời sống.
@@ -439,34 +442,39 @@ ${ACTIVITY_TABLE_CONTRACT}
 
 BẮT BUỘC xuất đúng 4 khối, mỗi khối bắt đầu bằng marker:
 <<<KHBD_A>>>
-(toàn bộ ## A. HOẠT ĐỘNG 1: MỞ ĐẦU)
+(toàn bộ ## A. HOẠT ĐỘNG 1: MỞ ĐẦU (5 phút))
 <<<KHBD_B>>>
 (toàn bộ ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI)
 <<<KHBD_C>>>
-(toàn bộ ## C. HOẠT ĐỘNG 3: LUYỆN TẬP)
+(toàn bộ ## C. HOẠT ĐỘNG 3: LUYỆN TẬP (10 phút))
 <<<KHBD_D>>>
-(toàn bộ ## D. HOẠT ĐỘNG 4: VẬN DỤNG)
+(toàn bộ ## D. HOẠT ĐỘNG 4: VẬN DỤNG (5 phút))
 
 YÊU CẦU HÌNH THỨC & KỊCH BẢN THỰC CHIẾN (Áp dụng mọi pha A–D):
 ${ACTIVITY_TABLE_CONTRACT}
+- QUY TẮC THỜI LƯỢNG CỐ ĐỊNH: BẮT BUỘC đặt thời lượng cố định cụ thể bằng số phút trong tiêu đề từng hoạt động (A: 5 phút, C: 10 phút, D: 5 phút; từng hoạt động nhánh trong B: ví dụ 15 phút). TUYỆT ĐỐI CẤM ghi từ "Khoảng" hoặc dải thời gian "X - Y phút".
 
 PHA A — MỞ ĐẦU:
+- Tiêu đề: \`## A. HOẠT ĐỘNG 1: MỞ ĐẦU (5 phút)\`.
 - Đủ a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất).
 - Bám sát tình huống mở đầu trong SGK; không bịa tình huống ngoài nguồn.
 - Khi có NLS/AI: Tích hợp công cụ số hoặc câu hỏi/prompt AI mở đầu ngắn gọn (marker **[NLS: ...]** hoặc **[AI: ...]**).
 
 PHA B — HÌNH THÀNH KIẾN THỨC:
-- Đếm số tiểu mục kiến thức trong SGK: tạo đúng N hoạt động con (### 1. Hoạt động 2.1: ..., ### 2. Hoạt động 2.2: ...).
+- Đếm số mục kiến thức lớn trong SGK (chỉ 1-3 mục lớn, tối đa 4 mục): tạo đúng N hoạt động con (### 1. Hoạt động 2.1: [Tên mục 1] (15 phút), ### 2. Hoạt động 2.2: [Tên mục 2] (15 phút)... hoặc ### 1. Hoạt động 1: ..., ### 2. Hoạt động 2: ...).
+- TUYỆT ĐỐI LOẠI BỎ việc tách câu hỏi nhỏ/bài tập con thành hoạt động riêng. Toàn bộ ví dụ, khám phá, thực hành con phải nằm trọn vẹn bên trong hoạt động của mục lớn tương ứng.
 - Mỗi hoạt động con đủ #### a) b) c) d) + đúng 1 bảng 2 cột duy nhất.
 - Cột Trái: Kịch bản phân vai GV (lời thoại trong "...", chỉ rõ lỗi sai điển hình) và HS (cá nhân -> nhóm -> báo cáo).
 - Khi có NLS/AI: Thể hiện GV hướng dẫn công cụ số / giao prompt AI trong "...", HS thao tác và BẮT BUỘC kiểm chứng đối chiếu kết quả với SGK (marker **[NLS: ...]** hoặc **[AI: ...]**).
 - Cột Phải: Nội dung ghi bảng chốt kiến thức, công thức LaTeX, ví dụ mẫu kèm đề và lời giải chi tiết. TUYỆT ĐỐI CẤM để dấu "...".
 
 PHA C — LUYỆN TẬP:
+- Tiêu đề: \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP (10 phút)\`.
 - Chép rõ đề và giải chi tiết các bài tập có trong SGK vào Cột Phải. Cột Trái phân vai rõ ràng.
 - Khi có NLS/AI: Ứng dụng phần mềm/máy tính hoặc AI để gợi ý, HS kiểm tra và đối chiếu lời giải.
 
 PHA D — VẬN DỤNG:
+- Tiêu đề: \`## D. HOẠT ĐỘNG 4: VẬN DỤNG (5 phút)\`.
 - Bám sát bài vận dụng trong SGK, trình bày mô hình hóa và lời giải chuẩn.
 - Khi có NLS/AI: Vận dụng công cụ số/AI giải quyết bài toán thực tế, đánh giá và kiểm chứng tính khả thi.
 
@@ -612,9 +620,9 @@ ${latexRule}
 }
 
 /**
- * Trích xuất danh sách các tiểu mục kiến thức từ nội dung phân tích SGK (Tab 1/Bước 0).
+ * Trích xuất danh sách các tiểu mục kiến thức lớn từ nội dung phân tích SGK (Tab 1/Bước 0).
  * @param {string} content - Nội dung phân tích SGK
- * @returns {Array<{index: number, title: string}>} Danh sách tiểu mục đã chuẩn hóa
+ * @returns {Array<{index: number, title: string}>} Danh sách tiểu mục đã chuẩn hóa (tối đa 4 mục lớn)
  */
 function extractTextbookSubsections(content) {
   if (!content || typeof content !== 'string') return [];
@@ -623,22 +631,6 @@ function extractTextbookSubsections(content) {
 
   const results = [];
   const seenTitles = new Set();
-
-  const ignorePatterns = [
-    /^tổng quan\b/i,
-    /^khung kiến thức\b/i,
-    /^chuỗi hoạt động\b/i,
-    /^hệ thống bài tập\b/i,
-    /^đề xuất của\b/i,
-    /^yêu cầu cần đạt\b/i,
-    /^tiến trình dạy học\b/i,
-    /^thiết bị\b/i,
-    /^hoạt động mở đầu\b/i,
-    /^hoạt động luyện tập\b/i,
-    /^hoạt động vận dụng\b/i,
-    /^bài tập cuối bài\b/i,
-    /^(?:định nghĩa|khái niệm|quy tắc|công thức|chú ý|ví dụ|bài tập|nhiệm vụ|bước\s*\d+|phương pháp|kỹ thuật)$/i
-  ];
 
   function cleanTitle(raw) {
     if (!raw) return '';
@@ -653,8 +645,24 @@ function extractTextbookSubsections(content) {
   }
 
   function isIgnored(title) {
-    if (!title || title.length < 2) return true;
-    return ignorePatterns.some(p => p.test(title));
+    if (!title || title.length < 3 || title.length > 100) return true;
+
+    // 1. Loại trừ bài tập dạng số thập phân (1.1, 1.2, 1.4, 2.3...)
+    if (/^\d+\.\d+/.test(title)) return true;
+
+    // 2. Loại trừ nhãn bài tập / thực hành / ví dụ / ghi nhớ / chú ý...
+    if (/^(?:Thực hành|Luyện tập|Vận dụng|Bài tập|Bài|Ví dụ|Câu hỏi|Thử thách|Trải nghiệm|Ghi nhớ|Chú ý|Nhận xét|Quy ước|Tranh luận|Em có biết)\b/i.test(title)) return true;
+
+    // 3. Loại trừ câu lệnh / câu hỏi phát vấn (tránh bắt nhầm "Tính chất...", "Giải bài toán...")
+    if (/^(?:Hãy|Nêu|Bằng cách|Cho\b|Tìm\b|Tính\s+(?!chất\b)|Chứng minh|Chỉ ra|Viết\b|Điền\b|Quan sát|Đọc\b|Xác định|Giải\s+(?!bài toán\b|tam giác\b)|Vẽ\b|Chọn\b|Thực hiện|Trả lời|Xét\b|Dựa vào|Kể\b|Phát biểu|Kiểm tra)\b/i.test(title)) return true;
+
+    // 4. Loại trừ tiêu đề khung giáo án / cấu trúc tài liệu
+    if (/^(?:Tổng quan|Khung kiến thức|Chuỗi hoạt động|Hệ thống bài tập|Đề xuất|Yêu cầu cần đạt|Tiến trình|Thiết bị|Hoạt động mở đầu|Hoạt động hình thành|Hoạt động luyện tập|Hoạt động vận dụng|Đánh giá|Hồ sơ|Hướng dẫn về nhà)\b/i.test(title)) return true;
+
+    // 5. Loại trừ các từ đơn lẻ generic
+    if (/^(?:định nghĩa|khái niệm|quy tắc|công thức|chú ý|ví dụ|bài tập|nhiệm vụ|bước\s*\d+|phương pháp|kỹ thuật)$/i.test(title)) return true;
+
+    return false;
   }
 
   function addSub(idx, title) {
@@ -666,9 +674,25 @@ function extractTextbookSubsections(content) {
     results.push({ index: idx, title: cleaned });
   }
 
-  // Chiến lược 1: Tìm các mẫu "Mục 1:", "Mục 2:", "Phần 1:", "Phần 2:"
-  const mucRegex = /(?:^|\n)\s*(?:[-*+•]\s+)?(?:#{1,6}\s+)?(?:\*\*)?(?:Mục|Phần)\s*(\d+)[\s.:\-]+([^\r\n]+)/gi;
+  // Chiến lược 1: Ưu tiên nhận diện theo Chữ số La Mã (I., II., III., IV. hoặc # I., ## I., ### I., - I.)
+  const romanRegex = /(?:^|\n)\s*(?:[-*+•]\s+)?(?:#{1,6}\s+)?(?:\*\*)?([IVXLCDM]+)[\s.:\-]+(?:\*\*)?\s*([A-ZÀ-Ỹ0-9][^\r\n]+)/g;
   let match;
+  while ((match = romanRegex.exec(text)) !== null) {
+    const romanStr = match[1].toUpperCase();
+    const title = match[2];
+    if (/^(?:I|II|III|IV|V|VI|VII|VIII|IX|X)$/.test(romanStr)) {
+      addSub(results.length + 1, title);
+    }
+  }
+
+  if (results.length > 0) {
+    let finalRes = results.map((item, i) => ({ index: i + 1, title: item.title }));
+    if (finalRes.length > 4) finalRes = finalRes.slice(0, 4);
+    return finalRes;
+  }
+
+  // Chiến lược 2: Tìm các mẫu rõ ràng "Mục 1:", "Mục 2:", "Phần 1:", "Phần 2:"
+  const mucRegex = /(?:^|\n)\s*(?:[-*+•]\s+)?(?:#{1,6}\s+)?(?:\*\*)?(?:Mục|Phần)\s*(\d+)[\s.:\-]+([^\r\n]+)/gi;
   while ((match = mucRegex.exec(text)) !== null) {
     const num = parseInt(match[1], 10);
     const title = match[2];
@@ -676,11 +700,13 @@ function extractTextbookSubsections(content) {
   }
 
   if (results.length > 0) {
-    return results.map((item, i) => ({ index: i + 1, title: item.title }));
+    let finalRes = results.map((item, i) => ({ index: i + 1, title: item.title }));
+    if (finalRes.length > 4) finalRes = finalRes.slice(0, 4);
+    return finalRes;
   }
 
-  // Chiến lược 2: Tìm theo "HĐ khám phá 1:", "Hoạt động khám phá 1:", "HĐ 1:", "Khám phá 1:"
-  const hdRegex = /(?:^|\n)\s*(?:[-*+•]\s+)?(?:#{1,6}\s+)?(?:\*\*)?(?:Hoạt động khám phá|HĐ khám phá|Hoạt động|HĐ|Khám phá)\s*(\d+)[\s.:\-]+([^\r\n]+)/gi;
+  // Chiến lược 3: Tìm theo "HĐ khám phá 1:", "Hoạt động khám phá 1:", "Khám phá 1:"
+  const hdRegex = /(?:^|\n)\s*(?:[-*+•]\s+)?(?:#{1,6}\s+)?(?:\*\*)?(?:Hoạt động khám phá|HĐ khám phá|Khám phá)\s*(\d+)[\s.:\-]+([^\r\n]+)/gi;
   while ((match = hdRegex.exec(text)) !== null) {
     const num = parseInt(match[1], 10);
     const title = match[2];
@@ -688,10 +714,12 @@ function extractTextbookSubsections(content) {
   }
 
   if (results.length > 0) {
-    return results.map((item, i) => ({ index: i + 1, title: item.title }));
+    let finalRes = results.map((item, i) => ({ index: i + 1, title: item.title }));
+    if (finalRes.length > 4) finalRes = finalRes.slice(0, 4);
+    return finalRes;
   }
 
-  // Chiến lược 3: Tìm trong phạm vi mục 2 "Khung kiến thức trọng tâm" hoặc toàn văn
+  // Chiến lược 4: Tìm trong phạm vi mục 2 "Khung kiến thức trọng tâm" hoặc toàn văn theo số lớn 1. 2. 3. 4.
   let searchBlock = text;
   const section2Match = text.match(/2\.\s*(?:\*\*)?Khung kiến thức trọng tâm[\s\S]*?(?=(?:\n\s*(?:#{1,3}\s*)?3\.\s*(?:\*\*)?Chuỗi hoạt động|\n\s*(?:#{1,2}\s*)?[3-9]\.|$))/i);
   if (section2Match) {
@@ -702,14 +730,13 @@ function extractTextbookSubsections(content) {
   while ((match = numRegex.exec(searchBlock)) !== null) {
     const num = parseInt(match[1], 10);
     const title = match[2];
-    if (section2Match && (num >= 1 && num <= 5) && isIgnored(title)) {
-      continue;
-    }
     addSub(num, title);
   }
 
   if (results.length > 0) {
-    return results.map((item, i) => ({ index: i + 1, title: item.title }));
+    let finalRes = results.map((item, i) => ({ index: i + 1, title: item.title }));
+    if (finalRes.length > 4) finalRes = finalRes.slice(0, 4);
+    return finalRes;
   }
 
   return [];
@@ -775,11 +802,11 @@ function getPromptTemplate(templateKey, context) {
     const rawTextbook = context.textbook_content || '';
     const subsections = extractTextbookSubsections(rawTextbook);
     if (subsections && subsections.length > 0) {
-      const subListStr = subsections.map(s => `+ Tiểu mục ${s.index}: "${s.title}" -> BẮT BUỘC sinh: ### ${s.index}. Hoạt động 2.${s.index}: ${s.title}`).join('\n');
+      const subListStr = subsections.map(s => `+ Tiểu mục ${s.index}: "${s.title}" -> BẮT BUỘC sinh: ### ${s.index}. Hoạt động 2.${s.index}: ${s.title} (15 phút)`).join('\n');
       result += `\n\nDANH SÁCH TIỂU MỤC SGK BẮT BUỘC ÁP DỤNG (ĐÚNG ${subsections.length} HOẠT ĐỘNG NHÁNH):
-Từ dữ liệu SGK được cung cấp, xác định chính xác ${subsections.length} tiểu mục kiến thức sau. Bạn PHẢI tạo đúng ${subsections.length} hoạt động nhánh tương ứng 1-1, KHÔNG ĐƯỢC GỘP, KHÔNG ĐƯỢC BỎ BỚT, KHÔNG ĐƯỢC BỊA THÊM:
+Từ dữ liệu SGK được cung cấp, xác định chính xác ${subsections.length} tiểu mục kiến thức lớn sau. Bạn PHẢI tạo đúng ${subsections.length} hoạt động nhánh tương ứng 1-1, KHÔNG ĐƯỢC GỘP, KHÔNG ĐƯỢC BỎ BỚT, KHÔNG ĐƯỢC BỊA THÊM:
 ${subListStr}
-Mỗi hoạt động 2.k trên BẮT BUỘC phải có đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng).`;
+Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có thời lượng cố định cụ thể ví dụ (15 phút), đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng). Tuyệt đối không tách câu hỏi nhỏ/bài tập con thành hoạt động riêng.`;
     }
   }
 
