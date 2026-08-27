@@ -962,7 +962,7 @@ function setupEventListeners() {
   });
   document.getElementById("btnImportLegacyDraft").addEventListener("click", () => {
     const legacy = localStorage.getItem("khbd_kntt_saved_state") || localStorage.getItem("khbd_app_saved_state");
-    if (!legacy || !confirm("Nhập bản nháp cũ trên trình duyệt này vào tài khoản hiện tại?")) return;
+    if (!legacy || !userConfirm("Nhập bản nháp cũ trên trình duyệt này vào tài khoản hiện tại?")) return;
     applyDraftData(JSON.parse(legacy)); saveStateToLocalStorage(); location.reload();
   });
 
@@ -1083,7 +1083,7 @@ function setupEventListeners() {
 
   document.getElementById("btnClearVisionImages").addEventListener("click", () => {
     if (appState.images.length === 0 && !(appState.pdfAttachments || []).length) return;
-    if (confirm(`Bạn có chắc muốn xóa tất cả ảnh trang SGK đã tải lên?`)) {
+    if (userConfirm(`Bạn có chắc muốn xóa tất cả ảnh trang SGK đã tải lên?`)) {
       appState.images = [];
       appState.pdfAttachments = [];
       updateImageCounts();
@@ -2198,11 +2198,10 @@ function buildPhasePedagogyContext(phase) {
 
   const scriptRequirement = phase === "E"
     ? `\nYÊU CẦU ĐẶC THÙ CHO HOẠT ĐỘNG E (HƯỚNG DẪN VỀ NHÀ):
-- Mục b) Nội dung và Cột Phải Bảng d) BẮT BUỘC có đủ 4 phần rõ nét:
-  1. Học cái gì: Ôn tập kiến thức cốt lõi và tóm tắt bằng sơ đồ tư duy (mindmap) vào vở ghi.
-  2. Làm bài tập gì: Hoàn thành bài tập SGK & SBT (nêu số bài, trang cụ thể).
-  3. Cho thêm bài tập nào: 1–2 bài toán/nhiệm vụ mở rộng, nâng cao phân hóa dành cho HS khá/giỏi kèm gợi ý ngắn gọn.
-  4. Chuẩn bị bài sau: Đọc trước bài mới trong SGK và chuẩn bị đồ dùng/dụng cụ học tập.
+- Mục b) Nội dung và Cột Phải Bảng d) BẮT BUỘC theo cấu trúc chuẩn sư phạm:
+  1. Học bài: Ôn tập kiến thức cốt lõi và tóm tắt bằng sơ đồ tư duy (mindmap) vào vở ghi.
+  2. Làm bài: Hoàn thành bài tập SGK & SBT (nêu số bài, trang cụ thể) và giải bài tập mở rộng / nâng cao phân hóa dành cho HS khá/giỏi (kèm gợi ý).
+  3. Chuẩn bị bài: Đọc trước bài mới trong SGK và chuẩn bị đồ dùng/dụng cụ học tập.
 - Cột Trái Bảng d): Đủ 4 bước CV 5512 phân vai rõ ràng:
   + **GV:** Nói câu lệnh giao việc trong ngoặc kép "...", hướng dẫn cách hoàn thành, thời hạn nộp.
   + **HS:** Lắng nghe, ghi nhận nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.`
@@ -2919,7 +2918,7 @@ async function handleGenerateVision() {
     return;
   }
   if (String(appState.content.vision || "").trim().length >= 80) {
-    if (!confirm("Đã có nội dung phân tích SGK. Đọc lại sẽ tốn hạn mức OCR. Tiếp tục?")) return;
+    if (!userConfirm("Đã có nội dung phân tích SGK. Đọc lại sẽ tốn hạn mức OCR. Tiếp tục?", true)) return;
   }
   if (canUseMistralOcr()) {
     await readTextbookWithMistral();
@@ -3226,7 +3225,8 @@ async function handle1ClickGenerate() {
   const topic = getTopicDisplayName();
   const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nHệ thống nhận diện SGK bằng Mistral OCR (nếu có) rồi soạn 6 bước tuần tự: I+II, A, B, C, D, E. File PDF/ảnh chỉ trong phiên này (F5 sẽ mất nếu chưa Đọc SGK).`;
 
-  if (typeof confirm === "function" && !confirm(confirmMsg)) return;
+  if (!userConfirm(confirmMsg, true)) return;
+  if (window.__KHBD_CANVAS__) showToast("Canvas không dùng hộp thoại xác nhận — bắt đầu soạn 1-click.", "info", 4000);
 
   appState.isGenerating = true;
   appState.cancelRequested = false;
@@ -3456,7 +3456,7 @@ function handleCopyFullMarkdown() {
 // XÓA TOÀN BỘ DỮ LIỆU (CÓ XÁC NHẬN)
 // =============================================================================
 function handleClearAllContent() {
-  if (confirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ nội dung giáo án đã soạn, ảnh SGK và toàn bộ thiết lập bối cảnh sư phạm không? Thao tác này không thể hoàn tác.")) {
+  if (userConfirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ nội dung giáo án đã soạn, ảnh SGK và toàn bộ thiết lập bối cảnh sư phạm không? Thao tác này không thể hoàn tác.")) {
     appState.content = {
       vision: "",
       objectives: "",
@@ -3484,6 +3484,45 @@ function handleClearAllContent() {
 
     showToast("Đã xóa toàn bộ nội dung và thiết lập bối cảnh dạy học thành công!", "info");
   }
+}
+
+function isSandboxWithoutModals() {
+  if (typeof window !== "undefined" && window.__KHBD_CANVAS__) return true;
+  try {
+    const frame = typeof window !== "undefined" ? window.frameElement : null;
+    if (frame && typeof frame.getAttribute === "function" && frame.hasAttribute("sandbox")) {
+      return !/\ballow-modals\b/.test(frame.getAttribute("sandbox") || "");
+    }
+  } catch (e) {
+    return true;
+  }
+  return false;
+}
+
+function userConfirm(message, proceedIfBlocked = false) {
+  if (isSandboxWithoutModals()) {
+    if (proceedIfBlocked) return true;
+    const token = String(message || "").slice(0, 80);
+    const now = Date.now();
+    if (userConfirm._arm && userConfirm._arm.token === token && now - userConfirm._arm.at < 5000) {
+      userConfirm._arm = null;
+      return true;
+    }
+    userConfirm._arm = { token, at: now };
+    if (typeof showToast === "function") {
+      showToast("Canvas không mở được hộp thoại. Nhấn lại lần nữa trong 5 giây để xác nhận.", "warning", 5000);
+    }
+    return false;
+  }
+  const confirmFn = (typeof confirm === "function")
+    ? confirm
+    : (typeof window !== "undefined" && typeof window.confirm === "function" ? window.confirm : null);
+  if (!confirmFn) return proceedIfBlocked;
+  try {
+    const result = confirmFn(message);
+    if (typeof result === "boolean") return result;
+  } catch (e) { /* sandbox may throw or no-op */ }
+  return proceedIfBlocked;
 }
 
 // =============================================================================
