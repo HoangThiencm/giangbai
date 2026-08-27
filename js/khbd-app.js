@@ -2572,7 +2572,8 @@ function buildPedagogicalContext() {
 - Chỉ được tích hợp các thành phần đã bật: ${enabledIntegrations.length ? enabledIntegrations.join("; ") : "không có thành phần tích hợp bổ sung"}.
 - Chuẩn NLS/AI đã chọn (mỗi mục một dòng; PHẢI xuất hiện đủ trong I.2.c và I.2.d; không được bỏ miền/mã đã chọn):
   ${selectedStandards || "Không có"}
-- CẤM bịa mã ngoài danh sách. Khi viết mục tiêu: chỉ mô tả năng lực một dòng, CẤM nhãn Biểu hiện / Nhiệm vụ / Minh chứng. AI chỉ hỗ trợ học ${subjectName}, có kiểm chứng của con người, không biến thành bài AI độc lập.
+- CẤM bịa mã ngoài danh sách. Khi viết mục tiêu: chỉ mô tả năng lực một dòng, CẤM nhãn Biểu hiện / Nhiệm vụ / Minh chứng.
+- TÍCH HỢP NLS & AI THỰC CHIẾN GẮN MÔN HỌC: NLS/AI chỉ là công cụ thực hành môn ${subjectName}, TUYỆT ĐỐI KHÔNG dạy lý thuyết Tin học hay hỏi lý thuyết AI suông trong giờ học (cấm GV hỏi: "AI là gì?", "Em hãy kể tên công cụ AI?", "Làm gì để kiểm chứng thông tin từ AI?"). CHỈ tích hợp tại 1–2 vị trí then chốt, đắc địa nhất theo 3 dạng: (1) Kiểm chứng phản biện lỗi sai AI, (2) Prompting gợi mở bước giải, (3) Thao tác phần mềm chuyên ngành (GeoGebra/Excel/PhET...). TUYỆT ĐỐI CẤM rải tag dồn dập nhiều mã [AI: ...].
 - Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.`;
 }
 
@@ -2624,20 +2625,17 @@ function buildIntegrationActivityConstraint(phase) {
   if (!digitalOn && !aiOn) return "";
   const nls = standardsOfKind("digital").map(item => item.officialLabel).filter(Boolean);
   const ai = standardsOfKind("ai").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
+  
   const lines = [
-    `TÍCH HỢP NLS/AI PHA ${phase}: lồng vào cách tổ chức bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu; dùng marker markdown **[NLS: {Miền/Mã} - {Công cụ}]** và **[AI: {Mã} - {Prompt/Kiểm chứng}]** (hoặc **[NLS]**, **[AI]**) trước nhiệm vụ tích hợp.`
+    `TÍCH HỢP NLS/AI THỰC CHIẾN PHA ${phase}: Lồng vào bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.`,
+    `QUY TẮC BẮT BUỘC: NLS/AI chỉ là công cụ thực hành môn học, TUYỆT ĐỐI CẤM GV hỏi lý thuyết suông về AI (như hỏi định nghĩa AI, hỏi kể tên công cụ, hỏi cách kết hợp AI). TUYỆT ĐỐI CẤM rải tag dồn dập. Toàn bộ bài chỉ tích hợp 1–2 điểm đắc địa nhất.`,
+    `Khi pha ${phase} có tích hợp NLS/AI, BẮT BUỘC dùng đúng 1 trong 3 dạng kịch bản thực chiến:`,
+    `- Dạng 1: Kiểm chứng & Phản biện lỗi sai của AI (GV chiếu câu trả lời AI chứa lỗi/ngộ nhận môn học, HS đối chiếu SGK phát hiện lỗi và sửa đúng; marker **[AI: {Mã} - Kiểm chứng phản hồi AI]**).`,
+    `- Dạng 2: Prompting tư duy môn học (GV hướng dẫn Prompt gợi mở bước giải trong "...", HS chạy prompt tự giải bài; marker **[AI: {Mã} - Prompting gợi mở & Tự giải]**).`,
+    `- Dạng 3: Phần mềm chuyên dụng NLS (HS trực tiếp thao tác GeoGebra, Desmos, Excel, PhET... để vẽ hình, xử lý số liệu, kiểm chứng; marker **[NLS: {Miền/Mã} - {Tên phần mềm}]**).`
   ];
-  if (phase === "A") {
-    if (digitalOn) lines.push(`NLS đã chọn: ${nls.join("; ") || "năng lực số"}. Thêm 1 móc ngắn kịch bản GV/HS thao tác số (marker **[NLS]** hoặc **[NLS: ...]**).`);
-    if (aiOn) lines.push(`AI đã chọn: ${ai.join("; ") || "năng lực AI"}. Thêm 1 móc ngắn kịch bản GV giao prompt "..." và HS kiểm chứng (marker **[AI]** hoặc **[AI: ...]**).`);
-  } else {
-    if (digitalOn) {
-      lines.push(`NLS đã chọn: ${nls.join("; ") || "năng lực số"}. Mỗi pha B/C/D phải có ÍT NHẤT một nhiệm vụ GV (hướng dẫn phần mềm GeoGebra/bảng tính/máy tính) VÀ một nhiệm vụ HS (thao tác số/khai thác) gắn marker **[NLS: ...]** hoặc **[NLS]**.`);
-    }
-    if (aiOn) {
-      lines.push(`AI đã chọn: ${ai.join("; ") || "năng lực AI"}. Mỗi pha B/C/D phải có ÍT NHẤT một nhiệm vụ GV (giao câu lệnh Prompt cụ thể trong ngoặc kép "...") VÀ HS (chạy prompt, BẮT BUỘC có bước so sánh, đối chiếu, kiểm chứng kết quả với SGK/toán học chuẩn mực) gắn marker **[AI: ...]** hoặc **[AI]**.`);
-    }
-  }
+  if (digitalOn && nls.length) lines.push(`Chuẩn NLS đã chọn: ${nls.join("; ")}.`);
+  if (aiOn && ai.length) lines.push(`Chuẩn AI đã chọn: ${ai.join("; ")}.`);
   return `\n${lines.join(" ")}`;
 }
 
