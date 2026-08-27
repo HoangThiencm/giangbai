@@ -4,12 +4,12 @@ const { getPromptTemplate } = require("../js/khbd-prompts.js");
 
 const docx = fs.readFileSync("js/khbd-docx.js", "utf8");
 assert.match(docx, /fontSizeBody = 26/);
-assert.match(docx, /lineSpacing = 312/);
+assert.match(docx, /lineSpacing = 276/);
 assert.match(docx, /lineRule = "auto"/);
-assert.match(docx, /top: 851/);
-assert.match(docx, /bottom: 851/);
-assert.match(docx, /left: 1418/);
-assert.match(docx, /right: 851/);
+assert.match(docx, /top: 850/);
+assert.match(docx, /bottom: 850/);
+assert.match(docx, /left: 1417/);
+assert.match(docx, /right: 850/);
 assert.match(docx, /width: 11906/);
 assert.match(docx, /height: 16838/);
 

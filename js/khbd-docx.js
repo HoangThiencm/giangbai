@@ -9,23 +9,26 @@
 class DocxGenerator {
   constructor() {
     this.fontFamily = "Times New Roman";
-    // Times New Roman 13pt; giãn dòng Multiple 1.3; khổ A4; lề trên/dưới/trái/phải 1.5/1.5/2.5/1.5 cm.
-    this.fontSizeBody = 26;
+    this.fontSizeBody = 26; // 13pt (26 half-points)
     this.fontSizeH1 = 26;
     this.fontSizeH2 = 26;
     this.fontSizeH3 = 26;
-    this.lineSpacing = 312;
+    this.lineSpacing = 276; // Multiple 1.15 (240 * 1.15)
     this.lineRule = "auto";
-    this.spaceAfter = 60;
+    this.spaceAfter = 60;   // 3pt (60 dxa)
     this.spaceBefore = 0;
 
+    // Căn lề trang A4 chuẩn (Top: 1.5cm (850 dxa), Bottom: 1.5cm (850 dxa), Left: 2.5cm (1417 dxa), Right: 1.5cm (850 dxa))
     this.pageMargins = {
-      top: 851,
-      bottom: 851,
-      left: 1418,
-      right: 851
+      top: 850,
+      bottom: 850,
+      left: 1417,
+      right: 850
     };
     this.pageSize = { width: 11906, height: 16838, orientation: "portrait" };
+    // Vùng in nội dung A4: 11906 - 1417 (trái) - 850 (phải) = 9639 dxa
+    this.tableWidth = 9639;
+    this.columnWidths = [4819, 4820];
   }
 
   /**
@@ -529,7 +532,7 @@ class DocxGenerator {
             elements.push(docxTable);
             // Thêm khoảng cách sau bảng
             elements.push(new Paragraph({
-              spacing: { before: 60, after: 120 }
+              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule }
             }));
           }
           continue;
@@ -607,7 +610,7 @@ class DocxGenerator {
       // 3. Phân tích ĐƯỜNG KẺ NGANG (--- hoặc ***)
       if (trimmed === "---" || trimmed === "***" || trimmed === "___") {
         elements.push(new Paragraph({
-          spacing: { before: 120, after: 120 },
+          spacing: { before: 60, after: 60 },
           border: {
             bottom: {
               color: "CCCCCC",
@@ -630,7 +633,7 @@ class DocxGenerator {
         const runs = this.parseInlineTextToRuns(`${marker} ${contentText}`, lineColor);
         elements.push(new Paragraph({
           indent: level ? { left: Math.max(level * 360, indent.length * 180) } : undefined,
-          spacing: { before: 40, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
           children: runs
         }));
         i++;
@@ -644,7 +647,7 @@ class DocxGenerator {
         const runs = this.parseInlineTextToRuns(bulletText, lineColor);
         elements.push(new Paragraph({
           bullet: { level: 0 },
-          spacing: { before: 40, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
           children: runs
         }));
         i++;
@@ -663,7 +666,7 @@ class DocxGenerator {
         const runs = this.parseInlineTextToRuns(contentText, lineColor);
 
         elements.push(new Paragraph({
-          spacing: { before: 40, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
           children: [
             this.coloredTextRun(prefix, { bold: true, color: lineColor }),
             ...runs
@@ -679,7 +682,7 @@ class DocxGenerator {
         const lineColor = this.lineIntegrationColor(quoteText, runColor);
         const runs = this.parseInlineTextToRuns(quoteText, lineColor);
         elements.push(new Paragraph({
-          spacing: { before: 80, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
           indent: { left: 567 }, // lùi 1cm
           children: runs
         }));
@@ -713,13 +716,16 @@ class DocxGenerator {
     if (validLines.length === 0) return null;
 
     const rows = [];
-    const tableWidth = 9637;
+    const tableWidth = this.tableWidth || 9639;
     const columnCount = Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
     const headerCells = this.splitMarkdownTableRow(validLines[0]).map(cell => cell.toLowerCase());
     const isActivityTwoCol = columnCount === 2 && headerCells.some(cell => cell.includes("hoạt động của gv") || cell.includes("nội dung"));
     const columnWidths = isActivityTwoCol
-      ? [4818, 4819]
-      : Array.from({ length: columnCount }, () => Math.floor(tableWidth / columnCount));
+      ? (this.columnWidths || [4819, 4820])
+      : Array.from({ length: columnCount }, (_, idx) => {
+          const base = Math.floor(tableWidth / columnCount);
+          return idx === columnCount - 1 ? (tableWidth - base * (columnCount - 1)) : base;
+        });
 
     validLines.forEach((line, rowIndex) => {
       const rawCells = this.splitMarkdownTableRow(line);
@@ -827,7 +833,7 @@ class DocxGenerator {
         : this.parseInlineTextToRuns(displayLine, lineColor);
       return new Paragraph({
         indent: indentLeft ? { left: indentLeft } : undefined,
-        spacing: { before: 20, after: 20, line: this.lineSpacing, lineRule: this.lineRule },
+        spacing: { before: 0, after: 30, line: this.lineSpacing, lineRule: this.lineRule },
         children: runs.length ? runs : [this.coloredTextRun(displayLine || "", { bold: isHeader, color: lineColor })]
       });
     });
@@ -979,7 +985,7 @@ class DocxGenerator {
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { before: 0, after: 80, line: this.lineSpacing, lineRule: this.lineRule },
+          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
           children: [
             this.coloredTextRun(`${kind}. ${caption}`, {
               italics: true,
