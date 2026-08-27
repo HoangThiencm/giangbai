@@ -194,7 +194,7 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
     * + Bước 3: Báo cáo, thảo luận: HS báo cáo và phản biện; GV điều hành 1 câu gợi mở.
     * + Bước 4: Kết luận, nhận định: GV nhận xét, chốt kiến thức cốt lõi; HS ghi bài vào vở.
   + Trong từng bước, BẮT BUỘC nêu tên Kỹ thuật/Phương pháp dạy học được áp dụng và PHÂN VAI RÕ RÀNG:
-    * **GV (Giáo viên):** Nói câu lệnh/câu hỏi trực tiếp trong ngoặc kép "..." ngắn gọn, dự kiến lỗi sai/ngộ nhận điển hình gắn đúng bài học SGK (dạng: "Dự kiến: nhầm [thuật ngữ X trong SGK] với [thuật ngữ Y trong SGK]"), can thiệp hỗ trợ phân hóa súc tích.
+    * **GV (Giáo viên):** Nói câu lệnh/câu hỏi trực tiếp trong ngoặc kép "..." ngắn gọn, dự kiến lỗi sai điển hình / ngộ nhận gắn đúng khái niệm bài học SGK (CẤM lỗi generic lặp lại mọi bài; dạng: "Dự kiến: nhầm [thuật ngữ X trong SGK] với [thuật ngữ Y trong SGK]"), can thiệp hỗ trợ phân hóa súc tích.
     * **HS (Học sinh):** Hành động cụ thể: (1) Thao tác cá nhân X phút vào vở/nháp/phiếu -> (2) Thảo luận cặp/nhóm Y phút tạo **sản phẩm trung gian** -> (3) Đại diện báo cáo và phản biện trước lớp.
   + KỊCH BẢN TÍCH HỢP NĂNG LỰC SỐ (NLS) VÀ NĂNG LỰC AI THỰC CHIẾN GẮN MÔN HỌC (chỉ khi được bật trong bối cảnh sư phạm):
     * NGUYÊN TẮC CỐT LÕI: NLS và AI CHỈ LÀ CÔNG CỤ THỰC HÀNH MÔN HỌC, không dạy lý thuyết Tin học hay định nghĩa AI trong giờ học chuyên môn. CHỈ tích hợp tại 1 đến 2 vị trí then chốt, đắc địa nhất trong toàn bộ bài dạy (ở Hoạt động B hoặc C hoặc D), TUYỆT ĐỐI KHÔNG rải bừa bãi.
