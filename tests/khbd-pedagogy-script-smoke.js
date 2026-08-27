@@ -246,8 +246,8 @@ async function testDocxCompatibility() {
   assert.ok(xml.includes("<w:tbl>"), "DOCX phải chứa phần tử bảng <w:tbl>");
   assert.ok(xml.includes("<w:tblGrid>"), "Bảng phải có lưới cột <w:tblGrid>");
 
-  // 2. Kiểm tra tỷ lệ 50-50 (4680 dxa)
-  assert.ok(xml.includes('w:w="4680"'), "Cột bảng phải có độ rộng 4680 dxa (chuẩn 50-50)");
+  // 2. Kiểm tra tỷ lệ 50-50 chuẩn A4 (4819 / 4820 dxa)
+  assert.ok(xml.includes('w:w="4819"') || xml.includes('w:w="4820"'), "Cột bảng phải có độ rộng 4819/4820 dxa (chuẩn A4 50-50)");
 
   // 3. Kiểm tra math formulas được chuyển thành OMML
   assert.ok(xml.includes("<m:oMath>"), "Công thức LaTeX phải được render thành OMML <m:oMath>");

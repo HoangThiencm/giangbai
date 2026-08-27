@@ -20,7 +20,7 @@ const prompt = getPromptTemplate("GENERATE_ACTIVITY_B", {
   textbook_content: "Mục 1: Khái niệm tập hợp",
   objectives_content: ""
 });
-assert.match(prompt, /GIỚI HẠN ĐỘ DÀI|GIỚI HẠN DUNG LƯỢNG/);
-assert.match(prompt, /8–12 trang|~10 trang/);
+assert.match(prompt, /8–10 trang|8–12 trang|~10 trang/);
+assert.match(prompt, /súc tích|cô đọng|GIỚI HẠN DUNG LƯỢNG|YÊU CẦU ĐỘ DÀI/);
 
 console.log("khbd docx layout smoke: passed");

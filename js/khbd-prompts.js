@@ -180,25 +180,22 @@ function calculateActivityTimeBudgets(durationStr, subsectionCount, grade) {
 }
 
 const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠM THỰC CHIẾN TRONG BẢNG 2 CỘT (Chuẩn CV 5512 & GDPT 2018):
+- YÊU CẦU ĐỘ DÀI & VĂN PHONG SÚC TÍCH: Toàn bộ Kế hoạch bài dạy hoàn chỉnh đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trực diện vào bản chất kiến thức và hành động cốt lõi của GV/HS; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không dùng câu thoại diễn giải lòng vòng, không lặp lại nội dung giữa các mục.
 - THỜI LƯỢNG HOẠT ĐỘNG: BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề các Hoạt động (A, B, C, D, E) và từng hoạt động nhánh trong Mục B, ví dụ: \`## A. HOẠT ĐỘNG 1: MỞ ĐẦU (5 phút)\`, \`### 1. Hoạt động 2.1: [Tên mục] (15 phút)\`, \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP (10 phút)\`, \`## D. HOẠT ĐỘNG 4: VẬN DỤNG (5 phút)\`, \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (3 phút)\`. CẤM TUYỆT ĐỐI ghi từ "Khoảng" hoặc dải thời gian dạng "X - Y phút".
-- Mục a) Mục tiêu, b) Nội dung, c) Sản phẩm: dùng 3 cấp danh sách: ý lớn \`-\`, ý con \`+\`, ý chi tiết \`.\`.
+- Mục a) Mục tiêu, b) Nội dung, c) Sản phẩm: dùng 3 cấp danh sách: ý lớn \`-\`, ý con \`+\`, ý chi tiết \`.\`. Trình bày súc tích, trọng tâm (mục a: tối đa 2 ý; mục b: tối đa 2–3 ý, không chép lại toàn văn SGK; mục c: tối đa 2 ý kết quả cốt lõi).
 - Mục d) Tổ chức thực hiện: BẮT BUỘC ĐÚNG MỘT bảng Markdown 2 cột, tiêu đề:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
 - Bảng Markdown CHỈ GỒM ĐÚNG 1 HÀNG DỮ LIỆU DUY NHẤT (CẤM tách thành 4 hàng riêng).
-- CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG (ngăn các bước bằng <br>):
+- CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG (ngăn các bước bằng <br>, mỗi bước chỉ 1–2 câu ngắn gọn):
   + Đủ 4 bước chuẩn Công văn 5512:
-    * + Bước 1: Chuyển giao nhiệm vụ: nêu kỹ thuật dạy học, GV nói câu lệnh trong ngoặc kép, HS tiếp nhận.
-    * + Bước 2: Thực hiện nhiệm vụ: HS làm cá nhân rồi thảo luận; GV quan sát và hỗ trợ phân hóa.
-    * + Bước 3: Báo cáo, thảo luận: HS báo cáo, phản biện; GV điều hành.
-    * + Bước 4: Kết luận, nhận định: GV chốt kiến thức; HS ghi bài.
+    * + Bước 1: Chuyển giao nhiệm vụ: Nêu kỹ thuật dạy học, GV nói 1 câu lệnh ngắn gọn trong ngoặc kép "...", HS tiếp nhận.
+    * + Bước 2: Thực hiện nhiệm vụ: HS làm cá nhân rồi thảo luận; GV quan sát, nêu 1 lỗi sai/ngộ nhận điển hình và hướng xử lý phân hóa.
+    * + Bước 3: Báo cáo, thảo luận: HS báo cáo và phản biện; GV điều hành 1 câu gợi mở.
+    * + Bước 4: Kết luận, nhận định: GV nhận xét, chốt kiến thức cốt lõi; HS ghi bài vào vở.
   + Trong từng bước, BẮT BUỘC nêu tên Kỹ thuật/Phương pháp dạy học được áp dụng và PHÂN VAI RÕ RÀNG:
-    * **GV (Giáo viên):** 
-      - Nói câu lệnh/câu hỏi trực tiếp trong ngoặc kép (câu lệnh giao việc rõ ràng, câu hỏi phát vấn gợi mở hoặc câu hỏi phân hóa đào sâu bản chất).
-      - Hành động cụ thể: phát phiếu học tập/dụng cụ, chia nhóm, kiểm soát thời gian.
-      - **BẮT BUỘC dự kiến lỗi sai điển hình / ngộ nhận** gắn đúng khái niệm, ví dụ hoặc bài tập đang dạy trong PDF/ảnh SGK (nêu thuật ngữ hoặc số bài). CẤM lỗi generic lặp lại mọi bài. Nếu nguồn không cho thấy ngộ nhận điển hình, viết một câu: "Dự kiến: nhầm [thuật ngữ X trong SGK] với [thuật ngữ Y trong SGK]". Can thiệp hỗ trợ phân hóa: hướng dẫn HS gặp khó khăn, đặt câu hỏi mở rộng cho HS khá giỏi.
-    * **HS (Học sinh):** 
-      - Hành động cụ thể theo 3 pha: (1) Thao tác cá nhân theo phút vào vở/nháp/phiếu -> (2) Thảo luận cặp/nhóm theo phút tạo **sản phẩm trung gian** (bảng phụ, phiếu học tập, sơ đồ tư duy, giấy A0, sticky note) -> (3) Đại diện báo cáo và phản biện trước lớp.
+    * **GV (Giáo viên):** Nói câu lệnh/câu hỏi trực tiếp trong ngoặc kép "..." ngắn gọn, dự kiến lỗi sai/ngộ nhận điển hình gắn đúng bài học SGK (dạng: "Dự kiến: nhầm [thuật ngữ X trong SGK] với [thuật ngữ Y trong SGK]"), can thiệp hỗ trợ phân hóa súc tích.
+    * **HS (Học sinh):** Hành động cụ thể: (1) Thao tác cá nhân X phút vào vở/nháp/phiếu -> (2) Thảo luận cặp/nhóm Y phút tạo **sản phẩm trung gian** -> (3) Đại diện báo cáo và phản biện trước lớp.
   + KỊCH BẢN TÍCH HỢP NĂNG LỰC SỐ (NLS) VÀ NĂNG LỰC AI THỰC CHIẾN GẮN MÔN HỌC (chỉ khi được bật trong bối cảnh sư phạm):
     * NGUYÊN TẮC CỐT LÕI: NLS và AI CHỈ LÀ CÔNG CỤ THỰC HÀNH MÔN HỌC, không dạy lý thuyết Tin học hay định nghĩa AI trong giờ học chuyên môn. CHỈ tích hợp tại 1 đến 2 vị trí then chốt, đắc địa nhất trong toàn bộ bài dạy (ở Hoạt động B hoặc C hoặc D), TUYỆT ĐỐI KHÔNG rải bừa bãi.
     * ĐIỀU KHOẢN CẤM NGHIÊM NGẶT: TUYỆT ĐỐI CẤM giáo viên hỏi miệng chung chung về định nghĩa hay lý thuyết AI (ví dụ cấm hỏi: "Em hãy kể tên công cụ AI?", "Khi AI đưa thông tin ta làm gì để kiểm chứng?", "Em có đề xuất gì về kết hợp AI?"). TUYỆT ĐỐI CẤM rải tag dồn dập nhiều mã [AI: ...] sau mỗi câu hỏi của giáo viên.
@@ -207,11 +204,10 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
       - Dạng 2 (Prompting tư duy môn học): GV hướng dẫn HS sử dụng câu lệnh Prompt cụ thể trong ngoặc kép "..." để AI gợi mở các bước giải mà không giải hộ -> HS thực hành prompt và tự giải bài tập. Marker: **[AI: {Mã} - Prompting gợi mở & Tự giải]** (hoặc **[AI]**).
       - Dạng 3 (Phần mềm chuyên dụng NLS): HS trực tiếp thao tác trên thiết bị với phần mềm chuyên ngành (GeoGebra, Desmos, bảng tính Excel, máy tính cầm tay, phần mềm mô phỏng PhET...) để vẽ hình, dựng đồ thị, xử lý số liệu hoặc kiểm chứng kết quả bài học. Marker: **[NLS: {Miền/Mã} - {Tên phần mềm}]** (hoặc **[NLS]**).
 - CỘT PHẢI — NỘI DUNG GHI BẢNG (Kiến thức chuẩn mực chốt cho HS chép vào vở):
-  + Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức LaTeX ($...$, $$...$$), chú ý quan trọng, ví dụ mẫu kèm đề bài và lời giải chi tiết từng bước. Dùng \`-\`, \`+\`, \`.\`; ngăn các dòng bằng \`<br>\`.
+  + Trình bày đề cương kiến thức súc tích, cô đọng, đúng trọng tâm: Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức LaTeX ($...$, $$...$$), chú ý quan trọng, tối đa 1 ví dụ mẫu kèm đề bài và lời giải chuẩn. Dùng \`-\`, \`+\`, \`.\`; ngăn các dòng bằng \`<br>\`.
   + CỘT PHẢI CẤM: mô tả hành vi GV/HS, CẤM viết "GV yêu cầu", "HS thảo luận", CẤM để trống, CẤM để dấu "..." hay "[...]".
 - CẤM để trống ô. Escape dấu | trong văn bản thành \\|.
-- Hoạt động B: Mỗi tiểu mục/nội dung kiến thức dùng một bảng 2 cột (1 hàng) độc lập như trên. Gộp toàn bộ ví dụ mẫu, câu hỏi khám phá con, thực hành của mục đó vào chung một hoạt động nhánh.
-- GIỚI HẠN ĐỘ DÀI (mục tiêu ~10 trang Word 13pt): a) tối đa 2 ý; b) tối đa 3 ý, không chép nguyên SGK; c) tối đa 2 ý. Cột trái mỗi bước 1–2 câu (GV một câu lệnh + HS một thao tác). Cột phải: định nghĩa/công thức + tối đa 1 ví dụ đã giải. C: tối đa 2 bài luyện tập, lời giải gọn đủ bước. D: 1 tình huống vận dụng. E: mỗi mục Học bài / Làm bài / Chuẩn bị bài 1–2 dòng. CẤM lặp kiến thức đã chốt ở B sang C/D/E. CẤM đoạn văn dài, CẤM nhiều ví dụ mẫu.`;
+- Hoạt động B: Mỗi tiểu mục/nội dung kiến thức dùng một bảng 2 cột (1 hàng) độc lập như trên. Gộp toàn bộ ví dụ mẫu, câu hỏi khám phá con, thực hành của mục đó vào chung một hoạt động nhánh.`;
 
 const PROMPTS = {
   // SYSTEM INSTRUCTION
@@ -226,6 +222,7 @@ const PROMPTS = {
 
 QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Bám sát GDPT 2018 và nội dung SGK, dữ liệu bài học do giáo viên cung cấp; không tự gán nhà xuất bản hay bộ sách nếu không có trong dữ liệu.
+- Kế hoạch bài dạy hoàn chỉnh đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trực diện vào bản chất kiến thức và hành động cốt lõi của GV/HS; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không dùng câu thoại diễn giải lòng vòng, không lặp lại nội dung giữa các mục.
 - Kế hoạch bài dạy phải là một KỊCH BẢN LỚP HỌC THỰC CHIẾN: Giáo viên có câu thoại dẫn dắt trực tiếp trong ngoặc kép "...", hành động sư phạm rõ ràng; Học sinh có thao tác cụ thể, sản phẩm rõ nét; chỉ ra lỗi sai điển hình và cách xử lý sư phạm.
 - Năng lực Số (NLS) và Trí tuệ Nhân tạo (AI) là công cụ thực hành của môn học; TUYỆT ĐỐI KHÔNG dạy lý thuyết Tin học/AI hay hỏi lý thuyết AI suông trong môn chuyên ngành. Tích hợp thực chiến đúng 1–2 điểm then chốt (kiểm chứng lỗi sai AI / prompting gợi mở / thao tác phần mềm chuyên ngành).
 - Thiết kế mục tiêu tinh gọn cho bài dạy 1–2 tiết: chọn 1–2 năng lực chung cốt lõi phù hợp đặc thù môn học, 2–3 năng lực đặc thù nổi trội, 1–2 phẩm chất gắn liền nội dung bài.
@@ -242,7 +239,7 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - TUYỆT ĐỐI CẤM để lại dấu ba chấm "..." hoặc ngoặc vuông "[...]" chưa điền. Mọi đề bài, câu hỏi, công thức, ví dụ mẫu và lời giải PHẢI ĐƯỢC VIẾT ĐẦY ĐỦ CHI TIẾT.
 - Danh sách nội dung có đúng 3 cấp: ý lớn bắt đầu bằng "- ", ý con "+ ", ý chi tiết ". ". Không dùng "1.", "2." làm danh sách nội dung trừ khi là số thứ tự bài tập hoặc bước CV 5512.
 - CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu. Màu sắc và font chữ do ứng dụng xử lý.
-- GIỚI HẠN ĐỘ DÀI: giáo án khoảng 8–12 trang Word. Viết cô đọng, đủ ý, không lan man.`,
+- ĐỘ DÀI & VĂN PHONG CHUẨN: Toàn bộ Kế hoạch bài dạy đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trọng tâm; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không lặp lại câu hỏi dài dòng.`,
 
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy chuẩn CV 5512. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ lại nội dung giáo án. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary, lời chúc ở cuối và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng "-", "+", ".". Không đổi tiêu đề mục khung như "I.", "## 1.", "a)", "Bước", "Bài".`,
 
@@ -897,6 +894,7 @@ function getSystemRole(subjectId, grade) {
 
 QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Bám sát GDPT 2018 và nội dung bài học do giáo viên cung cấp.
+- Kế hoạch bài dạy hoàn chỉnh đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trực diện vào bản chất kiến thức và hành động cốt lõi của GV/HS; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không dùng câu thoại diễn giải lòng vòng, không lặp lại nội dung giữa các mục.
 - Thiết kế giáo án thành KỊCH BẢN SƯ PHẠM THỰC CHIẾN (GV có lời thoại trực tiếp trong ngoặc kép "...", hành động cụ thể, dự kiến lỗi sai điển hình; HS có thao tác cá nhân, nhóm và sản phẩm rõ ràng).
 - NLS và AI là công cụ thực hành của môn học; TUYỆT ĐỐI KHÔNG dạy lý thuyết Tin học/AI hay hỏi lý thuyết AI suông trong giờ học chuyên môn. Tích hợp thực chiến đúng 1–2 vị trí then chốt (kiểm chứng lỗi sai AI, prompting gợi mở, thao tác phần mềm chuyên ngành).
 - Định dạng Markdown rõ ràng, phân cấp tiêu đề bằng #, ##, ###, #### hợp lý.
