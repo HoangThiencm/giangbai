@@ -643,7 +643,7 @@ PHA D — VẬN DỤNG:
 
 PHA E — HƯỚNG DẪN VỀ NHÀ:
 - Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`.
-- Đủ a) Mục tiêu, b) Nội dung (4 phần: 1. Học cái gì/sơ đồ tư duy, 2. Làm bài tập gì SGK/SBT, 3. Bài tập mở rộng/nâng cao 1-2 bài kèm gợi ý, 4. Chuẩn bị bài sau; có thêm Prompt AI nếu bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, 4 bước phân vai GV-HS).
+- Đủ a) Mục tiêu, b) Nội dung (1. Học bài/sơ đồ tư duy, 2. Làm bài tập SGK/SBT & bài tập mở rộng/nâng cao kèm gợi ý, 3. Chuẩn bị bài mới; có thêm Prompt AI nếu bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, 4 bước phân vai GV-HS).
 
 CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừng ở đầu/cuối bài.`,
 
@@ -703,7 +703,7 @@ PHA D — VẬN DỤNG:
 
 PHA E — HƯỚNG DẪN VỀ NHÀ:
 - Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`.
-- Đủ a) Mục tiêu, b) Nội dung (4 phần: 1. Học cái gì/sơ đồ tư duy, 2. Làm bài tập gì SGK/SBT, 3. Bài tập mở rộng/nâng cao 1-2 bài kèm gợi ý, 4. Chuẩn bị bài sau; có thêm Prompt AI nếu bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, 4 bước phân vai GV-HS).
+- Đủ a) Mục tiêu, b) Nội dung (1. Học bài/sơ đồ tư duy, 2. Làm bài tập SGK/SBT & bài tập mở rộng/nâng cao kèm gợi ý, 3. Chuẩn bị bài mới; có thêm Prompt AI nếu bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, 4 bước phân vai GV-HS).
 
 CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừng ở đầu/cuối bài.`,
 
