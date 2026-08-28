@@ -4483,16 +4483,32 @@ function mergeSplitActivityTables(text) {
     const afterHeader = rest.slice(match.index + match[0].length).replace(/^\n/, "");
     const lines = afterHeader.split("\n");
     const rowLines = [];
+    let currentRow = "";
     let consumed = 0;
     for (let i = 0; i < lines.length; i++) {
       const trimmed = lines[i].trim();
       if (/^\|[\s]*Hoạt động của GV và HS[\s]*\|/i.test(trimmed) || /^#{1,4}\s/.test(trimmed)) break;
+
+      // Gemini đôi lúc xuống dòng ngay bên trong ô bảng. Gom các dòng tiếp nối
+      // vào hàng đang mở bằng <br> để Markdown, phần xem trước và Word cùng hiểu.
       if (trimmed.startsWith("|")) {
-        rowLines.push(trimmed);
+        if (currentRow) rowLines.push(currentRow);
+        currentRow = trimmed;
+        consumed = i + 1;
+        continue;
+      }
+      if (currentRow) {
+        currentRow += `<br>${trimmed}`;
         consumed = i + 1;
         continue;
       }
       break;
+    }
+    if (currentRow) {
+      // Một số phản hồi bỏ dấu | kết thúc hàng; bổ sung để trình xuất DOCX
+      // vẫn giữ nguyên khung bảng thay vì biến phần còn lại thành đoạn văn.
+      if (!/\|\s*$/.test(currentRow)) currentRow += " |";
+      rowLines.push(currentRow);
     }
     const header = `${match[0]}\n`;
     if (rowLines.length <= 1) {
