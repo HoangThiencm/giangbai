@@ -353,42 +353,39 @@ const Utils = {
     },
 
     /**
-     * Render rich text / captions / overlays on a slide
-     * Completely deterministic based on localTime & duration
+     * Calculate bounding box and metrics for a Text Box on Canvas
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {Object} textBox
+     * @param {number} canvasW
+     * @param {number} canvasH
      */
-    drawTextOverlay(ctx, overlay, defaultText, localTime, duration, canvasW, canvasH) {
-        if (!overlay && !defaultText) return;
-        if (overlay && overlay.enabled === false) return;
-
-        const text = (overlay && overlay.text !== undefined && overlay.text !== null) ? overlay.text : (defaultText || '');
-        if (!text || !text.trim()) return;
-
+    measureTextBox(ctx, textBox, canvasW, canvasH) {
+        if (!textBox) return null;
         const scale = canvasH / 1080;
-        const fontFamily = overlay?.fontFamily || 'Be Vietnam Pro';
-        const rawFontSize = overlay?.fontSize || 46;
-        const fontSize = Math.max(16, Math.round(rawFontSize * scale));
-        const textColor = overlay?.color || '#ffffff';
-        const bgStyle = overlay?.bgStyle || 'pill'; // none, pill, shadow, neon, highlight, gradient-banner, boxed-border
-        const bgColor = overlay?.bgColor || '#000000';
-        const animation = overlay?.animation || 'fade';
-        const position = overlay?.position || 'bottom-center';
-        const customX = overlay?.customX ?? 50;
-        const customY = overlay?.customY ?? 85;
+        const rawFontSize = textBox.fontSize || 46;
+        const fontSize = Math.max(14, Math.round(rawFontSize * scale));
+        const fontFamily = textBox.fontFamily || 'Be Vietnam Pro';
+        const text = (textBox.text !== undefined && textBox.text !== null) ? textBox.text : '';
+        const position = textBox.position || 'bottom-center';
+        const customX = textBox.x ?? textBox.customX ?? 50;
+        const customY = textBox.y ?? textBox.customY ?? 85;
+        const bgStyle = textBox.bgStyle || 'pill';
 
-        let textAlign = overlay?.textAlign;
+        let textAlign = textBox.textAlign;
         if (!textAlign) {
             if (position.includes('left')) textAlign = 'left';
             else if (position.includes('right')) textAlign = 'right';
             else textAlign = 'center';
         }
 
-        // Target coordinates
+        // Determine target center/anchor coordinates
         let targetX = canvasW * 0.5;
         let targetY = canvasH * 0.85;
 
-        if (position === 'custom') {
-            targetX = canvasW * (customX / 100);
-            targetY = canvasH * (customY / 100);
+        if (textBox.x !== undefined && textBox.x !== null) {
+            targetX = canvasW * (textBox.x / 100);
+        } else if (textBox.customX !== undefined && textBox.customX !== null) {
+            targetX = canvasW * (textBox.customX / 100);
         } else {
             switch (position) {
                 case 'top-left': targetX = canvasW * 0.08; targetY = canvasH * 0.12; break;
@@ -405,12 +402,17 @@ const Utils = {
             }
         }
 
-        // Font & Wrapping
+        if (textBox.y !== undefined && textBox.y !== null) {
+            targetY = canvasH * (textBox.y / 100);
+        } else if (textBox.customY !== undefined && textBox.customY !== null) {
+            targetY = canvasH * (textBox.customY / 100);
+        }
+
         ctx.save();
         ctx.font = `600 ${fontSize}px "${fontFamily}", "Be Vietnam Pro", sans-serif`;
 
         const maxLineW = Math.min(canvasW * 0.84, 1600 * scale);
-        const hardLines = text.split('\n');
+        const hardLines = (text || ' ').split('\n');
         const lines = [];
 
         for (const hLine of hardLines) {
@@ -434,10 +436,192 @@ const Utils = {
             if (cur) lines.push(cur);
         }
 
-        if (lines.length === 0) {
-            ctx.restore();
-            return;
+        if (lines.length === 0) lines.push('');
+
+        const lineHeight = fontSize * 1.35;
+        const totalHeight = lines.length * lineHeight;
+
+        let maxLineWidth = 0;
+        const measuredLines = lines.map(line => {
+            const width = ctx.measureText(line).width;
+            if (width > maxLineWidth) maxLineWidth = width;
+            return { text: line, width };
+        });
+
+        let lineLeft, lineRight;
+        if (textAlign === 'left') {
+            lineLeft = targetX;
+            lineRight = targetX + maxLineWidth;
+        } else if (textAlign === 'right') {
+            lineLeft = targetX - maxLineWidth;
+            lineRight = targetX;
+        } else {
+            lineLeft = targetX - maxLineWidth / 2;
+            lineRight = targetX + maxLineWidth / 2;
         }
+
+        let padX = 14 * scale;
+        let padY = 8 * scale;
+        if (bgStyle === 'boxed-border') {
+            padX = fontSize * 0.8;
+            padY = fontSize * 0.4;
+        } else if (bgStyle === 'pill') {
+            padX = fontSize * 0.55;
+            padY = fontSize * 0.22;
+        } else if (bgStyle === 'highlight') {
+            padX = fontSize * 0.35;
+            padY = fontSize * 0.2;
+        }
+
+        let boxLeft, boxRight, boxTop, boxBottom;
+        if (bgStyle === 'gradient-banner') {
+            boxLeft = 0;
+            boxRight = canvasW;
+            boxTop = targetY - totalHeight / 2 - fontSize * 0.6;
+            boxBottom = targetY + totalHeight / 2 + fontSize * 0.6;
+        } else {
+            boxLeft = lineLeft - padX;
+            boxRight = lineRight + padX;
+            boxTop = targetY - totalHeight / 2 - padY;
+            boxBottom = targetY + totalHeight / 2 + padY;
+        }
+
+        ctx.restore();
+
+        return {
+            targetX,
+            targetY,
+            fontSize,
+            rawFontSize,
+            scale,
+            fontFamily,
+            textAlign,
+            bgStyle,
+            lines,
+            measuredLines,
+            lineHeight,
+            totalHeight,
+            maxLineWidth,
+            boxLeft,
+            boxTop,
+            boxRight,
+            boxBottom,
+            boxWidth: boxRight - boxLeft,
+            boxHeight: boxBottom - boxTop,
+            centerX: (boxLeft + boxRight) / 2,
+            centerY: (boxTop + boxBottom) / 2
+        };
+    },
+
+    /**
+     * Draw Bounding Box, Corner Handles, and Quick Action buttons for editor mode
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {Object} metrics
+     * @param {boolean} isActive
+     * @param {boolean} isHovered
+     * @param {number} canvasW
+     * @param {number} canvasH
+     */
+    drawBoundingBoxAndHandles(ctx, metrics, isActive, isHovered, canvasW, canvasH) {
+        if (!metrics) return;
+        const { boxLeft, boxTop, boxWidth, boxHeight, boxRight, scale = 1 } = metrics;
+        ctx.save();
+
+        const strokeColor = isActive ? '#8b5cf6' : '#38bdf8';
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = Math.max(2 * scale, 1.5);
+        ctx.setLineDash([6 * scale, 4 * scale]);
+
+        // Draw outer bounding box
+        ctx.shadowColor = isActive ? 'rgba(139, 92, 246, 0.6)' : 'rgba(56, 189, 248, 0.5)';
+        ctx.shadowBlur = 8 * scale;
+        ctx.strokeRect(boxLeft, boxTop, boxWidth, boxHeight);
+
+        // Reset dash for handles & buttons
+        ctx.setLineDash([]);
+        ctx.shadowBlur = 0;
+
+        if (isActive) {
+            // Corner handles
+            const handleSize = Math.max(8 * scale, 8);
+            const half = handleSize / 2;
+            const corners = [
+                [boxLeft, boxTop],
+                [boxRight, boxTop],
+                [boxLeft, boxTop + boxHeight],
+                [boxRight, boxTop + boxHeight]
+            ];
+
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#8b5cf6';
+            ctx.lineWidth = 1.5 * scale;
+            corners.forEach(([cx, cy]) => {
+                ctx.fillRect(cx - half, cy - half, handleSize, handleSize);
+                ctx.strokeRect(cx - half, cy - half, handleSize, handleSize);
+            });
+
+            // Delete button (✕) at top-right
+            const btnR = Math.max(13 * scale, 13);
+            const delX = boxRight + 6 * scale;
+            const delY = boxTop - 6 * scale;
+
+            ctx.beginPath();
+            ctx.arc(delX, delY, btnR, 0, Math.PI * 2);
+            ctx.fillStyle = '#ef4444';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5 * scale;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${Math.round(12 * scale)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('✕', delX, delY + 0.5 * scale);
+
+            // Edit button (✎) at top-left
+            const editX = boxLeft - 6 * scale;
+            const editY = boxTop - 6 * scale;
+
+            ctx.beginPath();
+            ctx.arc(editX, editY, btnR, 0, Math.PI * 2);
+            ctx.fillStyle = '#8b5cf6';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5 * scale;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${Math.round(11 * scale)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('✎', editX, editY);
+        }
+
+        ctx.restore();
+    },
+
+    /**
+     * Render a single Text Box on Canvas
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {Object} textBox
+     * @param {number} localTime
+     * @param {number} duration
+     * @param {number} canvasW
+     * @param {number} canvasH
+     */
+    drawSingleTextBox(ctx, textBox, localTime, duration, canvasW, canvasH) {
+        if (!textBox || textBox.enabled === false) return;
+        const text = textBox.text !== undefined ? textBox.text : '';
+        if (!text || !text.trim()) return;
+
+        const metrics = this.measureTextBox(ctx, textBox, canvasW, canvasH);
+        if (!metrics) return;
+
+        const { targetX, targetY, fontSize, scale, fontFamily, textAlign, bgStyle, measuredLines, lineHeight, totalHeight } = metrics;
+        const textColor = textBox.color || '#ffffff';
+        const bgColor = textBox.bgColor || '#000000';
+        const animation = textBox.animation || 'fade';
 
         // Animation timing calculations
         const dur = Math.max(0.1, duration);
@@ -502,29 +686,16 @@ const Utils = {
         }
 
         animAlpha *= exitAlpha;
-        if (animAlpha <= 0) {
-            ctx.restore();
-            return;
-        }
+        if (animAlpha <= 0) return;
 
-        const lineHeight = fontSize * 1.35;
-        const totalHeight = lines.length * lineHeight;
-
+        ctx.save();
+        ctx.font = `600 ${fontSize}px "${fontFamily}", "Be Vietnam Pro", sans-serif`;
         ctx.globalAlpha = animAlpha;
         ctx.translate(targetX + animOffsetX, targetY + animOffsetY);
         if (animScale !== 1) {
             ctx.scale(animScale, animScale);
         }
 
-        // Measure line metrics
-        let maxLineWidth = 0;
-        const measuredLines = lines.map(line => {
-            const width = ctx.measureText(line).width;
-            if (width > maxLineWidth) maxLineWidth = width;
-            return { text: line, width };
-        });
-
-        // Determine starting Y offset
         const startY = -totalHeight / 2 + lineHeight / 2;
 
         // Render Background Styles
@@ -545,12 +716,12 @@ const Utils = {
         } else if (bgStyle === 'boxed-border') {
             const padX = fontSize * 0.8;
             const padY = fontSize * 0.4;
-            const boxW = maxLineWidth + padX * 2;
+            const boxW = metrics.maxLineWidth + padX * 2;
             const boxH = totalHeight + padY * 2;
 
             let boxX = -boxW / 2;
             if (textAlign === 'left') boxX = -padX;
-            else if (textAlign === 'right') boxX = -maxLineWidth - padX;
+            else if (textAlign === 'right') boxX = -metrics.maxLineWidth - padX;
 
             ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
             ctx.beginPath();
@@ -577,17 +748,11 @@ const Utils = {
         measuredLines.forEach((mLine, idx) => {
             const y = startY + idx * lineHeight;
             let lineX = 0;
-            if (textAlign === 'left') lineX = 0;
-            else if (textAlign === 'right') lineX = 0;
-            else lineX = 0;
-
             let lineText = mLine.text;
 
             if (animation === 'typewriter') {
                 const remaining = animCharCount - charsRenderedSoFar;
-                if (remaining <= 0) {
-                    return;
-                }
+                if (remaining <= 0) return;
                 if (remaining < lineText.length) {
                     const isBlink = Math.floor(t * 4) % 2 === 0;
                     lineText = lineText.slice(0, remaining) + (isBlink ? '|' : '');
@@ -685,6 +850,30 @@ const Utils = {
         });
 
         ctx.restore();
+    },
+
+    /**
+     * Render rich text overlays / text boxes on a slide
+     * Supports single overlay object or array of text boxes
+     */
+    drawTextOverlay(ctx, overlayOrTextBoxes, defaultText, localTime, duration, canvasW, canvasH) {
+        if (!overlayOrTextBoxes && !defaultText) return;
+
+        if (Array.isArray(overlayOrTextBoxes)) {
+            overlayOrTextBoxes.forEach(tb => {
+                this.drawSingleTextBox(ctx, tb, localTime, duration, canvasW, canvasH);
+            });
+            return;
+        }
+
+        if (typeof overlayOrTextBoxes === 'object') {
+            this.drawSingleTextBox(ctx, overlayOrTextBoxes, localTime, duration, canvasW, canvasH);
+            return;
+        }
+
+        if (defaultText) {
+            this.drawSingleTextBox(ctx, { text: defaultText, position: 'bottom-center' }, localTime, duration, canvasW, canvasH);
+        }
     },
 
     /**

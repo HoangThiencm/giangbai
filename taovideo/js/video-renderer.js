@@ -30,6 +30,10 @@ class VideoRenderer {
         this.lastFrameTimestamp = 0;
         this.activeSlideIndex = -1;
 
+        // Text Box Editor Interaction State
+        this.selectedTextBoxId = null;
+        this.hoveredTextBoxId = null;
+
         // Export state
         this.isExporting = false;
         this.mediaRecorder = null;
@@ -136,6 +140,57 @@ class VideoRenderer {
     }
 
     /**
+     * Hit test text boxes on a slide from canvas coordinates (0..canvasW, 0..canvasH)
+     * Returns { textBox, hitButton: 'delete' | 'edit' | 'body', metrics } or null
+     */
+    getTextBoxAtCoords(canvasX, canvasY, currentSlide) {
+        if (!currentSlide) return null;
+        let list = [];
+        if (Array.isArray(currentSlide.textBoxes) && currentSlide.textBoxes.length > 0) {
+            list = currentSlide.textBoxes;
+        } else if (currentSlide.overlay && currentSlide.overlay.text) {
+            list = [currentSlide.overlay];
+        }
+
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        // Check in reverse order so top-most elements get clicked first
+        for (let i = list.length - 1; i >= 0; i--) {
+            const tb = list[i];
+            if (tb.enabled === false) continue;
+            const metrics = Utils.measureTextBox(this.ctx, tb, w, h);
+            if (!metrics) continue;
+
+            const scale = metrics.scale || 1;
+            const btnR = Math.max(14 * scale, 14);
+
+            // 1. Delete button hit test
+            const delX = metrics.boxRight + 6 * scale;
+            const delY = metrics.boxTop - 6 * scale;
+            if (Math.hypot(canvasX - delX, canvasY - delY) <= btnR) {
+                return { textBox: tb, hitButton: 'delete', metrics };
+            }
+
+            // 2. Edit button hit test
+            const editX = metrics.boxLeft - 6 * scale;
+            const editY = metrics.boxTop - 6 * scale;
+            if (Math.hypot(canvasX - editX, canvasY - editY) <= btnR) {
+                return { textBox: tb, hitButton: 'edit', metrics };
+            }
+
+            // 3. Body hit test (with buffer for easy grabbing)
+            const pad = 12 * scale;
+            if (canvasX >= metrics.boxLeft - pad && canvasX <= metrics.boxRight + pad &&
+                canvasY >= metrics.boxTop - pad && canvasY <= metrics.boxBottom + pad) {
+                return { textBox: tb, hitButton: 'body', metrics };
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Render a single frame at a specific timestamp
      */
     renderFrame(timeSec) {
@@ -177,11 +232,43 @@ class VideoRenderer {
             this.renderSingleSlide(ctx, currentSlide, current.progress, w, h, motion);
         }
 
-        // Render Text Overlay (Per-slide customizable overlay or fallback to subtitles)
-        if (currentSlide.overlay) {
-            Utils.drawTextOverlay(ctx, currentSlide.overlay, currentSlide.text, current.localTime, current.duration, w, h);
+        // Render Canvas Text Boxes (Multiple or Single)
+        let textBoxList = [];
+        if (Array.isArray(currentSlide.textBoxes) && currentSlide.textBoxes.length > 0) {
+            textBoxList = currentSlide.textBoxes;
+            textBoxList.forEach(tb => {
+                Utils.drawSingleTextBox(ctx, tb, current.localTime, current.duration, w, h);
+            });
+        } else if (currentSlide.overlay && currentSlide.overlay.enabled !== false && currentSlide.overlay.text) {
+            textBoxList = [currentSlide.overlay];
+            Utils.drawSingleTextBox(ctx, currentSlide.overlay, current.localTime, current.duration, w, h);
         } else if (this.enableSubtitles && currentSlide.text) {
             Utils.drawSubtitles(ctx, currentSlide.text, w, h, this.subtitleOptions);
+        }
+
+        // Render Editor Overlay: Bounding Box & Handles (Only in Pause/Edit Mode, Never during Export or Play)
+        if (!this.isPlaying && !this.isExporting && textBoxList.length > 0) {
+            // 1. Draw Hover Box if hovered and not selected
+            if (this.hoveredTextBoxId && this.hoveredTextBoxId !== this.selectedTextBoxId) {
+                const hovBox = textBoxList.find(tb => (tb.id || 'default_overlay') === this.hoveredTextBoxId);
+                if (hovBox) {
+                    const metrics = Utils.measureTextBox(ctx, hovBox, w, h);
+                    if (metrics) {
+                        Utils.drawBoundingBoxAndHandles(ctx, metrics, false, true, w, h);
+                    }
+                }
+            }
+
+            // 2. Draw Active Selected Box with corner handles & action buttons
+            if (this.selectedTextBoxId) {
+                const selBox = textBoxList.find(tb => (tb.id || 'default_overlay') === this.selectedTextBoxId);
+                if (selBox) {
+                    const metrics = Utils.measureTextBox(ctx, selBox, w, h);
+                    if (metrics) {
+                        Utils.drawBoundingBoxAndHandles(ctx, metrics, true, false, w, h);
+                    }
+                }
+            }
         }
 
         // Update badge index if callback provided

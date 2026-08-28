@@ -26,14 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
         isMuted: false
     };
 
-    // Helper: Create default overlay configuration for a slide
-    function createDefaultOverlay(text = '', motion = 'kenburns', transition = 'crossfade') {
+    // Helper: Create default text box configuration
+    function createDefaultTextBox(text = '', x = 50, y = 85, overrides = {}) {
         return {
+            id: 'tb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
             enabled: true,
             text: text || '',
-            position: 'bottom-center',
-            customX: 50,
-            customY: 85,
+            x: x,
+            y: y,
+            customX: x,
+            customY: y,
             textAlign: 'center',
             fontFamily: 'Be Vietnam Pro',
             fontSize: 46,
@@ -41,9 +43,34 @@ document.addEventListener('DOMContentLoaded', () => {
             bgStyle: 'pill',
             bgColor: '#000000',
             animation: 'fade',
-            motion: motion || 'kenburns',
-            transition: transition || 'crossfade'
+            ...overrides
         };
+    }
+
+    // Helper: Ensure slide has proper textBoxes array
+    function ensureSlideTextBoxes(slide) {
+        if (!slide) return [];
+        if (!Array.isArray(slide.textBoxes)) {
+            slide.textBoxes = [];
+            if (slide.overlay && (slide.overlay.text || slide.overlay.enabled !== false)) {
+                slide.textBoxes.push(createDefaultTextBox(
+                    slide.overlay.text || '',
+                    slide.overlay.customX ?? slide.overlay.x ?? 50,
+                    slide.overlay.customY ?? slide.overlay.y ?? 85,
+                    slide.overlay
+                ));
+            } else if (slide.text && slide.text.trim()) {
+                slide.textBoxes.push(createDefaultTextBox(slide.text, 50, 85));
+            } else {
+                slide.textBoxes.push(createDefaultTextBox('', 50, 85));
+            }
+        }
+        return slide.textBoxes;
+    }
+
+    // Helper: Create default overlay configuration for backward compatibility
+    function createDefaultOverlay(text = '', motion = 'kenburns', transition = 'crossfade') {
+        return createDefaultTextBox(text, 50, 85, { motion: motion || 'kenburns', transition: transition || 'crossfade' });
     }
 
     // Quick Style Presets definition
@@ -579,7 +606,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 text: '',
                 motion: initialMotion,
                 transition: 'crossfade',
-                overlay: createDefaultOverlay('', initialMotion, 'crossfade')
+                textBoxes: [
+                    createDefaultTextBox('Tiêu đề ảnh', 50, 85, { motion: initialMotion, transition: 'crossfade' })
+                ]
             };
 
             state.slides.push(newSlide);
@@ -590,13 +619,331 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // 8. Text Overlay & Slide Effects Modal Editor
+    // 8. Canvas Drag & Drop and Quick Floating Toolbar Controller
+    // =========================================================================
+    const canvasQuickToolbar = document.getElementById('canvas-quick-toolbar');
+    const quickTbText = document.getElementById('quick-tb-text');
+    const quickTbFont = document.getElementById('quick-tb-font');
+    const quickTbSizeDec = document.getElementById('quick-tb-size-dec');
+    const quickTbSizeInc = document.getElementById('quick-tb-size-inc');
+    const quickTbSizeVal = document.getElementById('quick-tb-size-val');
+    const quickTbColor = document.getElementById('quick-tb-color');
+    const quickTbBgStyle = document.getElementById('quick-tb-bg-style');
+    const quickTbAnim = document.getElementById('quick-tb-anim');
+    const quickTbDuplicate = document.getElementById('quick-tb-duplicate');
+    const quickTbDelete = document.getElementById('quick-tb-delete');
+    const quickTbModalOpen = document.getElementById('quick-tb-modal-open');
+    const quickTbClose = document.getElementById('quick-tb-close');
+    const canvasAddTextBtn = document.getElementById('canvas-add-text-btn');
+
+    let isDragging = false;
+    let draggedTextBox = null;
+    let dragStartPointer = { x: 0, y: 0 };
+    let dragStartBox = { x: 50, y: 85 };
+
+    function getCanvasPointerCoords(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? 0;
+        const clientY = e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? 0;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
+    function getCurrentActiveSlide() {
+        const current = videoRenderer.getSlideAtTime(videoRenderer.currentTime);
+        if (!current || !current.slide) return null;
+        ensureSlideTextBoxes(current.slide);
+        return current.slide;
+    }
+
+    function updateQuickToolbar() {
+        const currentSlide = getCurrentActiveSlide();
+        if (!currentSlide || state.slides.length === 0) {
+            canvasQuickToolbar?.classList.add('hidden');
+            canvasAddTextBtn?.classList.add('hidden');
+            return;
+        }
+
+        canvasAddTextBtn?.classList.remove('hidden');
+
+        if (!videoRenderer.selectedTextBoxId) {
+            canvasQuickToolbar?.classList.add('hidden');
+            return;
+        }
+
+        const selBox = currentSlide.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
+        if (!selBox) {
+            canvasQuickToolbar?.classList.add('hidden');
+            return;
+        }
+
+        if (quickTbText) quickTbText.value = selBox.text || '';
+        if (quickTbFont) quickTbFont.value = selBox.fontFamily || 'Be Vietnam Pro';
+        if (quickTbSizeVal) quickTbSizeVal.textContent = selBox.fontSize || 46;
+        if (quickTbColor) quickTbColor.value = selBox.color || '#ffffff';
+        if (quickTbBgStyle) quickTbBgStyle.value = selBox.bgStyle || 'pill';
+        if (quickTbAnim) quickTbAnim.value = selBox.animation || 'fade';
+
+        canvasQuickToolbar?.classList.remove('hidden');
+        refreshIcons();
+    }
+
+    // Canvas Pointer Event Listeners
+    canvas.addEventListener('pointerdown', (e) => {
+        if (videoRenderer.isPlaying) {
+            videoRenderer.pause();
+            playPauseIcon.setAttribute('data-lucide', 'play');
+            refreshIcons();
+        }
+
+        const currentSlide = getCurrentActiveSlide();
+        if (!currentSlide) return;
+
+        const coords = getCanvasPointerCoords(e);
+        const hit = videoRenderer.getTextBoxAtCoords(coords.x, coords.y, currentSlide);
+
+        if (hit) {
+            if (hit.hitButton === 'delete') {
+                currentSlide.textBoxes = currentSlide.textBoxes.filter(tb => tb.id !== hit.textBox.id);
+                if (videoRenderer.selectedTextBoxId === hit.textBox.id) {
+                    videoRenderer.selectedTextBoxId = null;
+                }
+                updateQuickToolbar();
+                updateSlidesUI();
+                videoRenderer.renderFrame(videoRenderer.currentTime);
+                return;
+            }
+
+            if (hit.hitButton === 'edit') {
+                videoRenderer.selectedTextBoxId = hit.textBox.id;
+                updateQuickToolbar();
+                quickTbText?.focus();
+                quickTbText?.select();
+                videoRenderer.renderFrame(videoRenderer.currentTime);
+                return;
+            }
+
+            // Hit body: select & start drag
+            videoRenderer.selectedTextBoxId = hit.textBox.id;
+            isDragging = true;
+            draggedTextBox = hit.textBox;
+            dragStartPointer = { x: coords.x, y: coords.y };
+            dragStartBox = { x: hit.textBox.x ?? hit.textBox.customX ?? 50, y: hit.textBox.y ?? hit.textBox.customY ?? 85 };
+            canvas.classList.add('cursor-grabbing');
+            updateQuickToolbar();
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+            canvas.setPointerCapture(e.pointerId);
+        } else {
+            // Clicked outside any text box
+            videoRenderer.selectedTextBoxId = null;
+            updateQuickToolbar();
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        if (!currentSlide) return;
+        const coords = getCanvasPointerCoords(e);
+
+        if (isDragging && draggedTextBox) {
+            const dx = coords.x - dragStartPointer.x;
+            const dy = coords.y - dragStartPointer.y;
+            const deltaXPercent = (dx / canvas.width) * 100;
+            const deltaYPercent = (dy / canvas.height) * 100;
+
+            draggedTextBox.x = Math.max(5, Math.min(95, Math.round(dragStartBox.x + deltaXPercent)));
+            draggedTextBox.y = Math.max(5, Math.min(95, Math.round(dragStartBox.y + deltaYPercent)));
+            draggedTextBox.customX = draggedTextBox.x;
+            draggedTextBox.customY = draggedTextBox.y;
+
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        } else if (!videoRenderer.isPlaying) {
+            const hit = videoRenderer.getTextBoxAtCoords(coords.x, coords.y, currentSlide);
+            if (hit) {
+                videoRenderer.hoveredTextBoxId = hit.textBox.id;
+                canvas.style.cursor = hit.hitButton === 'body' ? 'grab' : 'pointer';
+            } else {
+                videoRenderer.hoveredTextBoxId = null;
+                canvas.style.cursor = 'default';
+            }
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    const endDrag = (e) => {
+        if (isDragging) {
+            isDragging = false;
+            draggedTextBox = null;
+            canvas.classList.remove('cursor-grabbing');
+            try { canvas.releasePointerCapture(e.pointerId); } catch(err){}
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    };
+
+    canvas.addEventListener('pointerup', endDrag);
+    canvas.addEventListener('pointercancel', endDrag);
+
+    canvas.addEventListener('dblclick', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        if (!currentSlide) return;
+        const coords = getCanvasPointerCoords(e);
+        const hit = videoRenderer.getTextBoxAtCoords(coords.x, coords.y, currentSlide);
+        if (hit) {
+            videoRenderer.selectedTextBoxId = hit.textBox.id;
+            updateQuickToolbar();
+            quickTbText?.focus();
+            quickTbText?.select();
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    // Quick Toolbar Input Bindings
+    quickTbText?.addEventListener('input', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
+        if (selBox) {
+            selBox.text = e.target.value;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+            updateSlidesUI();
+        }
+    });
+
+    quickTbFont?.addEventListener('change', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
+        if (selBox) {
+            selBox.fontFamily = e.target.value;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    quickTbSizeDec?.addEventListener('click', () => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
+        if (selBox) {
+            selBox.fontSize = Math.max(16, (selBox.fontSize || 46) - 4);
+            if (quickTbSizeVal) quickTbSizeVal.textContent = selBox.fontSize;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    quickTbSizeInc?.addEventListener('click', () => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
+        if (selBox) {
+            selBox.fontSize = Math.min(120, (selBox.fontSize || 46) + 4);
+            if (quickTbSizeVal) quickTbSizeVal.textContent = selBox.fontSize;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    quickTbColor?.addEventListener('input', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
+        if (selBox) {
+            selBox.color = e.target.value;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    quickTbBgStyle?.addEventListener('change', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
+        if (selBox) {
+            selBox.bgStyle = e.target.value;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+            updateSlidesUI();
+        }
+    });
+
+    quickTbAnim?.addEventListener('change', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
+        if (selBox) {
+            selBox.animation = e.target.value;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+            updateSlidesUI();
+        }
+    });
+
+    quickTbDuplicate?.addEventListener('click', () => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
+        if (selBox) {
+            const newBox = createDefaultTextBox(selBox.text, Math.min(90, (selBox.x || 50) + 4), Math.min(90, (selBox.y || 85) + 4), {
+                textAlign: selBox.textAlign,
+                fontFamily: selBox.fontFamily,
+                fontSize: selBox.fontSize,
+                color: selBox.color,
+                bgStyle: selBox.bgStyle,
+                bgColor: selBox.bgColor,
+                animation: selBox.animation
+            });
+            currentSlide.textBoxes.push(newBox);
+            videoRenderer.selectedTextBoxId = newBox.id;
+            updateQuickToolbar();
+            updateSlidesUI();
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    quickTbDelete?.addEventListener('click', () => {
+        const currentSlide = getCurrentActiveSlide();
+        if (currentSlide && videoRenderer.selectedTextBoxId) {
+            currentSlide.textBoxes = currentSlide.textBoxes.filter(tb => tb.id !== videoRenderer.selectedTextBoxId);
+            videoRenderer.selectedTextBoxId = null;
+            updateQuickToolbar();
+            updateSlidesUI();
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    quickTbModalOpen?.addEventListener('click', () => {
+        const currentSlide = getCurrentActiveSlide();
+        if (currentSlide) {
+            openOverlayModal(currentSlide, videoRenderer.selectedTextBoxId);
+        }
+    });
+
+    quickTbClose?.addEventListener('click', () => {
+        videoRenderer.selectedTextBoxId = null;
+        updateQuickToolbar();
+        videoRenderer.renderFrame(videoRenderer.currentTime);
+    });
+
+    canvasAddTextBtn?.addEventListener('click', () => {
+        const currentSlide = getCurrentActiveSlide();
+        if (!currentSlide) return;
+        const newBox = createDefaultTextBox('Nhập nội dung chữ...', 50, 50);
+        currentSlide.textBoxes = currentSlide.textBoxes || [];
+        currentSlide.textBoxes.push(newBox);
+        videoRenderer.selectedTextBoxId = newBox.id;
+        updateQuickToolbar();
+        updateSlidesUI();
+        videoRenderer.renderFrame(videoRenderer.currentTime);
+        setTimeout(() => {
+            quickTbText?.focus();
+            quickTbText?.select();
+        }, 50);
+    });
+
+    // =========================================================================
+    // 9. Text Overlay & Slide Effects Modal Editor
     // =========================================================================
     const overlayModal = document.getElementById('slide-overlay-modal');
     const modalSlideBadge = document.getElementById('modal-slide-badge');
     const btnCloseOverlayModal = document.getElementById('btn-close-overlay-modal');
     const btnSaveOverlay = document.getElementById('btn-save-overlay');
     const btnApplyAllOverlay = document.getElementById('btn-apply-all-overlay');
+
+    const modalTextboxTabs = document.getElementById('modal-textbox-tabs');
+    const modalBtnAddTextbox = document.getElementById('modal-btn-add-textbox');
+    const modalBtnDeleteTextbox = document.getElementById('modal-btn-delete-textbox');
 
     const modalOverlayEnabled = document.getElementById('modal-overlay-enabled');
     const modalOverlayText = document.getElementById('modal-overlay-text');
@@ -615,49 +962,95 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalSlideTransition = document.getElementById('modal-slide-transition');
 
     let activeEditingSlide = null;
+    let activeEditingTextBoxId = null;
 
-    function openOverlayModal(slide) {
-        if (!slide) return;
-        activeEditingSlide = slide;
+    function renderModalTextBoxTabs() {
+        if (!activeEditingSlide || !modalTextboxTabs) return;
+        ensureSlideTextBoxes(activeEditingSlide);
+        modalTextboxTabs.innerHTML = '';
 
-        if (!slide.overlay) {
-            slide.overlay = createDefaultOverlay(slide.text, slide.motion, slide.transition);
+        activeEditingSlide.textBoxes.forEach((tb, idx) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `modal-tb-tab px-3 py-1.5 rounded-lg border text-xs flex items-center gap-1.5 transition ${
+                tb.id === activeEditingTextBoxId
+                    ? 'active-tb-tab bg-brand-500/20 border-brand-500 text-brand-300 font-bold'
+                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
+            }`;
+            btn.dataset.id = tb.id;
+            const snippet = tb.text ? (tb.text.length > 12 ? tb.text.slice(0, 12) + '…' : tb.text) : `Khung #${idx + 1}`;
+            btn.innerHTML = `<i data-lucide="type" class="w-3 h-3"></i><span>Khung #${idx + 1}: ${snippet}</span>`;
+            
+            btn.addEventListener('click', () => {
+                activeEditingTextBoxId = tb.id;
+                videoRenderer.selectedTextBoxId = tb.id;
+                populateModalFields();
+                renderModalTextBoxTabs();
+                videoRenderer.renderFrame(videoRenderer.currentTime);
+            });
+            modalTextboxTabs.appendChild(btn);
+        });
+
+        refreshIcons();
+    }
+
+    function populateModalFields() {
+        if (!activeEditingSlide) return;
+        ensureSlideTextBoxes(activeEditingSlide);
+
+        let tb = activeEditingSlide.textBoxes.find(t => t.id === activeEditingTextBoxId);
+        if (!tb && activeEditingSlide.textBoxes.length > 0) {
+            tb = activeEditingSlide.textBoxes[0];
+            activeEditingTextBoxId = tb.id;
         }
-        // Ensure text is synced
-        slide.overlay.text = slide.text !== undefined ? slide.text : (slide.overlay.text || '');
+        if (!tb) return;
 
-        const o = slide.overlay;
-        const idx = state.slides.indexOf(slide);
+        videoRenderer.selectedTextBoxId = tb.id;
 
-        if (modalSlideBadge) modalSlideBadge.textContent = `Slide #${idx + 1}`;
-        if (modalOverlayEnabled) modalOverlayEnabled.checked = o.enabled !== false;
-        if (modalOverlayText) modalOverlayText.value = o.text || '';
+        if (modalOverlayEnabled) modalOverlayEnabled.checked = tb.enabled !== false;
+        if (modalOverlayText) modalOverlayText.value = tb.text || '';
 
-        updatePosGridUI(o.position || 'bottom-center');
+        const curX = tb.x ?? tb.customX ?? 50;
+        const curY = tb.y ?? tb.customY ?? 85;
 
-        if (modalPosX) modalPosX.value = o.customX ?? 50;
-        if (modalPosY) modalPosY.value = o.customY ?? 85;
-        if (customCoordsVal) customCoordsVal.textContent = `${o.customX ?? 50}%, ${o.customY ?? 85}%`;
+        if (modalPosX) modalPosX.value = curX;
+        if (modalPosY) modalPosY.value = curY;
+        if (customCoordsVal) customCoordsVal.textContent = `${curX}%, ${curY}%`;
 
-        updateTextAlignUI(o.textAlign || 'center');
+        updatePosGridUI(tb.position || 'custom');
+        updateTextAlignUI(tb.textAlign || 'center');
 
-        if (modalFontFamily) modalFontFamily.value = o.fontFamily || 'Be Vietnam Pro';
-        if (modalFontSize) modalFontSize.value = o.fontSize || 46;
-        if (modalFontSizeVal) modalFontSizeVal.textContent = (o.fontSize || 46) + 'px';
-        if (modalTextColor) modalTextColor.value = o.color || '#ffffff';
+        if (modalFontFamily) modalFontFamily.value = tb.fontFamily || 'Be Vietnam Pro';
+        if (modalFontSize) modalFontSize.value = tb.fontSize || 46;
+        if (modalFontSizeVal) modalFontSizeVal.textContent = (tb.fontSize || 46) + 'px';
+        if (modalTextColor) modalTextColor.value = tb.color || '#ffffff';
 
         // Select Bg Style radio
         const bgRadios = document.querySelectorAll('input[name="modal-bg-style"]');
         bgRadios.forEach(r => {
-            r.checked = (r.value === (o.bgStyle || 'pill'));
+            r.checked = (r.value === (tb.bgStyle || 'pill'));
         });
 
-        if (modalBgColor) modalBgColor.value = o.bgColor || '#000000';
-        if (modalBgColorLabel) modalBgColorLabel.textContent = o.bgColor || '#000000';
+        if (modalBgColor) modalBgColor.value = tb.bgColor || '#000000';
+        if (modalBgColorLabel) modalBgColorLabel.textContent = tb.bgColor || '#000000';
 
-        if (modalTextAnimation) modalTextAnimation.value = o.animation || 'fade';
-        if (modalSlideMotion) modalSlideMotion.value = slide.motion || slide.transition || 'kenburns';
-        if (modalSlideTransition) modalSlideTransition.value = slide.transition || 'crossfade';
+        if (modalTextAnimation) modalTextAnimation.value = tb.animation || 'fade';
+        if (modalSlideMotion) modalSlideMotion.value = activeEditingSlide.motion || activeEditingSlide.transition || 'kenburns';
+        if (modalSlideTransition) modalSlideTransition.value = activeEditingSlide.transition || 'crossfade';
+    }
+
+    function openOverlayModal(slide, targetTextBoxId = null) {
+        if (!slide) return;
+        activeEditingSlide = slide;
+        ensureSlideTextBoxes(slide);
+
+        activeEditingTextBoxId = targetTextBoxId || (slide.textBoxes[0]?.id) || null;
+        const idx = state.slides.indexOf(slide);
+
+        if (modalSlideBadge) modalSlideBadge.textContent = `Slide #${idx + 1}`;
+
+        renderModalTextBoxTabs();
+        populateModalFields();
 
         // Seek player to this slide so user can see WYSIWYG preview immediately
         let startSec = 0;
@@ -674,62 +1067,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function closeOverlayModal() {
         if (overlayModal) overlayModal.classList.add('hidden');
+        updateQuickToolbar();
         updateSlidesUI();
+        videoRenderer.renderFrame(videoRenderer.currentTime);
     }
 
     function syncModalToSlide() {
-        if (!activeEditingSlide || !activeEditingSlide.overlay) return;
-        const o = activeEditingSlide.overlay;
+        if (!activeEditingSlide) return;
+        ensureSlideTextBoxes(activeEditingSlide);
 
-        if (modalOverlayEnabled) o.enabled = modalOverlayEnabled.checked;
+        const tb = activeEditingSlide.textBoxes.find(t => t.id === activeEditingTextBoxId);
+        if (!tb) return;
+
+        if (modalOverlayEnabled) tb.enabled = modalOverlayEnabled.checked;
         if (modalOverlayText) {
-            o.text = modalOverlayText.value;
-            activeEditingSlide.text = modalOverlayText.value;
-            activeEditingSlide.ttsAudioBuffer = null;
-            activeEditingSlide.ttsMetadata = null;
+            tb.text = modalOverlayText.value;
         }
 
-        if (modalFontFamily) o.fontFamily = modalFontFamily.value;
+        if (modalFontFamily) tb.fontFamily = modalFontFamily.value;
         if (modalFontSize) {
-            o.fontSize = parseInt(modalFontSize.value, 10) || 46;
-            if (modalFontSizeVal) modalFontSizeVal.textContent = o.fontSize + 'px';
+            tb.fontSize = parseInt(modalFontSize.value, 10) || 46;
+            if (modalFontSizeVal) modalFontSizeVal.textContent = tb.fontSize + 'px';
         }
-        if (modalTextColor) o.color = modalTextColor.value;
+        if (modalTextColor) tb.color = modalTextColor.value;
 
         const checkedBg = document.querySelector('input[name="modal-bg-style"]:checked');
-        if (checkedBg) o.bgStyle = checkedBg.value;
+        if (checkedBg) tb.bgStyle = checkedBg.value;
 
         if (modalBgColor) {
-            o.bgColor = modalBgColor.value;
+            tb.bgColor = modalBgColor.value;
             if (modalBgColorLabel) modalBgColorLabel.textContent = modalBgColor.value;
         }
 
-        if (modalTextAnimation) o.animation = modalTextAnimation.value;
+        if (modalTextAnimation) tb.animation = modalTextAnimation.value;
 
         if (modalPosX && modalPosY) {
-            o.customX = parseInt(modalPosX.value, 10);
-            o.customY = parseInt(modalPosY.value, 10);
-            if (customCoordsVal) customCoordsVal.textContent = `${o.customX}%, ${o.customY}%`;
+            tb.x = parseInt(modalPosX.value, 10);
+            tb.y = parseInt(modalPosY.value, 10);
+            tb.customX = tb.x;
+            tb.customY = tb.y;
+            if (customCoordsVal) customCoordsVal.textContent = `${tb.x}%, ${tb.y}%`;
         }
 
         if (modalSlideMotion) {
             activeEditingSlide.motion = modalSlideMotion.value;
-            o.motion = modalSlideMotion.value;
         }
 
         if (modalSlideTransition) {
             activeEditingSlide.transition = modalSlideTransition.value;
-            o.transition = modalSlideTransition.value;
         }
 
-        // Live preview redraw
+        renderModalTextBoxTabs();
+        updateQuickToolbar();
         videoRenderer.renderFrame(videoRenderer.currentTime);
     }
 
     function updatePosGridUI(pos) {
-        if (!activeEditingSlide || !activeEditingSlide.overlay) return;
-        activeEditingSlide.overlay.position = pos;
-
         const gridBtns = document.querySelectorAll('.btn-pos-grid');
         gridBtns.forEach(btn => {
             if (btn.dataset.pos === pos) {
@@ -749,8 +1142,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTextAlignUI(align) {
-        if (!activeEditingSlide || !activeEditingSlide.overlay) return;
-        activeEditingSlide.overlay.textAlign = align;
+        if (!activeEditingSlide) return;
+        const tb = activeEditingSlide.textBoxes?.find(t => t.id === activeEditingTextBoxId);
+        if (tb) tb.textAlign = align;
 
         const alignBtns = document.querySelectorAll('.btn-text-align');
         alignBtns.forEach(btn => {
@@ -767,38 +1161,41 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyPreset(presetKey) {
         if (!activeEditingSlide || !OVERLAY_PRESETS[presetKey]) return;
         const p = OVERLAY_PRESETS[presetKey];
-        const o = activeEditingSlide.overlay;
+        const tb = activeEditingSlide.textBoxes?.find(t => t.id === activeEditingTextBoxId);
+        if (!tb) return;
 
-        o.position = p.position;
-        o.customX = p.customX;
-        o.customY = p.customY;
-        o.textAlign = p.textAlign;
-        o.fontFamily = p.fontFamily;
-        o.fontSize = p.fontSize;
-        o.color = p.color;
-        o.bgStyle = p.bgStyle;
-        o.bgColor = p.bgColor;
-        o.animation = p.animation;
+        tb.position = p.position;
+        tb.x = p.customX;
+        tb.y = p.customY;
+        tb.customX = p.customX;
+        tb.customY = p.customY;
+        tb.textAlign = p.textAlign;
+        tb.fontFamily = p.fontFamily;
+        tb.fontSize = p.fontSize;
+        tb.color = p.color;
+        tb.bgStyle = p.bgStyle;
+        tb.bgColor = p.bgColor;
+        tb.animation = p.animation;
 
-        updatePosGridUI(o.position);
-        updateTextAlignUI(o.textAlign);
+        updatePosGridUI(tb.position);
+        updateTextAlignUI(tb.textAlign);
 
-        if (modalPosX) modalPosX.value = o.customX;
-        if (modalPosY) modalPosY.value = o.customY;
-        if (customCoordsVal) customCoordsVal.textContent = `${o.customX}%, ${o.customY}%`;
+        if (modalPosX) modalPosX.value = tb.x;
+        if (modalPosY) modalPosY.value = tb.y;
+        if (customCoordsVal) customCoordsVal.textContent = `${tb.x}%, ${tb.y}%`;
 
-        if (modalFontFamily) modalFontFamily.value = o.fontFamily;
-        if (modalFontSize) modalFontSize.value = o.fontSize;
-        if (modalFontSizeVal) modalFontSizeVal.textContent = o.fontSize + 'px';
-        if (modalTextColor) modalTextColor.value = o.color;
+        if (modalFontFamily) modalFontFamily.value = tb.fontFamily;
+        if (modalFontSize) modalFontSize.value = tb.fontSize;
+        if (modalFontSizeVal) modalFontSizeVal.textContent = tb.fontSize + 'px';
+        if (modalTextColor) modalTextColor.value = tb.color;
 
         const bgRadios = document.querySelectorAll('input[name="modal-bg-style"]');
-        bgRadios.forEach(r => { r.checked = (r.value === o.bgStyle); });
+        bgRadios.forEach(r => { r.checked = (r.value === tb.bgStyle); });
 
-        if (modalBgColor) modalBgColor.value = o.bgColor;
-        if (modalBgColorLabel) modalBgColorLabel.textContent = o.bgColor;
+        if (modalBgColor) modalBgColor.value = tb.bgColor;
+        if (modalBgColorLabel) modalBgColorLabel.textContent = tb.bgColor;
 
-        if (modalTextAnimation) modalTextAnimation.value = o.animation;
+        if (modalTextAnimation) modalTextAnimation.value = tb.animation;
 
         syncModalToSlide();
     }
@@ -806,6 +1203,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal Events Binding
     btnCloseOverlayModal?.addEventListener('click', closeOverlayModal);
     btnSaveOverlay?.addEventListener('click', closeOverlayModal);
+
+    modalBtnAddTextbox?.addEventListener('click', () => {
+        if (!activeEditingSlide) return;
+        const newBox = createDefaultTextBox('Khung chữ mới', 50, 50);
+        activeEditingSlide.textBoxes.push(newBox);
+        activeEditingTextBoxId = newBox.id;
+        renderModalTextBoxTabs();
+        populateModalFields();
+        videoRenderer.renderFrame(videoRenderer.currentTime);
+    });
+
+    modalBtnDeleteTextbox?.addEventListener('click', () => {
+        if (!activeEditingSlide || !activeEditingSlide.textBoxes) return;
+        if (activeEditingSlide.textBoxes.length <= 1) {
+            alert('Mỗi slide cần giữ ít nhất 1 khung chữ.');
+            return;
+        }
+        activeEditingSlide.textBoxes = activeEditingSlide.textBoxes.filter(t => t.id !== activeEditingTextBoxId);
+        activeEditingTextBoxId = activeEditingSlide.textBoxes[0].id;
+        renderModalTextBoxTabs();
+        populateModalFields();
+        videoRenderer.renderFrame(videoRenderer.currentTime);
+    });
 
     modalOverlayEnabled?.addEventListener('change', syncModalToSlide);
     modalOverlayText?.addEventListener('input', syncModalToSlide);
@@ -872,29 +1292,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnApplyAllOverlay?.addEventListener('click', () => {
-        if (!activeEditingSlide || !activeEditingSlide.overlay) return;
-        const src = activeEditingSlide.overlay;
+        if (!activeEditingSlide) return;
+        const curTb = activeEditingSlide.textBoxes?.find(t => t.id === activeEditingTextBoxId);
+        if (!curTb) return;
 
         state.slides.forEach(slide => {
-            if (!slide.overlay) {
-                slide.overlay = createDefaultOverlay(slide.text);
-            }
-            slide.overlay.enabled = src.enabled;
-            slide.overlay.position = src.position;
-            slide.overlay.customX = src.customX;
-            slide.overlay.customY = src.customY;
-            slide.overlay.textAlign = src.textAlign;
-            slide.overlay.fontFamily = src.fontFamily;
-            slide.overlay.fontSize = src.fontSize;
-            slide.overlay.color = src.color;
-            slide.overlay.bgStyle = src.bgStyle;
-            slide.overlay.bgColor = src.bgColor;
-            slide.overlay.animation = src.animation;
+            ensureSlideTextBoxes(slide);
+            const targetTb = slide.textBoxes[0] || createDefaultTextBox();
+            targetTb.enabled = curTb.enabled;
+            targetTb.x = curTb.x;
+            targetTb.y = curTb.y;
+            targetTb.customX = curTb.customX;
+            targetTb.customY = curTb.customY;
+            targetTb.textAlign = curTb.textAlign;
+            targetTb.fontFamily = curTb.fontFamily;
+            targetTb.fontSize = curTb.fontSize;
+            targetTb.color = curTb.color;
+            targetTb.bgStyle = curTb.bgStyle;
+            targetTb.bgColor = curTb.bgColor;
+            targetTb.animation = curTb.animation;
 
             slide.motion = activeEditingSlide.motion;
             slide.transition = activeEditingSlide.transition;
-            slide.overlay.motion = slide.motion;
-            slide.overlay.transition = slide.transition;
         });
 
         updateSlidesUI();
@@ -902,7 +1321,9 @@ document.addEventListener('DOMContentLoaded', () => {
         alert(`Đã áp dụng mẫu chữ & hiệu ứng cho toàn bộ ${state.slides.length} slide!`);
     });
 
-    // Render Slide Cards in Timeline
+    // =========================================================================
+    // 10. Render Slide Cards in Timeline
+    // =========================================================================
     function updateSlidesUI() {
         slidesContainer.innerHTML = '';
         const totalSlides = state.slides.length;
@@ -914,23 +1335,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (totalSlides === 0) {
             emptyState.classList.remove('hidden');
             previewSlideBadge.classList.add('hidden');
+            canvasAddTextBtn?.classList.add('hidden');
+            canvasQuickToolbar?.classList.add('hidden');
         } else {
             emptyState.classList.add('hidden');
             previewSlideBadge.classList.remove('hidden');
+            canvasAddTextBtn?.classList.remove('hidden');
         }
 
         state.slides.forEach((slide, idx) => {
-            // Ensure overlay exists
-            if (!slide.overlay) {
-                slide.overlay = createDefaultOverlay(slide.text, slide.motion, slide.transition);
-            }
+            ensureSlideTextBoxes(slide);
 
             const card = document.createElement('div');
             card.className = 'slide-card group flex flex-col justify-between p-2.5';
             card.dataset.id = slide.id;
 
-            const bgStyleName = slide.overlay.bgStyle || 'pill';
-            const animName = slide.overlay.animation || 'fade';
+            // Generate tags for all text boxes on this slide
+            const textBoxTagsHTML = slide.textBoxes.map((tb, tbIdx) => {
+                const previewText = tb.text ? (tb.text.length > 10 ? tb.text.slice(0, 10) + '…' : tb.text) : `Chữ #${tbIdx + 1}`;
+                return `
+                    <button type="button" class="tb-tag-chip px-1.5 py-0.5 rounded bg-slate-900/90 border border-slate-700/80 hover:border-brand-500 text-[10px] text-slate-200 flex items-center gap-1 transition" data-tb-id="${tb.id}" title="Nhấp để chọn & kéo thả khung chữ này trên Canvas">
+                        <i data-lucide="type" class="w-2.5 h-2.5 text-brand-400"></i>
+                        <span class="truncate max-w-[80px]">${previewText}</span>
+                    </button>
+                `;
+            }).join('');
 
             card.innerHTML = `
                 <!-- Top thumbnail preview & badge -->
@@ -940,23 +1369,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-delete-slide absolute top-1 right-1 w-6 h-6 rounded bg-black/70 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center transition">
                         <i data-lucide="trash" class="w-3.5 h-3.5"></i>
                     </button>
-                    ${slide.text ? '<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-emerald-500/90 text-[9px] font-bold text-white flex items-center gap-0.5"><i data-lucide="mic" class="w-2.5 h-2.5"></i> Giọng đọc</span>' : ''}
+                    ${slide.ttsAudioBuffer ? '<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-emerald-500/90 text-[9px] font-bold text-white flex items-center gap-0.5"><i data-lucide="volume-2" class="w-2.5 h-2.5"></i> Audio WAV</span>' : ''}
                 </div>
 
-                <!-- Action Button: Open Text Overlay & Effects Editor -->
-                <button type="button" class="btn-edit-slide-overlay w-full py-1.5 px-2 bg-gradient-to-r from-brand-600/30 to-indigo-600/30 hover:from-brand-600 hover:to-indigo-600 border border-brand-500/40 text-brand-200 hover:text-white rounded-lg text-[10px] font-semibold flex items-center justify-between transition shadow-sm mb-1.5" title="Chỉnh sửa chữ, kiểu dáng & hiệu ứng">
-                    <span class="flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3 text-amber-400"></i> Sửa Chữ & Hiệu ứng</span>
-                    <span class="text-[9px] font-mono text-indigo-300 opacity-90">${bgStyleName} · ${animName}</span>
-                </button>
+                <!-- Canvas Text Boxes Section -->
+                <div class="space-y-1 mb-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <i data-lucide="layers" class="w-3 h-3 text-brand-400"></i> Khung Chữ (${slide.textBoxes.length})
+                        </span>
+                        <button type="button" class="btn-card-add-tb px-1.5 py-0.5 bg-brand-600/20 hover:bg-brand-600/40 border border-brand-500/30 text-brand-300 rounded text-[9px] font-semibold flex items-center gap-0.5 transition" title="Thêm khung chữ mới">
+                            <i data-lucide="plus" class="w-2.5 h-2.5"></i> Chữ
+                        </button>
+                    </div>
 
-                <!-- Slide Text Prompt / Captions -->
-                <div class="space-y-1.5 flex-1 flex flex-col justify-between">
-                    <div class="relative">
-                        <textarea class="slide-text-input w-full bg-slate-900/90 border border-slate-700/80 rounded-lg p-1.5 text-[11px] text-white placeholder-slate-500 resize-none focus:ring-1 focus:ring-brand-500 outline-none h-12" placeholder="Nhập lời thoại / chữ hiển thị...">${slide.text || ''}</textarea>
+                    <!-- Tags list -->
+                    <div class="flex flex-wrap gap-1 items-center max-h-12 overflow-y-auto">
+                        ${textBoxTagsHTML}
+                    </div>
+
+                    <button type="button" class="btn-edit-slide-overlay w-full py-1 px-2 bg-gradient-to-r from-brand-600/20 to-indigo-600/20 hover:from-brand-600/40 hover:to-indigo-600/40 border border-brand-500/30 text-brand-200 hover:text-white rounded-lg text-[10px] font-semibold flex items-center justify-between transition mt-1" title="Chỉnh sửa chi tiết chữ & hiệu ứng">
+                        <span class="flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3 text-amber-400"></i> Sửa & Hiệu ứng</span>
+                        <i data-lucide="sliders" class="w-3 h-3 text-slate-400"></i>
+                    </button>
+                </div>
+
+                <!-- Slide Voice Narration Prompt (Separate for V-TTS) -->
+                <div class="space-y-1.5 flex-1 flex flex-col justify-between pt-1 border-t border-slate-700/50">
+                    <div>
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
+                            <i data-lucide="mic" class="w-2.5 h-2.5 text-emerald-400"></i> Lời thoại đọc AI (TTS)
+                        </label>
+                        <textarea class="slide-text-input w-full bg-slate-900/90 border border-slate-700/80 rounded-lg p-1.5 text-[11px] text-white placeholder-slate-500 resize-none focus:ring-1 focus:ring-brand-500 outline-none h-11" placeholder="Nhập lời đọc cho giọng AI...">${slide.text || ''}</textarea>
                     </div>
 
                     <!-- Per-slide motion effect -->
-                    <select class="slide-effect-select w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-[10px] text-indigo-200 focus:ring-1 focus:ring-brand-500 outline-none" title="Chuyển động trong ảnh">
+                    <select class="slide-effect-select w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[10px] text-indigo-200 focus:ring-1 focus:ring-brand-500 outline-none" title="Chuyển động trong ảnh">
                         ${effectOptions(slide.motion || slide.transition || 'kenburns')}
                     </select>
 
@@ -981,10 +1429,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 openOverlayModal(slide);
             });
 
+            const btnCardAddTb = card.querySelector('.btn-card-add-tb');
+            btnCardAddTb.addEventListener('click', (e) => {
+                e.stopPropagation();
+                let startSec = 0;
+                for (let i = 0; i < idx; i++) {
+                    startSec += (state.slides[i].duration || 3.5);
+                }
+                videoRenderer.seek(startSec);
+                const newBox = createDefaultTextBox('Nhập nội dung...', 50, 50);
+                slide.textBoxes.push(newBox);
+                videoRenderer.selectedTextBoxId = newBox.id;
+                updateSlidesUI();
+                updateQuickToolbar();
+                videoRenderer.renderFrame(videoRenderer.currentTime);
+            });
+
+            // Click tag chips to select & highlight text box on Canvas
+            card.querySelectorAll('.tb-tag-chip').forEach(chip => {
+                chip.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    let startSec = 0;
+                    for (let i = 0; i < idx; i++) {
+                        startSec += (state.slides[i].duration || 3.5);
+                    }
+                    videoRenderer.seek(startSec);
+                    const tbId = chip.dataset.tbId;
+                    videoRenderer.selectedTextBoxId = tbId;
+                    updateQuickToolbar();
+                    videoRenderer.renderFrame(videoRenderer.currentTime);
+                });
+            });
+
             const textInput = card.querySelector('.slide-text-input');
             textInput.addEventListener('input', (e) => {
                 slide.text = e.target.value;
-                if (slide.overlay) slide.overlay.text = e.target.value;
                 slide.ttsAudioBuffer = null;
                 slide.ttsMetadata = null;
                 videoRenderer.renderFrame(videoRenderer.currentTime);
@@ -1001,7 +1480,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const effectSelect = card.querySelector('.slide-effect-select');
             effectSelect.addEventListener('change', (e) => {
                 slide.motion = e.target.value;
-                if (slide.overlay) slide.overlay.motion = e.target.value;
                 videoRenderer.renderFrame(videoRenderer.currentTime);
             });
 
@@ -1009,7 +1487,9 @@ document.addEventListener('DOMContentLoaded', () => {
             btnDelete.addEventListener('click', (e) => {
                 e.stopPropagation();
                 state.slides = state.slides.filter(s => s.id !== slide.id);
+                videoRenderer.selectedTextBoxId = null;
                 updateSlidesUI();
+                updateQuickToolbar();
                 videoRenderer.setSlides(state.slides);
             });
 
@@ -1043,6 +1523,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     startSec += (state.slides[i].duration || 3.5);
                 }
                 videoRenderer.seek(startSec);
+                updateQuickToolbar();
             });
 
             slidesContainer.appendChild(card);
@@ -1051,7 +1532,9 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshIcons();
     }
 
-    // 9. Video Renderer Event Listeners & Player Controls
+    // =========================================================================
+    // 11. Video Renderer Event Listeners & Player Controls
+    // =========================================================================
     videoRenderer.onTimeUpdate = (current, total) => {
         playerCurrentTimeEl.textContent = Utils.formatTime(current);
         playerTotalTimeEl.textContent = Utils.formatTime(total);
@@ -1073,8 +1556,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    videoRenderer.onPlaybackPaused = () => {
+        updateQuickToolbar();
+    };
+
     videoRenderer.onPlaybackEnded = () => {
         playPauseIcon.setAttribute('data-lucide', 'play');
+        updateQuickToolbar();
         refreshIcons();
     };
 
@@ -1083,7 +1571,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (videoRenderer.isPlaying) {
             videoRenderer.pause();
             playPauseIcon.setAttribute('data-lucide', 'play');
+            updateQuickToolbar();
         } else {
+            canvasQuickToolbar?.classList.add('hidden');
             videoRenderer.play();
             playPauseIcon.setAttribute('data-lucide', 'pause');
         }
@@ -1092,12 +1582,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnRestart.addEventListener('click', () => {
         videoRenderer.seek(0);
+        updateQuickToolbar();
     });
 
     playerScrubber.addEventListener('input', (e) => {
         const percent = parseFloat(e.target.value);
         const targetTime = (percent / 100) * videoRenderer.totalDuration;
         videoRenderer.seek(targetTime);
+        updateQuickToolbar();
     });
 
     btnToggleMute.addEventListener('click', () => {
@@ -1107,7 +1599,9 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshIcons();
     });
 
-    // 10. Sample Demo Project Loader
+    // =========================================================================
+    // 12. Sample Demo Project Loader with Multi-Text Box Canvas Drag & Drop
+    // =========================================================================
     const btnLoadSample = document.getElementById('btn-load-sample');
     btnLoadSample.addEventListener('click', async () => {
         btnLoadSample.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang nạp...';
@@ -1133,100 +1627,104 @@ document.addEventListener('DOMContentLoaded', () => {
                     imageSrc: img1,
                     imageElement: loadedImg1,
                     duration: 4.5,
-                    text: 'CHÀO MỪNG BẠN ĐẾN VỚI\nSTUDIO LÀM VIDEO AI BÀI GIẢNG',
+                    text: 'Chào mừng bạn đến với Studio làm Video AI bài giảng trực quan.',
                     motion: 'kenburns',
                     transition: 'crossfade',
-                    overlay: {
-                        enabled: true,
-                        text: 'CHÀO MỪNG BẠN ĐẾN VỚI\nSTUDIO LÀM VIDEO AI BÀI GIẢNG',
-                        position: 'center',
-                        customX: 50,
-                        customY: 50,
-                        textAlign: 'center',
-                        fontFamily: 'Oswald',
-                        fontSize: 58,
-                        color: '#fde047',
-                        bgStyle: 'shadow',
-                        bgColor: '#000000',
-                        animation: 'pop',
-                        motion: 'kenburns',
-                        transition: 'crossfade'
-                    }
+                    textBoxes: [
+                        createDefaultTextBox('CHÀO MỪNG BẠN ĐẾN VỚI\nAI VIDEO STUDIO', 50, 40, {
+                            fontFamily: 'Oswald',
+                            fontSize: 60,
+                            color: '#fde047',
+                            bgStyle: 'shadow',
+                            animation: 'pop'
+                        }),
+                        createDefaultTextBox('✨ Kéo thả trực tiếp khung chữ trên Canvas', 50, 75, {
+                            fontFamily: 'Be Vietnam Pro',
+                            fontSize: 38,
+                            color: '#38bdf8',
+                            bgStyle: 'pill',
+                            animation: 'glow'
+                        })
+                    ]
                 },
                 {
                     id: 'sample_2',
                     imageSrc: img2,
                     imageElement: loadedImg2,
                     duration: 4.5,
-                    text: 'Tùy biến hiệu ứng chuyển động Ken Burns và chuyển cảnh nối tiếp đa dạng cho từng phân cảnh.',
+                    text: 'Tùy biến hiệu ứng chuyển động Ken Burns và đa khung chữ nghệ thuật.',
                     motion: 'pan-left',
                     transition: 'slide-left',
-                    overlay: {
-                        enabled: true,
-                        text: 'Tùy biến hiệu ứng chuyển động Ken Burns và chuyển cảnh nối tiếp đa dạng cho từng phân cảnh.',
-                        position: 'bottom-center',
-                        customX: 50,
-                        customY: 85,
-                        textAlign: 'center',
-                        fontFamily: 'Be Vietnam Pro',
-                        fontSize: 44,
-                        color: '#ffffff',
-                        bgStyle: 'pill',
-                        bgColor: '#000000',
-                        animation: 'slide-up',
-                        motion: 'pan-left',
-                        transition: 'slide-left'
-                    }
+                    textBoxes: [
+                        createDefaultTextBox('ĐA KHUNG CHỮ NGHỆ THUẬT', 50, 22, {
+                            fontFamily: 'Montserrat',
+                            fontSize: 50,
+                            color: '#ffffff',
+                            bgStyle: 'gradient-banner',
+                            animation: 'slide-down'
+                        }),
+                        createDefaultTextBox('🖍️ Dạ quang nổi bật', 30, 58, {
+                            fontFamily: 'Nunito',
+                            fontSize: 42,
+                            color: '#0f172a',
+                            bgStyle: 'highlight',
+                            bgColor: '#fde047',
+                            animation: 'bounce'
+                        }),
+                        createDefaultTextBox('⚡ Neon phát sáng', 70, 58, {
+                            fontFamily: 'Montserrat',
+                            fontSize: 42,
+                            color: '#ffffff',
+                            bgStyle: 'neon',
+                            bgColor: '#38bdf8',
+                            animation: 'glow'
+                        })
+                    ]
                 },
                 {
                     id: 'sample_3',
                     imageSrc: img3,
                     imageElement: loadedImg3,
                     duration: 4.8,
-                    text: 'LỒNG TIẾNG AI CHUẨN XÁC\nĐồng bộ âm thanh và chữ nghệ thuật rực rỡ.',
+                    text: 'Lồng tiếng AI chuẩn xác, đồng bộ âm thanh và hình ảnh sống động.',
                     motion: 'orbit-left',
                     transition: 'circle-reveal',
-                    overlay: {
-                        enabled: true,
-                        text: 'LỒNG TIẾNG AI CHUẨN XÁC\nĐồng bộ âm thanh và chữ nghệ thuật rực rỡ.',
-                        position: 'center',
-                        customX: 50,
-                        customY: 50,
-                        textAlign: 'center',
-                        fontFamily: 'Montserrat',
-                        fontSize: 50,
-                        color: '#ffffff',
-                        bgStyle: 'neon',
-                        bgColor: '#38bdf8',
-                        animation: 'glow',
-                        motion: 'orbit-left',
-                        transition: 'circle-reveal'
-                    }
+                    textBoxes: [
+                        createDefaultTextBox('🎓 KHUNG BÀI GIẢNG HIỆN ĐẠI', 50, 45, {
+                            fontFamily: 'Be Vietnam Pro',
+                            fontSize: 48,
+                            color: '#38bdf8',
+                            bgStyle: 'boxed-border',
+                            bgColor: '#0f172a',
+                            animation: 'bounce'
+                        }),
+                        createDefaultTextBox('🎤 Hỗ trợ Karaoke lướt màu chữ theo câu đọc', 50, 84, {
+                            fontFamily: 'Be Vietnam Pro',
+                            fontSize: 40,
+                            color: '#ffffff',
+                            bgStyle: 'pill',
+                            animation: 'karaoke'
+                        })
+                    ]
                 },
                 {
                     id: 'sample_4',
                     imageSrc: img4,
                     imageElement: loadedImg4,
                     duration: 4.5,
-                    text: 'Xuất video Full HD MP4 / WebM siêu nét, sẵn sàng chia sẻ ngay hôm nay!',
+                    text: 'Xuất video Full HD MP4 và WebM siêu nét, sẵn sàng chia sẻ ngay!',
                     motion: 'zoom-in',
                     transition: 'crossfade',
-                    overlay: {
-                        enabled: true,
-                        text: 'Xuất video Full HD MP4 / WebM siêu nét, sẵn sàng chia sẻ ngay hôm nay!',
-                        position: 'bottom-center',
-                        customX: 50,
-                        customY: 84,
-                        textAlign: 'center',
-                        fontFamily: 'Playfair Display',
-                        fontSize: 46,
-                        color: '#ffffff',
-                        bgStyle: 'gradient-banner',
-                        bgColor: '#0f172a',
-                        animation: 'slide-up',
-                        motion: 'zoom-in',
-                        transition: 'crossfade'
-                    }
+                    textBoxes: [
+                        createDefaultTextBox('XUẤT VIDEO FULL HD 1080P', 50, 50, {
+                            fontFamily: 'Playfair Display',
+                            fontSize: 54,
+                            color: '#ffffff',
+                            bgStyle: 'gradient-banner',
+                            bgColor: '#0f172a',
+                            animation: 'slide-up'
+                        })
+                    ]
                 }
             ];
 
@@ -1237,6 +1735,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateSlidesUI();
             videoRenderer.setSlides(state.slides);
             videoRenderer.seek(0);
+            updateQuickToolbar();
 
         } catch (err) {
             alert('Không thể tải dự án mẫu: ' + err.message);

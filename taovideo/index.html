@@ -410,9 +410,104 @@
                         </button>
                     </div>
 
-                    <!-- Current Slide Indicator in Preview -->
-                    <div id="preview-slide-badge" class="hidden absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur text-[11px] font-medium text-white/90 border border-white/10">
-                        Slide <span id="current-slide-idx">1</span> / <span id="total-slides-count">0</span>
+                    <!-- Top Actions inside Canvas Preview -->
+                    <div class="absolute top-3 inset-x-3 flex items-center justify-between pointer-events-none z-20">
+                        <!-- Current Slide Indicator in Preview -->
+                        <div id="preview-slide-badge" class="hidden pointer-events-auto px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-md text-[11px] font-semibold text-white/90 border border-white/10 shadow-lg">
+                            Slide <span id="current-slide-idx">1</span> / <span id="total-slides-count">0</span>
+                        </div>
+
+                        <!-- Floating Button: Add Text Box -->
+                        <button id="canvas-add-text-btn" type="button" class="hidden pointer-events-auto ml-auto px-3 py-1.5 rounded-xl bg-brand-600/90 hover:bg-brand-500 text-white text-xs font-semibold backdrop-blur shadow-lg shadow-brand-600/30 flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 border border-brand-400/40" title="Thêm khung chữ mới vào ảnh hiện tại">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                            <span>+ Thêm chữ vào ảnh</span>
+                        </button>
+                    </div>
+
+                    <!-- Floating Quick Toolbar (appears when a Text Box is selected on Canvas) -->
+                    <div id="canvas-quick-toolbar" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-30 max-w-[96%] bg-slate-900/95 backdrop-blur-md border border-brand-500/40 rounded-2xl p-2 shadow-2xl shadow-black flex items-center gap-2 flex-wrap sm:flex-nowrap transition-all animate-modal select-none">
+                        
+                        <div class="flex items-center gap-1.5 shrink-0 pl-1">
+                            <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-300 flex items-center justify-center">
+                                <i data-lucide="type" class="w-3.5 h-3.5"></i>
+                            </div>
+                            <!-- Quick text input -->
+                            <input type="text" id="quick-tb-text" placeholder="Nhập nội dung chữ..." class="bg-slate-950/80 border border-slate-700 focus:border-brand-500 rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 outline-none w-32 sm:w-44 font-medium" title="Sửa nội dung chữ trực tiếp">
+                        </div>
+
+                        <div class="h-5 w-px bg-slate-700/80 shrink-0 hidden sm:block"></div>
+
+                        <!-- Font Family -->
+                        <div class="shrink-0">
+                            <select id="quick-tb-font" class="bg-slate-950/80 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-brand-500" title="Font chữ">
+                                <option value="Be Vietnam Pro">Be Vietnam Pro</option>
+                                <option value="Montserrat">Montserrat</option>
+                                <option value="Playfair Display">Playfair</option>
+                                <option value="Oswald">Oswald</option>
+                                <option value="Nunito">Nunito</option>
+                                <option value="Caveat">Caveat</option>
+                            </select>
+                        </div>
+
+                        <!-- Font Size Stepper -->
+                        <div class="flex items-center bg-slate-950/80 border border-slate-700 rounded-lg overflow-hidden shrink-0">
+                            <button type="button" id="quick-tb-size-dec" class="w-6 h-6 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center font-bold text-xs transition" title="Giảm cỡ chữ">-</button>
+                            <span id="quick-tb-size-val" class="w-7 text-center font-mono text-[11px] font-bold text-brand-300">46</span>
+                            <button type="button" id="quick-tb-size-inc" class="w-6 h-6 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center font-bold text-xs transition" title="Tăng cỡ chữ">+</button>
+                        </div>
+
+                        <!-- Text Color Picker -->
+                        <div class="flex items-center gap-1 shrink-0" title="Màu chữ">
+                            <input type="color" id="quick-tb-color" value="#ffffff" class="w-6 h-6 rounded cursor-pointer bg-transparent border-0">
+                        </div>
+
+                        <!-- Background Style -->
+                        <div class="shrink-0">
+                            <select id="quick-tb-bg-style" class="bg-slate-950/80 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-brand-500" title="Kiểu nền & viền">
+                                <option value="pill">Hộp Pill</option>
+                                <option value="shadow">Đổ bóng</option>
+                                <option value="neon">Neon</option>
+                                <option value="highlight">Dạ quang</option>
+                                <option value="gradient-banner">Ruy băng</option>
+                                <option value="boxed-border">Khung viền</option>
+                                <option value="none">Không nền</option>
+                            </select>
+                        </div>
+
+                        <!-- Animation -->
+                        <div class="shrink-0">
+                            <select id="quick-tb-anim" class="bg-slate-950/80 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-brand-500" title="Hiệu ứng động">
+                                <option value="fade">Fade In</option>
+                                <option value="slide-up">Slide Lên</option>
+                                <option value="slide-down">Slide Xuống</option>
+                                <option value="slide-left">Slide Trái</option>
+                                <option value="typewriter">Máy chữ</option>
+                                <option value="pop">Pop Nảy</option>
+                                <option value="bounce">Rơi Bounce</option>
+                                <option value="glow">Glow Sáng</option>
+                                <option value="karaoke">Karaoke</option>
+                                <option value="static">Tĩnh</option>
+                            </select>
+                        </div>
+
+                        <div class="h-5 w-px bg-slate-700/80 shrink-0"></div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button type="button" id="quick-tb-duplicate" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition" title="Nhân bản khung chữ này">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button type="button" id="quick-tb-delete" class="w-7 h-7 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-rose-200 border border-rose-500/30 flex items-center justify-center transition" title="Xóa khung chữ này">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button type="button" id="quick-tb-modal-open" class="w-7 h-7 rounded-lg bg-brand-600/30 hover:bg-brand-600 text-brand-200 hover:text-white border border-brand-500/40 flex items-center justify-center transition" title="Mở hộp thoại tùy biến chi tiết">
+                                <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button type="button" id="quick-tb-close" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition" title="Đóng thanh công cụ">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+
                     </div>
                 </div>
 
@@ -596,10 +691,10 @@
                     </div>
                     <div>
                         <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                            Chỉnh Sửa Chữ, Kiểu Dáng & Hiệu Ứng
+                            Chỉnh Sửa Khung Chữ & Hiệu Ứng
                             <span id="modal-slide-badge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">Slide #1</span>
                         </h3>
-                        <p class="text-xs text-slate-400">Tùy biến chữ nghệ thuật, hiệu ứng xuất hiện và chuyển cảnh trực tiếp trên Canvas</p>
+                        <p class="text-xs text-slate-400">Tùy biến chữ nghệ thuật, vị trí kéo thả và hiệu ứng xuất hiện trực tiếp trên Canvas</p>
                     </div>
                 </div>
                 <button id="btn-close-overlay-modal" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
@@ -610,17 +705,36 @@
             <!-- Modal Body (Scrollable 2-column layout) -->
             <div class="p-6 overflow-y-auto flex-1 space-y-6">
                 
+                <!-- Section 0: Text Box Selector Tabs for current slide -->
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                            <i data-lucide="layers" class="w-3.5 h-3.5 text-brand-400"></i>
+                            Các Khung Chữ Trên Slide Này:
+                        </label>
+                        <button type="button" id="modal-btn-add-textbox" class="px-2.5 py-1 bg-brand-600/30 hover:bg-brand-600 text-brand-200 hover:text-white border border-brand-500/40 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                            <i data-lucide="plus" class="w-3 h-3"></i> Thêm Khung Chữ
+                        </button>
+                    </div>
+                    <!-- Tabs pills -->
+                    <div id="modal-textbox-tabs" class="flex items-center gap-2 overflow-x-auto py-1">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
                 <!-- Section 1: Toggle & Text Input -->
                 <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/70 space-y-3">
                     <div class="flex items-center justify-between">
                         <label class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" id="modal-overlay-enabled" checked class="w-4 h-4 rounded text-brand-500 bg-slate-900 border-slate-700 focus:ring-brand-500">
-                            <span>Bật lớp chữ hiển thị trên ảnh</span>
+                            <span>Bật khung chữ này hiển thị trên ảnh</span>
                         </label>
-                        <span class="text-[11px] text-brand-400 font-medium">Thay đổi được cập nhật xem trực tiếp ngay trên khung video</span>
+                        <button type="button" id="modal-btn-delete-textbox" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-rose-500/10 transition">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> Xóa khung chữ này
+                        </button>
                     </div>
                     <div>
-                        <textarea id="modal-overlay-text" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-500 outline-none leading-relaxed" placeholder="Nhập nội dung tiêu đề, lời thoại hoặc ghi chú cho ảnh này (hỗ trợ xuống dòng)..."></textarea>
+                        <textarea id="modal-overlay-text" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-500 outline-none leading-relaxed" placeholder="Nhập nội dung tiêu đề, chữ nghệ thuật hoặc ghi chú (hỗ trợ xuống dòng)..."></textarea>
                     </div>
                 </div>
 

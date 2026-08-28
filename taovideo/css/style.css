@@ -169,3 +169,51 @@ input[type="range"] {
     transform: scale(0.97);
 }
 
+/* Canvas Quick Toolbar */
+#canvas-quick-toolbar {
+    animation: toolbarPop 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes toolbarPop {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 12px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+    }
+}
+
+/* Modal Text Box Tabs */
+.modal-tb-tab {
+    transition: all 0.15s ease-in-out;
+}
+
+.modal-tb-tab.active-tb-tab {
+    background: rgba(139, 92, 246, 0.25) !important;
+    border-color: #8b5cf6 !important;
+    color: #c4b5fd !important;
+    font-weight: 700 !important;
+}
+
+/* Slide Card Text Box Tags */
+.tb-tag-chip {
+    transition: all 0.15s ease;
+}
+
+.tb-tag-chip:hover {
+    background: rgba(139, 92, 246, 0.25) !important;
+    border-color: #a78bfa !important;
+}
+
+/* Canvas cursor utilities */
+.cursor-grab {
+    cursor: grab !important;
+}
+
+.cursor-grabbing {
+    cursor: grabbing !important;
+}
+
+
