@@ -105,6 +105,8 @@
 
         for (let i = 0; i < Math.min(apiKeys.length, 4); i++) {
             const key = apiKeys[i];
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 25000);
             try {
                 const res = await fetch(API, {
                     method: 'POST',
@@ -113,7 +115,9 @@
                         Authorization: `Bearer ${key}`,
                     },
                     body: JSON.stringify(payload),
+                    signal: controller.signal
                 });
+                clearTimeout(timer);
                 const raw = await res.json().catch(() => ({}));
                 if (!res.ok) {
                     lastError = raw.message || raw.error?.message || `Mistral HTTP ${res.status}`;
@@ -123,7 +127,12 @@
                 reportMistral(currentModel, true, '', moduleName);
                 return { status: 'ok', data: raw, source: 'mistral-ocr' };
             } catch (err) {
-                lastError = err.message || lastError;
+                clearTimeout(timer);
+                if (err.name === 'AbortError') {
+                    lastError = 'Mistral OCR hết thời gian chờ (Timeout 25s). Vui lòng thử lại.';
+                } else {
+                    lastError = err.message || lastError;
+                }
             }
         }
         reportMistral(getModel(normalized.model), false, lastError, moduleName);

@@ -4549,42 +4549,32 @@ async function extractTextbookOcrText(onProgress) {
   const mistralKeys = getUserMistralKeys();
   if (!mistralKeys.length) throw new Error("Thiếu Mistral API Key cá nhân. Bấm Quản lý API Key để nhập key Mistral của bạn.");
   const chunks = [];
-  const pdfs = (appState.pdfAttachments || []).filter(att => att && att.dataUrl);
-  const photos = (appState.images || []).filter(img => img.sourceType !== "pdf" && img.dataUrl);
-  const totalUnits = pdfs.length + (photos.length ? 1 : 0);
-  let done = 0;
-  const report = (msg) => {
-    if (typeof onProgress === "function") {
-      const pct = totalUnits ? Math.min(90, Math.round(((done + 0.4) / totalUnits) * 80) + 10) : 20;
-      onProgress(msg, pct);
-    }
-  };
+  const images = (appState.images || []).filter(img => img && img.dataUrl);
 
-  for (const att of pdfs) {
-    report(`Đang nhận diện PDF "${att.name || "SGK"}" bằng Mistral OCR...`);
+  if (images.length > 0) {
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+      if (typeof onProgress === "function") {
+        const pct = Math.min(90, Math.round(((i + 0.5) / images.length) * 80) + 10);
+        onProgress(`Đang nhận diện trang ${i + 1}/${images.length} (${img.name || "SGK"})...`, pct);
+      }
+      const res = await window.MistralOcr.ocrImageDataUrl(img.dataUrl, mistralKeys, null, { module: "soankhbd" });
+      const text = String(res.text || "").trim();
+      if (text) chunks.push(text);
+    }
+    return chunks.join("\n\n");
+  }
+
+  const pdfs = (appState.pdfAttachments || []).filter(att => att && att.dataUrl);
+  for (let i = 0; i < pdfs.length; i++) {
+    const att = pdfs[i];
+    if (typeof onProgress === "function") {
+      onProgress(`Đang nhận diện PDF "${att.name || "SGK"}" bằng Mistral OCR...`, 50);
+    }
     const part = await buildPdfMediaPart(att);
     const result = await window.MistralOcr.ocrDocument(part.dataUrl, mistralKeys, null, { module: "soankhbd" });
     const text = formatOcrPages(result.data?.pages || [], att.name || "PDF SGK", att.selectedPages);
     if (text) chunks.push(text);
-    done++;
-  }
-
-  if (photos.length) {
-    report(`Đang nhận diện ${photos.length} ảnh SGK bằng Mistral OCR...`);
-    const combined = await photosToPdfDataUrl(photos);
-    if (combined) {
-      const result = await window.MistralOcr.ocrDocument(combined, mistralKeys, null, { module: "soankhbd" });
-      const text = formatOcrPages(result.data?.pages || [], "Ảnh SGK");
-      if (text) chunks.push(text);
-    } else {
-      for (let i = 0; i < photos.length; i++) {
-        report(`Đang nhận diện ảnh ${i + 1}/${photos.length} bằng Mistral OCR...`);
-        const res = await window.MistralOcr.ocrImageDataUrl(photos[i].dataUrl, mistralKeys, null, { module: "soankhbd" });
-        const text = String(res.text || "").trim();
-        if (text) chunks.push(`### ${photos[i].name || `Ảnh SGK ${i + 1}`}\n\n${text}`);
-      }
-    }
-    done++;
   }
 
   return chunks.join("\n\n");
