@@ -986,7 +986,6 @@ class DocxGenerator {
 
       const type = /jpe?g/i.test(header) ? "jpg" : (/svg/i.test(header) ? "svg" : "png");
       const caption = altText || ill.caption || ill.title || illustrationId;
-      const kind = ill.kind === "thuc_te" ? "Hình thực tế" : "Hình chuẩn SGK";
 
       return [
         new Paragraph({
@@ -1004,7 +1003,7 @@ class DocxGenerator {
           alignment: AlignmentType.CENTER,
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
           children: [
-            this.coloredTextRun(`${kind}. ${caption}`, {
+            this.coloredTextRun(caption, {
               italics: true,
               size: 22,
               color: "475569"

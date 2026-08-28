@@ -1372,11 +1372,10 @@ function rewriteIllustrationMarkdown(markdown) {
     const ill = list.find(item => item.id === id);
     if (!ill || (!ill.dataUrl && !ill.svgContent)) return full;
     const caption = alt || ill.caption || ill.title || id;
-    const kind = illustrationKindLabel(ill.kind);
     if (ill.svgContent) {
-      return `<figure class="khbd-illustration"><div class="khbd-svg-container">${ill.svgContent}</div><figcaption>${escapeHtml(kind)}. ${escapeHtml(caption)}</figcaption></figure>`;
+      return `<figure class="khbd-illustration"><div class="khbd-svg-container">${ill.svgContent}</div><figcaption>${escapeHtml(caption)}</figcaption></figure>`;
     }
-    return `<figure class="khbd-illustration"><img src="${ill.dataUrl}" alt="${escapeHtml(caption)}"><figcaption>${escapeHtml(kind)}. ${escapeHtml(caption)}</figcaption></figure>`;
+    return `<figure class="khbd-illustration"><img src="${ill.dataUrl}" alt="${escapeHtml(caption)}"><figcaption>${escapeHtml(caption)}</figcaption></figure>`;
   });
 }
 
@@ -1385,7 +1384,7 @@ function foldForMatch(value) {
 }
 
 function illustrationInsertBlock(ill) {
-  return `**${illustrationKindLabel(ill.kind)}:** ${ill.caption || ill.title || ""}\n${illustrationMarker(ill)}`;
+  return illustrationMarker(ill);
 }
 
 function insertIllustrationIntoMarkdown(markdown, ill) {
@@ -3958,7 +3957,7 @@ function getFullLessonPlanMarkdown(options = {}) {
   if (illustrations.length) {
     body.push(`\n---\n`, `# Hình minh họa`);
     illustrations.forEach(ill => {
-      body.push(`**${illustrationKindLabel(ill.kind)}.** ${ill.caption || ill.title || ill.id}`, illustrationMarker(ill));
+      body.push(illustrationMarker(ill));
     });
   }
   if (options.includeHeader === false) return body.join("\n\n");
