@@ -9,7 +9,6 @@ const khbdAppPath = path.join(__dirname, '../js/khbd-app.js');
 try {
   let fileContent = fs.readFileSync(khbdAppPath, 'utf8');
 
-  // Kiểm tra và chuẩn hóa khối SUBJECT_CONTEXT_INTEGRATIONS nếu có lỗi ký tự hoặc trùng lặp
   const cleanVirtualLab = `  {
     id: "virtualLab",
     label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
@@ -19,10 +18,8 @@ try {
     promptHint: "thao tác tương tác với mô phỏng trực quan PhET / GeoGebra / phần mềm chuyên ngành; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },`;
 
-  // Xóa bỏ các ký tự lỗi / đoạn lặp bị hỏng nếu có
   if (fileContent.includes('virtualLab')) {
     fileContent = fileContent.replace(/\{\s*id:\s*["']virtualLab["'][\s\S]*?marker:\s*["']\[TN-AO\]["'][\s\S]*?\},\s*/g, '');
-    // Chèn lại khối virtualLab sạch sẽ ngay sau stemModeling
     fileContent = fileContent.replace(/(id:\s*["']stemModeling["'][\s\S]*?\},\s*)/, `$1${cleanVirtualLab}\n`);
     fs.writeFileSync(khbdAppPath, fileContent, 'utf8');
   }
@@ -57,8 +54,30 @@ function createMockDOM() {
       className: '',
       value: '',
       checked: false,
-      textContent: '',
-      innerHTML: '',
+      _textContent: '',
+      _innerHTML: '',
+      get textContent() {
+        if (this._textContent) return this._textContent;
+        if (this.children && this.children.length > 0) {
+          return this.children.map(c => (c && c.textContent) || '').join('');
+        }
+        return '';
+      },
+      set textContent(val) {
+        this._textContent = String(val);
+        this._innerHTML = String(val);
+      },
+      get innerHTML() {
+        if (this._innerHTML) return this._innerHTML;
+        if (this._textContent) return this._textContent;
+        if (this.children && this.children.length > 0) {
+          return this.children.map(c => (c && (c.innerHTML || c.textContent)) || '').join('');
+        }
+        return '';
+      },
+      set innerHTML(val) {
+        this._innerHTML = String(val);
+      },
       hidden: false,
       disabled: false,
       style: {},
@@ -94,13 +113,20 @@ function createMockDOM() {
         return el.getAttribute(attr) !== null;
       },
       appendChild(child) {
+        if (!child) return child;
+        if (child.tagName === 'FRAGMENT' && child.children) {
+          child.children.forEach(c => el.appendChild(c));
+          return child;
+        }
         el.children.push(child);
         el.childNodes.push(child);
         if (typeof child === 'string') {
-          el.textContent += child;
-          el.innerHTML += child;
+          el._textContent += child;
+          el._innerHTML += child;
         } else if (child && child.textContent) {
-          el.textContent += child.textContent;
+          el._textContent += child.textContent;
+        } else if (child && child.innerHTML) {
+          el._innerHTML += child.innerHTML;
         }
         return child;
       },
@@ -110,16 +136,14 @@ function createMockDOM() {
       replaceChildren(...items) {
         el.children = [];
         el.childNodes = [];
-        el.innerHTML = '';
-        el.textContent = '';
+        el._innerHTML = '';
+        el._textContent = '';
         items.forEach(item => {
-          if (typeof item === 'string') {
-            el.textContent += item;
-            el.innerHTML += item;
-          } else if (item) {
-            el.children.push(item);
-            el.childNodes.push(item);
-            if (item.textContent) el.textContent += item.textContent;
+          if (!item) return;
+          if (item.tagName === 'FRAGMENT' && item.children) {
+            item.children.forEach(c => el.appendChild(c));
+          } else {
+            el.appendChild(item);
           }
         });
       },

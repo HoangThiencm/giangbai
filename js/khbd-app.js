@@ -152,7 +152,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     marker: "[STEM]",
     promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
-    {
+            {
     id: "virtualLab",
     label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
     legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
