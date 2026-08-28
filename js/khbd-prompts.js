@@ -591,29 +591,30 @@ ${ACTIVITY_TABLE_CONTRACT}
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
 - CHỈ dùng bài luyện tập / câu hỏi có trong SGK hoặc dữ liệu giáo viên cung cấp (khóa theo phạm vi tiết dạy PPCT nếu có). CẤM invent bài tập trắc nghiệm ngoài sách nếu nguồn không có.
+- HƯỚNG DẪN GIÁO VIÊN CHỌN LỌC BÀI TẬP: Chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi nhất của SGK để tổ chức cho học sinh làm và chữa chi tiết ngay trên lớp. Các bài tập luyện tập còn lại trong SGK sẽ được chuyển giao vào Hoạt động E (Hướng dẫn về nhà).
 - Cột TRÁI mục d): Kịch bản phân vai rõ ràng:
   + Áp dụng Kỹ thuật dạy học (ví dụ: Bài tập phân hóa 3 mức, Đánh giá đồng đẳng, Sửa lỗi theo cặp...).
-  + **GV:** Nói câu giao việc trong ngoặc kép "...", di chuyển quan sát phát hiện lỗi sai tính toán/lập luận điển hình, trực tiếp hướng dẫn phân hóa.
+  + **GV:** Nói câu giao việc trong ngoặc kép "...", hướng dẫn HS làm 1–2 bài tập trọng tâm, di chuyển quan sát phát hiện lỗi sai tính toán/lập luận điển hình, trực tiếp hướng dẫn phân hóa.
   + **HS:** Giải bài cá nhân vào vở -> Đổi vở kiểm tra chéo hoặc thảo luận cặp -> Lên bảng trình bày, lớp phản biện.
   + Khi có NLS/AI: Tích hợp thực chiến theo 3 dạng (phần mềm chuyên ngành/máy tính kiểm chứng kết quả; hoặc GV chiếu lời giải AI có lỗi sai ngộ nhận để HS phát hiện phản biện; hoặc HS dùng prompt gợi mở bước giải). CẤM hỏi lý thuyết AI suông. Dùng marker **[NLS: ...]** hoặc **[AI: ...]**.
-- Cột PHẢI mục d): Chép rõ Đề bài và Lời giải chi tiết từng bước của các bài tập trong SGK (không để dấu "...").
+- Cột PHẢI mục d): Chép rõ Đề bài và Lời giải chi tiết từng bước của 1–2 bài tập trọng tâm được chọn trong SGK (không để dấu "...").
 
 ## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C})
 
 ### a) Mục tiêu:
-- Củng cố và khắc sâu kiến thức vừa học thông qua giải quyết các bài tập, câu hỏi cụ thể trong SGK.
+- Củng cố, khắc sâu và rèn luyện kỹ năng vận dụng kiến thức vừa học thông qua giải quyết 1–2 bài tập luyện tập trọng tâm cốt lõi trong SGK.
 - Rèn luyện kỹ năng tính toán, biến đổi, lập luận và trình bày bài giải chuẩn mực.
 
 ### b) Nội dung:
-- Học sinh làm các bài tập luyện tập trong SGK: (Liệt kê rõ ràng đề bài các bài tập trong SGK).
+- Giáo viên lựa chọn 1–2 bài tập trọng tâm trong SGK để học sinh làm và chữa tại lớp: (Liệt kê rõ ràng đề bài các bài tập được chọn trong SGK).
 
 ### c) Sản phẩm:
-- Lời giải chi tiết và đáp số chuẩn xác của các bài tập trong SGK.
+- Lời giải chi tiết và đáp số chuẩn xác của các bài tập trọng tâm được chữa trên lớp.
 
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao bài tập trong SGK: "Các em hoàn thành các bài tập sau vào vở trong 7 phút, sau đó đổi vở kiểm tra chéo...". **HS:** Đọc kĩ đề bài, xác định công thức/quy tắc áp dụng.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm bài cá nhân vào vở (7 phút) -> Đổi vở kiểm tra chéo theo cặp (2 phút). **GV:** Quan sát, phát hiện các lỗi sai điển hình trong biến đổi/tính toán: (chỉ rõ lỗi sai thường gặp), trực tiếp hướng dẫn học sinh còn lúng túng.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** 2 học sinh lên bảng trình bày lời giải; cả lớp đối chiếu bài làm, nhận xét và phát hiện các cách giải khác. **GV:** Đặt câu hỏi chất vấn: "Có lưu ý gì quan trọng khi thực hiện bước này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt lời giải chuẩn xác, chỉ rõ các bẫy sai lầm cần tránh khi làm bài kiểm tra. **HS:** Chữa bài chuẩn mực vào vở ghi. | **Luyện tập**<br>- Bài 1: Đề bài và Lời giải chi tiết.<br>- Bài 2: Đề bài và Lời giải chi tiết.<br>. Lưu ý phương pháp giải chuẩn mực. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao 1–2 bài tập trọng tâm trong SGK: "Các em hoàn thành Bài ... trong SGK vào vở trong 7 phút, sau đó đổi vở kiểm tra chéo...". **HS:** Đọc kĩ đề bài, xác định công thức/quy tắc áp dụng.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm bài cá nhân vào vở (7 phút) -> Đổi vở kiểm tra chéo theo cặp (2 phút). **GV:** Quan sát, phát hiện các lỗi sai điển hình trong biến đổi/tính toán: (chỉ rõ lỗi sai thường gặp), trực tiếp hướng dẫn học sinh còn lúng túng.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** 2 học sinh lên bảng trình bày lời giải; cả lớp đối chiếu bài làm, nhận xét và phát hiện các cách giải khác. **GV:** Đặt câu hỏi chất vấn: "Có lưu ý gì quan trọng khi thực hiện bước này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt lời giải chuẩn xác, chỉ rõ các bẫy sai lầm cần tránh khi làm bài kiểm tra. **HS:** Chữa bài chuẩn mực vào vở ghi. | **Luyện tập**<br>- Bài 1: Đề bài và Lời giải chi tiết.<br>- Bài 2 (nếu có): Đề bài và Lời giải chi tiết.<br>. Lưu ý phương pháp giải chuẩn mực. |`,
 
   // TAB 4.D: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG VẬN DỤNG
   GENERATE_ACTIVITY_D: `Hãy biên soạn chi tiết **HOẠT ĐỘNG VẬN DỤNG** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
@@ -635,31 +636,32 @@ ${ACTIVITY_TABLE_CONTRACT}
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
+- KHÓA NHIỆM VỤ VẬN DỤNG / EXIT TICKET TẠI LỚP: Nhiệm vụ vận dụng thực tế hoặc phiếu Exit Ticket được tổ chức thực hiện, hoàn thành và thu hồi/chốt NGAY TẠI LỚP trong thời lượng quy định. TUYỆT ĐỐI KHÔNG kéo dài hay biến thành bài tập về nhà (bài tập về nhà được giao riêng ở Hoạt động E).
 - CHỈ dùng bài vận dụng / tình huống thực tế có trong SGK hoặc dữ liệu giáo viên cung cấp. CẤM invent số liệu bài toán ngoài nguồn.
 - Cột TRÁI mục d): Kịch bản phân vai rõ ràng:
-  + Áp dụng Kỹ thuật dạy học (Dự án mini, Phân tích tình huống, Bài tập mở...).
-  + **GV:** Nói câu định hướng trong ngoặc kép "...", gợi mở cách liên hệ thực tế, hướng dẫn phân hóa.
-  + **HS:** Thảo luận cặp/nhóm giải quyết bài toán thực tế -> Báo cáo giải pháp, lớp phản biện tính khả thi.
+  + Áp dụng Kỹ thuật dạy học (Dự án mini, Phân tích tình huống, Bài tập mở, Exit Ticket...).
+  + **GV:** Nói câu định hướng trong ngoặc kép "...", gợi mở cách liên hệ thực tế hoặc phát phiếu Exit Ticket chốt kiến thức, hướng dẫn phân hóa và thu hồi/đánh giá kết quả ngay tại lớp.
+  + **HS:** Thảo luận cặp/nhóm giải quyết bài toán thực tế hoặc làm phiếu cá nhân -> Báo cáo giải pháp / nộp phiếu tại lớp, lớp phản biện tính khả thi.
   + Khi có NLS/AI: Vận dụng phần mềm chuyên ngành (GeoGebra, Excel, PhET...) hoặc công cụ AI mô hình hóa, giải quyết bài toán thực tế và kiểm chứng tính khả thi. CẤM hỏi lý thuyết AI suông. Dùng marker **[NLS: ...]** hoặc **[AI: ...]**.
-- Cột PHẢI mục d): Tình huống thực tế và Lời giải mô hình hóa hoàn chỉnh.
-- CẤM viết mục E / Hướng dẫn về nhà trong pha D. Dừng ở hết hoạt động Vận dụng.
+- Cột PHẢI mục d): Tình huống thực tế và Lời giải mô hình hóa hoàn chỉnh (hoặc Nội dung câu hỏi và Đáp án chuẩn của phiếu Exit Ticket).
+- CẤM viết mục E / Hướng dẫn về nhà trong pha D. Dừng ở hết hoạt động Vận dụng tại lớp.
 
 ## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D})
 
 ### a) Mục tiêu:
-- Vận dụng kiến thức, kĩ năng đã học vào giải quyết các bài toán, tình huống thực tế đời sống.
+- Vận dụng kiến thức, kĩ năng đã học vào giải quyết bài toán/tình huống thực tế đời sống hoặc hoàn thành phiếu Exit Ticket đánh giá mức độ đạt chuẩn ngay tại lớp.
 - Phát triển năng lực giải quyết vấn đề, mô hình hóa và tư duy liên hệ thực tiễn.
 
 ### b) Nội dung:
-- Tình huống hoặc bài toán vận dụng thực tiễn trong SGK: (Nêu cụ thể đề bài tình huống).
+- Tình huống, bài toán vận dụng thực tiễn trong SGK hoặc phiếu Exit Ticket hoàn thành ngay tại lớp: (Nêu cụ thể đề bài tình huống).
 
 ### c) Sản phẩm:
-- Bài giải mô hình hóa thực tế, kết quả tính toán hoặc báo cáo giải pháp của học sinh.
+- Bài giải mô hình hóa thực tế, kết quả tính toán hoặc câu trả lời phiếu Exit Ticket được hoàn thành và thu hồi/chốt tại lớp.
 
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao nhiệm vụ vận dụng thực tế: "Hãy vận dụng kiến thức vừa học để giải quyết bài toán thực tiễn sau...". **HS:** Tiếp nhận nhiệm vụ, phân tích số liệu thực tế.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Thảo luận cặp/nhóm (4 phút) mô hình hóa vấn đề và tính toán kết quả. **GV:** Quan sát, gợi mở cách chuyển đổi từ ngôn ngữ thực tế sang biểu thức chuyên môn.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện nhóm trình bày mô hình và kết quả; các nhóm khác nhận xét tính hợp lý của đáp số thực tế. **GV:** Đặt câu hỏi mở rộng liên hệ đời sống.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét, đánh giá khả năng vận dụng của HS, chốt lại ý nghĩa thực tiễn của bài học. **HS:** Ghi nhận lời giải hoàn chỉnh vào vở. | **Vận dụng**<br>- Tình huống thực tế từ SGK.<br>- Mô hình hóa & Lời giải chuẩn xác.<br>. Ý nghĩa thực tiễn của bài học. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao nhiệm vụ vận dụng thực tế / phát phiếu Exit Ticket: "Hãy vận dụng kiến thức vừa học để giải quyết tình huống thực tiễn sau trong 4 phút...". **HS:** Tiếp nhận nhiệm vụ, phân tích số liệu thực tế.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Thảo luận cặp/nhóm (hoặc làm việc cá nhân 3–4 phút) mô hình hóa vấn đề và tính toán kết quả. **GV:** Quan sát, gợi mở cách chuyển đổi từ ngôn ngữ thực tế sang biểu thức chuyên môn, bao quát lớp.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện nhóm trình bày mô hình và kết quả (hoặc nộp phiếu Exit Ticket tại lớp); các nhóm khác nhận xét tính hợp lý của đáp số thực tế. **GV:** Đặt câu hỏi mở rộng liên hệ đời sống.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét, đánh giá khả năng vận dụng của HS, chốt lại ý nghĩa thực tiễn và kết thúc hoạt động tại lớp. **HS:** Ghi nhận lời giải hoàn chỉnh vào vở. | **Vận dụng**<br>- Tình huống thực tế từ SGK.<br>- Mô hình hóa & Lời giải chuẩn xác.<br>. Ý nghĩa thực tiễn của bài học. |`,
 
   // TAB 4.E: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ
   GENERATE_ACTIVITY_E: `Hãy biên soạn chi tiết **HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
@@ -678,15 +680,17 @@ ${ACTIVITY_TABLE_CONTRACT}
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
-- BỐ CỤC NỘI DUNG CHUẨN SƯ PHẠM Ở MỤC b) NỘI DUNG VÀ CỘT PHẢI BẢNG d):
-  1. Học bài: Ôn tập các định nghĩa, quy tắc, công thức trọng tâm và tóm tắt kiến thức bằng sơ đồ tư duy (mindmap) vào vở ghi.
-  2. Làm bài: Hoàn thành các bài tập trong SGK và Sách bài tập (SBT) môn {subject} (ghi rõ số bài, trang cụ thể); giải bài tập mở rộng / nâng cao phân hóa dành cho học sinh khá, giỏi kèm gợi ý ngắn gọn.
-  3. Chuẩn bị bài: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu cần thiết.
-- TÍCH HỢP PROMPT AI (Khi bối cảnh sư phạm bật năng lực AI): Thêm mẫu Prompt AI an toàn hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai gia sư gợi mở, không giải hộ).
+- BỐ CỤC NỘI DUNG CHUẨN SƯ PHẠM Ở MỤC b) NỘI DUNG VÀ CỘT PHẢI BẢNG d) (BẮT BUỘC 3 PHẦN RÕ RÀNG):
+  1. Học bài: Ôn tập các định nghĩa, quy tắc, công thức trọng tâm và tóm tắt kiến thức bằng sơ đồ tư duy (Mindmap) vào vở ghi.
+  2. Làm bài tập: Hoàn thành các bài tập CÒN LẠI trong SGK (chưa làm/chữa ở Hoạt động C và Hoạt động D), các bài tập tương ứng trong Sách bài tập (SBT) môn {subject} (ghi rõ số bài, trang cụ thể); giải 1 bài tập mở rộng / nâng cao phân hóa dành cho học sinh khá, giỏi kèm gợi ý ngắn gọn.
+     *CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa ở Hoạt động C hoặc Hoạt động D.*
+  3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu học tập cần thiết.
+- TÍCH HỢP PROMPT AI AN TOÀN (Khi bối cảnh sư phạm bật năng lực AI): Thêm mẫu Prompt AI an toàn mẫu mực hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai gia sư gợi mở tư duy khi gặp khó khăn, TUYỆT ĐỐI không giải bài hộ).
+- LOẠI BỎ TRIỆT ĐỂ CÁC YÊU CẦU HÌNH THỨC: TUYỆT ĐỐI KHÔNG đưa vào các chỉ thị ép buộc hình thức như "ghi âm cách đọc tập hợp", "quay video đọc quy tắc", "dùng AI tìm ví dụ tập hợp số tự nhiên".
 - Cột TRÁI mục d): Kịch bản phân vai rõ ràng đủ 4 bước CV 5512:
   + **GV:** Nói câu lệnh giao nhiệm vụ về nhà trực tiếp trong ngoặc kép "...", hướng dẫn cách hoàn thành, cách nộp sản phẩm ở tiết sau.
   + **HS:** Lắng nghe, ghi nhận nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.
-- Cột PHẢI mục d): Nội dung hướng dẫn học ở nhà chốt cho HS ghi vở (đánh số rõ ràng **1. Học bài:**, **2. Làm bài:**, **3. Chuẩn bị bài:**).
+- Cột PHẢI mục d): Nội dung hướng dẫn học ở nhà chốt cho HS ghi vở (đánh số rõ ràng **1. Học bài:**, **2. Làm bài tập:**, **3. Chuẩn bị bài mới:**, và Mẫu Prompt AI nếu có).
 - CHỈ xuất ĐÚNG MỘT khối \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\` với đủ a) b) c) d). CẤM lặp lại tiêu đề E. CẤM copy mục E có trong ngữ cảnh tiến trình dạy học.
 
 ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})
@@ -696,22 +700,22 @@ ${ACTIVITY_TABLE_CONTRACT}
 - Rèn luyện kĩ năng giải bài tập, phát triển tư duy mở rộng và chuẩn bị tâm thế, học liệu cho bài học tiếp theo.
 
 ### b) Nội dung:
-- 1. Học bài: Ôn tập các định nghĩa, quy tắc, công thức trọng tâm và vẽ sơ đồ tư duy (mindmap) tóm tắt toàn bộ nội dung bài học vào vở ghi.
-- 2. Làm bài:
-  + Hoàn thành các bài tập còn lại trong SGK và Sách bài tập (SBT) môn {subject}.
-  + Bài tập mở rộng / Nâng cao: Đưa ra 1–2 bài toán/nhiệm vụ mở rộng có tính tư duy cao dành cho học sinh khá, giỏi kèm gợi ý ngắn gọn.
-- 3. Chuẩn bị bài: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng học tập cần thiết.
+- 1. Học bài: Ôn tập các định nghĩa, quy tắc, công thức trọng tâm và vẽ sơ đồ tư duy (Mindmap) tóm tắt toàn bộ nội dung bài học vào vở ghi.
+- 2. Làm bài tập:
+  + Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) môn {subject}. CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
+  + Bài tập mở rộng / Nâng cao: Đưa ra 1 bài toán/nhiệm vụ mở rộng có tính tư duy cao dành cho học sinh khá, giỏi kèm gợi ý ngắn gọn.
+- 3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng học tập cần thiết.
 {ai_homework_prompt_note}
 
 ### c) Sản phẩm:
 - Sơ đồ tư duy tóm tắt bài học trong vở ghi của học sinh.
-- Lời giải bài tập SGK, SBT và bài tập mở rộng/nâng cao trong vở bài tập.
+- Lời giải các bài tập còn lại của SGK, SBT và bài tập mở rộng/nâng cao trong vở bài tập.
 - Phần chuẩn bị bài mới sẵn sàng cho tiết học tiếp theo.
 
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Trình chiếu slide hướng dẫn về nhà và nêu rõ câu lệnh trực tiếp: "Các em về nhà hoàn thành các nhiệm vụ: (1) Học bài và vẽ sơ đồ tư duy ôn tập, (2) Làm bài tập trong SGK, SBT và bài tập mở rộng, (3) Chuẩn bị bài mới...". **HS:** Lắng nghe, ghi nhận các nhiệm vụ và thời hạn hoàn thành vào vở.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Tự giác học bài, làm bài tập và chuẩn bị bài mới tại nhà theo hướng dẫn. **GV:** Theo dõi, hỗ trợ giải đáp thắc mắc qua kênh trực tuyến khi cần thiết.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Nộp vở bài tập và sơ đồ tư duy vào đầu tiết học sau; trao đổi, đối chiếu kết quả với bạn. **GV:** Kiểm tra xác suất hoặc giao cán sự lớp/tổ trưởng kiểm tra sản phẩm về nhà.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần tự học ở nhà, tuyên dương các bạn làm tốt bài tập nâng cao và giải đáp thắc mắc ở đầu tiết sau. **HS:** Rút kinh nghiệm và hoàn thiện sản phẩm học tập. | **Hướng dẫn học ở nhà**<br>**1. Học bài:**<br>- Ôn tập kiến thức bài học và vẽ sơ đồ tư duy.<br>**2. Làm bài:**<br>- Hoàn thành bài tập SGK & SBT.<br>- Bài tập mở rộng / Nâng cao: (kèm gợi ý).<br>**3. Chuẩn bị bài:**<br>- Đọc trước bài mới và chuẩn bị học liệu. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Trình chiếu slide hướng dẫn về nhà và nêu rõ câu lệnh trực tiếp: "Các em về nhà hoàn thành các nhiệm vụ: (1) Học bài và vẽ sơ đồ tư duy ôn tập, (2) Làm các bài tập còn lại trong SGK, SBT và bài tập mở rộng, (3) Chuẩn bị bài mới...". **HS:** Lắng nghe, ghi nhận các nhiệm vụ và thời hạn hoàn thành vào vở.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Tự giác học bài, làm bài tập và chuẩn bị bài mới tại nhà theo hướng dẫn. **GV:** Theo dõi, hỗ trợ giải đáp thắc mắc qua kênh trực tuyến khi cần thiết.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Nộp vở bài tập và sơ đồ tư duy vào đầu tiết học sau; trao đổi, đối chiếu kết quả với bạn. **GV:** Kiểm tra xác suất hoặc giao cán sự lớp/tổ trưởng kiểm tra sản phẩm về nhà.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần tự học ở nhà, tuyên dương các bạn làm tốt bài tập nâng cao và giải đáp thắc mắc ở đầu tiết sau. **HS:** Rút kinh nghiệm và hoàn thiện sản phẩm học tập. | **Hướng dẫn học ở nhà**<br>**1. Học bài:**<br>- Ôn tập kiến thức bài học và vẽ sơ đồ tư duy (Mindmap).<br>**2. Làm bài tập:**<br>- Hoàn thành các bài tập còn lại trong SGK & SBT.<br>- Bài tập mở rộng / Nâng cao: (kèm gợi ý).<br>**3. Chuẩn bị bài mới:**<br>- Đọc trước bài mới và chuẩn bị học liệu. |`,
 
   // 1-CLICK HOẠT ĐỘNG A -> E (ACTIVITIES AE)
   GENERATE_ACTIVITIES_AE: `Đọc PDF/ảnh SGK đính kèm và soạn toàn bộ hoạt động A–E môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512.
@@ -764,17 +768,18 @@ PHA B — HÌNH THÀNH KIẾN THỨC:
 
 PHA C — LUYỆN TẬP:
 - Tiêu đề: \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C})\`.
-- Chép rõ đề và giải chi tiết các bài tập có trong SGK vào Cột Phải. Cột Trái phân vai rõ ràng.
+- Giáo viên chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi trong SGK để chữa chi tiết tại lớp (các bài tập còn lại dành cho Hoạt động E). Chép rõ đề và giải chi tiết vào Cột Phải. Cột Trái phân vai rõ ràng.
 - Khi có NLS/AI: Ứng dụng phần mềm chuyên dụng (GeoGebra, bảng tính) hoặc AI để gợi mở / kiểm tra đối chiếu lời giải, phản biện lỗi sai. CẤM hỏi lý thuyết AI suông.
 
 PHA D — VẬN DỤNG:
 - Tiêu đề: \`## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D})\`.
-- Bám sát bài vận dụng trong SGK, trình bày mô hình hóa và lời giải chuẩn.
+- Khóa nhiệm vụ vận dụng thực tế hoặc phiếu Exit Ticket thực hiện, thu hồi và chốt ngay tại lớp. Trình bày mô hình hóa và lời giải chuẩn. Cột Trái 4 bước.
 - Khi có NLS/AI: Vận dụng công cụ số/AI chuyên ngành giải quyết bài toán thực tế, đánh giá và kiểm chứng tính khả thi. CẤM hỏi lý thuyết AI suông.
 
 PHA E — HƯỚNG DẪN VỀ NHÀ:
 - Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`.
-- Đủ a) Mục tiêu, b) Nội dung (1. Học bài/sơ đồ tư duy, 2. Làm bài tập SGK/SBT & bài tập mở rộng/nâng cao kèm gợi ý, 3. Chuẩn bị bài mới; có thêm Prompt AI nếu bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, 4 bước phân vai GV-HS).
+- Đủ a) Mục tiêu, b) Nội dung (Bố cục 3 phần rõ ràng: 1. Học bài/sơ đồ tư duy Mindmap, 2. Làm bài tập: hoàn thành các bài tập CÒN LẠI trong SGK chưa chữa ở Pha C/D, bài tập SBT và 1 bài mở rộng/nâng cao kèm gợi ý - CẤM TUYỆT ĐỐI giao lại bài đã chữa ở C/D, 3. Chuẩn bị bài mới; có thêm Mẫu Prompt AI an toàn làm gia sư nếu bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, 4 bước phân vai GV-HS).
+- LOẠI BỎ TRIỆT ĐỂ các yêu cầu hình thức (ghi âm, quay video, dùng AI tìm ví dụ suông...).
 
 CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừng ở đầu/cuối bài.`,
 
@@ -829,17 +834,18 @@ PHA B — HÌNH THÀNH KIẾN THỨC:
 
 PHA C — LUYỆN TẬP:
 - Tiêu đề: \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C})\`.
-- Chép rõ đề và giải chi tiết các bài tập có trong SGK vào Cột Phải. Cột Trái phân vai rõ ràng.
+- Giáo viên chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi trong SGK để chữa chi tiết tại lớp (các bài tập còn lại dành cho Hoạt động E). Chép rõ đề và giải chi tiết vào Cột Phải. Cột Trái phân vai rõ ràng.
 - Khi có NLS/AI: Ứng dụng phần mềm chuyên dụng (GeoGebra, bảng tính) hoặc AI để gợi mở / kiểm tra đối chiếu lời giải, phản biện lỗi sai. CẤM hỏi lý thuyết AI suông.
 
 PHA D — VẬN DỤNG:
 - Tiêu đề: \`## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D})\`.
-- Bám sát bài vận dụng trong SGK, trình bày mô hình hóa và lời giải chuẩn.
+- Khóa nhiệm vụ vận dụng thực tế hoặc phiếu Exit Ticket thực hiện, thu hồi và chốt ngay tại lớp. Trình bày mô hình hóa và lời giải chuẩn. Cột Trái 4 bước.
 - Khi có NLS/AI: Vận dụng công cụ số/AI chuyên ngành giải quyết bài toán thực tế, đánh giá và kiểm chứng tính khả thi. CẤM hỏi lý thuyết AI suông.
 
 PHA E — HƯỚNG DẪN VỀ NHÀ:
 - Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`.
-- Đủ a) Mục tiêu, b) Nội dung (1. Học bài/sơ đồ tư duy, 2. Làm bài tập SGK/SBT & bài tập mở rộng/nâng cao kèm gợi ý, 3. Chuẩn bị bài mới; có thêm Prompt AI nếu bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, 4 bước phân vai GV-HS).
+- Đủ a) Mục tiêu, b) Nội dung (Bố cục 3 phần rõ ràng: 1. Học bài/sơ đồ tư duy Mindmap, 2. Làm bài tập: hoàn thành các bài tập CÒN LẠI trong SGK chưa chữa ở Pha C/D, bài tập SBT và 1 bài mở rộng/nâng cao kèm gợi ý - CẤM TUYỆT ĐỐI giao lại bài đã chữa ở C/D, 3. Chuẩn bị bài mới; có thêm Mẫu Prompt AI an toàn làm gia sư nếu bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, 4 bước phân vai GV-HS).
+- LOẠI BỎ TRIỆT ĐỂ các yêu cầu hình thức (ghi âm, quay video, dùng AI tìm ví dụ suông...).
 
 CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừng ở đầu/cuối bài.`,
 
@@ -931,7 +937,7 @@ YÊU CẦU: Tạo 2 đến 3 Phiếu Học Tập (PHT) hoàn chỉnh với bản
 - Vẽ sơ đồ tư duy (Mindmap) tóm tắt toàn bộ nội dung bài học vào vở ghi.
 
 ## 2. Bài tập tự luyện tại nhà
-- Hoàn thành các bài tập còn lại trong SGK và Sách bài tập môn {subject}.
+- Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập môn {subject}. CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
 - **Bài tập mở rộng / Nâng cao (Dành cho HS khá, giỏi):** Đưa ra 1 bài toán/nhiệm vụ mở rộng có tính tư duy cao kèm gợi ý ngắn gọn.
 
 ## 3. Nhiệm vụ chuẩn bị cho bài học tiếp theo
@@ -939,9 +945,8 @@ YÊU CẦU: Tạo 2 đến 3 Phiếu Học Tập (PHT) hoàn chỉnh với bản
 - Chuẩn bị đầy đủ dụng cụ học tập và tìm hiểu các ví dụ thực tế liên quan đến bài học tiếp theo.
 
 ## 4. Gợi ý Câu lệnh Prompt AI hỗ trợ học sinh tự học tại nhà an toàn (CHỈ tạo khi bối cảnh sư phạm bật năng lực AI)
-- *Mẫu Prompt 1 (Giải thích lại khái niệm):* "Em là học sinh lớp {grade}, em chưa hiểu rõ về [khái niệm trong bài]. Bạn hãy giải thích lại bằng một ví dụ thực tế gần gũi, đơn giản nhất nhé!"
-- *Mẫu Prompt 2 (Gợi ý từng bước):* "Em đang giải bài tập [nội dung bài tập]. Em chưa biết bắt đầu từ đâu, bạn hãy cho em 2 câu hỏi gợi ý để em tự tìm ra hướng giải, đừng giải hộ em nhé!"
-- *Mẫu Prompt 3 (Kiểm tra lời giải):* "Đây là lời giải của em cho bài tập [nội dung]: [lời giải]. Bạn hãy nhận xét xem em đã làm đúng chưa và chỉ ra bước nào cần khắc phục nhé!"`
+- *Mẫu Prompt 1 (Gia sư gợi mở tư duy khi gặp khó khăn):* "Em là học sinh lớp {grade}, em đang tự học bài {topic} và gặp khó khăn ở [nội dung bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự suy nghĩ tìm ra cách giải, đừng giải hộ em nhé!"
+- *Mẫu Prompt 2 (Kiểm tra và phản biện cách hiểu):* "Đây là sơ đồ tư duy / cách hiểu của em về bài học {topic}: [nội dung]. Bạn hãy nhận xét xem em đã nắm đúng bản chất chưa và góp ý giúp em hoàn thiện nhé!"`
 };
 
 function getSystemRole(subjectId, grade) {
@@ -1168,7 +1173,7 @@ function getPromptTemplate(templateKey, context) {
   const subsections = extractTextbookSubsections(rawTextbook);
   const budgets = calculateActivityTimeBudgets(context.duration, subsections.length, context.grade);
   const aiHomeworkPromptNote = context.aiCompetencyEnabled
-    ? `- 5. Hướng dẫn Prompt AI an toàn: Cung cấp 1–2 mẫu câu lệnh Prompt AI an toàn hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai trò gia sư gợi mở câu hỏi định hướng, TUYỆT ĐỐI không giải hộ bài tập).`
+    ? `- 4. Hướng dẫn Prompt AI an toàn: Mẫu Prompt AI an toàn mẫu mực hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai gia sư gợi mở tư duy khi gặp khó khăn, TUYỆT ĐỐI không giải bài hộ):\n  + Mẫu Prompt: "Em là học sinh lớp ${context.grade || '6'}, em đang tự học bài ${context.topic || ''} và gặp khó khăn ở [nêu bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự tìm ra cách giải, đừng giải hộ em nhé!"`
     : '';
 
   // Replace placeholders an toàn
@@ -1267,19 +1272,19 @@ Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có
       result += `\n\nLƯU Ý QUAN TRỌNG VỀ NGUỒN BÀI TẬP: Vì dữ liệu SGK đã được cung cấp ở trên, CẤM ghi "[Không có trong tài liệu đã cung cấp]". BẮT BUỘC phải trích xuất và giải chi tiết các bài tập có trong nguồn.`;
     }
     if (templateKey === 'GENERATE_ACTIVITY_C' && lessonMap.practice) {
-      result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK (ánh xạ 1-1, không bỏ bài, không bịa đề):\n"""\n${lessonMap.practice}\n"""`;
+      result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK (chọn 1-2 bài tập trọng tâm để chữa trên lớp, các bài còn lại dành cho Hoạt động E - Hướng dẫn về nhà):\n"""\n${lessonMap.practice}\n"""`;
     }
     if (templateKey === 'GENERATE_ACTIVITY_D' && lessonMap.application) {
-      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK (ánh xạ 1-1, không bịa tình huống ngoài sách):\n"""\n${lessonMap.application}\n"""`;
+      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK (thực hiện và chốt ngay tại lớp, không kéo dài sang bài tập về nhà):\n"""\n${lessonMap.application}\n"""`;
     }
   }
 
   if (templateKey === 'GENERATE_ACTIVITIES_AD' || templateKey === 'GENERATE_ACTIVITIES_AE') {
     if (lessonMap.practice) {
-      result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK cho pha C (ánh xạ 1-1):\n"""\n${lessonMap.practice}\n"""`;
+      result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK cho pha C (chọn 1-2 bài tập trọng tâm để chữa trên lớp, các bài còn lại dành cho pha E):\n"""\n${lessonMap.practice}\n"""`;
     }
     if (lessonMap.application) {
-      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK cho pha D (ánh xạ 1-1):\n"""\n${lessonMap.application}\n"""`;
+      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK cho pha D (thực hiện và chốt ngay tại lớp):\n"""\n${lessonMap.application}\n"""`;
     }
   }
 

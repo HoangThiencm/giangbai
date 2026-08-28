@@ -4096,6 +4096,12 @@ function buildIntegrationActivityConstraint(phase) {
   const digitalOn = Boolean(context.integrations.digital);
   const aiOn = Boolean(context.integrations.ai);
   if (!digitalOn && !aiOn) return "";
+
+  if (phase === "E") {
+    if (!aiOn) return "";
+    return `\nTÍCH HỢP AI HỖ TRỢ TỰ HỌC TẠI NHÀ (Pha E): Cung cấp 1 mẫu Prompt AI an toàn mẫu mực đóng vai trò gia sư gợi mở tư duy khi học sinh tự học tại nhà gặp khó khăn, TUYỆT ĐỐI không giải bài hộ. TUYỆT ĐỐI CẤM các yêu cầu NLS/AI hình thức (như ghi âm, quay video, dùng AI tìm ví dụ suông).`;
+  }
+
   const nls = standardsOfKind("digital").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
   const ai = standardsOfKind("ai").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
   
@@ -4114,8 +4120,19 @@ function buildIntegrationActivityConstraint(phase) {
 
 function buildPhasePedagogyContext(phase) {
   if (phase === "E") {
-    return `\nMỤC E — HƯỚNG DẪN VỀ NHÀ: Đây không phải hoạt động dạy học theo bốn bước. Viết ngắn gọn, chỉ giao việc bằng 3 gạch đầu dòng: (1) học/ôn nội dung trọng tâm, (2) làm bài SGK hoặc SBT có số bài-trang nếu nguồn cung cấp, (3) chuẩn bị bài mới. Nêu sản phẩm hoặc thời điểm nộp trong đúng một câu khi cần. Không dùng bảng, không phân vai GV-HS, không tạo mục a), b), c), d).`;
+    const integrationE = buildIntegrationActivityConstraint("E");
+    return `\nYÊU CẦU ĐẶC THÙ CHO HOẠT ĐỘNG E (HƯỚNG DẪN VỀ NHÀ):
+- Đủ 4 mục a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (Đúng 1 bảng Markdown 2 cột, 1 hàng duy nhất).
+- Bố cục nội dung ở mục b) và Cột Phải Bảng d) BẮT BUỘC gồm 3 phần rõ ràng:
+  1. Học bài: Ôn tập kiến thức cốt lõi và tóm tắt bằng sơ đồ tư duy (Mindmap) vào vở ghi.
+  2. Làm bài tập: Hoàn thành các bài tập CÒN LẠI trong SGK (chưa làm/chữa ở Hoạt động C và D), các bài tập tương ứng trong Sách bài tập (SBT) và 1 bài tập mở rộng/nâng cao phân hóa (kèm gợi ý). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa ở Hoạt động C hoặc Hoạt động D.
+  3. Chuẩn bị bài mới: Đọc trước bài tiếp theo trong SGK và chuẩn bị đồ dùng học tập cần thiết.
+- TUYỆT ĐỐI LOẠI BỎ mọi yêu cầu hình thức (như ghi âm cách đọc, quay video, bắt dùng AI tìm ví dụ suông).
+- Cột Trái Bảng d): Đủ 4 bước CV 5512 phân vai rõ ràng:
+  + **GV:** Nói câu lệnh giao việc trong ngoặc kép "...", hướng dẫn cách hoàn thành, thời hạn nộp.
+  + **HS:** Lắng nghe, ghi nhận nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.${integrationE}`;
   }
+
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
   const techItems = (selected.techniques || []).map(id => pedagogyCatalogItem("techniques", id) || { id, label: pedagogyLabel("techniques", id), description: "" });
   const activityLabels = (appState.teachingContext.subjectActivities || []).map(id => pedagogyLabel("activities", id)).filter(Boolean);
@@ -4135,16 +4152,7 @@ function buildPhasePedagogyContext(phase) {
   }
   if (activityLabels.length) parts.push(`Hoạt động đặc thù đã chọn: ${activityLabels.join("; ")}. Chỉ triển khai nếu phù hợp pha ${phase}.`);
 
-  const scriptRequirement = phase === "E"
-    ? `\nYÊU CẦU ĐẶC THÙ CHO HOẠT ĐỘNG E (HƯỚNG DẪN VỀ NHÀ):
-- Mục b) Nội dung và Cột Phải Bảng d) BẮT BUỘC theo cấu trúc chuẩn sư phạm:
-  1. Học bài: Ôn tập kiến thức cốt lõi và tóm tắt bằng sơ đồ tư duy (mindmap) vào vở ghi.
-  2. Làm bài: Hoàn thành bài tập SGK & SBT (nêu số bài, trang cụ thể) và giải bài tập mở rộng / nâng cao phân hóa dành cho HS khá/giỏi (kèm gợi ý).
-  3. Chuẩn bị bài: Đọc trước bài mới trong SGK và chuẩn bị đồ dùng/dụng cụ học tập.
-- Cột Trái Bảng d): Đủ 4 bước CV 5512 phân vai rõ ràng:
-  + **GV:** Nói câu lệnh giao việc trong ngoặc kép "...", hướng dẫn cách hoàn thành, thời hạn nộp.
-  + **HS:** Lắng nghe, ghi nhận nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.`
-    : `\nYÊU CẦU KỊCH BẢN THỰC CHIẾN CỘT TRÁI BẢNG d) (Pha ${phase}):
+  const scriptRequirement = `\nYÊU CẦU KỊCH BẢN THỰC CHIẾN CỘT TRÁI BẢNG d) (Pha ${phase}):
 - Bắt buộc đủ 4 bước CV 5512 (ngăn các bước bằng <br>):
   + **GV:** Nói câu gì cụ thể trong ngoặc kép "..." (câu lệnh giao nhiệm vụ, câu hỏi dẫn dắt, câu hỏi gợi mở, câu hỏi phân hóa); Làm gì cụ thể (phát đồ dùng/phiếu học tập, chia nhóm, quan sát phát hiện lỗi sai điển hình: ..., can thiệp hỗ trợ phân hóa).
   + **HS:** Làm gì cụ thể theo từng pha (thao tác cá nhân X phút vào nháp/phiếu -> thảo luận cặp/nhóm Y phút -> tạo sản phẩm trung gian: bảng phụ, sơ đồ, phiếu học tập, sticky note...); Báo cáo và phản biện thế nào.
@@ -4379,6 +4387,7 @@ function hasRoleNearMarker(text, markerRe) {
 }
 
 function assertActivityIntegrations(phase, text) {
+  if (phase === "E") return; // Pha E là hướng dẫn tự học ở nhà, không bắt buộc marker NLS/AI
   const context = normalizeTeachingContext(appState.teachingContext);
   const digitalOn = Boolean(context.integrations.digital);
   const aiOn = Boolean(context.integrations.ai);

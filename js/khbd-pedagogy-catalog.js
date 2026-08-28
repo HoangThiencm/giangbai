@@ -768,20 +768,20 @@ const KHBD_PEDAGOGY_CATALOG = {
       description: "Ghi nhận nhanh mức độ đạt",
       executionScript: {
         step1: {
-          gv: 'GV phát phiếu Exit Ticket (gồm 1-2 câu hỏi chốt kiến thức và tự đánh giá): "Các em hoàn thành phiếu này trong 3 phút và nộp lại cho thầy/cô trước khi rời lớp...", định hướng làm bài.',
+          gv: 'GV phát phiếu Exit Ticket (gồm 1-2 câu hỏi chốt kiến thức và tự đánh giá): "Các em hoàn thành phiếu này trong 3 phút và nộp lại cho thầy/cô...", định hướng làm bài.',
           hs: "HS nhận phiếu Exit Ticket, chuẩn bị bút viết."
         },
         step2: {
-          gv: "HS làm bài độc lập, ghi rõ họ tên và đáp án vào phiếu (3 phút). GV đứng tại cửa hoặc đi bao quát thu phiếu, quan sát nhanh tỉ lệ làm đúng.",
-          hs: "HS hoàn thành phiếu Exit Ticket hoàn toàn độc lập và nộp lại cho GV."
+          gv: "GV bao quát lớp, quan sát nhanh tỉ lệ làm đúng và tiến hành thu hồi toàn bộ phiếu Exit Ticket của học sinh.",
+          hs: "HS làm bài độc lập, ghi rõ họ tên và đáp án vào phiếu trong 3 phút rồi nộp lại cho GV tại lớp."
         },
         step3: {
-          gv: 'GV phản hồi nhanh tổng quan không khí làm bài của lớp: "Thầy/cô nhận thấy đa số các em đã nắm vững phần...".',
+          gv: 'GV phản hồi nhanh tổng quan kết quả: "Thầy/cô nhận thấy đa số các em đã nắm vững phần...", tuyên dương và lưu ý lỗi sai phổ biến.',
           hs: "HS lắng nghe nhận xét nhanh của GV."
         },
         step4: {
-          gv: "GV dặn dò nhiệm vụ về nhà dựa trên khảo sát Exit Ticket.",
-          hs: "HS rời lớp sau khi đã nộp phiếu cho GV."
+          gv: "GV tổng kết, chuẩn hóa đáp án nhanh của phiếu Exit Ticket ngay tại lớp và đánh giá mức độ đạt mục tiêu của tiết học.",
+          hs: "HS đối chiếu kết quả nhanh, tự rút ra kinh nghiệm và hoàn thành hoạt động vận dụng tại lớp."
         }
       }
     },
