@@ -3561,15 +3561,11 @@ function rewriteMathSpanForVietnamese(inner, display) {
 }
 
 function unwrapVietnameseMathForKatex(markdown) {
-  let text = String(markdown || "");
-  text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, inner) => rewriteMathSpanForVietnamese(inner, true));
-  text = text.replace(/\\\[([\s\S]+?)\\\]/g, (_, inner) => rewriteMathSpanForVietnamese(inner, true));
-  text = text.replace(/\\\(([\s\S]+?)\\\)/g, (_, inner) => rewriteMathSpanForVietnamese(inner, false));
-  text = text.replace(/\$([^$\n]+)\$/g, (full, inner) => {
-    if (!VN_LETTER_RE.test(inner)) return full;
-    return rewriteMathSpanForVietnamese(inner, false);
-  });
-  return text;
+  // KaTeX hỗ trợ Unicode trong \text{...}. Không tách công thức có tiếng Việt
+  // thành các mảnh rời vì sẽ làm vỡ tập hợp/điều kiện như
+  // $U = \{x \in \mathbb{N} \mid x\ \text{chia hết cho}\ 3\}$.
+  // Giữ nguyên toàn bộ cặp dấu phân cách để KaTeX xử lý như một biểu thức.
+  return String(markdown || "");
 }
 
 function renderMathPreview(markdownText, targetElementId) {

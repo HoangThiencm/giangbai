@@ -71,6 +71,7 @@ class DocxGenerator {
       "\\emptyset": "∅", "\\infty": "∞", "\\forall": "∀", "\\exists": "∃",
       "\\perp": "⊥", "\\parallel": "∥", "\\angle": "∠", "\\triangle": "△",
       "\\degree": "°", "^{\\circ}": "°", "\\rightarrow": "→", "\\Rightarrow": "⇒",
+      "\\mid": "∣", "\\vert": "|", "\\Vert": "‖", "\\colon": ":", "\\setminus": "∖",
       "\\Leftrightarrow": "⇔", "\\cdots": "...", "\\ldots": "...", "\\text": "",
       "\\mathbf": "", "\\mathrm": "", "\\left": "", "\\right": "", "\\,": " ", "\\;": " ",
       "\\quad": "  ", "\\qquad": "    "
@@ -102,6 +103,7 @@ class DocxGenerator {
       "Theta", "lambda", "sigma", "Sigma", "omega", "Omega", "nabla", "partial", "infty",
       "angle", "perp", "bullet", "degree", "right", "left", "frac", "sqrt", "beta", "epsilon",
       "varepsilon", "pi", "Pi", "phi", "Phi", "psi", "rho", "mu", "nu", "neq", "leq", "geq",
+      "mid", "vert", "Vert", "colon", "setminus",
       "dots", "circ", "hbar", "not", "in", "ni", "ne", "le", "ge", "pm", "mp", "ast", "div",
       "cup", "cap", "sim", "to", "ell", "sin", "cos", "tan", "cot", "sec", "csc", "log", "ln",
       "lg", "lim", "max", "min", "gcd", "lcm", "det", "dim", "ker", "hom", "arg", "exp", "sinh",
@@ -153,6 +155,7 @@ class DocxGenerator {
       triangle: "△", angle: "∠", parallel: "∥", perp: "⊥", cup: "∪", cap: "∩",
       emptyset: "∅", infty: "∞", forall: "∀", exists: "∃", partial: "∂", nabla: "∇",
       subset: "⊂", subseteq: "⊆", supset: "⊃", sim: "∼", approx: "≈", equiv: "≡",
+      mid: "∣", vert: "|", Vert: "‖", colon: ":", setminus: "∖",
       cdots: "⋯", ldots: "…", dots: "…", degree: "°", ell: "ℓ", hbar: "ℏ",
       lbrack: "[", rbrack: "]", lbrace: "{", rbrace: "}", lparen: "(", rparen: ")"
     };
