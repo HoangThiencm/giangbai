@@ -252,8 +252,11 @@
             <div id="dropzoneContainerPpct" class="dropzone-container dropzone-ppct">
               <div class="dropzone-icon">📑</div>
               <div class="dropzone-text">
-                <h4>Dán ảnh hoặc Chọn file PDF / Ảnh Phân phối chương trình (PPCT)</h4>
+                <h4>Chọn file PDF / Ảnh Phân phối chương trình (PPCT)</h4>
                 <p>Đính kèm tài liệu PPCT (Phụ lục 3 CV 5512) để AI tự động nhận diện bài dạy, số tiết, tuần dạy và ghi chú tích hợp.</p>
+                <button id="btnPastePpct" class="btn btn-outline-primary dropzone-paste-button" type="button">
+                  <i data-lucide="clipboard-paste"></i> Dán ảnh PPCT (Ctrl+V)
+                </button>
               </div>
               <input type="file" id="fileInputPpct" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
             </div>

@@ -501,6 +501,16 @@ body {
   color: var(--text-muted);
 }
 
+.dropzone-paste-button {
+  margin-top: 0.75rem;
+}
+
+.dropzone-paste-button.is-armed {
+  color: #ffffff;
+  border-color: #7c3aed;
+  background: #7c3aed;
+}
+
 .image-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -1571,4 +1581,3 @@ body {
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border);
 }
-

@@ -93,6 +93,8 @@ const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "i
 // Biến lưu trữ tài liệu PDF tạm thời
 let currentPdfFile = null;
 let currentPdfDoc = null;
+let ppctPasteArmed = false;
+let ppctPasteArmTimer = null;
 
 // CÁC TÊN TIÊU ĐỀ HOẠT ĐỘNG
 const ACTIVITY_TITLES = {
@@ -2071,6 +2073,15 @@ function setupEventListeners() {
     });
   }
 
+  const btnPastePpct = document.getElementById("btnPastePpct");
+  if (btnPastePpct) {
+    btnPastePpct.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      armPpctPaste(btnPastePpct);
+    });
+  }
+
   // Lắng nghe Paste ảnh (Ctrl + V)
   window.addEventListener("paste", handleGlobalPaste);
 
@@ -2401,6 +2412,20 @@ function handleGlobalPaste(e) {
       }
     }
   }
+
+  if (imageFiles.length === 0) return;
+
+  if (ppctPasteArmed) {
+    e.preventDefault();
+    clearPpctPasteArm();
+    handlePpctFiles(imageFiles);
+    showToast(`Đã dán ${imageFiles.length} ảnh PPCT. Bấm “Đọc PPCT” để phân tích.`, "success");
+    return;
+  }
+
+  const target = e.target;
+  const isTyping = target && (target.matches?.("textarea, input, [contenteditable='true']") || target.isContentEditable);
+  if (isTyping) return;
 
   if (imageFiles.length > 0) {
     if (appState.activeTab !== "tabVision") {
@@ -2874,10 +2899,10 @@ async function handlePpctFiles(files) {
     reader.onload = (e) => {
       appState.ppctImages.push({
         id: "ppct_img_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
-        name: file.name || `Ảnh PPCT ${appState.ppctImages.length + 1}`,
+        name: file._isPasted ? `[Ảnh PPCT dán] ${new Date().toLocaleTimeString()}` : (file.name || `Ảnh PPCT ${appState.ppctImages.length + 1}`),
         mimeType: file.type || "image/jpeg",
         size: file.size,
-        sourceType: "upload",
+        sourceType: file._isPasted ? "paste" : "upload",
         dataUrl: e.target.result
       });
       renderPpctGallery();
@@ -5630,6 +5655,33 @@ function hideProgress() {
     container.classList.remove("show");
     container.style.display = "none";
   }
+}
+
+function clearPpctPasteArm() {
+  ppctPasteArmed = false;
+  if (ppctPasteArmTimer) clearTimeout(ppctPasteArmTimer);
+  ppctPasteArmTimer = null;
+  const button = document.getElementById("btnPastePpct");
+  if (button) {
+    button.classList.remove("is-armed");
+    button.innerHTML = '<i data-lucide="clipboard-paste"></i> Dán ảnh PPCT (Ctrl+V)';
+    if (window.lucide) window.lucide.createIcons({ attrs: { "stroke-width": 2 } });
+  }
+}
+
+function armPpctPaste(button) {
+  ppctPasteArmed = true;
+  if (ppctPasteArmTimer) clearTimeout(ppctPasteArmTimer);
+  button.classList.add("is-armed");
+  button.innerHTML = '<i data-lucide="clipboard-check"></i> Đang chờ Ctrl+V…';
+  if (window.lucide) window.lucide.createIcons({ attrs: { "stroke-width": 2 } });
+  ppctPasteArmTimer = setTimeout(() => {
+    if (ppctPasteArmed) {
+      clearPpctPasteArm();
+      showToast("Đã hết thời gian chờ dán ảnh PPCT.", "info");
+    }
+  }, 30000);
+  showToast("Hãy chụp đoạn PPCT rồi nhấn Ctrl+V trong 30 giây.", "info", 4500);
 }
 
 function showToast(message, type = "info", duration = 3500) {
