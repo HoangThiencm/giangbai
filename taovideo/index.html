@@ -52,10 +52,10 @@
             }
         }
     </script>
-    <!-- Google Fonts: Be Vietnam Pro -->
+    <!-- Google Fonts: Be Vietnam Pro, Montserrat, Playfair Display, Oswald, Nunito, Caveat -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Caveat:wght@400;600;700&family=Montserrat:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Oswald:wght@400;600;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- SortableJS for Drag and Drop slides -->
@@ -584,13 +584,344 @@
         </div>
     </div>
 
+    <!-- Modal: Slide Text Overlay & Effects Editor -->
+    <div id="slide-overlay-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 lg:p-6 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-modal">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
+                        <i data-lucide="type" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            Chỉnh Sửa Chữ, Kiểu Dáng & Hiệu Ứng
+                            <span id="modal-slide-badge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">Slide #1</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">Tùy biến chữ nghệ thuật, hiệu ứng xuất hiện và chuyển cảnh trực tiếp trên Canvas</p>
+                    </div>
+                </div>
+                <button id="btn-close-overlay-modal" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable 2-column layout) -->
+            <div class="p-6 overflow-y-auto flex-1 space-y-6">
+                
+                <!-- Section 1: Toggle & Text Input -->
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/70 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="modal-overlay-enabled" checked class="w-4 h-4 rounded text-brand-500 bg-slate-900 border-slate-700 focus:ring-brand-500">
+                            <span>Bật lớp chữ hiển thị trên ảnh</span>
+                        </label>
+                        <span class="text-[11px] text-brand-400 font-medium">Thay đổi được cập nhật xem trực tiếp ngay trên khung video</span>
+                    </div>
+                    <div>
+                        <textarea id="modal-overlay-text" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-500 outline-none leading-relaxed" placeholder="Nhập nội dung tiêu đề, lời thoại hoặc ghi chú cho ảnh này (hỗ trợ xuống dòng)..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Section 2: Quick Style Presets -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
+                        <i data-lucide="wand-2" class="w-3.5 h-3.5 text-amber-400"></i>
+                        Bộ Mẫu Phong Cách 1 Chạm (Quick Presets)
+                    </label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button type="button" class="btn-quick-preset p-2.5 rounded-xl border border-slate-700/80 bg-slate-800/60 hover:bg-brand-600/20 hover:border-brand-500/50 text-left transition flex flex-col gap-1 group" data-preset="cinema">
+                            <span class="text-xs font-semibold text-white group-hover:text-brand-300">🎬 Phụ đề điện ảnh</span>
+                            <span class="text-[10px] text-slate-400">Nền mờ · Chữ trắng · Trượt nhẹ</span>
+                        </button>
+                        <button type="button" class="btn-quick-preset p-2.5 rounded-xl border border-slate-700/80 bg-slate-800/60 hover:bg-brand-600/20 hover:border-brand-500/50 text-left transition flex flex-col gap-1 group" data-preset="hero">
+                            <span class="text-xs font-semibold text-white group-hover:text-brand-300">🔥 Tiêu đề giật gân</span>
+                            <span class="text-[10px] text-slate-400">Font Oswald · Vàng 3D · Pop nảy</span>
+                        </button>
+                        <button type="button" class="btn-quick-preset p-2.5 rounded-xl border border-slate-700/80 bg-slate-800/60 hover:bg-brand-600/20 hover:border-brand-500/50 text-left transition flex flex-col gap-1 group" data-preset="neon">
+                            <span class="text-xs font-semibold text-white group-hover:text-brand-300">⚡ Neon công nghệ</span>
+                            <span class="text-[10px] text-slate-400">Phát sáng Cyan · Glow pulse</span>
+                        </button>
+                        <button type="button" class="btn-quick-preset p-2.5 rounded-xl border border-slate-700/80 bg-slate-800/60 hover:bg-brand-600/20 hover:border-brand-500/50 text-left transition flex flex-col gap-1 group" data-preset="highlight">
+                            <span class="text-xs font-semibold text-white group-hover:text-brand-300">🖍️ Ghi nhớ dạ quang</span>
+                            <span class="text-[10px] text-slate-400">Vệt vàng highlight · Rơi nảy</span>
+                        </button>
+                        <button type="button" class="btn-quick-preset p-2.5 rounded-xl border border-slate-700/80 bg-slate-800/60 hover:bg-brand-600/20 hover:border-brand-500/50 text-left transition flex flex-col gap-1 group" data-preset="banner">
+                            <span class="text-xs font-semibold text-white group-hover:text-brand-300">📰 Bảng tin thanh lịch</span>
+                            <span class="text-[10px] text-slate-400">Playfair Display · Dải ruy băng</span>
+                        </button>
+                        <button type="button" class="btn-quick-preset p-2.5 rounded-xl border border-slate-700/80 bg-slate-800/60 hover:bg-brand-600/20 hover:border-brand-500/50 text-left transition flex flex-col gap-1 group" data-preset="karaoke">
+                            <span class="text-xs font-semibold text-white group-hover:text-brand-300">🎤 Karaoke ca khúc</span>
+                            <span class="text-[10px] text-slate-400">Tô màu lướt theo thời gian</span>
+                        </button>
+                        <button type="button" class="btn-quick-preset p-2.5 rounded-xl border border-slate-700/80 bg-slate-800/60 hover:bg-brand-600/20 hover:border-brand-500/50 text-left transition flex flex-col gap-1 group" data-preset="lecture">
+                            <span class="text-xs font-semibold text-white group-hover:text-brand-300">🎓 Khung bài giảng</span>
+                            <span class="text-[10px] text-slate-400">Khung viền công nghệ · Bounce</span>
+                        </button>
+                        <button type="button" class="btn-quick-preset p-2.5 rounded-xl border border-slate-700/80 bg-slate-800/60 hover:bg-brand-600/20 hover:border-brand-500/50 text-left transition flex flex-col gap-1 group" data-preset="handwritten">
+                            <span class="text-xs font-semibold text-white group-hover:text-brand-300">✍️ Ghi chú viết tay</span>
+                            <span class="text-[10px] text-slate-400">Font Caveat · Máy gõ chữ</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 3: Detailed Customization Grid (2 Columns) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    
+                    <!-- Left Sub-column: Position, Alignment, Font -->
+                    <div class="space-y-5">
+                        
+                        <!-- Position 3x3 Grid & Custom Coordinates -->
+                        <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <label class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                    <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-brand-400"></i> Vị trí hiển thị
+                                </label>
+                                <span id="pos-label-badge" class="text-[10px] font-mono text-brand-300 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20">Dưới giữa</span>
+                            </div>
+
+                            <!-- 3x3 Grid -->
+                            <div class="grid grid-cols-3 gap-1.5 max-w-[220px] mx-auto p-1.5 bg-slate-900 rounded-xl border border-slate-700">
+                                <button type="button" class="btn-pos-grid aspect-square rounded-lg bg-slate-800 hover:bg-brand-600/30 text-[10px] text-slate-300 flex items-center justify-center transition border border-transparent" data-pos="top-left" title="Trên trái">↖</button>
+                                <button type="button" class="btn-pos-grid aspect-square rounded-lg bg-slate-800 hover:bg-brand-600/30 text-[10px] text-slate-300 flex items-center justify-center transition border border-transparent" data-pos="top-center" title="Trên giữa">↑</button>
+                                <button type="button" class="btn-pos-grid aspect-square rounded-lg bg-slate-800 hover:bg-brand-600/30 text-[10px] text-slate-300 flex items-center justify-center transition border border-transparent" data-pos="top-right" title="Trên phải">↗</button>
+                                <button type="button" class="btn-pos-grid aspect-square rounded-lg bg-slate-800 hover:bg-brand-600/30 text-[10px] text-slate-300 flex items-center justify-center transition border border-transparent" data-pos="mid-left" title="Giữa trái">←</button>
+                                <button type="button" class="btn-pos-grid aspect-square rounded-lg bg-slate-800 hover:bg-brand-600/30 text-[10px] text-slate-300 flex items-center justify-center transition border border-transparent" data-pos="center" title="Chính giữa">•</button>
+                                <button type="button" class="btn-pos-grid aspect-square rounded-lg bg-slate-800 hover:bg-brand-600/30 text-[10px] text-slate-300 flex items-center justify-center transition border border-transparent" data-pos="mid-right" title="Giữa phải">→</button>
+                                <button type="button" class="btn-pos-grid aspect-square rounded-lg bg-slate-800 hover:bg-brand-600/30 text-[10px] text-slate-300 flex items-center justify-center transition border border-transparent" data-pos="bottom-left" title="Dưới trái">↙</button>
+                                <button type="button" class="btn-pos-grid aspect-square rounded-lg bg-slate-800 hover:bg-brand-600/30 text-[10px] text-slate-300 flex items-center justify-center transition border border-transparent active-pos" data-pos="bottom-center" title="Dưới giữa">↓</button>
+                                <button type="button" class="btn-pos-grid aspect-square rounded-lg bg-slate-800 hover:bg-brand-600/30 text-[10px] text-slate-300 flex items-center justify-center transition border border-transparent" data-pos="bottom-right" title="Dưới phải">↘</button>
+                            </div>
+
+                            <!-- Custom Coordinate Sliders -->
+                            <div class="pt-2 border-t border-slate-700/60 space-y-2">
+                                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                                    <span>Tọa độ tự do Custom (X, Y):</span>
+                                    <span id="custom-coords-val" class="font-mono text-brand-300">50%, 85%</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 block mb-0.5">Trục X (%)</label>
+                                        <input type="range" id="modal-pos-x" min="5" max="95" value="50" class="w-full accent-brand-500 cursor-pointer">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 block mb-0.5">Trục Y (%)</label>
+                                        <input type="range" id="modal-pos-y" min="5" max="95" value="85" class="w-full accent-brand-500 cursor-pointer">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Text Align -->
+                            <div class="flex items-center justify-between pt-1">
+                                <span class="text-[11px] text-slate-400">Căn lề dòng chữ:</span>
+                                <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-700 gap-1">
+                                    <button type="button" class="btn-text-align px-2.5 py-1 rounded text-xs text-slate-300 hover:text-white" data-align="left">Trái</button>
+                                    <button type="button" class="btn-text-align px-2.5 py-1 rounded text-xs text-brand-400 bg-brand-500/20 font-bold" data-align="center">Giữa</button>
+                                    <button type="button" class="btn-text-align px-2.5 py-1 rounded text-xs text-slate-300 hover:text-white" data-align="right">Phải</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Typography & Color -->
+                        <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-3">
+                            <label class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="type" class="w-3.5 h-3.5 text-brand-400"></i> Kiểu Font & Cỡ Chữ
+                            </label>
+
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1">Bộ font tiếng Việt chuẩn:</label>
+                                <select id="modal-font-family" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                                    <option value="Be Vietnam Pro" style="font-family: 'Be Vietnam Pro', sans-serif;">Be Vietnam Pro (Hiện đại & Chuẩn mực)</option>
+                                    <option value="Montserrat" style="font-family: 'Montserrat', sans-serif;">Montserrat (Mạnh mẽ, Khỏe khoắn)</option>
+                                    <option value="Playfair Display" style="font-family: 'Playfair Display', serif;">Playfair Display (Sang trọng & Nghệ thuật)</option>
+                                    <option value="Oswald" style="font-family: 'Oswald', sans-serif;">Oswald (Tiêu đề nổi bật, Đậm nét)</option>
+                                    <option value="Nunito" style="font-family: 'Nunito', sans-serif;">Nunito (Thân thiện, Dễ thương)</option>
+                                    <option value="Caveat" style="font-family: 'Caveat', cursive;">Caveat (Chữ viết tay mềm mại)</option>
+                                </select>
+                            </div>
+
+                            <!-- Font Size Slider -->
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-[11px] text-slate-400">Cỡ chữ (Font Size):</label>
+                                    <span id="modal-font-size-val" class="text-xs font-bold text-brand-400">46px</span>
+                                </div>
+                                <input type="range" id="modal-font-size" min="20" max="96" step="2" value="46" class="w-full accent-brand-500 cursor-pointer">
+                            </div>
+
+                            <!-- Text Color & Palette -->
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1.5">Màu chữ:</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="modal-text-color" value="#ffffff" class="w-8 h-8 rounded-lg bg-transparent border border-slate-700 cursor-pointer">
+                                    <div class="flex-1 flex items-center gap-1.5 flex-wrap">
+                                        <button type="button" class="color-chip w-6 h-6 rounded-full border border-white/20 bg-white" data-color="#ffffff" title="Trắng"></button>
+                                        <button type="button" class="color-chip w-6 h-6 rounded-full border border-white/20 bg-yellow-300" data-color="#fde047" title="Vàng chanh"></button>
+                                        <button type="button" class="color-chip w-6 h-6 rounded-full border border-white/20 bg-amber-400" data-color="#fbbf24" title="Vàng cam"></button>
+                                        <button type="button" class="color-chip w-6 h-6 rounded-full border border-white/20 bg-sky-400" data-color="#38bdf8" title="Xanh Cyan"></button>
+                                        <button type="button" class="color-chip w-6 h-6 rounded-full border border-white/20 bg-emerald-400" data-color="#4ade80" title="Xanh lá"></button>
+                                        <button type="button" class="color-chip w-6 h-6 rounded-full border border-white/20 bg-pink-400" data-color="#f472b6" title="Hồng neon"></button>
+                                        <button type="button" class="color-chip w-6 h-6 rounded-full border border-white/20 bg-rose-400" data-color="#f87171" title="Đỏ"></button>
+                                        <button type="button" class="color-chip w-6 h-6 rounded-full border border-white/20 bg-slate-900" data-color="#0f172a" title="Đen đậm"></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Sub-column: Background Styles, Animations, Motions & Transitions -->
+                    <div class="space-y-5">
+                        
+                        <!-- Background & Border Style -->
+                        <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-3">
+                            <label class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="palette" class="w-3.5 h-3.5 text-brand-400"></i> Kiểu Nền & Khung Viền
+                            </label>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="border border-slate-700 bg-slate-900/80 p-2 rounded-xl flex items-center gap-2 cursor-pointer hover:border-brand-500 transition style-card" data-style="pill">
+                                    <input type="radio" name="modal-bg-style" value="pill" checked class="accent-brand-500">
+                                    <span class="text-xs text-white">Hộp bo tròn (Pill)</span>
+                                </label>
+                                <label class="border border-slate-700 bg-slate-900/80 p-2 rounded-xl flex items-center gap-2 cursor-pointer hover:border-brand-500 transition style-card" data-style="shadow">
+                                    <input type="radio" name="modal-bg-style" value="shadow" class="accent-brand-500">
+                                    <span class="text-xs text-white">Đổ bóng 3D & Viền</span>
+                                </label>
+                                <label class="border border-slate-700 bg-slate-900/80 p-2 rounded-xl flex items-center gap-2 cursor-pointer hover:border-brand-500 transition style-card" data-style="neon">
+                                    <input type="radio" name="modal-bg-style" value="neon" class="accent-brand-500">
+                                    <span class="text-xs text-white">Phát sáng Neon</span>
+                                </label>
+                                <label class="border border-slate-700 bg-slate-900/80 p-2 rounded-xl flex items-center gap-2 cursor-pointer hover:border-brand-500 transition style-card" data-style="highlight">
+                                    <input type="radio" name="modal-bg-style" value="highlight" class="accent-brand-500">
+                                    <span class="text-xs text-white">Vệt dạ quang</span>
+                                </label>
+                                <label class="border border-slate-700 bg-slate-900/80 p-2 rounded-xl flex items-center gap-2 cursor-pointer hover:border-brand-500 transition style-card" data-style="gradient-banner">
+                                    <input type="radio" name="modal-bg-style" value="gradient-banner" class="accent-brand-500">
+                                    <span class="text-xs text-white">Ruy băng Gradient</span>
+                                </label>
+                                <label class="border border-slate-700 bg-slate-900/80 p-2 rounded-xl flex items-center gap-2 cursor-pointer hover:border-brand-500 transition style-card" data-style="boxed-border">
+                                    <input type="radio" name="modal-bg-style" value="boxed-border" class="accent-brand-500">
+                                    <span class="text-xs text-white">Khung viền vi tính</span>
+                                </label>
+                                <label class="border border-slate-700 bg-slate-900/80 p-2 rounded-xl flex items-center gap-2 cursor-pointer hover:border-brand-500 transition col-span-2 style-card" data-style="none">
+                                    <input type="radio" name="modal-bg-style" value="none" class="accent-brand-500">
+                                    <span class="text-xs text-white">Không nền (Chữ thuần túy)</span>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between pt-1">
+                                <label class="text-[11px] text-slate-400">Màu nền / Màu nhấn:</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="modal-bg-color" value="#000000" class="w-7 h-7 rounded-lg bg-transparent border border-slate-700 cursor-pointer">
+                                    <span id="modal-bg-color-label" class="text-[10px] font-mono text-slate-400">#000000</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Text Animation -->
+                        <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-3">
+                            <label class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="play-circle" class="w-3.5 h-3.5 text-brand-400"></i> Hiệu Ứng Động Của Chữ (Animation)
+                            </label>
+
+                            <select id="modal-text-animation" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option value="fade">Mờ dần vào (Fade In mượt mà)</option>
+                                <option value="slide-up">Trượt từ dưới lên (Slide Up)</option>
+                                <option value="slide-down">Trượt từ trên xuống (Slide Down)</option>
+                                <option value="slide-left">Trượt từ phải sang trái (Slide Left)</option>
+                                <option value="typewriter">Máy chữ gõ từng ký tự (Typewriter)</option>
+                                <option value="pop">Bật nảy phóng to (Pop In sôi động)</option>
+                                <option value="bounce">Rơi nảy tự nhiên (Bounce In)</option>
+                                <option value="glow">Ánh sáng nhấp nháy (Glow Pulse)</option>
+                                <option value="karaoke">Karaoke lướt màu theo câu đọc</option>
+                                <option value="static">Tĩnh (Hiện cố định suốt slide)</option>
+                            </select>
+                        </div>
+
+                        <!-- Slide Motion & Transition -->
+                        <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-3">
+                            <label class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="film" class="w-3.5 h-3.5 text-brand-400"></i> Chuyển Động Ảnh & Chuyển Cảnh
+                            </label>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[10px] text-slate-400 block mb-1">Chuyển động trong ảnh:</label>
+                                    <select id="modal-slide-motion" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                                        <option value="kenburns">Zoom điện ảnh</option>
+                                        <option value="zoom-in">Phóng to dần</option>
+                                        <option value="zoom-out">Thu nhỏ dần</option>
+                                        <option value="pan-left">Pan sang trái</option>
+                                        <option value="pan-right">Pan sang phải</option>
+                                        <option value="pan-up">Pan lên</option>
+                                        <option value="pan-down">Pan xuống</option>
+                                        <option value="drift-left">Lướt trái</option>
+                                        <option value="drift-right">Lướt phải</option>
+                                        <option value="breathe">Hơi thở điện ảnh</option>
+                                        <option value="pulse">Nhịp phóng nhẹ</option>
+                                        <option value="rotate-left">Xoay nhẹ trái</option>
+                                        <option value="rotate-right">Xoay nhẹ phải</option>
+                                        <option value="tilt-left">Nghiêng trái</option>
+                                        <option value="tilt-right">Nghiêng phải</option>
+                                        <option value="cinematic-left">Cinematic trái</option>
+                                        <option value="cinematic-right">Cinematic phải</option>
+                                        <option value="sweep-top">Quét từ trên</option>
+                                        <option value="sweep-bottom">Quét từ dưới</option>
+                                        <option value="none">Không hiệu ứng</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-slate-400 block mb-1">Chuyển cảnh nối tiếp:</label>
+                                    <select id="modal-slide-transition" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                                        <option value="crossfade">Hòa tan (Crossfade)</option>
+                                        <option value="fade-black">Mờ qua đen (Fade Black)</option>
+                                        <option value="fade-white">Mờ qua trắng (Fade White)</option>
+                                        <option value="slide-left">Trượt trái (Slide Left)</option>
+                                        <option value="slide-right">Trượt phải (Slide Right)</option>
+                                        <option value="slide-up">Trượt lên (Slide Up)</option>
+                                        <option value="slide-down">Trượt xuống (Slide Down)</option>
+                                        <option value="wipe-left">Quét rèm trái (Wipe)</option>
+                                        <option value="wipe-right">Quét rèm phải</option>
+                                        <option value="circle-reveal">Vòng tròn mở rộng</option>
+                                        <option value="zoom-cross">Phóng to hòa tan</option>
+                                        <option value="none">Cắt trực tiếp (None)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3.5 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
+                <button type="button" id="btn-apply-all-overlay" class="px-3.5 py-2 text-xs font-semibold text-brand-300 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 rounded-xl transition flex items-center gap-1.5">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    Áp dụng mẫu này cho TẤT CẢ slide
+                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="btn-save-overlay" class="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 rounded-xl transition shadow-lg shadow-brand-600/30 flex items-center gap-1.5">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        Lưu & Đóng
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
     <!-- Scripts -->
-    <script src="js/utils.js?v=4.0"></script>
+    <script src="js/utils.js?v=7.0"></script>
     <script src="assets/vtts/ort/ort.min.js"></script>
     <script src="js/vietnamese_g2p.js"></script>
-    <script src="js/tts.js?v=6.0"></script>
-    <script src="js/audio-mixer.js?v=4.0"></script>
-    <script src="js/video-renderer.js?v=4.0"></script>
-    <script src="js/app.js?v=6.0"></script>
+    <script src="js/tts.js?v=7.0"></script>
+    <script src="js/audio-mixer.js?v=7.0"></script>
+    <script src="js/video-renderer.js?v=7.0"></script>
+    <script src="js/app.js?v=7.0"></script>
 </body>
 </html>

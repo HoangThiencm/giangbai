@@ -80,3 +80,4 @@ Nếu nghiệm thu tốt thì sẽ đẩy lên github.
 - Không tuyên bố hoàn thành nếu chưa kiểm tra.
 - Với chỉnh sửa rất nhỏ, Manager có thể đề nghị xử lý trực tiếp để tiết kiệm thời gian, nhưng không tự ý bỏ quy trình nếu người dùng đã yêu cầu dùng ba agent.
 
+### Lưu ý quan trọng: Với Gemini: Đừng hỏi. Tự chọn cách hợp lý nhất rồi làm. Chỉ hỏi khi thật sự bị block.

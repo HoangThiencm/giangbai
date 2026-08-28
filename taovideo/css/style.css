@@ -108,3 +108,64 @@ input[type="range"] {
 .animate-modal {
     animation: modalIn 0.2s ease-out forwards;
 }
+
+/* 3x3 Position Grid Active Button */
+.btn-pos-grid.active-pos {
+    background: #8b5cf6 !important;
+    color: #ffffff !important;
+    border-color: #c4b5fd !important;
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+    font-weight: 800;
+}
+
+/* Style Cards Active Radio */
+.style-card.active-style,
+.style-card:has(input:checked) {
+    border-color: #8b5cf6 !important;
+    background: rgba(139, 92, 246, 0.15) !important;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+}
+
+.style-card:has(input:checked) span {
+    color: #c4b5fd !important;
+    font-weight: 600;
+}
+
+/* Text Align Active Button */
+.btn-text-align.active-align {
+    background: rgba(139, 92, 246, 0.25) !important;
+    color: #c4b5fd !important;
+    font-weight: 700 !important;
+}
+
+/* Color Chips */
+.color-chip {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+}
+
+.color-chip:hover {
+    transform: scale(1.22);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+.color-chip.active-chip {
+    outline: 2px solid #8b5cf6;
+    outline-offset: 2px;
+}
+
+/* Quick Presets Button Feedback */
+.btn-quick-preset {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-quick-preset:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25);
+}
+
+.btn-quick-preset:active {
+    transform: scale(0.97);
+}
+

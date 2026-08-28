@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Application State
     const state = {
-        slides: [], // Array of { id, imageSrc, imageElement, duration, text, transition }
+        slides: [], // Array of { id, imageSrc, imageElement, duration, text, motion, transition, overlay }
         defaultDuration: 3.5,
         defaultTransition: 'auto',
         voiceId: '',
@@ -26,31 +26,168 @@ document.addEventListener('DOMContentLoaded', () => {
         isMuted: false
     };
 
-    // ProShow-style motion presets. Each slide stores one of these values.
+    // Helper: Create default overlay configuration for a slide
+    function createDefaultOverlay(text = '', motion = 'kenburns', transition = 'crossfade') {
+        return {
+            enabled: true,
+            text: text || '',
+            position: 'bottom-center',
+            customX: 50,
+            customY: 85,
+            textAlign: 'center',
+            fontFamily: 'Be Vietnam Pro',
+            fontSize: 46,
+            color: '#ffffff',
+            bgStyle: 'pill',
+            bgColor: '#000000',
+            animation: 'fade',
+            motion: motion || 'kenburns',
+            transition: transition || 'crossfade'
+        };
+    }
+
+    // Quick Style Presets definition
+    const OVERLAY_PRESETS = {
+        cinema: {
+            position: 'bottom-center',
+            customX: 50,
+            customY: 86,
+            textAlign: 'center',
+            fontFamily: 'Be Vietnam Pro',
+            fontSize: 44,
+            color: '#ffffff',
+            bgStyle: 'pill',
+            bgColor: '#000000',
+            animation: 'slide-up'
+        },
+        hero: {
+            position: 'center',
+            customX: 50,
+            customY: 50,
+            textAlign: 'center',
+            fontFamily: 'Oswald',
+            fontSize: 64,
+            color: '#fde047',
+            bgStyle: 'shadow',
+            bgColor: '#000000',
+            animation: 'pop'
+        },
+        neon: {
+            position: 'center',
+            customX: 50,
+            customY: 50,
+            textAlign: 'center',
+            fontFamily: 'Montserrat',
+            fontSize: 52,
+            color: '#ffffff',
+            bgStyle: 'neon',
+            bgColor: '#38bdf8',
+            animation: 'glow'
+        },
+        highlight: {
+            position: 'top-left',
+            customX: 8,
+            customY: 14,
+            textAlign: 'left',
+            fontFamily: 'Nunito',
+            fontSize: 48,
+            color: '#0f172a',
+            bgStyle: 'highlight',
+            bgColor: '#fde047',
+            animation: 'bounce'
+        },
+        banner: {
+            position: 'bottom-center',
+            customX: 50,
+            customY: 84,
+            textAlign: 'center',
+            fontFamily: 'Playfair Display',
+            fontSize: 46,
+            color: '#ffffff',
+            bgStyle: 'gradient-banner',
+            bgColor: '#0f172a',
+            animation: 'slide-up'
+        },
+        karaoke: {
+            position: 'bottom-center',
+            customX: 50,
+            customY: 85,
+            textAlign: 'center',
+            fontFamily: 'Be Vietnam Pro',
+            fontSize: 48,
+            color: '#ffffff',
+            bgStyle: 'shadow',
+            bgColor: '#000000',
+            animation: 'karaoke'
+        },
+        lecture: {
+            position: 'center',
+            customX: 50,
+            customY: 50,
+            textAlign: 'center',
+            fontFamily: 'Be Vietnam Pro',
+            fontSize: 46,
+            color: '#38bdf8',
+            bgStyle: 'boxed-border',
+            bgColor: '#0f172a',
+            animation: 'bounce'
+        },
+        handwritten: {
+            position: 'top-right',
+            customX: 88,
+            customY: 14,
+            textAlign: 'right',
+            fontFamily: 'Caveat',
+            fontSize: 58,
+            color: '#fef08a',
+            bgStyle: 'shadow',
+            bgColor: '#000000',
+            animation: 'typewriter'
+        }
+    };
+
+    // Motion presets (Intra-slide motion)
     const EFFECTS = [
-        ['kenburns', 'Zoom điện ảnh'], ['zoom-in', 'Phóng to dần'], ['zoom-out', 'Thu nhỏ dần'],
-        ['push-in', 'Đẩy vào mạnh'], ['pull-back', 'Kéo lùi'], ['pulse', 'Nhịp phóng nhẹ'], ['breathe', 'Hơi thở điện ảnh'],
-        ['pan-left', 'Pan trái'], ['pan-right', 'Pan phải'], ['pan-up', 'Pan lên'], ['pan-down', 'Pan xuống'],
-        ['diagonal-tl', 'Chéo lên trái'], ['diagonal-tr', 'Chéo lên phải'], ['diagonal-bl', 'Chéo xuống trái'], ['diagonal-br', 'Chéo xuống phải'],
-        ['drift-left', 'Lướt trái'], ['drift-right', 'Lướt phải'], ['drift-up', 'Lướt lên'], ['drift-down', 'Lướt xuống'],
-        ['zoom-pan-left', 'Zoom + trái'], ['zoom-pan-right', 'Zoom + phải'], ['zoom-pan-up', 'Zoom + lên'], ['zoom-pan-down', 'Zoom + xuống'],
-        ['rotate-left', 'Xoay nhẹ trái'], ['rotate-right', 'Xoay nhẹ phải'], ['tilt-left', 'Nghiêng trái'], ['tilt-right', 'Nghiêng phải'],
-        ['orbit-left', 'Vòng cung trái'], ['orbit-right', 'Vòng cung phải'], ['cinematic-left', 'Cinematic trái'], ['cinematic-right', 'Cinematic phải'],
-        ['sweep-top', 'Quét từ trên'], ['sweep-bottom', 'Quét từ dưới']
+        ['kenburns', 'Zoom điện ảnh (Ken Burns)'],
+        ['zoom-in', 'Phóng to dần'], ['zoom-out', 'Thu nhỏ dần'],
+        ['push-in', 'Đẩy vào mạnh'], ['pull-back', 'Kéo lùi'],
+        ['pulse', 'Nhịp phóng nhẹ'], ['breathe', 'Hơi thở điện ảnh'],
+        ['pan-left', 'Pan sang trái'], ['pan-right', 'Pan sang phải'],
+        ['pan-up', 'Pan lên'], ['pan-down', 'Pan xuống'],
+        ['diagonal-tl', 'Chéo lên trái'], ['diagonal-tr', 'Chéo lên phải'],
+        ['diagonal-bl', 'Chéo xuống trái'], ['diagonal-br', 'Chéo xuống phải'],
+        ['drift-left', 'Lướt trái'], ['drift-right', 'Lướt phải'],
+        ['drift-up', 'Lướt lên'], ['drift-down', 'Lướt xuống'],
+        ['zoom-pan-left', 'Zoom + trái'], ['zoom-pan-right', 'Zoom + phải'],
+        ['zoom-pan-up', 'Zoom + lên'], ['zoom-pan-down', 'Zoom + xuống'],
+        ['rotate-left', 'Xoay nhẹ trái'], ['rotate-right', 'Xoay nhẹ phải'],
+        ['tilt-left', 'Nghiêng trái'], ['tilt-right', 'Nghiêng phải'],
+        ['orbit-left', 'Vòng cung trái'], ['orbit-right', 'Vòng cung phải'],
+        ['cinematic-left', 'Cinematic trái'], ['cinematic-right', 'Cinematic phải'],
+        ['sweep-top', 'Quét từ trên'], ['sweep-bottom', 'Quét từ dưới'],
+        ['none', 'Không hiệu ứng']
     ];
+
     const effectOptions = (selected) => EFFECTS.map(([id, label]) =>
         `<option value="${id}"${id === selected ? ' selected' : ''}>${label}</option>`
-    ).join('') + `<option value="none"${selected === 'none' ? ' selected' : ''}>Không hiệu ứng</option>`;
+    ).join('');
+
     const autoEffectFor = (index, previous) => {
-        let effect = EFFECTS[(index * 7 + state.slides.length * 3) % EFFECTS.length][0];
-        if (effect === previous) effect = EFFECTS[(index * 7 + state.slides.length * 3 + 1) % EFFECTS.length][0];
+        let effect = EFFECTS[(index * 7 + state.slides.length * 3) % (EFFECTS.length - 1)][0];
+        if (effect === previous) effect = EFFECTS[(index * 7 + state.slides.length * 3 + 1) % (EFFECTS.length - 1)][0];
         return effect;
     };
+
     const applyAutoEffects = () => {
         let previous = null;
         state.slides.forEach((slide, index) => {
-            slide.transition = autoEffectFor(index, previous);
-            previous = slide.transition;
+            slide.motion = autoEffectFor(index, previous);
+            slide.transition = 'crossfade';
+            if (slide.overlay) {
+                slide.overlay.motion = slide.motion;
+                slide.overlay.transition = slide.transition;
+            }
+            previous = slide.motion;
         });
     };
 
@@ -430,15 +567,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const dataUrl = await Utils.fileToDataURL(file);
             const imgEl = await Utils.loadImage(dataUrl);
 
+            const initialMotion = state.defaultTransition === 'auto'
+                ? autoEffectFor(state.slides.length, state.slides[state.slides.length - 1]?.motion)
+                : state.defaultTransition;
+
             const newSlide = {
                 id: 'slide_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                 imageSrc: dataUrl,
                 imageElement: imgEl,
                 duration: state.defaultDuration,
                 text: '',
-                transition: state.defaultTransition === 'auto'
-                    ? autoEffectFor(state.slides.length, state.slides[state.slides.length - 1]?.transition)
-                    : state.defaultTransition
+                motion: initialMotion,
+                transition: 'crossfade',
+                overlay: createDefaultOverlay('', initialMotion, 'crossfade')
             };
 
             state.slides.push(newSlide);
@@ -447,6 +588,319 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSlidesUI();
         videoRenderer.setSlides(state.slides);
     }
+
+    // =========================================================================
+    // 8. Text Overlay & Slide Effects Modal Editor
+    // =========================================================================
+    const overlayModal = document.getElementById('slide-overlay-modal');
+    const modalSlideBadge = document.getElementById('modal-slide-badge');
+    const btnCloseOverlayModal = document.getElementById('btn-close-overlay-modal');
+    const btnSaveOverlay = document.getElementById('btn-save-overlay');
+    const btnApplyAllOverlay = document.getElementById('btn-apply-all-overlay');
+
+    const modalOverlayEnabled = document.getElementById('modal-overlay-enabled');
+    const modalOverlayText = document.getElementById('modal-overlay-text');
+    const modalFontFamily = document.getElementById('modal-font-family');
+    const modalFontSize = document.getElementById('modal-font-size');
+    const modalFontSizeVal = document.getElementById('modal-font-size-val');
+    const modalTextColor = document.getElementById('modal-text-color');
+    const modalBgColor = document.getElementById('modal-bg-color');
+    const modalBgColorLabel = document.getElementById('modal-bg-color-label');
+    const modalTextAnimation = document.getElementById('modal-text-animation');
+    const modalPosX = document.getElementById('modal-pos-x');
+    const modalPosY = document.getElementById('modal-pos-y');
+    const customCoordsVal = document.getElementById('custom-coords-val');
+    const posLabelBadge = document.getElementById('pos-label-badge');
+    const modalSlideMotion = document.getElementById('modal-slide-motion');
+    const modalSlideTransition = document.getElementById('modal-slide-transition');
+
+    let activeEditingSlide = null;
+
+    function openOverlayModal(slide) {
+        if (!slide) return;
+        activeEditingSlide = slide;
+
+        if (!slide.overlay) {
+            slide.overlay = createDefaultOverlay(slide.text, slide.motion, slide.transition);
+        }
+        // Ensure text is synced
+        slide.overlay.text = slide.text !== undefined ? slide.text : (slide.overlay.text || '');
+
+        const o = slide.overlay;
+        const idx = state.slides.indexOf(slide);
+
+        if (modalSlideBadge) modalSlideBadge.textContent = `Slide #${idx + 1}`;
+        if (modalOverlayEnabled) modalOverlayEnabled.checked = o.enabled !== false;
+        if (modalOverlayText) modalOverlayText.value = o.text || '';
+
+        updatePosGridUI(o.position || 'bottom-center');
+
+        if (modalPosX) modalPosX.value = o.customX ?? 50;
+        if (modalPosY) modalPosY.value = o.customY ?? 85;
+        if (customCoordsVal) customCoordsVal.textContent = `${o.customX ?? 50}%, ${o.customY ?? 85}%`;
+
+        updateTextAlignUI(o.textAlign || 'center');
+
+        if (modalFontFamily) modalFontFamily.value = o.fontFamily || 'Be Vietnam Pro';
+        if (modalFontSize) modalFontSize.value = o.fontSize || 46;
+        if (modalFontSizeVal) modalFontSizeVal.textContent = (o.fontSize || 46) + 'px';
+        if (modalTextColor) modalTextColor.value = o.color || '#ffffff';
+
+        // Select Bg Style radio
+        const bgRadios = document.querySelectorAll('input[name="modal-bg-style"]');
+        bgRadios.forEach(r => {
+            r.checked = (r.value === (o.bgStyle || 'pill'));
+        });
+
+        if (modalBgColor) modalBgColor.value = o.bgColor || '#000000';
+        if (modalBgColorLabel) modalBgColorLabel.textContent = o.bgColor || '#000000';
+
+        if (modalTextAnimation) modalTextAnimation.value = o.animation || 'fade';
+        if (modalSlideMotion) modalSlideMotion.value = slide.motion || slide.transition || 'kenburns';
+        if (modalSlideTransition) modalSlideTransition.value = slide.transition || 'crossfade';
+
+        // Seek player to this slide so user can see WYSIWYG preview immediately
+        let startSec = 0;
+        for (let i = 0; i < idx; i++) {
+            startSec += (state.slides[i].duration || 3.5);
+        }
+        videoRenderer.seek(startSec);
+
+        if (overlayModal) {
+            overlayModal.classList.remove('hidden');
+            refreshIcons();
+        }
+    }
+
+    function closeOverlayModal() {
+        if (overlayModal) overlayModal.classList.add('hidden');
+        updateSlidesUI();
+    }
+
+    function syncModalToSlide() {
+        if (!activeEditingSlide || !activeEditingSlide.overlay) return;
+        const o = activeEditingSlide.overlay;
+
+        if (modalOverlayEnabled) o.enabled = modalOverlayEnabled.checked;
+        if (modalOverlayText) {
+            o.text = modalOverlayText.value;
+            activeEditingSlide.text = modalOverlayText.value;
+            activeEditingSlide.ttsAudioBuffer = null;
+            activeEditingSlide.ttsMetadata = null;
+        }
+
+        if (modalFontFamily) o.fontFamily = modalFontFamily.value;
+        if (modalFontSize) {
+            o.fontSize = parseInt(modalFontSize.value, 10) || 46;
+            if (modalFontSizeVal) modalFontSizeVal.textContent = o.fontSize + 'px';
+        }
+        if (modalTextColor) o.color = modalTextColor.value;
+
+        const checkedBg = document.querySelector('input[name="modal-bg-style"]:checked');
+        if (checkedBg) o.bgStyle = checkedBg.value;
+
+        if (modalBgColor) {
+            o.bgColor = modalBgColor.value;
+            if (modalBgColorLabel) modalBgColorLabel.textContent = modalBgColor.value;
+        }
+
+        if (modalTextAnimation) o.animation = modalTextAnimation.value;
+
+        if (modalPosX && modalPosY) {
+            o.customX = parseInt(modalPosX.value, 10);
+            o.customY = parseInt(modalPosY.value, 10);
+            if (customCoordsVal) customCoordsVal.textContent = `${o.customX}%, ${o.customY}%`;
+        }
+
+        if (modalSlideMotion) {
+            activeEditingSlide.motion = modalSlideMotion.value;
+            o.motion = modalSlideMotion.value;
+        }
+
+        if (modalSlideTransition) {
+            activeEditingSlide.transition = modalSlideTransition.value;
+            o.transition = modalSlideTransition.value;
+        }
+
+        // Live preview redraw
+        videoRenderer.renderFrame(videoRenderer.currentTime);
+    }
+
+    function updatePosGridUI(pos) {
+        if (!activeEditingSlide || !activeEditingSlide.overlay) return;
+        activeEditingSlide.overlay.position = pos;
+
+        const gridBtns = document.querySelectorAll('.btn-pos-grid');
+        gridBtns.forEach(btn => {
+            if (btn.dataset.pos === pos) {
+                btn.classList.add('active-pos');
+            } else {
+                btn.classList.remove('active-pos');
+            }
+        });
+
+        const labels = {
+            'top-left': 'Trên trái', 'top-center': 'Trên giữa', 'top-right': 'Trên phải',
+            'mid-left': 'Giữa trái', 'center': 'Chính giữa', 'mid-right': 'Giữa phải',
+            'bottom-left': 'Dưới trái', 'bottom-center': 'Dưới giữa', 'bottom-right': 'Dưới phải',
+            'custom': 'Tùy chỉnh'
+        };
+        if (posLabelBadge) posLabelBadge.textContent = labels[pos] || pos;
+    }
+
+    function updateTextAlignUI(align) {
+        if (!activeEditingSlide || !activeEditingSlide.overlay) return;
+        activeEditingSlide.overlay.textAlign = align;
+
+        const alignBtns = document.querySelectorAll('.btn-text-align');
+        alignBtns.forEach(btn => {
+            if (btn.dataset.align === align) {
+                btn.classList.add('active-align', 'text-brand-400', 'bg-brand-500/20', 'font-bold');
+                btn.classList.remove('text-slate-300');
+            } else {
+                btn.classList.remove('active-align', 'text-brand-400', 'bg-brand-500/20', 'font-bold');
+                btn.classList.add('text-slate-300');
+            }
+        });
+    }
+
+    function applyPreset(presetKey) {
+        if (!activeEditingSlide || !OVERLAY_PRESETS[presetKey]) return;
+        const p = OVERLAY_PRESETS[presetKey];
+        const o = activeEditingSlide.overlay;
+
+        o.position = p.position;
+        o.customX = p.customX;
+        o.customY = p.customY;
+        o.textAlign = p.textAlign;
+        o.fontFamily = p.fontFamily;
+        o.fontSize = p.fontSize;
+        o.color = p.color;
+        o.bgStyle = p.bgStyle;
+        o.bgColor = p.bgColor;
+        o.animation = p.animation;
+
+        updatePosGridUI(o.position);
+        updateTextAlignUI(o.textAlign);
+
+        if (modalPosX) modalPosX.value = o.customX;
+        if (modalPosY) modalPosY.value = o.customY;
+        if (customCoordsVal) customCoordsVal.textContent = `${o.customX}%, ${o.customY}%`;
+
+        if (modalFontFamily) modalFontFamily.value = o.fontFamily;
+        if (modalFontSize) modalFontSize.value = o.fontSize;
+        if (modalFontSizeVal) modalFontSizeVal.textContent = o.fontSize + 'px';
+        if (modalTextColor) modalTextColor.value = o.color;
+
+        const bgRadios = document.querySelectorAll('input[name="modal-bg-style"]');
+        bgRadios.forEach(r => { r.checked = (r.value === o.bgStyle); });
+
+        if (modalBgColor) modalBgColor.value = o.bgColor;
+        if (modalBgColorLabel) modalBgColorLabel.textContent = o.bgColor;
+
+        if (modalTextAnimation) modalTextAnimation.value = o.animation;
+
+        syncModalToSlide();
+    }
+
+    // Modal Events Binding
+    btnCloseOverlayModal?.addEventListener('click', closeOverlayModal);
+    btnSaveOverlay?.addEventListener('click', closeOverlayModal);
+
+    modalOverlayEnabled?.addEventListener('change', syncModalToSlide);
+    modalOverlayText?.addEventListener('input', syncModalToSlide);
+    modalFontFamily?.addEventListener('change', syncModalToSlide);
+    modalFontSize?.addEventListener('input', syncModalToSlide);
+    modalTextColor?.addEventListener('input', syncModalToSlide);
+    modalBgColor?.addEventListener('input', syncModalToSlide);
+    modalTextAnimation?.addEventListener('change', syncModalToSlide);
+    modalSlideMotion?.addEventListener('change', syncModalToSlide);
+    modalSlideTransition?.addEventListener('change', syncModalToSlide);
+
+    modalPosX?.addEventListener('input', () => {
+        updatePosGridUI('custom');
+        syncModalToSlide();
+    });
+    modalPosY?.addEventListener('input', () => {
+        updatePosGridUI('custom');
+        syncModalToSlide();
+    });
+
+    document.querySelectorAll('.btn-pos-grid').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const pos = btn.dataset.pos;
+            updatePosGridUI(pos);
+            if (pos === 'top-left') { if (modalPosX) modalPosX.value = 8; if (modalPosY) modalPosY.value = 12; }
+            else if (pos === 'top-center') { if (modalPosX) modalPosX.value = 50; if (modalPosY) modalPosY.value = 12; }
+            else if (pos === 'top-right') { if (modalPosX) modalPosX.value = 92; if (modalPosY) modalPosY.value = 12; }
+            else if (pos === 'mid-left') { if (modalPosX) modalPosX.value = 8; if (modalPosY) modalPosY.value = 50; }
+            else if (pos === 'center') { if (modalPosX) modalPosX.value = 50; if (modalPosY) modalPosY.value = 50; }
+            else if (pos === 'mid-right') { if (modalPosX) modalPosX.value = 92; if (modalPosY) modalPosY.value = 50; }
+            else if (pos === 'bottom-left') { if (modalPosX) modalPosX.value = 8; if (modalPosY) modalPosY.value = 85; }
+            else if (pos === 'bottom-center') { if (modalPosX) modalPosX.value = 50; if (modalPosY) modalPosY.value = 85; }
+            else if (pos === 'bottom-right') { if (modalPosX) modalPosX.value = 92; if (modalPosY) modalPosY.value = 85; }
+            syncModalToSlide();
+        });
+    });
+
+    document.querySelectorAll('.btn-text-align').forEach(btn => {
+        btn.addEventListener('click', () => {
+            updateTextAlignUI(btn.dataset.align);
+            syncModalToSlide();
+        });
+    });
+
+    document.querySelectorAll('input[name="modal-bg-style"]').forEach(r => {
+        r.addEventListener('change', syncModalToSlide);
+    });
+
+    document.querySelectorAll('.color-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const color = chip.dataset.color;
+            if (modalTextColor) {
+                modalTextColor.value = color;
+                syncModalToSlide();
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-quick-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const preset = btn.dataset.preset;
+            applyPreset(preset);
+        });
+    });
+
+    btnApplyAllOverlay?.addEventListener('click', () => {
+        if (!activeEditingSlide || !activeEditingSlide.overlay) return;
+        const src = activeEditingSlide.overlay;
+
+        state.slides.forEach(slide => {
+            if (!slide.overlay) {
+                slide.overlay = createDefaultOverlay(slide.text);
+            }
+            slide.overlay.enabled = src.enabled;
+            slide.overlay.position = src.position;
+            slide.overlay.customX = src.customX;
+            slide.overlay.customY = src.customY;
+            slide.overlay.textAlign = src.textAlign;
+            slide.overlay.fontFamily = src.fontFamily;
+            slide.overlay.fontSize = src.fontSize;
+            slide.overlay.color = src.color;
+            slide.overlay.bgStyle = src.bgStyle;
+            slide.overlay.bgColor = src.bgColor;
+            slide.overlay.animation = src.animation;
+
+            slide.motion = activeEditingSlide.motion;
+            slide.transition = activeEditingSlide.transition;
+            slide.overlay.motion = slide.motion;
+            slide.overlay.transition = slide.transition;
+        });
+
+        updateSlidesUI();
+        videoRenderer.renderFrame(videoRenderer.currentTime);
+        alert(`Đã áp dụng mẫu chữ & hiệu ứng cho toàn bộ ${state.slides.length} slide!`);
+    });
 
     // Render Slide Cards in Timeline
     function updateSlidesUI() {
@@ -466,30 +920,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         state.slides.forEach((slide, idx) => {
+            // Ensure overlay exists
+            if (!slide.overlay) {
+                slide.overlay = createDefaultOverlay(slide.text, slide.motion, slide.transition);
+            }
+
             const card = document.createElement('div');
             card.className = 'slide-card group flex flex-col justify-between p-2.5';
             card.dataset.id = slide.id;
 
+            const bgStyleName = slide.overlay.bgStyle || 'pill';
+            const animName = slide.overlay.animation || 'fade';
+
             card.innerHTML = `
                 <!-- Top thumbnail preview & badge -->
-                <div class="relative w-full h-24 rounded-lg overflow-hidden bg-slate-900 mb-2 border border-slate-700/60 shrink-0">
+                <div class="relative w-full h-20 rounded-lg overflow-hidden bg-slate-900 mb-1.5 border border-slate-700/60 shrink-0">
                     <img src="${slide.imageSrc}" class="w-full h-full object-cover pointer-events-none">
                     <span class="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-[10px] font-bold text-white">#${idx + 1}</span>
                     <button class="btn-delete-slide absolute top-1 right-1 w-6 h-6 rounded bg-black/70 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center transition">
                         <i data-lucide="trash" class="w-3.5 h-3.5"></i>
                     </button>
-                    ${slide.text ? '<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-emerald-500/90 text-[9px] font-bold text-white flex items-center gap-0.5"><i data-lucide="mic" class="w-2.5 h-2.5"></i> Lời thoại</span>' : ''}
+                    ${slide.text ? '<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-emerald-500/90 text-[9px] font-bold text-white flex items-center gap-0.5"><i data-lucide="mic" class="w-2.5 h-2.5"></i> Giọng đọc</span>' : ''}
                 </div>
+
+                <!-- Action Button: Open Text Overlay & Effects Editor -->
+                <button type="button" class="btn-edit-slide-overlay w-full py-1.5 px-2 bg-gradient-to-r from-brand-600/30 to-indigo-600/30 hover:from-brand-600 hover:to-indigo-600 border border-brand-500/40 text-brand-200 hover:text-white rounded-lg text-[10px] font-semibold flex items-center justify-between transition shadow-sm mb-1.5" title="Chỉnh sửa chữ, kiểu dáng & hiệu ứng">
+                    <span class="flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3 text-amber-400"></i> Sửa Chữ & Hiệu ứng</span>
+                    <span class="text-[9px] font-mono text-indigo-300 opacity-90">${bgStyleName} · ${animName}</span>
+                </button>
 
                 <!-- Slide Text Prompt / Captions -->
                 <div class="space-y-1.5 flex-1 flex flex-col justify-between">
                     <div class="relative">
-                        <textarea class="slide-text-input w-full bg-slate-900/90 border border-slate-700/80 rounded-lg p-1.5 text-[11px] text-white placeholder-slate-500 resize-none focus:ring-1 focus:ring-brand-500 outline-none h-14" placeholder="Nhập lời thoại / phụ đề...">${slide.text || ''}</textarea>
+                        <textarea class="slide-text-input w-full bg-slate-900/90 border border-slate-700/80 rounded-lg p-1.5 text-[11px] text-white placeholder-slate-500 resize-none focus:ring-1 focus:ring-brand-500 outline-none h-12" placeholder="Nhập lời thoại / chữ hiển thị...">${slide.text || ''}</textarea>
                     </div>
 
-                    <!-- Per-slide ProShow-style motion effect -->
-                    <select class="slide-effect-select w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-[10px] text-indigo-200 focus:ring-1 focus:ring-brand-500 outline-none" title="Hiệu ứng riêng của ảnh này">
-                        ${effectOptions(slide.transition || 'kenburns')}
+                    <!-- Per-slide motion effect -->
+                    <select class="slide-effect-select w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-[10px] text-indigo-200 focus:ring-1 focus:ring-brand-500 outline-none" title="Chuyển động trong ảnh">
+                        ${effectOptions(slide.motion || slide.transition || 'kenburns')}
                     </select>
 
                     <!-- Slide Controls: Duration & Voice Button -->
@@ -507,9 +975,16 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             // Card Event Listeners
+            const btnEditOverlay = card.querySelector('.btn-edit-slide-overlay');
+            btnEditOverlay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openOverlayModal(slide);
+            });
+
             const textInput = card.querySelector('.slide-text-input');
             textInput.addEventListener('input', (e) => {
                 slide.text = e.target.value;
+                if (slide.overlay) slide.overlay.text = e.target.value;
                 slide.ttsAudioBuffer = null;
                 slide.ttsMetadata = null;
                 videoRenderer.renderFrame(videoRenderer.currentTime);
@@ -525,7 +1000,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const effectSelect = card.querySelector('.slide-effect-select');
             effectSelect.addEventListener('change', (e) => {
-                slide.transition = e.target.value;
+                slide.motion = e.target.value;
+                if (slide.overlay) slide.overlay.motion = e.target.value;
                 videoRenderer.renderFrame(videoRenderer.currentTime);
             });
 
@@ -575,8 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshIcons();
     }
 
-    // 8. Playback/export use the V-TTS AudioBuffer tracks in AudioMixer.
-
+    // 9. Video Renderer Event Listeners & Player Controls
     videoRenderer.onTimeUpdate = (current, total) => {
         playerCurrentTimeEl.textContent = Utils.formatTime(current);
         playerTotalTimeEl.textContent = Utils.formatTime(total);
@@ -591,7 +1066,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSlideIdxEl.textContent = currentIdx;
         totalSlidesCountEl.textContent = totalCount;
 
-        // Highlight active slide card
         const cards = slidesContainer.querySelectorAll('.slide-card');
         cards.forEach((c, idx) => {
             if (idx === currentIdx - 1) c.classList.add('active-playing');
@@ -604,7 +1078,6 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshIcons();
     };
 
-    // Play/Pause button
     btnPlayPause.addEventListener('click', async () => {
         await audioMixer.init();
         if (videoRenderer.isPlaying) {
@@ -634,7 +1107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshIcons();
     });
 
-    // 9. Sample Demo Project Loader
+    // 10. Sample Demo Project Loader
     const btnLoadSample = document.getElementById('btn-load-sample');
     btnLoadSample.addEventListener('click', async () => {
         btnLoadSample.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang nạp...';
@@ -644,9 +1117,9 @@ document.addEventListener('DOMContentLoaded', () => {
             await audioMixer.init();
 
             // Generate sample procedural images
-            const img1 = Utils.generateSampleImage('Chào Mừng Bạn Đến Với', 'Studio Làm Video AI Tự Động', '#4f46e5', '#9333ea');
-            const img2 = Utils.generateSampleImage('Tạo Video Từ Ảnh', 'Hiệu ứng Ken Burns & Chuyển cảnh mượt mà', '#0ea5e9', '#3b82f6');
-            const img3 = Utils.generateSampleImage('Lồng Tiếng AI Chuẩn', 'Tự động tính thời lượng khớp từng câu đọc', '#059669', '#10b981');
+            const img1 = Utils.generateSampleImage('Chào Mừng Bạn Đến Với', 'Studio Làm Video AI Bài Giảng', '#4f46e5', '#9333ea');
+            const img2 = Utils.generateSampleImage('Tạo Video Từ Ảnh', 'Chuyển cảnh & Chuyển động Ken Burns', '#0ea5e9', '#3b82f6');
+            const img3 = Utils.generateSampleImage('Lồng Tiếng AI Chuẩn', 'Tự động đồng bộ giọng nói và chữ nghệ thuật', '#059669', '#10b981');
             const img4 = Utils.generateSampleImage('Xuất Video Full HD', 'Tải về MP4 chất lượng cao ngay trên web!', '#d97706', '#ea580c');
 
             const loadedImg1 = await Utils.loadImage(img1);
@@ -659,33 +1132,101 @@ document.addEventListener('DOMContentLoaded', () => {
                     id: 'sample_1',
                     imageSrc: img1,
                     imageElement: loadedImg1,
-                    duration: 4.2,
-                    text: 'Chào mừng bạn đến với Studio tạo video từ hình ảnh và giọng đọc AI ngọt ngào!',
-                    transition: 'kenburns'
+                    duration: 4.5,
+                    text: 'CHÀO MỪNG BẠN ĐẾN VỚI\nSTUDIO LÀM VIDEO AI BÀI GIẢNG',
+                    motion: 'kenburns',
+                    transition: 'crossfade',
+                    overlay: {
+                        enabled: true,
+                        text: 'CHÀO MỪNG BẠN ĐẾN VỚI\nSTUDIO LÀM VIDEO AI BÀI GIẢNG',
+                        position: 'center',
+                        customX: 50,
+                        customY: 50,
+                        textAlign: 'center',
+                        fontFamily: 'Oswald',
+                        fontSize: 58,
+                        color: '#fde047',
+                        bgStyle: 'shadow',
+                        bgColor: '#000000',
+                        animation: 'pop',
+                        motion: 'kenburns',
+                        transition: 'crossfade'
+                    }
                 },
                 {
                     id: 'sample_2',
                     imageSrc: img2,
                     imageElement: loadedImg2,
-                    duration: 4.2,
-                    text: 'Bạn có thể tải lên ảnh của riêng mình và sắp xếp thứ tự phân cảnh thật dễ dàng.',
-                    transition: 'slide'
+                    duration: 4.5,
+                    text: 'Tùy biến hiệu ứng chuyển động Ken Burns và chuyển cảnh nối tiếp đa dạng cho từng phân cảnh.',
+                    motion: 'pan-left',
+                    transition: 'slide-left',
+                    overlay: {
+                        enabled: true,
+                        text: 'Tùy biến hiệu ứng chuyển động Ken Burns và chuyển cảnh nối tiếp đa dạng cho từng phân cảnh.',
+                        position: 'bottom-center',
+                        customX: 50,
+                        customY: 85,
+                        textAlign: 'center',
+                        fontFamily: 'Be Vietnam Pro',
+                        fontSize: 44,
+                        color: '#ffffff',
+                        bgStyle: 'pill',
+                        bgColor: '#000000',
+                        animation: 'slide-up',
+                        motion: 'pan-left',
+                        transition: 'slide-left'
+                    }
                 },
                 {
                     id: 'sample_3',
                     imageSrc: img3,
                     imageElement: loadedImg3,
-                    duration: 4.5,
-                    text: 'Hệ thống tự động lồng tiếng thuyết minh và đồng bộ chính xác với nhạc nền MP3.',
-                    transition: 'kenburns'
+                    duration: 4.8,
+                    text: 'LỒNG TIẾNG AI CHUẨN XÁC\nĐồng bộ âm thanh và chữ nghệ thuật rực rỡ.',
+                    motion: 'orbit-left',
+                    transition: 'circle-reveal',
+                    overlay: {
+                        enabled: true,
+                        text: 'LỒNG TIẾNG AI CHUẨN XÁC\nĐồng bộ âm thanh và chữ nghệ thuật rực rỡ.',
+                        position: 'center',
+                        customX: 50,
+                        customY: 50,
+                        textAlign: 'center',
+                        fontFamily: 'Montserrat',
+                        fontSize: 50,
+                        color: '#ffffff',
+                        bgStyle: 'neon',
+                        bgColor: '#38bdf8',
+                        animation: 'glow',
+                        motion: 'orbit-left',
+                        transition: 'circle-reveal'
+                    }
                 },
                 {
                     id: 'sample_4',
                     imageSrc: img4,
                     imageElement: loadedImg4,
-                    duration: 4.2,
-                    text: 'Nhấn nút Xuất Video để tải về file MP4 chất lượng cao ngay hôm nay!',
-                    transition: 'crossfade'
+                    duration: 4.5,
+                    text: 'Xuất video Full HD MP4 / WebM siêu nét, sẵn sàng chia sẻ ngay hôm nay!',
+                    motion: 'zoom-in',
+                    transition: 'crossfade',
+                    overlay: {
+                        enabled: true,
+                        text: 'Xuất video Full HD MP4 / WebM siêu nét, sẵn sàng chia sẻ ngay hôm nay!',
+                        position: 'bottom-center',
+                        customX: 50,
+                        customY: 84,
+                        textAlign: 'center',
+                        fontFamily: 'Playfair Display',
+                        fontSize: 46,
+                        color: '#ffffff',
+                        bgStyle: 'gradient-banner',
+                        bgColor: '#0f172a',
+                        animation: 'slide-up',
+                        motion: 'zoom-in',
+                        transition: 'crossfade'
+                    }
                 }
             ];
 
@@ -717,7 +1258,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 10. Export Video Modal Handlers
+    // 11. Export Video Modal Handlers
     const exportModal = document.getElementById('export-modal');
     const btnOpenExportModal = document.getElementById('btn-open-export-modal');
     const btnCloseExportModal = document.getElementById('btn-close-export-modal');
@@ -737,7 +1278,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Populate summary
         document.getElementById('modal-summary-ratio').textContent = videoRenderer.aspectRatio;
         document.getElementById('modal-summary-slides').textContent = `${state.slides.length} ảnh`;
         document.getElementById('modal-summary-duration').textContent = `${videoRenderer.totalDuration.toFixed(1)}s`;
@@ -786,7 +1326,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 exportFrameText.textContent = `Khung hình ${currentFrame}/${totalFrames}`;
             });
 
-            // Show success
             exportProgressState.classList.add('hidden');
             exportSuccessState.classList.remove('hidden');
             btnDownloadVideo.href = result.url;

@@ -170,14 +170,17 @@ class VideoRenderer {
         // Check if we are in transition zone to next slide
         if (nextSlide && nextSlide.imageElement && timeRemaining <= this.transitionDuration && transition !== 'none') {
             const transProgress = 1 - (timeRemaining / this.transitionDuration);
-            this.renderTransition(ctx, currentSlide, nextSlide, current.progress, transProgress, w, h, transition);
+            Utils.drawTransition(ctx, currentSlide, nextSlide, current.progress, transProgress, w, h, transition);
         } else {
-            // Normal slide rendering
-            this.renderSingleSlide(ctx, currentSlide, current.progress, w, h, transition);
+            // Normal slide rendering with slide's intra-motion
+            const motion = currentSlide.motion || currentSlide.transition || this.defaultTransition;
+            this.renderSingleSlide(ctx, currentSlide, current.progress, w, h, motion);
         }
 
-        // Render Subtitles
-        if (this.enableSubtitles && currentSlide.text) {
+        // Render Text Overlay (Per-slide customizable overlay or fallback to subtitles)
+        if (currentSlide.overlay) {
+            Utils.drawTextOverlay(ctx, currentSlide.overlay, currentSlide.text, current.localTime, current.duration, w, h);
+        } else if (this.enableSubtitles && currentSlide.text) {
             Utils.drawSubtitles(ctx, currentSlide.text, w, h, this.subtitleOptions);
         }
 
@@ -191,38 +194,15 @@ class VideoRenderer {
      * Render single slide with Ken Burns motion
      */
     renderSingleSlide(ctx, slide, progress, w, h, transitionType) {
-        if (!slide.imageElement) return;
+        if (!slide || !slide.imageElement) return;
         Utils.drawKenBurns(ctx, slide.imageElement, progress, w, h, transitionType);
     }
 
     /**
-     * Render transition between two slides (Crossfade or Slide)
+     * Render transition between two slides
      */
     renderTransition(ctx, slide1, slide2, slide1Progress, transProgress, w, h, type) {
-        const p = Utils.easeInOutCubic(transProgress);
-
-        if (type === 'slide') {
-            // Slide Left transition
-            ctx.save();
-            // Slide 1 moving left
-            ctx.translate(-p * w, 0);
-            Utils.drawKenBurns(ctx, slide1.imageElement, slide1Progress, w, h, 'none');
-            ctx.restore();
-
-            ctx.save();
-            // Slide 2 entering from right
-            ctx.translate((1 - p) * w, 0);
-            Utils.drawKenBurns(ctx, slide2.imageElement, 0, w, h, 'none');
-            ctx.restore();
-        } else {
-            // Default: Crossfade
-            Utils.drawKenBurns(ctx, slide1.imageElement, slide1Progress, w, h, type);
-
-            ctx.save();
-            ctx.globalAlpha = p;
-            Utils.drawKenBurns(ctx, slide2.imageElement, 0, w, h, type);
-            ctx.restore();
-        }
+        Utils.drawTransition(ctx, slide1, slide2, slide1Progress, transProgress, w, h, type);
     }
 
     /**
@@ -333,6 +313,15 @@ class VideoRenderer {
         if (this.isExporting) return;
         this.isExporting = true;
         this.pause();
+
+        // Ensure all fonts are ready
+        if (document.fonts && document.fonts.ready) {
+            try {
+                await document.fonts.ready;
+            } catch (e) {
+                console.warn('Fonts ready wait warning:', e);
+            }
+        }
 
         const format = options.format || 'mp4';
         const fps = 30;
