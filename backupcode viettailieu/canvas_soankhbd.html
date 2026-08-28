@@ -66,6 +66,8 @@
     .ppct-dropzone.dragover { border-color: #0284c7; background: #e0f2fe; }
     .ppct-dropzone h4 { margin: .35rem 0 .2rem; font-size: .95rem; }
     .ppct-dropzone p { margin: 0; font-size: .8rem; color: #64748b; }
+    .ppct-dropzone.paste-ready { border-color: #16a34a; background: #f0fdf4; }
+    .ppct-paste-btn { margin-top: .7rem; }
     .ppct-scope { margin-top: .85rem; padding: .85rem; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
     .ppct-scope label { display: flex; gap: .5rem; align-items: flex-start; margin: .35rem 0; font-size: .88rem; cursor: pointer; }
     .ppct-cluster { width: 100%; margin: .4rem 0 0 1.5rem; }
@@ -341,8 +343,9 @@
             <h3 style="margin:0 0 .5rem;font-size:.95rem;">2. PPCT / Phụ lục 3 (đính kèm, khuyến nghị)</h3>
             <div id="dropzoneContainerPpct" class="ppct-dropzone dropzone-ppct">
               <div class="dropzone-icon">📋</div>
-              <h4>Chọn PDF/ảnh Phân phối chương trình của trường</h4>
+              <h4>Chọn PDF/ảnh hoặc dán ảnh PPCT</h4>
               <p>Dùng khi một bài/chủ đề SGK kéo dài nhiều tiết (ví dụ Ngữ văn 16 tiết). AI đọc PPCT rồi cho chọn soạn cả bài hay đúng cụm tiết.</p>
+              <button id="btnPastePpct" class="btn btn-outline-dark btn-sm ppct-paste-btn" type="button"><i data-lucide="clipboard-paste"></i> Dán ảnh PPCT (Ctrl + V)</button>
               <input type="file" id="fileInputPpct" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
             </div>
             <div id="ppctGallery" class="image-gallery ppct-gallery"></div>
@@ -781,7 +784,7 @@
       cfg.connected = true;
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-syntax"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-nlsfix1"></script>
   <script>
     (function notifyHostConnection() {
       const cfg = window.__KHBD_CANVAS__ || {};
@@ -848,6 +851,7 @@
         scope: "all",
         clusterId: ""
       };
+      let ppctPasteArmed = false;
       window.__KHBD_PPCT__ = state;
       const hostHasPpct = function () {
         return typeof handlePpctFiles === "function" && typeof handleGeneratePpctAnalysis === "function";
@@ -1229,6 +1233,7 @@
       function bindUi() {
         const drop = document.getElementById("dropzoneContainerPpct");
         const input = document.getElementById("fileInputPpct");
+        const pasteButton = document.getElementById("btnPastePpct");
         const btn = document.getElementById("btnAnalyzePpct");
         const btnClear = document.getElementById("btnClearPpctFiles");
         if (!hostHasPpct() && drop && input) {
@@ -1248,6 +1253,33 @@
             addFiles(input.files);
             input.value = "";
           });
+        }
+        if (pasteButton && drop) {
+          pasteButton.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            ppctPasteArmed = true;
+            drop.classList.add("paste-ready");
+            pasteButton.textContent = "Sẵn sàng — nhấn Ctrl + V để dán ảnh PPCT";
+            toast("Hãy nhấn Ctrl + V để dán ảnh PPCT.", "info", 4500);
+          });
+          window.addEventListener("paste", function (e) {
+            if (!ppctPasteArmed) return;
+            const files = Array.from((e.clipboardData && e.clipboardData.files) || []).filter(function (file) {
+              return file && /^image\//.test(file.type || "");
+            });
+            if (!files.length) {
+              toast("Clipboard chưa có ảnh. Hãy chụp/copy đoạn PPCT rồi nhấn Ctrl + V.", "warning");
+              return;
+            }
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            ppctPasteArmed = false;
+            drop.classList.remove("paste-ready");
+            pasteButton.innerHTML = '<i data-lucide="clipboard-paste"></i> Dán ảnh PPCT (Ctrl + V)';
+            addFiles(files);
+            if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+          }, true);
         }
         if (btn) {
           btn.addEventListener("click", function (e) {

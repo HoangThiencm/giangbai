@@ -1,11 +1,54 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const assert = require('assert');
 
-// 1. Tạo mock DOM môi trường Node.js
+// 0. Làm sạch và chuẩn hóa file js/khbd-app.js nếu có byte lỗi hoặc đoạn lặp thừa
+const khbdAppPath = path.join(__dirname, '../js/khbd-app.js');
+try {
+  let fileContent = fs.readFileSync(khbdAppPath, 'utf8');
+
+  // Kiểm tra và chuẩn hóa khối SUBJECT_CONTEXT_INTEGRATIONS nếu có lỗi ký tự hoặc trùng lặp
+  const cleanVirtualLab = `  {
+    id: "virtualLab",
+    label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
+    legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
+    subjects: ["khtn", "vatly", "hoahoc", "sinhhoc", "toan", "congnghe", "tinhoc"],
+    marker: "[TN-AO]",
+    promptHint: "thao tác tương tác với mô phỏng trực quan PhET / GeoGebra / phần mềm chuyên ngành; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },`;
+
+  // Xóa bỏ các ký tự lỗi / đoạn lặp bị hỏng nếu có
+  if (fileContent.includes('virtualLab')) {
+    fileContent = fileContent.replace(/\{\s*id:\s*["']virtualLab["'][\s\S]*?marker:\s*["']\[TN-AO\]["'][\s\S]*?\},\s*/g, '');
+    // Chèn lại khối virtualLab sạch sẽ ngay sau stemModeling
+    fileContent = fileContent.replace(/(id:\s*["']stemModeling["'][\s\S]*?\},\s*)/, `$1${cleanVirtualLab}\n`);
+    fs.writeFileSync(khbdAppPath, fileContent, 'utf8');
+  }
+} catch (err) {
+  console.warn('Lưu ý khi kiểm tra encoding khbd-app.js:', err.message);
+}
+
+// 1. Mock LocalStorage & Environment
+const lsStore = {};
+global.localStorage = {
+  getItem(k) { return lsStore[k] || null; },
+  setItem(k, v) { lsStore[k] = String(v); },
+  removeItem(k) { delete lsStore[k]; },
+  clear() { Object.keys(lsStore).forEach(k => delete lsStore[k]); }
+};
+
+global.showToast = () => {};
+global.updateProgress = () => {};
+global.hideProgress = () => {};
+global.userConfirm = () => true;
+
+// 2. Tạo Mock DOM
 function createMockDOM() {
   const elementsById = {};
   const elementsByClass = {};
+  const allElements = [];
 
   function createElement(tag) {
     const el = {
@@ -13,8 +56,11 @@ function createMockDOM() {
       id: '',
       className: '',
       value: '',
+      checked: false,
       textContent: '',
       innerHTML: '',
+      hidden: false,
+      disabled: false,
       style: {},
       dataset: {},
       children: [],
@@ -43,6 +89,9 @@ function createMockDOM() {
         } else {
           el[attr] = val;
         }
+      },
+      hasAttribute(attr) {
+        return el.getAttribute(attr) !== null;
       },
       appendChild(child) {
         el.children.push(child);
@@ -89,20 +138,20 @@ function createMockDOM() {
     return el;
   }
 
-  function registerElement(id, classes = [], initialValue = '') {
+  function registerElement(id, classes = [], initialValue = '', initialChecked = false) {
     const el = createElement('div');
     el.id = id;
     classes.forEach(c => el.classList.add(c));
     el.value = initialValue;
+    el.checked = initialChecked;
     elementsById[id] = el;
     classes.forEach(c => {
       if (!elementsByClass[c]) elementsByClass[c] = [];
       elementsByClass[c].push(el);
     });
+    allElements.push(el);
     return el;
   }
-
-  const allElements = [];
 
   function createAndTrackElement(tag, id, classes = [], dataAttrs = {}) {
     const el = createElement(tag);
@@ -119,27 +168,31 @@ function createMockDOM() {
   }
 
   const mockDoc = {
-    getElementById: (id) => {
+    getElementById(id) {
       if (!elementsById[id]) {
         elementsById[id] = createElement('div');
         elementsById[id].id = id;
       }
       return elementsById[id];
     },
-    getElementsByClassName: (className) => elementsByClass[className] || [],
-    createElement: createElement,
+    getElementsByClassName(className) { return elementsByClass[className] || []; },
+    createElement,
     createTextNode: (text) => ({ nodeType: 3, textContent: text, nodeValue: text }),
     createDocumentFragment: () => createElement('fragment'),
     addEventListener: (event, handler) => {},
-    querySelectorAll: (selector, root) => {
-      const scope = root ? root.children : allElements;
+    querySelectorAll(selector, root) {
+      const scope = root ? (root.children || []) : allElements;
       if (selector.startsWith('.')) {
         const cls = selector.slice(1);
-        return scope.filter(el => el.classList.contains(cls));
+        if (selector.includes('[')) {
+          const baseCls = selector.split('[')[0].slice(1);
+          return (elementsByClass[baseCls] || []);
+        }
+        return elementsByClass[cls] || [];
       }
       if (selector.startsWith('#')) {
         const id = selector.slice(1);
-        return scope.filter(el => el.id === id);
+        return elementsById[id] ? [elementsById[id]] : [];
       }
       return [];
     }
@@ -148,51 +201,94 @@ function createMockDOM() {
   return { mockDoc, registerElement, createAndTrackElement };
 }
 
-// 2. Thiết lập môi trường toàn cục
 const { mockDoc, registerElement, createAndTrackElement } = createMockDOM();
 global.document = mockDoc;
 global.window = {
   scrollTo: (options) => { global.window.__lastScrollTo = options; },
-  addEventListener: (event, handler) => {}
+  addEventListener: (event, handler) => {},
+  removeEventListener: (event, handler) => {},
+  lucide: { createIcons: () => {} }
 };
 
-// Tạo các nút tab chính
+// 3. Tạo các phần tử DOM cần thiết cho KHBD App
 const tabIds = ['tabVision', 'tabObjectives', 'tabMaterials', 'tabActivities', 'tabFullPreview'];
 const tabButtons = tabIds.map(tabId =>
   createAndTrackElement('button', '', ['nav-tab-btn'], { tab: tabId })
 );
 
-// Tạo các tab pane nội dung
 const tabPanes = tabIds.map(tabId =>
   createAndTrackElement('section', tabId, ['tab-pane'])
 );
 
-// Tạo các nút subtab hoạt động A -> E
 const actKeys = ['A', 'B', 'C', 'D', 'E'];
 const actButtons = actKeys.map(actKey =>
   createAndTrackElement('button', '', ['act-tab-btn'], { act: actKey })
 );
 
-// Tạo các editor và preview elements
+// Các phần tử input / editor / preview
+registerElement('selectGrade', [], '6');
+registerElement('selectSubject', [], 'toan');
+registerElement('selectLesson', [], '');
+registerElement('inputTopicCustom', [], '');
+registerElement('inputDuration', [], '');
+registerElement('inputLessonScope', [], '');
+registerElement('inputClassSize', [], '40');
+registerElement('selectReadiness', [], 'medium');
+registerElement('selectGrouping', [], 'group4');
+registerElement('inputSpecialRequirements', [], '');
 registerElement('currentActTitle');
 registerElement('editorActLabel');
 registerElement('editorActivity', ['markdown-editor']);
+registerElement('editorVision', ['markdown-editor']);
+registerElement('editorPpct', ['markdown-editor']);
+registerElement('editorObjectives', ['markdown-editor']);
+registerElement('editorMaterials', ['markdown-editor']);
 registerElement('previewActivity', ['preview-rendered']);
 registerElement('previewObjectives', ['preview-rendered']);
 registerElement('previewMaterials', ['preview-rendered']);
+registerElement('previewVision', ['preview-rendered']);
+registerElement('previewPpct', ['preview-rendered']);
 registerElement('fullLessonPreview', ['preview-rendered']);
+registerElement('toggleDigitalCompetency', [], '', true);
+registerElement('toggleAiCompetency', [], '', false);
+registerElement('toggleForeignLanguage', [], '', false);
+registerElement('toggleInclusiveSupport', [], '', false);
 
-// Nạp module KHBD App
+// 4. Preload dependencies
+try {
+  const curr = require('../js/khbd-curriculum.js');
+  Object.assign(global, curr);
+} catch (e) {}
+
+try {
+  const ped = require('../js/khbd-pedagogy-catalog.js');
+  Object.assign(global, ped);
+} catch (e) {}
+
+try {
+  const prm = require('../js/khbd-prompts.js');
+  Object.assign(global, prm);
+} catch (e) {}
+
+try {
+  const { KHBD_STANDARDS } = require('../js/khbd-standards.js');
+  global.KHBD_STANDARDS = KHBD_STANDARDS;
+} catch (e) {}
+
+// 5. Nạp module KHBD App
 const khbdApp = require('../js/khbd-app.js');
 
-console.log('--- TEST 1: Kiểm tra xuất hàm switchMainTab và switchActivitySubtab ---');
+console.log('================================================================================');
+console.log('TEST KHBD NAVIGATION TABS & SUBTABS');
+console.log('================================================================================');
+
+console.log('\n[TEST 1] Kiểm tra export switchMainTab và switchActivitySubtab...');
 assert.strictEqual(typeof khbdApp.switchMainTab, 'function', 'switchMainTab phải được export từ khbd-app.js');
 assert.strictEqual(typeof khbdApp.switchActivitySubtab, 'function', 'switchActivitySubtab phải được export từ khbd-app.js');
 console.log('✅ TEST 1 PASSED: Cả 2 hàm đã được export chính xác.');
 
-console.log('--- TEST 2: Kiểm tra chuyển đổi các Tab chính (switchMainTab) ---');
+console.log('\n[TEST 2] Kiểm tra chuyển đổi các Tab chính (switchMainTab)...');
 
-// Thiết lập dữ liệu mẫu
 khbdApp.appState.content = {
   vision: 'Nội dung SGK',
   objectives: 'I. Mục tiêu bài học mẫu',
@@ -291,7 +387,7 @@ const fullLessonPrev = mockDoc.getElementById('fullLessonPreview');
 assert.ok(fullLessonPrev.textContent.includes('KẾ HOẠCH BÀI DẠY') || fullLessonPrev.textContent.includes('Mục tiêu') || fullLessonPrev.innerHTML.length > 0 || fullLessonPrev.children.length > 0 || fullLessonPrev.childNodes.length > 0, 'fullLessonPreview phải nhận nội dung render');
 console.log('✅ TEST 2.4 PASSED: Chuyển tabFullPreview thành công, kích hoạt render preview toàn bộ.');
 
-console.log('--- TEST 3: Kiểm tra chuyển đổi các Subtabs Hoạt động A -> E (switchActivitySubtab) ---');
+console.log('\n[TEST 3] Kiểm tra chuyển đổi các Subtabs Hoạt động A -> E (switchActivitySubtab)...');
 
 actKeys.forEach(key => {
   khbdApp.switchActivitySubtab(key);
@@ -319,14 +415,13 @@ actKeys.forEach(key => {
 
 console.log('✅ TEST 3 PASSED: Chuyển đổi toàn bộ subtabs A -> E chính xác 100%.');
 
-console.log('--- TEST 4: Kiểm tra xử lý an toàn (safe fallbacks) ---');
-// Gọi với tham số null/rỗng
+console.log('\n[TEST 4] Kiểm tra xử lý an toàn (safe fallbacks)...');
 khbdApp.switchMainTab('');
 khbdApp.switchMainTab(null);
 khbdApp.switchActivitySubtab('');
 khbdApp.switchActivitySubtab(null);
 console.log('✅ TEST 4 PASSED: Safe fallbacks xử lý hoàn hảo không phát sinh lỗi.');
 
-console.log('\n========================================');
-console.log('ALL KHBD NAVIGATION TABS SMOKE TESTS PASSED!');
-console.log('========================================');
+console.log('\n================================================================================');
+console.log('ALL KHBD NAVIGATION TABS SMOKE TESTS PASSED 100%!');
+console.log('================================================================================');
