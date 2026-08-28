@@ -110,12 +110,12 @@ if ($action === 'update') {
         $currentUser['expires_at'] ?? null
     );
 
-    $stmt = $pdo->prepare('
+    $stmt = $pdo->prepare("
             UPDATE users
             SET full_name = ?, class_name = ?, role = ?, is_active = ?, allowed_pages_json = ?, expires_at = ?, expires_option = ?,
                 registration_status = CASE WHEN ? = 1 THEN 'approved' WHEN registration_status = 'pending' THEN 'pending' ELSE 'blocked' END
             WHERE id = ?
-    ');
+    ");
     $stmt->execute([
         $fullName,
         $className ?: null,

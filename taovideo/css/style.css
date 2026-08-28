@@ -154,6 +154,23 @@ input[type="range"] {
     outline-offset: 2px;
 }
 
+/* Quick Color Chips on Canvas Quick Toolbar */
+.quick-color-chip {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, outline 0.15s ease;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.quick-color-chip:hover {
+    transform: scale(1.25);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+.quick-color-chip.active-chip {
+    outline: 2px solid #8b5cf6;
+    outline-offset: 1px;
+}
+
 /* Quick Presets Button Feedback */
 .btn-quick-preset {
     position: relative;
