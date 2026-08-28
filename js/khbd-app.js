@@ -3195,20 +3195,19 @@ async function handleGeneratePpctAnalysis() {
 
     if (details) details.open = true;
 
-    // Tự động bóc tách chi tiết bài học từ kết quả PPCT
+    // Không tự ý ghi đè Tên bài học và Thời lượng người dùng đã chọn/nhập
     const currentTopic = appState.customTopic || appState.selectedLesson || "";
     const parsedDetails = parsePpctLessonDetails(cleanedResult, currentTopic);
-    const periods = Number(data.periodCount);
-    if (String(data.topic || "").trim()) appState.customTopic = String(data.topic).trim();
-    if (Number.isInteger(periods) && periods > 0 && periods <= 20) appState.duration = String(periods);
-    if (String(data.lessonScope || "").trim()) parsedDetails.lessonScopeSuggestion = String(data.lessonScope).trim();
-    if (data.hasAiIntegration === true) { parsedDetails.hasAiIntegration = true; parsedDetails.details.ghiChu = String(data.aiEvidence || "ghi chú Tích hợp AI trong PPCT").trim(); }
+    if (data.hasAiIntegration === true) { 
+      parsedDetails.hasAiIntegration = true; 
+      parsedDetails.details.ghiChu = String(data.aiEvidence || "ghi chú Tích hợp AI trong PPCT").trim(); 
+    }
 
     if (parsedDetails.lessonScopeSuggestion) {
-      appState.teachingContext.lessonScope = parsedDetails.lessonScopeSuggestion;
       const scopeInput = document.getElementById("inputLessonScope");
-      if (scopeInput) {
+      if (scopeInput && !scopeInput.value.trim()) {
         scopeInput.value = parsedDetails.lessonScopeSuggestion;
+        appState.teachingContext.lessonScope = parsedDetails.lessonScopeSuggestion;
       }
       saveStateToLocalStorage();
     }
@@ -4630,16 +4629,13 @@ async function readTextbookWithMistral() {
     }
     await applyTextbookOcrResult(ocrText, { silent: false });
 
-    // Tự động nhận diện Tên bài & Thời lượng từ OCR SGK và điền vào form
-    autoDetectAndFillLessonMetadata({ ocrText, silent: false });
-
     // Tự động mở khung chi tiết để xem kết quả
     const details = document.getElementById("detailsVisionContent");
     if (details) details.open = true;
 
     updateProgress(100, "Đã đọc nội dung SGK (Mistral OCR)!");
     setTimeout(() => hideProgress(), 1500);
-    showToast("Đã nhận diện SGK bằng Mistral OCR thành công! Đã tự động điền Tên bài.", "success", 5000);
+    showToast("Đã đọc nội dung SGK bằng Mistral OCR thành công!", "success", 5000);
     if (status) status.textContent = "Sẵn sàng.";
   } catch (error) {
     console.error("Mistral OCR:", error);

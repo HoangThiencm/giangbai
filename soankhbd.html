@@ -300,27 +300,13 @@
         </div>
       </div>
 
-      <!-- BANNER TỰ ĐỘNG NHẬN DIỆN METADATA -->
-      <div class="tab0-autofill-banner" style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.25rem; background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%); border: 1px solid #c7d2fe; border-radius: var(--radius); margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <span style="font-size: 1.5rem;">✨</span>
-          <div>
-            <strong style="color: var(--primary-dark); font-size: 0.95rem;">Tự động nhận diện Thông tin bài dạy từ Học liệu</strong>
-            <p style="margin: 0; font-size: 0.82rem; color: #4b5563;">AI sẽ tự động đọc SGK & PPCT để điền Tên bài, Thời lượng, Phạm vi tiết dạy và Bật tích hợp phù hợp.</p>
-          </div>
-        </div>
-        <button id="btnAutoDetectMetadata" class="btn btn-primary" type="button" style="box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);">
-          <i data-lucide="wand-2"></i> ✨ Tự động nhận diện bài & PPCT
-        </button>
-      </div>
-
       <!-- =====================================================================
            BƯỚC 2: THIẾT LẬP THÔNG TIN BÀI DẠY (NẰM PHÍA DƯỚI HỌC LIỆU)
            ===================================================================== -->
       <div class="card" id="lessonGeneralSettingsCard">
         <div class="card-header">
-          <h2 class="card-title"><i data-lucide="settings"></i> Thiết lập bài dạy từ SGK</h2>
-          <span class="text-muted" style="font-size: 0.85rem;">Thông tin tự động điền từ SGK/PPCT — Giáo viên có thể chỉnh sửa</span>
+          <h2 class="card-title"><i data-lucide="settings"></i> Thiết lập bài dạy</h2>
+          <span class="text-muted" style="font-size: 0.85rem;">Giáo viên chọn bài từ danh mục hoặc nhập trực tiếp</span>
           <div class="card-actions"><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
