@@ -3987,6 +3987,9 @@ function buildPedagogicalContext() {
 
   const subjectName = appState.subjectName || "Toán";
   const gradeLevel = getGradeLevelName(appState.selectedGrade);
+  const curriculumNotice = typeof getCurrentCurriculumNotice === "function"
+    ? getCurrentCurriculumNotice({ subjectId: currentSubjectId(), grade: appState.selectedGrade })
+    : "Căn cứ CT GDPT 2018/Thông tư 32/2018/TT-BGDĐT và các sửa đổi còn hiệu lực.";
 
   // Lấy gợi ý năng lực chung theo môn học
   const genComps = typeof getGeneralCompetenciesForSubject === "function"
@@ -4005,6 +4008,7 @@ function buildPedagogicalContext() {
 
   return `BỐI CẢNH VÀ RÀNG BUỘC SƯ PHẠM BẮT BUỘC:
 - Môn học: ${subjectName} ${gradeLevel}; khối/lớp: ${appState.selectedGrade}; tên bài: ${getTopicDisplayName()}; thời lượng: ${appState.duration || "chưa xác định"}.${lessonScopeLine}${ppctLine}
+- ${curriculumNotice}
 - Giới hạn năng lực & phẩm chất: Bài dạy 1–2 tiết CHỈ ĐƯỢC CHỌN 1–2 Năng lực chung phù hợp đặc thù môn học (${genCompHint}), 2–3 Năng lực đặc thù nổi trội nhất (gắn với nhiệm vụ/sản phẩm cụ thể), 1–2 Phẩm chất có hành vi quan sát rõ. CẤM liệt kê dàn trải toàn bộ khung năng lực hay đủ 5 phẩm chất.
 - Trình độ/đặc điểm lớp: ${classProfile || `Chưa cung cấp; thiết kế mức độ phù hợp học sinh ${gradeLevel} và có phân hóa vừa sức.`}
 - Hỗ trợ chức năng được chọn: ${support || "Không có yêu cầu riêng được chọn."}

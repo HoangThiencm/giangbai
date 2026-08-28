@@ -1,6 +1,6 @@
 /**
  * js/khbd-prompts.js
- * Hệ thống Siêu Prompt Sư phạm Đa Môn Học (Lớp 1–12) chuẩn Công văn 5512/BGDĐT-GDTrH,
+ * Hệ thống Siêu Prompt Sư phạm Đa Môn Học (Lớp 6–9) chuẩn Công văn 5512/BGDĐT-GDTrH,
  * Dùng cho SGK và học liệu do giáo viên cung cấp.
  * Tích hợp Kịch bản Sư phạm Thực chiến (Actionable Classroom Script),
  * Khung Năng lực Chung theo đặc thù môn học (CT GDPT 2018 - TT 32/2018/TT-BGDĐT),
