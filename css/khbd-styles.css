@@ -1591,12 +1591,17 @@ body {
 
 .integration-tab {
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
 }
 
 .integration-tab input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #0284c7;
+  cursor: pointer;
 }
 
 .integration-tab span {
