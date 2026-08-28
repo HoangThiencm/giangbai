@@ -761,7 +761,9 @@
         const response = await this.fetchWithTimeout(HOST + "/api/canvas_gemini.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          // Canvas không đăng nhập và API này không dùng cookie. Bỏ credentials
+          // để lời gọi từ miền Canvas không bị CORS chặn.
+          credentials: "omit",
           body: JSON.stringify({ model: useModel, payload: payload, timeout: Math.max(10, Math.round((timeoutMs || 75000) / 1000)) }),
           signal
         }, timeoutMs || 75000);
@@ -807,7 +809,7 @@
       cfg.connected = true;
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-canvas-systemgemini-obj2"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-canvas-systemgemini-preview3"></script>
   <script>
     (function notifyHostConnection() {
       const cfg = window.__KHBD_CANVAS__ || {};

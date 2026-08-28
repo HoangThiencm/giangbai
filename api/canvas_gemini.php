@@ -7,6 +7,16 @@
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/ai_runtime_config.php';
 
+// Canvas có thể chạy từ miền Gemini Canvas, nên không mang cookie/phiên người
+// dùng. Cho phép gọi chéo miền chỉ với JSON công khai; API key luôn ở máy chủ.
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     respond(['ok' => false, 'error' => 'Method not allowed.'], 405);
 }
@@ -28,11 +38,8 @@ if (empty($runtime['gemini_enabled']) || empty($keys)) {
     respond(['ok' => false, 'error' => 'Gemini Canvas chưa được Admin cấu hình khóa hệ thống.'], 503);
 }
 
-// Model Canvas do Admin cấu hình trên máy chủ quyết định, không nhận từ trình duyệt.
-$model = trim((string)($runtime['gemini_model'] ?? 'gemini-2.5-flash'));
-if (!preg_match('/^gemini-[a-z0-9._-]+$/i', $model)) {
-    $model = 'gemini-2.5-flash';
-}
+// Canvas dùng cố định model đã thiết kế; không lấy model/key từ người dùng.
+$model = 'gemini-3-flash-preview';
 $timeout = max(10, min(90, (int)($body['timeout'] ?? 75)));
 $lastStatus = 502;
 $lastError = 'Không gọi được Gemini Canvas.';
