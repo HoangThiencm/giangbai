@@ -1318,6 +1318,7 @@ body {
   flex-direction: column;
   gap: 0.5rem;
   z-index: 9999;
+  pointer-events: none;
 }
 
 .toast {
@@ -1336,6 +1337,7 @@ body {
   max-width: 420px;
   animation: slideIn 0.3s ease;
   transition: opacity 0.3s ease;
+  pointer-events: auto;
 }
 
 .toast.toast-success { border-left-color: var(--success); }

@@ -2235,7 +2235,6 @@ function populateLessonDropdown() {
     }
     subjectSelect.value = appState.selectedSubject;
   }
-  
   const select = document.getElementById("selectLesson");
   const chapters = getLessonsForBook(appState.selectedSubject, "standard", appState.selectedGrade);
   
@@ -2267,16 +2266,95 @@ function getTopicDisplayName() {
 // =============================================================================
 // SUBTABS HOẠT ĐỘNG A -> G
 // =============================================================================
-function switchActivitySubtab(actKey) {
-  appState.activeActSubtab = actKey;
-  const actInfo = ACTIVITY_TITLES[actKey];
-  document.getElementById("currentActTitle").textContent = actInfo.full;
-  document.getElementById("editorActLabel").textContent = `Nội dung ${actInfo.short}`;
+function switchMainTab(tabId) {
+  if (!tabId) return;
+  appState.activeTab = tabId;
 
-  // Đổ nội dung vào editor
-  const content = appState.content.activities[actKey] || "";
-  document.getElementById("editorActivity").value = content;
-  renderMathPreview(content, "previewActivity");
+  // 1. Cập nhật class active cho các nút tab điều hướng
+  document.querySelectorAll(".nav-tab-btn").forEach(btn => {
+    if (btn.getAttribute("data-tab") === tabId) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+
+  // 2. Cập nhật class active cho các tab pane nội dung
+  document.querySelectorAll(".tab-pane").forEach(pane => {
+    if (pane.id === tabId) {
+      pane.classList.add("active");
+    } else {
+      pane.classList.remove("active");
+    }
+  });
+
+  // 3. Kích hoạt render preview / refresh dữ liệu tương ứng
+  if (tabId === "tabFullPreview") {
+    if (typeof renderFullLessonPreview === "function") {
+      renderFullLessonPreview();
+    }
+  } else if (tabId === "tabActivities") {
+    if (typeof switchActivitySubtab === "function") {
+      switchActivitySubtab(appState.activeActSubtab || "A");
+    }
+  } else if (tabId === "tabObjectives") {
+    if (typeof renderMathPreview === "function") {
+      renderMathPreview(appState.content.objectives || "", "previewObjectives");
+    }
+  } else if (tabId === "tabMaterials") {
+    if (typeof renderMathPreview === "function") {
+      renderMathPreview(appState.content.materials || "", "previewMaterials");
+    }
+  }
+
+  // 4. Khởi tạo lại Lucide icons nếu có
+  if (typeof initLucideIcons === "function") {
+    initLucideIcons();
+  }
+
+  // 5. Cuộn mượt lên đầu trang khi chuyển tab
+  if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  }
+}
+
+function switchActivitySubtab(actKey) {
+  if (!actKey) return;
+  appState.activeActSubtab = actKey;
+
+  // 1. Cập nhật class active cho các nút subtab
+  document.querySelectorAll(".act-tab-btn").forEach(btn => {
+    if (btn.getAttribute("data-act") === actKey) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+  // 2. Cập nhật tiêu đề
+  const actInfo = ACTIVITY_TITLES[actKey] || { short: `HĐ ${actKey}`, full: `Hoạt động ${actKey}` };
+  const currentTitleEl = document.getElementById("currentActTitle");
+  if (currentTitleEl) currentTitleEl.textContent = actInfo.full;
+  const editorActLabelEl = document.getElementById("editorActLabel");
+  if (editorActLabelEl) editorActLabelEl.textContent = `Nội dung ${actInfo.short}`;
+
+  // 3. Đổ nội dung vào editor và render KaTeX preview
+  const content = (appState.content && appState.content.activities && appState.content.activities[actKey]) || "";
+  const editorAct = document.getElementById("editorActivity");
+  if (editorAct) editorAct.value = content;
+  if (typeof renderMathPreview === "function") {
+    renderMathPreview(content, "previewActivity");
+  }
+
+
+
+
+
+
+
 }
 
 // =============================================================================
@@ -5715,6 +5793,8 @@ if (typeof window !== 'undefined') {
   window.extractTextbookOcrText = extractTextbookOcrText;
   window.dataUrlToUint8Array = dataUrlToUint8Array;
   window.buildPdfMediaPart = buildPdfMediaPart;
+  window.switchMainTab = switchMainTab;
+  window.switchActivitySubtab = switchActivitySubtab;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -5784,6 +5864,8 @@ if (typeof module !== 'undefined' && module.exports) {
     readTextbookWithMistral,
     extractTextbookOcrText,
     dataUrlToUint8Array,
-    buildPdfMediaPart
+    buildPdfMediaPart,
+    switchMainTab,
+    switchActivitySubtab
   };
 }
