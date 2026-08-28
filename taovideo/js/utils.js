@@ -602,23 +602,6 @@ const Utils = {
     },
 
     /**
-     * Convert HEX or RGB color to RGBA with alpha
-     */
-    hexToRgba(hex, alpha = 1) {
-        if (!hex || typeof hex !== 'string') return `rgba(255, 255, 255, ${alpha})`;
-        if (hex.startsWith('rgba')) return hex;
-        if (hex.startsWith('rgb')) return hex.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
-        let c = hex.replace('#', '').trim();
-        if (c.length === 3) c = c.split('').map(x => x + x).join('');
-        const num = parseInt(c, 16);
-        if (isNaN(num)) return `rgba(255, 255, 255, ${alpha})`;
-        const r = (num >> 16) & 255;
-        const g = (num >> 8) & 255;
-        const b = num & 255;
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    },
-
-    /**
      * Render a single Text Box on Canvas
      * @param {CanvasRenderingContext2D} ctx
      * @param {Object} textBox
@@ -806,61 +789,38 @@ const Utils = {
             ctx.textAlign = textAlign;
             ctx.textBaseline = 'middle';
 
-            // 1. Draw stroke/shadow if needed (Isolation Pattern)
             if (bgStyle === 'shadow') {
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-                ctx.shadowBlur = 6 * scale;
-                ctx.shadowOffsetX = 2 * scale;
-                ctx.shadowOffsetY = 2 * scale;
-                ctx.lineWidth = fontSize * 0.09;
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+                ctx.shadowBlur = 10 * scale;
+                ctx.shadowOffsetX = 3 * scale;
+                ctx.shadowOffsetY = 3 * scale;
+
+                ctx.lineWidth = fontSize * 0.16;
                 ctx.strokeStyle = '#000000';
                 ctx.strokeText(lineText, lineX, y);
             } else if (bgStyle === 'neon') {
-                const glowColor = (textBox.bgColor && textBox.bgColor !== '#000000') ? textBox.bgColor : textColor;
+                const glowColor = bgColor !== '#000000' ? bgColor : '#38bdf8';
                 ctx.shadowColor = glowColor;
                 ctx.shadowBlur = (animGlowBlur || 14) * scale;
                 ctx.shadowOffsetX = 0;
                 ctx.shadowOffsetY = 0;
-                ctx.lineWidth = fontSize * 0.08;
+
+                ctx.lineWidth = fontSize * 0.14;
                 ctx.strokeStyle = glowColor;
                 ctx.strokeText(lineText, lineX, y);
-            } else if (bgStyle === 'pill') {
-                // Clean subtle stroke inside pill
-                ctx.shadowColor = 'transparent';
-                ctx.shadowBlur = 0;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 0;
-                ctx.lineWidth = fontSize * 0.04;
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.65)';
-                ctx.strokeText(lineText, lineX, y);
-            } else if (bgStyle === 'none') {
+            } else if (bgStyle === 'none' || bgStyle === 'pill') {
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
                 ctx.shadowBlur = 4 * scale;
                 ctx.shadowOffsetX = 1 * scale;
                 ctx.shadowOffsetY = 1 * scale;
-                ctx.lineWidth = fontSize * 0.06;
+
+                ctx.lineWidth = fontSize * 0.1;
                 ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.strokeText(lineText, lineX, y);
-            } else if (bgStyle === 'gradient-banner') {
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-                ctx.shadowBlur = 3 * scale;
-                ctx.shadowOffsetX = 1 * scale;
-                ctx.shadowOffsetY = 1 * scale;
-                ctx.lineWidth = fontSize * 0.05;
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
                 ctx.strokeText(lineText, lineX, y);
             }
 
-            // 2. CRITICAL: Reset shadow to transparent before fillText so text color is pure and vibrant
-            ctx.shadowColor = 'transparent';
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
-
-            // 3. Render Fill Text (Pure text color without dark shadow bleed)
             if (isKaraoke && totalWords > 0) {
-                // Dim unread text using textColor with opacity
-                ctx.fillStyle = this.hexToRgba(textColor, 0.45);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
                 ctx.fillText(lineText, lineX, y);
 
                 const words = lineText.trim().split(/\s+/);
@@ -872,15 +832,11 @@ const Utils = {
                     const wordProgress = (wordIdx + 1) / totalWords;
 
                     if (karaokeProgress >= wordProgress) {
-                        ctx.fillStyle = textColor;
-                        ctx.shadowColor = textColor;
+                        ctx.fillStyle = '#fde047';
+                        ctx.shadowColor = '#f59e0b';
                         ctx.shadowBlur = 8 * scale;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 0;
                         ctx.textAlign = 'left';
                         ctx.fillText(w, wordStartX, y);
-                        ctx.shadowColor = 'transparent';
-                        ctx.shadowBlur = 0;
                     }
                     wordStartX += wordMetrics.width;
                     wordsProcessedSoFar++;

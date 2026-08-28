@@ -660,30 +660,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return current.slide;
     }
 
-    function updateQuickColorChips(color) {
-        if (!color) return;
-        const norm = color.toLowerCase();
-        document.querySelectorAll('.quick-color-chip').forEach(chip => {
-            if (chip.dataset.color && chip.dataset.color.toLowerCase() === norm) {
-                chip.classList.add('active-chip');
-            } else {
-                chip.classList.remove('active-chip');
-            }
-        });
-    }
-
-    function updateModalColorChips(color) {
-        if (!color) return;
-        const norm = color.toLowerCase();
-        document.querySelectorAll('.color-chip').forEach(chip => {
-            if (chip.dataset.color && chip.dataset.color.toLowerCase() === norm) {
-                chip.classList.add('active-chip');
-            } else {
-                chip.classList.remove('active-chip');
-            }
-        });
-    }
-
     function updateQuickToolbar() {
         const currentSlide = getCurrentActiveSlide();
         if (!currentSlide || state.slides.length === 0) {
@@ -709,7 +685,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (quickTbFont) quickTbFont.value = selBox.fontFamily || 'Be Vietnam Pro';
         if (quickTbSizeVal) quickTbSizeVal.textContent = selBox.fontSize || 46;
         if (quickTbColor) quickTbColor.value = selBox.color || '#ffffff';
-        updateQuickColorChips(selBox.color || '#ffffff');
         if (quickTbBgStyle) quickTbBgStyle.value = selBox.bgStyle || 'pill';
         if (quickTbAnim) quickTbAnim.value = selBox.animation || 'fade';
 
@@ -867,29 +842,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const handleQuickColorChange = (newColor) => {
-        if (!newColor) return;
+    quickTbColor?.addEventListener('input', (e) => {
         const currentSlide = getCurrentActiveSlide();
         const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
         if (selBox) {
-            selBox.color = newColor;
-            if (quickTbColor) quickTbColor.value = newColor;
-            if (modalTextColor) modalTextColor.value = newColor;
-            updateQuickColorChips(newColor);
-            updateModalColorChips(newColor);
+            selBox.color = e.target.value;
             videoRenderer.renderFrame(videoRenderer.currentTime);
         }
-    };
-
-    quickTbColor?.addEventListener('input', (e) => handleQuickColorChange(e.target.value));
-    quickTbColor?.addEventListener('change', (e) => handleQuickColorChange(e.target.value));
-
-    document.querySelectorAll('.quick-color-chip').forEach(chip => {
-        chip.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const color = chip.dataset.color;
-            if (color) handleQuickColorChange(color);
-        });
     });
 
     quickTbBgStyle?.addEventListener('change', (e) => {
@@ -1065,7 +1024,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modalFontSize) modalFontSize.value = tb.fontSize || 46;
         if (modalFontSizeVal) modalFontSizeVal.textContent = (tb.fontSize || 46) + 'px';
         if (modalTextColor) modalTextColor.value = tb.color || '#ffffff';
-        updateModalColorChips(tb.color || '#ffffff');
 
         // Select Bg Style radio
         const bgRadios = document.querySelectorAll('input[name="modal-bg-style"]');
@@ -1131,12 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tb.fontSize = parseInt(modalFontSize.value, 10) || 46;
             if (modalFontSizeVal) modalFontSizeVal.textContent = tb.fontSize + 'px';
         }
-        if (modalTextColor) {
-            tb.color = modalTextColor.value;
-            updateModalColorChips(tb.color);
-            if (quickTbColor) quickTbColor.value = tb.color;
-            updateQuickColorChips(tb.color);
-        }
+        if (modalTextColor) tb.color = modalTextColor.value;
 
         const checkedBg = document.querySelector('input[name="modal-bg-style"]:checked');
         if (checkedBg) tb.bgStyle = checkedBg.value;
@@ -1235,7 +1188,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modalFontSize) modalFontSize.value = tb.fontSize;
         if (modalFontSizeVal) modalFontSizeVal.textContent = tb.fontSize + 'px';
         if (modalTextColor) modalTextColor.value = tb.color;
-        updateModalColorChips(tb.color);
 
         const bgRadios = document.querySelectorAll('input[name="modal-bg-style"]');
         bgRadios.forEach(r => { r.checked = (r.value === tb.bgStyle); });
@@ -1280,7 +1232,6 @@ document.addEventListener('DOMContentLoaded', () => {
     modalFontFamily?.addEventListener('change', syncModalToSlide);
     modalFontSize?.addEventListener('input', syncModalToSlide);
     modalTextColor?.addEventListener('input', syncModalToSlide);
-    modalTextColor?.addEventListener('change', syncModalToSlide);
     modalBgColor?.addEventListener('input', syncModalToSlide);
     modalTextAnimation?.addEventListener('change', syncModalToSlide);
     modalSlideMotion?.addEventListener('change', syncModalToSlide);
@@ -1326,9 +1277,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.color-chip').forEach(chip => {
         chip.addEventListener('click', () => {
             const color = chip.dataset.color;
-            if (modalTextColor && color) {
+            if (modalTextColor) {
                 modalTextColor.value = color;
-                updateModalColorChips(color);
                 syncModalToSlide();
             }
         });
