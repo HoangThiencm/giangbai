@@ -4588,13 +4588,6 @@ async function applyTextbookOcrResult(ocrText, { silent = false } = {}) {
   if (editor) editor.value = ocrText;
   renderMathPreview(ocrText, "previewVision");
   applyLessonBasedRecommendations({ silent });
-  const integrations = appState.teachingContext?.integrations || {};
-  if (integrations.digital || integrations.ai) {
-    updateProgress(92, "Đang đề xuất năng lực số/AI...");
-    const status = document.getElementById("statusFooterText");
-    if (status) status.textContent = "Đang đề xuất năng lực số/AI...";
-  }
-  await requestStructuredIntegrationCandidatesForEnabled({ silent });
 }
 
 async function readTextbookWithMistral() {
