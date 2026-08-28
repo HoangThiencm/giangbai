@@ -5218,9 +5218,11 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
     if (targetPreviewId) renderMathPreview(finalResult, targetPreviewId);
 
     updateProgress(100, `Hoàn tất ${operationName}!`);
-    setTimeout(() => hideProgress(), 1500);
     showToast(`Đã ${operationName} thành công!`, "success");
     document.getElementById("statusFooterText").textContent = `Sẵn sàng.`;
+    // Canvas có thể trì hoãn timer nền; đóng ngay sau khi đã hiện thông báo thành công
+    // để thanh tiến trình không bị kẹt ở 100%.
+    hideProgress();
 
   } catch (error) {
     console.error(`Lỗi khi ${operationName}:`, error);
@@ -5590,6 +5592,8 @@ function userConfirm(message, proceedIfBlocked = false) {
 // =============================================================================
 // PROGRESS BAR & TOAST NOTIFICATIONS
 // =============================================================================
+let progressDisplayVersion = 0;
+
 function updateProgress(percent, title) {
   if (typeof globalThis.onProgressUpdate === "function") {
     globalThis.onProgressUpdate(percent, title);
@@ -5600,10 +5604,13 @@ function updateProgress(percent, title) {
   const percentElem = document.getElementById("progressPercent");
 
   if (container) {
+    const displayVersion = ++progressDisplayVersion;
     container.style.display = "block";
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(() => {
-        container.classList.add("show");
+        if (displayVersion === progressDisplayVersion && container.style.display === "block") {
+          container.classList.add("show");
+        }
       });
     } else {
       container.classList.add("show");
@@ -5617,12 +5624,11 @@ function updateProgress(percent, title) {
 function hideProgress() {
   const container = document.getElementById("progressContainer");
   if (container) {
+    // Hủy mọi requestAnimationFrame cũ của updateProgress, tránh trường hợp
+    // một frame đến muộn làm thanh tiến trình hiện lại sau khi đã hoàn tất.
+    progressDisplayVersion++;
     container.classList.remove("show");
-    setTimeout(() => {
-      if (!container.classList.contains("show")) {
-        container.style.display = "none";
-      }
-    }, 350);
+    container.style.display = "none";
   }
 }
 
