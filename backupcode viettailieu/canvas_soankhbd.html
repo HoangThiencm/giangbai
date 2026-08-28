@@ -230,8 +230,8 @@
             <input type="text" id="inputTopicCustom" placeholder="Nhập tên bài học cụ thể...">
           </div>
           <div class="tool-group">
-            <label for="inputDuration">Số tiết dạy học:</label>
-            <input type="number" id="inputDuration" min="1" max="20" value="2">
+            <label for="inputDuration">Thời lượng dạy học:</label>
+            <select id="inputDuration" aria-label="Thời lượng dạy học"></select>
           </div>
           <div class="tool-group">
             <label for="inputLessonScope">Phạm vi tiết dạy theo PPCT:</label>
@@ -890,7 +890,9 @@
       }
       function formatDuration(periods) {
         const n = Math.max(1, Number(periods) || 1);
-        return String(n);
+        const grade = Number((typeof appState !== "undefined" && appState.selectedGrade) || ((document.getElementById("selectGrade") || {}).value) || 6);
+        const minutes = n * (grade >= 1 && grade <= 5 ? 35 : 45);
+        return String(n).padStart(2, "0") + " tiết (" + minutes + " phút)";
       }
       function currentScopeLabel() {
         const cluster = selectedCluster();

@@ -28,17 +28,36 @@ class GeminiAPIManager {
   }
 
   init() {
+    this.keyOwner = this.getKeyOwner();
     this.loadKeysFromLocalStorage();
     this.loadMistralKeysFromLocalStorage();
     this.loadModelFromLocalStorage();
   }
 
+  getKeyOwner() {
+    const id = String(localStorage.getItem('userId') || '').trim();
+    const email = String(localStorage.getItem('userEmail') || '').trim().toLowerCase();
+    return `${id}|${email}`;
+  }
+
+  ensureKeyOwner() {
+    const owner = this.getKeyOwner();
+    if (owner === this.keyOwner) return;
+    // Không giữ key trong bộ nhớ khi trình duyệt vừa đổi tài khoản.
+    this.keyOwner = owner;
+    this.apiKeys = [];
+    this.mistralKeys = [];
+    this.currentKeyIndex = 0;
+    this.loadKeysFromLocalStorage();
+    this.loadMistralKeysFromLocalStorage();
+  }
+
   getStorageKey() {
-    return 'khbd_user_gemini_keys_' + (localStorage.getItem('userEmail') || 'default');
+    return 'khbd_user_gemini_keys_' + (String(localStorage.getItem('userEmail') || 'default').trim().toLowerCase());
   }
 
   getMistralStorageKey() {
-    return 'khbd_user_mistral_keys_' + (localStorage.getItem('userEmail') || 'default');
+    return 'khbd_user_mistral_keys_' + (String(localStorage.getItem('userEmail') || 'default').trim().toLowerCase());
   }
 
   static cleanKeyList(keysArray) {
@@ -119,6 +138,7 @@ class GeminiAPIManager {
   // Đồng bộ danh sách keys từ máy chủ CSDL (nếu có session đăng nhập)
   async syncKeysFromServer() {
     try {
+      this.ensureKeyOwner();
       if (typeof fetch !== "function") return this.apiKeys;
       const res = await fetch('api/user_gemini_keys.php', {
         method: 'GET',
@@ -138,6 +158,7 @@ class GeminiAPIManager {
   }
 
   async saveUserAiKeysToServer(payload) {
+    this.ensureKeyOwner();
     const body = {};
     if (Array.isArray(payload?.keys)) {
       this.apiKeys = GeminiAPIManager.cleanKeyList(payload.keys);
@@ -198,6 +219,7 @@ class GeminiAPIManager {
 
   // Cập nhật danh sách API Keys
   setApiKeys(keysArray) {
+    this.ensureKeyOwner();
     this.apiKeys = Array.from(new Set(keysArray
       .map(k => k.trim())
       .filter(k => k.length > 10)));
@@ -207,6 +229,7 @@ class GeminiAPIManager {
 
   // Lấy key hiện tại
   getCurrentKey() {
+    this.ensureKeyOwner();
     if (this.apiKeys.length === 0) return null;
     if (this.currentKeyIndex >= this.apiKeys.length) {
       this.currentKeyIndex = 0;

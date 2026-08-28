@@ -299,6 +299,7 @@ function initLucideIcons() {
 
 function syncDraftDom() {
   const context = appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+  renderDurationOptions();
   const values = {
     selectGrade: appState.selectedGrade,
     inputSchool: appState.school,
@@ -754,6 +755,21 @@ function standardsOfKind(kind) {
       const entry = (catalog.entries || []).find(candidate => candidate.id === item.catalogId);
       return entry ? { ...item, standardKind: kind, officialCode: item.officialCode || entry.code, officialLabel: item.officialLabel || entry.label } : item;
     });
+}
+
+function renderDurationOptions() {
+  const select = document.getElementById("inputDuration");
+  if (!select || select.tagName !== "SELECT") return;
+  const grade = Number(appState.selectedGrade) || 6;
+  const periods = parsePeriodsFromInput(appState.duration, grade);
+  const periodMinutes = getPeriodMinutesByGrade(grade);
+  select.innerHTML = Array.from({ length: 20 }, (_, index) => {
+    const count = index + 1;
+    const value = `${String(count).padStart(2, "0")} tiết (${count * periodMinutes} phút)`;
+    return `<option value="${value}">${value}</option>`;
+  }).join("");
+  appState.duration = formatSmartDuration(periods, grade);
+  select.value = appState.duration;
 }
 
 function hasAnalyzedLessonContent() {
@@ -1856,6 +1872,8 @@ function setupEventListeners() {
     }
 
     switchDraft({ grade: nextGrade, lesson: "", topic: "" });
+    appState.duration = formatSmartDuration(appState.duration, nextGrade);
+    renderDurationOptions();
     const after = appState.teachingContext.standards.length;
     renderStandardsCatalog();
     renderPedagogyCatalogs();
@@ -1919,7 +1937,7 @@ function setupEventListeners() {
   });
 
   // 3. Inputs thông tin chung
-  ["inputSchool", "inputGroup", "inputTeacher", "inputSubject", "inputDuration"].forEach(id => {
+  ["inputSchool", "inputGroup", "inputTeacher", "inputSubject"].forEach(id => {
     document.getElementById(id).addEventListener("input", (e) => {
       const key = id.replace("input", "").toLowerCase();
       appState[key] = e.target.value;
@@ -2251,6 +2269,13 @@ function populateLessonDropdown() {
       optgroup.appendChild(opt);
     });
     select.appendChild(optgroup);
+  });
+
+  const durationSelect = document.getElementById("inputDuration");
+  if (durationSelect) durationSelect.addEventListener("change", (e) => {
+    appState.duration = formatSmartDuration(e.target.value, appState.selectedGrade);
+    e.target.value = appState.duration;
+    saveStateToLocalStorage();
   });
 }
 
@@ -3032,7 +3057,7 @@ function getPeriodMinutesByGrade(grade) {
  * Trích xuất số tiết học từ chuỗi người dùng nhập (hoặc số phút).
  * @param {string|number} inputStr - Chuỗi nhập vào
  * @param {string|number} [grade] - Khối lớp
- * @returns {number} Số tiết (1-10)
+ * @returns {number} Số tiết (1-20)
  */
 function parsePeriodsFromInput(inputStr, grade) {
   const str = String(inputStr || "").trim();
@@ -3043,7 +3068,7 @@ function parsePeriodsFromInput(inputStr, grade) {
   const tietMatch = str.match(/(\d+)\s*tiết/i);
   if (tietMatch) {
     const p = parseInt(tietMatch[1], 10);
-    return Math.max(1, Math.min(10, isNaN(p) ? 2 : p));
+    return Math.max(1, Math.min(20, isNaN(p) ? 2 : p));
   }
 
   // 2. Khớp "X phút" hoặc "Xp" (ví dụ: "45 phút", "90p", "70 phút", "35p", "105 phút")
@@ -3051,7 +3076,7 @@ function parsePeriodsFromInput(inputStr, grade) {
   if (minMatch) {
     const totalMin = parseInt(minMatch[1], 10);
     if (!isNaN(totalMin) && totalMin > 0) {
-      return Math.max(1, Math.min(10, Math.round(totalMin / periodMin)));
+      return Math.max(1, Math.min(20, Math.round(totalMin / periodMin)));
     }
   }
 
@@ -3063,7 +3088,7 @@ function parsePeriodsFromInput(inputStr, grade) {
       if (num <= 10) {
         return Math.max(1, num);
       }
-      return Math.max(1, Math.min(10, Math.round(num / periodMin)));
+      return Math.max(1, Math.min(20, Math.round(num / periodMin)));
     }
   }
 

@@ -35,6 +35,7 @@ if (!empty($user['expires_at']) && strtotime($user['expires_at']) < time()) {
 $pdo->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?')->execute([$user['id']]);
 $user = maybe_upgrade_teacher_allowed_pages($pdo, $user);
 
+session_regenerate_id(true);
 $_SESSION['user_id'] = (int)$user['id'];
 $_SESSION['role'] = $user['role'];
 
