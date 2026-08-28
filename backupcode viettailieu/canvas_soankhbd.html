@@ -51,7 +51,7 @@
   <script src="https://unpkg.com/lucide@0.460.0"></script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260828-syntax">
+  <link rel="stylesheet" href="https://hoangthiencm.id.vn/css/khbd-styles.css?v=20260828-canvas-full1">
   <style>
     #canvasHostBanner {
       position: sticky; top: 0; z-index: 2000; padding: .55rem 1rem;
@@ -202,11 +202,11 @@
          TAB 0: THIẾT LẬP CHUNG & THÔNG TIN BÀI DẠY
          ----------------------------------------------------------------------- -->
     <section id="tabVision" class="tab-pane active">
-      <div class="card">
+      <div class="card" id="lessonGeneralSettingsCard">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="settings"></i> Thiết lập bài dạy từ SGK</h2>
           <span class="text-muted" style="font-size: 0.85rem;">SGK do giáo viên cung cấp</span>
-          <div class="card-actions"><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
+          <div class="card-actions"><button id="btnAutoDetectMetadata" class="btn btn-outline-dark btn-sm" type="button"><i data-lucide="sparkles"></i> Đề xuất thông tin bài dạy</button><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
           <div class="tool-group">
@@ -278,17 +278,30 @@
             <div id="techniquesCatalogPanel"></div>
             <div id="activitiesCatalogPanel"></div>
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0;">
-            <label><input type="checkbox" id="toggleDigitalCompetency" checked> Tích hợp năng lực số (TT 02/2025)</label>
-            <label><input type="checkbox" id="toggleAiCompetency"> Tích hợp năng lực AI</label>
-            <label><input type="checkbox" id="toggleForeignLanguage"> Tích hợp ngoại ngữ</label>
-            <label><input type="checkbox" id="toggleInclusiveSupport"> Tích hợp hỗ trợ HS khuyết tật/hòa nhập</label>
+          <div id="dynamicIntegrationsContainer" class="dynamic-integrations-panel" style="margin-top: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #ffffff;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-dark); display: flex; align-items: center; gap: 0.4rem;"><i data-lucide="sparkles"></i> Tích hợp nội dung &amp; Bối cảnh sư phạm chuyên sâu</h4>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button id="btnSuggestPedagogyStandards" class="btn btn-outline-dark btn-sm" type="button"><i data-lucide="sparkles"></i> Đề xuất PP/KTDH &amp; Năng lực số/AI</button>
+                <span class="text-muted" style="font-size: 0.78rem;">Chuẩn TT 08/2024, CT 05-CT/TW, QĐ 1309, QĐ 149 &amp; CV 3089</span>
+              </div>
+            </div>
+            <div class="integration-tabs" role="tablist" aria-label="Các nội dung tích hợp">
+              <label class="integration-tab" data-integration-tab="digital"><input type="checkbox" id="toggleDigitalCompetency" checked> <span>💻 Năng lực số</span></label>
+              <label class="integration-tab" data-integration-tab="ai"><input type="checkbox" id="toggleAiCompetency"> <span>✨ Năng lực AI</span></label>
+              <label class="integration-tab" data-integration-tab="foreignLanguage"><input type="checkbox" id="toggleForeignLanguage"> <span>🌐 Ngoại ngữ</span></label>
+              <label class="integration-tab" data-integration-tab="inclusive"><input type="checkbox" id="toggleInclusiveSupport"> <span>🤝 Hòa nhập</span></label>
+            </div>
+            <div class="integration-tab-details">
+              <section class="integration-detail" data-integration-detail="digital"><div id="digitalStandardsPanel" hidden></div></section>
+              <section class="integration-detail" data-integration-detail="ai" hidden><div id="aiStandardsPanel" hidden></div></section>
+              <section class="integration-detail" data-integration-detail="foreignLanguage" hidden><p><b>Gợi ý tích hợp:</b> Chỉ dùng từ vựng, câu lệnh hoặc sản phẩm ngoại ngữ thật sự cần cho bài học; không biến tiết học thành dạy ngoại ngữ.</p></section>
+              <section class="integration-detail" data-integration-detail="inclusive" hidden><p><b>Gợi ý hỗ trợ:</b> Điều chỉnh nhiệm vụ, học liệu, cách giao tiếp và vai trò nhóm theo nhu cầu đã chọn ở phần Đặc điểm lớp học.</p></section>
+            </div>
+            <div id="subjectIntegrationsPanel" hidden style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border);"></div>
+            <p id="nlsAiSubjectHint" class="text-muted" hidden style="font-size:0.82rem;margin:0.5rem 0 0;"></p>
           </div>
-          <div id="subjectIntegrationsPanel" hidden></div>
-          <p id="nlsAiSubjectHint" class="text-muted" hidden style="font-size:0.82rem;margin:0 0 .5rem;"></p>
-          <p class="text-muted" style="font-size:0.82rem;margin:0 0 .75rem;">Làm Bước 0 (phân tích SGK) trước, rồi bật NLS và/hoặc AI. Sau OCR, hệ thống tự tick tối đa 3 mục/loại khi có minh chứng trực tiếp trong nội dung bài. NLS theo dải TT 02 lớp 6–7 / 8–9; AI đúng từng lớp. Không tự bịa mã ngoài văn bản.</p>
-          <div id="digitalStandardsPanel" hidden></div>
-          <div id="aiStandardsPanel" hidden></div>
+          <p class="text-muted" style="font-size:0.82rem;margin:0.75rem 0;">Làm Bước 0 (phân tích SGK) trước, rồi bật NLS và/hoặc AI. Sau OCR, hệ thống tự tick tối đa 3 mục/loại khi có minh chứng trực tiếp trong nội dung bài. NLS theo dải TT 02 lớp 6–7 / 8–9; AI đúng từng lớp. Không tự bịa mã ngoài văn bản.</p>
           <div class="tool-group">
             <label for="inputSpecialRequirements">Yêu cầu hoặc hoạt động đặc thù:</label>
             <textarea id="inputSpecialRequirements" maxlength="600" rows="3" placeholder="Ví dụ: Có hoạt động đo đạc ở sân trường; ưu tiên nhiệm vụ theo nhóm 4; không sử dụng điện thoại trong giờ học."></textarea>
@@ -316,6 +329,9 @@
           <div class="card-actions">
             <button id="btnAnalyzeVision" class="btn btn-primary" type="button">
               <i data-lucide="sparkles"></i> Đọc SGK + PPCT bằng AI
+            </button>
+            <button id="btnAnalyzePpct" class="btn btn-outline-dark" type="button">
+              <i data-lucide="clipboard-check"></i> Chỉ đọc PPCT
             </button>
             <button id="btnClearPpctFiles" class="btn btn-outline-dark" type="button">
               <i data-lucide="trash"></i> Xóa file PPCT
@@ -576,7 +592,7 @@
        ========================================================================= -->
   <footer class="app-footer">
     <div>
-      <b>Trợ lý Soạn Kế hoạch Bài dạy AI</b> • GDPT 2018 Lớp 1–12
+      <b>Trợ lý Soạn Kế hoạch Bài dạy AI</b> • GDPT 2018 THCS Lớp 6–9
     </div>
     <div>
       <span id="statusFooterText">Đang kết nối host…</span> (Model: <span id="footerModelName">gemini-3-flash-preview</span>)
@@ -697,15 +713,15 @@
   <!-- =========================================================================
        SCRIPTS — thuần từ host; Canvas tự cấp Gemini, không nạp Mistral client
        ========================================================================= -->
-  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260828-syntax"></script>
-  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260828-syntax"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260828-syntax"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260828-syntax"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260828-syntax"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260828-syntax"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260828-syntax"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260828-syntax"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260828-syntax"></script>
+  <script src="https://hoangthiencm.id.vn/ai-design-config.js?v=20260828-canvas-full1"></script>
+  <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js?v=20260828-canvas-full1"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260828-canvas-full1"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260828-canvas-full1"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260828-canvas-full1"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260828-canvas-full1"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js?v=20260828-canvas-full1"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260828-canvas-full1"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js?v=20260828-canvas-full1"></script>
   <script>
     /* Patch Gemini + OCR TRƯỚC khbd-app.js để DOMContentLoaded dùng runtime Canvas. */
     (function patchKhbdCanvasRuntime() {
@@ -784,7 +800,7 @@
       cfg.connected = true;
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-nlsfix1"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-canvas-full1"></script>
   <script>
     (function notifyHostConnection() {
       const cfg = window.__KHBD_CANVAS__ || {};
