@@ -166,7 +166,7 @@ console.log('✓ Phân loại tích hợp theo môn học chuẩn 100% văn bả
 // -----------------------------------------------------------------------------
 console.log('\n[TEST 2] Kiểm tra normalizeTeachingContext và tự động prune khi chuyển môn...');
 const emptyCtx = app.normalizeTeachingContext({});
-assert.strictEqual(emptyCtx.integrations.digital, false);
+assert.strictEqual(emptyCtx.integrations.digital, true);
 assert.strictEqual(emptyCtx.integrations.ai, false);
 assert.strictEqual(emptyCtx.integrations.gdqpan, false);
 assert.strictEqual(emptyCtx.integrations.stemModeling, false);

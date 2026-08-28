@@ -121,9 +121,9 @@ assert.ok(tinhocIds.includes('stemModeling') && tinhocIds.includes('virtualLab')
 assert.ok(cnIds.includes('stemModeling') && cnIds.includes('virtualLab') && cnIds.includes('greenEnergyEnv'), 'congnghe có STEM, Thí nghiệm ảo, Năng lượng xanh');
 console.log('✓ Catalog theo môn khớp Bộ/chuyên môn.');
 
-console.log('\n[TEST 2] normalizeTeachingContext giữ 4 key cũ và thêm key mới = false...');
+console.log('\n[TEST 2] normalizeTeachingContext giữ 4 key cũ (mặc định digital = true) và thêm key mới = false...');
 const normalized = app.normalizeTeachingContext({});
-assert.strictEqual(normalized.integrations.digital, false);
+assert.strictEqual(normalized.integrations.digital, true);
 assert.strictEqual(normalized.integrations.ai, false);
 assert.strictEqual(normalized.integrations.foreignLanguage, false);
 assert.strictEqual(normalized.integrations.inclusive, false);

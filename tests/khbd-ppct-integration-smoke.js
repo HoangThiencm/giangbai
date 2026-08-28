@@ -82,15 +82,21 @@ console.log('KIỂM THỬ TÍCH HỢP PPCT (PHỤ LỤC 3 CÔNG VĂN 5512) - SMO
 console.log('================================================================================');
 
 // 1. Kiểm tra Prompt ANALYZE_PPCT
-console.log('\n[TEST 1] Kiểm tra PROMPTS.ANALYZE_PPCT và cấu trúc Phụ lục 3 CV 5512...');
+console.log('\n[TEST 1] Kiểm tra PROMPTS.ANALYZE_PPCT, cấu trúc Ma trận 7 Cột và Lệnh cấm...');
 assert(typeof global.PROMPTS.ANALYZE_PPCT === 'string', 'PROMPTS.ANALYZE_PPCT phải là một string.');
 assert(global.PROMPTS.ANALYZE_PPCT.includes('Phụ lục 3'), 'Prompt phải nhắc đến Phụ lục 3.');
 assert(global.PROMPTS.ANALYZE_PPCT.includes('5512'), 'Prompt phải nhắc đến Công văn 5512.');
-assert(global.PROMPTS.ANALYZE_PPCT.includes('Bài học/Chủ đề') || global.PROMPTS.ANALYZE_PPCT.includes('Bài học'), 'Prompt phải có cột Bài học/Chủ đề.');
+assert(global.PROMPTS.ANALYZE_PPCT.includes('Tiết CT'), 'Prompt phải có cột Tiết CT.');
+assert(global.PROMPTS.ANALYZE_PPCT.includes('Bài học / Chủ đề') || global.PROMPTS.ANALYZE_PPCT.includes('Bài học'), 'Prompt phải có cột Bài học / Chủ đề.');
 assert(global.PROMPTS.ANALYZE_PPCT.includes('Số tiết'), 'Prompt phải có cột Số tiết.');
+assert(global.PROMPTS.ANALYZE_PPCT.includes('Tuần'), 'Prompt phải có cột Tuần.');
 assert(global.PROMPTS.ANALYZE_PPCT.includes('Thiết bị dạy học'), 'Prompt phải có cột Thiết bị dạy học.');
 assert(global.PROMPTS.ANALYZE_PPCT.includes('Địa điểm dạy học'), 'Prompt phải có cột Địa điểm dạy học.');
-console.log('✓ PROMPTS.ANALYZE_PPCT hợp lệ chuẩn Phụ lục 3 CV 5512.');
+assert(global.PROMPTS.ANALYZE_PPCT.includes('Ghi chú / Tích hợp') || global.PROMPTS.ANALYZE_PPCT.includes('Ghi chú'), 'Prompt phải có cột Ghi chú / Tích hợp.');
+assert(global.PROMPTS.ANALYZE_PPCT.includes('TUYỆT ĐỐI CẤM sinh Kế hoạch bài dạy'), 'Prompt phải có chỉ thị cấm sinh KHBD.');
+assert(global.PROMPTS.ANALYZE_PPCT.includes('CẤM viết tiến trình dạy học'), 'Prompt phải có chỉ thị cấm viết tiến trình dạy học.');
+assert(global.PROMPTS.ANALYZE_PPCT.includes('Gợi ý phạm vi tiết dạy (Lesson Scope)'), 'Prompt phải có mục Gợi ý phạm vi tiết dạy.');
+console.log('✓ PROMPTS.ANALYZE_PPCT hợp lệ chuẩn Ma trận 7 Cột Phụ lục 3 CV 5512 và lệnh cấm nghiêm ngặt.');
 
 // 2. Kiểm tra getPromptTemplate với ANALYZE_PPCT
 console.log("\n[TEST 2] Kiểm tra getPromptTemplate('ANALYZE_PPCT', ...)...");
@@ -116,7 +122,7 @@ const mockContext = {
   topic: 'Số vô tỉ. Căn bậc hai số học',
   duration: '02 tiết (90 phút)',
   lesson_scope: 'Tiết 1: Số vô tỉ và Căn bậc hai số học (Mục 1 + 2)',
-  ppct_content: '| STT | Bài học | Số tiết | Thời điểm | Thiết bị | Địa điểm |\n| 1 | Số vô tỉ. Căn bậc hai số học | 2 | Tuần 5 | Thước kẻ, máy tính Casio | Lớp học |',
+  ppct_content: '| Tiết CT | Bài học / Chủ đề | Số tiết | Tuần | Thiết bị dạy học | Địa điểm dạy học | Ghi chú / Tích hợp |\n| 1 | Số vô tỉ. Căn bậc hai số học | 1 | Tuần 5 | Thước kẻ, máy tính Casio | Lớp học | Tích hợp AI |',
   textbook_content: 'I. Số vô tỉ\nII. Căn bậc hai số học\nLuyện tập 1\nBài tập 2.1',
   objectives_content: '1. Về kiến thức: Nhận biết số vô tỉ và căn bậc hai số học.',
   activities_content: ''
@@ -138,18 +144,20 @@ const actAEPrompt = global.getPromptTemplate('GENERATE_ACTIVITIES_AE', mockConte
 assert(actAEPrompt.includes('Tiết 1: Số vô tỉ'), 'Prompt GENERATE_ACTIVITIES_AE phải chứa lesson_scope.');
 console.log('✓ Các prompt sư phạm đã thay thế và ràng buộc PPCT / phạm vi tiết dạy thành công.');
 
-// 4. Kiểm tra appState và các trường PPCT
-console.log('\n[TEST 4] Kiểm tra appState và normalizeTeachingContext...');
+// 4. Kiểm tra appState và các trường PPCT & Mặc định NLS = true
+console.log('\n[TEST 4] Kiểm tra appState, normalizeTeachingContext và Năng lực số mặc định...');
 assert(Array.isArray(app.appState.ppctImages), 'appState.ppctImages phải là một mảng.');
 assert(Array.isArray(app.appState.ppctPdfAttachments), 'appState.ppctPdfAttachments phải là một mảng.');
 assert(typeof app.appState.content.ppctAnalysis === 'string', 'appState.content.ppctAnalysis phải là một chuỗi.');
+assert.strictEqual(app.appState.teachingContext.integrations.digital, true, 'appState NLS phải mặc định true.');
 
 const normalizedCtx = app.normalizeTeachingContext({
   lessonScope: 'Tiết 15-16',
   specialRequirements: 'Tập trung phân hóa'
 });
 assert.strictEqual(normalizedCtx.lessonScope, 'Tiết 15-16', 'normalizeTeachingContext phải giữ nguyên lessonScope.');
-console.log('✓ appState và normalizeTeachingContext xử lý PPCT / lessonScope chính xác.');
+assert.strictEqual(normalizedCtx.integrations.digital, true, 'normalizeTeachingContext phải mặc định digital = true.');
+console.log('✓ appState và normalizeTeachingContext xử lý PPCT / lessonScope & NLS mặc định chính xác.');
 
 // 5. Kiểm tra buildPedagogicalContext & getGenerationPromptContext
 console.log('\n[TEST 5] Kiểm tra buildPedagogicalContext & getGenerationPromptContext...');
@@ -176,6 +184,49 @@ assert.strictEqual(app.appState.ppctImages.length, 0, 'emptyDraftForTarget phả
 assert.strictEqual(app.appState.ppctPdfAttachments.length, 0, 'emptyDraftForTarget phải reset ppctPdfAttachments.');
 assert.strictEqual(app.appState.teachingContext.lessonScope, '', 'emptyDraftForTarget phải reset lessonScope.');
 console.log('✓ Đã reset sạch sẽ state PPCT khi tạo draft mới.');
+
+// 7. Kiểm tra parsePpctLessonDetails và tự động bóc tách Lesson Scope & AI
+console.log('\n[TEST 7] Kiểm tra helper parsePpctLessonDetails...');
+const samplePpctOutput = `
+# PHÂN PHỐI CHƯƠNG TRÌNH MÔN TOÁN LỚP 6
+
+1. **Bảng Khung Ma trận Phân phối chương trình (Chuẩn Phụ lục 3 Công văn 5512 - 7 Cột):**
+| Tiết CT | Bài học / Chủ đề | Số tiết | Tuần | Thiết bị dạy học | Địa điểm dạy học | Ghi chú / Tích hợp |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | Tập hợp các số tự nhiên | 1 | Tuần 1 | Máy chiếu, phiếu học tập | Lớp học | Tích hợp AI (QĐ 2422) |
+| 2 | Các phép tính với số tự nhiên | 2 | Tuần 1, 2 | Bảng phụ | Lớp học | Không |
+
+2. **Bóc tách thông tin trọng tâm cho bài học "Tập hợp các số tự nhiên":**
+- **Tiết CT:** 1
+- **Tuần:** Tuần 1
+- **Thời lượng:** 01 tiết (45 phút)
+- **Thiết bị dạy học:** Máy chiếu, phiếu học tập
+- **Địa điểm dạy học:** Lớp học
+- **Ghi chú / Tích hợp:** Tích hợp AI (QĐ 2422)
+- **Gợi ý phạm vi tiết dạy (Lesson Scope):** Tiết 1 (Tuần 1) - Thời lượng: 01 tiết (45 phút)
+`;
+
+const parsed1 = app.parsePpctLessonDetails(samplePpctOutput, "Tập hợp các số tự nhiên");
+assert.strictEqual(parsed1.lessonScopeSuggestion, 'Tiết 1 (Tuần 1) - Thời lượng: 01 tiết (45 phút)', 'Bóc tách lessonScopeSuggestion phải chính xác.');
+assert.strictEqual(parsed1.hasAiIntegration, true, 'hasAiIntegration phải là true khi có ghi chú Tích hợp AI.');
+assert.strictEqual(parsed1.durationSuggestion, '01 tiết (45 phút)', 'durationSuggestion phải khớp.');
+assert.strictEqual(parsed1.details.tietCt, '1', 'Tiết CT phải là 1.');
+assert.strictEqual(parsed1.details.tuan, 'Tuần 1', 'Tuần phải là Tuần 1.');
+
+const sampleNoAiOutput = `
+2. **Bóc tách thông tin trọng tâm cho bài học "Đoạn thẳng":**
+- **Tiết CT:** 18, 19
+- **Tuần:** Tuần 9, 10
+- **Thời lượng:** 02 tiết (90 phút)
+- **Thiết bị dạy học:** Thước thẳng có vạch chia
+- **Địa điểm dạy học:** Lớp học
+- **Ghi chú / Tích hợp:** Không
+`;
+
+const parsed2 = app.parsePpctLessonDetails(sampleNoAiOutput, "Đoạn thẳng");
+assert.strictEqual(parsed2.hasAiIntegration, false, 'hasAiIntegration phải là false khi không có ghi chú AI.');
+assert.strictEqual(parsed2.lessonScopeSuggestion, 'Tiết 18, 19 (Tuần 9, 10) - Thời lượng: 02 tiết (90 phút)', 'Tự động tổng hợp lessonScopeSuggestion khi không có dòng gợi ý tường minh.');
+console.log('✓ parsePpctLessonDetails bóc tách và nhận diện AI & Lesson Scope chính xác 100%.');
 
 console.log('\n================================================================================');
 console.log('🎉 TẤT CẢ CÁC BÀI KIỂM THỬ PPCT SMOKE ĐÃ VƯỢT QUA 100% THÀNH CÔNG!');

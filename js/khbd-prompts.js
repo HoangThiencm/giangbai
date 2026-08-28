@@ -263,25 +263,30 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - RÀNG BUỘC PPCT & PHẠM VI TIẾT DẠY: Nếu có phạm vi tiết dạy / PPCT được cung cấp, BẮT BUỘC khóa chặt mục tiêu và nội dung hoạt động đúng trong phạm vi số tiết / nội dung được phân công của tiết học đó, không dạy vượt sang phạm vi của tiết khác.`,
 
   // TAB 0: PHÂN TÍCH PHÂN PHỐI CHƯƠNG TRÌNH (PPCT / PHỤ LỤC 3 CV 5512)
-  ANALYZE_PPCT: `Bạn là Chuyên gia Quản lý Giáo dục và Phương pháp dạy học môn {subject}.
-Hãy đọc tài liệu / hình ảnh / PDF Phân phối chương trình (PPCT) đính kèm và bóc tách cấu trúc phân phối chương trình môn học / bài dạy theo chuẩn Phụ lục 3 Công văn số 5512/BGDĐT-GDTrH.
+  ANALYZE_PPCT: `Bạn là Chuyên gia Quản lý Giáo dục và Phân phối chương trình môn {subject} Cấp {gradeLevelName}.
+Hãy đọc tài liệu / hình ảnh / PDF Phân phối chương trình (PPCT) đính kèm và trích xuất chuẩn xác Bảng Ma trận Phân phối chương trình theo chuẩn Phụ lục 3 Công văn số 5512/BGDĐT-GDTrH.
 
 Chủ đề/Bài học quan tâm: "{topic}" (Môn học: {subject} - Khối {grade}).
 
+CHỈ THỊ CẤM NGHIÊM NGẶT:
+- TUYỆT ĐỐI CẤM sinh Kế hoạch bài dạy (KHBD), CẤM viết tiến trình dạy học, CẤM viết kịch bản hoạt động dạy học của GV/HS (Mở đầu, Hình thành kiến thức, Luyện tập, Vận dụng).
+- TUYỆT ĐỐI CẤM bịa đặt thông tin không có trong tài liệu PPCT đính kèm.
+
 YÊU CẦU ĐẦU RA BẮT BUỘC:
-1. **Bảng Khung Phân phối chương trình (Chuẩn Phụ lục 3 Công văn 5512):**
-| STT | Bài học / Chủ đề | Số tiết | Thời điểm | Thiết bị dạy học | Địa điểm dạy học |
-| :--- | :--- | :--- | :--- | :--- | :--- |
+1. **Bảng Khung Ma trận Phân phối chương trình (Chuẩn Phụ lục 3 Công văn 5512 - 7 Cột):**
+| Tiết CT | Bài học / Chủ đề | Số tiết | Tuần | Thiết bị dạy học | Địa điểm dạy học | Ghi chú / Tích hợp |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 
-2. **Bóc tách chi tiết phân bổ cho bài học "{topic}":**
-- **Tổng thời lượng:** [Số tiết] tiết.
-- **Tiến trình phân bổ từng tiết:**
-  + Tiết 1: [Nội dung / Tiểu mục kiến thức / Hoạt động trọng tâm theo PPCT].
-  + Tiết 2: [Nội dung / Tiểu mục kiến thức / Hoạt động trọng tâm theo PPCT (nếu có)].
-  + ...
-- **Mục tiêu & Thiết bị trọng tâm theo PPCT:** [Tóm tắt ngắn gọn].
+2. **Bóc tách thông tin trọng tâm cho bài học "{topic}":**
+- **Tiết CT:** [Số thứ tự tiết theo phân phối, ví dụ: 1 hoặc 18, 19]
+- **Tuần:** [Tuần dạy, ví dụ: Tuần 1 hoặc Tuần 6, 7]
+- **Thời lượng:** [Số tiết, ví dụ: 01 tiết (45 phút) hoặc 02 tiết (90 phút)]
+- **Thiết bị dạy học:** [Liệt kê thiết bị ghi trong PPCT]
+- **Địa điểm dạy học:** [Lớp học / Phòng thực hành / Sân trường...]
+- **Ghi chú / Tích hợp:** [Ghi rõ nếu có ghi chú Tích hợp AI, STEM, GDQPAN, NLS... hoặc Không]
+- **Gợi ý phạm vi tiết dạy (Lesson Scope):** Tiết [X] (Tuần [Y]) - Thời lượng: [Z] tiết ([M] phút)
 
-CẤM bịa đặt thông tin không có trong tài liệu PPCT. Trình bày Markdown súc tích, mạch lạc.`,
+Trình bày Markdown chuẩn mực, rõ ràng, không xuất code block fence.`,
 
   // TAB 1: TÓM TẮT SGK
   ANALYZE_TEXTBOOK: `Hãy đọc PDF/ảnh SGK đính kèm và tóm tắt có cấu trúc cho giáo viên.
