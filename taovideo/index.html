@@ -160,14 +160,35 @@
 
                     <!-- Transition Effects -->
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Hiệu ứng chuyển cảnh mặc định</label>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Hiệu ứng chuyển động ảnh</label>
                         <select id="default-transition" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
-                            <option value="kenburns">Zoom chậm điện ảnh (Ken Burns Motion)</option>
-                            <option value="crossfade">Mờ dần chuyển tiếp (Crossfade)</option>
-                            <option value="slide">Trượt ngang nhẹ (Slide Left)</option>
-                            <option value="zoom-in">Phóng to dần (Zoom In)</option>
-                            <option value="none">Không hiệu ứng (Cắt tĩnh)</option>
+                            <option value="auto" selected>Tự động phối khác nhau cho mỗi ảnh</option>
+                            <optgroup label="Zoom & điện ảnh">
+                                <option value="kenburns">Zoom chậm điện ảnh (Ken Burns)</option>
+                                <option value="zoom-in">Phóng to dần</option><option value="zoom-out">Thu nhỏ dần</option>
+                                <option value="push-in">Đẩy vào mạnh</option><option value="pull-back">Kéo lùi</option>
+                                <option value="pulse">Nhịp phóng nhẹ</option><option value="breathe">Hơi thở điện ảnh</option>
+                                <option value="cinematic-left">Cinematic trái</option><option value="cinematic-right">Cinematic phải</option>
+                            </optgroup>
+                            <optgroup label="Pan & quét khung hình">
+                                <option value="pan-left">Pan sang trái</option><option value="pan-right">Pan sang phải</option>
+                                <option value="pan-up">Pan lên</option><option value="pan-down">Pan xuống</option>
+                                <option value="diagonal-tl">Chéo lên trái</option><option value="diagonal-tr">Chéo lên phải</option>
+                                <option value="diagonal-bl">Chéo xuống trái</option><option value="diagonal-br">Chéo xuống phải</option>
+                                <option value="drift-left">Lướt trái</option><option value="drift-right">Lướt phải</option>
+                                <option value="drift-up">Lướt lên</option><option value="drift-down">Lướt xuống</option>
+                                <option value="sweep-top">Quét từ trên</option><option value="sweep-bottom">Quét từ dưới</option>
+                            </optgroup>
+                            <optgroup label="Kết hợp & xoay">
+                                <option value="zoom-pan-left">Zoom + pan trái</option><option value="zoom-pan-right">Zoom + pan phải</option>
+                                <option value="zoom-pan-up">Zoom + pan lên</option><option value="zoom-pan-down">Zoom + pan xuống</option>
+                                <option value="rotate-left">Xoay nhẹ trái</option><option value="rotate-right">Xoay nhẹ phải</option>
+                                <option value="tilt-left">Nghiêng trái</option><option value="tilt-right">Nghiêng phải</option>
+                                <option value="orbit-left">Vòng cung trái</option><option value="orbit-right">Vòng cung phải</option>
+                                <option value="none">Không hiệu ứng</option>
+                            </optgroup>
                         </select>
+                        <p class="text-[10px] text-slate-400 mt-1">Bạn có thể chọn lại hiệu ứng riêng cho từng ảnh ở timeline bên dưới.</p>
                     </div>
 
                     <!-- Default Duration per slide -->

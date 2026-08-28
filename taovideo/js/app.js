@@ -20,10 +20,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = {
         slides: [], // Array of { id, imageSrc, imageElement, duration, text, transition }
         defaultDuration: 3.5,
-        defaultTransition: 'kenburns',
+        defaultTransition: 'auto',
         voiceId: '',
         ttsRate: 1.0,
         isMuted: false
+    };
+
+    // ProShow-style motion presets. Each slide stores one of these values.
+    const EFFECTS = [
+        ['kenburns', 'Zoom điện ảnh'], ['zoom-in', 'Phóng to dần'], ['zoom-out', 'Thu nhỏ dần'],
+        ['push-in', 'Đẩy vào mạnh'], ['pull-back', 'Kéo lùi'], ['pulse', 'Nhịp phóng nhẹ'], ['breathe', 'Hơi thở điện ảnh'],
+        ['pan-left', 'Pan trái'], ['pan-right', 'Pan phải'], ['pan-up', 'Pan lên'], ['pan-down', 'Pan xuống'],
+        ['diagonal-tl', 'Chéo lên trái'], ['diagonal-tr', 'Chéo lên phải'], ['diagonal-bl', 'Chéo xuống trái'], ['diagonal-br', 'Chéo xuống phải'],
+        ['drift-left', 'Lướt trái'], ['drift-right', 'Lướt phải'], ['drift-up', 'Lướt lên'], ['drift-down', 'Lướt xuống'],
+        ['zoom-pan-left', 'Zoom + trái'], ['zoom-pan-right', 'Zoom + phải'], ['zoom-pan-up', 'Zoom + lên'], ['zoom-pan-down', 'Zoom + xuống'],
+        ['rotate-left', 'Xoay nhẹ trái'], ['rotate-right', 'Xoay nhẹ phải'], ['tilt-left', 'Nghiêng trái'], ['tilt-right', 'Nghiêng phải'],
+        ['orbit-left', 'Vòng cung trái'], ['orbit-right', 'Vòng cung phải'], ['cinematic-left', 'Cinematic trái'], ['cinematic-right', 'Cinematic phải'],
+        ['sweep-top', 'Quét từ trên'], ['sweep-bottom', 'Quét từ dưới']
+    ];
+    const effectOptions = (selected) => EFFECTS.map(([id, label]) =>
+        `<option value="${id}"${id === selected ? ' selected' : ''}>${label}</option>`
+    ).join('') + `<option value="none"${selected === 'none' ? ' selected' : ''}>Không hiệu ứng</option>`;
+    const autoEffectFor = (index, previous) => {
+        let effect = EFFECTS[(index * 7 + state.slides.length * 3) % EFFECTS.length][0];
+        if (effect === previous) effect = EFFECTS[(index * 7 + state.slides.length * 3 + 1) % EFFECTS.length][0];
+        return effect;
+    };
+    const applyAutoEffects = () => {
+        let previous = null;
+        state.slides.forEach((slide, index) => {
+            slide.transition = autoEffectFor(index, previous);
+            previous = slide.transition;
+        });
     };
 
     // 3. Lucide Icons re-render helper
@@ -153,8 +181,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const defaultTransitionSelect = document.getElementById('default-transition');
     defaultTransitionSelect.addEventListener('change', (e) => {
         state.defaultTransition = e.target.value;
-        videoRenderer.defaultTransition = e.target.value;
-        state.slides.forEach(s => s.transition = e.target.value);
+        videoRenderer.defaultTransition = e.target.value === 'auto' ? 'kenburns' : e.target.value;
+        if (e.target.value === 'auto') applyAutoEffects();
+        else state.slides.forEach(s => s.transition = e.target.value);
+        updateSlidesUI();
         videoRenderer.renderFrame(videoRenderer.currentTime);
     });
 
@@ -406,7 +436,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 imageElement: imgEl,
                 duration: state.defaultDuration,
                 text: '',
-                transition: state.defaultTransition
+                transition: state.defaultTransition === 'auto'
+                    ? autoEffectFor(state.slides.length, state.slides[state.slides.length - 1]?.transition)
+                    : state.defaultTransition
             };
 
             state.slides.push(newSlide);
@@ -455,6 +487,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <textarea class="slide-text-input w-full bg-slate-900/90 border border-slate-700/80 rounded-lg p-1.5 text-[11px] text-white placeholder-slate-500 resize-none focus:ring-1 focus:ring-brand-500 outline-none h-14" placeholder="Nhập lời thoại / phụ đề...">${slide.text || ''}</textarea>
                     </div>
 
+                    <!-- Per-slide ProShow-style motion effect -->
+                    <select class="slide-effect-select w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-[10px] text-indigo-200 focus:ring-1 focus:ring-brand-500 outline-none" title="Hiệu ứng riêng của ảnh này">
+                        ${effectOptions(slide.transition || 'kenburns')}
+                    </select>
+
                     <!-- Slide Controls: Duration & Voice Button -->
                     <div class="flex items-center justify-between gap-1 pt-1 border-t border-slate-700/50">
                         <div class="flex items-center gap-1">
@@ -484,6 +521,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 slide.duration = val;
                 timelineStatsEl.textContent = `${state.slides.length} ảnh • ${videoRenderer.calculateTotalDuration().toFixed(1)} giây`;
                 videoRenderer.setSlides(state.slides);
+            });
+
+            const effectSelect = card.querySelector('.slide-effect-select');
+            effectSelect.addEventListener('change', (e) => {
+                slide.transition = e.target.value;
+                videoRenderer.renderFrame(videoRenderer.currentTime);
             });
 
             const btnDelete = card.querySelector('.btn-delete-slide');

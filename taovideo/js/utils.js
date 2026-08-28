@@ -103,6 +103,8 @@ const Utils = {
         let scale = 1.0;
         let offX = 0;
         let offY = 0;
+        let rotation = 0;
+        let alpha = 1;
 
         const p = this.easeInOutQuad(progress);
 
@@ -125,6 +127,34 @@ const Utils = {
                 scale = 1.08;
                 offX = (p * 2 - 1) * (canvasW * 0.04);
                 break;
+            case 'pan-up': scale = 1.08; offY = (1 - p * 2) * canvasH * 0.04; break;
+            case 'pan-down': scale = 1.08; offY = (p * 2 - 1) * canvasH * 0.04; break;
+            case 'diagonal-tl': scale = 1.11; offX = (1 - p * 2) * canvasW * 0.04; offY = (1 - p * 2) * canvasH * 0.04; break;
+            case 'diagonal-tr': scale = 1.11; offX = (p * 2 - 1) * canvasW * 0.04; offY = (1 - p * 2) * canvasH * 0.04; break;
+            case 'diagonal-bl': scale = 1.11; offX = (1 - p * 2) * canvasW * 0.04; offY = (p * 2 - 1) * canvasH * 0.04; break;
+            case 'diagonal-br': scale = 1.11; offX = (p * 2 - 1) * canvasW * 0.04; offY = (p * 2 - 1) * canvasH * 0.04; break;
+            case 'zoom-pan-left': scale = 1.04 + p * 0.14; offX = (1 - p * 2) * canvasW * 0.035; break;
+            case 'zoom-pan-right': scale = 1.04 + p * 0.14; offX = (p * 2 - 1) * canvasW * 0.035; break;
+            case 'zoom-pan-up': scale = 1.04 + p * 0.14; offY = (1 - p * 2) * canvasH * 0.035; break;
+            case 'zoom-pan-down': scale = 1.04 + p * 0.14; offY = (p * 2 - 1) * canvasH * 0.035; break;
+            case 'drift-left': scale = 1.13; offX = Math.sin(p * Math.PI) * canvasW * 0.055 - canvasW * 0.025; offY = Math.cos(p * Math.PI) * canvasH * 0.018; break;
+            case 'drift-right': scale = 1.13; offX = canvasW * 0.025 - Math.sin(p * Math.PI) * canvasW * 0.055; offY = -Math.cos(p * Math.PI) * canvasH * 0.018; break;
+            case 'drift-up': scale = 1.13; offY = Math.sin(p * Math.PI) * canvasH * 0.055 - canvasH * 0.025; offX = Math.cos(p * Math.PI) * canvasW * 0.018; break;
+            case 'drift-down': scale = 1.13; offY = canvasH * 0.025 - Math.sin(p * Math.PI) * canvasH * 0.055; offX = -Math.cos(p * Math.PI) * canvasW * 0.018; break;
+            case 'pulse': scale = 1.05 + Math.sin(p * Math.PI) * 0.07; break;
+            case 'breathe': scale = 1.09 + Math.sin(p * Math.PI * 2) * 0.025; break;
+            case 'rotate-left': scale = 1.16; rotation = -0.018 + p * 0.036; break;
+            case 'rotate-right': scale = 1.16; rotation = 0.018 - p * 0.036; break;
+            case 'tilt-left': scale = 1.16; rotation = -0.03 * p; offX = -p * canvasW * 0.025; break;
+            case 'tilt-right': scale = 1.16; rotation = 0.03 * p; offX = p * canvasW * 0.025; break;
+            case 'orbit-left': scale = 1.13; offX = Math.cos(p * Math.PI) * canvasW * 0.035; offY = Math.sin(p * Math.PI) * canvasH * 0.03; rotation = -0.012; break;
+            case 'orbit-right': scale = 1.13; offX = -Math.cos(p * Math.PI) * canvasW * 0.035; offY = Math.sin(p * Math.PI) * canvasH * 0.03; rotation = 0.012; break;
+            case 'push-in': scale = 1.0 + p * 0.2; alpha = 0.92 + p * 0.08; break;
+            case 'pull-back': scale = 1.2 - p * 0.2; alpha = 1 - p * 0.08; break;
+            case 'cinematic-left': scale = 1.15; offX = (1 - p * 2) * canvasW * 0.05; offY = p * canvasH * 0.018; break;
+            case 'cinematic-right': scale = 1.15; offX = (p * 2 - 1) * canvasW * 0.05; offY = -p * canvasH * 0.018; break;
+            case 'sweep-top': scale = 1.14; offY = (1 - p * 2) * canvasH * 0.055; rotation = 0.012; break;
+            case 'sweep-bottom': scale = 1.14; offY = (p * 2 - 1) * canvasH * 0.055; rotation = -0.012; break;
             case 'none':
             default:
                 scale = 1.0;
@@ -133,7 +163,15 @@ const Utils = {
                 break;
         }
 
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        if (rotation) {
+            ctx.translate(canvasW / 2, canvasH / 2);
+            ctx.rotate(rotation);
+            ctx.translate(-canvasW / 2, -canvasH / 2);
+        }
         this.drawImageCover(ctx, img, 0, 0, canvasW, canvasH, scale, offX, offY);
+        ctx.restore();
     },
 
     /**
