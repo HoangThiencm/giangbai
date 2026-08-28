@@ -4935,6 +4935,32 @@ async function extractTextbookOcrText(onProgress) {
   return chunks.join("\n\n");
 }
 
+async function extractTextbookOcrTextWithGemini(onProgress) {
+  if (typeof geminiAPI === "undefined" || typeof geminiAPI.generateContent !== "function") {
+    throw new Error("Không có Gemini để thay thế Mistral OCR.");
+  }
+  if (typeof onProgress === "function") {
+    onProgress("Đang nhận diện SGK bằng Gemini (thay thế Mistral OCR)...", 45);
+  }
+  const prompt = [
+    "Bạn là công cụ OCR tiếng Việt cho sách giáo khoa.",
+    "Trích nguyên văn toàn bộ chữ, tiêu đề, bảng và công thức trong PDF/ảnh được đính kèm.",
+    "Giữ cấu trúc trang bằng Markdown; công thức viết LaTeX $...$; không tóm tắt, không giải thích, không thêm kiến thức.",
+    "Chữ hoặc công thức không đọc được ghi [...].",
+    buildTextbookSourceHint()
+  ].filter(Boolean).join("\n\n");
+  const media = await prepareGeminiMedia();
+  if (!media.length) throw new Error("Không có PDF/ảnh SGK để Gemini nhận diện.");
+  return String(await geminiAPI.generateContent(
+    prompt,
+    media,
+    getSystemRole(appState.selectedSubject, appState.selectedGrade),
+    0.1,
+    null,
+    { maxOutputTokens: 16384 }
+  ) || "").trim();
+}
+
 async function applyTextbookOcrResult(ocrText, { silent = false } = {}) {
   appState.content.vision = ocrText;
   appState.teachingContext.ocrReady = true;
@@ -4961,12 +4987,31 @@ async function readTextbookWithMistral() {
   try {
     appState.isGenerating = true;
     if (btn) btn.disabled = true;
-    updateProgress(15, "Đang nhận diện SGK bằng Mistral OCR...");
     const status = document.getElementById("statusFooterText");
-    if (status) status.textContent = "Đang nhận diện SGK bằng Mistral OCR...";
-    const ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(pct, msg));
+    let ocrText = "";
+    let ocrProvider = "Gemini";
+
+    if (canUseMistralOcr()) {
+      updateProgress(15, "Đang nhận diện SGK bằng Mistral OCR...");
+      if (status) status.textContent = "Đang nhận diện SGK bằng Mistral OCR...";
+      try {
+        ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(pct, msg));
+        ocrProvider = "Mistral OCR";
+      } catch (mistralError) {
+        console.warn("Mistral OCR không khả dụng, chuyển sang Gemini:", mistralError);
+        showToast("Mistral OCR không dùng được, đang tự chuyển sang Gemini để đọc SGK.", "info", 4500);
+      }
+    } else {
+      showToast("Chưa có Mistral API Key; đang dùng Gemini để đọc SGK.", "info", 4500);
+    }
+
+    if (!ocrText) {
+      if (status) status.textContent = "Đang nhận diện SGK bằng Gemini...";
+      ocrText = await extractTextbookOcrTextWithGemini((msg, pct) => updateProgress(pct, msg));
+      ocrProvider = "Gemini";
+    }
     if (!ocrText.replace(/\s+/g, " ").trim()) {
-      throw new Error("Mistral OCR không đọc được chữ trên trang đã chọn.");
+      throw new Error(`${ocrProvider} không đọc được chữ trên trang đã chọn.`);
     }
     await applyTextbookOcrResult(ocrText, { silent: false });
 
@@ -4974,17 +5019,16 @@ async function readTextbookWithMistral() {
     const details = document.getElementById("detailsVisionContent");
     if (details) details.open = true;
 
-    updateProgress(100, "Đã đọc nội dung SGK (Mistral OCR)!");
+    updateProgress(100, `Đã đọc nội dung SGK (${ocrProvider})!`);
     setTimeout(() => hideProgress(), 1500);
     showToast("Đã xong! Đã đọc và trích xuất nội dung SGK thành công.", "success", 5000);
     if (status) status.textContent = "Sẵn sàng.";
   } catch (error) {
-    console.error("Mistral OCR:", error);
+    console.error("OCR SGK:", error);
     hideProgress();
-    showToast(`Mistral OCR lỗi (${error.message}). Kiểm tra Mistral API Key trong Quản lý API Key.`, "danger", 7000);
+    showToast(`Không thể đọc SGK: ${error.message}`, "danger", 7000);
     const status = document.getElementById("statusFooterText");
     if (status) status.textContent = "Lỗi nhận diện SGK.";
-    openModal("modalApiKeys");
   } finally {
     appState.isGenerating = false;
     if (btn) btn.disabled = false;
