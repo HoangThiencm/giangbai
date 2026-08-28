@@ -1581,3 +1581,51 @@ body {
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border);
 }
+
+.integration-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-bottom: .65rem;
+}
+
+.integration-tab {
+  cursor: pointer;
+}
+
+.integration-tab input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.integration-tab span {
+  display: block;
+  padding: .45rem .7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  font-size: .84rem;
+  font-weight: 600;
+}
+
+.integration-tab input:checked + span,
+.integration-tab.is-active span {
+  color: #075985;
+  border-color: #38bdf8;
+  background: #e0f2fe;
+}
+
+.integration-tab-details {
+  border-top: 1px dashed var(--border);
+  padding-top: .65rem;
+}
+
+.integration-detail {
+  padding: .15rem 0;
+}
+
+.integration-detail p {
+  margin: .25rem 0;
+  font-size: .86rem;
+}

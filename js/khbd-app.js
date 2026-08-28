@@ -340,6 +340,7 @@ function syncDraftDom() {
     if (input) input.checked = Boolean(context.integrations?.[key]);
   });
   renderSubjectIntegrations();
+  syncIntegrationTabs();
   renderDraftControls();
   renderPedagogyCatalogs();
   renderStandardsCatalog();
@@ -623,6 +624,21 @@ function renderSubjectIntegrations() {
     hintEl.textContent = toolHint;
     hintEl.hidden = !toolHint;
   }
+}
+
+function syncIntegrationTabs(preferredKey = "") {
+  const context = normalizeTeachingContext(appState.teachingContext);
+  const enabled = context.integrations || {};
+  const keys = ["digital", "ai", "foreignLanguage", "inclusive"];
+  const active = enabled[preferredKey] ? preferredKey : keys.find(key => enabled[key]) || "";
+
+  document.querySelectorAll(".integration-tab").forEach(tab => {
+    tab.classList.toggle("is-active", tab.dataset.integrationTab === active);
+  });
+  document.querySelectorAll(".integration-detail").forEach(panel => {
+    const key = panel.dataset.integrationDetail;
+    panel.hidden = key !== active || !enabled[key];
+  });
 }
 
 function pedagogyRecommendCtx() {
@@ -1979,7 +1995,14 @@ function setupEventListeners() {
         }
       }
       renderSubjectIntegrations();
+      syncIntegrationTabs(key);
       saveStateToLocalStorage();
+    });
+  });
+
+  document.querySelectorAll(".integration-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      setTimeout(() => syncIntegrationTabs(tab.dataset.integrationTab), 0);
     });
   });
 
