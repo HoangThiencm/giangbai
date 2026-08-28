@@ -5211,6 +5211,27 @@ async function handleGenerateObjectives() {
   });
 }
 
+function keepMaterialsOnly(markdown) {
+  const source = String(markdown || "").trim();
+  if (!source) return "";
+  // Chỉ cắt khi AI thực sự trả một giáo án có heading II. Danh mục không heading
+  // vẫn là đầu ra hợp lệ của luồng tạo học liệu.
+  const sectionStart = source.match(/^(?:#{1,6}\s*)?(?:II\.?|2\.)\s*(?:THIẾT\s+BỊ(?:\s+DẠY\s+HỌC)?(?:\s+VÀ)?\s+HỌC\s+LIỆU|HỌC\s+LIỆU)\b.*$/im);
+  if (!sectionStart || sectionStart.index == null) return source;
+  const tail = source.slice(sectionStart.index);
+  const nextSection = tail.match(/^#{0,6}\s*(?:III\.?|3\.|[A-E]\.\s*(?:HOẠT\s+ĐỘNG|)|HOẠT\s+ĐỘNG\s*[A-E])\b.*$/im);
+  return (nextSection && nextSection.index != null ? tail.slice(0, nextSection.index) : tail).trim();
+}
+
+function applyMaterialsOutput(result) {
+  const materials = keepMaterialsOnly(result);
+  if (!materials) throw new Error("Phản hồi AI không có nội dung Mục II. Thiết bị dạy học và học liệu hợp lệ.");
+  appState.content.materials = materials;
+  syncIllustrationsIntoContent();
+  saveStateToLocalStorage();
+  return appState.content.materials;
+}
+
 async function handleGenerateMaterials() {
   const context = getGenerationPromptContext();
   const prompt = getPromptTemplate('GENERATE_MATERIALS', context);
@@ -5221,11 +5242,7 @@ async function handleGenerateMaterials() {
     targetPreviewId: "previewMaterials",
     operationName: "Tạo II. Thiết bị & Học liệu",
     prompt,
-    onSuccess: (result) => {
-      appState.content.materials = result;
-      syncIllustrationsIntoContent();
-      saveStateToLocalStorage();
-    }
+    onSuccess: (result) => applyMaterialsOutput(result)
   });
 }
 
