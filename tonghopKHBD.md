@@ -47,7 +47,7 @@ Không đụng: `GIAO AN/js/*`, TKB, kttx, matrande, login.
 1. **Thiết lập chung** — trường, lớp, NLS/AI, PPDH.
 2. I. Mục tiêu
 3. II. Thiết bị
-4. III. Tiến trình A–D
+4. III. Tiến trình A–E
 5. Toàn bộ + xuất DOCX
 
 Đề xuất NLS/AI/PPDH **chỉ sau khi** `editorVision` có ≥ ~80 ký tự (đã đọc SGK). Tick NLS/AI trước khi có nội dung: hiện panel, **không** tự tick miền.
@@ -80,13 +80,17 @@ Bảng **d) Tổ chức thực hiện**:
 
 - Một hàng dữ liệu, không 4 hàng.
 - Hoạt động B: mỗi đơn vị kiến thức một bảng như trên.
+- Hoạt động E: Hướng dẫn về nhà cực kỳ ngắn gọn, chuẩn mực với đúng 4 nội dung:
+  1. Ôn nội dung trọng tâm.
+  2. Làm bài tập còn lại chưa làm hoặc chưa chữa trên lớp (kèm gợi ý/hướng dẫn phương pháp ngắn gọn; CẤM TUYỆT ĐỐI giao lại bài đã chữa).
+  3. Chuẩn bị bài mới.
+  4. Giao một nhiệm vụ tìm tòi/mở rộng nếu thật sự phù hợp.
+  *Quy tắc NLS/AI:* Tuyệt đối không tự ý xuất hiện NLS/AI trong Hoạt động E; chỉ thêm khi giáo viên CHỦ ĐỘNG BẬT tích hợp, nhiệm vụ có giá trị hỗ trợ tự học thực chất, không thay thế việc tự học môn học.
 - Word: cột ~4000 / 5000 DXA; mỗi dòng trong ô một đoạn; hàng nội dung được phép tách trang.
 
 Danh sách ngoài bảng: ý lớn `- `, ý con `+ ` (giữ nguyên ký tự khi xuất Word).
 
 Header Word: Trường, Tổ, GV, Ngày soạn/dạy, KẾ HOẠCH BÀI DẠY, Tên bài, Môn–Lớp, Bộ sách = “SGK do giáo viên cung cấp”, Thời lượng.
-
-Không có tab E/F/G hay IV. Kết luận/dặn dò trong demo chưa có trên UI.
 
 ---
 
@@ -132,7 +136,7 @@ Sau khi có nội dung SGK, nếu GV **không chọn**: tự đề xuất ~2 PPD
 
 Mọi prompt gắn `PROMPTS.SOURCE_LOCK`: chỉ dùng ảnh/PDF, Tab 0, tên bài/môn/lớp, YCCĐ official, bối cảnh lớp. Cấm bịa định nghĩa, số liệu, đề, đáp án, số trang. Luyện tập/vận dụng: chỉ bài có trong nguồn; thiếu thì `[Không có trong tài liệu đã cung cấp]`.
 
-1-Click / HĐ A–D: cần ảnh hoặc nội dung đã trích. Mục tiêu: ảnh/vision hoặc YCCĐ Toán 6–9.
+1-Click / HĐ A–E: cần ảnh hoặc nội dung đã trích. Mục tiêu: ảnh/vision hoặc YCCĐ Toán 6–9.
 
 ---
 
@@ -141,12 +145,11 @@ Mọi prompt gắn `PROMPTS.SOURCE_LOCK`: chỉ dùng ảnh/PDF, Tab 0, tên bà
 1. YCCĐ số hóa mới Toán 6–9; môn/khối khác chưa có CSDL.
 2. Parser `yeucau.docx` có chỗ dính ô Word.
 3. Không có test tự động cho 1-Click / DOCX.
-4. Prompt E/F/G còn trong `khbd-prompts.js` nhưng không còn tab.
-5. Gemini Vision 4 trang nén vẫn có thể lệch công thức/hình; free tier 20 request/ngày dễ hết.
-6. Model mặc định trên UI có thể là Gemini 3.x trong khi 429 log từng gặp `gemini-2.5-flash` — phụ thuộc key/model GV chọn.
-7. Bảng Markdown 1 hàng + `<br>`: nếu model vẫn xuất 4 hàng, Word vẫn ra 2 cột nhưng không đúng demo.
-8. Draft cũ (PPDH id/label cũ, bảng 4 hàng) không tự chuyển form mới.
-9. Tab IV / phụ lục demo chưa làm.
+4. Gemini Vision 4 trang nén vẫn có thể lệch công thức/hình; free tier 20 request/ngày dễ hết.
+5. Model mặc định trên UI có thể là Gemini 3.x trong khi 429 log từng gặp `gemini-2.5-flash` — phụ thuộc key/model GV chọn.
+6. Bảng Markdown 1 hàng + `<br>`: nếu model vẫn xuất 4 hàng, Word vẫn ra 2 cột nhưng không đúng demo.
+7. Draft cũ (PPDH id/label cũ, bảng 4 hàng) không tự chuyển form mới.
+8. Tab IV / phụ lục demo chưa làm.
 
 ---
 
@@ -159,5 +162,6 @@ Mọi prompt gắn `PROMPTS.SOURCE_LOCK`: chỉ dùng ảnh/PDF, Tab 0, tên bà
 - [ ] Năng lực: một dòng mô tả, không Biểu hiện/Minh chứng.
 - [ ] NLS 2–3 miền TT 02; AI 2–3 mã QĐ 2422; không mã lạ.
 - [ ] Bảng d): 1 hàng, 2 cột; phải = ghi bảng, không lặp GV/HS.
+- [ ] Hoạt động E: 4 nội dung súc tích (Ôn trọng tâm, Bài tập còn lại chưa chữa, Chuẩn bị bài mới, Tìm tòi mở rộng); NLS/AI opt-in thực chất.
 - [ ] Danh sách `-` / `+` giữ nguyên khi xuất Word.
 - [ ] HĐ C/D không invent TN 4 lựa chọn hay bài thực tiễn ngoài nguồn.

@@ -680,42 +680,44 @@ ${ACTIVITY_TABLE_CONTRACT}
 
 YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
-- BỐ CỤC NỘI DUNG CHUẨN SƯ PHẠM Ở MỤC b) NỘI DUNG VÀ CỘT PHẢI BẢNG d) (BẮT BUỘC 3 PHẦN RÕ RÀNG):
-  1. Học bài: Ôn tập các định nghĩa, quy tắc, công thức trọng tâm và tóm tắt kiến thức bằng sơ đồ tư duy (Mindmap) vào vở ghi.
-  2. Làm bài tập: Hoàn thành các bài tập CÒN LẠI trong SGK (chưa làm/chữa ở Hoạt động C và Hoạt động D), các bài tập tương ứng trong Sách bài tập (SBT) môn {subject} (ghi rõ số bài, trang cụ thể); giải 1 bài tập mở rộng / nâng cao phân hóa dành cho học sinh khá, giỏi kèm gợi ý ngắn gọn.
+- BỐ CỤC NỘI DUNG CHUẨN SƯ PHẠM Ở MỤC b) NỘI DUNG VÀ CỘT PHẢI BẢNG d) (CỰC KỲ NGẮN GỌN, CHUẨN MỰC, ĐÚNG 4 NỘI DUNG):
+  1. Ôn nội dung trọng tâm: Ôn tập và hệ thống hóa các định nghĩa, quy tắc, công thức trọng tâm của bài học vào vở ghi.
+  2. Làm bài tập: Hoàn thành các bài tập CÒN LẠI trong SGK (chưa làm/chữa ở Hoạt động C và Hoạt động D) và Sách bài tập (SBT) môn {subject} (kèm gợi ý/hướng dẫn phương pháp giải ngắn gọn).
      *CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa ở Hoạt động C hoặc Hoạt động D.*
   3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu học tập cần thiết.
-- TÍCH HỢP PROMPT AI AN TOÀN (Khi bối cảnh sư phạm bật năng lực AI): Thêm mẫu Prompt AI an toàn mẫu mực hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai gia sư gợi mở tư duy khi gặp khó khăn, TUYỆT ĐỐI không giải bài hộ).
-- LOẠI BỎ TRIỆT ĐỂ CÁC YÊU CẦU HÌNH THỨC: TUYỆT ĐỐI KHÔNG đưa vào các chỉ thị ép buộc hình thức như "ghi âm cách đọc tập hợp", "quay video đọc quy tắc", "dùng AI tìm ví dụ tập hợp số tự nhiên".
-- Cột TRÁI mục d): Kịch bản phân vai rõ ràng đủ 4 bước CV 5512:
-  + **GV:** Nói câu lệnh giao nhiệm vụ về nhà trực tiếp trong ngoặc kép "...", hướng dẫn cách hoàn thành, cách nộp sản phẩm ở tiết sau.
-  + **HS:** Lắng nghe, ghi nhận nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.
-- Cột PHẢI mục d): Nội dung hướng dẫn học ở nhà chốt cho HS ghi vở (đánh số rõ ràng **1. Học bài:**, **2. Làm bài tập:**, **3. Chuẩn bị bài mới:**, và Mẫu Prompt AI nếu có).
+  4. Nhiệm vụ tìm tòi, mở rộng: Giao một nhiệm vụ tìm tòi/mở rộng hoặc liên hệ vận dụng thực tiễn nếu thật sự phù hợp với bài học.
+- QUY TẮC NLS/AI (OPT-IN):
+  + Tuyệt đối KHÔNG tự ý xuất hiện NLS hoặc AI trong Hoạt động E.
+  + CHỈ thêm khi giáo viên CHỦ ĐỘNG BẬT lựa chọn tích hợp NLS/AI trong bối cảnh sư phạm, và khi đó nhiệm vụ phải có giá trị học tập thực chất, rõ ràng (như mẫu Prompt AI an toàn hỗ trợ tự học gợi mở tư duy khi gặp khó khăn, không giải hộ), TUYỆT ĐỐI KHÔNG thay thế việc tự học môn học.
+  + TUYỆT ĐỐI LOẠI BỎ các yêu cầu hình thức (như "ghi âm cách đọc", "quay video đọc quy tắc", "dùng AI tìm ví dụ suông").
+- Cột TRÁI mục d): Kịch bản phân vai rõ ràng đủ 4 bước CV 5512 ngắn gọn:
+  + **GV:** Nói câu lệnh giao nhiệm vụ về nhà trực tiếp trong ngoặc kép "...", hướng dẫn phương pháp và thời hạn nộp sản phẩm ở tiết sau.
+  + **HS:** Lắng nghe, ghi nhận 4 nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.
+- Cột PHẢI mục d): Nội dung hướng dẫn học ở nhà chốt cho HS ghi vở (đúng 4 mục: **1. Ôn tập kiến thức:**, **2. Làm bài tập:**, **3. Chuẩn bị bài mới:**, **4. Tìm tòi, mở rộng:**, và Mẫu Prompt AI nếu giáo viên chủ động bật).
 - CHỈ xuất ĐÚNG MỘT khối \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\` với đủ a) b) c) d). CẤM lặp lại tiêu đề E. CẤM copy mục E có trong ngữ cảnh tiến trình dạy học.
 
 ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})
 
 ### a) Mục tiêu:
-- Củng cố, hệ thống hóa kiến thức đã học trong bài và định hướng học sinh tự học, tự ôn tập tại nhà.
-- Rèn luyện kĩ năng giải bài tập, phát triển tư duy mở rộng và chuẩn bị tâm thế, học liệu cho bài học tiếp theo.
+- Củng cố, khắc sâu kiến thức trọng tâm của bài học và rèn luyện năng lực tự chủ, tự học ở nhà.
+- Hoàn thành các bài tập còn lại, phát triển tư duy mở rộng và chuẩn bị tốt cho bài học tiếp theo.
 
 ### b) Nội dung:
-- 1. Học bài: Ôn tập các định nghĩa, quy tắc, công thức trọng tâm và vẽ sơ đồ tư duy (Mindmap) tóm tắt toàn bộ nội dung bài học vào vở ghi.
+- 1. Ôn tập kiến thức: Ôn lại các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài.
 - 2. Làm bài tập:
-  + Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) môn {subject}. CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
-  + Bài tập mở rộng / Nâng cao: Đưa ra 1 bài toán/nhiệm vụ mở rộng có tính tư duy cao dành cho học sinh khá, giỏi kèm gợi ý ngắn gọn.
+  + Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) môn {subject} (kèm gợi ý/hướng dẫn phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
 - 3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng học tập cần thiết.
+- 4. Tìm tòi, mở rộng (nếu phù hợp): Tìm hiểu thêm ứng dụng thực tế hoặc bài tập tư duy mở rộng.
 {ai_homework_prompt_note}
 
 ### c) Sản phẩm:
-- Sơ đồ tư duy tóm tắt bài học trong vở ghi của học sinh.
-- Lời giải các bài tập còn lại của SGK, SBT và bài tập mở rộng/nâng cao trong vở bài tập.
-- Phần chuẩn bị bài mới sẵn sàng cho tiết học tiếp theo.
+- Vở ghi bài và vở bài tập có lời giải đầy đủ của các bài tập được giao về nhà.
+- Phần chuẩn bị bài mới và kết quả nhiệm vụ tìm tòi, mở rộng (nếu có).
 
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Trình chiếu slide hướng dẫn về nhà và nêu rõ câu lệnh trực tiếp: "Các em về nhà hoàn thành các nhiệm vụ: (1) Học bài và vẽ sơ đồ tư duy ôn tập, (2) Làm các bài tập còn lại trong SGK, SBT và bài tập mở rộng, (3) Chuẩn bị bài mới...". **HS:** Lắng nghe, ghi nhận các nhiệm vụ và thời hạn hoàn thành vào vở.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Tự giác học bài, làm bài tập và chuẩn bị bài mới tại nhà theo hướng dẫn. **GV:** Theo dõi, hỗ trợ giải đáp thắc mắc qua kênh trực tuyến khi cần thiết.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Nộp vở bài tập và sơ đồ tư duy vào đầu tiết học sau; trao đổi, đối chiếu kết quả với bạn. **GV:** Kiểm tra xác suất hoặc giao cán sự lớp/tổ trưởng kiểm tra sản phẩm về nhà.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần tự học ở nhà, tuyên dương các bạn làm tốt bài tập nâng cao và giải đáp thắc mắc ở đầu tiết sau. **HS:** Rút kinh nghiệm và hoàn thiện sản phẩm học tập. | **Hướng dẫn học ở nhà**<br>**1. Học bài:**<br>- Ôn tập kiến thức bài học và vẽ sơ đồ tư duy (Mindmap).<br>**2. Làm bài tập:**<br>- Hoàn thành các bài tập còn lại trong SGK & SBT.<br>- Bài tập mở rộng / Nâng cao: (kèm gợi ý).<br>**3. Chuẩn bị bài mới:**<br>- Đọc trước bài mới và chuẩn bị học liệu. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật Giao việc) **GV:** Trình chiếu slide/nêu câu lệnh giao việc ngắn gọn: "Các em về nhà hoàn thành 4 nhiệm vụ: (1) Ôn lại kiến thức trọng tâm, (2) Làm các bài tập còn lại trong SGK và SBT, (3) Chuẩn bị bài mới, (4) Thực hiện nhiệm vụ tìm tòi mở rộng...". **HS:** Lắng nghe, ghi nhận các nhiệm vụ và thời hạn hoàn thành vào vở.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Tự giác ôn tập, giải bài tập và chuẩn bị bài mới tại nhà theo hướng dẫn. **GV:** Định hướng phương pháp, hỗ trợ giải đáp khi cần thiết.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Nộp vở bài tập và báo cáo kết quả chuẩn bị vào đầu tiết học sau; trao đổi, đối chiếu kết quả với bạn. **GV:** Kiểm tra xác suất hoặc giao cán sự lớp/nhóm trưởng kiểm tra chéo.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần tự học ở nhà, giải đáp thắc mắc và tuyên dương học sinh hoàn thành tốt. **HS:** Rút kinh nghiệm và hoàn thiện bài làm. | **Hướng dẫn học ở nhà**<br>**1. Ôn tập kiến thức:**<br>- Ôn tập nội dung, quy tắc, công thức trọng tâm của bài học.<br>**2. Làm bài tập:**<br>- Hoàn thành bài tập còn lại trong SGK & SBT (kèm gợi ý phương pháp).<br>**3. Chuẩn bị bài mới:**<br>- Đọc trước bài mới và chuẩn bị học liệu, đồ dùng học tập.<br>**4. Tìm tòi, mở rộng:**<br>- Nhiệm vụ tìm tòi, ứng dụng mở rộng phù hợp bài học. |`,
 
   // 1-CLICK HOẠT ĐỘNG A -> E (ACTIVITIES AE)
   GENERATE_ACTIVITIES_AE: `Đọc PDF/ảnh SGK đính kèm và soạn toàn bộ hoạt động A–E môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512.
@@ -778,7 +780,8 @@ PHA D — VẬN DỤNG:
 
 PHA E — HƯỚNG DẪN VỀ NHÀ:
 - Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`.
-- Đủ a) Mục tiêu, b) Nội dung (Bố cục 3 phần rõ ràng: 1. Học bài/sơ đồ tư duy Mindmap, 2. Làm bài tập: hoàn thành các bài tập CÒN LẠI trong SGK chưa chữa ở Pha C/D, bài tập SBT và 1 bài mở rộng/nâng cao kèm gợi ý - CẤM TUYỆT ĐỐI giao lại bài đã chữa ở C/D, 3. Chuẩn bị bài mới; có thêm Mẫu Prompt AI an toàn làm gia sư nếu bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, 4 bước phân vai GV-HS).
+- Đủ a) Mục tiêu, b) Nội dung (Bố cục 4 nội dung chuẩn mực: 1. Ôn nội dung trọng tâm, 2. Làm bài tập: hoàn thành các bài tập CÒN LẠI trong SGK chưa làm/chữa ở Pha C/D, bài tập SBT kèm gợi ý phương pháp - CẤM TUYỆT ĐỐI giao lại bài đã chữa ở C/D, 3. Chuẩn bị bài mới, 4. Nhiệm vụ tìm tòi/mở rộng nếu phù hợp; có thêm Mẫu Prompt AI an toàn hỗ trợ tự học CHỈ khi giáo viên chủ động bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, Cột Trái 4 bước giao nhiệm vụ ngắn gọn, Cột Phải đúng 4 mục nội dung).
+- QUY TẮC NLS/AI: Tuyệt đối KHÔNG tự ý xuất hiện NLS hoặc AI trong Hoạt động E. Chỉ thêm khi giáo viên CHỦ ĐỘNG BẬT, và khi đó nhiệm vụ phải có giá trị học tập thực chất, rõ ràng, không thay thế việc tự học.
 - LOẠI BỎ TRIỆT ĐỂ các yêu cầu hình thức (ghi âm, quay video, dùng AI tìm ví dụ suông...).
 
 CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừng ở đầu/cuối bài.`,
@@ -844,7 +847,8 @@ PHA D — VẬN DỤNG:
 
 PHA E — HƯỚNG DẪN VỀ NHÀ:
 - Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`.
-- Đủ a) Mục tiêu, b) Nội dung (Bố cục 3 phần rõ ràng: 1. Học bài/sơ đồ tư duy Mindmap, 2. Làm bài tập: hoàn thành các bài tập CÒN LẠI trong SGK chưa chữa ở Pha C/D, bài tập SBT và 1 bài mở rộng/nâng cao kèm gợi ý - CẤM TUYỆT ĐỐI giao lại bài đã chữa ở C/D, 3. Chuẩn bị bài mới; có thêm Mẫu Prompt AI an toàn làm gia sư nếu bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, 4 bước phân vai GV-HS).
+- Đủ a) Mục tiêu, b) Nội dung (Bố cục 4 nội dung chuẩn mực: 1. Ôn nội dung trọng tâm, 2. Làm bài tập: hoàn thành các bài tập CÒN LẠI trong SGK chưa làm/chữa ở Pha C/D, bài tập SBT kèm gợi ý phương pháp - CẤM TUYỆT ĐỐI giao lại bài đã chữa ở C/D, 3. Chuẩn bị bài mới, 4. Nhiệm vụ tìm tòi/mở rộng nếu phù hợp; có thêm Mẫu Prompt AI an toàn hỗ trợ tự học CHỈ khi giáo viên chủ động bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, Cột Trái 4 bước giao nhiệm vụ ngắn gọn, Cột Phải đúng 4 mục nội dung).
+- QUY TẮC NLS/AI: Tuyệt đối KHÔNG tự ý xuất hiện NLS hoặc AI trong Hoạt động E. Chỉ thêm khi giáo viên CHỦ ĐỘNG BẬT, và khi đó nhiệm vụ phải có giá trị học tập thực chất, rõ ràng, không thay thế việc tự học.
 - LOẠI BỎ TRIỆT ĐỂ các yêu cầu hình thức (ghi âm, quay video, dùng AI tìm ví dụ suông...).
 
 CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừng ở đầu/cuối bài.`,
@@ -932,21 +936,21 @@ YÊU CẦU: Tạo 2 đến 3 Phiếu Học Tập (PHT) hoàn chỉnh với bản
 
 # G. HƯỚNG DẪN VỀ NHÀ
 
-## 1. Ôn tập và Khắc sâu kiến thức
-- Học thuộc và nắm vững các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài: (liệt kê vắn tắt các nội dung cốt lõi).
-- Vẽ sơ đồ tư duy (Mindmap) tóm tắt toàn bộ nội dung bài học vào vở ghi.
+## 1. Ôn tập nội dung trọng tâm
+- Ôn tập và nắm vững các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài: (liệt kê vắn tắt các nội dung cốt lõi).
+- Tóm tắt và hệ thống hóa kiến thức bài học vào vở ghi.
 
 ## 2. Bài tập tự luyện tại nhà
-- Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập môn {subject}. CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
-- **Bài tập mở rộng / Nâng cao (Dành cho HS khá, giỏi):** Đưa ra 1 bài toán/nhiệm vụ mở rộng có tính tư duy cao kèm gợi ý ngắn gọn.
+- Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập môn {subject} (kèm gợi ý/hướng dẫn phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
 
 ## 3. Nhiệm vụ chuẩn bị cho bài học tiếp theo
 - Đọc trước bài mới trong SGK môn {subject}.
-- Chuẩn bị đầy đủ dụng cụ học tập và tìm hiểu các ví dụ thực tế liên quan đến bài học tiếp theo.
+- Chuẩn bị đầy đủ dụng cụ học tập và tìm hiểu các ví dụ, hình ảnh liên quan đến bài học tiếp theo.
 
-## 4. Gợi ý Câu lệnh Prompt AI hỗ trợ học sinh tự học tại nhà an toàn (CHỈ tạo khi bối cảnh sư phạm bật năng lực AI)
-- *Mẫu Prompt 1 (Gia sư gợi mở tư duy khi gặp khó khăn):* "Em là học sinh lớp {grade}, em đang tự học bài {topic} và gặp khó khăn ở [nội dung bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự suy nghĩ tìm ra cách giải, đừng giải hộ em nhé!"
-- *Mẫu Prompt 2 (Kiểm tra và phản biện cách hiểu):* "Đây là sơ đồ tư duy / cách hiểu của em về bài học {topic}: [nội dung]. Bạn hãy nhận xét xem em đã nắm đúng bản chất chưa và góp ý giúp em hoàn thiện nhé!"`
+## 4. Nhiệm vụ tìm tòi, mở rộng (nếu phù hợp)
+- Tìm hiểu ứng dụng thực tiễn hoặc thực hiện bài toán mở rộng tư duy gắn với bài học.
+
+{ai_homework_prompt_note}`
 };
 
 function getSystemRole(subjectId, grade) {
@@ -1173,7 +1177,7 @@ function getPromptTemplate(templateKey, context) {
   const subsections = extractTextbookSubsections(rawTextbook);
   const budgets = calculateActivityTimeBudgets(context.duration, subsections.length, context.grade);
   const aiHomeworkPromptNote = context.aiCompetencyEnabled
-    ? `- 4. Hướng dẫn Prompt AI an toàn: Mẫu Prompt AI an toàn mẫu mực hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai gia sư gợi mở tư duy khi gặp khó khăn, TUYỆT ĐỐI không giải bài hộ):\n  + Mẫu Prompt: "Em là học sinh lớp ${context.grade || '6'}, em đang tự học bài ${context.topic || ''} và gặp khó khăn ở [nêu bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự tìm ra cách giải, đừng giải hộ em nhé!"`
+    ? `- Hướng dẫn Prompt AI an toàn (khi giáo viên chủ động bật AI): Mẫu Prompt AI an toàn mẫu mực hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai gia sư gợi mở tư duy khi gặp khó khăn, TUYỆT ĐỐI không giải bài hộ, không thay thế việc tự học):\n  + Mẫu Prompt: "Em là học sinh lớp ${context.grade || '6'}, em đang tự học bài ${context.topic || ''} và gặp khó khăn ở [nêu bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự tìm ra cách giải, đừng giải hộ em nhé!"`
     : '';
 
   // Replace placeholders an toàn

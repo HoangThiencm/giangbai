@@ -4095,12 +4095,22 @@ function buildIntegrationActivityConstraint(phase) {
   const context = normalizeTeachingContext(appState.teachingContext);
   const digitalOn = Boolean(context.integrations.digital);
   const aiOn = Boolean(context.integrations.ai);
-  if (!digitalOn && !aiOn) return "";
 
   if (phase === "E") {
-    if (!aiOn) return "";
-    return `\nTÍCH HỢP AI HỖ TRỢ TỰ HỌC TẠI NHÀ (Pha E): Cung cấp 1 mẫu Prompt AI an toàn mẫu mực đóng vai trò gia sư gợi mở tư duy khi học sinh tự học tại nhà gặp khó khăn, TUYỆT ĐỐI không giải bài hộ. TUYỆT ĐỐI CẤM các yêu cầu NLS/AI hình thức (như ghi âm, quay video, dùng AI tìm ví dụ suông).`;
+    if (!digitalOn && !aiOn) {
+      return `\nQUY TẮC NLS/AI CHO PHA E: Tuyệt đối KHÔNG tự ý đưa Năng lực số (NLS) hoặc Năng lực AI vào Hoạt động E khi giáo viên chưa bật tích hợp.`;
+    }
+    const eConstraints = [];
+    if (digitalOn) {
+      eConstraints.push(`- Tích hợp NLS tự học tại nhà: Hướng dẫn nhiệm vụ số thực chất (tra cứu tư liệu môn học, sử dụng phần mềm học tập); TUYỆT ĐỐI KHÔNG đưa yêu cầu hình thức (như bắt quay video, ghi âm).`);
+    }
+    if (aiOn) {
+      eConstraints.push(`- Tích hợp Prompt AI an toàn hỗ trợ tự học: Cung cấp 1 mẫu Prompt AI an toàn mẫu mực đóng vai trò gia sư gợi mở tư duy khi học sinh tự học tại nhà gặp khó khăn, TUYỆT ĐỐI không giải bài hộ, không thay thế việc tự học môn học; TUYỆT ĐỐI CẤM các yêu cầu hình thức (như bắt dùng AI tìm ví dụ suông).`);
+    }
+    return `\nQUY TẮC TÍCH HỢP NLS/AI CHO PHA E:\n${eConstraints.join("\n")}`;
   }
+
+  if (!digitalOn && !aiOn) return "";
 
   const nls = standardsOfKind("digital").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
   const ai = standardsOfKind("ai").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
@@ -4122,15 +4132,16 @@ function buildPhasePedagogyContext(phase) {
   if (phase === "E") {
     const integrationE = buildIntegrationActivityConstraint("E");
     return `\nYÊU CẦU ĐẶC THÙ CHO HOẠT ĐỘNG E (HƯỚNG DẪN VỀ NHÀ):
-- Đủ 4 mục a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (Đúng 1 bảng Markdown 2 cột, 1 hàng duy nhất).
-- Bố cục nội dung ở mục b) và Cột Phải Bảng d) BẮT BUỘC gồm 3 phần rõ ràng:
-  1. Học bài: Ôn tập kiến thức cốt lõi và tóm tắt bằng sơ đồ tư duy (Mindmap) vào vở ghi.
-  2. Làm bài tập: Hoàn thành các bài tập CÒN LẠI trong SGK (chưa làm/chữa ở Hoạt động C và D), các bài tập tương ứng trong Sách bài tập (SBT) và 1 bài tập mở rộng/nâng cao phân hóa (kèm gợi ý). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa ở Hoạt động C hoặc Hoạt động D.
+- Cực kỳ ngắn gọn, chuẩn mực, đủ 4 mục a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (Đúng 1 bảng Markdown 2 cột, 1 hàng duy nhất).
+- Bố cục nội dung ở mục b) và Cột Phải Bảng d) BẮT BUỘC đúng 4 nội dung súc tích:
+  1. Ôn nội dung trọng tâm: Ôn tập và hệ thống hóa kiến thức trọng tâm của bài học vào vở ghi.
+  2. Làm bài tập: Hoàn thành các bài tập CÒN LẠI trong SGK (chưa làm/chữa ở Hoạt động C và D), các bài tập tương ứng trong Sách bài tập (SBT) (có thể kèm gợi ý/hướng dẫn phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
   3. Chuẩn bị bài mới: Đọc trước bài tiếp theo trong SGK và chuẩn bị đồ dùng học tập cần thiết.
+  4. Nhiệm vụ tìm tòi, mở rộng: Giao một nhiệm vụ tìm tòi/mở rộng hoặc vận dụng thực tế nếu thật sự phù hợp.
 - TUYỆT ĐỐI LOẠI BỎ mọi yêu cầu hình thức (như ghi âm cách đọc, quay video, bắt dùng AI tìm ví dụ suông).
-- Cột Trái Bảng d): Đủ 4 bước CV 5512 phân vai rõ ràng:
-  + **GV:** Nói câu lệnh giao việc trong ngoặc kép "...", hướng dẫn cách hoàn thành, thời hạn nộp.
-  + **HS:** Lắng nghe, ghi nhận nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.${integrationE}`;
+- Cột Trái Bảng d): Đủ 4 bước CV 5512 phân vai rõ ràng, ngắn gọn:
+  + **GV:** Nói câu lệnh giao nhiệm vụ về nhà trực tiếp trong ngoặc kép "...", hướng dẫn phương pháp và thời hạn nộp sản phẩm ở đầu tiết sau.
+  + **HS:** Lắng nghe, ghi nhận 4 nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.${integrationE}`;
   }
 
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
@@ -4706,7 +4717,8 @@ function scoreKhbdActivityBlock(block) {
   if (/#{2,4}\s*b\)\s*Nội dung/i.test(text)) score += 1000;
   if (/#{2,4}\s*c\)\s*Sản phẩm/i.test(text)) score += 800;
   if (/#{2,4}\s*d\)\s*Tổ chức/i.test(text)) score += 800;
-  if (/Học bài/i.test(text) && /Làm bài/i.test(text) && /Chuẩn bị bài/i.test(text)) score += 500;
+  if (/(?:Ôn\s*tập|Ôn\s*nội\s*dung|Học\s*bài)/i.test(text) && /(?:Làm\s*bài|Bài\s*tập)/i.test(text) && /(?:Chuẩn\s*bị|Bài\s*mới)/i.test(text)) score += 500;
+  if (/(?:Tìm\s*tòi|Mở\s*rộng)/i.test(text)) score += 200;
   return score;
 }
 
