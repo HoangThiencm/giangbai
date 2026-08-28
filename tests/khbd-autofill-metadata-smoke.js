@@ -33,6 +33,11 @@ global.document = {
 
 global.showToast = () => {};
 
+try {
+  const curr = require('../js/khbd-curriculum.js');
+  Object.assign(global, curr);
+} catch (e) {}
+
 const {
   appState,
   extractLessonTitleFromOcr,
@@ -52,7 +57,7 @@ const ocrText1 = `
 1. Khái niệm tập hợp
 Tập hợp các số tự nhiên được kí hiệu là N...
 `;
-assert.strictEqual(extractLessonTitleFromOcr(ocrText1), 'Bài 1: TẬP HỢP CÁC SỐ TỰ NHIÊN');
+assert.strictEqual(extractLessonTitleFromOcr(ocrText1, 'toan', '6'), 'Bài 1: Tập hợp');
 
 const ocrText2 = `
 **BÀI 15: BIỂU THỨC ĐẠI SỐ** (2 tiết)
@@ -72,6 +77,18 @@ Khái niệm về phương trình bậc nhất...
 `;
 assert.strictEqual(extractLessonTitleFromOcr(ocrText4), 'Phương trình bậc nhất một ẩn');
 
+const ocrText5 = `
+# CHƯƠNG I: TẬP HỢP CÁC SỐ TỰ NHIÊN
+SỐ HỌC
+
+BÀI 1
+TẬP HỢP
+
+KHÁI NIỆM, THUẬT NGỮ
+Tập hợp, phần tử
+`;
+assert.strictEqual(extractLessonTitleFromOcr(ocrText5, 'toan', '6'), 'Bài 1: Tập hợp');
+
 console.log('  -> extractLessonTitleFromOcr: PASS');
 
 // 2. Kiểm tra trích xuất chi tiết từ bảng PPCT: parsePpctLessonDetails
@@ -80,11 +97,11 @@ console.log('-> 2. Kiểm tra parsePpctLessonDetails...');
 const ppctTableSample = `
 | TT | Tên bài học | Tiết PPCT | Số tiết | Ghi chú |
 |---|---|---|---|---|
-| 1 | Bài 1: Tập hợp các số tự nhiên | Tiết 1, 2 | 2 | Tích hợp GD Năng lực AI |
+| 1 | Bài 1: Tập hợp | Tiết 1, 2 | 2 | Tích hợp GD Năng lực AI |
 | 2 | Bài 2: Phép cộng và phép trừ số tự nhiên | Tiết 3, 4, 5 | 3 | Dùng GeoGebra |
 `;
 
-const details1 = parsePpctLessonDetails(ppctTableSample, 'Bài 1: Tập hợp các số tự nhiên');
+const details1 = parsePpctLessonDetails(ppctTableSample, 'Bài 1: Tập hợp');
 assert.strictEqual(details1.lessonScopeSuggestion, 'Tiết 1, 2', 'Phạm vi tiết phải là "Tiết 1, 2"');
 assert.strictEqual(details1.durationSuggestion, '2', 'Số tiết phải là 2');
 assert.strictEqual(details1.hasAiIntegration, true, 'Phải phát hiện ghi chú AI');
@@ -111,12 +128,12 @@ const result = autoDetectAndFillLessonMetadata({
   silent: true
 });
 
-assert.strictEqual(result.topic, 'Bài 1: TẬP HỢP CÁC SỐ TỰ NHIÊN', 'Topic phải tự động nhận diện từ OCR');
+assert.strictEqual(result.topic, 'Bài 1: Tập hợp', 'Topic phải tự động nhận diện từ OCR');
 assert.strictEqual(result.lessonScope, 'Tiết 1, 2', 'LessonScope phải nhận diện từ PPCT');
 assert.strictEqual(result.duration, '02 tiết (90 phút)', 'Thời lượng lớp 6 (2 tiết) phải là 90 phút');
 assert.strictEqual(result.hasAiIntegration, true, 'Năng lực AI phải được phát hiện');
 
-assert.strictEqual(appState.customTopic, 'Bài 1: TẬP HỢP CÁC SỐ TỰ NHIÊN');
+assert.strictEqual(appState.customTopic, 'Bài 1: Tập hợp');
 assert.strictEqual(appState.teachingContext.lessonScope, 'Tiết 1, 2');
 assert.strictEqual(appState.duration, '02 tiết (90 phút)');
 assert.strictEqual(appState.teachingContext.integrations.ai, true);

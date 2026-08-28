@@ -2841,37 +2841,96 @@ function formatSmartDuration(inputStr, grade) {
  * @param {string} ocrText - Văn bản OCR
  * @returns {string} Tên bài học đã trích xuất hoặc chuỗi rỗng
  */
-function extractLessonTitleFromOcr(ocrText) {
+function extractLessonTitleFromOcr(ocrText, subjectId, gradeVal) {
   if (!ocrText || typeof ocrText !== "string") return "";
   const text = ocrText.trim();
   if (!text) return "";
 
-  const patterns = [
-    /(?:^|\n)\s*(?:#{1,4}\s+)?(?:\*\*)?(?:TOÁN\s*\d+\s*[—–-]\s*)?(?:BÀI|Bài|CHỦ ĐỀ|Chủ đề|BÀI HỌC|Bài học)\s*(\d+)[\s.:–—\-]+([^\r\n*#]+)/i,
-    /(?:^|\n)\s*(?:#{1,4}\s+)?(?:\*\*)?(?:BÀI|Bài)\s*([IVXLCDM]+)[\s.:–—\-]+([^\r\n*#]+)/i,
-    /(?:^|\n)\s*#\s+([^\r\n*#]+)/
-  ];
+  // 1. Kiểm tra đối chiếu với danh mục bài học chuẩn trong Curriculum (nếu có)
+  const subj = subjectId || (typeof appState !== "undefined" ? (appState.selectedSubject || "toan") : "toan");
+  const gr = gradeVal || (typeof appState !== "undefined" ? (appState.selectedGrade || "6") : "6");
+  if (typeof getLessonsForBook === "function") {
+    try {
+      const chapters = getLessonsForBook(subj, "standard", gr);
+      if (Array.isArray(chapters)) {
+        for (const ch of chapters) {
+          for (const item of (ch.items || [])) {
+            const m = item.match(/^(?:Bài|Chủ đề)\s*(\d+)[\s.:–—\-]+(.*)$/i);
+            if (m) {
+              const num = m[1];
+              const cleanTitle = m[2].trim().toLowerCase();
+              const numRe = new RegExp(`\\b(?:BÀI|Bài|CHỦ ĐỀ|Chủ đề)\\s*${num}\\b`, "i");
+              if (numRe.test(text)) {
+                const matchIdx = text.search(numRe);
+                const snippet = text.slice(matchIdx, matchIdx + 450).toLowerCase();
+                const titleWords = cleanTitle.split(/\s+/).filter(w => w.length > 1);
+                if (snippet.includes(cleanTitle) || (titleWords.length && titleWords.every(w => snippet.includes(w)))) {
+                  return item;
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // Fallback sang regex
+    }
+  }
 
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      if (match.length >= 3) {
-        const num = match[1].trim();
-        let name = match[2].trim()
-          .replace(/[\s*#`_]+$/g, "")
-          .replace(/\s*\((?:tiết|tiếp theo|\d+\s*tiết|\d+\s*phút)[^)]*\)/gi, "")
-          .trim();
-        if (name && name.length >= 2) {
-          return `Bài ${num}: ${name}`;
+  // 2. Bóc tách bằng Regex thông minh (loại trừ tuyệt đối tên CHƯƠNG)
+  // 2.1. Cùng dòng: BÀI 1: TẬP HỢP
+  const sameLineMatch = text.match(/(?:^|\n)\s*(?:#{1,4}\s+)?(?:\*\*)?(?:TOÁN\s*\d+\s*[—–-]\s*)?(?:BÀI|Bài|BÀI HỌC|Bài học)\s*(\d+)[\s.:–—\-]+([^\r\n*#]+)/i);
+  if (sameLineMatch) {
+    const num = sameLineMatch[1].trim();
+    let name = sameLineMatch[2].trim()
+      .replace(/[\s*#`_]+$/g, "")
+      .replace(/\s*\((?:tiết|tiếp theo|\d+\s*tiết|\d+\s*phút)[^)]*\)/gi, "")
+      .trim();
+    if (name && name.length >= 2 && !/^(?:CHƯƠNG|Chương|PHẦN|Phần|MỤC LỤC|KHÁI NIỆM|KIẾN THỨC|SỐ HỌC|HÌNH HỌC)\b/i.test(name)) {
+      return `Bài ${num}: ${name}`;
+    }
+  }
+
+  // 2.2. Nhiều dòng (icon/badge BÀI 1 ở trên, tên bài ở dòng dưới như SGK Kết nối tri thức)
+  const multiLineMatch = text.match(/(?:^|\n)\s*(?:#{1,4}\s+)?(?:\*\*)?(?:BÀI|Bài)\s*(\d+)\b[^\n\r]*\r?\n+\s*(?:#{1,4}\s+)?(?:\*\*)?([^\r\n*#]+)/i);
+  if (multiLineMatch) {
+    const num = multiLineMatch[1].trim();
+    let name = multiLineMatch[2].trim()
+      .replace(/[\s*#`_]+$/g, "")
+      .replace(/\s*\((?:tiết|tiếp theo|\d+\s*tiết|\d+\s*phút)[^)]*\)/gi, "")
+      .trim();
+    if (name && name.length >= 2 && !/^(?:CHƯƠNG|Chương|PHẦN|Phần|MỤC LỤC|KHÁI NIỆM|KIẾN THỨC|SỐ HỌC|HÌNH HỌC|ĐẠI SỐ|HOẠT ĐỘNG)\b/i.test(name)) {
+      return `Bài ${num}: ${name}`;
+    }
+  }
+
+  // 2.3. Chủ đề X: ...
+  const chuDeMatch = text.match(/(?:^|\n)\s*(?:#{1,4}\s+)?(?:\*\*)?(?:CHỦ ĐỀ|Chủ đề)\s*(\d+)[\s.:–—\-]+([^\r\n*#]+)/i);
+  if (chuDeMatch) {
+    const num = chuDeMatch[1].trim();
+    let name = chuDeMatch[2].trim()
+      .replace(/[\s*#`_]+$/g, "")
+      .replace(/\s*\((?:tiết|tiếp theo|\d+\s*tiết|\d+\s*phút)[^)]*\)/gi, "")
+      .trim();
+    if (name && name.length >= 2 && !/^(?:CHƯƠNG|Chương|PHẦN|Phần)\b/i.test(name)) {
+      return `Bài ${num}: ${name}`;
+    }
+  }
+
+  // 2.4. Khớp heading # (loại trừ tuyệt đối CHƯƠNG, SỐ HỌC, HÌNH HỌC, PHẦN)
+  const headingLines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  for (const line of headingLines) {
+    const headMatch = line.match(/^#{1,3}\s+([^\r\n*#]+)/);
+    if (headMatch) {
+      let title = headMatch[1].trim()
+        .replace(/[\s*#`_]+$/g, "")
+        .replace(/\s*\((?:tiết|tiếp theo|\d+\s*tiết|\d+\s*phút)[^)]*\)/gi, "")
+        .trim();
+      if (title && title.length >= 3) {
+        if (/^(?:CHƯƠNG|Chương|PHẦN|Phần|MỤC LỤC|SỐ HỌC|HÌNH HỌC|ĐẠI SỐ|KHÁI NIỆM|KIẾN THỨC|HOẠT ĐỘNG|I{1,3}|IV|V)\b/i.test(title)) {
+          continue;
         }
-      } else if (match.length === 2) {
-        let title = match[1].trim()
-          .replace(/[\s*#`_]+$/g, "")
-          .replace(/\s*\((?:tiết|tiếp theo|\d+\s*tiết|\d+\s*phút)[^)]*\)/gi, "")
-          .trim();
-        if (title && title.length >= 3 && !/^(?:I{1,3}|IV|V|Mục|Phần|Nội dung|Hoạt động|Học liệu|Bước)\b/i.test(title)) {
-          return title;
-        }
+        return title;
       }
     }
   }
@@ -2907,8 +2966,14 @@ function autoDetectAndFillLessonMetadata({ ppctText, ocrText, silent = false } =
   if (topicCandidate) {
     detected.topic = topicCandidate;
     appState.customTopic = topicCandidate;
+    appState.selectedLesson = topicCandidate;
     const inputTopic = document.getElementById("inputTopicCustom");
     if (inputTopic) inputTopic.value = topicCandidate;
+    const selectLesson = document.getElementById("selectLesson");
+    if (selectLesson && selectLesson.options) {
+      const exists = Array.from(selectLesson.options).some(o => o.value === topicCandidate);
+      if (exists) selectLesson.value = topicCandidate;
+    }
     detectedChanges.push(`Tên bài: "${topicCandidate}"`);
   }
 
