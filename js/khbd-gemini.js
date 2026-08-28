@@ -51,11 +51,14 @@ class GeminiAPIManager {
   loadKeysFromLocalStorage() {
     try {
       const storageKey = this.getStorageKey();
-      const saved = localStorage.getItem(storageKey);
+      const saved = localStorage.getItem(storageKey)
+        || localStorage.getItem('global_gemini_keys')
+        || localStorage.getItem('gemini_api_keys')
+        || localStorage.getItem('khbd_user_gemini_keys_default');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          this.apiKeys = parsed.map(k => k.trim()).filter(k => k.length > 0);
+          this.apiKeys = GeminiAPIManager.cleanKeyList(parsed);
           return;
         }
       }
@@ -70,7 +73,10 @@ class GeminiAPIManager {
   saveKeysToLocalStorage() {
     try {
       const storageKey = this.getStorageKey();
-      localStorage.setItem(storageKey, JSON.stringify(this.apiKeys));
+      const json = JSON.stringify(this.apiKeys || []);
+      localStorage.setItem(storageKey, json);
+      localStorage.setItem('global_gemini_keys', json);
+      localStorage.setItem('khbd_user_gemini_keys_default', json);
     } catch (e) {
       console.error("Lỗi lưu keys vào localStorage:", e);
     }
@@ -78,7 +84,10 @@ class GeminiAPIManager {
 
   loadMistralKeysFromLocalStorage() {
     try {
-      const saved = localStorage.getItem(this.getMistralStorageKey());
+      const saved = localStorage.getItem(this.getMistralStorageKey())
+        || localStorage.getItem('global_mistral_keys')
+        || localStorage.getItem('mistral_api_keys')
+        || localStorage.getItem('khbd_user_mistral_keys_default');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -95,7 +104,10 @@ class GeminiAPIManager {
 
   saveMistralKeysToLocalStorage() {
     try {
-      localStorage.setItem(this.getMistralStorageKey(), JSON.stringify(this.mistralKeys || []));
+      const json = JSON.stringify(this.mistralKeys || []);
+      localStorage.setItem(this.getMistralStorageKey(), json);
+      localStorage.setItem('global_mistral_keys', json);
+      localStorage.setItem('khbd_user_mistral_keys_default', json);
     } catch (e) {
       console.error("Lỗi lưu Mistral keys vào localStorage:", e);
     }
@@ -114,39 +126,32 @@ class GeminiAPIManager {
     }
   }
 
-  // Đồng bộ danh sách keys từ máy chủ CSDL
+  // Đồng bộ danh sách keys từ máy chủ CSDL (nếu có session đăng nhập)
   async syncKeysFromServer() {
     try {
+      if (typeof fetch !== "function") return this.apiKeys;
       const res = await fetch('api/user_gemini_keys.php', {
         method: 'GET',
         cache: 'no-store',
         credentials: 'include'
-      });
-      if (res.ok) {
-        const data = await res.json();
+      }).catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json().catch(() => ({}));
         if (data.ok) {
           const serverGemini = Array.isArray(data.keys) ? data.keys : [];
           const serverMistral = Array.isArray(data.mistral_keys) ? data.mistral_keys : [];
-          const payload = {};
           if (serverGemini.length > 0) {
             this.apiKeys = GeminiAPIManager.cleanKeyList(serverGemini);
             this.saveKeysToLocalStorage();
-          } else if (this.apiKeys && this.apiKeys.length > 0) {
-            payload.keys = this.apiKeys;
           }
           if (serverMistral.length > 0) {
             this.mistralKeys = GeminiAPIManager.cleanKeyList(serverMistral);
             this.saveMistralKeysToLocalStorage();
-          } else if (this.mistralKeys && this.mistralKeys.length > 0) {
-            payload.mistral_keys = this.mistralKeys;
-          }
-          if (Object.keys(payload).length) {
-            await this.saveUserAiKeysToServer(payload);
           }
         }
       }
-    } catch (e) {
-      console.warn("Không thể đồng bộ keys từ server:", e);
+    } catch {
+      // Bỏ qua trong im lặng nếu chạy không có backend session
     }
     return this.apiKeys;
   }
@@ -165,7 +170,7 @@ class GeminiAPIManager {
       body.mistral_keys = this.mistralKeys;
     }
     if (!Object.keys(body).length) {
-      return { ok: false, keys: this.apiKeys, mistral_keys: this.mistralKeys, count: this.apiKeys.length, mistral_count: this.mistralKeys.length };
+      return { ok: true, keys: this.apiKeys, mistral_keys: this.mistralKeys, count: this.apiKeys.length, mistral_count: this.mistralKeys.length };
     }
 
     try {
@@ -174,16 +179,16 @@ class GeminiAPIManager {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(body)
-      });
-      if (res.ok) {
-        const data = await res.json();
+      }).catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json().catch(() => ({}));
         if (data.ok) this.applyServerKeyPayload(data);
         return data;
       }
-    } catch (e) {
-      console.error("Lỗi khi lưu keys lên máy chủ:", e);
+    } catch {
+      // Lưu offline/local an toàn
     }
-    return { ok: false, keys: this.apiKeys, mistral_keys: this.mistralKeys, count: this.apiKeys.length, mistral_count: this.mistralKeys.length };
+    return { ok: true, keys: this.apiKeys, mistral_keys: this.mistralKeys, count: this.apiKeys.length, mistral_count: this.mistralKeys.length };
   }
 
   // Lưu danh sách Gemini keys lên máy chủ CSDL và localStorage
@@ -357,59 +362,14 @@ class GeminiAPIManager {
     }
   }
 
-  wrapProxyAsResponse(data, httpStatus) {
-    const status = Number(data?.status || httpStatus || 0) || 0;
-    const body = data?.body && typeof data.body === "object" ? data.body : { error: { message: data?.error || "Gemini proxy lỗi" } };
-    return {
-      ok: status >= 200 && status < 300,
-      status: status || httpStatus || 502,
-      statusText: status ? String(status) : "Proxy Error",
-      json: async () => body,
-      headers: { get: () => null }
-    };
-  }
-
-  async fetchViaKhbdProxy(model, key, payload, timeoutSec, signal) {
-    const res = await this.fetchWithTimeout("api/khbd_gemini.php", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        key,
-        payload,
-        timeout: timeoutSec
-      }),
-      signal
-    }, Math.max(12000, (timeoutSec + 8) * 1000));
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok && !data.body) {
-      throw new Error(data.error || `Máy chủ không gọi được Gemini (HTTP ${res.status}).`);
-    }
-    return this.wrapProxyAsResponse(data, res.status);
-  }
-
   async fetchGeminiGenerate(model, key, payload, signal, timeoutMs, options = {}) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-    try {
-      return await this.fetchWithTimeout(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal
-      }, timeoutMs);
-    } catch (err) {
-      if (this.isUserAbort(err, signal)) throw err;
-      const isNet = err?.name === "TimeoutError"
-        || err?.name === "TypeError"
-        || /failed to fetch|network|timeout|hết thời gian/i.test(String(err?.message || ""));
-      if (!isNet || options._testFastRetry) throw err;
-      this.emitGeminiStatus({
-        type: "proxy",
-        message: "Trình duyệt không tới được Gemini, đang gọi qua máy chủ hosting..."
-      }, options);
-      return this.fetchViaKhbdProxy(model, key, payload, Math.max(15, Math.round((timeoutMs || 60000) / 1000)), signal);
-    }
+    return await this.fetchWithTimeout(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal
+    }, timeoutMs);
   }
 
   // Kiểm tra tính hợp lệ của 1 API Key

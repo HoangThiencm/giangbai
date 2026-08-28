@@ -3,6 +3,7 @@
  */
 (function (global) {
     const ENDPOINT = 'api/ai_usage_report.php';
+    let disableReporting = false;
 
     function extractGeminiTokens(raw) {
         const meta = raw?.usageMetadata;
@@ -16,6 +17,7 @@
     }
 
     function report(entry) {
+        if (disableReporting) return;
         if (!entry || typeof entry !== 'object') return;
         const provider = String(entry.provider || '').trim();
         if (!provider) return;
@@ -40,9 +42,15 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
                 keepalive: true,
-            }).catch(() => {});
+            }).then(res => {
+                if (res.status === 401 || res.status === 403 || res.status === 404) {
+                    disableReporting = true;
+                }
+            }).catch(() => {
+                disableReporting = true;
+            });
         } catch {
-            // ignore
+            disableReporting = true;
         }
     }
 
@@ -50,4 +58,4 @@
         report,
         extractGeminiTokens,
     };
-})(window);
+})(typeof window !== "undefined" ? window : globalThis);

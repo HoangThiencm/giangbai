@@ -883,7 +883,7 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
   const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chọn từ 1 đến ${maxSelect} mục từ DANH MỤC CHO PHÉP để tích hợp vào bài này.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id catalog (cột 1) hoặc mã chính thức (cột 2)","lessonAnchor":"đoạn OCR về khái niệm, ví dụ hoặc bài tập","fitRationale":"lý do ngắn","proposedTask":"nhiệm vụ GV/HS ngắn gắn bài, nêu sản phẩm"}]}.\n\nQuy tắc bắt buộc:\n- Bài Toán/môn học không cần có chữ AI hay năng lực số. Hãy chọn mục có thể lồng vào bài tập/khái niệm đang có.\n- id là cột 1 (id catalog) hoặc cột 2 (mã chính thức). Không bịa mã ngoài danh mục.\n- lessonAnchor nên trích từ OCR; nếu không trích đúng nguyên văn vẫn phải trả id phù hợp.\n- Không trả mảng rỗng khi danh mục còn mục có thể tích hợp.\n- Không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${visionForPrompt}`;
   const label = kind === "ai" ? "năng lực AI" : "năng lực số";
   let records = [];
-  if (typeof geminiAPI !== "undefined" && typeof geminiAPI.generateContent === "function") {
+  if (typeof geminiAPI !== "undefined" && typeof geminiAPI.generateContent === "function" && Array.isArray(geminiAPI.apiKeys) && geminiAPI.apiKeys.length > 0) {
     try {
       const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, grade), 0.1);
       const selected = parseStructuredCandidates(raw, candidates, appState.content.vision, maxSelect);
@@ -892,8 +892,8 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
           ...standardToRecord(kind, entry, grade, true), lessonAnchor, fitRationale, proposedTask
         }));
       }
-    } catch (error) {
-      console.warn(`Không thể đề xuất ${kind} theo minh chứng OCR:`, error);
+    } catch {
+      // Tự động dùng danh mục đề xuất cục bộ
     }
   }
   if (!records.length) records = catalogFallbackRecords(kind, grade, candidates, maxSelect);
