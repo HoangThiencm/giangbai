@@ -1148,6 +1148,18 @@ function getPromptTemplate(templateKey, context) {
   let baseTemplate = PROMPTS[templateKey];
   if (!baseTemplate) return '';
 
+  if (templateKey === 'GENERATE_ACTIVITY_E') {
+    baseTemplate = `Hãy viết mục cuối tiến trình dạy học cho môn {subject}, bài {topic}.
+
+CHỈ xuất đúng nội dung sau, không giải thích thêm:
+## E. HƯỚNG DẪN VỀ NHÀ
+- **Học bài:** [một nhiệm vụ ôn tập ngắn, bám nội dung vừa học].
+- **Làm bài:** [chỉ nêu bài SGK/SBT có số bài, trang khi có trong nguồn; không tự bịa bài].
+- **Chuẩn bị bài mới:** [tên/nội dung bài tiếp theo nếu có trong nguồn].
+
+Đây là phần giao việc về nhà, không phải một hoạt động dạy học. Không ghi thời lượng, không có a), b), c), d), không dùng bảng, không phân vai GV-HS và không viết bốn bước CV 5512. Nếu bật AI, chỉ thêm tối đa một Prompt AI tự học an toàn, yêu cầu AI gợi mở chứ không giải hộ.`;
+  }
+
   const subjectId = context.subject || 'toan';
   const subjectName = context.subjectName || 'Toán';
   const gradeLevelName = context.gradeLevelName || 'THCS';

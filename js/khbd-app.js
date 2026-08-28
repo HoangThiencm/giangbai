@@ -102,7 +102,7 @@ const ACTIVITY_TITLES = {
   B: { short: "B. Hình thành KT", full: "B. HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI" },
   C: { short: "C. Luyện tập", full: "C. HOẠT ĐỘNG LUYỆN TẬP" },
   D: { short: "D. Vận dụng", full: "D. HOẠT ĐỘNG VẬN DỤNG" },
-  E: { short: "E. Hướng dẫn về nhà", full: "E. HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ" }
+  E: { short: "E. Hướng dẫn về nhà", full: "E. HƯỚNG DẪN VỀ NHÀ" }
 };
 
 const SUBJECT_CONTEXT_INTEGRATIONS = [
@@ -4094,6 +4094,9 @@ function buildIntegrationActivityConstraint(phase) {
 }
 
 function buildPhasePedagogyContext(phase) {
+  if (phase === "E") {
+    return `\nMỤC E — HƯỚNG DẪN VỀ NHÀ: Đây không phải hoạt động dạy học theo bốn bước. Viết ngắn gọn, chỉ giao việc bằng 3 gạch đầu dòng: (1) học/ôn nội dung trọng tâm, (2) làm bài SGK hoặc SBT có số bài-trang nếu nguồn cung cấp, (3) chuẩn bị bài mới. Nêu sản phẩm hoặc thời điểm nộp trong đúng một câu khi cần. Không dùng bảng, không phân vai GV-HS, không tạo mục a), b), c), d).`;
+  }
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
   const techItems = (selected.techniques || []).map(id => pedagogyCatalogItem("techniques", id) || { id, label: pedagogyLabel("techniques", id), description: "" });
   const activityLabels = (appState.teachingContext.subjectActivities || []).map(id => pedagogyLabel("activities", id)).filter(Boolean);
@@ -4145,6 +4148,7 @@ function pedagogyLabelInText(haystack, label) {
 
 function assertPhasePedagogyOutput(phase, output) {
   const text = String(output || "");
+  if (phase === "E") return;
   const selected = (appState && appState.teachingContext && appState.teachingContext.phasePedagogy?.[phase]) || {};
   const labels = (selected.techniques || []).map(id => pedagogyLabel("techniques", id)).filter(Boolean);
 
@@ -4194,26 +4198,7 @@ function assertPhasePedagogyOutput(phase, output) {
     }
   }
 
-  // 3. Với Pha E (Hướng dẫn về nhà)
-  if (phase === "E") {
-    const tablePart = text.split(/#{3,4}\s*d\)/i)[1] || text.split("### d)")[1] || text;
-    const hasStep1 = /bước\s*1|chuyển giao/i.test(tablePart);
-    const hasStep2 = /bước\s*2|thực hiện/i.test(tablePart);
-    const hasStep3 = /bước\s*3|báo cáo|thảo luận/i.test(tablePart);
-    const hasStep4 = /bước\s*4|kết luận|nhận định/i.test(tablePart);
-    if (!hasStep1 || !hasStep2 || !hasStep3 || !hasStep4) {
-      throw new Error("Hoạt động E: Bảng tổ chức thực hiện chưa có đủ 4 bước CV 5512 (Bước 1: Chuyển giao -> Bước 2: Thực hiện -> Bước 3: Báo cáo -> Bước 4: Kết luận).");
-    }
-    const cellData = tablePart.replace(/\|\s*Hoạt động của GV và HS\s*\|\s*Nội dung\s*\|/i, "");
-    const hasGv = /(?:\*\*GV\b|\bGV\s*:|giáo viên)/i.test(cellData);
-    const hasHs = /(?:\*\*HS\b|\bHS\s*:|học sinh)/i.test(cellData);
-    if (!hasGv || !hasHs) {
-      throw new Error("Hoạt động E: Bảng tổ chức thực hiện chưa phân định rõ ràng vai trò GV (giao việc, hướng dẫn) và HS (ghi nhận, tự học tại nhà).");
-    }
-    return;
-  }
-
-  // Với các pha khác (A, C, D) hoặc fallback khi B không có chia nhánh:
+  // Với các pha A, C, D hoặc fallback khi B không có chia nhánh:
   const tablePart = text.split(/#{3,4}\s*d\)/i)[1] || text.split("### d)")[1] || text;
 
   // Kiểm tra đủ 4 bước CV 5512
@@ -5426,11 +5411,11 @@ async function handle1ClickGenerate() {
     }
     await delay(generationPauseMs(), appState.generationController.signal);
 
-    // Bước 6/6 (95% -> 100%): Sinh E. Hoạt động Hướng dẫn về nhà
-    updateProgress(95, "Bước 6/6: Đang soạn E. Hoạt động Hướng dẫn về nhà...");
+    // Bước 6/6 (95% -> 100%): Sinh E. Hướng dẫn về nhà
+    updateProgress(95, "Bước 6/6: Đang soạn E. Hướng dẫn về nhà...");
     context.activities_content = getFullLessonPlanMarkdown();
     const promptE = getPromptTemplate("GENERATE_ACTIVITY_E", context) + buildPhasePedagogyContext('E');
-    const rawE = await generateOneClickContent(promptE, media, { maxOutputTokens: 8192, timeoutMs: 60000 });
+    const rawE = await generateOneClickContent(promptE, media, { maxOutputTokens: 1200, timeoutMs: 60000 });
     await applyActivityOutput('E', rawE, appState.generationController.signal, { repairWithGemini: false });
 
     saveStateToLocalStorage();
