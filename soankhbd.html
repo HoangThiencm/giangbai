@@ -174,7 +174,7 @@
               <h2 class="card-title"><i data-lucide="camera"></i> 1. Sách giáo khoa (PDF / Ảnh SGK)</h2>
               <div class="card-actions">
                 <button id="btnAnalyzeVision" class="btn btn-primary" type="button">
-                  <i data-lucide="sparkles"></i> Đọc nội dung SGK (Mistral OCR)
+                  <i data-lucide="scan-text"></i> Đọc sách giáo khoa
                 </button>
                 <button id="btnClearVisionImages" class="btn btn-outline-dark" type="button">
                   <i data-lucide="trash"></i> Xóa tất cả ảnh
@@ -187,7 +187,7 @@
               <div class="dropzone-icon">📋</div>
               <div class="dropzone-text">
                 <h4>Dán ảnh SGK (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
-                <p>Mistral OCR nhận diện chữ & công thức toán học nhanh chóng. Giáo viên có thể bấm 1-Click ngay sau khi nạp ảnh.</p>
+                <p>Mistral OCR nhận diện chữ & công thức toán học nhanh chóng. Giáo viên bấm "Đọc sách giáo khoa" để trích xuất văn bản.</p>
               </div>
               <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
             </div>
@@ -240,7 +240,7 @@
               <h2 class="card-title"><i data-lucide="calendar-range"></i> 2. Phân phối chương trình (PPCT)</h2>
               <div class="card-actions">
                 <button id="btnAnalyzePpct" class="btn btn-primary" type="button">
-                  <i data-lucide="sparkles"></i> Đọc PPCT (AI Phân tích)
+                  <i data-lucide="book-open"></i> Đọc PPCT
                 </button>
                 <button id="btnClearPpctFiles" class="btn btn-outline-dark" type="button">
                   <i data-lucide="trash"></i> Xóa file PPCT
@@ -307,7 +307,7 @@
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="settings"></i> Thiết lập bài dạy</h2>
           <span class="text-muted" style="font-size: 0.85rem;">Giáo viên chọn bài từ danh mục hoặc nhập trực tiếp</span>
-          <div class="card-actions"><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
+          <div class="card-actions"><button id="btnAutoDetectMetadata" class="btn btn-outline-dark btn-sm" type="button"><i data-lucide="sparkles"></i> Đề xuất thông tin bài dạy</button><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
           <div class="tool-group">
@@ -384,7 +384,12 @@
               <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-dark); display: flex; align-items: center; gap: 0.4rem;">
                 <i data-lucide="sparkles"></i> Tích hợp nội dung & Bối cảnh sư phạm chuyên sâu
               </h4>
-              <span class="text-muted" style="font-size: 0.78rem;">Chuẩn TT 08/2024, CT 05-CT/TW, QĐ 1309, QĐ 149 & CV 3089</span>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button id="btnSuggestPedagogyStandards" class="btn btn-outline-dark btn-sm" type="button">
+                  <i data-lucide="sparkles"></i> Đề xuất PP/KTDH & Năng lực số/AI
+                </button>
+                <span class="text-muted" style="font-size: 0.78rem;">Chuẩn TT 08/2024, CT 05-CT/TW, QĐ 1309, QĐ 149 & CV 3089</span>
+              </div>
             </div>
             
             <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.75rem;">
@@ -407,12 +412,12 @@
         </div>
 
         <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
-          <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn KHBD:</h4>
+          <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình 4 bước soạn KHBD:</h4>
           <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
-            <li><b>Bước 1 (Học liệu nguồn):</b> Dán PDF/ảnh SGK & PPCT ở khối phía trên. Bấm <b>✨ Tự động nhận diện bài & PPCT</b> để AI tự điền thông tin.</li>
-            <li><b>Bước 2 (Thiết lập):</b> Kiểm tra Tên bài, Thời lượng, Phạm vi PPCT và tùy chọn Tích hợp ở khối phía dưới.</li>
-            <li><b>Bước 3 (Soạn bài):</b> Bấm <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b> hoặc tạo từng phần ở Tab 2–4.</li>
-            <li><b>Bước 4 (Xuất bản):</b> Tab 5 kiểm tra và <b>Xuất Toàn bộ Giáo án (.DOCX)</b>.</li>
+            <li><b>Bước 1 (Đọc SGK):</b> Tải PDF/ảnh SGK -> Bấm <b>Đọc sách giáo khoa</b> để trích xuất văn bản SGK.</li>
+            <li><b>Bước 2 (Đọc PPCT):</b> Tải PDF/ảnh PPCT -> Bấm <b>Đọc PPCT</b> để AI bóc tách phân phối chương trình.</li>
+            <li><b>Bước 3 (Thông tin bài dạy):</b> Bấm <b>Đề xuất thông tin bài dạy</b> để gợi ý Tên bài học, Thời lượng, Phạm vi tiết dạy.</li>
+            <li><b>Bước 4 (Bối cảnh & Tích hợp):</b> Bấm <b>Đề xuất PP/KTDH & Năng lực số/AI</b> -> Bấm <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b>.</li>
           </ol>
         </div>
       </div>

@@ -27,7 +27,7 @@ assert.doesNotMatch(html, /data-tab="tabConfig"/, "Không còn tab cấu hình r
 assert.match(html, /id="lessonTextbookAnalysis"/, "Kết quả phân tích SGK phải ở cùng tab thiết lập");
 assert.match(html, /pdf-lib@1\.17\.1/, "Cần pdf-lib để cắt trang PDF native");
 assert.match(html, /mistral-ocr-client\.js/, "soankhbd phải nạp Mistral OCR");
-assert.match(html, /Đọc nội dung SGK \(Mistral OCR\)/, "Nút đọc SGK phải ghi Mistral OCR");
+assert.match(html, /Đọc sách giáo khoa/, "Nút đọc SGK chuẩn hóa nhãn 'Đọc sách giáo khoa'");
 assert.match(app, /async function extractTextbookOcrText/, "Đọc SGK phải gọi Mistral OCR");
 assert.match(app, /function canUseMistralOcr/, "Cần kiểm tra key Mistral trước khi OCR");
 assert.match(app, /async function readTextbookWithMistral/, "Nút Đọc nội dung dùng Mistral trước");

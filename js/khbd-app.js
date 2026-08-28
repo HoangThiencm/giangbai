@@ -260,7 +260,12 @@ if (typeof document !== "undefined") {
     initLucideIcons();
     loadStateFromLocalStorage();
     appState.selectedGrade = clampKhbdGrade(appState.selectedGrade);
-    normalizeSavedObjectivesDigitalCodes();
+    try {
+      normalizeSavedObjectivesDigitalCodes();
+    } catch (error) {
+      // Bản nháp cũ không được phép làm dừng toàn bộ trang khi chuẩn hóa mã NLS.
+      console.warn("Không thể chuẩn hóa mã NLS của bản nháp cũ:", error);
+    }
     setupEventListeners();
     populateLessonDropdown();
     syncDraftDom();
@@ -735,7 +740,7 @@ function standardsOfKind(kind) {
   if (typeof KHBD_STANDARDS === "undefined") return [];
   const catalog = KHBD_STANDARDS?.[kind];
   if (!catalog) return [];
-  return (appState.teachingContext.standards || [])
+  return (appState.teachingContext?.standards || [])
     .filter(item => {
       if (item.standardKind === kind) return true;
       if (item.standardKind) return false;

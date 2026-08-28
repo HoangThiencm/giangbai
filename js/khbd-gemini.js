@@ -364,10 +364,25 @@ class GeminiAPIManager {
 
   async fetchGeminiGenerate(model, key, payload, signal, timeoutMs, options = {}) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-    return await this.fetchWithTimeout(url, {
+    try {
+      return await this.fetchWithTimeout(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal
+      }, timeoutMs);
+    } catch (directErr) {
+      if (this.isUserAbort(directErr, signal) || directErr?.name === "TimeoutError") throw directErr;
+      return await this.fetchViaKhbdProxy(model, key, payload, signal, timeoutMs);
+    }
+  }
+
+  async fetchViaKhbdProxy(model, key, payload, signal, timeoutMs) {
+    const proxyUrl = "api/khbd_gemini.php";
+    return await this.fetchWithTimeout(proxyUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ model, key, payload }),
       signal
     }, timeoutMs);
   }
