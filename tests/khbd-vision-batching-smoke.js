@@ -12,14 +12,11 @@ assert.match(app, /async function prepareGeminiMedia/, "Cần prepareGeminiMedia
 assert.match(app, /async function buildPdfMediaPart/, "Cần cắt/gửi PDF native");
 assert.match(app, /mimeType:\s*"application\/pdf"/, "Payload PDF phải là application/pdf");
 assert.match(app, /compressDataUrl\(image\.dataUrl\)/, "Ảnh chụp/dán vẫn nén trước khi gửi");
-assert.match(app, /function parseKhbdSections/, "1-click cần tách marker I/II/A–D");
-assert.match(app, /getPromptTemplate\("GENERATE_CORE_LESSON"/, "1-click bước 1 là GENERATE_CORE_LESSON");
-assert.match(app, /getPromptTemplate\("GENERATE_ACTIVITIES_AD"/, "1-click bước 2 là GENERATE_ACTIVITIES_AD");
-assert.doesNotMatch(app, /analyzeTextbookInBatches\(promptVision/, "1-click không dump SGK theo đợt");
+assert.match(app, /function parseKhbdSections/, "Cần hàm parseKhbdSections để phân tích cấu trúc giáo án");
+assert.doesNotMatch(app, /analyzeTextbookInBatches\(promptVision/, "Không dump SGK theo đợt");
 assert.doesNotMatch(app, /const VISION_BATCH_SIZE\s*=\s*4/, "Không còn batch JPEG 4 trang");
 assert.doesNotMatch(app, /async function analyzeTextbookInBatches/, "Không còn analyzeTextbookInBatches");
 assert.match(app, /images\.length \? images : await prepareGeminiMedia\(\)/, "executeAIGeneration đính prepareGeminiMedia");
-assert.match(app, /repairWithGemini: false/, "1-click tắt repair Gemini extra");
 assert.match(app, /MAX_IMAGE_BYTES/, "Phải giữ chốt dung lượng từng tệp");
 assert.match(app, /MAX_TOTAL_IMAGE_BYTES/, "Phải giữ chốt tổng dung lượng");
 assert.match(html, /data-tab="tabVision"/, "Tab gộp phải dùng tabVision");
@@ -31,7 +28,6 @@ assert.match(html, /Đọc sách giáo khoa/, "Nút đọc SGK chuẩn hóa nhã
 assert.match(app, /async function extractTextbookOcrText/, "Đọc SGK phải gọi Mistral OCR");
 assert.match(app, /function canUseMistralOcr/, "Cần kiểm tra key Mistral trước khi OCR");
 assert.match(app, /async function readTextbookWithMistral/, "Nút Đọc nội dung dùng Mistral trước");
-assert.match(app, /skipMedia \? \[\] : await prepareGeminiMedia\(\)/, "1-click bỏ gửi PDF khi đã có OCR");
 assert.match(app, /unwrapVietnameseMathForKatex/, "Preview KaTeX phải tách chữ Việt khỏi math");
 assert.match(prompts, /GENERATE_CORE_LESSON/, "Cần prompt I+II gộp");
 assert.match(prompts, /GENERATE_ACTIVITIES_AD/, "Cần prompt A–D gộp");

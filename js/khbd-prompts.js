@@ -368,7 +368,8 @@ QUY TẮC NĂNG LỰC ĐẶC THÙ & PHẨM CHẤT:
 {textbook_content}
 """
 
-YÊU CẦU: Tạo danh mục thiết bị và học liệu thiết yếu, cụ thể cho đúng bài dạy (tối đa 2 ý lớn cho mỗi đối tượng, mỗi ý lớn tối đa 3 ý con). TUYỆT ĐỐI KHÔNG để dấu ngoặc vuông [...] hay dấu ba chấm "..."; phải điền tên đồ dùng/học liệu thực tế.
+YÊU CẦU: CHỈ xuất duy nhất Mục II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU, đầu ra ngắn gọn. Tạo danh mục thiết bị và học liệu thiết yếu, cụ thể cho đúng bài dạy (tối đa 2 ý lớn cho mỗi đối tượng, mỗi ý lớn tối đa 3 ý con). TUYỆT ĐỐI KHÔNG để dấu ngoặc vuông [...] hay dấu ba chấm "..."; phải điền tên đồ dùng/học liệu thực tế.
+TUYỆT ĐỐI CẤM sinh Mục I, Mục III, hoạt động A–E, bảng tổ chức dạy học hoặc bất kỳ khung/toàn bộ giáo án nào.
 
 # II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
 
@@ -1147,18 +1148,6 @@ function extractTextbookLessonMap(content) {
 function getPromptTemplate(templateKey, context) {
   let baseTemplate = PROMPTS[templateKey];
   if (!baseTemplate) return '';
-
-  if (templateKey === 'GENERATE_ACTIVITY_E') {
-    baseTemplate = `Hãy viết mục cuối tiến trình dạy học cho môn {subject}, bài {topic}.
-
-CHỈ xuất đúng nội dung sau, không giải thích thêm:
-## E. HƯỚNG DẪN VỀ NHÀ
-- **Học bài:** [một nhiệm vụ ôn tập ngắn, bám nội dung vừa học].
-- **Làm bài:** [chỉ nêu bài SGK/SBT có số bài, trang khi có trong nguồn; không tự bịa bài].
-- **Chuẩn bị bài mới:** [tên/nội dung bài tiếp theo nếu có trong nguồn].
-
-Đây là phần giao việc về nhà, không phải một hoạt động dạy học. Không ghi thời lượng, không có a), b), c), d), không dùng bảng, không phân vai GV-HS và không viết bốn bước CV 5512. Nếu bật AI, chỉ thêm tối đa một Prompt AI tự học an toàn, yêu cầu AI gợi mở chứ không giải hộ.`;
-  }
 
   const subjectId = context.subject || 'toan';
   const subjectName = context.subjectName || 'Toán';

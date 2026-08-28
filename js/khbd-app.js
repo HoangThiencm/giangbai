@@ -1,7 +1,7 @@
 /**
  * js/khbd-app.js
  * Quản lý logic giao diện, luồng dữ liệu, tương tác người dùng,
- * Dán/Kéo thả ảnh SGK, Render KaTeX trực quan, Tự động hóa 1-Click
+ * Dán/Kéo thả ảnh SGK, Render KaTeX trực quan
  * và Tích hợp xuất Word .docx hoàn chỉnh.
  * Soạn KHBD môn Toán THCS theo SGK do giáo viên cung cấp.
  */
@@ -154,7 +154,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     marker: "[STEM]",
     promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
-            {
+                  {
     id: "virtualLab",
     label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
     legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
@@ -2214,9 +2214,6 @@ function setupEventListeners() {
   document.getElementById("btnGenerateObjectives").addEventListener("click", handleGenerateObjectives);
   document.getElementById("btnGenerateMaterials").addEventListener("click", handleGenerateMaterials);
   document.getElementById("btnGenerateCurrentAct").addEventListener("click", handleGenerateCurrentActivity);
-
-  // 8. Nút Tạo Toàn Bộ Giáo Án (1-Click)
-  document.getElementById("btn1ClickGenerate").addEventListener("click", handle1ClickGenerate);
   document.getElementById("btnCancelGeneration").addEventListener("click", requestGenerationCancel);
 
   document.querySelectorAll(".toggle-preview-btn").forEach(btn => {
@@ -3608,11 +3605,11 @@ function rewriteMathSpanForVietnamese(inner, display) {
 }
 
 function unwrapVietnameseMathForKatex(markdown) {
-  // KaTeX hỗ trợ Unicode trong \text{...}. Không tách công thức có tiếng Việt
-  // thành các mảnh rời vì sẽ làm vỡ tập hợp/điều kiện như
-  // $U = \{x \in \mathbb{N} \mid x\ \text{chia hết cho}\ 3\}$.
-  // Giữ nguyên toàn bộ cặp dấu phân cách để KaTeX xử lý như một biểu thức.
-  return String(markdown || "");
+  if (!markdown) return "";
+  let text = String(markdown);
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => rewriteMathSpanForVietnamese(inner, true));
+  text = text.replace(/\$([^\$\n]+?)\$/g, (_, inner) => rewriteMathSpanForVietnamese(inner, false));
+  return text;
 }
 
 function renderMathPreview(markdownText, targetElementId) {
@@ -5346,7 +5343,7 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
 }
 
 // =============================================================================
-// QUY TRÌNH ⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)
+// HỦY VÀ QUẢN LÝ TIẾN TRÌNH GENERATION
 // =============================================================================
 function requestGenerationCancel() {
   if (!appState.isGenerating || !appState.generationController) return;
@@ -5361,187 +5358,6 @@ function throwIfGenerationCancelled() {
   }
 }
 
-async function generateOneClickContent(prompt, images = [], options = {}) {
-  throwIfGenerationCancelled();
-  const rawResult = await geminiAPI.generateContent(
-    buildPedagogicalPrompt(prompt),
-    images,
-    getSystemRole(appState.selectedSubject, appState.selectedGrade),
-    0.3,
-    appState.generationController.signal,
-    options
-  );
-  throwIfGenerationCancelled();
-  const result = await guardGeminiLessonOutput(rawResult, appState.generationController.signal);
-  throwIfGenerationCancelled();
-  return result;
-}
-
-// getPromptTemplate("GENERATE_ACTIVITIES_AD")
-async function handle1ClickGenerate() {
-  if (appState.isGenerating) {
-    showToast("Tiến trình đang chạy. Vui lòng chờ hoàn tất.", "warning");
-    return;
-  }
-
-  const keys = geminiAPI.apiKeys;
-  if (!keys || keys.length === 0) {
-    showToast("Vui lòng cài đặt ít nhất 1 Gemini API Key trước khi bắt đầu!", "warning");
-    openModal("modalApiKeys");
-    return;
-  }
-  if (!hasTextbookSource()) {
-    showToast("Cần dán ảnh/PDF SGK hoặc có nội dung phân tích Bước 0 trước khi tạo toàn bộ giáo án. Không tự thêm nội dung ngoài nguồn.", "warning");
-    switchMainTab("tabVision");
-    return;
-  }
-
-  const topic = getTopicDisplayName();
-  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nHệ thống đọc trực tiếp PDF/ảnh SGK bằng AI rồi soạn 6 bước tuần tự: I+II, A, B, C, D, E.`;
-
-  if (!userConfirm(confirmMsg, true)) return;
-  if (window.__KHBD_CANVAS__) showToast("Canvas không dùng hộp thoại xác nhận — bắt đầu soạn 1-click.", "info", 4000);
-
-  appState.isGenerating = true;
-  appState.cancelRequested = false;
-  appState.generationController = new AbortController();
-
-  const btn1Click = document.getElementById("btn1ClickGenerate");
-  const btnCancel = document.getElementById("btnCancelGeneration");
-  if (btn1Click) btn1Click.disabled = true;
-  if (btnCancel) btnCancel.disabled = false;
-
-  try {
-    const skipMedia = hasAnalyzedLessonContent();
-    const media = skipMedia ? [] : await prepareGeminiMedia();
-    if (!media.length && !hasAnalyzedLessonContent()) {
-      throw new Error("Chưa có PDF/ảnh SGK trong phiên này. Hãy dán PDF hoặc ảnh trước khi 1-click.");
-    }
-    if (hasAnalyzedLessonContent()) applyLessonBasedRecommendations({ silent: true });
-    const integrations = appState.teachingContext?.integrations || {};
-    if (integrations.digital || integrations.ai) {
-      const needDigital = integrations.digital && !standardsOfKind("digital").length;
-      const needAi = integrations.ai && !standardsOfKind("ai").length;
-      if (needDigital || needAi) {
-        updateProgress(18, "Đang đề xuất năng lực số/AI...");
-        await requestStructuredIntegrationCandidatesForEnabled({ silent: true });
-      }
-    }
-    const context = getGenerationPromptContext();
-
-    // Bước 1/6 (15%): Sinh I. Mục tiêu & II. Thiết bị
-    updateProgress(15, "Bước 1/6: Đang soạn I. Mục tiêu & II. Thiết bị...");
-    const promptCore = getPromptTemplate("GENERATE_CORE_LESSON", context);
-    const rawCore = await generateOneClickContent(promptCore, media, { maxOutputTokens: 16384, timeoutMs: 75000 });
-    const coreParts = parseKhbdSections(rawCore, ["I", "II"]);
-    const objectivesRaw = coreParts.I || rawCore;
-    const materialsRaw = coreParts.II || "";
-    if (!String(objectivesRaw).trim()) {
-      throw new Error("Gemini không trả được phần I. Mục tiêu. Hãy thử lại hoặc soạn từng tab.");
-    }
-    const finalObj = await applyObjectivesOutput(objectivesRaw, appState.generationController.signal, { repairWithGemini: false });
-    const editorObj = document.getElementById("editorObjectives");
-    if (editorObj) editorObj.value = finalObj;
-    renderMathPreview(finalObj, "previewObjectives");
-    appState.content.materials = materialsRaw;
-    const editorMat = document.getElementById("editorMaterials");
-    if (editorMat) editorMat.value = materialsRaw;
-    renderMathPreview(materialsRaw, "previewMaterials");
-    if (!String(materialsRaw).trim()) {
-      showToast("Phần II bị thiếu hoặc cắt. Bạn có thể soạn tab Thiết bị.", "warning", 5000);
-    }
-    context.objectives_content = finalObj;
-    if (typeof geminiAPI !== "undefined" && typeof geminiAPI.rotateKey === "function") {
-      geminiAPI.rotateKey("Xoay key sau Bước 1");
-    }
-    await delay(generationPauseMs(), appState.generationController.signal);
-
-    // Bước 2/6 (30%): Sinh A. Hoạt động Mở đầu
-    updateProgress(30, "Bước 2/6: Đang soạn A. Hoạt động Mở đầu...");
-    const promptA = getPromptTemplate("GENERATE_ACTIVITY_A", context) + buildPhasePedagogyContext('A');
-    const rawA = await generateOneClickContent(promptA, media, { maxOutputTokens: 8192, timeoutMs: 60000 });
-    await applyActivityOutput('A', rawA, appState.generationController.signal, { repairWithGemini: false });
-    if (typeof geminiAPI !== "undefined" && typeof geminiAPI.rotateKey === "function") {
-      geminiAPI.rotateKey("Xoay key sau Bước 2");
-    }
-    await delay(generationPauseMs(), appState.generationController.signal);
-
-    // Bước 3/6 (50%): Sinh B. Hoạt động Hình thành kiến thức (bám sát SGK)
-    updateProgress(50, "Bước 3/6: Đang soạn B. Hoạt động Hình thành kiến thức (bám sát SGK)...");
-    const promptB = getPromptTemplate("GENERATE_ACTIVITY_B", context) + buildPhasePedagogyContext('B');
-    const rawB = await generateOneClickContent(promptB, media, { maxOutputTokens: 16384, timeoutMs: 75000 });
-    await applyActivityOutput('B', rawB, appState.generationController.signal, { repairWithGemini: false });
-    if (typeof geminiAPI !== "undefined" && typeof geminiAPI.rotateKey === "function") {
-      geminiAPI.rotateKey("Xoay key sau Bước 3");
-    }
-    await delay(generationPauseMs(), appState.generationController.signal);
-
-    // Bước 4/6 (68%): Sinh C. Hoạt động Luyện tập (giải bài tập SGK)
-    updateProgress(68, "Bước 4/6: Đang soạn C. Hoạt động Luyện tập (giải bài tập SGK)...");
-    const promptC = getPromptTemplate("GENERATE_ACTIVITY_C", context) + buildPhasePedagogyContext('C');
-    const rawC = await generateOneClickContent(promptC, media, { maxOutputTokens: 8192, timeoutMs: 60000 });
-    await applyActivityOutput('C', rawC, appState.generationController.signal, { repairWithGemini: false });
-    if (typeof geminiAPI !== "undefined" && typeof geminiAPI.rotateKey === "function") {
-      geminiAPI.rotateKey("Xoay key sau Bước 4");
-    }
-    await delay(generationPauseMs(), appState.generationController.signal);
-
-    // Bước 5/6 (84%): Sinh D. Hoạt động Vận dụng
-    updateProgress(84, "Bước 5/6: Đang soạn D. Hoạt động Vận dụng...");
-    const promptD = getPromptTemplate("GENERATE_ACTIVITY_D", context) + buildPhasePedagogyContext('D');
-    const rawD = await generateOneClickContent(promptD, media, { maxOutputTokens: 8192, timeoutMs: 60000 });
-    await applyActivityOutput('D', rawD, appState.generationController.signal, { repairWithGemini: false });
-    if (typeof geminiAPI !== "undefined" && typeof geminiAPI.rotateKey === "function") {
-      geminiAPI.rotateKey("Xoay key sau Bước 5");
-    }
-    await delay(generationPauseMs(), appState.generationController.signal);
-
-    // Bước 6/6 (95% -> 100%): Sinh E. Hướng dẫn về nhà
-    updateProgress(95, "Bước 6/6: Đang soạn E. Hướng dẫn về nhà...");
-    context.activities_content = getFullLessonPlanMarkdown();
-    const promptE = getPromptTemplate("GENERATE_ACTIVITY_E", context) + buildPhasePedagogyContext('E');
-    const rawE = await generateOneClickContent(promptE, media, { maxOutputTokens: 1200, timeoutMs: 60000 });
-    await applyActivityOutput('E', rawE, appState.generationController.signal, { repairWithGemini: false });
-
-    saveStateToLocalStorage();
-
-    const editorAct = document.getElementById("editorActivity");
-    if (editorAct) editorAct.value = appState.content.activities[appState.activeActSubtab];
-    renderMathPreview(appState.content.activities[appState.activeActSubtab], "previewActivity");
-    renderFullLessonPreview();
-
-    try {
-      updateProgress(97, "Đang tạo hình minh họa (chuẩn SGK + thực tế)...");
-      await generateLessonIllustrations({ silent: true });
-    } catch (illErr) {
-      console.warn("1-click minh họa:", illErr);
-    }
-
-    updateProgress(100, "ĐÃ TẠO XONG TOÀN BỘ KẾ HOẠCH BÀI DẠY (6/6 BƯỚC)!");
-    setTimeout(() => {
-      hideProgress();
-      switchMainTab("tabFullPreview");
-      showToast("Đã hoàn tất toàn bộ Kế hoạch bài dạy (6 bước tuần tự, sâu sắc 100%)!", "success", 6000);
-    }, 1200);
-
-  } catch (err) {
-    console.error("Lỗi quy trình 1-Click:", err);
-    const cancelled = err?.name === "AbortError" || appState.cancelRequested;
-    if (cancelled) {
-      showToast("Đã hủy quá trình tạo tự động. Nội dung đã hoàn tất trước đó vẫn được giữ lại.", "info", 7000);
-    } else if (isGeminiOverloadError(err)) {
-      showToast("Gemini đang quá tải, hệ thống đã thử lại/đổi model nhưng vẫn lỗi. Thử lại sau hoặc chọn Gemini 2.5 Flash.", "danger", 7000);
-    } else {
-      showToast(`Quá trình tạo tự động bị gián đoạn: ${err.message}`, "danger", 7000);
-    }
-    hideProgress();
-  } finally {
-    appState.isGenerating = false;
-    appState.generationController = null;
-    if (btn1Click) btn1Click.disabled = false;
-    if (btnCancel) btnCancel.disabled = true;
-  }
-}
 
 function delay(ms, signal = null) {
   return new Promise((resolve, reject) => {
@@ -5995,8 +5811,6 @@ if (typeof module !== 'undefined' && module.exports) {
     zoomIllustration,
     downloadIllustration,
     applyTextbookOcrResult,
-    handle1ClickGenerate,
-    generateOneClickContent,
     applyObjectivesOutput,
     applyActivityOutput,
     handlePpctFiles,
