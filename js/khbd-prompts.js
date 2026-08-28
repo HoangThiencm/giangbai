@@ -228,7 +228,7 @@ const PROMPTS = {
 3. Khung Năng lực Chung (Tự chủ & tự học; Giao tiếp & hợp tác; Giải quyết vấn đề & sáng tạo) được phân bổ linh hoạt theo đặc thù môn học.
 4. Khung Năng lực Đặc thù môn {subject}.
 5. Khung Năng lực Trí tuệ Nhân tạo (AI) theo Quyết định số 2422/QĐ-BGDĐT (khi được chọn).
-6. Khung Năng lực Số theo Thông tư số 02/2025/TT-BGDĐT (khi được chọn).
+6. Khung Năng lực Số theo Thông tư số 02/2025/TT-BGDĐT và Công văn số 3456/BGDĐT-GDPT (khi được chọn; Lớp 6–7 dùng dải Trung cấp 1 (TC1), Lớp 8–9 dùng dải Trung cấp 2 (TC2)).
 7. 5 phẩm chất chủ yếu (Yêu nước, Nhân ái, Chăm chỉ, Trung thực, Trách nhiệm) và phương pháp dạy học hòa nhập/phân hóa.
 
 QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
@@ -334,7 +334,7 @@ QUY TẮC NĂNG LỰC CHUNG (CĂN CỨ VÀO MÔN HỌC & BÀI HỌC):
 
 QUY TẮC NĂNG LỰC ĐẶC THÙ & PHẨM CHẤT:
 - Mục 2.b (Năng lực đặc thù môn học): CHỈ 2–3 năng lực đặc thù nổi trội của môn {subject} gắn với bài học. Viết mỗi mục 1 dòng.
-- Mục 2.c (Năng lực số): CHỈ khi được bật; liệt kê đủ từng miền đã chọn, mỗi miền 1 dòng.
+- Mục 2.c (Năng lực số): CHỈ khi được bật; liệt kê đủ từng miền đã chọn và đủ từng mã NLS đã chọn, mỗi mã 1 dòng theo đúng dạng miền.năng-lực-thành-phần.TC1/TC2chỉ-báo (ví dụ 1.1.TC1a). CẤM chỉ ghi tên miền hoặc mô tả mà không có mã.
 - Mục 2.d (Năng lực AI): CHỈ khi được bật; liệt kê đủ từng mã đã chọn, mỗi mã 1 dòng.
 - Mục 3 (Phẩm chất): CHỈ 1–2 phẩm chất có hành vi quan sát rõ trong bài (ví dụ: Chăm chỉ, Trung thực, Trách nhiệm).
 
@@ -1156,7 +1156,7 @@ function getPromptTemplate(templateKey, context) {
   // Insert competencies
   const competencies = context.competencies ? context.competencies.join('; ') : '';
   const digitalObjectivesSection = context.digitalCompetencyEnabled
-    ? `### c) Năng lực số\n- [Tên miền đã chọn]: [Mô tả nhiệm vụ số gắn với bài]`
+    ? `### c) Năng lực số\n- [Mã NLS đã chọn, ví dụ 1.1.TC1a]: [Mô tả nhiệm vụ số gắn với bài]`
     : '';
   const aiObjectivesSection = context.aiCompetencyEnabled
     ? `### d) Năng lực AI\n- [Mã AI đã chọn]: [Mô tả nhiệm vụ AI gắn với bài]`

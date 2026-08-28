@@ -6,6 +6,31 @@
  * Soạn KHBD môn Toán THCS theo SGK do giáo viên cung cấp.
  */
 
+if (typeof getPromptTemplate === "undefined" && typeof require !== "undefined") {
+  try {
+    const prompts = require("./khbd-prompts.js");
+    Object.assign(globalThis, prompts);
+  } catch (e) {}
+}
+if (typeof CURRICULUM_DATA === "undefined" && typeof require !== "undefined") {
+  try {
+    const curr = require("./khbd-curriculum.js");
+    Object.assign(globalThis, curr);
+  } catch (e) {}
+}
+if (typeof PEDAGOGY_CATALOG === "undefined" && typeof require !== "undefined") {
+  try {
+    const ped = require("./khbd-pedagogy-catalog.js");
+    Object.assign(globalThis, ped);
+  } catch (e) {}
+}
+if (typeof KHBD_STANDARDS === "undefined" && typeof require !== "undefined") {
+  try {
+    const std = require("./khbd-standards.js");
+    Object.assign(globalThis, std);
+  } catch (e) {}
+}
+
 // STATE TOÀN CỤC CỦA ỨNG DỤNG
 const appState = {
   selectedGrade: "6",
@@ -235,6 +260,7 @@ if (typeof document !== "undefined") {
     initLucideIcons();
     loadStateFromLocalStorage();
     appState.selectedGrade = clampKhbdGrade(appState.selectedGrade);
+    normalizeSavedObjectivesDigitalCodes();
     setupEventListeners();
     populateLessonDropdown();
     syncDraftDom();
@@ -709,7 +735,20 @@ function standardsOfKind(kind) {
   if (typeof KHBD_STANDARDS === "undefined") return [];
   const catalog = KHBD_STANDARDS?.[kind];
   if (!catalog) return [];
-  return (appState.teachingContext.standards || []).filter(item => item.framework === catalog.framework);
+  return (appState.teachingContext.standards || [])
+    .filter(item => {
+      if (item.standardKind === kind) return true;
+      if (item.standardKind) return false;
+      if (item.framework === catalog.framework) return true;
+      // Tương thích bản nháp cũ trước khi tên khung NLS bổ sung Công văn 3456.
+      return kind === "digital" && /Thông tư\s*02\/2025\/TT-BGDĐT/i.test(String(item.framework || ""));
+    })
+    // Bản nháp tạo trước khi có mã NLS đầy đủ vẫn chỉ lưu catalogId/nhãn.
+    // Bù mã từ catalog để mọi luồng xuất mục tiêu đều dùng được 1.1.TC1a/TC2a.
+    .map(item => {
+      const entry = (catalog.entries || []).find(candidate => candidate.id === item.catalogId);
+      return entry ? { ...item, standardKind: kind, officialCode: item.officialCode || entry.code, officialLabel: item.officialLabel || entry.label } : item;
+    });
 }
 
 function hasAnalyzedLessonContent() {
@@ -751,6 +790,109 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
     }
     // Không suy đoán để tự tick. Các đề xuất mới chỉ đến từ phản hồi có minh chứng OCR
     // của Gemini trong requestStructuredIntegrationCandidates().
+  });
+  if (changed) {
+    saveStateToLocalStorage();
+    renderStandardsCatalog();
+  }
+  return changed;
+}
+
+function normalizeEvidenceText(value) {
+  return String(value || "").normalize("NFC").replace(/\s+/g, " ").trim().toLocaleLowerCase("vi-VN");
+}
+
+function foldEvidenceLoose(value) {
+  return normalizeEvidenceText(value).replace(/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~«»“”‘’…–—]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function resolveCandidateEntry(id, entries) {
+  const raw = String(id || "").trim().replace(/^["'`]+|["'`]+$/g, "");
+  if (!raw || !Array.isArray(entries) || !entries.length) return null;
+  const lower = raw.toLowerCase();
+  const exactId = entries.find(entry => entry.id === raw);
+  if (exactId) return exactId;
+  const idIgnoreCase = entries.filter(entry => String(entry.id).toLowerCase() === lower);
+  if (idIgnoreCase.length === 1) return idIgnoreCase[0];
+  const codeExact = entries.filter(entry => {
+    const code = String(entry.code || "");
+    return code && (code === raw || code.toLowerCase() === lower);
+  });
+  if (codeExact.length === 1) return codeExact[0];
+  const firstToken = raw.split(/[\s|:–—]+/)[0];
+  if (firstToken && firstToken !== raw) {
+    const nested = resolveCandidateEntry(firstToken, entries);
+    if (nested) return nested;
+  }
+  const prefix = entries.filter(entry => {
+    const code = String(entry.code || "");
+    return code && (raw.startsWith(`${code} `) || raw.startsWith(`${code}:`) || raw.startsWith(`${code}|`));
+  });
+  if (prefix.length === 1) return prefix[0];
+  return null;
+}
+
+function parseJsonCandidatePayload(raw) {
+  let jsonText = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
+  let data;
+  try {
+    data = JSON.parse(jsonText);
+  } catch {
+    const start = jsonText.search(/[\[{]/);
+    const end = Math.max(jsonText.lastIndexOf("}"), jsonText.lastIndexOf("]"));
+    if (start < 0 || end <= start) return null;
+    try { data = JSON.parse(jsonText.slice(start, end + 1)); } catch { return null; }
+  }
+  if (Array.isArray(data)) return { candidates: data };
+  if (data && Array.isArray(data.candidates)) return data;
+  if (data && Array.isArray(data.items)) return { candidates: data.items };
+  return null;
+}
+
+function parseStructuredCandidates(raw, entries, ocrText, maxSelect) {
+  const source = normalizeEvidenceText(ocrText);
+  const foldedSource = foldEvidenceLoose(source);
+  const data = parseJsonCandidatePayload(raw);
+  if (!data || !Array.isArray(data.candidates)) return null;
+}
+
+function hasAnalyzedLessonContent() {
+  return String(appState.content.vision || "").replace(/\s+/g, " ").trim().length >= 80;
+}
+
+function hasOcrReadyLessonContent() {
+  return Boolean(appState.teachingContext?.ocrReady) && hasAnalyzedLessonContent();
+}
+
+function pedagogyRecommendFullCtx() {
+  const context = normalizeTeachingContext(appState.teachingContext);
+  return {
+    vision: appState.content.vision || "",
+    topic: getTopicDisplayName(),
+    subjectName: appState.subjectName || appState.subject || "",
+    subjectId: currentSubjectId(),
+    grade: appState.selectedGrade,
+    classSize: context.classSize,
+    readiness: context.readiness,
+    facilities: context.facilities
+  };
+}
+
+function ensureIntegrationStandards({ force = false, silent = false } = {}) {
+  let changed = false;
+  if (!Array.isArray(appState?.teachingContext?.standards)) {
+    if (appState?.teachingContext) appState.teachingContext.standards = [];
+  }
+  ["digital", "ai"].forEach(kind => {
+    const enabled = appState?.teachingContext?.integrations?.[kind];
+    const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS[kind] : null;
+    if (!catalog) return;
+    if (!enabled) {
+      const before = appState.teachingContext.standards.length;
+      appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item && item.framework !== catalog.framework);
+      if (appState.teachingContext.standards.length !== before) changed = true;
+      return;
+    }
   });
   if (changed) {
     saveStateToLocalStorage();
@@ -883,7 +1025,7 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
   const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chọn từ 1 đến ${maxSelect} mục từ DANH MỤC CHO PHÉP để tích hợp vào bài này.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id catalog (cột 1) hoặc mã chính thức (cột 2)","lessonAnchor":"đoạn OCR về khái niệm, ví dụ hoặc bài tập","fitRationale":"lý do ngắn","proposedTask":"nhiệm vụ GV/HS ngắn gắn bài, nêu sản phẩm"}]}.\n\nQuy tắc bắt buộc:\n- Bài Toán/môn học không cần có chữ AI hay năng lực số. Hãy chọn mục có thể lồng vào bài tập/khái niệm đang có.\n- id là cột 1 (id catalog) hoặc cột 2 (mã chính thức). Không bịa mã ngoài danh mục.\n- lessonAnchor nên trích từ OCR; nếu không trích đúng nguyên văn vẫn phải trả id phù hợp.\n- Không trả mảng rỗng khi danh mục còn mục có thể tích hợp.\n- Không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${visionForPrompt}`;
   const label = kind === "ai" ? "năng lực AI" : "năng lực số";
   let records = [];
-  if (typeof geminiAPI !== "undefined" && typeof geminiAPI.generateContent === "function" && Array.isArray(geminiAPI.apiKeys) && geminiAPI.apiKeys.length > 0) {
+  if (typeof geminiAPI !== "undefined" && typeof geminiAPI.generateContent === "function" && (!geminiAPI.apiKeys || (Array.isArray(geminiAPI.apiKeys) && geminiAPI.apiKeys.length > 0))) {
     try {
       const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, grade), 0.1);
       const selected = parseStructuredCandidates(raw, candidates, appState.content.vision, maxSelect);
@@ -907,7 +1049,40 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
 }
 
 async function requestStructuredIntegrationCandidatesForEnabled({ silent = false } = {}) {
-  for (const kind of ["digital", "ai"]) await requestStructuredIntegrationCandidates(kind, { silent });
+  const enabledKinds = ["digital", "ai"].filter(kind => appState.teachingContext?.integrations?.[kind]);
+  if (enabledKinds.length < 2) return enabledKinds.length ? requestStructuredIntegrationCandidates(enabledKinds[0], { silent }) : false;
+  if (!hasOcrReadyLessonContent()) return false;
+  const grade = Number(appState.selectedGrade);
+  const eligible = enabledKinds.filter(kind => {
+    const current = standardsOfKind(kind);
+    return !current.length || current.every(item => item.autoSuggested);
+  });
+  if (!eligible.length) return false;
+  const pools = Object.fromEntries(eligible.map(kind => [kind, entriesForGrade(kind, grade)]));
+  const vision = String(appState.content.vision || "");
+  const visionForPrompt = vision.length > 14000 ? `${vision.slice(0, 10000)}\n...\n${vision.slice(-3000)}` : vision;
+  const catalogs = eligible.map(kind => `DANH MỤC ${kind === "digital" ? "NĂNG LỰC SỐ (chỉ mã TC đúng dải lớp)" : "AI (mã lớp.chủ-đề.số-thứ-tự)"}:\n${pools[kind].map(entry => `${entry.id} | ${entry.code} | ${entry.label}`).join("\n")}`).join("\n\n");
+  const prompt = `Đọc OCR SGK và đề xuất tối đa 3 mục cho MỖI khung từ đúng danh mục. Trả DUY NHẤT JSON: {"digital":[{"id":"...","lessonAnchor":"...","fitRationale":"...","proposedTask":"..."}],"ai":[{"id":"...","lessonAnchor":"...","fitRationale":"...","proposedTask":"..."}]}.\nQuy tắc: NLS lớp 6–7 chỉ mã TC1, lớp 8–9 chỉ mã TC2; AI phải đúng mã ${grade}.chủ-đề.số-thứ-tự của danh mục. Không tự chế mã, không markdown, không để cả hai mảng rỗng.\n\n${catalogs}\n\nOCR SGK:\n${visionForPrompt}`;
+  let payload = null;
+  if (typeof geminiAPI !== "undefined" && typeof geminiAPI.generateContent === "function" && Array.isArray(geminiAPI.apiKeys) && geminiAPI.apiKeys.length) {
+    try {
+      const raw = String(await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, grade), 0.1) || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "");
+      payload = JSON.parse(raw);
+    } catch { /* fallback local */ }
+  }
+  let changed = false;
+  for (const kind of eligible) {
+    const catalog = KHBD_STANDARDS[kind];
+    const maxSelect = catalog.maxSelect || 3;
+    const raw = payload && Array.isArray(payload[kind]) ? JSON.stringify({ candidates: payload[kind] }) : "";
+    const selected = raw && parseStructuredCandidates(raw, pools[kind], vision, maxSelect);
+    const records = selected?.length
+      ? selected.map(({ entry, lessonAnchor, fitRationale, proposedTask }) => ({ ...standardToRecord(kind, entry, grade, true), lessonAnchor, fitRationale, proposedTask }))
+      : catalogFallbackRecords(kind, grade, pools[kind], maxSelect);
+    if (records.length) { applySuggestedStandardRecords(kind, catalog, records); changed = true; }
+  }
+  if (!silent && changed) showToast("Đã đề xuất năng lực số và năng lực AI theo SGK trong một lượt phân tích.", "info", 5000);
+  return changed;
 }
 
 function illustrationKindLabel(kind) {
@@ -1967,6 +2142,19 @@ function setupEventListeners() {
     });
   }
 
+  const btnSuggestStandards = document.getElementById("btnSuggestPedagogyStandards");
+  if (btnSuggestStandards) {
+    btnSuggestStandards.addEventListener("click", async () => {
+      const toggleDigital = document.getElementById("toggleDigitalCompetency");
+      if (toggleDigital) toggleDigital.checked = true;
+      if (appState.teachingContext?.integrations) {
+        appState.teachingContext.integrations.digital = true;
+      }
+      applyLessonBasedRecommendations({ force: true, silent: false });
+      showToast("✨ Đã đề xuất Phương pháp, Kỹ thuật dạy học & Năng lực số/AI dựa trên nội dung bài học!", "success", 5000);
+    });
+  }
+
   document.getElementById("btnGenerateObjectives").addEventListener("click", handleGenerateObjectives);
   document.getElementById("btnGenerateMaterials").addEventListener("click", handleGenerateMaterials);
   document.getElementById("btnGenerateCurrentAct").addEventListener("click", handleGenerateCurrentActivity);
@@ -2072,32 +2260,9 @@ function getTopicDisplayName() {
 }
 
 // =============================================================================
-// CHUYỂN TAB & SUBTABS
+// SUBTABS HOẠT ĐỘNG A -> G
 // =============================================================================
-function switchMainTab(tabId) {
-  document.querySelectorAll(".nav-tab-btn").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
-
-  const targetBtn = document.querySelector(`.nav-tab-btn[data-tab="${tabId}"]`);
-  const targetPane = document.getElementById(tabId);
-
-  if (targetBtn) targetBtn.classList.add("active");
-  if (targetPane) targetPane.classList.add("active");
-
-  appState.activeTab = tabId;
-
-  // Nếu chuyển sang Tab 5 (Toàn bộ Giáo án), tự động cập nhật preview
-  if (tabId === "tabFullPreview") {
-    renderFullLessonPreview();
-  }
-}
-
 function switchActivitySubtab(actKey) {
-  if (!ACTIVITY_TITLES[actKey]) return;
-  document.querySelectorAll(".act-tab-btn").forEach(b => b.classList.remove("active"));
-  const targetBtn = document.querySelector(`.act-tab-btn[data-act="${actKey}"]`);
-  if (targetBtn) targetBtn.classList.add("active");
-
   appState.activeActSubtab = actKey;
   const actInfo = ACTIVITY_TITLES[actKey];
   document.getElementById("currentActTitle").textContent = actInfo.full;
@@ -3227,7 +3392,7 @@ async function handleGeneratePpctAnalysis() {
 
     updateProgress(100, "Đã hoàn thành phân tích PPCT!");
     setTimeout(() => hideProgress(), 1500);
-    showToast("Đã phân tích Phân phối chương trình thành công theo Phụ lục 3 CV 5512!", "success", 5000);
+    showToast("Đã đọc! Đã phân tích Phân phối chương trình thành công.", "success", 5000);
     if (status) status.textContent = "Sẵn sàng.";
   } catch (error) {
     console.error("Lỗi phân tích PPCT:", error);
@@ -3680,8 +3845,8 @@ function buildPedagogicalContext() {
   const support = [...context.supportChoices, context.supportNote].filter(Boolean).join("; ");
   const digitalOn = Boolean(context.integrations.digital);
   const aiOn = Boolean(context.integrations.ai);
-  const nlsLines = digitalOn ? (context.standards || []).filter(item => !item.officialCode).map(item => `NLS: ${item.officialLabel}`) : [];
-  const aiLines = aiOn ? (context.standards || []).filter(item => item.officialCode).map(item => `AI: ${item.officialCode}: ${item.officialLabel}`) : [];
+  const nlsLines = digitalOn ? (context.standards || []).filter(item => item.standardKind === "digital" || item.framework === KHBD_STANDARDS?.digital?.framework).map(item => `NLS: ${item.officialCode}: ${item.officialLabel}`) : [];
+  const aiLines = aiOn ? (context.standards || []).filter(item => item.standardKind === "ai" || item.framework === KHBD_STANDARDS?.ai?.framework).map(item => `AI: ${item.officialCode}: ${item.officialLabel}`) : [];
   const selectedStandards = [...nlsLines, ...aiLines].join("\n  ");
   const methodLabels = (context.methods || []).map(id => pedagogyLabel("methods", id));
   const activityLabels = (context.subjectActivities || []).map(id => pedagogyLabel("activities", id));
@@ -3779,7 +3944,7 @@ function buildIntegrationActivityConstraint(phase) {
   const digitalOn = Boolean(context.integrations.digital);
   const aiOn = Boolean(context.integrations.ai);
   if (!digitalOn && !aiOn) return "";
-  const nls = standardsOfKind("digital").map(item => item.officialLabel).filter(Boolean);
+  const nls = standardsOfKind("digital").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
   const ai = standardsOfKind("ai").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
   
   const lines = [
@@ -3941,7 +4106,8 @@ function assertObjectivesStandards(text) {
   const integrations = normalizeTeachingContext(appState.teachingContext).integrations;
   const missing = [];
   if (integrations.digital) standardsOfKind("digital").forEach(item => {
-    if (!pedagogyLabelInText(hay, item.officialLabel)) missing.push({ kind: "digital", item });
+    const code = String(item.officialCode || "");
+    if (!code || !hay.includes(code)) missing.push({ kind: "digital", item });
   });
   if (integrations.ai) standardsOfKind("ai").forEach(item => {
     const code = String(item.officialCode || "");
@@ -4019,7 +4185,7 @@ function insertObjectivesMissingStandards(text, missing) {
     result = upsertObjectivesStandardSection(result, {
       matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực số\b/i,
       headingLine: "### c) Năng lực số",
-      bulletLines: digital.map(row => `- ${row.item.officialLabel}: ${row.item.officialLabel}`)
+      bulletLines: digital.map(row => `- ${row.item.officialCode}: ${row.item.officialLabel}`)
     });
   }
   if (ai.length) {
@@ -4030,6 +4196,39 @@ function insertObjectivesMissingStandards(text, missing) {
     });
   }
   return result;
+}
+
+function ensureObjectivesDigitalCodes(markdown) {
+  const selected = standardsOfKind("digital").filter(item => item.officialCode && item.officialLabel);
+  if (!selected.length) return markdown;
+  const lines = String(markdown || "").split("\n");
+  const headingIndex = lines.findIndex(line => /^#{1,6}\s*(?:c\)\s*)?năng lực số\b/i.test(line.trim()));
+  if (headingIndex < 0) return markdown;
+  const level = (lines[headingIndex].trim().match(/^#+/) || ["###"])[0].length;
+  let end = headingIndex + 1;
+  while (end < lines.length) {
+    const next = lines[end].trim().match(/^(#{1,6})\s+/);
+    if (next && next[1].length <= level) break;
+    end++;
+  }
+  selected.forEach(item => {
+    for (let i = headingIndex + 1; i < end; i++) {
+      if (!lines[i].includes(item.officialLabel) || lines[i].includes(item.officialCode)) continue;
+      const content = lines[i].replace(/^\s*-+\s*/, "");
+      lines[i] = `- ${item.officialCode}: ${content}`;
+      break;
+    }
+  });
+  return lines.join("\n");
+}
+
+function normalizeSavedObjectivesDigitalCodes() {
+  const current = String(appState.content?.objectives || "");
+  if (!current) return;
+  const normalized = ensureObjectivesDigitalCodes(current);
+  if (normalized === current) return;
+  appState.content.objectives = normalized;
+  saveStateToLocalStorage();
 }
 
 function hasRoleNearMarker(text, markerRe) {
@@ -4587,7 +4786,10 @@ async function applyTextbookOcrResult(ocrText, { silent = false } = {}) {
   const editor = document.getElementById("editorVision");
   if (editor) editor.value = ocrText;
   renderMathPreview(ocrText, "previewVision");
-  applyLessonBasedRecommendations({ silent });
+  // PPDH/kỹ thuật chọn cục bộ; NLS và AI dùng chung một yêu cầu đề xuất.
+  ensurePedagogyFromLesson({ silent: true });
+  await requestStructuredIntegrationCandidatesForEnabled({ silent });
+  renderStandardsCatalog();
 }
 
 async function readTextbookWithMistral() {
@@ -4618,7 +4820,7 @@ async function readTextbookWithMistral() {
 
     updateProgress(100, "Đã đọc nội dung SGK (Mistral OCR)!");
     setTimeout(() => hideProgress(), 1500);
-    showToast("Đã đọc nội dung SGK bằng Mistral OCR thành công!", "success", 5000);
+    showToast("Đã xong! Đã đọc và trích xuất nội dung SGK thành công.", "success", 5000);
     if (status) status.textContent = "Sẵn sàng.";
   } catch (error) {
     console.error("Mistral OCR:", error);
@@ -4766,7 +4968,7 @@ async function applyObjectivesOutput(result, signal, options = {}) {
     try {
       const missingDesc = missing.map(row => row.kind === "ai"
         ? `${row.item.officialCode}: ${row.item.officialLabel}`
-        : row.item.officialLabel).join("; ");
+        : `${row.item.officialCode}: ${row.item.officialLabel}`).join("; ");
       const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần phần I. Mục tiêu sau. Giữ nguyên Markdown và các dòng đã có. Chỉ bổ sung đúng các dòng còn thiếu vào ### c) Năng lực số / ### d) Năng lực AI. CẤM xóa dòng đã có. CẤM HTML/span/style/màu. Các mục còn thiếu: ${missingDesc}\n\n${finalResult}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
       finalResult = await guardGeminiLessonOutput(repair, signal);
       finalResult = stripDisabledObjectivesStandardSections(finalResult);
@@ -4778,6 +4980,7 @@ async function applyObjectivesOutput(result, signal, options = {}) {
   if (missing.length) {
     finalResult = insertObjectivesMissingStandards(finalResult, missing);
   }
+  finalResult = ensureObjectivesDigitalCodes(finalResult);
   finalResult = stripDisabledObjectivesStandardSections(finalResult);
   appState.content.objectives = finalResult;
   saveStateToLocalStorage();

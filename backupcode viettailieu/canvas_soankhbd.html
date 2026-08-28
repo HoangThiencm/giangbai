@@ -81,6 +81,8 @@
       border-radius: 10px;
       background: #fff7ed;
     }
+    /* Không để tab SGK luôn display:flex; chỉ tab đang active mới được hiển thị. */
+    #tabVision.active { display: flex; flex-direction: column; }
   </style>
 </head>
 <body>
@@ -195,7 +197,7 @@
     <!-- -----------------------------------------------------------------------
          TAB 0: THIẾT LẬP CHUNG & THÔNG TIN BÀI DẠY
          ----------------------------------------------------------------------- -->
-    <section id="tabVision" class="tab-pane active" style="display:flex; flex-direction:column;">
+    <section id="tabVision" class="tab-pane active">
       <div class="card">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="settings"></i> Thiết lập bài dạy từ SGK</h2>
@@ -1154,6 +1156,53 @@
           if (typeof hideProgress === "function") hideProgress();
         }
       }
+      async function analyzeSourceMaterialsCanvas() {
+        const hasPpct = hasPpctMedia();
+        const hasSgk = typeof hasTextbookMedia === "function" && hasTextbookMedia();
+        if (!hasPpct && !hasSgk) {
+          toast("Hãy đính kèm SGK hoặc PPCT trước khi đọc bằng AI.", "warning");
+          return;
+        }
+        const sourceButton = document.getElementById("btnAnalyzeVision");
+        if (sourceButton) sourceButton.disabled = true;
+        try {
+          // Đọc PPCT trước để giữ đúng thời lượng/phạm vi, rồi OCR SGK. Không dùng
+          // handleGenerateVision() vì hàm đó chỉ lưu bản tóm tắt ngắn, không đủ dữ
+          // liệu để bộ chọn NLS/AI và PPDH đối chiếu với nội dung bài.
+          let ppctDuration = "";
+          let ppctScope = "";
+          if (hasPpct) {
+            await analyzePpct();
+            ppctDuration = (typeof appState !== "undefined" && appState.duration) || "";
+            ppctScope = (typeof appState !== "undefined" && appState.teachingContext && appState.teachingContext.lessonScope) || "";
+          }
+          if (hasSgk && typeof readTextbookWithMistral === "function") {
+            await readTextbookWithMistral();
+          } else if (hasSgk) {
+            throw new Error("Không tải được bộ đọc SGK từ host.");
+          }
+          // OCR SGK đã tự chạy đề xuất một lần trong applyTextbookOcrResult().
+          // Chỉ khôi phục dữ liệu PPCT, tuyệt đối không gọi đề xuất lần nữa để
+          // không tốn thêm quota Gemini.
+          if (ppctDuration && typeof appState !== "undefined") {
+            appState.duration = ppctDuration;
+            const durationInput = document.getElementById("inputDuration");
+            if (durationInput) durationInput.value = ppctDuration;
+          }
+          if (ppctScope && typeof appState !== "undefined") {
+            appState.teachingContext = appState.teachingContext || {};
+            appState.teachingContext.lessonScope = ppctScope;
+            const scopeInput = document.getElementById("inputLessonScope");
+            if (scopeInput) scopeInput.value = ppctScope;
+            if (typeof saveStateToLocalStorage === "function") saveStateToLocalStorage();
+          }
+        } catch (err) {
+          console.error("Canvas source analysis:", err);
+          toast("Không thể hoàn tất đọc SGK + PPCT: " + (err && err.message ? err.message : err), "danger", 7000);
+        } finally {
+          if (sourceButton) sourceButton.disabled = false;
+        }
+      }
       function resetOverlay(clearFiles) {
         if (clearFiles) state.files = [];
         state.text = "";
@@ -1203,6 +1252,17 @@
             e.preventDefault();
             e.stopImmediatePropagation();
             analyzePpct();
+          }, true);
+        }
+        const sourceButton = document.getElementById("btnAnalyzeVision");
+        if (sourceButton && !sourceButton.dataset.canvasSourceBound) {
+          sourceButton.dataset.canvasSourceBound = "1";
+          // Chặn handler của host ở pha capture: handler đó chỉ đọc SGK hoặc gọi
+          // đường tóm tắt, khiến đề xuất NLS/AI và PPDH không có OCR đầy đủ.
+          sourceButton.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            analyzeSourceMaterialsCanvas();
           }, true);
         }
         if (!hostHasPpct() && btnClear) {

@@ -10,15 +10,17 @@ function aiEntry(code, label) {
 }
 
 function digitalEntry(code, domain, label) {
+  // Mã NLS phải luôn có chỉ báo đầy đủ: miền.thành-phần.TC1/TC2chỉ-báo.
+  // Danh mục này hiện đối chiếu ở cấp chỉ báo "a" của từng năng lực thành phần theo CV 3456/BGDĐT-GDPT.
   return [
-    { id: `tt02-67-${code.replace(/\./g, "-")}`, code, domain, label, grades: [6, 7], band: "Lớp 6–7: Trung cấp 1 (bậc 3)", descriptor: "Với các vấn đề đơn giản, học sinh có thể tự mình." },
-    { id: `tt02-89-${code.replace(/\./g, "-")}`, code, domain, label, grades: [8, 9], band: "Lớp 8–9: Trung cấp 2 (bậc 4)", descriptor: "Dựa trên nhu cầu riêng và với các vấn đề được xác định rõ ràng và không theo thông lệ, học sinh có thể tự mình." }
+    { id: `tt02-67-${code.replace(/\./g, "-")}`, code: `${code}.TC1a`, componentCode: code, domain, label, grades: [6, 7], band: "Lớp 6–7: Trung cấp 1 (TC1)", descriptor: "Chỉ báo a: với các vấn đề đơn giản, học sinh có thể tự mình thực hiện nhiệm vụ được xác định rõ ràng." },
+    { id: `tt02-89-${code.replace(/\./g, "-")}`, code: `${code}.TC2a`, componentCode: code, domain, label, grades: [8, 9], band: "Lớp 8–9: Trung cấp 2 (TC2)", descriptor: "Chỉ báo a: dựa trên nhu cầu riêng và giải quyết các vấn đề không theo thông lệ, học sinh có thể tự mình thực hiện nhiệm vụ được xác định rõ ràng." }
   ];
 }
 
 const KHBD_STANDARDS = {
   digital: {
-    framework: "Thông tư 02/2025/TT-BGDĐT", date: "24/01/2025", source: "02-bgddt.pdf; hướng dẫn 23456bgddthuong-dan-trien-khai-thuc-hien_219202522.pdf",
+    framework: "Thông tư 02/2025/TT-BGDĐT & Công văn 3456/BGDĐT-GDPT", date: "27/06/2025", source: "Thông tư 02/2025/TT-BGDĐT và Công văn 3456/BGDĐT-GDPT ngày 27/6/2025",
     minSelect: 0, maxSelect: 3,
     entries: [
       ...digitalEntry("1.1", "Khai thác dữ liệu và thông tin", "Duyệt, tìm kiếm và lọc dữ liệu, thông tin và nội dung số"), ...digitalEntry("1.2", "Khai thác dữ liệu và thông tin", "Đánh giá dữ liệu, thông tin và nội dung số"), ...digitalEntry("1.3", "Khai thác dữ liệu và thông tin", "Quản lý dữ liệu, thông tin và nội dung số"),
@@ -141,6 +143,7 @@ function standardToRecord(kind, entry, grade, autoSuggested) {
     date: catalog.date,
     catalogId: entry.id,
     officialCode: entry.code || null,
+    standardKind: kind,
     officialLabel: entry.label,
     grade: Number(grade),
     level: kind === "digital" ? (Number(grade) <= 7 ? 3 : 4) : null,
