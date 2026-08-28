@@ -308,11 +308,8 @@
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="camera"></i> Bước 0 — Học liệu nguồn (SGK + PPCT)</h2>
           <div class="card-actions">
-            <button id="btnAnalyzeVision" class="btn btn-primary">
-              <i data-lucide="sparkles"></i> Đọc SGK trực tiếp bằng AI
-            </button>
-            <button id="btnAnalyzePpct" class="btn btn-outline" type="button">
-              <i data-lucide="list-checks"></i> Đọc PPCT / Phụ lục 3
+            <button id="btnAnalyzeVision" class="btn btn-primary" type="button">
+              <i data-lucide="sparkles"></i> Đọc SGK + PPCT bằng AI
             </button>
             <button id="btnClearPpctFiles" class="btn btn-outline-dark" type="button">
               <i data-lucide="trash"></i> Xóa file PPCT
@@ -374,7 +371,7 @@
           <div class="editor-preview-container">
             <div class="panel-box">
               <div class="panel-header"><span>Nội dung Markdown PPCT (có thể chỉnh sửa)</span></div>
-              <textarea id="editorPpct" class="markdown-editor" placeholder="Nội dung phân tích PPCT sẽ hiện sau khi bấm Đọc PPCT / Phụ lục 3..."></textarea>
+              <textarea id="editorPpct" class="markdown-editor" placeholder="Nội dung phân tích PPCT sẽ hiện sau khi bấm Đọc SGK + PPCT bằng AI..."></textarea>
             </div>
             <div class="panel-box">
               <div class="panel-header"><span>Xem trước PPCT</span></div>
@@ -1096,7 +1093,7 @@
           state.files.push({ name: file.name, mimeType: file.type || "application/pdf", dataUrl: dataUrl });
         }
         renderFiles();
-        if (files.length) toast("Đã đính kèm " + files.length + " file PPCT. Bấm Đọc PPCT / Phụ lục 3.", "success");
+        if (files.length) toast("Đã đính kèm " + files.length + " file PPCT. Bấm Đọc SGK + PPCT bằng AI.", "success");
       }
       async function ocrOwnFiles() {
         const chunks = [];

@@ -162,10 +162,165 @@
          TAB 0: THIẾT LẬP CHUNG & THÔNG TIN BÀI DẠY
          ----------------------------------------------------------------------- -->
     <section id="tabVision" class="tab-pane active">
-      <div class="card">
+      <!-- =====================================================================
+           BƯỚC 1: TẢI HỌC LIỆU NGUỒN (SGK & PPCT) — ĐẦU TRANG TAB 0
+           ===================================================================== -->
+      <div class="tab0-materials-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+        
+        <!-- Cột 1: SÁCH GIÁO KHOA -->
+        <div id="lessonTextbookAnalysis">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><i data-lucide="camera"></i> 1. Sách giáo khoa (PDF / Ảnh SGK)</h2>
+              <div class="card-actions">
+                <button id="btnAnalyzeVision" class="btn btn-primary" type="button">
+                  <i data-lucide="sparkles"></i> Đọc nội dung SGK (Mistral OCR)
+                </button>
+                <button id="btnClearVisionImages" class="btn btn-outline-dark" type="button">
+                  <i data-lucide="trash"></i> Xóa tất cả ảnh
+                </button>
+              </div>
+            </div>
+
+            <!-- Dropzone & Paste Area -->
+            <div id="dropzoneContainer" class="dropzone-container">
+              <div class="dropzone-icon">📋</div>
+              <div class="dropzone-text">
+                <h4>Dán ảnh SGK (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
+                <p>Mistral OCR nhận diện chữ & công thức toán học nhanh chóng. Giáo viên có thể bấm 1-Click ngay sau khi nạp ảnh.</p>
+              </div>
+              <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
+            </div>
+
+            <!-- Image Gallery Grid -->
+            <div id="imageGallery" class="image-gallery"></div>
+          </div>
+
+          <!-- Result Panel SGK (Accordion / Details thu gọn nâng cao) -->
+          <details class="card vision-details-card" id="detailsVisionContent">
+            <summary class="vision-details-summary">
+              <div class="vision-summary-left">
+                <span class="vision-summary-icon">👁️</span>
+                <div class="vision-summary-text">
+                  <span class="vision-summary-title">Xem chi tiết văn bản trích xuất từ SGK (Nâng cao)</span>
+                  <span class="vision-summary-subtitle">Bấm để mở rộng / kiểm tra và chỉnh sửa nội dung văn bản AI đã đọc từ ảnh SGK hoặc file PDF</span>
+                </div>
+              </div>
+              <span class="vision-summary-chevron"><i data-lucide="chevron-down"></i></span>
+            </summary>
+
+            <div class="vision-details-body">
+              <div class="card-header vision-inner-header">
+                <span class="text-muted" style="font-size: 0.85rem;">Bạn có thể chỉnh sửa nội dung văn bản trích xuất dưới dạng Markdown trước khi tạo giáo án</span>
+                <div class="card-actions">
+                  <button class="btn btn-outline-dark btn-sm toggle-preview-btn" data-target="editorVision" type="button">
+                    <i data-lucide="eye"></i> Toggle Preview KaTeX
+                  </button>
+                </div>
+              </div>
+
+              <div class="editor-preview-container">
+                <div class="panel-box">
+                  <div class="panel-header"><span>Nội dung Markdown (Có thể chỉnh sửa)</span></div>
+                  <textarea id="editorVision" class="markdown-editor" placeholder="Nội dung phân tích SGK sẽ hiển thị ở đây sau khi AI xử lý..."></textarea>
+                </div>
+                <div class="panel-box">
+                  <div class="panel-header"><span>Xem trước KaTeX & Bảng biểu</span></div>
+                  <div id="previewVision" class="preview-rendered"></div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Cột 2: PHÂN PHỐI CHƯƠNG TRÌNH -->
+        <div id="lessonPpctAnalysis">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><i data-lucide="calendar-range"></i> 2. Phân phối chương trình (PPCT)</h2>
+              <div class="card-actions">
+                <button id="btnAnalyzePpct" class="btn btn-primary" type="button">
+                  <i data-lucide="sparkles"></i> Đọc PPCT (AI Phân tích)
+                </button>
+                <button id="btnClearPpctFiles" class="btn btn-outline-dark" type="button">
+                  <i data-lucide="trash"></i> Xóa file PPCT
+                </button>
+              </div>
+            </div>
+
+            <!-- Dropzone & Upload Area for PPCT -->
+            <div id="dropzoneContainerPpct" class="dropzone-container dropzone-ppct">
+              <div class="dropzone-icon">📑</div>
+              <div class="dropzone-text">
+                <h4>Dán ảnh hoặc Chọn file PDF / Ảnh Phân phối chương trình (PPCT)</h4>
+                <p>Đính kèm tài liệu PPCT (Phụ lục 3 CV 5512) để AI tự động nhận diện bài dạy, số tiết, tuần dạy và ghi chú tích hợp.</p>
+              </div>
+              <input type="file" id="fileInputPpct" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
+            </div>
+
+            <!-- PPCT Gallery Grid -->
+            <div id="ppctGallery" class="image-gallery ppct-gallery"></div>
+          </div>
+
+          <!-- Result Panel PPCT (Accordion / Details thu gọn) -->
+          <details class="card vision-details-card ppct-details-card" id="detailsPpctContent">
+            <summary class="vision-details-summary">
+              <div class="vision-summary-left">
+                <span class="vision-summary-icon">📋</span>
+                <div class="vision-summary-text">
+                  <span class="vision-summary-title">Xem chi tiết phân tích Phân phối chương trình (PPCT)</span>
+                  <span class="vision-summary-subtitle">Bấm để mở rộng / kiểm tra bảng phân phối tiết và định hướng phân bổ từng tiết dạy</span>
+                </div>
+              </div>
+              <span class="vision-summary-chevron"><i data-lucide="chevron-down"></i></span>
+            </summary>
+
+            <div class="vision-details-body">
+              <div class="card-header vision-inner-header">
+                <span class="text-muted" style="font-size: 0.85rem;">Nội dung PPCT bóc tách dưới dạng Markdown chuẩn Phụ lục 3 Công văn 5512</span>
+                <div class="card-actions">
+                  <button class="btn btn-outline-dark btn-sm toggle-preview-btn" data-target="editorPpct" type="button">
+                    <i data-lucide="eye"></i> Toggle Preview KaTeX
+                  </button>
+                </div>
+              </div>
+
+              <div class="editor-preview-container">
+                <div class="panel-box">
+                  <div class="panel-header"><span>Nội dung Markdown PPCT (Có thể chỉnh sửa)</span></div>
+                  <textarea id="editorPpct" class="markdown-editor" placeholder="Nội dung phân tích PPCT sẽ hiển thị ở đây sau khi xử lý..."></textarea>
+                </div>
+                <div class="panel-box">
+                  <div class="panel-header"><span>Xem trước Bảng PPCT &amp; KaTeX</span></div>
+                  <div id="previewPpct" class="preview-rendered"></div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <!-- BANNER TỰ ĐỘNG NHẬN DIỆN METADATA -->
+      <div class="tab0-autofill-banner" style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.25rem; background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%); border: 1px solid #c7d2fe; border-radius: var(--radius); margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.5rem;">✨</span>
+          <div>
+            <strong style="color: var(--primary-dark); font-size: 0.95rem;">Tự động nhận diện Thông tin bài dạy từ Học liệu</strong>
+            <p style="margin: 0; font-size: 0.82rem; color: #4b5563;">AI sẽ tự động đọc SGK & PPCT để điền Tên bài, Thời lượng, Phạm vi tiết dạy và Bật tích hợp phù hợp.</p>
+          </div>
+        </div>
+        <button id="btnAutoDetectMetadata" class="btn btn-primary" type="button" style="box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);">
+          <i data-lucide="wand-2"></i> ✨ Tự động nhận diện bài & PPCT
+        </button>
+      </div>
+
+      <!-- =====================================================================
+           BƯỚC 2: THIẾT LẬP THÔNG TIN BÀI DẠY (NẰM PHÍA DƯỚI HỌC LIỆU)
+           ===================================================================== -->
+      <div class="card" id="lessonGeneralSettingsCard">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="settings"></i> Thiết lập bài dạy từ SGK</h2>
-          <span class="text-muted" style="font-size: 0.85rem;">SGK do giáo viên cung cấp</span>
+          <span class="text-muted" style="font-size: 0.85rem;">Thông tin tự động điền từ SGK/PPCT — Giáo viên có thể chỉnh sửa</span>
           <div class="card-actions"><select id="selectMyDraft" aria-label="Bản nháp của tôi"><option> Bản nháp của tôi </option></select><button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button><button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button></div>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
@@ -268,150 +423,16 @@
         <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
           <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình soạn KHBD:</h4>
           <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
-            <li><b>Bước 0:</b> Dán PDF/ảnh SGK & PPCT (nếu có) là đủ để 1-click. Nút <b>Đọc nội dung SGK</b> và <b>Đọc & Phân tích PPCT</b> dùng Mistral OCR (nhanh).</li>
-            <li><b>Bước 1:</b> Chọn khối, môn, bài; bật NLS/AI nếu cần. Sau OCR, hệ thống đề xuất tối đa 3 mục có minh chứng theo bài.</li>
-            <li><b>Bước 2:</b> Bấm <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b> hoặc tạo từng phần ở Tab 2–4.</li>
-            <li><b>Bước 3:</b> Tab 5 kiểm tra và <b>Xuất Toàn bộ Giáo án (.DOCX)</b>.</li>
+            <li><b>Bước 1 (Học liệu nguồn):</b> Dán PDF/ảnh SGK & PPCT ở khối phía trên. Bấm <b>✨ Tự động nhận diện bài & PPCT</b> để AI tự điền thông tin.</li>
+            <li><b>Bước 2 (Thiết lập):</b> Kiểm tra Tên bài, Thời lượng, Phạm vi PPCT và tùy chọn Tích hợp ở khối phía dưới.</li>
+            <li><b>Bước 3 (Soạn bài):</b> Bấm <b>⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)</b> hoặc tạo từng phần ở Tab 2–4.</li>
+            <li><b>Bước 4 (Xuất bản):</b> Tab 5 kiểm tra và <b>Xuất Toàn bộ Giáo án (.DOCX)</b>.</li>
           </ol>
         </div>
       </div>
 
-    <!-- -----------------------------------------------------------------------
-         TAB 0: PHÂN PHỐI CHƯƠNG TRÌNH (PPCT / PHỤ LỤC 3 CV 5512)
-         ----------------------------------------------------------------------- -->
-    <div id="lessonPpctAnalysis" style="margin-top: 1.5rem;">
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title"><i data-lucide="calendar-range"></i> Phân phối chương trình (PPCT / Phụ lục 3 CV 5512)</h2>
-          <div class="card-actions">
-            <button id="btnAnalyzePpct" class="btn btn-primary" type="button">
-              <i data-lucide="sparkles"></i> Đọc &amp; Phân tích PPCT (Mistral OCR)
-            </button>
-            <button id="btnClearPpctFiles" class="btn btn-outline-dark" type="button">
-              <i data-lucide="trash"></i> Xóa file PPCT
-            </button>
-          </div>
-        </div>
-
-        <!-- Dropzone & Upload Area for PPCT -->
-        <div id="dropzoneContainerPpct" class="dropzone-container dropzone-ppct">
-          <div class="dropzone-icon">📑</div>
-          <div class="dropzone-text">
-            <h4>Dán ảnh hoặc Chọn file PDF / Ảnh Phân phối chương trình (PPCT)</h4>
-            <p>Đính kèm tài liệu phân phối chương trình của tổ chuyên môn/nhà trường để AI khóa đúng số tiết, phạm vi kiến thức và tiến trình từng tiết theo Phụ lục 3 Công văn 5512.</p>
-          </div>
-          <input type="file" id="fileInputPpct" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
-        </div>
-
-        <!-- PPCT Gallery Grid -->
-        <div id="ppctGallery" class="image-gallery ppct-gallery"></div>
-      </div>
-
-      <!-- Result Panel (Accordion / Details thu gọn) -->
-      <details class="card vision-details-card ppct-details-card" id="detailsPpctContent">
-        <summary class="vision-details-summary">
-          <div class="vision-summary-left">
-            <span class="vision-summary-icon">📋</span>
-            <div class="vision-summary-text">
-              <span class="vision-summary-title">Xem chi tiết phân tích Phân phối chương trình (PPCT)</span>
-              <span class="vision-summary-subtitle">Bấm để mở rộng / kiểm tra bảng phân phối tiết và định hướng phân bổ từng tiết dạy</span>
-            </div>
-          </div>
-          <span class="vision-summary-chevron"><i data-lucide="chevron-down"></i></span>
-        </summary>
-
-        <div class="vision-details-body">
-          <div class="card-header vision-inner-header">
-            <span class="text-muted" style="font-size: 0.85rem;">Nội dung PPCT bóc tách dưới dạng Markdown chuẩn Phụ lục 3 Công văn 5512</span>
-            <div class="card-actions">
-              <button class="btn btn-outline-dark btn-sm toggle-preview-btn" data-target="editorPpct" type="button">
-                <i data-lucide="eye"></i> Toggle Preview KaTeX
-              </button>
-            </div>
-          </div>
-
-          <div class="editor-preview-container">
-            <div class="panel-box">
-              <div class="panel-header"><span>Nội dung Markdown PPCT (Có thể chỉnh sửa)</span></div>
-              <textarea id="editorPpct" class="markdown-editor" placeholder="Nội dung phân tích PPCT sẽ hiển thị ở đây sau khi xử lý..."></textarea>
-            </div>
-            <div class="panel-box">
-              <div class="panel-header"><span>Xem trước Bảng PPCT &amp; KaTeX</span></div>
-              <div id="previewPpct" class="preview-rendered"></div>
-            </div>
-          </div>
-        </div>
-      </details>
-    </div>
-
-    <!-- -----------------------------------------------------------------------
-         TAB 0: PHÂN TÍCH ẢNH SGK (VISION) — LÀM TRƯỚC
-         ----------------------------------------------------------------------- -->
-    <div id="lessonTextbookAnalysis">
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title"><i data-lucide="camera"></i> Bước 0 — Dán & phân tích ảnh/trang SGK</h2>
-          <div class="card-actions">
-            <button id="btnAnalyzeVision" class="btn btn-primary">
-              <i data-lucide="sparkles"></i> Đọc nội dung SGK (Mistral OCR)
-            </button>
-            <button id="btnClearVisionImages" class="btn btn-outline-dark">
-              <i data-lucide="trash"></i> Xóa tất cả ảnh
-            </button>
-          </div>
-        </div>
-
-        <!-- Dropzone & Paste Area -->
-        <div id="dropzoneContainer" class="dropzone-container">
-          <div class="dropzone-icon">📋</div>
-          <div class="dropzone-text">
-            <h4>Dán ảnh SGK từ Clipboard (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
-            <p>Mistral OCR nhận diện chữ/công thức trên PDF/ảnh đã chọn (thường vài giây đến ~1 phút). Gallery JPEG chỉ xem trước. Gemini vẫn soạn giáo án từ văn bản đã nhận diện; không bắt buộc bước này trước 1-click.</p>
-          </div>
-          <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
-        </div>
-
-        <!-- Image Gallery Grid -->
-        <div id="imageGallery" class="image-gallery"></div>
-      </div>
-
-      <!-- Result Panel (Accordion / Details thu gọn nâng cao) -->
-      <details class="card vision-details-card" id="detailsVisionContent">
-        <summary class="vision-details-summary">
-          <div class="vision-summary-left">
-            <span class="vision-summary-icon">👁️</span>
-            <div class="vision-summary-text">
-              <span class="vision-summary-title">Xem chi tiết văn bản trích xuất từ SGK (Nâng cao)</span>
-              <span class="vision-summary-subtitle">Bấm để mở rộng / kiểm tra và chỉnh sửa nội dung văn bản AI đã đọc từ ảnh SGK hoặc file PDF</span>
-            </div>
-          </div>
-          <span class="vision-summary-chevron"><i data-lucide="chevron-down"></i></span>
-        </summary>
-
-        <div class="vision-details-body">
-          <div class="card-header vision-inner-header">
-            <span class="text-muted" style="font-size: 0.85rem;">Bạn có thể chỉnh sửa nội dung văn bản trích xuất dưới dạng Markdown trước khi tạo giáo án</span>
-            <div class="card-actions">
-              <button class="btn btn-outline-dark btn-sm toggle-preview-btn" data-target="editorVision" type="button">
-                <i data-lucide="eye"></i> Toggle Preview KaTeX
-              </button>
-            </div>
-          </div>
-
-          <div class="editor-preview-container">
-            <div class="panel-box">
-              <div class="panel-header"><span>Nội dung Markdown (Có thể chỉnh sửa)</span></div>
-              <textarea id="editorVision" class="markdown-editor" placeholder="Nội dung phân tích SGK sẽ hiển thị ở đây sau khi AI xử lý..."></textarea>
-            </div>
-            <div class="panel-box">
-              <div class="panel-header"><span>Xem trước KaTeX & Bảng biểu</span></div>
-              <div id="previewVision" class="preview-rendered"></div>
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <div class="card" id="lessonIllustrationCard">
+      <!-- CARD HÌNH MINH HỌA (ĐẶT Ở CUỐI TAB 0) -->
+      <div class="card" id="lessonIllustrationCard" style="margin-top: 1.5rem;">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="image"></i> Hình minh họa — chuẩn SGK &amp; thực tế</h2>
           <div class="card-actions">
@@ -423,7 +444,6 @@
         <p class="text-muted" style="font-size:0.85rem;margin:0 0 .75rem">Bài hình học/đo đạc cần hình vẽ toán thuần (nét mực SGK, nhãn đỉnh). Bài toán thực tế cần cảnh đời sống. Hệ thống chỉ vẽ khi nội dung SGK thực sự cần hình; ảnh được gắn vào hoạt động và xuất Word.</p>
         <div id="illustrationGallery" class="khbd-illustration-gallery"></div>
       </div>
-    </div>
     </section>
 
     <!-- -----------------------------------------------------------------------

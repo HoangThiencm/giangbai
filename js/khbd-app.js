@@ -1948,9 +1948,8 @@ function setupEventListeners() {
   }
 
   // 7. Các nút Tạo nội dung đơn lẻ
-  const btnAnalyzePpct = document.getElementById("btnAnalyzePpct");
-  if (btnAnalyzePpct) btnAnalyzePpct.addEventListener("click", handleGeneratePpctAnalysis);
-  document.getElementById("btnAnalyzeVision").addEventListener("click", handleGenerateVision);
+  const btnAnalyzeVision = document.getElementById("btnAnalyzeVision");
+  if (btnAnalyzeVision) btnAnalyzeVision.addEventListener("click", handleAnalyzeSourceMaterials);
   document.getElementById("btnGenerateObjectives").addEventListener("click", handleGenerateObjectives);
   document.getElementById("btnGenerateMaterials").addEventListener("click", handleGenerateMaterials);
   document.getElementById("btnGenerateCurrentAct").addEventListener("click", handleGenerateCurrentActivity);
@@ -4536,6 +4535,44 @@ async function handleGenerateVision() {
     updateProgress(100, "Đã đọc SGK."); setTimeout(hideProgress, 1000);
   } catch (error) { hideProgress(); showToast(`Lỗi đọc SGK: ${error.message}`, "danger", 7000); }
   finally { appState.isGenerating = false; if (btn) btn.disabled = false; }
+}
+
+async function handleAnalyzeSourceMaterials() {
+  const hasPpctMedia = (appState.ppctPdfAttachments && appState.ppctPdfAttachments.length > 0)
+    || (appState.ppctImages && appState.ppctImages.length > 0);
+  const hasSgkMedia = hasTextbookMedia();
+
+  if (!hasPpctMedia && !hasSgkMedia) {
+    showToast("Vui lòng đính kèm SGK hoặc PPCT trước khi đọc bằng AI!", "warning");
+    return;
+  }
+
+  const btn = document.getElementById("btnAnalyzeVision");
+  if (btn) btn.disabled = true;
+  try {
+    // PPCT được đọc trước để ưu tiên phạm vi tiết và thời lượng khi có cả hai nguồn.
+    let ppctDuration = "";
+    let ppctLessonScope = "";
+    if (hasPpctMedia) {
+      await handleGeneratePpctAnalysis();
+      ppctDuration = appState.duration || "";
+      ppctLessonScope = appState.teachingContext?.lessonScope || "";
+    }
+    if (hasSgkMedia) await handleGenerateVision();
+    if (ppctDuration) {
+      appState.duration = ppctDuration;
+      const durationInput = document.getElementById("inputDuration");
+      if (durationInput) durationInput.value = ppctDuration;
+    }
+    if (ppctLessonScope) {
+      appState.teachingContext.lessonScope = ppctLessonScope;
+      const scopeInput = document.getElementById("inputLessonScope");
+      if (scopeInput) scopeInput.value = ppctLessonScope;
+    }
+    if (hasPpctMedia && (ppctDuration || ppctLessonScope)) saveStateToLocalStorage();
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function hasTextbookMedia() {
