@@ -109,7 +109,8 @@ function formatGeneralCompetenciesGuide(subjectId, context) {
  * }}
  */
 function calculateActivityTimeBudgets(durationStr, subsectionCount, grade) {
-  let totalMinutes = 90;
+  const periodMinutes = Number(grade) >= 1 && Number(grade) <= 5 ? 35 : 45;
+  let totalMinutes = periodMinutes * 2;
   const str = String(durationStr || "").trim();
 
   const minMatch = str.match(/(\d+)\s*(?:phút|p|min)/i);
@@ -118,17 +119,18 @@ function calculateActivityTimeBudgets(durationStr, subsectionCount, grade) {
   } else {
     const tietMatch = str.match(/(\d+)\s*tiết/i);
     if (tietMatch) {
-      totalMinutes = parseInt(tietMatch[1], 10) * 45;
+      totalMinutes = parseInt(tietMatch[1], 10) * periodMinutes;
     } else {
       const numMatch = str.match(/^(\d+)$/);
       if (numMatch) {
-        totalMinutes = parseInt(numMatch[1], 10);
+        const number = parseInt(numMatch[1], 10);
+        totalMinutes = number <= 20 ? number * periodMinutes : number;
       }
     }
   }
 
   if (isNaN(totalMinutes) || totalMinutes <= 0) {
-    totalMinutes = 90;
+    totalMinutes = periodMinutes * 2;
   }
 
   const T = totalMinutes;

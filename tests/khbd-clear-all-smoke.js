@@ -292,7 +292,7 @@ function testClearAllContent() {
   assert.deepStrictEqual(appState.teachingContext.supportChoices, []);
   assert.strictEqual(appState.teachingContext.supportNote, '');
   const integ = appState.teachingContext.integrations;
-  assert.strictEqual(integ.digital, false);
+  assert.strictEqual(integ.digital, true);
   assert.strictEqual(integ.ai, false);
   assert.strictEqual(integ.foreignLanguage, false);
   assert.strictEqual(integ.inclusive, false);
@@ -337,7 +337,7 @@ function testClearAllContent() {
   assert.strictEqual(dom.elementsById.hasProjector.checked, false);
   assert.strictEqual(dom.elementsById.hasInternet.checked, false);
   assert.strictEqual(dom.elementsById.hasDevices.checked, false);
-  assert.strictEqual(dom.elementsById.toggleDigitalCompetency.checked, false);
+  assert.strictEqual(dom.elementsById.toggleDigitalCompetency.checked, true);
   assert.strictEqual(dom.elementsById.toggleAiCompetency.checked, false);
   assert.strictEqual(dom.elementsById.toggleForeignLanguage.checked, false);
   assert.strictEqual(dom.elementsById.toggleInclusiveSupport.checked, false);
@@ -351,7 +351,7 @@ function testClearAllContent() {
 
   // 3.6. Sau reset, NLS/AI unchecked nên panel khung phải ẩn.
   console.log('  -> Kiểm tra khung NLS & AI ẩn khi chưa bật tích hợp...');
-  assert.strictEqual(dom.elementsById.digitalStandardsPanel.hidden, true);
+  assert.strictEqual(dom.elementsById.digitalStandardsPanel.hidden, false);
   assert.strictEqual(dom.elementsById.aiStandardsPanel.hidden, true);
 
   // 3.7. Kiểm tra file input
@@ -370,7 +370,7 @@ function testClearAllContent() {
   const savedState = JSON.parse(savedJson);
   assert.strictEqual(savedState.content.vision, '');
   assert.strictEqual(savedState.content.objectives, '');
-  assert.strictEqual(savedState.teachingContext.integrations.digital, false);
+  assert.strictEqual(savedState.teachingContext.integrations.digital, true);
   assert.strictEqual(savedState.teachingContext.integrations.ai, false);
   assert.deepStrictEqual(savedState.teachingContext.standards, []);
 

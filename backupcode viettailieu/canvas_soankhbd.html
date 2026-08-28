@@ -195,7 +195,7 @@
     <!-- -----------------------------------------------------------------------
          TAB 0: THIẾT LẬP CHUNG & THÔNG TIN BÀI DẠY
          ----------------------------------------------------------------------- -->
-    <section id="tabVision" class="tab-pane active">
+    <section id="tabVision" class="tab-pane active" style="display:flex; flex-direction:column;">
       <div class="card">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="settings"></i> Thiết lập bài dạy từ SGK</h2>
@@ -224,8 +224,8 @@
             <input type="text" id="inputTopicCustom" placeholder="Nhập tên bài học cụ thể...">
           </div>
           <div class="tool-group">
-            <label for="inputDuration">Thời lượng dạy học:</label>
-            <input type="text" id="inputDuration" value="02 tiết (90 phút)">
+            <label for="inputDuration">Số tiết dạy học:</label>
+            <input type="number" id="inputDuration" min="1" max="20" value="2">
           </div>
           <div class="tool-group">
             <label for="inputLessonScope">Phạm vi tiết dạy theo PPCT:</label>
@@ -273,7 +273,7 @@
             <div id="activitiesCatalogPanel"></div>
           </div>
           <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0;">
-            <label><input type="checkbox" id="toggleDigitalCompetency"> Tích hợp năng lực số</label>
+            <label><input type="checkbox" id="toggleDigitalCompetency" checked> Tích hợp năng lực số (TT 02/2025)</label>
             <label><input type="checkbox" id="toggleAiCompetency"> Tích hợp năng lực AI</label>
             <label><input type="checkbox" id="toggleForeignLanguage"> Tích hợp ngoại ngữ</label>
             <label><input type="checkbox" id="toggleInclusiveSupport"> Tích hợp hỗ trợ HS khuyết tật/hòa nhập</label>
@@ -303,13 +303,13 @@
     <!-- -----------------------------------------------------------------------
          TAB 0: PHÂN TÍCH ẢNH SGK (VISION) — LÀM TRƯỚC
          ----------------------------------------------------------------------- -->
-    <div id="lessonTextbookAnalysis">
+    <div id="lessonTextbookAnalysis" style="order:-1;">
       <div class="card">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="camera"></i> Bước 0 — Học liệu nguồn (SGK + PPCT)</h2>
           <div class="card-actions">
             <button id="btnAnalyzeVision" class="btn btn-primary">
-              <i data-lucide="sparkles"></i> Đọc nội dung SGK (Gemini Canvas)
+              <i data-lucide="sparkles"></i> Đọc SGK trực tiếp bằng AI
             </button>
             <button id="btnAnalyzePpct" class="btn btn-outline" type="button">
               <i data-lucide="list-checks"></i> Đọc PPCT / Phụ lục 3
@@ -885,7 +885,7 @@
       }
       function formatDuration(periods) {
         const n = Math.max(1, Number(periods) || 1);
-        return (n < 10 ? "0" + n : String(n)) + " tiết (" + (n * 45) + " phút)";
+        return String(n);
       }
       function currentScopeLabel() {
         const cluster = selectedCluster();

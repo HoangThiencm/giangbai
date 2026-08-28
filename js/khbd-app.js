@@ -457,7 +457,7 @@ function normalizeTeachingContext(context) {
     supportChoices: Array.isArray(source.supportChoices) ? source.supportChoices.filter(value => typeof value === "string").slice(0, 7) : [],
     supportNote: typeof source.supportNote === "string" ? source.supportNote.slice(0, 300) : (typeof source.supportNeeds === "string" ? source.supportNeeds.slice(0, 300) : ""),
     integrations: Object.assign({
-      digital: integrations.digital !== undefined ? Boolean(integrations.digital) : true,
+      digital: true,
       ai: Boolean(integrations.ai),
       foreignLanguage: Boolean(integrations.foreignLanguage),
       inclusive: Boolean(integrations.inclusive)
@@ -2746,6 +2746,217 @@ async function prepareGeminiPpctMedia() {
  *   details: { tietCt: string, tuan: string, thoiLuong: string, thietBi: string, diaDiem: string, ghiChu: string }
  * }}
  */
+// =============================================================================
+// QUY ĐỔI THỜI LƯỢNG THÔNG MINH & TỰ ĐỘNG NHẬN DIỆN THÔNG TIN BÀI DẠY (METADATA)
+// =============================================================================
+/**
+ * Lấy số phút chuẩn cho 1 tiết học theo khối lớp.
+ * Lớp 1–5 (Tiểu học): 35 phút/tiết
+ * Lớp 6–12 (THCS & THPT): 45 phút/tiết
+ * @param {string|number} grade - Khối lớp (1-12)
+ * @returns {number} 35 hoặc 45
+ */
+function getPeriodMinutesByGrade(grade) {
+  const g = parseInt(grade, 10);
+  if (!isNaN(g) && g >= 1 && g <= 5) {
+    return 35;
+  }
+  return 45;
+}
+
+/**
+ * Trích xuất số tiết học từ chuỗi người dùng nhập (hoặc số phút).
+ * @param {string|number} inputStr - Chuỗi nhập vào
+ * @param {string|number} [grade] - Khối lớp
+ * @returns {number} Số tiết (1-10)
+ */
+function parsePeriodsFromInput(inputStr, grade) {
+  const str = String(inputStr || "").trim();
+  const periodMin = getPeriodMinutesByGrade(grade);
+  if (!str) return 2;
+
+  // 1. Khớp "X tiết" (ví dụ: "01 tiết", "2 tiết", "03 tiết (135 phút)")
+  const tietMatch = str.match(/(\d+)\s*tiết/i);
+  if (tietMatch) {
+    const p = parseInt(tietMatch[1], 10);
+    return Math.max(1, Math.min(10, isNaN(p) ? 2 : p));
+  }
+
+  // 2. Khớp "X phút" hoặc "Xp" (ví dụ: "45 phút", "90p", "70 phút", "35p", "105 phút")
+  const minMatch = str.match(/(\d+)\s*(?:phút|p|min)/i);
+  if (minMatch) {
+    const totalMin = parseInt(minMatch[1], 10);
+    if (!isNaN(totalMin) && totalMin > 0) {
+      return Math.max(1, Math.min(10, Math.round(totalMin / periodMin)));
+    }
+  }
+
+  // 3. Số đơn lẻ (ví dụ: "1", "2", "3" hoặc "45", "90", "70", "35")
+  const numMatch = str.match(/^(\d+)$/);
+  if (numMatch) {
+    const num = parseInt(numMatch[1], 10);
+    if (!isNaN(num)) {
+      if (num <= 10) {
+        return Math.max(1, num);
+      }
+      return Math.max(1, Math.min(10, Math.round(num / periodMin)));
+    }
+  }
+
+  return 2;
+}
+
+/**
+ * Chuẩn hóa chuỗi thời lượng theo định dạng chuẩn "0X tiết (YY phút)"
+ * @param {string|number} inputStr - Chuỗi nhập vào
+ * @param {string|number} [grade] - Khối lớp
+ * @returns {string} Chuỗi thời lượng chuẩn (Ví dụ: "02 tiết (90 phút)" hoặc "02 tiết (70 phút)")
+ */
+function formatSmartDuration(inputStr, grade) {
+  const periods = parsePeriodsFromInput(inputStr, grade);
+  const periodMin = getPeriodMinutesByGrade(grade);
+  const totalMin = periods * periodMin;
+  const padPeriods = String(periods).padStart(2, "0");
+  return `${padPeriods} tiết (${totalMin} phút)`;
+}
+
+/**
+ * Trích xuất tên bài học từ văn bản OCR của SGK hoặc PPCT
+ * @param {string} ocrText - Văn bản OCR
+ * @returns {string} Tên bài học đã trích xuất hoặc chuỗi rỗng
+ */
+function extractLessonTitleFromOcr(ocrText) {
+  if (!ocrText || typeof ocrText !== "string") return "";
+  const text = ocrText.trim();
+  if (!text) return "";
+
+  const patterns = [
+    /(?:^|\n)\s*(?:#{1,4}\s+)?(?:\*\*)?(?:TOÁN\s*\d+\s*[—–-]\s*)?(?:BÀI|Bài|CHỦ ĐỀ|Chủ đề|BÀI HỌC|Bài học)\s*(\d+)[\s.:–—\-]+([^\r\n*#]+)/i,
+    /(?:^|\n)\s*(?:#{1,4}\s+)?(?:\*\*)?(?:BÀI|Bài)\s*([IVXLCDM]+)[\s.:–—\-]+([^\r\n*#]+)/i,
+    /(?:^|\n)\s*#\s+([^\r\n*#]+)/
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      if (match.length >= 3) {
+        const num = match[1].trim();
+        let name = match[2].trim()
+          .replace(/[\s*#`_]+$/g, "")
+          .replace(/\s*\((?:tiết|tiếp theo|\d+\s*tiết|\d+\s*phút)[^)]*\)/gi, "")
+          .trim();
+        if (name && name.length >= 2) {
+          return `Bài ${num}: ${name}`;
+        }
+      } else if (match.length === 2) {
+        let title = match[1].trim()
+          .replace(/[\s*#`_]+$/g, "")
+          .replace(/\s*\((?:tiết|tiếp theo|\d+\s*tiết|\d+\s*phút)[^)]*\)/gi, "")
+          .trim();
+        if (title && title.length >= 3 && !/^(?:I{1,3}|IV|V|Mục|Phần|Nội dung|Hoạt động|Học liệu|Bước)\b/i.test(title)) {
+          return title;
+        }
+      }
+    }
+  }
+
+  return "";
+}
+
+/**
+ * Tự động nhận diện và điền siêu dữ liệu bài học (Tên bài, Tiết PPCT, Thời lượng, Năng lực AI)
+ * từ kết quả OCR SGK và phân tích PPCT.
+ * @param {{ ppctText?: string, ocrText?: string, silent?: boolean }} options
+ * @returns {{ topic: string, lessonScope: string, duration: string, hasAiIntegration: boolean }}
+ */
+function autoDetectAndFillLessonMetadata({ ppctText, ocrText, silent = false } = {}) {
+  const ppct = typeof ppctText === "string" ? ppctText : (appState.content?.ppctAnalysis || "");
+  const ocr = typeof ocrText === "string" ? ocrText : (appState.content?.vision || "");
+
+  const detected = {
+    topic: "",
+    lessonScope: "",
+    duration: "",
+    hasAiIntegration: false
+  };
+
+  const detectedChanges = [];
+
+  // 1. Nhận diện Tên bài học từ OCR SGK hoặc PPCT
+  let topicCandidate = extractLessonTitleFromOcr(ocr);
+  if (!topicCandidate && ppct) {
+    topicCandidate = extractLessonTitleFromOcr(ppct);
+  }
+
+  if (topicCandidate) {
+    detected.topic = topicCandidate;
+    appState.customTopic = topicCandidate;
+    const inputTopic = document.getElementById("inputTopicCustom");
+    if (inputTopic) inputTopic.value = topicCandidate;
+    detectedChanges.push(`Tên bài: "${topicCandidate}"`);
+  }
+
+  // 2. Nhận diện từ PPCT (nếu có)
+  if (ppct) {
+    const parsed = parsePpctLessonDetails(ppct, appState.customTopic || appState.selectedLesson || "");
+
+    if (parsed.lessonScopeSuggestion) {
+      detected.lessonScope = parsed.lessonScopeSuggestion;
+      if (appState.teachingContext) {
+        appState.teachingContext.lessonScope = parsed.lessonScopeSuggestion;
+      }
+      const scopeInput = document.getElementById("inputLessonScope");
+      if (scopeInput) scopeInput.value = parsed.lessonScopeSuggestion;
+      detectedChanges.push(`Phạm vi PPCT: "${parsed.lessonScopeSuggestion}"`);
+    }
+
+    if (parsed.durationSuggestion || parsed.details?.thoiLuong) {
+      const rawDur = parsed.durationSuggestion || parsed.details?.thoiLuong;
+      const formatted = formatSmartDuration(rawDur, appState.selectedGrade);
+      detected.duration = formatted;
+      appState.duration = formatted;
+      const durInput = document.getElementById("inputDuration");
+      if (durInput) durInput.value = formatted;
+      detectedChanges.push(`Thời lượng: ${formatted}`);
+    }
+
+    if (parsed.hasAiIntegration) {
+      detected.hasAiIntegration = true;
+      if (appState.teachingContext?.integrations) {
+        appState.teachingContext.integrations.ai = true;
+      }
+      const toggleAi = document.getElementById("toggleAiCompetency");
+      if (toggleAi) toggleAi.checked = true;
+      if (typeof renderStandardsCatalog === "function") renderStandardsCatalog();
+      detectedChanges.push("Kích hoạt Tích hợp Năng lực AI (theo PPCT)");
+    }
+  }
+
+  // 3. Chuẩn hóa thời lượng hiện tại nếu chưa cập nhật
+  if (!detected.duration && appState.duration) {
+    const formatted = formatSmartDuration(appState.duration, appState.selectedGrade);
+    detected.duration = formatted;
+    appState.duration = formatted;
+    const durInput = document.getElementById("inputDuration");
+    if (durInput) durInput.value = formatted;
+  }
+
+  if (typeof saveStateToLocalStorage === "function") {
+    saveStateToLocalStorage();
+  }
+
+  if (!silent && typeof showToast === "function") {
+    if (detectedChanges.length > 0) {
+      showToast(`✨ Đã tự động nhận diện:\n- ${detectedChanges.join("\n- ")}`, "success", 6000);
+    } else {
+      showToast("Chưa tìm thấy thông tin bài mới từ học liệu. Bạn có thể tự nhập ở ô bên dưới.", "info", 5000);
+    }
+  }
+
+  return detected;
+}
+
+
 function parsePpctLessonDetails(ppctText, topic) {
   const text = String(ppctText || "");
   const result = {
@@ -2767,68 +2978,98 @@ function parsePpctLessonDetails(ppctText, topic) {
   // 1. Trích xuất gợi ý phạm vi tiết dạy (Lesson Scope)
   const scopeMatch = text.match(/(?:Gợi ý phạm vi tiết dạy(?:\s*\(Lesson Scope\))?|Phạm vi tiết dạy)\s*:\s*([^\n\r]+)/i);
   if (scopeMatch) {
-    let cleanScope = scopeMatch[1].replace(/^[*\s`_]+|[*\s`_]+$/g, "").trim();
+    let cleanScope = scopeMatch[1].replace(/^[*s`_]+|[*s`_]+$/g, "").trim();
     if (cleanScope) {
       result.lessonScopeSuggestion = cleanScope;
     }
   }
 
-  // 2. Trích xuất các trường bóc tách chi tiết
+  // 2. Trích xuất các trường bóc tách chi tiết (Key-Value)
   const tietMatch = text.match(/(?:Tiết CT|Tiết theo PPCT|Tiết phân phối)\s*:\s*([^\n\r]+)/i);
-  if (tietMatch) result.details.tietCt = tietMatch[1].replace(/^[*\s`_]+|[*\s`_]+$/g, "").trim();
+  if (tietMatch) result.details.tietCt = tietMatch[1].replace(/^[*s`_]+|[*s`_]+$/g, "").trim();
 
   const tuanMatch = text.match(/(?:Tuần(?:\s*dạy)?)\s*:\s*([^\n\r]+)/i);
-  if (tuanMatch) result.details.tuan = tuanMatch[1].replace(/^[*\s`_]+|[*\s`_]+$/g, "").trim();
+  if (tuanMatch) result.details.tuan = tuanMatch[1].replace(/^[*s`_]+|[*s`_]+$/g, "").trim();
 
   const thoiLuongMatch = text.match(/(?:Thời lượng|Số tiết)\s*:\s*([^\n\r]+)/i);
   if (thoiLuongMatch) {
-    result.details.thoiLuong = thoiLuongMatch[1].replace(/^[*\s`_]+|[*\s`_]+$/g, "").trim();
+    result.details.thoiLuong = thoiLuongMatch[1].replace(/^[*s`_]+|[*s`_]+$/g, "").trim();
     result.durationSuggestion = result.details.thoiLuong;
   }
 
   const thietBiMatch = text.match(/(?:Thiết bị dạy học|Thiết bị)\s*:\s*([^\n\r]+)/i);
-  if (thietBiMatch) result.details.thietBi = thietBiMatch[1].replace(/^[*\s`_]+|[*\s`_]+$/g, "").trim();
+  if (thietBiMatch) result.details.thietBi = thietBiMatch[1].replace(/^[*s`_]+|[*s`_]+$/g, "").trim();
 
   const diaDiemMatch = text.match(/(?:Địa điểm dạy học|Địa điểm)\s*:\s*([^\n\r]+)/i);
-  if (diaDiemMatch) result.details.diaDiem = diaDiemMatch[1].replace(/^[*\s`_]+|[*\s`_]+$/g, "").trim();
+  if (diaDiemMatch) result.details.diaDiem = diaDiemMatch[1].replace(/^[*s`_]+|[*s`_]+$/g, "").trim();
 
   const ghiChuMatch = text.match(/(?:Ghi chú\s*\/\s*Tích hợp|Ghi chú|Tích hợp)\s*:\s*([^\n\r]+)/i);
-  if (ghiChuMatch) result.details.ghiChu = ghiChuMatch[1].replace(/^[*\s`_]+|[*\s`_]+$/g, "").trim();
-
-  // Nếu chưa có lessonScopeSuggestion từ dòng gợi ý, thử tổng hợp từ các trường chi tiết
-  if (!result.lessonScopeSuggestion && result.details.tietCt) {
-    let scopeParts = [];
-    const tietPart = result.details.tietCt.toLowerCase().startsWith("tiết")
-      ? result.details.tietCt
-      : `Tiết ${result.details.tietCt}`;
-    scopeParts.push(tietPart);
-
-    if (result.details.tuan && result.details.tuan !== "[...]" && result.details.tuan !== "...") {
-      const tuanPart = result.details.tuan.toLowerCase().startsWith("tuần")
-        ? result.details.tuan
-        : `Tuần ${result.details.tuan}`;
-      scopeParts.push(`(${tuanPart})`);
+  if (ghiChuMatch) {
+    result.details.ghiChu = ghiChuMatch[1].replace(/^[*s`_]+|[*s`_]+$/g, "").trim();
+    if (/năng lực ai|trí tuệ nhân tạo|\bai\b/i.test(result.details.ghiChu)) {
+      result.hasAiIntegration = true;
     }
-
-    if (result.details.thoiLuong && result.details.thoiLuong !== "[...]" && result.details.thoiLuong !== "...") {
-      scopeParts.push(`- Thời lượng: ${result.details.thoiLuong}`);
-    }
-
-    result.lessonScopeSuggestion = scopeParts.join(" ").trim();
   }
 
-  // 3. Kiểm tra Tích hợp AI (trong Ghi chú hoặc toàn bộ bảng PPCT)
-  const aiKeywords = /\bAI\b|Trí tuệ nhân tạo|QĐ 2422|Tích hợp AI/i;
-  if (result.details.ghiChu && aiKeywords.test(result.details.ghiChu)) {
-    result.hasAiIntegration = true;
-  } else {
-    const lines = text.split("\n");
-    for (const line of lines) {
-      if (line.includes("|") && aiKeywords.test(line)) {
-        result.hasAiIntegration = true;
-        break;
-      }
+  // 3. Hỗ trợ bóc tách từ Bảng phân phối chương trình (Markdown Table)
+  const lines = text.split(/\r?\n/);
+  let tableHeaderCols = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue;
+    const cols = trimmed.split("|").map(c => c.trim()).slice(1, -1);
+    if (!cols.length) continue;
+    if (cols.some(c => /tên bài|bài học|chủ đề/i.test(c))) {
+      tableHeaderCols = cols.map(c => c.toLowerCase());
+      continue;
     }
+    if (cols.every(c => /^:?-+:?$/.test(c))) continue; // separator row
+
+    const rowText = cols.join(" ");
+    let isMatch = false;
+    if (topic && topic.trim()) {
+      const cleanTopic = topic.replace(/^Bài\s*\d+[\s.:–—\-]+/i, "").trim().toLowerCase();
+      isMatch = rowText.toLowerCase().includes(topic.toLowerCase()) || (cleanTopic && rowText.toLowerCase().includes(cleanTopic));
+    } else {
+      isMatch = true;
+    }
+
+    if (isMatch) {
+      cols.forEach((val, idx) => {
+        const header = tableHeaderCols[idx] || "";
+        if (/tiết ppct|tiết ct|phạm vi tiết/i.test(header)) {
+          if (!result.lessonScopeSuggestion) result.lessonScopeSuggestion = val;
+          result.details.tietCt = val;
+        } else if (/số tiết|thời lượng/i.test(header)) {
+          if (!result.durationSuggestion) result.durationSuggestion = val;
+          result.details.thoiLuong = val;
+        } else if (/ghi chú|tích hợp/i.test(header)) {
+          result.details.ghiChu = val;
+          if (/năng lực ai|trí tuệ nhân tạo|\bai\b/i.test(val)) {
+            result.hasAiIntegration = true;
+          }
+        }
+      });
+      break;
+    }
+  }
+
+  // 4. Nếu chưa có gợi ý scope nhưng có tiết CT -> tự động tổng hợp lessonScopeSuggestion
+  if (!result.lessonScopeSuggestion && result.details.tietCt) {
+    const parts = [`Tiết ${result.details.tietCt.startsWith("Tiết") ? result.details.tietCt.replace(/^Tiết\s*/i, "") : result.details.tietCt}`];
+    if (result.details.tuan && result.details.tuan !== "[...]" && result.details.tuan !== "...") {
+      parts.push(`(${result.details.tuan.startsWith("Tuần") ? result.details.tuan : "Tuần " + result.details.tuan})`);
+    }
+    if (result.details.thoiLuong && result.details.thoiLuong !== "[...]" && result.details.thoiLuong !== "...") {
+      parts.push(`- Thời lượng: ${result.details.thoiLuong}`);
+    }
+    result.lessonScopeSuggestion = parts.join(" ").trim();
+  }
+
+  // 5. Kiểm tra toàn văn xem có ghi chú tích hợp Năng lực AI không
+  const aiKeywords = /\bAI\b|Trí tuệ nhân tạo|QĐ 2422|Tích hợp AI/i;
+  if (!result.hasAiIntegration && aiKeywords.test(text)) {
+    result.hasAiIntegration = true;
   }
 
   return result;
@@ -2859,38 +3100,12 @@ async function handleGeneratePpctAnalysis() {
     const status = document.getElementById("statusFooterText");
     if (status) status.textContent = "Đang đọc & phân tích PPCT...";
 
-    let rawOcrText = "";
-    if (canUseMistralOcr()) {
-      try {
-        rawOcrText = await extractPpctOcrText((msg, pct) => updateProgress(pct, msg));
-      } catch (ocrErr) {
-        console.warn("Lỗi OCR PPCT qua Mistral, fallback sang Gemini:", ocrErr);
-      }
-    }
-
     updateProgress(60, "Đang trích xuất cấu trúc Phụ lục 3 CV 5512 bằng AI...");
-    const promptCtx = getGenerationPromptContext();
-    const prompt = getPromptTemplate('ANALYZE_PPCT', promptCtx) + (rawOcrText ? `\n\nVĂN BẢN OCR PPCT ĐÃ NHẬN DIỆN:\n"""\n${rawOcrText}\n"""` : '');
-    
-    let analysisResult = "";
-    if (rawOcrText) {
-      analysisResult = await geminiAPI.generateContent(
-        prompt,
-        [],
-        getSystemRole(appState.selectedSubject, appState.selectedGrade),
-        0.2
-      );
-    } else {
-      const media = await prepareGeminiPpctMedia();
-      analysisResult = await geminiAPI.generateContent(
-        prompt,
-        media,
-        getSystemRole(appState.selectedSubject, appState.selectedGrade),
-        0.2
-      );
-    }
-
-    const cleanedResult = sanitizeLessonMarkdown(analysisResult);
+    const prompt = 'Đọc trực tiếp PPCT PDF/ảnh đính kèm. Không OCR, không chép toàn văn. Chỉ trả JSON: {"topic":"","subject":"","grade":"","periodCount":null,"lessonScope":"","hasAiIntegration":false,"aiEvidence":"","summary":""}. hasAiIntegration chỉ true khi PPCT ghi tích hợp AI; lessonScope giữ cụm tiết như Tiết 50-51.';
+    const raw = await geminiAPI.generateContent(prompt, await prepareGeminiPpctMedia(), getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1);
+    const json = String(raw || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    const data = JSON.parse((json.match(/\{[\s\S]*\}/) || [""])[0]);
+    const cleanedResult = String(data.summary || "").trim() || JSON.stringify(data, null, 2);
     appState.content.ppctAnalysis = cleanedResult;
     saveStateToLocalStorage();
 
@@ -2902,6 +3117,11 @@ async function handleGeneratePpctAnalysis() {
     // Tự động bóc tách chi tiết bài học từ kết quả PPCT
     const currentTopic = appState.customTopic || appState.selectedLesson || "";
     const parsedDetails = parsePpctLessonDetails(cleanedResult, currentTopic);
+    const periods = Number(data.periodCount);
+    if (String(data.topic || "").trim()) appState.customTopic = String(data.topic).trim();
+    if (Number.isInteger(periods) && periods > 0 && periods <= 20) appState.duration = String(periods);
+    if (String(data.lessonScope || "").trim()) parsedDetails.lessonScopeSuggestion = String(data.lessonScope).trim();
+    if (data.hasAiIntegration === true) { parsedDetails.hasAiIntegration = true; parsedDetails.details.ghiChu = String(data.aiEvidence || "ghi chú Tích hợp AI trong PPCT").trim(); }
 
     if (parsedDetails.lessonScopeSuggestion) {
       appState.teachingContext.lessonScope = parsedDetails.lessonScopeSuggestion;
@@ -4300,15 +4520,22 @@ async function handleGenerateVision() {
     showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh/trang SGK!", "warning");
     return;
   }
-  if (String(appState.content.vision || "").trim().length >= 80) {
-    if (!userConfirm("Đã có nội dung phân tích SGK. Đọc lại sẽ tốn hạn mức OCR. Tiếp tục?", true)) return;
-  }
-  if (canUseMistralOcr()) {
-    await readTextbookWithMistral();
-    return;
-  }
-  showToast("Đọc SGK dùng Mistral OCR của tài khoản này. Hãy nhập Mistral API Key trong Quản lý API Key.", "warning", 7000);
-  openModal("modalApiKeys");
+  if (appState.isGenerating) return showToast("Một tác vụ AI khác đang xử lý.", "warning");
+  const btn = document.getElementById("btnAnalyzeVision");
+  try {
+    appState.isGenerating = true; if (btn) btn.disabled = true;
+    updateProgress(30, "AI đang đọc trực tiếp SGK...");
+    const prompt = 'Đọc trực tiếp SGK PDF/ảnh đính kèm. Không OCR, không chép toàn văn. Chỉ trả JSON: {"topic":"","subject":"","grade":"","periodCount":null,"lessonScope":"","hasAiIntegration":false,"aiEvidence":"","summary":""}. summary tóm tắt ngắn bài; hasAiIntegration luôn false.';
+    const raw = await geminiAPI.generateContent(prompt, await prepareGeminiMedia(), getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1);
+    const json = String(raw || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    const data = JSON.parse((json.match(/\{[\s\S]*\}/) || [""])[0]);
+    if (String(data.topic || "").trim()) appState.customTopic = String(data.topic).trim();
+    const periods = Number(data.periodCount); if (Number.isInteger(periods) && periods > 0 && periods <= 20) appState.duration = String(periods);
+    appState.content.vision = String(data.summary || "").trim() || JSON.stringify(data, null, 2);
+    appState.teachingContext.ocrReady = true; syncDraftDom(); saveStateToLocalStorage(); renderMathPreview(appState.content.vision, "previewVision");
+    updateProgress(100, "Đã đọc SGK."); setTimeout(hideProgress, 1000);
+  } catch (error) { hideProgress(); showToast(`Lỗi đọc SGK: ${error.message}`, "danger", 7000); }
+  finally { appState.isGenerating = false; if (btn) btn.disabled = false; }
 }
 
 function hasTextbookMedia() {
@@ -4496,18 +4723,6 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
     updateProgress(20, `Đang ${operationName}...`);
     document.getElementById("statusFooterText").textContent = `Đang ${operationName}...`;
 
-    if (!skipMedia && !hasAnalyzedLessonContent() && canUseMistralOcr() && hasTextbookMedia()) {
-      updateProgress(25, "Đang nhận diện SGK bằng Mistral OCR trước khi soạn...");
-      try {
-        const ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(Math.min(40, pct), msg));
-        if (ocrText.replace(/\s+/g, " ").trim().length >= 80) {
-          await applyTextbookOcrResult(ocrText, { silent: true });
-        }
-      } catch (ocrErr) {
-        console.warn("OCR trước khi soạn:", ocrErr);
-      }
-    }
-
     const useTextOnly = skipMedia || hasAnalyzedLessonContent();
     const media = useTextOnly ? images : (images.length ? images : await prepareGeminiMedia());
     if (media.length) {
@@ -4589,6 +4804,7 @@ async function generateOneClickContent(prompt, images = [], options = {}) {
   return result;
 }
 
+// getPromptTemplate("GENERATE_ACTIVITIES_AD")
 async function handle1ClickGenerate() {
   if (appState.isGenerating) {
     showToast("Tiến trình đang chạy. Vui lòng chờ hoàn tất.", "warning");
@@ -4608,7 +4824,7 @@ async function handle1ClickGenerate() {
   }
 
   const topic = getTopicDisplayName();
-  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nHệ thống nhận diện SGK bằng Mistral OCR (nếu có) rồi soạn 6 bước tuần tự: I+II, A, B, C, D, E. File PDF/ảnh chỉ trong phiên này (F5 sẽ mất nếu chưa Đọc SGK).`;
+  const confirmMsg = `Bạn có muốn bắt đầu TỰ ĐỘNG TẠO KẾ HOẠCH BÀI DẠY LÕI cho bài:\n"${topic}" (Lớp ${appState.selectedGrade})?\n\nHệ thống đọc trực tiếp PDF/ảnh SGK bằng AI rồi soạn 6 bước tuần tự: I+II, A, B, C, D, E.`;
 
   if (!userConfirm(confirmMsg, true)) return;
   if (window.__KHBD_CANVAS__) showToast("Canvas không dùng hộp thoại xác nhận — bắt đầu soạn 1-click.", "info", 4000);
@@ -4623,21 +4839,6 @@ async function handle1ClickGenerate() {
   if (btnCancel) btnCancel.disabled = false;
 
   try {
-    if (!canUseMistralOcr() && hasTextbookMedia() && !hasAnalyzedLessonContent()) {
-      showToast("Chưa có Mistral key cá nhân — 1-click sẽ soạn bằng Gemini từ PDF (chậm hơn). Nên nhập Mistral để đọc SGK nhanh.", "warning", 6000);
-    }
-    if (canUseMistralOcr() && hasTextbookMedia() && !hasAnalyzedLessonContent()) {
-      updateProgress(8, "Đang nhận diện SGK bằng Mistral OCR...");
-      try {
-        const ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(Math.min(18, pct), msg));
-        if (ocrText.replace(/\s+/g, " ").trim().length >= 80) {
-          await applyTextbookOcrResult(ocrText, { silent: true });
-        }
-      } catch (ocrErr) {
-        console.warn("1-click Mistral OCR:", ocrErr);
-        showToast("Mistral OCR chưa xong, sẽ gửi PDF/ảnh cho Gemini.", "warning", 4500);
-      }
-    }
     const skipMedia = hasAnalyzedLessonContent();
     const media = skipMedia ? [] : await prepareGeminiMedia();
     if (!media.length && !hasAnalyzedLessonContent()) {
@@ -5141,6 +5342,11 @@ if (typeof window !== 'undefined') {
   window.zoomIllustration = zoomIllustration;
   window.downloadIllustration = downloadIllustration;
   window.parsePpctLessonDetails = parsePpctLessonDetails;
+  window.getPeriodMinutesByGrade = getPeriodMinutesByGrade;
+  window.parsePeriodsFromInput = parsePeriodsFromInput;
+  window.formatSmartDuration = formatSmartDuration;
+  window.extractLessonTitleFromOcr = extractLessonTitleFromOcr;
+  window.autoDetectAndFillLessonMetadata = autoDetectAndFillLessonMetadata;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -5201,6 +5407,11 @@ if (typeof module !== 'undefined' && module.exports) {
     VN_PROVINCES_34,
     localityProvinceOf,
     getIntegrationBadgeClass,
-    applyIntegrationPreviewColors
+    applyIntegrationPreviewColors,
+    getPeriodMinutesByGrade,
+    parsePeriodsFromInput,
+    formatSmartDuration,
+    extractLessonTitleFromOcr,
+    autoDetectAndFillLessonMetadata
   };
 }
