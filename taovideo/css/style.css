@@ -138,18 +138,21 @@ input[type="range"] {
     font-weight: 700 !important;
 }
 
-/* Color Chips */
-.color-chip {
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+/* Color Chips & Sidebar Color Chips */
+.color-chip,
+.sidebar-color-chip {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, outline 0.15s ease;
     cursor: pointer;
 }
 
-.color-chip:hover {
-    transform: scale(1.22);
+.color-chip:hover,
+.sidebar-color-chip:hover {
+    transform: scale(1.18);
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
 }
 
-.color-chip.active-chip {
+.color-chip.active-chip,
+.sidebar-color-chip.active-chip {
     outline: 2px solid #8b5cf6;
     outline-offset: 2px;
 }
@@ -162,13 +165,13 @@ input[type="range"] {
 }
 
 .quick-color-chip:hover {
-    transform: scale(1.25);
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+    transform: scale(1.22);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
 }
 
 .quick-color-chip.active-chip {
     outline: 2px solid #8b5cf6;
-    outline-offset: 1px;
+    outline-offset: 1.5px;
 }
 
 /* Quick Presets Button Feedback */

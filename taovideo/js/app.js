@@ -309,19 +309,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sidebar Tab switching
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabBtns.forEach(b => {
+
+    function switchSidebarTab(tabId) {
+        tabBtns.forEach(b => {
+            if (b.dataset.tab === tabId) {
+                b.classList.remove('text-slate-400');
+                b.classList.add('text-brand-400', 'bg-brand-500/10', 'border', 'border-brand-500/30');
+            } else {
                 b.classList.remove('text-brand-400', 'bg-brand-500/10', 'border', 'border-brand-500/30');
                 b.classList.add('text-slate-400');
-            });
-            tabContents.forEach(c => c.classList.add('hidden'));
+            }
+        });
+        tabContents.forEach(c => {
+            if (c.id === tabId) c.classList.remove('hidden');
+            else c.classList.add('hidden');
+        });
+        if (tabId === 'tab-text') {
+            syncSidebarTextBoxUI();
+        }
+        refreshIcons();
+    }
 
-            btn.classList.remove('text-slate-400');
-            btn.classList.add('text-brand-400', 'bg-brand-500/10', 'border', 'border-brand-500/30');
-            const tabId = btn.dataset.tab;
-            document.getElementById(tabId)?.classList.remove('hidden');
-            refreshIcons();
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchSidebarTab(btn.dataset.tab);
         });
     });
 
@@ -616,11 +627,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateSlidesUI();
         videoRenderer.setSlides(state.slides);
+        syncSidebarTextBoxUI();
     }
 
     // =========================================================================
-    // 8. Canvas Drag & Drop and Quick Floating Toolbar Controller
+    // 8. Canvas Drag & Drop, Sidebar Tab 4 & Quick Floating Toolbar Controller
     // =========================================================================
+    // Quick Toolbar Elements
     const canvasQuickToolbar = document.getElementById('canvas-quick-toolbar');
     const quickTbText = document.getElementById('quick-tb-text');
     const quickTbFont = document.getElementById('quick-tb-font');
@@ -635,6 +648,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const quickTbModalOpen = document.getElementById('quick-tb-modal-open');
     const quickTbClose = document.getElementById('quick-tb-close');
     const canvasAddTextBtn = document.getElementById('canvas-add-text-btn');
+
+    // Sidebar Tab 4 (Khung Chữ & Màu Sắc) Elements
+    const sidebarTbSlideIndicator = document.getElementById('sidebar-tb-slide-indicator');
+    const sidebarBtnAddTextbox = document.getElementById('sidebar-btn-add-textbox');
+    const sidebarBtnDeleteTb = document.getElementById('sidebar-btn-delete-tb');
+    const sidebarTextboxList = document.getElementById('sidebar-textbox-list');
+    const sidebarTbText = document.getElementById('sidebar-tb-text');
+    const sidebarTbColor = document.getElementById('sidebar-tb-color');
+    const sidebarTbFont = document.getElementById('sidebar-tb-font');
+    const sidebarTbSize = document.getElementById('sidebar-tb-size');
+    const sidebarTbSizeVal = document.getElementById('sidebar-tb-size-val');
+    const sidebarTbBgStyle = document.getElementById('sidebar-tb-bg-style');
+    const sidebarTbAnim = document.getElementById('sidebar-tb-anim');
+    const sidebarBtnApplyAll = document.getElementById('sidebar-btn-apply-all');
 
     let isDragging = false;
     let draggedTextBox = null;
@@ -684,6 +711,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function updateSidebarColorChips(color) {
+        if (!color) return;
+        const norm = color.toLowerCase();
+        document.querySelectorAll('.sidebar-color-chip').forEach(chip => {
+            if (chip.dataset.color && chip.dataset.color.toLowerCase() === norm) {
+                chip.classList.add('active-chip');
+            } else {
+                chip.classList.remove('active-chip');
+            }
+        });
+    }
+
+    // Centralized Text Color Synchronization
+    function applyTextColor(newColor) {
+        if (!newColor) return;
+        const currentSlide = getCurrentActiveSlide();
+        if (!currentSlide) return;
+        ensureSlideTextBoxes(currentSlide);
+
+        const selBox = currentSlide.textBoxes.find(tb => tb.id === videoRenderer.selectedTextBoxId) || currentSlide.textBoxes[0];
+        if (selBox) {
+            selBox.color = newColor;
+            if (quickTbColor) quickTbColor.value = newColor;
+            if (modalTextColor) modalTextColor.value = newColor;
+            if (sidebarTbColor) sidebarTbColor.value = newColor;
+
+            updateQuickColorChips(newColor);
+            updateModalColorChips(newColor);
+            updateSidebarColorChips(newColor);
+
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    }
+
     function updateQuickToolbar() {
         const currentSlide = getCurrentActiveSlide();
         if (!currentSlide || state.slides.length === 0) {
@@ -717,6 +778,65 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshIcons();
     }
 
+    function syncSidebarTextBoxUI() {
+        const currentSlide = getCurrentActiveSlide();
+        if (!currentSlide || state.slides.length === 0) {
+            if (sidebarTbSlideIndicator) sidebarTbSlideIndicator.textContent = 'Chưa có ảnh';
+            if (sidebarTextboxList) sidebarTextboxList.innerHTML = '<span class="text-slate-500 text-[11px]">Chưa có slide</span>';
+            if (sidebarTbText) { sidebarTbText.value = ''; sidebarTbText.disabled = true; }
+            return;
+        }
+
+        if (sidebarTbText) sidebarTbText.disabled = false;
+        ensureSlideTextBoxes(currentSlide);
+        const curIdx = state.slides.indexOf(currentSlide);
+        if (sidebarTbSlideIndicator) sidebarTbSlideIndicator.textContent = `Slide #${curIdx + 1} / ${state.slides.length}`;
+
+        // Render pills for all textboxes in this slide
+        if (sidebarTextboxList) {
+            sidebarTextboxList.innerHTML = '';
+            currentSlide.textBoxes.forEach((tb, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                const isSelected = (tb.id === videoRenderer.selectedTextBoxId) || (!videoRenderer.selectedTextBoxId && idx === 0);
+                btn.className = `px-2.5 py-1 rounded-lg border text-xs flex items-center gap-1.5 transition ${
+                    isSelected
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                }`;
+                const preview = tb.text ? (tb.text.length > 12 ? tb.text.slice(0, 12) + '…' : tb.text) : `Khung #${idx + 1}`;
+                btn.innerHTML = `<i data-lucide="type" class="w-3 h-3 text-amber-400"></i><span class="truncate max-w-[100px]">${preview}</span>`;
+                btn.addEventListener('click', () => {
+                    videoRenderer.selectedTextBoxId = tb.id;
+                    syncSidebarTextBoxUI();
+                    updateQuickToolbar();
+                    videoRenderer.renderFrame(videoRenderer.currentTime);
+                });
+                sidebarTextboxList.appendChild(btn);
+            });
+        }
+
+        // Active box
+        let selBox = currentSlide.textBoxes.find(tb => tb.id === videoRenderer.selectedTextBoxId);
+        if (!selBox && currentSlide.textBoxes.length > 0) {
+            selBox = currentSlide.textBoxes[0];
+            videoRenderer.selectedTextBoxId = selBox.id;
+        }
+
+        if (selBox) {
+            if (sidebarTbText) sidebarTbText.value = selBox.text || '';
+            if (sidebarTbFont) sidebarTbFont.value = selBox.fontFamily || 'Be Vietnam Pro';
+            if (sidebarTbSize) sidebarTbSize.value = selBox.fontSize || 46;
+            if (sidebarTbSizeVal) sidebarTbSizeVal.textContent = (selBox.fontSize || 46) + 'px';
+            if (sidebarTbColor) sidebarTbColor.value = selBox.color || '#ffffff';
+            updateSidebarColorChips(selBox.color || '#ffffff');
+            if (sidebarTbBgStyle) sidebarTbBgStyle.value = selBox.bgStyle || 'pill';
+            if (sidebarTbAnim) sidebarTbAnim.value = selBox.animation || 'fade';
+        }
+
+        refreshIcons();
+    }
+
     // Canvas Pointer Event Listeners
     canvas.addEventListener('pointerdown', (e) => {
         if (videoRenderer.isPlaying) {
@@ -738,6 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     videoRenderer.selectedTextBoxId = null;
                 }
                 updateQuickToolbar();
+                syncSidebarTextBoxUI();
                 updateSlidesUI();
                 videoRenderer.renderFrame(videoRenderer.currentTime);
                 return;
@@ -746,6 +867,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hit.hitButton === 'edit') {
                 videoRenderer.selectedTextBoxId = hit.textBox.id;
                 updateQuickToolbar();
+                syncSidebarTextBoxUI();
+                switchSidebarTab('tab-text');
                 quickTbText?.focus();
                 quickTbText?.select();
                 videoRenderer.renderFrame(videoRenderer.currentTime);
@@ -760,12 +883,15 @@ document.addEventListener('DOMContentLoaded', () => {
             dragStartBox = { x: hit.textBox.x ?? hit.textBox.customX ?? 50, y: hit.textBox.y ?? hit.textBox.customY ?? 85 };
             canvas.classList.add('cursor-grabbing');
             updateQuickToolbar();
+            syncSidebarTextBoxUI();
+            switchSidebarTab('tab-text');
             videoRenderer.renderFrame(videoRenderer.currentTime);
             canvas.setPointerCapture(e.pointerId);
         } else {
             // Clicked outside any text box
             videoRenderer.selectedTextBoxId = null;
             updateQuickToolbar();
+            syncSidebarTextBoxUI();
             videoRenderer.renderFrame(videoRenderer.currentTime);
         }
     });
@@ -821,6 +947,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hit) {
             videoRenderer.selectedTextBoxId = hit.textBox.id;
             updateQuickToolbar();
+            syncSidebarTextBoxUI();
+            switchSidebarTab('tab-text');
             quickTbText?.focus();
             quickTbText?.select();
             videoRenderer.renderFrame(videoRenderer.currentTime);
@@ -833,6 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
         if (selBox) {
             selBox.text = e.target.value;
+            if (sidebarTbText) sidebarTbText.value = e.target.value;
             videoRenderer.renderFrame(videoRenderer.currentTime);
             updateSlidesUI();
         }
@@ -843,6 +972,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
         if (selBox) {
             selBox.fontFamily = e.target.value;
+            if (sidebarTbFont) sidebarTbFont.value = e.target.value;
             videoRenderer.renderFrame(videoRenderer.currentTime);
         }
     });
@@ -853,6 +983,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selBox) {
             selBox.fontSize = Math.max(16, (selBox.fontSize || 46) - 4);
             if (quickTbSizeVal) quickTbSizeVal.textContent = selBox.fontSize;
+            if (sidebarTbSize) sidebarTbSize.value = selBox.fontSize;
+            if (sidebarTbSizeVal) sidebarTbSizeVal.textContent = selBox.fontSize + 'px';
             videoRenderer.renderFrame(videoRenderer.currentTime);
         }
     });
@@ -863,32 +995,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selBox) {
             selBox.fontSize = Math.min(120, (selBox.fontSize || 46) + 4);
             if (quickTbSizeVal) quickTbSizeVal.textContent = selBox.fontSize;
+            if (sidebarTbSize) sidebarTbSize.value = selBox.fontSize;
+            if (sidebarTbSizeVal) sidebarTbSizeVal.textContent = selBox.fontSize + 'px';
             videoRenderer.renderFrame(videoRenderer.currentTime);
         }
     });
 
-    const handleQuickColorChange = (newColor) => {
-        if (!newColor) return;
-        const currentSlide = getCurrentActiveSlide();
-        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
-        if (selBox) {
-            selBox.color = newColor;
-            if (quickTbColor) quickTbColor.value = newColor;
-            if (modalTextColor) modalTextColor.value = newColor;
-            updateQuickColorChips(newColor);
-            updateModalColorChips(newColor);
-            videoRenderer.renderFrame(videoRenderer.currentTime);
-        }
-    };
-
-    quickTbColor?.addEventListener('input', (e) => handleQuickColorChange(e.target.value));
-    quickTbColor?.addEventListener('change', (e) => handleQuickColorChange(e.target.value));
+    quickTbColor?.addEventListener('input', (e) => applyTextColor(e.target.value));
+    quickTbColor?.addEventListener('change', (e) => applyTextColor(e.target.value));
 
     document.querySelectorAll('.quick-color-chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
             e.stopPropagation();
             const color = chip.dataset.color;
-            if (color) handleQuickColorChange(color);
+            if (color) applyTextColor(color);
         });
     });
 
@@ -897,6 +1017,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
         if (selBox) {
             selBox.bgStyle = e.target.value;
+            if (sidebarTbBgStyle) sidebarTbBgStyle.value = e.target.value;
             videoRenderer.renderFrame(videoRenderer.currentTime);
             updateSlidesUI();
         }
@@ -907,6 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId);
         if (selBox) {
             selBox.animation = e.target.value;
+            if (sidebarTbAnim) sidebarTbAnim.value = e.target.value;
             videoRenderer.renderFrame(videoRenderer.currentTime);
             updateSlidesUI();
         }
@@ -928,6 +1050,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentSlide.textBoxes.push(newBox);
             videoRenderer.selectedTextBoxId = newBox.id;
             updateQuickToolbar();
+            syncSidebarTextBoxUI();
             updateSlidesUI();
             videoRenderer.renderFrame(videoRenderer.currentTime);
         }
@@ -939,6 +1062,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentSlide.textBoxes = currentSlide.textBoxes.filter(tb => tb.id !== videoRenderer.selectedTextBoxId);
             videoRenderer.selectedTextBoxId = null;
             updateQuickToolbar();
+            syncSidebarTextBoxUI();
             updateSlidesUI();
             videoRenderer.renderFrame(videoRenderer.currentTime);
         }
@@ -954,6 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
     quickTbClose?.addEventListener('click', () => {
         videoRenderer.selectedTextBoxId = null;
         updateQuickToolbar();
+        syncSidebarTextBoxUI();
         videoRenderer.renderFrame(videoRenderer.currentTime);
     });
 
@@ -965,12 +1090,149 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSlide.textBoxes.push(newBox);
         videoRenderer.selectedTextBoxId = newBox.id;
         updateQuickToolbar();
+        syncSidebarTextBoxUI();
+        switchSidebarTab('tab-text');
         updateSlidesUI();
         videoRenderer.renderFrame(videoRenderer.currentTime);
         setTimeout(() => {
             quickTbText?.focus();
             quickTbText?.select();
         }, 50);
+    });
+
+    // =========================================================================
+    // Sidebar Tab 4 (Chữ & Màu sắc) Event Listeners
+    // =========================================================================
+    sidebarTbText?.addEventListener('input', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId) || currentSlide?.textBoxes?.[0];
+        if (selBox) {
+            selBox.text = e.target.value;
+            if (quickTbText) quickTbText.value = e.target.value;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+            updateSlidesUI();
+        }
+    });
+
+    sidebarTbFont?.addEventListener('change', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId) || currentSlide?.textBoxes?.[0];
+        if (selBox) {
+            selBox.fontFamily = e.target.value;
+            if (quickTbFont) quickTbFont.value = e.target.value;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    sidebarTbSize?.addEventListener('input', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId) || currentSlide?.textBoxes?.[0];
+        if (selBox) {
+            const size = parseInt(e.target.value, 10);
+            selBox.fontSize = size;
+            if (sidebarTbSizeVal) sidebarTbSizeVal.textContent = size + 'px';
+            if (quickTbSizeVal) quickTbSizeVal.textContent = size;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+        }
+    });
+
+    sidebarTbColor?.addEventListener('input', (e) => applyTextColor(e.target.value));
+    sidebarTbColor?.addEventListener('change', (e) => applyTextColor(e.target.value));
+
+    document.querySelectorAll('.sidebar-color-chip').forEach(chip => {
+        chip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const color = chip.dataset.color;
+            if (color) applyTextColor(color);
+        });
+    });
+
+    sidebarTbBgStyle?.addEventListener('change', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId) || currentSlide?.textBoxes?.[0];
+        if (selBox) {
+            selBox.bgStyle = e.target.value;
+            if (quickTbBgStyle) quickTbBgStyle.value = e.target.value;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+            updateSlidesUI();
+        }
+    });
+
+    sidebarTbAnim?.addEventListener('change', (e) => {
+        const currentSlide = getCurrentActiveSlide();
+        const selBox = currentSlide?.textBoxes?.find(tb => tb.id === videoRenderer.selectedTextBoxId) || currentSlide?.textBoxes?.[0];
+        if (selBox) {
+            selBox.animation = e.target.value;
+            if (quickTbAnim) quickTbAnim.value = e.target.value;
+            videoRenderer.renderFrame(videoRenderer.currentTime);
+            updateSlidesUI();
+        }
+    });
+
+    sidebarBtnAddTextbox?.addEventListener('click', () => {
+        const currentSlide = getCurrentActiveSlide();
+        if (!currentSlide) {
+            alert('Vui lòng thêm ít nhất 1 ảnh trước khi thêm chữ!');
+            return;
+        }
+        const newBox = createDefaultTextBox('Nhập nội dung chữ...', 50, 50);
+        currentSlide.textBoxes = currentSlide.textBoxes || [];
+        currentSlide.textBoxes.push(newBox);
+        videoRenderer.selectedTextBoxId = newBox.id;
+        syncSidebarTextBoxUI();
+        updateQuickToolbar();
+        updateSlidesUI();
+        videoRenderer.renderFrame(videoRenderer.currentTime);
+        setTimeout(() => {
+            sidebarTbText?.focus();
+            sidebarTbText?.select();
+        }, 50);
+    });
+
+    sidebarBtnDeleteTb?.addEventListener('click', () => {
+        const currentSlide = getCurrentActiveSlide();
+        if (!currentSlide || !currentSlide.textBoxes || currentSlide.textBoxes.length === 0) return;
+        if (currentSlide.textBoxes.length <= 1) {
+            if (confirm('Khung chữ này là khung duy nhất trên slide. Bạn có muốn xóa trắng nội dung chữ?')) {
+                currentSlide.textBoxes[0].text = '';
+                syncSidebarTextBoxUI();
+                updateQuickToolbar();
+                updateSlidesUI();
+                videoRenderer.renderFrame(videoRenderer.currentTime);
+            }
+            return;
+        }
+        currentSlide.textBoxes = currentSlide.textBoxes.filter(tb => tb.id !== videoRenderer.selectedTextBoxId);
+        videoRenderer.selectedTextBoxId = currentSlide.textBoxes[0]?.id || null;
+        syncSidebarTextBoxUI();
+        updateQuickToolbar();
+        updateSlidesUI();
+        videoRenderer.renderFrame(videoRenderer.currentTime);
+    });
+
+    sidebarBtnApplyAll?.addEventListener('click', () => {
+        const currentSlide = getCurrentActiveSlide();
+        if (!currentSlide || !currentSlide.textBoxes || currentSlide.textBoxes.length === 0) {
+            alert('Chưa có khung chữ nào để áp dụng!');
+            return;
+        }
+        const curTb = currentSlide.textBoxes.find(t => t.id === videoRenderer.selectedTextBoxId) || currentSlide.textBoxes[0];
+        if (!curTb) return;
+
+        state.slides.forEach(slide => {
+            ensureSlideTextBoxes(slide);
+            const targetTb = slide.textBoxes[0] || createDefaultTextBox();
+            targetTb.fontFamily = curTb.fontFamily;
+            targetTb.fontSize = curTb.fontSize;
+            targetTb.color = curTb.color;
+            targetTb.bgStyle = curTb.bgStyle;
+            targetTb.bgColor = curTb.bgColor;
+            targetTb.animation = curTb.animation;
+        });
+
+        updateSlidesUI();
+        videoRenderer.renderFrame(videoRenderer.currentTime);
+        alert(`Đã áp dụng kiểu chữ và màu sắc cho tất cả ${state.slides.length} slide!`);
     });
 
     // =========================================================================
@@ -1492,6 +1754,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 videoRenderer.selectedTextBoxId = newBox.id;
                 updateSlidesUI();
                 updateQuickToolbar();
+                syncSidebarTextBoxUI();
+                switchSidebarTab('tab-text');
                 videoRenderer.renderFrame(videoRenderer.currentTime);
             });
 
@@ -1507,6 +1771,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const tbId = chip.dataset.tbId;
                     videoRenderer.selectedTextBoxId = tbId;
                     updateQuickToolbar();
+                    syncSidebarTextBoxUI();
+                    switchSidebarTab('tab-text');
                     videoRenderer.renderFrame(videoRenderer.currentTime);
                 });
             });
@@ -1540,6 +1806,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 videoRenderer.selectedTextBoxId = null;
                 updateSlidesUI();
                 updateQuickToolbar();
+                syncSidebarTextBoxUI();
                 videoRenderer.setSlides(state.slides);
             });
 
@@ -1574,6 +1841,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 videoRenderer.seek(startSec);
                 updateQuickToolbar();
+                syncSidebarTextBoxUI();
             });
 
             slidesContainer.appendChild(card);
@@ -1604,15 +1872,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (idx === currentIdx - 1) c.classList.add('active-playing');
             else c.classList.remove('active-playing');
         });
+
+        syncSidebarTextBoxUI();
     };
 
     videoRenderer.onPlaybackPaused = () => {
         updateQuickToolbar();
+        syncSidebarTextBoxUI();
     };
 
     videoRenderer.onPlaybackEnded = () => {
         playPauseIcon.setAttribute('data-lucide', 'play');
         updateQuickToolbar();
+        syncSidebarTextBoxUI();
         refreshIcons();
     };
 
@@ -1622,6 +1894,7 @@ document.addEventListener('DOMContentLoaded', () => {
             videoRenderer.pause();
             playPauseIcon.setAttribute('data-lucide', 'play');
             updateQuickToolbar();
+            syncSidebarTextBoxUI();
         } else {
             canvasQuickToolbar?.classList.add('hidden');
             videoRenderer.play();
@@ -1633,6 +1906,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRestart.addEventListener('click', () => {
         videoRenderer.seek(0);
         updateQuickToolbar();
+        syncSidebarTextBoxUI();
     });
 
     playerScrubber.addEventListener('input', (e) => {
@@ -1640,6 +1914,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetTime = (percent / 100) * videoRenderer.totalDuration;
         videoRenderer.seek(targetTime);
         updateQuickToolbar();
+        syncSidebarTextBoxUI();
     });
 
     btnToggleMute.addEventListener('click', () => {
@@ -1786,6 +2061,7 @@ document.addEventListener('DOMContentLoaded', () => {
             videoRenderer.setSlides(state.slides);
             videoRenderer.seek(0);
             updateQuickToolbar();
+            syncSidebarTextBoxUI();
 
         } catch (err) {
             alert('Không thể tải dự án mẫu: ' + err.message);
@@ -1804,6 +2080,8 @@ document.addEventListener('DOMContentLoaded', () => {
             updateSlidesUI();
             videoRenderer.setSlides([]);
             videoRenderer.seek(0);
+            updateQuickToolbar();
+            syncSidebarTextBoxUI();
         }
     });
 
@@ -1895,4 +2173,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnPlayPause.click();
         }
     });
+
+    // Initial Sidebar State Sync
+    syncSidebarTextBoxUI();
 });
