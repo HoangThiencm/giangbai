@@ -60,6 +60,23 @@
                 </div>
             </div>
 
+            <div id="registerDetails" class="hidden mb-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1" for="fullName">Họ và tên</label>
+                    <input type="text" id="fullName" maxlength="120"
+                        class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="Nguyễn Văn A">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1" for="registerRole">Loại tài khoản</label>
+                    <select id="registerRole" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="teacher">Giáo viên</option>
+                        <option value="student">Học sinh</option>
+                    </select>
+                </div>
+                <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">Sau khi đăng ký, tài khoản sẽ chờ Admin duyệt và cấp các chức năng phù hợp.</p>
+            </div>
+
             <button type="submit" id="submitBtn"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded shadow transition flex justify-center items-center">
                 <span>Đăng Nhập</span>
@@ -239,8 +256,7 @@
         redirectIfSessionIsValid();
     </script>
     <script>
-        // Hosting mode: student accounts are created by the teacher/admin only.
-        // This overrides the old public register flow that used the external HF API.
+        // Hosting mode: public registrations remain disabled until an admin grants access.
         document.addEventListener('DOMContentLoaded', () => {
             const tabRegister = document.getElementById('tabRegister');
             const tabLogin = document.getElementById('tabLogin');
@@ -248,22 +264,41 @@
             const subtitle = document.querySelector('.text-slate-500.text-sm');
             const emailLabel = document.querySelector('label[for="email"], label.block');
             const emailInput = document.getElementById('email');
+            const registerDetails = document.getElementById('registerDetails');
+            const fullNameInput = document.getElementById('fullName');
 
-            if (tabRegister) tabRegister.classList.add('hidden');
             if (tabLogin) tabLogin.className = "flex-1 py-2 text-blue-600 font-bold border-b-2 border-blue-600";
             if (title) title.textContent = "Đăng nhập học tập";
-            if (subtitle) subtitle.textContent = "Tài khoản do giáo viên cấp";
+            if (subtitle) subtitle.textContent = "Đăng nhập hoặc đăng ký tài khoản mới";
             if (emailLabel) emailLabel.textContent = "Tài khoản";
             if (emailInput) {
                 emailInput.type = "text";
-                emailInput.placeholder = "Ví dụ: HS001";
+                emailInput.placeholder = "Ví dụ: nguyenvana hoặc email";
                 emailInput.autocomplete = "username";
             }
-        });
 
-        window.switchTab = function () {
-            isLoginMode = true;
-        };
+            window.switchTab = function (mode) {
+                isLoginMode = mode !== 'register';
+                const registering = !isLoginMode;
+                if (tabLogin) tabLogin.className = registering
+                    ? "flex-1 py-2 text-slate-500 font-medium hover:text-blue-500"
+                    : "flex-1 py-2 text-blue-600 font-bold border-b-2 border-blue-600";
+                if (tabRegister) tabRegister.className = registering
+                    ? "flex-1 py-2 text-blue-600 font-bold border-b-2 border-blue-600"
+                    : "flex-1 py-2 text-slate-500 font-medium hover:text-blue-500";
+                if (registerDetails) registerDetails.classList.toggle('hidden', !registering);
+                if (fullNameInput) fullNameInput.required = registering;
+                if (title) title.textContent = registering ? "Đăng ký tài khoản" : "Đăng nhập học tập";
+                if (subtitle) subtitle.textContent = registering
+                    ? "Admin sẽ duyệt và cấp quyền sử dụng"
+                    : "Đăng nhập hoặc đăng ký tài khoản mới";
+                const btn = document.getElementById('submitBtn');
+                if (btn) btn.innerHTML = registering ? '<span>Gửi yêu cầu đăng ký</span>' : '<span>Đăng nhập</span>';
+                document.getElementById('message')?.classList.add('hidden');
+            };
+
+            if (registerDetails) registerDetails.classList.add('hidden');
+        });
 
         window.handleAuth = async function (e) {
             e.preventDefault();
@@ -277,14 +312,26 @@
             msg.classList.add('hidden');
 
             try {
-                const response = await fetch('api/login.php', {
+                const response = await fetch(isLoginMode ? 'api/login.php' : 'api/register.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify(isLoginMode ? { username, password } : {
+                        username,
+                        password,
+                        full_name: document.getElementById('fullName').value.trim(),
+                        role: document.getElementById('registerRole').value
+                    })
                 });
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Không đăng nhập được.');
+
+                if (!isLoginMode) {
+                    window.switchTab('login');
+                    msg.textContent = data.message || 'Đã gửi yêu cầu đăng ký. Vui lòng chờ Admin duyệt.';
+                    msg.className = "text-center text-sm mt-4 text-yellow-700 bg-yellow-50 p-2 rounded block border border-yellow-200";
+                    return;
+                }
 
                 localStorage.setItem('authToken', 'php-session');
                 localStorage.setItem('userEmail', data.user.username);
@@ -304,7 +351,7 @@
                 msg.className = "text-center text-sm mt-4 text-red-500 block";
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<span>Đăng nhập</span>';
+                btn.innerHTML = isLoginMode ? '<span>Đăng nhập</span>' : '<span>Gửi yêu cầu đăng ký</span>';
             }
         };
     </script>

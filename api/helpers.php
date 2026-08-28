@@ -562,6 +562,18 @@ function ensure_users_expires_option_column(PDO $pdo): void
     }
 }
 
+function ensure_users_registration_status_column(PDO $pdo): void
+{
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'registration_status'");
+        if (!$stmt->fetch()) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN registration_status VARCHAR(20) NOT NULL DEFAULT 'approved' AFTER is_active");
+        }
+    } catch (Throwable $e) {
+        // Column migration is best-effort for older databases.
+    }
+}
+
 function parse_stored_api_keys($raw): array
 {
     $keys = [];
@@ -669,6 +681,7 @@ function public_user(array $user): array
         'gemini_keys' => parse_stored_api_keys($user['gemini_keys'] ?? null),
         'mistral_keys' => parse_stored_api_keys($user['mistral_keys'] ?? null),
         'is_active' => (bool)$user['is_active'],
+        'registration_status' => $user['registration_status'] ?? ((bool)$user['is_active'] ? 'approved' : 'blocked'),
         'expires_at' => $user['expires_at'],
         'expires_option' => normalize_duration_option($user['expires_option'] ?? 'forever'),
         'last_login_at' => $user['last_login_at'] ?? null,

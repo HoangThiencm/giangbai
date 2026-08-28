@@ -15,6 +15,7 @@ if ($username === '' || $password === '') {
 }
 
 ensure_users_ai_key_columns($pdo);
+ensure_users_registration_status_column($pdo);
 
 $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ? LIMIT 1');
 $stmt->execute([$username]);
@@ -22,6 +23,10 @@ $user = $stmt->fetch();
 
 if (!$user || !password_verify($password, $user['password_hash'])) {
     respond(['error' => 'Sai tài khoản hoặc mật khẩu.'], 401);
+}
+
+if (($user['registration_status'] ?? '') === 'pending') {
+    respond(['error' => 'Tài khoản đang chờ Admin duyệt và cấp quyền sử dụng.'], 403);
 }
 
 if (!(bool)$user['is_active']) {

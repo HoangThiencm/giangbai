@@ -2,6 +2,7 @@
 require_once __DIR__ . '/helpers.php';
 require_admin_key();
 ensure_users_expires_option_column($pdo);
+ensure_users_registration_status_column($pdo);
 
 $method = $_SERVER['REQUEST_METHOD'];
 $data = json_body();
@@ -110,9 +111,10 @@ if ($action === 'update') {
     );
 
     $stmt = $pdo->prepare('
-        UPDATE users
-        SET full_name = ?, class_name = ?, role = ?, is_active = ?, allowed_pages_json = ?, expires_at = ?, expires_option = ?
-        WHERE id = ?
+            UPDATE users
+            SET full_name = ?, class_name = ?, role = ?, is_active = ?, allowed_pages_json = ?, expires_at = ?, expires_option = ?,
+                registration_status = CASE WHEN ? = 1 THEN 'approved' WHEN registration_status = 'pending' THEN 'pending' ELSE 'blocked' END
+            WHERE id = ?
     ');
     $stmt->execute([
         $fullName,
@@ -122,6 +124,7 @@ if ($action === 'update') {
         json_encode($allowedPages, JSON_UNESCAPED_UNICODE),
         $expiry['expires_at'],
         $expiry['expires_option'],
+        $isActive,
         $id,
     ]);
 
