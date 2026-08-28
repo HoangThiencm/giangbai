@@ -303,6 +303,7 @@ CẤM trích nguyên văn toàn bộ SGK. Tóm tắt ngắn gọn, mạch lạc 
 
   // TAB 2: MỤC TIÊU BÀI HỌC (I. MỤC TIÊU)
   GENERATE_OBJECTIVES: `Hãy xây dựng phần **I. MỤC TIÊU** cho Kế hoạch bài dạy môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512/BGDĐT-GDTrH, bám sát CT GDPT 2018.
+CHỈ xuất phần I. MỤC TIÊU. CẤM xuất phần II. Thiết bị, phần III. Tiến trình, hoạt động A-E hoặc bảng “Hoạt động của GV và HS | Nội dung”.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Thời lượng dự kiến: {duration}

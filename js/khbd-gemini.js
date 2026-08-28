@@ -51,13 +51,10 @@ class GeminiAPIManager {
   loadKeysFromLocalStorage() {
     try {
       const storageKey = this.getStorageKey();
-      const saved = localStorage.getItem(storageKey)
-        || localStorage.getItem('global_gemini_keys')
-        || localStorage.getItem('gemini_api_keys')
-        || localStorage.getItem('khbd_user_gemini_keys_default');
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           this.apiKeys = GeminiAPIManager.cleanKeyList(parsed);
           return;
         }
@@ -75,8 +72,6 @@ class GeminiAPIManager {
       const storageKey = this.getStorageKey();
       const json = JSON.stringify(this.apiKeys || []);
       localStorage.setItem(storageKey, json);
-      localStorage.setItem('global_gemini_keys', json);
-      localStorage.setItem('khbd_user_gemini_keys_default', json);
     } catch (e) {
       console.error("Lỗi lưu keys vào localStorage:", e);
     }
@@ -84,13 +79,10 @@ class GeminiAPIManager {
 
   loadMistralKeysFromLocalStorage() {
     try {
-      const saved = localStorage.getItem(this.getMistralStorageKey())
-        || localStorage.getItem('global_mistral_keys')
-        || localStorage.getItem('mistral_api_keys')
-        || localStorage.getItem('khbd_user_mistral_keys_default');
+      const saved = localStorage.getItem(this.getMistralStorageKey());
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           this.mistralKeys = GeminiAPIManager.cleanKeyList(parsed);
           return;
         }
@@ -106,8 +98,6 @@ class GeminiAPIManager {
     try {
       const json = JSON.stringify(this.mistralKeys || []);
       localStorage.setItem(this.getMistralStorageKey(), json);
-      localStorage.setItem('global_mistral_keys', json);
-      localStorage.setItem('khbd_user_mistral_keys_default', json);
     } catch (e) {
       console.error("Lỗi lưu Mistral keys vào localStorage:", e);
     }
@@ -138,16 +128,7 @@ class GeminiAPIManager {
       if (res && res.ok) {
         const data = await res.json().catch(() => ({}));
         if (data.ok) {
-          const serverGemini = Array.isArray(data.keys) ? data.keys : [];
-          const serverMistral = Array.isArray(data.mistral_keys) ? data.mistral_keys : [];
-          if (serverGemini.length > 0) {
-            this.apiKeys = GeminiAPIManager.cleanKeyList(serverGemini);
-            this.saveKeysToLocalStorage();
-          }
-          if (serverMistral.length > 0) {
-            this.mistralKeys = GeminiAPIManager.cleanKeyList(serverMistral);
-            this.saveMistralKeysToLocalStorage();
-          }
+          this.applyServerKeyPayload(data);
         }
       }
     } catch {

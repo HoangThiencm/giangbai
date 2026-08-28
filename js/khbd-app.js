@@ -243,6 +243,201 @@ function localityProvinceSelectHtml() {
     VN_PROVINCES_34.map(name => {
       const sel = name === current ? " selected" : "";
       return `<option value="${escapeHtml(name)}"${sel}>${escapeHtml(name)}</option>`;
+    methods: [],
+    techniques: [],
+    specialRequirements: ""
+  },
+  
+  // Danh sách ảnh SGK (Mảng phẳng trực quan)
+  images: [],
+  pdfAttachments: [],
+
+  // Danh sách file/ảnh PPCT (Tách biệt hoàn toàn với SGK)
+  ppctImages: [],
+  ppctPdfAttachments: [],
+
+  // Nội dung đã biên soạn
+  content: {
+    ppctAnalysis: "",
+    vision: "",
+    objectives: "",
+    materials: "",
+    activities: {
+      A: "",
+      B: "",
+      C: "",
+      D: "",
+      E: "",
+      F: "",
+      G: ""
+    },
+    illustrations: []
+  },
+
+  activeTab: "tabVision",
+  activeActSubtab: "A",
+  isGenerating: false,
+  cancelRequested: false,
+  generationController: null
+};
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+// Biến lưu trữ tài liệu PDF tạm thời
+let currentPdfFile = null;
+let currentPdfDoc = null;
+
+// CÁC TÊN TIÊU ĐỀ HOẠT ĐỘNG
+const ACTIVITY_TITLES = {
+  A: { short: "A. Mở đầu", full: "A. HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)" },
+  B: { short: "B. Hình thành KT", full: "B. HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI" },
+  C: { short: "C. Luyện tập", full: "C. HOẠT ĐỘNG LUYỆN TẬP" },
+  D: { short: "D. Vận dụng", full: "D. HOẠT ĐỘNG VẬN DỤNG" },
+  E: { short: "E. Hướng dẫn về nhà", full: "E. HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ" }
+};
+
+const SUBJECT_CONTEXT_INTEGRATIONS = [
+  {
+    id: "gdqpan",
+    label: "Tích hợp GD Quốc phòng & An ninh",
+    legal: "TT 08/2024/TT-BGDĐT",
+    subjects: ["nguvan", "lichsudialy", "lichsu", "dialy", "gdcd", "gdktpl", "amnhac", "mithuat", "hdtn-hn", "hdtn"],
+    marker: "[GDQPAN]",
+    promptHint: "lòng yêu nước, chủ quyền biển đảo Hoàng Sa–Trường Sa, an ninh quốc gia; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "hcmThought",
+    label: "Tích hợp Tư tưởng, đạo đức, phong cách Hồ Chí Minh",
+    legal: "Chỉ thị 05-CT/TW, KL 01-KL/TW",
+    subjects: ["nguvan", "gdcd", "gdktpl", "lichsudialy", "lichsu", "dialy", "hdtn-hn", "hdtn"],
+    marker: "[HCM]",
+    promptHint: "tư tưởng, đạo đức, phong cách Hồ Chí Minh; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên, không hô khẩu hiệu."
+  },
+  {
+    id: "humanRights",
+    label: "Tích hợp Giáo dục Quyền con người",
+    legal: "QĐ 1309/QĐ-TTg, QĐ 1404/QĐ-BGDĐT",
+    subjects: ["nguvan", "lichsudialy", "lichsu", "dialy", "gdcd", "gdktpl"],
+    marker: "[QCN]",
+    promptHint: "nhân phẩm, bình đẳng, chống bạo lực học đường; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "clil",
+    label: "CLIL (Tích hợp Nội dung & Ngôn ngữ)",
+    legal: "Dạy học tích hợp Nội dung & Ngôn ngữ CLIL",
+    subjects: ["tienganh"],
+    marker: "[CLIL]",
+    promptHint: "học nội dung chuyên môn gắn ngôn ngữ tiếng Anh (CLIL); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "financialEd",
+    label: "Tích hợp Giáo dục Tài chính",
+    legal: "QĐ 149/QĐ-TTg, CT GDPT 2018",
+    subjects: ["toan", "gdcd", "gdktpl", "hdtn-hn", "hdtn"],
+    marker: "[GDTC]",
+    promptHint: "tình huống tài chính thực tế (tiết kiệm, lập ngân sách cá nhân, chi tiêu thông minh, lãi suất); lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "stemModeling",
+    label: "Giáo dục STEM & Mô hình hóa thực tiễn",
+    legal: "CV 3089/BGDĐT-GDTrH, CT GDPT 2018",
+    subjects: ["toan", "khtn", "vatly", "hoahoc", "sinhhoc", "congnghe", "tinhoc"],
+    marker: "[STEM]",
+    promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "virtualLab",
+    label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
+    legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
+    subjects: ["khtn", "vatly", "hoahoc", "sinhhoc", "toan", "congnghe", "tinhoc"],
+    marker: "[TN-AO]",
+    promptHint: "thao tác tương tác với mô phỏng trực quan PhET / GeoGebra / phần mềm chuyên ngành; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "greenEnergyEnv",
+    label: "Môi trường & Năng lượng xanh",
+    legal: "Giáo dục bảo vệ môi trường & PTBV (CT GDPT 2018)",
+    subjects: ["khtn", "vatly", "hoahoc", "sinhhoc", "congnghe", "lichsudialy", "dialy", "nguvan"],
+    marker: "[MT-NLX]",
+    promptHint: "bảo vệ môi trường, tiết kiệm năng lượng, năng lượng tái tạo, giảm rác thải nhựa; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "localEnv",
+    label: "GD địa phương & môi trường",
+    legal: "Nội dung giáo dục địa phương (CT GDPT 2018, chương trình Sở GDĐT từng tỉnh/thành)",
+    subjects: ["nguvan"],
+    marker: "[GDĐP-MT]",
+    promptHint: "gắn ngữ liệu và bảo vệ môi trường đúng tỉnh/thành đã chọn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "climateSdgs",
+    label: "Biến đổi khí hậu & phát triển bền vững (SDGs)",
+    legal: "Biến đổi khí hậu & PTBV/SDGs trong Lịch sử và Địa lí (CT GDPT 2018)",
+    subjects: ["lichsudialy", "dialy"],
+    marker: "[BĐKH-SDG]",
+    promptHint: "biến đổi khí hậu, phát triển bền vững; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "localHeritage",
+    label: "Di sản lịch sử địa phương",
+    legal: "Di sản văn hóa/lịch sử địa phương (CT GDPT 2018, theo tỉnh/thành)",
+    subjects: ["lichsudialy", "lichsu"],
+    marker: "[Di sản ĐP]",
+    promptHint: "di sản lịch sử, văn hóa đúng tỉnh/thành đã chọn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "speechAiRoleplay",
+    label: "Luyện phát âm AI / đóng vai giao tiếp",
+    legal: "Bối cảnh luyện nói tiếng Anh (không phải mã NLS/AI QĐ 2422)",
+    subjects: ["tienganh"],
+    marker: "[Speech AI]",
+    promptHint: "luyện phát âm hoặc đóng vai giao tiếp có hỗ trợ AI như bối cảnh; KHÔNG phải mã NLS/AI QĐ 2422; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "vnIdentity",
+    label: "Bản sắc văn hóa Việt Nam ra quốc tế",
+    legal: "Bản sắc văn hóa Việt Nam trong dạy tiếng Anh",
+    subjects: ["tienganh"],
+    marker: "[Bản sắc VN]",
+    promptHint: "giới thiệu bản sắc văn hóa Việt Nam bằng tiếng Anh; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  },
+  {
+    id: "globalCitizen",
+    label: "Công dân toàn cầu & kỹ năng thế kỷ 21",
+    legal: "Công dân toàn cầu & kỹ năng thế kỷ 21",
+    subjects: ["tienganh"],
+    marker: "[CDTG]",
+    promptHint: "công dân toàn cầu, kỹ năng thế kỷ 21; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
+  }
+];
+
+/** 34 tỉnh/thành sau sắp xếp ĐVHC (Nghị quyết 202/2025/QH15, hiệu lực 01/7/2025). */
+const VN_PROVINCES_34 = [
+  "An Giang", "Bắc Ninh", "Cao Bằng", "Cà Mau", "Điện Biên", "Đắk Lắk", "Đồng Nai", "Đồng Tháp",
+  "Gia Lai", "Hà Tĩnh", "Hưng Yên", "Khánh Hòa", "Lai Châu", "Lào Cai", "Lâm Đồng", "Lạng Sơn",
+  "Nghệ An", "Ninh Bình", "Phú Thọ", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị", "Sơn La",
+  "Thanh Hóa", "Thái Nguyên", "Tây Ninh", "Tuyên Quang", "Vĩnh Long",
+  "Thành phố Cần Thơ", "Thành phố Huế", "Thành phố Hải Phòng", "Thành phố Hà Nội",
+  "Thành phố Đà Nẵng", "Thành phố Hồ Chí Minh"
+];
+
+function localityProvinceOf(context) {
+  const raw = String((context || (typeof appState !== "undefined" && appState.teachingContext) || {}).localityProvince || "").trim();
+  return raw.slice(0, 80);
+}
+
+function needsLocalityProvinceSelect(subjectId) {
+  return contextIntegrationsForSubject(subjectId).some(item => item.id === "localEnv" || item.id === "localHeritage");
+}
+
+function localityProvinceSelectHtml() {
+  const current = localityProvinceOf();
+  const options = ['<option value="">— Chọn tỉnh/thành phố —</option>'].concat(
+    VN_PROVINCES_34.map(name => {
+      const sel = name === current ? " selected" : "";
+      return `<option value="${escapeHtml(name)}"${sel}>${escapeHtml(name)}</option>`;
     })
   );
   return `<div class="locality-province-row" style="margin:.55rem 0 0;">
@@ -5045,7 +5240,7 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
 
 async function applyObjectivesOutput(result, signal, options = {}) {
   const repairWithGemini = options.repairWithGemini !== false;
-  let finalResult = stripDisabledObjectivesStandardSections(result);
+  let finalResult = keepObjectivesOnly(stripDisabledObjectivesStandardSections(result));
   let missing = assertObjectivesStandards(finalResult);
   if (missing.length && repairWithGemini) {
     try {
@@ -5054,7 +5249,7 @@ async function applyObjectivesOutput(result, signal, options = {}) {
         : `${row.item.officialCode}: ${row.item.officialLabel}`).join("; ");
       const repair = await geminiAPI.generateContent(buildPedagogicalPrompt(`Sửa đúng một lần phần I. Mục tiêu sau. Giữ nguyên Markdown và các dòng đã có. Chỉ bổ sung đúng các dòng còn thiếu vào ### c) Năng lực số / ### d) Năng lực AI. CẤM xóa dòng đã có. CẤM HTML/span/style/màu. Các mục còn thiếu: ${missingDesc}\n\n${finalResult}`), [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
       finalResult = await guardGeminiLessonOutput(repair, signal);
-      finalResult = stripDisabledObjectivesStandardSections(finalResult);
+      finalResult = keepObjectivesOnly(stripDisabledObjectivesStandardSections(finalResult));
       missing = assertObjectivesStandards(finalResult);
     } catch (error) {
       console.warn("Repair mục tiêu NLS/AI thất bại, sẽ chèn programmatic:", error);
@@ -5064,10 +5259,17 @@ async function applyObjectivesOutput(result, signal, options = {}) {
     finalResult = insertObjectivesMissingStandards(finalResult, missing);
   }
   finalResult = ensureObjectivesDigitalCodes(finalResult);
-  finalResult = stripDisabledObjectivesStandardSections(finalResult);
+  finalResult = keepObjectivesOnly(stripDisabledObjectivesStandardSections(finalResult));
   appState.content.objectives = finalResult;
   saveStateToLocalStorage();
   return finalResult;
+}
+
+function keepObjectivesOnly(markdown) {
+  const text = String(markdown || "");
+  const nextSection = /^#{1,3}\s*(?:II\.?\s*(?:Thiết bị|Học liệu)|III\.?\s*(?:Tiến trình|Hoạt động)|Hoạt động\s+[A-E]\b)/im;
+  const match = nextSection.exec(text);
+  return match ? text.slice(0, match.index).trim() : text;
 }
 
 async function handleGenerateObjectives() {

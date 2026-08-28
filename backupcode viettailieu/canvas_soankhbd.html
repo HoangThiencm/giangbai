@@ -81,8 +81,10 @@
       border-radius: 10px;
       background: #fff7ed;
     }
-    /* Không để tab SGK luôn display:flex; chỉ tab đang active mới được hiển thị. */
-    #tabVision.active { display: flex; flex-direction: column; }
+    /* Canvas phải tự kiểm soát trạng thái tab, kể cả khi script host chưa khởi tạo. */
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    #tabVision.tab-pane.active { display: flex; flex-direction: column; }
   </style>
 </head>
 <body>
@@ -1599,6 +1601,28 @@
       }
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(boot, 700); });
       else setTimeout(boot, 700);
+    })();
+  </script>
+  <script>
+    (function keepCanvasTabsUsable() {
+      function activate(tabId) {
+        if (!tabId) return;
+        document.querySelectorAll(".nav-tab-btn").forEach(function (button) {
+          button.classList.toggle("active", button.getAttribute("data-tab") === tabId);
+        });
+        document.querySelectorAll(".tab-pane").forEach(function (pane) {
+          pane.classList.toggle("active", pane.id === tabId);
+        });
+      }
+      function bind() {
+        document.addEventListener("click", function (event) {
+          const button = event.target && event.target.closest && event.target.closest(".nav-tab-btn[data-tab]");
+          if (!button) return;
+          activate(button.getAttribute("data-tab"));
+        }, true);
+      }
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
+      else bind();
     })();
   </script>
 </body>
