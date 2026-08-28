@@ -5191,7 +5191,10 @@ async function applyObjectivesOutput(result, signal, options = {}) {
 
 function keepObjectivesOnly(markdown) {
   const text = String(markdown || "");
-  const nextSection = /^#{1,3}\s*(?:II\.?\s*(?:Thiết bị|Học liệu)|III\.?\s*(?:Tiến trình|Hoạt động)|Hoạt động\s+[A-E]\b)/im;
+  // AI đôi khi trả thêm II/III nhưng không dùng ký hiệu # Markdown. Cắt tại
+  // mọi tiêu đề phần kế tiếp để nút I. Mục tiêu tuyệt đối không ghi đè sang
+  // các phần khác của giáo án.
+  const nextSection = /^(?:#{1,6}\s*)?(?:II\.?\s*(?:Thiết bị|Học liệu)|III\.?\s*(?:Tiến trình|Hoạt động)|[A-E]\.\s*Hoạt động|Hoạt động\s*[1-5]\b|Mở đầu\b|Hình thành kiến thức\b|Luyện tập\b|Vận dụng\b|Hướng dẫn về nhà\b)/im;
   const match = nextSection.exec(text);
   return match ? text.slice(0, match.index).trim() : text;
 }

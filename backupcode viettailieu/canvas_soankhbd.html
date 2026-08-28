@@ -8,7 +8,7 @@
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📐</text></svg>">
 
-  <!-- Canvas: không đăng nhập, không API key. Nội dung logic lấy từ host. -->
+  <!-- Canvas dùng phiên đăng nhập và Gemini key của chính tài khoản trên host. -->
   <script>
     (function () {
       window.__KHBD_CANVAS__ = {
@@ -101,7 +101,7 @@
         <div class="brand-icon">✨</div>
         <div>
           <h1>Soạn Kế hoạch Bài dạy AI — Gemini Canvas</h1>
-          <p>Chạy trong Canvas với <b>gemini-3-flash-preview</b> của hệ thống • Không cần API key Gemini/Mistral • Logic lấy từ host</p>
+          <p>Chạy trong Canvas với <b>gemini-3-flash-preview</b> • Dùng Gemini key của tài khoản đang đăng nhập • Logic lấy từ host</p>
         </div>
       </div>
       <div class="header-actions">
@@ -114,7 +114,7 @@
         <button id="btnCancelGeneration" class="btn btn-outline-dark" disabled title="Dừng tác vụ AI đang chạy">
           <i data-lucide="circle-stop"></i> Hủy tạo
         </button>
-        <button id="btnManageKeys" class="btn btn-outline" title="Gemini Canvas tự cấp quyền — không cần API key" style="pointer-events:none;opacity:.85">
+        <button id="btnManageKeys" class="btn btn-outline" title="Canvas dùng Gemini key đã lưu của tài khoản đăng nhập" style="pointer-events:none;opacity:.85">
           <i data-lucide="sparkles"></i> Canvas · <span id="keyCountBadge">gemini-3-flash-preview</span>
         </button>
         <button id="btnClearAll" class="btn btn-danger" title="Xóa toàn bộ nội dung đã soạn">
@@ -758,19 +758,30 @@
         this.apiKeys = [SESSION];
         this.mistralKeys = [SESSION];
       };
-      geminiAPI.fetchViaKhbdProxy = async function (model, key, payload, timeoutSec, signal) {
-        return this.fetchGeminiGenerate(MODEL, key, payload, signal, Math.max(15000, Number(timeoutSec || 75) * 1000), { _testFastRetry: true });
-      };
       geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
         const useModel = /image/i.test(String(model || "")) ? model : MODEL;
-        const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(useModel) + ":generateContent";
-        return this.fetchWithTimeout(url, {
+        const response = await this.fetchWithTimeout(HOST + "/api/khbd_gemini.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ model: useModel, key: SESSION, payload: payload, timeout: Math.max(10, Math.round((timeoutMs || 75000) / 1000)) }),
           signal
         }, timeoutMs || 75000);
+        const envelope = await response.json().catch(function () { return {}; });
+        if (!response.ok || !envelope.ok || !envelope.body) {
+          const message = envelope.error || (response.status === 401
+            ? "Canvas cần đăng nhập trên hoangthiencm.id.vn trước khi dùng Gemini."
+            : "Không thể gọi Gemini qua host.");
+          return new Response(JSON.stringify({ error: { message: message } }), {
+            status: response.status || 502,
+            statusText: response.statusText || "Canvas host error",
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+        return new Response(JSON.stringify(envelope.body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
       };
 
       const OCR_PROMPT = "Đóng vai công cụ OCR tiếng Việt cho SGK. Trích nguyên văn chữ, công thức (LaTeX $...$), bảng. Không thêm lời dẫn, không tóm tắt. Chữ mờ ghi [...].";
@@ -800,7 +811,7 @@
       cfg.connected = true;
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-ocrfallback1"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260828-canvas-fix401-obj1"></script>
   <script>
     (function notifyHostConnection() {
       const cfg = window.__KHBD_CANVAS__ || {};
@@ -834,10 +845,10 @@
         }
         if (hostOk) {
           cfg.connected = true;
-          setBanner("Đã kết nối host " + HOST.replace(/^https:\/\//, "") + " — dùng " + MODEL + " của Gemini Canvas, không cần API key.", "ok");
+          setBanner("Đã kết nối host " + HOST.replace(/^https:\/\//, "") + " — dùng Gemini key của tài khoản đang đăng nhập.", "ok");
           if (footer) footer.textContent = "Đã kết nối host. Sẵn sàng.";
           if (typeof showToast === "function") {
-            showToast("Đã kết nối host " + HOST + ". Model: " + MODEL + " (Canvas, không cần key).", "success", 6000);
+            showToast("Đã kết nối host " + HOST + ". Model: " + MODEL + ".", "success", 6000);
           }
           return;
         }
