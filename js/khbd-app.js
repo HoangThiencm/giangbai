@@ -1947,9 +1947,26 @@ function setupEventListeners() {
     });
   }
 
-  // 7. Các nút Tạo nội dung đơn lẻ
+  // 7. Các nút Tạo nội dung đơn lẻ & Đọc học liệu
   const btnAnalyzeVision = document.getElementById("btnAnalyzeVision");
-  if (btnAnalyzeVision) btnAnalyzeVision.addEventListener("click", handleAnalyzeSourceMaterials);
+  if (btnAnalyzeVision) btnAnalyzeVision.addEventListener("click", readTextbookWithMistral);
+
+  const btnAnalyzePpct = document.getElementById("btnAnalyzePpct");
+  if (btnAnalyzePpct) btnAnalyzePpct.addEventListener("click", handleGeneratePpctAnalysis);
+
+  const btnAutoDetect = document.getElementById("btnAutoDetectMetadata");
+  if (btnAutoDetect) {
+    btnAutoDetect.addEventListener("click", () => {
+      const hasSgk = Boolean(appState.content?.vision) || hasTextbookMedia();
+      const hasPpct = Boolean(appState.content?.ppctAnalysis) || Boolean(appState.ppctImages?.length || appState.ppctPdfAttachments?.length);
+      if (!hasSgk && !hasPpct) {
+        showToast("Vui lòng tải ảnh/PDF SGK hoặc PPCT trước khi nhận diện!", "warning");
+        return;
+      }
+      autoDetectAndFillLessonMetadata({ silent: false });
+    });
+  }
+
   document.getElementById("btnGenerateObjectives").addEventListener("click", handleGenerateObjectives);
   document.getElementById("btnGenerateMaterials").addEventListener("click", handleGenerateMaterials);
   document.getElementById("btnGenerateCurrentAct").addEventListener("click", handleGenerateCurrentActivity);
@@ -4395,6 +4412,52 @@ function formatOcrPages(pages, label, selectedPages) {
   }).filter(Boolean).join("\n\n");
 }
 
+function dataUrlToUint8Array(dataUrl) {
+  if (!dataUrl || typeof dataUrl !== "string") return new Uint8Array(0);
+  const base64Index = dataUrl.indexOf(";base64,");
+  const base64 = base64Index >= 0 ? dataUrl.slice(base64Index + 8) : dataUrl;
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function buildPdfMediaPart(attachment) {
+  if (!attachment || !attachment.dataUrl) return { mimeType: "application/pdf", dataUrl: "" };
+  const pdfLib = (typeof PDFLib !== "undefined" && PDFLib) || (typeof window !== "undefined" && window.PDFLib);
+  if (!pdfLib?.PDFDocument || !Array.isArray(attachment.selectedPages) || attachment.selectedPages.length === 0 || (attachment.pageCount && attachment.selectedPages.length === attachment.pageCount)) {
+    return {
+      mimeType: attachment.mimeType || "application/pdf",
+      dataUrl: attachment.dataUrl
+    };
+  }
+
+  try {
+    const srcDoc = await pdfLib.PDFDocument.load(dataUrlToUint8Array(attachment.dataUrl));
+    const destDoc = await pdfLib.PDFDocument.create();
+    const pageIndices = attachment.selectedPages.map(p => p - 1).filter(idx => idx >= 0 && idx < srcDoc.getPageCount());
+    if (pageIndices.length === 0) {
+      return { mimeType: attachment.mimeType || "application/pdf", dataUrl: attachment.dataUrl };
+    }
+    const copiedPages = await destDoc.copyPages(srcDoc, pageIndices);
+    copiedPages.forEach(p => destDoc.addPage(p));
+    const subsetDataUrl = await destDoc.saveAsBase64({ dataUri: true });
+    return {
+      mimeType: "application/pdf",
+      dataUrl: subsetDataUrl
+    };
+  } catch (err) {
+    console.warn("buildPdfMediaPart subset error:", err);
+    return {
+      mimeType: attachment.mimeType || "application/pdf",
+      dataUrl: attachment.dataUrl
+    };
+  }
+}
+
 async function photosToPdfDataUrl(photos) {
   const pdfLib = (typeof PDFLib !== "undefined" && PDFLib) || (typeof window !== "undefined" && window.PDFLib);
   if (!pdfLib?.PDFDocument || !photos.length) return null;
@@ -4485,6 +4548,10 @@ async function readTextbookWithMistral() {
     showToast("Một tác vụ AI khác đang được xử lý, vui lòng chờ trong giây lát...", "warning");
     return;
   }
+  if (!hasTextbookMedia()) {
+    showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh hoặc file PDF SGK!", "warning");
+    return;
+  }
   const btn = document.getElementById("btnAnalyzeVision");
   try {
     appState.isGenerating = true;
@@ -4497,9 +4564,17 @@ async function readTextbookWithMistral() {
       throw new Error("Mistral OCR không đọc được chữ trên trang đã chọn.");
     }
     await applyTextbookOcrResult(ocrText, { silent: false });
+
+    // Tự động nhận diện Tên bài & Thời lượng từ OCR SGK và điền vào form
+    autoDetectAndFillLessonMetadata({ ocrText, silent: false });
+
+    // Tự động mở khung chi tiết để xem kết quả
+    const details = document.getElementById("detailsVisionContent");
+    if (details) details.open = true;
+
     updateProgress(100, "Đã đọc nội dung SGK (Mistral OCR)!");
     setTimeout(() => hideProgress(), 1500);
-    showToast("Đã nhận diện SGK bằng Mistral OCR. Có thể sửa nội dung trước khi soạn giáo án.", "success", 5000);
+    showToast("Đã nhận diện SGK bằng Mistral OCR thành công! Đã tự động điền Tên bài.", "success", 5000);
     if (status) status.textContent = "Sẵn sàng.";
   } catch (error) {
     console.error("Mistral OCR:", error);
@@ -5384,6 +5459,10 @@ if (typeof window !== 'undefined') {
   window.formatSmartDuration = formatSmartDuration;
   window.extractLessonTitleFromOcr = extractLessonTitleFromOcr;
   window.autoDetectAndFillLessonMetadata = autoDetectAndFillLessonMetadata;
+  window.readTextbookWithMistral = readTextbookWithMistral;
+  window.extractTextbookOcrText = extractTextbookOcrText;
+  window.dataUrlToUint8Array = dataUrlToUint8Array;
+  window.buildPdfMediaPart = buildPdfMediaPart;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -5449,6 +5528,10 @@ if (typeof module !== 'undefined' && module.exports) {
     parsePeriodsFromInput,
     formatSmartDuration,
     extractLessonTitleFromOcr,
-    autoDetectAndFillLessonMetadata
+    autoDetectAndFillLessonMetadata,
+    readTextbookWithMistral,
+    extractTextbookOcrText,
+    dataUrlToUint8Array,
+    buildPdfMediaPart
   };
 }
