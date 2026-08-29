@@ -1858,12 +1858,30 @@
             return "Thí sinh tự do";
         };
 
+        const getExamClassName = (exam) => {
+            const parsed = exam?.info?.student_mode ? exam.info : parseExamMetaFromRow(exam);
+            const mode = parsed?.student_mode || exam?.info?.student_mode || exam?.student_mode;
+            if (mode !== "class") return "";
+            return String(parsed?.class_name || exam?.info?.class_name || exam?.class_name || "").trim();
+        };
+
+        const matchesClassFilter = (exam, classFilter) => {
+            if (!classFilter || classFilter === "all") return true;
+            const parsed = exam?.info?.student_mode ? exam.info : parseExamMetaFromRow(exam);
+            const mode = parsed?.student_mode || exam?.info?.student_mode || exam?.student_mode;
+            if (classFilter === "free") return mode !== "class";
+            if (mode !== "class") return false;
+            return getExamClassName(exam) === classFilter;
+        };
+
         const TeacherDashboard = ({ onViewDetail, onCreateNew, onEdit }) => {
             const isMobile = useMobileViewport();
             const [exams, setExams] = useState([]);
             const [loading, setLoading] = useState(false);
             const [searchText, setSearchText] = useState("");
             const [groupFilter, setGroupFilter] = useState("all");
+            const [classFilter, setClassFilter] = useState("all");
+            const [assignedClasses, setAssignedClasses] = useState([]);
             const [showLegacyExams, setShowLegacyExams] = useState(false);
             const [qrLink, setQrLink] = useState(null);
             const [showGuide, setShowGuide] = useState(false);
@@ -1908,6 +1926,12 @@
                 return () => { cancelled = true; };
             }, [userEmail]);
 
+            useEffect(() => {
+                axios.get(examUrl("student-classes"), { withCredentials: true })
+                    .then(res => setAssignedClasses(Array.isArray(res.data?.classes) ? res.data.classes : []))
+                    .catch(() => setAssignedClasses([]));
+            }, []);
+
             const visibleBaseExams = useMemo(() => {
                 return exams.filter(ex => {
                     const ownerEmail = getExamOwnerEmail(ex);
@@ -1917,15 +1941,21 @@
             }, [exams, normalizedUserEmail, showLegacyExams]);
             const legacyExamCount = useMemo(() => exams.filter(ex => !getExamOwnerEmail(ex)).length, [exams]);
             const groups = useMemo(() => Array.from(new Set(visibleBaseExams.map(getExamGroupName))).sort((a, b) => a.localeCompare(b, "vi")), [visibleBaseExams]);
+            const classFilterOptions = useMemo(() => {
+                const fromExams = visibleBaseExams.map(getExamClassName).filter(Boolean);
+                const merged = Array.from(new Set([...assignedClasses, ...fromExams].map(name => String(name || "").trim()).filter(Boolean)));
+                return merged.sort((a, b) => a.localeCompare(b, "vi"));
+            }, [visibleBaseExams, assignedClasses]);
             const filteredExams = useMemo(() => {
                 const keyword = searchText.trim().toLowerCase();
                 return visibleBaseExams.filter(ex => {
                     const groupName = getExamGroupName(ex);
                     if (groupFilter !== "all" && groupName !== groupFilter) return false;
+                    if (!matchesClassFilter(ex, classFilter)) return false;
                     if (!keyword) return true;
-                    return [ex.title, ex.school, ex.id, ex.info?.title, ex.info?.school].some(value => String(value || "").toLowerCase().includes(keyword));
+                    return [ex.title, ex.school, ex.id, ex.info?.title, ex.info?.school, getExamClassName(ex)].some(value => String(value || "").toLowerCase().includes(keyword));
                 });
-            }, [visibleBaseExams, searchText, groupFilter]);
+            }, [visibleBaseExams, searchText, groupFilter, classFilter]);
             const handleDelete = async (id) => { if (confirm("Xóa đề này?")) { await axios.delete(examUrl(`delete/${id}`), { withCredentials: true }); setExams(exams.filter(e => e.id !== id)); } };
             const handleDuplicate = async (id) => { await axios.post(examUrl(`duplicate/${id}`), null, { withCredentials: true }); window.location.reload(); };
 
@@ -1955,6 +1985,11 @@
                                 <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm bg-white w-full sm:min-w-[180px]">
                                     <option value="all">Tất cả phân loại</option>
                                     {groups.map(group => <option key={group} value={group}>{group}</option>)}
+                                </select>
+                                <select value={classFilter} onChange={e => setClassFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm bg-white w-full sm:min-w-[200px]" aria-label="Lọc theo lớp">
+                                    <option value="all">Tất cả các lớp</option>
+                                    <option value="free">Thí sinh tự do</option>
+                                    {classFilterOptions.map(name => <option key={name} value={name}>Lớp {name}</option>)}
                                 </select>
                                 <input value={searchText} onChange={e => setSearchText(e.target.value)} className="border rounded-lg px-3 py-2 text-sm w-full sm:min-w-[220px]" placeholder="Tìm tên đề, trường, mã đề..." />
                             </div>

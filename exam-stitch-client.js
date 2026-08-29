@@ -79,21 +79,37 @@
         };
     }
 
+    function pairSimilarity(a, b) {
+        if (a === b) return 1;
+        if (!a || !b) return 0;
+        const n = a.length;
+        const m = b.length;
+        if (n < 2 || m < 2) return 0;
+        const counts = new Map();
+        for (let i = 0; i < n - 1; i++) {
+            const g = a.slice(i, i + 2);
+            counts.set(g, (counts.get(g) || 0) + 1);
+        }
+        let inter = 0;
+        for (let i = 0; i < m - 1; i++) {
+            const g = b.slice(i, i + 2);
+            const c = counts.get(g) || 0;
+            if (c > 0) {
+                inter += 1;
+                counts.set(g, c - 1);
+            }
+        }
+        return (2 * inter) / ((n - 1) + (m - 1));
+    }
+
     function isDuplicate(q1, q2) {
         if (!q1 || !q2) return false;
-        let t1 = normalizeText(q1.question);
-        let t2 = normalizeText(q2.question);
-        if (t1.length < 20) t1 += normalizeText((q1.options || []).join(''));
-        if (t2.length < 20) t2 += normalizeText((q2.options || []).join(''));
-        if (!t1 || !t2) return false;
-        if (t1 === t2) return true;
-        if (t1.length > 50 && t2.length > 50 && (t1.includes(t2) || t2.includes(t1))) return true;
-        const minLen = Math.min(t1.length, t2.length);
-        const maxLen = Math.max(t1.length, t2.length);
-        if (maxLen === 0) return false;
-        let same = 0;
-        for (let i = 0; i < minLen; i++) if (t1[i] === t2[i]) same++;
-        return (same / maxLen) > 0.85;
+        const qA = normalizeText(q1.question);
+        const qB = normalizeText(q2.question);
+        const oA = normalizeText(ensureOptions(q1.options).join(''));
+        const oB = normalizeText(ensureOptions(q2.options).join(''));
+        if (!qA || !qB) return false;
+        return pairSimilarity(qA, qB) > 0.98 && pairSimilarity(oA, oB) > 0.98;
     }
 
     function dedupeQuestions(rows) {
@@ -133,12 +149,14 @@
 
     function flattenStitchedQuestions(pageQuestions, sortedPages) {
         const stitched = stitchPageQuestionsList(pageQuestions, sortedPages);
-        const flat = [];
         const pages = Array.isArray(sortedPages) ? sortedPages : [];
+        const skipDedupe = pages.length <= 1;
+        const flat = [];
         pages.forEach((p) => {
-            const qs = dedupeQuestions(stitched[p.id] || []);
+            const list = stitched[p.id] || [];
+            const qs = skipDedupe ? list : dedupeQuestions(list);
             qs.forEach((q) => {
-                if (!flat.some((x) => isDuplicate(x, q))) flat.push(q);
+                if (skipDedupe || !flat.some((x) => isDuplicate(x, q))) flat.push(q);
             });
         });
         return flat;
@@ -160,6 +178,7 @@
         isIncompleteQuestion,
         shouldMergeAcrossPages,
         mergeTwoQuestions,
+        pairSimilarity,
         isDuplicate,
         dedupeQuestions,
         stitchPageQuestionsList,
@@ -167,4 +186,4 @@
         countStitchMerges,
         ensureOptions,
     };
-})(window);
+})(typeof window !== "undefined" ? window : typeof globalThis !== "undefined" ? globalThis : this);
