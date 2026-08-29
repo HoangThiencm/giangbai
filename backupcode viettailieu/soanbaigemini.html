@@ -839,7 +839,11 @@
                 pageSubject: subject,
                 rawQuestionLineCount: rawQuestionLineCount
             });
-            (pkg.essay_exercises || []).forEach(function (essay, index) {
+            var essayList = pkg.essay_exercises || [];
+            if (essayList.length < 5) {
+                validation.errors.push('BÀI TẬP TỰ LUẬN NGẮN phải đủ đúng 5 câu phân hóa (Nhận biết → Thông hiểu 1 bước → Thông hiểu 2 bước → Vận dụng → Vận dụng thực tế). Hiện có ' + essayList.length + ' câu.');
+            }
+            essayList.forEach(function (essay, index) {
                 var answer = String((essay || {}).answer || '').trim();
                 var prompt = String((essay || {}).prompt || '').trim();
                 if (answer && !window.isLotrinhEssayNumericAnswer(answer)) {
@@ -2903,7 +2907,12 @@ Bạn KHÔNG được tự nghĩ format. Chỉ xuất đúng skeleton + quy tắ
 7. NỐI Ô và SẮP XẾP là 2 heading riêng — không gộp thành một bảng.
 
 **SỐ LƯỢNG BẮT BUỘC (thiếu = lỗi đỏ FAIL, không import được):**
-- BÀI TẬP TỰ LUẬN NGẮN: **TUYỆT ĐỐI BẮT BUỘC PHẢI TẠO ĐÚNG 5 DÒNG (5 CÂU). NẾU TẠO DƯỚI 5 DÒNG SẼ BỊ LỖI HỆ THỐNG.** (3 cột: Đề | Đáp án số | Gợi ý). Dù làm gì cũng không được bớt câu!
+- BÀI TẬP TỰ LUẬN NGẮN: **TUYỆT ĐỐI BẮT BUỘC ĐÚNG 5 DÒNG / 5 CÂU PHÂN HÓA 4 MỨC ĐỘ.** Thiếu câu = lỗi đỏ. (3 cột: Đề | Đáp án số | Gợi ý). Không được bớt câu.
+  - Câu 1: Nhận biết (áp dụng trực tiếp định nghĩa/công thức).
+  - Câu 2: Thông hiểu 1 bước.
+  - Câu 3: Thông hiểu 2 bước (tìm x / biến đổi biểu thức).
+  - Câu 4: Vận dụng (kết hợp 2 quy tắc hoặc bài có điều kiện).
+  - Câu 5: Vận dụng thực tế (tình huống đời sống, đúng một kết quả số).
 - KÉO THẢ VÀO Ô TRỐNG: đúng 2 dòng (4 cột)
 - SẮP XẾP THỨ TỰ: đúng 2 dòng (4 cột, ≥2 mảnh, cột 2 và 3 cùng bộ mảnh)
 - NỐI Ô: 1–2 dòng (5 cột, ≥2 cặp, cột 4 dạng 0-0,1-1). **CHÚ Ý: Cột 2 (mảnh trái) và Cột 3 (mảnh phải) PHẢI CÓ CÙNG SỐ LƯỢNG MẢNH (số dấu » phải bằng nhau), đồng thời số cặp ở cột 4 phải bằng số mảnh. Trước khi xuất từng dòng phải tự đếm đủ cả 3 số này. CẤM tạo bài phân loại nhiều->một, ví dụ 4 số ở cột trái nhưng chỉ “Số chẵn » Số lẻ” ở cột phải. Hãy thay bằng phép tính → kết quả hoặc khái niệm → mô tả riêng theo từng mảnh.**
@@ -2917,14 +2926,19 @@ Bạn KHÔNG được tự nghĩ format. Chỉ xuất đúng skeleton + quy tắ
 - Cột Đáp án CẤM tập hợp như {1; 2; 3}, khoảng/đoạn, nhiều đáp án, chữ, đơn vị và lời giải. Không dùng phép tính chưa rút gọn như 2+3; phải ghi kết quả cuối là 5.
 - Nếu kiến thức đang dạy vốn cần trả lời bằng tập hợp/ký hiệu/chữ, hãy đưa nội dung đó sang KÉO THẢ, NỐI Ô hoặc TRẮC NGHIỆM; phần TỰ LUẬN chỉ hỏi một đại lượng số liên quan (ví dụ: "Tập hợp A có bao nhiêu phần tử?").
 
-**MẪU ĐÚNG — BÀI TẬP TỰ LUẬN PHẢI ĐỦ 5 DÒNG NHƯ MẪU NÀY (copy cấu trúc, chỉ đổi nội dung toán):**
+**GỢI Ý SƯ PHẠM (cột 3 tự luận / cột gợi ý kéo thả-nối ô):**
+- Nêu từ khóa phương pháp hoặc bước then chốt để học sinh tự tư duy (ví dụ: "Lũy thừa trước, rồi nhân, rồi trừ"; "Chuyển vế đổi dấu rồi rút x").
+- CẤM gợi ý đối phó chung chung: "Tính cẩn thận", "Nhớ quy tắc", "Làm bài kỹ", "Chú ý đề".
+- Mỗi câu (ví dụ, tự luận, trắc nghiệm, kéo thả, nối ô) phải bám **một kỹ năng** trong mục KỸ NĂNG CẦN ĐẠT; số liệu thực tế, có ý nghĩa sư phạm; CẤM thay số ngẫu nhiên vô nghĩa không đo được năng lực bài học.
+
+**MẪU ĐÚNG — BÀI TẬP TỰ LUẬN PHẢI ĐỦ 5 DÒNG PHÂN HÓA (copy cấu trúc, chỉ đổi nội dung toán bám SGK):**
 
 BÀI TẬP TỰ LUẬN NGẮN
-Tính 4 · 5^2 - 3 · 2^3 | 76 | Lũy thừa trước rồi nhân rồi trừ
-Tìm x: 54 - (x + 7) = 24 | 23 | Chuyển vế cẩn thận
-Tính tổng các số tự nhiên từ 1 đến 10 | 55 | Cộng lần lượt hoặc dùng công thức
-Số 24 có bao nhiêu ước số? | 8 | Liệt kê các cặp ước
-Tính 2^4 + 3^2 | 25 | Lũy thừa rồi cộng
+Tính 2^4 | 16 | Nhận biết: áp dụng định nghĩa lũy thừa 2 nhân 4 lần
+Tính 3 · 5^2 | 75 | Thông hiểu 1 bước: lũy thừa trước rồi nhân
+Tìm x: 54 - (x + 7) = 24 | 23 | Thông hiểu 2 bước: gộp ngoặc, chuyển vế đổi dấu, rút x
+Tính 4 · 5^2 - 3 · 2^3 | 76 | Vận dụng: lũy thừa → nhân → trừ, giữ đúng thứ tự
+Một cửa hàng bán 24 hộp, mỗi hộp 5^2 cái kẹo. Hỏi có tất cả bao nhiêu cái kẹo? | 600 | Vận dụng thực tế: 5^2 rồi nhân 24
 
 KÉO THẢ VÀO Ô TRỐNG
 Thứ tự phép tính không ngoặc: ___ rồi ___ rồi ___ | lũy thừa » nhân chia » cộng trừ » đảo ngược | lũy thừa » nhân chia » cộng trừ | Nhớ quy tắc
@@ -2984,7 +2998,7 @@ DANH SÁCH HÌNH ẢNH CẦN TẠO`;
 - Bạn (model trong Canvas) phải xuất đúng pipe/heading. Không tự tạo bảng Markdown.
 - Sai format = học sinh không import được bài lên lộ trình.
 - Mỗi câu bài tập = đúng 1 dòng | ; mảnh nối bằng » ; không --- .
-- Riêng TỰ LUẬN: đề phải cho đúng một kết quả số nhập được; cấm yêu cầu nhập tập hợp, ký hiệu, chữ, đơn vị, lời giải hoặc nhiều giá trị.
+- Riêng TỰ LUẬN: **đúng 5 câu** phân hóa Nhận biết → Thông hiểu 1 bước → Thông hiểu 2 bước → Vận dụng → Vận dụng thực tế; đề phải cho đúng một kết quả số nhập được; cấm yêu cầu nhập tập hợp, ký hiệu, chữ, đơn vị, lời giải hoặc nhiều giá trị.
 - Không chắc format → chép đúng 1 dòng mẫu trong hợp đồng, chỉ thay số/đề toán.`;
         }
 
@@ -3150,9 +3164,20 @@ ${approvedTheory}
 
 **CHỈ XUẤT CÁC MỤC SAU (KHÔNG lặp lại MỤC TIÊU / LÝ THUYẾT):**
 
-- **VÍ DỤ:** Phân loại DẠNG 1, DẠNG 2...; ưu tiên bài trong ảnh; **bắt buộc đúng 1 dạng "Bài toán thực tế"** khi phù hợp. Mỗi dạng: PHƯƠNG PHÁP GIẢI, Bài 1–3, Lời giải đầy đủ. CẤM --- giữa các dạng.
+- **VÍ DỤ — QUÉT TOÀN DIỆN SGK, CẤM LƯỚT QUA:**
+  Phải khai thác hết các dạng toán nhìn thấy trong ảnh SGK và lý thuyết đã duyệt. Xuất **3–5 dạng đặc trưng** (không được chỉ 1–2 dạng rồi chuyển mục). Nếu SGK có thì phải phủ: nhận biết, tính toán cơ bản, tìm ẩn/tìm x, so sánh/rút gọn, ứng dụng thực tế. **Bắt buộc đúng 1 dạng "Bài toán thực tế"** khi phù hợp.
+  Mỗi dạng bắt buộc đủ 3 thành phần, đúng thứ tự:
+  1. Tên dạng rõ ràng: \`DẠNG 1: NHẬN BIẾT ...\`, \`DẠNG 2: TÌM X ...\`, \`DẠNG 3: TOÁN THỰC TẾ ...\`.
+  2. \`PHƯƠNG PHÁP GIẢI:\` đúng 2–3 bước chuẩn mực.
+  3. \`VÍ DỤ MẪU:\` tối thiểu 2 bài; mỗi bài có đề + lời giải từng bước (Bước 1, Bước 2, ...).
+  CẤM --- giữa các dạng. CẤM chỉ nêu tên dạng mà thiếu phương pháp hoặc lời giải.
 
-- **BÀI TẬP NỘP GIÁO VIÊN:** Bài song sinh theo từng dạng ví dụ; chỉ đề, không lời giải.
+- **BÀI TẬP NỘP GIÁO VIÊN:** Bài song sinh theo từng dạng ví dụ đã phân loại; chỉ đề, không lời giải.
+
+- **BÀI TẬP TỰ LUẬN NGẮN:** Đúng 5 câu / 5 dòng pipe, bám Mục tiêu / YCCĐ / KỸ NĂNG CẦN ĐẠT, số liệu thực tế có ý nghĩa (cấm bài rác chỉ đổi số to-nhỏ). Phân hóa bắt buộc:
+  Câu 1 Nhận biết; Câu 2 Thông hiểu 1 bước; Câu 3 Thông hiểu 2 bước (tìm x / biến đổi); Câu 4 Vận dụng; Câu 5 Vận dụng thực tế. Cột Gợi ý = từ khóa phương pháp / bước then chốt.
+
+- **MỌI DẠNG BÀI TẬP** (ví dụ, tự luận, trắc nghiệm, kéo thả, nối ô) phải tương ứng trực tiếp với 1 kỹ năng trong KỸ NĂNG CẦN ĐẠT và phục vụ kiểm tra đánh giá năng lực bài học GDPT 2018.
 
 ${getInteractiveFormatBlock()}
 
@@ -3180,6 +3205,7 @@ ${getInteractiveFormatBlock()}
 - CHỈ sửa định dạng / thiếu mục / dòng pipe sai.
 - GIỮ nguyên kiến thức toán đúng (đề, đáp án số, lời giải đúng).
 - Với TỰ LUẬN, nếu đề yêu cầu nhập tập hợp/ký hiệu/chữ/lời giải hoặc đáp án không phải một kết quả số thì phải đổi sang câu tương đương có đúng một kết quả số; có thể chuyển nội dung không phù hợp sang KÉO THẢ / NỐI Ô / TRẮC NGHIỆM.
+- Nếu TỰ LUẬN dưới 5 câu: BỔ SUNG cho đủ đúng 5 câu phân hóa (Câu 1 Nhận biết; Câu 2 Thông hiểu 1 bước; Câu 3 Thông hiểu 2 bước tìm x/biến đổi; Câu 4 Vận dụng; Câu 5 Vận dụng thực tế). Cột Gợi ý phải là bước then chốt, cấm "Tính cẩn thận"/"Nhớ quy tắc". Mỗi câu bám 1 kỹ năng cần đạt; số liệu thực tế, không bài rác.
 - Nếu thiếu TỰ LUẬN / KÉO THẢ / SẮP XẾP / NỐI Ô / TRẮC NGHIỆM / KỸ NĂNG: BỔ SUNG đủ số lượng bắt buộc, bám lý thuyết bài "${context.title}" (${context.subject}).
 - Nếu thấy bảng markdown (| Cột A | Cột B | hoặc :---): CHUYỂN thành dòng pipe NỐI Ô hoặc SẮP XẾP đúng quy tắc.
 - Với mọi lỗi NỐI Ô lệch số mảnh/cặp: **thay toàn bộ dòng lỗi**, không chỉ sửa cột chỉ số nối. Dòng thay thế phải có số mảnh trái = số mảnh phải = số cặp; tuyệt đối không giữ dạng phân loại nhiều số vào hai nhãn chung (chẵn/lẻ, đúng/sai…).

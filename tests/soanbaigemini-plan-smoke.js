@@ -19,7 +19,16 @@ const checks = [
     ['5512 validator', /function validateLessonPlan/.test(html) && /LESSON_PLAN_STEP_NAMES/.test(html)],
     ['UNESCO groups and levels', /UNESCO_AI_GROUPS/.test(html) && /\['Hiểu', 'Vận dụng', 'Tạo'\]/.test(html)],
     ['two-column Word export', /Hoạt động của giáo viên/.test(html) && /Hoạt động của học sinh/.test(html)],
-    ['sandbox message', /Gemini Canvas chặn tải file Word/.test(html)]
+    ['sandbox message', /Gemini Canvas chặn tải file Word/.test(html)],
+    ['ví dụ quét toàn diện SGK', /function buildRemainingSectionsPrompt[\s\S]*QUÉT TOÀN DIỆN SGK[\s\S]*3–5 dạng đặc trưng/.test(html)],
+    ['ví dụ 3 thành phần dạng toán', /function buildRemainingSectionsPrompt[\s\S]*PHƯƠNG PHÁP GIẢI[\s\S]*VÍ DỤ MẪU/.test(html)],
+    ['tự luận 5 câu phân hóa trong prompt', /function buildRemainingSectionsPrompt[\s\S]*Câu 1 Nhận biết[\s\S]*Câu 5 Vận dụng thực tế/.test(html)],
+    ['hợp đồng format khóa 5 câu tự luận', /BÀI TẬP TỰ LUẬN NGẮN:[\s\S]*ĐÚNG 5 DÒNG[\s\S]*Câu 1: Nhận biết/.test(html)],
+    ['gợi ý sư phạm không đối phó', /CẤM gợi ý đối phó[\s\S]*Tính cẩn thận/.test(html)],
+    ['bài tập bám kỹ năng cần đạt', /tương ứng trực tiếp với 1 kỹ năng trong KỸ NĂNG CẦN ĐẠT/.test(html)],
+    ['validator chặn tự luận dưới 5 câu', /essayList\.length < 5[\s\S]*phải đủ đúng 5 câu phân hóa/.test(html)],
+    ['repair bổ sung đủ 5 câu tự luận', /function buildFormatRepairPrompt[\s\S]*Nếu TỰ LUẬN dưới 5 câu[\s\S]*Câu 5 Vận dụng thực tế/.test(html)],
+    ['giữ lọc đáp án số tự luận', /isLotrinhEssayNumericAnswer/.test(html)]
 ];
 
 let failed = 0;

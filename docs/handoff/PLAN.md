@@ -1,68 +1,53 @@
-# PLAN: Mã hóa triệt để toàn bộ nội dung file HTML (HTML Encryption Loader)
+# PLAN: Nâng cấp chất lượng Sư phạm, Phân loại Ví dụ & Chuẩn hóa 5 câu Tự luận trong soanbaigemini.html
 
 Trạng thái: KẾ HOẠCH ĐÃ DUYỆT
 
 ## Hiện trạng
 
-- File `soankhbd.html` (và các file `.html` khác) đang deploy ở dạng plain text HTML.
-- Khi người dùng vào tab Sources hoặc xem mã nguồn trang (`Ctrl + U`), họ vẫn đọc được toàn bộ HTML, form ID, quy trình thiết kế bài dạy và các ghi chú comment tiếng Việt.
+1. **Phần VÍ DỤ sơ sài**: Chưa bao quát hết các dạng toán trong ảnh SGK; thiếu phương pháp giải chi tiết từng bước cho từng dạng.
+2. **BÀI TẬP TỰ LUẬN NGẮN thiếu số lượng**: Chưa đảm bảo chuẩn tối thiểu 5 câu phân hóa từ Nhận biết đến Vận dụng; validator chưa chặn lỗi thiếu số lượng câu.
+3. **Bài tập thiếu tính sư phạm và bám sát kiểm tra đánh giá**: Bài tập sinh ngẫu nhiên, chưa gắn chặt với Mục tiêu / Yêu cầu cần đạt (YCCĐ) và Ma trận kỹ năng của bài học GDPT 2018.
 
 ## Phạm vi
 
-1. **Bổ sung tính năng Mã hóa HTML vào `tools/build-obfuscate.js`**:
-   - Khi chạy `--in-place` (trên CI GitHub Actions):
-     1. Quét các file HTML (`soankhbd.html`, `lotrinhtoan*.html`, `thitructuyen.html`, `index.html`,...).
-     2. Gộp và làm rối các script JS thành bundle như đã thiết kế.
-     3. Xóa sạch 100% HTML comments (`<!-- ... -->`).
-     4. Mã hóa toàn bộ nội dung HTML của trang thành chuỗi Base64 đã xáo trộn (XOR).
-     5. Thay thế file HTML bằng Dynamic HTML Decryption Loader (kèm `js/security-guard.js` ở đầu trang).
-2. **Cập nhật `tests/security-f12-smoke.js`**:
-   - Kiểm tra file HTML sau build không còn chứa text `<!-- BƯỚC 1` hay các thẻ `<button class="nav-tab-btn">` dạng plain text.
-   - Kiểm tra mã giải mã trong sandbox `document.write` ra đúng cấu trúc DOM.
+1. Nâng cấp Prompt phần VÍ DỤ (`buildRemainingSectionsPrompt`): quét toàn bộ SGK, 3–5 dạng, mỗi dạng có tên / phương pháp / ví dụ mẫu 2 bài lời giải từng bước.
+2. Chuẩn hóa 5 câu BÀI TẬP TỰ LUẬN NGẮN phân hóa 4 mức độ; validator lỗi đỏ nếu `< 5`; `buildFormatRepairPrompt` sinh bù đủ 5 câu.
+3. Thắt chặt gợi ý sư phạm và bám sát KỸ NĂNG CẦN ĐẠT; số liệu thực tế.
+4. Cập nhật `tests/soanbaigemini-plan-smoke.js`.
 
 ## Ngoài phạm vi
 
-- Không can thiệp API backend PHP (`api/`).
-- Giữ nguyên mã nguồn HTML gốc trên máy tính cá nhân (local) để lập trình viên dễ dàng chỉnh sửa giao diện.
+- Không đổi format cấu trúc JSON đầu ra (`lesson-import-v1`).
+- Không đổi giao diện tổng thể của Canvas.
 
 ## File dự kiến tác động
 
-- `tools/build-obfuscate.js`
-- `tests/security-f12-smoke.js`
+- `backupcode viettailieu/soanbaigemini.html`
+- `tests/soanbaigemini-plan-smoke.js`
 - `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/PLAN.md`
 
 ## Các bước thực hiện
 
-1. **Bước 1: Nâng cấp `tools/build-obfuscate.js`**:
-   - Xây dựng hàm `encryptHtmlContent(html)`:
-     - Làm sạch comment, minify markup.
-     - Mã hóa chuỗi HTML thành Base64 obfuscated payload.
-     - Tạo template HTML Loader chứa `security-guard.js` và IIFE tự giải mã `document.write`.
-   - Áp dụng cho toàn bộ file HTML khi deploy `--in-place`.
-2. **Bước 2: Chạy kiểm thử**:
-   - Chạy `node tests/security-f12-smoke.js` kiểm tra tính chính xác và an toàn.
-3. **Bước 3: Ghi nhận kết quả vào `docs/handoff/IMPLEMENT.md`**.
+1. Cập nhật `buildRemainingSectionsPrompt()` và `CANVAS_BUILTIN_FORMAT_CONTRACT`.
+2. Cập nhật `getLessonValidationState()` và `buildFormatRepairPrompt()`.
+3. Chạy `node tests/soanbaigemini-plan-smoke.js`.
+4. Ghi `docs/handoff/IMPLEMENT.md`.
 
 ## Rủi ro
 
-- Một số trình duyệt có thể cảnh báo nếu dùng `document.write` không đúng thời điểm.
-  - *Giải pháp*: Loader thực thi ngay lập tức khi trang đang tải (`document.open() / document.write() / document.close()`) đồng bộ.
-- Payload Base64 XOR không phải bảo mật mật mã học — chỉ che view-source / Sources.
+- AI sinh 5 câu tự luận đôi khi trả về câu hỏi yêu cầu chữ thay vì số.
+  - *Giải pháp*: Giữ nguyên bộ lọc `isLotrinhEssayNumericAnswer()`.
 
 ## Cách kiểm thử
 
 ```
-node tests/security-f12-smoke.js
-node tools/build-obfuscate.js --dry-run
+node tests/soanbaigemini-plan-smoke.js
 ```
-
-- Mở `soankhbd.html` trên hosting:
-  - Tab Sources và `view-source:` **không còn** comment tiếng Việt / `nav-tab-btn` / `tabVision` dạng plain text.
-  - Giao diện web hiển thị đầy đủ sau khi loader giải mã.
 
 ## Tiêu chí nghiệm thu
 
-1. File `soankhbd.html` và các file HTML không còn chứa markup / comment plain text khi mở tab Sources.
-2. Giao diện trang web tự động giải mã và hoạt động không lỗi.
-3. `node tests/security-f12-smoke.js` pass.
+1. Phần Ví dụ yêu cầu phân loại đầy đủ dạng toán SGK, có phương pháp giải và lời giải từng bước.
+2. Phần Tự luận ngắn luôn khóa đủ 5 câu phân hóa; validator đỏ nếu thiếu.
+3. Bài tập bám kỹ năng cần đạt; gợi ý không đối phó.
+4. `node tests/soanbaigemini-plan-smoke.js` pass.
