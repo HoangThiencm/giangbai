@@ -290,7 +290,9 @@ failed += failCount([
     ['dry-run plans soankhbd bundle', /BUNDLE soankhbd\.html -> js\/soankhbd\.bundle\.js/.test(dryRun)],
     ['soankhbd bundle lists khbd-app.js', /BUNDLE soankhbd\.html[\s\S]*js\/khbd-app\.js/.test(dryRun)],
     ['soankhbd bundle lists ai-design-config.js', /BUNDLE soankhbd\.html[\s\S]*ai-design-config\.js/.test(dryRun)],
-    ['dry-run does not bundle vendor or CDN', !/BUNDLE[^\n]*vendor\//.test(dryRun) && !/cdn\.tailwindcss\.com/.test(dryRun)]
+    ['dry-run does not bundle vendor or CDN', !/BUNDLE[^\n]*vendor\//.test(dryRun) && !/cdn\.tailwindcss\.com/.test(dryRun)],
+    ['html encrypt helper exists', /encryptHtmlContent/.test(obfuscatorSrc) && /buildEncryptedHtmlShell/.test(obfuscatorSrc)],
+    ['dry-run encrypts soankhbd.html', /ENCRYPT soankhbd\.html/.test(dryRun)]
 ]);
 
 const bundleTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gb-bundle-'));
@@ -303,6 +305,11 @@ try {
     fs.writeFileSync(path.join(bundleTmp, 'page.html'), [
         '<!DOCTYPE html>',
         '<html><body>',
+        '<!-- BƯỚC 1: TẢI HỌC LIỆU NGUỒN -->',
+        '<main class="app-body">',
+        '<section id="tabVision"></section>',
+        '<button class="nav-tab-btn">Soạn</button>',
+        '</main>',
         '<script src="https://cdn.example.com/tailwind.js"></script>',
         '<script src="first.js"></script>',
         '<script src="second.js"></script>',
@@ -317,16 +324,43 @@ try {
     const bundledHtml = fs.readFileSync(path.join(bundleTmp, 'page.html'), 'utf8');
     const bundleFile = path.join(bundleTmp, 'js', 'page.bundle.js');
     const bundleCode = fs.existsSync(bundleFile) ? fs.readFileSync(bundleFile, 'utf8') : '';
-    const scriptSrcs = [...bundledHtml.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi)].map(m => m[1]);
+    const bundler = require(toolPath);
+    const encMatch = bundledHtml.match(/var _0xenc="([^"]+)"/);
+    const decoded = encMatch ? bundler.decryptHtmlPayload(encMatch[1]) : '';
+    const decodedSrcs = [...decoded.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi)].map(m => m[1]);
+    const fileSrcs = [...bundledHtml.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi)].map(m => m[1]);
+    const written = { html: '' };
+    if (encMatch) {
+        const sandbox = {
+            atob(s) { return Buffer.from(s, 'base64').toString('binary'); },
+            TextDecoder,
+            Uint8Array,
+            document: {
+                open() {},
+                write(html) { written.html = String(html || ''); },
+                close() {}
+            }
+        };
+        const loader = bundledHtml.match(/<body><script>([\s\S]*?)<\/script><\/body>/);
+        if (loader) vm.runInNewContext(loader[1], sandbox);
+    }
     failed += failCount([
         ['sample HTML writes js/page.bundle.js', fs.existsSync(bundleFile)],
-        ['sample HTML has single local bundle src', scriptSrcs.filter(s => s.endsWith('page.bundle.js')).length === 1],
-        ['sample HTML dropped first.js/second.js src', !scriptSrcs.some(s => /(^|\/)first\.js$/.test(s) || /(^|\/)second\.js$/.test(s))],
-        ['sample HTML keeps CDN script', scriptSrcs.some(s => s.indexOf('cdn.example.com') !== -1)],
-        ['sample HTML keeps vendor min.js', scriptSrcs.some(s => s.indexOf('vendor/katex.min.js') !== -1)],
+        ['encrypted shell has security-guard.js', fileSrcs.some(s => /security-guard\.js$/.test(s))],
+        ['encrypted HTML has no BƯỚC 1 comment', !bundledHtml.includes('<!-- BƯỚC 1') && !bundledHtml.includes('TẢI HỌC LIỆU')],
+        ['encrypted HTML has no nav-tab-btn plaintext', !bundledHtml.includes('nav-tab-btn')],
+        ['encrypted HTML has no tabVision plaintext', !bundledHtml.includes('tabVision')],
+        ['encrypted HTML dropped first.js/second.js src', !fileSrcs.some(s => /(^|\/)first\.js$/.test(s) || /(^|\/)second\.js$/.test(s))],
+        ['decoded HTML restores nav-tab-btn', /nav-tab-btn/.test(decoded)],
+        ['decoded HTML restores tabVision', /id="tabVision"/.test(decoded)],
+        ['decoded HTML has bundle src', decodedSrcs.some(s => s.endsWith('page.bundle.js'))],
+        ['decoded HTML dropped first.js/second.js src', !decodedSrcs.some(s => /(^|\/)first\.js$/.test(s) || /(^|\/)second\.js$/.test(s))],
+        ['decoded HTML keeps CDN script', decodedSrcs.some(s => s.indexOf('cdn.example.com') !== -1)],
+        ['decoded HTML keeps vendor min.js', decodedSrcs.some(s => s.indexOf('vendor/katex.min.js') !== -1)],
         ['bundle preserves first then second', /FirstFlag[\s\S]*SecondFlag/.test(bundleCode)],
-        ['CDN stays before bundle', bundledHtml.indexOf('cdn.example.com') < bundledHtml.indexOf('page.bundle.js')],
-        ['vendor stays after bundle', bundledHtml.indexOf('page.bundle.js') < bundledHtml.indexOf('vendor/katex.min.js')]
+        ['decoded CDN stays before bundle', decoded.indexOf('cdn.example.com') < decoded.indexOf('page.bundle.js')],
+        ['decoded vendor stays after bundle', decoded.indexOf('page.bundle.js') < decoded.indexOf('vendor/katex.min.js')],
+        ['loader document.write matches decoded DOM', written.html === decoded]
     ]);
 } finally {
     fs.rmSync(bundleTmp, { recursive: true, force: true });

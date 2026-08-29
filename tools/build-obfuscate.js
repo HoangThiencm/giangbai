@@ -310,6 +310,71 @@ function planHtmlBundles(root) {
     return plans;
 }
 
+const HTML_XOR_KEY = [0x5a, 0x3c, 0x91, 0xe7, 0x2b, 0x44, 0x6d, 0x18];
+
+function minifyHtml(html) {
+    let text = String(html || '').replace(/^\uFEFF/, '');
+    text = text.replace(/<!--[\s\S]*?-->/g, '');
+    text = text.replace(/>\s+</g, '><');
+    return text.trim();
+}
+
+function xorHtmlBytes(buf) {
+    const out = Buffer.alloc(buf.length);
+    for (let i = 0; i < buf.length; i++) {
+        out[i] = buf[i] ^ HTML_XOR_KEY[i % HTML_XOR_KEY.length] ^ (i & 0xff);
+    }
+    return out;
+}
+
+function encryptHtmlContent(html) {
+    const cleaned = minifyHtml(html);
+    return xorHtmlBytes(Buffer.from(cleaned, 'utf8')).toString('base64');
+}
+
+function decryptHtmlPayload(b64) {
+    return xorHtmlBytes(Buffer.from(String(b64 || ''), 'base64')).toString('utf8');
+}
+
+function isEncryptedHtmlShell(html) {
+    return /var _0xenc\s*=/.test(String(html || '')) && /document\.write/.test(String(html || ''));
+}
+
+function securityGuardSrc(htmlRel) {
+    const htmlDir = path.posix.dirname(String(htmlRel || '').replace(/\\/g, '/'));
+    const fromDir = !htmlDir || htmlDir === '.' ? '.' : htmlDir;
+    return path.posix.relative(fromDir, 'js/security-guard.js') || 'js/security-guard.js';
+}
+
+function buildEncryptedHtmlShell(html, htmlRel) {
+    const payload = encryptHtmlContent(html);
+    const guard = securityGuardSrc(htmlRel).replace(/\\/g, '/');
+    return '<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><script src="' + guard + '"></script></head><body><script>(function(){var _0xenc="' + payload + '";var _0xk=[90,60,145,231,43,68,109,24];function _0xdec(s){var b=atob(s),u=new Uint8Array(b.length),i=0;for(;i<b.length;i++)u[i]=b.charCodeAt(i)^_0xk[i%8]^(i&255);if(typeof TextDecoder==="function")return new TextDecoder("utf-8").decode(u);var t="";for(i=0;i<u.length;i++)t+=String.fromCharCode(u[i]);return decodeURIComponent(escape(t));}document.open();document.write(_0xdec(_0xenc));document.close();})();</script></body></html>';
+}
+
+function applyHtmlEncryption(root, destRoot, dryRun) {
+    const htmlFiles = collectHtmlFiles(root);
+    let count = 0;
+    for (const htmlPath of htmlFiles) {
+        const htmlRel = relPosix(root, htmlPath);
+        const destPath = path.join(destRoot, htmlRel.split('/').join(path.sep));
+        if (dryRun) {
+            console.log('ENCRYPT ' + htmlRel);
+            count += 1;
+            continue;
+        }
+        const sourcePath = fs.existsSync(destPath) ? destPath : htmlPath;
+        const html = fs.readFileSync(sourcePath, 'utf8');
+        if (isEncryptedHtmlShell(html)) continue;
+        const shell = buildEncryptedHtmlShell(html, htmlRel);
+        fs.mkdirSync(path.dirname(destPath), { recursive: true });
+        fs.writeFileSync(destPath, shell, 'utf8');
+        console.log('ENCRYPT ' + htmlRel + ' (' + html.length + ' -> ' + shell.length + ')');
+        count += 1;
+    }
+    return count;
+}
+
 function applyBundles(root, destRoot, obfuscator, dryRun) {
     const htmlFiles = collectHtmlFiles(root);
     let count = 0;
@@ -376,6 +441,7 @@ function main() {
         });
         console.log('TOTAL ' + files.length);
         applyBundles(root, root, null, true);
+        applyHtmlEncryption(root, root, true);
         return;
     }
 
@@ -403,7 +469,8 @@ function main() {
         console.log('OK ' + rel + ' (' + original.length + ' -> ' + next.length + ')');
     }
 
-    console.log('DONE ' + changed + ' file(s), ' + bundled + ' bundle(s)');
+    const encrypted = applyHtmlEncryption(root, destRoot, false);
+    console.log('DONE ' + changed + ' file(s), ' + bundled + ' bundle(s), ' + encrypted + ' html encrypted');
 }
 
 if (require.main === module) {
@@ -419,5 +486,10 @@ module.exports = {
     parseArgs,
     findLocalScriptGroups,
     planHtmlBundles,
-    applyBundles
+    applyBundles,
+    minifyHtml,
+    encryptHtmlContent,
+    decryptHtmlPayload,
+    buildEncryptedHtmlShell,
+    applyHtmlEncryption
 };
