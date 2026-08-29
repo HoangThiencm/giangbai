@@ -107,6 +107,28 @@ const ACTIVITY_TITLES = {
   F: { short: "F. Hồ sơ học tập", full: "F. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)" }
 };
 
+const TAB0_SUBTAB_KEYS = [
+  "tab0-sub-materials",
+  "tab0-sub-lesson-info",
+  "tab0-sub-pedagogy-digital",
+  "tab0-sub-ai-competency",
+  "tab0-sub-language-inclusive"
+];
+
+const TAB0_STEP_TO_SUBTAB = {
+  "1": "tab0-sub-materials",
+  "2": "tab0-sub-materials",
+  "3": "tab0-sub-pedagogy-digital",
+  "4": "tab0-sub-ai-competency"
+};
+
+const TAB0_STEP_SCROLL_TARGETS = {
+  "1": "lessonTextbookAnalysis",
+  "2": "lessonPpctAnalysis",
+  "3": "lessonStep3RecommendCard",
+  "4": "lessonAiCompetencyCard"
+};
+
 const SUBJECT_CONTEXT_INTEGRATIONS = [
   {
     id: "gdqpan",
@@ -2308,6 +2330,12 @@ function setupEventListeners() {
     });
   }
 
+  document.querySelectorAll(".tab0-subtab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      switchTab0Subtab(btn.getAttribute("data-tab0-sub"));
+    });
+  });
+
   // 5. Subtabs Hoạt động A -> G trong Tab 4
   document.querySelectorAll(".act-tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -2384,6 +2412,7 @@ function setupEventListeners() {
   if (btnStep3Recommend) {
     btnStep3Recommend.addEventListener("click", (event) => {
       event.stopPropagation();
+      switchTab0Subtab("tab0-sub-pedagogy-digital");
       void triggerStep3PedagogyAndDigitalRecommendations();
     });
   }
@@ -2400,13 +2429,7 @@ function setupEventListeners() {
       if (event.target.closest("button")) return;
       const step = event.target.closest("[data-step]");
       if (!step) return;
-      const targets = {
-        "1": "lessonTextbookAnalysis",
-        "2": "lessonPpctAnalysis",
-        "3": "lessonStep3RecommendCard",
-        "4": "lessonAiCompetencyCard"
-      };
-      document.getElementById(targets[step.getAttribute("data-step")])?.scrollIntoView({ behavior: "smooth", block: "start" });
+      revealTab0WorkflowStep(step.getAttribute("data-step"));
     });
   }
 
@@ -2576,6 +2599,28 @@ function switchMainTab(tabId) {
   }
 }
 
+function switchTab0Subtab(subtabKey) {
+  if (!TAB0_SUBTAB_KEYS.includes(subtabKey)) return;
+  document.querySelectorAll(".tab0-subtab-btn").forEach(btn => {
+    const isActive = btn.getAttribute("data-tab0-sub") === subtabKey;
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  document.querySelectorAll(".tab0-subtab-pane").forEach(pane => {
+    pane.classList.toggle("active", pane.id === subtabKey);
+  });
+}
+
+function revealTab0WorkflowStep(stepKey) {
+  const step = String(stepKey || "");
+  switchTab0Subtab(TAB0_STEP_TO_SUBTAB[step] || "tab0-sub-materials");
+  const targetId = TAB0_STEP_SCROLL_TARGETS[step];
+  const el = targetId ? document.getElementById(targetId) : null;
+  if (el && typeof el.scrollIntoView === "function") {
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
 function switchActivitySubtab(actKey) {
   if (!actKey) return;
   appState.activeActSubtab = actKey;
@@ -2696,6 +2741,7 @@ function handleGlobalPaste(e) {
     clearPpctPasteArm();
     setActiveDropzoneTarget("ppct");
     if (appState.activeTab !== "tabVision") switchMainTab("tabVision");
+    switchTab0Subtab("tab0-sub-materials");
     handlePpctFiles(imageFiles);
     showToast(`Đã dán ${imageFiles.length} ảnh PPCT. Bấm “Đọc PPCT” để phân tích.`, "success");
     return;
@@ -2707,6 +2753,7 @@ function handleGlobalPaste(e) {
   if (appState.activeTab !== "tabVision") {
     switchMainTab("tabVision");
   }
+  switchTab0Subtab("tab0-sub-materials");
   setActiveDropzoneTarget("sgk");
   handleFiles(imageFiles);
   showToast(`Đã dán thành công ${imageFiles.length} ảnh trang SGK!`, "success");
@@ -2974,6 +3021,7 @@ async function handleConfirmPdfPages() {
     if (appState.activeTab !== "tabVision") {
       switchMainTab("tabVision");
     }
+    switchTab0Subtab("tab0-sub-materials");
   } catch (err) {
     console.error("Lỗi khi nạp PDF:", err);
     showToast(`Lỗi khi nạp trang PDF: ${err.message}`, "danger");
@@ -6135,6 +6183,8 @@ if (typeof window !== 'undefined') {
   window.buildPdfMediaPart = buildPdfMediaPart;
   window.switchMainTab = switchMainTab;
   window.switchActivitySubtab = switchActivitySubtab;
+  window.switchTab0Subtab = switchTab0Subtab;
+  window.revealTab0WorkflowStep = revealTab0WorkflowStep;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -6209,6 +6259,8 @@ if (typeof module !== 'undefined' && module.exports) {
     dataUrlToUint8Array,
     buildPdfMediaPart,
     switchMainTab,
-    switchActivitySubtab
+    switchActivitySubtab,
+    switchTab0Subtab,
+    revealTab0WorkflowStep
   };
 }

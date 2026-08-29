@@ -32,6 +32,44 @@ assert.doesNotMatch(html, /data-integration-tab="ai"/, "AI không còn gộp tro
 assert.match(html, /dropzone-active-hint/, "Dropzone phải có gợi ý vùng đang chọn");
 assert.match(html, /id="dropzoneContainerPpct"[\s\S]*?tabindex="0"/, "Vùng PPCT phải focus được");
 
+const tab0Subtabs = [
+  "tab0-sub-materials",
+  "tab0-sub-lesson-info",
+  "tab0-sub-pedagogy-digital",
+  "tab0-sub-ai-competency",
+  "tab0-sub-language-inclusive"
+];
+assert.match(html, /class="tab0-subtabs-nav"/, "Tab 0 phải có thanh điều hướng 5 tab con");
+tab0Subtabs.forEach(id => {
+  assert.match(html, new RegExp(`data-tab0-sub="${id}"`), `Phải có nút tab con ${id}`);
+  assert.match(html, new RegExp(`id="${id}" class="tab0-subtab-pane`), `Phải có pane ${id}`);
+});
+assert.match(
+  html,
+  /id="tab0-sub-materials"[\s\S]*?id="lessonTextbookAnalysis"[\s\S]*?id="lessonPpctAnalysis"[\s\S]*?id="lessonIllustrationCard"/,
+  "Tab con 1 phải chứa SGK, PPCT và card hình minh họa"
+);
+assert.match(
+  html,
+  /id="tab0-sub-lesson-info"[\s\S]*?id="btnAutoDetectMetadata"[\s\S]*?id="inputSchool"[\s\S]*?id="inputTopicCustom"[\s\S]*?class="class-profile-choice"/,
+  "Tab con 2 phải chứa thông tin bài dạy, lớp và đề xuất thông tin"
+);
+assert.match(
+  html,
+  /id="tab0-sub-pedagogy-digital"[\s\S]*?id="btnStep3PedagogyDigital"[\s\S]*?id="digitalStandardsPanel"[\s\S]*?id="subjectIntegrationsPanel"/,
+  "Tab con 3 phải chứa PPDH, NLS và tích hợp môn"
+);
+assert.match(
+  html,
+  /id="tab0-sub-ai-competency"[\s\S]*?id="toggleAiCompetency"[\s\S]*?id="aiStandardsPanel"/,
+  "Tab con 4 phải chứa khung Năng lực AI độc lập"
+);
+assert.match(
+  html,
+  /id="tab0-sub-language-inclusive"[\s\S]*?id="toggleForeignLanguage"[\s\S]*?id="toggleInclusiveSupport"[\s\S]*?class="support-choice"/,
+  "Tab con 5 phải chứa Ngoại ngữ, Hòa nhập và Hỗ trợ chức năng"
+);
+
 console.log("✓ Giao diện HTML đáp ứng quy trình 4 bước.");
 
 console.log("\n[TEST 2] Logic JS từng bước...");
@@ -72,6 +110,24 @@ assert.doesNotMatch(
   appCode,
   /function normalizeTeachingContext[\s\S]{0,2200}catalogFallbackRecords\("digital"/,
   "Không tự seed NLS khi mới mở trang"
+);
+assert.match(appCode, /function switchTab0Subtab\(subtabKey\)/, "Phải có hàm chuyển tab con Tab 0");
+assert.match(appCode, /TAB0_STEP_TO_SUBTAB/, "Stepper phải map bước 1–4 sang tab con");
+assert.match(appCode, /data-tab0-sub/, "Nút tab con phải gắn sự kiện data-tab0-sub");
+assert.match(
+  appCode,
+  /revealTab0WorkflowStep\(step\.getAttribute\("data-step"\)\)/,
+  "Bấm stepper phải nhảy đúng tab con"
+);
+assert.match(
+  appCode,
+  /switchTab0Subtab\("tab0-sub-pedagogy-digital"\)/,
+  "Nút đề xuất Bước 3 phải mở tab con PPDH & NLS"
+);
+assert.match(
+  appCode,
+  /switchTab0Subtab\("tab0-sub-materials"\)/,
+  "Ctrl+V / nạp PDF phải mở tab con gửi file SGK/PPCT"
 );
 
 console.log("✓ Logic JS 4 bước độc lập hoạt động chuẩn xác.");

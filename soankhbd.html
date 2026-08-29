@@ -63,6 +63,12 @@
     .khbd-read-source-btn { width: 100%; margin: 0.75rem 0 1rem; padding: 0.9rem 1rem; font-size: 1rem; font-weight: 700; }
     .standard-choice-selected { background: #ecfdf5; border-left: 3px solid #059669; padding: 0.35rem 0.55rem; border-radius: 6px; }
     .khbd-ai-card { border: 2px solid #fde68a; background: linear-gradient(90deg, #fffbeb, #fff7ed); margin-bottom: 1.25rem; }
+    .tab0-subtabs-nav { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border); }
+    .tab0-subtab-btn { padding: 0.55rem 0.85rem; font-size: 0.82rem; font-weight: 600; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+    .tab0-subtab-btn:hover { background: var(--primary-light); color: var(--primary); }
+    .tab0-subtab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .tab0-subtab-pane { display: none; }
+    .tab0-subtab-pane.active { display: block; animation: fadeIn 0.2s ease-in-out; }
   </style>
 </head>
 <body>
@@ -214,6 +220,14 @@
           </div>
         </div>
       </nav>
+      <div class="tab0-subtabs-nav" role="tablist" aria-label="Thiết lập bài dạy và học liệu nguồn">
+        <button type="button" class="tab0-subtab-btn active" data-tab0-sub="tab0-sub-materials">📁 1. Gửi file &amp; Đọc SGK/PPCT</button>
+        <button type="button" class="tab0-subtab-btn" data-tab0-sub="tab0-sub-lesson-info">✍️ 2. Thông tin bài &amp; Lớp</button>
+        <button type="button" class="tab0-subtab-btn" data-tab0-sub="tab0-sub-pedagogy-digital">⚡ 3. PPDH, Năng lực số &amp; Môn</button>
+        <button type="button" class="tab0-subtab-btn" data-tab0-sub="tab0-sub-ai-competency">✨ 4. Năng lực AI (QĐ 2422)</button>
+        <button type="button" class="tab0-subtab-btn" data-tab0-sub="tab0-sub-language-inclusive">🌐 5. Ngoại ngữ &amp; Hòa nhập</button>
+      </div>
+      <div id="tab0-sub-materials" class="tab0-subtab-pane active">
       <!-- =====================================================================
            BƯỚC 1–2: TẢI HỌC LIỆU NGUỒN (SGK & PPCT) — ĐẦU TRANG TAB 0
            ===================================================================== -->
@@ -357,6 +371,21 @@
         </div>
       </div>
 
+      <div class="card" id="lessonIllustrationCard" style="margin-top: 0.5rem;">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="image"></i> Hình minh họa — chuẩn SGK &amp; thực tế</h2>
+          <div class="card-actions">
+            <button id="btnGenerateIllustrations" class="btn btn-primary" type="button">
+              <i data-lucide="sparkles"></i> Tạo hình minh họa
+            </button>
+          </div>
+        </div>
+        <p class="text-muted" style="font-size:0.85rem;margin:0 0 .75rem">Bài hình học/đo đạc cần hình vẽ toán thuần (nét mực SGK, nhãn đỉnh). Bài toán thực tế cần cảnh đời sống. Hệ thống chỉ vẽ khi nội dung SGK thực sự cần hình; ảnh được gắn vào hoạt động và xuất Word.</p>
+        <div id="illustrationGallery" class="khbd-illustration-gallery"></div>
+      </div>
+      </div>
+
+      <div id="tab0-sub-lesson-info" class="tab0-subtab-pane">
       <!-- =====================================================================
            KHỐI 2: THIẾT LẬP THÔNG TIN BÀI DẠY
            ===================================================================== -->
@@ -416,39 +445,16 @@
               <label for="inputClassProfileNote">Ghi chú ngắn (không nhập tên/thông tin sức khỏe nhạy cảm):</label>
               <textarea id="inputClassProfileNote" maxlength="300" rows="2"></textarea>
             </fieldset>
-            <fieldset class="tool-group" style="min-width:0;border:1px solid var(--border);border-radius:8px;padding:.75rem;">
-              <legend>Hỗ trợ chức năng (không chẩn đoán)</legend>
-              <label><input type="checkbox" class="support-choice" value="Nhiệm vụ chia nhỏ"> Nhiệm vụ chia nhỏ</label><br>
-              <label><input type="checkbox" class="support-choice" value="Thêm thời gian"> Thêm thời gian</label><br>
-              <label><input type="checkbox" class="support-choice" value="Học liệu trực quan/chữ lớn"> Học liệu trực quan/chữ lớn</label><br>
-              <label><input type="checkbox" class="support-choice" value="Đọc/nhắc lại yêu cầu"> Đọc/nhắc lại yêu cầu</label><br>
-              <label><input type="checkbox" class="support-choice" value="Hỗ trợ giao tiếp/thảo luận"> Hỗ trợ giao tiếp/thảo luận</label><br>
-              <label><input type="checkbox" class="support-choice" value="Bố trí vai trò phù hợp"> Bố trí vai trò phù hợp</label><br>
-              <label><input type="checkbox" class="support-choice" value="Bạn đồng hành"> Bạn đồng hành</label>
-              <label for="inputSupportNote">Ghi chú ngắn (không nhập tên/thông tin sức khỏe nhạy cảm):</label>
-              <textarea id="inputSupportNote" maxlength="300" rows="2"></textarea>
-            </fieldset>
           </div>
           <div class="tool-group">
             <label for="inputSpecialRequirements">Yêu cầu hoặc hoạt động đặc thù:</label>
             <textarea id="inputSpecialRequirements" maxlength="600" rows="3" placeholder="Ví dụ: Có hoạt động đo đạc ở sân trường; ưu tiên nhiệm vụ theo nhóm 4; không sử dụng điện thoại trong giờ học."></textarea>
           </div>
-          <div id="dynamicIntegrationsContainer" class="dynamic-integrations-panel" style="margin-top: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #ffffff;">
-            <h4 style="margin: 0 0 0.75rem; font-size: 0.95rem; font-weight: 700; color: var(--primary-dark);">Tích hợp bối cảnh (Ngoại ngữ, Hòa nhập)</h4>
-            <div class="integration-tabs" role="tablist" aria-label="Các nội dung tích hợp">
-              <label class="integration-tab" data-integration-tab="foreignLanguage"><input type="checkbox" id="toggleForeignLanguage"> <span>🌐 Ngoại ngữ</span></label>
-              <label class="integration-tab" data-integration-tab="inclusive"><input type="checkbox" id="toggleInclusiveSupport"> <span>🤝 Hòa nhập</span></label>
-            </div>
-            <div class="integration-tab-details">
-              <section class="integration-detail" data-integration-detail="foreignLanguage" hidden><p><b>Gợi ý tích hợp:</b> Chỉ dùng từ vựng, câu lệnh hoặc sản phẩm ngoại ngữ thật sự cần cho bài học; không biến tiết học thành dạy ngoại ngữ.</p></section>
-              <section class="integration-detail" data-integration-detail="inclusive" hidden><p><b>Gợi ý hỗ trợ:</b> Điều chỉnh nhiệm vụ, học liệu, cách giao tiếp và vai trò nhóm theo nhu cầu đã chọn ở phần Đặc điểm lớp học.</p></section>
-            </div>
-            <div id="subjectIntegrationsPanel" hidden style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border);"></div>
-            <p id="nlsAiSubjectHint" class="text-muted" hidden style="font-size:0.82rem;margin:0.5rem 0 0;"></p>
-          </div>
         </div>
       </div>
+      </div>
 
+      <div id="tab0-sub-pedagogy-digital" class="tab0-subtab-pane">
       <div class="card khbd-step3-card" id="lessonStep3RecommendCard">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="sparkles"></i> Khối 3: Phương pháp dạy học &amp; Năng lực số (TT 02 / CV 3456)</h2>
@@ -475,8 +481,12 @@
           <p class="text-muted" style="font-size:0.82rem;margin:0.4rem 0 0.75rem;">Nhóm có mục được chọn tự mở. Bấm đề xuất ở trên để tick 2–3 mã phù hợp khối lớp.</p>
           <div id="digitalStandardsPanel"></div>
         </div>
+        <div id="subjectIntegrationsPanel" hidden style="margin-top: 0.75rem; padding: 1rem; border: 1px dashed var(--border); border-radius: var(--radius);"></div>
+        <p id="nlsAiSubjectHint" class="text-muted" hidden style="font-size:0.82rem;margin:0.5rem 0 0;"></p>
+      </div>
       </div>
 
+      <div id="tab0-sub-ai-competency" class="tab0-subtab-pane">
       <div class="card khbd-ai-card" id="lessonAiCompetencyCard">
         <div class="card-header">
           <h2 class="card-title"><i data-lucide="bot"></i> ✨ Tích hợp Khung Năng lực AI (QĐ 2422/QĐ-BGDĐT)</h2>
@@ -487,29 +497,36 @@
         </label>
         <div id="aiStandardsPanel" hidden></div>
       </div>
-
-      <div style="margin-top: 0.25rem; margin-bottom: 1.25rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
-        <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình 4 bước soạn KHBD:</h4>
-        <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
-          <li><b>Khối 1 (Đọc học liệu):</b> Dán/chọn file rồi bấm <b>Đọc sách giáo khoa</b> / <b>Đọc PPCT</b> ngay dưới ô nạp.</li>
-          <li><b>Khối 2 (Thông tin bài dạy):</b> Trường, môn, tên bài, số tiết, phạm vi PPCT, đặc điểm lớp.</li>
-          <li><b>Khối 3 (PPDH &amp; NLS):</b> Bấm <b>⚡ ĐỀ XUẤT PPDH, KỸ THUẬT &amp; NĂNG LỰC SỐ (TT 02)</b> — luôn tick 2–3 mục NLS.</li>
-          <li><b>Khối 4 (Năng lực AI):</b> Chỉ khi cần, tick <b>✨ Năng lực AI</b> (đúng 2–3 mục QĐ 2422) rồi soạn bài.</li>
-        </ol>
       </div>
 
-      <!-- CARD HÌNH MINH HỌA (ĐẶT Ở CUỐI TAB 0) -->
-      <div class="card" id="lessonIllustrationCard" style="margin-top: 1.5rem;">
+      <div id="tab0-sub-language-inclusive" class="tab0-subtab-pane">
+      <div class="card">
         <div class="card-header">
-          <h2 class="card-title"><i data-lucide="image"></i> Hình minh họa — chuẩn SGK &amp; thực tế</h2>
-          <div class="card-actions">
-            <button id="btnGenerateIllustrations" class="btn btn-primary" type="button">
-              <i data-lucide="sparkles"></i> Tạo hình minh họa
-            </button>
+          <h2 class="card-title"><i data-lucide="languages"></i> Ngoại ngữ &amp; Giáo dục hòa nhập</h2>
+        </div>
+        <div id="dynamicIntegrationsContainer" class="dynamic-integrations-panel" style="margin-top: 0.25rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #ffffff;">
+          <div class="integration-tabs" role="tablist" aria-label="Các nội dung tích hợp">
+            <label class="integration-tab" data-integration-tab="foreignLanguage"><input type="checkbox" id="toggleForeignLanguage"> <span>🌐 Ngoại ngữ</span></label>
+            <label class="integration-tab" data-integration-tab="inclusive"><input type="checkbox" id="toggleInclusiveSupport"> <span>🤝 Hòa nhập</span></label>
+          </div>
+          <div class="integration-tab-details">
+            <section class="integration-detail" data-integration-detail="foreignLanguage" hidden><p><b>Gợi ý tích hợp:</b> Chỉ dùng từ vựng, câu lệnh hoặc sản phẩm ngoại ngữ thật sự cần cho bài học; không biến tiết học thành dạy ngoại ngữ.</p></section>
+            <section class="integration-detail" data-integration-detail="inclusive" hidden><p><b>Gợi ý hỗ trợ:</b> Điều chỉnh nhiệm vụ, học liệu, cách giao tiếp và vai trò nhóm theo nhu cầu đã chọn ở phần Đặc điểm lớp học.</p></section>
           </div>
         </div>
-        <p class="text-muted" style="font-size:0.85rem;margin:0 0 .75rem">Bài hình học/đo đạc cần hình vẽ toán thuần (nét mực SGK, nhãn đỉnh). Bài toán thực tế cần cảnh đời sống. Hệ thống chỉ vẽ khi nội dung SGK thực sự cần hình; ảnh được gắn vào hoạt động và xuất Word.</p>
-        <div id="illustrationGallery" class="khbd-illustration-gallery"></div>
+        <fieldset class="tool-group" style="min-width:0;border:1px solid var(--border);border-radius:8px;padding:.75rem;margin-top:1rem;">
+          <legend>Hỗ trợ chức năng (không chẩn đoán)</legend>
+          <label><input type="checkbox" class="support-choice" value="Nhiệm vụ chia nhỏ"> Nhiệm vụ chia nhỏ</label><br>
+          <label><input type="checkbox" class="support-choice" value="Thêm thời gian"> Thêm thời gian</label><br>
+          <label><input type="checkbox" class="support-choice" value="Học liệu trực quan/chữ lớn"> Học liệu trực quan/chữ lớn</label><br>
+          <label><input type="checkbox" class="support-choice" value="Đọc/nhắc lại yêu cầu"> Đọc/nhắc lại yêu cầu</label><br>
+          <label><input type="checkbox" class="support-choice" value="Hỗ trợ giao tiếp/thảo luận"> Hỗ trợ giao tiếp/thảo luận</label><br>
+          <label><input type="checkbox" class="support-choice" value="Bố trí vai trò phù hợp"> Bố trí vai trò phù hợp</label><br>
+          <label><input type="checkbox" class="support-choice" value="Bạn đồng hành"> Bạn đồng hành</label>
+          <label for="inputSupportNote">Ghi chú ngắn (không nhập tên/thông tin sức khỏe nhạy cảm):</label>
+          <textarea id="inputSupportNote" maxlength="300" rows="2"></textarea>
+        </fieldset>
+      </div>
       </div>
     </section>
 
