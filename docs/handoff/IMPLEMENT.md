@@ -1,30 +1,27 @@
 # IMPLEMENT
 
-Trạng thái: ĐÃ LÀM — vá VERIFY FAIL soanbaigemini: khớp 100% HINH_xx + card tạo ảnh tùy chọn
+Trạng thái: ĐÃ LÀM — PPCT Mistral OCR + khóa khung Năng lực AI 2–3 mục
 
 ## File đã đổi
 
-- `backupcode viettailieu/soanbaigemini.html`
-- `lesson-import.js` (nhận marker `HINH_CUSTOM_xx`)
-- `tests/soanbaigemini-plan-smoke.js`
+- `js/khbd-app.js`
+- `js/khbd-standards.js`
+- `tests/khbd-mistral-ocr-smoke.js`
+- `tests/khbd-structured-candidates-smoke.js`
+- `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Nội dung chính
 
-1. **Khớp hình ảnh**
-   - Prompt Bước 1 khóa mã liên tục `HINH_01`, `HINH_02`; mọi hình phải có `![Mô tả](HINH_xx)`.
-   - Prompt Bước 2 tiếp nối `HINH_03`, `HINH_04`..., liệt kê đủ mã đã dùng.
-   - `buildLessonImageInventory()` / `collectMarkerIdsFromLessonSources()`: marker trong bài mà thiếu DANH SÁCH HÌNH thì tự sinh prompt từ mô tả xung quanh (`autoFilled`) và **luôn hiện thẻ tạo ảnh**. Không còn chỉ hiện hint rồi ẩn khung.
-
-2. **Card “Tạo ảnh từ Prompt / Mô tả tùy chọn”**
-   - Textarea prompt, phong cách Sơ đồ/Vector SGK hoặc Ảnh thực tế.
-   - Nút **Tạo ảnh ngay** → `createLessonIllustration()`.
-   - Xem trước, **Tải PNG**, **Copy Data URL**, **Chèn vào bài soạn** `![Mô tả](HINH_CUSTOM_xx)`.
+1. **PPCT**: `handleGeneratePpctAnalysis` gọi `extractPpctOcrText`, tiến trình “Đang nhận diện PPCT bằng Mistral OCR...”, parse cục bộ `parsePpctLessonDetails` để điền ô phân tích / thời lượng / phạm vi tiết. Gemini chỉ khi hết key hoặc OCR lỗi.
+2. **AI chưa tick**: `isAiStandardRecord` dọn mọi bản ghi AI (`standardKind`, framework QĐ 2422). `autoDetectAndFillLessonMetadata` và đọc PPCT **không** tự `integrations.ai = true`.
+3. **AI đã tick**: `recommendOfficialStandards` / `catalogFallbackRecords` / `applySuggestedStandardRecords` khóa **2–3 mục**, `capAiStandardRecords` cắt tối đa 3.
 
 ## Test đã chạy
 
 ```
-node tests/soanbaigemini-plan-smoke.js
+node tests/khbd-mistral-ocr-smoke.js
+node tests/khbd-structured-candidates-smoke.js
 ```
 
 Kết quả: **pass**.

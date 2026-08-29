@@ -215,8 +215,8 @@ function recommendOfficialStandards(kind, ctx) {
   const catalog = KHBD_STANDARDS[kind];
   if (!catalog) return [];
   const grade = Number(ctx.grade) || 6;
-  const min = catalog.minSelect || 0;
-  const max = catalog.maxSelect || 3;
+  const max = kind === "ai" ? 3 : (catalog.maxSelect || 3);
+  const min = kind === "ai" ? Math.min(2, max) : (catalog.minSelect || 0);
   const pool = entriesForGrade(kind, grade);
   const ranked = pool
     .map(entry => ({ entry, score: scoreOfficialStandard(kind, entry, ctx) }))

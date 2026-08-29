@@ -492,6 +492,11 @@ function normalizeTeachingContext(context) {
     inclusive: Boolean(integrations.inclusive)
   }, Object.fromEntries(SUBJECT_CONTEXT_INTEGRATIONS.map(item => [item.id, Boolean(integrations[item.id])])));
   let standards = Array.isArray(source.standards) ? source.standards.filter(item => item && typeof item === "object") : [];
+  if (!mergedIntegrations.ai && typeof isAiStandardRecord === "function") {
+    standards = standards.filter(item => !isAiStandardRecord(item));
+  } else if (mergedIntegrations.ai) {
+    standards = standards.filter(item => !isAiStandardRecord(item)).concat(capAiStandardRecords(standards.filter(item => isAiStandardRecord(item))));
+  }
   if (mergedIntegrations.digital) {
     const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS.digital : null;
     const hasDigital = standards.some(item => item && (item.standardKind === "digital" || (catalog && item.framework === catalog.framework)));
@@ -834,7 +839,10 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
     if (!catalog) return;
     if (!enabled) {
       const before = appState.teachingContext.standards.length;
-      appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item && item.framework !== catalog.framework);
+      appState.teachingContext.standards = appState.teachingContext.standards.filter(item => {
+        if (kind === "ai") return !isAiStandardRecord(item);
+        return item && item.framework !== catalog.framework;
+      });
       if (appState.teachingContext.standards.length !== before) changed = true;
       return;
     }
@@ -849,6 +857,15 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
             .concat(records);
           changed = true;
         }
+      }
+    }
+    if (kind === "ai") {
+      const current = standardsOfKind("ai");
+      if (current.length > 3) {
+        appState.teachingContext.standards = appState.teachingContext.standards
+          .filter(item => !isAiStandardRecord(item))
+          .concat(capAiStandardRecords(current));
+        changed = true;
       }
     }
   });
@@ -950,7 +967,10 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
     if (!catalog) return;
     if (!enabled) {
       const before = appState.teachingContext.standards.length;
-      appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item && item.framework !== catalog.framework);
+      appState.teachingContext.standards = appState.teachingContext.standards.filter(item => {
+        if (kind === "ai") return !isAiStandardRecord(item);
+        return item && item.framework !== catalog.framework;
+      });
       if (appState.teachingContext.standards.length !== before) changed = true;
       return;
     }
@@ -965,6 +985,15 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
             .concat(records);
           changed = true;
         }
+      }
+    }
+    if (kind === "ai") {
+      const current = standardsOfKind("ai");
+      if (current.length > 3) {
+        appState.teachingContext.standards = appState.teachingContext.standards
+          .filter(item => !isAiStandardRecord(item))
+          .concat(capAiStandardRecords(current));
+        changed = true;
       }
     }
   });
@@ -1057,26 +1086,49 @@ function parseStructuredCandidates(raw, entries, ocrText, maxSelect) {
   return matched.concat(unmatched).slice(0, maxSelect || 3);
 }
 
+function isAiStandardRecord(item) {
+  if (!item || typeof item !== "object") return false;
+  if (item.standardKind === "ai") return true;
+  const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS.ai : null;
+  if (catalog && item.framework === catalog.framework) return true;
+  return /QĐ\s*2422|Quyết định\s*2422|năng lực AI|Khung nội dung giáo dục trí tuệ nhân tạo/i.test(String(item.framework || ""));
+}
+
+function capAiStandardRecords(records) {
+  return (Array.isArray(records) ? records.filter(Boolean) : []).slice(0, 3);
+}
+
 function catalogFallbackRecords(kind, grade, entries, maxSelect) {
-  const limit = maxSelect || 3;
+  const limit = kind === "ai" ? 3 : (maxSelect || 3);
+  const pool = Array.isArray(entries) && entries.length
+    ? entries
+    : (typeof entriesForGrade === "function" ? entriesForGrade(kind, grade) : []);
+  let records = [];
   if (typeof recommendOfficialStandards === "function") {
     const rec = recommendOfficialStandards(kind, {
       ...integrationRecommendContext(),
       grade,
       aiOn: kind === "ai" || Boolean(appState.teachingContext?.integrations?.ai)
     });
-    if (rec.length) return rec.slice(0, limit);
+    if (rec.length) records = rec.slice(0, limit);
   }
-  const pool = Array.isArray(entries) && entries.length
-    ? entries
-    : (typeof entriesForGrade === "function" ? entriesForGrade(kind, grade) : []);
-  return pool.slice(0, limit).map(entry => standardToRecord(kind, entry, grade, true));
+  if (!records.length) {
+    records = pool.slice(0, limit).map(entry => standardToRecord(kind, entry, grade, true));
+  }
+  if (kind === "ai" && records.length < 2) {
+    const used = new Set(records.map(item => item.catalogId));
+    pool.filter(entry => !used.has(entry.id)).slice(0, 2 - records.length).forEach(entry => {
+      records.push(standardToRecord(kind, entry, grade, true));
+    });
+  }
+  return kind === "ai" ? capAiStandardRecords(records) : records;
 }
 
 function applySuggestedStandardRecords(kind, catalog, records) {
+  const capped = kind === "ai" ? capAiStandardRecords(records) : records;
   appState.teachingContext.standards = appState.teachingContext.standards
-    .filter(item => item.framework !== catalog.framework)
-    .concat(records);
+    .filter(item => kind === "ai" ? !isAiStandardRecord(item) : item.framework !== catalog.framework)
+    .concat(capped);
   saveStateToLocalStorage();
   renderStandardsCatalog();
 }
@@ -1113,6 +1165,7 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
     }
   }
   if (!records.length) records = catalogFallbackRecords(kind, grade, candidates, maxSelect);
+  if (kind === "ai") records = capAiStandardRecords(records);
   if (!records.length) {
     if (!silent) showToast(`Chưa chọn được ${label} cho lớp ${grade}. Bạn có thể chọn thủ công từ khung chuẩn.`, "warning", 5000);
     return false;
@@ -1150,9 +1203,10 @@ async function requestStructuredIntegrationCandidatesForEnabled({ silent = false
     const maxSelect = catalog.maxSelect || 3;
     const raw = payload && Array.isArray(payload[kind]) ? JSON.stringify({ candidates: payload[kind] }) : "";
     const selected = raw && parseStructuredCandidates(raw, pools[kind], vision, maxSelect);
-    const records = selected?.length
+    let records = selected?.length
       ? selected.map(({ entry, lessonAnchor, fitRationale, proposedTask }) => ({ ...standardToRecord(kind, entry, grade, true), lessonAnchor, fitRationale, proposedTask }))
       : catalogFallbackRecords(kind, grade, pools[kind], maxSelect);
+    if (kind === "ai") records = capAiStandardRecords(records);
     if (records.length) { applySuggestedStandardRecords(kind, catalog, records); changed = true; }
   }
   if (!silent && changed) showToast("Đã đề xuất năng lực số và năng lực AI theo SGK trong một lượt phân tích.", "info", 5000);
@@ -3362,13 +3416,9 @@ function autoDetectAndFillLessonMetadata({ ppctText, ocrText, silent = false } =
 
     if (parsed.hasAiIntegration) {
       detected.hasAiIntegration = true;
-      if (appState.teachingContext?.integrations) {
-        appState.teachingContext.integrations.ai = true;
+      if (!appState.teachingContext?.integrations?.ai) {
+        detectedChanges.push("PPCT có ghi chú AI — tick Năng lực AI nếu muốn chọn 2–3 mục chuẩn");
       }
-      const toggleAi = document.getElementById("toggleAiCompetency");
-      if (toggleAi) toggleAi.checked = true;
-      if (typeof renderStandardsCatalog === "function") renderStandardsCatalog();
-      detectedChanges.push("Kích hoạt Tích hợp Năng lực AI (theo PPCT)");
     }
   }
 
@@ -3536,16 +3586,47 @@ async function handleGeneratePpctAnalysis() {
   try {
     appState.isGenerating = true;
     if (btn) btn.disabled = true;
-    updateProgress(20, "Đang đọc & phân tích Phân phối chương trình (PPCT)...");
+    updateProgress(15, "Đang nhận diện PPCT bằng Mistral OCR...");
     const status = document.getElementById("statusFooterText");
-    if (status) status.textContent = "Đang đọc & phân tích PPCT...";
+    if (status) status.textContent = "Đang nhận diện PPCT bằng Mistral OCR...";
 
-    updateProgress(60, "Đang trích xuất cấu trúc Phụ lục 3 CV 5512 bằng AI...");
-    const prompt = 'Đọc trực tiếp PPCT PDF/ảnh đính kèm. Không OCR, không chép toàn văn. Chỉ trả JSON: {"topic":"","subject":"","grade":"","periodCount":null,"lessonScope":"","hasAiIntegration":false,"aiEvidence":"","summary":""}. hasAiIntegration chỉ true khi PPCT ghi tích hợp AI; lessonScope giữ cụm tiết như Tiết 50-51.';
-    const raw = await geminiAPI.generateContent(prompt, await prepareGeminiPpctMedia(), getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1);
-    const json = String(raw || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-    const data = JSON.parse((json.match(/\{[\s\S]*\}/) || [""])[0]);
-    const cleanedResult = String(data.summary || "").trim() || JSON.stringify(data, null, 2);
+    let ocrText = "";
+    let usedMistral = false;
+    if (canUseMistralOcr()) {
+      try {
+        ocrText = String(await extractPpctOcrText((msg, pct) => updateProgress(pct, msg)) || "").trim();
+        usedMistral = Boolean(ocrText.replace(/\s+/g, " ").trim());
+        if (!usedMistral) ocrText = "";
+      } catch (mistralError) {
+        console.warn("Mistral OCR PPCT không khả dụng, chuyển sang Gemini:", mistralError);
+        showToast("Mistral OCR không dùng được, đang tự chuyển sang Gemini để đọc PPCT.", "info", 4500);
+      }
+    } else {
+      showToast("Chưa có Mistral API Key; đang dùng Gemini để đọc PPCT.", "info", 4500);
+    }
+
+    const currentTopic = appState.customTopic || appState.selectedLesson || "";
+    let cleanedResult = "";
+    let parsedDetails = { lessonScopeSuggestion: "", durationSuggestion: "", hasAiIntegration: false, details: {} };
+
+    if (ocrText) {
+      updateProgress(70, "Đang bóc tách tiết/thời lượng từ văn bản PPCT...");
+      cleanedResult = ocrText;
+      parsedDetails = parsePpctLessonDetails(ocrText, currentTopic);
+    } else {
+      updateProgress(60, "Đang trích xuất cấu trúc Phụ lục 3 CV 5512 bằng AI...");
+      const prompt = 'Đọc trực tiếp PPCT PDF/ảnh đính kèm. Không OCR, không chép toàn văn. Chỉ trả JSON: {"topic":"","subject":"","grade":"","periodCount":null,"lessonScope":"","hasAiIntegration":false,"aiEvidence":"","summary":""}. hasAiIntegration chỉ true khi PPCT ghi tích hợp AI; lessonScope giữ cụm tiết như Tiết 50-51.';
+      const raw = await geminiAPI.generateContent(prompt, await prepareGeminiPpctMedia(), getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1);
+      const json = String(raw || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+      const data = JSON.parse((json.match(/\{[\s\S]*\}/) || [""])[0]);
+      cleanedResult = String(data.summary || "").trim() || JSON.stringify(data, null, 2);
+      parsedDetails = parsePpctLessonDetails(cleanedResult, currentTopic);
+      if (data.hasAiIntegration === true) {
+        parsedDetails.hasAiIntegration = true;
+        parsedDetails.details.ghiChu = String(data.aiEvidence || "ghi chú Tích hợp AI trong PPCT").trim();
+      }
+    }
+
     appState.content.ppctAnalysis = cleanedResult;
     saveStateToLocalStorage();
 
@@ -3554,37 +3635,29 @@ async function handleGeneratePpctAnalysis() {
 
     if (details) details.open = true;
 
-    // Không tự ý ghi đè Tên bài học và Thời lượng người dùng đã chọn/nhập
-    const currentTopic = appState.customTopic || appState.selectedLesson || "";
-    const parsedDetails = parsePpctLessonDetails(cleanedResult, currentTopic);
-    if (data.hasAiIntegration === true) { 
-      parsedDetails.hasAiIntegration = true; 
-      parsedDetails.details.ghiChu = String(data.aiEvidence || "ghi chú Tích hợp AI trong PPCT").trim(); 
-    }
-
     if (parsedDetails.lessonScopeSuggestion) {
       const scopeInput = document.getElementById("inputLessonScope");
       if (scopeInput && !scopeInput.value.trim()) {
         scopeInput.value = parsedDetails.lessonScopeSuggestion;
         appState.teachingContext.lessonScope = parsedDetails.lessonScopeSuggestion;
       }
-      saveStateToLocalStorage();
+    }
+    if (parsedDetails.durationSuggestion || parsedDetails.details?.thoiLuong) {
+      const rawDur = parsedDetails.durationSuggestion || parsedDetails.details.thoiLuong;
+      const formatted = formatSmartDuration(rawDur, appState.selectedGrade);
+      const durInput = document.getElementById("inputDuration");
+      if (formatted && durInput && !String(durInput.value || "").trim()) {
+        durInput.value = formatted;
+        appState.duration = formatted;
+      }
+    }
+    saveStateToLocalStorage();
+
+    if (parsedDetails.hasAiIntegration && !appState.teachingContext.integrations.ai) {
+      showToast("PPCT có ghi chú tích hợp AI. Hãy tick Năng lực AI nếu muốn chọn 2–3 mục chuẩn theo lớp.", "info", 5000);
     }
 
-    if (parsedDetails.hasAiIntegration) {
-      appState.teachingContext.integrations.ai = true;
-      const toggleAi = document.getElementById("toggleAiCompetency");
-      if (toggleAi) {
-        toggleAi.checked = true;
-      }
-      if (typeof renderStandardsCatalog === "function") {
-        renderStandardsCatalog();
-      }
-      saveStateToLocalStorage();
-      showToast("Đã tự động kích hoạt Tích hợp Năng lực AI theo ghi chú trong Phân phối chương trình!", "info", 5000);
-    }
-
-    updateProgress(100, "Đã hoàn thành phân tích PPCT!");
+    updateProgress(100, usedMistral ? "Đã nhận diện PPCT bằng Mistral OCR!" : "Đã hoàn thành phân tích PPCT!");
     setTimeout(() => hideProgress(), 1500);
     showToast("Đã đọc! Đã phân tích Phân phối chương trình thành công.", "success", 5000);
     if (status) status.textContent = "Sẵn sàng.";

@@ -21,6 +21,10 @@ assert.doesNotMatch(app, /window\.geminiAPI/, "Không được phụ thuộc Gem
 assert.match(app, /const selectable = enabled;/, "Checkbox con chỉnh được khi bật tích hợp, không khóa vì thiếu OCR");
 assert.match(app, /catalogFallbackRecords\("digital"/, "NLS phải tự nạp mục con theo lớp");
 assert.match(app, /catalogFallbackRecords\("ai"/, "AI phải tự nạp mục con khi bật tích hợp");
+assert.match(app, /function isAiStandardRecord/, "Phải nhận diện bản ghi AI để dọn khi chưa tick");
+assert.match(app, /function capAiStandardRecords/, "Phải khóa tối đa 3 mục AI");
+assert.match(app, /kind === "ai" \? 3/, "catalogFallbackRecords khóa AI ở 3 mục");
+assert.doesNotMatch(app, /function autoDetectAndFillLessonMetadata[\s\S]{0,3500}integrations\.ai = true/, "Không tự bật AI khi giáo viên chưa tick");
 assert.match(app, /typeof entriesForGrade === "function"/, "Phải lọc danh mục theo lớp/dải");
 
 const ocrText = "Bài 1. Tập hợp. Cho tập hợp A = {1; 2; 3}. Hãy viết tập hợp B gồm các phần tử là số tự nhiên nhỏ hơn 4. Học sinh thảo luận và trình bày kết quả vào vở.";
@@ -125,6 +129,11 @@ function testParaphrasedAnchorStillAccepted() {
 }
 
 async function testEmptyCandidatesFallbackTicks() {
+  const standards = require("../js/khbd-standards.js");
+  global.KHBD_STANDARDS = standards.KHBD_STANDARDS;
+  global.standardToRecord = standards.standardToRecord;
+  global.entriesForGrade = standards.entriesForGrade;
+  global.recommendOfficialStandards = standards.recommendOfficialStandards;
   const { appState, requestStructuredIntegrationCandidates } = require("../js/khbd-app.js");
   global.geminiAPI = { generateContent: async () => '{"candidates":[]}' };
   appState.selectedGrade = "6";
@@ -132,10 +141,26 @@ async function testEmptyCandidatesFallbackTicks() {
   appState.teachingContext = { integrations: { ai: true, digital: false }, ocrReady: true, standards: [] };
   const result = await requestStructuredIntegrationCandidates("ai", { silent: true });
   assert.strictEqual(result, true, "candidates rỗng vẫn phải tick fallback khung lớp");
-  assert.ok(appState.teachingContext.standards.length >= 1, "Phải có ít nhất 1 mục được chọn");
+  assert.ok(appState.teachingContext.standards.length >= 2 && appState.teachingContext.standards.length <= 3, "Fallback AI phải đúng 2–3 mục");
   assert.ok(appState.teachingContext.standards.every(item => item.autoSuggested), "Fallback vẫn đánh dấu đề xuất tự động");
   assert.ok(appState.teachingContext.standards.every(item => String(item.officialCode || item.catalogId || "").startsWith("6") || String(item.catalogId).includes("6")), "Fallback AI lớp 6 không lấy lớp khác");
 }
+
+function testAiRecommendCappedAtThree() {
+  const { recommendOfficialStandards } = require("../js/khbd-standards.js");
+  const rec = recommendOfficialStandards("ai", {
+    grade: 6,
+    aiOn: true,
+    topic: "AI chatbot kiểm chứng dữ liệu cá nhân",
+    vision: "học sinh dùng AI kiểm tra kết quả và bảo vệ dữ liệu cá nhân",
+    methods: [],
+    activities: [],
+    facilities: { internet: true, devices: true }
+  });
+  assert.ok(rec.length >= 2 && rec.length <= 3, "recommendOfficialStandards AI khóa 2–3 mục");
+}
+
+testAiRecommendCappedAtThree();
 
 testGlobalGeminiWithoutWindow()
   .then(testOfficialCodeAndProseJson)

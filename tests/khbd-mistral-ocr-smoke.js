@@ -26,5 +26,8 @@ assert.match(html, /id="textareaMistralKeys"/, "Modal API Key có ô nhập Mist
 assert.match(html, /dùng Mistral OCR/, "Modal giải thích Mistral đọc SGK");
 assert.doesNotMatch(html, /Đọc nội dung SGK \(Gemini\)/, "Không còn nhãn Gemini trên nút đọc SGK");
 assert.match(app, /Đang nhận diện SGK bằng Mistral OCR/, "Ưu tiên hiển thị tiến trình Mistral OCR");
+assert.match(app, /async function extractPpctOcrText/, "Có hàm nhận diện PPCT bằng Mistral");
+assert.match(app, /Đang nhận diện PPCT bằng Mistral OCR/, "Đọc PPCT ưu tiên Mistral OCR");
+assert.match(app, /await extractPpctOcrText\(/, "handleGeneratePpctAnalysis gọi Mistral OCR trước Gemini");
 
 console.log("khbd mistral ocr smoke: passed");
