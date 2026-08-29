@@ -1,27 +1,26 @@
 # IMPLEMENT
 
-Trạng thái: ĐÃ LÀM — PPCT Mistral OCR + khóa khung Năng lực AI 2–3 mục
+Trạng thái: ĐÃ LÀM — PDF scan OCR + Tạo bài tập tổng hợp từ file (`taobaitap.html`)
 
 ## File đã đổi
 
-- `js/khbd-app.js`
-- `js/khbd-standards.js`
-- `tests/khbd-mistral-ocr-smoke.js`
-- `tests/khbd-structured-candidates-smoke.js`
+- `backupcode viettailieu/taobaitap.html`
+- `taobaitap.html`
+- `tests/taobaitap-plan-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Nội dung chính
 
-1. **PPCT**: `handleGeneratePpctAnalysis` gọi `extractPpctOcrText`, tiến trình “Đang nhận diện PPCT bằng Mistral OCR...”, parse cục bộ `parsePpctLessonDetails` để điền ô phân tích / thời lượng / phạm vi tiết. Gemini chỉ khi hết key hoặc OCR lỗi.
-2. **AI chưa tick**: `isAiStandardRecord` dọn mọi bản ghi AI (`standardKind`, framework QĐ 2422). `autoDetectAndFillLessonMetadata` và đọc PPCT **không** tự `integrations.ai = true`.
-3. **AI đã tick**: `recommendOfficialStandards` / `catalogFallbackRecords` / `applySuggestedStandardRecords` khóa **2–3 mục**, `capAiStandardRecords` cắt tối đa 3.
+1. **Đọc PDF scan/ảnh**: `readTextFromDocumentFile` vẫn dùng `pdfjsLib.getTextContent()`. Nếu PDF có text compact dưới 50 ký tự, `readDocumentSourceWithOcrFallback` render tối đa 20 trang sang JPEG (`renderPdfPagesToImageItems`) rồi OCR bằng `extractSourceTextFromImageBatch`. `extractSourceTextFromFile` và `handleFileUpload` đều đi đường này. `addSourceFiles` hiện tiến trình khi đọc PDF.
+2. **Tạo bài tập tổng hợp từ file**: `generateSynthesizedFromSource()` lấy `getSourceContext()` từ `sourceMaterials`, không cần tên chủ đề. Prompt yêu cầu quét toàn diện, bám sát 100% học liệu. Kết quả `normalizeQuizItems` (trắc nghiệm) rồi `setStep(2)`.
+3. **Card UI**: Card tím **"⚡ TẠO BÀI TẬP TỔNG HỢP TỪ FILE"** với số câu 5/10/15/20 hoặc tùy chỉnh (1–50), hình thức (trắc nghiệm tổng hợp / từng loại / tự luận), mức độ (Cơ bản, Trung bình, Nâng cao, Hỗn hợp 4 mức). Nút tắt khi chưa nạp nguồn.
+4. **Ngoài phạm vi giữ nguyên**: `generateContent` vẫn chặn chủ đề trống; Word và DẠY NGAY không đổi.
 
 ## Test đã chạy
 
 ```
-node tests/khbd-mistral-ocr-smoke.js
-node tests/khbd-structured-candidates-smoke.js
+node tests/taobaitap-plan-smoke.js
 ```
 
-Kết quả: **pass**.
+Kết quả: **pass** (48/48 check, gồm root + backup + ngưỡng OCR).

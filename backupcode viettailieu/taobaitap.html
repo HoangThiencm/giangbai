@@ -13655,11 +13655,11 @@ module.exports = {
             return !!(error && (error.isRecitation || String(error.message || '').includes('RECITATION')));
         };
 
-        const extractSourceTextFromFile = async (file, onRetry = null) => {
+        const extractSourceTextFromFile = async (file, onRetry = null, onProgress = null) => {
             const fileName = file.name.toLowerCase();
 
             if (fileName.endsWith('.pdf') || fileName.endsWith('.docx')) {
-                return readTextFromDocumentFile(file);
+                return readDocumentSourceWithOcrFallback(file, onRetry, onProgress);
             }
 
             if (isImageSourceFile(file)) {
@@ -13772,6 +13772,46 @@ module.exports = {
                     ...imageParts
                 ], onRetry);
             }
+        };
+
+        const renderPdfPagesToImageItems = async (pdf, onProgress = null) => {
+            const items = [];
+            const maxPages = Math.min(pdf.numPages, 20);
+            for (let i = 1; i <= maxPages; i++) {
+                if (onProgress) {
+                    onProgress({
+                        phase: 'preparing',
+                        percent: Math.round((i / maxPages) * 35),
+                        message: `PDF scan: đang chuyển trang ${i}/${maxPages} thành ảnh...`
+                    });
+                }
+                const page = await pdf.getPage(i);
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                await page.render({ canvasContext: context, viewport }).promise;
+                const blob = await new Promise((resolve, reject) => {
+                    canvas.toBlob(result => result ? resolve(result) : reject(new Error('Không xuất được ảnh trang PDF.')), 'image/jpeg', 0.86);
+                });
+                const file = new File([blob], `pdf-page-${i}.jpg`, { type: 'image/jpeg' });
+                items.push({ id: `${Date.now()}-pdf-${i}`, name: `Trang PDF ${i}`, file });
+            }
+            return items;
+        };
+
+        const readDocumentSourceWithOcrFallback = async (file, onRetry = null, onProgress = null) => {
+            const fileName = file.name.toLowerCase();
+            let extractedText = await readTextFromDocumentFile(file);
+            if (!fileName.endsWith('.pdf')) return extractedText;
+            if (extractedText.replace(/\s+/g, '').length >= 50) return extractedText;
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const imageItems = await renderPdfPagesToImageItems(pdf, onProgress);
+            if (!imageItems.length) return extractedText;
+            const ocrText = await extractSourceTextFromImageBatch(imageItems, onRetry, onProgress);
+            return String(ocrText || '').trim();
         };
 
         // --- HELPER: CHUYỂN ĐỔI TEXT SANG MATHML CHO WORD ---
@@ -14628,6 +14668,9 @@ module.exports = {
             const [sourceProgress, setSourceProgress] = useState({ active: false, percent: 0, message: "" });
             const [sourceNotice, setSourceNotice] = useState("");
             const [sourceOnly, setSourceOnly] = useState(true);
+            const [synthCount, setSynthCount] = useState(10);
+            const [synthForm, setSynthForm] = useState('mixed-quiz');
+            const [synthLevel, setSynthLevel] = useState('Hỗn hợp');
             const [retryCount, setRetryCount] = useState(0);
             const [showSettings, setShowSettings] = useState(false);
             const sourceDropZoneRef = useRef(null);
@@ -14726,7 +14769,13 @@ module.exports = {
                     const newMaterials = [];
 
                     for (const file of documentFiles) {
-                        const text = await extractSourceTextFromFile(file, setRetryCount);
+                        const text = await extractSourceTextFromFile(file, setRetryCount, (progress) => {
+                            setSourceProgress({
+                                active: true,
+                                percent: progress.percent || 20,
+                                message: progress.message || `Đang đọc ${file.name}...`
+                            });
+                        });
                         if (!text.trim()) {
                             throw new Error(`Không đọc được nội dung học tập từ ${sourceLabel} "${file.name}".`);
                         }
@@ -14744,6 +14793,7 @@ module.exports = {
                     showSourceNotice(`Lỗi khi đọc nguồn kiến thức: ${error.message}`);
                 } finally {
                     setSourceLoading(false);
+                    setTimeout(() => setSourceProgress({ active: false, percent: 0, message: "" }), 800);
                 }
             }, [showSourceNotice]);
 
@@ -14948,7 +14998,7 @@ module.exports = {
                         throw new Error("Vui lòng tải lên file .docx hoặc .pdf");
                     }
 
-                    const extractedText = await readTextFromDocumentFile(file);
+                    const extractedText = await readDocumentSourceWithOcrFallback(file, setRetryCount);
                     if (!extractedText.trim()) throw new Error("Không thể đọc được nội dung từ file.");
 
                     const prompt = `Đóng vai chuyên gia giáo dục. Trích xuất TẤT CẢ các câu hỏi trắc nghiệm từ nội dung sau và trả về định dạng JSON mảng phẳng.
@@ -15100,6 +15150,99 @@ module.exports = {
                     setStep(2);
                 } catch (error) {
                     showSourceNotice(`Thất bại! Lỗi: ${error.message}`);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const generateSynthesizedFromSource = async () => {
+                const sourceContext = getSourceContext();
+                if (!sourceContext.trim()) {
+                    showSourceNotice("Hãy nạp PDF, Word hoặc ảnh vào nguồn kiến thức trước khi tạo bài tập tổng hợp từ file.");
+                    return;
+                }
+                const count = Math.max(1, Math.min(50, Number(synthCount) || 10));
+                const isEssay = synthForm === 'essay';
+                const levelText = synthLevel === 'Hỗn hợp'
+                    ? 'Hỗn hợp phân hóa 4 mức độ: Nhận biết, Thông hiểu, Vận dụng, Vận dụng thực tế (chia đều nếu được).'
+                    : synthLevel;
+
+                let typeInstruction = '';
+                if (isEssay) {
+                    typeInstruction = 'Hình thức: Tự luận có lời giải chi tiết.';
+                } else if (synthForm === 'mixed-quiz') {
+                    typeInstruction = 'Hình thức TỔNG HỢP: trộn Nhiều lựa chọn, Đúng/Sai, Điền khuyết, Trả lời ngắn, Nối ô (mỗi loại ít nhất 1 câu nếu số câu >= 5).';
+                } else if (synthForm === 'multiple-choice') {
+                    typeInstruction = 'Hình thức: chỉ Trắc nghiệm nhiều lựa chọn (4 phương án A,B,C,D).';
+                } else if (synthForm === 'true-false') {
+                    typeInstruction = 'Hình thức: chỉ Đúng/Sai.';
+                } else if (synthForm === 'fill-blank') {
+                    typeInstruction = 'Hình thức: chỉ Điền khuyết.';
+                } else if (synthForm === 'short-answer') {
+                    typeInstruction = 'Hình thức: chỉ Trả lời ngắn (một kết quả số).';
+                } else if (synthForm === 'matching') {
+                    typeInstruction = 'Hình thức: chỉ Nối ô.';
+                }
+
+                setLoading(true);
+                setRetryCount(0);
+                try {
+                    let prompt = '';
+                    if (!isEssay) {
+                        prompt = `Đóng vai giáo viên giỏi. Tạo ĐÚNG ${count} câu hỏi trắc nghiệm TỔNG HỢP trực tiếp từ NGUỒN KIẾN THỨC.
+KHÔNG cần danh sách chủ đề do giáo viên nhập. Quét TOÀN DIỆN tài liệu đã nạp và bám sát 100% nội dung học liệu; không bịa kiến thức ngoài nguồn.
+Mức độ: ${levelText}
+${typeInstruction}
+
+QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
+QUY TẮC JSON: Chuỗi JSON phải escape đúng. Không dùng dấu \\ đơn lẻ.
+QUY TẮC OUTPUT: Trả về một mảng phẳng. Mỗi câu có field "type".
+QUY TẮC CHẤT LƯỢNG:
+- Trường "question" chỉ chứa nội dung câu hỏi, không tự thêm "Câu 1".
+- Với multiple-choice, 4 phương án khác nhau hoàn toàn, không rỗng, không đáp án giả "000đ".
+- Chỉ một phương án đúng.
+
+Chi tiết từng loại:
+- multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice"}
+- true-false: {"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0,"type":"true-false"}
+- fill-blank: {"question":"Câu hỏi có chỗ trống ______","correctAnswer":"đáp án đúng","type":"fill-blank"}
+- short-answer: {"question":"Câu hỏi định hướng kết quả số","correctAnswer":"12.5","type":"short-answer"}
+- matching: {"question":"Chủ đề nối","columnA":["A1","A2","A3"],"columnB":["B1","B2","B3"],"correctMatches":[0,1,2],"type":"matching"}
+
+NGUỒN KIẾN THỨC:
+${sourceContext}`;
+                    } else {
+                        prompt = `Đóng vai giáo viên giỏi. Tạo ĐÚNG ${count} bài tập TỰ LUẬN có lời giải, trực tiếp từ NGUỒN KIẾN THỨC.
+KHÔNG cần danh sách chủ đề. Quét TOÀN DIỆN tài liệu đã nạp, bám sát 100% học liệu, không bịa kiến thức ngoài nguồn.
+Mức độ: ${levelText}
+Mỗi bài: {"question":"Đề bài...","solution":"Lời giải chi tiết..."}
+QUY TẮC TOÁN: Dùng $...$ cho công thức.
+Output JSON: mảng phẳng các bài tập.
+
+NGUỒN KIẾN THỨC:
+${sourceContext}`;
+                    }
+
+                    const response = await GeminiModule.callGeminiAPI(prompt, setRetryCount);
+                    let parsedData;
+                    try {
+                        parsedData = GeminiModule.parseJSONResponse(response);
+                    } catch (parseError) {
+                        parsedData = await GeminiModule.repairJSONResponse(response, parseError.message, setRetryCount);
+                    }
+                    if (!isEssay) parsedData = normalizeQuizItems(parsedData);
+                    if (!parsedData || parsedData.length === 0) throw new Error("AI không sinh được bài tập từ file đã nạp.");
+
+                    if (isEssay) {
+                        setMode("essay");
+                        setEssays(parsedData);
+                    } else {
+                        setMode("quiz");
+                        setQuestions(parsedData);
+                    }
+                    setStep(2);
+                } catch (error) {
+                    showSourceNotice(`Thất bại khi tạo bài tập tổng hợp từ file: ${error.message}`);
                 } finally {
                     setLoading(false);
                 }
@@ -15493,6 +15636,77 @@ module.exports = {
                                         ))}
                                     </div>
                                 )}
+                            </div>
+
+                            <div className="mb-6 rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-50 to-indigo-50 p-5">
+                                <h3 className="font-bold text-violet-900 text-sm uppercase tracking-wide flex items-center gap-2">
+                                    <i className="fas fa-bolt text-violet-600"></i>
+                                    Tạo bài tập tổng hợp từ file đã nạp
+                                </h3>
+                                <p className="mt-1 text-xs text-violet-800">Không cần nhập chủ đề. Hệ thống quét toàn bộ nguồn kiến thức đã nạp (PDF/Word/ảnh) và sinh bộ bài tập bám sát học liệu.</p>
+                                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <label className="text-xs font-bold text-slate-700">
+                                        Số câu
+                                        <div className="mt-1 flex gap-2">
+                                            <select
+                                                value={synthCount}
+                                                onChange={(e) => setSynthCount(parseInt(e.target.value, 10) || 10)}
+                                                className="w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
+                                            >
+                                                <option value={5}>5 câu</option>
+                                                <option value={10}>10 câu</option>
+                                                <option value={15}>15 câu</option>
+                                                <option value={20}>20 câu</option>
+                                                {![5, 10, 15, 20].includes(synthCount) && (
+                                                    <option value={synthCount}>{synthCount} câu (tùy chỉnh)</option>
+                                                )}
+                                            </select>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="50"
+                                                value={synthCount}
+                                                onChange={(e) => setSynthCount(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))}
+                                                className="w-20 border border-violet-200 rounded-lg p-2 bg-white text-sm"
+                                                title="Tùy chỉnh số câu"
+                                            />
+                                        </div>
+                                    </label>
+                                    <label className="text-xs font-bold text-slate-700">
+                                        Hình thức
+                                        <select
+                                            value={synthForm}
+                                            onChange={(e) => setSynthForm(e.target.value)}
+                                            className="mt-1 w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
+                                        >
+                                            <option value="mixed-quiz">Trắc nghiệm tổng hợp</option>
+                                            <option value="multiple-choice">Nhiều lựa chọn</option>
+                                            <option value="true-false">Đúng/Sai</option>
+                                            <option value="fill-blank">Điền khuyết</option>
+                                            <option value="short-answer">Trả lời ngắn</option>
+                                            <option value="matching">Nối ô</option>
+                                            <option value="essay">Tự luận có lời giải</option>
+                                        </select>
+                                    </label>
+                                    <label className="text-xs font-bold text-slate-700">
+                                        Mức độ
+                                        <select
+                                            value={synthLevel}
+                                            onChange={(e) => setSynthLevel(e.target.value)}
+                                            className="mt-1 w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
+                                        >
+                                            {LEVELS.map(level => <option key={level} value={level}>{level}</option>)}
+                                        </select>
+                                    </label>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={generateSynthesizedFromSource}
+                                    disabled={loading || sourceLoading || pendingSourceImages.length > 0 || sourceMaterials.length === 0}
+                                    className="mt-4 w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white py-3 rounded-xl font-bold hover:shadow-lg disabled:opacity-60 flex justify-center items-center gap-2"
+                                >
+                                    {loading ? <><i className="fas fa-circle-notch fa-spin"></i> Đang tạo bài tập tổng hợp...</> : <>⚡ TẠO BÀI TẬP TỔNG HỢP TỪ FILE</>}
+                                </button>
                             </div>
 
                             <div className="mb-6">
