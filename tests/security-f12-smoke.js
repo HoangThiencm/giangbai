@@ -38,7 +38,8 @@ const staticChecks = [
     ['blocks Ctrl+U', /key === 'u'/.test(guardSrc)],
     ['admin shortcut Ctrl+Alt+Shift+D', /keyCode === 68/.test(guardSrc)],
     ['keeps editable context menu', /MATH-FIELD/.test(guardSrc) && /isContentEditable/.test(guardSrc)],
-    ['hashed fallback keys', /7731ce4a/.test(guardSrc) && /c3e3eb18/.test(guardSrc)]
+    ['hashed fallback keys', /7731ce4a/.test(guardSrc) && /c3e3eb18/.test(guardSrc)],
+    ['DevTools lock overlay', /__gb_devtools_lock__/.test(guardSrc) && /showLockOverlay/.test(guardSrc)]
 ];
 
 let failed = failCount(staticChecks);
@@ -47,10 +48,39 @@ function makeSandbox(options) {
     const listeners = { document: {}, window: {} };
     const sessionStore = Object.assign({}, options.session || {});
     const localStore = Object.assign({}, options.local || {});
+    const createdEls = [];
+    const documentElement = { style: { overflow: '' } };
+    const body = {
+        appendChild(el) {
+            this.child = el;
+            return el;
+        }
+    };
     const document = {
+        body,
+        documentElement,
+        createdEls,
         addEventListener(type, fn) {
             listeners.document[type] = listeners.document[type] || [];
             listeners.document[type].push(fn);
+        },
+        getElementById(id) {
+            for (let i = 0; i < createdEls.length; i++) {
+                if (createdEls[i].id === id) return createdEls[i];
+            }
+            return null;
+        },
+        createElement(tag) {
+            const el = {
+                tagName: String(tag || 'DIV').toUpperCase(),
+                id: '',
+                style: { display: '' },
+                textContent: '',
+                setAttribute() {},
+                parentNode: null
+            };
+            createdEls.push(el);
+            return el;
         }
     };
     const windowObj = {
@@ -92,6 +122,7 @@ function makeSandbox(options) {
         Function,
         Object,
         Error,
+        Date,
         Math,
         String,
         Boolean,
@@ -166,6 +197,24 @@ function keyEvent(partial) {
     failed += failCount(checks);
 })();
 
+(function testLockOverlayOnDevToolsSize() {
+    const box = makeSandbox({});
+    box.window.outerWidth = 1920;
+    box.window.innerWidth = 800;
+    fire(box.listeners.window.resize, {});
+    const overlay = box.document.getElementById('__gb_devtools_lock__');
+    const ok = Boolean(overlay && overlay.style.display === 'flex' && /DevTools/.test(overlay.textContent || ''));
+    console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + 'overlay locks screen when DevTools size detected');
+    if (!ok) failed += 1;
+})();
+
+(function testNoOverlayOnLocalhost() {
+    const box = makeSandbox({ hostname: 'localhost', protocol: 'http:' });
+    const ok = box.document.createdEls.length === 0;
+    console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + 'localhost does not create lock overlay');
+    if (!ok) failed += 1;
+})();
+
 (function testDebugUnlock() {
     let prompted = false;
     const box = makeSandbox({
@@ -189,6 +238,15 @@ function keyEvent(partial) {
     console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + 'unlocked session skips protection');
     if (!ok) failed += 1;
 })();
+
+const obfuscatorSrc = fs.readFileSync(toolPath, 'utf8');
+failed += failCount([
+    ['stringArrayThreshold 1', /stringArrayThreshold:\s*1\b/.test(obfuscatorSrc)],
+    ['transformObjectKeys true', /transformObjectKeys:\s*true/.test(obfuscatorSrc)],
+    ['debugProtection true', /debugProtection:\s*true/.test(obfuscatorSrc)],
+    ['debugProtectionInterval 1500', /debugProtectionInterval:\s*1500/.test(obfuscatorSrc)],
+    ['selfDefending true for all files', /selfDefending:\s*true/.test(obfuscatorSrc) && !/selfDefending:\s*isGuard/.test(obfuscatorSrc)]
+]);
 
 const workflow = fs.readFileSync(workflowPath, 'utf8');
 failed += failCount([

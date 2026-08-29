@@ -142,20 +142,20 @@ function loadObfuscator(fallbackOnly) {
 }
 
 function obfuscatorOptions(rel) {
-    const isGuard = /(^|\/)security-guard\.js$/.test(rel);
     return {
         compact: true,
         controlFlowFlattening: false,
         deadCodeInjection: false,
-        debugProtection: false,
+        debugProtection: true,
+        debugProtectionInterval: 1500,
         disableConsoleOutput: false,
         identifierNamesGenerator: 'hexadecimal',
         renameGlobals: false,
-        selfDefending: isGuard,
+        selfDefending: true,
         stringArray: true,
         stringArrayEncoding: ['base64'],
-        stringArrayThreshold: isGuard ? 0.75 : 0.5,
-        transformObjectKeys: false,
+        stringArrayThreshold: 1,
+        transformObjectKeys: true,
         unicodeEscapeSequence: false,
         target: 'browser'
     };

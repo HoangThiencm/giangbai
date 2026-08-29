@@ -90,6 +90,57 @@
         } catch (err) {}
     }
 
+    var overlayId = '__gb_devtools_lock__';
+
+    function getLockOverlay() {
+        try {
+            return document.getElementById(overlayId);
+        } catch (err) {
+            return null;
+        }
+    }
+
+    function showLockOverlay() {
+        if (isDebugUnlocked) return;
+        var el = getLockOverlay();
+        if (!el) {
+            el = document.createElement('div');
+            el.id = overlayId;
+            el.setAttribute(
+                'style',
+                'position:fixed;inset:0;z-index:2147483647;background:rgba(8,12,24,0.97);color:#f8fafc;display:flex;align-items:center;justify-content:center;text-align:center;font:600 18px/1.55 system-ui,sans-serif;padding:24px;'
+            );
+            el.textContent = 'Phát hiện DevTools. Hãy đóng công cụ phát triển để tiếp tục.';
+            var host = document.body || document.documentElement;
+            if (host && host.appendChild) host.appendChild(el);
+        }
+        el.style.display = 'flex';
+        try {
+            if (document.documentElement && document.documentElement.style) {
+                document.documentElement.style.overflow = 'hidden';
+            }
+        } catch (err) {}
+    }
+
+    function hideLockOverlay() {
+        var el = getLockOverlay();
+        if (el) el.style.display = 'none';
+        try {
+            if (document.documentElement && document.documentElement.style) {
+                document.documentElement.style.overflow = '';
+            }
+        } catch (err) {}
+    }
+
+    var lastStrongDetectAt = 0;
+
+    function onDevToolsDetected() {
+        if (isDebugUnlocked) return;
+        lastStrongDetectAt = Date.now();
+        clearConsoleQuietly();
+        showLockOverlay();
+    }
+
     // 1. Chặn menu chuột phải (Context Menu) - Vẫn cho phép thao tác trong ô soạn thảo/input
     document.addEventListener('contextmenu', function (e) {
         if (isDebugUnlocked) return;
@@ -159,7 +210,7 @@
             })();
             var endTime = performance.now();
             if (endTime - startTime > 100) {
-                clearConsoleQuietly();
+                onDevToolsDetected();
             }
         } catch (err) {}
     }
@@ -173,12 +224,16 @@
         var widthDiff = window.outerWidth - window.innerWidth > devtoolsThreshold;
         var heightDiff = window.outerHeight - window.innerHeight > devtoolsThreshold;
         if (widthDiff || heightDiff) {
-            clearConsoleQuietly();
+            onDevToolsDetected();
+        } else if (Date.now() - lastStrongDetectAt > 3000) {
+            hideLockOverlay();
         }
     }
     window.addEventListener('resize', checkDevToolsOpen, { passive: true });
+    checkDevToolsOpen();
+    setInterval(checkDevToolsOpen, 1500);
 
-    // 5. Phát hiện DevTools qua getter stack (không xóa trang — tránh dương tính giả)
+    // 5. Phát hiện DevTools qua getter stack (không xóa trang — chỉ overlay khóa)
     function probeDevToolsConsole() {
         if (isDebugUnlocked || !nativeConsole || !nativeConsole.debug) return;
         var detected = false;
@@ -192,7 +247,7 @@
             });
             nativeConsole.debug(probe);
         } catch (err) {}
-        if (detected) clearConsoleQuietly();
+        if (detected) onDevToolsDetected();
     }
     setInterval(probeDevToolsConsole, 3000);
 
