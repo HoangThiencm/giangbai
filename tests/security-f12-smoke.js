@@ -285,6 +285,53 @@ try {
     fs.rmSync(tmp, { recursive: true, force: true });
 }
 
+failed += failCount([
+    ['bundler scans HTML script tags', /findLocalScriptGroups/.test(obfuscatorSrc) && /applyBundles/.test(obfuscatorSrc)],
+    ['dry-run plans soankhbd bundle', /BUNDLE soankhbd\.html -> js\/soankhbd\.bundle\.js/.test(dryRun)],
+    ['soankhbd bundle lists khbd-app.js', /BUNDLE soankhbd\.html[\s\S]*js\/khbd-app\.js/.test(dryRun)],
+    ['soankhbd bundle lists ai-design-config.js', /BUNDLE soankhbd\.html[\s\S]*ai-design-config\.js/.test(dryRun)],
+    ['dry-run does not bundle vendor or CDN', !/BUNDLE[^\n]*vendor\//.test(dryRun) && !/cdn\.tailwindcss\.com/.test(dryRun)]
+]);
+
+const bundleTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gb-bundle-'));
+try {
+    fs.mkdirSync(path.join(bundleTmp, 'js'));
+    fs.mkdirSync(path.join(bundleTmp, 'vendor'));
+    fs.writeFileSync(path.join(bundleTmp, 'first.js'), 'window.FirstFlag = 1;\n', 'utf8');
+    fs.writeFileSync(path.join(bundleTmp, 'second.js'), 'window.SecondFlag = window.FirstFlag + 1;\n', 'utf8');
+    fs.writeFileSync(path.join(bundleTmp, 'vendor', 'katex.min.js'), 'window.VendorFlag = 9;\n', 'utf8');
+    fs.writeFileSync(path.join(bundleTmp, 'page.html'), [
+        '<!DOCTYPE html>',
+        '<html><body>',
+        '<script src="https://cdn.example.com/tailwind.js"></script>',
+        '<script src="first.js"></script>',
+        '<script src="second.js"></script>',
+        '<script src="vendor/katex.min.js"></script>',
+        '</body></html>',
+        ''
+    ].join('\n'), 'utf8');
+    execFileSync(process.execPath, [toolPath, '--in-place', '--fallback-only', '--root', bundleTmp], {
+        cwd: root,
+        encoding: 'utf8'
+    });
+    const bundledHtml = fs.readFileSync(path.join(bundleTmp, 'page.html'), 'utf8');
+    const bundleFile = path.join(bundleTmp, 'js', 'page.bundle.js');
+    const bundleCode = fs.existsSync(bundleFile) ? fs.readFileSync(bundleFile, 'utf8') : '';
+    const scriptSrcs = [...bundledHtml.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi)].map(m => m[1]);
+    failed += failCount([
+        ['sample HTML writes js/page.bundle.js', fs.existsSync(bundleFile)],
+        ['sample HTML has single local bundle src', scriptSrcs.filter(s => s.endsWith('page.bundle.js')).length === 1],
+        ['sample HTML dropped first.js/second.js src', !scriptSrcs.some(s => /(^|\/)first\.js$/.test(s) || /(^|\/)second\.js$/.test(s))],
+        ['sample HTML keeps CDN script', scriptSrcs.some(s => s.indexOf('cdn.example.com') !== -1)],
+        ['sample HTML keeps vendor min.js', scriptSrcs.some(s => s.indexOf('vendor/katex.min.js') !== -1)],
+        ['bundle preserves first then second', /FirstFlag[\s\S]*SecondFlag/.test(bundleCode)],
+        ['CDN stays before bundle', bundledHtml.indexOf('cdn.example.com') < bundledHtml.indexOf('page.bundle.js')],
+        ['vendor stays after bundle', bundledHtml.indexOf('page.bundle.js') < bundledHtml.indexOf('vendor/katex.min.js')]
+    ]);
+} finally {
+    fs.rmSync(bundleTmp, { recursive: true, force: true });
+}
+
 if (failed) {
     console.error('FAILED checks:', failed);
     process.exit(1);

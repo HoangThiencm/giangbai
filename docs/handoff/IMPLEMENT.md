@@ -1,41 +1,30 @@
 # IMPLEMENT
 
-Trạng thái: ĐÃ LÀM — vá VERIFY FAIL: obfuscation tối đa + overlay khóa DevTools
+Trạng thái: ĐÃ LÀM — bundle JS lúc deploy để ẩn tên file trên DevTools Sources
 
 ## File đã đổi
 
 - `tools/build-obfuscate.js`
-- `js/security-guard.js`
 - `tests/security-f12-smoke.js`
+- `.gitignore`
+- `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
-Không đụng HTML trang, PHP API, `vendor/`, workflow FTP (giữ bước obfuscate đã có).
+Không đụng PHP API, không gộp CDN/vendor, không sửa HTML trên git (chỉ rewrite khi `--in-place` / CI).
 
 ## Nội dung chính
 
-Sửa đúng 5 hạng mục FAIL trong báo cáo VERIFY:
+`tools/build-obfuscate.js` khi ghi output (`--in-place` trên GitHub Actions):
 
-### 1. `tools/build-obfuscate.js` — cấu hình javascript-obfuscator tối đa
+1. Quét `.html`, chỉ nhận thẻ `<script src>` **đứng một mình trên một dòng** (tránh template export trong chuỗi JS).
+2. Gộp các file JS nội bộ **liên tiếp** theo đúng thứ tự thẻ (cụm `soankhbd` 11 file → `js/soankhbd.bundle.js`).
+3. Bỏ qua `http(s):`, `//`, `vendor/`, `*.min.js`, `type=module` / `text/babel`.
+4. Obfuscate bundle (cùng cấu hình tối đa). Fallback không bọc `Function` cho bundle (giữ global).
+5. Thay cụm thẻ bằng một dòng `<script src="js/{trang}.bundle.js"></script>`.
 
-Áp dụng cho **mọi** file first-party (không còn nhánh riêng `security-guard`):
+Cụm 1 file (ví dụ `security-guard.js` trên `<head>`) **không** kéo xuống cuối trang — tránh chạy `khbd-app.js` trước CDN/DOM.
 
-- `stringArrayThreshold: 1` (100% chuỗi vào string array)
-- `transformObjectKeys: true`
-- `debugProtection: true`
-- `debugProtectionInterval: 1500`
-- `selfDefending: true`
-
-Giữ `renameGlobals: false` để không phá global (`TkbEngine`, v.v.). Fallback khi thiếu thư viện không đổi (Base64 chỉ `security-guard.js`).
-
-### 2. `js/security-guard.js` — overlay khóa màn hình
-
-Khi phát hiện DevTools (lệch kích thước cửa sổ, debugger trap, getter `stack`):
-
-- `console.clear`
-- Overlay full-viewport `#__gb_devtools_lock__` (“Phát hiện DevTools…”)
-- Không xóa DOM bên dưới
-
-Localhost / session debug vẫn bỏ qua toàn bộ bảo vệ. Ctrl+Alt+Shift+D vẫn mở khóa rồi reload. Overlay tự ẩn khi hết tín hiệu DevTools > 3s.
+`.gitignore`: `js/*.bundle.js` — artifact CI, không commit.
 
 ## Test đã chạy
 
@@ -43,10 +32,10 @@ Localhost / session debug vẫn bỏ qua toàn bộ bảo vệ. Ctrl+Alt+Shift+D
 node tests/security-f12-smoke.js
 ```
 
-Kết quả: **pass** (5 hạng mục VERIFY: threshold 1, transformObjectKeys, debugProtection 1500, selfDefending toàn cục, overlay khóa màn hình; localhost không overlay; các tiêu chí F12 cũ vẫn giữ).
+Kết quả: **pass** (cụm `soankhbd.html` → `js/soankhbd.bundle.js`; thư mục mẫu thay 2 thẻ local bằng 1 bundle, giữ CDN/vendor, thứ tự first→second).
 
 ## Vấn đề còn lại
 
-- `debugProtection` + `selfDefending` + `transformObjectKeys` trên mọi JS có thể làm chậm trang hoặc phá file dùng key động. Chỉ chạy lúc CI `--in-place`.
-- HTML inline vẫn đọc được trên tab Sources — ngoài phạm vi.
-- Overlay lệch cửa sổ có thể dương tính giả (thanh bookmark / dock lớn).
+- File JS gốc vẫn được FTP lên hosting nhưng HTML không nạp chúng, nên tab Sources không liệt kê tên thành phần. URL trực tiếp `.../js/khbd-app.js` vẫn mở được nếu biết đường dẫn.
+- `thitructuyen.html` có nhiều cụm xen CDN → có thể ra `bundle-1.js`, `bundle-2.js` thay vì một file duy nhất. Tên nhạy cảm trong từng cụm vẫn biến mất.
+- HTML inline / `type=text/babel` không gộp.

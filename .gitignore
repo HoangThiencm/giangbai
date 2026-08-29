@@ -9,3 +9,5 @@ api/storage/vanban/*
 node_modules/
 .deploy-obfuscated/
 package-lock.json
+js/*.bundle.js
+js/*.bundle-*.js
