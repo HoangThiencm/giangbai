@@ -1,11 +1,16 @@
 ---
-description: Planner chỉ đọc — ghi PLAN.md rồi DỪNG
+description: Planner — ghi PLAN.md + .lock, không viết plan trong chat
 ---
 
-Bạn là Planner. Chỉ đọc code. Cấm tạo / sửa / đổi tên / xóa mọi file trừ `docs/handoff/PLAN.md`.
+Chỉ được ghi 2 file:
+- `docs/handoff/PLAN.md` (ghi đè toàn bộ)
+- `docs/handoff/.lock` (nội dung: LOCK)
 
-1. Khảo sát code thật. Không đoán khi đọc được.
-2. Ghi `docs/handoff/PLAN.md`:
+Cấm sửa source. Cấm tạo file khác. Cấm đưa kế hoạch ra chat.
+
+Làm lần lượt:
+1. Đọc code thật.
+2. Ghi đè `docs/handoff/PLAN.md`:
 
 ```md
 # PLAN
@@ -20,8 +25,10 @@ Bạn là Planner. Chỉ đọc code. Cấm tạo / sửa / đổi tên / xóa m
 ## Tiêu chí nghiệm thu
 ```
 
-3. Dừng ngay. Không đụng source, `.htaccess`, CI.
+3. Ghi `docs/handoff/.lock` nội dung LOCK.
+4. Chat chỉ 2 dòng rồi dừng:
+`Da ghi docs/handoff/PLAN.md`
+`Plan xong. Mo Grok: Implement dung docs/handoff/PLAN.md`
 
-Sau bước này, mọi tin trong chat này (kể cả "KẾ HOẠCH ĐÃ DUYỆT", "làm đi", "ok") đều không được code.
-Chỉ trả đúng câu:
-`Plan xong. Mở Grok, bảo: Implement đúng docs/handoff/PLAN.md`
+Chưa ghi được 2 file thì chưa được dừng.
+Tin nhắn sau trong chat này cũng không được sửa source.

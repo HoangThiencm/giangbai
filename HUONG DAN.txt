@@ -1,0 +1,31 @@
+**0.** Mở đúng folder. `git status` sạch.
+
+**1.** Antigravity — **chat mới**:
+
+```text
+/survey
+[viết việc cần làm, 1–2 câu]
+```
+
+Đợi nó ghi `docs/handoff/PLAN.md` và `docs/handoff/.lock`.  
+Thấy câu `Plan xong. Mở Grok...` thì **đừng nhắn chat đó nữa**.
+
+**2.** Grok — chat khác, cùng folder:
+
+```text
+Implement đúng docs/handoff/PLAN.md
+```
+
+Đợi nó sửa code và ghi `docs/handoff/IMPLEMENT.md`.
+
+**3.** Antigravity — **chat mới nữa**:
+
+```text
+/verify
+```
+
+Xem `docs/handoff/VERIFY.md`.
+
+**4.**  
+- `FAIL` → Grok: `Sửa đúng bug trong docs/handoff/VERIFY.md` → rồi `/verify` lại.  
+- `PASS` → Commit, push, rồi xóa docs/handoff/.lock
