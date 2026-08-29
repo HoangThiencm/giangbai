@@ -6,21 +6,26 @@ Nguồn sự thật:
 - `docs/handoff/VERIFY.md`
 
 Luồng:
-1. Planner ghi `PLAN.md`, không sửa source.
-2. User chốt bằng đúng một dòng: `KẾ HOẠCH ĐÃ DUYỆT`
-3. Coder implement đúng plan đã duyệt, ghi `IMPLEMENT.md`.
-4. Tester chỉ kiểm thử, ghi `VERIFY.md`. Không viết feature.
-5. Fail thì Coder chỉ sửa bug trong `VERIFY.md`.
-6. Pass mới được push GitHub nếu user yêu cầu.
+1. Antigravity `/survey` ghi `PLAN.md` rồi dừng. Không sửa source.
+2. User mở Grok, bảo implement `PLAN.md`. Đó là lệnh duyệt.
+3. Grok code và ghi `IMPLEMENT.md`.
+4. Antigravity `/verify` ghi `VERIFY.md`. Không viết feature.
+5. Fail thì Grok sửa đúng bug trong `VERIFY.md`.
+6. Pass mới push GitHub nếu user yêu cầu.
 
-## Coder (Grok)
+## Antigravity
 
-- Chỉ làm khi `PLAN.md` có dòng `KẾ HOẠCH ĐÃ DUYỆT`.
-- Nhận nguyên văn plan. Không thêm chức năng, không đổi kiến trúc, không đụng file ngoài plan.
-- Không ghi đè thay đổi sẵn có của user.
-- Sửa nhỏ, rõ, có thể test.
-- Chạy test phù hợp. Không chạy được thì nêu nguyên nhân.
-- Ghi `docs/handoff/IMPLEMENT.md`: file đã đổi, nội dung chính, test đã chạy, vấn đề còn lại.
+Chỉ `/survey` hoặc `/verify`.
+Cấm implement. Cấm sửa source.
+Nếu user gõ duyệt / làm đi / KẾ HOẠCH ĐÃ DUYỆT trong chat này: không sửa file. Trả đúng một câu rồi dừng:
+`Plan xong. Mở Grok, bảo: Implement đúng docs/handoff/PLAN.md`
+
+## Coder (Grok / Codex)
+
+Khi user bảo implement `PLAN.md` thì đó là đã duyệt.
+Không thêm chức năng, không đổi kiến trúc, không đụng file ngoài plan.
+Không ghi đè thay đổi sẵn có của user.
+Ghi `docs/handoff/IMPLEMENT.md`: file đã đổi, nội dung chính, test đã chạy, vấn đề còn lại.
 
 ## Cấm
 

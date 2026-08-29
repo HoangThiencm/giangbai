@@ -1,7 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 
 <head>
+    <script src="js/security-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tạo Đề Kiểm Tra Thường Xuyên</title>
@@ -455,7 +456,8 @@ Output CHỈ JSON: ${q.type === 'TF' ? '{"q":"...","parts":[{"label":"a","conten
             };
             const exportWord = () => {
                 let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'>
-<head><meta charset='utf-8'><title>De Kiem Tra</title>
+<head>
+    <script src="js/security-guard.js"></script><meta charset='utf-8'><title>De Kiem Tra</title>
 <style>@page{size:21cm 29.7cm;margin:2cm 2cm 2cm 2.5cm;mso-page-orientation:portrait;}
 body{font-family:'Times New Roman',serif;font-size:13pt;line-height:1.3;text-align:justify;color:#000;}
 table{width:100%;border-collapse:collapse;}td{vertical-align:top;padding:4px;}
@@ -538,7 +540,8 @@ table{width:100%;border-collapse:collapse;}td{vertical-align:top;padding:4px;}
                 const sumCol = (type, level) => matrix.reduce((sum, row) => sum + row[type][level], 0);
 
                 let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
-                <head><meta charset='utf-8'><title>Ma Tran De</title>
+                <head>
+    <script src="js/security-guard.js"></script><meta charset='utf-8'><title>Ma Tran De</title>
                 <style>
                     @page { size: landscape; margin: 1.5cm; }
                     body { font-family: 'Times New Roman', serif; font-size: 11pt; color: black; }
@@ -877,7 +880,8 @@ Output CHỈ BẰNG JSON thuần túy dính liền, cấu trúc:
 
             const renderSpecHtml = (data) => {
                 let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
-                <head><meta charset='utf-8'><title>Ban Dac Ta</title>
+                <head>
+    <script src="js/security-guard.js"></script><meta charset='utf-8'><title>Ban Dac Ta</title>
                 <style>
                     @page { size: landscape; margin: 1.5cm; }
                     body { font-family: 'Times New Roman', serif; font-size: 11pt; color: black; }

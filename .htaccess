@@ -1,4 +1,47 @@
+# ==============================================================================
+# BẢO MẬT VÀ CẤU HÌNH MÁY CHỦ WEB (APACHE / LITESPEED)
+# ==============================================================================
+
+# 1. Tắt tính năng liệt kê danh mục thư mục (Directory Listing)
+Options -Indexes
+
+# 2. Bật Rewrite Engine
 RewriteEngine On
 
 # Link rút gọn dạng /s/AbCdEfGh -> s.php?c=AbCdEfGh
 RewriteRule ^s/([A-Za-z0-9]+)$ s.php?c=$1 [L,QSA]
+
+# 3. Chặn truy cập trực tiếp vào các file nhạy cảm và tài liệu
+<FilesMatch "(?i)\.(sql|md|log|ini|env|yml|yaml|zip|bak|backup|sh|bat)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 4. Chặn truy cập file cấu hình và cài đặt
+<FilesMatch "(?i)^(global_config\.json|setup\.php|config\.sample\.php|\.user\.ini)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 5. Chặn truy cập các file/thư mục ẩn (bắt đầu bằng dấu chấm)
+RewriteRule (^|/)\.(?!well-known) - [F]
+
+# 6. Chặn truy cập vào các thư mục tài liệu, mã nguồn công cụ nội bộ
+RewriteRule ^(docs|agent-tools|mcps|tests|\.agents|backupcode.*)(/|$) - [F,L]
+
+# 7. Thêm HTTP Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

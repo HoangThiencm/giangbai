@@ -218,7 +218,7 @@
                                     <button type="button" id="choose-file-btn"
                                             class="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-2xl flex items-center gap-x-2 shadow-sm">
                                         <i class="fas fa-folder-open"></i>
-                                        <span>Hoặc chọn file từ máy (nếu cần)</span>
+                                        <span>Chọn ảnh hoặc PDF từ máy</span>
                                     </button>
                                 </div>
                                 <input type="file" id="image-input" multiple accept="image/*,application/pdf,.pdf" class="hidden">
@@ -1017,10 +1017,64 @@
         const LESSON_PLAN_MAX_FILE_BYTES = 20 * 1024 * 1024;
         const LESSON_PLAN_MAX_TOTAL_BYTES = 60 * 1024 * 1024;
 
-        function isLessonPlanSource(file) {
-            return !!file && (String(file.type || '').startsWith('image/')
-                || String(file.type || '').toLowerCase() === 'application/pdf'
+        function isPdfFile(file) {
+            return !!file && (String(file.type || '').toLowerCase() === 'application/pdf'
                 || /\.pdf$/i.test(String(file.name || '')));
+        }
+
+        function isLessonPlanSource(file) {
+            return !!file && (String(file.type || '').startsWith('image/') || isPdfFile(file));
+        }
+
+        function lessonInputMimeType(file) {
+            if (isPdfFile(file)) return 'application/pdf';
+            const type = String((file && file.type) || '').toLowerCase();
+            return type.startsWith('image/') ? type : 'image/png';
+        }
+
+        function normalizeSourceDataUrl(dataUrl, mimeType) {
+            const raw = String(dataUrl || '');
+            const mime = String(mimeType || '').toLowerCase();
+            if (!mime || !/^data:/i.test(raw)) return raw;
+            return raw.replace(/^data:[^;,]*/i, 'data:' + mime);
+        }
+
+        function addLessonInputPreview(file, dataUrl) {
+            const preview = document.getElementById('image-preview');
+            if (!file || !dataUrl || !preview) return;
+            const mimeType = lessonInputMimeType(file);
+            const normalized = normalizeSourceDataUrl(dataUrl, mimeType);
+            const name = file.name || (mimeType === 'application/pdf'
+                ? ('tailieu-' + Date.now() + '.pdf')
+                : ('screenshot-' + Date.now() + '.png'));
+            uploadedImages.push({
+                name: name,
+                data: normalized,
+                mimeType: mimeType
+            });
+            preview.classList.remove('hidden');
+            const div = document.createElement('div');
+            div.className = 'relative group border border-slate-200 rounded-xl overflow-hidden';
+            if (mimeType === 'application/pdf') {
+                const bytes = Number(file.size) || 0;
+                const sizeLabel = bytes >= 1024 * 1024
+                    ? (Math.round(bytes / 1024 / 1024 * 10) / 10 + ' MB')
+                    : (Math.max(1, Math.round(bytes / 1024)) + ' KB');
+                div.innerHTML =
+                    '<div class="w-full aspect-[4/3] bg-rose-50 flex flex-col items-center justify-center px-2">' +
+                        '<i class="fas fa-file-pdf text-3xl text-rose-600 mb-1"></i>' +
+                        '<div class="text-[10px] font-semibold text-slate-700 truncate w-full text-center">' + window.escapeHtml(name) + '</div>' +
+                        '<div class="text-[9px] text-slate-500">' + sizeLabel + '</div>' +
+                    '</div>' +
+                    '<div class="absolute bottom-0 left-0 right-0 bg-rose-700/80 text-white text-[9px] px-1.5 py-0.5">PDF đã nhận</div>';
+            } else {
+                div.innerHTML =
+                    '<img src="' + normalized + '" class="w-full aspect-[4/3] object-cover">' +
+                    '<div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-1.5 py-0.5 truncate">' +
+                        window.escapeHtml(name) +
+                    '</div>';
+            }
+            preview.appendChild(div);
         }
 
         function updateLessonPlanSourceStatus() {
@@ -1082,9 +1136,9 @@
                 });
             }
 
-            // The drop zone itself should not open file picker on click (only drag)
             uploadArea.addEventListener('click', (e) => {
-                // do nothing - use the button instead
+                if (e.target.closest && e.target.closest('#choose-file-btn')) return;
+                fileInput.click();
             });
 
             // Keep Canvas from treating a text selection as a page-level Gemini request.
@@ -1165,35 +1219,23 @@
             function handleFiles(files) {
                 if (!files || files.length === 0) return;
 
-                uploadedImages = [];
-                previewContainer.innerHTML = '';
-                previewContainer.classList.remove('hidden');
-
-                // Ảnh vẫn phục vụ luồng bài học cũ; cả ảnh và PDF đồng thời là nguồn
-                // của tab “Soạn giáo án”. PDF không tạo preview ảnh nhưng được gửi đúng MIME.
                 addLessonPlanFiles(files);
-                Array.from(files).forEach(file => {
-                    if (!file.type.startsWith('image/')) return;
-
+                const selected = Array.from(files).filter(isLessonPlanSource);
+                if (!selected.length) {
+                    showAppToast('Chỉ nhận tệp hình ảnh hoặc PDF.', 'warn');
+                    return;
+                }
+                selected.forEach(function(file) {
                     const reader = new FileReader();
                     reader.onload = function(ev) {
-                        uploadedImages.push({
-                            name: file.name,
-                            data: ev.target.result
-                        });
-
-                        const imgDiv = document.createElement('div');
-                        imgDiv.className = 'relative group border border-slate-200 rounded-xl overflow-hidden';
-                        imgDiv.innerHTML = `
-                            <img src="${ev.target.result}" class="w-full aspect-[4/3] object-cover">
-                            <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-1.5 py-0.5 truncate">
-                                ${file.name}
-                            </div>
-                        `;
-                        previewContainer.appendChild(imgDiv);
+                        addLessonInputPreview(file, ev.target.result);
                     };
                     reader.readAsDataURL(file);
                 });
+                if (fileInput) fileInput.value = '';
+                if (selected.some(isPdfFile)) {
+                    showAppToast('Đã nạp PDF. Có thể tạo bài học hoặc soạn giáo án.', 'ok');
+                }
             }
         }
 
@@ -1358,7 +1400,7 @@ Bắt đầu tạo bài học.`;
 
             let imageInfo = '';
             if (uploadedImages.length > 0) {
-                imageInfo = `\n\n**${uploadedImages.length} ẢNH BÀI HỌC ĐÃ DÁN (screenshot).** Phân tích chúng kỹ để tạo nội dung chính xác.`;
+                imageInfo = `\n\n**${uploadedImages.length} HỌC LIỆU ĐÃ NẠP (ảnh dán hoặc PDF).** Phân tích chúng kỹ để tạo nội dung chính xác.`;
             }
 
             const prompt = `Bạn là chuyên gia soạn bài học Toán E-learning.
@@ -3422,7 +3464,7 @@ ${draftText}`;
         async function generateTheoryPhase() {
             if (lessonGenerationInProgress) return;
             if (uploadedImages.length === 0) {
-                updateGenerationProgress(0, 'Chưa có ảnh đầu vào', 'Hãy dán ít nhất một ảnh sách trước.', 'error');
+                updateGenerationProgress(0, 'Chưa có học liệu đầu vào', 'Hãy dán ảnh hoặc chọn PDF sách trước.', 'error');
                 return;
             }
             const context = getLessonFormContext();
@@ -3430,7 +3472,7 @@ ${draftText}`;
             const theoryArea = window.getTheoryOutputEl();
             lessonGenerationInProgress = true;
             setGenerateButtonsState(true, 'theory');
-            updateGenerationProgress(8, 'Bước 1/2', `Đang tạo Mục tiêu + Lý thuyết từ ${base64List.length} ảnh...`);
+            updateGenerationProgress(8, 'Bước 1/2', `Đang tạo Mục tiêu + Lý thuyết từ ${base64List.length} tệp ảnh/PDF...`);
             if (theoryArea) theoryArea.value = 'Đang tạo Mục tiêu + Lý thuyết (Bước 1)...';
             window.setLessonOutputTab('theory');
 
@@ -3461,7 +3503,7 @@ ${draftText}`;
                 return;
             }
             if (uploadedImages.length === 0) {
-                updateGenerationProgress(0, 'Thiếu ảnh SGK', 'Cần ảnh sách để đối chiếu ví dụ/bài tập.', 'error');
+                updateGenerationProgress(0, 'Thiếu học liệu SGK', 'Cần ảnh hoặc PDF sách để đối chiếu ví dụ/bài tập.', 'error');
                 return;
             }
             const context = getLessonFormContext();
@@ -3798,7 +3840,7 @@ ${source}`;
         async function generateQuizPhase() {
             if (lessonGenerationInProgress) return;
             if (uploadedImages.length === 0) {
-                window.showAppToast('Chưa có ảnh đầu vào. Hãy dán ảnh trước.', 'error');
+                window.showAppToast('Chưa có học liệu đầu vào. Hãy dán ảnh hoặc chọn PDF trước.', 'error');
                 return;
             }
             
@@ -3811,10 +3853,10 @@ ${source}`;
             if (quizArea) quizArea.value = 'Đang tạo bài kiểm tra trắc nghiệm...';
             window.setLessonOutputTab('quiz');
 
-            const quizPrompt = `Đóng vai chuyên gia giáo dục. Trích xuất TẤT CẢ các kiến thức quan trọng từ ảnh và sinh ra 10 câu hỏi trắc nghiệm (multiple-choice).
+            const quizPrompt = `Đóng vai chuyên gia giáo dục. Trích xuất TẤT CẢ các kiến thức quan trọng từ ảnh/PDF đính kèm và sinh ra 10 câu hỏi trắc nghiệm (multiple-choice).
 YÊU CẦU BẮT BUỘC:
 1. Tạo đúng 10 câu hỏi trắc nghiệm 4 đáp án A, B, C, D.
-2. Nội dung bám sát hình ảnh được cung cấp.
+2. Nội dung bám sát học liệu (ảnh hoặc PDF) được cung cấp.
 3. Cuối bài bắt buộc phải có BẢNG ĐÁP ÁN.
 4. Giữ nguyên các công thức Toán học nếu có.
 Hãy xuất trực tiếp dưới dạng văn bản (text), KHÔNG XUẤT JSON.`;
@@ -3915,7 +3957,7 @@ ${draftText}`;
         async function generateFullLessonDirect() {
             if (lessonGenerationInProgress) return;
             if (uploadedImages.length === 0) {
-                updateGenerationProgress(0, 'Chưa có ảnh đầu vào', 'Hãy dán hoặc chọn ít nhất một ảnh sách trước khi tạo bài học.', 'error');
+                updateGenerationProgress(0, 'Chưa có học liệu đầu vào', 'Hãy dán ảnh hoặc chọn PDF sách trước khi tạo bài học.', 'error');
                 return;
             }
 
@@ -3930,7 +3972,7 @@ ${draftText}`;
 
             const masterPrompt = `Bạn là chuyên gia thiết kế bài học E-learning Toán theo đúng hệ thống hiện tại.
 
-Từ các ảnh screenshot sách giáo khoa tôi cung cấp (đã đính kèm dưới dạng inline images), hãy tạo **TOÀN BỘ** một bài học hoàn chỉnh cho:
+Từ các ảnh/PDF sách giáo khoa tôi cung cấp (đã đính kèm dưới dạng inlineData), hãy tạo **TOÀN BỘ** một bài học hoàn chỉnh cho:
 - Môn: ${subject}
 - Chương: ${chapter}
 - Tên bài: ${title}
@@ -4085,7 +4127,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
             async function runOnce(activeImages, overrides) {
                 const parts = [{ text: prompt }];
                 activeImages.forEach(function(imgData) {
-                    const match = imgData.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
+                    const match = imgData.match(/^data:((?:image\/[a-z0-9.+-]+|application\/pdf));base64,(.+)$/i);
                     if (match) {
                         parts.push({
                             inlineData: {
@@ -4111,8 +4153,8 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                 let abortTimer = null;
                 try {
                     reportProgress(24, 'Đang đóng gói yêu cầu', activeImages.length
-                        ? ('Đã chuẩn bị ' + activeImages.length + ' ảnh để Gemini đọc.')
-                        : 'Chỉ gửi văn bản (không kèm ảnh) để tránh vượt giới hạn Canvas.');
+                        ? ('Đã chuẩn bị ' + activeImages.length + ' tệp ảnh/PDF để Gemini đọc.')
+                        : 'Chỉ gửi văn bản (không kèm ảnh/PDF) để tránh vượt giới hạn Canvas.');
                     const controller = new AbortController();
                     abortTimer = window.setTimeout(function() { controller.abort(); }, timeoutMs);
                     const progressStartedAt = Date.now();
@@ -4121,12 +4163,12 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                         const estimatedPercent = Math.min(88, 52 + Math.floor(elapsedSeconds / 3));
                         reportProgress(
                             estimatedPercent,
-                            activeImages.length ? 'Gemini đang phân tích ảnh và soạn bài' : 'Gemini đang soạn nội dung',
+                            activeImages.length ? 'Gemini đang phân tích ảnh/PDF và soạn bài' : 'Gemini đang soạn nội dung',
                             'Đã chờ ' + elapsedSeconds + ' giây; quá trình này thường mất 20–120 giây.'
                         );
                     }, 1000);
                     reportProgress(50, 'Đã gửi yêu cầu tới Gemini Canvas', activeImages.length
-                        ? 'Gemini đang đọc ảnh và lập cấu trúc bài học.'
+                        ? 'Gemini đang đọc ảnh/PDF và lập cấu trúc bài học.'
                         : 'Gemini đang soạn dựa trên lý thuyết đã duyệt.');
 
                     const { response: res, modelName: usedModel } = await postCanvasGeminiWithModelFallback(LESSON_TEXT_MODELS, body, {
@@ -4872,24 +4914,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                 addLessonPlanFiles([pastedFile]);
                 const reader = new FileReader();
                 reader.onload = function(ev) {
-                    const preview = document.getElementById('image-preview');
-                    preview.classList.remove('hidden');
-
-                    const div = document.createElement('div');
-                    div.className = 'relative group border border-slate-200 rounded-xl overflow-hidden';
-                    div.innerHTML = `
-                        <img src="${ev.target.result}" class="w-full aspect-[4/3] object-cover">
-                        <div class="absolute bottom-0 left-0 right-0 bg-teal-600/80 text-white text-[9px] px-1.5 py-0.5 flex items-center justify-between">
-                            <span>${source}</span>
-                            <span class="text-[8px] opacity-75">ảnh đã nhận</span>
-                        </div>
-                    `;
-                    preview.appendChild(div);
-
-                    uploadedImages.push({
-                        name: `${source}-${Date.now()}.png`,
-                        data: ev.target.result
-                    });
+                    addLessonInputPreview(pastedFile, ev.target.result);
                 };
                 reader.readAsDataURL(blob);
             }
@@ -4917,6 +4942,9 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                         const pdfFile = items[i].getAsFile();
                         if (pdfFile) {
                             addLessonPlanFiles([pdfFile]);
+                            const reader = new FileReader();
+                            reader.onload = function(ev) { addLessonInputPreview(pdfFile, ev.target.result); };
+                            reader.readAsDataURL(pdfFile);
                             foundPdf = true;
                             e.preventDefault();
                             break;

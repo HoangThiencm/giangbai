@@ -33,3 +33,17 @@ jobs:
             .github/**
             api/config.php
             global_config.json
+            **/*.md
+            **/*.sql
+            **/*.zip
+            **/*.bak
+            **/*.log
+            docs/**
+            tests/**
+            agent-tools/**
+            mcps/**
+            .agents/**
+            backupcode*/**
+            *.backup*.html
+            setup.php
+            tools/**
