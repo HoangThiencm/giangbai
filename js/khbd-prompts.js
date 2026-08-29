@@ -254,6 +254,14 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy chuẩn CV 5512. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ lại nội dung giáo án. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary, lời chúc ở cuối và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng "-", "+", ".". Không đổi tiêu đề mục khung như "I.", "## 1.", "a)", "Bước", "Bài".`,
 
+  NATURAL_INTEGRATION_GATE: `RÀNG BUỘC TÍCH HỢP TỰ NHIÊN — CẤM KHIÊN CƯỠNG:
+- Chỉ tích hợp NLS/AI khi bám sát nội dung SGK, dụng cụ đo/vẽ hoặc máy tính cầm tay của bài. Không gán ghép công nghệ cho đủ khung.
+- Bài Hình học & Đo đạc: ưu tiên trực quan hóa (thước, compa, mô hình, GeoGebra nếu có máy tính). CẤM TUYỆT ĐỐI mã Lập trình (3.4) và Bản quyền số (3.3); CẤM mã AI không liên quan.
+- Bài Đại số & Số học lý thuyết thuần túy: ưu tiên tính toán, máy tính cầm tay, giải quyết vấn đề số học. CẤM gán Bảo vệ dữ liệu cá nhân (4.2) hay đạo đức AI gượng ép.
+- Bài Thống kê & Xác suất: ưu tiên thu thập, đánh giá, biểu diễn bảng/biểu đồ số (1.1, 1.2, 1.3).
+- TIME-BUDGET GATE: Nếu bài 1 tiết (45 phút): tối đa 1 kỹ thuật dạy học tích cực nhẹ ở pha B — Think-Pair-Share (3–5 phút) hoặc Khăn trải bàn ngắn (5 phút). CẤM kết hợp Mảnh ghép + Khăn trải bàn + Dự án trong cùng 1 tiết. Bài 2–3 tiết mới được dùng Mảnh ghép, Trạm/Góc học tập, Dự án nhỏ.
+- FACILITY GATE: Nếu lớp KHÔNG có thiết bị học sinh và KHÔNG có Internet: TUYỆT ĐỐI CẤM yêu cầu học sinh lên mạng tra cứu, dùng điện thoại quét mã, thiết kế Canva, dùng laptop/chatbot trong giờ. Chỉ dùng thước, compa, bảng, phiếu giấy, máy tính cầm tay nếu bài cần.`,
+
   SOURCE_LOCK: `KHÓA NGUỒN BẮT BUỘC:
 - Nguồn chính = văn bản SGK đã nhận diện (Mistral OCR / tóm tắt Bước 0) và/hoặc file PDF/ảnh đính kèm đúng request này.
 - Kèm theo (nếu có): Tài liệu Phân phối chương trình (PPCT / Phụ lục 3 CV 5512) và phạm vi tiết dạy được phân công.
@@ -1218,6 +1226,16 @@ function getPromptTemplate(templateKey, context) {
 
   if (PROMPTS.SOURCE_LOCK) {
     result += `\n\n${PROMPTS.SOURCE_LOCK}`;
+  }
+  if ([
+    "GENERATE_OBJECTIVES",
+    "GENERATE_MATERIALS",
+    "GENERATE_ACTIVITY_A",
+    "GENERATE_ACTIVITY_B",
+    "GENERATE_ACTIVITY_C",
+    "GENERATE_ACTIVITY_D"
+  ].includes(templateKey) && PROMPTS.NATURAL_INTEGRATION_GATE) {
+    result += `\n\n${PROMPTS.NATURAL_INTEGRATION_GATE}`;
   }
   result += `\n\nGIỚI HẠN DUNG LƯỢNG: Viết cô đọng để giáo án in Word khoảng 8–12 trang (Times New Roman 13pt). Không viết lại lý thuyết đã có ở mục trước.`;
 

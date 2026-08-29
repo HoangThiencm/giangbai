@@ -1,32 +1,33 @@
 # IMPLEMENT
 
-Trạng thái: ĐÃ LÀM — Sửa NLS luôn 2–3 mục + bố cục Tab 0 từ trên xuống, tách AI độc lập
+Trạng thái: ĐÃ LÀM — Bộ lọc sư phạm chống khiên cưỡng (dạng bài, Time-Budget, Facility Gate)
 
 ## File đã đổi
 
-- `soankhbd.html`
-- `js/khbd-app.js`
 - `js/khbd-standards.js`
+- `js/khbd-prompts.js`
+- `js/khbd-app.js`
 - `tests/khbd-4steps-workflow-smoke.js`
+- `tests/khbd-pedagogy-script-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Nội dung chính
 
-1. **NLS không còn rỗng**: `KHBD_STANDARDS.digital.minSelect = 2`, `maxSelect = 3`. `recommendOfficialStandards` và `catalogFallbackRecords("digital")` luôn trả 2–3 mục TC1a (lớp 6–7) / TC2a (lớp 8–9). `applySuggestedStandardRecords` không ghi mảng rỗng (không xóa tick). Nhóm `<details>` có mục được chọn tự `open`.
-2. **Nút đọc dưới dropzone**: `btnAnalyzeVision` / `btnAnalyzePpct` đặt ngay dưới vùng nạp tương ứng.
-3. **Tab 0 tuần tự**: Khối 1 học liệu → Khối 2 thông tin bài dạy → Khối 3 PPDH & NLS (TT 02) → Khối 4 card AI (QĐ 2422) độc lập.
-4. **AI tách khỏi NLS**: Không còn chung tab tích hợp. AI mặc định tắt; chỉ tick 2–3 mục khi bật.
+1. **Dạng bài**: `detectLessonMathBranch` phân loại geometry / algebra / statistics. `isUnnaturalOfficialStandard` đưa điểm 0 cho mã không khớp (Hình học: 3.3, 3.4; Đại số: 4.2; không pad các mã bị cấm). Thống kê ưu tiên 1.1–1.3.
+2. **Time-Budget Gate**: `applyTimeBudgetGateToPedagogy` — bài 1 tiết chỉ 1 kỹ thuật nhẹ pha B (`tps-tech` hoặc `tablecloth`), loại Mảnh ghép / Trạm / Dự án.
+3. **Facility Gate + prompt**: `PROMPTS.NATURAL_INTEGRATION_GATE` gắn Mục tiêu, Thiết bị, Hoạt động A–D. Không có devices/internet: cấm tra cứu mạng, điện thoại, Canva, laptop/chatbot trong giờ. `buildPedagogicalContext` lặp lại các cổng này.
 
 ## Ngoài phạm vi giữ nguyên
 
-- Không đổi danh mục mã TT 02 / QĐ 2422.
-- Không đổi xuất Word 5512.
+- Danh mục mã TT 02 / QĐ 2422 không đổi.
+- Xuất Word 5512 không đổi.
 
 ## Test đã chạy
 
 ```
 node tests/khbd-4steps-workflow-smoke.js
+node tests/khbd-pedagogy-script-smoke.js
 ```
 
-Kết quả: **pass** (`khbd-4steps-workflow-smoke.js`, kèm structured-candidates, mistral-ocr, ppct-integration, dynamic-integrations).
+Kết quả: **pass** (`khbd-4steps-workflow-smoke.js`, `khbd-pedagogy-script-smoke.js`).

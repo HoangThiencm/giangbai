@@ -56,6 +56,10 @@ assert.match(appCode, /dropzone-active-ppct/, "PPCT active zone phải có class
 assert.match(appCode, /dropzone-active-sgk/, "SGK active zone phải có class viền xanh");
 assert.match(appCode, /async function triggerStep3PedagogyAndDigitalRecommendations/, "Phải có hàm Bước 3 đề xuất PPDH & NLS");
 assert.match(appCode, /btnStep3PedagogyDigital/, "Phải gắn nút card Bước 3");
+assert.match(appCode, /function applyTimeBudgetGateToPedagogy/, "Phải có Time-Budget Gate cho bài 1 tiết");
+assert.match(appCode, /tps-tech/, "Bài 1 tiết ưu tiên Think-Pair-Share");
+assert.match(appCode, /TIME-BUDGET GATE/, "Bối cảnh sư phạm phải có Time-Budget Gate");
+assert.match(appCode, /FACILITY GATE/, "Bối cảnh sư phạm phải có Facility Gate");
 assert.match(appCode, /ensurePedagogyFromLesson\(\{ force: true/, "Bước 3 force chọn PPDH/kỹ thuật 4 pha");
 assert.match(appCode, /requestStructuredIntegrationCandidates\("digital"/, "Bước 3 đề xuất NLS, không phải AI");
 assert.match(appCode, /kind === "digital" && records\.length < 2/, "NLS không được để dưới 2 mục; phải fallback 2-3");
@@ -74,7 +78,7 @@ console.log("✓ Logic JS 4 bước độc lập hoạt động chuẩn xác.");
 
 console.log("\n[TEST 3] Khung mã NLS (CV 3456) và AI (QĐ 2422)...");
 
-const { KHBD_STANDARDS, entriesForGrade, recommendOfficialStandards } = require("../js/khbd-standards.js");
+const { KHBD_STANDARDS, entriesForGrade, recommendOfficialStandards, detectLessonMathBranch } = require("../js/khbd-standards.js");
 
 assert.strictEqual(KHBD_STANDARDS.digital.framework, "Thông tư 02/2025/TT-BGDĐT & Công văn 3456/BGDĐT-GDPT", "Framework NLS phải ghi rõ TT 02 & CV 3456");
 assert.strictEqual(KHBD_STANDARDS.digital.minSelect, 2, "NLS minSelect phải là 2");
@@ -109,12 +113,53 @@ assert.ok(aiG9.length > 0 && aiG9.every(e => /^9\.[A-D]\d+\.(?:\d+|MR\d+)$/.test
 
 console.log("✓ Khung mã NLS (CV 3456) và AI (QĐ 2422) chuẩn 100%.");
 
+console.log("\n[TEST 3b] Bộ lọc chống khiên cưỡng theo dạng bài...");
+
+assert.strictEqual(detectLessonMathBranch("Góc ở vị trí đặc biệt", "Hai đường thẳng song song, góc đồng vị."), "geometry");
+assert.strictEqual(detectLessonMathBranch("Phương trình bậc nhất một ẩn", "Giải phương trình đại số."), "algebra");
+assert.strictEqual(detectLessonMathBranch("Thống kê", "Bảng tần suất và biểu đồ."), "statistics");
+
+const geoRec = recommendOfficialStandards("digital", {
+  grade: 6,
+  topic: "Góc ở vị trí đặc biệt",
+  vision: "Hai đường thẳng song song. Góc đồng vị, góc so le trong.",
+  facilities: {}
+});
+assert.ok(geoRec.length >= 2 && geoRec.length <= 3, `Hình học phải 2–3 mục NLS, nhận ${geoRec.length}`);
+assert.ok(geoRec.every(item => !/^3\.[34]/.test(String(item.officialCode || ""))), "Bài Hình học không được đề xuất Lập trình 3.4 hay Bản quyền 3.3");
+
+const algRec = recommendOfficialStandards("digital", {
+  grade: 6,
+  topic: "Phương trình bậc nhất",
+  vision: "Giải phương trình đại số trên tập số tự nhiên.",
+  facilities: {}
+});
+assert.ok(algRec.every(item => !/^4\.2/.test(String(item.officialCode || ""))), "Bài Đại số không được gán Bảo vệ dữ liệu cá nhân 4.2");
+
+const app = require("../js/khbd-app.js");
+app.appState.duration = "01 tiết (45 phút)";
+app.appState.selectedGrade = "6";
+const gated = app.applyTimeBudgetGateToPedagogy({
+  methods: ["pbl", "cooperative"],
+  techniques: { A: ["kwl-tech"], B: ["jigsaw-tech", "tablecloth", "tps-tech"], C: ["station"], D: ["mini-project"] }
+});
+assert.strictEqual(gated.techniques.B.length, 1, "Bài 1 tiết chỉ 1 kỹ thuật pha B");
+assert.ok(["tps-tech", "tablecloth"].includes(gated.techniques.B[0]), "Pha B 1 tiết phải là kỹ thuật nhẹ");
+assert.ok(!gated.methods.includes("pbl"), "Bài 1 tiết không đề xuất dạy học dự án");
+
+console.log("✓ Bộ lọc dạng bài, Time-Budget và Facility Gate đạt.");
+
 console.log("\n[TEST 4] Prompt engineering NLS & AI...");
 
 assert.match(promptsCode, /3456\/BGDĐT-GDPT/, "Prompt phải dẫn chiếu Công văn 3456/BGDĐT-GDPT");
 assert.match(promptsCode, /2422\/QĐ-BGDĐT/, "Prompt phải dẫn chiếu Quyết định 2422/QĐ-BGDĐT");
 assert.match(promptsCode, /Trung cấp 1 \(TC1/, "Prompt phải ghi rõ Lớp 6-7 dùng TC1");
 assert.match(promptsCode, /Trung cấp 2 \(TC2/, "Prompt phải ghi rõ Lớp 8-9 dùng TC2");
+assert.match(promptsCode, /NATURAL_INTEGRATION_GATE/, "Phải có khối prompt chống khiên cưỡng");
+assert.match(promptsCode, /CẤM TUYỆT ĐỐI mã Lập trình \(3\.4\)/, "Prompt cấm Lập trình trong bài Hình học");
+assert.match(promptsCode, /TIME-BUDGET GATE/, "Prompt phải có Time-Budget Gate");
+assert.match(promptsCode, /FACILITY GATE/, "Prompt phải có Facility Gate");
+assert.match(promptsCode, /GENERATE_OBJECTIVES[\s\S]*NATURAL_INTEGRATION_GATE|NATURAL_INTEGRATION_GATE[\s\S]*GENERATE_ACTIVITY_A/, "Cổng chống khiên cưỡng được gắn vào prompt soạn bài");
 
 console.log("✓ Prompt Engineering tích hợp đầy đủ quy tắc kiểm tra mã.");
 

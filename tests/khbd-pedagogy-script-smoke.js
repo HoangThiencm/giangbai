@@ -154,6 +154,14 @@ function testPrompts() {
   assert.ok(promptD.includes("KỊCH BẢN SƯ PHẠM THỰC CHIẾN"), "Prompt D phải có contract kịch bản thực chiến");
   assert.ok(promptD.includes("mô hình hóa"), "Prompt D phải có yêu cầu mô hình hóa");
 
+  assert.ok(promptB.includes("TIME-BUDGET GATE"), "Prompt B phải có Time-Budget Gate");
+  assert.ok(promptB.includes("FACILITY GATE"), "Prompt B phải có Facility Gate");
+  assert.ok(promptB.includes("điện thoại"), "Prompt B phải cấm hoạt động điện thoại khi không có thiết bị");
+  const promptObj = getPromptTemplate("GENERATE_OBJECTIVES", stubContext);
+  const promptMat = getPromptTemplate("GENERATE_MATERIALS", stubContext);
+  assert.ok(promptObj.includes("CẤM KHIÊN CƯỠNG"), "Prompt Mục tiêu phải có chống khiên cưỡng");
+  assert.ok(promptMat.includes("Canva"), "Prompt Thiết bị phải cấm Canva khi không có thiết bị");
+
   console.log("  -> Prompts: PASS");
 }
 

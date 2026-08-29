@@ -1860,10 +1860,32 @@ async function generateLessonIllustrations({ silent = false } = {}) {
   }
 }
 
+function isSinglePeriodLesson() {
+  const periods = typeof parsePeriodsFromInput === "function"
+    ? parsePeriodsFromInput(appState.duration, appState.selectedGrade)
+    : 2;
+  return Number(periods) <= 1;
+}
+
+function applyTimeBudgetGateToPedagogy(rec) {
+  if (!rec || !isSinglePeriodLesson()) return rec;
+  const lightB = ["tps-tech", "tablecloth"];
+  const currentB = rec.techniques?.B || [];
+  const chosen = lightB.find(id => currentB.includes(id)) || "tps-tech";
+  rec.techniques = rec.techniques || { A: [], B: [], C: [], D: [] };
+  rec.techniques.B = [chosen];
+  const heavy = /jigsaw|station|mini-project|gallery-tech|pbl|steam/;
+  ["A", "C", "D"].forEach(phase => {
+    rec.techniques[phase] = (rec.techniques[phase] || []).filter(id => !heavy.test(String(id))).slice(0, 1);
+  });
+  rec.methods = (rec.methods || []).filter(id => !["pbl", "steam", "flipped"].includes(id)).slice(0, 1);
+  return rec;
+}
+
 function ensurePedagogyFromLesson({ force = false, silent = false } = {}) {
   if (typeof recommendPedagogyFromLesson !== "function") return false;
   if (!hasAnalyzedLessonContent()) return false;
-  const rec = recommendPedagogyFromLesson(pedagogyRecommendFullCtx());
+  const rec = applyTimeBudgetGateToPedagogy(recommendPedagogyFromLesson(pedagogyRecommendFullCtx()));
   const auto = autoPedagogyState();
   let changed = false;
   const notices = [];
@@ -4299,6 +4321,9 @@ function buildPedagogicalContext() {
   ${selectedStandards || "Không có"}
 - CẤM bịa mã ngoài danh sách. Khi viết mục tiêu: chỉ mô tả năng lực một dòng, CẤM nhãn Biểu hiện / Nhiệm vụ / Minh chứng.
 - TÍCH HỢP NLS & AI THỰC CHIẾN GẮN MÔN HỌC: NLS/AI chỉ là công cụ thực hành môn ${subjectName}, TUYỆT ĐỐI KHÔNG dạy lý thuyết Tin học hay hỏi lý thuyết AI suông trong giờ học (cấm GV hỏi: "AI là gì?", "Em hãy kể tên công cụ AI?", "Làm gì để kiểm chứng thông tin từ AI?"). CHỈ tích hợp tại 1–2 vị trí then chốt, đắc địa nhất theo 3 dạng: (1) Kiểm chứng phản biện lỗi sai AI, (2) Prompting gợi mở bước giải, (3) Thao tác phần mềm chuyên ngành (GeoGebra/Excel/PhET...). TUYỆT ĐỐI CẤM rải tag dồn dập nhiều mã [AI: ...].
+- TÍCH HỢP TỰ NHIÊN — KHÔNG GƯỢNG ÉP: Chỉ gắn NLS/AI khi khớp nội dung SGK. Bài Hình học: ưu tiên thước, compa, mô hình, GeoGebra nếu có máy; CẤM mã Lập trình (3.4) và Bản quyền số (3.3). Bài Đại số lý thuyết: CẤM gán Bảo vệ dữ liệu cá nhân (4.2) hay đạo đức AI gượng ép. Bài Thống kê/Xác suất: ưu tiên 1.1, 1.2, 1.3.
+- TIME-BUDGET GATE: ${isSinglePeriodLesson() ? "Bài 1 tiết (45 phút): tối đa 1 kỹ thuật nhẹ ở pha B (Think-Pair-Share 3–5 phút hoặc Khăn trải bàn ngắn 5 phút). CẤM kết hợp Mảnh ghép, Trạm/Góc học tập và Dự án trong cùng 1 tiết." : "Bài 2–3 tiết: được phân bổ kỹ thuật sâu (Mảnh ghép, Trạm/Góc học tập, Dự án nhỏ) nếu phù hợp."}
+- FACILITY GATE: ${!(context.facilities || {}).devices && !(context.facilities || {}).internet ? "Lớp KHÔNG có thiết bị học sinh và KHÔNG có Internet. TUYỆT ĐỐI CẤM yêu cầu học sinh lên mạng tra cứu, dùng điện thoại quét mã, thiết kế Canva, dùng laptop/chatbot trong giờ. Chỉ dùng thước, compa, bảng, phiếu giấy, máy tính cầm tay nếu bài cần." : "Có thể dùng công nghệ số khi khớp bài và thiết bị đã tick."}
 - Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.
 
 ${buildContextIntegrationsPromptBlock()}`;
@@ -6127,6 +6152,8 @@ if (typeof module !== 'undefined' && module.exports) {
     generateSingleIllustration,
     zoomIllustration,
     downloadIllustration,
+    applyTimeBudgetGateToPedagogy,
+    isSinglePeriodLesson,
     applyTextbookOcrResult,
     triggerStep3PedagogyAndDigitalRecommendations,
     setActiveDropzoneTarget,

@@ -1,54 +1,54 @@
-# PLAN: Tái Cấu trúc Giao diện Khoa học & Sửa Triệt để Lỗi Đề xuất Năng lực số (soankhbd.html)
+# PLAN: Tích hợp Bộ Lọc Sư phạm Chống Khiên cưỡng & Ràng buộc Thực chiến (soankhbd.html)
 
 Trạng thái: KẾ HOẠCH ĐÃ DUYỆT
 
 ## Hiện trạng
-1. Đề xuất NLS bị lỗi trả về rỗng (0 mục được tick) do minSelect = 0 và fallback chưa khóa cứng 2-3 mục.
-2. Vị trí nút Đọc SGK / Đọc PPCT đặt ở header card, ngược với thao tác nạp file ở dưới.
-3. Luồng giao diện Tab 0 bị nhảy cóc, phải cuộn lên cuộn xuống nhiều lần.
-4. Năng lực số (TT 02/CV 3456) và Năng lực AI (QĐ 2422) cần tách biệt rành mạch, độc lập.
+1. Đề xuất NLS/AI còn bị gán ghép khiên cưỡng do chưa phân loại theo dạng bài (Hình học, Đại số, Thống kê).
+2. Chưa kiểm soát chặt chẽ thời lượng 45 phút, gây quá tải kỹ thuật dạy học nhóm trong 1 tiết.
+3. Khi lớp học không có thiết bị, AI đôi khi vẫn tự sinh hoạt động tra cứu mạng/app công nghệ cao.
 
 ## Phạm vi
-1. **Sửa dứt điểm Đề xuất Năng lực số (NLS)**:
-   - Trong js/khbd-standards.js và js/khbd-app.js: Khóa cứng luôn đề xuất từ 2 đến 3 mục NLS chuẩn TT 02 / CV 3456 (TC1a cho Lớp 6-7, TC2a cho Lớp 8-9). Không bao giờ trả về mảng rỗng.
-   - Tự động mở (open) các nhóm NLS có mục được tick để giáo viên nhìn thấy ngay lập tức.
-2. **Thiết kế lại Giao diện Tab 0 Cực kỳ Khoa học (Top-to-Bottom Flow)**:
-   - **Khối 1 (Nạp học liệu)**: Vùng dán/chọn file -> Nút "Đọc SGK" / "Đọc PPCT" đặt ngay dưới vùng nạp tương ứng.
-   - **Khối 2 (Thông tin bài dạy)**: Trường, Lớp, Môn, Tên bài, Thời lượng, Phạm vi tiết dạy theo PPCT.
-   - **Khối 3 (PPDH & Năng lực số)**: Nút "⚡ Đề xuất PPDH & Năng lực số" + Bảng PPDH + Bảng Năng lực số (TT 02/CV 3456) tách riêng.
-   - **Khối 4 (Năng lực AI - Độc lập)**: Card riêng biệt "✨ Khung Năng lực AI (QĐ 2422)". Chỉ phân tích và tick 2-3 mục khi giáo viên chủ động bật.
-3. **Cập nhật Bộ kiểm thử tự động**:
-   - Cập nhật tests/khbd-4steps-workflow-smoke.js đảm bảo assertions kiểm tra nút dưới dropzone và NLS luôn >= 2 mục.
+1. **Bộ lọc theo Phân môn & Dạng bài (Subject & Topic Classification Gate)**:
+   - Trong `js/khbd-standards.js` (`scoreOfficialStandard` & `recommendOfficialStandards`):
+     * **Bài Hình học & Đo đạc**: Ưu tiên trực quan hóa (thước, compa, mô hình, GeoGebra nếu có máy tính); CẤM TUYỆT ĐỐI đề xuất mã Lập trình (3.4), Bản quyền số (3.3), hoặc các mã AI không liên quan.
+     * **Bài Đại số & Số học**: Ưu tiên tính toán, máy tính cầm tay, giải quyết vấn đề số học; CẤM gán ghép bảo vệ dữ liệu cá nhân hay đạo đức AI gượng ép.
+     * **Bài Thống kê & Xác suất**: Ưu tiên thu thập, đánh giá và biểu diễn bảng/biểu đồ số (1.1, 1.2, 1.3).
+2. **Quy tắc "Tích hợp Tự nhiên — Không Gượng ép"**:
+   - Nếu bài học là lý thuyết thuần túy hoặc không có điều kiện công nghệ: Chỉ đề xuất mục tối thiểu gắn liền SGK / máy tính cầm tay, không ép học sinh dùng AI hay công nghệ phức tạp.
+   - Ràng buộc Cơ sở vật chất (`Facility Gate`): Nếu `facilities.devices = false` và `facilities.internet = false` -> CẤM sinh hoạt động đòi hỏi học sinh dùng điện thoại/laptop/chatbot trong lớp.
+3. **Ràng buộc Thời lượng Tiết dạy (Time-Budget Gate)**:
+   - **Bài 1 tiết (45 phút)**: Khóa cứng chỉ chọn **tối đa 1 kỹ thuật dạy học tích cực nhẹ nhàng** trong pha B (Hình thành kiến thức) như *Think-Pair-Share* (3–5 phút) hoặc *Khăn trải bàn ngắn* (5 phút). CẤM kết hợp nhiều kỹ thuật nhóm phức tạp.
+   - **Bài 2–3 tiết**: Mới cho phép phân bổ các kỹ thuật sâu như *Mảnh ghép*, *Trạm/Góc học tập*, *Dự án nhỏ*.
+4. **Cập nhật Prompt Engineering Chống Khiên cưỡng (`js/khbd-prompts.js`)**:
+   - Bổ sung chỉ dẫn cấm gán ghép khiên cưỡng vào tất cả các Prompt sinh Mục tiêu (I), Thiết bị (II), và Hoạt động (III A–D).
+5. **Cập nhật Bộ kiểm thử tự động**:
+   - Cập nhật `tests/khbd-pedagogy-script-smoke.js` và `tests/khbd-4steps-workflow-smoke.js`.
 
 ## Ngoài phạm vi
-- Không đổi cấu trúc mã chuẩn TT 02 / CV 3456 và QĐ 2422.
-- Không đổi logic xuất file Word 5512.
+- Không thay đổi danh mục mã chuẩn TT 02/2025 & QĐ 2422.
+- Không thay đổi định dạng xuất Word 5512.
 
 ## File dự kiến tác động
-- `soankhbd.html`
-- `js/khbd-app.js`
 - `js/khbd-standards.js`
+- `js/khbd-prompts.js`
+- `js/khbd-app.js`
 - `tests/khbd-4steps-workflow-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Các bước thực hiện
-1. **Bước 1: Sửa logic Đề xuất NLS (js/khbd-standards.js & js/khbd-app.js)**:
-   - Đặt minSelect = 2, maxSelect = 3 cho digital.
-   - Đảm bảo catalogFallbackRecords("digital", grade) luôn trả về 2-3 mục TC1a/TC2a phù hợp nhất.
-   - Trong renderStandardsCatalog: Tự động thêm thuộc tính `open` cho `<details>` chứa mục NLS được chọn.
-2. **Bước 2: Tái cấu trúc Layout trực quan trong soankhbd.html**:
-   - Chuyển nút `btnAnalyzeVision` xuống dưới `dropzoneContainer`.
-   - Chuyển nút `btnAnalyzePpct` xuống dưới `dropzoneContainerPpct`.
-   - Sắp xếp thứ tự các Card: 1. Nạp học liệu -> 2. Thông tin bài dạy -> 3. PPDH & Năng lực số -> 4. Tích hợp AI (Card riêng).
-3. **Bước 3: Tách bạch rõ ràng Năng lực số và Năng lực AI**:
-   - Tách riêng Panel NLS (TT 02) và Panel AI (QĐ 2422) thành 2 khu vực rõ ràng.
+1. **Bước 1: Nâng cấp hàm nhận diện dạng bài & chấm điểm trong `js/khbd-standards.js`**:
+   - Viết hàm `detectLessonMathBranch(topic, vision)`: Phân loại "geometry" (Hình học), "algebra" (Đại số), "statistics" (Thống kê).
+   - Trong `scoreOfficialStandard`: Áp dụng điểm phạt nặng (về 0) cho các mã không phù hợp dạng bài (ví dụ phạt mã 3.4 Lập trình trong bài Hình học).
+2. **Bước 2: Cài đặt Time-Budget Gate trong `js/khbd-app.js`**:
+   - Trong `ensurePedagogyFromLesson`: Kiểm tra số tiết (`appState.duration`). Nếu là 1 tiết (45 phút), chỉ giữ 1 kỹ thuật nhẹ nhàng nhất cho pha B, loại bỏ việc nhồi nhét nhiều kỹ thuật.
+3. **Bước 3: Tích hợp Negative Constraints vào `js/khbd-prompts.js`**:
+   - Đưa chỉ dẫn cấm gượng ép công nghệ khi lớp không có thiết bị và cấm kéo dài hoạt động quá thời lượng tiết dạy vào toàn bộ prompt.
 4. **Bước 4: Kiểm thử tự động**:
-   - Chạy tests/khbd-4steps-workflow-smoke.js.
+   - Chạy `node tests/khbd-4steps-workflow-smoke.js`.
 
 ## Tiêu chí nghiệm thu
-1. Bấm đề xuất NLS: Luôn hiển thị và tick chọn đúng 2–3 mục Năng lực số theo khối lớp.
-2. Nút Đọc SGK và Đọc PPCT nằm ngay dưới vùng chọn/dán file.
-3. Giao diện bố cục tuần tự, khoa học từ trên xuống dưới, không phải cuộn ngược.
-4. Năng lực số và Năng lực AI tách rời hoàn toàn thành 2 mục độc lập.
-5. Bộ kiểm thử tự động pass 100%.
+1. Bài Hình học: Không bao giờ đề xuất mã Lập trình (3.4) hay Bản quyền số (3.3).
+2. Bài 1 tiết (45 phút): Chỉ đề xuất tối đa 1 kỹ thuật dạy học nhóm nhẹ nhàng, không cháy giáo án.
+3. Lớp không có thiết bị HS: Giáo án không tự bịa hoạt động học sinh dùng điện thoại/laptop trong giờ.
+4. Bộ kiểm thử tự động pass 100%.

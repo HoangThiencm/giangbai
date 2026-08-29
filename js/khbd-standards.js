@@ -152,11 +152,49 @@ function standardToRecord(kind, entry, grade, autoSuggested) {
   };
 }
 
+function detectLessonMathBranch(topic, vision) {
+  const hay = String([topic, vision].join(" "))
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const count = (re) => (hay.match(re) || []).length;
+  const geo = count(/hinh hoc|do dac|goc o vi tri|goc doi dinh|goc ke nhau|song song|vuong goc|tam giac|tu giac|hinh binh hanh|hinh thang|hinh chu nhat|hinh vuong|hinh tron|duong thang|doan thang|trung diem|trung truc|doi xung|dien tich|chu vi|the tich|compas?|thuoc ke|hai duong thang|tia |dong vi|khac phia/g);
+  const stat = count(/thong ke|xac suat|bieu do|bang tan suat|mau so lieu|tan suat/g);
+  const alg = count(/dai so|phuong trinh|bat phuong trinh|ham so|da thuc|phan so|so tu nhien|so nguyen|so thuc|luy thua|can bac|ty le|phan tram|tap hop/g);
+  if (stat > 0 && stat >= geo && stat >= alg) return "statistics";
+  if (geo > 0 && geo >= alg) return "geometry";
+  if (alg > 0) return "algebra";
+  return "";
+}
+
+function isUnnaturalOfficialStandard(kind, entry, ctx) {
+  const branch = detectLessonMathBranch(ctx.topic, ctx.vision);
+  const code = String(entry.componentCode || entry.code || "");
+  const facilities = ctx.facilities || {};
+  const hasStudentTech = Boolean(facilities.devices || facilities.internet);
+  if (kind === "digital") {
+    if (branch === "geometry" && (/^3\.4/.test(code) || /^3\.3/.test(code))) return true;
+    if (branch === "algebra" && /^4\.2/.test(code)) return true;
+    if (!hasStudentTech && (/^3\.4/.test(code) || /^3\.3/.test(code))) return true;
+  }
+  if (kind === "ai") {
+    const label = foldStandardText(entry.label);
+    if ((branch === "geometry" || branch === "algebra") && /dao duc|ban quyen|du lieu ca nhan|quyen rieng tu|thien vi|gia mao/.test(label)) return true;
+  }
+  return false;
+}
+
 function scoreOfficialStandard(kind, entry, ctx) {
+  if (isUnnaturalOfficialStandard(kind, entry, ctx)) return 0;
   const hay = foldStandardText([ctx.topic, ctx.vision, ctx.subjectName, ...(ctx.methods || []), ...(ctx.activities || []), ctx.specialRequirements].join(" "));
   const facilities = ctx.facilities || {};
   const hasTech = Boolean(facilities.internet || facilities.devices);
   const grouping = foldStandardText(ctx.grouping || "");
+  const branch = detectLessonMathBranch(ctx.topic, ctx.vision);
+  const code = String(entry.componentCode || entry.code || "");
   let score = 1;
   if (kind === "digital") {
     if (entry.domain === "Khai thác dữ liệu và thông tin") {
@@ -180,6 +218,15 @@ function scoreOfficialStandard(kind, entry, ctx) {
       if (!hasTech && !ctx.aiOn) score -= 3;
       if (/\bai\b|chatbot|gemini|tri tue nhan tao/.test(hay)) score += 4;
     }
+    if (branch === "geometry") {
+      if (/^1\./.test(code) || entry.domain === "Giải quyết vấn đề") score += 4;
+      if (/do dac|thuoc|compa|mo hinh|geogebra/.test(hay) && /^1\./.test(code)) score += 2;
+    } else if (branch === "algebra") {
+      if (entry.domain === "Giải quyết vấn đề") score += 4;
+    } else if (branch === "statistics") {
+      if (/^1\.[123]/.test(code) || entry.domain === "Khai thác dữ liệu và thông tin") score += 6;
+    }
+    if (!hasTech && !facilities.projector && /canva|padlet|chatbot/.test(foldStandardText(entry.label))) score = 0;
   } else if (kind === "ai") {
     // Không dùng AI hoặc không có dấu vết hoạt động AI thì không tự gán chuẩn AI.
     if (!ctx.aiOn && !/\bai\b|chatbot|gemini|tri tue nhan tao/.test(hay)) return 0;
@@ -224,7 +271,7 @@ function recommendOfficialStandards(kind, ctx) {
     .sort((a, b) => b.score - a.score);
   const picked = ranked.slice(0, Math.min(max, Math.max(min, ranked.length)));
   if (min && picked.length < min) {
-    pool.filter(entry => !picked.some(row => row.entry.id === entry.id))
+    pool.filter(entry => !picked.some(row => row.entry.id === entry.id) && !isUnnaturalOfficialStandard(kind, entry, ctx))
       .slice(0, min - picked.length)
       .forEach(entry => picked.push({ entry, score: 0 }));
   }
@@ -232,5 +279,5 @@ function recommendOfficialStandards(kind, ctx) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { KHBD_STANDARDS, recommendOfficialStandards, standardToRecord, entriesForGrade };
+  module.exports = { KHBD_STANDARDS, recommendOfficialStandards, standardToRecord, entriesForGrade, detectLessonMathBranch, isUnnaturalOfficialStandard };
 }
