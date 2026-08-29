@@ -640,7 +640,7 @@ function renderSubjectIntegrations() {
 function syncIntegrationTabs(preferredKey = "") {
   const context = normalizeTeachingContext(appState.teachingContext);
   const enabled = context.integrations || {};
-  const keys = ["digital", "ai", "foreignLanguage", "inclusive"];
+  const keys = ["foreignLanguage", "inclusive"];
   const active = enabled[preferredKey] ? preferredKey : keys.find(key => enabled[key]) || "";
 
   document.querySelectorAll(".integration-tab").forEach(tab => {
@@ -1094,7 +1094,7 @@ function capAiStandardRecords(records) {
 }
 
 function catalogFallbackRecords(kind, grade, entries, maxSelect) {
-  const limit = kind === "ai" ? 3 : (maxSelect || 3);
+  const limit = kind === "ai" ? 3 : (kind === "digital" ? 3 : (maxSelect || 3));
   const pool = Array.isArray(entries) && entries.length
     ? entries
     : (typeof entriesForGrade === "function" ? entriesForGrade(kind, grade) : []);
@@ -1110,17 +1110,26 @@ function catalogFallbackRecords(kind, grade, entries, maxSelect) {
   if (!records.length) {
     records = pool.slice(0, limit).map(entry => standardToRecord(kind, entry, grade, true));
   }
-  if (kind === "ai" && records.length < 2) {
+  if ((kind === "ai" || kind === "digital") && records.length < 2) {
     const used = new Set(records.map(item => item.catalogId));
     pool.filter(entry => !used.has(entry.id)).slice(0, 2 - records.length).forEach(entry => {
       records.push(standardToRecord(kind, entry, grade, true));
     });
   }
-  return kind === "ai" ? capAiStandardRecords(records) : records;
+  if (kind === "ai") return capAiStandardRecords(records);
+  if (kind === "digital") return records.slice(0, 3);
+  return records;
 }
 
 function applySuggestedStandardRecords(kind, catalog, records) {
-  const capped = kind === "ai" ? capAiStandardRecords(records) : records;
+  let next = Array.isArray(records) ? records.filter(Boolean) : [];
+  if (kind === "digital") {
+    if (next.length < 2) next = catalogFallbackRecords("digital", Number(appState.selectedGrade) || 6);
+    next = next.slice(0, 3);
+    if (!next.length) return;
+  }
+  const capped = kind === "ai" ? capAiStandardRecords(next) : next;
+  if (kind === "ai" && !capped.length) return;
   appState.teachingContext.standards = appState.teachingContext.standards
     .filter(item => kind === "ai" ? !isAiStandardRecord(item) : item.framework !== catalog.framework)
     .concat(capped);
@@ -1140,12 +1149,13 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
   // Giáo viên đã sửa/chọn tay: không có quyền ghi đè.
   if (current.length && !current.every(item => item.autoSuggested)) return false;
   const maxSelect = catalog.maxSelect || 3;
+  const minSelect = kind === "digital" || kind === "ai" ? 2 : (catalog.minSelect || 1);
   const candidateText = candidates.map(entry => `${entry.id} | ${entry.code || entry.label} | ${entry.label}`).join("\n");
   const vision = String(appState.content.vision || "");
   const ppct = String(appState.content.ppctAnalysis || "").trim();
   const sourceText = kind === "digital" && ppct ? `${vision}\n\n--- PPCT ---\n${ppct}` : vision;
   const visionForPrompt = sourceText.length > 14000 ? `${sourceText.slice(0, 10000)}\n...\n${sourceText.slice(-3000)}` : sourceText;
-  const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chọn từ 1 đến ${maxSelect} mục từ DANH MỤC CHO PHÉP để tích hợp vào bài này.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id catalog (cột 1) hoặc mã chính thức (cột 2)","lessonAnchor":"đoạn OCR về khái niệm, ví dụ hoặc bài tập","fitRationale":"lý do ngắn","proposedTask":"nhiệm vụ GV/HS ngắn gắn bài, nêu sản phẩm"}]}.\n\nQuy tắc bắt buộc:\n- Bài Toán/môn học không cần có chữ AI hay năng lực số. Hãy chọn mục có thể lồng vào bài tập/khái niệm đang có.\n- id là cột 1 (id catalog) hoặc cột 2 (mã chính thức). Không bịa mã ngoài danh mục.\n- lessonAnchor nên trích từ OCR; nếu không trích đúng nguyên văn vẫn phải trả id phù hợp.\n- Không trả mảng rỗng khi danh mục còn mục có thể tích hợp.\n- Không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${visionForPrompt}`;
+  const prompt = `Đọc NỘI DUNG OCR SGK dưới đây và chọn từ ${minSelect} đến ${maxSelect} mục từ DANH MỤC CHO PHÉP để tích hợp vào bài này.\n\nTrả về DUY NHẤT JSON hợp lệ: {"candidates":[{"id":"id catalog (cột 1) hoặc mã chính thức (cột 2)","lessonAnchor":"đoạn OCR về khái niệm, ví dụ hoặc bài tập","fitRationale":"lý do ngắn","proposedTask":"nhiệm vụ GV/HS ngắn gắn bài, nêu sản phẩm"}]}.\n\nQuy tắc bắt buộc:\n- Bài Toán/môn học không cần có chữ AI hay năng lực số. Hãy chọn mục có thể lồng vào bài tập/khái niệm đang có.\n- id là cột 1 (id catalog) hoặc cột 2 (mã chính thức). Không bịa mã ngoài danh mục.\n- lessonAnchor nên trích từ OCR; nếu không trích đúng nguyên văn vẫn phải trả id phù hợp.\n- Không trả mảng rỗng khi danh mục còn mục có thể tích hợp. Năng lực số phải đúng 2 đến 3 mục.\n- Không thêm trường, không dùng markdown.\n\nDANH MỤC CHO PHÉP (lớp/dải hiện tại):\n${candidateText}\n\nNỘI DUNG OCR SGK:\n${visionForPrompt}`;
   const label = kind === "ai" ? "năng lực AI" : "năng lực số";
   let records = [];
   if (typeof geminiAPI !== "undefined" && typeof geminiAPI.generateContent === "function" && (!geminiAPI.apiKeys || (Array.isArray(geminiAPI.apiKeys) && geminiAPI.apiKeys.length > 0))) {
@@ -1163,6 +1173,7 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
   }
   if (!records.length) records = catalogFallbackRecords(kind, grade, candidates, maxSelect);
   if (kind === "ai") records = capAiStandardRecords(records);
+  if (kind === "digital" && records.length < 2) records = catalogFallbackRecords("digital", grade, candidates, 3);
   if (!records.length) {
     if (!silent) showToast(`Chưa chọn được ${label} cho lớp ${grade}. Bạn có thể chọn thủ công từ khung chuẩn.`, "warning", 5000);
     return false;
@@ -1204,6 +1215,7 @@ async function requestStructuredIntegrationCandidatesForEnabled({ silent = false
       ? selected.map(({ entry, lessonAnchor, fitRationale, proposedTask }) => ({ ...standardToRecord(kind, entry, grade, true), lessonAnchor, fitRationale, proposedTask }))
       : catalogFallbackRecords(kind, grade, pools[kind], maxSelect);
     if (kind === "ai") records = capAiStandardRecords(records);
+    if (kind === "digital" && records.length < 2) records = catalogFallbackRecords("digital", grade, pools[kind], 3);
     if (records.length) { applySuggestedStandardRecords(kind, catalog, records); changed = true; }
   }
   if (!silent && changed) showToast("Đã đề xuất năng lực số và năng lực AI theo SGK trong một lượt phân tích.", "info", 5000);
@@ -1914,7 +1926,7 @@ async function triggerStep3PedagogyAndDigitalRecommendations() {
   if (hasOcrReadyLessonContent()) {
     digitalOk = await requestStructuredIntegrationCandidates("digital", { silent: false });
   }
-  if (!digitalOk) ensureIntegrationStandards({ force: true, silent: true });
+  if (!digitalOk || standardsOfKind("digital").length < 2) ensureIntegrationStandards({ force: true, silent: true });
   renderPedagogyCatalogs();
   renderStandardsCatalog();
   saveStateToLocalStorage();
@@ -1951,10 +1963,11 @@ function renderStandardsCatalog() {
     const renderChoice = entry => {
       const rec = suggestedIds.has(entry.id);
       const proposed = proposedById.get(entry.id);
-      return `<label style="display:block"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selectedIds.has(entry.id) ? "checked" : ""} ${selectable ? "" : "disabled"}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : ""}${proposed ? `<small class="text-muted" style="display:block;margin-left:1.5rem">Neo SGK: “${escapeHtml(proposed.lessonAnchor)}”<br>Lý do: ${escapeHtml(proposed.fitRationale)}<br>Nhiệm vụ: ${escapeHtml(proposed.proposedTask)}</small>` : ""}</label>`;
+      const selected = selectedIds.has(entry.id);
+      return `<label style="display:block" class="${selected ? "standard-choice-selected" : ""}"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selected ? "checked" : ""} ${selectable ? "" : "disabled"}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : ""}${proposed ? `<small class="text-muted" style="display:block;margin-left:1.5rem">Neo SGK: “${escapeHtml(proposed.lessonAnchor)}”<br>Lý do: ${escapeHtml(proposed.fitRationale)}<br>Nhiệm vụ: ${escapeHtml(proposed.proposedTask)}</small>` : ""}</label>`;
     };
     const choicesHtml = kind === "digital"
-      ? Object.entries(entries.reduce((groups, entry) => { (groups[entry.domain] ||= []).push(entry); return groups; }, {})).map(([domain, items]) => `<details class="pedagogy-block"><summary>${domain}</summary><small>${items[0].band}: ${items[0].descriptor}</small>${items.map(renderChoice).join("")}</details>`).join("")
+      ? Object.entries(entries.reduce((groups, entry) => { (groups[entry.domain] ||= []).push(entry); return groups; }, {})).map(([domain, items]) => `<details class="pedagogy-block"${items.some(entry => selectedIds.has(entry.id)) ? " open" : ""}><summary>${domain}</summary><small>${items[0].band}: ${items[0].descriptor}</small>${items.map(renderChoice).join("")}</details>`).join("")
       : entries.map(renderChoice).join("");
     panel.innerHTML = `<fieldset class="tool-group"><legend>${catalog.framework} (${catalog.date})</legend><small>${catalog.source}. ${waitHint}</small>${choicesHtml}</fieldset>`;
     panel.querySelectorAll(".standard-choice").forEach(input => input.addEventListener("change", () => {
@@ -2368,7 +2381,7 @@ function setupEventListeners() {
         "1": "lessonTextbookAnalysis",
         "2": "lessonPpctAnalysis",
         "3": "lessonStep3RecommendCard",
-        "4": "lessonGeneralSettingsCard"
+        "4": "lessonAiCompetencyCard"
       };
       document.getElementById(targets[step.getAttribute("data-step")])?.scrollIntoView({ behavior: "smooth", block: "start" });
     });

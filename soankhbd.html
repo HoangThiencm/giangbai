@@ -60,6 +60,9 @@
     .dropzone-active-hint { display: none; margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700; }
     .dropzone-active-sgk .dropzone-active-hint { display: block; color: #047857; }
     .dropzone-active-ppct .dropzone-active-hint { display: block; color: #c2410c; }
+    .khbd-read-source-btn { width: 100%; margin: 0.75rem 0 1rem; padding: 0.9rem 1rem; font-size: 1rem; font-weight: 700; }
+    .standard-choice-selected { background: #ecfdf5; border-left: 3px solid #059669; padding: 0.35rem 0.55rem; border-radius: 6px; }
+    .khbd-ai-card { border: 2px solid #fde68a; background: linear-gradient(90deg, #fffbeb, #fff7ed); margin-bottom: 1.25rem; }
   </style>
 </head>
 <body>
@@ -222,9 +225,6 @@
             <div class="card-header">
               <h2 class="card-title"><i data-lucide="camera"></i> 1. Sách giáo khoa (PDF / Ảnh SGK)</h2>
               <div class="card-actions">
-                <button id="btnAnalyzeVision" class="btn btn-primary" type="button">
-                  <i data-lucide="scan-text"></i> Đọc sách giáo khoa
-                </button>
                 <button id="btnClearVisionImages" class="btn btn-outline-dark" type="button">
                   <i data-lucide="trash"></i> Xóa tất cả ảnh
                 </button>
@@ -241,6 +241,9 @@
               </div>
               <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
             </div>
+            <button id="btnAnalyzeVision" class="btn btn-primary khbd-read-source-btn" type="button">
+              <i data-lucide="scan-text"></i> 📖 Đọc sách giáo khoa
+            </button>
 
             <!-- Image Gallery Grid -->
             <div id="imageGallery" class="image-gallery"></div>
@@ -289,9 +292,6 @@
             <div class="card-header">
               <h2 class="card-title"><i data-lucide="calendar-range"></i> 2. Phân phối chương trình (PPCT)</h2>
               <div class="card-actions">
-                <button id="btnAnalyzePpct" class="btn btn-primary" type="button">
-                  <i data-lucide="book-open"></i> Đọc PPCT
-                </button>
                 <button id="btnClearPpctFiles" class="btn btn-outline-dark" type="button">
                   <i data-lucide="trash"></i> Xóa file PPCT
                 </button>
@@ -311,6 +311,9 @@
               </div>
               <input type="file" id="fileInputPpct" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
             </div>
+            <button id="btnAnalyzePpct" class="btn btn-primary khbd-read-source-btn" type="button">
+              <i data-lucide="book-open"></i> 📑 Đọc PPCT
+            </button>
 
             <!-- PPCT Gallery Grid -->
             <div id="ppctGallery" class="image-gallery ppct-gallery"></div>
@@ -354,18 +357,8 @@
         </div>
       </div>
 
-      <div class="card khbd-step3-card" id="lessonStep3RecommendCard">
-        <div class="card-header">
-          <h2 class="card-title"><i data-lucide="sparkles"></i> Bước 3: Đề xuất Phương pháp, Kỹ thuật dạy học &amp; Năng lực số</h2>
-        </div>
-        <p class="text-muted" style="font-size:0.88rem;margin:0 0 .75rem;">AI đọc SGK (Bước 1) + PPCT (Bước 2) + môn/lớp, rồi tự tick Phương pháp dạy học, kỹ thuật 4 pha A–D (Khăn trải bàn, Mảnh ghép, KWL, Think-Pair-Share...) và 2–3 mục Năng lực số theo TT 02/2025 &amp; CV 3456. Không tick Năng lực AI ở bước này.</p>
-        <button id="btnStep3PedagogyDigital" class="btn" type="button" style="width:100%;padding:0.85rem 1rem;border-radius:12px;">
-          ⚡ ĐỀ XUẤT PPDH, KỸ THUẬT &amp; NĂNG LỰC SỐ (AI)
-        </button>
-      </div>
-
       <!-- =====================================================================
-           BƯỚC 4: THIẾT LẬP THÔNG TIN BÀI DẠY (NẰM PHÍA DƯỚI HỌC LIỆU)
+           KHỐI 2: THIẾT LẬP THÔNG TIN BÀI DẠY
            ===================================================================== -->
       <div class="card" id="lessonGeneralSettingsCard">
         <div class="card-header">
@@ -436,59 +429,73 @@
               <textarea id="inputSupportNote" maxlength="300" rows="2"></textarea>
             </fieldset>
           </div>
-          <div class="pedagogy-section">
-            <h3>Phương pháp & Kĩ thuật dạy học</h3>
-            <p class="text-muted">Để trống nếu muốn hệ thống đề xuất sau khi đã phân tích nội dung SGK (Bước 0). Nếu bạn đã chọn thì giữ nguyên lựa chọn đó.</p>
-            <div id="methodsCatalogPanel"></div>
-            <div id="techniquesCatalogPanel"></div>
-            <div id="activitiesCatalogPanel"></div>
-          </div>
-          <div id="dynamicIntegrationsContainer" class="dynamic-integrations-panel" style="margin-top: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #ffffff;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-              <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--primary-dark); display: flex; align-items: center; gap: 0.4rem;">
-                <i data-lucide="sparkles"></i> Tích hợp nội dung & Bối cảnh sư phạm chuyên sâu
-              </h4>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <button id="btnSuggestPedagogyStandards" class="btn btn-outline-dark btn-sm" type="button">
-                  <i data-lucide="sparkles"></i> Đề xuất PPDH, kỹ thuật &amp; Năng lực số
-                </button>
-                <span class="text-muted" style="font-size: 0.78rem;">Chuẩn TT 08/2024, CT 05-CT/TW, QĐ 1309, QĐ 149 & CV 3089</span>
-              </div>
-            </div>
-            
-            <div class="integration-tabs" role="tablist" aria-label="Các nội dung tích hợp">
-              <label class="integration-tab" data-integration-tab="digital"><input type="checkbox" id="toggleDigitalCompetency" checked> <span>💻 Năng lực số</span></label>
-              <label class="integration-tab" data-integration-tab="ai"><input type="checkbox" id="toggleAiCompetency"> <span>✨ Năng lực AI</span></label>
-              <label class="integration-tab" data-integration-tab="foreignLanguage"><input type="checkbox" id="toggleForeignLanguage"> <span>🌐 Ngoại ngữ</span></label>
-              <label class="integration-tab" data-integration-tab="inclusive"><input type="checkbox" id="toggleInclusiveSupport"> <span>🤝 Hòa nhập</span></label>
-            </div>
-
-            <div class="integration-tab-details">
-              <section class="integration-detail" data-integration-detail="digital"><div id="digitalStandardsPanel" hidden></div></section>
-              <section class="integration-detail" data-integration-detail="ai" hidden><div id="aiStandardsPanel" hidden></div></section>
-              <section class="integration-detail" data-integration-detail="foreignLanguage" hidden><p><b>Gợi ý tích hợp:</b> Chỉ dùng từ vựng, câu lệnh hoặc sản phẩm ngoại ngữ thật sự cần cho bài học; không biến tiết học thành dạy ngoại ngữ.</p></section>
-              <section class="integration-detail" data-integration-detail="inclusive" hidden><p><b>Gợi ý hỗ trợ:</b> Điều chỉnh nhiệm vụ, học liệu, cách giao tiếp và vai trò nhóm theo nhu cầu đã chọn ở phần Đặc điểm lớp học.</p></section>
-            </div>
-
-            <div id="subjectIntegrationsPanel" hidden style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border);"></div>
-            <p id="nlsAiSubjectHint" class="text-muted" hidden style="font-size:0.82rem;margin:0.5rem 0 0;"></p>
-          </div>
-          <p class="text-muted" style="font-size:0.82rem;margin:0.75rem 0;">Bước 3 đề xuất PPDH, kỹ thuật và NLS. Ô ✨ Năng lực AI mặc định tắt; chỉ khi bạn chủ động bật, Gemini mới phân tích SGK và tick đúng 2–3 mục AI theo lớp (QĐ 2422). Bỏ tick thì xóa sạch mã AI.</p>
           <div class="tool-group">
             <label for="inputSpecialRequirements">Yêu cầu hoặc hoạt động đặc thù:</label>
             <textarea id="inputSpecialRequirements" maxlength="600" rows="3" placeholder="Ví dụ: Có hoạt động đo đạc ở sân trường; ưu tiên nhiệm vụ theo nhóm 4; không sử dụng điện thoại trong giờ học."></textarea>
           </div>
+          <div id="dynamicIntegrationsContainer" class="dynamic-integrations-panel" style="margin-top: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #ffffff;">
+            <h4 style="margin: 0 0 0.75rem; font-size: 0.95rem; font-weight: 700; color: var(--primary-dark);">Tích hợp bối cảnh (Ngoại ngữ, Hòa nhập)</h4>
+            <div class="integration-tabs" role="tablist" aria-label="Các nội dung tích hợp">
+              <label class="integration-tab" data-integration-tab="foreignLanguage"><input type="checkbox" id="toggleForeignLanguage"> <span>🌐 Ngoại ngữ</span></label>
+              <label class="integration-tab" data-integration-tab="inclusive"><input type="checkbox" id="toggleInclusiveSupport"> <span>🤝 Hòa nhập</span></label>
+            </div>
+            <div class="integration-tab-details">
+              <section class="integration-detail" data-integration-detail="foreignLanguage" hidden><p><b>Gợi ý tích hợp:</b> Chỉ dùng từ vựng, câu lệnh hoặc sản phẩm ngoại ngữ thật sự cần cho bài học; không biến tiết học thành dạy ngoại ngữ.</p></section>
+              <section class="integration-detail" data-integration-detail="inclusive" hidden><p><b>Gợi ý hỗ trợ:</b> Điều chỉnh nhiệm vụ, học liệu, cách giao tiếp và vai trò nhóm theo nhu cầu đã chọn ở phần Đặc điểm lớp học.</p></section>
+            </div>
+            <div id="subjectIntegrationsPanel" hidden style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border);"></div>
+            <p id="nlsAiSubjectHint" class="text-muted" hidden style="font-size:0.82rem;margin:0.5rem 0 0;"></p>
+          </div>
         </div>
+      </div>
 
-        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
-          <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình 4 bước soạn KHBD:</h4>
-          <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
-            <li><b>Bước 1 (Đọc SGK):</b> Tải PDF/ảnh SGK -> Bấm <b>Đọc sách giáo khoa</b>. Chỉ trích xuất văn bản, không tự tick PPDH/NLS.</li>
-            <li><b>Bước 2 (Đọc PPCT):</b> Click vùng PPCT rồi <b>Ctrl+V</b> dán ảnh, hoặc chọn file -> Bấm <b>Đọc PPCT</b>.</li>
-            <li><b>Bước 3 (PPDH &amp; NLS):</b> Bấm <b>⚡ ĐỀ XUẤT PPDH, KỸ THUẬT &amp; NĂNG LỰC SỐ (AI)</b> sau khi đã có SGK/PPCT.</li>
-            <li><b>Bước 4 (Năng lực AI &amp; soạn bài):</b> Chỉ khi cần, tick <b>✨ Năng lực AI</b> (đúng 2–3 mục) rồi chuyển Tab Mục tiêu/Hoạt động để soạn.</li>
-          </ol>
+      <div class="card khbd-step3-card" id="lessonStep3RecommendCard">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="sparkles"></i> Khối 3: Phương pháp dạy học &amp; Năng lực số (TT 02 / CV 3456)</h2>
+          <div class="card-actions">
+            <button id="btnSuggestPedagogyStandards" class="btn btn-outline-dark btn-sm" type="button">
+              <i data-lucide="sparkles"></i> Đề xuất PPDH &amp; Năng lực số
+            </button>
+          </div>
         </div>
+        <p class="text-muted" style="font-size:0.88rem;margin:0 0 .75rem;">AI đọc SGK + PPCT + môn/lớp, rồi tick PPDH, kỹ thuật 4 pha A–D và <b>đúng 2–3 mục Năng lực số</b> (Lớp 6–7: TC1a; Lớp 8–9: TC2a). Không tick Năng lực AI ở bước này.</p>
+        <button id="btnStep3PedagogyDigital" class="btn" type="button" style="width:100%;padding:0.85rem 1rem;border-radius:12px;">
+          ⚡ ĐỀ XUẤT PPDH, KỸ THUẬT &amp; NĂNG LỰC SỐ (TT 02)
+        </button>
+        <div class="pedagogy-section" style="margin-top:1rem;">
+          <h3>Phương pháp &amp; Kĩ thuật dạy học</h3>
+          <div id="methodsCatalogPanel"></div>
+          <div id="techniquesCatalogPanel"></div>
+          <div id="activitiesCatalogPanel"></div>
+        </div>
+        <div style="margin-top:1rem;padding:1rem;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4;">
+          <label class="integration-tab" style="display:inline-flex;align-items:center;gap:0.4rem;font-weight:700;">
+            <input type="checkbox" id="toggleDigitalCompetency" checked> <span>💻 Năng lực số (TT 02/2025 &amp; CV 3456)</span>
+          </label>
+          <p class="text-muted" style="font-size:0.82rem;margin:0.4rem 0 0.75rem;">Nhóm có mục được chọn tự mở. Bấm đề xuất ở trên để tick 2–3 mã phù hợp khối lớp.</p>
+          <div id="digitalStandardsPanel"></div>
+        </div>
+      </div>
+
+      <div class="card khbd-ai-card" id="lessonAiCompetencyCard">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="bot"></i> ✨ Tích hợp Khung Năng lực AI (QĐ 2422/QĐ-BGDĐT)</h2>
+        </div>
+        <p class="text-muted" style="font-size:0.88rem;margin:0 0 .75rem;">Độc lập với Năng lực số. Mặc định tắt. Chỉ khi giáo viên tick bật, Gemini mới phân tích SGK và chọn đúng 2–3 mục AI theo lớp. Bỏ tick thì xóa sạch mã AI.</p>
+        <label class="integration-tab" style="display:inline-flex;align-items:center;gap:0.4rem;font-weight:700;margin-bottom:0.75rem;">
+          <input type="checkbox" id="toggleAiCompetency"> <span>✨ Năng lực AI</span>
+        </label>
+        <div id="aiStandardsPanel" hidden></div>
+      </div>
+
+      <div style="margin-top: 0.25rem; margin-bottom: 1.25rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border-left: 4px solid var(--primary);">
+        <h4 style="color: var(--primary-dark); margin-bottom: 0.4rem; font-size: 0.95rem;">💡 Hướng dẫn nhanh quy trình 4 bước soạn KHBD:</h4>
+        <ol style="padding-left: 1.2rem; font-size: 0.88rem; color: var(--text-main); line-height: 1.6;">
+          <li><b>Khối 1 (Đọc học liệu):</b> Dán/chọn file rồi bấm <b>Đọc sách giáo khoa</b> / <b>Đọc PPCT</b> ngay dưới ô nạp.</li>
+          <li><b>Khối 2 (Thông tin bài dạy):</b> Trường, môn, tên bài, số tiết, phạm vi PPCT, đặc điểm lớp.</li>
+          <li><b>Khối 3 (PPDH &amp; NLS):</b> Bấm <b>⚡ ĐỀ XUẤT PPDH, KỸ THUẬT &amp; NĂNG LỰC SỐ (TT 02)</b> — luôn tick 2–3 mục NLS.</li>
+          <li><b>Khối 4 (Năng lực AI):</b> Chỉ khi cần, tick <b>✨ Năng lực AI</b> (đúng 2–3 mục QĐ 2422) rồi soạn bài.</li>
+        </ol>
       </div>
 
       <!-- CARD HÌNH MINH HỌA (ĐẶT Ở CUỐI TAB 0) -->

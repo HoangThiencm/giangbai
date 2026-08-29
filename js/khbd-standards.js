@@ -21,7 +21,7 @@ function digitalEntry(code, domain, label) {
 const KHBD_STANDARDS = {
   digital: {
     framework: "Thông tư 02/2025/TT-BGDĐT & Công văn 3456/BGDĐT-GDPT", date: "27/06/2025", source: "Thông tư 02/2025/TT-BGDĐT và Công văn 3456/BGDĐT-GDPT ngày 27/6/2025",
-    minSelect: 0, maxSelect: 3,
+    minSelect: 2, maxSelect: 3,
     entries: [
       ...digitalEntry("1.1", "Khai thác dữ liệu và thông tin", "Duyệt, tìm kiếm và lọc dữ liệu, thông tin và nội dung số"), ...digitalEntry("1.2", "Khai thác dữ liệu và thông tin", "Đánh giá dữ liệu, thông tin và nội dung số"), ...digitalEntry("1.3", "Khai thác dữ liệu và thông tin", "Quản lý dữ liệu, thông tin và nội dung số"),
       ...digitalEntry("2.1", "Giao tiếp và hợp tác trong môi trường số", "Tương tác thông qua công nghệ số"), ...digitalEntry("2.2", "Giao tiếp và hợp tác trong môi trường số", "Chia sẻ thông tin và nội dung thông qua công nghệ số"), ...digitalEntry("2.3", "Giao tiếp và hợp tác trong môi trường số", "Sử dụng công nghệ số để thực hiện trách nhiệm công dân"), ...digitalEntry("2.4", "Giao tiếp và hợp tác trong môi trường số", "Hợp tác thông qua công nghệ số"), ...digitalEntry("2.5", "Giao tiếp và hợp tác trong môi trường số", "Quy tắc ứng xử trên mạng"), ...digitalEntry("2.6", "Giao tiếp và hợp tác trong môi trường số", "Quản lý danh tính số"),
@@ -215,8 +215,8 @@ function recommendOfficialStandards(kind, ctx) {
   const catalog = KHBD_STANDARDS[kind];
   if (!catalog) return [];
   const grade = Number(ctx.grade) || 6;
-  const max = kind === "ai" ? 3 : (catalog.maxSelect || 3);
-  const min = kind === "ai" ? Math.min(2, max) : (catalog.minSelect || 0);
+  const max = kind === "ai" || kind === "digital" ? 3 : (catalog.maxSelect || 3);
+  const min = kind === "ai" || kind === "digital" ? Math.min(2, max) : (catalog.minSelect || 0);
   const pool = entriesForGrade(kind, grade);
   const ranked = pool
     .map(entry => ({ entry, score: scoreOfficialStandard(kind, entry, ctx) }))

@@ -18,12 +18,17 @@ assert.match(html, /Bước 1: Nạp &amp; Đọc SGK/, "Stepper phải có Bư�
 assert.match(html, /Bước 2: Nạp &amp; Đọc PPCT/, "Stepper phải có Bước 2 Đọc PPCT");
 assert.match(html, /Bước 3: AI Đề xuất PPDH &amp; NLS/, "Stepper phải có Bước 3 đề xuất PPDH & NLS");
 assert.match(html, /Bước 4: Tích hợp AI &amp; Soạn bài/, "Stepper phải có Bước 4 AI & soạn bài");
+assert.match(html, /id="dropzoneContainer"[\s\S]{0,900}id="btnAnalyzeVision"/, "Nút Đọc SGK phải nằm ngay dưới dropzone");
 assert.match(html, /id="btnAnalyzeVision"[\s\S]*?Đọc sách giáo khoa/, "Nút OCR phải có nhãn 'Đọc sách giáo khoa'");
+assert.match(html, /id="dropzoneContainerPpct"[\s\S]{0,1400}id="btnAnalyzePpct"/, "Nút Đọc PPCT phải nằm ngay dưới dropzone PPCT");
 assert.match(html, /id="btnAnalyzePpct"[\s\S]*?Đọc PPCT/, "Nút PPCT phải có nhãn 'Đọc PPCT'");
-assert.match(html, /id="btnStep3PedagogyDigital"[\s\S]*?ĐỀ XUẤT PPDH, KỸ THUẬT &amp; NĂNG LỰC SỐ \(AI\)/, "Card Bước 3 phải có nút đề xuất PPDH & NLS");
+assert.match(html, /id="btnStep3PedagogyDigital"[\s\S]*?ĐỀ XUẤT PPDH, KỸ THUẬT &amp; NĂNG LỰC SỐ \(TT 02\)/, "Card Bước 3 phải có nút đề xuất PPDH & NLS TT 02");
+assert.match(html, /id="lessonAiCompetencyCard"/, "Phải có card Năng lực AI độc lập");
 assert.match(html, /id="btnStartComposeFromStep4"/, "Bước 4 phải có nút Bắt đầu soạn");
 assert.match(html, /id="toggleDigitalCompetency"\s+checked/, "Năng lực số phải checked mặc định");
 assert.doesNotMatch(html, /id="toggleAiCompetency"\s+checked/, "Năng lực AI mặc định không checked");
+assert.doesNotMatch(html, /data-integration-tab="digital"/, "NLS không còn gộp trong tab tích hợp chung với AI");
+assert.doesNotMatch(html, /data-integration-tab="ai"/, "AI không còn gộp trong tab tích hợp chung với NLS");
 assert.match(html, /dropzone-active-hint/, "Dropzone phải có gợi ý vùng đang chọn");
 assert.match(html, /id="dropzoneContainerPpct"[\s\S]*?tabindex="0"/, "Vùng PPCT phải focus được");
 
@@ -53,6 +58,9 @@ assert.match(appCode, /async function triggerStep3PedagogyAndDigitalRecommendati
 assert.match(appCode, /btnStep3PedagogyDigital/, "Phải gắn nút card Bước 3");
 assert.match(appCode, /ensurePedagogyFromLesson\(\{ force: true/, "Bước 3 force chọn PPDH/kỹ thuật 4 pha");
 assert.match(appCode, /requestStructuredIntegrationCandidates\("digital"/, "Bước 3 đề xuất NLS, không phải AI");
+assert.match(appCode, /kind === "digital" && records\.length < 2/, "NLS không được để dưới 2 mục; phải fallback 2-3");
+assert.match(appCode, /items\.some\(entry => selectedIds\.has\(entry\.id\)\) \? " open"/, "Nhóm NLS có mục được tick phải tự mở");
+assert.match(appCode, /if \(kind === "digital"\) \{\s*if \(next\.length < 2\)/, "applySuggestedStandardRecords không được ghi NLS rỗng");
 assert.match(appCode, /key === "ai"[\s\S]*requestStructuredIntegrationCandidates\("ai"/, "Bật Năng lực AI mới gọi Gemini AI");
 assert.match(appCode, /Hãy đọc SGK ở Bước 1\. Khi có nội dung, Gemini sẽ đề xuất đúng 2–3 mục AI/, "Khi bật AI chưa có OCR phải hướng dẫn đọc SGK");
 assert.match(appCode, /digital:\s*(?:context\?\.integrations\?\.digital\s*!==\s*false|true)/, "normalizeTeachingContext phải giữ NLS mặc định bật");
@@ -66,9 +74,18 @@ console.log("✓ Logic JS 4 bước độc lập hoạt động chuẩn xác.");
 
 console.log("\n[TEST 3] Khung mã NLS (CV 3456) và AI (QĐ 2422)...");
 
-const { KHBD_STANDARDS, entriesForGrade } = require("../js/khbd-standards.js");
+const { KHBD_STANDARDS, entriesForGrade, recommendOfficialStandards } = require("../js/khbd-standards.js");
 
 assert.strictEqual(KHBD_STANDARDS.digital.framework, "Thông tư 02/2025/TT-BGDĐT & Công văn 3456/BGDĐT-GDPT", "Framework NLS phải ghi rõ TT 02 & CV 3456");
+assert.strictEqual(KHBD_STANDARDS.digital.minSelect, 2, "NLS minSelect phải là 2");
+assert.strictEqual(KHBD_STANDARDS.digital.maxSelect, 3, "NLS maxSelect phải là 3");
+
+[6, 7, 8, 9].forEach(grade => {
+  const rec = recommendOfficialStandards("digital", { grade, vision: "", topic: "Bài học" });
+  assert.ok(rec.length >= 2 && rec.length <= 3, `NLS lớp ${grade} phải luôn 2–3 mục, nhận ${rec.length}`);
+  const expectTc = grade <= 7 ? /TC1a$/ : /TC2a$/;
+  assert.ok(rec.every(item => expectTc.test(String(item.officialCode || ""))), `NLS lớp ${grade} phải đúng dải TC1a/TC2a`);
+});
 
 const digitalG6 = entriesForGrade("digital", 6);
 const digitalG7 = entriesForGrade("digital", 7);
