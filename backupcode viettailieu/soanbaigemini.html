@@ -1086,12 +1086,12 @@
 
         function addLessonPlanSource(file, dataUrl) {
             if (!file || !dataUrl || !isLessonPlanSource(file)) return;
-            const mimeType = String(file.type || (/\.pdf$/i.test(file.name) ? 'application/pdf' : 'image/png')).toLowerCase();
+            const mimeType = lessonInputMimeType(file);
             uploadedLessonPlanSources.push({
                 name: file.name || ('clipboard-' + Date.now()),
                 mimeType: mimeType,
                 size: Number(file.size) || 0,
-                data: dataUrl
+                data: normalizeSourceDataUrl(dataUrl, mimeType)
             });
             updateLessonPlanSourceStatus();
         }
@@ -1113,13 +1113,17 @@
                 selected = validateLessonPlanFiles(files);
             } catch (error) {
                 showAppToast(error.message, 'warn');
-                return;
+                return [];
             }
             selected.forEach(function(file) {
                 const reader = new FileReader();
-                reader.onload = function(event) { addLessonPlanSource(file, event.target.result); };
+                reader.onload = function(event) {
+                    addLessonPlanSource(file, event.target.result);
+                    addLessonInputPreview(file, event.target.result);
+                };
                 reader.readAsDataURL(file);
             });
+            return selected;
         }
 
         function setupImageUpload() {
@@ -1137,6 +1141,7 @@
             }
 
             uploadArea.addEventListener('click', (e) => {
+                if (e.target === fileInput) return;
                 if (e.target.closest && e.target.closest('#choose-file-btn')) return;
                 fileInput.click();
             });
@@ -1219,19 +1224,7 @@
             function handleFiles(files) {
                 if (!files || files.length === 0) return;
 
-                addLessonPlanFiles(files);
-                const selected = Array.from(files).filter(isLessonPlanSource);
-                if (!selected.length) {
-                    showAppToast('Chỉ nhận tệp hình ảnh hoặc PDF.', 'warn');
-                    return;
-                }
-                selected.forEach(function(file) {
-                    const reader = new FileReader();
-                    reader.onload = function(ev) {
-                        addLessonInputPreview(file, ev.target.result);
-                    };
-                    reader.readAsDataURL(file);
-                });
+                const selected = addLessonPlanFiles(files) || [];
                 if (fileInput) fileInput.value = '';
                 if (selected.some(isPdfFile)) {
                     showAppToast('Đã nạp PDF. Có thể tạo bài học hoặc soạn giáo án.', 'ok');
@@ -4912,11 +4905,6 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                 // vẫn luôn là đường thay thế. Ảnh clipboard được thêm cho cả hai luồng.
                 var pastedFile = new File([blob], `${source}-${Date.now()}.png`, { type: blob.type || 'image/png' });
                 addLessonPlanFiles([pastedFile]);
-                const reader = new FileReader();
-                reader.onload = function(ev) {
-                    addLessonInputPreview(pastedFile, ev.target.result);
-                };
-                reader.readAsDataURL(blob);
             }
 
             // Global paste listener - best for Ctrl+V screenshots
@@ -4942,9 +4930,6 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                         const pdfFile = items[i].getAsFile();
                         if (pdfFile) {
                             addLessonPlanFiles([pdfFile]);
-                            const reader = new FileReader();
-                            reader.onload = function(ev) { addLessonInputPreview(pdfFile, ev.target.result); };
-                            reader.readAsDataURL(pdfFile);
                             foundPdf = true;
                             e.preventDefault();
                             break;
@@ -4963,7 +4948,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
                     }
                     // scroll so user sees the images added
                     if (area && area.scrollIntoView) area.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    if (foundPdf) showAppToast('Đã nhận PDF từ clipboard cho tab Soạn giáo án.', 'ok');
+                    if (foundPdf) showAppToast('Đã nhận PDF từ clipboard.', 'ok');
                 }
             }, true);
 

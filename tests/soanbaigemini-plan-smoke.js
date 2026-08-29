@@ -7,6 +7,9 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'backupcode viettailieu'
 const checks = [
     ['named plan tab', /id="lesson-tab-plan"[^>]*[\s\S]*?Soạn giáo án/.test(html)],
     ['image and PDF input', /accept="image\/\*,application\/pdf,\.pdf"/.test(html)],
+    ['PDF file picker button', /Chọn ảnh hoặc PDF từ máy/.test(html)],
+    ['PDF preview in soạn bài', /function addLessonInputPreview[\s\S]*?application\/pdf[\s\S]*?PDF đã nhận/.test(html)],
+    ['PDF sent with lesson Gemini call', html.includes('application\\/pdf));base64')],
     ['PDF clipboard branch', /items\[i\]\.type === 'application\/pdf'[\s\S]*?addLessonPlanFiles\(\[pdfFile\]\)/.test(html)],
     ['source caps', /LESSON_PLAN_MAX_FILES\s*=\s*12/.test(html) && /LESSON_PLAN_MAX_TOTAL_BYTES/.test(html)],
     ['single requested model', /const LESSON_PLAN_MODEL = 'gemini-3-flash-preview'/.test(html)],
