@@ -485,22 +485,33 @@ function loadStateFromLocalStorage() {
 function normalizeTeachingContext(context) {
   const source = context && typeof context === "object" ? context : {};
   const integrations = source.integrations && typeof source.integrations === "object" ? source.integrations : {};
+  const mergedIntegrations = Object.assign({
+    digital: true,
+    ai: Boolean(integrations.ai),
+    foreignLanguage: Boolean(integrations.foreignLanguage),
+    inclusive: Boolean(integrations.inclusive)
+  }, Object.fromEntries(SUBJECT_CONTEXT_INTEGRATIONS.map(item => [item.id, Boolean(integrations[item.id])])));
+  let standards = Array.isArray(source.standards) ? source.standards.filter(item => item && typeof item === "object") : [];
+  if (mergedIntegrations.digital) {
+    const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS.digital : null;
+    const hasDigital = standards.some(item => item && (item.standardKind === "digital" || (catalog && item.framework === catalog.framework)));
+    if (!hasDigital && typeof catalogFallbackRecords === "function") {
+      const grade = Number(source.grade || (typeof appState !== "undefined" && appState.selectedGrade) || 6);
+      const seeded = catalogFallbackRecords("digital", grade);
+      if (seeded.length) standards = standards.concat(seeded);
+    }
+  }
   return {
     lessonScope: typeof source.lessonScope === "string" ? source.lessonScope.slice(0, 300) : "",
     classProfileChoices: Array.isArray(source.classProfileChoices) ? source.classProfileChoices.filter(value => typeof value === "string").slice(0, 7) : [],
     classProfileNote: typeof source.classProfileNote === "string" ? source.classProfileNote.slice(0, 300) : (typeof source.classProfile === "string" ? source.classProfile.slice(0, 300) : ""),
     supportChoices: Array.isArray(source.supportChoices) ? source.supportChoices.filter(value => typeof value === "string").slice(0, 7) : [],
     supportNote: typeof source.supportNote === "string" ? source.supportNote.slice(0, 300) : (typeof source.supportNeeds === "string" ? source.supportNeeds.slice(0, 300) : ""),
-    integrations: Object.assign({
-      digital: true,
-      ai: Boolean(integrations.ai),
-      foreignLanguage: Boolean(integrations.foreignLanguage),
-      inclusive: Boolean(integrations.inclusive)
-    }, Object.fromEntries(SUBJECT_CONTEXT_INTEGRATIONS.map(item => [item.id, Boolean(integrations[item.id])]))),
+    integrations: mergedIntegrations,
     methods: Array.isArray(source.methods) ? source.methods.filter(value => typeof value === "string").slice(0, 20) : [],
     techniques: Array.isArray(source.techniques) ? source.techniques.filter(value => typeof value === "string").slice(0, 20) : [],
     subjectActivities: Array.isArray(source.subjectActivities) ? source.subjectActivities.filter(value => typeof value === "string").slice(0, 20) : [],
-    standards: Array.isArray(source.standards) ? source.standards.filter(item => item && typeof item === "object") : [],
+    standards,
     phasePedagogy: source.phasePedagogy && typeof source.phasePedagogy === "object" ? source.phasePedagogy : { A: {}, B: {}, C: {}, D: {} },
     classSize: Math.max(1, Math.min(60, Number(source.classSize) || 40)), readiness: typeof source.readiness === "string" ? source.readiness : "Không đồng đều", grouping: typeof source.grouping === "string" ? source.grouping : "Cá nhân/cặp đôi", facilities: source.facilities && typeof source.facilities === "object" ? source.facilities : { projector:false, internet:false, devices:false },
     specialRequirements: typeof source.specialRequirements === "string" ? source.specialRequirements.slice(0, 600) : "",
@@ -827,8 +838,19 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
       if (appState.teachingContext.standards.length !== before) changed = true;
       return;
     }
-    // Không suy đoán để tự tick. Các đề xuất mới chỉ đến từ phản hồi có minh chứng OCR
-    // của Gemini trong requestStructuredIntegrationCandidates().
+    if (kind === "digital") {
+      const current = standardsOfKind("digital");
+      if (force || !current.length) {
+        const grade = Number(appState.selectedGrade) || 6;
+        const records = catalogFallbackRecords("digital", grade);
+        if (records.length) {
+          appState.teachingContext.standards = appState.teachingContext.standards
+            .filter(item => item.framework !== catalog.framework)
+            .concat(records);
+          changed = true;
+        }
+      }
+    }
   });
   if (changed) {
     saveStateToLocalStorage();
@@ -931,6 +953,19 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
       appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item && item.framework !== catalog.framework);
       if (appState.teachingContext.standards.length !== before) changed = true;
       return;
+    }
+    if (kind === "digital") {
+      const current = standardsOfKind("digital");
+      if (force || !current.length) {
+        const grade = Number(appState.selectedGrade) || 6;
+        const records = catalogFallbackRecords("digital", grade);
+        if (records.length) {
+          appState.teachingContext.standards = appState.teachingContext.standards
+            .filter(item => item.framework !== catalog.framework)
+            .concat(records);
+          changed = true;
+        }
+      }
     }
   });
   if (changed) {
@@ -1830,15 +1865,15 @@ function renderStandardsCatalog() {
     const suggestedIds = new Set(selectedRecords.filter(item => item.autoSuggested).map(item => item.catalogId));
     const proposedById = new Map(selectedRecords.filter(item => item.lessonAnchor).map(item => [item.catalogId, item]));
     const maxSelect = catalog.maxSelect || 3;
-    const selectable = enabled && hasOcrReadyLessonContent();
+    const selectable = enabled;
     const band = kind === "digital"
       ? (grade <= 7
         ? `Lớp ${grade} — dải Trung cấp 1 (TT 02, chung lớp 6–7). Không dùng dải lớp 8–9.`
         : `Lớp ${grade} — dải Trung cấp 2 (TT 02, chung lớp 8–9). Không dùng dải lớp 6–7.`)
       : `Lớp ${grade}`;
-    const waitHint = selectable
-      ? `Khung áp dụng: ${band}. Chỉ tự đề xuất khi nội dung SGK có minh chứng; bạn có thể chọn thủ công, tối đa ${maxSelect} mục.`
-      : `Khung áp dụng: ${band}. Hãy bật tích hợp tương ứng và hoàn thành Bước 0 để chọn hoặc nhận đề xuất.`;
+    const waitHint = enabled
+      ? `Khung áp dụng: ${band}. Đã chọn sẵn mục theo lớp; bạn có thể sửa, tối đa ${maxSelect} mục.`
+      : `Khung áp dụng: ${band}. Bật tích hợp tương ứng để chọn mục.`;
     const renderChoice = entry => {
       const rec = suggestedIds.has(entry.id);
       const proposed = proposedById.get(entry.id);
@@ -1984,7 +2019,14 @@ function setupEventListeners() {
       appState.teachingContext.integrations[key] = e.target.checked;
       if (key === "digital" || key === "ai") {
         if (!e.target.checked) removeDisabledObjectivesStandardSections();
+        if (key === "ai" && e.target.checked) {
+          const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS.ai : null;
+          const grade = Number(appState.selectedGrade) || 6;
+          const records = catalogFallbackRecords("ai", grade);
+          if (catalog && records.length) applySuggestedStandardRecords("ai", catalog, records);
+        }
         if (e.target.checked && !hasOcrReadyLessonContent()) {
+          ensureIntegrationStandards({ force: key === "digital" });
           renderStandardsCatalog();
           showToast("Hãy phân tích SGK ở Bước 0 trước. Sau OCR, hệ thống chỉ đề xuất tối đa 3 mục có minh chứng đúng văn bản.", "info", 5000);
         } else {
@@ -4820,15 +4862,39 @@ function isGeminiOverloadError(error) {
 }
 
 function getUserMistralKeys() {
+  const collected = [];
+  function pushKeys(list) {
+    (Array.isArray(list) ? list : []).forEach(item => {
+      const key = String(item || "").trim();
+      if (key) collected.push(key);
+    });
+  }
   if (typeof geminiAPI !== "undefined" && Array.isArray(geminiAPI.mistralKeys)) {
-    return geminiAPI.mistralKeys.filter(Boolean);
+    pushKeys(geminiAPI.mistralKeys);
   }
   try {
     const id = (typeof localStorage !== "undefined" && localStorage.getItem("userEmail")) || "default";
-    return JSON.parse(localStorage.getItem("khbd_user_mistral_keys_" + id) || "[]").filter(Boolean);
-  } catch {
-    return [];
-  }
+    pushKeys(JSON.parse(localStorage.getItem("khbd_user_mistral_keys_" + id) || "[]"));
+  } catch { /* ignore */ }
+  try {
+    pushKeys(JSON.parse(localStorage.getItem("global_mistral_keys") || "[]"));
+  } catch { /* ignore */ }
+  try {
+    if (typeof AiDesignConfig !== "undefined" && typeof AiDesignConfig.getMistralKeys === "function") {
+      pushKeys(AiDesignConfig.getMistralKeys());
+    }
+  } catch { /* ignore */ }
+  try {
+    if (typeof window !== "undefined" && window.MistralOcr && typeof window.MistralOcr.getKeys === "function") {
+      pushKeys(window.MistralOcr.getKeys());
+    }
+  } catch { /* ignore */ }
+  const seen = new Set();
+  return collected.filter(key => {
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function canUseMistralOcr() {
@@ -5009,9 +5075,9 @@ async function readTextbookWithMistral() {
     let ocrText = "";
     let ocrProvider = "Gemini";
 
+    updateProgress(15, "Đang nhận diện SGK bằng Mistral OCR...");
+    if (status) status.textContent = "Đang nhận diện SGK bằng Mistral OCR...";
     if (canUseMistralOcr()) {
-      updateProgress(15, "Đang nhận diện SGK bằng Mistral OCR...");
-      if (status) status.textContent = "Đang nhận diện SGK bằng Mistral OCR...";
       try {
         ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(pct, msg));
         ocrProvider = "Mistral OCR";
@@ -5097,7 +5163,7 @@ async function handleAnalyzeSourceMaterials() {
       ppctDuration = appState.duration || "";
       ppctLessonScope = appState.teachingContext?.lessonScope || "";
     }
-    if (hasSgkMedia) await handleGenerateVision();
+    if (hasSgkMedia) await readTextbookWithMistral();
     if (ppctDuration) {
       appState.duration = ppctDuration;
       const durationInput = document.getElementById("inputDuration");

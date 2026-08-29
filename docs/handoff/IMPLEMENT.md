@@ -1,37 +1,26 @@
 # IMPLEMENT
 
-Trạng thái: ĐÃ LÀM — mã hóa HTML lúc deploy (Encrypted HTML Loader)
+Trạng thái: ĐÃ LÀM — vá VERIFY FAIL soankhbd: NLS/AI tự tick + Mistral OCR bắt buộc
 
 ## File đã đổi
 
-- `tools/build-obfuscate.js`
-- `tests/security-f12-smoke.js`
-- `docs/handoff/PLAN.md`
+- `js/khbd-app.js`
+- `mistral-ocr-client.js` (export `getKeys` để `getUserMistralKeys` đọc được)
+- `tests/khbd-structured-candidates-smoke.js`
+- `tests/khbd-mistral-ocr-smoke.js`
 - `docs/handoff/IMPLEMENT.md`
-
-Không đụng PHP API. HTML trên git giữ nguyên — chỉ mã hóa khi `--in-place` / CI.
 
 ## Nội dung chính
 
-Sau bước bundle JS, `tools/build-obfuscate.js`:
-
-1. Xóa comment `<!-- ... -->`, gọn `>\s+<`.
-2. XOR + Base64 toàn bộ markup (`encryptHtmlContent`).
-3. Ghi vỏ `buildEncryptedHtmlShell`: `js/security-guard.js` + IIFE `document.open/write/close`.
-4. `--dry-run` in `ENCRYPT {file.html}`.
-
-View-source chỉ thấy loader + payload; trình duyệt tự giải mã ra DOM đầy đủ (kèm bundle JS).
+1. **NLS**: `normalizeTeachingContext` và `ensureIntegrationStandards` nạp 2–3 mục `catalogFallbackRecords("digital", grade)` khi tích hợp số bật. Checkbox con không còn `disabled` vì thiếu OCR.
+2. **AI**: khi tick `toggleAiCompetency`, gọi `catalogFallbackRecords("ai", grade)` (1–3 mã). Bỏ tick thì xóa mã AI như cũ.
+3. **Mistral OCR**: `getUserMistralKeys` đọc thêm `global_mistral_keys`, `AiDesignConfig.getMistralKeys()`, `MistralOcr.getKeys()`. `readTextbookWithMistral` luôn hiện “Đang nhận diện SGK bằng Mistral OCR...”, chỉ fallback Gemini khi hết key/lỗi. `handleAnalyzeSourceMaterials` gọi `readTextbookWithMistral` thay vì `handleGenerateVision`.
 
 ## Test đã chạy
 
 ```
-node tests/security-f12-smoke.js
+node tests/khbd-structured-candidates-smoke.js
+node tests/khbd-mistral-ocr-smoke.js
 ```
 
-Kết quả: **pass** (vỏ mã hóa không còn `<!-- BƯỚC 1` / `nav-tab-btn` / `tabVision`; sandbox `document.write` ra đúng DOM đã giải mã; bundle + CDN/vendor vẫn đúng thứ tự trong payload).
-
-## Vấn đề còn lại
-
-- XOR+Base64 không chống người cố tình giải payload; chỉ che Sources / Ctrl+U.
-- `document.write` thay cả document — đúng thiết kế loader; một số extension có thể cảnh báo.
-- File JS gốc vẫn nằm trên hosting nếu FTP upload cả cây.
+Kết quả: **pass** (`khbd-structured-candidates-smoke.js`, `khbd-mistral-ocr-smoke.js`).

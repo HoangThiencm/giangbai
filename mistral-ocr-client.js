@@ -169,5 +169,6 @@
         ocrImageDataUrl,
         ocrDocument,
         isReady,
+        getKeys,
     };
 })(window);

@@ -16,11 +16,15 @@ assert.match(html, /ai-usage-reporter\.js/, "soankhbd nạp usage reporter cho O
 assert.match(app, /module:\s*"soankhbd"/, "OCR KHBD ghi log đúng module");
 assert.match(app, /async function extractTextbookOcrText/, "Có hàm nhận diện SGK bằng Mistral");
 assert.match(app, /canUseMistralOcr\(\)/, "Nút đọc SGK ưu tiên Mistral");
-assert.match(app, /function getUserMistralKeys/, "OCR dùng Mistral key của user, không dùng key hệ thống");
+assert.match(app, /function getUserMistralKeys/, "OCR dùng Mistral key của user");
+assert.match(app, /global_mistral_keys/, "OCR đọc thêm key Mistral global");
+assert.match(app, /AiDesignConfig\.getMistralKeys/, "OCR đọc thêm key từ AiDesignConfig");
+assert.match(app, /MistralOcr\.getKeys/, "OCR đọc thêm key từ MistralOcr");
+assert.match(app, /if \(hasSgkMedia\) await readTextbookWithMistral\(\)/, "Phân tích SGK bắt buộc đi Mistral OCR trước");
 assert.match(app, /ocrDocument\(part\.dataUrl, mistralKeys/, "OCR PDF truyền key Mistral của user");
 assert.match(html, /id="textareaMistralKeys"/, "Modal API Key có ô nhập Mistral");
 assert.match(html, /dùng Mistral OCR/, "Modal giải thích Mistral đọc SGK");
 assert.doesNotMatch(html, /Đọc nội dung SGK \(Gemini\)/, "Không còn nhãn Gemini trên nút đọc SGK");
-assert.doesNotMatch(app, /AiDesignConfig\.getMistralKeys/, "KHBD không lấy Mistral key global/admin");
+assert.match(app, /Đang nhận diện SGK bằng Mistral OCR/, "Ưu tiên hiển thị tiến trình Mistral OCR");
 
 console.log("khbd mistral ocr smoke: passed");

@@ -18,7 +18,9 @@ assert.match(app, /current\.length && !current\.every\(item => item\.autoSuggest
 assert.match(app, /hasOcrReadyLessonContent\(\)/, "Chỉ yêu cầu Gemini sau khi OCR sẵn sàng");
 assert.match(app, /typeof geminiAPI !== "undefined"/, "Phải kiểm tra Gemini API toàn cục an toàn");
 assert.doesNotMatch(app, /window\.geminiAPI/, "Không được phụ thuộc Gemini API là thuộc tính window");
-assert.match(app, /const selectable = enabled && hasOcrReadyLessonContent\(\)/, "Text dán tay chưa qua OCR không được mở checkbox");
+assert.match(app, /const selectable = enabled;/, "Checkbox con chỉnh được khi bật tích hợp, không khóa vì thiếu OCR");
+assert.match(app, /catalogFallbackRecords\("digital"/, "NLS phải tự nạp mục con theo lớp");
+assert.match(app, /catalogFallbackRecords\("ai"/, "AI phải tự nạp mục con khi bật tích hợp");
 assert.match(app, /typeof entriesForGrade === "function"/, "Phải lọc danh mục theo lớp/dải");
 
 const ocrText = "Bài 1. Tập hợp. Cho tập hợp A = {1; 2; 3}. Hãy viết tập hợp B gồm các phần tử là số tự nhiên nhỏ hơn 4. Học sinh thảo luận và trình bày kết quả vào vở.";
