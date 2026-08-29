@@ -560,7 +560,9 @@ class DocxGenerator {
       if (trimmed.startsWith("# ")) {
         const headingText = trimmed.substring(2).trim();
         runColor = this.headingIntegrationColor(headingText);
+        const isAppendix = /^IV[\.\s:]/i.test(headingText) && /PHỤ\s*LỤC|HỒ\s*SƠ/i.test(headingText);
         elements.push(new Paragraph({
+          pageBreakBefore: Boolean(isAppendix),
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
           children: [
             this.coloredTextRun(headingText, { size: this.fontSizeH1, bold: true, color: runColor })

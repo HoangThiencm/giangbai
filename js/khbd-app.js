@@ -103,7 +103,8 @@ const ACTIVITY_TITLES = {
   B: { short: "B. Hình thành KT", full: "B. HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI" },
   C: { short: "C. Luyện tập", full: "C. HOẠT ĐỘNG LUYỆN TẬP" },
   D: { short: "D. Vận dụng", full: "D. HOẠT ĐỘNG VẬN DỤNG" },
-  E: { short: "E. Hướng dẫn về nhà", full: "E. HƯỚNG DẪN VỀ NHÀ" }
+  E: { short: "E. Hướng dẫn về nhà", full: "E. HƯỚNG DẪN VỀ NHÀ" },
+  F: { short: "F. Hồ sơ học tập", full: "F. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)" }
 };
 
 const SUBJECT_CONTEXT_INTEGRATIONS = [
@@ -4237,6 +4238,10 @@ function getFullLessonPlanMarkdown(options = {}) {
       body.push(illustrationMarker(ill));
     });
   }
+  const appendixF = String(c.activities.F || "").trim();
+  if (appendixF) {
+    body.push(`\n---\n`, `# IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)`, appendixF);
+  }
   if (options.includeHeader === false) return body.join("\n\n");
   const header = [
     `**TRƯỜNG:** ${appState.school || "................................................"}`,
@@ -4988,7 +4993,8 @@ function activityHeadingRegex(key) {
     B: "B[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*2\\b|HÌNH[ \\t]*THÀNH",
     C: "C[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*3\\b|LUYỆN[ \\t]*TẬP\\b",
     D: "D[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*4\\b|VẬN[ \\t]*DỤNG\\b",
-    E: "E[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*5\\b|HƯỚNG[ \\t]*DẪN[ \\t]*VỀ[ \\t]*NHÀ\\b"
+    E: "E[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*5\\b|HƯỚNG[ \\t]*DẪN[ \\t]*VỀ[ \\t]*NHÀ\\b",
+    F: "F[\\.\\s:]|HỒ[ \\t]*SƠ[ \\t]*DẠY|PHỤ[ \\t]*LỤC"
   };
   return new RegExp(`^#{1,3}\\s*(?:${map[key]})`, "i");
 }
@@ -5025,7 +5031,7 @@ function keepBestActivityBlock(text, actKey) {
 function clipKhbdActivityMarkdown(actKey, text) {
   const source = String(text || "").replace(/^\uFEFF/, "").trim();
   if (!source) return source;
-  const keys = ["A", "B", "C", "D", "E"];
+  const keys = ["A", "B", "C", "D", "E", "F"];
   const lines = source.split(/\r?\n/);
   const ownRe = activityHeadingRegex(actKey);
   let start = 0;
@@ -5073,7 +5079,8 @@ function parseKhbdSections(text, keys) {
     B: /(?:^|\n)\s*#{1,3}\s*(?:B[\.\s:]|HOẠT ĐỘNG 2\b|HÌNH THÀNH KIẾN THỨC\b)[^\n]*/i,
     C: /(?:^|\n)\s*#{1,3}\s*(?:C[\.\s:]|HOẠT ĐỘNG 3\b|LUYỆN TẬP\b)[^\n]*/i,
     D: /(?:^|\n)\s*#{1,3}\s*(?:D[\.\s:]|HOẠT ĐỘNG 4\b|VẬN DỤNG\b)[^\n]*/i,
-    E: /(?:^|\n)\s*#{1,3}\s*(?:E[\.\s:]|HOẠT ĐỘNG 5\b|HƯỚNG DẪN VỀ NHÀ\b)[^\n]*/i
+    E: /(?:^|\n)\s*#{1,3}\s*(?:E[\.\s:]|HOẠT ĐỘNG 5\b|HƯỚNG DẪN VỀ NHÀ\b)[^\n]*/i,
+    F: /(?:^|\n)\s*#{1,3}\s*(?:F[\.\s:]|HỒ SƠ\b|PHỤ LỤC\b|PHIẾU HỌC TẬP\b)[^\n]*/i
   };
   const found = [];
   (keys || []).forEach(key => {
@@ -5442,6 +5449,11 @@ function hasLessonSource() {
 }
 
 function activityOutputProblem(actKey, output) {
+  if (actKey === "F") {
+    const text = String(output || "");
+    if (!/PHIẾU HỌC TẬP/i.test(text)) return new Error("Mục F phải có Phiếu học tập.");
+    return null;
+  }
   try { assertPhasePedagogyOutput(actKey, output); }
   catch (error) { return error; }
   try { assertActivityIntegrations(actKey, output); }
@@ -5577,9 +5589,17 @@ async function handleGenerateCurrentActivity() {
   
   if (!actInfo) return;
 
+  if (actKey === "F") {
+    const hasActs = ["A", "B", "C", "D"].some(k => String(appState.content.activities[k] || "").trim());
+    if (!hasActs && !hasTextbookSource()) {
+      showToast("Hãy soạn các hoạt động A–D (hoặc đọc SGK) trước khi tạo phiếu học tập.", "warning");
+      return;
+    }
+  }
+
   const context = getGenerationPromptContext();
-  const templateKey = `GENERATE_ACTIVITY_${actKey}`;
-  const prompt = getPromptTemplate(templateKey, context) + buildPhasePedagogyContext(actKey);
+  const templateKey = actKey === "F" ? "GENERATE_PORTFOLIO_WORKSHEETS" : `GENERATE_ACTIVITY_${actKey}`;
+  const prompt = getPromptTemplate(templateKey, context) + (actKey === "F" ? "" : buildPhasePedagogyContext(actKey));
 
   await executeAIGeneration({
     buttonId: "btnGenerateCurrentAct",
@@ -5587,7 +5607,7 @@ async function handleGenerateCurrentActivity() {
     targetPreviewId: "previewActivity",
     operationName: `Tạo ${actInfo.short}`,
     prompt,
-    requireTextbook: true,
+    requireTextbook: actKey !== "F",
     onSuccess: async (result) => applyActivityOutput(actKey, result)
   });
 }

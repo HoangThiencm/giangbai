@@ -1,29 +1,28 @@
 # IMPLEMENT
 
-Trạng thái: ĐÃ LÀM — Lọc đề theo lớp + giữ nguyên 20 câu Word ở Tổng hợp
+Trạng thái: ĐÃ LÀM — Sub-tab F Hồ sơ & Phiếu học tập + phụ lục Word IV
 
 ## File đã đổi
 
-- `thitructuyen.html`
-- `exam-stitch-client.js`
-- `tests/exam-word-stitch-smoke.js`
+- `soankhbd.html`
+- `js/khbd-app.js`
+- `js/khbd-prompts.js`
+- `js/khbd-docx.js` (file xuất Word thực tế của project; không tạo `khbd-docx-export.js` mới)
+- `tests/khbd-pedagogy-script-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Nội dung chính
 
-1. **Lọc theo lớp**: `TeacherDashboard` có dropdown `classFilter` (Tất cả các lớp / Thí sinh tự do / từng lớp). Danh sách lớp gộp từ đề đã tạo và `api/student-classes`. `matchesClassFilter` lọc `filteredExams`.
-2. **Không nuốt câu Word**: `isDuplicate` so sánh cả nội dung câu hỏi và 4 đáp án, ngưỡng > 98% (Dice bigram), bỏ so sánh index 0.85. `flattenStitchedQuestions` không dedupe khi chỉ có 1 trang (nhập Word).
-
-## Ngoài phạm vi giữ nguyên
-
-- Không đổi schema lưu đề.
-- Không đổi StudentView.
+1. **Tab F**: `activities-nav` thêm `F. Hồ sơ học tập`. `ACTIVITY_TITLES.F` = Hồ sơ dạy học & phiếu học tập (phụ lục).
+2. **Sinh AI**: Tab F gọi `GENERATE_PORTFOLIO_WORKSHEETS` (alias `PROMPTS.ACTIVITY_F`). Đọc A–D, thiết kế PHT số 1/2, phiếu Trạm 1–3 nếu có station, Rubric/Bảng kiểm, hướng dẫn chấm, khung in trường/lớp/họ tên.
+3. **Word**: `getFullLessonPlanMarkdown` thêm `# IV. PHỤ LỤC: HỒ SƠ DẠY HỌC...` ở cuối. `khbd-docx.js` ngắt trang trước tiêu đề IV phụ lục.
+4. **A–E không đổi** cấu trúc I, II, III.
 
 ## Test đã chạy
 
 ```
-node tests/exam-word-stitch-smoke.js
+node tests/khbd-pedagogy-script-smoke.js
 ```
 
 Kết quả: **pass**.

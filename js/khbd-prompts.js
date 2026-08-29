@@ -727,6 +727,69 @@ ${ACTIVITY_TABLE_CONTRACT}
 | :--- | :--- |
 | + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật Giao việc) **GV:** Trình chiếu slide/nêu câu lệnh giao việc ngắn gọn: "Các em về nhà hoàn thành 4 nhiệm vụ: (1) Ôn lại kiến thức trọng tâm, (2) Làm các bài tập còn lại trong SGK và SBT, (3) Chuẩn bị bài mới, (4) Thực hiện nhiệm vụ tìm tòi mở rộng...". **HS:** Lắng nghe, ghi nhận các nhiệm vụ và thời hạn hoàn thành vào vở.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Tự giác ôn tập, giải bài tập và chuẩn bị bài mới tại nhà theo hướng dẫn. **GV:** Định hướng phương pháp, hỗ trợ giải đáp khi cần thiết.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Nộp vở bài tập và báo cáo kết quả chuẩn bị vào đầu tiết học sau; trao đổi, đối chiếu kết quả với bạn. **GV:** Kiểm tra xác suất hoặc giao cán sự lớp/nhóm trưởng kiểm tra chéo.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần tự học ở nhà, giải đáp thắc mắc và tuyên dương học sinh hoàn thành tốt. **HS:** Rút kinh nghiệm và hoàn thiện bài làm. | **Hướng dẫn học ở nhà**<br>**1. Ôn tập kiến thức:**<br>- Ôn tập nội dung, quy tắc, công thức trọng tâm của bài học.<br>**2. Làm bài tập:**<br>- Hoàn thành bài tập còn lại trong SGK & SBT (kèm gợi ý phương pháp).<br>**3. Chuẩn bị bài mới:**<br>- Đọc trước bài mới và chuẩn bị học liệu, đồ dùng học tập.<br>**4. Tìm tòi, mở rộng:**<br>- Nhiệm vụ tìm tòi, ứng dụng mở rộng phù hợp bài học. |`,
 
+  get ACTIVITY_F() { return this.GENERATE_PORTFOLIO_WORKSHEETS; },
+  GENERATE_PORTFOLIO_WORKSHEETS: `Hãy thiết kế **F. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)** để giáo viên in phát cho học sinh, bám sát Công văn 5512/BGDĐT-GDTrH.
+- Môn học: {subject}
+- Tên bài dạy: {topic}
+- Thời lượng: {duration}
+- Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
+- Mục tiêu và tiến trình dạy học A, B, C, D (và E nếu có):
+"""
+{objectives_content}
+{activities_content}
+"""
+- Dữ liệu SGK:
+"""
+{textbook_content}
+"""
+
+NHIỆM VỤ:
+- Đọc toàn bộ tiến trình A–D và bóc tách MỌI phiếu học tập / phiếu bài tập / phiếu KWL / phiếu trạm / rubric / bảng kiểm được nhắc tới (ví dụ: "GV phát phiếu học tập theo trạm", "Phiếu học tập số 1").
+- Nếu tiến trình có Dạy học theo trạm / Station / Trạm 1, Trạm 2, Trạm 3: BẮT BUỘC thiết kế đủ **Phiếu học tập Trạm 1**, **Phiếu học tập Trạm 2**, **Phiếu học tập Trạm 3** (mỗi trạm một phiếu, nhiệm vụ khác nhau, vừa sức 1 vòng trạm).
+- Nếu có Khởi động / Hình thành kiến thức / Khăn trải bàn / Think-Pair-Share / KWL: thiết kế **Phiếu học tập số 1 (Khám phá)** (và Phiếu KWL nếu kỹ thuật KWL được dùng).
+- Nếu có Luyện tập / nhóm / Mảnh ghép: thiết kế **Phiếu học tập số 2 (Luyện tập)** và **Rubric / Bảng kiểm đánh giá** (quan sát nhóm hoặc đánh giá đồng đẳng).
+- Nếu tiến trình không nêu tên phiếu: vẫn tạo tối thiểu PHT số 1 (Khám phá), PHT số 2 (Luyện tập) và 1 Rubric/Bảng kiểm.
+- Mỗi phiếu là MẪU IN SẴN: tiêu đề trường/lớp, nhóm/họ tên HS, bảng kẻ rõ, câu hỏi/nhiệm vụ, dòng kẻ điền kết quả. Không để dấu "..." hay "[...]". Điền nội dung bám SGK.
+- Kèm **Hướng dẫn chấm / đáp án** cho từng phiếu (thang điểm 10 nếu là bài tập).
+- CẤM viết lại tiến trình A–E. CẤM bịa bài tập ngoài nguồn SGK khi nguồn đã có bài.
+
+CẤU TRÚC BẮT BUỘC:
+
+# F. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)
+
+## 1. PHIẾU HỌC TẬP SỐ 1 (Khám phá / Hình thành kiến thức)
+**TRƯỜNG THCS: .......................................**  
+**LỚP: .............. NHÓM: ..............................**  
+**HỌ VÀ TÊN: .....................................................................................**  
+**BÀI: {topic}**
+
+| Nhiệm vụ | Nội dung câu hỏi / Bài tập | Chỗ HS điền kết quả |
+| :--- | :--- | :--- |
+| **Nhiệm vụ 1** | [Câu hỏi/bài tập cụ thể bám SGK] | ................................ |
+| **Nhiệm vụ 2** | [Câu hỏi/bài tập cụ thể bám SGK] | ................................ |
+
+*(Nhận xét của GV: ........................................................................................................)*
+
+## 2. PHIẾU HỌC TẬP TRẠM (chỉ khi tiến trình có dạy học theo trạm — đủ Trạm 1, Trạm 2, Trạm 3)
+[Mỗi trạm một phiếu in riêng, cùng khung tiêu đề trường/lớp/họ tên.]
+
+## 3. PHIẾU HỌC TẬP SỐ 2 (Luyện tập)
+[Khung tiêu đề + bảng nhiệm vụ luyện tập.]
+
+## 4. CÔNG CỤ ĐÁNH GIÁ (Bảng kiểm / Rubric)
+| Tiêu chí | Chưa đạt | Đạt | Tốt |
+| :--- | :--- | :--- | :--- |
+| Hoàn thành nhiệm vụ | | | |
+| Trao đổi nhóm | | | |
+| Chính xác kết quả | | | |
+
+## 5. HƯỚNG DẪN CHẤM VÀ ĐÁP ÁN
+### a) Đáp án Phiếu học tập số 1 (Thang điểm 10)
+- Nhiệm vụ 1: [lời giải]
+- Nhiệm vụ 2: [lời giải]
+### b) Đáp án các phiếu còn lại
+[lời giải chi tiết]`,
+
   // 1-CLICK HOẠT ĐỘNG A -> E (ACTIVITIES AE)
   GENERATE_ACTIVITIES_AE: `Đọc PDF/ảnh SGK đính kèm và soạn toàn bộ hoạt động A–E môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512.
 - Môn học: {subject}
@@ -1233,7 +1296,8 @@ function getPromptTemplate(templateKey, context) {
     "GENERATE_ACTIVITY_A",
     "GENERATE_ACTIVITY_B",
     "GENERATE_ACTIVITY_C",
-    "GENERATE_ACTIVITY_D"
+    "GENERATE_ACTIVITY_D",
+    "GENERATE_PORTFOLIO_WORKSHEETS"
   ].includes(templateKey) && PROMPTS.NATURAL_INTEGRATION_GATE) {
     result += `\n\n${PROMPTS.NATURAL_INTEGRATION_GATE}`;
   }

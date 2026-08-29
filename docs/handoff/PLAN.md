@@ -1,42 +1,36 @@
-# PLAN: Thêm Bộ Lọc Quản Lý Theo Lớp & Sửa Lỗi Sót Câu Khi Nhập Đề Word (thitructuyen.html)
+# PLAN: Bổ sung Sub-tab F. Hồ Sơ & Phiếu Học Tập Chuẩn Mẫu In (soankhbd.html)
 
 Trạng thái: KẾ HOẠCH ĐÃ DUYỆT
 
 ## Hiện trạng
-1. Giáo viên chưa có bộ lọc chọn theo Lớp trên thanh công cụ Quản lý thi.
-2. Hàm isDuplicate trong exam-stitch-client.js xóa nhầm câu hỏi toán có mở đầu giống nhau, làm đề 20 câu Word bị tụt xuống 19 câu ở cột Tổng hợp.
+- Các hoạt động dạy học (A, B, C, D) nhắc tới Phiếu học tập (như Phiếu trạm 1, 2, 3, Phiếu số 1...) nhưng chưa có phần thiết kế chi tiết mẫu phiếu và công cụ đánh giá đi kèm.
 
 ## Phạm vi
-1. **Thêm Bộ lọc Quản lý đề theo Lớp trong `TeacherDashboard`**:
-   - Thêm dropdown `Lọc theo lớp` (`classFilter`) bên cạnh dropdown phân loại.
-   - Hiển thị danh sách các lớp đã tạo đề + danh sách lớp được phân công giảng dạy.
-   - Cập nhật logic `filteredExams` lọc chính xác theo lớp được chọn.
-2. **Sửa dứt điểm Lỗi Nuốt Câu trong `exam-stitch-client.js`**:
-   - Tinh chỉnh thuật toán `isDuplicate`: So sánh đồng thời cả `question` và `options.join('')` với độ tương đồng khắt khe (>98%), loại bỏ logic đếm index `t1[i] === t2[i]` sai lệch.
-   - Đảm bảo khi nhập đề Word 20 câu thì cột Tổng hợp hiển thị đủ 100% 20/20 câu.
-3. **Bộ kiểm thử tự động**:
-   - Tạo/Cập nhật test `tests/exam-word-stitch-smoke.js` kiểm tra độ chính xác của bộ lọc lớp và xác nhận 20 câu Word được giữ nguyên 20 câu ở Tổng hợp.
+1. **Thêm Sub-tab `F. Hồ sơ học tập` trong Tab 4 (Tiến trình dạy học)**:
+   - Thêm nút tab `F. Hồ sơ học tập` trên thanh điều hướng `activities-nav`.
+   - Tiêu đề đầy đủ: `F. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)`.
+2. **Cập nhật Cấu trúc Dữ liệu & Logic JS (`js/khbd-app.js`)**:
+   - Mở rộng `ACTIVITY_TITLES`: thêm key `F`.
+   - Khởi tạo `appState.content.activities.F` (đã có sẵn trong bộ nhớ).
+   - Nút `btnGenerateCurrentAct` khi đang ở Tab F gọi `GENERATE_PORTFOLIO_WORKSHEETS`; nội dung F được ghép vào xuất toàn bộ giáo án.
+3. **Prompt AI (`js/khbd-prompts.js`)**: `PROMPTS.GENERATE_PORTFOLIO_WORKSHEETS` (`ACTIVITY_F`) bóc tách phiếu từ A–D, đủ Trạm 1–3 khi có dạy theo trạm, PHT số 1/2, Rubric/Bảng kiểm, mẫu in và đáp án.
+4. **Xuất Word (`js/khbd-docx.js`)**: mục **IV. PHỤ LỤC: HỒ SƠ DẠY HỌC** ở cuối file, ngắt trang trước phụ lục.
+5. **Kiểm thử**: `tests/khbd-pedagogy-script-smoke.js`.
 
 ## Ngoài phạm vi
-- Không đổi cấu trúc lưu trữ đề thi trong cơ sở dữ liệu.
-- Không đổi giao diện làm bài của học sinh (StudentView).
+- Không làm thay đổi cấu trúc chuẩn của các mục I, II, III (A, B, C, D, E).
 
 ## File dự kiến tác động
-- `thitructuyen.html`
-- `exam-stitch-client.js`
-- `tests/exam-word-stitch-smoke.js`
+- `soankhbd.html`
+- `js/khbd-app.js`
+- `js/khbd-prompts.js`
+- `js/khbd-docx.js`
+- `tests/khbd-pedagogy-script-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
-## Các bước thực hiện
-1. **Bước 1: Sửa logic dedupe trong `exam-stitch-client.js`**:
-   - Sửa hàm `isDuplicate` để không xóa nhầm câu hỏi khác biệt có tiền tố tương tự.
-2. **Bước 2: Cập nhật UI & Logic lọc theo lớp trong `thitructuyen.html`**:
-   - Thêm state `classFilter`, dropdown Lọc theo lớp, và điều kiện lọc trong `filteredExams`.
-3. **Bước 3: Kiểm thử tự động**:
-   - Chạy `node tests/exam-word-stitch-smoke.js`.
-
 ## Tiêu chí nghiệm thu
-1. Thanh công cụ Quản lý thi có dropdown lọc theo từng Lớp mượt mà.
-2. Nhập file Word 20 câu toán có LaTeX: Cột Chi tiết có 20 câu, cột Tổng hợp giữ nguyên 100% đúng 20/20 câu.
-3. Bộ kiểm thử tự động pass 100%.
+1. Tab 4 có đầy đủ 6 subtabs: A, B, C, D, E, F.
+2. Tab F sinh phiếu học tập chi tiết (Trạm 1–3 khi có trạm) + Rubric.
+3. Xuất Word có phụ lục phiếu học tập.
+4. Bộ kiểm thử tự động pass 100%.

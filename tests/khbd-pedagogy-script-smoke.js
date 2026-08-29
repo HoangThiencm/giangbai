@@ -162,6 +162,13 @@ function testPrompts() {
   assert.ok(promptObj.includes("CẤM KHIÊN CƯỠNG"), "Prompt Mục tiêu phải có chống khiên cưỡng");
   assert.ok(promptMat.includes("Canva"), "Prompt Thiết bị phải cấm Canva khi không có thiết bị");
 
+  const promptF = getPromptTemplate("GENERATE_PORTFOLIO_WORKSHEETS", stubContext);
+  assert.ok(promptF.includes("PHIẾU HỌC TẬP"), "Prompt F phải sinh Phiếu học tập");
+  assert.ok(promptF.includes("Trạm 1") && promptF.includes("Trạm 2") && promptF.includes("Trạm 3"), "Prompt F phải có phiếu Trạm 1–3 khi dạy theo trạm");
+  assert.ok(promptF.includes("Rubric") || promptF.includes("Bảng kiểm"), "Prompt F phải có Rubric/Bảng kiểm đánh giá");
+  assert.ok(promptF.includes("HƯỚNG DẪN CHẤM"), "Prompt F phải có hướng dẫn chấm/đáp án");
+  assert.ok(PROMPTS.ACTIVITY_F && PROMPTS.ACTIVITY_F.includes("PHIẾU HỌC TẬP"), "PROMPTS.ACTIVITY_F phải trỏ tới prompt phiếu học tập");
+
   console.log("  -> Prompts: PASS");
 }
 
@@ -270,6 +277,20 @@ async function testDocxCompatibility() {
   console.log("  -> DOCX Compatibility: PASS");
 }
 
+function testPortfolioTabF() {
+  console.log("-> Kiểm tra Sub-tab F Hồ sơ & Phiếu học tập...");
+  const html = fs.readFileSync(path.join(__dirname, "..", "soankhbd.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "..", "js", "khbd-app.js"), "utf8");
+  const docxSrc = fs.readFileSync(path.join(__dirname, "..", "js", "khbd-docx.js"), "utf8");
+  assert.match(html, /data-act="F">F\. Hồ sơ học tập/, "Tab 4 phải có sub-tab F. Hồ sơ học tập");
+  assert.match(html, /data-act="A"[\s\S]*data-act="B"[\s\S]*data-act="C"[\s\S]*data-act="D"[\s\S]*data-act="E"[\s\S]*data-act="F"/, "Phải đủ 6 subtabs A–F");
+  assert.match(app, /F: \{ short: "F\. Hồ sơ học tập"/, "ACTIVITY_TITLES phải có key F");
+  assert.match(app, /GENERATE_PORTFOLIO_WORKSHEETS/, "Tạo mục F phải gọi prompt phiếu học tập");
+  assert.match(app, /IV\. PHỤ LỤC: HỒ SƠ DẠY HỌC/, "Xuất giáo án phải có phụ lục IV phiếu học tập");
+  assert.match(docxSrc, /pageBreakBefore: Boolean\(isAppendix\)/, "Word phải ngắt trang trước phụ lục phiếu học tập");
+  console.log("  -> Sub-tab F & xuất Word phụ lục: PASS");
+}
+
 async function main() {
   console.log("==================================================");
   console.log("BẮT ĐẦU KIỂM THỬ KỊCH BẢN SƯ PHẠM THỰC CHIẾN (SMOKE TEST)");
@@ -278,6 +299,7 @@ async function main() {
   testCatalog();
   testPrompts();
   testAssertions();
+  testPortfolioTabF();
   await testDocxCompatibility();
 
   console.log("==================================================");
