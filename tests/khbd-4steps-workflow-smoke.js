@@ -69,6 +69,19 @@ assert.match(
   /id="tab0-sub-language-inclusive"[\s\S]*?id="toggleForeignLanguage"[\s\S]*?id="toggleInclusiveSupport"[\s\S]*?class="support-choice"/,
   "Tab con 5 phải chứa Ngoại ngữ, Hòa nhập và Hỗ trợ chức năng"
 );
+assert.match(html, /name="clilLevel" value="A1"/, "CLIL phải có mức A1");
+assert.match(html, /name="clilLevel" value="A2"/, "CLIL phải có mức A2");
+assert.match(html, /name="clilLevel" value="B1"/, "CLIL phải có mức B1");
+assert.match(html, /name="clilLevel" value="B2"/, "CLIL phải có mức B2");
+assert.match(html, /name="clilLevel" value="A1" checked/, "CLIL mặc định A1");
+assert.match(html, /class="disability-type-choice" value="Khuyết tật nhìn \(Thị giác\)"/, "HSKT phải có khuyết tật nhìn");
+assert.match(html, /class="disability-type-choice" value="Khuyết tật nghe \(Thính giác\)"/, "HSKT phải có khuyết tật nghe");
+assert.match(html, /class="disability-type-choice" value="Khuyết tật vận động"/, "HSKT phải có khuyết tật vận động");
+assert.match(html, /class="disability-type-choice" value="Khuyết tật trí tuệ \/ Phát triển"/, "HSKT phải có khuyết tật trí tuệ");
+assert.match(html, /class="disability-type-choice" value="Khuyết tật ngôn ngữ \/ Giao tiếp"/, "HSKT phải có khuyết tật ngôn ngữ");
+assert.match(html, /class="disability-type-choice" value="Khuyết tật khác"/, "HSKT phải có khuyết tật khác");
+assert.strictEqual((html.match(/class="disability-type-choice"/g) || []).length, 6, "Đúng 6 loại khuyết tật HSKT");
+assert.strictEqual((html.match(/name="clilLevel"/g) || []).length, 4, "Đúng 4 mức CLIL A1–B2");
 
 console.log("✓ Giao diện HTML đáp ứng quy trình 4 bước.");
 
@@ -129,6 +142,13 @@ assert.match(
   /switchTab0Subtab\("tab0-sub-materials"\)/,
   "Ctrl+V / nạp PDF phải mở tab con gửi file SGK/PPCT"
 );
+assert.match(appCode, /function normalizeClilLevel/, "Phải chuẩn hóa cấp độ CLIL");
+assert.match(appCode, /clilLevel: normalizeClilLevel\(source\.clilLevel\)/, "teachingContext phải lưu clilLevel");
+assert.match(appCode, /disabilityTypes: Array\.isArray\(source\.disabilityTypes\)/, "teachingContext phải lưu disabilityTypes");
+assert.match(appCode, /input\[name="clilLevel"\]/, "Phải bắt sự kiện radio CLIL");
+assert.match(appCode, /\.disability-type-choice/, "Phải bắt sự kiện checkbox loại khuyết tật");
+assert.match(appCode, /CLIL_LEVEL_HINTS/, "Prompt bối cảnh phải có gợi ý theo cấp độ CLIL");
+assert.match(appCode, /marker \*\*\[HOANHAP\]\*\*/, "Prompt hòa nhập phải dùng marker HOANHAP");
 
 console.log("✓ Logic JS 4 bước độc lập hoạt động chuẩn xác.");
 
@@ -203,6 +223,22 @@ assert.strictEqual(gated.techniques.B.length, 1, "Bài 1 tiết chỉ 1 kỹ thu
 assert.ok(["tps-tech", "tablecloth"].includes(gated.techniques.B[0]), "Pha B 1 tiết phải là kỹ thuật nhẹ");
 assert.ok(!gated.methods.includes("pbl"), "Bài 1 tiết không đề xuất dạy học dự án");
 
+assert.strictEqual(app.normalizeClilLevel("B1"), "B1");
+assert.strictEqual(app.normalizeClilLevel("z9"), "A1");
+const clilCtx = app.normalizeTeachingContext({
+  clilLevel: "B1",
+  disabilityTypes: ["Khuyết tật nhìn (Thị giác)", "Khuyết tật nghe (Thính giác)"],
+  supportChoices: ["Học liệu trực quan/chữ lớn"],
+  integrations: { foreignLanguage: true, inclusive: true }
+});
+assert.strictEqual(clilCtx.clilLevel, "B1");
+assert.deepStrictEqual(clilCtx.disabilityTypes, ["Khuyết tật nhìn (Thị giác)", "Khuyết tật nghe (Thính giác)"]);
+app.appState.teachingContext = clilCtx;
+const ped = app.buildPedagogicalContext();
+assert.match(ped, /cấp độ B1/, "Bối cảnh sư phạm phải truyền cấp độ CLIL B1");
+assert.match(ped, /Khuyết tật nhìn \(Thị giác\)/, "Bối cảnh sư phạm phải truyền loại khuyết tật HSKT");
+assert.match(ped, /Học liệu trực quan\/chữ lớn/, "Bối cảnh sư phạm phải truyền giải pháp hỗ trợ");
+
 console.log("✓ Bộ lọc dạng bài, Time-Budget và Facility Gate đạt.");
 
 console.log("\n[TEST 4] Prompt engineering NLS & AI...");
@@ -216,6 +252,13 @@ assert.match(promptsCode, /CẤM TUYỆT ĐỐI mã Lập trình \(3\.4\)/, "Pro
 assert.match(promptsCode, /TIME-BUDGET GATE/, "Prompt phải có Time-Budget Gate");
 assert.match(promptsCode, /FACILITY GATE/, "Prompt phải có Facility Gate");
 assert.match(promptsCode, /GENERATE_OBJECTIVES[\s\S]*NATURAL_INTEGRATION_GATE|NATURAL_INTEGRATION_GATE[\s\S]*GENERATE_ACTIVITY_A/, "Cổng chống khiên cưỡng được gắn vào prompt soạn bài");
+assert.match(promptsCode, /CLIL_INCLUSIVE_GATE/, "Phải có khối prompt CLIL và hòa nhập");
+assert.match(promptsCode, /A1 — Nhận biết/, "Prompt CLIL phải có A1");
+assert.match(promptsCode, /A2 — Đọc hiểu/, "Prompt CLIL phải có A2");
+assert.match(promptsCode, /B1 — Vận dụng/, "Prompt CLIL phải có B1");
+assert.match(promptsCode, /B2 — Tự chủ/, "Prompt CLIL phải có B2");
+assert.match(promptsCode, /\[HOANHAP\]/, "Prompt hòa nhập phải có marker HOANHAP");
+assert.match(promptsCode, /loại khuyết tật đã chọn/, "Prompt hòa nhập phải nhắc loại khuyết tật HSKT");
 
 console.log("✓ Prompt Engineering tích hợp đầy đủ quy tắc kiểm tra mã.");
 

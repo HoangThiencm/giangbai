@@ -129,6 +129,27 @@ const TAB0_STEP_SCROLL_TARGETS = {
   "4": "lessonAiCompetencyCard"
 };
 
+const CLIL_LEVEL_KEYS = ["A1", "A2", "B1", "B2"];
+const CLIL_LEVEL_HINTS = {
+  A1: "Nhận biết & Thuật ngữ: chú thích 3–5 thuật ngữ Anh–Việt then chốt; CẤM bắt HS nói/viết đoạn tiếng Anh.",
+  A2: "Đọc hiểu & Thao tác: câu lệnh ngắn tiếng Anh gắn thao tác bài học (Read / Match / Circle).",
+  B1: "Vận dụng & Giao tiếp: cặp đôi dùng 1–2 câu tiếng Anh khi thảo luận hoặc báo cáo ngắn.",
+  B2: "Tự chủ & Sản xuất: HS tự dùng thuật ngữ chuyên môn để giải thích/báo cáo ngắn bằng tiếng Anh."
+};
+const DISABILITY_TYPE_VALUES = [
+  "Khuyết tật nhìn (Thị giác)",
+  "Khuyết tật nghe (Thính giác)",
+  "Khuyết tật vận động",
+  "Khuyết tật trí tuệ / Phát triển",
+  "Khuyết tật ngôn ngữ / Giao tiếp",
+  "Khuyết tật khác"
+];
+
+function normalizeClilLevel(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  return CLIL_LEVEL_KEYS.includes(raw) ? raw : "A1";
+}
+
 const SUBJECT_CONTEXT_INTEGRATIONS = [
   {
     id: "gdqpan",
@@ -354,6 +375,10 @@ function syncDraftDom() {
   if (lessonSelect) lessonSelect.value = appState.selectedLesson || "";
   setCheckboxGroupValues(".class-profile-choice", context.classProfileChoices);
   setCheckboxGroupValues(".support-choice", context.supportChoices);
+  setCheckboxGroupValues(".disability-type-choice", context.disabilityTypes);
+  document.querySelectorAll('input[name="clilLevel"]').forEach(input => {
+    input.checked = input.value === (context.clilLevel || "A1");
+  });
   if (document.getElementById("inputClassSize")) document.getElementById("inputClassSize").value = context.classSize;
   if (document.getElementById("selectReadiness")) document.getElementById("selectReadiness").value = context.readiness;
   if (document.getElementById("selectGrouping")) document.getElementById("selectGrouping").value = context.grouping;
@@ -530,6 +555,10 @@ function normalizeTeachingContext(context) {
     classProfileNote: typeof source.classProfileNote === "string" ? source.classProfileNote.slice(0, 300) : (typeof source.classProfile === "string" ? source.classProfile.slice(0, 300) : ""),
     supportChoices: Array.isArray(source.supportChoices) ? source.supportChoices.filter(value => typeof value === "string").slice(0, 7) : [],
     supportNote: typeof source.supportNote === "string" ? source.supportNote.slice(0, 300) : (typeof source.supportNeeds === "string" ? source.supportNeeds.slice(0, 300) : ""),
+    clilLevel: normalizeClilLevel(source.clilLevel),
+    disabilityTypes: Array.isArray(source.disabilityTypes)
+      ? source.disabilityTypes.filter(value => typeof value === "string" && DISABILITY_TYPE_VALUES.includes(value)).slice(0, 6)
+      : [],
     integrations: mergedIntegrations,
     methods: Array.isArray(source.methods) ? source.methods.filter(value => typeof value === "string").slice(0, 20) : [],
     techniques: Array.isArray(source.techniques) ? source.techniques.filter(value => typeof value === "string").slice(0, 20) : [],
@@ -2205,11 +2234,18 @@ function setupEventListeners() {
     });
   }
 
-  [[".class-profile-choice", "classProfileChoices"], [".support-choice", "supportChoices"]].forEach(([selector, key]) => {
+  [[".class-profile-choice", "classProfileChoices"], [".support-choice", "supportChoices"], [".disability-type-choice", "disabilityTypes"]].forEach(([selector, key]) => {
     document.querySelectorAll(selector).forEach(input => input.addEventListener("change", () => {
       appState.teachingContext[key] = Array.from(document.querySelectorAll(`${selector}:checked`)).map(choice => choice.value);
       saveStateToLocalStorage();
     }));
+  });
+  document.querySelectorAll('input[name="clilLevel"]').forEach(input => {
+    input.addEventListener("change", () => {
+      if (!input.checked) return;
+      appState.teachingContext.clilLevel = normalizeClilLevel(input.value);
+      saveStateToLocalStorage();
+    });
   });
   [["inputClassSize", "classSize"], ["selectReadiness", "readiness"], ["selectGrouping", "grouping"]].forEach(([id, key]) => document.getElementById(id).addEventListener("change", e => { appState.teachingContext[key] = e.target.value; saveStateToLocalStorage(); }));
   [["hasProjector", "projector"], ["hasInternet", "internet"], ["hasDevices", "devices"]].forEach(([id, key]) => document.getElementById(id).addEventListener("change", e => {
@@ -4136,6 +4172,7 @@ function getIntegrationBadgeClass(tagText) {
   if (/^\[?HCM(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-hcm";
   if (/^\[?QCN(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-qcn";
   if (/^\[?CLIL(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-clil";
+  if (/^\[?(?:HOANHAP|GDHN|HÒA NHẬP|HOA NHAP)(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-hoanhap";
   if (/^\[?(?:GDTC|TAICHINH)(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-taichinh";
   if (/^\[?STEM(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-stem";
   if (/^\[?(?:TN-AO|TNAO)(?::\s*[^\]]+)?\]?$/i.test(t)) return "khbd-badge khbd-badge-tnao";
@@ -4165,7 +4202,7 @@ function applyIntegrationPreviewColors(fragment) {
     while ((textNode = walker.nextNode())) {
       textNodes.push(textNode);
     }
-    const tagRe = /(\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
+    const tagRe = /(\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|HOANHAP|GDHN|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
     textNodes.forEach(node => {
       const val = node.nodeValue;
       if (!val || !tagRe.test(val)) return;
@@ -4209,6 +4246,8 @@ function applyIntegrationPreviewColors(fragment) {
     }
     const hasNls = /\bNLS\b/.test(text) || /^NLS$/i.test(strongText);
     const hasAiMarker = /\bAI\b/.test(text) || /^AI$/i.test(strongText) || /năng lực\s*AI/i.test(text);
+    const hasClil = /\bCLIL\b/i.test(text);
+    const hasInclusive = /\bHOANHAP\b|\bGDHN\b/.test(text);
     const inAiContext = hasAiMarker || Boolean(el.closest(".khbd-ai"));
     if (hasNls) {
       el.classList.add("khbd-nls");
@@ -4222,6 +4261,20 @@ function applyIntegrationPreviewColors(fragment) {
       if (!inTable && hasAiMarker) {
         const host = el.closest("li, p");
         if (host) host.classList.add("khbd-ai");
+      }
+    }
+    if (hasClil) {
+      el.classList.add("khbd-clil");
+      if (!inTable) {
+        const host = el.closest("li, p");
+        if (host) host.classList.add("khbd-clil");
+      }
+    }
+    if (hasInclusive) {
+      el.classList.add("khbd-inclusive");
+      if (!inTable) {
+        const host = el.closest("li, p");
+        if (host) host.classList.add("khbd-inclusive");
       }
     }
   });
@@ -4320,10 +4373,12 @@ function buildPedagogicalContext() {
   const enabledIntegrations = [];
   if (context.integrations.digital) enabledIntegrations.push("năng lực số");
   if (context.integrations.ai) enabledIntegrations.push("năng lực AI");
-  if (context.integrations.foreignLanguage) enabledIntegrations.push("ngoại ngữ");
+  if (context.integrations.foreignLanguage) enabledIntegrations.push(`ngoại ngữ CLIL ${normalizeClilLevel(context.clilLevel)}`);
   if (context.integrations.inclusive) enabledIntegrations.push("hỗ trợ HS khuyết tật/hòa nhập");
   const classProfile = [...context.classProfileChoices, context.classProfileNote].filter(Boolean).join("; ");
   const support = [...context.supportChoices, context.supportNote].filter(Boolean).join("; ");
+  const clilLevel = normalizeClilLevel(context.clilLevel);
+  const disabilityLine = (context.disabilityTypes || []).join("; ");
   const digitalOn = Boolean(context.integrations.digital);
   const aiOn = Boolean(context.integrations.ai);
   const nlsLines = digitalOn ? (context.standards || []).filter(item => item.standardKind === "digital" || item.framework === KHBD_STANDARDS?.digital?.framework).map(item => `NLS: ${item.officialCode}: ${item.officialLabel}`) : [];
@@ -4363,6 +4418,8 @@ function buildPedagogicalContext() {
 - ${curriculumNotice}
 - Giới hạn năng lực & phẩm chất: Bài dạy 1–2 tiết CHỈ ĐƯỢC CHỌN 1–2 Năng lực chung phù hợp đặc thù môn học (${genCompHint}), 2–3 Năng lực đặc thù nổi trội nhất (gắn với nhiệm vụ/sản phẩm cụ thể), 1–2 Phẩm chất có hành vi quan sát rõ. CẤM liệt kê dàn trải toàn bộ khung năng lực hay đủ 5 phẩm chất.
 - Trình độ/đặc điểm lớp: ${classProfile || `Chưa cung cấp; thiết kế mức độ phù hợp học sinh ${gradeLevel} và có phân hóa vừa sức.`}
+- Ngoại ngữ/CLIL: ${context.integrations.foreignLanguage ? `ĐÃ BẬT — cấp độ ${clilLevel}. ${CLIL_LEVEL_HINTS[clilLevel]} Gắn marker **[CLIL]** (hiển thị màu xanh lục). CẤM biến tiết môn thành tiết tiếng Anh.` : "KHÔNG bật. CẤM thêm thuật ngữ/câu lệnh/sản phẩm ngoại ngữ hay marker [CLIL]."}
+- Giáo dục hòa nhập/HSKT: ${context.integrations.inclusive ? `ĐÃ BẬT — loại khuyết tật: ${disabilityLine || "chưa chọn loại cụ thể, chỉ dùng giải pháp hỗ trợ chức năng đã tick"}. Giải pháp hỗ trợ: ${support || "chưa chọn"}. Gắn marker **[HOANHAP]** (hiển thị màu tím) đúng chỗ điều chỉnh nhiệm vụ/học liệu. CẤM chẩn đoán y khoa, CẤM nêu tên học sinh, CẤM bịa loại khuyết tật không được chọn.` : "KHÔNG bật. CẤM tự thêm giáo dục hòa nhập/HSKT hay marker [HOANHAP]."}
 - Hỗ trợ chức năng được chọn: ${support || "Không có yêu cầu riêng được chọn."}
 - Sĩ số: ${context.classSize}; mức sẵn sàng: ${context.readiness}; tổ chức: ${context.grouping}; điều kiện: ${Object.entries(context.facilities).filter(([, value]) => value).map(([key]) => key).join(", ") || "thiết bị cơ bản"}.
 - Phương pháp dạy học được chọn: ${methodLabels.length ? methodLabels.join("; ") : `Chưa chọn; khi soạn chỉ được lấy 1–2 phương pháp phù hợp môn ${subjectName} lớp ${appState.selectedGrade} từ catalog, đúng nguyên nhãn, không bịa tên PPDH ngoài catalog.`}
@@ -6261,6 +6318,7 @@ if (typeof module !== 'undefined' && module.exports) {
     switchMainTab,
     switchActivitySubtab,
     switchTab0Subtab,
-    revealTab0WorkflowStep
+    revealTab0WorkflowStep,
+    normalizeClilLevel
   };
 }

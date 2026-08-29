@@ -69,6 +69,17 @@
     .tab0-subtab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     .tab0-subtab-pane { display: none; }
     .tab0-subtab-pane.active { display: block; animation: fadeIn 0.2s ease-in-out; }
+    .khbd-clil-card { border: 2px solid #86efac; background: linear-gradient(180deg, #f0fdf4, #ecfdf5); margin-bottom: 1.25rem; }
+    .khbd-inclusive-card { border: 2px solid #d8b4fe; background: linear-gradient(180deg, #faf5ff, #f5f3ff); margin-bottom: 1.25rem; }
+    .clil-level-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; margin-top: 0.5rem; }
+    .clil-level-pill { display: flex; align-items: flex-start; gap: 0.45rem; padding: 0.7rem 0.8rem; border: 1px solid #86efac; border-radius: 10px; background: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #166534; }
+    .clil-level-pill:has(input:checked) { background: #dcfce7; border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.18); }
+    .disability-type-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.4rem 0.85rem; margin: 0.5rem 0 1rem; }
+    .disability-type-list label { font-size: 0.88rem; color: #5b21b6; }
+    .khbd-badge-clil { background-color: #dcfce7 !important; color: #166534 !important; border-color: #86efac !important; }
+    .khbd-badge-hoanhap { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+    .khbd-clil { color: #166534; }
+    .khbd-inclusive { color: #6b21a8; }
   </style>
 </head>
 <body>
@@ -500,22 +511,47 @@
       </div>
 
       <div id="tab0-sub-language-inclusive" class="tab0-subtab-pane">
-      <div class="card">
+      <div id="dynamicIntegrationsContainer">
+      <div class="card khbd-clil-card">
         <div class="card-header">
-          <h2 class="card-title"><i data-lucide="languages"></i> Ngoại ngữ &amp; Giáo dục hòa nhập</h2>
+          <h2 class="card-title">🌐 Tích hợp năng lực ngoại ngữ</h2>
         </div>
-        <div id="dynamicIntegrationsContainer" class="dynamic-integrations-panel" style="margin-top: 0.25rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: #ffffff;">
-          <div class="integration-tabs" role="tablist" aria-label="Các nội dung tích hợp">
-            <label class="integration-tab" data-integration-tab="foreignLanguage"><input type="checkbox" id="toggleForeignLanguage"> <span>🌐 Ngoại ngữ</span></label>
-            <label class="integration-tab" data-integration-tab="inclusive"><input type="checkbox" id="toggleInclusiveSupport"> <span>🤝 Hòa nhập</span></label>
+        <p class="text-muted" style="font-size:0.88rem;margin:0 0 .75rem;font-style:italic;">Tích hợp thuật ngữ tiếng Anh chuyên ngành theo phương pháp CLIL (hiển thị màu xanh lục)</p>
+        <label class="integration-tab" data-integration-tab="foreignLanguage" style="margin-bottom:0.85rem;">
+          <input type="checkbox" id="toggleForeignLanguage"> <span>Bật tích hợp Ngoại ngữ (CLIL)</span>
+        </label>
+        <fieldset class="tool-group" style="min-width:0;border:1px solid #86efac;border-radius:10px;padding:.75rem;background:#fff;">
+          <legend style="color:#166534;font-weight:700;">Trình độ năng lực ngoại ngữ:</legend>
+          <div class="clil-level-grid" role="radiogroup" aria-label="Trình độ năng lực ngoại ngữ CLIL">
+            <label class="clil-level-pill"><input type="radio" name="clilLevel" value="A1" checked> A1 — Nhận biết &amp; Thuật ngữ</label>
+            <label class="clil-level-pill"><input type="radio" name="clilLevel" value="A2"> A2 — Đọc hiểu &amp; Thao tác</label>
+            <label class="clil-level-pill"><input type="radio" name="clilLevel" value="B1"> B1 — Vận dụng &amp; Giao tiếp</label>
+            <label class="clil-level-pill"><input type="radio" name="clilLevel" value="B2"> B2 — Tự chủ &amp; Sản xuất</label>
           </div>
-          <div class="integration-tab-details">
-            <section class="integration-detail" data-integration-detail="foreignLanguage" hidden><p><b>Gợi ý tích hợp:</b> Chỉ dùng từ vựng, câu lệnh hoặc sản phẩm ngoại ngữ thật sự cần cho bài học; không biến tiết học thành dạy ngoại ngữ.</p></section>
-            <section class="integration-detail" data-integration-detail="inclusive" hidden><p><b>Gợi ý hỗ trợ:</b> Điều chỉnh nhiệm vụ, học liệu, cách giao tiếp và vai trò nhóm theo nhu cầu đã chọn ở phần Đặc điểm lớp học.</p></section>
-          </div>
+        </fieldset>
+      </div>
+
+      <div class="card khbd-inclusive-card">
+        <div class="card-header">
+          <h2 class="card-title">💜 Thêm năng lực cho giáo án giáo dục hòa nhập</h2>
         </div>
-        <fieldset class="tool-group" style="min-width:0;border:1px solid var(--border);border-radius:8px;padding:.75rem;margin-top:1rem;">
-          <legend>Hỗ trợ chức năng (không chẩn đoán)</legend>
+        <p class="text-muted" style="font-size:0.88rem;margin:0 0 .75rem;font-style:italic;">Sử dụng dữ liệu giáo dục hòa nhập &amp; giải pháp hỗ trợ học sinh khuyết tật (hiển thị màu tím)</p>
+        <label class="integration-tab" data-integration-tab="inclusive" style="margin-bottom:0.85rem;">
+          <input type="checkbox" id="toggleInclusiveSupport"> <span>Bật Giáo dục hòa nhập</span>
+        </label>
+        <fieldset class="tool-group" style="min-width:0;border:1px solid #d8b4fe;border-radius:10px;padding:.75rem;background:#fff;">
+          <legend style="color:#6b21a8;font-weight:700;">Chọn loại khuyết tật của HSKT:</legend>
+          <div class="disability-type-list">
+            <label><input type="checkbox" class="disability-type-choice" value="Khuyết tật nhìn (Thị giác)"> Khuyết tật nhìn (Thị giác)</label>
+            <label><input type="checkbox" class="disability-type-choice" value="Khuyết tật nghe (Thính giác)"> Khuyết tật nghe (Thính giác)</label>
+            <label><input type="checkbox" class="disability-type-choice" value="Khuyết tật vận động"> Khuyết tật vận động</label>
+            <label><input type="checkbox" class="disability-type-choice" value="Khuyết tật trí tuệ / Phát triển"> Khuyết tật trí tuệ / Phát triển</label>
+            <label><input type="checkbox" class="disability-type-choice" value="Khuyết tật ngôn ngữ / Giao tiếp"> Khuyết tật ngôn ngữ / Giao tiếp</label>
+            <label><input type="checkbox" class="disability-type-choice" value="Khuyết tật khác"> Khuyết tật khác</label>
+          </div>
+        </fieldset>
+        <fieldset class="tool-group" style="min-width:0;border:1px solid #d8b4fe;border-radius:10px;padding:.75rem;margin-top:1rem;background:#fff;">
+          <legend style="color:#6b21a8;font-weight:700;">Hỗ trợ chức năng (không chẩn đoán)</legend>
           <label><input type="checkbox" class="support-choice" value="Nhiệm vụ chia nhỏ"> Nhiệm vụ chia nhỏ</label><br>
           <label><input type="checkbox" class="support-choice" value="Thêm thời gian"> Thêm thời gian</label><br>
           <label><input type="checkbox" class="support-choice" value="Học liệu trực quan/chữ lớn"> Học liệu trực quan/chữ lớn</label><br>
@@ -526,6 +562,7 @@
           <label for="inputSupportNote">Ghi chú ngắn (không nhập tên/thông tin sức khỏe nhạy cảm):</label>
           <textarea id="inputSupportNote" maxlength="300" rows="2"></textarea>
         </fieldset>
+      </div>
       </div>
       </div>
     </section>

@@ -209,7 +209,8 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
       - Giáo dục Quốc phòng & An ninh (TT 08/2024/TT-BGDĐT): Lồng ghép truyền thống yêu nước, tự hào dân tộc, chủ quyền biển đảo Tổ quốc; gắn marker **[GDQPAN]** hoặc **[GDQPAN: ...]**.
       - Tư tưởng, đạo đức, phong cách Hồ Chí Minh (Chỉ thị 05-CT/TW): Gắn tấm gương Bác Hồ, tinh thần tự học, tiết kiệm, yêu thương con người qua bài học cụ thể; gắn marker **[HCM]** hoặc **[HCM: ...]**.
       - Quyền con người (QĐ 1309/QĐ-TTg): Tôn trọng phẩm giá, bình đẳng, không phân biệt đối xử, phòng chống bạo lực; gắn marker **[QCN]** hoặc **[QCN: ...]**.
-      - Tích hợp CLIL: Sử dụng thuật ngữ song ngữ Anh - Việt, nhiệm vụ khám phá ngắn bằng tiếng Anh; gắn marker **[CLIL]** hoặc **[CLIL: ...]**.
+      - Tích hợp CLIL (CHỈ khi GV bật Ngoại ngữ): bám đúng cấp độ A1 (thuật ngữ), A2 (câu lệnh ngắn), B1 (thảo luận), B2 (báo cáo/sản xuất) trong bối cảnh sư phạm; gắn marker **[CLIL]** hoặc **[CLIL: ...]**.
+      - Giáo dục hòa nhập (CHỈ khi GV bật): bám đúng loại khuyết tật HSKT và giải pháp hỗ trợ đã chọn; gắn marker **[HOANHAP]** hoặc **[HOANHAP: ...]**.
       - Giáo dục Tài chính (QĐ 149/QĐ-TTg): Tình huống tính toán chi tiêu thông minh, lập ngân sách cá nhân, tiết kiệm, bài toán lãi suất; gắn marker **[GDTC]** hoặc **[TAICHINH]**.
       - Giáo dục STEM & Mô hình hóa: Quy trình thiết kế kỹ thuật, giải quyết bài toán thực nghiệm liên môn; gắn marker **[STEM]** hoặc **[STEM: ...]**.
       - Thí nghiệm ảo & Mô phỏng số: Thao tác thí nghiệm ảo PhET, mô phỏng GeoGebra trực quan; gắn marker **[TN-AO]** hoặc **[TN-AO: ...]**.
@@ -261,6 +262,15 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Bài Thống kê & Xác suất: ưu tiên thu thập, đánh giá, biểu diễn bảng/biểu đồ số (1.1, 1.2, 1.3).
 - TIME-BUDGET GATE: Nếu bài 1 tiết (45 phút): tối đa 1 kỹ thuật dạy học tích cực nhẹ ở pha B — Think-Pair-Share (3–5 phút) hoặc Khăn trải bàn ngắn (5 phút). CẤM kết hợp Mảnh ghép + Khăn trải bàn + Dự án trong cùng 1 tiết. Bài 2–3 tiết mới được dùng Mảnh ghép, Trạm/Góc học tập, Dự án nhỏ.
 - FACILITY GATE: Nếu lớp KHÔNG có thiết bị học sinh và KHÔNG có Internet: TUYỆT ĐỐI CẤM yêu cầu học sinh lên mạng tra cứu, dùng điện thoại quét mã, thiết kế Canva, dùng laptop/chatbot trong giờ. Chỉ dùng thước, compa, bảng, phiếu giấy, máy tính cầm tay nếu bài cần.`,
+
+  CLIL_INCLUSIVE_GATE: `RÀNG BUỘC NGOẠI NGỮ CLIL & GIÁO DỤC HÒA NHẬP:
+- Ngoại ngữ/CLIL CHỈ khi giáo viên đã bật. Bám đúng cấp độ trong bối cảnh sư phạm. Marker **[CLIL]** (hiển thị màu xanh lục). CẤM biến tiết môn thành tiết tiếng Anh.
+  + A1 — Nhận biết & Thuật ngữ: chú thích 3–5 thuật ngữ Anh–Việt then chốt; không bắt HS nói/viết đoạn tiếng Anh.
+  + A2 — Đọc hiểu & Thao tác: câu lệnh ngắn tiếng Anh gắn thao tác bài học.
+  + B1 — Vận dụng & Giao tiếp: cặp đôi dùng 1–2 câu tiếng Anh khi thảo luận/báo cáo ngắn.
+  + B2 — Tự chủ & Sản xuất: HS tự dùng thuật ngữ chuyên môn để giải thích/báo cáo ngắn bằng tiếng Anh.
+- Giáo dục hòa nhập/HSKT CHỈ khi giáo viên đã bật. Bám đúng loại khuyết tật đã chọn (Nhìn, Nghe, Vận động, Trí tuệ/Phát triển, Ngôn ngữ/Giao tiếp, Khác) và giải pháp hỗ trợ chức năng. Marker **[HOANHAP]** (hiển thị màu tím). CẤM chẩn đoán y khoa, CẤM nêu tên học sinh, CẤM bịa loại khuyết tật không được chọn.
+- Nếu Ngoại ngữ hoặc Hòa nhập không được bật: TUYỆT ĐỐI CẤM tự thêm thuật ngữ CLIL, nhiệm vụ tiếng Anh, điều chỉnh HSKT hay marker [CLIL]/[HOANHAP].`,
 
   SOURCE_LOCK: `KHÓA NGUỒN BẮT BUỘC:
 - Nguồn chính = văn bản SGK đã nhận diện (Mistral OCR / tóm tắt Bước 0) và/hoặc file PDF/ảnh đính kèm đúng request này.
@@ -1300,6 +1310,17 @@ function getPromptTemplate(templateKey, context) {
     "GENERATE_PORTFOLIO_WORKSHEETS"
   ].includes(templateKey) && PROMPTS.NATURAL_INTEGRATION_GATE) {
     result += `\n\n${PROMPTS.NATURAL_INTEGRATION_GATE}`;
+  }
+  if ([
+    "GENERATE_OBJECTIVES",
+    "GENERATE_MATERIALS",
+    "GENERATE_ACTIVITY_A",
+    "GENERATE_ACTIVITY_B",
+    "GENERATE_ACTIVITY_C",
+    "GENERATE_ACTIVITY_D",
+    "GENERATE_PORTFOLIO_WORKSHEETS"
+  ].includes(templateKey) && PROMPTS.CLIL_INCLUSIVE_GATE) {
+    result += `\n\n${PROMPTS.CLIL_INCLUSIVE_GATE}`;
   }
   result += `\n\nGIỚI HẠN DUNG LƯỢNG: Viết cô đọng để giáo án in Word khoảng 8–12 trang (Times New Roman 13pt). Không viết lại lý thuyết đã có ở mục trước.`;
 
