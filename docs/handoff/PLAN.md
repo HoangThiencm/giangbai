@@ -1,53 +1,60 @@
-# PLAN: Bổ sung chọn File PDF & Tính năng Tạo Bài tập Tổng hợp từ File trong backupcode viettailieu/taobaitap.html
+# PLAN: Tối ưu Quy trình 4 Bước Soạn KHBD & Trải nghiệm Dán PPCT (soankhbd.html)
 
 Trạng thái: KẾ HOẠCH ĐÃ DUYỆT
 
 ## Hiện trạng
-1. **Chọn File PDF**: `readTextFromDocumentFile` chỉ trích xuất được PDF có sẵn text layer; PDF dạng scan/ảnh chụp bị rỗng văn bản.
-2. **Tạo bài tập tổng hợp từ File**: Bắt buộc người dùng phải gõ tên từng chủ đề thủ công; chưa có chức năng tạo bài tập tổng hợp trực tiếp từ toàn bộ nội dung file đã nạp.
+1. Đọc SGK tự động chạy đề xuất PPDH & NLS quá sớm khi chưa có PPCT.
+2. Dán PPCT (Ctrl+V) rườm rà vì phải bấm nút kích hoạt arm trước.
+3. Nút đề xuất PPDH & NLS chưa được bố trí thành Bước 3 rõ ràng.
+4. Năng lực AI cần đảm bảo chỉ phân tích và tick chọn khi người dùng chủ động bật.
 
 ## Phạm vi
-1. **Nâng cấp bộ đọc PDF (hỗ trợ cả PDF scan/ảnh)**:
-   - Cho phép chọn file `.pdf` từ máy tính vào nguồn kiến thức.
-   - Nếu PDF có text layer: Dùng `pdfjsLib` đọc text nhanh.
-   - Nếu PDF là dạng scan/ảnh (text < 50 ký tự): Tự động render từng trang PDF sang canvas ảnh và nhận diện OCR qua `extractSourceTextFromImageBatch` (Mistral OCR / Gemini) để đọc trọn vẹn nội dung.
-2. **Thêm tính năng "Tạo bài tập tổng hợp từ File đã nạp"**:
-   - Thêm Card công cụ & Nút bấm: **"⚡ TẠO BÀI TẬP TỔNG HỢP TỪ FILE"**.
-   - Không bắt buộc giáo viên phải nhập hay phân chia danh sách chủ đề thủ công.
-   - Cho phép tùy chọn nhanh:
-     * Số lượng câu: 5, 10, 15, 20 câu (hoặc tùy chỉnh).
-     * Hình thức: Trắc nghiệm tổng hợp (Nhiều lựa chọn, Đúng/Sai, Điền khuyết, Trả lời ngắn, Nối ô) hoặc Tự luận có lời giải.
-     * Mức độ: Cơ bản, Trung bình, Nâng cao, hoặc Hỗn hợp (phân hóa 4 mức độ: Nhận biết, Thông hiểu, Vận dụng, Vận dụng thực tế).
-   - Tự động lấy toàn bộ nội dung từ `sourceMaterials`, gửi prompt chuyên sâu yêu cầu AI quét toàn diện tài liệu đưa lên và sinh bộ bài tập bám sát 100% nội dung học liệu.
-3. **Cập nhật giao diện & Bộ kiểm thử tự động**:
-   - Thêm UI trực quan, hiển thị thông báo tiến trình rõ ràng.
-   - Tạo file kiểm thử `tests/taobaitap-plan-smoke.js` kiểm tra đầy đủ các tiêu chí.
+1. **Bước 1 (Đọc SGK)**:
+   - Khi bấm "Đọc sách giáo khoa" -> Mistral OCR trích xuất văn bản vào editorVision/previewVision.
+   - Chưa tự động tick chọn PPDH, KTDH hay NLS.
+2. **Bước 2 (Đọc PPCT & Dán nhanh Ctrl+V)**:
+   - Click hoặc focus vào vùng PPCT -> Nhấn Ctrl+V dán ngay ảnh PPCT vào gallery không cần nút phụ.
+   - Bấm "Đọc PPCT" -> Mistral OCR bóc tách số tiết, tuần, phạm vi bài dạy.
+3. **Bước 3 (Nút AI Đề xuất PPDH, Kỹ thuật & NLS)**:
+   - Thêm nút / card hành động nổi bật: "⚡ ĐỀ XUẤT PPDH, KỸ THUẬT & NĂNG LỰC SỐ (AI)".
+   - Khi bấm: AI phân tích SGK + PPCT -> Tự động tick chọn PPDH, Kỹ thuật dạy học 4 pha, và 2–3 mục Năng lực số (NLS).
+4. **Bước 4 (Khung Năng lực AI)**:
+   - Mặc định không tick chọn Năng lực AI.
+   - Khi người dùng click toggleAiCompetency -> Gemini phân tích nội dung SGK và tick chọn đúng 2–3 mục AI phù hợp nhất theo lớp (QĐ 2422).
+5. **Cập nhật giao diện & Bộ kiểm thử tự động**:
+   - Thêm Thanh Stepper 4 Bước trực quan trên đầu Tab 0.
+   - Cập nhật tests/khbd-4steps-workflow-smoke.js.
 
 ## Ngoài phạm vi
-- Không thay đổi tính năng tạo câu hỏi theo danh sách chủ đề thủ công đã có.
-- Không thay đổi logic xuất Word (.docx) và trình chiếu DẠY NGAY.
+- Không thay đổi cấu trúc bảng mã chuẩn TT 02 và QĐ 2422 trong js/khbd-standards.js.
+- Không thay đổi định dạng xuất Word 5512.
 
 ## File dự kiến tác động
-- `backupcode viettailieu/taobaitap.html`
-- `taobaitap.html`
-- `tests/taobaitap-plan-smoke.js`
+- `soankhbd.html`
+- `js/khbd-app.js`
+- `tests/khbd-4steps-workflow-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Các bước thực hiện
-1. **Bước 1: Nâng cấp đọc PDF trong `backupcode viettailieu/taobaitap.html`**:
-   - Trong `readTextFromDocumentFile`: Nếu `pdfjsLib` trích xuất dưới 50 ký tự từ file PDF, tự động render các trang PDF thành ảnh và gọi `extractSourceTextFromImageBatch` để đọc nội dung.
-2. **Bước 2: Viết hàm `generateSynthesizedFromSource()`**:
-   - Lấy toàn bộ `sourceContext` từ `sourceMaterials`.
-   - Gửi prompt yêu cầu AI tạo bài tập tổng hợp phân hóa bám sát 100% tài liệu đưa lên mà không cần nhập tên chủ đề.
-   - Chuẩn hóa kết quả qua `normalizeQuizItems` và chuyển sang Bước 2 (Kết quả).
-3. **Bước 3: Thêm Card UI Tạo bài tập tổng hợp**:
-   - Hiển thị Card màu sắc nổi bật với nút chọn số lượng câu, mức độ, và nút "⚡ TẠO BÀI TẬP TỔNG HỢP TỪ FILE".
-4. **Bước 4: Kiểm thử tự động**:
-   - Tạo và chạy `tests/taobaitap-plan-smoke.js`.
+1. **Bước 1: Tách rời OCR SGK khỏi tự động tick chọn (js/khbd-app.js)**:
+   - Trong applyTextbookOcrResult: Chỉ lưu vision text và ocrReady = true. Bỏ gọi tự động ensurePedagogyFromLesson và requestStructuredIntegrationCandidatesForEnabled.
+2. **Bước 2: Nâng cấp Paste Controller cho PPCT (js/khbd-app.js & soankhbd.html)**:
+   - Theo dõi activeDropzoneTarget ('sgk' hoặc 'ppct'). Khi click vào vùng PPCT, gán activeDropzoneTarget = 'ppct'.
+   - Trong handleGlobalPaste: Nếu activeDropzoneTarget === 'ppct' hoặc focus trong card PPCT -> chuyển trực tiếp ảnh vào handlePpctFiles.
+3. **Bước 3: Tạo Nút AI Đề xuất PPDH & NLS (soankhbd.html & js/khbd-app.js)**:
+   - Bố trí Card Bước 3 rõ ràng: "⚡ ĐỀ XUẤT PHƯƠNG PHÁP, KỸ THUẬT & NĂNG LỰC SỐ".
+   - Viết hàm triggerStep3PedagogyAndDigitalRecommendations(): Kích hoạt chọn PPDH, KTDH 4 pha và NLS (TT 02).
+4. **Bước 4: Chuẩn hóa kích hoạt Năng lực AI (js/khbd-app.js)**:
+   - Trong toggleAiCompetency: Khi checked === true -> Gọi Gemini phân tích và tick đúng 2–3 mục AI theo lớp. Khi checked === false -> Xóa sạch mã AI.
+5. **Bước 5: Thêm Thanh Stepper 4 Bước trên UI (soankhbd.html)**:
+   - Hiển thị 4 bước: [1. Đọc SGK] -> [2. Đọc PPCT] -> [3. Đề xuất PPDH & NLS] -> [4. Tích hợp AI & Soạn bài].
+6. **Bước 6: Kiểm thử tự động**:
+   - Chạy tests/khbd-4steps-workflow-smoke.js.
 
 ## Tiêu chí nghiệm thu
-1. Hỗ trợ chọn và đọc file PDF (cả PDF văn bản và PDF scan ảnh) vào nguồn kiến thức mượt mà.
-2. Có nút/chức năng Tạo bài tập tổng hợp trực tiếp từ file tài liệu đã nạp mà không cần tạo hay nhập chủ đề thủ công.
-3. Bài tập sinh ra bám sát chính xác nội dung học liệu được đưa lên.
-4. Bộ kiểm thử tự động pass 100%.
+1. Bước 1: Đọc SGK chỉ trích xuất OCR, không tự động tick chọn sớm.
+2. Bước 2: Click vào vùng PPCT -> Nhấn Ctrl+V dán ảnh trực tiếp mượt mà.
+3. Bước 3: Có nút riêng để AI đề xuất PPDH, Kỹ thuật và NLS từ học liệu đã đọc.
+4. Bước 4: Khung AI chỉ phân tích và chọn 2–3 mục khi người dùng click bật.
+5. Kiểm thử tự động pass 100%.

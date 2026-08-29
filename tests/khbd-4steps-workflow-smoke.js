@@ -11,49 +11,65 @@ console.log("===================================================================
 console.log("KIỂM THỬ QUY TRÌNH 4 BƯỚC VÀ KHUNG MÃ NLS (CV 3456) & AI (QĐ 2422)");
 console.log("================================================================================");
 
-// -----------------------------------------------------------------------------
-// TEST 1: GIAO DIỆN QUY TRÌNH 4 BƯỚC TRONG SOANKHBD.HTML
-// -----------------------------------------------------------------------------
-console.log("\n[TEST 1] Kiểm tra các nút bấm và nhãn trên giao diện HTML...");
+console.log("\n[TEST 1] Giao diện 4 bước trên Tab 0...");
 
+assert.match(html, /id="khbdWorkflowStepper"/, "Phải có thanh stepper 4 bước");
+assert.match(html, /Bước 1: Nạp &amp; Đọc SGK/, "Stepper phải có Bước 1 Đọc SGK");
+assert.match(html, /Bước 2: Nạp &amp; Đọc PPCT/, "Stepper phải có Bước 2 Đọc PPCT");
+assert.match(html, /Bước 3: AI Đề xuất PPDH &amp; NLS/, "Stepper phải có Bước 3 đề xuất PPDH & NLS");
+assert.match(html, /Bước 4: Tích hợp AI &amp; Soạn bài/, "Stepper phải có Bước 4 AI & soạn bài");
 assert.match(html, /id="btnAnalyzeVision"[\s\S]*?Đọc sách giáo khoa/, "Nút OCR phải có nhãn 'Đọc sách giáo khoa'");
 assert.match(html, /id="btnAnalyzePpct"[\s\S]*?Đọc PPCT/, "Nút PPCT phải có nhãn 'Đọc PPCT'");
-assert.match(html, /id="btnAutoDetectMetadata"[\s\S]*?Đề xuất thông tin bài dạy/, "Card Thiết lập bài dạy phải có nút 'Đề xuất thông tin bài dạy'");
-assert.match(html, /id="btnSuggestPedagogyStandards"[\s\S]*?Đề xuất PP\/KTDH & Năng lực số\/AI/, "Card Tích hợp phải có nút 'Đề xuất PP/KTDH & Năng lực số/AI'");
-assert.match(html, /id="toggleDigitalCompetency"\s+checked/, "Năng lực số phải có thuộc tính checked mặc định trong HTML");
+assert.match(html, /id="btnStep3PedagogyDigital"[\s\S]*?ĐỀ XUẤT PPDH, KỸ THUẬT &amp; NĂNG LỰC SỐ \(AI\)/, "Card Bước 3 phải có nút đề xuất PPDH & NLS");
+assert.match(html, /id="btnStartComposeFromStep4"/, "Bước 4 phải có nút Bắt đầu soạn");
+assert.match(html, /id="toggleDigitalCompetency"\s+checked/, "Năng lực số phải checked mặc định");
+assert.doesNotMatch(html, /id="toggleAiCompetency"\s+checked/, "Năng lực AI mặc định không checked");
+assert.match(html, /dropzone-active-hint/, "Dropzone phải có gợi ý vùng đang chọn");
+assert.match(html, /id="dropzoneContainerPpct"[\s\S]*?tabindex="0"/, "Vùng PPCT phải focus được");
 
-console.log("✓ Giao diện HTML đáp ứng 100% yêu cầu 4 bước.");
+console.log("✓ Giao diện HTML đáp ứng quy trình 4 bước.");
 
-// -----------------------------------------------------------------------------
-// TEST 2: HÀNH VI TỪNG BƯỚC ĐỘC LẬP TRONG JS/KHBD-APP.JS
-// -----------------------------------------------------------------------------
-console.log("\n[TEST 2] Kiểm tra logic JS các bước độc lập...");
+console.log("\n[TEST 2] Logic JS từng bước...");
 
-// Bước 1: OCR SGK -> toast "Đã xong"
 assert.match(appCode, /showToast\("Đã xong/i, "Bước 1 OCR SGK phải toast 'Đã xong'");
-
-// Bước 2: PPCT -> toast "Đã đọc"
 assert.match(appCode, /showToast\("Đã đọc/i, "Bước 2 Phân tích PPCT phải toast 'Đã đọc'");
-
-// Bước 3 & 4: Event listener gắn cho 2 nút đề xuất mới
-assert.match(appCode, /btnAutoDetectMetadata/, "Phải gắn event listener cho nút btnAutoDetectMetadata");
-assert.match(appCode, /btnSuggestPedagogyStandards/, "Phải gắn event listener cho nút btnSuggestPedagogyStandards");
-
-// Mặc định NLS bật trong normalizeTeachingContext
+assert.match(appCode, /async function applyTextbookOcrResult[\s\S]*?ocrReady = true[\s\S]*?updateWorkflowStepper\(\)/, "OCR SGK chỉ lưu text và ocrReady");
+assert.doesNotMatch(
+  appCode,
+  /async function applyTextbookOcrResult[\s\S]{0,500}ensurePedagogyFromLesson/,
+  "OCR SGK không được tự tick PPDH"
+);
+assert.doesNotMatch(
+  appCode,
+  /async function applyTextbookOcrResult[\s\S]{0,800}requestStructuredIntegrationCandidatesForEnabled/,
+  "OCR SGK không được tự đề xuất NLS/AI"
+);
+assert.match(appCode, /let activeDropzoneTarget = "sgk"/, "Phải theo dõi vùng dán đang chọn");
+assert.match(appCode, /function setActiveDropzoneTarget/, "Phải có hàm gán vùng dán SGK/PPCT");
+assert.match(appCode, /pasteToPpct = ppctPasteArmed \|\| activeDropzoneTarget === "ppct" \|\| inPpct/, "Ctrl+V vào PPCT khi vùng PPCT đang chọn");
+assert.match(appCode, /dropzone-active-ppct/, "PPCT active zone phải có class viền cam");
+assert.match(appCode, /dropzone-active-sgk/, "SGK active zone phải có class viền xanh");
+assert.match(appCode, /async function triggerStep3PedagogyAndDigitalRecommendations/, "Phải có hàm Bước 3 đề xuất PPDH & NLS");
+assert.match(appCode, /btnStep3PedagogyDigital/, "Phải gắn nút card Bước 3");
+assert.match(appCode, /ensurePedagogyFromLesson\(\{ force: true/, "Bước 3 force chọn PPDH/kỹ thuật 4 pha");
+assert.match(appCode, /requestStructuredIntegrationCandidates\("digital"/, "Bước 3 đề xuất NLS, không phải AI");
+assert.match(appCode, /key === "ai"[\s\S]*requestStructuredIntegrationCandidates\("ai"/, "Bật Năng lực AI mới gọi Gemini AI");
+assert.match(appCode, /Hãy đọc SGK ở Bước 1\. Khi có nội dung, Gemini sẽ đề xuất đúng 2–3 mục AI/, "Khi bật AI chưa có OCR phải hướng dẫn đọc SGK");
 assert.match(appCode, /digital:\s*(?:context\?\.integrations\?\.digital\s*!==\s*false|true)/, "normalizeTeachingContext phải giữ NLS mặc định bật");
+assert.doesNotMatch(
+  appCode,
+  /function normalizeTeachingContext[\s\S]{0,2200}catalogFallbackRecords\("digital"/,
+  "Không tự seed NLS khi mới mở trang"
+);
 
 console.log("✓ Logic JS 4 bước độc lập hoạt động chuẩn xác.");
 
-// -----------------------------------------------------------------------------
-// TEST 3: KHUNG MÃ NĂNG LỰC SỐ (CV 3456) VÀ AI (QĐ 2422) TRONG STANDARDS
-// -----------------------------------------------------------------------------
-console.log("\n[TEST 3] Kiểm tra khung mã NLS (CV 3456) và AI (QĐ 2422)...");
+console.log("\n[TEST 3] Khung mã NLS (CV 3456) và AI (QĐ 2422)...");
 
 const { KHBD_STANDARDS, entriesForGrade } = require("../js/khbd-standards.js");
 
 assert.strictEqual(KHBD_STANDARDS.digital.framework, "Thông tư 02/2025/TT-BGDĐT & Công văn 3456/BGDĐT-GDPT", "Framework NLS phải ghi rõ TT 02 & CV 3456");
 
-// Kiểm tra mã NLS lớp 6-7 (TC1) và lớp 8-9 (TC2)
 const digitalG6 = entriesForGrade("digital", 6);
 const digitalG7 = entriesForGrade("digital", 7);
 const digitalG8 = entriesForGrade("digital", 8);
@@ -64,7 +80,6 @@ assert.ok(digitalG7.length > 0 && digitalG7.every(e => /\.TC1[a-z]?$/.test(e.cod
 assert.ok(digitalG8.length > 0 && digitalG8.every(e => /\.TC2[a-z]?$/.test(e.code)), "Lớp 8 phải 100% dùng mã TC2 (Công văn 3456)");
 assert.ok(digitalG9.length > 0 && digitalG9.every(e => /\.TC2[a-z]?$/.test(e.code)), "Lớp 9 phải 100% dùng mã TC2 (Công văn 3456)");
 
-// Kiểm tra mã AI QĐ 2422 (88 YCCĐ)
 const aiG6 = entriesForGrade("ai", 6);
 const aiG7 = entriesForGrade("ai", 7);
 const aiG8 = entriesForGrade("ai", 8);
@@ -77,10 +92,7 @@ assert.ok(aiG9.length > 0 && aiG9.every(e => /^9\.[A-D]\d+\.(?:\d+|MR\d+)$/.test
 
 console.log("✓ Khung mã NLS (CV 3456) và AI (QĐ 2422) chuẩn 100%.");
 
-// -----------------------------------------------------------------------------
-// TEST 4: QUY TẮC KIỂM TRA MÃ TRONG PROMPT ENGINEERING
-// -----------------------------------------------------------------------------
-console.log("\n[TEST 4] Kiểm tra Prompt Engineering có ràng buộc mã NLS & AI...");
+console.log("\n[TEST 4] Prompt engineering NLS & AI...");
 
 assert.match(promptsCode, /3456\/BGDĐT-GDPT/, "Prompt phải dẫn chiếu Công văn 3456/BGDĐT-GDPT");
 assert.match(promptsCode, /2422\/QĐ-BGDĐT/, "Prompt phải dẫn chiếu Quyết định 2422/QĐ-BGDĐT");

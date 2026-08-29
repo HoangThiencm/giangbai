@@ -1,26 +1,32 @@
 # IMPLEMENT
 
-Trạng thái: ĐÃ LÀM — PDF scan OCR + Tạo bài tập tổng hợp từ file (`taobaitap.html`)
+Trạng thái: ĐÃ LÀM — Quy trình 4 bước KHBD (OCR SGK không tự tick, dán PPCT trực tiếp, đề xuất PPDH/NLS, AI opt-in)
 
 ## File đã đổi
 
-- `backupcode viettailieu/taobaitap.html`
-- `taobaitap.html`
-- `tests/taobaitap-plan-smoke.js`
+- `soankhbd.html`
+- `js/khbd-app.js`
+- `tests/khbd-4steps-workflow-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Nội dung chính
 
-1. **Đọc PDF scan/ảnh**: `readTextFromDocumentFile` vẫn dùng `pdfjsLib.getTextContent()`. Nếu PDF có text compact dưới 50 ký tự, `readDocumentSourceWithOcrFallback` render tối đa 20 trang sang JPEG (`renderPdfPagesToImageItems`) rồi OCR bằng `extractSourceTextFromImageBatch`. `extractSourceTextFromFile` và `handleFileUpload` đều đi đường này. `addSourceFiles` hiện tiến trình khi đọc PDF.
-2. **Tạo bài tập tổng hợp từ file**: `generateSynthesizedFromSource()` lấy `getSourceContext()` từ `sourceMaterials`, không cần tên chủ đề. Prompt yêu cầu quét toàn diện, bám sát 100% học liệu. Kết quả `normalizeQuizItems` (trắc nghiệm) rồi `setStep(2)`.
-3. **Card UI**: Card tím **"⚡ TẠO BÀI TẬP TỔNG HỢP TỪ FILE"** với số câu 5/10/15/20 hoặc tùy chỉnh (1–50), hình thức (trắc nghiệm tổng hợp / từng loại / tự luận), mức độ (Cơ bản, Trung bình, Nâng cao, Hỗn hợp 4 mức). Nút tắt khi chưa nạp nguồn.
-4. **Ngoài phạm vi giữ nguyên**: `generateContent` vẫn chặn chủ đề trống; Word và DẠY NGAY không đổi.
+1. **Bước 1**: `applyTextbookOcrResult` chỉ ghi `content.vision`, `ocrReady = true` và preview. Không gọi `ensurePedagogyFromLesson` / `requestStructuredIntegrationCandidatesForEnabled`. Bỏ auto-tick khi blur editor SGK. `normalizeTeachingContext` không còn seed sẵn mã NLS khi mở trang.
+2. **Bước 2**: `activeDropzoneTarget` (`sgk` | `ppct`). Click / focus / hover card PPCT rồi Ctrl+V đưa ảnh vào `handlePpctFiles`. Viền xanh (SGK) / cam (PPCT). Đọc PPCT vẫn Mistral OCR.
+3. **Bước 3**: Card + stepper nút `triggerStep3PedagogyAndDigitalRecommendations()` — force PPDH/kỹ thuật 4 pha, bật NLS, Gemini đề xuất NLS (kèm PPCT trong prompt). Không tick AI.
+4. **Bước 4**: `toggleAiCompetency` mặc định tắt. Khi bật: fallback 2–3 mục rồi Gemini nếu đã OCR. Khi tắt: xóa mã AI. Nút "Bắt đầu soạn" chuyển Tab Mục tiêu.
+5. **Stepper 4 bước** trên đầu Tab 0, badge trạng thái theo SGK/PPCT/đề xuất/AI.
+
+## Ngoài phạm vi giữ nguyên
+
+- `js/khbd-standards.js` không đổi cấu trúc TT 02 / QĐ 2422.
+- Xuất Word 5512 không đổi.
 
 ## Test đã chạy
 
 ```
-node tests/taobaitap-plan-smoke.js
+node tests/khbd-4steps-workflow-smoke.js
 ```
 
-Kết quả: **pass** (48/48 check, gồm root + backup + ngưỡng OCR).
+Kết quả: **pass** (`khbd-4steps-workflow-smoke.js`, kèm `khbd-structured-candidates-smoke.js`, `khbd-mistral-ocr-smoke.js`, `khbd-ppct-integration-smoke.js`).
