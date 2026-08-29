@@ -5,36 +5,96 @@
 (function () {
     'use strict';
 
-    // Bỏ qua bảo vệ nếu chạy trên localhost hoặc đã kích hoạt chế độ Debug bởi Admin
+    var debugModeKey = '__system_debug_unlocked__';
+
+    function fingerprint(value) {
+        var hash = 2166136261;
+        var text = String(value || '');
+        for (var i = 0; i < text.length; i++) {
+            hash ^= text.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return (hash >>> 0).toString(16);
+    }
+
+    function storageGet(store, key) {
+        try {
+            return store && store.getItem ? store.getItem(key) : null;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    function storageSet(store, key, value) {
+        try {
+            if (store && store.setItem) store.setItem(key, value);
+        } catch (err) {}
+    }
+
+    var hostname = '';
+    var protocol = '';
+    try {
+        hostname = String((window.location && window.location.hostname) || '');
+        protocol = String((window.location && window.location.protocol) || '');
+    } catch (err) {}
+
     var isLocalhost = Boolean(
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1' ||
-        window.location.hostname.startsWith('192.168.') ||
-        window.location.protocol === 'file:'
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '[::1]' ||
+        hostname.indexOf('192.168.') === 0 ||
+        protocol === 'file:'
     );
 
-    var debugModeKey = '__system_debug_unlocked__';
-    var isDebugUnlocked = sessionStorage.getItem(debugModeKey) === 'true';
+    var isDebugUnlocked = storageGet(sessionStorage, debugModeKey) === 'true';
 
-    if (isLocalhost && isDebugUnlocked) {
+    // Bỏ qua bảo vệ nếu chạy trên localhost hoặc đã kích hoạt chế độ Debug bởi Admin
+    if (isLocalhost || isDebugUnlocked) {
         return;
+    }
+
+    var nativeConsole = null;
+    try {
+        if (window.console) {
+            nativeConsole = {
+                debug: typeof window.console.debug === 'function' ? window.console.debug.bind(window.console) : null,
+                clear: typeof window.console.clear === 'function' ? window.console.clear.bind(window.console) : null
+            };
+        }
+    } catch (err) {
+        nativeConsole = null;
+    }
+
+    function isEditableTarget(target) {
+        if (!target) return false;
+        var tag = target.tagName;
+        return Boolean(
+            tag === 'INPUT' ||
+            tag === 'TEXTAREA' ||
+            target.isContentEditable ||
+            tag === 'MATH-FIELD' ||
+            (target.closest && target.closest('math-field, [contenteditable="true"]'))
+        );
+    }
+
+    function blockEvent(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+
+    function clearConsoleQuietly() {
+        try {
+            if (nativeConsole && nativeConsole.clear) nativeConsole.clear();
+            else if (console && console.clear) console.clear();
+        } catch (err) {}
     }
 
     // 1. Chặn menu chuột phải (Context Menu) - Vẫn cho phép thao tác trong ô soạn thảo/input
     document.addEventListener('contextmenu', function (e) {
         if (isDebugUnlocked) return;
-        var target = e.target;
-        var isEditable = target && (
-            target.tagName === 'INPUT' ||
-            target.tagName === 'TEXTAREA' ||
-            target.isContentEditable ||
-            target.tagName === 'MATH-FIELD' ||
-            (target.closest && target.closest('math-field, [contenteditable="true"]'))
-        );
-        if (!isEditable) {
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
+        if (!isEditableTarget(e.target)) {
+            return blockEvent(e);
         }
     }, true);
 
@@ -43,64 +103,49 @@
         if (isDebugUnlocked) return;
 
         var keyCode = e.keyCode || e.which;
-        var isCtrl = e.ctrlKey || e.metaKey; // Ctrl trên Win, Cmd trên Mac
+        var key = String(e.key || '').toLowerCase();
+        var code = String(e.code || '');
+        var isCtrl = e.ctrlKey || e.metaKey;
         var isShift = e.shiftKey;
         var isAlt = e.altKey;
 
-        // F12 (123)
-        if (keyCode === 123) {
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
+        if (keyCode === 123 || code === 'F12' || key === 'f12') {
+            return blockEvent(e);
         }
 
-        // Ctrl + Shift + I (Inspect Elements)
-        // Ctrl + Shift + J (Console)
-        // Ctrl + Shift + C (Element Picker)
-        // Ctrl + Shift + K (Firefox Console)
-        if (isCtrl && isShift && (keyCode === 73 || keyCode === 74 || keyCode === 67 || keyCode === 75)) {
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
+        if (isCtrl && isShift && (
+            keyCode === 73 || keyCode === 74 || keyCode === 67 || keyCode === 75 || keyCode === 69 ||
+            key === 'i' || key === 'j' || key === 'c' || key === 'k' || key === 'e'
+        )) {
+            return blockEvent(e);
         }
 
-        // Ctrl + U (View Source)
-        if (isCtrl && keyCode === 85) {
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
+        if (isCtrl && !isShift && (keyCode === 85 || key === 'u')) {
+            return blockEvent(e);
         }
 
-        // Ctrl + S (Save page)
-        if (isCtrl && keyCode === 83) {
-            var target = e.target;
-            var isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
-            if (!isInput) {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
+        if (isCtrl && !isShift && (keyCode === 83 || key === 's')) {
+            if (!isEditableTarget(e.target)) {
+                return blockEvent(e);
             }
         }
 
         // Phím tắt bí mật cho Quản trị viên: Ctrl + Alt + Shift + D để mở khóa Debug
-        if (isCtrl && isAlt && isShift && (keyCode === 68 || e.key === 'D' || e.key === 'd')) {
-            var key = prompt('Nhập mã xác thực Admin để mở khóa DevTools:');
-            if (key) {
-                var storedKey = localStorage.getItem('admin_key') || localStorage.getItem('ADMIN_KEY');
-                if (storedKey && key === storedKey) {
-                    sessionStorage.setItem(debugModeKey, 'true');
-                    alert('Đã mở khóa chế độ DevTools cho phiên làm việc này.');
-                    window.location.reload();
-                } else if (key === 'htcm@admin' || key === 'hoangthien') {
-                    sessionStorage.setItem(debugModeKey, 'true');
+        if (isCtrl && isAlt && isShift && (keyCode === 68 || key === 'd')) {
+            var typedKey = prompt('Nhập mã xác thực Admin để mở khóa DevTools:');
+            if (typedKey) {
+                var storedKey = storageGet(localStorage, 'admin_key') || storageGet(localStorage, 'ADMIN_KEY');
+                var typedFp = fingerprint(typedKey);
+                var allowedFallback = typedFp === '7731ce4a' || typedFp === 'c3e3eb18';
+                if ((storedKey && typedKey === storedKey) || allowedFallback) {
+                    storageSet(sessionStorage, debugModeKey, 'true');
                     alert('Đã mở khóa chế độ DevTools cho phiên làm việc này.');
                     window.location.reload();
                 } else {
                     alert('Mã xác thực không chính xác.');
                 }
             }
-            e.preventDefault();
-            return false;
+            return blockEvent(e);
         }
     }, true);
 
@@ -114,15 +159,11 @@
             })();
             var endTime = performance.now();
             if (endTime - startTime > 100) {
-                // Phát hiện DevTools đang dừng ở debugger
-                if (console && console.clear) {
-                    console.clear();
-                }
+                clearConsoleQuietly();
             }
         } catch (err) {}
     }
 
-    // Chạy bẫy ngắt quãng
     setInterval(triggerDebuggerTrap, 2500);
 
     // 4. Phát hiện DevTools mở bằng cách đo chênh lệch kích thước cửa sổ
@@ -132,18 +173,34 @@
         var widthDiff = window.outerWidth - window.innerWidth > devtoolsThreshold;
         var heightDiff = window.outerHeight - window.innerHeight > devtoolsThreshold;
         if (widthDiff || heightDiff) {
-            if (console && console.clear) {
-                console.clear();
-            }
+            clearConsoleQuietly();
         }
     }
     window.addEventListener('resize', checkDevToolsOpen, { passive: true });
 
-    // 5. Vô hiệu hóa một số hàm console nguy hiểm ở môi trường production
+    // 5. Phát hiện DevTools qua getter stack (không xóa trang — tránh dương tính giả)
+    function probeDevToolsConsole() {
+        if (isDebugUnlocked || !nativeConsole || !nativeConsole.debug) return;
+        var detected = false;
+        try {
+            var probe = Object.defineProperty(new Error(), 'stack', {
+                configurable: true,
+                get: function () {
+                    detected = true;
+                    return '';
+                }
+            });
+            nativeConsole.debug(probe);
+        } catch (err) {}
+        if (detected) clearConsoleQuietly();
+    }
+    setInterval(probeDevToolsConsole, 3000);
+
+    // 6. Vô hiệu hóa một số hàm console nguy hiểm ở môi trường production
     try {
         if (!isLocalhost && !isDebugUnlocked && window.console) {
             var noop = function () {};
-            var methods = ['log', 'debug', 'info', 'dir', 'dirxml', 'trace'];
+            var methods = ['log', 'debug', 'info', 'dir', 'dirxml', 'trace', 'table', 'group', 'groupCollapsed', 'groupEnd'];
             for (var i = 0; i < methods.length; i++) {
                 // Giữ lại error và warn để không ảnh hưởng bắt lỗi logic
                 window.console[methods[i]] = noop;

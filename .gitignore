@@ -6,3 +6,6 @@ storage/vanban/*
 !storage/vanban/.gitkeep
 api/storage/vanban/*
 !api/storage/vanban/.gitkeep
+node_modules/
+.deploy-obfuscated/
+package-lock.json

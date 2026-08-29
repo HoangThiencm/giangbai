@@ -16,6 +16,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install JS obfuscator
+        run: npm install --no-save javascript-obfuscator@4.1.1
+
+      - name: Obfuscate first-party JavaScript
+        run: node tools/build-obfuscate.js --in-place
+
       - name: Sync files to hosting
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
@@ -47,3 +58,6 @@ jobs:
             *.backup*.html
             setup.php
             tools/**
+            package-lock.json
+            package.json
+            .deploy-obfuscated/**
