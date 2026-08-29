@@ -473,6 +473,34 @@
                                         3. Kiểm tra import / Xuất JSON từ tab Tổng hợp
                                     </div>
                                 </div>
+                                <div id="custom-image-tool-card" class="mt-4 rounded-2xl border-2 border-orange-300 bg-orange-50 p-4">
+                                    <h3 class="font-semibold text-orange-900 flex items-center gap-2">
+                                        <i class="fas fa-wand-magic-sparkles"></i>
+                                        Tạo ảnh từ Prompt / Mô tả tùy chọn
+                                    </h3>
+                                    <p class="mt-1 text-[11px] text-orange-800">Dán prompt có sẵn hoặc gõ mô tả tự nhiên. Ảnh tạo ra có thể tải, copy, hoặc chèn vào bài soạn.</p>
+                                    <textarea id="custom-image-prompt" rows="4"
+                                              class="mt-3 w-full rounded-xl border border-orange-200 bg-white p-3 text-sm font-mono"
+                                              placeholder="Ví dụ: Sơ đồ tư duy tập hợp lớp 6, nền trắng, nhãn tiếng Việt..."></textarea>
+                                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                                        <label class="text-xs font-semibold text-orange-900">Phong cách</label>
+                                        <select id="custom-image-style" class="rounded-lg border border-orange-200 bg-white px-2 py-1.5 text-xs">
+                                            <option value="diagram">Sơ đồ/Vector SGK</option>
+                                            <option value="photo">Ảnh thực tế đời sống</option>
+                                        </select>
+                                        <button type="button" id="custom-image-generate-btn"
+                                                class="ml-auto inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700">
+                                            <i class="fas fa-image"></i> Tạo ảnh ngay
+                                        </button>
+                                    </div>
+                                    <div id="custom-image-status" class="mt-2 text-xs text-orange-800"></div>
+                                    <img id="custom-image-preview" alt="Ảnh tùy chọn" class="hidden mt-3 max-h-72 w-auto max-w-full rounded-lg border border-orange-200 bg-white">
+                                    <div id="custom-image-actions" class="hidden mt-3 flex flex-wrap gap-2">
+                                        <button type="button" id="custom-image-download-btn" class="rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-xs font-semibold text-orange-800 hover:bg-orange-100"><i class="fas fa-download mr-1"></i>Tải PNG</button>
+                                        <button type="button" id="custom-image-copy-btn" class="rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-xs font-semibold text-orange-800 hover:bg-orange-100"><i class="fas fa-copy mr-1"></i>Copy Data URL</button>
+                                        <button type="button" id="custom-image-insert-btn" class="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800"><i class="fas fa-plus mr-1"></i>Chèn vào bài soạn</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1545,7 +1573,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
         }
 
         function renderLessonContentPreview(container, value) {
-            const markerPattern = /!\[([^\]]*)\]\((?:HINH|HÌNH)[_\s-]*(\d+)\)/gi;
+            const markerPattern = /!\[([^\]]*)\]\((HINH[_\s-]*CUSTOM[_\s-]*\d+|(?:HINH|HÌNH)[_\s-]*\d+)\)/gi;
             const content = String(value || '');
             let cursor = 0;
             let match;
@@ -1561,7 +1589,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
 
             while ((match = markerPattern.exec(content)) !== null) {
                 appendText(content.slice(cursor, match.index));
-                const imageId = normalizeLessonImageId(`HINH_${match[2]}`);
+                const imageId = normalizeLessonImageId(match[2]);
                 const imageDataUrl = generatedLessonImages.get(imageId);
                 const figure = document.createElement('figure');
                 figure.className = 'my-3 rounded-lg border border-slate-200 bg-white p-2';
@@ -1704,6 +1732,43 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             ].filter(Boolean).join(' | ');
         }
 
+        function collectLessonImageSourceTexts(raw, sectionValues) {
+            const theoryRaw = String((window.getTheoryOutputEl && window.getTheoryOutputEl() && window.getTheoryOutputEl().value) || '').trim();
+            const restRaw = String((window.getRestOutputEl && window.getRestOutputEl() && window.getRestOutputEl().value) || '').trim();
+            const parts = [raw, theoryRaw, restRaw];
+            if (sectionValues && typeof sectionValues === 'object') {
+                Object.keys(sectionValues).forEach(function (key) {
+                    if (typeof sectionValues[key] === 'string') parts.push(sectionValues[key]);
+                });
+            }
+            return parts.filter(Boolean).join('\n\n');
+        }
+
+        function collectMarkerIdsFromLessonSources(raw, LI, sectionValues) {
+            const ids = new Set();
+            const addFromText = function (text) {
+                if (LI && LI.extractImageMarkers) {
+                    LI.extractImageMarkers(text).forEach(function (id) { ids.add(normalizeLessonImageId(id)); });
+                    return;
+                }
+                const re = /!\[([^\]]*)\]\((HINH[_\s-]*CUSTOM[_\s-]*\d+|(?:HINH|HÌNH)[_\s-]*\d+)\)/gi;
+                let match;
+                while ((match = re.exec(String(text || ''))) !== null) {
+                    ids.add(normalizeLessonImageId(match[2]));
+                }
+            };
+            addFromText(collectLessonImageSourceTexts(raw, sectionValues));
+            return [...ids].filter(Boolean);
+        }
+
+        function buildFallbackPromptFromContext(imageId, locations) {
+            const loc = (locations && locations[0]) || {};
+            const desc = String(loc.alt || loc.subsection || loc.sectionLabel || imageId).trim() || imageId;
+            const where = loc.sectionLabel ? (' (mục ' + loc.sectionLabel + ')') : '';
+            const extra = loc.subsection ? ('; ' + loc.subsection) : '';
+            return imageId + ': ' + (loc.sectionKey || 'content') + ' | ' + desc + ' | diagram | Minh họa sách giáo khoa Toán, vector sạch, nền trắng, nhãn tiếng Việt ngắn. Nội dung: ' + desc + where + extra + '.';
+        }
+
         function collectLessonImagePrompts(raw, LI, sectionValues) {
             const byId = new Map();
             const addPrompt = (imageId, promptText) => {
@@ -1734,13 +1799,11 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 }
             }
 
-            const markerIds = LI && LI.extractImageMarkers
-                ? LI.extractImageMarkers(raw)
-                : [];
-            markerIds.forEach(id => {
+            const locationById = collectLessonImageLocations(sectionValues);
+            collectMarkerIdsFromLessonSources(raw, LI, sectionValues).forEach(id => {
                 const norm = normalizeLessonImageId(id);
-                if (!byId.has(norm)) {
-                    addPrompt(norm, `${norm}: content | ${norm} | diagram | Minh họa cho ![...](${norm}) trong bài. Bổ sung mô tả chi tiết trong DANH SÁCH HÌNH ẢNH CẦN TẠO.`);
+                if (!byId.has(norm) || isGenericLessonImagePrompt(byId.get(norm))) {
+                    addPrompt(norm, buildFallbackPromptFromContext(norm, locationById.get(norm)));
                 }
             });
 
@@ -1812,7 +1875,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
 
         function collectLessonImageLocations(sectionValues) {
             const locationById = new Map();
-            const markerRe = /!\[([^\]]*)\]\((?:HINH|HÌNH)[_\s-]*(\d+)\)/gi;
+            const markerRe = /!\[([^\]]*)\]\((HINH[_\s-]*CUSTOM[_\s-]*\d+|(?:HINH|HÌNH)[_\s-]*\d+)\)/gi;
 
             const addLocation = (imageId, location) => {
                 const list = locationById.get(imageId) || [];
@@ -1833,7 +1896,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 let match;
                 markerRe.lastIndex = 0;
                 while ((match = markerRe.exec(text)) !== null) {
-                    const imageId = normalizeLessonImageId(`HINH_${match[2]}`);
+                    const imageId = normalizeLessonImageId(match[2]);
                     const alt = String(match[1] || '').trim();
                     addLocation(imageId, {
                         sectionKey: key,
@@ -1870,7 +1933,8 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 });
             }
 
-            return promptEntries.map(entry => {
+            const byId = new Map();
+            promptEntries.forEach(entry => {
                 const imageId = entry.imageId;
                 let locations = [...(locationById.get(imageId) || [])];
                 const manifest = manifestById.get(imageId);
@@ -1884,16 +1948,32 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                         fromManifest: true
                     }];
                 }
-                return {
+                byId.set(imageId, {
                     imageId,
                     prompt: entry.prompt,
                     locations,
-                    manifestSection: manifest && manifest.section ? manifest.section : ''
-                };
-            }).sort((a, b) => {
+                    manifestSection: manifest && manifest.section ? manifest.section : '',
+                    autoFilled: !manifest
+                });
+            });
+            collectMarkerIdsFromLessonSources(raw, LI, sectionValues).forEach(id => {
+                if (byId.has(id)) return;
+                const locations = [...(locationById.get(id) || [])];
+                byId.set(id, {
+                    imageId: id,
+                    prompt: buildFallbackPromptFromContext(id, locations),
+                    locations,
+                    manifestSection: '',
+                    autoFilled: true
+                });
+            });
+
+            return [...byId.values()].sort((a, b) => {
+                const customA = /^HINH_CUSTOM_/.test(a.imageId) ? 1000 : 0;
+                const customB = /^HINH_CUSTOM_/.test(b.imageId) ? 1000 : 0;
                 const na = parseInt(String(a.imageId).replace(/\D/g, ''), 10) || 0;
                 const nb = parseInt(String(b.imageId).replace(/\D/g, ''), 10) || 0;
-                return na - nb;
+                return (customA + na) - (customB + nb);
             });
         }
 
@@ -2070,6 +2150,12 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
             if (imagePrompts.length > 0) {
                 const imgDiv = document.createElement('div');
                 imgDiv.className = 'border-2 border-orange-300 bg-orange-50 rounded-2xl p-4';
+                if (imagePromptEntries.some(function (entry) { return entry.autoFilled; })) {
+                    const autoNote = document.createElement('div');
+                    autoNote.className = 'mb-3 rounded-lg border border-amber-200 bg-white p-2 text-[11px] text-amber-900';
+                    autoNote.innerHTML = 'Đã tự tạo thẻ tạo ảnh cho mọi <code>HINH_xx</code> trong bài, kể cả khi thiếu mục DANH SÁCH HÌNH ẢNH CẦN TẠO (prompt lấy từ mô tả xung quanh marker).';
+                    imgDiv.appendChild(autoNote);
+                }
 
                 const imgTitle = document.createElement('div');
                 imgTitle.className = 'font-bold text-orange-700 mb-1';
@@ -2216,11 +2302,6 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                 });
 
                 container.appendChild(imgDiv);
-            } else if (LI && LI.extractImageMarkers && LI.extractImageMarkers(raw).length) {
-                const hint = document.createElement('div');
-                hint.className = 'border border-amber-200 bg-amber-50 rounded-2xl p-4 text-xs text-amber-900';
-                hint.innerHTML = '<strong>Hình ảnh:</strong> Bài có <code>HINH_xx</code> trong nội dung nhưng thiếu mục <strong>DANH SÁCH HÌNH ẢNH CẦN TẠO</strong> — thêm prompt từng HINH ở cuối bài rồi bấm <em>Xem trước &amp; tách section</em>.';
-                container.appendChild(hint);
             }
 
             if (container.children.length === 0) {
@@ -2593,7 +2674,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
         function appendLessonContentWithImages(children, raw, api) {
             const { Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType } = api;
             const report = { embedded: 0, missing: [] };
-            const markerPattern = /!\[([^\]]*)\]\((?:HINH|HÌNH)[_\s-]*(\d+)\)/gi;
+            const markerPattern = /!\[([^\]]*)\]\((HINH[_\s-]*CUSTOM[_\s-]*\d+|(?:HINH|HÌNH)[_\s-]*\d+)\)/gi;
 
             String(raw || '').split('\n').forEach(originalLine => {
                 const line = originalLine.trim();
@@ -2622,7 +2703,7 @@ Làm một lần đầy đủ, dùng LaTeX $...$ .`;
                         children.push(new Paragraph({ children: [new TextRun({ text: textBefore, size: 22 })] }));
                     }
 
-                    const imageId = normalizeLessonImageId(`HINH_${match[2]}`);
+                    const imageId = normalizeLessonImageId(match[2]);
                     const imageDataUrl = generatedLessonImages.get(imageId);
                     if (imageDataUrl) {
                         children.push(new Paragraph({
@@ -3117,7 +3198,8 @@ ${buildKnowledgeCeilingBlock(context)}
 1. **MỤC TIÊU** — 2–4 câu, bắt đầu bằng "Sau bài học này..."
 2. **LÝ THUYẾT** — Markdown + LaTeX $...$; ngắn gọn, sát ảnh SGK; chèn ![mô tả](HINH_xx) chỉ khi thật cần sơ đồ/khái niệm trực quan.
    **BẮT BUỘC:** Kết thúc phần lý thuyết LUÔN LUÔN chèn một ảnh sơ đồ tư duy (mind map) tổng hợp toàn bộ kiến thức bài học: ![Sơ đồ tư duy bài học](HINH_01). Sơ đồ tư duy phải bao gồm tên bài ở trung tâm, các nhánh chính là các khái niệm/công thức/quy tắc cốt lõi, các nhánh phụ là ví dụ hoặc lưu ý quan trọng.
-3. **DANH SÁCH HÌNH ẢNH CẦN TẠO** — bắt buộc khai báo HINH_01 bằng đúng 4 cột: HINH_01: theory | Sơ đồ tư duy bài học | diagram | Prompt tạo ảnh chi tiết. Các hình khác, nếu cần, bắt đầu từ HINH_02.
+   **KHÓA MÃ HÌNH BƯỚC 1:** Chỉ dùng liên tục **HINH_01**, **HINH_02** (không nhảy số). Mọi chỗ cần hình PHẢI có marker \`![Mô tả ngắn](HINH_xx)\` đúng vị trí — CẤM mô tả hình bằng chữ mà không có marker.
+3. **DANH SÁCH HÌNH ẢNH CẦN TẠO** — bắt buộc khai báo ĐỦ mọi HINH_xx đã dùng ở Bước 1, đúng 4 cột, bắt đầu HINH_01 rồi HINH_02 nếu có: HINH_01: theory | Sơ đồ tư duy bài học | diagram | Prompt tạo ảnh chi tiết.
 
 **CẤM Ở BƯỚC 1:** Không viết VÍ DỤ, BÀI TẬP, TỰ LUẬN, KÉO THẢ, TRẮC NGHIỆM, KỸ NĂNG, NHIỆM VỤ.
 
@@ -3185,8 +3267,10 @@ ${getInteractiveFormatBlock()}
 
 **NHIỆM VỤ HỌC SINH** — 3–5 dòng việc thật (không ---, không bullet rác).
 
-**DANH SÁCH HÌNH ẢNH CẦN TẠO** — liệt kê **mọi** HINH_xx đã chèn ![...](HINH_xx) trong toàn bài (lý thuyết + ví dụ). Mỗi dòng:
-HINH_01: theory | Mô tả ngắn | diagram | Prompt chi tiết tạo ảnh
+**KHÓA MÃ HÌNH BƯỚC 2:** Tiếp nối liên tục từ Bước 1. Không dùng lại HINH_01/HINH_02. Hình mới bắt đầu **HINH_03**, **HINH_04**... không nhảy số. Mọi hình trong VÍ DỤ/bài tập PHẢI có marker \`![Mô tả](HINH_xx)\`.
+
+**DANH SÁCH HÌNH ẢNH CẦN TẠO** — liệt kê **mọi** HINH_xx đã chèn ![...](HINH_xx) trong Bước 2 (từ HINH_03 trở đi). Không bỏ sót mã nào. Mỗi dòng:
+HINH_03: examples | Mô tả ngắn | diagram | Prompt chi tiết tạo ảnh
 
 Không ghi chú nguồn SGK. Không lời mở đầu. Không dùng \`---\` ngăn cách phần. Không bảng Markdown.`;
         }
@@ -3660,6 +3744,8 @@ ${draftText}`;
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, '')
                 .toUpperCase();
+            const custom = normalized.match(/HINH[_\s-]*CUSTOM[_\s-]*(\d+)/);
+            if (custom) return `HINH_CUSTOM_${String(Number(custom[1])).padStart(2, '0')}`;
             const match = normalized.match(/HINH[_\s-]*(\d+)/);
             return match ? `HINH_${String(Number(match[1])).padStart(2, '0')}` : normalized;
         }
@@ -4908,6 +4994,7 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
         function init() {
             try {
             initializeTailwind();
+            setupCustomImageToolCard();
             setupLessonCatalog();
             setupImageUpload();
             var lessonPlanTitle = document.getElementById('lesson-plan-title');
@@ -5030,6 +5117,122 @@ Phân tích kỹ các ảnh SGK và tạo nội dung vừa đủ, sát ảnh, v�
         window.generateRemainingSections = generateRemainingSections;
         window.generateFullLessonDirect = generateFullLessonDirect;
         window.showStructureGuide = showStructureGuide;
+        function nextCustomLessonImageId() {
+            let max = 0;
+            generatedLessonImages.forEach(function (_, id) {
+                const match = String(id).match(/^HINH_CUSTOM_(\d+)$/);
+                if (match) max = Math.max(max, Number(match[1]));
+            });
+            const blob = String((window.getTheoryOutputEl && window.getTheoryOutputEl() && window.getTheoryOutputEl().value) || '')
+                + '\n' + String((window.getRestOutputEl && window.getRestOutputEl() && window.getRestOutputEl().value) || '');
+            const re = /HINH_CUSTOM[_\s-]*(\d+)/gi;
+            let match;
+            while ((match = re.exec(blob)) !== null) max = Math.max(max, Number(match[1]));
+            return 'HINH_CUSTOM_' + String(max + 1).padStart(2, '0');
+        }
+
+        function downloadLessonImagePng(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = filename || 'hinh.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function insertCustomImageIntoLesson(imageId, alt) {
+            const marker = '![' + (alt || 'Hình tùy chọn') + '](' + imageId + ')';
+            const restEl = window.getRestOutputEl && window.getRestOutputEl();
+            const theoryEl = window.getTheoryOutputEl && window.getTheoryOutputEl();
+            const target = (restEl && String(restEl.value || '').trim()) ? restEl : theoryEl;
+            if (!target) {
+                showAppToast('Không tìm thấy ô bài soạn để chèn hình.', 'warn');
+                return;
+            }
+            target.value = String(target.value || '').replace(/\s*$/, '') + '\n\n' + marker + '\n';
+            if (window.syncCombinedLessonPreview) window.syncCombinedLessonPreview();
+            showAppToast('Đã chèn ' + imageId + ' vào bài soạn.', 'ok');
+            parseAndPreview();
+        }
+
+        async function generateCustomLessonImage() {
+            const promptEl = document.getElementById('custom-image-prompt');
+            const styleEl = document.getElementById('custom-image-style');
+            const statusEl = document.getElementById('custom-image-status');
+            const previewEl = document.getElementById('custom-image-preview');
+            const actionsEl = document.getElementById('custom-image-actions');
+            const btn = document.getElementById('custom-image-generate-btn');
+            const userText = String(promptEl && promptEl.value || '').trim();
+            if (!userText) {
+                showAppToast('Hãy nhập prompt hoặc mô tả trước khi tạo ảnh.', 'warn');
+                return;
+            }
+            const style = styleEl ? styleEl.value : 'diagram';
+            const imageId = nextCustomLessonImageId();
+            const prefix = style === 'photo' ? 'LOẠI: THỰC_TẾ. ' : 'LOẠI: SƠ_ĐỒ. ';
+            const fullPrompt = imageId + ': custom | ' + userText.slice(0, 80) + ' | ' + (style === 'photo' ? 'photo' : 'diagram') + ' | ' + prefix + userText;
+            if (btn) btn.disabled = true;
+            if (statusEl) {
+                statusEl.className = 'mt-2 text-xs text-sky-700';
+                statusEl.textContent = 'Đang tạo ảnh từ mô tả tùy chọn...';
+            }
+            try {
+                const dataUrl = await createLessonIllustration(fullPrompt, function (message) {
+                    if (statusEl) statusEl.textContent = message;
+                });
+                generatedLessonImages.set(imageId, dataUrl);
+                lessonImagePromptById.set(imageId, fullPrompt);
+                persistLessonImageState();
+                if (previewEl) {
+                    previewEl.src = dataUrl;
+                    previewEl.classList.remove('hidden');
+                    previewEl.dataset.imageId = imageId;
+                    previewEl.dataset.alt = userText.slice(0, 80);
+                }
+                if (actionsEl) actionsEl.classList.remove('hidden');
+                if (statusEl) {
+                    statusEl.className = 'mt-2 text-xs text-emerald-700';
+                    statusEl.textContent = 'Đã tạo ' + imageId + '. Có thể tải PNG, copy Data URL hoặc chèn vào bài.';
+                }
+            } catch (error) {
+                if (isCanvasImageGenerationBlocked(error)) canvasImageGenerationBlocked = true;
+                if (statusEl) {
+                    statusEl.className = 'mt-2 text-xs text-rose-700';
+                    statusEl.textContent = 'Chưa tạo được ảnh: ' + describeGeminiError(error);
+                }
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function setupCustomImageToolCard() {
+            const generateBtn = document.getElementById('custom-image-generate-btn');
+            if (!generateBtn || generateBtn.dataset.bound === '1') return;
+            generateBtn.dataset.bound = '1';
+            generateBtn.addEventListener('click', function () { generateCustomLessonImage(); });
+            const downloadBtn = document.getElementById('custom-image-download-btn');
+            if (downloadBtn) downloadBtn.addEventListener('click', function () {
+                const previewEl = document.getElementById('custom-image-preview');
+                if (!previewEl || !previewEl.src) return;
+                downloadLessonImagePng(previewEl.src, (previewEl.dataset.imageId || 'hinh-tuy-chon') + '.png');
+            });
+            const copyBtn = document.getElementById('custom-image-copy-btn');
+            if (copyBtn) copyBtn.addEventListener('click', function () {
+                const previewEl = document.getElementById('custom-image-preview');
+                if (!previewEl || !previewEl.src) return;
+                safeCopy(previewEl.src, copyBtn);
+            });
+            const insertBtn = document.getElementById('custom-image-insert-btn');
+            if (insertBtn) insertBtn.addEventListener('click', function () {
+                const previewEl = document.getElementById('custom-image-preview');
+                if (!previewEl || !previewEl.dataset.imageId) {
+                    showAppToast('Chưa có ảnh để chèn. Hãy tạo ảnh trước.', 'warn');
+                    return;
+                }
+                insertCustomImageIntoLesson(previewEl.dataset.imageId, previewEl.dataset.alt || 'Hình tùy chọn');
+            });
+        }
+
         window.parseAndPreview = parseAndPreview;
         window.refreshLessonValidation = window.refreshLessonValidation;
         window.exportToWord = exportToWord;

@@ -1,26 +1,30 @@
 # IMPLEMENT
 
-Trạng thái: ĐÃ LÀM — vá VERIFY FAIL soankhbd: NLS/AI tự tick + Mistral OCR bắt buộc
+Trạng thái: ĐÃ LÀM — vá VERIFY FAIL soanbaigemini: khớp 100% HINH_xx + card tạo ảnh tùy chọn
 
 ## File đã đổi
 
-- `js/khbd-app.js`
-- `mistral-ocr-client.js` (export `getKeys` để `getUserMistralKeys` đọc được)
-- `tests/khbd-structured-candidates-smoke.js`
-- `tests/khbd-mistral-ocr-smoke.js`
+- `backupcode viettailieu/soanbaigemini.html`
+- `lesson-import.js` (nhận marker `HINH_CUSTOM_xx`)
+- `tests/soanbaigemini-plan-smoke.js`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Nội dung chính
 
-1. **NLS**: `normalizeTeachingContext` và `ensureIntegrationStandards` nạp 2–3 mục `catalogFallbackRecords("digital", grade)` khi tích hợp số bật. Checkbox con không còn `disabled` vì thiếu OCR.
-2. **AI**: khi tick `toggleAiCompetency`, gọi `catalogFallbackRecords("ai", grade)` (1–3 mã). Bỏ tick thì xóa mã AI như cũ.
-3. **Mistral OCR**: `getUserMistralKeys` đọc thêm `global_mistral_keys`, `AiDesignConfig.getMistralKeys()`, `MistralOcr.getKeys()`. `readTextbookWithMistral` luôn hiện “Đang nhận diện SGK bằng Mistral OCR...”, chỉ fallback Gemini khi hết key/lỗi. `handleAnalyzeSourceMaterials` gọi `readTextbookWithMistral` thay vì `handleGenerateVision`.
+1. **Khớp hình ảnh**
+   - Prompt Bước 1 khóa mã liên tục `HINH_01`, `HINH_02`; mọi hình phải có `![Mô tả](HINH_xx)`.
+   - Prompt Bước 2 tiếp nối `HINH_03`, `HINH_04`..., liệt kê đủ mã đã dùng.
+   - `buildLessonImageInventory()` / `collectMarkerIdsFromLessonSources()`: marker trong bài mà thiếu DANH SÁCH HÌNH thì tự sinh prompt từ mô tả xung quanh (`autoFilled`) và **luôn hiện thẻ tạo ảnh**. Không còn chỉ hiện hint rồi ẩn khung.
+
+2. **Card “Tạo ảnh từ Prompt / Mô tả tùy chọn”**
+   - Textarea prompt, phong cách Sơ đồ/Vector SGK hoặc Ảnh thực tế.
+   - Nút **Tạo ảnh ngay** → `createLessonIllustration()`.
+   - Xem trước, **Tải PNG**, **Copy Data URL**, **Chèn vào bài soạn** `![Mô tả](HINH_CUSTOM_xx)`.
 
 ## Test đã chạy
 
 ```
-node tests/khbd-structured-candidates-smoke.js
-node tests/khbd-mistral-ocr-smoke.js
+node tests/soanbaigemini-plan-smoke.js
 ```
 
-Kết quả: **pass** (`khbd-structured-candidates-smoke.js`, `khbd-mistral-ocr-smoke.js`).
+Kết quả: **pass**.

@@ -29,8 +29,8 @@
     const AI_MARKER_LINE_RE = /^\s*(\[\[AI\]\]|\[AI\])\s*$/i;
     const AI_MARKER_INLINE_RE = /\s*(\[\[AI\]\]|\[AI\])\s*$/i;
     // HINH_MINDMAP từng được dùng bởi bản Canvas cũ; vẫn nhận để import lại bài cũ.
-    const IMAGE_MARKER_RE = /!\[[^\]]*\]\((HINH[_\s-]*\d+|HÌNH[_\s-]*\d+|HINH_MINDMAP)\)/gi;
-    const IMAGE_REF_RE = /^(?:(?:HINH|HÌNH|IMAGE)[_\s-]*\d+|HINH_MINDMAP)$/i;
+    const IMAGE_MARKER_RE = /!\[[^\]]*\]\((HINH[_\s-]*CUSTOM[_\s-]*\d+|HINH[_\s-]*\d+|HÌNH[_\s-]*\d+|HINH_MINDMAP)\)/gi;
+    const IMAGE_REF_RE = /^(?:(?:HINH|HÌNH|IMAGE)[_\s-]*(?:CUSTOM[_\s-]*)?\d+|HINH_MINDMAP)$/i;
 
     function slugify(value) {
         return String(value || '')
@@ -1297,6 +1297,8 @@ ${getLessonOutputSkeleton()}`;
 
     function normalizeImageId(value) {
         const text = String(value || '').trim().toUpperCase().replace(/\s+/g, '_');
+        const custom = text.match(/HINH[_-]*CUSTOM[_-]*(\d+)/i);
+        if (custom) return `HINH_CUSTOM_${String(custom[1]).padStart(2, '0')}`;
         const match = text.match(/HINH[_-]*(\d+)/i) || text.match(/HÌNH[_-]*(\d+)/i);
         if (match) return `HINH_${String(match[1]).padStart(2, '0')}`;
         return text;

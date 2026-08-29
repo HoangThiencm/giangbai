@@ -28,7 +28,14 @@ const checks = [
     ['bài tập bám kỹ năng cần đạt', /tương ứng trực tiếp với 1 kỹ năng trong KỸ NĂNG CẦN ĐẠT/.test(html)],
     ['validator chặn tự luận dưới 5 câu', /essayList\.length < 5[\s\S]*phải đủ đúng 5 câu phân hóa/.test(html)],
     ['repair bổ sung đủ 5 câu tự luận', /function buildFormatRepairPrompt[\s\S]*Nếu TỰ LUẬN dưới 5 câu[\s\S]*Câu 5 Vận dụng thực tế/.test(html)],
-    ['giữ lọc đáp án số tự luận', /isLotrinhEssayNumericAnswer/.test(html)]
+    ['giữ lọc đáp án số tự luận', /isLotrinhEssayNumericAnswer/.test(html)],
+    ['Bước 1 khóa HINH_01 HINH_02', /function buildTheoryPhasePrompt[\s\S]*KHÓA MÃ HÌNH BƯỚC 1[\s\S]*HINH_01[\s\S]*HINH_02/.test(html)],
+    ['Bước 2 tiếp nối HINH_03', /function buildRemainingSectionsPrompt[\s\S]*KHÓA MÃ HÌNH BƯỚC 2[\s\S]*HINH_03/.test(html)],
+    ['inventory tự tạo prompt khi thiếu danh sách hình', /function buildLessonImageInventory[\s\S]*buildFallbackPromptFromContext[\s\S]*autoFilled/.test(html)],
+    ['card tạo ảnh prompt tùy chọn', /id="custom-image-tool-card"/.test(html) && /Tạo ảnh từ Prompt \/ Mô tả tùy chọn/.test(html)],
+    ['nút tạo ảnh ngay', /id="custom-image-generate-btn"[\s\S]*Tạo ảnh ngay/.test(html)],
+    ['chèn HINH_CUSTOM vào bài', /HINH_CUSTOM_/.test(html) && /function insertCustomImageIntoLesson/.test(html)],
+    ['tải PNG và copy data URL', /id="custom-image-download-btn"/.test(html) && /id="custom-image-copy-btn"/.test(html)]
 ];
 
 let failed = 0;
