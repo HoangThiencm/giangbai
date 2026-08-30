@@ -1,89 +1,117 @@
-# PLAN: Tích hợp ứng dụng Xây dựng Phụ lục (xaydungphuluc.html) vào Hệ thống Portal (Mở Tab Mới) và Phân quyền Quản trị Admin
+# PLAN: Đưa xaydungphuluc.html ra Thư mục Gốc (Đồng cấp index.html), Tự động Dùng Chung API Key từ soankhbd.html, và Bật Security Guard Chống Lộ Code
 
 ## Hiện trạng
-1. Đã hoàn thành xây dựng ứng dụng web độc lập [xaydungphuluc.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/GIAO%20AN/XAYDUNGPHULUC/xaydungphuluc.html) chuyên biệt cho khối THCS (Lớp 6 đến Lớp 9) chuẩn Công văn 5512/BGDĐT-GDTrH với đầy đủ chức năng quản lý API Key, cấu hình độc lập NLS và AI, bóc tách tài liệu và xuất Word .docx / Zip.
-2. Hiện tại, ứng dụng chưa được gắn vào giao diện Cổng thông tin trung tâm ([index.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/index.html)) trong lưới công cụ dành cho giáo viên (`mainToolsGrid`).
-3. Trong bảng điều khiển quản trị ([admin.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/admin.html)), danh mục tính năng toàn cục (`features`), danh mục phân quyền trang (`allowedPages` / `PAGE_CONFIG`), và cấu hình quyền cho từng giáo viên (`user_features`) chưa có mục quản lý bật/tắt và phân quyền cho công cụ `xaydungphuluc`.
+1. **Vị trí tệp**: `xaydungphuluc.html` hiện đang nằm trong thư mục con `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`. Người dùng muốn đưa ra ngoài thư mục gốc (đồng cấp với `index.html`, `soankhbd.html`, `admin.html`) để đường dẫn trực quan `https://hoangthiencm.id.vn/xaydungphuluc.html` và thuận tiện tích hợp.
+2. **Chia sẻ API Key**: Trong [js/khbd-gemini.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/js/khbd-gemini.js) của `soankhbd.html`, API keys được lưu trong `localStorage` theo cấu trúc:
+   - `khbd_user_gemini_keys_${userEmail}` (khóa chính theo tài khoản giáo viên đăng nhập)
+   - `khbd_user_gemini_keys_default`
+   - `khbd_gemini_api_keys`
+   - `gemini_api_keys`
+   - `global_gemini_keys`
+   Khi giáo viên đã nhập key trong `soankhbd.html`, `xaydungphuluc.html` cần tự động đọc các key này để giáo viên không phải nhập lại.
+3. **Bảo vệ mã nguồn (Chống F12 / DevTools)**: Trong ảnh chụp thực tế của người dùng, cửa sổ DevTools (F12) mở được và thấy toàn bộ mã HTML/JS vì trong `<head>` của `xaydungphuluc.html` chưa nhúng [js/security-guard.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/js/security-guard.js) và [access-control.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/access-control.js) như các trang khác (`soankhbd.html`, `index.html`, `admin.html`).
+4. **Phân quyền Admin & Backend**: Cần hoàn thiện cả `api/helpers.php`, `admin.html`, `access-control.js` để đường dẫn trang được đồng bộ chuẩn `xaydungphuluc.html`.
 
 ## Phạm vi
-1. **Tích hợp Thẻ công cụ vào Lưới công cụ Giáo viên trên Portal chính ([index.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/index.html))**:
-   - Thêm thẻ công cụ `data-tool="xaydungphuluc"` vào cụm công cụ soạn giảng / sư phạm trong `#mainToolsGrid`.
-   - Thiết lập mở ra tab mới: `target="_blank" rel="noopener noreferrer"`.
-   - Đường dẫn liên kết: `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`.
-   - Thiết kế giao diện thẻ đồng bộ với phong cách hệ thống: Tiêu đề *Xây dựng Phụ lục 1, 2, 3*, mô tả *Chuẩn CV 5512 · THCS Lớp 6–9 · Tích hợp NLS & AI*, icon sư phạm/tài liệu, hiệu ứng hover, glow và badge nhận diện.
-   - Bổ sung `xaydungphuluc: 'GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html'` vào hằng số `TOOL_PAGE_LINKS` trong JavaScript của `index.html`.
-   - Áp dụng logic kiểm soát hiển thị thẻ theo cấu hình phân quyền tài khoản giáo viên và cấu hình bật/tắt toàn cục của Admin.
-
-2. **Tích hợp Phân quyền Quản trị Toàn diện trong Bảng điều khiển Admin ([admin.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/admin.html))**:
-   - **Bật/Tắt Toàn cục (Admin Global Features)**:
-     + Thêm ô checkbox cấu hình `id="cfg_xaydungphuluc"` trong khu vực *2. Cài đặt Ứng dụng Client (Admin Global)*.
-     + Cập nhật danh sách hằng số tính năng `FEATURE_KEYS` và logic lưu/tải cấu hình toàn cục lên kho lưu trữ.
-   - **Phân quyền Từng Tài khoản Giáo viên (User Permissions / Allowed Pages)**:
-     + Bổ sung định nghĩa trang vào `PAGE_CONFIG`: `xaydungphuluc: { title: 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', url: 'GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html' }`.
-     + Đưa `xaydungphuluc` vào danh sách nhóm công cụ mở cho Giáo viên (`teacherPages` / `defaultTeacherPages`).
-     + Hiển thị checkbox `xaydungphuluc` trong modal Tạo tài khoản mới (`#createAllowedPages`), modal Import danh sách tài khoản Excel (`#importAllowedPages`), và modal Chỉnh sửa quyền tài khoản (`#editAllowedPages`).
-     + Đồng bộ tính năng `user_features` và `allowed_pages` khi Admin cấp/thu hồi quyền của giáo viên.
-
-3. **Cập nhật Điều hướng & Xác thực Thân thiện trong ([xaydungphuluc.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/GIAO%20AN/XAYDUNGPHULUC/xaydungphuluc.html))**:
-   - Thêm nút *Về Trang chủ Portal* trên thanh Header của `xaydungphuluc.html` (liên kết về `../../index.html`).
-   - Kiểm tra xác thực nhẹ nhàng phía client: nếu chạy trong môi trường hệ thống đã đăng nhập, tự động lấy thông tin giáo viên / email từ `localStorage` (`userEmail`, `teacherName` nếu có) để điền sẵn vào biểu mẫu.
-
-4. **Bộ kiểm thử tích hợp tự động ([tests/xaydungphuluc-integration-smoke.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/tests/xaydungphuluc-integration-smoke.js))**:
-   - Viết bài kiểm thử Node.js tự động kiểm tra:
-     + `index.html`: Thẻ công cụ `data-tool="xaydungphuluc"`, mở tab mới `target="_blank"`, `TOOL_PAGE_LINKS.xaydungphuluc`.
-     + `admin.html`: Checkbox `cfg_xaydungphuluc`, cấu hình trong `PAGE_CONFIG`, mảng phân quyền giáo viên và logic đồng bộ quyền.
-     + `xaydungphuluc.html`: Đường dẫn hợp lệ, liên kết quay về trang chủ.
+1. **Đưa tệp `xaydungphuluc.html` ra Thư mục Gốc**:
+   - Di chuyển / tạo `xaydungphuluc.html` trực tiếp tại thư mục gốc của dự án (`/xaydungphuluc.html`).
+   - Cập nhật liên kết Trang chủ trong header: `<a href="index.html" class="btn secondary">🏠 Trang chủ</a>`.
+   - Cập nhật tất cả các đường dẫn tương đối tài nguyên:
+     + `<script src="js/security-guard.js"></script>`
+     + `<script src="access-control.js"></script>`
+   - Dọn dẹp/chuyển đổi tệp cũ trong `GIAO AN/XAYDUNGPHULUC/` hoặc để file chuyển hướng về trang gốc.
+2. **Bảo mật Chống Xem Mã Nguồn / DevTools (Security Guard)**:
+   - Nhúng `<script src="js/security-guard.js"></script>` làm thẻ đầu tiên trong `<head>` của `xaydungphuluc.html`.
+   - Nhúng `<script src="access-control.js"></script>` để kiểm tra phân quyền giáo viên theo tài khoản đăng nhập.
+   - Khi chạy trên domain `hoangthiencm.id.vn`, `security-guard.js` sẽ tự động vô hiệu hóa F12, Ctrl+Shift+I, Ctrl+U, chuột phải và chặn Inspect Element.
+3. **Tự động Dùng Chung API Key từ `soankhbd.html`**:
+   - Hàm `loadKeys()` trong `xaydungphuluc.html` sẽ quét toàn bộ danh sách key lưu trữ theo tài khoản:
+     + `const email = String(localStorage.getItem('userEmail') || 'default').trim().toLowerCase();`
+     + `khbd_user_gemini_keys_${email}`
+     + `khbd_user_gemini_keys_default`
+     + `khbd_gemini_api_keys`
+     + `gemini_api_keys`
+     + `xdpl_gemini_api_keys`
+     + `global_gemini_keys`
+   - Nếu phát hiện danh sách API keys hợp lệ (dạng `AIza...`), tự động nạp vào bộ nhớ và hiển thị số lượng key sẵn sàng, tuyệt đối không bắt người dùng nhập lại.
+4. **Đồng bộ Hệ thống Portal & Phân quyền Quản trị Admin**:
+   - **`index.html`**:
+     + Cập nhật thẻ công cụ: `<a href="xaydungphuluc.html" target="_blank" rel="noopener noreferrer" data-tool="xaydungphuluc" class="tool-tile tool-tile--colored tool-tile--xaydungphuluc">`.
+     + Cập nhật `TOOL_PAGE_LINKS.xaydungphuluc = 'xaydungphuluc.html'`.
+   - **`admin.html`**:
+     + Cập nhật `hostingPages.xaydungphuluc = { title: 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', url: 'xaydungphuluc.html' }`.
+     + Đảm bảo `hostingPages` được merge an toàn: `hostingPages = Object.assign({}, hostingPages, data.pages || {});`.
+     + Đảm bảo `teacherFeatureGroups`, `USER_FEATURE_GROUPS`, `defaultTeacherPages`, `CLIENT_FEATURE_CHECKS`, `FEATURE_NAMES` đều có `xaydungphuluc`.
+   - **`api/helpers.php`**:
+     + Đăng ký `xaydungphuluc` với `url => 'xaydungphuluc.html'` trong `page_catalog()`.
+     + Đăng ký trong `teacher_workspace_page_ids()`, `teacher_default_workspace_extras()`, `teacher_feature_keys_for_pages()`.
+   - **`access-control.js`**:
+     + Đăng ký `pageKeys['xaydungphuluc.html'] = 'xaydungphuluc'`.
+     + Đăng ký `pageUrls['xaydungphuluc'] = 'xaydungphuluc.html'`.
+   - **`global_config.json`**:
+     + Bổ sung `"xaydungphuluc": true` vào `features`.
+5. **Cập nhật Bộ Kiểm thử Tự động ([tests/xaydungphuluc-integration-smoke.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/tests/xaydungphuluc-integration-smoke.js))**:
+   - Kiểm tra file `xaydungphuluc.html` ở thư mục gốc có nhúng `security-guard.js`, `access-control.js`, hàm load key `khbd_user_gemini_keys_...`.
+   - Kiểm tra `index.html`, `admin.html`, `api/helpers.php`, `access-control.js`, `global_config.json` đồng bộ chính xác.
 
 ## Ngoài phạm vi
-- Không thay đổi các chức năng nội tại của các công cụ khác trong `index.html` và `admin.html`.
-- Không thay đổi cấu trúc dữ liệu người dùng đang có trên cơ sở dữ liệu.
+- Không thay đổi các chức năng nội tại của `soankhbd.html` hay các công cụ khác.
+- Không thay đổi bảng cơ sở dữ liệu MySQL.
 
 ## File dự kiến tác động
-- `index.html` [CHỈNH SỬA / TÍCH HỢP THẺ CÔNG CỤ & TOOL_PAGE_LINKS]
-- `admin.html` [CHỈNH SỬA / TÍCH HỢP GLOBAL TOGGLE & PHÂN QUYỀN GIÁO VIÊN]
-- `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html` [CẬP NHẬT HEADER LIÊN KẾT VỀ TRANG CHỦ]
-- `tests/xaydungphuluc-integration-smoke.js` [TẠO MỚI]
+- `xaydungphuluc.html` [TẠO Ở GỐC / NHÚNG SECURITY-GUARD & AUTO-LOAD KEY SOANKHBD]
+- `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html` [CHUYỂN HƯỚNG HOẶC ĐỒNG BỘ NỘI DUNG VỀ GỐC]
+- `index.html` [CẬP NHẬT ĐƯỜNG DẪN XAYDUNGPHULUC.HTML]
+- `admin.html` [CẬP NHẬT ĐƯỜNG DẪN XAYDUNGPHULUC.HTML & MERGE HOSTING_PAGES]
+- `api/helpers.php` [CẬP NHẬT URL XAYDUNGPHULUC.HTML VÀ QUYỀN GIÁO VIÊN]
+- `access-control.js` [CẬP NHẬT ÁNH XẠ XAYDUNGPHULUC.HTML]
+- `global_config.json` [THÊM XAYDUNGPHULUC VÀO FEATURES]
+- `tests/xaydungphuluc-smoke.js` [CẬP NHẬT ĐƯỜNG DẪN FILE TEST GỐC]
+- `tests/xaydungphuluc-integration-smoke.js` [CẬP NHẬT KIỂM TRA ĐẦY ĐỦ SECURITY & KEY SHARING]
 - `docs/handoff/PLAN.md` [GHI ĐÈ]
 - `docs/handoff/.lock` [GHI MỚI / NỘI DUNG: LOCK]
 - `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi triển khai]
 - `docs/handoff/VERIFY.md` [Tester cập nhật kết quả nghiệm thu]
 
 ## Các bước thực hiện
-1. **Bước 1: Cập nhật `index.html`**:
-   - Thêm thẻ công cụ `xaydungphuluc` vào lưới `#mainToolsGrid` với thuộc tính `target="_blank" rel="noopener noreferrer"`, href trỏ đến `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`.
-   - Cập nhật định nghĩa `TOOL_PAGE_LINKS`: thêm key `xaydungphuluc: 'GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html'`.
-   - Bổ sung CSS định dạng màu sắc/hiệu ứng cho `.tool-tile--phuluc` / `.tool-tile--xaydungphuluc` hài hòa với giao diện chung.
-2. **Bước 2: Cập nhật `admin.html`**:
-   - Thêm ô checkbox `cfg_xaydungphuluc` vào khu vực *Cài đặt Ứng dụng Client (Admin Global)*.
-   - Thêm `xaydungphuluc` vào danh sách `FEATURE_KEYS`.
-   - Thêm `xaydungphuluc` vào `PAGE_CONFIG` và mảng quyền mặc định của Giáo viên (`defaultTeacherPages`).
-   - Cập nhật hàm thu thập và lưu cài đặt tính năng toàn cục cũng như hàm đồng bộ `user_features`.
-3. **Bước 3: Cập nhật `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`**:
-   - Thêm nút liên kết `<a href="../../index.html" class="btn secondary">🏠 Trang chủ</a>` vào Header.
-   - Tự động nạp sẵn tên giáo viên từ `localStorage.getItem('userName')` hoặc `localStorage.getItem('userEmail')` nếu có.
-4. **Bước 4: Viết và chạy bộ kiểm thử tự động `tests/xaydungphuluc-integration-smoke.js`**:
-   - Chạy kiểm thử tự động bằng Node.js và xác nhận PASS 100%.
+1. **Bước 1: Tạo và hoàn thiện `xaydungphuluc.html` tại thư mục gốc**:
+   - Thêm `<script src="js/security-guard.js"></script>` và `<script src="access-control.js"></script>` vào ngay đầu `<head>`.
+   - Nút Trang chủ trỏ về `index.html`.
+   - Nâng cấp hàm `loadKeys()`: Tự động nạp danh sách key từ `khbd_user_gemini_keys_${userEmail}`, `khbd_user_gemini_keys_default`, `khbd_gemini_api_keys`, `gemini_api_keys`, `xdpl_gemini_api_keys`, `global_gemini_keys`.
+2. **Bước 2: Cập nhật `api/helpers.php`**:
+   - Cập nhật `page_catalog()`: `'xaydungphuluc' => ['title' => 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', 'url' => 'xaydungphuluc.html']`.
+   - Cập nhật `teacher_workspace_page_ids()`, `teacher_default_workspace_extras()`, `teacher_feature_keys_for_pages()`.
+3. **Bước 3: Cập nhật `access-control.js` & `global_config.json`**:
+   - Đăng ký `pageKeys['xaydungphuluc.html'] = 'xaydungphuluc'` và `pageUrls['xaydungphuluc'] = 'xaydungphuluc.html'`.
+   - Thêm `"xaydungphuluc": true` vào `global_config.json`.
+4. **Bước 4: Cập nhật `index.html` & `admin.html`**:
+   - `index.html`: `href="xaydungphuluc.html"`, `TOOL_PAGE_LINKS.xaydungphuluc = 'xaydungphuluc.html'`.
+   - `admin.html`: `hostingPages.xaydungphuluc.url = 'xaydungphuluc.html'`, merge `hostingPages = Object.assign({}, hostingPages, data.pages || {});`.
+5. **Bước 5: Cập nhật và chạy kiểm thử tự động**:
+   - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`, xác nhận PASS 100%.
 
 ## Rủi ro
-- **Rủi ro 1**: Tài khoản giáo viên cũ chưa có cờ phân quyền `xaydungphuluc` trong danh sách `allowed_pages`.
-  - *Giải pháp*: Trong hàm `ensureTeacherToolPages` hoặc `augmentTeacherAllowedSet`, tự động cấp quyền mặc định cho giáo viên khi tính năng toàn cục đang ở trạng thái bật (`features.xaydungphuluc !== false`), đồng thời cho phép Admin tùy chỉnh bật/tắt riêng cho từng tài khoản.
-- **Rủi ro 2**: Đường dẫn tương đối từ `index.html` tới `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html` có khoảng trắng trong tên thư mục.
-  - *Giải pháp*: Mã hóa URL chuẩn `GIAO%20AN/XAYDUNGPHULUC/xaydungphuluc.html` hoặc dùng đường dẫn hợp lệ đảm bảo mở chính xác trên mọi máy chủ web.
+- **Rủi ro 1**: Người dùng truy cập bookmark hoặc URL cũ `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`.
+  - *Giải pháp*: Trong `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`, thêm mã tự động chuyển hướng sang `../../xaydungphuluc.html`.
+- **Rủi ro 2**: Trình duyệt lưu cache localStorage theo domain.
+  - *Giải pháp*: `xaydungphuluc.html` và `soankhbd.html` cùng nằm trên cùng domain (`hoangthiencm.id.vn`) nên truy cập chung `localStorage` hoàn toàn tự nhiên và tức thì.
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động qua Node.js**:
-   - Chạy lệnh `node tests/xaydungphuluc-integration-smoke.js`.
-   - Xác nhận: Kiểm tra sự hiện diện của thẻ `data-tool="xaydungphuluc"` trong `index.html`, `target="_blank"`, `TOOL_PAGE_LINKS`, checkbox cấu hình trong `admin.html`, cấu hình `PAGE_CONFIG`, mảng phân quyền giáo viên $\rightarrow$ PASS 100%.
+   - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`:
+     + Xác nhận file `xaydungphuluc.html` ở thư mục gốc tồn tại và hợp lệ.
+     + Xác nhận `security-guard.js` và `access-control.js` được nhúng trong `<head>`.
+     + Xác nhận hàm nạp key quét qua `khbd_user_gemini_keys_...`.
+     + Xác nhận `index.html`, `admin.html`, `api/helpers.php`, `access-control.js` đều trỏ đúng `xaydungphuluc.html`.
 2. **Kiểm thử thủ công trên trình duyệt**:
-   - Mở `index.html`: Xác nhận thẻ công cụ *Xây dựng Phụ lục 1, 2, 3* xuất hiện trong lưới công cụ.
-   - Nhấp vào thẻ công cụ: Xác nhận trình duyệt mở ra **Tab Mới** với giao diện `xaydungphuluc.html`.
-   - Mở `admin.html`: Đăng nhập admin, kiểm tra checkbox bật/tắt toàn cục *Xây dựng Phụ lục 1, 2, 3*, kiểm tra modal phân quyền cho giáo viên có mục chọn *Xây dựng Phụ lục 1, 2, 3*.
-   - Thử nghiệm tắt tính năng trên Admin và kiểm tra thẻ công cụ trên `index.html` được ẩn tương ứng.
+   - Mở `xaydungphuluc.html` trực tiếp trên domain `https://hoangthiencm.id.vn/xaydungphuluc.html`.
+   - Thử bấm F12 hoặc chuột phải $\rightarrow$ Xác nhận Security Guard chặn và bảo vệ mã nguồn.
+   - Nhập API Key bên `soankhbd.html`, sau đó mở `xaydungphuluc.html` $\rightarrow$ Xác nhận badge hiển thị ngay số lượng key sẵn sàng mà không cần nhập lại.
+   - Mở `admin.html` $\rightarrow$ Xác nhận mục phân quyền giáo viên hiển thị toggle `Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)`.
 
 ## Tiêu chí nghiệm thu
-1. Trên giao diện chính `index.html` có thẻ công cụ *Xây dựng Phụ lục 1, 2, 3*, nhấp vào sẽ mở ứng dụng `xaydungphuluc.html` trong **Tab mới** (`target="_blank"`).
-2. Trên bảng điều khiển `admin.html` có đầy đủ chức năng quản trị và phân quyền cho `xaydungphuluc`:
-   - Công tắc Bật/Tắt toàn cục (Global feature toggle).
-   - Tùy chọn phân quyền cho từng tài khoản Giáo viên (Tạo mới, Import Excel, Chỉnh sửa quyền).
-3. Ứng dụng `xaydungphuluc.html` có nút liên kết quay về Trang chủ và tích hợp dữ liệu người dùng liền mạch.
-4. Bộ kiểm thử tự động `tests/xaydungphuluc-integration-smoke.js` chạy thành công và PASS 100%.
+1. File `xaydungphuluc.html` nằm ở thư mục gốc (đồng cấp với `index.html`), mở trực tiếp tại `https://hoangthiencm.id.vn/xaydungphuluc.html`.
+2. Nhúng đầy đủ `js/security-guard.js` và `access-control.js`, bảo vệ chống mở F12/DevTools khi chạy production.
+3. Tự động nhận diện và dùng chung API Key đã lưu từ `soankhbd.html` (`khbd_user_gemini_keys_...`), người dùng không phải nhập lại.
+4. Tích hợp phân quyền hoàn chỉnh trên `admin.html`, `index.html`, `api/helpers.php` và `access-control.js`.
+5. Toàn bộ smoke test tự động đều PASS 100%.

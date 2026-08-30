@@ -1,43 +1,28 @@
-# IMPLEMENT: Tích hợp Xây dựng Phụ lục vào Portal và phân quyền Admin
+# IMPLEMENT: Đưa Xây dựng Phụ lục ra thư mục gốc và đồng bộ quyền truy cập
 
 ## Phạm vi đã triển khai
 
-- Hoàn tất các hạng mục trong `docs/handoff/PLAN.md` cho công cụ `xaydungphuluc`.
-- Giữ nguyên `PLAN.md`, `VERIFY.md`, `.lock` (nếu có) và các thay đổi có sẵn ngoài phạm vi.
-- Không commit hoặc push.
+- Tạo ứng dụng tại `xaydungphuluc.html` ở thư mục gốc, đồng cấp với Portal.
+- Giữ URL cũ bằng một trang chuyển hướng từ `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`.
+- Bổ sung Security Guard, kiểm soát truy cập và tự nhận các Gemini API key đã lưu từ KHBD.
+- Đồng bộ liên kết Portal, cấu hình Admin, backend phân quyền, cấu hình global và các smoke test.
+- Không sửa `PLAN.md`, `VERIFY.md` hoặc `.lock`; không commit/push.
 
 ## File thay đổi
 
-### `index.html`
-
-- Thêm thẻ công cụ `data-tool="xaydungphuluc"` vào `#mainToolsGrid`.
-- Liên kết đúng tới `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`, mở tab mới với `noopener noreferrer`.
-- Bổ sung `TOOL_PAGE_LINKS.xaydungphuluc`; logic quyền tài khoản và công tắc global hiện có tự áp dụng cho thẻ mới.
-- Thêm kiểu thẻ màu, hover/glow và nội dung nhận diện CV 5512, THCS 6–9, NLS & AI.
-
-### `admin.html`
-
-- Thêm công tắc global `cfg_xaydungphuluc` và đăng ký trong `CLIENT_FEATURE_CHECKS`.
-- Bổ sung cấu hình trang `xaydungphuluc` (qua `PAGE_CONFIG`/`hostingPages`), tên tính năng và nhóm quyền công cụ giáo viên.
-- Thêm quyền này cho `defaultTeacherPages`, nên xuất hiện trong giao diện tạo và chỉnh sửa tài khoản giáo viên.
-- Đồng bộ `user_features` khi tạo, sửa hoặc cấp full quyền cho giáo viên bằng luồng đồng bộ sẵn có.
-
-### `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`
-
-- Bổ sung nút `Trang chủ` về `../../index.html` ở header.
-- Bổ sung nạp sẵn giáo viên từ `teacherName`, `userName` hoặc `userEmail` trong localStorage.
-
-### `tests/xaydungphuluc-integration-smoke.js`
-
-- Thêm smoke test tích hợp Portal/Admin/ứng dụng: thẻ mở tab mới, link map, checkbox global, cấu hình trang, các vùng cấp quyền, liên kết Trang chủ và identity prefill.
+- `xaydungphuluc.html`: ứng dụng chính ở thư mục gốc; nhúng `js/security-guard.js` và `access-control.js` đầu `head`, nút Trang chủ trỏ `index.html`, đọc key theo tài khoản và tất cả kho key dự phòng trong kế hoạch.
+- `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`: trang chuyển hướng tương thích về URL gốc.
+- `index.html`, `admin.html`: dùng URL gốc; Admin merge an toàn các trang cấu hình trả về từ backend.
+- `api/helpers.php`, `access-control.js`, `global_config.json`: đăng ký tính năng `xaydungphuluc` cho danh mục trang, không gian giáo viên, feature key, route access-control và feature toàn cục.
+- `tests/xaydungphuluc-smoke.js`, `tests/xaydungphuluc-integration-smoke.js`: kiểm tra vị trí mới, bảo mật, dùng chung key, chuyển hướng cũ và các ánh xạ tích hợp.
 
 ## Kiểm thử đã chạy
 
 - `node tests/xaydungphuluc-smoke.js` — PASS.
 - `node tests/xaydungphuluc-integration-smoke.js` — PASS.
-- Kiểm tra cú pháp JavaScript nội tuyến của `xaydungphuluc.html` — PASS.
-- `git diff --check` — PASS (chỉ có cảnh báo CRLF trên các tệp đã thay đổi từ trước).
+- `git diff --check` — PASS.
 
 ## Vấn đề còn lại
 
-- Chưa kiểm thử thao tác thật trên trình duyệt với phiên đăng nhập Admin/giáo viên; thực hiện bằng `/verify` theo quy trình.
+- Chưa thực hiện kiểm thử trình duyệt production cho F12/DevTools, đăng nhập giáo viên và key thật; bước này thuộc `/verify`.
+- Không thể chạy `php -l api/helpers.php` vì môi trường hiện tại không cài PHP CLI.

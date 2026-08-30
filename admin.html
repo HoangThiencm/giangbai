@@ -1955,7 +1955,7 @@
             vietbaocao: { title: 'Viết báo cáo AI', url: 'vietbaocao.html' },
             soankhbd: { title: 'Soạn Kế hoạch Bài dạy AI (KHBD)', url: 'soankhbd.html' },
             taovideo: { title: 'Tạo video bài giảng', url: 'taovideo/index.html' },
-            xaydungphuluc: { title: 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', url: 'GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html' },
+            xaydungphuluc: { title: 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', url: 'xaydungphuluc.html' },
             thanhtich: { title: 'Thống kê thành tích', url: 'thanhtich.html' },
             thoikhoabieu: { title: 'Xếp thời khóa biểu', url: 'thoikhoabieu.html' },
             phancongtochuyenmon: { title: 'Phân công chuyên môn', url: 'phancongtochuyenmon.html' },
@@ -2764,7 +2764,7 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Không tải được danh sách học sinh.');
 
-                hostingPages = data.pages || hostingPages;
+                hostingPages = Object.assign({}, hostingPages, data.pages || {});
                 cachedUsers = data.users || [];
                 cachedKey = key;
 

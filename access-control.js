@@ -33,7 +33,8 @@ async function accessControlMain() {
         'rutgon.html': 'rutgon',
         'thanhtich.html': 'thanhtich',
         'thoikhoabieu.html': 'thoikhoabieu',
-        'phancongtochuyenmon.html': 'phancongtochuyenmon'
+        'phancongtochuyenmon.html': 'phancongtochuyenmon',
+        'xaydungphuluc.html': 'xaydungphuluc'
     };
     const pageUrls = {
         lotrinh: 'lotrinhtoan6.html',
@@ -59,7 +60,8 @@ async function accessControlMain() {
         rutgon: 'rutgon.html',
         thanhtich: 'thanhtich.html',
         thoikhoabieu: 'thoikhoabieu.html',
-        phancongtochuyenmon: 'phancongtochuyenmon.html'
+        phancongtochuyenmon: 'phancongtochuyenmon.html',
+        xaydungphuluc: 'xaydungphuluc.html'
     };
     const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
     const lotrinhRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
