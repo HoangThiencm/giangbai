@@ -1,6 +1,6 @@
 {
   "lock-source-after-plan": {
-    "enabled": true,
+    "enabled": false,
     "PreToolUse": [
       {
         "matcher": "write_to_file|replace_file_content|multi_replace_file_content|run_command",
