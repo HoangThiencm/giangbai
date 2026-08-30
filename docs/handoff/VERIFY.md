@@ -4,38 +4,42 @@
 PASS
 
 ## Đối chiếu scope
-1. **Đồng bộ hóa luồng Đề xuất Bước 3 (PPDH & NLS) (`js/khbd-app.js`)**:
-   - Khi bấm `btnStep3Recommend`, `btnStep3PedagogyDigital`, hoặc `btnSuggestPedagogyStandards`, nút bấm lập tức chuyển sang trạng thái `⏳ Đang phân tích SGK & đề xuất...`, bị disabled và gắn `aria-busy="true"`.
-   - Các hàm `ensurePedagogyFromLesson` và `requestStructuredIntegrationCandidates("digital")` chạy với `silent: true` và `skipRender: true`, không còn bắn Toast trung gian màu xanh lam (Toast 1) và không tick checkbox tạm.
-   - Khi quá trình phân tích hoàn tất, checkbox được render cập nhật **một lần duy nhất** (atomic update), và chỉ phát **duy nhất 1 thông báo hoàn tất** (Toast xanh lá: *"✅ Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và Năng lực số (NLS) bám sát nội dung SGK."*).
-   - Nút bấm luôn được khôi phục trạng thái bình thường trong khối `finally` ngay cả khi có lỗi.
+1. **Chuẩn hóa 4 Hoạt động (A–D) theo Công văn 5512 (`js/khbd-prompts.js`, `js/khbd-app.js`)**:
+   - `calculateActivityTimeBudgets(..., { fourActivities: true })` phân bổ 100% thời lượng cho 4 hoạt động A + B + C + D (ví dụ 02 tiết 90 phút: A = 8p, B = 45p, C = 25p, D = 12p; tổng đúng 90 phút).
+   - `GENERATE_ACTIVITIES_AD` và `GENERATE_ACTIVITY_D` đã tích hợp trọn vẹn 4 nhiệm vụ tự học ở nhà (ôn tập, bài tập SGK/SBT còn lại, chuẩn bị bài mới, tìm tòi mở rộng) vào Bước 4 của Hoạt động D.
+   - `getFullLessonPlanMarkdown` ưu tiên ghép chuẩn 4 hoạt động A–D khi Hoạt động D đã bao gồm hướng dẫn tự học.
    - Khớp 100% scope trong PLAN.md.
 
-2. **Đồng bộ hóa Khung Năng lực AI (QĐ 2422) (`js/khbd-app.js`)**:
-   - `triggerAiCompetencyRecommendations` (khi bật toggle AI hoặc bấm đề xuất AI) hiển thị loading trên panel AI, chờ Gemini phân tích rồi mới tick chọn 1 lần duy nhất kèm 1 toast thông báo.
-   - Tôn trọng và bảo toàn các mục AI người dùng đã tự tay chọn (`autoSuggested === false`), không tự ý xóa bỏ.
+2. **Xử lý Nhúng Ảnh & Fallback Chú thích Hình vẽ trong Word (`js/khbd-docx.js`)**:
+   - `createIllustrationParagraphs`, `parseMarkdownToDocxElements` và `parseTableCellParagraphs` đã hỗ trợ xử lý marker `![caption](khbd-ill:id)`:
+     * Khi đã có ảnh: Nhúng ảnh `ImageRun` căn lề giữa sắc nét.
+     * Khi chưa vẽ ảnh / không có dữ liệu ảnh: Tự động chuyển đổi thành dòng chú thích in nghiêng thanh lịch `*(Hình vẽ minh họa: [caption])*`, loại bỏ 100% hiện tượng in chuỗi mã thô `![...](khbd-ill:id)` ra file Word.
    - Khớp 100% scope trong PLAN.md.
 
 ## Test đã chạy
 ```
-node tests/khbd-recommendation-flow-smoke.js
-node tests/khbd-4steps-workflow-smoke.js
-node tests/khbd-structured-candidates-smoke.js
-node tests/khbd-dotted-lines-smoke.js
-node tests/khbd-activity-d-dedupe-smoke.js
+node tests/khbd-activities-ad-standard-smoke.js
+node tests/khbd-docx-illustration-fallback-smoke.js
 node tests/khbd-time-budgets-smoke.js
+node tests/khbd-activity-e-dedupe-smoke.js
+node tests/khbd-activity-d-dedupe-smoke.js
 node tests/khbd-docx-format-smoke.js
+node tests/khbd-illustrations-smoke.js
+node tests/khbd-recommendation-flow-smoke.js
+node tests/khbd-dotted-lines-smoke.js
+node tests/khbd-table-columns-smoke.js
+node tests/khbd-list-numbering-smoke.js
 ```
-- Tất cả unit / smoke tests trực tiếp và liên quan đều PASS 100%.
+- Tất cả 11 bài unit / smoke test trực tiếp và liên quan đều PASS 100%.
 
 ## Pass / Fail từng tiêu chí
-1. **Tiêu chí 1**: Quá trình đề xuất PPDH, NLS (Bước 3) và Năng lực AI (Bước 4) diễn ra mượt mà, có trạng thái loading rõ ràng trên nút bấm. -> **PASS**
-2. **Tiêu chí 2**: Loại bỏ triệt để hiện tượng "chớp" giao diện (hiện lựa chọn tạm thời rồi vài giây sau tự động nhảy đổi sang lựa chọn khác). -> **PASS**
-3. **Tiêu chí 3**: Chỉ xuất hiện duy nhất 1 thông báo Toast xác nhận hoàn tất, không bị bắn 2–3 thông báo chồng lặp. -> **PASS**
-4. **Tiêu chí 4**: Toàn bộ các bài kiểm thử liên quan đều PASS 100%. -> **PASS**
+1. **Tiêu chí 1**: Chuẩn hóa trọn vẹn 4 hoạt động A, B, C, D theo đúng Công văn 5512, tích hợp đầy đủ nhiệm vụ về nhà và mở rộng thực tế vào Hoạt động D; tổng thời gian các hoạt động đúng 100% theo số tiết khai báo (02 tiết = đúng 90 phút). -> **PASS**
+2. **Tiêu chí 2**: File Word xuất ra nhúng đúng ảnh khi đã vẽ, hoặc hiển thị dòng chú thích `*(Hình vẽ minh họa: ...)*` lịch sự khi chưa vẽ ảnh, loại bỏ 100% mã thô `![...](khbd-ill:id)`. -> **PASS**
+3. **Tiêu chí 3**: Toàn bộ các bài kiểm thử liên quan đều PASS 100%. -> **PASS**
 
 ## Bug
 Không có.
+
 
 
 

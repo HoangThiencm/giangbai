@@ -694,11 +694,9 @@ class DocxGenerator {
       const illustrationMatch = trimmed.match(/^!\[([^\]]*)\]\(khbd-ill:([^)]+)\)$/);
       if (illustrationMatch) {
         const imageBlock = this.createIllustrationParagraphs(illustrationMatch[1], illustrationMatch[2]);
-        if (imageBlock.length) {
-          elements.push(...imageBlock);
-          i++;
-          continue;
-        }
+        elements.push(...(imageBlock.length ? imageBlock : [this.illustrationFallbackParagraph(illustrationMatch[1])]));
+        i++;
+        continue;
       }
 
       // 3. Phân tích ĐƯỜNG KẺ NGANG (--- hoặc ***)
@@ -784,13 +782,32 @@ class DocxGenerator {
         continue;
       }
 
-      // 7. ĐOẠN VĂN BẢN BÌNH THƯỜNG
+      // 7. ĐOẠN VĂN BẢN BÌNH THƯỜNG (kể cả dòng lẫn marker khbd-ill)
+      const mixedIll = this.splitIllustrationSegments(trimmed);
+      if (mixedIll.some(part => part.type === "illustration")) {
+        mixedIll.forEach(part => {
+          if (part.type === "illustration") {
+            const block = this.createIllustrationParagraphs(part.caption, part.id);
+            elements.push(...(block.length ? block : [this.illustrationFallbackParagraph(part.caption)]));
+            return;
+          }
+          const leftover = String(part.text || "").trim();
+          if (!leftover) return;
+          const leftoverColor = this.lineIntegrationColor(leftover, runColor);
+          const leftoverRuns = this.parseInlineTextToRuns(leftover, leftoverColor);
+          elements.push(new Paragraph({
+            spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+            children: leftoverRuns
+          }));
+        });
+      } else {
       const lineColor = this.lineIntegrationColor(trimmed, runColor);
       const runs = this.parseInlineTextToRuns(trimmed, lineColor);
       elements.push(new Paragraph({
         spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
         children: runs
       }));
+      }
       }
 
       i++;
@@ -920,7 +937,25 @@ class DocxGenerator {
     const { Paragraph } = window.docx;
     const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
     const usable = lines.length ? lines : [""];
-    return usable.map(line => {
+    return usable.flatMap(line => {
+      const illParts = this.splitIllustrationSegments(line);
+      if (illParts.some(part => part.type === "illustration")) {
+        return illParts.flatMap(part => {
+          if (part.type === "illustration") {
+            const block = this.createIllustrationParagraphs(part.caption, part.id);
+            return block.length ? block : [this.illustrationFallbackParagraph(part.caption)];
+          }
+          const content = String(part.text || "").trim();
+          if (!content) return [];
+          const runs = isHeader
+            ? [this.coloredTextRun(content, { bold: true })]
+            : this.parseInlineTextToRuns(content, this.lineIntegrationColor(content, null));
+          return [new Paragraph({
+            spacing: { before: 0, after: 30, line: this.lineSpacing, lineRule: this.lineRule },
+            children: runs.length ? runs : [this.coloredTextRun(content, { bold: isHeader })]
+          })];
+        });
+      }
       const listMatch = !isHeader ? line.match(/^([-+.•])\s+(.+)$/) : null;
       const marker = listMatch ? listMatch[1] : "";
       const contentText = listMatch ? listMatch[2] : line;
@@ -930,11 +965,11 @@ class DocxGenerator {
       const runs = isHeader
         ? [this.coloredTextRun(line || " ", { bold: true })]
         : this.parseInlineTextToRuns(displayLine, lineColor);
-      return new Paragraph({
+      return [new Paragraph({
         indent: indentLeft ? { left: indentLeft } : undefined,
         spacing: { before: 0, after: 30, line: this.lineSpacing, lineRule: this.lineRule },
         children: runs.length ? runs : [this.coloredTextRun(displayLine || "", { bold: isHeader, color: lineColor })]
-      });
+      })];
     });
   }
 
@@ -1024,6 +1059,53 @@ class DocxGenerator {
     return headers;
   }
 
+  safeIllustrationCaption(caption) {
+    const cleaned = String(caption || "")
+      .replace(/khbd-ill:[^\s)]+/gi, "")
+      .replace(/[\[\]]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    return cleaned || "Hình minh họa";
+  }
+
+  safeIllustrationId(illustrationId) {
+    return String(illustrationId || "").replace(/[^\w.\-]/g, "").slice(0, 80);
+  }
+
+  illustrationFallbackParagraph(caption) {
+    const { Paragraph, AlignmentType } = window.docx || {};
+    const label = `(Hình vẽ minh họa: ${this.safeIllustrationCaption(caption)})`;
+    return new Paragraph({
+      alignment: AlignmentType?.CENTER,
+      spacing: { before: 80, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+      children: [
+        this.coloredTextRun(label, { italics: true, size: 22, color: "475569" })
+      ]
+    });
+  }
+
+  splitIllustrationSegments(text) {
+    const source = String(text || "");
+    const re = /!\[([^\]]*)\]\(khbd-ill:([^)]+)\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    while ((match = re.exec(source)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: "text", text: source.slice(lastIndex, match.index) });
+      }
+      parts.push({
+        type: "illustration",
+        caption: this.safeIllustrationCaption(match[1]),
+        id: this.safeIllustrationId(match[2])
+      });
+      lastIndex = match.index + match[0].length;
+    }
+    if (!parts.length) return [{ type: "text", text: source }];
+    if (lastIndex < source.length) parts.push({ type: "text", text: source.slice(lastIndex) });
+    return parts;
+  }
+
   illustrationCatalog() {
     if (typeof appState !== "undefined" && Array.isArray(appState.content?.illustrations)) {
       return appState.content.illustrations;
@@ -1038,10 +1120,13 @@ class DocxGenerator {
   }
 
   createIllustrationParagraphs(altText, illustrationId) {
+    const caption = this.safeIllustrationCaption(altText);
+    const safeId = this.safeIllustrationId(illustrationId);
+    const fallback = [this.illustrationFallbackParagraph(caption)];
     const docxApi = window.docx || (typeof require !== "undefined" ? require("docx") : {});
     const { Paragraph, ImageRun, AlignmentType } = docxApi || {};
-    const ill = this.illustrationCatalog().find(item => item && item.id === illustrationId);
-    if (!ill || (!ill.dataUrl && !ill.svgContent) || typeof ImageRun !== "function") return [];
+    const ill = this.illustrationCatalog().find(item => item && item.id === safeId);
+    if (!ill || (!ill.dataUrl && !ill.svgContent) || typeof ImageRun !== "function") return fallback;
     try {
       let dataUrl = ill.dataUrl;
       // Nếu chưa có dataUrl nhưng có svgContent dạng base64 trong môi trường Node.js
@@ -1049,7 +1134,7 @@ class DocxGenerator {
         const b64Svg = Buffer.from(ill.svgContent).toString("base64");
         dataUrl = `data:image/svg+xml;base64,${b64Svg}`;
       }
-      if (!dataUrl) return [];
+      if (!dataUrl) return fallback;
 
       const comma = String(dataUrl).indexOf(",");
       const header = comma >= 0 ? dataUrl.slice(0, comma) : "";
@@ -1063,11 +1148,11 @@ class DocxGenerator {
       } else if (typeof Buffer !== "undefined") {
         bytes = Buffer.from(b64, "base64");
       } else {
-        return [];
+        return fallback;
       }
 
       const type = /jpe?g/i.test(header) ? "jpg" : (/svg/i.test(header) ? "svg" : "png");
-      const caption = altText || ill.caption || ill.title || illustrationId;
+      const imageCaption = caption || ill.caption || ill.title || safeId;
 
       return [
         new Paragraph({
@@ -1085,7 +1170,7 @@ class DocxGenerator {
           alignment: AlignmentType.CENTER,
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
           children: [
-            this.coloredTextRun(caption, {
+            this.coloredTextRun(imageCaption, {
               italics: true,
               size: 22,
               color: "475569"
@@ -1095,7 +1180,7 @@ class DocxGenerator {
       ];
     } catch (error) {
       console.warn("Không nhúng được hình minh họa vào Word:", error);
-      return [];
+      return fallback;
     }
   }
 
@@ -1142,8 +1227,15 @@ class DocxGenerator {
     // Tạo phần Header trang trọng
     const headerElements = this.createDocumentHeader(lessonInfo);
 
-    // Tạo phần thân từ Markdown
-    const bodyElements = this.parseMarkdownToDocxElements(fullMarkdownContent);
+    // Tạo phần thân từ Markdown. Phụ lục phiếu học tập lấy từ activities.E nếu markdown chưa có mục IV.
+    let markdown = String(fullMarkdownContent || "");
+    const appendixE = (typeof appState !== "undefined" && appState.content?.activities?.E)
+      || (typeof window !== "undefined" && window.appState?.content?.activities?.E)
+      || "";
+    if (String(appendixE).trim() && !/PHỤ\s*LỤC/i.test(markdown)) {
+      markdown += `\n\n# IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)\n\n${appendixE}`;
+    }
+    const bodyElements = this.parseMarkdownToDocxElements(markdown);
 
     const allChildren = [...headerElements, ...bodyElements];
 

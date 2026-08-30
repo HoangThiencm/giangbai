@@ -62,12 +62,12 @@ assert.ok(budgetsGrade4.A > 0, 'Pha A > 0');
 assert.ok(budgetsGrade4.B > 0, 'Pha B > 0');
 assert.ok(budgetsGrade4.C > 0, 'Pha C > 0');
 assert.ok(budgetsGrade4.D > 0, 'Pha D > 0');
-assert.ok(budgetsGrade4.E > 0, 'Pha E > 0');
-assert.strictEqual(budgetsGrade4.A + budgetsGrade4.B + budgetsGrade4.C + budgetsGrade4.D + budgetsGrade4.E, 70, 'Tổng các pha phải bằng đúng 70 phút');
+assert.strictEqual(budgetsGrade4.E, 0, 'Chuẩn 4 hoạt động không tách pha E');
+assert.strictEqual(budgetsGrade4.A + budgetsGrade4.B + budgetsGrade4.C + budgetsGrade4.D, 70, 'Tổng A+B+C+D phải bằng đúng 70 phút');
 
 const budgetsGrade8 = calculateActivityTimeBudgets('02 tiết (90 phút)', 2, 8);
 assert.strictEqual(budgetsGrade8.totalMinutes, 90, 'Tổng phút lớp 8 (2 tiết) phải là 90');
-assert.strictEqual(budgetsGrade8.A + budgetsGrade8.B + budgetsGrade8.C + budgetsGrade8.D + budgetsGrade8.E, 90, 'Tổng các pha phải bằng đúng 90 phút');
+assert.strictEqual(budgetsGrade8.A + budgetsGrade8.B + budgetsGrade8.C + budgetsGrade8.D, 90, 'Tổng A+B+C+D phải bằng đúng 90 phút');
 
 console.log('  -> calculateActivityTimeBudgets: PASS');
 

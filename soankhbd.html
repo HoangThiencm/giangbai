@@ -626,7 +626,7 @@
     </section>
 
     <!-- -----------------------------------------------------------------------
-         TAB 4: III. TIẾN TRÌNH DẠY HỌC (SUB-TABS A -> G)
+         TAB 4: III. TIẾN TRÌNH DẠY HỌC (SUB-TABS A–D) + E HỒ SƠ + F HÌNH MINH HỌA
          ----------------------------------------------------------------------- -->
     <section id="tabActivities" class="tab-pane">
       <div class="card" style="padding-bottom: 0.5rem;">
@@ -635,9 +635,9 @@
           <button class="act-tab-btn active" data-act="A">A. Mở đầu</button>
           <button class="act-tab-btn" data-act="B">B. Hình thành Kiến thức</button>
           <button class="act-tab-btn" data-act="C">C. Luyện tập</button>
-          <button class="act-tab-btn" data-act="D">D. Vận dụng</button>
-          <button class="act-tab-btn" data-act="E">E. Hướng dẫn về nhà</button>
-          <button class="act-tab-btn" data-act="F">F. Hồ sơ học tập</button>
+          <button class="act-tab-btn" data-act="D">D. Vận dụng &amp; Hướng dẫn tự học</button>
+          <button class="act-tab-btn" data-act="E">E. Hồ sơ học tập</button>
+          <button class="act-tab-btn" data-act="F">🎨 F. Hình minh họa SGK</button>
         </div>
 
         <div class="card-header" style="margin-bottom: 0.5rem;">
@@ -654,7 +654,7 @@
       </div>
 
       <!-- Activity Editor/Preview Pane -->
-      <div class="card">
+      <div class="card" id="activityMarkdownCard">
         <div class="editor-preview-container">
           <div class="panel-box">
             <div class="panel-header"><span id="editorActLabel">Nội dung Markdown Hoạt động</span></div>
@@ -666,6 +666,19 @@
           </div>
         </div>
       </div>
+
+      <div class="card" id="activityIllustrationCard" hidden>
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="image"></i> 🎨 F. Hình minh họa SGK (Vector SVG)</h2>
+          <div class="card-actions">
+            <button id="btnGenerateIllustrationsAct" class="btn btn-primary" type="button">
+              <i data-lucide="sparkles"></i> Tạo hình minh họa
+            </button>
+          </div>
+        </div>
+        <p class="text-muted" style="font-size:0.85rem;margin:0 0 .75rem">Tạo, xem trước và nhúng hình vẽ toán học chuẩn SGK (SVG) hoặc hình thực tế vào hoạt động. Ảnh được gắn marker <code>khbd-ill</code> và xuất Word.</p>
+        <div id="illustrationGalleryAct" class="khbd-illustration-gallery"></div>
+      </div>
     </section>
 
     <!-- -----------------------------------------------------------------------
@@ -674,7 +687,7 @@
     <section id="tabFullPreview" class="tab-pane">
       <div class="card">
         <div class="card-header">
-          <h2 class="card-title"><i data-lucide="file-text"></i> Kế hoạch Bài dạy lõi (I, II, III.A–E và IV. Phụ lục phiếu học tập)</h2>
+          <h2 class="card-title"><i data-lucide="file-text"></i> Kế hoạch Bài dạy lõi (I, II, III.A–D và IV. Phụ lục phiếu học tập)</h2>
           <div class="card-actions">
             <button id="btnExportFullDocx" class="btn btn-special">
               <i data-lucide="download"></i> 📥 XUẤT TOÀN BỘ GIÁO ÁN (.DOCX)

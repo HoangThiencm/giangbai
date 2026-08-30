@@ -100,11 +100,11 @@ let activeDropzoneTarget = "sgk";
 // CÁC TÊN TIÊU ĐỀ HOẠT ĐỘNG
 const ACTIVITY_TITLES = {
   A: { short: "A. Mở đầu", full: "A. HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)" },
-  B: { short: "B. Hình thành KT", full: "B. HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI" },
+  B: { short: "B. Hình thành Kiến thức", full: "B. HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI" },
   C: { short: "C. Luyện tập", full: "C. HOẠT ĐỘNG LUYỆN TẬP" },
-  D: { short: "D. Vận dụng", full: "D. HOẠT ĐỘNG VẬN DỤNG" },
-  E: { short: "E. Hướng dẫn về nhà", full: "E. HƯỚNG DẪN VỀ NHÀ" },
-  F: { short: "F. Hồ sơ học tập", full: "F. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)" }
+  D: { short: "D. Vận dụng & Hướng dẫn tự học", full: "D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC" },
+  E: { short: "E. Hồ sơ học tập", full: "E. Hồ sơ học tập (Phiếu học tập & Công cụ đánh giá)" },
+  F: { short: "F. Hình minh họa SGK", full: "F. Hình minh họa SGK (Vector SVG)" }
 };
 
 const TAB0_SUBTAB_KEYS = [
@@ -199,7 +199,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     marker: "[STEM]",
     promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
-                    {
+                      {
     id: "virtualLab",
     label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
     legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
@@ -439,11 +439,24 @@ function clampKhbdGrade(grade) {
   return ["6", "7", "8", "9"].includes(g) ? g : "6";
 }
 
+function migrateLegacyActivitiesPortfolio(activities) {
+  if (!activities || typeof activities !== "object") return activities;
+  const e = String(activities.E || "").trim();
+  const f = String(activities.F || "").trim();
+  const eIsHomework = /HƯỚNG DẪN VỀ NHÀ|HOẠT ĐỘNG\s*5/i.test(e) && !/PHIẾU HỌC TẬP|HỒ SƠ DẠY HỌC/i.test(e);
+  if (eIsHomework) activities.E = "";
+  if (String(activities.F || "").trim() && !String(activities.E || "").trim()) {
+    activities.E = activities.F;
+    activities.F = "";
+  }
+  return activities;
+}
+
 function applyDraftData(data) {
   if (!data) return;
   Object.assign(appState, { selectedGrade: clampKhbdGrade(data.selectedGrade || "6"), selectedSubject: data.selectedSubject || "TOAN", selectedLesson: data.selectedLesson || "", customTopic: data.customTopic || "", school: data.school || appState.school, group: data.group || appState.group, teacher: data.teacher || appState.teacher, subject: data.subject || appState.subject, duration: data.duration || appState.duration });
   appState.teachingContext = normalizeTeachingContext(data.teachingContext);
-  if (data.content) { const a = data.content.activities || {}; appState.content = { ppctAnalysis: data.content.ppctAnalysis || "", vision: data.content.vision || "", objectives: data.content.objectives || "", materials: data.content.materials || "", activities: Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""])), illustrations: Array.isArray(data.content.illustrations) ? data.content.illustrations : [] }; }
+  if (data.content) { const a = data.content.activities || {}; appState.content = { ppctAnalysis: data.content.ppctAnalysis || "", vision: data.content.vision || "", objectives: data.content.objectives || "", materials: data.content.materials || "", activities: migrateLegacyActivitiesPortfolio(Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""]))), illustrations: Array.isArray(data.content.illustrations) ? data.content.illustrations : [] }; }
 }
 function renderDraftControls() {
   const select = document.getElementById("selectMyDraft"); if (!select) return;
@@ -1772,14 +1785,14 @@ async function generateSingleIllustration(illId) {
 }
 
 function renderIllustrationGallery() {
-  const panel = document.getElementById("illustrationGallery");
-  if (!panel) return;
+  const panels = ["illustrationGallery", "illustrationGalleryAct"]
+    .map(id => typeof document !== "undefined" ? document.getElementById(id) : null)
+    .filter(Boolean);
+  if (!panels.length) return;
   const list = appState.content.illustrations || [];
-  if (!list.length) {
-    panel.innerHTML = `<p class="text-muted" style="font-size:.85rem;margin:0">Chưa có hình minh họa. Bấm tạo sau khi đã đọc SGK — hệ thống tự động sinh Vector SVG toán học chuẩn SGK và hình ảnh thực tế trực quan.</p>`;
-    return;
-  }
-  panel.innerHTML = list.map(ill => {
+  const html = !list.length
+    ? `<p class="text-muted" style="font-size:.85rem;margin:0">Chưa có hình minh họa. Bấm tạo sau khi đã đọc SGK — hệ thống tự động sinh Vector SVG toán học chuẩn SGK và hình ảnh thực tế trực quan.</p>`
+    : list.map(ill => {
     let previewContent = "";
     if (ill.svgContent) {
       previewContent = `<div class="khbd-svg-preview-wrap" onclick="zoomIllustration('${ill.id}')" title="Bấm để xem phóng to SVG">${ill.svgContent}</div>`;
@@ -1814,6 +1827,7 @@ function renderIllustrationGallery() {
       </div>
     </article>`;
   }).join("");
+  panels.forEach(panel => { panel.innerHTML = html; });
 
   initLucideIcons();
 }
@@ -2475,6 +2489,13 @@ function setupEventListeners() {
   }
 
   // 7. Các nút Tạo nội dung đơn lẻ & Đọc học liệu
+  const btnGenerateIllustrationsAct = document.getElementById("btnGenerateIllustrationsAct");
+  if (btnGenerateIllustrationsAct) {
+    btnGenerateIllustrationsAct.addEventListener("click", () => {
+      void generateLessonIllustrations({ silent: false });
+    });
+  }
+
   const btnAnalyzeVision = document.getElementById("btnAnalyzeVision");
   if (btnAnalyzeVision) btnAnalyzeVision.addEventListener("click", readTextbookWithMistral);
 
@@ -2781,20 +2802,27 @@ function switchActivitySubtab(actKey) {
   const editorActLabelEl = document.getElementById("editorActLabel");
   if (editorActLabelEl) editorActLabelEl.textContent = `Nội dung ${actInfo.short}`;
 
+  const markdownCard = document.getElementById("activityMarkdownCard");
+  const illustrationCard = document.getElementById("activityIllustrationCard");
+  const generateBtn = document.getElementById("btnGenerateCurrentAct");
+  const isIllustrationTab = actKey === "F";
+  if (markdownCard) markdownCard.hidden = isIllustrationTab;
+  if (illustrationCard) illustrationCard.hidden = !isIllustrationTab;
+  if (generateBtn) {
+    generateBtn.innerHTML = isIllustrationTab
+      ? `<i data-lucide="sparkles"></i> Tạo hình minh họa`
+      : `<i data-lucide="sparkles"></i> Tạo nội dung mục này`;
+  }
+
   // 3. Đổ nội dung vào editor và render KaTeX preview
   const content = (appState.content && appState.content.activities && appState.content.activities[actKey]) || "";
   const editorAct = document.getElementById("editorActivity");
   if (editorAct) editorAct.value = content;
-  if (typeof renderMathPreview === "function") {
+  if (typeof renderMathPreview === "function" && !isIllustrationTab) {
     renderMathPreview(content, "previewActivity");
   }
-
-
-
-
-
-
-
+  if (isIllustrationTab) renderIllustrationGallery();
+  if (typeof initLucideIcons === "function") initLucideIcons();
 }
 
 // =============================================================================
@@ -4430,6 +4458,10 @@ function getLessonPlanMetadata() {
   };
 }
 
+function activityKeysForFullPlan(content) {
+  return ["A", "B", "C", "D"];
+}
+
 function getFullLessonPlanMarkdown(options = {}) {
   const topic = getTopicDisplayName();
   const subject = appState.subject || "TOÁN";
@@ -4438,7 +4470,7 @@ function getFullLessonPlanMarkdown(options = {}) {
   const metadata = getLessonPlanMetadata();
   const c = appState.content;
   const actParts = [];
-  ["A", "B", "C", "D", "E"].forEach(k => {
+  activityKeysForFullPlan(c).forEach(k => {
     if (c.activities[k] && c.activities[k].trim()) {
       actParts.push(clipKhbdActivityMarkdown(k, c.activities[k]));
     }
@@ -4450,7 +4482,7 @@ function getFullLessonPlanMarkdown(options = {}) {
     c.materials || "*[Chưa tạo II. Thiết bị dạy học và học liệu]*",
     `\n---\n`,
     `# III. TIẾN TRÌNH DẠY HỌC`,
-    fullActMarkdown || "*[Chưa tạo các hoạt động dạy học III.A - E]*"
+    fullActMarkdown || "*[Chưa tạo các hoạt động dạy học III.A - D]*"
   ];
   const planSoFar = body.join("\n\n");
   const illustrations = (c.illustrations || []).filter(item => item && (item.dataUrl || item.svgContent) && !planSoFar.includes(`khbd-ill:${item.id}`));
@@ -4460,9 +4492,11 @@ function getFullLessonPlanMarkdown(options = {}) {
       body.push(illustrationMarker(ill));
     });
   }
-  const appendixF = String(c.activities.F || "").trim();
-  if (appendixF) {
-    body.push(`\n---\n`, `# IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)`, appendixF);
+  const rawAppendix = String(c.activities.E || c.activities.F || "").trim();
+  const appendixIsHomework = /HƯỚNG DẪN VỀ NHÀ|HOẠT ĐỘNG\s*5/i.test(rawAppendix) && !/PHIẾU HỌC TẬP|HỒ SƠ DẠY HỌC/i.test(rawAppendix);
+  const appendixE = appendixIsHomework ? "" : rawAppendix;
+  if (appendixE) {
+    body.push(`\n---\n`, `# IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)`, appendixE);
   }
   if (options.includeHeader === false) return body.join("\n\n");
   const header = [
@@ -5315,8 +5349,8 @@ function activityHeadingRegex(key) {
     B: "B[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*2\\b|HÌNH[ \\t]*THÀNH",
     C: "C[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*3\\b|LUYỆN[ \\t]*TẬP\\b",
     D: "D[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*4\\b|VẬN[ \\t]*DỤNG\\b",
-    E: "E[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*5\\b|HƯỚNG[ \\t]*DẪN[ \\t]*VỀ[ \\t]*NHÀ\\b",
-    F: "F[\\.\\s:]|HỒ[ \\t]*SƠ[ \\t]*DẠY|PHỤ[ \\t]*LỤC"
+    E: "E[\\.\\s:]|HỒ[ \\t]*SƠ|PHIẾU[ \\t]*HỌC[ \\t]*TẬP|PHỤ[ \\t]*LỤC",
+    F: "F[\\.\\s:]|HÌNH[ \\t]*MINH[ \\t]*HỌA"
   };
   return new RegExp(`^#{1,3}\\s*(?:${map[key]})`, "i");
 }
@@ -5401,7 +5435,8 @@ function normalizeActivityTimeHeadings(text, options = {}) {
     1,
     Number(options.subsectionCount) || countBBranchHeadings(source) || 1
   );
-  const budgets = calc(duration, subsectionCount, grade);
+  const fourActivities = options.fourActivities !== false;
+  const budgets = calc(duration, subsectionCount, grade, { fourActivities });
   const headingRe = {
     A: activityHeadingRegex("A"),
     B: /^#{1,3}\s*(?:B[\.\s:]|HOẠT[ \t]*ĐỘNG[ \t]*2(?!\.\d)|HÌNH[ \t]*THÀNH)/i,
@@ -5501,8 +5536,8 @@ function parseKhbdSections(text, keys) {
     B: /(?:^|\n)\s*#{1,3}\s*(?:B[\.\s:]|HOẠT ĐỘNG 2\b|HÌNH THÀNH KIẾN THỨC\b)[^\n]*/i,
     C: /(?:^|\n)\s*#{1,3}\s*(?:C[\.\s:]|HOẠT ĐỘNG 3\b|LUYỆN TẬP\b)[^\n]*/i,
     D: /(?:^|\n)\s*#{1,3}\s*(?:D[\.\s:]|HOẠT ĐỘNG 4\b|VẬN DỤNG\b)[^\n]*/gi,
-    E: /(?:^|\n)\s*#{1,3}\s*(?:E[\.\s:]|HOẠT ĐỘNG 5\b|HƯỚNG DẪN VỀ NHÀ\b)[^\n]*/i,
-    F: /(?:^|\n)\s*#{1,3}\s*(?:F[\.\s:]|HỒ SƠ\b|PHỤ LỤC\b|PHIẾU HỌC TẬP\b)[^\n]*/i
+    E: /(?:^|\n)\s*#{1,3}\s*(?:E[\.\s:]|HỒ SƠ\b|PHỤ LỤC\b|PHIẾU HỌC TẬP\b)[^\n]*/i,
+    F: /(?:^|\n)\s*#{1,3}\s*(?:F[\.\s:]|HÌNH MINH HỌA\b)[^\n]*/i
   };
   const found = [];
   (keys || []).forEach(key => {
@@ -5895,9 +5930,12 @@ function hasLessonSource() {
 }
 
 function activityOutputProblem(actKey, output) {
-  if (actKey === "F") {
+  if (actKey === "E") {
     const text = String(output || "");
-    if (!/PHIẾU HỌC TẬP/i.test(text)) return new Error("Mục F phải có Phiếu học tập.");
+    if (!/PHIẾU HỌC TẬP/i.test(text)) return new Error("Mục E phải có Phiếu học tập.");
+    return null;
+  }
+  if (actKey === "F") {
     return null;
   }
   try { assertPhasePedagogyOutput(actKey, output); }
@@ -6036,6 +6074,11 @@ async function handleGenerateCurrentActivity() {
   if (!actInfo) return;
 
   if (actKey === "F") {
+    await generateLessonIllustrations({ silent: false });
+    return;
+  }
+
+  if (actKey === "E") {
     const hasActs = ["A", "B", "C", "D"].some(k => String(appState.content.activities[k] || "").trim());
     if (!hasActs && !hasTextbookSource()) {
       showToast("Hãy soạn các hoạt động A–D (hoặc đọc SGK) trước khi tạo phiếu học tập.", "warning");
@@ -6044,8 +6087,8 @@ async function handleGenerateCurrentActivity() {
   }
 
   const context = getGenerationPromptContext();
-  const templateKey = actKey === "F" ? "GENERATE_PORTFOLIO_WORKSHEETS" : `GENERATE_ACTIVITY_${actKey}`;
-  const prompt = getPromptTemplate(templateKey, context) + (actKey === "F" ? "" : buildPhasePedagogyContext(actKey));
+  const templateKey = actKey === "E" ? "GENERATE_PORTFOLIO_WORKSHEETS" : `GENERATE_ACTIVITY_${actKey}`;
+  const prompt = getPromptTemplate(templateKey, context) + (actKey === "E" ? "" : buildPhasePedagogyContext(actKey));
 
   await executeAIGeneration({
     buttonId: "btnGenerateCurrentAct",
@@ -6053,7 +6096,7 @@ async function handleGenerateCurrentActivity() {
     targetPreviewId: "previewActivity",
     operationName: `Tạo ${actInfo.short}`,
     prompt,
-    requireTextbook: actKey !== "F",
+    requireTextbook: actKey !== "E",
     onSuccess: async (result) => applyActivityOutput(actKey, result)
   });
 }
@@ -6598,6 +6641,10 @@ if (typeof module !== 'undefined' && module.exports) {
     prepareGeminiMedia,
     parseKhbdSections,
     clipKhbdActivityMarkdown,
+    getFullLessonPlanMarkdown,
+    activityKeysForFullPlan,
+    migrateLegacyActivitiesPortfolio,
+    ACTIVITY_TITLES,
     collapseDottedLines,
     stripExcessiveDottedLines,
     normalizeActivityTimeHeadings,

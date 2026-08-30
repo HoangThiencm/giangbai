@@ -108,10 +108,11 @@ function formatGeneralCompetenciesGuide(subjectId, context) {
  *   }
  * }}
  */
-function calculateActivityTimeBudgets(durationStr, subsectionCount, grade) {
+function calculateActivityTimeBudgets(durationStr, subsectionCount, grade, options) {
   const periodMinutes = Number(grade) >= 1 && Number(grade) <= 5 ? 35 : 45;
   let totalMinutes = periodMinutes * 2;
   const str = String(durationStr || "").trim();
+  const fourActivities = !(options && (options.fourActivities === false || options.mode === "ae"));
 
   const minMatch = str.match(/(\d+)\s*(?:phút|p|min)/i);
   if (minMatch) {
@@ -135,26 +136,58 @@ function calculateActivityTimeBudgets(durationStr, subsectionCount, grade) {
 
   const T = totalMinutes;
   const clamp = (min, max, val) => Math.max(min, Math.min(max, val));
+  const subCount = Math.max(1, Math.min(4, Number(subsectionCount) || 1));
 
-  let timeA = clamp(3, 10, Math.round(T * 0.08));
-  let timeE = clamp(2, 5, Math.round(T * 0.04));
-  let timeD = clamp(5, 25, Math.round(T * 0.12));
-  let timeC = clamp(8, 50, Math.round(T * 0.25));
-  let timeB = T - (timeA + timeC + timeD + timeE);
+  let timeA;
+  let timeB;
+  let timeC;
+  let timeD;
+  let timeE;
 
-  if (timeB < 5) {
-    timeB = Math.max(5, Math.round(T * 0.4));
-    timeC = Math.max(5, Math.round(T * 0.25));
-    timeA = Math.max(3, Math.round(T * 0.15));
-    timeD = Math.max(3, Math.round(T * 0.12));
-    timeE = Math.max(2, T - (timeA + timeB + timeC + timeD));
-    if (timeE < 1) {
-      timeE = 2;
-      timeB = T - (timeA + timeC + timeD + timeE);
+  if (fourActivities) {
+    // Chuẩn CV 5512: A + B + C + D = T. B/C lệch theo số tiểu mục N.
+    timeA = clamp(3, 12, Math.round(T * 0.09));
+    timeD = clamp(5, 25, Math.round(T * 0.135));
+    if (timeA + timeD > T - 8) {
+      timeA = clamp(3, 12, Math.round(T * 0.08));
+      timeD = clamp(5, Math.max(5, T - timeA - 8), Math.round(T * 0.12));
+    }
+    let remaining = T - timeA - timeD;
+    const splits = { 1: [45, 30], 2: [50, 28], 3: [54, 24], 4: [58, 20] };
+    const [bW, cW] = splits[subCount] || splits[2];
+    timeB = Math.max(5, Math.round(remaining * bW / (bW + cW)));
+    timeC = remaining - timeB;
+    if (timeC < 5 && remaining >= 10) {
+      timeC = 5;
+      timeB = remaining - timeC;
+    }
+    if (timeC < 3) {
+      timeC = Math.max(3, remaining - Math.max(5, timeB));
+      timeB = remaining - timeC;
+    }
+    timeE = 0;
+    const drift = T - (timeA + timeB + timeC + timeD);
+    if (drift) timeB += drift;
+  } else {
+    timeA = clamp(3, 10, Math.round(T * 0.08));
+    timeE = clamp(2, 5, Math.round(T * 0.04));
+    timeD = clamp(5, 25, Math.round(T * 0.12));
+    timeC = clamp(8, 50, Math.round(T * 0.25));
+    timeB = T - (timeA + timeC + timeD + timeE);
+
+    if (timeB < 5) {
+      timeB = Math.max(5, Math.round(T * 0.4));
+      timeC = Math.max(5, Math.round(T * 0.25));
+      timeA = Math.max(3, Math.round(T * 0.15));
+      timeD = Math.max(3, Math.round(T * 0.12));
+      timeE = Math.max(2, T - (timeA + timeB + timeC + timeD));
+      if (timeE < 1) {
+        timeE = 2;
+        timeB = T - (timeA + timeC + timeD + timeE);
+      }
     }
   }
 
-  const subCount = Math.max(1, Math.min(4, Number(subsectionCount) || 1));
   const bSubsections = [];
   const baseSub = Math.floor(timeB / subCount);
   const remSub = timeB % subCount;
@@ -164,6 +197,7 @@ function calculateActivityTimeBudgets(durationStr, subsectionCount, grade) {
 
   return {
     totalMinutes: T,
+    fourActivities,
     A: timeA,
     B: timeB,
     B_subsections: bSubsections,
@@ -188,7 +222,7 @@ const LATEX_SPACING_BAN = `- CẤM TUYỆT ĐỐI dùng chuỗi lệnh LaTeX kho
 const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠM THỰC CHIẾN TRONG BẢNG 2 CỘT (Chuẩn CV 5512 & GDPT 2018):
 - YÊU CẦU ĐỘ DÀI & VĂN PHONG SÚC TÍCH: Toàn bộ Kế hoạch bài dạy hoàn chỉnh đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trực diện vào bản chất kiến thức và hành động cốt lõi của GV/HS; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không dùng câu thoại diễn giải lòng vòng, không lặp lại nội dung giữa các mục.
 - THỜI LƯỢNG HOẠT ĐỘNG: BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề các Hoạt động (A, B, C, D, E) và từng hoạt động nhánh trong Mục B, ví dụ: \`## A. HOẠT ĐỘNG 1: MỞ ĐẦU (5 phút)\`, \`### 1. Hoạt động 2.1: [Tên mục] (15 phút)\`, \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP (10 phút)\`, \`## D. HOẠT ĐỘNG 4: VẬN DỤNG (5 phút)\`, \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (3 phút)\`. CẤM TUYỆT ĐỐI ghi từ "Khoảng" hoặc dải thời gian dạng "X - Y phút".
-- KHÓA TỔNG THỜI LƯỢNG: Tổng thời lượng tất cả hoạt động nhánh trong B BẮT BUỘC đúng bằng {time_budget_B}; tổng A + B + C + D + E BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration} (02 tiết = đúng 90 phút). Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). Không tự tăng thời lượng một nhánh hoặc tổng toàn bài.
+- KHÓA TỔNG THỜI LƯỢNG: Tổng thời lượng tất cả hoạt động nhánh trong B BẮT BUỘC đúng bằng {time_budget_B}; tổng A + B + C + D BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration} (02 tiết = đúng 90 phút). Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). Không tự tăng thời lượng một nhánh hoặc tổng toàn bài.
 - Chỉ dùng dấu gạch đầu dòng -, +, *; không dùng cú pháp gạch dưới để định dạng như _Trạm X:_ hoặc __tiêu đề__.
 - Mục a) Mục tiêu, b) Nội dung, c) Sản phẩm: dùng 3 cấp danh sách: ý lớn \`-\`, ý con \`+\`, ý chi tiết \`.\`. Trình bày súc tích, trọng tâm (mục a: tối đa 2 ý; mục b: tối đa 2–3 ý, không chép lại toàn văn SGK; mục c: tối đa 2 ý kết quả cốt lõi).
 - Mục d) Tổ chức thực hiện: BẮT BUỘC ĐÚNG MỘT bảng Markdown 2 cột, tiêu đề:
@@ -260,7 +294,7 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Danh sách nội dung có đúng 3 cấp: ý lớn bắt đầu bằng "- ", ý con "+ ", ý chi tiết ". ". Không dùng "1.", "2." làm danh sách nội dung trừ khi là số thứ tự bài tập hoặc bước CV 5512.
 - CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu. Màu sắc và font chữ do ứng dụng xử lý.
 - ĐỘ DÀI & VĂN PHONG CHUẨN: Toàn bộ Kế hoạch bài dạy đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trọng tâm; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không lặp lại câu hỏi dài dòng.
-- KHÓA TỔNG THỜI LƯỢNG: Tổng A + B + C + D + E BẮT BUỘC KHỚP 100% với thời lượng tiết dạy {duration}; ví dụ 01 tiết = 45 phút, 02 tiết = đúng 90 phút, 03 tiết = 135 phút. Hoạt động B BẮT BUỘC đúng {time_budget_B}. Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút).
+- KHÓA TỔNG THỜI LƯỢNG: Tổng A + B + C + D BẮT BUỘC KHỚP 100% với thời lượng tiết dạy {duration}; ví dụ 01 tiết = 45 phút, 02 tiết = đúng 90 phút, 03 tiết = 135 phút. Hoạt động B BẮT BUỘC đúng {time_budget_B}. Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút).
 ${LATEX_SPACING_BAN}`,
 
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy chuẩn CV 5512. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ lại nội dung giáo án. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary, lời chúc ở cuối và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng "-", "+", ".". Không đổi tiêu đề mục khung như "I.", "## 1.", "a)", "Bước", "Bài".`,
@@ -665,35 +699,42 @@ ${LATEX_SPACING_BAN}
 {textbook_content}
 """
 
-YÊU CẦU BIÊN SOẠN:
+YÊU CẦU BIÊN SOẠN (Chuẩn 4 hoạt động CV 5512 — nhiệm vụ về nhà nằm trong Hoạt động D):
 ${ACTIVITY_TABLE_CONTRACT}
 ${LATEX_SPACING_BAN}
-- KHÓA NHIỆM VỤ VẬN DỤNG / EXIT TICKET TẠI LỚP: Nhiệm vụ vận dụng thực tế hoặc phiếu Exit Ticket được tổ chức thực hiện, hoàn thành và thu hồi/chốt NGAY TẠI LỚP trong thời lượng quy định. TUYỆT ĐỐI KHÔNG kéo dài hay biến thành bài tập về nhà (bài tập về nhà được giao riêng ở Hoạt động E).
+- KHÓA NHIỆM VỤ VẬN DỤNG TẠI LỚP + GIAO TỰ HỌC: Bài toán vận dụng / Exit Ticket hoàn thành và chốt NGAY TẠI LỚP; ngay Bước 4, GV giao đủ 4 nhiệm vụ tự học ở nhà (không tách thành pha E).
 - CHỈ dùng bài vận dụng / tình huống thực tế có trong SGK hoặc dữ liệu giáo viên cung cấp. CẤM invent số liệu bài toán ngoài nguồn.
-- Cột TRÁI mục d): Kịch bản phân vai rõ ràng:
+- Cột TRÁI mục d): Kịch bản phân vai rõ ràng, đủ 4 bước CV 5512:
   + Áp dụng Kỹ thuật dạy học (Dự án mini, Phân tích tình huống, Bài tập mở, Exit Ticket...).
-  + **GV:** Nói câu định hướng trong ngoặc kép "...", gợi mở cách liên hệ thực tế hoặc phát phiếu Exit Ticket chốt kiến thức, hướng dẫn phân hóa và thu hồi/đánh giá kết quả ngay tại lớp.
+  + **GV:** Nói câu định hướng trong ngoặc kép "...", gợi mở liên hệ thực tế, hướng dẫn phân hóa và thu hồi/đánh giá kết quả ngay tại lớp.
   + **HS:** Thảo luận cặp/nhóm giải quyết bài toán thực tế hoặc làm phiếu cá nhân -> Báo cáo giải pháp / nộp phiếu tại lớp, lớp phản biện tính khả thi.
+  + **Bước 4: Kết luận, nhận định:** GV chuẩn hóa lời giải bài toán vận dụng và **Giao cụ thể 4 nhiệm vụ tự học ở nhà**:
+    1. Ôn tập: Ghi nhớ các quy tắc, định nghĩa, công thức trọng tâm.
+    2. Làm bài tập: Hoàn thành các bài tập còn lại trong SGK và Sách bài tập (SBT) (nêu rõ số bài, kèm gợi ý).
+    3. Chuẩn bị bài mới: Đọc trước bài tiếp theo trong SGK và chuẩn bị học liệu.
+    4. Vận dụng, tìm tòi mở rộng: Tìm hiểu ứng dụng thực tế hoặc dùng công cụ số/AI (khi GV đã bật NLS/AI).
   + Khi có NLS/AI: Vận dụng phần mềm chuyên ngành (GeoGebra, Excel, PhET...) hoặc công cụ AI mô hình hóa, giải quyết bài toán thực tế và kiểm chứng tính khả thi. CẤM hỏi lý thuyết AI suông. Dùng marker **[NLS: ...]** hoặc **[AI: ...]**.
-- Cột PHẢI mục d): Tình huống thực tế và Lời giải mô hình hóa hoàn chỉnh (hoặc Nội dung câu hỏi và Đáp án chuẩn của phiếu Exit Ticket).
-- CẤM viết mục E / Hướng dẫn về nhà trong pha D. Dừng ở hết hoạt động Vận dụng tại lớp.
+- Cột PHẢI mục d): Đề bài vận dụng thực tế + Lời giải chi tiết + Khung nhiệm vụ tự học cho học sinh ghi vở.
+- CẤM viết mục E / Hướng dẫn về nhà thành khối riêng; nhiệm vụ tự học được giao ngay trong Bước 4 của Hoạt động D.
 
-## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D})
+## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC ({time_budget_D})
 
 ### a) Mục tiêu:
 - Vận dụng kiến thức, kĩ năng đã học vào giải quyết bài toán/tình huống thực tế đời sống hoặc hoàn thành phiếu Exit Ticket đánh giá mức độ đạt chuẩn ngay tại lớp.
-- Phát triển năng lực giải quyết vấn đề, mô hình hóa và tư duy liên hệ thực tiễn.
+- Phát triển năng lực giải quyết vấn đề, mô hình hóa, tư duy liên hệ thực tiễn và ý thức tự học ngoài giờ lên lớp.
 
 ### b) Nội dung:
 - Tình huống, bài toán vận dụng thực tiễn trong SGK hoặc phiếu Exit Ticket hoàn thành ngay tại lớp: (Nêu cụ thể đề bài tình huống).
+- Bốn nhiệm vụ tự học/về nhà được giao cụ thể ở Bước 4.
 
 ### c) Sản phẩm:
 - Bài giải mô hình hóa thực tế, kết quả tính toán hoặc câu trả lời phiếu Exit Ticket được hoàn thành và thu hồi/chốt tại lớp.
+- Học sinh ghi vào vở khung 4 nhiệm vụ tự học.
 
 ### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao nhiệm vụ vận dụng thực tế / phát phiếu Exit Ticket: "Hãy vận dụng kiến thức vừa học để giải quyết tình huống thực tiễn sau trong 4 phút...". **HS:** Tiếp nhận nhiệm vụ, phân tích số liệu thực tế.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Thảo luận cặp/nhóm (hoặc làm việc cá nhân 3–4 phút) mô hình hóa vấn đề và tính toán kết quả. **GV:** Quan sát, gợi mở cách chuyển đổi từ ngôn ngữ thực tế sang biểu thức chuyên môn, bao quát lớp.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện nhóm trình bày mô hình và kết quả (hoặc nộp phiếu Exit Ticket tại lớp); các nhóm khác nhận xét tính hợp lý của đáp số thực tế. **GV:** Đặt câu hỏi mở rộng liên hệ đời sống.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét, đánh giá khả năng vận dụng của HS, chốt lại ý nghĩa thực tiễn và kết thúc hoạt động tại lớp. **HS:** Ghi nhận lời giải hoàn chỉnh vào vở. | **Vận dụng**<br>- Tình huống thực tế từ SGK.<br>- Mô hình hóa & Lời giải chuẩn xác.<br>. Ý nghĩa thực tiễn của bài học. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao nhiệm vụ vận dụng thực tế / phát phiếu Exit Ticket: "Hãy vận dụng kiến thức vừa học để giải quyết tình huống thực tiễn sau trong 4 phút...". **HS:** Tiếp nhận nhiệm vụ, phân tích số liệu thực tế.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Thảo luận cặp/nhóm (hoặc làm việc cá nhân 3–4 phút) mô hình hóa vấn đề và tính toán kết quả. **GV:** Quan sát, gợi mở cách chuyển đổi từ ngôn ngữ thực tế sang biểu thức chuyên môn, bao quát lớp.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện nhóm trình bày mô hình và kết quả (hoặc nộp phiếu Exit Ticket tại lớp); các nhóm khác nhận xét tính hợp lý của đáp số thực tế. **GV:** Đặt câu hỏi mở rộng liên hệ đời sống.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chuẩn hóa lời giải bài toán vận dụng; giao 4 nhiệm vụ tự học ở nhà: (1) Ôn tập quy tắc/định nghĩa/công thức trọng tâm; (2) Làm bài tập còn lại SGK và SBT (nêu số bài, gợi ý); (3) Chuẩn bị bài mới: đọc trước SGK và học liệu; (4) Vận dụng, tìm tòi mở rộng / công cụ số-AI nếu được bật. **HS:** Ghi lời giải chuẩn và khung nhiệm vụ tự học vào vở. | **Vận dụng**<br>- Tình huống thực tế từ SGK.<br>- Mô hình hóa & Lời giải chuẩn xác.<br>**Nhiệm vụ tự học**<br>1. Ôn tập: ...<br>2. Làm bài tập: ...<br>3. Chuẩn bị bài mới: ...<br>4. Vận dụng, tìm tòi mở rộng: ... |`,
 
   // TAB 4.E: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ
   GENERATE_ACTIVITY_E: `Hãy biên soạn **HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
@@ -733,8 +774,9 @@ YÊU CẦU BIÊN SOẠN — DANH SÁCH 4 MỤC TINH GỌN (KHÔNG DÙNG BẢNG):
 4. Nhiệm vụ tìm tòi, mở rộng: Tìm hiểu thêm ứng dụng thực tế của bài học trong các lĩnh vực khác như kinh tế, đời sống, khoa học...
 {ai_homework_prompt_note}`,
 
+  get ACTIVITY_E() { return this.GENERATE_PORTFOLIO_WORKSHEETS; },
   get ACTIVITY_F() { return this.GENERATE_PORTFOLIO_WORKSHEETS; },
-  GENERATE_PORTFOLIO_WORKSHEETS: `Hãy thiết kế **F. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)** để giáo viên in phát cho học sinh, bám sát Công văn 5512/BGDĐT-GDTrH.
+  GENERATE_PORTFOLIO_WORKSHEETS: `Hãy thiết kế **E. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)** để giáo viên in phát cho học sinh, bám sát Công văn 5512/BGDĐT-GDTrH.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Thời lượng: {duration}
@@ -762,7 +804,7 @@ NHIỆM VỤ:
 
 CẤU TRÚC BẮT BUỘC:
 
-# F. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)
+# E. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)
 
 ## 1. PHIẾU HỌC TẬP SỐ 1 (Khám phá / Hình thành kiến thức)
 **TRƯỜNG THCS: .......................................**  
@@ -879,8 +921,8 @@ PHA E — HƯỚNG DẪN VỀ NHÀ:
 
 CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừng ở đầu/cuối bài.`,
 
-  // ALIAS GENERATE_ACTIVITIES_AD -> GENERATE_ACTIVITIES_AE
-  GENERATE_ACTIVITIES_AD: `Đọc PDF/ảnh SGK đính kèm và soạn toàn bộ hoạt động A–E môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512.
+  // 1-CLICK 4 HOẠT ĐỘNG A -> D (Chuẩn Phụ lục 4 CV 5512)
+  GENERATE_ACTIVITIES_AD: `Đọc PDF/ảnh SGK đính kèm và soạn đúng 4 hoạt động A–D môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512 (Phụ lục 4).
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Thời lượng: {duration}
@@ -898,7 +940,7 @@ CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừ
 {textbook_content}
 """
 
-BẮT BUỘC xuất đúng 5 khối, mỗi khối bắt đầu bằng marker:
+BẮT BUỘC xuất đúng 4 khối, mỗi khối bắt đầu bằng marker:
 <<<KHBD_A>>>
 (toàn bộ ## A. HOẠT ĐỘNG 1: MỞ ĐẦU ({time_budget_A}))
 <<<KHBD_B>>>
@@ -906,19 +948,17 @@ BẮT BUỘC xuất đúng 5 khối, mỗi khối bắt đầu bằng marker:
 <<<KHBD_C>>>
 (toàn bộ ## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C}))
 <<<KHBD_D>>>
-(toàn bộ ## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D}))
-<<<KHBD_E>>>
-(toàn bộ ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E}))
+(toàn bộ ## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC ({time_budget_D}))
 
-KHÓA ĐÚNG 5 MARKER DUY NHẤT: Xuất đúng một lần mỗi marker <<<KHBD_A>>> … <<<KHBD_E>>> theo thứ tự trên. CẤM lặp lại marker. CẤM xuất thêm tiêu đề hoặc khối ## D. HOẠT ĐỘNG 4 sau khi đã viết xong pha D.
+KHÓA ĐÚNG 4 MARKER DUY NHẤT: Xuất đúng một lần mỗi marker <<<KHBD_A>>> … <<<KHBD_D>>> theo thứ tự trên. CẤM lặp lại marker. CẤM xuất <<<KHBD_E>>> hoặc tiêu đề ## E. HOẠT ĐỘNG 5. CẤM xuất thêm tiêu đề hoặc khối ## D. HOẠT ĐỘNG 4 sau khi đã viết xong pha D.
 
-KHÓA THỜI LƯỢNG TOÀN BÀI:
+KHÓA THỜI LƯỢNG TOÀN BÀI (4 hoạt động):
 - Hoạt động B = {time_budget_B}. Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh con cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút).
-- Tổng A + B + C + D + E BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration} (02 tiết = đúng 90 phút).
+- Tổng A + B + C + D BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration} (02 tiết = đúng 90 phút; ví dụ A 8 phút, B 45 phút, C 25 phút, D 12 phút).
 
-YÊU CẦU HÌNH THỨC & KỊCH BẢN THỰC CHIẾN (Áp dụng các pha A–D; pha E dùng danh sách 4 mục, KHÔNG dùng bảng 2 cột):
+YÊU CẦU HÌNH THỨC & KỊCH BẢN THỰC CHIẾN (Đủ 4 pha A–D, mỗi pha A–D đúng 1 bảng 2 cột):
 ${ACTIVITY_TABLE_CONTRACT}
-- QUY TẮC THỜI LƯỢNG CỐ ĐỊNH: BẮT BUỘC đặt thời lượng cố định cụ thể bằng số phút trong tiêu đề từng hoạt động (A: {time_budget_A}, C: {time_budget_C}, D: {time_budget_D}, E: {time_budget_E}; từng hoạt động nhánh trong B: theo phân bổ tiểu mục). TUYỆT ĐỐI CẤM ghi từ "Khoảng" hoặc dải thời gian "X - Y phút".
+- QUY TẮC THỜI LƯỢNG CỐ ĐỊNH: BẮT BUỘC đặt thời lượng cố định cụ thể bằng số phút trong tiêu đề từng hoạt động (A: {time_budget_A}, C: {time_budget_C}, D: {time_budget_D}; từng hoạt động nhánh trong B: theo phân bổ tiểu mục). TUYỆT ĐỐI CẤM ghi từ "Khoảng" hoặc dải thời gian "X - Y phút".
 
 PHA A — MỞ ĐẦU:
 - Tiêu đề: \`## A. HOẠT ĐỘNG 1: MỞ ĐẦU ({time_budget_A})\`.
@@ -937,27 +977,16 @@ PHA B — HÌNH THÀNH KIẾN THỨC:
 
 PHA C — LUYỆN TẬP:
 - Tiêu đề: \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C})\`.
-- Giáo viên chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi trong SGK để chữa chi tiết tại lớp (các bài tập còn lại dành cho Hoạt động E). Chép rõ đề và giải chi tiết vào Cột Phải. Cột Trái phân vai rõ ràng.
+- Giáo viên chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi trong SGK để chữa chi tiết tại lớp (các bài tập còn lại giao trong Bước 4 Hoạt động D — nhiệm vụ tự học). Chép rõ đề và giải chi tiết vào Cột Phải. Cột Trái phân vai rõ ràng.
 - Khi có NLS/AI: Ứng dụng phần mềm chuyên dụng (GeoGebra, bảng tính) hoặc AI để gợi mở / kiểm tra đối chiếu lời giải, phản biện lỗi sai. CẤM hỏi lý thuyết AI suông.
 
-PHA D — VẬN DỤNG:
-- Tiêu đề: \`## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D})\`.
-- Khóa nhiệm vụ vận dụng thực tế hoặc phiếu Exit Ticket thực hiện, thu hồi và chốt ngay tại lớp. Trình bày mô hình hóa và lời giải chuẩn. Cột Trái 4 bước.
+PHA D — VẬN DỤNG & HƯỚNG DẪN TỰ HỌC:
+- Tiêu đề: \`## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC ({time_budget_D})\`.
+- Khóa nhiệm vụ vận dụng thực tế hoặc phiếu Exit Ticket thực hiện, thu hồi và chốt ngay tại lớp. Trình bày mô hình hóa và lời giải chuẩn. Cột Trái đủ 4 bước.
+- **Bước 4: Kết luận, nhận định:** GV chuẩn hóa lời giải và giao đủ 4 nhiệm vụ tự học ở nhà: (1) Ôn tập quy tắc/định nghĩa/công thức; (2) Làm bài tập còn lại SGK và SBT (nêu số bài, gợi ý); (3) Chuẩn bị bài mới; (4) Vận dụng, tìm tòi mở rộng / công cụ số-AI nếu được bật.
+- Cột Phải: Đề bài vận dụng + Lời giải chi tiết + Khung 4 nhiệm vụ tự học cho HS ghi vở.
+- CẤM xuất pha E / ## E. HOẠT ĐỘNG 5. CẤM viết mục E.
 - Khi có NLS/AI: Vận dụng công cụ số/AI chuyên ngành giải quyết bài toán thực tế, đánh giá và kiểm chứng tính khả thi. CẤM hỏi lý thuyết AI suông.
-
-PHA E — HƯỚNG DẪN VỀ NHÀ:
-- Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\` (hoặc \`## E. HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`).
-- CẤM TUYỆT ĐỐI mục a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện. CẤM bảng Markdown 2 cột và 4 bước CV 5512.
-- Xuất thẳng danh sách phẳng 4 mục:
-  1. Ôn tập kiến thức: Ôn lại các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài.
-  2. Làm bài tập: Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) môn {subject} (kèm gợi ý phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
-  3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu học tập cần thiết.
-  4. Nhiệm vụ tìm tòi, mở rộng: Tìm hiểu thêm ứng dụng thực tế của bài học trong các lĩnh vực khác như kinh tế, đời sống, khoa học...
-- Khi giáo viên chủ động bật AI, thêm khối:
-  - Hướng dẫn Prompt AI an toàn:
-  + Mẫu Prompt: "Em là học sinh lớp {grade}, em đang tự học bài {topic} và gặp khó khăn ở [nêu bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự tìm ra cách giải, đừng giải hộ em nhé!"
-- QUY TẮC NLS/AI: Tuyệt đối KHÔNG tự ý xuất hiện NLS hoặc AI trong Hoạt động E. Chỉ thêm khi giáo viên CHỦ ĐỘNG BẬT, và khi đó nhiệm vụ phải có giá trị học tập thực chất, rõ ràng, không thay thế việc tự học.
-- LOẠI BỎ TRIỆT ĐỂ các yêu cầu hình thức (ghi âm, quay video, dùng AI tìm ví dụ suông...).
 
 CẤM xuất HTML, span, style, mã màu. CẤM lời chào hỏi hay chúc mừng ở đầu/cuối bài.`,
 
@@ -1283,7 +1312,8 @@ function getPromptTemplate(templateKey, context) {
   
   const rawTextbook = context.textbook_content || '';
   const subsections = extractTextbookSubsections(rawTextbook);
-  const budgets = calculateActivityTimeBudgets(context.duration, subsections.length, context.grade);
+  const fourActivities = templateKey !== 'GENERATE_ACTIVITIES_AE' && templateKey !== 'GENERATE_ACTIVITY_E';
+  const budgets = calculateActivityTimeBudgets(context.duration, subsections.length, context.grade, { fourActivities });
   const aiHomeworkPromptNote = context.aiCompetencyEnabled
     ? `- Hướng dẫn Prompt AI an toàn (khi giáo viên chủ động bật AI): Mẫu Prompt AI an toàn mẫu mực hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai gia sư gợi mở tư duy khi gặp khó khăn, TUYỆT ĐỐI không giải bài hộ, không thay thế việc tự học):\n  + Mẫu Prompt: "Em là học sinh lớp ${context.grade || '6'}, em đang tự học bài ${context.topic || ''} và gặp khó khăn ở [nêu bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự tìm ra cách giải, đừng giải hộ em nhé!"`
     : '';
@@ -1378,7 +1408,7 @@ function getPromptTemplate(templateKey, context) {
 Từ dữ liệu SGK được cung cấp, xác định chính xác ${subsections.length} tiểu mục kiến thức lớn sau. Bạn PHẢI tạo đúng ${subsections.length} hoạt động nhánh tương ứng 1-1, KHÔNG ĐƯỢC GỘP, KHÔNG ĐƯỢC BỎ BỚT, KHÔNG ĐƯỢC BỊA THÊM:
 ${subListStr}
 Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có thời lượng cố định cụ thể ví dụ (${budgets.formatted.B_subsections[0] || '15 phút'}), đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng). Tuyệt đối không tách câu hỏi nhỏ/bài tập con thành hoạt động riêng.
-Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budgets.formatted.B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). Tổng A + B + C + D + E BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.`;
+Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budgets.formatted.B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). ${fourActivities ? `Tổng A + B + C + D BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.` : `Tổng A + B + C + D + E BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.`} `;
     }
   }
 
@@ -1410,16 +1440,22 @@ Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budg
       result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK (chọn 1-2 bài tập trọng tâm để chữa trên lớp, các bài còn lại dành cho Hoạt động E - Hướng dẫn về nhà):\n"""\n${lessonMap.practice}\n"""`;
     }
     if (templateKey === 'GENERATE_ACTIVITY_D' && lessonMap.application) {
-      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK (thực hiện và chốt ngay tại lớp, không kéo dài sang bài tập về nhà):\n"""\n${lessonMap.application}\n"""`;
+      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK (thực hiện và chốt ngay tại lớp; 4 nhiệm vụ tự học giao trong Bước 4 Hoạt động D):\n"""\n${lessonMap.application}\n"""`;
     }
   }
 
   if (templateKey === 'GENERATE_ACTIVITIES_AD' || templateKey === 'GENERATE_ACTIVITIES_AE') {
     if (lessonMap.practice) {
-      result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK cho pha C (chọn 1-2 bài tập trọng tâm để chữa trên lớp, các bài còn lại dành cho pha E):\n"""\n${lessonMap.practice}\n"""`;
+      const leftover = templateKey === 'GENERATE_ACTIVITIES_AD'
+        ? 'các bài còn lại giao trong Bước 4 Hoạt động D — nhiệm vụ tự học'
+        : 'các bài còn lại dành cho pha E';
+      result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK cho pha C (chọn 1-2 bài tập trọng tâm để chữa trên lớp, ${leftover}):\n"""\n${lessonMap.practice}\n"""`;
     }
     if (lessonMap.application) {
-      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK cho pha D (thực hiện và chốt ngay tại lớp):\n"""\n${lessonMap.application}\n"""`;
+      const dNote = templateKey === 'GENERATE_ACTIVITIES_AD'
+        ? 'thực hiện và chốt ngay tại lớp; giao 4 nhiệm vụ tự học trong Bước 4'
+        : 'thực hiện và chốt ngay tại lớp';
+      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK cho pha D (${dNote}):\n"""\n${lessonMap.application}\n"""`;
     }
   }
 
