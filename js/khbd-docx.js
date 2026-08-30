@@ -31,15 +31,39 @@ class DocxGenerator {
     this.columnWidths = [4819, 4820];
   }
 
+  isGarbageLatexMathInner(inner) {
+    const trimmed = String(inner || "").trim();
+    if (!trimmed) return true;
+    const leftover = trimmed
+      .replace(/\\(?:quad|qquad|hspace\s*\{[^}]*\}|phantom\s*\{[^}]*\}|(?:long)?(?:left|right|leftright)arrow|(?:Left|Right|Leftright)arrow|mapsto|to|gets)/g, "")
+      .replace(/[-–—−→←↔]/g, "")
+      .replace(/\s+/g, "");
+    return leftover === "";
+  }
+
+  stripRepeatedLatexSpacing(text) {
+    if (!text) return "";
+    let s = String(text);
+    s = s.replace(/\$\$([\s\S]*?)\$\$/g, (full, inner) => (this.isGarbageLatexMathInner(inner) ? "" : full));
+    s = s.replace(/\$([^$\n]+?)\$/g, (full, inner) => (this.isGarbageLatexMathInner(inner) ? "" : full));
+    s = s.replace(/(?:\\(?:quad|qquad)\s*){3,}/g, " ");
+    s = s.replace(/[ \t]+\n/g, "\n");
+    s = s.replace(/\n{3,}/g, "\n\n");
+    return s;
+  }
+
   /**
    * Chuyển đổi mã LaTeX thành chuỗi ký tự toán học Unicode chuẩn
    */
   latexToUnicodeMath(latex) {
     if (!latex) return "";
-    let s = latex.trim();
+    let s = this.stripRepeatedLatexSpacing(String(latex)).trim();
+    if (!s) return "";
 
     // Loại bỏ dấu bao bọc $ hoặc $$
     s = s.replace(/^\$\$|\$\$$/g, "").replace(/^\$|\$$/g, "").trim();
+    if (this.isGarbageLatexMathInner(s)) return "";
+    s = s.replace(/(?:\\(?:quad|qquad)\s*){3,}/g, " ");
 
     // Thay thế các phân số \frac{a}{b} -> (a)/(b) hoặc a/b
     s = s.replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, "($1)/($2)");
@@ -425,13 +449,17 @@ class DocxGenerator {
     let match;
 
     const pushMath = (token, display) => {
-      const math = this.createNativeMath(token);
+      const cleaned = this.stripRepeatedLatexSpacing(token).trim();
+      if (!cleaned) return;
+      const math = this.createNativeMath(cleaned);
       if (math) {
         runs.push(math);
         return;
       }
+      const uni = this.latexToUnicodeMath(cleaned);
+      if (!uni) return;
       runs.push(new TextRun({
-        text: this.latexToUnicodeMath(token),
+        text: uni,
         font: "Cambria Math",
         italics: true,
         bold: Boolean(display),
@@ -519,7 +547,8 @@ class DocxGenerator {
       AlignmentType, BorderStyle, ShadingType
     } = window.docx;
 
-    const cleanMarkdown = typeof sanitizeLessonMarkdown === "function" ? sanitizeLessonMarkdown(markdown) : String(markdown || "");
+    const sanitized = typeof sanitizeLessonMarkdown === "function" ? sanitizeLessonMarkdown(markdown) : String(markdown || "");
+    const cleanMarkdown = this.stripRepeatedLatexSpacing(sanitized);
     const elements = [];
     const lines = cleanMarkdown.split(/\r?\n/);
     let i = 0;

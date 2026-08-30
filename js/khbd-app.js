@@ -3971,10 +3971,10 @@ function rewriteMathSpanForVietnamese(inner, display) {
 
 function unwrapVietnameseMathForKatex(markdown) {
   if (!markdown) return "";
-  let text = String(markdown);
+  let text = stripGarbageLatexSpacing(String(markdown));
   text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => rewriteMathSpanForVietnamese(inner, true));
   text = text.replace(/\$([^\$\n]+?)\$/g, (_, inner) => rewriteMathSpanForVietnamese(inner, false));
-  return text;
+  return stripGarbageLatexSpacing(text);
 }
 
 function renderMathPreview(markdownText, targetElementId) {
@@ -3991,7 +3991,7 @@ function renderMathPreview(markdownText, targetElementId) {
     return;
   }
 
-  const katexSafeMarkdown = rewriteIllustrationMarkdown(unwrapVietnameseMathForKatex(markdownText));
+  const katexSafeMarkdown = rewriteIllustrationMarkdown(unwrapVietnameseMathForKatex(stripGarbageLatexSpacing(markdownText)));
 
   // 1. Phân tích Markdown sang HTML bằng Marked.js
   let html = "";
@@ -4878,6 +4878,27 @@ function stripClosingChitchat(text) {
   return String(text || "");
 }
 
+const LATEX_SPACING_CMD_RE = String.raw`\\(?:quad|qquad|hspace\s*\{[^}]*\}|phantom\s*\{[^}]*\})`;
+const LATEX_AXIS_JUNK_RE = String.raw`(?:${LATEX_SPACING_CMD_RE}|\\(?:long)?(?:left|right|leftright)arrow|\\(?:Left|Right|Leftright)arrow|\\mapsto|\\to|\\gets|[-–—−→←↔])`;
+
+function isGarbageLatexMathInner(inner) {
+  const trimmed = String(inner || "").trim();
+  if (!trimmed) return true;
+  const leftover = trimmed.replace(new RegExp(LATEX_AXIS_JUNK_RE, "g"), "").replace(/\s+/g, "");
+  return leftover === "";
+}
+
+function stripGarbageLatexSpacing(markdown) {
+  if (!markdown) return "";
+  let text = String(markdown);
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (full, inner) => (isGarbageLatexMathInner(inner) ? "" : full));
+  text = text.replace(/\$([^$\n]+?)\$/g, (full, inner) => (isGarbageLatexMathInner(inner) ? "" : full));
+  text = text.replace(/(?:\\(?:quad|qquad)\s*){3,}/g, " ");
+  text = text.replace(/[ \t]+\n/g, "\n");
+  text = text.replace(/\n{3,}/g, "\n\n");
+  return text;
+}
+
 function mergeSplitActivityTables(text) {
   const headerPat = /\|[\s]*Hoạt động của GV và HS[\s]*\|[\s]*Nội dung[\s]*\|\s*\n\|[\s]*:?---:?[\s]*\|[\s]*:?---:?[\s]*\|/i;
   const chunks = [];
@@ -4981,6 +5002,7 @@ function sanitizeLessonMarkdown(rawOutput) {
 
   text = stripClosingChitchat(text);
   text = mergeSplitActivityTables(text);
+  text = stripGarbageLatexSpacing(text);
 
   return text.trim();
 }
@@ -6259,6 +6281,7 @@ if (typeof module !== 'undefined' && module.exports) {
     assertActivityIntegrations,
     assertObjectivesStandards,
     sanitizeLessonMarkdown,
+    stripGarbageLatexSpacing,
     splitKhbdMarkdownTableRow,
     mergeSplitActivityTables,
     unwrapVietnameseMathForKatex,
