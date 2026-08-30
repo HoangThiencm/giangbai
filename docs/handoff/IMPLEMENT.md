@@ -1,53 +1,50 @@
 # IMPLEMENT
 
-Trạng thái: ĐÃ LÀM — Lọc chuỗi `\quad` rác trong prompt, KaTeX preview và xuất Word
+Trạng thái: ĐÃ LÀM — Tinh gọn Hoạt động E thành danh sách 4 mục, không bảng 4 bước
 
 ## File đã đổi
 
 - `js/khbd-prompts.js`
 - `js/khbd-app.js`
-- `js/khbd-docx.js`
+- `tests/khbd-activity-e-smoke.js`
+- `tests/khbd-activity-e-dedupe-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Nội dung chính
 
 1. **Prompt (`js/khbd-prompts.js`)**
-   - Thêm `LATEX_SPACING_BAN` cấm chuỗi `\quad` / `\qquad` / `\hspace{...}` / `\phantom{...}` để giả lập hình vẽ hoặc trục số.
-   - Bài vẽ hình/trục số: mô tả bước thực hiện tường minh hoặc `![caption](khbd-ill:id)`.
-   - Gắn vào `ACTIVITY_TABLE_CONTRACT`, `OUTPUT_CONTRACT`, `GENERATE_ACTIVITY_B`, `GENERATE_ACTIVITY_C`, `GENERATE_ACTIVITY_D`.
+   - `GENERATE_ACTIVITY_E`: bỏ `ACTIVITY_TABLE_CONTRACT`, a) b) c) d) và bảng 2 cột. Mẫu xuất:
+     `## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})` rồi `1.` Ôn tập kiến thức, `2.` Làm bài tập, `3.` Chuẩn bị bài mới, `4.` Nhiệm vụ tìm tòi, mở rộng.
+   - `{ai_homework_prompt_note}` chỉ khi bật AI: `- Hướng dẫn Prompt AI an toàn:` + `+ Mẫu Prompt: "..."`.
+   - `GENERATE_ACTIVITIES_AE` / `GENERATE_ACTIVITIES_AD`: bảng 2 cột chỉ áp dụng A–D; Pha E cùng định dạng danh sách 4 mục, cấm a/b/c/d và bảng.
 
-2. **Làm sạch Markdown / KaTeX (`js/khbd-app.js`)**
-   - `stripGarbageLatexSpacing`: xóa khối `$...$` / `$$...$$` chỉ chứa lệnh khoảng trắng (và gạch nối/mũi tên giả lập trục số); rút gọn `(?:\quad|\qquad){3,}` còn 1 khoảng trắng.
-   - Gọi trong `sanitizeLessonMarkdown`, `unwrapVietnameseMathForKatex`, `renderMathPreview`.
-   - Giữ công thức hợp lệ kiểu `$x = 1 \quad \text{hoặc} \quad x = 2$`.
+2. **Logic (`js/khbd-app.js`)**
+   - `buildPhasePedagogyContext("E")`: yêu cầu danh sách 4 mục, cấm bảng/4 bước.
+   - `assertPhasePedagogyOutput("E")`: bắt đủ 4 nội dung (ôn tập, làm bài tập, chuẩn bị bài mới, tìm tòi/mở rộng); không bắt bảng hay GV/HS.
+   - `scoreKhbdActivityBlock(block, actKey)`: khối E cộng điểm 4 mục + danh sách `1. 2. 3. 4.`; không cộng điểm a/b/c/d; trừ nhẹ nếu còn bảng/a-b-c-d.
+   - `getFullLessonPlanMarkdown` / `renderMathPreview` giữ nguyên: markdown `1. 2. 3. 4.` render danh sách.
 
-3. **Xuất Word (`js/khbd-docx.js`)**
-   - `stripRepeatedLatexSpacing` + `isGarbageLatexMathInner` trong `latexToUnicodeMath` và `parseMarkdownToDocxElements`.
-   - Bỏ khối `\quad` rác trước khi tạo Unicode / Paragraph / Equation, tránh hàng trăm dấu cách làm vỡ bảng 2 cột.
+3. **Test**
+   - `tests/khbd-activity-e-smoke.js`: assert 4 mục, cấm bảng 2 cột, validator thiếu mục thì fail.
+   - `tests/khbd-activity-e-dedupe-smoke.js`: khi trùng tiêu đề E, giữ khối danh sách 4 mục.
 
 ## Ngoài phạm vi (không đụng)
 
-- Không đổi cấu trúc bảng 2 cột CV 5512.
-- Không lọc `\quad` đơn/đôi trong công thức toán hợp lệ.
+- Bảng 2 cột 4 bước của Hoạt động A, B, C, D.
+- Cấu trúc xuất Word chung (`DocxGenerator`).
 
 ## Test đã chạy
 
 ```
-node tests/khbd-sanitize-smoke.js
-node tests/khbd-katex-vn-smoke.js
-node tests/khbd-docx-math-smoke.js
-node tests/khbd-docx-layout-smoke.js
+node tests/khbd-activity-e-smoke.js
+node tests/khbd-activity-e-dedupe-smoke.js
 node tests/khbd-4steps-workflow-smoke.js
+node tests/khbd-docx-layout-smoke.js
+node tests/khbd-time-budgets-smoke.js
+node tests/khbd-pedagogy-script-smoke.js
 ```
 
 Kết quả: **pass**.
 
-Kiểm tra riêng bộ lọc `\quad`:
-- `$$\quad \quad \quad...$$` bị xóa; lời văn giữ nguyên.
-- Khối chỉ `\hspace` / `\phantom` / mũi tên + `\quad` bị xóa.
-- `$x = 1 \quad \text{hoặc} \quad x = 2$` giữ nguyên.
-- 3+ `\quad` liên tiếp rút gọn còn 1 khoảng trắng.
-- `latexToUnicodeMath` không chèn chuỗi space dài.
-
-Không mở được trình duyệt để bấm tạo bài AI / xuất Word trên `soankhbd.html`. Preview KaTeX và file .docx thật (Toán 6 Bài 3.4) cần `/verify` trên giao diện.
+Không mở được trình duyệt để bấm "Tạo Hoạt động E" trên `soankhbd.html` hay xuất file .docx thật. Cần `/verify` trên giao diện.

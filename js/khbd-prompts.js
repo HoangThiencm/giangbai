@@ -691,7 +691,7 @@ ${LATEX_SPACING_BAN}
 | + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao nhiệm vụ vận dụng thực tế / phát phiếu Exit Ticket: "Hãy vận dụng kiến thức vừa học để giải quyết tình huống thực tiễn sau trong 4 phút...". **HS:** Tiếp nhận nhiệm vụ, phân tích số liệu thực tế.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Thảo luận cặp/nhóm (hoặc làm việc cá nhân 3–4 phút) mô hình hóa vấn đề và tính toán kết quả. **GV:** Quan sát, gợi mở cách chuyển đổi từ ngôn ngữ thực tế sang biểu thức chuyên môn, bao quát lớp.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện nhóm trình bày mô hình và kết quả (hoặc nộp phiếu Exit Ticket tại lớp); các nhóm khác nhận xét tính hợp lý của đáp số thực tế. **GV:** Đặt câu hỏi mở rộng liên hệ đời sống.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét, đánh giá khả năng vận dụng của HS, chốt lại ý nghĩa thực tiễn và kết thúc hoạt động tại lớp. **HS:** Ghi nhận lời giải hoàn chỉnh vào vở. | **Vận dụng**<br>- Tình huống thực tế từ SGK.<br>- Mô hình hóa & Lời giải chuẩn xác.<br>. Ý nghĩa thực tiễn của bài học. |`,
 
   // TAB 4.E: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ
-  GENERATE_ACTIVITY_E: `Hãy biên soạn chi tiết **HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
+  GENERATE_ACTIVITY_E: `Hãy biên soạn **HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.
 - Môn học: {subject}
 - Tên bài dạy: {topic}
 - Phạm vi tiết dạy theo PPCT (nếu có): {lesson_scope}
@@ -705,46 +705,28 @@ ${LATEX_SPACING_BAN}
 {activities_content}
 """
 
-YÊU CẦU BIÊN SOẠN:
-${ACTIVITY_TABLE_CONTRACT}
-- BỐ CỤC NỘI DUNG CHUẨN SƯ PHẠM Ở MỤC b) NỘI DUNG VÀ CỘT PHẢI BẢNG d) (CỰC KỲ NGẮN GỌN, CHUẨN MỰC, ĐÚNG 4 NỘI DUNG):
-  1. Ôn nội dung trọng tâm: Ôn tập và hệ thống hóa các định nghĩa, quy tắc, công thức trọng tâm của bài học vào vở ghi.
-  2. Làm bài tập: Hoàn thành các bài tập CÒN LẠI trong SGK (chưa làm/chữa ở Hoạt động C và Hoạt động D) và Sách bài tập (SBT) môn {subject} (kèm gợi ý/hướng dẫn phương pháp giải ngắn gọn).
-     *CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa ở Hoạt động C hoặc Hoạt động D.*
+YÊU CẦU BIÊN SOẠN — DANH SÁCH 4 MỤC TINH GỌN (KHÔNG DÙNG BẢNG):
+- Hoạt động E chỉ chiếm 2–3 phút giao việc về nhà. Xuất THẲNG danh sách phẳng 4 mục, cực kỳ ngắn gọn, trực diện.
+- CẤM TUYỆT ĐỐI các mục \`### a) Mục tiêu:\`, \`### b) Nội dung:\`, \`### c) Sản phẩm:\`, \`### d) Tổ chức thực hiện:\`.
+- CẤM TUYỆT ĐỐI bảng Markdown 2 cột và 4 bước CV 5512 (Bước 1 Chuyển giao / Bước 2 Thực hiện / Bước 3 Báo cáo / Bước 4 Kết luận).
+- ĐÚNG 4 MỤC BẮT BUỘC, đánh số 1. 2. 3. 4.:
+  1. Ôn tập kiến thức: Ôn lại các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài.
+  2. Làm bài tập: Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) môn {subject} (kèm gợi ý/hướng dẫn phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
   3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu học tập cần thiết.
-  4. Nhiệm vụ tìm tòi, mở rộng: Giao một nhiệm vụ tìm tòi/mở rộng hoặc liên hệ vận dụng thực tiễn nếu thật sự phù hợp với bài học.
+  4. Nhiệm vụ tìm tòi, mở rộng: Tìm hiểu thêm ứng dụng thực tế của bài học trong các lĩnh vực khác như kinh tế, đời sống, khoa học...
 - QUY TẮC NLS/AI (OPT-IN):
   + Tuyệt đối KHÔNG tự ý xuất hiện NLS hoặc AI trong Hoạt động E.
-  + CHỈ thêm khi giáo viên CHỦ ĐỘNG BẬT lựa chọn tích hợp NLS/AI trong bối cảnh sư phạm, và khi đó nhiệm vụ phải có giá trị học tập thực chất, rõ ràng (như mẫu Prompt AI an toàn hỗ trợ tự học gợi mở tư duy khi gặp khó khăn, không giải hộ), TUYỆT ĐỐI KHÔNG thay thế việc tự học môn học.
+  + CHỈ thêm khi giáo viên CHỦ ĐỘNG BẬT lựa chọn tích hợp NLS/AI trong bối cảnh sư phạm, và khi đó nhiệm vụ phải có giá trị học tập thực chất, rõ ràng (mẫu Prompt AI an toàn hỗ trợ tự học gợi mở tư duy khi gặp khó khăn, không giải hộ), TUYỆT ĐỐI KHÔNG thay thế việc tự học môn học.
   + TUYỆT ĐỐI LOẠI BỎ các yêu cầu hình thức (như "ghi âm cách đọc", "quay video đọc quy tắc", "dùng AI tìm ví dụ suông").
-- Cột TRÁI mục d): Kịch bản phân vai rõ ràng đủ 4 bước CV 5512 ngắn gọn:
-  + **GV:** Nói câu lệnh giao nhiệm vụ về nhà trực tiếp trong ngoặc kép "...", hướng dẫn phương pháp và thời hạn nộp sản phẩm ở tiết sau.
-  + **HS:** Lắng nghe, ghi nhận 4 nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.
-- Cột PHẢI mục d): Nội dung hướng dẫn học ở nhà chốt cho HS ghi vở (đúng 4 mục: **1. Ôn tập kiến thức:**, **2. Làm bài tập:**, **3. Chuẩn bị bài mới:**, **4. Tìm tòi, mở rộng:**, và Mẫu Prompt AI nếu giáo viên chủ động bật).
-- CHỈ xuất ĐÚNG MỘT khối \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\` với đủ a) b) c) d). CẤM lặp lại tiêu đề E. CẤM copy mục E có trong ngữ cảnh tiến trình dạy học.
+- CHỈ xuất ĐÚNG MỘT khối \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\` (hoặc \`## E. HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`). CẤM lặp lại tiêu đề E. CẤM copy mục E có trong ngữ cảnh tiến trình dạy học.
 
 ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})
 
-### a) Mục tiêu:
-- Củng cố, khắc sâu kiến thức trọng tâm của bài học và rèn luyện năng lực tự chủ, tự học ở nhà.
-- Hoàn thành các bài tập còn lại, phát triển tư duy mở rộng và chuẩn bị tốt cho bài học tiếp theo.
-
-### b) Nội dung:
-- 1. Ôn tập kiến thức: Ôn lại các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài.
-- 2. Làm bài tập:
-  + Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) môn {subject} (kèm gợi ý/hướng dẫn phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
-- 3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng học tập cần thiết.
-- 4. Tìm tòi, mở rộng (nếu phù hợp): Tìm hiểu thêm ứng dụng thực tế hoặc bài tập tư duy mở rộng.
-{ai_homework_prompt_note}
-
-### c) Sản phẩm:
-- Vở ghi bài và vở bài tập có lời giải đầy đủ của các bài tập được giao về nhà.
-- Phần chuẩn bị bài mới và kết quả nhiệm vụ tìm tòi, mở rộng (nếu có).
-
-### d) Tổ chức thực hiện:
-| Hoạt động của GV và HS | Nội dung |
-| :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật Giao việc) **GV:** Trình chiếu slide/nêu câu lệnh giao việc ngắn gọn: "Các em về nhà hoàn thành 4 nhiệm vụ: (1) Ôn lại kiến thức trọng tâm, (2) Làm các bài tập còn lại trong SGK và SBT, (3) Chuẩn bị bài mới, (4) Thực hiện nhiệm vụ tìm tòi mở rộng...". **HS:** Lắng nghe, ghi nhận các nhiệm vụ và thời hạn hoàn thành vào vở.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Tự giác ôn tập, giải bài tập và chuẩn bị bài mới tại nhà theo hướng dẫn. **GV:** Định hướng phương pháp, hỗ trợ giải đáp khi cần thiết.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Nộp vở bài tập và báo cáo kết quả chuẩn bị vào đầu tiết học sau; trao đổi, đối chiếu kết quả với bạn. **GV:** Kiểm tra xác suất hoặc giao cán sự lớp/nhóm trưởng kiểm tra chéo.<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét tinh thần tự học ở nhà, giải đáp thắc mắc và tuyên dương học sinh hoàn thành tốt. **HS:** Rút kinh nghiệm và hoàn thiện bài làm. | **Hướng dẫn học ở nhà**<br>**1. Ôn tập kiến thức:**<br>- Ôn tập nội dung, quy tắc, công thức trọng tâm của bài học.<br>**2. Làm bài tập:**<br>- Hoàn thành bài tập còn lại trong SGK & SBT (kèm gợi ý phương pháp).<br>**3. Chuẩn bị bài mới:**<br>- Đọc trước bài mới và chuẩn bị học liệu, đồ dùng học tập.<br>**4. Tìm tòi, mở rộng:**<br>- Nhiệm vụ tìm tòi, ứng dụng mở rộng phù hợp bài học. |`,
+1. Ôn tập kiến thức: Ôn lại các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài.
+2. Làm bài tập: Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) môn {subject} (kèm gợi ý/hướng dẫn phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
+3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu học tập cần thiết.
+4. Nhiệm vụ tìm tòi, mở rộng: Tìm hiểu thêm ứng dụng thực tế của bài học trong các lĩnh vực khác như kinh tế, đời sống, khoa học...
+{ai_homework_prompt_note}`,
 
   get ACTIVITY_F() { return this.GENERATE_PORTFOLIO_WORKSHEETS; },
   GENERATE_PORTFOLIO_WORKSHEETS: `Hãy thiết kế **F. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)** để giáo viên in phát cho học sinh, bám sát Công văn 5512/BGDĐT-GDTrH.
@@ -840,7 +822,7 @@ BẮT BUỘC xuất đúng 5 khối, mỗi khối bắt đầu bằng marker:
 <<<KHBD_E>>>
 (toàn bộ ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E}))
 
-YÊU CẦU HÌNH THỨC & KỊCH BẢN THỰC CHIẾN (Áp dụng mọi pha A–E):
+YÊU CẦU HÌNH THỨC & KỊCH BẢN THỰC CHIẾN (Áp dụng các pha A–D; pha E dùng danh sách 4 mục, KHÔNG dùng bảng 2 cột):
 ${ACTIVITY_TABLE_CONTRACT}
 - QUY TẮC THỜI LƯỢNG CỐ ĐỊNH: BẮT BUỘC đặt thời lượng cố định cụ thể bằng số phút trong tiêu đề từng hoạt động (A: {time_budget_A}, C: {time_budget_C}, D: {time_budget_D}, E: {time_budget_E}; từng hoạt động nhánh trong B: theo phân bổ tiểu mục). TUYỆT ĐỐI CẤM ghi từ "Khoảng" hoặc dải thời gian "X - Y phút".
 
@@ -869,8 +851,16 @@ PHA D — VẬN DỤNG:
 - Khi có NLS/AI: Vận dụng công cụ số/AI chuyên ngành giải quyết bài toán thực tế, đánh giá và kiểm chứng tính khả thi. CẤM hỏi lý thuyết AI suông.
 
 PHA E — HƯỚNG DẪN VỀ NHÀ:
-- Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`.
-- Đủ a) Mục tiêu, b) Nội dung (Bố cục 4 nội dung chuẩn mực: 1. Ôn nội dung trọng tâm, 2. Làm bài tập: hoàn thành các bài tập CÒN LẠI trong SGK chưa làm/chữa ở Pha C/D, bài tập SBT kèm gợi ý phương pháp - CẤM TUYỆT ĐỐI giao lại bài đã chữa ở C/D, 3. Chuẩn bị bài mới, 4. Nhiệm vụ tìm tòi/mở rộng nếu phù hợp; có thêm Mẫu Prompt AI an toàn hỗ trợ tự học CHỈ khi giáo viên chủ động bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, Cột Trái 4 bước giao nhiệm vụ ngắn gọn, Cột Phải đúng 4 mục nội dung).
+- Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\` (hoặc \`## E. HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`).
+- CẤM TUYỆT ĐỐI mục a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện. CẤM bảng Markdown 2 cột và 4 bước CV 5512.
+- Xuất thẳng danh sách phẳng 4 mục:
+  1. Ôn tập kiến thức: Ôn lại các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài.
+  2. Làm bài tập: Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) môn {subject} (kèm gợi ý phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
+  3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu học tập cần thiết.
+  4. Nhiệm vụ tìm tòi, mở rộng: Tìm hiểu thêm ứng dụng thực tế của bài học trong các lĩnh vực khác như kinh tế, đời sống, khoa học...
+- Khi giáo viên chủ động bật AI, thêm khối:
+  - Hướng dẫn Prompt AI an toàn:
+  + Mẫu Prompt: "Em là học sinh lớp {grade}, em đang tự học bài {topic} và gặp khó khăn ở [nêu bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự tìm ra cách giải, đừng giải hộ em nhé!"
 - QUY TẮC NLS/AI: Tuyệt đối KHÔNG tự ý xuất hiện NLS hoặc AI trong Hoạt động E. Chỉ thêm khi giáo viên CHỦ ĐỘNG BẬT, và khi đó nhiệm vụ phải có giá trị học tập thực chất, rõ ràng, không thay thế việc tự học.
 - LOẠI BỎ TRIỆT ĐỂ các yêu cầu hình thức (ghi âm, quay video, dùng AI tìm ví dụ suông...).
 
@@ -907,7 +897,7 @@ BẮT BUỘC xuất đúng 5 khối, mỗi khối bắt đầu bằng marker:
 <<<KHBD_E>>>
 (toàn bộ ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E}))
 
-YÊU CẦU HÌNH THỨC & KỊCH BẢN THỰC CHIẾN (Áp dụng mọi pha A–E):
+YÊU CẦU HÌNH THỨC & KỊCH BẢN THỰC CHIẾN (Áp dụng các pha A–D; pha E dùng danh sách 4 mục, KHÔNG dùng bảng 2 cột):
 ${ACTIVITY_TABLE_CONTRACT}
 - QUY TẮC THỜI LƯỢNG CỐ ĐỊNH: BẮT BUỘC đặt thời lượng cố định cụ thể bằng số phút trong tiêu đề từng hoạt động (A: {time_budget_A}, C: {time_budget_C}, D: {time_budget_D}, E: {time_budget_E}; từng hoạt động nhánh trong B: theo phân bổ tiểu mục). TUYỆT ĐỐI CẤM ghi từ "Khoảng" hoặc dải thời gian "X - Y phút".
 
@@ -936,8 +926,16 @@ PHA D — VẬN DỤNG:
 - Khi có NLS/AI: Vận dụng công cụ số/AI chuyên ngành giải quyết bài toán thực tế, đánh giá và kiểm chứng tính khả thi. CẤM hỏi lý thuyết AI suông.
 
 PHA E — HƯỚNG DẪN VỀ NHÀ:
-- Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`.
-- Đủ a) Mục tiêu, b) Nội dung (Bố cục 4 nội dung chuẩn mực: 1. Ôn nội dung trọng tâm, 2. Làm bài tập: hoàn thành các bài tập CÒN LẠI trong SGK chưa làm/chữa ở Pha C/D, bài tập SBT kèm gợi ý phương pháp - CẤM TUYỆT ĐỐI giao lại bài đã chữa ở C/D, 3. Chuẩn bị bài mới, 4. Nhiệm vụ tìm tòi/mở rộng nếu phù hợp; có thêm Mẫu Prompt AI an toàn hỗ trợ tự học CHỈ khi giáo viên chủ động bật AI), c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất, Cột Trái 4 bước giao nhiệm vụ ngắn gọn, Cột Phải đúng 4 mục nội dung).
+- Tiêu đề: \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\` (hoặc \`## E. HƯỚNG DẪN VỀ NHÀ ({time_budget_E})\`).
+- CẤM TUYỆT ĐỐI mục a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện. CẤM bảng Markdown 2 cột và 4 bước CV 5512.
+- Xuất thẳng danh sách phẳng 4 mục:
+  1. Ôn tập kiến thức: Ôn lại các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài.
+  2. Làm bài tập: Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) môn {subject} (kèm gợi ý phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
+  3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu học tập cần thiết.
+  4. Nhiệm vụ tìm tòi, mở rộng: Tìm hiểu thêm ứng dụng thực tế của bài học trong các lĩnh vực khác như kinh tế, đời sống, khoa học...
+- Khi giáo viên chủ động bật AI, thêm khối:
+  - Hướng dẫn Prompt AI an toàn:
+  + Mẫu Prompt: "Em là học sinh lớp {grade}, em đang tự học bài {topic} và gặp khó khăn ở [nêu bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự tìm ra cách giải, đừng giải hộ em nhé!"
 - QUY TẮC NLS/AI: Tuyệt đối KHÔNG tự ý xuất hiện NLS hoặc AI trong Hoạt động E. Chỉ thêm khi giáo viên CHỦ ĐỘNG BẬT, và khi đó nhiệm vụ phải có giá trị học tập thực chất, rõ ràng, không thay thế việc tự học.
 - LOẠI BỎ TRIỆT ĐỂ các yêu cầu hình thức (ghi âm, quay video, dùng AI tìm ví dụ suông...).
 

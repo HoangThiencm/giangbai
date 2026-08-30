@@ -1,15 +1,13 @@
 const assert = require("assert");
 const {
   PROMPTS,
-  getPromptTemplate,
-  calculateActivityTimeBudgets
+  getPromptTemplate
 } = require("../js/khbd-prompts.js");
 
 console.log("==================================================");
 console.log("BẮT ĐẦU KIỂM THỬ TÍCH HỢP HOẠT ĐỘNG E (HƯỚNG DẪN VỀ NHÀ)");
 console.log("==================================================");
 
-// Mock môi trường tối giản cho các hàm từ khbd-app.js
 function sanitizeLessonMarkdown(rawOutput) {
   if (!rawOutput) return "";
   return String(rawOutput).replace(/^\uFEFF/, "").trim();
@@ -61,22 +59,30 @@ function parseKhbdSections(text, keys) {
 function assertPhasePedagogyOutput(phase, output) {
   const text = String(output || "");
   if (phase === "E") {
-    const tablePart = text.split(/#{3,4}\s*d\)/i)[1] || text.split("### d)")[1] || text;
-    const hasStep1 = /bước\s*1|chuyển giao/i.test(tablePart);
-    const hasStep2 = /bước\s*2|thực hiện/i.test(tablePart);
-    const hasStep3 = /bước\s*3|báo cáo|thảo luận/i.test(tablePart);
-    const hasStep4 = /bước\s*4|kết luận|nhận định/i.test(tablePart);
-    if (!hasStep1 || !hasStep2 || !hasStep3 || !hasStep4) {
-      throw new Error("Hoạt động E: Bảng tổ chức thực hiện chưa có đủ 4 bước CV 5512 (Bước 1: Chuyển giao -> Bước 2: Thực hiện -> Bước 3: Báo cáo -> Bước 4: Kết luận).");
-    }
-    const cellData = tablePart.replace(/\|\s*Hoạt động của GV và HS\s*\|\s*Nội dung\s*\|/i, "");
-    const hasGv = /(?:\*\*GV\b|\bGV\s*:|giáo viên)/i.test(cellData);
-    const hasHs = /(?:\*\*HS\b|\bHS\s*:|học sinh)/i.test(cellData);
-    if (!hasGv || !hasHs) {
-      throw new Error("Hoạt động E: Bảng tổ chức thực hiện chưa phân định rõ ràng vai trò GV (giao việc, hướng dẫn) và HS (ghi nhận, tự học tại nhà).");
+    const hasOnTap = /ôn\s*tập/i.test(text);
+    const hasBaiTap = /làm\s*bài\s*tập|bài\s*tập/i.test(text);
+    const hasChuanBi = /chuẩn\s*bị\s*bài/i.test(text);
+    const hasMoRong = /tìm\s*tòi|mở\s*rộng/i.test(text);
+    if (!hasOnTap || !hasBaiTap || !hasChuanBi || !hasMoRong) {
+      throw new Error("Hoạt động E: Chưa đủ 4 mục (Ôn tập kiến thức, Làm bài tập, Chuẩn bị bài mới, Nhiệm vụ tìm tòi/mở rộng).");
     }
     return;
   }
+}
+
+function assertCompactListItems(text) {
+  assert.match(text, /1\.\s*Ôn tập kiến thức/i, "Must have item 1 Ôn tập kiến thức");
+  assert.match(text, /2\.\s*Làm bài tập/i, "Must have item 2 Làm bài tập");
+  assert.match(text, /3\.\s*Chuẩn bị bài mới/i, "Must have item 3 Chuẩn bị bài mới");
+  assert.match(text, /4\.\s*Nhiệm vụ tìm tòi, mở rộng/i, "Must have item 4 Tìm tòi, mở rộng");
+}
+
+function assertGeneratedCompactE(text) {
+  assertCompactListItems(text);
+  const sample = String(text).split(/#{1,3}\s*E\./i)[1] || text;
+  assert.doesNotMatch(sample, /#{2,4}\s*a\)\s*Mục tiêu/i, "Sample E must not use a) Mục tiêu");
+  assert.doesNotMatch(sample, /#{2,4}\s*d\)\s*Tổ chức thực hiện/i, "Sample E must not use d) Tổ chức thực hiện");
+  assert.doesNotMatch(sample, /\|\s*Hoạt động của GV và HS\s*\|/i, "Sample E must not use 2-column table");
 }
 
 // 1. Kiểm tra Template PROMPTS.GENERATE_ACTIVITY_E
@@ -96,11 +102,17 @@ const context = {
 
 const promptE = getPromptTemplate("GENERATE_ACTIVITY_E", context);
 assert(promptE.includes("HƯỚNG DẪN VỀ NHÀ") && promptE.includes("E. HOẠT ĐỘNG"), "Must contain Activity E heading");
-assert(promptE.includes("Sơ đồ tư duy") || promptE.includes("sơ đồ tư duy"), "Must instruct mindmap");
+assertGeneratedCompactE(promptE);
 assert(promptE.includes("SGK") && promptE.includes("SBT"), "Must instruct textbook & workbook exercises");
-assert(promptE.includes("mở rộng") || promptE.includes("nâng cao"), "Must instruct advanced exercises");
-assert(promptE.includes("Chuẩn bị bài mới") || promptE.includes("chuẩn bị") || promptE.includes("Chuẩn bị bài sau"), "Must instruct next lesson preparation");
+assert(promptE.includes("CẤM TUYỆT ĐỐI bảng Markdown 2 cột") || promptE.includes("CẤM TUYỆT ĐỐI bảng Markdown"), "Must forbid 2-column table");
 assert(promptE.includes("Prompt AI an toàn"), "Must include AI prompt guide when AI enabled");
+assert.match(promptE, /Mẫu Prompt:/, "Must include sample AI prompt");
+
+const promptAE = getPromptTemplate("GENERATE_ACTIVITIES_AE", context);
+assert.match(promptAE, /PHA E — HƯỚNG DẪN VỀ NHÀ/);
+assert.match(promptAE, /CẤM TUYỆT ĐỐI mục a\) Mục tiêu/);
+assert.match(promptAE, /1\.\s*Ôn tập kiến thức/);
+assert.match(promptAE, /danh sách 4 mục/);
 console.log("  -> Prompt Template Activity E: PASS");
 
 // 2. Kiểm tra Parser 1-Click bóc tách marker <<<KHBD_E>>>
@@ -123,20 +135,13 @@ Nội dung C...
 Nội dung D...
 
 <<<KHBD_E>>>
-# E. HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ
-#### a) Mục tiêu:
-- Học sinh củng cố kiến thức về căn bậc hai số học.
-#### b) Nội dung:
-1. Ôn tập kiến thức và vẽ sơ đồ tư duy.
-2. Làm bài tập 2.1, 2.2 SGK trang 32.
-3. Bài tập nâng cao: Tính giá trị biểu thức.
-4. Đọc trước bài mới: Số thực.
-#### c) Sản phẩm:
-- Vở ghi bài tập và sơ đồ tư duy của học sinh.
-#### d) Tổ chức thực hiện:
-| Hoạt động của GV và HS | Nội dung |
-| :--- | :--- |
-| **Bước 1: Chuyển giao nhiệm vụ:**<br>- **GV:** Giao nhiệm vụ tự học tại nhà: "Các em hãy hoàn thành bài tập 2.1, 2.2 vào vở và chuẩn bị bài mới nhé!"<br>- **HS:** Lắng nghe và ghi chép nhiệm vụ.<br><br>**Bước 2: Thực hiện nhiệm vụ:**<br>- **HS:** Tự giác làm bài tập ở nhà.<br><br>**Bước 3: Báo cáo, thảo luận:**<br>- **HS:** Nộp vở bài tập vào đầu tiết học sau.<br><br>**Bước 4: Kết luận, nhận định:**<br>- **GV:** Nhận xét, đánh giá kết quả tự học của học sinh. | 1. Ôn tập kiến thức.<br>2. Bài tập SGK & SBT.<br>3. Bài tập nâng cao.<br>4. Chuẩn bị bài sau. |
+## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (3 phút)
+1. Ôn tập kiến thức: Ôn lại các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài.
+2. Làm bài tập: Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và SBT.
+3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK.
+4. Nhiệm vụ tìm tòi, mở rộng: Tìm hiểu ứng dụng thực tế của căn bậc hai.
+- Hướng dẫn Prompt AI an toàn:
++ Mẫu Prompt: "Em là học sinh lớp 7, em đang tự học bài Số vô tỉ và gặp khó khăn ở [nêu bài tập]. Bạn hãy đóng vai gia sư gợi mở..."
 `;
 
 const parsed = parseKhbdSections(mock1ClickOutput, ["A", "B", "C", "D", "E"]);
@@ -144,7 +149,8 @@ assert(parsed.A && parsed.A.includes("HOẠT ĐỘNG MỞ ĐẦU"), "Parsed A ok
 assert(parsed.B && parsed.B.includes("HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC"), "Parsed B ok");
 assert(parsed.C && parsed.C.includes("HOẠT ĐỘNG LUYỆN TẬP"), "Parsed C ok");
 assert(parsed.D && parsed.D.includes("HOẠT ĐỘNG VẬN DỤNG"), "Parsed D ok");
-assert(parsed.E && parsed.E.includes("HOẠT ĐỘNG HƯỚNG DẪN VỀ NHÀ"), "Parsed E ok with marker");
+assert(parsed.E && parsed.E.includes("HƯỚNG DẪN VỀ NHÀ"), "Parsed E ok with marker");
+assertGeneratedCompactE(parsed.E);
 console.log("  -> Parser với marker KHBD_E: PASS");
 
 // 3. Kiểm tra Parser Fallback nhận diện Heading E. HƯỚNG DẪN VỀ NHÀ
@@ -163,40 +169,30 @@ Nội dung C
 Nội dung D
 
 # E. HƯỚNG DẪN VỀ NHÀ
-Nội dung E
+1. Ôn tập kiến thức: Ôn lại kiến thức trọng tâm.
+2. Làm bài tập: Hoàn thành bài tập còn lại SGK và SBT.
+3. Chuẩn bị bài mới: Đọc trước bài mới.
+4. Nhiệm vụ tìm tòi, mở rộng: Tìm hiểu ứng dụng thực tế.
 `;
 const parsedFallback = parseKhbdSections(mockFallbackOutput, ["A", "B", "C", "D", "E"]);
 assert(parsedFallback.E && parsedFallback.E.includes("HƯỚNG DẪN VỀ NHÀ"), "Parsed E fallback ok");
+assertGeneratedCompactE(parsedFallback.E);
 console.log("  -> Parser Fallback Heading E: PASS");
 
 // 4. Kiểm tra Validator Sư phạm assertPhasePedagogyOutput cho Pha E
 console.log("-> 4. Kiểm tra assertPhasePedagogyOutput cho Pha E...");
-// Hợp lệ:
 assert.doesNotThrow(() => {
   assertPhasePedagogyOutput("E", parsed.E);
-}, "Valid Activity E should pass assertion");
+}, "Valid compact Activity E should pass assertion");
 
-// Không hợp lệ: Thiếu Bước 4
-const invalidStep = `
-#### d) Tổ chức thực hiện:
-| Hoạt động của GV và HS | Nội dung |
-| :--- | :--- |
-| **Bước 1: Chuyển giao nhiệm vụ:** **GV:** Giao bài tập. **HS:** Ghi bài. | Nội dung... |
+const invalidMissing = `
+## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (3 phút)
+1. Ôn tập kiến thức: Ôn lại định nghĩa.
+2. Làm bài tập: Làm bài 2.1 SGK.
 `;
 assert.throws(() => {
-  assertPhasePedagogyOutput("E", invalidStep);
-}, /chưa có đủ 4 bước/, "Should throw when missing CV 5512 steps");
-
-// Không hợp lệ: Thiếu vai trò GV/HS
-const invalidRole = `
-#### d) Tổ chức thực hiện:
-| Hoạt động của GV và HS | Nội dung |
-| :--- | :--- |
-| **Bước 1: Chuyển giao:** Giao bài tập.<br>**Bước 2: Thực hiện:** Làm bài.<br>**Bước 3: Báo cáo:** Nộp bài.<br>**Bước 4: Kết luận:** Đánh giá. | Nội dung... |
-`;
-assert.throws(() => {
-  assertPhasePedagogyOutput("E", invalidRole);
-}, /chưa phân định rõ ràng vai trò/, "Should throw when missing GV/HS roles");
+  assertPhasePedagogyOutput("E", invalidMissing);
+}, /Chưa đủ 4 mục/, "Should throw when missing compact E items");
 console.log("  -> Validator Sư phạm Pha E: PASS");
 
 console.log("==================================================");

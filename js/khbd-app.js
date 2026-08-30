@@ -4525,16 +4525,16 @@ function buildPhasePedagogyContext(phase) {
   if (phase === "E") {
     const integrationE = buildIntegrationActivityConstraint("E");
     return `\nYÊU CẦU ĐẶC THÙ CHO HOẠT ĐỘNG E (HƯỚNG DẪN VỀ NHÀ):
-- Cực kỳ ngắn gọn, chuẩn mực, đủ 4 mục a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (Đúng 1 bảng Markdown 2 cột, 1 hàng duy nhất).
-- Bố cục nội dung ở mục b) và Cột Phải Bảng d) BẮT BUỘC đúng 4 nội dung súc tích:
-  1. Ôn nội dung trọng tâm: Ôn tập và hệ thống hóa kiến thức trọng tâm của bài học vào vở ghi.
-  2. Làm bài tập: Hoàn thành các bài tập CÒN LẠI trong SGK (chưa làm/chữa ở Hoạt động C và D), các bài tập tương ứng trong Sách bài tập (SBT) (có thể kèm gợi ý/hướng dẫn phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
-  3. Chuẩn bị bài mới: Đọc trước bài tiếp theo trong SGK và chuẩn bị đồ dùng học tập cần thiết.
-  4. Nhiệm vụ tìm tòi, mở rộng: Giao một nhiệm vụ tìm tòi/mở rộng hoặc vận dụng thực tế nếu thật sự phù hợp.
-- TUYỆT ĐỐI LOẠI BỎ mọi yêu cầu hình thức (như ghi âm cách đọc, quay video, bắt dùng AI tìm ví dụ suông).
-- Cột Trái Bảng d): Đủ 4 bước CV 5512 phân vai rõ ràng, ngắn gọn:
-  + **GV:** Nói câu lệnh giao nhiệm vụ về nhà trực tiếp trong ngoặc kép "...", hướng dẫn phương pháp và thời hạn nộp sản phẩm ở đầu tiết sau.
-  + **HS:** Lắng nghe, ghi nhận 4 nhiệm vụ vào vở, tự giác thực hiện ở nhà và báo cáo/nộp sản phẩm vào đầu tiết sau.${integrationE}`;
+- Cực kỳ ngắn gọn, 2–3 phút giao việc về nhà. Xuất THẲNG danh sách phẳng 4 mục, không chia a) b) c) d).
+- CẤM TUYỆT ĐỐI mục ### a) Mục tiêu, ### b) Nội dung, ### c) Sản phẩm, ### d) Tổ chức thực hiện.
+- CẤM TUYỆT ĐỐI bảng Markdown 2 cột và 4 bước CV 5512 (Chuyển giao / Thực hiện / Báo cáo / Kết luận).
+- BẮT BUỘC đúng 4 mục đánh số:
+  1. Ôn tập kiến thức: Ôn lại các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài.
+  2. Làm bài tập: Hoàn thành các bài tập CÒN LẠI trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) (kèm gợi ý phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.
+  3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu học tập cần thiết.
+  4. Nhiệm vụ tìm tòi, mở rộng: Tìm hiểu thêm ứng dụng thực tế của bài học (kinh tế, đời sống, khoa học...).
+- Khi giáo viên chủ động bật AI: thêm \`- Hướng dẫn Prompt AI an toàn:\` và \`+ Mẫu Prompt: "..."\` (gia sư gợi mở, không giải hộ).
+- TUYỆT ĐỐI LOẠI BỎ mọi yêu cầu hình thức (như ghi âm cách đọc, quay video, bắt dùng AI tìm ví dụ suông).${integrationE}`;
   }
 
   const selected = appState.teachingContext.phasePedagogy?.[phase] || {};
@@ -4579,7 +4579,16 @@ function pedagogyLabelInText(haystack, label) {
 
 function assertPhasePedagogyOutput(phase, output) {
   const text = String(output || "");
-  if (phase === "E") return;
+  if (phase === "E") {
+    const hasOnTap = /ôn\s*tập/i.test(text);
+    const hasBaiTap = /làm\s*bài\s*tập|bài\s*tập/i.test(text);
+    const hasChuanBi = /chuẩn\s*bị\s*bài/i.test(text);
+    const hasMoRong = /tìm\s*tòi|mở\s*rộng/i.test(text);
+    if (!hasOnTap || !hasBaiTap || !hasChuanBi || !hasMoRong) {
+      throw new Error("Hoạt động E: Chưa đủ 4 mục (Ôn tập kiến thức, Làm bài tập, Chuẩn bị bài mới, Nhiệm vụ tìm tòi/mở rộng).");
+    }
+    return;
+  }
   const selected = (appState && appState.teachingContext && appState.teachingContext.phasePedagogy?.[phase]) || {};
   const labels = (selected.techniques || []).map(id => pedagogyLabel("techniques", id)).filter(Boolean);
 
@@ -5126,15 +5135,29 @@ function activityHeadingRegex(key) {
   return new RegExp(`^#{1,3}\\s*(?:${map[key]})`, "i");
 }
 
-function scoreKhbdActivityBlock(block) {
+function scoreKhbdActivityBlock(block, actKey) {
   const text = String(block || "");
   let score = text.length;
+  const hasOnTap = /(?:Ôn\s*tập|Ôn\s*nội\s*dung|Học\s*bài)/i.test(text);
+  const hasBaiTap = /(?:Làm\s*bài|Bài\s*tập)/i.test(text);
+  const hasChuanBi = /(?:Chuẩn\s*bị|Bài\s*mới)/i.test(text);
+  const hasMoRong = /(?:Tìm\s*tòi|Mở\s*rộng)/i.test(text);
+  if (actKey === "E") {
+    if (hasOnTap) score += 800;
+    if (hasBaiTap) score += 800;
+    if (hasChuanBi) score += 800;
+    if (hasMoRong) score += 800;
+    if (/^\s*1\.\s/m.test(text) && /^\s*2\.\s/m.test(text) && /^\s*3\.\s/m.test(text) && /^\s*4\.\s/m.test(text)) score += 600;
+    if (/#{2,4}\s*[abcd]\)/i.test(text)) score -= 400;
+    if (/\|\s*Hoạt động của GV và HS\s*\|/i.test(text)) score -= 400;
+    return score;
+  }
   if (/#{2,4}\s*a\)\s*Mục tiêu/i.test(text)) score += 1000;
   if (/#{2,4}\s*b\)\s*Nội dung/i.test(text)) score += 1000;
   if (/#{2,4}\s*c\)\s*Sản phẩm/i.test(text)) score += 800;
   if (/#{2,4}\s*d\)\s*Tổ chức/i.test(text)) score += 800;
-  if (/(?:Ôn\s*tập|Ôn\s*nội\s*dung|Học\s*bài)/i.test(text) && /(?:Làm\s*bài|Bài\s*tập)/i.test(text) && /(?:Chuẩn\s*bị|Bài\s*mới)/i.test(text)) score += 500;
-  if (/(?:Tìm\s*tòi|Mở\s*rộng)/i.test(text)) score += 200;
+  if (hasOnTap && hasBaiTap && hasChuanBi) score += 500;
+  if (hasMoRong) score += 200;
   return score;
 }
 
@@ -5152,7 +5175,7 @@ function keepBestActivityBlock(text, actKey) {
     const end = idx + 1 < starts.length ? starts[idx + 1] : lines.length;
     return lines.slice(start, end).join("\n").trim();
   });
-  return blocks.sort((a, b) => scoreKhbdActivityBlock(b) - scoreKhbdActivityBlock(a))[0];
+  return blocks.sort((a, b) => scoreKhbdActivityBlock(b, actKey) - scoreKhbdActivityBlock(a, actKey))[0];
 }
 
 function clipKhbdActivityMarkdown(actKey, text) {

@@ -1,70 +1,79 @@
-﻿# PLAN: Khắc phục lỗi hiển thị chuỗi \quad lặp lại vô nghĩa trong KaTeX và Bảng Nội dung (soankhbd.html)
+﻿# PLAN: Tinh gọn Hoạt động E (Hướng dẫn về nhà) thành danh sách ngắn gọn, không dùng bảng 4 bước
 
 Trạng thái: ĐÃ IMPLEMENT (chờ /verify)
 
 ## Hiện trạng
-- Trong ảnh chụp giao diện `soankhbd.html` (phần xem trước KaTeX & Bảng biểu ở Hoạt động C. Luyện tập, Bài 3.4 về biểu diễn số trên trục số), mục Lời giải xuất hiện một khối lớn toàn các lệnh LaTeX khoảng trắng: `$$\quad \quad \quad \quad \quad \quad \quad \quad \dots$$`.
-- **Nguyên nhân gốc rễ**:
-  1. Khi gặp bài toán yêu cầu vẽ hình hoặc biểu diễn số trên trục số, mô hình AI (Gemini) cố tình tạo khoảng trống hoặc mô phỏng trục số/vạch chia bằng cách lặp lại hàng chục lệnh khoảng trắng LaTeX `\quad` hoặc `\qquad`.
-  2. Trong `js/khbd-prompts.js`, hệ thống prompt chưa có ràng buộc cấm AI sinh chuỗi `\quad` liên tiếp để tạo khoảng trống hoặc vẽ hình giả lập.
-  3. Trong `js/khbd-app.js`, các hàm làm sạch `sanitizeLessonMarkdown`, `normalizeGeminiLessonOutput` và `unwrapVietnameseMathForKatex` chưa có bộ lọc regex để nhận diện và loại bỏ/rút gọn các khối LaTeX rác chỉ chứa toàn `\quad`, `\qquad`, `\hspace` hay khoảng trắng vô nghĩa.
-  4. Khi Marked.js và KaTeX render, chuỗi này biến thành một mảng khối rác dài làm xấu giao diện và xô lệch bảng; khi xuất sang Word (.docx), `js/khbd-docx.js` chuyển đổi thành hàng trăm dấu cách làm vỡ lề bảng 2 cột.
+- Hiện tại, Hoạt động E (Hướng dẫn về nhà) trong `js/khbd-prompts.js` và `js/khbd-app.js` đang được thiết kế theo cấu trúc đầy đủ 4 phần (a. Mục tiêu, b. Nội dung, c. Sản phẩm, d. Tổ chức thực hiện) kèm Bảng Markdown 2 cột phân chia 4 bước (Bước 1 Chuyển giao -> Bước 2 Thực hiện -> Bước 3 Báo cáo -> Bước 4 Kết luận).
+- **Vấn đề**: Đối với hoạt động hướng dẫn học sinh tự học ở nhà (thời lượng 2–3 phút), việc trình bày bảng 2 cột 4 bước gây cồng kềnh, rườm rà và trùng lặp nội dung giữa mục b) Nội dung và Cột Phải bảng d). Người dùng yêu cầu tinh gọn Hoạt động E thành định dạng danh sách 4 mục súc tích, trực diện, dễ đọc, không cần chia a) b) c) d) hay bảng 2 cột.
 
 ## Phạm vi
-1. **Cập nhật Prompt Engineering (`js/khbd-prompts.js`)**:
-   - Thêm quy tắc cấm tuyệt đối trong `ACTIVITY_TABLE_CONTRACT`, `OUTPUT_CONTRACT`, `GENERATE_ACTIVITY_B`, `GENERATE_ACTIVITY_C`, `GENERATE_ACTIVITY_D`:
-     * CẤM TUYỆT ĐỐI dùng chuỗi lệnh LaTeX khoảng trắng liên tiếp (`\quad \quad \quad...`, `\qquad`, `\hspace{...}`, `\phantom{...}`) để mô phỏng hình vẽ, giả lập trục số hoặc tạo khoảng trống làm bài.
-     * Đối với bài tập vẽ hình/trục số: BẮT BUỘC mô tả lời giải bằng các bước thực hiện tường minh (ví dụ: "Vẽ trục số nằm ngang, chọn điểm 0 làm gốc, chia các đoạn đơn vị bằng nhau... Điểm biểu diễn -5 nằm bên trái gốc 0 cách 5 đơn vị...") hoặc định vị hình minh họa SVG chuẩn SGK `![caption](khbd-ill:id)`.
-     * Lời giải trong cột Nội dung phải là các bước giải chi tiết hoàn chỉnh, không để khoảng trống vô nghĩa.
+1. **Định dạng chuẩn mới cho Hoạt động E (Hướng dẫn về nhà)**:
+   - Tiêu đề: `## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})` (hoặc `## E. HƯỚNG DẪN VỀ NHÀ ({time_budget_E})`).
+   - Cấu trúc nội dung dạng danh sách phẳng gồm 4 mục cốt lõi:
+     * `1. Ôn tập kiến thức: Ôn lại các định nghĩa, quy tắc, công thức trọng tâm đã học trong bài.`
+     * `2. Làm bài tập: Hoàn thành các bài tập còn lại trong SGK (chưa làm/chữa ở Hoạt động C và D) và Sách bài tập (SBT) môn {subject} (kèm gợi ý/hướng dẫn phương pháp giải ngắn gọn). CẤM TUYỆT ĐỐI giao lại các bài tập đã được giải/chữa trên lớp.`
+     * `3. Chuẩn bị bài mới: Đọc trước nội dung bài học tiếp theo trong SGK và chuẩn bị đồ dùng, học liệu học tập cần thiết.`
+     * `4. Nhiệm vụ tìm tòi, mở rộng: {Tìm hiểu thêm ứng dụng thực tế của bài học trong các lĩnh vực khác như kinh tế, đời sống, khoa học...}`
+   - Khối tích hợp AI an toàn (CHỈ xuất hiện khi giáo viên chủ động bật tích hợp AI):
+     * `- Hướng dẫn Prompt AI an toàn:`
+     * `+ Mẫu Prompt: "Em là học sinh lớp {grade}, em đang tự học bài {topic} và gặp khó khăn ở [nêu bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự tìm ra cách giải, đừng giải hộ em nhé!"`
+   - Bỏ hoàn toàn các mục `### a) Mục tiêu:`, `### b) Nội dung:`, `### c) Sản phẩm:`, `### d) Tổ chức thực hiện:` và Bảng Markdown 2 cột trong Hoạt động E.
 
-2. **Cập nhật Bộ lọc & Làm sạch Markdown (`js/khbd-app.js`)**:
-   - Trong `sanitizeLessonMarkdown(rawOutput)`:
-     * Phát hiện và loại bỏ các khối math độc lập `\$\$(?:\s*\\(?:quad|qquad|hspace\{[^}]*\}|phantom\{[^}]*\})\s*)+\$\$` hoặc `\$(?:\s*\\(?:quad|qquad|hspace\{[^}]*\}|phantom\{[^}]*\})\s*)+\$`.
-     * Rút gọn chuỗi `(?:\\[q]?quad\s*){3,}` thành tối đa 1 khoảng cách hoặc dấu cách thường.
-     * Dọn dẹp các khối math giả lập trục số rác (chỉ chứa `\quad` và dấu gạch nối/mũi tên).
-   - Trong `unwrapVietnameseMathForKatex(markdown)` & `renderMathPreview(markdownText, targetElementId)`:
-     * Tiền xử lý làm sạch mọi chuỗi `\quad` lặp thừa trước khi chuyển qua Marked.js và KaTeX Auto-render, đảm bảo preview hiển thị đẹp mắt, không lỗi.
+2. **Cập nhật Prompt Template (`js/khbd-prompts.js`)**:
+   - `PROMPTS.GENERATE_ACTIVITY_E`: Cập nhật prompt chỉ thị rõ ràng định dạng danh sách 4 mục phẳng, cấm sinh bảng 2 cột và a) b) c) d).
+   - `PROMPTS.GENERATE_ACTIVITIES_AE` (và alias `GENERATE_ACTIVITIES_AD`): Cập nhật yêu cầu cho Pha E trong luồng sinh 1-Click để đồng bộ định dạng danh sách ngắn gọn mới.
 
-3. **Cập nhật Xử lý Xuất Word (`js/khbd-docx.js`)**:
-   - Trong `latexToUnicodeMath` và `parseMarkdownToDocxElements`:
-     * Lọc bỏ các chuỗi `\quad` lặp lại liên tiếp trước khi chuyển đổi sang Unicode / Paragraph, ngăn chặn việc chèn hàng trăm khoảng trắng làm tràn bảng Word.
+3. **Cập nhật Logic App & Validation (`js/khbd-app.js`)**:
+   - `buildPhasePedagogyContext("E")`: Cập nhật prompt context đặc thù cho Pha E theo định dạng danh sách 4 mục tinh gọn.
+   - `scoreKhbdActivityBlock(block)`: Điều chỉnh thang điểm cho khối E: ưu tiên khối có đủ 4 nội dung (Ôn tập, Làm bài tập, Chuẩn bị bài mới, Tìm tòi mở rộng), không trừ điểm vì thiếu a) b) c) d) hay bảng.
+   - Đảm bảo các hàm render Preview KaTeX (`renderMathPreview`) và `getFullLessonPlanMarkdown` hiển thị danh sách mục 1, 2, 3, 4 đẹp mắt, rõ ràng.
+
+4. **Cập nhật Kiểm thử (`tests/khbd-activity-e-smoke.js` và các file test liên quan)**:
+   - Cập nhật các assertions trong `tests/khbd-activity-e-smoke.js` để kiểm tra đúng định dạng danh sách tinh gọn mới (có đủ 4 mục nội dung, không bắt buộc bảng 2 cột).
 
 ## Ngoài phạm vi
-- Không can thiệp vào các công thức Toán học LaTeX hợp lệ chứa `\quad` đơn lẻ làm khoảng cách giữa các mệnh đề toán học (ví dụ `$x = 1 \quad \text{hoặc} \quad x = 2$`).
-- Không thay đổi cấu trúc bảng 2 cột chuẩn CV 5512.
+- Không thay đổi cấu trúc bảng 2 cột chuẩn CV 5512 của các Hoạt động A, B, C, D (vẫn giữ nguyên 4 bước và bảng 2 cột cho các hoạt động diễn ra trực tiếp tại lớp học).
+- Không can thiệp vào cấu trúc xuất file Word chung (DocxGenerator tự động render heading và danh sách có thụt lề chuẩn).
 
 ## File dự kiến tác động
 - `js/khbd-prompts.js`
 - `js/khbd-app.js`
-- `js/khbd-docx.js`
+- `tests/khbd-activity-e-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Các bước thực hiện
-1. **Bước 1: Bổ sung ràng buộc chống chuỗi `\quad` rác vào `js/khbd-prompts.js`**:
-   - Thêm chỉ dẫn cấm chuỗi khoảng trắng LaTeX lặp vào `ACTIVITY_TABLE_CONTRACT` và các prompt Hoạt động B, C, D.
-2. **Bước 2: Cập nhật hàm làm sạch `sanitizeLessonMarkdown` trong `js/khbd-app.js`**:
-   - Viết regex phát hiện và loại bỏ triệt để các khối `$$\quad \quad ...$$` rác.
-   - Thêm xử lý trong `unwrapVietnameseMathForKatex` để bảo vệ KaTeX preview.
-3. **Bước 3: Cập nhật bộ chuyển đổi Docx trong `js/khbd-docx.js`**:
-   - Thêm bước làm sạch chuỗi `\quad` liên tiếp trước khi render text run / table cell.
-4. **Bước 4: Kiểm thử với các bài tập biểu diễn trục số / hình học**:
-   - Kiểm tra hiển thị KaTeX preview và file Word xuất ra không còn tình trạng chuỗi `\quad` kéo dài.
+1. **Bước 1: Cập nhật Prompt `GENERATE_ACTIVITY_E` và `GENERATE_ACTIVITIES_AE` trong `js/khbd-prompts.js`**:
+   - Biên soạn lại mẫu prompt và contract cho Hoạt động E theo đúng ví dụ của người dùng: xuất thẳng danh sách 4 mục 1., 2., 3., 4. (kèm Mẫu Prompt AI an toàn nếu có).
+2. **Bước 2: Cập nhật Logic trong `js/khbd-app.js`**:
+   - Sửa `buildPhasePedagogyContext("E")` để nhất quán với prompt mới.
+   - Cập nhật hàm chấm điểm khối `scoreKhbdActivityBlock` cho khối E.
+3. **Bước 3: Cập nhật Unit Tests trong `tests/khbd-activity-e-smoke.js`**:
+   - Điều chỉnh assertion kiểm thử định dạng mới của Hoạt động E.
+4. **Bước 4: Chạy bộ kiểm thử tự động**:
+   - Chạy `node tests/khbd-activity-e-smoke.js`, `node tests/khbd-4steps-workflow-smoke.js`, `node tests/khbd-docx-layout-smoke.js` để đảm bảo toàn bộ hệ thống tương thích và pass 100%.
 
 ## Rủi ro
-- **Rủi ro**: Regex làm sạch quá mức có thể ảnh hưởng đến các khoảng cách hợp lệ trong công thức LaTeX phức tạp (ví dụ hệ phương trình có `\quad`).
-  - **Khắc phục**: Chỉ lọc bỏ các khối toán CHỈ CHỨA DUY NHẤT chuỗi `\quad`/`\qquad` hoặc khi có từ 3 `\quad` liên tiếp không kèm ký hiệu toán học.
+- **Rủi ro**: Parser cắt ghép markdown trong luồng 1-Click (`clipKhbdActivityMarkdown`) có thể bị ảnh hưởng nếu marker kết thúc không rõ.
+  - **Khắc phục**: Heading `## E.` và các heading tiếp theo (`## F.` / `# IV.` / `# Hình minh họa`) vẫn được giữ nguyên nên regex phân tách hoạt động hoạt động hoàn toàn chính xác.
 
 ## Cách kiểm thử
-1. Thử nghiệm với bài toán biểu diễn trục số (Toán 6 - Bài 3.4):
-   - Tạo nội dung Hoạt động C. Luyện tập.
-   - Xác nhận cột Nội dung hiển thị lời giải bằng lời văn rõ ràng / tọa độ điểm, không còn khối `$$\quad \quad ...$$`.
-2. Kiểm tra phần Preview KaTeX:
-   - Xác nhận bảng 2 cột hiển thị gọn gàng, không bị tràn ô hay lỗi font.
+1. Kiểm tra Prompt Hoạt động E:
+   - Mở Tab Hoạt động E trên `soankhbd.html` -> Bấm "Tạo Hoạt động E".
+   - Kết quả sinh ra đúng định dạng danh sách:
+     * `## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (2 phút)`
+     * `1. Ôn tập kiến thức: ...`
+     * `2. Làm bài tập: ...`
+     * `3. Chuẩn bị bài mới: ...`
+     * `4. Nhiệm vụ tìm tòi, mở rộng: ...`
+     * `- Hướng dẫn Prompt AI an toàn:` (nếu bật AI)
+     * `+ Mẫu Prompt: "..."`
+2. Kiểm tra phần Preview KaTeX & Bảng biểu:
+   - Giao diện hiển thị danh sách rõ ràng, không còn bảng trống hay các mục a) b) c) d) rườm rà.
 3. Kiểm tra Xuất file Word (.docx):
-   - Mở file docx, kiểm tra cột Nội dung bảng mục d) căn lề chuẩn, không bị vỡ hàng do khoảng trắng thừa.
+   - Xuất giáo án và mở file .docx, Hoạt động E hiển thị dưới dạng tiêu đề và các đoạn danh sách căn lề chuẩn mực.
 
 ## Tiêu chí nghiệm thu
-1. Hoàn toàn không còn hiện tượng xuất hiện chuỗi `$$\quad \quad \quad...$$` trong nội dung tạo bởi AI hoặc trong bảng xem trước KaTeX.
-2. Lời giải các bài tập vẽ hình/trục số được diễn đạt mạch lạc, chuẩn mực sư phạm.
-3. File Word (.docx) xuất ra chuẩn đẹp, bảng 2 cột không bị xô lệch.
+1. Hoạt động E được sinh ra theo đúng định dạng danh sách 4 mục tinh gọn, không chứa a) b) c) d) hay bảng 2 cột 4 bước.
+2. Tích hợp Mẫu Prompt AI an toàn tự động xuất hiện chuẩn chỉnh khi bật tính năng AI.
+3. Tất cả unit tests liên quan đến Hoạt động E và xuất file docx đều PASS.

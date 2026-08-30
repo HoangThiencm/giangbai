@@ -20,22 +20,15 @@ const dupE = `## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (3 phút)
 - [NLS: 1.3] Tìm hiểu nhà toán học Cantor.
 
 ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (4 phút)
-### a) Mục tiêu:
-- Củng cố kiến thức về tập hợp.
-### b) Nội dung:
-- 1. Học bài: Ôn tập định nghĩa tập hợp.
-- 2. Làm bài: Hoàn thành bài tập SGK.
-- 3. Chuẩn bị bài: Đọc bài số tự nhiên.
-### c) Sản phẩm:
-- Sơ đồ tư duy.
-### d) Tổ chức thực hiện:
-| Hoạt động của GV và HS | Nội dung |
-| :--- | :--- |
-| + Bước 1: **GV:** "Về nhà hoàn thành 3 nhiệm vụ". **HS:** Ghi vở. | **1. Học bài:** Ôn tập. |`;
+1. Ôn tập kiến thức: Ôn lại định nghĩa tập hợp.
+2. Làm bài tập: Hoàn thành các bài tập còn lại trong SGK.
+3. Chuẩn bị bài mới: Đọc bài số tự nhiên.
+4. Nhiệm vụ tìm tòi, mở rộng: Tìm hiểu nhà toán học Cantor.`;
 const clippedE = clipKhbdActivityMarkdown("E", dupE);
-assert.match(clippedE, /### a\) Mục tiêu:/);
+assert.match(clippedE, /1\. Ôn tập kiến thức:/);
 assert.match(clippedE, /\(4 phút\)/);
 assert.doesNotMatch(clippedE, /\(3 phút\)/);
+assert.doesNotMatch(clippedE, /### a\) Mục tiêu:/);
 assert.equal((clippedE.match(/HOẠT ĐỘNG 5/g) || []).length, 1);
 
 const promptE = getPromptTemplate("GENERATE_ACTIVITY_E", {
