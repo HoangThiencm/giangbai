@@ -193,6 +193,7 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
 - Bảng Markdown CHỈ GỒM ĐÚNG 1 HÀNG DỮ LIỆU DUY NHẤT (CẤM tách thành 4 hàng riêng).
+- TUYỆT ĐỐI chỉ tạo đúng 2 cột theo hai tiêu đề trên; CẤM thêm cột thứ 3 dưới mọi hình thức. Trong công thức hoặc văn bản có ký hiệu gạch đứng, dùng \\vert hoặc \\| thay cho dấu | thô để không làm vỡ cột Markdown.
 - CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG (ngăn các bước bằng <br>, mỗi bước chỉ 1–2 câu ngắn gọn):
   + Đủ 4 bước chuẩn Công văn 5512:
     * + Bước 1: Chuyển giao nhiệm vụ: Nêu kỹ thuật dạy học, GV nói 1 câu lệnh ngắn gọn trong ngoặc kép "...", HS tiếp nhận.

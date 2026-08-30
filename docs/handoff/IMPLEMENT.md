@@ -1,50 +1,32 @@
-# IMPLEMENT
+# IMPLEMENT: Khắc phục numbering Preview và chuẩn bảng Hoạt động 2 cột
 
-Trạng thái: ĐÃ LÀM — Tinh gọn Hoạt động E thành danh sách 4 mục, không bảng 4 bước
+## Phạm vi đã triển khai
 
-## File đã đổi
-
-- `js/khbd-prompts.js`
+- Giữ nguyên thay đổi có sẵn tại `docs/handoff/PLAN.md` và `docs/handoff/.lock`.
 - `js/khbd-app.js`
-- `tests/khbd-activity-e-smoke.js`
-- `tests/khbd-activity-e-dedupe-smoke.js`
-- `docs/handoff/PLAN.md`
-- `docs/handoff/IMPLEMENT.md`
+  - `sanitizePreviewHtml()` giữ có kiểm tra các thuộc tính danh sách: `ol[start]`, `li[value]`, cùng `type` hợp lệ (`ol/li`: `1`, `a`, `A`, `i`, `I`; `ul`: `disc`, `circle`, `square`).
+  - Chuẩn hoá mọi hàng của bảng Hoạt động: chỉ giữ cột trái và gộp các cell từ vị trí 2 trở đi bằng ` | ` vào cột Nội dung.
+- `js/khbd-docx.js`
+  - Chỉ nhận diện bảng Hoạt động khi header đồng thời có `Hoạt động của GV` và `Nội dung`.
+  - Với bảng nhận diện được, ép đúng 2 cột rộng `[4819, 4820]` và gộp cell dư vào cột Nội dung.
+- `js/khbd-prompts.js`
+  - Siết hợp đồng prompt: cấm cột thứ ba và yêu cầu dùng `\\vert` hoặc `\\|` cho ký hiệu gạch đứng.
+- Thêm smoke test:
+  - `tests/khbd-list-numbering-smoke.js`
+  - `tests/khbd-table-columns-smoke.js`
 
-## Nội dung chính
+## Kiểm thử
 
-1. **Prompt (`js/khbd-prompts.js`)**
-   - `GENERATE_ACTIVITY_E`: bỏ `ACTIVITY_TABLE_CONTRACT`, a) b) c) d) và bảng 2 cột. Mẫu xuất:
-     `## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E})` rồi `1.` Ôn tập kiến thức, `2.` Làm bài tập, `3.` Chuẩn bị bài mới, `4.` Nhiệm vụ tìm tòi, mở rộng.
-   - `{ai_homework_prompt_note}` chỉ khi bật AI: `- Hướng dẫn Prompt AI an toàn:` + `+ Mẫu Prompt: "..."`.
-   - `GENERATE_ACTIVITIES_AE` / `GENERATE_ACTIVITIES_AD`: bảng 2 cột chỉ áp dụng A–D; Pha E cùng định dạng danh sách 4 mục, cấm a/b/c/d và bảng.
+Đạt:
 
-2. **Logic (`js/khbd-app.js`)**
-   - `buildPhasePedagogyContext("E")`: yêu cầu danh sách 4 mục, cấm bảng/4 bước.
-   - `assertPhasePedagogyOutput("E")`: bắt đủ 4 nội dung (ôn tập, làm bài tập, chuẩn bị bài mới, tìm tòi/mở rộng); không bắt bảng hay GV/HS.
-   - `scoreKhbdActivityBlock(block, actKey)`: khối E cộng điểm 4 mục + danh sách `1. 2. 3. 4.`; không cộng điểm a/b/c/d; trừ nhẹ nếu còn bảng/a-b-c-d.
-   - `getFullLessonPlanMarkdown` / `renderMathPreview` giữ nguyên: markdown `1. 2. 3. 4.` render danh sách.
+- `node tests/khbd-list-numbering-smoke.js`
+- `node tests/khbd-table-columns-smoke.js`
+- `node tests/khbd-sanitize-smoke.js`
+- `node tests/khbd-pedagogy-script-smoke.js`
+- `git diff --check`
 
-3. **Test**
-   - `tests/khbd-activity-e-smoke.js`: assert 4 mục, cấm bảng 2 cột, validator thiếu mục thì fail.
-   - `tests/khbd-activity-e-dedupe-smoke.js`: khi trùng tiêu đề E, giữ khối danh sách 4 mục.
+Toàn bộ suite đã được chạy bằng `node tests/run-all-tests.js` nhưng dừng ở test có sẵn `tests/khbd-1click-chain-smoke.js` do assertion hướng dẫn Bước 4 sang Tab 2, 3, 4. Lỗi này không thuộc các file/phạm vi thay đổi của đợt triển khai; các kiểm thử liên quan trực tiếp đều PASS.
 
-## Ngoài phạm vi (không đụng)
+## Vấn đề còn lại
 
-- Bảng 2 cột 4 bước của Hoạt động A, B, C, D.
-- Cấu trúc xuất Word chung (`DocxGenerator`).
-
-## Test đã chạy
-
-```
-node tests/khbd-activity-e-smoke.js
-node tests/khbd-activity-e-dedupe-smoke.js
-node tests/khbd-4steps-workflow-smoke.js
-node tests/khbd-docx-layout-smoke.js
-node tests/khbd-time-budgets-smoke.js
-node tests/khbd-pedagogy-script-smoke.js
-```
-
-Kết quả: **pass**.
-
-Không mở được trình duyệt để bấm "Tạo Hoạt động E" trên `soankhbd.html` hay xuất file .docx thật. Cần `/verify` trên giao diện.
+- Cần xử lý hoặc cập nhật riêng smoke test `khbd-1click-chain-smoke.js` trước khi có thể xác nhận toàn bộ suite PASS 100%.

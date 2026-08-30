@@ -4129,6 +4129,22 @@ function sanitizePreviewHtml(html) {
     ["colspan", "rowspan"].forEach(attribute => {
       if (node.hasAttribute(attribute)) clean.setAttribute(attribute, node.getAttribute(attribute));
     });
+    if (node.tagName === "OL") {
+      const start = node.getAttribute("start") || "";
+      const type = node.getAttribute("type") || "";
+      if (/^\d+$/.test(start)) clean.setAttribute("start", start);
+      if (/^[1aAiI]$/.test(type)) clean.setAttribute("type", type);
+    }
+    if (node.tagName === "UL") {
+      const type = node.getAttribute("type") || "";
+      if (/^(disc|circle|square)$/i.test(type)) clean.setAttribute("type", type.toLowerCase());
+    }
+    if (node.tagName === "LI") {
+      const value = node.getAttribute("value") || "";
+      const type = node.getAttribute("type") || "";
+      if (/^\d+$/.test(value)) clean.setAttribute("value", value);
+      if (/^[1aAiI]$/.test(type)) clean.setAttribute("type", type);
+    }
     node.childNodes.forEach(child => clean.appendChild(copyNode(child)));
     return clean;
   };
@@ -4950,16 +4966,21 @@ function mergeSplitActivityTables(text) {
       rowLines.push(currentRow);
     }
     const header = `${match[0]}\n`;
-    if (rowLines.length <= 1) {
-      chunks.push(header + (rowLines[0] ? `${rowLines[0]}\n` : ""));
+    const normalizedRows = rowLines.map(row => {
+      const cells = splitKhbdMarkdownTableRow(row);
+      if (cells.length < 2) return row;
+      return `| ${cells[0]} | ${cells.slice(1).join(" | ")} |`;
+    });
+    if (normalizedRows.length <= 1) {
+      chunks.push(header + (normalizedRows[0] ? `${normalizedRows[0]}\n` : ""));
     } else {
       const leftParts = [];
       const rightParts = [];
-      rowLines.forEach(row => {
+      normalizedRows.forEach(row => {
         const cells = splitKhbdMarkdownTableRow(row);
         if (cells.length >= 2) {
           if (cells[0]) leftParts.push(cells[0]);
-          if (cells[1]) rightParts.push(cells[1]);
+          if (cells.slice(1).join(" | ")) rightParts.push(cells.slice(1).join(" | "));
         }
       });
       chunks.push(`${header}| ${leftParts.join("<br>")} | ${rightParts.join("<br>")} |\n`);
@@ -6304,6 +6325,7 @@ if (typeof module !== 'undefined' && module.exports) {
     assertActivityIntegrations,
     assertObjectivesStandards,
     sanitizeLessonMarkdown,
+    sanitizePreviewHtml,
     stripGarbageLatexSpacing,
     splitKhbdMarkdownTableRow,
     mergeSplitActivityTables,

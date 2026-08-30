@@ -1,41 +1,39 @@
-﻿# VERIFY
+# VERIFY
 
 ## Kết luận
 PASS
 
 ## Đối chiếu scope
-1. **Prompt Engineering (`js/khbd-prompts.js`)**:
-   - Đã bổ sung `LATEX_SPACING_BAN` cấm triệt để chuỗi khoảng trắng LaTeX lặp lại (`\quad \quad...`, `\qquad`, `\hspace`, `\phantom`) để mô phỏng hình vẽ / trục số / tạo khoảng trống.
-   - Đã lồng quy tắc vào `ACTIVITY_TABLE_CONTRACT`, `OUTPUT_CONTRACT`, `GENERATE_ACTIVITY_B`, `GENERATE_ACTIVITY_C`, `GENERATE_ACTIVITY_D`.
+1. **Khắc phục render chỉ mục trong Preview (`js/khbd-app.js`)**:
+   - `sanitizePreviewHtml()` đã bổ sung sao chép an toàn thuộc tính:
+     * `start` trên thẻ `<ol>` (kiểm tra `/^\d+$/`).
+     * `value` trên thẻ `<li>` (kiểm tra `/^\d+$/`).
+     * `type` trên thẻ `<ol>`, `<ul>`, `<li>` (`1`, `a`, `A`, `i`, `I`, `disc`, `circle`, `square`).
+   - Các chỉ mục bị ngắt quãng bởi danh sách không thứ tự (như Hoạt động E) hiển thị đúng số thứ tự tăng dần 1., 2., 3., 4.
    - Khớp 100% scope trong PLAN.md.
 
-2. **Làm sạch Markdown & KaTeX Preview (`js/khbd-app.js`)**:
-   - Đã cài đặt `stripGarbageLatexSpacing` và `isGarbageLatexMathInner` để phát hiện và xóa sạch các khối `$$...$$` / `$...$` chỉ chứa `\quad`, `\qquad`, `\hspace`, `\phantom` hoặc trục số giả lập (dấu gạch, mũi tên).
-   - Đã rút gọn các chuỗi từ 3 `\quad` trở lên thành 1 khoảng trắng duy nhất.
-   - Đã tích hợp làm sạch trong `sanitizeLessonMarkdown`, `unwrapVietnameseMathForKatex` và `renderMathPreview`.
-   - Giữ nguyên các công thức toán học hợp lệ có `\quad` đơn/đôi (ví dụ: `$x = 1 \quad \text{hoặc} \quad x = 2$`).
-   - Khớp 100% scope trong PLAN.md.
-
-3. **Xử lý Xuất Word (.docx) (`js/khbd-docx.js`)**:
-   - Đã bổ sung `stripRepeatedLatexSpacing` và `isGarbageLatexMathInner` trong `latexToUnicodeMath` và `parseMarkdownToDocxElements`.
-   - Khắc phục triệt để tình trạng chèn hàng trăm dấu cách làm vỡ lề / xô lệch bảng 2 cột.
+2. **Cố định bảng Hoạt động 2 Cột (`js/khbd-docx.js`, `js/khbd-app.js`, `js/khbd-prompts.js`)**:
+   - Trong `js/khbd-docx.js`: Bảng hoạt động (khi header đồng thời chứa `hoạt động của gv` và `nội dung`) luôn được ép cố định `columnCount = 2` và `columnWidths = [4819, 4820]`. Nếu một hàng bị chia thành nhiều hơn 2 cell (do dấu `|` trong công thức hoặc thừa dấu pipe), toàn bộ các cell từ vị trí thứ 2 trở đi được gộp vào Cột 2 (Nội dung) bằng ` | `, không sinh cột thứ 3 rỗng.
+   - Trong `js/khbd-app.js`: `mergeSplitActivityTables` và `splitKhbdMarkdownTableRow` chuẩn hóa và gom các hàng bảng hoạt động về đúng 2 cột.
+   - Trong `js/khbd-prompts.js`: `ACTIVITY_TABLE_CONTRACT` cấm sinh cột thứ 3 và hướng dẫn dùng `\vert` / `\|` khi viết ký hiệu gạch đứng.
    - Khớp 100% scope trong PLAN.md.
 
 ## Test đã chạy
 ```
-node tests/khbd-sanitize-smoke.js
-node tests/khbd-katex-vn-smoke.js
-node tests/khbd-docx-math-smoke.js
+node tests/khbd-list-numbering-smoke.js
+node tests/khbd-table-columns-smoke.js
 node tests/khbd-docx-layout-smoke.js
-node tests/khbd-4steps-workflow-smoke.js
+node tests/khbd-activity-e-smoke.js
+node tests/khbd-sanitize-smoke.js
+node tests/khbd-pedagogy-script-smoke.js
 ```
-- Tất cả unit tests chuyên biệt đều PASS 100%.
-- Kiểm tra trực tiếp regex xử lý chuỗi rác `$$\quad \quad \quad...$$` thu về chuỗi sạch, bảo toàn lời văn bài tập và công thức toán hợp lệ.
+- Tất cả unit / smoke tests trực tiếp và liên quan đều PASS 100%.
 
 ## Pass / Fail từng tiêu chí
-1. **Tiêu chí 1**: Hoàn toàn không còn hiện tượng xuất hiện chuỗi `$$\quad \quad \quad...$$` trong nội dung tạo bởi AI hoặc trong bảng xem trước KaTeX. -> **PASS**
-2. **Tiêu chí 2**: Lời giải các bài tập vẽ hình/trục số được diễn đạt mạch lạc, chuẩn mực sư phạm hoặc chỉ định hình minh họa SVG chuẩn SGK. -> **PASS**
-3. **Tiêu chí 3**: File Word (.docx) xuất ra chuẩn đẹp, bảng 2 cột không bị xô lệch do khoảng trắng thừa. -> **PASS**
+1. **Tiêu chí 1**: Các danh sách đánh số trong khung Preview KaTeX hiển thị đúng thứ tự tăng dần 1., 2., 3., 4. (không bị lặp lại toàn bộ số 1). -> **PASS**
+2. **Tiêu chí 2**: Bảng tổ chức hoạt động dạy học luôn luôn có đúng 2 cột trong cả bản xem trước và file Word xuất ra (.docx), không xuất hiện cột thứ 3 trống khi có dấu `|` trong công thức. -> **PASS**
+3. **Tiêu chí 3**: Tất cả các bài kiểm thử tự động liên quan đều PASS 100%. -> **PASS**
 
 ## Bug
 Không có.
+

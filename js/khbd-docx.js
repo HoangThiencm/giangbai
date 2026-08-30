@@ -765,18 +765,22 @@ class DocxGenerator {
 
     const rows = [];
     const tableWidth = this.tableWidth || 9639;
-    const columnCount = Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
     const headerCells = this.splitMarkdownTableRow(validLines[0]).map(cell => cell.toLowerCase());
-    const isActivityTwoCol = columnCount === 2 && headerCells.some(cell => cell.includes("hoạt động của gv") || cell.includes("nội dung"));
+    const isActivityTwoCol = headerCells.some(cell => cell.includes("hoạt động của gv"))
+      && headerCells.some(cell => cell.includes("nội dung"));
+    const columnCount = isActivityTwoCol ? 2 : Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
     const columnWidths = isActivityTwoCol
-      ? (this.columnWidths || [4819, 4820])
+      ? [4819, 4820]
       : Array.from({ length: columnCount }, (_, idx) => {
           const base = Math.floor(tableWidth / columnCount);
           return idx === columnCount - 1 ? (tableWidth - base * (columnCount - 1)) : base;
         });
 
     validLines.forEach((line, rowIndex) => {
-      const rawCells = this.splitMarkdownTableRow(line);
+      const parsedCells = this.splitMarkdownTableRow(line);
+      const rawCells = isActivityTwoCol && parsedCells.length > 2
+        ? [parsedCells[0], parsedCells.slice(1).join(" | ")]
+        : parsedCells;
       const isHeader = (rowIndex === 0);
 
       const tableCells = Array.from({ length: columnCount }, (_, columnIndex) => {
