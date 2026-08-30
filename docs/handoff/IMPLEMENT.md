@@ -1,48 +1,43 @@
-# IMPLEMENT: Xóa E cũ, Tab E Hồ sơ / Tab F Hình minh họa, phân bổ thời lượng động
+# IMPLEMENT: Tích hợp Xây dựng Phụ lục vào Portal và phân quyền Admin
 
 ## Phạm vi đã triển khai
 
-- Giữ nguyên `docs/handoff/PLAN.md` và `docs/handoff/.lock`.
-- Không đổi 4 bước CV 5512, TT 02, QĐ 2422.
+- Hoàn tất các hạng mục trong `docs/handoff/PLAN.md` cho công cụ `xaydungphuluc`.
+- Giữ nguyên `PLAN.md`, `VERIFY.md`, `.lock` (nếu có) và các thay đổi có sẵn ngoài phạm vi.
+- Không commit hoặc push.
 
-### `soankhbd.html`
+## File thay đổi
 
-- Subtab Tab 4: A Mở đầu, B Hình thành Kiến thức, C Luyện tập, D Vận dụng & Hướng dẫn tự học, **E. Hồ sơ học tập**, **🎨 F. Hình minh họa SGK**.
-- Xóa nhãn "E. Hướng dẫn về nhà".
-- Panel `activityIllustrationCard` / `illustrationGalleryAct` cho subtab F.
+### `index.html`
 
-### `js/khbd-prompts.js`
+- Thêm thẻ công cụ `data-tool="xaydungphuluc"` vào `#mainToolsGrid`.
+- Liên kết đúng tới `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`, mở tab mới với `noopener noreferrer`.
+- Bổ sung `TOOL_PAGE_LINKS.xaydungphuluc`; logic quyền tài khoản và công tắc global hiện có tự áp dụng cho thẻ mới.
+- Thêm kiểu thẻ màu, hover/glow và nội dung nhận diện CV 5512, THCS 6–9, NLS & AI.
 
-- `calculateActivityTimeBudgets` mặc định 4 hoạt động: A 7–10% (3–12p), D 12–15% (5–25p); phần còn lại chia B/C theo số tiểu mục N=1..4; A+B+C+D = T; tổng nhánh B = B.
-- Chế độ 5 pha chỉ khi `{ fourActivities: false }` hoặc `mode: "ae"`.
-- `GENERATE_PORTFOLIO_WORKSHEETS` gắn subtab E (`# E. HỒ SƠ...`).
+### `admin.html`
 
-### `js/khbd-app.js`
+- Thêm công tắc global `cfg_xaydungphuluc` và đăng ký trong `CLIENT_FEATURE_CHECKS`.
+- Bổ sung cấu hình trang `xaydungphuluc` (qua `PAGE_CONFIG`/`hostingPages`), tên tính năng và nhóm quyền công cụ giáo viên.
+- Thêm quyền này cho `defaultTeacherPages`, nên xuất hiện trong giao diện tạo và chỉnh sửa tài khoản giáo viên.
+- Đồng bộ `user_features` khi tạo, sửa hoặc cấp full quyền cho giáo viên bằng luồng đồng bộ sẵn có.
 
-- `ACTIVITY_TITLES` đúng A–F mới.
-- `switchActivitySubtab("F")` hiện gallery, ẩn editor markdown.
-- Tạo E = `GENERATE_PORTFOLIO_WORKSHEETS`; tạo F = `generateLessonIllustrations`.
-- `getFullLessonPlanMarkdown`: III = A–D; IV = `activities.E` (bỏ E cũ nếu là hướng dẫn về nhà).
-- `migrateLegacyActivitiesPortfolio`: nếu F có nội dung và E rỗng → chuyển F sang E; xóa E kiểu "Hướng dẫn về nhà".
+### `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`
 
-### `js/khbd-docx.js`
+- Bổ sung nút `Trang chủ` về `../../index.html` ở header.
+- Bổ sung nạp sẵn giáo viên từ `teacherName`, `userName` hoặc `userEmail` trong localStorage.
 
-- `exportFullLessonPlan` bổ sung phụ lục từ `activities.E` nếu markdown chưa có mục IV.
+### `tests/xaydungphuluc-integration-smoke.js`
 
-### Kiểm thử
-
-- Thêm `tests/khbd-dynamic-time-budgets-smoke.js`.
-- Thêm `tests/khbd-tabs-reorganized-smoke.js`.
+- Thêm smoke test tích hợp Portal/Admin/ứng dụng: thẻ mở tab mới, link map, checkbox global, cấu hình trang, các vùng cấp quyền, liên kết Trang chủ và identity prefill.
 
 ## Kiểm thử đã chạy
 
-- `node tests/khbd-dynamic-time-budgets-smoke.js` — PASS
-- `node tests/khbd-tabs-reorganized-smoke.js` — PASS
-- `node tests/khbd-time-budgets-smoke.js` — PASS
-- `node tests/khbd-activities-ad-standard-smoke.js` — PASS
-- `node tests/khbd-docx-illustration-fallback-smoke.js` — PASS
-- `node tests/khbd-illustrations-smoke.js` — PASS
+- `node tests/xaydungphuluc-smoke.js` — PASS.
+- `node tests/xaydungphuluc-integration-smoke.js` — PASS.
+- Kiểm tra cú pháp JavaScript nội tuyến của `xaydungphuluc.html` — PASS.
+- `git diff --check` — PASS (chỉ có cảnh báo CRLF trên các tệp đã thay đổi từ trước).
 
 ## Vấn đề còn lại
 
-- Không có trong phạm vi này. Cần `/verify` trên Tab 4: E = Hồ sơ, F = Hình minh họa, không còn E về nhà; bài 1 tiết / 3 tiết tổng A+B+C+D đúng phút.
+- Chưa kiểm thử thao tác thật trên trình duyệt với phiên đăng nhập Admin/giáo viên; thực hiện bằng `/verify` theo quy trình.

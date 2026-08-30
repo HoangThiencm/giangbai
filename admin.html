@@ -210,6 +210,15 @@
                             <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
                         </label>
                     </div>
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">Xây dựng Phụ lục 1, 2, 3</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_xaydungphuluc"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
                     <!-- 7. Đề KTTX (15 phút) -->
                     <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
                         <h4 class="font-bold text-slate-700 text-sm mb-3">Đề Kiểm Tra Thường Xuyên</h4>
@@ -830,7 +839,7 @@
 
         const CLIENT_FEATURE_CHECKS = [
             'gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx',
-            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'soankhbd', 'taovideo'
+            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'soankhbd', 'taovideo', 'xaydungphuluc'
         ];
 
         const FEATURE_NAMES = {
@@ -849,6 +858,7 @@
             phancongtochuyenmon: "Phân Công Chuyên Môn",
             rutgon: "Link Rút Gọn & QR",
             taovideo: "Tạo video bài giảng",
+            xaydungphuluc: "Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)",
             teacher_design: "Soạn bài lộ trình",
             teacher_progress_stats: "Thống kê tiến trình",
             teacher_ai_stats: "Theo dõi AI"
@@ -857,7 +867,7 @@
         const USER_FEATURE_GROUPS = [
             {
                 title: 'Công cụ AI trên hub giáo viên',
-                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'taovideo']
+                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'taovideo', 'xaydungphuluc']
             },
             {
                 title: 'Không gian lộ trình Toán',
@@ -1945,6 +1955,7 @@
             vietbaocao: { title: 'Viết báo cáo AI', url: 'vietbaocao.html' },
             soankhbd: { title: 'Soạn Kế hoạch Bài dạy AI (KHBD)', url: 'soankhbd.html' },
             taovideo: { title: 'Tạo video bài giảng', url: 'taovideo/index.html' },
+            xaydungphuluc: { title: 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', url: 'GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html' },
             thanhtich: { title: 'Thống kê thành tích', url: 'thanhtich.html' },
             thoikhoabieu: { title: 'Xếp thời khóa biểu', url: 'thoikhoabieu.html' },
             phancongtochuyenmon: { title: 'Phân công chuyên môn', url: 'phancongtochuyenmon.html' },
@@ -1961,6 +1972,8 @@
             quanlyvanban: hostingPages.quanlyvanban,
             theodoiai: hostingPages.theodoiai
         };
+        // Alias kept for the page-permission configuration contract.
+        const PAGE_CONFIG = hostingPages;
         const teacherFeatureGroups = [
             {
                 title: 'Lộ trình Toán — Soạn bài',
@@ -1975,7 +1988,7 @@
             {
                 title: 'Công cụ giảng dạy',
                 hint: 'Hiện trên trang chính của giáo viên.',
-                pages: ['thitructuyen', 'matrande', 'soankhbd', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'taovideo']
+                pages: ['thitructuyen', 'matrande', 'soankhbd', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'taovideo', 'xaydungphuluc']
             }
         ];
         let editingStudent = null;
@@ -2611,7 +2624,7 @@
         }
 
         const mathRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
-        const defaultTeacherPages = ['lotrinhtoan6', 'thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu'];
+        const defaultTeacherPages = ['lotrinhtoan6', 'thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu', 'xaydungphuluc'];
 
         function allTeacherPageIds() {
             return teacherFeatureGroups.flatMap(group => group.pages);
@@ -3029,6 +3042,9 @@
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Không tạo được tài khoản.');
+                if (role === 'teacher') {
+                    await syncTeacherUserFeaturesFromPages(data.username || formData.get('username'), data.allowed_pages || allowedPages);
+                }
                 form.reset();
                 const roleSelect = document.querySelector('#createStudentForm select[name="role"]');
                 const resetRole = roleSelect?.value || 'student';

@@ -1,102 +1,89 @@
-# PLAN: Xóa bỏ hoàn toàn mục E cũ, Đổi tên Hồ sơ học tập thành Tab E, Thêm Tab F Hình minh họa và Phân bổ thời lượng Động theo Nội dung & Số tiết
+# PLAN: Tích hợp ứng dụng Xây dựng Phụ lục (xaydungphuluc.html) vào Hệ thống Portal (Mở Tab Mới) và Phân quyền Quản trị Admin
 
 ## Hiện trạng
-1. **Vấn đề 1: Cấu trúc Tab cần dọn sạch mục "E. Hướng dẫn về nhà" cũ và chuẩn hóa danh mục Tab**:
-   - Hiện tại, toàn bộ nhiệm vụ về nhà (ôn tập kiến thức, bài tập SGK/SBT, chuẩn bị bài mới, mở rộng thực tế/số) đã được tích hợp trọn vẹn vào **Hoạt động D (Vận dụng & Hướng dẫn tự học)** theo đúng chuẩn Công văn 5512.
-   - Do đó, mục riêng "E. Hướng dẫn về nhà" cũ không còn cần thiết và gây thừa thãi.
-   - Cần xóa bỏ hoàn toàn mục "E. Hướng dẫn về nhà" cũ, đổi tên tab **F. Hồ sơ học tập** thành **E. Hồ sơ học tập & Phiếu học tập**, và thêm tab **F. Hình minh họa SGK (Vector SVG)** ngay trong Tab 4 để người dùng dễ dàng tạo, xem trước và nhúng hình vẽ vào bài học.
-
-2. **Vấn đề 2: Phân bổ thời lượng động linh hoạt theo Dung lượng từng mục SGK và Số tiết (1, 2, 3, 4 tiết)**:
-   - Các bài học có số tiết rất đa dạng: 1 tiết (45p / 35p), 2 tiết (90p / 70p), 3 tiết (135p / 105p), 4 tiết (180p / 140p), hoặc số phút tùy chỉnh.
-   - Trong cùng một bài dạy, các mục kiến thức có độ dài và độ phức tạp không hề bằng nhau (ví dụ: mục 1 là kiến thức trọng tâm mới rất dài, nhiều hoạt động cần 28–30 phút; mục 2 ngắn hơn chỉ cần 15–17 phút; hoặc ngược lại).
-   - Thuật toán phân bổ thời lượng `calculateActivityTimeBudgets` và bộ chuẩn hóa tiêu đề cần tính toán **động theo trọng số dung lượng thực tế**:
-     * Đọc chính xác số tiết/thời lượng của bài học (`totalMinutes`).
-     * Tự động điều chỉnh tỷ trọng giữa Hoạt động B (Hình thành kiến thức) và Hoạt động C (Luyện tập) dựa theo số lượng và tỷ trọng nội dung SGK.
-     * **Phân bổ thời gian nhánh con theo độ dài thực tế của từng mục SGK**: Mục dài, nhiều hoạt động/ví dụ được phân bổ nhiều thời gian hơn mục ngắn (không cào bằng cứng nhắc).
-     * Khóa cứng tổng $A + B + C + D = 100\%$ tổng thời gian của tiết dạy, và tổng các nhánh con trong $B$ cộng lại luôn luôn bằng đúng $B$.
+1. Đã hoàn thành xây dựng ứng dụng web độc lập [xaydungphuluc.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/GIAO%20AN/XAYDUNGPHULUC/xaydungphuluc.html) chuyên biệt cho khối THCS (Lớp 6 đến Lớp 9) chuẩn Công văn 5512/BGDĐT-GDTrH với đầy đủ chức năng quản lý API Key, cấu hình độc lập NLS và AI, bóc tách tài liệu và xuất Word .docx / Zip.
+2. Hiện tại, ứng dụng chưa được gắn vào giao diện Cổng thông tin trung tâm ([index.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/index.html)) trong lưới công cụ dành cho giáo viên (`mainToolsGrid`).
+3. Trong bảng điều khiển quản trị ([admin.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/admin.html)), danh mục tính năng toàn cục (`features`), danh mục phân quyền trang (`allowedPages` / `PAGE_CONFIG`), và cấu hình quyền cho từng giáo viên (`user_features`) chưa có mục quản lý bật/tắt và phân quyền cho công cụ `xaydungphuluc`.
 
 ## Phạm vi
-1. **Tái cấu trúc danh mục Subtab trong Tab 4 (Tiến trình dạy học & Hồ sơ học tập) (`soankhbd.html`, `js/khbd-app.js`)**:
-   - Chuẩn hóa hệ thống subtab của Tab 4 gồm:
-     * **Subtab A**: `A. Mở đầu`
-     * **Subtab B**: `B. Hình thành Kiến thức`
-     * **Subtab C**: `C. Luyện tập`
-     * **Subtab D**: `D. Vận dụng & Hướng dẫn tự học` (đã tích hợp đầy đủ 4 nhiệm vụ về nhà)
-     * **Subtab E**: `E. Hồ sơ học tập & Phiếu học tập` (chuyển đổi và kế thừa từ tab F cũ)
-     * **Subtab F**: `🎨 F. Hình minh họa SGK (Vector SVG)` (tạo và xem trước toàn bộ hình vẽ SGK)
-   - Trong `js/khbd-app.js`:
-     * Cập nhật `ACTIVITY_TITLES`:
-       + `A`: A. Mở đầu
-       + `B`: B. Hình thành Kiến thức
-       + `C`: C. Luyện tập
-       + `D`: D. Vận dụng & Hướng dẫn tự học
-       + `E`: E. Hồ sơ học tập (Phiếu học tập & Công cụ đánh giá)
-       + `F`: F. Hình minh họa SGK (Vector SVG)
-     * Cập nhật `appState.content.activities`: Lưu trữ trực tiếp nội dung A, B, C, D, E.
-     * Cập nhật `getFullLessonPlanMarkdown`: Ghép chuẩn 4 hoạt động sư phạm A, B, C, D vào mục **III. TIẾN TRÌNH DẠY HỌC**, và đưa nội dung tab E vào mục **IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)**.
+1. **Tích hợp Thẻ công cụ vào Lưới công cụ Giáo viên trên Portal chính ([index.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/index.html))**:
+   - Thêm thẻ công cụ `data-tool="xaydungphuluc"` vào cụm công cụ soạn giảng / sư phạm trong `#mainToolsGrid`.
+   - Thiết lập mở ra tab mới: `target="_blank" rel="noopener noreferrer"`.
+   - Đường dẫn liên kết: `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`.
+   - Thiết kế giao diện thẻ đồng bộ với phong cách hệ thống: Tiêu đề *Xây dựng Phụ lục 1, 2, 3*, mô tả *Chuẩn CV 5512 · THCS Lớp 6–9 · Tích hợp NLS & AI*, icon sư phạm/tài liệu, hiệu ứng hover, glow và badge nhận diện.
+   - Bổ sung `xaydungphuluc: 'GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html'` vào hằng số `TOOL_PAGE_LINKS` trong JavaScript của `index.html`.
+   - Áp dụng logic kiểm soát hiển thị thẻ theo cấu hình phân quyền tài khoản giáo viên và cấu hình bật/tắt toàn cục của Admin.
 
-2. **Nâng cấp Thuật toán Phân bổ Thời lượng Động theo Trọng số Dung lượng & Số tiết (`js/khbd-prompts.js`, `js/khbd-app.js`)**:
-   - Trong `js/khbd-prompts.js`:
-     * Mặc định sử dụng chế độ chuẩn 4 hoạt động ($A + B + C + D = \text{totalMinutes}$).
-     * Thuật toán phân bổ động theo thời lượng $T$ và trọng số dung lượng các tiểu mục SGK ($w_1, w_2, ...$):
-       + **Hoạt động A (Mở đầu)**: Chiếm ~7–10% thời lượng ($3 \le \text{timeA} \le 12$ phút tùy theo bài 1, 2, 3, 4 tiết).
-       + **Hoạt động D (Vận dụng & Hướng dẫn tự học)**: Chiếm ~12–15% thời lượng ($5 \le \text{timeD} \le 25$ phút, đủ thời gian cho bài toán thực tế và 4 nhiệm vụ tự học).
-       + **Hoạt động B (Hình thành kiến thức) & C (Luyện tập)**: Phân bổ linh hoạt phần thời gian còn lại ($T - A - D$):
-         - Nếu bài nhiều lý thuyết / nhiều mục lớn: $B \approx 50–55\%$, $C \approx 22–26\%$.
-         - Nếu bài ít lý thuyết / bài luyện tập thực hành: $B \approx 40–45\%$, $C \approx 30–35\%$.
-       + **Phân chia nhánh con trong B theo trọng số độ dài**: $B_i = \text{round}\left(B \times \frac{w_i}{\sum w_k}\right)$, mục dài nhiều nội dung nhận nhiều phút hơn mục ngắn, tổng $\sum B_i = B$ bảo toàn chính xác.
-       + **Khóa cứng toàn bài**: Tổng $A + B + C + D$ luôn luôn bằng chính xác $100\%$ thời lượng $T$ (1 tiết = 45p/35p, 2 tiết = 90p/70p, 3 tiết = 135p/105p, 4 tiết = 180p/140p, hoặc số phút tùy chỉnh).
+2. **Tích hợp Phân quyền Quản trị Toàn diện trong Bảng điều khiển Admin ([admin.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/admin.html))**:
+   - **Bật/Tắt Toàn cục (Admin Global Features)**:
+     + Thêm ô checkbox cấu hình `id="cfg_xaydungphuluc"` trong khu vực *2. Cài đặt Ứng dụng Client (Admin Global)*.
+     + Cập nhật danh sách hằng số tính năng `FEATURE_KEYS` và logic lưu/tải cấu hình toàn cục lên kho lưu trữ.
+   - **Phân quyền Từng Tài khoản Giáo viên (User Permissions / Allowed Pages)**:
+     + Bổ sung định nghĩa trang vào `PAGE_CONFIG`: `xaydungphuluc: { title: 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', url: 'GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html' }`.
+     + Đưa `xaydungphuluc` vào danh sách nhóm công cụ mở cho Giáo viên (`teacherPages` / `defaultTeacherPages`).
+     + Hiển thị checkbox `xaydungphuluc` trong modal Tạo tài khoản mới (`#createAllowedPages`), modal Import danh sách tài khoản Excel (`#importAllowedPages`), và modal Chỉnh sửa quyền tài khoản (`#editAllowedPages`).
+     + Đồng bộ tính năng `user_features` và `allowed_pages` khi Admin cấp/thu hồi quyền của giáo viên.
 
-3. **Bộ kiểm thử tự động (Unit / Smoke Tests)**:
-   - Viết test `tests/khbd-dynamic-time-budgets-smoke.js` kiểm tra thuật toán phân bổ động trên đa dạng các mốc thời gian: 1 tiết (45p, 35p), 2 tiết (90p, 70p), 3 tiết (135p, 105p), 4 tiết (180p, 140p), và số phút bất kỳ (120p, 150p) với số tiểu mục $N = 1, 2, 3, 4$.
-   - Viết test `tests/khbd-tabs-reorganized-smoke.js` kiểm tra cấu trúc subtab mới (A, B, C, D, E: Hồ sơ học tập, F: Hình minh họa).
+3. **Cập nhật Điều hướng & Xác thực Thân thiện trong ([xaydungphuluc.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/GIAO%20AN/XAYDUNGPHULUC/xaydungphuluc.html))**:
+   - Thêm nút *Về Trang chủ Portal* trên thanh Header của `xaydungphuluc.html` (liên kết về `../../index.html`).
+   - Kiểm tra xác thực nhẹ nhàng phía client: nếu chạy trong môi trường hệ thống đã đăng nhập, tự động lấy thông tin giáo viên / email từ `localStorage` (`userEmail`, `teacherName` nếu có) để điền sẵn vào biểu mẫu.
+
+4. **Bộ kiểm thử tích hợp tự động ([tests/xaydungphuluc-integration-smoke.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/tests/xaydungphuluc-integration-smoke.js))**:
+   - Viết bài kiểm thử Node.js tự động kiểm tra:
+     + `index.html`: Thẻ công cụ `data-tool="xaydungphuluc"`, mở tab mới `target="_blank"`, `TOOL_PAGE_LINKS.xaydungphuluc`.
+     + `admin.html`: Checkbox `cfg_xaydungphuluc`, cấu hình trong `PAGE_CONFIG`, mảng phân quyền giáo viên và logic đồng bộ quyền.
+     + `xaydungphuluc.html`: Đường dẫn hợp lệ, liên kết quay về trang chủ.
 
 ## Ngoài phạm vi
-- Không thay đổi cấu trúc sư phạm 4 bước của Công văn 5512.
-- Không thay đổi các khung chuẩn NLS (TT 02) và Năng lực AI (QĐ 2422).
+- Không thay đổi các chức năng nội tại của các công cụ khác trong `index.html` và `admin.html`.
+- Không thay đổi cấu trúc dữ liệu người dùng đang có trên cơ sở dữ liệu.
 
 ## File dự kiến tác động
-- `soankhbd.html`
-- `js/khbd-prompts.js`
-- `js/khbd-app.js`
-- `js/khbd-docx.js`
-- `tests/khbd-dynamic-time-budgets-smoke.js`
-- `tests/khbd-tabs-reorganized-smoke.js`
-- `docs/handoff/PLAN.md`
-- `docs/handoff/IMPLEMENT.md`
+- `index.html` [CHỈNH SỬA / TÍCH HỢP THẺ CÔNG CỤ & TOOL_PAGE_LINKS]
+- `admin.html` [CHỈNH SỬA / TÍCH HỢP GLOBAL TOGGLE & PHÂN QUYỀN GIÁO VIÊN]
+- `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html` [CẬP NHẬT HEADER LIÊN KẾT VỀ TRANG CHỦ]
+- `tests/xaydungphuluc-integration-smoke.js` [TẠO MỚI]
+- `docs/handoff/PLAN.md` [GHI ĐÈ]
+- `docs/handoff/.lock` [GHI MỚI / NỘI DUNG: LOCK]
+- `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi triển khai]
+- `docs/handoff/VERIFY.md` [Tester cập nhật kết quả nghiệm thu]
 
 ## Các bước thực hiện
-1. **Bước 1: Nâng cấp `calculateActivityTimeBudgets` trong `js/khbd-prompts.js`**:
-   - Cài đặt thuật toán phân bổ thời lượng động theo $T$ và $N$ tiểu mục SGK cho chuẩn 4 hoạt động A, B, C, D.
-   - Cập nhật các prompt tương ứng (`GENERATE_PORTFOLIO_WORKSHEETS` gắn với subtab E).
-2. **Bước 2: Cập nhật giao diện `soankhbd.html` & `js/khbd-app.js`**:
-   - Xóa bỏ nút và panel subtab E cũ.
-   - Đặt subtab E là "E. Hồ sơ học tập" và subtab F là "🎨 F. Hình minh họa SGK".
-   - Cập nhật `ACTIVITY_TITLES`, `switchActivitySubtab`, `getFullLessonPlanMarkdown`.
-3. **Bước 3: Cập nhật `js/khbd-docx.js`**:
-   - Đồng bộ xuất Word mục Phụ lục từ `appState.content.activities.E`.
-4. **Bước 4: Viết và chạy bài test tự động**:
-   - Chạy `tests/khbd-dynamic-time-budgets-smoke.js` và `tests/khbd-tabs-reorganized-smoke.js`, xác nhận PASS 100%.
+1. **Bước 1: Cập nhật `index.html`**:
+   - Thêm thẻ công cụ `xaydungphuluc` vào lưới `#mainToolsGrid` với thuộc tính `target="_blank" rel="noopener noreferrer"`, href trỏ đến `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`.
+   - Cập nhật định nghĩa `TOOL_PAGE_LINKS`: thêm key `xaydungphuluc: 'GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html'`.
+   - Bổ sung CSS định dạng màu sắc/hiệu ứng cho `.tool-tile--phuluc` / `.tool-tile--xaydungphuluc` hài hòa với giao diện chung.
+2. **Bước 2: Cập nhật `admin.html`**:
+   - Thêm ô checkbox `cfg_xaydungphuluc` vào khu vực *Cài đặt Ứng dụng Client (Admin Global)*.
+   - Thêm `xaydungphuluc` vào danh sách `FEATURE_KEYS`.
+   - Thêm `xaydungphuluc` vào `PAGE_CONFIG` và mảng quyền mặc định của Giáo viên (`defaultTeacherPages`).
+   - Cập nhật hàm thu thập và lưu cài đặt tính năng toàn cục cũng như hàm đồng bộ `user_features`.
+3. **Bước 3: Cập nhật `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`**:
+   - Thêm nút liên kết `<a href="../../index.html" class="btn secondary">🏠 Trang chủ</a>` vào Header.
+   - Tự động nạp sẵn tên giáo viên từ `localStorage.getItem('userName')` hoặc `localStorage.getItem('userEmail')` nếu có.
+4. **Bước 4: Viết và chạy bộ kiểm thử tự động `tests/xaydungphuluc-integration-smoke.js`**:
+   - Chạy kiểm thử tự động bằng Node.js và xác nhận PASS 100%.
 
 ## Rủi ro
-- **Rủi ro**: Dữ liệu lưu trong localStorage của người dùng từ phiên bản cũ có thể còn key `activities.F` cho hồ sơ học tập.
-  - **Khắc phục**: Thêm hàm tự động migrate an toàn trong `loadStateFromLocalStorage`: nếu `activities.F` có nội dung mà `activities.E` rỗng thì tự động chuyển sang `activities.E`.
+- **Rủi ro 1**: Tài khoản giáo viên cũ chưa có cờ phân quyền `xaydungphuluc` trong danh sách `allowed_pages`.
+  - *Giải pháp*: Trong hàm `ensureTeacherToolPages` hoặc `augmentTeacherAllowedSet`, tự động cấp quyền mặc định cho giáo viên khi tính năng toàn cục đang ở trạng thái bật (`features.xaydungphuluc !== false`), đồng thời cho phép Admin tùy chỉnh bật/tắt riêng cho từng tài khoản.
+- **Rủi ro 2**: Đường dẫn tương đối từ `index.html` tới `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html` có khoảng trắng trong tên thư mục.
+  - *Giải pháp*: Mã hóa URL chuẩn `GIAO%20AN/XAYDUNGPHULUC/xaydungphuluc.html` hoặc dùng đường dẫn hợp lệ đảm bảo mở chính xác trên mọi máy chủ web.
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động qua Node.js**:
-   - Chạy `node tests/khbd-dynamic-time-budgets-smoke.js`: Kiểm tra phân bổ động cho bài 1 tiết (45p), 2 tiết (90p), 3 tiết (135p), 4 tiết (180p) với 1, 2, 3, 4 tiểu mục $\rightarrow$ tất cả đều khớp 100% thời gian.
-   - Chạy `node tests/khbd-tabs-reorganized-smoke.js`: Kiểm tra chuyển đổi subtab A, B, C, D, E (Hồ sơ), F (Hình vẽ) và xuất giáo án đầy đủ.
-2. **Kiểm thử thủ công trên giao diện `soankhbd.html`**:
-   - Chọn bài 3 tiết (135 phút): Kiểm tra thời gian hiển thị động (ví dụ B ~ 70p chia 3 nhánh, C ~ 35p, A ~ 10p, D ~ 20p $\rightarrow$ tổng đúng 135p).
-   - Chọn bài 1 tiết (45 phút): Kiểm tra thời gian hiển thị động (ví dụ A ~ 5p, B ~ 22p, C ~ 12p, D ~ 6p $\rightarrow$ tổng đúng 45p).
-   - Kiểm tra thanh Tab 4: Thấy rõ subtab **E. Hồ sơ học tập** và **F. Hình minh họa SGK**, hoàn toàn không còn tab E cũ.
+   - Chạy lệnh `node tests/xaydungphuluc-integration-smoke.js`.
+   - Xác nhận: Kiểm tra sự hiện diện của thẻ `data-tool="xaydungphuluc"` trong `index.html`, `target="_blank"`, `TOOL_PAGE_LINKS`, checkbox cấu hình trong `admin.html`, cấu hình `PAGE_CONFIG`, mảng phân quyền giáo viên $\rightarrow$ PASS 100%.
+2. **Kiểm thử thủ công trên trình duyệt**:
+   - Mở `index.html`: Xác nhận thẻ công cụ *Xây dựng Phụ lục 1, 2, 3* xuất hiện trong lưới công cụ.
+   - Nhấp vào thẻ công cụ: Xác nhận trình duyệt mở ra **Tab Mới** với giao diện `xaydungphuluc.html`.
+   - Mở `admin.html`: Đăng nhập admin, kiểm tra checkbox bật/tắt toàn cục *Xây dựng Phụ lục 1, 2, 3*, kiểm tra modal phân quyền cho giáo viên có mục chọn *Xây dựng Phụ lục 1, 2, 3*.
+   - Thử nghiệm tắt tính năng trên Admin và kiểm tra thẻ công cụ trên `index.html` được ẩn tương ứng.
 
 ## Tiêu chí nghiệm thu
-1. Xóa bỏ hoàn toàn mục "E. Hướng dẫn về nhà" cũ; Subtab E trong Tab 4 là **E. Hồ sơ học tập & Phiếu học tập**; Subtab F là **🎨 F. Hình minh họa SGK**.
-2. Thuật toán phân bổ thời lượng hoạt động động và linh hoạt cho mọi số tiết (1 tiết = 45p/35p, 2 tiết = 90p/70p, 3 tiết = 135p/105p, 4 tiết = 180p/140p) và số lượng tiểu mục SGK, bảo toàn $A + B + C + D = 100\%$ thời lượng bài dạy.
-3. Tương thích ngược an toàn với dữ liệu cũ trong localStorage, xuất file Word đầy đủ các phần I, II, III (A-D) và IV (Phụ lục E).
-4. Toàn bộ các bài kiểm thử liên quan đều PASS 100%.
-
-
-
-
+1. Trên giao diện chính `index.html` có thẻ công cụ *Xây dựng Phụ lục 1, 2, 3*, nhấp vào sẽ mở ứng dụng `xaydungphuluc.html` trong **Tab mới** (`target="_blank"`).
+2. Trên bảng điều khiển `admin.html` có đầy đủ chức năng quản trị và phân quyền cho `xaydungphuluc`:
+   - Công tắc Bật/Tắt toàn cục (Global feature toggle).
+   - Tùy chọn phân quyền cho từng tài khoản Giáo viên (Tạo mới, Import Excel, Chỉnh sửa quyền).
+3. Ứng dụng `xaydungphuluc.html` có nút liên kết quay về Trang chủ và tích hợp dữ liệu người dùng liền mạch.
+4. Bộ kiểm thử tự động `tests/xaydungphuluc-integration-smoke.js` chạy thành công và PASS 100%.
