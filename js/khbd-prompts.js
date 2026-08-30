@@ -188,7 +188,7 @@ const LATEX_SPACING_BAN = `- CẤM TUYỆT ĐỐI dùng chuỗi lệnh LaTeX kho
 const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠM THỰC CHIẾN TRONG BẢNG 2 CỘT (Chuẩn CV 5512 & GDPT 2018):
 - YÊU CẦU ĐỘ DÀI & VĂN PHONG SÚC TÍCH: Toàn bộ Kế hoạch bài dạy hoàn chỉnh đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trực diện vào bản chất kiến thức và hành động cốt lõi của GV/HS; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không dùng câu thoại diễn giải lòng vòng, không lặp lại nội dung giữa các mục.
 - THỜI LƯỢNG HOẠT ĐỘNG: BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề các Hoạt động (A, B, C, D, E) và từng hoạt động nhánh trong Mục B, ví dụ: \`## A. HOẠT ĐỘNG 1: MỞ ĐẦU (5 phút)\`, \`### 1. Hoạt động 2.1: [Tên mục] (15 phút)\`, \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP (10 phút)\`, \`## D. HOẠT ĐỘNG 4: VẬN DỤNG (5 phút)\`, \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (3 phút)\`. CẤM TUYỆT ĐỐI ghi từ "Khoảng" hoặc dải thời gian dạng "X - Y phút".
-- KHÓA TỔNG THỜI LƯỢNG: Tổng thời lượng tất cả hoạt động nhánh trong B BẮT BUỘC đúng bằng {time_budget_B}; tổng A + B + C + D + E BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration}. Không tự tăng thời lượng một nhánh hoặc tổng toàn bài.
+- KHÓA TỔNG THỜI LƯỢNG: Tổng thời lượng tất cả hoạt động nhánh trong B BẮT BUỘC đúng bằng {time_budget_B}; tổng A + B + C + D + E BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration} (02 tiết = đúng 90 phút). Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). Không tự tăng thời lượng một nhánh hoặc tổng toàn bài.
 - Chỉ dùng dấu gạch đầu dòng -, +, *; không dùng cú pháp gạch dưới để định dạng như _Trạm X:_ hoặc __tiêu đề__.
 - Mục a) Mục tiêu, b) Nội dung, c) Sản phẩm: dùng 3 cấp danh sách: ý lớn \`-\`, ý con \`+\`, ý chi tiết \`.\`. Trình bày súc tích, trọng tâm (mục a: tối đa 2 ý; mục b: tối đa 2–3 ý, không chép lại toàn văn SGK; mục c: tối đa 2 ý kết quả cốt lõi).
 - Mục d) Tổ chức thực hiện: BẮT BUỘC ĐÚNG MỘT bảng Markdown 2 cột, tiêu đề:
@@ -260,7 +260,7 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Danh sách nội dung có đúng 3 cấp: ý lớn bắt đầu bằng "- ", ý con "+ ", ý chi tiết ". ". Không dùng "1.", "2." làm danh sách nội dung trừ khi là số thứ tự bài tập hoặc bước CV 5512.
 - CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu. Màu sắc và font chữ do ứng dụng xử lý.
 - ĐỘ DÀI & VĂN PHONG CHUẨN: Toàn bộ Kế hoạch bài dạy đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trọng tâm; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không lặp lại câu hỏi dài dòng.
-- KHÓA TỔNG THỜI LƯỢNG: Tổng A + B + C + D + E BẮT BUỘC KHỚP 100% với thời lượng tiết dạy {duration}; ví dụ 01 tiết = 45 phút, 02 tiết = 90 phút, 03 tiết = 135 phút. Riêng tổng mọi hoạt động nhánh trong B phải đúng bằng thời lượng B đã phân bổ.
+- KHÓA TỔNG THỜI LƯỢNG: Tổng A + B + C + D + E BẮT BUỘC KHỚP 100% với thời lượng tiết dạy {duration}; ví dụ 01 tiết = 45 phút, 02 tiết = đúng 90 phút, 03 tiết = 135 phút. Hoạt động B BẮT BUỘC đúng {time_budget_B}. Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút).
 ${LATEX_SPACING_BAN}`,
 
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy chuẩn CV 5512. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ lại nội dung giáo án. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary, lời chúc ở cuối và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng "-", "+", ".". Không đổi tiêu đề mục khung như "I.", "## 1.", "a)", "Bước", "Bài".`,
@@ -565,7 +565,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 YÊU CẦU KỊCH BẢN THỰC CHIẾN & NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO MỤC LỚN SGK:
 ${ACTIVITY_TABLE_CONTRACT}
 ${LATEX_SPACING_BAN}
-- BẮT BUỘC dùng tiêu đề ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B}). Tổng số phút của TẤT CẢ hoạt động nhánh 2.1, 2.2, 2.3... phải đúng bằng {time_budget_B}; dùng đúng số phút đã phân bổ cho từng tiểu mục, tuyệt đối không tự gán 25–30 phút cho mỗi nhánh.
+- BẮT BUỘC dùng tiêu đề ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B}). Tổng số phút của TẤT CẢ hoạt động nhánh 2.1, 2.2, 2.3... phải đúng bằng {time_budget_B}; dùng đúng số phút đã phân bổ cho từng tiểu mục, tuyệt đối không tự gán 25–30 phút cho mỗi nhánh. Nếu chia N nhánh con, tổng số phút của N nhánh con cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). Tổng A + B + C + D + E BẮT BUỘC đúng bằng {duration} (02 tiết = đúng 90 phút).
 - ĐẾM SỐ TIỂU MỤC KIẾN THỨC LỚN TRONG SGK: Chỉ ánh xạ đúng các Mục lớn (Đơn vị kiến thức cốt lõi chính thức trong mục lục SGK, thông thường 1–3 mục lớn, tối đa 4 mục). Bạn BẮT BUỘC PHẢI chia Hoạt động B thành đúng N hoạt động con tương ứng 1-1:
   ### 1. Hoạt động 2.1: [Tên mục 1 trong SGK] (... phút) (hoặc ### 1. Hoạt động 1: [Tên mục 1 trong SGK] (... phút))
   ### 2. Hoạt động 2.2: [Tên mục 2 trong SGK] (... phút) (hoặc ### 2. Hoạt động 2: [Tên mục 2 trong SGK] (... phút))
@@ -755,9 +755,10 @@ NHIỆM VỤ:
 - Nếu có Khởi động / Hình thành kiến thức / Khăn trải bàn / Think-Pair-Share / KWL: thiết kế **Phiếu học tập số 1 (Khám phá)** (và Phiếu KWL nếu kỹ thuật KWL được dùng).
 - Nếu có Luyện tập / nhóm / Mảnh ghép: thiết kế **Phiếu học tập số 2 (Luyện tập)** và **Rubric / Bảng kiểm đánh giá** (quan sát nhóm hoặc đánh giá đồng đẳng).
 - Nếu tiến trình không nêu tên phiếu: vẫn tạo tối thiểu PHT số 1 (Khám phá), PHT số 2 (Luyện tập) và 1 Rubric/Bảng kiểm.
-- Mỗi phiếu là MẪU IN SẴN: tiêu đề trường/lớp, nhóm/họ tên HS, bảng kẻ rõ, câu hỏi/nhiệm vụ, dòng kẻ điền kết quả. Không để dấu "..." hay "[...]". Điền nội dung bám SGK.
+- Mỗi phiếu là MẪU IN SẴN: tiêu đề trường/lớp, nhóm/họ tên HS, bảng kẻ rõ, câu hỏi/nhiệm vụ, chỗ HS điền kết quả. Không để dấu "..." hay "[...]" chưa điền nội dung câu hỏi. Điền nội dung bám SGK.
 - Kèm **Hướng dẫn chấm / đáp án** cho từng phiếu (thang điểm 10 nếu là bài tập).
 - CẤM viết lại tiến trình A–E. CẤM bịa bài tập ngoài nguồn SGK khi nguồn đã có bài.
+- CẤM DÒNG CHẤM RÁC / PHÌNH TRANG: TUYỆT ĐỐI CẤM sinh khối nhiều dòng liên tiếp chỉ gồm dấu chấm hoặc gạch ngang (ví dụ 10–80 dòng \`........................................\`) để chừa chỗ trống cho học sinh. Mọi câu hỏi và phần trả lời của học sinh BẮT BUỘC nằm gọn trong ô của BẢNG Markdown, hoặc tối đa 1–2 dòng chấm NGẮN ngay dưới từng câu hỏi (dưới 40 ký tự/dòng). Được phép 1 dòng điền ngắn trên tiêu đề phiếu (ví dụ \`Họ và tên: ....................\`). Phụ lục F phải gọn trong 1–2 trang in Word A4.
 
 CẤU TRÚC BẮT BUỘC:
 
@@ -819,13 +820,19 @@ BẮT BUỘC xuất đúng 5 khối, mỗi khối bắt đầu bằng marker:
 <<<KHBD_A>>>
 (toàn bộ ## A. HOẠT ĐỘNG 1: MỞ ĐẦU ({time_budget_A}))
 <<<KHBD_B>>>
-(toàn bộ ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI)
+(toàn bộ ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B}))
 <<<KHBD_C>>>
 (toàn bộ ## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C}))
 <<<KHBD_D>>>
 (toàn bộ ## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D}))
 <<<KHBD_E>>>
 (toàn bộ ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E}))
+
+KHÓA ĐÚNG 5 MARKER DUY NHẤT: Xuất đúng một lần mỗi marker <<<KHBD_A>>> … <<<KHBD_E>>> theo thứ tự trên. CẤM lặp lại marker. CẤM xuất thêm tiêu đề hoặc khối ## D. HOẠT ĐỘNG 4 sau khi đã viết xong pha D.
+
+KHÓA THỜI LƯỢNG TOÀN BÀI:
+- Hoạt động B = {time_budget_B}. Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh con cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút).
+- Tổng A + B + C + D + E BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration} (02 tiết = đúng 90 phút).
 
 YÊU CẦU HÌNH THỨC & KỊCH BẢN THỰC CHIẾN (Áp dụng các pha A–D; pha E dùng danh sách 4 mục, KHÔNG dùng bảng 2 cột):
 ${ACTIVITY_TABLE_CONTRACT}
@@ -838,6 +845,7 @@ PHA A — MỞ ĐẦU:
 - Khi có NLS/AI: Tích hợp công cụ số hoặc câu hỏi/prompt AI mở đầu ngắn gọn (marker **[NLS: ...]** hoặc **[AI: ...]**). CẤM hỏi lý thuyết AI suông.
 
 PHA B — HÌNH THÀNH KIẾN THỨC:
+- Tiêu đề: \`## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B})\`. Tổng các nhánh 2.1, 2.2, ... BẮT BUỘC đúng bằng {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM 45 phút + 30 phút = 75 phút).
 - Đếm số mục kiến thức lớn trong SGK (chỉ 1-3 mục lớn, tối đa 4 mục): tạo đúng N hoạt động con (### 1. Hoạt động 2.1: [Tên mục 1] (... phút), ### 2. Hoạt động 2.2: [Tên mục 2] (... phút)... hoặc ### 1. Hoạt động 1: ..., ### 2. Hoạt động 2: ...).
 - TUYỆT ĐỐI LOẠI BỎ việc tách câu hỏi nhỏ/bài tập con thành hoạt động riêng. Toàn bộ ví dụ, khám phá, thực hành con phải nằm trọn vẹn bên trong hoạt động của mục lớn tương ứng.
 - Mỗi hoạt động con đủ #### a) b) c) d) + đúng 1 bảng 2 cột duy nhất.
@@ -894,13 +902,19 @@ BẮT BUỘC xuất đúng 5 khối, mỗi khối bắt đầu bằng marker:
 <<<KHBD_A>>>
 (toàn bộ ## A. HOẠT ĐỘNG 1: MỞ ĐẦU ({time_budget_A}))
 <<<KHBD_B>>>
-(toàn bộ ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI)
+(toàn bộ ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B}))
 <<<KHBD_C>>>
 (toàn bộ ## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C}))
 <<<KHBD_D>>>
 (toàn bộ ## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D}))
 <<<KHBD_E>>>
 (toàn bộ ## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ ({time_budget_E}))
+
+KHÓA ĐÚNG 5 MARKER DUY NHẤT: Xuất đúng một lần mỗi marker <<<KHBD_A>>> … <<<KHBD_E>>> theo thứ tự trên. CẤM lặp lại marker. CẤM xuất thêm tiêu đề hoặc khối ## D. HOẠT ĐỘNG 4 sau khi đã viết xong pha D.
+
+KHÓA THỜI LƯỢNG TOÀN BÀI:
+- Hoạt động B = {time_budget_B}. Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh con cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút).
+- Tổng A + B + C + D + E BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration} (02 tiết = đúng 90 phút).
 
 YÊU CẦU HÌNH THỨC & KỊCH BẢN THỰC CHIẾN (Áp dụng các pha A–D; pha E dùng danh sách 4 mục, KHÔNG dùng bảng 2 cột):
 ${ACTIVITY_TABLE_CONTRACT}
@@ -913,6 +927,7 @@ PHA A — MỞ ĐẦU:
 - Khi có NLS/AI: Tích hợp công cụ số hoặc câu hỏi/prompt AI mở đầu ngắn gọn (marker **[NLS: ...]** hoặc **[AI: ...]**). CẤM hỏi lý thuyết AI suông.
 
 PHA B — HÌNH THÀNH KIẾN THỨC:
+- Tiêu đề: \`## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B})\`. Tổng các nhánh 2.1, 2.2, ... BẮT BUỘC đúng bằng {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM 45 phút + 30 phút = 75 phút).
 - Đếm số mục kiến thức lớn trong SGK (chỉ 1-3 mục lớn, tối đa 4 mục): tạo đúng N hoạt động con (### 1. Hoạt động 2.1: [Tên mục 1] (... phút), ### 2. Hoạt động 2.2: [Tên mục 2] (... phút)... hoặc ### 1. Hoạt động 1: ..., ### 2. Hoạt động 2: ...).
 - TUYỆT ĐỐI LOẠI BỎ việc tách câu hỏi nhỏ/bài tập con thành hoạt động riêng. Toàn bộ ví dụ, khám phá, thực hành con phải nằm trọn vẹn bên trong hoạt động của mục lớn tương ứng.
 - Mỗi hoạt động con đủ #### a) b) c) d) + đúng 1 bảng 2 cột duy nhất.
@@ -1362,7 +1377,8 @@ function getPromptTemplate(templateKey, context) {
       result += `\n\nDANH SÁCH TIỂU MỤC SGK BẮT BUỘC ÁP DỤNG (ĐÚNG ${subsections.length} HOẠT ĐỘNG NHÁNH):
 Từ dữ liệu SGK được cung cấp, xác định chính xác ${subsections.length} tiểu mục kiến thức lớn sau. Bạn PHẢI tạo đúng ${subsections.length} hoạt động nhánh tương ứng 1-1, KHÔNG ĐƯỢC GỘP, KHÔNG ĐƯỢC BỎ BỚT, KHÔNG ĐƯỢC BỊA THÊM:
 ${subListStr}
-Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có thời lượng cố định cụ thể ví dụ (${budgets.formatted.B_subsections[0] || '15 phút'}), đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng). Tuyệt đối không tách câu hỏi nhỏ/bài tập con thành hoạt động riêng.`;
+Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có thời lượng cố định cụ thể ví dụ (${budgets.formatted.B_subsections[0] || '15 phút'}), đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng). Tuyệt đối không tách câu hỏi nhỏ/bài tập con thành hoạt động riêng.
+Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budgets.formatted.B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). Tổng A + B + C + D + E BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.`;
     }
   }
 

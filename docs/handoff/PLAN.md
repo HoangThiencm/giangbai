@@ -1,83 +1,75 @@
-# PLAN: Khắc phục lỗi hiển thị gạch dưới `_Trạm X:_` trong Word và Khóa chuẩn tổng thời lượng 90 phút cho bài 02 tiết
+# PLAN: Khóa chuẩn tổng thời lượng 90 phút (chống lặp Hoạt động D) và Triệt tiêu 7 trang dòng chấm trong Phụ lục Phiếu học tập
 
 ## Hiện trạng
-1. **Vấn đề 1: Ký tự gạch dưới `_Trạm 1 (Khám phá số nguyên âm):_` và rò rỉ dòng phân cách bảng trong Word**:
-   - Khi AI sinh Markdown có cú pháp in nghiêng bằng dấu gạch dưới (như `_Trạm 1 (Khám phá số nguyên âm):_`, `_Trạm 2:..._`), hàm `parseInlineTextToRuns` trong `js/khbd-docx.js` chỉ nhận diện cú pháp `*...*` và `**...**` mà bỏ sót cú pháp `_..._` và `__...__`.
-   - Do đó, thư viện docx không bóc tách được định dạng in nghiêng mà xuất nguyên văn các ký tự gạch dưới `_` ra file Word.
-   - Ngoài ra, ở cuối bảng nội dung đôi khi rò rỉ dòng tiêu đề bài hoặc ký tự pipe thừa (`Bài 13: ... |`, `---`, `|`) tạo thành các ô/đường kẻ đơn lẻ thừa trong tài liệu Word (như ảnh người dùng cung cấp).
+1. **Vấn đề 1: Phân chia sai thời lượng (Hoạt động B bị gán 75 phút thay vì 45 phút, tổng bài 120-131 phút) và Bị lặp 2 lần Hoạt động D**:
+   - Khi bài học khai báo 02 tiết (90 phút), mẫu prompt 1-click `GENERATE_ACTIVITIES_AE` và mẫu riêng `GENERATE_ACTIVITY_B` chưa khóa cứng phân bổ số phút cho các hoạt động nhánh con (2.1, 2.2,...). AI tự ý gán nhánh 2.1 là 45 phút, nhánh 2.2 là 30 phút, khiến riêng Hoạt động B bị đội lên 75 phút, kéo tổng thời gian cả bài lên 120–131 phút.
+   - Hoạt động D (`## D. HOẠT ĐỘNG 4: VẬN DỤNG (11 phút)`) bị xuất lặp lại 2 lần trong giáo án tổng hợp do hàm cắt/dedupe chưa lọc triệt để khi AI vô tình trả về nhiều hơn 1 khối D hoặc khi ghép nối các hoạt động.
 
-2. **Vấn đề 2: Khai báo bài học 02 tiết nhưng tổng thời gian các hoạt động bị đội lên 135 phút**:
-   - Khi khai báo 02 tiết (tương đương 90 phút), hàm `calculateActivityTimeBudgets` tính toán phân bổ chuẩn (A: 7 phút, B: 45 phút, C: 23 phút, D: 11 phút, E: 4 phút; tổng đúng 90 phút).
-   - Tuy nhiên, trong `PROMPTS.GENERATE_ACTIVITY_B` tại `js/khbd-prompts.js`, tiêu đề chỉ ghi `## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI` mà thiếu placeholder `{time_budget_B}`.
-   - Đồng thời, prompt chưa có chỉ thị khóa cứng tổng thời lượng của các hoạt động nhánh con (2.1, 2.2, 2.3...), khiến AI tự tiện gán mỗi nhánh 25–30 phút (hoặc 3 trạm x 30 phút = 90 phút riêng cho mục B), cộng thêm các hoạt động C, D, A làm tổng thời gian toàn bài bị đội lên tới 135 phút (vượt quá thời lượng 2 tiết).
+2. **Vấn đề 2: Mục IV. Phụ lục F (Phiếu học tập) sinh ra 7 trang toàn dòng chấm chấm `........................................`**:
+   - Khi tạo Phụ lục F (`GENERATE_PORTFOLIO_WORKSHEETS`), để chừa chỗ trống cho học sinh làm bài dưới bảng KWL / phiếu học tập, AI sinh ra 50–80 dòng liên tiếp toàn dấu chấm `................................................................................`.
+   - Trong `js/khbd-docx.js`, mỗi dòng chấm được phân tích thành 1 đoạn văn Word (Paragraph) độc lập có khoảng đệm dòng (line spacing & space after). Hàng chục dòng chấm này làm phình tài liệu ra thành **7 trang giấy trắng** toàn dấu chấm vô nghĩa.
 
 ## Phạm vi
-1. **Khắc phục Vấn đề 1: Xử lý định dạng `_italic_`, `__bold__` và dọn rác bảng trong Word (`js/khbd-docx.js`, `js/khbd-prompts.js`, `js/khbd-app.js`)**:
-   - Trong `js/khbd-docx.js`:
-     * Cập nhật `parseInlineTextToRuns` nhận diện cú pháp `_..._` (in nghiêng) và `__...__` (in đậm) của Markdown, chuyển đổi thành docx `TextRun` có `italics: true` / `bold: true` và bóc bỏ dấu gạch dưới `_`.
-     * Trong `parseMarkdownToDocxElements`, bổ sung bộ lọc loại bỏ các dòng rác phân cách bảng đơn lẻ (`|`, `---`, `|---|`, dòng chỉ có dấu pipe rò rỉ).
+1. **Khắc phục Vấn đề 1: Khóa cứng thời lượng 90 phút và Dedupe Hoạt động D (`js/khbd-prompts.js`, `js/khbd-app.js`)**:
    - Trong `js/khbd-prompts.js`:
-     * Chỉ thị AI dùng phân cấp gạch đầu dòng chuẩn (`- `, `+ `, `* `), không dùng cú pháp `_Trạm X:_` gây hiểu nhầm.
+     * Cập nhật `GENERATE_ACTIVITIES_AE`, `GENERATE_ACTIVITY_B`, `GENERATE_ACTIVITIES_AD`, `OUTPUT_CONTRACT`:
+       + Khóa cứng thời lượng Hoạt động B = `{time_budget_B}`. Ghi rõ trong chỉ thị: **Nếu chia N nhánh con (2.1, 2.2,...), tổng số phút của N nhánh con cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B}** (Ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút).
+       + Khóa cứng tổng thời lượng cả bài (A + B + C + D + E) = `{duration}` (02 tiết = đúng 90 phút).
+       + Trong `GENERATE_ACTIVITIES_AE`, khóa đúng 5 marker duy nhất, nghiêm cấm xuất lặp lại marker hoặc tiêu đề Hoạt động D.
    - Trong `js/khbd-app.js`:
-     * Tăng cường `mergeSplitActivityTables` và `sanitizeLessonMarkdown` để dọn sạch các dòng pipe rác cuối bảng.
+     * Tăng cường `clipKhbdActivityMarkdown("D", text)` và `parseKhbdSections`: Nếu phát hiện lặp lại tiêu đề D (`## D. HOẠT ĐỘNG 4`), chỉ giữ lại duy nhất 1 khối D chuẩn mực.
+     * Bổ sung hàm chuẩn hóa thời lượng (`normalizeActivityTimeHeadings`): Tự động phát hiện và điều chỉnh lại số phút trên tiêu đề các hoạt động khớp với `calculateActivityTimeBudgets` nếu AI sinh sai tổng thời gian.
 
-2. **Khắc phục Vấn đề 2: Khóa cứng tổng thời lượng các hoạt động khớp 100% thời lượng bài dạy (`js/khbd-prompts.js`, `js/khbd-app.js`)**:
+2. **Khắc phục Vấn đề 2: Triệt tiêu các trang dòng chấm rác trong Phụ lục F và file Word (`js/khbd-prompts.js`, `js/khbd-docx.js`, `js/khbd-app.js`)**:
    - Trong `js/khbd-prompts.js`:
-     * Đưa `{time_budget_B}` vào tiêu đề Hoạt động B: `## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC ({time_budget_B})`.
-     * Bổ sung quy tắc bắt buộc trong `ACTIVITY_TABLE_CONTRACT` và `PROMPTS.GENERATE_ACTIVITY_B`: **Tổng số phút của tất cả các hoạt động con (2.1, 2.2, 2.3...) trong Hoạt động B cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B}** (Ví dụ Hoạt động B là 45 phút chia 3 hoạt động nhánh thì mỗi nhánh là 15 phút; CẤM để mỗi nhánh 25–30 phút).
-     * Bổ sung quy tắc khóa tổng thời lượng toàn bài trong `PROMPTS.OUTPUT_CONTRACT`: **Tổng thời lượng A + B + C + D + E BẮT BUỘC PHẢI KHỚP 100% VỚI THỜI LƯỢNG TIẾT DẠY LÀ {duration}** (02 tiết = đúng 90 phút, 01 tiết = đúng 45 phút, 03 tiết = đúng 135 phút).
-   - Trong `js/khbd-app.js`:
-     * Đảm bảo `getGenerationPromptContext` luôn truyền chuẩn xác `appState.duration` (ví dụ "02 tiết (90 phút)") vào các mẫu prompt.
+     * Cập nhật `GENERATE_PORTFOLIO_WORKSHEETS`: Nghiêm cấm AI sinh các dòng chấm chấm lặp lại liên tiếp; yêu cầu toàn bộ câu hỏi và phần trả lời của học sinh phải nằm gọn trong các ô của BẢNG (Table) hoặc tối đa 1–2 dòng chấm ngắn cho mỗi câu hỏi; khống chế dung lượng Phụ lục F chỉ gọn gàng trong 1–2 trang in Word.
+   - Trong `js/khbd-docx.js` & `js/khbd-app.js`:
+     * Cài đặt bộ lọc rút gọn dòng chấm lặp lại (`collapseDottedLines` / `stripExcessiveDottedLines`): Khi phát hiện từ 3 dòng liên tiếp chỉ chứa dấu chấm/gạch ngang (`/^\s*[.\-_…\s]{10,}\s*$/`), tự động rút gọn chỉ giữ lại tối đa 1–2 dòng, ngăn chặn triệt để việc sinh 7 trang dấu chấm trong Word.
 
 3. **Bộ kiểm thử tự động (Unit / Smoke Tests)**:
-   - Viết test `tests/khbd-docx-format-smoke.js` kiểm tra `parseInlineTextToRuns` bóc tách đúng `_italic_`, `__bold__`, `*italic*`, `**bold**`.
-   - Cập nhật test `tests/khbd-time-budgets-smoke.js` kiểm tra `{time_budget_B}` được thay thế chuẩn và tổng thời gian các hoạt động trong template luôn khớp 100% với duration.
+   - Viết test `tests/khbd-dotted-lines-smoke.js` kiểm tra bộ lọc dọn sạch các dòng chấm lặp lại không để phình trang Word.
+   - Viết test `tests/khbd-activity-d-dedupe-smoke.js` kiểm tra dedupe Hoạt động D và bảo toàn tổng thời gian 90 phút cho bài 2 tiết.
 
 ## Ngoài phạm vi
-- Không thay đổi công thức tính toán `calculateActivityTimeBudgets` (hàm đã phân bổ đúng 90 phút cho 2 tiết).
+- Không thay đổi công thức tính toán `calculateActivityTimeBudgets`.
 - Không thay đổi cấu trúc sư phạm 4 bước CV 5512.
 
 ## File dự kiến tác động
-- `js/khbd-docx.js`
 - `js/khbd-prompts.js`
 - `js/khbd-app.js`
-- `tests/khbd-docx-format-smoke.js`
-- `tests/khbd-time-budgets-smoke.js`
+- `js/khbd-docx.js`
+- `tests/khbd-dotted-lines-smoke.js`
+- `tests/khbd-activity-d-dedupe-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Các bước thực hiện
-1. **Bước 1: Cập nhật `parseInlineTextToRuns` và `parseMarkdownToDocxElements` trong `js/khbd-docx.js`**:
-   - Hỗ trợ đầy đủ `_..._` và `__...__`.
-   - Lọc bỏ các dòng pipe rác/separator rò rỉ cuối bảng.
-2. **Bước 2: Cập nhật các mẫu prompt trong `js/khbd-prompts.js`**:
-   - Thêm `{time_budget_B}` vào tiêu đề Hoạt động B.
-   - Thêm chỉ thị bắt buộc tổng các nhánh con trong B bằng `{time_budget_B}` và tổng toàn bài bằng `{duration}`.
-   - Hướng dẫn AI không dùng dấu gạch dưới `_Trạm X:_`.
-3. **Bước 3: Tinh chỉnh hàm lọc rò rỉ bảng trong `js/khbd-app.js`**:
-   - Đảm bảo `sanitizeLessonMarkdown` dọn sạch các dòng thừa dấu `|` hoặc `---` đơn độc.
-4. **Bước 4: Viết bài test tự động**:
-   - Viết `tests/khbd-docx-format-smoke.js` và cập nhật `tests/khbd-time-budgets-smoke.js`.
-5. **Bước 5: Chạy toàn bộ test suites**:
-   - Xác nhận tất cả bài test liên quan đều PASS 100%.
+1. **Bước 1: Cập nhật `js/khbd-prompts.js`**:
+   - Siết chặt quy tắc thời lượng Hoạt động B và toàn bài trong `GENERATE_ACTIVITIES_AE` và `GENERATE_ACTIVITY_B`.
+   - Cập nhật `GENERATE_PORTFOLIO_WORKSHEETS` cấm sinh các khối dòng chấm rác kéo dài.
+2. **Bước 2: Cập nhật `js/khbd-docx.js` & `js/khbd-app.js`**:
+   - Thêm bộ lọc `collapseDottedLines` trong `parseMarkdownToDocxElements` và `sanitizeLessonMarkdown`.
+   - Tăng cường `clipKhbdActivityMarkdown` dedupe triệt để cho Hoạt động D và chuẩn hóa số phút tiêu đề.
+3. **Bước 3: Viết các bài kiểm thử tự động**:
+   - Viết `tests/khbd-dotted-lines-smoke.js` và `tests/khbd-activity-d-dedupe-smoke.js`.
+4. **Bước 4: Chạy toàn bộ test suites**:
+   - Xác nhận tất cả bài kiểm thử đều PASS 100%.
 
 ## Rủi ro
-- **Rủi ro**: Dấu gạch dưới `_` trong công thức toán học (`x_1`, `a_{ij}`) nếu parse nhầm thành in nghiêng có thể làm hỏng công thức.
-  - **Khắc phục**: Thuật toán `parseInlineTextToRuns` đã ưu tiên bóc tách công thức LaTeX `$..$` và `$$..$$` trước khi parse các thẻ định dạng inline.
+- **Rủi ro**: Lọc nhầm dòng chấm trong bảng kẻ mẫu in ngắn (như `Họ và tên: ....................`).
+  - **Khắc phục**: Bộ lọc chỉ rút gọn khi có từ 3 dòng chấm riêng biệt liên tiếp đứng ngoài bảng.
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động qua Node.js**:
-   - Chạy `node tests/khbd-docx-format-smoke.js`: Kiểm tra chuỗi `_Trạm 1 (Khám phá):_` chuyển đổi thành TextRun có `italics: true` và text là `Trạm 1 (Khám phá):`.
-   - Chạy `node tests/khbd-time-budgets-smoke.js`: Kiểm tra prompt Activity B chứa đúng `{time_budget_B}` và quy tắc tổng thời gian 90 phút cho 2 tiết.
+   - Chạy `node tests/khbd-dotted-lines-smoke.js`: Kiểm tra khối văn bản chứa 50 dòng chấm được rút gọn về 1 dòng duy nhất khi qua bộ lọc Word.
+   - Chạy `node tests/khbd-activity-d-dedupe-smoke.js`: Kiểm tra văn bản chứa 2 khối Hoạt động D bị cắt chỉ giữ lại 1 khối duy nhất; kiểm tra tổng số phút 5 hoạt động đúng 90 phút.
 2. **Kiểm thử thủ công trên giao diện**:
-   - Mở `soankhbd.html`, chọn bài 02 tiết và tạo các hoạt động:
-     * Kiểm tra tiêu đề Hoạt động B hiển thị rõ số phút phân bổ (ví dụ: `(45 phút)`).
-     * Kiểm tra các hoạt động con (2.1, 2.2,...) có số phút cộng lại đúng bằng 45 phút.
-     * Xuất file Word (.docx), mở lên kiểm tra: Không còn ký tự `_Trạm 1:_` thô, văn bản in nghiêng đẹp mắt, không có dòng rác `|` hay `---` rò rỉ.
+   - Tạo bài học 2 tiết, mở tab Hoạt động D và Phụ lục F:
+     * Kiểm tra không còn bị lặp lại tiêu đề `## D. HOẠT ĐỘNG 4`.
+     * Kiểm tra Hoạt động B có số phút là (45 phút) và các nhánh con (23p, 22p), tổng bài đúng 90 phút.
+     * Xuất file Word (.docx), mở lên kiểm tra: Phụ lục F gọn gàng 1–2 trang, hoàn toàn không còn 7 trang dòng chấm `....................`.
 
 ## Tiêu chí nghiệm thu
-1. File Word xuất ra hiển thị định dạng in nghiêng chuẩn mực, bóc sạch ký tự gạch dưới `_Trạm X:_` và không rò rỉ đường kẻ/dấu pipe thừa.
-2. Tiêu đề Hoạt động B và toàn bộ các hoạt động con có thời lượng chuẩn xác, tổng thời lượng toàn bộ giáo án 2 tiết đúng 90 phút (không bị đội lên 135 phút).
-3. Toàn bộ các bài kiểm thử liên quan đều PASS 100%.
-
-
+1. Giáo án 2 tiết có tổng thời lượng các hoạt động A, B, C, D, E khớp chính xác 100% bằng 90 phút (Hoạt động B đúng 45 phút, các nhánh con cộng lại đúng 45 phút), không lặp lại Hoạt động D.
+2. Mục IV. Phụ lục F được trình bày gọn gàng trong bảng hoặc 1–2 dòng điền, loại bỏ hoàn toàn hiện tượng sinh 7 trang giấy trắng toàn dòng chấm `.....`.
+3. Tất cả bài kiểm thử liên quan đều PASS 100%.

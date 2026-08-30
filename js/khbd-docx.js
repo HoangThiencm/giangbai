@@ -52,6 +52,45 @@ class DocxGenerator {
     return s;
   }
 
+  collapseDottedLines(text, maxKeep) {
+    const source = String(text || "");
+    if (!source) return source;
+    const dottedRe = /^\s*[.\-_…\s]{10,}\s*$/;
+    const keep = Math.max(1, Number(maxKeep) || 1);
+    const isTableLine = line => {
+      const trimmed = String(line || "").trim();
+      return trimmed.startsWith("|") && trimmed.endsWith("|");
+    };
+    const lines = source.split(/\r?\n/);
+    const out = [];
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      if (!isTableLine(line) && dottedRe.test(line)) {
+        let run = 1;
+        while (
+          i + run < lines.length
+          && !isTableLine(lines[i + run])
+          && dottedRe.test(lines[i + run])
+        ) {
+          run++;
+        }
+        if (run >= 3) {
+          for (let k = 0; k < Math.min(keep, run); k++) out.push(lines[i + k]);
+          i += run;
+          continue;
+        }
+      }
+      out.push(line);
+      i++;
+    }
+    return out.join("\n");
+  }
+
+  stripExcessiveDottedLines(text) {
+    return this.collapseDottedLines(text, 1);
+  }
+
   /**
    * Chuyển đổi mã LaTeX thành chuỗi ký tự toán học Unicode chuẩn
    */
@@ -545,7 +584,7 @@ class DocxGenerator {
     } = window.docx;
 
     const sanitized = typeof sanitizeLessonMarkdown === "function" ? sanitizeLessonMarkdown(markdown) : String(markdown || "");
-    const cleanMarkdown = this.stripRepeatedLatexSpacing(sanitized);
+    const cleanMarkdown = this.stripRepeatedLatexSpacing(this.collapseDottedLines(sanitized, 1));
     const elements = [];
     const lines = cleanMarkdown.split(/\r?\n/);
     let i = 0;

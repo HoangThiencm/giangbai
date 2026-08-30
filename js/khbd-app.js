@@ -199,7 +199,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     marker: "[STEM]",
     promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
-                  {
+                    {
     id: "virtualLab",
     label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
     legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
@@ -5007,6 +5007,47 @@ function stripOrphanTableArtifacts(markdown) {
   }).join("\n");
 }
 
+const DOTTED_LINE_RE = /^\s*[.\-_…\s]{10,}\s*$/;
+
+function isMarkdownTableLine(line) {
+  const trimmed = String(line || "").trim();
+  return trimmed.startsWith("|") && trimmed.endsWith("|");
+}
+
+function collapseDottedLines(text, maxKeep) {
+  const source = String(text || "");
+  if (!source) return source;
+  const keep = Math.max(1, Number(maxKeep) || 1);
+  const lines = source.split(/\r?\n/);
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!isMarkdownTableLine(line) && DOTTED_LINE_RE.test(line)) {
+      let run = 1;
+      while (
+        i + run < lines.length
+        && !isMarkdownTableLine(lines[i + run])
+        && DOTTED_LINE_RE.test(lines[i + run])
+      ) {
+        run++;
+      }
+      if (run >= 3) {
+        for (let k = 0; k < Math.min(keep, run); k++) out.push(lines[i + k]);
+        i += run;
+        continue;
+      }
+    }
+    out.push(line);
+    i++;
+  }
+  return out.join("\n");
+}
+
+function stripExcessiveDottedLines(text) {
+  return collapseDottedLines(text, 1);
+}
+
 function sanitizeLessonMarkdown(rawOutput) {
   if (!rawOutput) return "";
   let text = String(rawOutput).replace(/^\uFEFF/, "").trim();
@@ -5051,6 +5092,7 @@ function sanitizeLessonMarkdown(rawOutput) {
   text = mergeSplitActivityTables(text);
   text = stripOrphanTableArtifacts(text);
   text = stripGarbageLatexSpacing(text);
+  text = collapseDottedLines(text, 1);
 
   return text.trim();
 }
@@ -5217,6 +5259,70 @@ function keepBestActivityBlock(text, actKey) {
   return blocks.sort((a, b) => scoreKhbdActivityBlock(b, actKey) - scoreKhbdActivityBlock(a, actKey))[0];
 }
 
+function countBBranchHeadings(text) {
+  const re = /^#{3,4}\s*(?:\d+\.\s*)?Hoạt\s*động\s*(?:2\.)?\d+\b/i;
+  return String(text || "").split(/\r?\n/).filter(line => re.test(line.trim())).length;
+}
+
+function replaceHeadingMinutes(line, minutes) {
+  const next = `(${minutes} phút)`;
+  if (/\(\s*(?:khoảng\s*)?\d+\s*(?:[-–]\s*\d+\s*)?phút\s*\)/i.test(line)) {
+    return line.replace(/\(\s*(?:khoảng\s*)?\d+\s*(?:[-–]\s*\d+\s*)?phút\s*\)/i, next);
+  }
+  return `${String(line).replace(/\s+$/, "")} ${next}`;
+}
+
+function getActivityTimeBudgetFn() {
+  if (typeof calculateActivityTimeBudgets === "function") return calculateActivityTimeBudgets;
+  if (typeof window !== "undefined" && typeof window.calculateActivityTimeBudgets === "function") {
+    return window.calculateActivityTimeBudgets;
+  }
+  return null;
+}
+
+function normalizeActivityTimeHeadings(text, options = {}) {
+  const source = String(text || "");
+  if (!source) return source;
+  const calc = getActivityTimeBudgetFn();
+  if (!calc) return source;
+
+  const duration = options.duration
+    || (typeof appState !== "undefined" && appState.duration)
+    || "02 tiết (90 phút)";
+  const grade = options.grade
+    || (typeof appState !== "undefined" && appState.selectedGrade)
+    || 6;
+  const subsectionCount = Math.max(
+    1,
+    Number(options.subsectionCount) || countBBranchHeadings(source) || 1
+  );
+  const budgets = calc(duration, subsectionCount, grade);
+  const headingRe = {
+    A: activityHeadingRegex("A"),
+    B: /^#{1,3}\s*(?:B[\.\s:]|HOẠT[ \t]*ĐỘNG[ \t]*2(?!\.\d)|HÌNH[ \t]*THÀNH)/i,
+    C: activityHeadingRegex("C"),
+    D: activityHeadingRegex("D"),
+    E: activityHeadingRegex("E")
+  };
+  const branchRe = /^#{3,4}\s*(?:\d+\.\s*)?Hoạt\s*động\s*(?:2\.)?\d+\b/i;
+  let branchIdx = 0;
+
+  return source.split(/\r?\n/).map(line => {
+    const trimmed = line.trim();
+    if (headingRe.A.test(trimmed)) return replaceHeadingMinutes(line, budgets.A);
+    if (headingRe.B.test(trimmed) && !branchRe.test(trimmed)) return replaceHeadingMinutes(line, budgets.B);
+    if (headingRe.C.test(trimmed)) return replaceHeadingMinutes(line, budgets.C);
+    if (headingRe.D.test(trimmed)) return replaceHeadingMinutes(line, budgets.D);
+    if (headingRe.E.test(trimmed)) return replaceHeadingMinutes(line, budgets.E);
+    if (branchRe.test(trimmed)) {
+      const minutes = budgets.B_subsections[Math.min(branchIdx, budgets.B_subsections.length - 1)];
+      branchIdx += 1;
+      return replaceHeadingMinutes(line, minutes);
+    }
+    return line;
+  }).join("\n");
+}
+
 function clipKhbdActivityMarkdown(actKey, text) {
   const source = String(text || "").replace(/^\uFEFF/, "").trim();
   if (!source) return source;
@@ -5239,7 +5345,25 @@ function clipKhbdActivityMarkdown(actKey, text) {
       break;
     }
   }
-  return keepBestActivityBlock(lines.slice(start, end).join("\n").trim(), actKey);
+  let clipped = keepBestActivityBlock(lines.slice(start, end).join("\n").trim(), actKey);
+  if (actKey === "D") {
+    clipped = keepBestActivityBlock(clipped, "D");
+  }
+  return normalizeActivityTimeHeadings(clipped);
+}
+
+function finalizeParsedKhbdSection(key, text) {
+  const sanitized = sanitizeLessonMarkdown(text);
+  if (/^[A-F]$/.test(key)) return clipKhbdActivityMarkdown(key, sanitized);
+  return sanitized;
+}
+
+function pickBestKhbdSectionChunks(chunks, key) {
+  const parts = (chunks || []).filter(Boolean);
+  if (!parts.length) return "";
+  if (parts.length === 1) return finalizeParsedKhbdSection(key, parts[0]);
+  const best = parts.slice().sort((a, b) => scoreKhbdActivityBlock(b, key) - scoreKhbdActivityBlock(a, key))[0];
+  return finalizeParsedKhbdSection(key, best);
 }
 
 function parseKhbdSections(text, keys) {
@@ -5253,11 +5377,15 @@ function parseKhbdSections(text, keys) {
     hits.push({ key: match[1].toUpperCase(), start: match.index + match[0].length, markerAt: match.index });
   }
   if (hits.length) {
+    const buckets = {};
     hits.forEach((hit, i) => {
       const end = i + 1 < hits.length ? hits[i + 1].markerAt : source.length;
-      if (Object.prototype.hasOwnProperty.call(result, hit.key)) {
-        result[hit.key] = sanitizeLessonMarkdown(source.slice(hit.start, end));
-      }
+      if (!Object.prototype.hasOwnProperty.call(result, hit.key)) return;
+      if (!buckets[hit.key]) buckets[hit.key] = [];
+      buckets[hit.key].push(source.slice(hit.start, end));
+    });
+    Object.keys(buckets).forEach(key => {
+      result[key] = pickBestKhbdSectionChunks(buckets[key], key);
     });
     return result;
   }
@@ -5267,7 +5395,7 @@ function parseKhbdSections(text, keys) {
     A: /(?:^|\n)\s*#{1,3}\s*(?:A[\.\s:]|HOẠT ĐỘNG 1\b|MỞ ĐẦU\b|KHỞI ĐỘNG\b)[^\n]*/i,
     B: /(?:^|\n)\s*#{1,3}\s*(?:B[\.\s:]|HOẠT ĐỘNG 2\b|HÌNH THÀNH KIẾN THỨC\b)[^\n]*/i,
     C: /(?:^|\n)\s*#{1,3}\s*(?:C[\.\s:]|HOẠT ĐỘNG 3\b|LUYỆN TẬP\b)[^\n]*/i,
-    D: /(?:^|\n)\s*#{1,3}\s*(?:D[\.\s:]|HOẠT ĐỘNG 4\b|VẬN DỤNG\b)[^\n]*/i,
+    D: /(?:^|\n)\s*#{1,3}\s*(?:D[\.\s:]|HOẠT ĐỘNG 4\b|VẬN DỤNG\b)[^\n]*/gi,
     E: /(?:^|\n)\s*#{1,3}\s*(?:E[\.\s:]|HOẠT ĐỘNG 5\b|HƯỚNG DẪN VỀ NHÀ\b)[^\n]*/i,
     F: /(?:^|\n)\s*#{1,3}\s*(?:F[\.\s:]|HỒ SƠ\b|PHỤ LỤC\b|PHIẾU HỌC TẬP\b)[^\n]*/i
   };
@@ -5275,13 +5403,37 @@ function parseKhbdSections(text, keys) {
   (keys || []).forEach(key => {
     const re = headingMap[key];
     if (!re) return;
+    if (key === "D") {
+      let dMatch;
+      const dRe = headingMap.D;
+      dRe.lastIndex = 0;
+      while ((dMatch = dRe.exec(source))) {
+        found.push({ key: "D", at: dMatch.index + (dMatch[0].startsWith("\n") ? 1 : 0) });
+      }
+      return;
+    }
     const hit = re.exec(source);
     if (hit) found.push({ key, at: hit.index + (hit[0].startsWith("\n") ? 1 : 0) });
   });
   found.sort((a, b) => a.at - b.at);
+  const buckets = {};
   found.forEach((hit, i) => {
-    const end = i + 1 < found.length ? found[i + 1].at : source.length;
-    result[hit.key] = sanitizeLessonMarkdown(source.slice(hit.at, end));
+    let end = source.length;
+    for (let j = i + 1; j < found.length; j++) {
+      if (found[j].key !== hit.key) {
+        end = found[j].at;
+        break;
+      }
+      if (found[j].key === hit.key) {
+        end = found[j].at;
+        break;
+      }
+    }
+    if (!buckets[hit.key]) buckets[hit.key] = [];
+    buckets[hit.key].push(source.slice(hit.at, end));
+  });
+  Object.keys(buckets).forEach(key => {
+    result[key] = pickBestKhbdSectionChunks(buckets[key], key);
   });
   return result;
 }
@@ -6302,6 +6454,9 @@ function closeModal(modalId) {
 if (typeof window !== 'undefined') {
   window.assertPhasePedagogyOutput = assertPhasePedagogyOutput;
   window.sanitizeLessonMarkdown = sanitizeLessonMarkdown;
+  window.collapseDottedLines = collapseDottedLines;
+  window.stripExcessiveDottedLines = stripExcessiveDottedLines;
+  window.normalizeActivityTimeHeadings = normalizeActivityTimeHeadings;
   window.splitKhbdMarkdownTableRow = splitKhbdMarkdownTableRow;
   window.unwrapVietnameseMathForKatex = unwrapVietnameseMathForKatex;
   window.extractSvgCode = extractSvgCode;
@@ -6338,6 +6493,9 @@ if (typeof module !== 'undefined' && module.exports) {
     prepareGeminiMedia,
     parseKhbdSections,
     clipKhbdActivityMarkdown,
+    collapseDottedLines,
+    stripExcessiveDottedLines,
+    normalizeActivityTimeHeadings,
     buildTextbookSourceHint,
     assertPhasePedagogyOutput,
     assertActivityIntegrations,
