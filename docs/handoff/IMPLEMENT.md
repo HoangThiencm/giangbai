@@ -1,32 +1,31 @@
-# IMPLEMENT: Khắc phục numbering Preview và chuẩn bảng Hoạt động 2 cột
+# IMPLEMENT: Markdown underscore trong Word và khóa thời lượng Hoạt động B
 
 ## Phạm vi đã triển khai
 
-- Giữ nguyên thay đổi có sẵn tại `docs/handoff/PLAN.md` và `docs/handoff/.lock`.
-- `js/khbd-app.js`
-  - `sanitizePreviewHtml()` giữ có kiểm tra các thuộc tính danh sách: `ol[start]`, `li[value]`, cùng `type` hợp lệ (`ol/li`: `1`, `a`, `A`, `i`, `I`; `ul`: `disc`, `circle`, `square`).
-  - Chuẩn hoá mọi hàng của bảng Hoạt động: chỉ giữ cột trái và gộp các cell từ vị trí 2 trở đi bằng ` | ` vào cột Nội dung.
+- Giữ nguyên thay đổi sẵn có tại `docs/handoff/PLAN.md` và `docs/handoff/.lock`.
 - `js/khbd-docx.js`
-  - Chỉ nhận diện bảng Hoạt động khi header đồng thời có `Hoạt động của GV` và `Nội dung`.
-  - Với bảng nhận diện được, ép đúng 2 cột rộng `[4819, 4820]` và gộp cell dư vào cột Nội dung.
+  - `parseInlineTextToRuns` hỗ trợ `_italic_` và `__bold__`, đồng thời vẫn ưu tiên nhận diện biểu thức LaTeX trước khi xử lý Markdown.
+  - Các mảnh bảng rò rỉ đứng riêng (`|`, separator pipe, `---` gắn với pipe) bị bỏ qua; bảng Markdown hợp lệ vẫn được xuất Word.
+  - Khi bỏ artifact, chỉ số dòng được tăng đúng một lần ở cuối vòng lặp nên không bỏ qua nội dung hợp lệ ngay sau đó.
+- `js/khbd-app.js`
+  - `sanitizeLessonMarkdown` loại bỏ riêng pipe/separator rò rỉ sau khi chuẩn hóa bảng hoạt động mà không xóa separator của bảng hợp lệ.
 - `js/khbd-prompts.js`
-  - Siết hợp đồng prompt: cấm cột thứ ba và yêu cầu dùng `\\vert` hoặc `\\|` cho ký hiệu gạch đứng.
-- Thêm smoke test:
-  - `tests/khbd-list-numbering-smoke.js`
-  - `tests/khbd-table-columns-smoke.js`
+  - Tiêu đề Hoạt động B có `{time_budget_B}`.
+  - Prompt khóa tổng các nhánh B đúng bằng thời lượng B và tổng A–E đúng bằng `{duration}`; đồng thời yêu cầu không dùng `_Trạm X:_` / `__tiêu đề__`.
+- Kiểm thử
+  - Thêm `tests/khbd-docx-format-smoke.js`.
+  - Cập nhật `tests/khbd-sanitize-smoke.js` và `tests/khbd-time-budgets-smoke.js`.
+  - Smoke test định dạng Word xác nhận dòng sau pipe rò rỉ vẫn được xuất.
 
-## Kiểm thử
+## Kiểm thử đã chạy
 
-Đạt:
-
-- `node tests/khbd-list-numbering-smoke.js`
-- `node tests/khbd-table-columns-smoke.js`
-- `node tests/khbd-sanitize-smoke.js`
-- `node tests/khbd-pedagogy-script-smoke.js`
-- `git diff --check`
-
-Toàn bộ suite đã được chạy bằng `node tests/run-all-tests.js` nhưng dừng ở test có sẵn `tests/khbd-1click-chain-smoke.js` do assertion hướng dẫn Bước 4 sang Tab 2, 3, 4. Lỗi này không thuộc các file/phạm vi thay đổi của đợt triển khai; các kiểm thử liên quan trực tiếp đều PASS.
+- `node tests/khbd-docx-format-smoke.js` — PASS
+- `node tests/khbd-sanitize-smoke.js` — PASS
+- `node tests/khbd-time-budgets-smoke.js` — PASS
+- `node tests/khbd-docx-math-smoke.js` — PASS
+- `node tests/khbd-docx-layout-smoke.js` — PASS
+- `git diff --check` — PASS (cảnh báo newline thuộc `docs/handoff/PLAN.md` có sẵn, không chỉnh sửa).
 
 ## Vấn đề còn lại
 
-- Cần xử lý hoặc cập nhật riêng smoke test `khbd-1click-chain-smoke.js` trước khi có thể xác nhận toàn bộ suite PASS 100%.
+- Không có trong phạm vi triển khai này.

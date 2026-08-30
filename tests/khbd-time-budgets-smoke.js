@@ -81,6 +81,8 @@ assert(/\(\d+\s*phút\)/.test(promptA), "Prompt Activity A must include time bud
 const promptB = getPromptTemplate("GENERATE_ACTIVITY_B", context);
 assert(!promptB.includes("{time_budget_B}"), "Placeholder {time_budget_B} must be replaced");
 assert(!promptB.includes("{time_budget_A}"), "All time budget placeholders must be replaced");
+assert.match(promptB, /## B\. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI \(45 phút\)/, "Prompt Activity B must show its 45-minute budget");
+assert.match(promptB, /Tổng số phút của TẤT CẢ hoạt động nhánh[\s\S]*?đúng bằng 45 phút/, "Prompt Activity B must lock the total of its branches");
 assert(promptB.includes("Hoạt động 2.1: Số và tập hợp các số tự nhiên"), "Prompt Activity B must contain branch 1");
 assert(promptB.includes("Hoạt động 2.2: Biểu diễn số tự nhiên trên tia số"), "Prompt Activity B must contain branch 2");
 
@@ -94,6 +96,7 @@ assert(prompt1Click.includes("<<<KHBD_B>>>"), "Prompt 1-Click must contain marke
 assert(prompt1Click.includes("<<<KHBD_C>>>"), "Prompt 1-Click must contain marker C");
 assert(prompt1Click.includes("<<<KHBD_D>>>"), "Prompt 1-Click must contain marker D");
 assert(prompt1Click.includes("<<<KHBD_E>>>"), "Prompt 1-Click must contain marker E");
+assert.match(prompt1Click, /tổng A \+ B \+ C \+ D \+ E BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy 02 tiết \(90 phút\)/i, "Prompt must lock the full lesson duration");
 console.log("  -> getPromptTemplate time budget injection: PASS");
 
 console.log("==================================================");

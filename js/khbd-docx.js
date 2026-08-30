@@ -439,12 +439,13 @@ class DocxGenerator {
   /**
    * Tách một dòng văn bản chứa các công thức $...$ thành danh sách các docx TextRun
    */
-  parseInlineTextToRuns(text, color) {
+  parseInlineTextToRuns(text, color, styles = {}) {
     if (!window.docx) return [];
     const { TextRun } = window.docx;
 
     const runs = [];
-    const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*[\s\S]+?\*\*|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|`[^`]+?`|\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
+    // Công thức đứng trước định dạng Markdown để x_1, a_{ij} trong $...$ không bị hiểu là italic.
+    const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*[\s\S]+?\*\*|(?<![\w\\])__(?!\s|_)[^_\n]+?(?<!\s)__(?!\w)|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|(?<![\w\\])_(?!\s|_)[^_\n]+?(?<!\s)_(?![\w_])|`[^`]+?`|\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
     let lastIndex = 0;
     let match;
 
@@ -462,7 +463,7 @@ class DocxGenerator {
         text: uni,
         font: "Cambria Math",
         italics: true,
-        bold: Boolean(display),
+        bold: Boolean(display || styles.bold),
         size: this.fontSizeBody
       }));
     };
@@ -470,7 +471,7 @@ class DocxGenerator {
     while ((match = regex.exec(text)) !== null) {
       if (match.index > lastIndex) {
         const plain = text.substring(lastIndex, match.index);
-        runs.push(this.coloredTextRun(plain, { color }));
+        runs.push(this.coloredTextRun(plain, { color, ...styles }));
       }
 
       const token = match[0];
@@ -479,7 +480,7 @@ class DocxGenerator {
         pushMath(token, true);
       } else if ((token.startsWith("$") && token.endsWith("$")) || (token.startsWith("\\(") && token.endsWith("\\)"))) {
         pushMath(token, false);
-      } else if (token.startsWith("**") && token.endsWith("**")) {
+      } else if ((token.startsWith("**") && token.endsWith("**")) || (token.startsWith("__") && token.endsWith("__"))) {
         const boldText = token.substring(2, token.length - 2);
         const markerInfo = this.markerRunColor(boldText);
         if (markerInfo) {
@@ -489,11 +490,7 @@ class DocxGenerator {
             shading: markerInfo.shading
           }));
         } else {
-          const subRuns = this.parseInlineTextToRuns(boldText, color);
-          subRuns.forEach(r => {
-            if (r instanceof TextRun) r.bold = true;
-          });
-          runs.push(...subRuns);
+          runs.push(...this.parseInlineTextToRuns(boldText, color, { ...styles, bold: true }));
         }
       } else if (token.startsWith("[")) {
         const markerInfo = this.markerRunColor(token);
@@ -506,9 +503,9 @@ class DocxGenerator {
         } else {
           runs.push(this.coloredTextRun(token, { color }));
         }
-      } else if (token.startsWith("*") && token.endsWith("*")) {
+      } else if ((token.startsWith("*") && token.endsWith("*")) || (token.startsWith("_") && token.endsWith("_"))) {
         const italicText = token.substring(1, token.length - 1);
-        runs.push(this.coloredTextRun(italicText, { italics: true, color }));
+        runs.push(...this.parseInlineTextToRuns(italicText, color, { ...styles, italics: true }));
       } else if (token.startsWith("`") && token.endsWith("`")) {
         const codeText = token.substring(1, token.length - 1);
         runs.push(new TextRun({
@@ -524,11 +521,11 @@ class DocxGenerator {
 
     if (lastIndex < text.length) {
       const remaining = text.substring(lastIndex);
-      runs.push(this.coloredTextRun(remaining, { color }));
+      runs.push(this.coloredTextRun(remaining, { color, ...styles }));
     }
 
     if (runs.length === 0) {
-      runs.push(this.coloredTextRun("", { color }));
+      runs.push(this.coloredTextRun("", { color, ...styles }));
     }
 
     return runs;
@@ -563,6 +560,16 @@ class DocxGenerator {
         i++;
         continue;
       }
+
+      // Bỏ riêng các mảnh bảng bị rò rỉ; bảng Markdown hợp lệ vẫn được giữ nguyên.
+      const previous = i > 0 ? lines[i - 1].trim() : "";
+      const next = i + 1 < lines.length ? lines[i + 1].trim() : "";
+      const isPipeOnly = /^\|+$/.test(trimmed);
+      const isPipeSeparator = /^\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?$/.test(trimmed);
+      const isLooseDashAfterPipe = trimmed === "---" && (/\|\s*$/.test(previous) || /^\|+$/.test(next));
+      if (isPipeOnly || (isPipeSeparator && !(previous.startsWith("|") && previous.endsWith("|") && next.startsWith("|") && next.endsWith("|"))) || isLooseDashAfterPipe) {
+        // Để i được tăng đúng một lần ở cuối vòng lặp, không dùng continue tại đây.
+      } else {
 
       // 1. Phân tích BẢNG MARKDOWN (| Cột 1 | Cột 2 | ...)
       if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
@@ -745,6 +752,7 @@ class DocxGenerator {
         spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
         children: runs
       }));
+      }
 
       i++;
     }

@@ -123,10 +123,20 @@ function testOpeningChitchat() {
   assert.ok(out.startsWith('# I. MỤC TIÊU'), 'Cắt lời mở đầu, giữ tiêu đề');
 }
 
+function testStripOrphanTableArtifacts() {
+  const source = '# I. MỤC TIÊU\n| Cột trái | Cột phải |\n| :--- | :--- |\n| Nội dung trái | Nội dung phải |\n|\n|---|\n---\n\n## B. HOẠT ĐỘNG 2';
+  const out = sanitizeLessonMarkdown(source);
+  assert.ok(out.includes('| :--- | :--- |'), 'Giữ separator của bảng Markdown hợp lệ');
+  assert.ok(!/\n\|\n/.test(out), 'Xóa pipe rò rỉ đứng riêng');
+  assert.ok(!/\n\|---\|\n/.test(out), 'Xóa separator pipe rò rỉ');
+  assert.ok(!/\n---\n\n## B/.test(out), 'Xóa separator rò rỉ sau bảng');
+}
+
 testSplitTableRow();
 testKeepLessonLanguage();
 testStripClosingBlessing();
 testKeepPedagogyNote();
 testDoNotMergePhaseBTables();
 testOpeningChitchat();
+testStripOrphanTableArtifacts();
 console.log('khbd-sanitize-smoke: passed');

@@ -4990,6 +4990,23 @@ function mergeSplitActivityTables(text) {
   return chunks.join("");
 }
 
+function stripOrphanTableArtifacts(markdown) {
+  const lines = String(markdown || "").split("\n");
+  const isTableRow = line => /^\|.+\|\s*$/.test(String(line || "").trim());
+  const isPipeOnly = line => /^\|+$/.test(String(line || "").trim());
+  const isPipeSeparator = line => /^\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?$/.test(String(line || "").trim());
+
+  return lines.filter((line, index) => {
+    const trimmed = line.trim();
+    const previous = index > 0 ? lines[index - 1] : "";
+    const next = index + 1 < lines.length ? lines[index + 1] : "";
+    if (isPipeOnly(trimmed)) return false;
+    if (isPipeSeparator(trimmed)) return isTableRow(previous) && isTableRow(next);
+    // "---" ngay sau một hàng pipe là dấu phân cách bảng lỗi, không phải đường kẻ ngang hợp lệ.
+    return !(trimmed === "---" && (/\|\s*$/.test(previous.trim()) || isPipeOnly(next)));
+  }).join("\n");
+}
+
 function sanitizeLessonMarkdown(rawOutput) {
   if (!rawOutput) return "";
   let text = String(rawOutput).replace(/^\uFEFF/, "").trim();
@@ -5032,6 +5049,7 @@ function sanitizeLessonMarkdown(rawOutput) {
 
   text = stripClosingChitchat(text);
   text = mergeSplitActivityTables(text);
+  text = stripOrphanTableArtifacts(text);
   text = stripGarbageLatexSpacing(text);
 
   return text.trim();

@@ -188,6 +188,8 @@ const LATEX_SPACING_BAN = `- CẤM TUYỆT ĐỐI dùng chuỗi lệnh LaTeX kho
 const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠM THỰC CHIẾN TRONG BẢNG 2 CỘT (Chuẩn CV 5512 & GDPT 2018):
 - YÊU CẦU ĐỘ DÀI & VĂN PHONG SÚC TÍCH: Toàn bộ Kế hoạch bài dạy hoàn chỉnh đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trực diện vào bản chất kiến thức và hành động cốt lõi của GV/HS; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không dùng câu thoại diễn giải lòng vòng, không lặp lại nội dung giữa các mục.
 - THỜI LƯỢNG HOẠT ĐỘNG: BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề các Hoạt động (A, B, C, D, E) và từng hoạt động nhánh trong Mục B, ví dụ: \`## A. HOẠT ĐỘNG 1: MỞ ĐẦU (5 phút)\`, \`### 1. Hoạt động 2.1: [Tên mục] (15 phút)\`, \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP (10 phút)\`, \`## D. HOẠT ĐỘNG 4: VẬN DỤNG (5 phút)\`, \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (3 phút)\`. CẤM TUYỆT ĐỐI ghi từ "Khoảng" hoặc dải thời gian dạng "X - Y phút".
+- KHÓA TỔNG THỜI LƯỢNG: Tổng thời lượng tất cả hoạt động nhánh trong B BẮT BUỘC đúng bằng {time_budget_B}; tổng A + B + C + D + E BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration}. Không tự tăng thời lượng một nhánh hoặc tổng toàn bài.
+- Chỉ dùng dấu gạch đầu dòng -, +, *; không dùng cú pháp gạch dưới để định dạng như _Trạm X:_ hoặc __tiêu đề__.
 - Mục a) Mục tiêu, b) Nội dung, c) Sản phẩm: dùng 3 cấp danh sách: ý lớn \`-\`, ý con \`+\`, ý chi tiết \`.\`. Trình bày súc tích, trọng tâm (mục a: tối đa 2 ý; mục b: tối đa 2–3 ý, không chép lại toàn văn SGK; mục c: tối đa 2 ý kết quả cốt lõi).
 - Mục d) Tổ chức thực hiện: BẮT BUỘC ĐÚNG MỘT bảng Markdown 2 cột, tiêu đề:
 | Hoạt động của GV và HS | Nội dung |
@@ -258,6 +260,7 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Danh sách nội dung có đúng 3 cấp: ý lớn bắt đầu bằng "- ", ý con "+ ", ý chi tiết ". ". Không dùng "1.", "2." làm danh sách nội dung trừ khi là số thứ tự bài tập hoặc bước CV 5512.
 - CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu. Màu sắc và font chữ do ứng dụng xử lý.
 - ĐỘ DÀI & VĂN PHONG CHUẨN: Toàn bộ Kế hoạch bài dạy đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trọng tâm; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không lặp lại câu hỏi dài dòng.
+- KHÓA TỔNG THỜI LƯỢNG: Tổng A + B + C + D + E BẮT BUỘC KHỚP 100% với thời lượng tiết dạy {duration}; ví dụ 01 tiết = 45 phút, 02 tiết = 90 phút, 03 tiết = 135 phút. Riêng tổng mọi hoạt động nhánh trong B phải đúng bằng thời lượng B đã phân bổ.
 ${LATEX_SPACING_BAN}`,
 
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy chuẩn CV 5512. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ lại nội dung giáo án. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary, lời chúc ở cuối và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng "-", "+", ".". Không đổi tiêu đề mục khung như "I.", "## 1.", "a)", "Bước", "Bài".`,
@@ -562,6 +565,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 YÊU CẦU KỊCH BẢN THỰC CHIẾN & NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO MỤC LỚN SGK:
 ${ACTIVITY_TABLE_CONTRACT}
 ${LATEX_SPACING_BAN}
+- BẮT BUỘC dùng tiêu đề ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B}). Tổng số phút của TẤT CẢ hoạt động nhánh 2.1, 2.2, 2.3... phải đúng bằng {time_budget_B}; dùng đúng số phút đã phân bổ cho từng tiểu mục, tuyệt đối không tự gán 25–30 phút cho mỗi nhánh.
 - ĐẾM SỐ TIỂU MỤC KIẾN THỨC LỚN TRONG SGK: Chỉ ánh xạ đúng các Mục lớn (Đơn vị kiến thức cốt lõi chính thức trong mục lục SGK, thông thường 1–3 mục lớn, tối đa 4 mục). Bạn BẮT BUỘC PHẢI chia Hoạt động B thành đúng N hoạt động con tương ứng 1-1:
   ### 1. Hoạt động 2.1: [Tên mục 1 trong SGK] (... phút) (hoặc ### 1. Hoạt động 1: [Tên mục 1 trong SGK] (... phút))
   ### 2. Hoạt động 2.2: [Tên mục 2 trong SGK] (... phút) (hoặc ### 2. Hoạt động 2: [Tên mục 2 trong SGK] (... phút))
@@ -581,7 +585,7 @@ ${LATEX_SPACING_BAN}
       + Khi có NLS/AI: Tích hợp thực chiến theo đúng 1 trong 3 dạng (Dạng 1: Kiểm chứng phản hồi AI có lỗi ngộ nhận; Dạng 2: Prompting gợi mở bước giải trong "..."; Dạng 3: Thao tác phần mềm chuyên ngành GeoGebra/bảng tính/mô phỏng). CẤM hỏi lý thuyết AI suông, CẤM rải tag bừa bãi. Gắn marker chuẩn **[AI: {Mã} - Kiểm chứng phản hồi AI]**, **[AI: {Mã} - Prompting gợi mở & Tự giải]**, **[NLS: {Miền/Mã} - {Tên phần mềm}]** (hoặc **[NLS]**, **[AI]**).
     * CỘT PHẢI: NỘI DUNG GHI BẢNG CHỐT KIẾN THỨC CHO HS CHÉP VỞ (Định nghĩa, quy tắc, công thức LaTeX, chú ý, ví dụ mẫu kèm đề bài và lời giải chi tiết từng bước). CẤM viết hành động của GV/HS ở cột phải.
 
-## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI
+## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B})
 
 ### 1. Hoạt động 2.1: [Tên tiểu mục 1 trong SGK] (15 phút)
 #### a) Mục tiêu:
