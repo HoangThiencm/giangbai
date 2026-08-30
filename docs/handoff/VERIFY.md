@@ -4,39 +4,38 @@
 PASS
 
 ## Đối chiếu scope
-1. **Khóa cứng thời lượng 90 phút và Dedupe Hoạt động D (`js/khbd-prompts.js`, `js/khbd-app.js`)**:
-   - `PROMPTS.GENERATE_ACTIVITIES_AE` và `GENERATE_ACTIVITY_B` đã siết chặt quy tắc khóa thời lượng Hoạt động B = `{time_budget_B}` (45 phút chia 2 nhánh con là 23p và 22p; cấm 45p + 30p = 75p), và tổng cả bài A–E đúng bằng `{duration}` (02 tiết = đúng 90 phút).
-   - `clipKhbdActivityMarkdown("D")` và `parseKhbdSections` đã dedupe triệt để để chỉ giữ lại đúng 1 khối Hoạt động D duy nhất.
-   - `normalizeActivityTimeHeadings` tự động chuẩn hóa các phút trên tiêu đề A–E và các nhánh B khớp chính xác với `calculateActivityTimeBudgets`.
+1. **Đồng bộ hóa luồng Đề xuất Bước 3 (PPDH & NLS) (`js/khbd-app.js`)**:
+   - Khi bấm `btnStep3Recommend`, `btnStep3PedagogyDigital`, hoặc `btnSuggestPedagogyStandards`, nút bấm lập tức chuyển sang trạng thái `⏳ Đang phân tích SGK & đề xuất...`, bị disabled và gắn `aria-busy="true"`.
+   - Các hàm `ensurePedagogyFromLesson` và `requestStructuredIntegrationCandidates("digital")` chạy với `silent: true` và `skipRender: true`, không còn bắn Toast trung gian màu xanh lam (Toast 1) và không tick checkbox tạm.
+   - Khi quá trình phân tích hoàn tất, checkbox được render cập nhật **một lần duy nhất** (atomic update), và chỉ phát **duy nhất 1 thông báo hoàn tất** (Toast xanh lá: *"✅ Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và Năng lực số (NLS) bám sát nội dung SGK."*).
+   - Nút bấm luôn được khôi phục trạng thái bình thường trong khối `finally` ngay cả khi có lỗi.
    - Khớp 100% scope trong PLAN.md.
 
-2. **Triệt tiêu 7 trang dòng chấm trong Phụ lục F và file Word (`js/khbd-prompts.js`, `js/khbd-docx.js`, `js/khbd-app.js`)**:
-   - `GENERATE_PORTFOLIO_WORKSHEETS` đã cấm sinh các khối dòng chấm rác kéo dài, khống chế phiếu học tập trình bày trong bảng hoặc tối đa 1–2 dòng chấm ngắn.
-   - `collapseDottedLines` / `stripExcessiveDottedLines` trong `js/khbd-docx.js` và `js/khbd-app.js` đã tự động gom các khối dòng chấm liên tiếp ngoài bảng về tối đa 1 dòng, loại bỏ hoàn toàn hiện tượng phình thành 7 trang giấy trắng toàn dấu chấm trong file Word.
+2. **Đồng bộ hóa Khung Năng lực AI (QĐ 2422) (`js/khbd-app.js`)**:
+   - `triggerAiCompetencyRecommendations` (khi bật toggle AI hoặc bấm đề xuất AI) hiển thị loading trên panel AI, chờ Gemini phân tích rồi mới tick chọn 1 lần duy nhất kèm 1 toast thông báo.
+   - Tôn trọng và bảo toàn các mục AI người dùng đã tự tay chọn (`autoSuggested === false`), không tự ý xóa bỏ.
    - Khớp 100% scope trong PLAN.md.
 
 ## Test đã chạy
 ```
+node tests/khbd-recommendation-flow-smoke.js
+node tests/khbd-4steps-workflow-smoke.js
+node tests/khbd-structured-candidates-smoke.js
 node tests/khbd-dotted-lines-smoke.js
 node tests/khbd-activity-d-dedupe-smoke.js
-node tests/khbd-activity-e-dedupe-smoke.js
 node tests/khbd-time-budgets-smoke.js
-node tests/khbd-sanitize-smoke.js
 node tests/khbd-docx-format-smoke.js
-node tests/khbd-docx-layout-smoke.js
-node tests/khbd-table-columns-smoke.js
-node tests/khbd-list-numbering-smoke.js
-node tests/khbd-activity-e-smoke.js
-node tests/khbd-pedagogy-script-smoke.js
 ```
-- Tất cả 11 bài unit / smoke test trực tiếp và liên quan đều PASS 100%.
+- Tất cả unit / smoke tests trực tiếp và liên quan đều PASS 100%.
 
 ## Pass / Fail từng tiêu chí
-1. **Tiêu chí 1**: Giáo án 2 tiết có tổng thời lượng các hoạt động A, B, C, D, E khớp chính xác 100% bằng 90 phút (Hoạt động B đúng 45 phút, các nhánh con cộng lại đúng 45 phút), không còn hiện tượng lặp lại Hoạt động D. -> **PASS**
-2. **Tiêu chí 2**: Mục IV. Phụ lục F được trình bày gọn gàng, loại bỏ hoàn toàn hiện tượng sinh 7 trang giấy trắng toàn dòng chấm `.....` trong Word. -> **PASS**
-3. **Tiêu chí 3**: Tất cả các bài kiểm thử tự động liên quan đều PASS 100%. -> **PASS**
+1. **Tiêu chí 1**: Quá trình đề xuất PPDH, NLS (Bước 3) và Năng lực AI (Bước 4) diễn ra mượt mà, có trạng thái loading rõ ràng trên nút bấm. -> **PASS**
+2. **Tiêu chí 2**: Loại bỏ triệt để hiện tượng "chớp" giao diện (hiện lựa chọn tạm thời rồi vài giây sau tự động nhảy đổi sang lựa chọn khác). -> **PASS**
+3. **Tiêu chí 3**: Chỉ xuất hiện duy nhất 1 thông báo Toast xác nhận hoàn tất, không bị bắn 2–3 thông báo chồng lặp. -> **PASS**
+4. **Tiêu chí 4**: Toàn bộ các bài kiểm thử liên quan đều PASS 100%. -> **PASS**
 
 ## Bug
 Không có.
+
 
 

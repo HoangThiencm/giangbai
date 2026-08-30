@@ -875,7 +875,7 @@ function pedagogyRecommendFullCtx() {
   };
 }
 
-function ensureIntegrationStandards({ force = false, silent = false } = {}) {
+function ensureIntegrationStandards({ force = false, silent = false, skipRender = false } = {}) {
   let changed = false;
   if (!Array.isArray(appState?.teachingContext?.standards)) {
     if (appState?.teachingContext) appState.teachingContext.standards = [];
@@ -918,7 +918,7 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
   });
   if (changed) {
     saveStateToLocalStorage();
-    renderStandardsCatalog();
+    if (!skipRender) renderStandardsCatalog();
   }
   return changed;
 }
@@ -1003,7 +1003,7 @@ function pedagogyRecommendFullCtx() {
   };
 }
 
-function ensureIntegrationStandards({ force = false, silent = false } = {}) {
+function ensureIntegrationStandards({ force = false, silent = false, skipRender = false } = {}) {
   let changed = false;
   if (!Array.isArray(appState?.teachingContext?.standards)) {
     if (appState?.teachingContext) appState.teachingContext.standards = [];
@@ -1046,7 +1046,7 @@ function ensureIntegrationStandards({ force = false, silent = false } = {}) {
   });
   if (changed) {
     saveStateToLocalStorage();
-    renderStandardsCatalog();
+    if (!skipRender) renderStandardsCatalog();
   }
   return changed;
 }
@@ -1173,7 +1173,7 @@ function catalogFallbackRecords(kind, grade, entries, maxSelect) {
   return records;
 }
 
-function applySuggestedStandardRecords(kind, catalog, records) {
+function applySuggestedStandardRecords(kind, catalog, records, options = {}) {
   let next = Array.isArray(records) ? records.filter(Boolean) : [];
   if (kind === "digital") {
     if (next.length < 2) next = catalogFallbackRecords("digital", Number(appState.selectedGrade) || 6);
@@ -1186,10 +1186,10 @@ function applySuggestedStandardRecords(kind, catalog, records) {
     .filter(item => kind === "ai" ? !isAiStandardRecord(item) : item.framework !== catalog.framework)
     .concat(capped);
   saveStateToLocalStorage();
-  renderStandardsCatalog();
+  if (!options.skipRender) renderStandardsCatalog();
 }
 
-async function requestStructuredIntegrationCandidates(kind, { silent = false } = {}) {
+async function requestStructuredIntegrationCandidates(kind, { silent = false, skipRender = false, force = false } = {}) {
   const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS?.[kind] : null;
   const integrationKey = kind === "digital" ? "digital" : "ai";
   if (!catalog || !appState.teachingContext.integrations[integrationKey] || !hasOcrReadyLessonContent()) return false;
@@ -1198,8 +1198,8 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
     ? entriesForGrade(kind, grade)
     : catalog.entries.filter(entry => entry.grades.includes(grade));
   const current = standardsOfKind(kind);
-  // Giáo viên đã sửa/chọn tay: không có quyền ghi đè.
-  if (current.length && !current.every(item => item.autoSuggested)) return false;
+  // Giáo viên đã sửa/chọn tay: không ghi đè trừ khi bấm Đề xuất lại (force).
+  if (current.length && !current.every(item => item.autoSuggested) && !force) return false;
   const maxSelect = catalog.maxSelect || 3;
   const minSelect = kind === "digital" || kind === "ai" ? 2 : (catalog.minSelect || 1);
   const candidateText = candidates.map(entry => `${entry.id} | ${entry.code || entry.label} | ${entry.label}`).join("\n");
@@ -1230,7 +1230,7 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false } =
     if (!silent) showToast(`Chưa chọn được ${label} cho lớp ${grade}. Bạn có thể chọn thủ công từ khung chuẩn.`, "warning", 5000);
     return false;
   }
-  applySuggestedStandardRecords(kind, catalog, records);
+  applySuggestedStandardRecords(kind, catalog, records, { skipRender });
   if (!silent) showToast(`Đã đề xuất ${records.length} mục ${label} theo bài/khung lớp.`, "info", 5000);
   return true;
 }
@@ -1934,7 +1934,7 @@ function applyTimeBudgetGateToPedagogy(rec) {
   return rec;
 }
 
-function ensurePedagogyFromLesson({ force = false, silent = false } = {}) {
+function ensurePedagogyFromLesson({ force = false, silent = false, skipRender = false } = {}) {
   if (typeof recommendPedagogyFromLesson !== "function") return false;
   if (!hasAnalyzedLessonContent()) return false;
   const rec = applyTimeBudgetGateToPedagogy(recommendPedagogyFromLesson(pedagogyRecommendFullCtx()));
@@ -1967,7 +1967,7 @@ function ensurePedagogyFromLesson({ force = false, silent = false } = {}) {
   if (changed) {
     appState.teachingContext.autoPedagogy = auto;
     saveStateToLocalStorage();
-    renderPedagogyCatalogs();
+    if (!skipRender) renderPedagogyCatalogs();
     if (!silent) showToast(`Đã đề xuất PPDH/kỹ thuật theo nội dung SGK. ${notices.join(". ")}. Bạn có thể sửa.`, "info", 5000);
   }
   return changed;
@@ -1986,27 +1986,95 @@ function applyLessonBasedRecommendations({ force = false, silent = false } = {})
   return ped || std;
 }
 
+const STEP3_RECOMMEND_BUTTON_IDS = ["btnStep3Recommend", "btnStep3PedagogyDigital", "btnSuggestPedagogyStandards"];
+const RECOMMEND_LOADING_LABEL = "⏳ Đang phân tích SGK & đề xuất...";
+let step3RecommendInFlight = false;
+let aiRecommendInFlight = false;
+
+function collectElementsById(ids) {
+  if (typeof document === "undefined") return [];
+  return (ids || []).map(id => document.getElementById(id)).filter(Boolean);
+}
+
+function setRecommendButtonsLoading(buttons, loading, label) {
+  (buttons || []).forEach(btn => {
+    if (!btn) return;
+    const store = btn.dataset || (btn.dataset = {});
+    if (loading) {
+      if (store.loadingLabelBackup == null) {
+        store.loadingLabelBackup = btn.innerHTML || btn.textContent || "";
+      }
+      btn.disabled = true;
+      if (typeof btn.setAttribute === "function") btn.setAttribute("aria-busy", "true");
+      const text = label || RECOMMEND_LOADING_LABEL;
+      if ("innerHTML" in btn) btn.innerHTML = text;
+      else btn.textContent = text;
+    } else {
+      btn.disabled = false;
+      if (typeof btn.removeAttribute === "function") btn.removeAttribute("aria-busy");
+      if (store.loadingLabelBackup != null) {
+        if ("innerHTML" in btn) btn.innerHTML = store.loadingLabelBackup;
+        else btn.textContent = store.loadingLabelBackup;
+        delete store.loadingLabelBackup;
+      }
+    }
+  });
+}
+
+function setRecommendPanelsPending(panelIds, pending) {
+  if (typeof document === "undefined") return;
+  (panelIds || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (pending) {
+      if (typeof el.setAttribute === "function") el.setAttribute("aria-busy", "true");
+      el.innerHTML = `<p class="text-muted" style="margin:0.5rem 0;">${RECOMMEND_LOADING_LABEL}</p>`;
+    } else if (typeof el.removeAttribute === "function") {
+      el.removeAttribute("aria-busy");
+    }
+  });
+}
+
 async function triggerStep3PedagogyAndDigitalRecommendations() {
   if (!hasAnalyzedLessonContent()) {
     showToast("Hãy đọc SGK ở Bước 1 trước khi đề xuất PPDH, kỹ thuật và năng lực số.", "warning");
     return false;
   }
-  const toggleDigital = document.getElementById("toggleDigitalCompetency");
-  if (toggleDigital) toggleDigital.checked = true;
-  appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
-  appState.teachingContext.integrations.digital = true;
-  ensurePedagogyFromLesson({ force: true, silent: false });
-  let digitalOk = false;
-  if (hasOcrReadyLessonContent()) {
-    digitalOk = await requestStructuredIntegrationCandidates("digital", { silent: false });
+  if (step3RecommendInFlight) return false;
+  step3RecommendInFlight = true;
+  const buttons = collectElementsById(STEP3_RECOMMEND_BUTTON_IDS);
+  setRecommendButtonsLoading(buttons, true, RECOMMEND_LOADING_LABEL);
+  setRecommendPanelsPending(
+    ["methodsCatalogPanel", "techniquesCatalogPanel", "activitiesCatalogPanel", "digitalStandardsPanel"],
+    true
+  );
+  try {
+    const toggleDigital = document.getElementById("toggleDigitalCompetency");
+    if (toggleDigital) toggleDigital.checked = true;
+    appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+    appState.teachingContext.integrations.digital = true;
+    ensurePedagogyFromLesson({ force: true, silent: true, skipRender: true });
+    let digitalOk = false;
+    if (hasOcrReadyLessonContent()) {
+      digitalOk = await requestStructuredIntegrationCandidates("digital", { silent: true, skipRender: true, force: true });
+    }
+    if (!digitalOk || standardsOfKind("digital").length < 2) {
+      ensureIntegrationStandards({ force: true, silent: true, skipRender: true });
+    }
+    showToast("✅ Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và Năng lực số (NLS) bám sát nội dung SGK.", "success", 5000);
+    return true;
+  } finally {
+    renderPedagogyCatalogs();
+    renderStandardsCatalog();
+    saveStateToLocalStorage();
+    updateWorkflowStepper();
+    setRecommendButtonsLoading(buttons, false);
+    setRecommendPanelsPending(
+      ["methodsCatalogPanel", "techniquesCatalogPanel", "activitiesCatalogPanel", "digitalStandardsPanel"],
+      false
+    );
+    step3RecommendInFlight = false;
   }
-  if (!digitalOk || standardsOfKind("digital").length < 2) ensureIntegrationStandards({ force: true, silent: true });
-  renderPedagogyCatalogs();
-  renderStandardsCatalog();
-  saveStateToLocalStorage();
-  updateWorkflowStepper();
-  showToast("Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và 2–3 mục Năng lực số (NLS).", "success", 5000);
-  return true;
 }
 
 function renderStandardsCatalog() {
@@ -2184,16 +2252,10 @@ function setupEventListeners() {
           ensureIntegrationStandards({ force: false });
           renderStandardsCatalog();
         } else if (key === "ai") {
-          const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS.ai : null;
-          const grade = Number(appState.selectedGrade) || 6;
-          const records = catalogFallbackRecords("ai", grade);
-          if (catalog && records.length) applySuggestedStandardRecords("ai", catalog, records);
-          if (hasOcrReadyLessonContent()) {
-            void requestStructuredIntegrationCandidates("ai", { silent: false });
-          } else {
-            showToast("Hãy đọc SGK ở Bước 1. Khi có nội dung, Gemini sẽ đề xuất đúng 2–3 mục AI theo lớp (QĐ 2422).", "info", 5000);
-          }
-          renderStandardsCatalog();
+          void triggerAiCompetencyRecommendations();
+          renderSubjectIntegrations();
+          syncIntegrationTabs(key);
+          return;
         } else {
           ensureIntegrationStandards({ force: false });
           renderStandardsCatalog();
@@ -2522,6 +2584,49 @@ function setupEventListeners() {
       titleElem.textContent = text;
     }
   };
+}
+
+async function triggerAiCompetencyRecommendations({ force = false } = {}) {
+  if (aiRecommendInFlight) return false;
+  aiRecommendInFlight = true;
+  const toggle = typeof document !== "undefined" ? document.getElementById("toggleAiCompetency") : null;
+  const panel = typeof document !== "undefined" ? document.getElementById("aiStandardsPanel") : null;
+  if (toggle) toggle.disabled = true;
+  if (panel) {
+    panel.hidden = false;
+    if (typeof panel.setAttribute === "function") panel.setAttribute("aria-busy", "true");
+    panel.innerHTML = `<p class="text-muted" style="margin:0.5rem 0;">${RECOMMEND_LOADING_LABEL}</p>`;
+  }
+  try {
+    appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+    appState.teachingContext.integrations.ai = true;
+    const current = standardsOfKind("ai");
+    const hasManual = current.length && !current.every(item => item.autoSuggested);
+    if (hasManual && !force) return true;
+    let aiOk = false;
+    if (hasOcrReadyLessonContent()) {
+      aiOk = await requestStructuredIntegrationCandidates("ai", { silent: true, skipRender: true, force });
+    } else {
+      showToast("Hãy đọc SGK ở Bước 1. Khi có nội dung, Gemini sẽ đề xuất đúng 2–3 mục AI theo lớp (QĐ 2422).", "info", 5000);
+    }
+    if (!aiOk || !standardsOfKind("ai").length) {
+      const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS.ai : null;
+      const grade = Number(appState.selectedGrade) || 6;
+      const records = catalogFallbackRecords("ai", grade);
+      if (catalog && records.length) applySuggestedStandardRecords("ai", catalog, records, { skipRender: true });
+    }
+    if (hasOcrReadyLessonContent()) {
+      showToast("✅ Đã đề xuất Năng lực AI (QĐ 2422) bám sát nội dung SGK.", "success", 5000);
+    }
+    return true;
+  } finally {
+    renderStandardsCatalog();
+    saveStateToLocalStorage();
+    updateWorkflowStepper();
+    if (toggle) toggle.disabled = false;
+    if (panel && typeof panel.removeAttribute === "function") panel.removeAttribute("aria-busy");
+    aiRecommendInFlight = false;
+  }
 }
 
 // =============================================================================
@@ -6527,6 +6632,8 @@ if (typeof module !== 'undefined' && module.exports) {
     isSinglePeriodLesson,
     applyTextbookOcrResult,
     triggerStep3PedagogyAndDigitalRecommendations,
+    triggerAiCompetencyRecommendations,
+    setRecommendButtonsLoading,
     setActiveDropzoneTarget,
     handleGlobalPaste,
     applyObjectivesOutput,

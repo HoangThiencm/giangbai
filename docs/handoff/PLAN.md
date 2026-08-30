@@ -1,75 +1,75 @@
-# PLAN: Khóa chuẩn tổng thời lượng 90 phút (chống lặp Hoạt động D) và Triệt tiêu 7 trang dòng chấm trong Phụ lục Phiếu học tập
+# PLAN: Khắc phục hiện tượng nhảy lựa chọn 2 lần và trùng lặp thông báo khi Đề xuất PPDH, Năng lực số & Khung AI
 
 ## Hiện trạng
-1. **Vấn đề 1: Phân chia sai thời lượng (Hoạt động B bị gán 75 phút thay vì 45 phút, tổng bài 120-131 phút) và Bị lặp 2 lần Hoạt động D**:
-   - Khi bài học khai báo 02 tiết (90 phút), mẫu prompt 1-click `GENERATE_ACTIVITIES_AE` và mẫu riêng `GENERATE_ACTIVITY_B` chưa khóa cứng phân bổ số phút cho các hoạt động nhánh con (2.1, 2.2,...). AI tự ý gán nhánh 2.1 là 45 phút, nhánh 2.2 là 30 phút, khiến riêng Hoạt động B bị đội lên 75 phút, kéo tổng thời gian cả bài lên 120–131 phút.
-   - Hoạt động D (`## D. HOẠT ĐỘNG 4: VẬN DỤNG (11 phút)`) bị xuất lặp lại 2 lần trong giáo án tổng hợp do hàm cắt/dedupe chưa lọc triệt để khi AI vô tình trả về nhiều hơn 1 khối D hoặc khi ghép nối các hoạt động.
-
-2. **Vấn đề 2: Mục IV. Phụ lục F (Phiếu học tập) sinh ra 7 trang toàn dòng chấm chấm `........................................`**:
-   - Khi tạo Phụ lục F (`GENERATE_PORTFOLIO_WORKSHEETS`), để chừa chỗ trống cho học sinh làm bài dưới bảng KWL / phiếu học tập, AI sinh ra 50–80 dòng liên tiếp toàn dấu chấm `................................................................................`.
-   - Trong `js/khbd-docx.js`, mỗi dòng chấm được phân tích thành 1 đoạn văn Word (Paragraph) độc lập có khoảng đệm dòng (line spacing & space after). Hàng chục dòng chấm này làm phình tài liệu ra thành **7 trang giấy trắng** toàn dấu chấm vô nghĩa.
+1. **Hiện tượng nhảy lựa chọn 2 lần (Flash of Interim Defaults) & Bắn nhiều Toast chồng lặp**:
+   - Khi người dùng bấm nút "Đề xuất PPDH & NLS" (Bước 3 / Subtab 3) hoặc kích hoạt "Khung Năng lực AI" (Bước 4 / Subtab 4), hệ thống hiện đang chạy một quy trình 2 giai đoạn không đồng bộ:
+     * **Giai đoạn 1 (Ngay tức thì)**: Hệ thống lập tức gán các giá trị mặc định/heuristic ban đầu (như PBL, STEM/STEAM) và bắn Toast #1 màu xanh lam (*"Đã đề xuất PPDH/kỹ thuật theo nội dung SGK..."*), làm người dùng nhìn thấy các ô checkbox được tick ngay lập tức.
+     * **Giai đoạn 2 (Sau 2–4 giây)**: Hàm AI `requestStructuredIntegrationCandidates` chạy ngầm gọi Gemini trả về kết quả phân tích sâu. Khi nhận được phản hồi, hệ thống tự động ghi đè lại các checkbox đã chọn và bắn tiếp Toast #2 màu xanh lá (*"Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và 2–3 mục Năng lực số (NLS)..."*).
+   - Hiện tượng tương tự cũng xảy ra tại **Khung Năng lực AI (QĐ 2422)** khi bật toggle AI: hệ thống tick ngay các mục fallback theo lớp rồi sau đó mới ghi đè bằng kết quả Gemini.
+   - **Hậu quả**:
+     * Người dùng thấy Toast #1 và các checkbox đã tick nên lầm tưởng hệ thống đã hoàn thành đề xuất, do đó bỏ qua hoặc chuyển sang bước khác để soạn bài.
+     * Vài giây sau, hệ thống âm thầm ghi đè lại các lựa chọn khác hoặc nếu người dùng đã tự tay chỉnh sửa thì bị mất/thay đổi lựa chọn, gây hoang mang, cảm giác giật lag và sai lệch bối cảnh dạy học khi tạo giáo án.
 
 ## Phạm vi
-1. **Khắc phục Vấn đề 1: Khóa cứng thời lượng 90 phút và Dedupe Hoạt động D (`js/khbd-prompts.js`, `js/khbd-app.js`)**:
-   - Trong `js/khbd-prompts.js`:
-     * Cập nhật `GENERATE_ACTIVITIES_AE`, `GENERATE_ACTIVITY_B`, `GENERATE_ACTIVITIES_AD`, `OUTPUT_CONTRACT`:
-       + Khóa cứng thời lượng Hoạt động B = `{time_budget_B}`. Ghi rõ trong chỉ thị: **Nếu chia N nhánh con (2.1, 2.2,...), tổng số phút của N nhánh con cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B}** (Ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút).
-       + Khóa cứng tổng thời lượng cả bài (A + B + C + D + E) = `{duration}` (02 tiết = đúng 90 phút).
-       + Trong `GENERATE_ACTIVITIES_AE`, khóa đúng 5 marker duy nhất, nghiêm cấm xuất lặp lại marker hoặc tiêu đề Hoạt động D.
-   - Trong `js/khbd-app.js`:
-     * Tăng cường `clipKhbdActivityMarkdown("D", text)` và `parseKhbdSections`: Nếu phát hiện lặp lại tiêu đề D (`## D. HOẠT ĐỘNG 4`), chỉ giữ lại duy nhất 1 khối D chuẩn mực.
-     * Bổ sung hàm chuẩn hóa thời lượng (`normalizeActivityTimeHeadings`): Tự động phát hiện và điều chỉnh lại số phút trên tiêu đề các hoạt động khớp với `calculateActivityTimeBudgets` nếu AI sinh sai tổng thời gian.
+1. **Đồng bộ hóa luồng Đề xuất Bước 3 (PPDH & NLS) và Bước 4 (Năng lực AI) (`js/khbd-app.js`)**:
+   - **Trạng thái Chờ xử lý rõ ràng (Loading State)**:
+     * Khi người dùng bấm nút "Đề xuất PPDH & NLS" hoặc bật đề xuất: Nút bấm hiển thị trạng thái đang xử lý (ví dụ: `⏳ Đang phân tích SGK & đề xuất...`), vô hiệu hóa nút bấm tạm thời để tránh người dùng bấm liên tục nhiều lần.
+     * Có thể hiển thị chỉ báo tải nhẹ / skeleton trên panel danh mục để người dùng biết hệ thống đang phân tích.
+   - **Tắt toàn bộ Toast trung gian & Chỉ cập nhật giao diện một lần duy nhất (Atomic UI Update)**:
+     * Chạy các hàm heuristic và API AI ở chế độ im lặng (`silent: true`).
+     * Sau khi AI phân tích xong (hoặc fallback nếu offline/timeout): Cập nhật trạng thái và render lại các checkbox trên giao diện **MỘT LẦN DUY NHẤT**.
+     * Chỉ hiển thị **DUY NHẤT MỘT THÔNG BÁO HOÀN TẤT** (Toast xanh lá): *"✅ Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và Năng lực số (NLS) bám sát nội dung SGK."* (loại bỏ hoàn toàn Toast #1 trung gian).
+   - **Đồng bộ hóa cho Khung Năng lực AI (QĐ 2422)**:
+     * Khi người dùng bật toggle AI hoặc bấm "Đề xuất Năng lực AI": Hiển thị trạng thái đang phân tích, chờ AI phản hồi rồi mới tick chọn và hiển thị 1 thông báo duy nhất.
+   - **Bảo toàn lựa chọn thủ công của giáo viên**:
+     * Nếu người dùng đã tự tay tick chọn hoặc bỏ chọn một mục (không còn cờ `autoSuggested`), hệ thống tôn trọng và không tự ý ghi đè/xóa bỏ mục đó trừ khi người dùng chủ động bấm nút "Đề xuất lại".
 
-2. **Khắc phục Vấn đề 2: Triệt tiêu các trang dòng chấm rác trong Phụ lục F và file Word (`js/khbd-prompts.js`, `js/khbd-docx.js`, `js/khbd-app.js`)**:
-   - Trong `js/khbd-prompts.js`:
-     * Cập nhật `GENERATE_PORTFOLIO_WORKSHEETS`: Nghiêm cấm AI sinh các dòng chấm chấm lặp lại liên tiếp; yêu cầu toàn bộ câu hỏi và phần trả lời của học sinh phải nằm gọn trong các ô của BẢNG (Table) hoặc tối đa 1–2 dòng chấm ngắn cho mỗi câu hỏi; khống chế dung lượng Phụ lục F chỉ gọn gàng trong 1–2 trang in Word.
-   - Trong `js/khbd-docx.js` & `js/khbd-app.js`:
-     * Cài đặt bộ lọc rút gọn dòng chấm lặp lại (`collapseDottedLines` / `stripExcessiveDottedLines`): Khi phát hiện từ 3 dòng liên tiếp chỉ chứa dấu chấm/gạch ngang (`/^\s*[.\-_…\s]{10,}\s*$/`), tự động rút gọn chỉ giữ lại tối đa 1–2 dòng, ngăn chặn triệt để việc sinh 7 trang dấu chấm trong Word.
-
-3. **Bộ kiểm thử tự động (Unit / Smoke Tests)**:
-   - Viết test `tests/khbd-dotted-lines-smoke.js` kiểm tra bộ lọc dọn sạch các dòng chấm lặp lại không để phình trang Word.
-   - Viết test `tests/khbd-activity-d-dedupe-smoke.js` kiểm tra dedupe Hoạt động D và bảo toàn tổng thời gian 90 phút cho bài 2 tiết.
+2. **Xây dựng bộ kiểm thử tự động (`tests/khbd-recommendation-flow-smoke.js`)**:
+   - Viết bài kiểm thử tự động kiểm tra luồng đề xuất:
+     * Xác nhận nút bấm có trạng thái loading trong khi xử lý.
+     * Xác nhận không còn tình trạng bắn 2 thông báo toast nối tiếp nhau.
+     * Xác nhận giao diện chỉ cập nhật 1 lần với kết quả cuối cùng hoàn chỉnh.
 
 ## Ngoài phạm vi
-- Không thay đổi công thức tính toán `calculateActivityTimeBudgets`.
-- Không thay đổi cấu trúc sư phạm 4 bước CV 5512.
+- Không thay đổi danh mục chuẩn PPDH, Thông tư 02 (NLS) hay Quyết định 2422 (Năng lực AI).
+- Không thay đổi thuật toán phân tích sư phạm trong `khbd-pedagogy-catalog.js`.
 
 ## File dự kiến tác động
-- `js/khbd-prompts.js`
 - `js/khbd-app.js`
-- `js/khbd-docx.js`
-- `tests/khbd-dotted-lines-smoke.js`
-- `tests/khbd-activity-d-dedupe-smoke.js`
+- `tests/khbd-recommendation-flow-smoke.js`
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 
 ## Các bước thực hiện
-1. **Bước 1: Cập nhật `js/khbd-prompts.js`**:
-   - Siết chặt quy tắc thời lượng Hoạt động B và toàn bài trong `GENERATE_ACTIVITIES_AE` và `GENERATE_ACTIVITY_B`.
-   - Cập nhật `GENERATE_PORTFOLIO_WORKSHEETS` cấm sinh các khối dòng chấm rác kéo dài.
-2. **Bước 2: Cập nhật `js/khbd-docx.js` & `js/khbd-app.js`**:
-   - Thêm bộ lọc `collapseDottedLines` trong `parseMarkdownToDocxElements` và `sanitizeLessonMarkdown`.
-   - Tăng cường `clipKhbdActivityMarkdown` dedupe triệt để cho Hoạt động D và chuẩn hóa số phút tiêu đề.
-3. **Bước 3: Viết các bài kiểm thử tự động**:
-   - Viết `tests/khbd-dotted-lines-smoke.js` và `tests/khbd-activity-d-dedupe-smoke.js`.
+1. **Bước 1: Tinh chỉnh `triggerStep3PedagogyAndDigitalRecommendations` trong `js/khbd-app.js`**:
+   - Thêm cơ chế quản lý trạng thái loading trên nút bấm (`btnStep3Recommend`, `btnStep3PedagogyDigital`, `btnSuggestPedagogyStandards`).
+   - Chạy `ensurePedagogyFromLesson({ force: true, silent: true })` và `requestStructuredIntegrationCandidates("digital", { silent: true })`.
+   - Cập nhật DOM và hiển thị duy nhất 1 toast thông báo thành công khi toàn bộ quá trình hoàn tất.
+2. **Bước 2: Tinh chỉnh luồng kích hoạt Năng lực AI trong `js/khbd-app.js`**:
+   - Khi bật toggle AI hoặc bấm đề xuất AI, chạy với `silent: true`, cập nhật UI 1 lần và bắn 1 toast duy nhất.
+3. **Bước 3: Viết bài test tự động `tests/khbd-recommendation-flow-smoke.js`**:
+   - Kiểm tra luồng đề xuất Bước 3 và Bước 4 không bắn toast trùng lặp và cập nhật trạng thái an toàn.
 4. **Bước 4: Chạy toàn bộ test suites**:
    - Xác nhận tất cả bài kiểm thử đều PASS 100%.
 
 ## Rủi ro
-- **Rủi ro**: Lọc nhầm dòng chấm trong bảng kẻ mẫu in ngắn (như `Họ và tên: ....................`).
-  - **Khắc phục**: Bộ lọc chỉ rút gọn khi có từ 3 dòng chấm riêng biệt liên tiếp đứng ngoài bảng.
+- **Rủi ro**: Nếu kết nối mạng chậm hoặc API Gemini bị lỗi, nút bấm có thể bị treo ở trạng thái loading.
+  - **Khắc phục**: Đặt khối `try...finally` đảm bảo luôn khôi phục lại trạng thái bình thường của nút bấm và fallback về danh mục cục bộ trong mọi trường hợp.
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động qua Node.js**:
-   - Chạy `node tests/khbd-dotted-lines-smoke.js`: Kiểm tra khối văn bản chứa 50 dòng chấm được rút gọn về 1 dòng duy nhất khi qua bộ lọc Word.
-   - Chạy `node tests/khbd-activity-d-dedupe-smoke.js`: Kiểm tra văn bản chứa 2 khối Hoạt động D bị cắt chỉ giữ lại 1 khối duy nhất; kiểm tra tổng số phút 5 hoạt động đúng 90 phút.
-2. **Kiểm thử thủ công trên giao diện**:
-   - Tạo bài học 2 tiết, mở tab Hoạt động D và Phụ lục F:
-     * Kiểm tra không còn bị lặp lại tiêu đề `## D. HOẠT ĐỘNG 4`.
-     * Kiểm tra Hoạt động B có số phút là (45 phút) và các nhánh con (23p, 22p), tổng bài đúng 90 phút.
-     * Xuất file Word (.docx), mở lên kiểm tra: Phụ lục F gọn gàng 1–2 trang, hoàn toàn không còn 7 trang dòng chấm `....................`.
+   - Chạy `node tests/khbd-recommendation-flow-smoke.js`: Kiểm tra hàm đề xuất thực hiện cập nhật atomic và chỉ phát 1 thông báo hoàn tất.
+2. **Kiểm thử thủ công trên giao diện `soankhbd.html`**:
+   - Đọc nội dung SGK ở Bước 1.
+   - Bấm vào mục **3. PPDH, Năng lực số & Môn** (hoặc bấm nút "⚡ Đề xuất PPDH & NLS"):
+     * Nút bấm hiện trạng thái `⏳ Đang phân tích...`.
+     * Khi hoàn tất, các checkbox hiện ra ngay kết quả chuẩn xác cuối cùng và chỉ xuất hiện duy nhất 1 thông báo hoàn tất màu xanh lá.
+     * Hoàn toàn không còn hiện tượng hiển thị kết quả mặc định trước rồi vài giây sau tự nhảy đổi sang kết quả khác.
+   - Chuyển sang mục **4. Năng lực AI (QĐ 2422)** và bật toggle AI: Kết quả được áp dụng mượt mà, đồng nhất 1 lần.
 
 ## Tiêu chí nghiệm thu
-1. Giáo án 2 tiết có tổng thời lượng các hoạt động A, B, C, D, E khớp chính xác 100% bằng 90 phút (Hoạt động B đúng 45 phút, các nhánh con cộng lại đúng 45 phút), không lặp lại Hoạt động D.
-2. Mục IV. Phụ lục F được trình bày gọn gàng trong bảng hoặc 1–2 dòng điền, loại bỏ hoàn toàn hiện tượng sinh 7 trang giấy trắng toàn dòng chấm `.....`.
-3. Tất cả bài kiểm thử liên quan đều PASS 100%.
+1. Quá trình đề xuất PPDH, NLS (Bước 3) và Năng lực AI (Bước 4) diễn ra mượt mà, có trạng thái loading rõ ràng trên nút bấm.
+2. Loại bỏ triệt để hiện tượng "chớp" giao diện (hiện lựa chọn tạm thời rồi vài giây sau tự động nhảy đổi sang lựa chọn khác).
+3. Chỉ xuất hiện duy nhất 1 thông báo Toast xác nhận hoàn tất, không bị bắn 2–3 thông báo chồng lặp.
+4. Toàn bộ các bài kiểm thử liên quan đều PASS 100%.
+

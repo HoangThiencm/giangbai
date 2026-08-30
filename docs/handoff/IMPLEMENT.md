@@ -1,50 +1,32 @@
-# IMPLEMENT: Khóa chuẩn tổng thời lượng 90 phút (chống lặp Hoạt động D) và Triệt tiêu 7 trang dòng chấm trong Phụ lục Phiếu học tập
+# IMPLEMENT: Khắc phục nhảy lựa chọn 2 lần và trùng lặp thông báo khi Đề xuất PPDH, Năng lực số & Khung AI
 
 ## Phạm vi đã triển khai
 
 - Giữ nguyên `docs/handoff/PLAN.md` và `docs/handoff/.lock`.
-- Không đổi công thức `calculateActivityTimeBudgets`.
-- Không đổi cấu trúc sư phạm 4 bước CV 5512.
-
-### `js/khbd-prompts.js`
-
-- `OUTPUT_CONTRACT`, `ACTIVITY_TABLE_CONTRACT`, `GENERATE_ACTIVITY_B`, `GENERATE_ACTIVITIES_AE`, `GENERATE_ACTIVITIES_AD`:
-  - Khóa Hoạt động B = `{time_budget_B}`.
-  - Nếu chia N nhánh (2.1, 2.2, ...), tổng phút N nhánh bắt buộc đúng bằng `{time_budget_B}` (ví dụ 45 phút chia 2 nhánh = 23 + 22; cấm 45 + 30 = 75).
-  - Tổng A + B + C + D + E bắt buộc đúng bằng `{duration}` (02 tiết = đúng 90 phút).
-  - `GENERATE_ACTIVITIES_AE` / `GENERATE_ACTIVITIES_AD`: đúng 5 marker duy nhất, cấm lặp marker hoặc tiêu đề `## D. HOẠT ĐỘNG 4`.
-- `GENERATE_PORTFOLIO_WORKSHEETS`: cấm khối dòng chấm rác; câu hỏi/chỗ điền nằm trong bảng hoặc tối đa 1–2 dòng chấm ngắn; phụ lục F gọn 1–2 trang Word.
+- Không đổi danh mục PPDH, Thông tư 02 (NLS) hay Quyết định 2422.
+- Không đổi thuật toán trong `khbd-pedagogy-catalog.js`.
+- Chỉ sửa `js/khbd-app.js` và thêm `tests/khbd-recommendation-flow-smoke.js`.
 
 ### `js/khbd-app.js`
 
-- `collapseDottedLines` / `stripExcessiveDottedLines`: từ 3 dòng chấm/gạch liên tiếp ngoài bảng (`/^\s*[.\-_…\s]{10,}\s*$/`) rút còn 1 dòng. Gọi trong `sanitizeLessonMarkdown`.
-- `clipKhbdActivityMarkdown("D")` và `parseKhbdSections`: nếu lặp tiêu đề D / marker `<<<KHBD_D>>>`, chỉ giữ 1 khối D tốt nhất.
-- `normalizeActivityTimeHeadings`: chỉnh phút trên tiêu đề A–E và nhánh B cho khớp `calculateActivityTimeBudgets`.
-
-### `js/khbd-docx.js`
-
-- `collapseDottedLines` / `stripExcessiveDottedLines` trong `parseMarkdownToDocxElements` để Word không phình thành nhiều trang dấu chấm.
-
-### Kiểm thử
-
-- Thêm `tests/khbd-dotted-lines-smoke.js`.
-- Thêm `tests/khbd-activity-d-dedupe-smoke.js`.
+- `triggerStep3PedagogyAndDigitalRecommendations`:
+  - Nút `btnStep3Recommend`, `btnStep3PedagogyDigital`, `btnSuggestPedagogyStandards` chuyển sang `⏳ Đang phân tích SGK & đề xuất...`, disabled, `aria-busy`.
+  - Panel PPDH/NLS hiện chỉ báo đang phân tích; không tick checkbox tạm.
+  - `ensurePedagogyFromLesson({ force: true, silent: true, skipRender: true })` và `requestStructuredIntegrationCandidates("digital", { silent: true, skipRender: true, force: true })`.
+  - Render checkbox **một lần** trong `finally`; luôn khôi phục nút (không treo khi Gemini lỗi).
+  - Chỉ 1 toast hoàn tất: *"✅ Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và Năng lực số (NLS) bám sát nội dung SGK."*
+- `triggerAiCompetencyRecommendations` (bật toggle AI):
+  - Loading trên panel AI, chờ Gemini (hoặc fallback nếu không OCR), rồi tick 1 lần.
+  - 1 toast hoàn tất khi có OCR; nếu chưa đọc SGK thì chỉ toast hướng dẫn đọc SGK.
+  - Không ghi đè mục AI đã chọn tay (`autoSuggested === false`) trừ khi `force`.
+- `skipRender` trên `ensurePedagogyFromLesson`, `ensureIntegrationStandards`, `applySuggestedStandardRecords`, `requestStructuredIntegrationCandidates`.
 
 ## Kiểm thử đã chạy
 
-- `node tests/khbd-dotted-lines-smoke.js` — PASS
-- `node tests/khbd-activity-d-dedupe-smoke.js` — PASS
-- `node tests/khbd-activity-e-dedupe-smoke.js` — PASS
-- `node tests/khbd-time-budgets-smoke.js` — PASS
-- `node tests/khbd-sanitize-smoke.js` — PASS
-- `node tests/khbd-docx-format-smoke.js` — PASS
-- `node tests/khbd-activity-e-smoke.js` — PASS
-- `node tests/khbd-activity-b-subsections-smoke.js` — PASS
-- `node tests/khbd-docx-layout-smoke.js` — PASS
-- `node tests/khbd-pedagogy-script-smoke.js` — PASS
-
-Các suite không liên quan (1-click HTML, AI catalog, autofill metadata, clear-all) vẫn fail sẵn, không đụng trong phạm vi này.
+- `node tests/khbd-recommendation-flow-smoke.js` — PASS
+- `node tests/khbd-4steps-workflow-smoke.js` — PASS
+- `node tests/khbd-structured-candidates-smoke.js` — PASS
 
 ## Vấn đề còn lại
 
-- Không có trong phạm vi triển khai này. Cần `/verify` trên giao diện: bài 2 tiết không lặp D, B = 45 phút, Word Phụ lục F không còn 7 trang dòng chấm.
+- Không có trong phạm vi triển khai này. Cần `/verify` trên `soankhbd.html`: Bước 3 và bật AI không còn chớp checkbox / 2 toast.
