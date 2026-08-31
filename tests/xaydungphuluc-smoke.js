@@ -161,13 +161,20 @@ assert.equal(vm.runInContext(`aiRate={value:'100',min:'0',max:'100',disabled:fal
 assert.equal(vm.runInContext(`aiRate.value`,sandbox),'92','the slider must snap to the practical 12-of-13 rate');
 assert.equal(vm.runInContext(`sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT'],lessonIndex:0,rows:[{cells:['Bài từ Tiết CT','','3-5'],isHeader:false}]};sourcePpctRows=[];aiPeriodCandidates().length`,sandbox),3,'blank Số tiết must derive period candidates from Tiết CT');
 assert.equal(vm.runInContext(`sourcePpctRowsForAppendixOne()[0].periods`,sandbox),'3','PL1 must derive its period count from raw Tiết CT');
-assert(vm.runInContext(`const pickerNodes={'#aiLessonPickerCard':{classList:{remove(){}}},'#aiLessonPicker':{innerHTML:''},'#aiSelectionCount':{textContent:''}};document.querySelector=selector=>pickerNodes[selector]||null;sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị dạy học','Địa điểm dạy học'],lessonIndex:0,rows:[{cells:['Bài hiển thị','1','1','Tuần 1','Máy chiếu','Lớp học'],isHeader:false}]};updateAiPicker();pickerNodes['#aiLessonPicker'].innerHTML`,sandbox).includes('Thiết bị: Máy chiếu'),'PPCT picker must show the complete source lesson metadata');
+const pickerMetadata=vm.runInContext(`const pickerNodes={'#aiLessonPickerCard':{classList:{remove(){}}},'#aiLessonPicker':{innerHTML:''},'#aiSelectionCount':{textContent:''}};document.querySelector=selector=>pickerNodes[selector]||null;sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị dạy học','Địa điểm dạy học'],lessonIndex:0,rows:[{cells:['Bài hiển thị','1','1','Tuần 1','Máy chiếu','Lớp học'],isHeader:false}]};updateAiPicker();pickerNodes['#aiLessonPicker'].innerHTML`,sandbox);
+assert(pickerMetadata.includes('Máy chiếu')&&pickerMetadata.includes('Lớp học'),'PPCT picker must show the complete source lesson metadata');
+const pickerTable=vm.runInContext(`const pickerTableNodes={'#aiLessonPickerCard':{classList:{remove(){}}},'#aiLessonPicker':{innerHTML:''},'#aiSelectionCount':{textContent:''}};document.querySelector=selector=>pickerTableNodes[selector]||null;sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị dạy học','Địa điểm dạy học'],lessonIndex:0,rows:[{cells:['HỌC KÌ I','','','','',''],isHeader:true},{cells:['Bài bảng','2','1-2','Tuần 1','Máy chiếu','Lớp học'],isHeader:false}]};updateAiPicker();pickerTableNodes['#aiLessonPicker'].innerHTML`,sandbox);
+['overflow-x-auto','<table','STT','Bài học','Số tiết','Tiết CT','Tuần','Thiết bị dạy học','Địa điểm','Tích hợp AI (QĐ 2422)','colspan="8"','Tiết 1','Tiết 2'].forEach(value=>assert(pickerTable.includes(value),`PPCT table picker must include ${value}`));
+assert(pickerTable.includes('HỌC KÌ I'),'PPCT table picker must preserve and merge source header rows');
+const fallbackPicker=vm.runInContext(`const fallbackPickerNodes={'#aiLessonPickerCard':{classList:{remove(){}}},'#aiLessonPicker':{innerHTML:''},'#aiSelectionCount':{textContent:''}};document.querySelector=selector=>fallbackPickerNodes[selector]||null;sourcePpctTable=null;sourcePpctRows=[];getConfig=()=>({monHoc:'Toán học',lop:'6',nls:{enabled:false,rate:0,density:'1-2'},ai:{enabled:false,rate:0,density:'1-2'}});updateAiPicker();fallbackPickerNodes['#aiLessonPicker'].innerHTML`,sandbox);
+assert(fallbackPicker.includes('Bài 1. Tập hợp')&&fallbackPicker.includes('Bài 5. Phép nhân và phép chia số tự nhiên'),'PPCT table picker must show the Toán 6 sample before source upload');
 const defaultMath=vm.runInContext(`defaultPpctRows({monHoc:'Toán học',lop:'6',nls:{enabled:false,rate:0,density:'1-2'},ai:{enabled:false,rate:0,density:'1-2'}})`,sandbox);
 const defaultLessons=defaultMath.filter(row=>!row.isHeader);
-assert.equal(defaultLessons.length,43,'Toán 6 catalog must retain 43 local lesson titles');
-assert.equal(defaultLessons.reduce((sum,row)=>sum+Number(row.periods),0),140,'Toán default PPCT must total 140 annual periods');
-assert.equal(defaultLessons[0].tietCT,'1-4','default PPCT must start contiguous period ranges');
-assert.equal(defaultLessons[42].tietCT,'138-140','default PPCT must end at the annual total');
+assert.equal(defaultLessons.length,47,'Toán 6 catalog must retain all 47 lessons from the verified sample document');
+assert.equal(defaultLessons[0].periods,'1','Toán 6 Bài 1 must retain its verified one-period allocation');
+assert.equal(defaultLessons[4].periods,'2','Toán 6 Bài 5 must retain its verified two-period allocation');
+assert.equal(defaultLessons.find(row=>row.lesson.includes('Ôn tập và Bài tập cuối chương II')).periods,'5','Toán 6 review must retain its verified five-period allocation');
+assert(defaultLessons.some(row=>Number(row.periods)!==4),'Toán 6 PPCT must not be allocated as uniform four-period cards');
 
 const keyElements={
   '#keyBadge':{textContent:''},'#keyInput':{value:'AIza-manual\nAIza-manual'},'#mistralKeyInput':{value:'mistral-manual\nmistral-manual'},

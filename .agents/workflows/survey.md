@@ -26,9 +26,10 @@ Làm lần lượt:
 ```
 
 3. Ghi `docs/handoff/.lock` nội dung LOCK.
-4. Chat chỉ 2 dòng rồi dừng:
-`Da ghi docs/handoff/PLAN.md`
-`Plan xong. Mo Grok: Implement dung docs/handoff/PLAN.md`
+4. Chat chỉ trình bày như sau rồi rồi dừng:
+`Trình bày những gì đã khảo sát`
+`Đã ghi docs/handoff/PLAN.md`
+`Plan xong. Mở Grok/Chatgpt: Implement dùng docs/handoff/PLAN.md`
 
 Chưa ghi được 2 file thì chưa được dừng.
 Tin nhắn sau trong chat này cũng không được sửa source.
