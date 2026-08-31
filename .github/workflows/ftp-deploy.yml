@@ -41,6 +41,11 @@ jobs:
             **/.git*
             **/.git*/**
             **/node_modules/**
+            GIAO AN/**
+            taovideo/assets/vtts/models/**
+            **/*.pdf
+            **/*.onnx
+            **/*.wasm
             .github/**
             api/config.php
             global_config.json
