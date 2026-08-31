@@ -39,6 +39,7 @@ const userEmail=String(localStorage.getItem('userEmail')||'default').trim().toLo
 const STORAGE_KEYS=[`khbd_user_gemini_keys_${userEmail}`,'khbd_user_gemini_keys_default','khbd_gemini_api_keys','gemini_api_keys','xdpl_gemini_api_keys','global_gemini_keys'];
 const SUBJECTS=[['Toán học',140],['Ngữ văn',140],['Tiếng Anh (Ngoại ngữ 1)',105],['Khoa học tự nhiên',140],['Lịch sử và Địa lí',105],['Tin học',35],['Công nghệ',35],['Giáo dục công dân',35],['Giáo dục thể chất',70],['Âm nhạc',35],['Mĩ thuật',35],['Hoạt động trải nghiệm, hướng nghiệp',105],['Giáo dục địa phương',35]];
 const EQUIPMENT={"Toán học":['Bộ dụng cụ vẽ hình','Mô hình hình học 3D','Máy tính khoa học','Phần mềm GeoGebra'],"Khoa học tự nhiên":['Kính hiển vi','Bộ dụng cụ thí nghiệm','Ống nghiệm và hóa chất','Mô phỏng PhET'],"Tin học":['Máy tính kết nối Internet','Thiết bị mạng','Bộ kit STEM/Robotics','Phần mềm lập trình'],"Tiếng Anh (Ngoại ngữ 1)":['Hệ thống âm thanh','Tai nghe phòng Lab','Màn hình tương tác','Học liệu số'],default:['Máy chiếu','Máy tính','Tranh ảnh/học liệu số','Bảng phụ thảo luận nhóm']};
+const APPENDIX_1_COLUMNS=[['stt','STT'],['lesson','Bài học'],['periods','Số tiết'],['outcomes','Yêu cầu cần đạt'],['integration','Mã NLS & AI (CV 3456 & QĐ 2422)']];
 const PPCT_COLUMNS=[['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['integration','Mã NLS & AI (CV 3456 & QĐ 2422)']];
 const SCHEDULE_COLUMNS=PPCT_COLUMNS,PLAN_COLUMNS=PPCT_COLUMNS;
 const PPCT_COLUMN_WIDTHS={lesson:30,periods:7,tietCT:8,week:7,devices:12,location:11,integration:25};
@@ -274,12 +275,12 @@ async function parseFiles(files){
   updateAiPicker();if(sourcePpctTable)fileList.innerHTML+=`<div class="font-bold">✓ Giữ nguyên ${sourcePpctTable.columns.length} cột và ${sourcePpctTable.rows.length} dòng PPCT; chỉ thêm cột Mã NLS & AI.</div>`;
 }
 function appendixPrompt(no,c){
-  const preservation=attachments.length?'NGUYÊN TẮC BẢO TOÀN PPCT NGUỒN: giữ nguyên 100% mọi cột, mọi ô dữ liệu, thứ tự dòng và dòng phân cấp. Chỉ trả nội dung cột integration; ứng dụng tự nối đúng một cột cuối “Mã NLS & AI (CV 3456 & QĐ 2422)”. ':'';
+  const preservation=no==='3'&&attachments.length?'NGUYÊN TẮC BẢO TOÀN PPCT NGUỒN: giữ nguyên 100% mọi cột, mọi ô dữ liệu, thứ tự dòng và dòng phân cấp. Chỉ trả nội dung cột integration; ứng dụng tự nối đúng một cột cuối “Mã NLS & AI (CV 3456 & QĐ 2422)”. ':'';
   const sgk=c.sgkContext?`NGỮ CẢNH SGK ĐÃ TINH GỌN (chỉ tên bài, mục tiêu và hoạt động):\n${c.sgkContext.slice(0,30000)}\n`:'';
   const selected=c.ai.enabled?c.ai.selectedLessons:[];
   const rules=`${standards()} ${preservation}${sgk}NLS dùng dạng [NLS: mã - mô tả]. AI dùng dạng [AI: mã - mô tả]. AI TUYỆT ĐỐI chỉ được xuất cho đúng các bài đã chọn sau: ${selected.length?selected.map(x=>'“'+x+'”').join('; '):'(không có bài nào; không xuất mã AI)'}. Không xuất mã AI cho bất cứ bài khác nào.`;
   const base=`Bạn là chuyên gia sư phạm THCS. ${rules} Cấu hình: ${JSON.stringify(c)}. Dữ liệu nguồn: ${attachments.map(a=>`[${a.name}]\n${a.text}`).join('\n').slice(0,75000)}. `;
-  if(no==='1')return base+'Trả JSON duy nhất theo schema {title,overview,devices:[{name,quantity,use}],rooms:[{name,quantity,use}],schedule:[{lesson,periods,tietCT,week,devices,location,integration,isHeader}],assessments:[{milestone,week,duration,form,requirements}],other:[string]}. Phụ lục 1 phải có đủ mục I, II, III theo CV 5512.';
+  if(no==='1')return base+'Khi dữ liệu nguồn là Phụ lục 3, lấy nguyên danh sách Bài học và Số tiết theo đúng thứ tự nguồn; với mỗi bài không phải dòng tiêu đề, tự viết outcomes (Yêu cầu cần đạt) chuẩn Chương trình GDPT 2018, phù hợp môn/lớp/bài học. Không sao chép Tiết CT, Tuần, Thiết bị hay Địa điểm vào bảng Phụ lục 1. Trả JSON duy nhất theo schema {title,overview,devices:[{name,quantity,use}],rooms:[{name,quantity,use}],schedule:[{lesson,periods,outcomes,integration,isHeader}],assessments:[{milestone,week,duration,form,requirements}],other:[string]}. Phụ lục 1 phải có đủ mục I, II, III theo CV 5512.';
   if(no==='2')return base+'Trả JSON duy nhất {title,activities:[{topic,requirements,duration,time,location,host,coordinator,conditions,integration}]}. AI trong integration vẫn chỉ theo bài đã chọn; nếu không gắn được bài đã chọn thì chỉ ghi NLS.';
   return base+'Trả JSON duy nhất {title,plan:[{lesson,periods,tietCT,week,devices,location,integration,isHeader}],specialties:[{topic,time,devices,location}],duties:[string]}. Phụ lục 3 dùng PPCT nguồn nếu có.';
 }
@@ -288,12 +289,37 @@ function hasAiCode(value){return /\[\s*(?:AI\s*:|\d+\.A)/i.test(String(value||''
 function integrationParts(value){const raw=String(value||'').trim();if(!raw||raw==='-')return [];const parts=raw.split(/(?=\[\s*(?:AI\s*:|NLS\s*:|\d+\.A))/i).filter(Boolean);return parts.map(text=>({text,ai:/^\s*\[\s*(?:AI\s*:|\d+\.A)/i.test(text)}));}
 function fallbackAiCode(i,c){return `[AI: ${String(c.lop).charAt(0)}.A1.1 - HS sử dụng AI có kiểm chứng để hỗ trợ nhiệm vụ học tập.]`}
 function selectedIntegration(value,selected,index,c){const allowAi=!!(selected&&c.ai.enabled);let parts=integrationParts(value).filter(part=>!part.ai||allowAi);if(allowAi&&!parts.some(part=>part.ai))parts.push({text:fallbackAiCode(index,c),ai:true});return parts.map(x=>x.text.trim()).join(' ')||'-'}
+function sourcePpctRowsForAppendixOne(){
+  if(sourcePpctTable&&Array.isArray(sourcePpctTable.rows)){
+    const columns=sourcePpctTable.columns||[],lessonIndex=sourcePpctTable.lessonIndex;
+    const periodsIndex=columns.map(normalizeHeaderKey).indexOf('periods');
+    return sourcePpctTable.rows.map((row,index)=>({
+      id:aiCandidateIdForSourceRow(index),isHeader:!!row.isHeader,
+      lesson:String((row.cells||[])[lessonIndex]||'').trim(),
+      periods:String((row.cells||[])[periodsIndex]||'').trim()
+    })).filter(row=>row.lesson&&!isAdminLesson(row.lesson));
+  }
+  return sourcePpctRows.map((row,index)=>({id:`ppct:${index}`,isHeader:!!row.isHeader,lesson:String(row.lesson||'').trim(),periods:String(row.periods||'').trim()})).filter(row=>row.lesson&&!isAdminLesson(row.lesson));
+}
+function appendixOneFallbackOutcome(lesson,c){return `Thực hiện được yêu cầu cần đạt của bài ${lesson} theo Chương trình GDPT 2018 môn ${c.monHoc||'học'}.`}
+function appendixOneTable(generated,c){
+  const source=sourcePpctRowsForAppendixOne(),generatedRows=(generated||[]).filter(row=>!row.isHeader),rows=source.length?source:(generated||[]).map((row,index)=>({id:`generated:${index}`,isHeader:!!row.isHeader,lesson:String(row.lesson||'').trim(),periods:String(row.periods||'').trim()})).filter(row=>row.lesson&&!isAdminLesson(row.lesson));
+  let normal=0,stt=0;
+  return {columns:APPENDIX_1_COLUMNS.map(([,label])=>label),rows:rows.map(row=>{
+    if(row.isHeader)return {cells:[row.lesson],isHeader:true};
+    const matching=generatedRows.find(item=>String(item.lesson||'').trim()===row.lesson)||generatedRows[normal]||{};
+    const integration=selectedIntegration(matching.integration,aiSelectedLessonIds.has(row.id),normal,c);
+    const outcomes=String(matching.outcomes||matching.outcome||matching.requirements||'').trim()||appendixOneFallbackOutcome(row.lesson,c);
+    normal+=1;
+    return {cells:[String(++stt),row.lesson,row.periods,outcomes,integration],isHeader:false};
+  })};
+}
 function preservedPpctTable(generated,c){
-  if(!sourcePpctTable)return ppctTableFromRows((generated||[]).map((row,index)=>({...row,integration:selectedIntegration(row.integration,false,index,c)})));
+  if(!sourcePpctTable)return ppctTableFromRows((generated||[]).map((row,index)=>({...row,integration:selectedIntegration(row.integration,aiSelectedLessonIds.has(`ppct:${index}`),index,c)})));
   const columns=[...sourcePpctTable.columns,'Mã NLS & AI (CV 3456 & QĐ 2422)'];let normal=0;
   return {columns,rows:sourcePpctTable.rows.map((row,rowIndex)=>{if(row.isHeader)return {cells:[...(row.cells||[])],isHeader:true};const generatedRow=(generated||[]).filter(x=>!x.isHeader)[normal]||{};const selected=aiSelectedLessonIds.has(aiCandidateIdForSourceRow(rowIndex));const integration=selectedIntegration(generatedRow.integration,selected,normal,c);normal++;return {cells:[...(row.cells||[]),integration],isHeader:false}})};
 }
-function normalizeAppendix(data,no,c){if(!data||typeof data!=='object')data=fallback(no,c);if(no==='1'){data.schedule=(data.schedule||[]).map((row,i)=>ppctRow(row,i,c)).filter(row=>row.lesson&&!isAdminLesson(row.lesson));data.scheduleTable=preservedPpctTable(data.schedule,c);data.assessments=sourceAssessments.length?sourceAssessments:(data.assessments||fallback('1',c).assessments);data.devices=sourceDevices.length?sourceDevices:(data.devices||[]);data.rooms=sourceRooms.length?sourceRooms:(data.rooms||[])}else if(no==='3'){data.plan=(data.plan||[]).map((row,i)=>ppctRow(row,i,c)).filter(row=>row.lesson&&!isAdminLesson(row.lesson));data.planTable=preservedPpctTable(data.plan,c)}return data}
+function normalizeAppendix(data,no,c){if(!data||typeof data!=='object')data=fallback(no,c);if(no==='1'){data.schedule=(data.schedule||[]).map((row,i)=>({...ppctRow(row,i,c),outcomes:String(row.outcomes||row.outcome||row.requirements||'').trim()})).filter(row=>row.lesson&&!isAdminLesson(row.lesson));data.scheduleTable=appendixOneTable(data.schedule,c);data.assessments=sourceAssessments.length?sourceAssessments:(data.assessments||fallback('1',c).assessments);data.devices=sourceDevices.length?sourceDevices:(data.devices||[]);data.rooms=sourceRooms.length?sourceRooms:(data.rooms||[])}else if(no==='3'){data.plan=(data.plan||[]).map((row,i)=>ppctRow(row,i,c)).filter(row=>row.lesson&&!isAdminLesson(row.lesson));data.planTable=preservedPpctTable(data.plan,c)}return data}
 function integrationHtml(value){const parts=integrationParts(value);return parts.length?parts.map(x=>`<span class="${x.ai?'ai-code':'nls-code'}">${esc(x.text)}</span>`).join(' '):esc(value||'-')}
 function dynamicPpctTable(model){const columns=(model&&model.columns)||[],rows=(model&&model.rows)||[],integrationIndex=columns.findIndex(label=>/Mã NLS|NLS\s*&\s*AI/i.test(label));return `<table class="ppct-table"><thead><tr>${columns.map(label=>`<th>${esc(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>row.isHeader?`<tr class="ppct-header"><td colspan="${columns.length}">${esc((row.cells||[]).filter(Boolean).join(' ')||'')}</td></tr>`:`<tr>${columns.map((_,i)=>`<td class="${i?'ppct-num':''}">${i===integrationIndex?integrationHtml((row.cells||[])[i]):esc((row.cells||[])[i]||'')}</td>`).join('')}</tr>`).join('')}</tbody></table>`}
 async function exportDocx(n,save=true){
