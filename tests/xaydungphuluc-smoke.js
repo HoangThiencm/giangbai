@@ -33,6 +33,7 @@ const script=html.match(/<script>\s*(\/\* Client-side[\s\S]*?)<\/script>/);
 assert(script,'inline application script missing');
 const sandbox={
   window:{},
+  KHBD_YCCD:{toan:{'6':Array.from({length:43},(_,i)=>({lesson:`Bài ${i+1}. Toán 6`})),'7':Array.from({length:37},(_,i)=>({lesson:`Bài ${i+1}. Toán 7`})),'8':Array.from({length:39},(_,i)=>({lesson:`Bài ${i+1}. Toán 8`})),'9':Array.from({length:32},(_,i)=>({lesson:`Bài ${i+1}. Toán 9`}))}},
   document:{querySelector(){return null},querySelectorAll(){return []},addEventListener(){},createElement(){return {className:'',textContent:'',append(){},remove(){}}}},
   localStorage:{getItem(){return null},setItem(){}},
   console,
@@ -43,7 +44,7 @@ vm.createContext(sandbox);
 try{vm.runInContext(script[1].replace(/document\.addEventListener\('DOMContentLoaded'[\s\S]*\);\s*$/,''),sandbox);}
 catch(e){assert.fail('inline JavaScript failed to parse: '+e.message)}
 assert.equal(typeof sandbox.extractPpctRows,'function','extractPpctRows must be defined');
-[['(2 tiết)',2],['3 tiết',3],['[3 tiết]',3],['4 tiết/tuần',4],['1-2',2],['Tiết 1-3',3],['tiết 6 đến 8',3],['hai tiết',2],['bốn tiết',4]].forEach(([value,expected])=>assert.equal(vm.runInContext(`parsePeriodCount(${JSON.stringify(value)})`,sandbox),expected,`must parse ${value}`));
+[['(2 tiết)',2],['3 tiết',3],['[3 tiết]',3],['4 tiết/tuần',4],['1-2',2],['1, 2',2],['Tiết 1-3',3],['tiết 6 đến 8',3],['hai tiết',2],['bốn tiết',4]].forEach(([value,expected])=>assert.equal(vm.runInContext(`parsePeriodCount(${JSON.stringify(value)})`,sandbox),expected,`must parse ${value}`));
 assert.equal(vm.runInContext("parsePeriodCount('3-1')",sandbox),null,'reversed ranges must be rejected');
 const sample=[
   'Bài học\tSố tiết\tTiết CT\tTuần\tThiết bị dạy học (*)\tĐịa điểm dạy học (**)',
@@ -160,12 +161,13 @@ assert.equal(vm.runInContext(`aiRate={value:'100',min:'0',max:'100',disabled:fal
 assert.equal(vm.runInContext(`aiRate.value`,sandbox),'92','the slider must snap to the practical 12-of-13 rate');
 assert.equal(vm.runInContext(`sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT'],lessonIndex:0,rows:[{cells:['Bài từ Tiết CT','','3-5'],isHeader:false}]};sourcePpctRows=[];aiPeriodCandidates().length`,sandbox),3,'blank Số tiết must derive period candidates from Tiết CT');
 assert.equal(vm.runInContext(`sourcePpctRowsForAppendixOne()[0].periods`,sandbox),'3','PL1 must derive its period count from raw Tiết CT');
+assert(vm.runInContext(`const pickerNodes={'#aiLessonPickerCard':{classList:{remove(){}}},'#aiLessonPicker':{innerHTML:''},'#aiSelectionCount':{textContent:''}};document.querySelector=selector=>pickerNodes[selector]||null;sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị dạy học','Địa điểm dạy học'],lessonIndex:0,rows:[{cells:['Bài hiển thị','1','1','Tuần 1','Máy chiếu','Lớp học'],isHeader:false}]};updateAiPicker();pickerNodes['#aiLessonPicker'].innerHTML`,sandbox).includes('Thiết bị: Máy chiếu'),'PPCT picker must show the complete source lesson metadata');
 const defaultMath=vm.runInContext(`defaultPpctRows({monHoc:'Toán học',lop:'6',nls:{enabled:false,rate:0,density:'1-2'},ai:{enabled:false,rate:0,density:'1-2'}})`,sandbox);
 const defaultLessons=defaultMath.filter(row=>!row.isHeader);
-assert.equal(defaultLessons.length,35,'default PPCT must retain 35 sample lessons');
+assert.equal(defaultLessons.length,43,'Toán 6 catalog must retain 43 local lesson titles');
 assert.equal(defaultLessons.reduce((sum,row)=>sum+Number(row.periods),0),140,'Toán default PPCT must total 140 annual periods');
 assert.equal(defaultLessons[0].tietCT,'1-4','default PPCT must start contiguous period ranges');
-assert.equal(defaultLessons[34].tietCT,'137-140','default PPCT must end at the annual total');
+assert.equal(defaultLessons[42].tietCT,'138-140','default PPCT must end at the annual total');
 
 const keyElements={
   '#keyBadge':{textContent:''},'#keyInput':{value:'AIza-manual\nAIza-manual'},'#mistralKeyInput':{value:'mistral-manual\nmistral-manual'},

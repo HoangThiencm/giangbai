@@ -1,73 +1,53 @@
-# PLAN: Trích Xuất & Nhận Diện Đầy Đủ Số Tiết Của Bài Học Từ PPCT Nguồn (Hỗ Trợ Định Dạng "(2 tiết)", "Tiết 1-2", "2-3", "2 tiết") và Cho Phép Điều Chỉnh Linh Hoạt
+# PLAN: Nạp File Phụ Lục 3 $\rightarrow$ Đọc & Hiển Thị Toàn Bộ Bảng PPCT Chính Xác Lên Hệ Thống $\rightarrow$ Tick Chọn 12 Tiết Tích Hợp Khung Năng Lực AI $\rightarrow$ Sinh & Xuất Trọn Bộ Word 2 Màu
 
-## Hiện trạng
-1. **Nguyên Nhân Gây Ra Việc Mọi Bài Học Bị Ép Về 1 Tiết**:
-   - Hàm `validPeriodCount(value)` trước đây sử dụng `Number.parseInt(String(value).trim(), 10)`.
-   - Khi văn bản cột `Số tiết` hoặc `Tiết CT` trong file PPCT của người dùng có dạng:
-     + `"(2 tiết)"` hoặc `"(3 tiết)"` $\rightarrow$ Bắt đầu bằng dấu ngoặc đơn `(` $\rightarrow$ `parseInt` trả về `NaN` $\rightarrow$ Bị ép về `1` tiết!
-     + `"2 tiết"`, `"3 tiết"` $\rightarrow$ Nếu có khoảng trắng hoặc ký tự bao quanh $\rightarrow$ Dễ bị trả về `1` tiết.
-     + Dạng khoảng tiết `"1-2"`, `"3-5"` trong cột Tiết CT $\rightarrow$ Không tự động tính ra hiệu số tiết (2 tiết, 3 tiết).
-   - Trong `defaultPpctRows()` mặc định, hệ thống cũng chỉ gán cứng `periods: '1'` cho 35 tuần mà không phản ánh đúng tổng thời lượng năm học (ví dụ Toán 6 có 140 tiết $\approx$ 4 tiết/tuần).
-2. **Kỳ Vọng Của Người Dùng**:
-   - Khi tải file PPCT lên: Hệ thống phải **nhận diện chính xác 100% số tiết thực tế của từng bài học** từ file gốc (ví dụ bài 2 tiết thì nhận diện đủ 2 tiết, bài 3 tiết nhận diện đủ 3 tiết).
-   - Cung cấp ô nhập liệu số tiết trực quan ngay trên từng dòng bài học ở bảng Mục 3 để giáo viên có thể **điều chỉnh tăng/giảm số tiết của bất kỳ bài học nào** sau khi nhận diện.
-   - Khi giáo viên thay đổi số tiết của một bài: Bảng chọn tiết AI (`Tiết 1`, `Tiết 2`, `Tiết 3`...) và tổng số tiết/tỷ lệ % AI tự động cập nhật đồng bộ.
+## Hiện trạng & Yêu Cầu Cốt Lõi
+- **Quy Trình Chuẩn Sư Phạm 100% Khép Kín**:
+  1. **Nạp Tệp Phụ Lục 3**:
+     - Giáo viên tải file Phụ lục 3 (DOCX, XLSX, PDF) lên ở Mục 2.
+  2. **Đọc & Hiển Thị Toàn Bộ Bảng Phụ Lục 3 Lên Hệ Thống Chính Xác 100%**:
+     - Hệ thống bóc tách và hiển thị ngay toàn bộ bảng phân phối chương trình nguồn lên giao diện:
+       * Cột `Bài học` (Tên bài học thật).
+       * Cột `Số tiết` (Số tiết thật: 1 tiết, 2 tiết, 3 tiết... cho phép tăng/giảm nếu cần).
+       * Cột `Tiết CT` (Tiết thứ mấy trong chương trình).
+       * Cột `Tuần` (Tuần thực hiện).
+       * Cột `Thiết bị dạy học` & `Địa điểm dạy học`.
+  3. **Tích Hợp Khung Năng Lực AI (QĐ 2422) Qua Checkbox Trực Tiếp**:
+     - Hiển thị checkbox tick chọn trên từng tiết/bài học để giáo viên **tick chọn chính xác 12 tiết tích hợp Khung năng lực AI (QĐ 2422)**.
+     - Có bộ đếm trực quan `🎯 Đã chọn: X/12 tiết AI` kèm nút `✨ Gợi ý 12 tiết chuẩn` và `✕ Bỏ chọn tất cả`.
+     - Khung Năng lực số (NLS - CV 3456) được tích hợp tự động theo tỷ lệ (%) và mật độ đã cấu hình.
+  4. **Sinh Phụ Lục & Xuất Word (.docx) 2 Màu**:
+     - Bấm **⚡ Sinh trọn bộ Phụ lục**:
+       * *Phụ lục 3 (Giáo viên)*: Bảo toàn 100% toàn bộ bảng nguồn người dùng đã tải lên + bổ sung đúng 01 cột cuối: `Mã NLS & AI (CV 3456 & QĐ 2422)`.
+       * *Phụ lục 1 (Tổ chuyên môn)*: Lấy danh sách bài học và số tiết từ Phụ lục 3 $\rightarrow$ AI tự động sinh đầy đủ cột `Yêu cầu cần đạt` chuẩn Chương trình GDPT 2018.
+       * File Word xuất ra và Preview thể hiện rõ 2 màu: **Mã NLS Màu Xanh (`0070C0`)** và **Mã NLAI (AI) Màu Tím (`7030A0`)**, đủ 6 phần chuẩn theo file mẫu `Phụ lục 1 - Lớp 6 - Toán.docx`.
 
-## Phạm vi
-1. **Nâng Cấp Hàm Trích Xuất & Chuẩn Hóa Số Tiết `validPeriodCount(value)` & `extractLessonPeriods(row)`**:
-   - Nhận diện thông minh mọi biến thể định dạng số tiết trong giáo dục:
-     * Dạng số kèm chữ: `"2 tiết"`, `"3 tiet"`, `"(2 tiết)"`, `"[3 tiết]"`, `"4 tiết/tuần"` $\rightarrow$ Trích xuất đúng `2`, `3`, `4`.
-     * Dạng khoảng tiết / tiết CT: `"1-2"`, `"3-5"`, `"tiết 6 đến 8"` $\rightarrow$ Tự động tính số tiết: `(to - from + 1)` (ví dụ: `1-2` $\rightarrow$ 2 tiết, `3-5` $\rightarrow$ 3 tiết).
-     * Dạng số nguyên thuần túy: `2`, `3`, `4`.
-   - Nếu cột `Số tiết` bị trống nhưng có cột `Tiết CT` dạng khoảng: Tự động suy diễn số tiết từ `Tiết CT`.
-2. **Đồng Bộ Dữ Liệu Khi Giáo Viên Chỉnh Sửa Số Tiết Trên Giao Diện**:
-   - Khi giáo viên sửa ô `Số tiết` của một bài học ở Mục 3:
-     + Cập nhật giá trị vào `sourcePpctTable` và `sourcePpctRows`.
-     + Cập nhật lại số lượng checkbox tiết (`Tiết 1`, `Tiết 2`, `Tiết 3`...) của bài học đó.
-     + Cập nhật lại tổng số tiết của môn học và tự động tính lại tỷ lệ `% AI`.
-     + Cập nhật số tiết trong bảng xem trước (Preview) và file Word (.docx) xuất ra.
-3. **Cải Tiến Cấu Trúc PPCT Mẫu (Khi Chưa Tải File)**:
-   - `defaultPpctRows()` phân bổ số tiết hợp lý theo tổng số tiết năm học của môn học (ví dụ: Môn Toán 140 tiết $\rightarrow$ các bài học mẫu phân bổ 3–4 tiết/bài thay vì chỉ 1 tiết).
-4. **Cập Nhật Bộ Kiểm Thử Tự Động ([tests/xaydungphuluc-smoke.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/tests/xaydungphuluc-smoke.js))**:
-   - Thêm bài kiểm tra assert xác nhận trích xuất đúng số tiết từ các định dạng: `"(2 tiết)"`, `"3 tiết"`, `"1-2"`, `"3-5"`, và kiểm tra phản ứng khi sửa số tiết trên UI.
+## Phạm vi Kỹ Thuật trong `xaydungphuluc.html`
+1. **Hiển Thị Toàn Bộ Bảng PPCT Nhận Diện Lên Giao Diện (Mục 3)**:
+   - Khi tải file Phụ lục 3: Render toàn bộ danh sách các bài học với đầy đủ thông tin (Tên bài, Số tiết, Tiết CT, Tuần, Thiết bị, Địa điểm) kèm các checkbox chọn tiết AI (`Tiết 1`, `Tiết 2`... `Tiết N`) tương ứng đúng số tiết của bài.
+   - Khi chưa tải file: Hiển thị khung chờ thông báo tải file Phụ lục 3 (hoặc nút nạp thử mẫu Toán 6).
+2. **Bóc Tách Số Tiết Đa Kênh Chuẩn Xác**:
+   - Xử lý sạch các định dạng `"(2 tiết)"`, `"[3 tiết]"`, `"2 tiết"`, khoảng `"1-3"`, `"1, 2"`.
+   - Cho phép giáo viên chỉnh sửa tăng/giảm số tiết trực tiếp trên ô input của từng bài.
+3. **Liên Thông Sinh Phụ Lục 1 Tự Động Từ Phụ Lục 3**:
+   - Phụ lục 1 tự sinh `outcomes` chuẩn GDPT 2018; Phụ lục 3 giữ nguyên bảng nguồn; AI chỉ sinh mã AI cho đúng các tiết đã tick.
+4. **Bộ Xuất DOCX 2 Màu**:
+   - Tách riêng từng TextRun: NLS Xanh `0070C0` và NLAI Tím `7030A0`.
 
-## Ngoài phạm vi
-- Không can thiệp các file ngoài `xaydungphuluc.html` và file test liên quan.
-
-## File dự kiến tác động
-- `xaydungphuluc.html` [NÂNG CẤP THUẬT TOÁN TRÍCH XUẤT SỐ TIẾT ĐA ĐỊNH DẠNG, ĐỒNG BỘ THỜI GIAN THỰC KHI ĐIỀU CHỈNH SỐ TIẾT]
-- `tests/xaydungphuluc-smoke.js` [BỔ SUNG SMOKE TEST CHO TRÍCH XUẤT VÀ ĐIỀU CHỈNH SỐ TIẾT]
-- `docs/handoff/PLAN.md` [GHI ĐÈ]
-- `docs/handoff/.lock` [GHI MỚI / NỘI DUNG: LOCK]
-- `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi triển khai]
-- `docs/handoff/VERIFY.md` [Tester cập nhật kết quả nghiệm thu]
+## File tác động
+- `xaydungphuluc.html`
+- `tests/xaydungphuluc-smoke.js`
+- `docs/handoff/PLAN.md`
+- `docs/handoff/.lock`
+- `docs/handoff/IMPLEMENT.md`
+- `docs/handoff/VERIFY.md`
 
 ## Các bước thực hiện
-1. **Bước 1: Hoàn Thiện Hàm `validPeriodCount(value)` và `normalizePeriods(value)` trong `xaydungphuluc.html`**:
-   - Viết regex bóc tách số từ chuỗi có dấu ngoặc đơn, chữ "tiết", hoặc khoảng gạch nối `"1-2"`.
-2. **Bước 2: Cập Nhật Trình Bóc Tách Bảng PPCT**:
-   - Đảm bảo khi đọc từng hàng từ bảng Word/Excel/PDF, giá trị số tiết thực tế được giữ nguyên vẹn vào `sourcePpctTable` và `sourcePpctRows`.
-3. **Bước 3: Hoàn Thiện Hàm `updatePpctLessonPeriods`**:
-   - Đảm bảo khi người dùng sửa số tiết trên UI, danh sách tiết của bài học sinh ra đúng $N$ tiết (`Tiết 1`, `Tiết 2`... `Tiết N`) để người dùng tick chọn chính xác từng tiết lẻ.
-4. **Bước 4: Chạy và Hoàn Thiện Kiểm Thử**:
-   - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`, xác nhận PASS 100%.
-
-## Rủi ro
-- **Rủi ro**: Dữ liệu số tiết trong file bị ghi dạng chữ như "hai tiết", "ba tiết".
-  - *Giải pháp*: Bổ sung bản đồ chuyển đổi số đếm tiếng Việt cơ bản (một $\rightarrow$ 1, hai $\rightarrow$ 2, ba $\rightarrow$ 3, bốn $\rightarrow$ 4).
-
-## Cách kiểm thử
-1. **Kiểm thử tự động qua Node.js**:
-   - Chạy `node tests/xaydungphuluc-smoke.js`:
-     + Test `validPeriodCount("(2 tiết)")` $\rightarrow$ 2.
-     + Test `validPeriodCount("Tiết 1-3")` $\rightarrow$ 3.
-     + Test `validPeriodCount("4 tiết")` $\rightarrow$ 4.
-     + Test sửa số tiết từ 2 lên 4 $\rightarrow$ sinh đủ 4 checkbox tiết.
-2. **Kiểm thử thủ công trên trình duyệt**:
-   - Tải file `Phụ lục 1 - Lớp 6 - Toán.docx` hoặc file PPCT có bài 2 tiết, 3 tiết lên $\rightarrow$ Quan sát các bài học hiển thị đúng 2 tiết, 3 tiết (không bị biến thành 1 tiết).
-   - Thử sửa số tiết của Bài 1 từ 1 thành 3 $\rightarrow$ Quan sát xuất hiện đủ `Tiết 1`, `Tiết 2`, `Tiết 3` và tổng số tiết tăng lên chính xác.
+1. Triển khai hiển thị toàn bộ bảng PPCT nhận diện từ file Phụ lục 3 tải lên kèm checkbox chọn 12 tiết AI.
+2. Hoàn thiện bộ bóc tách số tiết đa kênh và cho phép tăng/giảm số tiết.
+3. Cập nhật và chạy smoke test `node tests/xaydungphuluc-smoke.js` xác nhận PASS 100%.
 
 ## Tiêu chí nghiệm thu
-1. Nhận diện chính xác 100% số tiết của từng bài học từ file PPCT tải lên, kể cả khi số tiết được viết dưới dạng `"(2 tiết)"`, `"3 tiết"`, `"1-2"`.
-2. Cho phép giáo viên chỉnh sửa số tiết của từng bài học trực tiếp trên giao diện và tự động đồng bộ sang bảng chọn tiết AI, bảng preview và file Word xuất ra.
-3. Toàn bộ smoke test tự động đều PASS 100%.
+1. Tải file Phụ lục 3 lên $\rightarrow$ Đọc và hiển thị toàn bộ bảng PPCT chính xác 100% lên hệ thống kèm checkbox tick chọn 12 tiết AI.
+2. Cho phép giáo viên tăng/giảm số tiết trực tiếp trên từng bài; checkbox tiết tự động cập nhật tương ứng.
+3. Xuất Word giữ nguyên bảng Phụ lục 3 nguồn, tự sinh YCCĐ cho Phụ lục 1, phân biệt 2 màu NLS Xanh và NLAI Tím.
+4. Toàn bộ smoke test tự động đều PASS 100%.

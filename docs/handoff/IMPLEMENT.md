@@ -1,11 +1,11 @@
-# IMPLEMENT: Nhận diện số tiết PPCT đầy đủ
+# IMPLEMENT: Nạp và chọn tiết PPCT cho Phụ lục 1/3
 
 ## Đã triển khai
 
-- Thêm nhận diện số tiết từ số thường, cách ghi `tiết`, ngoặc, `/tuần`, khoảng tiết và số đếm tiếng Việt cơ bản.
-- Khi cột Số tiết trống, mô hình PPCT, bảng chọn AI và PL1 suy ra số tiết từ Tiết CT; bảng PPCT thô vẫn được bảo toàn.
-- Danh sách chọn AI dùng số tiết đã suy ra, nên số checkbox và tỷ lệ phản ánh đúng tổng tiết.
-- PPCT mẫu vẫn có 35 bài/hai học kỳ nhưng phân bổ chính xác tổng số tiết năm học theo môn, với Tiết CT liên tiếp.
+- Nạp PPCT DOCX/XLSX/PDF, bảo toàn bảng nguồn và hiển thị từng bài với Bài học, Số tiết (có thể sửa), Tiết CT, Tuần, Thiết bị, Địa điểm cùng checkbox từng tiết AI.
+- Giới hạn, gợi ý và bỏ chọn AI hoạt động theo tối đa 12 tiết; khi giảm số tiết, checkbox thừa tự bị loại và PL1/PL3 được làm mới.
+- Nhận diện số tiết từ số thường, ngoặc, `/tuần`, khoảng, danh sách `1, 2` và số đếm tiếng Việt; khi Số tiết trống, suy ra từ Tiết CT.
+- PL1 lấy Bài học/Số tiết từ PPCT và sinh Yêu cầu cần đạt; PL3 giữ nguyên bảng nguồn và chỉ nối một cột Mã NLS & AI. Preview/DOCX tách NLS xanh `0070C0`, AI tím `7030A0`.
 
 ## File thay đổi
 
@@ -13,7 +13,7 @@
 - `tests/xaydungphuluc-smoke.js`
 - `docs/handoff/IMPLEMENT.md`
 
-`docs/handoff/.lock` được giữ với nội dung `LOCK`. Không sửa `docs/handoff/PLAN.md` hoặc `docs/handoff/VERIFY.md`.
+Không sửa `docs/handoff/PLAN.md`, `docs/handoff/VERIFY.md` hoặc `docs/handoff/.lock` trong lần triển khai này.
 
 ## Kiểm thử
 
