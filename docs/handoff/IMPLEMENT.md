@@ -1,12 +1,11 @@
-# IMPLEMENT: Đồng bộ Gemini và Mistral API keys
+# IMPLEMENT: Nhận diện số tiết PPCT đầy đủ
 
 ## Đã triển khai
 
-- Bổ sung danh sách `mistralKeys` cùng các hàm chuẩn hóa, loại trùng và lưu cục bộ theo từng tài khoản.
-- Trang tải các khóa cục bộ trước, rồi gọi `GET api/user_gemini_keys.php` với phiên đăng nhập để nhận `keys` và `mistral_keys`. Lỗi mạng hoặc chưa đăng nhập giữ nguyên bản cục bộ.
-- Mở hộp thoại khóa cũng đồng bộ lại từ CSDL. Hộp thoại có hai vùng nhập Gemini và Mistral; thao tác lưu gửi `POST` JSON gồm cả hai danh sách và cập nhật bộ nhớ đệm theo phản hồi hợp lệ.
-- Badge hiển thị riêng số lượng từng nhà cung cấp, ví dụ `🔑 6 Gemini · 2 Mistral`; không hiện nội dung khóa trong badge hoặc log.
-- Kiểm tra live vẫn chỉ kiểm tra Gemini. Khóa Mistral không bị ép theo định dạng Gemini.
+- Thêm nhận diện số tiết từ số thường, cách ghi `tiết`, ngoặc, `/tuần`, khoảng tiết và số đếm tiếng Việt cơ bản.
+- Khi cột Số tiết trống, mô hình PPCT, bảng chọn AI và PL1 suy ra số tiết từ Tiết CT; bảng PPCT thô vẫn được bảo toàn.
+- Danh sách chọn AI dùng số tiết đã suy ra, nên số checkbox và tỷ lệ phản ánh đúng tổng tiết.
+- PPCT mẫu vẫn có 35 bài/hai học kỳ nhưng phân bổ chính xác tổng số tiết năm học theo môn, với Tiết CT liên tiếp.
 
 ## File thay đổi
 
