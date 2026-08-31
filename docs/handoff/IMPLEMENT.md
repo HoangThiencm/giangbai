@@ -1,22 +1,20 @@
-# IMPLEMENT: PPCT/SGK riêng biệt và chọn tối đa 12 tiết AI
+# IMPLEMENT: Đồng bộ Gemini và Mistral API keys
 
 ## Đã triển khai
 
-- Tách khu vực nạp dữ liệu thành ô PPCT (DOCX/XLSX/PDF) và ô SGK (PDF/DOCX), với luồng xử lý độc lập.
-- Bổ sung nút nạp PPCT mẫu theo Môn & Lớp; danh sách bài học mẫu được nạp ngay khi mở trang và khi thay đổi Môn/Lớp.
-- Bảng chọn tiết AI luôn hiển thị, có checkbox từng bài, bộ đếm `X/12`, gợi ý 12 tiết ưu tiên Hình học/Thống kê/Trải nghiệm, và nút bỏ chọn tất cả.
-- Luồng SGK chỉ giữ tên bài, mục tiêu và hoạt động; ngữ cảnh tinh gọn này được đưa vào prompt Gemini. Mã `[AI: ...]` chỉ được giữ hoặc bổ sung tại các bài được tick.
-- Giữ liên thông Phụ lục 3 sang Phụ lục 1: PL3 bảo toàn bảng PPCT nguồn, còn PL1 tự sinh Yêu cầu cần đạt theo GDPT 2018.
-- Preview và DOCX tách màu mã NLS xanh `0070C0` và mã NLAI tím `7030A0`.
+- Bổ sung danh sách `mistralKeys` cùng các hàm chuẩn hóa, loại trùng và lưu cục bộ theo từng tài khoản.
+- Trang tải các khóa cục bộ trước, rồi gọi `GET api/user_gemini_keys.php` với phiên đăng nhập để nhận `keys` và `mistral_keys`. Lỗi mạng hoặc chưa đăng nhập giữ nguyên bản cục bộ.
+- Mở hộp thoại khóa cũng đồng bộ lại từ CSDL. Hộp thoại có hai vùng nhập Gemini và Mistral; thao tác lưu gửi `POST` JSON gồm cả hai danh sách và cập nhật bộ nhớ đệm theo phản hồi hợp lệ.
+- Badge hiển thị riêng số lượng từng nhà cung cấp, ví dụ `🔑 6 Gemini · 2 Mistral`; không hiện nội dung khóa trong badge hoặc log.
+- Kiểm tra live vẫn chỉ kiểm tra Gemini. Khóa Mistral không bị ép theo định dạng Gemini.
 
 ## File thay đổi
 
 - `xaydungphuluc.html`
 - `tests/xaydungphuluc-smoke.js`
-- `docs/handoff/.lock` (nội dung `LOCK`)
 - `docs/handoff/IMPLEMENT.md`
 
-Không sửa `docs/handoff/PLAN.md` hoặc `docs/handoff/VERIFY.md`.
+`docs/handoff/.lock` được giữ với nội dung `LOCK`. Không sửa `docs/handoff/PLAN.md` hoặc `docs/handoff/VERIFY.md`.
 
 ## Kiểm thử
 

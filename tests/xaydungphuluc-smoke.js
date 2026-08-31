@@ -1,12 +1,13 @@
 /* Smoke test for the standalone THCS Appendix Builder. Run: node tests/xaydungphuluc-smoke.js */
 const fs=require('fs'),path=require('path'),assert=require('assert'),vm=require('vm');
+async function run(){
 const file=path.join(__dirname,'..','xaydungphuluc.html');
 const html=fs.readFileSync(file,'utf8');
 function has(value,label=value){assert(html.includes(value),`Missing: ${label}`)}
 assert(/^<!doctype html>/i.test(html),'not a standalone HTML document');
 ['tailwindcss','mammoth','pdf.js','xlsx.full.min.js','docx@8.5.0','JSZip','FileSaver'].forEach(x=>has(x));
 ['Lớp 6','Lớp 7','Lớp 8','Lớp 9','Toán học','Ngữ văn','Khoa học tự nhiên','Giáo dục địa phương'].forEach(has);
-['js/security-guard.js','access-control.js','khbd_user_gemini_keys_${userEmail}','khbd_user_gemini_keys_default','khbd_gemini_api_keys','gemini_api_keys','xdpl_gemini_api_keys','global_gemini_keys','loadKeys','saveKeys','checkKeys','429','403'].forEach(has);
+['js/security-guard.js','access-control.js','khbd_user_gemini_keys_${userEmail}','khbd_user_gemini_keys_default','khbd_gemini_api_keys','gemini_api_keys','xdpl_gemini_api_keys','global_gemini_keys','loadKeys','saveKeys','checkKeys','429','403','mistralKeys','MISTRAL_STORAGE_KEYS','mistralKeyInput','mistral_keys','syncUserKeysFromServer','api/user_gemini_keys.php','cacheUserKeys','credentials:\'include\'','cache:\'no-store\''].forEach(has);
 ['nlsRate','nlsDensity','aiRate','aiDensity','NLS và AI ĐỘC LẬP','1–2 mã/bài','2–3 mã/bài','3–4 mã/bài'].forEach(has);
 ['appendixPrompt','NGUYÊN TẮC BẢO TOÀN PPCT NGUỒN','giữ nguyên 100%','Tuần 1 đến Tuần 35','Phụ lục 1','Phụ lục 2','Phụ lục 3','Công văn 5512','TT 38/2021','TT 14/2020'].forEach(has);
 ['parseFiles','extractPpctRows','extractDocxTables','ingestSourceTables','preserveSourceSchedule','mammoth.extractRawText','pdfjsLib','XLSX.read','generateSelected','exportDocx','contenteditable','exportAll'].forEach(has);
@@ -66,11 +67,12 @@ assert(sandbox.setProgress.toString().includes('safe>=100')||sandbox.setProgress
 assert(typeof sandbox.hideProgress==='function','hideProgress must be defined');
 assert.equal(typeof sandbox.extractDocxTables,'function');
 assert.equal(typeof sandbox.ingestSourceTables,'function');
-['aiLessonPickerCard','aiLessonPicker','aiSelectionCount','toggleAiLesson','suggestAiLessons','AI_SELECTION_LIMIT','compactSgkText','isSgkFile','looksLikeSgkText','selectedAiLessons','sgkCompactContext'].forEach(has);
+['aiLessonPickerCard','aiLessonPicker','aiSelectionCount','toggleAiLesson','toggleAiLessonRow','suggestAiLessons','AI_SELECTION_LIMIT','aiPeriodCandidates','updatePpctLessonPeriods','syncAiSelectionFromRate','validPeriodCount','compactSgkText','isSgkFile','looksLikeSgkText','selectedAiLessons','sgkCompactContext'].forEach(has);
 ['ppctFiles','sgkFiles',"parseFiles(this.files,'ppct')","parseFiles(this.files,'sgk')",'Nạp cấu trúc PPCT chuẩn theo Môn &amp; Lớp','loadDefaultPpctStructure','clearAiLessons','Bỏ chọn tất cả','Đã chọn: 0/12 tiết AI'].forEach(has);
 assert(!html.includes('id="aiLessonPickerCard" class="card p-5 hidden"'),'AI lesson picker must be visible on initial load');
 ['sourcePpctRowsForAppendixOne','appendixOneTable','appendixOneFallbackOutcome','outcomes (Yêu cầu cần đạt) chuẩn Chương trình GDPT 2018'].forEach(has);
-has('slice(0,AI_SELECTION_LIMIT)','AI suggestion must cap the selection at 12 lessons');
+has('slice(0,aiSelectionLimit())','AI suggestion must cap the selection at 12 periods');
+has(':period:','AI selections must use stable per-period identifiers');
 ['NLS: mã - mô tả','AI TUYỆT ĐỐI chỉ được xuất','[AI: mã - mô tả]','0070C0','7030A0','nls-code','ai-code','integrationHtml','integrationCell'].forEach(has);
 assert.equal(typeof sandbox.compactSgkText,'function','compact SGK index must be defined');
 const compact=vm.runInContext("compactSgkText('BÀI 1. Tập hợp\\nMục tiêu cần đạt: nhận biết tập hợp.\\nNội dung giới thiệu dài không giữ lại.\\nHoạt động khám phá: lập tập hợp.\\nLuyện tập: viết tập hợp.')",sandbox);
@@ -134,9 +136,47 @@ const preserved=vm.runInContext(`sourcePpctTable=${JSON.stringify(arbitrary)};pr
 assert.equal(preserved.columns.length,7,'must add exactly one NLS/AI column');
 assert.equal(preserved.columns[6],'Mã NLS & AI (CV 3456 & QĐ 2422)');
 assert.equal(preserved.rows[1].cells[3],'Nhận biết tập hợp','must retain arbitrary source data');
-const appendixOne=vm.runInContext(`sourcePpctTable=${JSON.stringify({columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị','Địa điểm'],lessonIndex:0,rows:[{cells:['HỌC KÌ I','','','','',''],isHeader:true},{cells:['Bài 1. Tập hợp','1','1','1','Bảng phụ','Lớp học'],isHeader:false}]})};aiSelectedLessonIds=new Set(['source:1']);appendixOneTable([{lesson:'Bài 1. Tập hợp',periods:'99',outcomes:'Nhận biết và mô tả được tập hợp.',integration:'[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]'}],{lop:'6',monHoc:'Toán học',ai:{enabled:true}})`,sandbox);
+const appendixOne=vm.runInContext(`sourcePpctTable=${JSON.stringify({columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị','Địa điểm'],lessonIndex:0,rows:[{cells:['HỌC KÌ I','','','','',''],isHeader:true},{cells:['Bài 1. Tập hợp','1','1','1','Bảng phụ','Lớp học'],isHeader:false}]})};aiSelectedLessonIds=new Set(['source:1:period:1']);appendixOneTable([{lesson:'Bài 1. Tập hợp',periods:'99',outcomes:'Nhận biết và mô tả được tập hợp.',integration:'[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]'}],{lop:'6',monHoc:'Toán học',ai:{enabled:true}})`,sandbox);
 assert.deepEqual(Array.from(appendixOne.columns),['STT','Bài học','Số tiết','Yêu cầu cần đạt','Mã NLS & AI (CV 3456 & QĐ 2422)'],'PL1 must use its five-column form');
 assert.equal(appendixOne.rows[1].cells[2],'1','PL1 must retain periods from PL3, not generated schedule values');
 assert.equal(appendixOne.rows[1].cells[3],'Nhận biết và mô tả được tập hợp.','PL1 must use the AI-generated outcome');
 assert(appendixOne.rows[1].cells[4].includes('[AI:'),'selected PL3 lesson must retain its AI code in PL1');
+assert(appendixOne.rows[1].cells[4].includes('Áp dụng: tiết 1'),'partial selected period must be scoped in PL1 AI integration');
+
+const periodFixture=`sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Bài A','2'],isHeader:false},{cells:['Bài B','3'],isHeader:false}]};sourcePpctRows=[{lesson:'Bài A',periods:'2',isHeader:false},{lesson:'Bài B',periods:'3',isHeader:false}];aiSelectedLessonIds=new Set(['source:0:period:1','source:1:period:2']);results={1:{},2:{},3:{}};activeTab='2';`;
+assert.equal(vm.runInContext(`${periodFixture}aiPeriodCandidates().length`,sandbox),5,'period candidates must flatten the lesson durations');
+assert.equal(vm.runInContext(`${periodFixture}aiSelectionPercentage()`,sandbox),40,'two selected periods out of five must report 40%');
+vm.runInContext(`${periodFixture}updatePpctLessonPeriods('source:0','1')`,sandbox);
+assert.equal(vm.runInContext(`sourcePpctTable.rows[0].cells[1]`,sandbox),'1','editing periods must update the raw PPCT table');
+assert.equal(vm.runInContext(`sourcePpctRows[0].periods`,sandbox),'1','editing periods must update canonical PPCT rows');
+assert.equal(vm.runInContext(`aiSelectedLessonIds.has('source:0:period:2')`,sandbox),false,'reducing periods must discard invalid period selections');
+assert.equal(vm.runInContext(`results['1']===null&&results['3']===null`,sandbox),true,'editing periods must invalidate PL1 and PL3');
+assert(vm.runInContext(`appendixOneTable([{lesson:'Bài A',outcomes:'Đạt yêu cầu.',integration:'[AI: 6.A1.1 - Hỗ trợ.]'}],{lop:'6',monHoc:'Toán học',ai:{enabled:true}}).rows[0].cells[4]`,sandbox).includes('Áp dụng: tiết 1'),'PL1 must keep a selected partial-period scope');
+assert.equal(vm.runInContext(`preservedPpctTable([{lesson:'Bài A',integration:'[AI: 6.A1.1 - Hỗ trợ.]'}],{lop:'6',ai:{enabled:true}}).rows[0].cells[1]`,sandbox),'1','PL3 must keep the edited source period count');
+assert.equal(vm.runInContext(`sourcePpctTable=null;sourcePpctRows=[{lesson:'Bài dài',periods:'13',isHeader:false}];aiSelectedLessonIds=new Set(aiPeriodCandidates().map(x=>x.id));selectedAiPeriodIds().size`,sandbox),12,'the thirteenth period must not remain selected');
+assert.equal(vm.runInContext(`aiRate={value:'100',min:'0',max:'100',disabled:false};aiRateOut={value:''};syncAiSelectionFromRate();aiSelectedLessonIds.size`,sandbox),12,'the slider must cap its selection at 12 periods');
+assert.equal(vm.runInContext(`aiRate.value`,sandbox),'92','the slider must snap to the practical 12-of-13 rate');
+
+const keyElements={
+  '#keyBadge':{textContent:''},'#keyInput':{value:'AIza-manual\nAIza-manual'},'#mistralKeyInput':{value:'mistral-manual\nmistral-manual'},
+  '#keyModal':{classList:{add(){},remove(){}}},'#keyResults':{textContent:'',innerHTML:''}
+};
+const keyStorage=new Map();
+sandbox.localStorage.getItem=key=>keyStorage.get(key)||null;
+sandbox.localStorage.setItem=(key,value)=>keyStorage.set(key,value);
+sandbox.setTimeout=()=>0;
+sandbox.document.querySelector=selector=>keyElements[selector]||null;
+sandbox.document.body={append(){}};
+let serverRequests=[];
+sandbox.fetch=async(url,options={})=>{serverRequests.push({url,options});if(options.method==='POST')return {ok:true,json:async()=>({ok:true,keys:['AIza-saved'],mistral_keys:['mistral-saved']})};return {ok:true,json:async()=>({ok:true,keys:['AIza-server','AIza-server'],mistral_keys:['mistral-server','mistral-server']})}};
+assert.equal(await sandbox.syncUserKeysFromServer(),true,'server key sync must succeed without exposing key contents');
+assert.deepEqual(Array.from(vm.runInContext('apiKeys',sandbox)),['AIza-server'],'GET sync must apply normalized Gemini keys');
+assert.deepEqual(Array.from(vm.runInContext('mistralKeys',sandbox)),['mistral-server'],'GET sync must apply normalized Mistral keys');
+await sandbox.saveKeys();
+const saveRequest=serverRequests.find(request=>request.options.method==='POST');
+assert(saveRequest,'saving keys must POST to the key API');
+assert.deepEqual(JSON.parse(saveRequest.options.body),{keys:['AIza-manual'],mistral_keys:['mistral-manual']},'POST body must include both normalized key arrays');
+assert.equal(keyElements['#keyBadge'].textContent,'🔑 1 Gemini · 1 Mistral','badge must report provider-specific counts');
 console.log('PASS xaydungphuluc smoke: PPCT 7-column form, independent table ingest, no admin-header leak, density ranges and auto-hiding progress UI are present.');
+}
+run().catch(error=>{console.error(error);process.exitCode=1});
