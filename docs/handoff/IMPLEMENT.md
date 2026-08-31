@@ -1,6 +1,11 @@
-# IMPLEMENT: Hai giai đoạn PPCT → Phụ lục
+# IMPLEMENT: Bảo mật key, nạp key tức thì và tiến trình PPCT
 
 ## Đã triển khai
+
+- Loại bỏ hoàn toàn cơ chế đọc/ghi API key từ `localStorage` và không dùng `sessionStorage`. Gemini/Mistral key chỉ tồn tại trong RAM (`apiKeys`, `mistralKeys`) sau khi đồng bộ với `api/user_gemini_keys.php`; lưu từ modal chỉ POST lên máy chủ rồi cập nhật RAM khi thành công.
+- Khi khởi động trang, ứng dụng dọn đúng các key API cũ (bao gồm biến thể `khbd_user_*_keys_*`) nhưng giữ nguyên nhận diện tài khoản, giao diện và tuỳ chọn khác. Badge key được cập nhật từ kết quả nạp máy chủ.
+- Thêm `syncUserKeysPromise` cho eager load ngay lúc vào trang và `ensureKeysLoaded()` dùng chung promise đó. Luồng nhận diện PPCT luôn chờ key load hoàn tất trước khi gửi ngữ cảnh tới Gemini/Mistral, không tạo GET trùng lặp.
+- Gắn tiến trình chi tiết, chỉ cho tải PPCT: 15% đọc tệp, 40% gửi ngữ cảnh, 75% AI phân tích, 90% dựng bảng 8 cột, 100% hoàn tất và tự ẩn sau 1,5 giây. Nhánh parser dự phòng và lỗi đọc tệp cũng luôn đóng tiến trình; luồng SGK không giả mạo tiến trình nhận diện PPCT.
 
 - Tách rõ hai giai đoạn: lúc nạp PPCT, ứng dụng chỉ đọc văn bản và gọi recognizer trả JSON `{ppct:[{lesson,periods,tietCT,week,devices,location,isHeader}]}`; không gọi prompt sinh YCCĐ, NLS hay AI ở thời điểm tải tệp. Bảng Mục 3 được làm mới ngay sau khi hoàn tất nhận diện.
 - Recognizer dùng Gemini hiện có trước, rồi tự chuyển sang Mistral nếu Gemini không phản hồi. Nếu không có key, API lỗi hoặc JSON không có dòng PPCT hợp lệ, ứng dụng giữ parser DOCX/PDF/XLSX hiện có, hiển thị cảnh báo cụ thể và vẫn cho giáo viên sửa/tick PPCT bình thường.
@@ -23,6 +28,6 @@ Không sửa `docs/handoff/PLAN.md`, `docs/handoff/VERIFY.md` hoặc `docs/hando
 
 ## Kiểm thử
 
-- `node tests/xaydungphuluc-smoke.js` — PASS (bao gồm recognizer Giai đoạn 1, gọi Gemini, fallback parser, tách prompt nhận diện khỏi prompt sinh phụ lục, 8 cột table view và metadata nguồn/gộp header).
+- `node tests/xaydungphuluc-smoke.js` — PASS (bao gồm recognizer Giai đoạn 1, fallback parser, không persist key, dọn key legacy có chọn lọc, eager-load/await dùng chung promise, các mốc tiến trình PPCT, 8 cột table view và metadata nguồn/gộp header).
 - `node tests/xaydungphuluc-integration-smoke.js` — PASS.
 - `git diff --check` — PASS.

@@ -1,63 +1,73 @@
-# PLAN: Phân Tách 2 Giai Đoạn Rõ Ràng: (1) AI Đọc File PDF/DOCX Đẩy Bảng PPCT Lên Màn Hình Để Tick Chọn 12 Tiết AI $\rightarrow$ (2) Bấm Sinh Mới Bù Đắp YCCĐ & Tích Hợp NLS/AI Xuất Word 2 Màu
+# PLAN: Bảo Mật Tuyệt Đối API Key (Không Lưu LocalStorage), Tải Key Ngay Khi Vào Web Và Hiển Thị Thanh Tiến Trình Thời Gian Thực Khi Trích Xuất PPCT
 
-## Hiện trạng & Phân Định Rạch Ròi 2 Giai Đoạn Nghiệp Vụ
+## Hiện trạng & 3 Yêu Cầu Thiết Kế Cốt Lõi
 
-### Giai Đoạn 1: Nạp File $\rightarrow$ AI Nhận Diện Bảng PPCT Gốc $\rightarrow$ Đẩy Lên Màn Hình Để Tick Chọn 12 Tiết AI
-- **Hành động của giáo viên**: Tải file PPCT (PDF, DOCX, XLSX) lên ở Mục 2.
-- **Hành động của AI & Hệ thống**:
-  1. AI (Gemini/Mistral) đọc toàn bộ nội dung file PDF/DOCX được gửi lên.
-  2. AI trích xuất **chính xác và đầy đủ toàn bộ bảng phân phối chương trình theo đúng file gốc** (Tên bài học, Số tiết, Tiết CT, Tuần, Thiết bị dạy học, Địa điểm dạy học).
-  3. Đẩy ngay bảng PPCT này ra màn hình Mục 3 (dạng Table View 8 cột).
-  4. Giáo viên nhìn thấy toàn bộ bảng PPCT từ file của mình; có thể chỉnh sửa số tiết trực tiếp và **tick chọn 12 tiết tích hợp Khung năng lực AI (QĐ 2422)** (kèm bộ đếm `🎯 Đã chọn: X/12 tiết AI` và nút `✨ Gợi ý 12 tiết chuẩn`).
+### 1. Bảo Mật API Key: Không Lưu Trong LocalStorage
+- **Vấn đề**: Việc lưu key vào `localStorage` có nguy cơ bị lộ khi dùng chung máy tính hoặc qua kiểm tra DevTools.
+- **Thiết kế mới**:
+  * **Tuyệt đối không lưu API Key vào `localStorage` hay `sessionStorage`**.
+  * Toàn bộ API Key (Gemini & Mistral) chỉ được lưu trữ an toàn trong CSDL máy chủ thông qua [api/user_gemini_keys.php](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/api/user_gemini_keys.php) của tài khoản đăng nhập.
+  * Trong ứng dụng, key chỉ tồn tại trong bộ nhớ RAM (`apiKeys`, `mistralKeys`) trong suốt phiên làm việc hiện tại.
+  * Tự động dọn dẹp sạch sẽ mọi key cũ còn vướng trong `localStorage` khi nạp trang.
 
 ---
 
-### Giai Đoạn 2: Bấm "⚡ Sinh Trọn Bộ Phụ Lục (1, 2, 3)" $\rightarrow$ Lúc Này Mới Bù Đắp & Tích Hợp
-- **Hành động của giáo viên**: Sau khi đã tick chọn xong các tiết AI, bấm nút **⚡ Sinh trọn bộ Phụ lục**.
-- **Hành động của AI & Hệ thống**:
-  1. **Tích hợp Năng Lực Số (NLS) & Trí Tuệ Nhân Tạo (AI)**:
-     - Tích hợp NLS (CV 3456) tự động theo tỷ lệ (%) và mật độ cấu hình.
-     - Tích hợp AI (QĐ 2422) **chính xác vào đúng các tiết mà giáo viên đã tick chọn ở Giai đoạn 1**.
-  2. **Bù đắp & Hoàn thiện Phụ lục 1 (Tổ chuyên môn)**:
-     - Lấy danh sách Bài học & Số tiết từ bảng PPCT $\rightarrow$ AI tự động **viết và bù đắp đầy đủ cột `Yêu cầu cần đạt` (outcomes) chuẩn Chương trình GDPT 2018**.
-     - Tự động hoàn thiện Mục I (Thiết bị tối thiểu TT 38/2021, Phòng bộ môn TT 14/2020), Kiểm tra đánh giá định kỳ (GK1 Tuần 9, CK1 Tuần 18, GK2 Tuần 27, CK2 Tuần 35) và Mục III Nội dung khác.
-  3. **Hoàn thiện Phụ lục 2 (Hoạt động giáo dục)**:
-     - Tự sinh 4–6 hoạt động STEM/STEAM, CLB, trải nghiệm có tích hợp NLS và AI.
-  4. **Hoàn thiện Phụ lục 3 (Giáo viên)**:
-     - Giữ nguyên vẹn 100% các cột bảng tiến độ PPCT gốc của giáo viên + nối thêm đúng 01 cột cuối `Mã NLS & AI (CV 3456 & QĐ 2422)`.
-  5. **Xuất Word (.docx) & Xem Trước 2 Màu Chuẩn Mực**:
-     - **Mã NLS Màu Xanh (`0070C0`)** và **Mã NLAI Màu Tím (`7030A0`)**.
-     - Cấu trúc tài liệu đầy đủ 6 phần chuẩn theo file mẫu [Phụ lục 1 - Lớp 6 - Toán.docx](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/GIAO%20AN/XAYDUNGPHULUC/Ph%E1%BB%A5%20l%E1%BB%A5c%201%20-%20L%E1%BB%9Bp%206%20-%20To%C3%A1n.docx).
+### 2. Nạp Key Tức Thì Ngay Khi Vào Web (Instant Eager Load)
+- Khi mở trang web:
+  * Ứng dụng ngay lập tức gửi yêu cầu `fetch('api/user_gemini_keys.php', { method: 'GET', credentials: 'include' })` để lấy danh sách key từ CSDL máy chủ.
+  * Cập nhật badge ngay lập tức: `🔑 X Gemini · Y Mistral`.
+  * Trong `parseFiles()`: Luôn `await` tiến trình nạp key này để bảo đảm 100% có key trong RAM trước khi gọi AI nhận diện file PPCT, không bao giờ bị báo lỗi thiếu key.
+
+---
+
+### 3. Thanh Tiến Trình Thời Gian Thực (% Real-time Progress Bar) Khi Trích Xuất PPCT
+- Khi giáo viên tải file PPCT lên (hoặc bấm nhận diện AI):
+  * Bật thanh tiến trình thời gian thực `#progressContainer` với thông điệp rõ ràng theo từng chặng:
+    * `15%`: *Đang đọc tệp dữ liệu PPCT...*
+    * `40%`: *Đang gửi ngữ cảnh lên AI (Gemini/Mistral)...*
+    * `75%`: *AI đang phân tích và trích xuất bảng PPCT...*
+    * `90%`: *Đang khởi tạo Bảng PPCT 8 cột...*
+    * `100%`: *✓ Đã nhận diện hoàn tất bảng PPCT!* (tự động ẩn sau 1.5s).
+  * Giúp giáo viên quan sát rõ ràng từng giây hoạt động của hệ thống, chuyên nghiệp và mượt mà.
+
+---
+
+### 4. Quy Trình 2 Giai Đoạn Vẫn Duy Trì Hoàn Hảo
+- **Giai đoạn 1**: Nạp file $\rightarrow$ Thanh tiến trình chạy $\rightarrow$ AI đọc và đẩy bảng PPCT gốc lên Mục 3 (Table View 8 cột) để giáo viên tick chọn 12 tiết AI.
+- **Giai đoạn 2**: Bấm Sinh Phụ lục $\rightarrow$ Thanh tiến trình chạy $\rightarrow$ AI bù đắp YCCĐ cho Phụ lục 1 và tích hợp mã NLS Xanh (`0070C0`) / AI Tím (`7030A0`) $\rightarrow$ Xuất Word (.docx) chuẩn mực 6 phần.
 
 ## Phạm vi Kỹ Thuật trong `xaydungphuluc.html`
-1. **Hàm Gọi AI Nhận Diện PPCT Khi Tải File (`recognizePpctWithAi(text)`)**:
-   - Khi người dùng tải file PPCT PDF/DOCX: Đọc text thô và gọi AI trích xuất trung thực bảng PPCT nguồn sang cấu trúc JSON `{ ppct: [{ lesson, periods, tietCT, week, devices, location, isHeader }] }`.
-   - Nạp vào hệ thống và hiển thị ngay ra bảng Mục 3 (`updateAiPicker()`).
-2. **Giao Diện Bảng Biểu Phụ Lục 3 Mục 3 (Table View 8 Cột)**:
-   - Cột 1..7: `STT | Bài học | Số tiết | Tiết CT | Tuần | Thiết bị | Địa điểm`.
-   - Cột 8: Checkbox chọn từng tiết (`Tiết 1`, `Tiết 2`...) để giáo viên tick chọn 12 tiết AI.
-   - Sửa số tiết trực tiếp trên ô input $\rightarrow$ tự động mở rộng/thu gọn checkbox tiết con.
-3. **Quá Trình Sinh Phụ Lục Khi Bấm Nút (Giai Đoạn 2)**:
-   - Phụ lục 1: AI tự động sinh cột `outcomes` chuẩn GDPT 2018.
-   - Phụ lục 3: Nối cột `integration` (chỉ xuất mã AI cho đúng các tiết đã tick).
-   - Xuất Word 2 màu NLS Xanh `0070C0` / NLAI Tím `7030A0`.
+1. **Xóa Bỏ Hoàn Toàn `localStorage` Cho API Key**:
+   - Bỏ các hàm `cacheUserKeys()` và `readStoredKeyList()`.
+   - Khi lưu key ở Modal: Gửi `POST api/user_gemini_keys.php` trực tiếp lên CSDL, chỉ cập nhật biến trong RAM.
+   - Thêm hàm dọn dẹp các key `khbd_*`, `gemini_*`, `xdpl_*` trong `localStorage`.
+2. **Khởi Tạo Đồng Bộ Key Ngay Lập Tức**:
+   - `syncUserKeysPromise = syncUserKeysFromServer()` được kích hoạt ngay đầu trang.
+   - Hàm `ensureKeysLoaded()` trả về `await syncUserKeysPromise` trước khi gọi AI.
+3. **Tích Hợp `setProgress` Thời Gian Thực Vào `parseFiles()`**:
+   - Hiển thị tiến trình từ 0% đến 100% trong quá trình đọc file và AI nhận diện PPCT.
+4. **Giữ Nguyên Giao Diện Table View 8 Cột & Xuất Word 2 Màu**:
+   - Phụ lục 1 tự sinh YCCĐ; Phụ lục 3 giữ nguyên bảng nguồn; Xuất DOCX NLS Xanh `0070C0` / NLAI Tím `7030A0`.
 
 ## File tác động
-- `xaydungphuluc.html`
-- `tests/xaydungphuluc-smoke.js`
-- `docs/handoff/PLAN.md`
-- `docs/handoff/.lock`
-- `docs/handoff/IMPLEMENT.md`
-- `docs/handoff/VERIFY.md`
+- `xaydungphuluc.html` [XÓA BỎ LOCALSTORAGE KEY, ĐỒNG BỘ CSDL TỨC THÌ, THANH TIẾN TRÌNH THỜI GIAN THỰC KHI TRÍCH XUẤT PPCT]
+- `tests/xaydungphuluc-smoke.js` [BỔ SUNG TEST CHO BẢO MẬT KHÔNG LƯU LOCALSTORAGE VÀ TIẾN TRÌNH TRÍCH XUẤT PPCT]
+- `docs/handoff/PLAN.md` [GHI ĐÈ]
+- `docs/handoff/.lock` [GHI MỚI / NỘI DUNG: LOCK]
+- `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi triển khai]
+- `docs/handoff/VERIFY.md` [Tester cập nhật kết quả nghiệm thu]
 
 ## Các bước thực hiện
-1. **Bước 1**: Cập nhật `parseFiles` trong `xaydungphuluc.html` để khi tải file PDF/DOCX sẽ gọi AI nhận diện toàn bộ bảng PPCT gốc và render ngay ra bảng 8 cột Mục 3.
-2. **Bước 2**: Giữ nguyên tương tác chỉnh sửa số tiết và tick chọn 12 tiết AI tại Mục 3.
-3. **Bước 3**: Khi bấm Sinh trọn bộ Phụ lục $\rightarrow$ AI tiến hành bù đắp YCCĐ cho Phụ lục 1 và tích hợp mã NLS Xanh / AI Tím.
-4. **Bước 4**: Cập nhật và chạy kiểm thử tự động `node tests/xaydungphuluc-smoke.js` xác nhận PASS 100%.
+1. **Bước 1: Tái Cấu Trúc Quản Lý Key Hoàn Toàn Bằng CSDL Máy Chủ**:
+   - Xóa bỏ việc ghi key vào `localStorage`. Key chỉ lưu CSDL và lưu tạm trong RAM.
+   - Nạp key tức thì ngay khi mở trang web.
+2. **Bước 2: Gắn Thanh Tiến Trình Thời Gian Thực Vào `parseFiles()`**:
+   - Hiển thị tiến độ % và thông báo động khi đọc file và gọi AI nhận diện.
+3. **Bước 3: Cập Nhật và Chạy Kiểm Thử Tự Động**:
+   - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`, xác nhận PASS 100%.
 
 ## Tiêu chí nghiệm thu
-1. Giai đoạn 1: File PDF/DOCX tải lên được AI đọc và đẩy toàn bộ bảng PPCT gốc lên màn hình Mục 3 (Table View 8 cột) để giáo viên tick chọn 12 tiết AI.
-2. Giai đoạn 2: Khi bấm Sinh Phụ lục, AI mới tiến hành bù đắp YCCĐ cho Phụ lục 1 và tích hợp mã NLS/AI vào đúng các tiết đã chọn.
-3. Xuất Word (.docx) phân biệt rõ ràng 2 màu: NLS Xanh (`0070C0`) và NLAI Tím (`7030A0`).
+1. API Key tuyệt đối không còn bị lưu trong `localStorage` hay `sessionStorage`; chỉ lưu an toàn trên CSDL máy chủ và RAM phiên làm việc.
+2. Vừa vào trang web là key được tự động nạp ngay từ CSDL (badge hiển thị đúng số lượng key tức thì).
+3. Khi tải file PPCT lên: Thanh tiến trình thời gian thực hiển thị % và trạng thái rõ ràng từ 0% đến 100%.
 4. Toàn bộ smoke test tự động đều PASS 100%.
