@@ -8,7 +8,7 @@ assert(/^<!doctype html>/i.test(html),'not a standalone HTML document');
 ['tailwindcss','mammoth','pdf.js','xlsx.full.min.js','docx@8.5.0','JSZip','FileSaver'].forEach(x=>has(x));
 ['Lớp 6','Lớp 7','Lớp 8','Lớp 9','Toán học','Ngữ văn','Khoa học tự nhiên','Giáo dục địa phương'].forEach(has);
 ['js/security-guard.js','access-control.js','LEGACY_API_KEY_STORAGE_KEYS','khbd_user_gemini_keys_default','khbd_gemini_api_keys','gemini_api_keys','xdpl_gemini_api_keys','global_gemini_keys','clearLegacyApiKeyStorage','ensureKeysLoaded','syncUserKeysPromise','saveKeys','checkKeys','429','403','mistralKeys','mistralKeyInput','mistral_keys','syncUserKeysFromServer','api/user_gemini_keys.php','credentials:\'include\'','cache:\'no-store\''].forEach(has);
-assert(!/localStorage\.setItem\([^\n]*(?:gemini|mistral|api_keys)/i.test(html),'API keys must never be persisted in localStorage');
+assert(!/localStorage\.setItem\([^\n]*(?:gemini|mistral|api_keys)/i.test(html.replace(/localStorage\.setItem\('khbd_gemini_model',[\s\S]*?\);/g,'')),'API keys must never be persisted in localStorage');
 assert(!/sessionStorage\.(?:setItem|getItem)/i.test(html),'API keys must never use sessionStorage');
 assert(!html.includes('readStoredKeyList')&&!html.includes('cacheUserKeys'),'legacy API-key cache helpers must be removed');
 ['Đang đọc tệp dữ liệu PPCT…','Đang gửi ngữ cảnh lên AI (Gemini/Mistral)…','AI đang phân tích và trích xuất bảng PPCT…','Đang khởi tạo Bảng PPCT 8 cột…','Đã nhận diện hoàn tất bảng PPCT!','await ensureKeysLoaded()'].forEach(has);
@@ -41,7 +41,7 @@ const sandbox={
   document:{querySelector(){return null},querySelectorAll(){return []},addEventListener(){},createElement(){return {className:'',textContent:'',append(){},remove(){}}}},
   localStorage:{getItem(){return null},setItem(){}},
   console,
-  JSON,Math,Set,Array,String,Number,Boolean,RegExp,Date,Error,Promise,Map,
+  JSON,Math,Set,Array,String,Number,Boolean,RegExp,Date,Error,Promise,Map,AbortController,setTimeout,clearTimeout,
   DOMParser:class{parseFromString(){return {querySelectorAll(){return []}}}},
 };
 vm.createContext(sandbox);
@@ -50,6 +50,7 @@ catch(e){assert.fail('inline JavaScript failed to parse: '+e.message)}
 assert.equal(typeof sandbox.extractPpctRows,'function','extractPpctRows must be defined');
 assert.equal(typeof sandbox.recognizePpctWithAi,'function','stage-one PPCT recognizer must be defined');
 assert.equal(typeof sandbox.callAiJson,'function','AI provider fallback must be defined');
+['selectModel','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-3-flash-preview','getSelectedModel','onModelChange','khbd_gemini_model','thinkingConfig:{thinkingBudget:0}','api/khbd_gemini.php','GEMINI_FALLBACK_MODEL','fetchWithGeminiTimeout','Không thể trích xuất dòng PPCT nào từ tệp','Tệp không có văn bản hoặc là PDF scan cần OCR.'].forEach(has);
 assert(html.includes('Giai đoạn 1 chỉ nhận diện PPCT'),'upload flow must document stage separation');
 assert(html.includes('AI chưa khả dụng')&&html.includes('đang dùng bảng PPCT đọc trực tiếp từ tệp'),'upload must provide a visible parser fallback');
 assert(html.includes('await recognizePpctWithAi(text)'),'PPCT upload must invoke recognition after text extraction');
@@ -197,6 +198,30 @@ const recognizedByApi=await sandbox.recognizePpctWithAi('Bài học\\tSố tiế
 assert.equal(recognizedByApi[0].lesson,'Bài AI nhận diện','recognizer must use the provider JSON PPCT result');
 assert(recognitionRequest.url.includes('generativelanguage.googleapis.com'),'recognizer must reuse the existing Gemini provider');
 assert(JSON.parse(recognitionRequest.options.body).contents[0].parts[0].text.includes('Không suy diễn Yêu cầu cần đạt'),'stage one provider prompt must forbid early appendix generation');
+
+const modelStorage=new Map([['khbd_gemini_model','gemini-3.6-flash']]);
+const modelSelect={value:'',options:[...['gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-3-flash-preview'].map(value=>({value}))]};
+sandbox.localStorage={getItem:key=>modelStorage.get(key)||null,setItem:(key,value)=>modelStorage.set(key,value),removeItem:key=>modelStorage.delete(key),key:index=>Array.from(modelStorage.keys())[index]||null,get length(){return modelStorage.size}};
+sandbox.document.querySelector=selector=>selector==='#selectModel'?modelSelect:selector==='#log'?{textContent:'',scrollTop:0}:null;
+sandbox.document.body={append(){}};
+assert.equal(sandbox.getSelectedModel(),'gemini-3.6-flash','saved model selection must be restored');
+sandbox.onModelChange('gemini-3.5-flash');
+assert.equal(modelStorage.get('khbd_gemini_model'),'gemini-3.5-flash','only the selected model id may be persisted');
+let geminiCalls=[];
+sandbox.fetch=async(url,options)=>{geminiCalls.push({url,options});return {ok:true,status:200,json:async()=>({candidates:[{content:{parts:[{text:'{"ok":true}'}]}}]})}};
+vm.runInContext("apiKeys=['AIza-direct'];mistralKeys=[];aborter=null",sandbox);
+await sandbox.callGemini('payload test');
+assert(geminiCalls[0].url.includes('/gemini-3.5-flash:generateContent'),'direct request must use the selected model');
+assert.equal(JSON.parse(geminiCalls[0].options.body).generationConfig.thinkingConfig.thinkingBudget,0,'Gemini request must disable thinking budget');
+geminiCalls=[];
+sandbox.fetch=async(url,options)=>{geminiCalls.push({url,options});if(url.includes('generativelanguage.googleapis.com'))throw new TypeError('network/CORS');return {ok:true,status:200,json:async()=>({ok:true,status:200,body:{candidates:[{content:{parts:[{text:'{"proxy":true}'}]}}]}})}};
+assert.deepEqual(await sandbox.callGemini('proxy test'),{proxy:true},'network failure must retry through proxy');
+assert(geminiCalls.some(call=>call.url==='api/khbd_gemini.php'),'proxy fallback must call khbd proxy');
+geminiCalls=[];modelStorage.set('khbd_gemini_model','gemini-3.7-flash');
+sandbox.fetch=async(url,options)=>{geminiCalls.push({url,options});if(url.includes('gemini-3.7-flash'))return {ok:false,status:503,json:async()=>({error:{message:'high demand'}})};return {ok:true,status:200,json:async()=>({candidates:[{content:{parts:[{text:'{"fallback":true}'}]}}]})}};
+assert.deepEqual(await sandbox.callGemini('fallback test'),{fallback:true},'3.7 transient failures must retry with 2.5');
+assert(geminiCalls.some(call=>call.url.includes('gemini-2.5-flash')),'fallback must use Gemini 2.5 Flash without changing saved model');
+assert.equal(modelStorage.get('khbd_gemini_model'),'gemini-3.7-flash','temporary fallback must not overwrite selected model');
 
 const keyElements={
   '#keyBadge':{textContent:''},'#keyInput':{value:'AIza-manual\nAIza-manual'},'#mistralKeyInput':{value:'mistral-manual\nmistral-manual'},

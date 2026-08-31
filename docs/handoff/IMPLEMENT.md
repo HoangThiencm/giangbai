@@ -31,3 +31,17 @@ Không sửa `docs/handoff/PLAN.md`, `docs/handoff/VERIFY.md` hoặc `docs/hando
 - `node tests/xaydungphuluc-smoke.js` — PASS (bao gồm recognizer Giai đoạn 1, fallback parser, không persist key, dọn key legacy có chọn lọc, eager-load/await dùng chung promise, các mốc tiến trình PPCT, 8 cột table view và metadata nguồn/gộp header).
 - `node tests/xaydungphuluc-integration-smoke.js` — PASS.
 - `git diff --check` — PASS.
+
+## Cập nhật triển khai: chọn model Gemini và nhận diện PPCT có cảnh báo
+
+- Thêm bộ chọn `#selectModel` ở header với Gemini 3.7 Flash làm mặc định và đầy đủ các model trong kế hoạch. Chỉ ID model `khbd_gemini_model` được lưu trong `localStorage`; API key vẫn chỉ được đồng bộ với máy chủ và giữ trong RAM.
+- `callGemini()` dùng model được chọn, gửi `thinkingConfig.thinkingBudget: 0`, có timeout, xoay vòng key khi gặp 429/403, rồi tự thử proxy `api/khbd_gemini.php` khi direct request lỗi mạng/CORS. Phản hồi proxy bọc `{ok,status,body}` được giải mã trước khi đọc Gemini body.
+- Khi Gemini 3.7 Flash gặp lỗi tạm thời 5xx/quá tải/không khả dụng/timeout, hoặc 429 ở key cuối, request tự chạy lại bằng Gemini 2.5 Flash. Đây chỉ là fallback cho request đó, không đổi model đã lưu; hủy tác vụ không kích hoạt fallback.
+- Trước khi nhận diện PPCT, ứng dụng nạp key và chặn rõ ràng nếu tổng Gemini/Mistral key bằng 0: log, toast, `#fileList`, modal API key và trạng thái tiến trình lỗi. Tệp rỗng/PDF scan, lỗi AI (trước parser dự phòng), và trường hợp cuối cùng không có dòng PPCT đều có log/toast/file list/status rõ ràng. Thành công hiển thị số dòng đã nhận diện.
+- Mở rộng smoke test cho lưu/khôi phục model, payload thinking budget, direct request, proxy fallback và fallback 3.7 → 2.5 mà không đổi lựa chọn lưu.
+
+## Kiểm thử cập nhật
+
+- `node tests/xaydungphuluc-smoke.js` — PASS.
+- Kiểm tra cú pháp JavaScript inline bằng Node VM — PASS.
+- `git diff --check` — PASS.
