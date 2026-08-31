@@ -158,6 +158,7 @@ function obfuscatorOptions(rel) {
         stringArrayThreshold: 1,
         transformObjectKeys: true,
         unicodeEscapeSequence: false,
+        seed: 12345, // Cố định seed giúp mã không bị đổi ngẫu nhiên khi file không thay đổi
         target: 'browser'
     };
 }
