@@ -67,6 +67,8 @@ assert(typeof sandbox.hideProgress==='function','hideProgress must be defined');
 assert.equal(typeof sandbox.extractDocxTables,'function');
 assert.equal(typeof sandbox.ingestSourceTables,'function');
 ['aiLessonPickerCard','aiLessonPicker','aiSelectionCount','toggleAiLesson','suggestAiLessons','AI_SELECTION_LIMIT','compactSgkText','isSgkFile','looksLikeSgkText','selectedAiLessons','sgkCompactContext'].forEach(has);
+['ppctFiles','sgkFiles',"parseFiles(this.files,'ppct')","parseFiles(this.files,'sgk')",'Nạp cấu trúc PPCT chuẩn theo Môn &amp; Lớp','loadDefaultPpctStructure','clearAiLessons','Bỏ chọn tất cả','Đã chọn: 0/12 tiết AI'].forEach(has);
+assert(!html.includes('id="aiLessonPickerCard" class="card p-5 hidden"'),'AI lesson picker must be visible on initial load');
 ['sourcePpctRowsForAppendixOne','appendixOneTable','appendixOneFallbackOutcome','outcomes (Yêu cầu cần đạt) chuẩn Chương trình GDPT 2018'].forEach(has);
 has('slice(0,AI_SELECTION_LIMIT)','AI suggestion must cap the selection at 12 lessons');
 ['NLS: mã - mô tả','AI TUYỆT ĐỐI chỉ được xuất','[AI: mã - mô tả]','0070C0','7030A0','nls-code','ai-code','integrationHtml','integrationCell'].forEach(has);
@@ -77,6 +79,7 @@ assert(!compact.includes('Nội dung giới thiệu dài'),'SGK compact index mu
 assert(vm.runInContext("looksLikeSgkText('Bài 1. Tập hợp. Mục tiêu cần đạt. Hoạt động khám phá.',[])",sandbox),'content signature must recognize SGK even when its filename is generic');
 assert.equal(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]',false,0,{ai:{enabled:true},lop:'6'})",sandbox),'[NLS: 1.1.6a - Khai thác học liệu.]','unselected lesson must not retain AI integration');
 assert(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.]',true,0,{ai:{enabled:true},lop:'6'})",sandbox).includes('[AI:'),'selected lesson must receive an AI integration when AI is enabled');
+assert(vm.runInContext("integrationHtml('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]')",sandbox).includes('nls-code')&&vm.runInContext("integrationHtml('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]')",sandbox).includes('ai-code'),'preview must distinguish NLS and AI integration colors');
 
 const zlib=require('zlib');
 function zipRead(buf,entryName){

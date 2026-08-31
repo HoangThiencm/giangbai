@@ -1,50 +1,80 @@
-# PLAN: Hoàn Thiện Trọn Vẹn Hệ Thống Xây Dựng Phụ Lục 1, 2, 3 (CV 5512 - THCS) Với Cơ Chế Liên Thông Tự Động Sinh YCCĐ Chuẩn GDPT 2018 Khi Nạp Phụ Lục 3
+# PLAN: Thiết Kế Trực Quan Vùng Nhận Diện PPCT, Nút Import SGK PDF Riêng Biệt, Bảng Tick Chọn 12 Tiết AI Luôn Hiển Thị & Định Dạng Màu Sắc NLS Xanh - NLAI Tím
 
-## Hiện trạng & Giải Pháp Toàn Diện
-1. **Liên Thông Phụ Lục 1 và Phụ Lục 3 (Tự Động Sinh YCCĐ Chuẩn)**:
-   - Khi giáo viên chỉ tải lên **01 file Phụ lục 3** (chỉ có `Bài học`, `Số tiết`, `Tiết CT`, `Tuần`, `Thiết bị`, `Địa điểm`):
-     + **Xuất Phụ lục 3**: Giữ nguyên vẹn 100% các cột nguồn + Bổ sung cột `Mã NLS & AI (CV 3456 & QĐ 2422)`.
-     + **Xuất Phụ lục 1**: Lấy danh sách bài học và số tiết từ Phụ lục 3 $\rightarrow$ **AI tự động sinh cột `Yêu cầu cần đạt` chuẩn Chương trình GDPT 2018 (TT 32/2018/TT-BGDĐT)** cho từng bài học $\rightarrow$ Xuất thành bảng Phụ lục 1 chuẩn 5 cột:
-       $$\text{STT} \;\vert\; \text{Bài học} \;\vert\; \text{Số tiết} \;\vert\; \mathbf{\text{Yêu cầu cần đạt (AI tự sinh chuẩn)}} \;\vert\; \mathbf{\text{Mã NLS \& AI}}$$
-2. **Khớp 100% Khung Hình Thức File Mẫu ([Phụ lục 1 - Lớp 6 - Toán.docx](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/GIAO%20AN/XAYDUNGPHULUC/Ph%E1%BB%A5%20l%E1%BB%A5c%201%20-%20L%E1%BB%9Bp%206%20-%20To%C3%A1n.docx))**:
-   - Tiêu ngữ 2 cột hành chính (UBND Xã/Phường, Trường, Tổ / Quốc hiệu, Tiêu ngữ).
-   - Căn cứ Công văn 5512/BGDĐT-GDTrH.
-   - Phần I. Đặc điểm tình hình (I.1 Số lớp/HS, I.2 Đội ngũ GV, I.3 Bảng Thiết bị TT 38, I.4 Bảng Phòng TT 14).
-   - Phần II. Kế hoạch dạy học (II.1 Bảng PPCT + Cột NLS/AI, II.2 Bảng Chuyên đề, II.3 Bảng KTĐG định kỳ 4 đợt).
-   - Phần III. Các nội dung khác (Bồi dưỡng HSG, phụ đạo, sinh hoạt cụm).
-   - Bảng Chữ ký phê duyệt 2 bên chuẩn hành chính (Tổ trưởng & Hiệu trưởng / Giáo viên & Tổ trưởng).
-3. **Bộ Lọc Sư Phạm Tinh Gọn Cho Sách Giáo Khoa (Smart Pedagogical Indexing)**:
-   - Tự động trích xuất các đề mục trọng tâm SGK (`Tên bài` + `Mục tiêu cần đạt` + `Hoạt động khám phá / luyện tập / vận dụng`), giảm 95% token tiêu thụ để AI hiểu sâu ngữ cảnh từng bài mà siêu tiết kiệm Quota.
-4. **Bảng Tick Chọn Tiết AI Chủ Động (Tick 12 Tiết Trọng Tâm)**:
-   - Giáo viên có thể tick chọn chính xác 12 tiết trọng tâm trên bảng PPCT (kèm nút gợi ý 12 bài Hình học, Thống kê, Trải nghiệm); AI chỉ sinh mã AI cho các tiết đã tick.
-5. **Phân Biệt 2 Màu Sắc Khi Xuất Bản**:
-   - Mã Năng lực số (NLS): Chữ **Màu Xanh** (`0070C0`).
-   - Mã Năng lực AI (NLAI): Chữ **Màu Tím** (`7030A0`).
-6. **Thanh Tiến Trình Thời Gian Thực (% Floating Progress Bar)**:
-   - Khi đạt 100%: Dừng spinner, hiển thị tích xanh `✓`, thông báo hoàn tất và tự động ẩn mượt mà sau 1.5 giây; có nút đóng `✕`.
+## Hiện trạng
+1. **Vấn Đề Giao Diện Người Dùng (UI/UX)**:
+   - Thẻ chọn tiết AI (`#aiLessonPickerCard`) trước đây bị ẩn mặc định (`hidden`) và chỉ kích hoạt sau khi upload file có chứa PPCT. Do đó, người dùng mở trang không thấy nút nhận diện PPCT, không thấy nút tải riêng SGK PDF, và không thấy bảng tick chọn 12 tiết AI ở đâu.
+   - Khu vực tải file chỉ có 1 nút upload chung chung, không phân định rõ ràng giữa **Tệp Phân phối chương trình** và **Tệp Sách giáo khoa (PDF/DOCX)**.
+2. **Kỳ Vọng Của Giáo Viên**:
+   - Có nút **🔍 Nhận diện cấu trúc PPCT** (hoặc tự động nạp cấu trúc bài học ngay khi chọn Môn / Lớp hoặc tải file).
+   - Có nút riêng **📚 Tải tệp Sách Giáo Khoa (PDF/DOCX)** để nạp ngữ cảnh SGK tinh gọn.
+   - Bảng phân phối chương trình kèm **cột checkbox "Tích hợp AI" trên từng bài học** luôn hiển thị rõ ràng, kèm bộ đếm `Đã chọn: X/12 tiết` và nút `✨ Gợi ý 12 tiết chuẩn`.
+   - Xuất Word và Preview hiển thị rõ ràng 2 màu: **Mã NLS Màu Xanh (`0070C0`)** và **Mã NLAI Màu Tím (`7030A0`)**.
+   - Cơ chế liên thông tự sinh cột `Yêu cầu cần đạt` cho Phụ lục 1 khi người dùng nạp Phụ lục 3.
 
 ## Phạm vi
-1. **Cơ chế Liên thông Phụ lục 1 - Phụ lục 3**:
-   - Khi nguồn là Phụ lục 3: Sinh `outcomes` chuẩn GDPT 2018 cho Phụ lục 1; giữ nguyên cấu trúc tiến độ cho Phụ lục 3.
-2. **Khung Xuất Word (.docx) & Web Preview Đạt Chuẩn Tuyệt Đối**:
-   - Xuất đầy đủ 6 phần hành chính, định dạng 2 màu Xanh (`0070C0`) / Tím (`7030A0`), bảng Thiết bị, Phòng bộ môn, KTĐG, Chữ ký.
-3. **Bộ Kiểm thử Tự động ([tests/xaydungphuluc-smoke.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/tests/xaydungphuluc-smoke.js))**:
-   - Đảm bảo toàn bộ bài test kiểm tra liên thông dữ liệu, bóc tách bảng, 12 tiết AI, xuất Word 2 màu và cấu trúc 6 phần đều PASS 100%.
+1. **Thiết Kế Lại Khu Vực Nạp Dữ Liệu & Nhận Diện PPCT (Mục 2 Trên Giao Diện)**:
+   - Chia thành 2 ô nạp tài liệu riêng biệt, trực quan:
+     * **Ô 1**: `📄 Tải lên Phân phối chương trình (DOCX, XLSX, PDF)` $\rightarrow$ Nhận diện ngay toàn bộ cấu trúc bài học.
+     * **Ô 2**: `📚 Tải lên Sách Giáo Khoa (PDF, DOCX)` $\rightarrow$ Bóc tách ngữ cảnh SGK tinh gọn (giảm 95% token).
+   - Thêm nút: `🔍 Nạp cấu trúc PPCT chuẩn theo Môn & Lớp` (cho phép giáo viên xem và tick chọn 12 tiết AI ngay lập tức kể cả khi chưa có sẵn file để tải lên).
+2. **Bảng Tick Chọn Tiết AI Luôn Hiển Thị (Mục 3 Trên Giao Diện)**:
+   - Luôn hiển thị danh sách bài học của PPCT (nguồn tải lên hoặc mẫu chuẩn theo môn/lớp) với cột checkbox `Chọn AI (tối đa 12 tiết)`.
+   - Thanh công cụ trên đầu bảng:
+     * Bộ đếm nổi bật: `🎯 Đã chọn: X/12 tiết AI`.
+     * Nút `✨ Gợi ý 12 tiết chuẩn (Hình học, Thống kê, Trải nghiệm)`.
+     * Nút `✕ Bỏ chọn tất cả`.
+3. **Phân Biệt 2 Màu Sắc Khi Xuất Bản**:
+   - Web Preview và file Word `.docx` xuất bản:
+     * Mã NLS: Chữ **Màu Xanh** (`0070C0`).
+     * Mã NLAI: Chữ **Màu Tím** (`7030A0`).
+4. **Cơ Chế Liên Thông Phụ Lục 1 - Phụ Lục 3**:
+   - Nạp file Phụ lục 3 $\rightarrow$ AI tự động sinh `outcomes` chuẩn GDPT 2018 cho Phụ lục 1, và bảo toàn nguyên vẹn bảng tiến độ cho Phụ lục 3.
+5. **Cập Nhật Bộ Kiểm Thử Tự Động ([tests/xaydungphuluc-smoke.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/tests/xaydungphuluc-smoke.js))**:
+   - Kiểm tra sự hiện diện của nút nạp SGK riêng, nút nhận diện PPCT, bảng tick chọn AI luôn sẵn sàng, và xuất Word 2 màu.
 
 ## Ngoài phạm vi
-- Không can thiệp các file ngoài `xaydungphuluc.html` và file test liên quan.
+- Không can thiệp các trang khác ngoài `xaydungphuluc.html` và file test liên quan.
 
 ## File dự kiến tác động
-- `xaydungphuluc.html` [HOÀN THIỆN CƠ CHẾ LIÊN THÔNG TỰ SINH YCCĐ CHO PL1 KHI NẠP PL3, BỘ LỌC SGK, CHỌN 12 TIẾT AI, MÀU NLS XANH / AI TÍM, CHUẨN HÓA DOCX]
+- `xaydungphuluc.html` [THIẾT KẾ LẠI GIAO DIỆN NẠP PPCT/SGK RIÊNG BIỆT, NÚT NHẬN DIỆN PPCT, BẢNG TICK CHỌN 12 TIẾT AI LUÔN HIỂN THỊ, XUẤT WORD 2 MÀU]
 - `tests/xaydungphuluc-smoke.js` [CẬP NHẬT SMOKE TEST]
 - `docs/handoff/PLAN.md` [GHI ĐÈ]
 - `docs/handoff/.lock` [GHI MỚI / NỘI DUNG: LOCK]
 - `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi triển khai]
 - `docs/handoff/VERIFY.md` [Tester cập nhật kết quả nghiệm thu]
 
+## Các bước thực hiện
+1. **Bước 1: Nâng Cấp Giao Diện Nạp Dữ Liệu trong `xaydungphuluc.html`**:
+   - Bố trí 2 thẻ tải file song song: `📄 Tải PPCT` và `📚 Tải SGK PDF/Word`.
+   - Thêm nút `🔍 Nạp cấu trúc PPCT mẫu theo Môn & Lớp` để khởi tạo danh sách bài học ngay lập tức.
+2. **Bước 2: Mở Khóa Bảng Tick Chọn 12 Tiết AI Luôn Hoạt Động**:
+   - Loại bỏ class `hidden` khỏi vùng chọn AI, tự động nạp danh sách bài học mặc định của môn Toán 6 (hoặc môn đang chọn) khi vừa mở trang.
+   - Thêm checkbox trên từng dòng bài học, thanh đếm `X/12 tiết` và nút gợi ý 12 tiết chuẩn.
+3. **Bước 3: Tích Hợp Cơ Chế Lọc SGK & Siêu Prompt Gemini**:
+   - Gắn ngữ cảnh SGK tinh gọn vào prompt.
+   - AI chỉ sinh mã `[AI: ...]` vào đúng các bài học được tick chọn.
+4. **Bước 4: Xuất DOCX và Preview Phân Tách 2 Màu Xanh (`0070C0`) và Tím (`7030A0`)**:
+   - Tái lập đầy đủ 6 phần chuẩn theo `Phụ lục 1 - Lớp 6 - Toán.docx`.
+5. **Bước 5: Cập nhật và chạy kiểm thử tự động**:
+   - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`, xác nhận PASS 100%.
+
+## Rủi ro
+- **Rủi ro**: Giáo viên đổi môn học hoặc khối lớp sau khi đã chọn file/tick AI.
+  - *Giải pháp*: Tự động cập nhật lại danh sách bài học tương ứng với môn học/khối lớp mới và giữ trải nghiệm mượt mà.
+
+## Cách kiểm thử
+1. **Kiểm thử tự động qua Node.js**:
+   - Chạy `node tests/xaydungphuluc-smoke.js`:
+     + Xác nhận giao diện có nút tải PPCT, nút tải SGK riêng biệt, nút nhận diện PPCT.
+     + Xác nhận bảng tick chọn AI hiển thị ngay khi mở trang.
+     + Xác nhận xuất Word có mã màu `0070C0` (NLS) và `7030A0` (NLAI).
+2. **Kiểm thử thủ công trên trình duyệt**:
+   - Mở `xaydungphuluc.html` $\rightarrow$ Thấy ngay 2 ô nạp (PPCT và SGK), thấy ngay bảng danh sách bài học có checkbox tick chọn AI.
+   - Bấm `Gợi ý 12 tiết chuẩn` $\rightarrow$ Bộ đếm nhảy `12/12 tiết`.
+   - Bấm `⚡ Sinh trọn bộ Phụ lục` $\rightarrow$ Sinh đúng 12 bài có mã AI màu Tím, các bài còn lại có mã NLS màu Xanh.
+
 ## Tiêu chí nghiệm thu
-1. Khi người dùng nạp file Phụ lục 3, Phụ lục 1 tự động được sinh đầy đủ cột `Yêu cầu cần đạt` chuẩn CT GDPT 2018, và Phụ lục 3 giữ nguyên vẹn các cột tiến độ của người dùng.
-2. Cấu trúc hình thức tổng thể của file xuất ra khớp 100% với file mẫu `Phụ lục 1 - Lớp 6 - Toán.docx`.
-3. Giáo viên có thể tick chọn đích danh 12 tiết AI; AI chỉ sinh mã AI cho các tiết đã chọn.
-4. File Word xuất ra và Preview thể hiện rõ: NLS Màu Xanh (`0070C0`), NLAI Màu Tím (`7030A0`).
-5. Toàn bộ smoke test tự động đều PASS 100%.
+1. Giao diện có nút tải PPCT riêng, nút tải SGK PDF riêng và nút nhận diện PPCT từ môn/lớp.
+2. Bảng tick chọn 12 tiết AI luôn hiển thị sẵn sàng, trực quan, có bộ đếm và nút gợi ý 12 tiết chuẩn.
+3. File Word xuất ra và Preview phân biệt rõ: NLS Màu Xanh (`0070C0`), NLAI Màu Tím (`7030A0`).
+4. Toàn bộ smoke test tự động đều PASS 100%.
