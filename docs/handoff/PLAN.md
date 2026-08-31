@@ -1,117 +1,88 @@
-# PLAN: Đưa xaydungphuluc.html ra Thư mục Gốc (Đồng cấp index.html), Tự động Dùng Chung API Key từ soankhbd.html, và Bật Security Guard Chống Lộ Code
+# PLAN: Bảo Toàn Nguyên Vẹn 100% Cấu Trúc PPCT & Tuần Thực Hiện từ File Tải Lên (Chỉ Bổ Sung Cột Năng Lực Số / Khung AI), Chuẩn Hóa Theo File Mẫu Demo, Bật Progress Bar % và Nâng Cấp Mật Độ Mã
 
 ## Hiện trạng
-1. **Vị trí tệp**: `xaydungphuluc.html` hiện đang nằm trong thư mục con `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`. Người dùng muốn đưa ra ngoài thư mục gốc (đồng cấp với `index.html`, `soankhbd.html`, `admin.html`) để đường dẫn trực quan `https://hoangthiencm.id.vn/xaydungphuluc.html` và thuận tiện tích hợp.
-2. **Chia sẻ API Key**: Trong [js/khbd-gemini.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/js/khbd-gemini.js) của `soankhbd.html`, API keys được lưu trong `localStorage` theo cấu trúc:
-   - `khbd_user_gemini_keys_${userEmail}` (khóa chính theo tài khoản giáo viên đăng nhập)
-   - `khbd_user_gemini_keys_default`
-   - `khbd_gemini_api_keys`
-   - `gemini_api_keys`
-   - `global_gemini_keys`
-   Khi giáo viên đã nhập key trong `soankhbd.html`, `xaydungphuluc.html` cần tự động đọc các key này để giáo viên không phải nhập lại.
-3. **Bảo vệ mã nguồn (Chống F12 / DevTools)**: Trong ảnh chụp thực tế của người dùng, cửa sổ DevTools (F12) mở được và thấy toàn bộ mã HTML/JS vì trong `<head>` của `xaydungphuluc.html` chưa nhúng [js/security-guard.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/js/security-guard.js) và [access-control.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/access-control.js) như các trang khác (`soankhbd.html`, `index.html`, `admin.html`).
-4. **Phân quyền Admin & Backend**: Cần hoàn thiện cả `api/helpers.php`, `admin.html`, `access-control.js` để đường dẫn trang được đồng bộ chuẩn `xaydungphuluc.html`.
+1. **Mất cột "Tuần" và cấu trúc PPCT gốc khi tải file lên**:
+   - Khi giáo viên tải lên file PPCT (.docx, .xlsx, .pdf), file gốc đã có đầy đủ: `STT`, `Tuần thực hiện` (từ Tuần 1 đến Tuần 35), `Tên bài học`, `Số tiết`, `Yêu cầu cần đạt`.
+   - Trước đây, khi AI tạo nội dung thường tự động tóm tắt hoặc sinh lại danh sách bài mới, dẫn đến việc **bị mất cột Tuần thực hiện**, thiếu bài hoặc làm lệch tiến độ năm học của nhà trường.
+   - **Yêu cầu nghiêm ngặt của người dùng**: Khi người dùng tải file PPCT lên, hệ thống phải **giữ lại đủ 100%**, giữ nguyên cột **Tuần thực hiện (Tuần 1 $\rightarrow$ Tuần 35)**, STT, Tên bài, Số tiết; AI chỉ làm nhiệm vụ **bổ sung thêm phần Năng lực số (NLS) / Khung Trí tuệ nhân tạo (AI)** vào đúng từng bài học theo cấu hình.
+2. **Cấu trúc bảng chuẩn theo File Mẫu ([GIAO AN/XAYDUNGPHULUC/Phụ lục 1 - Lớp 6 - Toán.docx](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/GIAO%20AN/XAYDUNGPHULUC/Ph%E1%BB%A5%20l%E1%BB%A5c%201%20-%20L%E1%BB%9Bp%206%20-%20To%C3%A1n.docx))**:
+   - Bảng Phân phối chương trình phải có đầy đủ cột `Tuần` ở vị trí trang trọng:
+     + **Phụ lục 1**: `STT | Tuần | Bài học | Số tiết | Yêu cầu cần đạt | Mã NLS & AI (CV 3456 & QĐ 2422)`.
+     + **Phụ lục 3**: `STT | Tuần | Bài học | Số tiết | Thời điểm | Thiết bị dạy học | Địa điểm dạy học | Mã NLS & AI (CV 3456 & QĐ 2422)`.
+   - Các bảng phụ trợ đầy đủ: Bảng Thiết bị (TT 38/2021), Bảng Phòng bộ môn (TT 14/2020), Bảng Kiểm tra đánh giá định kỳ (GK1, CK1, GK2, CK2) và Bảng Chữ ký phê duyệt 2 bên.
+3. **Các cải tiến giao diện trước đó**:
+   - Xóa bỏ hoàn toàn khối "4. Phương pháp & kĩ thuật dạy học".
+   - Bổ sung thanh tiến trình thời gian thực nổi ở đáy màn hình (% 0% $\rightarrow$ 100%, spinner xoay, thanh gradient).
+   - Nâng cấp dropdown mật độ mã NLS & AI thành các khoảng dải linh hoạt: `1–2 mã/bài`, `2–3 mã/bài`, `3–4 mã/bài`.
 
 ## Phạm vi
-1. **Đưa tệp `xaydungphuluc.html` ra Thư mục Gốc**:
-   - Di chuyển / tạo `xaydungphuluc.html` trực tiếp tại thư mục gốc của dự án (`/xaydungphuluc.html`).
-   - Cập nhật liên kết Trang chủ trong header: `<a href="index.html" class="btn secondary">🏠 Trang chủ</a>`.
-   - Cập nhật tất cả các đường dẫn tương đối tài nguyên:
-     + `<script src="js/security-guard.js"></script>`
-     + `<script src="access-control.js"></script>`
-   - Dọn dẹp/chuyển đổi tệp cũ trong `GIAO AN/XAYDUNGPHULUC/` hoặc để file chuyển hướng về trang gốc.
-2. **Bảo mật Chống Xem Mã Nguồn / DevTools (Security Guard)**:
-   - Nhúng `<script src="js/security-guard.js"></script>` làm thẻ đầu tiên trong `<head>` của `xaydungphuluc.html`.
-   - Nhúng `<script src="access-control.js"></script>` để kiểm tra phân quyền giáo viên theo tài khoản đăng nhập.
-   - Khi chạy trên domain `hoangthiencm.id.vn`, `security-guard.js` sẽ tự động vô hiệu hóa F12, Ctrl+Shift+I, Ctrl+U, chuột phải và chặn Inspect Element.
-3. **Tự động Dùng Chung API Key từ `soankhbd.html`**:
-   - Hàm `loadKeys()` trong `xaydungphuluc.html` sẽ quét toàn bộ danh sách key lưu trữ theo tài khoản:
-     + `const email = String(localStorage.getItem('userEmail') || 'default').trim().toLowerCase();`
-     + `khbd_user_gemini_keys_${email}`
-     + `khbd_user_gemini_keys_default`
-     + `khbd_gemini_api_keys`
-     + `gemini_api_keys`
-     + `xdpl_gemini_api_keys`
-     + `global_gemini_keys`
-   - Nếu phát hiện danh sách API keys hợp lệ (dạng `AIza...`), tự động nạp vào bộ nhớ và hiển thị số lượng key sẵn sàng, tuyệt đối không bắt người dùng nhập lại.
-4. **Đồng bộ Hệ thống Portal & Phân quyền Quản trị Admin**:
-   - **`index.html`**:
-     + Cập nhật thẻ công cụ: `<a href="xaydungphuluc.html" target="_blank" rel="noopener noreferrer" data-tool="xaydungphuluc" class="tool-tile tool-tile--colored tool-tile--xaydungphuluc">`.
-     + Cập nhật `TOOL_PAGE_LINKS.xaydungphuluc = 'xaydungphuluc.html'`.
-   - **`admin.html`**:
-     + Cập nhật `hostingPages.xaydungphuluc = { title: 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', url: 'xaydungphuluc.html' }`.
-     + Đảm bảo `hostingPages` được merge an toàn: `hostingPages = Object.assign({}, hostingPages, data.pages || {});`.
-     + Đảm bảo `teacherFeatureGroups`, `USER_FEATURE_GROUPS`, `defaultTeacherPages`, `CLIENT_FEATURE_CHECKS`, `FEATURE_NAMES` đều có `xaydungphuluc`.
-   - **`api/helpers.php`**:
-     + Đăng ký `xaydungphuluc` với `url => 'xaydungphuluc.html'` trong `page_catalog()`.
-     + Đăng ký trong `teacher_workspace_page_ids()`, `teacher_default_workspace_extras()`, `teacher_feature_keys_for_pages()`.
-   - **`access-control.js`**:
-     + Đăng ký `pageKeys['xaydungphuluc.html'] = 'xaydungphuluc'`.
-     + Đăng ký `pageUrls['xaydungphuluc'] = 'xaydungphuluc.html'`.
-   - **`global_config.json`**:
-     + Bổ sung `"xaydungphuluc": true` vào `features`.
-5. **Cập nhật Bộ Kiểm thử Tự động ([tests/xaydungphuluc-integration-smoke.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/tests/xaydungphuluc-integration-smoke.js))**:
-   - Kiểm tra file `xaydungphuluc.html` ở thư mục gốc có nhúng `security-guard.js`, `access-control.js`, hàm load key `khbd_user_gemini_keys_...`.
-   - Kiểm tra `index.html`, `admin.html`, `api/helpers.php`, `access-control.js`, `global_config.json` đồng bộ chính xác.
+1. **Cơ chế Bảo toàn Nguyên vẹn PPCT Nguồn từ File Người dùng Tải Lên**:
+   - Bóc tách chi tiết dữ liệu bảng từ `.docx`, `.xlsx`, `.pdf` (bao gồm các cột `Tuần`, `STT`, `Bài học`, `Số tiết`, `YCCĐ`).
+   - Cập nhật chỉ thị tối thượng trong Siêu Prompt Gemini AI:
+     + *"NGUYÊN TẮC BẢO TOÀN PPCT NGUỒN: BẮT BUỘC giữ nguyên 100% danh sách bài học và tuần thực hiện (Tuần 1 đến Tuần 35) từ tệp người dùng tải lên. Tuyệt đối không được xóa bỏ, rút gọn hay gộp tuần. Chỉ thực hiện nhiệm vụ: Giữ nguyên vẹn toàn bộ các dòng và BỔ SUNG thêm cột 'Mã NLS & AI (CV 3456 & QĐ 2422)' theo tỷ lệ (%) và khoảng mật độ mã (1–2, 2–3, 3–4 mã/bài) đã chọn."*
+   - Trong trường hợp không tải file: Hệ thống tự động sinh trọn bộ 35 tuần với đầy đủ cột `Tuần` chuẩn theo chương trình GDPT 2018.
+2. **Chuẩn hóa Bảng Preview và File Xuất Word (.docx) Khớp File Mẫu**:
+   - Cột `Tuần` được tích hợp cố định vào bảng xem trước và bảng xuất Word cho cả Phụ lục 1 và Phụ lục 3.
+   - Header 2 cột hành chính chuẩn (UBND Xã/Phường, Trường THCS / Quốc hiệu, Tiêu ngữ).
+   - Đầy đủ 5 bảng chuẩn:
+     1. Bảng Thiết bị dạy học (TT 38/2021): `STT | Thiết bị | Số lượng | Bài thực hành | Ghi chú`.
+     2. Bảng Phòng học bộ môn (TT 14/2020): `STT | Tên phòng | Số lượng | Phạm vi sử dụng | Ghi chú`.
+     3. Bảng PPCT Phụ lục 1: `STT | Tuần | Bài học | Số tiết | Yêu cầu cần đạt | Mã NLS & AI`.
+     4. Bảng PPCT Phụ lục 3: `STT | Tuần | Bài học | Số tiết | Thời điểm | Thiết bị | Địa điểm | Mã NLS & AI`.
+     5. Bảng Kiểm tra đánh giá (4 mốc GK1 Tuần 9, CK1 Tuần 18, GK2 Tuần 27, CK2 Tuần 35) và Bảng Chữ ký phê duyệt 2 bên.
+3. **Giao diện & Trải nghiệm Người dùng**:
+   - Xóa bỏ hoàn toàn khối "Phương pháp & kĩ thuật dạy học".
+   - Thêm Floating Progress Bar thời gian thực nổi bật ở đáy màn hình (% 0% $\rightarrow$ 100%, spinner xoay, thanh gradient).
+   - Nâng cấp Dropdown mật độ mã linh hoạt: `1–2 mã/bài`, `2–3 mã/bài`, `3–4 mã/bài`.
+4. **Bộ Kiểm thử Tự động ([tests/xaydungphuluc-smoke.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/tests/xaydungphuluc-smoke.js))**:
+   - Cập nhật assert kiểm tra cột `Tuần`, bảo toàn PPCT, Floating Progress Bar và dải mật độ mã.
 
 ## Ngoài phạm vi
-- Không thay đổi các chức năng nội tại của `soankhbd.html` hay các công cụ khác.
-- Không thay đổi bảng cơ sở dữ liệu MySQL.
+- Không thay đổi các file ngoài `xaydungphuluc.html` và các file test liên quan.
 
 ## File dự kiến tác động
-- `xaydungphuluc.html` [TẠO Ở GỐC / NHÚNG SECURITY-GUARD & AUTO-LOAD KEY SOANKHBD]
-- `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html` [CHUYỂN HƯỚNG HOẶC ĐỒNG BỘ NỘI DUNG VỀ GỐC]
-- `index.html` [CẬP NHẬT ĐƯỜNG DẪN XAYDUNGPHULUC.HTML]
-- `admin.html` [CẬP NHẬT ĐƯỜNG DẪN XAYDUNGPHULUC.HTML & MERGE HOSTING_PAGES]
-- `api/helpers.php` [CẬP NHẬT URL XAYDUNGPHULUC.HTML VÀ QUYỀN GIÁO VIÊN]
-- `access-control.js` [CẬP NHẬT ÁNH XẠ XAYDUNGPHULUC.HTML]
-- `global_config.json` [THÊM XAYDUNGPHULUC VÀO FEATURES]
-- `tests/xaydungphuluc-smoke.js` [CẬP NHẬT ĐƯỜNG DẪN FILE TEST GỐC]
-- `tests/xaydungphuluc-integration-smoke.js` [CẬP NHẬT KIỂM TRA ĐẦY ĐỦ SECURITY & KEY SHARING]
+- `xaydungphuluc.html` [BẢO TOÀN CỘT TUẦN PPCT NGUỒN, CHUẨN HÓA DOCX THEO FILE MẪU, THÊM PROGRESS BAR %, XÓA KHỐI PHƯƠNG PHÁP, NÂNG CẤP DENSITY]
+- `tests/xaydungphuluc-smoke.js` [CẬP NHẬT SMOKE TEST]
 - `docs/handoff/PLAN.md` [GHI ĐÈ]
 - `docs/handoff/.lock` [GHI MỚI / NỘI DUNG: LOCK]
 - `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi triển khai]
 - `docs/handoff/VERIFY.md` [Tester cập nhật kết quả nghiệm thu]
 
 ## Các bước thực hiện
-1. **Bước 1: Tạo và hoàn thiện `xaydungphuluc.html` tại thư mục gốc**:
-   - Thêm `<script src="js/security-guard.js"></script>` và `<script src="access-control.js"></script>` vào ngay đầu `<head>`.
-   - Nút Trang chủ trỏ về `index.html`.
-   - Nâng cấp hàm `loadKeys()`: Tự động nạp danh sách key từ `khbd_user_gemini_keys_${userEmail}`, `khbd_user_gemini_keys_default`, `khbd_gemini_api_keys`, `gemini_api_keys`, `xdpl_gemini_api_keys`, `global_gemini_keys`.
-2. **Bước 2: Cập nhật `api/helpers.php`**:
-   - Cập nhật `page_catalog()`: `'xaydungphuluc' => ['title' => 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', 'url' => 'xaydungphuluc.html']`.
-   - Cập nhật `teacher_workspace_page_ids()`, `teacher_default_workspace_extras()`, `teacher_feature_keys_for_pages()`.
-3. **Bước 3: Cập nhật `access-control.js` & `global_config.json`**:
-   - Đăng ký `pageKeys['xaydungphuluc.html'] = 'xaydungphuluc'` và `pageUrls['xaydungphuluc'] = 'xaydungphuluc.html'`.
-   - Thêm `"xaydungphuluc": true` vào `global_config.json`.
-4. **Bước 4: Cập nhật `index.html` & `admin.html`**:
-   - `index.html`: `href="xaydungphuluc.html"`, `TOOL_PAGE_LINKS.xaydungphuluc = 'xaydungphuluc.html'`.
-   - `admin.html`: `hostingPages.xaydungphuluc.url = 'xaydungphuluc.html'`, merge `hostingPages = Object.assign({}, hostingPages, data.pages || {});`.
-5. **Bước 5: Cập nhật và chạy kiểm thử tự động**:
+1. **Bước 1: Cập nhật Schema Bảng và Siêu Prompt trong `xaydungphuluc.html`**:
+   - Thêm cột `Tuần` (`week`) vào cấu trúc JSON của bảng PPCT cho cả Phụ lục 1 và Phụ lục 3.
+   - Bổ sung nguyên tắc bảo toàn PPCT nguồn vào `appendixPrompt`: bắt buộc giữ nguyên tất cả các bài học và tuần thực hiện từ tài liệu tải lên, chỉ sinh thêm nội dung NLS & AI.
+2. **Bước 2: Nâng cấp Bảng Xem Trước Inline và Hàm Xuất Word `exportDocx`**:
+   - Render cột `Tuần` ở vị trí cột thứ 2 trong bảng xem trước.
+   - Thêm cột `Tuần` vào file Word `.docx` xuất bản với độ rộng cột tối ưu.
+   - Đảm bảo đầy đủ 5 bảng chuẩn theo file mẫu `Phụ lục 1 - Lớp 6 - Toán.docx`.
+3. **Bước 3: Xóa Khối Phương pháp, Thêm Floating Progress Bar và Nâng Cấp Dropdown Mật Độ**:
+   - Xóa bỏ `<section>` mục 4 và code liên quan đến `methods`.
+   - Thêm `#progressContainer` và CSS floating bar ở đáy màn hình.
+   - Cập nhật `#nlsDensity` và `#aiDensity` với các dải `1-2`, `2-3`, `3-4`.
+4. **Bước 4: Cập nhật và chạy kiểm thử tự động**:
    - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`, xác nhận PASS 100%.
 
 ## Rủi ro
-- **Rủi ro 1**: Người dùng truy cập bookmark hoặc URL cũ `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`.
-  - *Giải pháp*: Trong `GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html`, thêm mã tự động chuyển hướng sang `../../xaydungphuluc.html`.
-- **Rủi ro 2**: Trình duyệt lưu cache localStorage theo domain.
-  - *Giải pháp*: `xaydungphuluc.html` và `soankhbd.html` cùng nằm trên cùng domain (`hoangthiencm.id.vn`) nên truy cập chung `localStorage` hoàn toàn tự nhiên và tức thì.
+- **Rủi ro**: File tải lên có định dạng bảng không chuẩn hoặc dạng văn bản thô.
+  - *Giải pháp*: Parser trích xuất toàn bộ text kèm cấu trúc dòng; Siêu Prompt của Gemini có chỉ dẫn phân tích thông minh nhận diện cột Tuần, STT, Bài học từ bất kỳ định dạng nào.
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động qua Node.js**:
    - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`:
-     + Xác nhận file `xaydungphuluc.html` ở thư mục gốc tồn tại và hợp lệ.
-     + Xác nhận `security-guard.js` và `access-control.js` được nhúng trong `<head>`.
-     + Xác nhận hàm nạp key quét qua `khbd_user_gemini_keys_...`.
-     + Xác nhận `index.html`, `admin.html`, `api/helpers.php`, `access-control.js` đều trỏ đúng `xaydungphuluc.html`.
+     + Xác nhận bảng PPCT có cột `Tuần` (`week`) và chỉ dẫn bảo toàn PPCT.
+     + Xác nhận tồn tại các tùy chọn mật độ `1-2`, `2-3`, `3-4`.
+     + Xác nhận tồn tại `progressContainer`, `progressPercent`, `progressBarInner`.
+     + Xác nhận không còn khối "Phương pháp & kĩ thuật dạy học".
 2. **Kiểm thử thủ công trên trình duyệt**:
-   - Mở `xaydungphuluc.html` trực tiếp trên domain `https://hoangthiencm.id.vn/xaydungphuluc.html`.
-   - Thử bấm F12 hoặc chuột phải $\rightarrow$ Xác nhận Security Guard chặn và bảo vệ mã nguồn.
-   - Nhập API Key bên `soankhbd.html`, sau đó mở `xaydungphuluc.html` $\rightarrow$ Xác nhận badge hiển thị ngay số lượng key sẵn sàng mà không cần nhập lại.
-   - Mở `admin.html` $\rightarrow$ Xác nhận mục phân quyền giáo viên hiển thị toggle `Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)`.
+   - Tải file PPCT mẫu lên $\rightarrow$ Bấm Sinh Phụ lục.
+   - Kiểm tra kết quả xem trước: Toàn bộ danh sách bài học và tuần thực hiện (Tuần 1 $\rightarrow$ Tuần 35) được giữ nguyên vẹn 100%, cột Mã NLS & AI được điền đầy đủ.
+   - Xuất file Word $\rightarrow$ Mở kiểm tra file `.docx` có đủ cột Tuần và khớp định dạng chuẩn của file demo.
 
 ## Tiêu chí nghiệm thu
-1. File `xaydungphuluc.html` nằm ở thư mục gốc (đồng cấp với `index.html`), mở trực tiếp tại `https://hoangthiencm.id.vn/xaydungphuluc.html`.
-2. Nhúng đầy đủ `js/security-guard.js` và `access-control.js`, bảo vệ chống mở F12/DevTools khi chạy production.
-3. Tự động nhận diện và dùng chung API Key đã lưu từ `soankhbd.html` (`khbd_user_gemini_keys_...`), người dùng không phải nhập lại.
-4. Tích hợp phân quyền hoàn chỉnh trên `admin.html`, `index.html`, `api/helpers.php` và `access-control.js`.
-5. Toàn bộ smoke test tự động đều PASS 100%.
+1. Bảng PPCT giữ nguyên vẹn 100% danh sách bài học và cột Tuần thực hiện từ file tải lên; AI chỉ bổ sung cột Mã NLS & AI.
+2. File Word xuất ra có đầy đủ cột Tuần, chuẩn thể thức theo file mẫu `Phụ lục 1 - Lớp 6 - Toán.docx`.
+3. Khối "Phương pháp & kĩ thuật dạy học" được xóa bỏ hoàn toàn.
+4. Thanh tiến trình % thời gian thực (Floating Progress Bar) nổi bật, mượt mà khi chạy sinh AI.
+5. Dropdown mật độ mã hỗ trợ đầy đủ các dải linh hoạt: `1–2 mã/bài`, `2–3 mã/bài`, `3–4 mã/bài`.
+6. Toàn bộ smoke test tự động đều PASS 100%.
