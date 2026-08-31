@@ -44,6 +44,16 @@ vm.createContext(sandbox);
 try{vm.runInContext(script[1].replace(/document\.addEventListener\('DOMContentLoaded'[\s\S]*\);\s*$/,''),sandbox);}
 catch(e){assert.fail('inline JavaScript failed to parse: '+e.message)}
 assert.equal(typeof sandbox.extractPpctRows,'function','extractPpctRows must be defined');
+assert.equal(typeof sandbox.recognizePpctWithAi,'function','stage-one PPCT recognizer must be defined');
+assert.equal(typeof sandbox.callAiJson,'function','AI provider fallback must be defined');
+assert(html.includes('Giai đoạn 1 chỉ nhận diện PPCT'),'upload flow must document stage separation');
+assert(html.includes('AI chưa khả dụng')&&html.includes('đang dùng bảng PPCT đọc trực tiếp từ tệp'),'upload must provide a visible parser fallback');
+assert(html.includes('await recognizePpctWithAi(text)'),'PPCT upload must invoke recognition after text extraction');
+assert(vm.runInContext("ppctRecognitionPrompt('Bài 1').includes('Không suy diễn Yêu cầu cần đạt')",sandbox),'stage-one prompt must explicitly forbid outcome generation');
+assert(!vm.runInContext("ppctRecognitionPrompt('Bài 1').includes('schema {title')",sandbox),'stage-one prompt must not use an appendix-generation schema');
+const recognizedRows=vm.runInContext("normalizeRecognizedPpct({ppct:[{lesson:'HỌC KÌ I',isHeader:true},{lesson:'Bài 1. Tập hợp',periods:'1, 2',tietCT:'1-2',week:'Tuần 1',devices:'Máy chiếu',location:'Lớp học'}]})",sandbox);
+assert.equal(recognizedRows.length,2,'recognizer must retain PPCT headers and lesson rows');
+assert.equal(recognizedRows[1].periods,'2','recognizer must normalize listed periods for picker checkboxes');
 [['(2 tiết)',2],['3 tiết',3],['[3 tiết]',3],['4 tiết/tuần',4],['1-2',2],['1, 2',2],['Tiết 1-3',3],['tiết 6 đến 8',3],['hai tiết',2],['bốn tiết',4]].forEach(([value,expected])=>assert.equal(vm.runInContext(`parsePeriodCount(${JSON.stringify(value)})`,sandbox),expected,`must parse ${value}`));
 assert.equal(vm.runInContext("parsePeriodCount('3-1')",sandbox),null,'reversed ranges must be rejected');
 const sample=[
@@ -175,6 +185,14 @@ assert.equal(defaultLessons[0].periods,'1','Toán 6 Bài 1 must retain its verif
 assert.equal(defaultLessons[4].periods,'2','Toán 6 Bài 5 must retain its verified two-period allocation');
 assert.equal(defaultLessons.find(row=>row.lesson.includes('Ôn tập và Bài tập cuối chương II')).periods,'5','Toán 6 review must retain its verified five-period allocation');
 assert(defaultLessons.some(row=>Number(row.periods)!==4),'Toán 6 PPCT must not be allocated as uniform four-period cards');
+
+let recognitionRequest;
+sandbox.fetch=async(url,options)=>{recognitionRequest={url,options};return {ok:true,status:200,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify({ppct:[{lesson:'Bài AI nhận diện',periods:'2',tietCT:'1-2',week:'Tuần 1',devices:'Máy chiếu',location:'Lớp học'}]})}]}}]})}};
+vm.runInContext("apiKeys=['AIza-stage-one'];mistralKeys=[];aborter=null",sandbox);
+const recognizedByApi=await sandbox.recognizePpctWithAi('Bài học\\tSố tiết\\nBài AI nhận diện\\t2');
+assert.equal(recognizedByApi[0].lesson,'Bài AI nhận diện','recognizer must use the provider JSON PPCT result');
+assert(recognitionRequest.url.includes('generativelanguage.googleapis.com'),'recognizer must reuse the existing Gemini provider');
+assert(JSON.parse(recognitionRequest.options.body).contents[0].parts[0].text.includes('Không suy diễn Yêu cầu cần đạt'),'stage one provider prompt must forbid early appendix generation');
 
 const keyElements={
   '#keyBadge':{textContent:''},'#keyInput':{value:'AIza-manual\nAIza-manual'},'#mistralKeyInput':{value:'mistral-manual\nmistral-manual'},
