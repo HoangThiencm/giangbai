@@ -9,7 +9,9 @@ assert(/^<!doctype html>/i.test(html),'not a standalone HTML document');
 ['js/security-guard.js','access-control.js','khbd_user_gemini_keys_${userEmail}','khbd_user_gemini_keys_default','khbd_gemini_api_keys','gemini_api_keys','xdpl_gemini_api_keys','global_gemini_keys','loadKeys','saveKeys','checkKeys','429','403'].forEach(has);
 ['nlsRate','nlsDensity','aiRate','aiDensity','NLS và AI ĐỘC LẬP','1–2 mã/bài','2–3 mã/bài','3–4 mã/bài'].forEach(has);
 ['appendixPrompt','NGUYÊN TẮC BẢO TOÀN PPCT NGUỒN','giữ nguyên 100%','Tuần 1 đến Tuần 35','Phụ lục 1','Phụ lục 2','Phụ lục 3','Công văn 5512','TT 38/2021','TT 14/2020'].forEach(has);
-['parseFiles','extractPpctRows','preserveSourceSchedule','mammoth.extractRawText','pdfjsLib','XLSX.read','generateSelected','exportDocx','contenteditable','exportAll'].forEach(has);
+['parseFiles','extractPpctRows','extractDocxTables','ingestSourceTables','preserveSourceSchedule','mammoth.extractRawText','pdfjsLib','XLSX.read','generateSelected','exportDocx','contenteditable','exportAll'].forEach(has);
+has('table-layout: fixed');
+has('word-break: break-word');
 ['progressContainer','progressPercent','progressBarInner','setProgress','hideProgress','progressTimerId','SCHEDULE_COLUMNS','PLAN_COLUMNS','UBND XÃ/PHƯỜNG','CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'].forEach(has);
 has('onclick="hideProgress()"');
 has('setTimeout(()=>hideProgress(),hideMs??1500)');
@@ -62,4 +64,50 @@ assert.equal(lesson.location,'Lớp học');
 assert(html.includes('✓'),'complete-state checkmark missing');
 assert(sandbox.setProgress.toString().includes('safe>=100')||sandbox.setProgress.toString().includes('safe >= 100'),'setProgress must stop spinner at 100%');
 assert(typeof sandbox.hideProgress==='function','hideProgress must be defined');
-console.log('PASS xaydungphuluc smoke: PPCT 7-column form, Tiet CT, spanning headers, density ranges and auto-hiding progress UI are present.');
+assert.equal(typeof sandbox.extractDocxTables,'function');
+assert.equal(typeof sandbox.ingestSourceTables,'function');
+
+const zlib=require('zlib');
+function zipRead(buf,entryName){
+  const nameBuf=Buffer.from(entryName);
+  let idx=0;
+  while((idx=buf.indexOf(nameBuf,idx))!==-1){
+    const header=idx-30;
+    if(header>=0&&buf.readUInt32LE(header)===0x04034b50){
+      const method=buf.readUInt16LE(header+8);
+      const compSize=buf.readUInt32LE(header+18);
+      const extraLen=buf.readUInt16LE(header+28);
+      const data=buf.slice(idx+entryName.length+extraLen, idx+entryName.length+extraLen+compSize);
+      if(method===0)return data.toString('utf8');
+      if(method===8)return zlib.inflateRawSync(data).toString('utf8');
+    }
+    idx+=1;
+  }
+  throw new Error('missing zip entry '+entryName);
+}
+function xmlTablesToHtml(xml){
+  function cellText(cell){return (cell.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)||[]).map(t=>t.replace(/<[^>]+>/g,'')).join('').replace(/\s+/g,' ').trim()}
+  const chunks=[];
+  xml.replace(/<w:tbl\b[\s\S]*?<\/w:tbl>/g,tbl=>{
+    let h='<table>';
+    tbl.replace(/<w:tr\b[\s\S]*?<\/w:tr>/g,tr=>{
+      h+='<tr>';
+      tr.replace(/<w:tc\b[\s\S]*?<\/w:tc>/g,tc=>{h+=`<td>${cellText(tc)}</td>`});
+      h+='</tr>';
+    });
+    chunks.push(h+'</table>');
+    return '';
+  });
+  return chunks.join('');
+}
+const sampleDocx=path.join(__dirname,'..','GIAO AN','XAYDUNGPHULUC','Phụ lục 1 - Lớp 6 - Toán.docx');
+assert(fs.existsSync(sampleDocx),'sample PPCT docx missing');
+const ingested=sandbox.ingestSourceTables(sandbox.extractDocxTables(xmlTablesToHtml(zipRead(fs.readFileSync(sampleDocx),'word/document.xml'))));
+assert(ingested.ppct.length>=2,'sample docx must yield PPCT rows');
+assert(!ingested.ppct.some(r=>/TRƯỜNG THCS|CỘNG HÒA XÃ HỘI|UBND/i.test(r.lesson||'')),'administrative header must not leak into PPCT rows');
+assert(ingested.ppct.some(r=>/Bài 1\. Tập hợp/.test(r.lesson)),'must recognize Bài 1. Tập hợp');
+assert(ingested.ppct.some(r=>/Bài 2\. Cách ghi số tự nhiên/.test(r.lesson)),'must recognize Bài 2. Cách ghi số tự nhiên');
+const bai1=ingested.ppct.find(r=>/Bài 1\. Tập hợp/.test(r.lesson));
+assert.equal(String(bai1.periods),'1');
+assert.equal(String(bai1.tietCT),'1');
+console.log('PASS xaydungphuluc smoke: PPCT 7-column form, independent table ingest, no admin-header leak, density ranges and auto-hiding progress UI are present.');
