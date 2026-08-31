@@ -1,29 +1,28 @@
-# IMPLEMENT: Bóc tách độc lập bảng PPCT, loại header hành chính, định dạng 7 cột cố định
+# IMPLEMENT: Bảo toàn bảng PPCT nguồn và chuẩn hóa Phụ lục 1 theo CV 5512
 
 ## Phạm vi đã triển khai
 
-- `extractDocxTables` tách từng `<table>` (mammoth HTML, regex fallback). `ingestSourceTables` phân loại độc lập:
-  - Bảng hành chính (`UBND`, `CỘNG HÒA XÃ HỘI`, `TỔ TRƯỞNG`, `HIỆU TRƯỞNG`): điền trường/tổ, không đưa vào PPCT.
-  - Bảng PPCT (header có `Bài học` / `Tên bài` / `Tiết CT` / `Tuần`): `sourcePpctRows`.
-  - Bảng thiết bị (`Thiết bị dạy học`) → `sourceDevices`; phòng bộ môn (`Tên phòng`) → `sourceRooms`; kiểm tra (`Bài kiểm tra`) → `sourceAssessments`.
-- Dòng bài học sạch (`Bài 1. Tập hợp`, …); `isHeader` cho học kỳ/chương; không nhồi quốc hiệu/tên trường vào cột Bài học.
-- Preview `table.ppct-table`: `table-layout: fixed; width: 100%; word-break: break-word` và colgroup 30/7/8/7/12/11/25. Dòng chương `colspan` 7 cột.
-- AI chỉ điền cột `integration`; `preserveSourceSchedule` lọc dòng hành chính nếu còn sót.
-- Không sửa `PLAN.md`, `VERIFY.md` hoặc `.lock`; không commit/push.
+- `xaydungphuluc.html` lưu bảng PPCT nguồn theo mô hình động (nguyên tên cột, thứ tự cột, ô dữ liệu và dòng phân cấp), thay vì ép về bảy cột cố định.
+- Khi có PPCT nguồn, ứng dụng chỉ nối một cột cuối: `Mã NLS & AI (CV 3456 & QĐ 2422)`. Gemini chỉ được dùng để điền nội dung cột này; dữ liệu nguồn không bị thay thế.
+- Preview Phụ lục 1 hiển thị đủ khung hành chính: tiêu ngữ, căn cứ CV 5512, mục I (đặc điểm, thiết bị, phòng học), mục II (PPCT, chuyên đề, KTĐG), mục III và bảng ký hai bên.
+- Xuất Word Phụ lục 1 dùng cùng cấu trúc hành chính, bảng PPCT động và cột NLS/AI bổ sung. Phụ lục 2, 3 vẫn xuất Word được, trong đó Phụ lục 3 dùng bảng PPCT động nếu có nguồn.
+- Cập nhật smoke test bằng tình huống PPCT sáu cột bất kỳ, có cột `Yêu cầu cần đạt`; test xác nhận nguyên cột/dữ liệu được giữ và chỉ có đúng một cột mới được thêm.
 
 ## File thay đổi
 
-- `xaydungphuluc.html`: parser theo từng bảng, lọc hành chính, CSS bảng 7 cột cố định, nạp thiết bị/phòng/KTĐG nguồn vào phụ lục 1.
-- `tests/xaydungphuluc-smoke.js`: parse trực tiếp `GIAO AN/XAYDUNGPHULUC/Phụ lục 1 - Lớp 6 - Toán.docx`; cấm rò `TRƯỜNG THCS` / `CỘNG HÒA XÃ HỘI`; nhận `Bài 1. Tập hợp`, `Bài 2. Cách ghi số tự nhiên`.
-- `docs/handoff/IMPLEMENT.md`: báo cáo triển khai này.
+- `xaydungphuluc.html`
+- `tests/xaydungphuluc-smoke.js`
+- `docs/handoff/IMPLEMENT.md`
+
+Không sửa `docs/handoff/PLAN.md`, `docs/handoff/VERIFY.md` hoặc `docs/handoff/.lock`; không commit/push.
 
 ## Kiểm thử đã chạy
 
-- `node tests/xaydungphuluc-smoke.js` — PASS (47 dòng PPCT từ file mẫu, 0 dòng hành chính lẫn vào).
+- `node tests/xaydungphuluc-smoke.js` — PASS.
 - `node tests/xaydungphuluc-integration-smoke.js` — PASS.
+- `node --check` cho JavaScript nội tuyến — PASS.
+- `git diff --check` — PASS.
 
-Không có browser MCP trong phiên này nên chưa tải file lên giao diện và xuất Word bằng tay.
+## Cần nghiệm thu thủ công
 
-## Vấn đề còn lại
-
-- Cần `/verify` trên trình duyệt: tải `Phụ lục 1 - Lớp 6 - Toán.docx`, sinh phụ lục, đối chiếu 7 cột và tên bài sạch, rồi mở file Word đã xuất.
+Mở `xaydungphuluc.html`, tải file mẫu `GIAO AN/XAYDUNGPHULUC/Phụ lục 1 - Lớp 6 - Toán.docx`, sinh Phụ lục 1 và mở file Word xuất ra để đối chiếu trực quan font/căn lề với mẫu Office.

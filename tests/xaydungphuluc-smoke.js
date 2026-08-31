@@ -110,4 +110,14 @@ assert(ingested.ppct.some(r=>/Bài 2\. Cách ghi số tự nhiên/.test(r.lesson
 const bai1=ingested.ppct.find(r=>/Bài 1\. Tập hợp/.test(r.lesson));
 assert.equal(String(bai1.periods),'1');
 assert.equal(String(bai1.tietCT),'1');
+const arbitrary=sandbox.sourcePpctFromTable([
+  ['STT','Bài học','Số tiết','Yêu cầu cần đạt','Thiết bị','Địa điểm'],
+  ['HỌC KÌ I','','','','',''],
+  ['1','Bài 1. Tập hợp','1','Nhận biết tập hợp','Bảng phụ','Lớp học']
+]);
+assert.deepEqual(Array.from(arbitrary.columns),['STT','Bài học','Số tiết','Yêu cầu cần đạt','Thiết bị','Địa điểm'],'must preserve every source column verbatim');
+const preserved=vm.runInContext(`sourcePpctTable=${JSON.stringify(arbitrary)};preservedPpctTable([{lesson:'Bài 1. Tập hợp',integration:'[1.1.6a] Khai thác học liệu số.'}],{lop:'6',nls:{enabled:true,rate:50,density:'1-2'},ai:{enabled:false,rate:0,density:'1-2'}})`,sandbox);
+assert.equal(preserved.columns.length,7,'must add exactly one NLS/AI column');
+assert.equal(preserved.columns[6],'Mã NLS & AI (CV 3456 & QĐ 2422)');
+assert.equal(preserved.rows[1].cells[3],'Nhận biết tập hợp','must retain arbitrary source data');
 console.log('PASS xaydungphuluc smoke: PPCT 7-column form, independent table ingest, no admin-header leak, density ranges and auto-hiding progress UI are present.');
