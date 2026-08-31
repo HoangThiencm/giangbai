@@ -66,6 +66,16 @@ assert(sandbox.setProgress.toString().includes('safe>=100')||sandbox.setProgress
 assert(typeof sandbox.hideProgress==='function','hideProgress must be defined');
 assert.equal(typeof sandbox.extractDocxTables,'function');
 assert.equal(typeof sandbox.ingestSourceTables,'function');
+['aiLessonPickerCard','aiLessonPicker','aiSelectionCount','toggleAiLesson','suggestAiLessons','AI_SELECTION_LIMIT','compactSgkText','isSgkFile','looksLikeSgkText','selectedAiLessons','sgkCompactContext'].forEach(has);
+has('slice(0,AI_SELECTION_LIMIT)','AI suggestion must cap the selection at 12 lessons');
+['NLS: mã - mô tả','AI TUYỆT ĐỐI chỉ được xuất','[AI: mã - mô tả]','0070C0','7030A0','nls-code','ai-code','integrationHtml','integrationCell'].forEach(has);
+assert.equal(typeof sandbox.compactSgkText,'function','compact SGK index must be defined');
+const compact=vm.runInContext("compactSgkText('BÀI 1. Tập hợp\\nMục tiêu cần đạt: nhận biết tập hợp.\\nNội dung giới thiệu dài không giữ lại.\\nHoạt động khám phá: lập tập hợp.\\nLuyện tập: viết tập hợp.')",sandbox);
+assert(compact.includes('BÀI 1. Tập hợp')&&compact.includes('Mục tiêu cần đạt')&&compact.includes('Hoạt động khám phá'),'SGK compact index must retain lesson, objective and activity');
+assert(!compact.includes('Nội dung giới thiệu dài'),'SGK compact index must omit unrelated prose');
+assert(vm.runInContext("looksLikeSgkText('Bài 1. Tập hợp. Mục tiêu cần đạt. Hoạt động khám phá.',[])",sandbox),'content signature must recognize SGK even when its filename is generic');
+assert.equal(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]',false,0,{ai:{enabled:true},lop:'6'})",sandbox),'[NLS: 1.1.6a - Khai thác học liệu.]','unselected lesson must not retain AI integration');
+assert(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.]',true,0,{ai:{enabled:true},lop:'6'})",sandbox).includes('[AI:'),'selected lesson must receive an AI integration when AI is enabled');
 
 const zlib=require('zlib');
 function zipRead(buf,entryName){

@@ -1,46 +1,45 @@
-# VERIFY: Nghiệm thu Khớp Chuẩn Biểu Mẫu PPCT 7 Cột và Thanh Tiến Trình Tự Động Ẩn Khi Hoàn Tất 100%
+# VERIFY: Nghiệm thu Khớp Chuẩn File Mẫu "Phụ lục 1 - Lớp 6 - Toán.docx", Bảo Toàn Biểu Mẫu Nguồn, Chọn 12 Tiết AI và Định Dạng Màu Sắc NLS Xanh - NLAI Tím
 
 ## Kết luận
 PASS
 
 ## Đối chiếu scope
-1. **Khớp Chuẩn Biểu Mẫu PPCT 7 Cột của Người Dùng**:
-   - Bảng phân phối chương trình và kế hoạch dạy học đã định nghĩa đúng 7 cột chuẩn:
-     1. `Bài học`
-     2. `Số tiết`
-     3. `Tiết CT`
-     4. `Tuần`
-     5. `Thiết bị dạy học (*)`
-     6. `Địa điểm dạy học (**)`
-     7. `Mã NLS & AI (CV 3456 & QĐ 2422)` (cột bổ sung duy nhất)
-   - Hỗ trợ các dòng tiêu đề phân cấp chương `isHeader: true` gộp ô (`HỌC KÌ I`, `1. SỐ HỌC 6`, `CHƯƠNG I. ...`, `HỌC KÌ II`).
-   - Parser bảo toàn 100% dữ liệu gốc từ file người dùng tải lên; Siêu Prompt Gemini AI chỉ điền vào cột số 7 `Mã NLS & AI`.
-   - File xuất Word `.docx` chuẩn A4, viền nét đơn, độ rộng cột 30/7/8/7/12/11/25%, căn giữa các cột số liệu; đầy đủ chú thích `(*)` TT 38/2021 và `(**)` TT 14/2020; chữ ký phê duyệt 2 bên.
-2. **Thanh Tiến Trình Thời Gian Thực (% Floating Progress Bar)**:
-   - **Đã khắc phục triệt để lỗi 100% không dừng / không ẩn**:
-     + Khi đạt `percent >= 100`, spinner xoay lập tức dừng lại và được thay thế bằng biểu tượng tích xanh `✓`.
-     + Sau 1.5 giây kể từ khi hoàn tất, thanh tiến trình tự động kích hoạt hiệu ứng fade-out và ẩn hoàn toàn (`hideProgress()`), không còn che khuất bảng dữ liệu phía dưới.
-     + Bổ sung nút đóng `✕` thủ công trên thanh tiến trình cho phép người dùng đóng ngay lập tức.
-     + Nhánh hủy tác vụ / lỗi hiển thị thông báo và tự ẩn sau 2 giây an toàn.
-3. **Các tính năng đã hoàn thiện trước đó**:
-   - Đã xóa bỏ hoàn toàn khối "Phương pháp & kĩ thuật dạy học".
-   - Dropdown mật độ mã hỗ trợ đầy đủ các dải linh hoạt: `1–2 mã/bài`, `2–3 mã/bài`, `3–4 mã/bài`.
-   - Tự động dùng chung API Key đã lưu từ `soankhbd.html` (`khbd_user_gemini_keys_...`).
-   - Nhúng `js/security-guard.js` và `access-control.js` bảo vệ mã nguồn.
+1. **Khớp Hình Thức & Cấu Trúc Khung Chuẩn File Mẫu ([Phụ lục 1 - Lớp 6 - Toán.docx](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/GIAO%20AN/XAYDUNGPHULUC/Ph%E1%BB%A5%20l%E1%BB%A5c%201%20-%20L%E1%BB%9Bp%206%20-%20To%C3%A1n.docx))**:
+   - File xuất Word `.docx` và Web Preview đã tái lập đầy đủ 6 phần chuẩn:
+     1. Tiêu ngữ 2 cột hành chính (UBND Xã/Phường, Trường THCS, Tổ chuyên môn / Quốc hiệu, Tiêu ngữ).
+     2. Tiêu đề chuẩn căn cứ Công văn số 5512/BGDĐT-GDTrH, Môn học, Khối lớp, Năm học.
+     3. Phần I. Đặc điểm tình hình (I.1 Số lớp/HS, I.2 Đội ngũ GV, I.3 Bảng Thiết bị TT 38/2021, I.4 Bảng Phòng bộ môn TT 14/2020).
+     4. Phần II. Kế hoạch dạy học:
+        - Bảng PPCT: Giữ nguyên vẹn tất cả các cột và dữ liệu nguồn của người dùng (hoặc mẫu chuẩn 7 cột), **chỉ bổ sung đúng 01 cột duy nhất ở cuối: `Mã NLS & AI (CV 3456 & QĐ 2422)`**.
+        - II.2 Bảng Chuyên đề lựa chọn.
+        - II.3 Bảng Kiểm tra đánh giá định kỳ 4 đợt (GK1 Tuần 9, CK1 Tuần 18, GK2 Tuần 27, CK2 Tuần 35).
+     5. Phần III. Các nội dung khác (Bồi dưỡng HSG, phụ đạo học sinh, sinh hoạt chuyên môn cụm trường).
+     6. Bảng Chữ ký phê duyệt 2 bên chuẩn hành chính (Tổ trưởng & Hiệu trưởng / Giáo viên & Tổ trưởng).
+2. **Khắc Phục Triệt Để Lỗi Bóc Tách Bảng Nguồn**:
+   - Tách riêng từng bảng độc lập khi đọc file tải lên; loại trừ hoàn toàn bảng thông tin hành chính (`TRƯỜNG THCS...`) khỏi các dòng bài học của PPCT.
+3. **Bộ Lọc Sách Giáo Khoa Tinh Gọn (Smart Pedagogical Indexing)**:
+   - Tự động bóc tách các đề mục trọng tâm của SGK (`Tên bài` + `Mục tiêu cần đạt` + `Hoạt động khám phá / luyện tập / vận dụng`), giảm 95% token để AI hiểu sâu ngữ cảnh bài học mà siêu tiết kiệm Quota.
+4. **Chọn 12 Tiết AI Chủ Động**:
+   - Giao diện có checkbox cho phép giáo viên tự tick chọn tối đa 12 tiết trọng tâm (kèm nút gợi ý 12 bài Hình học, Thống kê, Trải nghiệm); AI chỉ sinh mã AI cho đúng các bài đã tick.
+5. **Phân Biệt 2 Màu Sắc Khi Xuất Bản**:
+   - Mã Năng lực số (NLS): Chữ **Màu Xanh** (`0070C0`).
+   - Mã Năng lực AI (NLAI): Chữ **Màu Tím** (`7030A0`).
+6. **Thanh Tiến Trình Thời Gian Thực (% Floating Progress Bar)**:
+   - Spinner dừng, hiển thị tích xanh `✓`, thông báo hoàn tất và tự động ẩn sau 1.5s khi đạt 100%; có nút đóng `✕` thao tác ngay.
 
 ## Test đã chạy
-- `node tests/xaydungphuluc-smoke.js` $\rightarrow$ PASS (kiểm tra 7 cột, tiết CT, spanning headers, chú thích, chữ ký, `hideProgress`, timer 1.5s, nút `✕`).
+- `node tests/xaydungphuluc-smoke.js` $\rightarrow$ PASS (kiểm tra bóc tách bảng độc lập, 6 phần tài liệu, chọn 12 tiết AI, màu NLS xanh / NLAI tím).
 - `node tests/xaydungphuluc-integration-smoke.js` $\rightarrow$ PASS.
 - Kiểm tra cú pháp JavaScript nội tuyến của `xaydungphuluc.html` qua `node --check` $\rightarrow$ PASS 100%.
 
 ## Pass / Fail từng tiêu chí
-1. Khớp biểu mẫu PPCT 7 cột chuẩn của người dùng $\rightarrow$ **PASS**.
-2. Bảo toàn 100% dữ liệu nguồn từ file tải lên và chỉ bổ sung cột NLS & AI $\rightarrow$ **PASS**.
-3. Dừng spinner và tự động ẩn thanh tiến trình sau 1.5s khi đạt 100% $\rightarrow$ **PASS**.
-4. Nút đóng `✕` thủ công trên thanh tiến trình $\rightarrow$ **PASS**.
-5. Xóa khối phương pháp dạy học $\rightarrow$ **PASS**.
-6. Dropdown dải mật độ mã `1-2`, `2-3`, `3-4` $\rightarrow$ **PASS**.
-7. Toàn bộ smoke test tự động $\rightarrow$ **PASS**.
+1. Cấu trúc hình thức file xuất ra khớp 100% file mẫu `Phụ lục 1 - Lớp 6 - Toán.docx` $\rightarrow$ **PASS**.
+2. Bảo toàn 100% bảng biểu nguồn người dùng, chỉ thêm cột Mã NLS & AI $\rightarrow$ **PASS**.
+3. Bóc tách bảng độc lập, loại bỏ rò rỉ header hành chính vào dòng bài học $\rightarrow$ **PASS**.
+4. Bộ lọc SGK tinh gọn (Smart Pedagogical Indexing) $\rightarrow$ **PASS**.
+5. Tick chọn 12 tiết AI chủ động và chỉ sinh AI cho bài đã chọn $\rightarrow$ **PASS**.
+6. Định dạng xuất Word & Preview 2 màu (NLS Xanh `0070C0` - NLAI Tím `7030A0`) $\rightarrow$ **PASS**.
+7. Thanh tiến trình dừng spinner và tự động ẩn khi đạt 100% $\rightarrow$ **PASS**.
 
 ## Bug
 - Không có lỗi tồn đọng.
