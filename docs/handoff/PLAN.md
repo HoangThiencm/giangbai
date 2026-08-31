@@ -1,47 +1,52 @@
-# PLAN: Bảo Toàn Nguyên Vẹn 100% Cấu Trúc PPCT & Tuần Thực Hiện từ File Tải Lên (Chỉ Bổ Sung Cột Năng Lực Số / Khung AI), Chuẩn Hóa Theo File Mẫu Demo, Bật Progress Bar % và Nâng Cấp Mật Độ Mã
+# PLAN: Khớp 100% Biểu Mẫu PPCT Chuẩn (Bài học, Số tiết, Tiết CT, Tuần, Thiết bị, Địa điểm, chỉ thêm Cột NLS & AI) và Sửa Triệt Để Lỗi Thanh Tiến Trình 100% Không Tự Ẩn
 
 ## Hiện trạng
-1. **Mất cột "Tuần" và cấu trúc PPCT gốc khi tải file lên**:
-   - Khi giáo viên tải lên file PPCT (.docx, .xlsx, .pdf), file gốc đã có đầy đủ: `STT`, `Tuần thực hiện` (từ Tuần 1 đến Tuần 35), `Tên bài học`, `Số tiết`, `Yêu cầu cần đạt`.
-   - Trước đây, khi AI tạo nội dung thường tự động tóm tắt hoặc sinh lại danh sách bài mới, dẫn đến việc **bị mất cột Tuần thực hiện**, thiếu bài hoặc làm lệch tiến độ năm học của nhà trường.
-   - **Yêu cầu nghiêm ngặt của người dùng**: Khi người dùng tải file PPCT lên, hệ thống phải **giữ lại đủ 100%**, giữ nguyên cột **Tuần thực hiện (Tuần 1 $\rightarrow$ Tuần 35)**, STT, Tên bài, Số tiết; AI chỉ làm nhiệm vụ **bổ sung thêm phần Năng lực số (NLS) / Khung Trí tuệ nhân tạo (AI)** vào đúng từng bài học theo cấu hình.
-2. **Cấu trúc bảng chuẩn theo File Mẫu ([GIAO AN/XAYDUNGPHULUC/Phụ lục 1 - Lớp 6 - Toán.docx](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/GIAO%20AN/XAYDUNGPHULUC/Ph%E1%BB%A5%20l%E1%BB%A5c%201%20-%20L%E1%BB%9Bp%206%20-%20To%C3%A1n.docx))**:
-   - Bảng Phân phối chương trình phải có đầy đủ cột `Tuần` ở vị trí trang trọng:
-     + **Phụ lục 1**: `STT | Tuần | Bài học | Số tiết | Yêu cầu cần đạt | Mã NLS & AI (CV 3456 & QĐ 2422)`.
-     + **Phụ lục 3**: `STT | Tuần | Bài học | Số tiết | Thời điểm | Thiết bị dạy học | Địa điểm dạy học | Mã NLS & AI (CV 3456 & QĐ 2422)`.
-   - Các bảng phụ trợ đầy đủ: Bảng Thiết bị (TT 38/2021), Bảng Phòng bộ môn (TT 14/2020), Bảng Kiểm tra đánh giá định kỳ (GK1, CK1, GK2, CK2) và Bảng Chữ ký phê duyệt 2 bên.
-3. **Các cải tiến giao diện trước đó**:
-   - Xóa bỏ hoàn toàn khối "4. Phương pháp & kĩ thuật dạy học".
-   - Bổ sung thanh tiến trình thời gian thực nổi ở đáy màn hình (% 0% $\rightarrow$ 100%, spinner xoay, thanh gradient).
-   - Nâng cấp dropdown mật độ mã NLS & AI thành các khoảng dải linh hoạt: `1–2 mã/bài`, `2–3 mã/bài`, `3–4 mã/bài`.
+1. **Khớp Chuẩn Biểu Mẫu PPCT Thực Tế của Người Dùng**:
+   - Biểu mẫu kế hoạch dạy học thực tế của giáo viên gồm 6 cột gốc:
+     + Cột 1: **Bài học** (chứa các dòng phân cấp gộp ô: `HỌC KÌ I`, `1. SỐ HỌC 6`, `CHƯƠNG I. TẬP HỢP SỐ TỰ NHIÊN (13 tiết)`, `HỌC KÌ II`,...)
+     + Cột 2: **Số tiết**
+     + Cột 3: **Tiết CT** (Tiết phân phối chương trình: 1, 2, 3, 4, 5, 6,...)
+     + Cột 4: **Tuần** (1, 2, 3,..., 35)
+     + Cột 5: **Thiết bị dạy học (*)**
+     + Cột 6: **Địa điểm dạy học (**)**
+   - **Cam kết hợp đồng & yêu cầu cốt lõi**: Giữ nguyên 100% cấu trúc biểu mẫu của người dùng, giữ nguyên các dòng tiêu đề chương và phân phối tiết CT; **chỉ bổ sung thêm 01 cột duy nhất ở cuối bảng**:
+     + Cột 7: **Mã NLS & AI (CV 3456 & QĐ 2422)**.
+2. **Lỗi Thanh Tiến Trình 100% Không Dừng / Không Ẩn (như ảnh chụp thực tế)**:
+   - Khi chạy xong 100%, hàm `setProgress(100, 'Đã hoàn tất. Có thể xem trước và xuất Word.')` trong [xaydungphuluc.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/xaydungphuluc.html) chỉ gán text thông báo nhưng:
+     + Thẻ spinner `<span class="spinner"></span>` vẫn xoay liên tục tạo cảm giác hệ thống chưa xong.
+     + Thanh tiến trình không có cơ chế tự động ẩn (`setTimeout hide`) và không có nút đóng `✕`, dẫn đến thanh progress bar nổi cố định ở đáy màn hình che khuất bảng xem trước và các dòng dữ liệu của người dùng.
 
 ## Phạm vi
-1. **Cơ chế Bảo toàn Nguyên vẹn PPCT Nguồn từ File Người dùng Tải Lên**:
-   - Bóc tách chi tiết dữ liệu bảng từ `.docx`, `.xlsx`, `.pdf` (bao gồm các cột `Tuần`, `STT`, `Bài học`, `Số tiết`, `YCCĐ`).
-   - Cập nhật chỉ thị tối thượng trong Siêu Prompt Gemini AI:
-     + *"NGUYÊN TẮC BẢO TOÀN PPCT NGUỒN: BẮT BUỘC giữ nguyên 100% danh sách bài học và tuần thực hiện (Tuần 1 đến Tuần 35) từ tệp người dùng tải lên. Tuyệt đối không được xóa bỏ, rút gọn hay gộp tuần. Chỉ thực hiện nhiệm vụ: Giữ nguyên vẹn toàn bộ các dòng và BỔ SUNG thêm cột 'Mã NLS & AI (CV 3456 & QĐ 2422)' theo tỷ lệ (%) và khoảng mật độ mã (1–2, 2–3, 3–4 mã/bài) đã chọn."*
-   - Trong trường hợp không tải file: Hệ thống tự động sinh trọn bộ 35 tuần với đầy đủ cột `Tuần` chuẩn theo chương trình GDPT 2018.
-2. **Chuẩn hóa Bảng Preview và File Xuất Word (.docx) Khớp File Mẫu**:
-   - Cột `Tuần` được tích hợp cố định vào bảng xem trước và bảng xuất Word cho cả Phụ lục 1 và Phụ lục 3.
-   - Header 2 cột hành chính chuẩn (UBND Xã/Phường, Trường THCS / Quốc hiệu, Tiêu ngữ).
-   - Đầy đủ 5 bảng chuẩn:
-     1. Bảng Thiết bị dạy học (TT 38/2021): `STT | Thiết bị | Số lượng | Bài thực hành | Ghi chú`.
-     2. Bảng Phòng học bộ môn (TT 14/2020): `STT | Tên phòng | Số lượng | Phạm vi sử dụng | Ghi chú`.
-     3. Bảng PPCT Phụ lục 1: `STT | Tuần | Bài học | Số tiết | Yêu cầu cần đạt | Mã NLS & AI`.
-     4. Bảng PPCT Phụ lục 3: `STT | Tuần | Bài học | Số tiết | Thời điểm | Thiết bị | Địa điểm | Mã NLS & AI`.
-     5. Bảng Kiểm tra đánh giá (4 mốc GK1 Tuần 9, CK1 Tuần 18, GK2 Tuần 27, CK2 Tuần 35) và Bảng Chữ ký phê duyệt 2 bên.
-3. **Giao diện & Trải nghiệm Người dùng**:
-   - Xóa bỏ hoàn toàn khối "Phương pháp & kĩ thuật dạy học".
-   - Thêm Floating Progress Bar thời gian thực nổi bật ở đáy màn hình (% 0% $\rightarrow$ 100%, spinner xoay, thanh gradient).
-   - Nâng cấp Dropdown mật độ mã linh hoạt: `1–2 mã/bài`, `2–3 mã/bài`, `3–4 mã/bài`.
-4. **Bộ Kiểm thử Tự động ([tests/xaydungphuluc-smoke.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/tests/xaydungphuluc-smoke.js))**:
-   - Cập nhật assert kiểm tra cột `Tuần`, bảo toàn PPCT, Floating Progress Bar và dải mật độ mã.
+1. **Sửa Triệt Để Lỗi Thanh Tiến Trình (% Floating Bar)**:
+   - **Dừng Spinner khi Đạt 100%**: Khi hoàn tất (`percent >= 100`), thay thế spinner xoay bằng biểu tượng tích xanh `✓` hoặc `✦` ("Đã hoàn tất").
+   - **Tự động Ẩn Mượt Mà**: Sau 1.5 giây kể từ khi đạt 100%, tự động kích hoạt hiệu ứng fade-out và ẩn thanh tiến trình (`container.classList.add('hidden')`).
+   - **Bổ sung Nút Đóng `✕` Thủ công**: Thêm nút `✕` trên thanh tiến trình để người dùng có thể chủ động tắt ngay bất cứ lúc nào.
+   - **Xử lý khi Hủy / Lỗi**: Khi người dùng bấm Hủy tác vụ hoặc gặp lỗi, hiển thị thông báo lỗi ngắn và tự ẩn sau 2 giây.
+2. **Khớp Tuyệt Đối Biểu Mẫu PPCT 7 Cột Chuẩn**:
+   - Cấu trúc 7 cột chuẩn trên Web Preview và file xuất Word `.docx`:
+     1. `Bài học`
+     2. `Số tiết`
+     3. `Tiết CT`
+     4. `Tuần`
+     5. `Thiết bị dạy học (*)`
+     6. `Địa điểm dạy học (**)`
+     7. `Mã NLS & AI (CV 3456 & QĐ 2422)` (Cột bổ sung duy nhất)
+   - Giữ nguyên các dòng tiêu đề phân cấp gộp cột (`HỌC KÌ I`, `1. SỐ HỌC 6`, `CHƯƠNG I. ...`, `HỌC KÌ II`...).
+   - AI chỉ điền nội dung vào cột số 7 (`Mã NLS & AI`) theo tỷ lệ NLS (%), tỷ lệ AI (%) và dải mật độ mã (`1-2`, `2-3`, `3-4 mã/bài`) đã cấu hình.
+3. **Đầy đủ Ghi chú & Bảng Chữ ký Phê duyệt**:
+   - Chú thích chân bảng:
+     + `(*) Tên thiết bị/học liệu số theo Thông tư 38/2021/TT-BGDĐT`
+     + `(**) Lớp học/Phòng học bộ môn theo Thông tư 14/2020/TT-BGDĐT`
+   - Bảng chữ ký 2 bên chuẩn hành chính (Giáo viên / Tổ trưởng phê duyệt cho Phụ lục 3; Tổ trưởng / Hiệu trưởng cho Phụ lục 1, 2).
+4. **Nâng cấp Bộ Kiểm thử Tự động ([tests/xaydungphuluc-smoke.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/tests/xaydungphuluc-smoke.js))**:
+   - Kiểm tra các tiêu đề cột `Tiết CT`, `Thiết bị dạy học (*)`, `Địa điểm dạy học (**)`.
+   - Kiểm tra cơ chế tự ẩn của progress bar (`hideProgress` / `setTimeout` / nút đóng `✕`).
 
 ## Ngoài phạm vi
-- Không thay đổi các file ngoài `xaydungphuluc.html` và các file test liên quan.
+- Không can thiệp các file ngoài `xaydungphuluc.html` và file test liên quan.
 
 ## File dự kiến tác động
-- `xaydungphuluc.html` [BẢO TOÀN CỘT TUẦN PPCT NGUỒN, CHUẨN HÓA DOCX THEO FILE MẪU, THÊM PROGRESS BAR %, XÓA KHỐI PHƯƠNG PHÁP, NÂNG CẤP DENSITY]
+- `xaydungphuluc.html` [SỬA PROGRESS BAR TỰ ẨN KHI 100%, DỪNG SPINNER, THÊM NÚT ĐÓNG ✕, KHỚP CHUẨN BIỂU MẪU PPCT 7 CỘT]
 - `tests/xaydungphuluc-smoke.js` [CẬP NHẬT SMOKE TEST]
 - `docs/handoff/PLAN.md` [GHI ĐÈ]
 - `docs/handoff/.lock` [GHI MỚI / NỘI DUNG: LOCK]
@@ -49,40 +54,41 @@
 - `docs/handoff/VERIFY.md` [Tester cập nhật kết quả nghiệm thu]
 
 ## Các bước thực hiện
-1. **Bước 1: Cập nhật Schema Bảng và Siêu Prompt trong `xaydungphuluc.html`**:
-   - Thêm cột `Tuần` (`week`) vào cấu trúc JSON của bảng PPCT cho cả Phụ lục 1 và Phụ lục 3.
-   - Bổ sung nguyên tắc bảo toàn PPCT nguồn vào `appendixPrompt`: bắt buộc giữ nguyên tất cả các bài học và tuần thực hiện từ tài liệu tải lên, chỉ sinh thêm nội dung NLS & AI.
-2. **Bước 2: Nâng cấp Bảng Xem Trước Inline và Hàm Xuất Word `exportDocx`**:
-   - Render cột `Tuần` ở vị trí cột thứ 2 trong bảng xem trước.
-   - Thêm cột `Tuần` vào file Word `.docx` xuất bản với độ rộng cột tối ưu.
-   - Đảm bảo đầy đủ 5 bảng chuẩn theo file mẫu `Phụ lục 1 - Lớp 6 - Toán.docx`.
-3. **Bước 3: Xóa Khối Phương pháp, Thêm Floating Progress Bar và Nâng Cấp Dropdown Mật Độ**:
-   - Xóa bỏ `<section>` mục 4 và code liên quan đến `methods`.
-   - Thêm `#progressContainer` và CSS floating bar ở đáy màn hình.
-   - Cập nhật `#nlsDensity` và `#aiDensity` với các dải `1-2`, `2-3`, `3-4`.
+1. **Bước 1: Sửa Hàm Điều Khiển Tiến Trình `setProgress` & `hideProgress` trong `xaydungphuluc.html`**:
+   - Thêm nút đóng `✕` (`<button class="text-xs opacity-75 hover:opacity-100 ml-2" onclick="hideProgress()">✕</button>`) vào thanh `#progressContainer`.
+   - Nâng cấp `setProgress(percent, message, visible)`:
+     + Nếu `percent >= 100`: Hiển thị icon `✓ Đã hoàn tất`, dừng spinner và đặt `setTimeout(() => hideProgress(), 1500)`.
+     + Nếu `percent < 100` và `visible`: Hiển thị spinner xoay và xóa timer ẩn trước đó (nếu có).
+2. **Bước 2: Chuẩn Hóa 7 Cột Biểu Mẫu PPCT**:
+   - Định nghĩa danh sách cột chuẩn:
+     `[['lesson','Bài học'],['periods','Số tiết'],['periodOrder','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['integration','Mã NLS & AI (CV 3456 & QĐ 2422)']]`.
+   - Parser nhận diện và bảo toàn `periodOrder` (Tiết CT), `week` (Tuần), `devices`, `location` từ file tải lên.
+   - Siêu Prompt Gemini chỉ điền duy nhất vào cột `integration`.
+3. **Bước 3: Nâng Cấp Bảng Xem Trước Inline và Hàm Xuất Word `exportDocx`**:
+   - Render bảng xem trước và xuất Word `.docx` chuẩn 7 cột theo đúng bố cục trong ảnh của người dùng.
+   - Thêm chú thích `(*)` và `(**)` dưới bảng và chữ ký phê duyệt 2 bên.
 4. **Bước 4: Cập nhật và chạy kiểm thử tự động**:
    - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`, xác nhận PASS 100%.
 
 ## Rủi ro
-- **Rủi ro**: File tải lên có định dạng bảng không chuẩn hoặc dạng văn bản thô.
-  - *Giải pháp*: Parser trích xuất toàn bộ text kèm cấu trúc dòng; Siêu Prompt của Gemini có chỉ dẫn phân tích thông minh nhận diện cột Tuần, STT, Bài học từ bất kỳ định dạng nào.
+- **Rủi ro**: Timer tự ẩn thanh progress bar bị đè khi người dùng bấm sinh liên tiếp nhiều lần.
+  - *Giải pháp*: Lưu `progressTimerId` vào biến toàn cục và `clearTimeout(progressTimerId)` mỗi khi bắt đầu tiến trình mới hoặc khi người dùng hủy tác vụ.
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động qua Node.js**:
    - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`:
-     + Xác nhận bảng PPCT có cột `Tuần` (`week`) và chỉ dẫn bảo toàn PPCT.
-     + Xác nhận tồn tại các tùy chọn mật độ `1-2`, `2-3`, `3-4`.
-     + Xác nhận tồn tại `progressContainer`, `progressPercent`, `progressBarInner`.
-     + Xác nhận không còn khối "Phương pháp & kĩ thuật dạy học".
+     + Xác nhận hàm `setProgress` có cơ chế dừng spinner và tự ẩn sau 1.5s khi 100%.
+     + Xác nhận thanh progress bar có nút đóng `✕`.
+     + Xác nhận bảng PPCT có đầy đủ các cột: `Bài học`, `Số tiết`, `Tiết CT`, `Tuần`, `Thiết bị dạy học (*)`, `Địa điểm dạy học (**)`, `Mã NLS & AI`.
 2. **Kiểm thử thủ công trên trình duyệt**:
-   - Tải file PPCT mẫu lên $\rightarrow$ Bấm Sinh Phụ lục.
-   - Kiểm tra kết quả xem trước: Toàn bộ danh sách bài học và tuần thực hiện (Tuần 1 $\rightarrow$ Tuần 35) được giữ nguyên vẹn 100%, cột Mã NLS & AI được điền đầy đủ.
-   - Xuất file Word $\rightarrow$ Mở kiểm tra file `.docx` có đủ cột Tuần và khớp định dạng chuẩn của file demo.
+   - Mở `xaydungphuluc.html` trên trình duyệt.
+   - Bấm nút **⚡ Sinh trọn bộ Phụ lục**:
+     + Thanh tiến trình nổi lên với spinner xoay và % tăng dần.
+     + Khi đạt 100%: Spinner dừng, icon chuyển sang `✓`, hiển thị thông báo hoàn tất và **tự động ẩn mượt mà sau 1.5 giây** (không còn bị treo che khuất bảng như trong ảnh).
+     + Người dùng cũng có thể bấm nút `✕` để đóng thanh tiến trình ngay lập tức.
+   - Kiểm tra bảng xem trước và xuất file Word: Khớp 100% biểu mẫu chuẩn 7 cột gồm `Tiết CT`, `Tuần`, `Thiết bị`, `Địa điểm` và `Mã NLS & AI`.
 
 ## Tiêu chí nghiệm thu
-1. Bảng PPCT giữ nguyên vẹn 100% danh sách bài học và cột Tuần thực hiện từ file tải lên; AI chỉ bổ sung cột Mã NLS & AI.
-2. File Word xuất ra có đầy đủ cột Tuần, chuẩn thể thức theo file mẫu `Phụ lục 1 - Lớp 6 - Toán.docx`.
-3. Khối "Phương pháp & kĩ thuật dạy học" được xóa bỏ hoàn toàn.
-4. Thanh tiến trình % thời gian thực (Floating Progress Bar) nổi bật, mượt mà khi chạy sinh AI.
-5. Dropdown mật độ mã hỗ trợ đầy đủ các dải linh hoạt: `1–2 mã/bài`, `2–3 mã/bài`, `3–4 mã/bài`.
-6. Toàn bộ smoke test tự động đều PASS 100%.
+1. Khi chạy sinh AI đạt 100%, thanh tiến trình dừng spinner, hiển thị tích xanh `✓` và tự động ẩn mượt mà sau 1.5 giây; có nút đóng `✕` để tắt chủ động.
+2. Cấu trúc bảng PPCT và file Word xuất ra khớp 100% biểu mẫu người dùng cung cấp (gồm đúng các cột: `Bài học`, `Số tiết`, `Tiết CT`, `Tuần`, `Thiết bị dạy học (*)`, `Địa điểm dạy học (**)`, và chỉ bổ sung cột `Mã NLS & AI (CV 3456 & QĐ 2422)`).
+3. Toàn bộ smoke test tự động đều PASS 100%.

@@ -1,37 +1,46 @@
-# VERIFY: Nghiệm thu Đưa xaydungphuluc.html ra Thư mục Gốc, Tự động Nhận API Key từ soankhbd.html, và Bật Security Guard Bảo vệ Mã nguồn
+# VERIFY: Nghiệm thu Khớp Chuẩn Biểu Mẫu PPCT 7 Cột và Thanh Tiến Trình Tự Động Ẩn Khi Hoàn Tất 100%
 
 ## Kết luận
 PASS
 
 ## Đối chiếu scope
-1. **Vị trí tệp**:
-   - Đã tạo và hoàn thiện [xaydungphuluc.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/xaydungphuluc.html) trực tiếp ở thư mục gốc (đồng cấp với `index.html`, `soankhbd.html`, `admin.html`), mở trực tiếp tại `https://hoangthiencm.id.vn/xaydungphuluc.html`.
-   - Giữ tệp tương thích ngược tại [GIAO AN/XAYDUNGPHULUC/xaydungphuluc.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/GIAO%20AN/XAYDUNGPHULUC/xaydungphuluc.html) tự động chuyển hướng về trang gốc.
-2. **Bảo vệ mã nguồn & Chống F12 / DevTools (Security Guard)**:
-   - Đã nhúng `<script src="js/security-guard.js"></script>` và `<script src="access-control.js"></script>` làm các thẻ đầu tiên trong `<head>` của `xaydungphuluc.html`.
-   - Khắc phục hoàn toàn hiện tượng mở được DevTools / xem mã nguồn khi chạy trên domain thật (`hoangthiencm.id.vn`).
-3. **Tự động Dùng Chung API Key từ `soankhbd.html`**:
-   - Hàm `loadKeys()` tự động quét tất cả các khóa lưu trữ của `soankhbd.html`: `khbd_user_gemini_keys_${userEmail}`, `khbd_user_gemini_keys_default`, `khbd_gemini_api_keys`, `gemini_api_keys`, `xdpl_gemini_api_keys`, `global_gemini_keys`.
-   - Giáo viên đã nhập key bên `soankhbd.html` khi mở `xaydungphuluc.html` sẽ thấy ngay trạng thái "🔑 X key sẵn sàng" mà không phải nhập lại.
-4. **Phân quyền Toàn diện trên Backend & Admin UI**:
-   - [index.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/index.html): Thẻ công cụ mở `xaydungphuluc.html` trong tab mới với `target="_blank" rel="noopener noreferrer"`.
-   - [admin.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/admin.html): Đã cập nhật URL `xaydungphuluc.html`, merge an toàn `hostingPages` với dữ liệu backend, hiển thị đầy đủ toggle *Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)* trong form cấp/sửa quyền giáo viên.
-   - [api/helpers.php](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/api/helpers.php): Đăng ký `xaydungphuluc` trong `page_catalog()`, `teacher_workspace_page_ids()`, `teacher_default_workspace_extras()`, `teacher_feature_keys_for_pages()`.
-   - [access-control.js](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/access-control.js): Đăng ký ánh xạ `xaydungphuluc.html` và `xaydungphuluc`.
-   - [global_config.json](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/global_config.json): Đã thêm `"xaydungphuluc": true` vào `features`.
+1. **Khớp Chuẩn Biểu Mẫu PPCT 7 Cột của Người Dùng**:
+   - Bảng phân phối chương trình và kế hoạch dạy học đã định nghĩa đúng 7 cột chuẩn:
+     1. `Bài học`
+     2. `Số tiết`
+     3. `Tiết CT`
+     4. `Tuần`
+     5. `Thiết bị dạy học (*)`
+     6. `Địa điểm dạy học (**)`
+     7. `Mã NLS & AI (CV 3456 & QĐ 2422)` (cột bổ sung duy nhất)
+   - Hỗ trợ các dòng tiêu đề phân cấp chương `isHeader: true` gộp ô (`HỌC KÌ I`, `1. SỐ HỌC 6`, `CHƯƠNG I. ...`, `HỌC KÌ II`).
+   - Parser bảo toàn 100% dữ liệu gốc từ file người dùng tải lên; Siêu Prompt Gemini AI chỉ điền vào cột số 7 `Mã NLS & AI`.
+   - File xuất Word `.docx` chuẩn A4, viền nét đơn, độ rộng cột 30/7/8/7/12/11/25%, căn giữa các cột số liệu; đầy đủ chú thích `(*)` TT 38/2021 và `(**)` TT 14/2020; chữ ký phê duyệt 2 bên.
+2. **Thanh Tiến Trình Thời Gian Thực (% Floating Progress Bar)**:
+   - **Đã khắc phục triệt để lỗi 100% không dừng / không ẩn**:
+     + Khi đạt `percent >= 100`, spinner xoay lập tức dừng lại và được thay thế bằng biểu tượng tích xanh `✓`.
+     + Sau 1.5 giây kể từ khi hoàn tất, thanh tiến trình tự động kích hoạt hiệu ứng fade-out và ẩn hoàn toàn (`hideProgress()`), không còn che khuất bảng dữ liệu phía dưới.
+     + Bổ sung nút đóng `✕` thủ công trên thanh tiến trình cho phép người dùng đóng ngay lập tức.
+     + Nhánh hủy tác vụ / lỗi hiển thị thông báo và tự ẩn sau 2 giây an toàn.
+3. **Các tính năng đã hoàn thiện trước đó**:
+   - Đã xóa bỏ hoàn toàn khối "Phương pháp & kĩ thuật dạy học".
+   - Dropdown mật độ mã hỗ trợ đầy đủ các dải linh hoạt: `1–2 mã/bài`, `2–3 mã/bài`, `3–4 mã/bài`.
+   - Tự động dùng chung API Key đã lưu từ `soankhbd.html` (`khbd_user_gemini_keys_...`).
+   - Nhúng `js/security-guard.js` và `access-control.js` bảo vệ mã nguồn.
 
 ## Test đã chạy
-- `node tests/xaydungphuluc-smoke.js` $\rightarrow$ PASS.
+- `node tests/xaydungphuluc-smoke.js` $\rightarrow$ PASS (kiểm tra 7 cột, tiết CT, spanning headers, chú thích, chữ ký, `hideProgress`, timer 1.5s, nút `✕`).
 - `node tests/xaydungphuluc-integration-smoke.js` $\rightarrow$ PASS.
 - Kiểm tra cú pháp JavaScript nội tuyến của `xaydungphuluc.html` qua `node --check` $\rightarrow$ PASS 100%.
 
 ## Pass / Fail từng tiêu chí
-1. **Vị trí tệp gốc**: `xaydungphuluc.html` nằm ở thư mục gốc, có nút Trang chủ trỏ `index.html`, tệp cũ trong `GIAO AN/` tự chuyển hướng $\rightarrow$ **PASS**.
-2. **Security Guard & Access Control**: Nhúng `js/security-guard.js` và `access-control.js` chặn xem mã nguồn / F12 trên production $\rightarrow$ **PASS**.
-3. **Tự động nhận diện API Key**: Quét tự động các khóa `khbd_user_gemini_keys_...` từ `soankhbd.html`, không bắt nhập lại nếu đã có $\rightarrow$ **PASS**.
-4. **Phân quyền Backend PHP**: `api/helpers.php` đăng ký `xaydungphuluc` trong `page_catalog` và các nhóm quyền giáo viên $\rightarrow$ **PASS**.
-5. **Admin UI & Portal Link**: `index.html` và `admin.html` đồng bộ URL `xaydungphuluc.html`, merge an toàn `hostingPages` $\rightarrow$ **PASS**.
-6. **Kiểm thử tự động**: Toàn bộ smoke test đều PASS $\rightarrow$ **PASS**.
+1. Khớp biểu mẫu PPCT 7 cột chuẩn của người dùng $\rightarrow$ **PASS**.
+2. Bảo toàn 100% dữ liệu nguồn từ file tải lên và chỉ bổ sung cột NLS & AI $\rightarrow$ **PASS**.
+3. Dừng spinner và tự động ẩn thanh tiến trình sau 1.5s khi đạt 100% $\rightarrow$ **PASS**.
+4. Nút đóng `✕` thủ công trên thanh tiến trình $\rightarrow$ **PASS**.
+5. Xóa khối phương pháp dạy học $\rightarrow$ **PASS**.
+6. Dropdown dải mật độ mã `1-2`, `2-3`, `3-4` $\rightarrow$ **PASS**.
+7. Toàn bộ smoke test tự động $\rightarrow$ **PASS**.
 
 ## Bug
 - Không có lỗi tồn đọng.
