@@ -29,17 +29,43 @@ function scoreYccdRow(row, haystack) {
   return score;
 }
 
+function lessonNumber(value) {
+  const match = String(value || "").match(/\bbài\s*(\d+)\b/i);
+  return match ? match[1] : "";
+}
+
+function findOfficialYccdRows({ subjectId, grade, topic, visionText } = {}) {
+  const subject = String(subjectId || "").toLowerCase();
+  if (subject !== "toan" && subject !== "math") return [];
+  const rows = KHBD_YCCD.toan && KHBD_YCCD.toan[String(grade || "")];
+  if (!Array.isArray(rows) || !rows.length) return [];
+
+  const haystack = normalizeYccdText([topic, visionText].filter(Boolean).join(" "));
+  const requestedNumber = lessonNumber([topic, visionText].filter(Boolean).join(" "));
+  const exactNumber = requestedNumber ? rows.filter(row => lessonNumber(row.lesson) === requestedNumber) : [];
+  if (exactNumber.length) return exactNumber;
+  const exactName = haystack ? rows.filter(row => normalizeYccdText(row.lesson) === haystack) : [];
+  if (exactName.length) return exactName;
+  const ranked = rows.map(row => ({ row, score: scoreYccdRow(row, haystack) })).sort((a, b) => b.score - a.score);
+  return haystack && ranked[0].score > 0 ? [ranked[0].row] : rows.slice(0, 1);
+}
+
+function getCleanOfficialYccd(options = {}) {
+  const rows = findOfficialYccdRows(options);
+  const items = [];
+  rows.forEach(row => (row.items || []).forEach(item => {
+    const clean = String(item || "").replace(/^\s*[-•]\s*/, "").replace(/\s+/g, " ").trim();
+    if (clean && !items.includes(clean)) items.push(clean);
+  }));
+  return items.map(item => "- " + item).join("\n");
+}
+
 function getOfficialYccd({ subjectId, grade, topic, visionText } = {}) {
   const subject = String(subjectId || "").toLowerCase();
   if (subject !== "toan" && subject !== "math") return "";
   const gradeKey = String(grade || "");
-  const rows = KHBD_YCCD.toan && KHBD_YCCD.toan[gradeKey];
-  if (!Array.isArray(rows) || !rows.length) return "";
-
-  const haystack = normalizeYccdText([topic, visionText].filter(Boolean).join(" "));
-  const ranked = rows.map(row => ({ row, score: scoreYccdRow(row, haystack) }))
-    .sort((a, b) => b.score - a.score);
-  const picked = haystack && ranked[0].score > 0 ? ranked.slice(0, 1).map(entry => entry.row) : rows.slice(0, 1);
+  const picked = findOfficialYccdRows({ subjectId, grade, topic, visionText });
+  if (!picked.length) return "";
 
   const lines = [
     "Nguồn bắt buộc: Yêu cầu cần đạt môn Toán 6–12 – CTGDPT 2018.xlsx, lớp " + gradeKey + ".",
@@ -64,6 +90,6 @@ function getCurrentCurriculumNotice({ subjectId, grade } = {}) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { KHBD_YCCD, KHBD_CURRICULUM_AMENDMENTS, getOfficialYccd, getCurrentCurriculumNotice };
+  module.exports = { KHBD_YCCD, KHBD_CURRICULUM_AMENDMENTS, getOfficialYccd, getCleanOfficialYccd, findOfficialYccdRows, getCurrentCurriculumNotice };
 }
 

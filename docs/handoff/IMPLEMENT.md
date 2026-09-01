@@ -1,5 +1,19 @@
 # IMPLEMENT: PPCT recognition and preview synchronization
 
+## Latest implementation: clean YCCĐ matching and landscape DOCX
+
+- Added clean Toán YCCĐ helpers in `js/khbd-yccd.js`: lesson matching now prioritizes the explicit `Bài <số>`, then normalized lesson name, and only then uses keyword scoring. The new clean export joins trimmed, deduplicated outcome bullets without source, legal, lesson, or topic metadata; `getOfficialYccd()` remains compatible.
+- Routed Appendix 1 fallback outcomes, standards context, and the prompt's lesson catalog through the clean YCCĐ wrapper. Appendix 1 now replaces an AI outcome containing boilerplate metadata with the clean official YCCĐ and prompts the model to return behavioral outcomes only.
+- Made NLS selection honor the lower bound of its configured density range (1–2 → 1, 2–3 → 2, 3–4 → 3), while preserving the existing AI selection behavior.
+- Changed DOCX output to A4 landscape (`16838 × 11906`), with landscape orientation and 1134-twip margins on all four sides.
+- Extended smoke coverage for Bài 14 clean matching, metadata removal in Appendix 1, all density lower bounds, and the landscape export configuration. Extended integration smoke with static coverage of the clean helper and landscape export.
+
+## Latest verification
+
+- `node tests/xaydungphuluc-smoke.js` — PASS
+- `node tests/xaydungphuluc-integration-smoke.js` — PASS
+- `git diff --check` — PASS
+
 ## Latest implementation: full-width AI picker and explicit full-suite generation
 
 - Made the AI lesson picker card and its picker container full-width, with horizontal overflow for the source PPCT table instead of a two-column grid.

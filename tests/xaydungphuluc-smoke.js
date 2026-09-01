@@ -1,5 +1,6 @@
 /* Smoke test for the standalone THCS Appendix Builder. Run: node tests/xaydungphuluc-smoke.js */
 const fs=require('fs'),path=require('path'),assert=require('assert'),vm=require('vm');
+const {getCleanOfficialYccd}=require('../js/khbd-yccd.js');
 async function run(){
 const file=path.join(__dirname,'..','xaydungphuluc.html');
 const html=fs.readFileSync(file,'utf8');
@@ -24,6 +25,7 @@ assert(!html.includes('id="aiLessonPicker" class="grid md:grid-cols-2 gap-2 mt-3
 has('id="generateAll" class="btn primary" onclick="generateSelected(\'all\')"');
 assert(!html.includes('word-break: break-word'),'table text must not be forcibly broken');
 ['js/khbd-standards.js','KHBD_STANDARDS','recommendOfficialStandards','getOfficialYccd','getStandardCompetenciesForLesson','normalizeIntegrationTable','stageFiles','recognizeStagedPpct','readStagedSgk','🔍 Nhận diện PPCT','📖 Đọc SGK','Đã hiểu thông tin SGK','sgkKnowledgeBase'].forEach(has);
+['getCleanOfficialYccd','densityLowerBound','cleanAppendixOutcome','PageOrientation.LANDSCAPE','width:16838,height:11906','top:1134,right:1134,bottom:1134,left:1134'].forEach(has);
 ['progressContainer','progressPercent','progressBarInner','setProgress','hideProgress','progressTimerId','SCHEDULE_COLUMNS','PLAN_COLUMNS','UBND XÃ/PHƯỜNG','CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'].forEach(has);
 has('onclick="hideProgress()"');
 has('setTimeout(()=>hideProgress(),hideMs??1500)');
@@ -57,6 +59,10 @@ catch(e){assert.fail('inline JavaScript failed to parse: '+e.message)}
 assert.equal(typeof sandbox.extractPpctRows,'function','extractPpctRows must be defined');
 assert.equal(typeof sandbox.recognizePpctWithAi,'function','stage-one PPCT recognizer must be defined');
 assert.equal(typeof sandbox.callAiJson,'function','AI provider fallback must be defined');
+const bai14Yccd=getCleanOfficialYccd({subjectId:'toan',grade:'6',topic:'Bài 14. Phép cộng và phép trừ số nguyên'});
+assert(/phép cộng|số nguyên/i.test(bai14Yccd),'clean YCCĐ must match Bài 14 by its lesson number');
+assert(!/ước chung lớn nhất|bội chung nhỏ nhất/i.test(bai14Yccd),'Bài 14 YCCĐ must not leak ƯCLN/BCNN from another lesson');
+assert(!/nguồn bắt buộc|căn cứ|bài sgk|nội dung ctgdpt/i.test(bai14Yccd),'clean YCCĐ must contain outcomes only, without metadata');
 ['selectModel','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-3-flash-preview','getSelectedModel','onModelChange','khbd_gemini_model','thinkingConfig:{thinkingBudget:0}','api/khbd_gemini.php','GEMINI_FALLBACK_MODEL','fetchWithGeminiTimeout','Không thể trích xuất dòng PPCT nào từ tệp','Tệp không có văn bản hoặc là PDF scan cần OCR.'].forEach(has);
 assert(html.includes('Giai đoạn 1 chỉ nhận diện PPCT'),'upload flow must document stage separation');
 assert(html.includes('AI chưa khả dụng')&&html.includes('đang dùng bảng PPCT đọc trực tiếp từ tệp'),'upload must provide a visible parser fallback');
@@ -180,6 +186,12 @@ assert.equal(appendixOne.rows[1].cells[2],'1','PL1 must retain periods from PL3,
 assert.equal(appendixOne.rows[1].cells[3],'Nhận biết và mô tả được tập hợp.','PL1 must use the AI-generated outcome');
 assert(appendixOne.rows[1].cells[4].includes('[AI:'),'selected PL3 lesson must retain its AI code in PL1');
 assert(appendixOne.rows[1].cells[4].includes('Áp dụng: tiết 1'),'partial selected period must be scoped in PL1 AI integration');
+sandbox.getCleanOfficialYccd=()=>'- Thực hiện được phép cộng và phép trừ số nguyên.';
+const cleanAppendixOne=vm.runInContext(`sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Bài 14. Phép cộng và phép trừ số nguyên','1'],isHeader:false}]};appendixOneTable([{lesson:'Bài 14. Phép cộng và phép trừ số nguyên',outcomes:'Nguồn bắt buộc: CTGDPT 2018. Bài SGK: Bài 14.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
+assert.equal(cleanAppendixOne.rows[0].cells[3],'- Thực hiện được phép cộng và phép trừ số nguyên.','PL1 must replace metadata outcomes with clean YCCĐ');
+assert.equal(vm.runInContext("densityLowerBound('1-2')",sandbox),1,'NLS density 1-2 must select one digital standard');
+assert.equal(vm.runInContext("densityLowerBound('2-3')",sandbox),2,'NLS density 2-3 must select two digital standards');
+assert.equal(vm.runInContext("densityLowerBound('3-4')",sandbox),3,'NLS density 3-4 must select three digital standards');
 
 const periodFixture=`sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Bài A','2'],isHeader:false},{cells:['Bài B','3'],isHeader:false}]};sourcePpctRows=[{lesson:'Bài A',periods:'2',isHeader:false},{lesson:'Bài B',periods:'3',isHeader:false}];aiSelectedLessonIds=new Set(['source:0:period:1','source:1:period:2']);results={1:{},2:{},3:{}};activeTab='2';`;
 assert.equal(vm.runInContext(`${periodFixture}aiPeriodCandidates().length`,sandbox),5,'period candidates must flatten the lesson durations');

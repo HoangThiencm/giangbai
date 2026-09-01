@@ -1,44 +1,48 @@
-﻿# PLAN: Sửa Lỗi Bảng Chọn Tiết AI Bị Bó Hẹp 50% Chiều Rộng Và Khắc Phục Nút "Sinh Trọn Bộ Phụ Lục" Không Sinh Đủ 3 Phụ Lục Trong xaydungphuluc.html
+﻿# PLAN: Chuẩn Hóa Yêu Cầu Cần Đạt Sư Phạm, Khớp Chính Xác Bài Học & Tri Thức SGK, Đa Dạng Mã NLS Theo Mật Độ Và Xuất File Word Khổ Nằm Ngang (Landscape)
 
 ## Hiện trạng
-1. **Nguyên nhân bảng Mục 3 ("3. Chọn chính xác tiết tích hợp AI") bị co cụm dù đã mở rộng main**:
-   - Trong thẻ `<section id="aiLessonPickerCard">`, phần tử chứa bảng có class cố định: `<div id="aiLessonPicker" class="grid md:grid-cols-2 gap-2 mt-3"></div>`.
-   - Thuộc tính `grid md:grid-cols-2` ép toàn bộ bảng 8 cột (`.ai-picker-table`) chui vào 1 nửa (50% bề rộng màn hình), để trống hoàn toàn nửa bên phải.
-   - Do bị ép vào khung 50%, các cột "Bài học", "Thiết bị", "Địa điểm", "Tích hợp AI" bị co nghẹt lại và ngắt dòng vụn vặt như trong ảnh người dùng gửi (`media_1788232765119.png`).
-2. **Nguyên nhân nút "⚡ Sinh trọn bộ Phụ lục" chỉ sinh mỗi Phụ lục 3**:
-   - Thẻ button ở Mục 6 đang gán `onclick="generateSelected()"` (không truyền tham số).
-   - Hàm `generateSelected(force)` lấy `let selection = force || document.querySelector('[name=appendix]:checked').value`.
-   - Nếu người dùng trước đó đã bấm chọn radio "Phụ lục 3" ở Mục 1 (hoặc radio Phụ lục 3 được chọn), khi bấm nút "⚡ Sinh trọn bộ Phụ lục", hệ thống lấy giá trị `'3'` thay vì `'all'`, dẫn đến mảng `list = ['3']` và chỉ sinh duy nhất Phụ lục 3.
-   - Ngoài ra, khi sinh trọn bộ (`'all'`), nếu một phụ lục gặp lỗi hoặc thời gian chờ lâu, cần đảm bảo từng phụ lục (`results['1']`, `results['2']`, `results['3']`) được xử lý tuần tự, hiển thị log/tiến trình rõ ràng và chuyển tab xem trước linh hoạt.
+1. **Lỗi tràn văn bản quy chuẩn / prompt vào cột "Yêu cầu cần đạt" (Phụ lục 1)**:
+   - Hàm `getOfficialYccd` trong `js/khbd-yccd.js` sinh ra khối văn bản tiền đề cho prompt (`"Nguồn bắt buộc: Yêu cầu cần đạt môn Toán 6–12... Căn cứ pháp lý: Thông tư 32/2018... Bài SGK:... Nội dung CTGDPT 2018 tham chiếu:..."`).
+   - Khi `appendixOneFallbackOutcome` sử dụng kết quả này hoặc khi AI trả về nguyên văn prompt tham chiếu, toàn bộ văn bản quy chuẩn này bị đưa thẳng vào ô "Yêu cầu cần đạt" trong bảng hiển thị và file Word (`media_1788237703203.png`).
+2. **Lỗi so khớp bài học sai lệch kiến thức (Bài cộng trừ số nguyên lại gán YCCĐ và mã của Ước chung lớn nhất)**:
+   - Thuật toán `scoreYccdRow` và tìm kiếm bài học chấm điểm theo từ khóa đơn giản trong chuỗi, dẫn đến các bài số nguyên (như Bài 14: Phép cộng và phép trừ số nguyên) bị gán nhầm sang bài Bài 11 (Ước chung. Ước chung lớn nhất).
+   - Chưa bóc tách chính xác số thứ tự bài ("Bài 14", "Bài 4"...) và tên bài chuẩn hóa để map trực tiếp 1-1 với kho YCCĐ.
+3. **Mã Năng lực số (NLS) chỉ hiển thị 1 mã duy nhất, chưa bám sát tri thức SGK và mật độ cấu hình**:
+   - Hàm fallback `integrationText` đang cố định `standard.digital.slice(0, 1)` (chỉ lấy đúng 1 mã).
+   - Chưa tích hợp linh hoạt mật độ NLS (`nlsDensity`: `1-2`, `2-3`, `3-4` mã/bài) và chưa liên kết sâu với từ khóa hoạt động thực tế từ SGK đã đọc.
+4. **File Word xuất ra (.docx) đang để khổ dọc (Portrait) gây chật chội bảng**:
+   - Trong hàm `exportDocx`, cấu hình trang đang là `width: 11906, height: 16838` (khổ dọc A4), khiến bảng 7–8 cột bị co hẹp lề, chữ trong các ô bị ngắt dòng nhiều. Người dùng yêu cầu chuyển file Word sang khổ **nằm ngang (Landscape)**.
 
 ---
 
 ## Phạm vi
-1. **Khắc phục triệt để lỗi bề rộng Bảng chọn tiết AI (Mục 3)**:
-   - Xóa bỏ class `grid md:grid-cols-2 gap-2` tại `#aiLessonPicker`, đổi thành `<div id="aiLessonPicker" class="w-full mt-3 overflow-x-auto"></div>`.
-   - Bảng `.ai-picker-table` chiếm trọn vẹn 100% bề rộng màn hình (Full width container), các cột dữ liệu trải rộng thông thoáng, không còn hiện tượng chia đôi màn hình vô lý.
-2. **Khắc phục nút "⚡ Sinh trọn bộ Phụ lục"**:
-   - Gán rõ ràng `onclick="generateSelected('all')"` cho nút `generateAll` ở Mục 6 và đồng bộ với radio "⚡ Trọn bộ 1–2–3" ở Mục 1.
-   - Đảm bảo khi bấm "⚡ Sinh trọn bộ Phụ lục", hệ thống chắc chắn chạy vòng lặp cho đủ cả 3 phụ lục: `list = ['1', '2', '3']`.
-   - Cập nhật dữ liệu đầy đủ vào `results['1']`, `results['2']`, `results['3']`, cập nhật tiến trình từng bước `① Phân tích -> ② Phụ lục 1 -> ③ Phụ lục 2 -> ④ Phụ lục 3 -> Hoàn tất`.
-   - Sau khi hoàn thành trọn bộ, mặc định hiển thị Tab Phụ lục 1 và bật sáng tab để người dùng có thể nhấp xem ngay cả 3 tab Phụ lục 1, 2, 3 ở Mục 7.
-3. **Kiểm thử**:
-   - Cập nhật test `tests/xaydungphuluc-smoke.js` và `tests/xaydungphuluc-integration-smoke.js` xác thực:
-     * `#aiLessonPicker` không còn chứa `grid md:grid-cols-2`.
-     * Nút `generateAll` gọi `generateSelected('all')`.
-     * `generateSelected('all')` sinh và lưu trữ đầy đủ `results['1']`, `results['2']`, `results['3']`.
+1. **Chuẩn hóa hàm trích xuất Yêu cầu cần đạt sạch (`getCleanYccdForLesson`)**:
+   - Xây dựng hàm trích xuất YCCĐ tinh gọn, chỉ lấy nội dung các gạch đầu dòng hành vi chuẩn của học sinh từ `KHBD_YCCD.toan[grade]` hoặc từ SGK/AI:
+     * Loại bỏ 100% các câu hành chính, metadata ("Nguồn bắt buộc...", "Căn cứ pháp lý...", "Bài SGK:", "Nội dung CTGDPT 2018 tham chiếu:").
+     * Định dạng kết quả sạch: các gạch đầu dòng rõ ràng, chuẩn ngữ pháp sư phạm.
+2. **Nâng cấp thuật toán so khớp bài học chuẩn xác 1-1**:
+   - Chuẩn hóa tách số hiệu bài học (vd: "Bài 14.", "Bài 4.", "Bài 11.") và so khớp chính xác tên bài học với `KHBD_YCCD.toan[grade]` và mục lục SGK.
+   - Đảm bảo bài nào thì sinh đúng YCCĐ và mã NLS/AI của bài đó: Bài Số nguyên / Phép tính số nguyên chỉ sinh kiến thức về số nguyên và quy tắc dấu ngoặc, tuyệt đối không gán sang Ước chung lớn nhất.
+3. **Sinh đa dạng mã NLS theo đúng cấu hình mật độ và tri thức SGK**:
+   - Nâng cấp `integrationText` và prompt AI để sinh đúng số lượng mã NLS theo `nlsDensity` (`1–2`, `2–3`, `3–4` mã/bài).
+   - Phối hợp các nhóm năng lực số phù hợp (tìm kiếm dữ liệu `1.1.TC1a`, giải quyết vấn đề số `5.3.TC1a`, giao tiếp số `2.1.TC1a`, sáng tạo nội dung số `3.1.TC1a`...).
+4. **Chuyển đổi toàn bộ xuất file Word (.docx) sang khổ nằm ngang (Landscape)**:
+   - Cập nhật cấu hình phần `sections` trong `docx.Document` thành khổ ngang A4:
+     `size: { width: 16838, height: 11906, orientation: docx.PageOrientation.LANDSCAPE }` (hoặc `orientation: 'landscape'`), margin cân đối 1.5cm–2cm (`top: 1134, bottom: 1134, left: 1134, right: 1134`).
+   - Giúp bảng Phụ lục 1 (5 cột) và Phụ lục 3 (7 cột) hiển thị thoáng đãng, chuyên nghiệp, đúng quy cách hồ sơ chuyên môn THCS.
 
 ---
 
 ## Ngoài phạm vi
-- Không thay đổi các quy chuẩn sư phạm (CV 5512, TT 38/2021, TT 14/2020, NLS CV 3456 / TT 02, Khung AI QĐ 2422).
-- Không can thiệp vào các trang khác (`soankhbd.html`, `admin.html`).
+- Không can thiệp vào các trang khác như `soankhbd.html`, `admin.html`.
+- Không thay đổi các quy định bảo mật API key.
 
 ---
 
 ## File dự kiến tác động
-- `xaydungphuluc.html` [XÓA BỎ GRID MD:GRID-COLS-2 TẠI #aiLessonPicker, GÁN ONCLICK='generateSelected(\"all\")' CHO NÚT SINH TRỌN BỘ]
-- `tests/xaydungphuluc-smoke.js` [BỔ SUNG TEST CHO GIAO DIỆN FULL-WIDTH MỤC 3 VÀ SINH ĐỦ TRỌN BỘ 3 PHỤ LỤC]
+- `xaydungphuluc.html` [HÀM getCleanYccdForLesson SẠCH METADATA, SO KHỚP CHÍNH XÁC BÀI HỌC, NLS THEO MẬT ĐỘ, WORD KHỔ NẰM NGANG LANDSCAPE]
+- `js/khbd-yccd.js` [TỐI ƯU HÓA HÀM TRÍCH XUẤT YCCĐ VÀ MATCHING ĐẢM BẢO KHÔNG BỊ LỆCH BÀI]
+- `tests/xaydungphuluc-smoke.js` [KIỂM TRA YCCĐ SẠCH KHÔNG CHỨA METADATA, WORD KHỔ NGANG LANDSCAPE, MẬT ĐỘ NLS]
 - `docs/handoff/PLAN.md` [GHI ĐÈ THEO QUY TRÌNH SURVEY]
 - `docs/handoff/.lock` [GHI NỘI DUNG: LOCK]
 - `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi hoàn thành triển khai]
@@ -47,35 +51,57 @@
 ---
 
 ## Các bước thực hiện
-1. **Bước 1: Sửa HTML `#aiLessonPicker` trong `xaydungphuluc.html`**:
-   - Tìm thẻ `<div id="aiLessonPicker" class="grid md:grid-cols-2 gap-2 mt-3"></div>`.
-   - Sửa thành `<div id="aiLessonPicker" class="w-full mt-3 overflow-x-auto"></div>`.
-   - Đảm bảo thẻ cha `<section id="aiLessonPickerCard">` có class `card p-5 w-full`.
-2. **Bước 2: Sửa nút hành động Mục 6 & Logic `generateSelected`**:
-   - Trong Mục 6:
-     * Đổi `<button id="generateAll" class="btn primary" onclick="generateSelected()">⚡ Sinh trọn bộ Phụ lục</button>` thành `<button id="generateAll" class="btn primary" onclick="generateSelected('all')">⚡ Sinh trọn bộ Phụ lục</button>`.
-   - Trong hàm `generateSelected(force)`:
-     * Đảm bảo `const selection = force || (document.querySelector('[name=appendix]:checked') ? document.querySelector('[name=appendix]:checked').value : 'all');`
-     * `const list = (selection === 'all' || !selection) ? ['1', '2', '3'] : [selection];`
-     * Nếu `selection === 'all'`, tự động check radio `input[value="all"]` ở Mục 1 để giao diện đồng bộ.
-     * Chạy tuần tự cho từng phụ lục trong `list`, lưu kết quả vào `results[no]`, cập nhật log chi tiết `✓ Hoàn thành Phụ lục ${no}`.
-     * Khi hoàn thành, gọi `showTab('1')` (hoặc `showTab(list[0])`), kích hoạt sẵn sàng cả 3 tab xem trước và xuất Word ở Mục 7.
-3. **Bước 3: Cập nhật kiểm thử tự động `tests/xaydungphuluc-smoke.js`**:
-   - Bổ sung assertion:
-     * `assert(!html.includes('id="aiLessonPicker" class="grid md:grid-cols-2'), '#aiLessonPicker must not be split into 2-column grid');`
-     * `assert(html.includes("onclick=\"generateSelected('all')\""), 'generateAll button must explicitly trigger all 3 appendices');`
-     * Mô phỏng chạy `generateSelected('all')` kiểm tra `results['1']`, `results['2']`, `results['3']` đều có dữ liệu.
-4. **Bước 4: Chạy test và khóa handoff**:
-   - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`.
+1. **Bước 1: Nâng cấp `getCleanYccdForLesson` trong `xaydungphuluc.html` và `js/khbd-yccd.js`**:
+   - Viết hàm `getCleanYccdForLesson(lessonName, grade, subject)`:
+     * Bóc tách số bài học (vd: `Bài 14`, `Bài 4`) và từ khóa chính (vd: `phép cộng và phép trừ số nguyên`).
+     * Tra cứu trực tiếp trong `KHBD_YCCD.toan[grade]`:
+       + Tìm kiếm ưu tiên 1: Cùng số hiệu bài (ví dụ `Bài 14`).
+       + Tìm kiếm ưu tiên 2: Khớp tên bài học sau khi chuẩn hóa không dấu.
+     * Khi tìm thấy: Lấy mảng `row.items`, lọc các câu trùng lặp, nối thành danh sách gạch đầu dòng: `row.items.map(item => '- ' + item.trim()).join('\n')`.
+     * Tuyệt đối không thêm bất kỳ dòng nào chứa `"Nguồn bắt buộc"`, `"Căn cứ pháp lý"`, `"Bài SGK"`, `"Nội dung CTGDPT 2018 tham chiếu"`.
+2. **Bước 2: Chuẩn hóa cột "Yêu cầu cần đạt" trong Phụ lục 1 (`appendixOneTable` và `appendixPrompt`)**:
+   - Trong `appendixOneTable`: Nếu kết quả do AI sinh ra có chứa các cụm từ boilerplate (`Nguồn bắt buộc`, `Căn cứ pháp lý`, `tham chiếu`), tự động làm sạch hoặc thay thế bằng `getCleanYccdForLesson`.
+   - Trong `appendixPrompt('1')`: Ràng buộc AI: "Chỉ viết ngắn gọn các mục tiêu hành vi học sinh đạt được (bắt đầu bằng động từ: Nhận biết, Thực hiện, Vận dụng, Giải quyết...). Cấm đưa các câu dẫn văn bản, căn cứ pháp lý, hay tiêu đề mục vào ô yêu cầu cần đạt."
+3. **Bước 3: Tối ưu hóa gợi ý Mã NLS theo mật độ và tri thức SGK**:
+   - Trong hàm `integrationText(i, c, lesson)`:
+     * Đọc `c.nls.density` để xác định số lượng mã NLS cần lấy (ví dụ `1-2` -> lấy 1-2 mã; `2-3` -> lấy 2-3 mã; `3-4` -> lấy 3-4 mã).
+     * Phân bổ các mã NLS chuẩn từ `KHBD_STANDARDS.digital` phù hợp với nội dung bài (Toán số học dùng `1.1.TC1a`, `5.3.TC1a`; Hình học dùng `3.1.TC1a`, `5.2.TC1a`; Thống kê dùng `1.2.TC1a`, `1.3.TC1a`...).
+     * Nếu có ngữ cảnh SGK (`sgkCompactContext`), ưu tiên các mã NLS tương ứng với các hoạt động số/khám phá của bài trong SGK.
+4. **Bước 4: Cập nhật cấu hình xuất Word DOCX sang khổ nằm ngang (Landscape)**:
+   - Trong `exportDocx(n, save)`:
+     * Cập nhật section properties:
+       ```js
+       properties: {
+         page: {
+           size: {
+             width: 16838, // Chiều rộng khổ A4 ngang (twips)
+             height: 11906, // Chiều cao khổ A4 ngang (twips)
+             orientation: docx.PageOrientation.LANDSCAPE
+           },
+           margin: {
+             top: 1134,   // 2 cm
+             bottom: 1134,
+             left: 1134,
+             right: 1134
+           }
+         }
+       }
+       ```
+5. **Bước 5: Cập nhật kiểm thử tự động `tests/xaydungphuluc-smoke.js`**:
+   - Kiểm tra `getCleanYccdForLesson('Bài 14. Phép cộng và phép trừ số nguyên', '6', 'Toán học')` phải trả về đúng YCCĐ của số nguyên, không được trả về Ước chung lớn nhất.
+   - Kiểm tra `appendixOneTable` không chứa bất kỳ từ khóa nào như `"Nguồn bắt buộc"`, `"Căn cứ pháp lý"`.
+   - Kiểm tra cấu hình DOCX có `width: 16838`, `height: 11906`, `LANDSCAPE`.
+   - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js` đạt 100% PASS.
+6. **Bước 6: Khóa trạng thái giao việc**:
    - Ghi `LOCK` vào `docs/handoff/.lock`.
 
 ---
 
 ## Rủi ro & Giải pháp
-1. **Rủi ro người dùng bấm radio Mục 1 sau đó bấm nút Mục 6**:
-   - *Giải pháp*: Nút "⚡ Sinh trọn bộ Phụ lục" truyền tường minh `'all'`, luôn sinh đủ cả 3 phụ lục bất kể radio nào đang chọn; các nút "Sinh PL 1", "Sinh PL 2", "Sinh PL 3" truyền tương ứng `'1'`, `'2'`, `'3'`.
-2. **Rủi ro bảng quá rộng trên thiết bị di động**:
-   - *Giải pháp*: Container bọc `overflow-x-auto` cho phép cuộn ngang mượt mà trên màn hình nhỏ mà vẫn hiển thị 100% full width trên màn hình máy tính.
+1. **Rủi ro người dùng tải lên bài học viết tắt hoặc tên khác SGK mẫu**:
+   - *Giải pháp*: Kết hợp trích xuất số thứ tự bài kết hợp so khớp ngữ nghĩa từ khóa chính và ngữ cảnh SGK đã nạp ở Bước 2.
+2. **Rủi ro khổ ngang làm bảng phụ mục I, III bị giãn quá rộng**:
+   - *Giải pháp*: Định dạng tỷ lệ phần trăm các cột trong bảng phụ hợp lý (STT: 5%, Thiết bị/Phòng: 30%, Số lượng: 15%, Phạm vi: 35%, Ghi chú: 15%) để trang văn bản cân đối, đẹp mắt.
 
 ---
 
@@ -85,17 +111,15 @@
    - `node tests/xaydungphuluc-integration-smoke.js`
 2. **Kiểm thử thủ công**:
    - Mở `xaydungphuluc.html`:
-     * Kiểm tra Mục 3: Bảng chọn tiết AI mở rộng 100% toàn bộ chiều rộng thẻ, không còn bị ép vào cột 50% bên trái.
-     * Bấm nút "⚡ Sinh trọn bộ Phụ lục":
-       - Quan sát tiến trình chạy đủ qua 3 phụ lục: PL 1 -> PL 2 -> PL 3.
-       - Log hiển thị hoàn thành đủ cả 3 phụ lục.
-       - Chuyển qua các tab Phụ lục 1, Phụ lục 2, Phụ lục 3 ở Mục 7 đều có nội dung đầy đủ.
-       - Bấm nút "📦 Tải trọn bộ (.zip)" tải về file zip chứa đủ `Phu-luc-1.docx`, `Phu-luc-2.docx`, `Phu-luc-3.docx`.
+     * Kiểm tra Phụ lục 1: Cột "Yêu cầu cần đạt" hiển thị danh sách mục tiêu sư phạm sạch sẽ, chuẩn xác cho từng bài (Bài 14 số nguyên có YCCĐ về phép cộng trừ số nguyên, quy tắc dấu ngoặc; không có Ước chung lớn nhất; không có chữ "Nguồn bắt buộc...").
+     * Kiểm tra cột "Mã NLS & AI": Hiển thị đủ 2-3 mã NLS theo mật độ cấu hình, kết hợp đúng mã AI cho các tiết đã chọn.
+     * Bấm "📥 Xuất phụ lục đang xem (.docx)": Mở file Word và kiểm tra toàn bộ trang văn bản nằm ngang (Landscape), bảng rộng rãi, trình bày đẹp mắt.
 
 ---
 
 ## Tiêu chí nghiệm thu
-- [x] Bảng chọn tiết AI ở Mục 3 mở rộng 100% toàn màn hình, xóa bỏ hoàn toàn class `grid md:grid-cols-2` gây bó hẹp 50%.
-- [x] Nút "⚡ Sinh trọn bộ Phụ lục" luôn sinh đầy đủ cả 3 Phụ lục (1, 2, 3), lưu kết quả vào `results['1']`, `results['2']`, `results['3']`.
-- [x] Người dùng xem trước được đầy đủ cả 3 tab Phụ lục ở Mục 7 và xuất được trọn bộ file zip chứa đủ 3 file Word.
+- [x] Cột "Yêu cầu cần đạt" ở Phụ lục 1 hiển thị các mục tiêu hành vi sư phạm sạch, hoàn toàn không chứa văn bản quy chuẩn/boilerplate ("Nguồn bắt buộc...", "Căn cứ pháp lý...").
+- [x] Bài học nào thì khớp chính xác 100% YCCĐ của bài học đó (Bài số nguyên không gán nhầm sang Ước chung lớn nhất).
+- [x] Mã NLS được sinh đa dạng theo đúng mật độ `nlsDensity` cấu hình (1–2, 2–3, hoặc 3–4 mã/bài) và liên kết với tri thức SGK.
+- [x] Toàn bộ file Word (.docx) của Phụ lục 1, Phụ lục 2, Phụ lục 3 được xuất theo khổ **nằm ngang (Landscape)**.
 - [x] Bộ test `tests/xaydungphuluc-smoke.js` và `tests/xaydungphuluc-integration-smoke.js` đạt PASS 100%.
