@@ -1,5 +1,18 @@
 # IMPLEMENT: PPCT recognition and preview synchronization
 
+## Latest implementation: PPCT insert and delete controls
+
+- Added `insertPpctRowAt(index, isHeader)` and `deletePpctRowAt(index)` for inserting a normal lesson directly below any PPCT row, inserting a safe hierarchy header, and deleting a row after confirmation.
+- Added Section 3 controls for `➕ Thêm bài học mới`, `➕ Thêm tiêu đề`, and per-row `➕` / `🗑️`; the existing move and drag controls remain available on both lesson and header rows.
+- New lessons default to `Bài học mới` with one period; headers default to `HỌC KÌ / CHƯƠNG MỚI` and do not consume a curriculum period. Insert, delete, move, drag, and period edits recalculate Tiết CT/Tuần and synchronize the preserved source table, canonical PPCT rows, Appendices 1/3, and AI selections.
+- Extended smoke coverage for normal/header insertion, deletion, cumulative period recalculation, and AI selection remapping.
+
+## Latest verification
+
+- `node tests/xaydungphuluc-smoke.js` — PASS
+- `node tests/xaydungphuluc-integration-smoke.js` — PASS
+- `git diff --check` — PASS
+
 ## Latest implementation: automatic PPCT Tiết CT and Tuần recalculation
 
 - Added `recalculatePpctSequences()` to recalculate each non-header PPCT row cumulatively in its current order. It derives the subject norm from the configured annual allocation over 35 weeks (for example, Toán học: 4 periods/week), writes one curriculum period per line, and lists every applicable week once for lessons spanning a weekly boundary.
