@@ -18,6 +18,10 @@ assert(!html.includes('readStoredKeyList')&&!html.includes('cacheUserKeys'),'leg
 has('max-w-[98%]');
 has('min-width:900px');
 has('overflow-x-auto');
+has('id="aiLessonPickerCard" class="card p-5 w-full"');
+has('id="aiLessonPicker" class="w-full mt-3 overflow-x-auto"');
+assert(!html.includes('id="aiLessonPicker" class="grid md:grid-cols-2 gap-2 mt-3"'),'AI picker must not use a two-column grid');
+has('id="generateAll" class="btn primary" onclick="generateSelected(\'all\')"');
 assert(!html.includes('word-break: break-word'),'table text must not be forcibly broken');
 ['js/khbd-standards.js','KHBD_STANDARDS','recommendOfficialStandards','getOfficialYccd','getStandardCompetenciesForLesson','normalizeIntegrationTable','stageFiles','recognizeStagedPpct','readStagedSgk','🔍 Nhận diện PPCT','📖 Đọc SGK','Đã hiểu thông tin SGK','sgkKnowledgeBase'].forEach(has);
 ['progressContainer','progressPercent','progressBarInner','setProgress','hideProgress','progressTimerId','SCHEDULE_COLUMNS','PLAN_COLUMNS','UBND XÃ/PHƯỜNG','CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'].forEach(has);
@@ -269,6 +273,13 @@ serverRequests=[];vm.runInContext('syncUserKeysPromise=null',sandbox);
 assert.deepEqual(await Promise.all([sandbox.ensureKeysLoaded(),sandbox.ensureKeysLoaded()]),[true,true],'recognition must await the shared eager key-load promise');
 assert.equal(serverRequests.filter(request=>request.options.method==='GET').length,1,'concurrent key checks must share one eager GET request');
 assert.equal(keyElements['#keyBadge'].textContent,'🔑 1 Gemini · 1 Mistral','badge must report provider-specific counts');
+const allRadio={checked:false};
+sandbox.generateAll={disabled:false};
+sandbox.document.querySelector=selector=>selector==='input[value="all"]'?allRadio:null;
+vm.runInContext("apiKeys=['mock-key'];mistralKeys=[];results={};getConfig=()=>({});callAiJson=async prompt=>({appendix:prompt});normalizeAppendix=value=>value;appendixPrompt=no=>no;setStep=()=>{};setProgress=()=>{};log=()=>{};showTab=()=>{};notify=()=>{};openKeyModal=()=>{};aborter=null",sandbox);
+await sandbox.generateSelected('all');
+assert.deepEqual(Array.from(vm.runInContext('Object.keys(results).sort()',sandbox)),['1','2','3'],'generateSelected(all) must generate all three appendices');
+assert.equal(allRadio.checked,true,'generateSelected(all) must synchronize the all radio button');
 console.log('PASS xaydungphuluc smoke: PPCT 7-column form, independent table ingest, no admin-header leak, density ranges and auto-hiding progress UI are present.');
 }
 run().catch(error=>{console.error(error);process.exitCode=1});

@@ -43,6 +43,10 @@ mustInclude(appendix, '📖 Đọc SGK');
 mustInclude(appendix, 'Đã hiểu thông tin SGK');
 mustInclude(appendix, 'normalizeIntegrationTable');
 mustInclude(appendix, 'Mã NLS & AI (CV 3456 & QĐ 2422)');
+mustInclude(appendix, 'id="aiLessonPickerCard" class="card p-5 w-full"');
+mustInclude(appendix, 'id="aiLessonPicker" class="w-full mt-3 overflow-x-auto"');
+mustInclude(appendix, 'id="generateAll" class="btn primary" onclick="generateSelected(\'all\')"');
+assert(!appendix.includes('id="aiLessonPicker" class="grid md:grid-cols-2 gap-2 mt-3"'), 'AI lesson picker must not use the old two-column grid');
 
 mustInclude(legacyAppendix, '../../xaydungphuluc.html');
 

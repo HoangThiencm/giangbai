@@ -1,5 +1,12 @@
 # IMPLEMENT: PPCT recognition and preview synchronization
 
+## Latest implementation: full-width AI picker and explicit full-suite generation
+
+- Made the AI lesson picker card and its picker container full-width, with horizontal overflow for the source PPCT table instead of a two-column grid.
+- Changed the full-suite button to explicitly call `generateSelected('all')`.
+- Hardened `generateSelected(force)`: it safely falls back to `all` when no radio is checked, expands full-suite selection to appendices 1–3, and synchronizes the `all` radio when that path is used.
+- Updated smoke and integration coverage to check the picker layout, button argument, and mocked full-suite generation without calling an AI provider.
+
 ## Latest implementation: standards, staged document workflow, and single integration column
 
 - Added `js/khbd-standards.js` and a shared `normalizeIntegrationTable` adapter so imported, generated, previewed, and DOCX PPCT tables retain exactly one integration column.

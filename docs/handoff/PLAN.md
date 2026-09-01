@@ -1,52 +1,44 @@
-﻿# PLAN: Nâng Cấp Giao Diện Toàn Màn Hình, Chuẩn Hóa 1 Cột Tích Hợp, Quy Trình 4 Bước Đọc SGK & Sinh Mã Năng Lực Số/AI Chuẩn Xác Theo soankhbd
+﻿# PLAN: Sửa Lỗi Bảng Chọn Tiết AI Bị Bó Hẹp 50% Chiều Rộng Và Khắc Phục Nút "Sinh Trọn Bộ Phụ Lục" Không Sinh Đủ 3 Phụ Lục Trong xaydungphuluc.html
 
 ## Hiện trạng
-1. **Giao diện bảng bị co cụm (Screenshot phản ánh từ người dùng)**:
-   - Thẻ `<main class="max-w-7xl">` giới hạn chiều rộng container trong khi bảng PPCT có tới 7–8 cột dữ liệu lớn.
-   - CSS `table.ppct-table { table-layout: fixed; width: 100%; word-break: break-word }` cùng các tỷ lệ phần trăm cột chưa cân đối khiến các cột như "Bài học", "Yêu cầu cần đạt", "Thiết bị", "Mã NLS & AI" bị bóp nghẹt, chữ bị ngắt dòng sau mỗi 1–2 từ (ví dụ: "Tập / hợp", "Cách / ghi số / tự / nhiên").
-2. **Lỗi lặp 2 cột "Mã NLS & AI (CV 3456 & QĐ 2422)" trong bảng kết quả & file xuất Word**:
-   - Khi bảng nguồn đã có sẵn cột tích hợp hoặc khi gán bảng qua hàm `preservedPpctTable`, code tự động thêm `[...sourcePpctTable.columns, 'Mã NLS & AI (CV 3456 & QĐ 2422)']` mà không kiểm tra trùng lặp, dẫn đến bảng đầu ra xuất hiện 2 cột tích hợp giống hệt nhau.
-3. **Quy trình đọc tài liệu và tích hợp chưa tối ưu theo 4 bước sư phạm**:
-   - Hiện tại việc upload file và parse diễn ra tự động gộp chung, thiếu các nút hành động độc lập ("Nhận diện PPCT", "Đọc SGK").
-   - Chưa có luồng gửi file SGK lên AI để AI đọc hiểu toàn bộ cấu trúc bài học, mục tiêu, nội dung nhằm chuẩn hóa ngữ cảnh sư phạm trước khi sinh phụ lục.
-   - Chưa hiển thị thông báo trạng thái rõ ràng: **"Đã hiểu thông tin SGK"** sau khi AI phân tích SGK xong.
-4. **Mã Năng lực Số (NLS) và Khung AI chưa chuẩn xác theo quy ước `soankhbd`**:
-   - Mã NLS đang sinh giả định (`[1.1.6a]...`) chưa theo đúng khung Thông tư 02/2025/TT-BGDĐT & CV 3456/BGDĐT-GDPT (`1.1.TC1a` cho Lớp 6–7, `1.1.TC2a` cho Lớp 8–9).
-   - Mã Khung AI (QĐ 2422) chưa gắn đúng danh mục chuẩn theo từng lớp (`6.A1.1`, `7.A1.1`, `8.A1.1`, `9.A3.1`...).
-   - Hiện tượng sinh sai lệch nội dung (ví dụ: bài cộng trừ số tự nhiên nhưng sinh mã ƯCLN/BCNN hoặc mã không liên quan) do prompt chưa liên kết chặt chẽ giữa tên bài học, YCCĐ môn học (`KHBD_YCCD`) và tri thức từ SGK.
-   - Phụ lục 1 chưa tận dụng kho Yêu cầu cần đạt chính xác đã có sẵn trong `js/khbd-yccd.js`.
+1. **Nguyên nhân bảng Mục 3 ("3. Chọn chính xác tiết tích hợp AI") bị co cụm dù đã mở rộng main**:
+   - Trong thẻ `<section id="aiLessonPickerCard">`, phần tử chứa bảng có class cố định: `<div id="aiLessonPicker" class="grid md:grid-cols-2 gap-2 mt-3"></div>`.
+   - Thuộc tính `grid md:grid-cols-2` ép toàn bộ bảng 8 cột (`.ai-picker-table`) chui vào 1 nửa (50% bề rộng màn hình), để trống hoàn toàn nửa bên phải.
+   - Do bị ép vào khung 50%, các cột "Bài học", "Thiết bị", "Địa điểm", "Tích hợp AI" bị co nghẹt lại và ngắt dòng vụn vặt như trong ảnh người dùng gửi (`media_1788232765119.png`).
+2. **Nguyên nhân nút "⚡ Sinh trọn bộ Phụ lục" chỉ sinh mỗi Phụ lục 3**:
+   - Thẻ button ở Mục 6 đang gán `onclick="generateSelected()"` (không truyền tham số).
+   - Hàm `generateSelected(force)` lấy `let selection = force || document.querySelector('[name=appendix]:checked').value`.
+   - Nếu người dùng trước đó đã bấm chọn radio "Phụ lục 3" ở Mục 1 (hoặc radio Phụ lục 3 được chọn), khi bấm nút "⚡ Sinh trọn bộ Phụ lục", hệ thống lấy giá trị `'3'` thay vì `'all'`, dẫn đến mảng `list = ['3']` và chỉ sinh duy nhất Phụ lục 3.
+   - Ngoài ra, khi sinh trọn bộ (`'all'`), nếu một phụ lục gặp lỗi hoặc thời gian chờ lâu, cần đảm bảo từng phụ lục (`results['1']`, `results['2']`, `results['3']`) được xử lý tuần tự, hiển thị log/tiến trình rõ ràng và chuyển tab xem trước linh hoạt.
 
 ---
 
 ## Phạm vi
-1. **Mở rộng giao diện hiển thị toàn màn hình (Full-width / Fluid Layout)**:
-   - Chuyển `main` sang container siêu rộng (`max-w-[98%] 2xl:max-w-[1750px] mx-auto`) để bảng PPCT và Bảng chọn tiết AI lấp đầy màn hình, hiển thị thoáng đãng.
-   - Cân đối lại tỷ lệ bề rộng các cột (STT: 4%, Bài học: 28%, Số tiết: 6%, Tiết CT: 7%, Tuần: 6%, Thiết bị: 14%, Địa điểm: 10%, Mã NLS & AI: 25%) và cho phép tự động co giãn thông minh, hạn chế ngắt dòng vụn vặt.
-2. **Khắc phục triệt để lỗi 2 cột tích hợp (Duy nhất 1 cột NLS & AI)**:
-   - Chuẩn hóa mọi hàm xử lý bảng (`preservedPpctTable`, `ppctTableFromRows`, `appendixOneTable`, `dynamicPpctTable`, `exportDocx`): Kiểm tra nếu cột NLS & AI đã tồn tại thì cập nhật nội dung vào đúng cột đó; nếu chưa có mới thêm duy nhất 1 cột ở cuối bảng.
-3. **Thiết kế quy trình 4 bước chuẩn hóa**:
-   - **Bước 1**: Upload file PPCT / Phụ lục (PDF, DOCX, XLSX) -> Bấm nút **"🔍 Nhận diện PPCT"** -> Bóc tách và xuất ngay bảng PPCT trực quan ra màn hình ở Mục 3 và Mục 7.
-   - **Bước 2**: Upload file SGK (PDF, DOCX) -> Bấm nút **"📖 Đọc SGK"** -> Đẩy lên AI để phân tích toàn bộ cấu trúc SGK -> Xuất thông báo nổi bật: **"✓ Đã hiểu thông tin SGK"**.
-   - **Bước 3**: Người dùng tick chọn các bài/tiết tích hợp Khung năng lực AI (tối đa 12 tiết chuẩn) trên bảng mở rộng.
-   - **Bước 4**: Bấm nút sinh phụ lục (Trọn bộ 1–2–3 hoặc từng phụ lục):
-     * Đọc toàn bộ danh mục mã NLS (CV 3456 / TT 02) và Khung AI (QĐ 2422) từ `js/khbd-standards.js`.
-     * Ghép nối ngữ cảnh SGK (Bước 2) + YCCĐ từ `js/khbd-yccd.js` để AI sinh đúng mã, đúng động từ, đúng hành vi sư phạm phù hợp với từng bài học cụ thể (tuyệt đối không gán nhầm kiến thức).
-     * Phụ lục 1 tự động điền Yêu cầu cần đạt chuẩn CT GDPT 2018 từ kho dữ liệu đã cung cấp.
-4. **Tích hợp thư viện chuẩn & Kiểm thử**:
-   - Nhúng `<script src="js/khbd-standards.js"></script>` vào `xaydungphuluc.html`.
-   - Cập nhật test `tests/xaydungphuluc-smoke.js` và `tests/xaydungphuluc-integration-smoke.js` đảm bảo pass 100%.
+1. **Khắc phục triệt để lỗi bề rộng Bảng chọn tiết AI (Mục 3)**:
+   - Xóa bỏ class `grid md:grid-cols-2 gap-2` tại `#aiLessonPicker`, đổi thành `<div id="aiLessonPicker" class="w-full mt-3 overflow-x-auto"></div>`.
+   - Bảng `.ai-picker-table` chiếm trọn vẹn 100% bề rộng màn hình (Full width container), các cột dữ liệu trải rộng thông thoáng, không còn hiện tượng chia đôi màn hình vô lý.
+2. **Khắc phục nút "⚡ Sinh trọn bộ Phụ lục"**:
+   - Gán rõ ràng `onclick="generateSelected('all')"` cho nút `generateAll` ở Mục 6 và đồng bộ với radio "⚡ Trọn bộ 1–2–3" ở Mục 1.
+   - Đảm bảo khi bấm "⚡ Sinh trọn bộ Phụ lục", hệ thống chắc chắn chạy vòng lặp cho đủ cả 3 phụ lục: `list = ['1', '2', '3']`.
+   - Cập nhật dữ liệu đầy đủ vào `results['1']`, `results['2']`, `results['3']`, cập nhật tiến trình từng bước `① Phân tích -> ② Phụ lục 1 -> ③ Phụ lục 2 -> ④ Phụ lục 3 -> Hoàn tất`.
+   - Sau khi hoàn thành trọn bộ, mặc định hiển thị Tab Phụ lục 1 và bật sáng tab để người dùng có thể nhấp xem ngay cả 3 tab Phụ lục 1, 2, 3 ở Mục 7.
+3. **Kiểm thử**:
+   - Cập nhật test `tests/xaydungphuluc-smoke.js` và `tests/xaydungphuluc-integration-smoke.js` xác thực:
+     * `#aiLessonPicker` không còn chứa `grid md:grid-cols-2`.
+     * Nút `generateAll` gọi `generateSelected('all')`.
+     * `generateSelected('all')` sinh và lưu trữ đầy đủ `results['1']`, `results['2']`, `results['3']`.
 
 ---
 
 ## Ngoài phạm vi
-- Không can thiệp vào các trang khác như `soankhbd.html`, `admin.html`, `index.html`.
-- Không thay đổi các quy định bảo mật API key (không lưu vào LocalStorage).
+- Không thay đổi các quy chuẩn sư phạm (CV 5512, TT 38/2021, TT 14/2020, NLS CV 3456 / TT 02, Khung AI QĐ 2422).
+- Không can thiệp vào các trang khác (`soankhbd.html`, `admin.html`).
 
 ---
 
 ## File dự kiến tác động
-- `xaydungphuluc.html` [MỞ RỘNG LAYOUT TOÀN MÀN HÌNH, NÚT NHẬN DIỆN PPCT & ĐỌC SGK ĐỘC LẬP, SỬA LỖI 2 CỘT TÍCH HỢP, TÍCH HỢP KHBD_STANDARDS & KHBD_YCCD]
-- `tests/xaydungphuluc-smoke.js` [CẬP NHẬT TEST CHO 4 BƯỚC, KHBD_STANDARDS, 1 CỘT TÍCH HỢP DUY NHẤT VÀ THÔNG BÁO "ĐÃ HIỂU THÔNG TIN SGK"]
+- `xaydungphuluc.html` [XÓA BỎ GRID MD:GRID-COLS-2 TẠI #aiLessonPicker, GÁN ONCLICK='generateSelected(\"all\")' CHO NÚT SINH TRỌN BỘ]
+- `tests/xaydungphuluc-smoke.js` [BỔ SUNG TEST CHO GIAO DIỆN FULL-WIDTH MỤC 3 VÀ SINH ĐỦ TRỌN BỘ 3 PHỤ LỤC]
 - `docs/handoff/PLAN.md` [GHI ĐÈ THEO QUY TRÌNH SURVEY]
 - `docs/handoff/.lock` [GHI NỘI DUNG: LOCK]
 - `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi hoàn thành triển khai]
@@ -55,51 +47,35 @@
 ---
 
 ## Các bước thực hiện
-1. **Bước 1: Tinh chỉnh Giao diện Mở rộng Toàn màn hình & Tỷ lệ Cột Bảng**:
-   - Trong `xaydungphuluc.html`:
-     * Đổi `<main class="max-w-7xl mx-auto p-4 space-y-4">` thành `<main class="w-full max-w-[98%] 2xl:max-w-[1750px] mx-auto p-4 space-y-4">`.
-     * Tinh chỉnh CSS `.ppct-table`: Loại bỏ `word-break: break-word` cưỡng bức gây ngắt chữ vụn, thêm `min-width: 900px`, `overflow-x: auto`, padding ô hợp lý (`padding: 0.6rem 0.75rem`).
-     * Định nghĩa lại `PPCT_COLUMN_WIDTHS`: `{ lesson: 28, periods: 6, tietCT: 7, week: 6, devices: 14, location: 10, integration: 25 }` (hoặc phân bổ linh hoạt theo nội dung).
-2. **Bước 2: Cập nhật Mục 2 thành Luồng Thao tác 2 Nút Độc lập (Bước 1 & Bước 2)**:
-   - Thiết kế lại thẻ Mục 2:
-     * Khu vực PPCT: Input chọn file + Nút **"🔍 Nhận diện PPCT"** (nút nổi bật) + Nút "Nạp cấu trúc mẫu". Khi bấm "Nhận diện PPCT" (hoặc chọn file), bóc tách và xuất ngay bảng ra Mục 3 và Mục 7.
-     * Khu vực SGK: Input chọn file SGK + Nút **"📖 Đọc SGK"** (nút nổi bật).
-     * Khi bấm "Đọc SGK": Gửi nội dung/mục lục/hoạt động SGK lên AI phân tích, lưu vào `sgkKnowledgeBase`, hiển thị thông báo xanh: **"✓ Đã hiểu thông tin SGK ([Tên file] — [X] bài học/hoạt động)"**.
-3. **Bước 3: Khắc phục triệt để lỗi Nhân đôi Cột Tích hợp NLS & AI**:
-   - Trong `preservedPpctTable(generated, c)`:
-     * Tìm vị trí cột tích hợp hiện có trong `sourcePpctTable.columns` qua regex `/Mã NLS|NLS\s*&\s*AI|Tích hợp/i`.
-     * Nếu đã có cột tích hợp -> thay thế giá trị tại đúng cột đó trong mỗi dòng `row.cells[integrationIdx] = ...`.
-     * Nếu chưa có cột tích hợp -> thêm đúng 1 cột `'Mã NLS & AI (CV 3456 & QĐ 2422)'` vào cuối mảng `columns`.
-   - Áp dụng kiểm tra tương tự trong `ppctTableFromRows`, `appendixOneTable`, `dynamicPpctTable`, `exportDocx`.
-4. **Bước 4: Nhúng `js/khbd-standards.js` và Chuẩn hóa Hệ thống Mã Sư phạm**:
-   - Thêm `<script src="js/khbd-standards.js"></script>` vào `<head>` của `xaydungphuluc.html`.
-   - Xây dựng hàm `getStandardCompetenciesForLesson(lessonName, grade, subject, sgkContext)`:
-     * Đối chiếu với `KHBD_STANDARDS.digital` (mã `1.1.TC1a`..`5.4.TC1a` cho khối 6-7, `1.1.TC2a`..`5.4.TC2a` cho khối 8-9).
-     * Đối chiếu với `KHBD_STANDARDS.ai` (mã `6.A1.1`..`6.D2.2` cho lớp 6, `7.A1.1`..`7.D2.1` cho lớp 7, `8.A1.1`..`8.D2.2` cho lớp 8, `9.A1.1`..`9.D2.1` cho lớp 9).
-     * Lấy Yêu cầu cần đạt chuẩn từ `KHBD_YCCD` cho môn Toán (hoặc tri thức SGK đã đọc cho các môn khác).
-   - Nâng cấp `appendixPrompt`:
-     * Truyền danh mục mã chuẩn và yêu cầu AI: "Mỗi bài học CHỈ ĐƯỢC sinh mã NLS và mã AI đúng trọng tâm kiến thức của bài đó. Ví dụ: bài Số tự nhiên thì dùng mã NLS về thu thập dữ liệu số/tính toán số học, bài Hình học dùng mã vẽ hình/mô phỏng, bài Thống kê dùng mã biểu đồ. Tuyệt đối KHÔNG gán mã sai lệch như Ước chung lớn nhất cho bài cộng trừ cơ bản."
-     * Yêu cầu AI chỉ xuất mã `[AI: ...]` cho các bài/tiết nằm trong danh sách đã chọn ở Bước 3.
-     * Với Phụ lục 1: Tự động trích xuất hoặc hoàn thiện cột "Yêu cầu cần đạt" bám sát CT GDPT 2018.
-5. **Bước 5: Cập nhật `tests/xaydungphuluc-smoke.js` và `tests/xaydungphuluc-integration-smoke.js`**:
-   - Bổ sung kiểm tra:
-     * Sự có mặt của `js/khbd-standards.js` và `KHBD_STANDARDS`.
-     * Sự tồn tại của nút "Nhận diện PPCT" và nút "Đọc SGK", thông báo "Đã hiểu thông tin SGK".
-     * Kiểm tra cấu trúc bảng xuất ra chỉ có đúng 1 cột "Mã NLS & AI (CV 3456 & QĐ 2422)", không bị lặp cột.
-     * Kiểm tra định dạng mã NLS chuẩn (`.TC1a` / `.TC2a`) và mã AI chuẩn (`6.A1.1`, `7.A1.1`...).
-   - Chạy test đảm bảo pass 100%.
-6. **Bước 6: Khóa trạng thái giao việc**:
-   - Ghi nội dung `LOCK` vào `docs/handoff/.lock`.
+1. **Bước 1: Sửa HTML `#aiLessonPicker` trong `xaydungphuluc.html`**:
+   - Tìm thẻ `<div id="aiLessonPicker" class="grid md:grid-cols-2 gap-2 mt-3"></div>`.
+   - Sửa thành `<div id="aiLessonPicker" class="w-full mt-3 overflow-x-auto"></div>`.
+   - Đảm bảo thẻ cha `<section id="aiLessonPickerCard">` có class `card p-5 w-full`.
+2. **Bước 2: Sửa nút hành động Mục 6 & Logic `generateSelected`**:
+   - Trong Mục 6:
+     * Đổi `<button id="generateAll" class="btn primary" onclick="generateSelected()">⚡ Sinh trọn bộ Phụ lục</button>` thành `<button id="generateAll" class="btn primary" onclick="generateSelected('all')">⚡ Sinh trọn bộ Phụ lục</button>`.
+   - Trong hàm `generateSelected(force)`:
+     * Đảm bảo `const selection = force || (document.querySelector('[name=appendix]:checked') ? document.querySelector('[name=appendix]:checked').value : 'all');`
+     * `const list = (selection === 'all' || !selection) ? ['1', '2', '3'] : [selection];`
+     * Nếu `selection === 'all'`, tự động check radio `input[value="all"]` ở Mục 1 để giao diện đồng bộ.
+     * Chạy tuần tự cho từng phụ lục trong `list`, lưu kết quả vào `results[no]`, cập nhật log chi tiết `✓ Hoàn thành Phụ lục ${no}`.
+     * Khi hoàn thành, gọi `showTab('1')` (hoặc `showTab(list[0])`), kích hoạt sẵn sàng cả 3 tab xem trước và xuất Word ở Mục 7.
+3. **Bước 3: Cập nhật kiểm thử tự động `tests/xaydungphuluc-smoke.js`**:
+   - Bổ sung assertion:
+     * `assert(!html.includes('id="aiLessonPicker" class="grid md:grid-cols-2'), '#aiLessonPicker must not be split into 2-column grid');`
+     * `assert(html.includes("onclick=\"generateSelected('all')\""), 'generateAll button must explicitly trigger all 3 appendices');`
+     * Mô phỏng chạy `generateSelected('all')` kiểm tra `results['1']`, `results['2']`, `results['3']` đều có dữ liệu.
+4. **Bước 4: Chạy test và khóa handoff**:
+   - Chạy `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`.
+   - Ghi `LOCK` vào `docs/handoff/.lock`.
 
 ---
 
 ## Rủi ro & Giải pháp
-1. **Rủi ro bảng rộng bị tràn trên màn hình nhỏ**:
-   - *Giải pháp*: Bọc bảng trong container `<div class="overflow-x-auto">` với thanh cuộn ngang mượt mà, đồng thời ưu tiên giãn rộng tối đa trên màn hình máy tính để không bị co cụm chữ.
-2. **Rủi ro AI sinh mã NLS/AI ngẫu nhiên không đúng bài**:
-   - *Giải pháp*: Cung cấp catalog quy chuẩn từ `KHBD_STANDARDS` và tri thức SGK đã phân tích trực tiếp vào prompt, kèm ràng buộc logic sư phạm nghiêm ngặt.
-3. **Rủi ro tệp SGK dung lượng lớn làm vượt quá token**:
-   - *Giải pháp*: Sử dụng cơ chế tinh gọn `compactSgkText` kết hợp tóm lược mục tiêu bài học trước khi gửi AI.
+1. **Rủi ro người dùng bấm radio Mục 1 sau đó bấm nút Mục 6**:
+   - *Giải pháp*: Nút "⚡ Sinh trọn bộ Phụ lục" truyền tường minh `'all'`, luôn sinh đủ cả 3 phụ lục bất kể radio nào đang chọn; các nút "Sinh PL 1", "Sinh PL 2", "Sinh PL 3" truyền tương ứng `'1'`, `'2'`, `'3'`.
+2. **Rủi ro bảng quá rộng trên thiết bị di động**:
+   - *Giải pháp*: Container bọc `overflow-x-auto` cho phép cuộn ngang mượt mà trên màn hình nhỏ mà vẫn hiển thị 100% full width trên màn hình máy tính.
 
 ---
 
@@ -108,21 +84,18 @@
    - `node tests/xaydungphuluc-smoke.js`
    - `node tests/xaydungphuluc-integration-smoke.js`
 2. **Kiểm thử thủ công**:
-   - Mở `xaydungphuluc.html` trên trình duyệt:
-     * Bước 1: Upload file PPCT -> Bấm "Nhận diện PPCT" -> Kiểm tra bảng hiển thị toàn màn hình, không bị co cụm chữ.
-     * Bước 2: Upload file SGK -> Bấm "Đọc SGK" -> Kiểm tra thông báo "Đã hiểu thông tin SGK".
-     * Bước 3: Tick chọn 2-3 tiết AI ở Mục 3.
-     * Bước 4: Bấm "Sinh trọn bộ Phụ lục" -> Kiểm tra:
-       + Phụ lục 1: Cột Yêu cầu cần đạt có nội dung chuẩn xác; Cột NLS & AI chỉ có duy nhất 1 cột.
-       + Phụ lục 3: Bảng 7 cột chuẩn CV 5512, chỉ có duy nhất 1 cột NLS & AI, mã NLS & AI khớp đúng nội dung từng bài.
-       + Xuất file Word (.docx) và mở kiểm tra không có cột trùng lặp.
+   - Mở `xaydungphuluc.html`:
+     * Kiểm tra Mục 3: Bảng chọn tiết AI mở rộng 100% toàn bộ chiều rộng thẻ, không còn bị ép vào cột 50% bên trái.
+     * Bấm nút "⚡ Sinh trọn bộ Phụ lục":
+       - Quan sát tiến trình chạy đủ qua 3 phụ lục: PL 1 -> PL 2 -> PL 3.
+       - Log hiển thị hoàn thành đủ cả 3 phụ lục.
+       - Chuyển qua các tab Phụ lục 1, Phụ lục 2, Phụ lục 3 ở Mục 7 đều có nội dung đầy đủ.
+       - Bấm nút "📦 Tải trọn bộ (.zip)" tải về file zip chứa đủ `Phu-luc-1.docx`, `Phu-luc-2.docx`, `Phu-luc-3.docx`.
 
 ---
 
 ## Tiêu chí nghiệm thu
-- [x] Giao diện Bảng chọn tiết AI và Xem trước được mở rộng toàn màn hình (`max-w-[98%]`), không còn hiện tượng co cụm bóp nghẹt chữ.
-- [x] Bảng kết quả Phụ lục 1, Phụ lục 3 trên giao diện và trong file Word (.docx) xuất ra chỉ có duy nhất 1 cột "Mã NLS & AI (CV 3456 & QĐ 2422)".
-- [x] Giao diện có đầy đủ nút "Nhận diện PPCT" (Bước 1) và nút "Đọc SGK" (Bước 2), xuất thông báo "Đã hiểu thông tin SGK" sau khi AI đọc xong SGK.
-- [x] Tích hợp `js/khbd-standards.js`, mã NLS và mã AI được sinh chuẩn xác theo quy ước sư phạm, khớp đúng nội dung từng bài (không gán nhầm kiến thức).
-- [x] Cột "Yêu cầu cần đạt" trong Phụ lục 1 được lấy từ `KHBD_YCCD` / CT GDPT 2018 chuẩn xác.
-- [x] Bộ test `tests/xaydungphuluc-smoke.js` và `tests/xaydungphuluc-integration-smoke.js` chạy đạt 100%.
+- [x] Bảng chọn tiết AI ở Mục 3 mở rộng 100% toàn màn hình, xóa bỏ hoàn toàn class `grid md:grid-cols-2` gây bó hẹp 50%.
+- [x] Nút "⚡ Sinh trọn bộ Phụ lục" luôn sinh đầy đủ cả 3 Phụ lục (1, 2, 3), lưu kết quả vào `results['1']`, `results['2']`, `results['3']`.
+- [x] Người dùng xem trước được đầy đủ cả 3 tab Phụ lục ở Mục 7 và xuất được trọn bộ file zip chứa đủ 3 file Word.
+- [x] Bộ test `tests/xaydungphuluc-smoke.js` và `tests/xaydungphuluc-integration-smoke.js` đạt PASS 100%.
