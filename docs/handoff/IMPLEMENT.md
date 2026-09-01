@@ -1,26 +1,29 @@
-# IMPLEMENT: PPCT phân môn song song và định dạng dấu phẩy
+# IMPLEMENT: Tối ưu PPCT và lưu/tải bản nháp Phụ lục 5512
 
 ## Phạm vi đã triển khai
 
-- Chuẩn hóa `Tiết CT` và `Tuần` thành danh sách số nguyên phân cách bằng `, `.
-- Sửa hai luồng trích xuất PPCT dùng nhầm chuẩn hóa tuần cho `Tiết CT`.
-- Bổ sung quy tắc nhận diện AI: bảo toàn tuyệt đối `Số tiết`, `Tiết CT`, `Tuần`; không dồn tuần giữa các phân môn song song.
-- Chỉ tính lại PPCT khi người dùng bấm nút tính lại. Sửa số tiết, thêm/xóa hoặc di chuyển dòng không còn ghi đè tuần và tiết CT đã nhập/từ nguồn.
-- Thuật toán tính lại nhận diện học kỳ và các nhánh Số học, Hình học, Vật lí, Hóa học, Sinh học, Lịch sử, Địa lí. Số học dùng 3 tiết/tuần, Hình học dùng 1 tiết/tuần; mỗi nhánh có Tiết CT và tuần riêng, tiếp tục đúng sang học kỳ II.
-- Bổ sung smoke test cho định dạng dấu phẩy, bảo toàn dữ liệu thủ công và Toán 6 dạng Số học/Hình học song song.
+- Giữ nguyên tối ưu nhập liệu PPCT hiện có: sửa ô cập nhật trực tiếp dữ liệu, preview được gộp theo khung hình kế tiếp, picker tiết AI gom nhóm bằng `Map`, và cache YCCĐ/NLS/AI được giữ nguyên.
+- Thêm `api/user_phuluc_draft.php`: xác thực bằng `$_SESSION['user_id']`, tự khởi tạo bảng `user_phuluc_drafts`, tải bản nháp mới nhất bằng `GET` và lưu/cập nhật một bản nháp cho mỗi tài khoản bằng `POST`.
+- Bản nháp lưu cấu hình sư phạm, PPCT nguồn/bảng nguồn, thiết bị/phòng/đánh giá, các tiết AI đã chọn, ngữ cảnh SGK, cơ sở tri thức SGK và kết quả Phụ lục 1, 2, 3.
+- Bổ sung nút `💾 Lưu lên CSDL`, `📂 Tải từ CSDL`, trạng thái thời điểm lưu; khi mở trang hệ thống kiểm tra bản nháp và hỏi người dùng trước khi nạp.
+- Bổ sung smoke assertions cho endpoint và cấu trúc dữ liệu bản nháp.
 
-## File đã sửa
+## File đã sửa/tạo
 
+- `api/user_phuluc_draft.php` (mới)
 - `xaydungphuluc.html`
 - `tests/xaydungphuluc-smoke.js`
+- `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/.lock`
 
 ## Kiểm thử đã chạy
 
 - `node tests/xaydungphuluc-smoke.js` — PASS
 - `node tests/xaydungphuluc-integration-smoke.js` — PASS
+- `php -l api/user_phuluc_draft.php` — không chạy được vì môi trường hiện không có PHP CLI.
 - `git diff --check` — PASS
 
 ## Vấn đề còn lại
 
-Không có. Chưa commit hoặc push theo yêu cầu.
+- Chưa thể thực hiện kiểm thử thủ công với CSDL/session trên môi trường hiện tại; endpoint đã có xử lý 401 cho người chưa đăng nhập và kiểm thử cú pháp cần chạy lại ở máy chủ có PHP CLI.
+- Chưa commit hoặc push theo yêu cầu.
