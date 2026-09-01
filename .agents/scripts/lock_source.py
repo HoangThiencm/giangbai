@@ -6,7 +6,7 @@ from pathlib import Path
 ALLOW = {"decision": "allow"}
 DENY = {
     "decision": "deny",
-    "reason": "PLAN.md da xong. Antigravity bi khoa ghi source. Mo Grok de code, hoac chat moi /verify de test.",
+    "reason": "PLAN.md da xong. IDE bi khoa ghi source. Mo Coder (Grok / ChatGPT / agy) hoac chat moi /verify.",
 }
 
 payload = json.loads(sys.stdin.read() or "{}")

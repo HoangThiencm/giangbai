@@ -53,12 +53,20 @@ assert.equal(typeof sandbox.callAiJson,'function','AI provider fallback must be 
 ['selectModel','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-3-flash-preview','getSelectedModel','onModelChange','khbd_gemini_model','thinkingConfig:{thinkingBudget:0}','api/khbd_gemini.php','GEMINI_FALLBACK_MODEL','fetchWithGeminiTimeout','Không thể trích xuất dòng PPCT nào từ tệp','Tệp không có văn bản hoặc là PDF scan cần OCR.'].forEach(has);
 assert(html.includes('Giai đoạn 1 chỉ nhận diện PPCT'),'upload flow must document stage separation');
 assert(html.includes('AI chưa khả dụng')&&html.includes('đang dùng bảng PPCT đọc trực tiếp từ tệp'),'upload must provide a visible parser fallback');
-assert(html.includes('await recognizePpctWithAi(text)'),'PPCT upload must invoke recognition after text extraction');
+assert(html.includes('await recognizePpctWithAi(recognitionInput)'),'PPCT upload must invoke recognition after structured extraction');
 assert(vm.runInContext("ppctRecognitionPrompt('Bài 1').includes('Không suy diễn Yêu cầu cần đạt')",sandbox),'stage-one prompt must explicitly forbid outcome generation');
 assert(!vm.runInContext("ppctRecognitionPrompt('Bài 1').includes('schema {title')",sandbox),'stage-one prompt must not use an appendix-generation schema');
 const recognizedRows=vm.runInContext("normalizeRecognizedPpct({ppct:[{lesson:'HỌC KÌ I',isHeader:true},{lesson:'Bài 1. Tập hợp',periods:'1, 2',tietCT:'1-2',week:'Tuần 1',devices:'Máy chiếu',location:'Lớp học'}]})",sandbox);
 assert.equal(recognizedRows.length,2,'recognizer must retain PPCT headers and lesson rows');
 assert.equal(recognizedRows[1].periods,'2','recognizer must normalize listed periods for picker checkboxes');
+const recognizedVariants=vm.runInContext("normalizeRecognizedPpct([{ten_bai:'HỌC KÌ II'},{bai_hoc:'Bài biến thể',so_tiet:'2',tiet_ct:'3-4',tuan:'Tuần 2',thiet_bi:'Máy chiếu',dia_diem:'Lớp học'}])",sandbox);
+assert.equal(recognizedVariants.length,2,'recognizer must accept a direct JSON array');
+assert.equal(recognizedVariants[0].isHeader,true,'recognizer must infer PPCT headers');
+assert.deepEqual(Array.from(vm.runInContext("normalizeRecognizedPpct({schedule:[{ten_bai:'Bài wrapped',so_tiet:'1',tiet_ct:'5'}]})",sandbox)),[{lesson:'Bài wrapped',periods:'1',tietCT:'5',week:'',devices:'',location:'',integration:'',isHeader:false}],'recognizer must accept wrapped Vietnamese snake_case rows');
+const recognizedTable=vm.runInContext("ppctTableFromRows(normalizeRecognizedPpct({items:[{lesson:'Bài đồng bộ',periods:'1',tietCT:'1'}]}))",sandbox);
+assert.equal(recognizedTable.rows[0].cells[0],'Bài đồng bộ','AI rows must synchronize into the PPCT table model');
+assert(html.includes('const recognitionInput=tableText||text'),'table uploads must prefer TSV input for recognition');
+assert(html.includes("results['1']=normalizeAppendix(fallback('1',config),'1',config)")&&html.includes('activeTab=\'1\';renderPreview()'),'recognized PPCT must render immediately in the preview');
 [['(2 tiết)',2],['3 tiết',3],['[3 tiết]',3],['4 tiết/tuần',4],['1-2',2],['1, 2',2],['Tiết 1-3',3],['tiết 6 đến 8',3],['hai tiết',2],['bốn tiết',4]].forEach(([value,expected])=>assert.equal(vm.runInContext(`parsePeriodCount(${JSON.stringify(value)})`,sandbox),expected,`must parse ${value}`));
 assert.equal(vm.runInContext("parsePeriodCount('3-1')",sandbox),null,'reversed ranges must be rejected');
 const sample=[
