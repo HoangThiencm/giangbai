@@ -4,24 +4,24 @@
 PASS
 
 ## Đối chiếu scope
-- [x] Nhập liệu trong bảng PPCT Mục 3 phản hồi tức thì, không còn hiện tượng full re-render hay giật lag.
-- [x] Hàm `updatePpctField` cập nhật in-place vào dữ liệu mà không làm hủy/vẽ lại toàn bộ DOM bảng Mục 3.
-- [x] Hàm `updateAiPicker` được tối ưu hóa từ $O(N^2)$ xuống $O(N)$, không còn duyệt lặp thừa.
-- [x] Bảng xem trước Phụ lục 1 và Phụ lục 3 ở Mục 7 được đồng bộ mượt mà qua cơ chế debounce/animation frame.
-- [x] Tạo mới API `api/user_phuluc_draft.php` lưu và tải bản nháp tiến trình theo tài khoản `user_id` trên CSDL máy chủ.
-- [x] Giao diện có đầy đủ nút `💾 Lưu lên CSDL` và `📂 Tải từ CSDL`, hiển thị trạng thái lưu rõ ràng.
-- [x] Khôi phục toàn diện: Cấu hình sư phạm, bảng PPCT nguồn, tiết AI đã chọn, ngữ cảnh SGK và kết quả Phụ lục 1, 2, 3.
+- [x] Triệt tiêu hoàn toàn lỗi lệch pha YCCĐ giữa các bài học ("râu ông nọ cắm cằm bà kia").
+- [x] Xóa bỏ triệt để lệnh fallback theo chỉ số dòng `generatedRows[normal]` trong `appendixOneTable`.
+- [x] Triển khai thành công Chiến lược dự phòng 4 tầng: CSDL CTGDPT 2018 (`KHBD_YCCD`) $\to$ Ngữ cảnh SGK $\to$ AI có kiểm chứng từ khóa $\to$ Khung YCCĐ Sư phạm chuẩn hóa theo thể loại bài.
+- [x] Xử lý ngữ cảnh chủ đề cho các bài Luyện tập, Luyện tập chung, Ôn tập chương và bài học lạ.
+- [x] Cho phép giáo viên chỉnh sửa trực tiếp (Inline Edit) ô Yêu cầu cần đạt trong bảng xem trước Phụ lục 1 trước khi xuất Word.
+- [x] Chuẩn hóa độ rộng cột khi xuất Word (.docx) theo nội dung thực tế (Phụ lục 1: `[5, 22, 6, 47, 20]`, Phụ lục 3: `[22, 6, 8, 6, 18, 16, 24]`).
+- [x] Thiết lập `cantSplit: true` trên từng hàng và `tableHeader: true` trên hàng tiêu đề trên nền khổ giấy A4 Landscape chuẩn.
 
 ## Test đã chạy
 - `node tests/xaydungphuluc-smoke.js` — PASS
 - `node tests/xaydungphuluc-integration-smoke.js` — PASS
 
 ## Pass / Fail từng tiêu chí
-- [x] PASS: In-place update các ô input trong bảng PPCT không gọi re-render DOM toàn phần.
-- [x] PASS: Map gom nhóm tiết AI giảm độ phức tạp xuống $O(N)$.
-- [x] PASS: Endpoint `api/user_phuluc_draft.php` hỗ trợ đầy đủ GET/POST theo session `user_id`.
-- [x] PASS: Cấu trúc payload bản nháp chứa đầy đủ `config`, `sourcePpctTable`, `sourcePpctRows`, `aiSelectedLessonIds`, `sgkCompactContext`, `results`.
-- [x] PASS: Tự động tải bản nháp khi mở trang và khôi phục đồng bộ.
+- [x] PASS: Bài 5 (Phép nhân và phép chia) nhận đúng YCCĐ phép nhân, chia, luỹ thừa; không dính YCCĐ tập hợp/La Mã.
+- [x] PASS: Luyện tập chung nhận đúng YCCĐ củng cố chủ đề đứng trước.
+- [x] PASS: Bài học không có trong CSDL nhận đúng khung sư phạm tương ứng (`generatePedagogicalOutcome`).
+- [x] PASS: Sửa trực tiếp ô YCCĐ đồng bộ vào model và lưu cho xuất Word.
+- [x] PASS: Tỉ lệ cột DOCX và thuộc tính `cantSplit`, `tableHeader`, A4 Landscape được cấu hình chuẩn xác.
 
 ## Bug
 - Không có.

@@ -1,6 +1,6 @@
 /* Smoke test for the standalone THCS Appendix Builder. Run: node tests/xaydungphuluc-smoke.js */
 const fs=require('fs'),path=require('path'),assert=require('assert'),vm=require('vm');
-const {getCleanOfficialYccd}=require('../js/khbd-yccd.js');
+const {getCleanOfficialYccd,generatePedagogicalOutcome}=require('../js/khbd-yccd.js');
 const {recommendOfficialStandards}=require('../js/khbd-standards.js');
 async function run(){
 const file=path.join(__dirname,'..','xaydungphuluc.html');
@@ -75,6 +75,14 @@ const bai14Yccd=getCleanOfficialYccd({subjectId:'toan',grade:'6',topic:'Bài 14.
 assert(/phép cộng|số nguyên/i.test(bai14Yccd),'clean YCCĐ must match Bài 14 by its lesson number');
 assert(!/ước chung lớn nhất|bội chung nhỏ nhất/i.test(bai14Yccd),'Bài 14 YCCĐ must not leak ƯCLN/BCNN from another lesson');
 assert(!/nguồn bắt buộc|căn cứ|bài sgk|nội dung ctgdpt/i.test(bai14Yccd),'clean YCCĐ must contain outcomes only, without metadata');
+const bai5Yccd=getCleanOfficialYccd({subjectId:'toan',grade:'6',topic:'Bài 5: Phép nhân và phép chia số tự nhiên'});
+assert(/phép.*nhân|phép.*chia|luỹ thừa/i.test(bai5Yccd),'Bài 5 must receive the arithmetic YCCĐ');
+assert(!/chữ số la mã|thuật ngữ tập hợp/i.test(bai5Yccd),'Bài 5 must not receive the Tập hợp YCCĐ');
+const practiceYccd=getCleanOfficialYccd({subjectId:'toan',grade:'6',topic:'Luyện tập chung',contextTopic:'Bài 5. Phép nhân và phép chia số tự nhiên'});
+assert(/phép.*nhân|phép.*chia|luỹ thừa/i.test(practiceYccd),'practice lessons must inherit the preceding topic context');
+assert(/Củng cố, hệ thống hóa/i.test(generatePedagogicalOutcome('Luyện tập chung','Toán học','6')),'practice fallback must use the pedagogical review frame');
+assert(/Vận dụng kiến thức liên môn/i.test(generatePedagogicalOutcome('Chuyên đề STEM mô hình toán học','Toán học','6')),'STEM fallback must use the pedagogical project frame');
+['DOCX_WIDTHS','appendixOne:[5,22,6,47,20]','appendixThree:[22,6,8,6,18,16,24]','tableHeader:true,cantSplit:true','contenteditable="true" onblur="editAppendixOneOutcome','sgkOutcomeForLesson','generatePedagogicalOutcome'].forEach(has);
 ['selectModel','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-3-flash-preview','getSelectedModel','onModelChange','khbd_gemini_model','thinkingConfig:{thinkingBudget:0}','api/khbd_gemini.php','GEMINI_FALLBACK_MODEL','fetchWithGeminiTimeout','Không thể trích xuất dòng PPCT nào từ tệp','Tệp không có văn bản hoặc là PDF scan cần OCR.'].forEach(has);
 assert(html.includes('Giai đoạn 1 chỉ nhận diện PPCT'),'upload flow must document stage separation');
 assert(html.includes('AI chưa khả dụng')&&html.includes('đang dùng bảng PPCT đọc trực tiếp từ tệp'),'upload must provide a visible parser fallback');

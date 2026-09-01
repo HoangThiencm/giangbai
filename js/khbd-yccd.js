@@ -19,11 +19,36 @@ function normalizeYccdText(value) {
   return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function normalizeYccdTopic(value) {
+  return normalizeYccdText(value)
+    .replace(/\b(bai|chu de|tiet)\s+\d+\b/g, " ")
+    .replace(/\b(luyen tap chung|luyen tap|on tap chuong|on tap|thuc hanh trai nghiem)\b/g, " ")
+    .replace(/\s+/g, " ").trim();
+}
+
+function yccdKeywords(value) {
+  const text = normalizeYccdTopic(value);
+  const concepts = [
+    "tap hop", "so tu nhien", "so la ma", "phep cong", "phep tru", "phep nhan", "phep chia", "luy thua", "thu tu thuc hien",
+    "chia het", "uoc chung", "boi chung", "uoc", "boi", "so nguyen to", "hop so", "so nguyen", "phan so", "so thap phan",
+    "tam giac deu", "hinh vuong", "hinh luc giac deu", "hinh chu nhat", "hinh thoi", "hinh binh hanh", "hinh thang can",
+    "doi xung", "du lieu", "bieu do", "xac suat"
+  ];
+  return concepts.filter(concept => text.includes(concept));
+}
+
+function isPracticeOrReview(value) {
+  return /\b(luyen tap|on tap|thuc hanh trai nghiem)\b/i.test(normalizeYccdText(value));
+}
+
 function scoreYccdRow(row, haystack) {
   const lesson = normalizeYccdText(row.lesson);
   const topic = normalizeYccdText(row.topic);
+  const wantedKeywords = yccdKeywords(haystack);
+  const rowKeywords = yccdKeywords([row.lesson, row.topic].join(" "));
   let score = 0;
   if (lesson && (haystack.includes(lesson) || lesson.includes(haystack))) score += 1000;
+  wantedKeywords.forEach(keyword => { if (rowKeywords.includes(keyword)) score += 100; });
   lesson.split(" ").filter(word => word.length > 2).forEach(word => { if (haystack.includes(word)) score += 5; });
   topic.split(" ").filter(word => word.length > 3).forEach(word => { if (haystack.includes(word)) score += 2; });
   return score;
@@ -34,20 +59,22 @@ function lessonNumber(value) {
   return match ? match[1] : "";
 }
 
-function findOfficialYccdRows({ subjectId, grade, topic, visionText } = {}) {
+function findOfficialYccdRows({ subjectId, grade, topic, visionText, contextTopic } = {}) {
   const subject = String(subjectId || "").toLowerCase();
   if (subject !== "toan" && subject !== "math") return [];
   const rows = KHBD_YCCD.toan && KHBD_YCCD.toan[String(grade || "")];
   if (!Array.isArray(rows) || !rows.length) return [];
 
-  const haystack = normalizeYccdText([topic, visionText].filter(Boolean).join(" "));
+  const requestedTopic = String(topic || "");
+  const contextualTopic = isPracticeOrReview(requestedTopic) ? String(contextTopic || visionText || "") : "";
+  const haystack = normalizeYccdText([requestedTopic, contextualTopic, isPracticeOrReview(requestedTopic) ? "" : visionText].filter(Boolean).join(" "));
   const requestedNumber = lessonNumber([topic, visionText].filter(Boolean).join(" "));
   const exactNumber = requestedNumber ? rows.filter(row => lessonNumber(row.lesson) === requestedNumber) : [];
-  if (exactNumber.length) return exactNumber;
-  const exactName = haystack ? rows.filter(row => normalizeYccdText(row.lesson) === haystack) : [];
+  if (exactNumber.length && !isPracticeOrReview(requestedTopic)) return exactNumber;
+  const exactName = haystack ? rows.filter(row => normalizeYccdTopic(row.lesson) === normalizeYccdTopic(requestedTopic)) : [];
   if (exactName.length) return exactName;
   const ranked = rows.map(row => ({ row, score: scoreYccdRow(row, haystack) })).sort((a, b) => b.score - a.score);
-  return haystack && ranked[0].score > 0 ? [ranked[0].row] : rows.slice(0, 1);
+  return haystack && ranked[0].score > 0 ? [ranked[0].row] : [];
 }
 
 function getCleanOfficialYccd(options = {}) {
@@ -58,6 +85,21 @@ function getCleanOfficialYccd(options = {}) {
     if (clean && !items.includes(clean)) items.push(clean);
   }));
   return items.map(item => "- " + item).join("\n");
+}
+
+function generatePedagogicalOutcome(lesson, subject, grade) {
+  const name = String(lesson || "bài học").trim();
+  const normalized = normalizeYccdText(name);
+  if (/\b(giua ky|cuoi ky|kiem tra|danh gia)\b/.test(normalized)) {
+    return "- Đánh giá mức độ đạt được các yêu cầu cần đạt về phẩm chất, năng lực học sinh theo chương trình môn học đến thời điểm kiểm tra.";
+  }
+  if (/\b(chuyen de|stem|steam|trai nghiem)\b/.test(normalized)) {
+    return "- Vận dụng kiến thức liên môn để giải quyết vấn đề thực tiễn, phát triển tư duy sáng tạo và kĩ năng hợp tác nhóm.";
+  }
+  if (isPracticeOrReview(name)) {
+    return `- Củng cố, hệ thống hóa và khắc sâu các kiến thức, kĩ năng trọng tâm của ${name}.\n- Rèn luyện kĩ năng tính toán, phân tích và vận dụng linh hoạt các phương pháp giải bài tập.`;
+  }
+  return `- Nhận biết và phát biểu được các khái niệm, quy tắc, tính chất trọng tâm của ${name}.\n- Vận dụng được kiến thức, kĩ năng đã học để giải quyết các bài tập và tình huống thực tiễn liên quan.`;
 }
 
 function getOfficialYccd({ subjectId, grade, topic, visionText } = {}) {
@@ -90,6 +132,6 @@ function getCurrentCurriculumNotice({ subjectId, grade } = {}) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { KHBD_YCCD, KHBD_CURRICULUM_AMENDMENTS, getOfficialYccd, getCleanOfficialYccd, findOfficialYccdRows, getCurrentCurriculumNotice };
+  module.exports = { KHBD_YCCD, KHBD_CURRICULUM_AMENDMENTS, getOfficialYccd, getCleanOfficialYccd, findOfficialYccdRows, generatePedagogicalOutcome, getCurrentCurriculumNotice };
 }
 
