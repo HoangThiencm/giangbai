@@ -26,7 +26,7 @@ assert(!html.includes('id="aiLessonPicker" class="grid md:grid-cols-2 gap-2 mt-3
 has('id="generateAll" class="btn primary" onclick="generateSelected(\'all\')"');
 assert(!html.includes('word-break: break-word'),'table text must not be forcibly broken');
 ['js/khbd-standards.js','KHBD_STANDARDS','recommendOfficialStandards','getOfficialYccd','getStandardCompetenciesForLesson','normalizeIntegrationTable','stageFiles','recognizeStagedPpct','readStagedSgk','🔍 Nhận diện PPCT','📖 Đọc SGK','Đã hiểu thông tin SGK','sgkKnowledgeBase'].forEach(has);
-['getCleanOfficialYccd','densityLowerBound','cleanAppendixOutcome','PageOrientation.LANDSCAPE','width:16838,height:11906','top:1134,right:1134,bottom:1134,left:1134'].forEach(has);
+['getCleanOfficialYccd','densityLowerBound','cleanAppendixOutcome','formatOutcomeLines','formatTietCT','formatWeek','PageOrientation.LANDSCAPE','width:16838,height:11906','top:1134,right:1134,bottom:1134,left:1134','LineRuleType.AUTO','line:312,lineRule:LineRuleType.AUTO','size:26'].forEach(has);
 ['progressContainer','progressPercent','progressBarInner','setProgress','hideProgress','progressTimerId','SCHEDULE_COLUMNS','PLAN_COLUMNS','CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM','organizationHeading'].forEach(has);
 assert(!html.includes('UBND XÃ/PHƯỜNG ...<br>'),'Appendix 1 HTML heading must not render a commune/ward line');
 assert(!html.includes('UBND XÃ/PHƯỜNG ...\\n${school.value'),'Appendix 1 DOCX heading must not render a commune/ward line');
@@ -130,6 +130,12 @@ assert(codesFor('Bảng số liệu và biểu đồ cột').some(code=>code.sta
 assert.equal(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]',false,0,{ai:{enabled:true},lop:'6'})",sandbox),'[NLS: 1.1.6a - Khai thác học liệu.]','unselected lesson must not retain AI integration');
 assert(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.]',true,0,{ai:{enabled:true},lop:'6'})",sandbox).includes('[AI:'),'selected lesson must receive an AI integration when AI is enabled');
 assert(vm.runInContext("integrationHtml('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]')",sandbox).includes('nls-code')&&vm.runInContext("integrationHtml('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]')",sandbox).includes('ai-code'),'preview must distinguish NLS and AI integration colors');
+assert.equal(vm.runInContext("formatOutcomeLines('Mô tả được nội dung.,- Nhận biết được khái niệm; - Vận dụng được kiến thức.')",sandbox),'Mô tả được nội dung.\n- Nhận biết được khái niệm\n- Vận dụng được kiến thức.','outcomes must normalize compact bullets into separate lines');
+assert.equal(vm.runInContext("formatTietCT('8 9')",sandbox),'8\n9','Tiết CT must display each curriculum period on its own line');
+assert.equal(vm.runInContext("formatWeek('Tuần 3 3')",sandbox),'3','week display must remove duplicate weeks');
+const scopedIntegration=vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ.] Áp dụng: tiết 1, 2. Áp dụng: tiết 1, 2.',[1,2],0,{ai:{enabled:true},lop:'6'})",sandbox);
+assert.equal((scopedIntegration.match(/Áp dụng:/g)||[]).length,1,'selected AI integration must keep exactly one scope');
+assert(scopedIntegration.includes('[NLS:')&&scopedIntegration.includes('[AI:'),'selected AI integration must retain NLS alongside AI');
 
 const zlib=require('zlib');
 function zipRead(buf,entryName){
@@ -221,8 +227,8 @@ const ppctEditing=vm.runInContext(`getConfig=()=>({lop:'6',monHoc:'Toán học',
 assert(ppctEditing.moved&&ppctEditing.edited&&ppctEditing.reordered,'PPCT move, edit and reorder helpers must report success');
 assert.equal(ppctEditing.table[0][0],'Bài A','reorderPpctRow must update sourcePpctTable');
 assert.equal(ppctEditing.rows[0].lesson,'Bài A','reorderPpctRow must update sourcePpctRows');
-assert.equal(ppctEditing.table[0][3],'Tuần 10','updatePpctField must update sourcePpctTable');
-assert.equal(ppctEditing.rows[0].week,'Tuần 10','updatePpctField must update sourcePpctRows');
+assert.equal(ppctEditing.table[0][3],'10','updatePpctField must normalize and update sourcePpctTable');
+assert.equal(ppctEditing.rows[0].week,'10','updatePpctField must normalize and update sourcePpctRows');
 assert(ppctEditing.selected.includes('source:0:period:1'),'reordering must keep the AI selection attached to its lesson');
 const pickerMetadata=vm.runInContext(`const pickerNodes={'#aiLessonPickerCard':{classList:{remove(){}}},'#aiLessonPicker':{innerHTML:''},'#aiSelectionCount':{textContent:''}};document.querySelector=selector=>pickerNodes[selector]||null;sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị dạy học','Địa điểm dạy học'],lessonIndex:0,rows:[{cells:['Bài hiển thị','1','1','Tuần 1','Máy chiếu','Lớp học'],isHeader:false}]};updateAiPicker();pickerNodes['#aiLessonPicker'].innerHTML`,sandbox);
 assert(pickerMetadata.includes('Máy chiếu')&&pickerMetadata.includes('Lớp học'),'PPCT picker must show the complete source lesson metadata');

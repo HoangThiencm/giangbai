@@ -1,5 +1,18 @@
 # IMPLEMENT: PPCT recognition and preview synchronization
 
+## Latest implementation: multiline outcomes, clean NLS/AI scope, and 13pt DOCX
+
+- Added shared formatting for outcome bullets, curriculum periods, and weeks. Compact YCCĐ bullets render as separate lines in both HTML preview and DOCX; multi-period Tiết CT renders one period per line, while repeated week values are deduplicated.
+- Reworked integration selection so every lesson retains NLS codes; selected AI periods add exactly one AI scope in the form `(Áp dụng: tiết ...)`, without duplicate scope text. Preview and DOCX now place each NLS/AI code on its own line with the existing blue/purple distinction.
+- Standardized DOCX paragraphs and table cells to Times New Roman 13pt (`size: 26`), multiple 1.3 line spacing (`line: 312`, `LineRuleType.AUTO`), while retaining A4 landscape and 100% table widths.
+- Expanded smoke and integration coverage for multiline formatting, period/week normalization, NLS+AI selection, and DOCX typography.
+
+## Latest verification
+
+- `node tests/xaydungphuluc-smoke.js` — PASS
+- `node tests/xaydungphuluc-integration-smoke.js` — PASS
+- `git diff --check` — PASS
+
 ## Latest implementation: PPCT ordering and Appendix 1 header
 
 - Removed the `UBND XÃ/PHƯỜNG ...` line from the Appendix 1 HTML preview and DOCX export. The left heading now consistently uses normalized `TRƯỜNG ...` and `TỔ ...` values only.
