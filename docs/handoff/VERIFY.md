@@ -1,20 +1,26 @@
-# VERIFY
+﻿# VERIFY
 
 ## Kết luận
 PASS
 
-## Phạm vi đã nghiệm thu
-- [x] PPCT Mục 3 có nút thêm bài học, thêm tiêu đề, chèn dòng dưới từng hàng, xóa từng hàng, di chuyển `▲`/`▼` và kéo-thả.
-- [x] `insertPpctRowAt`, `deletePpctRowAt` và `reorderPpctRow` đều gọi `recalculatePpctSequences`; Tiết CT được đánh liên tục, Tuần được phân bổ theo định mức môn học. Dòng tiêu đề không tiêu thụ tiết.
-- [x] Chèn/xóa/di chuyển đồng bộ `sourcePpctTable`, `sourcePpctRows`, Phụ lục 1/3, preview và lựa chọn AI. Xóa yêu cầu xác nhận trước khi thực hiện.
-- [x] YCCĐ tách từng ý; NLS và AI hiển thị từng dòng, vẫn giữ NLS khi chọn AI và không lặp phạm vi `Áp dụng: tiết ...`.
-- [x] Tiết CT nhiều tiết hiển thị xuống dòng, Tuần trùng được khử; DOCX vẫn A4 ngang, Times New Roman 13pt, dãn dòng 1.3 và bảng rộng 100%.
+## Đối chiếu scope
+- [x] Nhận diện PPCT từ PDF/Word/Excel bảo toàn 100% cột `Số tiết`, `Tuần` và `Tiết CT` từ tệp gốc.
+- [x] Quy ước Tiết CT và Tuần là các số nguyên phân cách bằng dấu phẩy `", "` (ví dụ `14, 15`, `6, 7`).
+- [x] Sửa hai luồng trích xuất PPCT (`extractPpctRowsFromTable`, `extractPpctRows`) không còn gọi nhầm `normalizeWeek` cho `tietCT`.
+- [x] Thuật toán `recalculatePpctSequences` hỗ trợ cấu trúc phân môn song song (Toán 6: Số học 3 tiết/tuần, Hình học 1 tiết/tuần) khi phân bổ Tuần 1–18 (HKI) và Tuần 19–35 (HKII).
+- [x] Chỉnh sửa số tiết, thêm/xóa/di chuyển dòng không tự ý ghi đè dữ liệu Tuần và Tiết CT do người dùng nhập hoặc từ tệp nguồn.
+- [x] Prompt AI nhận diện PPCT (`ppctRecognitionPrompt`) bảo toàn nguyên vẹn Số tiết, Tiết CT và Tuần của từng phân môn song song.
 
-## Kiểm tra đã chạy
-1. `node tests/xaydungphuluc-smoke.js` — PASS
-   - Bao phủ chèn bài mặc định/tiêu đề, xóa, tính lại luỹ kế, đồng bộ bảng nguồn và ánh xạ lại lựa chọn AI.
-2. `node tests/xaydungphuluc-integration-smoke.js` — PASS
-3. `git diff --check` — PASS
+## Test đã chạy
+- `node tests/xaydungphuluc-smoke.js` — PASS
+- `node tests/xaydungphuluc-integration-smoke.js` — PASS
+
+## Pass / Fail từng tiêu chí
+- [x] PASS: Định dạng dấu phẩy cho Tiết CT và Tuần (`formatTietCT('8 9') -> '8, 9'`).
+- [x] PASS: Khử trùng lặp Tuần (`formatWeek('Tuần 3 3') -> '3'`).
+- [x] PASS: Phân môn song song tính đúng 3 Số + 1 Hình (Số học Tuần 1–18, Hình học Tuần 1–18; HKII Số học Tuần 19–35, Hình học Tuần 19–35).
+- [x] PASS: Giữ nguyên dữ liệu người dùng sửa tay khi đổi vị trí hoặc thêm dòng.
+- [x] PASS: Không rò rỉ tiêu đề hành chính vào bảng PPCT.
 
 ## Bug
-- Không phát hiện lỗi trong phạm vi kế hoạch đã duyệt.
+- Không có.
