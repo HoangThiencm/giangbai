@@ -1,19 +1,17 @@
-# IMPLEMENT: RAG sư phạm cho YCCĐ Phụ lục 1
+# IMPLEMENT: Phân rã YCCĐ Toán 6 và ngữ cảnh chương
 
 ## Phạm vi đã triển khai
 
-- Prompt Phụ lục 1 nay truyền toàn bộ danh sách bài học PPCT theo thứ tự, ngữ cảnh CTGDPT 2018/SGK theo từng bài, và yêu cầu AI trả đúng 1–3 YCCĐ cho từng bài theo ghép 1-kèm-1.
-- `appendixOneTable` ghép kết quả AI với PPCT bằng tên chuẩn hóa hoặc số bài, chỉ dùng vị trí tương ứng khi không ghép được tên; mỗi kết quả AI chỉ được sử dụng một lần.
-- `cleanAppendixOutcome` giữ kết quả AI hợp lệ, đúng ngữ nghĩa bài học. Chuỗi dự phòng khi AI thiếu hoặc sai là: CSDL CTGDPT 2018 → ngữ cảnh SGK → `generatePedagogicalOutcome`.
-- Bộ ghép tên bài không còn danh sách từ khóa Toán cố định; nó dùng số bài, tên chuẩn hóa và từ khóa tổng quát, nên áp dụng cho các môn khác.
-- Chuẩn hóa cột NLS/AI vẫn bảo toàn khả năng nhận mảng/object mà không hiển thị `[object Object]` trong preview hoặc Word.
-- Tách Mục 4 thành ba ô `Số lớp`, `Số học sinh`, `Số giáo viên`; lưu/khôi phục bản nháp tương thích cả định dạng cũ và đưa đủ ba giá trị vào Word.
-- Giữ bố cục DOCX A4 ngang với tỉ lệ cột riêng, `tableHeader: true` và `cantSplit: true`.
+- Mở rộng `KHBD_LESSON_YCCD_OVERRIDES` cho đầy đủ Bài 1–43 Toán 6. Mỗi bài có YCCĐ trọng tâm riêng, không còn dùng chung toàn bộ YCCĐ của chủ đề.
+- `findOfficialYccdRows` nhận thêm `chapterTopic`/`domain` và ưu tiên ngữ cảnh này cho bài Luyện tập, Ôn tập.
+- Phụ lục 1 theo dõi tiêu đề chương trong PPCT nguồn; YCCĐ của bài ôn tập/luyện tập được kiểm tra theo đúng chương hiện hành, thay vì chỉ dựa vào bài trước đó.
+- `formatOutcomeLines` nhận mảng hoặc chuỗi; tách dấu phẩy/chấm phẩy chỉ khi trước một động từ YCCĐ và chuẩn hóa từng ý thành dòng `- `.
+- Smoke test đã bao quát định dạng bullet, toàn bộ 43 bài Toán 6, sự khác nhau giữa các bài liền kề và bài ôn tập có ngữ cảnh chương.
 
 ## File đã sửa
 
-- `xaydungphuluc.html`
 - `js/khbd-yccd.js`
+- `xaydungphuluc.html`
 - `tests/xaydungphuluc-smoke.js`
 - `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/.lock`
@@ -26,5 +24,5 @@
 
 ## Vấn đề còn lại
 
-- Chưa thực hiện kiểm tra thủ công trên trình duyệt và Microsoft Word.
+- Chưa kiểm tra thủ công bản xem trước trên trình duyệt hoặc tài liệu Word xuất ra.
 - Chưa commit hoặc push theo yêu cầu.

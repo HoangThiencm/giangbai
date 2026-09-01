@@ -1,6 +1,6 @@
 /* Smoke test for the standalone THCS Appendix Builder. Run: node tests/xaydungphuluc-smoke.js */
 const fs=require('fs'),path=require('path'),assert=require('assert'),vm=require('vm');
-const {getCleanOfficialYccd,generatePedagogicalOutcome}=require('../js/khbd-yccd.js');
+const {getCleanOfficialYccd,generatePedagogicalOutcome,KHBD_YCCD}=require('../js/khbd-yccd.js');
 const {recommendOfficialStandards}=require('../js/khbd-standards.js');
 async function run(){
 const file=path.join(__dirname,'..','xaydungphuluc.html');
@@ -163,7 +163,11 @@ assert.equal(vm.runInContext("integrationText([{text:'[NLS: 1.1.TC1a - Học li�
 assert(!vm.runInContext("selectedIntegration([{text:'[NLS: 1.1.TC1a - Học liệu số]',ai:false}],false,0,{ai:{enabled:false},lop:'6'}).includes('[object Object]')",sandbox),'selected integration must never stringify raw objects');
 assert.equal(vm.runInContext("cleanAppendixOutcome('- Phân tích được nhân vật và chi tiết tiêu biểu trong truyện.', 'Bài 3. Nhân vật trong truyện', {lop:'6',monHoc:'Ngữ văn',sgkContext:''})",sandbox),'- Phân tích được nhân vật và chi tiết tiêu biểu trong truyện.','a valid AI outcome for a non-math lesson must be preserved');
 assert(vm.runInContext("appendixPrompt('1',{lop:'6',monHoc:'Ngữ văn',ai:{enabled:false,selectedPeriods:[]},nls:{}}).includes('DANH SÁCH BÀI HỌC BẮT BUỘC')",sandbox),'Appendix 1 prompt must transmit the ordered PPCT lesson list');
-assert.equal(vm.runInContext("formatOutcomeLines('Mô tả được nội dung.,- Nhận biết được khái niệm; - Vận dụng được kiến thức.')",sandbox),'Mô tả được nội dung.\n- Nhận biết được khái niệm\n- Vận dụng được kiến thức.','outcomes must normalize compact bullets into separate lines');
+assert.equal(vm.runInContext("formatOutcomeLines('Mô tả được nội dung., Nhận biết được khái niệm; Vận dụng được kiến thức.')",sandbox),'- Mô tả được nội dung.\n- Nhận biết được khái niệm\n- Vận dụng được kiến thức.','outcomes must normalize compact outcomes into separate bullets');
+const toan6Overrides=KHBD_YCCD.toan['6'];
+assert.equal(toan6Overrides.length,43,'Toán 6 must contain all 43 lesson rows');
+assert(toan6Overrides.every(row=>row.items.length>0),'every Toán 6 lesson must have a focused YCCĐ');
+assert.notDeepEqual(toan6Overrides[12].items,toan6Overrides[13].items,'adjacent Toán 6 lessons must not share a topic-wide YCCĐ block');
 assert.equal(vm.runInContext("formatTietCT('8 9')",sandbox),'8, 9','Tiết CT must use comma-separated integers');
 assert.equal(vm.runInContext("formatWeek('Tuần 3 3')",sandbox),'3','week display must remove duplicate weeks');
 const scopedIntegration=vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ.] Áp dụng: tiết 1, 2. Áp dụng: tiết 1, 2.',[1,2],0,{ai:{enabled:true},lop:'6'})",sandbox);
@@ -231,12 +235,14 @@ assert(/^[6-9]\.A/.test('6.A1.1'),'AI standards must be grade-specific');
 const appendixOne=vm.runInContext(`sourcePpctTable=${JSON.stringify({columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị','Địa điểm'],lessonIndex:0,rows:[{cells:['HỌC KÌ I','','','','',''],isHeader:true},{cells:['Bài 1. Tập hợp','1','1','1','Bảng phụ','Lớp học'],isHeader:false}]})};aiSelectedLessonIds=new Set(['source:1:period:1']);appendixOneTable([{lesson:'Bài 1. Tập hợp',periods:'99',outcomes:'Nhận biết và mô tả được tập hợp.',integration:'[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]'}],{lop:'6',monHoc:'Toán học',ai:{enabled:true}})`,sandbox);
 assert.deepEqual(Array.from(appendixOne.columns),['STT','Bài học','Số tiết','Yêu cầu cần đạt','Mã NLS & AI (CV 3456 & QĐ 2422)'],'PL1 must use its five-column form');
 assert.equal(appendixOne.rows[1].cells[2],'1','PL1 must retain periods from PL3, not generated schedule values');
-assert.equal(appendixOne.rows[1].cells[3],'Nhận biết và mô tả được tập hợp.','PL1 must use the AI-generated outcome');
+assert.equal(appendixOne.rows[1].cells[3],'- Nhận biết và mô tả được tập hợp.','PL1 must use the AI-generated outcome as a bullet');
 assert(appendixOne.rows[1].cells[4].includes('[AI:'),'selected PL3 lesson must retain its AI code in PL1');
 assert(appendixOne.rows[1].cells[4].includes('Áp dụng: tiết 1'),'partial selected period must be scoped in PL1 AI integration');
 sandbox.getCleanOfficialYccd=()=>'- Thực hiện được phép cộng và phép trừ số nguyên.';
 const cleanAppendixOne=vm.runInContext(`sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Bài 14. Phép cộng và phép trừ số nguyên','1'],isHeader:false}]};appendixOneTable([{lesson:'Bài 14. Phép cộng và phép trừ số nguyên',outcomes:'Nguồn bắt buộc: CTGDPT 2018. Bài SGK: Bài 14.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
 assert.equal(cleanAppendixOne.rows[0].cells[3],'- Thực hiện được phép cộng và phép trừ số nguyên.','PL1 must replace metadata outcomes with clean YCCĐ');
+const chapterScopedReview=vm.runInContext(`sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['CHƯƠNG II. SỐ NGUYÊN',''],isHeader:true},{cells:['Ôn tập chương II','1'],isHeader:false}]};appendixOneTable([{lesson:'Ôn tập chương II',outcomes:'Củng cố được kiến thức số nguyên và phép tính với số nguyên.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
+assert(chapterScopedReview.rows[1].cells[3].includes('số nguyên'),'a chapter review must retain the outcome from its current chapter context');
 assert.equal(vm.runInContext("densityLowerBound('1-2')",sandbox),1,'NLS density 1-2 must select one digital standard');
 assert.equal(vm.runInContext("densityLowerBound('2-3')",sandbox),2,'NLS density 2-3 must select two digital standards');
 assert.equal(vm.runInContext("densityLowerBound('3-4')",sandbox),3,'NLS density 3-4 must select three digital standards');

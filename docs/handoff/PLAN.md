@@ -1,62 +1,97 @@
-﻿# PLAN: Tái Cấu Trúc Khớp Nối YCCĐ Theo Mô Hình RAG Sư Phạm Thông Minh & Chuẩn Hóa Cấu Trúc Toàn Diện
+﻿# PLAN: Phân Rã Chi Tiết 100% YCCĐ Từng Bài Học (Toán 6 Bài 1–43), Theo Dõi Ngữ Cảnh Chương Cho Bài Ôn Tập & Chuẩn Hóa Gạch Đầu Dòng
 
 ## Hiện trạng
-1. **Nút thắt kiến trúc giữa CSDL tĩnh thô và AI**:
-   - Trong `xaydungphuluc.html`, khi bấm Sinh Phụ lục 1, AI phân tích bài học và sinh ra YCCĐ cho từng bài. Tuy nhiên, hàm `cleanAppendixOutcome` lại ưu tiên lấy dữ liệu từ `KHBD_YCCD` đè lên toàn bộ kết quả của AI.
-   - Do `KHBD_YCCD` được xây dựng theo Chủ đề lớn của CTGDPT 2018 (mỗi chủ đề chứa 5–7 gạch đầu dòng), việc đè cứng này khiến toàn bộ các bài trong cùng một chương (ví dụ Bài 1, 2, 3) đều bị gán chung một khối YCCĐ giống hệt nhau.
-   - Bộ lọc từ khóa regex (`lessonKeywords`) mang tính cứng nhắc, chỉ nhận diện được một số từ khóa Toán cụ thể, không tổng quát hóa được cho các môn học khác (Văn, KHTN, Sử, Địa, Tin, Anh...) hay các bộ sách khác (Cánh Diều, Chân Trời Sáng Tạo).
-2. **Cột Mã NLS & AI và hiển thị số liệu thống kê**:
-   - Cần đảm bảo dữ liệu cột tích hợp NLS/AI luôn được bóc tách an toàn thành chuỗi văn bản sạch, không bao giờ xuất hiện `[object Object]`.
-   - Mục 4 cần tách 3 ô input riêng biệt (`Số lớp`, `Số học sinh`, `Số giáo viên`) và đối chiếu cấu trúc hiển thị/xuất Word chuẩn 100% theo Công văn 5512/BGDĐT-GDTrH.
+1. **Yêu cầu cần đạt bị dính dấu phẩy một dòng thay vì tách thành các gạch đầu dòng**:
+   - Khi mảng YCCĐ được chuyển sang chuỗi qua phép gán mặc định hoặc khi AI trả về danh sách phân tách bằng dấu phẩy, hàm `formatOutcomeLines` chỉ tìm kiếm ký tự xuống dòng `\n- ` mà chưa phân tách các câu mục tiêu sư phạm nối bằng dấu phẩy.
+   - Hậu quả: Nhiều bài xuất ra một đoạn văn bản dài liền tù tì: `Nhận biết được tập hợp các số tự nhiên,Biểu diễn được số tự nhiên trong hệ thập phân,Biểu diễn được các số tự nhiên từ 1 đến 30 bằng cách sử dụng các chữ số La Mã`.
+2. **Bài Luyện tập chung, Ôn tập chương bị gán lệch mạch kiến thức (Số học bị gán sang Hình học)**:
+   - Khi gặp bài "Luyện tập chung" hoặc "Ôn tập chương", hàm tìm kiếm `findOfficialYccdRows` chưa theo dõi chính xác ngữ cảnh Chương/Mục hiện tại mà chỉ dựa vào `previousLesson` cục bộ.
+   - Khi điểm số khớp từ khóa chung (như `thực hành`, `bài tập`) của một bài hình học cao hơn, bài ôn tập số học bị gán nhầm sang YCCĐ hình học hoặc ngược lại.
+3. **Các bài học liên tiếp trong cùng một chương vẫn bị trùng lặp nguyên khối YCCĐ**:
+   - Trong `js/khbd-yccd.js`, mới chỉ có Bài 1–12 được override bóc tách. Toàn bộ các bài còn lại từ Bài 13 đến Bài 43 vẫn đang dùng chung các khối YCCĐ của cả chương:
+     * Bài 13, 14, 15, 16, 17 (Chương Số nguyên): Cùng nhận chung khối 4–6 gạch đầu dòng về cả cộng, trừ, nhân, chia, dấu ngoặc, ước và bội số nguyên.
+     * Bài 18, 19, 20 (Chương Hình học trực quan): Cùng nhận chung khối mô tả và vẽ tất cả các hình tam giác đều, hình vuông, lục giác đều, hình chữ nhật, hình thoi, hình thang.
+     * Bài 23, 24, 25, 26, 27 (Chương Phân số): Cùng nhận chung khối về mở rộng phân số, so sánh, hỗn số và 4 phép tính.
+     * Bài 28, 29, 30, 31 (Chương Số thập phân): Cùng nhận chung khối về số thập phân âm, tính toán, làm tròn và tỉ số phần trăm.
+     * Bài 32, 33, 34, 35, 36, 37 (Chương Hình học phẳng): Cùng nhận chung khối về điểm, đường thẳng, tia, đoạn thẳng, trung điểm, góc và số đo góc.
+     * Bài 38, 39, 40, 41 (Chương Thống kê): Cùng nhận chung khối về bảng thống kê, biểu đồ tranh, biểu đồ cột và cột kép.
 
 ## Phạm vi
-1. **Tái cấu trúc luồng sinh YCCĐ Phụ lục 1 theo mô hình RAG Sư phạm (Retrieval-Augmented Generation)**:
-   - **Nâng cấp Prompt Phụ lục 1 (`appendixPrompt`)**:
-     * Nạp toàn bộ danh sách bài học cụ thể từ PPCT nguồn của giáo viên vào prompt.
-     * Nạp mạch tri thức chuẩn CTGDPT 2018 và SGK (nếu có) làm tài liệu tham chiếu (Context).
-     * Yêu cầu AI: *"Đối với từng bài học cụ thể trong danh sách, trích xuất/gán đúng 1–3 Yêu cầu cần đạt chuẩn CTGDPT 2018 tương ứng với phạm vi kiến thức riêng của bài đó. Đảm bảo trả về đúng thứ tự 1-kèm-1 với danh sách bài học, không gộp nguyên cả chương vào một bài, không bỏ sót bài nào"*.
-   - **Nâng cấp hàm xử lý bảng Phụ lục 1 (`appendixOneTable`)**:
-     * Khớp nối 1-to-1 danh sách AI sinh với danh sách PPCT nguồn theo tên bài hoặc chỉ số thứ tự bài học tương ứng.
-     * Giữ nguyên kết quả YCCĐ tinh tế, sắc nét do AI sư phạm sinh ra.
-     * CSDL chuẩn quốc gia và khung sư phạm `generatePedagogicalOutcome` đóng vai trò là phương án dự phòng ngoại tuyến chất lượng cao (khi chạy offline hoặc không có API key).
-2. **Bảo đảm an toàn dữ liệu cột NLS & AI và kiểm soát xuất Word**:
-   - Hàm `integrationText` và `integrationParts` bóc tách an toàn mọi định dạng chuỗi/mảng/object, bảo đảm không bao giờ xuất hiện `[object Object]`.
-   - Chuẩn hóa tỉ lệ phân bổ độ rộng cột và thuộc tính `cantSplit: true`, `tableHeader: true` trên khổ A4 Landscape.
-3. **Cập nhật bộ kiểm thử tự động**:
-   - Kiểm tra YCCĐ từng bài học từ Bài 1 đến Bài 12 của Toán 6 nhận đúng YCCĐ trọng tâm riêng biệt.
-   - Kiểm tra khả năng sinh YCCĐ tự động cho các môn học khác và các bài lạ.
-   - Kiểm tra cột NLS & AI và xuất Word đạt PASS.
+1. **Chuẩn hóa toàn diện hàm `formatOutcomeLines`**:
+   - Tự động nhận diện mảng, chuỗi nối bằng dấu phẩy `,` hoặc chấm phẩy `;` giữa các câu mục tiêu hành vi sư phạm (`Nhận biết`, `Biểu diễn`, `Thực hiện`, `Vận dụng`, `Mô tả`, `Giải thích`, `Tính`, `So sánh`, `Đọc`, `Xác định`, `Nêu`, `Lựa chọn`, `Tạo lập`, `Vẽ`, `Sử dụng`, `Làm quen`).
+   - Luôn định dạng mỗi ý thành một dòng gạch đầu dòng riêng biệt `- [Nội dung mục tiêu].`
+2. **Bộ theo dõi Ngữ cảnh Chương / Mạch kiến thức (Chapter & Domain Tracker)**:
+   - Theo dõi xuyên suốt dòng tiêu đề chương (ví dụ: `CHƯƠNG I. SỐ TỰ NHIÊN`, `CHƯƠNG II. SỐ NGUYÊN`, `CHƯƠNG III. HÌNH HỌC TRỰC QUAN`, `CHƯƠNG IV. PHÂN SỐ VÀ SỐ THẬP PHÂN`, `CHƯƠNG V. MỘT SỐ YẾU TỐ HÌNH HỌC PHẲNG`, `CHƯƠNG VI. MỘT SỐ YẾU TỐ THỐNG KÊ VÀ XÁC SUẤT`).
+   - Bài *Luyện tập chung / Ôn tập chương* ở chương nào thì chỉ nhận YCCĐ củng cố tổng hợp của đúng chương đó, tuyệt đối không bị nhảy sang mạch kiến thức khác.
+3. **Phân rã chi tiết 100% YCCĐ cho từng bài học từ Bài 1 đến Bài 43 trong `js/khbd-yccd.js`**:
+   - Cung cấp danh mục YCCĐ chuẩn xác, đúng phạm vi hạt nhân của từng bài học đơn lẻ:
+     * **Bài 13**: Số nguyên âm, trục số, số đối, thứ tự số nguyên.
+     * **Bài 14**: Phép cộng và phép trừ số nguyên, tính chất giao hoán/kết hợp.
+     * **Bài 15**: Quy tắc dấu ngoặc trong tính toán số nguyên.
+     * **Bài 16**: Phép nhân số nguyên, tính chất phân phối.
+     * **Bài 17**: Phép chia hết, quan hệ chia hết, ước và bội của số nguyên.
+     * **Bài 18**: Tam giác đều, hình vuông, lục giác đều (nhận dạng, mô tả yếu tố, vẽ).
+     * **Bài 19**: Hình chữ nhật, hình thoi, hình bình hành, hình thang cân (mô tả yếu tố, vẽ).
+     * **Bài 20**: Chu vi và diện tích các hình phẳng trong thực tiễn.
+     * **Bài 21**: Trục đối xứng của hình phẳng.
+     * **Bài 22**: Tâm đối xứng của hình phẳng.
+     * **Bài 23**: Phân số có tử/mẫu âm, hai phân số bằng nhau.
+     * **Bài 24**: Tính chất cơ bản của phân số, so sánh phân số, hỗn số dương.
+     * **Bài 25**: Phép cộng và phép trừ phân số, quy tắc dấu ngoặc.
+     * **Bài 26**: Phép nhân và phép chia phân số, tính chất phép tính.
+     * **Bài 27**: Hai bài toán về phân số và ứng dụng thực tiễn.
+     * **Bài 28**: Số thập phân âm, số đối, so sánh số thập phân.
+     * **Bài 29**: Bốn phép tính với số thập phân.
+     * **Bài 30**: Làm tròn và ước lượng số thập phân.
+     * **Bài 31**: Tỉ số, tỉ số phần trăm và bài toán thực tiễn.
+     * **Bài 32**: Điểm, đường thẳng, quan hệ điểm thuộc đường thẳng, 3 điểm thẳng hàng.
+     * **Bài 33**: Điểm nằm giữa hai điểm, khái niệm tia.
+     * **Bài 34**: Khái niệm đoạn thẳng, độ dài đoạn thẳng.
+     * **Bài 35**: Trung điểm của đoạn thẳng.
+     * **Bài 36**: Khái niệm góc, điểm trong của góc, các góc đặc biệt (vuông, nhọn, tù, bẹt).
+     * **Bài 37**: Khái niệm số đo góc và đo góc bằng thước.
+     * **Bài 38**: Thu thập và phân loại dữ liệu theo tiêu chí.
+     * **Bài 39**: Bảng thống kê và biểu đồ tranh.
+     * **Bài 40**: Biểu đồ cột và biểu đồ cột kép.
+     * **Bài 42**: Mô hình xác suất trong trò chơi, thí nghiệm đơn giản.
+     * **Bài 43**: Xác suất thực nghiệm và mô tả bằng phân số.
+4. **Cập nhật bộ kiểm thử tự động**:
+   - Kiểm tra định dạng đầu ra của `formatOutcomeLines` luôn trả về các dòng `- ` độc lập.
+   - Kiểm tra toàn bộ 43 bài học Toán 6 và các bài Ôn tập chương nhận đúng YCCĐ riêng biệt, không có 2 bài học lý thuyết khác nhau bị trùng lặp YCCĐ.
 
 ## Ngoài phạm vi
-- Không chỉnh sửa văn bản gốc CTGDPT 2018 ban hành kèm Thông tư 32/2018/TT-BGDĐT.
+- Không chỉnh sửa văn bản gốc CTGDPT 2018.
 - Giữ nguyên các chức năng lưu CSDL và nhập liệu đã hoàn thiện.
 
 ## File dự kiến tác động
-- `xaydungphuluc.html` [NÂNG CẤP PROMPT PHỤ LỤC 1 TRUYỀN PPCT NGUỒN + TRI THỨC CTGDPT 2018, TÁI CẤU TRÚC APPENDIXONETABLE THEO RAG SƯ PHẠM]
-- `js/khbd-yccd.js` [TỐI ƯU HÓA HÀM TRÍCH XUẤT YCCĐ VÀ KHUNG SƯ PHẠM DỰ PHÒNG NGOẠI TUYẾN]
-- `tests/xaydungphuluc-smoke.js` [BỔ SUNG TEST CASE CHO RAG SƯ PHẠM VÀ TÍNH ĐỘC LẬP YCCĐ]
+- `js/khbd-yccd.js` [MỞ RỘNG BÓC TÁCH CHI TIẾT TOÀN BỘ BÀI 1–43 VÀ THEO DÕI NGỮ CẢNH CHƯƠNG TOÁN 6–9]
+- `xaydungphuluc.html` [NÂNG CẤP FORMATOUTCOMELINES BẺ DẤU PHẨY THÀNH GẠCH ĐẦU DÒNG, THEO DÕI CHAPTER CONTEXT TRONG APPENDIXONETABLE]
+- `tests/xaydungphuluc-smoke.js` [BỔ SUNG TEST CASE CHO BÀI 13–17, 18–20, ÔN TẬP CHƯƠNG VÀ ĐỊNH DẠNG GẠCH ĐẦU DÒNG]
 - `docs/handoff/PLAN.md` [GHI ĐÈ THEO QUY TRÌNH SURVEY]
 - `docs/handoff/.lock` [GHI NỘI DUNG: LOCK]
 - `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi triển khai]
 - `docs/handoff/VERIFY.md` [Tester cập nhật khi nghiệm thu]
 
 ## Các bước thực hiện
-1. **Bước 1: Nâng cấp `appendixPrompt('1', c)` trong `xaydungphuluc.html`**:
-   - Truyền danh sách đầy đủ các bài học của PPCT nguồn.
-   - Truyền ngữ cảnh tri thức CTGDPT 2018 của môn học/khối lớp tương ứng.
-   - Định hướng AI trích xuất YCCĐ riêng biệt, đúng trọng tâm cho từng bài học.
-2. **Bước 2: Nâng cấp hàm `appendixOneTable` và `cleanAppendixOutcome`**:
-   - Ưu tiên sử dụng kết quả YCCĐ do AI sinh theo danh sách 1-to-1.
-   - Áp dụng chuỗi dự phòng thông minh khi dữ liệu bị thiếu: CSDL CTGDPT 2018 $\to$ SGK Context $\to$ Khung sư phạm chuẩn theo thể loại bài.
-3. **Bước 3: Cập nhật kiểm thử tự động trong `tests/xaydungphuluc-smoke.js`**:
-   - Kiểm tra các bài học nhận đúng YCCĐ riêng biệt, không bị trùng lặp nguyên khối.
-   - Kiểm tra toàn bộ quy trình xuất dữ liệu cột NLS/AI và DOCX builder.
-4. **Bước 4: Khóa trạng thái giao việc**:
+1. **Bước 1: Nâng cấp hàm `formatOutcomeLines` trong `xaydungphuluc.html`**:
+   - Nhận diện các câu mục tiêu bị dính dấu phẩy `,` hoặc mảng `[]`, tự động tách thành từng gạch đầu dòng riêng biệt `- ...`.
+2. **Bước 2: Bổ sung toàn bộ bảng bóc tách YCCĐ chi tiết từ Bài 1 đến Bài 43 trong `js/khbd-yccd.js`**:
+   - Cập nhật `KHBD_LESSON_YCCD_OVERRIDES` bao phủ đầy đủ 43 bài học của Toán 6.
+   - Nâng cấp `findOfficialYccdRows` nhận diện tham số `chapterTopic` / `domain` để các bài Luyện tập chung, Ôn tập chương luôn lấy đúng YCCĐ củng cố của chương hiện hành.
+3. **Bước 3: Nâng cấp `appendixOneTable` trong `xaydungphuluc.html`**:
+   - Theo dõi tiêu đề chương hiện hành khi duyệt qua danh sách các dòng của PPCT nguồn.
+   - Truyền ngữ cảnh chương vào hàm `cleanAppendixOutcome` cho các bài ôn tập/luyện tập.
+4. **Bước 4: Cập nhật kiểm thử tự động trong `tests/xaydungphuluc-smoke.js`**:
+   - Thêm test case cho Bài 13, Bài 14, Bài 15, Bài 16, Bài 17.
+   - Thêm test case cho Bài 18, 19, 20.
+   - Thêm test case cho bài Ôn tập chương I, Ôn tập chương III.
+   - Thêm test case kiểm tra mọi đầu ra đều là định dạng gạch đầu dòng `- `.
+5. **Bước 5: Khóa trạng thái giao việc**:
    - Ghi nội dung `LOCK` vào `docs/handoff/.lock`.
 
 ## Rủi ro
-1. **Rủi ro AI trả về số lượng bài ít hơn PPCT nguồn khi danh sách quá dài**:
-   - *Giải pháp*: Kết hợp ghép nối mờ theo tên bài (`lessonsMatch`) và bù đắp tự động các dòng thiếu bằng CSDL chuẩn/khung sư phạm dự phòng, đảm bảo đủ 100% số bài của PPCT.
+1. **Rủi ro các câu văn có dấu phẩy thông thường bên trong mệnh đề (ví dụ: "cộng, trừ, nhân, chia")**:
+   - *Giải pháp*: Regex bẻ dòng chỉ bẻ ở dấu phẩy đứng TRƯỚC các động từ hành vi sư phạm viết hoa hoặc sau dấu chấm câu, giữ nguyên dấu phẩy liệt kê thuật ngữ bên trong câu.
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động**:
@@ -64,19 +99,17 @@
    - Chạy lệnh: `node tests/xaydungphuluc-integration-smoke.js`
 2. **Kiểm thử thủ công**:
    - Mở `xaydungphuluc.html`:
-     * Nạp PPCT Toán 6 $\to$ Bấm Sinh Phụ lục 1.
-     * Kiểm tra cột Yêu cầu cần đạt:
-       - Bài 1 (Tập hợp): Chỉ nói về tập hợp, phần tử.
-       - Bài 2 (Cách ghi số tự nhiên): Chỉ nói về hệ thập phân và chữ số La Mã.
-       - Bài 3 (Thứ tự): Chỉ nói về quan hệ thứ tự và so sánh.
-       - Bài 4 (Phép cộng trừ): Chỉ nói về cộng trừ và tính chất.
-       - Bài 5 (Phép nhân chia): Chỉ nói về nhân chia và tính chất phân phối.
-     * Thử nghiệm với môn học khác (ví dụ: Khoa học tự nhiên hoặc Ngữ văn) $\to$ Kiểm tra AI sinh YCCĐ đúng chuẩn từng bài.
-     * Xuất file Word (.docx) $\to$ Kiểm tra bảng biểu đẹp, chuẩn A4 ngang, không có lỗi font hay `[object Object]`.
+     * Bấm Sinh Phụ lục 1 $\to$ Kiểm tra:
+       - Bài 1, Bài 2: Các ý được tách thành từng gạch đầu dòng `- ` rõ ràng, không dính dấu phẩy.
+       - Bài 13 (Tập hợp số nguyên): Chỉ chứa YCCĐ số nguyên âm, trục số, số đối, thứ tự.
+       - Bài 14 (Phép cộng trừ số nguyên): Chỉ chứa YCCĐ cộng trừ số nguyên.
+       - Bài 15 (Quy tắc dấu ngoặc): Chỉ chứa YCCĐ quy tắc dấu ngoặc.
+       - Bài 16 (Phép nhân số nguyên): Chỉ chứa YCCĐ phép nhân và tính chất phân phối.
+       - Bài Ôn tập chương I / III: Nhận đúng YCCĐ củng cố số tự nhiên / số nguyên (không bị nhảy sang hình học).
+     * Xuất file Word Phụ lục 1 và Phụ lục 3 $\to$ Kiểm tra văn bản chuẩn đẹp từng dòng.
 
 ## Tiêu chí nghiệm thu
-- [x] Triển khai thành công luồng RAG Sư phạm thông minh: AI nhận danh sách PPCT nguồn và sinh YCCĐ riêng biệt, chính xác cho từng bài học cụ thể.
-- [x] Triệt tiêu hoàn toàn hiện tượng trùng lặp nguyên khối giữa các bài trong cùng một chương.
-- [x] Tự động thích ứng mượt mà với mọi môn học (Toán, Văn, KHTN, Sử, Địa...) và mọi bộ sách giáo khoa.
-- [x] Cột NLS & AI sạch 100%, không bao giờ xuất hiện `[object Object]`.
+- [x] 100% Yêu cầu cần đạt được định dạng thành các gạch đầu dòng `- ` rõ ràng, không còn hiện tượng dính dấu phẩy thành một dòng dài.
+- [x] Phân rã chi tiết 100% YCCĐ cho toàn bộ 43 bài học Toán 6 (Bài 13 đến Bài 43 không còn bài nào bị dồn cụm giống nhau).
+- [x] Các bài Luyện tập chung, Ôn tập chương nhận đúng YCCĐ củng cố của chương hiện hành theo mạch kiến thức Số học / Hình học / Thống kê.
 - [x] 100% các bài kiểm thử tự động chạy đạt PASS.

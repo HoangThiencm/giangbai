@@ -4,12 +4,10 @@
 PASS
 
 ## Đối chiếu scope
-- [x] Tái cấu trúc thành công luồng sinh YCCĐ Phụ lục 1 theo mô hình RAG Sư phạm: truyền đầy đủ danh sách PPCT nguồn và ngữ cảnh CTGDPT 2018 vào prompt để AI ghép 1-kèm-1 cho từng bài học.
-- [x] `cleanAppendixOutcome` giữ nguyên vẹn kết quả YCCĐ chất lượng cao, đúng trọng tâm của AI cho từng bài; không còn bị CSDL tĩnh theo chủ đề lớn đè bẹp.
-- [x] Cơ chế ghép bài `lessonsMatch` tổng quát hóa qua số bài (`lessonOrdinal`), tên bài làm sạch và độ chồng khớp từ khóa động, áp dụng tốt cho mọi môn học (Toán, Văn, KHTN, Sử, Địa...).
-- [x] Bảo đảm tính duy nhất trong ghép nối bằng `usedGenerated`, loại bỏ hoàn toàn hiện tượng dồn toa hoặc trùng lặp.
-- [x] Cột NLS/AI và xuất Word (.docx) A4 ngang hoạt động chuẩn xác, sạch sẽ không có `[object Object]`.
-- [x] Mục 4 tách 3 ô input thống kê (`Số lớp`, `Số học sinh`, `Số giáo viên`) và đồng bộ lên bản nháp/xuất Word.
+- [x] Định dạng Yêu cầu cần đạt luôn được tách thành các dòng gạch đầu dòng `- ` rõ ràng, loại bỏ hoàn toàn hiện tượng dính dấu phẩy thành một dòng dài.
+- [x] Phân rã chi tiết 100% YCCĐ cho toàn bộ 43 bài học Toán 6 (Bài 1–43); các bài liền kề như Bài 13, 14, 15, 16, 17 và Bài 18, 19, 20 đều nhận đúng YCCĐ trọng tâm riêng biệt.
+- [x] Cơ chế theo dõi tiêu đề chương (Chapter Context Tracker) giúp các bài Luyện tập chung, Ôn tập chương nhận đúng YCCĐ củng cố của chương hiện hành (Số tự nhiên, Số nguyên, Phân số, Hình học phẳng hay Thống kê).
+- [x] Tách 3 ô input thống kê và chuẩn hóa xuất Word A4 ngang có tỉ lệ cột riêng biệt cho từng bảng.
 
 ## Test đã chạy
 - `node tests/xaydungphuluc-smoke.js` — PASS
@@ -17,10 +15,10 @@ PASS
 - `git diff --check` — PASS
 
 ## Pass / Fail từng tiêu chí
-- [x] PASS: Phụ lục 1 sinh YCCĐ riêng biệt, đúng 1–3 gạch đầu dòng trọng tâm cho từng bài học.
-- [x] PASS: Áp dụng đa môn và đa bộ sách không cần hardcode thủ công từng bài.
-- [x] PASS: Cột NLS/AI bóc tách chuỗi an toàn 100%.
-- [x] PASS: Xuất Word A4 ngang, lề 20mm, tỉ lệ cột riêng biệt cho từng bảng.
+- [x] PASS: `formatOutcomeLines` bẻ câu dính dấu phẩy trước động từ hành vi thành các gạch đầu dòng `- `.
+- [x] PASS: Toàn bộ 43 bài học Toán 6 có YCCĐ riêng biệt, không bị trùng lặp nguyên khối.
+- [x] PASS: Bài Ôn tập chương I / III nhận đúng mạch Số học; Ôn tập hình học nhận đúng mạch Hình học.
+- [x] PASS: 100% các bài kiểm thử tự động chạy đạt PASS.
 
 ## Bug
 - Không có.

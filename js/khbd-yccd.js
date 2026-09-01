@@ -59,14 +59,14 @@ function lessonNumber(value) {
   return match ? match[1] : "";
 }
 
-function findOfficialYccdRows({ subjectId, grade, topic, visionText, contextTopic } = {}) {
+function findOfficialYccdRows({ subjectId, grade, topic, visionText, contextTopic, chapterTopic, domain } = {}) {
   const subject = String(subjectId || "").toLowerCase();
   if (subject !== "toan" && subject !== "math") return [];
   const rows = KHBD_YCCD.toan && KHBD_YCCD.toan[String(grade || "")];
   if (!Array.isArray(rows) || !rows.length) return [];
 
   const requestedTopic = String(topic || "");
-  const contextualTopic = isPracticeOrReview(requestedTopic) ? String(contextTopic || visionText || "") : "";
+  const contextualTopic = isPracticeOrReview(requestedTopic) ? String(chapterTopic || domain || contextTopic || visionText || "") : "";
   const haystack = normalizeYccdText([requestedTopic, contextualTopic, isPracticeOrReview(requestedTopic) ? "" : visionText].filter(Boolean).join(" "));
   const requestedNumber = lessonNumber([topic, visionText].filter(Boolean).join(" "));
   const exactNumber = requestedNumber ? rows.filter(row => lessonNumber(row.lesson) === requestedNumber) : [];
@@ -116,12 +116,42 @@ const KHBD_LESSON_YCCD_OVERRIDES = {
   "9": ["Vận dụng được dấu hiệu chia hết cho 2, 5, 9, 3 để xác định một số đã cho có chia hết cho 2, 5, 9, 3 hay không."],
   "10": ["Nhận biết được khái niệm số nguyên tố, hợp số.", "Thực hiện được việc phân tích một số tự nhiên lớn hơn 1 thành tích của các thừa số nguyên tố trong những trường hợp đơn giản."],
   "11": ["Xác định được ước chung, ước chung lớn nhất của hai hoặc ba số tự nhiên; nhận biết được phân số tối giản."],
-  "12": ["Xác định được bội chung, bội chung nhỏ nhất của hai hoặc ba số tự nhiên; thực hiện được phép cộng, phép trừ phân số bằng cách sử dụng bội chung nhỏ nhất."]
+  "12": ["Xác định được bội chung, bội chung nhỏ nhất của hai hoặc ba số tự nhiên; thực hiện được phép cộng, phép trừ phân số bằng cách sử dụng bội chung nhỏ nhất."],
+  "13": ["Nhận biết được số nguyên âm, tập hợp các số nguyên; biểu diễn được số nguyên trên trục số.", "Nhận biết được số đối và so sánh được hai số nguyên."],
+  "14": ["Thực hiện được phép cộng, phép trừ số nguyên.", "Vận dụng được tính chất giao hoán, kết hợp của phép cộng trong tính toán số nguyên."],
+  "15": ["Thực hiện được quy tắc dấu ngoặc trong tính toán với số nguyên."],
+  "16": ["Thực hiện được phép nhân số nguyên.", "Vận dụng được tính chất giao hoán, kết hợp và phân phối của phép nhân đối với phép cộng trong tính toán."],
+  "17": ["Nhận biết được quan hệ chia hết trong tập hợp số nguyên; xác định được ước và bội của một số nguyên."],
+  "18": ["Nhận dạng, mô tả được các yếu tố cơ bản của tam giác đều, hình vuông, lục giác đều.", "Vẽ được tam giác đều, hình vuông, lục giác đều trong những trường hợp đơn giản."],
+  "19": ["Mô tả được các yếu tố cơ bản của hình chữ nhật, hình thoi, hình bình hành, hình thang cân.", "Vẽ được các hình trên trong những trường hợp đơn giản."],
+  "20": ["Tính được chu vi và diện tích của một số hình phẳng trong thực tiễn.", "Vận dụng được công thức chu vi, diện tích để giải quyết vấn đề thực tiễn."],
+  "21": ["Nhận biết được trục đối xứng của một số hình phẳng quen thuộc.", "Vẽ được trục đối xứng của hình phẳng trong trường hợp đơn giản."],
+  "22": ["Nhận biết được tâm đối xứng của một số hình phẳng quen thuộc.", "Xác định được tâm đối xứng của hình phẳng trong trường hợp đơn giản."],
+  "23": ["Nhận biết được phân số có tử hoặc mẫu âm và hai phân số bằng nhau.", "Biểu diễn được phân số bằng phân số bằng nó trong trường hợp đơn giản."],
+  "24": ["Vận dụng được tính chất cơ bản của phân số để rút gọn, quy đồng và so sánh phân số.", "Nhận biết, biểu diễn được hỗn số dương."],
+  "25": ["Thực hiện được phép cộng, phép trừ phân số.", "Vận dụng được quy tắc dấu ngoặc trong tính toán với phân số."],
+  "26": ["Thực hiện được phép nhân, phép chia phân số.", "Vận dụng được các tính chất của phép tính với phân số trong tính toán hợp lí."],
+  "27": ["Giải quyết được hai bài toán cơ bản về phân số.", "Vận dụng được kiến thức về phân số để giải quyết vấn đề thực tiễn."],
+  "28": ["Nhận biết được số thập phân âm, số đối của số thập phân; so sánh được các số thập phân."],
+  "29": ["Thực hiện được bốn phép tính với số thập phân.", "Vận dụng được các phép tính với số thập phân để giải quyết vấn đề thực tiễn."],
+  "30": ["Làm tròn được số thập phân đến hàng quy định.", "Ước lượng được kết quả tính toán với số thập phân."],
+  "31": ["Nhận biết, tính được tỉ số và tỉ số phần trăm.", "Giải quyết được một số bài toán thực tiễn về tỉ số phần trăm."],
+  "32": ["Nhận biết được điểm, đường thẳng và quan hệ điểm thuộc đường thẳng.", "Nhận biết được ba điểm thẳng hàng."],
+  "33": ["Nhận biết được điểm nằm giữa hai điểm.", "Nhận biết và mô tả được tia."],
+  "34": ["Nhận biết được đoạn thẳng; đo và so sánh được độ dài đoạn thẳng."],
+  "35": ["Nhận biết và xác định được trung điểm của đoạn thẳng."],
+  "36": ["Nhận biết được góc, điểm trong của góc và các góc vuông, nhọn, tù, bẹt."],
+  "37": ["Nhận biết được số đo góc.", "Đo được góc bằng thước đo góc trong trường hợp đơn giản."],
+  "38": ["Thu thập, phân loại được dữ liệu theo tiêu chí cho trước."],
+  "39": ["Đọc, mô tả được dữ liệu từ bảng thống kê và biểu đồ tranh.", "Lập được bảng thống kê, biểu đồ tranh trong trường hợp đơn giản."],
+  "40": ["Đọc, mô tả được dữ liệu từ biểu đồ cột và biểu đồ cột kép.", "Lập được biểu đồ cột, biểu đồ cột kép trong trường hợp đơn giản."],
+  "41": ["Nhận biết được kết quả có thể và sự kiện trong trò chơi, thí nghiệm đơn giản."],
+  "42": ["Mô tả được mô hình xác suất trong trò chơi, thí nghiệm đơn giản."],
+  "43": ["Xác định được xác suất thực nghiệm của một sự kiện.", "Mô tả được xác suất thực nghiệm bằng phân số."]
 };
 
-// The first twelve lessons of Toán 6 are the only place where the source rows
-// deliberately repeat a full topic-wide list. Keep the official wording while
-// assigning each requirement to its actual lesson.
+// The source groups requirements by broad topics. Keep its wording while
+// assigning each requirement to the individual Toán 6 lesson.
 (function splitToan6TopicWideYccd(){
   const rows = KHBD_YCCD.toan && KHBD_YCCD.toan["6"];
   if (!Array.isArray(rows)) return;
