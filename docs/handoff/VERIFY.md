@@ -4,24 +4,27 @@
 PASS
 
 ## Đối chiếu scope
-- [x] Chuyển đổi bảng DOCX/XLSX sang dạng bảng phân tách tab (TSV) trước khi gửi cho AI nhận diện PPCT.
-- [x] Hàm `normalizeRecognizedPpct` xử lý linh hoạt mọi cấu trúc JSON từ AI (mảng trực tiếp, object bọc ngoài `ppct`/`schedule`/`plan`/`data`/`lessons`, tên trường tiếng Anh, tiếng Việt, snake_case).
-- [x] Tự động suy luận dòng tiêu đề `isHeader` bằng `isPpctHeaderRow`.
-- [x] Sau khi nhận diện, đồng bộ cả `sourcePpctRows` và `sourcePpctTable`, khởi tạo dữ liệu xem trước ban đầu và render ngay tại Mục 7 (Xem trước).
-- [x] Cập nhật Mục 3 (Bảng chọn tiết AI) và hiển thị thông báo thành công màu xanh nổi bật tại Mục 2.
-- [x] Đã dọn dẹp và hợp nhất các hàm bị trùng lặp trong thẻ `<script>` của `xaydungphuluc.html`.
+- [x] Mở rộng giao diện hiển thị toàn màn hình (`w-full max-w-[98%] 2xl:max-w-[1750px]`), loại bỏ hiện tượng co cụm chữ trong bảng PPCT và Bảng chọn tiết AI.
+- [x] Chuẩn hóa duy nhất 1 cột "Mã NLS & AI (CV 3456 & QĐ 2422)" qua adapter `normalizeIntegrationTable`, loại bỏ triệt để lỗi nhân đôi cột khi xem trước và khi xuất DOCX.
+- [x] Thiết lập quy trình 4 bước chuẩn hóa:
+  * Bước 1: Chọn file PPCT -> Bấm nút "🔍 Nhận diện PPCT" (`recognizeStagedPpct`) -> Bóc tách và hiển thị ngay bảng PPCT ở Mục 3 và Mục 7.
+  * Bước 2: Chọn file SGK -> Bấm nút "📖 Đọc SGK" (`readStagedSgk`) -> Gửi AI phân tích ngữ cảnh SGK và xuất thông báo nổi bật "✓ Đã hiểu thông tin SGK".
+  * Bước 3: Người dùng tick chọn tiết tích hợp Khung AI (tối đa 12 tiết chuẩn) trên bảng mở rộng.
+  * Bước 4: Bấm sinh phụ lục (1, 2, 3) với hệ thống mã NLS chuẩn (TT 02 / CV 3456: `.TC1a` / `.TC2a`) và mã Khung AI chuẩn (QĐ 2422: `6.A1.1`, `7.A1.1`...) từ `js/khbd-standards.js` và YCCĐ chuẩn từ `js/khbd-yccd.js`.
+- [x] Tự động nạp "Yêu cầu cần đạt" từ dữ liệu chuẩn CT GDPT 2018 cho Phụ lục 1.
+- [x] Dọn dẹp mã nguồn, không còn hàm trùng lặp trong thẻ `<script>`.
 
 ## Test đã chạy
-- `node tests/xaydungphuluc-smoke.js` — PASS (Kiểm thử cấu trúc bảng 7/8 cột, nhận diện AI linh hoạt, đồng bộ bảng nguồn, cập nhật picker và preview).
-- `node tests/xaydungphuluc-integration-smoke.js` — PASS (Kiểm thử tích hợp điều khiển tính năng, bảo mật API key, liên kết cổng giáo viên).
+1. `node tests/xaydungphuluc-smoke.js` — PASS 100%
+2. `node tests/xaydungphuluc-integration-smoke.js` — PASS 100%
 
 ## Pass / Fail từng tiêu chí
-- [x] Nhận diện PPCT từ bảng tab-delimited hoặc văn bản: PASS
-- [x] Hỗ trợ cấu trúc JSON mảng / object bọc / key tiếng Việt: PASS
-- [x] Đồng bộ `sourcePpctTable` từ `sourcePpctRows`: PASS
-- [x] Render bảng xem trước Phụ lục ngay sau khi tải tệp: PASS
-- [x] Không còn mã nguồn lặp đè hàm trong `<script>`: PASS
-- [x] Bảo mật API key (không lưu vào localStorage): PASS
+- [x] Giao diện mở rộng toàn màn hình không bị bóp nghẹt: PASS
+- [x] Bảng kết quả Phụ lục 1, Phụ lục 3 chỉ có duy nhất 1 cột NLS & AI: PASS
+- [x] Nút "🔍 Nhận diện PPCT" và nút "📖 Đọc SGK" hoạt động độc lập, có trạng thái "Đã hiểu thông tin SGK": PASS
+- [x] Tích hợp `js/khbd-standards.js` và `js/khbd-yccd.js`, sinh mã chuẩn xác theo từng bài học: PASS
+- [x] Phụ lục 1 tự động điền YCCĐ chuẩn: PASS
+- [x] Bộ test tự động smoke & integration: PASS
 
 ## Bug
-(Không phát hiện lỗi tồn đọng trong phạm vi xaydungphuluc.html)
+- Không phát hiện lỗi mới.

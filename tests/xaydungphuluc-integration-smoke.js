@@ -37,6 +37,12 @@ mustInclude(appendix, "localStorage.getItem('teacherName')");
 mustInclude(appendix, "localStorage.getItem('userEmail')");
 mustInclude(appendix, 'khbd_user_gemini_keys_${userEmail}');
 mustInclude(appendix, 'global_gemini_keys');
+mustInclude(appendix, 'js/khbd-standards.js');
+mustInclude(appendix, '🔍 Nhận diện PPCT');
+mustInclude(appendix, '📖 Đọc SGK');
+mustInclude(appendix, 'Đã hiểu thông tin SGK');
+mustInclude(appendix, 'normalizeIntegrationTable');
+mustInclude(appendix, 'Mã NLS & AI (CV 3456 & QĐ 2422)');
 
 mustInclude(legacyAppendix, '../../xaydungphuluc.html');
 
