@@ -1,5 +1,18 @@
 # IMPLEMENT: PPCT recognition and preview synchronization
 
+## Latest implementation: automatic PPCT Tiết CT and Tuần recalculation
+
+- Added `recalculatePpctSequences()` to recalculate each non-header PPCT row cumulatively in its current order. It derives the subject norm from the configured annual allocation over 35 weeks (for example, Toán học: 4 periods/week), writes one curriculum period per line, and lists every applicable week once for lessons spanning a weekly boundary.
+- Recalculation now runs after both `▲`/`▼` movement and drag-and-drop reorder. It synchronizes the preserved source PPCT table, canonical PPCT rows, generated Appendix 1/3 data, and keeps selected AI periods attached to their lesson.
+- Added the Section 3 button `🔄 Tính lại Tiết CT & Tuần tự động`. Tiết CT and Tuần inputs remain directly editable; a later reorder or explicit automatic recalculation intentionally rebuilds the sequence.
+- Expanded smoke coverage for the automatic button/function, the Toán four-period norm, cumulative periods, cross-week allocation, source-row synchronization, and direct Tiết CT/Tuần overrides.
+
+## Latest verification
+
+- `node tests/xaydungphuluc-smoke.js` — PASS
+- `node tests/xaydungphuluc-integration-smoke.js` — PASS
+- `git diff --check` — PASS
+
 ## Latest implementation: multiline outcomes, clean NLS/AI scope, and 13pt DOCX
 
 - Added shared formatting for outcome bullets, curriculum periods, and weeks. Compact YCCĐ bullets render as separate lines in both HTML preview and DOCX; multi-period Tiết CT renders one period per line, while repeated week values are deduplicated.
