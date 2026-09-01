@@ -1,5 +1,30 @@
 # IMPLEMENT: PPCT recognition and preview synchronization
 
+## Latest implementation: PPCT ordering and Appendix 1 header
+
+- Removed the `UBND XÃ/PHƯỜNG ...` line from the Appendix 1 HTML preview and DOCX export. The left heading now consistently uses normalized `TRƯỜNG ...` and `TỔ ...` values only.
+- Added PPCT row movement (`▲` / `▼`), HTML5 drag-and-drop, and inline editing for lesson, week, curriculum period, equipment, and location in Section 3.
+- Added synchronized PPCT helpers so reordering and edits update `sourcePpctTable`, `sourcePpctRows`, and already-generated Appendix 1/3 data immediately while remapping selected AI period IDs to their moved lesson.
+- Updated smoke coverage for the no-UBND heading and PPCT move/reorder/edit synchronization.
+
+## Latest verification
+
+- `node tests/xaydungphuluc-smoke.js` — PASS
+- `node tests/xaydungphuluc-integration-smoke.js` — PASS
+
+## Latest implementation: standards-grounded SGK enrichment and math-branch matching
+
+- Updated `compactSgkText` to preserve the table of contents, chapters, lesson names, learning activities, and technology-practice cues (including software, GeoGebra, calculators, and digital transformation), while retaining the 30,000-character safety cap. SGK remains supplementary context only.
+- Clarified the Appendix Builder interface: the school PPCT plus the Ministry-standard catalog is sufficient; the SGK upload is explicitly optional. The AI picker also explains that AI codes are limited to the periods selected from PPCT.
+- Refined official digital-competency ranking for Toán: algebra prioritizes `5.3` then `1.1`; geometry prioritizes `3.1` then `5.2`; statistics/probability prioritizes `1.1`/`1.2` and uses `3.1` for digital charts. AI recommendations remain grade-specific and are returned only when the relevant PPCT period is selected.
+- Added smoke assertions covering structured SGK extraction and the three mathematics-branch priorities.
+
+## Latest verification
+
+- `node tests/xaydungphuluc-smoke.js` — PASS
+- `node tests/xaydungphuluc-integration-smoke.js` — PASS
+- `git diff --check` — PASS
+
 ## Latest implementation: clean YCCĐ matching and landscape DOCX
 
 - Added clean Toán YCCĐ helpers in `js/khbd-yccd.js`: lesson matching now prioritizes the explicit `Bài <số>`, then normalized lesson name, and only then uses keyword scoring. The new clean export joins trimmed, deduplicated outcome bullets without source, legal, lesson, or topic metadata; `getOfficialYccd()` remains compatible.

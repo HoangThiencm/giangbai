@@ -219,12 +219,16 @@ function scoreOfficialStandard(kind, entry, ctx) {
       if (/\bai\b|chatbot|gemini|tri tue nhan tao/.test(hay)) score += 4;
     }
     if (branch === "geometry") {
-      if (/^1\./.test(code) || entry.domain === "Giải quyết vấn đề") score += 4;
-      if (/do dac|thuoc|compa|mo hinh|geogebra/.test(hay) && /^1\./.test(code)) score += 2;
+      if (/^3\.1/.test(code)) score += 8;
+      if (/^5\.2/.test(code)) score += 6;
+      if (/do dac|thuoc|compa|mo hinh|geogebra|ve hinh/.test(hay) && /^3\.1/.test(code)) score += 4;
     } else if (branch === "algebra") {
-      if (entry.domain === "Giải quyết vấn đề") score += 4;
+      if (/^5\.3/.test(code)) score += 8;
+      if (/^1\.1/.test(code)) score += 5;
     } else if (branch === "statistics") {
-      if (/^1\.[123]/.test(code) || entry.domain === "Khai thác dữ liệu và thông tin") score += 6;
+      if (/^1\.1|^1\.2/.test(code)) score += 8;
+      if (/^3\.1/.test(code)) score += 5;
+      if (/bieu do|bang bieu|du lieu/.test(hay) && /^3\.1/.test(code)) score += 3;
     }
     if (!hasTech && !facilities.projector && /canva|padlet|chatbot/.test(foldStandardText(entry.label))) score = 0;
   } else if (kind === "ai") {

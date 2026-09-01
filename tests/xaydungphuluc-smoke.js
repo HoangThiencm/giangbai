@@ -1,6 +1,7 @@
 /* Smoke test for the standalone THCS Appendix Builder. Run: node tests/xaydungphuluc-smoke.js */
 const fs=require('fs'),path=require('path'),assert=require('assert'),vm=require('vm');
 const {getCleanOfficialYccd}=require('../js/khbd-yccd.js');
+const {recommendOfficialStandards}=require('../js/khbd-standards.js');
 async function run(){
 const file=path.join(__dirname,'..','xaydungphuluc.html');
 const html=fs.readFileSync(file,'utf8');
@@ -26,7 +27,9 @@ has('id="generateAll" class="btn primary" onclick="generateSelected(\'all\')"');
 assert(!html.includes('word-break: break-word'),'table text must not be forcibly broken');
 ['js/khbd-standards.js','KHBD_STANDARDS','recommendOfficialStandards','getOfficialYccd','getStandardCompetenciesForLesson','normalizeIntegrationTable','stageFiles','recognizeStagedPpct','readStagedSgk','🔍 Nhận diện PPCT','📖 Đọc SGK','Đã hiểu thông tin SGK','sgkKnowledgeBase'].forEach(has);
 ['getCleanOfficialYccd','densityLowerBound','cleanAppendixOutcome','PageOrientation.LANDSCAPE','width:16838,height:11906','top:1134,right:1134,bottom:1134,left:1134'].forEach(has);
-['progressContainer','progressPercent','progressBarInner','setProgress','hideProgress','progressTimerId','SCHEDULE_COLUMNS','PLAN_COLUMNS','UBND XÃ/PHƯỜNG','CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'].forEach(has);
+['progressContainer','progressPercent','progressBarInner','setProgress','hideProgress','progressTimerId','SCHEDULE_COLUMNS','PLAN_COLUMNS','CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM','organizationHeading'].forEach(has);
+assert(!html.includes('UBND XÃ/PHƯỜNG ...<br>'),'Appendix 1 HTML heading must not render a commune/ward line');
+assert(!html.includes('UBND XÃ/PHƯỜNG ...\\n${school.value'),'Appendix 1 DOCX heading must not render a commune/ward line');
 has('onclick="hideProgress()"');
 has('setTimeout(()=>hideProgress(),hideMs??1500)');
 has('progress-done');
@@ -117,7 +120,13 @@ assert.equal(typeof sandbox.compactSgkText,'function','compact SGK index must be
 const compact=vm.runInContext("compactSgkText('BÀI 1. Tập hợp\\nMục tiêu cần đạt: nhận biết tập hợp.\\nNội dung giới thiệu dài không giữ lại.\\nHoạt động khám phá: lập tập hợp.\\nLuyện tập: viết tập hợp.')",sandbox);
 assert(compact.includes('BÀI 1. Tập hợp')&&compact.includes('Mục tiêu cần đạt')&&compact.includes('Hoạt động khám phá'),'SGK compact index must retain lesson, objective and activity');
 assert(!compact.includes('Nội dung giới thiệu dài'),'SGK compact index must omit unrelated prose');
+const compactTechnology=vm.runInContext("compactSgkText('MỤC LỤC\\nChương I. Hình học\\nBài 1. Tam giác\\nThực hành với phần mềm GeoGebra\\nĐoạn văn kể chuyện không liên quan.')",sandbox);
+assert(compactTechnology.includes('MỤC LỤC')&&compactTechnology.includes('Chương I')&&compactTechnology.includes('GeoGebra'),'SGK compact index must retain table of contents, chapter and digital practice');
 assert(vm.runInContext("looksLikeSgkText('Bài 1. Tập hợp. Mục tiêu cần đạt. Hoạt động khám phá.',[])",sandbox),'content signature must recognize SGK even when its filename is generic');
+const codesFor=topic=>recommendOfficialStandards('digital',{grade:6,topic,vision:'Hoạt động thực hành với công nghệ số',subjectName:'Toán học',facilities:{devices:true},aiOn:false}).map(item=>item.officialCode);
+assert(codesFor('Bài toán về số nguyên và phân số').some(code=>code.startsWith('5.3.TC1a')),'algebra must prioritize 5.3.TC1a');
+assert(codesFor('Tam giác, đo góc và vẽ hình với GeoGebra').some(code=>code.startsWith('3.1.TC1a')),'geometry must prioritize 3.1.TC1a');
+assert(codesFor('Bảng số liệu và biểu đồ cột').some(code=>code.startsWith('1.1.TC1a')||code.startsWith('1.2.TC1a')),'statistics must prioritize data standards');
 assert.equal(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]',false,0,{ai:{enabled:true},lop:'6'})",sandbox),'[NLS: 1.1.6a - Khai thác học liệu.]','unselected lesson must not retain AI integration');
 assert(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.]',true,0,{ai:{enabled:true},lop:'6'})",sandbox).includes('[AI:'),'selected lesson must receive an AI integration when AI is enabled');
 assert(vm.runInContext("integrationHtml('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]')",sandbox).includes('nls-code')&&vm.runInContext("integrationHtml('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]')",sandbox).includes('ai-code'),'preview must distinguish NLS and AI integration colors');
@@ -193,14 +202,14 @@ assert.equal(vm.runInContext("densityLowerBound('1-2')",sandbox),1,'NLS density 
 assert.equal(vm.runInContext("densityLowerBound('2-3')",sandbox),2,'NLS density 2-3 must select two digital standards');
 assert.equal(vm.runInContext("densityLowerBound('3-4')",sandbox),3,'NLS density 3-4 must select three digital standards');
 
-const periodFixture=`sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Bài A','2'],isHeader:false},{cells:['Bài B','3'],isHeader:false}]};sourcePpctRows=[{lesson:'Bài A',periods:'2',isHeader:false},{lesson:'Bài B',periods:'3',isHeader:false}];aiSelectedLessonIds=new Set(['source:0:period:1','source:1:period:2']);results={1:{},2:{},3:{}};activeTab='2';`;
+const periodFixture=`getConfig=()=>({lop:'6',monHoc:'Toán học',nls:{enabled:false,rate:0,density:'1-2'},ai:{enabled:false,rate:0,density:'1-2'}});sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Bài A','2'],isHeader:false},{cells:['Bài B','3'],isHeader:false}]};sourcePpctRows=[{lesson:'Bài A',periods:'2',isHeader:false},{lesson:'Bài B',periods:'3',isHeader:false}];aiSelectedLessonIds=new Set(['source:0:period:1','source:1:period:2']);results={1:{},2:null,3:{}};activeTab='2';`;
 assert.equal(vm.runInContext(`${periodFixture}aiPeriodCandidates().length`,sandbox),5,'period candidates must flatten the lesson durations');
 assert.equal(vm.runInContext(`${periodFixture}aiSelectionPercentage()`,sandbox),40,'two selected periods out of five must report 40%');
 vm.runInContext(`${periodFixture}updatePpctLessonPeriods('source:0','1')`,sandbox);
 assert.equal(vm.runInContext(`sourcePpctTable.rows[0].cells[1]`,sandbox),'1','editing periods must update the raw PPCT table');
 assert.equal(vm.runInContext(`sourcePpctRows[0].periods`,sandbox),'1','editing periods must update canonical PPCT rows');
 assert.equal(vm.runInContext(`aiSelectedLessonIds.has('source:0:period:2')`,sandbox),false,'reducing periods must discard invalid period selections');
-assert.equal(vm.runInContext(`results['1']===null&&results['3']===null`,sandbox),true,'editing periods must invalidate PL1 and PL3');
+assert.equal(vm.runInContext(`!!results['1']&&!!results['3']`,sandbox),true,'editing periods must immediately synchronize PL1 and PL3');
 assert(vm.runInContext(`appendixOneTable([{lesson:'Bài A',outcomes:'Đạt yêu cầu.',integration:'[AI: 6.A1.1 - Hỗ trợ.]'}],{lop:'6',monHoc:'Toán học',ai:{enabled:true}}).rows[0].cells[4]`,sandbox).includes('Áp dụng: tiết 1'),'PL1 must keep a selected partial-period scope');
 assert.equal(vm.runInContext(`preservedPpctTable([{lesson:'Bài A',integration:'[AI: 6.A1.1 - Hỗ trợ.]'}],{lop:'6',ai:{enabled:true}}).rows[0].cells[1]`,sandbox),'1','PL3 must keep the edited source period count');
 assert.equal(vm.runInContext(`sourcePpctTable=null;sourcePpctRows=[{lesson:'Bài dài',periods:'13',isHeader:false}];aiSelectedLessonIds=new Set(aiPeriodCandidates().map(x=>x.id));selectedAiPeriodIds().size`,sandbox),12,'the thirteenth period must not remain selected');
@@ -208,6 +217,13 @@ assert.equal(vm.runInContext(`aiRate={value:'100',min:'0',max:'100',disabled:fal
 assert.equal(vm.runInContext(`aiRate.value`,sandbox),'92','the slider must snap to the practical 12-of-13 rate');
 assert.equal(vm.runInContext(`sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT'],lessonIndex:0,rows:[{cells:['Bài từ Tiết CT','','3-5'],isHeader:false}]};sourcePpctRows=[];aiPeriodCandidates().length`,sandbox),3,'blank Số tiết must derive period candidates from Tiết CT');
 assert.equal(vm.runInContext(`sourcePpctRowsForAppendixOne()[0].periods`,sandbox),'3','PL1 must derive its period count from raw Tiết CT');
+const ppctEditing=vm.runInContext(`getConfig=()=>({lop:'6',monHoc:'Toán học',nls:{enabled:false,rate:0,density:'1-2'},ai:{enabled:false,rate:0,density:'1-2'}});results={'1':null,'2':null,'3':null};activeTab='2';sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị dạy học','Địa điểm dạy học'],lessonIndex:0,rows:[{cells:['Bài A','1','1','Tuần 1','Bảng phụ','Lớp học'],isHeader:false},{cells:['Bài B','1','2','Tuần 2','Máy chiếu','Phòng bộ môn'],isHeader:false}]};sourcePpctRows=[{lesson:'Bài A',periods:'1',tietCT:'1',week:'Tuần 1',devices:'Bảng phụ',location:'Lớp học',isHeader:false},{lesson:'Bài B',periods:'1',tietCT:'2',week:'Tuần 2',devices:'Máy chiếu',location:'Phòng bộ môn',isHeader:false}];aiSelectedLessonIds=new Set(['source:0:period:1']);const moved=movePpctRow(0,1),edited=updatePpctField(1,'week','Tuần 10'),reordered=reorderPpctRow(1,0);({moved,edited,reordered,table:sourcePpctTable.rows.map(row=>row.cells),rows:sourcePpctRows,selected:[...aiSelectedLessonIds]})`,sandbox);
+assert(ppctEditing.moved&&ppctEditing.edited&&ppctEditing.reordered,'PPCT move, edit and reorder helpers must report success');
+assert.equal(ppctEditing.table[0][0],'Bài A','reorderPpctRow must update sourcePpctTable');
+assert.equal(ppctEditing.rows[0].lesson,'Bài A','reorderPpctRow must update sourcePpctRows');
+assert.equal(ppctEditing.table[0][3],'Tuần 10','updatePpctField must update sourcePpctTable');
+assert.equal(ppctEditing.rows[0].week,'Tuần 10','updatePpctField must update sourcePpctRows');
+assert(ppctEditing.selected.includes('source:0:period:1'),'reordering must keep the AI selection attached to its lesson');
 const pickerMetadata=vm.runInContext(`const pickerNodes={'#aiLessonPickerCard':{classList:{remove(){}}},'#aiLessonPicker':{innerHTML:''},'#aiSelectionCount':{textContent:''}};document.querySelector=selector=>pickerNodes[selector]||null;sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị dạy học','Địa điểm dạy học'],lessonIndex:0,rows:[{cells:['Bài hiển thị','1','1','Tuần 1','Máy chiếu','Lớp học'],isHeader:false}]};updateAiPicker();pickerNodes['#aiLessonPicker'].innerHTML`,sandbox);
 assert(pickerMetadata.includes('Máy chiếu')&&pickerMetadata.includes('Lớp học'),'PPCT picker must show the complete source lesson metadata');
 const pickerTable=vm.runInContext(`const pickerTableNodes={'#aiLessonPickerCard':{classList:{remove(){}}},'#aiLessonPicker':{innerHTML:''},'#aiSelectionCount':{textContent:''}};document.querySelector=selector=>pickerTableNodes[selector]||null;sourcePpctTable={columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị dạy học','Địa điểm dạy học'],lessonIndex:0,rows:[{cells:['HỌC KÌ I','','','','',''],isHeader:true},{cells:['Bài bảng','2','1-2','Tuần 1','Máy chiếu','Lớp học'],isHeader:false}]};updateAiPicker();pickerTableNodes['#aiLessonPicker'].innerHTML`,sandbox);
