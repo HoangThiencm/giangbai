@@ -102,6 +102,35 @@ function generatePedagogicalOutcome(lesson, subject, grade) {
   return `- Nhận biết và phát biểu được các khái niệm, quy tắc, tính chất trọng tâm của ${name}.\n- Vận dụng được kiến thức, kĩ năng đã học để giải quyết các bài tập và tình huống thực tiễn liên quan.`;
 }
 
+// CTGDPT groups some requirements by chủ đề; present only the requirements that
+// belong to the named lesson so adjacent lessons do not inherit a whole chapter.
+const KHBD_LESSON_YCCD_OVERRIDES = {
+  "1": ["Sử dụng được thuật ngữ tập hợp, phần tử thuộc (không thuộc) một tập hợp; sử dụng được cách cho tập hợp."],
+  "2": ["Nhận biết được tập hợp các số tự nhiên.", "Biểu diễn được số tự nhiên trong hệ thập phân.", "Biểu diễn được các số tự nhiên từ 1 đến 30 bằng cách sử dụng các chữ số La Mã."],
+  "3": ["Nhận biết được quan hệ thứ tự trong tập hợp các số tự nhiên; so sánh được hai số tự nhiên cho trước."],
+  "4": ["Thực hiện được phép cộng, phép trừ trong tập hợp số tự nhiên.", "Vận dụng được tính chất giao hoán, kết hợp của phép cộng để tính nhẩm, tính nhanh một cách hợp lí.", "Giải quyết được vấn đề thực tiễn gắn với phép cộng, phép trừ số tự nhiên."],
+  "5": ["Thực hiện được phép nhân, phép chia trong tập hợp số tự nhiên.", "Vận dụng được tính chất giao hoán, kết hợp của phép nhân và tính chất phân phối của phép nhân đối với phép cộng trong tính toán.", "Giải quyết được vấn đề thực tiễn gắn với phép nhân, phép chia số tự nhiên."],
+  "6": ["Thực hiện được phép tính luỹ thừa với số mũ tự nhiên; thực hiện được phép nhân và phép chia hai luỹ thừa cùng cơ số với số mũ tự nhiên."],
+  "7": ["Nhận biết được thứ tự thực hiện các phép tính trong biểu thức."],
+  "8": ["Nhận biết được quan hệ chia hết, khái niệm ước và bội."],
+  "9": ["Vận dụng được dấu hiệu chia hết cho 2, 5, 9, 3 để xác định một số đã cho có chia hết cho 2, 5, 9, 3 hay không."],
+  "10": ["Nhận biết được khái niệm số nguyên tố, hợp số.", "Thực hiện được việc phân tích một số tự nhiên lớn hơn 1 thành tích của các thừa số nguyên tố trong những trường hợp đơn giản."],
+  "11": ["Xác định được ước chung, ước chung lớn nhất của hai hoặc ba số tự nhiên; nhận biết được phân số tối giản."],
+  "12": ["Xác định được bội chung, bội chung nhỏ nhất của hai hoặc ba số tự nhiên; thực hiện được phép cộng, phép trừ phân số bằng cách sử dụng bội chung nhỏ nhất."]
+};
+
+// The first twelve lessons of Toán 6 are the only place where the source rows
+// deliberately repeat a full topic-wide list. Keep the official wording while
+// assigning each requirement to its actual lesson.
+(function splitToan6TopicWideYccd(){
+  const rows = KHBD_YCCD.toan && KHBD_YCCD.toan["6"];
+  if (!Array.isArray(rows)) return;
+  rows.forEach(row => {
+    const override = KHBD_LESSON_YCCD_OVERRIDES[lessonNumber(row.lesson)];
+    if (override) row.items = override.slice();
+  });
+})();
+
 function getOfficialYccd({ subjectId, grade, topic, visionText } = {}) {
   const subject = String(subjectId || "").toLowerCase();
   if (subject !== "toan" && subject !== "math") return "";

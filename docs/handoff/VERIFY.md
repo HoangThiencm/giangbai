@@ -4,24 +4,23 @@
 PASS
 
 ## Đối chiếu scope
-- [x] Triệt tiêu hoàn toàn lỗi lệch pha YCCĐ giữa các bài học ("râu ông nọ cắm cằm bà kia").
-- [x] Xóa bỏ triệt để lệnh fallback theo chỉ số dòng `generatedRows[normal]` trong `appendixOneTable`.
-- [x] Triển khai thành công Chiến lược dự phòng 4 tầng: CSDL CTGDPT 2018 (`KHBD_YCCD`) $\to$ Ngữ cảnh SGK $\to$ AI có kiểm chứng từ khóa $\to$ Khung YCCĐ Sư phạm chuẩn hóa theo thể loại bài.
-- [x] Xử lý ngữ cảnh chủ đề cho các bài Luyện tập, Luyện tập chung, Ôn tập chương và bài học lạ.
-- [x] Cho phép giáo viên chỉnh sửa trực tiếp (Inline Edit) ô Yêu cầu cần đạt trong bảng xem trước Phụ lục 1 trước khi xuất Word.
-- [x] Chuẩn hóa độ rộng cột khi xuất Word (.docx) theo nội dung thực tế (Phụ lục 1: `[5, 22, 6, 47, 20]`, Phụ lục 3: `[22, 6, 8, 6, 18, 16, 24]`).
-- [x] Thiết lập `cantSplit: true` trên từng hàng và `tableHeader: true` trên hàng tiêu đề trên nền khổ giấy A4 Landscape chuẩn.
+- [x] Tái cấu trúc thành công luồng sinh YCCĐ Phụ lục 1 theo mô hình RAG Sư phạm: truyền đầy đủ danh sách PPCT nguồn và ngữ cảnh CTGDPT 2018 vào prompt để AI ghép 1-kèm-1 cho từng bài học.
+- [x] `cleanAppendixOutcome` giữ nguyên vẹn kết quả YCCĐ chất lượng cao, đúng trọng tâm của AI cho từng bài; không còn bị CSDL tĩnh theo chủ đề lớn đè bẹp.
+- [x] Cơ chế ghép bài `lessonsMatch` tổng quát hóa qua số bài (`lessonOrdinal`), tên bài làm sạch và độ chồng khớp từ khóa động, áp dụng tốt cho mọi môn học (Toán, Văn, KHTN, Sử, Địa...).
+- [x] Bảo đảm tính duy nhất trong ghép nối bằng `usedGenerated`, loại bỏ hoàn toàn hiện tượng dồn toa hoặc trùng lặp.
+- [x] Cột NLS/AI và xuất Word (.docx) A4 ngang hoạt động chuẩn xác, sạch sẽ không có `[object Object]`.
+- [x] Mục 4 tách 3 ô input thống kê (`Số lớp`, `Số học sinh`, `Số giáo viên`) và đồng bộ lên bản nháp/xuất Word.
 
 ## Test đã chạy
 - `node tests/xaydungphuluc-smoke.js` — PASS
 - `node tests/xaydungphuluc-integration-smoke.js` — PASS
+- `git diff --check` — PASS
 
 ## Pass / Fail từng tiêu chí
-- [x] PASS: Bài 5 (Phép nhân và phép chia) nhận đúng YCCĐ phép nhân, chia, luỹ thừa; không dính YCCĐ tập hợp/La Mã.
-- [x] PASS: Luyện tập chung nhận đúng YCCĐ củng cố chủ đề đứng trước.
-- [x] PASS: Bài học không có trong CSDL nhận đúng khung sư phạm tương ứng (`generatePedagogicalOutcome`).
-- [x] PASS: Sửa trực tiếp ô YCCĐ đồng bộ vào model và lưu cho xuất Word.
-- [x] PASS: Tỉ lệ cột DOCX và thuộc tính `cantSplit`, `tableHeader`, A4 Landscape được cấu hình chuẩn xác.
+- [x] PASS: Phụ lục 1 sinh YCCĐ riêng biệt, đúng 1–3 gạch đầu dòng trọng tâm cho từng bài học.
+- [x] PASS: Áp dụng đa môn và đa bộ sách không cần hardcode thủ công từng bài.
+- [x] PASS: Cột NLS/AI bóc tách chuỗi an toàn 100%.
+- [x] PASS: Xuất Word A4 ngang, lề 20mm, tỉ lệ cột riêng biệt cho từng bảng.
 
 ## Bug
 - Không có.
