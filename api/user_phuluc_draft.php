@@ -1,85 +1,30 @@
 <?php
 require_once __DIR__ . '/helpers.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
+if (empty($_SESSION['user_id'])) respond(['error' => 'Chưa đăng nhập.'], 401);
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+function column_exists(PDO $pdo, string $column): bool { $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='user_phuluc_drafts' AND COLUMN_NAME=?"); $q->execute([$column]); return (bool)$q->fetchColumn(); }
+function index_exists(PDO $pdo, string $index): bool { $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='user_phuluc_drafts' AND INDEX_NAME=?"); $q->execute([$index]); return (bool)$q->fetchColumn(); }
+function ensure_user_phuluc_drafts_table(PDO $pdo): void {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS user_phuluc_drafts (id INT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL,title VARCHAR(255) NOT NULL DEFAULT '',mon_hoc VARCHAR(160) NOT NULL DEFAULT '',lop VARCHAR(30) NOT NULL DEFAULT '',nam_hoc VARCHAR(30) NOT NULL DEFAULT '',appendix_type VARCHAR(30) NOT NULL DEFAULT '',summary VARCHAR(255) NOT NULL DEFAULT '',draft_data LONGTEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,INDEX idx_user_phuluc_drafts_updated (updated_at)) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    foreach (['title'=>"VARCHAR(255) NOT NULL DEFAULT ''",'appendix_type'=>"VARCHAR(30) NOT NULL DEFAULT ''",'summary'=>"VARCHAR(255) NOT NULL DEFAULT ''"] as $column=>$definition) if (!column_exists($pdo,$column)) $pdo->exec("ALTER TABLE user_phuluc_drafts ADD COLUMN $column $definition");
+    // Existing drafts keep their payload intact; only an empty display label is filled from its saved metadata.
+    $pdo->exec("UPDATE user_phuluc_drafts SET title=CONCAT('Kế hoạch ',mon_hoc,' ',lop,' - Năm học ',nam_hoc) WHERE title='' OR title IS NULL");
+    // Migration only drops the limiting index and adds columns/indexes; it never removes rows or recreates data.
+    if (index_exists($pdo,'uniq_user_phuluc_draft_user')) $pdo->exec('ALTER TABLE user_phuluc_drafts DROP INDEX uniq_user_phuluc_draft_user');
+    if (!index_exists($pdo,'idx_user_phuluc_drafts_user')) $pdo->exec('ALTER TABLE user_phuluc_drafts ADD INDEX idx_user_phuluc_drafts_user (user_id)');
+    if (!index_exists($pdo,'idx_user_phuluc_drafts_mon_lop')) $pdo->exec('ALTER TABLE user_phuluc_drafts ADD INDEX idx_user_phuluc_drafts_mon_lop (user_id, mon_hoc, lop)');
 }
+function draft_config_value(array $draft,string $key): string { $config=$draft['config']??[]; return is_array($config)?trim((string)($config[$key]??'')):''; }
+function draft_summary(array $draft): string { $rows=is_array($draft['sourcePpctRows']??null)?$draft['sourcePpctRows']:[]; $lessons=count(array_filter($rows,fn($r)=>is_array($r)&&empty($r['isHeader'])&&!empty($r['lesson']))); $ai=is_array($draft['aiSelectedLessonIds']??null)?count($draft['aiSelectedLessonIds']):0; $appendices=implode(', ',array_keys(array_filter($draft['results']??[]))); return trim("$lessons bài PPCT · $ai tiết AI".($appendices?" · PL $appendices":'')); }
+function draft_title(array $draft,string $title): string { if($title!=='')return mb_substr($title,0,255); return mb_substr(trim('Kế hoạch '.draft_config_value($draft,'monHoc').' '.draft_config_value($draft,'lop').' - Năm học '.draft_config_value($draft,'namHoc')),0,255); }
 
-if (empty($_SESSION['user_id'])) {
-    respond(['error' => 'Chưa đăng nhập.'], 401);
-}
-
-function ensure_user_phuluc_drafts_table(PDO $pdo): void
-{
-    $pdo->exec("CREATE TABLE IF NOT EXISTS user_phuluc_drafts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        mon_hoc VARCHAR(160) NOT NULL DEFAULT '',
-        lop VARCHAR(30) NOT NULL DEFAULT '',
-        nam_hoc VARCHAR(30) NOT NULL DEFAULT '',
-        draft_data LONGTEXT NOT NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uniq_user_phuluc_draft_user (user_id),
-        INDEX idx_user_phuluc_drafts_updated (updated_at)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-}
-
-function draft_config_value(array $draft, string $key): string
-{
-    $config = $draft['config'] ?? [];
-    return is_array($config) ? trim((string)($config[$key] ?? '')) : '';
-}
-
-$userId = (int)$_SESSION['user_id'];
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-
-try {
-    ensure_user_phuluc_drafts_table($pdo);
-
-    if ($method === 'GET') {
-        $statement = $pdo->prepare('SELECT draft_data, updated_at FROM user_phuluc_drafts WHERE user_id = ? LIMIT 1');
-        $statement->execute([$userId]);
-        $row = $statement->fetch();
-        if (!$row) {
-            respond(['ok' => true, 'draft' => null, 'updated_at' => null]);
-        }
-
-        $draft = json_decode((string)$row['draft_data'], true);
-        if (!is_array($draft)) {
-            respond(['error' => 'Bản nháp đã lưu không hợp lệ.'], 422);
-        }
-        respond(['ok' => true, 'draft' => $draft, 'updated_at' => $row['updated_at']]);
-    }
-
-    if ($method === 'POST') {
-        $body = json_body();
-        $draft = $body['draft'] ?? null;
-        if (!is_array($draft)) {
-            respond(['error' => 'Dữ liệu bản nháp không hợp lệ.'], 422);
-        }
-
-        $draftJson = json_encode($draft, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if ($draftJson === false) {
-            respond(['error' => 'Không thể mã hóa dữ liệu bản nháp.'], 422);
-        }
-
-        $statement = $pdo->prepare('INSERT INTO user_phuluc_drafts (user_id, mon_hoc, lop, nam_hoc, draft_data) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE mon_hoc = VALUES(mon_hoc), lop = VALUES(lop), nam_hoc = VALUES(nam_hoc), draft_data = VALUES(draft_data), updated_at = CURRENT_TIMESTAMP');
-        $statement->execute([
-            $userId,
-            draft_config_value($draft, 'monHoc'),
-            draft_config_value($draft, 'lop'),
-            draft_config_value($draft, 'namHoc'),
-            $draftJson,
-        ]);
-
-        $updated = $pdo->prepare('SELECT updated_at FROM user_phuluc_drafts WHERE user_id = ? LIMIT 1');
-        $updated->execute([$userId]);
-        $row = $updated->fetch() ?: [];
-        respond(['ok' => true, 'updated_at' => $row['updated_at'] ?? null]);
-    }
-
-    respond(['error' => 'Method not allowed.'], 405);
-} catch (Throwable $e) {
-    respond(['error' => 'Không thể lưu hoặc tải bản nháp.'], 500);
-}
+$userId=(int)$_SESSION['user_id']; $method=$_SERVER['REQUEST_METHOD']??'GET'; $action=$_GET['action']??'';
+try { ensure_user_phuluc_drafts_table($pdo);
+    if ($method==='GET'&&$action==='list') { $where=['user_id=?'];$params=[$userId];foreach(['mon_hoc','lop','nam_hoc'] as $f)if(trim((string)($_GET[$f]??''))!==''){$where[]="$f=?";$params[]=trim((string)$_GET[$f]);}$s=$pdo->prepare('SELECT id,title,mon_hoc,lop,nam_hoc,appendix_type,summary,created_at,updated_at FROM user_phuluc_drafts WHERE '.implode(' AND ',$where).' ORDER BY updated_at DESC,id DESC');$s->execute($params);respond(['ok'=>true,'drafts'=>$s->fetchAll()]); }
+    if ($method==='GET'&&isset($_GET['id'])) { $s=$pdo->prepare('SELECT id,title,mon_hoc,lop,nam_hoc,appendix_type,summary,draft_data,created_at,updated_at FROM user_phuluc_drafts WHERE id=? AND user_id=?');$s->execute([(int)$_GET['id'],$userId]);$row=$s->fetch();if(!$row)respond(['error'=>'Không tìm thấy bản kế hoạch.'],404);$row['draft']=json_decode((string)$row['draft_data'],true);unset($row['draft_data']);if(!is_array($row['draft']))respond(['error'=>'Bản nháp đã lưu không hợp lệ.'],422);respond(['ok'=>true]+$row); }
+    if ($method==='GET') { $s=$pdo->prepare('SELECT id,title,mon_hoc,lop,nam_hoc,draft_data,updated_at FROM user_phuluc_drafts WHERE user_id=? ORDER BY updated_at DESC,id DESC LIMIT 1');$s->execute([$userId]);$row=$s->fetch();if(!$row)respond(['ok'=>true,'draft'=>null,'updated_at'=>null]);$draft=json_decode((string)$row['draft_data'],true);if(!is_array($draft))respond(['error'=>'Bản nháp đã lưu không hợp lệ.'],422);respond(['ok'=>true,'draft'=>$draft,'id'=>(int)$row['id'],'title'=>$row['title'],'mon_hoc'=>$row['mon_hoc'],'lop'=>$row['lop'],'nam_hoc'=>$row['nam_hoc'],'updated_at'=>$row['updated_at']]); }
+    if ($method==='DELETE'||($method==='POST'&&$action==='delete')) { $body=json_body();$id=(int)($body['id']??$_GET['id']??0);if(!$id)respond(['error'=>'Thiếu mã bản kế hoạch.'],422);$s=$pdo->prepare('DELETE FROM user_phuluc_drafts WHERE id=? AND user_id=?');$s->execute([$id,$userId]);if(!$s->rowCount())respond(['error'=>'Không tìm thấy bản kế hoạch.'],404);respond(['ok'=>true]); }
+    if ($method==='POST') { $body=json_body();$draft=$body['draft']??null;if(!is_array($draft))respond(['error'=>'Dữ liệu bản nháp không hợp lệ.'],422);$json=json_encode($draft,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if($json===false)respond(['error'=>'Không thể mã hóa dữ liệu bản nháp.'],422);$id=(int)($body['id']??0);$mode=$body['save_mode']??'new';$metadata=[draft_title($draft,trim((string)($body['title']??''))),draft_config_value($draft,'monHoc'),draft_config_value($draft,'lop'),draft_config_value($draft,'namHoc'),trim((string)($body['appendix_type']??'1-2-3')),draft_summary($draft)];if($mode==='update'&&$id){$exists=$pdo->prepare('SELECT 1 FROM user_phuluc_drafts WHERE id=? AND user_id=?');$exists->execute([$id,$userId]);if(!$exists->fetchColumn())respond(['error'=>'Không tìm thấy bản kế hoạch để cập nhật.'],404);$s=$pdo->prepare('UPDATE user_phuluc_drafts SET title=?,mon_hoc=?,lop=?,nam_hoc=?,appendix_type=?,summary=?,draft_data=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?');$s->execute([...$metadata,$json,$id,$userId]);}else{$s=$pdo->prepare('INSERT INTO user_phuluc_drafts (user_id,title,mon_hoc,lop,nam_hoc,appendix_type,summary,draft_data) VALUES (?,?,?,?,?,?,?,?)');$s->execute([$userId,...$metadata,$json]);$id=(int)$pdo->lastInsertId();}$s=$pdo->prepare('SELECT id,title,mon_hoc,lop,nam_hoc,appendix_type,summary,created_at,updated_at FROM user_phuluc_drafts WHERE id=? AND user_id=?');$s->execute([$id,$userId]);respond(['ok'=>true,'draft_info'=>$s->fetch()]); }
+    respond(['error'=>'Method not allowed.'],405);
+} catch (Throwable $e) { respond(['error'=>'Không thể lưu hoặc tải bản nháp.'],500); }
