@@ -4,26 +4,31 @@
 PASS
 
 ## Đối chiếu scope
-1. **API Backend đa bản lưu (`api/user_phuluc_draft.php`)**:
-   - Migration gỡ bỏ `UNIQUE KEY uniq_user_phuluc_draft_user`, bổ sung các cột `title`, `appendix_type`, `summary`, thêm index `idx_user_phuluc_drafts_user` và `idx_user_phuluc_drafts_mon_lop`.
-   - Hỗ trợ đầy đủ các endpoint: `GET ?action=list` (kèm lọc `mon_hoc`, `lop`, `nam_hoc`), `GET ?id={id}`, `POST` (lưu mới / cập nhật có kiểm tra quyền sở hữu `user_id`), `POST ?action=delete` / `DELETE`.
-   - Dữ liệu `draft_data` cũ của người dùng được bảo toàn 100% và tự động gắn nhãn tiêu đề hiển thị.
-2. **Giao diện & Modal Quản lý Lưu / Tải (`xaydungphuluc.html`)**:
-   - Đã thêm `#saveDraftModal` với đầy đủ Môn học, Khối lớp, Năm học, Tên trường, Tổ chuyên môn, trường nhập Tên kế hoạch, Tóm tắt thống kê và 2 lựa chọn "Lưu thành bản mới" / "Cập nhật bản đang mở".
-   - Đã thêm `#loadDraftModal` với bộ lọc Môn học, Khối lớp, Năm học, ô tìm kiếm nhanh, danh sách bản lưu trực quan cùng nút "Mở" và "Xóa".
-   - Quản lý trạng thái bản nháp đang mở (`currentDraftId`, `currentDraftTitle`) và hiển thị chi tiết trên `#draftStatus`.
-3. **Bộ kiểm thử tự động (`tests/xaydungphuluc-smoke.js` & `tests/xaydungphuluc-integration-smoke.js`)**:
-   - Bao phủ toàn bộ các hàm quản lý bản lưu, schema DB đa bản lưu, các phần tử modal UI mới.
+1. **Sửa dứt điểm lỗi dấu gạch đầu dòng `- ` trên HTML Preview và file DOCX**:
+   - `htmlMultiline(value)` được tách độc lập với `outcomeHtml(value)`. Các cột thông thường (STT, Bài học, Số tiết, Tiết CT, Tuần, Thiết bị, Địa điểm) và tiêu đề bảng không còn bị gắn tiền tố `- `.
+   - Cột `Yêu cầu cần đạt` vẫn duy trì đầy đủ định dạng gạch đầu dòng `- ` cho từng mục tiêu sư phạm theo chuẩn.
+   - Hàm xuất DOCX phân tách `cell` (cho ô thông thường), `outcomeCell` (cho ô YCCĐ) và `integrationCell` (cho ô mã NLS/AI), đảm bảo file Word sạch đẹp và chuẩn thể thức.
+2. **Xây dựng Thẻ Thống kê & Modal Báo cáo Thẩm định Sư phạm**:
+   - Thẻ thẩm định `#complianceSummaryCard` hiển thị trực quan tình trạng đáp ứng tại Section 7.
+   - Modal `#complianceModal` đối chiếu chi tiết 6 tiêu chí cốt lõi dựa trên các căn cứ pháp lý:
+     * *Thời lượng chương trình*: TT 32/2018/TT-BGDĐT.
+     * *Yêu cầu cần đạt*: Chuẩn CTGDPT 2018 theo từng môn học.
+     * *Năng lực số*: CV 3456/BGDĐT-GDTrH & TT 02/2024/TT-BGDĐT.
+     * *Trí tuệ nhân tạo*: QĐ 2422/QĐ-BGDĐT (tối đa 12 tiết/năm).
+     * *Thiết bị & Địa điểm dạy học*: TT 38/2021/TT-BGDĐT & TT 14/2020/TT-BGDĐT.
+     * *Đánh giá định kỳ*: CV 5512/BGDĐT-GDTrH.
+   - Báo cáo đưa ra kết luận đánh giá chính xác dựa trên dữ liệu thực tế (chỉ xác nhận ĐẠT CHUẨN 100% khi đủ 6/6 tiêu chí).
+3. **Kiểm thử tự động**:
+   - Bổ sung assertions kiểm tra không bị dính `- ` ở ô thông thường, kiểm tra bullet của YCCĐ, kiểm tra hàm tính toán thẩm định và các trường hợp dữ liệu thiếu/đầy đủ.
 
 ## Test đã chạy
 - `node tests/xaydungphuluc-smoke.js` $\to$ PASS
 - `node tests/xaydungphuluc-integration-smoke.js` $\to$ PASS
 
 ## Pass / Fail từng tiêu chí
-- [x] Bảng `user_phuluc_drafts` cho phép mỗi tài khoản lưu nhiều bản kế hoạch độc lập, có đầy đủ metadata Môn học, Lớp, Năm học, Tiêu đề, Tóm tắt: PASS
-- [x] Bấm "Lưu lên CSDL" mở modal xác nhận đầy đủ Môn, Lớp, Năm học, cho phép đặt tên và chọn Lưu mới / Cập nhật: PASS
-- [x] Bấm "Tải từ CSDL" mở modal danh sách các bản lưu có bộ lọc theo Môn, Lớp, Năm học, hiển thị ngày giờ, cho phép Mở và Xóa: PASS
-- [x] Thanh trạng thái hiển thị rõ ràng bản kế hoạch đang làm việc và thời gian đồng bộ CSDL: PASS
+- [x] Các cột STT, Bài học, Số tiết, Tiết CT, Tuần, Thiết bị, Địa điểm, Mã NLS & AI và tiêu đề bảng trên HTML & DOCX hoàn toàn không bị dính dấu `- `: PASS
+- [x] Cột Yêu cầu cần đạt vẫn giữ nguyên định dạng từng gạch đầu dòng `- ` cho các mục tiêu sư phạm: PASS
+- [x] Có Thẻ Thống kê Thẩm định & Modal Báo cáo Đối chiếu Tiêu chuẩn Pháp lý (CV 5512, TT 32/2018, CV 3456, QĐ 2422, TT 38/2021, TT 14/2020) với kết luận rõ ràng về khả năng sử dụng giảng dạy cho giáo viên: PASS
 - [x] 100% kiểm thử tự động `tests/xaydungphuluc-smoke.js` và `tests/xaydungphuluc-integration-smoke.js` chạy đạt PASS: PASS
 
 ## Bug

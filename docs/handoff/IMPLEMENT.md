@@ -1,18 +1,15 @@
-# IMPLEMENT: Quản lý nhiều bản kế hoạch phụ lục
+# IMPLEMENT: Sửa định dạng bullet và báo cáo thẩm định sư phạm
 
 ## Phạm vi đã triển khai
 
-- Nâng cấp API bản nháp sang nhiều bản lưu cho mỗi tài khoản. Migration chỉ gỡ index giới hạn `uniq_user_phuluc_draft_user`, thêm metadata `title`, `appendix_type`, `summary` và các index hỗ trợ; không xóa bảng, dòng, hay `draft_data` cũ.
-- Bản nháp cũ được gắn nhãn từ metadata đã lưu để hiển thị trong danh sách mà không thay đổi nội dung bản nháp.
-- Thêm API danh sách, tải theo ID, lưu mới/cập nhật bản đang mở và xóa có kiểm tra quyền sở hữu theo `user_id`.
-- Nhánh cập nhật xác minh bản lưu thuộc tài khoản trước khi ghi, nên lưu lại dữ liệu không đổi vẫn thành công thay vì nhầm là không tìm thấy.
-- Thêm modal lưu với môn, lớp, năm học, trường, tổ chuyên môn, tên kế hoạch và thống kê PPCT/AI/phụ lục; tách rõ Lưu bản mới và Cập nhật bản đang mở.
-- Thêm modal quản lý/tải với bộ lọc môn, lớp, năm học, tìm theo tên, cùng các nút Mở và Xóa có xác nhận.
-- Bổ sung trạng thái bản nháp đang làm việc và mở rộng smoke test cho phần tử, hàm và API đa bản lưu.
+- Tách hiển thị văn bản thông thường và Yêu cầu cần đạt: `htmlMultiline` không tự thêm dấu `- `; `outcomeHtml` chỉ định dạng bullet cho cột Yêu cầu cần đạt; mã NLS/AI được giữ nguyên.
+- Xuất DOCX dùng `cell` cho văn bản thông thường, `outcomeCell` cho YCCĐ và `integrationCell` sạch cho mã NLS/AI. Tiêu đề và các cột thường không còn bị gắn dấu gạch đầu dòng.
+- Thêm thẻ thẩm định và modal báo cáo, đối chiếu sáu tiêu chí: thời lượng, YCCĐ, NLS, AI, thiết bị/địa điểm, đánh giá định kỳ; kèm căn cứ CV 5512, TT 32, CV 3456/TT 02, QĐ 2422, TT 38 và TT 14.
+- Kết luận được tính từ dữ liệu thực tế. Chỉ hiện `ĐẠT CHUẨN 100%` khi toàn bộ 6/6 tiêu chí đạt; dữ liệu thiếu sẽ hiển thị yêu cầu hoàn thiện, không cam kết đạt chuẩn vô điều kiện.
+- Bổ sung smoke assertions cho định dạng không-bullet của ô thường, bullet của YCCĐ, các hàm/modal thẩm định và trường hợp dữ liệu thiếu không đạt chuẩn.
 
 ## File đã sửa
 
-- `api/user_phuluc_draft.php`
 - `xaydungphuluc.html`
 - `tests/xaydungphuluc-smoke.js`
 - `docs/handoff/IMPLEMENT.md`
@@ -23,9 +20,8 @@
 - `node tests/xaydungphuluc-smoke.js` — PASS
 - `node tests/xaydungphuluc-integration-smoke.js` — PASS
 - `git diff --check` — PASS
-- PHP syntax check — không chạy được vì môi trường không có lệnh `php` trên PATH.
 
 ## Vấn đề còn lại
 
-- Chưa thực hiện kiểm thử thủ công với CSDL và phiên đăng nhập thật.
+- Chưa kiểm tra thủ công tệp DOCX đã xuất bằng Microsoft Word.
 - Chưa commit hoặc push theo yêu cầu.

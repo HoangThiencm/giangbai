@@ -64,6 +64,15 @@ vm.createContext(sandbox);
 try{vm.runInContext(script[1].replace(/document\.addEventListener\('DOMContentLoaded'[\s\S]*\);\s*$/,''),sandbox);}
 catch(e){assert.fail('inline JavaScript failed to parse: '+e.message)}
 assert.equal(typeof sandbox.extractPpctRows,'function','extractPpctRows must be defined');
+assert.equal(sandbox.htmlMultiline('STT'),'STT','ordinary HTML table labels must not gain a bullet');
+assert.equal(sandbox.htmlMultiline('4'),'4','ordinary HTML table values must not gain a bullet');
+assert.equal(sandbox.outcomeHtml('Nhận biết được số tự nhiên').startsWith('- '),true,'only outcomes must retain pedagogical bullets');
+assert(html.includes('const outcomeCell=')&&!html.includes('children:formatOutcomeLines(integrationText(text))'),'DOCX must use a dedicated outcome cell instead of formatting every cell as an outcome');
+assert.equal(typeof sandbox.calculateComplianceReport,'function','compliance calculation must be defined');
+assert.equal(typeof sandbox.renderComplianceCard,'function','compliance summary renderer must be defined');
+assert(html.includes('id="complianceSummaryCard"')&&html.includes('id="complianceModal"'),'compliance card and modal must be present');
+const incompleteCompliance=vm.runInContext("calculateComplianceReport({monHoc:'Toán học',nls:{enabled:false,rate:0},ai:{selectedPeriods:[]}}, {'1':{schedule:[],assessments:[]}})",sandbox);
+assert.equal(incompleteCompliance.isCompliant,false,'incomplete source data must never be reported as 100% compliant');
 assert.equal(typeof sandbox.recognizePpctWithAi,'function','stage-one PPCT recognizer must be defined');
 assert.equal(typeof sandbox.callAiJson,'function','AI provider fallback must be defined');
 vm.runInContext("getConfig=()=>({lop:'6',monHoc:'Toán học',namHoc:'2026-2027'});sourcePpctRows=[{lesson:'Bài nháp'}];sourcePpctTable={columns:['Bài học'],rows:[]};aiSelectedLessonIds=new Set(['ppct:0:period:1']);sgkCompactContext='Ngữ cảnh SGK';sgkKnowledgeBase='{}';results={'1':{title:'PL1'},'2':{title:'PL2'},'3':{title:'PL3'}}",sandbox);
