@@ -53,7 +53,7 @@ function page_catalog(): array
         'thanhtich' => ['title' => 'Thống kê thành tích', 'url' => 'thanhtich.html'],
         'thoikhoabieu' => ['title' => 'Xếp thời khóa biểu', 'url' => 'thoikhoabieu.html'],
         'phancongtochuyenmon' => ['title' => 'Quản lý tổ chuyên môn', 'url' => 'phancongtochuyenmon.html'],
-        'xaydungphuluc' => ['title' => 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', 'url' => 'xaydungphuluc.html'], 'duyetgiaoan' => ['title' => 'Duyệt Giáo Án AI', 'url' => 'duyetgiaoan.html'],
+        'xaydungphuluc' => ['title' => 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', 'url' => 'xaydungphuluc.html'], 'duyetgiaoan' => ['title' => 'Duyệt Giáo Án AI', 'url' => 'duyetgiaoan.html'], 'duyetde' => ['title' => 'Rà soát & Hiệu chỉnh Đề Kiểm Tra (Duyệt đề AI)', 'url' => 'duyetde.html'],
     ];
 }
 
@@ -79,13 +79,13 @@ function teacher_workspace_page_ids(): array
         'thoikhoabieu',
         'phancongtochuyenmon',
         'rutgon',
-        'xaydungphuluc', 'duyetgiaoan',
+        'xaydungphuluc', 'duyetgiaoan', 'duyetde',
     ];
 }
 
 function teacher_default_workspace_extras(): array
 {
-    return ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'xaydungphuluc', 'duyetgiaoan'];
+    return ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'xaydungphuluc', 'duyetgiaoan', 'duyetde'];
 }
 
 function teacher_all_page_ids(): array
@@ -115,7 +115,7 @@ function teacher_feature_keys_for_pages(): array
         'phancongtochuyenmon' => 'phancongtochuyenmon',
         'rutgon' => 'rutgon',
         'thanhtich' => 'thanhtich',
-        'xaydungphuluc' => 'xaydungphuluc', 'duyetgiaoan' => 'duyetgiaoan',
+        'xaydungphuluc' => 'xaydungphuluc', 'duyetgiaoan' => 'duyetgiaoan', 'duyetde' => 'duyetde',
     ];
 }
 
@@ -577,9 +577,72 @@ function ensure_users_registration_status_column(PDO $pdo): void
     }
 }
 
-function parse_stored_api_keys($raw): array
+function user_api_key_secret(): string
 {
-    $keys = [];
+    $raw = '';
+    if (defined('API_KEY_ENCRYPTION_SECRET') && is_string(API_KEY_ENCRYPTION_SECRET) && API_KEY_ENCRYPTION_SECRET !== '') {
+        $raw = API_KEY_ENCRYPTION_SECRET;
+    } elseif (defined('ADMIN_KEY') && is_string(ADMIN_KEY) && ADMIN_KEY !== '') {
+        $raw = ADMIN_KEY . '|giangbai-user-api-keys';
+    } else {
+        $raw = 'giangbai-user-api-keys-fallback';
+    }
+    return hash('sha256', $raw, true);
+}
+
+function is_encrypted_user_api_key(string $value): bool
+{
+    return strncmp($value, 'enc:v1:', 7) === 0;
+}
+
+function encrypt_user_api_key($rawKey): string
+{
+    $plain = trim((string)$rawKey);
+    if ($plain === '') {
+        return '';
+    }
+    if (is_encrypted_user_api_key($plain)) {
+        return $plain;
+    }
+    $iv = random_bytes(16);
+    $cipher = openssl_encrypt($plain, 'AES-256-CBC', user_api_key_secret(), OPENSSL_RAW_DATA, $iv);
+    if ($cipher === false) {
+        return '';
+    }
+    return 'enc:v1:' . base64_encode($iv . $cipher);
+}
+
+function decrypt_user_api_key($encryptedKey): string
+{
+    $value = trim((string)$encryptedKey);
+    if ($value === '') {
+        return '';
+    }
+    if (!is_encrypted_user_api_key($value)) {
+        return $value;
+    }
+    $raw = base64_decode(substr($value, 7), true);
+    if (!is_string($raw) || strlen($raw) < 17) {
+        return '';
+    }
+    $plain = openssl_decrypt(substr($raw, 16), 'AES-256-CBC', user_api_key_secret(), OPENSSL_RAW_DATA, substr($raw, 0, 16));
+    return is_string($plain) ? $plain : '';
+}
+
+function mask_user_api_key(string $rawKey): string
+{
+    $key = trim($rawKey);
+    if ($key === '') {
+        return '';
+    }
+    $keep = min(7, max(0, strlen($key) - 4));
+    return substr($key, 0, $keep) . '...****';
+}
+
+function stored_api_keys_items($raw): array
+{
+    $updatedAt = '';
+    $encrypted = false;
     if (is_string($raw) && trim($raw) !== '') {
         $decoded = json_decode($raw, true);
         if (is_array($decoded)) {
@@ -588,16 +651,73 @@ function parse_stored_api_keys($raw): array
             $raw = preg_split('/[\r\n,;]+/', $raw) ?: [];
         }
     }
-    if (!is_array($raw)) {
-        return [];
+    if (is_array($raw) && isset($raw['keys']) && is_array($raw['keys']) && (isset($raw['v']) || isset($raw['alg']))) {
+        $updatedAt = trim((string)($raw['updated_at'] ?? ''));
+        $encrypted = (($raw['alg'] ?? '') === 'AES-256-CBC') || !empty($raw['v']);
+        $raw = $raw['keys'];
     }
+    if (!is_array($raw)) {
+        return ['items' => [], 'updated_at' => $updatedAt, 'encrypted' => $encrypted];
+    }
+    $items = [];
     foreach ($raw as $item) {
-        $k = trim((string)$item);
+        if (is_array($item) || is_object($item)) {
+            continue;
+        }
+        $value = trim((string)$item);
+        if ($value === '') {
+            continue;
+        }
+        if (is_encrypted_user_api_key($value)) {
+            $encrypted = true;
+        }
+        $items[] = $value;
+    }
+    return ['items' => $items, 'updated_at' => $updatedAt, 'encrypted' => $encrypted];
+}
+
+function parse_stored_api_keys($raw): array
+{
+    $bundle = stored_api_keys_items($raw);
+    $keys = [];
+    foreach ($bundle['items'] as $item) {
+        $k = trim(decrypt_user_api_key($item));
         if (strlen($k) > 10 && !in_array($k, $keys, true)) {
             $keys[] = $k;
         }
     }
     return $keys;
+}
+
+function stored_api_keys_need_encryption($raw): bool
+{
+    $bundle = stored_api_keys_items($raw);
+    if (!$bundle['items']) {
+        return false;
+    }
+    foreach ($bundle['items'] as $item) {
+        if (!is_encrypted_user_api_key($item)) {
+            return true;
+        }
+    }
+    return empty($bundle['encrypted']);
+}
+
+function encode_stored_api_keys(array $plainKeys): string
+{
+    $encrypted = [];
+    foreach ($plainKeys as $key) {
+        $blob = encrypt_user_api_key($key);
+        if ($blob !== '') {
+            $encrypted[] = $blob;
+        }
+    }
+    return json_encode([
+        'v' => 1,
+        'alg' => 'AES-256-CBC',
+        'updated_at' => date('c'),
+        'keys' => array_values($encrypted),
+    ], JSON_UNESCAPED_UNICODE);
 }
 
 function collect_api_keys_from_input($rawInput): array

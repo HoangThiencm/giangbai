@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rà soát &amp; Hiệu chỉnh Đề Kiểm Tra</title>
+<script src="js/security-guard.js"></script>
+<script src="access-control.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<style>
+  body { font-family: "Segoe UI", system-ui, sans-serif; }
+  .katex-display { overflow-x: auto; }
+  .q-body p { margin: 0.35rem 0; }
+</style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+<main class="mx-auto max-w-6xl space-y-5 p-4 md:p-7">
+<header class="rounded-3xl bg-gradient-to-br from-violet-950 via-indigo-800 to-fuchsia-600 p-6 text-white shadow-xl">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-[.18em] text-violet-100">Thẩm định đề · Ma trận – Đặc tả</p>
+      <h1 class="mt-2 text-3xl font-black">Rà soát &amp; Hiệu chỉnh Đề Kiểm Tra</h1>
+      <p id="keyStatus" class="mt-2 text-sm text-violet-50">Đang kiểm tra API Key tài khoản…</p>
+    </div>
+    <a href="index.html" class="rounded-xl bg-white/15 px-4 py-2 text-sm font-bold hover:bg-white/25">← Trang chủ</a>
+  </div>
+</header>
+
+<section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+  <div class="mb-4 flex items-center gap-3">
+    <span class="grid h-9 w-9 place-items-center rounded-full bg-violet-100 font-black text-violet-800">1</span>
+    <div>
+      <h2 class="font-bold">Thông tin đợt thẩm định</h2>
+      <p class="text-sm text-slate-500">Khai báo hồ sơ và quản lý Gemini API Key (lưu mã hóa trên máy chủ, không lộ key gốc).</p>
+    </div>
+  </div>
+  <div class="grid gap-3 md:grid-cols-4">
+    <label class="text-sm font-semibold">Tổ chuyên môn<input id="toChuyenMon" class="mt-1 w-full rounded-lg border border-slate-300 p-2" placeholder="Tổ Toán"></label>
+    <label class="text-sm font-semibold">Môn học<input id="monHoc" class="mt-1 w-full rounded-lg border border-slate-300 p-2" value="Toán học"></label>
+    <label class="text-sm font-semibold">Khối lớp<select id="khoiLop" class="mt-1 w-full rounded-lg border border-slate-300 p-2"><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></label>
+    <label class="text-sm font-semibold">Năm học<input id="namHoc" class="mt-1 w-full rounded-lg border border-slate-300 p-2" value="2026-2027"></label>
+    <label class="text-sm font-semibold">Học kỳ<select id="hocKy" class="mt-1 w-full rounded-lg border border-slate-300 p-2"><option>Học kỳ I</option><option>Học kỳ II</option></select></label>
+    <label class="text-sm font-semibold">Loại bài kiểm tra<select id="loaiDe" class="mt-1 w-full rounded-lg border border-slate-300 p-2"><option>Thường xuyên</option><option>Giữa kỳ</option><option>Cuối kỳ</option></select></label>
+    <label class="text-sm font-semibold">Giáo viên ra đề<input id="giaoVienRaDe" class="mt-1 w-full rounded-lg border border-slate-300 p-2" placeholder="Họ tên GV ra đề"></label>
+    <label class="text-sm font-semibold">Người thẩm duyệt<input id="nguoiThamDuyet" class="mt-1 w-full rounded-lg border border-slate-300 p-2" placeholder="Tổ trưởng chuyên môn"></label>
+  </div>
+  <label class="mt-3 block text-sm font-semibold">Tiêu đề đợt duyệt<input id="sessionTitle" class="mt-1 w-full rounded-lg border border-slate-300 p-2" placeholder="Ví dụ: Đề giữa kỳ Toán 8 — đợt 1"></label>
+  <div class="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h3 class="text-sm font-bold text-violet-900">Gemini API Key (mã hóa AES-256 trên máy chủ)</h3>
+      <span id="keyMeta" class="text-xs font-semibold text-violet-700">Chưa có key</span>
+    </div>
+    <p id="maskedKeys" class="mt-2 font-mono text-xs text-slate-600">—</p>
+    <textarea id="newKeys" class="mt-3 w-full rounded-lg border border-violet-200 p-2 text-sm" rows="2" placeholder="Dán key mới (mỗi dòng một key). Key cũ không hiển thị dạng gốc."></textarea>
+    <div class="mt-2 flex flex-wrap gap-2">
+      <button type="button" onclick="addKeys()" class="rounded-lg bg-violet-700 px-3 py-2 text-sm font-bold text-white">Thêm key</button>
+      <button type="button" onclick="testKeys()" class="rounded-lg border border-violet-300 px-3 py-2 text-sm font-bold text-violet-800">Kiểm tra key</button>
+      <button type="button" onclick="deleteKeys()" class="rounded-lg border border-rose-200 px-3 py-2 text-sm font-bold text-rose-700">Xóa toàn bộ key</button>
+    </div>
+    <p id="keyTest" class="mt-2 text-xs text-slate-600"></p>
+  </div>
+</section>
+
+<section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+  <div class="mb-4 flex items-center gap-3">
+    <span class="grid h-9 w-9 place-items-center rounded-full bg-indigo-100 font-black text-indigo-800">2</span>
+    <div>
+      <h2 class="font-bold">Nạp hồ sơ đề thi</h2>
+      <p class="text-sm text-slate-500">Bắt buộc: Đề thi, Ma trận đề, Bảng đặc tả. Tùy chọn: Đáp án/Hướng dẫn chấm. Hỗ trợ PDF và DOCX.</p>
+    </div>
+  </div>
+  <div class="grid gap-3 md:grid-cols-2">
+    <label class="rounded-xl border border-slate-200 p-3 text-sm font-semibold">Đề thi (bắt buộc)<input id="fileExam" type="file" accept=".pdf,.docx" class="mt-2 block w-full text-xs" onchange="readDoc('exam', this.files[0])"><span id="stExam" class="mt-2 block text-xs font-medium text-slate-500">Chưa nạp</span></label>
+    <label class="rounded-xl border border-slate-200 p-3 text-sm font-semibold">Ma trận đề (bắt buộc)<input id="fileMatrix" type="file" accept=".pdf,.docx" class="mt-2 block w-full text-xs" onchange="readDoc('matrix', this.files[0])"><span id="stMatrix" class="mt-2 block text-xs font-medium text-slate-500">Chưa nạp</span></label>
+    <label class="rounded-xl border border-slate-200 p-3 text-sm font-semibold">Bảng đặc tả (bắt buộc)<input id="fileSpec" type="file" accept=".pdf,.docx" class="mt-2 block w-full text-xs" onchange="readDoc('spec', this.files[0])"><span id="stSpec" class="mt-2 block text-xs font-medium text-slate-500">Chưa nạp</span></label>
+    <label class="rounded-xl border border-slate-200 p-3 text-sm font-semibold">Đáp án / Hướng dẫn chấm (tùy chọn)<input id="fileAnswer" type="file" accept=".pdf,.docx" class="mt-2 block w-full text-xs" onchange="readDoc('answer', this.files[0])"><span id="stAnswer" class="mt-2 block text-xs font-medium text-slate-500">Không bắt buộc</span></label>
+  </div>
+  <details class="mt-3 rounded-xl bg-slate-900 p-3 text-xs text-slate-100">
+    <summary class="cursor-pointer font-semibold">Xem trước văn bản đã trích xuất</summary>
+    <pre id="extractPreview" class="mt-2 max-h-48 overflow-auto whitespace-pre-wrap">Chưa có nội dung.</pre>
+  </details>
+</section>
+
+<section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+  <div class="mb-4 flex items-center gap-3">
+    <span class="grid h-9 w-9 place-items-center rounded-full bg-cyan-100 font-black text-cyan-800">3</span>
+    <div>
+      <h2 class="font-bold">Rà soát &amp; Thẩm định AI</h2>
+      <p class="text-sm text-slate-500">Pha 1 giải đề → Pha 2 đối chiếu ma trận/đặc tả theo máy trạng thái thống nhất.</p>
+    </div>
+  </div>
+  <div class="flex flex-wrap items-center gap-3">
+    <button type="button" onclick="runReview()" class="rounded-lg bg-indigo-700 px-5 py-2 font-bold text-white hover:bg-indigo-800">Bắt đầu rà soát đề</button>
+    <span id="reviewStatus" class="text-sm font-medium text-slate-500">Sẵn sàng thẩm định.</span>
+  </div>
+  <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+    <div id="reviewProgress" class="h-full w-0 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 transition-all duration-300" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+  </div>
+  <div id="summary" class="mt-4 grid gap-3 sm:grid-cols-5"></div>
+  <div id="questionTable" class="mt-4 overflow-x-auto"></div>
+</section>
+
+<section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+  <div class="mb-4 flex items-center gap-3">
+    <span class="grid h-9 w-9 place-items-center rounded-full bg-amber-100 font-black text-amber-800">4</span>
+    <div>
+      <h2 class="font-bold">Gợi ý sửa đề &amp; phiên bản</h2>
+      <p class="text-sm text-slate-500">Không ghi đè đề gốc. Chấp nhận / tự sửa / giữ nguyên — mỗi lần sửa tạo phiên bản mới và bắt buộc kiểm tra lại.</p>
+    </div>
+  </div>
+  <p id="versionLabel" class="mb-3 text-sm font-semibold text-slate-600">Phiên bản hiện tại: v1</p>
+  <div id="proposals" class="space-y-4"></div>
+  <div id="versionHistory" class="mt-4 space-y-2 text-sm"></div>
+</section>
+
+<section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+  <div class="mb-4 flex items-center gap-3">
+    <span class="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 font-black text-emerald-800">5</span>
+    <div>
+      <h2 class="font-bold">Thẩm định của Tổ trưởng &amp; Xuất báo cáo</h2>
+      <p class="text-sm text-slate-500">Kết luận chính thức, lưu hồ sơ và xuất Word.</p>
+    </div>
+  </div>
+  <div class="grid gap-3 md:grid-cols-2">
+    <label class="text-sm font-semibold">Quyết định
+      <select id="finalDecision" class="mt-1 w-full rounded-lg border border-slate-300 p-2">
+        <option value="">— Chọn —</option>
+        <option value="co_the_su_dung">Có thể sử dụng</option>
+        <option value="can_chinh_sua">Cần chỉnh sửa</option>
+        <option value="khong_su_dung">Không sử dụng</option>
+      </select>
+    </label>
+    <label class="text-sm font-semibold">Ý kiến chỉ đạo<textarea id="leaderFeedback" class="mt-1 w-full rounded-lg border border-slate-300 p-2" rows="3" placeholder="Nhận xét của tổ trưởng chuyên môn"></textarea></label>
+  </div>
+  <div class="mt-4 flex flex-wrap gap-2">
+    <button type="button" onclick="saveSession()" class="rounded-lg bg-teal-700 px-4 py-2 font-bold text-white">Lưu CSDL</button>
+    <button type="button" onclick="submitLeader()" class="rounded-lg bg-indigo-700 px-4 py-2 font-bold text-white">Nộp duyệt tổ trưởng</button>
+    <button type="button" onclick="saveDecision()" class="rounded-lg bg-emerald-700 px-4 py-2 font-bold text-white">Lưu quyết định thẩm duyệt</button>
+    <button type="button" onclick="loadSessions()" class="rounded-lg border border-slate-300 px-4 py-2 font-bold">Tải lịch sử</button>
+    <button type="button" onclick="exportMinutesDocx()" class="rounded-lg border border-slate-300 px-4 py-2 font-bold">Xuất biên bản thẩm định .docx</button>
+    <button type="button" onclick="exportExamDocx()" class="rounded-lg border border-slate-300 px-4 py-2 font-bold">Xuất đề thi hoàn chỉnh .docx</button>
+  </div>
+  <div id="history" class="mt-4 space-y-2"></div>
+</section>
+</main>
+<script>
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const STATUSES = ['Đạt', 'Cần chỉnh sửa', 'Không đạt', 'Chưa đủ dữ liệu để kết luận'];
+const DECISION_LABEL = { co_the_su_dung: 'Có thể sử dụng', can_chinh_sua: 'Cần chỉnh sửa', khong_su_dung: 'Không sử dụng' };
+const STATUS_CLASS = {
+  'Đạt': 'bg-emerald-100 text-emerald-800',
+  'Cần chỉnh sửa': 'bg-amber-100 text-amber-800',
+  'Không đạt': 'bg-rose-100 text-rose-800',
+  'Chưa đủ dữ liệu để kết luận': 'bg-slate-200 text-slate-700'
+};
+
+let currentSessionId = null;
+let currentVersion = 1;
+let sessionStatus = 'draft';
+let questions = [];
+let solution = null;
+let evaluation = null;
+let versions = [];
+let files = {
+  exam: { name: '', text: '', pdfBase64: '' },
+  matrix: { name: '', text: '', pdfBase64: '' },
+  spec: { name: '', text: '', pdfBase64: '' },
+  answer: { name: '', text: '', pdfBase64: '' }
+};
+let keyInfo = { count: 0, masked_keys: [], updated_at: null };
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const val = id => document.querySelector(id).value.trim();
+
+function mathHtml(text) {
+  const raw = String(text || '');
+  if (!raw) return '—';
+  const parts = raw.split(/(\$\$[\s\S]+?\$\$|\$[^$\n]+\$)/g);
+  return parts.map(part => {
+    const display = /^\$\$[\s\S]+\$\$$/.test(part);
+    const inline = /^\$[^$\n]+\$$/.test(part);
+    if ((display || inline) && window.katex) {
+      try {
+        return katex.renderToString(part.replace(/^\$+|\$+$/g, ''), { throwOnError: false, displayMode: display });
+      } catch (e) { return esc(part); }
+    }
+    return esc(part).replace(/\n/g, '<br>');
+  }).join('');
+}
+
+function setProgress(percent, status) {
+  const bar = document.querySelector('#reviewProgress');
+  bar.style.width = `${percent}%`;
+  bar.setAttribute('aria-valuenow', percent);
+  document.querySelector('#reviewStatus').textContent = status;
+}
+
+function profile() {
+  return {
+    title: val('#sessionTitle'),
+    to_chuyen_mon: val('#toChuyenMon'),
+    mon_hoc: val('#monHoc'),
+    khoi_lop: val('#khoiLop'),
+    nam_hoc: val('#namHoc'),
+    hoc_ky: val('#hocKy'),
+    loai_de: val('#loaiDe'),
+    giao_vien_ra_de: val('#giaoVienRaDe'),
+    nguoi_tham_duyet: val('#nguoiThamDuyet')
+  };
+}
+
+function filePayload(kind) {
+  const f = files[kind];
+  const out = {};
+  if (f.text) out[kind + '_text'] = f.text;
+  if (f.pdfBase64) out[kind + '_pdf_base64'] = f.pdfBase64;
+  return out;
+}
+
+async function extractFileText(file) {
+  if (!file) return '';
+  if (/\.pdf$/i.test(file.name)) {
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      text += (await (await pdf.getPage(i)).getTextContent()).items.map(x => x.str).join(' ') + '\n';
+    }
+    return text;
+  }
+  if (/\.docx$/i.test(file.name)) {
+    return (await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value;
+  }
+  throw new Error('Chỉ hỗ trợ PDF và DOCX.');
+}
+
+async function fileToPdfBase64(file) {
+  if (!file || !/\.pdf$/i.test(file.name)) return '';
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  if (bytes.length > 2.5 * 1024 * 1024) return '';
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+async function readDoc(kind, file) {
+  if (!file) return;
+  try {
+    const text = await extractFileText(file);
+    files[kind] = { name: file.name, text, pdfBase64: await fileToPdfBase64(file) };
+    const el = document.querySelector('#st' + kind[0].toUpperCase() + kind.slice(1));
+    el.textContent = `Đã nạp: ${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB`;
+    el.className = 'mt-2 block text-xs font-medium text-emerald-700';
+    const preview = ['exam', 'matrix', 'spec', 'answer'].map(k => `--- ${k.toUpperCase()} (${files[k].name || 'chưa nạp'}) ---\n${(files[k].text || '').slice(0, 1200)}`).join('\n\n');
+    document.querySelector('#extractPreview').textContent = preview;
+  } catch (error) {
+    alert(error.message || 'Không đọc được tệp.');
+  }
+}
+
+function renderKeyInfo(data) {
+  keyInfo = data || keyInfo;
+  const count = Number(keyInfo.count || 0);
+  const masked = Array.isArray(keyInfo.masked_keys) ? keyInfo.masked_keys : [];
+  document.querySelector('#keyStatus').textContent = count
+    ? `🔑 ${count} Gemini API Key đã lưu mã hóa trên máy chủ. Client không nhận key gốc.`
+    : 'Tài khoản chưa có Gemini API Key. Hãy thêm key ở mục hồ sơ.';
+  document.querySelector('#keyMeta').textContent = count
+    ? `${count} key · cập nhật ${keyInfo.updated_at || '—'}`
+    : 'Chưa có key';
+  document.querySelector('#maskedKeys').textContent = masked.length ? masked.join('   ') : '—';
+}
+
+async function loadKeyInfo() {
+  try {
+    const res = await fetch('api/user_gemini_keys.php', { credentials: 'include', cache: 'no-store' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Không tải được key.');
+    renderKeyInfo(data);
+  } catch (e) {
+    document.querySelector('#keyStatus').textContent = 'Không thể kiểm tra API Key. Hãy đăng nhập lại.';
+  }
+}
+
+async function addKeys() {
+  const keys = document.querySelector('#newKeys').value.split(/[\r\n,;]+/).map(s => s.trim()).filter(k => k && !k.includes('****'));
+  if (!keys.length) return alert('Hãy dán ít nhất một API key mới.');
+  const res = await fetch('api/user_gemini_keys.php', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ action: 'add', keys })
+  });
+  const data = await res.json();
+  if (!res.ok) return alert(data.error || 'Không lưu được key.');
+  document.querySelector('#newKeys').value = '';
+  renderKeyInfo(data);
+  alert('Đã thêm key. Máy chủ lưu dạng mã hóa, không trả key gốc về trình duyệt.');
+}
+
+async function testKeys() {
+  document.querySelector('#keyTest').textContent = 'Đang kiểm tra key trên máy chủ…';
+  const res = await fetch('api/user_gemini_keys.php', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ action: 'test' })
+  });
+  const data = await res.json();
+  const lines = (data.results || []).map(r => `Key ${r.index} (${r.masked}): ${r.valid ? 'hợp lệ' : ('lỗi ' + (r.error || r.status))}`);
+  document.querySelector('#keyTest').textContent = lines.join(' · ') || (data.error || 'Không kiểm tra được.');
+}
+
+async function deleteKeys() {
+  if (!confirm('Xóa toàn bộ API key của tài khoản này?')) return;
+  const res = await fetch('api/user_gemini_keys.php', { method: 'DELETE', credentials: 'include' });
+  const data = await res.json();
+  renderKeyInfo(data);
+}
+
+function countsFromQuestions() {
+  const counts = { 'Đạt': 0, 'Cần chỉnh sửa': 0, 'Không đạt': 0, 'Chưa đủ dữ liệu để kết luận': 0 };
+  questions.forEach(q => { counts[q.trang_thai] = (counts[q.trang_thai] || 0) + 1; });
+  return counts;
+}
+
+function overallPassRevoked() {
+  return questions.some(q => q.needs_recheck || q.trang_thai !== 'Đạt');
+}
+
+function renderSummary() {
+  const c = countsFromQuestions();
+  const total = questions.length;
+  document.querySelector('#summary').innerHTML = [
+    ['Tổng số câu', total, 'bg-slate-100'],
+    ['Đạt', c['Đạt'], 'bg-emerald-50'],
+    ['Cần chỉnh sửa', c['Cần chỉnh sửa'], 'bg-amber-50'],
+    ['Không đạt', c['Không đạt'], 'bg-rose-50'],
+    ['Chưa đủ dữ liệu', c['Chưa đủ dữ liệu để kết luận'], 'bg-slate-50']
+  ].map(([label, n, bg]) => `<div class="rounded-xl ${bg} p-3"><b>${n}</b><span class="block text-xs text-slate-500">${label}</span></div>`).join('');
+  document.querySelector('#versionLabel').textContent = `Phiên bản hiện tại: v${currentVersion}${overallPassRevoked() ? ' · Đề chưa được công nhận Đạt cho đến khi kiểm tra lại các câu đã sửa.' : ''}`;
+}
+
+function statusBadge(status) {
+  return `<span class="rounded-full px-2 py-1 text-xs font-bold ${STATUS_CLASS[status] || 'bg-slate-100'}">${esc(status || '—')}</span>`;
+}
+
+function renderQuestions() {
+  renderSummary();
+  if (!questions.length) {
+    document.querySelector('#questionTable').innerHTML = '<p class="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Chưa có kết quả đối chiếu.</p>';
+    document.querySelector('#proposals').innerHTML = '<p class="text-sm text-slate-500">Chưa có câu cần hiệu chỉnh.</p>';
+    document.querySelector('#versionHistory').innerHTML = versions.length ? versions.map(v => `<article class="rounded-lg border p-2"><b>v${v.version}</b> · ${esc(v.action)} · câu ${esc(v.so_cau)} · ${esc(v.created_at)}</article>`).join('') : '';
+    return;
+  }
+  document.querySelector('#questionTable').innerHTML = `<table class="w-full overflow-hidden rounded-xl text-left text-sm"><thead class="bg-slate-800 text-white"><tr><th class="p-3">Câu</th><th class="p-3">Trạng thái</th><th class="p-3">Căn cứ ma trận</th><th class="p-3">Nhận xét</th></tr></thead><tbody>${questions.map((q, i) => `<tr class="border-b align-top"><td class="p-3 font-semibold">${esc(q.so_cau || (i + 1))}${q.needs_recheck ? '<div class="mt-1 text-xs font-bold text-amber-700">Cần kiểm tra lại</div>' : ''}</td><td class="p-3">${statusBadge(q.trang_thai)}</td><td class="p-3 text-xs">${esc(q.ma_tran?.dong || '—')}<br>${esc(q.ma_tran?.chu_de || '')} · ${esc(q.ma_tran?.muc_do || '')} · ${esc(q.ma_tran?.diem || '')}</td><td class="p-3 text-xs"><div class="q-body">${mathHtml(q.nhan_xet || q.ma_tran?.nhan_xet || '')}</div></td></tr>`).join('')}</tbody></table>`;
+
+  const needFix = questions.map((q, i) => ({ q, i })).filter(x => x.q.trang_thai !== 'Đạt' || x.q.needs_recheck || x.q.teacher_action);
+  document.querySelector('#proposals').innerHTML = needFix.length ? needFix.map(({ q, i }) => `
+    <article class="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h3 class="font-bold">Câu ${esc(q.so_cau || (i + 1))} · ${statusBadge(q.trang_thai)}</h3>
+        <span class="text-xs font-semibold text-slate-500">${q.teacher_action ? 'Đã xử lý: ' + esc(q.teacher_action) : 'Bản đề xuất độc lập — chưa ghi đè đề gốc'}</span>
+      </div>
+      <p class="mt-2 text-xs"><b>Nhận xét sai lệch:</b> ${esc(q.nhan_xet || '')}</p>
+      <p class="mt-1 text-xs"><b>Căn cứ:</b> ${esc(q.can_cu || [q.ma_tran?.dong, q.ma_tran?.chu_de, q.ma_tran?.muc_do, q.ma_tran?.diem].filter(Boolean).join(' · ') || '—')}</p>
+      <div class="mt-3 grid gap-3 md:grid-cols-2">
+        <div class="rounded-lg bg-white p-3 text-sm"><b class="text-xs uppercase text-slate-500">Câu gốc</b><div class="q-body mt-1">${mathHtml(q.cau_hoi_goc || '')}</div></div>
+        <div class="rounded-lg bg-white p-3 text-sm"><b class="text-xs uppercase text-slate-500">Câu đề xuất AI</b><div class="q-body mt-1">${mathHtml(q.cau_de_xuat || '—')}</div>
+          <p class="mt-2 text-xs"><b>Đáp án / HD chấm mới:</b> ${esc(q.dap_an_de_xuat || '')} ${esc(q.huong_dan_cham_de_xuat || '')}</p>
+        </div>
+      </div>
+      <textarea id="editQ${i}" class="mt-3 w-full rounded-lg border p-2 text-sm" rows="3" placeholder="Tự chỉnh sửa thêm câu hỏi…">${esc(q.cau_hien_tai || q.cau_de_xuat || q.cau_hoi_goc || '')}</textarea>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <button type="button" onclick="acceptProposal(${i})" class="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white">Chấp nhận câu đề xuất</button>
+        <button type="button" onclick="editInline(${i})" class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white">Tự chỉnh sửa thêm</button>
+        <button type="button" onclick="keepOriginal(${i})" class="rounded-lg border px-3 py-1.5 text-xs font-bold">Bỏ qua (giữ câu gốc)</button>
+        <button type="button" onclick="recheckQuestion(${i})" class="rounded-lg bg-indigo-700 px-3 py-1.5 text-xs font-bold text-white">Kiểm tra lại câu sửa</button>
+      </div>
+    </article>`).join('') : '<p class="text-sm text-emerald-700">Không có câu cần hiệu chỉnh.</p>';
+
+  document.querySelector('#versionHistory').innerHTML = versions.length
+    ? versions.map(v => `<article class="rounded-lg border border-slate-200 p-2"><b>v${v.version}</b> · ${esc(v.action)} · câu ${esc(v.so_cau)} · ${esc(v.created_at)}<div class="mt-1 text-xs text-slate-500">Từ: ${esc((v.from || '').slice(0, 180))}<br>Sang: ${esc((v.to || '').slice(0, 180))}</div></article>`).join('')
+    : '<p class="text-xs text-slate-500">Chưa có phiên bản hiệu chỉnh.</p>';
+}
+
+function snapshotQuestions() {
+  return JSON.parse(JSON.stringify(questions));
+}
+
+function createVersion(index, action, nextText) {
+  const q = questions[index];
+  const from = q.cau_hien_tai || q.cau_hoi_goc || '';
+  currentVersion += 1;
+  q.cau_hien_tai = nextText;
+  q.needs_recheck = true;
+  q.teacher_action = action;
+  q.trang_thai = q.trang_thai === 'Đạt' ? 'Cần chỉnh sửa' : q.trang_thai;
+  sessionStatus = 'needs_recheck';
+  versions.push({
+    version: currentVersion,
+    created_at: new Date().toISOString(),
+    action,
+    so_cau: q.so_cau || String(index + 1),
+    question_index: index,
+    from,
+    to: nextText,
+    snapshot: snapshotQuestions()
+  });
+  renderQuestions();
+}
+
+function acceptProposal(i) {
+  const next = String(questions[i].cau_de_xuat || '').trim();
+  if (!next) return alert('AI chưa có câu đề xuất cho câu này.');
+  createVersion(i, 'accept', next);
+}
+
+function editInline(i) {
+  const next = document.querySelector('#editQ' + i).value.trim();
+  if (!next) return alert('Hãy nhập câu hỏi đã chỉnh sửa.');
+  createVersion(i, 'edit', next);
+}
+
+function keepOriginal(i) {
+  questions[i].teacher_action = 'keep';
+  questions[i].cau_hien_tai = questions[i].cau_hoi_goc || questions[i].cau_hien_tai;
+  questions[i].needs_recheck = false;
+  renderQuestions();
+}
+
+async function aiPost(payload) {
+  const res = await fetch('api/duyetde_ai.php', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) throw new Error(data.error || 'Lỗi AI gateway.');
+  return data;
+}
+
+async function runReview() {
+  if (!files.exam.text && !files.exam.pdfBase64) return alert('Hãy nạp đề thi.');
+  if (!files.matrix.text && !files.matrix.pdfBase64) return alert('Hãy nạp ma trận đề.');
+  if (!files.spec.text && !files.spec.pdfBase64) return alert('Hãy nạp bảng đặc tả.');
+  try {
+    setProgress(8, 'Đang giải đề…');
+    const sol = await aiPost({
+      action: 'generate_solution',
+      profile: profile(),
+      ...filePayload('exam'),
+      ...filePayload('answer')
+    });
+    solution = sol.solution;
+    setProgress(55, 'Đang đối chiếu ma trận…');
+    const ev = await aiPost({
+      action: 'evaluate_exam',
+      profile: profile(),
+      solution,
+      ...filePayload('exam'),
+      ...filePayload('matrix'),
+      ...filePayload('spec'),
+      ...filePayload('answer')
+    });
+    evaluation = ev.evaluation;
+    questions = (evaluation.questions || []).map(q => ({
+      ...q,
+      cau_hien_tai: q.cau_hien_tai || q.cau_hoi_goc || '',
+      needs_recheck: !!q.needs_recheck,
+      teacher_action: q.teacher_action || ''
+    }));
+    currentVersion = 1;
+    versions = [{ version: 1, created_at: new Date().toISOString(), action: 'initial', so_cau: 'all', snapshot: snapshotQuestions() }];
+    sessionStatus = 'reviewed';
+    setProgress(100, 'Hoàn tất đối chiếu.');
+    renderQuestions();
+  } catch (error) {
+    setProgress(0, error.message || 'Thẩm định thất bại.');
+    alert(error.message || 'Thẩm định thất bại.');
+  }
+}
+
+async function recheckQuestion(i) {
+  const q = questions[i];
+  if (!q.needs_recheck && q.teacher_action !== 'edit' && q.teacher_action !== 'accept') {
+    return alert('Hãy chấp nhận hoặc tự sửa câu này trước khi kiểm tra lại.');
+  }
+  try {
+    setProgress(40, `Đang kiểm tra lại câu ${q.so_cau || (i + 1)}…`);
+    const data = await aiPost({
+      action: 'recheck_question',
+      profile: profile(),
+      question: q,
+      ...filePayload('matrix'),
+      ...filePayload('spec')
+    });
+    const next = data.result || {};
+    questions[i] = {
+      ...q,
+      ...next,
+      cau_hoi_goc: q.cau_hoi_goc,
+      cau_hien_tai: q.cau_hien_tai,
+      teacher_action: q.teacher_action,
+      needs_recheck: false,
+      trang_thai: next.trang_thai || q.trang_thai
+    };
+    if (!questions.some(item => item.needs_recheck)) sessionStatus = overallPassRevoked() ? 'reviewed' : 'verified';
+    setProgress(100, `Đã kiểm tra lại câu ${q.so_cau || (i + 1)}.`);
+    renderQuestions();
+  } catch (error) {
+    setProgress(0, error.message);
+    alert(error.message);
+  }
+}
+
+function sessionPayload() {
+  const p = profile();
+  const c = countsFromQuestions();
+  return {
+    id: currentSessionId,
+    title: p.title || `${p.mon_hoc} ${p.loai_de} khối ${p.khoi_lop}`,
+    to_chuyen_mon: p.to_chuyen_mon,
+    mon_hoc: p.mon_hoc,
+    khoi_lop: p.khoi_lop,
+    loai_de: p.loai_de,
+    nam_hoc: p.nam_hoc,
+    current_version: currentVersion,
+    status: sessionStatus,
+    final_decision: val('#finalDecision'),
+    leader_feedback: val('#leaderFeedback'),
+    session_data: {
+      ...p,
+      current_version: currentVersion,
+      status: sessionStatus,
+      files: {
+        exam: { name: files.exam.name, text: files.exam.text },
+        matrix: { name: files.matrix.name, text: files.matrix.text },
+        spec: { name: files.spec.name, text: files.spec.text },
+        answer: { name: files.answer.name, text: files.answer.text }
+      },
+      solution,
+      evaluation,
+      questions,
+      versions,
+      counts: c,
+      leader: { decision: val('#finalDecision'), feedback: val('#leaderFeedback') }
+    }
+  };
+}
+
+async function saveSession() {
+  const res = await fetch('api/duyetde.php', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(sessionPayload())
+  });
+  const data = await res.json();
+  if (!res.ok || !data.ok) return alert(data.error || 'Không lưu được.');
+  currentSessionId = data.session.id;
+  alert('Đã lưu đợt duyệt đề.');
+  loadSessions();
+}
+
+async function submitLeader() {
+  if (!currentSessionId) await saveSession();
+  const res = await fetch('api/duyetde.php?action=submit', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id: currentSessionId })
+  });
+  const data = await res.json();
+  if (!res.ok || !data.ok) return alert(data.error || 'Không nộp được.');
+  sessionStatus = data.session.status;
+  alert('Đã nộp hồ sơ cho tổ trưởng chuyên môn.');
+  loadSessions();
+}
+
+async function saveDecision() {
+  if (!currentSessionId) await saveSession();
+  const decision = val('#finalDecision');
+  if (!decision) return alert('Hãy chọn quyết định thẩm duyệt.');
+  const res = await fetch('api/duyetde.php?action=decide', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id: currentSessionId, final_decision: decision, leader_feedback: val('#leaderFeedback') })
+  });
+  const data = await res.json();
+  if (!res.ok || !data.ok) return alert(data.error || 'Không lưu quyết định.');
+  sessionStatus = data.session.status;
+  alert('Đã lưu quyết định của tổ trưởng.');
+  loadSessions();
+}
+
+function applySession(session) {
+  currentSessionId = Number(session.id);
+  currentVersion = Number(session.current_version || 1);
+  sessionStatus = session.status || 'draft';
+  const stored = session.session_data || {};
+  document.querySelector('#sessionTitle').value = session.title || stored.title || '';
+  document.querySelector('#toChuyenMon').value = session.to_chuyen_mon || stored.to_chuyen_mon || '';
+  document.querySelector('#monHoc').value = session.mon_hoc || stored.mon_hoc || 'Toán học';
+  document.querySelector('#khoiLop').value = session.khoi_lop || stored.khoi_lop || '6';
+  document.querySelector('#namHoc').value = session.nam_hoc || stored.nam_hoc || '';
+  document.querySelector('#hocKy').value = stored.hoc_ky || 'Học kỳ I';
+  document.querySelector('#loaiDe').value = session.loai_de || stored.loai_de || 'Thường xuyên';
+  document.querySelector('#giaoVienRaDe').value = stored.giao_vien_ra_de || '';
+  document.querySelector('#nguoiThamDuyet').value = stored.nguoi_tham_duyet || '';
+  document.querySelector('#finalDecision').value = session.final_decision || stored.leader?.decision || '';
+  document.querySelector('#leaderFeedback').value = session.leader_feedback || stored.leader?.feedback || '';
+  const storedFiles = stored.files || {};
+  ['exam', 'matrix', 'spec', 'answer'].forEach(kind => {
+    files[kind] = { name: storedFiles[kind]?.name || '', text: storedFiles[kind]?.text || '', pdfBase64: '' };
+    const el = document.querySelector('#st' + kind[0].toUpperCase() + kind.slice(1));
+    if (files[kind].name || files[kind].text) {
+      el.textContent = files[kind].name ? `Đã khôi phục: ${files[kind].name}` : 'Đã khôi phục văn bản từ đợt cũ';
+      el.className = 'mt-2 block text-xs font-medium text-emerald-700';
+    }
+  });
+  solution = stored.solution || null;
+  evaluation = stored.evaluation || null;
+  questions = Array.isArray(stored.questions) ? stored.questions : [];
+  versions = Array.isArray(stored.versions) ? stored.versions : [];
+  renderQuestions();
+  document.querySelector('#reviewStatus').textContent = 'Đã tải lại đợt duyệt.';
+}
+
+async function loadSessions() {
+  const data = await (await fetch('api/duyetde.php?action=list', { credentials: 'include' })).json();
+  const sessions = data.sessions || [];
+  document.querySelector('#history').innerHTML = sessions.length
+    ? sessions.map(s => `<article class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 p-3 text-sm"><div><b>${esc(s.title || s.mon_hoc || 'Đợt duyệt đề')}</b><span class="ml-2 text-slate-500">v${s.current_version || 1} · ${esc(s.status)} · ${esc(DECISION_LABEL[s.final_decision] || s.final_decision || '')}</span></div><div class="flex gap-2"><button type="button" onclick="loadSessionById(${s.id})" class="rounded border px-2 py-1 font-bold">Mở</button><button type="button" onclick="deleteSession(${s.id})" class="rounded border border-rose-200 px-2 py-1 font-bold text-rose-700">Xóa</button></div></article>`).join('')
+    : '<p class="text-sm text-slate-500">Chưa có đợt duyệt đề đã lưu.</p>';
+}
+
+async function loadSessionById(id) {
+  const res = await fetch(`api/duyetde.php?id=${encodeURIComponent(id)}`, { credentials: 'include', cache: 'no-store' });
+  const data = await res.json();
+  if (!res.ok || !data.ok) return alert(data.error || 'Không tải được đợt duyệt.');
+  applySession(data.session);
+}
+
+async function deleteSession(id) {
+  if (!confirm('Xóa đợt duyệt đề này?')) return;
+  await fetch('api/duyetde.php?action=delete', {
+    method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id })
+  });
+  if (Number(currentSessionId) === Number(id)) currentSessionId = null;
+  loadSessions();
+}
+
+function docParagraphs(lines) {
+  const { Paragraph, TextRun } = docx;
+  return lines.map(line => new Paragraph({ children: [new TextRun({ text: String(line || ''), font: 'Times New Roman', size: 24 })] }));
+}
+
+async function exportMinutesDocx() {
+  if (!window.docx) return alert('Chưa tải thư viện DOCX.');
+  const p = profile();
+  const c = countsFromQuestions();
+  const { Document, Packer, Paragraph, TextRun } = docx;
+  const heading = text => new Paragraph({ children: [new TextRun({ text, bold: true, font: 'Times New Roman', size: 28 })] });
+  const children = [
+    heading('BIÊN BẢN RÀ SOÁT, THẨM ĐỊNH ĐỀ KIỂM TRA'),
+    ...docParagraphs([
+      `Tổ chuyên môn: ${p.to_chuyen_mon}`,
+      `Môn: ${p.mon_hoc} · Khối: ${p.khoi_lop} · ${p.loai_de} · Năm học ${p.nam_hoc} · ${p.hoc_ky}`,
+      `Giáo viên ra đề: ${p.giao_vien_ra_de}`,
+      `Người thẩm duyệt: ${p.nguoi_tham_duyet}`,
+      `Phiên bản đề: v${currentVersion}`,
+      `Tổng số câu: ${questions.length}; Đạt: ${c['Đạt']}; Cần chỉnh sửa: ${c['Cần chỉnh sửa']}; Không đạt: ${c['Không đạt']}; Chưa đủ dữ liệu: ${c['Chưa đủ dữ liệu để kết luận']}`,
+      `Kết luận tổ trưởng: ${DECISION_LABEL[val('#finalDecision')] || 'Chưa có'}`,
+      `Ý kiến chỉ đạo: ${val('#leaderFeedback') || '—'}`
+    ]),
+    heading('Chi tiết từng câu'),
+    ...questions.flatMap(q => docParagraphs([
+      `Câu ${q.so_cau}: ${q.trang_thai}${q.needs_recheck ? ' (cần kiểm tra lại)' : ''}`,
+      `Căn cứ: ${q.can_cu || [q.ma_tran?.dong, q.ma_tran?.chu_de, q.ma_tran?.muc_do, q.ma_tran?.diem].filter(Boolean).join(' · ')}`,
+      `Nhận xét: ${q.nhan_xet || ''}`,
+      `Câu gốc: ${q.cau_hoi_goc || ''}`,
+      `Câu hiện tại: ${q.cau_hien_tai || q.cau_hoi_goc || ''}`
+    ]))
+  ];
+  const doc = new Document({ sections: [{ children }] });
+  saveAs(await Packer.toBlob(doc), 'Bien-ban-tham-dinh-de.docx');
+}
+
+async function exportExamDocx() {
+  if (!window.docx) return alert('Chưa tải thư viện DOCX.');
+  const p = profile();
+  const { Document, Packer, Paragraph, TextRun } = docx;
+  const heading = text => new Paragraph({ children: [new TextRun({ text, bold: true, font: 'Times New Roman', size: 28 })] });
+  const children = [
+    heading(`ĐỀ KIỂM TRA ${String(p.loai_de || '').toUpperCase()} — PHIÊN BẢN v${currentVersion}`),
+    ...docParagraphs([`${p.mon_hoc} · Khối ${p.khoi_lop} · Năm học ${p.nam_hoc}`, `Tổ: ${p.to_chuyen_mon} · GV ra đề: ${p.giao_vien_ra_de}`]),
+    heading('Nội dung đề (sau hiệu chỉnh)'),
+    ...(questions.length ? questions.flatMap(q => docParagraphs([
+      `Câu ${q.so_cau}:`,
+      q.cau_hien_tai || q.cau_hoi_goc || '',
+      q.dap_an_de_xuat ? `Gợi ý đáp án: ${q.dap_an_de_xuat}` : ''
+    ])) : docParagraphs([files.exam.text || 'Chưa có nội dung đề.']))
+  ];
+  const doc = new Document({ sections: [{ children }] });
+  saveAs(await Packer.toBlob(doc), `De-thi-hieu-chinh-v${currentVersion}.docx`);
+}
+
+loadKeyInfo();
+loadSessions();
+renderQuestions();
+</script>
+</body>
+</html>

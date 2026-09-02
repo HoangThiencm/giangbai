@@ -1,121 +1,69 @@
-# IMPLEMENT: Khắc phục false positive DevTools trên thiết bị di động
-
-## Bổ sung: Chrome iOS và thiết bị touch
-
-1. Mở rộng nhận diện `isMobileOrTablet` trong `js/security-guard.js` cho `CriOS`, `FxiOS`, `EdgiOS`, `OPiOS`, Silk và Kindle; đồng thời kết hợp `maxTouchPoints`, `ontouchstart`, `DocumentTouch`, coarse pointer, hover-none và kích thước màn hình touch.
-2. Mở rộng `tests/security-f12-smoke.js` với Chrome iOS desktop UA (`Macintosh` + `CriOS`), Firefox iOS, Edge iOS và màn hình touch/coarse pointer với `maxTouchPoints: 1`; mọi trường hợp có chênh lệch kích thước đều không tạo overlay.
-3. Không thay đổi cơ chế bảo vệ trên desktop hay bất kỳ file ngoài phạm vi kế hoạch.
-
-## Kiểm thử
-
-- `node tests/security-f12-smoke.js` — PASS.
-- `node tools/build-obfuscate.js --dry-run` — PASS.
-- `git diff --check` — PASS.
-
----
+# IMPLEMENT: Tích hợp rà soát & hiệu chỉnh đề kiểm tra (`duyetde`) + mã hóa API key
 
 ## Đã làm
 
-1. Thêm nhận diện mobile/tablet trong `js/security-guard.js` bằng User-Agent, đồng thời nhận diện iPadOS gửi User-Agent desktop Safari qua `Macintosh` kết hợp `navigator.maxTouchPoints > 1`.
-2. `checkDevToolsOpen()` chỉ bỏ qua phép đo chênh lệch `outerWidth`/`innerWidth` và `outerHeight`/`innerHeight` trên các thiết bị này. Các cơ chế desktop khác, gồm phím tắt, menu chuột phải, debugger trap và console probe, không thay đổi.
-3. Mở rộng `tests/security-f12-smoke.js` với giả lập iPhone và iPadOS User-Agent desktop có chênh lệch chiều cao lớn; cả hai không tạo overlay. Kiểm thử desktop hiện có vẫn xác nhận overlay bị khóa khi chênh lệch kích thước cửa sổ lớn.
+1. **Bảo mật API key (AES-256-CBC)** trong `api/helpers.php` và `api/user_gemini_keys.php`:
+   - Thêm `encrypt_user_api_key()` / `decrypt_user_api_key()` dùng `openssl_encrypt`/`openssl_decrypt`, thuật toán `AES-256-CBC`, secret suy từ `API_KEY_ENCRYPTION_SECRET` hoặc `ADMIN_KEY`.
+   - Lưu key dạng envelope JSON `{v, alg, updated_at, keys:[enc:v1:...]}`.
+   - Key cũ plaintext được tự nhận diện và nâng cấp khi GET/POST.
+   - GET không trả raw key: chỉ `count`, `masked_keys` (`AIzaSy...****`), `updated_at`.
+   - POST `action=add` thêm key, `action=test` kiểm tra key trên máy chủ, DELETE xóa danh sách.
+   - Mỗi user chỉ đọc/ghi key của session mình.
 
-## Kiểm thử
+2. **AI Gateway** `api/duyetde_ai.php`:
+   - Lấy key đã giải mã từ CSDL theo session, gọi Gemini qua cURL.
+   - `call_gemini_with_rotation()` xoay vòng khi 429/403/quota/resource exhausted.
+   - `generate_solution`, `evaluate_exam`, `recheck_question` (alias `recheck_single_question`).
+   - Gửi đồng thời văn bản trích xuất và PDF base64 (multimodal). Chuẩn hóa 4 trạng thái: Đạt / Cần chỉnh sửa / Không đạt / Chưa đủ dữ liệu để kết luận.
 
-- `node tests/security-f12-smoke.js` — PASS.
-- `git diff --check` — PASS.
+3. **Lưu hồ sơ & phiên bản** `api/duyetde.php`:
+   - `ensure_duyetde_sessions()` tạo bảng đúng schema PLAN.
+   - list / chi tiết / lưu-cập nhật / xóa / nộp tổ trưởng (`submit`) / quyết định (`decide`: Có thể sử dụng / Cần chỉnh sửa / Không sử dụng).
 
----
+4. **Giao diện** `duyetde.html` — 5 phân khu:
+   - Hồ sơ đợt duyệt + quản lý API key (masked, thêm, test, xóa).
+   - Nạp Đề thi, Ma trận, Bảng đặc tả (bắt buộc) và Đáp án (tùy chọn) PDF/DOCX qua `pdf.js` + `mammoth.js`; KaTeX cho công thức.
+   - Thanh tiến trình 2 pha, thống kê, bảng đối chiếu màu theo state machine.
+   - Gợi ý sửa độc lập: Chấp nhận / Tự chỉnh sửa / Giữ gốc; mỗi lần sửa tạo vN, gắn cờ kiểm tra lại, hủy trạng thái Đạt của đề.
+   - Tổ trưởng kết luận + xuất biên bản và đề hoàn chỉnh `.docx` (`docx.js`).
 
-# IMPLEMENT: Duyệt Giáo Án AI — giao diện và trạng thái hồ sơ
+5. **Phân quyền**:
+   - `admin.html`: `cfg_duyetde`, `CLIENT_FEATURE_CHECKS`, `FEATURE_NAMES`, `USER_FEATURE_GROUPS`, `hostingPages`, `teacherFeatureGroups`.
+   - `access-control.js`: `'duyetde.html': 'duyetde'` và `duyetde: 'duyetde.html'`.
+   - `api/helpers.php`: `page_catalog()`, `teacher_workspace_page_ids()`, `teacher_feature_keys_for_pages()`, `teacher_default_workspace_extras()`.
+   - `index.html`: thẻ "Rà soát & Hiệu chỉnh Đề Kiểm Tra" (`fa-file-shield`, nhãn CV 5512 · Ma trận – Đặc tả).
 
-## Đã làm
-
-1. Chuẩn hóa thẻ `Duyệt Giáo Án AI` trên trang chủ thành bento tile teal/cyan, với watermark `fa-file-circle-check`, nội dung mô tả và nút điều hướng đồng bộ.
-2. Làm mới `duyetgiaoan.html`: dropdown tháng có 9 lựa chọn tĩnh từ Tháng 9 đến Tháng 5; bố cục theo bốn bước rõ ràng, thân thiện trên màn hình nhỏ.
-3. Thêm trạng thái tên/kích thước tệp giáo án, trạng thái PPCT, tiến độ thẩm định và thông báo đang xử lý từng giáo viên. Kết quả có thẻ thống kê, badge xếp loại và lịch sử dễ đọc.
-4. Khi tải dữ liệu phiên cũ, giáo viên được chuẩn hóa với metadata tệp mặc định; kết quả thiếu trường hiển thị vẫn được render an toàn.
-5. Mở rộng smoke test kiểm tra trực tiếp 9 tháng tĩnh, thành phần tệp/progress/badge và cấu trúc bento card.
-
-## Kiểm thử
-
-- `node tests/duyetgiaoan-smoke.js` — PASS.
-- `node tests/duyetgiaoan-integration-smoke.js` — PASS.
-- Kiểm tra cú pháp script nội trang — PASS.
-- `git diff --check` — PASS.
-
-## Phạm vi
-
-- Không thay đổi endpoint, payload, API hay cơ sở dữ liệu.
-- Không sửa `docs/handoff/PLAN.md` hoặc `docs/handoff/.lock`.
-- Không commit thay đổi.
-
-## Lưu ý
-
-- Không thay đổi `docs/handoff/PLAN.md` hoặc `docs/handoff/.lock`.
-- Không commit thay đổi.
-
----
-
-# IMPLEMENT: Khắc phục VERIFY — DevTools false positive WebKit/mobile
-
-## Đã làm
-
-1. Loại bỏ hoàn toàn `probeDevToolsConsole()` và interval getter `Error.stack` để Safari/WebKit không thể kích hoạt khóa do console tự đọc stack.
-2. Thêm chặn mobile/tablet trong `showLockOverlay()`, `onDevToolsDetected()` và `triggerDebuggerTrap()`; desktop vẫn giữ cơ chế phát hiện và overlay.
-3. Mở rộng `tests/security-f12-smoke.js` để xác nhận probe đã bị xóa, guard mobile tồn tại và đường dẫn debugger detection trên sandbox iPhone không tạo overlay/khóa cuộn.
-
-## Kiểm thử
-
-- `node tests/security-f12-smoke.js` — PASS.
-- `git diff --check` — PASS.
-
-## Phạm vi
-
-- Chỉ sửa `js/security-guard.js`, `tests/security-f12-smoke.js` và `docs/handoff/IMPLEMENT.md`.
-- Không sửa `docs/handoff/PLAN.md`, `docs/handoff/VERIFY.md` hoặc `docs/handoff/.lock`.
-- Không commit thay đổi.
-
----
-
-# IMPLEMENT: matrande.html — Xuất Word + đồng bộ Gemini API Key
-
-## Đã làm
-
-1. **Sửa lỗi xuất Word** trong `matrande.html`:
-   - Xóa thẻ `<script src="js/security-guard.js"></script>` khỏi template HTML của `exportWord` và `exportWordRaw`.
-   - Khối `<script type="text/babel">` không còn bị HTML parser đóng sớm; hai hàm xuất Word giữ `<meta charset='utf-8'>` và namespace Word/OMML.
-
-2. **Tự động đồng bộ Gemini API Key theo tài khoản**:
-   - Thêm `normalizeGeminiKeys`, `readCachedGeminiKeys`, `syncUserKeysFromServer()`.
-   - `syncUserKeysFromServer()` gọi `GET api/user_gemini_keys.php` với `credentials: 'include'` và `cache: 'no-store'`.
-   - Khi React mount, `useEffect` nạp key, ghi cache `localStorage('global_gemini_keys')` nếu server trả key, fallback cache khi mất mạng/lỗi.
-   - Giao diện hiển thị số lượng key đã nạp (`🔑 Đã nạp N Gemini API Key từ tài khoản/từ bộ nhớ tạm`).
-
-3. **Kiểm thử** `tests/matrande-smoke.js`:
-   - Babel script nguyên vẹn, không có thẻ `<script>` lồng trong template Word.
-   - `exportWord` / `exportWordRaw` có charset UTF-8 và blob `application/msword`.
-   - Có `syncUserKeysFromServer` + nạp key khi mount + fallback cache.
+6. Ghi `LOCK` vào `docs/handoff/.lock`.
 
 ## File đã sửa / tạo
 
-- `matrande.html`
-- `tests/matrande-smoke.js` (tạo mới)
+- `duyetde.html` (tạo mới)
+- `api/duyetde.php` (tạo mới)
+- `api/duyetde_ai.php` (tạo mới)
+- `api/user_gemini_keys.php`
+- `api/helpers.php`
+- `access-control.js`
+- `admin.html`
+- `index.html`
 - `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/.lock` (LOCK)
 
 ## Kiểm thử
 
+- `node tests/khbd-user-ai-keys-smoke.js` — PASS
+- `node tests/duyetgiaoan-integration-smoke.js` — PASS
+- `node tests/duyetgiaoan-smoke.js` — PASS
 - `node tests/matrande-smoke.js` — PASS
-- `node tests/kttx-smoke.js` — PASS
-- `node tests/xaydungphuluc-smoke.js` — PASS
+- Không có PHP CLI trên máy này nên chưa `php -l`.
+- Không verify trên trình duyệt (không có browser tools / PHP server trong phiên này).
 
-Không verify trên trình duyệt (không có browser tools trong phiên này).
+## Phạm vi
 
-## Bổ sung: quyền Duyệt Giáo Án AI cho từng giáo viên
+- Không sửa `matrande.html`, `soankhbd.html`, `duyetgiaoan.html`, `thitructuyen.html`.
+- Không sửa `docs/handoff/PLAN.md`.
+- Không commit.
 
-- Thêm `duyetgiaoan` vào `CLIENT_FEATURE_CHECKS`, `USER_FEATURE_GROUPS` và nhóm quyền trang của giáo viên trong `admin.html`.
-- Khi tạo/sửa/cấp toàn quyền giáo viên, `teacherFeatureFlagsFromPages()` nay đồng bộ `duyetgiaoan: true/false` vào `user_features` theo `allowed_pages`; checkbox cũng xuất hiện trong nhóm Công cụ giảng dạy.
-- `node tests/duyetgiaoan-integration-smoke.js` — PASS.
-- `node tests/duyetgiaoan-smoke.js` — PASS.
-- `git diff --check` — PASS.
+## Lưu ý
+
+- GET `api/user_gemini_keys.php` không còn trả mảng `keys` gốc. Các công cụ cũ gọi Gemini từ trình duyệt vẫn dùng key đã cache local hoặc key user nhập trực tiếp; module `duyetde` gọi AI qua backend proxy.
+- `me.php` / `public_user()` vẫn giải mã key phía server để tương thích KHBD; client `duyetde` không đọc raw key từ GET.
