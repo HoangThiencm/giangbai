@@ -31,3 +31,11 @@
 - `node tests/xaydungphuluc-smoke.js` — PASS
 
 Không verify trên trình duyệt (không có browser tools trong phiên này).
+
+## Bổ sung: quyền Duyệt Giáo Án AI cho từng giáo viên
+
+- Thêm `duyetgiaoan` vào `CLIENT_FEATURE_CHECKS`, `USER_FEATURE_GROUPS` và nhóm quyền trang của giáo viên trong `admin.html`.
+- Khi tạo/sửa/cấp toàn quyền giáo viên, `teacherFeatureFlagsFromPages()` nay đồng bộ `duyetgiaoan: true/false` vào `user_features` theo `allowed_pages`; checkbox cũng xuất hiện trong nhóm Công cụ giảng dạy.
+- `node tests/duyetgiaoan-integration-smoke.js` — PASS.
+- `node tests/duyetgiaoan-smoke.js` — PASS.
+- `git diff --check` — PASS.

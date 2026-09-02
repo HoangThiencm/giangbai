@@ -4,27 +4,29 @@
 PASS
 
 ## Đối chiếu scope
-1. **Sửa lỗi xuất file Word (Đề thi, Ma trận, Bản đặc tả) trong `kttx.html`**:
-   - Đã gỡ bỏ hoàn toàn thẻ `<script src="js/security-guard.js"></script>` khỏi cả 3 template HTML sinh Word (`exportWord`, `exportMatrixToWord`, `renderSpecHtml`).
-   - Loại bỏ thẻ đóng `</div>` mồ côi tại header đề thi và chuẩn hóa thẻ `<meta charset='utf-8'>`.
-   - Trình phân tích Babel/React không còn bị ngắt sớm bởi thẻ `</script>`, đảm bảo file Word (.doc) xuất ra hiển thị nội dung câu hỏi, bảng ma trận, bản đặc tả và công thức toán MathML/WordML sạch đẹp, không còn dính mã JavaScript thô.
-2. **Cấp lại & Tự động đồng bộ Gemini API Key từ tài khoản CSDL**:
-   - Triển khai hàm `syncUserKeysFromServer()` kết nối tới `api/user_gemini_keys.php` với session đăng nhập hiện tại.
-   - Tự động nạp key vào React state khi mount và cache vào `localStorage ('global_gemini_keys')`.
-   - Hiển thị thông báo trạng thái rõ ràng về số lượng Gemini API Key đã nạp từ tài khoản/bộ nhớ tạm.
-3. **Kiểm thử tự động (`tests/kttx-smoke.js`)**:
-   - Kiểm tra khối Babel không bị ngắt, 3 template Word không chứa thẻ script, template đề thi không chứa thẻ div thừa, cơ chế gọi `api/user_gemini_keys.php` và fallback an toàn đều đạt chuẩn.
+1. **Duyệt Giáo Án AI (`duyetgiaoan.html` & `api/duyetgiaoan.php`)**:
+   - Giao diện 4 bước chuyên nghiệp, hỗ trợ bóc tách tài liệu PDF/DOCX/XLSX bằng `pdf.js` và Mammoth.
+   - Cơ chế đối chiếu 3 trụ cột: Khung PPCT môn học, Chuẩn YCCĐ CTGDPT 2018 (`js/khbd-yccd.js`, `js/khbd-standards.js`), và tiến trình 4 hoạt động CV 5512.
+   - Thẩm định qua Gemini AI với fallback minh bạch khi mất kết nối.
+   - Xuất Báo cáo Tổng hợp tổ chuyên môn và Phiếu nhận xét cá nhân định dạng Word (.docx).
+   - Backend `api/duyetgiaoan.php` hỗ trợ lưu trữ, tải và quản lý lịch sử các đợt duyệt theo tháng/năm học.
+   - Tích hợp hoàn chỉnh trên `index.html`, `admin.html`, `access-control.js`, `api/helpers.php` và `global_config.json`.
+2. **Sửa lỗi xuất Word & Đồng bộ Gemini API Key (`matrande.html` & `kttx.html`)**:
+   - Gỡ bỏ hoàn toàn thẻ `<script>` khỏi các template Word (`exportWord`, `exportWordRaw`), bảo toàn khối script Babel nguyên vẹn.
+   - Triển khai `syncUserKeysFromServer()` tự động nạp Gemini API Keys từ tài khoản CSDL (`api/user_gemini_keys.php`) khi mount, kèm cơ chế fallback an toàn vào `localStorage`.
 
 ## Test đã chạy
+- `node tests/matrande-smoke.js` $\to$ PASS
 - `node tests/kttx-smoke.js` $\to$ PASS
+- `node tests/duyetgiaoan-smoke.js` $\to$ PASS
+- `node tests/duyetgiaoan-integration-smoke.js` $\to$ PASS
 - `node tests/xaydungphuluc-smoke.js` $\to$ PASS
-- `node tests/xaydungphuluc-integration-smoke.js` $\to$ PASS
 
 ## Pass / Fail từng tiêu chí
-- [x] Không còn bất kỳ thẻ `</script>` nào nằm bên trong template string của `kttx.html`: PASS
-- [x] File Word xuất ra (`KiemTra_...doc`, `MaTran_...doc`, `BanDacTa_...doc`) hiển thị nội dung đề thi, bảng ma trận và bản đặc tả hoàn chỉnh, 100% không còn dính mã nguồn JavaScript thô: PASS
-- [x] `kttx.html` tự động đồng bộ và cấp Gemini API Key từ tài khoản CSDL (`api/user_gemini_keys.php`) khi vào trang: PASS
-- [x] Kiểm thử tự động `tests/kttx-smoke.js` chạy đạt PASS: PASS
+- [x] Công cụ `duyetgiaoan.html` và backend `api/duyetgiaoan.php` hoạt động đầy đủ chức năng và tích hợp hệ thống: PASS
+- [x] `matrande.html` và `kttx.html` không còn lỗi thẻ script trong template Word, xuất Word sạch đẹp: PASS
+- [x] Tự động đồng bộ Gemini API Key từ tài khoản CSDL khi tải trang: PASS
+- [x] 100% các bộ kiểm thử smoke của các tính năng mới và tính năng liên quan đều đạt PASS: PASS
 
 ## Bug
 *(Không có)*
