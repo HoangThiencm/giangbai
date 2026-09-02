@@ -110,7 +110,7 @@
     }
 
     function showLockOverlay() {
-        if (isDebugUnlocked) return;
+        if (isDebugUnlocked || isMobileOrTablet) return;
         var el = getLockOverlay();
         if (!el) {
             el = document.createElement('div');
@@ -144,7 +144,7 @@
     var lastStrongDetectAt = 0;
 
     function onDevToolsDetected() {
-        if (isDebugUnlocked) return;
+        if (isDebugUnlocked || isMobileOrTablet) return;
         lastStrongDetectAt = Date.now();
         clearConsoleQuietly();
         showLockOverlay();
@@ -211,7 +211,7 @@
 
     // 3. Cơ chế bẫy Debugger Trap khi cố tình mở DevTools
     function triggerDebuggerTrap() {
-        if (isDebugUnlocked) return;
+        if (isDebugUnlocked || isMobileOrTablet) return;
         try {
             var startTime = performance.now();
             (function () {
@@ -243,25 +243,7 @@
     checkDevToolsOpen();
     setInterval(checkDevToolsOpen, 1500);
 
-    // 5. Phát hiện DevTools qua getter stack (không xóa trang — chỉ overlay khóa)
-    function probeDevToolsConsole() {
-        if (isDebugUnlocked || !nativeConsole || !nativeConsole.debug) return;
-        var detected = false;
-        try {
-            var probe = Object.defineProperty(new Error(), 'stack', {
-                configurable: true,
-                get: function () {
-                    detected = true;
-                    return '';
-                }
-            });
-            nativeConsole.debug(probe);
-        } catch (err) {}
-        if (detected) onDevToolsDetected();
-    }
-    setInterval(probeDevToolsConsole, 3000);
-
-    // 6. Vô hiệu hóa một số hàm console nguy hiểm ở môi trường production
+    // 5. Vô hiệu hóa một số hàm console nguy hiểm ở môi trường production
     try {
         if (!isLocalhost && !isDebugUnlocked && window.console) {
             var noop = function () {};

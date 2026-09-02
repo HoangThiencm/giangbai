@@ -43,6 +43,27 @@
 
 ---
 
+# IMPLEMENT: Khắc phục VERIFY — DevTools false positive WebKit/mobile
+
+## Đã làm
+
+1. Loại bỏ hoàn toàn `probeDevToolsConsole()` và interval getter `Error.stack` để Safari/WebKit không thể kích hoạt khóa do console tự đọc stack.
+2. Thêm chặn mobile/tablet trong `showLockOverlay()`, `onDevToolsDetected()` và `triggerDebuggerTrap()`; desktop vẫn giữ cơ chế phát hiện và overlay.
+3. Mở rộng `tests/security-f12-smoke.js` để xác nhận probe đã bị xóa, guard mobile tồn tại và đường dẫn debugger detection trên sandbox iPhone không tạo overlay/khóa cuộn.
+
+## Kiểm thử
+
+- `node tests/security-f12-smoke.js` — PASS.
+- `git diff --check` — PASS.
+
+## Phạm vi
+
+- Chỉ sửa `js/security-guard.js`, `tests/security-f12-smoke.js` và `docs/handoff/IMPLEMENT.md`.
+- Không sửa `docs/handoff/PLAN.md`, `docs/handoff/VERIFY.md` hoặc `docs/handoff/.lock`.
+- Không commit thay đổi.
+
+---
+
 # IMPLEMENT: matrande.html — Xuất Word + đồng bộ Gemini API Key
 
 ## Đã làm

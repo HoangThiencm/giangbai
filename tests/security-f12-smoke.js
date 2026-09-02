@@ -39,7 +39,11 @@ const staticChecks = [
     ['admin shortcut Ctrl+Alt+Shift+D', /keyCode === 68/.test(guardSrc)],
     ['keeps editable context menu', /MATH-FIELD/.test(guardSrc) && /isContentEditable/.test(guardSrc)],
     ['hashed fallback keys', /7731ce4a/.test(guardSrc) && /c3e3eb18/.test(guardSrc)],
-    ['DevTools lock overlay', /__gb_devtools_lock__/.test(guardSrc) && /showLockOverlay/.test(guardSrc)]
+    ['DevTools lock overlay', /__gb_devtools_lock__/.test(guardSrc) && /showLockOverlay/.test(guardSrc)],
+    ['removes console stack getter probe', !/\bprobeDevToolsConsole\b/.test(guardSrc) && !/Object\.defineProperty\(new Error\(\), 'stack'/.test(guardSrc)],
+    ['mobile guards lock and debugger paths', /function showLockOverlay\(\)\s*\{\s*if \(isDebugUnlocked \|\| isMobileOrTablet\) return;/.test(guardSrc) &&
+        /function onDevToolsDetected\(\)\s*\{\s*if \(isDebugUnlocked \|\| isMobileOrTablet\) return;/.test(guardSrc) &&
+        /function triggerDebuggerTrap\(\)\s*\{\s*if \(isDebugUnlocked \|\| isMobileOrTablet\) return;/.test(guardSrc)]
 ];
 
 let failed = failCount(staticChecks);
@@ -49,6 +53,8 @@ function makeSandbox(options) {
     const sessionStore = Object.assign({}, options.session || {});
     const localStore = Object.assign({}, options.local || {});
     const createdEls = [];
+    const intervalCallbacks = [];
+    const performanceValues = Array.isArray(options.performanceValues) ? options.performanceValues.slice() : [0];
     const documentElement = { style: { overflow: '' } };
     const body = {
         appendChild(el) {
@@ -127,7 +133,7 @@ function makeSandbox(options) {
         sessionStorage: windowObj.sessionStorage,
         localStorage: windowObj.localStorage,
         console: windowObj.console,
-        performance: { now() { return 0; } },
+        performance: { now() { return performanceValues.length > 1 ? performanceValues.shift() : performanceValues[0]; } },
         Function,
         Object,
         Error,
@@ -135,14 +141,18 @@ function makeSandbox(options) {
         Math,
         String,
         Boolean,
-        setInterval() { return 1; },
+        setInterval(fn) { intervalCallbacks.push(fn); return intervalCallbacks.length; },
         prompt: options.prompt || function () { return null; },
         alert: options.alert || function () {},
         listeners,
-        sessionStore
+        sessionStore,
+        intervalCallbacks
     };
     vm.createContext(sandbox);
-    vm.runInContext(guardSrc, sandbox, { filename: 'security-guard.js' });
+    const sourceToRun = options.exposeTestHooks
+        ? guardSrc.replace(/\}\)\(\);\s*$/, 'window.__securityGuardTestHooks = { showLockOverlay: showLockOverlay, onDevToolsDetected: onDevToolsDetected, triggerDebuggerTrap: triggerDebuggerTrap };\n})();')
+        : guardSrc;
+    vm.runInContext(sourceToRun, sandbox, { filename: 'security-guard.js' });
     return sandbox;
 }
 
@@ -227,6 +237,21 @@ function keyEvent(partial) {
     fire(box.listeners.window.resize, {});
     const ok = !box.document.getElementById('__gb_devtools_lock__');
     console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + 'iPhone size difference does not create lock overlay');
+    if (!ok) failed += 1;
+})();
+
+(function testMobileDebuggerDetectionDoesNotLock() {
+    const box = makeSandbox({
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1',
+        maxTouchPoints: 5,
+        performanceValues: [0, 200],
+        exposeTestHooks: true
+    });
+    box.window.__securityGuardTestHooks.showLockOverlay();
+    box.window.__securityGuardTestHooks.onDevToolsDetected();
+    box.window.__securityGuardTestHooks.triggerDebuggerTrap();
+    const ok = !box.document.getElementById('__gb_devtools_lock__') && box.document.documentElement.style.overflow === '';
+    console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + 'mobile direct detection and overlay paths do not lock');
     if (!ok) failed += 1;
 })();
 
