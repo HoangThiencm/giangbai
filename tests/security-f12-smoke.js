@@ -110,10 +110,19 @@ function makeSandbox(options) {
         innerWidth: 1920,
         outerHeight: 1080,
         innerHeight: 1080,
+        navigator: {
+            userAgent: options.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36',
+            maxTouchPoints: options.maxTouchPoints || 0
+        },
         __reloaded: false
     };
+    windowObj.outerWidth = options.outerWidth || windowObj.outerWidth;
+    windowObj.innerWidth = options.innerWidth || windowObj.innerWidth;
+    windowObj.outerHeight = options.outerHeight || windowObj.outerHeight;
+    windowObj.innerHeight = options.innerHeight || windowObj.innerHeight;
     const sandbox = {
         window: windowObj,
+        navigator: windowObj.navigator,
         document,
         sessionStorage: windowObj.sessionStorage,
         localStorage: windowObj.localStorage,
@@ -205,6 +214,32 @@ function keyEvent(partial) {
     const overlay = box.document.getElementById('__gb_devtools_lock__');
     const ok = Boolean(overlay && overlay.style.display === 'flex' && /DevTools/.test(overlay.textContent || ''));
     console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + 'overlay locks screen when DevTools size detected');
+    if (!ok) failed += 1;
+})();
+
+(function testMobileSizeDoesNotLock() {
+    const box = makeSandbox({
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1',
+        maxTouchPoints: 5,
+        outerHeight: 844,
+        innerHeight: 640
+    });
+    fire(box.listeners.window.resize, {});
+    const ok = !box.document.getElementById('__gb_devtools_lock__');
+    console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + 'iPhone size difference does not create lock overlay');
+    if (!ok) failed += 1;
+})();
+
+(function testIPadOSDesktopUaSizeDoesNotLock() {
+    const box = makeSandbox({
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15',
+        maxTouchPoints: 5,
+        outerHeight: 1366,
+        innerHeight: 1100
+    });
+    fire(box.listeners.window.resize, {});
+    const ok = !box.document.getElementById('__gb_devtools_lock__');
+    console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + 'iPadOS desktop user-agent size difference does not create lock overlay');
     if (!ok) failed += 1;
 })();
 

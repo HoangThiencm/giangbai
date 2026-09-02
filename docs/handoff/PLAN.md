@@ -1,78 +1,77 @@
-# PLAN: Khắc Phục Lỗi Xuất Word & Tự Động Đồng Bộ Gemini API Key Theo Tài Khoản Trong `matrande.html`
+﻿# PLAN: Khắc Phục Lỗi Cảnh Báo "Phát Hiện DevTools" Trên Điện Thoại Di Động Trong `js/security-guard.js`
 
 ## Hiện trạng
-1. **Lỗi thẻ `<script>` chèn nhầm bên trong chuỗi template string xuất Word**:
-   - Trong `matrande.html`, tại các hàm tạo file Word:
-     * Dòng 1714: bên trong hàm `exportWord` (Xuất Đề thi & Hướng dẫn chấm)
-     * Dòng 1934: bên trong hàm `exportWordRaw` (Xuất Đề thi dạng thô)
-     bị chèn thẻ `<script src="js/security-guard.js"></script>` vào bên trong chuỗi template string HTML sinh file Word.
-   - Toàn bộ mã nguồn React/Babel của trang được bao bọc trong thẻ `<script type="text/babel">`. Khi trình duyệt đọc đến ký tự `</script>` ở dòng 1714, trình phân tích HTML (HTML parser) **lập tức đóng luôn thẻ script chính của trang**.
-   - Hậu quả: Toàn bộ mã nguồn từ dòng 1715 trở đi bị trình duyệt coi là văn bản thô, làm hỏng quá trình xuất file Word và khiến mã nguồn JavaScript thô bị in thẳng ra file `.doc`.
-
-2. **Chưa tự động đồng bộ Gemini API Key từ tài khoản CSDL**:
-   - `matrande.html` hiện chỉ đọc khóa API từ `localStorage.getItem('global_gemini_keys')`.
-   - Khi người dùng đăng nhập tài khoản trên thiết bị mới hoặc xóa cache trình duyệt, trang báo lỗi `Thiếu Gemini API Key` dù tài khoản đã có key lưu trên máy chủ CSDL (`api/user_gemini_keys.php`).
-   - Cần bổ sung cơ chế tự động gọi `syncUserKeysFromServer()` kết nối tới `api/user_gemini_keys.php` ngay khi tải trang để nạp key vào React state và cache `localStorage`.
+1. **Lỗi báo DevTools giả (False Positive) trên thiết bị di động**:
+   - Khi học sinh, giáo viên hoặc quản trị viên truy cập hệ thống làm bài trên điện thoại di động (iPhone / iPad / Safari / Android Chrome), màn hình lập tức bị khóa và hiển thị cảnh báo:
+     > *"Phát hiện DevTools. Hãy đóng công cụ phát triển để tiếp tục."*
+   - **Nguyên nhân cốt lõi trong `js/security-guard.js`**:
+     * Cơ chế đo chênh lệch kích thước cửa sổ (`checkDevToolsOpen` - dòng 220-234):
+       `window.outerWidth - window.innerWidth > 170` hoặc `window.outerHeight - window.innerHeight > 170`.
+     * Trên các trình duyệt di động (đặc biệt là iOS Safari, Chrome Mobile), `outerHeight` là toàn bộ chiều cao màn hình thiết bị, trong khi `innerHeight` bị thu hẹp bởi thanh địa chỉ (URL bar), thanh điều hướng dưới đáy (tab bar/navigation bar), tai thỏ (Notch / Dynamic Island) và bàn phím ảo.
+     * Mức chênh lệch tự nhiên này thường vượt quá `170px` (ví dụ trên iPhone 13/14/15 là ~180px - 220px), khiến `checkDevToolsOpen()` lập tức đánh giá là mở DevTools và kích hoạt `showLockOverlay()` chặn toàn bộ trang.
+     * Ngoài ra, cơ chế bẫy đo độ trễ `triggerDebuggerTrap()` (`performance.now() > 100ms`) hoặc getter `probeDevToolsConsole()` có thể gây lag hoặc nhận diện sai trên các dòng máy di động cấu hình thấp hoặc trình duyệt WebKit Mobile.
 
 ## Phạm vi
-1. **Sửa dứt điểm lỗi xuất file Word trong `matrande.html`**:
-   - Xóa bỏ hoàn toàn các thẻ `<script src="js/security-guard.js"></script>` nằm trong chuỗi template string của:
-     * `exportWord` (dòng 1714)
-     * `exportWordRaw` (dòng 1934)
-   - Đảm bảo thẻ `<meta charset='utf-8'>` hợp lệ và cấu trúc HTML của cả 2 hàm xuất Word chuẩn chỉnh, không chứa thẻ đóng mồ côi.
-2. **Cấp lại & Tự động đồng bộ Gemini API Key theo tài khoản**:
-   - Thêm hàm `syncUserKeysFromServer()` gọi `GET api/user_gemini_keys.php` với session credentials.
-   - Trong `useEffect` khi ứng dụng React mount: tự động gọi `syncUserKeysFromServer()`, chuẩn hóa danh sách key và lưu vào `localStorage ('global_gemini_keys')`.
-   - Cập nhật trạng thái hiển thị: thông báo rõ số lượng Gemini API Key đã nạp từ tài khoản.
-3. **Xây dựng Bộ Kiểm thử Tự động (`tests/matrande-smoke.js`)**:
-   - Kiểm tra `matrande.html` không còn thẻ `</script>` nào nằm bên trong template string của khối Babel script.
-   - Kiểm tra `exportWord` và `exportWordRaw` sinh chuỗi HTML Word chuẩn cú pháp.
-   - Kiểm tra cơ chế tự động đồng bộ API Key từ `api/user_gemini_keys.php`.
+1. **Cập nhật và tối ưu `js/security-guard.js`**:
+   - Bổ sung hàm kiểm tra thiết bị di động / máy tính bảng (`isMobile` / touch device):
+     * Nhận diện qua User-Agent (`/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i`) và/hoặc `navigator.maxTouchPoints > 0`.
+   - Vô hiệu hóa hoặc bỏ qua cơ chế đo chênh lệch kích thước cửa sổ (`checkDevToolsOpen`) đối với môi trường thiết bị di động.
+   - Giữ nguyên toàn bộ các cơ chế bảo mật cốt lõi trên Desktop (chặn F12, Ctrl+Shift+I, Ctrl+U, phím tắt Admin `Ctrl+Alt+Shift+D`, context menu chống sao chép).
+   - Đảm bảo an toàn không gây false positive trên WebKit/Safari mobile và Android.
+2. **Bổ sung và cập nhật Bộ Kiểm thử Tự động (`tests/security-f12-smoke.js`)**:
+   - Thêm test case giả lập môi trường Mobile (User-Agent iOS/Android, `outerHeight - innerHeight = 200px`) -> xác nhận KHÔNG bị kích hoạt lock overlay.
+   - Thêm test case xác nhận trên môi trường Desktop với `outerHeight - innerHeight > 170px` -> vẫn kích hoạt lock overlay như thiết kế.
+   - Chạy toàn bộ test suite để kiểm tra tính tương thích với `tools/build-obfuscate.js` và hệ thống CI/CD.
 
 ## Ngoài phạm vi
-- Không thay đổi thuật toán sinh đề AI ma trận (Biết - Hiểu - Vận dụng).
-- Không can thiệp vào các logic AI Groq hoặc HuggingFace fallback sẵn có.
+- Không thay đổi giao diện các bài kiểm tra, trang làm bài hay luồng đăng nhập quản trị viên.
+- Không xóa bỏ chức năng bảo vệ bản quyền mã nguồn trên máy tính Desktop.
 
 ## File dự kiến tác động
-- `matrande.html` [XÓA SCRIPT TRONG TEMPLATE WORD, BỔ SUNG TỰ ĐỘNG ĐỒNG BỘ GEMINI API KEY TỪ SERVER]
-- `tests/matrande-smoke.js` [TẠO MỚI TEST SUITE KIỂM THỬ XUẤT WORD VÀ ĐỒNG BỘ API KEY CỦA MATRANDE]
+- `js/security-guard.js` [TỐI ƯU NHẬN DIỆN MOBILE, BỎ QUA KIỂM TRA KÍCH THƯỚC DEVTOOLS TRÊN DI ĐỘNG]
+- `tests/security-f12-smoke.js` [BỔ SUNG TEST CASE KIỂM TRA MOBILE VÀ DESKTOP CHO SECURITY GUARD]
 - `docs/handoff/PLAN.md` [GHI ĐÈ KẾ HOẠCH THEO QUY TRÌNH SURVEY]
 - `docs/handoff/.lock` [GHI NỘI DUNG: LOCK]
 - `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi triển khai]
 - `docs/handoff/VERIFY.md` [Tester cập nhật khi nghiệm thu]
 
 ## Các bước thực hiện
-1. **Bước 1: Sửa các hàm xuất Word trong `matrande.html`**:
-   - Xóa thẻ `<script src="js/security-guard.js"></script>` tại dòng 1714 (`exportWord`) và dòng 1934 (`exportWordRaw`).
-   - Kiểm tra toàn bộ chuỗi template HTML của `exportWord` và `exportWordRaw` đảm bảo không còn thẻ script lồng nhau.
-2. **Bước 2: Triển khai tự động đồng bộ Gemini API Key trong `matrande.html`**:
-   - Thêm hàm `syncUserKeysFromServer()` kết nối tới `api/user_gemini_keys.php`.
-   - Thêm logic nạp key tự động trong `useEffect` khi ứng dụng mount, cập nhật state và lưu cache `localStorage ('global_gemini_keys')`.
-   - Hiển thị trạng thái số lượng API Key đã nạp từ tài khoản trên giao diện.
-3. **Bước 3: Xây dựng kiểm thử tự động `tests/matrande-smoke.js`**:
-   - Kiểm tra cấu trúc `matrande.html` có khối script Babel nguyên vẹn không bị ngắt sớm.
-   - Kiểm tra 2 template Word không chứa thẻ script và khai báo `<meta charset='utf-8'>`.
-   - Kiểm tra hàm `syncUserKeysFromServer` và quy trình nạp key.
-4. **Bước 4: Khóa trạng thái giao việc**:
+1. **Bước 1: Cập nhật `js/security-guard.js`**:
+   - Bổ sung logic kiểm tra `isMobile`:
+     ```js
+     var isMobile = Boolean(
+         typeof navigator !== 'undefined' && (
+             /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent || '') ||
+             (navigator.maxTouchPoints && navigator.maxTouchPoints > 1 && !/Windows NT|Macintosh/i.test(navigator.userAgent || ''))
+         )
+     );
+     ```
+   - Trong `checkDevToolsOpen()`: nếu `isMobile` thì lập tức `return;` (không thực hiện so sánh `outerWidth`/`outerHeight` với threshold).
+   - Đảm bảo các hàm bẫy debugger và console probe hoạt động an toàn, không tự kích hoạt sai trên WebKit/Mobile.
+2. **Bước 2: Cập nhật `tests/security-f12-smoke.js`**:
+   - Thêm test case `testMobileNoFalsePositive`: Giả lập sandbox Mobile với User-Agent iPhone/Android và độ chênh kích thước màn hình lớn (`outerHeight: 844, innerHeight: 640`), kiểm tra overlay `__gb_devtools_lock__` không bị tạo / không hiển thị.
+   - Giữ nguyên và mở rộng test case Desktop để đảm bảo tính năng chống DevTools trên máy tính vẫn hoạt động 100%.
+   - Chạy lệnh `node tests/security-f12-smoke.js` để xác thực toàn bộ test passed.
+3. **Bước 3: Khóa trạng thái giao việc**:
    - Ghi nội dung `LOCK` vào `docs/handoff/.lock`.
 
 ## Rủi ro
-1. **Rủi ro người dùng mất mạng khi tải trang**:
-   - *Giải pháp*: Hàm sync có try/catch an toàn và tự động dùng `readCachedGeminiKeys()` từ `localStorage` nếu không gọi được server.
+1. **Rủi ro tablet (iPadOS) gửi User-Agent giống desktop Safari**:
+   - *Giải pháp*: Kết hợp kiểm tra `navigator.maxTouchPoints > 1` cùng với kiểm tra touch event / screen dimensions để nhận diện chính xác tablet và tránh khóa nhầm.
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động**:
-   - Chạy lệnh: `node tests/matrande-smoke.js`
-   - Chạy lệnh: `node tests/kttx-smoke.js`
-   - Chạy lệnh: `node tests/xaydungphuluc-smoke.js`
+   - Chạy lệnh: `node tests/security-f12-smoke.js`
+   - Chạy lệnh: `node tools/build-obfuscate.js --dry-run`
 2. **Kiểm thử thủ công**:
-   - Mở `matrande.html` trên trình duyệt:
-     * Ứng dụng tải mượt mà, không bị lỗi console cú pháp script.
-     * Tự động nhận diện và hiển thị số lượng Gemini API Key đã đăng ký của tài khoản.
-     * Tạo đề từ ma trận $\to$ Bấm "Xuất file Word" (`De_Thi_Toan_...doc`) và "Xuất Word Raw" $\to$ Mở file Word kiểm tra nội dung đề, bảng đáp án và lời giải hiển thị chuẩn đẹp, hoàn toàn không có mã JavaScript thô.
+   - Mở hệ thống làm bài hoặc trang quản trị trên trình duyệt điện thoại (iOS Safari / Android Chrome):
+     * Giao diện tải bình thường, hoàn toàn không xuất hiện bảng đen cảnh báo DevTools.
+     * Làm bài, cuộn trang, bật bàn phím ảo, xoay màn hình không bị gián đoạn hay khóa trang.
+   - Mở hệ thống trên Desktop Chrome/Edge:
+     * Nhấn F12 hoặc mở DevTools -> Vẫn hiển thị bảng cảnh báo khóa như thiết kế.
 
 ## Tiêu chí nghiệm thu
-- [ ] Không còn thẻ `</script>` nào nằm bên trong template string của `matrande.html`.
-- [ ] File Word xuất ra (`De_Thi_Toan_...doc`, `De_Thi_Toan_..._raw.doc`) hiển thị nội dung đề thi hoàn chỉnh, 100% không còn dính mã nguồn JavaScript thô.
-- [ ] `matrande.html` tự động đồng bộ và nạp Gemini API Key từ tài khoản CSDL (`api/user_gemini_keys.php`) khi vào trang.
-- [ ] 100% kiểm thử tự động `tests/matrande-smoke.js` chạy đạt PASS.
+- [ ] Truy cập trên điện thoại di động (iPhone / Android) không còn bị hiện popup/overlay "Phát hiện DevTools. Hãy đóng công cụ phát triển để tiếp tục."
+- [ ] Các thao tác trên điện thoại (cuộn trang, ẩn/hiện thanh công cụ Safari/Chrome, gõ bàn phím ảo) hoạt động bình thường, mượt mà.
+- [ ] Cơ chế chống DevTools trên môi trường máy tính (Desktop) vẫn được bảo toàn.
+- [ ] 100% kiểm thử tự động trong `tests/security-f12-smoke.js` chạy đạt PASS.

@@ -48,6 +48,15 @@
 
     var isDebugUnlocked = storageGet(sessionStorage, debugModeKey) === 'true';
 
+    // iPadOS may report a desktop Safari user-agent, so combine UA and touch points.
+    var isMobileOrTablet = false;
+    try {
+        var userAgent = String((navigator && navigator.userAgent) || '');
+        var maxTouchPoints = Number((navigator && navigator.maxTouchPoints) || 0);
+        isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(userAgent) ||
+            (/Macintosh/i.test(userAgent) && maxTouchPoints > 1);
+    } catch (err) {}
+
     // Bỏ qua bảo vệ nếu chạy trên localhost hoặc đã kích hoạt chế độ Debug bởi Admin
     if (isLocalhost || isDebugUnlocked) {
         return;
@@ -221,6 +230,7 @@
     var devtoolsThreshold = 170;
     function checkDevToolsOpen() {
         if (isDebugUnlocked) return;
+        if (isMobileOrTablet) return;
         var widthDiff = window.outerWidth - window.innerWidth > devtoolsThreshold;
         var heightDiff = window.outerHeight - window.innerHeight > devtoolsThreshold;
         if (widthDiff || heightDiff) {
