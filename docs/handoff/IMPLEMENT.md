@@ -11,6 +11,31 @@
 - `node tests/security-f12-smoke.js` — PASS.
 - `git diff --check` — PASS.
 
+---
+
+# IMPLEMENT: Duyệt Giáo Án AI — giao diện và trạng thái hồ sơ
+
+## Đã làm
+
+1. Chuẩn hóa thẻ `Duyệt Giáo Án AI` trên trang chủ thành bento tile teal/cyan, với watermark `fa-file-circle-check`, nội dung mô tả và nút điều hướng đồng bộ.
+2. Làm mới `duyetgiaoan.html`: dropdown tháng có 9 lựa chọn tĩnh từ Tháng 9 đến Tháng 5; bố cục theo bốn bước rõ ràng, thân thiện trên màn hình nhỏ.
+3. Thêm trạng thái tên/kích thước tệp giáo án, trạng thái PPCT, tiến độ thẩm định và thông báo đang xử lý từng giáo viên. Kết quả có thẻ thống kê, badge xếp loại và lịch sử dễ đọc.
+4. Khi tải dữ liệu phiên cũ, giáo viên được chuẩn hóa với metadata tệp mặc định; kết quả thiếu trường hiển thị vẫn được render an toàn.
+5. Mở rộng smoke test kiểm tra trực tiếp 9 tháng tĩnh, thành phần tệp/progress/badge và cấu trúc bento card.
+
+## Kiểm thử
+
+- `node tests/duyetgiaoan-smoke.js` — PASS.
+- `node tests/duyetgiaoan-integration-smoke.js` — PASS.
+- Kiểm tra cú pháp script nội trang — PASS.
+- `git diff --check` — PASS.
+
+## Phạm vi
+
+- Không thay đổi endpoint, payload, API hay cơ sở dữ liệu.
+- Không sửa `docs/handoff/PLAN.md` hoặc `docs/handoff/.lock`.
+- Không commit thay đổi.
+
 ## Lưu ý
 
 - Không thay đổi `docs/handoff/PLAN.md` hoặc `docs/handoff/.lock`.

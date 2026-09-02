@@ -1,35 +1,38 @@
-﻿# PLAN: Khắc Phục Lỗi Cảnh Báo "Phát Hiện DevTools" Trên Điện Thoại Di Động Trong `js/security-guard.js`
+﻿# PLAN: Xử Lý Triệt Để Lỗi Báo "Phát Hiện DevTools" Trên Điện Thoại Di Động (iOS / Android / Safari) Trong `js/security-guard.js`
 
 ## Hiện trạng
-1. **Lỗi báo DevTools giả (False Positive) trên thiết bị di động**:
-   - Khi học sinh, giáo viên hoặc quản trị viên truy cập hệ thống làm bài trên điện thoại di động (iPhone / iPad / Safari / Android Chrome), màn hình lập tức bị khóa và hiển thị cảnh báo:
+1. **Lỗi báo DevTools giả vẫn tiếp tục xảy ra trên iPhone / Android**:
+   - Mặc dù lần trước đã thêm `if (isMobileOrTablet) return;` trong hàm `checkDevToolsOpen()`, người dùng mở trang trên điện thoại (iPhone Safari, Android Chrome) vẫn bị popup đen khóa màn hình:
      > *"Phát hiện DevTools. Hãy đóng công cụ phát triển để tiếp tục."*
    - **Nguyên nhân cốt lõi trong `js/security-guard.js`**:
-     * Cơ chế đo chênh lệch kích thước cửa sổ (`checkDevToolsOpen` - dòng 220-234):
-       `window.outerWidth - window.innerWidth > 170` hoặc `window.outerHeight - window.innerHeight > 170`.
-     * Trên các trình duyệt di động (đặc biệt là iOS Safari, Chrome Mobile), `outerHeight` là toàn bộ chiều cao màn hình thiết bị, trong khi `innerHeight` bị thu hẹp bởi thanh địa chỉ (URL bar), thanh điều hướng dưới đáy (tab bar/navigation bar), tai thỏ (Notch / Dynamic Island) và bàn phím ảo.
-     * Mức chênh lệch tự nhiên này thường vượt quá `170px` (ví dụ trên iPhone 13/14/15 là ~180px - 220px), khiến `checkDevToolsOpen()` lập tức đánh giá là mở DevTools và kích hoạt `showLockOverlay()` chặn toàn bộ trang.
-     * Ngoài ra, cơ chế bẫy đo độ trễ `triggerDebuggerTrap()` (`performance.now() > 100ms`) hoặc getter `probeDevToolsConsole()` có thể gây lag hoặc nhận diện sai trên các dòng máy di động cấu hình thấp hoặc trình duyệt WebKit Mobile.
+     * **Nguyên nhân 1 - Bẫy Console Getter (`probeDevToolsConsole`)**:
+       Hàm `probeDevToolsConsole` (dòng 247-262) chạy định kỳ 3 giây: tạo object `new Error()` với getter `stack` rồi gọi `nativeConsole.debug(probe)`.
+       Trên trình duyệt WebKit (Safari trên iOS và macOS), trình duyệt **luôn tự động truy cập thuộc tính `.stack` của Error object khi ghi log vào console buffer, bất kể người dùng có mở DevTools hay không**. Điều này khiến `detected = true` ngay lập tức và gọi `onDevToolsDetected()` -> `showLockOverlay()` khóa màn hình của 100% người dùng iPhone / iPad / Safari.
+     * **Nguyên nhân 2 - Bẫy Debugger Trap (`triggerDebuggerTrap`)**:
+       Hàm `triggerDebuggerTrap` (dòng 213-227) chạy định kỳ 2.5 giây: thực thi `Function('debugger')()` và đo `performance.now() > 100ms`. Trên chip di động, khi máy đang tải trang, cuộn trang hoặc tiết kiệm pin, việc biên dịch động và chạy hàm mất > 100ms dẫn đến báo giả và gọi `onDevToolsDetected()`.
+     * **Nguyên nhân 3 - Hàm `showLockOverlay()` và `onDevToolsDetected()` chưa có chốt chặn an toàn `isMobileOrTablet`**:
+       Khi `probeDevToolsConsole` hoặc `triggerDebuggerTrap` gọi `onDevToolsDetected()`, hàm `showLockOverlay()` lập tức tạo overlay khóa màn hình. Đồng thời, vì `checkDevToolsOpen()` có `if (isMobileOrTablet) return;`, hàm `hideLockOverlay()` **không bao giờ được gọi trên mobile**, khiến màn hình bị khóa vĩnh viễn không thể tắt.
 
 ## Phạm vi
-1. **Cập nhật và tối ưu `js/security-guard.js`**:
-   - Bổ sung hàm kiểm tra thiết bị di động / máy tính bảng (`isMobile` / touch device):
-     * Nhận diện qua User-Agent (`/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i`) và/hoặc `navigator.maxTouchPoints > 0`.
-   - Vô hiệu hóa hoặc bỏ qua cơ chế đo chênh lệch kích thước cửa sổ (`checkDevToolsOpen`) đối với môi trường thiết bị di động.
-   - Giữ nguyên toàn bộ các cơ chế bảo mật cốt lõi trên Desktop (chặn F12, Ctrl+Shift+I, Ctrl+U, phím tắt Admin `Ctrl+Alt+Shift+D`, context menu chống sao chép).
-   - Đảm bảo an toàn không gây false positive trên WebKit/Safari mobile và Android.
-2. **Bổ sung và cập nhật Bộ Kiểm thử Tự động (`tests/security-f12-smoke.js`)**:
-   - Thêm test case giả lập môi trường Mobile (User-Agent iOS/Android, `outerHeight - innerHeight = 200px`) -> xác nhận KHÔNG bị kích hoạt lock overlay.
-   - Thêm test case xác nhận trên môi trường Desktop với `outerHeight - innerHeight > 170px` -> vẫn kích hoạt lock overlay như thiết kế.
-   - Chạy toàn bộ test suite để kiểm tra tính tương thích với `tools/build-obfuscate.js` và hệ thống CI/CD.
+1. **Sửa triệt để module `js/security-guard.js`**:
+   - **Chặn toàn diện ở cấp độ overlay**:
+     * Trong `showLockOverlay()` và `onDevToolsDetected()`: Bổ sung điều kiện `if (isMobileOrTablet) return;` để đảm bảo trên thiết bị di động / tablet, overlay cảnh báo DevTools **tuyệt đối không bao giờ được phép hiển thị**.
+   - **Loại bỏ / vô hiệu hóa các bẫy gây False Positive**:
+     * **Loại bỏ hoàn toàn cơ chế `probeDevToolsConsole`** (Error stack getter): Đây là kỹ thuật không đáng tin cậy, gây lỗi 100% trên Safari/WebKit (iOS & Mac).
+     * **Bỏ qua `triggerDebuggerTrap` trên mobile / tablet**: Chỉ chạy bẫy timing debugger trên môi trường Desktop không phải Safari WebKit hoặc nâng ngưỡng an toàn để không bắt nhầm CPU lag.
+   - **Giữ vững bảo mật Desktop**:
+     * Duy trì đầy đủ các tính năng bảo vệ trên Desktop: Chặn F12, chặn Ctrl+Shift+I, chặn Ctrl+U, chặn chuột phải sao chép ngoài ô input, phím tắt quản trị `Ctrl+Alt+Shift+D` mở khóa debug.
+2. **Cập nhật và mở rộng bộ kiểm thử tự động `tests/security-f12-smoke.js`**:
+   - Thêm test case giả lập gọi trực tiếp `onDevToolsDetected()` / `showLockOverlay()` trong môi trường Mobile/Tablet -> đảm bảo không tạo hoặc hiển thị overlay `__gb_devtools_lock__`.
+   - Thêm test case xác nhận không còn bẫy console getter gây lỗi WebKit.
+   - Đảm bảo 100% các bài test trong `tests/security-f12-smoke.js` chạy đạt PASS.
 
 ## Ngoài phạm vi
-- Không thay đổi giao diện các bài kiểm tra, trang làm bài hay luồng đăng nhập quản trị viên.
-- Không xóa bỏ chức năng bảo vệ bản quyền mã nguồn trên máy tính Desktop.
+- Không can thiệp vào các logic nghiệp vụ khác của website.
 
 ## File dự kiến tác động
-- `js/security-guard.js` [TỐI ƯU NHẬN DIỆN MOBILE, BỎ QUA KIỂM TRA KÍCH THƯỚC DEVTOOLS TRÊN DI ĐỘNG]
-- `tests/security-f12-smoke.js` [BỔ SUNG TEST CASE KIỂM TRA MOBILE VÀ DESKTOP CHO SECURITY GUARD]
+- `js/security-guard.js` [SỬA TRIỆT ĐỂ: LOẠI BỎ PROBE CONSOLE GETTER, CHẶN SHOW OVERLAY TRÊN MOBILE/TABLET]
+- `tests/security-f12-smoke.js` [BỔ SUNG TEST CASE KIỂM TRA CHẶN OVERLAY HOÀN TOÀN TRÊN MOBILE]
 - `docs/handoff/PLAN.md` [GHI ĐÈ KẾ HOẠCH THEO QUY TRÌNH SURVEY]
 - `docs/handoff/.lock` [GHI NỘI DUNG: LOCK]
 - `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi triển khai]
@@ -37,41 +40,46 @@
 
 ## Các bước thực hiện
 1. **Bước 1: Cập nhật `js/security-guard.js`**:
-   - Bổ sung logic kiểm tra `isMobile`:
+   - Cập nhật `showLockOverlay()` và `onDevToolsDetected()`:
      ```js
-     var isMobile = Boolean(
-         typeof navigator !== 'undefined' && (
-             /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent || '') ||
-             (navigator.maxTouchPoints && navigator.maxTouchPoints > 1 && !/Windows NT|Macintosh/i.test(navigator.userAgent || ''))
-         )
-     );
+     function showLockOverlay() {
+         if (isDebugUnlocked || isMobileOrTablet) return;
+         // ...
+     }
+     function onDevToolsDetected() {
+         if (isDebugUnlocked || isMobileOrTablet) return;
+         // ...
+     }
      ```
-   - Trong `checkDevToolsOpen()`: nếu `isMobile` thì lập tức `return;` (không thực hiện so sánh `outerWidth`/`outerHeight` với threshold).
-   - Đảm bảo các hàm bẫy debugger và console probe hoạt động an toàn, không tự kích hoạt sai trên WebKit/Mobile.
+   - Xóa bỏ hoàn toàn hàm `probeDevToolsConsole()` và `setInterval(probeDevToolsConsole, ...)` vì xung đột với WebKit Safari.
+   - Trong `triggerDebuggerTrap()`: thêm `if (isDebugUnlocked || isMobileOrTablet) return;`.
+   - Trong `checkDevToolsOpen()`: đảm bảo `if (isDebugUnlocked || isMobileOrTablet) return;`.
 2. **Bước 2: Cập nhật `tests/security-f12-smoke.js`**:
-   - Thêm test case `testMobileNoFalsePositive`: Giả lập sandbox Mobile với User-Agent iPhone/Android và độ chênh kích thước màn hình lớn (`outerHeight: 844, innerHeight: 640`), kiểm tra overlay `__gb_devtools_lock__` không bị tạo / không hiển thị.
-   - Giữ nguyên và mở rộng test case Desktop để đảm bảo tính năng chống DevTools trên máy tính vẫn hoạt động 100%.
-   - Chạy lệnh `node tests/security-f12-smoke.js` để xác thực toàn bộ test passed.
+   - Cập nhật test case tĩnh và sandbox test:
+     * Kiểm tra `showLockOverlay` không hiển thị trên mobile/tablet ngay cả khi kích hoạt sự kiện phát hiện.
+     * Kiểm tra sandbox iPhone và iPadOS không tạo phần tử `__gb_devtools_lock__`.
+     * Kiểm tra Desktop vẫn phát hiện và hiển thị khóa khi mở DevTools.
+   - Chạy lệnh `node tests/security-f12-smoke.js` kiểm tra toàn bộ test PASS.
 3. **Bước 3: Khóa trạng thái giao việc**:
    - Ghi nội dung `LOCK` vào `docs/handoff/.lock`.
 
 ## Rủi ro
-1. **Rủi ro tablet (iPadOS) gửi User-Agent giống desktop Safari**:
-   - *Giải pháp*: Kết hợp kiểm tra `navigator.maxTouchPoints > 1` cùng với kiểm tra touch event / screen dimensions để nhận diện chính xác tablet và tránh khóa nhầm.
+1. **Rủi ro trình duyệt Safari Desktop cũng bị ảnh hưởng bởi WebKit getter**:
+   - *Giải pháp*: Việc xóa bỏ hoàn toàn `probeDevToolsConsole` sẽ giải quyết dứt điểm lỗi cho cả Safari trên iPhone/iPad và Safari trên máy Mac.
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động**:
    - Chạy lệnh: `node tests/security-f12-smoke.js`
    - Chạy lệnh: `node tools/build-obfuscate.js --dry-run`
 2. **Kiểm thử thủ công**:
-   - Mở hệ thống làm bài hoặc trang quản trị trên trình duyệt điện thoại (iOS Safari / Android Chrome):
-     * Giao diện tải bình thường, hoàn toàn không xuất hiện bảng đen cảnh báo DevTools.
-     * Làm bài, cuộn trang, bật bàn phím ảo, xoay màn hình không bị gián đoạn hay khóa trang.
-   - Mở hệ thống trên Desktop Chrome/Edge:
-     * Nhấn F12 hoặc mở DevTools -> Vẫn hiển thị bảng cảnh báo khóa như thiết kế.
+   - Mở bất kỳ trang nào (`index.html`, `admin.html`,...) trên điện thoại iPhone (Safari / Chrome) và điện thoại Android:
+     * Trang tải mượt mà, hoàn toàn không xuất hiện popup "Phát hiện DevTools".
+     * Thao tác làm bài, bấm nút, cuộn trang không bị khóa.
+   - Mở trên máy tính Desktop Chrome/Edge:
+     * Bấm F12 hoặc Inspect -> Vẫn hiển thị thông báo khóa DevTools theo đúng thiết kế.
 
 ## Tiêu chí nghiệm thu
-- [ ] Truy cập trên điện thoại di động (iPhone / Android) không còn bị hiện popup/overlay "Phát hiện DevTools. Hãy đóng công cụ phát triển để tiếp tục."
-- [ ] Các thao tác trên điện thoại (cuộn trang, ẩn/hiện thanh công cụ Safari/Chrome, gõ bàn phím ảo) hoạt động bình thường, mượt mà.
-- [ ] Cơ chế chống DevTools trên môi trường máy tính (Desktop) vẫn được bảo toàn.
-- [ ] 100% kiểm thử tự động trong `tests/security-f12-smoke.js` chạy đạt PASS.
+- [ ] Truy cập trên điện thoại iPhone (iOS Safari) và Android 100% không còn bị popup/overlay "Phát hiện DevTools. Hãy đóng công cụ phát triển để tiếp tục."
+- [ ] Đã loại bỏ hoàn toàn cơ chế bẫy `probeDevToolsConsole` (Error stack getter) gây lỗi trên WebKit.
+- [ ] Toàn bộ các cơ chế bảo mật trên Desktop (F12, Ctrl+U, Ctrl+Shift+I, DevTools size check) vẫn hoạt động chính xác.
+- [ ] 100% kiểm thử tự động `tests/security-f12-smoke.js` chạy đạt PASS.
