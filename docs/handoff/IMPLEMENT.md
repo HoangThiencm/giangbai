@@ -1,5 +1,19 @@
 # IMPLEMENT: Khắc phục false positive DevTools trên thiết bị di động
 
+## Bổ sung: Chrome iOS và thiết bị touch
+
+1. Mở rộng nhận diện `isMobileOrTablet` trong `js/security-guard.js` cho `CriOS`, `FxiOS`, `EdgiOS`, `OPiOS`, Silk và Kindle; đồng thời kết hợp `maxTouchPoints`, `ontouchstart`, `DocumentTouch`, coarse pointer, hover-none và kích thước màn hình touch.
+2. Mở rộng `tests/security-f12-smoke.js` với Chrome iOS desktop UA (`Macintosh` + `CriOS`), Firefox iOS, Edge iOS và màn hình touch/coarse pointer với `maxTouchPoints: 1`; mọi trường hợp có chênh lệch kích thước đều không tạo overlay.
+3. Không thay đổi cơ chế bảo vệ trên desktop hay bất kỳ file ngoài phạm vi kế hoạch.
+
+## Kiểm thử
+
+- `node tests/security-f12-smoke.js` — PASS.
+- `node tools/build-obfuscate.js --dry-run` — PASS.
+- `git diff --check` — PASS.
+
+---
+
 ## Đã làm
 
 1. Thêm nhận diện mobile/tablet trong `js/security-guard.js` bằng User-Agent, đồng thời nhận diện iPadOS gửi User-Agent desktop Safari qua `Macintosh` kết hợp `navigator.maxTouchPoints > 1`.

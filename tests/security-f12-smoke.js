@@ -120,8 +120,13 @@ function makeSandbox(options) {
             userAgent: options.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36',
             maxTouchPoints: options.maxTouchPoints || 0
         },
+        screen: options.screen || { width: 1920, height: 1080 },
+        matchMedia(query) {
+            return { matches: Boolean(options.mediaMatches && options.mediaMatches[query]) };
+        },
         __reloaded: false
     };
+    if (options.hasTouchStart) windowObj.ontouchstart = function () {};
     windowObj.outerWidth = options.outerWidth || windowObj.outerWidth;
     windowObj.innerWidth = options.innerWidth || windowObj.innerWidth;
     windowObj.outerHeight = options.outerHeight || windowObj.outerHeight;
@@ -265,6 +270,37 @@ function keyEvent(partial) {
     fire(box.listeners.window.resize, {});
     const ok = !box.document.getElementById('__gb_devtools_lock__');
     console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + 'iPadOS desktop user-agent size difference does not create lock overlay');
+    if (!ok) failed += 1;
+})();
+
+[
+    ['Chrome iOS', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 CriOS/120.0.0.0 Safari/604.1'],
+    ['Firefox iOS', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 FxiOS/120.0 Mobile/15E148 Safari/605.1'],
+    ['Edge iOS', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 EdgiOS/120.0 Mobile/15E148 Safari/605.1']
+].forEach(function (scenario) {
+    const box = makeSandbox({
+        userAgent: scenario[1],
+        outerHeight: 900,
+        innerHeight: 650
+    });
+    fire(box.listeners.window.resize, {});
+    const ok = !box.document.getElementById('__gb_devtools_lock__');
+    console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + scenario[0] + ' does not create lock overlay');
+    if (!ok) failed += 1;
+});
+
+(function testCoarseTouchScreenDoesNotLock() {
+    const box = makeSandbox({
+        userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36',
+        maxTouchPoints: 1,
+        mediaMatches: { '(pointer: coarse)': true, '(hover: none)': true },
+        screen: { width: 800, height: 1280 },
+        outerHeight: 900,
+        innerHeight: 650
+    });
+    fire(box.listeners.window.resize, {});
+    const ok = !box.document.getElementById('__gb_devtools_lock__');
+    console[ok ? 'log' : 'error']((ok ? 'OK: ' : 'FAIL: ') + 'coarse touch screen does not create lock overlay');
     if (!ok) failed += 1;
 })();
 

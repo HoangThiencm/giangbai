@@ -48,13 +48,29 @@
 
     var isDebugUnlocked = storageGet(sessionStorage, debugModeKey) === 'true';
 
-    // iPadOS may report a desktop Safari user-agent, so combine UA and touch points.
+    // Một số trình duyệt iOS có thể gửi desktop UA; kết hợp UA, touch và media query.
     var isMobileOrTablet = false;
     try {
         var userAgent = String((navigator && navigator.userAgent) || '');
         var maxTouchPoints = Number((navigator && navigator.maxTouchPoints) || 0);
-        isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(userAgent) ||
-            (/Macintosh/i.test(userAgent) && maxTouchPoints > 1);
+        var hasTouch = Boolean(
+            maxTouchPoints > 0 ||
+            'ontouchstart' in window ||
+            (window.DocumentTouch && document instanceof window.DocumentTouch)
+        );
+        var isCoarsePointer = Boolean(
+            window.matchMedia && (
+                window.matchMedia('(pointer: coarse)').matches ||
+                window.matchMedia('(hover: none)').matches
+            )
+        );
+        var isMobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet|CriOS|FxiOS|EdgiOS|OPiOS|Silk|Kindle/i.test(userAgent);
+        var isAppleTouchDesktop = /Macintosh/i.test(userAgent) && hasTouch;
+        var isSmallTouchScreen = Boolean(
+            window.screen && Math.min(window.screen.width, window.screen.height) <= 1024 && hasTouch
+        );
+
+        isMobileOrTablet = isMobileUa || isAppleTouchDesktop || (hasTouch && isCoarsePointer) || isSmallTouchScreen;
     } catch (err) {}
 
     // Bỏ qua bảo vệ nếu chạy trên localhost hoặc đã kích hoạt chế độ Debug bởi Admin
