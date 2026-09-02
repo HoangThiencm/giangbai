@@ -38,7 +38,37 @@ function yccdKeywords(value) {
 }
 
 function isPracticeOrReview(value) {
-  return /\b(luyen tap|on tap|thuc hanh trai nghiem)\b/i.test(normalizeYccdText(value));
+  return /\b(luyen tap|on tap|bai tap|cuoi chuong|thuc hanh|trai nghiem|hoat dong trai nghiem)\b/i.test(normalizeYccdText(value));
+}
+
+function isChapterReview(value) {
+  return /\b(on tap\s*(chuong)?|bai tap(?:\s+cuoi\s+chuong)?|cuoi chuong)\b/i.test(normalizeYccdText(value));
+}
+
+const TOAN6_CHAPTER_RANGES = { 1:[1,12], 2:[13,17], 3:[18,22], 4:[23,31], 5:[32,37], 6:[38,43] };
+const TOAN6_CHAPTER_OUTCOMES = {
+  1:["Củng cố, hệ thống hóa kiến thức trọng tâm về tập hợp số tự nhiên, các phép tính và quan hệ chia hết, số nguyên tố, ước và bội.","Vận dụng các tính chất của phép tính, dấu hiệu chia hết và ước chung, bội chung để giải quyết các bài tập và vấn đề thực tiễn liên quan."],
+  2:["Củng cố kiến thức về số nguyên, thứ tự và các phép tính với số nguyên.","Vận dụng quy tắc tính toán, quan hệ chia hết, ước và bội của số nguyên để giải quyết bài tập."],
+  3:["Củng cố đặc điểm, cách vẽ và ứng dụng của các hình phẳng, tính đối xứng.","Vận dụng kiến thức hình học trực quan để giải quyết bài tập thực tiễn."],
+  4:["Củng cố kiến thức về phân số, số thập phân, tỉ số và tỉ số phần trăm.","Vận dụng phép tính với phân số, số thập phân để giải quyết bài tập thực tiễn."],
+  5:["Củng cố kiến thức về điểm, đường thẳng, tia, đoạn thẳng, góc và số đo góc.","Vận dụng kiến thức hình học phẳng để giải quyết bài tập."],
+  6:["Củng cố kiến thức về dữ liệu, biểu đồ và xác suất thực nghiệm.","Đọc, mô tả và vận dụng dữ liệu, biểu đồ để giải quyết bài tập."]
+};
+
+function inferChapterDomain(chapterTopic, lesson, grade) {
+  if (String(grade || '') !== '6') return null;
+  const text = normalizeYccdText([chapterTopic, lesson].filter(Boolean).join(' '));
+  const roman = text.match(/\bchuong\s*(i|ii|iii|iv|v|vi|[1-6])\b/);
+  const chapterByLabel = { i:1, ii:2, iii:3, iv:4, v:5, vi:6 };
+  if (roman) return chapterByLabel[roman[1]] || Number(roman[1]);
+  if (/so tu nhien|so hoc/.test(text)) return 1;
+  if (/so nguyen/.test(text)) return 2;
+  if (/hinh hoc truc quan|tam giac deu|doi xung/.test(text)) return 3;
+  if (/phan so|so thap phan|phan tram/.test(text)) return 4;
+  if (/diem|duong thang|tia|doan thang|goc/.test(text)) return 5;
+  if (/thong ke|du lieu|bieu do|xac suat/.test(text)) return 6;
+  const number = Number(lessonNumber(lesson));
+  return Object.keys(TOAN6_CHAPTER_RANGES).map(Number).find(key => number >= TOAN6_CHAPTER_RANGES[key][0] && number <= TOAN6_CHAPTER_RANGES[key][1]) || null;
 }
 
 function scoreYccdRow(row, haystack) {
@@ -66,14 +96,18 @@ function findOfficialYccdRows({ subjectId, grade, topic, visionText, contextTopi
   if (!Array.isArray(rows) || !rows.length) return [];
 
   const requestedTopic = String(topic || "");
-  const contextualTopic = isPracticeOrReview(requestedTopic) ? String(chapterTopic || domain || contextTopic || visionText || "") : "";
-  const haystack = normalizeYccdText([requestedTopic, contextualTopic, isPracticeOrReview(requestedTopic) ? "" : visionText].filter(Boolean).join(" "));
+  const practice = isPracticeOrReview(requestedTopic), chapterReview = isChapterReview(requestedTopic);
+  const contextualTopic = practice ? String(chapterReview ? (chapterTopic || domain || contextTopic || visionText || "") : (contextTopic || chapterTopic || domain || visionText || "")) : "";
+  const chapter = practice ? inferChapterDomain(String(chapterTopic || domain || contextualTopic), requestedTopic, grade) : null;
+  if (chapterReview && chapter && TOAN6_CHAPTER_OUTCOMES[chapter]) return [{ lesson: `Ôn tập chương ${chapter}`, items: TOAN6_CHAPTER_OUTCOMES[chapter] }];
+  const scopedRows = chapter && TOAN6_CHAPTER_RANGES[chapter] ? rows.filter(row => { const number=Number(lessonNumber(row.lesson)); const range=TOAN6_CHAPTER_RANGES[chapter]; return number>=range[0]&&number<=range[1]; }) : rows;
+  const haystack = normalizeYccdText([requestedTopic, contextualTopic, practice ? "" : visionText].filter(Boolean).join(" "));
   const requestedNumber = lessonNumber([topic, visionText].filter(Boolean).join(" "));
-  const exactNumber = requestedNumber ? rows.filter(row => lessonNumber(row.lesson) === requestedNumber) : [];
-  if (exactNumber.length && !isPracticeOrReview(requestedTopic)) return exactNumber;
-  const exactName = haystack ? rows.filter(row => normalizeYccdTopic(row.lesson) === normalizeYccdTopic(requestedTopic)) : [];
+  const exactNumber = requestedNumber ? scopedRows.filter(row => lessonNumber(row.lesson) === requestedNumber) : [];
+  if (exactNumber.length && !practice) return exactNumber;
+  const exactName = haystack ? scopedRows.filter(row => normalizeYccdTopic(row.lesson) === normalizeYccdTopic(requestedTopic)) : [];
   if (exactName.length) return exactName;
-  const ranked = rows.map(row => ({ row, score: scoreYccdRow(row, haystack) })).sort((a, b) => b.score - a.score);
+  const ranked = scopedRows.map(row => ({ row, score: scoreYccdRow(row, haystack) })).sort((a, b) => b.score - a.score);
   return haystack && ranked[0].score > 0 ? [ranked[0].row] : [];
 }
 
