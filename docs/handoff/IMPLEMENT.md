@@ -1,27 +1,33 @@
-# IMPLEMENT: Sửa xuất Word và đồng bộ Gemini API Key cho KTTX
+# IMPLEMENT: matrande.html — Xuất Word + đồng bộ Gemini API Key
 
-## Phạm vi đã triển khai
+## Đã làm
 
-- Xóa toàn bộ script tag khỏi ba template Word: xuất đề/đáp án, ma trận và bản đặc tả. Các script tải thư viện hợp lệ của trang vẫn được giữ nguyên.
-- Chuẩn hóa ba template với `meta charset='utf-8'`; loại bỏ thẻ `</div>` mồ côi trong template xuất đề.
-- Thêm `syncUserKeysFromServer()` gọi `api/user_gemini_keys.php` cùng session hiện tại; key hợp lệ từ tài khoản được chuẩn hóa và cache vào `global_gemini_keys`.
-- Khi không kết nối được hoặc chưa có key trên máy chủ, ứng dụng an toàn dùng cache localStorage hiện có. React đồng bộ khi mount và hiển thị rõ số Gemini API Key đã nạp cùng nguồn dữ liệu.
-- Thêm `tests/kttx-smoke.js` kiểm tra cấu trúc Babel/template Word và luồng đồng bộ key.
+1. **Sửa lỗi xuất Word** trong `matrande.html`:
+   - Xóa thẻ `<script src="js/security-guard.js"></script>` khỏi template HTML của `exportWord` và `exportWordRaw`.
+   - Khối `<script type="text/babel">` không còn bị HTML parser đóng sớm; hai hàm xuất Word giữ `<meta charset='utf-8'>` và namespace Word/OMML.
 
-## File đã sửa
+2. **Tự động đồng bộ Gemini API Key theo tài khoản**:
+   - Thêm `normalizeGeminiKeys`, `readCachedGeminiKeys`, `syncUserKeysFromServer()`.
+   - `syncUserKeysFromServer()` gọi `GET api/user_gemini_keys.php` với `credentials: 'include'` và `cache: 'no-store'`.
+   - Khi React mount, `useEffect` nạp key, ghi cache `localStorage('global_gemini_keys')` nếu server trả key, fallback cache khi mất mạng/lỗi.
+   - Giao diện hiển thị số lượng key đã nạp (`🔑 Đã nạp N Gemini API Key từ tài khoản/từ bộ nhớ tạm`).
 
-- `kttx.html`
-- `tests/kttx-smoke.js`
+3. **Kiểm thử** `tests/matrande-smoke.js`:
+   - Babel script nguyên vẹn, không có thẻ `<script>` lồng trong template Word.
+   - `exportWord` / `exportWordRaw` có charset UTF-8 và blob `application/msword`.
+   - Có `syncUserKeysFromServer` + nạp key khi mount + fallback cache.
+
+## File đã sửa / tạo
+
+- `matrande.html`
+- `tests/matrande-smoke.js` (tạo mới)
 - `docs/handoff/IMPLEMENT.md`
-- `docs/handoff/.lock`
+- `docs/handoff/.lock` (LOCK)
 
-## Kiểm thử đã chạy
+## Kiểm thử
 
+- `node tests/matrande-smoke.js` — PASS
 - `node tests/kttx-smoke.js` — PASS
-- `node tests/run-all-tests.js` — FAIL ở `tests/khbd-1click-chain-smoke.js`: assertion có sẵn về hướng dẫn Bước 4 sang Tab 2, 3, 4; không thuộc phạm vi KTTX.
-- `git diff --check` — PASS
+- `node tests/xaydungphuluc-smoke.js` — PASS
 
-## Vấn đề còn lại
-
-- Chưa thực hiện kiểm tra thủ công file `.doc` trong Microsoft Word.
-- Chưa commit hoặc push theo yêu cầu.
+Không verify trên trình duyệt (không có browser tools trong phiên này).

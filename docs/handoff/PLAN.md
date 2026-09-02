@@ -1,88 +1,78 @@
-# PLAN: Khắc Phục Lỗi Xuất Word (Hiển Thị Mã Nguồn Thô) & Tự Động Đồng Bộ API Key Theo Tài Khoản Đã Đăng Ký Trong `kttx.html`
+# PLAN: Khắc Phục Lỗi Xuất Word & Tự Động Đồng Bộ Gemini API Key Theo Tài Khoản Trong `matrande.html`
 
 ## Hiện trạng
-1. **Lỗi nghiêm trọng khi xuất file Word: Toàn bộ mã nguồn JavaScript bị in thẳng ra file `.doc`**:
-   - Trong `kttx.html`, tại các hàm tạo file Word:
-     * Dòng 460 (`exportWord` - Xuất Đề & Đáp án)
-     * Dòng 544 (`exportMatrixToWord` - Xuất Ma trận)
-     * Dòng 884 (`renderSpecHtml` - Xuất Bản đặc tả)
+1. **Lỗi thẻ `<script>` chèn nhầm bên trong chuỗi template string xuất Word**:
+   - Trong `matrande.html`, tại các hàm tạo file Word:
+     * Dòng 1714: bên trong hàm `exportWord` (Xuất Đề thi & Hướng dẫn chấm)
+     * Dòng 1934: bên trong hàm `exportWordRaw` (Xuất Đề thi dạng thô)
      bị chèn thẻ `<script src="js/security-guard.js"></script>` vào bên trong chuỗi template string HTML sinh file Word.
-   - Do toàn bộ mã nguồn React/JavaScript của trang được đặt trong thẻ `<script type="text/babel">`, khi trình duyệt đọc đến ký tự `</script>` ở dòng 460, trình phân tích HTML (HTML parser) của trình duyệt **lập tức đóng luôn thẻ script chính**.
-   - Hậu quả: Toàn bộ đoạn code JavaScript từ dòng 461 trở đi bị trình duyệt hiểu nhầm là văn bản HTML thô, khiến khi xuất Word, nội dung file bị dính toàn bộ mã nguồn template string chưa biên dịch (ví dụ: `${info.dept.toUpperCase()}`, `typeOrder.forEach(...)`, `if(q.type=='TF')...` như trong ảnh người dùng phản ánh).
-   - Ngoài ra tại dòng 468 có thẻ đóng `</div>` mồ côi (không có thẻ mở `<div>` tương ứng).
+   - Toàn bộ mã nguồn React/Babel của trang được bao bọc trong thẻ `<script type="text/babel">`. Khi trình duyệt đọc đến ký tự `</script>` ở dòng 1714, trình phân tích HTML (HTML parser) **lập tức đóng luôn thẻ script chính của trang**.
+   - Hậu quả: Toàn bộ mã nguồn từ dòng 1715 trở đi bị trình duyệt coi là văn bản thô, làm hỏng quá trình xuất file Word và khiến mã nguồn JavaScript thô bị in thẳng ra file `.doc`.
 
-2. **Chưa tự động cấp / đồng bộ API Key theo tài khoản đã đăng ký**:
-   - Khi người dùng đăng nhập tài khoản (ví dụ: `hoangthiencm@gmail.com`), danh sách Gemini API Keys đã được lưu trên máy chủ CSDL và truy xuất được qua `api/user_gemini_keys.php`.
-   - Tuy nhiên, `kttx.html` hiện tại chỉ đọc thụ động từ `localStorage.getItem('global_gemini_keys')`. Khi người dùng mở trang trên thiết bị mới, trình duyệt mới hoặc sau khi xóa cache, trang báo lỗi `Chưa có API Key AI` dù tài khoản đã đăng ký và nạp key trên hệ thống.
-   - Trang thiếu hàm tự động gọi `syncUserKeysFromServer()` khi tải trang để nạp key từ CSDL máy chủ về ứng dụng.
+2. **Chưa tự động đồng bộ Gemini API Key từ tài khoản CSDL**:
+   - `matrande.html` hiện chỉ đọc khóa API từ `localStorage.getItem('global_gemini_keys')`.
+   - Khi người dùng đăng nhập tài khoản trên thiết bị mới hoặc xóa cache trình duyệt, trang báo lỗi `Thiếu Gemini API Key` dù tài khoản đã có key lưu trên máy chủ CSDL (`api/user_gemini_keys.php`).
+   - Cần bổ sung cơ chế tự động gọi `syncUserKeysFromServer()` kết nối tới `api/user_gemini_keys.php` ngay khi tải trang để nạp key vào React state và cache `localStorage`.
 
 ## Phạm vi
-1. **Sửa dứt điểm lỗi xuất file Word trong `kttx.html`**:
+1. **Sửa dứt điểm lỗi xuất file Word trong `matrande.html`**:
    - Xóa bỏ hoàn toàn các thẻ `<script src="js/security-guard.js"></script>` nằm trong chuỗi template string của:
-     * `exportWord` (Đề thi & Hướng dẫn chấm)
-     * `exportMatrixToWord` (Ma trận đề kiểm tra)
-     * `renderSpecHtml` (Bản đặc tả đề kiểm tra)
-   - Chuẩn hóa cấu trúc HTML xuất Word: loại bỏ thẻ `</div>` mồ côi, bổ sung thẻ `<meta charset='utf-8'>`, chuẩn hóa bảng biểu và công thức toán MathML/WordML.
-2. **Cấp lại & Tự động đồng bộ API Key theo tài khoản người dùng**:
-   - Viết hàm `syncUserKeysFromServer()` trong `kttx.html` để tự động gọi `GET api/user_gemini_keys.php` với credentials session khi khởi tạo ứng dụng.
-   - Tự động nạp danh sách API Key hợp lệ vào State React và lưu cache vào `localStorage ('global_gemini_keys')` để `AIAdapter` hoạt động ngay lập tức mà không cần người dùng phải chọn lại file key thủ công.
-   - Thêm nút / phản hồi trạng thái hiển thị số lượng Gemini API Key đã đồng bộ từ tài khoản.
-3. **Xây dựng Bộ Kiểm thử Tự động (`tests/kttx-smoke.js`)**:
-   - Kiểm tra không còn thẻ `</script>` bên trong các khối script của `kttx.html`.
-   - Kiểm tra mã nguồn Babel/React phân tích cú pháp hợp lệ 100%.
-   - Kiểm tra cơ chế tự động đồng bộ API key từ `api/user_gemini_keys.php`.
-   - Kiểm tra chuỗi HTML xuất Word cho Đề, Ma trận và Bản đặc tả sinh ra chuẩn cú pháp, không chứa mã JavaScript thô.
+     * `exportWord` (dòng 1714)
+     * `exportWordRaw` (dòng 1934)
+   - Đảm bảo thẻ `<meta charset='utf-8'>` hợp lệ và cấu trúc HTML của cả 2 hàm xuất Word chuẩn chỉnh, không chứa thẻ đóng mồ côi.
+2. **Cấp lại & Tự động đồng bộ Gemini API Key theo tài khoản**:
+   - Thêm hàm `syncUserKeysFromServer()` gọi `GET api/user_gemini_keys.php` với session credentials.
+   - Trong `useEffect` khi ứng dụng React mount: tự động gọi `syncUserKeysFromServer()`, chuẩn hóa danh sách key và lưu vào `localStorage ('global_gemini_keys')`.
+   - Cập nhật trạng thái hiển thị: thông báo rõ số lượng Gemini API Key đã nạp từ tài khoản.
+3. **Xây dựng Bộ Kiểm thử Tự động (`tests/matrande-smoke.js`)**:
+   - Kiểm tra `matrande.html` không còn thẻ `</script>` nào nằm bên trong template string của khối Babel script.
+   - Kiểm tra `exportWord` và `exportWordRaw` sinh chuỗi HTML Word chuẩn cú pháp.
+   - Kiểm tra cơ chế tự động đồng bộ API Key từ `api/user_gemini_keys.php`.
 
 ## Ngoài phạm vi
-- Không thay đổi thuật toán sinh đề AI của các dạng câu hỏi MC, TF, TLN, TL.
-- Không thay đổi định dạng cấu trúc ma trận 3 mức độ (Biết - Hiểu - Vận dụng).
+- Không thay đổi thuật toán sinh đề AI ma trận (Biết - Hiểu - Vận dụng).
+- Không can thiệp vào các logic AI Groq hoặc HuggingFace fallback sẵn có.
 
 ## File dự kiến tác động
-- `kttx.html` [XÓA THẺ SCRIPT TRONG TEMPLATE WORD, CHUẨN HÓA HTML WORD EXPORT, THÊM TỰ ĐỘNG ĐỒNG BỘ API KEY TỪ SERVER]
-- `tests/kttx-smoke.js` [TẠO MỚI TEST SUITE KIỂM THỬ XUẤT WORD VÀ ĐỒNG BỘ API KEY CỦA KTTX]
+- `matrande.html` [XÓA SCRIPT TRONG TEMPLATE WORD, BỔ SUNG TỰ ĐỘNG ĐỒNG BỘ GEMINI API KEY TỪ SERVER]
+- `tests/matrande-smoke.js` [TẠO MỚI TEST SUITE KIỂM THỬ XUẤT WORD VÀ ĐỒNG BỘ API KEY CỦA MATRANDE]
 - `docs/handoff/PLAN.md` [GHI ĐÈ KẾ HOẠCH THEO QUY TRÌNH SURVEY]
 - `docs/handoff/.lock` [GHI NỘI DUNG: LOCK]
 - `docs/handoff/IMPLEMENT.md` [Coder cập nhật khi triển khai]
 - `docs/handoff/VERIFY.md` [Tester cập nhật khi nghiệm thu]
 
 ## Các bước thực hiện
-1. **Bước 1: Sửa các hàm xuất Word trong `kttx.html`**:
-   - Xóa bỏ dòng `<script src="js/security-guard.js"></script>` tại dòng 460, dòng 544, dòng 884.
-   - Sửa dòng 468: Xóa thẻ `</div>` thừa.
-   - Kiểm tra lại toàn bộ chuỗi template HTML của `exportWord`, `exportMatrixToWord`, `renderSpecHtml`.
-2. **Bước 2: Triển khai tự động đồng bộ API Key theo tài khoản trong `kttx.html`**:
+1. **Bước 1: Sửa các hàm xuất Word trong `matrande.html`**:
+   - Xóa thẻ `<script src="js/security-guard.js"></script>` tại dòng 1714 (`exportWord`) và dòng 1934 (`exportWordRaw`).
+   - Kiểm tra toàn bộ chuỗi template HTML của `exportWord` và `exportWordRaw` đảm bảo không còn thẻ script lồng nhau.
+2. **Bước 2: Triển khai tự động đồng bộ Gemini API Key trong `matrande.html`**:
    - Thêm hàm `syncUserKeysFromServer()` kết nối tới `api/user_gemini_keys.php`.
-   - Trong `useEffect` khi ứng dụng React mount:
-     * Gọi `syncUserKeysFromServer()`.
-     * Cập nhật danh sách `geminiKeys` trong state và cập nhật `hasGemini` thành `true`.
-     * Đồng bộ vào `localStorage.setItem('global_gemini_keys', ...)`.
-   - Cập nhật thông báo thanh công cụ: hiển thị số lượng key đã nhận diện từ tài khoản (ví dụ: `🔑 Đã nạp X Gemini API Keys từ tài khoản`).
-3. **Bước 3: Xây dựng kiểm thử tự động `tests/kttx-smoke.js`**:
-   - Kiểm tra cấu trúc file `kttx.html` không có `</script>` lồng bên trong khối script Babel.
-   - Kiểm tra hàm `exportWord`, `exportMatrixToWord`, `renderSpecHtml` tạo chuỗi HTML sạch, thay thế đúng các biến `${info.dept}`, `${info.school}`, `${info.title}` và các câu hỏi.
-   - Kiểm tra quy trình sync API keys từ server.
+   - Thêm logic nạp key tự động trong `useEffect` khi ứng dụng mount, cập nhật state và lưu cache `localStorage ('global_gemini_keys')`.
+   - Hiển thị trạng thái số lượng API Key đã nạp từ tài khoản trên giao diện.
+3. **Bước 3: Xây dựng kiểm thử tự động `tests/matrande-smoke.js`**:
+   - Kiểm tra cấu trúc `matrande.html` có khối script Babel nguyên vẹn không bị ngắt sớm.
+   - Kiểm tra 2 template Word không chứa thẻ script và khai báo `<meta charset='utf-8'>`.
+   - Kiểm tra hàm `syncUserKeysFromServer` và quy trình nạp key.
 4. **Bước 4: Khóa trạng thái giao việc**:
    - Ghi nội dung `LOCK` vào `docs/handoff/.lock`.
 
 ## Rủi ro
-1. **Rủi ro người dùng chưa đăng nhập hoặc mạng ngoại tuyến khi tải key từ server**:
-   - *Giải pháp*: Hàm `syncUserKeysFromServer` có khối try/catch an toàn và fallback đọc từ `localStorage ('global_gemini_keys')` nếu đã có sẵn từ trước.
+1. **Rủi ro người dùng mất mạng khi tải trang**:
+   - *Giải pháp*: Hàm sync có try/catch an toàn và tự động dùng `readCachedGeminiKeys()` từ `localStorage` nếu không gọi được server.
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động**:
+   - Chạy lệnh: `node tests/matrande-smoke.js`
    - Chạy lệnh: `node tests/kttx-smoke.js`
-   - Chạy lệnh: `node tests/run-all-tests.js`
+   - Chạy lệnh: `node tests/xaydungphuluc-smoke.js`
 2. **Kiểm thử thủ công**:
-   - Mở `kttx.html` trên trình duyệt:
-     * Kiểm tra ứng dụng React tải mượt mà, không bị màn hình trắng hay lỗi cú pháp console.
-     * Kiểm tra API Key: Ứng dụng tự động kết nối và nạp danh sách Gemini API Keys đã đăng ký của tài khoản, không hiện cảnh báo thiếu key.
-     * Tạo một bộ đề kiểm tra (hoặc dùng câu hỏi mẫu) $\to$ Bấm "Xuất đề & Đáp án" (.doc) $\to$ Mở file Word kiểm tra:
-       + Tiêu đề Sở/Trường/Môn/Thời gian hiển thị đúng nội dung chữ (không còn hiện `${info.dept...}`).
-       + Bảng Đúng/Sai, Trắc nghiệm, Đáp án và Lời giải hiển thị đầy đủ, không có đoạn mã JavaScript nào bị rò rỉ.
-     * Thử bấm "Xuất Ma trận" và "Xuất Bản đặc tả" $\to$ Kiểm tra cả 2 file Word đều sạch đẹp.
+   - Mở `matrande.html` trên trình duyệt:
+     * Ứng dụng tải mượt mà, không bị lỗi console cú pháp script.
+     * Tự động nhận diện và hiển thị số lượng Gemini API Key đã đăng ký của tài khoản.
+     * Tạo đề từ ma trận $\to$ Bấm "Xuất file Word" (`De_Thi_Toan_...doc`) và "Xuất Word Raw" $\to$ Mở file Word kiểm tra nội dung đề, bảng đáp án và lời giải hiển thị chuẩn đẹp, hoàn toàn không có mã JavaScript thô.
 
 ## Tiêu chí nghiệm thu
-- [ ] Không còn bất kỳ thẻ `</script>` nào nằm bên trong template string của `kttx.html`.
-- [ ] File Word xuất ra (`KiemTra_...doc`, `MaTran_...doc`, `BanDacTa_...doc`) hiển thị nội dung đề thi, bảng ma trận và bản đặc tả hoàn chỉnh, 100% không còn dính mã nguồn JavaScript thô.
-- [ ] `kttx.html` tự động đồng bộ và cấp Gemini API Key từ tài khoản CSDL (`api/user_gemini_keys.php`) khi vào trang.
-- [ ] 100% kiểm thử tự động `tests/kttx-smoke.js` và toàn bộ test suite chạy đạt PASS.
+- [ ] Không còn thẻ `</script>` nào nằm bên trong template string của `matrande.html`.
+- [ ] File Word xuất ra (`De_Thi_Toan_...doc`, `De_Thi_Toan_..._raw.doc`) hiển thị nội dung đề thi hoàn chỉnh, 100% không còn dính mã nguồn JavaScript thô.
+- [ ] `matrande.html` tự động đồng bộ và nạp Gemini API Key từ tài khoản CSDL (`api/user_gemini_keys.php`) khi vào trang.
+- [ ] 100% kiểm thử tự động `tests/matrande-smoke.js` chạy đạt PASS.

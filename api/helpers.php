@@ -53,7 +53,7 @@ function page_catalog(): array
         'thanhtich' => ['title' => 'Thống kê thành tích', 'url' => 'thanhtich.html'],
         'thoikhoabieu' => ['title' => 'Xếp thời khóa biểu', 'url' => 'thoikhoabieu.html'],
         'phancongtochuyenmon' => ['title' => 'Quản lý tổ chuyên môn', 'url' => 'phancongtochuyenmon.html'],
-        'xaydungphuluc' => ['title' => 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', 'url' => 'xaydungphuluc.html'],
+        'xaydungphuluc' => ['title' => 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', 'url' => 'xaydungphuluc.html'], 'duyetgiaoan' => ['title' => 'Duyệt Giáo Án AI', 'url' => 'duyetgiaoan.html'],
     ];
 }
 
@@ -79,13 +79,13 @@ function teacher_workspace_page_ids(): array
         'thoikhoabieu',
         'phancongtochuyenmon',
         'rutgon',
-        'xaydungphuluc',
+        'xaydungphuluc', 'duyetgiaoan',
     ];
 }
 
 function teacher_default_workspace_extras(): array
 {
-    return ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'xaydungphuluc'];
+    return ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'xaydungphuluc', 'duyetgiaoan'];
 }
 
 function teacher_all_page_ids(): array
@@ -115,7 +115,7 @@ function teacher_feature_keys_for_pages(): array
         'phancongtochuyenmon' => 'phancongtochuyenmon',
         'rutgon' => 'rutgon',
         'thanhtich' => 'thanhtich',
-        'xaydungphuluc' => 'xaydungphuluc',
+        'xaydungphuluc' => 'xaydungphuluc', 'duyetgiaoan' => 'duyetgiaoan',
     ];
 }
 

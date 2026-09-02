@@ -446,6 +446,20 @@
             }
         };
 
+        const normalizeGeminiKeys = (keys) => Array.from(new Set((Array.isArray(keys) ? keys : []).map(key => String(key || '').trim()).filter(Boolean)));
+        const readCachedGeminiKeys = () => { try { return normalizeGeminiKeys(JSON.parse(localStorage.getItem('global_gemini_keys') || '[]')); } catch { return []; } };
+        const syncUserKeysFromServer = async () => {
+            const cached = readCachedGeminiKeys();
+            try {
+                const response = await fetch('api/user_gemini_keys.php', { credentials: 'include', cache: 'no-store' });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể đồng bộ API Key.');
+                const keys = normalizeGeminiKeys(data.keys);
+                if (keys.length) localStorage.setItem('global_gemini_keys', JSON.stringify(keys));
+                return { keys: keys.length ? keys : cached, source: keys.length ? 'account' : 'cache' };
+            } catch (error) { return { keys: cached, source: 'cache', error }; }
+        };
+
         // ==========================================
         // 3. MAIN APP
         // ==========================================
@@ -469,6 +483,8 @@
             const [matrixFile, setMatrixFile] = useState(null);
             const [specFile, setSpecFile] = useState(null);
             const [aiProvider, setAiProvider] = useState("gemini"); // Thêm state cho AI Provider
+            const [keySyncStatus, setKeySyncStatus] = useState('Đang đồng bộ Gemini API Key…');
+            const [geminiKeyCount, setGeminiKeyCount] = useState(() => readCachedGeminiKeys().length);
 
             const [matrixConfig, setMatrixConfig] = useState({
                 useConfig: false,
@@ -485,7 +501,16 @@
                     setAiProvider("groq");
                 }
             }, []);
-            const hasGemini = AIAdapter.getConfig().geminiKeys.length > 0;
+            useEffect(() => {
+                let active = true;
+                syncUserKeysFromServer().then(({ keys, source, error }) => {
+                    if (!active) return;
+                    setGeminiKeyCount(keys.length);
+                    setKeySyncStatus(keys.length ? `🔑 Đã nạp ${keys.length} Gemini API Key ${source === 'account' ? 'từ tài khoản' : 'từ bộ nhớ tạm'}.` : (error ? 'Không thể kết nối tài khoản; chưa có Gemini API Key trong bộ nhớ tạm.' : 'Tài khoản chưa có Gemini API Key.'));
+                });
+                return () => { active = false; };
+            }, []);
+            const hasGemini = geminiKeyCount > 0 || AIAdapter.getConfig().geminiKeys.length > 0;
             const hasGroq = AIAdapter.getConfig().groqKeys.length > 0;
 
             const callPrimaryAI = async (payloadParts) => {
@@ -1711,7 +1736,6 @@ YÊU CẦU:
                           xmlns:w='urn:schemas-microsoft-com:office:word'
                           xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'>
                     <head>
-    <script src="js/security-guard.js"></script>
                         <meta charset='utf-8'><title>De Thi</title>
                         <style>
                             @page {
@@ -1931,7 +1955,6 @@ YÊU CẦU:
                           xmlns:w='urn:schemas-microsoft-com:office:word'
                           xmlns:m='http://schemas.openxmlformats.org/officeDocument/2006/math'>
                     <head>
-    <script src="js/security-guard.js"></script>
                         <meta charset='utf-8'><title>De Thi Raw</title>
                         <style>
                             @page {
@@ -2385,6 +2408,7 @@ YÊU CẦU:
                                     <button onClick={() => setAiProvider('gemini')} className={`px-3 py-1 text-xs font-bold rounded ${aiProvider === 'gemini' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}>Gemini</button>
                                     <button onClick={() => setAiProvider('groq')} className={`px-3 py-1 text-xs font-bold rounded ${aiProvider === 'groq' ? 'bg-orange-100 text-orange-700' : 'text-gray-500 hover:bg-gray-50'}`}>Groq AI</button>
                                 </div>
+                                <span className={`text-xs font-semibold ${geminiKeyCount ? 'text-emerald-700' : 'text-amber-700'}`} title={keySyncStatus}>{keySyncStatus}</span>
                                 <div className="flex items-center gap-2">
                                     <a href="index.html" className="text-indigo-500 hover:text-indigo-700 text-sm font-semibold transition-colors bg-indigo-50 px-3 py-1.5 rounded-full"><i className="fas fa-home mr-1"></i> Dashboard</a>
                                     <button type="button" onClick={openKhoDeModal} className="text-violet-600 hover:text-violet-800 text-sm font-semibold transition-colors bg-violet-50 px-3 py-1.5 rounded-full border border-violet-200"><i className="fas fa-folder-open mr-1"></i> Mở đề từ kho</button>
