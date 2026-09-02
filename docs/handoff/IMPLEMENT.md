@@ -1,30 +1,27 @@
-# IMPLEMENT: Khóa phạm vi chương khi khớp YCCĐ
+# IMPLEMENT: Sửa xuất Word và đồng bộ Gemini API Key cho KTTX
 
 ## Phạm vi đã triển khai
 
-- Mở rộng nhận diện bài luyện tập/ôn tập bao gồm bài tập, bài tập cuối chương, cuối chương, thực hành và hoạt động trải nghiệm.
-- Bổ sung bộ suy luận chương Toán 6 và giới hạn ứng viên YCCĐ theo sáu dải bài học của từng chương.
-- Với bài ôn tập hoặc bài tập cuối chương, sinh YCCĐ tổng hợp đúng mạch chương; riêng Chương I dùng YCCĐ về tập hợp số tự nhiên, phép tính, chia hết, ước và bội.
-- YCCĐ tổng hợp chỉ dùng cho ôn tập hoặc bài tập cuối chương. Với `Luyện tập chung`, hệ thống vẫn khóa trong chương nhưng ưu tiên bài/chủ đề liền trước; ví dụ sau Bài 5 chỉ trả phạm vi phép tính, không lẫn chia hết, ước hoặc bội của các bài sau.
-- Fallback của Phụ lục 1 dùng cùng phân loại trên: chỉ ôn tập/bài tập cuối chương mới nhận tổng hợp Chương I; `Luyện tập chung` sau Bài 4–7 nhận nội dung phép tính khi kết quả AI bị loại.
-- Phụ lục 1 giữ ngữ cảnh của mọi dòng tiêu đề chương và từ chối kết quả YCCĐ lệch mạch; fallback Chương I không thể trả về điểm, đường thẳng, góc hoặc phân số.
-- Bổ sung smoke tests cho tra cứu YCCĐ và bảng Phụ lục 1 của `Bài tập cuối chương I`/`Luyện tập chung`, xác nhận không rò rỉ Hình học hoặc Phân số.
+- Xóa toàn bộ script tag khỏi ba template Word: xuất đề/đáp án, ma trận và bản đặc tả. Các script tải thư viện hợp lệ của trang vẫn được giữ nguyên.
+- Chuẩn hóa ba template với `meta charset='utf-8'`; loại bỏ thẻ `</div>` mồ côi trong template xuất đề.
+- Thêm `syncUserKeysFromServer()` gọi `api/user_gemini_keys.php` cùng session hiện tại; key hợp lệ từ tài khoản được chuẩn hóa và cache vào `global_gemini_keys`.
+- Khi không kết nối được hoặc chưa có key trên máy chủ, ứng dụng an toàn dùng cache localStorage hiện có. React đồng bộ khi mount và hiển thị rõ số Gemini API Key đã nạp cùng nguồn dữ liệu.
+- Thêm `tests/kttx-smoke.js` kiểm tra cấu trúc Babel/template Word và luồng đồng bộ key.
 
 ## File đã sửa
 
-- `js/khbd-yccd.js`
-- `xaydungphuluc.html`
-- `tests/xaydungphuluc-smoke.js`
+- `kttx.html`
+- `tests/kttx-smoke.js`
 - `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/.lock`
 
 ## Kiểm thử đã chạy
 
-- `node tests/xaydungphuluc-smoke.js` — PASS
-- `node tests/xaydungphuluc-integration-smoke.js` — PASS
+- `node tests/kttx-smoke.js` — PASS
+- `node tests/run-all-tests.js` — FAIL ở `tests/khbd-1click-chain-smoke.js`: assertion có sẵn về hướng dẫn Bước 4 sang Tab 2, 3, 4; không thuộc phạm vi KTTX.
 - `git diff --check` — PASS
 
 ## Vấn đề còn lại
 
-- Chưa thực hiện kiểm thử thủ công với PPCT thực tế có biến thể tiêu đề chương.
+- Chưa thực hiện kiểm tra thủ công file `.doc` trong Microsoft Word.
 - Chưa commit hoặc push theo yêu cầu.
