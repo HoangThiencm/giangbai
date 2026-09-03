@@ -85,12 +85,26 @@ class GeminiAPIManager {
     }
   }
 
+  persistGlobalKeys() {
+    try {
+      if (Array.isArray(this.apiKeys) && this.apiKeys.length > 0) {
+        localStorage.setItem('global_gemini_keys', JSON.stringify(this.apiKeys));
+      }
+      if (Array.isArray(this.mistralKeys) && this.mistralKeys.length > 0) {
+        localStorage.setItem('global_mistral_keys', JSON.stringify(this.mistralKeys));
+      }
+    } catch (e) {
+      // Không chặn luồng chính nếu localStorage đầy / bị khóa
+    }
+  }
+
   // Lưu danh sách keys vào localStorage theo tài khoản cá nhân
   saveKeysToLocalStorage() {
     try {
       const storageKey = this.getStorageKey();
       const json = JSON.stringify(this.apiKeys || []);
       localStorage.setItem(storageKey, json);
+      this.persistGlobalKeys();
     } catch (e) {
       console.error("Lỗi lưu keys vào localStorage:", e);
     }
@@ -117,6 +131,7 @@ class GeminiAPIManager {
     try {
       const json = JSON.stringify(this.mistralKeys || []);
       localStorage.setItem(this.getMistralStorageKey(), json);
+      this.persistGlobalKeys();
     } catch (e) {
       console.error("Lỗi lưu Mistral keys vào localStorage:", e);
     }
@@ -171,8 +186,17 @@ class GeminiAPIManager {
       this.saveMistralKeysToLocalStorage();
       body.mistral_keys = this.mistralKeys;
     }
+    const localResult = {
+      ok: true,
+      offline: true,
+      saved_to_db: false,
+      keys: this.apiKeys,
+      mistral_keys: this.mistralKeys,
+      count: this.apiKeys.length,
+      mistral_count: this.mistralKeys.length
+    };
     if (!Object.keys(body).length) {
-      return { ok: true, keys: this.apiKeys, mistral_keys: this.mistralKeys, count: this.apiKeys.length, mistral_count: this.mistralKeys.length };
+      return localResult;
     }
 
     try {
@@ -185,12 +209,15 @@ class GeminiAPIManager {
       if (res && res.ok) {
         const data = await res.json().catch(() => ({}));
         if (data.ok) this.applyServerKeyPayload(data);
-        return data;
+        return Object.assign({ saved_to_db: true, offline: false, not_logged_in: false }, data);
+      }
+      if (res && res.status === 401) {
+        return Object.assign({}, localResult, { not_logged_in: true });
       }
     } catch {
       // Lưu offline/local an toàn
     }
-    return { ok: true, keys: this.apiKeys, mistral_keys: this.mistralKeys, count: this.apiKeys.length, mistral_count: this.mistralKeys.length };
+    return localResult;
   }
 
   // Lưu danh sách Gemini keys lên máy chủ CSDL và localStorage

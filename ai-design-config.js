@@ -128,7 +128,7 @@
                 const cfg = await res.json();
                 // Admin là nguồn cấu hình chung. Đồng bộ ở đây để khi mở thẳng
                 // một công cụ, giáo viên không cần ghé qua trang chủ trước.
-                if (Array.isArray(cfg.gemini_keys)) {
+                if (Array.isArray(cfg.gemini_keys) && cfg.gemini_keys.filter(Boolean).length > 0) {
                     localStorage.setItem(LS.gemini, JSON.stringify(cfg.gemini_keys.filter(Boolean)));
                 }
                 if (cfg.gemini_model) localStorage.setItem(LS.geminiModel, String(cfg.gemini_model));
@@ -136,7 +136,7 @@
                     localStorage.setItem(LS.groq, JSON.stringify(cfg.groq_keys.filter(Boolean)));
                 }
                 if (cfg.groq_model) localStorage.setItem(LS.groqModel, String(cfg.groq_model));
-                if (Array.isArray(cfg.mistral_keys)) {
+                if (Array.isArray(cfg.mistral_keys) && cfg.mistral_keys.filter(Boolean).length > 0) {
                     localStorage.setItem(LS.mistral, JSON.stringify(cfg.mistral_keys.filter(Boolean)));
                 }
                 if (cfg.mistral_ocr_model) localStorage.setItem(LS.mistralModel, String(cfg.mistral_ocr_model));

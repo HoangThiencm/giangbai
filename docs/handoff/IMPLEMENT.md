@@ -1,33 +1,62 @@
-# IMPLEMENT: Pipeline 3 chặng bóc tách Ma trận – Đặc tả dài (duyetde)
+# IMPLEMENT: Khắc Phục & Đồng Bộ API Keys Người Dùng Từ CSDL Cho Toàn Bộ Hệ Thống
 
-## Đã làm
+**Ngày implement**: 2026-09-03
+**Coder**: Grok (xAI)
+**Trạng thái**: DONE — 5 smoke tests PLAN yêu cầu đều PASS
 
-1. **Chặng 1 — Structural Indexing** (`api/duyetde_ai.php` `action=extract_matrix_index`):
-   - Chỉ gửi PDF/văn bản ma trận và bảng đặc tả (Gemini Multimodal). Không gửi đề thi.
-   - Chuẩn hóa `SpecificationMatrixIndex`: `tong_quan` (tỉ lệ 40-30-20-10, tổng điểm, thời gian) + `danh_sach_chi_tieu` (`id` SPEC_xx, `cac_y_con` cho Đúng/Sai, `yeu_cau_ngu_lieu`, `vi_tri_du_kien` có thể trống khi ma trận chỉ ghi số lượng).
-2. **Chặng 2 — Human-in-the-loop + Slot Matching & Batching**:
-   - `duyetde.html`: sau khi nạp ma trận/đặc tả tự bóc tách, hiện "Đã nhận diện X chỉ tiêu | Tỉ lệ: 40-30-20-10 | Tổng điểm: 10.0". Nút rà soát khóa đến khi giáo viên xác nhận chỉ mục.
-   - `evaluate_exam` bắt buộc nhận JSON chỉ mục, đối chiếu theo từng Phần I / II / III / Tự luận. Không đính kèm 8–9 trang PDF ma trận cùng đề thi.
-3. **Chặng 3 — Recheck 1 SPEC**:
-   - `recheck_question` chỉ nhận đúng 1 object chỉ tiêu (`spec` / `spec_id`). Không đọc lại PDF ma trận.
-4. **Bổ sung thực chiến**: cảnh báo thời lượng và lệch tỉ lệ/điểm; giữ mô tả hình vẽ; xuất biên bản có chỗ ký GV – Tổ trưởng – BGH; xuất hướng dẫn chấm chính thức `.docx`.
-5. Nâng hạn PDF (tới ~8MB file / 12MB base64) để nhận ma trận 6–10 trang.
+## Tóm tắt thay đổi
 
-## File đã sửa
+VERIFY.md trước đó ghi FAIL vì `IMPLEMENT.md` cũ mô tả sửa source nhưng working copy chưa đổi. Lần này đã sửa đúng các file trong `PLAN.md`.
 
-- `api/duyetde_ai.php`
-- `duyetde.html`
-- `docs/handoff/IMPLEMENT.md`
-- `docs/handoff/.lock` (LOCK)
+### Bước 1: Backend API keys (`api/user_gemini_keys.php`)
+- `session_start()` bọc `if (session_status() === PHP_SESSION_NONE)`.
+- `public_ai_keys_payload()` trả `'keys'` và `'mistral_keys'` plain, song song `masked_keys` / `masked_mistral_keys`.
+- POST nhận alias `gemini_keys` bên cạnh `keys` / `api_keys`.
+- POST khôi phục key thật khi client gửi lại masked key trùng `mask_user_api_key` trong DB.
+- DELETE trả `'keys' => []` và `'mistral_keys' => []`.
 
-## Không đụng
+### Bước 2: Phổ biến key người dùng tới client
+- `access-control.js` (`refreshSessionPages`): khi `api/me.php` có `user.gemini_keys` / `user.mistral_keys` thì ghi cả `khbd_user_*` và `global_gemini_keys` / `global_mistral_keys`.
+- `login.html`: cả 2 luồng (phiên còn hạn + form đăng nhập) ghi `global_gemini_keys` và `global_mistral_keys` khi mảng key không rỗng.
+- `ai-design-config.js` (`loadHostingFallbackConfig`): chỉ ghi `global_gemini_keys` / `global_mistral_keys` khi `filter(Boolean).length > 0`.
+- `index.html` (`applyGlobalConfig`): cùng điều kiện, không ghi đè mảng rỗng lên key cá nhân.
 
-- `matrande.html`, `soankhbd.html`, `duyetgiaoan.html`, `thitructuyen.html`
-- `docs/handoff/PLAN.md`
-- Không commit
+### Bước 3: Backend AI runtime
+- `api/ai_runtime_config.php`: khi có `$_SESSION['user_id']`, đọc `gemini_keys` từ bảng `users`, giải mã bằng `parse_stored_api_keys`, ưu tiên hơn key admin. Tự `session_start` nếu chưa có session; tự mở PDO nếu `$GLOBALS['pdo']` chưa có.
+- `api/hf_fallback.php` (`hf_load_gemini_keys`): cùng thứ tự ưu tiên. Có `hf_parse_user_stored_keys` để `exam_ai.php` (chỉ nạp `bootstrap.php`, không nạp `helpers.php`) vẫn giải mã được key đã mã hóa AES-256-CBC — không đổi thuật toán mã hóa.
 
-## Kiểm thử
+### Bước 4: Modal lưu key
+- `js/khbd-gemini.js`: `persistGlobalKeys()` ghi `global_gemini_keys` / `global_mistral_keys` khi sync/save; `saveUserAiKeysToServer` trả `saved_to_db` / `offline` / `not_logged_in` (401).
+- `js/khbd-app.js`: nút lưu chỉ gửi `mistral_keys` khi textarea Mistral có nội dung (không xóa nhầm Mistral khi chỉ sửa Gemini). Toast phân biệt lưu CSDL vs lưu trên máy + "Đăng nhập để lưu lên CSDL".
 
-- Không có PHP CLI trên máy này.
-- Không verify trên trình duyệt (không có browser tools / PHP server trong phiên này).
-- Rà soát tĩnh: `extract_matrix_index` không nhận đề thi; `evaluate_exam` không gọi `duyetde_file_parts(..., 'matrix'|'spec')`; `recheck_question` không đính PDF ma trận.
+### Bước 5: Kiểm thử
+- `tests/khbd-user-ai-keys-smoke.js`: bổ sung assert `keys`/`mistral_keys` plain, alias, masked restore, safe session, đồng bộ `global_*` trên access-control/login, chống ghi đè rỗng, runtime/hf nạp key user, toast/offline, không gửi Mistral rỗng.
+
+## Files đã sửa
+
+| File | Thay đổi |
+|------|----------|
+| `api/user_gemini_keys.php` | Safe session, trả plain keys, alias `gemini_keys`, resolve masked key |
+| `access-control.js` | Đồng bộ `global_gemini_keys` & `global_mistral_keys` |
+| `login.html` | 2 luồng login ghi global keys |
+| `ai-design-config.js` | Không ghi đè mảng rỗng |
+| `index.html` | Không ghi đè mảng rỗng |
+| `api/ai_runtime_config.php` | Nạp key user từ CSDL theo session |
+| `api/hf_fallback.php` | Nạp key user từ CSDL theo session; parse khi thiếu helpers |
+| `js/khbd-app.js` | Bảo lưu Mistral khi chỉ sửa Gemini; toast CSDL vs offline |
+| `js/khbd-gemini.js` | Đồng bộ global keys; phân biệt lưu CSDL vs offline |
+| `tests/khbd-user-ai-keys-smoke.js` | Kiểm tra đồng bộ toàn diện |
+
+Không đụng file ngoài danh sách PLAN. Không đổi AES-256-CBC. Không đổi logic nghiệp vụ AI từng công cụ.
+
+## Kết quả kiểm thử
+
+```
+khbd user AI keys smoke: passed
+matrande smoke: Word templates and account Gemini key synchronization passed
+kttx smoke: Word templates and account Gemini key synchronization passed
+PASS xaydungphuluc smoke: PPCT 7-column form, independent table ingest, no admin-header leak, density ranges and auto-hiding progress UI are present.
+duyetgiaoan smoke: passed
+```
+
+Không chạy được kiểm thử trình duyệt end-to-end (không có browser tool trong phiên này). Các tiêu chí đăng nhập thật / mở từng trang công cụ để xác nhận ô key không rỗng thuộc bước `/verify`.

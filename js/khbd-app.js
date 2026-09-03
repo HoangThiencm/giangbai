@@ -6522,24 +6522,41 @@ function setupApiKeyModal() {
   });
 
   bindKeyFileInput("fileInputApiKeyTxt", "textareaApiKeys", async (keys) => {
-    await geminiAPI.saveKeysToServer(keys);
+    const result = await geminiAPI.saveKeysToServer(keys);
     updateKeyCountDisplay();
-    showToast(`Đã nạp và lưu ${keys.length} Gemini key lên CSDL!`, "success");
+    if (result && result.saved_to_db) {
+      showToast(`Đã nạp và lưu ${keys.length} Gemini key lên CSDL!`, "success");
+    } else {
+      showToast(`Đã nạp ${keys.length} Gemini key trên máy. Đăng nhập để lưu lên CSDL.`, "warning");
+    }
   });
   bindKeyFileInput("fileInputMistralKeyTxt", "textareaMistralKeys", async (keys) => {
-    await geminiAPI.saveMistralKeysToServer(keys);
+    const result = await geminiAPI.saveMistralKeysToServer(keys);
     updateKeyCountDisplay();
-    showToast(`Đã nạp và lưu ${keys.length} Mistral key lên CSDL!`, "success");
+    if (result && result.saved_to_db) {
+      showToast(`Đã nạp và lưu ${keys.length} Mistral key lên CSDL!`, "success");
+    } else {
+      showToast(`Đã nạp ${keys.length} Mistral key trên máy. Đăng nhập để lưu lên CSDL.`, "warning");
+    }
   });
 
   document.getElementById("btnSaveApiKeys").addEventListener("click", async () => {
     const geminiLines = parseKeysFromTextarea(document.getElementById("textareaApiKeys").value);
     const mistralArea = document.getElementById("textareaMistralKeys");
+    const mistralRaw = mistralArea ? String(mistralArea.value || "").trim() : "";
     const mistralLines = parseKeysFromTextarea(mistralArea ? mistralArea.value : "");
-    await geminiAPI.saveUserAiKeysToServer({ keys: geminiLines, mistral_keys: mistralLines });
+    const payload = { keys: geminiLines };
+    if (mistralRaw !== "") {
+      payload.mistral_keys = mistralLines;
+    }
+    const result = await geminiAPI.saveUserAiKeysToServer(payload);
     updateKeyCountDisplay();
     closeModal("modalApiKeys");
-    showToast(`Đã lưu lên CSDL: Gemini ${geminiAPI.apiKeys.length} key, Mistral ${(geminiAPI.mistralKeys || []).length} key.`, "success");
+    if (result && result.saved_to_db) {
+      showToast(`Đã lưu lên CSDL: Gemini ${geminiAPI.apiKeys.length} key, Mistral ${(geminiAPI.mistralKeys || []).length} key.`, "success");
+    } else {
+      showToast(`Đã lưu trên máy: Gemini ${geminiAPI.apiKeys.length} key, Mistral ${(geminiAPI.mistralKeys || []).length} key. Đăng nhập để lưu lên CSDL.`, "warning");
+    }
   });
 
   document.getElementById("btnTestApiKey").addEventListener("click", async () => {

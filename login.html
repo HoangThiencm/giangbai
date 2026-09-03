@@ -247,6 +247,12 @@
                 const accountKey = String(data.user.username || data.user.email || 'default').trim().toLowerCase();
                 localStorage.setItem('khbd_user_gemini_keys_' + accountKey, JSON.stringify(Array.isArray(data.user.gemini_keys) ? data.user.gemini_keys : []));
                 localStorage.setItem('khbd_user_mistral_keys_' + accountKey, JSON.stringify(Array.isArray(data.user.mistral_keys) ? data.user.mistral_keys : []));
+                if (Array.isArray(data.user.gemini_keys) && data.user.gemini_keys.length > 0) {
+                    localStorage.setItem('global_gemini_keys', JSON.stringify(data.user.gemini_keys));
+                }
+                if (Array.isArray(data.user.mistral_keys) && data.user.mistral_keys.length > 0) {
+                    localStorage.setItem('global_mistral_keys', JSON.stringify(data.user.mistral_keys));
+                }
                 sessionStorage.setItem('lotrinh_force_notification_popup', '1');
                 window.location.href = landingPageFor(data.user);
             } catch {
@@ -344,6 +350,12 @@
                 const accountKey = String(data.user.username || data.user.email || 'default').trim().toLowerCase();
                 localStorage.setItem('khbd_user_gemini_keys_' + accountKey, JSON.stringify(Array.isArray(data.user.gemini_keys) ? data.user.gemini_keys : []));
                 localStorage.setItem('khbd_user_mistral_keys_' + accountKey, JSON.stringify(Array.isArray(data.user.mistral_keys) ? data.user.mistral_keys : []));
+                if (Array.isArray(data.user.gemini_keys) && data.user.gemini_keys.length > 0) {
+                    localStorage.setItem('global_gemini_keys', JSON.stringify(data.user.gemini_keys));
+                }
+                if (Array.isArray(data.user.mistral_keys) && data.user.mistral_keys.length > 0) {
+                    localStorage.setItem('global_mistral_keys', JSON.stringify(data.user.mistral_keys));
+                }
                 sessionStorage.setItem('lotrinh_force_notification_popup', '1');
 
                 window.location.href = landingPageFor(data.user);

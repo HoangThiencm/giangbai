@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/helpers.php';
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 if (empty($_SESSION['user_id'])) {
     respond(['error' => 'Chưa đăng nhập.'], 401);
@@ -79,9 +79,11 @@ function public_ai_keys_payload(PDO $pdo, int $userId): array
     return [
         'ok' => true,
         'count' => count($gemini['keys']),
+        'keys' => $gemini['keys'],
         'masked_keys' => array_values(array_filter(array_map('mask_user_api_key', $gemini['keys']))),
         'updated_at' => $gemini['updated_at'],
         'mistral_count' => count($mistral['keys']),
+        'mistral_keys' => $mistral['keys'],
         'masked_mistral_keys' => array_values(array_filter(array_map('mask_user_api_key', $mistral['keys']))),
         'mistral_updated_at' => $mistral['updated_at'],
     ];
@@ -145,7 +147,7 @@ if ($method === 'POST' && $action === 'test') {
 }
 
 if ($method === 'POST') {
-    $hasGemini = array_key_exists('keys', $body) || array_key_exists('api_keys', $body);
+    $hasGemini = array_key_exists('keys', $body) || array_key_exists('api_keys', $body) || array_key_exists('gemini_keys', $body);
     $hasMistral = array_key_exists('mistral_keys', $body);
 
     if (!$hasGemini && !$hasMistral) {
@@ -153,18 +155,50 @@ if ($method === 'POST') {
     }
 
     if ($hasGemini) {
-        $incoming = filter_posted_api_keys(collect_api_keys_from_input($body['keys'] ?? $body['api_keys'] ?? null));
+        $rawInput = $body['keys'] ?? $body['api_keys'] ?? $body['gemini_keys'] ?? null;
+        $collected = collect_api_keys_from_input($rawInput);
+        // Resolve masked keys: if a submitted key looks masked, restore the real key from DB
+        $existingKeys = parse_stored_api_keys(read_user_key_column_raw($pdo, $userId, 'gemini_keys'));
+        $resolved = [];
+        foreach ($collected as $k) {
+            $trimmed = trim((string)$k);
+            if (looks_like_masked_api_key($trimmed)) {
+                foreach ($existingKeys as $realKey) {
+                    if (mask_user_api_key($realKey) === $trimmed) {
+                        $resolved[] = $realKey;
+                        break;
+                    }
+                }
+                continue;
+            }
+            $resolved[] = $trimmed;
+        }
+        $incoming = filter_posted_api_keys($resolved);
         if ($action === 'add') {
-            $existing = parse_stored_api_keys(read_user_key_column_raw($pdo, $userId, 'gemini_keys'));
-            $incoming = array_values(array_unique(array_merge($existing, $incoming)));
+            $incoming = array_values(array_unique(array_merge($existingKeys, $incoming)));
         }
         save_user_key_column($pdo, $userId, 'gemini_keys', $incoming);
     }
     if ($hasMistral) {
-        $incoming = filter_posted_api_keys(collect_api_keys_from_input($body['mistral_keys'] ?? null));
+        $rawMistral = collect_api_keys_from_input($body['mistral_keys'] ?? null);
+        $existingMistral = parse_stored_api_keys(read_user_key_column_raw($pdo, $userId, 'mistral_keys'));
+        $resolvedMistral = [];
+        foreach ($rawMistral as $k) {
+            $trimmed = trim((string)$k);
+            if (looks_like_masked_api_key($trimmed)) {
+                foreach ($existingMistral as $realKey) {
+                    if (mask_user_api_key($realKey) === $trimmed) {
+                        $resolvedMistral[] = $realKey;
+                        break;
+                    }
+                }
+                continue;
+            }
+            $resolvedMistral[] = $trimmed;
+        }
+        $incoming = filter_posted_api_keys($resolvedMistral);
         if ($action === 'add') {
-            $existing = parse_stored_api_keys(read_user_key_column_raw($pdo, $userId, 'mistral_keys'));
-            $incoming = array_values(array_unique(array_merge($existing, $incoming)));
+            $incoming = array_values(array_unique(array_merge($existingMistral, $incoming)));
         }
         save_user_key_column($pdo, $userId, 'mistral_keys', $incoming);
     }
@@ -179,9 +213,11 @@ if ($method === 'DELETE') {
     respond([
         'ok' => true,
         'count' => 0,
+        'keys' => [],
         'masked_keys' => [],
         'updated_at' => null,
         'mistral_count' => 0,
+        'mistral_keys' => [],
         'masked_mistral_keys' => [],
         'mistral_updated_at' => null,
     ]);

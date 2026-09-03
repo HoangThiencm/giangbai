@@ -93,6 +93,57 @@ function load_ai_runtime_config(): array
         }
     }
 
+    // Nạp key cá nhân của user từ CSDL (ưu tiên hơn key admin)
+    try {
+        $configFile = __DIR__ . '/config.php';
+        if (is_file($configFile)) {
+            require_once $configFile;
+        }
+        if (defined('APP_SESSION_NAME') && session_status() === PHP_SESSION_NONE) {
+            session_name(APP_SESSION_NAME);
+        }
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (!empty($_SESSION['user_id'])) {
+            $pdo = $GLOBALS['pdo'] ?? null;
+            if (!$pdo instanceof PDO && defined('DB_HOST')) {
+                try {
+                    $pdo = new PDO(
+                        'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+                        DB_USER,
+                        DB_PASS,
+                        [
+                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                            PDO::ATTR_EMULATE_PREPARES => false,
+                        ]
+                    );
+                    $GLOBALS['pdo'] = $pdo;
+                } catch (Throwable $e) {
+                    $pdo = null;
+                }
+            }
+            if ($pdo instanceof PDO) {
+                $userStmt = $pdo->prepare('SELECT gemini_keys FROM users WHERE id = ? LIMIT 1');
+                $userStmt->execute([(int)$_SESSION['user_id']]);
+                $userRow = $userStmt->fetch();
+                if ($userRow && !empty($userRow['gemini_keys'])) {
+                    if (function_exists('parse_stored_api_keys')) {
+                        $userKeys = parse_stored_api_keys($userRow['gemini_keys']);
+                    } else {
+                        $userKeys = normalize_api_keys($userRow['gemini_keys']);
+                    }
+                    if (!empty($userKeys)) {
+                        $config['gemini_keys'] = $userKeys;
+                    }
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        // Không để lỗi nạp key user ảnh hưởng đến luồng chính
+    }
+
     return $config;
 }
 

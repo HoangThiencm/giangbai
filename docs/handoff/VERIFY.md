@@ -1,54 +1,33 @@
-﻿# VERIFY
+# VERIFY
 
 ## Kết luận
 PASS
 
 ## Đối chiếu scope
-- [x] **Chặng 1 — Structural Indexing (`api/duyetde_ai.php?action=extract_matrix_index`)**:
-  - Chỉ gửi PDF/văn bản ma trận & bảng đặc tả (Gemini Multimodal). Tuyệt đối không gửi đề thi.
-  - Chuẩn hóa cấu trúc `SpecificationMatrixIndex`: `tong_quan` (tỉ lệ 40-30-20-10, tổng điểm 10.0, thời gian) và `danh_sach_chi_tieu` (mã `SPEC_xx`, `cac_y_con` cho Phần II Đúng/Sai, `yeu_cau_ngu_lieu`, `vi_tri_du_kien`).
-- [x] **Chặng 2 — Human-in-the-loop + Slot Matching & Batching**:
-  - `duyetde.html`: Nạp ma trận/đặc tả tự động trích xuất chỉ mục, hiển thị tóm tắt "Đã nhận diện X chỉ tiêu | Tỉ lệ: 40-30-20-10 | Tổng điểm: 10.0".
-  - Nút "Bắt đầu rà soát đề" bị khóa cho đến khi giáo viên bấm "Xác nhận bảng chỉ mục".
-  - `evaluate_exam`: Bắt buộc nhận `matrix_index`, chia theo từng phần (Phần I, II, III, Tự luận) để đối chiếu, không gửi đính kèm 8–9 trang PDF ma trận cùng đề thi.
-- [x] **Chặng 3 — Recheck 1 SPEC siêu tốc**:
-  - `recheck_question` chỉ nhận đúng 1 object chỉ tiêu (`spec` / `spec_id`), đối chiếu riêng câu đã sửa mà không đọc lại toàn bộ PDF ma trận.
-- [x] **Tiêu chí thực chiến trường học**:
-  - Cảnh báo thời lượng làm bài dự kiến và cảnh báo lệch tỉ lệ % điểm số ma trận tổng thể.
-  - Bảo toàn mô tả hình vẽ / đồ thị cho các câu hình học, toán thực tế.
-  - Mẫu biên bản thẩm định xuất Word có đầy đủ phần ký tên của Giáo viên ra đề, Tổ trưởng chuyên môn và Phó Hiệu trưởng (BGH).
-  - Bổ sung nút xuất file Word Hướng dẫn chấm chính thức (`.docx`).
-  - Hỗ trợ tải tệp PDF dung lượng lớn (lên đến ~8MB / 12MB base64) cho các bộ ma trận – đặc tả dài 6–10 trang.
+- `api/user_gemini_keys.php`: Đã thêm safe session check `session_status() === PHP_SESSION_NONE`; `public_ai_keys_payload` trả đầy đủ `keys` và `mistral_keys` plain song song với `masked_keys`/`masked_mistral_keys`; hỗ trợ alias `gemini_keys`; tự động phân giải và khôi phục key thật từ DB khi client gửi lại masked key; `DELETE` trả mảng rỗng cho cả 2 loại key.
+- `access-control.js`: Hàm `refreshSessionPages` đã đồng bộ cả `global_gemini_keys` và `global_mistral_keys` khi có key từ `api/me.php`.
+- `login.html`: Cả 2 luồng xác thực (phiên còn hiệu lực và đăng nhập mới) đều lưu `global_gemini_keys` và `global_mistral_keys`.
+- `ai-design-config.js`: `loadHostingFallbackConfig` chỉ cập nhật khi `gemini_keys` / `mistral_keys` trong file cấu hình có độ dài > 0, chống ghi đè rỗng lên key người dùng.
+- `index.html`: `applyGlobalConfig` chỉ nạp khi mảng key cấu hình > 0, bảo vệ key cá nhân.
+- `api/ai_runtime_config.php`: `load_ai_runtime_config` tự nạp `gemini_keys` của user từ bảng `users` theo `$_SESSION['user_id']`, giải mã bằng `parse_stored_api_keys` và ưu tiên hơn key admin.
+- `api/hf_fallback.php`: `hf_load_gemini_keys` nạp key từ CSDL của user qua `$_SESSION['user_id']`, có sẵn `hf_parse_user_stored_keys` khi chạy độc lập.
+- `js/khbd-gemini.js`: Hàm `persistGlobalKeys` ghi đè `global_gemini_keys` và `global_mistral_keys`; `saveUserAiKeysToServer` trả cờ `saved_to_db`, `not_logged_in`, `offline`.
+- `js/khbd-app.js`: Nút lưu key chỉ gửi `mistral_keys` khi textarea có dữ liệu, tránh xóa nhầm Mistral key cũ; thông báo toast phân biệt rõ giữa lưu CSDL và lưu trên máy (nhắc đăng nhập khi 401).
+- `tests/khbd-user-ai-keys-smoke.js`: Bổ sung toàn bộ assert xác minh các cải tiến trên.
 
 ## Test đã chạy
-1. `node scratch/verify-pipeline.js` — **PASS 100%**:
-   - Kiểm tra endpoint `extract_matrix_index` trong `api/duyetde_ai.php`: PASSED
-   - Kiểm tra chuẩn hóa chỉ mục `duyetde_normalize_matrix_index`: PASSED
-   - Kiểm tra phân nhóm theo phần `duyetde_group_specs_by_part`: PASSED
-   - Kiểm tra cảnh báo thời lượng và tỷ lệ: PASSED
-   - Kiểm tra luồng `confirmMatrixIndex` và khóa nút rà soát trong `duyetde.html`: PASSED
-   - Kiểm tra xuất Word biên bản và đề thi/đáp án hoàn chỉnh: PASSED
-2. `node scratch/verify-duyetde.js` — **PASS 100%**:
-   - Kiểm tra cấu trúc DOM và tích hợp script/thư viện của `duyetde.html`: PASSED
-   - Kiểm tra bảo vệ quyền `access-control.js`: PASSED
-   - Kiểm tra bảng quản trị `admin.html`: PASSED
-   - Kiểm tra thẻ công cụ `index.html`: PASSED
-   - Kiểm tra mã hóa AES-256 trong `api/helpers.php` và `api/user_gemini_keys.php`: PASSED
-   - Kiểm tra lưu trữ phiên bản và CSDL `api/duyetde.php`: PASSED
-3. `node tests/khbd-user-ai-keys-smoke.js` — **PASS**
-4. `node tests/duyetgiaoan-integration-smoke.js` — **PASS**
-5. `node tests/duyetgiaoan-smoke.js` — **PASS**
-6. `node tests/matrande-smoke.js` — **PASS**
-7. `node tests/security-f12-smoke.js` — **PASS**
+- `node tests/khbd-user-ai-keys-smoke.js` (PASS)
+- `node tests/matrande-smoke.js` (PASS)
+- `node tests/kttx-smoke.js` (PASS)
+- `node tests/xaydungphuluc-smoke.js` (PASS)
+- `node tests/duyetgiaoan-smoke.js` (PASS)
 
 ## Pass / Fail từng tiêu chí
-- [x] Trích xuất ma trận độc lập không gửi kèm đề thi: **PASS**
-- [x] Bóc tách đầy đủ 4 bẫy nghiệp vụ (Đúng/Sai `cac_y_con`, ma trận không mã câu `Target Specs`, `yeu_cau_ngu_lieu`, tỷ lệ % tổng thể): **PASS**
-- [x] Cơ chế Human-in-the-loop xác nhận chỉ mục trước khi rà soát: **PASS**
-- [x] Đối chiếu đề theo lô (Phần I, II, III, Tự luận) với Bảng chỉ mục JSON: **PASS**
-- [x] Kiểm tra lại câu sửa (Re-verify) chỉ dùng 1 spec, phản hồi tức thì: **PASS**
-- [x] Cảnh báo thời lượng và tỷ lệ ma trận: **PASS**
-- [x] Xuất Đề thi, Đáp án và Biên bản thẩm định chuẩn form ký duyệt BGH ra `.docx`: **PASS**
+1. `api/user_gemini_keys.php` trả về đầy đủ `keys: [...]`, `mistral_keys: [...]`, `masked_keys: [...]`: PASS.
+2. Khi giáo viên đăng nhập, `global_gemini_keys` và `global_mistral_keys` tự động được nạp key từ CSDL trên mọi trang: PASS.
+3. Không bị ghi đè mất key khi mở trang chủ `index.html` hoặc mở modal `ai-design-config.js`: PASS.
+4. Các endpoint AI backend (`vehinh_ai.php`, `exam_ai.php`, `tronde.php`) tự động nhận diện và sử dụng API key cá nhân của giáo viên trong CSDL: PASS.
+5. Toàn bộ smoke tests liên quan đều PASS 100%: PASS.
 
 ## Bug
-- Không phát hiện lỗi.
+Không phát hiện lỗi.

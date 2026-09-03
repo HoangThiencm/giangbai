@@ -132,10 +132,95 @@ function hf_normalize_api_keys($value): array
     return array_values(array_unique(array_filter(array_map('trim', $value))));
 }
 
+function hf_parse_user_stored_keys($raw): array
+{
+    if (function_exists('parse_stored_api_keys')) {
+        return parse_stored_api_keys($raw);
+    }
+    if (is_string($raw) && trim($raw) !== '') {
+        $decoded = json_decode($raw, true);
+        $raw = is_array($decoded) ? $decoded : (preg_split('/[\r\n,;]+/', $raw) ?: []);
+    }
+    if (is_array($raw) && isset($raw['keys']) && is_array($raw['keys'])) {
+        $raw = $raw['keys'];
+    }
+    if (!is_array($raw)) return [];
+    $secret = '';
+    if (defined('API_KEY_ENCRYPTION_SECRET') && is_string(API_KEY_ENCRYPTION_SECRET) && API_KEY_ENCRYPTION_SECRET !== '') {
+        $secret = API_KEY_ENCRYPTION_SECRET;
+    } elseif (defined('ADMIN_KEY') && is_string(ADMIN_KEY) && ADMIN_KEY !== '') {
+        $secret = ADMIN_KEY . '|giangbai-user-api-keys';
+    } else {
+        $secret = 'giangbai-user-api-keys-fallback';
+    }
+    $keyMaterial = hash('sha256', $secret, true);
+    $out = [];
+    foreach ($raw as $item) {
+        if (is_array($item) || is_object($item)) continue;
+        $value = trim((string)$item);
+        if ($value === '') continue;
+        if (strncmp($value, 'enc:v1:', 7) === 0) {
+            $blob = base64_decode(substr($value, 7), true);
+            if (!is_string($blob) || strlen($blob) < 17) continue;
+            $plain = openssl_decrypt(substr($blob, 16), 'AES-256-CBC', $keyMaterial, OPENSSL_RAW_DATA, substr($blob, 0, 16));
+            $value = is_string($plain) ? trim($plain) : '';
+        }
+        if (strlen($value) > 10 && !in_array($value, $out, true)) {
+            $out[] = $value;
+        }
+    }
+    return $out;
+}
+
 function hf_load_gemini_keys(?array $requestKeys = null): array
 {
     $keys = hf_normalize_api_keys($requestKeys);
     if (!empty($keys)) return $keys;
+
+    // Nạp key cá nhân của user từ CSDL (ưu tiên hơn key admin/config)
+    try {
+        $configPath = __DIR__ . '/config.php';
+        if (is_file($configPath)) {
+            require_once $configPath;
+        }
+        if (defined('APP_SESSION_NAME') && session_status() === PHP_SESSION_NONE) {
+            session_name(APP_SESSION_NAME);
+        }
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (!empty($_SESSION['user_id'])) {
+            $pdo = $GLOBALS['pdo'] ?? null;
+            if (!$pdo instanceof PDO && defined('DB_HOST')) {
+                try {
+                    $pdo = new PDO(
+                        'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+                        DB_USER,
+                        DB_PASS,
+                        [
+                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                            PDO::ATTR_EMULATE_PREPARES => false,
+                        ]
+                    );
+                    $GLOBALS['pdo'] = $pdo;
+                } catch (Throwable $e) {
+                    $pdo = null;
+                }
+            }
+            if ($pdo instanceof PDO) {
+                $userStmt = $pdo->prepare('SELECT gemini_keys FROM users WHERE id = ? LIMIT 1');
+                $userStmt->execute([(int)$_SESSION['user_id']]);
+                $userRow = $userStmt->fetch();
+                if ($userRow && !empty($userRow['gemini_keys'])) {
+                    $userKeys = hf_parse_user_stored_keys($userRow['gemini_keys']);
+                    if (!empty($userKeys)) return $userKeys;
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        // fallthrough to admin keys
+    }
 
     if (defined('GEMINI_API_KEYS')) {
         $keys = hf_normalize_api_keys(GEMINI_API_KEYS);
