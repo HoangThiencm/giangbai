@@ -23,6 +23,8 @@ assert.match(app, /function sanitizeSvg\(/);
 assert.match(app, /function svgToPngDataUrl\(/);
 assert.match(app, /function generateSvgDrawing\(/);
 assert.match(app, /function generateLessonIllustrations\(/);
+assert.match(app, /setTimeout\(\s*\(\)\s*=>\s*hideProgress\(\),\s*800\s*\)/);
+assert.match(app, /btnGenerateIllustrationsAct[\s\S]*finally\s*\{[\s\S]*hideProgress\(\)/);
 assert.match(app, /function generateSingleIllustration\(/);
 assert.match(app, /function zoomIllustration\(/);
 assert.match(app, /function downloadIllustration\(/);

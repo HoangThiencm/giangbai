@@ -7,6 +7,11 @@
  * Khung Năng lực Đặc thù, Khung Năng lực AI (QĐ 2422/QĐ-BGDĐT) và Khung Năng lực Số (TT 02/2025/TT-BGDĐT).
  */
 
+function isEnglishSubject(subjectId) {
+  const sid = String(subjectId || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
+  return sid === 'tienganh' || sid === 'english' || sid === 'tienganhthcs' || sid.includes('english');
+}
+
 /**
  * Lấy danh sách Năng lực chung phù hợp nhất theo đặc thù môn học (CT GDPT 2018).
  * @param {string} subjectId - Mã môn học (toan, nguvan, khtn, vatly, hoahoc, sinhhoc, lichsudialy, gdcd, tinhoc, congnghe, tienganh, amnhac, mithuat, gdtc, hdtn-hn...)
@@ -298,6 +303,43 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 ${LATEX_SPACING_BAN}`,
 
   OUTPUT_REPAIR: `Hãy viết lại nội dung sau thành đúng Markdown của mục Kế hoạch bài dạy chuẩn CV 5512. Bắt đầu ngay bằng tiêu đề/mục chuyên môn; chỉ giữ lại nội dung giáo án. Xóa toàn bộ lời chào, khen ngợi, giới thiệu, meta commentary, lời chúc ở cuối và mọi code fence. Không thêm lời dẫn mới. Danh sách nội dung chỉ dùng "-", "+", ".". Không đổi tiêu đề mục khung như "I.", "## 1.", "a)", "Bước", "Bài".`,
+
+  ENGLISH_ELT_DIRECTIVE: `ENGLISH-MEDIUM ELT LESSON PLAN OVERRIDE (subject = Tiếng Anh / English):
+This is an English language lesson, NOT a CLIL insert in another subject. IGNORE any instruction above that requires Vietnamese prose, Vietnamese section titles (MỤC TIÊU, THIẾT BỊ, HOẠT ĐỘNG MỞ ĐẦU, HÌNH THÀNH KIẾN THỨC, LUYỆN TẬP, VẬN DỤNG), or Vietnamese teacher talk.
+Write the ENTIRE lesson plan in natural classroom English (100% English). Vietnamese may appear only as a brief L1 gloss in parentheses when a new lexical item needs scaffolding — never as the main script.
+
+MANDATORY STRUCTURE (CV 5512 four activities, ELT labels):
+# I. Objectives
+## 1. Competences
+- Language knowledge: Pronunciation; Vocabulary; Grammar (specific items of this lesson).
+- Skills: Listening, Speaking, Reading, Writing as relevant.
+- General competences: 1–2 items with observable classroom behaviours.
+## 2. Attributes
+- Kindness, Diligence, Honesty, Responsibility — pick 1–2 with observable behaviours.
+
+# II. Teaching aids & Learning materials
+- Teacher: Textbook, projector, audio tracks, flashcards, board, worksheets...
+- Students: Textbook, notebook, pencils...
+
+# III. Procedures
+Map the four CV 5512 phases exactly:
+- Activity 1: Warm-up / Lead-in  (Hoạt động A)
+- Activity 2: Knowledge Formation — Presentation / Pre-stage  (Hoạt động B)
+- Activity 3: Practice — Controlled / While-stage  (Hoạt động C)
+- Activity 4: Application — Production / Post-stage / Homework  (Hoạt động D)
+
+Each activity MUST include:
+#### a. Objectives
+#### b. Content
+#### c. Expected outcomes / Products
+#### d. Implementation
+Implementation uses four steps:
+- Step 1: Task delivery
+- Step 2: Task execution
+- Step 3: Presentation & Discussion
+- Step 4: Assessment & Conclusion
+Teacher talk MUST be English in quotation marks, e.g. Teacher says: "Look at the board and guess the topic."
+Do not start with greetings or meta commentary. Start immediately with the professional heading.`,
 
   NATURAL_INTEGRATION_GATE: `RÀNG BUỘC TÍCH HỢP TỰ NHIÊN — CẤM KHIÊN CƯỠNG:
 - Chỉ tích hợp NLS/AI khi bám sát nội dung SGK, dụng cụ đo/vẽ hoặc máy tính cầm tay của bài. Không gán ghép công nghệ cho đủ khung.
@@ -1120,6 +1162,22 @@ function getSystemRole(subjectId, grade) {
     ? "- Công thức, phương trình PHẢI được viết bằng mã LaTeX chuẩn: công thức trong dòng dùng $công_thức$, công thức khối dùng $$công_thức$$. Ví dụ: $x^2 + 2x + 1 = 0$, $\\frac{a}{b}$, $\\sqrt{x}$."
     : "- Trình bày văn bản thuần túy, rõ ràng. Không dùng LaTeX trừ khi thật sự cần thiết.";
 
+  if (isEnglishSubject(subjectId)) {
+    return `You are a senior ELT (English Language Teaching) specialist for ${subjectName}, ${gradeLevelName}, fully versed in:
+- Vietnam General Education Curriculum 2018 (Circular 32/2018/TT-BGDĐT) for English, and Official Dispatch 5512/BGDĐT-GDTrH lesson-plan structure.
+- Communicative language teaching: pronunciation, vocabulary, grammar, and the four skills (Listening, Speaking, Reading, Writing).
+- General competences and character attributes as observable classroom behaviours.
+
+MANDATORY OUTPUT RULES:
+- Write the COMPLETE lesson plan in English (English-medium). This is an English lesson, not CLIL inside another subject.
+- Keep the four CV 5512 activities with ELT names: Warm-up/Lead-in; Knowledge Formation (Presentation/Pre-stage); Practice (Controlled/While-stage); Application (Production/Post-stage/Homework).
+- Each activity uses a/b/c/d: Objectives; Content; Expected outcomes/Products; Implementation (Step 1 Task delivery, Step 2 Task execution, Step 3 Presentation & Discussion, Step 4 Assessment & Conclusion).
+- Teacher talk is English in quotation marks, e.g. Teacher says: "Look at the board and guess the topic."
+- Compact, classroom-ready script (about 8–10 A4 pages). No Vietnamese running prose. No greetings or meta commentary.
+- Markdown headings #, ##, ###, ####. No code fences. No ellipsis placeholders.
+${latexRule}`;
+  }
+
   return `Bạn là Chuyên gia Sư phạm Môn ${subjectName}, Cấp ${gradeLevelName}, nắm vững:
 - Chương trình GDPT 2018 (${cvDoc} cho cấp ${gradeLevelName})
 - Khung Năng lực đặc thù: ${compList}
@@ -1459,10 +1517,29 @@ Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budg
     }
   }
 
+  const englishContentKeys = [
+    'GENERATE_OBJECTIVES',
+    'GENERATE_MATERIALS',
+    'GENERATE_ACTIVITY_A',
+    'GENERATE_ACTIVITY_B',
+    'GENERATE_ACTIVITY_C',
+    'GENERATE_ACTIVITY_D',
+    'GENERATE_ACTIVITY_E',
+    'GENERATE_ACTIVITIES_AD',
+    'GENERATE_ACTIVITIES_AE',
+    'GENERATE_CORE_LESSON',
+    'GENERATE_PORTFOLIO_WORKSHEETS',
+    'OUTPUT_REPAIR'
+  ];
+  if (isEnglishSubject(subjectId) && englishContentKeys.includes(templateKey) && PROMPTS.ENGLISH_ELT_DIRECTIVE) {
+    result += `\n\n${PROMPTS.ENGLISH_ELT_DIRECTIVE}`;
+  }
+
   return result;
 }
 
 if (typeof window !== 'undefined') {
+  window.isEnglishSubject = isEnglishSubject;
   window.getSystemRole = getSystemRole;
   window.getPromptTemplate = getPromptTemplate;
   window.calculateActivityTimeBudgets = calculateActivityTimeBudgets;
@@ -1473,5 +1550,5 @@ if (typeof window !== 'undefined') {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { PROMPTS, calculateActivityTimeBudgets, getSystemRole, getPromptTemplate, extractTextbookSubsections, extractTextbookLessonMap, getGeneralCompetenciesForSubject, formatGeneralCompetenciesGuide };
+  module.exports = { PROMPTS, calculateActivityTimeBudgets, isEnglishSubject, getSystemRole, getPromptTemplate, extractTextbookSubsections, extractTextbookLessonMap, getGeneralCompetenciesForSubject, formatGeneralCompetenciesGuide };
 }

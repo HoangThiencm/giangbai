@@ -1918,11 +1918,14 @@ async function generateLessonIllustrations({ silent = false } = {}) {
       if (ok) showToast(`Đã tạo ${ok} hình minh họa (${created.filter(i => i.kind === "sgk").length} SVG toán học chuẩn SGK, ${created.filter(i => i.kind === "thuc_te").length} thực tế).`, "success", 6000);
       else showToast("Chưa tạo được hình (có thể do kết nối mạng). Bạn có thể bấm vẽ lại từng hình.", "warning", 7000);
     }
+    updateProgress(100, "Đã tạo xong hình minh họa.");
     return ok > 0;
   } catch (error) {
     console.warn("generateLessonIllustrations:", error);
     if (!silent) showToast(`Không tạo được hình minh họa: ${error.message}`, "warning", 6000);
     return false;
+  } finally {
+    setTimeout(() => hideProgress(), 800);
   }
 }
 
@@ -2491,8 +2494,20 @@ function setupEventListeners() {
   // 7. Các nút Tạo nội dung đơn lẻ & Đọc học liệu
   const btnGenerateIllustrationsAct = document.getElementById("btnGenerateIllustrationsAct");
   if (btnGenerateIllustrationsAct) {
-    btnGenerateIllustrationsAct.addEventListener("click", () => {
-      void generateLessonIllustrations({ silent: false });
+    btnGenerateIllustrationsAct.addEventListener("click", async () => {
+      if (appState.isGenerating) {
+        showToast("Một tác vụ AI khác đang chạy, vui lòng chờ.", "warning");
+        return;
+      }
+      appState.isGenerating = true;
+      btnGenerateIllustrationsAct.disabled = true;
+      try {
+        await generateLessonIllustrations({ silent: false });
+      } finally {
+        appState.isGenerating = false;
+        btnGenerateIllustrationsAct.disabled = false;
+        hideProgress();
+      }
     });
   }
 
@@ -4573,7 +4588,7 @@ function buildPedagogicalContext() {
 - ${curriculumNotice}
 - Giới hạn năng lực & phẩm chất: Bài dạy 1–2 tiết CHỈ ĐƯỢC CHỌN 1–2 Năng lực chung phù hợp đặc thù môn học (${genCompHint}), 2–3 Năng lực đặc thù nổi trội nhất (gắn với nhiệm vụ/sản phẩm cụ thể), 1–2 Phẩm chất có hành vi quan sát rõ. CẤM liệt kê dàn trải toàn bộ khung năng lực hay đủ 5 phẩm chất.
 - Trình độ/đặc điểm lớp: ${classProfile || `Chưa cung cấp; thiết kế mức độ phù hợp học sinh ${gradeLevel} và có phân hóa vừa sức.`}
-- Ngoại ngữ/CLIL: ${context.integrations.foreignLanguage ? `ĐÃ BẬT — cấp độ ${clilLevel}. ${CLIL_LEVEL_HINTS[clilLevel]} Gắn marker **[CLIL]** (hiển thị màu xanh lục). CẤM biến tiết môn thành tiết tiếng Anh.` : "KHÔNG bật. CẤM thêm thuật ngữ/câu lệnh/sản phẩm ngoại ngữ hay marker [CLIL]."}
+- Ngoại ngữ/CLIL: ${typeof isEnglishSubject === "function" && isEnglishSubject(appState.selectedSubject) ? "Môn Tiếng Anh: soạn toàn bộ kế hoạch bài dạy bằng tiếng Anh (English-medium ELT), không dùng CLIL như môn khác." : (context.integrations.foreignLanguage ? `ĐÃ BẬT — cấp độ ${clilLevel}. ${CLIL_LEVEL_HINTS[clilLevel]} Gắn marker **[CLIL]** (hiển thị màu xanh lục). CẤM biến tiết môn thành tiết tiếng Anh.` : "KHÔNG bật. CẤM thêm thuật ngữ/câu lệnh/sản phẩm ngoại ngữ hay marker [CLIL].")}
 - Giáo dục hòa nhập/HSKT: ${context.integrations.inclusive ? `ĐÃ BẬT — loại khuyết tật: ${disabilityLine || "chưa chọn loại cụ thể, chỉ dùng giải pháp hỗ trợ chức năng đã tick"}. Giải pháp hỗ trợ: ${support || "chưa chọn"}. Gắn marker **[HOANHAP]** (hiển thị màu tím) đúng chỗ điều chỉnh nhiệm vụ/học liệu. CẤM chẩn đoán y khoa, CẤM nêu tên học sinh, CẤM bịa loại khuyết tật không được chọn.` : "KHÔNG bật. CẤM tự thêm giáo dục hòa nhập/HSKT hay marker [HOANHAP]."}
 - Hỗ trợ chức năng được chọn: ${support || "Không có yêu cầu riêng được chọn."}
 - Sĩ số: ${context.classSize}; mức sẵn sàng: ${context.readiness}; tổ chức: ${context.grouping}; điều kiện: ${Object.entries(context.facilities).filter(([, value]) => value).map(([key]) => key).join(", ") || "thiết bị cơ bản"}.
@@ -4596,7 +4611,11 @@ ${buildContextIntegrationsPromptBlock()}`;
 
 function buildPedagogicalPrompt(prompt) {
   // getPromptTemplate already appends context if provided, but some places might call this directly.
-  return `${prompt}\n\n${PROMPTS.OUTPUT_CONTRACT}`;
+  let out = `${prompt}\n\n${PROMPTS.OUTPUT_CONTRACT}`;
+  if (typeof isEnglishSubject === "function" && isEnglishSubject(appState.selectedSubject) && PROMPTS.ENGLISH_ELT_DIRECTIVE) {
+    out += `\n\n${PROMPTS.ENGLISH_ELT_DIRECTIVE}`;
+  }
+  return out;
 }
 
 function getGenerationPromptContext(params = {}) {
@@ -6074,7 +6093,11 @@ async function handleGenerateCurrentActivity() {
   if (!actInfo) return;
 
   if (actKey === "F") {
-    await generateLessonIllustrations({ silent: false });
+    try {
+      await generateLessonIllustrations({ silent: false });
+    } finally {
+      hideProgress();
+    }
     return;
   }
 
