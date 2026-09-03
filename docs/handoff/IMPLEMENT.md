@@ -1,49 +1,43 @@
-# IMPLEMENT: Thêm Nút Cài Đặt AI & Đăng Ký Khóa API Trên Trang Chủ Người Dùng
+# IMPLEMENT: Khắc Phục Lỗi Render Raw Code Trên Trang SmartQuiz
 
 **Ngày implement**: 2026-09-03
 **Coder**: Grok (xAI)
-**Trạng thái**: DONE — 6 smoke tests PLAN yêu cầu đều PASS
+**Trạng thái**: DONE — 4 smoke tests PLAN yêu cầu đều PASS
 
 ## Tóm tắt thay đổi
 
-### Bước 1: Module `js/user-ai-settings.js` (tạo mới)
-- `window.UserAiSettings` với `ensureModal`, `openModal`, `closeModal`, `handleFile`, `testGeminiKeys`, `saveSettings`, `deleteKeys`, `updateBadge`.
-- Modal `#userAiSettingsModal`: Tailwind, responsive, backdrop blur.
-- Dropdown module Gemini (`gemini-2.5-flash`, `gemini-3-flash-preview`, `gemini-2.5-pro`, …) lưu cả `default_gemini_module` và `khbd_gemini_model`.
-- Textarea Gemini + Mistral, nạp từ file `.txt`.
-- Lưu `POST api/user_gemini_keys.php`; đồng bộ `global_gemini_keys`, `global_mistral_keys` và cache theo tài khoản.
-- Kiểm tra key: `POST action=test`; xóa key: `DELETE`.
-- 401 hiện "Vui lòng đăng nhập lại" thay vì lỗi mơ hồ.
-- Ẩn nút với vai trò `student`.
+Kịch bản chèn `security-guard.js` đã nhét `<script src="js/security-guard.js"></script>` vào chuỗi template HTML xuất Word/Excel. Trình duyệt gặp `</script>` trong template thì đóng sớm khối `<script type="text/babel">`, nên phần còn lại bị in ra trang dưới dạng text thô.
 
-### Bước 2: Tích hợp `index.html`
-- Navbar: nút `#btnOpenUserAiSettings` — "Cài đặt AI & Key", icon `fa-sliders-h`, cạnh Đăng xuất.
-- Hero giáo viên (`renderTeacherLotrinhPanel`): badge `#heroKeyStatus` dưới "Xin chào, {teacherName}".
-- Nhúng `<script src="js/user-ai-settings.js"></script>` trước script khởi tạo hub.
+### Bước 1: `smartquiz.html`
+- Xóa thẻ script thừa trong `exportWord()` (template Word).
+- Giữ `<head>` + `<meta charset='utf-8'><title>Export</title>`.
+- Giữ nguyên `security-guard.js` hợp lệ ở `<head>` thật (dòng 5).
 
-### Bước 3: Kiểm thử
-- Tạo `tests/user-ai-settings-smoke.js`.
-- Chạy đủ suite PLAN: user-ai-settings, khbd-user-ai-keys, matrande, kttx, xaydungphuluc, duyetgiaoan.
+### Bước 2: `taobaitap.html` và `phancongtochuyenmon.html`
+- `taobaitap.html`: xóa script thừa trong `exportWord` và `exportWordLatex`.
+- `phancongtochuyenmon.html`: xóa script thừa trong `downloadExcelFile` và ghép lại chuỗi template Excel thành một dòng (tránh ngắt string nháy đơn).
+
+### Bước 3–4: Kiểm thử
+- Tạo `tests/smartquiz-smoke.js`: không còn `</script>` lồng trong khối script; Babel mở/đóng khớp; `security-guard.js` chỉ còn 1 lần ở `<head>` thật.
 
 ## Files đã sửa / tạo
 
 | File | Thay đổi |
 |------|----------|
-| `js/user-ai-settings.js` | Tạo mới — modal & logic cài đặt AI / API Key |
-| `index.html` | Nút navbar, badge hero, nhúng script |
-| `tests/user-ai-settings-smoke.js` | Tạo mới — smoke test tính năng |
+| `smartquiz.html` | Xóa script thừa trong template `exportWord` |
+| `taobaitap.html` | Xóa script thừa trong `exportWord` và `exportWordLatex` |
+| `phancongtochuyenmon.html` | Xóa script thừa và nối lại template Excel |
+| `tests/smartquiz-smoke.js` | Tạo mới — kiểm tra không lồng `</script>` |
 
-Không đụng bảng `users`, không đổi AES-256-CBC, không đổi luồng học sinh.
+Không đổi logic sinh câu hỏi, chấm điểm hay AI.
 
 ## Kết quả kiểm thử
 
 ```
+smartquiz smoke: nested </script> export templates cleaned; babel scripts stay intact
 user-ai-settings smoke: passed
 khbd user AI keys smoke: passed
-matrande smoke: Word templates and account Gemini key synchronization passed
-kttx smoke: Word templates and account Gemini key synchronization passed
-PASS xaydungphuluc smoke: PPCT 7-column form, independent table ingest, no admin-header leak, density ranges and auto-hiding progress UI are present.
-duyetgiaoan smoke: passed
+security-f12-smoke: all checks passed
 ```
 
-Không chạy được kiểm thử trình duyệt end-to-end (không có browser tool trong phiên này). Luồng đăng nhập giáo viên → bấm Cài đặt AI & Key → lưu/test key thuộc bước `/verify`.
+Không chạy được kiểm thử trình duyệt end-to-end (không có browser tool trong phiên này). Mở `smartquiz.html` và thử Xuất Word thuộc bước `/verify`.
