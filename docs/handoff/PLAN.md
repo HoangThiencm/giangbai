@@ -1,80 +1,67 @@
-# PLAN: Khắc Phục & Đồng Bộ API Keys Người Dùng Từ CSDL Cho Toàn Bộ Hệ Thống
+# PLAN: Thêm Nút Cài Đặt AI & Đăng Ký Khóa API (Gemini & Mistral) Trên Trang Chủ Người Dùng
 
 ## Hiện trạng
-1. **Nguyên nhân gốc (Root Cause) khiến người dùng lưu API keys lên CSDL không được / bị mất**:
-   - Ở commit `a612acd`, hàm `public_ai_keys_payload` trong `api/user_gemini_keys.php` đã loại bỏ các trường trả về `keys` và `mistral_keys`, chỉ trả về `masked_keys` và `masked_mistral_keys` (dạng `AIzaSy...****`).
-   - Hầu hết các công cụ gọi API trực tiếp từ trình duyệt (`matrande.html`, `kttx.html`, `duyetgiaoan.html`, `xaydungphuluc.html`, `js/khbd-gemini.js` / `soankhbd.html`) phụ thuộc vào `data.keys` và `data.mistral_keys` từ `api/user_gemini_keys.php`. Khi thiếu các trường này, các trang nhận danh sách rỗng, xóa trắng ô nhập hoặc báo lỗi đỏ *"Tài khoản chưa có Gemini API Key"*.
-2. **Thiếu cơ chế phổ biến API Key người dùng sang các module dùng `global_gemini_keys`**:
-   - Rất nhiều công cụ trên hệ thống (`smartquiz.html`, `vehinh.html` thông qua `app.js`, `thitructuyen.html`, `tronde.html`, `taobaitap.html`, 6 trò chơi `game-*.html`, `trochoi.compiled.js`, `exam-vision-client.js`) đọc trực tiếp API Key từ `localStorage.getItem('global_gemini_keys')`.
-   - Tuy nhiên, trong `access-control.js` và `login.html`, khi đăng nhập và nạp thông tin user từ `api/me.php`, hệ thống chỉ lưu vào key riêng `khbd_user_gemini_keys_<username>`, HOÀN TOÀN KHÔNG ghi vào `global_gemini_keys`.
-   - Thêm vào đó, `index.html` (`applyGlobalConfig`) và `ai-design-config.js` (`loadHostingFallbackConfig`) khi nạp tệp `global_config.json` nếu thấy mảng rỗng `gemini_keys: []` lại ghi đè `[]` vào `global_gemini_keys`, xóa sạch key của người dùng nếu có.
-3. **Các backend AI trên máy chủ chưa nạp key cá nhân của user trong CSDL**:
-   - Các API thực thi AI phía máy chủ (`api/vehinh_ai.php`, `api/ai_explain.php`, `api/exam_ai.php`, `api/tronde.php` qua `hf_fallback.php` và `ai_runtime_config.php`) mới chỉ đọc cấu hình admin chung (`api/config.php` và `global_config.json`). Khi giáo viên đăng nhập thực hiện thao tác vẽ hình hay trích xuất đề từ ảnh, server không lấy API key cá nhân của giáo viên đã lưu trong bảng `users`.
-4. **Các lỗi phụ khi lưu (`POST`)**:
-   - `api/user_gemini_keys.php` chưa chấp nhận alias `gemini_keys`.
-   - Khi lưu trong `khbd-app.js`, để trống Mistral khiến server hiểu là xóa trắng Mistral key cũ.
-   - Submit lại masked key khiến server xóa mất key thật trong DB.
-   - `session_start()` gọi trùng lặp có thể gây warning làm hỏng JSON.
+1. **Chưa có nơi quản lý API Key tập trung trên trang chủ giáo viên (`index.html`)**:
+   - Hiện tại, người dùng sau khi đăng nhập (với vai trò `teacher`) sẽ được đưa về trang chủ `index.html`.
+   - Trên `index.html`, thanh điều hướng chỉ có nút "Đăng xuất" và chip "Cập nhật đồng bộ"; hoàn toàn KHÔNG có giao diện hay nút Cài đặt (Setting) nào để người dùng biết mình có thể đăng ký, nhập hoặc cập nhật khóa API (Gemini, Mistral) hay lựa chọn model AI mặc định.
+   - Muốn cài đặt API key, giáo viên phải tự tìm và mở các trang công cụ con như `soankhbd.html` hoặc `xaydungphuluc.html` hoặc `duyetde.html`. Điều này gây bất tiện lớn và khiến người dùng thắc mắc: *"vấn đề là tài khoản user sẽ đăng ký API ở đâu?"*.
+2. **Chưa có giao diện chọn Module / Model Gemini mặc định trên trang chủ**:
+   - Các công cụ trên hệ thống (`smartquiz.html`, `matrande.html`, `kttx.html`, `thitructuyen.html`, `soankhbd.html`, `trochoi.compiled.js`) đều hỗ trợ nhiều model (`gemini-2.5-flash`, `gemini-3-flash-preview`, `gemini-2.5-pro`...) và đọc từ `localStorage.getItem('default_gemini_module')`.
+   - Hiện tại giáo viên không có nơi thiết lập model ưu tiên ngay từ trang chủ.
+3. **Cơ sở hạ tầng backend đã hoàn toàn sẵn sàng**:
+   - `api/user_gemini_keys.php` đã hoàn thiện đầy đủ các chức năng: nạp key qua `GET` (trả về cả `keys`, `mistral_keys`, `masked_keys`), lưu key mã hóa qua `POST`, kiểm tra key qua `POST action=test`, xóa key qua `DELETE`.
+   - `access-control.js` đã đồng bộ `global_gemini_keys` và `global_mistral_keys` cho toàn bộ hệ thống khi có phiên đăng nhập.
+   - Do đó, chỉ cần bổ sung giao diện Cài đặt AI & API Key trên trang chủ `index.html` kết nối trực tiếp với backend `api/user_gemini_keys.php`.
 
 ## Phạm vi
-1. **Khắc phục `api/user_gemini_keys.php`**:
-   - Trả về đầy đủ `keys` (Gemini plain keys) và `mistral_keys` (Mistral plain keys) song song với `masked_keys`, `masked_mistral_keys` và metadata.
-   - Hỗ trợ alias `gemini_keys`, khôi phục key thật khi nhận lại masked key trùng khớp key đã lưu trong DB.
-   - Bọc an toàn `session_start()`.
-2. **Đồng bộ toàn diện sang `global_gemini_keys` và `global_mistral_keys`**:
-   - Cập nhật `access-control.js` (chạy trên tất cả các trang): khi `api/me.php` trả về `user.gemini_keys` và `user.mistral_keys`, tự động ghi đồng thời vào `global_gemini_keys` và `global_mistral_keys`.
-   - Cập nhật `login.html`: đồng bộ ngay khi đăng nhập thành công.
-   - Bảo vệ `global_gemini_keys` trong `index.html` và `ai-design-config.js`: không để cấu hình admin rỗng ghi đè mất key người dùng.
-3. **Hỗ trợ nạp key cá nhân của user trong Backend AI**:
-   - Cập nhật `api/ai_runtime_config.php` và `api/hf_fallback.php`: khi có session user (`$_SESSION['user_id']`), nạp và ưu tiên API keys trong CSDL của user đó.
-4. **Chuẩn hóa Client & Kiểm thử**:
-   - Cập nhật `js/khbd-gemini.js` và `js/khbd-app.js`: báo rõ khi chưa đăng nhập, không xóa nhầm Mistral khi chỉ lưu Gemini.
-   - Cập nhật bài kiểm thử trong `tests/khbd-user-ai-keys-smoke.js` để kiểm tra độ phủ đồng bộ toàn bộ hệ thống.
+1. **Xây dựng module giao diện `js/user-ai-settings.js`**:
+   - Cung cấp component quản lý cài đặt AI cho người dùng (`window.UserAiSettings`):
+     * Modal Cài đặt (`#userAiSettingsModal`) với thiết kế hiện đại (Tailwind CSS, responsive trên mobile/tablet/desktop, backdrop blur).
+     * **Khai báo Module Gemini**: Dropdown lựa chọn model (`gemini-2.5-flash`, `gemini-3-flash-preview`, `gemini-2.5-pro`...) lưu vào `default_gemini_module` và `khbd_gemini_model`.
+     * **Nhập Gemini API Keys**: Textarea nhập nhiều key, hỗ trợ nút nạp từ tệp `.txt`, nút kiểm tra tính hợp lệ của key trực tiếp từ máy chủ.
+     * **Nhập Mistral API Keys**: Textarea nhập key Mistral dùng cho OCR/đọc SGK, hỗ trợ nạp từ tệp `.txt`.
+     * **Lưu lên CSDL**: Gọi `api/user_gemini_keys.php` (POST) lưu an toàn vào DB tài khoản người dùng, đồng thời lưu vào `localStorage` (`global_gemini_keys`, `global_mistral_keys`, `default_gemini_module`, `khbd_gemini_model`).
+     * **Xóa key**: Hỗ trợ nút xóa toàn bộ key khỏi CSDL (`DELETE`) khi cần.
+     * **Hiển thị trạng thái**: Trực quan hóa số lượng key Gemini / Mistral hiện tại, thời gian lưu gần nhất.
+2. **Tích hợp nút Setting trên trang chủ `index.html`**:
+   - Bổ sung nút **"Cấu hình AI & Key"** (icon `fas fa-sliders-h`) trên thanh điều hướng (navbar) cạnh nút Đăng xuất.
+   - Bổ sung nút / badge trạng thái API Key trên bảng điều khiển Hero chào mừng (`Xin chào, {teacherName}`) để giáo viên nhìn thấy ngay tình trạng key của mình khi vào trang chủ.
+   - Nhúng `<script src="js/user-ai-settings.js"></script>` vào `index.html` và tự động khởi tạo badge trạng thái.
+3. **Tạo bài kiểm thử tự động**:
+   - Tạo file `tests/user-ai-settings-smoke.js` kiểm tra sự hiện diện của nút Setting, modal, các trường nhập liệu, cơ chế gọi API và các smoke test liên quan.
 
 ## Ngoài phạm vi
-- Không thay đổi mã hóa đối xứng AES-256-CBC trong CSDL (`users` table).
-- Không sửa đổi logic nghiệp vụ AI cụ thể của từng công cụ.
+- Không thay đổi bảng `users` trong CSDL hay cơ chế mã hóa AES-256-CBC trong `api/helpers.php`.
+- Không can thiệp vào tài khoản học sinh (`student`), vì học sinh không sử dụng API key cá nhân.
 
 ## File dự kiến tác động
-- `api/user_gemini_keys.php` [SỬA: Khôi phục trả về `keys`, `mistral_keys`, nhận diện alias, bảo lưu key gốc khi gặp mask, an toàn session]
-- `access-control.js` [SỬA: Đồng bộ `user.gemini_keys` và `user.mistral_keys` vào `global_gemini_keys` và `global_mistral_keys` trên mọi trang]
-- `login.html` [SỬA: Ghi `global_gemini_keys` và `global_mistral_keys` khi đăng nhập]
-- `ai-design-config.js` [SỬA: Chống ghi đè mảng rỗng lên `global_gemini_keys`, ưu tiên key user]
-- `index.html` [SỬA: `applyGlobalConfig` chỉ nạp key nếu admin có key và không ghi đè mảng rỗng]
-- `api/ai_runtime_config.php` [SỬA: Tự động nạp Gemini keys của user từ CSDL theo `$_SESSION['user_id']`]
-- `api/hf_fallback.php` [SỬA: `hf_load_gemini_keys` nạp keys từ CSDL của user theo `$_SESSION['user_id']`]
-- `js/khbd-gemini.js` [SỬA: Nhận diện phản hồi và phân biệt lưu CSDL vs offline]
-- `js/khbd-app.js` [SỬA: Xử lý toast chính xác, bảo lưu Mistral key khi để trống]
-- `tests/khbd-user-ai-keys-smoke.js` [SỬA: Bổ sung kiểm tra đồng bộ toàn diện `keys`, `mistral_keys`, `global_gemini_keys`]
+- `js/user-ai-settings.js` [TẠO MỚI: Modal & Logic quản lý Cài đặt AI & API Key cá nhân của người dùng]
+- `index.html` [SỬA: Thêm nút Setting trên navbar và hero panel, nhúng `js/user-ai-settings.js`]
+- `tests/user-ai-settings-smoke.js` [TẠO MỚI: Kiểm thử smoke cho tính năng Cài đặt AI trên trang chủ]
+- `docs/handoff/PLAN.md` [GHI ĐÈ KẾ HOẠCH]
+- `docs/handoff/.lock` [GHI NỘI DUNG: LOCK]
 
 ## Các bước thực hiện
-1. **Bước 1: Sửa chữa Backend API keys (`api/user_gemini_keys.php`)**:
-   - Đảm bảo `if (session_status() === PHP_SESSION_NONE) { session_start(); }`.
-   - Trong `public_ai_keys_payload`: Bổ sung `'keys' => $gemini['keys']` và `'mistral_keys' => $mistral['keys']`.
-   - Trong `DELETE`: Trả về `keys: []` và `mistral_keys: []`.
-   - Trong `POST`: Nhận diện `$body['gemini_keys']`. Thêm logic phân giải masked key dựa trên danh sách key đã lưu của user.
-2. **Bước 2: Phổ biến key người dùng tới toàn bộ client qua `access-control.js` & `login.html`**:
-   - Trong `access-control.js` (`refreshSessionPages`):
-     ```javascript
-     if (Array.isArray(user.gemini_keys) && user.gemini_keys.length > 0) {
-         localStorage.setItem('khbd_user_gemini_keys_' + (user.username || user.email || 'default'), JSON.stringify(user.gemini_keys));
-         localStorage.setItem('global_gemini_keys', JSON.stringify(user.gemini_keys));
-     }
-     if (Array.isArray(user.mistral_keys) && user.mistral_keys.length > 0) {
-         localStorage.setItem('khbd_user_mistral_keys_' + (user.username || user.email || 'default'), JSON.stringify(user.mistral_keys));
-         localStorage.setItem('global_mistral_keys', JSON.stringify(user.mistral_keys));
-     }
-     ```
-   - Trong `login.html`: Bổ sung 2 dòng tương tự khi lưu thông tin đăng nhập thành công.
-   - Trong `ai-design-config.js` và `index.html`: Thêm điều kiện kiểm tra `cfg.gemini_keys.length > 0` trước khi lưu vào `global_gemini_keys` để tránh ghi đè rỗng lên key cá nhân.
-3. **Bước 3: Nạp key người dùng trong Backend AI Runtime (`api/ai_runtime_config.php` và `api/hf_fallback.php`)**:
-   - Khi có `$_SESSION['user_id']`, truy vấn cột `gemini_keys` từ bảng `users`, giải mã qua `parse_stored_api_keys` và nạp vào danh sách key thực thi.
-4. **Bước 4: Chuẩn hóa Modal lưu key trong `js/khbd-gemini.js` và `js/khbd-app.js`**:
-   - Tránh xóa nhầm Mistral key khi người dùng chỉ cập nhật Gemini key.
-   - Thông báo rõ ràng cho người dùng khi chưa đăng nhập.
-5. **Bước 5: Cập nhật kiểm thử tự động & Xác minh**:
-   - Cập nhật `tests/khbd-user-ai-keys-smoke.js`.
-   - Chạy toàn bộ các file smoke tests:
+1. **Bước 1: Xây dựng module `js/user-ai-settings.js`**:
+   - Định nghĩa đối tượng `window.UserAiSettings`:
+     * `ensureModal()`: Tạo cấu trúc HTML modal nếu chưa có trong DOM.
+     * `openModal()`: Nạp dữ liệu hiện tại từ `api/user_gemini_keys.php` và `localStorage` (model), điền vào các ô textarea/dropdown, mở modal.
+     * `closeModal()`: Đóng modal.
+     * `handleFile(file, type)`: Nạp nội dung từ tệp text vào textarea tương ứng.
+     * `testGeminiKeys()`: Gửi request `POST api/user_gemini_keys.php` với `action=test`, hiển thị kết quả kiểm tra từng key (hợp lệ / lỗi).
+     * `saveSettings()`: Lấy dữ liệu từ textarea Gemini, Mistral và model dropdown; gửi `POST api/user_gemini_keys.php`; cập nhật `default_gemini_module`, `global_gemini_keys`, `global_mistral_keys`; cập nhật badge và hiển thị toast thành công.
+     * `deleteKeys()`: Xác nhận và gửi `DELETE api/user_gemini_keys.php`, dọn dẹp localStorage và UI.
+     * `updateBadge()`: Cập nhật tóm tắt trạng thái key trên giao diện trang chủ (`#heroKeyStatus`).
+2. **Bước 2: Tích hợp vào `index.html`**:
+   - Thêm nút bấm Cài đặt AI trên Navbar:
+     `<button type="button" onclick="UserAiSettings.openModal()" id="btnOpenUserAiSettings" class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 shadow-sm transition hover:bg-indigo-100 hover:border-indigo-300"><i class="fas fa-sliders-h text-indigo-600"></i> Cài đặt AI & Key</button>`
+   - Thêm nút / chip trạng thái trong khối Hero giáo viên (`renderTeacherLotrinhPanel`).
+   - Nhúng `<script src="js/user-ai-settings.js"></script>` vào cuối thẻ `<body>` trước script khởi tạo.
+3. **Bước 3: Tạo bài kiểm thử `tests/user-ai-settings-smoke.js`**:
+   - Kiểm tra `index.html` có chứa nút gọi `UserAiSettings.openModal()` và thẻ nhúng script.
+   - Kiểm tra `js/user-ai-settings.js` định nghĩa đầy đủ các trường: chọn module gemini (`default_gemini_module`), nhập Gemini keys, Mistral keys, gọi `api/user_gemini_keys.php`.
+   - Chạy toàn bộ smoke test suite để đảm bảo không hồi quy:
+     * `node tests/user-ai-settings-smoke.js`
      * `node tests/khbd-user-ai-keys-smoke.js`
      * `node tests/matrande-smoke.js`
      * `node tests/kttx-smoke.js`
@@ -82,26 +69,33 @@
      * `node tests/duyetgiaoan-smoke.js`
 
 ## Rủi ro
-- **Xung đột giữa key cá nhân và key admin**: Key cá nhân của giáo viên được ưu tiên cho các tác vụ của chính giáo viên đó; khi giáo viên đăng xuất, key admin hoặc cache tạm vẫn hoạt động bình thường.
-- **Tính tương thích**: Giữ nguyên `masked_keys` cho `duyetde.html`, đồng thời khôi phục `keys` và `mistral_keys` cho toàn bộ các module còn lại.
+- **Rủi ro đè cấu hình**: Lưu ý rằng `localStorage` chứa cả `default_gemini_module` và `khbd_gemini_model`; module settings cần đồng bộ cả 2 key này để các công cụ khác nhau đều nhận diện chung 1 model mà giáo viên đã chọn.
+- **Rủi ro phiên đăng nhập**: Nếu chưa đăng nhập hoặc session hết hạn, hiển thị thông báo yêu cầu đăng nhập lại thay vì báo lỗi mơ hồ.
 
 ## Cách kiểm thử
-- Chạy toàn bộ smoke tests tự động bằng Node.js:
+- Chạy smoke tests bằng Node.js:
   ```powershell
+  node tests/user-ai-settings-smoke.js
   node tests/khbd-user-ai-keys-smoke.js
   node tests/matrande-smoke.js
   node tests/kttx-smoke.js
   node tests/xaydungphuluc-smoke.js
   node tests/duyetgiaoan-smoke.js
   ```
-- Kiểm tra tính đồng bộ thực tế:
-  1. Đăng nhập tài khoản giáo viên đã lưu key trong CSDL.
-  2. Truy cập lần lượt: `soankhbd.html`, `xaydungphuluc.html`, `matrande.html`, `kttx.html`, `duyetgiaoan.html`, `smartquiz.html`, `vehinh.html`, `thitructuyen.html`, `tronde.html`, `game-tower.html`.
-  3. Xác nhận trên tất cả các trang, API key của tài khoản đều được nạp đầy đủ (không còn thông báo "Chưa nạp API Key" hoặc ô nhập bị rỗng).
+- Kiểm tra luồng người dùng trên giao diện:
+  1. Đăng nhập tài khoản giáo viên, mở `index.html`.
+  2. Bấm nút "Cài đặt AI & Key" trên thanh điều hướng hoặc trên banner chào mừng.
+  3. Modal mở ra, hiển thị đúng model đang chọn và danh sách key đã lưu trong CSDL.
+  4. Chọn model mới, thêm/sửa key Gemini và Mistral, bấm "Kiểm tra Key" -> thấy kết quả test.
+  5. Bấm "Lưu lên CSDL" -> thấy thông báo thành công, badge cập nhật, các trang công cụ khác tự động nhận diện key mới.
 
 ## Tiêu chí nghiệm thu
-1. `api/user_gemini_keys.php` trả về đầy đủ `keys: [...]`, `mistral_keys: [...]`, `masked_keys: [...]`.
-2. Khi giáo viên đăng nhập, `global_gemini_keys` và `global_mistral_keys` tự động được nạp key từ CSDL trên TẤT CẢ các trang công cụ.
-3. Không bị ghi đè mất key khi mở trang chủ `index.html` hoặc mở modal `ai-design-config.js`.
-4. Các endpoint AI backend (`vehinh_ai.php`, `exam_ai.php`, `tronde.php`) tự động nhận diện và sử dụng API key cá nhân của giáo viên trong CSDL.
-5. Toàn bộ smoke tests liên quan đều PASS 100%.
+1. Trên trang chủ `index.html` của mỗi user (giáo viên), có nút Cài đặt AI & Key rõ ràng, dễ thấy trên navbar và hero banner.
+2. Bấm nút sẽ mở modal cài đặt hoàn chỉnh cho phép:
+   - Khai báo / lựa chọn module Gemini (`gemini-2.5-flash`, `gemini-3-flash-preview`, `gemini-2.5-pro`...).
+   - Nhập danh sách Gemini API Keys (bằng tay hoặc nạp từ file `.txt`).
+   - Nhập danh sách Mistral API Keys (bằng tay hoặc nạp từ file `.txt`).
+   - Kiểm tra key hợp lệ trực tiếp.
+   - Lưu an toàn lên CSDL máy chủ thông qua `api/user_gemini_keys.php`.
+3. Dữ liệu sau khi lưu được đồng bộ tự động tới toàn bộ các trang công cụ trên hệ thống.
+4. Toàn bộ smoke test suite (bao gồm `user-ai-settings-smoke.js`) PASS 100%.

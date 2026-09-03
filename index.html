@@ -1095,6 +1095,8 @@
                     <i class="fas fa-sparkles mr-1 text-indigo-300"></i> Cập nhật đồng bộ
                 </span>
 
+                <button type="button" onclick="UserAiSettings.openModal()" id="btnOpenUserAiSettings" class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 shadow-sm transition hover:bg-indigo-100 hover:border-indigo-300"><i class="fas fa-sliders-h text-indigo-600"></i> Cài đặt AI & Key</button>
+
                 <button onclick="SystemConfig.logout()"
                     class="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-600 shadow-sm transition hover:bg-rose-50">
                     <i class="fas fa-power-off"></i> Đăng xuất
@@ -1423,6 +1425,7 @@
 
     </main>
 
+    <script src="js/user-ai-settings.js"></script>
     <script src="ai-stats-panel.js?v=20260708"></script>
     <script>
         (async function setupTeacherLotrinhHub() {
@@ -1606,6 +1609,9 @@
                             <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-white md:text-3xl">Xin chào, ${teacherName}</h2>
                             <p class="mt-2 text-sm leading-6 text-teal-50/90">${introText}</p>
                             <p class="mt-2 text-xs text-teal-100/80">${classHint}</p>
+                            <button type="button" id="heroKeyStatus" onclick="UserAiSettings.openModal()" class="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-teal-50 transition hover:bg-white/20">
+                                <i class="fas fa-key text-amber-300"></i> Đang kiểm tra API Key...
+                            </button>
                         </div>
                         <div class="${gridClass} w-full lg:max-w-3xl">
                             ${actionCards.join('')}
@@ -1614,6 +1620,9 @@
                     ${aiStatsSection}
                 </div>
             `;
+            if (window.UserAiSettings && typeof UserAiSettings.updateBadge === 'function') {
+                UserAiSettings.updateBadge();
+            }
 
             // Hai tác vụ thao tác được đặt cùng các công cụ phía dưới; phần đầu chỉ
             // giữ hai việc theo dõi thường ngày của giáo viên.
