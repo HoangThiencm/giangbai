@@ -172,6 +172,61 @@
      * Lưu Specification Matrix Index vào hồ sơ đợt duyệt. Khi giáo viên sửa 1 câu và bấm "Kiểm tra lại câu sửa", hệ thống chỉ cần lấy đúng dòng chỉ mục của câu đó ra để đối chiếu, không cần đọc lại 8–9 trang PDF ma trận từ đầu, tiết kiệm token và tăng tốc độ phản hồi tức thì (< 3 giây).
 
 
+
+### Chi tiết Kỹ thuật: Bóc tách Bảng Ma trận & Bảng Đặc tả (Specification Matrix Schema)
+Để giải quyết bài toán ma trận dài 8–9 trang và tránh các bẫy nghiệp vụ thực tế, cấu trúc bóc tách bắt buộc phải tuân theo 2 tầng dữ liệu:
+
+1. **Schema JSON chuẩn hóa (`SpecificationMatrixIndex`)**:
+```json
+{
+  "tong_quan": {
+    "mon": "Toán",
+    "lop": 9,
+    "thoi_gian_phut": 90,
+    "tong_diem": 10.0,
+    "ti_le_phan_tram": {
+      "nhan_biet": 40,
+      "thong_hieu": 30,
+      "van_dung": 20,
+      "van_dung_cao": 10
+    }
+  },
+  "danh_sach_chi_tieu": [
+    {
+      "id": "SPEC_01",
+      "chu_de": "Hàm số bậc nhất",
+      "don_vi_kien_thuc": "Hàm số y = ax + b",
+      "phan_thi": "Phần I",
+      "dang_cau": "TNKQ_4_lua_chon",
+      "vi_tri_du_kien": "Câu 1",
+      "muc_do": "nhan_biet",
+      "yccd": "Nhận biết được tính đồng biến, nghịch biến của hàm số y = ax + b qua hệ số a",
+      "so_diem": 0.25,
+      "yeu_cau_ngu_lieu": "Toán thuần túy"
+    },
+    {
+      "id": "SPEC_02",
+      "chu_de": "Hàm số bậc nhất",
+      "don_vi_kien_thuc": "Ứng dụng thực tế",
+      "phan_thi": "Phần II",
+      "dang_cau": "TNKQ_dung_sai",
+      "vi_tri_du_kien": "Câu 1",
+      "cac_y_con": [
+        { "y": "a", "muc_do": "nhan_biet", "diem": 0.1, "yccd": "Nhận biết điểm thuộc đồ thị" },
+        { "y": "b", "muc_do": "thong_hieu", "diem": 0.15, "yccd": "Tìm toạ độ giao điểm" },
+        { "y": "c", "muc_do": "van_dung", "diem": 0.25, "yccd": "Tính quãng đường chuyển động thực tế", "yeu_cau_ngu_lieu": "Bài toán thực tế" },
+        { "y": "d", "muc_do": "van_dung_cao", "diem": 0.5, "yccd": "Tối ưu hóa chi phí taxi theo đồ thị", "yeu_cau_ngu_lieu": "Bài toán thực tế" }
+      ]
+    }
+  ]
+}
+```
+
+2. **Thuật toán Khớp chỉ tiêu (Slot Matching)**:
+- Đối với ma trận có mã câu (`vi_tri_du_kien`): Ánh xạ trực tiếp với câu tương ứng trong đề thi.
+- Đối với ma trận không có mã câu (chỉ có số lượng): AI duyệt các câu hỏi trong đề thuộc cùng chủ đề/phần thi, tính độ tương đồng ngữ nghĩa giữa nội dung câu hỏi và `yccd`, sau đó ghép vào chỉ tiêu phù hợp nhất.
+- Báo cảnh báo nếu: Có chỉ tiêu trong ma trận không tìm thấy câu hỏi tương ứng trong đề, hoặc câu hỏi trong đề không thuộc bất kỳ chỉ tiêu nào của ma trận.
+
 ### 4 Tiêu chí thực chiến bổ sung để "Đủ dùng 100% trong trường học"
 1. **Xuất Đề thi hoàn chỉnh sau hiệu chỉnh (.docx sẵn sàng in ấn)**:
    - Ngoài xuất "Biên bản thẩm định", hệ thống tự động tổng hợp và xuất ra file **"Đề kiểm tra chính thức (.docx)"** và **"Hướng dẫn chấm chính thức (.docx)"** đã được thay thế các câu đã sửa đạt chuẩn, đúng format in ấn của Bộ/Sở.

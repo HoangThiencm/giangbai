@@ -98,7 +98,7 @@ function duyetde_normalize_pdf_base64(string $raw): string
         $value = explode('base64,', $value, 2)[1] ?? $value;
     }
     $value = preg_replace('/\s+/', '', $value) ?? $value;
-    if (strlen($value) > 3500000) {
+    if (strlen($value) > 12000000) {
         return '';
     }
     return $value;
@@ -113,7 +113,7 @@ function call_gemini_with_rotation(array $keys, array $payload, string $model = 
         $model = 'gemini-2.5-flash';
     }
     $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE);
-    if (!is_string($encoded) || strlen($encoded) > 8 * 1024 * 1024) {
+    if (!is_string($encoded) || strlen($encoded) > 14 * 1024 * 1024) {
         return ['ok' => false, 'error' => 'Tài liệu gửi AI quá lớn.', 'status' => 413];
     }
     $timeout = max(20, min(120, $timeout));
@@ -213,6 +213,264 @@ function duyetde_normalize_status(string $status): string
         : 'Chưa đủ dữ liệu để kết luận');
 }
 
+function duyetde_normalize_muc_do(string $raw): string
+{
+    $s = strtolower(trim($raw));
+    $s = str_replace(['_', '-'], ' ', $s);
+    if (preg_match('/van dung cao|vận dụng cao|vdc|high/u', $s)) {
+        return 'van_dung_cao';
+    }
+    if (preg_match('/van dung|vận dụng|apply/u', $s)) {
+        return 'van_dung';
+    }
+    if (preg_match('/thong hieu|thông hiểu|understand/u', $s)) {
+        return 'thong_hieu';
+    }
+    if (preg_match('/nhan biet|nhận biết|know|nb/u', $s)) {
+        return 'nhan_biet';
+    }
+    return $s !== '' ? str_replace(' ', '_', $s) : 'nhan_biet';
+}
+
+function duyetde_normalize_dang_cau(string $raw): string
+{
+    $s = function_exists('mb_strtolower') ? mb_strtolower(trim($raw), 'UTF-8') : strtolower(trim($raw));
+    if (preg_match('/đúng\s*\/?\s*sai|dung sai|true\s*false|tnkq_dung_sai/u', $s)) {
+        return 'TNKQ_dung_sai';
+    }
+    if (preg_match('/tự luận|tu luan|essay|tl_tu_luan/u', $s)) {
+        return 'TL_tu_luan';
+    }
+    if (preg_match('/trả lời ngắn|tra loi ngan|tl_ngan/u', $s)) {
+        return 'TL_ngan';
+    }
+    if (preg_match('/4\s*lựa chọn|nhiều lựa chọn|trac nghiem|tnkq/u', $s)) {
+        return 'TNKQ_4_lua_chon';
+    }
+    return trim($raw) !== '' ? trim($raw) : 'TNKQ_4_lua_chon';
+}
+
+function duyetde_normalize_phan_thi(string $raw): string
+{
+    $s = function_exists('mb_strtolower') ? mb_strtolower(trim($raw), 'UTF-8') : strtolower(trim($raw));
+    if (preg_match('/tự luận|tu luan|phần\s*iv|phan\s*iv|phần\s*4/u', $s)) {
+        return 'Tự luận';
+    }
+    if (preg_match('/phần\s*iii|phan\s*iii|phần\s*3|trả lời ngắn/u', $s)) {
+        return 'Phần III';
+    }
+    if (preg_match('/phần\s*ii|phan\s*ii|phần\s*2|đúng\s*\/?\s*sai/u', $s)) {
+        return 'Phần II';
+    }
+    if (preg_match('/phần\s*i\b|phan\s*i\b|phần\s*1|trắc nghiệm/u', $s)) {
+        return 'Phần I';
+    }
+    return trim($raw) !== '' ? trim($raw) : 'Khác';
+}
+
+function duyetde_normalize_ngu_lieu(string $raw): string
+{
+    $s = function_exists('mb_strtolower') ? mb_strtolower(trim($raw), 'UTF-8') : strtolower(trim($raw));
+    if (preg_match('/đồ thị|do thi|graph/u', $s)) {
+        return 'Đồ thị';
+    }
+    if (preg_match('/bảng biểu|bang bieu|table/u', $s)) {
+        return 'Bảng biểu';
+    }
+    if (preg_match('/thực tế|thuc te|ngữ liệu/u', $s)) {
+        return 'Thực tế';
+    }
+    if ($s === '') {
+        return 'Thuần túy';
+    }
+    return trim($raw);
+}
+
+function duyetde_muc_do_label(string $code): string
+{
+    $map = [
+        'nhan_biet' => 'Nhận biết',
+        'thong_hieu' => 'Thông hiểu',
+        'van_dung' => 'Vận dụng',
+        'van_dung_cao' => 'Vận dụng cao',
+    ];
+    return $map[$code] ?? $code;
+}
+
+function duyetde_normalize_subitems($raw): array
+{
+    if (!is_array($raw)) {
+        return [];
+    }
+    $out = [];
+    foreach ($raw as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $y = trim((string)($item['y'] ?? $item['ky_hieu'] ?? ''));
+        $out[] = [
+            'y' => $y !== '' ? $y : chr(97 + count($out)),
+            'muc_do' => duyetde_normalize_muc_do((string)($item['muc_do'] ?? '')),
+            'diem' => (float)($item['diem'] ?? $item['so_diem'] ?? 0),
+            'yccd' => trim((string)($item['yccd'] ?? $item['yeu_cau'] ?? '')),
+            'yeu_cau_ngu_lieu' => duyetde_normalize_ngu_lieu((string)($item['yeu_cau_ngu_lieu'] ?? '')),
+        ];
+    }
+    return $out;
+}
+
+function duyetde_normalize_matrix_index($raw): array
+{
+    $data = is_array($raw) ? $raw : [];
+    $overview = is_array($data['tong_quan'] ?? null) ? $data['tong_quan'] : [];
+    $ratio = is_array($overview['ti_le_phan_tram'] ?? null) ? $overview['ti_le_phan_tram'] : [];
+    $items = is_array($data['danh_sach_chi_tieu'] ?? $data['items'] ?? null) ? ($data['danh_sach_chi_tieu'] ?? $data['items']) : [];
+    $specs = [];
+    $n = 0;
+    foreach ($items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $n++;
+        $id = trim((string)($item['id'] ?? ''));
+        if ($id === '') {
+            $id = 'SPEC_' . str_pad((string)$n, 2, '0', STR_PAD_LEFT);
+        }
+        $subs = duyetde_normalize_subitems($item['cac_y_con'] ?? []);
+        $dangCau = duyetde_normalize_dang_cau((string)($item['dang_cau'] ?? ''));
+        $diem = (float)($item['so_diem'] ?? $item['diem'] ?? 0);
+        if ($subs && $diem <= 0) {
+            foreach ($subs as $sub) {
+                $diem += (float)$sub['diem'];
+            }
+        }
+        $specs[] = [
+            'id' => $id,
+            'chu_de' => trim((string)($item['chu_de'] ?? '')),
+            'don_vi_kien_thuc' => trim((string)($item['don_vi_kien_thuc'] ?? $item['don_vi'] ?? '')),
+            'phan_thi' => duyetde_normalize_phan_thi((string)($item['phan_thi'] ?? $item['phan'] ?? '')),
+            'dang_cau' => $dangCau,
+            'vi_tri_du_kien' => trim((string)($item['vi_tri_du_kien'] ?? $item['vi_tri_cau'] ?? '')),
+            'muc_do' => duyetde_normalize_muc_do((string)($item['muc_do'] ?? ($subs[0]['muc_do'] ?? ''))),
+            'yccd' => trim((string)($item['yccd'] ?? $item['yccd_yeu_cau_can_dat'] ?? '')),
+            'so_diem' => $diem,
+            'yeu_cau_ngu_lieu' => duyetde_normalize_ngu_lieu((string)($item['yeu_cau_ngu_lieu'] ?? '')),
+            'cac_y_con' => $subs,
+        ];
+    }
+    $counts = ['nhan_biet' => 0, 'thong_hieu' => 0, 'van_dung' => 0, 'van_dung_cao' => 0];
+    $sumPoints = 0.0;
+    foreach ($specs as $spec) {
+        if ($spec['cac_y_con']) {
+            foreach ($spec['cac_y_con'] as $sub) {
+                $counts[$sub['muc_do']] = ($counts[$sub['muc_do']] ?? 0) + 1;
+                $sumPoints += (float)$sub['diem'];
+            }
+        } else {
+            $counts[$spec['muc_do']] = ($counts[$spec['muc_do']] ?? 0) + 1;
+            $sumPoints += (float)$spec['so_diem'];
+        }
+    }
+    $totalSlots = max(1, array_sum($counts));
+    $computedRatio = [
+        'nhan_biet' => round(($counts['nhan_biet'] / $totalSlots) * 100),
+        'thong_hieu' => round(($counts['thong_hieu'] / $totalSlots) * 100),
+        'van_dung' => round(($counts['van_dung'] / $totalSlots) * 100),
+        'van_dung_cao' => round(($counts['van_dung_cao'] / $totalSlots) * 100),
+    ];
+    return [
+        'tong_quan' => [
+            'mon' => trim((string)($overview['mon'] ?? '')),
+            'lop' => (int)($overview['lop'] ?? 0),
+            'thoi_gian_phut' => (int)($overview['thoi_gian_phut'] ?? 0),
+            'tong_diem' => isset($overview['tong_diem']) ? (float)$overview['tong_diem'] : round($sumPoints, 2),
+            'ti_le_phan_tram' => [
+                'nhan_biet' => (float)($ratio['nhan_biet'] ?? $computedRatio['nhan_biet']),
+                'thong_hieu' => (float)($ratio['thong_hieu'] ?? $computedRatio['thong_hieu']),
+                'van_dung' => (float)($ratio['van_dung'] ?? $computedRatio['van_dung']),
+                'van_dung_cao' => (float)($ratio['van_dung_cao'] ?? $computedRatio['van_dung_cao']),
+            ],
+            'so_chi_tieu' => count($specs),
+            'ti_le_tinh_tu_chi_tieu' => $computedRatio,
+            'tong_diem_tinh_tu_chi_tieu' => round($sumPoints, 2),
+        ],
+        'danh_sach_chi_tieu' => $specs,
+    ];
+}
+
+function duyetde_ratio_text(array $ratio): string
+{
+    return implode('-', [
+        (int)($ratio['nhan_biet'] ?? 0),
+        (int)($ratio['thong_hieu'] ?? 0),
+        (int)($ratio['van_dung'] ?? 0),
+        (int)($ratio['van_dung_cao'] ?? 0),
+    ]);
+}
+
+function duyetde_group_specs_by_part(array $index): array
+{
+    $order = ['Phần I', 'Phần II', 'Phần III', 'Tự luận'];
+    $groups = [];
+    foreach ($index['danh_sach_chi_tieu'] ?? [] as $spec) {
+        $part = (string)($spec['phan_thi'] ?? 'Khác');
+        $groups[$part][] = $spec;
+    }
+    $sorted = [];
+    foreach ($order as $part) {
+        if (!empty($groups[$part])) {
+            $sorted[$part] = $groups[$part];
+            unset($groups[$part]);
+        }
+    }
+    foreach ($groups as $part => $specs) {
+        $sorted[$part] = $specs;
+    }
+    return $sorted ?: ['Toàn đề' => []];
+}
+
+function duyetde_find_spec(array $index, string $specId): ?array
+{
+    foreach ($index['danh_sach_chi_tieu'] ?? [] as $spec) {
+        if ((string)($spec['id'] ?? '') === $specId) {
+            return $spec;
+        }
+    }
+    return null;
+}
+
+function duyetde_normalize_eval_questions(array $questions): array
+{
+    $out = [];
+    foreach ($questions as $q) {
+        if (!is_array($q)) {
+            continue;
+        }
+        $q['trang_thai'] = duyetde_normalize_status((string)($q['trang_thai'] ?? ''));
+        $q['needs_recheck'] = false;
+        $q['teacher_action'] = (string)($q['teacher_action'] ?? '');
+        $q['cau_hien_tai'] = (string)($q['cau_hien_tai'] ?? $q['cau_hoi_goc'] ?? '');
+        $q['spec_id'] = trim((string)($q['spec_id'] ?? $q['ma_tran']['spec_id'] ?? $q['ma_tran']['dong'] ?? ''));
+        $out[] = $q;
+    }
+    return $out;
+}
+
+function duyetde_count_statuses(array $questions): array
+{
+    $counts = [
+        'Đạt' => 0,
+        'Cần chỉnh sửa' => 0,
+        'Không đạt' => 0,
+        'Chưa đủ dữ liệu để kết luận' => 0,
+    ];
+    foreach ($questions as $q) {
+        $st = duyetde_normalize_status((string)($q['trang_thai'] ?? ''));
+        $counts[$st] = ($counts[$st] ?? 0) + 1;
+    }
+    return $counts;
+}
+
 $keys = duyetde_load_user_gemini_keys($pdo, $userId);
 if (!$keys) {
     respond(['ok' => false, 'error' => 'Tài khoản chưa có Gemini API Key. Hãy lưu key trong phần Hồ sơ đợt duyệt.'], 422);
@@ -228,6 +486,48 @@ $profileLine = trim(implode(' · ', array_filter([
     $profile['hoc_ky'] ?? '',
     $profile['to_chuyen_mon'] ?? '',
 ])));
+
+if ($action === 'extract_matrix_index') {
+    $parts = array_merge(
+        [['text' => "Bạn là chuyên gia đo lường đánh giá theo CTGDPT 2018. NHIỆM VỤ CHẶNG 1 — Structural Indexing:\nChỉ đọc Bảng ma trận / Bảng đặc tả (PDF/bảng nhiều ô gộp, 6–10 trang). KHÔNG đọc đề thi. KHÔNG đối chiếu đề.\nBóc tách thành SpecificationMatrixIndex JSON phẳng, mỗi chỉ tiêu = 1 dòng.\nBẮT BUỘC xử lý 4 bẫy:\n1) Phần II Đúng/Sai: mỗi câu có 4 ý a,b,c,d với mức độ và điểm khác nhau — bắt buộc mảng cac_y_con.\n2) Ma trận không đánh số câu (chỉ ghi số lượng): vẫn tạo chỉ tiêu Target Specs, vi_tri_du_kien để trống hoặc ghi \"slot\".\n3) Ngữ liệu: yeu_cau_ngu_lieu = Thuần túy | Thực tế | Đồ thị | Bảng biểu.\n4) Tỷ lệ toàn đề: tong_quan.ti_le_phan_tram (thường 40-30-20-10) và tong_diem (thường 10.0).\nHồ sơ: {$profileLine}\nmuc_do chỉ dùng: nhan_biet | thong_hieu | van_dung | van_dung_cao.\ndang_cau: TNKQ_4_lua_chon | TNKQ_dung_sai | TL_ngan | TL_tu_luan.\nphan_thi: Phần I | Phần II | Phần III | Tự luận.\nid dạng SPEC_01, SPEC_02, ...\nTrả JSON duy nhất đúng schema:\n{\"tong_quan\":{\"mon\":\"\",\"lop\":0,\"thoi_gian_phut\":0,\"tong_diem\":10.0,\"ti_le_phan_tram\":{\"nhan_biet\":40,\"thong_hieu\":30,\"van_dung\":20,\"van_dung_cao\":10}},\"danh_sach_chi_tieu\":[{\"id\":\"SPEC_01\",\"chu_de\":\"\",\"don_vi_kien_thuc\":\"\",\"phan_thi\":\"Phần I\",\"dang_cau\":\"TNKQ_4_lua_chon\",\"vi_tri_du_kien\":\"Câu 1\",\"muc_do\":\"nhan_biet\",\"yccd\":\"\",\"so_diem\":0.25,\"yeu_cau_ngu_lieu\":\"Thuần túy\",\"cac_y_con\":[]}]}"]],
+        duyetde_file_parts($body, 'matrix', 'Ma trận đề'),
+        duyetde_file_parts($body, 'spec', 'Bảng đặc tả')
+    );
+    if (count($parts) < 2) {
+        respond(['ok' => false, 'error' => 'Thiếu PDF/văn bản ma trận hoặc bảng đặc tả để bóc tách chỉ mục.'], 422);
+    }
+    $result = call_gemini_with_rotation($keys, [
+        'contents' => [['role' => 'user', 'parts' => $parts]],
+        'generationConfig' => [
+            'temperature' => 0.1,
+            'responseMimeType' => 'application/json',
+        ],
+    ], $model, 120);
+    if (empty($result['ok'])) {
+        respond(['ok' => false, 'error' => $result['error'] ?? 'Không bóc tách được ma trận.'], (int)($result['status'] ?? 502));
+    }
+    $parsed = duyetde_parse_json_object((string)($result['text'] ?? ''));
+    if (!$parsed) {
+        respond(['ok' => false, 'error' => 'AI không trả JSON chỉ mục ma trận hợp lệ.', 'raw' => duyetde_clip_text((string)($result['text'] ?? ''), 4000)], 502);
+    }
+    $index = duyetde_normalize_matrix_index($parsed);
+    if (!$index['danh_sach_chi_tieu']) {
+        respond(['ok' => false, 'error' => 'Không nhận diện được chỉ tiêu nào trong ma trận/đặc tả.', 'matrix_index' => $index], 422);
+    }
+    $overview = $index['tong_quan'];
+    respond([
+        'ok' => true,
+        'action' => $action,
+        'matrix_index' => $index,
+        'summary' => [
+            'so_chi_tieu' => (int)$overview['so_chi_tieu'],
+            'ti_le' => duyetde_ratio_text($overview['ti_le_phan_tram']),
+            'tong_diem' => (float)$overview['tong_diem'],
+            'thoi_gian_phut' => (int)$overview['thoi_gian_phut'],
+        ],
+        'model' => $result['model'] ?? $model,
+    ]);
+}
 
 if ($action === 'generate_solution') {
     $parts = array_merge(
@@ -256,64 +556,103 @@ if ($action === 'generate_solution') {
 }
 
 if ($action === 'evaluate_exam') {
+    $index = duyetde_normalize_matrix_index($body['matrix_index'] ?? $body['specification_matrix_index'] ?? null);
+    if (!$index['danh_sach_chi_tieu']) {
+        respond(['ok' => false, 'error' => 'Thiếu Specification Matrix Index. Hãy bóc tách ma trận (extract_matrix_index) và xác nhận trước khi đối chiếu. Không gửi 8–9 trang PDF ma trận kèm đề thi.'], 422);
+    }
+    $examParts = duyetde_file_parts($body, 'exam', 'Đề thi');
+    $answerParts = duyetde_file_parts($body, 'answer', 'Đáp án/Hướng dẫn chấm gốc (nếu có)');
+    if (!$examParts) {
+        respond(['ok' => false, 'error' => 'Thiếu nội dung đề thi.'], 422);
+    }
     $solutionJson = $body['solution'] ?? null;
     $solutionText = is_array($solutionJson)
         ? json_encode($solutionJson, JSON_UNESCAPED_UNICODE)
         : trim((string)($body['solution_text'] ?? ''));
-    $parts = array_merge(
-        [['text' => "Bạn là chuyên gia giáo dục, thẩm định đề kiểm tra theo Ma trận và Bảng đặc tả (Evaluation Engine).\nHồ sơ: {$profileLine}\nĐánh giá dứt khoát từng câu theo 3 khía cạnh: Ma trận (chuẩn kiến thức, mức độ tư duy, số điểm), Hình thức (câu từ, chính tả, trình bày), Nội dung (tính chính xác khoa học).\nMáy trạng thái bắt buộc, chỉ được dùng đúng 4 giá trị:\n- Đạt: khớp hoàn toàn ma trận/đặc tả về câu hỏi, mức độ nhận thức, đơn vị kiến thức, số điểm.\n- Cần chỉnh sửa: lỗi chính tả, diễn đạt, hình vẽ chưa rõ hoặc tinh chỉnh câu chữ nhỏ.\n- Không đạt: sai mạch kiến thức, sai mức độ tư duy, sai số điểm, hoặc không có trong ma trận/đặc tả.\n- Chưa đủ dữ liệu để kết luận: ma trận/đặc tả mờ, thiếu dữ liệu, câu hỏi không rõ ngữ cảnh. Không được kết luận bừa.\nVới câu Cần chỉnh sửa hoặc Không đạt, bắt buộc viết lại câu hỏi đề xuất, đáp án và hướng dẫn chấm mới, kèm căn cứ dòng/cột ma trận.\nTrả JSON duy nhất:\n{\"tong_so_cau\":0,\"so_cau_dat\":0,\"so_cau_can_chinh_sua\":0,\"so_cau_khong_dat\":0,\"so_cau_chua_du_du_lieu\":0,\"ket_luan\":\"\",\"questions\":[{\"so_cau\":\"1\",\"cau_hoi_goc\":\"\",\"trang_thai\":\"Đạt\",\"ma_tran\":{\"nhan_xet\":\"\",\"dong\":\"\",\"chu_de\":\"\",\"muc_do\":\"\",\"diem\":\"\"},\"hinh_thuc\":{\"nhan_xet\":\"\"},\"noi_dung\":{\"nhan_xet\":\"\"},\"nhan_xet\":\"\",\"can_cu\":\"\",\"cau_de_xuat\":\"\",\"dap_an_de_xuat\":\"\",\"huong_dan_cham_de_xuat\":\"\"}]}"]],
-        duyetde_file_parts($body, 'exam', 'Đề thi'),
-        duyetde_file_parts($body, 'matrix', 'Ma trận đề'),
-        duyetde_file_parts($body, 'spec', 'Bảng đặc tả'),
-        duyetde_file_parts($body, 'answer', 'Đáp án/Hướng dẫn chấm gốc (nếu có)')
-    );
-    if ($solutionText !== '') {
-        $parts[] = ['text' => "Lời giải tham khảo (Pha 1):\n" . duyetde_clip_text($solutionText, 80000)];
-    }
-    if (count($parts) < 3) {
-        respond(['ok' => false, 'error' => 'Thiếu đề thi hoặc ma trận/đặc tả để đối chiếu.'], 422);
-    }
-    $result = call_gemini_with_rotation($keys, [
-        'contents' => [['role' => 'user', 'parts' => $parts]],
-        'generationConfig' => [
-            'temperature' => 0.15,
-            'responseMimeType' => 'application/json',
-        ],
-    ], $model, 110);
-    if (empty($result['ok'])) {
-        respond(['ok' => false, 'error' => $result['error'] ?? 'Không thẩm định được đề.'], (int)($result['status'] ?? 502));
-    }
-    $parsed = duyetde_parse_json_object((string)($result['text'] ?? ''));
-    if (!$parsed) {
-        respond(['ok' => false, 'error' => 'AI không trả JSON thẩm định hợp lệ.', 'raw' => duyetde_clip_text((string)($result['text'] ?? ''), 4000)], 502);
-    }
-    $questions = is_array($parsed['questions'] ?? null) ? $parsed['questions'] : [];
-    foreach ($questions as $i => $q) {
-        if (!is_array($q)) {
+    $groups = duyetde_group_specs_by_part($index);
+    $questions = [];
+    $warnings = [];
+    $timeNotes = [];
+    $figureNotes = [];
+    $batchErrors = [];
+    foreach ($groups as $partName => $specs) {
+        if (!$specs) {
             continue;
         }
-        $questions[$i]['trang_thai'] = duyetde_normalize_status((string)($q['trang_thai'] ?? ''));
-        $questions[$i]['needs_recheck'] = false;
-        $questions[$i]['teacher_action'] = '';
-        $questions[$i]['cau_hien_tai'] = (string)($q['cau_hoi_goc'] ?? '');
+        $specJson = json_encode($specs, JSON_UNESCAPED_UNICODE);
+        $prompt = "Bạn là chuyên gia giáo dục. CHẶNG 2 — Slot Matching & Batching.\nHồ sơ: {$profileLine}\nChỉ đối chiếu PHẦN: {$partName}. KHÔNG đọc lại toàn bộ 8–9 trang PDF ma trận. Chỉ dùng Bảng chỉ mục JSON dưới đây.\nThuật toán khớp:\n- Nếu vi_tri_du_kien có mã câu: ánh xạ đúng câu đó.\n- Nếu không có mã câu: tìm câu cùng chủ đề/phần thi, khớp ngữ nghĩa với yccd (Target Specs → Slot Matching).\n- Cảnh báo chỉ tiêu không có câu, hoặc câu không thuộc chỉ tiêu nào.\n- Phần II TNKQ_dung_sai: chấm từng ý trong cac_y_con (mức độ + điểm riêng).\n- Kiểm tra yeu_cau_ngu_lieu (Thuần túy/Thực tế/Đồ thị/Bảng biểu).\n- Ước lượng thời gian làm bài từng câu (giây) và nêu hình vẽ/đồ thị nếu có.\n3 tiêu chí: Ma trận, Hình thức, Nội dung.\n4 trạng thái: Đạt | Cần chỉnh sửa | Không đạt | Chưa đủ dữ liệu để kết luận.\nCâu lệch: viết lại cau_de_xuat, dap_an_de_xuat, huong_dan_cham_de_xuat.\nTrả JSON: {\"questions\":[{\"so_cau\":\"\",\"spec_id\":\"SPEC_01\",\"phan_thi\":\"{$partName}\",\"cau_hoi_goc\":\"\",\"trang_thai\":\"Đạt\",\"thoi_gian_giay\":0,\"hinh_ve\":\"\",\"ma_tran\":{\"spec_id\":\"SPEC_01\",\"dong\":\"\",\"chu_de\":\"\",\"don_vi_kien_thuc\":\"\",\"muc_do\":\"\",\"diem\":\"\",\"yccd\":\"\",\"yeu_cau_ngu_lieu\":\"\"},\"hinh_thuc\":{\"nhan_xet\":\"\"},\"noi_dung\":{\"nhan_xet\":\"\"},\"cac_y_con\":[],\"nhan_xet\":\"\",\"can_cu\":\"\",\"cau_de_xuat\":\"\",\"dap_an_de_xuat\":\"\",\"huong_dan_cham_de_xuat\":\"\"}],\"chi_tieu_chua_khop\":[],\"cau_thua\":[],\"thoi_gian_phut_uoc_tinh\":0,\"canh_bao_thoi_luong\":\"\"}";
+        $parts = array_merge(
+            [['text' => $prompt]],
+            $examParts,
+            $answerParts,
+            [['text' => "Bảng chỉ mục JSON của {$partName} (KHÔNG phải PDF ma trận):\n" . duyetde_clip_text((string)$specJson, 50000)]]
+        );
+        if ($solutionText !== '') {
+            $parts[] = ['text' => "Lời giải tham khảo (Pha 1):\n" . duyetde_clip_text($solutionText, 40000)];
+        }
+        $result = call_gemini_with_rotation($keys, [
+            'contents' => [['role' => 'user', 'parts' => $parts]],
+            'generationConfig' => [
+                'temperature' => 0.15,
+                'responseMimeType' => 'application/json',
+            ],
+        ], $model, 90);
+        if (empty($result['ok'])) {
+            $batchErrors[] = $partName . ': ' . ($result['error'] ?? 'lỗi AI');
+            continue;
+        }
+        $parsed = duyetde_parse_json_object((string)($result['text'] ?? ''));
+        if (!$parsed) {
+            $batchErrors[] = $partName . ': JSON không hợp lệ';
+            continue;
+        }
+        $questions = array_merge($questions, duyetde_normalize_eval_questions(is_array($parsed['questions'] ?? null) ? $parsed['questions'] : []));
+        foreach ((array)($parsed['chi_tieu_chua_khop'] ?? []) as $miss) {
+            $warnings[] = is_string($miss) ? ($partName . ': thiếu câu cho ' . $miss) : ($partName . ': chỉ tiêu chưa khớp');
+        }
+        foreach ((array)($parsed['cau_thua'] ?? []) as $extra) {
+            $warnings[] = is_string($extra) ? ($partName . ': câu thừa ' . $extra) : ($partName . ': câu không thuộc ma trận');
+        }
+        if (!empty($parsed['canh_bao_thoi_luong'])) {
+            $timeNotes[] = (string)$parsed['canh_bao_thoi_luong'];
+        }
+        if (!empty($parsed['thoi_gian_phut_uoc_tinh'])) {
+            $timeNotes[] = $partName . ': ~' . $parsed['thoi_gian_phut_uoc_tinh'] . ' phút';
+        }
+        foreach (is_array($parsed['questions'] ?? null) ? $parsed['questions'] : [] as $q) {
+            if (!empty($q['hinh_ve'])) {
+                $figureNotes[] = 'Câu ' . ($q['so_cau'] ?? '') . ': ' . $q['hinh_ve'];
+            }
+        }
     }
-    $parsed['questions'] = $questions;
-    $counts = [
-        'Đạt' => 0,
-        'Cần chỉnh sửa' => 0,
-        'Không đạt' => 0,
-        'Chưa đủ dữ liệu để kết luận' => 0,
+    if (!$questions && $batchErrors) {
+        respond(['ok' => false, 'error' => 'Không thẩm định được đề. ' . implode(' | ', $batchErrors)], 502);
+    }
+    $counts = duyetde_count_statuses($questions);
+    $overview = $index['tong_quan'];
+    $ratioText = duyetde_ratio_text($overview['ti_le_phan_tram']);
+    $pointGap = abs(((float)$overview['tong_diem']) - ((float)$overview['tong_diem_tinh_tu_chi_tieu']));
+    if ($pointGap > 0.2) {
+        $warnings[] = 'Lệch tổng điểm ma trận: khai báo ' . $overview['tong_diem'] . ' nhưng cộng chỉ tiêu ra ' . $overview['tong_diem_tinh_tu_chi_tieu'];
+    }
+    $eval = [
+        'tong_so_cau' => count($questions),
+        'so_cau_dat' => $counts['Đạt'],
+        'so_cau_can_chinh_sua' => $counts['Cần chỉnh sửa'],
+        'so_cau_khong_dat' => $counts['Không đạt'],
+        'so_cau_chua_du_du_lieu' => $counts['Chưa đủ dữ liệu để kết luận'],
+        'ket_luan' => $counts['Không đạt'] ? 'Chưa đạt — có câu lệch ma trận/đặc tả.' : ($counts['Cần chỉnh sửa'] ? 'Cần chỉnh sửa hình thức/diễn đạt.' : 'Khớp ma trận theo bảng chỉ mục.'),
+        'questions' => $questions,
+        'ti_le_ma_tran' => $ratioText,
+        'tong_diem_ma_tran' => $overview['tong_diem'],
+        'thoi_gian_quy_dinh' => $overview['thoi_gian_phut'],
+        'canh_bao_thoi_luong' => implode(' | ', array_unique($timeNotes)),
+        'canh_bao_ti_le' => implode(' | ', $warnings),
+        'hinh_ve_do_thi' => $figureNotes,
+        'batch_errors' => $batchErrors,
+        'used_matrix_index' => true,
     ];
-    foreach ($questions as $q) {
-        $st = duyetde_normalize_status((string)($q['trang_thai'] ?? ''));
-        $counts[$st] = ($counts[$st] ?? 0) + 1;
-    }
-    $parsed['tong_so_cau'] = count($questions);
-    $parsed['so_cau_dat'] = $counts['Đạt'];
-    $parsed['so_cau_can_chinh_sua'] = $counts['Cần chỉnh sửa'];
-    $parsed['so_cau_khong_dat'] = $counts['Không đạt'];
-    $parsed['so_cau_chua_du_du_lieu'] = $counts['Chưa đủ dữ liệu để kết luận'];
-    respond(['ok' => true, 'action' => $action, 'evaluation' => $parsed, 'model' => $result['model'] ?? $model]);
+    respond(['ok' => true, 'action' => $action, 'evaluation' => $eval, 'matrix_index' => $index, 'model' => $model]);
 }
 
 if ($action === 'recheck_question' || $action === 'recheck_single_question') {
@@ -322,18 +661,30 @@ if ($action === 'recheck_question' || $action === 'recheck_single_question') {
     if ($questionText === '') {
         respond(['ok' => false, 'error' => 'Thiếu nội dung câu hỏi cần kiểm tra lại.'], 422);
     }
-    $parts = array_merge(
-        [['text' => "Bạn là chuyên gia giáo dục. Chỉ thẩm định LẠI MỘT câu hỏi đã được giáo viên hiệu chỉnh, đối chiếu với ma trận và bảng đặc tả.\nHồ sơ: {$profileLine}\nCâu gốc: " . trim((string)($question['cau_hoi_goc'] ?? '')) . "\nCâu đã sửa:\n{$questionText}\nĐáp án/hướng dẫn chấm mới: " . trim((string)($question['dap_an_de_xuat'] ?? $question['dap_an'] ?? '')) . "\nDùng đúng 4 trạng thái: Đạt | Cần chỉnh sửa | Không đạt | Chưa đủ dữ liệu để kết luận.\nTrả JSON duy nhất: {\"so_cau\":\"" . trim((string)($question['so_cau'] ?? '')) . "\",\"trang_thai\":\"Đạt\",\"nhan_xet\":\"\",\"can_cu\":\"\",\"ma_tran\":{\"nhan_xet\":\"\",\"dong\":\"\",\"chu_de\":\"\",\"muc_do\":\"\",\"diem\":\"\"},\"hinh_thuc\":{\"nhan_xet\":\"\"},\"noi_dung\":{\"nhan_xet\":\"\"},\"cau_de_xuat\":\"\",\"dap_an_de_xuat\":\"\",\"huong_dan_cham_de_xuat\":\"\"}"]],
-        duyetde_file_parts($body, 'matrix', 'Ma trận đề'),
-        duyetde_file_parts($body, 'spec', 'Bảng đặc tả')
-    );
+    $spec = is_array($body['spec'] ?? null) ? $body['spec'] : null;
+    $maTran = is_array($question['ma_tran'] ?? null) ? $question['ma_tran'] : [];
+    $specId = trim((string)($body['spec_id'] ?? $question['spec_id'] ?? $maTran['spec_id'] ?? ''));
+    if (!$spec && $specId !== '' && is_array($body['matrix_index'] ?? null)) {
+        $spec = duyetde_find_spec(duyetde_normalize_matrix_index($body['matrix_index']), $specId);
+    }
+    if (is_array($spec)) {
+        $spec = duyetde_normalize_matrix_index(['danh_sach_chi_tieu' => [$spec]])['danh_sach_chi_tieu'][0] ?? $spec;
+    }
+    if (!$spec) {
+        respond(['ok' => false, 'error' => 'Thiếu đúng 1 SPEC_id trong bảng chỉ mục. Không đọc lại 8–9 trang PDF ma trận khi kiểm tra lại câu sửa.'], 422);
+    }
+    $specJson = json_encode($spec, JSON_UNESCAPED_UNICODE);
+    $soCau = trim((string)($question['so_cau'] ?? ''));
+    $parts = [[
+        'text' => "Bạn là chuyên gia giáo dục. CHẶNG 3 — Recheck 1 câu, 1 chỉ tiêu.\nHồ sơ: {$profileLine}\nChỉ đối chiếu câu đã sửa với ĐÚNG 1 dòng chỉ mục JSON. CẤM đọc lại toàn bộ ma trận PDF.\nCâu số: {$soCau}\nCâu gốc: " . trim((string)($question['cau_hoi_goc'] ?? '')) . "\nCâu đã sửa:\n{$questionText}\nĐáp án/HD chấm mới: " . trim((string)($question['dap_an_de_xuat'] ?? $question['dap_an'] ?? '')) . "\nChỉ tiêu JSON:\n{$specJson}\nKiểm tra mức độ, điểm, YCCĐ, ngữ liệu, các ý con (nếu TNKQ_dung_sai).\n4 trạng thái: Đạt | Cần chỉnh sửa | Không đạt | Chưa đủ dữ liệu để kết luận.\nTrả JSON duy nhất: {\"so_cau\":\"\",\"spec_id\":\"\",\"trang_thai\":\"Đạt\",\"nhan_xet\":\"\",\"can_cu\":\"\",\"ma_tran\":{\"spec_id\":\"\",\"dong\":\"\",\"chu_de\":\"\",\"muc_do\":\"\",\"diem\":\"\"},\"hinh_thuc\":{\"nhan_xet\":\"\"},\"noi_dung\":{\"nhan_xet\":\"\"},\"cau_de_xuat\":\"\",\"dap_an_de_xuat\":\"\",\"huong_dan_cham_de_xuat\":\"\"}",
+    ]];
     $result = call_gemini_with_rotation($keys, [
         'contents' => [['role' => 'user', 'parts' => $parts]],
         'generationConfig' => [
             'temperature' => 0.1,
             'responseMimeType' => 'application/json',
         ],
-    ], $model);
+    ], $model, 25);
     if (empty($result['ok'])) {
         respond(['ok' => false, 'error' => $result['error'] ?? 'Không kiểm tra lại được câu hỏi.'], (int)($result['status'] ?? 502));
     }
@@ -343,7 +694,8 @@ if ($action === 'recheck_question' || $action === 'recheck_single_question') {
     }
     $parsed['trang_thai'] = duyetde_normalize_status((string)($parsed['trang_thai'] ?? ''));
     $parsed['needs_recheck'] = false;
+    $parsed['spec_id'] = (string)($parsed['spec_id'] ?? $spec['id'] ?? $specId);
     respond(['ok' => true, 'action' => 'recheck_question', 'result' => $parsed, 'model' => $result['model'] ?? $model]);
 }
 
-respond(['error' => 'Hành động AI không hợp lệ. Dùng generate_solution, evaluate_exam hoặc recheck_question.'], 422);
+respond(['error' => 'Hành động AI không hợp lệ. Dùng extract_matrix_index, generate_solution, evaluate_exam hoặc recheck_question.'], 422);
