@@ -2266,6 +2266,7 @@ function setupEventListeners() {
       if (key === "digital" || key === "ai") {
         if (!e.target.checked) {
           removeDisabledObjectivesStandardSections();
+          stripActivitiesOfDisabledIntegrations();
           ensureIntegrationStandards({ force: false });
           renderStandardsCatalog();
         } else if (key === "ai") {
@@ -4600,8 +4601,8 @@ function buildPedagogicalContext() {
 - Chuẩn NLS/AI đã chọn (mỗi mục một dòng; PHẢI xuất hiện đủ trong I.2.c và I.2.d; không được bỏ miền/mã đã chọn):
   ${selectedStandards || "Không có"}
 - CẤM bịa mã ngoài danh sách. Khi viết mục tiêu: chỉ mô tả năng lực một dòng, CẤM nhãn Biểu hiện / Nhiệm vụ / Minh chứng.
-- TÍCH HỢP NLS & AI THỰC CHIẾN GẮN MÔN HỌC: NLS/AI chỉ là công cụ thực hành môn ${subjectName}, TUYỆT ĐỐI KHÔNG dạy lý thuyết Tin học hay hỏi lý thuyết AI suông trong giờ học (cấm GV hỏi: "AI là gì?", "Em hãy kể tên công cụ AI?", "Làm gì để kiểm chứng thông tin từ AI?"). CHỈ tích hợp tại 1–2 vị trí then chốt, đắc địa nhất theo 3 dạng: (1) Kiểm chứng phản biện lỗi sai AI, (2) Prompting gợi mở bước giải, (3) Thao tác phần mềm chuyên ngành (GeoGebra/Excel/PhET...). TUYỆT ĐỐI CẤM rải tag dồn dập nhiều mã [AI: ...].
-- TÍCH HỢP TỰ NHIÊN — KHÔNG GƯỢNG ÉP: Chỉ gắn NLS/AI khi khớp nội dung SGK. Bài Hình học: ưu tiên thước, compa, mô hình, GeoGebra nếu có máy; CẤM mã Lập trình (3.4) và Bản quyền số (3.3). Bài Đại số lý thuyết: CẤM gán Bảo vệ dữ liệu cá nhân (4.2) hay đạo đức AI gượng ép. Bài Thống kê/Xác suất: ưu tiên 1.1, 1.2, 1.3.
+${aiOn ? `- TÍCH HỢP NLS & AI THỰC CHIẾN GẮN MÔN HỌC: NLS/AI chỉ là công cụ thực hành môn ${subjectName}, TUYỆT ĐỐI KHÔNG dạy lý thuyết Tin học hay hỏi lý thuyết AI suông trong giờ học (cấm GV hỏi: "AI là gì?", "Em hãy kể tên công cụ AI?", "Làm gì để kiểm chứng thông tin từ AI?"). CHỈ tích hợp tại 1–2 vị trí then chốt, đắc địa nhất theo 3 dạng: (1) Kiểm chứng phản biện lỗi sai AI, (2) Prompting gợi mở bước giải, (3) Thao tác phần mềm chuyên ngành (GeoGebra/Excel/PhET...). TUYỆT ĐỐI CẤM rải tag dồn dập nhiều mã [AI: ...].` : `- NĂNG LỰC AI (QĐ 2422): KHÔNG BẬT. CẤM tự ý đưa kịch bản AI, prompt AI hay marker [AI] vào bất kỳ hoạt động nào.`}
+${digitalOn ? `- TÍCH HỢP TỰ NHIÊN — KHÔNG GƯỢNG ÉP: Chỉ gắn NLS/AI khi khớp nội dung SGK. Bài Hình học: ưu tiên thước, compa, mô hình, GeoGebra nếu có máy; CẤM mã Lập trình (3.4) và Bản quyền số (3.3). Bài Đại số lý thuyết: CẤM gán Bảo vệ dữ liệu cá nhân (4.2) hay đạo đức AI gượng ép. Bài Thống kê/Xác suất: ưu tiên 1.1, 1.2, 1.3.` : `- NĂNG LỰC SỐ (CV 3456): KHÔNG BẬT. CẤM tự ý đưa kịch bản NLS hay marker [NLS] vào giáo án.`}
 - TIME-BUDGET GATE: ${isSinglePeriodLesson() ? "Bài 1 tiết (45 phút): tối đa 1 kỹ thuật nhẹ ở pha B (Think-Pair-Share 3–5 phút hoặc Khăn trải bàn ngắn 5 phút). CẤM kết hợp Mảnh ghép, Trạm/Góc học tập và Dự án trong cùng 1 tiết." : "Bài 2–3 tiết: được phân bổ kỹ thuật sâu (Mảnh ghép, Trạm/Góc học tập, Dự án nhỏ) nếu phù hợp."}
 - FACILITY GATE: ${!(context.facilities || {}).devices && !(context.facilities || {}).internet ? "Lớp KHÔNG có thiết bị học sinh và KHÔNG có Internet. TUYỆT ĐỐI CẤM yêu cầu học sinh lên mạng tra cứu, dùng điện thoại quét mã, thiết kế Canva, dùng laptop/chatbot trong giờ. Chỉ dùng thước, compa, bảng, phiếu giấy, máy tính cầm tay nếu bài cần." : "Có thể dùng công nghệ số khi khớp bài và thiết bị đã tick."}
 - Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.
@@ -4662,26 +4663,54 @@ function buildIntegrationActivityConstraint(phase) {
   const context = normalizeTeachingContext(appState.teachingContext);
   const digitalOn = Boolean(context.integrations.digital);
   const aiOn = Boolean(context.integrations.ai);
+  const nls = standardsOfKind("digital").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
+  const ai = standardsOfKind("ai").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
 
   if (phase === "E") {
     if (!digitalOn && !aiOn) {
-      return `\nQUY TẮC NLS/AI CHO PHA E: Tuyệt đối KHÔNG tự ý đưa Năng lực số (NLS) hoặc Năng lực AI vào Hoạt động E khi giáo viên chưa bật tích hợp.`;
+      return `\nQUY TẮC NLS/AI CHO PHA E: Giáo viên KHÔNG bật Năng lực số và KHÔNG bật Năng lực AI. TUYỆT ĐỐI CẤM đưa bất kỳ kịch bản nào liên quan đến NLS/AI, CẤM chèn marker [NLS], [AI] vào hoạt động.`;
     }
     const eConstraints = [];
     if (digitalOn) {
       eConstraints.push(`- Tích hợp NLS tự học tại nhà: Hướng dẫn nhiệm vụ số thực chất (tra cứu tư liệu môn học, sử dụng phần mềm học tập); TUYỆT ĐỐI KHÔNG đưa yêu cầu hình thức (như bắt quay video, ghi âm).`);
+    } else {
+      eConstraints.push(`- NĂNG LỰC SỐ (CV 3456): KHÔNG BẬT. CẤM tự ý đưa kịch bản NLS hay marker [NLS] vào giáo án.`);
     }
     if (aiOn) {
       eConstraints.push(`- Tích hợp Prompt AI an toàn hỗ trợ tự học: Cung cấp 1 mẫu Prompt AI an toàn mẫu mực đóng vai trò gia sư gợi mở tư duy khi học sinh tự học tại nhà gặp khó khăn, TUYỆT ĐỐI không giải bài hộ, không thay thế việc tự học môn học; TUYỆT ĐỐI CẤM các yêu cầu hình thức (như bắt dùng AI tìm ví dụ suông).`);
+    } else {
+      eConstraints.push(`- NĂNG LỰC AI (QĐ 2422): KHÔNG BẬT. CẤM tự ý đưa kịch bản AI, prompt AI hay marker [AI] vào bất kỳ hoạt động nào.`);
     }
     return `\nQUY TẮC TÍCH HỢP NLS/AI CHO PHA E:\n${eConstraints.join("\n")}`;
   }
 
-  if (!digitalOn && !aiOn) return "";
+  if (!digitalOn && !aiOn) {
+    return `\nQUY TẮC NLS/AI CHO PHA ${phase}: Giáo viên KHÔNG bật Năng lực số và KHÔNG bật Năng lực AI. TUYỆT ĐỐI CẤM đưa bất kỳ kịch bản nào liên quan đến NLS/AI, CẤM chèn marker [NLS], [AI] vào hoạt động.`;
+  }
 
-  const nls = standardsOfKind("digital").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
-  const ai = standardsOfKind("ai").map(item => item.officialCode ? `${item.officialCode}: ${item.officialLabel}` : item.officialLabel).filter(Boolean);
-  
+  if (digitalOn && !aiOn) {
+    const lines = [
+      `TÍCH HỢP NLS THỰC CHIẾN PHA ${phase}: Lồng vào bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.`,
+      `Khi pha ${phase} có tích hợp NLS, BẮT BUỘC dùng DUY NHẤT kịch bản phần mềm chuyên dụng NLS (HS trực tiếp thao tác GeoGebra, Desmos, bảng tính Excel, máy tính cầm tay, PhET... để vẽ hình, xử lý số liệu, kiểm chứng; marker **[NLS: {Miền/Mã} - {Tên phần mềm}]**).`,
+      `CẤM TUYỆT ĐỐI: Giáo viên KHÔNG bật Khung năng lực AI (QĐ 2422). TUYỆT ĐỐI CẤM kịch bản kiểm chứng phản hồi AI, CẤM prompting AI, TUYỆT ĐỐI CẤM chèn bất kỳ tag [AI], [AI: ...] nào.`
+    ];
+    if (nls.length) lines.push(`Chuẩn NLS đã chọn: ${nls.join("; ")}.`);
+    return `\n${lines.join(" ")}`;
+  }
+
+  if (aiOn && !digitalOn) {
+    const lines = [
+      `TÍCH HỢP AI THỰC CHIẾN PHA ${phase}: Lồng vào bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.`,
+      `QUY TẮC BẮT BUỘC: AI chỉ là công cụ thực hành môn học, TUYỆT ĐỐI CẤM GV hỏi lý thuyết suông về AI. TUYỆT ĐỐI CẤM rải tag dồn dập. Toàn bộ bài chỉ tích hợp 1–2 điểm đắc địa nhất.`,
+      `Khi pha ${phase} có tích hợp AI, BẮT BUỘC dùng đúng 1 trong 2 dạng kịch bản thực chiến:`,
+      `- Dạng 1: Kiểm chứng & Phản biện lỗi sai của AI (GV chiếu câu trả lời AI chứa lỗi/ngộ nhận môn học, HS đối chiếu SGK phát hiện lỗi và sửa đúng; marker **[AI: {Mã} - Kiểm chứng phản hồi AI]**).`,
+      `- Dạng 2: Prompting tư duy môn học (GV hướng dẫn Prompt gợi mở bước giải trong "...", HS chạy prompt tự giải bài; marker **[AI: {Mã} - Prompting gợi mở & Tự giải]**).`,
+      `NĂNG LỰC SỐ (CV 3456): KHÔNG BẬT. CẤM tự ý đưa kịch bản NLS hay marker [NLS] vào giáo án.`
+    ];
+    if (ai.length) lines.push(`Chuẩn AI đã chọn: ${ai.join("; ")}.`);
+    return `\n${lines.join(" ")}`;
+  }
+
   const lines = [
     `TÍCH HỢP NLS/AI THỰC CHIẾN PHA ${phase}: Lồng vào bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.`,
     `QUY TẮC BẮT BUỘC: NLS/AI chỉ là công cụ thực hành môn học, TUYỆT ĐỐI CẤM GV hỏi lý thuyết suông về AI (như hỏi định nghĩa AI, hỏi kể tên công cụ, hỏi cách kết hợp AI). TUYỆT ĐỐI CẤM rải tag dồn dập. Toàn bộ bài chỉ tích hợp 1–2 điểm đắc địa nhất.`,
@@ -4693,6 +4722,32 @@ function buildIntegrationActivityConstraint(phase) {
   if (digitalOn && nls.length) lines.push(`Chuẩn NLS đã chọn: ${nls.join("; ")}.`);
   if (aiOn && ai.length) lines.push(`Chuẩn AI đã chọn: ${ai.join("; ")}.`);
   return `\n${lines.join(" ")}`;
+}
+
+function stripDisabledActivityIntegrations(markdown) {
+  const context = normalizeTeachingContext(appState.teachingContext);
+  const digitalOn = Boolean(context.integrations.digital);
+  const aiOn = Boolean(context.integrations.ai);
+  let text = String(markdown || "");
+  if (!aiOn) {
+    text = text.replace(/\*\*\[?AI(?::[^\]\n]+)?\]?\*\*/gi, "")
+               .replace(/\[AI(?::[^\]\n]+)?\]/gi, "");
+    text = text.replace(/^[ \t]*[-+*]?[ \t]*Hướng dẫn Prompt AI.*$/gmi, "")
+               .replace(/^[ \t]*[-+*]?[ \t]*Mẫu Prompt:.*$/gmi, "");
+  }
+  if (!digitalOn) {
+    text = text.replace(/\*\*\[?NLS(?::[^\]\n]+)?\]?\*\*/gi, "")
+               .replace(/\[NLS(?::[^\]\n]+)?\]/gi, "");
+  }
+  return text;
+}
+
+function stripActivitiesOfDisabledIntegrations() {
+  ["A", "B", "C", "D", "E"].forEach(key => {
+    if (appState.content.activities[key]) {
+      appState.content.activities[key] = stripDisabledActivityIntegrations(appState.content.activities[key]);
+    }
+  });
 }
 
 function buildPhasePedagogyContext(phase) {
@@ -5508,6 +5563,7 @@ function clipKhbdActivityMarkdown(actKey, text) {
   if (actKey === "D") {
     clipped = keepBestActivityBlock(clipped, "D");
   }
+  clipped = stripDisabledActivityIntegrations(clipped);
   return normalizeActivityTimeHeadings(clipped);
 }
 
@@ -5993,6 +6049,7 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
     // Chỉ ghi log để không biến kết quả tạo thành công thành cảnh báo gây nhiễu.
     console.info(`Hoạt động ${actKey} đã lưu; kiểm tra cấu trúc chưa khớp hoàn toàn:`, problem.message);
   }
+  finalResult = stripDisabledActivityIntegrations(finalResult);
   appState.content.activities[actKey] = clipKhbdActivityMarkdown(actKey, finalResult);
   syncIllustrationsIntoContent();
   saveStateToLocalStorage();
@@ -6725,6 +6782,9 @@ if (typeof module !== 'undefined' && module.exports) {
     handleGlobalPaste,
     applyObjectivesOutput,
     applyActivityOutput,
+    buildIntegrationActivityConstraint,
+    stripDisabledActivityIntegrations,
+    stripActivitiesOfDisabledIntegrations,
     handlePpctFiles,
     renderPpctGallery,
     deletePpctImage,

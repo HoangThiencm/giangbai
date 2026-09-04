@@ -1535,6 +1535,14 @@ Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budg
     result += `\n\n${PROMPTS.ENGLISH_ELT_DIRECTIVE}`;
   }
 
+  if (!context.aiCompetencyEnabled) {
+    result += `\n\nQUY TẮC BẮT BUỘC VỀ KHUNG NĂNG LỰC AI: Giáo viên KHÔNG bật tích hợp Khung năng lực AI (QĐ 2422). Bỏ qua mọi gợi ý về AI/Dạng 1/Dạng 2/[AI] ở trên. TUYỆT ĐỐI CẤM chèn bất kỳ marker [AI], [AI: ...], CẤM kịch bản kiểm chứng phản biện AI, CẤM prompting AI vào giáo án.`;
+    result += `\n\nLỆNH BẮT BUỘC KHÓA NĂNG LỰC AI: Giáo viên KHÔNG kích hoạt Khung năng lực AI (QĐ 2422). Bỏ qua toàn bộ các hướng dẫn hoặc ví dụ mẫu liên quan đến AI (Dạng 1 kiểm chứng phản hồi AI, Dạng 2 prompting AI) trong hợp đồng biên soạn. TUYỆT ĐỐI CẤM đưa nội dung AI hoặc gắn bất kỳ marker [AI], [AI: ...] vào bài.`;
+  }
+  if (!context.digitalCompetencyEnabled) {
+    result += `\n\nLỆNH BẮT BUỘC KHÓA NĂNG LỰC SỐ: Giáo viên KHÔNG kích hoạt Năng lực số (CV 3456). TUYỆT ĐỐI CẤM kịch bản NLS hay gắn marker [NLS], [NLS: ...] vào bài.`;
+  }
+
   return result;
 }
 

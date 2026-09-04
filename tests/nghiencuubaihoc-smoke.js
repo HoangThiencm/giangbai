@@ -72,18 +72,26 @@ assert(!/runDocumentAnalyzer[\s\S]{0,800}lessonContext\(\)/.test(html), 'Documen
 
 has(html, '<select id="fMon"');
 has(html, '<select id="fLop"');
-has(html, '<select id="fSgk"');
+assert(!html.includes('id="fSgk"'), 'Bước 1 must not have Bộ SGK field');
+assert(!html.includes('SGK_OPTIONS'), 'SGK_OPTIONS must be removed');
 assert(!html.includes('<input id="fMon"'), 'fMon must not remain a text input');
 assert(!html.includes('<input id="fLop"'), 'fLop must not remain a text input');
-assert(!html.includes('<input id="fSgk"'), 'fSgk must not remain a text input');
-['SUBJECT_OPTIONS', 'GRADE_OPTIONS', 'SGK_OPTIONS', 'normalizeSubject', 'normalizeGrade', 'optionList'].forEach(x => has(html, x));
+['SUBJECT_OPTIONS', 'GRADE_OPTIONS', 'normalizeSubject', 'normalizeGrade', 'optionList'].forEach(x => has(html, x));
 ['Toán học', 'Tin học', 'Khoa học tự nhiên', 'Ngữ văn', 'Tiếng Anh', 'Lịch sử và Địa lí', 'Giáo dục công dân', 'Công nghệ', 'Hoạt động trải nghiệm, hướng nghiệp'].forEach(x => has(html, x));
 ['Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 4', 'Lớp 5', 'Lớp 10', 'Lớp 11', 'Lớp 12'].forEach(x => has(html, x));
-['Kết nối tri thức với cuộc sống', 'Chân trời sáng tạo', 'Cánh diều', 'Cùng khám phá', 'SGK hiện hành khác'].forEach(x => has(html, x));
-has(html, 'Kết nối tri thức');
 has(html, "compact === 'toán'");
+assert(!html.includes('id="fCanCuQ"'), 'Bước 2 must not have Câu hỏi căn cứ textarea');
+['Định hướng phân tích bài học', 'Nguyên tắc AI bắt buộc', 'YCCĐ &amp; Trọng tâm', 'Kiến thức tiền đề', 'Chuỗi nhiệm vụ SGK', 'Sản phẩm học tập HS', 'Điểm khó &amp; Sai lầm HS', 'Cơ hội năng lực, phẩm chất', 'Tích hợp NLS (CV 3456)', 'Khung AI (QĐ 2422)', 'Chạy Lesson Analyzer'].forEach(x => has(html, x));
+has(html, 'boSgk: \'\'');
+has(html, 'Tổng hợp nhận xét giáo viên trong tổ có tham dự');
+has(html, 'id="gvToComments"');
+has(html, 'teacherComments');
+has(html, 'temperature: 0');
+has(html, 'looksLikeKhbd5512');
+has(html, 'CẤM kết luận "thiếu tổ chức thực hiện"');
+has(html, '## 1. YCCĐ và trọng tâm');
 
-console.log('nghiencuubaihoc smoke: index/admin integration, 12 steps, 6 zones, 12 AI tasks, key sync, progress bar, markdown, step-1 readiness, subject/grade/sgk selects passed');
+console.log('nghiencuubaihoc smoke: index/admin integration, 12 steps, 6 zones, 12 AI tasks, key sync, progress bar, markdown, step-1 readiness, no fSgk/fCanCuQ, step-2 pedagogy banner passed');
 
 function PRODUCTS_13_TITLES() {
     return [

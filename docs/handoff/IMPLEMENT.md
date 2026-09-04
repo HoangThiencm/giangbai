@@ -1,29 +1,33 @@
-# IMPLEMENT: Dropdown Môn, Lớp, Bộ SGK ở Bước 1 NCBH
+# IMPLEMENT: Khóa Năng lực AI khi không bật (Soạn KHBD) + ổn định NCBH
 
 **Ngày implement**: 2026-09-04
 **Coder**: Grok (xAI)
-**Trạng thái**: DONE — `tests/nghiencuubaihoc-smoke.js` PASS
+**Trạng thái**: DONE — test PLAN + NCBH PASS
 
-## Tóm tắt
-
-Bước 1: `#fMon`, `#fLop`, `#fSgk` đổi từ `<input>` sang `<select>`. Hồ sơ cũ "Toán" map sang "Toán học"; giá trị tùy biến được thêm option để không mất dữ liệu.
-
-## Files
+## 1. PLAN: Soạn KHBD không tự chèn AI khi tắt `✨ Năng lực AI`
 
 | File | Thay đổi |
 |------|----------|
-| `nghiencuubaihoc.html` | `SUBJECT_OPTIONS` / `GRADE_OPTIONS` / `SGK_OPTIONS`; `normalizeSubject` / `normalizeGrade`; select Bước 1; `captureMeta()` đọc `.value` select |
-| `tests/nghiencuubaihoc-smoke.js` | Assertion `<select id="fMon|fLop|fSgk">` và option chuẩn |
+| `js/khbd-app.js` | `buildIntegrationActivityConstraint` tách NLS/AI; `buildPedagogicalContext` cấm AI khi `!aiOn`; `stripDisabledActivityIntegrations` + gọi từ `applyActivityOutput`, `clipKhbdActivityMarkdown`, bỏ tick AI |
+| `js/khbd-prompts.js` | `getPromptTemplate` thêm lệnh khóa AI/NLS khi cờ tắt |
+| `tests/khbd-ai-integration-gate.test.js` | Tạo mới |
 
-Không đổi Bước 2–12, không đổi `api/nghiencuubaihoc.php`, không đụng `soankhbd.html` / `xaydungphuluc.html` / `duyetgiaoan.html` / `duyetde.html`.
+Khi chỉ bật NLS: chỉ kịch bản phần mềm (GeoGebra/Excel/PhET) + `[NLS]`. Marker `[AI]` bị lọc. Khi bật AI: giữ hành vi cũ.
 
-## Kết quả kiểm thử
+## 2. NCBH (user yêu cầu thêm)
+
+| File | Thay đổi |
+|------|----------|
+| `nghiencuubaihoc.html` | Ô **Tổng hợp nhận xét giáo viên trong tổ** ở Bước 2, 3, 9, 10; `temperature: 0`; phiếu 8 mục cố định; Bước 3 nhận KHBD CV 5512 (không bắt lỗi vì mất bảng Word) |
+| `tests/nghiencuubaihoc-smoke.js` | Assertion ô tổ, temp 0, rubric KHBD |
+
+## Kiểm thử
 
 ```
-node tests/nghiencuubaihoc-smoke.js
-nghiencuubaihoc smoke: ... subject/grade/sgk selects passed
+node tests/khbd-ai-integration-gate.test.js  → passed
+node tests/nghiencuubaihoc-smoke.js           → passed
 ```
 
-Cũng PASS: `xaydungphuluc-integration-smoke.js`, `duyetgiaoan-integration-smoke.js`, `duyetgiaoan-smoke.js`, `user-ai-settings-smoke.js`, `security-f12-smoke.js`.
+Cũng PASS: `khbd-integrations-smoke.js`, `khbd-user-ai-keys-smoke.js`, `user-ai-settings-smoke.js`, `security-f12-smoke.js`, `xaydungphuluc-integration-smoke.js`.
 
-Không có browser tool trong phiên này. `/verify` nên mở Bước 1, chọn dropdown, chuyển bước rồi quay lại, lưu CSDL và mở lại hồ sơ.
+`/verify`: Soạn KHBD tắt Năng lực AI → hoạt động không có `[AI]`. NCBH Bước 2/3: ô nhận xét tổ, chạy AI hai lần cùng khung 8 mục, nạp Word từ Soạn KHBD không bị nhận xét từa lưa vì mất bảng.

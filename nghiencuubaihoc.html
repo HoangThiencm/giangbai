@@ -136,7 +136,6 @@ const REVIEW_LEVELS = ['Giữ nguyên', 'Giữ nhưng bổ sung', 'Cần điều
 const SUBJECT_OPTIONS = ['Toán học', 'Tin học', 'Khoa học tự nhiên', 'Ngữ văn', 'Tiếng Anh', 'Lịch sử và Địa lí', 'Giáo dục công dân', 'Công nghệ', 'Hoạt động trải nghiệm, hướng nghiệp', 'Khác'];
 const GRADE_OPTIONS = ['6', '7', '8', '9', '4', '5', '10', '11', '12'];
 const GRADE_LABELS = { '6': 'Lớp 6', '7': 'Lớp 7', '8': 'Lớp 8', '9': 'Lớp 9', '4': 'Lớp 4', '5': 'Lớp 5', '10': 'Lớp 10', '11': 'Lớp 11', '12': 'Lớp 12' };
-const SGK_OPTIONS = ['Kết nối tri thức với cuộc sống', 'Chân trời sáng tạo', 'Cánh diều', 'Cùng khám phá', 'SGK hiện hành khác'];
 
 let geminiKeys = [];
 let mistralKeys = [];
@@ -161,6 +160,7 @@ function emptyState() {
         evidence: [],
         afterAnalysis: '',
         discussionInput: '',
+        teacherComments: { 2: '', 3: '', 9: '', 10: '' },
         minutes: '',
         revisions: [],
         khbdV2: defaultActivities().map(emptyKhbdActivity),
@@ -283,7 +283,7 @@ async function callGemini(prompt, jsonMode) {
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), 45000);
             try {
-                const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.25 } };
+                const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0, topP: 0, topK: 1 } };
                 if (jsonMode) body.generationConfig.responseMimeType = 'application/json';
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(mdl)}:generateContent?key=${encodeURIComponent(key)}`, {
                     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal
@@ -312,7 +312,7 @@ async function callMistral(prompt, previousError) {
             const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + key },
-                body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: prompt }], temperature: 0.25 }),
+                body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: prompt }], temperature: 0 }),
                 signal: controller.signal
             });
             clearTimeout(timer);
@@ -385,7 +385,7 @@ function lessonContext() {
         researchQuestion: state.researchQuestion,
         yccdCatalog: yccdHint(),
         sgk: compactContext(state.files.sgkText, 8000),
-        giaoAn: compactContext(state.files.giaoAnText, 6000),
+        giaoAn: compactContext(state.files.giaoAnText, 14000),
         phieu: compactContext(state.files.phieuText, 2500),
         taiLieu: compactContext(state.files.taiLieuText, 2500),
         canCu: CAN_CU
@@ -401,7 +401,6 @@ function documentAnalyzerContext() {
             monHoc: state.meta.monHoc,
             lop: state.meta.lop,
             baiHoc: state.meta.baiHoc,
-            boSgk: state.meta.boSgk,
             soTiet: state.meta.soTiet
         },
         optional: {
@@ -482,7 +481,7 @@ function captureMeta() {
         monHoc: normalizeSubject(val('fMon') || 'Toán học'),
         lop: normalizeGrade(val('fLop') || '6'),
         baiHoc: val('fBai'),
-        boSgk: val('fSgk'),
+        boSgk: '',
         soTiet: val('fTiet') || '1',
         gvDay: val('fGv'),
         thanhVien: val('fTv'),
@@ -497,7 +496,7 @@ function payload() {
         mon_hoc: state.meta.monHoc,
         lop: state.meta.lop,
         bai_hoc: state.meta.baiHoc,
-        bo_sgk: state.meta.boSgk,
+        bo_sgk: '',
         gv_day: state.meta.gvDay,
         session_title: [state.meta.monHoc, 'Lớp ' + state.meta.lop, state.meta.baiHoc].filter(Boolean).join(' · ') || 'Hồ sơ NCBH',
         current_step: state.currentStep,
@@ -618,13 +617,25 @@ function decide(action, detail) {
     alert('Đã ghi nhật ký quyết định: ' + action + '. AI chỉ đề xuất, GV quyết định.');
 }
 
+function teacherOrgCommentsBox() {
+    const step = state.currentStep;
+    if (![2, 3, 9, 10].includes(step)) return '';
+    if (!state.teacherComments) state.teacherComments = { 2: '', 3: '', 9: '', 10: '' };
+    const saved = state.teacherComments[step] || (step === 10 ? state.discussionInput : '');
+    return `<section class="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
+        <h3 class="text-sm font-black text-amber-950">Tổng hợp nhận xét giáo viên trong tổ có tham dự</h3>
+        <p class="mt-1 text-xs text-amber-900">Tách khỏi đề xuất AI. Ghi họ tên GV dự, ý kiến, thống nhất / không thống nhất với nhận định AI. Không xếp loại giáo viên.</p>
+        <textarea id="gvToComments" class="mt-2 w-full rounded-lg border border-amber-300 bg-white p-2 text-sm" rows="5" placeholder="Ví dụ: Cô A — đồng ý phiếu phân tích; Thầy B — chưa thấy căn cứ YCCĐ ở HĐ 2">${esc(saved)}</textarea>
+    </section>`;
+}
+
 function renderStep() {
     const s = STEPS[state.currentStep - 1];
     const nav = `<div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
         <div><p class="text-xs font-bold uppercase tracking-widest text-teal-700">Bước ${s.n}/12 · ${esc(s.ai)}</p><h2 class="text-xl font-black">${esc(s.title)}</h2></div>
         <div class="flex gap-2"><button type="button" class="rounded-lg border px-3 py-2 text-sm font-bold" onclick="goStep(${Math.max(1, s.n - 1)})">← Trước</button><button type="button" class="rounded-lg bg-teal-700 px-3 py-2 text-sm font-bold text-white" onclick="completeAndNext()">Hoàn thành bước →</button></div>
     </div>`;
-    document.getElementById('stepRoot').innerHTML = nav + stepBody(s) + sixZones(
+    document.getElementById('stepRoot').innerHTML = nav + stepBody(s) + teacherOrgCommentsBox() + sixZones(
         cancuHtml(stepCancuExtra(s.n)),
         aiPanel(s.ai, 'Chạy ' + s.ai, stepAiHandler(s.n)),
         stepGv(s.n),
@@ -655,8 +666,8 @@ function stepAiHandler(n) {
 
 function stepGv(n) {
     const map = {
-        1: 'Khai báo môn, lớp, bài, bộ SGK, số tiết, GV dạy minh họa, thành viên tổ NCBH, lớp thực nghiệm. Nạp SGK PDF bắt buộc; giáo án DOCX/PDF tùy chọn.',
-        2: 'Đọc Kho căn cứ + SGK + YCCĐ CTGDPT 2018. Kiểm tra từng đề xuất bằng câu hỏi căn cứ.',
+        1: 'Khai báo môn, lớp, bài, số tiết, GV dạy minh họa, thành viên tổ NCBH, lớp thực nghiệm. Nạp SGK PDF bắt buộc; giáo án DOCX/PDF tùy chọn.',
+        2: 'Xem định hướng 8 nội dung phân tích rồi bấm Chạy Lesson Analyzer. Không cần nhập câu hỏi căn cứ — đó là nguyên tắc ràng buộc cho AI.',
         3: 'Đánh giá 8 khía cạnh theo 4 mức: Giữ nguyên / Giữ nhưng bổ sung / Cần điều chỉnh / Nên thiết kế lại.',
         4: 'Chọn, chỉnh sửa hoặc tự nhập câu hỏi nghiên cứu. Đây là trục xuyên suốt.',
         5: 'Rà soát từng hoạt động: hướng suy nghĩ, sai lầm, bế tắc, thời điểm can thiệp / không can thiệp.',
@@ -712,7 +723,6 @@ function stepBody(s) {
         <label class="text-xs font-bold">Môn<select id="fMon" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2">${optionList(SUBJECT_OPTIONS, normalizeSubject(state.meta.monHoc))}</select></label>
         <label class="text-xs font-bold">Lớp<select id="fLop" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2">${optionList(GRADE_OPTIONS, normalizeGrade(state.meta.lop), g => GRADE_LABELS[g] || ('Lớp ' + g))}</select></label>
         <label class="text-xs font-bold">Bài học<input id="fBai" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.baiHoc)}" placeholder="Ví dụ: Số nguyên"></label>
-        <label class="text-xs font-bold">Bộ SGK<select id="fSgk" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2">${optionList(state.meta.boSgk ? SGK_OPTIONS : [''].concat(SGK_OPTIONS), state.meta.boSgk, v => v || '— Chọn bộ SGK —')}</select></label>
         <label class="text-xs font-bold">Số tiết<input id="fTiet" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.soTiet)}"></label>
         <label class="text-xs font-bold">GV dạy minh họa<input id="fGv" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.gvDay)}"></label>
         <label class="text-xs font-bold">Thành viên tổ NCBH<input id="fTv" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.thanhVien)}"></label>
@@ -724,7 +734,25 @@ function stepBody(s) {
         <label class="text-xs font-bold">Phiếu học tập<input type="file" accept=".pdf,.docx,.txt" class="mt-1 block w-full text-xs" onchange="readNamedFile(event,'phieu')"><span class="text-slate-500">${esc(state.files.phieuName || 'Chưa nạp')}</span></label>
         <label class="text-xs font-bold">Tài liệu GV<input type="file" accept=".pdf,.docx,.txt" class="mt-1 block w-full text-xs" onchange="readNamedFile(event,'taiLieu')"><span class="text-slate-500">${esc(state.files.taiLieuName || 'Chưa nạp')}</span></label>
     </div></section>`;
-    if (s.n === 2) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><p class="text-sm">Phân tích YCCĐ, trọng tâm, kiến thức tiền đề, chuỗi nhiệm vụ SGK, sản phẩm học tập, điểm khó, lỗi HS, cơ hội năng lực phẩm chất, tích hợp NLS (CV 3456) &amp; Khung AI (QĐ 2422).</p><label class="mt-2 block text-xs font-bold">Câu hỏi căn cứ<textarea id="fCanCuQ" class="mt-1 w-full rounded-lg border p-2" rows="2">Đề xuất này dựa trên căn cứ hoặc yêu cầu chuyên môn nào?</textarea></label></section>`;
+    if (s.n === 2) return `<section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 space-y-4">
+           <div>
+               <h3 class="text-base font-black text-slate-900">Định hướng phân tích bài học</h3>
+               <p class="mt-1 text-xs text-slate-600">Gemini sẽ đọc SGK, đối chiếu CTGDPT 2018 và văn bản hướng dẫn để xây dựng Phiếu phân tích bài học gồm 8 nội dung trọng tâm:</p>
+           </div>
+           <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-4 text-xs font-semibold">
+               <div class="rounded-xl border border-teal-200 bg-teal-50/70 p-3 text-teal-900">1. YCCĐ &amp; Trọng tâm</div>
+               <div class="rounded-xl border border-teal-200 bg-teal-50/70 p-3 text-teal-900">2. Kiến thức tiền đề</div>
+               <div class="rounded-xl border border-teal-200 bg-teal-50/70 p-3 text-teal-900">3. Chuỗi nhiệm vụ SGK</div>
+               <div class="rounded-xl border border-teal-200 bg-teal-50/70 p-3 text-teal-900">4. Sản phẩm học tập HS</div>
+               <div class="rounded-xl border border-indigo-200 bg-indigo-50/70 p-3 text-indigo-900">5. Điểm khó &amp; Sai lầm HS</div>
+               <div class="rounded-xl border border-indigo-200 bg-indigo-50/70 p-3 text-indigo-900">6. Cơ hội năng lực, phẩm chất</div>
+               <div class="rounded-xl border border-cyan-200 bg-cyan-50/70 p-3 text-cyan-900">7. Tích hợp NLS (CV 3456)</div>
+               <div class="rounded-xl border border-cyan-200 bg-cyan-50/70 p-3 text-cyan-900">8. Khung AI (QĐ 2422)</div>
+           </div>
+           <div class="rounded-xl border-l-4 border-teal-600 bg-slate-50 p-3 text-xs text-slate-700">
+               <span class="font-black text-teal-800">📌 Nguyên tắc AI bắt buộc:</span> Mọi phân tích và đề xuất điều chỉnh bài học bắt buộc phải trả lời rõ: <em>“Đề xuất này dựa trên căn cứ hoặc yêu cầu chuyên môn nào?”</em> (đối chiếu cụ thể từ CTGDPT 2018 và hướng dẫn của Bộ GD&amp;ĐT).
+           </div>
+       </section>`;
     if (s.n === 3) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><p class="text-sm mb-2">8 khía cạnh chuyên môn · 4 mức: ${REVIEW_LEVELS.map(esc).join(' / ')}</p><ul class="grid gap-1 text-sm md:grid-cols-2">${REVIEW_ASPECTS.map(a => `<li class="rounded bg-slate-50 px-2 py-1">${esc(a)}</li>`).join('')}</ul></section>`;
     if (s.n === 4) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><label class="text-xs font-bold">Câu hỏi nghiên cứu chính thức (trục xuyên suốt)<textarea id="fRQ" class="mt-1 w-full rounded-lg border p-2" rows="3">${esc(state.researchQuestion)}</textarea></label><div id="rqOptions" class="mt-2 space-y-1 text-sm">${(state.researchOptions || []).map((q, i) => `<button type="button" class="block w-full rounded border px-3 py-2 text-left" onclick="chooseRQ(${i})">${esc(q)}</button>`).join('')}</div></section>`;
     if (s.n === 5) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 overflow-x-auto"><table class="w-full min-w-[900px] text-xs"><thead class="bg-slate-800 text-white"><tr><th class="p-2">Hoạt động</th><th class="p-2">HS bắt đầu</th><th class="p-2">Hướng suy nghĩ</th><th class="p-2">Đúng / chưa hoàn chỉnh / sai</th><th class="p-2">Bế tắc</th><th class="p-2">Câu hỏi gợi mở</th><th class="p-2">Can thiệp</th></tr></thead><tbody>${state.studentPredictions.map((r, i) => `<tr class="border-b align-top"><td class="p-1 font-bold">${esc(r.activity)}</td><td><textarea data-pred="${i}" data-k="start" class="w-full rounded border p-1">${esc(r.start)}</textarea></td><td><textarea data-pred="${i}" data-k="thinking" class="w-full rounded border p-1">${esc(r.thinking)}</textarea></td><td><textarea data-pred="${i}" data-k="correct" class="w-full rounded border p-1">${esc(r.correct)}</textarea></td><td><textarea data-pred="${i}" data-k="stuck" class="w-full rounded border p-1">${esc(r.stuck)}</textarea></td><td><textarea data-pred="${i}" data-k="prompts" class="w-full rounded border p-1">${esc(r.prompts)}</textarea></td><td><textarea data-pred="${i}" data-k="intervene" class="w-full rounded border p-1">${esc(r.intervene)}</textarea></td></tr>`).join('')}</tbody></table></section>`;
@@ -855,6 +883,11 @@ function captureStepFields() {
         state.observation = { hsSheet: val('obsHs'), duGio: val('obsDg'), criteria: val('obsTc'), assignment: val('obsPc'), meeting: val('obsHop'), minutes: val('obsBb') };
     }
     if (document.getElementById('discIn')) state.discussionInput = val('discIn');
+    if (document.getElementById('gvToComments')) {
+        if (!state.teacherComments) state.teacherComments = { 2: '', 3: '', 9: '', 10: '' };
+        state.teacherComments[state.currentStep] = val('gvToComments');
+        if (state.currentStep === 10) state.discussionInput = val('gvToComments');
+    }
     document.querySelectorAll('[data-rev]').forEach(el => {
         const i = Number(el.getAttribute('data-rev')); const k = el.getAttribute('data-k');
         if (!state.revisions[i]) state.revisions[i] = { truoc: '', vanDe: '', minhChung: '', deXuat: '', lyDo: '' };
@@ -918,7 +951,7 @@ async function runDocumentAnalyzer() {
     if (!(state.meta.monHoc && state.meta.lop && state.meta.baiHoc)) return alert('Hãy điền môn, lớp và tên bài học.');
     const instruction = `Bạn là Document Analyzer cho Bước 1 Khởi tạo hồ sơ NCBH.
 NGUYÊN TẮC KIỂM TRA ĐẦY ĐỦ — BẮT BUỘC TUÂN THỦ:
-- Đầu vào bắt buộc duy nhất: SGK và thông tin cơ bản của bài học (môn, lớp, bài, bộ SGK, số tiết). Khi đã có SGK và thông tin bài học thì hồ sơ ĐÃ ĐỦ ĐIỀU KIỆN TIẾN HÀNH NGHIÊN CỨU BÀI HỌC, đủ điều kiện chuyển sang Bước 2.
+- Đầu vào bắt buộc duy nhất: SGK và thông tin cơ bản của bài học (môn, lớp, bài, số tiết). Khi đã có SGK và thông tin bài học thì hồ sơ ĐÃ ĐỦ ĐIỀU KIỆN TIẾN HÀNH NGHIÊN CỨU BÀI HỌC, đủ điều kiện chuyển sang Bước 2.
 - Giáo án hiện có là TÙY CHỌN: nếu có thì dùng cho Bước 3; nếu chưa có thì KHÔNG báo thiếu — ghi nhận "chưa có giáo án cũ - thiết kế mới từ đầu" và Bước 6 sẽ thiết kế mới KHBD minh họa.
 - Phiếu học tập và Tài liệu GV là tài liệu bổ trợ TÙY CHỌN, không bắt buộc.
 - CẤM đòi hỏi Câu hỏi nghiên cứu (sản phẩm Bước 4, không phải dữ liệu nạp Bước 1).
@@ -933,9 +966,23 @@ Trả lời bằng Markdown (tiêu đề, in đậm, danh sách). Kết luận p
     scheduleAutoSave();
 }
 
+function looksLikeKhbd5512(text) {
+    const t = String(text || '');
+    return /HOẠT ĐỘNG 1|## A\.|Hình thành kiến thức|Tổ chức thực hiện|CV 5512|Yêu cầu cần đạt|HOẠT ĐỘNG 2|Luyện tập/i.test(t);
+}
+
 async function runLessonAnalyzer() {
     captureMetaIfPresent();
-    const out = await runAiTask('Lesson Analyzer', 'Phân tích bài học: YCCĐ, trọng tâm, kiến thức tiền đề, chuỗi nhiệm vụ SGK, sản phẩm học tập, điểm khó, lỗi HS có thể gặp, cơ hội năng lực phẩm chất, tích hợp NLS CV 3456 và Khung AI QĐ 2422. Mỗi đề xuất phải trả lời: Đề xuất này dựa trên căn cứ hoặc yêu cầu chuyên môn nào? Sản phẩm: Phiếu phân tích bài học.', false);
+    const out = await runAiTask('Lesson Analyzer', `Viết Phiếu phân tích bài học theo ĐÚNG 8 mục, cùng thứ tự, cùng tiêu đề mỗi lần (không đổi khung):
+## 1. YCCĐ và trọng tâm
+## 2. Kiến thức tiền đề
+## 3. Chuỗi nhiệm vụ SGK
+## 4. Sản phẩm học tập của HS
+## 5. Điểm khó và sai lầm thường gặp
+## 6. Cơ hội phẩm chất - năng lực
+## 7. Tích hợp NLS (CV 3456)
+## 8. Khung AI (QĐ 2422)
+Mỗi mục: nhận định ngắn + câu "Căn cứ: ...". Thiếu dữ liệu thì ghi "Chưa đủ căn cứ", không bịa. Không xếp loại giáo viên.`, false);
     state.analysis = String(out); state.products['phieu-phan-tich'] = state.analysis; showAi(out); markStepDone(2); scheduleAutoSave();
 }
 
@@ -944,7 +991,16 @@ async function runLessonPlanReviewer() {
         showAi('Chưa có giáo án hiện có. Bước 3 có thể bỏ qua hoặc nạp giáo án ở Bước 1.');
         return;
     }
-    const out = await runAiTask('Lesson Plan Reviewer', `Đánh giá giáo án theo 8 khía cạnh: ${REVIEW_ASPECTS.join('; ')}. Phân loại mỗi khía cạnh theo 4 mức: ${REVIEW_LEVELS.join(' / ')}. Chỉ rõ vấn đề, nguyên nhân, căn cứ và hướng sửa. Không xếp loại giáo viên.`, false);
+    const khbd = looksLikeKhbd5512(state.files.giaoAnText);
+    const out = await runAiTask('Lesson Plan Reviewer', `Đánh giá giáo án/KHBD theo ĐÚNG 8 mục, cùng thứ tự mỗi lần:
+${REVIEW_ASPECTS.map((a, i) => `## ${i + 1}. ${a}`).join('\n')}
+Mỗi mục ghi 4 dòng cố định:
+- Mức: một trong ${REVIEW_LEVELS.join(' / ')}
+- Vấn đề:
+- Căn cứ (văn bản / YCCĐ / CV 5512):
+- Hướng sửa:
+${khbd ? `Đây là KHBD chuẩn CV 5512 (Soạn KHBD / 4 hoạt động A–D hoặc Mở đầu – Hình thành kiến thức – Luyện tập – Vận dụng). Đọc đúng cấu trúc đó. Word có thể mất bảng 2 cột GV/HS: CẤM kết luận "thiếu tổ chức thực hiện" chỉ vì không còn bảng. Chỉ đánh giá phần văn bản còn đọc được.` : 'Nếu không phải KHBD 5512, vẫn dùng 8 mục trên, không bịa mục thiếu.'}
+CẤM xếp loại giáo viên. CẤM viết lan man ngoài 8 mục.`, false);
     state.planReview = String(out); state.products['bao-cao-giao-an'] = state.planReview; showAi(out); markStepDone(3); scheduleAutoSave();
 }
 
@@ -1013,8 +1069,8 @@ async function runReportGenerator() {
 function productText(p) {
     const map = {
         'khoi-tao': JSON.stringify(state.meta, null, 2) + '\nSGK: ' + (state.files.sgkName || 'chưa nạp') + '\nGiáo án: ' + (state.files.giaoAnName || 'không có') + '\n' + (state.completeness || ''),
-        'phieu-phan-tich': state.analysis || 'Chưa có phiếu phân tích bài học.',
-        'bao-cao-giao-an': state.planReview || 'Chưa đánh giá giáo án (bỏ qua nếu không có giáo án).',
+        'phieu-phan-tich': (state.analysis || 'Chưa có phiếu phân tích bài học.') + '\n\nNhận xét GV trong tổ:\n' + (state.teacherComments?.[2] || 'Chưa ghi.'),
+        'bao-cao-giao-an': (state.planReview || 'Chưa đánh giá giáo án (bỏ qua nếu không có giáo án).') + '\n\nNhận xét GV trong tổ:\n' + (state.teacherComments?.[3] || 'Chưa ghi.'),
         'cau-hoi-nc': state.researchQuestion || (state.researchOptions || []).join('\n') || 'Chưa chọn câu hỏi nghiên cứu.',
         'du-kien-hs': state.studentPredictions.map(r => Object.values(r).join(' | ')).join('\n'),
         'khbd-v1': formatKhbd(state.khbdV1),
@@ -1022,8 +1078,8 @@ function productText(p) {
         'phieu-du-gio': state.observation.duGio || 'Chưa có phiếu dự giờ NCBH.',
         'bien-ban-xay-dung': state.observation.minutes || 'Chưa có biên bản xây dựng bài học.',
         'kho-minh-chung': state.liveNotes.map(n => `${n.time} | ${n.sit} | ${n.talk} | ${n.err} | ${n.act}`).join('\n') + '\n' + state.evidence.map(e => e.name).join(', '),
-        'bao-cao-tiet-day': state.afterAnalysis || 'Chưa có báo cáo phân tích tiết dạy.',
-        'bien-ban-sau': state.minutes || 'Chưa có biên bản sau tiết dạy. Không tạo biên bản giả mạo.',
+        'bao-cao-tiet-day': (state.afterAnalysis || 'Chưa có báo cáo phân tích tiết dạy.') + '\n\nNhận xét GV trong tổ:\n' + (state.teacherComments?.[9] || 'Chưa ghi.'),
+        'bien-ban-sau': (state.minutes || 'Chưa có biên bản sau tiết dạy. Không tạo biên bản giả mạo.') + '\n\nNhận xét GV trong tổ:\n' + (state.teacherComments?.[10] || state.discussionInput || 'Chưa ghi.'),
         'khbd-v2': 'Trước → Vấn đề → Minh chứng → Đề xuất sửa → Lý do sửa\n' + (state.revisions || []).map(r => [r.truoc, r.vanDe, r.minhChung, r.deXuat, r.lyDo].join(' | ')).join('\n') + '\n' + formatKhbd(state.khbdV2)
     };
     return map[p.id] || '';
