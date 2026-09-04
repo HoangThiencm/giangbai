@@ -19,6 +19,7 @@
     <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         html, body { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
         .stepper-btn.active { background: #0f766e; color: #fff; box-shadow: 0 8px 18px rgba(15,118,110,.28); }
@@ -26,7 +27,21 @@
         .zone-card { border: 1px solid #e2e8f0; border-radius: 1rem; background: #fff; padding: 1rem; }
         .zone-card h3 { font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #0f766e; margin-bottom: .5rem; }
         textarea, input, select { font-family: inherit; }
-        .ai-box { white-space: pre-wrap; background: #0f172a; color: #e2e8f0; border-radius: .9rem; padding: .9rem; font-size: .82rem; min-height: 7rem; max-height: 22rem; overflow: auto; }
+        .ai-box { background: #f8fafc; color: #1e293b; border: 1px solid #e2e8f0; border-radius: .9rem; padding: 1rem 1.1rem; font-size: .9rem; min-height: 7rem; max-height: 28rem; overflow: auto; line-height: 1.65; }
+        .ai-box.prose h1, .ai-box.prose h2, .ai-box.prose h3 { color: #0f766e; font-weight: 800; margin: .8rem 0 .35rem; line-height: 1.3; }
+        .ai-box.prose h1 { font-size: 1.15rem; } .ai-box.prose h2 { font-size: 1.05rem; } .ai-box.prose h3 { font-size: .95rem; }
+        .ai-box.prose p { margin: .4rem 0; }
+        .ai-box.prose ul { list-style: disc; padding-left: 1.25rem; margin: .35rem 0; }
+        .ai-box.prose ol { list-style: decimal; padding-left: 1.25rem; margin: .35rem 0; }
+        .ai-box.prose li { margin: .15rem 0; }
+        .ai-box.prose strong { font-weight: 800; color: #0f172a; }
+        .ai-box.prose em { font-style: italic; }
+        .ai-box.prose blockquote { border-left: 3px solid #0f766e; padding: .25rem .75rem; color: #475569; background: #f0fdfa; margin: .5rem 0; }
+        .ai-box.prose table { width: 100%; border-collapse: collapse; margin: .5rem 0; font-size: .82rem; }
+        .ai-box.prose th, .ai-box.prose td { border: 1px solid #e2e8f0; padding: .35rem .5rem; text-align: left; }
+        .ai-box.prose th { background: #ecfeff; }
+        .ai-box.prose code { background: #e2e8f0; border-radius: .25rem; padding: .05rem .3rem; font-size: .8em; }
+        .ready-badge { display: inline-flex; align-items: center; border-radius: 999px; background: #d1fae5; color: #065f46; font-weight: 800; font-size: .75rem; padding: .35rem .75rem; letter-spacing: .02em; }
         .layer-grid { display: grid; gap: .75rem; }
         @media (min-width: 1024px) { .layer-grid { grid-template-columns: 1fr 1fr; } }
     </style>
@@ -118,6 +133,10 @@ const STEPS = [
 
 const REVIEW_ASPECTS = ['Mục tiêu / YCCĐ', 'Nội dung dạy học', 'Phương pháp và kỹ thuật', 'Tổ chức 4 hoạt động CV 5512', 'Sản phẩm học tập', 'Kiểm tra đánh giá', 'Thiết bị / học liệu (TT 38/2021, TT 14/2020)', 'Tích hợp NLS (CV 3456) & Khung AI (QĐ 2422)'];
 const REVIEW_LEVELS = ['Giữ nguyên', 'Giữ nhưng bổ sung', 'Cần điều chỉnh', 'Nên thiết kế lại'];
+const SUBJECT_OPTIONS = ['Toán học', 'Tin học', 'Khoa học tự nhiên', 'Ngữ văn', 'Tiếng Anh', 'Lịch sử và Địa lí', 'Giáo dục công dân', 'Công nghệ', 'Hoạt động trải nghiệm, hướng nghiệp', 'Khác'];
+const GRADE_OPTIONS = ['6', '7', '8', '9', '4', '5', '10', '11', '12'];
+const GRADE_LABELS = { '6': 'Lớp 6', '7': 'Lớp 7', '8': 'Lớp 8', '9': 'Lớp 9', '4': 'Lớp 4', '5': 'Lớp 5', '10': 'Lớp 10', '11': 'Lớp 11', '12': 'Lớp 12' };
+const SGK_OPTIONS = ['Kết nối tri thức với cuộc sống', 'Chân trời sáng tạo', 'Cánh diều', 'Cùng khám phá', 'SGK hiện hành khác'];
 
 let geminiKeys = [];
 let mistralKeys = [];
@@ -128,7 +147,7 @@ let state = emptyState();
 
 function emptyState() {
     return {
-        meta: { monHoc: 'Toán', lop: '6', baiHoc: '', boSgk: '', soTiet: '1', gvDay: '', thanhVien: '', lopThucNghiem: '' },
+        meta: { monHoc: 'Toán học', lop: '6', baiHoc: '', boSgk: '', soTiet: '1', gvDay: '', thanhVien: '', lopThucNghiem: '' },
         files: { sgkName: '', sgkText: '', giaoAnName: '', giaoAnText: '', phieuName: '', phieuText: '', taiLieuName: '', taiLieuText: '' },
         completeness: '',
         analysis: '',
@@ -309,16 +328,45 @@ async function callMistral(prompt, previousError) {
     throw new Error(lastError);
 }
 
-async function runAiTask(taskName, instruction, jsonMode) {
+function setAiProgress(pct, label) {
+    const wrap = document.getElementById('aiProgressWrap');
+    const bar = document.getElementById('aiProgressBar');
+    const percent = document.getElementById('aiProgressPercent');
+    const lab = document.getElementById('aiProgressLabel');
+    const status = document.getElementById('aiProgressStatus');
+    if (wrap) wrap.classList.remove('hidden');
+    const n = Math.max(0, Math.min(100, Number(pct) || 0));
+    if (bar) bar.style.width = n + '%';
+    if (percent) percent.textContent = n + '%';
+    const msg = label || 'Đang xử lý...';
+    if (lab) lab.textContent = msg;
+    if (status) status.textContent = msg;
+    setAiStatus(msg);
+}
+
+function paintProgress(pct, label) {
+    setAiProgress(pct, label);
+    return new Promise(resolve => requestAnimationFrame(() => resolve()));
+}
+
+async function runAiTask(taskName, instruction, jsonMode, contextFn) {
     try {
-        const ctx = lessonContext();
+        await paintProgress(15, 'Chuẩn bị dữ liệu và trích xuất ngữ cảnh…');
+        const ctx = typeof contextFn === 'function' ? contextFn() : lessonContext();
+        await paintProgress(25, 'Đã trích xuất ngữ cảnh hồ sơ.');
         const prompt = `${PRINCIPLES}\nTác vụ AI: ${taskName}.\n${instruction}\n\nNgữ cảnh hồ sơ:\n${ctx}\nNếu thiếu dữ liệu, hãy nói rõ phần nào là yêu cầu văn bản, khuyến nghị chuyên môn, hay đề xuất AI. Không bịa minh chứng.`;
-        setAiStatus(taskName + ' đang chạy…');
+        await paintProgress(40, 'Kết nối và gửi prompt tới mô hình AI Gemini / Mistral…');
+        setAiProgress(55, 'Đang chờ phản hồi mô hình…');
         const text = await callGemini(prompt, jsonMode);
+        await paintProgress(75, 'Phân tích sư phạm chuyên sâu và nhận phản hồi…');
+        await paintProgress(90, 'Đang hoàn thiện nhận định…');
+        const result = jsonMode ? parseAiJson(text) : text;
+        setAiProgress(100, 'Hoàn tất xử lý và hiển thị kết quả.');
         setAiStatus(taskName + ' hoàn tất. AI chỉ đề xuất — GV quyết định.');
-        return jsonMode ? parseAiJson(text) : text;
+        return result;
     } catch (err) {
         const msg = err.message || String(err);
+        setAiProgress(100, 'Lỗi ' + taskName + ': ' + msg);
         setAiStatus('Lỗi ' + taskName + ': ' + msg);
         alert('Không chạy được ' + taskName + ': ' + msg);
         return jsonMode ? { text: msg } : msg;
@@ -341,6 +389,36 @@ function lessonContext() {
         phieu: compactContext(state.files.phieuText, 2500),
         taiLieu: compactContext(state.files.taiLieuText, 2500),
         canCu: CAN_CU
+    });
+}
+
+function documentAnalyzerContext() {
+    return JSON.stringify({
+        step: 1,
+        required: {
+            sgk: compactContext(state.files.sgkText, 8000),
+            sgkFileName: state.files.sgkName || '',
+            monHoc: state.meta.monHoc,
+            lop: state.meta.lop,
+            baiHoc: state.meta.baiHoc,
+            boSgk: state.meta.boSgk,
+            soTiet: state.meta.soTiet
+        },
+        optional: {
+            giaoAn: state.files.giaoAnText
+                ? { present: true, name: state.files.giaoAnName, excerpt: compactContext(state.files.giaoAnText, 2000) }
+                : { present: false, note: 'Tùy chọn. Chưa có giáo án không phải lỗi thiếu. Bước 3 ghi nhận chưa có giáo án cũ; Bước 6 thiết kế mới KHBD minh họa.' },
+            phieuHocTap: state.files.phieuText
+                ? { present: true, name: state.files.phieuName }
+                : { present: false, note: 'Tài liệu bổ trợ tùy chọn, không bắt buộc ở Bước 1.' },
+            taiLieuGv: state.files.taiLieuText
+                ? { present: true, name: state.files.taiLieuName }
+                : { present: false, note: 'Tài liệu bổ trợ tùy chọn, không bắt buộc ở Bước 1.' }
+        },
+        doNotRequire: [
+            'Câu hỏi nghiên cứu là sản phẩm Bước 4, không phải dữ liệu nạp Bước 1.',
+            'YCCĐ là nội dung AI phân tích ở Bước 2 từ SGK và CTGDPT 2018, không đòi hỏi ở Bước 1.'
+        ]
     });
 }
 
@@ -373,10 +451,36 @@ async function extractFileText(file) {
     return compactContext(await file.text(), 12000);
 }
 
+function normalizeSubject(raw) {
+    const v = String(raw || '').trim();
+    if (!v) return 'Toán học';
+    const compact = v.toLowerCase().replace(/\s+/g, ' ');
+    if (compact === 'toán' || compact === 'toan' || compact === 'toán học' || compact === 'toan hoc') return 'Toán học';
+    const hit = SUBJECT_OPTIONS.find(s => s.toLowerCase() === compact);
+    return hit || v;
+}
+
+function normalizeGrade(raw) {
+    const v = String(raw || '').trim();
+    const m = v.match(/(\d{1,2})/);
+    if (m && GRADE_OPTIONS.includes(m[1])) return m[1];
+    return v || '6';
+}
+
+function optionList(options, selected, labelFn) {
+    const current = String(selected || '');
+    const values = options.slice();
+    if (current && !values.includes(current)) values.push(current);
+    return values.map(v => {
+        const label = labelFn ? labelFn(v) : v;
+        return `<option value="${esc(v)}"${v === current ? ' selected' : ''}>${esc(label)}</option>`;
+    }).join('');
+}
+
 function captureMeta() {
     state.meta = {
-        monHoc: val('fMon') || 'Toán',
-        lop: val('fLop') || '6',
+        monHoc: normalizeSubject(val('fMon') || 'Toán học'),
+        lop: normalizeGrade(val('fLop') || '6'),
         baiHoc: val('fBai'),
         boSgk: val('fSgk'),
         soTiet: val('fTiet') || '1',
@@ -437,6 +541,9 @@ async function loadSessionById(id) {
     if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể tải hồ sơ.');
     const session = data.session || {};
     state = Object.assign(emptyState(), session.session_data || {});
+    state.meta = Object.assign(emptyState().meta, state.meta || {});
+    state.meta.monHoc = normalizeSubject(state.meta.monHoc);
+    state.meta.lop = normalizeGrade(state.meta.lop);
     currentSessionId = Number(session.id);
     persistLocal();
     goStep(Number(session.current_step || state.currentStep || 1));
@@ -482,7 +589,17 @@ function aiPanel(task, buttonLabel, onclick) {
     return `<p class="text-xs font-bold text-indigo-700">${esc(task)} — AI chỉ đề xuất, GV quyết định.</p>
         <button type="button" class="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-800" onclick="${onclick}">${buttonLabel}</button>
         <p id="aiStatus" class="text-xs text-slate-500">Sẵn sàng chạy ${esc(task)}.</p>
-        <div id="aiOut" class="ai-box">${esc(currentAiText()) || 'Chưa có nhận định AI.'}</div>
+        <div id="aiProgressWrap" class="hidden mt-2 space-y-1">
+            <div id="aiProgressContainer" class="flex justify-between text-xs font-semibold text-slate-600">
+                <span id="aiProgressLabel">Đang xử lý...</span>
+                <span id="aiProgressStatus" class="sr-only">Đang xử lý...</span>
+                <span id="aiProgressPercent">0%</span>
+            </div>
+            <div class="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                <div id="aiProgressBar" class="h-full bg-gradient-to-r from-teal-500 to-indigo-600 transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+        <div id="aiOut" class="ai-box prose prose-sm max-w-none text-slate-800">${currentAiText() ? renderMarkdown(currentAiText()) : 'Chưa có nhận định AI.'}</div>
         <div class="flex flex-wrap gap-2 pt-1">
             <button type="button" class="rounded border px-3 py-1 text-xs font-bold" onclick="decide('duyệt','Đồng ý đề xuất AI bước ' + state.currentStep)">Duyệt</button>
             <button type="button" class="rounded border px-3 py-1 text-xs font-bold" onclick="decide('sửa','Giữ đề xuất nhưng sẽ chỉnh sửa')">Sửa</button>
@@ -516,6 +633,7 @@ function renderStep() {
         `<p><b>${esc(s.product)}</b></p><p>Dữ liệu bước này sẽ được ghi vào hồ sơ NCBH và có thể xuất Word ở Bước 12.</p>`
     );
     fillStepFields();
+    if (state.currentStep === 1 && state.completeness) showReadyBadge();
 }
 
 function stepCancuExtra(n) {
@@ -591,10 +709,10 @@ function stepObserve(n) {
 
 function stepBody(s) {
     if (s.n === 1) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><div class="grid gap-3 md:grid-cols-4">
-        <label class="text-xs font-bold">Môn<input id="fMon" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.monHoc)}"></label>
-        <label class="text-xs font-bold">Lớp<input id="fLop" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.lop)}"></label>
+        <label class="text-xs font-bold">Môn<select id="fMon" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2">${optionList(SUBJECT_OPTIONS, normalizeSubject(state.meta.monHoc))}</select></label>
+        <label class="text-xs font-bold">Lớp<select id="fLop" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2">${optionList(GRADE_OPTIONS, normalizeGrade(state.meta.lop), g => GRADE_LABELS[g] || ('Lớp ' + g))}</select></label>
         <label class="text-xs font-bold">Bài học<input id="fBai" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.baiHoc)}" placeholder="Ví dụ: Số nguyên"></label>
-        <label class="text-xs font-bold">Bộ SGK<input id="fSgk" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.boSgk)}"></label>
+        <label class="text-xs font-bold">Bộ SGK<select id="fSgk" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2">${optionList(state.meta.boSgk ? SGK_OPTIONS : [''].concat(SGK_OPTIONS), state.meta.boSgk, v => v || '— Chọn bộ SGK —')}</select></label>
         <label class="text-xs font-bold">Số tiết<input id="fTiet" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.soTiet)}"></label>
         <label class="text-xs font-bold">GV dạy minh họa<input id="fGv" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.gvDay)}"></label>
         <label class="text-xs font-bold">Thành viên tổ NCBH<input id="fTv" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.thanhVien)}"></label>
@@ -754,16 +872,65 @@ function completeAndNext() {
     goStep(Math.min(12, state.currentStep + 1));
 }
 
-function showAi(text) {
+function fallbackMarkdown(text) {
+    let html = esc(String(text || ''));
+    html = html.replace(/^###### (.*)$/gm, '<h6>$1</h6>').replace(/^##### (.*)$/gm, '<h5>$1</h5>').replace(/^#### (.*)$/gm, '<h4>$1</h4>').replace(/^### (.*)$/gm, '<h3>$1</h3>').replace(/^## (.*)$/gm, '<h2>$1</h2>').replace(/^# (.*)$/gm, '<h1>$1</h1>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/__(.+?)__/g, '<strong>$1</strong>');
+    html = html.replace(/(^|[^*])\*(?!\*)([^*]+)\*(?!\*)/g, '$1<em>$2</em>');
+    html = html.replace(/^&gt; (.*)$/gm, '<blockquote>$1</blockquote>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/^\d+\.\s+(.*)$/gm, '<li>$1</li>').replace(/^[-*]\s+(.*)$/gm, '<li>$1</li>');
+    html = html.replace(/(?:<li>[\s\S]*?<\/li>\n?)+/g, m => /<li>\d/.test(m) ? '<ol>' + m + '</ol>' : '<ul>' + m + '</ul>');
+    html = html.replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br>');
+    return '<p>' + html + '</p>';
+}
+
+function renderMarkdown(content) {
+    const raw = typeof content === 'string' ? content : ('```json\n' + JSON.stringify(content, null, 2) + '\n```');
+    let html = '';
+    if (window.marked && typeof marked.parse === 'function') {
+        html = marked.parse(raw, { breaks: true, gfm: true });
+    } else {
+        html = fallbackMarkdown(raw);
+    }
+    const scriptClose = new RegExp('<script[\\s\\S]*?<\\/script>', 'gi');
+    return String(html).replace(scriptClose, '').replace(/\son\w+="[^"]*"/gi, '');
+}
+
+function showAi(content) {
     const el = document.getElementById('aiOut');
-    if (el) el.textContent = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
+    if (!el) return;
+    el.classList.add('prose', 'prose-sm', 'max-w-none', 'text-slate-800');
+    el.innerHTML = renderMarkdown(content);
+}
+
+function showReadyBadge() {
+    const el = document.getElementById('aiOut');
+    if (!el) return;
+    if (!el.innerHTML.includes('HỒ SƠ ĐÃ ĐỦ ĐIỀU KIỆN ĐỂ TIẾP TỤC')) {
+        el.insertAdjacentHTML('beforeend', '<p class="mt-3"><span class="ready-badge">✓ HỒ SƠ ĐÃ ĐỦ ĐIỀU KIỆN ĐỂ TIẾP TỤC</span></p>');
+    }
 }
 
 async function runDocumentAnalyzer() {
     captureMetaIfPresent();
     if (!state.files.sgkText) return alert('Hãy nạp tệp SGK PDF trước.');
-    const out = await runAiTask('Document Analyzer', 'Kiểm tra tính đầy đủ dữ liệu hồ sơ NCBH: SGK, giáo án, phiếu học tập, tài liệu GV, thông tin môn/lớp/bài. Chỉ ra phần còn thiếu. Trả văn bản rõ ràng.', false);
-    state.completeness = String(out); showAi(out); markStepDone(1); scheduleAutoSave();
+    if (!(state.meta.monHoc && state.meta.lop && state.meta.baiHoc)) return alert('Hãy điền môn, lớp và tên bài học.');
+    const instruction = `Bạn là Document Analyzer cho Bước 1 Khởi tạo hồ sơ NCBH.
+NGUYÊN TẮC KIỂM TRA ĐẦY ĐỦ — BẮT BUỘC TUÂN THỦ:
+- Đầu vào bắt buộc duy nhất: SGK và thông tin cơ bản của bài học (môn, lớp, bài, bộ SGK, số tiết). Khi đã có SGK và thông tin bài học thì hồ sơ ĐÃ ĐỦ ĐIỀU KIỆN TIẾN HÀNH NGHIÊN CỨU BÀI HỌC, đủ điều kiện chuyển sang Bước 2.
+- Giáo án hiện có là TÙY CHỌN: nếu có thì dùng cho Bước 3; nếu chưa có thì KHÔNG báo thiếu — ghi nhận "chưa có giáo án cũ - thiết kế mới từ đầu" và Bước 6 sẽ thiết kế mới KHBD minh họa.
+- Phiếu học tập và Tài liệu GV là tài liệu bổ trợ TÙY CHỌN, không bắt buộc.
+- CẤM đòi hỏi Câu hỏi nghiên cứu (sản phẩm Bước 4, không phải dữ liệu nạp Bước 1).
+- CẤM đòi hỏi YCCĐ (nội dung AI phân tích ở Bước 2 từ SGK và CTGDPT 2018).
+- Không coi việc chưa có Giáo án, Phiếu học tập, Tài liệu GV, Câu hỏi NC hay YCCĐ là lỗi thiếu bắt buộc.
+Trả lời bằng Markdown (tiêu đề, in đậm, danh sách). Kết luận phải khẳng định rõ hồ sơ đã đủ điều kiện. Kết thúc bằng dòng: ✓ HỒ SƠ ĐÃ ĐỦ ĐIỀU KIỆN ĐỂ TIẾP TỤC`;
+    const out = await runAiTask('Document Analyzer', instruction, false, documentAnalyzerContext);
+    state.completeness = String(out && out.text ? out.text : out);
+    showAi(state.completeness);
+    showReadyBadge();
+    markStepDone(1);
+    scheduleAutoSave();
 }
 
 async function runLessonAnalyzer() {

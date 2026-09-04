@@ -55,7 +55,35 @@ has(read('access-control.js'), "'nghiencuubaihoc.html': 'nghiencuubaihoc'");
 has(read('api', 'helpers.php'), "'nghiencuubaihoc'");
 has(read('global_config.json'), '"nghiencuubaihoc": true');
 
-console.log('nghiencuubaihoc smoke: index/admin integration, 12 steps, 6 zones, 12 AI tasks, key sync, API schema passed');
+['marked/marked.min.js', 'marked.parse', 'fallbackMarkdown', 'renderMarkdown', 'showAi', 'setAiProgress', 'aiProgressBar', 'aiProgressWrap', 'aiProgressContainer', 'aiProgressStatus', 'aiProgressLabel', 'aiProgressPercent', 'prose prose-sm max-w-none text-slate-800'].forEach(x => has(html, x));
+has(html, 'Chuẩn bị dữ liệu và trích xuất ngữ cảnh');
+has(html, 'Kết nối và gửi prompt tới mô hình AI Gemini / Mistral');
+has(html, 'Phân tích sư phạm chuyên sâu và nhận phản hồi');
+has(html, 'Hoàn tất xử lý và hiển thị kết quả');
+has(html, 'function documentAnalyzerContext');
+has(html, 'ĐÃ ĐỦ ĐIỀU KIỆN TIẾN HÀNH NGHIÊN CỨU BÀI HỌC');
+has(html, '✓ HỒ SƠ ĐÃ ĐỦ ĐIỀU KIỆN ĐỂ TIẾP TỤC');
+has(html, 'showReadyBadge');
+has(html, 'CẤM đòi hỏi Câu hỏi nghiên cứu');
+has(html, 'CẤM đòi hỏi YCCĐ');
+has(html, 'Tùy chọn');
+assert(html.includes("runAiTask('Document Analyzer'") && html.includes('documentAnalyzerContext'), 'Document Analyzer uses dedicated step-1 context');
+assert(!/runDocumentAnalyzer[\s\S]{0,800}lessonContext\(\)/.test(html), 'Document Analyzer must not send full lessonContext');
+
+has(html, '<select id="fMon"');
+has(html, '<select id="fLop"');
+has(html, '<select id="fSgk"');
+assert(!html.includes('<input id="fMon"'), 'fMon must not remain a text input');
+assert(!html.includes('<input id="fLop"'), 'fLop must not remain a text input');
+assert(!html.includes('<input id="fSgk"'), 'fSgk must not remain a text input');
+['SUBJECT_OPTIONS', 'GRADE_OPTIONS', 'SGK_OPTIONS', 'normalizeSubject', 'normalizeGrade', 'optionList'].forEach(x => has(html, x));
+['Toán học', 'Tin học', 'Khoa học tự nhiên', 'Ngữ văn', 'Tiếng Anh', 'Lịch sử và Địa lí', 'Giáo dục công dân', 'Công nghệ', 'Hoạt động trải nghiệm, hướng nghiệp'].forEach(x => has(html, x));
+['Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 4', 'Lớp 5', 'Lớp 10', 'Lớp 11', 'Lớp 12'].forEach(x => has(html, x));
+['Kết nối tri thức với cuộc sống', 'Chân trời sáng tạo', 'Cánh diều', 'Cùng khám phá', 'SGK hiện hành khác'].forEach(x => has(html, x));
+has(html, 'Kết nối tri thức');
+has(html, "compact === 'toán'");
+
+console.log('nghiencuubaihoc smoke: index/admin integration, 12 steps, 6 zones, 12 AI tasks, key sync, progress bar, markdown, step-1 readiness, subject/grade/sgk selects passed');
 
 function PRODUCTS_13_TITLES() {
     return [
