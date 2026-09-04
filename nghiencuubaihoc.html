@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nghiên cứu bài học AI · Chu trình NCBH sư phạm</title>
+    <script src="js/security-guard.js"></script>
+    <script src="access-control.js"></script>
+    <script src="js/khbd-yccd.js"></script>
+    <script src="js/khbd-standards.js"></script>
+    <script src="mistral-ocr-client.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        html, body { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
+        .stepper-btn.active { background: #0f766e; color: #fff; box-shadow: 0 8px 18px rgba(15,118,110,.28); }
+        .stepper-btn.done { background: #ecfdf5; color: #047857; }
+        .zone-card { border: 1px solid #e2e8f0; border-radius: 1rem; background: #fff; padding: 1rem; }
+        .zone-card h3 { font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #0f766e; margin-bottom: .5rem; }
+        textarea, input, select { font-family: inherit; }
+        .ai-box { white-space: pre-wrap; background: #0f172a; color: #e2e8f0; border-radius: .9rem; padding: .9rem; font-size: .82rem; min-height: 7rem; max-height: 22rem; overflow: auto; }
+        .layer-grid { display: grid; gap: .75rem; }
+        @media (min-width: 1024px) { .layer-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+<main class="mx-auto max-w-7xl space-y-4 p-4 md:p-6">
+    <header class="rounded-3xl bg-gradient-to-br from-slate-950 via-indigo-900 to-cyan-700 p-6 text-white shadow-xl">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[.2em] text-cyan-100">Chu trình NCBH sư phạm · 12 bước · KHBD 2 lớp</p>
+                <h1 class="mt-2 text-3xl font-black">Nghiên cứu bài học AI</h1>
+                <p id="keyStatus" class="mt-2 text-sm text-cyan-50">Đang đồng bộ Gemini &amp; Mistral API Key từ CSDL…</p>
+                <p id="saveStatus" class="mt-1 text-xs text-cyan-100/80">Chưa lưu hồ sơ.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="index.html" class="rounded-xl bg-white/15 px-4 py-2 text-sm font-bold hover:bg-white/25">← Trang chủ</a>
+                <button type="button" onclick="saveSession(false)" class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-400">Lưu CSDL</button>
+                <button type="button" onclick="loadSessions()" class="rounded-xl bg-white/15 px-4 py-2 text-sm font-bold hover:bg-white/25">Mở hồ sơ cũ</button>
+            </div>
+        </div>
+    </header>
+
+    <nav id="stepperBar" class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-12"></nav>
+    <section id="stepRoot" class="space-y-4"></section>
+    <section id="history" class="space-y-2"></section>
+</main>
+<script>
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const NCBH_LS_KEY = 'ncbh_autosave';
+const API_URL = 'api/nghiencuubaihoc.php';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+const PRINCIPLES = 'Nguyên tắc bắt buộc: không tự suy diễn quy định, căn cứ minh bạch; phân biệt rõ yêu cầu văn bản / khuyến nghị chuyên môn / đề xuất AI / quyết định GV; AI chỉ đề xuất, GV quyết định; không tạo biên bản giả mạo; không xếp loại giáo viên.';
+
+const AI_TASKS = [
+    { id: 1, name: 'Document Analyzer', label: 'Đọc văn bản, SGK' },
+    { id: 2, name: 'Lesson Analyzer', label: 'Phân tích bài học' },
+    { id: 3, name: 'Lesson Plan Reviewer', label: 'Đánh giá giáo án' },
+    { id: 4, name: 'Research Question Advisor', label: 'Gợi ý vấn đề nghiên cứu' },
+    { id: 5, name: 'Student Thinking Predictor', label: 'Dự đoán suy nghĩ, lỗi sai HS' },
+    { id: 6, name: 'Lesson Adaptation Advisor', label: 'Điều chỉnh KHBD 2 lớp' },
+    { id: 7, name: 'Observation Designer', label: 'Xây công cụ quan sát' },
+    { id: 8, name: 'Evidence Analyzer', label: 'Phân tích minh chứng' },
+    { id: 9, name: 'Discussion Assistant', label: 'Hỗ trợ thảo luận' },
+    { id: 10, name: 'Minutes Generator', label: 'Xây biên bản' },
+    { id: 11, name: 'Lesson Reviser', label: 'Hoàn thiện bài dạy v2' },
+    { id: 12, name: 'Report Generator', label: 'Tổng hợp hồ sơ' }
+];
+
+const PRODUCTS_13 = [
+    { id: 'khoi-tao', step: 1, title: 'Hồ sơ khởi tạo NCBH' },
+    { id: 'phieu-phan-tich', step: 2, title: 'Phiếu phân tích bài học' },
+    { id: 'bao-cao-giao-an', step: 3, title: 'Báo cáo phân tích giáo án ban đầu' },
+    { id: 'cau-hoi-nc', step: 4, title: 'Vấn đề/câu hỏi nghiên cứu chính thức' },
+    { id: 'du-kien-hs', step: 5, title: 'Bảng dự kiến hoạt động và phản ứng của HS' },
+    { id: 'khbd-v1', step: 6, title: 'KHBD minh họa - phiên bản 1' },
+    { id: 'phieu-quan-sat', step: 7, title: 'Phiếu quan sát học sinh' },
+    { id: 'phieu-du-gio', step: 7, title: 'Phiếu dự giờ NCBH' },
+    { id: 'bien-ban-xay-dung', step: 7, title: 'Biên bản xây dựng bài học' },
+    { id: 'kho-minh-chung', step: 8, title: 'Kho minh chứng tiết dạy' },
+    { id: 'bao-cao-tiet-day', step: 9, title: 'Báo cáo phân tích tiết dạy' },
+    { id: 'bien-ban-sau', step: 10, title: 'Biên bản phân tích bài học sau tiết dạy' },
+    { id: 'khbd-v2', step: 11, title: 'KHBD minh họa - phiên bản 2' }
+];
+
+const CAN_CU = [
+    'Công văn 5512/BGDĐT-GDTrH — xây dựng và tổ chức thực hiện kế hoạch giáo dục của nhà trường; cấu trúc KHBD (mục tiêu, nội dung, sản phẩm, tổ chức thực hiện, kiểm tra đánh giá).',
+    'Thông tư 32/2018/TT-BGDĐT — Chương trình GDPT 2018, Yêu cầu cần đạt theo môn/lớp.',
+    'Hướng dẫn sinh hoạt chuyên môn theo Nghiên cứu bài học (NCBH) của Bộ GDĐT — trọng tâm là việc học của học sinh, không xếp loại giáo viên.',
+    'Quyết định 2422/QĐ-BGDĐT — Khung năng lực AI cho học sinh phổ thông.',
+    'Công văn 3456/BGDĐT-CNTT và Công văn 2345/BGDĐT-GDTH — Khung năng lực số (NLS).',
+    'Thông tư 38/2021/TT-BGDĐT (thiết bị, học liệu) và Thông tư 14/2020/TT-BGDĐT (phòng học bộ môn).'
+];
+
+const STEPS = [
+    { n: 1, title: 'Khởi tạo hồ sơ', short: 'Khởi tạo', ai: 'Document Analyzer', product: 'Hồ sơ khởi tạo NCBH' },
+    { n: 2, title: 'Nghiên cứu văn bản và phân tích bài học', short: 'Phân tích bài', ai: 'Lesson Analyzer', product: 'Phiếu phân tích bài học' },
+    { n: 3, title: 'Đánh giá giáo án hiện có', short: 'Đánh giá GA', ai: 'Lesson Plan Reviewer', product: 'Báo cáo phân tích giáo án ban đầu' },
+    { n: 4, title: 'Xác định vấn đề nghiên cứu', short: 'Câu hỏi NC', ai: 'Research Question Advisor', product: 'Vấn đề/câu hỏi nghiên cứu chính thức' },
+    { n: 5, title: 'Dự kiến quá trình học của HS', short: 'Dự kiến HS', ai: 'Student Thinking Predictor', product: 'Bảng dự kiến hoạt động và phản ứng của HS' },
+    { n: 6, title: 'Xây dựng bài dạy minh họa (KHBD Phiên bản 1)', short: 'KHBD v1', ai: 'Lesson Adaptation Advisor', product: 'KHBD minh họa - phiên bản 1' },
+    { n: 7, title: 'Xây dựng kế hoạch quan sát và hồ sơ trước giờ dạy', short: 'Hồ sơ trước dạy', ai: 'Observation Designer', product: 'Bộ hồ sơ trước giờ dạy minh họa' },
+    { n: 8, title: 'Dạy minh họa và thu thập minh chứng', short: 'Minh chứng', ai: 'Evidence Analyzer', product: 'Kho minh chứng tiết dạy' },
+    { n: 9, title: 'AI phân tích sau giờ dạy', short: 'Phân tích sau dạy', ai: 'Discussion Assistant', product: 'Báo cáo phân tích tiết dạy' },
+    { n: 10, title: 'Thảo luận và xây dựng biên bản sau tiết dạy', short: 'Biên bản', ai: 'Minutes Generator', product: 'Biên bản phân tích bài học sau tiết dạy' },
+    { n: 11, title: 'Điều chỉnh bài học (KHBD Phiên bản 2)', short: 'KHBD v2', ai: 'Lesson Reviser', product: 'KHBD minh họa - phiên bản 2' },
+    { n: 12, title: 'Hoàn thiện hồ sơ NCBH', short: 'Xuất hồ sơ', ai: 'Report Generator', product: 'Bộ 13 sản phẩm hồ sơ NCBH' }
+];
+
+const REVIEW_ASPECTS = ['Mục tiêu / YCCĐ', 'Nội dung dạy học', 'Phương pháp và kỹ thuật', 'Tổ chức 4 hoạt động CV 5512', 'Sản phẩm học tập', 'Kiểm tra đánh giá', 'Thiết bị / học liệu (TT 38/2021, TT 14/2020)', 'Tích hợp NLS (CV 3456) & Khung AI (QĐ 2422)'];
+const REVIEW_LEVELS = ['Giữ nguyên', 'Giữ nhưng bổ sung', 'Cần điều chỉnh', 'Nên thiết kế lại'];
+
+let geminiKeys = [];
+let mistralKeys = [];
+let geminiModel = DEFAULT_GEMINI_MODEL;
+let currentSessionId = null;
+let saveTimer = null;
+let state = emptyState();
+
+function emptyState() {
+    return {
+        meta: { monHoc: 'Toán', lop: '6', baiHoc: '', boSgk: '', soTiet: '1', gvDay: '', thanhVien: '', lopThucNghiem: '' },
+        files: { sgkName: '', sgkText: '', giaoAnName: '', giaoAnText: '', phieuName: '', phieuText: '', taiLieuName: '', taiLieuText: '' },
+        completeness: '',
+        analysis: '',
+        planReview: '',
+        researchOptions: [],
+        researchQuestion: '',
+        studentPredictions: defaultActivities().map(a => ({ activity: a.name, start: '', thinking: '', correct: '', incomplete: '', mistakes: '', stuck: '', product: '', understood: '', prompts: '', intervene: '', handle: '' })),
+        khbdV1: defaultActivities().map(emptyKhbdActivity),
+        observation: { hsSheet: '', duGio: '', criteria: '', assignment: '', meeting: '', minutes: '' },
+        liveNotes: [],
+        evidence: [],
+        afterAnalysis: '',
+        discussionInput: '',
+        minutes: '',
+        revisions: [],
+        khbdV2: defaultActivities().map(emptyKhbdActivity),
+        decisions: [],
+        completedSteps: [],
+        currentStep: 1,
+        products: {}
+    };
+}
+
+function defaultActivities() {
+    return [
+        { name: 'Hoạt động 1. Mở đầu' },
+        { name: 'Hoạt động 2. Hình thành kiến thức mới' },
+        { name: 'Hoạt động 3. Luyện tập' },
+        { name: 'Hoạt động 4. Vận dụng' }
+    ];
+}
+
+function emptyKhbdActivity(a) {
+    return {
+        name: a.name,
+        decision: 'chưa duyệt',
+        layer1: { mucTieu: '', noiDung: '', sanPham: '', gv: '', hs: '', danhGia: '' },
+        layer2: { quanSat: '', phanUng: '', loiSai: '', goiMo: '', duPhong: '', hsChuY: '', minhChung: '', canThiep: '' }
+    };
+}
+
+const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function val(id) { return document.getElementById(id)?.value || ''; }
+function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v || ''; }
+function nowLabel() { return new Date().toLocaleString('vi-VN'); }
+
+function currentGeminiModel() {
+    return localStorage.getItem('khbd_gemini_model') || localStorage.getItem('default_gemini_module') || DEFAULT_GEMINI_MODEL;
+}
+
+function compactContext(text, maxLen) {
+    const raw = String(text || '').replace(/\s+/g, ' ').trim();
+    const limit = maxLen || 12000;
+    const needle = String(state.meta.baiHoc || '').toLowerCase();
+    if (needle && raw.toLowerCase().includes(needle)) {
+        const i = raw.toLowerCase().indexOf(needle);
+        return raw.slice(Math.max(0, i - 400), i + Math.min(limit, 9000));
+    }
+    return raw.slice(0, limit);
+}
+
+function logDecision(action, detail) {
+    state.decisions.push({ at: nowLabel(), step: state.currentStep, action, detail: String(detail || '') });
+    scheduleAutoSave();
+}
+
+function markStepDone(n) {
+    if (!state.completedSteps.includes(n)) state.completedSteps.push(n);
+    renderStepper();
+}
+
+function scheduleAutoSave() {
+    persistLocal();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveSession(true), 1800);
+}
+
+function persistLocal() {
+    try {
+        const slim = JSON.parse(JSON.stringify(state));
+        slim.evidence = (slim.evidence || []).map(e => ({ ...e, dataUrl: e.dataUrl ? '[local-image]' : '' }));
+        localStorage.setItem(NCBH_LS_KEY, JSON.stringify({ id: currentSessionId, state: slim, savedAt: Date.now() }));
+        const st = document.getElementById('saveStatus');
+        if (st) st.textContent = 'Đã lưu cục bộ ' + nowLabel();
+    } catch (e) { console.warn('localStorage autosave skipped', e.message); }
+}
+
+function restoreLocal() {
+    try {
+        const raw = localStorage.getItem(NCBH_LS_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed?.state) {
+            state = Object.assign(emptyState(), parsed.state);
+            currentSessionId = parsed.id || null;
+        }
+    } catch (e) { /* ignore corrupt draft */ }
+}
+
+async function syncUserKeysFromServer() {
+    geminiModel = currentGeminiModel();
+    try {
+        const r = await fetch('api/user_gemini_keys.php', { credentials: 'include', cache: 'no-store' });
+        const d = await r.json();
+        geminiKeys = Array.isArray(d.keys) ? d.keys.filter(Boolean) : [];
+        mistralKeys = Array.isArray(d.mistral_keys) ? d.mistral_keys.filter(Boolean) : [];
+        if (geminiKeys.length) localStorage.setItem('global_gemini_keys', JSON.stringify(geminiKeys));
+        if (mistralKeys.length) localStorage.setItem('global_mistral_keys', JSON.stringify(mistralKeys));
+        document.getElementById('keyStatus').textContent = `🔑 Đã nạp ${geminiKeys.length} Gemini API Key và ${mistralKeys.length} Mistral Key từ CSDL · model ${geminiModel}.`;
+    } catch (e) {
+        try { geminiKeys = JSON.parse(localStorage.getItem('global_gemini_keys') || '[]'); } catch { geminiKeys = []; }
+        try { mistralKeys = JSON.parse(localStorage.getItem('global_mistral_keys') || '[]'); } catch { mistralKeys = []; }
+        document.getElementById('keyStatus').textContent = geminiKeys.length || mistralKeys.length
+            ? `🔑 Đang dùng ${geminiKeys.length} Gemini / ${mistralKeys.length} Mistral Key đã lưu tạm · model ${geminiModel}.`
+            : 'Không thể đồng bộ API Key. Hãy cấu hình Gemini & Mistral trên trang chủ.';
+    }
+}
+
+function parseAiJson(text) {
+    const raw = String(text || '').replace(/^```json\s*|\s*```$/g, '').trim();
+    try { return JSON.parse(raw); } catch { return { text: raw }; }
+}
+
+async function callGemini(prompt, jsonMode) {
+    const model = currentGeminiModel();
+    const keys = geminiKeys.slice();
+    let lastError = 'Gemini không phản hồi.';
+    const tryModels = [model];
+    if (model !== DEFAULT_GEMINI_MODEL) tryModels.push(DEFAULT_GEMINI_MODEL);
+    for (const mdl of tryModels) {
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 45000);
+            try {
+                const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.25 } };
+                if (jsonMode) body.generationConfig.responseMimeType = 'application/json';
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(mdl)}:generateContent?key=${encodeURIComponent(key)}`, {
+                    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal
+                });
+                clearTimeout(timer);
+                if (res.status === 429 || res.status === 503) { lastError = 'Gemini HTTP ' + res.status; continue; }
+                if (!res.ok) { lastError = 'Gemini HTTP ' + res.status; if (res.status >= 500) continue; throw new Error(lastError); }
+                const data = await res.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            } catch (err) {
+                clearTimeout(timer);
+                lastError = err.name === 'AbortError' ? 'Timeout 45s khi gọi Gemini.' : (err.message || lastError);
+            }
+        }
+    }
+    return callMistral(prompt, lastError);
+}
+
+async function callMistral(prompt, previousError) {
+    if (!mistralKeys.length) throw new Error(previousError || 'Hết Gemini key và chưa có Mistral Key.');
+    let lastError = previousError || 'Mistral không phản hồi.';
+    for (const key of mistralKeys) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 45000);
+        try {
+            const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + key },
+                body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: prompt }], temperature: 0.25 }),
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            if (res.status === 429 || res.status === 503) { lastError = 'Mistral HTTP ' + res.status; continue; }
+            if (!res.ok) { lastError = 'Mistral HTTP ' + res.status; continue; }
+            const data = await res.json();
+            return data.choices?.[0]?.message?.content || '';
+        } catch (err) {
+            clearTimeout(timer);
+            lastError = err.name === 'AbortError' ? 'Timeout khi gọi Mistral.' : (err.message || lastError);
+        }
+    }
+    throw new Error(lastError);
+}
+
+async function runAiTask(taskName, instruction, jsonMode) {
+    try {
+        const ctx = lessonContext();
+        const prompt = `${PRINCIPLES}\nTác vụ AI: ${taskName}.\n${instruction}\n\nNgữ cảnh hồ sơ:\n${ctx}\nNếu thiếu dữ liệu, hãy nói rõ phần nào là yêu cầu văn bản, khuyến nghị chuyên môn, hay đề xuất AI. Không bịa minh chứng.`;
+        setAiStatus(taskName + ' đang chạy…');
+        const text = await callGemini(prompt, jsonMode);
+        setAiStatus(taskName + ' hoàn tất. AI chỉ đề xuất — GV quyết định.');
+        return jsonMode ? parseAiJson(text) : text;
+    } catch (err) {
+        const msg = err.message || String(err);
+        setAiStatus('Lỗi ' + taskName + ': ' + msg);
+        alert('Không chạy được ' + taskName + ': ' + msg);
+        return jsonMode ? { text: msg } : msg;
+    }
+}
+
+function yccdHint() {
+    const grade = String(state.meta.lop || '6');
+    const catalog = window.KHBD_YCCD && window.KHBD_YCCD.toan ? (window.KHBD_YCCD.toan[grade] || []) : [];
+    return catalog.slice(0, 10).map(x => x.lesson || x.title || '').filter(Boolean).join('; ');
+}
+
+function lessonContext() {
+    return JSON.stringify({
+        meta: state.meta,
+        researchQuestion: state.researchQuestion,
+        yccdCatalog: yccdHint(),
+        sgk: compactContext(state.files.sgkText, 8000),
+        giaoAn: compactContext(state.files.giaoAnText, 6000),
+        phieu: compactContext(state.files.phieuText, 2500),
+        taiLieu: compactContext(state.files.taiLieuText, 2500),
+        canCu: CAN_CU
+    });
+}
+
+function setAiStatus(msg) {
+    const el = document.getElementById('aiStatus');
+    if (el) el.textContent = msg;
+}
+
+async function extractFileText(file) {
+    if (!file) return '';
+    if (/pdf$/i.test(file.name)) {
+        try {
+            const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+            let text = '';
+            const lesson = String(state.meta.baiHoc || '').toLowerCase();
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const pageText = (await (await pdf.getPage(i)).getTextContent()).items.map(x => x.str).join(' ');
+                if (!lesson || pageText.toLowerCase().includes(lesson) || pdf.numPages <= 8) text += pageText + '\n';
+                else if (text.length < 500) text += pageText + '\n';
+            }
+            if (text.replace(/\s/g, '').length > 180) return compactContext(text, 16000);
+        } catch (e) { console.warn('pdf.js extract failed', e.message); }
+        if (window.MistralOcr && mistralKeys.length) {
+            const ocr = await MistralOcr.ocrPdfFile(file, mistralKeys, null, { module: 'nghiencuubaihoc' });
+            return compactContext((ocr.pages || []).map(p => p.ocr_text).join('\n'), 16000);
+        }
+        return '';
+    }
+    if (/docx$/i.test(file.name)) return compactContext((await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value, 16000);
+    return compactContext(await file.text(), 12000);
+}
+
+function captureMeta() {
+    state.meta = {
+        monHoc: val('fMon') || 'Toán',
+        lop: val('fLop') || '6',
+        baiHoc: val('fBai'),
+        boSgk: val('fSgk'),
+        soTiet: val('fTiet') || '1',
+        gvDay: val('fGv'),
+        thanhVien: val('fTv'),
+        lopThucNghiem: val('fLopTn')
+    };
+}
+
+function payload() {
+    captureMetaIfPresent();
+    return {
+        id: currentSessionId,
+        mon_hoc: state.meta.monHoc,
+        lop: state.meta.lop,
+        bai_hoc: state.meta.baiHoc,
+        bo_sgk: state.meta.boSgk,
+        gv_day: state.meta.gvDay,
+        session_title: [state.meta.monHoc, 'Lớp ' + state.meta.lop, state.meta.baiHoc].filter(Boolean).join(' · ') || 'Hồ sơ NCBH',
+        current_step: state.currentStep,
+        session_data: state
+    };
+}
+
+function captureMetaIfPresent() {
+    if (document.getElementById('fMon')) captureMeta();
+}
+
+async function saveSession(silent) {
+    persistLocal();
+    try {
+        const r = await fetch(API_URL, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload()) });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error || 'Lưu thất bại');
+        currentSessionId = d.session.id;
+        persistLocal();
+        const st = document.getElementById('saveStatus');
+        if (st) st.textContent = 'Đã lưu CSDL #' + currentSessionId + ' · ' + nowLabel();
+        if (!silent) alert('Đã lưu hồ sơ NCBH lên CSDL.');
+    } catch (e) {
+        const st = document.getElementById('saveStatus');
+        if (st) st.textContent = 'Lưu CSDL lỗi, vẫn còn bản cục bộ. ' + e.message;
+        if (!silent) alert('Không lưu được CSDL: ' + e.message + '. Dữ liệu vẫn nằm trong localStorage.');
+    }
+}
+
+async function loadSessions() {
+    const d = await (await fetch(API_URL + '?action=list', { credentials: 'include' })).json();
+    const sessions = d.sessions || [];
+    document.getElementById('history').innerHTML = sessions.length
+        ? sessions.map(s => `<article class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3 text-sm"><div><b>${esc(s.session_title || s.bai_hoc || 'Hồ sơ NCBH')}</b><span class="ml-2 text-slate-500">${esc(s.mon_hoc || '')} · Lớp ${esc(s.lop || '')} · Bước ${esc(s.current_step || 1)}</span></div><div class="flex gap-2"><button type="button" onclick="loadSessionById(${s.id})" class="rounded border px-2 py-1 font-bold">Mở</button><button type="button" onclick="deleteSession(${s.id})" class="rounded border border-rose-200 px-2 py-1 font-bold text-rose-700">Xóa</button></div></article>`).join('')
+        : '<p class="text-sm text-slate-500">Chưa có hồ sơ đã lưu.</p>';
+}
+
+async function loadSessionById(id) {
+    const response = await fetch(`${API_URL}?id=${encodeURIComponent(id)}`, { credentials: 'include', cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể tải hồ sơ.');
+    const session = data.session || {};
+    state = Object.assign(emptyState(), session.session_data || {});
+    currentSessionId = Number(session.id);
+    persistLocal();
+    goStep(Number(session.current_step || state.currentStep || 1));
+    alert('Đã tải lại toàn bộ tiến trình hồ sơ.');
+}
+
+async function deleteSession(id) {
+    await fetch(API_URL + '?action=delete', { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id }) });
+    if (currentSessionId === id) currentSessionId = null;
+    loadSessions();
+}
+
+function renderStepper() {
+    document.getElementById('stepperBar').innerHTML = STEPS.map(s => {
+        const active = state.currentStep === s.n ? 'active' : '';
+        const done = state.completedSteps.includes(s.n) ? 'done' : '';
+        return `<button type="button" class="stepper-btn ${active} ${done} rounded-xl border border-slate-200 bg-white px-2 py-2 text-left text-[11px] font-bold leading-tight" onclick="goStep(${s.n})"><span class="block text-[10px] opacity-70">Bước ${s.n}</span>${esc(s.short)}</button>`;
+    }).join('');
+}
+
+function goStep(n) {
+    captureMetaIfPresent();
+    captureStepFields();
+    state.currentStep = n;
+    renderStepper();
+    renderStep();
+    persistLocal();
+}
+
+function zone(title, body) {
+    return `<article class="zone-card"><h3>${title}</h3><div class="text-sm text-slate-700 space-y-2">${body}</div></article>`;
+}
+
+function sixZones(cancu, ai, gv, hs, observe, product) {
+    return `<div class="grid gap-3 lg:grid-cols-2">${zone('Căn cứ', cancu)}${zone('AI phân tích', ai)}${zone('GV cần làm', gv)}${zone('HS dự kiến làm', hs)}${zone('Cần quan sát / thu thập', observe)}${zone('Sản phẩm của bước', product)}</div>`;
+}
+
+function cancuHtml(extra) {
+    return `<ul class="list-disc pl-5 space-y-1">${CAN_CU.map(x => `<li>${esc(x)}</li>`).join('')}</ul>${extra ? `<p class="mt-2">${extra}</p>` : ''}`;
+}
+
+function aiPanel(task, buttonLabel, onclick) {
+    return `<p class="text-xs font-bold text-indigo-700">${esc(task)} — AI chỉ đề xuất, GV quyết định.</p>
+        <button type="button" class="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-800" onclick="${onclick}">${buttonLabel}</button>
+        <p id="aiStatus" class="text-xs text-slate-500">Sẵn sàng chạy ${esc(task)}.</p>
+        <div id="aiOut" class="ai-box">${esc(currentAiText()) || 'Chưa có nhận định AI.'}</div>
+        <div class="flex flex-wrap gap-2 pt-1">
+            <button type="button" class="rounded border px-3 py-1 text-xs font-bold" onclick="decide('duyệt','Đồng ý đề xuất AI bước ' + state.currentStep)">Duyệt</button>
+            <button type="button" class="rounded border px-3 py-1 text-xs font-bold" onclick="decide('sửa','Giữ đề xuất nhưng sẽ chỉnh sửa')">Sửa</button>
+            <button type="button" class="rounded border px-3 py-1 text-xs font-bold text-rose-700" onclick="decide('từ chối','Từ chối đề xuất AI')">Từ chối</button>
+        </div>
+        <p class="text-[11px] text-slate-500">Nhật ký quyết định: ${state.decisions.length} mục.</p>`;
+}
+
+function currentAiText() {
+    const map = { 1: state.completeness, 2: state.analysis, 3: state.planReview, 4: state.researchOptions.join('\n'), 9: state.afterAnalysis, 10: state.minutes };
+    return map[state.currentStep] || '';
+}
+
+function decide(action, detail) {
+    logDecision(action, detail);
+    alert('Đã ghi nhật ký quyết định: ' + action + '. AI chỉ đề xuất, GV quyết định.');
+}
+
+function renderStep() {
+    const s = STEPS[state.currentStep - 1];
+    const nav = `<div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+        <div><p class="text-xs font-bold uppercase tracking-widest text-teal-700">Bước ${s.n}/12 · ${esc(s.ai)}</p><h2 class="text-xl font-black">${esc(s.title)}</h2></div>
+        <div class="flex gap-2"><button type="button" class="rounded-lg border px-3 py-2 text-sm font-bold" onclick="goStep(${Math.max(1, s.n - 1)})">← Trước</button><button type="button" class="rounded-lg bg-teal-700 px-3 py-2 text-sm font-bold text-white" onclick="completeAndNext()">Hoàn thành bước →</button></div>
+    </div>`;
+    document.getElementById('stepRoot').innerHTML = nav + stepBody(s) + sixZones(
+        cancuHtml(stepCancuExtra(s.n)),
+        aiPanel(s.ai, 'Chạy ' + s.ai, stepAiHandler(s.n)),
+        stepGv(s.n),
+        stepHs(s.n),
+        stepObserve(s.n),
+        `<p><b>${esc(s.product)}</b></p><p>Dữ liệu bước này sẽ được ghi vào hồ sơ NCBH và có thể xuất Word ở Bước 12.</p>`
+    );
+    fillStepFields();
+}
+
+function stepCancuExtra(n) {
+    const extras = {
+        2: 'Đính kèm câu hỏi căn cứ: “Đề xuất này dựa trên căn cứ hoặc yêu cầu chuyên môn nào?”',
+        4: 'Câu hỏi nghiên cứu là trục xuyên suốt toàn bộ quy trình, tập trung vào việc học của HS.',
+        6: 'Lớp 1 theo chuẩn CV 5512; Lớp 2 là thông tin NCBH phục vụ quan sát và cải tiến.',
+        7: 'Phiếu quan sát trọng tâm “HS học như thế nào”, không đánh giá GV dạy hay/dở.',
+        9: 'Đối chiếu Dự kiến trước giờ dạy ↔ Thực tế xảy ra. Phân biệt ý kiến cảm tính và minh chứng thực tế.',
+        10: 'Không tự sinh nội dung hình thức “thống nhất cao” nếu thiếu dữ liệu.',
+        11: 'Công thức cải tiến: Trước → Vấn đề → Minh chứng → Đề xuất sửa → Lý do sửa.'
+    };
+    return extras[n] || '';
+}
+
+function stepAiHandler(n) {
+    return ({ 1: 'runDocumentAnalyzer()', 2: 'runLessonAnalyzer()', 3: 'runLessonPlanReviewer()', 4: 'runResearchQuestionAdvisor()', 5: 'runStudentThinkingPredictor()', 6: 'runLessonAdaptationAdvisor()', 7: 'runObservationDesigner()', 8: 'runEvidenceAnalyzer()', 9: 'runDiscussionAssistant()', 10: 'runMinutesGenerator()', 11: 'runLessonReviser()', 12: 'runReportGenerator()' })[n];
+}
+
+function stepGv(n) {
+    const map = {
+        1: 'Khai báo môn, lớp, bài, bộ SGK, số tiết, GV dạy minh họa, thành viên tổ NCBH, lớp thực nghiệm. Nạp SGK PDF bắt buộc; giáo án DOCX/PDF tùy chọn.',
+        2: 'Đọc Kho căn cứ + SGK + YCCĐ CTGDPT 2018. Kiểm tra từng đề xuất bằng câu hỏi căn cứ.',
+        3: 'Đánh giá 8 khía cạnh theo 4 mức: Giữ nguyên / Giữ nhưng bổ sung / Cần điều chỉnh / Nên thiết kế lại.',
+        4: 'Chọn, chỉnh sửa hoặc tự nhập câu hỏi nghiên cứu. Đây là trục xuyên suốt.',
+        5: 'Rà soát từng hoạt động: hướng suy nghĩ, sai lầm, bế tắc, thời điểm can thiệp / không can thiệp.',
+        6: 'Duyệt từng hoạt động KHBD 2 lớp. Lưu quyết định duyệt/sửa/từ chối.',
+        7: 'Phân công người quan sát, thống nhất tiêu chí gắn vấn đề nghiên cứu.',
+        8: 'Ghi chú thời gian thực và gắn minh chứng với hoạt động, đối tượng HS, tiêu chí.',
+        9: 'Đối chiếu dự kiến với thực tế; không suy diễn khi thiếu minh chứng.',
+        10: 'Nhập ý kiến thảo luận thật; AI chỉ nhóm và đối chiếu, không viết hộ biên bản hình thức.',
+        11: 'Quyết định từng đề xuất sửa theo minh chứng, không sửa vì thói quen.',
+        12: 'Rà soát 13 sản phẩm, xuất lẻ .docx hoặc ZIP toàn bộ hồ sơ.'
+    };
+    return map[n];
+}
+
+function stepHs(n) {
+    const map = {
+        1: 'HS chưa vào tiết; cần xác định lớp thực nghiệm và đặc điểm học tập sẽ quan sát.',
+        2: 'Dự kiến sản phẩm học tập, điểm khó và lỗi HS có thể gặp theo YCCĐ.',
+        3: 'So sánh việc học mà giáo án hiện có tạo điều kiện với việc học cần có.',
+        4: 'Câu hỏi nghiên cứu phải mô tả hành vi/tư duy HS, không mô tả hình thức dạy.',
+        5: 'HS bắt đầu ra sao, các hướng suy nghĩ, phương án đúng/chưa hoàn chỉnh/sai, dấu hiệu hiểu/chưa hiểu.',
+        6: 'Lớp 2 mô tả phản ứng HS dự kiến, HS/nhóm cần chú ý.',
+        7: 'Xác định HS/nhóm trọng tâm quan sát, không quan sát GV.',
+        8: 'Ghi phát biểu, lỗi sai, sản phẩm và hỗ trợ mà HS thực sự nhận.',
+        9: 'Chỉ ra chỗ HS bế tắc, câu hỏi nào hiệu quả với HS.',
+        10: 'Mọi kết luận về HS phải có minh chứng kèm theo.',
+        11: 'Phiên bản 2 phải làm rõ HS sẽ học khác đi ở điểm nào.',
+        12: 'Hồ sơ hoàn chỉnh phản ánh việc học của HS, không xếp loại GV.'
+    };
+    return map[n];
+}
+
+function stepObserve(n) {
+    const map = {
+        1: 'Thu thập: tệp SGK, giáo án hiện có, phiếu học tập, tài liệu GV. AI kiểm tra tính đầy đủ.',
+        2: 'Minh chứng: đoạn SGK, YCCĐ, cơ hội NLS/AI gắn bài.',
+        3: 'Minh chứng: trích giáo án cho từng mức đánh giá.',
+        4: 'Ghi rõ căn cứ chọn câu hỏi nghiên cứu.',
+        5: 'Tiêu chí quan sát tương ứng từng dự kiến phản ứng HS.',
+        6: 'Mỗi hoạt động có mục “minh chứng cần thu thập” và thời điểm can thiệp.',
+        7: 'Phiếu quan sát HS, phiếu dự giờ NCBH, tiêu chí, phân công.',
+        8: 'Thời điểm, tình huống, phát biểu HS, lỗi sai, hỗ trợ GV, ảnh bài làm.',
+        9: 'Tách minh chứng thực tế khỏi nhận xét cảm tính.',
+        10: 'Đối chiếu từng ý kiến với kho minh chứng.',
+        11: 'Mỗi sửa đổi phải có minh chứng đi kèm.',
+        12: 'Kiểm tra hồ sơ còn thiếu sản phẩm nào trước khi xuất.'
+    };
+    return map[n];
+}
+
+function stepBody(s) {
+    if (s.n === 1) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><div class="grid gap-3 md:grid-cols-4">
+        <label class="text-xs font-bold">Môn<input id="fMon" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.monHoc)}"></label>
+        <label class="text-xs font-bold">Lớp<input id="fLop" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.lop)}"></label>
+        <label class="text-xs font-bold">Bài học<input id="fBai" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.baiHoc)}" placeholder="Ví dụ: Số nguyên"></label>
+        <label class="text-xs font-bold">Bộ SGK<input id="fSgk" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.boSgk)}"></label>
+        <label class="text-xs font-bold">Số tiết<input id="fTiet" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.soTiet)}"></label>
+        <label class="text-xs font-bold">GV dạy minh họa<input id="fGv" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.gvDay)}"></label>
+        <label class="text-xs font-bold">Thành viên tổ NCBH<input id="fTv" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.thanhVien)}"></label>
+        <label class="text-xs font-bold">Lớp thực nghiệm<input id="fLopTn" class="mt-1 w-full rounded-lg border p-2" value="${esc(state.meta.lopThucNghiem)}"></label>
+    </div>
+    <div class="mt-3 grid gap-3 md:grid-cols-2">
+        <label class="text-xs font-bold">SGK (bắt buộc PDF)<input id="fileSgk" type="file" accept=".pdf" class="mt-1 block w-full text-xs" onchange="readNamedFile(event,'sgk')"><span class="text-slate-500">${esc(state.files.sgkName || 'Chưa nạp')}</span></label>
+        <label class="text-xs font-bold">Giáo án hiện có (DOCX/PDF tùy chọn)<input id="fileGa" type="file" accept=".pdf,.docx" class="mt-1 block w-full text-xs" onchange="readNamedFile(event,'giaoAn')"><span class="text-slate-500">${esc(state.files.giaoAnName || 'Chưa nạp')}</span></label>
+        <label class="text-xs font-bold">Phiếu học tập<input type="file" accept=".pdf,.docx,.txt" class="mt-1 block w-full text-xs" onchange="readNamedFile(event,'phieu')"><span class="text-slate-500">${esc(state.files.phieuName || 'Chưa nạp')}</span></label>
+        <label class="text-xs font-bold">Tài liệu GV<input type="file" accept=".pdf,.docx,.txt" class="mt-1 block w-full text-xs" onchange="readNamedFile(event,'taiLieu')"><span class="text-slate-500">${esc(state.files.taiLieuName || 'Chưa nạp')}</span></label>
+    </div></section>`;
+    if (s.n === 2) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><p class="text-sm">Phân tích YCCĐ, trọng tâm, kiến thức tiền đề, chuỗi nhiệm vụ SGK, sản phẩm học tập, điểm khó, lỗi HS, cơ hội năng lực phẩm chất, tích hợp NLS (CV 3456) &amp; Khung AI (QĐ 2422).</p><label class="mt-2 block text-xs font-bold">Câu hỏi căn cứ<textarea id="fCanCuQ" class="mt-1 w-full rounded-lg border p-2" rows="2">Đề xuất này dựa trên căn cứ hoặc yêu cầu chuyên môn nào?</textarea></label></section>`;
+    if (s.n === 3) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><p class="text-sm mb-2">8 khía cạnh chuyên môn · 4 mức: ${REVIEW_LEVELS.map(esc).join(' / ')}</p><ul class="grid gap-1 text-sm md:grid-cols-2">${REVIEW_ASPECTS.map(a => `<li class="rounded bg-slate-50 px-2 py-1">${esc(a)}</li>`).join('')}</ul></section>`;
+    if (s.n === 4) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><label class="text-xs font-bold">Câu hỏi nghiên cứu chính thức (trục xuyên suốt)<textarea id="fRQ" class="mt-1 w-full rounded-lg border p-2" rows="3">${esc(state.researchQuestion)}</textarea></label><div id="rqOptions" class="mt-2 space-y-1 text-sm">${(state.researchOptions || []).map((q, i) => `<button type="button" class="block w-full rounded border px-3 py-2 text-left" onclick="chooseRQ(${i})">${esc(q)}</button>`).join('')}</div></section>`;
+    if (s.n === 5) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 overflow-x-auto"><table class="w-full min-w-[900px] text-xs"><thead class="bg-slate-800 text-white"><tr><th class="p-2">Hoạt động</th><th class="p-2">HS bắt đầu</th><th class="p-2">Hướng suy nghĩ</th><th class="p-2">Đúng / chưa hoàn chỉnh / sai</th><th class="p-2">Bế tắc</th><th class="p-2">Câu hỏi gợi mở</th><th class="p-2">Can thiệp</th></tr></thead><tbody>${state.studentPredictions.map((r, i) => `<tr class="border-b align-top"><td class="p-1 font-bold">${esc(r.activity)}</td><td><textarea data-pred="${i}" data-k="start" class="w-full rounded border p-1">${esc(r.start)}</textarea></td><td><textarea data-pred="${i}" data-k="thinking" class="w-full rounded border p-1">${esc(r.thinking)}</textarea></td><td><textarea data-pred="${i}" data-k="correct" class="w-full rounded border p-1">${esc(r.correct)}</textarea></td><td><textarea data-pred="${i}" data-k="stuck" class="w-full rounded border p-1">${esc(r.stuck)}</textarea></td><td><textarea data-pred="${i}" data-k="prompts" class="w-full rounded border p-1">${esc(r.prompts)}</textarea></td><td><textarea data-pred="${i}" data-k="intervene" class="w-full rounded border p-1">${esc(r.intervene)}</textarea></td></tr>`).join('')}</tbody></table></section>`;
+    if (s.n === 6) return khbdEditor('khbdV1', 'Lớp 1 (KHBD chính thức CV 5512)', 'Lớp 2 (Thông tin NCBH)');
+    if (s.n === 7) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 grid gap-3 md:grid-cols-2">
+        <label class="text-xs font-bold">Phiếu quan sát HS<textarea id="obsHs" class="mt-1 w-full rounded border p-2" rows="5">${esc(state.observation.hsSheet)}</textarea></label>
+        <label class="text-xs font-bold">Phiếu dự giờ NCBH<textarea id="obsDg" class="mt-1 w-full rounded border p-2" rows="5">${esc(state.observation.duGio)}</textarea></label>
+        <label class="text-xs font-bold">Tiêu chí quan sát (gắn Bước 4)<textarea id="obsTc" class="mt-1 w-full rounded border p-2" rows="4">${esc(state.observation.criteria)}</textarea></label>
+        <label class="text-xs font-bold">Phân công người quan sát<textarea id="obsPc" class="mt-1 w-full rounded border p-2" rows="4">${esc(state.observation.assignment)}</textarea></label>
+        <label class="text-xs font-bold">Nội dung họp chuẩn bị<textarea id="obsHop" class="mt-1 w-full rounded border p-2" rows="4">${esc(state.observation.meeting)}</textarea></label>
+        <label class="text-xs font-bold">Biên bản xây dựng bài học<textarea id="obsBb" class="mt-1 w-full rounded border p-2" rows="4">${esc(state.observation.minutes)}</textarea></label>
+    </section>`;
+    if (s.n === 8) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 space-y-3">
+        <div class="grid gap-3 md:grid-cols-5">
+            <label class="text-xs font-bold">Thời điểm<input id="evTime" class="mt-1 w-full rounded border p-2" placeholder="Phút 07"></label>
+            <label class="text-xs font-bold">Tình huống<input id="evSit" class="mt-1 w-full rounded border p-2"></label>
+            <label class="text-xs font-bold">Phát biểu HS<input id="evTalk" class="mt-1 w-full rounded border p-2"></label>
+            <label class="text-xs font-bold">Lỗi sai / hỗ trợ GV<input id="evErr" class="mt-1 w-full rounded border p-2"></label>
+            <label class="text-xs font-bold">Hoạt động / đối tượng HS<input id="evAct" class="mt-1 w-full rounded border p-2"></label>
+        </div>
+        <div class="flex flex-wrap gap-2"><button type="button" class="rounded bg-teal-700 px-4 py-2 text-sm font-bold text-white" onclick="addLiveNote()">Thêm ghi chú thời gian thực</button>
+        <label class="rounded border px-3 py-2 text-sm font-bold">Ảnh bài làm / phiếu HS<input id="evImg" type="file" accept="image/*" class="mt-1 block text-xs" onchange="addEvidenceImage(event)"></label></div>
+        <div id="evList" class="space-y-2">${renderEvidenceList()}</div>
+    </section>`;
+    if (s.n === 9) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><p class="text-sm">Đối chiếu <b>Dự kiến trước giờ dạy ↔ Thực tế xảy ra</b>: dự đoán nào đúng, điều gì ngoài dự đoán, HS bế tắc ở đâu, câu hỏi nào hiệu quả, can thiệp sớm/muộn.</p></section>`;
+    if (s.n === 10) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><label class="text-xs font-bold">Ý kiến thảo luận thật của tổ (mỗi ý một dòng)<textarea id="discIn" class="mt-1 w-full rounded border p-2" rows="6">${esc(state.discussionInput)}</textarea></label></section>`;
+    if (s.n === 11) return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 overflow-x-auto"><p class="mb-2 text-sm font-bold">Trước → Vấn đề → Minh chứng → Đề xuất sửa → Lý do sửa</p>
+        <table class="w-full min-w-[860px] text-xs"><thead class="bg-slate-800 text-white"><tr><th class="p-2">Trước</th><th class="p-2">Vấn đề</th><th class="p-2">Minh chứng</th><th class="p-2">Đề xuất sửa</th><th class="p-2">Lý do sửa</th></tr></thead>
+        <tbody>${(state.revisions.length ? state.revisions : [{ truoc: '', vanDe: '', minhChung: '', deXuat: '', lyDo: '' }]).map((r, i) => `<tr>${['truoc', 'vanDe', 'minhChung', 'deXuat', 'lyDo'].map(k => `<td class="p-1"><textarea data-rev="${i}" data-k="${k}" class="w-full rounded border p-1">${esc(r[k] || '')}</textarea></td>`).join('')}</tr>`).join('')}</tbody></table>
+        ${khbdEditor('khbdV2', 'Lớp 1 — KHBD phiên bản 2', 'Lớp 2 — Thông tin NCBH đã điều chỉnh')}</section>`;
+    return `<section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"><p class="mb-3 text-sm">Xuất từng biểu mẫu Word (.docx) hoặc nén ZIP toàn bộ 13 sản phẩm hồ sơ NCBH.</p>
+        <div class="grid gap-2 md:grid-cols-2">${PRODUCTS_13.map((p, i) => `<button type="button" class="rounded-xl border px-3 py-2 text-left text-sm font-bold hover:bg-slate-50" onclick="exportOneDocx(${i})"><i class="fa-solid fa-file-word mr-2 text-sky-700"></i>${esc(p.title)}</button>`).join('')}</div>
+        <div class="mt-3 flex flex-wrap gap-2">
+            <button type="button" class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white" onclick="exportAllDocx()">Xuất trọn bộ hồ sơ .docx</button>
+            <button type="button" class="rounded-lg border px-4 py-2 text-sm font-bold" onclick="exportZip()">Nén ZIP toàn bộ hồ sơ</button>
+        </div></section>`;
+}
+
+function khbdEditor(key, l1, l2) {
+    const rows = state[key];
+    return `<section class="space-y-3">${rows.map((act, i) => `<article class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2"><h3 class="font-black">${esc(act.name)}</h3>
+            <div class="flex gap-2 text-xs font-bold"><button type="button" class="rounded border px-2 py-1" onclick="khbdDecide('${key}',${i},'duyệt')">Duyệt</button><button type="button" class="rounded border px-2 py-1" onclick="khbdDecide('${key}',${i},'sửa')">Sửa</button><button type="button" class="rounded border px-2 py-1 text-rose-700" onclick="khbdDecide('${key}',${i},'từ chối')">Từ chối</button><span class="rounded bg-slate-100 px-2 py-1">${esc(act.decision)}</span></div></div>
+        <div class="layer-grid">
+            <div class="rounded-xl bg-teal-50 p-3"><h4 class="mb-2 text-xs font-black uppercase tracking-wide text-teal-800">${esc(l1)}</h4>
+                ${['mucTieu|Mục tiêu', 'noiDung|Nội dung', 'sanPham|Sản phẩm', 'gv|Tổ chức thực hiện — Hoạt động GV', 'hs|Tổ chức thực hiện — Hoạt động HS', 'danhGia|Kiểm tra đánh giá'].map(x => { const [k, lab] = x.split('|'); return `<label class="mt-1 block text-[11px] font-bold">${lab}<textarea data-khbd="${key}" data-i="${i}" data-layer="layer1" data-k="${k}" class="mt-1 w-full rounded border p-1 text-xs">${esc(act.layer1[k] || '')}</textarea></label>`; }).join('')}
+            </div>
+            <div class="rounded-xl bg-indigo-50 p-3"><h4 class="mb-2 text-xs font-black uppercase tracking-wide text-indigo-800">${esc(l2)}</h4>
+                ${['quanSat|Điều cần quan sát', 'phanUng|Phản ứng HS dự kiến', 'loiSai|Lỗi sai dự kiến', 'goiMo|Câu hỏi gợi mở', 'duPhong|Tình huống dự phòng', 'hsChuY|HS/nhóm cần chú ý', 'minhChung|Minh chứng cần thu thập', 'canThiep|Thời điểm GV can thiệp / không can thiệp'].map(x => { const [k, lab] = x.split('|'); return `<label class="mt-1 block text-[11px] font-bold">${lab}<textarea data-khbd="${key}" data-i="${i}" data-layer="layer2" data-k="${k}" class="mt-1 w-full rounded border p-1 text-xs">${esc(act.layer2[k] || '')}</textarea></label>`; }).join('')}
+            </div>
+        </div></article>`).join('')}</section>`;
+}
+
+function khbdDecide(key, i, action) {
+    state[key][i].decision = action;
+    logDecision(action, key + ' · ' + state[key][i].name);
+    renderStep();
+}
+
+function renderEvidenceList() {
+    const notes = state.liveNotes.map(n => `<li class="rounded bg-slate-50 p-2 text-xs"><b>${esc(n.time)}</b> · ${esc(n.sit)} · HS: ${esc(n.talk)} · ${esc(n.err)} · ${esc(n.act)}</li>`).join('');
+    const imgs = state.evidence.map(e => `<li class="rounded bg-slate-50 p-2 text-xs">${esc(e.name)} · ${esc(e.act || '')}</li>`).join('');
+    return `<ul class="space-y-1">${notes || '<li class="text-slate-500 text-sm">Chưa có ghi chú.</li>'}${imgs}</ul>`;
+}
+
+async function readNamedFile(e, kind) {
+    const file = e.target.files[0];
+    if (!file) return;
+    captureMetaIfPresent();
+    setAiStatus('Đang đọc tệp ' + file.name + '…');
+    const text = await extractFileText(file);
+    state.files[kind + 'Name'] = file.name;
+    state.files[kind + 'Text'] = text;
+    scheduleAutoSave();
+    renderStep();
+}
+
+function chooseRQ(i) {
+    state.researchQuestion = state.researchOptions[i] || '';
+    logDecision('duyệt', 'Chọn câu hỏi nghiên cứu: ' + state.researchQuestion);
+    renderStep();
+}
+
+function addLiveNote() {
+    state.liveNotes.push({ time: val('evTime') || nowLabel(), sit: val('evSit'), talk: val('evTalk'), err: val('evErr'), act: val('evAct') });
+    scheduleAutoSave();
+    renderStep();
+}
+
+async function addEvidenceImage(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const dataUrl = await compressImage(file);
+    state.evidence.push({ name: file.name, dataUrl, act: val('evAct'), at: nowLabel() });
+    scheduleAutoSave();
+    renderStep();
+}
+
+function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            const c = document.createElement('canvas');
+            const scale = Math.min(1, 900 / Math.max(img.width, img.height));
+            c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            URL.revokeObjectURL(url);
+            resolve(c.toDataURL('image/jpeg', 0.72));
+        };
+        img.onerror = reject;
+        img.src = url;
+    });
+}
+
+function captureStepFields() {
+    if (document.getElementById('fRQ')) state.researchQuestion = val('fRQ');
+    document.querySelectorAll('[data-pred]').forEach(el => {
+        const i = Number(el.getAttribute('data-pred')); const k = el.getAttribute('data-k');
+        if (state.studentPredictions[i]) state.studentPredictions[i][k] = el.value;
+    });
+    document.querySelectorAll('[data-khbd]').forEach(el => {
+        const key = el.getAttribute('data-khbd'); const i = Number(el.getAttribute('data-i'));
+        const layer = el.getAttribute('data-layer'); const k = el.getAttribute('data-k');
+        if (state[key]?.[i]?.[layer]) state[key][i][layer][k] = el.value;
+    });
+    if (document.getElementById('obsHs')) {
+        state.observation = { hsSheet: val('obsHs'), duGio: val('obsDg'), criteria: val('obsTc'), assignment: val('obsPc'), meeting: val('obsHop'), minutes: val('obsBb') };
+    }
+    if (document.getElementById('discIn')) state.discussionInput = val('discIn');
+    document.querySelectorAll('[data-rev]').forEach(el => {
+        const i = Number(el.getAttribute('data-rev')); const k = el.getAttribute('data-k');
+        if (!state.revisions[i]) state.revisions[i] = { truoc: '', vanDe: '', minhChung: '', deXuat: '', lyDo: '' };
+        state.revisions[i][k] = el.value;
+    });
+}
+
+function fillStepFields() { /* values already baked into render */ }
+
+function completeAndNext() {
+    captureMetaIfPresent();
+    captureStepFields();
+    markStepDone(state.currentStep);
+    scheduleAutoSave();
+    goStep(Math.min(12, state.currentStep + 1));
+}
+
+function showAi(text) {
+    const el = document.getElementById('aiOut');
+    if (el) el.textContent = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
+}
+
+async function runDocumentAnalyzer() {
+    captureMetaIfPresent();
+    if (!state.files.sgkText) return alert('Hãy nạp tệp SGK PDF trước.');
+    const out = await runAiTask('Document Analyzer', 'Kiểm tra tính đầy đủ dữ liệu hồ sơ NCBH: SGK, giáo án, phiếu học tập, tài liệu GV, thông tin môn/lớp/bài. Chỉ ra phần còn thiếu. Trả văn bản rõ ràng.', false);
+    state.completeness = String(out); showAi(out); markStepDone(1); scheduleAutoSave();
+}
+
+async function runLessonAnalyzer() {
+    captureMetaIfPresent();
+    const out = await runAiTask('Lesson Analyzer', 'Phân tích bài học: YCCĐ, trọng tâm, kiến thức tiền đề, chuỗi nhiệm vụ SGK, sản phẩm học tập, điểm khó, lỗi HS có thể gặp, cơ hội năng lực phẩm chất, tích hợp NLS CV 3456 và Khung AI QĐ 2422. Mỗi đề xuất phải trả lời: Đề xuất này dựa trên căn cứ hoặc yêu cầu chuyên môn nào? Sản phẩm: Phiếu phân tích bài học.', false);
+    state.analysis = String(out); state.products['phieu-phan-tich'] = state.analysis; showAi(out); markStepDone(2); scheduleAutoSave();
+}
+
+async function runLessonPlanReviewer() {
+    if (!state.files.giaoAnText) {
+        showAi('Chưa có giáo án hiện có. Bước 3 có thể bỏ qua hoặc nạp giáo án ở Bước 1.');
+        return;
+    }
+    const out = await runAiTask('Lesson Plan Reviewer', `Đánh giá giáo án theo 8 khía cạnh: ${REVIEW_ASPECTS.join('; ')}. Phân loại mỗi khía cạnh theo 4 mức: ${REVIEW_LEVELS.join(' / ')}. Chỉ rõ vấn đề, nguyên nhân, căn cứ và hướng sửa. Không xếp loại giáo viên.`, false);
+    state.planReview = String(out); state.products['bao-cao-giao-an'] = state.planReview; showAi(out); markStepDone(3); scheduleAutoSave();
+}
+
+async function runResearchQuestionAdvisor() {
+    const out = await runAiTask('Research Question Advisor', 'Gợi ý 4-6 câu hỏi nghiên cứu cụ thể, tập trung vào việc học của HS, tránh chung chung hình thức. Trả JSON {questions:[...]} .', true);
+    const qs = Array.isArray(out.questions) ? out.questions : String(out.text || out).split('\n').filter(Boolean);
+    state.researchOptions = qs.map(String); showAi(qs.join('\n')); renderStep(); markStepDone(4); scheduleAutoSave();
+}
+
+async function runStudentThinkingPredictor() {
+    captureStepFields();
+    const out = await runAiTask('Student Thinking Predictor', 'Dự kiến chi tiết từng hoạt động: HS bắt đầu, hướng suy nghĩ, phương án đúng/chưa hoàn chỉnh/sai, bế tắc, sản phẩm, dấu hiệu hiểu/chưa hiểu, câu hỏi gợi mở, thời điểm can thiệp/không can thiệp, cách xử lý sai lầm. Trả JSON {rows:[{activity,start,thinking,correct,stuck,prompts,intervene}]}', true);
+    if (Array.isArray(out.rows) && out.rows.length) {
+        state.studentPredictions = out.rows.map((r, i) => Object.assign(state.studentPredictions[i] || { activity: r.activity }, r));
+    }
+    showAi(out); renderStep(); markStepDone(5); scheduleAutoSave();
+}
+
+async function runLessonAdaptationAdvisor() {
+    captureStepFields();
+    const out = await runAiTask('Lesson Adaptation Advisor', 'Sinh KHBD 2 lớp cho 4 hoạt động CV 5512. Lớp 1: mucTieu, noiDung, sanPham, gv, hs, danhGia. Lớp 2: quanSat, phanUng, loiSai, goiMo, duPhong, hsChuY, minhChung, canThiep. Trả JSON {activities:[{name,layer1:{},layer2:{}}]}', true);
+    if (Array.isArray(out.activities)) {
+        state.khbdV1 = out.activities.map((a, i) => Object.assign(emptyKhbdActivity({ name: a.name || defaultActivities()[i]?.name }), { name: a.name || defaultActivities()[i]?.name, layer1: Object.assign({}, emptyKhbdActivity({ name: '' }).layer1, a.layer1 || {}), layer2: Object.assign({}, emptyKhbdActivity({ name: '' }).layer2, a.layer2 || {}) }));
+    }
+    showAi(out); renderStep(); markStepDone(6); scheduleAutoSave();
+}
+
+async function runObservationDesigner() {
+    const out = await runAiTask('Observation Designer', `Thiết kế phiếu quan sát HS (trọng tâm HS học như thế nào, không đánh giá GV), phiếu dự giờ NCBH, tiêu chí gắn câu hỏi nghiên cứu "${state.researchQuestion}", phân công, nội dung họp, biên bản xây dựng bài học. Trả JSON {hsSheet,duGio,criteria,assignment,meeting,minutes}.`, true);
+    state.observation = Object.assign(state.observation, out);
+    showAi(out); renderStep(); markStepDone(7); scheduleAutoSave();
+}
+
+async function runEvidenceAnalyzer() {
+    captureStepFields();
+    const out = await runAiTask('Evidence Analyzer', `Ghi nhận kho minh chứng. Ghi chú: ${JSON.stringify(state.liveNotes).slice(0, 4000)}. Ảnh/sản phẩm: ${state.evidence.map(e => e.name).join(', ')}. Gắn với hoạt động, đối tượng HS, tiêu chí quan sát và câu hỏi nghiên cứu. Không bịa minh chứng.`, false);
+    showAi(out); markStepDone(8); scheduleAutoSave();
+}
+
+async function runDiscussionAssistant() {
+    const out = await runAiTask('Discussion Assistant', `Phân tích sau giờ dạy. Đối chiếu Dự kiến trước giờ dạy ↔ Thực tế xảy ra. Dữ liệu dự kiến: ${JSON.stringify(state.studentPredictions).slice(0, 4000)}. Minh chứng: ${JSON.stringify(state.liveNotes).slice(0, 4000)}. Chỉ ra dự đoán đúng, ngoài dự đoán, chỗ bế tắc, câu hỏi hiệu quả, can thiệp sớm/muộn. Phân biệt ý kiến cảm tính và minh chứng thực tế.`, false);
+    state.afterAnalysis = String(out); state.products['bao-cao-tiet-day'] = state.afterAnalysis; showAi(out); markStepDone(9); scheduleAutoSave();
+}
+
+async function runMinutesGenerator() {
+    captureStepFields();
+    const out = await runAiTask('Minutes Generator', `Từ ý kiến thảo luận thật sau:\n${state.discussionInput || '(chưa có ý kiến)'}\nHãy nhóm ý trùng, chỉ ra ý trái chiều, đối chiếu với minh chứng ${JSON.stringify(state.liveNotes).slice(0, 2500)}. Nếu thiếu dữ liệu, nói thiếu, KHÔNG tự sinh câu "thống nhất cao". Không xếp loại giáo viên. Không tạo biên bản giả mạo.`, false);
+    state.minutes = String(out); showAi(out); markStepDone(10); scheduleAutoSave();
+}
+
+async function runLessonReviser() {
+    const out = await runAiTask('Lesson Reviser', 'Đề xuất KHBD phiên bản 2 theo công thức Trước → Vấn đề → Minh chứng → Đề xuất sửa → Lý do sửa. Trả JSON {revisions:[{truoc,vanDe,minhChung,deXuat,lyDo}], activities:[{name,layer1,layer2}] }', true);
+    if (Array.isArray(out.revisions)) state.revisions = out.revisions;
+    if (Array.isArray(out.activities)) {
+        state.khbdV2 = out.activities.map((a, i) => Object.assign(emptyKhbdActivity({ name: a.name || defaultActivities()[i]?.name }), { name: a.name || defaultActivities()[i]?.name, layer1: Object.assign({}, emptyKhbdActivity({ name: '' }).layer1, a.layer1 || {}), layer2: Object.assign({}, emptyKhbdActivity({ name: '' }).layer2, a.layer2 || {}) }));
+    }
+    showAi(out); renderStep(); markStepDone(11); scheduleAutoSave();
+}
+
+async function runReportGenerator() {
+    captureStepFields();
+    const out = await runAiTask('Report Generator', 'Tổng hợp 13 sản phẩm hồ sơ NCBH, chỉ ra sản phẩm còn thiếu, không bịa nội dung. Liệt kê checklist 13 biểu mẫu.', false);
+    showAi(out); markStepDone(12); scheduleAutoSave();
+}
+
+function productText(p) {
+    const map = {
+        'khoi-tao': JSON.stringify(state.meta, null, 2) + '\nSGK: ' + (state.files.sgkName || 'chưa nạp') + '\nGiáo án: ' + (state.files.giaoAnName || 'không có') + '\n' + (state.completeness || ''),
+        'phieu-phan-tich': state.analysis || 'Chưa có phiếu phân tích bài học.',
+        'bao-cao-giao-an': state.planReview || 'Chưa đánh giá giáo án (bỏ qua nếu không có giáo án).',
+        'cau-hoi-nc': state.researchQuestion || (state.researchOptions || []).join('\n') || 'Chưa chọn câu hỏi nghiên cứu.',
+        'du-kien-hs': state.studentPredictions.map(r => Object.values(r).join(' | ')).join('\n'),
+        'khbd-v1': formatKhbd(state.khbdV1),
+        'phieu-quan-sat': state.observation.hsSheet || 'Chưa có phiếu quan sát HS.',
+        'phieu-du-gio': state.observation.duGio || 'Chưa có phiếu dự giờ NCBH.',
+        'bien-ban-xay-dung': state.observation.minutes || 'Chưa có biên bản xây dựng bài học.',
+        'kho-minh-chung': state.liveNotes.map(n => `${n.time} | ${n.sit} | ${n.talk} | ${n.err} | ${n.act}`).join('\n') + '\n' + state.evidence.map(e => e.name).join(', '),
+        'bao-cao-tiet-day': state.afterAnalysis || 'Chưa có báo cáo phân tích tiết dạy.',
+        'bien-ban-sau': state.minutes || 'Chưa có biên bản sau tiết dạy. Không tạo biên bản giả mạo.',
+        'khbd-v2': 'Trước → Vấn đề → Minh chứng → Đề xuất sửa → Lý do sửa\n' + (state.revisions || []).map(r => [r.truoc, r.vanDe, r.minhChung, r.deXuat, r.lyDo].join(' | ')).join('\n') + '\n' + formatKhbd(state.khbdV2)
+    };
+    return map[p.id] || '';
+}
+
+function formatKhbd(rows) {
+    return (rows || []).map(a => {
+        return `${a.name} [${a.decision}]\nLớp 1 (KHBD chính thức): ${JSON.stringify(a.layer1)}\nLớp 2 (Thông tin NCBH): ${JSON.stringify(a.layer2)}`;
+    }).join('\n\n');
+}
+
+async function buildDoc(title, body) {
+    if (!window.docx) throw new Error('Chưa tải thư viện DOCX.');
+    const { Document, Packer, Paragraph, HeadingLevel } = docx;
+    const lines = String(body || '').split('\n');
+    const doc = new Document({
+        sections: [{ children: [new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }), new Paragraph(`Trường / Tổ NCBH — ${state.meta.monHoc} lớp ${state.meta.lop} — ${state.meta.baiHoc}`), new Paragraph('Căn cứ: CV 5512, TT 32/2018, Hướng dẫn NCBH, QĐ 2422, CV 3456 & 2345, TT 38/2021, TT 14/2020.'), ...lines.map(t => new Paragraph(t))] }]
+    });
+    return Packer.toBlob(doc);
+}
+
+async function exportOneDocx(i) {
+    const p = PRODUCTS_13[i];
+    saveAs(await buildDoc(p.title, productText(p)), slug(p.title) + '.docx');
+}
+
+async function exportAllDocx() {
+    const body = PRODUCTS_13.map(p => '\n\n===== ' + p.title + ' =====\n' + productText(p)).join('\n');
+    saveAs(await buildDoc('Hồ sơ Nghiên cứu bài học — trọn bộ 13 sản phẩm', body), 'Ho-so-NCBH-tron-bo.docx');
+}
+
+async function exportZip() {
+    if (!window.JSZip) return alert('Chưa tải JSZip.');
+    const zip = new JSZip();
+    for (const p of PRODUCTS_13) {
+        const blob = await buildDoc(p.title, productText(p));
+        zip.file(slug(p.title) + '.docx', blob);
+    }
+    saveAs(await zip.generateAsync({ type: 'blob' }), 'Ho-so-NCBH-13-san-pham.zip');
+}
+
+function slug(s) { return String(s || 'ncbh').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-'); }
+
+syncUserKeysFromServer();
+restoreLocal();
+renderStepper();
+renderStep();
+</script>
+</body>
+</html>

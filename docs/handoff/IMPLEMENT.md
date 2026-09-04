@@ -1,43 +1,39 @@
-# IMPLEMENT: Khắc Phục Lỗi Render Raw Code Trên Trang SmartQuiz
+# IMPLEMENT: Hệ thống Nghiên cứu bài học (NCBH) có hỗ trợ AI
 
-**Ngày implement**: 2026-09-03
+**Ngày implement**: 2026-09-04
 **Coder**: Grok (xAI)
-**Trạng thái**: DONE — 4 smoke tests PLAN yêu cầu đều PASS
+**Trạng thái**: DONE — `tests/nghiencuubaihoc-smoke.js` PASS
 
-## Tóm tắt thay đổi
+## Tóm tắt
 
-Kịch bản chèn `security-guard.js` đã nhét `<script src="js/security-guard.js"></script>` vào chuỗi template HTML xuất Word/Excel. Trình duyệt gặp `</script>` trong template thì đóng sớm khối `<script type="text/babel">`, nên phần còn lại bị in ra trang dưới dạng text thô.
+Thêm phân hệ `nghiencuubaihoc.html`: 12 bước NCBH, 6 khu vực thống nhất mỗi bước, 12 tác vụ AI riêng, KHBD 2 lớp, nhật ký quyết định GV, lưu kép CSDL + localStorage, xuất 13 sản phẩm Word/.zip.
 
-### Bước 1: `smartquiz.html`
-- Xóa thẻ script thừa trong `exportWord()` (template Word).
-- Giữ `<head>` + `<meta charset='utf-8'><title>Export</title>`.
-- Giữ nguyên `security-guard.js` hợp lệ ở `<head>` thật (dòng 5).
-
-### Bước 2: `taobaitap.html` và `phancongtochuyenmon.html`
-- `taobaitap.html`: xóa script thừa trong `exportWord` và `exportWordLatex`.
-- `phancongtochuyenmon.html`: xóa script thừa trong `downloadExcelFile` và ghép lại chuỗi template Excel thành một dòng (tránh ngắt string nháy đơn).
-
-### Bước 3–4: Kiểm thử
-- Tạo `tests/smartquiz-smoke.js`: không còn `</script>` lồng trong khối script; Babel mở/đóng khớp; `security-guard.js` chỉ còn 1 lần ở `<head>` thật.
-
-## Files đã sửa / tạo
+## Files
 
 | File | Thay đổi |
 |------|----------|
-| `smartquiz.html` | Xóa script thừa trong template `exportWord` |
-| `taobaitap.html` | Xóa script thừa trong `exportWord` và `exportWordLatex` |
-| `phancongtochuyenmon.html` | Xóa script thừa và nối lại template Excel |
-| `tests/smartquiz-smoke.js` | Tạo mới — kiểm tra không lồng `</script>` |
+| `api/nghiencuubaihoc.php` | Tạo mới — bảng `nghien_cuu_bai_hoc_sessions`, `list` / `get` / `save` / `delete` |
+| `nghiencuubaihoc.html` | Tạo mới — giao diện + logic 12 bước |
+| `index.html` | Thẻ công cụ + `TOOL_PAGE_LINKS.nghiencuubaihoc` |
+| `admin.html` | Quyền hiển thị `cfg_nghiencuubaihoc` và danh mục công cụ GV |
+| `api/helpers.php` | Catalog trang để `allowed_pages` lưu được `nghiencuubaihoc` |
+| `access-control.js` | Map trang `nghiencuubaihoc.html` |
+| `global_config.json` | `features.nghiencuubaihoc: true` |
+| `tests/nghiencuubaihoc-smoke.js` | Tạo mới |
 
-Không đổi logic sinh câu hỏi, chấm điểm hay AI.
+Không sửa `soankhbd.html`, `xaydungphuluc.html`, `duyetgiaoan.html`, `duyetde.html`, bảng `users`, Google Drive, Cloudflare Workers.
 
 ## Kết quả kiểm thử
 
 ```
-smartquiz smoke: nested </script> export templates cleaned; babel scripts stay intact
-user-ai-settings smoke: passed
-khbd user AI keys smoke: passed
-security-f12-smoke: all checks passed
+node tests/nghiencuubaihoc-smoke.js
+nghiencuubaihoc smoke: index/admin integration, 12 steps, 6 zones, 12 AI tasks, key sync, API schema passed
 ```
 
-Không chạy được kiểm thử trình duyệt end-to-end (không có browser tool trong phiên này). Mở `smartquiz.html` và thử Xuất Word thuộc bước `/verify`.
+Cũng PASS: `xaydungphuluc-integration-smoke.js`, `duyetgiaoan-integration-smoke.js`, `security-f12-smoke.js`.
+
+`node tests/run-all-tests.js` dừng ở các smoke KHBD sẵn có (`soankhbd.html` / `js/khbd-*.js`) — ngoài phạm vi PLAN. Module NCBH không đụng các file đó.
+
+## Chưa kiểm thử trên trình duyệt
+
+Phiên này không có browser tool. `/verify` cần mở `index.html` → thẻ NCBH → 12 bước, nạp key, lưu CSDL, xuất .docx.

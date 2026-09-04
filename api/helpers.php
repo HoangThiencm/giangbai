@@ -53,7 +53,7 @@ function page_catalog(): array
         'thanhtich' => ['title' => 'Thống kê thành tích', 'url' => 'thanhtich.html'],
         'thoikhoabieu' => ['title' => 'Xếp thời khóa biểu', 'url' => 'thoikhoabieu.html'],
         'phancongtochuyenmon' => ['title' => 'Quản lý tổ chuyên môn', 'url' => 'phancongtochuyenmon.html'],
-        'xaydungphuluc' => ['title' => 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', 'url' => 'xaydungphuluc.html'], 'duyetgiaoan' => ['title' => 'Duyệt Giáo Án AI', 'url' => 'duyetgiaoan.html'], 'duyetde' => ['title' => 'Rà soát & Hiệu chỉnh Đề Kiểm Tra (Duyệt đề AI)', 'url' => 'duyetde.html'],
+        'xaydungphuluc' => ['title' => 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', 'url' => 'xaydungphuluc.html'], 'duyetgiaoan' => ['title' => 'Duyệt Giáo Án AI', 'url' => 'duyetgiaoan.html'], 'duyetde' => ['title' => 'Rà soát & Hiệu chỉnh Đề Kiểm Tra (Duyệt đề AI)', 'url' => 'duyetde.html'], 'nghiencuubaihoc' => ['title' => 'Nghiên cứu bài học AI', 'url' => 'nghiencuubaihoc.html'],
     ];
 }
 
@@ -79,7 +79,7 @@ function teacher_workspace_page_ids(): array
         'thoikhoabieu',
         'phancongtochuyenmon',
         'rutgon',
-        'xaydungphuluc', 'duyetgiaoan', 'duyetde',
+        'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc',
     ];
 }
 
@@ -115,7 +115,7 @@ function teacher_feature_keys_for_pages(): array
         'phancongtochuyenmon' => 'phancongtochuyenmon',
         'rutgon' => 'rutgon',
         'thanhtich' => 'thanhtich',
-        'xaydungphuluc' => 'xaydungphuluc', 'duyetgiaoan' => 'duyetgiaoan', 'duyetde' => 'duyetde',
+        'xaydungphuluc' => 'xaydungphuluc', 'duyetgiaoan' => 'duyetgiaoan', 'duyetde' => 'duyetde', 'nghiencuubaihoc' => 'nghiencuubaihoc',
     ];
 }
 
