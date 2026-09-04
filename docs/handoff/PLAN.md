@@ -1,132 +1,86 @@
-# PLAN: Khắc Phục Triệt Để Lỗi Tự Động Chèn Khung AI Vào Hoạt Động Khi Giáo Viên Không Bật Tích Hợp (soankhbd.html)
+# PLAN: Tổng Hợp Dữ Liệu Biểu Mẫu Báo Cáo Thành Bảng Excel Mỗi Người Một Dòng (nopbai-quanly.html)
 
-## Hiện trạng & Nguyên nhân gốc rễ (Root Cause Analysis)
-Khi giáo viên **không kích chọn** ô `✨ Năng lực AI` (`toggleAiCompetency`, tương đương `appState.teachingContext.integrations.ai === false`), AI vẫn tự động chèn kịch bản AI (Dạng 1: Kiểm chứng lỗi AI, Dạng 2: Prompting AI) và marker `**[AI: {Mã} - ...]**` vào các hoạt động (A, B, C, D, E).
+## Hiện trạng
+1. **Khảo sát hệ thống hiện tại**:
+   - Trang `nopbai-quanly.html` đã hỗ trợ tính năng thiết kế biểu mẫu báo cáo (`submission_type === 'report'`) với các chỉ tiêu tùy chỉnh (như trong ảnh: *Họ và Tên GV, Năm sinh, Trình độ CM, Năm vào ngành, Phân công môn dạy, Lớp dạy, Ghi chú...*).
+   - Cấu trúc các trường này được lưu trữ trong `submission_assignments.form_fields_json` (mỗi trường có `key`, `label`, `type`, `required`, `allow_evidence`...).
+   - Trang nộp bài `nopbai.html` khi người dùng gửi biểu mẫu đã thu thập toàn bộ dữ liệu vào `report_data` (dạng JSON `{ [field.key]: "giá trị người dùng nhập" }`) và lưu an toàn vào bảng `assignment_submissions.report_data_json`.
+   - Backend `api/submissions.php` (hàm `submission_rows_for_teacher`) khi trả về danh sách bài nộp đã tự động giải mã `report_data` thành đối tượng dữ liệu cho từng lượt nộp.
+2. **Hạn chế cần khắc phục**:
+   - Trong `nopbai-quanly.html` (dòng 486), hàm `exportSubmissions()` hiện chỉ xuất file CSV tĩnh với 7 cột cố định (`Họ tên, Vai trò, Nhóm/đơn vị, Mã/SĐT/email, Thời gian, Ghi chú, Tệp`). Toàn bộ dữ liệu các trường biểu mẫu người dùng nhập vào đang bị dồn cục vào 1 cột văn bản nối nhau bằng dấu gạch ` | ` hoặc bị bỏ quên.
+   - Hệ thống chưa có nút xuất tệp Excel `.xlsx` chuyên nghiệp (mới chỉ có xuất `.csv`).
+   - Bảng xem trước "Bài đã nhận" trên giao diện web cũng đang gộp tất cả các chỉ tiêu vào một cột duy nhất `Nội dung/Ghi chú`, gây khó khăn cho việc đối soát trực quan.
 
-### 4 Nguyên nhân chính:
-1. **`buildIntegrationActivityConstraint(phase)` trong `js/khbd-app.js` (dòng 4661–4696)**:
-   - Hệ thống mặc định bật Năng lực số (`digital: true`).
-   - Điều kiện kiểm tra `if (!digitalOn && !aiOn) return ""` bị vượt qua vì `digitalOn === true`.
-   - Hàm này sau đó trả về chuỗi ép buộc Gemini:
-     *"Khi pha ${phase} có tích hợp NLS/AI, BẮT BUỘC dùng đúng 1 trong 3 dạng kịch bản thực chiến: - Dạng 1: Kiểm chứng & Phản biện lỗi sai của AI... - Dạng 2: Prompting tư duy môn học... - Dạng 3: Phần mềm chuyên dụng NLS..."*
-   - Trong 3 dạng thì có tới 2 dạng là của AI. Gemini hiểu lầm là được quyền chọn Dạng 1 hoặc Dạng 2, dẫn tới việc tự động sinh kịch bản AI và gán marker `[AI]`.
-   - Khi `aiOn === false`, hàm này hoàn toàn thiếu câu lệnh phủ định (negative constraint) cấm AI.
+## Phạm vi
+1. **Khẳng định giải pháp**:
+   - **Hoàn toàn thực hiện được 100%** và nền tảng dữ liệu đã sẵn sàng đáp ứng.
+2. **Nâng cấp chức năng xuất Excel tổng hợp trong `nopbai-quanly.html`**:
+   - Tích hợp thư viện SheetJS (`xlsx.full.min.js`) — thư viện chuẩn đã dùng xuyên suốt hệ thống GiangBai (`thitructuyen.html`, `thoikhoabieu.html`, `xaydungphuluc.html`).
+   - Nâng cấp logic xuất bảng tổng hợp:
+     + Khi đợt nộp là **Báo cáo biểu mẫu** (`submission_type === 'report'`):
+       * Cột cố định định danh: `STT`, `Họ tên người nộp`, `Vai trò`, `Tổ / Nhóm / Đơn vị`, `Mã định danh / SĐT`, `Thời gian nộp`.
+       * **Mỗi trường mà người quản lý thiết kế sẽ tự động trở thành một cột riêng biệt** (Ví dụ đúng như ảnh: Cột *Họ và Tên GV*, Cột *Năm sinh*, Cột *Trình độ CM*, Cột *Năm vào ngành*, Cột *Phân công môn dạy*, Cột *Lớp dạy*, Cột *Ghi chú*).
+       * Cột thông tin bổ sung: `Tệp đính kèm / Minh chứng`, `Ghi chú chung`.
+     + **Mỗi người nộp là một dòng độc lập** trong Excel, các giá trị người dùng nhập được điền chính xác vào đúng cột tương ứng.
+     + Cung cấp 2 lựa chọn xuất: **"Xuất Excel (.xlsx)"** (chuẩn đẹp, tự động căn độ rộng cột, không bao giờ lỗi font tiếng Việt) và **"Xuất CSV"** (dành cho các hệ thống nhập liệu phụ trợ).
+3. **Cải tiến bảng xem trước "Bài đã nhận" trên giao diện Web (modal Kết quả)**:
+   - Khi xem một đợt nộp dạng biểu mẫu, bảng hiển thị động các cột tương ứng với các chỉ tiêu đã thiết kế, giúp giáo viên/quản lý có thể xem dạng lưới bảng tính ngay trên trình duyệt mà không bắt buộc phải tải file về máy.
 
-2. **`buildPedagogicalContext()` trong `js/khbd-app.js` (dòng 4603)**:
-   - Khối văn bản hướng dẫn tích hợp NLS/AI được nhúng cứng vào mọi prompt mà không kiểm tra cờ `aiOn`:
-     *"TÍCH HỢP NLS & AI THỰC CHIẾN GẮN MÔN HỌC: ... CHỈ tích hợp tại 1–2 vị trí then chốt, đắc địa nhất theo 3 dạng: (1) Kiểm chứng phản biện lỗi sai AI, (2) Prompting gợi mở bước giải..."*
+## Ngoài phạm vi
+- Không thay đổi cấu trúc bảng cơ sở dữ liệu MySQL (giữ nguyên bảng `submission_assignments`, `assignment_submissions`, `assignment_submission_files`).
+- Không thay đổi quy trình nộp bài của người dùng trên `nopbai.html`.
+- Không ảnh hưởng đến các đợt nộp tệp thông thường (`submission_type === 'file'`).
 
-3. **`ACTIVITY_TABLE_CONTRACT` và template prompt trong `js/khbd-prompts.js`**:
-   - `ACTIVITY_TABLE_CONTRACT` (dòng 247–253) và các mẫu `GENERATE_ACTIVITY_B` (dòng 661), `GENERATE_ACTIVITY_C` (dòng 706), `GENERATE_ACTIVITY_D` (dòng 758) chứa các câu cố định: *"+ Khi có NLS/AI: Tích hợp thực chiến theo đúng 1 trong 3 dạng (Dạng 1: Kiểm chứng phản hồi AI... Dạng 2: Prompting... Gắn marker [AI: ...])"*.
-   - Trong `getPromptTemplate(templateKey, context)` thiếu chỉ thị ghi đè cấp cao cấm triệt để AI khi `context.aiCompetencyEnabled === false`.
+## File dự kiến tác động
+- `nopbai-quanly.html` [SỬA: Thêm CDN SheetJS, cập nhật hàm render bảng chi tiết và hàm xuất Excel/CSV động theo trường biểu mẫu]
+- `docs/handoff/PLAN.md` [GHI ĐÈ: Kế hoạch handoff cho Coder]
+- `docs/handoff/.lock` [GHI: LOCK]
 
-4. **Thiếu bộ lọc hậu xử lý (Post-processing Sanitizer) cho nội dung Hoạt động**:
-   - `stripDisabledObjectivesStandardSections` hiện tại chỉ lọc mục tiêu phần I (`editorObjectives`).
-   - Khi Gemini trả về nội dung hoạt động (A–E) trong `applyActivityOutput` và `clipKhbdActivityMarkdown`, không có hàm nào bóc tách hoặc loại bỏ các marker `[AI: ...]`, `**[AI]**` hay các câu lệnh prompting AI sinh nhầm khi giáo viên tắt cờ AI.
+## Các bước thực hiện cho Coder
+1. **Bước 1: Bổ sung thư viện SheetJS vào `nopbai-quanly.html`**:
+   - Thêm thẻ `<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>` vào phần `<head>`.
+2. **Bước 2: Xây dựng hàm trích xuất cấu trúc cột động**:
+   - Viết hàm `getAssignmentReportColumns(assignment)`:
+     + Lấy mảng trường từ `assignment.form_fields` (hoặc parse `assignment.form_fields_json`).
+     + Lọc bỏ các mục `type === 'heading'`.
+     + Trả về mảng các cột gồm `{ key, label, type }`.
+3. **Bước 3: Nâng cấp hàm xuất Excel `exportSubmissionsExcel()`**:
+   - Tạo mảng tiêu đề cột (Headers):
+     `['STT', 'Họ tên', 'Vai trò', 'Tổ / Nhóm / Đơn vị', 'Mã / SĐT / Email', 'Thời gian nộp', ...customLabels, 'Tệp minh chứng / Đính kèm', 'Ghi chú']`
+   - Tạo mảng dòng dữ liệu (Data rows):
+     + Duyệt từng lượt nộp `s` trong `submissions`:
+       * Cột cơ bản: `index + 1`, `s.submitter_name`, `s.submitter_role`, `s.group_name`, `s.identifier`, `fmt(s.submitted_at)`
+       * Các cột dữ liệu biểu mẫu: lấy trực tiếp từ `s.report_data?.[col.key] || ''`
+       * Cột tệp: ghép link xem file từ `(s.files || []).map(f => f.view_url).join('\n')`
+       * Cột ghi chú: `s.note || ''`
+   - Dùng `XLSX.utils.aoa_to_sheet(rows)` để tạo Worksheet.
+   - Tự động thiết lập độ rộng cột (`!cols`) để bảng tính thoáng đẹp, dễ đọc.
+   - Tạo Workbook và gọi `XLSX.writeFile(wb, \`tong-hop-\${a.public_code}.xlsx\`)`.
+4. **Bước 4: Cập nhật giao diện modal Kết quả (`renderDetail`)**:
+   - Thêm nút bấm xanh lá `<button onclick="exportSubmissionsExcel()" class="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800"><i class="fas fa-file-excel mr-1"></i>Xuất Excel (.xlsx)</button>`.
+   - Điều chỉnh bảng HTML hiển thị các cột biểu mẫu nếu đợt nộp là `report`.
 
----
+## Rủi ro
+- Một số đợt nộp cũ hoặc đợt nộp dạng tệp (`file`) không có `form_fields` -> Cần kiểm tra điều kiện an toàn (`if (reportCols.length === 0)`), tự động quay về cấu trúc cột mặc định để không gây lỗi.
+- Người dùng nhập dữ liệu số hoặc ngày tháng -> Cần định dạng text an toàn để không bị Excel hiểu sai định dạng ngày tháng.
 
-## Phạm vi can thiệp
+## Cách kiểm thử
+1. Mở `nopbai-quanly.html`, tạo một đợt nộp với 7 trường đúng như ảnh chụp của người dùng:
+   - Họ và Tên GV (Văn bản ngắn)
+   - Năm sinh (Văn bản ngắn)
+   - Trình độ CM (Văn bản ngắn)
+   - Năm vào ngành (Văn bản ngắn)
+   - Phân công môn dạy (Văn bản ngắn)
+   - Lớp dạy (Văn bản ngắn)
+   - Ghi chú (Văn bản ngắn)
+2. Mở link đợt nộp trên `nopbai.html` và nhập thử 2 bài nộp với các thông tin mẫu khác nhau.
+3. Quay lại `nopbai-quanly.html`, mở "Kết quả" của đợt nộp.
+4. Bấm **"Xuất Excel (.xlsx)"** và mở file bằng Excel / Google Sheets:
+   - Kiểm tra mỗi người là 1 dòng riêng biệt.
+   - Kiểm tra 7 cột trường dữ liệu tương ứng hiển thị chuẩn xác từng trường.
+   - Tiếng Việt hiển thị sắc nét, chuẩn Unicode.
 
-### 1. File dự kiến tác động
-- `js/khbd-app.js`:
-  + Sửa `buildIntegrationActivityConstraint(phase)`: Tách biệt hoàn toàn logic giữa NLS và AI. Khi `!aiOn`, cấm tuyệt đối Dạng 1, Dạng 2 và cấm gắn bất kỳ marker `[AI]`. Khi chỉ bật NLS (`digitalOn && !aiOn`), chỉ cho phép duy nhất Dạng 3 (Phần mềm chuyên dụng NLS).
-  + Sửa `buildPedagogicalContext()`: Điều kiện hóa mục Tích hợp thực chiến theo đúng cờ `digitalOn` và `aiOn`. Thêm chỉ thị cấm AI rõ ràng khi `!aiOn`.
-  + Thêm hàm hậu xử lý `stripDisabledActivityIntegrations(markdown)`: Tự động loại bỏ sạch các tag `**[AI: ...]**`, `[AI: ...]`, `**[AI]**`, `[AI]` và các đoạn văn kịch bản AI sinh nhầm khi `!aiOn`. Tương tự với NLS khi `!digitalOn`.
-  + Tích hợp `stripDisabledActivityIntegrations` vào `applyActivityOutput`, `clipKhbdActivityMarkdown` và sự kiện `toggleAiCompetency` khi giáo viên bỏ tick AI trên giao diện.
-- `js/khbd-prompts.js`:
-  + Trong `getPromptTemplate(templateKey, context)`: Khi `!context.aiCompetencyEnabled`, nối thêm chỉ thị cấm ghi đè nghiêm ngặt:
-    *"QUY TẮC BẮT BUỘC VỀ KHUNG NĂNG LỰC AI: Giáo viên KHÔNG bật tích hợp Khung năng lực AI (QĐ 2422). Bỏ qua mọi gợi ý về AI/Dạng 1/Dạng 2/[AI] ở trên. TUYỆT ĐỐI CẤM chèn bất kỳ marker [AI], [AI: ...], CẤM kịch bản kiểm chứng phản biện AI, CẤM prompting AI vào giáo án."*
-- `tests/khbd-ai-integration-gate.test.js` (NEW):
-  + Bộ test kiểm tra tự động:
-    1. Khi `aiOn === false`, `buildIntegrationActivityConstraint()` không sinh ra Dạng 1, Dạng 2 hay tag `[AI]`.
-    2. Khi `aiOn === false`, `getPromptTemplate()` cho hoạt động A/B/C/D/E có chỉ thị cấm AI nghiêm ngặt.
-    3. Hàm `stripDisabledActivityIntegrations()` làm sạch hoàn toàn các marker `**[AI: 7.A1.MR1 - Kiểm chứng phản hồi AI]**` và `[AI]` khỏi bảng d) khi tắt AI, nhưng giữ nguyên marker `[NLS]` nếu NLS bật.
-
-### 2. Ngoài phạm vi
-- Không thay đổi logic khi giáo viên CHỦ ĐỘNG BẬT cờ Khung AI (`aiOn === true`).
-- Không ảnh hưởng đến các màn hình khác (`nghiencuubaihoc.html`, `xaydungphuluc.html`, etc.).
-
----
-
-## Chi tiết các bước thực hiện cho Coder
-
-### Bước 1: Sửa `buildIntegrationActivityConstraint(phase)` trong `js/khbd-app.js`
-1. Tách rẽ nhánh rõ ràng theo `digitalOn` và `aiOn`:
-   - Nếu `!digitalOn && !aiOn`:
-     Trả về cảnh báo nghiêm ngặt cấm cả NLS và AI:
-     `QUY TẮC NLS/AI CHO PHA ${phase}: Giáo viên KHÔNG bật Năng lực số và KHÔNG bật Năng lực AI. TUYỆT ĐỐI CẤM đưa bất kỳ kịch bản nào liên quan đến NLS/AI, CẤM chèn marker [NLS], [AI] vào hoạt động.`
-   - Nếu `digitalOn && !aiOn`:
-     + Cung cấp DUY NHẤT kịch bản Dạng 3 (Phần mềm chuyên dụng NLS: GeoGebra, Desmos, bảng tính Excel, máy tính cầm tay, PhET...) với marker `[NLS: {Miền/Mã} - {Tên phần mềm}]`.
-     + Kèm theo lệnh cấm nghiêm khắc:
-       `CẤM TUYỆT ĐỐI: Giáo viên KHÔNG bật Khung năng lực AI (QĐ 2422). TUYỆT ĐỐI CẤM đưa Dạng 1 (kiểm chứng phản hồi AI), Dạng 2 (prompting AI), TUYỆT ĐỐI CẤM chèn bất kỳ tag [AI], [AI: ...] nào.`
-   - Nếu `aiOn && !digitalOn`:
-     + Cung cấp kịch bản Dạng 1 & Dạng 2 (AI).
-     + Kèm theo lệnh cấm NLS.
-   - Nếu `digitalOn && aiOn`:
-     + Cho phép chọn 1 trong 3 dạng như hiện tại.
-
-### Bước 2: Sửa `buildPedagogicalContext()` trong `js/khbd-app.js`
-Tại dòng 4603:
-- Thay vì ghi chung "TÍCH HỢP NLS & AI THỰC CHIẾN GẮN MÔN HỌC...", kiểm tra `digitalOn` và `aiOn`:
-  - Nếu `!aiOn`: Thêm dòng cấm rõ ràng:
-    `- NĂNG LỰC AI (QĐ 2422): KHÔNG BẬT. CẤM tự ý đưa kịch bản AI, prompt AI hay marker [AI] vào bất kỳ hoạt động nào.`
-  - Nếu `!digitalOn`: Thêm dòng cấm NLS rõ ràng:
-    `- NĂNG LỰC SỐ (CV 3456): KHÔNG BẬT. CẤM tự ý đưa kịch bản NLS hay marker [NLS] vào giáo án.`
-
-### Bước 3: Cập nhật `getPromptTemplate` trong `js/khbd-prompts.js`
-Trong hàm `getPromptTemplate(templateKey, context)`:
-- Kiểm tra nếu `!context.aiCompetencyEnabled`:
-  Thêm chỉ thị phủ định có độ ưu tiên cao:
-  ```javascript
-  result += `\n\nLỆNH BẮT BUỘC KHÓA NĂNG LỰC AI: Giáo viên KHÔNG kích hoạt Khung năng lực AI (QĐ 2422). Bỏ qua toàn bộ các hướng dẫn hoặc ví dụ mẫu liên quan đến AI (Dạng 1 kiểm chứng phản hồi AI, Dạng 2 prompting AI) trong hợp đồng biên soạn. TUYỆT ĐỐI CẤM đưa nội dung AI hoặc gắn bất kỳ marker [AI], [AI: ...] vào bài.`;
-  ```
-- Tương tự, nếu `!context.digitalCompetencyEnabled`:
-  Thêm chỉ thị khóa NLS tương ứng.
-
-### Bước 4: Viết hàm hậu xử lý `stripDisabledActivityIntegrations` trong `js/khbd-app.js`
-1. Định nghĩa hàm:
-   ```javascript
-   function stripDisabledActivityIntegrations(markdown) {
-     const context = normalizeTeachingContext(appState.teachingContext);
-     const digitalOn = Boolean(context.integrations.digital);
-     const aiOn = Boolean(context.integrations.ai);
-     let text = String(markdown || "");
-     if (!aiOn) {
-       // Xóa sạch các marker AI
-       text = text.replace(/\*\*\[?AI(?::[^\]\n]+)?\]?\*\*/gi, "")
-                  .replace(/\[AI(?::[^\]\n]+)?\]/gi, "");
-       // Xóa các dòng hướng dẫn prompt AI nếu có lọt vào
-       text = text.replace(/^[ \t]*[-+*]?[ \t]*Hướng dẫn Prompt AI.*$/gmi, "")
-                  .replace(/^[ \t]*[-+*]?[ \t]*Mẫu Prompt:.*$/gmi, "");
-     }
-     if (!digitalOn) {
-       text = text.replace(/\*\*\[?NLS(?::[^\]\n]+)?\]?\*\*/gi, "")
-                  .replace(/\[NLS(?::[^\]\n]+)?\]/gi, "");
-     }
-     return text;
-   }
-   ```
-2. Gọi hàm này trong `applyActivityOutput`:
-   `finalResult = stripDisabledActivityIntegrations(finalResult);`
-3. Gọi hàm này trong `clipKhbdActivityMarkdown`:
-   `clipped = stripDisabledActivityIntegrations(clipped);`
-4. Khi giáo viên toggle bỏ tick `toggleAiCompetency`:
-   Duyệt qua `appState.content.activities` (A, B, C, D, E) và áp dụng `stripDisabledActivityIntegrations` để dọn sạch ngay lập tức nếu trước đó đã từng sinh có AI.
-
-### Bước 5: Viết bộ test `tests/khbd-ai-integration-gate.test.js`
-- Chạy qua `node tests/khbd-ai-integration-gate.test.js`.
-- Kiểm tra các test cases:
-  1. `aiOn = false`: `buildIntegrationActivityConstraint("B")` chứa lệnh cấm AI và KHÔNG chứa "Dạng 1" hay "Dạng 2".
-  2. `aiOn = false`: `stripDisabledActivityIntegrations` làm sạch chuỗi `**[AI: 7.A1.MR1 - Kiểm chứng phản hồi AI]**`.
-  3. `aiOn = true`: Giữ nguyên marker AI bình thường.
-
----
-
-## Tiêu chí nghiệm thu (Acceptance Criteria)
-1. Khi giáo viên **không kích chọn** `✨ Năng lực AI`:
-   - Soạn Hoạt động A, B, C, D, E: **Hoàn toàn không có** bất kỳ marker `[AI]`, `[AI: ...]`, kịch bản phản biện AI, hay prompting AI nào xuất hiện.
-   - Nếu có bật NLS (`digital: true`), giáo án chỉ chứa kịch bản NLS thuần túy (GeoGebra, phần mềm môn học, bảng tính) với marker `[NLS: ...]`.
-2. Khi giáo viên **kích chọn** `✨ Năng lực AI`:
-   - Kịch bản AI hoạt động bình thường, đúng 1–2 vị trí then chốt, đúng chuẩn QĐ 2422.
-3. Test suite tự động PASS 100%.
+## Tiêu chí nghiệm thu
+1. Xác nhận chắc chắn với người dùng: Hệ thống hoàn toàn làm được và tổng hợp cực kỳ chuẩn xác.
+2. File Excel xuất ra có cấu trúc cột động khớp 100% với các trường người dùng thiết lập trong biểu mẫu.
+3. Mỗi người nộp là một dòng dữ liệu tương ứng.

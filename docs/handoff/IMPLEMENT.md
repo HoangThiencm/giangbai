@@ -1,33 +1,27 @@
-# IMPLEMENT: Khóa Năng lực AI khi không bật (Soạn KHBD) + ổn định NCBH
+# IMPLEMENT: Xuất Excel tổng hợp biểu mẫu — mỗi người một dòng
 
 **Ngày implement**: 2026-09-04
 **Coder**: Grok (xAI)
-**Trạng thái**: DONE — test PLAN + NCBH PASS
+**Trạng thái**: DONE
 
-## 1. PLAN: Soạn KHBD không tự chèn AI khi tắt `✨ Năng lực AI`
+## Tóm tắt
 
-| File | Thay đổi |
-|------|----------|
-| `js/khbd-app.js` | `buildIntegrationActivityConstraint` tách NLS/AI; `buildPedagogicalContext` cấm AI khi `!aiOn`; `stripDisabledActivityIntegrations` + gọi từ `applyActivityOutput`, `clipKhbdActivityMarkdown`, bỏ tick AI |
-| `js/khbd-prompts.js` | `getPromptTemplate` thêm lệnh khóa AI/NLS khi cờ tắt |
-| `tests/khbd-ai-integration-gate.test.js` | Tạo mới |
+`nopbai-quanly.html`: đợt **Báo cáo biểu mẫu** xuất Excel `.xlsx` và CSV với mỗi trường thiết kế thành một cột, mỗi người nộp một dòng. Modal Kết quả hiện lưới cột động. Đợt nộp tệp thường giữ bảng cũ.
 
-Khi chỉ bật NLS: chỉ kịch bản phần mềm (GeoGebra/Excel/PhET) + `[NLS]`. Marker `[AI]` bị lọc. Khi bật AI: giữ hành vi cũ.
-
-## 2. NCBH (user yêu cầu thêm)
+## Files
 
 | File | Thay đổi |
 |------|----------|
-| `nghiencuubaihoc.html` | Ô **Tổng hợp nhận xét giáo viên trong tổ** ở Bước 2, 3, 9, 10; `temperature: 0`; phiếu 8 mục cố định; Bước 3 nhận KHBD CV 5512 (không bắt lỗi vì mất bảng Word) |
-| `tests/nghiencuubaihoc-smoke.js` | Assertion ô tổ, temp 0, rubric KHBD |
+| `nopbai-quanly.html` | SheetJS CDN; `getAssignmentReportColumns`; `exportSubmissionsExcel`; CSV dùng cùng cột động; `renderSubmissionsTable` |
+
+Không đổi MySQL, không đổi `nopbai.html`, không đổi đợt `submission_type === 'file'` ngoài việc CSV/Excel dùng cùng hàng định danh.
+
+## Cách dùng
+
+Mở đợt nộp dạng biểu mẫu → **Kết quả** → **Xuất Excel (.xlsx)**. File `tong-hop-{mã}.xlsx`: STT, họ tên, vai trò, tổ, mã, thời gian, từng trường biểu mẫu, tệp, ghi chú.
 
 ## Kiểm thử
 
-```
-node tests/khbd-ai-integration-gate.test.js  → passed
-node tests/nghiencuubaihoc-smoke.js           → passed
-```
+Đã kiểm tra source: có SheetJS, `getAssignmentReportColumns`, `exportSubmissionsExcel`, nút Xuất Excel, bảng động, không lồng `</script>`.
 
-Cũng PASS: `khbd-integrations-smoke.js`, `khbd-user-ai-keys-smoke.js`, `user-ai-settings-smoke.js`, `security-f12-smoke.js`, `xaydungphuluc-integration-smoke.js`.
-
-`/verify`: Soạn KHBD tắt Năng lực AI → hoạt động không có `[AI]`. NCBH Bước 2/3: ô nhận xét tổ, chạy AI hai lần cùng khung 8 mục, nạp Word từ Soạn KHBD không bị nhận xét từa lưa vì mất bảng.
+Không có browser tool trong phiên này. `/verify` nên tạo đợt 7 trường như PLAN, nộp 2 bài, xuất Excel và đối chiếu từng cột.
