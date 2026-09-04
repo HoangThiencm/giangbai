@@ -1,4 +1,4 @@
-# IMPLEMENT: Xuất Excel tổng hợp biểu mẫu — mỗi người một dòng
+# IMPLEMENT: Excel biểu mẫu + xóa bài nộp để nộp lại
 
 **Ngày implement**: 2026-09-04
 **Coder**: Grok (xAI)
@@ -6,22 +6,19 @@
 
 ## Tóm tắt
 
-`nopbai-quanly.html`: đợt **Báo cáo biểu mẫu** xuất Excel `.xlsx` và CSV với mỗi trường thiết kế thành một cột, mỗi người nộp một dòng. Modal Kết quả hiện lưới cột động. Đợt nộp tệp thường giữ bảng cũ.
+1. **Xuất Excel**: mỗi trường biểu mẫu một cột, mỗi người một dòng (đã có từ bước trước; giữ nguyên).
+2. **Xóa bài nộp**: giáo viên xóa từng lượt nộp trong modal Kết quả. DB xóa `assignment_submission_files` + `assignment_submissions`. Không xóa file trên Google Drive. Người nộp về trạng thái Chưa nộp và nộp lại được (kể cả khi đợt tắt “Cho nộp nhiều lần”).
 
 ## Files
 
 | File | Thay đổi |
 |------|----------|
-| `nopbai-quanly.html` | SheetJS CDN; `getAssignmentReportColumns`; `exportSubmissionsExcel`; CSV dùng cùng cột động; `renderSubmissionsTable` |
+| `api/submissions.php` | POST `delete_submission`: kiểm tra GV sở hữu đợt, transaction xóa files + submission |
+| `nopbai-quanly.html` | `deleteSingleSubmission`, nút thùng rác từng dòng, confirm tên người nộp, refresh `openDetail` |
 
-Không đổi MySQL, không đổi `nopbai.html`, không đổi đợt `submission_type === 'file'` ngoài việc CSV/Excel dùng cùng hàng định danh.
+## Kiểm thử thủ công (`/verify`)
 
-## Cách dùng
-
-Mở đợt nộp dạng biểu mẫu → **Kết quả** → **Xuất Excel (.xlsx)**. File `tong-hop-{mã}.xlsx`: STT, họ tên, vai trò, tổ, mã, thời gian, từng trường biểu mẫu, tệp, ghi chú.
-
-## Kiểm thử
-
-Đã kiểm tra source: có SheetJS, `getAssignmentReportColumns`, `exportSubmissionsExcel`, nút Xuất Excel, bảng động, không lồng `</script>`.
-
-Không có browser tool trong phiên này. `/verify` nên tạo đợt 7 trường như PLAN, nộp 2 bài, xuất Excel và đối chiếu từng cột.
+1. Tạo đợt biểu mẫu, nộp 1 bài.
+2. Kết quả → **Xóa bài nộp (để cho nộp lại)** → confirm → trạng thái **Chưa nộp**.
+3. Mở lại link nộp → nộp được bài mới.
+4. Xuất Excel: đúng 1 dòng, cột khớp biểu mẫu.

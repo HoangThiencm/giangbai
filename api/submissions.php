@@ -773,6 +773,31 @@ if ($method === 'POST' && $action === 'delete') {
     ]);
 }
 
+if ($method === 'POST' && $action === 'delete_submission') {
+    $teacher = submission_require_teacher($pdo);
+    $data = json_body();
+    $submissionId = (int)($data['submission_id'] ?? 0);
+    if ($submissionId <= 0) respond(['error' => 'Thiếu mã bài nộp.'], 422);
+    $stmt = $pdo->prepare('SELECT id, assignment_id, submitter_name FROM assignment_submissions WHERE id = ? LIMIT 1');
+    $stmt->execute([$submissionId]);
+    $row = $stmt->fetch();
+    if (!$row) respond(['error' => 'Không tìm thấy bài nộp.'], 404);
+    submission_require_owner($pdo, $teacher, (int)$row['assignment_id']);
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('DELETE FROM assignment_submission_files WHERE submission_id = ?')->execute([$submissionId]);
+        $pdo->prepare('DELETE FROM assignment_submissions WHERE id = ?')->execute([$submissionId]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+    respond([
+        'ok' => true,
+        'message' => 'Đã xóa bài nộp. Người này có thể nộp lại bình thường.',
+    ]);
+}
+
 if ($method === 'GET' && $action === 'public') {
     $assignment = submission_assignment_by_code($pdo, (string)($_GET['code'] ?? ''));
     if (!$assignment) respond(['error' => 'Đường link nộp bài không tồn tại.'], 404);
