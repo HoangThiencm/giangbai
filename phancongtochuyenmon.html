@@ -36,20 +36,40 @@
             overflow: hidden;
         }
 
-        /* TOP NAVBAR */
+        /* TOP NAVBAR — 2 TẦNG: Brand/Action + Workspace Tabs */
         #top-navbar {
-            min-height: 56px;
+            min-height: auto;
             height: auto;
             background: #ffffff;
             border-bottom: 1px solid var(--border-color);
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 6px 16px;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            padding: 0;
             z-index: 30;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
             flex-shrink: 0;
-            gap: 8px 12px;
+            gap: 0;
+        }
+
+        .top-brand-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 18px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .workspace-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 18px 8px;
+            gap: 10px 14px;
+            background: #f8fafc;
+            border-top: 1px solid var(--border-color);
             flex-wrap: wrap;
         }
 
@@ -177,34 +197,37 @@
         /* VIEW SWITCHER TABS */
         .view-switcher {
             display: flex;
-            background: #f1f5f9;
-            padding: 3px;
-            border-radius: 9px;
-            gap: 2px;
-            border: 1px solid var(--border-color);
-            flex-shrink: 0;
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+            gap: 6px;
+            border: none;
+            flex-shrink: 1;
+            flex-wrap: wrap;
         }
 
         .view-tab-btn {
-            background: none;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 7px;
-            font-size: 0.76rem;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 7px 12px;
+            border-radius: 9px;
+            font-size: 0.78rem;
             font-weight: 700;
             color: #64748b;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
             transition: all 0.15s ease;
             white-space: nowrap;
         }
+        .view-tab-btn:hover { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; }
 
         .view-tab-btn.active {
-            background: #ffffff;
+            background: #eef2ff;
             color: var(--primary);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-color: #c7d2fe;
+            box-shadow: 0 1px 3px rgba(67, 56, 202, 0.12);
         }
 
         .db-status-badge {
@@ -234,9 +257,45 @@
         .nav-actions {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             flex-wrap: wrap;
         }
+
+        .tools-menu { position: relative; display: inline-flex; }
+        .tools-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 6px);
+            min-width: 210px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+            padding: 6px;
+            z-index: 80;
+        }
+        .tools-menu.open .tools-dropdown { display: flex; flex-direction: column; gap: 2px; }
+        .tools-dropdown button,
+        .tools-dropdown a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 8px 10px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #334155;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: left;
+        }
+        .tools-dropdown button:hover,
+        .tools-dropdown a:hover { background: #f1f5f9; color: #0f172a; }
 
         .btn-group-wrapper {
             display: inline-flex;
@@ -281,9 +340,12 @@
         .btn-db-save {
             background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
             color: white !important;
-            box-shadow: 0 2px 5px rgba(67, 56, 202, 0.2);
+            box-shadow: 0 2px 8px rgba(67, 56, 202, 0.28);
+            padding: 7px 14px;
+            font-size: 0.8rem;
         }
         .btn-db-save:hover { background: linear-gradient(135deg, #3730a3 0%, #312e81 100%); transform: translateY(-1px); }
+        .btn-db-save:disabled { opacity: 0.75; cursor: wait; transform: none; }
 
         .btn-db-reload { background: #f8fafc; color: #475569; border-color: #cbd5e1; }
         .btn-db-reload:hover { background: #e2e8f0; color: #0f172a; }
@@ -613,7 +675,153 @@
         .quota-status-badge.over { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
         .quota-status-badge.under { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
 
-        /* 2. VIEW CHẤM CÔNG */
+        /* 2. VIEW SỔ DẠY THAY - BÙ */
+        #view-daythay {
+            flex-direction: column;
+            background: #f8fafc;
+            padding: 18px 24px;
+            overflow-y: auto;
+            gap: 16px;
+        }
+
+        .dt-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        }
+
+        .dt-card-title {
+            margin: 0 0 14px 0;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dt-stats-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .dt-stat-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #334155;
+        }
+        .dt-stat-chip b { font-size: 1.05rem; }
+        .dt-stat-chip.replace { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+        .dt-stat-chip.makeup { background: #f5f3ff; border-color: #ddd6fe; color: #6d28d9; }
+
+        .period-slots-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .period-slots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 10px;
+        }
+
+        .period-slot {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: #f8fafc;
+            opacity: 0.5;
+            transition: all 0.15s ease;
+        }
+        .period-slot.active {
+            opacity: 1;
+            background: #eef2ff;
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.12);
+        }
+        .period-slot .slot-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 800;
+            font-size: 0.82rem;
+            color: #334155;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+        .period-slot .slot-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: none;
+        }
+        .period-slot.active .slot-fields { pointer-events: auto; }
+        .period-slot .slot-fields .form-control { font-size: 0.78rem; padding: 6px 8px; }
+        .period-slot .slot-fields label { font-size: 0.7rem; font-weight: 700; color: #64748b; }
+
+        .slots-total-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: #312e81;
+            color: #ffffff;
+            font-size: 0.8rem;
+            font-weight: 800;
+            margin-left: auto;
+        }
+
+        .period-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: #eef2ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            font-size: 0.72rem;
+            font-weight: 800;
+            margin: 1px 2px;
+            white-space: nowrap;
+        }
+
+        .dt-filters {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dt-table-wrap {
+            overflow: auto;
+            max-height: min(58vh, 640px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        .weekday-hint {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #4338ca;
+            margin-top: 4px;
+        }
+
+        /* 3. VIEW CHẤM CÔNG */
         #view-chamcong {
             flex-direction: column;
             background: #ffffff;
@@ -650,7 +858,14 @@
             text-align: center;
         }
 
-        .attendance-table th { background: #f8fafc; font-weight: 800; color: #1e293b; }
+        .attendance-table th {
+            background: #f8fafc;
+            font-weight: 800;
+            color: #1e293b;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
         .attendance-table td.text-left { text-align: left; }
 
         .att-input {
@@ -816,11 +1031,21 @@
         .form-group { display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 0.8rem; font-weight: 700; color: #334155; }
         .form-control { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.85rem; outline: none; }
-        .form-control:focus { border-color: var(--primary); }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.15); }
 
         .data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 10px; }
         .data-table th, .data-table td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; }
-        .data-table th { background: #f8fafc; font-weight: 800; color: #334155; }
+        .data-table th {
+            background: #f8fafc;
+            font-weight: 800;
+            color: #334155;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .table-btn-edit { background: none; border: none; color: #4338ca; cursor: pointer; padding: 4px; font-size: 0.85rem; }
+        .table-btn-edit:hover { color: #312e81; }
 
         .table-btn { background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; font-size: 0.85rem; }
         .table-btn:hover { color: #b91c1c; }
@@ -889,95 +1114,94 @@
         @media (max-width: 900px) {
             #view-phancong { flex-direction: column; }
             #left-panel { width: 100%; height: 260px; }
-            #top-navbar { height: auto; padding: 10px 15px; flex-direction: column; gap: 8px; }
+            #top-navbar { height: auto; padding: 0; flex-direction: column; gap: 0; }
+            .top-brand-bar, .workspace-bar { padding: 10px 15px; }
             .nav-actions { width: 100%; justify-content: flex-start; overflow-x: auto; }
+            .period-slots-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
 <body>
 
-    <!-- TOP NAVBAR -->
+    <!-- TOP NAVBAR: Tầng 1 Brand/Action · Tầng 2 Workspace Tabs -->
     <header id="top-navbar">
-        <div class="brand-section">
-            <div class="brand-icon">
-                <i class="fas fa-people-roof"></i>
-            </div>
-            <div class="brand-text">
-                <div class="brand-title-row">
-                    <h1><span id="display-plan-title">Chưa khai báo tổ</span></h1>
-                    <span class="plan-title-badge" onclick="openConfigModal('tab-info')" title="Nhấn để đổi tên tổ / năm học">
-                        <i class="fas fa-pen-to-square"></i> <span id="display-plan-year">Khai báo để bắt đầu</span>
-                    </span>
+        <div class="top-brand-bar">
+            <div class="brand-section">
+                <div class="brand-icon">
+                    <i class="fas fa-people-roof"></i>
                 </div>
-                <div class="brand-sub-row">
-                    <span class="brand-desc">Phân công · Chấm công · Tăng giờ</span>
-                    <div id="db-status-badge" class="db-status-badge">
-                        <span class="status-dot"></span>
-                        <span id="db-status-text">Đang kiểm tra CSDL...</span>
+                <div class="brand-text">
+                    <div class="brand-title-row">
+                        <h1><span id="display-plan-title">Chưa khai báo tổ</span></h1>
+                        <span class="plan-title-badge" onclick="openConfigModal('tab-info')" title="Nhấn để đổi tên tổ / năm học">
+                            <i class="fas fa-pen-to-square"></i> <span id="display-plan-year">Khai báo để bắt đầu</span>
+                        </span>
+                    </div>
+                    <div class="brand-sub-row">
+                        <span class="brand-desc">Phân công · Dạy thay · Chấm công · Tăng giờ</span>
+                        <div id="db-status-badge" class="db-status-badge">
+                            <span class="status-dot"></span>
+                            <span id="db-status-text">Đang kiểm tra CSDL...</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- CHỌN ĐỢT PHÂN CÔNG & TẠO ĐỢT MỚI KHI THAY ĐỔI -->
-        <div class="phase-selector-wrapper" title="Đang xem & phân công theo đợt này">
-            <i class="fas fa-clock-rotate-left text-amber-600"></i>
-            <span class="phase-selector-label">Đợt:</span>
-            <select class="phase-select" id="nav-phase-select" onchange="switchPhase(this.value)">
-                <!-- Render từ JS -->
-            </select>
-            <button class="btn-quick-new-phase" onclick="openQuickNewPhaseModal()" title="Tạo ngay một đợt phân công mới khi có thay đổi trong tuần/kỳ">
-                <i class="fas fa-plus"></i> Đợt mới
-            </button>
-        </div>
-
-        <!-- VIEW SWITCHER -->
-        <div class="view-switcher">
-            <button class="view-tab-btn active" id="tab-nav-phancong" onclick="switchAppView('view-phancong')">
-                <i class="fas fa-clipboard-list"></i> 1. Phân công
-            </button>
-            <button class="view-tab-btn" id="tab-nav-chamcong" onclick="switchAppView('view-chamcong')">
-                <i class="fas fa-calendar-check"></i> 2. Chấm công GV
-            </button>
-            <button class="view-tab-btn" id="tab-nav-tanggio" onclick="switchAppView('view-tanggio')">
-                <i class="fas fa-calculator text-amber-600"></i> 3. Tăng Giờ
-            </button>
-            <button class="view-tab-btn" id="tab-nav-baocao" onclick="switchAppView('view-baocao')">
-                <i class="fas fa-chart-pie"></i> 4. Báo cáo &amp; Thống kê
-            </button>
-        </div>
-
-        <div class="nav-actions">
-            <button class="btn-toolbar btn-config" onclick="openConfigModal('tab-info')" title="Cài đặt tổ, đợt phân công, môn học, lớp học và giáo viên">
-                <i class="fas fa-gear text-indigo-600"></i> Khai báo Tổ
-            </button>
-            
-            <div class="btn-group-wrapper">
-                <button class="btn-toolbar btn-db-save" id="btn-save-db" onclick="saveToDB()" title="Lưu toàn bộ dữ liệu phân công các đợt & chấm công lên CSDL MySQL">
+            <div class="nav-actions">
+                <button class="btn-toolbar btn-db-save" id="btn-save-db" onclick="saveToDB()" title="Lưu toàn bộ dữ liệu phân công các đợt &amp; chấm công lên CSDL MySQL">
                     <i class="fas fa-cloud-arrow-up"></i> Lưu CSDL
                 </button>
-                <button class="btn-toolbar btn-db-reload" onclick="loadFromDB(true)" title="Nạp lại dữ liệu từ CSDL">
-                    <i class="fas fa-rotate"></i> Nạp CSDL
+                <button class="btn-toolbar btn-config" onclick="openConfigModal('tab-info')" title="Cài đặt tổ, đợt phân công, môn học, lớp học và giáo viên">
+                    <i class="fas fa-gear"></i> Khai báo tổ
+                </button>
+                <input type="file" id="file-input" style="display:none" accept=".json" onchange="loadFromFile(event)">
+                <div class="tools-menu" id="tools-menu">
+                    <button class="btn-toolbar btn-config" type="button" onclick="toggleToolsMenu(event)" title="Nạp CSDL, mở/xuất JSON, xuất Excel">
+                        <i class="fas fa-toolbox"></i> Công cụ / Tệp
+                        <i class="fas fa-caret-down"></i>
+                    </button>
+                    <div class="tools-dropdown" id="tools-dropdown">
+                        <button type="button" onclick="closeToolsMenu(); loadFromDB(true)"><i class="fas fa-rotate"></i> Nạp CSDL</button>
+                        <button type="button" onclick="closeToolsMenu(); document.getElementById('file-input').click()"><i class="fas fa-folder-open"></i> Mở JSON</button>
+                        <button type="button" onclick="closeToolsMenu(); saveToFile()"><i class="fas fa-floppy-disk"></i> Xuất JSON</button>
+                        <button type="button" onclick="closeToolsMenu(); handleExportExcel()"><i class="fas fa-file-excel"></i> Xuất Excel</button>
+                    </div>
+                </div>
+                <a href="index.html" class="btn-toolbar btn-home" title="Trở về trang chủ">
+                    <i class="fas fa-home"></i> Trang chủ
+                </a>
+            </div>
+        </div>
+
+        <div class="workspace-bar">
+            <div class="view-switcher">
+                <button class="view-tab-btn active" id="tab-nav-phancong" onclick="switchAppView('view-phancong')">
+                    <i class="fas fa-clipboard-list"></i> 1. Phân công giảng dạy
+                </button>
+                <button class="view-tab-btn" id="tab-nav-daythay" onclick="switchAppView('view-daythay')">
+                    <i class="fas fa-book-bookmark"></i> 2. Sổ Dạy Thay - Bù
+                </button>
+                <button class="view-tab-btn" id="tab-nav-chamcong" onclick="switchAppView('view-chamcong')">
+                    <i class="fas fa-calendar-check"></i> 3. Chấm công GV
+                </button>
+                <button class="view-tab-btn" id="tab-nav-tanggio" onclick="switchAppView('view-tanggio')">
+                    <i class="fas fa-calculator"></i> 4. Tăng Giờ
+                </button>
+                <button class="view-tab-btn" id="tab-nav-baocao" onclick="switchAppView('view-baocao')">
+                    <i class="fas fa-chart-pie"></i> 5. Báo cáo &amp; Thống kê
                 </button>
             </div>
 
-            <input type="file" id="file-input" style="display:none" accept=".json" onchange="loadFromFile(event)">
-            <div class="btn-group-wrapper">
-                <button class="btn-toolbar btn-file-open" onclick="document.getElementById('file-input').click()" title="Mở file JSON">
-                    <i class="fas fa-folder-open text-indigo-500"></i> Mở
-                </button>
-                <button class="btn-toolbar btn-file-save" onclick="saveToFile()" title="Lưu file JSON về máy">
-                    <i class="fas fa-floppy-disk text-sky-600"></i> Xuất
+            <div class="phase-selector-wrapper" title="Đang xem &amp; phân công theo đợt này">
+                <i class="fas fa-clock-rotate-left"></i>
+                <span class="phase-selector-label">Đợt:</span>
+                <select class="phase-select" id="nav-phase-select" onchange="switchPhase(this.value)">
+                    <!-- Render từ JS -->
+                </select>
+                <button class="btn-quick-new-phase" onclick="openQuickNewPhaseModal()" title="Tạo ngay một đợt phân công mới khi có thay đổi trong tuần/kỳ">
+                    <i class="fas fa-plus"></i> Đợt mới
                 </button>
             </div>
-
-            <button class="btn-toolbar btn-export-excel" onclick="handleExportExcel()" title="Xuất dữ liệu ra Excel">
-                <i class="fas fa-file-excel"></i> Xuất Excel
-            </button>
-            
-            <a href="index.html" class="btn-toolbar btn-home" title="Trở về trang chủ">
-                <i class="fas fa-home text-slate-500"></i> Trang chủ
-            </a>
         </div>
     </header>
 
@@ -1034,7 +1258,153 @@
         </main>
     </div>
 
-    <!-- 2. VIEW CHẤM CÔNG & THEO DÕI GIÁO VIÊN -->
+    <!-- 2. VIEW SỔ THEO DÕI DẠY THAY & DẠY BÙ (TAB RIÊNG) -->
+    <div class="app-view" id="view-daythay">
+        <div class="dt-card" id="daythay-form-card">
+            <h3 class="dt-card-title">
+                <i class="fas fa-pen-to-square" style="color:#4338ca;"></i>
+                <span id="daythay-form-title">Ghi nhận lượt Dạy thay / Dạy bù</span>
+            </h3>
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 12px;">
+                <div class="form-group">
+                    <label>Loại hình:</label>
+                    <select class="form-control" id="new-sub-type" onchange="toggleSubTypeLabel(this.value)">
+                        <option value="replacement">Dạy thay (cho GV khác)</option>
+                        <option value="makeup">Dạy bù (cho lớp của mình)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ngày dạy:</label>
+                    <input type="date" class="form-control" id="new-sub-date" onchange="updateDateWeekday()">
+                    <span class="weekday-hint" id="new-sub-weekday"></span>
+                </div>
+                <div class="form-group">
+                    <label>Buổi dạy:</label>
+                    <select class="form-control" id="new-sub-session" onchange="onDayThaySessionChange()">
+                        <option value="morning">Sáng (tiết 1 - 5)</option>
+                        <option value="afternoon">Chiều (tiết 1 - 5)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 14px;">
+                <div class="form-group">
+                    <label>Giáo viên thực dạy:</label>
+                    <select class="form-control" id="new-sub-teacher">
+                        <!-- Render từ teachers -->
+                    </select>
+                </div>
+                <div class="form-group" id="group-for-teacher">
+                    <label id="label-for-teacher">Dạy thay cho giáo viên:</label>
+                    <select class="form-control" id="new-sub-for-teacher">
+                        <!-- Render từ teachers -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Lý do / Căn cứ thay:</label>
+                    <input type="text" class="form-control" id="new-sub-reason" list="daythay-reason-list" placeholder="VD: Nghỉ phép, Công tác, Ốm...">
+                    <datalist id="daythay-reason-list">
+                        <option value="Nghỉ phép"></option>
+                        <option value="Công tác"></option>
+                        <option value="Ốm"></option>
+                        <option value="Bồi dưỡng chuyên môn"></option>
+                        <option value="Hội họp"></option>
+                        <option value="Nghỉ lễ / nghỉ đột xuất"></option>
+                    </datalist>
+                </div>
+            </div>
+
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px;">
+                <div class="period-slots-toolbar">
+                    <span style="font-size:0.82rem; font-weight:800; color:#1e293b;">
+                        <i class="fas fa-table-cells" style="color:#4338ca;"></i> Phân bổ từng tiết cho từng lớp
+                    </span>
+                    <button type="button" class="btn-small" onclick="setQuickSlots([1,2])">+ Tiết 1-2</button>
+                    <button type="button" class="btn-small" onclick="setQuickSlots([1,2,3])">+ Tiết 1-3</button>
+                    <button type="button" class="btn-small" onclick="setQuickSlots([3,4])">+ Tiết 3-4</button>
+                    <button type="button" class="btn-small" onclick="setQuickSlots([1,2,3,4,5])">+ Cả buổi (1-5)</button>
+                    <button type="button" class="btn-small" onclick="clearAllSlots()">Bỏ chọn tất cả</button>
+                    <span class="slots-total-badge" id="slots-total-badge"><i class="fas fa-hashtag"></i> Tổng cộng: 0 tiết</span>
+                </div>
+                <div class="period-slots-grid" id="period-slots-builder">
+                    <!-- Render 5 tiết từ JS -->
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px; flex-wrap:wrap;">
+                <button type="button" class="btn-small" onclick="resetDayThayForm()"><i class="fas fa-rotate-left"></i> Làm mới / Hủy sửa</button>
+                <button type="button" class="btn-small btn-small-primary" id="btn-save-daythay" onclick="saveDayThayRecord()">
+                    <i class="fas fa-check"></i> Lưu vào Sổ Dạy Thay
+                </button>
+            </div>
+        </div>
+
+        <div class="dt-card">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+                <h3 class="dt-card-title" style="margin:0;">
+                    <i class="fas fa-list-check" style="color:#4338ca;"></i> Nhật ký chi tiết
+                </h3>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn-small btn-export-excel" onclick="exportDayThayToExcel()"><i class="fas fa-file-excel"></i> Xuất Excel Sổ Dạy Thay</button>
+                    <button type="button" class="btn-small" onclick="autoSyncSubstitutePeriods()"><i class="fas fa-rotate"></i> Đồng bộ số tiết sang Chấm Công</button>
+                </div>
+            </div>
+
+            <div class="dt-filters" style="margin-bottom:12px;">
+                <label style="font-size:0.8rem; font-weight:800; color:#1e293b;">Tháng:</label>
+                <select class="form-control" id="dt-month-select" style="padding:5px 10px; width:130px; font-weight:700;" onchange="changeAttendanceMonth(this.value); renderDayThayJournal();">
+                    <option value="1">Tháng 1</option>
+                    <option value="2">Tháng 2</option>
+                    <option value="3">Tháng 3</option>
+                    <option value="4">Tháng 4</option>
+                    <option value="5">Tháng 5</option>
+                    <option value="6">Tháng 6</option>
+                    <option value="7">Tháng 7</option>
+                    <option value="8">Tháng 8</option>
+                    <option value="9" selected>Tháng 9</option>
+                    <option value="10">Tháng 10</option>
+                    <option value="11">Tháng 11</option>
+                    <option value="12">Tháng 12</option>
+                </select>
+                <select class="form-control" id="dt-filter-teacher" style="padding:5px 10px; min-width:180px;" onchange="renderDayThayJournal()">
+                    <option value="">Tất cả giáo viên</option>
+                </select>
+                <select class="form-control" id="dt-filter-type" style="padding:5px 10px; width:150px;" onchange="renderDayThayJournal()">
+                    <option value="">Tất cả loại</option>
+                    <option value="replacement">Dạy thay</option>
+                    <option value="makeup">Dạy bù</option>
+                </select>
+                <input type="text" class="form-control" id="dt-search" style="padding:5px 10px; min-width:200px; flex:1;" placeholder="Tìm tên GV, lớp, lý do..." oninput="renderDayThayJournal()">
+            </div>
+
+            <div class="dt-stats-row" id="daythay-stats-row" style="margin-bottom:12px;">
+                <!-- Render từ JS -->
+            </div>
+
+            <div class="dt-table-wrap">
+                <table class="data-table" id="substitute-records-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px; text-align:center;">STT</th>
+                            <th style="width:100px;">Loại</th>
+                            <th style="width:130px;">Ngày &amp; Thứ</th>
+                            <th style="width:80px; text-align:center;">Buổi</th>
+                            <th>Chi tiết từng tiết &amp; Lớp</th>
+                            <th style="width:80px; text-align:center;">Tổng tiết</th>
+                            <th>GV thực dạy</th>
+                            <th>Thay cho GV</th>
+                            <th>Lý do</th>
+                            <th style="width:80px; text-align:center;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="substitute-table-body">
+                        <!-- Render từ JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. VIEW CHẤM CÔNG & THEO DÕI GIÁO VIÊN -->
     <div class="app-view" id="view-chamcong">
         <div class="attendance-toolbar">
             <div class="attendance-filter">
@@ -1053,7 +1423,7 @@
                     <option value="11">Tháng 11</option>
                     <option value="12">Tháng 12</option>
                 </select>
-                <button class="btn-small btn-small-primary" onclick="openSubstituteModal()"><i class="fas fa-book-bookmark"></i> Sổ Dạy Thay - Dạy Bù (<span id="btn-sub-count">0</span> lượt)</button>
+                <button class="btn-small btn-small-primary" onclick="switchAppView('view-daythay')"><i class="fas fa-book-bookmark"></i> Xem chi tiết Sổ Dạy Thay (<span id="btn-sub-count">0</span> lượt)</button>
                 <button class="btn-small" onclick="autoFillAttendance()"><i class="fas fa-wand-magic-sparkles"></i> Điền chuẩn theo phân công</button>
             </div>
             <div style="font-size: 0.8rem; color: #64748b; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -1066,7 +1436,7 @@
             </div>
         </div>
 
-        <div style="flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 12px;">
+        <div style="flex: 1; overflow: auto; border: 1px solid var(--border-color); border-radius: 12px;">
             <table class="attendance-table">
                 <thead>
                     <tr>
@@ -1094,7 +1464,7 @@
         </div>
     </div>
 
-    <!-- 3. VIEW TỔNG HỢP & QUYẾT TOÁN TĂNG GIỜ (CUỐI HK1, CUỐI HK2, CẢ NĂM) -->
+    <!-- 4. VIEW TỔNG HỢP & QUYẾT TOÁN TĂNG GIỜ (CUỐI HK1, CUỐI HK2, CẢ NĂM) -->
     <div class="app-view" id="view-tanggio">
         <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 14px; padding: 18px 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
@@ -1130,7 +1500,7 @@
         </div>
     </div>
 
-    <!-- 4. VIEW BÁO CÁO & THỐNG KÊ TỔ -->
+    <!-- 5. VIEW BÁO CÁO & THỐNG KÊ TỔ -->
     <div class="app-view" id="view-baocao">
         <div class="stats-cards-grid">
             <div class="stat-card">
@@ -1272,110 +1642,6 @@
                 <button class="btn-small btn-small-primary" onclick="submitQuickNewPhase()">
                     <i class="fas fa-rocket"></i> Tạo đợt &amp; Chuyển phân công ngay
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL SỔ NHẬT KÝ DẠY THAY - DẠY BÙ -->
-    <div class="modal-overlay" id="substitute-modal">
-        <div class="modal-card" style="max-width: 1080px;">
-            <div class="modal-header">
-                <h2><i class="fas fa-book-bookmark text-indigo-600"></i> Sổ Theo Dõi Dạy Thay - Dạy Bù (<span id="sub-modal-month-label">Tháng 9</span>)</h2>
-                <button class="modal-close" onclick="closeSubstituteModal()">&times;</button>
-            </div>
-            <div class="modal-body" style="padding: 18px;">
-                <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
-                    <h4 style="margin: 0 0 10px 0; font-size: 0.88rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-                        <i class="fas fa-plus-circle text-indigo-600"></i> Ghi nhận lượt Dạy Thay / Dạy Bù mới
-                    </h4>
-                    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 10px;">
-                        <div class="form-group">
-                            <label>Loại hình:</label>
-                            <select class="form-control" id="new-sub-type" onchange="toggleSubTypeLabel(this.value)">
-                                <option value="replacement">Dạy thay (cho GV khác)</option>
-                                <option value="makeup">Dạy bù (cho lớp của mình)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Ngày dạy:</label>
-                            <input type="date" class="form-control" id="new-sub-date">
-                        </div>
-                        <div class="form-group">
-                            <label>Buổi:</label>
-                            <select class="form-control" id="new-sub-session">
-                                <option value="morning">Sáng (tiết 1 - 5)</option>
-                                <option value="afternoon">Chiều (tiết 1 - 5)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Tiết dạy:</label>
-                            <input type="text" class="form-control" id="new-sub-period" placeholder="VD: Tiết 1-2, Tiết 3...">
-                        </div>
-                        <div class="form-group">
-                            <label>Số tiết:</label>
-                            <input type="number" class="form-control" id="new-sub-period-count" min="1" max="5" value="1">
-                        </div>
-                        <div class="form-group">
-                            <label>Lớp học:</label>
-                            <select class="form-control" id="new-sub-class">
-                                <!-- Render từ classes -->
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 10px;">
-                        <div class="form-group">
-                            <label>Giáo viên thực dạy:</label>
-                            <select class="form-control" id="new-sub-teacher">
-                                <!-- Render từ teachers -->
-                            </select>
-                        </div>
-                        <div class="form-group" id="group-for-teacher">
-                            <label id="label-for-teacher">Dạy thay cho Giáo viên:</label>
-                            <select class="form-control" id="new-sub-for-teacher">
-                                <!-- Render từ teachers -->
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Lý do / Ghi chú:</label>
-                            <input type="text" class="form-control" id="new-sub-reason" placeholder="VD: Nghỉ ốm, Đi công tác, Dạy bù do lễ...">
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: flex-end;">
-                        <button class="btn-small btn-small-primary" onclick="addSubstituteRecord()"><i class="fas fa-check"></i> Lưu vào sổ dạy thay</button>
-                    </div>
-                </div>
-
-                <div class="action-bar-sub">
-                    <span style="font-size: 0.88rem; font-weight: 800; color: #1e293b;">
-                        <i class="fas fa-list-check text-indigo-600"></i> Danh sách các lượt trong tháng (<span id="sub-table-count">0</span> lượt):
-                    </span>
-                    <button class="btn-small" onclick="autoSyncSubstitutePeriods()"><i class="fas fa-rotate text-emerald-600"></i> Cập nhật tổng tiết vào Chấm công</button>
-                </div>
-                <div style="overflow-x: auto; max-height: 320px; border: 1px solid var(--border-color); border-radius: 8px;">
-                    <table class="data-table" id="substitute-records-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 35px; text-align:center;">STT</th>
-                                <th style="width: 90px;">Loại</th>
-                                <th style="width: 95px;">Ngày</th>
-                                <th style="width: 75px; text-align:center;">Buổi</th>
-                                <th style="width: 85px;">Tiết</th>
-                                <th style="width: 60px; text-align:center;">Lớp</th>
-                                <th>Giáo viên dạy</th>
-                                <th>Thay cho / Đối tượng</th>
-                                <th style="width: 60px; text-align:center;">Số tiết</th>
-                                <th>Lý do</th>
-                                <th style="width: 45px; text-align:center;">Xóa</th>
-                            </tr>
-                        </thead>
-                        <tbody id="substitute-table-body">
-                            <!-- Render từ JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-small" onclick="closeSubstituteModal()">Đóng</button>
             </div>
         </div>
     </div>
@@ -1656,6 +1922,7 @@
         let autoSaveTimer = null;
         let isSavingInProgress = false;
         let hasUnsavedChanges = false;
+        let editingSubId = null;
 
         function setLocalStorageScope(currentUser) {
             const userId = Number(currentUser?.id || 0);
@@ -1696,6 +1963,12 @@
             if (!s.attendance) s.attendance = { current_month: '9', records: {}, substitutes: {} };
             if (!s.attendance.records) s.attendance.records = {};
             if (!s.attendance.substitutes) s.attendance.substitutes = {};
+            Object.keys(s.attendance.substitutes).forEach(k => {
+                if (!Array.isArray(s.attendance.substitutes[k])) s.attendance.substitutes[k] = [];
+                s.attendance.substitutes[k].forEach((item, i) => {
+                    if (item && !item.id) item.id = `sub_${k}_${i}`;
+                });
+            });
 
             s.subjects.forEach(sub => {
                 if (typeof sub.is_core !== 'boolean') {
@@ -1750,7 +2023,9 @@
             if (view) view.classList.add('active');
             if (btn) btn.classList.add('active');
 
-            if (viewId === 'view-chamcong') {
+            if (viewId === 'view-daythay') {
+                renderDayThayView();
+            } else if (viewId === 'view-chamcong') {
                 renderAttendance();
             } else if (viewId === 'view-tanggio') {
                 renderOvertimeSummary();
@@ -1758,6 +2033,21 @@
                 renderReports();
             }
         }
+
+        function toggleToolsMenu(ev) {
+            if (ev) ev.stopPropagation();
+            const menu = document.getElementById('tools-menu');
+            if (menu) menu.classList.toggle('open');
+        }
+
+        function closeToolsMenu() {
+            document.getElementById('tools-menu')?.classList.remove('open');
+        }
+
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('tools-menu');
+            if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+        });
 
         // ================= QUẢN LÝ & CHUYỂN ĐỔI ĐỢT (PHASES) =================
         function getCurrentPhase() {
@@ -2286,6 +2576,10 @@
             renderAttendance();
             renderReports();
             renderOvertimeSummary();
+            syncMonthSelects();
+            if (document.getElementById('view-daythay')?.classList.contains('active')) {
+                renderDayThayView();
+            }
         }
 
         function hasPlanConfiguration() {
@@ -2895,15 +3189,31 @@
         }
 
         // ================= 2. CHẤM CÔNG & SỔ DẠY THAY / DẠY BÙ =================
-        function getMonthKey() {
-            const m = document.getElementById('att-month-select')?.value || state.attendance?.current_month || '9';
-            return `m_${m}`;
+        function getSelectedMonth() {
+            return String(state.attendance?.current_month || document.getElementById('dt-month-select')?.value || document.getElementById('att-month-select')?.value || '9');
+        }
+
+        function getMonthKey(monthVal) {
+            return `m_${String(monthVal || getSelectedMonth())}`;
+        }
+
+        function syncMonthSelects(val) {
+            const month = String(val || getSelectedMonth());
+            ['att-month-select', 'dt-month-select'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.value !== month) el.value = month;
+            });
         }
 
         function changeAttendanceMonth(val) {
+            val = String(val);
             if (!state.attendance) state.attendance = { current_month: val, records: {}, substitutes: {} };
             state.attendance.current_month = val;
+            syncMonthSelects(val);
             renderAttendance();
+            if (document.getElementById('view-daythay')?.classList.contains('active')) {
+                renderDayThayJournal();
+            }
         }
 
         function renderWeekSelect(teacherId, weekKey, currentValue) {
@@ -3007,146 +3317,507 @@
             showToast("Đã điền chấm công chuẩn theo phân công chuyên môn!", "success");
         }
 
-        // ================= SỔ DẠY THAY & DẠY BÙ (MODAL LOGIC) =================
+        // ================= SỔ DẠY THAY & DẠY BÙ (TAB RIÊNG) =================
         function openSubstituteModal() {
-            const m = document.getElementById('att-month-select')?.value || '9';
-            document.getElementById('sub-modal-month-label').textContent = `Tháng ${m}`;
-            document.getElementById('new-sub-date').value = new Date().toISOString().slice(0, 10);
-
-            const tSel = document.getElementById('new-sub-teacher');
-            const forTSel = document.getElementById('new-sub-for-teacher');
-            const cSel = document.getElementById('new-sub-class');
-
-            if (tSel) {
-                tSel.innerHTML = state.teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.role})</option>`).join('');
-            }
-            if (forTSel) {
-                forTSel.innerHTML = `<option value="">-- Chọn GV được thay --</option>` + state.teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.role})</option>`).join('');
-            }
-            if (cSel) {
-                cSel.innerHTML = state.classes.map(c => `<option value="${c}">${c}</option>`).join('');
-            }
-
-            renderSubstituteRecordsTable();
-            document.getElementById('substitute-modal').classList.add('active');
+            switchAppView('view-daythay');
         }
 
         function closeSubstituteModal() {
-            document.getElementById('substitute-modal').classList.remove('active');
-            renderAttendance();
+            /* Tab riêng đã thay thế modal */
+        }
+
+        function weekdayLabel(dateStr) {
+            if (!dateStr) return '';
+            const days = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+            const d = new Date(dateStr + 'T00:00:00');
+            if (isNaN(d.getTime())) return '';
+            return days[d.getDay()] || '';
+        }
+
+        function updateDateWeekday() {
+            const hint = document.getElementById('new-sub-weekday');
+            if (!hint) return;
+            const label = weekdayLabel(document.getElementById('new-sub-date')?.value);
+            hint.textContent = label || '';
+        }
+
+        function getSessionLabel(session) {
+            return session === 'afternoon' ? 'Chiều' : 'Sáng';
+        }
+
+        function getSubPeriodCount(item) {
+            if (!item) return 1;
+            if (Array.isArray(item.periods_detail) && item.periods_detail.length) return item.periods_detail.length;
+            return item.period_count || 1;
+        }
+
+        function getPeriodsDetail(item) {
+            if (!item) return [];
+            if (Array.isArray(item.periods_detail) && item.periods_detail.length) {
+                return item.periods_detail.map(p => ({
+                    period_num: parseInt(p.period_num, 10) || 1,
+                    class_name: p.class_name || '',
+                    subject: p.subject || '',
+                    note: p.note || ''
+                }));
+            }
+            const className = item.class_name || '';
+            const subject = item.subject || '';
+            const periodStr = String(item.period || '');
+            const tagged = [...periodStr.matchAll(/Tiết\s*(\d+)\s*\(([^)]*)\)/gi)];
+            if (tagged.length) {
+                return tagged.map(m => ({
+                    period_num: parseInt(m[1], 10),
+                    class_name: (m[2] || className).trim(),
+                    subject,
+                    note: ''
+                }));
+            }
+            const nums = [...periodStr.matchAll(/(\d+)/g)].map(m => parseInt(m[1], 10)).filter(n => n >= 1 && n <= 5);
+            let periodNums = [];
+            const rangeMatch = periodStr.match(/(\d+)\s*-\s*(\d+)/);
+            if (rangeMatch && nums.length <= 2) {
+                const a = parseInt(rangeMatch[1], 10), b = parseInt(rangeMatch[2], 10);
+                for (let i = Math.min(a, b); i <= Math.max(a, b) && i <= 5; i++) periodNums.push(i);
+            } else if (nums.length) {
+                periodNums = [...new Set(nums)];
+            } else {
+                const count = Math.min(5, Math.max(1, parseInt(item.period_count, 10) || 1));
+                periodNums = Array.from({ length: count }, (_, i) => i + 1);
+            }
+            return periodNums.map(n => ({ period_num: n, class_name: className, subject, note: '' }));
+        }
+
+        function collectPeriodSlots() {
+            const slots = [];
+            document.querySelectorAll('#period-slots-builder .period-slot').forEach(slot => {
+                const cb = slot.querySelector('.slot-enable');
+                if (!cb || !cb.checked) return;
+                const period_num = parseInt(slot.dataset.period, 10);
+                const class_name = slot.querySelector('.slot-class')?.value || '';
+                const subject = slot.querySelector('.slot-subject')?.value || '';
+                const note = (slot.querySelector('.slot-note')?.value || '').trim();
+                if (!class_name) return;
+                slots.push({ period_num, class_name, subject, note });
+            });
+            return slots.sort((a, b) => a.period_num - b.period_num);
+        }
+
+        function classOptionsHtml(selected) {
+            const opts = ['<option value="">-- Chọn lớp --</option>']
+                .concat((state.classes || []).map(c => `<option value="${escapeHtml(c)}" ${c === selected ? 'selected' : ''}>${escapeHtml(c)}</option>`));
+            if (selected && !(state.classes || []).includes(selected)) {
+                opts.push(`<option value="${escapeHtml(selected)}" selected>${escapeHtml(selected)}</option>`);
+            }
+            return opts.join('');
+        }
+
+        function subjectOptionsHtml(selected) {
+            const names = (state.subjects || []).map(s => s.name).filter(Boolean);
+            const opts = ['<option value="">-- Chọn môn --</option>']
+                .concat(names.map(n => `<option value="${escapeHtml(n)}" ${n === selected ? 'selected' : ''}>${escapeHtml(n)}</option>`));
+            if (selected && !names.includes(selected)) {
+                opts.push(`<option value="${escapeHtml(selected)}" selected>${escapeHtml(selected)}</option>`);
+            }
+            return opts.join('');
+        }
+
+        function defaultSubjectName() {
+            return (state.subjects && state.subjects[0] && state.subjects[0].name) || '';
+        }
+
+        function initPeriodSlotsBuilder(selectedDetails) {
+            const wrap = document.getElementById('period-slots-builder');
+            if (!wrap) return;
+            const sessionText = getSessionLabel(document.getElementById('new-sub-session')?.value || 'morning');
+            const selectedMap = {};
+            (selectedDetails || []).forEach(p => { selectedMap[p.period_num] = p; });
+
+            wrap.innerHTML = [1, 2, 3, 4, 5].map(n => {
+                const sel = selectedMap[n];
+                const active = Boolean(sel);
+                return `
+                    <div class="period-slot ${active ? 'active' : ''}" data-period="${n}">
+                        <label class="slot-head">
+                            <input type="checkbox" class="slot-enable" ${active ? 'checked' : ''} onchange="onSlotToggle(this)">
+                            <span class="slot-label">Tiết ${n} (${sessionText})</span>
+                        </label>
+                        <div class="slot-fields">
+                            <label>Lớp học</label>
+                            <select class="form-control slot-class">${classOptionsHtml(sel ? sel.class_name : '')}</select>
+                            <label>Môn học</label>
+                            <select class="form-control slot-subject">${subjectOptionsHtml(sel ? sel.subject : defaultSubjectName())}</select>
+                            <label>Ghi chú tiết (tuỳ chọn)</label>
+                            <input type="text" class="form-control slot-note" placeholder="Ghi chú..." value="${escapeHtml(sel ? (sel.note || '') : '')}">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            updateSlotsTotal();
+        }
+
+        function refreshSlotOptions() {
+            document.querySelectorAll('#period-slots-builder .period-slot').forEach(slot => {
+                const classSel = slot.querySelector('.slot-class');
+                const subSel = slot.querySelector('.slot-subject');
+                if (classSel) classSel.innerHTML = classOptionsHtml(classSel.value);
+                if (subSel) subSel.innerHTML = subjectOptionsHtml(subSel.value);
+            });
+        }
+
+        function onDayThaySessionChange() {
+            const sessionText = getSessionLabel(document.getElementById('new-sub-session')?.value || 'morning');
+            document.querySelectorAll('#period-slots-builder .slot-label').forEach(el => {
+                const n = el.closest('.period-slot')?.dataset.period;
+                if (n) el.textContent = `Tiết ${n} (${sessionText})`;
+            });
+        }
+
+        function onSlotToggle(cb) {
+            const slot = cb.closest('.period-slot');
+            updateSlotState(slot);
+            if (cb.checked) {
+                const classSel = slot.querySelector('.slot-class');
+                if (classSel && !classSel.value && state.classes && state.classes[0]) {
+                    classSel.value = state.classes[0];
+                }
+                const subSel = slot.querySelector('.slot-subject');
+                if (subSel && !subSel.value) {
+                    subSel.value = defaultSubjectName();
+                }
+            }
+            updateSlotsTotal();
+        }
+
+        function updateSlotState(slot) {
+            if (!slot) return;
+            const checked = slot.querySelector('.slot-enable')?.checked;
+            slot.classList.toggle('active', Boolean(checked));
+        }
+
+        function setQuickSlots(nums) {
+            const set = new Set((nums || []).map(n => parseInt(n, 10)));
+            document.querySelectorAll('#period-slots-builder .period-slot').forEach(slot => {
+                const n = parseInt(slot.dataset.period, 10);
+                const cb = slot.querySelector('.slot-enable');
+                if (cb) cb.checked = set.has(n);
+                updateSlotState(slot);
+                if (cb && cb.checked) {
+                    const classSel = slot.querySelector('.slot-class');
+                    if (classSel && !classSel.value && state.classes && state.classes[0]) classSel.value = state.classes[0];
+                    const subSel = slot.querySelector('.slot-subject');
+                    if (subSel && !subSel.value) subSel.value = defaultSubjectName();
+                }
+            });
+            updateSlotsTotal();
+        }
+
+        function clearAllSlots() {
+            setQuickSlots([]);
+        }
+
+        function updateSlotsTotal() {
+            const count = document.querySelectorAll('#period-slots-builder .slot-enable:checked').length;
+            const badge = document.getElementById('slots-total-badge');
+            if (badge) badge.innerHTML = `<i class="fas fa-hashtag"></i> Tổng cộng: ${count} tiết`;
+        }
+
+        function populateDayThayFormSelects() {
+            const tSel = document.getElementById('new-sub-teacher');
+            const forTSel = document.getElementById('new-sub-for-teacher');
+            const filterT = document.getElementById('dt-filter-teacher');
+            const tVal = tSel?.value || '';
+            const forVal = forTSel?.value || '';
+            const filterVal = filterT?.value || '';
+            const teacherOpts = (state.teachers || []).map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.role})</option>`).join('');
+            if (tSel) {
+                tSel.innerHTML = teacherOpts;
+                if (tVal && [...tSel.options].some(o => o.value === tVal)) tSel.value = tVal;
+            }
+            if (forTSel) {
+                forTSel.innerHTML = `<option value="">-- Chọn GV được thay --</option>` + teacherOpts;
+                if (forVal && [...forTSel.options].some(o => o.value === forVal)) forTSel.value = forVal;
+            }
+            if (filterT) {
+                filterT.innerHTML = `<option value="">Tất cả giáo viên</option>` + teacherOpts;
+                if (filterVal && [...filterT.options].some(o => o.value === filterVal)) filterT.value = filterVal;
+            }
+        }
+
+        function renderDayThayView() {
+            populateDayThayFormSelects();
+            const dateEl = document.getElementById('new-sub-date');
+            if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+            updateDateWeekday();
+            if (!document.querySelector('#period-slots-builder .period-slot')) {
+                initPeriodSlotsBuilder();
+            } else {
+                refreshSlotOptions();
+                onDayThaySessionChange();
+            }
+            toggleSubTypeLabel(document.getElementById('new-sub-type')?.value || 'replacement');
+            renderDayThayJournal();
         }
 
         function toggleSubTypeLabel(type) {
             const group = document.getElementById('group-for-teacher');
             const label = document.getElementById('label-for-teacher');
             if (type === 'makeup') {
-                if (label) label.textContent = 'Dạy bù cho lớp/tiết nào:';
-                if (group) group.style.opacity = '0.5';
+                if (label) label.textContent = 'Dạy bù cho lớp / đối tượng (tuỳ chọn):';
+                if (group) group.style.opacity = '0.55';
             } else {
-                if (label) label.textContent = 'Dạy thay cho Giáo viên:';
+                if (label) label.textContent = 'Dạy thay cho giáo viên:';
                 if (group) group.style.opacity = '1';
             }
         }
 
-        function renderSubstituteRecordsTable() {
-            const tbody = document.getElementById('substitute-table-body');
-            const countLabel = document.getElementById('sub-table-count');
-            if (!tbody) return;
+        function monthFromDate(dateStr) {
+            const parts = String(dateStr || '').split('-');
+            if (parts.length >= 2) {
+                const m = parseInt(parts[1], 10);
+                if (m >= 1 && m <= 12) return String(m);
+            }
+            return getSelectedMonth();
+        }
 
+        function findSubstituteRecord(id) {
+            const subs = state.attendance?.substitutes || {};
+            for (const [mKey, list] of Object.entries(subs)) {
+                if (!Array.isArray(list)) continue;
+                const index = list.findIndex(x => x.id === id);
+                if (index >= 0) return { mKey, index, item: list[index] };
+            }
+            return null;
+        }
+
+        function renderDayThayJournal() {
+            const tbody = document.getElementById('substitute-table-body');
+            if (!tbody) return;
             const mKey = getMonthKey();
+            if (!state.attendance.substitutes) state.attendance.substitutes = {};
             if (!state.attendance.substitutes[mKey]) state.attendance.substitutes[mKey] = [];
             const list = state.attendance.substitutes[mKey];
 
-            if (countLabel) countLabel.textContent = list.length;
+            const teacherFilter = document.getElementById('dt-filter-teacher')?.value || '';
+            const typeFilter = document.getElementById('dt-filter-type')?.value || '';
+            const q = (document.getElementById('dt-search')?.value || '').trim().toLowerCase();
 
-            if (list.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" style="padding: 20px; text-align:center; color: #94a3b8; font-style:italic;">Chưa có lượt dạy thay hoặc dạy bù nào trong tháng này. Hãy nhập ở form phía trên.</td></tr>`;
+            const filtered = list.filter(item => {
+                if (teacherFilter && item.teacher_id !== teacherFilter && item.for_teacher_id !== teacherFilter) return false;
+                if (typeFilter && item.type !== typeFilter) return false;
+                if (q) {
+                    const t = state.teachers.find(x => x.id === item.teacher_id);
+                    const forT = state.teachers.find(x => x.id === item.for_teacher_id);
+                    const details = getPeriodsDetail(item);
+                    const hay = [
+                        t?.name || '',
+                        forT?.name || '',
+                        item.for_other || '',
+                        item.reason || '',
+                        item.class_name || '',
+                        item.period || '',
+                        details.map(p => `${p.class_name} ${p.subject} tiết ${p.period_num}`).join(' ')
+                    ].join(' ').toLowerCase();
+                    if (!hay.includes(q)) return false;
+                }
+                return true;
+            });
+
+            const replacePeriods = list.filter(i => i.type === 'replacement').reduce((s, i) => s + getSubPeriodCount(i), 0);
+            const makeupPeriods = list.filter(i => i.type === 'makeup').reduce((s, i) => s + getSubPeriodCount(i), 0);
+            const stats = document.getElementById('daythay-stats-row');
+            if (stats) {
+                stats.innerHTML = `
+                    <span class="dt-stat-chip"><i class="fas fa-list"></i> Tổng lượt trong tháng: <b>${list.length}</b></span>
+                    <span class="dt-stat-chip replace"><i class="fas fa-user-clock"></i> Tổng tiết dạy thay (+): <b>${replacePeriods}</b></span>
+                    <span class="dt-stat-chip makeup"><i class="fas fa-rotate"></i> Tổng tiết dạy bù: <b>${makeupPeriods}</b></span>
+                `;
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" style="padding: 20px; text-align:center; color: #94a3b8; font-style:italic;">Chưa có lượt dạy thay hoặc dạy bù nào khớp bộ lọc. Hãy ghi nhận ở form phía trên.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = list.map((item, index) => {
+            tbody.innerHTML = filtered.map((item, index) => {
                 const t = state.teachers.find(x => x.id === item.teacher_id);
                 const forT = state.teachers.find(x => x.id === item.for_teacher_id);
-
+                const details = getPeriodsDetail(item);
+                const tags = details.length
+                    ? details.map(p => `<span class="period-tag">Tiết ${p.period_num}: ${escapeHtml(p.class_name || '—')}${p.subject ? ' · ' + escapeHtml(p.subject) : ''}</span>`).join(' ')
+                    : `<span class="period-tag">${escapeHtml(item.period || '—')} · ${escapeHtml(item.class_name || '—')}</span>`;
                 const typeBadge = item.type === 'replacement'
                     ? `<span style="background:#eff6ff; color:#1e40af; padding:2px 7px; border-radius:5px; font-weight:800; font-size:0.72rem;"><i class="fas fa-user-clock"></i> Dạy thay</span>`
                     : `<span style="background:#f5f3ff; color:#6d28d9; padding:2px 7px; border-radius:5px; font-weight:800; font-size:0.72rem;"><i class="fas fa-rotate"></i> Dạy bù</span>`;
-
                 const sessionBadge = item.session === 'morning'
                     ? `<span class="session-badge session-morning"><i class="fas fa-sun"></i> Sáng</span>`
                     : `<span class="session-badge session-afternoon"><i class="fas fa-moon"></i> Chiều</span>`;
-
+                const count = getSubPeriodCount(item);
+                const weekday = weekdayLabel(item.date);
                 return `
                     <tr>
                         <td style="text-align:center;">${index + 1}</td>
                         <td>${typeBadge}</td>
-                        <td>${escapeHtml(item.date)}</td>
+                        <td><b>${escapeHtml(item.date || '')}</b>${weekday ? `<div style="font-size:0.72rem; color:#64748b; font-weight:700;">${weekday}</div>` : ''}</td>
                         <td style="text-align:center;">${sessionBadge}</td>
-                        <td><b>${escapeHtml(item.period || '—')}</b></td>
-                        <td style="text-align:center; font-weight:800; color:#4338ca;">${escapeHtml(item.class_name || '—')}</td>
+                        <td>${tags}</td>
+                        <td style="text-align:center;"><span style="background:#1e3a8a; color:#fff; padding:2px 8px; border-radius:999px; font-weight:800; font-size:0.75rem;">${count}t</span></td>
                         <td><b>${t ? escapeHtml(t.name) : '—'}</b></td>
                         <td>${forT ? escapeHtml(forT.name) : (item.for_other || '—')}</td>
-                        <td style="text-align:center; font-weight:bold; color:#2563eb;">${item.period_count || 1}t</td>
                         <td>${escapeHtml(item.reason || '')}</td>
-                        <td style="text-align:center;">
-                            <button class="table-btn" onclick="removeSubstituteRecord(${index})" title="Xóa"><i class="fas fa-trash"></i></button>
+                        <td style="text-align:center; white-space:nowrap;">
+                            <button class="table-btn-edit" onclick="editDayThayRecord('${item.id}')" title="Sửa"><i class="fas fa-pen"></i></button>
+                            <button class="table-btn" onclick="removeDayThayRecord('${item.id}')" title="Xóa"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                 `;
             }).join('');
         }
 
-        function addSubstituteRecord() {
-            const mKey = getMonthKey();
-            if (!state.attendance.substitutes[mKey]) state.attendance.substitutes[mKey] = [];
+        function renderSubstituteRecordsTable() {
+            renderDayThayJournal();
+        }
 
-            const type = document.getElementById('new-sub-type').value;
-            const date = document.getElementById('new-sub-date').value || new Date().toISOString().slice(0, 10);
-            const session = document.getElementById('new-sub-session').value;
-            const period = document.getElementById('new-sub-period').value.trim() || 'Tiết 1';
-            const period_count = parseInt(document.getElementById('new-sub-period-count').value) || 1;
-            const class_name = document.getElementById('new-sub-class').value;
-            const teacher_id = document.getElementById('new-sub-teacher').value;
-            const for_teacher_id = document.getElementById('new-sub-for-teacher').value;
-            const reason = document.getElementById('new-sub-reason').value.trim();
+        function saveDayThayRecord() {
+            const type = document.getElementById('new-sub-type')?.value || 'replacement';
+            const date = document.getElementById('new-sub-date')?.value || new Date().toISOString().slice(0, 10);
+            const session = document.getElementById('new-sub-session')?.value || 'morning';
+            const teacher_id = document.getElementById('new-sub-teacher')?.value || '';
+            const for_teacher_id = document.getElementById('new-sub-for-teacher')?.value || '';
+            const reason = (document.getElementById('new-sub-reason')?.value || '').trim();
+            const periods_detail = collectPeriodSlots();
 
             if (!teacher_id) {
-                alert("Vui lòng chọn giáo viên thực dạy!");
+                alert('Vui lòng chọn giáo viên thực dạy!');
+                return;
+            }
+            if (!periods_detail.length) {
+                alert('Vui lòng chọn ít nhất 1 tiết và lớp học tương ứng!');
                 return;
             }
 
-            state.attendance.substitutes[mKey].push({
-                id: 'sub_' + Date.now(),
+            const period_count = periods_detail.length;
+            const period = periods_detail.map(p => `Tiết ${p.period_num} (${p.class_name})`).join(', ');
+            const class_name = [...new Set(periods_detail.map(p => p.class_name).filter(Boolean))].join(', ');
+            const monthVal = monthFromDate(date);
+            const mKey = getMonthKey(monthVal);
+            const wasEditing = Boolean(editingSubId);
+
+            if (!state.attendance.substitutes) state.attendance.substitutes = {};
+            if (!state.attendance.substitutes[mKey]) state.attendance.substitutes[mKey] = [];
+
+            const record = {
+                id: editingSubId || ('sub_' + Date.now()),
                 type,
                 date,
                 session,
-                period,
-                period_count,
-                class_name,
                 teacher_id,
                 for_teacher_id,
-                for_other: type === 'makeup' ? 'Tự dạy bù lớp' : '',
-                reason
-            });
+                for_other: type === 'makeup' ? (for_teacher_id ? '' : 'Tự dạy bù lớp') : '',
+                reason,
+                periods_detail,
+                period_count,
+                period,
+                class_name
+            };
 
+            if (wasEditing) {
+                const found = findSubstituteRecord(editingSubId);
+                if (found) {
+                    state.attendance.substitutes[found.mKey].splice(found.index, 1);
+                }
+            }
+            state.attendance.substitutes[mKey].push(record);
+
+            changeAttendanceMonth(monthVal);
             saveToLocal();
-            renderSubstituteRecordsTable();
-            autoSyncSubstitutePeriods();
-            showToast("Đã thêm lượt dạy thay/dạy bù thành công!", "success");
+            autoSyncSubstitutePeriods({ silent: true, mKey });
+            resetDayThayForm();
+            renderDayThayJournal();
+            showToast(wasEditing ? 'Đã cập nhật bản ghi dạy thay/dạy bù!' : 'Đã lưu vào Sổ Dạy Thay!', 'success');
+        }
+
+        function addSubstituteRecord() {
+            saveDayThayRecord();
+        }
+
+        function editDayThayRecord(id) {
+            const found = findSubstituteRecord(id);
+            if (!found) {
+                showToast('Không tìm thấy bản ghi để sửa.', 'error');
+                return;
+            }
+            const item = found.item;
+            editingSubId = item.id;
+            const monthVal = found.mKey.replace(/^m_/, '');
+            changeAttendanceMonth(monthVal);
+            populateDayThayFormSelects();
+            const typeEl = document.getElementById('new-sub-type');
+            const dateEl = document.getElementById('new-sub-date');
+            const sessionEl = document.getElementById('new-sub-session');
+            const tSel = document.getElementById('new-sub-teacher');
+            const forTSel = document.getElementById('new-sub-for-teacher');
+            const reasonEl = document.getElementById('new-sub-reason');
+            if (typeEl) typeEl.value = item.type || 'replacement';
+            if (dateEl) dateEl.value = item.date || '';
+            if (sessionEl) sessionEl.value = item.session || 'morning';
+            if (tSel) tSel.value = item.teacher_id || '';
+            if (forTSel) forTSel.value = item.for_teacher_id || '';
+            if (reasonEl) reasonEl.value = item.reason || '';
+            toggleSubTypeLabel(item.type || 'replacement');
+            updateDateWeekday();
+            initPeriodSlotsBuilder(getPeriodsDetail(item));
+            const btn = document.getElementById('btn-save-daythay');
+            if (btn) btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Cập nhật thay đổi';
+            const title = document.getElementById('daythay-form-title');
+            if (title) title.textContent = 'Chỉnh sửa lượt Dạy thay / Dạy bù';
+            document.getElementById('view-daythay')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetDayThayForm() {
+            editingSubId = null;
+            const typeEl = document.getElementById('new-sub-type');
+            const dateEl = document.getElementById('new-sub-date');
+            const sessionEl = document.getElementById('new-sub-session');
+            const reasonEl = document.getElementById('new-sub-reason');
+            const forTSel = document.getElementById('new-sub-for-teacher');
+            if (typeEl) typeEl.value = 'replacement';
+            if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
+            if (sessionEl) sessionEl.value = 'morning';
+            if (reasonEl) reasonEl.value = '';
+            if (forTSel) forTSel.value = '';
+            toggleSubTypeLabel('replacement');
+            updateDateWeekday();
+            initPeriodSlotsBuilder();
+            const btn = document.getElementById('btn-save-daythay');
+            if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Lưu vào Sổ Dạy Thay';
+            const title = document.getElementById('daythay-form-title');
+            if (title) title.textContent = 'Ghi nhận lượt Dạy thay / Dạy bù';
+        }
+
+        function removeDayThayRecord(id) {
+            if (!confirm('Xóa bản ghi dạy thay/dạy bù này?')) return;
+            const found = findSubstituteRecord(id);
+            if (!found) return;
+            const mKey = found.mKey;
+            state.attendance.substitutes[mKey].splice(found.index, 1);
+            if (editingSubId === id) resetDayThayForm();
+            saveToLocal();
+            autoSyncSubstitutePeriods({ silent: true, mKey });
+            renderDayThayJournal();
+            showToast('Đã xóa bản ghi.', 'success');
         }
 
         function removeSubstituteRecord(index) {
             const mKey = getMonthKey();
-            if (confirm("Xóa bản ghi dạy thay/dạy bù này?")) {
-                state.attendance.substitutes[mKey].splice(index, 1);
-                saveToLocal();
-                renderSubstituteRecordsTable();
-                autoSyncSubstitutePeriods();
-            }
+            const list = state.attendance.substitutes[mKey] || [];
+            const item = list[index];
+            if (item) removeDayThayRecord(item.id);
         }
 
-        function autoSyncSubstitutePeriods() {
-            const mKey = getMonthKey();
+        function autoSyncSubstitutePeriods(options = {}) {
+            const silent = Boolean(options && options.silent);
+            const mKey = (options && options.mKey) || getMonthKey();
             const list = state.attendance.substitutes[mKey] || [];
             if (!state.attendance.records[mKey]) state.attendance.records[mKey] = {};
 
@@ -3154,7 +3825,7 @@
             const makeupMap = {};
 
             list.forEach(item => {
-                const count = item.period_count || 1;
+                const count = getSubPeriodCount(item);
                 if (item.type === 'replacement') {
                     replaceMap[item.teacher_id] = (replaceMap[item.teacher_id] || 0) + count;
                 } else if (item.type === 'makeup') {
@@ -3176,7 +3847,83 @@
 
             saveToLocal();
             renderAttendance();
-            showToast("Đã đồng bộ số tiết Dạy thay & Dạy bù vào Bảng Chấm Công!", "success");
+            if (!silent) {
+                showToast('Đã đồng bộ số tiết Dạy thay & Dạy bù vào Bảng Chấm Công!', 'success');
+            }
+        }
+
+        function exportDayThayToExcel() {
+            const monthNum = getSelectedMonth();
+            const mKey = getMonthKey(monthNum);
+            const list = state.attendance?.substitutes?.[mKey] || [];
+            const schoolYear = state.info?.school_year || '';
+            const org = (state.info?.title || 'Tổ chuyên môn').toUpperCase();
+            const now = new Date();
+
+            let rows = '';
+            if (!list.length) {
+                rows = `<tr><td colspan="9" style="padding:10px; text-align:center; font-style:italic;">Chưa có dữ liệu trong tháng ${monthNum}</td></tr>`;
+            } else {
+                list.forEach((item, idx) => {
+                    const t = state.teachers.find(x => x.id === item.teacher_id);
+                    const forT = state.teachers.find(x => x.id === item.for_teacher_id);
+                    const details = getPeriodsDetail(item);
+                    const detailText = details.length
+                        ? details.map(p => `Tiết ${p.period_num}: ${p.class_name}${p.subject ? ' (' + p.subject + ')' : ''}`).join('; ')
+                        : `${item.period || ''} — ${item.class_name || ''}`;
+                    rows += `<tr>
+                        <td style="padding:6px; text-align:center;">${idx + 1}</td>
+                        <td style="padding:6px; text-align:center;">${item.type === 'replacement' ? 'Dạy thay' : 'Dạy bù'}</td>
+                        <td style="padding:6px; text-align:center;">${item.date || ''} ${weekdayLabel(item.date)}</td>
+                        <td style="padding:6px; text-align:center;">${item.session === 'afternoon' ? 'Chiều' : 'Sáng'}</td>
+                        <td style="padding:6px;">${detailText}</td>
+                        <td style="padding:6px; text-align:center; font-weight:bold;">${getSubPeriodCount(item)}</td>
+                        <td style="padding:6px; font-weight:bold;">${t ? t.name : '—'}</td>
+                        <td style="padding:6px;">${forT ? forT.name : (item.for_other || '—')}</td>
+                        <td style="padding:6px;">${item.reason || ''}</td>
+                    </tr>`;
+                });
+            }
+
+            const table = `<table border="1" style="border-collapse: collapse; font-family: 'Times New Roman', Arial, sans-serif; font-size: 13px; width: 100%;">
+                <tr>
+                    <td colspan="5" style="text-align:center; border:none; font-weight:bold;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</td>
+                    <td colspan="4" style="text-align:center; border:none; font-weight:bold;">Độc lập - Tự do - Hạnh phúc</td>
+                </tr>
+                <tr><td colspan="9" style="border:none; height:8px;"></td></tr>
+                <tr>
+                    <th colspan="9" style="background-color:#1e3a8a; color:white; font-size:16px; padding:10px; text-align:center;">
+                        SỔ THEO DÕI DẠY THAY - DẠY BÙ<br>
+                        <span style="font-size:13px; font-weight:normal;">${org} · Năm học ${schoolYear} · Tháng ${monthNum}</span>
+                    </th>
+                </tr>
+                <tr style="background-color:#f1f5f9; font-weight:bold; text-align:center;">
+                    <th style="padding:8px;">STT</th>
+                    <th style="padding:8px;">Loại</th>
+                    <th style="padding:8px;">Ngày & Thứ</th>
+                    <th style="padding:8px;">Buổi</th>
+                    <th style="padding:8px;">Chi tiết từng tiết & lớp</th>
+                    <th style="padding:8px;">Tổng tiết</th>
+                    <th style="padding:8px;">GV thực dạy</th>
+                    <th style="padding:8px;">Thay cho GV</th>
+                    <th style="padding:8px;">Lý do / Căn cứ</th>
+                </tr>
+                ${rows}
+                <tr><td colspan="9" style="border:none; height:18px;"></td></tr>
+                <tr>
+                    <td colspan="4" style="border:none; text-align:center;">
+                        <b>Tổ trưởng chuyên môn</b><br>
+                        <span style="font-style:italic;">(Ký, ghi rõ họ tên)</span>
+                    </td>
+                    <td colspan="5" style="border:none; text-align:center;">
+                        Ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}<br>
+                        <b>Hiệu trưởng</b><br>
+                        <span style="font-style:italic;">(Ký, ghi rõ họ tên)</span>
+                    </td>
+                </tr>
+            </table>`;
+
+            downloadExcelFile(table, `So_Day_Thay_Thang_${monthNum}_${state.info.title}`);
         }
 
         // ================= 4. BÁO CÁO & THỐNG KÊ TỔ =================
@@ -3258,7 +4005,9 @@
         function handleExportExcel() {
             if (!requirePlanConfiguration()) return;
             const currentTab = document.querySelector('.view-tab-btn.active')?.id;
-            if (currentTab === 'tab-nav-chamcong') {
+            if (currentTab === 'tab-nav-daythay') {
+                exportDayThayToExcel();
+            } else if (currentTab === 'tab-nav-chamcong') {
                 exportAttendanceToExcel();
             } else if (currentTab === 'tab-nav-tanggio') {
                 exportOvertimeToExcel();
@@ -3412,11 +4161,11 @@
                         <td style="padding: 5px; text-align: center;">${item.type === 'replacement' ? 'Dạy thay' : 'Dạy bù'}</td>
                         <td style="padding: 5px; text-align: center;">${item.date}</td>
                         <td style="padding: 5px; text-align: center;">${item.session === 'morning' ? 'Sáng' : 'Chiều'}</td>
-                        <td style="padding: 5px; text-align: center;">${item.period || '—'}</td>
-                        <td style="padding: 5px; text-align: center; font-weight: bold;">${item.class_name || '—'}</td>
+                        <td style="padding: 5px; text-align: center;">${item.period || (getPeriodsDetail(item).map(p => 'Tiết ' + p.period_num).join(', ')) || '—'}</td>
+                        <td style="padding: 5px; text-align: center; font-weight: bold;">${item.class_name || (getPeriodsDetail(item).map(p => p.class_name).filter(Boolean).join(', ')) || '—'}</td>
                         <td style="padding: 5px; font-weight: bold;">${t ? t.name : '—'}</td>
                         <td style="padding: 5px;">${forT ? forT.name : (item.for_other || '—')}</td>
-                        <td style="padding: 5px; text-align: center; font-weight: bold;">${item.period_count || 1}</td>
+                        <td style="padding: 5px; text-align: center; font-weight: bold;">${getSubPeriodCount(item)}</td>
                         <td style="padding: 5px;">${item.reason || ''}</td>
                     </tr>`;
                 });
