@@ -1,225 +1,190 @@
-# PLAN: Tái Cấu Trúc Giao Diện Chuyên Nghiệp, Tách Tab Sổ Dạy Thay Riêng & Tối Ưu Phân Bổ Chi Tiết Từng Tiết Cho Các Lớp (phancongtochuyenmon.html)
+# PLAN: Tùy Chỉnh Khung Tiết Buổi Sáng & Chiều + Tích Hợp AI Nhận Diện Thời Khóa Biểu Giáo Viên (phancongtochuyenmon.html)
 
-## Hiện trạng
-1. **Giao diện tổng thể bị rối**:
-   - Thanh Top Navbar (`#top-navbar`) dồn ép quá nhiều thành phần vào một hàng duy nhất: Logo, tên tổ, bộ chọn đợt, 4 tab chuyển đổi (view switcher), nút khai báo tổ, cụm nút CSDL (Lưu/Nạp), cụm nút File (Mở/Xuất JSON), nút Xuất Excel, nút Trang chủ. Khi hiển thị trên màn hình máy tính thông thường hoặc chia đôi cửa sổ, navbar bị vỡ hàng, các nút chen chúc gây rối mắt.
-   - Các bảng dữ liệu (Bảng chấm công, Quyết toán tăng giờ, Báo cáo) thiếu sticky header, viền và khoảng cách chưa chuẩn UI hiện đại.
-   - Các khối phân loại màu sắc chưa đồng nhất, tạo cảm giác chật chội và kém chuyên nghiệp.
-2. **Chức năng Dạy Thay bị chôn vùi trong Chấm Công**:
-   - Hiện tại, chức năng Dạy Thay - Dạy Bù chỉ được mở qua nút bấm nhỏ (`openSubstituteModal()`) bên trong Tab "Chấm công GV".
-   - Giáo viên hoặc Tổ trưởng phải vào Chấm công mới mở được modal sổ dạy thay, không gian modal popup nhỏ hẹp, khó quan sát tổng thể nhật ký trong tháng.
-3. **Chức năng Dạy Thay chưa tối ưu phân bổ từng tiết cho từng lớp**:
-   - Trong dữ liệu hiện tại (`state.attendance.substitutes`), một bản ghi chỉ chứa 1 trường `class_name` duy nhất và 1 trường `period_count` (số tiết).
-   - **Vấn đề thực tế**: Khi một giáo viên dạy thay 3 tiết trong 1 buổi (ví dụ: Tiết 1 dạy lớp 9A1, Tiết 2 dạy lớp 9A2, Tiết 4 dạy lớp 8A3), form hiện tại chỉ cho chọn đúng 1 lớp duy nhất và nhập số 3. Người dùng không thể nhập chi tiết tiết 1 ở lớp nào, tiết 2 lớp nào, tiết 3 lớp nào, gây sai lệch thông tin và khó theo dõi.
+## Hiện trạng & Nhu cầu người dùng
+1. **Khung tiết cứng nhắc**:
+   - Hiện tại, khu vực "Phân bổ từng tiết" của Sổ Dạy Thay đang gán cứng 5 tiết: `[1, 2, 3, 4, 5]` cho cả sáng và chiều.
+   - Thực tế các trường có khung tiết khác nhau: sáng có nơi học 4 tiết (`1-4`), chiều có nơi học 3 tiết (`7-9` hoặc `6-8`) hoặc 4 tiết (`1-4`, `6-9`).
+2. **Nhu cầu quản lý Thời khoá biểu (TKB) và nhận diện AI**:
+   - Mỗi giáo viên trong tổ đều có Thời khoá biểu riêng theo tuần (gồm Thứ 2 đến Thứ 7, từng tiết dạy môn gì, lớp nào).
+   - Người dùng muốn: Chọn giáo viên $\rightarrow$ Dán ảnh chụp TKB (Ctrl+V) $\rightarrow$ AI nhận diện tự động cấu trúc TKB và lưu lại.
+   - **Giá trị cốt lõi**: Khi ghi nhận Sổ Dạy Thay, chọn ngày dạy (ví dụ Thứ 4) và chọn GV được thay (ví dụ Cô Ánh hoặc Thầy Danh) $\rightarrow$ Hệ thống tự động tra TKB của GV đó và tự động điền sẵn các tiết, lớp học và môn học tương ứng, người dùng không cần mở ảnh TKB để tra cứu thủ công từng tiết.
 
 ---
 
-## Mục tiêu cải thiện
-1. **Thiết kế lại giao diện Top Header & Navigation chuẩn chuyên nghiệp**:
-   - Phân chia bố cục 2 tầng khoa học:
-     + **Tầng 1 (Brand & Action Bar)**: Logo Tổ, Tên Tổ & Năm học (click để sửa nhanh), Trạng thái kết nối CSDL, Nút "Lưu CSDL" nổi bật (kèm trạng thái auto-save), Menu gom nhóm công cụ (File/Excel/Khai báo/Trang chủ).
-     + **Tầng 2 (Workspace Bar & Tabs)**: 
-       * Bên trái: 5 Tab làm việc hiện đại, có icon và số thứ tự rõ ràng:
-         1. 📋 Phân công giảng dạy
-         2. 📅 Sổ Dạy Thay - Bù (TÁCH THÀNH TAB RIÊNG)
-         3. ⏱️ Chấm công GV
-         4. 🧮 Tăng Giờ
-         5. 📊 Báo cáo & Thống kê
-       * Bên phải: Bộ chọn Đợt phân công (`Phase Selector`) thanh lịch và nút `+ Đợt mới`.
-   - Cải tiến Design System: Bảng màu chuẩn Slate/Indigo, các card và bảng dữ liệu bo góc hiện đại, sticky header bảng, hover mượt mà.
-2. **Tách chức năng Dạy Thay thành một Tab riêng biệt (Tab 2: `view-daythay`)**:
-   - Tạo Tab chính `tab-nav-daythay` và màn hình `view-daythay` toàn trang thay thế hoàn toàn cho modal nhỏ hẹp cũ.
-   - Bố cục Tab Sổ Dạy Thay gồm:
-     + Khối Form Ghi nhận lượt Dạy thay / Dạy bù (có hỗ trợ chế độ Thêm mới và Chỉnh sửa bản ghi).
-     + Khối Thống kê nhanh theo tháng (Tổng lượt, Tổng tiết dạy thay, Tổng tiết dạy bù).
-     + Khối Bảng Nhật ký chi tiết kèm bộ lọc đa năng (Lọc theo tháng, lọc theo GV dạy, lọc theo loại, tìm kiếm theo tên/lớp/lý do).
-     + Nút "Xuất Excel Sổ Dạy Thay" độc lập và Nút "Đồng bộ số tiết sang Chấm Công".
-   - Giữ liên kết nhanh từ Tab Chấm Công: Cột "Dạy thay" và "Dạy bù" vẫn tự động nhận số tiết, kèm nút mở nhanh chuyển sang Tab Sổ Dạy Thay.
-3. **Tối ưu phân bổ từng tiết học cho từng lớp cụ thể (Period Slots Builder)**:
-   - Trong form ghi nhận: Khi chọn Buổi (Sáng hoặc Chiều), hệ thống hiển thị danh sách các tiết học trong buổi (Tiết 1 đến Tiết 5):
-     + Cho phép chọn/bật từng tiết (Tiết 1, 2, 3, 4, 5) bằng switch/checkbox hoặc nút thêm tiết linh hoạt.
-     + Với mỗi tiết được kích hoạt: Cho phép chọn **Lớp học** tương ứng từ danh mục lớp (`state.classes`) và chọn **Môn học** (từ `state.subjects` hoặc mặc định).
-     + Các nút thao tác nhanh: `[+ Tiết 1-2]`, `[+ Tiết 1-3]`, `[+ Tiết 3-4]`, `[+ Cả buổi 1-5]`, `[Xóa chọn]`.
-     + Tổng số tiết (`period_count`) tự động tính = số tiết đã gán, không cần nhập tay.
-   - Bảng nhật ký hiển thị rõ ràng từng tag/badge: `[Tiết 1: 9A1]` `[Tiết 2: 9A2]` `[Tiết 4: 8A3]`.
-   - Đảm bảo tính tương thích ngược 100% với dữ liệu cũ đã lưu trên LocalStorage và CSDL MySQL.
+## Mục tiêu kỹ thuật
+
+### Phần 1: Tùy chỉnh khung tiết Sáng / Chiều linh hoạt
+1. Lưu cấu hình khung tiết vào `state.info`:
+   - `morning_periods`: Mặc định `'1-5'` (cho phép người dùng đổi thành `'1-4'`, `'1-5'`...).
+   - `afternoon_periods`: Mặc định `'1-4'` (cho phép người dùng đổi thành `'7-9'`, `'6-9'`, `'1-4'`...).
+2. Hỗ trợ nhập định dạng dải (VD: `1-4`, `7-9`) hoặc liệt kê cách nhau bởi dấu phẩy (VD: `7, 8, 9`).
+3. Cung cấp 2 nơi cấu hình:
+   - Nút `⚙️ Khung tiết` ngay tại thanh công cụ của Sổ Dạy Thay (sửa nhanh).
+   - Trong Modal "Khai báo tổ" (tab Thông tin tổ).
+4. Dropdown Buổi dạy và Lưới Slot Builder:
+   - Dropdown Buổi dạy tự động đổi nhãn: `Sáng (tiết 1 - 4)`, `Chiều (tiết 7 - 9)`.
+   - Lưới hiển thị đúng các tiết theo buổi: Sáng hiện `Tiết 1 - 4`, Chiều hiện `Tiết 7, 8, 9`.
+   - Nút chọn nhanh tự động sinh phù hợp theo dải tiết (`+ Tiết 7-8`, `+ Tiết 8-9`, `+ Cả buổi (7-9)`).
+   - Nút `+ Thêm tiết` để chèn thêm tiết bất kỳ đột xuất và nút `✕` để xóa bớt slot tiết.
+
+### Phần 2: Quản lý Thời khoá biểu Giáo viên + AI Gemini Vision nhận diện
+1. **Cấu trúc dữ liệu TKB**:
+   - Thêm trường `timetable` vào đối tượng mỗi giáo viên trong `state.teachers`:
+     ```javascript
+     {
+       updated_at: '2026-09-07',
+       school_year: '2026 - 2027',
+       semester: 'Học kỳ 1',
+       morning: {
+         "2": { "3": { subject: "Toán", class_name: "63" }, "4": { subject: "Toán", class_name: "64" } },
+         "3": { "1": { subject: "Toán", class_name: "63" }, "3": { subject: "Toán", class_name: "64" }, "4": { subject: "Toán", class_name: "94" } },
+         "4": { "1": { subject: "Toán", class_name: "93" }, "2": { subject: "Toán", class_name: "93" }, "3": { subject: "Toán", class_name: "94" }, "4": { subject: "Toán", class_name: "94" } },
+         "5": { "2": { subject: "Toán", class_name: "64" }, "3": { subject: "Toán", class_name: "63" }, "4": { subject: "Toán", class_name: "93" } },
+         "6": { "1": { subject: "Toán", class_name: "63" }, "2": { subject: "Toán", class_name: "94" }, "3": { subject: "Toán", class_name: "64" }, "4": { subject: "Toán", class_name: "93" } },
+         "7": {}
+       },
+       afternoon: {
+         "2": {}, "3": {}, "4": {}, "5": {}, "6": {}, "7": {}
+       }
+     }
+     ```
+2. **Modal Thời khoá biểu Giáo viên (`#teacher-timetable-modal`)**:
+   - Mở từ nút `📅 Thời khoá biểu` trên thẻ card của Giáo viên ở View 1 hoặc nút `📅 TKB Giáo viên` tại Tab Sổ Dạy Thay.
+   - Vùng dán ảnh thông minh (`#tt-dropzone`): Hỗ trợ **Ctrl + V dán ảnh chụp màn hình**, kéo thả hoặc chọn file ảnh.
+   - Nút `✨ AI nhận diện TKB (Gemini Vision)`:
+     + Chuyển ảnh sang Base64.
+     + Gửi tới proxy backend `api/khbd_gemini.php` (sử dụng model `gemini-2.5-flash` và API key sẵn có của user).
+     + AI phân tích ma trận buổi Sáng / Chiều $\times$ Thứ 2 - Thứ 7 $\times$ Tiết $\rightarrow$ Trả về JSON chuẩn.
+   - Lưới ma trận Thời khóa biểu tuần trực quan:
+     + Hiển thị bảng Sáng & Chiều từ Thứ 2 đến Thứ 7.
+     + Các ô có thể click trực tiếp để chỉnh sửa môn và lớp.
+     + Nút `Lưu Thời khoá biểu`.
+3. **Tính năng Tự động điền tiết thông minh trong Sổ Dạy Thay**:
+   - Khi chọn Ngày dạy (VD: 09/09/2026 $\rightarrow$ Thứ Tư), Buổi dạy (Sáng), và chọn "Dạy thay cho giáo viên: Thầy Danh":
+     + Hệ thống kiểm tra nếu Thầy Danh đã có TKB:
+       - Tự động lấy danh sách tiết của Thầy Danh vào sáng Thứ Tư (Tiết 1: 93, Tiết 2: 93, Tiết 3: 94, Tiết 4: 94).
+       - Tự động tick chọn và điền vào các slot tương ứng trong Period Slots Builder!
+       - Có nút bấm thủ công: `⚡ Lấy tiết từ TKB giáo viên` để người dùng chủ động nạp lại bất kỳ lúc nào.
 
 ---
 
 ## Phạm vi thực hiện
-1. **Giao diện & Bố cục (`phancongtochuyenmon.html`)**:
-   - Cập nhật cấu trúc HTML của Header, thanh Navigation 5 tab, và thêm container `div.app-view#view-daythay`.
-   - Cập nhật CSS: Phong cách thiết kế hiện đại, typography, spacing, card styles, form controls, badges và responsive layout.
-2. **Logic chức năng Sổ Dạy Thay (`phancongtochuyenmon.html`)**:
-   - Nâng cấp cấu trúc dữ liệu bản ghi dạy thay:
-     ```javascript
-     {
-       id: 'sub_' + Date.now(),
-       type: 'replacement', // 'replacement' | 'makeup'
-       date: 'YYYY-MM-DD',
-       session: 'morning', // 'morning' | 'afternoon'
-       teacher_id: '...', // GV thực dạy
-       for_teacher_id: '...', // GV được thay (hoặc để trống nếu dạy bù)
-       for_other: '',
-       reason: '...',
-       // Phân bổ chi tiết từng tiết cho từng lớp:
-       periods_detail: [
-         { period_num: 1, class_name: '9A1', subject: 'Toán' },
-         { period_num: 2, class_name: '9A2', subject: 'Toán' },
-         { period_num: 4, class_name: '8A3', subject: 'Toán' }
-       ],
-       // Tương thích ngược:
-       period_count: 3,
-       period: 'Tiết 1 (9A1), Tiết 2 (9A2), Tiết 4 (8A3)',
-       class_name: '9A1, 9A2, 8A3'
-     }
-     ```
-   - Xây dựng giao diện Slot Picker cho 5 tiết: Checkbox chọn tiết + Select chọn lớp cho tiết đó + Select chọn môn.
-   - Xây dựng hàm `renderDayThayView()`: Render form, thống kê số liệu tháng, bảng nhật ký có bộ lọc (tháng, giáo viên, tìm kiếm).
-   - Thêm chức năng **Chỉnh sửa (Edit)** bản ghi: Bấm nút Sửa sẽ nạp dữ liệu cũ vào form để cập nhật.
-   - Thêm chức năng **Xuất Excel riêng cho Sổ Dạy Thay - Dạy Bù** chuẩn mẫu văn bản trường học.
-   - Giữ nguyên cơ chế đồng bộ `autoSyncSubstitutePeriods()` sang Bảng Chấm Công và Quyết Toán Tăng Giờ.
-3. **Cập nhật Điều hướng App View (`switchAppView`)**:
-   - Bổ sung `view-daythay` vào `switchAppView(viewId)`: Tự động kích hoạt tab, nạp danh sách giáo viên/lớp vào form và render bảng nhật ký.
-
----
-
-## Ngoài phạm vi
-- Không thay đổi backend `api/phancong.php` vì trường `data_json` lưu trữ toàn bộ state dưới dạng JSON, cấu trúc mới hoàn toàn tương thích với JSON hiện có.
-- Không thay đổi các bảng cơ sở dữ liệu MySQL khác.
+1. **Frontend HTML/CSS/JS (`phancongtochuyenmon.html`)**:
+   - Thêm HTML Modal Thời khóa biểu giáo viên (`#teacher-timetable-modal`) kèm vùng dán ảnh, nút nhận diện AI và lưới bảng tuần.
+   - Thêm nút mở TKB trong thẻ card giáo viên và trong tab Sổ Dạy Thay.
+   - Bổ sung cấu hình khung tiết Sáng / Chiều (`morning_periods`, `afternoon_periods`) trong State và giao diện.
+   - Xây dựng logic gọi AI Gemini Vision qua `api/khbd_gemini.php` để đọc ảnh TKB.
+   - Tích hợp tự động điền slot tiết trong Sổ Dạy Thay dựa theo TKB của GV được thay.
+2. **Backend**:
+   - Tận dụng `api/khbd_gemini.php` đã có sẵn trong hệ thống (hỗ trợ gọi Gemini với API Key từ session, không cần viết backend mới).
 
 ---
 
 ## File dự kiến tác động
-- `phancongtochuyenmon.html` [SỬA: Tái cấu trúc Header/Tabs, tạo View Dạy Thay mới, bổ sung Period Slot Picker, hoàn thiện CSS/JS]
-- `docs/handoff/PLAN.md` [GHI ĐÈ: Tài liệu handoff này]
+- `phancongtochuyenmon.html` [SỬA: Cấu hình khung tiết, Modal TKB giáo viên, AI Vision bóc tách TKB, tích hợp tự động điền Sổ Dạy Thay]
+- `docs/handoff/PLAN.md` [GHI ĐÈ: Kế hoạch này]
 - `docs/handoff/.lock` [GHI: LOCK]
 
 ---
 
 ## Chi tiết các bước thực hiện cho Coder
 
-### Bước 1: Tái cấu trúc HTML Header & Thanh Điều Hướng (Tabs)
-1. **Header chính**:
-   - Chia thành cụm Trái (Logo, Tên tổ, Năm học, DB status) và cụm Phải (Nút Lưu CSDL dạng primary có icon xoay khi lưu, Nút "Khai báo tổ", Cụm menu "Công cụ / Tệp" gồm: Nạp CSDL, Mở JSON, Xuất JSON, Xuất Excel, Nút Trang chủ).
-2. **Thanh Tabs (Sub-navbar)**:
-   - Thêm tab thứ 2:
-     ```html
-     <button class="view-tab-btn" id="tab-nav-daythay" onclick="switchAppView('view-daythay')">
-         <i class="fas fa-book-bookmark text-blue-600"></i> 2. Sổ Dạy Thay - Bù
-     </button>
-     ```
-   - Đánh số lại các tab: 1. Phân công, 2. Sổ Dạy Thay - Bù, 3. Chấm công GV, 4. Tăng Giờ, 5. Báo cáo & Thống kê.
-   - Đặt bộ chọn Đợt (`phase-selector-wrapper`) và nút `+ Đợt mới` sang góc phải của thanh Sub-navbar một cách gọn gàng, tách biệt với Header chính.
-
-### Bước 2: Tạo màn hình Tab mới `view-daythay`
-1. **Thêm container view**:
-   ```html
-   <!-- 2. VIEW SỔ THEO DÕI DẠY THAY & DẠY BÙ (TAB RIÊNG) -->
-   <div class="app-view" id="view-daythay">
-       <!-- Bố cục 2 khối: Khối Form Ghi Nhận & Khối Bảng Nhật Ký -->
-   </div>
+### Bước 1: Quản lý Cấu hình Khung tiết Sáng / Chiều
+1. Khai báo mặc định trong `defaultState.info`:
+   ```javascript
+   morning_periods: '1-5',
+   afternoon_periods: '1-4',
    ```
-2. **Khối Form Ghi Nhận (Card nhập liệu chuyên nghiệp)**:
-   - **Hàng 1**: Loại hình (Dạy thay / Dạy bù), Ngày dạy (kèm hiển thị thứ trong tuần), Buổi dạy (Sáng / Chiều - khi đổi buổi sẽ cập nhật nhãn tiết 1-5 buổi sáng/chiều).
-   - **Hàng 2**: Giáo viên thực dạy, Dạy thay cho giáo viên (hoặc Lớp bù), Lý do / Căn cứ thay (Nghỉ phép, Công tác, Ốm, Bồi dưỡng chuyên môn...).
-   - **Hàng 3 - KHU VỰC PHÂN BỔ TỪNG TIẾT (Period Slots Builder)**:
-     - Tạo một container bảng/lưới chứa 5 tiết của buổi (Tiết 1 -> Tiết 5):
-       + Checkbox chọn tiết `[x] Tiết X`
-       + Dropdown chọn Lớp cho tiết X (render từ `state.classes`)
-       + Dropdown chọn Môn cho tiết X (render từ `state.subjects`)
-       + Textbox ghi chú tiết (tùy chọn)
-     - Dải nút chọn nhanh: `[+ Tiết 1-2]`, `[+ Tiết 1-3]`, `[+ Tiết 3-4]`, `[+ Cả buổi (1-5)]`, `[Bỏ chọn tất cả]`.
-     - Badge tổng số tiết: `Tổng cộng: X tiết` (tự động tính realtime khi người dùng click chọn tiết).
-   - **Hàng nút bấm**: Nút "Lưu vào Sổ Dạy Thay" (hoặc "Cập nhật thay đổi" khi đang ở chế độ sửa), Nút "Làm mới / Hủy sửa".
+2. Viết hàm phân tích dải tiết `parsePeriodsConfig(val, defaultArr)` và `getSessionPeriods(session)`.
+3. Cập nhật nhãn `#new-sub-session` thành:
+   `Sáng (tiết ${mRange})` và `Chiều (tiết ${aRange})`.
+4. Cập nhật `initPeriodSlotsBuilder()`: Lấy danh sách số tiết theo buổi từ `getSessionPeriods(session)` (ví dụ chiều là `[7, 8, 9]`).
+5. Thêm nút `⚙️ Khung tiết` trên toolbar Form Sổ Dạy Thay mở modal/dialog nhỏ cho phép sửa nhanh Sáng / Chiều và lưu.
 
-3. **Khối Thống kê & Bảng Nhật Ký**:
-   - Bộ lọc đầu bảng:
-     + Chọn tháng (Tháng 1 -> 12).
-     + Lọc theo Giáo viên (Tất cả GV hoặc chọn GV cụ thể).
-     + Lọc theo Loại (Tất cả / Dạy thay / Dạy bù).
-     + Ô tìm kiếm nhanh (tìm kiếm tên GV, lớp học, lý do).
-   - 3 Chip Thống kê nhanh: Tổng lượt trong tháng, Tổng số tiết dạy thay (+), Tổng số tiết dạy bù.
-   - Nút hành động: `[Xuất Excel Sổ Dạy Thay]` và `[Đồng bộ số tiết sang Chấm Công]`.
-   - **Bảng Nhật Ký**:
-     + Cột STT, Loại, Ngày & Thứ, Buổi.
-     + Cột **Chi tiết từng tiết & Lớp**: Hiển thị các tag nổi bật (ví dụ: `<span class="period-tag">Tiết 1: 9A1</span> <span class="period-tag">Tiết 2: 9A2</span> <span class="period-tag">Tiết 4: 8A3</span>`).
-     + Cột Tổng số tiết (badge đậm).
-     + Cột GV thực dạy, Thay cho GV, Lý do.
-     + Cột Thao tác: Nút Sửa (✏️) nạp lại form để chỉnh sửa, Nút Xóa (🗑️).
+### Bước 2: Xây dựng Modal Thời khóa biểu Giáo viên & Vùng Dán Ảnh
+1. Thêm modal `#teacher-timetable-modal`:
+   - Header: Chọn giáo viên cần xem/nhập TKB (dropdown danh sách GV).
+   - Cột 1 / Phía trên: Vùng Upload & Dán ảnh TKB (`#tt-dropzone`):
+     + Lắng nghe sự kiện `paste` trên window hoặc dropzone:
+       ```javascript
+       window.addEventListener('paste', (e) => {
+         const items = e.clipboardData?.items;
+         // Kiểm tra nếu có item image, đọc FileReader thành Base64 và hiển thị preview
+       });
+       ```
+     + Nút: `<button id="btn-ai-scan-tt" onclick="scanTimetableWithAI()"><i class="fas fa-wand-magic-sparkles"></i> AI Nhận diện TKB</button>`.
+   - Cột 2 / Phía dưới: Bảng Lưới Thời khóa biểu tuần trực quan:
+     + Bảng gồm 2 phần: Buổi sáng và Buổi chiều.
+     + Cột: Tiết, Thứ 2, Thứ 3, Thứ 4, Thứ 5, Thứ 6, Thứ 7.
+     + Mỗi ô cho phép click vào để chỉnh sửa nhanh nội dung (Môn - Lớp).
+     + Nút `Lưu Thời khoá biểu`.
 
-### Bước 3: Cập nhật CSS Giao Diện Chuyên Nghiệp
-1. Nâng cấp CSS màu sắc, typography, shadows, bo góc `rounded-xl`, badge, input focus rings theo phong cách Tailwind UI / Modern SaaS.
-2. Thiết kế giao diện riêng cho `Period Slots Builder`: Các ô tiết hiển thị dạng thẻ card nhỏ trực quan, khi checkbox được tick thì sáng màu nổi bật (Indigo tint), khi chưa tick thì mờ nhạt (disabled).
-3. Thêm CSS cho bảng Sticky Header (`position: sticky; top: 0; z-index: 10; background: #f8fafc;`) để khi cuộn dữ liệu dài không bị mất tiêu đề cột.
+### Bước 3: Logic AI Gemini Vision nhận diện Thời khoá biểu
+1. Khi bấm `AI Nhận diện TKB`:
+   - Lấy chuỗi base64 của ảnh TKB (từ dán ảnh hoặc upload file).
+   - Tạo payload gửi đến `api/khbd_gemini.php`:
+     ```javascript
+     const prompt = `Bạn là trợ lý AI chuyên nhận diện bảng Thời khóa biểu giáo viên THCS tại Việt Nam.
+Hãy đọc ảnh Thời khóa biểu đính kèm và trích xuất thành định dạng JSON chuẩn.
+Cấu trúc JSON yêu cầu:
+{
+  "teacher_name": "Tên giáo viên trong ảnh",
+  "school": "Tên trường",
+  "school_year": "Năm học",
+  "semester": "Học kỳ",
+  "morning": {
+    "2": { "1": "Toán - 63", "2": "...", ... },
+    "3": { ... },
+    "4": { ... },
+    "5": { ... },
+    "6": { ... },
+    "7": { ... }
+  },
+  "afternoon": {
+    "2": { ... },
+    ...
+  }
+}
+Quy tắc:
+- Key của các ngày: "2" (Thứ 2), "3" (Thứ 3), "4" (Thứ 4), "5" (Thứ 5), "6" (Thứ 6), "7" (Thứ 7).
+- Key của các tiết là số tiết (ví dụ: "1", "2", "3", "4", "5", hoặc "7", "8", "9").
+- Giá trị mỗi tiết là chuỗi định dạng "TênMôn - TênLớp" (ví dụ: "Toán - 63", "HĐTN - 64"), nếu tiết trống thì bỏ qua hoặc để rỗng "".
+- Chỉ trả về duy nhất khối JSON hợp lệ, không bọc thêm văn bản giải thích.`;
+     ```
+   - Gọi `fetch('api/khbd_gemini.php', { method: 'POST', body: JSON.stringify({ model: 'gemini-2.5-flash', payload: { contents: [ ... ] } }) })`.
+   - Nhận kết quả JSON, bóc tách và tự động điền vào Lưới ma trận TKB trên Modal để người dùng kiểm tra.
 
-### Bước 4: Viết JavaScript Xử Lý Nghiệp Vụ Mới
-1. **Hàm chuyển view `switchAppView(viewId)`**:
-   - Bổ sung xử lý: Khi `viewId === 'view-daythay'`, gọi hàm `renderDayThayView()`.
-2. **Hàm khởi tạo Form phân bổ tiết (`initPeriodSlotsBuilder()`)**:
-   - Render 5 hàng/thẻ tương ứng với 5 tiết của buổi (Sáng hoặc Chiều).
-   - Lắng nghe sự kiện tick/untick để cập nhật trạng thái disabled của select lớp và tự động đếm tổng số tiết.
-   - Viết các hàm trợ giúp chọn nhanh: `setQuickSlots([1,2])`, `setQuickSlots([1,2,3])`, `clearAllSlots()`.
-3. **Hàm Lưu / Cập nhật lượt dạy thay (`saveDayThayRecord()`)**:
-   - Thu thập thông tin chung (loại, ngày, buổi, GV dạy, GV được thay, lý do).
-   - Thu thập mảng `periods_detail`: Lọc các tiết được tick chọn, lấy `period_num`, `class_name`, `subject`.
-   - Kiểm tra hợp lệ: Bắt buộc chọn GV dạy và phải chọn ít nhất 1 tiết (kèm lớp).
-   - Tính toán các trường tương thích ngược:
-     + `period_count = periods_detail.length`
-     + `period = periods_detail.map(p => 'Tiết ' + p.period_num + ' (' + p.class_name + ')').join(', ')`
-     + `class_name = [...new Set(periods_detail.map(p => p.class_name))].join(', ')`
-   - Nếu đang sửa (`editingSubId`): Cập nhật bản ghi tương ứng; nếu mới: `push` bản ghi mới.
-   - Tự động gọi `autoSyncSubstitutePeriods()` để số tiết tự động cập nhật ngay lập tức vào Bảng Chấm Công.
-   - Lưu vào LocalStorage / kích hoạt Auto-save CSDL.
-4. **Hàm Sửa bản ghi (`editDayThayRecord(id)`)**:
-   - Tìm bản ghi theo `id`, fill dữ liệu lên các trường của form.
-   - Đánh dấu các slot tiết tương ứng trong `periods_detail` (nếu là bản ghi cũ chưa có `periods_detail`, tự động trích xuất tiết từ chuỗi `period` hoặc tick tiết 1 với số tiết = `period_count`).
-   - Đổi nút Lưu thành "Cập nhật thay đổi", cuộn mượt lên đầu form.
-5. **Hàm Xuất Excel Sổ Dạy Thay (`exportDayThayToExcel()`)**:
-   - Tạo file Excel định dạng HTML table chuẩn gồm tiêu đề trường học, tháng, bảng nhật ký có liệt kê chi tiết từng tiết cho từng lớp, chữ ký Tổ trưởng chuyên môn và Hiệu trưởng.
-6. **Cập nhật Tab Chấm Công (`view-chamcong`)**:
-   - Thay nút "Sổ Dạy Thay - Dạy Bù (X lượt)" cũ bằng nút "Xem chi tiết Sổ Dạy Thay (X lượt)" để chuyển nhanh sang Tab 2 (`switchAppView('view-daythay')`).
-   - Cột "Dạy thay (tiết)" và "Dạy bù (tiết)" trong Bảng Chấm Công vẫn tự động hiển thị số tiết được tổng hợp chính xác từ Tab Sổ Dạy Thay.
-
----
-
-## Rủi ro & Giải pháp
-1. **Rủi ro tương thích dữ liệu cũ**: Người dùng có thể đã có dữ liệu chấm công và dạy thay cũ đã lưu trên máy hoặc CSDL chưa có mảng `periods_detail`.
-   - *Giải pháp*: Trong tất cả các hàm render và tính toán, luôn kiểm tra nếu `item.periods_detail` tồn tại thì render chi tiết, nếu không thì fallback về `item.period` và `item.class_name` cũ. Hàm tính toán số tiết ưu tiên `item.period_count || item.periods_detail?.length || 1`.
-2. **Rủi ro giao diện vỡ trên màn hình nhỏ**:
-   - *Giải pháp*: Dùng CSS Grid và Flex-wrap có kiểm soát, thiết lập `min-width` hợp lý cho các cột bảng và cho phép cuộn ngang (`overflow-x: auto`) mượt mà trên thiết bị di động / tablet.
+### Bước 4: Tích hợp TKB vào Sổ Dạy Thay
+1. Trong Tab 2 (Sổ Dạy Thay):
+   - Thêm nút `⚡ Lấy tiết từ TKB` cạnh khu vực phân bổ tiết.
+   - Khi người dùng thay đổi Ngày dạy (`#new-sub-date`) hoặc Buổi dạy (`#new-sub-session`) hoặc GV được thay (`#new-sub-for-teacher`):
+     - Hàm `autoSuggestSlotsFromTimetable()` kiểm tra:
+       + Lấy thứ trong tuần từ Ngày dạy (2 đến 7).
+       + Lấy giáo viên từ `#new-sub-for-teacher`.
+       + Tra trong `teacher.timetable[session][dayOfWeek]`:
+       + Nếu có các tiết dạy: Tự động tick chọn các slot tiết tương ứng, điền đúng Lớp học và Môn học!
+       + Hiển thị thông báo toast: *"Đã nạp tự động X tiết từ TKB của giáo viên [Tên GV]"*.
 
 ---
 
 ## Cách kiểm thử
-1. **Kiểm tra giao diện tổng thể**:
-   - Mở `phancongtochuyenmon.html` trên trình duyệt: Header sạch sẽ, gọn gàng, không bị tràn vỡ nút.
-   - Thanh điều hướng có 5 tab rõ ràng, chuyển đổi giữa 5 tab mượt mà.
-2. **Kiểm tra Tab Sổ Dạy Thay & Nhập chi tiết từng tiết**:
-   - Chuyển sang Tab "2. Sổ Dạy Thay - Bù".
-   - Chọn ngày dạy: 15/09/2025, Buổi Sáng.
-   - Chọn GV dạy: Thầy A, Dạy thay cho: Cô B.
-   - Trong khu vực chọn tiết:
-     + Chọn Tiết 1: Chọn lớp `9A1`.
-     + Chọn Tiết 2: Chọn lớp `9A2`.
-     + Chọn Tiết 4: Chọn lớp `8A3`.
-   - Quan sát badge tổng số tiết: Hiển thị đúng `3 tiết`.
-   - Bấm "Lưu vào Sổ Dạy Thay".
-   - Kiểm tra Bảng Nhật Ký: Xuất hiện dòng mới hiển thị đúng các tag `Tiết 1: 9A1`, `Tiết 2: 9A2`, `Tiết 4: 8A3`, tổng tiết là 3.
-3. **Kiểm tra chức năng Sửa & Xóa**:
-   - Bấm nút Sửa bản ghi vừa tạo: Form được điền lại đúng các tiết và lớp đã chọn.
-   - Đổi lớp Tiết 4 thành `8A4` và bấm "Cập nhật thay đổi": Bảng cập nhật chính xác.
-4. **Kiểm tra đồng bộ sang Tab Chấm Công & Tăng Giờ**:
-   - Chuyển sang Tab "3. Chấm công GV": Cột "Dạy thay (tiết)" của Thầy A trong Tháng 9 hiển thị đúng `3` tiết.
-   - Chuyển sang Tab "4. Tăng Giờ": Bảng quyết toán tính đúng 3 tiết dạy thay cộng thêm vào tổng số tiết thực dạy của Thầy A.
-5. **Kiểm tra Xuất Excel**:
-   - Bấm "Xuất Excel Sổ Dạy Thay": File tải về mở được trên Excel, có đầy đủ cột chi tiết tiết và lớp.
+1. **Kiểm tra Cấu hình Khung tiết**:
+   - Đổi khung tiết: Sáng `1-4`, Chiều `7-9`.
+   - Kiểm tra Tab Sổ Dạy Thay hiển thị đúng các slot: Sáng `1 - 4`, Chiều `7 - 9`.
+2. **Kiểm tra Nhập TKB và Dán ảnh (Ctrl+V)**:
+   - Mở modal TKB của Thầy Danh.
+   - Dán ảnh chụp màn hình TKB (Ctrl+V) $\rightarrow$ Preview ảnh xuất hiện.
+   - Bấm `AI Nhận diện TKB` $\rightarrow$ Sau vài giây, bảng ma trận tuần hiển thị đúng các tiết của Thầy Danh (như Thứ 3 tiết 1: Toán 63, Thứ 4 tiết 1-2: Toán 93, tiết 3-4: Toán 94...).
+   - Bấm `Lưu Thời khoá biểu`.
+3. **Kiểm tra Tự động điền tiết trong Sổ Dạy Thay**:
+   - Sang Tab Sổ Dạy Thay.
+   - Chọn ngày Thứ Tư, Buổi Sáng, chọn Dạy thay cho: Thầy Danh.
+   - Quan sát lưới tiết: Hệ thống tự động tick chọn Tiết 1 (93), Tiết 2 (93), Tiết 3 (94), Tiết 4 (94), tổng số tiết tự tính là 4 tiết!
 
 ---
 
-## Tiêu chí nghiệm thu (Acceptance Criteria)
-1. Giao diện toàn trang được cải thiện chuyên nghiệp, hiện đại, bố cục header và các tab ngăn nắp, không bị rối mắt.
-2. Chức năng Sổ Dạy Thay - Dạy Bù đã được tách thành một Tab riêng biệt, dễ dàng truy cập và quản lý toàn diện.
-3. Người dùng nhập được cụ thể từng tiết cho từng lớp học khác nhau trong cùng một buổi dạy thay/dạy bù (ví dụ: Tiết 1 lớp 9A1, Tiết 2 lớp 9A2, Tiết 4 lớp 8A3).
-4. Dữ liệu dạy thay đồng bộ tự động sang Tab Chấm Công và Quyết Toán Tăng Giờ mà không phát sinh lỗi.
-5. Tương thích 100% với dữ liệu cũ và CSDL backend MySQL (`api/phancong.php`).
+## Tiêu chí nghiệm thu
+1. Người dùng tùy chỉnh được khung tiết Sáng / Chiều tự do (ví dụ: Sáng 1-4, Chiều 7-9).
+2. Tích hợp giao diện quản lý Thời khóa biểu cá nhân cho từng Giáo viên.
+3. Hỗ trợ dán ảnh (Ctrl+V) hoặc upload ảnh TKB và dùng AI Gemini Vision bóc tách tự động chính xác lịch dạy tuần.
+4. Sổ Dạy Thay tự động gợi ý / điền nhanh các tiết học cần dạy thay dựa trên TKB của giáo viên được thay.

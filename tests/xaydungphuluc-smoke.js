@@ -101,6 +101,11 @@ assert.notEqual(bai1Yccd,bai2Yccd,'adjacent lessons must not share a topic-wide 
 const practiceYccd=getCleanOfficialYccd({subjectId:'toan',grade:'6',topic:'Luyện tập chung',contextTopic:'Bài 5. Phép nhân và phép chia số tự nhiên'});
 assert(/phép.*nhân|phép.*chia|luỹ thừa/i.test(practiceYccd),'practice lessons must inherit the preceding topic context');
 assert(!/chia hết|ước chung|bội chung|số nguyên tố/i.test(practiceYccd),'practice after Bài 5 must not inherit divisibility or factor outcomes from later Chapter I lessons');
+const orphanPractice=getCleanOfficialYccd({subjectId:'toan',grade:'6',topic:'Luyện tập chung'});
+assert(!/phần tử thuộc|thuật ngữ tập hợp/i.test(orphanPractice||''),'practice without chapter context must not steal Bài 1 Tập hợp YCCĐ');
+const integerPracticeYccd=getCleanOfficialYccd({subjectId:'toan',grade:'6',topic:'Luyện tập chung',contextTopic:'Bài 16. Phép nhân số nguyên'});
+assert(/số nguyên|phép nhân/i.test(integerPracticeYccd),'practice after Bài 16 must stay in integer multiplication');
+assert(!/tập hợp số tự nhiên|phần tử thuộc/i.test(integerPracticeYccd),'practice after Bài 16 must not fall back to Chapter I Tập hợp');
 const chapterOneReview=getCleanOfficialYccd({subjectId:'toan',grade:'6',topic:'Bài tập cuối chương I',chapterTopic:'CHƯƠNG I. TẬP HỢP SỐ TỰ NHIÊN'});
 assert(/số tự nhiên|tập hợp|phép tính|chia hết|ước/i.test(chapterOneReview),'chapter I review must remain in the natural-number domain');
 assert(!/điểm|đường thẳng|tia|góc|tam giác|phân số/i.test(chapterOneReview),'chapter I review must never leak geometry or fractions');
@@ -259,6 +264,7 @@ assert(appendixOne.rows[1].cells[4].includes('Áp dụng: tiết 1'),'partial se
 sandbox.getCleanOfficialYccd=()=>'- Thực hiện được phép cộng và phép trừ số nguyên.';
 const cleanAppendixOne=vm.runInContext(`sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Bài 14. Phép cộng và phép trừ số nguyên','1'],isHeader:false}]};appendixOneTable([{lesson:'Bài 14. Phép cộng và phép trừ số nguyên',outcomes:'Nguồn bắt buộc: CTGDPT 2018. Bài SGK: Bài 14.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
 assert.equal(cleanAppendixOne.rows[0].cells[3],'- Thực hiện được phép cộng và phép trừ số nguyên.','PL1 must replace metadata outcomes with clean YCCĐ');
+sandbox.getCleanOfficialYccd=getCleanOfficialYccd;
 const chapterScopedReview=vm.runInContext(`sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['CHƯƠNG II. SỐ NGUYÊN',''],isHeader:true},{cells:['Ôn tập chương II','1'],isHeader:false}]};appendixOneTable([{lesson:'Ôn tập chương II',outcomes:'Củng cố được kiến thức số nguyên và phép tính với số nguyên.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
 assert(chapterScopedReview.rows[1].cells[3].includes('số nguyên'),'a chapter review must retain the outcome from its current chapter context');
 const chapterOneIsolation=vm.runInContext(`sourcePpctTable=null;sourcePpctRows=[{lesson:'CHƯƠNG I. TẬP HỢP SỐ TỰ NHIÊN',isHeader:true},{lesson:'Bài tập cuối chương I',periods:'1',isHeader:false}];appendixOneTable([{lesson:'Bài tập cuối chương I',outcomes:'Nhận biết được điểm, đường thẳng và góc.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
@@ -267,6 +273,12 @@ assert(!/điểm|đường thẳng|góc/i.test(chapterOneIsolation.rows[1].cells
 const chapterOnePracticeFallback=vm.runInContext(`officialYccdCache.clear();sourcePpctTable=null;sourcePpctRows=[{lesson:'CHƯƠNG I. TẬP HỢP SỐ TỰ NHIÊN',isHeader:true},{lesson:'Bài 5. Phép nhân và phép chia số tự nhiên',periods:'1',isHeader:false},{lesson:'Luyện tập chung',periods:'1',isHeader:false}];appendixOneTable([{lesson:'Bài 5. Phép nhân và phép chia số tự nhiên',outcomes:'Thực hiện phép nhân và phép chia số tự nhiên.'},{lesson:'Luyện tập chung',outcomes:'Nhận biết được điểm, đường thẳng và góc.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
 assert(/phép.*nhân|phép.*chia|luỹ thừa/i.test(chapterOnePracticeFallback.rows[2].cells[3]),'PL1 practice fallback after Bài 5 must use the preceding calculation topic');
 assert(!/chia hết|ước chung|bội chung|số nguyên tố/i.test(chapterOnePracticeFallback.rows[2].cells[3]),'PL1 practice fallback after Bài 5 must not use whole-chapter review outcomes');
+assert.equal(typeof sandbox.practiceContextFromRows,'function','practice lessons must resolve chapter context from preceding PPCT rows');
+const integerPracticeTable=vm.runInContext(`officialYccdCache.clear();sourcePpctTable=null;sourcePpctRows=[{lesson:'Bài 16. Phép nhân số nguyên',periods:'1',isHeader:false},{lesson:'Luyện tập chung',periods:'1',isHeader:false}];appendixOneTable([{lesson:'Bài 16. Phép nhân số nguyên',outcomes:'Thực hiện được phép nhân số nguyên.'},{lesson:'Luyện tập chung',outcomes:'Nhận biết được điểm, đường thẳng và góc.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
+assert(/số nguyên|phép nhân/i.test(integerPracticeTable.rows[1].cells[3]),'PL1 luyện tập chung after Bài 16 must use integer-chapter YCCĐ even without a CHƯƠNG header');
+assert(!/điểm|đường thẳng|phần tử thuộc/i.test(integerPracticeTable.rows[1].cells[3]),'PL1 luyện tập chung after Bài 16 must not keep leaked geometry or Tập hợp outcomes');
+const consecutivePractice=vm.runInContext(`officialYccdCache.clear();sourcePpctTable=null;sourcePpctRows=[{lesson:'Bài 5. Phép nhân và phép chia số tự nhiên',periods:'1',isHeader:false},{lesson:'Luyện tập chung',periods:'1',isHeader:false},{lesson:'Luyện tập chung',periods:'1',isHeader:false}];appendixOneTable([{lesson:'Bài 5. Phép nhân và phép chia số tự nhiên',outcomes:'Thực hiện phép nhân và phép chia số tự nhiên.'},{lesson:'Luyện tập chung',outcomes:'Nhận biết được điểm, đường thẳng và góc.'},{lesson:'Luyện tập chung',outcomes:'Nhận biết được điểm, đường thẳng và góc.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
+assert(/phép.*nhân|phép.*chia|luỹ thừa/i.test(consecutivePractice.rows[2].cells[3]),'a second Luyện tập chung must keep the last content lesson, not the previous practice row');
 assert.equal(vm.runInContext("densityLowerBound('1-2')",sandbox),1,'NLS density 1-2 must select one digital standard');
 assert.equal(vm.runInContext("densityLowerBound('2-3')",sandbox),2,'NLS density 2-3 must select two digital standards');
 assert.equal(vm.runInContext("densityLowerBound('3-4')",sandbox),3,'NLS density 3-4 must select three digital standards');

@@ -756,13 +756,84 @@
         .period-slot .slot-head {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 8px;
             font-weight: 800;
             font-size: 0.82rem;
             color: #334155;
             margin-bottom: 8px;
+        }
+        .period-slot .slot-head label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            min-width: 0;
+        }
+        .slot-remove {
+            border: none;
+            background: #fee2e2;
+            color: #b91c1c;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            cursor: pointer;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .slot-remove:hover { background: #fecaca; color: #991b1b; }
+        .quick-slot-buttons {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .period-preset-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 8px;
+            border: 1px solid #c7d2fe;
+            background: #eef2ff;
+            color: #3730a3;
+            font-size: 0.75rem;
+            font-weight: 800;
             cursor: pointer;
         }
+        .period-preset-chip:hover { background: #e0e7ff; }
+
+        .tt-dropzone {
+            border: 2px dashed #c7d2fe;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .tt-dropzone.dragover { background: #eef2ff; border-color: #818cf8; }
+        .tt-preview { max-height: 180px; max-width: 100%; border-radius: 8px; margin-top: 8px; display: none; }
+        .tt-grid { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        .tt-grid th, .tt-grid td { border: 1px solid #e2e8f0; padding: 4px; text-align: center; min-width: 86px; }
+        .tt-grid th { background: #f8fafc; font-weight: 800; color: #334155; }
+        .tt-cell {
+            min-height: 44px;
+            width: 100%;
+            border: none;
+            background: #eef2ff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #312e81;
+            padding: 4px 3px;
+            line-height: 1.25;
+        }
+        .tt-cell.empty { background: #f8fafc; color: #94a3b8; font-weight: 600; }
+        .tt-cell:hover { outline: 2px solid #818cf8; }
         .period-slot .slot-fields {
             display: flex;
             flex-direction: column;
@@ -1275,14 +1346,14 @@
                 </div>
                 <div class="form-group">
                     <label>Ngày dạy:</label>
-                    <input type="date" class="form-control" id="new-sub-date" onchange="updateDateWeekday()">
+                    <input type="date" class="form-control" id="new-sub-date" onchange="updateDateWeekday(); maybeAutoSuggestSlotsFromTimetable()">
                     <span class="weekday-hint" id="new-sub-weekday"></span>
                 </div>
                 <div class="form-group">
                     <label>Buổi dạy:</label>
                     <select class="form-control" id="new-sub-session" onchange="onDayThaySessionChange()">
                         <option value="morning">Sáng (tiết 1 - 5)</option>
-                        <option value="afternoon">Chiều (tiết 1 - 5)</option>
+                        <option value="afternoon">Chiều (tiết 1 - 4)</option>
                     </select>
                 </div>
             </div>
@@ -1295,7 +1366,7 @@
                 </div>
                 <div class="form-group" id="group-for-teacher">
                     <label id="label-for-teacher">Dạy thay cho giáo viên:</label>
-                    <select class="form-control" id="new-sub-for-teacher">
+                    <select class="form-control" id="new-sub-for-teacher" onchange="maybeAutoSuggestSlotsFromTimetable()">
                         <!-- Render từ teachers -->
                     </select>
                 </div>
@@ -1318,11 +1389,10 @@
                     <span style="font-size:0.82rem; font-weight:800; color:#1e293b;">
                         <i class="fas fa-table-cells" style="color:#4338ca;"></i> Phân bổ từng tiết cho từng lớp
                     </span>
-                    <button type="button" class="btn-small" onclick="setQuickSlots([1,2])">+ Tiết 1-2</button>
-                    <button type="button" class="btn-small" onclick="setQuickSlots([1,2,3])">+ Tiết 1-3</button>
-                    <button type="button" class="btn-small" onclick="setQuickSlots([3,4])">+ Tiết 3-4</button>
-                    <button type="button" class="btn-small" onclick="setQuickSlots([1,2,3,4,5])">+ Cả buổi (1-5)</button>
-                    <button type="button" class="btn-small" onclick="clearAllSlots()">Bỏ chọn tất cả</button>
+                    <button type="button" class="btn-small" onclick="openQuickPeriodsConfig()"><i class="fas fa-gear"></i> Khung tiết</button>
+                    <button type="button" class="btn-small" onclick="openTeacherTimetableModal()"><i class="fas fa-calendar-days"></i> TKB Giáo viên</button>
+                    <button type="button" class="btn-small" onclick="autoSuggestSlotsFromTimetable()"><i class="fas fa-bolt"></i> Lấy tiết từ TKB</button>
+                    <span id="quick-slot-buttons" class="quick-slot-buttons"></span>
                     <span class="slots-total-badge" id="slots-total-badge"><i class="fas fa-hashtag"></i> Tổng cộng: 0 tiết</span>
                 </div>
                 <div class="period-slots-grid" id="period-slots-builder">
@@ -1646,6 +1716,85 @@
         </div>
     </div>
 
+    <!-- MODAL CẤU HÌNH NHANH KHUNG TIẾT SÁNG / CHIỀU -->
+    <div class="modal-overlay" id="periods-config-modal">
+        <div class="modal-card" style="max-width: 520px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-clock"></i> Khung tiết buổi Sáng / Chiều</h2>
+                <button class="modal-close" onclick="closeQuickPeriodsConfig()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin: 0 0 12px 0; font-size: 0.82rem; color: #64748b;">Nhập dải tiết (VD: <b>1-4</b>, <b>7-9</b>) hoặc liệt kê (VD: <b>7, 8, 9</b>).</p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Buổi Sáng:</label>
+                        <input type="text" class="form-control" id="quick-cfg-morning" placeholder="VD: 1-5 hoặc 1-4">
+                    </div>
+                    <div class="form-group">
+                        <label>Buổi Chiều:</label>
+                        <input type="text" class="form-control" id="quick-cfg-afternoon" placeholder="VD: 1-4 hoặc 7-9">
+                    </div>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
+                    <button type="button" class="period-preset-chip" onclick="applyPeriodPreset('1-5','1-4')">Sáng 1-5, Chiều 1-4</button>
+                    <button type="button" class="period-preset-chip" onclick="applyPeriodPreset('1-4','7-9')">Sáng 1-4, Chiều 7-9</button>
+                    <button type="button" class="period-preset-chip" onclick="applyPeriodPreset('1-5','6-9')">Sáng 1-5, Chiều 6-9</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-small" onclick="closeQuickPeriodsConfig()">Hủy</button>
+                <button class="btn-small btn-small-primary" onclick="saveQuickPeriodsConfig()"><i class="fas fa-check"></i> Lưu khung tiết</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL THỜI KHÓA BIỂU GIÁO VIÊN -->
+    <div class="modal-overlay" id="teacher-timetable-modal">
+        <div class="modal-card" style="max-width: 1120px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-calendar-days"></i> Thời khoá biểu giáo viên</h2>
+                <button class="modal-close" onclick="closeTeacherTimetableModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid" style="grid-template-columns: 1.4fr 1fr 1fr; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label>Giáo viên:</label>
+                        <select class="form-control" id="tt-teacher-select" onchange="onTimetableTeacherChange()">
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Năm học:</label>
+                        <input type="text" class="form-control" id="tt-school-year" placeholder="VD: 2026 - 2027">
+                    </div>
+                    <div class="form-group">
+                        <label>Học kỳ:</label>
+                        <input type="text" class="form-control" id="tt-semester" placeholder="VD: Học kỳ 1">
+                    </div>
+                </div>
+                <div class="tt-dropzone" id="tt-dropzone" onclick="document.getElementById('tt-file-input').click()">
+                    <input type="file" id="tt-file-input" accept="image/*" class="hidden" onchange="handleTimetableFile(this.files && this.files[0])">
+                    <div><i class="fas fa-image" style="font-size:1.4rem; color:#4338ca;"></i></div>
+                    <p style="margin:8px 0 4px; font-weight:800;">Dán ảnh TKB (Ctrl+V), kéo thả hoặc bấm để chọn file</p>
+                    <p class="text-sm" style="margin:0; color:#64748b;">Ảnh chụp màn hình Thời khoá biểu giáo viên (JPG/PNG)</p>
+                    <img id="tt-preview" class="tt-preview" alt="Xem trước TKB">
+                </div>
+                <div style="display:flex; justify-content:flex-end; margin:10px 0 14px;">
+                    <button type="button" class="btn-small btn-small-primary" id="btn-ai-scan-tt" onclick="scanTimetableWithAI()">
+                        <i class="fas fa-wand-magic-sparkles"></i> AI nhận diện TKB
+                    </button>
+                </div>
+                <h4 style="margin:0 0 8px; font-size:0.88rem; font-weight:800;">Buổi sáng</h4>
+                <div style="overflow-x:auto; margin-bottom:16px;" id="tt-morning-wrap"></div>
+                <h4 style="margin:0 0 8px; font-size:0.88rem; font-weight:800;">Buổi chiều</h4>
+                <div style="overflow-x:auto;" id="tt-afternoon-wrap"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-small" onclick="closeTeacherTimetableModal()">Đóng</button>
+                <button class="btn-small btn-small-primary" onclick="saveTeacherTimetable()"><i class="fas fa-floppy-disk"></i> Lưu Thời khoá biểu</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL MA TRẬN & THỐNG KÊ PHÂN CÔNG TOÀN DIỆN -->
     <div class="modal-overlay" id="matrix-modal">
         <div class="modal-card" style="max-width: 1080px;">
@@ -1725,6 +1874,23 @@
                             <label>Mã kế hoạch (Key):</label>
                             <input type="text" class="form-control" id="cfg-plan-key" placeholder="default" value="default">
                         </div>
+                    </div>
+
+                    <div style="margin-top: 16px;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 0.88rem; font-weight: 800; color: #334155;">
+                            <i class="fas fa-clock"></i> Khung tiết buổi học (Sổ Dạy Thay)
+                        </h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Khung tiết buổi Sáng:</label>
+                                <input type="text" class="form-control" id="cfg-morning-periods" placeholder="VD: 1-5 hoặc 1-4" value="1-5">
+                            </div>
+                            <div class="form-group">
+                                <label>Khung tiết buổi Chiều:</label>
+                                <input type="text" class="form-control" id="cfg-afternoon-periods" placeholder="VD: 1-4 hoặc 7-9 hoặc 6-9" value="1-4">
+                            </div>
+                        </div>
+                        <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: #64748b;">Nhập dải <b>1-4</b>, <b>7-9</b> hoặc liệt kê <b>7, 8, 9</b>.</p>
                     </div>
 
                     <div style="margin-top: 20px;">
@@ -1897,7 +2063,9 @@
                 school_year: '',
                 semester: '',
                 plan_key: 'default',
-                current_phase_id: ''
+                current_phase_id: '',
+                morning_periods: '1-5',
+                afternoon_periods: '1-4'
             },
             phases: [],
             subjects: [],
@@ -1923,6 +2091,8 @@
         let isSavingInProgress = false;
         let hasUnsavedChanges = false;
         let editingSubId = null;
+        let extraPeriodSlots = [];
+        let hiddenPeriodSlots = new Set();
 
         function setLocalStorageScope(currentUser) {
             const userId = Number(currentUser?.id || 0);
@@ -1948,6 +2118,8 @@
             if (!s || typeof s !== 'object') s = {};
             if (!s.info || typeof s.info !== 'object') s.info = { ...defaultState.info };
             s.info = { ...defaultState.info, ...s.info };
+            if (!s.info.morning_periods) s.info.morning_periods = '1-5';
+            if (!s.info.afternoon_periods) s.info.afternoon_periods = '1-4';
             if (!Array.isArray(s.phases)) s.phases = [];
             if (s.phases.length && !s.phases.some(p => p.id === s.info.current_phase_id)) {
                 s.info.current_phase_id = s.phases[0].id;
@@ -1993,6 +2165,7 @@
                         t.assignments[sub.key] = Array.isArray(t[sub.key]) ? t[sub.key] : [];
                     }
                 });
+                t.timetable = normalizeTeacherTimetable(t.timetable);
             });
 
             const curPhase = s.info.current_phase_id;
@@ -2771,7 +2944,9 @@
                             </div>
                             <div class="footer-row total-row">
                                 <span class="quota-status-badge ${badgeClass}">${badgeText}</span>
-                                <span class="total-periods">${totalPeriods} tiết</span>
+                                <button type="button" class="btn-small" onclick="openTeacherTimetableModal('${t.id}')" title="Thời khoá biểu giáo viên">
+                                    <i class="fas fa-calendar-days"></i> Thời khoá biểu
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -3373,16 +3548,16 @@
                     note: ''
                 }));
             }
-            const nums = [...periodStr.matchAll(/(\d+)/g)].map(m => parseInt(m[1], 10)).filter(n => n >= 1 && n <= 5);
+            const nums = [...periodStr.matchAll(/(\d+)/g)].map(m => parseInt(m[1], 10)).filter(n => n >= 1 && n <= 15);
             let periodNums = [];
             const rangeMatch = periodStr.match(/(\d+)\s*-\s*(\d+)/);
             if (rangeMatch && nums.length <= 2) {
                 const a = parseInt(rangeMatch[1], 10), b = parseInt(rangeMatch[2], 10);
-                for (let i = Math.min(a, b); i <= Math.max(a, b) && i <= 5; i++) periodNums.push(i);
+                for (let i = Math.min(a, b); i <= Math.max(a, b) && i <= 15; i++) periodNums.push(i);
             } else if (nums.length) {
                 periodNums = [...new Set(nums)];
             } else {
-                const count = Math.min(5, Math.max(1, parseInt(item.period_count, 10) || 1));
+                const count = Math.min(15, Math.max(1, parseInt(item.period_count, 10) || 1));
                 periodNums = Array.from({ length: count }, (_, i) => i + 1);
             }
             return periodNums.map(n => ({ period_num: n, class_name: className, subject, note: '' }));
@@ -3426,22 +3601,126 @@
             return (state.subjects && state.subjects[0] && state.subjects[0].name) || '';
         }
 
+        function parsePeriodsConfig(val, defaultArr = [1, 2, 3, 4, 5]) {
+            const fallback = Array.isArray(defaultArr) && defaultArr.length ? defaultArr.slice() : [1, 2, 3, 4, 5];
+            if (val == null || String(val).trim() === '') return fallback;
+            const str = String(val).trim();
+            const rangeMatch = str.match(/^(\d+)\s*-\s*(\d+)$/);
+            if (rangeMatch) {
+                const start = parseInt(rangeMatch[1], 10);
+                const end = parseInt(rangeMatch[2], 10);
+                const min = Math.max(1, Math.min(start, end));
+                const max = Math.min(15, Math.max(start, end));
+                const result = [];
+                for (let i = min; i <= max; i++) result.push(i);
+                return result.length ? result : fallback;
+            }
+            const list = str.split(/[,\s]+/).map(n => parseInt(n, 10)).filter(n => !isNaN(n) && n > 0 && n <= 15);
+            const unique = [...new Set(list)].sort((a, b) => a - b);
+            return unique.length ? unique : fallback;
+        }
+
+        function parsePeriodString(str, defaultList) {
+            return parsePeriodsConfig(str, defaultList);
+        }
+
+        function getSessionPeriods(session) {
+            const isAfternoon = session === 'afternoon';
+            const raw = isAfternoon ? state.info?.afternoon_periods : state.info?.morning_periods;
+            const fallback = isAfternoon ? [1, 2, 3, 4] : [1, 2, 3, 4, 5];
+            return parsePeriodsConfig(raw, fallback);
+        }
+
+        function formatPeriodSpan(periods, fallbackLabel) {
+            if (!periods || !periods.length) return fallbackLabel;
+            if (periods.length === 1) return String(periods[0]);
+            return `${periods[0]} - ${periods[periods.length - 1]}`;
+        }
+
+        function updateSessionSelectLabels() {
+            const mPeriods = getSessionPeriods('morning');
+            const aPeriods = getSessionPeriods('afternoon');
+            const mLabel = formatPeriodSpan(mPeriods, '1 - 5');
+            const aLabel = formatPeriodSpan(aPeriods, '1 - 4');
+            const sel = document.getElementById('new-sub-session');
+            if (!sel) return;
+            const optM = sel.querySelector('option[value="morning"]');
+            const optA = sel.querySelector('option[value="afternoon"]');
+            if (optM) optM.textContent = `Sáng (tiết ${mLabel})`;
+            if (optA) optA.textContent = `Chiều (tiết ${aLabel})`;
+        }
+
+        function getVisibleSlotNumbers() {
+            const nums = [...document.querySelectorAll('#period-slots-builder .period-slot')]
+                .map(slot => parseInt(slot.dataset.period, 10))
+                .filter(n => n > 0);
+            if (nums.length) return nums;
+            return getSessionPeriods(document.getElementById('new-sub-session')?.value || 'morning');
+        }
+
+        function snapshotPeriodSlots() {
+            const details = [];
+            document.querySelectorAll('#period-slots-builder .period-slot').forEach(slot => {
+                const cb = slot.querySelector('.slot-enable');
+                details.push({
+                    period_num: parseInt(slot.dataset.period, 10),
+                    class_name: slot.querySelector('.slot-class')?.value || '',
+                    subject: slot.querySelector('.slot-subject')?.value || '',
+                    note: (slot.querySelector('.slot-note')?.value || '').trim(),
+                    enabled: !!(cb && cb.checked)
+                });
+            });
+            return details;
+        }
+
+        function renderQuickSlotButtons() {
+            const host = document.getElementById('quick-slot-buttons');
+            if (!host) return;
+            const periods = getVisibleSlotNumbers();
+            let html = '';
+            for (let i = 0; i < periods.length - 1; i++) {
+                const a = periods[i], b = periods[i + 1];
+                html += `<button type="button" class="btn-small" onclick="setQuickSlots([${a},${b}])">+ Tiết ${a}-${b}</button>`;
+            }
+            if (periods.length) {
+                html += `<button type="button" class="btn-small" onclick="setQuickSlots([${periods.join(',')}])">+ Cả buổi (${periods[0]}-${periods[periods.length - 1]})</button>`;
+            }
+            html += `<button type="button" class="btn-small" onclick="clearAllSlots()">Bỏ chọn tất cả</button>`;
+            html += `<button type="button" class="btn-small" onclick="addCustomPeriodSlot()"><i class="fas fa-plus"></i> Thêm tiết</button>`;
+            host.innerHTML = html;
+        }
+
         function initPeriodSlotsBuilder(selectedDetails) {
             const wrap = document.getElementById('period-slots-builder');
             if (!wrap) return;
-            const sessionText = getSessionLabel(document.getElementById('new-sub-session')?.value || 'morning');
+            const session = document.getElementById('new-sub-session')?.value || 'morning';
+            const sessionText = getSessionLabel(session);
             const selectedMap = {};
-            (selectedDetails || []).forEach(p => { selectedMap[p.period_num] = p; });
-
-            wrap.innerHTML = [1, 2, 3, 4, 5].map(n => {
+            (selectedDetails || []).forEach(p => {
+                const n = parseInt(p.period_num, 10);
+                if (n > 0) selectedMap[n] = p;
+            });
+            const base = getSessionPeriods(session);
+            const fromSelected = Object.keys(selectedMap).map(n => parseInt(n, 10));
+            let nums = [...new Set([...base, ...fromSelected, ...extraPeriodSlots])]
+                .filter(n => n > 0 && n <= 15 && !hiddenPeriodSlots.has(n))
+                .sort((a, b) => a - b);
+            if (!nums.length) {
+                hiddenPeriodSlots.clear();
+                nums = base.slice();
+            }
+            wrap.innerHTML = nums.map(n => {
                 const sel = selectedMap[n];
                 const active = Boolean(sel);
                 return `
                     <div class="period-slot ${active ? 'active' : ''}" data-period="${n}">
-                        <label class="slot-head">
-                            <input type="checkbox" class="slot-enable" ${active ? 'checked' : ''} onchange="onSlotToggle(this)">
-                            <span class="slot-label">Tiết ${n} (${sessionText})</span>
-                        </label>
+                        <div class="slot-head">
+                            <label>
+                                <input type="checkbox" class="slot-enable" ${active ? 'checked' : ''} onchange="onSlotToggle(this)">
+                                <span class="slot-label">Tiết ${n} (${sessionText})</span>
+                            </label>
+                            <button type="button" class="slot-remove" title="Xóa tiết này" onclick="removePeriodSlot(${n})">✕</button>
+                        </div>
                         <div class="slot-fields">
                             <label>Lớp học</label>
                             <select class="form-control slot-class">${classOptionsHtml(sel ? sel.class_name : '')}</select>
@@ -3454,6 +3733,8 @@
                 `;
             }).join('');
             updateSlotsTotal();
+            renderQuickSlotButtons();
+            updateSessionSelectLabels();
         }
 
         function refreshSlotOptions() {
@@ -3466,11 +3747,526 @@
         }
 
         function onDayThaySessionChange() {
-            const sessionText = getSessionLabel(document.getElementById('new-sub-session')?.value || 'morning');
-            document.querySelectorAll('#period-slots-builder .slot-label').forEach(el => {
-                const n = el.closest('.period-slot')?.dataset.period;
-                if (n) el.textContent = `Tiết ${n} (${sessionText})`;
+            extraPeriodSlots = [];
+            hiddenPeriodSlots = new Set();
+            if (!maybeAutoSuggestSlotsFromTimetable()) initPeriodSlotsBuilder();
+        }
+
+        function removePeriodSlot(n) {
+            n = parseInt(n, 10);
+            extraPeriodSlots = extraPeriodSlots.filter(x => x !== n);
+            hiddenPeriodSlots.add(n);
+            const kept = snapshotPeriodSlots().filter(p => p.enabled && p.period_num !== n);
+            initPeriodSlotsBuilder(kept);
+        }
+
+        function addCustomPeriodSlot() {
+            const raw = prompt('Nhập số tiết muốn thêm (1–15), ví dụ: 5 hoặc 10:');
+            if (raw == null) return;
+            const n = parseInt(String(raw).trim(), 10);
+            if (!n || n < 1 || n > 15) {
+                alert('Số tiết không hợp lệ. Hãy nhập số từ 1 đến 15.');
+                return;
+            }
+            hiddenPeriodSlots.delete(n);
+            if (!extraPeriodSlots.includes(n)) extraPeriodSlots.push(n);
+            const kept = snapshotPeriodSlots().filter(p => p.enabled);
+            if (!kept.some(p => p.period_num === n)) kept.push({ period_num: n, class_name: '', subject: defaultSubjectName(), note: '' });
+            initPeriodSlotsBuilder(kept);
+            const slot = document.querySelector(`#period-slots-builder .period-slot[data-period="${n}"]`);
+            const cb = slot?.querySelector('.slot-enable');
+            if (cb && !cb.checked) {
+                cb.checked = true;
+                onSlotToggle(cb);
+            }
+        }
+
+        function openQuickPeriodsConfig() {
+            const m = document.getElementById('quick-cfg-morning');
+            const a = document.getElementById('quick-cfg-afternoon');
+            if (m) m.value = state.info?.morning_periods || '1-5';
+            if (a) a.value = state.info?.afternoon_periods || '1-4';
+            document.getElementById('periods-config-modal')?.classList.add('active');
+        }
+
+        function closeQuickPeriodsConfig() {
+            document.getElementById('periods-config-modal')?.classList.remove('active');
+        }
+
+        function applyPeriodPreset(morning, afternoon) {
+            const m = document.getElementById('quick-cfg-morning');
+            const a = document.getElementById('quick-cfg-afternoon');
+            if (m) m.value = morning;
+            if (a) a.value = afternoon;
+        }
+
+        function saveQuickPeriodsConfig() {
+            const morning = document.getElementById('quick-cfg-morning')?.value.trim() || '1-5';
+            const afternoon = document.getElementById('quick-cfg-afternoon')?.value.trim() || '1-4';
+            if (!state.info) state.info = {};
+            state.info.morning_periods = morning;
+            state.info.afternoon_periods = afternoon;
+            extraPeriodSlots = [];
+            hiddenPeriodSlots = new Set();
+            saveToLocal();
+            closeQuickPeriodsConfig();
+            updateSessionSelectLabels();
+            initPeriodSlotsBuilder();
+            showToast('Đã lưu khung tiết Sáng / Chiều.', 'success');
+        }
+
+        let editingTimetable = null;
+        let ttImageDataUrl = '';
+        let ttPasteBound = false;
+        const TT_DAYS = ['2', '3', '4', '5', '6', '7'];
+        const TT_DAY_LABELS = { 2: 'Thứ 2', 3: 'Thứ 3', 4: 'Thứ 4', 5: 'Thứ 5', 6: 'Thứ 6', 7: 'Thứ 7' };
+
+        function foldText(s) {
+            return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+        }
+
+        function emptyDayMap() {
+            const days = {};
+            TT_DAYS.forEach(d => { days[d] = {}; });
+            return days;
+        }
+
+        function emptyTimetable() {
+            return {
+                updated_at: '',
+                school_year: '',
+                semester: '',
+                morning: emptyDayMap(),
+                afternoon: emptyDayMap()
+            };
+        }
+
+        function normalizeTeacherTimetable(raw) {
+            const base = emptyTimetable();
+            if (!raw || typeof raw !== 'object') return base;
+            base.updated_at = raw.updated_at || '';
+            base.school_year = raw.school_year || '';
+            base.semester = raw.semester || '';
+            ['morning', 'afternoon'].forEach(session => {
+                const src = raw[session] && typeof raw[session] === 'object' ? raw[session] : {};
+                TT_DAYS.forEach(day => {
+                    const cells = src[day] && typeof src[day] === 'object' ? src[day] : {};
+                    const clean = {};
+                    Object.keys(cells).forEach(period => {
+                        const parsed = parseTimetableCell(cells[period]);
+                        if (parsed && (parsed.subject || parsed.class_name)) clean[String(period)] = parsed;
+                    });
+                    base[session][day] = clean;
+                });
             });
+            return base;
+        }
+
+        function parseTimetableCell(value) {
+            if (!value) return null;
+            if (typeof value === 'object') {
+                const subject = String(value.subject || '').trim();
+                const class_name = String(value.class_name || value.className || '').trim();
+                if (!subject && !class_name) return null;
+                return { subject, class_name };
+            }
+            const s = String(value).trim();
+            if (!s || s === '-' || s === '—' || s === '/') return null;
+            const m = s.match(/^(.+?)\s*[-–]\s*(.+)$/);
+            if (m) return { subject: m[1].trim(), class_name: m[2].trim() };
+            return { subject: s, class_name: '' };
+        }
+
+        function formatTimetableCell(cell) {
+            const parsed = parseTimetableCell(cell);
+            if (!parsed) return '';
+            if (parsed.subject && parsed.class_name) return `${parsed.subject} - ${parsed.class_name}`;
+            return parsed.subject || parsed.class_name;
+        }
+
+        function timetableHasLessons(tt) {
+            if (!tt) return false;
+            return ['morning', 'afternoon'].some(session =>
+                TT_DAYS.some(day => Object.keys(tt[session]?.[day] || {}).length > 0)
+            );
+        }
+
+        function persistTeacherTimetable(teacherId, timetable) {
+            const copy = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
+            const apply = teachers => {
+                const t = (teachers || []).find(x => x.id === teacherId);
+                if (t) t.timetable = JSON.parse(JSON.stringify(copy));
+            };
+            apply(state.teachers);
+            Object.values(state.phase_assignments || {}).forEach(snap => apply(snap.teachers));
+        }
+
+        function populateTimetableTeacherSelect(selectedId) {
+            const sel = document.getElementById('tt-teacher-select');
+            if (!sel) return;
+            sel.innerHTML = (state.teachers || []).map(t => `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${escapeHtml(t.name)} (${t.role})</option>`).join('');
+            if (selectedId && [...sel.options].some(o => o.value === selectedId)) sel.value = selectedId;
+        }
+
+        function openTeacherTimetableModal(teacherId) {
+            if (!state.teachers.length) {
+                showToast('Chưa có giáo viên trong tổ. Hãy khai báo tổ trước.', 'info');
+                return;
+            }
+            const preferred = teacherId || document.getElementById('new-sub-for-teacher')?.value || document.getElementById('new-sub-teacher')?.value || state.teachers[0].id;
+            populateTimetableTeacherSelect(preferred);
+            loadTimetableDraft(preferred);
+            ttImageDataUrl = '';
+            const preview = document.getElementById('tt-preview');
+            if (preview) { preview.src = ''; preview.style.display = 'none'; }
+            bindTimetableInputEvents();
+            document.getElementById('teacher-timetable-modal')?.classList.add('active');
+        }
+
+        function closeTeacherTimetableModal() {
+            document.getElementById('teacher-timetable-modal')?.classList.remove('active');
+        }
+
+        function loadTimetableDraft(teacherId) {
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            editingTimetable = normalizeTeacherTimetable(teacher?.timetable);
+            if (!editingTimetable.school_year) editingTimetable.school_year = state.info?.school_year || '';
+            if (!editingTimetable.semester) editingTimetable.semester = state.info?.semester || '';
+            const yearEl = document.getElementById('tt-school-year');
+            const semEl = document.getElementById('tt-semester');
+            if (yearEl) yearEl.value = editingTimetable.school_year || '';
+            if (semEl) semEl.value = editingTimetable.semester || '';
+            renderTimetableGrid();
+        }
+
+        function onTimetableTeacherChange() {
+            const id = document.getElementById('tt-teacher-select')?.value;
+            if (id) loadTimetableDraft(id);
+        }
+
+        function periodsForTimetableSession(session, timetable) {
+            const base = getSessionPeriods(session);
+            const extra = [];
+            const block = timetable?.[session] || {};
+            Object.values(block).forEach(day => {
+                Object.keys(day || {}).forEach(p => {
+                    const n = parseInt(p, 10);
+                    if (n > 0) extra.push(n);
+                });
+            });
+            return [...new Set([...base, ...extra])].sort((a, b) => a - b);
+        }
+
+        function renderTimetableGrid() {
+            if (!editingTimetable) editingTimetable = emptyTimetable();
+            renderTimetableSessionGrid('morning', 'tt-morning-wrap');
+            renderTimetableSessionGrid('afternoon', 'tt-afternoon-wrap');
+        }
+
+        function renderTimetableSessionGrid(session, wrapId) {
+            const wrap = document.getElementById(wrapId);
+            if (!wrap) return;
+            const periods = periodsForTimetableSession(session, editingTimetable);
+            const rows = periods.map(period => {
+                const cells = TT_DAYS.map(day => {
+                    const cell = editingTimetable[session]?.[day]?.[String(period)];
+                    const label = formatTimetableCell(cell);
+                    const cls = label ? 'tt-cell' : 'tt-cell empty';
+                    const text = label ? escapeHtml(label).replace(' - ', '<br>') : 'Trống';
+                    return `<td><button type="button" class="${cls}" onclick="editTimetableCell('${session}','${day}',${period})">${text}</button></td>`;
+                }).join('');
+                return `<tr><th>Tiết ${period}</th>${cells}</tr>`;
+            }).join('');
+            wrap.innerHTML = `<table class="tt-grid"><thead><tr><th>Tiết</th>${TT_DAYS.map(d => `<th>${TT_DAY_LABELS[d]}</th>`).join('')}</tr></thead><tbody>${rows || `<tr><td colspan="7" style="padding:12px;color:#94a3b8;">Chưa có tiết. Hãy cấu hình khung tiết hoặc nhận diện ảnh TKB.</td></tr>`}</tbody></table>`;
+        }
+
+        function editTimetableCell(session, day, period) {
+            if (!editingTimetable) editingTimetable = emptyTimetable();
+            const current = formatTimetableCell(editingTimetable[session]?.[day]?.[String(period)]);
+            const raw = prompt('Nhập Môn - Lớp (để trống nếu không dạy):', current);
+            if (raw == null) return;
+            const parsed = parseTimetableCell(raw);
+            if (!editingTimetable[session][day]) editingTimetable[session][day] = {};
+            if (parsed) editingTimetable[session][day][String(period)] = parsed;
+            else delete editingTimetable[session][day][String(period)];
+            renderTimetableGrid();
+        }
+
+        function bindTimetableInputEvents() {
+            const zone = document.getElementById('tt-dropzone');
+            if (zone && !zone.dataset.bound) {
+                zone.dataset.bound = '1';
+                zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+                zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+                zone.addEventListener('drop', e => {
+                    e.preventDefault();
+                    zone.classList.remove('dragover');
+                    const file = e.dataTransfer?.files?.[0];
+                    if (file) handleTimetableFile(file);
+                });
+            }
+            if (!ttPasteBound) {
+                ttPasteBound = true;
+                window.addEventListener('paste', e => {
+                    const modal = document.getElementById('teacher-timetable-modal');
+                    if (!modal?.classList.contains('active')) return;
+                    const items = e.clipboardData?.items;
+                    if (!items) return;
+                    for (const item of items) {
+                        if (item.type && item.type.startsWith('image/')) {
+                            e.preventDefault();
+                            handleTimetableFile(item.getAsFile());
+                            break;
+                        }
+                    }
+                });
+            }
+        }
+
+        function handleTimetableFile(file) {
+            if (!file || !String(file.type || '').startsWith('image/')) {
+                showToast('Hãy chọn hoặc dán một file ảnh TKB.', 'error');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => setTimetablePreview(String(reader.result || ''));
+            reader.readAsDataURL(file);
+        }
+
+        function setTimetablePreview(dataUrl) {
+            ttImageDataUrl = dataUrl;
+            const preview = document.getElementById('tt-preview');
+            if (preview && dataUrl) {
+                preview.src = dataUrl;
+                preview.style.display = 'inline-block';
+            }
+        }
+
+        function splitImageDataUrl(dataUrl) {
+            const match = String(dataUrl || '').match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+            if (!match) return null;
+            return { mime: match[1], base64: match[2] };
+        }
+
+        function compressTimetableImage(dataUrl) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(1, 1600 / Math.max(img.width, 1));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, Math.round(img.width * scale));
+                    canvas.height = Math.max(1, Math.round(img.height * scale));
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                };
+                img.onerror = () => resolve(dataUrl);
+                img.src = dataUrl;
+            });
+        }
+
+        function extractGeminiText(data) {
+            const body = data?.body && data.body.candidates ? data.body : data;
+            const parts = body?.candidates?.[0]?.content?.parts || [];
+            return parts.map(p => p.text || '').join('').trim();
+        }
+
+        function parseAiJson(text) {
+            const raw = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+            const start = raw.indexOf('{');
+            const end = raw.lastIndexOf('}');
+            if (start < 0 || end <= start) throw new Error('AI không trả về JSON hợp lệ.');
+            return JSON.parse(raw.slice(start, end + 1));
+        }
+
+        async function scanTimetableWithAI() {
+            if (!ttImageDataUrl) {
+                alert('Hãy dán hoặc tải ảnh Thời khoá biểu trước.');
+                return;
+            }
+            const btn = document.getElementById('btn-ai-scan-tt');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang nhận diện...';
+            }
+            try {
+                const compressed = await compressTimetableImage(ttImageDataUrl);
+                const parts = splitImageDataUrl(compressed);
+                if (!parts) throw new Error('Không đọc được dữ liệu ảnh.');
+                const prompt = `Bạn là trợ lý AI chuyên nhận diện bảng Thời khóa biểu giáo viên THCS tại Việt Nam.
+Hãy đọc ảnh Thời khóa biểu đính kèm và trích xuất thành định dạng JSON chuẩn.
+Cấu trúc JSON yêu cầu:
+{
+  "teacher_name": "Tên giáo viên trong ảnh",
+  "school": "Tên trường",
+  "school_year": "Năm học",
+  "semester": "Học kỳ",
+  "morning": {
+    "2": { "1": "Toán - 63", "2": "...", "...": "..." },
+    "3": {},
+    "4": {},
+    "5": {},
+    "6": {},
+    "7": {}
+  },
+  "afternoon": {
+    "2": {},
+    "3": {},
+    "4": {},
+    "5": {},
+    "6": {},
+    "7": {}
+  }
+}
+Quy tắc:
+- Key của các ngày: "2" (Thứ 2), "3" (Thứ 3), "4" (Thứ 4), "5" (Thứ 5), "6" (Thứ 6), "7" (Thứ 7).
+- Key của các tiết là số tiết (ví dụ: "1", "2", "3", "4", "5", hoặc "7", "8", "9").
+- Giá trị mỗi tiết là chuỗi định dạng "TênMôn - TênLớp" (ví dụ: "Toán - 63", "HĐTN - 64"), nếu tiết trống thì bỏ qua hoặc để rỗng "".
+- Chỉ trả về duy nhất khối JSON hợp lệ, không bọc thêm văn bản giải thích.`;
+                const payload = {
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            { inline_data: { mime_type: parts.mime, data: parts.base64 } }
+                        ]
+                    }],
+                    generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+                };
+                const res = await fetch('api/khbd_gemini.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    credentials: 'include',
+                    body: JSON.stringify({ model: 'gemini-2.5-flash', payload, timeout: 90 })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || data.ok === false) {
+                    throw new Error(data.error || data.body?.error?.message || `Gemini HTTP ${res.status}`);
+                }
+                const text = extractGeminiText(data);
+                const parsed = parseAiJson(text);
+                applyAiTimetableResult(parsed);
+                showToast('Đã nhận diện TKB. Hãy rà soát lưới rồi bấm Lưu.', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast(err.message || 'Không nhận diện được TKB.', 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> AI nhận diện TKB';
+                }
+            }
+        }
+
+        function applyAiTimetableResult(raw) {
+            const next = emptyTimetable();
+            next.school_year = raw.school_year || state.info?.school_year || '';
+            next.semester = raw.semester || state.info?.semester || '';
+            next.updated_at = new Date().toISOString().slice(0, 10);
+            ['morning', 'afternoon'].forEach(session => {
+                const src = raw[session] && typeof raw[session] === 'object' ? raw[session] : {};
+                TT_DAYS.forEach(day => {
+                    const cells = src[day] || src[Number(day)] || {};
+                    Object.keys(cells || {}).forEach(period => {
+                        const parsed = parseTimetableCell(cells[period]);
+                        if (parsed) next[session][day][String(period)] = parsed;
+                    });
+                });
+            });
+            editingTimetable = next;
+            const yearEl = document.getElementById('tt-school-year');
+            const semEl = document.getElementById('tt-semester');
+            if (yearEl) yearEl.value = next.school_year || '';
+            if (semEl) semEl.value = next.semester || '';
+            renderTimetableGrid();
+            const name = String(raw.teacher_name || '').trim();
+            if (name) {
+                const foldedName = foldText(name);
+                const match = (state.teachers || []).find(t => {
+                    const folded = foldText(t.name);
+                    return folded === foldedName || folded.includes(foldedName) || foldedName.includes(folded);
+                });
+                if (match) {
+                    const sel = document.getElementById('tt-teacher-select');
+                    if (sel) sel.value = match.id;
+                }
+            }
+        }
+
+        function saveTeacherTimetable() {
+            const teacherId = document.getElementById('tt-teacher-select')?.value;
+            if (!teacherId) {
+                alert('Hãy chọn giáo viên.');
+                return;
+            }
+            if (!editingTimetable) editingTimetable = emptyTimetable();
+            editingTimetable.school_year = document.getElementById('tt-school-year')?.value.trim() || state.info?.school_year || '';
+            editingTimetable.semester = document.getElementById('tt-semester')?.value.trim() || state.info?.semester || '';
+            editingTimetable.updated_at = new Date().toISOString().slice(0, 10);
+            persistTeacherTimetable(teacherId, editingTimetable);
+            saveCurrentPhaseSnapshot();
+            saveToLocal();
+            closeTeacherTimetableModal();
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            showToast(`Đã lưu Thời khoá biểu của ${teacher ? teacher.name : 'giáo viên'}.`, 'success');
+        }
+
+        function weekdayNumberFromDate(dateStr) {
+            if (!dateStr) return 0;
+            const d = new Date(dateStr + 'T00:00:00');
+            if (isNaN(d.getTime())) return 0;
+            const js = d.getDay();
+            if (js === 0) return 0;
+            return js + 1;
+        }
+
+        function getTimetableDaySlots(teacher, session, dayNum) {
+            const block = teacher?.timetable?.[session === 'afternoon' ? 'afternoon' : 'morning'];
+            const day = block?.[String(dayNum)] || {};
+            return Object.keys(day).map(period => {
+                const parsed = parseTimetableCell(day[period]);
+                const n = parseInt(period, 10);
+                if (!parsed || !n) return null;
+                return { period_num: n, class_name: parsed.class_name || '', subject: parsed.subject || '', note: '' };
+            }).filter(Boolean).sort((a, b) => a.period_num - b.period_num);
+        }
+
+        function autoSuggestSlotsFromTimetable(options = {}) {
+            const silentEmpty = Boolean(options.silentEmpty);
+            const date = document.getElementById('new-sub-date')?.value;
+            const session = document.getElementById('new-sub-session')?.value || 'morning';
+            const forId = document.getElementById('new-sub-for-teacher')?.value;
+            if (!forId) {
+                if (!silentEmpty) showToast('Hãy chọn giáo viên được thay để lấy tiết từ TKB.', 'info');
+                return false;
+            }
+            const teacher = state.teachers.find(t => t.id === forId);
+            if (!teacher) return false;
+            const dayNum = weekdayNumberFromDate(date);
+            if (!dayNum) {
+                if (!silentEmpty) showToast('Hãy chọn ngày dạy từ Thứ 2 đến Thứ 7.', 'info');
+                return false;
+            }
+            if (!timetableHasLessons(teacher.timetable)) {
+                if (!silentEmpty) showToast(`${teacher.name} chưa có Thời khoá biểu. Hãy mở TKB Giáo viên để nhập hoặc nhận diện ảnh.`, 'info');
+                return false;
+            }
+            const slots = getTimetableDaySlots(teacher, session, dayNum);
+            if (!slots.length) {
+                if (!silentEmpty) showToast(`${teacher.name} không có tiết ${session === 'afternoon' ? 'chiều' : 'sáng'} ${TT_DAY_LABELS[dayNum] || ''}.`, 'info');
+                return false;
+            }
+            extraPeriodSlots = slots.map(s => s.period_num);
+            hiddenPeriodSlots = new Set();
+            initPeriodSlotsBuilder(slots);
+            showToast(`Đã nạp tự động ${slots.length} tiết từ TKB của giáo viên ${teacher.name}`, 'success');
+            return true;
+        }
+
+        function maybeAutoSuggestSlotsFromTimetable() {
+            if (editingSubId) return false;
+            const type = document.getElementById('new-sub-type')?.value || 'replacement';
+            if (type === 'makeup') return false;
+            return autoSuggestSlotsFromTimetable({ silentEmpty: true });
         }
 
         function onSlotToggle(cb) {
@@ -3549,11 +4345,12 @@
             const dateEl = document.getElementById('new-sub-date');
             if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
             updateDateWeekday();
+            updateSessionSelectLabels();
             if (!document.querySelector('#period-slots-builder .period-slot')) {
                 initPeriodSlotsBuilder();
             } else {
                 refreshSlotOptions();
-                onDayThaySessionChange();
+                renderQuickSlotButtons();
             }
             toggleSubTypeLabel(document.getElementById('new-sub-type')?.value || 'replacement');
             renderDayThayJournal();
@@ -3766,6 +4563,8 @@
             if (reasonEl) reasonEl.value = item.reason || '';
             toggleSubTypeLabel(item.type || 'replacement');
             updateDateWeekday();
+            extraPeriodSlots = [];
+            hiddenPeriodSlots = new Set();
             initPeriodSlotsBuilder(getPeriodsDetail(item));
             const btn = document.getElementById('btn-save-daythay');
             if (btn) btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Cập nhật thay đổi';
@@ -3788,6 +4587,8 @@
             if (forTSel) forTSel.value = '';
             toggleSubTypeLabel('replacement');
             updateDateWeekday();
+            extraPeriodSlots = [];
+            hiddenPeriodSlots = new Set();
             initPeriodSlotsBuilder();
             const btn = document.getElementById('btn-save-daythay');
             if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Lưu vào Sổ Dạy Thay';
@@ -4241,6 +5042,10 @@
             document.getElementById('cfg-school-year').value = editingConfig.info?.school_year || '';
             document.getElementById('cfg-semester').value = editingConfig.info?.semester || 'HK1';
             document.getElementById('cfg-plan-key').value = editingConfig.info?.plan_key || 'default';
+            const cfgMorning = document.getElementById('cfg-morning-periods');
+            const cfgAfternoon = document.getElementById('cfg-afternoon-periods');
+            if (cfgMorning) cfgMorning.value = editingConfig.info?.morning_periods || '1-5';
+            if (cfgAfternoon) cfgAfternoon.value = editingConfig.info?.afternoon_periods || '1-4';
 
             document.getElementById('cfg-classes-text').value = (editingConfig.classes || []).join(', ');
             updateClassesPreview();
@@ -4603,12 +5408,19 @@
             editingConfig.info.school_year = document.getElementById('cfg-school-year').value.trim() || '';
             editingConfig.info.semester = document.getElementById('cfg-semester').value || 'HK1';
             editingConfig.info.plan_key = document.getElementById('cfg-plan-key').value.trim() || 'default';
+            editingConfig.info.morning_periods = document.getElementById('cfg-morning-periods')?.value.trim() || '1-5';
+            editingConfig.info.afternoon_periods = document.getElementById('cfg-afternoon-periods')?.value.trim() || '1-4';
 
             editingConfig.classes = parseClassesList(document.getElementById('cfg-classes-text').value);
 
             state = normalizeState(editingConfig);
+            extraPeriodSlots = [];
+            hiddenPeriodSlots = new Set();
             saveToLocal();
             render();
+            if (document.getElementById('view-daythay')?.classList.contains('active')) {
+                initPeriodSlotsBuilder();
+            }
             closeConfigModal();
             showToast("Đã cập nhật cấu hình tổ chuyên môn!", "success");
         }

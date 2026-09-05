@@ -67,7 +67,7 @@ function inferChapterDomain(chapterTopic, lesson, grade) {
   if (/phan so|so thap phan|phan tram/.test(text)) return 4;
   if (/diem|duong thang|tia|doan thang|goc/.test(text)) return 5;
   if (/thong ke|du lieu|bieu do|xac suat/.test(text)) return 6;
-  const number = Number(lessonNumber(lesson));
+  const number = Number(lessonNumber(lesson) || lessonNumber(chapterTopic));
   return Object.keys(TOAN6_CHAPTER_RANGES).map(Number).find(key => number >= TOAN6_CHAPTER_RANGES[key][0] && number <= TOAN6_CHAPTER_RANGES[key][1]) || null;
 }
 
@@ -98,10 +98,15 @@ function findOfficialYccdRows({ subjectId, grade, topic, visionText, contextTopi
   const requestedTopic = String(topic || "");
   const practice = isPracticeOrReview(requestedTopic), chapterReview = isChapterReview(requestedTopic);
   const contextualTopic = practice ? String(chapterReview ? (chapterTopic || domain || contextTopic || visionText || "") : (contextTopic || chapterTopic || domain || visionText || "")) : "";
-  const chapter = practice ? inferChapterDomain(String(chapterTopic || domain || contextualTopic), requestedTopic, grade) : null;
+  const chapter = practice ? inferChapterDomain(String(chapterTopic || domain || contextualTopic), String(contextualTopic || requestedTopic), grade) : null;
   if (chapterReview && chapter && TOAN6_CHAPTER_OUTCOMES[chapter]) return [{ lesson: `Ôn tập chương ${chapter}`, items: TOAN6_CHAPTER_OUTCOMES[chapter] }];
+  const contextHasTopic = Boolean(yccdKeywords(normalizeYccdText(contextualTopic)).length || lessonNumber(contextualTopic));
+  if (practice && !contextHasTopic) {
+    if (chapter && TOAN6_CHAPTER_OUTCOMES[chapter]) return [{ lesson: `Ôn tập chương ${chapter}`, items: TOAN6_CHAPTER_OUTCOMES[chapter] }];
+    return [];
+  }
   const scopedRows = chapter && TOAN6_CHAPTER_RANGES[chapter] ? rows.filter(row => { const number=Number(lessonNumber(row.lesson)); const range=TOAN6_CHAPTER_RANGES[chapter]; return number>=range[0]&&number<=range[1]; }) : rows;
-  const haystack = normalizeYccdText([requestedTopic, contextualTopic, practice ? "" : visionText].filter(Boolean).join(" "));
+  const haystack = normalizeYccdText([practice ? contextualTopic : requestedTopic, practice ? "" : contextualTopic, practice ? "" : visionText].filter(Boolean).join(" "));
   const requestedNumber = lessonNumber([topic, visionText].filter(Boolean).join(" "));
   const exactNumber = requestedNumber ? scopedRows.filter(row => lessonNumber(row.lesson) === requestedNumber) : [];
   if (exactNumber.length && !practice) return exactNumber;
