@@ -4,39 +4,36 @@
 PASS
 
 ## Đối chiếu scope
-- [x] **Tùy chỉnh khung tiết Sáng / Chiều linh hoạt**:
-  + Hỗ trợ cấu hình dải tiết qua `#quick-cfg-morning`, `#quick-cfg-afternoon` và trong modal cấu hình tổ (`#cfg-morning-periods`, `#cfg-afternoon-periods`).
-  + Hàm `parsePeriodsConfig` phân tích chính xác cả dạng dải (`1-4`, `7-9`, `6 - 10`) và danh sách (`1, 2, 3, 4`).
-  + Lưới slot builder (`initPeriodSlotsBuilder`) tự động sinh các ô tiết theo đúng khung tiết buổi sáng/chiều đã cấu hình.
-- [x] **Quản lý Thời khóa biểu Giáo viên**:
-  + Đã thêm modal `#teacher-timetable-modal` với bộ chọn giáo viên, năm học, học kỳ.
-  + Đã tích hợp vùng dán ảnh `#tt-dropzone` (hỗ trợ Ctrl+V dán ảnh, kéo thả file, chọn file ảnh).
-  + Lưới ma trận TKB tuần (Sáng/Chiều x Thứ 2 - Thứ 7) hiển thị và hỗ trợ click sửa ô.
-  + Lưu TKB vào `state.teachers[].timetable` và đồng bộ qua tất cả snapshot đợt (`persistTeacherTimetable`).
-- [x] **AI Gemini Vision nhận diện Thời khoá biểu**:
-  + Gửi payload ảnh base64 qua proxy `api/khbd_gemini.php` (`gemini-2.5-flash`).
-  + Hàm xử lý kết quả AI `applyAiTimetableResult()` bóc tách JSON chuẩn xác, tự động khớp tên giáo viên bằng hàm `foldText()`, render lưới ma trận TKB mượt mà.
-- [x] **Tự động gợi ý điền tiết từ TKB vào Sổ Dạy Thay**:
-  + Hàm `weekdayNumberFromDate` chuyển đổi chính xác ngày (VD: `2026-09-09` -> Thứ Tư / 4).
-  + Hàm `getTimetableDaySlots` trích xuất đúng các tiết/lớp/môn của giáo viên trong ngày.
-  + Nút `⚡ Lấy tiết từ TKB` và tự động gợi ý (`maybeAutoSuggestSlotsFromTimetable`) hoạt động đúng thiết kế khi giáo viên đã có TKB.
+- [x] **Kiêm nhiệm trường (Không dạy lớp, tính tiết trực tiếp cho GV)**:
+  + Chuẩn hóa 3 loại nhiệm vụ trong `state.subjects` (`duty_type: 'core' | 'class_duty' | 'school_duty'`) và bảo toàn tương thích ngược dữ liệu cũ.
+  + Modal Khai báo tổ -> Tab 4 Môn học & Nhiệm vụ hiển thị dropdown 3 lựa chọn kèm chú thích số tiết rõ ràng.
+  + Nhiệm vụ `school_duty` không sinh kho lớp chưa phân công (`state.unassigned`), không tạo cột trong bảng ma trận lớp (`#matrix-classes-table`).
+  + Hỗ trợ gán trực tiếp cho giáo viên bằng kéo thả hoặc nút chọn nhanh `+ Kiêm nhiệm` trên thẻ GV.
+  + Hàm `calcSchoolDutiesPeriods` tính chính xác số tiết quy đổi và cộng vào tổng số tiết / định mức (`calcTeacherTotalPeriods`).
+  + Hiển thị minh bạch tag nhiệm vụ `[Tên nhiệm vụ (+Xt)] ✕` trên thẻ GV, trong cột Giảm trừ/kiêm nhiệm ở Bảng ma trận tổng hợp và Báo cáo / Xuất Excel.
+- [x] **Dịch ngược từ Thời khóa biểu sang Phân công chuyên môn**:
+  + Hàm `extractAssignmentsFromTimetable` duyệt qua toàn bộ ma trận TKB tuần của giáo viên, bóc tách chính xác các cặp `{ môn, lớp }` và gom nhóm lớp theo môn học.
+  + Hàm `applyTimetableToAssignments` tự động cập nhật danh sách lớp vào `teacher.assignments[subKey]`, dọn dẹp khỏi kho lớp chưa gán (`state.unassigned`), tự động bổ sung lớp mới vào `state.classes`, và chuyển giao lớp nếu lớp từng được gán cho GV khác.
+  + Hàm `syncAllAssignmentsFromTimetables` duyệt toàn bộ giáo viên đã có TKB và cập nhật phân công hàng loạt cho cả tổ.
+  + Giao diện tích hợp đầy đủ: nút "Dịch sang Phân công" + checkbox tự động trong Modal TKB, nút "Nạp phân công từ TKB" trên Thẻ GV, và mục "Đồng bộ phân công từ TKB toàn tổ" trong Menu Công cụ / Tệp.
 
 ## Test đã chạy
 1. `tests/smartquiz-smoke.js`: PASS.
-2. Kiểm tra tính duy nhất của toàn bộ 123 HTML IDs: 100% unique, không có ID trùng lặp.
-3. Kiểm tra sự tồn tại của 15 DOM elements mới phục vụ TKB và cấu hình tiết: PASS.
-4. Kiểm tra sự tồn tại của 15 hàm JS nghiệp vụ mới (`openTeacherTimetableModal`, `scanTimetableWithAI`, `applyAiTimetableResult`, `saveTeacherTimetable`, `autoSuggestSlotsFromTimetable`, `parsePeriodsConfig`, `foldText`...): PASS.
-5. Kiểm tra hàm `parsePeriodsConfig`: Xử lý tốt các dạng dải và danh sách tiết: PASS.
-6. Kiểm tra hàm `parseTimetableCell` và `formatTimetableCell`: PASS.
-7. Kiểm tra hàm `foldText` chuẩn hóa tiếng Việt không dấu: PASS.
-8. Kiểm tra luồng `applyAiTimetableResult` với dữ liệu ma trận từ Gemini Vision: PASS.
-9. Kiểm tra hàm `weekdayNumberFromDate` và `getTimetableDaySlots`: PASS.
+2. `tests/xaydungphuluc-smoke.js`: PASS.
+3. Kiểm tra tính duy nhất của toàn bộ 124 HTML IDs: 100% unique, không có ID trùng lặp.
+4. Kiểm tra sự tồn tại và cú pháp của 9 hàm JS nghiệp vụ mới (`getSubjectDutyType`, `assignSchoolDuty`, `unassignSchoolDuty`, `calcSchoolDutiesPeriods`, `extractAssignmentsFromTimetable`, `applyTimetableToAssignments`, `syncAllAssignmentsFromTimetables`...): PASS.
+5. Kiểm tra hàm `getSubjectDutyType` với 3 loại nhiệm vụ và dữ liệu cũ tương thích ngược: PASS.
+6. Kiểm tra quy trình gán, hủy nhiệm vụ kiêm nhiệm trường và phép tính số tiết (`calcSchoolDutiesPeriods`, `calcTeacherTotalPeriods`): PASS.
+7. Kiểm tra hàm `extractAssignmentsFromTimetable` bóc tách đúng các lớp từ ma trận TKB tuần: PASS.
+8. Kiểm tra hàm `applyTimetableToAssignments` gán lớp cho GV, dọn kho lớp, chuyển lớp trùng từ GV khác: PASS.
+9. Kiểm tra hàm `syncAllAssignmentsFromTimetables` đồng bộ phân công toàn tổ từ TKB: PASS.
+10. Bộ kiểm thử TKB & Khung tiết trước đó (`scratch/verify_test_timetable.js`): ALL 7 TESTS PASS.
 
 ## Pass / Fail từng tiêu chí
-- Tiêu chí 1: Người dùng tùy chỉnh được khung tiết Sáng / Chiều tự do (ví dụ: Sáng 1-4, Chiều 7-9) → PASS
-- Tiêu chí 2: Tích hợp giao diện quản lý Thời khóa biểu cá nhân cho từng Giáo viên → PASS
-- Tiêu chí 3: Hỗ trợ dán ảnh (Ctrl+V) hoặc upload ảnh TKB và dùng AI Gemini Vision bóc tách tự động chính xác lịch dạy tuần → PASS
-- Tiêu chí 4: Sổ Dạy Thay tự động gợi ý / điền nhanh các tiết học cần dạy thay dựa trên TKB của giáo viên được thay → PASS
+- Tiêu chí 1: Cung cấp tùy chọn loại nhiệm vụ thứ 3 `Kiêm nhiệm trường (Không dạy lớp, tính tiết)` → PASS
+- Tiêu chí 2: Nhiệm vụ kiêm nhiệm trường không sinh lớp trong kho lớp và không tạo cột trong ma trận lớp → PASS
+- Tiêu chí 3: Gán được trực tiếp cho giáo viên, tự động tính số tiết vào tổng định mức / tải công tác của GV → PASS
+- Tiêu chí 4: Hỗ trợ dịch ngược 1-click từ Thời khóa biểu sang Phân công chuyên môn của từng GV và toàn tổ → PASS
 
 ## Bug
-Không phát hiện bug. (Bug `foldText` ở lần verify trước đã được sửa và kiểm thử thành công).
+Không phát hiện bug.

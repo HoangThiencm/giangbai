@@ -467,6 +467,42 @@
         .pill:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
         .pill:active { cursor: grabbing; transform: scale(0.96); }
 
+        .school-duty-chip {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px dashed #cbd5e1;
+            background: #ffffff;
+            cursor: grab;
+        }
+        .school-duty-chip:active { cursor: grabbing; }
+        .school-duty-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+        .school-duty-badge button {
+            border: none;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            padding: 0;
+            font-size: 0.78rem;
+        }
+        .teacher-school-duties {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            margin-top: 6px;
+        }
+
         #right-panel {
             flex: 1;
             display: flex;
@@ -1236,6 +1272,7 @@
                         <button type="button" onclick="closeToolsMenu(); document.getElementById('file-input').click()"><i class="fas fa-folder-open"></i> Mở JSON</button>
                         <button type="button" onclick="closeToolsMenu(); saveToFile()"><i class="fas fa-floppy-disk"></i> Xuất JSON</button>
                         <button type="button" onclick="closeToolsMenu(); handleExportExcel()"><i class="fas fa-file-excel"></i> Xuất Excel</button>
+                        <button type="button" onclick="closeToolsMenu(); syncAllAssignmentsFromTimetables()"><i class="fas fa-bolt"></i> Đồng bộ phân công từ TKB toàn tổ</button>
                     </div>
                 </div>
                 <a href="index.html" class="btn-toolbar btn-home" title="Trở về trang chủ">
@@ -1788,9 +1825,16 @@
                 <h4 style="margin:0 0 8px; font-size:0.88rem; font-weight:800;">Buổi chiều</h4>
                 <div style="overflow-x:auto;" id="tt-afternoon-wrap"></div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-small" onclick="closeTeacherTimetableModal()">Đóng</button>
-                <button class="btn-small btn-small-primary" onclick="saveTeacherTimetable()"><i class="fas fa-floppy-disk"></i> Lưu Thời khoá biểu</button>
+            <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                <label class="checkbox-group" style="margin:0;">
+                    <input type="checkbox" id="tt-auto-apply-assign">
+                    Tự động cập nhật phân công chuyên môn khi lưu TKB
+                </label>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn-small" onclick="closeTeacherTimetableModal()">Đóng</button>
+                    <button type="button" class="btn-small" onclick="applyCurrentTimetableToAssignments()"><i class="fas fa-arrows-rotate"></i> Dịch sang Phân công</button>
+                    <button class="btn-small btn-small-primary" onclick="saveTeacherTimetable()"><i class="fas fa-floppy-disk"></i> Lưu Thời khoá biểu</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1975,7 +2019,7 @@
                             <button class="btn-small" onclick="applyPresetSubjects('khtn')">Mẫu KHTN</button>
                             <button class="btn-small" onclick="applyPresetSubjects('khxh')">Mẫu KHXH</button>
                         </div>
-                        <span style="font-size: 0.8rem; color: #64748b;">Phân biệt môn chính toàn trường và nhiệm vụ kiêm nhiệm (chỉ một số lớp)</span>
+                        <span style="font-size: 0.8rem; color: #64748b;">Theo lớp: tiết/lớp; Kiêm nhiệm trường: tiết/GV (không sinh kho lớp)</span>
                     </div>
                     <table class="data-table">
                         <thead>
@@ -1983,8 +2027,8 @@
                                 <th style="width: 35px; text-align:center;">STT</th>
                                 <th style="width: 90px;">Mã môn</th>
                                 <th>Tên Môn học</th>
-                                <th style="width: 170px;">Loại nhiệm vụ</th>
-                                <th style="width: 100px; text-align:center;">Số tiết/lớp/tuần</th>
+                                <th style="width: 210px;">Loại nhiệm vụ</th>
+                                <th style="width: 110px; text-align:center;">Số tiết / tuần</th>
                                 <th style="width: 65px; text-align:center;">Màu</th>
                                 <th style="width: 45px; text-align:center;">Xóa</th>
                             </tr>
@@ -2143,10 +2187,17 @@
             });
 
             s.subjects.forEach(sub => {
-                if (typeof sub.is_core !== 'boolean') {
-                    sub.is_core = (sub.key !== 'gvcn' && sub.key !== 'hdtn');
+                if (!sub.duty_type) {
+                    if (typeof sub.is_core === 'boolean') {
+                        sub.duty_type = sub.is_core ? 'core' : 'class_duty';
+                    } else {
+                        sub.duty_type = (sub.key !== 'gvcn' && sub.key !== 'hdtn') ? 'core' : 'class_duty';
+                    }
                 }
-                if (!Array.isArray(s.unassigned[sub.key])) {
+                sub.is_core = (sub.duty_type === 'core');
+                if (getSubjectDutyType(sub) === 'school_duty') {
+                    s.unassigned[sub.key] = [];
+                } else if (!Array.isArray(s.unassigned[sub.key])) {
                     s.unassigned[sub.key] = [...s.classes];
                 }
             });
@@ -2159,11 +2210,18 @@
                 if (typeof t.allowance !== 'number') {
                     t.allowance = (ROLE_DEFAULTS[t.role]?.allowance ?? 0);
                 }
+                if (!Array.isArray(t.school_duties)) t.school_duties = [];
 
                 s.subjects.forEach(sub => {
-                    if (!Array.isArray(t.assignments[sub.key])) {
+                    if (getSubjectDutyType(sub) === 'school_duty') {
+                        t.assignments[sub.key] = [];
+                    } else if (!Array.isArray(t.assignments[sub.key])) {
                         t.assignments[sub.key] = Array.isArray(t[sub.key]) ? t[sub.key] : [];
                     }
+                });
+                t.school_duties = t.school_duties.filter(key => {
+                    const sub = s.subjects.find(item => item.key === key);
+                    return sub && getSubjectDutyType(sub) === 'school_duty';
                 });
                 t.timetable = normalizeTeacherTimetable(t.timetable);
             });
@@ -2177,6 +2235,10 @@
             }
 
             s.subjects.forEach(sub => {
+                if (getSubjectDutyType(sub) === 'school_duty') {
+                    s.unassigned[sub.key] = [];
+                    return;
+                }
                 const assigned = new Set();
                 s.teachers.forEach(t => {
                     (t.assignments[sub.key] || []).forEach(c => assigned.add(c));
@@ -2244,6 +2306,9 @@
                 };
             }
 
+            state.teachers.forEach(t => {
+                if (!Array.isArray(t.school_duties)) t.school_duties = [];
+            });
             saveToLocal();
             render();
             const curP = getCurrentPhase();
@@ -2634,7 +2699,11 @@
 
         // ================= KÉO THẢ & PHÂN CÔNG =================
         function dragStart(e, subjectKey, className) {
-            e.dataTransfer.setData('text/plain', JSON.stringify({ subject: subjectKey, className }));
+            e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'class', subject: subjectKey, className }));
+        }
+
+        function dragStartSchoolDuty(e, subjectKey) {
+            e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'school_duty', subject: subjectKey }));
         }
 
         function allowDrop(e) {
@@ -2656,9 +2725,71 @@
             if (dataStr) {
                 try {
                     const data = JSON.parse(dataStr);
-                    assignClass(data.subject, data.className, teacherId);
+                    if (data.kind === 'school_duty' || (data.subject && !data.className && getSubjectDutyType(state.subjects.find(s => s.key === data.subject) || {}) === 'school_duty')) {
+                        assignSchoolDuty(data.subject, teacherId);
+                    } else {
+                        assignClass(data.subject, data.className, teacherId);
+                    }
                 } catch (err) { console.error(err); }
             }
+        }
+
+        function getSubjectDutyType(sub) {
+            if (!sub) return 'core';
+            if (sub.duty_type === 'school_duty' || sub.duty_type === 'class_duty' || sub.duty_type === 'core') return sub.duty_type;
+            return (sub.is_core !== false) ? 'core' : 'class_duty';
+        }
+
+        function schoolDutySubjects() {
+            return (state.subjects || []).filter(sub => getSubjectDutyType(sub) === 'school_duty');
+        }
+
+        function teachersWithSchoolDuty(subjectKey) {
+            return (state.teachers || []).filter(t => Array.isArray(t.school_duties) && t.school_duties.includes(subjectKey));
+        }
+
+        function dropSchoolDuty(subKey, teacherId) {
+            assignSchoolDuty(subKey, teacherId);
+        }
+
+        function assignSchoolDuty(subjectKey, teacherId) {
+            const sub = state.subjects.find(s => s.key === subjectKey);
+            if (!sub || getSubjectDutyType(sub) !== 'school_duty') return;
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            if (!teacher) return;
+            if (!Array.isArray(teacher.school_duties)) teacher.school_duties = [];
+            if (!teacher.school_duties.includes(subjectKey)) teacher.school_duties.push(subjectKey);
+            saveCurrentPhaseSnapshot();
+            saveToLocal();
+            render();
+        }
+
+        function unassignSchoolDuty(subjectKey, teacherId) {
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            if (!teacher || !Array.isArray(teacher.school_duties)) return;
+            teacher.school_duties = teacher.school_duties.filter(key => key !== subjectKey);
+            saveCurrentPhaseSnapshot();
+            saveToLocal();
+            render();
+        }
+
+        function calcSchoolDutiesPeriods(t) {
+            if (!t || !Array.isArray(t.school_duties)) return 0;
+            return t.school_duties.reduce((sum, key) => {
+                const s = state.subjects.find(sub => sub.key === key);
+                return sum + ((s && getSubjectDutyType(s) === 'school_duty') ? (s.periods || 0) : 0);
+            }, 0);
+        }
+
+        function kiemNhiemParts(t) {
+            const parts = [];
+            if ((t.allowance || 0) > 0) parts.push(`${t.role} (${t.allowance}t)`);
+            (t.school_duties || []).forEach(key => {
+                const sub = state.subjects.find(s => s.key === key);
+                if (sub && getSubjectDutyType(sub) === 'school_duty') parts.push(`${sub.name} (${sub.periods || 0}t)`);
+            });
+            if (t.qlpm) parts.push(`QL Máy (${PERIOD_QLPM}t)`);
+            return parts;
         }
 
         function assignClass(subjectKey, className, teacherId) {
@@ -2716,6 +2847,7 @@
         function calcTeachingPeriods(t) {
             let sum = 0;
             state.subjects.forEach(sub => {
+                if (getSubjectDutyType(sub) === 'school_duty') return;
                 const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
                 sum += assigned.length * (sub.periods || 0);
             });
@@ -2725,7 +2857,8 @@
         function calcTeacherTotalPeriods(t) {
             const teaching = calcTeachingPeriods(t);
             const qlpmPeriods = t.qlpm ? PERIOD_QLPM : 0;
-            return teaching + (t.allowance || 0) + qlpmPeriods;
+            const schoolDutyPeriods = calcSchoolDutiesPeriods(t);
+            return teaching + (t.allowance || 0) + qlpmPeriods + schoolDutyPeriods;
         }
 
         function getTeacherQuota(t) {
@@ -2786,9 +2919,20 @@
             `;
 
             state.subjects.forEach(sub => {
+                const dtype = getSubjectDutyType(sub);
+                if (dtype === 'school_duty') {
+                    const holders = teachersWithSchoolDuty(sub.key);
+                    chipsHtml += `
+                        <span class="stat-chip optional" title="Kiêm nhiệm trường: ${holders.length} giáo viên">
+                            <i class="fas fa-briefcase"></i>
+                            <b style="color:${sub.color};">${sub.name}:</b> ${holders.length ? holders.map(t => t.name).join(', ') : 'Chưa phân công'} (${sub.periods || 0}t/GV)
+                        </span>
+                    `;
+                    return;
+                }
                 const assignedCount = state.teachers.reduce((sum, t) => sum + ((t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key].length : 0), 0);
 
-                if (sub.is_core !== false) {
+                if (dtype === 'core') {
                     const remaining = (state.unassigned[sub.key] || []).length;
                     const isFull = (remaining === 0 && totalClasses > 0);
 
@@ -2800,7 +2944,7 @@
                     `;
                 } else {
                     chipsHtml += `
-                        <span class="stat-chip optional" title="Nhiệm vụ kiêm nhiệm trong tổ: ${assignedCount} lớp">
+                        <span class="stat-chip optional" title="Nhiệm vụ kiêm nhiệm theo lớp: ${assignedCount} lớp">
                             <i class="fas fa-tag text-purple-600"></i>
                             <b style="color:${sub.color};">${sub.name}:</b> ${assignedCount} lớp (trong tổ)
                         </span>
@@ -2824,14 +2968,15 @@
             const searchVal = (document.getElementById('class-search')?.value || '').trim().toLowerCase();
 
             state.subjects.forEach(sub => {
+                if (getSubjectDutyType(sub) === 'school_duty') return;
                 let arr = state.unassigned[sub.key] || [];
                 if (searchVal) {
                     arr = arr.filter(c => c.toLowerCase().includes(searchVal));
                 }
 
                 const countAll = (state.unassigned[sub.key] || []).length;
-                const isCore = sub.is_core !== false;
-                const typeHint = isCore ? `Môn chính (${sub.periods}t/lớp)` : `Kiêm nhiệm (${sub.periods}t/lớp)`;
+                const isCore = getSubjectDutyType(sub) === 'core';
+                const typeHint = isCore ? `Môn chính (${sub.periods}t/lớp)` : `Kiêm nhiệm lớp (${sub.periods}t/lớp)`;
 
                 const html = `
                     <div class="subject-group" style="border-left: 4px solid ${sub.color};">
@@ -2851,6 +2996,38 @@
                 `;
                 pool.innerHTML += html;
             });
+
+            const schoolDuties = schoolDutySubjects().filter(sub => !searchVal || sub.name.toLowerCase().includes(searchVal) || sub.key.toLowerCase().includes(searchVal));
+            if (schoolDuties.length) {
+                const dutyHtml = schoolDuties.map(sub => {
+                    const holders = teachersWithSchoolDuty(sub.key);
+                    const status = holders.length
+                        ? `Đã gán: ${holders.map(t => t.name).join(', ')}`
+                        : 'Chưa phân công';
+                    const options = state.teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+                    return `
+                        <div class="school-duty-chip" draggable="true" ondragstart="dragStartSchoolDuty(event, '${sub.key}')" style="border-left: 4px solid ${sub.color};">
+                            <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
+                                <b style="color:${sub.color};">${escapeHtml(sub.name)}</b>
+                                <span class="count-badge">+${sub.periods || 0}t/GV</span>
+                            </div>
+                            <div style="font-size:0.75rem; color:#475569; font-weight:700;">${escapeHtml(status)}</div>
+                            <select class="form-control" style="padding:4px 8px; font-size:0.78rem;" onchange="if(this.value){assignSchoolDuty('${sub.key}', this.value); this.value='';}">
+                                <option value="">+ Gán GV</option>
+                                ${options}
+                            </select>
+                        </div>
+                    `;
+                }).join('');
+                pool.innerHTML += `
+                    <div class="subject-group" style="border-left: 4px solid #0891b2; background:#f0fdfa;">
+                        <div class="subject-title" style="color:#0f766e;">
+                            <span><b>Nhiệm vụ Kiêm nhiệm Trường / Hoạt động</b></span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:8px;">${dutyHtml}</div>
+                    </div>
+                `;
+            }
         }
 
         function renderTeachers() {
@@ -2873,6 +3050,7 @@
             state.teachers.forEach(t => {
                 const teachingPeriods = calcTeachingPeriods(t);
                 const qlpmPeriods = t.qlpm ? PERIOD_QLPM : 0;
+                const schoolDutyPeriods = calcSchoolDutiesPeriods(t);
                 const totalPeriods = calcTeacherTotalPeriods(t);
                 const quota = getTeacherQuota(t);
                 const diff = totalPeriods - quota;
@@ -2881,6 +3059,7 @@
                 let totalAssignedClasses = 0;
 
                 state.subjects.forEach(sub => {
+                    if (getSubjectDutyType(sub) === 'school_duty') return;
                     const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
                     totalAssignedClasses += assigned.length;
 
@@ -2900,6 +3079,22 @@
                     }
                 });
 
+                const assignedDuties = (t.school_duties || []).map(key => state.subjects.find(s => s.key === key)).filter(Boolean);
+                const dutyBadges = assignedDuties.map(sub => `
+                    <span class="school-duty-badge" style="background:${sub.color}22; color:${sub.color}; border: 1px solid ${sub.color};">
+                        ⚙️ ${escapeHtml(sub.name)} (+${sub.periods || 0}t)
+                        <button type="button" onclick="event.stopPropagation(); unassignSchoolDuty('${sub.key}', '${t.id}')" title="Hủy kiêm nhiệm"><i class="fas fa-times"></i></button>
+                    </span>
+                `).join('');
+                const remainingDuties = schoolDutySubjects().filter(sub => !(t.school_duties || []).includes(sub.key));
+                const dutySelect = remainingDuties.length ? `
+                    <select class="form-control" style="padding:3px 6px; font-size:0.75rem; width:auto;" onchange="if(this.value){assignSchoolDuty(this.value, '${t.id}'); this.value='';}">
+                        <option value="">+ Kiêm nhiệm</option>
+                        ${remainingDuties.map(sub => `<option value="${sub.key}">${escapeHtml(sub.name)} (+${sub.periods || 0}t)</option>`).join('')}
+                    </select>
+                ` : '';
+                const dutyHtml = `<div class="teacher-school-duties">${dutyBadges}${dutySelect}</div>`;
+
                 let badgeClass = 'exact';
                 let badgeText = `Đủ chuẩn (${totalPeriods}/${quota}t)`;
                 if (diff > 0) {
@@ -2910,7 +3105,7 @@
                     badgeText = `Thiếu ${diff}t (${totalPeriods}/${quota}t)`;
                 }
 
-                const isEmpty = totalAssignedClasses === 0;
+                const isEmpty = totalAssignedClasses === 0 && assignedDuties.length === 0;
 
                 const cardHtml = `
                     <div class="teacher-card" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event, '${t.id}')">
@@ -2935,18 +3130,24 @@
 
                         <div class="teacher-body">
                             ${isEmpty ? '<div class="empty-hint">Kéo lớp học từ kho bên trái thả vào đây...</div>' : rowsHtml}
+                            ${dutyHtml}
                         </div>
 
                         <div class="teacher-footer">
                             <div class="footer-row">
-                                <span>Dạy: <b>${teachingPeriods}t</b> · Giảm trừ/kiêm nhiệm: <b>${(t.allowance || 0) + qlpmPeriods}t</b></span>
+                                <span>Dạy: <b>${teachingPeriods}t</b> · Giảm trừ/kiêm nhiệm: <b>${(t.allowance || 0) + qlpmPeriods + schoolDutyPeriods}t</b></span>
                                 <span>ĐM chuẩn: <b>${quota}t</b></span>
                             </div>
                             <div class="footer-row total-row">
                                 <span class="quota-status-badge ${badgeClass}">${badgeText}</span>
-                                <button type="button" class="btn-small" onclick="openTeacherTimetableModal('${t.id}')" title="Thời khoá biểu giáo viên">
-                                    <i class="fas fa-calendar-days"></i> Thời khoá biểu
-                                </button>
+                                <span style="display:inline-flex; gap:6px; flex-wrap:wrap;">
+                                    <button type="button" class="btn-small" onclick="applyTimetableToAssignments('${t.id}')" title="Nạp phân công lớp từ Thời khoá biểu">
+                                        <i class="fas fa-bolt"></i> Nạp phân công từ TKB
+                                    </button>
+                                    <button type="button" class="btn-small" onclick="openTeacherTimetableModal('${t.id}')" title="Thời khoá biểu giáo viên">
+                                        <i class="fas fa-calendar-days"></i> Thời khoá biểu
+                                    </button>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -3021,13 +3222,14 @@
                     else if (diff < 0) diffBadge = `<span style="color:#2563eb; font-weight:bold;">Thiếu ${diff}t</span>`;
 
                     const subCells = state.subjects.map(sub => {
+                        if (getSubjectDutyType(sub) === 'school_duty') {
+                            return `<td style="text-align:center;">${(t.school_duties || []).includes(sub.key) ? '✓' : '—'}</td>`;
+                        }
                         const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
                         return `<td style="text-align:center;">${assigned.join(', ') || '—'}</td>`;
                     }).join('');
 
-                    let kn = [];
-                    if (t.allowance > 0) kn.push(`${t.role} (${t.allowance}t)`);
-                    if (t.qlpm) kn.push(`QL Máy (3t)`);
+                    const kn = kiemNhiemParts(t);
 
                     tbody += `
                         <tr>
@@ -3065,10 +3267,10 @@
                         <tr>
                             <th style="width:50px; text-align:center;">STT</th>
                             <th style="width:100px; text-align:center;">Lớp học</th>
-                            ${state.subjects.map(s => `
+                            ${state.subjects.filter(s => getSubjectDutyType(s) !== 'school_duty').map(s => `
                                 <th style="text-align:center; color:${s.color};">
                                     ${s.name} (${s.periods}t)
-                                    ${s.is_core !== false ? '<br><small style="font-size:0.68rem; color:#059669; font-weight:normal;">(Môn chính)</small>' : '<br><small style="font-size:0.68rem; color:#7c3aed; font-weight:normal;">(Kiêm nhiệm)</small>'}
+                                    ${getSubjectDutyType(s) === 'core' ? '<br><small style="font-size:0.68rem; color:#059669; font-weight:normal;">(Môn chính)</small>' : '<br><small style="font-size:0.68rem; color:#7c3aed; font-weight:normal;">(Kiêm nhiệm lớp)</small>'}
                                 </th>
                             `).join('')}
                             <th style="text-align:center;">Tình trạng lớp</th>
@@ -3081,9 +3283,10 @@
                 state.classes.forEach((cName, idx) => {
                     let missingCoreSubs = [];
 
-                    const cells = state.subjects.map(sub => {
+                    const classSubjects = state.subjects.filter(s => getSubjectDutyType(s) !== 'school_duty');
+                    const cells = classSubjects.map(sub => {
                         const assignedTeacher = state.teachers.find(t => t.assignments && t.assignments[sub.key] && t.assignments[sub.key].includes(cName));
-                        const isCore = (sub.is_core !== false);
+                        const isCore = getSubjectDutyType(sub) === 'core';
 
                         if (assignedTeacher) {
                             return `<td style="text-align:center; font-weight:700; color:#0f172a;">${escapeHtml(assignedTeacher.name)}</td>`;
@@ -4205,9 +4408,149 @@ Quy tắc:
             persistTeacherTimetable(teacherId, editingTimetable);
             saveCurrentPhaseSnapshot();
             saveToLocal();
-            closeTeacherTimetableModal();
+            const autoApply = document.getElementById('tt-auto-apply-assign')?.checked;
             const teacher = state.teachers.find(t => t.id === teacherId);
-            showToast(`Đã lưu Thời khoá biểu của ${teacher ? teacher.name : 'giáo viên'}.`, 'success');
+            if (autoApply) {
+                applyTimetableToAssignments(teacherId, { keepModal: true });
+            }
+            closeTeacherTimetableModal();
+            if (!autoApply) {
+                showToast(`Đã lưu Thời khoá biểu của ${teacher ? teacher.name : 'giáo viên'}.`, 'success');
+            }
+        }
+
+        function normalizeClassNameFromTimetable(name) {
+            return String(name || '').replace(/\s+/g, '').replace(/\//g, '').trim();
+        }
+
+        function matchSubjectFromTimetableLabel(label) {
+            const folded = foldText(label);
+            if (!folded) return null;
+            const exact = (state.subjects || []).find(s => foldText(s.name) === folded || foldText(s.key) === folded);
+            if (exact) return exact;
+            return (state.subjects || []).find(s => {
+                const n = foldText(s.name), k = foldText(s.key);
+                return (n && (n.includes(folded) || folded.includes(n))) || (k && (k.includes(folded) || folded.includes(k)));
+            }) || null;
+        }
+
+        function extractAssignmentsFromTimetable(teacher) {
+            const bySubject = {};
+            const unmatched = [];
+            const tt = teacher?.timetable;
+            if (!tt) return { bySubject, unmatched };
+            ['morning', 'afternoon'].forEach(session => {
+                const block = tt[session] || {};
+                Object.keys(block).forEach(day => {
+                    const cells = block[day] || {};
+                    Object.keys(cells).forEach(period => {
+                        const parsed = parseTimetableCell(cells[period]);
+                        if (!parsed || !parsed.class_name) return;
+                        const className = normalizeClassNameFromTimetable(parsed.class_name);
+                        if (!className) return;
+                        const sub = matchSubjectFromTimetableLabel(parsed.subject);
+                        if (!sub) {
+                            if (parsed.subject && !unmatched.includes(parsed.subject)) unmatched.push(parsed.subject);
+                            return;
+                        }
+                        if (getSubjectDutyType(sub) === 'school_duty') return;
+                        if (!bySubject[sub.key]) bySubject[sub.key] = new Set();
+                        bySubject[sub.key].add(className);
+                    });
+                });
+            });
+            const mapped = {};
+            Object.keys(bySubject).forEach(key => {
+                mapped[key] = [...bySubject[key]].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+            });
+            return { bySubject: mapped, unmatched };
+        }
+
+        function rebuildUnassignedForSubject(subjectKey) {
+            const sub = state.subjects.find(s => s.key === subjectKey);
+            if (!sub || getSubjectDutyType(sub) === 'school_duty') {
+                state.unassigned[subjectKey] = [];
+                return;
+            }
+            const assigned = new Set();
+            state.teachers.forEach(t => (t.assignments?.[subjectKey] || []).forEach(c => assigned.add(c)));
+            state.unassigned[subjectKey] = state.classes.filter(c => !assigned.has(c));
+        }
+
+        function applyTimetableToAssignments(teacherId, options = {}) {
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            if (!teacher) {
+                showToast('Không tìm thấy giáo viên.', 'error');
+                return 0;
+            }
+            if (!timetableHasLessons(teacher.timetable)) {
+                showToast(`${teacher.name} chưa có Thời khoá biểu để dịch phân công.`, 'info');
+                return 0;
+            }
+            const { bySubject, unmatched } = extractAssignmentsFromTimetable(teacher);
+            const subjectKeys = Object.keys(bySubject);
+            if (!subjectKeys.length) {
+                showToast(`Không bóc được lớp/môn nào từ TKB của ${teacher.name}.`, 'info');
+                return 0;
+            }
+            let classCount = 0;
+            subjectKeys.forEach(subjectKey => {
+                bySubject[subjectKey].forEach(className => {
+                    if (!state.classes.includes(className)) {
+                        state.classes.push(className);
+                        state.classes.sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+                    }
+                    state.teachers.forEach(other => {
+                        if (other.id === teacherId || !other.assignments?.[subjectKey]) return;
+                        other.assignments[subjectKey] = other.assignments[subjectKey].filter(c => c !== className);
+                    });
+                    if (!teacher.assignments) teacher.assignments = {};
+                    if (!Array.isArray(teacher.assignments[subjectKey])) teacher.assignments[subjectKey] = [];
+                    if (!teacher.assignments[subjectKey].includes(className)) {
+                        teacher.assignments[subjectKey].push(className);
+                    }
+                    teacher.assignments[subjectKey].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+                    classCount += 1;
+                });
+                rebuildUnassignedForSubject(subjectKey);
+            });
+            saveCurrentPhaseSnapshot();
+            saveToLocal();
+            if (!options.skipRender) render();
+            if (!options.silent) {
+                const extra = unmatched.length ? ` Bỏ qua môn chưa khai báo: ${unmatched.join(', ')}.` : '';
+                showToast(`Đã cập nhật phân công ${classCount} lớp cho GV ${teacher.name} từ Thời khoá biểu!${extra}`, classCount ? 'success' : 'info');
+            }
+            return classCount;
+        }
+
+        function applyCurrentTimetableToAssignments() {
+            const teacherId = document.getElementById('tt-teacher-select')?.value;
+            if (!teacherId) {
+                alert('Hãy chọn giáo viên.');
+                return;
+            }
+            if (editingTimetable) {
+                editingTimetable.school_year = document.getElementById('tt-school-year')?.value.trim() || state.info?.school_year || '';
+                editingTimetable.semester = document.getElementById('tt-semester')?.value.trim() || state.info?.semester || '';
+                persistTeacherTimetable(teacherId, editingTimetable);
+            }
+            applyTimetableToAssignments(teacherId, { keepModal: true });
+        }
+
+        function syncAllAssignmentsFromTimetables() {
+            const teachers = (state.teachers || []).filter(t => timetableHasLessons(t.timetable));
+            if (!teachers.length) {
+                showToast('Chưa có giáo viên nào có Thời khoá biểu để đồng bộ.', 'info');
+                return;
+            }
+            let updated = 0;
+            teachers.forEach(t => {
+                const n = applyTimetableToAssignments(t.id, { silent: true, skipRender: true });
+                if (n > 0) updated += 1;
+            });
+            render();
+            showToast(`Đã cập nhật phân công cho ${updated} giáo viên từ Thời khoá biểu!`, updated ? 'success' : 'info');
         }
 
         function weekdayNumberFromDate(dateStr) {
@@ -4740,7 +5083,7 @@ Quy tắc:
             let totalAllowanceAll = 0;
             state.teachers.forEach(t => {
                 totalPeriodsAll += calcTeachingPeriods(t);
-                totalAllowanceAll += (t.allowance || 0) + (t.qlpm ? PERIOD_QLPM : 0);
+                totalAllowanceAll += (t.allowance || 0) + (t.qlpm ? PERIOD_QLPM : 0) + calcSchoolDutiesPeriods(t);
             });
 
             if (repPeriods) repPeriods.textContent = totalPeriodsAll;
@@ -4773,13 +5116,14 @@ Quy tắc:
                 const diff = total - quota;
 
                 const subCells = state.subjects.map(sub => {
+                    if (getSubjectDutyType(sub) === 'school_duty') {
+                        return `<td style="text-align:center;">${(t.school_duties || []).includes(sub.key) ? '✓' : '—'}</td>`;
+                    }
                     const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
                     return `<td style="text-align:center;">${assigned.join(', ') || '—'}</td>`;
                 }).join('');
 
-                let kn_text = [];
-                if (t.allowance > 0) kn_text.push(`${t.role} (${t.allowance}t)`);
-                if (t.qlpm) kn_text.push(`QL Máy (${PERIOD_QLPM}t)`);
+                const kn_text = kiemNhiemParts(t);
 
                 let statusBadge = `<span style="color:#059669; font-weight:bold;">Đủ định mức</span>`;
                 if (diff > 0) statusBadge = `<span style="color:#dc2626; font-weight:bold;">Thừa +${diff}t</span>`;
@@ -4845,13 +5189,14 @@ Quy tắc:
                 const diff = total - quota;
 
                 const subjectCells = state.subjects.map(sub => {
+                    if (getSubjectDutyType(sub) === 'school_duty') {
+                        return `<td style="padding: 6px; text-align: center;">${(t.school_duties || []).includes(sub.key) ? '✓' : '—'}</td>`;
+                    }
                     const assigned = (t.assignments && t.assignments[sub.key]) ? t.assignments[sub.key] : [];
                     return `<td style="padding: 6px; text-align: center;">${assigned.join(', ') || '—'}</td>`;
                 }).join('');
 
-                let kn_text = [];
-                if (t.allowance > 0) kn_text.push(`${t.role} (${t.allowance}t)`);
-                if (t.qlpm) kn_text.push(`QL Máy (${PERIOD_QLPM}t)`);
+                const kn_text = kiemNhiemParts(t);
 
                 let diffStr = (diff === 0 ? 'Đủ chuẩn' : (diff > 0 ? `Thừa +${diff}t` : `Thiếu ${diff}t`));
 
@@ -5206,7 +5551,8 @@ Quy tắc:
                 quota: 19,
                 allowance: 0,
                 qlpm: false,
-                assignments: {}
+                assignments: {},
+                school_duties: []
             });
             renderConfigTeachersTable();
         }
@@ -5252,7 +5598,8 @@ Quy tắc:
                         quota: 19,
                         allowance: 0,
                         qlpm: false,
-                        assignments: {}
+                        assignments: {},
+                        school_duties: []
                     });
                     addedCount++;
                 }
@@ -5269,7 +5616,7 @@ Quy tắc:
             tbody.innerHTML = '';
 
             editingConfig.subjects.forEach((sub, index) => {
-                const isCore = sub.is_core !== false;
+                const dtype = getSubjectDutyType(sub);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td style="text-align:center;">${index + 1}</td>
@@ -5280,9 +5627,10 @@ Quy tắc:
                         <input type="text" class="form-control" style="padding:4px 8px;" value="${escapeHtml(sub.name)}" onchange="updateEditingSubject(${index}, 'name', this.value)">
                     </td>
                     <td>
-                        <select class="form-control" style="padding:4px 8px; font-weight:700;" onchange="updateEditingSubject(${index}, 'is_core', this.value === 'true')">
-                            <option value="true" ${isCore ? 'selected' : ''}>Môn chính (Toàn trường)</option>
-                            <option value="false" ${!isCore ? 'selected' : ''}>Kiêm nhiệm (Chỉ vài lớp)</option>
+                        <select class="form-control" style="padding:4px 8px; font-weight:700;" onchange="updateEditingSubjectDutyType(${index}, this.value)">
+                            <option value="core" ${dtype === 'core' ? 'selected' : ''}>Môn chính (Toàn trường)</option>
+                            <option value="class_duty" ${dtype === 'class_duty' ? 'selected' : ''}>Kiêm nhiệm theo lớp (Chỉ vài lớp)</option>
+                            <option value="school_duty" ${dtype === 'school_duty' ? 'selected' : ''}>Kiêm nhiệm trường (Không dạy lớp, tính tiết)</option>
                         </select>
                     </td>
                     <td>
@@ -5308,7 +5656,8 @@ Quy tắc:
                 name: 'Môn học ' + count,
                 periods: 2,
                 color: colors[count % colors.length],
-                is_core: true
+                is_core: true,
+                duty_type: 'core'
             });
             renderConfigSubjectsTable();
         }
@@ -5326,27 +5675,35 @@ Quy tắc:
             }
         }
 
+        function updateEditingSubjectDutyType(index, value) {
+            const sub = editingConfig?.subjects?.[index];
+            if (!sub) return;
+            sub.duty_type = value;
+            sub.is_core = (value === 'core');
+        }
+
         function applyPresetSubjects(type) {
             if (type === 'toan_tin') {
                 editingConfig.subjects = [
-                    { key: 'math', name: 'Toán', periods: 4, color: '#2563eb', is_core: true },
-                    { key: 'it', name: 'Tin học', periods: 1, color: '#059669', is_core: true },
-                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false },
-                    { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed', is_core: false }
+                    { key: 'math', name: 'Toán', periods: 4, color: '#2563eb', is_core: true, duty_type: 'core' },
+                    { key: 'it', name: 'Tin học', periods: 1, color: '#059669', is_core: true, duty_type: 'core' },
+                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false, duty_type: 'class_duty' },
+                    { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed', is_core: false, duty_type: 'class_duty' },
+                    { key: 'cds', name: 'Chuyển đổi số', periods: 3, color: '#0891b2', is_core: false, duty_type: 'school_duty' }
                 ];
             } else if (type === 'khtn') {
                 editingConfig.subjects = [
-                    { key: 'khtn', name: 'KHTN', periods: 4, color: '#059669', is_core: true },
-                    { key: 'congnghe', name: 'Công nghệ', periods: 1, color: '#0891b2', is_core: true },
-                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false },
-                    { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed', is_core: false }
+                    { key: 'khtn', name: 'KHTN', periods: 4, color: '#059669', is_core: true, duty_type: 'core' },
+                    { key: 'congnghe', name: 'Công nghệ', periods: 1, color: '#0891b2', is_core: true, duty_type: 'core' },
+                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false, duty_type: 'class_duty' },
+                    { key: 'hdtn', name: 'HĐTN', periods: 3, color: '#7c3aed', is_core: false, duty_type: 'class_duty' }
                 ];
             } else if (type === 'khxh') {
                 editingConfig.subjects = [
-                    { key: 'van', name: 'Ngữ văn', periods: 4, color: '#db2777', is_core: true },
-                    { key: 'sudi', name: 'Lịch sử & Địa lí', periods: 3, color: '#ea580c', is_core: true },
-                    { key: 'gdcd', name: 'GDCD', periods: 1, color: '#2563eb', is_core: true },
-                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false }
+                    { key: 'van', name: 'Ngữ văn', periods: 4, color: '#db2777', is_core: true, duty_type: 'core' },
+                    { key: 'sudi', name: 'Lịch sử & Địa lí', periods: 3, color: '#ea580c', is_core: true, duty_type: 'core' },
+                    { key: 'gdcd', name: 'GDCD', periods: 1, color: '#2563eb', is_core: true, duty_type: 'core' },
+                    { key: 'gvcn', name: 'Chủ nhiệm', periods: 4, color: '#d97706', is_core: false, duty_type: 'class_duty' }
                 ];
             }
             renderConfigSubjectsTable();
