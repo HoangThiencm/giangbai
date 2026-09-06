@@ -198,6 +198,10 @@ function currentGeminiModel() {
     return localStorage.getItem('khbd_gemini_model') || localStorage.getItem('default_gemini_module') || DEFAULT_GEMINI_MODEL;
 }
 
+function getFallbackModel() {
+    return localStorage.getItem('default_gemini_fallback') || localStorage.getItem('khbd_gemini_fallback_model') || 'gemini-2.5-flash';
+}
+
 function compactContext(text, maxLen) {
     const raw = String(text || '').replace(/\s+/g, ' ').trim();
     const limit = maxLen || 12000;
@@ -275,8 +279,9 @@ async function callGemini(prompt, jsonMode) {
     const model = currentGeminiModel();
     const keys = geminiKeys.slice();
     let lastError = 'Gemini không phản hồi.';
+    const fallbackModel = String(getFallbackModel() || '').trim() || 'gemini-2.5-flash';
     const tryModels = [model];
-    if (model !== DEFAULT_GEMINI_MODEL) tryModels.push(DEFAULT_GEMINI_MODEL);
+    if (fallbackModel !== model) tryModels.push(fallbackModel);
     for (const mdl of tryModels) {
         for (let i = 0; i < keys.length; i++) {
             const key = keys[i];

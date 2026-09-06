@@ -115,7 +115,7 @@ assert(!/chia hết|ước chung|bội chung|số nguyên tố/i.test(chapterOne
 assert(/Củng cố, hệ thống hóa/i.test(generatePedagogicalOutcome('Luyện tập chung','Toán học','6')),'practice fallback must use the pedagogical review frame');
 assert(/Vận dụng kiến thức liên môn/i.test(generatePedagogicalOutcome('Chuyên đề STEM mô hình toán học','Toán học','6')),'STEM fallback must use the pedagogical project frame');
 ['DOCX_WIDTHS','appendixOne:[4,20,5,35,18,18]','appendixThree:[22,6,8,6,18,16,24]','tableHeader:true,cantSplit:true','contenteditable="true" onblur="editAppendixOneOutcome','sgkOutcomeForLesson','generatePedagogicalOutcome'].forEach(has);
-['selectModel','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-3-flash-preview','getSelectedModel','onModelChange','khbd_gemini_model','thinkingConfig:{thinkingBudget:0}','api/khbd_gemini.php','GEMINI_FALLBACK_MODEL','fetchWithGeminiTimeout','Không thể trích xuất dòng PPCT nào từ tệp','Tệp không có văn bản hoặc là PDF scan cần OCR.'].forEach(has);
+['selectModel','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-3-flash-preview','getSelectedModel','getFallbackModel','onModelChange','khbd_gemini_model','default_gemini_fallback','khbd_gemini_fallback_model','thinkingConfig:{thinkingBudget:0}','api/khbd_gemini.php','fetchWithGeminiTimeout','Không thể trích xuất dòng PPCT nào từ tệp','Tệp không có văn bản hoặc là PDF scan cần OCR.'].forEach(has);
 assert(html.includes('Giai đoạn 1 chỉ nhận diện PPCT'),'upload flow must document stage separation');
 assert(html.includes('AI chưa khả dụng')&&html.includes('đang dùng bảng PPCT đọc trực tiếp từ tệp'),'upload must provide a visible parser fallback');
 assert(html.includes('await recognizePpctWithAi(recognitionInput)'),'PPCT upload must invoke recognition after structured extraction');
@@ -414,15 +414,24 @@ vm.runInContext("apiKeys=['AIza-direct'];mistralKeys=[];aborter=null",sandbox);
 await sandbox.callGemini('payload test');
 assert(geminiCalls[0].url.includes('/gemini-3.5-flash:generateContent'),'direct request must use the selected model');
 assert.equal(JSON.parse(geminiCalls[0].options.body).generationConfig.thinkingConfig.thinkingBudget,0,'Gemini request must disable thinking budget');
+geminiCalls=[];modelStorage.set('khbd_gemini_model','gemini-custom-primary');
+assert.equal(sandbox.getSelectedModel(),'gemini-custom-primary','a custom primary saved by AI settings must be used even when it is absent from the page picker');
+await sandbox.callGemini('custom primary test');
+assert(geminiCalls[0].url.startsWith('https://generativelanguage.googleapis.com/v1beta/models/gemini-custom-primary:generateContent?key='),'Gemini request URL must start with the saved custom primary model');
 geminiCalls=[];
 sandbox.fetch=async(url,options)=>{geminiCalls.push({url,options});if(url.includes('generativelanguage.googleapis.com'))throw new TypeError('network/CORS');return {ok:true,status:200,json:async()=>({ok:true,status:200,body:{candidates:[{content:{parts:[{text:'{"proxy":true}'}]}}]}})}};
+modelStorage.set('khbd_gemini_model','gemini-3.5-flash');
 assert.deepEqual(await sandbox.callGemini('proxy test'),{proxy:true},'network failure must retry through proxy');
 assert(geminiCalls.some(call=>call.url==='api/khbd_gemini.php'),'proxy fallback must call khbd proxy');
-geminiCalls=[];modelStorage.set('khbd_gemini_model','gemini-3.7-flash');
+geminiCalls=[];modelStorage.set('khbd_gemini_model','gemini-3.7-flash');modelStorage.set('default_gemini_fallback','gemini-custom-fallback');
 sandbox.fetch=async(url,options)=>{geminiCalls.push({url,options});if(url.includes('gemini-3.7-flash'))return {ok:false,status:503,json:async()=>({error:{message:'high demand'}})};return {ok:true,status:200,json:async()=>({candidates:[{content:{parts:[{text:'{"fallback":true}'}]}}]})}};
-assert.deepEqual(await sandbox.callGemini('fallback test'),{fallback:true},'3.7 transient failures must retry with 2.5');
-assert(geminiCalls.some(call=>call.url.includes('gemini-2.5-flash')),'fallback must use Gemini 2.5 Flash without changing saved model');
+assert.deepEqual(await sandbox.callGemini('fallback test'),{fallback:true},'transient failures must retry with configured fallback');
+assert(geminiCalls.some(call=>call.url.includes('gemini-custom-fallback')),'fallback must use configured custom model without changing saved model');
 assert.equal(modelStorage.get('khbd_gemini_model'),'gemini-3.7-flash','temporary fallback must not overwrite selected model');
+geminiCalls=[];modelStorage.set('default_gemini_fallback','gemini-3.7-flash');
+sandbox.fetch=async(url,options)=>{geminiCalls.push({url,options});return {ok:false,status:503,json:async()=>({error:{message:'high demand'}})}};
+await assert.rejects(()=>sandbox.callGemini('same model fallback test'),'same fallback model must return the original error');
+assert.equal(geminiCalls.length,1,'fallback equal to primary must not make a second model call');
 
 const keyElements={
   '#keyBadge':{textContent:''},'#keyInput':{value:'AIza-manual\nAIza-manual'},'#mistralKeyInput':{value:'mistral-manual\nmistral-manual'},

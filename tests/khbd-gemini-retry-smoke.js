@@ -110,6 +110,7 @@ async function case2_retry429then200() {
 }
 
 async function case3_fallbackModelOn503() {
+  localStorage.setItem("default_gemini_fallback", "gemini-custom-fallback");
   const api = makeApi();
   const calls = [];
   global.fetch = async (url) => {
@@ -122,12 +123,27 @@ async function case3_fallbackModelOn503() {
   const text = await api.generateContent("prompt", [], null, 0.3, null, { _testFastRetry: true });
   assert(text === "OK on fallback model", "case3: succeeds after model fallback");
   assert(modelFromUrl(calls[0]?.url) === "gemini-3.7-flash", `case3: first URL uses selected model (got ${modelFromUrl(calls[0]?.url)})`);
-  assert(modelFromUrl(calls[1]?.url) === "gemini-2.5-flash", `case3: second URL uses gemini-2.5-flash (got ${modelFromUrl(calls[1]?.url)})`);
+  assert(modelFromUrl(calls[1]?.url) === "gemini-custom-fallback", `case3: second URL uses configured custom fallback (got ${modelFromUrl(calls[1]?.url)})`);
   assert(api.selectedModel === "gemini-3.7-flash", "case3: does not overwrite selectedModel");
   assert(localStorage.getItem("khbd_gemini_model") == null, "case3: does not write khbd_gemini_model");
 }
 
-async function case4_400noRetry() {
+async function case4_sameFallbackDoesNotSwitchModels() {
+  localStorage.setItem("default_gemini_fallback", "gemini-3.7-flash");
+  const api = makeApi();
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push({ url, at: Date.now() });
+    if (calls.length === 1) return errResponse(503, "The model is overloaded. Please try again later.");
+    return okResponse("OK after retrying the same model");
+  };
+  const text = await api.generateContent("prompt", [], null, 0.3, null, { _testFastRetry: true });
+  assert(text === "OK after retrying the same model", "case4: retries without a duplicate fallback model");
+  assert(calls.every(call => modelFromUrl(call.url) === "gemini-3.7-flash"), "case4: fallback equal to primary never calls a second model");
+}
+
+async function case5_400noRetry() {
+  localStorage.setItem("default_gemini_fallback", "gemini-2.5-flash");
   const api = makeApi();
   const calls = [];
   global.fetch = async (url) => {
@@ -140,9 +156,9 @@ async function case4_400noRetry() {
   } catch (err) {
     thrown = err;
   }
-  assert(Boolean(thrown), "case4: 400 throws");
-  assert(/400/.test(String(thrown && thrown.message)), `case4: error mentions 400 (got ${thrown && thrown.message})`);
-  assert(calls.length === 1, `case4: no retry on 400 (got ${calls.length} fetches)`);
+  assert(Boolean(thrown), "case5: 400 throws");
+  assert(/400/.test(String(thrown && thrown.message)), `case5: error mentions 400 (got ${thrown && thrown.message})`);
+  assert(calls.length === 1, `case5: no retry on 400 (got ${calls.length} fetches)`);
 }
 
 (async () => {
@@ -150,7 +166,8 @@ async function case4_400noRetry() {
     await case1_retry503then200();
     await case2_retry429then200();
     await case3_fallbackModelOn503();
-    await case4_400noRetry();
+    await case4_sameFallbackDoesNotSwitchModels();
+    await case5_400noRetry();
   } catch (err) {
     failed += 1;
     console.error("FAIL: uncaught", err);

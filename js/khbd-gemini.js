@@ -17,7 +17,12 @@ class GeminiAPIManager {
       { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite (Nhẹ, Nhanh & Tiết kiệm Token)", recommended: false },
       { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Nhẹ & Nhanh)", recommended: false },
       { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite (Tối ưu Free Tier - Nhanh & Tiết kiệm Token)", recommended: false },
-      { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview (Thử nghiệm)", recommended: false }
+      { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview (Thử nghiệm)", recommended: false },
+      { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", recommended: false },
+      { id: "gemini-2.0-flash-lite", name: "Gemini 2.0 Flash Lite", recommended: false },
+      { id: "gemini-2.0-pro-exp-02-05", name: "Gemini 2.0 Pro Experimental", recommended: false },
+      { id: "gemini-2.0-flash-thinking-exp-01-21", name: "Gemini 2.0 Flash Thinking Experimental", recommended: false },
+      { id: "gemini-3.7-flash-thinking", name: "Gemini 3.7 Flash Thinking", recommended: false }
     ];
 
     this.onKeyRotatedCallback = null;
@@ -231,8 +236,9 @@ class GeminiAPIManager {
 
   // Tải Model đã chọn (hoặc lấy mặc định từ hệ thống)
   loadModelFromLocalStorage() {
-    const savedModel = localStorage.getItem("khbd_gemini_model") || localStorage.getItem("default_gemini_module");
-    if (savedModel && this.availableModels.some(m => m.id === savedModel)) {
+    const savedModel = String(localStorage.getItem("khbd_gemini_model") || localStorage.getItem("default_gemini_module") || "").trim();
+    if (savedModel) {
+      this._ensureAvailableModel(savedModel);
       this.selectedModel = savedModel;
     } else {
       this.selectedModel = "gemini-3.7-flash";
@@ -240,8 +246,10 @@ class GeminiAPIManager {
   }
 
   setModel(modelId) {
-    this.selectedModel = modelId;
-    localStorage.setItem("khbd_gemini_model", modelId);
+    const value = String(modelId || "").trim() || "gemini-3.7-flash";
+    this._ensureAvailableModel(value);
+    this.selectedModel = value;
+    localStorage.setItem("khbd_gemini_model", value);
   }
 
   // Cập nhật danh sách API Keys
@@ -353,7 +361,17 @@ class GeminiAPIManager {
   }
 
   _fallbackModelId() {
-    return "gemini-2.5-flash";
+    return String(localStorage.getItem("default_gemini_fallback")
+      || localStorage.getItem("khbd_gemini_fallback_model")
+      || "gemini-2.5-flash").trim() || "gemini-2.5-flash";
+  }
+
+  _ensureAvailableModel(modelId) {
+    const value = String(modelId || "").trim();
+    if (value && !this.availableModels.some(model => model.id === value)) {
+      this.availableModels.push({ id: value, name: value, recommended: false });
+    }
+    return value;
   }
 
   isUserAbort(err, signal) {
@@ -476,6 +494,7 @@ class GeminiAPIManager {
 
     const totalKeys = this.apiKeys.length;
     const fallbackModel = this._fallbackModelId();
+    this._ensureAvailableModel(fallbackModel);
     const selectedModel = this.selectedModel;
     let activeModel = selectedModel;
     let usedFallback = false;

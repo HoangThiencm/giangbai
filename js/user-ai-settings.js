@@ -12,6 +12,11 @@
         { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
         { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
         { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+        { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+        { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
+        { id: 'gemini-2.0-pro-exp-02-05', label: 'Gemini 2.0 Pro Experimental' },
+        { id: 'gemini-2.0-flash-thinking-exp-01-21', label: 'Gemini 2.0 Flash Thinking Experimental' },
+        { id: 'gemini-3.7-flash-thinking', label: 'Gemini 3.7 Flash Thinking' },
     ];
 
     function isStudent() {
@@ -32,13 +37,26 @@
     function currentModel() {
         return localStorage.getItem('khbd_gemini_model')
             || localStorage.getItem('default_gemini_module')
-            || 'gemini-2.5-flash';
+            || 'gemini-3.7-flash';
     }
 
     function persistModel(modelId) {
-        const value = String(modelId || '').trim() || 'gemini-2.5-flash';
+        const value = String(modelId || '').trim() || 'gemini-3.7-flash';
         localStorage.setItem('default_gemini_module', value);
         localStorage.setItem('khbd_gemini_model', value);
+        return value;
+    }
+
+    function currentFallbackModel() {
+        return localStorage.getItem('default_gemini_fallback')
+            || localStorage.getItem('khbd_gemini_fallback_model')
+            || 'gemini-2.5-flash';
+    }
+
+    function persistFallbackModel(modelId) {
+        const value = String(modelId || '').trim() || 'gemini-2.5-flash';
+        localStorage.setItem('default_gemini_fallback', value);
+        localStorage.setItem('khbd_gemini_fallback_model', value);
         return value;
     }
 
@@ -123,14 +141,31 @@
         return { res, data };
     }
 
-    function modelOptionsHtml(selected) {
+    function modelOptionsHtml(selected, customValue) {
         const ids = GEMINI_MODELS.map((m) => m.id);
-        const extra = selected && !ids.includes(selected)
-            ? `<option value="${selected}">${selected}</option>`
-            : '';
-        return extra + GEMINI_MODELS.map((m) => (
+        const isCustom = selected === '__custom__' || (customValue && !ids.includes(customValue));
+        return GEMINI_MODELS.map((m) => (
             `<option value="${m.id}"${m.id === selected ? ' selected' : ''}>${m.label}</option>`
-        )).join('');
+        )).join('') + `<option value="__custom__"${isCustom ? ' selected' : ''}>Tự nhập model khác...</option>`;
+    }
+
+    function syncModelControl(select, input, value) {
+        if (!select || !input) return;
+        const ids = GEMINI_MODELS.map((m) => m.id);
+        const model = String(value || '').trim();
+        const custom = model && !ids.includes(model);
+        select.innerHTML = modelOptionsHtml(custom ? '__custom__' : model, custom ? model : '');
+        select.value = custom ? '__custom__' : (model || 'gemini-3.7-flash');
+        input.value = custom ? model : '';
+        input.classList.toggle('hidden', !custom);
+    }
+
+    function selectedModelValue(selectId, inputId, fallback) {
+        const select = document.getElementById(selectId);
+        const input = document.getElementById(inputId);
+        return select?.value === '__custom__'
+            ? (String(input?.value || '').trim() || fallback)
+            : (String(select?.value || '').trim() || fallback);
     }
 
     function ensureModal() {
@@ -158,9 +193,18 @@
                     <div>
                         <label for="userAiGeminiModel" class="mb-1.5 block text-sm font-bold text-slate-700">Module Gemini mặc định</label>
                         <select id="userAiGeminiModel" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                            ${modelOptionsHtml(currentModel())}
+                            ${modelOptionsHtml(currentModel(), currentModel())}
                         </select>
+                        <input id="userAiGeminiModelCustom" class="mt-2 hidden w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ví dụ: gemini-experimental" />
                         <p class="mt-1 text-xs text-slate-500">Lưu vào <code>default_gemini_module</code> và <code>khbd_gemini_model</code>.</p>
+                    </div>
+                    <div>
+                        <label for="userAiGeminiFallbackModel" class="mb-1.5 block text-sm font-bold text-slate-700">Module Gemini dự phòng</label>
+                        <select id="userAiGeminiFallbackModel" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            ${modelOptionsHtml(currentFallbackModel(), currentFallbackModel())}
+                        </select>
+                        <input id="userAiGeminiFallbackModelCustom" class="mt-2 hidden w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ví dụ: gemini-2.0-flash" />
+                        <p class="mt-1 text-xs text-slate-500">Dùng tạm khi model mặc định lỗi hoặc quá tải; lưu vào <code>default_gemini_fallback</code> và <code>khbd_gemini_fallback_model</code>.</p>
                     </div>
                     <div>
                         <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
@@ -201,6 +245,14 @@
             if (e.target === wrap) UserAiSettings.closeModal();
         });
         document.getElementById('userAiSettingsClose').addEventListener('click', () => UserAiSettings.closeModal());
+        [['userAiGeminiModel', 'userAiGeminiModelCustom'], ['userAiGeminiFallbackModel', 'userAiGeminiFallbackModelCustom']].forEach(([selectId, inputId]) => {
+            document.getElementById(selectId).addEventListener('change', () => {
+                const select = document.getElementById(selectId);
+                const input = document.getElementById(inputId);
+                input.classList.toggle('hidden', select.value !== '__custom__');
+                if (select.value === '__custom__') input.focus();
+            });
+        });
         document.getElementById('userAiGeminiFile').addEventListener('change', (e) => {
             const file = e.target.files && e.target.files[0];
             if (file) UserAiSettings.handleFile(file, 'gemini');
@@ -220,16 +272,17 @@
         const geminiArea = document.getElementById('userAiGeminiKeys');
         const mistralArea = document.getElementById('userAiMistralKeys');
         const modelSelect = document.getElementById('userAiGeminiModel');
+        const modelCustom = document.getElementById('userAiGeminiModelCustom');
+        const fallbackSelect = document.getElementById('userAiGeminiFallbackModel');
+        const fallbackCustom = document.getElementById('userAiGeminiFallbackModelCustom');
         const meta = document.getElementById('userAiMeta');
         const keys = Array.isArray(payload?.keys) ? payload.keys : [];
         const mistral = Array.isArray(payload?.mistral_keys) ? payload.mistral_keys : [];
         if (geminiArea) geminiArea.value = keys.join('\n');
         if (mistralArea) mistralArea.value = mistral.join('\n');
         const model = currentModel();
-        if (modelSelect) {
-            modelSelect.innerHTML = modelOptionsHtml(model);
-            modelSelect.value = model;
-        }
+        syncModelControl(modelSelect, modelCustom, model);
+        syncModelControl(fallbackSelect, fallbackCustom, currentFallbackModel());
         if (meta) {
             const geminiCount = Number(payload?.count ?? keys.length) || 0;
             const mistralCount = Number(payload?.mistral_count ?? mistral.length) || 0;
@@ -353,7 +406,8 @@
 
         async saveSettings() {
             ensureModal();
-            const model = persistModel(document.getElementById('userAiGeminiModel')?.value);
+            const model = persistModel(selectedModelValue('userAiGeminiModel', 'userAiGeminiModelCustom', 'gemini-3.7-flash'));
+            persistFallbackModel(selectedModelValue('userAiGeminiFallbackModel', 'userAiGeminiFallbackModelCustom', 'gemini-2.5-flash'));
             const geminiLines = parseKeys(document.getElementById('userAiGeminiKeys')?.value || '');
             const mistralLines = parseKeys(document.getElementById('userAiMistralKeys')?.value || '');
             persistLocalKeys(geminiLines, mistralLines, { wipeEmpty: true });

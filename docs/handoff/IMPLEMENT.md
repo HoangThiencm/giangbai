@@ -39,6 +39,36 @@ Cần tải lại trang (Ctrl+F5) nếu vẫn thấy chân ký / tiêu đề dà
 
 ---
 
+# IMPLEMENT: Cấu hình model Gemini chính và dự phòng
+
+**Trạng thái**: DONE
+
+## Files
+
+- `js/user-ai-settings.js`: thêm danh sách model gợi ý, chọn hoặc tự nhập model chính/dự phòng, và đồng bộ bốn khóa localStorage.
+- `js/khbd-gemini.js`: nạp model custom đã lưu, đọc fallback động và cho phép fallback custom trong danh sách khả dụng.
+- `xaydungphuluc.html`, `nghiencuubaihoc.html`: dùng fallback động và không chuyển model khi fallback trùng primary.
+- `tests/user-ai-settings-smoke.js`, `tests/khbd-gemini-retry-smoke.js`, `tests/xaydungphuluc-smoke.js`: bổ sung regression cho custom fallback và guard model trùng.
+
+## Behavior
+
+- Primary mặc định an toàn là `gemini-3.7-flash`; fallback mặc định an toàn là `gemini-2.5-flash`.
+- Giá trị custom được trim, lưu và nạp lại qua `default_gemini_module` / `khbd_gemini_model` và `default_gemini_fallback` / `khbd_gemini_fallback_model`.
+- Fallback chỉ áp dụng tạm thời khi lỗi có thể retry, không ghi đè primary và không tạo vòng lặp nếu hai model giống nhau.
+
+## Tests
+
+- `node tests/user-ai-settings-smoke.js`: PASS.
+- `node tests/khbd-gemini-retry-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-integration-smoke.js`: PASS.
+
+## Limitation
+
+- Danh sách gợi ý chỉ hỗ trợ thao tác chọn nhanh; độ khả dụng của một model custom vẫn do Gemini API quyết định tại thời điểm gọi.
+
+---
+
 # IMPLEMENT: PL1 tách cột NLS/AI và DOCX landscape
 
 **Trạng thái**: DONE
