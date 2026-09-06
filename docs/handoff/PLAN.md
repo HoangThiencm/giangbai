@@ -1,192 +1,167 @@
-# PLAN: Tách Thời Khóa Biểu Thành Tab Riêng & Tối Ưu Quy Trình Nhận Diện TKB Hàng Loạt (Lưu Local Liên Tục, Lưu CSDL 1 Lần)
+# PLAN: Nạp Phân Công TKB Toàn Tổ & Tạo Ảnh Thông Báo Dạy Thay Thông Minh Bằng AI
 
-## Hiện trạng
-1. **Thời khóa biểu hiện tại đang là Modal popup (`#teacher-timetable-modal`)**:
-   - Hiện tại, tính năng TKB của giáo viên mở dưới dạng modal popup khi bấm nút "Thời khoá biểu" trên từng card giáo viên hoặc trong tab Sổ Dạy Thay.
-   - Khi làm việc với nhiều giáo viên trong tổ (10 - 20 GV): người dùng phải mở modal cho GV 1, dán ảnh, nhận diện AI, lưu (modal tự đóng), rồi lại tìm thẻ GV 2, mở modal... Quy trình bị ngắt quãng, chật chội và tốn rất nhiều thao tác đóng/mở.
-2. **Nhu cầu quy trình nhận diện TKB hàng loạt liên tục**:
-   - Người dùng có ảnh chụp TKB của cả tổ (hoặc nhận diện lần lượt từng giáo viên).
-   - Nhu cầu thực tế: Chọn GV 1 $\rightarrow$ Dán ảnh $\rightarrow$ AI nhận diện $\rightarrow$ **Tự động lưu ngay vào máy (Local)** $\rightarrow$ Chuyển sang GV 2 tiếp tục $\rightarrow$ Cứ thế làm hết toàn bộ giáo viên trong tổ $\rightarrow$ Nhấn **"Lưu CSDL" 1 lần duy nhất** để đẩy toàn bộ dữ liệu tổ lên server MySQL.
-   - Cần một không gian làm việc toàn trang rộng rãi, chuyên nghiệp với danh sách giáo viên bên trái (hiển thị rõ ai đã có TKB, ai chưa có) và lưới TKB bên phải để thao tác nhanh, trực quan.
+## Hiện trạng & Nhu cầu
+1. **Phân công từ Thời khóa biểu (TKB)**:
+   - Đã nhận diện TKB cho cả tổ (11/11 giáo viên), nhưng các lớp chưa tự động phiên sang phân công giảng dạy (`state.teachers[].assignments`).
+   - Người dùng phải bấm thủ công trên từng giáo viên ("phải nạp thụ động từng người"), thiếu nút nổi bật để nạp một lượt cho toàn bộ giáo viên trong tổ.
+2. **Thông báo Sổ Dạy Thay - Bù**:
+   - Sau khi ghi nhận các lượt dạy thay / dạy bù trong tổ (GV nghỉ phép, đi công tác, GV khác dạy thay tiết nào, lớp nào), Tổ trưởng cần gửi thông báo đến các giáo viên liên quan hoặc gửi vào nhóm Zalo trường/tổ.
+   - Hiện tại chỉ có xuất Excel hoặc xem bảng trên web, chưa có tính năng **tạo ảnh thông báo đẹp mắt chuẩn sư phạm** và **chưa có AI hỗ trợ soạn thông báo Zalo / dặn dò** để gửi nhanh cho giáo viên.
 
 ---
 
-## Phạm vi
-1. **Tách tính năng Thời khóa biểu thành Tab riêng trong thanh Workspace Navigation (`#tab-nav-timetable`, `#view-timetable`)**:
-   - Thêm Tab mới trên thanh 5 tab hiện tại:
-     + `1. Phân công giảng dạy` (`#view-phancong`)
-     + `2. Thời khoá biểu GV` (`#view-timetable`)
-     + `3. Sổ Dạy Thay - Bù` (`#view-daythay`)
-     + `4. Chấm công GV` (`#view-chamcong`)
-     + `5. Tăng Giờ` (`#view-tanggio`)
-     + `6. Báo cáo & Thống kê` (`#view-baocao`)
-   - Cập nhật hàm `switchAppView()` hỗ trợ view `view-timetable` và gọi `renderTimetableView()`.
-   - Giữ hàm `openTeacherTimetableModal(teacherId)` như một alias chuyển sang `switchAppView('view-timetable')` và focus chọn đúng giáo viên đó để tương thích 100% với các nút gọi hiện có trên Thẻ GV và Sổ Dạy Thay.
+## Phạm vi thực hiện
 
-2. **Xây dựng Màn hình Không gian làm việc Thời khóa biểu Toàn trang 2 cột (`#view-timetable`)**:
-   - **Cột Trái (Danh sách Giáo viên & Trạng thái TKB)**:
-     + Ô tìm kiếm nhanh giáo viên (`#tt-teacher-search`).
-     + Bộ lọc: `Tất cả` | `Đã có TKB` | `Chưa có TKB`.
-     + Thống kê tiến độ trực quan: `Đã có TKB: X / Y giáo viên`.
-     + Danh sách thẻ giáo viên: Mỗi dòng gồm Avatar/Icon, Tên giáo viên, vai trò (GV, TTCM...), badge trạng thái:
-       * `✓ Đã có TKB (X tiết)` (màu xanh lá)
-       * `⏳ Chưa có TKB` (màu cam/xám)
-       * `● Chưa lưu CSDL` (chấm xanh dương nổi bật nếu có thay đổi local chưa đồng bộ lên CSDL).
-     + Bấm vào giáo viên nào thì vùng làm việc bên phải lập tức chuyển sang giáo viên đó.
-   - **Cột Phải (Không gian làm việc TKB của giáo viên đang chọn)**:
-     + Header thông tin: Tên giáo viên (lớn), vai trò, nút chuyển nhanh `< GV trước` và `GV tiếp theo >`.
-     + Bộ chọn Năm học (`#tt-school-year`), Học kỳ (`#tt-semester`).
-     + Vùng dán ảnh thông minh (`#tt-dropzone`):
-       * Lắng nghe Ctrl+V dán ảnh chụp màn hình, kéo thả ảnh hoặc chọn file ảnh.
-       * Preview ảnh thu nhỏ gọn gàng, có nút xóa ảnh.
-       * Nút **`✨ AI Nhận diện TKB`** với spinner loading mượt mà.
-     + Lưới ma trận Thời khóa biểu tuần (Buổi Sáng + Buổi Chiều $\times$ Thứ 2 - Thứ 7):
-       * Cho phép click chỉnh sửa nhanh từng ô Môn - Lớp.
-     + Thanh công cụ tác vụ:
-       * Nút **`Lưu tất cả lên CSDL`** (nổi bật, gọi `saveToDB()`).
-       * Nút **`⚡ Dịch sang Phân công`** (`applyCurrentTimetableToAssignments()`).
-       * Nút **`GV tiếp theo ➔`** (chuyển sang GV chưa có TKB tiếp theo để làm liên tục).
-       * Nút **`🗑️ Xóa TKB GV này`** (xóa trắng TKB của GV hiện tại nếu muốn làm lại).
+### PHẦN 1: Nạp Phân Công Từ TKB Toàn Tổ & Tự Động Phiên Lớp Sau Nhận Diện
+1. **Bổ sung Nút Nổi Bật Nạp Phân Công Toàn Tổ (1-Click Sync)**:
+   - **Tab 1 (`#view-phancong`)**: Thêm nút `⚡ Nạp phân công từ TKB toàn tổ` (`btn-small-primary`) ngay trên thanh thống kê tiến độ `.live-stats-banner` (cạnh nút "Xem Ma trận Đợt này").
+   - **Tab 2 (`#view-timetable`)**:
+     + Thêm nút `⚡ Dịch TKB toàn tổ sang Phân công` (`btn-small-primary`) trên thanh công cụ tác vụ (`#tt-right-panel`, cạnh nút "Lưu tất cả lên CSDL").
+     + Đổi nhãn nút đơn lẻ thành `Dịch GV này sang Phân công`.
+     + Cột trái (`#tt-left-panel`): thêm nút nhanh `⚡ Nạp phân công toàn tổ` ngay dưới dòng tiến độ `Đã có TKB: X / Y giáo viên`.
+2. **Tự Động Phiên Lớp Khi AI Nhận Diện Xong**:
+   - Đặt checkbox `#tt-auto-apply-assign` ("Tự động cập nhật phân công khi lưu TKB") thành mặc định **`checked`** trong HTML.
+   - Trong `applyAiTimetableResult(raw)`: nếu `#tt-auto-apply-assign` được tích, tự động gọi ngay `applyTimetableToAssignments(selectedTimetableTeacherId, { silent: true, skipRender: true })`.
+   - Thông báo Toast hiển thị rõ: *"Đã nhận diện, lưu TKB và tự động phiên X lớp sang phân công cho GV [Tên GV]!"*.
+3. **Nâng Cấp Hàm `syncAllAssignmentsFromTimetables()`**:
+   - Xác nhận thân thiện: *"Bạn có muốn nạp phân công từ Thời khoá biểu của X giáo viên vào [Tên đợt] không?"*.
+   - Đếm tổng số giáo viên và tổng số lượt lớp được gán; dọn sạch kho lớp chưa gán (`state.unassigned`), bổ sung lớp mới vào `state.classes`.
+   - Lưu snapshot đợt (`saveCurrentPhaseSnapshot()`) và lưu máy (`saveToLocal()`), gọi `render()`.
+   - Toast kết quả: *"✅ Đã nạp phân công thành công cho X giáo viên (tổng cộng Y lượt lớp) từ Thời khoá biểu vào [Tên đợt]!"*.
+4. **Cải Tiến Bóc Tách Ô & Khớp Môn**:
+   - Hỗ trợ tách lớp khi ô TKB không có dấu gạch ngang (VD: `Toán 95`, `Toán 9A1`, `Toán/95`).
+   - Bổ sung alias khớp môn trong `matchSubjectFromTimetableLabel`: `tin` -> `Tin học`, `toan` -> `Toán`, `hdtn` -> `HĐTN`, `shl` / `sinh hoạt lớp` -> `Chủ nhiệm` (nếu có lớp kèm theo).
 
-3. **Cơ chế Tự động Lưu Local khi AI nhận diện & Chuyển tiếp liên tục**:
-   - Khi AI Gemini Vision nhận diện xong (hoặc khi người dùng sửa ô TKB):
-     + Dữ liệu TKB của giáo viên được cập nhật ngay vào `teacher.timetable`.
-     + Tự động gọi `persistTeacherTimetable(teacherId, next)`.
-     + Tự động gọi `saveToLocal({ autoSave: false })` để lưu ngay vào `localStorage`.
-     + Đánh dấu cờ `hasUnsavedChanges = true`.
-     + Badge trạng thái của giáo viên bên cột trái tự động đổi sang `✓ Đã có TKB`.
-     + Hiển thị Toast thông báo: *"Đã lưu TKB của [Tên GV] vào máy! Bạn có thể chọn giáo viên tiếp theo."*.
-     + Tự động kích hoạt gợi ý chuyển sang giáo viên kế tiếp mà không làm ngắt quãng mạch làm việc của người dùng.
+---
 
-4. **Lưu toàn bộ dữ liệu lên CSDL 1 lần duy nhất**:
-   - Khi hoàn thành tất cả giáo viên trong tổ (hoặc bất kỳ lúc nào), người dùng bấm nút **"Lưu tất cả lên CSDL"** trên Tab TKB (hoặc nút "Lưu CSDL" ở Top Header):
-     + Gọi `saveToDB()` $\rightarrow$ Đẩy toàn bộ `state` (bao gồm TKB của tất cả giáo viên và phân công các đợt) lên server MySQL qua `api/phancong.php?action=save`.
-     + Server phản hồi thành công $\rightarrow$ Cập nhật trạng thái `Đã lưu CSDL`, xóa cờ `hasUnsavedChanges`.
+### PHẦN 2: Tính Năng Tạo Ảnh Thông Báo Dạy Thay Thông Minh Bằng AI & Canvas
+1. **Nút "Tạo ảnh thông báo (AI)" trên Sổ Dạy Thay (`view-daythay`)**:
+   - Thêm nút **`✨ Tạo ảnh thông báo (AI)`** (`btn-small-primary`) trên thanh công cụ của Sổ Dạy Thay (cạnh nút "Xuất Excel Sổ Dạy Thay").
+2. **Tích Hợp Thư Viện `html2canvas`**:
+   - Thêm script `html2canvas` (`https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js`) vào `<head>` của `phancongtochuyenmon.html` (đồng bộ với `vehinh.html`).
+3. **Modal "Thông báo Phân công Dạy thay" (`#substitute-announcement-modal`)**:
+   - **Bộ điều khiển & Tuỳ biến**:
+     + Chọn ngày cần thông báo (Date picker, mặc định là ngày có lượt dạy thay gần nhất hoặc ngày được chọn).
+     + Tiêu đề thông báo (mặc định: `THÔNG BÁO PHÂN CÔNG DẠY THAY NGÀY DD/MM/YYYY`).
+     + Ghi chú / Dặn dò của Tổ chuyên môn (cho phép nhập thủ công hoặc AI sinh tự động).
+     + Nút **`✨ AI Soạn thông báo Zalo`**: Gửi danh sách các tiết dạy thay của ngày được chọn sang `api/khbd_gemini.php` (Gemini 2.5 Flash) để tự động soạn lời dặn dò trang trọng, lịch sự, chuẩn văn phong nhà trường và tóm tắt gửi Zalo.
+   - **Khung Preview Card Thông Báo Thiết Kế Chuẩn Sư Phạm (`#dt-announcement-card`)**:
+     + Thiết kế card đồ họa chuyên nghiệp, trang nhã:
+       * Header: Tên đơn vị / Trường THCS (`state.info.school`), Tổ chuyên môn (`state.info.title`).
+       * Tiêu đề chính nổi bật: `BẢNG PHÂN CÔNG DẠY THAY` kèm Ngày, Thứ.
+       * Bảng phân công chi tiết, rõ ràng:
+         | Buổi | Tiết | Lớp | Môn | Giáo viên vắng & Lý do | Giáo viên dạy thay | Ghi chú |
+       * Footer: Lời dặn dò của tổ, ngày giờ lập thông báo, chữ ký đại diện Tổ trưởng chuyên môn (`TTCM`).
+   - **Thanh Tác Vụ Xuất Bản (1-Click Export)**:
+     + **`📋 Sao chép ảnh (Copy Image)`**: Dùng `html2canvas` kết hợp `navigator.clipboard.write([new ClipboardItem({'image/png': blob})])` để copy trực tiếp ảnh vào bộ nhớ tạm -> Người dùng chỉ cần ấn `Ctrl+V` vào Zalo/Messenger là gửi được ngay ảnh thông báo!
+     + **`💾 Tải ảnh PNG (Download Image)`**: Xuất ảnh PNG độ nét cao (2x retina) lưu về máy tính.
+     + **`📝 Sao chép tin nhắn Zalo (Copy Text)`**: Copy văn bản thông báo có emoji gọn gàng để dán kèm caption tin nhắn khi gửi ảnh trên Zalo.
 
 ---
 
 ## Ngoài phạm vi
-- Không thay đổi cấu trúc dữ liệu JSON lưu trong MySQL (`state.teachers[].timetable`).
-- Không sửa backend PHP (`api/phancong.php` và `api/khbd_gemini.php` đã hỗ trợ đầy đủ payload).
-- Không làm thay đổi logic phân công hoặc chấm công hiện có.
+- Không thay đổi cấu trúc dữ liệu JSON lưu trong CSDL (`state.attendance.substitutes`, `state.teachers[].assignments`, `state.teachers[].timetable`).
+- Không sửa backend PHP (`api/phancong.php`, `api/khbd_gemini.php`). Proxy Gemini hiện tại đã hỗ trợ đầy đủ `generateContent`.
+- Không ảnh hưởng đến dữ liệu chấm công, tăng giờ.
 
 ---
 
 ## File dự kiến tác động
-- `phancongtochuyenmon.html` [SỬA: Thêm tab và view `#view-timetable`, render layout 2 cột, danh sách GV kèm trạng thái TKB, tự động lưu local khi AI nhận diện, nút lưu CSDL toàn tổ]
+- `phancongtochuyenmon.html` [SỬA:
+  + Thêm thư viện `html2canvas` ở `<head>`.
+  + Thêm nút nạp TKB toàn tổ ở Tab 1 và Tab 2; kích hoạt tự động phiên lớp sau khi AI nhận diện TKB.
+  + Thêm nút `Tạo ảnh thông báo (AI)` trên toolbar Sổ Dạy Thay.
+  + Thêm Modal `#substitute-announcement-modal` kèm Card thông báo `#dt-announcement-card`.
+  + Viết các hàm JS: `openDayThayAnnouncementModal()`, `closeDayThayAnnouncementModal()`, `renderAnnouncementCard()`, `generateDayThayAnnouncementAI()`, `copyAnnouncementImage()`, `downloadAnnouncementImage()`, `copyAnnouncementZaloText()`.
+]
 - `docs/handoff/PLAN.md` [GHI ĐÈ: Kế hoạch này]
-- `docs/handoff/.lock` [TẠO: LOCK]
+- `docs/handoff/.lock` [TẠO/GIỮ: LOCK]
 
 ---
 
-## Các bước thực hiện
+## Các bước thực hiện chi tiết
 
-### Bước 1: Khai báo Tab Navigation & Tạo Khung HTML View TKB
-1. Trong `#top-navbar .view-switcher`:
-   - Thêm nút tab:
+### Bước 1: Nút Nạp Phân Công Toàn Tổ & Tự Động Phiên Lớp TKB (Phần 1)
+1. **Tab 1 (`#view-phancong`)**:
+   - Thêm nút `<button class="btn-small btn-small-primary" onclick="syncAllAssignmentsFromTimetables()"><i class="fas fa-bolt"></i> Nạp phân công từ TKB toàn tổ</button>` vào `.live-stats-banner`.
+2. **Tab 2 (`#view-timetable`)**:
+   - Thêm nút `<button type="button" class="btn-small btn-small-primary" onclick="syncAllAssignmentsFromTimetables()"><i class="fas fa-bolt"></i> Dịch TKB toàn tổ sang Phân công</button>` cạnh nút Lưu CSDL.
+   - Thêm nút nhanh `⚡ Nạp phân công TKB toàn tổ` ở cột trái dưới `#tt-progress`.
+   - Đặt checkbox `#tt-auto-apply-assign` mặc định `checked`.
+3. **Trong `applyAiTimetableResult(raw)`**:
+   - Sau khi lưu TKB giáo viên, nếu `#tt-auto-apply-assign` bật thì tự động gọi `applyTimetableToAssignments(selectedTimetableTeacherId, { silent: true, skipRender: true })`.
+4. **Tối ưu `syncAllAssignmentsFromTimetables()`**:
+   - Thêm xác nhận `confirm()`, đếm số GV và số lớp được phiên, dọn sạch kho lớp unassigned và render cập nhật Tab 1.
+
+### Bước 2: Tích Hợp Thư Viện html2canvas & Giao Diện Nút Sổ Dạy Thay (Phần 2)
+1. Trong `<head>` của `phancongtochuyenmon.html`:
+   - Thêm `<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>`.
+2. Trong thanh công cụ của Sổ Dạy Thay (`view-daythay`):
+   - Thêm nút:
      ```html
-     <button class="view-tab-btn" id="tab-nav-timetable" onclick="switchAppView('view-timetable')">
-         <i class="fas fa-calendar-days"></i> 2. Thời khoá biểu GV
+     <button type="button" class="btn-small btn-small-primary" onclick="openDayThayAnnouncementModal()">
+         <i class="fas fa-wand-magic-sparkles"></i> Tạo ảnh thông báo (AI)
      </button>
      ```
-   - Điều chỉnh lại số thứ tự các tab tiếp theo:
-     + 3. Sổ Dạy Thay - Bù (`tab-nav-daythay`)
-     + 4. Chấm công GV (`tab-nav-chamcong`)
-     + 5. Tăng Giờ (`tab-nav-tanggio`)
-     + 6. Báo cáo & Thống kê (`tab-nav-baocao`)
-2. Thêm container `#view-timetable` trong thân trang:
-   - Layout gồm 2 phần:
-     + `#tt-left-panel`: Cột danh sách giáo viên, thanh tìm kiếm, bộ lọc trạng thái và thống kê tiến độ.
-     + `#tt-right-panel`: Vùng làm việc TKB giáo viên đang chọn, vùng dán ảnh AI, ma trận tuần và thanh công cụ lưu.
-3. Cập nhật CSS cho `#view-timetable`:
-   - Phân chia 2 cột rõ ràng, responsive mượt mà trên các độ phân giải màn hình.
 
-### Bước 2: Xây dựng Logic Cột Trái (Danh sách Giáo viên & Trạng thái)
-1. Viết hàm `renderTimetableTeacherList()`:
-   - Đọc danh sách `state.teachers`.
-   - Lọc theo từ khóa tìm kiếm (`#tt-teacher-search`) và bộ lọc trạng thái (`filter: all | has_tt | missing_tt`).
-   - Đếm số GV đã có TKB (`timetableHasLessons(t.timetable)`) / Tổng số GV và hiển thị badge tiến độ.
-   - Vẽ danh sách các item giáo viên:
-     + Highlight GV đang được chọn (`selectedTimetableTeacherId`).
-     + Hiển thị badge: `✓ Đã có TKB` hoặc `⏳ Chưa có TKB`.
-     + Khi click vào một item: gọi `selectTimetableTeacher(teacherId)`.
-2. Hàm `selectTimetableTeacher(teacherId)`:
-   - Cập nhật `selectedTimetableTeacherId = teacherId`.
-   - Cập nhật lại class active ở danh sách bên trái.
-   - Nạp TKB của GV vào `editingTimetable = JSON.parse(JSON.stringify(teacher.timetable || emptyTimetable()))`.
-   - Gọi `renderTimetableWorkspace()` để hiển thị thông tin và lưới TKB bên phải.
+### Bước 3: Xây Dựng Modal & Card Thông Báo Dạy Thay Chuẩn Sư Phạm
+1. Tạo modal `#substitute-announcement-modal` gồm:
+   - Header modal: Tiêu đề "Tạo ảnh thông báo phân công dạy thay", nút đóng.
+   - Cột trái: Bộ điều khiển (Chọn ngày dạy thay, Tiêu đề thông báo, Lời dặn dò, Nút "✨ AI Soạn thông báo Zalo").
+   - Cột phải: Khung xem trước trực quan `#dt-announcement-card`:
+     + Phong cách thiết kế: Giấy khen / Văn bản sư phạm hiện đại, nền gradient nhẹ hoặc viền bo trang trọng, logo biểu tượng giáo dục.
+     + Tiêu đề trường & tổ chuyên môn.
+     + Bảng liệt kê: Buổi, Tiết, Lớp, Môn, GV vắng (Lý do), GV dạy thay.
+     + Lời dặn dò của TTCM.
+     + Chữ ký / Đại diện Tổ chuyên môn.
+   - Footer modal:
+     + Nút `📋 Sao chép ảnh` (`copyAnnouncementImage()`).
+     + Nút `💾 Tải ảnh PNG` (`downloadAnnouncementImage()`).
+     + Nút `📝 Sao chép tin Zalo` (`copyAnnouncementZaloText()`).
 
-### Bước 3: Xây dựng Không gian Làm việc TKB Cột Phải
-1. Viết hàm `renderTimetableWorkspace()`:
-   - Hiển thị tên giáo viên, vai trò, số tiết hiện tại.
-   - Nạp giá trị năm học (`#tt-school-year`), học kỳ (`#tt-semester`).
-   - Render lưới ma trận Buổi sáng (`#tt-morning-wrap`) và Buổi chiều (`#tt-afternoon-wrap`).
-   - Đặt lại vùng dán ảnh preview (nếu có ảnh trước đó).
-2. Xử lý nút điều hướng nhanh:
-   - `goToPrevTimetableTeacher()`: Chọn giáo viên liền trước trong danh sách.
-   - `goToNextTimetableTeacher(onlyMissing = false)`: Chọn giáo viên liền sau; nếu `onlyMissing = true` thì nhảy thẳng đến giáo viên tiếp theo chưa có TKB.
-
-### Bước 4: Tích hợp Tự động Lưu Local & Chuyển Tiếp Sau Khi AI Nhận Diện
-1. Cập nhật `applyAiTimetableResult(raw)`:
-   - Đọc JSON từ Gemini Vision, cập nhật vào `editingTimetable`.
-   - Tự động gọi `persistTeacherTimetable(selectedTimetableTeacherId, editingTimetable)`.
-   - Tự động gọi `saveCurrentPhaseSnapshot()`.
-   - Tự động gọi `saveToLocal({ autoSave: false })` để ghi ngay vào `localStorage`.
-   - Đánh dấu `hasUnsavedChanges = true`.
-   - Cập nhật lại danh sách bên trái (`renderTimetableTeacherList()`) để badge GV đó ngay lập tức chuyển sang màu xanh lá `✓ Đã có TKB`.
-   - Hiển thị Toast thông báo: *"Đã nhận diện và lưu TKB của GV [Tên GV] vào máy! Bạn có thể chọn GV tiếp theo để tiếp tục."*.
-   - Hiển thị nút bấm nhanh: `GV tiếp theo ➔` để người dùng tiếp tục thao tác mà không cần tìm kiếm.
-2. Xử lý sửa ô trực tiếp trên lưới:
-   - Khi người dùng sửa nội dung ô TKB trên lưới: tự động cập nhật vào `editingTimetable`, tự động lưu local sau 500ms debounce hoặc khi blur.
-
-### Bước 5: Nút Lưu Toàn Bộ CSDL & Tích Hợp Menu
-1. Trên thanh công cụ của View TKB:
-   - Đặt nút nổi bật:
-     `<button class="btn-toolbar btn-db-save" onclick="saveToDB()"><i class="fas fa-cloud-arrow-up"></i> Lưu tất cả lên CSDL</button>`
-   - Nút gọi trực tiếp `saveToDB()`, gửi toàn bộ `state` lên MySQL và hiển thị thông báo thành công.
-2. Nút "Dịch sang Phân công" trên View TKB:
-   - Bấm nút gọi `applyTimetableToAssignments(selectedTimetableTeacherId)` để nạp phân công lớp ngay cho giáo viên đang chọn.
-3. Giữ hàm tương thích:
-   - `openTeacherTimetableModal(teacherId)`: nếu được gọi từ bất kỳ đâu (như Thẻ GV ở View 1 hay Sổ Dạy Thay ở View 3), hàm sẽ gọi `switchAppView('view-timetable')` và `selectTimetableTeacher(teacherId)`. Đảm bảo các nút bấm cũ hoạt động trơn tru.
+### Bước 4: Viết Logic JS Cho Tính Năng Tạo Ảnh & AI Soạn Tin
+1. Hàm `openDayThayAnnouncementModal(targetDate)`:
+   - Mở modal, xác định ngày cần thông báo (ưu tiên ngày truyền vào hoặc ngày có lượt dạy thay gần nhất).
+   - Nạp các bản ghi dạy thay của ngày đó từ `state.attendance.substitutes`.
+   - Render preview card thông báo.
+2. Hàm `generateDayThayAnnouncementAI()`:
+   - Thu thập danh sách lượt dạy thay trong ngày (GV vắng, lý do, GV dạy thay, tiết, lớp).
+   - Gửi prompt yêu cầu Gemini soạn lời dặn dò ngắn gọn, lịch sự, ân cần và chuyên nghiệp.
+   - Điền kết quả vào ô "Lời dặn dò" và cập nhật trực tiếp lên card xem trước.
+3. Hàm `copyAnnouncementImage()` & `downloadAnnouncementImage()`:
+   - Gọi `html2canvas(document.getElementById('dt-announcement-card'), { scale: 2, useCORS: true })`.
+   - `copyAnnouncementImage`: chuyển canvas thành blob `image/png`, ghi vào `navigator.clipboard.write([new ClipboardItem({'image/png': blob})])`, hiển thị Toast "Đã sao chép ảnh vào bộ nhớ tạm! Bạn có thể dán (Ctrl+V) ngay vào Zalo.".
+   - `downloadAnnouncementImage`: tạo thẻ `<a>` tải file `Thong_Bao_Day_Thay_YYYYMMDD.png`.
+4. Hàm `copyAnnouncementZaloText()`:
+   - Định dạng văn bản tóm tắt có icon đẹp mắt, copy vào clipboard.
 
 ---
 
-## Rủi ro
-1. **Lắng nghe sự kiện Paste (Ctrl+V)**: Khi chuyển từ modal sang Tab view toàn trang, sự kiện `paste` cần gắn đúng vùng dropzone hoặc chỉ kích hoạt khi tab TKB đang `active` để tránh bắt nhầm khi người dùng đang ở các tab khác.
-   - *Biện pháp*: Kiểm tra `document.getElementById('view-timetable')?.classList.contains('active')` trước khi xử lý dán ảnh.
-2. **Trùng lặp ID phần tử**: Một số ID trong modal cũ (`#tt-dropzone`, `#tt-morning-wrap`...) nếu tái sử dụng trong view mới cần đảm bảo không bị nhân bản thành 2 ID trùng lặp trong DOM.
-   - *Biện pháp*: Chuyển toàn bộ các phần tử từ modal sang view mới hoặc thay thế modal bằng view mới, chạy test kiểm tra 100% ID duy nhất.
+## Rủi ro & Biện pháp giảm thiểu
+1. **Quyền ghi Clipboard Image**: Một số trình duyệt cũ hoặc trang không chạy qua HTTPS/localhost có thể chặn `navigator.clipboard.write([ClipboardItem])`.
+   - *Biện pháp*: Bọc trong `try...catch`; nếu clipboard image không khả dụng, tự động fallback sang tải ảnh về máy (`downloadAnnouncementImage()`) kèm thông báo rõ ràng cho người dùng.
+2. **Kích thước Card thông báo khi có nhiều tiết**: Nếu một ngày có nhiều lượt dạy thay, bảng có thể dài.
+   - *Biện pháp*: Thiết kế card có padding hợp lý, font chữ co giãn linh hoạt (auto scale) và bảng table responsive để ảnh chụp luôn rõ ràng, sắc nét.
 
 ---
 
 ## Cách kiểm thử
-1. **Kiểm tra Thanh Tab Navigation**:
-   - Mở trang: Quan sát thấy Tab `2. Thời khoá biểu GV` trên thanh tab.
-   - Bấm vào Tab: Chuyển sang `#view-timetable`, hiển thị đầy đủ bố cục 2 cột (Danh sách GV bên trái, Không gian TKB bên phải).
-2. **Kiểm tra Danh sách Giáo viên & Trạng thái TKB**:
-   - Cột trái hiển thị đầy đủ danh sách giáo viên của tổ.
-   - Giáo viên đã có TKB có badge xanh `✓ Đã có TKB`; giáo viên chưa có hiển thị `⏳ Chưa có TKB`.
-   - Tìm kiếm tên giáo viên lọc chính xác danh sách.
-   - Bấm vào Thầy Danh: Panel bên phải tải đúng TKB của Thầy Danh.
-3. **Kiểm tra Quy trình AI Nhận diện & Tự Động Lưu Local**:
-   - Chọn một giáo viên chưa có TKB (VD: Cô Ánh).
-   - Dán ảnh TKB (Ctrl+V) $\rightarrow$ Preview ảnh xuất hiện.
-   - Bấm `AI nhận diện TKB` $\rightarrow$ AI đọc và render lưới TKB.
-   - Kiểm tra `localStorage`: TKB của Cô Ánh đã được lưu ngay vào máy mà không cần bấm thêm nút nào!
-   - Badge của Cô Ánh bên cột trái lập tức chuyển thành `✓ Đã có TKB`.
-   - Bấm nút `GV tiếp theo ➔`: Hệ thống tự động chuyển sang giáo viên kế tiếp chưa có TKB.
-4. **Kiểm tra Lưu CSDL 1 lần duy nhất**:
-   - Sau khi làm xong các giáo viên, bấm nút **"Lưu tất cả lên CSDL"** trên tab TKB.
-   - Kiểm tra request gửi đến `api/phancong.php?action=save`: Toàn bộ TKB của các giáo viên được gửi lên và server phản hồi thành công.
-   - Nạp lại trang (F5): Dữ liệu TKB của toàn bộ giáo viên được giữ nguyên vẹn từ CSDL.
-5. **Kiểm tra Tương thích Nút bấm từ View khác**:
-   - Sang Tab 1 (Phân công): Bấm nút "Thời khoá biểu" trên thẻ của Thầy Danh $\rightarrow$ Tự động nhảy sang Tab TKB và focus đúng Thầy Danh.
+1. **Kiểm tra Nạp TKB Toàn Tổ**:
+   - Tab 1: Thấy nút `⚡ Nạp phân công từ TKB toàn tổ`. Bấm vào -> Xác nhận -> 11/11 GV được nạp đủ lớp từ TKB.
+   - Tab 2: Thấy nút `⚡ Dịch TKB toàn tổ sang Phân công` và nút nhanh bên cột trái.
+2. **Kiểm tra Tạo Ảnh Thông Báo Dạy Thay**:
+   - Mở Tab 3 (Sổ Dạy Thay): Ghi nhận 1-2 lượt dạy thay cho ngày mai.
+   - Bấm nút `✨ Tạo ảnh thông báo (AI)` -> Modal xuất hiện với bảng xem trước đẹp mắt chứa đúng các lượt dạy thay của ngày đó.
+   - Bấm `✨ AI Soạn thông báo Zalo` -> AI Gemini trả về lời dặn dò phù hợp, tự động điền vào bảng và caption.
+   - Bấm `📋 Sao chép ảnh` -> Dán Ctrl+V vào khung chat Zalo / Word kiểm tra ảnh nét, chuẩn định dạng.
+   - Bấm `💾 Tải ảnh PNG` -> File ảnh được tải về máy thành công.
+   - Bấm `📝 Sao chép tin Zalo` -> Văn bản tóm tắt được sao chép chuẩn emoji.
 
 ---
 
 ## Tiêu chí nghiệm thu
-1. Thời khóa biểu được tách thành một Tab riêng biệt trong thanh làm việc của Quản lý tổ chuyên môn (`view-timetable`).
-2. Giao diện toàn trang 2 cột chuyên nghiệp: Cột trái liệt kê giáo viên kèm trạng thái TKB trực quan, cột phải là bảng làm việc TKB chi tiết.
-3. Nhận diện ảnh TKB tự động lưu ngay vào máy (`localStorage`), cho phép người dùng chuyển liên tục qua các giáo viên khác mà không bị đóng/mở ngắt quãng.
-4. Cung cấp nút Lưu CSDL rõ ràng để người dùng nhấn lưu 1 lần sau khi đã hoàn tất toàn bộ giáo viên trong tổ.
-5. Các nút xem TKB từ Thẻ GV và Sổ Dạy Thay tự động điều hướng mượt mà sang Tab Thời khóa biểu.
+1. Có nút **`⚡ Nạp phân công từ TKB toàn tổ`** nổi bật ở Tab 1 và Tab 2, 1 click phân công cho tất cả giáo viên.
+2. Khi AI nhận diện TKB của giáo viên mới, các lớp tự động được phiên ngay sang phân công.
+3. Có nút **`✨ Tạo ảnh thông báo (AI)`** trên thanh công cụ của Sổ Dạy Thay.
+4. Xuất được ảnh thông báo dạy thay thiết kế chuẩn sư phạm, sắc nét (PNG), cho phép copy trực tiếp vào clipboard để paste Zalo và tải về máy.
+5. AI Gemini hỗ trợ soạn nội dung thông báo / lời dặn dò văn phong nhà trường và văn bản gửi Zalo tiện lợi.

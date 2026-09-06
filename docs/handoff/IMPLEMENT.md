@@ -1,34 +1,46 @@
-# IMPLEMENT: Tab Thời khoá biểu GV toàn trang + nhận diện hàng loạt, lưu local liên tục
+# IMPLEMENT: Nạp phân công TKB toàn tổ + ảnh thông báo dạy thay (AI)
 
-**Ngày implement**: 2026-09-07
+**Ngày implement**: 2026-09-06
 **Coder**: Grok (xAI)
 **Trạng thái**: DONE
 
 ## Tóm tắt
 
-Tách TKB khỏi modal thành Tab `2. Thời khoá biểu GV` (`#view-timetable`): cột trái danh sách GV + trạng thái, cột phải workspace dán ảnh / AI / lưới tuần. AI nhận diện xong lưu ngay `localStorage`; lưu MySQL 1 lần bằng **Lưu tất cả lên CSDL**.
+1. **Nạp phân công từ TKB toàn tổ (1-click)** trên Tab 1 và Tab 2; AI nhận diện TKB xong tự phiên lớp sang phân công khi checkbox bật (mặc định `checked`).
+2. **Sổ Dạy Thay**: nút `Tạo ảnh thông báo (AI)` mở modal card sư phạm, soạn lời dặn dò bằng Gemini 2.5 Flash, copy ảnh / tải PNG / copy tin Zalo.
 
 ## Files
 
 | File | Thay đổi |
 |------|----------|
-| `phancongtochuyenmon.html` | Tab mới, view 2 cột, bỏ modal TKB (tránh trùng ID), auto-save local, điều hướng GV |
+| `phancongtochuyenmon.html` | Nút nạp TKB toàn tổ, auto-apply, bóc ô/alias môn, html2canvas, modal `#substitute-announcement-modal`, JS tạo ảnh & AI |
 | `docs/handoff/IMPLEMENT.md` | Ghi nhận implement |
 | `docs/handoff/.lock` | Khóa lại |
 
-Không sửa `api/phancong.php` / `api/khbd_gemini.php`.
+Không sửa `api/phancong.php` / `api/khbd_gemini.php`. Không đổi cấu trúc JSON (`assignments`, `timetable`, `substitutes`).
 
 ## Chi tiết
 
-- Tab: 1 Phân công · 2 TKB GV · 3 Sổ Dạy Thay · 4 Chấm công · 5 Tăng giờ · 6 Báo cáo.
-- `openTeacherTimetableModal(id)` → `switchAppView('view-timetable')` + `selectTimetableTeacher(id)`.
-- Paste Ctrl+V chỉ khi `#view-timetable` đang active.
-- `applyAiTimetableResult` / sửa ô: `persistTeacherTimetable` + `saveToLocal({ autoSave: false })` + `hasUnsavedChanges`.
-- Nút **GV tiếp theo** nhảy GV chưa có TKB; **Lưu tất cả lên CSDL** gọi `saveToDB()`.
+### Phần 1
+- Tab 1 `.live-stats-banner`: nút `⚡ Nạp phân công từ TKB toàn tổ`.
+- Tab 2 `#tt-right-panel`: nút `⚡ Dịch TKB toàn tổ sang Phân công`; nhãn đơn lẻ `Dịch GV này sang Phân công`.
+- Tab 2 `#tt-left-panel`: nút `⚡ Nạp phân công toàn tổ` dưới `#tt-progress`.
+- `#tt-auto-apply-assign` mặc định `checked`.
+- `applyAiTimetableResult`: nếu checkbox bật thì gọi `applyTimetableToAssignments(..., { silent: true, skipRender: true })` rồi toast phiên lớp.
+- `syncAllAssignmentsFromTimetables`: `confirm()` theo tên đợt, đếm GV + lượt lớp, `rebuildUnassignedForSubject` toàn bộ môn, snapshot + `saveToLocal` + `render()`.
+- `parseTimetableCell` / `splitSubjectAndClass`: `Toán 95`, `Toán 9A1`, `Toán/95`.
+- `matchSubjectFromTimetableLabel`: alias `tin`→Tin học, `toan`→Toán, `hdtn`→HĐTN, `shl`/`sinh hoạt lớp`→Chủ nhiệm khi có lớp.
+
+### Phần 2
+- `html2canvas` 1.4.1 trên `<head>` (cùng CDN với `vehinh.html`).
+- Toolbar Sổ Dạy Thay: `✨ Tạo ảnh thông báo (AI)`.
+- Modal `#substitute-announcement-modal` + card `#dt-announcement-card`.
+- Hàm: `openDayThayAnnouncementModal`, `closeDayThayAnnouncementModal`, `renderAnnouncementCard`, `generateDayThayAnnouncementAI` (`api/khbd_gemini.php`, `gemini-2.5-flash`), `copyAnnouncementImage` (clipboard PNG, fallback tải file), `downloadAnnouncementImage` (`Thong_Bao_Day_Thay_YYYYMMDD.png`), `copyAnnouncementZaloText`.
 
 ## Kiểm thử Coder
 
-1. JS parse OK; 134 ID duy nhất; không còn `#teacher-timetable-modal`.
-2. `node tests/smartquiz-smoke.js` → PASS.
+1. `node tests/smartquiz-smoke.js` → PASS.
+2. 140 HTML ID, 0 trùng; JS parse (`vm.Script`) OK.
+3. Unit `parseTimetableCell` / `matchSubjectFromTimetableLabel`: `Toán 95`/`9A1`/`Toán/95`; alias tin/toan/hdtn/shl.
 
-`/verify` theo *Cách kiểm thử* trong `PLAN.md`.
+Chưa chạy được trên trình duyệt thật (cần đăng nhập + Gemini + dữ liệu tổ). `/verify` theo *Cách kiểm thử* trong `PLAN.md`.
