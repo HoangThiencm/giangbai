@@ -34,6 +34,40 @@ function sliceFunction(name){
   assert(start>=0,`missing ${name}`);
   return target.slice(start,target.indexOf('\n',start));
 }
+function sliceNamedFunction(name){
+  const start=target.indexOf(`function ${name}(`);
+  assert(start>=0,`missing ${name}`);
+  return target.slice(start,target.indexOf('\n',start));
+}
+assert(target.includes('function getConfig({includeAiSelection=true}={})'),
+  'getConfig must support suppressing AI selection while bootstrapping PPCT');
+assert(target.includes('defaultPpctRows(getConfig({includeAiSelection:false}))'),
+  'empty PPCT fallbacks must not recursively read AI selection');
+
+// With no recognized PPCT, reading AI selection used to call aiCandidates(),
+// which asked getConfig() for default rows and entered the same path again.
+// The bootstrap config must avoid those selection helpers and still create rows.
+const bootstrapSandbox={
+  sourcePpctRows:[],sourcePpctTable:null,
+  grade:{value:'6'},subject:{value:'Toán học'},schoolYear:{value:'2026-2027'},
+  school:{value:''},department:{value:''},teacher:{value:''},
+  classCount:{value:''},studentCount:{value:''},teacherCount:{value:''},
+  nlsEnabled:{checked:false},nlsRate:{value:'0'},nlsDensity:{value:'1'},
+  aiEnabled:{checked:true},aiRate:{value:'0'},aiDensity:{value:'1'},
+  clil:{checked:false},inclusive:{checked:false},instructions:{value:''},sgkCompactContext:'',
+  defaultPpctRows(config){
+    assert.deepEqual(JSON.parse(JSON.stringify(config.ai.selectedLessons)),[]);
+    assert.deepEqual(JSON.parse(JSON.stringify(config.ai.selectedPeriods)),[]);
+    return [{lesson:'PPCT mẫu',periods:'1',tietCT:'1',week:'1',devices:'',location:'',isHeader:false}];
+  },
+  extractLessonPeriods(){return 1},isAdminLesson(){return false},
+  selectedAiLessons(){throw new RangeError('AI selection must not run while PPCT is bootstrapping')},
+  selectedAiPeriods(){throw new RangeError('AI selection must not run while PPCT is bootstrapping')}
+};
+vm.createContext(bootstrapSandbox);
+vm.runInContext(sliceNamedFunction('getConfig'),bootstrapSandbox);
+assert.equal(vm.runInContext('defaultPpctRows(getConfig({includeAiSelection:false})).length',bootstrapSandbox),1,
+  'empty PPCT must create its default rows without recursively reading AI selection');
 const calls=[];
 const sandbox={console,AbortController,clearTimeout,setTimeout,fetch:async(url,init)=>{
   calls.push({url,init});

@@ -169,3 +169,21 @@ Cần tải lại trang (Ctrl+F5) nếu vẫn thấy chân ký / tiêu đề dà
 
 - `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
 - Smoke mở rộng kiểm tra cấu hình đầy đủ, catalog/parser PPCT, chọn AI theo tiết, thêm/xóa dòng PPCT, báo cáo thẩm định, preview chỉnh sửa, DOCX và ZIP.
+
+---
+
+# IMPLEMENT: Sửa vòng lặp khởi tạo bộ chọn AI khi PPCT trống
+
+**Trạng thái**: DONE
+
+## Nội dung đã triển khai
+
+- `getConfig` nhận tùy chọn nội bộ `includeAiSelection`; khi tắt, cấu hình vẫn đầy đủ nhưng không gọi các helper đọc lựa chọn AI.
+- Hai fallback PPCT trong `aiCandidates` và `aiPickerRows` dùng cấu hình khởi tạo này, vì vậy PPCT mẫu được tạo mà không gọi đệ quy qua lựa chọn AI.
+- Bổ sung regression mô phỏng PPCT trống: các helper chọn AI ném `RangeError` nếu bị gọi trong lúc khởi tạo; PPCT mẫu vẫn được tạo thành công.
+
+## Kiểm thử
+
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-integration-smoke.js`: PASS.
