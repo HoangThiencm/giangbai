@@ -2588,7 +2588,13 @@
                             <input type="text" class="form-control" id="dt-ann-title" oninput="this.dataset.manual='1'; renderAnnouncementCard()">
                         </div>
                         <div class="form-group">
-                            <label>Ghi chú / Dặn dò của Tổ chuyên môn:</label>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <label for="dt-ann-note" style="margin: 0;">Ghi chú / Dặn dò của Tổ chuyên môn:</label>
+                                <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; color: #334155; user-select: none;">
+                                    <input type="checkbox" id="dt-ann-show-note" checked onchange="renderAnnouncementCard()">
+                                    <span>Hiển thị lời dặn</span>
+                                </label>
+                            </div>
                             <textarea class="form-control" id="dt-ann-note" rows="6" placeholder="Nhập lời dặn dò hoặc bấm AI soạn thông báo Zalo..." oninput="renderAnnouncementCard()"></textarea>
                         </div>
                         <div class="dt-ann-ai-row">
@@ -5347,6 +5353,14 @@ Quy tắc:
             return `THÔNG BÁO PHÂN CÔNG DẠY THAY NGÀY ${formatVnDate(dateStr)}`;
         }
 
+        function officialAnnouncementSubject(title) {
+            let t = String(title || '').trim();
+            t = t.replace(/^THÔNG\s+BÁO\s+/i, '').trim();
+            if (!t) return 'V/v phân công dạy thay';
+            if (/^V\/v\b/i.test(t)) return t;
+            return `V/v ${t}`;
+        }
+
         function collectAllSubstituteRecords() {
             const out = [];
             const subs = state.attendance?.substitutes || {};
@@ -5456,6 +5470,8 @@ Quy tắc:
             if (!text) return;
             const noteEl = document.getElementById('dt-ann-note');
             if (noteEl) noteEl.value = text;
+            const showEl = document.getElementById('dt-ann-show-note');
+            if (showEl) showEl.checked = true;
             renderAnnouncementCard();
         }
 
@@ -5531,6 +5547,7 @@ Quy tắc:
             const dateStr = document.getElementById('dt-ann-date')?.value || '';
             const title = (document.getElementById('dt-ann-title')?.value || '').trim() || defaultAnnouncementTitle(dateStr);
             const note = (document.getElementById('dt-ann-note')?.value || '').trim();
+            const showNote = document.getElementById('dt-ann-show-note')?.checked ?? true;
             const school = state.info?.school || 'TRƯỜNG TRUNG HỌC CƠ SỞ';
             const org = state.info?.title || 'Tổ chuyên môn';
             const year = state.info?.school_year || '';
@@ -5569,11 +5586,13 @@ Quy tắc:
                     </thead>
                     <tbody>${bodyRows}</tbody>
                 </table>`;
-            const noteHtml = `
+            const noteHtml = (showNote && note)
+                ? `
                 <div class="dt-ann-note">
                     <div class="dt-ann-note-title">🔔 Lời dặn dò của Tổ chuyên môn</div>
-                    <div style="white-space:pre-wrap;">${note ? escapeHtml(note) : '—'}</div>
-                </div>`;
+                    <div style="white-space:pre-wrap;">${escapeHtml(note)}</div>
+                </div>`
+                : '';
             const signHtml = `
                 <div class="dt-ann-sign">
                     <div>
@@ -5581,7 +5600,7 @@ Quy tắc:
                         <div class="muted">Nguồn: Sổ Dạy Thay - Bù</div>
                     </div>
                     <div class="sign-box">
-                        <div><b>Đại diện Tổ trưởng chuyên môn</b></div>
+                        <div><b>Tổ trưởng</b></div>
                         <div style="height:36px;"></div>
                         <div><b>${escapeHtml(ttcm || 'TTCM')}</b></div>
                     </div>
@@ -5609,7 +5628,7 @@ Quy tắc:
                         </div>
                     </div>
                     <h3 class="dt-ann-main-title">THÔNG BÁO</h3>
-                    <p class="dt-ann-sub">V/v phân công dạy thay ${weekday ? escapeHtml(weekday) + ', ' : ''}ngày ${escapeHtml(formatVnDate(dateStr))}<br>${escapeHtml(title)}</p>
+                    <p class="dt-ann-sub">${escapeHtml(officialAnnouncementSubject(title))}</p>
                     ${tableHtml}
                     ${noteHtml}
                     ${signHtml}
@@ -5620,8 +5639,8 @@ Quy tắc:
                         <div class="dt-ann-edu-badge">🎓</div>
                         <p class="dt-ann-school">${escapeHtml(school)}</p>
                         <p class="dt-ann-org">${escapeHtml(org)}${year ? ` · Năm học ${escapeHtml(year)}` : ''}</p>
-                        <h3 class="dt-ann-main-title">BẢNG PHÂN CÔNG DẠY THAY</h3>
-                        <p class="dt-ann-sub">${escapeHtml(title)}</p>
+                        <h3 class="dt-ann-main-title">${escapeHtml(title)}</h3>
+                        <p class="dt-ann-sub">${weekday ? escapeHtml(weekday) + ', ' : ''}ngày ${escapeHtml(formatVnDate(dateStr))} · ${escapeHtml(org)}</p>
                         ${pillsHtml}
                     </div>
                     <div class="dt-ann-body">
@@ -5678,6 +5697,8 @@ ${listText}`;
                 if (!text) throw new Error('AI không trả về nội dung.');
                 const noteEl = document.getElementById('dt-ann-note');
                 if (noteEl) noteEl.value = text;
+                const showEl = document.getElementById('dt-ann-show-note');
+                if (showEl) showEl.checked = true;
                 renderAnnouncementCard();
                 showToast('Đã soạn lời dặn dò bằng AI. Kiểm tra khung xem trước rồi sao chép ảnh hoặc tin Zalo.', 'success');
             } catch (err) {
@@ -5764,6 +5785,7 @@ ${listText}`;
             const dateStr = document.getElementById('dt-ann-date')?.value || '';
             const title = (document.getElementById('dt-ann-title')?.value || '').trim() || defaultAnnouncementTitle(dateStr);
             const note = (document.getElementById('dt-ann-note')?.value || '').trim();
+            const showNote = document.getElementById('dt-ann-show-note')?.checked ?? true;
             const org = state.info?.title || 'Tổ chuyên môn';
             const rows = collectAnnouncementRows(dateStr);
             const weekday = weekdayLabel(dateStr);
@@ -5784,13 +5806,13 @@ ${listText}`;
                     lines.push(`   ✨ GV dạy thay: ${r.substitute || '—'}`);
                 });
             }
-            if (note) {
+            if (showNote && note) {
                 lines.push('');
                 lines.push(`🔔 Lời dặn dò: ${note}`);
             }
             const ttcm = ttcmTeacherName();
             lines.push('');
-            lines.push(`✍️ TTCM: ${ttcm || 'Tổ trưởng chuyên môn'}`);
+            lines.push(`✍️ Tổ trưởng: ${ttcm || 'TTCM'}`);
             return lines.join('\n');
         }
 
