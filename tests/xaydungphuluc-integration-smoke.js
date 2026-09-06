@@ -44,7 +44,7 @@ mustInclude(appendix, 'Đã hiểu thông tin SGK');
 mustInclude(appendix, 'normalizeIntegrationTable');
 mustInclude(appendix, 'getCleanOfficialYccd');
 mustInclude(appendix, 'PageOrientation.LANDSCAPE');
-mustInclude(appendix, 'width:16838,height:11906');
+mustInclude(appendix, 'width:11906,height:16838');
 mustInclude(appendix, 'Mã NLS & AI (CV 3456 & QĐ 2422)');
 mustInclude(appendix, 'id="aiLessonPickerCard" class="card p-5 w-full"');
 mustInclude(appendix, 'id="aiLessonPicker" class="w-full mt-3 overflow-x-auto"');

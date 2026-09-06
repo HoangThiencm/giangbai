@@ -30,7 +30,7 @@ assert(!html.includes('id="aiLessonPicker" class="grid md:grid-cols-2 gap-2 mt-3
 has('id="generateAll" class="btn primary" onclick="generateSelected(\'all\')"');
 assert(!html.includes('word-break: break-word'),'table text must not be forcibly broken');
 ['js/khbd-standards.js','KHBD_STANDARDS','recommendOfficialStandards','getOfficialYccd','getStandardCompetenciesForLesson','normalizeIntegrationTable','stageFiles','recognizeStagedPpct','readStagedSgk','🔍 Nhận diện PPCT','📖 Đọc SGK','Đã hiểu thông tin SGK','sgkKnowledgeBase'].forEach(has);
-['getCleanOfficialYccd','densityLowerBound','cleanAppendixOutcome','formatOutcomeLines','formatTietCT','formatWeek','PageOrientation.LANDSCAPE','width:16838,height:11906','top:1134,right:1134,bottom:1134,left:1134','LineRuleType.AUTO','line:312,lineRule:LineRuleType.AUTO','size:26'].forEach(has);
+['getCleanOfficialYccd','densityLowerBound','cleanAppendixOutcome','formatOutcomeLines','formatTietCT','formatWeek','PageOrientation.LANDSCAPE','width:11906,height:16838','top:1134,right:1134,bottom:1134,left:1134','LineRuleType.AUTO','line:312,lineRule:LineRuleType.AUTO','size:26'].forEach(has);
 ['progressContainer','progressPercent','progressBarInner','setProgress','hideProgress','progressTimerId','SCHEDULE_COLUMNS','PLAN_COLUMNS','CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM','organizationHeading'].forEach(has);
 assert(!html.includes('UBND XÃ/PHƯỜNG ...<br>'),'Appendix 1 HTML heading must not render a commune/ward line');
 assert(!html.includes('UBND XÃ/PHƯỜNG ...\\n${school.value'),'Appendix 1 DOCX heading must not render a commune/ward line');
@@ -114,7 +114,7 @@ assert(/số tự nhiên|phép tính|chia hết/i.test(chapterOnePractice),'chap
 assert(!/chia hết|ước chung|bội chung|số nguyên tố/i.test(chapterOnePractice),'chapter I practice after Bài 5 must prioritize its preceding calculation topic');
 assert(/Củng cố, hệ thống hóa/i.test(generatePedagogicalOutcome('Luyện tập chung','Toán học','6')),'practice fallback must use the pedagogical review frame');
 assert(/Vận dụng kiến thức liên môn/i.test(generatePedagogicalOutcome('Chuyên đề STEM mô hình toán học','Toán học','6')),'STEM fallback must use the pedagogical project frame');
-['DOCX_WIDTHS','appendixOne:[5,22,6,47,20]','appendixThree:[22,6,8,6,18,16,24]','tableHeader:true,cantSplit:true','contenteditable="true" onblur="editAppendixOneOutcome','sgkOutcomeForLesson','generatePedagogicalOutcome'].forEach(has);
+['DOCX_WIDTHS','appendixOne:[4,20,5,35,18,18]','appendixThree:[22,6,8,6,18,16,24]','tableHeader:true,cantSplit:true','contenteditable="true" onblur="editAppendixOneOutcome','sgkOutcomeForLesson','generatePedagogicalOutcome'].forEach(has);
 ['selectModel','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3.5-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-3-flash-preview','getSelectedModel','onModelChange','khbd_gemini_model','thinkingConfig:{thinkingBudget:0}','api/khbd_gemini.php','GEMINI_FALLBACK_MODEL','fetchWithGeminiTimeout','Không thể trích xuất dòng PPCT nào từ tệp','Tệp không có văn bản hoặc là PDF scan cần OCR.'].forEach(has);
 assert(html.includes('Giai đoạn 1 chỉ nhận diện PPCT'),'upload flow must document stage separation');
 assert(html.includes('AI chưa khả dụng')&&html.includes('đang dùng bảng PPCT đọc trực tiếp từ tệp'),'upload must provide a visible parser fallback');
@@ -256,12 +256,48 @@ assert.equal(duplicateIntegration.rows[0].cells.length,2,'adapter must keep one 
 assert(/\.TC1a|\.TC2a/.test('1.1.TC1a 1.1.TC2a'),'digital standards must use TC1a/TC2a');
 assert(/^[6-9]\.A/.test('6.A1.1'),'AI standards must be grade-specific');
 const appendixOne=vm.runInContext(`sourcePpctTable=${JSON.stringify({columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị','Địa điểm'],lessonIndex:0,rows:[{cells:['HỌC KÌ I','','','','',''],isHeader:true},{cells:['Bài 1. Tập hợp','1','1','1','Bảng phụ','Lớp học'],isHeader:false}]})};aiSelectedLessonIds=new Set(['source:1:period:1']);appendixOneTable([{lesson:'Bài 1. Tập hợp',periods:'99',outcomes:'Nhận biết và mô tả được tập hợp.',integration:'[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]'}],{lop:'6',monHoc:'Toán học',ai:{enabled:true}})`,sandbox);
-assert.deepEqual(Array.from(appendixOne.columns),['STT','Bài học','Số tiết','Yêu cầu cần đạt','Mã NLS & AI (CV 3456 & QĐ 2422)'],'PL1 must use its five-column form');
+assert.deepEqual(Array.from(appendixOne.columns),['STT','Bài học','Số tiết','Yêu cầu cần đạt','Biểu hiện năng lực số','Biểu hiện năng lực AI'],'PL1 must use its six-column form');
 assert.equal(appendixOne.rows[1].cells[2],'1','PL1 must retain periods from PL3, not generated schedule values');
 assert.equal(appendixOne.rows[1].cells[3],'- Nhận biết và mô tả được tập hợp.','PL1 must use the AI-generated outcome as a bullet');
-assert(appendixOne.rows[1].cells[4].includes('[AI:'),'selected PL3 lesson must retain its AI code in PL1');
-assert(appendixOne.rows[1].cells[4].includes('Áp dụng: tiết 1'),'partial selected period must be scoped in PL1 AI integration');
+assert(appendixOne.rows[1].cells[5].includes('[AI:'),'selected PL3 lesson must retain its AI code in PL1');
+assert(appendixOne.rows[1].cells[5].includes('Áp dụng: tiết 1'),'partial selected period must be scoped in PL1 AI integration');
 sandbox.getCleanOfficialYccd=()=>'- Thực hiện được phép cộng và phép trừ số nguyên.';
+
+const splitValue='[NLS: 1.1.TC1a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]';
+const splitConfig={lop:'6',monHoc:'Toán học',nls:{enabled:true,rate:100},ai:{enabled:true}};
+const separate=sandbox.separateIntegration(splitValue,[1,3],0,splitConfig,'Bài mẫu');
+assert(separate.nlsText.includes('[NLS:')&&!separate.nlsText.includes('[AI:'),'NLS column must contain only NLS');
+assert(separate.aiText.includes('[AI:')&&!separate.aiText.includes('[NLS:')&&separate.aiText.includes('Áp dụng: tiết 1, 3'),'AI column must isolate codes and scope multiple selected periods');
+assert.equal(sandbox.separateIntegration(splitValue,[],0,splitConfig).aiText,'-','unselected lesson must not contain AI');
+assert.equal(sandbox.separateIntegration(splitValue,[1],0,{...splitConfig,ai:{enabled:false}}).aiText,'-','AI disabled must suppress selected codes');
+assert.equal(sandbox.separateIntegration(splitValue,[1],0,{...splitConfig,nls:{enabled:false}}).nlsText,'-','NLS disabled must suppress provided codes');
+assert(sandbox.separateIntegration('-',[],0,splitConfig).nlsText.includes('[NLS:'),'enabled NLS must receive catalog/fallback codes');
+const splitModel={columns:Array.from(appendixOne.columns),rows:[{cells:['CHƯƠNG I'],isHeader:true},{cells:['1','Bài mẫu','140','- Nhận biết được kiến thức.',separate.nlsText,separate.aiText],isHeader:false}]};
+assert.deepEqual(JSON.parse(JSON.stringify(sandbox.normalizeIntegrationTable(splitModel))).columns,splitModel.columns,'normalization must retain six separate columns');
+assert.deepEqual(JSON.parse(JSON.stringify(sandbox.normalizeIntegrationTable(splitModel))).rows,splitModel.rows,'normalization must preserve cells and spanning headers');
+const splitPreview=sandbox.dynamicPpctTable(splitModel,true);
+assert.equal((splitPreview.match(/<th>/g)||[]).length,6,'preview must have six headers');
+assert(splitPreview.includes('colspan="6"')&&splitPreview.includes('class="nls-code">[NLS:')&&splitPreview.includes('class="ai-code">[AI:'),'preview must span six columns and color each code column');
+assert.equal(sandbox.ppctTableFromRows([{lesson:'Bài mẫu',periods:'1',integration:splitValue}]).columns.length,7,'PL3 must retain seven columns');
+const complianceConfig={...splitConfig,ai:{enabled:true,selectedPeriods:[{lesson:'Bài mẫu',periods:[1,3]}]}};
+const complianceData={'1':{scheduleTable:splitModel,schedule:[{lesson:'Bài mẫu',devices:'Máy chiếu',location:'Lớp học'}],assessments:['Giữa học kỳ I','Cuối học kỳ I','Giữa học kỳ II','Cuối học kỳ II'].map(milestone=>({milestone}))}};
+const completeReport=sandbox.calculateComplianceReport(complianceConfig,complianceData);
+assert.equal(completeReport.isCompliant,true,'complete separate-column data must achieve 100%');
+const missingAi=JSON.parse(JSON.stringify(complianceData));missingAi['1'].scheduleTable.rows[1].cells[5]='-';
+assert.equal(sandbox.calculateComplianceReport(complianceConfig,missingAi).criteria[3].pass,false,'configured AI selections without output codes must fail');
+const partialAi=JSON.parse(JSON.stringify(complianceData));partialAi['1'].scheduleTable.rows[1].cells[5]='[AI: 6.A1.1 - Hỗ trợ.] (Áp dụng: tiết 1).';
+assert.equal(sandbox.calculateComplianceReport(complianceConfig,partialAi).criteria[3].pass,false,'missing one selected period must fail');
+partialAi['1'].scheduleTable.rows[1].cells[5]='[AI: chưa có mã] (Áp dụng: tiết 1, 3).';
+assert.equal(sandbox.calculateComplianceReport(complianceConfig,partialAi).criteria[3].pass,false,'AI placeholder must not count as a real code');
+const missingNls=JSON.parse(JSON.stringify(complianceData));missingNls['1'].scheduleTable.rows[1].cells[4]='-';
+assert.equal(sandbox.calculateComplianceReport(complianceConfig,missingNls).criteria[2].pass,false,'dash must not count as an NLS code');
+assert.equal(sandbox.calculateComplianceReport({...complianceConfig,nls:{enabled:false}},missingNls).isCompliant,true,'disabled NLS does not require a code');
+const tooManyAi={...complianceConfig,ai:{enabled:true,selectedPeriods:[{lesson:'Bài mẫu',periods:Array.from({length:13},(_,i)=>i+1)}]}};
+assert.equal(sandbox.calculateComplianceReport(tooManyAi,complianceData).criteria[3].pass,false,'AI cap must count periods, not lesson groups');
+
+
+const repeatedLessonCoverage=vm.runInContext("(()=>{const originalSource=sourcePpctTable;sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Luyện tập chung','1']},{cells:['Luyện tập chung','1']}]};const table={columns:APPENDIX_1_COLUMNS.map(x=>x[1]),rows:[{cells:['1','Luyện tập chung','1','Đạt','-','-']},{cells:['2','Luyện tập chung','1','Đạt','-','[AI: 6.A1.1 - Hỗ trợ.] (Áp dụng: tiết 1).']}]};const report=appendixAiCoverage(table,{ai:{enabled:true,selectedPeriods:[{lessonId:'source:1',lesson:'Luyện tập chung',periods:[1]}]}});sourcePpctTable=originalSource;return report})()",sandbox);
+assert.equal(repeatedLessonCoverage.pass,true,'AI selection must match the second repeated lesson by its source ID');
 const cleanAppendixOne=vm.runInContext(`sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Bài 14. Phép cộng và phép trừ số nguyên','1'],isHeader:false}]};appendixOneTable([{lesson:'Bài 14. Phép cộng và phép trừ số nguyên',outcomes:'Nguồn bắt buộc: CTGDPT 2018. Bài SGK: Bài 14.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
 assert.equal(cleanAppendixOne.rows[0].cells[3],'- Thực hiện được phép cộng và phép trừ số nguyên.','PL1 must replace metadata outcomes with clean YCCĐ');
 sandbox.getCleanOfficialYccd=getCleanOfficialYccd;
@@ -291,7 +327,7 @@ assert.equal(vm.runInContext(`sourcePpctTable.rows[0].cells[1]`,sandbox),'1','ed
 assert.equal(vm.runInContext(`sourcePpctRows[0].periods`,sandbox),'1','editing periods must update canonical PPCT rows');
 assert.equal(vm.runInContext(`aiSelectedLessonIds.has('source:0:period:2')`,sandbox),false,'reducing periods must discard invalid period selections');
 assert.equal(vm.runInContext(`!!results['1']&&!!results['3']`,sandbox),true,'editing periods must immediately synchronize PL1 and PL3');
-assert(vm.runInContext(`appendixOneTable([{lesson:'Bài A',outcomes:'Đạt yêu cầu.',integration:'[AI: 6.A1.1 - Hỗ trợ.]'}],{lop:'6',monHoc:'Toán học',ai:{enabled:true}}).rows[0].cells[4]`,sandbox).includes('Áp dụng: tiết 1'),'PL1 must keep a selected partial-period scope');
+assert(vm.runInContext(`appendixOneTable([{lesson:'Bài A',outcomes:'Đạt yêu cầu.',integration:'[AI: 6.A1.1 - Hỗ trợ.]'}],{lop:'6',monHoc:'Toán học',ai:{enabled:true}}).rows[0].cells[5]`,sandbox).includes('Áp dụng: tiết 1'),'PL1 must keep a selected partial-period scope');
 assert.equal(vm.runInContext(`preservedPpctTable([{lesson:'Bài A',integration:'[AI: 6.A1.1 - Hỗ trợ.]'}],{lop:'6',ai:{enabled:true}}).rows[0].cells[1]`,sandbox),'1','PL3 must keep the edited source period count');
 assert.equal(vm.runInContext(`sourcePpctTable=null;sourcePpctRows=[{lesson:'Bài dài',periods:'13',isHeader:false}];aiSelectedLessonIds=new Set(aiPeriodCandidates().map(x=>x.id));selectedAiPeriodIds().size`,sandbox),12,'the thirteenth period must not remain selected');
 assert.equal(vm.runInContext(`aiRate={value:'100',min:'0',max:'100',disabled:false};aiRateOut={value:''};syncAiSelectionFromRate();aiSelectedLessonIds.size`,sandbox),12,'the slider must cap its selection at 12 periods');

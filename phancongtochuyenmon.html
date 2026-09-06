@@ -1361,17 +1361,19 @@
         .dt-ann-table th, .dt-ann-table td { padding: 8px 8px; text-align: left; vertical-align: middle; }
         .dt-ann-table th { font-weight: 800; text-align: center; white-space: nowrap; }
         .dt-ann-table .center { text-align: center; }
-        .dt-ann-table [contenteditable="true"] {
+        .dt-announcement-card [contenteditable="true"] {
             cursor: text;
             outline: none;
             border-radius: 4px;
             min-width: 1.2em;
         }
-        .dt-ann-table [contenteditable="true"]:hover { box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.35); }
-        .dt-ann-table [contenteditable="true"]:focus {
+        .dt-announcement-card [contenteditable="true"]:hover { box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.35); }
+        .dt-announcement-card [contenteditable="true"]:focus {
             box-shadow: inset 0 0 0 2px #6366f1;
-            background: #ffffff;
+            background: rgba(255,255,255,0.92);
+            color: #0f172a;
         }
+        .dt-ann-doc { text-align: center; font-size: 0.78rem; font-weight: 700; margin: 4px 0 0; }
         .dt-ann-row-del {
             border: none;
             background: #fee2e2;
@@ -1437,6 +1439,7 @@
         }
         .dt-announcement-card[data-theme="modern"] .dt-ann-school,
         .dt-announcement-card[data-theme="modern"] .dt-ann-org,
+        .dt-announcement-card[data-theme="modern"] .dt-ann-doc,
         .dt-announcement-card[data-theme="modern"] .dt-ann-main-title,
         .dt-announcement-card[data-theme="modern"] .dt-ann-sub { color: #ffffff; }
         .dt-announcement-card[data-theme="modern"] .dt-ann-main-title { font-size: 1.18rem; letter-spacing: 0.06em; }
@@ -1511,6 +1514,7 @@
         }
         .dt-announcement-card[data-theme="emerald"] .dt-ann-school,
         .dt-announcement-card[data-theme="emerald"] .dt-ann-org,
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-doc,
         .dt-announcement-card[data-theme="emerald"] .dt-ann-main-title,
         .dt-announcement-card[data-theme="emerald"] .dt-ann-sub { color: #ffffff; }
         .dt-announcement-card[data-theme="emerald"] .dt-ann-pill {
@@ -2623,7 +2627,23 @@
                                 <button type="button" class="btn-small" onclick="addAnnouncementDraftRow()"><i class="fas fa-plus"></i> Thêm dòng</button>
                                 <button type="button" class="btn-small" onclick="reloadAnnouncementDraftRows()"><i class="fas fa-rotate"></i> Tải lại từ sổ</button>
                             </div>
-                            <p class="dt-ann-edit-hint">Bấm vào từng ô trên bảng ảnh để sửa. Ảnh xuất ra theo đúng buổi phân công đang chọn.</p>
+                            <p class="dt-ann-edit-hint">Bấm vào tên trường, tổ, số thông báo và từng ô trên bảng ảnh để sửa.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="dt-ann-school">Tên trường:</label>
+                            <input type="text" class="form-control" id="dt-ann-school" placeholder="Tên trường" oninput="this.dataset.manual='1'; renderAnnouncementCard()">
+                        </div>
+                        <div class="form-group">
+                            <label for="dt-ann-org">Tổ chuyên môn:</label>
+                            <input type="text" class="form-control" id="dt-ann-org" placeholder="Tên tổ" oninput="this.dataset.manual='1'; renderAnnouncementCard()">
+                        </div>
+                        <div class="form-group">
+                            <label for="dt-ann-year">Năm học:</label>
+                            <input type="text" class="form-control" id="dt-ann-year" placeholder="VD: 2026 - 2027" oninput="this.dataset.manual='1'; renderAnnouncementCard()">
+                        </div>
+                        <div class="form-group">
+                            <label for="dt-ann-docno">Số thông báo:</label>
+                            <input type="text" class="form-control" id="dt-ann-docno" placeholder="VD: 0909/TB-TCM" oninput="this.dataset.manual='1'; renderAnnouncementCard()">
                         </div>
                         <div class="form-group">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 8px;">
@@ -5401,6 +5421,43 @@ Quy tắc:
             return 'Phân công dạy thay';
         }
 
+        function defaultAnnouncementDocNo(dateStr) {
+            const dateParts = String(dateStr || '').split('-');
+            return dateParts.length >= 3 ? `${dateParts[2]}${dateParts[1]}/TB-TCM` : '…/TB-TCM';
+        }
+
+        function announcementHeaderValue(id, fallback) {
+            const el = document.getElementById(id);
+            const v = (el?.value || '').trim();
+            return v || fallback || '';
+        }
+
+        function fillAnnouncementHeaderFields() {
+            const dateStr = document.getElementById('dt-ann-date')?.value || '';
+            const schoolEl = document.getElementById('dt-ann-school');
+            const orgEl = document.getElementById('dt-ann-org');
+            const yearEl = document.getElementById('dt-ann-year');
+            const docEl = document.getElementById('dt-ann-docno');
+            if (schoolEl) {
+                schoolEl.value = state.info?.school || 'TRƯỜNG TRUNG HỌC CƠ SỞ';
+                schoolEl.dataset.manual = '';
+            }
+            if (orgEl) {
+                orgEl.value = state.info?.title || 'Tổ chuyên môn';
+                orgEl.dataset.manual = '';
+            }
+            if (yearEl) {
+                yearEl.value = state.info?.school_year || '';
+                yearEl.dataset.manual = '';
+            }
+            if (docEl) {
+                const auto = defaultAnnouncementDocNo(dateStr);
+                docEl.value = auto;
+                docEl.dataset.auto = auto;
+                docEl.dataset.manual = '';
+            }
+        }
+
         function officialAnnouncementSubject(title) {
             let t = String(title || '').trim();
             t = t.replace(/^THÔNG\s+BÁO\s+/i, '').trim();
@@ -5632,6 +5689,28 @@ Quy tắc:
             return `<span${cls} contenteditable="true" data-ann-idx="${idx}" data-ann-field="${field}" oninput="onAnnouncementRowEdit(this)" onblur="onAnnouncementRowBlur(this)" onkeydown="onAnnouncementRowKeydown(event)">${escapeHtml(text ?? '')}</span>`;
         }
 
+        function announcementMetaEditable(field, text) {
+            return `<span contenteditable="true" data-ann-meta="${field}" oninput="onAnnouncementMetaEdit(this)" onblur="onAnnouncementMetaBlur(this)" onkeydown="onAnnouncementRowKeydown(event)">${escapeHtml(text ?? '')}</span>`;
+        }
+
+        function announcementMetaInputId(field) {
+            return ({ school: 'dt-ann-school', org: 'dt-ann-org', year: 'dt-ann-year', docNo: 'dt-ann-docno' })[field] || '';
+        }
+
+        function onAnnouncementMetaEdit(el) {
+            const input = document.getElementById(announcementMetaInputId(el?.dataset?.annMeta));
+            if (!input) return;
+            input.value = el.textContent || '';
+            input.dataset.manual = '1';
+        }
+
+        function onAnnouncementMetaBlur(el) {
+            onAnnouncementMetaEdit(el);
+            const input = document.getElementById(announcementMetaInputId(el?.dataset?.annMeta));
+            if (input) input.value = String(input.value || '').replace(/\s+/g, ' ').trim();
+            renderAnnouncementCard();
+        }
+
         function onAnnouncementDateChange() {
             const dateEl = document.getElementById('dt-ann-date');
             const titleEl = document.getElementById('dt-ann-title');
@@ -5641,6 +5720,12 @@ Quy tắc:
                 titleEl.value = autoTitle;
             }
             if (titleEl) titleEl.dataset.auto = autoTitle;
+            const docEl = document.getElementById('dt-ann-docno');
+            const autoDoc = defaultAnnouncementDocNo(dateStr);
+            if (docEl && (!docEl.dataset.manual || docEl.value === docEl.dataset.auto)) {
+                docEl.value = autoDoc;
+            }
+            if (docEl) docEl.dataset.auto = autoDoc;
             loadAnnouncementDraftRows();
             renderAnnouncementCard();
         }
@@ -5716,6 +5801,7 @@ Quy tắc:
                 titleEl.dataset.auto = titleEl.value;
                 titleEl.dataset.manual = '';
             }
+            fillAnnouncementHeaderFields();
             loadAnnouncementDraftRows();
             bindAnnouncementPreviewFit();
             renderAnnouncementCard();
@@ -5754,13 +5840,12 @@ Quy tắc:
             const title = (document.getElementById('dt-ann-title')?.value || '').trim() || defaultAnnouncementTitle(dateStr);
             const note = (document.getElementById('dt-ann-note')?.value || '').trim();
             const showNote = document.getElementById('dt-ann-show-note')?.checked ?? true;
-            const school = state.info?.school || 'TRƯỜNG TRUNG HỌC CƠ SỞ';
-            const org = state.info?.title || 'Tổ chuyên môn';
-            const year = state.info?.school_year || '';
+            const school = announcementHeaderValue('dt-ann-school', state.info?.school || 'TRƯỜNG TRUNG HỌC CƠ SỞ');
+            const org = announcementHeaderValue('dt-ann-org', state.info?.title || 'Tổ chuyên môn');
+            const year = announcementHeaderValue('dt-ann-year', '');
+            const docNo = announcementHeaderValue('dt-ann-docno', defaultAnnouncementDocNo(dateStr));
             const weekday = weekdayLabel(dateStr);
             const rows = getAnnouncementRows();
-            const dateParts = String(dateStr || '').split('-');
-            const docNo = dateParts.length >= 3 ? `${dateParts[2]}${dateParts[1]}/TB-TCM` : '…/TB-TCM';
             const bodyRows = rows.length
                 ? rows.map((r, i) => `
                     <tr>
@@ -5810,16 +5895,16 @@ Quy tắc:
                 card.innerHTML = `
                     <div class="dt-ann-cv-head">
                         <div class="dt-ann-cv-left">
-                            <p class="dt-ann-cv-qh">${escapeHtml(school)}</p>
-                            <p class="dt-ann-cv-tn">${escapeHtml(org)}</p>
+                            <p class="dt-ann-cv-qh">${announcementMetaEditable('school', school)}</p>
+                            <p class="dt-ann-cv-tn">${announcementMetaEditable('org', org)}</p>
                             <p class="dt-ann-cv-line">-----------</p>
-                            <p class="dt-ann-cv-no">Số: ${escapeHtml(docNo)}</p>
+                            <p class="dt-ann-cv-no">Số: ${announcementMetaEditable('docNo', docNo)}</p>
                         </div>
                         <div class="dt-ann-cv-right">
                             <p class="dt-ann-cv-qh">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
                             <p class="dt-ann-cv-tn">Độc lập - Tự do - Hạnh phúc</p>
                             <p class="dt-ann-cv-line">------------------------------</p>
-                            ${year ? `<p class="dt-ann-cv-no">Năm học ${escapeHtml(year)}</p>` : ''}
+                            <p class="dt-ann-cv-no">Năm học ${announcementMetaEditable('year', year)}</p>
                         </div>
                     </div>
                     <h3 class="dt-ann-main-title">THÔNG BÁO</h3>
@@ -5831,8 +5916,9 @@ Quy tắc:
                 card.innerHTML = `
                     <div class="dt-ann-header">
                         <div class="dt-ann-edu-badge">🎓</div>
-                        <p class="dt-ann-school">${escapeHtml(school)}</p>
-                        <p class="dt-ann-org">${escapeHtml(org)}${year ? ` · Năm học ${escapeHtml(year)}` : ''}</p>
+                        <p class="dt-ann-school">${announcementMetaEditable('school', school)}</p>
+                        <p class="dt-ann-org">${announcementMetaEditable('org', org)} · Năm học ${announcementMetaEditable('year', year)}</p>
+                        <p class="dt-ann-doc">Số: ${announcementMetaEditable('docNo', docNo)}</p>
                         <h3 class="dt-ann-main-title">${escapeHtml(title)}</h3>
                         ${pillsHtml}
                     </div>
@@ -5852,8 +5938,8 @@ Quy tắc:
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gợi ý...';
             }
-            const org = state.info?.title || 'Tổ chuyên môn';
-            const school = state.info?.school || '';
+            const org = announcementHeaderValue('dt-ann-org', state.info?.title || 'Tổ chuyên môn');
+            const school = announcementHeaderValue('dt-ann-school', state.info?.school || '');
             const rows = getAnnouncementRows();
             const weekday = weekdayLabel(dateStr) || '';
             const theme = ANNOUNCEMENT_THEMES.includes(currentAnnouncementTheme) ? currentAnnouncementTheme : 'modern';
@@ -6047,7 +6133,7 @@ ${listText}`;
             const title = (document.getElementById('dt-ann-title')?.value || '').trim() || defaultAnnouncementTitle(dateStr);
             const note = (document.getElementById('dt-ann-note')?.value || '').trim();
             const showNote = document.getElementById('dt-ann-show-note')?.checked ?? true;
-            const org = state.info?.title || 'Tổ chuyên môn';
+            const org = announcementHeaderValue('dt-ann-org', state.info?.title || 'Tổ chuyên môn');
             const rows = getAnnouncementRows();
             const weekday = weekdayLabel(dateStr);
             const lines = [

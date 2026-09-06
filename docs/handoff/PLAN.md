@@ -1,111 +1,122 @@
-# PLAN: Cải Tiến Thẻ & Modal Thông Báo Dạy Thay Theo Phản Hồi Người Dùng
+# PLAN: Tách Riêng 02 Cột Năng Lực Số & AI Ở Phụ Lục 1 Và Định Dạng Khổ Giấy Ngang Khi Xuất Word
 
-## Hiện trạng & Phản hồi thực tế từ người dùng (ảnh chụp đính kèm)
-Quan sát ảnh chụp màn hình thực tế từ người dùng (`media_1788687743253.png`):
-1. **Tiêu đề thông báo bị lặp nội dung**:
-   - Trong mẫu "Chuẩn Hành chính" (`official`), thẻ thông báo đang render cả 2 dòng cùng nội dung:
-     `V/v phân công dạy thay Thứ Tư, ngày 09/09/2026`
-     `<br>THÔNG BÁO PHÂN CÔNG DẠY THAY NGÀY 09/09/2026`
-     dưới khối tiêu đề in hoa `THÔNG BÁO`. Điều này làm tiêu đề bị lặp 2 lần một cách thừa thãi và mất thẩm mỹ.
-   - Người dùng yêu cầu: Tên thông báo lấy trực tiếp từ ô nhập liệu của user (`#dt-ann-title`), không lặp lại nội dung.
-2. **Lời dặn dò cần có nút check bật/tắt**:
-   - Hiện tại khối "Lời dặn dò của Tổ chuyên môn" luôn luôn hiển thị (nếu trống thì hiện gạch ngang `—`), chiếm nhiều diện tích trên ảnh khi tổ chuyên môn không có nhu cầu dặn dò thêm.
-   - Người dùng yêu cầu: Thêm nút check (checkbox / switch) bật/tắt (hiện/ẩn) lời dặn dò. Khi tắt thì ẩn hoàn toàn khối lời dặn trên ảnh và khi copy tin nhắn Zalo.
-3. **Chức danh người ký chưa chuẩn xác**:
-   - Thẻ thông báo hiện ghi chức danh: `Đại diện Tổ trưởng chuyên môn`.
-   - Người dùng chỉ rõ: Câu này không đúng trong quy chuẩn nhà trường, phải là `Tổ trưởng`.
+## Hiện trạng
+1. **Phụ lục 1 đang gộp chung 1 cột NLS & AI**:
+   - Trong `xaydungphuluc.html`, bảng Phụ lục 1 (`APPENDIX_1_COLUMNS`) hiện có 5 cột: `STT`, `Bài học`, `Số tiết`, `Yêu cầu cần đạt`, và cột gộp `Mã NLS & AI (CV 3456 & QĐ 2422)`.
+   - Cả mã Năng lực số (CV 3456) và Trí tuệ nhân tạo (QĐ 2422) đang được nối chung trong cùng một ô dữ liệu của cột này, chưa tách riêng thành 02 cột độc lập theo yêu cầu chuyên môn mới.
+2. **Lỗi định dạng hướng giấy ngang khi xuất Word**:
+   - Trong hàm `exportDocx(n, save)` (dòng 398), thuộc tính trang đang cấu hình:
+     `size: { width: 16838, height: 11906, orientation: PageOrientation.LANDSCAPE }`.
+   - Trong thư viện `docx` v8.5.0 (lớp `PageSize`), khi `orientation === PageOrientation.LANDSCAPE`, thư viện tự động hoán đổi (`flip`) chiều rộng và chiều cao: gán thuộc tính XML `w:w` bằng `height` (11906) và `w:h` bằng `width` (16838).
+   - Kết quả là file DOCX tạo ra có thẻ `<w:pgSz w:w="11906" w:h="16838" w:orient="landscape"/>`. Vì chiều rộng (11906 twips ~ 210mm) nhỏ hơn chiều cao (16838 twips ~ 297mm), Microsoft Word nhận diện đây là kích thước trang dọc (Portrait) dẫn đến tài liệu khi mở ra không hiển thị đúng hướng giấy ngang.
 
 ---
 
-## Phạm vi thực hiện
-
-### 1. Tối Ưu Tiêu Đề Thông Báo & Chống Trùng Lặp (`#dt-ann-title` & Card Render)
-- **Ô nhập liệu `#dt-ann-title`**: Người dùng có toàn quyền nhập tiêu đề thông báo theo ý muốn.
-- **Theme `official` (Chuẩn Hành chính)**:
-  - Khối tiêu đề gồm:
-    `<h3 class="dt-ann-main-title">THÔNG BÁO</h3>`
-    `<p class="dt-ann-sub">${officialSubject}</p>`
-  - Trích yếu `officialSubject` được chuẩn hóa từ `title` do user nhập:
-    + Nếu user nhập nội dung bắt đầu bằng `"THÔNG BÁO V/v ..."` hoặc `"THÔNG BÁO ..."`, loại bỏ tiền tố thừa `"THÔNG BÁO"` để thành `V/v ...` trang trọng.
-    + Nếu tiêu đề đã có `V/v`, giữ nguyên `V/v ...`.
-    + Nếu tiêu đề chưa có `V/v`, tự động thêm `V/v ${title}` hoặc hiển thị trực tiếp `title` gọn gàng.
-    + **Tuyệt đối loại bỏ** việc nối chuỗi `<br>${escapeHtml(title)}` bên dưới dòng `V/v ...` như code cũ.
-- **Theme `modern` và `emerald`**:
-  - Tiêu đề chính to rõ hiển thị trực tiếp nội dung do user nhập vào `#dt-ann-title`:
-    `<h3 class="dt-ann-main-title">${escapeHtml(title)}</h3>`
-  - Dòng phụ `.dt-ann-sub` hiển thị thông tin thời gian hoặc tổ ban hành, không lặp lại cụm từ `"BẢNG PHÂN CÔNG DẠY THAY"` rồi lại `"THÔNG BÁO PHÂN CÔNG DẠY THAY"`.
-
-### 2. Thêm Checkbox Bật/Tắt "Lời Dặn Dò"
-- **Giao diện bảng điều khiển (`.dt-ann-controls`)**:
-  - Tại nhãn của trường "Ghi chú / Dặn dò của Tổ chuyên môn", thêm checkbox điều khiển:
-    ```html
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-        <label for="dt-ann-note" style="margin: 0;">Ghi chú / Dặn dò của Tổ chuyên môn:</label>
-        <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; color: #334155; user-select: none;">
-            <input type="checkbox" id="dt-ann-show-note" checked onchange="renderAnnouncementCard()">
-            <span>Hiển thị lời dặn</span>
-        </label>
-    </div>
-    ```
-- **Logic render thẻ thông báo (`renderAnnouncementCard`)**:
-  - Đọc trạng thái `showNote = document.getElementById('dt-ann-show-note')?.checked ?? true`.
-  - Nếu `showNote` là `true` VÀ có nội dung `note` (không rỗng): Render khối `.dt-ann-note`.
-  - Nếu `showNote` là `false` HOẶC `note` rỗng: Không render khối `.dt-ann-note` (thẻ ảnh sẽ co gọn lại sạch sẽ, dành toàn bộ tiêu điểm cho bảng phân công).
-- **Tương tác nút tiện ích**:
-  - Khi bấm các chip mẫu nhanh (`Giờ giấc`, `Sổ đầu bài`, `Đột xuất`) hoặc bấm `AI Soạn thông báo Zalo`: Tự động gán `dt-ann-show-note.checked = true` để lời dặn hiển thị ngay.
-- **Xuất tin nhắn Zalo (`buildAnnouncementZaloText`)**:
-  - Chỉ đưa dòng `🔔 Lời dặn dò: ...` vào tin nhắn Zalo khi `showNote` được bật và có nội dung.
-
-### 3. Chuẩn Hóa Chức Danh Ký Tên
-- **Trong thẻ thông báo (`#dt-announcement-card`)**:
-  - Sửa dòng chữ ký:
-    Từ:
-    ```html
-    <div class="sign-box">
-        <div><b>Đại diện Tổ trưởng chuyên môn</b></div>
-        <div style="height:36px;"></div>
-        <div><b>${escapeHtml(ttcm || 'TTCM')}</b></div>
-    </div>
-    ```
-    Thành:
-    ```html
-    <div class="sign-box">
-        <div><b>Tổ trưởng</b></div>
-        <div style="height:36px;"></div>
-        <div><b>${escapeHtml(ttcm || 'TTCM')}</b></div>
-    </div>
-    ```
-- **Trong tin nhắn Zalo (`buildAnnouncementZaloText`)**:
-  - Sửa chữ ký cuối tin:
-    Từ `✍️ TTCM: ${ttcm || 'Tổ trưởng chuyên môn'}`
-    Thành `✍️ Tổ trưởng: ${ttcm || 'TTCM'}`.
+## Phạm vi
+1. **Tách 02 cột riêng cho Phụ lục 1 trong `xaydungphuluc.html`**:
+   - Định nghĩa lại `APPENDIX_1_COLUMNS` gồm 6 cột:
+     1. `STT` (`stt`)
+     2. `Bài học` (`lesson`)
+     3. `Số tiết` (`periods`)
+     4. `Yêu cầu cần đạt` (`outcomes`)
+     5. `Biểu hiện năng lực số` (`nls`)
+     6. `Biểu hiện năng lực AI` (`ai`)
+   - Cập nhật hàm `appendixOneTable()`: phân tách dữ liệu `integration` thành 2 giá trị độc lập: `nlsText` (chứa các biểu hiện NLS theo CV 3456) và `aiText` (chứa các biểu hiện AI theo QĐ 2422 kèm tiết áp dụng, hoặc `-` nếu bài học không chọn AI).
+   - Cập nhật hàm hiển thị xem trước `dynamicPpctTable()`: nhận diện độc lập cột `Biểu hiện năng lực số` (áp dụng định dạng `.nls-code`) và `Biểu hiện năng lực AI` (áp dụng định dạng `.ai-code`).
+   - Tinh chỉnh `calculateComplianceReport()`: đối chiếu tỷ lệ NLS và AI trên các cột riêng biệt của Phụ lục 1 để báo cáo thẩm định đạt chuẩn 100%.
+2. **Sửa định dạng xuất Word hướng giấy ngang (Landscape)**:
+   - Trong hàm `exportDocx()`: điều chỉnh tham số `page.size` thành:
+     `size: { width: 11906, height: 16838, orientation: PageOrientation.LANDSCAPE }`
+     để sau khi thư viện `docx` áp dụng logic `flip`, kết quả xuất ra OpenXML sẽ đúng chuẩn:
+     `<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>` (chiều ngang 297mm, chiều dọc 210mm).
+   - Cập nhật `DOCX_WIDTHS.appendixOne` thành mảng 6 tỉ lệ tương ứng cho 6 cột: ví dụ `[4, 20, 5, 35, 18, 18]` (tổng 100%).
+   - Cập nhật hàm `addPpct()` trong `exportDocx()`: render ô NLS với màu xanh dương (`0070C0`) và ô AI với màu tím (`7030A0`) khi xuất bảng Phụ lục 1.
+3. **Cập nhật bộ kiểm thử tự động**:
+   - Cập nhật `tests/xaydungphuluc-smoke.js` và `tests/xaydungphuluc-integration-smoke.js` để kiểm tra 6 cột của Phụ lục 1 và kích thước ngang chuẩn của DOCX.
 
 ---
 
-## File tác động
-- `phancongtochuyenmon.html`:
-  + Cập nhật HTML control `#dt-ann-show-note`.
-  + Sửa hàm `renderAnnouncementCard()`:
-    - Xử lý tiêu đề theme `official` và `modern` không bị trùng lặp, dùng đúng input của user.
-    - Điều kiện hiển thị khối lời dặn dò theo checkbox.
-    - Sửa chức danh ký tên thành `Tổ trưởng`.
-  + Sửa hàm `buildAnnouncementZaloText()`:
-    - Chỉ đưa lời dặn khi checkbox bật và có nội dung.
-    - Sửa chức danh ký tên Zalo thành `Tổ trưởng`.
-  + Cập nhật các hàm `applyAnnouncementQuickNote()` và `generateDayThayAnnouncementAI()` để bật lại checkbox nếu user đang tắt khi bấm thêm lời dặn.
-- `docs/handoff/PLAN.md` (Kế hoạch này).
-- `docs/handoff/.lock` (Tạo file khóa).
+## Ngoài phạm vi
+- Giữ nguyên cấu trúc bảng 7 cột của Phụ lục 3 (Kế hoạch giáo dục của giáo viên / PPCT) và bảng Phụ lục 2 (Hoạt động giáo dục).
+- Không sửa đổi logic các trang khác (`duyetgiaoan.html`, `duyetde.html`, v.v.).
 
 ---
 
-## Tiêu chí nghiệm thu (Verify Checklist)
-1. **Tiêu đề thông báo**:
-   - Khi chọn theme "Chuẩn Hành chính", không còn hiện tượng lặp 2 dòng trích yếu và tiêu đề in hoa nối đuôi nhau.
-   - Khi user gõ tiêu đề tùy ý vào `#dt-ann-title`, tiêu đề trên card cập nhật ngay lập tức theo đúng nội dung user gõ.
-2. **Checkbox bật/tắt Lời dặn dò**:
-   - Khi checkbox được tick và có ghi chú: Thẻ ảnh hiển thị hộp Lời dặn dò trang trọng.
-   - Khi bỏ tick checkbox: Hộp Lời dặn dò biến mất hoàn toàn trên thẻ ảnh, card tự động co gọn chiều cao.
-   - Khi bấm các chip mẫu hoặc AI soạn: Checkbox tự động bật và hiển thị lời dặn.
-   - Tin nhắn Zalo khi copy tôn trọng trạng thái bật/tắt này.
-3. **Chức danh người ký**:
-   - Hiển thị đúng `Tổ trưởng` (không còn chữ `Đại diện Tổ trưởng chuyên môn`).
+## File dự kiến tác động
+- `xaydungphuluc.html`: Cập nhật cấu hình cột, hàm tạo dữ liệu bảng, renderer xem trước HTML và logic xuất DOCX khổ ngang.
+- `tests/xaydungphuluc-smoke.js`: Cập nhật assertions về các cột Phụ lục 1 và cấu hình page size landscape.
+- `tests/xaydungphuluc-integration-smoke.js`: Cập nhật assertion về page size.
+- `docs/handoff/PLAN.md` (kế hoạch này).
+- `docs/handoff/.lock` (file khóa).
+
+---
+
+## Các bước thực hiện
+1. **Bước 1: Cấu hình danh mục cột Phụ lục 1**:
+   - Trong `xaydungphuluc.html`, cập nhật:
+     ```javascript
+     const APPENDIX_1_COLUMNS = [
+       ['stt', 'STT'],
+       ['lesson', 'Bài học'],
+       ['periods', 'Số tiết'],
+       ['outcomes', 'Yêu cầu cần đạt'],
+       ['nls', 'Biểu hiện năng lực số'],
+       ['ai', 'Biểu hiện năng lực AI']
+     ];
+     ```
+2. **Bước 2: Xây dựng hàm trích xuất tách bạch NLS & AI**:
+   - Bổ sung hàm `separateIntegration(value, selectedPeriods, index, c, lesson)`:
+     + Trích xuất danh sách NLS (nếu cấu hình NLS bật, lấy từ catalog hoặc fallback; ngược lại trả `-`).
+     + Trích xuất danh sách AI (nếu cấu hình AI bật và bài/tiết có chọn AI, gán phạm vi tiết; ngược lại trả `-`).
+3. **Bước 3: Cập nhật hàm tạo bảng Phụ lục 1 (`appendixOneTable`)**:
+   - Dùng `separateIntegration` để điền 6 ô:
+     `{ cells: [String(++stt), row.lesson, row.periods, outcomes, nlsText, aiText], isHeader: false }`.
+4. **Bước 4: Cập nhật renderer xem trước (`dynamicPpctTable`) & `normalizeIntegrationTable`**:
+   - Kiểm tra nếu bảng là Phụ lục 1 (có cột `Biểu hiện năng lực số` và `Biểu hiện năng lực AI`) thì giữ nguyên 6 cột không chèn thêm `INTEGRATION_COLUMN_LABEL`.
+   - Tô màu `.nls-code` cho cột NLS và `.ai-code` cho cột AI.
+5. **Bước 5: Cập nhật hàm `calculateComplianceReport`**:
+   - Tính toán số bài có NLS và số bài/tiết có AI dựa trên cột tương ứng khi bảng có 2 cột riêng biệt.
+6. **Bước 6: Cập nhật xuất DOCX cho Phụ lục 1**:
+   - Cấu hình lại `DOCX_WIDTHS.appendixOne = [4, 20, 5, 35, 18, 18]`.
+   - Trong `addPpct()`, phân biệt cột NLS và cột AI để gán màu TextRun tương ứng (`0070C0` cho NLS, `7030A0` cho AI).
+7. **Bước 7: Sửa hướng giấy ngang trong DOCX**:
+   - Đổi tham số tạo section trong `exportDocx`:
+     ```javascript
+     page: {
+       size: { width: 11906, height: 16838, orientation: PageOrientation.LANDSCAPE },
+       margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 }
+     }
+     ```
+     Đảm bảo file sinh ra có `<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>`.
+8. **Bước 8: Cập nhật test và kiểm thử**:
+   - Cập nhật `tests/xaydungphuluc-smoke.js` và `tests/xaydungphuluc-integration-smoke.js`.
+   - Chạy kiểm tra tự động `node tests/xaydungphuluc-smoke.js` và `node tests/xaydungphuluc-integration-smoke.js`.
+
+---
+
+## Rủi ro
+- **Rủi ro xung đột bộ chuyển đổi bảng**: Hàm `normalizeIntegrationTable` đang được gọi tại nhiều nơi. Cần phân biệt rõ bảng Phụ lục 1 (đã có 2 cột riêng) và bảng Phụ lục 3 / PPCT nguồn (bảng 7-8 cột với 1 cột tích hợp chung) để tránh bị gộp cột ngoài ý muốn.
+- **Tương thích kiểm thử cũ**: Hai file smoke test đang assert chuỗi `'width:16838,height:11906'`. Coder cần đồng bộ kiểm thử sang kích thước đúng để test pass.
+
+---
+
+## Cách kiểm thử
+1. **Kiểm thử tự động bằng Node**:
+   - Chạy `node tests/xaydungphuluc-smoke.js` -> Phải báo PASS.
+   - Chạy `node tests/xaydungphuluc-integration-smoke.js` -> Phải báo PASS.
+2. **Kiểm thử tạo file DOCX bằng script**:
+   - Chạy script Node mô phỏng `exportDocx('1')`, kiểm tra file DOCX tạo ra:
+     + Chứa `<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>`.
+     + Bảng có đúng 6 cột tiêu đề: `STT`, `Bài học`, `Số tiết`, `Yêu cầu cần đạt`, `Biểu hiện năng lực số`, `Biểu hiện năng lực AI`.
+3. **Kiểm thử trực quan trên trình duyệt**:
+   - Mở `xaydungphuluc.html`, xem tab "Phụ lục 1": bảng hiển thị 2 cột riêng biệt NLS và AI to rõ, có màu phân biệt.
+   - Bấm nút "Xuất phụ lục đang xem (.docx)", mở file tải về trên Microsoft Word: trang hiển thị đúng chiều giấy ngang (Landscape) chuẩn A4.
+
+---
+
+## Tiêu chí nghiệm thu
+- Phụ lục 1 có đủ 02 cột tách biệt: `Biểu hiện năng lực số` và `Biểu hiện năng lực AI`.
+- Nội dung NLS hiển thị ở cột NLS; nội dung AI hiển thị ở cột AI (có chú thích tiết áp dụng); bài không có AI hiển thị `-`.
+- File Word (.docx) của tất cả các Phụ lục khi mở trong Microsoft Word hiển thị đúng định dạng hướng giấy ngang (Landscape), khổ A4 (297mm x 210mm).
+- Báo cáo thẩm định sư phạm (Compliance report) vẫn đạt 100%.
+- Tất cả các bộ smoke test tự động đều PASS.
