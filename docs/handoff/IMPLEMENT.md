@@ -1,4 +1,4 @@
-# IMPLEMENT: Kiêm nhiệm trường + Dịch TKB sang phân công chuyên môn
+# IMPLEMENT: Tab Thời khoá biểu GV toàn trang + nhận diện hàng loạt, lưu local liên tục
 
 **Ngày implement**: 2026-09-07
 **Coder**: Grok (xAI)
@@ -6,26 +6,29 @@
 
 ## Tóm tắt
 
-1. **Kiêm nhiệm trường** (đã có): `duty_type = school_duty`, không sinh lớp, gán trực tiếp GV, cộng tiết.
-2. **Dịch ngược TKB → phân công**: bóc môn/lớp từ ma trận TKB, gán `teacher.assignments`, dọn kho lớp, chuyển lớp từ GV khác nếu trùng.
+Tách TKB khỏi modal thành Tab `2. Thời khoá biểu GV` (`#view-timetable`): cột trái danh sách GV + trạng thái, cột phải workspace dán ảnh / AI / lưới tuần. AI nhận diện xong lưu ngay `localStorage`; lưu MySQL 1 lần bằng **Lưu tất cả lên CSDL**.
 
 ## Files
 
 | File | Thay đổi |
 |------|----------|
-| `phancongtochuyenmon.html` | extract/apply/sync TKB, nút Dịch sang Phân công, Nạp từ TKB, đồng bộ toàn tổ |
+| `phancongtochuyenmon.html` | Tab mới, view 2 cột, bỏ modal TKB (tránh trùng ID), auto-save local, điều hướng GV |
 | `docs/handoff/IMPLEMENT.md` | Ghi nhận implement |
 | `docs/handoff/.lock` | Khóa lại |
 
-## UI
+Không sửa `api/phancong.php` / `api/khbd_gemini.php`.
 
-- Modal TKB: **Dịch sang Phân công** + checkbox tự cập nhật khi lưu.
-- Thẻ GV: **Nạp phân công từ TKB**.
-- Menu Công cụ: **Đồng bộ phân công từ TKB toàn tổ**.
+## Chi tiết
+
+- Tab: 1 Phân công · 2 TKB GV · 3 Sổ Dạy Thay · 4 Chấm công · 5 Tăng giờ · 6 Báo cáo.
+- `openTeacherTimetableModal(id)` → `switchAppView('view-timetable')` + `selectTimetableTeacher(id)`.
+- Paste Ctrl+V chỉ khi `#view-timetable` đang active.
+- `applyAiTimetableResult` / sửa ô: `persistTeacherTimetable` + `saveToLocal({ autoSave: false })` + `hasUnsavedChanges`.
+- Nút **GV tiếp theo** nhảy GV chưa có TKB; **Lưu tất cả lên CSDL** gọi `saveToDB()`.
 
 ## Kiểm thử Coder
 
-1. JS inline parse OK, không trùng `id`.
+1. JS parse OK; 134 ID duy nhất; không còn `#teacher-timetable-modal`.
 2. `node tests/smartquiz-smoke.js` → PASS.
 
-`/verify` theo *Cách kiểm thử* trong `PLAN.md` (gán CĐS + dịch TKB Toán 63/64/93/94).
+`/verify` theo *Cách kiểm thử* trong `PLAN.md`.

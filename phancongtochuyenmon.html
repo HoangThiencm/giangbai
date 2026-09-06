@@ -711,7 +711,53 @@
         .quota-status-badge.over { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
         .quota-status-badge.under { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
 
-        /* 2. VIEW SỔ DẠY THAY - BÙ */
+        /* 2. VIEW THỜI KHÓA BIỂU GV */
+        #view-timetable {
+            flex-direction: row;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+        #tt-left-panel {
+            width: 300px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        #tt-right-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .tt-teacher-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .tt-teacher-item:hover { background: #f8fafc; }
+        .tt-teacher-item.active { background: #eef2ff; border-color: #c7d2fe; }
+        .tt-filter-btn {
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 4px 8px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            cursor: pointer;
+            color: #475569;
+        }
+        .tt-filter-btn.active { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; }
+        .tt-unsaved-dot { width: 8px; height: 8px; border-radius: 50%; background: #2563eb; display: inline-block; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+
+        /* 3. VIEW SỔ DẠY THAY - BÙ */
         #view-daythay {
             flex-direction: column;
             background: #f8fafc;
@@ -1220,6 +1266,8 @@
 
         @media (max-width: 900px) {
             #view-phancong { flex-direction: column; }
+            #view-timetable { flex-direction: column; }
+            #tt-left-panel { width: 100%; height: 220px; }
             #left-panel { width: 100%; height: 260px; }
             #top-navbar { height: auto; padding: 0; flex-direction: column; gap: 0; }
             .top-brand-bar, .workspace-bar { padding: 10px 15px; }
@@ -1286,17 +1334,20 @@
                 <button class="view-tab-btn active" id="tab-nav-phancong" onclick="switchAppView('view-phancong')">
                     <i class="fas fa-clipboard-list"></i> 1. Phân công giảng dạy
                 </button>
+                <button class="view-tab-btn" id="tab-nav-timetable" onclick="switchAppView('view-timetable')">
+                    <i class="fas fa-calendar-days"></i> 2. Thời khoá biểu GV
+                </button>
                 <button class="view-tab-btn" id="tab-nav-daythay" onclick="switchAppView('view-daythay')">
-                    <i class="fas fa-book-bookmark"></i> 2. Sổ Dạy Thay - Bù
+                    <i class="fas fa-book-bookmark"></i> 3. Sổ Dạy Thay - Bù
                 </button>
                 <button class="view-tab-btn" id="tab-nav-chamcong" onclick="switchAppView('view-chamcong')">
-                    <i class="fas fa-calendar-check"></i> 3. Chấm công GV
+                    <i class="fas fa-calendar-check"></i> 4. Chấm công GV
                 </button>
                 <button class="view-tab-btn" id="tab-nav-tanggio" onclick="switchAppView('view-tanggio')">
-                    <i class="fas fa-calculator"></i> 4. Tăng Giờ
+                    <i class="fas fa-calculator"></i> 5. Tăng Giờ
                 </button>
                 <button class="view-tab-btn" id="tab-nav-baocao" onclick="switchAppView('view-baocao')">
-                    <i class="fas fa-chart-pie"></i> 5. Báo cáo &amp; Thống kê
+                    <i class="fas fa-chart-pie"></i> 6. Báo cáo &amp; Thống kê
                 </button>
             </div>
 
@@ -1362,6 +1413,70 @@
 
             <div class="teachers-grid" id="teachers-grid">
                 <!-- Render từ JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- 2. VIEW THỜI KHÓA BIỂU GIÁO VIÊN (TAB RIÊNG) -->
+    <div class="app-view" id="view-timetable">
+        <aside id="tt-left-panel">
+            <div class="panel-header">
+                <div class="panel-header-title">
+                    <i class="fas fa-calendar-days"></i>
+                    <span>GIÁO VIÊN &amp; TKB</span>
+                </div>
+            </div>
+            <div class="search-box-container">
+                <div id="tt-progress" style="font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:8px;">Đã có TKB: 0 / 0 giáo viên</div>
+                <input type="text" class="search-input" id="tt-teacher-search" placeholder="Tìm giáo viên..." oninput="renderTimetableTeacherList()">
+                <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+                    <button type="button" class="tt-filter-btn active" id="tt-filter-all" onclick="setTimetableTeacherFilter('all')">Tất cả</button>
+                    <button type="button" class="tt-filter-btn" id="tt-filter-has_tt" onclick="setTimetableTeacherFilter('has_tt')">Đã có TKB</button>
+                    <button type="button" class="tt-filter-btn" id="tt-filter-missing_tt" onclick="setTimetableTeacherFilter('missing_tt')">Chưa có TKB</button>
+                </div>
+            </div>
+            <div class="pool-container" id="tt-teacher-list"></div>
+        </aside>
+        <main id="tt-right-panel">
+            <div id="tt-workspace-header"></div>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin:0;">
+                <div class="form-group">
+                    <label>Năm học:</label>
+                    <input type="text" class="form-control" id="tt-school-year" placeholder="VD: 2026 - 2027" onchange="persistAndSaveTimetableLocal()">
+                </div>
+                <div class="form-group">
+                    <label>Học kỳ:</label>
+                    <input type="text" class="form-control" id="tt-semester" placeholder="VD: Học kỳ 1" onchange="persistAndSaveTimetableLocal()">
+                </div>
+            </div>
+            <div class="tt-dropzone" id="tt-dropzone" onclick="document.getElementById('tt-file-input').click()">
+                <input type="file" id="tt-file-input" accept="image/*" class="hidden" onchange="handleTimetableFile(this.files && this.files[0])">
+                <div><i class="fas fa-image" style="font-size:1.4rem; color:#4338ca;"></i></div>
+                <p style="margin:8px 0 4px; font-weight:800;">Dán ảnh TKB (Ctrl+V), kéo thả hoặc bấm để chọn file</p>
+                <p style="margin:0; color:#64748b; font-size:0.8rem;">Ảnh chụp màn hình Thời khoá biểu giáo viên (JPG/PNG)</p>
+                <div style="margin-top:8px;">
+                    <img id="tt-preview" class="tt-preview" alt="Xem trước TKB">
+                    <button type="button" class="btn-small" id="tt-clear-preview" style="display:none;" onclick="event.stopPropagation(); clearTimetablePreview()">Xóa ảnh</button>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end;">
+                <button type="button" class="btn-small btn-small-primary" id="btn-ai-scan-tt" onclick="scanTimetableWithAI()">
+                    <i class="fas fa-wand-magic-sparkles"></i> AI nhận diện TKB
+                </button>
+            </div>
+            <h4 style="margin:0 0 8px; font-size:0.88rem; font-weight:800;">Buổi sáng</h4>
+            <div style="overflow-x:auto; margin-bottom:8px;" id="tt-morning-wrap"></div>
+            <h4 style="margin:8px 0; font-size:0.88rem; font-weight:800;">Buổi chiều</h4>
+            <div style="overflow-x:auto;" id="tt-afternoon-wrap"></div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px;">
+                <label class="checkbox-group" style="margin:0;">
+                    <input type="checkbox" id="tt-auto-apply-assign">
+                    Tự động cập nhật phân công khi lưu TKB
+                </label>
+                <button type="button" class="btn-toolbar btn-db-save" onclick="saveToDB()"><i class="fas fa-cloud-arrow-up"></i> Lưu tất cả lên CSDL</button>
+                <button type="button" class="btn-small" onclick="applyCurrentTimetableToAssignments()"><i class="fas fa-bolt"></i> Dịch sang Phân công</button>
+                <button type="button" class="btn-small" onclick="goToNextTimetableTeacher(true)">GV tiếp theo ➔</button>
+                <button type="button" class="btn-small" onclick="clearCurrentTeacherTimetable()"><i class="fas fa-trash"></i> Xóa TKB GV này</button>
             </div>
         </main>
     </div>
@@ -1785,60 +1900,6 @@
         </div>
     </div>
 
-    <!-- MODAL THỜI KHÓA BIỂU GIÁO VIÊN -->
-    <div class="modal-overlay" id="teacher-timetable-modal">
-        <div class="modal-card" style="max-width: 1120px;">
-            <div class="modal-header">
-                <h2><i class="fas fa-calendar-days"></i> Thời khoá biểu giáo viên</h2>
-                <button class="modal-close" onclick="closeTeacherTimetableModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-grid" style="grid-template-columns: 1.4fr 1fr 1fr; margin-bottom: 12px;">
-                    <div class="form-group">
-                        <label>Giáo viên:</label>
-                        <select class="form-control" id="tt-teacher-select" onchange="onTimetableTeacherChange()">
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Năm học:</label>
-                        <input type="text" class="form-control" id="tt-school-year" placeholder="VD: 2026 - 2027">
-                    </div>
-                    <div class="form-group">
-                        <label>Học kỳ:</label>
-                        <input type="text" class="form-control" id="tt-semester" placeholder="VD: Học kỳ 1">
-                    </div>
-                </div>
-                <div class="tt-dropzone" id="tt-dropzone" onclick="document.getElementById('tt-file-input').click()">
-                    <input type="file" id="tt-file-input" accept="image/*" class="hidden" onchange="handleTimetableFile(this.files && this.files[0])">
-                    <div><i class="fas fa-image" style="font-size:1.4rem; color:#4338ca;"></i></div>
-                    <p style="margin:8px 0 4px; font-weight:800;">Dán ảnh TKB (Ctrl+V), kéo thả hoặc bấm để chọn file</p>
-                    <p class="text-sm" style="margin:0; color:#64748b;">Ảnh chụp màn hình Thời khoá biểu giáo viên (JPG/PNG)</p>
-                    <img id="tt-preview" class="tt-preview" alt="Xem trước TKB">
-                </div>
-                <div style="display:flex; justify-content:flex-end; margin:10px 0 14px;">
-                    <button type="button" class="btn-small btn-small-primary" id="btn-ai-scan-tt" onclick="scanTimetableWithAI()">
-                        <i class="fas fa-wand-magic-sparkles"></i> AI nhận diện TKB
-                    </button>
-                </div>
-                <h4 style="margin:0 0 8px; font-size:0.88rem; font-weight:800;">Buổi sáng</h4>
-                <div style="overflow-x:auto; margin-bottom:16px;" id="tt-morning-wrap"></div>
-                <h4 style="margin:0 0 8px; font-size:0.88rem; font-weight:800;">Buổi chiều</h4>
-                <div style="overflow-x:auto;" id="tt-afternoon-wrap"></div>
-            </div>
-            <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                <label class="checkbox-group" style="margin:0;">
-                    <input type="checkbox" id="tt-auto-apply-assign">
-                    Tự động cập nhật phân công chuyên môn khi lưu TKB
-                </label>
-                <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <button class="btn-small" onclick="closeTeacherTimetableModal()">Đóng</button>
-                    <button type="button" class="btn-small" onclick="applyCurrentTimetableToAssignments()"><i class="fas fa-arrows-rotate"></i> Dịch sang Phân công</button>
-                    <button class="btn-small btn-small-primary" onclick="saveTeacherTimetable()"><i class="fas fa-floppy-disk"></i> Lưu Thời khoá biểu</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- MODAL MA TRẬN & THỐNG KÊ PHÂN CÔNG TOÀN DIỆN -->
     <div class="modal-overlay" id="matrix-modal">
         <div class="modal-card" style="max-width: 1080px;">
@@ -2258,7 +2319,9 @@
             if (view) view.classList.add('active');
             if (btn) btn.classList.add('active');
 
-            if (viewId === 'view-daythay') {
+            if (viewId === 'view-timetable') {
+                renderTimetableView();
+            } else if (viewId === 'view-daythay') {
                 renderDayThayView();
             } else if (viewId === 'view-chamcong') {
                 renderAttendance();
@@ -2883,6 +2946,9 @@
             renderReports();
             renderOvertimeSummary();
             syncMonthSelects();
+            if (document.getElementById('view-timetable')?.classList.contains('active')) {
+                renderTimetableView();
+            }
             if (document.getElementById('view-daythay')?.classList.contains('active')) {
                 renderDayThayView();
             }
@@ -4021,6 +4087,9 @@
         let editingTimetable = null;
         let ttImageDataUrl = '';
         let ttPasteBound = false;
+        let selectedTimetableTeacherId = '';
+        let ttTeacherFilter = 'all';
+        let ttCellSaveTimer = null;
         const TT_DAYS = ['2', '3', '4', '5', '6', '7'];
         const TT_DAY_LABELS = { 2: 'Thứ 2', 3: 'Thứ 3', 4: 'Thứ 4', 5: 'Thứ 5', 6: 'Thứ 6', 7: 'Thứ 7' };
 
@@ -4094,6 +4163,14 @@
             );
         }
 
+        function countTimetableLessons(tt) {
+            let n = 0;
+            ['morning', 'afternoon'].forEach(session => {
+                TT_DAYS.forEach(day => { n += Object.keys(tt?.[session]?.[day] || {}).length; });
+            });
+            return n;
+        }
+
         function persistTeacherTimetable(teacherId, timetable) {
             const copy = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
             const apply = teachers => {
@@ -4105,10 +4182,7 @@
         }
 
         function populateTimetableTeacherSelect(selectedId) {
-            const sel = document.getElementById('tt-teacher-select');
-            if (!sel) return;
-            sel.innerHTML = (state.teachers || []).map(t => `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${escapeHtml(t.name)} (${t.role})</option>`).join('');
-            if (selectedId && [...sel.options].some(o => o.value === selectedId)) sel.value = selectedId;
+            if (selectedId) selectedTimetableTeacherId = selectedId;
         }
 
         function openTeacherTimetableModal(teacherId) {
@@ -4116,35 +4190,186 @@
                 showToast('Chưa có giáo viên trong tổ. Hãy khai báo tổ trước.', 'info');
                 return;
             }
-            const preferred = teacherId || document.getElementById('new-sub-for-teacher')?.value || document.getElementById('new-sub-teacher')?.value || state.teachers[0].id;
-            populateTimetableTeacherSelect(preferred);
-            loadTimetableDraft(preferred);
-            ttImageDataUrl = '';
-            const preview = document.getElementById('tt-preview');
-            if (preview) { preview.src = ''; preview.style.display = 'none'; }
-            bindTimetableInputEvents();
-            document.getElementById('teacher-timetable-modal')?.classList.add('active');
+            const preferred = teacherId || selectedTimetableTeacherId || document.getElementById('new-sub-for-teacher')?.value || document.getElementById('new-sub-teacher')?.value || state.teachers[0].id;
+            switchAppView('view-timetable');
+            selectTimetableTeacher(preferred);
         }
 
         function closeTeacherTimetableModal() {
-            document.getElementById('teacher-timetable-modal')?.classList.remove('active');
+            /* Tab TKB thay thế modal */
         }
 
         function loadTimetableDraft(teacherId) {
+            selectTimetableTeacher(teacherId);
+        }
+
+        function onTimetableTeacherChange() {
+            const id = selectedTimetableTeacherId;
+            if (id) selectTimetableTeacher(id);
+        }
+
+        function persistAndSaveTimetableLocal() {
+            const teacherId = selectedTimetableTeacherId;
+            if (!teacherId) return;
+            if (!editingTimetable) editingTimetable = emptyTimetable();
+            editingTimetable.school_year = document.getElementById('tt-school-year')?.value.trim() || state.info?.school_year || '';
+            editingTimetable.semester = document.getElementById('tt-semester')?.value.trim() || state.info?.semester || '';
+            editingTimetable.updated_at = new Date().toISOString().slice(0, 10);
+            persistTeacherTimetable(teacherId, editingTimetable);
+            saveCurrentPhaseSnapshot();
+            saveToLocal({ autoSave: false });
+            hasUnsavedChanges = true;
+            renderTimetableTeacherList();
+        }
+
+        function filteredTimetableTeachers() {
+            const q = foldText(document.getElementById('tt-teacher-search')?.value || '');
+            return (state.teachers || []).filter(t => {
+                if (q && !foldText(t.name).includes(q)) return false;
+                const has = timetableHasLessons(t.timetable);
+                if (ttTeacherFilter === 'has_tt') return has;
+                if (ttTeacherFilter === 'missing_tt') return !has;
+                return true;
+            });
+        }
+
+        function setTimetableTeacherFilter(filter) {
+            ttTeacherFilter = filter || 'all';
+            ['all', 'has_tt', 'missing_tt'].forEach(key => {
+                document.getElementById(`tt-filter-${key}`)?.classList.toggle('active', ttTeacherFilter === key);
+            });
+            renderTimetableTeacherList();
+        }
+
+        function renderTimetableView() {
+            bindTimetableInputEvents();
+            if (!selectedTimetableTeacherId && state.teachers[0]) selectedTimetableTeacherId = state.teachers[0].id;
+            renderTimetableTeacherList();
+            renderTimetableWorkspace();
+        }
+
+        function renderTimetableTeacherList() {
+            const list = document.getElementById('tt-teacher-list');
+            const progress = document.getElementById('tt-progress');
+            const all = state.teachers || [];
+            const hasCount = all.filter(t => timetableHasLessons(t.timetable)).length;
+            if (progress) progress.textContent = `Đã có TKB: ${hasCount} / ${all.length} giáo viên`;
+            if (!list) return;
+            const rows = filteredTimetableTeachers();
+            if (!rows.length) {
+                list.innerHTML = '<div style="color:#94a3b8; font-size:0.82rem; padding:10px;">Không có giáo viên khớp bộ lọc.</div>';
+                return;
+            }
+            list.innerHTML = rows.map(t => {
+                const has = timetableHasLessons(t.timetable);
+                const n = countTimetableLessons(t.timetable);
+                const active = t.id === selectedTimetableTeacherId ? 'active' : '';
+                const badge = has
+                    ? `<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:999px; padding:2px 7px; font-size:0.68rem; font-weight:800;">✓ Đã có TKB (${n} tiết)</span>`
+                    : `<span style="background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; border-radius:999px; padding:2px 7px; font-size:0.68rem; font-weight:800;">⏳ Chưa có TKB</span>`;
+                const unsaved = hasUnsavedChanges ? '<span class="tt-unsaved-dot" title="Chưa lưu CSDL"></span>' : '';
+                return `
+                    <div class="tt-teacher-item ${active}" onclick="selectTimetableTeacher('${t.id}')">
+                        <i class="fas fa-user-tie" style="color:#4338ca;"></i>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:800; font-size:0.82rem;">${escapeHtml(t.name)}</div>
+                            <div style="font-size:0.7rem; color:#64748b; font-weight:700;">${t.role || 'GV'}</div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">${badge}${unsaved}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectTimetableTeacher(teacherId) {
+            if (!teacherId) return;
+            selectedTimetableTeacherId = teacherId;
             const teacher = state.teachers.find(t => t.id === teacherId);
             editingTimetable = normalizeTeacherTimetable(teacher?.timetable);
             if (!editingTimetable.school_year) editingTimetable.school_year = state.info?.school_year || '';
             if (!editingTimetable.semester) editingTimetable.semester = state.info?.semester || '';
+            ttImageDataUrl = '';
+            const preview = document.getElementById('tt-preview');
+            if (preview) { preview.src = ''; preview.style.display = 'none'; }
+            const clearBtn = document.getElementById('tt-clear-preview');
+            if (clearBtn) clearBtn.style.display = 'none';
+            renderTimetableTeacherList();
+            renderTimetableWorkspace();
+        }
+
+        function renderTimetableWorkspace() {
+            const header = document.getElementById('tt-workspace-header');
+            const teacher = state.teachers.find(t => t.id === selectedTimetableTeacherId);
+            if (header) {
+                if (!teacher) {
+                    header.innerHTML = '<div style="padding:24px; color:#94a3b8; font-weight:700;">Chưa có giáo viên. Hãy khai báo tổ trước.</div>';
+                } else {
+                    const n = countTimetableLessons(editingTimetable || teacher.timetable);
+                    header.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+                            <div>
+                                <h3 style="margin:0; font-size:1.15rem; font-weight:800;">${escapeHtml(teacher.name)}</h3>
+                                <p style="margin:4px 0 0; font-size:0.8rem; color:#64748b; font-weight:700;">${teacher.role || 'GV'} · ${n} tiết trên TKB</p>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button type="button" class="btn-small" onclick="goToPrevTimetableTeacher()">&lt; GV trước</button>
+                                <button type="button" class="btn-small" onclick="goToNextTimetableTeacher(false)">GV tiếp theo &gt;</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
             const yearEl = document.getElementById('tt-school-year');
             const semEl = document.getElementById('tt-semester');
-            if (yearEl) yearEl.value = editingTimetable.school_year || '';
-            if (semEl) semEl.value = editingTimetable.semester || '';
+            if (yearEl) yearEl.value = editingTimetable?.school_year || state.info?.school_year || '';
+            if (semEl) semEl.value = editingTimetable?.semester || state.info?.semester || '';
             renderTimetableGrid();
         }
 
-        function onTimetableTeacherChange() {
-            const id = document.getElementById('tt-teacher-select')?.value;
-            if (id) loadTimetableDraft(id);
+        function goToPrevTimetableTeacher() {
+            const list = filteredTimetableTeachers();
+            if (!list.length) return;
+            const idx = list.findIndex(t => t.id === selectedTimetableTeacherId);
+            const prev = list[(idx <= 0 ? list.length : idx) - 1];
+            if (prev) selectTimetableTeacher(prev.id);
+        }
+
+        function goToNextTimetableTeacher(onlyMissing = false) {
+            if (onlyMissing) {
+                const all = state.teachers || [];
+                const curIdx = all.findIndex(t => t.id === selectedTimetableTeacherId);
+                const after = all.slice(curIdx + 1).find(t => !timetableHasLessons(t.timetable));
+                const wrap = all.slice(0, Math.max(0, curIdx)).find(t => !timetableHasLessons(t.timetable));
+                const next = after || wrap;
+                if (!next) {
+                    showToast('Tất cả giáo viên đã có TKB.', 'success');
+                    return;
+                }
+                selectTimetableTeacher(next.id);
+                return;
+            }
+            const list = filteredTimetableTeachers();
+            if (!list.length) return;
+            const idx = list.findIndex(t => t.id === selectedTimetableTeacherId);
+            const next = list[(idx + 1) % list.length];
+            if (next) selectTimetableTeacher(next.id);
+        }
+
+        function clearCurrentTeacherTimetable() {
+            if (!selectedTimetableTeacherId) return;
+            if (!confirm('Xóa trắng Thời khoá biểu của giáo viên này để nhập lại?')) return;
+            editingTimetable = emptyTimetable();
+            persistAndSaveTimetableLocal();
+            renderTimetableWorkspace();
+            showToast('Đã xóa TKB của giáo viên hiện tại trên máy.', 'info');
+        }
+
+        function clearTimetablePreview() {
+            ttImageDataUrl = '';
+            const preview = document.getElementById('tt-preview');
+            if (preview) { preview.src = ''; preview.style.display = 'none'; }
+            const clearBtn = document.getElementById('tt-clear-preview');
+            if (clearBtn) clearBtn.style.display = 'none';
         }
 
         function periodsForTimetableSession(session, timetable) {
@@ -4193,6 +4418,8 @@
             if (parsed) editingTimetable[session][day][String(period)] = parsed;
             else delete editingTimetable[session][day][String(period)];
             renderTimetableGrid();
+            clearTimeout(ttCellSaveTimer);
+            ttCellSaveTimer = setTimeout(() => persistAndSaveTimetableLocal(), 500);
         }
 
         function bindTimetableInputEvents() {
@@ -4211,8 +4438,7 @@
             if (!ttPasteBound) {
                 ttPasteBound = true;
                 window.addEventListener('paste', e => {
-                    const modal = document.getElementById('teacher-timetable-modal');
-                    if (!modal?.classList.contains('active')) return;
+                    if (!document.getElementById('view-timetable')?.classList.contains('active')) return;
                     const items = e.clipboardData?.items;
                     if (!items) return;
                     for (const item of items) {
@@ -4243,6 +4469,8 @@
                 preview.src = dataUrl;
                 preview.style.display = 'inline-block';
             }
+            const clearBtn = document.getElementById('tt-clear-preview');
+            if (clearBtn) clearBtn.style.display = dataUrl ? 'inline-flex' : 'none';
         }
 
         function splitImageDataUrl(dataUrl) {
@@ -4348,7 +4576,6 @@ Quy tắc:
                 const text = extractGeminiText(data);
                 const parsed = parseAiJson(text);
                 applyAiTimetableResult(parsed);
-                showToast('Đã nhận diện TKB. Hãy rà soát lưới rồi bấm Lưu.', 'success');
             } catch (err) {
                 console.error(err);
                 showToast(err.message || 'Không nhận diện được TKB.', 'error');
@@ -4376,11 +4603,6 @@ Quy tắc:
                 });
             });
             editingTimetable = next;
-            const yearEl = document.getElementById('tt-school-year');
-            const semEl = document.getElementById('tt-semester');
-            if (yearEl) yearEl.value = next.school_year || '';
-            if (semEl) semEl.value = next.semester || '';
-            renderTimetableGrid();
             const name = String(raw.teacher_name || '').trim();
             if (name) {
                 const foldedName = foldText(name);
@@ -4388,35 +4610,29 @@ Quy tắc:
                     const folded = foldText(t.name);
                     return folded === foldedName || folded.includes(foldedName) || foldedName.includes(folded);
                 });
-                if (match) {
-                    const sel = document.getElementById('tt-teacher-select');
-                    if (sel) sel.value = match.id;
-                }
+                if (match) selectedTimetableTeacherId = match.id;
             }
+            const yearEl = document.getElementById('tt-school-year');
+            const semEl = document.getElementById('tt-semester');
+            if (yearEl) yearEl.value = next.school_year || '';
+            if (semEl) semEl.value = next.semester || '';
+            persistAndSaveTimetableLocal();
+            renderTimetableWorkspace();
+            const teacher = state.teachers.find(t => t.id === selectedTimetableTeacherId);
+            showToast(`Đã nhận diện và lưu TKB của GV ${teacher ? teacher.name : ''} vào máy! Bạn có thể chọn GV tiếp theo để tiếp tục.`, 'success');
         }
 
         function saveTeacherTimetable() {
-            const teacherId = document.getElementById('tt-teacher-select')?.value;
+            const teacherId = selectedTimetableTeacherId;
             if (!teacherId) {
                 alert('Hãy chọn giáo viên.');
                 return;
             }
-            if (!editingTimetable) editingTimetable = emptyTimetable();
-            editingTimetable.school_year = document.getElementById('tt-school-year')?.value.trim() || state.info?.school_year || '';
-            editingTimetable.semester = document.getElementById('tt-semester')?.value.trim() || state.info?.semester || '';
-            editingTimetable.updated_at = new Date().toISOString().slice(0, 10);
-            persistTeacherTimetable(teacherId, editingTimetable);
-            saveCurrentPhaseSnapshot();
-            saveToLocal();
+            persistAndSaveTimetableLocal();
             const autoApply = document.getElementById('tt-auto-apply-assign')?.checked;
             const teacher = state.teachers.find(t => t.id === teacherId);
-            if (autoApply) {
-                applyTimetableToAssignments(teacherId, { keepModal: true });
-            }
-            closeTeacherTimetableModal();
-            if (!autoApply) {
-                showToast(`Đã lưu Thời khoá biểu của ${teacher ? teacher.name : 'giáo viên'}.`, 'success');
-            }
+            if (autoApply) applyTimetableToAssignments(teacherId, { skipRender: false });
+            else showToast(`Đã lưu Thời khoá biểu của ${teacher ? teacher.name : 'giáo viên'} vào máy.`, 'success');
         }
 
         function normalizeClassNameFromTimetable(name) {
@@ -4525,17 +4741,13 @@ Quy tắc:
         }
 
         function applyCurrentTimetableToAssignments() {
-            const teacherId = document.getElementById('tt-teacher-select')?.value;
+            const teacherId = selectedTimetableTeacherId;
             if (!teacherId) {
                 alert('Hãy chọn giáo viên.');
                 return;
             }
-            if (editingTimetable) {
-                editingTimetable.school_year = document.getElementById('tt-school-year')?.value.trim() || state.info?.school_year || '';
-                editingTimetable.semester = document.getElementById('tt-semester')?.value.trim() || state.info?.semester || '';
-                persistTeacherTimetable(teacherId, editingTimetable);
-            }
-            applyTimetableToAssignments(teacherId, { keepModal: true });
+            persistAndSaveTimetableLocal();
+            applyTimetableToAssignments(teacherId);
         }
 
         function syncAllAssignmentsFromTimetables() {

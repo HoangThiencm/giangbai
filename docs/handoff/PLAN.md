@@ -1,253 +1,192 @@
-# PLAN: Bổ sung Nhiệm vụ Kiêm nhiệm Trường (Không dạy lớp, tính tiết trực tiếp cho GV)
+# PLAN: Tách Thời Khóa Biểu Thành Tab Riêng & Tối Ưu Quy Trình Nhận Diện TKB Hàng Loạt (Lưu Local Liên Tục, Lưu CSDL 1 Lần)
 
-## Hiện trạng & Nhu cầu người dùng
-1. **Hiện trạng phân loại nhiệm vụ trong `phancongtochuyenmon.html`**:
-   - Hiện tại trong modal "Khai báo & Cài đặt Tổ Chuyên Môn" -> Tab "4. Môn học", cột "Loại nhiệm vụ" chỉ có 2 lựa chọn:
-     + `Môn chính (Toàn trường)` (`is_core = true`)
-     + `Kiêm nhiệm (Chỉ vài lớp)` (`is_core = false`)
-   - Cả 2 loại này đều được hệ thống coi là **môn dạy theo lớp**, tự động sinh toàn bộ danh sách lớp học (`state.classes`, ví dụ 25 lớp) vào Kho lớp bên trái (`#pool-container`) để người dùng kéo thả vào giáo viên.
-   - Bảng Ma trận theo Lớp học (`#matrix-classes-table`) cũng tạo cột cho môn đó và kiểm tra tình trạng lớp.
-
-2. **Nhu cầu thực tế cấp thiết**:
-   - Trong trường học, có 2 hình thức kiêm nhiệm:
-     + **Kiêm nhiệm theo lớp**: Chủ nhiệm (GVCN), Hoạt động trải nghiệm (HĐTN)... $\rightarrow$ gắn với từng lớp cụ thể.
-     + **Kiêm nhiệm công tác nhà trường / phong trào**: Chuyển đổi số (CĐS), Quản trị website/hệ thống, Phụ trách phòng máy / thiết bị / thí nghiệm, Thư ký hội đồng, Trưởng ban TTND, Công tác Đoàn/Đội, Ban thanh tra... $\rightarrow$ **Không dạy ở lớp nào cả nhưng vẫn được quy đổi số tiết/tuần** (ví dụ CĐS tính 3 tiết/tuần).
-   - Khi người dùng khai báo "CĐS (3 tiết)", hiện tại hệ thống sinh ra 25 lớp CĐS trong kho lớp đòi kéo thả, và trên ma trận lớp cũng hiện cột CĐS cho từng lớp, gây sai lệch bản chất và bất tiện khi thao tác.
-   - Người dùng cần: Bổ sung loại nhiệm vụ **"Kiêm nhiệm trường (Không dạy lớp, tính tiết)"**, gán trực tiếp cho giáo viên, không sinh kho lớp, không đưa vào ma trận lớp, và tự động tính số tiết vào tổng tải/kiêm nhiệm của giáo viên.
+## Hiện trạng
+1. **Thời khóa biểu hiện tại đang là Modal popup (`#teacher-timetable-modal`)**:
+   - Hiện tại, tính năng TKB của giáo viên mở dưới dạng modal popup khi bấm nút "Thời khoá biểu" trên từng card giáo viên hoặc trong tab Sổ Dạy Thay.
+   - Khi làm việc với nhiều giáo viên trong tổ (10 - 20 GV): người dùng phải mở modal cho GV 1, dán ảnh, nhận diện AI, lưu (modal tự đóng), rồi lại tìm thẻ GV 2, mở modal... Quy trình bị ngắt quãng, chật chội và tốn rất nhiều thao tác đóng/mở.
+2. **Nhu cầu quy trình nhận diện TKB hàng loạt liên tục**:
+   - Người dùng có ảnh chụp TKB của cả tổ (hoặc nhận diện lần lượt từng giáo viên).
+   - Nhu cầu thực tế: Chọn GV 1 $\rightarrow$ Dán ảnh $\rightarrow$ AI nhận diện $\rightarrow$ **Tự động lưu ngay vào máy (Local)** $\rightarrow$ Chuyển sang GV 2 tiếp tục $\rightarrow$ Cứ thế làm hết toàn bộ giáo viên trong tổ $\rightarrow$ Nhấn **"Lưu CSDL" 1 lần duy nhất** để đẩy toàn bộ dữ liệu tổ lên server MySQL.
+   - Cần một không gian làm việc toàn trang rộng rãi, chuyên nghiệp với danh sách giáo viên bên trái (hiển thị rõ ai đã có TKB, ai chưa có) và lưới TKB bên phải để thao tác nhanh, trực quan.
 
 ---
 
-## Mục tiêu kỹ thuật
+## Phạm vi
+1. **Tách tính năng Thời khóa biểu thành Tab riêng trong thanh Workspace Navigation (`#tab-nav-timetable`, `#view-timetable`)**:
+   - Thêm Tab mới trên thanh 5 tab hiện tại:
+     + `1. Phân công giảng dạy` (`#view-phancong`)
+     + `2. Thời khoá biểu GV` (`#view-timetable`)
+     + `3. Sổ Dạy Thay - Bù` (`#view-daythay`)
+     + `4. Chấm công GV` (`#view-chamcong`)
+     + `5. Tăng Giờ` (`#view-tanggio`)
+     + `6. Báo cáo & Thống kê` (`#view-baocao`)
+   - Cập nhật hàm `switchAppView()` hỗ trợ view `view-timetable` và gọi `renderTimetableView()`.
+   - Giữ hàm `openTeacherTimetableModal(teacherId)` như một alias chuyển sang `switchAppView('view-timetable')` và focus chọn đúng giáo viên đó để tương thích 100% với các nút gọi hiện có trên Thẻ GV và Sổ Dạy Thay.
 
-### 1. Chuẩn hóa 3 loại nhiệm vụ trong `state.subjects` (`duty_type`)
-Mỗi môn/nhiệm vụ trong `state.subjects` có thuộc tính:
-- `duty_type`:
-  + `'core'`: **Môn chính (Toàn trường)** (mặc định cho Toán, Văn, KHTN...). Phải phân công đủ mọi lớp.
-  + `'class_duty'`: **Kiêm nhiệm theo lớp (Chỉ vài lớp)** (GVCN, HĐTN...). Kéo thả theo từng lớp.
-  + `'school_duty'`: **Kiêm nhiệm trường / Công tác (Không dạy lớp, tính tiết/GV)** (CĐS, Thiết bị, Thư ký HĐ...). Gán trực tiếp cho GV.
-- **Tương thích ngược dữ liệu**:
-  ```javascript
-  function getSubjectDutyType(sub) {
-      if (sub.duty_type) return sub.duty_type;
-      return (sub.is_core !== false) ? 'core' : 'class_duty';
-  }
-  ```
-  Khi lưu và chuẩn hóa:
-  - Nếu `duty_type === 'school_duty'` $\rightarrow$ `is_core = false`.
-  - Nếu `duty_type === 'core'` $\rightarrow$ `is_core = true`.
-  - Nếu `duty_type === 'class_duty'` $\rightarrow$ `is_core = false`.
+2. **Xây dựng Màn hình Không gian làm việc Thời khóa biểu Toàn trang 2 cột (`#view-timetable`)**:
+   - **Cột Trái (Danh sách Giáo viên & Trạng thái TKB)**:
+     + Ô tìm kiếm nhanh giáo viên (`#tt-teacher-search`).
+     + Bộ lọc: `Tất cả` | `Đã có TKB` | `Chưa có TKB`.
+     + Thống kê tiến độ trực quan: `Đã có TKB: X / Y giáo viên`.
+     + Danh sách thẻ giáo viên: Mỗi dòng gồm Avatar/Icon, Tên giáo viên, vai trò (GV, TTCM...), badge trạng thái:
+       * `✓ Đã có TKB (X tiết)` (màu xanh lá)
+       * `⏳ Chưa có TKB` (màu cam/xám)
+       * `● Chưa lưu CSDL` (chấm xanh dương nổi bật nếu có thay đổi local chưa đồng bộ lên CSDL).
+     + Bấm vào giáo viên nào thì vùng làm việc bên phải lập tức chuyển sang giáo viên đó.
+   - **Cột Phải (Không gian làm việc TKB của giáo viên đang chọn)**:
+     + Header thông tin: Tên giáo viên (lớn), vai trò, nút chuyển nhanh `< GV trước` và `GV tiếp theo >`.
+     + Bộ chọn Năm học (`#tt-school-year`), Học kỳ (`#tt-semester`).
+     + Vùng dán ảnh thông minh (`#tt-dropzone`):
+       * Lắng nghe Ctrl+V dán ảnh chụp màn hình, kéo thả ảnh hoặc chọn file ảnh.
+       * Preview ảnh thu nhỏ gọn gàng, có nút xóa ảnh.
+       * Nút **`✨ AI Nhận diện TKB`** với spinner loading mượt mà.
+     + Lưới ma trận Thời khóa biểu tuần (Buổi Sáng + Buổi Chiều $\times$ Thứ 2 - Thứ 7):
+       * Cho phép click chỉnh sửa nhanh từng ô Môn - Lớp.
+     + Thanh công cụ tác vụ:
+       * Nút **`Lưu tất cả lên CSDL`** (nổi bật, gọi `saveToDB()`).
+       * Nút **`⚡ Dịch sang Phân công`** (`applyCurrentTimetableToAssignments()`).
+       * Nút **`GV tiếp theo ➔`** (chuyển sang GV chưa có TKB tiếp theo để làm liên tục).
+       * Nút **`🗑️ Xóa TKB GV này`** (xóa trắng TKB của GV hiện tại nếu muốn làm lại).
 
-### 2. Giao diện Cấu hình Tab "4. Môn học & Nhiệm vụ" (`#config-modal`)
-- Cột "Loại nhiệm vụ" hiển thị dropdown 3 lựa chọn:
-  1. `<option value="core">Môn chính (Toàn trường)</option>`
-  2. `<option value="class_duty">Kiêm nhiệm theo lớp (Chỉ vài lớp)</option>`
-  3. `<option value="school_duty">Kiêm nhiệm trường (Không dạy lớp, tính tiết)</option>`
-- Đổi tiêu đề cột "Số tiết/lớp/tuần" thành: **"Số tiết / tuần"** (kèm chú thích: *"Theo lớp: tiết/lớp; Kiêm nhiệm trường: tiết/GV"*).
-- Bổ sung nút preset / mẫu nhiệm vụ nhanh:
-  + Mẫu Toán - Tin: Toán (4t), Tin học (1t), Chủ nhiệm (4t), HĐTN (3t), CĐS (3t - Kiêm nhiệm trường).
+3. **Cơ chế Tự động Lưu Local khi AI nhận diện & Chuyển tiếp liên tục**:
+   - Khi AI Gemini Vision nhận diện xong (hoặc khi người dùng sửa ô TKB):
+     + Dữ liệu TKB của giáo viên được cập nhật ngay vào `teacher.timetable`.
+     + Tự động gọi `persistTeacherTimetable(teacherId, next)`.
+     + Tự động gọi `saveToLocal({ autoSave: false })` để lưu ngay vào `localStorage`.
+     + Đánh dấu cờ `hasUnsavedChanges = true`.
+     + Badge trạng thái của giáo viên bên cột trái tự động đổi sang `✓ Đã có TKB`.
+     + Hiển thị Toast thông báo: *"Đã lưu TKB của [Tên GV] vào máy! Bạn có thể chọn giáo viên tiếp theo."*.
+     + Tự động kích hoạt gợi ý chuyển sang giáo viên kế tiếp mà không làm ngắt quãng mạch làm việc của người dùng.
 
-### 3. Điều chỉnh Kho Lớp bên trái (`#pool-container`)
-- Đối với nhiệm vụ `duty_type === 'school_duty'`:
-  + **KHÔNG** sinh mảng 25 lớp vào `state.unassigned[sub.key]`.
-  + Thay vào đó, tạo một khối riêng phía dưới kho lớp hoặc nhóm nhiệm vụ:
-    **"Nhiệm vụ kiêm nhiệm trường"**:
-    Hiển thị các thẻ chip nhiệm vụ, ví dụ:
-    `<div class="school-duty-chip" draggable="true" ondragstart="dragStartSchoolDuty(event, '${sub.key}')">`
-    Kèm badge trạng thái: *"Đã gán: Thầy Danh"* hoặc *"Chưa phân công"*.
-    Có thể kéo thả vào Thẻ Giáo viên HOẶC bấm trực tiếp để chọn/gán GV nhanh!
-
-### 4. Giao diện Thẻ Giáo viên (`renderTeachers`)
-- Trên mỗi Thẻ Giáo viên (`.teacher-card`):
-  + Hỗ trợ thả nhiệm vụ kiêm nhiệm trường (hàm `dropSchoolDuty(subKey, teacherId)`).
-  + Thêm khu vực hiển thị các nhiệm vụ kiêm nhiệm trường đã gán:
-    Mỗi nhiệm vụ hiển thị dưới dạng badge/tag nổi bật:
-    `<span class="school-duty-badge" style="background:${sub.color}15; color:${sub.color}; border: 1px solid ${sub.color};">
-       ⚙️ ${sub.name} (+${sub.periods}t)
-       <i class="fas fa-times" onclick="unassignSchoolDuty('${sub.key}', '${t.id}')" title="Hủy kiêm nhiệm"></i>
-     </span>`
-  + Thêm nút bấm nhỏ `+ Kiêm nhiệm` để mở menu popup/dropdown chọn nhanh nhiệm vụ kiêm nhiệm trường gán cho GV đó mà không cần kéo thả.
-
-### 5. Cấu trúc lưu trữ và Phép tính Định mức / Tải giảng dạy
-1. **Lưu trữ trên đối tượng Giáo viên**:
-   - Thêm thuộc tính `t.school_duties = ['CDS', ...]` (danh sách các `sub.key` kiêm nhiệm trường).
-   - Hàm `normalizeState` đảm bảo mọi giáo viên đều có `t.school_duties = Array.isArray(t.school_duties) ? t.school_duties : []`.
-   - Đồng bộ vào snapshot đợt (`state.phase_assignments[phaseId].teachers` và `persistTeacherTimetable`).
-2. **Tính toán số tiết**:
-   - Viết hàm `calcSchoolDutiesPeriods(t)`:
-     ```javascript
-     function calcSchoolDutiesPeriods(t) {
-         if (!Array.isArray(t.school_duties)) return 0;
-         return t.school_duties.reduce((sum, key) => {
-             const s = state.subjects.find(sub => sub.key === key);
-             return sum + ((s && getSubjectDutyType(s) === 'school_duty') ? (s.periods || 0) : 0);
-         }, 0);
-     }
-     ```
-   - Cập nhật `calcTeacherTotalPeriods(t)`:
-     ```javascript
-     function calcTeacherTotalPeriods(t) {
-         const teaching = calcTeachingPeriods(t);
-         const qlpmPeriods = t.qlpm ? PERIOD_QLPM : 0;
-         const schoolDutyPeriods = calcSchoolDutiesPeriods(t);
-         return teaching + (t.allowance || 0) + qlpmPeriods + schoolDutyPeriods;
-     }
-     ```
-   - Cập nhật dòng hiển thị footer thẻ GV:
-     `Dạy: ${teaching}t · Giảm trừ/kiêm nhiệm: ${(t.allowance || 0) + qlpmPeriods + schoolDutyPeriods}t`
-   - Cập nhật bảng tổng hợp Ma trận giáo viên (`#matrix-teachers-table`) và Báo cáo (`#rep-teachers-table`):
-     Trong cột "Giảm trừ / kiêm nhiệm", liệt kê rõ:
-     `TTCM (3t) + CĐS (3t) + QL Máy (3t)` $\rightarrow$ Cực kỳ rõ ràng, minh bạch!
-
-### 6. Điều chỉnh Bảng Ma trận Lớp học (`#matrix-classes-table`)
-- Bảng Ma trận Lớp học (`matrix-classes-table`) chỉ lặp qua các môn học có `duty_type !== 'school_duty'` (tức là chỉ gồm môn chính và kiêm nhiệm theo lớp).
-- Tuyệt đối không sinh cột lớp cho các nhiệm vụ kiêm nhiệm trường.
+4. **Lưu toàn bộ dữ liệu lên CSDL 1 lần duy nhất**:
+   - Khi hoàn thành tất cả giáo viên trong tổ (hoặc bất kỳ lúc nào), người dùng bấm nút **"Lưu tất cả lên CSDL"** trên Tab TKB (hoặc nút "Lưu CSDL" ở Top Header):
+     + Gọi `saveToDB()` $\rightarrow$ Đẩy toàn bộ `state` (bao gồm TKB của tất cả giáo viên và phân công các đợt) lên server MySQL qua `api/phancong.php?action=save`.
+     + Server phản hồi thành công $\rightarrow$ Cập nhật trạng thái `Đã lưu CSDL`, xóa cờ `hasUnsavedChanges`.
 
 ---
 
-## File tác động
-- `phancongtochuyenmon.html` [SỬA: Tab 4 Môn học & Nhiệm vụ, duty_type, school_duty chip/drag-drop/quick-assign, tính toán định mức, ma trận lớp và báo cáo]
+## Ngoài phạm vi
+- Không thay đổi cấu trúc dữ liệu JSON lưu trong MySQL (`state.teachers[].timetable`).
+- Không sửa backend PHP (`api/phancong.php` và `api/khbd_gemini.php` đã hỗ trợ đầy đủ payload).
+- Không làm thay đổi logic phân công hoặc chấm công hiện có.
+
+---
+
+## File dự kiến tác động
+- `phancongtochuyenmon.html` [SỬA: Thêm tab và view `#view-timetable`, render layout 2 cột, danh sách GV kèm trạng thái TKB, tự động lưu local khi AI nhận diện, nút lưu CSDL toàn tổ]
 - `docs/handoff/PLAN.md` [GHI ĐÈ: Kế hoạch này]
 - `docs/handoff/.lock` [TẠO: LOCK]
 
 ---
 
-## Chi tiết các bước thực hiện cho Coder
+## Các bước thực hiện
 
-### Bước 1: Khai báo và Chuẩn hóa `duty_type` & `school_duties`
-1. Trong `normalizeState(s)`:
-   - Chuẩn hóa `sub.duty_type`:
-     + Nếu `sub.duty_type` chưa có: nếu `sub.is_core === false` thì `'class_duty'`, ngược lại `'core'`.
-     + Đảm bảo `sub.is_core = (sub.duty_type === 'core')`.
-   - Với `sub.duty_type === 'school_duty'`:
-     + Không khởi tạo `s.unassigned[sub.key] = [...s.classes]`. Nếu có lớp cũ trong `s.unassigned[sub.key]` thì dọn dẹp thành `[]`.
-   - Với mỗi giáo viên trong `s.teachers`:
-     + Khởi tạo `t.school_duties = Array.isArray(t.school_duties) ? t.school_duties : []`.
-2. Viết các helper:
-   - `getSubjectDutyType(sub)`: Trả về `'core' | 'class_duty' | 'school_duty'`.
-   - `calcSchoolDutiesPeriods(t)`: Tính tổng tiết kiêm nhiệm trường của giáo viên.
-   - Cập nhật `calcTeacherTotalPeriods(t)` tính thêm `calcSchoolDutiesPeriods(t)`.
-
-### Bước 2: Nâng cấp Tab 4 Môn học & Nhiệm vụ trong Modal Cấu hình
-1. Trong `renderConfigSubjectsTable()`:
-   - Cột "Loại nhiệm vụ" đổi thành dropdown 3 giá trị:
+### Bước 1: Khai báo Tab Navigation & Tạo Khung HTML View TKB
+1. Trong `#top-navbar .view-switcher`:
+   - Thêm nút tab:
      ```html
-     <select class="form-control" style="padding:4px 8px; font-weight:700;" onchange="updateEditingSubjectDutyType(${index}, this.value)">
-         <option value="core" ${dtype === 'core' ? 'selected' : ''}>Môn chính (Toàn trường)</option>
-         <option value="class_duty" ${dtype === 'class_duty' ? 'selected' : ''}>Kiêm nhiệm theo lớp (Chỉ vài lớp)</option>
-         <option value="school_duty" ${dtype === 'school_duty' ? 'selected' : ''}>Kiêm nhiệm trường (Không dạy lớp, tính tiết)</option>
-     </select>
+     <button class="view-tab-btn" id="tab-nav-timetable" onclick="switchAppView('view-timetable')">
+         <i class="fas fa-calendar-days"></i> 2. Thời khoá biểu GV
+     </button>
      ```
-   - Tiêu đề cột số tiết đổi thành: `"Số tiết/tuần"`.
-2. Hàm `updateEditingSubjectDutyType(index, value)`:
-   - Cập nhật `sub.duty_type = value`.
-   - Cập nhật `sub.is_core = (value === 'core')`.
-3. Cập nhật các preset môn học:
-   - Mẫu Toán - Tin: thêm môn `key: 'cds', name: 'Chuyển đổi số', periods: 3, color: '#0891b2', duty_type: 'school_duty', is_core: false`.
+   - Điều chỉnh lại số thứ tự các tab tiếp theo:
+     + 3. Sổ Dạy Thay - Bù (`tab-nav-daythay`)
+     + 4. Chấm công GV (`tab-nav-chamcong`)
+     + 5. Tăng Giờ (`tab-nav-tanggio`)
+     + 6. Báo cáo & Thống kê (`tab-nav-baocao`)
+2. Thêm container `#view-timetable` trong thân trang:
+   - Layout gồm 2 phần:
+     + `#tt-left-panel`: Cột danh sách giáo viên, thanh tìm kiếm, bộ lọc trạng thái và thống kê tiến độ.
+     + `#tt-right-panel`: Vùng làm việc TKB giáo viên đang chọn, vùng dán ảnh AI, ma trận tuần và thanh công cụ lưu.
+3. Cập nhật CSS cho `#view-timetable`:
+   - Phân chia 2 cột rõ ràng, responsive mượt mà trên các độ phân giải màn hình.
 
-### Bước 3: Cập nhật Kho Lớp & Khối Nhiệm vụ Kiêm nhiệm Trường
-1. Trong `renderPool()`:
-   - Các môn `core` và `class_duty` giữ nguyên cách hiển thị lớp học.
-   - Các môn `school_duty`: Hiển thị trong một section riêng biệt `"Nhiệm vụ Kiêm nhiệm Trường / Hoạt động"`:
-     + Hiển thị từng nhiệm vụ kèm số tiết và danh sách giáo viên đang đảm nhiệm.
-     + Có nút `+ Gán GV` để gán nhanh cho một giáo viên từ dropdown.
-     + Hỗ trợ kéo thả chip nhiệm vụ vào thẻ card của giáo viên.
+### Bước 2: Xây dựng Logic Cột Trái (Danh sách Giáo viên & Trạng thái)
+1. Viết hàm `renderTimetableTeacherList()`:
+   - Đọc danh sách `state.teachers`.
+   - Lọc theo từ khóa tìm kiếm (`#tt-teacher-search`) và bộ lọc trạng thái (`filter: all | has_tt | missing_tt`).
+   - Đếm số GV đã có TKB (`timetableHasLessons(t.timetable)`) / Tổng số GV và hiển thị badge tiến độ.
+   - Vẽ danh sách các item giáo viên:
+     + Highlight GV đang được chọn (`selectedTimetableTeacherId`).
+     + Hiển thị badge: `✓ Đã có TKB` hoặc `⏳ Chưa có TKB`.
+     + Khi click vào một item: gọi `selectTimetableTeacher(teacherId)`.
+2. Hàm `selectTimetableTeacher(teacherId)`:
+   - Cập nhật `selectedTimetableTeacherId = teacherId`.
+   - Cập nhật lại class active ở danh sách bên trái.
+   - Nạp TKB của GV vào `editingTimetable = JSON.parse(JSON.stringify(teacher.timetable || emptyTimetable()))`.
+   - Gọi `renderTimetableWorkspace()` để hiển thị thông tin và lưới TKB bên phải.
 
-### Bước 4: Cập nhật Thẻ Card Giáo viên (`renderTeachers`)
-1. Trong hàm `renderTeachers()`:
-   - Thêm khu vực hiển thị danh sách nhiệm vụ kiêm nhiệm trường đã gán cho giáo viên:
-     `<div class="teacher-school-duties">...</div>`
-   - Bấm vào icon `✕` trên tag để hủy nhiệm vụ (`unassignSchoolDuty(dutyKey, teacherId)`).
-   - Thêm nút dropdown `+ Kiêm nhiệm` để chọn nhanh một nhiệm vụ kiêm nhiệm trường gán cho giáo viên.
-   - Cập nhật footer: hiển thị rõ tổng tiết kiêm nhiệm trường trong phần `Giảm trừ/kiêm nhiệm`.
+### Bước 3: Xây dựng Không gian Làm việc TKB Cột Phải
+1. Viết hàm `renderTimetableWorkspace()`:
+   - Hiển thị tên giáo viên, vai trò, số tiết hiện tại.
+   - Nạp giá trị năm học (`#tt-school-year`), học kỳ (`#tt-semester`).
+   - Render lưới ma trận Buổi sáng (`#tt-morning-wrap`) và Buổi chiều (`#tt-afternoon-wrap`).
+   - Đặt lại vùng dán ảnh preview (nếu có ảnh trước đó).
+2. Xử lý nút điều hướng nhanh:
+   - `goToPrevTimetableTeacher()`: Chọn giáo viên liền trước trong danh sách.
+   - `goToNextTimetableTeacher(onlyMissing = false)`: Chọn giáo viên liền sau; nếu `onlyMissing = true` thì nhảy thẳng đến giáo viên tiếp theo chưa có TKB.
 
-### Bước 5: Cập nhật Ma trận Lớp học & Báo cáo Tổng hợp
-1. Trong `matrix-classes-table`:
-   - Chỉ lọc và vẽ cột cho các môn có `getSubjectDutyType(sub) !== 'school_duty'`.
-2. Trong `matrix-teachers-table` và `rep-teachers-table`:
-   - Cột "Giảm trừ / kiêm nhiệm" liệt kê chi tiết cả các nhiệm vụ kiêm nhiệm trường:
-     Ví dụ: `TTCM (3t) + CĐS (3t)`.
-   - Cột "Tổng" và "Định mức chuẩn" tự động phản ánh chính xác số tiết.
-3. Trong xuất Excel:
-   - Xuất đầy đủ tên các nhiệm vụ kiêm nhiệm trường vào cột Kiêm nhiệm.
+### Bước 4: Tích hợp Tự động Lưu Local & Chuyển Tiếp Sau Khi AI Nhận Diện
+1. Cập nhật `applyAiTimetableResult(raw)`:
+   - Đọc JSON từ Gemini Vision, cập nhật vào `editingTimetable`.
+   - Tự động gọi `persistTeacherTimetable(selectedTimetableTeacherId, editingTimetable)`.
+   - Tự động gọi `saveCurrentPhaseSnapshot()`.
+   - Tự động gọi `saveToLocal({ autoSave: false })` để ghi ngay vào `localStorage`.
+   - Đánh dấu `hasUnsavedChanges = true`.
+   - Cập nhật lại danh sách bên trái (`renderTimetableTeacherList()`) để badge GV đó ngay lập tức chuyển sang màu xanh lá `✓ Đã có TKB`.
+   - Hiển thị Toast thông báo: *"Đã nhận diện và lưu TKB của GV [Tên GV] vào máy! Bạn có thể chọn GV tiếp theo để tiếp tục."*.
+   - Hiển thị nút bấm nhanh: `GV tiếp theo ➔` để người dùng tiếp tục thao tác mà không cần tìm kiếm.
+2. Xử lý sửa ô trực tiếp trên lưới:
+   - Khi người dùng sửa nội dung ô TKB trên lưới: tự động cập nhật vào `editingTimetable`, tự động lưu local sau 500ms debounce hoặc khi blur.
 
-### Bước 6: Đồng bộ Snapshot Đợt & Lưu CSDL
-1. Cập nhật `saveCurrentPhaseSnapshot()` và `switchPhase()`:
-   - Đảm bảo `school_duties` của từng giáo viên được lưu trữ và khôi phục đồng bộ theo từng đợt phân công.
+### Bước 5: Nút Lưu Toàn Bộ CSDL & Tích Hợp Menu
+1. Trên thanh công cụ của View TKB:
+   - Đặt nút nổi bật:
+     `<button class="btn-toolbar btn-db-save" onclick="saveToDB()"><i class="fas fa-cloud-arrow-up"></i> Lưu tất cả lên CSDL</button>`
+   - Nút gọi trực tiếp `saveToDB()`, gửi toàn bộ `state` lên MySQL và hiển thị thông báo thành công.
+2. Nút "Dịch sang Phân công" trên View TKB:
+   - Bấm nút gọi `applyTimetableToAssignments(selectedTimetableTeacherId)` để nạp phân công lớp ngay cho giáo viên đang chọn.
+3. Giữ hàm tương thích:
+   - `openTeacherTimetableModal(teacherId)`: nếu được gọi từ bất kỳ đâu (như Thẻ GV ở View 1 hay Sổ Dạy Thay ở View 3), hàm sẽ gọi `switchAppView('view-timetable')` và `selectTimetableTeacher(teacherId)`. Đảm bảo các nút bấm cũ hoạt động trơn tru.
 
 ---
 
-## PHẦN 2: TỰ ĐỘNG DỊCH NGƯỢC TỪ THỜI KHÓA BIỂU SANG PHÂN CÔNG CHUYÊN MÔN
-
-### 1. Nhu cầu nghiệp vụ
-- Nhiều giáo viên hoặc tổ chuyên môn đã có Thời khóa biểu (qua dán ảnh AI Gemini Vision nhận diện hoặc nhập tay vào ma trận TKB).
-- Trong TKB đã có đầy đủ: Thứ, Buổi, Tiết, Môn học, Lớp học (VD: `Toán - 63`, `Toán - 64`, `Toán - 93`, `Toán - 94`, `HĐTN - 64`).
-- Thay vì phải kéo thả từng lớp thủ công vào Thẻ Giáo viên, người dùng chỉ cần:
-  + Bấm 1 nút: **"⚡ Dịch sang Phân công chuyên môn"** $\rightarrow$ Hệ thống tự động bóc tách tất cả các lớp của từng môn mà GV dạy và cập nhật trực tiếp vào phân công lớp (`teacher.assignments`)!
-
-### 2. Thiết kế Kỹ thuật
-1. **Hàm trích xuất phân công từ TKB của một giáo viên (`extractAssignmentsFromTimetable(teacher)`)**:
-   - Duyệt qua `teacher.timetable.morning` và `teacher.timetable.afternoon` (Thứ 2 đến Thứ 7, các tiết 1 đến 10).
-   - Gọi `parseTimetableCell(cell)` để lấy `subject` và `class_name`.
-   - Nếu ô có môn và lớp:
-     + Khớp `subject` với `state.subjects` (so sánh `foldText(s.name) === foldText(subject)` hoặc `foldText(s.key) === foldText(subject)`). Nếu không tìm thấy, tạo môn mới hoặc bỏ qua kèm thông báo.
-     + Chuẩn hóa tên lớp: cắt khoảng trắng (VD: `63`, `6/3`, `9A1`).
-     + Lưu vào map: `bySubject[sub.key].add(className)`.
-   - Trả về đối tượng: `{ [subjectKey]: ['63', '64', ...] }`.
-
-2. **Hàm áp dụng phân công cho một giáo viên (`applyTimetableToAssignments(teacherId)`)**:
-   - Lấy danh sách lớp theo môn từ hàm trích xuất trên.
-   - Với các lớp chưa có trong `state.classes`: tự động bổ sung vào `state.classes` để không bị sót lớp.
-   - Gán vào `teacher.assignments[subKey]`:
-     + Hợp nhất danh sách lớp hoặc ghi đè (hỏi người dùng hoặc thông báo số lớp được gán).
-     + Tự động dọn dẹp các lớp này khỏi `state.unassigned[subKey]`.
-     + Nếu lớp đó trước đây đang được gán cho một giáo viên khác, gỡ khỏi GV cũ (chuyển giao phân công về GV này).
-   - Lưu snapshot và gọi `render()`.
-   - Hiển thị Toast thông báo: *"Đã cập nhật phân công X lớp cho GV [Tên GV] từ Thời khoá biểu!"*.
-
-3. **Hàm đồng bộ phân công toàn tổ từ TKB (`syncAllAssignmentsFromTimetables()`)**:
-   - Duyệt qua tất cả giáo viên trong `state.teachers` có `timetableHasLessons(t.timetable)`.
-   - Tự động chạy bóc tách và phân công hàng loạt cho cả tổ.
-   - Toast thông báo tổng hợp: *"Đã cập nhật phân công cho X giáo viên từ Thời khoá biểu!"*.
-
-4. **Giao diện Người dùng (UI)**:
-   - **Trong Modal Thời khoá biểu Giáo viên (`#teacher-timetable-modal`)**:
-     + Thêm nút cạnh nút Lưu: `<button type="button" class="btn btn-outline-primary" onclick="applyCurrentTimetableToAssignments()"><i class="fas fa-arrows-rotate"></i> Dịch sang Phân công</button>`.
-     + Thêm tùy chọn checkbox: `☑️ Tự động cập nhật phân công chuyên môn khi lưu TKB`.
-   - **Trên Thẻ Giáo viên (View 1)**:
-     + Trong menu / nút TKB có nút nhanh: `⚡ Nạp phân công từ TKB`.
-   - **Trên Thanh Công cụ (Menu Tệp / Công cụ)**:
-     + Thêm mục: `⚡ Đồng bộ phân công từ TKB toàn tổ`.
+## Rủi ro
+1. **Lắng nghe sự kiện Paste (Ctrl+V)**: Khi chuyển từ modal sang Tab view toàn trang, sự kiện `paste` cần gắn đúng vùng dropzone hoặc chỉ kích hoạt khi tab TKB đang `active` để tránh bắt nhầm khi người dùng đang ở các tab khác.
+   - *Biện pháp*: Kiểm tra `document.getElementById('view-timetable')?.classList.contains('active')` trước khi xử lý dán ảnh.
+2. **Trùng lặp ID phần tử**: Một số ID trong modal cũ (`#tt-dropzone`, `#tt-morning-wrap`...) nếu tái sử dụng trong view mới cần đảm bảo không bị nhân bản thành 2 ID trùng lặp trong DOM.
+   - *Biện pháp*: Chuyển toàn bộ các phần tử từ modal sang view mới hoặc thay thế modal bằng view mới, chạy test kiểm tra 100% ID duy nhất.
 
 ---
 
 ## Cách kiểm thử
-1. **Kiểm tra Khai báo Nhiệm vụ Kiêm nhiệm Trường**:
-   - Mở Khai báo tổ -> Tab 4 Môn học.
-   - Thêm hàng mới: Mã `CDS`, Tên `Chuyển đổi số`, Loại: `Kiêm nhiệm trường (Không dạy lớp, tính tiết)`, Số tiết: `3`.
-   - Bấm "Áp dụng cấu hình".
-2. **Kiểm tra Kho Lớp và Ma trận Lớp**:
-   - Kho lớp bên trái KHÔNG sinh 25 lớp `CDS`.
-   - Bảng Ma trận Lớp học KHÔNG có cột `CDS`.
-3. **Kiểm tra Gán nhiệm vụ Kiêm nhiệm Trường cho Giáo viên**:
-   - Gán `Chuyển đổi số (3t)` cho Thầy Danh.
-   - Thẻ của Thầy Danh hiện tag `⚙️ Chuyển đổi số (+3t)`.
-   - Tổng tiết của Thầy Danh tự động tăng thêm 3 tiết.
-   - Bảng Ma trận Giáo viên và Báo cáo hiển thị: `CĐS (3t)` trong cột Giảm trừ / kiêm nhiệm.
-4. **Kiểm tra Dịch ngược từ TKB sang Phân công**:
-   - Mở modal TKB của Thầy Danh (đã có các tiết Toán 63, 64, 93, 94).
-   - Bấm nút "Dịch sang Phân công".
-   - Đóng modal: Quan sát Thẻ của Thầy Danh trên View 1:
-     + Môn Toán tự động có 4 lớp: `63, 64, 93, 94`.
-     + Kho lớp môn Toán tự động giảm 4 lớp tương ứng.
-     + Tổng tiết dạy tăng lên 16 tiết (4 lớp x 4 tiết).
-5. **Kiểm tra Snapshot Đợt**:
-   - Đổi đợt phân công -> Dữ liệu kiêm nhiệm trường và phân công lớp được bảo toàn đúng từng đợt.
+1. **Kiểm tra Thanh Tab Navigation**:
+   - Mở trang: Quan sát thấy Tab `2. Thời khoá biểu GV` trên thanh tab.
+   - Bấm vào Tab: Chuyển sang `#view-timetable`, hiển thị đầy đủ bố cục 2 cột (Danh sách GV bên trái, Không gian TKB bên phải).
+2. **Kiểm tra Danh sách Giáo viên & Trạng thái TKB**:
+   - Cột trái hiển thị đầy đủ danh sách giáo viên của tổ.
+   - Giáo viên đã có TKB có badge xanh `✓ Đã có TKB`; giáo viên chưa có hiển thị `⏳ Chưa có TKB`.
+   - Tìm kiếm tên giáo viên lọc chính xác danh sách.
+   - Bấm vào Thầy Danh: Panel bên phải tải đúng TKB của Thầy Danh.
+3. **Kiểm tra Quy trình AI Nhận diện & Tự Động Lưu Local**:
+   - Chọn một giáo viên chưa có TKB (VD: Cô Ánh).
+   - Dán ảnh TKB (Ctrl+V) $\rightarrow$ Preview ảnh xuất hiện.
+   - Bấm `AI nhận diện TKB` $\rightarrow$ AI đọc và render lưới TKB.
+   - Kiểm tra `localStorage`: TKB của Cô Ánh đã được lưu ngay vào máy mà không cần bấm thêm nút nào!
+   - Badge của Cô Ánh bên cột trái lập tức chuyển thành `✓ Đã có TKB`.
+   - Bấm nút `GV tiếp theo ➔`: Hệ thống tự động chuyển sang giáo viên kế tiếp chưa có TKB.
+4. **Kiểm tra Lưu CSDL 1 lần duy nhất**:
+   - Sau khi làm xong các giáo viên, bấm nút **"Lưu tất cả lên CSDL"** trên tab TKB.
+   - Kiểm tra request gửi đến `api/phancong.php?action=save`: Toàn bộ TKB của các giáo viên được gửi lên và server phản hồi thành công.
+   - Nạp lại trang (F5): Dữ liệu TKB của toàn bộ giáo viên được giữ nguyên vẹn từ CSDL.
+5. **Kiểm tra Tương thích Nút bấm từ View khác**:
+   - Sang Tab 1 (Phân công): Bấm nút "Thời khoá biểu" trên thẻ của Thầy Danh $\rightarrow$ Tự động nhảy sang Tab TKB và focus đúng Thầy Danh.
 
 ---
 
 ## Tiêu chí nghiệm thu
-1. Cung cấp tùy chọn loại nhiệm vụ thứ 3: `Kiêm nhiệm trường (Không dạy lớp, tính tiết)`.
-2. Nhiệm vụ kiêm nhiệm trường không sinh lớp trong kho lớp và không tạo cột trong ma trận lớp.
-3. Gán được trực tiếp cho giáo viên (qua kéo thả hoặc menu chọn nhanh).
-4. Tự động tính số tiết kiêm nhiệm trường vào tổng định mức / tải công tác của giáo viên và hiển thị minh bạch.
-5. Hỗ trợ dịch ngược 1-click từ Thời khóa biểu sang Phân công chuyên môn (bóc tách các lớp/môn từ TKB gán vào `teacher.assignments`).
+1. Thời khóa biểu được tách thành một Tab riêng biệt trong thanh làm việc của Quản lý tổ chuyên môn (`view-timetable`).
+2. Giao diện toàn trang 2 cột chuyên nghiệp: Cột trái liệt kê giáo viên kèm trạng thái TKB trực quan, cột phải là bảng làm việc TKB chi tiết.
+3. Nhận diện ảnh TKB tự động lưu ngay vào máy (`localStorage`), cho phép người dùng chuyển liên tục qua các giáo viên khác mà không bị đóng/mở ngắt quãng.
+4. Cung cấp nút Lưu CSDL rõ ràng để người dùng nhấn lưu 1 lần sau khi đã hoàn tất toàn bộ giáo viên trong tổ.
+5. Các nút xem TKB từ Thẻ GV và Sổ Dạy Thay tự động điều hướng mượt mà sang Tab Thời khóa biểu.
