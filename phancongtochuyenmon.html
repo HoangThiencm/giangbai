@@ -1361,6 +1361,30 @@
         .dt-ann-table th, .dt-ann-table td { padding: 8px 8px; text-align: left; vertical-align: middle; }
         .dt-ann-table th { font-weight: 800; text-align: center; white-space: nowrap; }
         .dt-ann-table .center { text-align: center; }
+        .dt-ann-table [contenteditable="true"] {
+            cursor: text;
+            outline: none;
+            border-radius: 4px;
+            min-width: 1.2em;
+        }
+        .dt-ann-table [contenteditable="true"]:hover { box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.35); }
+        .dt-ann-table [contenteditable="true"]:focus {
+            box-shadow: inset 0 0 0 2px #6366f1;
+            background: #ffffff;
+        }
+        .dt-ann-row-del {
+            border: none;
+            background: #fee2e2;
+            color: #b91c1c;
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 800;
+            line-height: 1;
+            padding: 0;
+        }
+        .dt-ann-edit-hint { font-size: 0.75rem; color: #64748b; margin: 0; line-height: 1.4; }
         .dt-ann-session {
             display: inline-flex;
             align-items: center;
@@ -1988,6 +2012,9 @@
                 <button type="button" class="btn-small btn-small-primary" id="btn-save-daythay" onclick="saveDayThayRecord()">
                     <i class="fas fa-check"></i> Lưu vào Sổ Dạy Thay
                 </button>
+                <button type="button" class="btn-small btn-small-primary" id="btn-ann-from-form" onclick="openDayThayAnnouncementFromForm()">
+                    <i class="fas fa-image"></i> Tạo ảnh thông báo
+                </button>
             </div>
         </div>
 
@@ -1998,7 +2025,7 @@
                 </h3>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                     <button type="button" class="btn-small btn-small-primary" onclick="openDayThayAnnouncementModal()">
-                        <i class="fas fa-wand-magic-sparkles"></i> Tạo ảnh thông báo (AI)
+                        <i class="fas fa-image"></i> Tạo ảnh thông báo
                     </button>
                     <button type="button" class="btn-small btn-export-excel" onclick="exportDayThayToExcel()"><i class="fas fa-file-excel"></i> Xuất Excel Sổ Dạy Thay</button>
                     <button type="button" class="btn-small" onclick="autoSyncSubstitutePeriods()"><i class="fas fa-rotate"></i> Đồng bộ số tiết sang Chấm Công</button>
@@ -2584,6 +2611,21 @@
                             <input type="date" class="form-control" id="dt-ann-date" onchange="onAnnouncementDateChange()">
                         </div>
                         <div class="form-group">
+                            <label for="dt-ann-session">Buổi trên ảnh:</label>
+                            <select class="form-control" id="dt-ann-session" onchange="onAnnouncementSessionChange()">
+                                <option value="">Cả ngày</option>
+                                <option value="morning">Sáng</option>
+                                <option value="afternoon">Chiều</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
+                                <button type="button" class="btn-small" onclick="addAnnouncementDraftRow()"><i class="fas fa-plus"></i> Thêm dòng</button>
+                                <button type="button" class="btn-small" onclick="reloadAnnouncementDraftRows()"><i class="fas fa-rotate"></i> Tải lại từ sổ</button>
+                            </div>
+                            <p class="dt-ann-edit-hint">Bấm vào từng ô trên bảng ảnh để sửa. Ảnh xuất ra theo đúng buổi phân công đang chọn.</p>
+                        </div>
+                        <div class="form-group">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 8px;">
                                 <label for="dt-ann-title" style="margin: 0;">Tiêu đề thông báo:</label>
                                 <button type="button" class="btn-small btn-small-primary" id="btn-ai-ann-title" onclick="generateAnnouncementTitleAI()">
@@ -2703,6 +2745,7 @@
         let hiddenPeriodSlots = new Set();
         let currentAnnouncementTheme = 'modern';
         let announcementFitBound = false;
+        let announcementDraftRows = null;
         const ANNOUNCEMENT_THEMES = ['modern', 'official', 'emerald'];
         const ANNOUNCEMENT_CARD_WIDTH = 800;
         const ANNOUNCEMENT_QUICK_NOTES = {
@@ -5404,17 +5447,41 @@ Quy tắc:
             return (state.teachers || []).find(t => t.role === 'TTCM')?.name || '';
         }
 
-        function collectAnnouncementRows(dateStr) {
+        function announcementSessionKey(session) {
+            const s = String(session || '').trim().toLowerCase();
+            if (s === 'afternoon' || s === 'chiều' || s === 'chieu') return 'afternoon';
+            if (s === 'morning' || s === 'sáng' || s === 'sang') return 'morning';
+            return '';
+        }
+
+        function buildAnnouncementAbsentCell(type, forTeacherId, forOther, reason) {
+            const absentTeacher = teacherNameById(forTeacherId) || forOther || '';
+            const why = reason || '';
+            if (type === 'makeup') {
+                return absentTeacher ? `${absentTeacher}${why ? ' · ' + why : ''}` : (why || 'Dạy bù');
+            }
+            return `${absentTeacher || '—'}${why ? ' (' + why + ')' : ''}`;
+        }
+
+        function sortAnnouncementRows(rows) {
+            const sessionOrder = { 'Sáng': 0, 'Chiều': 1 };
+            rows.sort((a, b) => {
+                const s = (sessionOrder[a.session] ?? 9) - (sessionOrder[b.session] ?? 9);
+                if (s) return s;
+                return (parseInt(a.period, 10) || 0) - (parseInt(b.period, 10) || 0);
+            });
+            return rows;
+        }
+
+        function collectAnnouncementRows(dateStr, sessionFilter) {
             const rows = [];
+            const want = announcementSessionKey(sessionFilter);
             getSubstituteRecordsForDate(dateStr).forEach(item => {
+                if (want && announcementSessionKey(item.session) !== want) return;
                 const details = getPeriodsDetail(item);
                 const sessionLabel = getSessionLabel(item.session);
                 const subTeacher = teacherNameById(item.teacher_id);
-                const absentTeacher = teacherNameById(item.for_teacher_id) || item.for_other || '';
-                const reason = item.reason || '';
-                const absentCell = item.type === 'makeup'
-                    ? (absentTeacher ? `${absentTeacher}${reason ? ' · ' + reason : ''}` : (reason || 'Dạy bù'))
-                    : `${absentTeacher || '—'}${reason ? ' (' + reason + ')' : ''}`;
+                const absentCell = buildAnnouncementAbsentCell(item.type, item.for_teacher_id, item.for_other, item.reason);
                 const note = item.type === 'makeup' ? 'Dạy bù' : '';
                 if (details.length) {
                     details.forEach(p => {
@@ -5440,13 +5507,129 @@ Quy tắc:
                     });
                 }
             });
-            const sessionOrder = { 'Sáng': 0, 'Chiều': 1 };
-            rows.sort((a, b) => {
-                const s = (sessionOrder[a.session] ?? 9) - (sessionOrder[b.session] ?? 9);
-                if (s) return s;
-                return (parseInt(a.period, 10) || 0) - (parseInt(b.period, 10) || 0);
+            return sortAnnouncementRows(rows);
+        }
+
+        function collectFormAnnouncementRows() {
+            const slots = collectPeriodSlots();
+            if (!slots.length) return [];
+            const session = document.getElementById('new-sub-session')?.value || 'morning';
+            const type = document.getElementById('new-sub-type')?.value || 'replacement';
+            const reason = (document.getElementById('new-sub-reason')?.value || '').trim();
+            const subTeacher = teacherNameById(document.getElementById('new-sub-teacher')?.value);
+            const forId = document.getElementById('new-sub-for-teacher')?.value;
+            const absentCell = buildAnnouncementAbsentCell(type, forId, type === 'makeup' ? 'Tự dạy bù lớp' : '', reason);
+            const note = type === 'makeup' ? 'Dạy bù' : '';
+            return slots.map(p => ({
+                session: getSessionLabel(session),
+                period: p.period_num,
+                class_name: p.class_name || '',
+                subject: p.subject || '',
+                absent: absentCell,
+                substitute: subTeacher || '—',
+                note: p.note || note
+            }));
+        }
+
+        function mergeAnnouncementRows(savedRows, formRows) {
+            const out = savedRows.map(r => ({ ...r }));
+            (formRows || []).forEach(fr => {
+                const idx = out.findIndex(r =>
+                    String(r.period) === String(fr.period)
+                    && String(r.class_name || '') === String(fr.class_name || '')
+                    && announcementSessionKey(r.session) === announcementSessionKey(fr.session)
+                );
+                if (idx >= 0) out[idx] = { ...out[idx], ...fr };
+                else out.push({ ...fr });
             });
-            return rows;
+            return sortAnnouncementRows(out);
+        }
+
+        function currentAnnouncementSessionFilter() {
+            return document.getElementById('dt-ann-session')?.value || '';
+        }
+
+        function loadAnnouncementDraftRows() {
+            const dateStr = document.getElementById('dt-ann-date')?.value || '';
+            const session = currentAnnouncementSessionFilter();
+            const saved = collectAnnouncementRows(dateStr, session);
+            const formDate = document.getElementById('new-sub-date')?.value || '';
+            let formRows = [];
+            if (formDate && formDate === dateStr) {
+                const formSession = document.getElementById('new-sub-session')?.value || '';
+                if (!session || announcementSessionKey(session) === announcementSessionKey(formSession)) {
+                    formRows = collectFormAnnouncementRows();
+                }
+            }
+            announcementDraftRows = mergeAnnouncementRows(saved, formRows);
+            return announcementDraftRows;
+        }
+
+        function getAnnouncementRows() {
+            if (Array.isArray(announcementDraftRows)) return announcementDraftRows;
+            const dateStr = document.getElementById('dt-ann-date')?.value || '';
+            return collectAnnouncementRows(dateStr, currentAnnouncementSessionFilter());
+        }
+
+        function addAnnouncementDraftRow() {
+            if (!Array.isArray(announcementDraftRows)) loadAnnouncementDraftRows();
+            const session = currentAnnouncementSessionFilter();
+            announcementDraftRows.push({
+                session: getSessionLabel(session || 'morning'),
+                period: '',
+                class_name: '',
+                subject: '',
+                absent: '',
+                substitute: '',
+                note: ''
+            });
+            renderAnnouncementCard();
+        }
+
+        function removeAnnouncementDraftRow(idx) {
+            if (!Array.isArray(announcementDraftRows)) return;
+            announcementDraftRows.splice(idx, 1);
+            renderAnnouncementCard();
+        }
+
+        function reloadAnnouncementDraftRows() {
+            loadAnnouncementDraftRows();
+            renderAnnouncementCard();
+            showToast('Đã tải lại danh sách từ sổ và form buổi đang nhập.', 'success');
+        }
+
+        function onAnnouncementRowEdit(el) {
+            const idx = parseInt(el?.dataset?.annIdx, 10);
+            const field = el?.dataset?.annField;
+            if (!Array.isArray(announcementDraftRows) || Number.isNaN(idx) || !announcementDraftRows[idx] || !field) return;
+            announcementDraftRows[idx][field] = el.textContent || '';
+        }
+
+        function onAnnouncementRowBlur(el) {
+            onAnnouncementRowEdit(el);
+            const idx = parseInt(el?.dataset?.annIdx, 10);
+            const field = el?.dataset?.annField;
+            if (!Array.isArray(announcementDraftRows) || Number.isNaN(idx) || !announcementDraftRows[idx]) return;
+            const raw = String(announcementDraftRows[idx][field] || '').replace(/\s+/g, ' ').trim();
+            if (field === 'session') {
+                const key = announcementSessionKey(raw);
+                announcementDraftRows[idx].session = key === 'afternoon' ? 'Chiều' : (key === 'morning' ? 'Sáng' : (raw || 'Sáng'));
+                renderAnnouncementCard();
+                return;
+            }
+            announcementDraftRows[idx][field] = raw;
+        }
+
+        function onAnnouncementRowKeydown(ev) {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                ev.currentTarget.blur();
+            }
+        }
+
+        function announcementEditable(idx, field, text, extraClass) {
+            const cls = extraClass ? ` class="${extraClass}"` : '';
+            return `<span${cls} contenteditable="true" data-ann-idx="${idx}" data-ann-field="${field}" oninput="onAnnouncementRowEdit(this)" onblur="onAnnouncementRowBlur(this)" onkeydown="onAnnouncementRowKeydown(event)">${escapeHtml(text ?? '')}</span>`;
         }
 
         function onAnnouncementDateChange() {
@@ -5458,6 +5641,12 @@ Quy tắc:
                 titleEl.value = autoTitle;
             }
             if (titleEl) titleEl.dataset.auto = autoTitle;
+            loadAnnouncementDraftRows();
+            renderAnnouncementCard();
+        }
+
+        function onAnnouncementSessionChange() {
+            loadAnnouncementDraftRows();
             renderAnnouncementCard();
         }
 
@@ -5514,32 +5703,44 @@ Quy tắc:
             scaler.style.marginBottom = `${h * (scale - 1)}px`;
         }
 
-        function openDayThayAnnouncementModal(targetDate) {
+        function openDayThayAnnouncementModal(targetDate, session) {
             const preferred = targetDate || document.getElementById('new-sub-date')?.value || '';
-            const dateStr = findNearestSubstituteDate(preferred);
+            const dateStr = preferred || findNearestSubstituteDate('');
             const dateEl = document.getElementById('dt-ann-date');
+            const sessionEl = document.getElementById('dt-ann-session');
             const titleEl = document.getElementById('dt-ann-title');
             if (dateEl) dateEl.value = dateStr;
+            if (sessionEl) sessionEl.value = session || '';
             if (titleEl) {
                 titleEl.value = defaultAnnouncementTitle(dateStr);
                 titleEl.dataset.auto = titleEl.value;
                 titleEl.dataset.manual = '';
             }
+            loadAnnouncementDraftRows();
             bindAnnouncementPreviewFit();
             renderAnnouncementCard();
             document.getElementById('substitute-announcement-modal')?.classList.add('active');
             requestAnimationFrame(() => requestAnimationFrame(fitAnnouncementPreview));
         }
 
-        function closeDayThayAnnouncementModal() {
-            document.getElementById('substitute-announcement-modal')?.classList.remove('active');
+        function openDayThayAnnouncementFromForm() {
+            const date = document.getElementById('new-sub-date')?.value || new Date().toISOString().slice(0, 10);
+            const session = document.getElementById('new-sub-session')?.value || 'morning';
+            openDayThayAnnouncementModal(date, session);
         }
 
-        function announcementSessionBadge(session) {
-            const isMorning = String(session || '') === 'Sáng';
+        function closeDayThayAnnouncementModal() {
+            document.getElementById('substitute-announcement-modal')?.classList.remove('active');
+            announcementDraftRows = null;
+        }
+
+        function announcementSessionBadge(session, idx) {
+            const isMorning = announcementSessionKey(session) !== 'afternoon';
             const cls = isMorning ? 'dt-ann-session dt-ann-session-sang' : 'dt-ann-session dt-ann-session-chieu';
             const icon = isMorning ? '☀️' : '🌅';
-            return `<span class="${cls}">${escapeHtml(session || '—')} ${icon}</span>`;
+            const label = session || (isMorning ? 'Sáng' : 'Chiều');
+            if (idx == null) return `<span class="${cls}">${escapeHtml(label)} ${icon}</span>`;
+            return `<span class="${cls}">${announcementEditable(idx, 'session', label)} ${icon}</span>`;
         }
 
         function renderAnnouncementCard() {
@@ -5557,22 +5758,25 @@ Quy tắc:
             const org = state.info?.title || 'Tổ chuyên môn';
             const year = state.info?.school_year || '';
             const weekday = weekdayLabel(dateStr);
-            const rows = collectAnnouncementRows(dateStr);
+            const rows = getAnnouncementRows();
             const dateParts = String(dateStr || '').split('-');
             const docNo = dateParts.length >= 3 ? `${dateParts[2]}${dateParts[1]}/TB-TCM` : '…/TB-TCM';
             const bodyRows = rows.length
-                ? rows.map(r => `
+                ? rows.map((r, i) => `
                     <tr>
-                        <td class="center">${announcementSessionBadge(r.session)}</td>
-                        <td class="center">${escapeHtml(String(r.period))}</td>
-                        <td class="center"><span class="dt-ann-class-badge">${escapeHtml(r.class_name || '—')}</span></td>
-                        <td>${escapeHtml(r.subject || '—')}</td>
-                        <td>${escapeHtml(r.absent || '—')}</td>
-                        <td><span class="dt-ann-sub-chip">${escapeHtml(r.substitute || '—')}</span></td>
-                        <td>${escapeHtml(r.note || '')}</td>
+                        <td class="center">${announcementSessionBadge(r.session, i)}</td>
+                        <td class="center">${announcementEditable(i, 'period', r.period === 0 || r.period ? String(r.period) : '')}</td>
+                        <td class="center">${announcementEditable(i, 'class_name', r.class_name || '', 'dt-ann-class-badge')}</td>
+                        <td>${announcementEditable(i, 'subject', r.subject || '')}</td>
+                        <td>${announcementEditable(i, 'absent', r.absent || '')}</td>
+                        <td>${announcementEditable(i, 'substitute', r.substitute || '', 'dt-ann-sub-chip')}</td>
+                        <td>${announcementEditable(i, 'note', r.note || '')}</td>
+                        <td class="center dt-ann-edit-only" data-ann-edit-only>
+                            <button type="button" class="dt-ann-row-del" title="Xóa dòng" onclick="removeAnnouncementDraftRow(${i})">&times;</button>
+                        </td>
                     </tr>
                 `).join('')
-                : `<tr><td colspan="7" class="center" style="font-style:italic; color:#64748b;">Chưa có lượt dạy thay / dạy bù nào trong ngày ${escapeHtml(formatVnDate(dateStr))}.</td></tr>`;
+                : `<tr><td colspan="7" class="center" style="font-style:italic; color:#64748b;">Chưa có lượt dạy thay / dạy bù nào trong ngày ${escapeHtml(formatVnDate(dateStr))}${currentAnnouncementSessionFilter() ? ' · buổi ' + escapeHtml(getSessionLabel(currentAnnouncementSessionFilter())) : ''}.</td><td class="dt-ann-edit-only" data-ann-edit-only></td></tr>`;
             const tableHtml = `
                 <table class="dt-ann-table">
                     <thead>
@@ -5584,6 +5788,7 @@ Quy tắc:
                             <th>Giáo viên vắng &amp; Lý do</th>
                             <th>Giáo viên dạy thay</th>
                             <th>Ghi chú</th>
+                            <th class="dt-ann-edit-only" data-ann-edit-only></th>
                         </tr>
                     </thead>
                     <tbody>${bodyRows}</tbody>
@@ -5649,7 +5854,7 @@ Quy tắc:
             }
             const org = state.info?.title || 'Tổ chuyên môn';
             const school = state.info?.school || '';
-            const rows = collectAnnouncementRows(dateStr);
+            const rows = getAnnouncementRows();
             const weekday = weekdayLabel(dateStr) || '';
             const theme = ANNOUNCEMENT_THEMES.includes(currentAnnouncementTheme) ? currentAnnouncementTheme : 'modern';
             const prompt = `Bạn là Tổ trưởng chuyên môn của ${org}${school ? ' tại ' + school : ''}.
@@ -5701,9 +5906,9 @@ Yêu cầu bắt buộc:
 
         async function generateDayThayAnnouncementAI() {
             const dateStr = document.getElementById('dt-ann-date')?.value || '';
-            const rows = collectAnnouncementRows(dateStr);
+            const rows = getAnnouncementRows();
             if (!rows.length) {
-                showToast('Chưa có lượt dạy thay nào trong ngày đã chọn để soạn thông báo.', 'info');
+                showToast('Chưa có lượt dạy thay nào trong buổi đã chọn để soạn thông báo.', 'info');
                 return;
             }
             const btn = document.getElementById('btn-ai-ann-zalo');
@@ -5769,6 +5974,16 @@ ${listText}`;
             clone.style.width = ANNOUNCEMENT_CARD_WIDTH + 'px';
             clone.style.maxWidth = ANNOUNCEMENT_CARD_WIDTH + 'px';
             clone.style.transform = 'none';
+            clone.querySelectorAll('[data-ann-edit-only]').forEach(node => node.remove());
+            clone.querySelectorAll('[contenteditable]').forEach(node => {
+                node.removeAttribute('contenteditable');
+                node.removeAttribute('oninput');
+                node.removeAttribute('onblur');
+                node.removeAttribute('onkeydown');
+                node.style.boxShadow = 'none';
+                node.style.background = 'transparent';
+                node.style.cursor = 'default';
+            });
             const holder = document.createElement('div');
             holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;z-index:-1;pointer-events:none;';
             holder.appendChild(clone);
@@ -5833,7 +6048,7 @@ ${listText}`;
             const note = (document.getElementById('dt-ann-note')?.value || '').trim();
             const showNote = document.getElementById('dt-ann-show-note')?.checked ?? true;
             const org = state.info?.title || 'Tổ chuyên môn';
-            const rows = collectAnnouncementRows(dateStr);
+            const rows = getAnnouncementRows();
             const weekday = weekdayLabel(dateStr);
             const lines = [
                 `📢 ${title}`,

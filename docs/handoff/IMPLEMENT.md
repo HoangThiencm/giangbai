@@ -1,49 +1,37 @@
-# IMPLEMENT: Cải tiến thẻ & modal thông báo dạy thay theo phản hồi người dùng
+# IMPLEMENT: Cải tiến thẻ thông báo dạy thay (edit dòng + tạo ảnh theo buổi)
 
 **Ngày implement**: 2026-09-06
 **Coder**: Grok (xAI)
 **Trạng thái**: DONE
-**Nguồn**: `docs/handoff/PLAN.md` + phản hồi ảnh (bỏ chân ký; AI gợi ý tiêu đề, chống lặp)
+**Nguồn**: `docs/handoff/PLAN.md` + phản hồi ảnh (bỏ chân ký, AI tiêu đề, dòng sửa được, nút tạo ảnh trên form buổi)
 
 ## Tóm tắt
 
-1. **Tiêu đề không lặp**: ô `#dt-ann-title` do user nhập; mặc định ngắn `Phân công dạy thay` (không nhét ngày). Theme `official` chỉ còn `THÔNG BÁO` + một dòng `V/v …`. Theme `modern` / `emerald`: tiêu đề = nội dung user; ngày/tổ chỉ ở pills, không lặp dòng phụ.
-2. **Nút AI gợi ý tiêu đề** (`#btn-ai-ann-title`): điền nhanh tiêu đề ngắn, không lặp ngày/tổ/THÔNG BÁO.
-3. **Checkbox `#dt-ann-show-note`**: bật/tắt khối lời dặn trên thẻ và tin Zalo.
-4. **Bỏ chân ký trên thẻ**: không còn ô `Tổ trưởng`, `Lập lúc`, `Nguồn: Sổ Dạy Thay - Bù`.
+1. **Nút Tạo ảnh thông báo trên form Sổ Dạy Thay** (cạnh Lưu): lấy đúng **ngày + buổi** đang nhập, gộp tiết trên form (kể cả chưa lưu) với sổ.
+2. **Bảng trên ảnh sửa được**: bấm vào ô (buổi, tiết, lớp, môn, GV vắng, GV dạy thay, ghi chú). Thêm dòng / xóa dòng / tải lại từ sổ. Ảnh xuất ra không còn nút xóa.
+3. **Lọc buổi trên modal**: Cả ngày / Sáng / Chiều.
+4. Giữ các chỉnh trước: tiêu đề không lặp, checkbox lời dặn, bỏ chân ký trên thẻ, AI gợi ý tiêu đề.
 
 ## Files
 
 | File | Thay đổi |
 |------|----------|
-| `phancongtochuyenmon.html` | Checkbox lời dặn; AI gợi ý tiêu đề; tiêu đề không lặp; bỏ chân ký thẻ; Zalo tôn trọng checkbox |
-| `docs/handoff/IMPLEMENT.md` | Ghi nhận implement |
+| `phancongtochuyenmon.html` | Nút form, lọc buổi, draft rows, contenteditable, capture sạch edit-only |
+| `docs/handoff/IMPLEMENT.md` | Ghi nhận |
 | `docs/handoff/.lock` | Khóa lại |
 
-Không sửa API, JSON state, hay file ngoài phạm vi thông báo dạy thay.
+## Cách dùng
 
-## Chi tiết
+1. Vào **Sổ Dạy Thay**, chọn **Ngày dạy** + **Buổi dạy**, điền tiết/lớp (hoặc đã lưu sổ).
+2. Bấm **Tạo ảnh thông báo** trên form.
+3. Sửa trực tiếp các ô trên bảng ảnh nếu cần, rồi Sao chép ảnh / Zalo.
 
-### Tiêu đề
-- `#dt-ann-title`: user nhập tự do; placeholder gợi ý bấm AI.
-- `defaultAnnouncementTitle()`: `Phân công dạy thay` — không kèm ngày (ngày đã có ở pills / ngày chọn).
-- Theme `official`: `THÔNG BÁO` + `officialAnnouncementSubject(title)` (bỏ tiền tố `THÔNG BÁO`, thêm `V/v` nếu thiếu). Không nối `<br>${title}`.
-- Theme `modern` / `emerald`: `<h3>${title}</h3>` + pills ngày/tổ/số lượt. Không dòng phụ lặp ngày + tên tổ.
-- `#btn-ai-ann-title` → `generateAnnouncementTitleAI()` (cùng `api/khbd_gemini.php` / Gemini 2.5 Flash). Prompt bắt buộc không lặp ngày, thứ, trường, tổ, không mở đầu `THÔNG BÁO`. Kết quả ghi vào `#dt-ann-title` và `dataset.manual='1'`.
-
-### Lời dặn
-- `#dt-ann-show-note` mặc định bật. Render `.dt-ann-note` chỉ khi `showNote && note`.
-- Chip mẫu và `AI Soạn thông báo Zalo` tự bật checkbox.
-- Zalo: dòng `🔔 Lời dặn dò` chỉ khi checkbox bật và có nội dung.
-
-### Chân thẻ
-- Đã gỡ toàn bộ `.dt-ann-sign` trên ảnh thông báo (ô ký + lập lúc + nguồn).
-- Tin Zalo vẫn có `✍️ Tổ trưởng: ${ttcm || 'TTCM'}` (không nằm trên ảnh).
+Nút cùng tên ở nhật ký mở modal **cả ngày** (không khóa buổi).
 
 ## Kiểm thử Coder
 
-1. Parse JS trong `phancongtochuyenmon.html` (`vm.Script`): PASS.
-2. Có `#btn-ai-ann-title` và `generateAnnouncementTitleAI`.
-3. Không còn `Lập lúc` / `signHtml` trên thẻ. Không còn tiêu đề mặc định `THÔNG BÁO PHÂN CÔNG DẠY THAY NGÀY …`.
+- Parse JS (`vm.Script`): PASS.
+- Có `#btn-ann-from-form`, `#dt-ann-session`, `contenteditable`, `openDayThayAnnouncementFromForm`.
+- Không còn `Lập lúc` trên thẻ.
 
-Chưa chạy trên trình duyệt thật (cần đăng nhập + Gemini). `/verify` trên modal thông báo: 3 theme, checkbox lời dặn, AI gợi ý tiêu đề, copy Zalo.
+Cần tải lại trang (Ctrl+F5) nếu vẫn thấy chân ký / tiêu đề dài cũ.
