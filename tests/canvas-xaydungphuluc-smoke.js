@@ -13,6 +13,7 @@ const sourceFunctions=new Set(functions(source)),targetFunctions=new Set(functio
 for(const id of sourceIds){if(!['selectModel','keyBadge'].includes(id))assert(targetIds.has(id),`missing original DOM id #${id}`)}
 for(const name of sourceFunctions)assert(targetFunctions.has(name),`missing original function ${name}`);
 assert(targetIds.has('canvasHostBanner'),'missing Canvas connection banner');
+['function cleanNlsColumnText','function cleanAiColumnText','hasCode:hasAiCode(value)'].forEach(value=>assert(target.includes(value),`missing clean Appendix 1 integration behavior: ${value}`));
 
 for(const text of [
   '<script src="https://hoangthiencm.id.vn/js/khbd-yccd.js"></script>',
@@ -91,3 +92,68 @@ vm.runInContext(
   assert.equal(body.payload.contents[0].parts[0].text,'kiểm tra Canvas');
   console.log('canvas-xaydungphuluc-smoke: PASS');
 })().catch(error=>{console.error(error);process.exit(1)});
+
+
+// Draft transport must work with an opaque Canvas origin and no cookies.
+const draftEndpoint='https://hoangthiencm.id.vn/api/user_phuluc_draft.php';
+assert(target.includes(`const DRAFT_API_ENDPOINT = '${draftEndpoint}';`));
+assert(!target.includes("fetch('api/user_phuluc_draft.php"));
+for(const id of ['saveDraftAccount','loadDraftAccount','draftJsonInput'])assert(targetIds.has(id));
+for(const name of ['submitSaveDraft','fetchAndRenderDraftList','loadDraftById','deleteDraftFromServer'])assert(sliceFunction(name).includes('requestCanvasDraft('));
+const storage=new Map(),draftCalls=[],messages=[];
+const draftPayload={version:1,config:{giaoVien:'Giáo viên',monHoc:'Toán học'},sourcePpctRows:[{lesson:'Bài 1'}],results:{'1':{title:'Phụ lục'}}};
+let restored=null,download=null,allowRestore=true;
+const draftSandbox={URLSearchParams,Blob,console,
+  localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},
+  document:{querySelector:()=>null},
+  notify:message=>messages.push(message),confirm:()=>allowRestore,
+  buildDraftPayload:()=>draftPayload,draftDefaultTitle:()=> 'Kế hoạch mẫu',
+  applyDraftPayload:value=>{restored=value},setDraftStatus(){},closeSaveDraftModal(){},closeLoadDraftModal(){},
+  saveAs:(blob,name)=>{download={blob,name}},
+  fetch:async(url,init)=>{draftCalls.push({url,init});return {ok:true}},
+};
+vm.createContext(draftSandbox);
+vm.runInContext(`const DRAFT_API_ENDPOINT=${JSON.stringify(draftEndpoint)};let currentDraftId=42,currentDraftTitle='';`+
+  sliceNamedFunction('readCanvasStorage')+"\nlet canvasDraftAccount=readCanvasStorage('canvas_xdpl_user');\n"+
+  ['setCanvasDraftAccount','savedCanvasDraft','restoreCanvasDraft','saveDraftLocally','loadDraftLocally','exportDraftJson'].map(sliceNamedFunction).join('\n')+'\n'+
+  sliceFunction('requestCanvasDraft')+'\n'+sliceFunction('importDraftJson'),draftSandbox);
+(async()=>{
+  await assert.rejects(()=>draftSandbox.requestCanvasDraft({action:'list'}),/tài khoản/);
+  assert.equal(draftCalls.length,0);
+  draftSandbox.setCanvasDraftAccount(' teacher1 ');
+  assert.equal(storage.get('canvas_xdpl_user'),'teacher1');
+  assert.equal(vm.runInContext('currentDraftId',draftSandbox),null,'changing account must detach existing draft');
+  for(const [params,options] of [[{action:'list'},{}],[{id:12},{}],[{},{method:'POST',body:JSON.stringify({draft:draftPayload})}],[{action:'delete'},{method:'POST',body:'{"id":12}'}]]){
+    await draftSandbox.requestCanvasDraft(params,options);
+    const call=draftCalls.at(-1),url=new URL(call.url);
+    assert.equal(url.origin+url.pathname,draftEndpoint);
+    assert.equal(url.searchParams.get('user_account'),'teacher1');
+    assert.equal(call.init.headers['X-User-Account'],'teacher1');
+    assert.equal(call.init.credentials,'omit');
+    if(options.body)assert.equal(JSON.parse(call.init.body).user_account,'teacher1');
+  }
+  draftSandbox.saveDraftLocally();
+  draftSandbox.loadDraftLocally();
+  assert.deepEqual(JSON.parse(JSON.stringify(restored)),draftPayload);
+  restored=null;
+  assert.throws(()=>draftSandbox.restoreCanvasDraft({unrelated:true}),/hợp lệ/);
+  assert.equal(restored,null,'invalid JSON must not erase current work');
+  allowRestore=false;
+  draftSandbox.restoreCanvasDraft(JSON.parse(storage.get('canvas_xdpl_draft')));
+  assert.equal(restored,null,'cancel must preserve current work');
+  allowRestore=true;
+  draftSandbox.exportDraftJson();
+  assert.equal(download.name,'ke-hoach-phu-luc.json');
+  const exported=await download.blob.text();
+  const input={files:[{text:async()=>exported}],value:'draft.json'};
+  await draftSandbox.importDraftJson(input);
+  assert.deepEqual(JSON.parse(JSON.stringify(restored)),draftPayload);
+  assert.equal(input.value,'');
+  draftSandbox.localStorage={getItem(){throw new Error('SecurityError')},setItem(){throw new Error('QuotaExceededError')}};
+  assert.equal(draftSandbox.readCanvasStorage('canvas_xdpl_user'),'');
+  draftSandbox.saveDraftLocally();
+  assert(messages.at(-1).includes('Xuất file JSON'));
+  draftSandbox.exportDraftJson();
+  assert.equal(JSON.parse(await download.blob.text()).format,'canvas-xdpl-draft');
+  console.log('canvas draft transport and offline recovery: PASS');
+})().catch(error=>{console.error(error);process.exitCode=1});

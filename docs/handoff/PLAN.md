@@ -1,111 +1,96 @@
-# PLAN: Nhân bản 1-1 xaydungphuluc.html sang canvas_xaydungphuluc.html (Môi trường Canvas nội bộ)
+# PLAN: Chuẩn hóa hiển thị Mã NLS, Mã AI và xử lý hàng không AI trong Phụ lục 1 (kèm sửa lỗi CSDL Canvas)
 
-## Hiện trạng & Yêu cầu của người dùng
-1. **Yêu cầu bắt buộc từ người dùng**:
-   - `canvas_xaydungphuluc.html` bắt buộc lấy **toàn bộ ý tưởng, giao diện và cách chạy từ `xaydungphuluc.html` hoàn toàn 1-1**.
-   - **Không được phép tự ý thay đổi, rút gọn hoặc viết lại code**.
-   - **Chỉ thay đổi duy nhất ở việc chạy trong môi trường nội bộ Canvas** (không cần API key cá nhân, dùng endpoint `api/canvas_gemini.php` với model `gemini-3-flash-preview`).
-2. **Vấn đề phát hiện ở bản thử nghiệm trước**:
-   - Bản trước đó đã bị rút gọn/viết lại script riêng (83 dòng) khiến một số logic, bảng và prompt khác với bản chuẩn `xaydungphuluc.html`.
-   - Banner kiểm tra ping trang chủ `fetch('https://hoangthiencm.id.vn')` bị trình duyệt chặn CORS (`cors: null`), dẫn đến báo đỏ *"Không kiểm tra được host"*.
+## Hiện trạng
+1. **Hiển thị Mã NLS và Mã AI trong Phụ lục 1**:
+   - Bảng Phụ lục 1 hiện tại đã tách thành 2 cột riêng biệt: Cột 5 là `Biểu hiện năng lực số`, Cột 6 là `Biểu hiện năng lực AI`.
+   - Tuy nhiên, dữ liệu trong từng ô vẫn giữ nguyên tiền tố và dấu ngoặc vuông:
+     + NLS: `[NLS: 1.1.TC2a - Sử dụng công cụ số để tìm kiếm thông tin theo yêu cầu]`
+     + AI: `[AI: 8.A1.1 - Nhận diện vai trò dữ liệu đầu vào trong mô hình AI] (Áp dụng: tiết 1, 2).`
+   - Vì tiêu đề cột đã ghi rõ "Biểu hiện năng lực số" và "Biểu hiện năng lực AI", việc lặp lại chữ `[NLS: ` và `[AI: ` cùng dấu ngoặc `]` gây rườm rà, lặp từ và choán diện tích bảng.
+2. **Xử lý dòng không tích hợp AI**:
+   - Đối với các bài học không được tick chọn tiết AI, cột `Biểu hiện năng lực AI` cần đảm bảo luôn tự động điền một dấu gạch ngang `-` rõ ràng, chuẩn văn bản hành chính theo CV 5512.
+3. **Lỗi Tải/Lưu CSDL trong môi trường Canvas** (từ khảo sát trước):
+   - `canvas_xaydungphuluc.html` trong iframe Canvas bị lỗi `Failed to parse URL` do dùng URL tương đối `api/user_phuluc_draft.php` và thiếu CORS + thiếu định danh tài khoản giáo viên (`username`).
 
----
-
-## Phạm vi thực hiện
-
-### 1. File nguồn và đích
-- Tệp nguồn gốc (chuẩn 100%): `xaydungphuluc.html` (khoảng 420 dòng, 150KB).
-- Tệp đích: `backupcode viettailieu/canvas_xaydungphuluc.html`.
-- Tệp test: `tests/canvas-xaydungphuluc-smoke.js`.
-
-### 2. Các điểm thay đổi DUY NHẤT để chạy môi trường Canvas nội bộ
-Mọi cấu trúc HTML, CSS, DOM id, và logic JavaScript từ `xaydungphuluc.html` được giữ nguyên vẹn 1-1, CHỈ sửa đúng các điểm sau:
-1. **Thư viện phụ thuộc đầu trang `<head>`**:
-   - Đổi đường dẫn tương đối thành URL tuyệt đối từ host:
-     `https://hoangthiencm.id.vn/js/khbd-yccd.js`
-     `https://hoangthiencm.id.vn/js/khbd-standards.js`
-   - Bỏ `js/security-guard.js` và `access-control.js` (không áp dụng chống debug hay chặn phân quyền đăng nhập trong Canvas).
-2. **Thêm Banner trạng thái Canvas (`#canvasHostBanner`) ở đầu trang**:
-   - Đặt ngay sau `<body>`.
-   - Lệnh ping kết nối sử dụng method `OPTIONS` gửi tới endpoint API:
-     ```javascript
-     fetch('https://hoangthiencm.id.vn/api/canvas_gemini.php', { method: 'OPTIONS', credentials: 'omit' })
-       .then(r => {
-         if (r.ok || r.status === 204) {
-           const b = document.getElementById('canvasHostBanner');
-           if (b) { b.textContent = 'Đã kết nối Gemini Canvas · gemini-3-flash-preview'; b.className = 'ok'; }
-         }
-       })
-       .catch(() => {
-         const b = document.getElementById('canvasHostBanner');
-         if (b) { b.textContent = 'Không kiểm tra được host; vẫn có thể thử tạo phụ lục.'; b.className = 'err'; }
-       });
-     ```
-3. **Thanh Header (Giao diện trạng thái API Key & Model)**:
-   - Thay cụm `<select id="selectModel">` và nút `🔑 Đang kiểm tra key…` bằng huy hiệu Canvas cố định:
-     `<span class="rounded-full bg-violet-100 px-3 py-2 text-sm font-bold text-violet-800">Gemini Canvas · gemini-3-flash-preview (Hệ thống cấp)</span>`
-   - Vẫn giữ nguyên cấu trúc DOM và các nút còn lại (Trang chủ, Lưu CSDL, Tải CSDL, Giao diện, Đặt lại).
-4. **Tầng gọi AI nội bộ Canvas (`requestGemini` & `callGemini`)**:
-   - Khởi tạo sẵn `apiKeys = ['canvas-session']`, `mistralKeys = []`.
-   - Trong `requestGemini`: Thay thế việc gọi trực tiếp Google `https://generativelanguage.googleapis.com/...` bằng lời gọi POST tới endpoint hệ thống:
-     ```javascript
-     const CANVAS_ENDPOINT = 'https://hoangthiencm.id.vn/api/canvas_gemini.php';
-     const response = await fetchWithGeminiTimeout(CANVAS_ENDPOINT, {
-       method: 'POST',
-       headers: { 'content-type': 'application/json' },
-       credentials: 'omit',
-       body: JSON.stringify({ payload, timeout: 75 })
-     }, GEMINI_TIMEOUT_MS);
-     ```
-   - Trong `readGeminiResponse`: Giải nén `envelope.body` chứa `{ candidates: [{ content: { parts: [{ text }] } }] }`.
-   - Bỏ qua modal chặn "Chưa có API key" trong `generateSelected` và `readStagedSgk`.
-5. **Giữ nguyên 100% tất cả các hàm và thuật toán còn lại**:
-   - Toàn bộ 7 bước giao diện.
-   - Toàn bộ hàm bóc tách PPCT (`extractPpctRows`, `extractDocxTables`, `ingestSourceTables`...).
-   - Toàn bộ bộ chọn 12 tiết AI (`aiCandidates`, `aiPeriodCandidates`, `selectedAiPeriods`, `renderAiPicker`...).
-   - Toàn bộ prompt chi tiết (`appendixPrompt`, `currentPpctPromptSource`, `curriculumContext`, `lessonCatalog`...).
-   - Toàn bộ thuật toán chuẩn hóa Phụ lục 1 (`appendixOneTable`, `normalizeAppendix`, `cleanAppendixOutcome`, tách riêng 02 cột NLS và AI).
-   - Toàn bộ xuất Word (`exportDocx` khổ A4 ngang `11906x16838`) và xuất ZIP (`exportAll`).
-   - Toàn bộ modal Thẩm định sư phạm (`complianceModal`).
-
----
+## Phạm vi
+- Cập nhật hàm tách và làm sạch mã `separateIntegration` trong `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`:
+  + Bỏ tiền tố `[NLS: ` và dấu đóng `]` ở cột `Biểu hiện năng lực số`: `1.1.TC2a - Sử dụng công cụ số để tìm kiếm thông tin theo yêu cầu`.
+  + Bỏ tiền tố `[AI: ` và dấu `]` ở cột `Biểu hiện năng lực AI`: `8.A1.1 - Nhận diện vai trò dữ liệu đầu vào trong mô hình AI (Áp dụng: tiết 1, 2).`
+  + Tự động điền dấu `-` cho cột AI ở các bài học không được tick chọn tiết AI.
+- Cập nhật các hàm phụ thuộc trong `xaydungphuluc.html` và `canvas_xaydungphuluc.html`:
+  + `appendixAiCoverage` và `calculateComplianceReport`: Điều chỉnh regex để nhận diện mã NLS (`\d+\.\d+\.TC\w+`) và mã AI (`\d+\.A\d+\.\d+`) kể cả khi không còn `[NLS:` và `[AI:`.
+  + `exportDocx`: Đảm bảo khi xuất Word, các ô NLS/AI hiển thị đúng chữ số màu chuẩn (NLS: `#0070C0`, AI: `#7030A0`), và dòng không có AI hiển thị đúng `-`.
+- Đồng bộ sửa lỗi CSDL Canvas:
+  + Backend `api/user_phuluc_draft.php`: Bật CORS và nhận diện user qua `username` khi không có session.
+  + Frontend `canvas_xaydungphuluc.html`: Dùng `DRAFT_API_ENDPOINT` tuyệt đối và thêm ô nhập username.
+- Cập nhật smoke tests: `tests/xaydungphuluc-smoke.js` và `tests/canvas-xaydungphuluc-smoke.js`.
 
 ## Ngoài phạm vi
-- Không sửa source gốc `xaydungphuluc.html`.
-- Không sửa `api/canvas_gemini.php`.
+- Không thay đổi bảng Phụ lục 3 (cột gộp `Mã NLS & AI (CV 3456 & QĐ 2422)` vẫn giữ `[NLS:` và `[AI:` để phân biệt hai loại mã khi nằm chung một ô).
+- Không sửa đổi nội dung chuẩn hóa của CTGDPT 2018 (YCCĐ) hay danh mục mã NLS/AI gốc.
 
----
-
-## File tác động
+## File dự kiến tác động
+- `xaydungphuluc.html`
 - `backupcode viettailieu/canvas_xaydungphuluc.html`
+- `api/user_phuluc_draft.php`
+- `tests/xaydungphuluc-smoke.js`
 - `tests/canvas-xaydungphuluc-smoke.js`
-- `docs/handoff/PLAN.md`
-- `docs/handoff/.lock`
 
----
+## Các bước thực hiện
+1. **Bước 1: Bổ sung hàm làm sạch mã hiển thị NLS và AI**:
+   - Viết hàm `cleanNlsColumnText(text)`:
+     ```javascript
+     function cleanNlsColumnText(text){
+       if(!text||text==='-')return '-';
+       const lines=String(text).split('\n').map(line=>{
+         const l=line.trim();
+         if(!l||l==='-')return '';
+         return l.replace(/^\[\s*NLS\s*:\s*/i,'').replace(/\]\s*$/,'').trim();
+       }).filter(Boolean);
+       return lines.length?lines.join('\n'):'-';
+     }
+     ```
+   - Viết hàm `cleanAiColumnText(text)`:
+     ```javascript
+     function cleanAiColumnText(text){
+       if(!text||text==='-')return '-';
+       const lines=String(text).split('\n').map(line=>{
+         const l=line.trim();
+         if(!l||l==='-')return '';
+         return l.replace(/^\[\s*AI\s*:\s*/i,'').replace(/\](\s*\(Áp dụng:[^)]+\)\.?)/i,'$1').replace(/\]\s*$/,'').trim();
+       }).filter(Boolean);
+       return lines.length?lines.join('\n'):'-';
+     }
+     ```
+2. **Bước 2: Cập nhật `separateIntegration` trong `xaydungphuluc.html` & `canvas_xaydungphuluc.html`**:
+   - Khi tách phần NLS: Chạy qua `cleanNlsColumnText(...)`. Nếu không có hoặc NLS bị tắt, trả về `'-'`.
+   - Khi tách phần AI: Nếu bài học không có tiết AI nào được chọn (hoặc AI bị tắt), trả về `'-'`. Nếu có, chạy qua `cleanAiColumnText(...)`.
+3. **Bước 3: Cập nhật `appendixAiCoverage` và `calculateComplianceReport`**:
+   - Cập nhật regex kiểm tra mã trong ô:
+     + NLS: `/(?:\[\s*NLS\s*:\s*)?\b\d+\.\d+\.TC\w+/i`
+     + AI: `/(?:\[\s*AI\s*:\s*|\b)\d+\.A\d+\.\d+/i`
+     + Phạm vi tiết: `/(?:Áp dụng:\s*tiết\s*([\d, ]+))/i`
+4. **Bước 4: Cập nhật `api/user_phuluc_draft.php` và `canvas_xaydungphuluc.html`**:
+   - Cấu hình CORS và hỗ trợ `username` cho API nháp.
+   - Thêm ô tài khoản giáo viên và nút cứu hộ Local/JSON trong Canvas.
+5. **Bước 5: Cập nhật kiểm thử và chạy test**:
+   - Cập nhật các câu lệnh `assert` trong `tests/xaydungphuluc-smoke.js` và `tests/canvas-xaydungphuluc-smoke.js` khớp với định dạng mã sạch mới.
+   - Chạy `node tests/xaydungphuluc-smoke.js; node tests/canvas-xaydungphuluc-smoke.js` đảm bảo PASS 100%.
 
-## Các bước Coder thực hiện
-1. **Bước 1**: Đọc toàn văn `xaydungphuluc.html`.
-2. **Bước 2**: Nhân bản sang `backupcode viettailieu/canvas_xaydungphuluc.html` và áp dụng đúng 4 điểm điều chỉnh cho môi trường Canvas:
-   - Thay link script head thành URL tuyệt đối host (bỏ `security-guard.js`, `access-control.js`).
-   - Thêm banner `#canvasHostBanner` kèm logic ping OPTIONS tới `api/canvas_gemini.php`.
-   - Cập nhật header hiển thị huy hiệu Gemini Canvas cố định.
-   - Thay thế ruột hàm `requestGemini` trỏ về `api/canvas_gemini.php` với `credentials: 'omit'` và giải nén `envelope.body`; khởi tạo sẵn `apiKeys = ['canvas-session']`.
-3. **Bước 3**: Cập nhật `tests/canvas-xaydungphuluc-smoke.js` để kiểm thử toàn diện code 1-1 mới.
-4. **Bước 4**: Chạy toàn bộ test đảm bảo PASS.
-
----
+## Rủi ro
+- Khi loại bỏ tiền tố `[NLS:` và `[AI:`, các hàm báo cáo thẩm định sư phạm (`calculateComplianceReport`) hoặc xuất Docx nếu tìm cứng chuỗi `[NLS:` sẽ bị đếm thiếu -> Cần đồng bộ sửa regex nhận diện cả định dạng mã sạch.
 
 ## Cách kiểm thử
-1. `node tests/canvas-xaydungphuluc-smoke.js` -> PASS.
-2. `node tests/xaydungphuluc-smoke.js` -> PASS.
-3. `node tests/xaydungphuluc-integration-smoke.js` -> PASS.
-4. Kiểm tra ping OPTIONS tới `api/canvas_gemini.php` trả về 204 có CORS `*`.
-
----
+1. Chạy `node tests/xaydungphuluc-smoke.js` -> PASS.
+2. Chạy `node tests/canvas-xaydungphuluc-smoke.js` -> PASS.
+3. Chạy `node tests/xaydungphuluc-integration-smoke.js` -> PASS.
+4. Kiểm tra trực quan:
+   - Cột Biểu hiện năng lực số chỉ hiện mã và mô tả: `1.1.TC2a - Sử dụng công cụ số...` (không có `[NLS:` và `]`).
+   - Cột Biểu hiện năng lực AI chỉ hiện mã, mô tả và phạm vi: `8.A1.1 - Nhận diện... (Áp dụng: tiết 1, 2).` (không có `[AI:` và `]`).
+   - Các bài học không có AI hiển thị đúng một dấu `-`.
 
 ## Tiêu chí nghiệm thu
-- `canvas_xaydungphuluc.html` giống 1-1 hoàn toàn với `xaydungphuluc.html` về mọi tính năng, bảng, prompt, logic xử lý; chỉ thay thế tầng gọi AI sang `api/canvas_gemini.php` (Zero-Config API key).
-- Banner kiểm tra host phản hồi màu xanh (OK) không bị lỗi CORS.
-- File test chạy PASS.
-
+- Phụ lục 1 hiển thị mã sạch không còn `[NLS: ]` và `[AI: ]`.
+- Mọi dòng không chọn tiết AI đều tự động điền `-`.
+- Xuất file Word (.docx) hiển thị đúng format sạch và giữ đúng màu xanh/tím.
+- Toàn bộ bài test chạy PASS.

@@ -13,6 +13,9 @@ assert(/^<!doctype html>/i.test(html),'not a standalone HTML document');
 ['js/security-guard.js','access-control.js','LEGACY_API_KEY_STORAGE_KEYS','khbd_user_gemini_keys_default','khbd_gemini_api_keys','gemini_api_keys','xdpl_gemini_api_keys','global_gemini_keys','clearLegacyApiKeyStorage','ensureKeysLoaded','syncUserKeysPromise','saveKeys','checkKeys','429','403','mistralKeys','mistralKeyInput','mistral_keys','syncUserKeysFromServer','api/user_gemini_keys.php','credentials:\'include\'','cache:\'no-store\''].forEach(has);
 ['saveDraftToServer','loadDraftFromServer','buildDraftPayload','applyDraftPayload','openSaveDraftModal','openLoadDraftModal','fetchAndRenderDraftList','buildDraftSummary','loadDraftById','deleteDraftFromServer','api/user_phuluc_draft.php','💾 Lưu lên CSDL','📂 Tải từ CSDL','id="draftStatus"','id="saveDraftModal"','id="loadDraftModal"','id="draftTitleInput"','id="draftListContainer"','aiSelectedLessonIds','sgkCompactContext','sgkKnowledgeBase'].forEach(has);
 ['user_phuluc_drafts','LONGTEXT','$_SESSION[\'user_id\']','DROP INDEX uniq_user_phuluc_draft_user','idx_user_phuluc_drafts_user','idx_user_phuluc_drafts_mon_lop','action===\'list\'','action===\'delete\'','draft_data','updated_at','save_mode'].forEach(value=>assert(draftApi.includes(value),`draft API missing ${value}`));
+for(const value of ['Access-Control-Allow-Origin: *','Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS','Access-Control-Allow-Headers: Content-Type, X-User-Account','http_response_code(204)','HTTP_X_USER_ACCOUNT',"$body['user_account']",'WHERE username = ? AND is_active = 1 LIMIT 1'])assert(draftApi.includes(value),`draft API missing Canvas support: ${value}`);
+assert(draftApi.indexOf('http_response_code(204)')<draftApi.indexOf('require_once'),'preflight must exit before database/session access');
+assert(draftApi.includes('if ($userId <= 0) {'),'account fallback must preserve authenticated session precedence');
 assert(!draftApi.includes('UNIQUE KEY uniq_user_phuluc_draft_user'),'draft API must not create a single-draft unique key');
 assert(!/localStorage\.setItem\([^\n]*(?:gemini|mistral|api_keys)/i.test(html.replace(/localStorage\.setItem\('khbd_gemini_model',[\s\S]*?\);/g,'')),'API keys must never be persisted in localStorage');
 assert(!/sessionStorage\.(?:setItem|getItem)/i.test(html),'API keys must never use sessionStorage');
@@ -259,25 +262,25 @@ const appendixOne=vm.runInContext(`sourcePpctTable=${JSON.stringify({columns:['B
 assert.deepEqual(Array.from(appendixOne.columns),['STT','Bài học','Số tiết','Yêu cầu cần đạt','Biểu hiện năng lực số','Biểu hiện năng lực AI'],'PL1 must use its six-column form');
 assert.equal(appendixOne.rows[1].cells[2],'1','PL1 must retain periods from PL3, not generated schedule values');
 assert.equal(appendixOne.rows[1].cells[3],'- Nhận biết và mô tả được tập hợp.','PL1 must use the AI-generated outcome as a bullet');
-assert(appendixOne.rows[1].cells[5].includes('[AI:'),'selected PL3 lesson must retain its AI code in PL1');
+assert(/^6\.A\d+\.\d+/.test(appendixOne.rows[1].cells[5])&&!appendixOne.rows[1].cells[5].includes('[AI:'),'PL1 must show a clean AI code without its wrapper');
 assert(appendixOne.rows[1].cells[5].includes('Áp dụng: tiết 1'),'partial selected period must be scoped in PL1 AI integration');
 sandbox.getCleanOfficialYccd=()=>'- Thực hiện được phép cộng và phép trừ số nguyên.';
 
 const splitValue='[NLS: 1.1.TC1a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]';
 const splitConfig={lop:'6',monHoc:'Toán học',nls:{enabled:true,rate:100},ai:{enabled:true}};
 const separate=sandbox.separateIntegration(splitValue,[1,3],0,splitConfig,'Bài mẫu');
-assert(separate.nlsText.includes('[NLS:')&&!separate.nlsText.includes('[AI:'),'NLS column must contain only NLS');
-assert(separate.aiText.includes('[AI:')&&!separate.aiText.includes('[NLS:')&&separate.aiText.includes('Áp dụng: tiết 1, 3'),'AI column must isolate codes and scope multiple selected periods');
+assert(/^1\.1\.TC\w+/i.test(separate.nlsText)&&!/[\[\]]/.test(separate.nlsText),'NLS column must contain only a clean NLS code');
+assert(/^6\.A\d+\.\d+/i.test(separate.aiText)&&!/[\[\]]/.test(separate.aiText)&&separate.aiText.includes('Áp dụng: tiết 1, 3'),'AI column must isolate a clean code and scope multiple selected periods');
 assert.equal(sandbox.separateIntegration(splitValue,[],0,splitConfig).aiText,'-','unselected lesson must not contain AI');
 assert.equal(sandbox.separateIntegration(splitValue,[1],0,{...splitConfig,ai:{enabled:false}}).aiText,'-','AI disabled must suppress selected codes');
 assert.equal(sandbox.separateIntegration(splitValue,[1],0,{...splitConfig,nls:{enabled:false}}).nlsText,'-','NLS disabled must suppress provided codes');
-assert(sandbox.separateIntegration('-',[],0,splitConfig).nlsText.includes('[NLS:'),'enabled NLS must receive catalog/fallback codes');
+assert(/^\d+\.\d+\.TC\w+/i.test(sandbox.separateIntegration('-',[],0,splitConfig).nlsText),'enabled NLS must receive a clean catalog/fallback code');
 const splitModel={columns:Array.from(appendixOne.columns),rows:[{cells:['CHƯƠNG I'],isHeader:true},{cells:['1','Bài mẫu','140','- Nhận biết được kiến thức.',separate.nlsText,separate.aiText],isHeader:false}]};
 assert.deepEqual(JSON.parse(JSON.stringify(sandbox.normalizeIntegrationTable(splitModel))).columns,splitModel.columns,'normalization must retain six separate columns');
 assert.deepEqual(JSON.parse(JSON.stringify(sandbox.normalizeIntegrationTable(splitModel))).rows,splitModel.rows,'normalization must preserve cells and spanning headers');
 const splitPreview=sandbox.dynamicPpctTable(splitModel,true);
 assert.equal((splitPreview.match(/<th>/g)||[]).length,6,'preview must have six headers');
-assert(splitPreview.includes('colspan="6"')&&splitPreview.includes('class="nls-code">[NLS:')&&splitPreview.includes('class="ai-code">[AI:'),'preview must span six columns and color each code column');
+assert(splitPreview.includes('colspan="6"')&&splitPreview.includes('class="nls-code">1.1.TC')&&splitPreview.includes('class="ai-code">6.A'),'preview must span six columns, use clean text, and color each code column');
 assert.equal(sandbox.ppctTableFromRows([{lesson:'Bài mẫu',periods:'1',integration:splitValue}]).columns.length,7,'PL3 must retain seven columns');
 const complianceConfig={...splitConfig,ai:{enabled:true,selectedPeriods:[{lesson:'Bài mẫu',periods:[1,3]}]}};
 const complianceData={'1':{scheduleTable:splitModel,schedule:[{lesson:'Bài mẫu',devices:'Máy chiếu',location:'Lớp học'}],assessments:['Giữa học kỳ I','Cuối học kỳ I','Giữa học kỳ II','Cuối học kỳ II'].map(milestone=>({milestone}))}};
@@ -285,9 +288,9 @@ const completeReport=sandbox.calculateComplianceReport(complianceConfig,complian
 assert.equal(completeReport.isCompliant,true,'complete separate-column data must achieve 100%');
 const missingAi=JSON.parse(JSON.stringify(complianceData));missingAi['1'].scheduleTable.rows[1].cells[5]='-';
 assert.equal(sandbox.calculateComplianceReport(complianceConfig,missingAi).criteria[3].pass,false,'configured AI selections without output codes must fail');
-const partialAi=JSON.parse(JSON.stringify(complianceData));partialAi['1'].scheduleTable.rows[1].cells[5]='[AI: 6.A1.1 - Hỗ trợ.] (Áp dụng: tiết 1).';
+const partialAi=JSON.parse(JSON.stringify(complianceData));partialAi['1'].scheduleTable.rows[1].cells[5]='6.A1.1 - Hỗ trợ. (Áp dụng: tiết 1).';
 assert.equal(sandbox.calculateComplianceReport(complianceConfig,partialAi).criteria[3].pass,false,'missing one selected period must fail');
-partialAi['1'].scheduleTable.rows[1].cells[5]='[AI: chưa có mã] (Áp dụng: tiết 1, 3).';
+partialAi['1'].scheduleTable.rows[1].cells[5]='AI chưa có mã (Áp dụng: tiết 1, 3).';
 assert.equal(sandbox.calculateComplianceReport(complianceConfig,partialAi).criteria[3].pass,false,'AI placeholder must not count as a real code');
 const missingNls=JSON.parse(JSON.stringify(complianceData));missingNls['1'].scheduleTable.rows[1].cells[4]='-';
 assert.equal(sandbox.calculateComplianceReport(complianceConfig,missingNls).criteria[2].pass,false,'dash must not count as an NLS code');
@@ -296,7 +299,7 @@ const tooManyAi={...complianceConfig,ai:{enabled:true,selectedPeriods:[{lesson:'
 assert.equal(sandbox.calculateComplianceReport(tooManyAi,complianceData).criteria[3].pass,false,'AI cap must count periods, not lesson groups');
 
 
-const repeatedLessonCoverage=vm.runInContext("(()=>{const originalSource=sourcePpctTable;sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Luyện tập chung','1']},{cells:['Luyện tập chung','1']}]};const table={columns:APPENDIX_1_COLUMNS.map(x=>x[1]),rows:[{cells:['1','Luyện tập chung','1','Đạt','-','-']},{cells:['2','Luyện tập chung','1','Đạt','-','[AI: 6.A1.1 - Hỗ trợ.] (Áp dụng: tiết 1).']}]};const report=appendixAiCoverage(table,{ai:{enabled:true,selectedPeriods:[{lessonId:'source:1',lesson:'Luyện tập chung',periods:[1]}]}});sourcePpctTable=originalSource;return report})()",sandbox);
+const repeatedLessonCoverage=vm.runInContext("(()=>{const originalSource=sourcePpctTable;sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Luyện tập chung','1']},{cells:['Luyện tập chung','1']}]};const table={columns:APPENDIX_1_COLUMNS.map(x=>x[1]),rows:[{cells:['1','Luyện tập chung','1','Đạt','-','-']},{cells:['2','Luyện tập chung','1','Đạt','-','6.A1.1 - Hỗ trợ. (Áp dụng: tiết 1).']}]};const report=appendixAiCoverage(table,{ai:{enabled:true,selectedPeriods:[{lessonId:'source:1',lesson:'Luyện tập chung',periods:[1]}]}});sourcePpctTable=originalSource;return report})()",sandbox);
 assert.equal(repeatedLessonCoverage.pass,true,'AI selection must match the second repeated lesson by its source ID');
 const cleanAppendixOne=vm.runInContext(`sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Bài 14. Phép cộng và phép trừ số nguyên','1'],isHeader:false}]};appendixOneTable([{lesson:'Bài 14. Phép cộng và phép trừ số nguyên',outcomes:'Nguồn bắt buộc: CTGDPT 2018. Bài SGK: Bài 14.'}],{lop:'6',monHoc:'Toán học',ai:{enabled:false}})`,sandbox);
 assert.equal(cleanAppendixOne.rows[0].cells[3],'- Thực hiện được phép cộng và phép trừ số nguyên.','PL1 must replace metadata outcomes with clean YCCĐ');
