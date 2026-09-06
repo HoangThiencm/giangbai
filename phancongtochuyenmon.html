@@ -2584,8 +2584,13 @@
                             <input type="date" class="form-control" id="dt-ann-date" onchange="onAnnouncementDateChange()">
                         </div>
                         <div class="form-group">
-                            <label>Tiêu đề thông báo:</label>
-                            <input type="text" class="form-control" id="dt-ann-title" oninput="this.dataset.manual='1'; renderAnnouncementCard()">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 8px;">
+                                <label for="dt-ann-title" style="margin: 0;">Tiêu đề thông báo:</label>
+                                <button type="button" class="btn-small btn-small-primary" id="btn-ai-ann-title" onclick="generateAnnouncementTitleAI()">
+                                    <i class="fas fa-wand-magic-sparkles"></i> AI gợi ý
+                                </button>
+                            </div>
+                            <input type="text" class="form-control" id="dt-ann-title" placeholder="Nhập tiêu đề hoặc bấm AI gợi ý..." oninput="this.dataset.manual='1'; renderAnnouncementCard()">
                         </div>
                         <div class="form-group">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
@@ -5350,7 +5355,7 @@ Quy tắc:
         }
 
         function defaultAnnouncementTitle(dateStr) {
-            return `THÔNG BÁO PHÂN CÔNG DẠY THAY NGÀY ${formatVnDate(dateStr)}`;
+            return 'Phân công dạy thay';
         }
 
         function officialAnnouncementSubject(title) {
@@ -5553,9 +5558,6 @@ Quy tắc:
             const year = state.info?.school_year || '';
             const weekday = weekdayLabel(dateStr);
             const rows = collectAnnouncementRows(dateStr);
-            const now = new Date();
-            const madeAt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ngày ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-            const ttcm = ttcmTeacherName();
             const dateParts = String(dateStr || '').split('-');
             const docNo = dateParts.length >= 3 ? `${dateParts[2]}${dateParts[1]}/TB-TCM` : '…/TB-TCM';
             const bodyRows = rows.length
@@ -5593,18 +5595,6 @@ Quy tắc:
                     <div style="white-space:pre-wrap;">${escapeHtml(note)}</div>
                 </div>`
                 : '';
-            const signHtml = `
-                <div class="dt-ann-sign">
-                    <div>
-                        <div>Lập lúc ${escapeHtml(madeAt)}</div>
-                        <div class="muted">Nguồn: Sổ Dạy Thay - Bù</div>
-                    </div>
-                    <div class="sign-box">
-                        <div><b>Tổ trưởng</b></div>
-                        <div style="height:36px;"></div>
-                        <div><b>${escapeHtml(ttcm || 'TTCM')}</b></div>
-                    </div>
-                </div>`;
             const pillsHtml = `
                 <div class="dt-ann-pills">
                     <span class="dt-ann-pill">📅 ${weekday ? escapeHtml(weekday) + ' · ' : ''}Ngày ${escapeHtml(formatVnDate(dateStr))}</span>
@@ -5631,7 +5621,6 @@ Quy tắc:
                     <p class="dt-ann-sub">${escapeHtml(officialAnnouncementSubject(title))}</p>
                     ${tableHtml}
                     ${noteHtml}
-                    ${signHtml}
                 `;
             } else {
                 card.innerHTML = `
@@ -5640,17 +5629,74 @@ Quy tắc:
                         <p class="dt-ann-school">${escapeHtml(school)}</p>
                         <p class="dt-ann-org">${escapeHtml(org)}${year ? ` · Năm học ${escapeHtml(year)}` : ''}</p>
                         <h3 class="dt-ann-main-title">${escapeHtml(title)}</h3>
-                        <p class="dt-ann-sub">${weekday ? escapeHtml(weekday) + ', ' : ''}ngày ${escapeHtml(formatVnDate(dateStr))} · ${escapeHtml(org)}</p>
                         ${pillsHtml}
                     </div>
                     <div class="dt-ann-body">
                         ${tableHtml}
                         ${noteHtml}
-                        ${signHtml}
                     </div>
                 `;
             }
             requestAnimationFrame(fitAnnouncementPreview);
+        }
+
+        async function generateAnnouncementTitleAI() {
+            const dateStr = document.getElementById('dt-ann-date')?.value || '';
+            const btn = document.getElementById('btn-ai-ann-title');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gợi ý...';
+            }
+            const org = state.info?.title || 'Tổ chuyên môn';
+            const school = state.info?.school || '';
+            const rows = collectAnnouncementRows(dateStr);
+            const weekday = weekdayLabel(dateStr) || '';
+            const theme = ANNOUNCEMENT_THEMES.includes(currentAnnouncementTheme) ? currentAnnouncementTheme : 'modern';
+            const prompt = `Bạn là Tổ trưởng chuyên môn của ${org}${school ? ' tại ' + school : ''}.
+Hãy gợi ý MỘT tiêu đề thông báo phân công dạy thay / dạy bù, ngắn gọn, trang trọng.
+Ngày thông báo: ${formatVnDate(dateStr) || 'chưa chọn'} (${weekday || 'chưa rõ thứ'}).
+Số lượt dạy thay: ${rows.length}.
+Mẫu giao diện đang chọn: ${theme}.
+Yêu cầu bắt buộc:
+- Chỉ trả về đúng 1 dòng tiêu đề, không markdown, không ngoặc kép, không giải thích.
+- KHÔNG ghi ngày tháng, thứ trong tuần, tên trường, tên tổ (các thông tin này đã hiện riêng trên thẻ, tránh lặp).
+- KHÔNG mở đầu bằng "THÔNG BÁO" (mẫu hành chính đã có dòng THÔNG BÁO).
+- Không quá 10 từ. Phong cách ví dụ: Phân công dạy thay
+- Nếu mẫu official, có thể dùng dạng trích yếu ngắn như: Phân công dạy thay (không cần V/v, hệ thống tự thêm).`;
+            try {
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.3, maxOutputTokens: 128 }
+                };
+                const res = await fetch('api/khbd_gemini.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    credentials: 'include',
+                    body: JSON.stringify({ model: 'gemini-2.5-flash', payload, timeout: 60 })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || data.ok === false) {
+                    throw new Error(data.error || data.body?.error?.message || `Gemini HTTP ${res.status}`);
+                }
+                let text = extractGeminiText(data).replace(/^["'\s]+|["'\s]+$/g, '').split('\n')[0].trim();
+                text = text.replace(/^THÔNG\s+BÁO\s+/i, '').trim();
+                if (!text) throw new Error('AI không trả về tiêu đề.');
+                const titleEl = document.getElementById('dt-ann-title');
+                if (titleEl) {
+                    titleEl.value = text;
+                    titleEl.dataset.manual = '1';
+                }
+                renderAnnouncementCard();
+                showToast('Đã gợi ý tiêu đề. Bạn có thể sửa lại ô nhập nếu muốn.', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast(err.message || 'Không gợi ý được tiêu đề.', 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> AI gợi ý';
+                }
+            }
         }
 
         async function generateDayThayAnnouncementAI() {
