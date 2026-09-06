@@ -1252,96 +1252,285 @@
             flex-direction: column;
             gap: 12px;
         }
+        .dt-ann-theme-chips,
+        .dt-ann-quick-notes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        .dt-ann-theme-chip,
+        .dt-ann-quick-chip {
+            border: 1px solid #c7d2fe;
+            background: #eef2ff;
+            color: #3730a3;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            cursor: pointer;
+            font-family: inherit;
+            min-height: 32px;
+        }
+        .dt-ann-theme-chip.active {
+            background: #4338ca;
+            color: #ffffff;
+            border-color: #4338ca;
+        }
+        .dt-ann-theme-chip[data-theme="official"].active {
+            background: #1f2937;
+            border-color: #1f2937;
+        }
+        .dt-ann-theme-chip[data-theme="emerald"].active {
+            background: #059669;
+            border-color: #059669;
+        }
+        .dt-ann-quick-chip {
+            background: #fff7ed;
+            border-color: #fed7aa;
+            color: #9a3412;
+        }
+        .dt-ann-quick-chip:hover { background: #ffedd5; }
+        .dt-ann-quick-label {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #64748b;
+        }
+        .dt-ann-ai-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
         .dt-ann-preview-wrap {
             background: #e2e8f0;
             border-radius: 12px;
-            padding: 16px;
+            padding: 12px;
             overflow: auto;
             max-height: 62vh;
+            -webkit-overflow-scrolling: touch;
         }
-        #dt-announcement-card {
-            width: 100%;
-            max-width: 780px;
+        .dt-ann-swipe-hint {
+            display: none;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #475569;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .dt-ann-card-scaler {
+            transform-origin: top left;
+        }
+        .dt-announcement-card {
+            width: 800px;
+            max-width: 800px;
             margin: 0 auto;
-            background: linear-gradient(180deg, #fffbeb 0%, #ffffff 28%);
-            border: 3px solid #1e3a8a;
-            box-shadow: inset 0 0 0 6px #fde68a;
-            border-radius: 6px;
-            padding: 32px 34px 26px;
             color: #0f172a;
             box-sizing: border-box;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05);
+            overflow: hidden;
         }
-        .dt-ann-school {
-            text-align: center;
-            font-size: 0.78rem;
-            font-weight: 800;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: #1e3a8a;
-            margin: 0 0 2px;
+        .dt-ann-body { padding: 18px 22px 20px; }
+        .dt-ann-edu-badge {
+            display: inline-flex;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.16);
         }
-        .dt-ann-org {
-            text-align: center;
-            font-size: 0.92rem;
-            font-weight: 800;
-            color: #0f172a;
-            margin: 0 0 10px;
-        }
-        .dt-ann-main-title {
-            text-align: center;
-            font-size: 1.22rem;
-            font-weight: 800;
-            color: #9a3412;
-            margin: 0 0 4px;
-            letter-spacing: 0.04em;
-        }
-        .dt-ann-sub {
-            text-align: center;
-            font-size: 0.9rem;
+        .dt-ann-school { text-align: center; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 2px; }
+        .dt-ann-org { text-align: center; font-size: 0.92rem; font-weight: 800; margin: 0 0 8px; }
+        .dt-ann-main-title { text-align: center; font-size: 1.22rem; font-weight: 800; margin: 0 0 4px; letter-spacing: 0.03em; }
+        .dt-ann-sub { text-align: center; font-size: 0.88rem; font-weight: 700; margin: 0; }
+        .dt-ann-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+        .dt-ann-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
             font-weight: 700;
-            color: #1e3a8a;
-            margin: 0 0 14px;
         }
-        .dt-ann-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.78rem;
-            margin-bottom: 14px;
-        }
-        .dt-ann-table th, .dt-ann-table td {
-            border: 1px solid #1e3a8a;
-            padding: 6px 8px;
-            text-align: left;
-            vertical-align: top;
-        }
-        .dt-ann-table th {
-            background: #1e3a8a;
-            color: #ffffff;
+        .dt-ann-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 14px; }
+        .dt-ann-table th, .dt-ann-table td { padding: 8px 8px; text-align: left; vertical-align: middle; }
+        .dt-ann-table th { font-weight: 800; text-align: center; white-space: nowrap; }
+        .dt-ann-table .center { text-align: center; }
+        .dt-ann-session {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 0.72rem;
             font-weight: 800;
-            text-align: center;
             white-space: nowrap;
         }
-        .dt-ann-table td { color: #0f172a; }
-        .dt-ann-table .center { text-align: center; }
+        .dt-ann-session-sang { background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; }
+        .dt-ann-session-chieu { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+        .dt-ann-class-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 42px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 0.78rem;
+        }
+        .dt-ann-sub-chip {
+            display: inline-flex;
+            align-items: center;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
         .dt-ann-note {
-            background: #fff7ed;
-            border: 1px dashed #fdba74;
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 0.82rem;
-            line-height: 1.5;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.84rem;
+            line-height: 1.55;
             margin-bottom: 16px;
             min-height: 48px;
         }
-        .dt-ann-note b { color: #9a3412; }
-        .dt-ann-sign {
-            display: flex;
-            justify-content: space-between;
-            gap: 16px;
-            font-size: 0.78rem;
-        }
+        .dt-ann-note-title { display: flex; align-items: center; gap: 6px; font-weight: 800; margin-bottom: 6px; }
+        .dt-ann-sign { display: flex; justify-content: space-between; gap: 16px; font-size: 0.78rem; }
         .dt-ann-sign .sign-box { text-align: center; min-width: 180px; }
         .dt-ann-sign .muted { color: #64748b; font-style: italic; }
+
+        /* Theme 1: Zalo Hiện đại (Modern Indigo) */
+        .dt-announcement-card[data-theme="modern"] .dt-ann-header {
+            background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%);
+            color: #ffffff;
+            padding: 22px 26px 20px;
+            text-align: center;
+        }
+        .dt-announcement-card[data-theme="modern"] .dt-ann-school,
+        .dt-announcement-card[data-theme="modern"] .dt-ann-org,
+        .dt-announcement-card[data-theme="modern"] .dt-ann-main-title,
+        .dt-announcement-card[data-theme="modern"] .dt-ann-sub { color: #ffffff; }
+        .dt-announcement-card[data-theme="modern"] .dt-ann-main-title { font-size: 1.18rem; letter-spacing: 0.06em; }
+        .dt-announcement-card[data-theme="modern"] .dt-ann-pill {
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.28);
+            color: #ffffff;
+        }
+        .dt-announcement-card[data-theme="modern"] .dt-ann-table th {
+            background: #eef2ff;
+            color: #312e81;
+            border: none;
+            border-bottom: 2px solid #c7d2fe;
+        }
+        .dt-announcement-card[data-theme="modern"] .dt-ann-table td {
+            border: none;
+            border-bottom: 1px solid #eef2ff;
+            color: #0f172a;
+        }
+        .dt-announcement-card[data-theme="modern"] .dt-ann-class-badge { background: #e0e7ff; color: #3730a3; }
+        .dt-announcement-card[data-theme="modern"] .dt-ann-sub-chip { background: #fef3c7; color: #92400e; box-shadow: 0 0 0 1px #fde68a; }
+        .dt-announcement-card[data-theme="modern"] .dt-ann-note { background: #eef2ff; border: 1px solid #c7d2fe; }
+        .dt-announcement-card[data-theme="modern"] .dt-ann-note-title { color: #3730a3; }
+
+        /* Theme 2: Chuẩn Hành chính (Official Document) */
+        .dt-announcement-card[data-theme="official"] {
+            border-radius: 4px;
+            padding: 28px 32px 22px;
+            font-family: 'Times New Roman', Times, serif;
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.08);
+        }
+        .dt-ann-cv-head { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+        .dt-ann-cv-left, .dt-ann-cv-right { text-align: center; }
+        .dt-ann-cv-qh { margin: 0; font-weight: 800; font-size: 0.92rem; text-transform: uppercase; }
+        .dt-ann-cv-tn { margin: 4px 0 0; font-weight: 700; font-size: 0.88rem; }
+        .dt-ann-cv-line { margin: 2px 0 0; letter-spacing: 3px; }
+        .dt-ann-cv-no { margin: 8px 0 0; font-size: 0.82rem; }
+        .dt-announcement-card[data-theme="official"] .dt-ann-main-title { color: #111827; margin-top: 8px; }
+        .dt-announcement-card[data-theme="official"] .dt-ann-sub { color: #111827; font-style: italic; margin-bottom: 12px; }
+        .dt-announcement-card[data-theme="official"] .dt-ann-table { font-size: 0.8rem; }
+        .dt-announcement-card[data-theme="official"] .dt-ann-table th,
+        .dt-announcement-card[data-theme="official"] .dt-ann-table td {
+            border: 1px solid #111827;
+            padding: 6px 7px;
+        }
+        .dt-announcement-card[data-theme="official"] .dt-ann-table th { background: #f3f4f6; color: #111827; }
+        .dt-announcement-card[data-theme="official"] .dt-ann-session,
+        .dt-announcement-card[data-theme="official"] .dt-ann-class-badge,
+        .dt-announcement-card[data-theme="official"] .dt-ann-sub-chip {
+            border-radius: 0;
+            background: transparent;
+            border: none;
+            padding: 0;
+            box-shadow: none;
+            color: inherit;
+        }
+        .dt-announcement-card[data-theme="official"] .dt-ann-sub-chip { font-weight: 800; text-decoration: underline; }
+        .dt-announcement-card[data-theme="official"] .dt-ann-note {
+            background: #ffffff;
+            border: 1px solid #111827;
+            border-radius: 0;
+            font-family: inherit;
+        }
+        .dt-announcement-card[data-theme="official"] .dt-ann-note-title { color: #111827; }
+
+        /* Theme 3: Xanh Tươi sáng (Emerald Campus) */
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-header {
+            background: linear-gradient(135deg, #064e3b 0%, #059669 52%, #34d399 100%);
+            color: #ffffff;
+            padding: 22px 26px 20px;
+            text-align: center;
+        }
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-school,
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-org,
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-main-title,
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-sub { color: #ffffff; }
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-pill {
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #ffffff;
+        }
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-table th {
+            background: #ecfdf5;
+            color: #065f46;
+            border: none;
+            border-bottom: 2px solid #a7f3d0;
+        }
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-table td {
+            border: none;
+            border-bottom: 1px solid #d1fae5;
+        }
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-class-badge { background: #d1fae5; color: #065f46; }
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-sub-chip { background: #fef9c3; color: #854d0e; box-shadow: 0 0 0 1px #fde047; }
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-note { background: #ecfdf5; border: 1px solid #a7f3d0; }
+        .dt-announcement-card[data-theme="emerald"] .dt-ann-note-title { color: #065f46; }
+
+        .live-stats-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .tt-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+        .tt-grid-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 8px;
+        }
+        .tt-grid th:first-child,
+        .tt-grid tbody th {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background: #f8fafc;
+            min-width: 64px;
+            box-shadow: 4px 0 8px -4px rgba(15, 23, 42, 0.18);
+        }
+        .tt-grid thead th:first-child { z-index: 3; }
+        .dt-filter-label { font-size: 0.8rem; font-weight: 800; color: #1e293b; }
+        .dt-filter-month { width: 130px; font-weight: 700; padding: 5px 10px; }
+        .dt-filter-teacher { min-width: 180px; padding: 5px 10px; }
+        .dt-filter-type { width: 150px; padding: 5px 10px; }
+        .dt-filter-search { min-width: 200px; flex: 1; padding: 5px 10px; }
 
         /* TOAST */
         #toast {
@@ -1379,7 +1568,135 @@
             .nav-actions { width: 100%; justify-content: flex-start; overflow-x: auto; }
             .period-slots-grid { grid-template-columns: 1fr 1fr; }
             .dt-ann-layout { grid-template-columns: 1fr; }
-            .dt-ann-preview-wrap { max-height: none; }
+            .dt-ann-preview-wrap { max-height: min(52vh, 520px); }
+            .live-stats-banner { align-items: flex-start; }
+            .teachers-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+        }
+
+        @media (max-width: 768px) {
+            #substitute-announcement-modal .modal-card { max-width: 100%; max-height: 96vh; }
+            .dt-ann-layout { grid-template-columns: 1fr; }
+            #substitute-announcement-modal .modal-footer.dt-ann-footer {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            #substitute-announcement-modal .modal-footer.dt-ann-footer .btn-small {
+                min-height: 44px;
+                justify-content: center;
+                width: 100%;
+            }
+            #substitute-announcement-modal .dt-ann-btn-download {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .top-brand-bar {
+                padding: 8px 12px;
+                gap: 8px;
+            }
+            .brand-title-row h1 {
+                font-size: clamp(1rem, 4vw, 1.25rem);
+                white-space: normal;
+            }
+            .brand-desc { display: none; }
+            .nav-actions {
+                width: 100%;
+                gap: 6px;
+            }
+            .nav-actions .btn-toolbar {
+                padding: 6px 8px;
+                font-size: 0.68rem;
+                min-height: 36px;
+            }
+            .workspace-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+                padding: 8px 12px 10px;
+            }
+            .view-switcher {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                width: 100%;
+                padding-bottom: 2px;
+            }
+            .view-switcher::-webkit-scrollbar { display: none; }
+            .view-tab-btn.active {
+                border-bottom: 2px solid var(--primary);
+            }
+            .phase-selector-wrapper {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .phase-select { max-width: none; flex: 1; }
+            .live-stats-banner {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 10px 12px;
+            }
+            .live-stats-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                width: 100%;
+            }
+            .live-stats-actions .btn-small,
+            .live-stats-actions .btn-view-matrix {
+                justify-content: center;
+                min-height: 40px;
+                width: 100%;
+            }
+            .live-stats-actions .btn-small-primary {
+                grid-column: 1 / -1;
+                min-height: 44px;
+                order: -1;
+            }
+            .dt-ann-swipe-hint { display: block; }
+            .modal-overlay { padding: 8px; }
+            .modal-header h2 { font-size: 0.95rem; }
+            #daythay-form-card .form-grid { grid-template-columns: 1fr !important; }
+            #daythay-form-card .form-control { min-height: 42px; }
+            .dt-filters { gap: 8px; }
+            .dt-filter-label { flex: 1 1 100%; }
+            .dt-filter-month,
+            .dt-filter-teacher,
+            .dt-filter-type {
+                width: auto;
+                min-width: 0;
+                flex: 1 1 calc(50% - 6px);
+            }
+            .dt-filter-search {
+                flex: 1 1 100%;
+                min-width: 0;
+                width: 100%;
+            }
+            .dt-table-wrap { -webkit-overflow-scrolling: touch; }
+            .tt-toolbar { justify-content: flex-start; }
+            .tt-toolbar .btn-small,
+            .tt-toolbar .btn-toolbar { min-height: 40px; }
+            #view-daythay, #view-chamcong, #view-baocao, #view-tanggio {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .teachers-grid {
+                grid-template-columns: 1fr;
+                padding: 12px;
+            }
+            .teacher-title-row { flex-wrap: wrap; gap: 6px; }
+            .assigned-row { flex-direction: column; }
+            .assigned-label { width: auto; }
+            .period-slots-grid { grid-template-columns: 1fr; }
+            .nav-actions .btn-toolbar { font-size: 0.64rem; }
+            #substitute-announcement-modal .modal-footer.dt-ann-footer {
+                grid-template-columns: 1fr;
+            }
+            #substitute-announcement-modal .dt-ann-btn-download { grid-column: auto; }
         }
     </style>
 </head>
@@ -1505,7 +1822,7 @@
                 <div class="live-chips-list" id="live-subject-chips">
                     <!-- Render từ JS -->
                 </div>
-                <div style="display:flex; align-items:center; gap:8px;">
+                <div class="live-stats-actions">
                     <button class="btn-small" onclick="openQuickNewPhaseModal()" title="Tạo một đợt phân công mới khi có thay đổi">
                         <i class="fas fa-plus-circle text-amber-600"></i> Tạo đợt mới
                     </button>
@@ -1578,10 +1895,10 @@
                 </button>
             </div>
             <h4 style="margin:0 0 8px; font-size:0.88rem; font-weight:800;">Buổi sáng</h4>
-            <div style="overflow-x:auto; margin-bottom:8px;" id="tt-morning-wrap"></div>
+            <div class="tt-grid-scroll" id="tt-morning-wrap"></div>
             <h4 style="margin:8px 0; font-size:0.88rem; font-weight:800;">Buổi chiều</h4>
-            <div style="overflow-x:auto;" id="tt-afternoon-wrap"></div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px;">
+            <div class="tt-grid-scroll" id="tt-afternoon-wrap"></div>
+            <div class="tt-toolbar">
                 <label class="checkbox-group" style="margin:0;">
                     <input type="checkbox" id="tt-auto-apply-assign" checked>
                     Tự động cập nhật phân công khi lưu TKB
@@ -1689,8 +2006,8 @@
             </div>
 
             <div class="dt-filters" style="margin-bottom:12px;">
-                <label style="font-size:0.8rem; font-weight:800; color:#1e293b;">Tháng:</label>
-                <select class="form-control" id="dt-month-select" style="padding:5px 10px; width:130px; font-weight:700;" onchange="changeAttendanceMonth(this.value); renderDayThayJournal();">
+                <label class="dt-filter-label">Tháng:</label>
+                <select class="form-control dt-filter-month" id="dt-month-select" onchange="changeAttendanceMonth(this.value); renderDayThayJournal();">
                     <option value="1">Tháng 1</option>
                     <option value="2">Tháng 2</option>
                     <option value="3">Tháng 3</option>
@@ -1704,15 +2021,15 @@
                     <option value="11">Tháng 11</option>
                     <option value="12">Tháng 12</option>
                 </select>
-                <select class="form-control" id="dt-filter-teacher" style="padding:5px 10px; min-width:180px;" onchange="renderDayThayJournal()">
+                <select class="form-control dt-filter-teacher" id="dt-filter-teacher" onchange="renderDayThayJournal()">
                     <option value="">Tất cả giáo viên</option>
                 </select>
-                <select class="form-control" id="dt-filter-type" style="padding:5px 10px; width:150px;" onchange="renderDayThayJournal()">
+                <select class="form-control dt-filter-type" id="dt-filter-type" onchange="renderDayThayJournal()">
                     <option value="">Tất cả loại</option>
                     <option value="replacement">Dạy thay</option>
                     <option value="makeup">Dạy bù</option>
                 </select>
-                <input type="text" class="form-control" id="dt-search" style="padding:5px 10px; min-width:200px; flex:1;" placeholder="Tìm tên GV, lớp, lý do..." oninput="renderDayThayJournal()">
+                <input type="text" class="form-control dt-filter-search" id="dt-search" placeholder="Tìm tên GV, lớp, lý do..." oninput="renderDayThayJournal()">
             </div>
 
             <div class="dt-stats-row" id="daythay-stats-row" style="margin-bottom:12px;">
@@ -2255,6 +2572,14 @@
                 <div class="dt-ann-layout">
                     <div class="dt-ann-controls">
                         <div class="form-group">
+                            <label>Mẫu giao diện:</label>
+                            <div class="dt-ann-theme-chips" id="dt-ann-theme-chips">
+                                <button type="button" class="dt-ann-theme-chip active" data-theme="modern" onclick="setAnnouncementTheme('modern')">Zalo Hiện đại</button>
+                                <button type="button" class="dt-ann-theme-chip" data-theme="official" onclick="setAnnouncementTheme('official')">Chuẩn Hành chính</button>
+                                <button type="button" class="dt-ann-theme-chip" data-theme="emerald" onclick="setAnnouncementTheme('emerald')">Xanh Tươi sáng</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
                             <label>Ngày cần thông báo:</label>
                             <input type="date" class="form-control" id="dt-ann-date" onchange="onAnnouncementDateChange()">
                         </div>
@@ -2266,19 +2591,30 @@
                             <label>Ghi chú / Dặn dò của Tổ chuyên môn:</label>
                             <textarea class="form-control" id="dt-ann-note" rows="6" placeholder="Nhập lời dặn dò hoặc bấm AI soạn thông báo Zalo..." oninput="renderAnnouncementCard()"></textarea>
                         </div>
-                        <button type="button" class="btn-small btn-small-primary" id="btn-ai-ann-zalo" onclick="generateDayThayAnnouncementAI()">
-                            <i class="fas fa-wand-magic-sparkles"></i> AI Soạn thông báo Zalo
-                        </button>
+                        <div class="dt-ann-ai-row">
+                            <button type="button" class="btn-small btn-small-primary" id="btn-ai-ann-zalo" onclick="generateDayThayAnnouncementAI()">
+                                <i class="fas fa-wand-magic-sparkles"></i> AI Soạn thông báo Zalo
+                            </button>
+                            <div class="dt-ann-quick-notes" id="dt-ann-quick-notes">
+                                <span class="dt-ann-quick-label">Mẫu lời dặn:</span>
+                                <button type="button" class="dt-ann-quick-chip" onclick="applyAnnouncementQuickNote('gio')">Giờ giấc</button>
+                                <button type="button" class="dt-ann-quick-chip" onclick="applyAnnouncementQuickNote('so')">Sổ đầu bài</button>
+                                <button type="button" class="dt-ann-quick-chip" onclick="applyAnnouncementQuickNote('dotxuat')">Đột xuất</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="dt-ann-preview-wrap">
-                        <div id="dt-announcement-card"></div>
+                        <div class="dt-ann-swipe-hint" id="dt-ann-swipe-hint">Vuốt ngang để xem trọn vẹn thẻ thông báo</div>
+                        <div class="dt-ann-card-scaler" id="dt-ann-card-scaler">
+                            <div id="dt-announcement-card" class="dt-announcement-card" data-theme="modern"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer" style="flex-wrap:wrap;">
-                <button type="button" class="btn-small" onclick="copyAnnouncementImage()"><i class="fas fa-copy"></i> Sao chép ảnh (Copy Image)</button>
-                <button type="button" class="btn-small" onclick="downloadAnnouncementImage()"><i class="fas fa-download"></i> Tải ảnh PNG (Download Image)</button>
-                <button type="button" class="btn-small btn-small-primary" onclick="copyAnnouncementZaloText()"><i class="fas fa-comment-dots"></i> Sao chép tin nhắn Zalo (Copy Text)</button>
+            <div class="modal-footer dt-ann-footer">
+                <button type="button" class="btn-small btn-small-primary dt-ann-btn-main" onclick="copyAnnouncementImage()"><i class="fas fa-copy"></i> Sao chép ảnh</button>
+                <button type="button" class="btn-small btn-small-primary dt-ann-btn-main" onclick="copyAnnouncementZaloText()"><i class="fas fa-comment-dots"></i> Sao chép tin Zalo</button>
+                <button type="button" class="btn-small dt-ann-btn-download" onclick="downloadAnnouncementImage()"><i class="fas fa-download"></i> Tải ảnh PNG</button>
             </div>
         </div>
     </div>
@@ -2354,6 +2690,15 @@
         let editingSubId = null;
         let extraPeriodSlots = [];
         let hiddenPeriodSlots = new Set();
+        let currentAnnouncementTheme = 'modern';
+        let announcementFitBound = false;
+        const ANNOUNCEMENT_THEMES = ['modern', 'official', 'emerald'];
+        const ANNOUNCEMENT_CARD_WIDTH = 800;
+        const ANNOUNCEMENT_QUICK_NOTES = {
+            gio: 'Đề nghị quý thầy cô dạy thay có mặt trước giờ vào lớp 5 phút, nhận lớp đúng giờ, duy trì nề nếp học tập và bàn giao lớp sau tiết học.',
+            so: 'Nhờ quý thầy cô ghi đầy đủ Sổ đầu bài, nhận xét tiết học và trao đổi nội dung bài dạy với giáo viên bộ môn để đảm bảo mạch kiến thức.',
+            dotxuat: 'Phân công dạy thay đột xuất. Đề nghị quý thầy cô linh hoạt nội dung, ổn định lớp học và phản ánh kịp thời về Tổ chuyên môn nếu có phát sinh.'
+        };
 
         function setLocalStorageScope(currentUser) {
             const userId = Number(currentUser?.id || 0);
@@ -5097,6 +5442,57 @@ Quy tắc:
             renderAnnouncementCard();
         }
 
+        function setAnnouncementTheme(theme) {
+            if (!ANNOUNCEMENT_THEMES.includes(theme)) theme = 'modern';
+            currentAnnouncementTheme = theme;
+            document.querySelectorAll('#dt-ann-theme-chips .dt-ann-theme-chip').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.theme === theme);
+            });
+            renderAnnouncementCard();
+        }
+
+        function applyAnnouncementQuickNote(kind) {
+            const text = ANNOUNCEMENT_QUICK_NOTES[kind];
+            if (!text) return;
+            const noteEl = document.getElementById('dt-ann-note');
+            if (noteEl) noteEl.value = text;
+            renderAnnouncementCard();
+        }
+
+        function bindAnnouncementPreviewFit() {
+            if (announcementFitBound) return;
+            announcementFitBound = true;
+            window.addEventListener('resize', () => {
+                if (document.getElementById('substitute-announcement-modal')?.classList.contains('active')) {
+                    fitAnnouncementPreview();
+                }
+            });
+        }
+
+        function fitAnnouncementPreview() {
+            const wrap = document.querySelector('#substitute-announcement-modal .dt-ann-preview-wrap');
+            const scaler = document.getElementById('dt-ann-card-scaler');
+            const card = document.getElementById('dt-announcement-card');
+            if (!wrap || !scaler || !card) return;
+            scaler.style.transform = 'none';
+            scaler.style.width = '';
+            scaler.style.height = '';
+            scaler.style.marginRight = '';
+            scaler.style.marginBottom = '';
+            card.style.width = ANNOUNCEMENT_CARD_WIDTH + 'px';
+            card.style.maxWidth = ANNOUNCEMENT_CARD_WIDTH + 'px';
+            const available = wrap.clientWidth - 24;
+            if (available <= 0) return;
+            if (available >= ANNOUNCEMENT_CARD_WIDTH) return;
+            const scale = Math.max(0.35, available / ANNOUNCEMENT_CARD_WIDTH);
+            const h = card.offsetHeight;
+            scaler.style.width = ANNOUNCEMENT_CARD_WIDTH + 'px';
+            scaler.style.transformOrigin = 'top left';
+            scaler.style.transform = `scale(${scale})`;
+            scaler.style.marginRight = `${ANNOUNCEMENT_CARD_WIDTH * (scale - 1)}px`;
+            scaler.style.marginBottom = `${h * (scale - 1)}px`;
+        }
+
         function openDayThayAnnouncementModal(targetDate) {
             const preferred = targetDate || document.getElementById('new-sub-date')?.value || '';
             const dateStr = findNearestSubstituteDate(preferred);
@@ -5108,45 +5504,57 @@ Quy tắc:
                 titleEl.dataset.auto = titleEl.value;
                 titleEl.dataset.manual = '';
             }
+            bindAnnouncementPreviewFit();
             renderAnnouncementCard();
             document.getElementById('substitute-announcement-modal')?.classList.add('active');
+            requestAnimationFrame(() => requestAnimationFrame(fitAnnouncementPreview));
         }
 
         function closeDayThayAnnouncementModal() {
             document.getElementById('substitute-announcement-modal')?.classList.remove('active');
         }
 
+        function announcementSessionBadge(session) {
+            const isMorning = String(session || '') === 'Sáng';
+            const cls = isMorning ? 'dt-ann-session dt-ann-session-sang' : 'dt-ann-session dt-ann-session-chieu';
+            const icon = isMorning ? '☀️' : '🌅';
+            return `<span class="${cls}">${escapeHtml(session || '—')} ${icon}</span>`;
+        }
+
         function renderAnnouncementCard() {
             const card = document.getElementById('dt-announcement-card');
             if (!card) return;
+            const theme = ANNOUNCEMENT_THEMES.includes(currentAnnouncementTheme) ? currentAnnouncementTheme : 'modern';
+            currentAnnouncementTheme = theme;
+            card.classList.add('dt-announcement-card');
+            card.setAttribute('data-theme', theme);
             const dateStr = document.getElementById('dt-ann-date')?.value || '';
             const title = (document.getElementById('dt-ann-title')?.value || '').trim() || defaultAnnouncementTitle(dateStr);
             const note = (document.getElementById('dt-ann-note')?.value || '').trim();
             const school = state.info?.school || 'TRƯỜNG TRUNG HỌC CƠ SỞ';
             const org = state.info?.title || 'Tổ chuyên môn';
+            const year = state.info?.school_year || '';
             const weekday = weekdayLabel(dateStr);
             const rows = collectAnnouncementRows(dateStr);
             const now = new Date();
             const madeAt = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ngày ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
             const ttcm = ttcmTeacherName();
+            const dateParts = String(dateStr || '').split('-');
+            const docNo = dateParts.length >= 3 ? `${dateParts[2]}${dateParts[1]}/TB-TCM` : '…/TB-TCM';
             const bodyRows = rows.length
                 ? rows.map(r => `
                     <tr>
-                        <td class="center">${escapeHtml(r.session)}</td>
+                        <td class="center">${announcementSessionBadge(r.session)}</td>
                         <td class="center">${escapeHtml(String(r.period))}</td>
-                        <td class="center">${escapeHtml(r.class_name || '—')}</td>
+                        <td class="center"><span class="dt-ann-class-badge">${escapeHtml(r.class_name || '—')}</span></td>
                         <td>${escapeHtml(r.subject || '—')}</td>
                         <td>${escapeHtml(r.absent || '—')}</td>
-                        <td>${escapeHtml(r.substitute || '—')}</td>
+                        <td><span class="dt-ann-sub-chip">${escapeHtml(r.substitute || '—')}</span></td>
                         <td>${escapeHtml(r.note || '')}</td>
                     </tr>
                 `).join('')
                 : `<tr><td colspan="7" class="center" style="font-style:italic; color:#64748b;">Chưa có lượt dạy thay / dạy bù nào trong ngày ${escapeHtml(formatVnDate(dateStr))}.</td></tr>`;
-            card.innerHTML = `
-                <p class="dt-ann-school">${escapeHtml(school)}</p>
-                <p class="dt-ann-org">${escapeHtml(org)}${state.info?.school_year ? ` · Năm học ${escapeHtml(state.info.school_year)}` : ''}</p>
-                <h3 class="dt-ann-main-title">BẢNG PHÂN CÔNG DẠY THAY</h3>
-                <p class="dt-ann-sub">${escapeHtml(title)}<br>${weekday ? escapeHtml(weekday) + ' · ' : ''}Ngày ${escapeHtml(formatVnDate(dateStr))}</p>
+            const tableHtml = `
                 <table class="dt-ann-table">
                     <thead>
                         <tr>
@@ -5160,11 +5568,13 @@ Quy tắc:
                         </tr>
                     </thead>
                     <tbody>${bodyRows}</tbody>
-                </table>
+                </table>`;
+            const noteHtml = `
                 <div class="dt-ann-note">
-                    <b>Lời dặn dò của Tổ chuyên môn:</b>
-                    <div style="margin-top:6px; white-space:pre-wrap;">${note ? escapeHtml(note) : '—'}</div>
-                </div>
+                    <div class="dt-ann-note-title">🔔 Lời dặn dò của Tổ chuyên môn</div>
+                    <div style="white-space:pre-wrap;">${note ? escapeHtml(note) : '—'}</div>
+                </div>`;
+            const signHtml = `
                 <div class="dt-ann-sign">
                     <div>
                         <div>Lập lúc ${escapeHtml(madeAt)}</div>
@@ -5175,8 +5585,53 @@ Quy tắc:
                         <div style="height:36px;"></div>
                         <div><b>${escapeHtml(ttcm || 'TTCM')}</b></div>
                     </div>
-                </div>
-            `;
+                </div>`;
+            const pillsHtml = `
+                <div class="dt-ann-pills">
+                    <span class="dt-ann-pill">📅 ${weekday ? escapeHtml(weekday) + ' · ' : ''}Ngày ${escapeHtml(formatVnDate(dateStr))}</span>
+                    <span class="dt-ann-pill">🏫 ${escapeHtml(org)}</span>
+                    <span class="dt-ann-pill">⚡ ${rows.length} lượt dạy thay</span>
+                </div>`;
+            if (theme === 'official') {
+                card.innerHTML = `
+                    <div class="dt-ann-cv-head">
+                        <div class="dt-ann-cv-left">
+                            <p class="dt-ann-cv-qh">${escapeHtml(school)}</p>
+                            <p class="dt-ann-cv-tn">${escapeHtml(org)}</p>
+                            <p class="dt-ann-cv-line">-----------</p>
+                            <p class="dt-ann-cv-no">Số: ${escapeHtml(docNo)}</p>
+                        </div>
+                        <div class="dt-ann-cv-right">
+                            <p class="dt-ann-cv-qh">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+                            <p class="dt-ann-cv-tn">Độc lập - Tự do - Hạnh phúc</p>
+                            <p class="dt-ann-cv-line">------------------------------</p>
+                            ${year ? `<p class="dt-ann-cv-no">Năm học ${escapeHtml(year)}</p>` : ''}
+                        </div>
+                    </div>
+                    <h3 class="dt-ann-main-title">THÔNG BÁO</h3>
+                    <p class="dt-ann-sub">V/v phân công dạy thay ${weekday ? escapeHtml(weekday) + ', ' : ''}ngày ${escapeHtml(formatVnDate(dateStr))}<br>${escapeHtml(title)}</p>
+                    ${tableHtml}
+                    ${noteHtml}
+                    ${signHtml}
+                `;
+            } else {
+                card.innerHTML = `
+                    <div class="dt-ann-header">
+                        <div class="dt-ann-edu-badge">🎓</div>
+                        <p class="dt-ann-school">${escapeHtml(school)}</p>
+                        <p class="dt-ann-org">${escapeHtml(org)}${year ? ` · Năm học ${escapeHtml(year)}` : ''}</p>
+                        <h3 class="dt-ann-main-title">BẢNG PHÂN CÔNG DẠY THAY</h3>
+                        <p class="dt-ann-sub">${escapeHtml(title)}</p>
+                        ${pillsHtml}
+                    </div>
+                    <div class="dt-ann-body">
+                        ${tableHtml}
+                        ${noteHtml}
+                        ${signHtml}
+                    </div>
+                `;
+            }
+            requestAnimationFrame(fitAnnouncementPreview);
         }
 
         async function generateDayThayAnnouncementAI() {
@@ -5240,7 +5695,30 @@ ${listText}`;
             const el = document.getElementById('dt-announcement-card');
             if (!el) throw new Error('Không tìm thấy khung thông báo.');
             if (typeof html2canvas !== 'function') throw new Error('Chưa tải thư viện html2canvas.');
-            return html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+            const clone = el.cloneNode(true);
+            clone.removeAttribute('id');
+            clone.classList.add('dt-announcement-card');
+            clone.setAttribute('data-theme', currentAnnouncementTheme || el.getAttribute('data-theme') || 'modern');
+            clone.style.width = ANNOUNCEMENT_CARD_WIDTH + 'px';
+            clone.style.maxWidth = ANNOUNCEMENT_CARD_WIDTH + 'px';
+            clone.style.transform = 'none';
+            const holder = document.createElement('div');
+            holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;z-index:-1;pointer-events:none;';
+            holder.appendChild(clone);
+            document.body.appendChild(holder);
+            try {
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                const scale = window.devicePixelRatio >= 2 ? 3 : 2.5;
+                return await html2canvas(clone, {
+                    scale,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    width: ANNOUNCEMENT_CARD_WIDTH,
+                    windowWidth: ANNOUNCEMENT_CARD_WIDTH
+                });
+            } finally {
+                holder.remove();
+            }
         }
 
         function announcementFileStamp(dateStr) {
@@ -5288,24 +5766,27 @@ ${listText}`;
             const note = (document.getElementById('dt-ann-note')?.value || '').trim();
             const org = state.info?.title || 'Tổ chuyên môn';
             const rows = collectAnnouncementRows(dateStr);
+            const weekday = weekdayLabel(dateStr);
             const lines = [
                 `📢 ${title}`,
                 `🏫 ${org}`,
-                `📅 ${weekdayLabel(dateStr) || ''} · ${formatVnDate(dateStr)}`.replace(/\s+·\s+$/, ''),
+                `📅 ${[weekday, formatVnDate(dateStr)].filter(Boolean).join(' · ')}`,
+                `⚡ Tổng số: ${rows.length} lượt dạy thay`,
                 ''
             ];
             if (!rows.length) {
                 lines.push('Chưa có lượt dạy thay trong ngày này.');
             } else {
                 rows.forEach((r, i) => {
-                    lines.push(`${i + 1}. ${r.session === 'Sáng' ? '☀️' : '🌙'} ${r.session} · Tiết ${r.period} · Lớp ${r.class_name || '—'} · ${r.subject || '—'}`);
+                    const icon = r.session === 'Sáng' ? '☀️' : '🌅';
+                    lines.push(`${i + 1}. ${icon} ${r.session} · Tiết ${r.period} · Lớp ${r.class_name || '—'} · ${r.subject || '—'}`);
                     lines.push(`   👤 GV vắng: ${r.absent || '—'}`);
-                    lines.push(`   🔄 GV dạy thay: ${r.substitute || '—'}`);
+                    lines.push(`   ✨ GV dạy thay: ${r.substitute || '—'}`);
                 });
             }
             if (note) {
                 lines.push('');
-                lines.push(`📝 Lời dặn dò: ${note}`);
+                lines.push(`🔔 Lời dặn dò: ${note}`);
             }
             const ttcm = ttcmTeacherName();
             lines.push('');
