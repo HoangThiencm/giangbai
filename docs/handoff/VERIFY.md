@@ -4,29 +4,26 @@
 PASS
 
 ## Đối chiếu scope
-- [x] Modal "Cài đặt AI & Key" (`js/user-ai-settings.js`): bổ sung danh mục model mới nhất (`gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-2.0-pro-exp-02-05`, `gemini-2.0-flash-thinking-exp-01-21`, `gemini-3.7-flash-thinking`, ...).
-- [x] Cho phép tự nhập model thủ công: hỗ trợ tùy chọn `__custom__` ("Tự nhập model khác...") và hiển thị ô input text để người dùng tự do nhập bất kỳ model ID nào.
-- [x] Tách 02 cấu hình rõ ràng:
-  - **Module Gemini mặc định**: lưu vào `default_gemini_module` và `khbd_gemini_model`.
-  - **Module Gemini dự phòng (Fallback)**: lưu vào `default_gemini_fallback` và `khbd_gemini_fallback_model`.
-- [x] Module `js/khbd-gemini.js`: `_fallbackModelId()` đọc động từ localStorage (`default_gemini_fallback` / `khbd_gemini_fallback_model`), tự động thêm custom fallback model vào `availableModels`.
-- [x] Module `xaydungphuluc.html` và `nghiencuubaihoc.html`: đọc fallback model động qua `getFallbackModel()`, có guard chống lặp khi fallback trùng model chính.
-- [x] Bộ test tự động kiểm thử regression và retry fallback chạy pass 100%.
+- File mới `backupcode viettailieu/canvas_xaydungphuluc.html`: Đạt. Đã tạo độc lập, kế thừa toàn diện quy trình 7 bước, cấu hình sư phạm, PPCT, SGK, OCR PDF scan fallback qua Canvas.
+- Tầng kết nối AI Canvas không cần key: Đạt. Gọi `https://hoangthiencm.id.vn/api/canvas_gemini.php` với `credentials: 'omit'`, model cố định `gemini-3-flash-preview`, không có trường nhập hay lưu API key cá nhân, có `#canvasHostBanner`.
+- Phụ lục 1 đầy đủ 2 cột riêng biệt `Biểu hiện năng lực số` và `Biểu hiện năng lực AI`: Đạt. Hiển thị đúng mã màu NLS `#0070C0`, AI `#7030A0`.
+- Xuất DOCX và ZIP: Đạt. Định dạng A4 ngang (`width: 11906, height: 16838, orientation: PageOrientation.LANDSCAPE`), xuất DOCX đơn và xuất gói ZIP đầy đủ các tệp phụ lục.
+- Bảng chỉnh sửa trực quan (contenteditable, thêm/xóa dòng) và báo cáo thẩm định sư phạm: Đạt.
+- Không sửa source gốc `xaydungphuluc.html`: Đạt.
 
 ## Test đã chạy
-1. `node tests/user-ai-settings-smoke.js`: PASS (exited with code 0).
-2. `node tests/khbd-gemini-retry-smoke.js`: PASS 5/5 cases (exited with code 0).
-3. `node tests/xaydungphuluc-smoke.js`: PASS (exited with code 0).
-4. `node tests/xaydungphuluc-integration-smoke.js`: PASS (exited with code 0).
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-integration-smoke.js`: PASS.
 
 ## Pass / Fail từng tiêu chí
-- [x] Cho phép khai báo thủ công model mới: PASS.
-- [x] Cho phép chọn/nhập model mặc định: PASS.
-- [x] Cho phép chọn/nhập model fallback: PASS.
-- [x] Lưu và nạp lại chính xác từ localStorage: PASS.
-- [x] Cơ chế xoay vòng fallback sử dụng đúng model được cấu hình: PASS.
-- [x] Không gây lặp vô hạn khi model chính trùng model fallback: PASS.
-- [x] Tất cả smoke test liên quan đều PASS: PASS.
+- [x] Tạo tệp `backupcode viettailieu/canvas_xaydungphuluc.html`: PASS
+- [x] Không lưu hay yêu cầu key cá nhân, kết nối API Canvas nội bộ với credentials: omit: PASS
+- [x] Phụ lục 1 tách riêng cột Biểu hiện năng lực số và Biểu hiện năng lực AI: PASS
+- [x] Xuất Word (.docx) chuẩn khổ ngang A4 (11906x16838 LANDSCAPE): PASS
+- [x] Xuất ZIP trọn bộ các phụ lục: PASS
+- [x] Thẩm định sư phạm và chỉnh sửa trực quan: PASS
+- [x] Không ảnh hưởng mã nguồn khác: PASS
 
 ## Bug
-Không có.
+(Không có lỗi)

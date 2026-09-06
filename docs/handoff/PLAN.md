@@ -1,125 +1,111 @@
-# PLAN: Khai Báo Thủ Công Model Gemini Mới Nhất & Tùy Chọn Model Mặc Định, Model Fallback
+# PLAN: Nhân bản 1-1 xaydungphuluc.html sang canvas_xaydungphuluc.html (Môi trường Canvas nội bộ)
 
-## Hiện trạng
-1. **Modal "Cài đặt AI & Key" (`js/user-ai-settings.js`)**:
-   - Hiện tại modal chỉ có 1 trường chọn model Gemini mặc định (`userAiGeminiModel`) dạng `<select>` cố định với danh sách gồm 8 model hardcode (`gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.5-pro`, `gemini-3-flash-preview`).
-   - Chưa cho phép người dùng tự do nhập thủ công bất kỳ model ID mới nào (custom model name, ví dụ: các phiên bản experimental, thinking preview, hoặc các model mới ra mắt trong tương lai).
-   - Hoàn toàn chưa có cấu hình **Model Fallback** (dự phòng): hệ thống đang gán cứng model fallback là `gemini-2.5-flash` ở khắp các file (`js/khbd-gemini.js`, `xaydungphuluc.html`, `nghiencuubaihoc.html`, v.v.), người dùng không thể chủ động chọn model nào sẽ đóng vai trò fallback khi model chính bị lỗi (HTTP 429, 503, timeout hoặc quá tải).
-2. **Cơ chế Fallback trong các module xử lý AI**:
-   - Trong `js/khbd-gemini.js`: hàm `_fallbackModelId()` trả về chuỗi cố định `"gemini-2.5-flash"`.
-   - Trong `xaydungphuluc.html`: biến `GEMINI_FALLBACK_MODEL` đang gán cứng `'gemini-2.5-flash'`.
-   - Các công cụ khác (`app.js`, `exam-vision-client.js`, `kttx.html`, `smartquiz.html`, `trochoi.compiled.js`) đều fallback về chuỗi cố định `'gemini-2.5-flash'`.
+## Hiện trạng & Yêu cầu của người dùng
+1. **Yêu cầu bắt buộc từ người dùng**:
+   - `canvas_xaydungphuluc.html` bắt buộc lấy **toàn bộ ý tưởng, giao diện và cách chạy từ `xaydungphuluc.html` hoàn toàn 1-1**.
+   - **Không được phép tự ý thay đổi, rút gọn hoặc viết lại code**.
+   - **Chỉ thay đổi duy nhất ở việc chạy trong môi trường nội bộ Canvas** (không cần API key cá nhân, dùng endpoint `api/canvas_gemini.php` với model `gemini-3-flash-preview`).
+2. **Vấn đề phát hiện ở bản thử nghiệm trước**:
+   - Bản trước đó đã bị rút gọn/viết lại script riêng (83 dòng) khiến một số logic, bảng và prompt khác với bản chuẩn `xaydungphuluc.html`.
+   - Banner kiểm tra ping trang chủ `fetch('https://hoangthiencm.id.vn')` bị trình duyệt chặn CORS (`cors: null`), dẫn đến báo đỏ *"Không kiểm tra được host"*.
 
 ---
 
-## Phạm vi
-1. **Nâng cấp giao diện Modal "Cài đặt AI & Key" (`js/user-ai-settings.js`)**:
-   - Bổ sung các model mới nhất vào danh mục gợi ý sẵn (bổ sung `gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-2.0-pro-exp-02-05`, `gemini-2.0-flash-thinking-exp-01-21`, `gemini-3.7-flash-thinking` nếu có).
-   - Thêm tùy chọn "Tự nhập model khác..." hoặc ô input text cho phép người dùng khai báo thủ công bất kỳ model ID nào theo ý muốn.
-   - Tách bạch rõ 02 thiết lập riêng biệt:
-     + **Model Gemini mặc định (Primary Model)**: chọn từ danh mục hoặc nhập thủ công. Lưu vào `default_gemini_module` và `khbd_gemini_model`.
-     + **Model Gemini dự phòng (Fallback Model)**: chọn từ danh mục hoặc nhập thủ công. Lưu vào `default_gemini_fallback` và `khbd_gemini_fallback_model` (mặc định là `gemini-2.5-flash`).
-   - Hiển thị mô tả rõ ràng ngay dưới các trường nhập liệu để người dùng nắm được chức năng của từng model.
-2. **Cập nhật cơ chế đọc Model Fallback động**:
-   - Trong `js/user-ai-settings.js`:
-     + Bổ sung các hàm helper `currentFallbackModel()` và `persistFallbackModel(modelId)`.
-     + Cập nhật `fillForm` và `saveSettings` để nạp và lưu đồng bộ cả Model Mặc Định lẫn Model Fallback.
-   - Trong `js/khbd-gemini.js`:
-     + Sửa hàm `_fallbackModelId()` để đọc giá trị từ `localStorage.getItem('default_gemini_fallback') || localStorage.getItem('khbd_gemini_fallback_model') || 'gemini-2.5-flash'`.
-     + Cho phép thêm model thủ công vào `this.availableModels` nếu chưa có, tránh bị chặn ở điều kiện kiểm tra model hợp lệ.
-   - Trong `xaydungphuluc.html`:
-     + Đổi cơ chế fallback: đọc `getFallbackModel()` từ `localStorage` thay vì hằng số cứng `GEMINI_FALLBACK_MODEL`.
-   - Trong `nghiencuubaihoc.html`:
-     + Đọc model fallback động từ `localStorage` khi gặp lỗi 429/503.
-3. **Cập nhật kiểm thử tự động**:
-   - Cập nhật `tests/user-ai-settings-smoke.js` để kiểm tra:
-     + Sự hiện diện của cấu hình model mặc định và model fallback.
-     + Khả năng nhập thủ công model mới.
-     + Lưu trữ đúng các key `default_gemini_module`, `khbd_gemini_model`, `default_gemini_fallback`, `khbd_gemini_fallback_model`.
+## Phạm vi thực hiện
+
+### 1. File nguồn và đích
+- Tệp nguồn gốc (chuẩn 100%): `xaydungphuluc.html` (khoảng 420 dòng, 150KB).
+- Tệp đích: `backupcode viettailieu/canvas_xaydungphuluc.html`.
+- Tệp test: `tests/canvas-xaydungphuluc-smoke.js`.
+
+### 2. Các điểm thay đổi DUY NHẤT để chạy môi trường Canvas nội bộ
+Mọi cấu trúc HTML, CSS, DOM id, và logic JavaScript từ `xaydungphuluc.html` được giữ nguyên vẹn 1-1, CHỈ sửa đúng các điểm sau:
+1. **Thư viện phụ thuộc đầu trang `<head>`**:
+   - Đổi đường dẫn tương đối thành URL tuyệt đối từ host:
+     `https://hoangthiencm.id.vn/js/khbd-yccd.js`
+     `https://hoangthiencm.id.vn/js/khbd-standards.js`
+   - Bỏ `js/security-guard.js` và `access-control.js` (không áp dụng chống debug hay chặn phân quyền đăng nhập trong Canvas).
+2. **Thêm Banner trạng thái Canvas (`#canvasHostBanner`) ở đầu trang**:
+   - Đặt ngay sau `<body>`.
+   - Lệnh ping kết nối sử dụng method `OPTIONS` gửi tới endpoint API:
+     ```javascript
+     fetch('https://hoangthiencm.id.vn/api/canvas_gemini.php', { method: 'OPTIONS', credentials: 'omit' })
+       .then(r => {
+         if (r.ok || r.status === 204) {
+           const b = document.getElementById('canvasHostBanner');
+           if (b) { b.textContent = 'Đã kết nối Gemini Canvas · gemini-3-flash-preview'; b.className = 'ok'; }
+         }
+       })
+       .catch(() => {
+         const b = document.getElementById('canvasHostBanner');
+         if (b) { b.textContent = 'Không kiểm tra được host; vẫn có thể thử tạo phụ lục.'; b.className = 'err'; }
+       });
+     ```
+3. **Thanh Header (Giao diện trạng thái API Key & Model)**:
+   - Thay cụm `<select id="selectModel">` và nút `🔑 Đang kiểm tra key…` bằng huy hiệu Canvas cố định:
+     `<span class="rounded-full bg-violet-100 px-3 py-2 text-sm font-bold text-violet-800">Gemini Canvas · gemini-3-flash-preview (Hệ thống cấp)</span>`
+   - Vẫn giữ nguyên cấu trúc DOM và các nút còn lại (Trang chủ, Lưu CSDL, Tải CSDL, Giao diện, Đặt lại).
+4. **Tầng gọi AI nội bộ Canvas (`requestGemini` & `callGemini`)**:
+   - Khởi tạo sẵn `apiKeys = ['canvas-session']`, `mistralKeys = []`.
+   - Trong `requestGemini`: Thay thế việc gọi trực tiếp Google `https://generativelanguage.googleapis.com/...` bằng lời gọi POST tới endpoint hệ thống:
+     ```javascript
+     const CANVAS_ENDPOINT = 'https://hoangthiencm.id.vn/api/canvas_gemini.php';
+     const response = await fetchWithGeminiTimeout(CANVAS_ENDPOINT, {
+       method: 'POST',
+       headers: { 'content-type': 'application/json' },
+       credentials: 'omit',
+       body: JSON.stringify({ payload, timeout: 75 })
+     }, GEMINI_TIMEOUT_MS);
+     ```
+   - Trong `readGeminiResponse`: Giải nén `envelope.body` chứa `{ candidates: [{ content: { parts: [{ text }] } }] }`.
+   - Bỏ qua modal chặn "Chưa có API key" trong `generateSelected` và `readStagedSgk`.
+5. **Giữ nguyên 100% tất cả các hàm và thuật toán còn lại**:
+   - Toàn bộ 7 bước giao diện.
+   - Toàn bộ hàm bóc tách PPCT (`extractPpctRows`, `extractDocxTables`, `ingestSourceTables`...).
+   - Toàn bộ bộ chọn 12 tiết AI (`aiCandidates`, `aiPeriodCandidates`, `selectedAiPeriods`, `renderAiPicker`...).
+   - Toàn bộ prompt chi tiết (`appendixPrompt`, `currentPpctPromptSource`, `curriculumContext`, `lessonCatalog`...).
+   - Toàn bộ thuật toán chuẩn hóa Phụ lục 1 (`appendixOneTable`, `normalizeAppendix`, `cleanAppendixOutcome`, tách riêng 02 cột NLS và AI).
+   - Toàn bộ xuất Word (`exportDocx` khổ A4 ngang `11906x16838`) và xuất ZIP (`exportAll`).
+   - Toàn bộ modal Thẩm định sư phạm (`complianceModal`).
 
 ---
 
 ## Ngoài phạm vi
-- Không thay đổi backend PHP `api/user_gemini_keys.php` (key lưu trên CSDL, còn cài đặt model cục bộ trên trình duyệt qua localStorage để linh hoạt theo từng thiết bị và phiên làm việc).
-- Không can thiệp các module bài giảng / logic nghiệp vụ khác ngoài phần kết nối và xoay vòng model Gemini.
+- Không sửa source gốc `xaydungphuluc.html`.
+- Không sửa `api/canvas_gemini.php`.
 
 ---
 
-## File dự kiến tác động
-- `js/user-ai-settings.js`: Cập nhật UI modal, danh sách model gợi ý, ô nhập thủ công, lưu/tải model mặc định & fallback.
-- `js/khbd-gemini.js`: Cập nhật `_fallbackModelId()` đọc động từ localStorage và hỗ trợ custom model.
-- `xaydungphuluc.html`: Cập nhật logic fallback model động.
-- `tests/user-ai-settings-smoke.js`: Bổ sung assertions kiểm tra tính năng mới.
-- `docs/handoff/PLAN.md` (kế hoạch này).
-- `docs/handoff/.lock` (file khóa).
+## File tác động
+- `backupcode viettailieu/canvas_xaydungphuluc.html`
+- `tests/canvas-xaydungphuluc-smoke.js`
+- `docs/handoff/PLAN.md`
+- `docs/handoff/.lock`
 
 ---
 
-## Các bước thực hiện
-1. **Bước 1: Cập nhật danh mục model & hỗ trợ custom model trong `js/user-ai-settings.js`**:
-   - Bổ sung các model mới vào `GEMINI_MODELS`.
-   - Viết hàm `modelOptionsHtml(selected, customValue)` có tùy chọn `__custom__` ("Tự nhập model khác...").
-   - Thêm UI cho 2 khối:
-     + Khối 1: "Module Gemini mặc định" gồm select + input text nhập thủ công (hiện ra khi chọn "Tự nhập...").
-     + Khối 2: "Module Gemini dự phòng (Fallback khi lỗi/quá tải)" gồm select + input text nhập thủ công.
-2. **Bước 2: Xây dựng hàm lưu & nạp model mặc định và fallback**:
-   - Thêm `currentFallbackModel()`: đọc `localStorage.getItem('default_gemini_fallback') || localStorage.getItem('khbd_gemini_fallback_model') || 'gemini-2.5-flash'`.
-   - Thêm `persistFallbackModel(val)`: lưu vào `default_gemini_fallback` và `khbd_gemini_fallback_model`.
-   - Trong `fillForm()`: nạp giá trị vào select và input custom cho cả model mặc định và fallback.
-   - Trong `saveSettings()`: đọc giá trị (nếu là `__custom__` thì lấy từ ô input text), lưu vào localStorage cho cả 2 trường.
-3. **Bước 3: Cập nhật `js/khbd-gemini.js`**:
-   - Sửa `_fallbackModelId()`:
-     ```javascript
-     _fallbackModelId() {
-       return localStorage.getItem('default_gemini_fallback')
-         || localStorage.getItem('khbd_gemini_fallback_model')
-         || 'gemini-2.5-flash';
-     }
-     ```
-   - Trong `generateContent` hoặc chỗ kiểm tra `this.availableModels`: nếu `fallbackModel` chưa có trong `availableModels`, tự động thêm object `{ id: fallbackModel, name: fallbackModel }` để không bị từ chối chuyển model.
-4. **Bước 4: Cập nhật `xaydungphuluc.html`**:
-   - Cập nhật hàm `getFallbackModel()`:
-     ```javascript
-     function getFallbackModel() {
-       return localStorage.getItem('default_gemini_fallback')
-         || localStorage.getItem('khbd_gemini_fallback_model')
-         || 'gemini-2.5-flash';
-     }
-     ```
-   - Trong `callGemini`: dùng `getFallbackModel()` thay cho hằng số cứng `GEMINI_FALLBACK_MODEL`.
-5. **Bước 5: Cập nhật và chạy kiểm thử tự động**:
-   - Cập nhật `tests/user-ai-settings-smoke.js`.
-   - Chạy `node tests/user-ai-settings-smoke.js` và `node tests/xaydungphuluc-smoke.js`.
-
----
-
-## Rủi ro
-- **Giá trị rỗng hoặc không hợp lệ**: Người dùng có thể để trống ô nhập thủ công; cần fallback an toàn về `gemini-3.7-flash` (mặc định) và `gemini-2.5-flash` (fallback) nếu chuỗi rỗng.
-- **Model trùng nhau**: Nếu người dùng đặt model mặc định và model fallback trùng nhau, khi gặp lỗi quá tải hệ thống không nên xoay vòng vô tận vào chính model đó. Cần kiểm tra `activeModel !== fallbackModel` trước khi chuyển.
+## Các bước Coder thực hiện
+1. **Bước 1**: Đọc toàn văn `xaydungphuluc.html`.
+2. **Bước 2**: Nhân bản sang `backupcode viettailieu/canvas_xaydungphuluc.html` và áp dụng đúng 4 điểm điều chỉnh cho môi trường Canvas:
+   - Thay link script head thành URL tuyệt đối host (bỏ `security-guard.js`, `access-control.js`).
+   - Thêm banner `#canvasHostBanner` kèm logic ping OPTIONS tới `api/canvas_gemini.php`.
+   - Cập nhật header hiển thị huy hiệu Gemini Canvas cố định.
+   - Thay thế ruột hàm `requestGemini` trỏ về `api/canvas_gemini.php` với `credentials: 'omit'` và giải nén `envelope.body`; khởi tạo sẵn `apiKeys = ['canvas-session']`.
+3. **Bước 3**: Cập nhật `tests/canvas-xaydungphuluc-smoke.js` để kiểm thử toàn diện code 1-1 mới.
+4. **Bước 4**: Chạy toàn bộ test đảm bảo PASS.
 
 ---
 
 ## Cách kiểm thử
-1. **Kiểm thử tự động bằng Node**:
-   - Chạy `node tests/user-ai-settings-smoke.js` -> PASS.
-   - Chạy `node tests/khbd-gemini-retry-smoke.js` -> PASS.
-   - Chạy `node tests/xaydungphuluc-smoke.js` -> PASS.
-2. **Kiểm thử giao diện & localStorage**:
-   - Mở modal "Cài đặt AI & Key":
-     + Chọn model mặc định từ dropdown -> Lưu -> Kiểm tra `localStorage.getItem('default_gemini_module')`.
-     + Chọn "Tự nhập model khác..." -> Nhập `gemini-experimental` -> Lưu -> Kiểm tra localStorage lưu đúng `gemini-experimental`.
-     + Chọn model fallback là `gemini-2.5-flash-lite` -> Lưu -> Kiểm tra `localStorage.getItem('default_gemini_fallback')`.
-     + Chọn "Tự nhập model khác..." cho fallback -> Nhập `gemini-2.0-flash` -> Lưu -> Kiểm tra localStorage lưu đúng `gemini-2.0-flash`.
-3. **Kiểm thử hành vi Fallback**:
-   - Giả lập lỗi 503/429 ở model mặc định: kiểm tra hệ thống tự động đổi sang model fallback đã cấu hình trong localStorage và thông báo chính xác tên model fallback.
+1. `node tests/canvas-xaydungphuluc-smoke.js` -> PASS.
+2. `node tests/xaydungphuluc-smoke.js` -> PASS.
+3. `node tests/xaydungphuluc-integration-smoke.js` -> PASS.
+4. Kiểm tra ping OPTIONS tới `api/canvas_gemini.php` trả về 204 có CORS `*`.
 
 ---
 
 ## Tiêu chí nghiệm thu
-- Modal "Cài đặt AI & Key" có đầy đủ:
-  + Cấu hình Model Gemini mặc định (cho phép chọn hoặc tự nhập tên model thủ công).
-  + Cấu hình Model Gemini fallback dự phòng (cho phép chọn hoặc tự nhập tên model thủ công).
-- Khi lưu, cả 2 giá trị được ghi nhận chuẩn xác vào `localStorage` (`default_gemini_module`, `khbd_gemini_model`, `default_gemini_fallback`, `khbd_gemini_fallback_model`).
-- Khi mở lại modal, các lựa chọn (kể cả model tự nhập thủ công) vẫn được giữ nguyên đầy đủ.
-- Các module gọi AI (`khbd-gemini.js`, `xaydungphuluc.html`, v.v.) tự động dùng đúng model fallback được cấu hình khi model chính gặp lỗi hoặc quá tải.
-- Tất cả các bộ test tự động liên quan đều PASS.
+- `canvas_xaydungphuluc.html` giống 1-1 hoàn toàn với `xaydungphuluc.html` về mọi tính năng, bảng, prompt, logic xử lý; chỉ thay thế tầng gọi AI sang `api/canvas_gemini.php` (Zero-Config API key).
+- Banner kiểm tra host phản hồi màu xanh (OK) không bị lỗi CORS.
+- File test chạy PASS.
+

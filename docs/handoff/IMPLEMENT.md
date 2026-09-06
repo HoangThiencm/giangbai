@@ -1,3 +1,48 @@
+# IMPLEMENT: Canvas Xây dựng Phụ lục
+
+**Trạng thái**: DONE
+
+## Files
+
+- `backupcode viettailieu/canvas_xaydungphuluc.html`: Canvas độc lập có workflow 7 bước, PPCT/SGK/OCR PDF scan, sinh/xem trước, thẩm định, Word và ZIP.
+- `tests/canvas-xaydungphuluc-smoke.js`: kiểm tra endpoint, cấu hình, VM mock và sinh PL1.
+
+## Behavior
+
+- Không nhập/lưu key người dùng. Canvas gọi endpoint hệ thống với `credentials: 'omit'`, model cố định và timeout 75 giây.
+- PL1 sáu cột, NLS xanh `0070C0`, AI tím `7030A0`; Word dùng A4 ngang `11906x16838`.
+- OCR PDF scan giới hạn 3 trang JPEG và kiểm tra payload trước giới hạn endpoint 8 MiB.
+
+## Tests
+
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-integration-smoke.js`: PASS.
+
+## Limitation
+
+- Canvas phụ thuộc CDN và host hệ thống có thể truy cập; PDF scan quá giới hạn sẽ hiện lỗi để người dùng nén/tách tệp.
+
+---
+
+# IMPLEMENT: Bản Canvas nhân bản từ Xây dựng Phụ lục
+
+**Trạng thái**: DONE
+
+## Files
+
+- `backupcode viettailieu/canvas_xaydungphuluc.html`: bản Canvas dùng endpoint hệ thống.
+- `tests/canvas-xaydungphuluc-smoke.js`: regression kiểm tra cấu trúc 1:1, endpoint Canvas và request mock.
+
+## Kiểm thử
+
+- Khôi phục `closeKeyModal()` để nút đóng của hộp thoại khóa không gọi hàm thiếu; hộp thoại được đóng an toàn bằng tùy chọn `#keyModal`.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-integration-smoke.js`: PASS.
+
+---
+
 # IMPLEMENT: Cải tiến thẻ thông báo dạy thay (edit dòng + tạo ảnh theo buổi)
 
 **Ngày implement**: 2026-09-06
@@ -85,3 +130,42 @@ Cần tải lại trang (Ctrl+F5) nếu vẫn thấy chân ký / tiêu đề dà
 - `node tests/xaydungphuluc-smoke.js`: PASS.
 - `node tests/xaydungphuluc-integration-smoke.js`: PASS.
 - Đã tạo DOCX thực và kiểm tra OpenXML tại `C:\Users\HoangThien\AppData\Local\Temp\giangbai-pl1-docx-verify`.
+
+---
+
+# IMPLEMENT: Hoàn thiện xuất ZIP và bảng chỉnh sửa Canvas
+
+**Trạng thái**: DONE
+
+## Nội dung đã triển khai
+
+- `exportDocx(n, save=true)` luôn trả về Blob DOCX; chỉ gọi tải tệp khi `save` là true.
+- ZIP gọi `exportDocx(n, false)` cho từng phụ lục và chỉ chứa các tệp `.docx`, không tạo tải Word riêng lẻ.
+- Phụ lục 2 và 3 hiển thị bảng HTML có thể chỉnh sửa cho mảng dữ liệu AI trả về; chỉnh sửa được lưu ngay vào dữ liệu dùng để xuất Word.
+
+## Kiểm thử
+
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-integration-smoke.js`: PASS.
+
+---
+
+# IMPLEMENT: Hoàn thiện workflow Canvas Xây dựng Phụ lục
+
+**Trạng thái**: DONE
+
+## Nội dung đã triển khai
+
+- Mở rộng cấu hình Canvas: năm học, trường, tổ chuyên môn, lớp/môn, thống kê lớp-học sinh-giáo viên, tỷ lệ và mật độ NLS/AI, CLIL và giáo dục hòa nhập.
+- PPCT theo nguyên tắc nguồn trước: nhận diện bảng XLSX, giữ thứ tự dòng, dòng tiêu đề, tiết CT, tuần, thiết bị, địa điểm; đồng thời tách dữ liệu thiết bị, phòng học và mốc đánh giá. Có catalog PPCT mẫu khi chưa có tệp nguồn.
+- Bộ chọn AI chọn theo từng tiết (giới hạn 12), rồi đối chiếu lại bằng `lessonId` trong Phụ lục 1.
+- Hoàn chỉnh nội dung Phụ lục 1 (đặc điểm, tiến độ, NLS/AI riêng, thiết bị, phòng, đánh giá), Phụ lục 2 (hoạt động) và Phụ lục 3 (kế hoạch dạy học, việc chuyên môn). Các bảng đều sửa, thêm và xóa dòng trực tiếp.
+- Báo cáo thẩm định kiểm tra PPCT, YCCĐ, NLS, AI, thiết bị/địa điểm và sự có mặt của Phụ lục 2–3.
+- DOCX và ZIP xuất đủ các phần với A4 ngang, giữ màu NLS `#0070C0` và AI `#7030A0`.
+- Giữ ràng buộc Canvas: mọi AI gọi `api/canvas_gemini.php` với `credentials: 'omit'`; không dùng key cá nhân, `localStorage` hay API Google trực tiếp.
+
+## Kiểm thử
+
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- Smoke mở rộng kiểm tra cấu hình đầy đủ, catalog/parser PPCT, chọn AI theo tiết, thêm/xóa dòng PPCT, báo cáo thẩm định, preview chỉnh sửa, DOCX và ZIP.
