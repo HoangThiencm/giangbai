@@ -290,3 +290,31 @@ Khảo sát trực tiếp từ hình ảnh thực tế người dùng cung cấp
    - Smoke tests: `tests/sgk-knowledge-smoke.js`, `tests/canvas-xaydungphuluc-smoke.js`.
    - Chạy toàn bộ 59/59 test suites PASS 100%.
 
+---
+
+# PLAN: Đa dạng hóa & Chuẩn hóa Thực chất Năng lực số (CV 3456) & Năng lực AI (QĐ 2422)
+
+## Vấn đề Cần Giải Quyết
+- Tránh tình trạng "Template hóa" lặp đi lặp lại bộ mã `5.3, 5.2, 1.1` trên toàn bộ các bài học trong năm.
+- Cần đa dạng hóa các mã NLS bám sát thực chất hoạt động học tập của từng bài:
+  + Bài tính toán số học: bổ sung `5.1.TC1a` (nhận biết & xử lý lỗi kỹ thuật MTCT: Math ERROR, Syntax ERROR).
+  + Bài hình học & đối xứng: bổ sung `3.1.TC1a` (dựng hình GeoGebra, vẽ trục/tâm đối xứng) và `1.1.TC1a`.
+  + Bài thống kê & xác suất: bổ sung `1.2.TC1a` (đánh giá độ tin cậy dữ liệu số) và `3.1.TC1a` (bảng tính Excel/Sheets).
+  + Bài thực hành trải nghiệm & dự án: bổ sung `2.2.TC1a` (chia sẻ sản phẩm nhóm trên môi trường số).
+  + Bài lý thuyết khái niệm trừu tượng: bổ sung `1.1.TC1a`, `5.2.TC1a`, `4.3.TC1a` (an toàn mắt & tư thế).
+- Tinh chỉnh mô tả hành động sư phạm của từng mã rõ ràng, thực tiễn, có công cụ thực tế (MTCT Casio fx-580, GeoGebra, Excel, bảng số liệu...).
+
+## Các Bước Triển Khai
+1. **Nâng cấp `recommendLessonDigitalCandidates`**:
+   - Nhận diện 6 nhóm bài học đặc thù qua tiêu đề và YCCD.
+   - Đề xuất bộ 2–3 mã NLS riêng biệt cho từng nhóm, giải phóng hoàn toàn sự lặp lại đơn điệu.
+2. **Nâng cấp `lessonAppliedNlsDescription`**:
+   - Bổ sung mô tả hành động cụ thể cho các mã mới: `5.1` (sự cố kỹ thuật MTCT), `3.1` (sản phẩm số/dựng hình/bảng tính), `2.2` (hợp tác số), `1.2` (đánh giá dữ liệu số), `4.3` (an toàn sức khỏe số).
+   - Giữ hàm ở định dạng 1 dòng đơn (`single-line`) để tương thích với `sliceNamedFunction` của bộ test smoke Canvas.
+3. **Đồng bộ 1-1**:
+   - Áp dụng trên `canvas_xaydungphuluc.html`, `xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`.
+4. **Kiểm thử**:
+   - Viết test case trong `tests/sgk-knowledge-smoke.js` xác nhận tính đa dạng: kiểm tra các bài Toán 6 thuộc các phân môn khác nhau nhận các mã khác nhau (`5.1`, `3.1`, `1.2`, `2.2`...), không bài nào bị trùng lặp máy móc.
+   - Chạy toàn bộ 59 test suites PASS 100%.
+
+
