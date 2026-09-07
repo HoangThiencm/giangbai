@@ -20,10 +20,10 @@ PASS
   + `ensureFullCurriculumLessons`: Cơ chế an toàn 2 lớp, tự động bù đắp 100% bài học cả năm học từ chuẩn CTGDPT 2018 (`KHBD_YCCD.toan[grade]`), bảo đảm luôn đủ 37-43 bài, có sẵn YCCD chuẩn, NLS thực tế (Casio/GeoGebra/Excel) và AI sư phạm (QĐ 2422).
   + Nút 1-click `seedStandardSgkKnowledge`: Khởi tạo tức thì 100% bài học chuẩn vào CSDL hoặc bộ nhớ máy mà không cần tệp PDF.
 - Đạt: **Đồng bộ song song 1-1** trên cả `xaydungphuluc.html` và `canvas_xaydungphuluc.html` (kèm mirror `backupcode viettailieu/canvas_xaydungphuluc.html`).
-- Đạt: Toàn bộ 59 test suite trong toàn dự án và kiểm tra cú pháp JS inline đều thành công 100%.
+- Đạt: Toàn bộ 60 test suite trong toàn dự án và kiểm tra cú pháp JS inline đều thành công 100%.
 
 ## Test đã chạy
-1. `node tests/run-all-tests.js`: **ALL 59 TEST SUITES PASSED 100%!**
+1. `node tests/run-all-tests.js`: **ALL 60 TEST SUITES PASSED 100%!**
 2. `node tests/sgk-knowledge-smoke.js`: PASS 100% (kiểm tra toàn diện API schema PHP, 17 DOM hooks/functions trên 3 tệp HTML, option sách dùng chung selected, `compactSgkText` giữ > 220 dòng bao phủ toàn bộ sách, và `ensureFullCurriculumLessons` bù đắp 100% bài học cho Toán 7 từ 9 bài lên 40 bài, Toán 6 đủ 43 bài).
 3. `node tests/xaydungphuluc-smoke.js`: PASS 100% (bao gồm ca kiểm thử làm giàu mã AI cụt `9.B2.1`, khử bỏ chatbot lịch sử NLS, ưu tiên 5.3.TC2a cho Đại số 9).
 4. `node tests/canvas-xaydungphuluc-smoke.js`: PASS 100% (bao gồm kiểm tra Canvas với `cleanLessonDescription`, `lessonAppliedNlsDescription`, `lessonAppliedAiDescription`, `getConfig`, `addRow`, `deleteTableRow`).
@@ -36,6 +36,52 @@ PASS
 11. `node tests/khbd-4steps-workflow-smoke.js`: PASS 100%.
 12. `node tests/security-f12-smoke.js`: PASS 100%.
 13. Kiểm tra cú pháp toàn bộ JavaScript inline Canvas bằng Node `vm.Script`: PASS.
+
+
+- Đạt: **Bắt buộc chuyển đổi 100% công thức toán học thành Equation (Office Math OMML) trong Phụ lục**:
+  + Bộ tự động nhận diện `autoWrapMathInDelimiters` bọc chính xác các dạng công thức toán học vào `$ ... # VERIFY
+
+## Kết luận
+PASS
+
+## Đối chiếu scope
+- Đạt: **Chuẩn hóa Phụ lục 2 theo CV 5512**: Đổi bản chất từ danh sách bài học lý thuyết sang Kế hoạch tổ chức các hoạt động giáo dục (Hoạt động thực hành trải nghiệm, chuyên đề STEM, CLB môn học, AI Day). Bảng 10 cột có cột `STT`, khối tiêu đề hành chính Quốc hiệu/Tên trường/Tổ, khối chữ ký bên trái `TỔ TRƯỞNG` và bên phải `HIỆU TRƯỞNG` chuẩn xác 100%.
+- Đạt: **Đồng bộ 100% NLS & AI giữa Phụ lục 1 và Phụ lục 3**: Phụ lục 1 là Single Source of Truth; Phụ lục 3 tự động kế thừa 100% mã và mô tả tích hợp từ Phụ lục 1; sửa ô tích hợp ở Phụ lục 1 tự động cập nhật sang Phụ lục 3 ngay lập tức.
+- Đạt: **Khắc phục triệt để gán ghép NLS gượng ép môn Toán**: Loại bỏ hoàn toàn mã Miền 6 (AI) khỏi danh mục đề xuất NLS môn Toán; ưu tiên tuyệt đối các công cụ số toán học cốt lõi (Máy tính cầm tay, GeoGebra/Desmos, Bảng tính điện tử) theo chuẩn CTGDPT 2018.
+- Đạt: **Khắc phục dứt điểm lỗi cụt mô tả cột AI (QĐ 2422)**: 100% các ô AI luôn có đầy đủ mã chuẩn, câu mô tả hành động sư phạm gắn với bài học và trách nhiệm kiểm chứng theo 4 nhóm A, B, C, D của QĐ 2422, kèm phạm vi tiết `(Áp dụng: tiết X, Y)`.
+- Đạt: **Kho Tri thức SGK dùng chung (Curriculum Knowledge Map Repository)**:
+  + Backend API `api/sgk_knowledge.php` quản lý 2 bảng CSDL MySQL `sgk_books` và `sgk_lessons` qua PDO.
+  + Giao diện `xaydungphuluc.html` và `canvas_xaydungphuluc.html` có trường chọn Bộ sách (`bookSeries`), tự động kiểm tra kho tri thức dùng chung; nếu đã có thì nạp tức thì (< 0.5s); nếu chưa có thì trích xuất 1 lần và lưu CSDL dùng chung cho toàn trường.
+  + Tự động kế thừa YCCD chuẩn từ SGK, minh chứng NLS thực tế (máy tính cầm tay, GeoGebra, bảng tính) và gợi ý AI chuẩn QĐ 2422.
+- Đạt: **Sách giáo khoa dùng chung (từ 2026-2027)**:
+  + Dropdown `#bookSeries` đã đặt tùy chọn `"Sách giáo khoa dùng chung (từ 2026-2027)"` ở vị trí số 1 và là mặc định.
+  + Hàm `getConfig()` trả về mặc định bộ sách dùng chung 2026-2027.
+- Đạt: **Bảo đảm bao phủ 100% tất cả các bài học (Curriculum Assurance)**:
+  + `compactSgkText`: Bắt trọn vẹn Mục lục (TOC), nâng hạn mức lên 2.500 dòng / 150.000 ký tự, không bao giờ bị cắt ở 9 bài đầu.
+  + `ensureFullCurriculumLessons`: Cơ chế an toàn 2 lớp, tự động bù đắp 100% bài học cả năm học từ chuẩn CTGDPT 2018 (`KHBD_YCCD.toan[grade]`), bảo đảm luôn đủ 37-43 bài, có sẵn YCCD chuẩn, NLS thực tế (Casio/GeoGebra/Excel) và AI sư phạm (QĐ 2422).
+  + Nút 1-click `seedStandardSgkKnowledge`: Khởi tạo tức thì 100% bài học chuẩn vào CSDL hoặc bộ nhớ máy mà không cần tệp PDF.
+- Đạt: **Đồng bộ song song 1-1** trên cả `xaydungphuluc.html` và `canvas_xaydungphuluc.html` (kèm mirror `backupcode viettailieu/canvas_xaydungphuluc.html`).
+- Đạt: Toàn bộ 60 test suite trong toàn dự án và kiểm tra cú pháp JS inline đều thành công 100%.
+
+## Test đã chạy
+1. `node tests/run-all-tests.js`: **ALL 60 TEST SUITES PASSED 100%!**
+2. `node tests/sgk-knowledge-smoke.js`: PASS 100% (kiểm tra toàn diện API schema PHP, 17 DOM hooks/functions trên 3 tệp HTML, option sách dùng chung selected, `compactSgkText` giữ > 220 dòng bao phủ toàn bộ sách, và `ensureFullCurriculumLessons` bù đắp 100% bài học cho Toán 7 từ 9 bài lên 40 bài, Toán 6 đủ 43 bài).
+3. `node tests/xaydungphuluc-smoke.js`: PASS 100% (bao gồm ca kiểm thử làm giàu mã AI cụt `9.B2.1`, khử bỏ chatbot lịch sử NLS, ưu tiên 5.3.TC2a cho Đại số 9).
+4. `node tests/canvas-xaydungphuluc-smoke.js`: PASS 100% (bao gồm kiểm tra Canvas với `cleanLessonDescription`, `lessonAppliedNlsDescription`, `lessonAppliedAiDescription`, `getConfig`, `addRow`, `deleteTableRow`).
+5. `node tests/xaydungphuluc-integration-smoke.js`: PASS 100%.
+6. `node tests/canvas-soankhbd-smoke.js`: PASS 100%.
+7. `node tests/soankhbd-ppct-standards-smoke.js`: PASS 100%.
+8. `node tests/khbd-ppct-integration-smoke.js`: PASS 100%.
+9. `node tests/khbd-ai-catalog-smoke.js`: PASS 100%.
+10. `node tests/khbd-ai-integration-gate.test.js`: PASS 100%.
+11. `node tests/khbd-4steps-workflow-smoke.js`: PASS 100%.
+12. `node tests/security-f12-smoke.js`: PASS 100%.
+13. Kiểm tra cú pháp toàn bộ JavaScript inline Canvas bằng Node `vm.Script`: PASS.
+
+.
+  + Hàm `parseDocxMathRuns` chuyển đổi toàn diện sang `docx.Math` (`<m:oMath>`) với đầy đủ phân số (`<m:f>`), căn thức (`<m:rad>`), số mũ (`<m:sSup>`), hệ phương trình (`<m:eqArr>`).
+  + Giao diện Preview web tích hợp KaTeX hiển thị công thức toán sắc nét, giữ đúng gạch đầu dòng `- ` của YCCĐ.
+  + Thêm bài test chuyên sâu `tests/xaydungphuluc-math-smoke.js` xác thực thực tế gói DOCX sinh ra chứa OMML chuẩn Word.
 
 ## Pass / Fail từng tiêu chí
 - [PASS] Sách giáo khoa dùng chung (từ 2026-2027): Đặt làm tùy chọn số 1 và mặc định trên toàn bộ giao diện và cấu hình.
@@ -72,7 +118,8 @@ PASS
   + Thanh nút chuyển nhanh Khối lớp `[ Lớp 6 ] [ Lớp 7 ] [ Lớp 8 ] [ Lớp 9 ]` ngay trong Section 2.
   + Hộp thoại `#sgkExtractModal` cho phép chọn chính xác Khối lớp, Môn học, Bộ sách trước khi AI trích xuất từ tệp PDF/Word SGK.
   + Tự động nhận diện Khối lớp và Môn học từ tên tệp SGK khi tải lên.
-- [PASS] Toàn bộ 59/59 bài test của hệ thống chạy PASS 100%.
+- [PASS] Bắt buộc 100% công thức toán thành Word Equation: Xuất Word chứa đầy đủ OMML <m:oMath>, <m:f>, <m:rad>, <m:eqArr>, xem trước KaTeX chuẩn xác.
+- [PASS] Toàn bộ 60/60 bài test của hệ thống chạy PASS 100%.
 
 ## Bug
 - Lỗi: Không có

@@ -444,3 +444,58 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
    - Chạy `tests/run-all-tests.js`: Toàn bộ 59/59 test suites PASS 100%.
 
 
+
+
+---
+
+## Bắt buộc Chuyển Đổi 100% Công Thức Toán Học thành Equation (Office Math OMML) trong Phụ Lục
+
+### 1. Phản hồi Người dùng & Vấn đề Cốt lõi
+- **Yêu cầu trực tiếp từ User**: *"các công thức được sinh ra trong phụ lục không được chuyển thành equation nha, tất cả các công thức đều được đặt trong equation hết, bắt buộc"*
+- **Nguyên nhân kỹ thuật trước đó**:
+  + Trong hàm `exportDocx`, toàn bộ nội dung văn bản ở các ô Bài học, Yêu cầu cần đạt, Năng lực số, AI và Hoạt động đều được đóng gói bằng `TextRun` thuần (`new TextRun({text: ...})`).
+  + Các công thức toán học dạng LaTeX (`$ax + b = 0$`, `$\frac{a}{b}$`, `$\sqrt{x}$`, hệ phương trình `$\begin{cases}...\end{cases}$`) hoặc biểu thức đại số bị xuất thành văn bản thuần, không được chuyển đổi thành đối tượng **Equation** (Office Math / OMML `<m:oMath>`) trong Microsoft Word.
+  + Giao diện Preview trên web hiển thị chuỗi LaTeX thô mà chưa có bộ render KaTeX.
+
+### 2. Các Giải pháp Kỹ thuật Đã Triển khai Toàn diện
+1. **Bộ tự động nhận diện & bọc công thức toán (`autoWrapMathInDelimiters`)**:
+   - Tự động quét và phát hiện các biểu thức toán học chưa có dấu bọc `$`:
+     + Phương trình, hàm số: `ax + b = 0`, `ax + by = c`, `y = ax + b`, `ax^2 + bx + c = 0`.
+     + Lệnh LaTeX phân số, căn thức: `\frac{a}{b}`, `\sqrt{x}`, `\begin{cases}...\end{cases}`, `\left\{...\right.`.
+     + Ký hiệu toán học: `\in`, `\notin`, `\le`, `\ge`, `\ne`, `\approx`, `\pm`, `\alpha`, `\beta`, `\pi`.
+     + Các ký hiệu toán Unicode: `∈`, `∉`, `≤`, `≥`, `≠`, `≈`, `±`, `√`.
+     + Số mũ, lũy thừa: `x^2`, `a^n`, `y^3`.
+   - Cơ chế bảo vệ `___MATH_BLOCK_X___`: Bảo đảm các công thức đã có sẵn cặp dấu `$` hoặc `$$` không bao giờ bị bọc lặp 2 lần.
+
+2. **Bộ chuyển đổi Equation Office Math chuẩn Word (`parseDocxMathRuns`)**:
+   - Tận dụng sức mạnh của `DocxGenerator` (`js/khbd-docx.js`), kết nối trực tiếp với API `docx.Math` và các thẻ cấu trúc:
+     + Phân số: `docx.MathFraction` -> OMML `<m:f>`.
+     + Căn thức: `docx.MathRadical` -> OMML `<m:rad>`.
+     + Số mũ / Chỉ số trên: `docx.MathSuperScript` -> OMML `<m:sSup>`.
+     + Chỉ số dưới: `docx.MathSubScript` -> OMML `<m:sSub>`.
+     + Hệ phương trình: `m:d` (delimiter ngoặc nhọn mở) + `m:eqArr` (equation array) cho từng phương trình.
+     + Ký hiệu toán học và chữ số: `docx.MathRun` render chuẩn xác.
+   - Khi mở file Word .docx, toàn bộ công thức toán xuất hiện dưới dạng đối tượng **Word Equation** có thể nhấp chuột chỉnh sửa trực tiếp trên thanh công cụ Equation Tools của Word.
+
+3. **Tích hợp toàn diện vào quy trình xuất Word (`exportDocx`)**:
+   - Áp dụng trên:
+     + `para(text, opts)`: Chuyển đổi toàn bộ văn bản và tiêu đề.
+     + `outcomeCell(text, opts)`: Chuyển đổi 100% công thức trong cột Yêu cầu cần đạt.
+     + `integrationCell(value, opts)`: Chuyển đổi toàn bộ công thức trong cột NLS và AI.
+     + `cell(text, opts)`: Chuyển đổi các ô Bài học, Hoạt động Phụ lục 2, Phân phối Phụ lục 3.
+
+4. **Chỉ thị Sư phạm Bắt buộc trong Prompt AI (`standards()` & `appendixPrompt()`)**:
+   - Thêm quy tắc: `QUY TẮC CÔNG THỨC TOÁN HỌC (BẮT BUỘC ĐẶT TRONG EQUATION): Mọi công thức toán học, phương trình, hệ phương trình, biểu thức đại số, phân số, căn thức, lũy thừa, số mũ, ký hiệu tập hợp (như $ax + b = 0$, $x^2$, \frac{a}{b}, \sqrt{x}, $x \in \mathbb{N}$, \begin{cases} ... \end{cases}) BẮT BUỘC phải đặt trong cặp dấu $...$ hoặc $$...$$ để hệ thống tự động xuất thành Equation (Office Math) chuẩn Word. Tuyệt đối không viết công thức dưới dạng văn bản thô không có dấu $.`
+
+5. **Hiển thị trực quan trên giao diện Web Preview (`renderMathHtml`)**:
+   - Nạp KaTeX CSS và JS trên thẻ `<head>`.
+   - Cập nhật `outcomeHtml` và `htmlMultiline` tự động render biểu thức toán học thành công thức KaTeX sắc nét, bảo toàn tuyệt đối gạch đầu dòng sư phạm `- ` của các YCCĐ.
+
+6. **Đồng bộ 1-1 trên cả 3 file**:
+   - `xaydungphuluc.html`
+   - `canvas_xaydungphuluc.html`
+   - `backupcode viettailieu/canvas_xaydungphuluc.html` (giữ đúng cấu trúc hàm 1 dòng phục vụ Canvas test).
+
+7. **Kiểm thử tự động**:
+   - Tạo mới `tests/xaydungphuluc-math-smoke.js`: Trích xuất trực tiếp `word/document.xml` từ gói ZIP docx để xác minh sự hiện diện của `<m:oMath>`, `<m:f>`, `<m:rad>`, `<m:eqArr>`, ký hiệu `∉`, `≠`.
+   - Chạy `tests/run-all-tests.js`: **ALL 60 TEST SUITES PASSED 100%!**

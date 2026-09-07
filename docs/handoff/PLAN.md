@@ -344,3 +344,21 @@ Khảo sát trực tiếp từ hình ảnh thực tế người dùng cung cấp
    - Áp dụng trên `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và mirror `backupcode viettailieu/canvas_xaydungphuluc.html`.
 5. **Kiểm thử Toàn diện**:
    - `tests/sgk-knowledge-smoke.js`, `tests/canvas-xaydungphuluc-smoke.js` và `tests/run-all-tests.js` (59/59 suites PASS 100%).
+
+---
+
+## Kế hoạch Triển khai: Bắt buộc Chuyển Đổi 100% Công Thức Toán Học thành Equation (Office Math OMML) trong Phụ Lục
+
+### 1. Mục tiêu
+- Yêu cầu User: *"các công thức được sinh ra trong phụ lục không được chuyển thành equation nha, tất cả các công thức đều được đặt trong equation hết, bắt buộc"*.
+- Mọi công thức toán học trong Phụ lục (Bài học, YCCĐ, NLS, AI, Hoạt động) bắt buộc xuất ra Word dưới dạng đối tượng Equation (OMML `<m:oMath>`), không được để dạng text thô.
+- Giao diện web hiển thị công thức toán qua KaTeX.
+
+### 2. Các bước triển khai
+1. Nạp `js/khbd-docx.js` và KaTeX vào `<head>` của cả 3 tệp HTML (`xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`).
+2. Xây dựng bộ nhận diện công thức toán `autoWrapMathInDelimiters`.
+3. Xây dựng `parseDocxMathRuns` tạo đối tượng `docx.Math` (`<m:oMath>`).
+4. Tích hợp `renderMathHtml` với KaTeX cho giao diện Preview.
+5. Cập nhật `exportDocx` (`para`, `outcomeCell`, `cell`, `integrationCell`).
+6. Cập nhật prompt AI trong `standards()` yêu cầu bọc công thức trong `$ ... $`.
+7. Viết smoke test `tests/xaydungphuluc-math-smoke.js` và kiểm thử toàn bộ 60/60 test suites.
