@@ -1,4 +1,49 @@
-# IMPLEMENT — Đồng bộ 1-1 soankhbd.html sang canvas_soankhbd.html & Phục hồi 1-Click
+# IMPLEMENT — Chuẩn hóa Toàn diện Phụ lục 2 & Đồng bộ NLS/AI Phụ lục 1 - Phụ lục 3
+
+## Chuẩn hóa Phụ lục 2 (Hoạt động Giáo dục/Trải nghiệm/STEM) theo Công văn 5512 & Đồng bộ 100% NLS/AI giữa Phụ lục 1 và Phụ lục 3
+
+### 1. Chuẩn hóa bản chất và nội dung Phụ lục 2
+- **Tệp áp dụng**: `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và bản sao mirror `backupcode viettailieu/canvas_xaydungphuluc.html`.
+- **Dữ liệu mẫu (`fallback('2', c)`)**:
+  + Thay thế toàn bộ dữ liệu mẫu cũ bằng 6 hoạt động thực hành trải nghiệm, chuyên đề STEM và ngày hội khoa học/AI đặc thù môn Toán THCS (Chủ đề 1: Dụng cụ học tập & Giác kế ngoài trời; Chủ đề 2: Vẽ hình động GeoGebra; Chủ đề 3: Phân tích thống kê trên phần mềm bảng tính; Chủ đề 4: Dự án STEM mô hình hình học; Chủ đề 5: Vòng quay xác suất thực nghiệm; Chủ đề 6: Ngày hội Sáng tạo Khoa học, Công nghệ số và AI - AI Day).
+  + Mỗi hoạt động có đầy đủ 10 trường dữ liệu: `stt, topic, requirements, duration, time, location, host, coordinator, conditions, integration`.
+- **Chỉ thị AI (`appendixPrompt('2', c)`)**:
+  + Định danh vai trò Chuyên gia Quản lý Giáo dục Trung học.
+  + Yêu cầu thiết kế 4–6 hoạt động trải nghiệm, chuyên đề STEM, CLB bộ môn rải đều 2 học kỳ.
+  + Nghiêm cấm nhặt các bài học lý thuyết thông thường trong PPCT đưa vào Phụ lục 2; chỉ lấy bài học mang tên "Hoạt động thực hành và trải nghiệm" hoặc "STEM".
+- **Chuẩn hóa đầu vào (`normalizeAppendix`)**:
+  + Hỗ trợ định dạng `{activities: [...]}` hoặc mảng thuần.
+  + Tự động map các tên trường biến thể (`topicName`, `tenChuDe`, `soTiet`, `thoiDiem`, `diaDiem`, `chuTri`, `phoiHop`, `dieuKien`, `digitalCompetency`).
+  + Tự động đánh lại cột `stt` liên tục từ 1..N.
+  + Làm sạch mã NLS và AI thông qua `cleanNlsColumnText` và `cleanAiColumnText`.
+
+### 2. Chuẩn hóa Thể thức Hành chính, Bảng 10 cột & Chữ ký Phụ lục 2
+- **Khối đầu trang hành chính (`appendixTwoHeading`)**:
+  + Quốc hiệu - Tiêu ngữ và Tên cơ quan chủ quản (Trường/Tổ).
+  + Tiêu đề chuẩn theo CV 5512: `KHUNG KẾ HOẠCH TỔ CHỨC CÁC HOẠT ĐỘNG GIÁO DỤC CỦA TỔ CHUYÊN MÔN`, căn cứ CV 5512/BGDĐT-GDTrH, Môn học, Khối lớp, Năm học, Sĩ số.
+- **Bảng 10 cột chuẩn có cột STT**:
+  + Giao diện Preview và xuất Word DOCX đều gồm 10 cột: `STT | Chủ đề (1) | Yêu cầu cần đạt (2) | Số tiết (3) | Thời điểm (4) | Địa điểm (5) | Chủ trì (6) | Phối hợp (7) | Điều kiện thực hiện (8) | Mã NLS & AI (CV 3456 & QĐ 2422)`.
+  + Phân bổ tỷ lệ độ rộng 10 cột tối ưu trên khổ ngang Landscape: `[4, 16, 20, 6, 7, 9, 8, 8, 10, 12]`.
+- **Khối chữ ký đúng thẩm quyền**:
+  + Bên trái: `TỔ TRƯỞNG (Ký và ghi rõ họ tên)` (thay vì "GIÁO VIÊN" sai thẩm quyền).
+  + Bên phải: `HIỆU TRƯỞNG (Ký, ghi rõ họ tên, đóng dấu)`.
+
+### 3. Khắc phục triệt để lệch pha NLS & AI giữa Phụ lục 1 và Phụ lục 3 (Single Source of Truth)
+- **Cơ chế Single Source of Truth**:
+  + Xác lập Phụ lục 1 (Kế hoạch Tổ) là nguồn chân lý duy nhất.
+  + Khi sinh Phụ lục 3 hoặc sinh trọn bộ (`generateSelected`), Phụ lục 3 tự động kế thừa 100% cột tích hợp NLS và AI từ `scheduleTable` của Phụ lục 1 thông qua `syncIntegrationFromAppendixOne()`.
+  + Loại bỏ tình trạng gọi 2 lệnh AI riêng biệt sinh ra 2 bộ mã khác nhau trên cùng một bài học.
+- **Đồng bộ thời gian thực khi chỉnh sửa (`editAppendixOneIntegration`)**:
+  + Khi người dùng sửa ô NLS hoặc AI trực tiếp trên bảng Phụ lục 1, hàm `editAppendixOneIntegration()` tự động cập nhật ngay lập tức sang bảng Phụ lục 3.
+  + Khi cấu hình hoặc chọn tiết AI thay đổi, cả hai bảng đều được đồng bộ tự động.
+
+### 4. Mở rộng Báo cáo Thẩm định Sư phạm (`calculateComplianceReport`)
+- Bổ sung kiểm tra Phụ lục 2: Kiểm tra số lượng hoạt động giáo dục (yêu cầu tối thiểu 4 hoạt động).
+- Bổ sung kiểm tra Đồng bộ NLS & AI (PL1–PL3): Xác minh tỷ lệ khớp mã giữa Kế hoạch Tổ và Kế hoạch Giáo viên đạt 100%.
+- Cơ chế linh hoạt: Khi đánh giá riêng Phụ lục 1 (trong các bài unit test hoặc khi chưa khởi tạo PL2/PL3), hàm tự động điều chỉnh phạm vi kiểm tra đảm bảo tính tương thích hồi quy hoàn hảo.
+
+---
+
 
 ## Đồng bộ 1-1 soankhbd.html sang canvas_soankhbd.html & 1-Click Soạn KHBD
 - `backupcode viettailieu/canvas_soankhbd.html` và `canvas_soankhbd.html`: Mang toàn bộ giao diện và chức năng 1-1 từ `soankhbd.html` (Quy trình Stepper 4 bước, 5 subtab Tab 0, hệ thống kéo thả SGK & PPCT độc lập, khối hình minh họa, các modal xem ảnh, chọn trang PDF, modal xác nhận chuẩn PPCT).
