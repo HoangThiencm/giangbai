@@ -243,14 +243,33 @@ function scoreOfficialStandard(kind, entry, ctx) {
       else if (/^5\.3/.test(code)) score += 16;
       else if (/^1\.1/.test(code)) score += 14;
     } else if (branch === "algebra") {
+      const isWordProblem = /giai bai toan bang cach lap|thuc te|thuc tien|toan thuc te|mo hinh hoa/i.test(hay);
+      const isConcept = /khai niem|nhan biet|mo dau|lam quen|dinh nghia/i.test(hay) && !/giai he|giai phuong trinh|phuong phap|cong dai so|the\b/i.test(hay);
+      const isSolvingEq = /giai he|giai phuong trinh|phuong phap the|cong dai so|cong thuc nghiem|viet|phuong trinh quy ve|bat phuong trinh/i.test(hay);
       const isCompute = /phep cong|phep tru|phep nhan|phep chia|cac phep tinh|tinh toan|bai toan|luy thua|thu tu thuc hien|dau ngoac|phan thuc|don thuc|da thuc|hang dang thuc|can bac|rut gon/i.test(hay);
-      const isEq = /phuong trinh|he phuong trinh|bat phuong trinh|ham so|do thi|he so goc|parabol/i.test(hay);
       const isOrder = /so sanh|thu tu/i.test(hay);
-      if (isCompute) {
+      const isGeneralEq = /phuong trinh|he phuong trinh|ham so|do thi|he so goc|parabol/i.test(hay);
+
+      if (isWordProblem) {
+        if (/^3\.1/.test(code)) score += 24;
+        else if (/^5\.3/.test(code)) score += 22;
+        else if (/^1\.2/.test(code)) score += 20;
+        else if (/^5\.2/.test(code)) score += 14;
+      } else if (isConcept) {
+        if (/^1\.1/.test(code)) score += 24;
+        else if (/^5\.3/.test(code)) score += 20;
+        else if (/^3\.1/.test(code)) score += 18;
+        else if (/^5\.2/.test(code)) score += 14;
+      } else if (isSolvingEq) {
+        if (/^5\.3/.test(code)) score += 22;
+        else if (/^5\.1/.test(code)) score += 20;
+        else if (/^5\.2/.test(code)) score += 18;
+        else if (/^3\.1/.test(code)) score += 14;
+      } else if (isCompute) {
         if (/^5\.3/.test(code)) score += 20;
         else if (/^5\.1/.test(code)) score += 18;
         else if (/^5\.2/.test(code)) score += 16;
-      } else if (isEq) {
+      } else if (isGeneralEq) {
         if (/^5\.3/.test(code)) score += 20;
         else if (/^3\.1/.test(code)) score += 18;
         else if (/^5\.2/.test(code)) score += 16;

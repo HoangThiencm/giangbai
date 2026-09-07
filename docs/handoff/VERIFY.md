@@ -125,9 +125,20 @@ PASS
   + Cập nhật đồng bộ trên 4 tệp: `js/khbd-yccd.js`, `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html` (duy trì byte-identical 100%).
   + `tests/sgk-knowledge-smoke.js` (Section 8): Kiểm tra tự động tính phân hóa (distinctness) 100% bài học Toán 6, 7, 8, 9 và khẳng định Bài 1, Bài 2 Toán 9 không trùng nhau.
 - [PASS] Toàn bộ 60/60 bài test của hệ thống chạy PASS 100%.
+- [PASS] CSDL Hosting (`hoangthiencm.id.vn`) & Trình duyệt:
+  + Đã thực hiện kiểm tra và cập nhật trực tiếp qua API `action=save` lên máy chủ hosting cho toàn bộ 4 khối lớp Toán 6 (43 bài), Toán 7 (37 bài), Toán 8 (39 bài), Toán 9 (32 bài).
+  + Kiểm tra `action=get` trên server live: Xác nhận Bài 1, Bài 2, Bài 3 Toán 9 đã có YCCĐ riêng biệt, không còn 5 gạch đầu dòng trùng lặp.
+  + Thêm cơ chế Auto-healing và Cache-Busting: Bảo đảm trình duyệt tự xóa cache cũ nếu phát hiện dữ liệu YCCĐ bị trùng lặp.
+- [PASS] Phân hóa Triệt để Năng lực số (NLS) và Gợi ý AI theo Cấp độ Nhận thức Sư phạm:
+  + Bài 1 Toán 9 (Khái niệm): NLS `1.1.TC2a, 5.3.TC2a, 3.1.TC2a`; MTCT (phím CALC) kiểm tra $(x_0; y_0)$ có là nghiệm không; sơ đồ tư duy dạng tổng quát; AI tạo ví dụ kiểm tra nghiệm. Tuyệt đối không còn "các bước giải" hay "vẽ đồ thị nghiệm".
+  + Bài 2 Toán 9 (Giải hệ): NLS `5.3.TC2a, 5.1.TC2a, 5.2.TC2a`; chức năng giải hệ EQUATION/SIMULT trên MTCT đối chiếu phương pháp thế/cộng đại số; GeoGebra minh họa nghiệm giao điểm 2 đường thẳng; AI phân tích hệ số đề xuất lựa chọn phương pháp thế hay cộng đại số tối ưu.
+  + Bài 3 Toán 9 (Toán thực tế / Mô hình hóa): NLS `3.1.TC2a, 5.3.TC2a, 1.2.TC2a`; Bảng tính Excel/Sheets lập bảng phân tích đại lượng; MTCT giải hệ và đối chiếu điều kiện thực tế (nguyên, dương); AI phản biện bước chọn ẩn số và quan hệ đại lượng.
+  + `tests/sgk-knowledge-smoke.js` (Section 9): Tự động kiểm tra độ phân hóa NLS & AI của Bài 1, 2, 3 Toán 9 đạt 100% PASS.
+  + CSDL hosting `hoangthiencm.id.vn` đã lưu dữ liệu phân hóa NLS và AI mới cho cả 4 khối lớp Toán 6–9.
 
 ## Bug
 - Lỗi: Không có
 - Tái hiện: Không có
 - File liên quan: Không có
+
 

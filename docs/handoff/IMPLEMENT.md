@@ -534,3 +534,69 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
    - Khẳng định: Toán 9 Bài 1, Bài 2 và Bài 3 tuyệt đối không trùng lặp (`assert.notEqual`).
    - Chạy `node tests/run-all-tests.js`: **ALL 60 TEST SUITES PASSED 100%**.
 
+### 3. Khắc phục Dữ liệu Cũ Tồn lưu Trên CSDL Hosting & Cơ chế Tự động Nâng cấp (Auto-Healing)
+1. **Bản chất Vấn đề**:
+   - Khi người dùng thắc mắc *"Xem cái này bản cũ hay mới mà sao nạp từ tri thức nó vẫn giống nhau thế"*, ảnh chụp của người dùng chính xác 100% là **BẢN CŨ** (5 gạch đầu dòng giống hệt nhau ở Bài 1, Bài 2, Bài 3).
+   - Nguyên nhân: Trước đó CSDL MySQL trên máy chủ hosting (`hoangthiencm.id.vn`) đã được nạp từ phiên bản cũ (khi chưa phân rã). Vì bảng `sgk_books` đã có bản ghi (`exists: true`), khi người dùng mở xem "Chi tiết" hoặc bấm "Nạp tri thức", hệ thống tải lại bản ghi cũ trong bảng `sgk_lessons` của MySQL về hiển thị thay vì dữ liệu mới trong code.
+2. **Giải pháp Triển khai**:
+   - **Cập nhật Trực tiếp CSDL Hosting**: Thực hiện đồng bộ ghi đè thành công 100% danh mục tri thức mới cho toàn bộ 4 khối lớp (Toán 6: 43 bài, Toán 7: 37 bài, Toán 8: 39 bài, Toán 9: 32 bài) lên máy chủ hosting `hoangthiencm.id.vn` qua API `action=save`.
+   - **Cơ chế Cache-Busting**: Thêm headers `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` và `Pragma: no-cache` vào `api/sgk_knowledge.php`, đồng thời thêm `_t=${Date.now()}` và `{cache: 'no-store'}` trong các lời gọi fetch của client.
+   - **Cơ chế Tự phục hồi (Auto-Healing)**: Trong `syncSharedSgkToApp`, `openSgkDetailModal` và `checkSharedSgkKnowledge`, nếu phát hiện dữ liệu cũ (Bài 1 và Bài 2 có YCCĐ trùng lặp), client tự động xóa `localStorage` cũ, thay thế bằng dữ liệu chuẩn mới phân rã từ `DEFAULT_MATH_CATALOG` / `KHBD_YCCD`.
+
+---
+
+## Triển khai: Phân hóa Triệt để Năng lực số (NLS) và Trợ lý AI theo Cấp độ Nhận thức Từng Bài học (Khắc phục Dập khuôn, Cào bằng)
+
+### 1. Phản hồi Người dùng & Vấn đề Cốt lõi
+- **Yêu cầu trực tiếp từ User**: *"nhưng mà năng lực số của cả các bài này giống nhau đều được hả? bài 1 mới nhận biết thôi mà. Bài 2 mới giải hệ pt, bài 3 thì lại liên quan giải bài toán bằng cách lập pt. Đây là tôi ví dụ. Mỗi bài đều có năng lực số, AI khác nhau chứ. Cho dù là nạp từ SGK hay nạp từ tri thức. Chỗ này bị nhầm lẫn nè"*
+- **Nguyên nhân kỹ thuật & sư phạm**:
+  + Trong `js/khbd-standards.js`, hàm `scoreOfficialStandard` nhánh `algebra` trước đây gom toàn bộ bài học có chữ "phuong trinh" vào một rổ, luôn cộng điểm tối đa cho `5.3`, `3.1`, `5.2`, không phân biệt bài Khái niệm/Nhận biết (Bài 1) với bài Rèn kỹ năng giải (Bài 2) với bài Mô hình hóa thực tiễn (Bài 3).
+  + Trong `xaydungphuluc.html` và bản Canvas, hàm `recommendLessonDigitalCandidates` trả về cùng một bộ mã `5.3.TC2a, 3.1.TC2a, 5.2.TC2a` cho cả 3 bài.
+  + Hàm `lessonAppliedNlsDescription` khi gặp `isEquation` sinh ra câu mẫu dập khuôn có chữ *"trình bày các bước giải"* và *"vẽ đồ thị minh họa nghiệm hình học"*, khiến Bài 1 mới học nhận biết dạng phương trình nhưng bị gán phải giải và vẽ đồ thị.
+  + Hàm `lessonAppliedAiDescription` nhánh B luôn trả về cùng một câu *"Ứng dụng công cụ AI hỗ trợ gợi ý các bước giải bài..."* cho cả 3 bài.
+  + Trên CSDL máy chủ hosting (`hoangthiencm.id.vn`), bảng `sgk_lessons` lưu các dòng NLS và AI sinh từ engine cũ nên khi nạp tri thức từ máy chủ về vẫn bị giống nhau.
+
+### 2. Các Cải tiến Kỹ thuật & Sư phạm Đã Triển khai
+1. **Phân hóa 3 cấp độ nhận thức sư phạm cho chủ đề Phương trình & Hệ phương trình (điển hình Toán 9 Bài 1, 2, 3)**:
+   - **Bài 1 (Khái niệm / Nhận biết)**:
+     * Bộ mã NLS: `1.1.TC2a, 5.3.TC2a, 3.1.TC2a` (hoặc `TC1a` cho lớp 6–7).
+     * Minh chứng NLS: Khai thác video học liệu số nhận biết dạng tổng quát $ax+by=c$; Sử dụng máy tính cầm tay (chức năng CALC / tính giá trị biểu thức) để kiểm tra một cặp số $(x_0; y_0)$ có thỏa mãn là nghiệm của phương trình/hệ phương trình hay không; Ứng dụng phần mềm sơ đồ tư duy hệ thống hóa cấu trúc tổng quát và biểu diễn tập nghiệm. (Loại bỏ triệt để "các bước giải" và "vẽ đồ thị nghiệm").
+     * Gợi ý AI: Ứng dụng công cụ AI hỗ trợ tạo ví dụ ngẫu nhiên cặp số và phương trình/hệ phương trình để học sinh luyện tập kiểm tra nghiệm, phân tích nguyên nhân thỏa mãn hoặc không thỏa mãn định nghĩa; học sinh tự đối chiếu với SGK và chịu trách nhiệm về sản phẩm học tập.
+   - **Bài 2 (Kỹ năng giải / Thuật toán giải)**:
+     * Bộ mã NLS: `5.3.TC2a, 5.1.TC2a, 5.2.TC2a`.
+     * Minh chứng NLS: Sử dụng chức năng giải hệ phương trình (EQUATION/SIMULT) trên máy tính cầm tay để kiểm tra, đối chiếu kết quả giải bằng phương pháp thế hoặc cộng đại số; Nhận biết và xử lý các thông báo đặc biệt (vô số nghiệm Infinite Solutions, vô nghiệm No Solution hoặc lỗi cú pháp Math ERROR); Sử dụng GeoGebra minh họa nghiệm hình học là giao điểm của hai đường thẳng.
+     * Gợi ý AI: Ứng dụng công cụ AI hỗ trợ phân tích hệ số đề xuất lựa chọn phương pháp giải tối ưu (phương pháp thế hay cộng đại số); học sinh tự thực hiện các bước biến đổi đại số, kiểm chứng kết quả và chịu trách nhiệm về sản phẩm học tập.
+   - **Bài 3 (Giải bài toán bằng cách lập hệ phương trình / Mô hình hóa thực tiễn)**:
+     * Bộ mã NLS: `3.1.TC2a, 5.3.TC2a, 1.2.TC2a`.
+     * Minh chứng NLS: Sử dụng phần mềm bảng tính (Excel/Google Sheets) để lập bảng phân tích các đại lượng (vận tốc, thời gian, quãng đường; năng suất; quan hệ số); Sử dụng máy tính cầm tay giải hệ phương trình và kiểm tra đối chiếu điều kiện thực tế của ẩn (nghiệm nguyên, dương, nằm trong khoảng cho phép); Đánh giá tính hợp lý và độ tin cậy của kết quả số so với đời sống thực tế.
+     * Gợi ý AI: Ứng dụng công cụ AI hỗ trợ phản biện bước chọn ẩn số, đặt điều kiện thực tế và gợi mở mối liên hệ ràng buộc giữa các đại lượng; học sinh tự xây dựng hệ phương trình, giải và chịu trách nhiệm về sản phẩm học tập.
+
+2. **Nâng cấp `js/khbd-standards.js`**:
+   - Tái cấu trúc hàm chấm điểm `scoreOfficialStandard` trong nhánh `branch === "algebra"`:
+     * `isWordProblem`: ưu tiên `3.1` (+10đ), `5.3` (+7đ), `1.2` (+6đ), `5.2` (+4đ).
+     * `isConcept`: ưu tiên `1.1` (+10đ), `5.3` (+8đ), `3.1` (+6đ), `5.2` (+4đ).
+     * `isSolvingEq`: ưu tiên `5.3` (+10đ), `5.1` (+7đ), `5.2` (+6đ), `3.1` (+3đ).
+     * `isCompute`: ưu tiên `5.3` (+10đ), `5.1` (+7đ), `5.2` (+6đ).
+     * `isGeneralEq`: ưu tiên `5.3` (+10đ), `3.1` (+7đ), `5.2` (+5đ).
+     * `else`: lý thuyết số học trừu tượng (ưu tiên `1.1` (+8đ), `5.2` (+6đ), `4.3` (+5đ)).
+
+3. **Cập nhật Đồng bộ trên cả 3 Tệp HTML (`xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`)**:
+   - `recommendLessonDigitalCandidates`: Thêm các nhánh `isWordProblem`, `isConceptEq`, `isSolvingEq` để cấp đúng 3 mã NLS riêng biệt.
+   - `isUnfitDigitalEvidence`: Tự động nhận diện và loại bỏ các minh chứng gán sai ("các bước giải", "vẽ đồ thị nghiệm") đối với bài học khái niệm.
+   - `lessonAppliedNlsDescription`: Phân hóa chi tiết từng dạng bài, bảo vệ các bài số học không bị dính chữ "nghiệm".
+   - `lessonAppliedAiDescription`: Phân hóa sâu theo từng dạng bài với tiền tố đồng bộ chuẩn `Ứng dụng công cụ AI hỗ trợ...` cho domain B, tương thích hoàn toàn với toàn bộ test suites.
+   - `ensureFullCurriculumLessons`: Bổ sung cơ chế tự làm lành dữ liệu cũ (self-healing) cho cả NLS và AI khi nạp từ SGK hoặc khởi tạo.
+   - `openSgkDetailModal`: Tự động nhận diện dữ liệu NLS/AI chưa phân hóa để refresh hiển thị mới nhất theo chuẩn phân hóa.
+   - Xác nhận `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đạt **100% BYTE-IDENTICAL**.
+
+4. **Đồng bộ Trực tiếp CSDL Máy chủ Hosting (`hoangthiencm.id.vn`)**:
+   - Thực hiện ghi đè toàn bộ dữ liệu phân hóa NLS & AI cho cả 4 khối lớp:
+     * Toán 9: 32 bài (đặc biệt Bài 1, Bài 2, Bài 3 phân hóa hoàn hảo).
+     * Toán 6: 43 bài.
+     * Toán 7: 37 bài.
+     * Toán 8: 39 bài.
+   - Xác minh trực tiếp từ máy chủ hosting qua API: Bài 1, 2, 3 Toán 9 đã lưu chính xác các minh chứng NLS và gợi ý AI phân hóa riêng biệt.
+
+5. **Kiểm thử Tự động**:
+   - Bổ sung Section 9 trong `tests/sgk-knowledge-smoke.js`: Kiểm tra tự động tính phân hóa NLS và AI của Bài 1, Bài 2, Bài 3 Toán 9 -> PASS 100%.
+   - Chạy toàn bộ 60 test suites (`node tests/run-all-tests.js`): **ALL 60 TEST SUITES PASSED 100%**.

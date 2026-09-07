@@ -450,6 +450,38 @@ assert.notEqual(toan9Lessons[0].yccd, toan9Lessons[1].yccd, 'Toán 9 Bài 1 và 
 assert.notEqual(toan9Lessons[1].yccd, toan9Lessons[2].yccd, 'Toán 9 Bài 2 và Bài 3 không được có cùng YCCĐ!');
 console.log('  -> 100% bài học Toán 6, 7, 8, 9 có YCCĐ riêng biệt, Toán 9 Bài 1 và Bài 2 hoàn toàn khác biệt: PASS');
 
+// ==================================================
+// 9. KIỂM TRA PHÂN HÓA NĂNG LỰC SỐ VÀ AI SƯ PHẠM TOÁN 9 (BÀI 1, 2, 3 HOÀN TOÀN KHÁC BIỆT)
+// ==================================================
+console.log('-> 9. Kiểm tra phân hóa sư phạm NLS và AI theo cấp độ nhận thức từng bài học Toán 9...');
+const b1 = toan9Lessons[0];
+const b2 = toan9Lessons[1];
+const b3 = toan9Lessons[2];
+
+// Mã NLS khác biệt
+assert.notEqual(b1.digital_candidates, b2.digital_candidates, 'Bài 1 (Khái niệm) và Bài 2 (Giải hệ) phải có mã NLS khác nhau!');
+assert.notEqual(b2.digital_candidates, b3.digital_candidates, 'Bài 2 (Giải hệ) và Bài 3 (Toán thực tế) phải có mã NLS khác nhau!');
+assert(b1.digital_candidates.includes('1.1.TC2a') || b1.digital_candidates.includes('3.1.TC2a'), 'Bài 1 phải có mã nhận biết/khai thác học liệu số hoặc sơ đồ tư duy');
+assert(b2.digital_candidates.includes('5.1.TC2a') || b2.digital_candidates.includes('5.2.TC2a'), 'Bài 2 phải có mã xử lý sự cố máy tính hoặc lựa chọn công cụ');
+assert(b3.digital_candidates.includes('1.2.TC2a') || b3.digital_candidates.includes('3.1.TC2a'), 'Bài 3 phải có mã đánh giá dữ liệu hoặc bảng tính phân tích đại lượng');
+
+// Minh chứng NLS khác biệt và chuẩn sư phạm
+assert.notEqual(b1.digital_evidence, b2.digital_evidence, 'Bài 1 và Bài 2 phải có minh chứng NLS khác nhau!');
+assert.notEqual(b2.digital_evidence, b3.digital_evidence, 'Bài 2 và Bài 3 phải có minh chứng NLS khác nhau!');
+assert(!b1.digital_evidence.includes('các bước giải') && !b1.digital_evidence.includes('SIMULT'), 'Bài 1 mới nhận biết, không được chứa "các bước giải" hay SIMULT giải hệ');
+assert(b1.digital_evidence.includes('kiểm tra') || b1.digital_evidence.includes('CALC'), 'Bài 1 phải dùng MTCT kiểm tra cặp số có là nghiệm');
+assert(b2.digital_evidence.includes('EQUATION') || b2.digital_evidence.includes('SIMULT') || b2.digital_evidence.includes('giải phương trình') || b2.digital_evidence.includes('giải hệ'), 'Bài 2 phải có chức năng giải hệ trên MTCT');
+assert(b3.digital_evidence.includes('bảng tính') || b3.digital_evidence.includes('thực tiễn') || b3.digital_evidence.includes('thực tế'), 'Bài 3 phải có bảng tính phân tích đại lượng hoặc kiểm tra điều kiện thực tiễn');
+
+// Gợi ý AI khác biệt và chuẩn sư phạm
+assert.notEqual(b1.ai_pedagogy_hint, b2.ai_pedagogy_hint, 'Bài 1 và Bài 2 phải có gợi ý AI khác biệt!');
+assert.notEqual(b2.ai_pedagogy_hint, b3.ai_pedagogy_hint, 'Bài 2 và Bài 3 phải có gợi ý AI khác biệt!');
+assert(b1.ai_pedagogy_hint.includes('nghiệm') && !b1.ai_pedagogy_hint.includes('các bước giải bài'), 'AI Bài 1 phải tập trung vào nhận biết nghiệm, không dập khuôn các bước giải');
+assert(b2.ai_pedagogy_hint.includes('phương pháp thế') || b2.ai_pedagogy_hint.includes('cộng đại số') || b2.ai_pedagogy_hint.includes('tối ưu'), 'AI Bài 2 phải định hướng chọn phương pháp giải tối ưu');
+assert(b3.ai_pedagogy_hint.includes('chọn ẩn') || b3.ai_pedagogy_hint.includes('đại lượng') || b3.ai_pedagogy_hint.includes('phản biện'), 'AI Bài 3 phải phản biện bước chọn ẩn và mô hình hóa đại lượng');
+
+console.log('  -> Toán 9 Bài 1 (Khái niệm), Bài 2 (Giải hệ), Bài 3 (Toán thực tế) phân hóa 100% NLS và AI: PASS');
+
 console.log('==================================================');
 console.log('TẤT CẢ TEST KHO TRI THỨC SGK ĐỀU ĐẠT (PASS)!');
 console.log('==================================================');

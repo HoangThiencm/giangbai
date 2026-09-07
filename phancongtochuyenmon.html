@@ -2933,7 +2933,7 @@
             return aliases[token] || token;
         }
         function baoGiangKey(className, subject) { return `${foldText(className)}|${baoGiangSubjectKey(subject)}`; }
-        async function extractBaoGiangPpctText(file) { const name = String(file?.name || '').toLowerCase(); if (!file) throw new Error('Hãy chọn tệp PPCT trước.'); if (name.endsWith('.txt') || name.endsWith('.csv')) return file.text(); if (name.endsWith('.docx')) { if (!window.mammoth) throw new Error('Chưa tải được công cụ đọc Word.'); return (await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value; } if (name.endsWith('.xlsx')) { if (!window.XLSX) throw new Error('Chưa tải được công cụ đọc Excel.'); const book = XLSX.read(await file.arrayBuffer(), { type: 'array' }); return book.SheetNames.map(sheet => `[Trang tính: ${sheet}]\n${XLSX.utils.sheet_to_json(book.Sheets[sheet], { header: 1, defval: '', raw: false }).map(row => row.join('\t')).join('\n')}`).join('\n\n'); } if (name.endsWith('.pdf')) { if (!window.pdfjsLib) throw new Error('Chưa tải được công cụ đọc PDF.'); pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise; let text = ''; for (let page = 1; page <= pdf.numPages; page++) text += `${(await (await pdf.getPage(page)).getTextContent()).items.map(item => item.str).join(' ')}\n`; return text; } throw new Error('Chỉ hỗ trợ PDF, DOCX, XLSX, CSV và TXT.'); }
+        async function extractBaoGiangPpctText(file) { const name = String(file?.name || '').toLowerCase(); if (!file) throw new Error('Hãy chọn tệp PPCT trước.'); if (name.endsWith('.txt') || name.endsWith('.csv')) return file.text(); if (name.endsWith('.docx')) { if (!window.mammoth) throw new Error('Chưa tải được công cụ đọc Word.'); return (await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value; } if (name.endsWith('.xlsx')) { if (!window.XLSX) throw new Error('Chưa tải được công cụ đọc Excel.'); const book = XLSX.read(await file.arrayBuffer(), { type: 'array' }); return book.SheetNames.map(sheet => `[Trang tính: ${sheet}]\n${XLSX.utils.sheet_to_json(book.Sheets[sheet], { header: 1, defval: '', raw: false }).map(row => row.join('\t')).join('\n')}`).join('\n\n'); } if (name.endsWith('.pdf')) { if (!window.pdfjsLib) throw new Error('Chưa tải được công cụ đọc PDF.'); pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise; let text = ''; for (let page = 1; page <= pdf.numPages; page++) text += `[Trang ${page}]\n${baoGiangPdfPageText((await (await pdf.getPage(page)).getTextContent()).items)}\n`; return text; } throw new Error('Chỉ hỗ trợ PDF, DOCX, XLSX, CSV và TXT.'); }
         async function scanBaoGiangPpct() { const file = document.getElementById('bg-ppct-file')?.files?.[0], button = document.getElementById('bg-scan-ppct'), status = document.getElementById('bg-ppct-status'); try { if (button) { button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang nhận diện…'; } if (status) status.textContent = 'Đang đọc tệp PPCT…'; const text = await extractBaoGiangPpctText(file); if (!text.trim()) throw new Error('Không trích xuất được nội dung từ tệp.'); if (status) status.textContent = 'AI đang chuẩn hóa PPCT…'; const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"8A1","subject":"Toán","lesson":"Bài 1. Đơn thức","periods":2}]}. Mỗi phần tử là một bài/chủ đề theo đúng thứ tự PPCT. Giữ nguyên tên lớp, môn, tên bài và số tiết nếu có trong tài liệu; không tự bịa dữ liệu. Nếu PPCT dùng chung cho nhiều lớp mà không ghi lớp, đặt class_name là "*". Không đưa dòng tiêu đề học kỳ/chương nếu không có số tiết.\n\nPPCT:\n${text.slice(0, 70000)}`; const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 16384 } }; const response = await fetch('api/khbd_gemini.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ model: 'gemini-2.5-flash', payload, timeout: 90 }) }); const data = await response.json().catch(() => ({})); if (!response.ok || data.ok === false) throw new Error(data.error || 'Không thể gọi AI nhận diện PPCT.'); const parsed = parseAiJson(extractGeminiText(data)), rows = Array.isArray(parsed.curriculum) ? parsed.curriculum : []; const lines = rows.map(item => `${String(item.class_name || '*').trim()} | ${String(item.subject || '').trim()} | ${String(item.lesson || '').trim()} | ${Math.max(1, Number.parseInt(item.periods, 10) || 1)}`).filter(line => !/\|\s*\|/.test(line)); if (!lines.length) throw new Error('AI không nhận diện được dòng PPCT hợp lệ.'); state.bao_giang.curriculum_text = lines.join('\n'); const output = document.getElementById('bg-curriculum'); if (output) output.value = state.bao_giang.curriculum_text; saveToLocal(); renderBaoGiangView(); if (status) status.textContent = `Đã nhận diện ${lines.length} bài/chủ đề. Hãy rà soát rồi lưu.`; showToast(`Đã đưa ${lines.length} dòng PPCT vào lịch báo giảng.`, 'success'); } catch (error) { if (status) status.textContent = error.message || 'Nhận diện PPCT thất bại.'; showToast(error.message || 'Nhận diện PPCT thất bại.', 'error'); } finally { if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> AI nhận diện PPCT'; } } }
         function parseBaoGiangCurriculum(text) { const plans = new Map(); String(text || '').split(/\r?\n/).forEach((line, lineIndex) => { const parts = line.split('|').map(x => x.trim()); if (parts.length < 4 || !parts[0] || !parts[1] || !parts[2]) return; const count = Math.max(1, Number.parseInt(parts[3], 10) || 1), key = baoGiangKey(parts[0], parts[1]); if (!plans.has(key)) plans.set(key, []); for (let i = 1; i <= count; i++) plans.get(key).push({ ppct: plans.get(key).length + 1, lesson: parts[2], segment: `${i}/${count}`, sourceLine: lineIndex + 1 }); }); return plans; }
         function baoGiangPlanFor(plans, className, subject) { return plans.get(baoGiangKey(className, subject)) || plans.get(baoGiangKey('*', subject)) || []; }
@@ -3415,6 +3415,58 @@
             }
         }
 
+        function baoGiangPdfPageText(items) {
+            let text = '', previous = null;
+            for (const item of items) {
+                if (typeof item.str !== 'string') continue;
+                if (previous && !text.endsWith('\n')) {
+                    const yChanged = Math.abs((item.transform?.[5] || 0) - (previous.transform?.[5] || 0)) > 3;
+                    const gap = (item.transform?.[4] || 0) - ((previous.transform?.[4] || 0) + (previous.width || 0));
+                    text += yChanged ? '\n' : gap > 8 ? '\t' : ' ';
+                }
+                text += item.str;
+                if (item.hasEOL) text += '\n';
+                previous = item;
+            }
+            return text;
+        }
+
+        async function requestBaoGiangRecognition(payload) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 105000);
+            try {
+                const response = await fetch('api/khbd_gemini.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', signal: controller.signal, body: JSON.stringify({ model: 'gemini-2.5-flash', payload, timeout: 90 }) });
+                const raw = await response.text();
+                if (response.status === 401 || response.redirected) throw new Error('Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại rồi nạp PPCT.');
+                let data;
+                try { data = JSON.parse(raw); } catch (_) { throw new Error(`Hosting trả phản hồi không hợp lệ (HTTP ${response.status}). Hãy kiểm tra máy chủ rồi thử lại.`); }
+                if (!response.ok || data.ok === false) throw new Error(data.error || `Không thể gọi AI nhận diện PPCT (HTTP ${response.status}).`);
+                const result = data.body || data;
+                if (result.promptFeedback?.blockReason) throw new Error('Gemini đã chặn xử lý tài liệu này. Hãy dùng nút nạp JSON PPCT.');
+                const candidate = result.candidates?.[0];
+                if (!candidate) throw new Error('Gemini không trả nội dung nhận diện. Hãy thử lại hoặc dùng nạp JSON PPCT.');
+                if (candidate.finishReason === 'MAX_TOKENS') throw new Error('Kết quả PPCT bị cắt vì vượt giới hạn trả lời. Hãy chia tài liệu theo học kỳ hoặc dùng nạp JSON PPCT.');
+                if (candidate.finishReason && candidate.finishReason !== 'STOP') throw new Error('Gemini chưa hoàn tất nhận diện tài liệu. Hãy thử lại hoặc dùng nạp JSON PPCT.');
+                const text = (candidate.content?.parts || []).filter(part => !part.thought).map(part => part.text || '').join('');
+                if (!text.trim()) throw new Error('Gemini trả nội dung rỗng. Hãy thử lại hoặc dùng nạp JSON PPCT.');
+                return text;
+            } catch (error) {
+                if (error.name === 'AbortError') throw new Error('Đã hết thời gian chờ nhận diện PPCT. Máy chủ chưa trả kết quả; hãy thử lại hoặc dùng nạp JSON PPCT.');
+                throw error;
+            } finally { clearTimeout(timer); }
+        }
+
+        function baoGiangRecognizedLines(parsed, grade, subject) {
+            if (!Array.isArray(parsed?.curriculum) || !parsed.curriculum.length) throw new Error('AI chưa trả danh sách PPCT hợp lệ.');
+            return parsed.curriculum.map((item, index) => {
+                const validText = value => typeof value === 'string' && !/[|\r\n]/.test(value);
+                if (!item || !validText(item.lesson) || !item.lesson.trim() || !Number.isInteger(item.periods) || item.periods < 1 || !Object.hasOwn(item, 'week')) throw new Error(`Dòng PPCT ${index + 1} thiếu hoặc sai bài, tuần hay số tiết. Chưa lưu kết quả.`);
+                if (item.week === null) return `${grade} | ${subject} | ${item.lesson.trim()} | ${item.periods}`;
+                if (!Number.isInteger(item.week) || item.week < 1 || !validText(item.period_no) || !item.period_no.trim() || !validText(item.strand)) throw new Error(`Dòng PPCT ${index + 1} thiếu hoặc sai tuần, tiết PPCT hay mạch. Chưa lưu kết quả.`);
+                return `${grade} | ${subject} | ${item.week} | ${item.period_no.trim()} | ${item.strand.trim()} | ${item.lesson.trim()} | ${item.periods}`;
+            });
+        }
+
         // Nạp thêm PPCT không được làm mất môn khác: chỉ thay nhóm trùng Khối – Môn.
         async function scanBaoGiangPpct() {
             const file = document.getElementById('bg-ppct-file')?.files?.[0];
@@ -3430,35 +3482,22 @@
                 if (status) status.textContent = 'Đang đọc tệp PPCT…';
                 const text = await extractBaoGiangPpctText(file);
                 if (!text.trim()) throw new Error('Không trích xuất được nội dung từ tệp.');
+                if (text.length > 70000) throw new Error('Tệp PPCT vượt 70.000 ký tự. Hãy chia theo học kỳ hoặc dùng nạp JSON PPCT; chưa gửi nội dung bị cắt cho AI.');
                 if (status) status.textContent = 'AI đang chuẩn hóa PPCT…';
                 const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"${grade}","subject":"${subjectName}","week":2,"period_no":"3-4","strand":"Đại số","lesson":"Bài 1. Đơn thức","periods":2}]}. Đây là PPCT môn ${subjectName} dùng chung cho TOÀN BỘ khối ${grade}; class_name BẮT BUỘC là "${grade}" và subject BẮT BUỘC là "${subjectName}" ở mọi phần tử, không ghi từng lớp con. BẮT BUỘC trích chính xác tuần (week), tiết PPCT (period_no) và mạch/phân môn (strand) nếu tài liệu có. Nếu PPCT chia Đại số và Hình học riêng nhưng cùng Tuần 2, phải trả các phần tử riêng cùng week=2; không xếp hết Đại số rồi mới đến Hình học. Xuất đúng thứ tự tuần tăng dần, trong mỗi tuần giữ đúng thứ tự từng mạch theo tài liệu. Một bài nhiều tiết chỉ ghi tổng tiết của chính bài đó. Các dòng trùng tên ở phần khác nhau phải giữ riêng. Không tự bịa tuần, tiết, mạch hoặc số tiết; nếu tài liệu không thể hiện tuần thì dùng week:null và period_no:"". Không đưa tiêu đề học kỳ/chương nếu không có số tiết. QUY TẮC JSON BẮT BUỘC: mọi phần tử trong mảng curriculum phải ngăn cách bằng dấu phẩy, không có dấu phẩy thừa ở phần tử cuối, không dùng markdown hay giải thích; tự kiểm tra JSON trước khi trả lời.\n\nPPCT:\n${text.slice(0, 70000)}`;
-                const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 32768 } };
-                const requestPpctRecognition = async (requestPayload) => {
-                    const response = await fetch('api/khbd_gemini.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ model: 'gemini-2.5-flash', payload: requestPayload, timeout: 90 }) });
-                    const data = await response.json().catch(() => ({}));
-                    if (!response.ok || data.ok === false) throw new Error(data.error || data.body?.error?.message || `Không thể gọi AI nhận diện PPCT (mã ${data.status || response.status}).`);
-                    return data;
-                };
-                const firstResult = await requestPpctRecognition(payload);
+                const payload = { contents: [{ parts: [{ text: prompt + '\nNếu một bài trải qua nhiều tuần, tách thành từng dòng theo tuần, giữ nguyên tên bài và chỉ đếm số tiết thực tế của tuần đó. Ví dụ Bài 2 tổng 3 tiết: tiết CT 3 thuộc tuần 1, CT 4,5 thuộc tuần 2 => hai dòng: week:1, period_no:"3", periods:1 và week:2, period_no:"4-5", periods:2. Không gán cả 3 tiết vào một tuần. Các cột trống do ô gộp kế thừa đúng tiêu đề/tuần trong bảng; không đoán khi thiếu bằng chứng.' }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 32768, thinkingConfig: { thinkingBudget: 0 } } };
+                const firstResult = await requestBaoGiangRecognition(payload);
                 let parsed;
                 try {
-                    parsed = parseBaoGiangPpctAiJson(extractGeminiText(firstResult));
+                    parsed = parseBaoGiangPpctAiJson(firstResult);
                 } catch (_) {
                     if (status) status.textContent = 'Kết quả đầu chưa trọn vẹn, AI đang kiểm tra và nhận diện lại…';
                     setBaoGiangPpctNotice('Kết quả đầu chưa trọn vẹn; AI đang kiểm tra và nhận diện lại.');
                     const retryPayload = JSON.parse(JSON.stringify(payload));
                     retryPayload.contents[0].parts[0].text += '\n\nLẦN KIỂM TRA LẠI: Chỉ trả một JSON hoàn chỉnh. Bắt buộc đóng đủ ] và }; giữa hai đối tượng phải có dấu phẩy. Không cắt dở danh sách.';
-                    parsed = parseBaoGiangPpctAiJson(extractGeminiText(await requestPpctRecognition(retryPayload)));
+                    parsed = parseBaoGiangPpctAiJson(await requestBaoGiangRecognition(retryPayload));
                 }
-                const rows = Array.isArray(parsed.curriculum) ? parsed.curriculum : [];
-                const lines = rows.filter(item => String(item?.lesson || '').trim()).map(item => {
-                    const week = Number.parseInt(item?.week, 10);
-                    const lesson = String(item?.lesson || '').trim();
-                    const periods = Math.max(1, Number.parseInt(item?.periods, 10) || 1);
-                    return Number.isInteger(week) && week > 0
-                        ? `${grade} | ${subjectName} | ${week} | ${String(item?.period_no || '').trim()} | ${String(item?.strand || '').trim()} | ${lesson} | ${periods}`
-                        : `${grade} | ${subjectName} | ${lesson} | ${periods}`;
-                });
+                const lines = baoGiangRecognizedLines(parsed, grade, subjectName);
                 if (!lines.length) throw new Error('AI không nhận diện được dòng PPCT hợp lệ.');
                 state.bao_giang.curriculum_text = mergeBaoGiangCurriculumLines(lines);
                 const output = document.getElementById('bg-curriculum');
@@ -5746,26 +5785,13 @@
             return JSON.parse(raw.slice(start, end + 1));
         }
 
-        // Gemini đôi khi bỏ dấu phẩy giữa hai đối tượng liên tiếp trong mảng PPCT.
-        // Chỉ sửa lỗi phân cách này trong kết quả tạm thời; PPCT chỉ được lưu sau khi JSON hợp lệ.
+        // Không sửa chuỗi tên bài hoặc đoán phần JSON bị thiếu.
         function parseBaoGiangPpctAiJson(text) {
             try {
-                return parseAiJson(text);
-            } catch (originalError) {
                 const raw = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-                const start = raw.indexOf('{');
-                const end = raw.lastIndexOf('}');
-                if (start < 0 || end <= start) throw originalError;
-                const repaired = raw.slice(start, end + 1)
-                    .replace(/[\u201C\u201D]/g, '"')
-                    .replace(/[\u2018\u2019]/g, "'")
-                    .replace(/}\s*(?={)/g, '},')
-                    .replace(/,\s*([}\]])/g, '$1');
-                try {
-                    return JSON.parse(repaired);
-                } catch (_) {
-                    throw new Error('Chưa đọc được kết quả nhận diện PPCT. PPCT hiện có vẫn được giữ nguyên; thầy hãy bấm “AI nhận diện PPCT” lại một lần.');
-                }
+                return JSON.parse(raw);
+            } catch (_) {
+                throw new Error('AI trả danh sách chưa đúng định dạng JSON. Chưa lưu PPCT; hãy thử lại hoặc dùng nạp JSON PPCT.');
             }
         }
 
