@@ -6,16 +6,15 @@ PASS
 ## Đối chiếu scope
 - Đạt: **Chuẩn hóa Phụ lục 2 theo CV 5512**: Đổi bản chất từ danh sách bài học lý thuyết sang Kế hoạch tổ chức các hoạt động giáo dục (Hoạt động thực hành trải nghiệm, chuyên đề STEM, CLB môn học, AI Day). Bảng 10 cột có cột `STT`, khối tiêu đề hành chính Quốc hiệu/Tên trường/Tổ, khối chữ ký bên trái `TỔ TRƯỞNG` và bên phải `HIỆU TRƯỞNG` chuẩn xác 100%.
 - Đạt: **Đồng bộ 100% NLS & AI giữa Phụ lục 1 và Phụ lục 3**: Phụ lục 1 là Single Source of Truth; Phụ lục 3 tự động kế thừa 100% mã và mô tả tích hợp từ Phụ lục 1; sửa ô tích hợp ở Phụ lục 1 tự động cập nhật sang Phụ lục 3 ngay lập tức.
+- Đạt: **Khắc phục triệt để gán ghép NLS gượng ép môn Toán**: Loại bỏ hoàn toàn mã Miền 6 (AI) khỏi danh mục đề xuất NLS môn Toán; ưu tiên tuyệt đối các công cụ số toán học cốt lõi (Máy tính cầm tay, GeoGebra/Desmos, Bảng tính điện tử) theo chuẩn CTGDPT 2018.
+- Đạt: **Khắc phục dứt điểm lỗi cụt mô tả cột AI (QĐ 2422)**: 100% các ô AI luôn có đầy đủ mã chuẩn, câu mô tả hành động sư phạm gắn với bài học và trách nhiệm kiểm chứng theo 4 nhóm A, B, C, D của QĐ 2422, kèm phạm vi tiết `(Áp dụng: tiết X, Y)`.
 - Đạt: **Đồng bộ song song 1-1** trên cả `xaydungphuluc.html` và `canvas_xaydungphuluc.html` (kèm mirror `backupcode viettailieu/canvas_xaydungphuluc.html`).
-- Đạt: Đồng bộ giao diện 1-1 từ `soankhbd.html` sang `canvas_soankhbd.html` (kèm bản sao tại `backupcode viettailieu/canvas_soankhbd.html`), bao gồm đầy đủ Stepper 4 bước, 5 subtab Tab 0, hệ thống nạp liệu SGK & PPCT độc lập, khối hình minh họa và các modal popup.
-- Đạt: Tương thích hoàn toàn với môi trường Gemini Canvas sandbox (bỏ auth check, tải tài nguyên qua HTTPS host, kết nối gateway `api/canvas_gemini.php` model `gemini-3-flash-preview`, thay `confirm()` bằng `canvasConfirm()` DOM modal).
-- Đạt: Tái lập thành công tính năng **⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)** với chuỗi 7 bước tự động.
 - Đạt: Toàn bộ 58 test suite trong toàn dự án và kiểm tra cú pháp JS inline đều thành công 100%.
 
 ## Test đã chạy
 1. `node tests/run-all-tests.js`: **ALL 58 TEST SUITES PASSED 100%!**
-2. `node tests/xaydungphuluc-smoke.js`: PASS 100%.
-3. `node tests/canvas-xaydungphuluc-smoke.js`: PASS 100%.
+2. `node tests/xaydungphuluc-smoke.js`: PASS 100% (bao gồm ca kiểm thử làm giàu mã AI cụt `9.B2.1`, khử bỏ chatbot lịch sử NLS, ưu tiên 5.3.TC2a cho Đại số 9).
+3. `node tests/canvas-xaydungphuluc-smoke.js`: PASS 100% (bao gồm kiểm tra Canvas với `cleanLessonDescription`, `lessonAppliedNlsDescription`, `lessonAppliedAiDescription`).
 4. `node tests/xaydungphuluc-integration-smoke.js`: PASS 100%.
 5. `node tests/canvas-soankhbd-smoke.js`: PASS 100%.
 6. `node tests/soankhbd-ppct-standards-smoke.js`: PASS 100%.
@@ -26,15 +25,11 @@ PASS
 11. Kiểm tra cú pháp toàn bộ JavaScript inline Canvas bằng Node `vm.Script`: PASS.
 
 ## Pass / Fail từng tiêu chí
+- [PASS] Loại bỏ hoàn toàn mã Miền 6 (AI) khỏi Năng lực số môn Toán: `recommendOfficialStandards('digital', ...)` cho Toán 9 phương trình 100% không đề xuất mã 6.x, ưu tiên `5.3.TC2a` ("Sử dụng sáng tạo công nghệ số - máy tính cầm tay, GeoGebra") và `5.2.TC2a`, `1.1.TC2a`.
+- [PASS] Khắc phục triệt để lỗi cụt mô tả cột AI: `cleanAiColumnText('9.B2.1 - (Áp dụng: tiết 1, 2).', ...)` tự động bổ sung mô tả hành động sư phạm và trách nhiệm kiểm chứng chuẩn QĐ 2422, giữ nguyên vẹn phạm vi tiết.
+- [PASS] Lọc bỏ triệt để các câu NLS đối phó "dùng chatbot tìm hiểu lịch sử ra đời": `cleanNlsColumnText` tự động chuyển hóa thành mô tả thực hành công cụ số trực quan.
 - [PASS] Chuẩn hóa toàn diện Phụ lục 2: dữ liệu mẫu 6 hoạt động trải nghiệm/STEM/AI Day, prompt chỉ thị đúng bản chất, bảng 10 cột có cột STT, khối tiêu đề hành chính Quốc hiệu/Tên trường/Tổ, chữ ký Tổ trưởng (bên trái) và Hiệu trưởng (bên phải).
 - [PASS] Đồng bộ 100% NLS & AI giữa Phụ lục 1 và Phụ lục 3: Kế thừa chính xác từ Phụ lục 1 (Single Source of Truth), cập nhật realtime 2 chiều khi chỉnh sửa ô NLS/AI.
-- [PASS] Nhận diện và bóc tách đầy đủ cả 4 khung năng lực AI (Khung A, B, C, D và MR) khi dán PPCT trong `soankhbd.html` và `canvas_soankhbd.html`.
-- [PASS] Toàn bộ DOM IDs 1-1 từ `soankhbd.html` được đảm bảo trên `canvas_soankhbd.html`.
-- [PASS] Đã sửa triệt để lỗi "Đơ luôn khi Bắt đầu nạp trang PDF": nút `#btnConfirmPdfPages` được kích hoạt và hoạt động bình thường, không còn lỗi TypeError chặn đứng `initApp()`.
-- [PASS] Đã nâng cấp toàn diện Mô tả Năng lực số và AI trong Phụ lục 1: câu mô tả nêu rõ hành động học tập thực tế của học sinh gắn liền với nội dung bài học cụ thể, xóa bỏ tình trạng chép lại khung lý thuyết chung chung.
-- [PASS] Nút `#btn1ClickGenerate` và hàm `handle1ClickGenerate()` hoạt động chính xác.
-- [PASS] `canvasConfirm()` DOM modal hoạt động không gây lỗi iframe sandbox.
-- [PASS] Không chứa mã độc quyền đăng nhập/bảo mật cục bộ.
 - [PASS] Toàn bộ 58/58 bài test của hệ thống chạy PASS 100%.
 
 ## Bug

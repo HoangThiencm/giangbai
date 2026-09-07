@@ -1292,8 +1292,29 @@
             </div>
             <div class="p-5 space-y-4">
                 <div class="bg-sky-50 border border-sky-200 rounded p-3 text-sm text-sky-800">
-                    Hồ sơ này đồng bộ theo <b>userEmail + github_repo</b> và dùng chung cho mọi máy khi đăng nhập cùng tài khoản.
+                    Hồ sơ được lưu cục bộ ngay lập tức; bạn có thể chọn đồng bộ Hosting hoặc GitHub khi cần.
                     <div id="accountSettingsStatus" class="text-xs text-sky-700 mt-1 italic">Chưa tải hồ sơ.</div>
+                </div>
+
+                <div class="rounded border border-sky-200 bg-slate-50 p-3 space-y-3">
+                    <h4 class="font-bold text-sky-900">Thông tin tài khoản &amp; nơi lưu trữ</h4>
+                    <label class="block text-sm font-semibold text-gray-700">Email / tên tài khoản
+                        <input id="accUserEmail" type="text" class="w-full p-2 border border-sky-300 rounded font-bold text-sky-900 mt-1" placeholder="Nhập email hoặc tên tài khoản (VD: thcs.tranphu@gmail.com)">
+                    </label>
+                    <label class="block text-sm font-semibold text-gray-700">Phương thức đồng bộ
+                        <select id="accStorageMode" class="w-full p-2 border border-sky-300 rounded mt-1" onchange="toggleAccountStorageFields()">
+                            <option value="hosting">Hosting &amp; cục bộ (Khuyên dùng — không cần GitHub token)</option>
+                            <option value="github">Đồng bộ GitHub Cloud</option>
+                        </select>
+                    </label>
+                    <div id="accGithubFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label class="block text-sm font-semibold text-gray-700">GitHub repo
+                            <input id="accGithubRepo" type="text" class="w-full p-2 border border-slate-300 rounded mt-1" placeholder="owner/repository">
+                        </label>
+                        <label class="block text-sm font-semibold text-gray-700">GitHub PAT
+                            <input id="accGithubPat" type="password" class="w-full p-2 border border-slate-300 rounded mt-1" placeholder="github_pat_…">
+                        </label>
+                    </div>
                 </div>
 
                 <div class="mb-3 flex flex-wrap items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2">
@@ -1429,7 +1450,7 @@
             </div>
 
             <div class="px-5 py-4 border-t border-gray-200 flex justify-end gap-2 sticky bottom-0 bg-white">
-                <button type="button" onclick="loadAccountSettingsFromGitHub(true, true)" class="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium">Tải lại từ GitHub</button>
+                <button type="button" onclick="loadAccountSettingsFromGitHub(true, true)" class="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium">Tải lại hồ sơ</button>
                 <button type="button" onclick="saveAccountSettingsToGitHub()" class="px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-700 text-sm font-bold">Lưu hồ sơ tài khoản</button>
             </div>
         </div>
@@ -2778,8 +2799,15 @@ ${profile.guide}
             footerDiv.innerHTML = buildDocumentFooterHtml(meta, getSignatureInsertZoneHtml(footerDiv));
         }
 
-        function getCurrentUserEmail() {
-            return String(localStorage.getItem("userEmail") || "").trim();
+        function getCurrentUserEmail(allowPrompt = true) {
+            const input = document.getElementById("accUserEmail");
+            let email = String(input?.value || localStorage.getItem("userEmail") || localStorage.getItem("userName") || "").trim().toLowerCase();
+            if (!email && allowPrompt && typeof prompt === "function") email = String(prompt("Vui lòng nhập email hoặc tên tài khoản để lưu hồ sơ:") || "").trim().toLowerCase();
+            if (email) {
+                localStorage.setItem("userEmail", email);
+                if (input) input.value = email;
+            }
+            return email;
         }
 
         function normalizeGitHubRepo(raw = "") {
@@ -2791,9 +2819,21 @@ ${profile.guide}
         }
 
         function getGitHubCloudConfig() {
-            const pat = String(localStorage.getItem("github_pat") || "").trim();
-            const repo = normalizeGitHubRepo(localStorage.getItem("github_repo") || "");
+            const pat = String(document.getElementById("accGithubPat")?.value || localStorage.getItem("github_pat") || "").trim();
+            const repo = normalizeGitHubRepo(document.getElementById("accGithubRepo")?.value || localStorage.getItem("github_repo") || "");
+            if (pat) localStorage.setItem("github_pat", pat);
+            if (repo) localStorage.setItem("github_repo", repo);
             return { pat, repo };
+        }
+
+        function getAccountStorageMode() {
+            return String(document.getElementById("accStorageMode")?.value || localStorage.getItem("tthc_account_storage_mode") || "hosting").trim() === "github" ? "github" : "hosting";
+        }
+
+        function toggleAccountStorageFields() {
+            const mode = getAccountStorageMode();
+            localStorage.setItem("tthc_account_storage_mode", mode);
+            document.getElementById("accGithubFields")?.classList.toggle("hidden", mode !== "github");
         }
 
         function getAccountSettingsStatusEl() {
@@ -2820,6 +2860,15 @@ ${profile.guide}
             if (!modal) return;
             modal.classList.remove("hidden");
             modal.classList.add("flex");
+            const emailInput = document.getElementById("accUserEmail");
+            if (emailInput) emailInput.value = String(localStorage.getItem("userEmail") || localStorage.getItem("userName") || "").trim();
+            const modeInput = document.getElementById("accStorageMode");
+            if (modeInput) modeInput.value = localStorage.getItem("tthc_account_storage_mode") === "github" ? "github" : "hosting";
+            const repoInput = document.getElementById("accGithubRepo");
+            const patInput = document.getElementById("accGithubPat");
+            if (repoInput) repoInput.value = localStorage.getItem("github_repo") || "";
+            if (patInput) patInput.value = localStorage.getItem("github_pat") || "";
+            toggleAccountStorageFields();
             fillAccountSettingsForm(accountProfile);
             renderSignatureAssetPreviews();
         }
@@ -3612,6 +3661,70 @@ ${profile.guide}
             return safeParseJSON(localStorage.getItem(getAccountProfileCacheKey(email)) || "", null);
         }
 
+        function getAccountHostingDraftIdKey(email = "") {
+            return `tthc_account_profile_hosting_draft:${String(email || "").trim().toLowerCase()}`;
+        }
+
+        function getAccountHostingEndpoint() {
+            return new URL("../api/user_phuluc_draft.php", window.location.href).toString();
+        }
+
+        async function saveAccountProfileToHosting(email, payload) {
+            const id = Number(localStorage.getItem(getAccountHostingDraftIdKey(email)) || 0);
+            const draft = {
+                version: 1,
+                config: { monHoc: "Hồ sơ tổ chuyên môn", lop: "", namHoc: "" },
+                account_profile_payload: payload
+            };
+            const response = await fetch(getAccountHostingEndpoint(), {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-User-Account": email },
+                body: JSON.stringify({
+                    user_account: email,
+                    id: id || undefined,
+                    save_mode: id ? "update" : "new",
+                    title: "Hồ sơ tổ chuyên môn",
+                    appendix_type: "account-profile",
+                    draft
+                })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.ok) throw new Error(data.error || "Không thể lưu hồ sơ lên Hosting.");
+            const savedId = Number(data.draft_info?.id || 0);
+            if (savedId) localStorage.setItem(getAccountHostingDraftIdKey(email), String(savedId));
+            return data;
+        }
+
+        async function loadAccountProfileFromHosting(email) {
+            let id = Number(localStorage.getItem(getAccountHostingDraftIdKey(email)) || 0);
+            const headers = { "X-User-Account": email };
+            if (!id) {
+                const listResponse = await fetch(`${getAccountHostingEndpoint()}?action=list&user_account=${encodeURIComponent(email)}`, { headers });
+                const listData = await listResponse.json().catch(() => ({}));
+                if (!listResponse.ok || !listData.ok) throw new Error(listData.error || "Không thể tìm hồ sơ Hosting.");
+                id = Number((listData.drafts || []).find(item => item.title === "Hồ sơ tổ chuyên môn")?.id || 0);
+            }
+            if (!id) return null;
+            const response = await fetch(`${getAccountHostingEndpoint()}?id=${id}&user_account=${encodeURIComponent(email)}`, { headers });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.ok) throw new Error(data.error || "Không thể tải hồ sơ từ Hosting.");
+            const payload = data.draft?.account_profile_payload || null;
+            if (!payload?.profile) return null;
+            localStorage.setItem(getAccountHostingDraftIdKey(email), String(id));
+            return payload;
+        }
+
+        async function applyAccountProfilePayload(payload, forceApply = false) {
+            accountProfile = sanitizeAccountProfile(payload?.profile || {});
+            signatureAssets = sanitizeSignatureAssets(payload?.signature_assets || {});
+            await tryLoadDefaultSignatureAssets();
+            fillAccountSettingsForm(accountProfile);
+            applyAccountProfileToSetupInputs(accountProfile, forceApply);
+            syncSignatureAssetsIntoCurrentMeta();
+            refreshRenderedFooterFromCurrentMeta();
+            renderSignatureAssetPreviews();
+        }
+
         function cacheAccountProfilePathHint(email, path) {
             if (!email) return;
             const key = getAccountProfilePathCacheKey(email);
@@ -3988,13 +4101,38 @@ ${profile.guide}
         }
 
         async function loadAccountSettingsFromGitHub(showAlert = false, forceApply = false) {
-            const email = getCurrentUserEmail();
+            const email = getCurrentUserEmail(false);
             if (!email) {
-                setAccountSettingsStatus("Không tìm thấy userEmail, vui lòng đăng nhập lại.", "error");
+                setAccountSettingsStatus("Hãy mở Cài đặt tài khoản và nhập email hoặc tên tài khoản để tải hồ sơ.", "info");
                 return;
             }
             const shouldForceApply = Boolean(forceApply);
-            const preserveLocalDraft = !shouldForceApply && !!localStorage.getItem(TTHC_STORAGE_KEYS.setupDraft);
+
+            if (getAccountStorageMode() !== "github") {
+                try {
+                    setAccountSettingsStatus("Đang tải hồ sơ từ Hosting…", "info");
+                    const hostedPayload = await loadAccountProfileFromHosting(email);
+                    if (hostedPayload) {
+                        await applyAccountProfilePayload(hostedPayload, shouldForceApply);
+                        cacheAccountProfileLocally(email, hostedPayload);
+                        setAccountSettingsStatus("Đã tải hồ sơ tài khoản từ Hosting.", "success");
+                        if (showAlert) alert("Đã tải hồ sơ tài khoản từ Hosting.");
+                        return;
+                    }
+                } catch (e) {
+                    console.warn("Không thể tải hồ sơ Hosting:", e);
+                }
+                const cache = loadAccountProfileCache(email);
+                if (cache?.profile) {
+                    await applyAccountProfilePayload(cache, shouldForceApply);
+                    setAccountSettingsStatus("Đã nạp hồ sơ cache cục bộ.", "success");
+                    if (showAlert) alert("Đã nạp hồ sơ cache cục bộ.");
+                    return;
+                }
+                setAccountSettingsStatus("Chưa có hồ sơ đã lưu cho tài khoản này.", "info");
+                if (showAlert) alert("Chưa có hồ sơ đã lưu cho tài khoản này.");
+                return;
+            }
 
             try {
                 setAccountSettingsStatus("Đang tải hồ sơ từ GitHub...", "info");
@@ -4096,7 +4234,7 @@ ${profile.guide}
         async function saveAccountSettingsToGitHub() {
             const email = getCurrentUserEmail();
             if (!email) {
-                alert("Không tìm thấy userEmail. Vui lòng đăng nhập lại.");
+                setAccountSettingsStatus("Cần email hoặc tên tài khoản để lưu hồ sơ.", "error");
                 return;
             }
             accountProfile = collectAccountSettingsForm();
@@ -4110,21 +4248,37 @@ ${profile.guide}
                 signature_assets: sanitizeSignatureAssets(signatureAssets)
             };
 
+            // Local-first: hồ sơ tổ chuyên môn luôn được giữ lại trước khi gọi mạng.
+            cacheAccountProfileLocally(email, payload);
+            syncSignatureAssetsIntoCurrentMeta();
+            refreshRenderedFooterFromCurrentMeta();
+            saveSetupDraft(false);
+
+            if (getAccountStorageMode() !== "github") {
+                try {
+                    setAccountSettingsStatus("Đã lưu cục bộ; đang đồng bộ hồ sơ lên Hosting…", "info");
+                    await saveAccountProfileToHosting(email, payload);
+                    setAccountSettingsStatus("Đã lưu hồ sơ và danh sách các tổ chuyên môn vào Hosting thành công.", "success");
+                    alert("Đã lưu hồ sơ cục bộ và đồng bộ Hosting thành công.");
+                    closeAccountSettingsModal();
+                } catch (e) {
+                    setAccountSettingsStatus(`Đã lưu cục bộ. Chưa đồng bộ được Hosting: ${e?.message || e}`, "info");
+                    alert("Hồ sơ và danh sách các tổ đã được lưu trên máy. Hosting sẽ đồng bộ lại khi kết nối/tài khoản hợp lệ.");
+                }
+                return;
+            }
+
             try {
                 setAccountSettingsStatus("Đang lưu hồ sơ lên GitHub...", "info");
                 const path = resolvePreferredAccountProfilePath(email);
                 await githubWriteJsonFile(path, payload, `update profile: ${email}`);
-                cacheAccountProfileLocally(email, payload);
                 cacheAccountProfilePathHint(email, path);
-                syncSignatureAssetsIntoCurrentMeta();
-                refreshRenderedFooterFromCurrentMeta();
-                saveSetupDraft(false);
                 setAccountSettingsStatus(`Đã lưu hồ sơ tài khoản lên GitHub (${path}).`, "success");
                 alert("Đã lưu hồ sơ tài khoản lên GitHub thành công.");
                 closeAccountSettingsModal();
             } catch (e) {
-                setAccountSettingsStatus(`Lỗi lưu hồ sơ: ${e?.message || e}`, "error");
-                alert("Lỗi lưu hồ sơ tài khoản: " + (e?.message || e));
+                setAccountSettingsStatus(`Đã lưu cục bộ; GitHub chưa đồng bộ được: ${e?.message || e}`, "info");
+                alert("Hồ sơ và danh sách các tổ đã được lưu trên máy. GitHub chưa đồng bộ được: " + (e?.message || e));
             }
         }
 
@@ -4142,6 +4296,27 @@ ${profile.guide}
                 ["input", "change"].forEach((eventName) => el.addEventListener(eventName, () => {
                     accountProfile = collectAccountSettingsForm();
                     applyAccountProfileToSetupInputs(accountProfile, false);
+                }));
+            });
+
+            const emailInput = document.getElementById("accUserEmail");
+            if (emailInput) {
+                ["input", "change"].forEach((eventName) => emailInput.addEventListener(eventName, () => {
+                    const email = String(emailInput.value || "").trim().toLowerCase();
+                    if (email) localStorage.setItem("userEmail", email);
+                }));
+            }
+
+            const storageModeInput = document.getElementById("accStorageMode");
+            if (storageModeInput) {
+                storageModeInput.addEventListener("change", toggleAccountStorageFields);
+            }
+
+            ["accGithubRepo", "accGithubPat"].forEach((id) => {
+                const input = document.getElementById(id);
+                if (!input) return;
+                ["input", "change"].forEach((eventName) => input.addEventListener(eventName, () => {
+                    getGitHubCloudConfig();
                 }));
             });
 

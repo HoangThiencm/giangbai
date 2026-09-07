@@ -175,3 +175,37 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
 - Hai bản `canvas_soankhbd.html` dùng một dấu escape trong chuỗi đóng script động, nhờ đó `document.write()` tạo đúng thẻ `</script>` và tải đủ `khbd-docx.js` từ host hoặc local.
 - `tests/canvas-soankhbd-smoke.js` chặn lại dạng escape kép gây thẻ đóng lỗi, đồng thời kiểm tra chuỗi nạp động đúng.
 - Đã chạy PASS: `node tests/canvas-soankhbd-smoke.js`, `node tests/khbd-docx-math-smoke.js`, `node tests/khbd-katex-vn-smoke.js`, và `git diff --check`.
+
+## Sửa theo PLAN: Khắc phục Triệt để Gán ghép NLS Gượng ép & Cụt Mô tả Khung Năng lực AI (CV 3456 & QĐ 2422)
+1. **Loại bỏ hoàn toàn mã Miền 6 (AI) khỏi Năng lực số môn Toán**:
+   - Trong `js/khbd-standards.js`:
+     + Cập nhật `isUnnaturalOfficialStandard`: Với môn Toán (`isMath = branch || /toan/i.test(subjectName)`), miền 6 của NLS (`/^6\./`) trả về `true` (phi tự nhiên).
+     + Cập nhật `scoreOfficialStandard`: Miền `Ứng dụng trí tuệ nhân tạo` của NLS trả về điểm `0` cho môn Toán.
+     + Ưu tiên vượt trội các công cụ số toán học cốt lõi:
+       * Đại số / Phương trình / Hệ phương trình: `5.3` (+10 điểm), `5.2` (+6 điểm), `3.1` (+5 điểm), `1.1` (+5 điểm).
+       * Hình học: `3.1` (+8 điểm), `5.2 / 5.3` (+6 điểm), kết hợp compa/thước/GeoGebra.
+       * Thống kê: `1.1 / 1.2` (+8 điểm), `3.1` (+6 điểm), `5.3` (+5 điểm).
+2. **Khắc phục triệt để lỗi cụt mô tả cột Trí tuệ nhân tạo (AI - QĐ 2422)**:
+   - Xây dựng hàm chuẩn hóa `lessonAppliedAiDescription(code, label, lesson)` theo 4 miền năng lực AI của Quyết định 2422:
+     + Miền A (Làm chủ AI): `Sử dụng trợ lý AI gợi mở cách tiếp cận, tra cứu thông tin và đối chiếu phương pháp thực hành bài [Tên bài], học sinh chủ động giữ quyền quyết định cuối cùng.`
+     + Miền B (Trách nhiệm & Đạo đức AI): `Ứng dụng công cụ AI hỗ trợ gợi ý các bước giải bài [Tên bài], học sinh đối chiếu kết quả với SGK để kiểm chứng tính chính xác và chịu trách nhiệm về sản phẩm học tập.`
+     + Miền C (Nguyên lý & Kỹ thuật): `Khám phá nguyên lý thu thập dữ liệu và xử lý thông tin của công nghệ AI qua các bài toán/mô hình thực tế trong bài [Tên bài].`
+     + Miền D (Đánh giá & Tối ưu): `Đánh giá mức độ chính xác, tính tối ưu và an toàn của mô hình AI khi hỗ trợ giải quyết các nhiệm vụ học tập bài [Tên bài].`
+   - Nâng cấp `cleanAiColumnText(text, lesson)`:
+     + Tự động phát hiện khi phần mô tả bị rỗng (`!after`), bị ký tự gạch nối (`after === '-'`), quá ngắn, hoặc chỉ là nhãn lý thuyết chung chung / bị AI cắt cụt trước phạm vi tiết.
+     + Tự động bù đắp mô tả sư phạm chuẩn từ `lessonAppliedAiDescription` và bảo toàn 100% phạm vi tiết `(Áp dụng: tiết X, Y)`.
+     + Đảm bảo kết quả luôn có cấu trúc hoàn chỉnh: `${code} - ${description}. (Áp dụng: tiết X, Y).`.
+3. **Chuẩn hóa Năng lực số sư phạm môn Toán (`lessonAppliedNlsDescription` & `enrichNlsCode`)**:
+   - `lessonAppliedNlsDescription` tự động nhận diện bài học Đại số/Phương trình/Hệ phương trình/Hàm số: gắn liền với **máy tính cầm tay** để kiểm tra nghiệm, phần mềm đồ thị (**GeoGebra/Desmos**) minh họa nghiệm hình học, bảng tính điện tử (**Excel/Sheets**).
+   - `enrichNlsCode`: Bổ sung bộ lọc phát hiện và triệt tiêu các câu gán ghép đối phó như "chatbot... tìm hiểu lịch sử ra đời...", tự động chuyển thành mô tả học tập công cụ số thiết thực.
+4. **Tinh chỉnh Prompt Chỉ thị AI (`appendixPrompt('1', c)`)**:
+   - Thay ví dụ mẫu từ `6.2.TC2a` sang `[NLS: 5.3.TC2a - Sử dụng phần mềm vẽ đồ thị (GeoGebra) và máy tính cầm tay để kiểm tra nghiệm của hệ hai phương trình bậc nhất hai ẩn.]`.
+   - Cấm tuyệt đối đưa các hoạt động ngoài lề "dùng chatbot tìm hiểu lịch sử ra đời" vào bài học Toán.
+   - Bắt buộc mã AI phải có mô tả hành động sư phạm gắn với bài học trước phạm vi tiết.
+5. **Đồng bộ 1-1 và Kiểm thử Toàn diện**:
+   - Áp dụng đồng bộ trên cả 3 file: `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html` và `js/khbd-standards.js`.
+   - Mở rộng smoke tests `tests/xaydungphuluc-smoke.js` và `tests/canvas-xaydungphuluc-smoke.js` với các ca kiểm thử:
+     + `cleanAiColumnText('9.B2.1 - (Áp dụng: tiết 1, 2).', ...)` -> tự động sinh đầy đủ câu mô tả sư phạm Miền B.
+     + `cleanNlsColumnText('[NLS: 6.1.TC2a - Sử dụng chatbot AI để tìm hiểu lịch sử ra đời...]', ...)` -> loại bỏ chatbot lịch sử, thay bằng mô tả luyện tập công cụ số.
+     + `recommendOfficialStandards('digital', ...)` cho Toán 9 phương trình -> 100% không chứa mã 6.x, ưu tiên `5.3.TC2a`.
+   - Toàn bộ 58 test suite (`node tests/run-all-tests.js`) đạt 100% PASS.

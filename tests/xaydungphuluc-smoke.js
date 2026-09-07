@@ -298,6 +298,15 @@ assert.equal(sandbox.cleanAiColumnText('[AI: 6.A1.1 - Hỗ trợ bài tập] (Á
 assert.equal(sandbox.cleanAiColumnText('[AI: 6.A1.1 - Hỗ trợ bài tập]. (Áp dụng: tiết 1).'),'6.A1.1 - Hỗ trợ bài tập. (Áp dụng: tiết 1).','clean AI text must remove a bracket before its scoped period');
 assert.equal(sandbox.cleanAiColumnText('[AI: 6.A1.1 - Hỗ trợ bài tập] .'),'6.A1.1 - Hỗ trợ bài tập.','clean AI text must remove a spaced bracket before a final period');
 assert.equal(sandbox.cleanAiColumnText(''),'','empty AI text must remain an empty Appendix 1 cell');
+const bareAiCase = sandbox.cleanAiColumnText('9.B2.1 - (Áp dụng: tiết 1, 2).', 'Bài 1: Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn');
+assert(!bareAiCase.includes('9.B2.1 - (Áp dụng:'), 'bare AI code without description must be enriched');
+assert(bareAiCase.includes('9.B2.1 - Ứng dụng công cụ AI') && bareAiCase.includes('(Áp dụng: tiết 1, 2).'), 'AI code 9.B2.1 must have pedagogical description and retain scope');
+const unpedagogicalNls = sandbox.cleanNlsColumnText('[NLS: 6.1.TC2a - Sử dụng chatbot AI để tìm hiểu lịch sử ra đời của hệ phương trình bậc nhất.;]', 'Bài 1: Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn');
+assert(!unpedagogicalNls.includes('chatbot') && !unpedagogicalNls.includes('lịch sử ra đời'), 'unpedagogical chatbot history NLS must be filtered out');
+assert(unpedagogicalNls.includes('6.1.TC2a - Sử dụng công cụ số hỗ trợ luyện tập'), 'NLS code must have meaningful pedagogical description');
+const math9DigitalCodes = recommendOfficialStandards('digital', {grade: 9, topic: 'Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn', vision: 'Nhận biết phương trình và hệ hai phương trình bậc nhất hai ẩn', subjectName: 'Toán học', facilities: {devices: true}, aiOn: true}).map(item => item.officialCode);
+assert.ok(math9DigitalCodes.every(code => !code.startsWith('6.')), 'Math 9 digital standards must not recommend domain 6 (AI chatbot)');
+assert.ok(math9DigitalCodes.some(code => code.startsWith('5.3.TC2a')), 'Math 9 Algebra must prioritize 5.3.TC2a (calculator, GeoGebra)');
 const separate=sandbox.separateIntegration(splitValue,[1,3],0,splitConfig,'Bài mẫu');
 assert(/^1\.1\.TC\w+/i.test(separate.nlsText)&&!/[\[\]]/.test(separate.nlsText),'NLS column must contain only a clean NLS code');
 assert(/^6\.A\d+\.\d+/i.test(separate.aiText)&&!/[\[\]]/.test(separate.aiText)&&separate.aiText.includes('Áp dụng: tiết 1, 3'),'AI column must isolate a clean code and scope multiple selected periods');

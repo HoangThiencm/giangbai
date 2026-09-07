@@ -175,7 +175,9 @@ function isUnnaturalOfficialStandard(kind, entry, ctx) {
   const code = String(entry.componentCode || entry.code || "");
   const facilities = ctx.facilities || {};
   const hasStudentTech = Boolean(facilities.devices || facilities.internet);
+  const isMath = Boolean(branch || /toan/i.test(foldStandardText(ctx.subjectName || "")));
   if (kind === "digital") {
+    if (isMath && /^6\./.test(code)) return true;
     if (branch === "geometry" && (/^3\.4/.test(code) || /^3\.3/.test(code))) return true;
     if (branch === "algebra" && /^4\.2/.test(code)) return true;
     if (!hasStudentTech && (/^3\.4/.test(code) || /^3\.3/.test(code))) return true;
@@ -195,6 +197,7 @@ function scoreOfficialStandard(kind, entry, ctx) {
   const grouping = foldStandardText(ctx.grouping || "");
   const branch = detectLessonMathBranch(ctx.topic, ctx.vision);
   const code = String(entry.componentCode || entry.code || "");
+  const isMath = Boolean(branch || /toan/i.test(foldStandardText(ctx.subjectName || "")));
   let score = 1;
   if (kind === "digital") {
     if (entry.domain === "Khai thác dữ liệu và thông tin") {
@@ -214,21 +217,33 @@ function scoreOfficialStandard(kind, entry, ctx) {
       if (/van de|du an|thuc tien|giai quyet|van dung/.test(hay)) score += 4;
       score += 2;
     } else if (entry.domain === "Ứng dụng trí tuệ nhân tạo") {
-      if (ctx.aiOn) score += 5;
-      if (!hasTech && !ctx.aiOn) score -= 3;
-      if (/\bai\b|chatbot|gemini|tri tue nhan tao/.test(hay)) score += 4;
+      if (isMath) {
+        score = 0;
+      } else {
+        if (ctx.aiOn) score += 5;
+        if (!hasTech && !ctx.aiOn) score -= 3;
+        if (/\bai\b|chatbot|gemini|tri tue nhan tao/.test(hay)) score += 4;
+      }
     }
     if (branch === "geometry") {
       if (/^3\.1/.test(code)) score += 8;
-      if (/^5\.2/.test(code)) score += 6;
+      if (/^5\.2|^5\.3/.test(code)) score += 6;
       if (/do dac|thuoc|compa|mo hinh|geogebra|ve hinh/.test(hay) && /^3\.1/.test(code)) score += 4;
     } else if (branch === "algebra") {
-      if (/^5\.3/.test(code)) score += 8;
+      if (/^5\.3/.test(code)) score += 10;
+      if (/^5\.2/.test(code)) score += 6;
+      if (/^3\.1/.test(code)) score += 5;
       if (/^1\.1/.test(code)) score += 5;
     } else if (branch === "statistics") {
       if (/^1\.1|^1\.2/.test(code)) score += 8;
-      if (/^3\.1/.test(code)) score += 5;
+      if (/^3\.1/.test(code)) score += 6;
+      if (/^5\.3/.test(code)) score += 5;
       if (/bieu do|bang bieu|du lieu/.test(hay) && /^3\.1/.test(code)) score += 3;
+    } else if (isMath) {
+      if (/^5\.3/.test(code)) score += 8;
+      if (/^5\.2/.test(code)) score += 6;
+      if (/^3\.1/.test(code)) score += 5;
+      if (/^1\.1/.test(code)) score += 4;
     }
     if (!hasTech && !facilities.projector && /canva|padlet|chatbot/.test(foldStandardText(entry.label))) score = 0;
   } else if (kind === "ai") {
