@@ -471,14 +471,14 @@ async function openSgkDetailModal(bookId){
       <div class="space-y-3">
         ${lessons.map((l,idx)=>`
           <div class="p-3 rounded-lg border text-xs space-y-1" style="background:var(--paper);border-color:var(--line)">
-            <div class="flex justify-between items-center font-bold text-sm text-teal-800 dark:text-teal-200">
+            <div class="flex justify-between items-center font-black text-sm" style="color:var(--brand)">
               <span>${idx+1}. ${esc(l.lesson_title)}</span>
-              <span class="text-xs font-normal opacity-70">Trang ${l.page_start||'—'} - ${l.page_end||'—'}</span>
+              <span class="text-xs font-bold px-2 py-0.5 rounded border" style="border-color:var(--line);color:var(--ink)">Trang ${l.page_start||'—'} - ${l.page_end||'—'}</span>
             </div>
-            ${l.chapter?`<div class="opacity-75">Chương: ${esc(l.chapter)}</div>`:''}
-            <div class="mt-1"><b class="text-slate-700 dark:text-slate-300">Yêu cầu cần đạt:</b><br><pre class="font-sans whitespace-pre-wrap mt-0.5 text-slate-800 dark:text-slate-200">${esc(l.yccd)}</pre></div>
-            ${l.digital_evidence?`<div class="mt-1"><b style="color:#0070C0">Minh chứng Năng lực số (CV 3456):</b> ${esc(l.digital_evidence)}</div>`:''}
-            ${l.ai_pedagogy_hint?`<div class="mt-1"><b style="color:#7030A0">Gợi ý Ứng dụng AI (QĐ 2422):</b> ${esc(l.ai_pedagogy_hint)}</div>`:''}
+            ${l.chapter?`<div class="text-xs font-semibold mt-0.5" style="color:var(--ink);opacity:0.85">Chương: ${esc(l.chapter)}</div>`:''}
+            <div class="mt-1.5"><b style="color:var(--ink);font-weight:700">Yêu cầu cần đạt:</b><div class="font-sans whitespace-pre-wrap mt-0.5 text-xs" style="color:var(--ink);line-height:1.6">${esc(l.yccd)}</div></div>
+            ${l.digital_evidence?`<div class="mt-1.5"><b style="color:#0070C0;font-weight:700">Minh chứng Năng lực số (CV 3456):</b> <span style="color:var(--ink)">${esc(l.digital_evidence)}</span></div>`:''}
+            ${l.ai_pedagogy_hint?`<div class="mt-1.5"><b style="color:#7030A0;font-weight:700">Gợi ý Ứng dụng AI (QĐ 2422):</b> <span style="color:var(--ink)">${esc(l.ai_pedagogy_hint)}</span></div>`:''}
           </div>
         `).join('')}
       </div>
