@@ -327,6 +327,49 @@ assert.equal(compensatedToan6[24].page_start, 100, 'Trang sách do AI trích xu�
 assert(compensatedToan6[25].lesson_title.includes('Bài 26.'), 'Bài 26 bị thiếu do AI dừng sớm phải được bù đắp chuẩn');
 console.log(`  -> Bù đắp an toàn 100% khi AI nhận diện thiếu bài (tự khôi phục Bài 3 và bù đủ 43 bài): PASS`);
 
+// 6. Kiểm tra tính đa dạng của mã NLS theo 6 phân môn (chống template hóa đối phó)
+console.log('-> 6. Kiểm tra tính đa dạng sư phạm của mã NLS theo 6 phân môn...');
+// 6.1: Nhánh tính toán số học (arith_practice) có mã 5.1.TC1a (sự cố kỹ thuật MTCT)
+const candArithPractice = vm.runInContext("recommendLessonDigitalCandidates('Bài 4. Phép cộng và phép trừ số tự nhiên', 6, 'Toán học')", sandbox);
+assert(candArithPractice.includes('5.1.TC1a'), `Nhánh tính toán số học phải có mã 5.1.TC1a (thực tế: ${candArithPractice})`);
+assert(candArithPractice.includes('5.3.TC1a'), `Nhánh tính toán số học phải có mã 5.3.TC1a (thực tế: ${candArithPractice})`);
+
+// 6.2: Nhánh hình học trực quan (geometry) có mã 3.1 và 1.1 (vẽ hình GeoGebra, mô hình 3D)
+const candGeometry = vm.runInContext("recommendLessonDigitalCandidates('Bài 18. Hình tam giác đều. Hình vuông. Hình lục giác đều', 6, 'Toán học')", sandbox);
+assert(candGeometry.includes('3.1.TC1a') && candGeometry.includes('1.1.TC1a'), `Nhánh hình học phải có mã 3.1 và 1.1 (thực tế: ${candGeometry})`);
+
+// 6.3: Nhánh thống kê - xác suất (statistics) có mã 3.1 và 1.2 (bảng tính Excel, đánh giá dữ liệu)
+const candStat = vm.runInContext("recommendLessonDigitalCandidates('Bài 38. Dữ liệu và thu thập dữ liệu', 6, 'Toán học')", sandbox);
+assert(candStat.includes('1.2.TC1a') && (candStat.includes('3.1.TC1a') || candStat.includes('1.1.TC1a')), `Nhánh thống kê phải có mã 1.2 và 3.1 (thực tế: ${candStat})`);
+
+// 6.4: Hoạt động thực hành trải nghiệm (experiential) có mã 2.2 (hợp tác số, chia sẻ dữ liệu)
+const candExp = vm.runInContext("recommendLessonDigitalCandidates('Hoạt động thực hành trải nghiệm', 6, 'Toán học')", sandbox);
+assert(candExp.includes('2.2.TC1a'), `Hoạt động trải nghiệm phải có mã hợp tác số 2.2.TC1a (thực tế: ${candExp})`);
+
+// 6.5: Nhánh lý thuyết số học trừu tượng (arith_theory) có mã 1.1 và 4.3 (khai thác học liệu số, bảo vệ thị giác)
+const candTheory = vm.runInContext("recommendLessonDigitalCandidates('Bài 1. Tập hợp', 6, 'Toán học')", sandbox);
+assert(candTheory.includes('1.1.TC1a') && candTheory.includes('4.3.TC1a'), `Nhánh lý thuyết số học phải có 1.1 và 4.3 (thực tế: ${candTheory})`);
+
+// 6.6: Nhánh phương trình/hệ phương trình THCS (equation) có mã bậc 2 (TC2a)
+const candEq = vm.runInContext("recommendLessonDigitalCandidates('Bài 1. Phương trình bậc nhất hai ẩn', 9, 'Toán học')", sandbox);
+assert(candEq.includes('5.3.TC2a') && candEq.includes('3.1.TC2a'), `Phương trình lớp 9 phải có mã 5.3.TC2a và 3.1.TC2a (thực tế: ${candEq})`);
+
+// 6.7: Kiểm tra nội dung mô tả sư phạm của từng mã phân môn
+const desc51 = vm.runInContext("lessonAppliedNlsDescription('5.1.TC1a', '', 'Bài 4. Phép cộng và phép trừ số tự nhiên')", sandbox);
+assert(desc51.includes('sự cố') || desc51.includes('Math ERROR') || desc51.includes('máy tính cầm tay'), 'Mã 5.1 phải mô tả giải quyết sự cố kỹ thuật MTCT');
+
+const desc12 = vm.runInContext("lessonAppliedNlsDescription('1.2.TC1a', '', 'Bài 38. Dữ liệu và thu thập dữ liệu')", sandbox);
+assert(desc12.includes('đánh giá') || desc12.includes('độ tin cậy') || desc12.includes('dữ liệu'), 'Mã 1.2 phải mô tả đánh giá dữ liệu');
+
+const desc22 = vm.runInContext("lessonAppliedNlsDescription('2.2.TC1a', '', 'Hoạt động thực hành trải nghiệm')", sandbox);
+assert(sandbox.foldText(desc22).includes('hop tac') || sandbox.foldText(desc22).includes('chia se') || sandbox.foldText(desc22).includes('hoc tap so'), 'Mã 2.2 phải mô tả hợp tác số');
+
+const desc43 = vm.runInContext("lessonAppliedNlsDescription('4.3.TC1a', '', 'Bài 1. Tập hợp')", sandbox);
+assert(desc43.includes('thị giác') || desc43.includes('sức khỏe') || desc43.includes('an toàn'), 'Mã 4.3 phải mô tả bảo vệ thị giác/sức khỏe số');
+
+console.log('  -> Đa dạng hóa 6 phân môn & mô tả sư phạm thực chất: PASS');
+
 console.log('==================================================');
 console.log('TẤT CẢ TEST KHO TRI THỨC SGK ĐỀU ĐẠT (PASS)!');
 console.log('==================================================');
+

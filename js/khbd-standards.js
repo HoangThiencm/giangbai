@@ -132,7 +132,7 @@ const KHBD_STANDARDS = {
 };
 
 function foldStandardText(value) {
-  return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+  return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 function standardToRecord(kind, entry, grade, autoSuggested) {
@@ -161,9 +161,9 @@ function detectLessonMathBranch(topic, vision) {
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
   const count = (re) => (hay.match(re) || []).length;
-  const geo = count(/hinh hoc|do dac|goc o vi tri|goc doi dinh|goc ke nhau|song song|vuong goc|tam giac|tu giac|hinh binh hanh|hinh thang|hinh chu nhat|hinh vuong|hinh tron|duong thang|doan thang|trung diem|trung truc|doi xung|dien tich|chu vi|the tich|compas?|thuoc ke|hai duong thang|tia |dong vi|khac phia/g);
-  const stat = count(/thong ke|xac suat|bieu do|bang tan suat|mau so lieu|tan suat/g);
-  const alg = count(/dai so|phuong trinh|bat phuong trinh|ham so|da thuc|phan so|so tu nhien|so nguyen|so thuc|luy thua|can bac|ty le|phan tram|tap hop/g);
+  const stat = count(/thong ke|xac suat|bieu do|bang tan suat|mau so lieu|tan suat|du lieu|thu thap|bien co/g);
+  const geo = count(/hinh hoc|do dac|goc o vi tri|goc doi dinh|goc ke nhau|song song|vuong goc|tam giac|tu giac|hinh binh hanh|hinh thang|hinh chu nhat|hinh vuong|hinh thoi|hinh luc giac|hinh tron|duong thang|doan thang|trung diem|trung truc|doi xung|dien tich|chu vi|the tich|compa|thuoc ke|hai duong thang|tia |dong vi|khac phia|geogebra|ve hinh/g);
+  const alg = count(/dai so|phuong trinh|bat phuong trinh|ham so|da thuc|phan so|so tu nhien|so nguyen|so thuc|so vo ti|so huu ti|so thap phan|luy thua|can bac|ty le|phan tram|tap hop|uoc|boi|chia het|so nguyen to|phep cong|phep tru|phep nhan|phep chia|tinh toan/g);
   if (stat > 0 && stat >= geo && stat >= alg) return "statistics";
   if (geo > 0 && geo >= alg) return "geometry";
   if (alg > 0) return "algebra";
@@ -210,8 +210,8 @@ function scoreOfficialStandard(kind, entry, ctx) {
       if (!hasTech && !facilities.projector) score -= 3;
       if (/san pham|poster|video|thuyet trinh|thiet ke|sang tao|canva/.test(hay)) score += 4;
     } else if (entry.domain === "An toàn") {
-      if (hasTech || ctx.aiOn) score += 4;
-      if (/an toan|rieng tu|mang|chia se|thong tin ca nhan/.test(hay)) score += 3;
+      if (!isMath && (hasTech || ctx.aiOn)) score += 4;
+      if (/an toan|rieng tu|mang|chia se|thong tin ca nhan|bao ve mat|suc khoe/.test(hay)) score += 4;
       score += 1;
     } else if (entry.domain === "Giải quyết vấn đề") {
       if (/van de|du an|thuc tien|giai quyet|van dung/.test(hay)) score += 4;
@@ -225,25 +225,49 @@ function scoreOfficialStandard(kind, entry, ctx) {
         if (/\bai\b|chatbot|gemini|tri tue nhan tao/.test(hay)) score += 4;
       }
     }
-    if (branch === "geometry") {
-      if (/^3\.1/.test(code)) score += 8;
-      if (/^5\.2|^5\.3/.test(code)) score += 6;
-      if (/do dac|thuoc|compa|mo hinh|geogebra|ve hinh/.test(hay) && /^3\.1/.test(code)) score += 4;
-    } else if (branch === "algebra") {
-      if (/^5\.3/.test(code)) score += 10;
-      if (/^5\.2/.test(code)) score += 6;
-      if (/^3\.1/.test(code)) score += 5;
-      if (/^1\.1/.test(code)) score += 5;
+    const topicHay = foldStandardText(ctx.topic || "");
+    const isExperiential = /thuc hanh va trai nghiem|hoat dong thuc hanh|trai nghiem|stem|du an|clb/i.test(topicHay);
+    if (isExperiential) {
+      if (/^2\.2/.test(code)) score += 20;
+      else if (/^3\.1/.test(code)) score += 18;
+      else if (/^5\.3/.test(code)) score += 16;
+      else if (/^5\.2/.test(code)) score += 14;
+    } else if (branch === "geometry") {
+      if (/^3\.1/.test(code)) score += 20;
+      else if (/^1\.1/.test(code)) score += 18;
+      else if (/^5\.3/.test(code)) score += 16;
+      else if (/^5\.2/.test(code)) score += 14;
     } else if (branch === "statistics") {
-      if (/^1\.1|^1\.2/.test(code)) score += 8;
-      if (/^3\.1/.test(code)) score += 6;
-      if (/^5\.3/.test(code)) score += 5;
-      if (/bieu do|bang bieu|du lieu/.test(hay) && /^3\.1/.test(code)) score += 3;
+      if (/^3\.1/.test(code)) score += 20;
+      else if (/^1\.2/.test(code)) score += 18;
+      else if (/^5\.3/.test(code)) score += 16;
+      else if (/^1\.1/.test(code)) score += 14;
+    } else if (branch === "algebra") {
+      const isCompute = /phep cong|phep tru|phep nhan|phep chia|cac phep tinh|tinh toan|luy thua|thu tu thuc hien|dau ngoac|phan thuc|don thuc|da thuc|hang dang thuc|can bac|rut gon/i.test(hay);
+      const isEq = /phuong trinh|he phuong trinh|bat phuong trinh|ham so|do thi|he so goc|parabol/i.test(hay);
+      const isOrder = /so sanh|thu tu/i.test(hay);
+      if (isCompute) {
+        if (/^5\.3/.test(code)) score += 20;
+        else if (/^5\.1/.test(code)) score += 18;
+        else if (/^5\.2/.test(code)) score += 16;
+      } else if (isEq) {
+        if (/^5\.3/.test(code)) score += 20;
+        else if (/^3\.1/.test(code)) score += 18;
+        else if (/^5\.2/.test(code)) score += 16;
+      } else if (isOrder) {
+        if (/^5\.3/.test(code)) score += 20;
+        else if (/^5\.2/.test(code)) score += 18;
+        else if (/^1\.1/.test(code)) score += 16;
+      } else {
+        if (/^1\.1/.test(code)) score += 20;
+        else if (/^5\.2/.test(code)) score += 18;
+        else if (/^4\.3/.test(code)) score += 16;
+        else if (/^5\.3/.test(code)) score += 14;
+      }
     } else if (isMath) {
-      if (/^5\.3/.test(code)) score += 8;
-      if (/^5\.2/.test(code)) score += 6;
-      if (/^3\.1/.test(code)) score += 5;
-      if (/^1\.1/.test(code)) score += 4;
+      if (/^5\.3/.test(code)) score += 20;
+      else if (/^5\.2/.test(code)) score += 18;
+      else if (/^1\.1/.test(code)) score += 16;
     }
     if (!hasTech && !facilities.projector && /canva|padlet|chatbot/.test(foldStandardText(entry.label))) score = 0;
   } else if (kind === "ai") {
