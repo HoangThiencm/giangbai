@@ -1,5 +1,10 @@
 # IMPLEMENT — Chuẩn hóa mã Phụ lục 1 và nháp Gemini Canvas
 
+## Tự động nhận diện chuẩn NLS và AI từ PPCT trong KHBD
+- `soankhbd.html` có modal xác nhận các mã chuẩn được nhận diện; người dùng có thể đóng hoặc chuyển thẳng tới Bước 3.
+- `js/khbd-app.js` ưu tiên dòng PPCT khớp bài đang chọn, lọc mã NLS theo dải lớp TC1/TC2 và mã AI theo đúng lớp; sau đó bật công tắc, đồng bộ danh mục/state, lưu nháp và cập nhật tiến trình. Việc sửa PPCT thủ công được nhận diện sau debounce 500 ms để tránh hiện lại modal với cùng tập mã.
+- `tests/soankhbd-ppct-standards-smoke.js` xác minh nhận diện theo đúng dòng bài, lọc sai khối lớp, tick state/công tắc và nội dung modal.
+
 Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trường thật.
 
 ## File đã sửa

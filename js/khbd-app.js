@@ -122,6 +122,9 @@ const TAB0_STEP_TO_SUBTAB = {
   "4": "tab0-sub-ai-competency"
 };
 
+let ppctStandardsSyncTimer = null;
+let lastPpctStandardsSignature = "";
+
 const TAB0_STEP_SCROLL_TARGETS = {
   "1": "lessonTextbookAnalysis",
   "2": "lessonPpctAnalysis",
@@ -1189,7 +1192,7 @@ function catalogFallbackRecords(kind, grade, entries, maxSelect) {
 function applySuggestedStandardRecords(kind, catalog, records, options = {}) {
   let next = Array.isArray(records) ? records.filter(Boolean) : [];
   if (kind === "digital") {
-    if (next.length < 2) next = catalogFallbackRecords("digital", Number(appState.selectedGrade) || 6);
+    if (next.length < 2 && !options.preserveDetected) next = catalogFallbackRecords("digital", Number(appState.selectedGrade) || 6);
     next = next.slice(0, 3);
     if (!next.length) return;
   }
@@ -1200,6 +1203,68 @@ function applySuggestedStandardRecords(kind, catalog, records, options = {}) {
     .concat(capped);
   saveStateToLocalStorage();
   if (!options.skipRender) renderStandardsCatalog();
+}
+
+function normalizePpctMatchText(value) {
+  return String(value || "").toLocaleLowerCase("vi-VN").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function extractStandardsFromPpctText(text, topic, grade) {
+  const numericGrade = Number(grade) || 6;
+  const target = normalizePpctMatchText(topic);
+  const lines = String(text || "").split(/\r?\n/).filter(line => line.trim());
+  const matchedLines = target ? lines.filter(line => normalizePpctMatchText(line).includes(target)) : [];
+  const source = (matchedLines.length ? matchedLines : lines).join("\n");
+  const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS : null;
+  if (!catalog) return { digital: [], ai: [], matchedLines };
+  const takeEntries = (kind, regex, allowed) => {
+    const codes = new Set(); let match;
+    while ((match = regex.exec(source))) codes.add(match[1]);
+    const entries = typeof entriesForGrade === "function" ? entriesForGrade(kind, numericGrade) : (catalog[kind]?.entries || []).filter(entry => (entry.grades || []).includes(numericGrade));
+    return Array.from(codes).filter(allowed).map(code => entries.find(entry => String(entry.code).toLowerCase() === String(code).toLowerCase())).filter(Boolean);
+  };
+  return {
+    digital: takeEntries("digital", /\b(\d+\.\d+\.TC[12][a-z]?)\b/gi, code => numericGrade <= 7 ? /\.TC1/i.test(code) : /\.TC2/i.test(code)),
+    ai: takeEntries("ai", /\b([6-9]\.A\d+\.(?:MR)?\d+)\b/gi, code => Number(String(code).split(".")[0]) === numericGrade),
+    matchedLines
+  };
+}
+
+function ppctDetectedStandardSignature(detected) {
+  return ["digital", "ai"].map(kind => (detected?.[kind] || []).map(entry => entry.id).sort().join(",")).join("|");
+}
+
+function showPpctStandardsNotificationModal(detected) {
+  const modal = document.getElementById("modalPpctStandardsDetected");
+  const list = document.getElementById("ppctDetectedStandardsList");
+  if (!modal || !list) return;
+  const groups = [["Năng lực số", "digital", "#0070C0"], ["Khung năng lực AI", "ai", "#7030A0"]].filter(([, kind]) => (detected?.[kind] || []).length);
+  list.innerHTML = groups.map(([label, kind, color]) => `<div style="margin:.5rem 0"><b style="color:${color}">${label}</b><div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem">${detected[kind].map(entry => `<span style="background:${color};color:#fff;border-radius:999px;padding:.2rem .55rem;font-size:.82rem">${escapeHtml(entry.code)} — ${escapeHtml(entry.label)}</span>`).join("")}</div></div>`).join("");
+  modal.classList.add("active");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function closePpctStandardsModal() { closeModal("modalPpctStandardsDetected"); }
+function goToStep3Pedagogy() {
+  closePpctStandardsModal(); switchTab0Subtab("tab0-sub-pedagogy-digital");
+  document.getElementById("lessonStep3RecommendCard")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+}
+function applyPpctDetectedStandards(detected, { showModal = true } = {}) {
+  if (!detected || (!(detected.digital || []).length && !(detected.ai || []).length)) return false;
+  appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+  const grade = Number(appState.selectedGrade) || 6;
+  [["digital", "toggleDigitalCompetency"], ["ai", "toggleAiCompetency"]].forEach(([kind, toggleId]) => {
+    const entries = detected[kind] || [];
+    if (!entries.length || !KHBD_STANDARDS?.[kind]) return;
+    const toggle = document.getElementById(toggleId); if (toggle) toggle.checked = true;
+    appState.teachingContext.integrations[kind] = true;
+    applySuggestedStandardRecords(kind, KHBD_STANDARDS[kind], entries.map(entry => standardToRecord(kind, entry, grade, true)), { skipRender: true, preserveDetected: true });
+  });
+  renderSubjectIntegrations(); renderStandardsCatalog(); saveStateToLocalStorage(); updateWorkflowStepper();
+  if (showModal) showPpctStandardsNotificationModal(detected);
+  return true;
 }
 
 async function requestStructuredIntegrationCandidates(kind, { silent = false, skipRender = false, force = false } = {}) {
@@ -2464,6 +2529,15 @@ function setupEventListeners() {
   setupEditorPreviewSync("editorPpct", "previewPpct", (val) => {
     appState.content.ppctAnalysis = val;
     saveStateToLocalStorage();
+    clearTimeout(ppctStandardsSyncTimer);
+    ppctStandardsSyncTimer = setTimeout(() => {
+      const detected = extractStandardsFromPpctText(val, appState.customTopic || appState.selectedLesson, appState.selectedGrade);
+      const signature = ppctDetectedStandardSignature(detected);
+      if (signature && signature !== lastPpctStandardsSignature) {
+        lastPpctStandardsSignature = signature;
+        applyPpctDetectedStandards(detected, { showModal: true });
+      }
+    }, 500);
   });
   setupEditorPreviewSync("editorVision", "previewVision", (val) => { appState.content.vision = val; appState.teachingContext.ocrReady = false; saveStateToLocalStorage(); updateWorkflowStepper(); });
   setupEditorPreviewSync("editorObjectives", "previewObjectives", (val) => { appState.content.objectives = val; saveStateToLocalStorage(); });
@@ -4030,6 +4104,11 @@ async function handleGeneratePpctAnalysis() {
 
     if (editor) editor.value = cleanedResult;
     renderMathPreview(cleanedResult, "previewPpct");
+    const detectedStandards = extractStandardsFromPpctText(cleanedResult, currentTopic, appState.selectedGrade);
+    if (detectedStandards.digital.length || detectedStandards.ai.length) {
+      lastPpctStandardsSignature = ppctDetectedStandardSignature(detectedStandards);
+      applyPpctDetectedStandards(detectedStandards, { showModal: true });
+    }
 
     if (details) details.open = true;
 
@@ -6726,6 +6805,8 @@ if (typeof window !== 'undefined') {
   window.switchActivitySubtab = switchActivitySubtab;
   window.switchTab0Subtab = switchTab0Subtab;
   window.revealTab0WorkflowStep = revealTab0WorkflowStep;
+  window.closePpctStandardsModal = closePpctStandardsModal;
+  window.goToStep3Pedagogy = goToStep3Pedagogy;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -6791,6 +6872,11 @@ if (typeof module !== 'undefined' && module.exports) {
     extractPpctOcrText,
     handleGeneratePpctAnalysis,
     parsePpctLessonDetails,
+    extractStandardsFromPpctText,
+    applyPpctDetectedStandards,
+    showPpctStandardsNotificationModal,
+    closePpctStandardsModal,
+    goToStep3Pedagogy,
     getGenerationPromptContext,
     buildPedagogicalContext,
     SUBJECT_CONTEXT_INTEGRATIONS,

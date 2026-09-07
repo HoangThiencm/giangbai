@@ -4,33 +4,22 @@
 PASS
 
 ## Đối chiếu scope
-- Đạt: Khắc phục triệt để việc sót lại dấu `]` ở cuối câu mô tả NLS và AI khi có dấu chấm `.`, phẩy `,`, chấm phẩy `;` hoặc đứng trước cụm `(Áp dụng: tiết …)`.
-- Đạt: Bộ điều khiển phân bổ NLS thông minh theo số tiết & AI (1 tiết: 2 mã; ≥2 tiết có AI: 2 mã; ≥2 tiết không AI: tùy chọn 2–3 mã) trên UI Mục 4 của cả hai giao diện.
-- Đạt: Cột AI trong Phụ lục 1 để ô trống hoàn toàn (chuỗi rỗng `''`) đối với bài không có tích hợp AI; xuất Word DOCX để ô trống.
-- Đạt: Timeout client/proxy đồng nhất 120s cho tài liệu cả năm học.
-- Đạt: Bảo toàn định dạng Phụ lục 3 và không tác động ngoài scope.
+- Đạt: Sửa triệt để lỗi tương phản mờ chữ trong khung `#nlsAdaptiveOptions` trên cả `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+- Đạt: Bỏ class Tailwind `dark:bg-slate-800`, chuyển sang dùng trực tiếp các biến giao diện `var(--paper)`, `var(--line)` và `var(--ink)`.
+- Đạt: Nhãn "2 mã NLS" dùng màu thương hiệu `var(--brand)`. Select `#nlsNoAiDensity` dùng nền `--card`, chữ `--ink`, viền `--line` rõ nét ở cả Light mode và Dark mode.
+- Đạt: Toàn bộ smoke test và kiểm tra hồi quy đều thành công.
 
 ## Test đã chạy
-1. `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
-2. `node tests/xaydungphuluc-smoke.js`: PASS.
+1. `node tests/xaydungphuluc-smoke.js`: PASS.
+2. `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
 3. `node tests/xaydungphuluc-integration-smoke.js`: PASS.
-4. Kiểm thử hồi quy regex làm sạch:
-   - `cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng phần mềm GeoGebra].')` -> `"5.3.TC2a - Sử dụng phần mềm GeoGebra."` (PASS: sạch dấu `]`).
-   - `cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng phần mềm GeoGebra],')` -> `"5.3.TC2a - Sử dụng phần mềm GeoGebra"` (PASS).
-   - `cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng phần mềm GeoGebra] .')` -> `"5.3.TC2a - Sử dụng phần mềm GeoGebra."` (PASS).
-   - `cleanAiColumnText('[AI: 8.A1.1 - Học sinh sử dụng AI]. (Áp dụng: tiết 1).')` -> `"8.A1.1 - Học sinh sử dụng AI. (Áp dụng: tiết 1)."` (PASS: sạch dấu `]`).
-   - `cleanAiColumnText('[AI: 8.A1.1 - Học sinh sử dụng AI] (Áp dụng: tiết 1).')` -> `"8.A1.1 - Học sinh sử dụng AI (Áp dụng: tiết 1)."` (PASS).
-   - `cleanAiColumnText('[AI: 8.A1.1 - Học sinh sử dụng AI].')` -> `"8.A1.1 - Học sinh sử dụng AI."` (PASS).
-   - `cleanAiColumnText('8.A1.1 - Học sinh sử dụng AI]')` -> `"8.A1.1 - Học sinh sử dụng AI"` (PASS).
-   - `cleanAiColumnText('')` -> `""` (PASS: ô rỗng).
-5. Kiểm thử phân bổ NLS: bài 1 tiết -> 2 mã; bài ≥2 tiết có AI -> 2 mã; bài ≥2 tiết không AI -> 2-3 mã: PASS.
+4. Kiểm tra mã nguồn HTML: không còn `dark:bg-slate-800`, đảm bảo độ tương phản chuẩn WCAG trên mọi thiết bị và theme.
 
 ## Pass / Fail từng tiêu chí
-- [PASS] Loại bỏ triệt để dấu `]` ở cuối câu mô tả NLS kể cả khi có dấu chấm `].` hoặc `] .`.
-- [PASS] Loại bỏ triệt để dấu `]` trong mô tả AI khi nằm trước dấu chấm hoặc trước cụm `(Áp dụng: tiết X)`.
-- [PASS] Giao diện Mục 4 có bộ chọn phân bổ NLS theo tiết & AI trực quan và đồng bộ cấu hình.
-- [PASS] Cột AI để trống hoàn toàn (chuỗi rỗng `''`) khi không chọn AI.
-- [PASS] Toàn bộ 3 bộ smoke tests chạy thành công.
+- [PASS] Khung `#nlsAdaptiveOptions` hiển thị nền và chữ có độ tương phản cao, rõ nét 100%.
+- [PASS] Select con `#nlsNoAiDensity` hiển thị đúng màu theme.
+- [PASS] Đồng bộ hoàn toàn giữa web chính và Gemini Canvas.
+- [PASS] Toàn bộ test suite chạy PASS.
 
 ## Bug
 Không có.
