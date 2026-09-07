@@ -40,6 +40,7 @@
 <div id="loadDraftModal" class="modal hidden"><section class="card p-5 max-w-5xl"><div class="flex justify-between gap-3"><h2 class="font-black">Quản lý &amp; Tải bản kế hoạch từ CSDL</h2><button class="btn secondary" onclick="closeLoadDraftModal()">✕</button></div><label class="label mt-3" for="loadDraftAccount">Tài khoản giáo viên (username)</label><input id="loadDraftAccount" class="field" placeholder="Username đăng nhập trên hoangthiencm.id.vn" oninput="setCanvasDraftAccount(this.value)" onchange="fetchAndRenderDraftList()"><p class="text-xs opacity-75 mt-1">Kiểm tra đúng tài khoản trước khi lưu hoặc tải CSDL.</p><div class="flex flex-wrap gap-2 mt-3"><button class="btn secondary" onclick="saveDraftLocally()">💾 Lưu vào trình duyệt</button><button class="btn secondary" onclick="loadDraftLocally()">📂 Tải từ trình duyệt</button><button class="btn secondary" onclick="exportDraftJson()">📤 Xuất file JSON</button><button class="btn secondary" onclick="document.querySelector('#draftJsonInput').click()">📥 Nhập file JSON</button></div><div class="grid md:grid-cols-4 gap-2 mt-3"><input id="draftFilterSubject" class="field" placeholder="Lọc môn học" oninput="fetchAndRenderDraftList()"><input id="draftFilterGrade" class="field" placeholder="Lọc khối lớp" oninput="fetchAndRenderDraftList()"><input id="draftFilterYear" class="field" placeholder="Lọc năm học" oninput="fetchAndRenderDraftList()"><input id="draftSearchInput" class="field" placeholder="Tìm theo tên" oninput="fetchAndRenderDraftList()"></div><div id="draftListContainer" class="mt-4 space-y-2" aria-live="polite"></div></section></div>
 <div id="complianceModal" class="modal hidden"><section class="card p-5 max-w-5xl"><div class="flex justify-between gap-3"><h2 class="font-black">Báo cáo Thẩm định Sư phạm &amp; Căn cứ Pháp lý</h2><button class="btn secondary" onclick="closeComplianceModal()">✕</button></div><div id="complianceReportContent" class="mt-4"></div><div class="flex gap-2 mt-4"><button class="btn primary" onclick="window.print()">🖨 In báo cáo thẩm định</button></div></section></div>
 
+<input id="sgkJsonFileInput" type="file" accept=".json,application/json" class="hidden" onchange="importSgkKnowledgeJson(this)">
 <div id="sgkLibraryModal" class="modal hidden"><section class="card p-5 max-w-4xl w-full"><div class="flex justify-between items-center gap-3"><h2 class="font-black text-lg">📚 Kho Tri thức Sách Giáo Khoa Dùng Chung</h2><button class="btn secondary" onclick="closeSgkLibraryModal()">✕</button></div><p class="text-xs opacity-75 mt-1">Các bộ sách đã được trích xuất và số hóa thành Bản đồ Tri thức trong CSDL dùng chung. Bấm vào bộ sách để nạp hoặc xem chi tiết từng bài học.</p><div class="mt-3 flex gap-2"><input id="sgkLibrarySearch" class="field text-sm" placeholder="Tìm theo môn, lớp, bộ sách…" oninput="renderFilteredSgkLibrary()"><button class="btn secondary text-xs" onclick="fetchAndRenderSgkLibrary()">🔄 Làm mới</button></div><div id="sgkLibraryList" class="mt-3 space-y-2 max-h-[60vh] overflow-y-auto" aria-live="polite"></div></section></div>
 <div id="sgkDetailModal" class="modal hidden"><section class="card p-5 max-w-5xl w-full"><div class="flex justify-between items-center gap-3"><div><h2 id="sgkDetailTitle" class="font-black text-lg">Chi tiết Bản đồ Tri thức</h2><p id="sgkDetailSubtitle" class="text-xs opacity-75">Danh mục bài học, YCCD, hoạt động số &amp; gợi ý AI</p></div><button class="btn secondary" onclick="closeSgkDetailModal()">✕</button></div><div id="sgkDetailContent" class="mt-4 max-h-[68vh] overflow-y-auto" aria-live="polite"></div><div class="mt-4 flex justify-end gap-2"><button id="btnUseCurBook" class="btn primary text-sm" onclick="useCurrentDetailBook()">⚡ Sử dụng bộ sách này cho Phụ lục</button><button class="btn secondary text-sm" onclick="closeSgkDetailModal()">Đóng</button></div></section></div>
 <script>
@@ -261,8 +262,30 @@ async function checkSharedSgkKnowledge(silent=false){
       loadedSharedSgkKnowledge=null;
     }
   }catch(e){
+    const localKey=`sgk_knowledge_${mon}_${lop}_${series}`.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+    const cached=typeof localStorage!=='undefined'?localStorage.getItem(localKey):null;
+    if(cached){
+      try{
+        const parsed=JSON.parse(cached);
+        if(parsed&&parsed.book&&Array.isArray(parsed.lessons)){
+          loadedSharedSgkKnowledge=parsed;
+          sgkKnowledgeBase=JSON.stringify(loadedSharedSgkKnowledge);
+          sgkCompactContext=`[Bản đồ Tri thức SGK cục bộ]\n`+parsed.lessons.map(l=>`${l.lesson_title}: YCCD: ${l.yccd} | NLS: ${l.digital_evidence} | AI: ${l.ai_pedagogy_hint}`).join('\n');
+          if(container)container.className='mt-4 p-4 rounded-xl border border-sky-300 bg-sky-50/80 text-sm';
+          titleEl.innerHTML=`✓ Đã nạp Bản đồ Tri thức (Bộ nhớ máy): <b>${esc(parsed.book.series||series)}</b> · ${esc(parsed.book.subject||mon)} ${esc(parsed.book.grade||lop)}`;
+          descEl.innerHTML=`Đang dùng bản lưu cục bộ trình duyệt (<b>${parsed.lessons.length} bài học</b>). Kết nối máy chủ hosting tạm thời gián đoạn.`;
+          if(actionsEl){
+            actionsEl.innerHTML=`<button type="button" class="btn primary text-xs" onclick="syncSharedSgkToApp()">⚡ Dùng Tri thức</button><button type="button" class="btn secondary text-xs" onclick="exportSgkKnowledgeJson()">📤 Xuất file JSON</button><button type="button" class="btn secondary text-xs" onclick="document.querySelector('#sgkJsonFileInput').click()">📥 Nhập JSON</button>`;
+          }
+          return;
+        }
+      }catch(_){}
+    }
     titleEl.textContent='Kho Tri thức SGK dùng chung';
-    descEl.textContent='Không thể kết nối CSDL tri thức (offline/ngoại tuyến).';
+    descEl.innerHTML=`CSDL hosting chưa kết nối được (file backend trên hosting chưa được push hoặc đang offline). Bạn có thể bấm <button type="button" class="underline font-bold text-teal-800" onclick="document.querySelector('#sgkJsonFileInput').click()">📥 Nhập file JSON</button> hoặc tải PDF để trích xuất lưu tạm.`;
+    if(actionsEl){
+      actionsEl.innerHTML=`<button type="button" class="btn primary text-xs" onclick="document.querySelector('#sgkJsonFileInput').click()">📥 Nhập file JSON</button><button type="button" class="btn secondary text-xs" onclick="extractAndSaveSharedSgk()">🚀 Trích xuất từ PDF</button><button type="button" class="btn secondary text-xs" onclick="openSgkLibraryModal()">📚 Thư viện</button>`;
+    }
   }
 }
 async function syncSharedSgkToApp(bookId=0,silent=false){
@@ -332,6 +355,8 @@ ${sgkCompactContext.slice(0,35000)}`;
     const res=await callAiJson(prompt);
     if(!res||!Array.isArray(res.lessons)||!res.lessons.length)throw new Error('AI không trích xuất được danh sách bài học hợp lệ.');
     setProgress(80,'Đang lưu Bản đồ Tri thức vào CSDL dùng chung…');
+    const localKey=`sgk_knowledge_${payload.book.subject}_${payload.book.grade}_${payload.book.series}`.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+    if(typeof localStorage!=='undefined')localStorage.setItem(localKey,JSON.stringify(payload));
     const payload={
       book:{
         subject:res.book?.subject||c.monHoc,
@@ -362,6 +387,48 @@ ${sgkCompactContext.slice(0,35000)}`;
     setProgress(100,msg,true,3500);
   }
 }
+
+function exportSgkKnowledgeJson(){
+  if(!loadedSharedSgkKnowledge)return notify('Chưa có bản đồ tri thức nào được nạp để xuất.');
+  try{
+    const b=loadedSharedSgkKnowledge.book||{};
+    const filename=`TriThucSGK_${b.subject||'Mon'}_${b.grade||'Lop'}_${b.series||'Sach'}.json`.replace(/[\s/\\?%*:|"<>]+/g,'_');
+    const blob=new Blob([JSON.stringify(loadedSharedSgkKnowledge,null,2)],{type:'application/json;charset=utf-8'});
+    saveAs(blob,filename);
+    notify('Đã xuất file JSON Bản đồ Tri thức SGK!');
+  }catch(err){
+    notify(`Không thể xuất file: ${err.message}`);
+  }
+}
+function importSgkKnowledgeJson(input){
+  const file=input?.files?.[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data||!data.book||!Array.isArray(data.lessons))throw new Error('Định dạng file JSON Bản đồ Tri thức không hợp lệ.');
+      loadedSharedSgkKnowledge=data;
+      sgkKnowledgeBase=JSON.stringify(data);
+      sgkCompactContext=`[Bản đồ Tri thức SGK]\n`+data.lessons.map(l=>`${l.lesson_title}: YCCD: ${l.yccd} | NLS: ${l.digital_evidence} | AI: ${l.ai_pedagogy_hint}`).join('\n');
+      const b=data.book;
+      const localKey=`sgk_knowledge_${b.subject}_${b.grade}_${b.series}`.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+      if(typeof localStorage!=='undefined')localStorage.setItem(localKey,JSON.stringify(data));
+      if(b.grade)grade.value=b.grade;
+      refreshSubjects();
+      if(b.subject)subject.value=b.subject;
+      if(b.series&&document.querySelector('#bookSeries'))document.querySelector('#bookSeries').value=b.series;
+      checkSharedSgkKnowledge(true);
+      notify(`✓ Đã nhập thành công ${data.lessons.length} bài học từ file JSON!`);
+    }catch(err){
+      notify(`Lỗi đọc file JSON: ${err.message}`);
+    }finally{
+      input.value='';
+    }
+  };
+  reader.readAsText(file);
+}
+
 function openSgkLibraryModal(){document.querySelector('#sgkLibraryModal').classList.remove('hidden');fetchAndRenderSgkLibrary();}
 function closeSgkLibraryModal(){document.querySelector('#sgkLibraryModal').classList.add('hidden');}
 async function fetchAndRenderSgkLibrary(){

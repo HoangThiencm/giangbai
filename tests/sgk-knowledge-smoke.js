@@ -43,7 +43,8 @@ const requiredIds = [
   'sgkDetailTitle',
   'sgkDetailSubtitle',
   'sgkDetailContent',
-  'btnUseCurBook'
+  'btnUseCurBook',
+  'sgkJsonFileInput'
 ];
 
 const requiredFunctions = [
@@ -59,7 +60,9 @@ const requiredFunctions = [
   'closeSgkDetailModal',
   'useCurrentDetailBook',
   'useSharedSgkBook',
-  'getSharedSgkLessonKnowledge'
+  'getSharedSgkLessonKnowledge',
+  'exportSgkKnowledgeJson',
+  'importSgkKnowledgeJson'
 ];
 
 for (const { path, isCanvas } of htmlFiles) {
