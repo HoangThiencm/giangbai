@@ -1,4 +1,57 @@
-# IMPLEMENT — Chuẩn hóa mã Phụ lục 1 và nháp Gemini Canvas
+# IMPLEMENT — Đồng bộ 1-1 soankhbd.html sang canvas_soankhbd.html & Phục hồi 1-Click
+
+## Đồng bộ 1-1 soankhbd.html sang canvas_soankhbd.html & 1-Click Soạn KHBD
+- `backupcode viettailieu/canvas_soankhbd.html` và `canvas_soankhbd.html`: Mang toàn bộ giao diện và chức năng 1-1 từ `soankhbd.html` (Quy trình Stepper 4 bước, 5 subtab Tab 0, hệ thống kéo thả SGK & PPCT độc lập, khối hình minh họa, các modal xem ảnh, chọn trang PDF, modal xác nhận chuẩn PPCT).
+- Chạy độc lập trong môi trường Gemini Canvas:
+  + Loại bỏ hoàn toàn `security-guard.js` và kiểm tra đăng nhập `authToken`.
+  + Tải tài nguyên tĩnh và các module JS qua HTTPS tuyệt đối `https://hoangthiencm.id.vn/...`.
+  + Tích hợp thanh thông báo trạng thái kết nối `#canvasHostBanner`.
+  + Thay thế `window.confirm()` bằng modal xác nhận nội bộ DOM `canvasConfirm()`, tương thích sandbox iframe không có `allow-modals`.
+  + Định tuyến gọi Gemini qua `https://hoangthiencm.id.vn/api/canvas_gemini.php` với `credentials: 'omit'` và model hệ thống `gemini-3-flash-preview`.
+  + Tích hợp OCR dự phòng qua Gemini Vision.
+- Tái lập và hoàn thiện tính năng **⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)**:
+  + Thêm nút `#btn1ClickGenerate` trên header toolbar.
+  + Hàm điều phối `handle1ClickGenerate()` tự động chạy tuần tự: I. Mục tiêu -> II. Thiết bị & Học liệu -> III.A Khởi động -> III.B Hình thành kiến thức -> III.C Luyện tập -> III.D Vận dụng -> III.E Hồ sơ học tập & Đánh giá.
+  + Cập nhật thanh tiến trình theo từng chặng (15% -> 30% -> 45% -> 60% -> 75% -> 88% -> 96% -> 100%).
+  + Tự động kích hoạt chuyển sang Tab 4 (`tabFullPreview`) hiển thị toàn bộ giáo án sau khi hoàn tất.
+  + Cho phép hủy an toàn giữa chừng bằng nút `btnCancelGeneration` (`AbortController`).
+- `tests/canvas-soankhbd-smoke.js`: Bộ kiểm thử tự động xác minh toàn bộ DOM IDs 1-1, kiểm tra cú pháp JS inline bằng Node vm.Script, nút 1-Click và tính năng Canvas. Chạy PASS 100%.
+
+### Sửa lỗi: Khắc phục treo modal PDF "Bắt đầu nạp trang" (Đơ luôn)
+- **Nguyên nhân**: Trong `canvas_soankhbd.html`, `#modalApiKeys` từng bị rút gọn làm mất `#btnSaveApiKeys` và `#btnTestApiKey`. Khi `initApp()` khởi chạy trong `js/khbd-app.js`, `setupApiKeyModal()` ném lỗi `TypeError: Cannot read properties of null (reading 'addEventListener')` khiến chuỗi khởi tạo bị đứt quãng trước khi gọi `setupPdfModal()`. Do đó, nút `#btnConfirmPdfPages` không bao giờ được gán listener click.
+- **Giải pháp**:
+  1. `js/khbd-app.js`: Bổ sung kiểm tra phòng thủ `if (btnSave)`, `if (btnTest)`, `if (btnManage)` trong `setupApiKeyModal()` để chống đứt gãy luồng khởi tạo trong mọi tình huống.
+  2. `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`: Đồng bộ chuẩn 1-1 toàn bộ nội dung `#modalApiKeys` từ `soankhbd.html` (có `#textareaApiKeys`, `#btnSaveApiKeys`, `#btnTestApiKey`, `#textareaMistralKeys`, `#btnTestMistralKey`...), đồng thời có banner ghi rõ chế độ Canvas tự động kết nối Gateway `hoangthiencm.id.vn` và vẫn cho phép người dùng nạp key cá nhân nếu muốn.
+  3. Bổ sung fail-safe event listener cho `#btnConfirmPdfPages` trong `bindCanvasEvents()`.
+  4. Cập nhật bài test `tests/canvas-soankhbd-smoke.js` kiểm tra toàn bộ ID của modal API key và modal PDF.
+
+### Nâng cấp: Ngữ cảnh hóa Mô tả Năng lực số và AI theo bài học trong Phụ lục 1
+- **Vấn đề**: Cột Năng lực số và AI trong Phụ lục 1 từng bị xuất nhãn lý thuyết chung chung trích từ văn bản (ví dụ: `6.1.TC2a - Hiểu biết về hệ thống trí tuệ nhân tạo;`, `6.2.TC2a - Sử dụng hệ thống trí tuệ nhân tạo;`, `9.B2.1 - Trình bày được vai trò của người dùng...`).
+- **Triển khai**:
+  1. `xaydungphuluc.html` & `backupcode viettailieu/canvas_xaydungphuluc.html` (và bản sao `canvas_xaydungphuluc.html` tại root):
+     - Nâng cấp `appendixPrompt()`: Bổ sung chỉ thị nghiêm ngặt cấm chép lại tên chuẩn lý thuyết khung; bắt buộc AI mô tả hành động cụ thể học sinh áp dụng công nghệ số/phần mềm nào (GeoGebra, máy tính cầm tay, video mô phỏng, bảng tính...) để học tập kiến thức của đúng bài học đó.
+     - Bổ sung helper `cleanLessonDescription(lesson)` và `lessonAppliedNlsDescription(code, label, lesson)` tự động tạo câu hành động sư phạm gắn liền với tên bài học theo từng nhóm mã NLS (6.1, 6.2, 6.3, 5.x, 1.x, 3.x, 2.x, 4.x).
+     - Nâng cấp `fallbackNlsCodes()`, `fallbackAiCode()`, `enrichNlsCode()`, `cleanNlsColumnText()`, `cleanAiColumnText()` tự động phát hiện và chuyển đổi nhãn khung lý thuyết chung chung thành câu mô tả gắn với bài học cụ thể, đồng thời giữ nguyên vẹn các mô tả tùy biến của người dùng và phạm vi tiết `(Áp dụng: tiết ...)`.
+     - Đảm bảo các hàm được định nghĩa single-line tương thích hoàn toàn với bộ test `sliceNamedFunction`.
+  2. Tạo bài kiểm thử chuyên sâu `scratch/test-applied-nls-smoke.js` kiểm tra 100% các tình huống (nhãn generic -> gắn bài, mô tả custom -> bảo lưu, AI dài dòng -> rút gọn theo bài và giữ phạm vi tiết, fallback tự sinh theo bài). Chạy PASS 100%.
+
+### Nâng cấp: Sửa lỗi bóc tách Năng lực AI trong PPCT chỉ nhận Khung năng lực A
+- **Vấn đề**: Khi dán hoặc phân tích Phân phối chương trình (PPCT) có chứa các mã AI thuộc Khung B (Định hướng AI), Khung C (Hiểu biết & ứng dụng AI), hoặc Khung D (Sáng tạo & đánh giá AI) theo Quyết định 2422/QĐ-BGDĐT (ví dụ: `[AI: 9.A1.1, 9.B2.1]`, `[AI: 6.B2.1]`, `[AI: 7.C4.1]`, `[AI: 8.D1.1]`...), hệ thống chỉ bắt duy nhất mã khung A, bỏ qua 56/88 mã thuộc khung B, C, D.
+- **Triển khai**:
+  1. `js/khbd-app.js`:
+     - Trong hàm `extractStandardsFromPpctText()` (dòng 1230): Cập nhật regex từ `/\b([6-9]\.A\d+\.(?:MR)?\d+)\b/gi` thành `/\b([6-9]\.[A-Z]\d+\.(?:MR)?\d+)\b/gi`. Bây giờ nhận diện chuẩn xác 100% toàn bộ 88 mã YCCĐ của cả 4 khung A, B, C, D và mã mở rộng `MR`.
+     - Bảo lưu và chọn lọc đầy đủ đa mã AI khi PPCT chứa nhiều mã (tối đa 3 mã theo trần `capAiStandardRecords` quy định tại QĐ 2422).
+  2. `xaydungphuluc.html`, `canvas_xaydungphuluc.html` & `backupcode viettailieu/canvas_xaydungphuluc.html`:
+     - Đồng bộ hàm `hasAiCode()` sang `/(?:\[\s*AI\s*:\s*|\b)\d+\.[A-Z]\d+\.(?:MR)?\d+/i`.
+     - Đồng bộ `integrationParts()` sang `\d+\.[A-Z]`.
+  3. `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`:
+     - Tích hợp bộ nạp script thông minh: tự động nạp bản local `js/khbd-standards.js` và `js/khbd-app.js` khi chạy local/file:// để người dùng thử nghiệm nhanh mọi cập nhật code, đồng thời giữ nguyên fallback HTTPS CDN khi chạy nhúng trong Google Canvas.
+  4. Chuẩn hóa an toàn hệ thống & fix lặp test:
+     - `js/khbd-standards.js`: `recommendOfficialStandards()` tính `min` cho AI phụ thuộc vào cờ `ctx.aiOn` (không tự động ép nạp mã AI khi người dùng chưa kích hoạt).
+     - `js/khbd-app.js`: Thêm kiểm tra phòng thủ an toàn `typeof document.querySelector === "function"` trong `updateWorkflowStepper` và null-check cho `btnImportLegacyDraft`.
+     - Toàn bộ 58 bộ kiểm thử trong `tests/run-all-tests.js` chạy đạt 100% PASS tuyệt đối.
+
+Ngày: 2026-09-07. Đã hoàn tất triển khai và kiểm thử.
 
 ## Tự động nhận diện chuẩn NLS và AI từ PPCT trong KHBD
 - `soankhbd.html` có modal xác nhận các mã chuẩn được nhận diện; người dùng có thể đóng hoặc chuyển thẳng tới Bước 3.
@@ -65,3 +118,10 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
 - Hai nhãn “2 mã NLS” dùng `--brand`. Ô chọn `#nlsNoAiDensity` dùng nền `--card`, chữ `--ink` và viền `--line` để rõ ở cả hai chế độ giao diện.
 - Hai smoke test kiểm tra các ràng buộc theme này, gồm việc không còn class nền tối Tailwind trong khung tùy chỉnh.
 - Đã chạy PASS: `node tests/xaydungphuluc-smoke.js`, `node tests/canvas-xaydungphuluc-smoke.js`, `node tests/xaydungphuluc-integration-smoke.js`, và `git diff --check`.
+
+## Sửa theo PLAN: Hệ phương trình LaTeX trong DOCX và KaTeX
+- `js/khbd-docx.js` nhận diện riêng `\\begin{cases}`, `\\begin{aligned}` và `\\left\\{ ... \\right.`; xuất Word Equation bằng OMML delimiter (`m:d`) có ngoặc nhọn mở và Equation Array (`m:eqArr`) cho từng dòng. Phương án Unicode dự phòng cũng xóa hoàn toàn token `begin...`/`end...`.
+- `js/khbd-app.js` giữ nguyên khối các hệ phương trình có `\\text{...}` tiếng Việt để KaTeX không nhận cú pháp `begin/end` bị cắt rời.
+- Hai bản `canvas_soankhbd.html` nạp `js/khbd-docx.js` cục bộ khi mở từ `file:` hoặc `localhost`, và vẫn dùng nguồn hosting trong Gemini Canvas.
+- Mở rộng smoke tests tạo DOCX mẫu, kiểm tra XML có `m:begChr`, `m:eqArr`, các dòng phương trình và không có chuỗi LaTeX rác; bổ sung ca KaTeX tiếng Việt và kiểm tra bộ nạp Canvas.
+- Đã chạy PASS: `node tests/khbd-docx-math-smoke.js`, `node tests/khbd-docx-format-smoke.js`, `node tests/khbd-docx-layout-smoke.js`, `node tests/khbd-docx-illustration-fallback-smoke.js`, `node tests/khbd-katex-vn-smoke.js`, `node tests/canvas-soankhbd-smoke.js`.

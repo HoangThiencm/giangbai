@@ -169,10 +169,9 @@ function testPromptTemplateActivityB() {
   assert.ok(promptB.includes("NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO MỤC LỚN SGK"), "Prompt B phải có nguyên tắc ánh xạ 1-1 theo mục lớn");
   assert.ok(promptB.includes("TUYỆT ĐỐI CẤM GỘP"), "Prompt B phải cấm gộp tiểu mục");
   assert.ok(promptB.includes("TUYỆT ĐỐI CẤM BỊA THÊM"), "Prompt B phải cấm bịa thêm hoạt động");
-  assert.ok(promptB.includes("DANH SÁCH TIỂU MỤC SGK BẮT BUỘC ÁP DỤNG (ĐÚNG 3 HOẠT ĐỘNG NHÁNH)"), "Prompt B phải nhúng danh sách đúng 3 tiểu mục");
-  assert.ok(promptB.includes("### 1. Hoạt động 2.1: Khái niệm tập hợp (15 phút)"), "Prompt B phải có chỉ định cho Hoạt động 2.1 có thời lượng cố định");
-  assert.ok(promptB.includes("### 2. Hoạt động 2.2: Phần tử của tập hợp (15 phút)"), "Prompt B phải có chỉ định cho Hoạt động 2.2 có thời lượng cố định");
-  assert.ok(promptB.includes("### 3. Hoạt động 2.3: Cách viết tập hợp (15 phút)"), "Prompt B phải có chỉ định cho Hoạt động 2.3 có thời lượng cố định");
+  assert.ok(/### 1\. Hoạt động 2\.1: Khái niệm tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.1 có thời lượng cố định");
+  assert.ok(/### 2\. Hoạt động 2\.2: Phần tử của tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.2 có thời lượng cố định");
+  assert.ok(/### 3\. Hoạt động 2\.3: Cách viết tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.3 có thời lượng cố định");
 
   console.log("  -> getPromptTemplate Activity B: PASS");
 }

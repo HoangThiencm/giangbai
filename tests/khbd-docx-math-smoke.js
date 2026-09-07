@@ -69,6 +69,10 @@ async function main() {
   assert.strictEqual(generator.normalizeLatexForMath(String.raw`$\notinA$`), String.raw`$\notin A$`);
 
   const inline = String.raw`$\notin A$; $\\notin A$; $\notinA$; $\frac{a}{b}$; $\sqrt{x}$; $x^2$`;
+  const cases = String.raw`$\begin{cases}x + y = 17\;(1) \\ 10x + 3y = 100\;(2)\end{cases}$`;
+  const aligned = String.raw`$\begin{aligned}x &= 2 \\ y &= 3\end{aligned}$`;
+  const leftBrace = String.raw`$\left\{x+y=5 \\ x-y=1\right.$`;
+  assert.ok(!/begin(?:cases|aligned)|end(?:cases|aligned)/i.test(generator.latexToUnicodeMath(cases)), "Fallback Unicode phải bỏ begin/end");
   const table = generator.createDocxTableFromMarkdown([
     "| Hoạt động | Nội dung |",
     "| --- | --- |",
@@ -78,6 +82,9 @@ async function main() {
     sections: [{
       children: [
         new docx.Paragraph({ children: generator.parseInlineTextToRuns(inline) }),
+        new docx.Paragraph({ children: generator.parseInlineTextToRuns(cases) }),
+        new docx.Paragraph({ children: generator.parseInlineTextToRuns(aligned) }),
+        new docx.Paragraph({ children: generator.parseInlineTextToRuns(leftBrace) }),
         table
       ]
     }]
@@ -91,6 +98,11 @@ async function main() {
   assert.match(xml, /<m:f>/, "frac phải tạo OMML fraction");
   assert.match(xml, /<m:rad>/, "sqrt phải tạo OMML radical");
   assert.match(xml, /<m:sSup>/, "superscript phải tạo OMML superscript");
+  assert.match(xml, /<m:dPr><m:begChr m:val="\{"\/><m:endChr m:val=""\/><\/m:dPr>/, "Hệ phương trình phải có dấu ngoặc nhọn mở OMML");
+  assert.ok((xml.match(/<m:eqArr>/g) || []).length >= 3, "cases, aligned và left brace phải tạo Equation Array");
+  assert.match(xml, /x \+ y = 17.*\(1\)/, "Giữ dòng và số thứ tự phương trình thứ nhất");
+  assert.match(xml, /10x \+ 3y = 100.*\(2\)/, "Giữ dòng và số thứ tự phương trình thứ hai");
+  assert.ok(!/begincases|endcases|beginaligned|endaligned/i.test(xml), "XML DOCX không được chứa token LaTeX rác");
   console.log("khbd-docx math smoke: passed");
 }
 

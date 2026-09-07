@@ -104,6 +104,15 @@ class DocxGenerator {
     if (this.isGarbageLatexMathInner(s)) return "";
     s = s.replace(/(?:\\(?:quad|qquad)\s*){3,}/g, " ");
 
+    // Fallback Unicode cho hệ phương trình không được để token begin/end lọt ra Word.
+    s = s
+      .replace(/\\begin\s*\{(?:cases|aligned)\}/gi, "{ ")
+      .replace(/\\end\s*\{(?:cases|aligned)\}/gi, "")
+      .replace(/\\left\s*\\?\{/g, "{ ")
+      .replace(/\\right\s*\./g, "")
+      .replace(/\\\\(?:\[[^\]]*\])?/g, "; ")
+      .replace(/\s*&\s*/g, " ");
+
     // Thay thế các phân số \frac{a}{b} -> (a)/(b) hoặc a/b
     s = s.replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, "($1)/($2)");
     s = s.replace(/\\dfrac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, "($1)/($2)");
@@ -190,6 +199,41 @@ class DocxGenerator {
     return source;
   }
 
+  /** Tạo OMML delimiter + equation array cho cases/aligned và \\left\\{. */
+  createCasesMath(source, mathApi) {
+    const casesMatch = source.match(/^\\begin\s*\{(cases|aligned)\}([\s\S]*?)\\end\s*\{\1\}\s*$/i);
+    const leftBraceMatch = source.match(/^\\left\s*\\\{([\s\S]*?)\\right\s*\.\s*$/);
+    const body = casesMatch ? casesMatch[2] : (leftBraceMatch ? leftBraceMatch[1] : null);
+    if (body === null || typeof mathApi.XmlComponent !== "function" || typeof mathApi.XmlAttributeComponent !== "function") return null;
+
+    const rows = body
+      .split(/\\\\(?:\[[^\]]*\])?\s*/)
+      .map(row => row.replace(/\s*&\s*/g, " ").trim())
+      .filter(Boolean);
+    if (!rows.length) return null;
+
+    const element = name => new mathApi.XmlComponent(name);
+    const attribute = value => new mathApi.XmlAttributeComponent({ "m:val": value });
+    const delimiterProperties = element("m:dPr");
+    const beginning = element("m:begChr");
+    beginning.root.push(attribute("{"));
+    const ending = element("m:endChr");
+    ending.root.push(attribute(""));
+    delimiterProperties.root.push(beginning, ending);
+
+    const equationArray = element("m:eqArr");
+    for (const row of rows) {
+      const equation = element("m:e");
+      equation.root.push(new mathApi.MathRun(this.latexToUnicodeMath(row)));
+      equationArray.root.push(equation);
+    }
+    const base = element("m:e");
+    base.root.push(equationArray);
+    const delimiter = element("m:d");
+    delimiter.root.push(delimiterProperties, base);
+    return new mathApi.Math({ children: [delimiter] });
+  }
+
   /** Chuyển LaTeX ($...$, $$...$$, \\(...\\)) thành Equation Word (OMML). Thất bại thì trả null để fallback Unicode. */
   createNativeMath(latex) {
     const mathApi = window.docx;
@@ -207,6 +251,9 @@ class DocxGenerator {
       .replace(/\\displaystyle\b/g, "")
       .replace(/\\nolimits\b/g, "")
       .replace(/\\limits\b/g, "");
+
+    const casesMath = this.createCasesMath(source, mathApi);
+    if (casesMath) return casesMath;
 
     const commandMap = {
       alpha: "α", beta: "β", gamma: "γ", delta: "δ", Delta: "Δ", epsilon: "ε", varepsilon: "ε",

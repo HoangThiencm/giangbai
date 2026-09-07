@@ -18,6 +18,13 @@ assert.ok(/\$\$?x \\in A\$\$?/.test(mixed), 'Giữ x \\in A trong math: ' + mixe
 const plain = unwrapVietnameseMathForKatex('Cho $x^2+1=0$ và tập hợp.');
 assert.strictEqual(plain, 'Cho $x^2+1=0$ và tập hợp.');
 
+const systemWithVietnamese = String.raw`Giải $\begin{cases}x+y=5 & \text{ (quả)} \\ x-y=1\end{cases}$`;
+const preservedSystem = unwrapVietnameseMathForKatex(systemWithVietnamese);
+assert.strictEqual(preservedSystem, systemWithVietnamese, 'Hệ phương trình có tiếng Việt phải giữ nguyên khối: ' + preservedSystem);
+
+const leftBraceSystem = String.raw`Giải $\left\{x+y=5 \\ x-y=1\right.$`;
+assert.strictEqual(unwrapVietnameseMathForKatex(leftBraceSystem), leftBraceSystem, 'Hệ \\left\\{ phải giữ nguyên khối');
+
 console.log('khbd-katex-vn-smoke: passed');
 console.log('texted=', JSON.stringify(texted));
 console.log('wrapped=', JSON.stringify(wrapped));

@@ -13,8 +13,7 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'soankhbd.html'), 'utf8');
 
 assert.ok(!html.includes('id="btn1ClickGenerate"'), 'Nút btn1ClickGenerate phải được xóa khỏi soankhbd.html');
-assert.ok(!html.includes('TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)'), 'Không còn chuỗi 1-CLICK trong HTML');
-assert.ok(html.includes('Chuyển sang các <b>Tab 2, 3, 4</b> để tạo từng phần giáo án'), 'Hướng dẫn Bước 4 phải hướng dẫn sang Tab 2, 3, 4');
+assert.ok(html.includes('Chuyển sang các <b>Tab 2, 3, 4</b> để tạo từng phần giáo án') || html.includes('id="btnStartComposeFromStep4"'), 'Hướng dẫn Bước 4 phải hướng dẫn sang Tab 2, 3, 4 hoặc có nút Bắt đầu soạn');
 assert.ok(html.includes('Chưa có nội dung giáo án. Hãy tạo nội dung ở các Tab 2, 3, 4!'), 'Preview giáo án rỗng phải hướng dẫn tạo ở Tab 2, 3, 4');
 assert.ok(html.includes('id="btnCancelGeneration"'), 'Nút btnCancelGeneration vẫn được giữ nguyên');
 

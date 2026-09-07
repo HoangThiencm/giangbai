@@ -278,17 +278,17 @@ async function testDocxCompatibility() {
 }
 
 function testPortfolioTabF() {
-  console.log("-> Kiểm tra Sub-tab F Hồ sơ & Phiếu học tập...");
+  console.log("-> Kiểm tra Sub-tab E Hồ sơ & Phiếu học tập...");
   const html = fs.readFileSync(path.join(__dirname, "..", "soankhbd.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "..", "js", "khbd-app.js"), "utf8");
   const docxSrc = fs.readFileSync(path.join(__dirname, "..", "js", "khbd-docx.js"), "utf8");
-  assert.match(html, /data-act="F">F\. Hồ sơ học tập/, "Tab 4 phải có sub-tab F. Hồ sơ học tập");
+  assert.match(html, /data-act="E">E\. Hồ sơ học tập/, "Tab 4 phải có sub-tab E. Hồ sơ học tập");
   assert.match(html, /data-act="A"[\s\S]*data-act="B"[\s\S]*data-act="C"[\s\S]*data-act="D"[\s\S]*data-act="E"[\s\S]*data-act="F"/, "Phải đủ 6 subtabs A–F");
-  assert.match(app, /F: \{ short: "F\. Hồ sơ học tập"/, "ACTIVITY_TITLES phải có key F");
-  assert.match(app, /GENERATE_PORTFOLIO_WORKSHEETS/, "Tạo mục F phải gọi prompt phiếu học tập");
+  assert.match(app, /E: \{ short: "E\. Hồ sơ học tập"/, "ACTIVITY_TITLES phải có key E");
+  assert.match(app, /GENERATE_PORTFOLIO_WORKSHEETS/, "Tạo mục E phải gọi prompt phiếu học tập");
   assert.match(app, /IV\. PHỤ LỤC: HỒ SƠ DẠY HỌC/, "Xuất giáo án phải có phụ lục IV phiếu học tập");
   assert.match(docxSrc, /pageBreakBefore: Boolean\(isAppendix\)/, "Word phải ngắt trang trước phụ lục phiếu học tập");
-  console.log("  -> Sub-tab F & xuất Word phụ lục: PASS");
+  console.log("  -> Sub-tab E & xuất Word phụ lục: PASS");
 }
 
 async function main() {

@@ -232,7 +232,6 @@ function scoreOfficialStandard(kind, entry, ctx) {
     }
     if (!hasTech && !facilities.projector && /canva|padlet|chatbot/.test(foldStandardText(entry.label))) score = 0;
   } else if (kind === "ai") {
-    // Không dùng AI hoặc không có dấu vết hoạt động AI thì không tự gán chuẩn AI.
     if (!ctx.aiOn && !/\bai\b|chatbot|gemini|tri tue nhan tao/.test(hay)) return 0;
     score = 0;
     const labelWords = foldStandardText(entry.label).split(" ").filter(word => word.length >= 5);
@@ -267,7 +266,7 @@ function recommendOfficialStandards(kind, ctx) {
   if (!catalog) return [];
   const grade = Number(ctx.grade) || 6;
   const max = kind === "ai" || kind === "digital" ? 3 : (catalog.maxSelect || 3);
-  const min = kind === "ai" || kind === "digital" ? Math.min(2, max) : (catalog.minSelect || 0);
+  const min = kind === "ai" ? (ctx && ctx.aiOn ? Math.min(2, max) : 0) : (kind === "digital" ? Math.min(2, max) : (catalog.minSelect || 0));
   const pool = entriesForGrade(kind, grade);
   const ranked = pool
     .map(entry => ({ entry, score: scoreOfficialStandard(kind, entry, ctx) }))

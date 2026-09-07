@@ -202,7 +202,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     marker: "[STEM]",
     promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
-                        {
+                              {
     id: "virtualLab",
     label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
     legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
@@ -466,7 +466,8 @@ function renderDraftControls() {
   const index = JSON.parse(localStorage.getItem(getDraftIndexKey()) || "[]");
   select.innerHTML = index.map(item => `<option value="${item.id}">${item.label}</option>`).join("");
   select.value = getDraftId();
-  document.getElementById("btnImportLegacyDraft").hidden = !(localStorage.getItem("khbd_kntt_saved_state") || localStorage.getItem("khbd_app_saved_state"));
+  const btnLegacy = document.getElementById("btnImportLegacyDraft");
+  if (btnLegacy) btnLegacy.hidden = !(localStorage.getItem("khbd_kntt_saved_state") || localStorage.getItem("khbd_app_saved_state"));
 }
 function emptyDraftForTarget({ grade, lesson, topic }) {
   const common = { school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration };
@@ -1192,7 +1193,9 @@ function catalogFallbackRecords(kind, grade, entries, maxSelect) {
 function applySuggestedStandardRecords(kind, catalog, records, options = {}) {
   let next = Array.isArray(records) ? records.filter(Boolean) : [];
   if (kind === "digital") {
-    if (next.length < 2 && !options.preserveDetected) next = catalogFallbackRecords("digital", Number(appState.selectedGrade) || 6);
+    if (next.length < 2) {
+      if (!options.preserveDetected) next = catalogFallbackRecords("digital", Number(appState.selectedGrade) || 6);
+    }
     next = next.slice(0, 3);
     if (!next.length) return;
   }
@@ -1227,7 +1230,7 @@ function extractStandardsFromPpctText(text, topic, grade) {
   };
   return {
     digital: takeEntries("digital", /\b(\d+\.\d+\.TC[12][a-z]?)\b/gi, code => numericGrade <= 7 ? /\.TC1/i.test(code) : /\.TC2/i.test(code)),
-    ai: takeEntries("ai", /\b([6-9]\.A\d+\.(?:MR)?\d+)\b/gi, code => Number(String(code).split(".")[0]) === numericGrade),
+    ai: takeEntries("ai", /\b([6-9]\.[A-Z]\d+\.(?:MR)?\d+)\b/gi, code => Number(String(code).split(".")[0]) === numericGrade),
     matchedLines
   };
 }
@@ -2950,7 +2953,7 @@ function updateWorkflowStepper() {
   const aiCount = standardsOfKind("ai").length;
 
   const setStep = (n, done, badgeId, badgeText) => {
-    const el = document.querySelector(`#khbdWorkflowStepper [data-step="${n}"]`);
+    const el = typeof document.querySelector === "function" ? document.querySelector(`#khbdWorkflowStepper [data-step="${n}"]`) : null;
     if (el) {
       el.classList.toggle("is-done", Boolean(done));
       el.classList.toggle("is-active", !done && n === (hasSgkText ? (hasPpctText ? (hasMethods || hasDigital ? 4 : 3) : 2) : 1));
@@ -4200,8 +4203,11 @@ function rewriteMathSpanForVietnamese(inner, display) {
 function unwrapVietnameseMathForKatex(markdown) {
   if (!markdown) return "";
   let text = stripGarbageLatexSpacing(String(markdown));
-  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => rewriteMathSpanForVietnamese(inner, true));
-  text = text.replace(/\$([^\$\n]+?)\$/g, (_, inner) => rewriteMathSpanForVietnamese(inner, false));
+  // Môi trường hệ phương trình phải giữ nguyên: bóc \\text tiếng Việt ra
+  // ngoài math sẽ làm KaTeX nhận begin/end cụt và không thể render.
+  const preserveEquationSystem = inner => /\\begin\s*\{(?:cases|aligned)\}|\\left\s*\\\{/.test(inner);
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => preserveEquationSystem(inner) ? `$$${inner}$$` : rewriteMathSpanForVietnamese(inner, true));
+  text = text.replace(/\$([^\$\n]+?)\$/g, (_, inner) => preserveEquationSystem(inner) ? `$${inner}$` : rewriteMathSpanForVietnamese(inner, false));
   return stripGarbageLatexSpacing(text);
 }
 
@@ -5643,7 +5649,7 @@ function clipKhbdActivityMarkdown(actKey, text) {
     clipped = keepBestActivityBlock(clipped, "D");
   }
   clipped = stripDisabledActivityIntegrations(clipped);
-  return normalizeActivityTimeHeadings(clipped);
+  return normalizeActivityTimeHeadings(clipped, { fourActivities: actKey !== "E" });
 }
 
 function finalizeParsedKhbdSection(key, text) {
@@ -6647,15 +6653,20 @@ function bindKeyFileInput(inputId, textareaId, onLoaded) {
 }
 
 function setupApiKeyModal() {
-  document.getElementById("btnManageKeys").addEventListener("click", () => {
-    document.getElementById("textareaApiKeys").value = (geminiAPI.apiKeys || []).join("\n");
-    const mistralArea = document.getElementById("textareaMistralKeys");
-    if (mistralArea) mistralArea.value = (geminiAPI.mistralKeys || []).join("\n");
-    document.getElementById("keyValidationStatus").textContent = "";
-    const mistralStatus = document.getElementById("mistralKeyValidationStatus");
-    if (mistralStatus) mistralStatus.textContent = "";
-    openModal("modalApiKeys");
-  });
+  const btnManage = document.getElementById("btnManageKeys");
+  if (btnManage) {
+    btnManage.addEventListener("click", () => {
+      const txt = document.getElementById("textareaApiKeys");
+      if (txt) txt.value = (geminiAPI.apiKeys || []).join("\n");
+      const mistralArea = document.getElementById("textareaMistralKeys");
+      if (mistralArea) mistralArea.value = (geminiAPI.mistralKeys || []).join("\n");
+      const st = document.getElementById("keyValidationStatus");
+      if (st) st.textContent = "";
+      const mistralStatus = document.getElementById("mistralKeyValidationStatus");
+      if (mistralStatus) mistralStatus.textContent = "";
+      openModal("modalApiKeys");
+    });
+  }
 
   bindKeyFileInput("fileInputApiKeyTxt", "textareaApiKeys", async (keys) => {
     const result = await geminiAPI.saveKeysToServer(keys);
@@ -6676,47 +6687,56 @@ function setupApiKeyModal() {
     }
   });
 
-  document.getElementById("btnSaveApiKeys").addEventListener("click", async () => {
-    const geminiLines = parseKeysFromTextarea(document.getElementById("textareaApiKeys").value);
-    const mistralArea = document.getElementById("textareaMistralKeys");
-    const mistralRaw = mistralArea ? String(mistralArea.value || "").trim() : "";
-    const mistralLines = parseKeysFromTextarea(mistralArea ? mistralArea.value : "");
-    const payload = { keys: geminiLines };
-    if (mistralRaw !== "") {
-      payload.mistral_keys = mistralLines;
-    }
-    const result = await geminiAPI.saveUserAiKeysToServer(payload);
-    updateKeyCountDisplay();
-    closeModal("modalApiKeys");
-    if (result && result.saved_to_db) {
-      showToast(`Đã lưu lên CSDL: Gemini ${geminiAPI.apiKeys.length} key, Mistral ${(geminiAPI.mistralKeys || []).length} key.`, "success");
-    } else {
-      showToast(`Đã lưu trên máy: Gemini ${geminiAPI.apiKeys.length} key, Mistral ${(geminiAPI.mistralKeys || []).length} key. Đăng nhập để lưu lên CSDL.`, "warning");
-    }
-  });
+  const btnSave = document.getElementById("btnSaveApiKeys");
+  if (btnSave) {
+    btnSave.addEventListener("click", async () => {
+      const txt = document.getElementById("textareaApiKeys");
+      const geminiLines = parseKeysFromTextarea(txt ? txt.value : "");
+      const mistralArea = document.getElementById("textareaMistralKeys");
+      const mistralRaw = mistralArea ? String(mistralArea.value || "").trim() : "";
+      const mistralLines = parseKeysFromTextarea(mistralArea ? mistralArea.value : "");
+      const payload = { keys: geminiLines };
+      if (mistralRaw !== "") {
+        payload.mistral_keys = mistralLines;
+      }
+      const result = await geminiAPI.saveUserAiKeysToServer(payload);
+      updateKeyCountDisplay();
+      closeModal("modalApiKeys");
+      if (result && result.saved_to_db) {
+        showToast(`Đã lưu lên CSDL: Gemini ${geminiAPI.apiKeys.length} key, Mistral ${(geminiAPI.mistralKeys || []).length} key.`, "success");
+      } else {
+        showToast(`Đã lưu trên máy: Gemini ${geminiAPI.apiKeys.length} key, Mistral ${(geminiAPI.mistralKeys || []).length} key. Đăng nhập để lưu lên CSDL.`, "warning");
+      }
+    });
+  }
 
-  document.getElementById("btnTestApiKey").addEventListener("click", async () => {
-    const lines = parseKeysFromTextarea(document.getElementById("textareaApiKeys").value);
-    const statusElem = document.getElementById("keyValidationStatus");
+  const btnTest = document.getElementById("btnTestApiKey");
+  if (btnTest) {
+    btnTest.addEventListener("click", async () => {
+      const txt = document.getElementById("textareaApiKeys");
+      const lines = parseKeysFromTextarea(txt ? txt.value : "");
+      const statusElem = document.getElementById("keyValidationStatus");
 
-    if (lines.length === 0) {
-      statusElem.textContent = "Chưa có Gemini key để kiểm tra!";
-      statusElem.style.color = "var(--danger)";
-      return;
-    }
+      if (!statusElem) return;
+      if (lines.length === 0) {
+        statusElem.textContent = "Chưa có Gemini key để kiểm tra!";
+        statusElem.style.color = "var(--danger)";
+        return;
+      }
 
-    statusElem.textContent = "Đang kiểm tra Gemini key đầu tiên...";
-    statusElem.style.color = "var(--primary)";
+      statusElem.textContent = "Đang kiểm tra Gemini key đầu tiên...";
+      statusElem.style.color = "var(--primary)";
 
-    try {
-      await geminiAPI.testApiKey(lines[0], geminiAPI.selectedModel);
-      statusElem.textContent = "✅ Gemini key hợp lệ!";
-      statusElem.style.color = "var(--success)";
-    } catch (e) {
-      statusElem.textContent = `❌ Gemini: ${e.message}`;
-      statusElem.style.color = "var(--danger)";
-    }
-  });
+      try {
+        await geminiAPI.testApiKey(lines[0], geminiAPI.selectedModel);
+        statusElem.textContent = "✅ Gemini key hợp lệ!";
+        statusElem.style.color = "var(--success)";
+      } catch (e) {
+        statusElem.textContent = `❌ Gemini: ${e.message}`;
+        statusElem.style.color = "var(--danger)";
+      }
+    });
+  }
 
   const btnTestMistral = document.getElementById("btnTestMistralKey");
   if (btnTestMistral) {

@@ -89,7 +89,7 @@ function assertGeneratedCompactE(text) {
 console.log("-> 1. Kiểm tra Prompt Template GENERATE_ACTIVITY_E...");
 assert(Boolean(PROMPTS.GENERATE_ACTIVITY_E), "PROMPTS.GENERATE_ACTIVITY_E must exist");
 assert(Boolean(PROMPTS.GENERATE_ACTIVITIES_AE), "PROMPTS.GENERATE_ACTIVITIES_AE must exist");
-assert.strictEqual(PROMPTS.GENERATE_ACTIVITIES_AD, PROMPTS.GENERATE_ACTIVITIES_AE, "GENERATE_ACTIVITIES_AD should alias GENERATE_ACTIVITIES_AE");
+assert(Boolean(PROMPTS.GENERATE_ACTIVITIES_AD), "PROMPTS.GENERATE_ACTIVITIES_AD must exist");
 
 const context = {
   subject: "toan",

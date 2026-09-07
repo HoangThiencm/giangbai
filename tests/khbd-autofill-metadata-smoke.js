@@ -136,7 +136,7 @@ assert.strictEqual(result.hasAiIntegration, true, 'Năng lực AI phải đượ
 assert.strictEqual(appState.customTopic, 'Bài 1: Tập hợp');
 assert.strictEqual(appState.teachingContext.lessonScope, 'Tiết 1, 2');
 assert.strictEqual(appState.duration, '02 tiết (90 phút)');
-assert.strictEqual(appState.teachingContext.integrations.ai, true);
+assert.strictEqual(appState.teachingContext.integrations.ai, false, 'AI không tự ý bật nếu GV chưa tick');
 
 console.log('  -> autoDetectAndFillLessonMetadata: PASS');
 
