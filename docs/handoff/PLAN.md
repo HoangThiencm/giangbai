@@ -317,4 +317,30 @@ Khảo sát trực tiếp từ hình ảnh thực tế người dùng cung cấp
    - Viết test case trong `tests/sgk-knowledge-smoke.js` xác nhận tính đa dạng: kiểm tra các bài Toán 6 thuộc các phân môn khác nhau nhận các mã khác nhau (`5.1`, `3.1`, `1.2`, `2.2`...), không bài nào bị trùng lặp máy móc.
    - Chạy toàn bộ 59 test suites PASS 100%.
 
+---
 
+# PLAN: Hệ thống Nạp Tri thức Toàn diện cho Từng Môn ở Mỗi Lớp (Lớp 6–9)
+
+## 1. Hiện trạng & Yêu cầu Người dùng
+- Người dùng phản ánh: *"xaydungphuluc và canvas_xaydungphuluc tôi nạp tri thức được mỗi toán 6 còn lại không có chỗ để nạp. Đúng ra sẽ có nút nạp cho từng môn ở mỗi lớp"*.
+- *Nguyên nhân*:
+  + `onchange` của thẻ `<select id="grade">` không gọi `checkSharedSgkKnowledge(true)`, khiến khung tri thức bị giữ nguyên trạng thái cũ khi đổi lớp.
+  + Hàm `ensureFullCurriculumLessons` chỉ hỗ trợ môn Toán (`isMath = /toán/i.test(subject)`). Khi chọn các môn khác (Ngữ văn, KHTN, Lịch sử - Địa lí, Tin học, Công nghệ, GDCD, Tiếng Anh, v.v.), hệ thống báo lỗi không có danh mục chuẩn.
+  + Modal Thư viện sách (`#sgkLibraryModal`) chỉ hiển thị các sách đã lưu trong CSDL, không có danh mục ma trận các môn theo từng khối lớp và không có nút nạp riêng cho từng môn.
+
+## 2. Giải pháp Thực hiện
+1. **Mở rộng Kho Tri thức Chuẩn cho Tất cả 12 Môn THCS (Lớp 6, 7, 8, 9)**:
+   - Khai thác danh mục bài học từ `js/khbd-curriculum.js` (`CURRICULUM_DATA.lessonsBySubject`) cho toàn bộ 12 môn THCS.
+   - Tích hợp hàm `getStandardCurriculumLessons(subject, grade)` tự động cung cấp danh mục 100% bài học chuẩn cho bất kỳ môn học nào.
+   - Nâng cấp `ensureFullCurriculumLessons`: hỗ trợ trọn vẹn 100% các môn và các khối lớp 6, 7, 8, 9.
+2. **Cập nhật Giao diện Ngoài Trang Chính (`#sharedSgkContainer`)**:
+   - Thêm `checkSharedSgkKnowledge(true)` vào sự kiện `onchange` của `#grade`.
+   - Khi chọn bất kỳ môn và lớp nào, khung hiển thị ngay trạng thái của môn/lớp đó kèm nút `⚡ Nạp Tri thức chuẩn môn [Môn] Lớp [Lớp] (100% bài)`.
+3. **Xây dựng Trung tâm Quản lý & Nạp Tri thức Toàn bộ Môn học (`#sgkLibraryModal`)**:
+   - Bổ sung Tab chọn Khối lớp: `[ Lớp 6 ]` · `[ Lớp 7 ]` · `[ Lớp 8 ]` · `[ Lớp 9 ]` · `[ Sách đã lưu trong CSDL ]`.
+   - Bổ sung các nút tác vụ hàng loạt: `⚡ Nạp tất cả môn Khối Lớp X` và `⚡ Nạp trọn bộ tất cả các môn (Lớp 6–9)`.
+   - Lưới danh sách môn học: Mỗi môn có tên, số tiết, số bài học chuẩn, trạng thái CSDL và **Nút Nạp Tri thức riêng cho môn đó**.
+4. **Đồng bộ 100%**:
+   - Áp dụng trên `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và mirror `backupcode viettailieu/canvas_xaydungphuluc.html`.
+5. **Kiểm thử Toàn diện**:
+   - `tests/sgk-knowledge-smoke.js`, `tests/canvas-xaydungphuluc-smoke.js` và `tests/run-all-tests.js` (59/59 suites PASS 100%).

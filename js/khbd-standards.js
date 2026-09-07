@@ -243,7 +243,7 @@ function scoreOfficialStandard(kind, entry, ctx) {
       else if (/^5\.3/.test(code)) score += 16;
       else if (/^1\.1/.test(code)) score += 14;
     } else if (branch === "algebra") {
-      const isCompute = /phep cong|phep tru|phep nhan|phep chia|cac phep tinh|tinh toan|luy thua|thu tu thuc hien|dau ngoac|phan thuc|don thuc|da thuc|hang dang thuc|can bac|rut gon/i.test(hay);
+      const isCompute = /phep cong|phep tru|phep nhan|phep chia|cac phep tinh|tinh toan|bai toan|luy thua|thu tu thuc hien|dau ngoac|phan thuc|don thuc|da thuc|hang dang thuc|can bac|rut gon/i.test(hay);
       const isEq = /phuong trinh|he phuong trinh|bat phuong trinh|ham so|do thi|he so goc|parabol/i.test(hay);
       const isOrder = /so sanh|thu tu/i.test(hay);
       if (isCompute) {

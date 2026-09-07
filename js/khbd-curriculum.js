@@ -2930,6 +2930,11 @@ function getGradeLevelName(grade) {
   return 'THCS';
 }
 
+if (typeof window !== 'undefined') {
+  window.CURRICULUM_DATA = CURRICULUM_DATA;
+  window.SUBJECT_COMPETENCIES = SUBJECT_COMPETENCIES;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { 
     SUBJECT_COMPETENCIES,

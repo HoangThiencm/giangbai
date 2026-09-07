@@ -368,3 +368,57 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
   + Thêm Test 3.4: Kiểm tra đa mã NLS có minh chứng riêng biệt theo từng tiêu chí.
   + Thêm Test 3.5: Kiểm tra hàm `renderSgkDetailNlsBlock` render đầy đủ badge và danh sách hành động.
 - Chạy `node tests/run-all-tests.js`: **ALL 59 TEST SUITES PASSED 100%**.
+
+---
+
+## Triển khai: Hệ thống Nạp Tri thức Toàn diện cho Từng Môn ở Mỗi Lớp (Lớp 6–9) trong xaydungphuluc & canvas_xaydungphuluc
+
+### 1. Bối cảnh & Yêu cầu
+- Trước đây, hệ thống chỉ hỗ trợ nạp Tri thức chuẩn cho môn Toán (chủ yếu là Toán 6). Giáo viên dạy các môn khác (Ngữ văn, KHTN, Tin học, Lịch sử - Địa lí, Công nghệ, GDCD, Ngoại ngữ, Âm nhạc, Mĩ thuật, GDTC, HĐTN-HN, GD địa phương) hoặc các khối lớp 7, 8, 9 không có nút nạp tri thức chuẩn có sẵn và phải tự trích xuất từ PDF.
+- Khi người dùng thay đổi Khối lớp (`#grade`), khung thông báo Section 2 không tự động kiểm tra lại CSDL để cập nhật nút nạp phù hợp.
+- Modal Thư viện sách trước đây chỉ hiển thị danh sách sách đã có trong CSDL thay vì cung cấp bảng điều khiển nạp theo từng môn và khối lớp.
+
+### 2. Giải pháp Kỹ thuật & Triển khai Chi tiết
+1. **Tích hợp Kho Tri thức Chuẩn 13 Môn x 4 Khối Lớp (52 bộ môn THCS)**:
+   - Tích hợp `js/khbd-curriculum.js` (chứa `CURRICULUM_DATA.lessonsBySubject` và `SUBJECT_COMPETENCIES`) vào `<head>` của cả 3 tệp HTML.
+   - Xây dựng mảng hằng số `KHBD_ALL_SUBJECTS` định nghĩa 13 môn học THCS kèm mã key, số tiết chuẩn/năm và icon đại diện.
+   - Hàm `getSubjectCurriculumKey(subjectName)`: Chuẩn hóa tên môn (bỏ dấu tiếng Việt, regex) để map chính xác vào 13 môn học.
+   - Hàm `getStandardSubjectYccd(key, itemStr, g)`: Tự động phát sinh bộ 3 YCCĐ chuẩn theo đặc thù bộ môn cho bất kỳ bài học nào:
+     + *Ngữ văn*: Nhận biết thể loại, rèn luyện đọc hiểu/viết/nói nghe, cảm thụ văn học.
+     + *Khoa học tự nhiên*: Trình bày định luật/khái niệm, rèn kĩ năng làm thí nghiệm/quan sát, vận dụng đời sống & bảo vệ môi trường.
+     + *Tin học*: Hiểu quy tắc công nghệ số, thực hành máy tính & phần mềm, ứng dụng an toàn có trách nhiệm.
+     + *Lịch sử và Địa lí*: Sự kiện lịch sử, phân tích tư liệu/lược đồ/bản đồ, tình yêu quê hương đất nước.
+     + *Công nghệ, GDCD, Tiếng Anh, Âm nhạc, Mĩ thuật, GDTC, HĐTN-HN, GD địa phương*: Đều có bộ tiêu chí YCCĐ đặc thù riêng biệt.
+   - Hàm `getStandardCurriculumCatalog(subject, grade)`: Trích xuất trọn vẹn danh mục bài học từ `CURRICULUM_DATA` hoặc `DEFAULT_MATH_CATALOG`, cấp YCCĐ và chủ đề chương cho từng bài.
+
+2. **Cập nhật Luồng UI Khung Tri thức Section 2**:
+   - Gán `checkSharedSgkKnowledge(true)` vào sự kiện `onchange` của dropdown Khối lớp (`#grade`).
+   - Khi giáo viên đổi lớp hoặc môn, khung Section 2 lập tức hiển thị trạng thái và nút:
+     `⚡ Nạp Tri thức chuẩn: [Tên Môn] [Khối Lớp] (100% bài)`
+     cùng nút mở `📚 Bảng nạp tất cả các môn`.
+   - Bấm nút là nạp tức thì 100% bài học của đúng môn và khối lớp đang chọn vào CSDL và bộ nhớ máy.
+
+3. **Trung tâm Quản lý & Nạp Tri thức Toàn diện (`sgkLibraryModal`)**:
+   - Bổ sung thanh Tab chọn khối lớp: `[ Lớp 6 ]`, `[ Lớp 7 ]`, `[ Lớp 8 ]`, `[ Lớp 9 ]`, `[ 💾 Đã lưu CSDL ]`.
+   - Hàm `renderSgkSubjectMatrix(grade)`: Hiển thị ma trận 13 môn học của khối lớp tương ứng:
+     + Hiển thị Icon, tên môn học, số tiết/năm, số lượng bài học chuẩn CTGDPT 2018.
+     + Badge trạng thái rõ ràng: `✓ Đã có trong CSDL (X bài)`, `✓ Đã lưu bộ nhớ máy (X bài)`, hoặc `Chưa nạp`.
+     + Bộ nút hành động cho từng môn:
+       * Môn chưa nạp: Nút `⚡ Nạp tri thức môn này` màu nổi bật.
+       * Môn đã nạp: Nút `⚡ Chọn dùng môn này` (tự động chọn môn, lớp vào ứng dụng và nạp vào phụ lục), `👁 Chi tiết` (xem danh sách bài học và YCCĐ/NLS/AI), `🔄 Nạp lại`, `🗑 Xóa`.
+   - Bộ nút nạp hàng loạt:
+     + `⚡ Nạp tất cả môn Khối Lớp X`: Tự động nạp tuần tự 13 môn của khối lớp được chọn, có thanh tiến trình realtime.
+     + `⚡ Nạp trọn bộ Lớp 6–9`: Tự động nạp toàn bộ 52 bộ môn học toàn cấp THCS vào CSDL dùng chung với 1 click.
+   - Hộp tìm kiếm nhanh `#sgkLibrarySearch` hỗ trợ lọc môn học tức thì theo từ khóa.
+
+### 3. Đồng bộ & Kiểm thử Hoàn tất
+- **Tệp áp dụng đồng bộ 1-1**:
+  + `xaydungphuluc.html`
+  + `canvas_xaydungphuluc.html`
+  + `backupcode viettailieu/canvas_xaydungphuluc.html`
+- **Bộ kiểm thử tự động**:
+  + `tests/sgk-knowledge-smoke.js`: Bổ sung kiểm tra DOM IDs mới (`sgkGradeTabs`, `btnSeedAllGrade`), 10 hàm xử lý mới, và Section 7 kiểm thử nạp tri thức đa môn đa lớp (Ngữ văn 6, KHTN 7, Tin học 8, Sử Địa 9, GD địa phương 6–9). Chạy PASS 100%.
+  + `tests/canvas-xaydungphuluc-smoke.js`: Chạy PASS 100%.
+  + `tests/xaydungphuluc-smoke.js`: Chạy PASS 100%.
+  + `tests/run-all-tests.js`: **ALL 59 TEST SUITES PASSED 100%**.
+

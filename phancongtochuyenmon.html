@@ -1958,7 +1958,7 @@
                 <label class="form-group">Xem từ ngày<input class="form-control" id="bg-view-date" type="date" onchange="renderBaoGiangView()"></label>
                 <label class="form-group">Số ngày xem<input class="form-control" id="bg-days" type="number" min="7" max="90" value="14" onchange="renderBaoGiangView()"></label>
             </div>
-            <details open><summary style="font-weight:800;cursor:pointer;">PPCT theo lớp / môn</summary><p style="font-size:.82rem;color:#64748b;">Tải PPCT PDF, Word, Excel, CSV hoặc TXT; AI sẽ trích xuất lớp, môn, bài và số tiết, sau đó tự đưa vào lịch. Bạn luôn có thể rà soát trước khi lưu.</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><input id="bg-ppct-file" class="form-control" style="max-width:420px" type="file" accept=".pdf,.docx,.xlsx,.csv,.txt"><button id="bg-scan-ppct" class="btn-small btn-small-primary" type="button" onclick="scanBaoGiangPpct()"><i class="fas fa-wand-magic-sparkles"></i> AI nhận diện PPCT</button><button class="btn-small" type="button" onclick="clearBaoGiangCurriculum()"><i class="fas fa-trash"></i> Xóa toàn bộ PPCT</button><span id="bg-ppct-status" style="font-size:.82rem;color:#64748b"></span></div><p style="font-size:.82rem;color:#64748b;">Định dạng kết quả: <b>Lớp | Môn | Tên bài | Số tiết</b>. Ví dụ: <code>75 | Toán | Bài 1. Đơn thức | 2</code>. Tên lớp và môn phải khớp với TKB; dùng <code>* | Toán | ...</code> cho PPCT dùng chung mọi lớp.</p><textarea id="bg-curriculum" class="form-control" rows="7" oninput="updateBaoGiangSettings()" placeholder="75 | Toán | Bài 1. Đơn thức | 2"></textarea><div id="bg-ppct-library" style="margin-top:12px;"></div></details>
+            <details open><summary style="font-weight:800;cursor:pointer;">PPCT theo lớp / môn</summary><p style="font-size:.82rem;color:#64748b;">Tải PPCT PDF, Word, Excel, CSV hoặc TXT; AI sẽ trích xuất tuần, mạch kiến thức, bài và số tiết để ghép đúng lịch. Bạn luôn có thể rà soát trước khi lưu.</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><input id="bg-ppct-file" class="form-control" style="max-width:420px" type="file" accept=".pdf,.docx,.xlsx,.csv,.txt"><button id="bg-scan-ppct" class="btn-small btn-small-primary" type="button" onclick="scanBaoGiangPpct()"><i class="fas fa-wand-magic-sparkles"></i> AI nhận diện PPCT</button><button class="btn-small" type="button" onclick="clearBaoGiangCurriculum()"><i class="fas fa-trash"></i> Xóa toàn bộ PPCT</button><span id="bg-ppct-status" style="font-size:.82rem;color:#64748b"></span></div><p style="font-size:.82rem;color:#64748b;">Định dạng mới: <b>Khối | Môn | Tuần | Tiết PPCT | Mạch | Bài | Số tiết</b>. Ví dụ: <code>9 | Toán | 2 | 3-4 | Đại số | Bài 1. Đơn thức | 2</code>. Dữ liệu 4 cột cũ vẫn được giữ nguyên và đọc tương thích.</p><textarea id="bg-curriculum" class="form-control" rows="7" oninput="updateBaoGiangSettings()" placeholder="9 | Toán | 2 | 3-4 | Đại số | Bài 1. Đơn thức | 2"></textarea><div id="bg-ppct-library" style="margin-top:12px;"></div></details>
             <label class="form-group" style="display:block;margin:10px 0 0;max-width:300px;"><b>Khối của PPCT đang nạp</b><select id="bg-ppct-grade" class="form-control" onchange="updateBaoGiangSettings()"><option value="">Chọn khối trước khi AI nhận diện</option><option value="6">Khối 6</option><option value="7">Khối 7</option><option value="8">Khối 8</option><option value="9">Khối 9</option></select></label><p style="font-size:.82rem;color:#64748b;margin:5px 0 0;">Nạp một lần cho mỗi môn/khối, ví dụ <b>Toán · khối 7</b>. Mọi lớp 7 sẽ dùng PPCT này và tự tính tiến độ theo TKB riêng.</p>
             <label class="form-group" style="display:block;margin:10px 0 0;max-width:300px;"><b>Môn của PPCT đang nạp</b><input id="bg-ppct-subject" class="form-control" list="bg-ppct-subject-options" oninput="updateBaoGiangSettings()" placeholder="Ví dụ: Toán hoặc Tin"></label><datalist id="bg-ppct-subject-options"></datalist><p style="font-size:.82rem;color:#64748b;margin:5px 0 0;">Chọn/nhập đúng tên môn đang có trong TKB để lịch ghép chính xác.</p>
             <details style="margin-top:12px;"><summary style="font-weight:800;cursor:pointer;">Ngày nghỉ và dạy bù</summary><p style="font-size:.82rem;color:#64748b;">Dùng “Tôi nghỉ cả ngày” khi không cần nhớ bài. Nếu biết chính xác bài nào/tiết nào, chọn “Đúng một tiết/bài của tôi” rồi chọn dòng lịch bên dưới; bài đó sẽ tự dồn sang lần dạy thực tế kế tiếp.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px;"><label class="form-group">Ngày<input id="bg-ex-date" class="form-control" type="date" onchange="refreshBaoGiangPersonalLessonOptions()"></label><label class="form-group">Loại<select id="bg-ex-type" class="form-control"><option value="off">Nghỉ học</option><option value="makeup">Dạy bù</option></select></label><label class="form-group">Phạm vi nghỉ<select id="bg-ex-scope" class="form-control" onchange="refreshBaoGiangPersonalLessonOptions()"><option value="self">Tôi nghỉ cả ngày</option><option value="self_lesson">Đúng một tiết/bài của tôi</option><option value="self_subject">Một môn tôi dạy</option><option value="all">Toàn trường</option><option value="class">Một lớp</option><option value="teacher">Một giáo viên</option><option value="subject">Một môn toàn trường</option></select></label><label class="form-group">Mục tiêu<input id="bg-ex-target" class="form-control" placeholder="Để trống khi “Tôi nghỉ cả ngày”; nhập tên môn khi cần"></label><label class="form-group" style="grid-column:1/-1;">Tiết/bài cụ thể của tôi<select id="bg-ex-lesson" class="form-control"><option value="">Chọn ngày để xem các tiết của tôi</option></select></label></div><button class="btn-small" type="button" onclick="addBaoGiangException()"><i class="fas fa-plus"></i> Thêm ngoại lệ</button><div id="bg-exceptions" style="margin-top:8px;"></div></details>
@@ -2942,14 +2942,14 @@
         let baoGiangPersonalLessonChoices = [];
         function baoGiangMatchesException(ex, row) { if (ex.scope === 'all') return true; if (ex.scope === 'self') return baoGiangMatchesCurrentUser(row); if (ex.scope === 'self_lesson') return baoGiangMatchesCurrentUser(row) && row.teacher_id === ex.teacher_id && foldText(row.class_name) === foldText(ex.class_name) && baoGiangSubjectKey(row.subject) === baoGiangSubjectKey(ex.subject) && String(row.session) === String(ex.session) && String(row.period) === String(ex.period); if (ex.scope === 'self_subject') return baoGiangMatchesCurrentUser(row) && baoGiangSubjectKey(ex.target) === baoGiangSubjectKey(row.subject); if (ex.scope === 'class') return foldText(ex.target) === foldText(row.class_name); if (ex.scope === 'subject') return baoGiangSubjectKey(ex.target) === baoGiangSubjectKey(row.subject); return ex.scope === 'teacher' && String(ex.target).trim() === String(row.teacher_id); }
         function updateBaoGiangSettings() { const data = state.bao_giang; data.start_date = document.getElementById('bg-start-date')?.value || data.start_date; data.curriculum_text = document.getElementById('bg-curriculum')?.value || ''; saveToLocal(); }
-        function refreshBaoGiangPersonalLessonOptions() { const select = document.getElementById('bg-ex-lesson'), date = document.getElementById('bg-ex-date')?.value, scope = document.getElementById('bg-ex-scope')?.value; if (!select) return; baoGiangPersonalLessonChoices = []; if (scope !== 'self_lesson') { select.disabled = true; select.innerHTML = '<option value="">Chỉ dùng khi chọn “Đúng một tiết/bài của tôi”</option>'; return; } select.disabled = false; if (!date) { select.innerHTML = '<option value="">Chọn ngày trước</option>'; return; } const plan = parseBaoGiangCurriculum(state.bao_giang.curriculum_text), counters = new Map(); const rows = baoGiangRows(date).map(row => { const key = baoGiangKey(row.class_name, row.subject), index = counters.get(key) || 0; counters.set(key, index + 1); return { ...row, lesson: baoGiangPlanFor(plan, row.class_name, row.subject)[index] || null }; }).filter(row => row.date === date && baoGiangMatchesCurrentUser(row)); baoGiangPersonalLessonChoices = rows; select.innerHTML = rows.length ? `<option value="">Chọn tiết/bài cần nghỉ</option>${rows.map((row, index) => `<option value="${index}">${escapeHtml(`${row.class_name} · ${row.subject} · ${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period} · ${row.lesson?.lesson || 'Chưa ghép PPCT'}`)}</option>`).join('')}` : '<option value="">Không có tiết của tôi trong ngày này</option>'; }
+        function refreshBaoGiangPersonalLessonOptions() { const select = document.getElementById('bg-ex-lesson'), date = document.getElementById('bg-ex-date')?.value, scope = document.getElementById('bg-ex-scope')?.value; if (!select) return; baoGiangPersonalLessonChoices = []; if (scope !== 'self_lesson') { select.disabled = true; select.innerHTML = '<option value="">Chỉ dùng khi chọn “Đúng một tiết/bài của tôi”</option>'; return; } select.disabled = false; if (!date) { select.innerHTML = '<option value="">Chọn ngày trước</option>'; return; } const rows = decorateBaoGiangRows(date).rows.filter(row => row.date === date && baoGiangMatchesCurrentUser(row)); baoGiangPersonalLessonChoices = rows; select.innerHTML = rows.length ? `<option value="">Chọn tiết/bài cần nghỉ</option>${rows.map((row, index) => `<option value="${index}">${escapeHtml(`${row.class_name} · ${row.subject} · ${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period} · ${row.lesson?.lesson || 'Chưa ghép PPCT'}`)}</option>`).join('')}` : '<option value="">Không có tiết của tôi trong ngày này</option>'; }
         function addBaoGiangException() { const date = document.getElementById('bg-ex-date')?.value, type = document.getElementById('bg-ex-type')?.value, scope = document.getElementById('bg-ex-scope')?.value, target = document.getElementById('bg-ex-target')?.value.trim(); if (!date) return showToast('Hãy chọn ngày áp dụng ngoại lệ.', 'error'); if (scope === 'self_lesson') { if (type !== 'off') return showToast('Chọn đúng tiết/bài chỉ áp dụng cho Nghỉ học.', 'error'); const choice = baoGiangPersonalLessonChoices[Number(document.getElementById('bg-ex-lesson')?.value)]; if (!choice) return showToast('Hãy chọn đúng tiết/bài của thầy cần nghỉ.', 'error'); state.bao_giang.exceptions.push({ id: `bg_${Date.now()}`, date, type, scope, target: `${choice.class_name} | ${choice.subject} | ${choice.lesson?.lesson || ''}`, teacher_id: choice.teacher_id, class_name: choice.class_name, subject: choice.subject, session: choice.session, period: choice.period, lesson: choice.lesson?.lesson || '' }); } else { if ((type === 'makeup' || (scope !== 'all' && scope !== 'self')) && !target) return showToast(type === 'makeup' ? 'Dạy bù cần nhập “Lớp | Môn”, ví dụ 8A1 | Toán.' : (scope === 'subject' || scope === 'self_subject') ? 'Hãy nhập tên môn cần nghỉ, ví dụ: Tin hoặc Toán.' : 'Hãy nhập lớp hoặc mã giáo viên cho ngoại lệ này.', 'error'); state.bao_giang.exceptions.push({ id: `bg_${Date.now()}`, date, type, scope, target }); } saveToLocal(); renderBaoGiangView(); }
         function removeBaoGiangException(id) { state.bao_giang.exceptions = state.bao_giang.exceptions.filter(x => x.id !== id); saveToLocal(); renderBaoGiangView(); }
         function baoGiangRows(until) { const cfg = state.bao_giang, start = baoGiangDate(cfg.start_date); if (!start) return []; const end = baoGiangDate(until); if (!end || end < start) return []; const rows = []; for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) { const day = baoGiangDayKey(date); if (!day) continue; state.teachers.forEach(teacher => { const timetable = normalizeTeacherTimetable(teacher.timetable); ['morning', 'afternoon'].forEach(session => Object.entries(timetable[session]?.[day] || {}).sort((a, b) => Number(a[0]) - Number(b[0])).forEach(([period, cell]) => { const value = parseTimetableCell(cell); if (!value?.class_name || !value?.subject) return; const row = { date: baoGiangIso(date), session, period, class_name: value.class_name, subject: value.subject, teacher_id: teacher.id, teacher_name: teacher.name }; const off = cfg.exceptions.some(ex => ex.type === 'off' && ex.date === row.date && baoGiangMatchesException(ex, row)); if (!off) rows.push(row); })); }); cfg.exceptions.filter(ex => ex.type === 'makeup' && ex.date === baoGiangIso(date)).forEach(ex => { const [className, subject] = String(ex.target || '').split('|').map(x => x.trim()); if (!className || !subject) return; const teacher = state.teachers.find(t => Object.values(t.timetable || {}).some(session => Object.values(session || {}).some(day => Object.values(day || {}).some(cell => { const c = parseTimetableCell(cell); return c && foldText(c.class_name) === foldText(className) && foldText(c.subject) === foldText(subject); })))); rows.push({ date: ex.date, session: 'makeup', period: 'Bù', class_name: className, subject, teacher_id: teacher?.id || '', teacher_name: teacher?.name || 'Chưa xác định GV' }); }); } return rows.sort((a, b) => `${a.date}|${a.session}|${String(a.period).padStart(2, '0')}`.localeCompare(`${b.date}|${b.session}|${String(b.period).padStart(2, '0')}`)); }
         function renderBaoGiangView() { const cfg = state.bao_giang, today = new Date(), fallbackStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; if (!cfg.start_date) cfg.start_date = fallbackStart; const startInput = document.getElementById('bg-start-date'), viewInput = document.getElementById('bg-view-date'), curriculum = document.getElementById('bg-curriculum'); if (!startInput) return; if (!viewInput.value) viewInput.value = cfg.start_date; startInput.value = cfg.start_date; curriculum.value = cfg.curriculum_text || ''; const days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14)), viewStart = baoGiangDate(viewInput.value), viewEnd = new Date(viewStart); viewEnd.setDate(viewEnd.getDate() + days - 1); const plan = parseBaoGiangCurriculum(cfg.curriculum_text), allRows = baoGiangRows(baoGiangIso(viewEnd)), counters = new Map(); const decorated = allRows.map(row => { const key = baoGiangKey(row.class_name, row.subject), index = counters.get(key) || 0; counters.set(key, index + 1); return { ...row, lesson: baoGiangPlanFor(plan, row.class_name, row.subject)[index] || null }; }), visible = decorated.filter(row => row.date >= viewInput.value && row.date <= baoGiangIso(viewEnd)); const schedule = document.getElementById('bg-schedule'); const exceptions = document.getElementById('bg-exceptions'); exceptions.innerHTML = cfg.exceptions.length ? cfg.exceptions.map(ex => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:.85rem;"><b>${escapeHtml(ex.date)}</b><span>${ex.type === 'off' ? 'Nghỉ học' : 'Dạy bù'}</span><span>${escapeHtml(ex.scope === 'all' ? 'Toàn trường' : ex.target)}</span><button class="btn-small" onclick="removeBaoGiangException('${ex.id}')">Xóa</button></div>`).join('') : '<p style="color:#64748b;font-size:.85rem;">Chưa có ngoại lệ.</p>'; const recipients = document.getElementById('bg-recipient-list'); recipients.innerHTML = `<div style="font-weight:800;margin-bottom:6px;">Người nhận email</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${state.teachers.map(t => `<label style="padding:7px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;"><input type="checkbox" ${cfg.recipient_ids.includes(t.id) ? 'checked' : ''} onchange="toggleBaoGiangRecipient('${t.id}',this.checked)"> ${escapeHtml(t.name)} <input aria-label="Email ${escapeHtml(t.name)}" value="${escapeHtml(t.email || '')}" placeholder="email" style="width:150px;border:0;border-bottom:1px solid #cbd5e1;margin-left:4px;" onchange="setBaoGiangEmail('${t.id}',this.value)"></label>`).join('')}</div>`; schedule.innerHTML = visible.length ? `<div style="overflow:auto;"><table class="data-table"><thead><tr><th>Ngày</th><th>Lớp</th><th>Môn</th><th>Tiết</th><th>GV</th><th>Tiết PPCT</th><th>Bài dạy</th><th>Phân đoạn</th></tr></thead><tbody>${visible.map(row => `<tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.class_name)}</td><td>${escapeHtml(row.subject)}</td><td>${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} ${row.period}`)}</td><td>${escapeHtml(row.teacher_name)}</td><td>${row.lesson?.ppct || '<span style="color:#b45309">Chưa có</span>'}</td><td>${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td><td>${escapeHtml(row.lesson?.segment || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p style="padding:16px;color:#64748b;">Chưa có tiết TKB trong khoảng ngày này. Hãy nhập TKB, ngày áp dụng và PPCT.</p>'; }
         function toggleBaoGiangRecipient(id, checked) { const list = state.bao_giang.recipient_ids; state.bao_giang.recipient_ids = checked ? [...new Set([...list, id])] : list.filter(x => x !== id); saveToLocal(); }
         function setBaoGiangEmail(id, email) { const teacher = state.teachers.find(t => t.id === id); if (teacher) teacher.email = String(email || '').trim(); saveToLocal(); }
-        function composeBaoGiangEmail() { const ids = new Set(state.bao_giang.recipient_ids), recipients = state.teachers.filter(t => ids.has(t.id)).map(t => t.email || (String(t.username || '').includes('@') ? t.username : '')).filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)); if (!recipients.length) return showToast('Hãy chọn giáo viên và nhập email hợp lệ cho ít nhất một người.', 'error'); const viewDate = document.getElementById('bg-view-date')?.value || state.bao_giang.start_date, days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14)), viewEnd = baoGiangDate(viewDate); viewEnd.setDate(viewEnd.getDate() + days - 1); const plan = parseBaoGiangCurriculum(state.bao_giang.curriculum_text), counters = new Map(), lessons = baoGiangRows(baoGiangIso(viewEnd)).map(row => { const key = baoGiangKey(row.class_name, row.subject), index = counters.get(key) || 0; counters.set(key, index + 1); return { ...row, lesson: baoGiangPlanFor(plan, row.class_name, row.subject)[index] || null }; }).filter(row => ids.has(row.teacher_id) && row.date >= viewDate && row.date <= baoGiangIso(viewEnd)); const list = lessons.map(row => `${row.date} | ${row.teacher_name} | ${row.class_name} | ${row.subject} | ${row.session === 'makeup' ? 'Dạy bù' : `Tiết ${row.period}`} | PPCT ${row.lesson?.ppct || '—'} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'}${row.lesson?.segment ? ` (${row.lesson.segment})` : ''}`).join('\n'); const subject = `Lịch báo giảng ${state.info?.title || ''} từ ${viewDate}`.trim(), body = `Kính gửi thầy/cô,\n\nLịch báo giảng trong ${days} ngày tới:\n${list || 'Chưa có tiết phù hợp trong khoảng thời gian này.'}\n\nVui lòng phản hồi tổ chuyên môn nếu có điều chỉnh.\n\nTrân trọng.`; window.location.href = `mailto:${recipients.map(encodeURIComponent).join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; }
+        function composeBaoGiangEmail() { const ids = new Set(state.bao_giang.recipient_ids), recipients = state.teachers.filter(t => ids.has(t.id)).map(t => t.email || (String(t.username || '').includes('@') ? t.username : '')).filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)); if (!recipients.length) return showToast('Hãy chọn giáo viên và nhập email hợp lệ cho ít nhất một người.', 'error'); const viewDate = document.getElementById('bg-view-date')?.value || state.bao_giang.start_date, days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14)), viewEnd = baoGiangDate(viewDate); viewEnd.setDate(viewEnd.getDate() + days - 1); const scheduleData = decorateBaoGiangRows(baoGiangIso(viewEnd)); if (scheduleData.warnings.length) return showToast(`${scheduleData.warnings[0]} Cần kiểm tra PPCT trước khi gửi.`, 'error'); const lessons = scheduleData.rows.filter(row => ids.has(row.teacher_id) && row.date >= viewDate && row.date <= baoGiangIso(viewEnd)); const list = lessons.map(row => `${row.date} | ${row.teacher_name} | ${row.class_name} | ${row.subject} | ${row.session === 'makeup' ? 'Dạy bù' : `Tiết ${row.period}`} | PPCT ${row.lesson?.ppct || '—'} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'}${row.lesson?.segment ? ` (${row.lesson.segment})` : ''}`).join('\n'); const subject = `Lịch báo giảng ${state.info?.title || ''} từ ${viewDate}`.trim(), body = `Kính gửi thầy/cô,\n\nLịch báo giảng trong ${days} ngày tới:\n${list || 'Chưa có tiết phù hợp trong khoảng thời gian này.'}\n\nVui lòng phản hồi tổ chuyên môn nếu có điều chỉnh.\n\nTrân trọng.`; window.location.href = `mailto:${recipients.map(encodeURIComponent).join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; }
 
         function buildBaoGiangSelfEmail(viewDateOverride = '', daysOverride = 0) {
             const owner = systemData?.current_user || {};
@@ -2960,16 +2960,12 @@
             const viewEnd = baoGiangDate(viewDate);
             if (!viewEnd) throw new Error('Hãy chọn ngày bắt đầu xem lịch.');
             viewEnd.setDate(viewEnd.getDate() + days - 1);
-            const plan = parseBaoGiangCurriculum(state.bao_giang.curriculum_text);
-            const counters = new Map();
-            const rows = baoGiangRows(baoGiangIso(viewEnd)).map(row => {
-                const key = baoGiangKey(row.class_name, row.subject);
-                const index = counters.get(key) || 0;
-                counters.set(key, index + 1);
-                return { ...row, lesson: baoGiangPlanFor(plan, row.class_name, row.subject)[index] || null };
-            }).filter(row => row.date >= viewDate && row.date <= baoGiangIso(viewEnd))
+            const scheduleData = decorateBaoGiangRows(baoGiangIso(viewEnd));
+            const rows = scheduleData.rows.filter(row => row.date >= viewDate && row.date <= baoGiangIso(viewEnd))
                 .filter(row => row.teacher_id === ownerTeacherId || (ownerName && foldText(row.teacher_name) === foldText(ownerName)));
             if (!rows.length) throw new Error('Chưa tìm thấy tiết dạy của tài khoản đang đăng nhập trong khoảng thời gian này.');
+            const warnings = (scheduleData.warningDetails || []).filter(item => rows.some(row => row.teaching_week === item.week && row.class_name === item.class_name && baoGiangSubjectKey(row.subject) === baoGiangSubjectKey(item.subject))).map(item => `Tuần ${item.week} – ${item.subject} lớp ${item.class_name}: TKB có ${item.slots} tiết, PPCT xác định ${item.lessons} tiết.`);
+            if (warnings.length) throw new Error(`${warnings[0]} Cần kiểm tra PPCT trước khi gửi.`);
             const sessionOrder = { morning: 0, afternoon: 1, makeup: 2 };
             const scheduleRows = rows.sort((a, b) => a.date.localeCompare(b.date) || (sessionOrder[a.session] ?? 9) - (sessionOrder[b.session] ?? 9) || Number(a.period) - Number(b.period) || String(a.class_name).localeCompare(String(b.class_name)) || String(a.subject).localeCompare(String(b.subject)));
             const list = scheduleRows.map(row => `${row.date} | ${row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period}`} | Lớp ${row.class_name} | ${row.subject} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'} | Tiết PPCT ${row.lesson?.ppct || '—'}${row.lesson?.segment ? ` (${row.lesson.segment})` : ''}`).join('\n');
@@ -3060,12 +3056,61 @@
             return String(text || '').split(/\r?\n/).map((raw, lineIndex) => {
                 const parts = raw.split('|').map(x => x.trim());
                 if (parts.length < 4 || !parts[0] || !parts[1] || !parts[2]) return { raw, lineIndex, valid: false };
+                const hasWeekMapping = parts.length >= 7 && /^\d+$/.test(parts[2]);
                 return {
                     raw, lineIndex, valid: true,
-                    class_name: parts[0], subject: parts[1], lesson: parts[2],
-                    periods: Math.max(1, Number.parseInt(parts[3], 10) || 1)
+                    class_name: parts[0], subject: parts[1],
+                    week: hasWeekMapping ? Number(parts[2]) : null,
+                    period_no: hasWeekMapping ? parts[3] : '',
+                    strand: hasWeekMapping ? parts[4] : '',
+                    lesson: hasWeekMapping ? parts[5] : parts[2],
+                    periods: Math.max(1, Number.parseInt(hasWeekMapping ? parts[6] : parts[3], 10) || 1)
                 };
             });
+        }
+
+        function baoGiangTeachingWeek(dateValue, startDate) {
+            const date = dateValue instanceof Date ? new Date(dateValue) : baoGiangDate(dateValue);
+            const start = baoGiangDate(startDate);
+            if (!date || !start) return null;
+            const firstMonday = new Date(start);
+            firstMonday.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+            return Math.floor((date - firstMonday) / 604800000) + 1;
+        }
+
+        function baoGiangExpandPeriodNumbers(value, count) {
+            const numbers = String(value || '').match(/\d+/g)?.map(Number) || [];
+            if (!numbers.length) return Array.from({ length: count }, (_, index) => index + 1);
+            if (numbers.length >= 2 && /[-–]/.test(String(value))) return Array.from({ length: count }, (_, index) => numbers[0] + index);
+            return Array.from({ length: count }, (_, index) => (numbers[index] || numbers[0] + index));
+        }
+
+        // PPCT mới được tra theo tuần; PPCT 4 cột cũ giữ cách chạy cũ để không thay đổi dữ liệu đã có.
+        function parseBaoGiangCurriculum(text) {
+            const plans = new Map();
+            parseBaoGiangCurriculumEntries(text).filter(entry => entry.valid).forEach(entry => {
+                const key = baoGiangKey(entry.class_name, entry.subject);
+                if (!plans.has(key)) plans.set(key, { all: [], byWeek: new Map(), usesWeek: false });
+                const plan = plans.get(key);
+                const periodNumbers = baoGiangExpandPeriodNumbers(entry.period_no, entry.periods);
+                for (let index = 0; index < entry.periods; index++) {
+                    const lesson = {
+                        ppct: entry.period_no ? String(periodNumbers[index]) : plan.all.length + 1,
+                        lesson: entry.lesson,
+                        strand: entry.strand,
+                        week: entry.week,
+                        segment: `${index + 1}/${entry.periods}`,
+                        sourceLine: entry.lineIndex + 1
+                    };
+                    plan.all.push(lesson);
+                    if (entry.week) {
+                        plan.usesWeek = true;
+                        if (!plan.byWeek.has(entry.week)) plan.byWeek.set(entry.week, []);
+                        plan.byWeek.get(entry.week).push(lesson);
+                    }
+                }
+            });
+            return plans;
         }
 
         function getBaoGiangCurriculumGroups(text = state.bao_giang.curriculum_text) {
@@ -3103,8 +3148,8 @@
                 if (!lesson) return compacted;
                 const periods = Math.max(1, Number.parseInt(row.periods, 10) || 1);
                 const previous = compacted[compacted.length - 1];
-                if (previous && foldText(previous.lesson) === foldText(lesson)) previous.periods += periods;
-                else compacted.push({ lesson, periods });
+                if (previous && previous.week === row.week && previous.strand === row.strand && foldText(previous.lesson) === foldText(lesson)) previous.periods += periods;
+                else compacted.push({ lesson, periods, week: row.week, period_no: row.period_no, strand: row.strand });
                 return compacted;
             }, []);
         }
@@ -3114,7 +3159,34 @@
             return plans.get(baoGiangKey(baoGiangGrade(className), subject))
                 || plans.get(baoGiangKey(className, subject))
                 || plans.get(baoGiangKey('*', subject))
-                || [];
+                || { all: [], byWeek: new Map(), usesWeek: false };
+        }
+
+        function decorateBaoGiangRows(until) {
+            const plan = parseBaoGiangCurriculum(state.bao_giang.curriculum_text);
+            const rows = baoGiangRows(until);
+            const legacyCounters = new Map();
+            const weeklyCounters = new Map();
+            const coverage = new Map();
+            const decorated = rows.map(row => {
+                const group = baoGiangPlanFor(plan, row.class_name, row.subject);
+                if (!group.usesWeek) {
+                    const key = baoGiangKey(row.class_name, row.subject);
+                    const index = legacyCounters.get(key) || 0;
+                    legacyCounters.set(key, index + 1);
+                    return { ...row, lesson: group.all[index] || null, teaching_week: null };
+                }
+                const week = baoGiangTeachingWeek(row.date, state.bao_giang.start_date);
+                const key = `${baoGiangKey(row.class_name, row.subject)}|${week}`;
+                const index = weeklyCounters.get(key) || 0;
+                weeklyCounters.set(key, index + 1);
+                const lessons = group.byWeek.get(week) || [];
+                coverage.set(key, { week, class_name: row.class_name, subject: row.subject, slots: index + 1, lessons: lessons.length });
+                return { ...row, lesson: lessons[index] || null, teaching_week: week, ppct_missing: index >= lessons.length };
+            });
+            const warningDetails = [...coverage.values()].filter(item => item.slots !== item.lessons);
+            const warnings = warningDetails.map(item => `Tuần ${item.week} – ${item.subject} lớp ${item.class_name}: TKB có ${item.slots} tiết, PPCT xác định ${item.lessons} tiết.`);
+            return { rows: decorated, warnings, warningDetails };
         }
 
         function mergeBaoGiangCurriculumLines(recognizedLines) {
@@ -3125,7 +3197,7 @@
                 const parts = line.split('|').map(value => value.trim());
                 return parts.length < 4 || !incomingKeys.has(baoGiangKey(parts[0], parts[1]));
             }).filter(line => line.trim());
-            return [...preserved, ...incoming.map(row => `${row.class_name} | ${row.subject} | ${row.lesson} | ${row.periods}`)].join('\n');
+            return [...preserved, ...incoming.map(row => row.week ? `${row.class_name} | ${row.subject} | ${row.week} | ${row.period_no} | ${row.strand} | ${row.lesson} | ${row.periods}` : `${row.class_name} | ${row.subject} | ${row.lesson} | ${row.periods}`)].join('\n');
         }
 
         function renderBaoGiangCurriculumLibrary(decoratedRows = []) {
@@ -3141,21 +3213,21 @@
             const groupCards = groups.map((group, index) => {
                 const totalPeriods = group.items.reduce((sum, item) => sum + item.periods, 0);
                 const scheduled = decoratedRows.filter(row => (group.class_name === '*' ? foldText(row.subject) === foldText(group.subject) : /^[6-9]$/.test(group.class_name) ? baoGiangGrade(row.class_name) === group.class_name && foldText(row.subject) === foldText(group.subject) : baoGiangKey(row.class_name, row.subject) === group.key) && row.lesson).length;
-                const lessonLines = group.items.map(item => `${item.lesson} | ${item.periods}`).join('\n');
-                const lessonRows = group.items.map((item, lessonIndex) => `<tr><td style="width:48px;text-align:center;color:#64748b;">${lessonIndex + 1}</td><td>${escapeHtml(item.lesson)}</td><td style="width:82px;text-align:center;font-weight:700;color:#1d4ed8;">${item.periods}</td></tr>`).join('');
+                const lessonLines = group.items.map(item => item.week ? `${item.week} | ${item.period_no} | ${item.strand} | ${item.lesson} | ${item.periods}` : `${item.lesson} | ${item.periods}`).join('\n');
+                const lessonRows = group.items.map((item, lessonIndex) => `<tr><td style="width:48px;text-align:center;color:#64748b;">${lessonIndex + 1}</td><td style="width:62px;text-align:center;">${item.week ? `T${escapeHtml(item.week)}` : '—'}</td><td>${escapeHtml(item.strand || '—')}</td><td>${escapeHtml(item.lesson)}</td><td style="width:82px;text-align:center;font-weight:700;color:#1d4ed8;">${item.periods}</td></tr>`).join('');
                 return `<details style="margin-top:10px;border:1px solid #bfdbfe;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.05);">
                     <summary style="cursor:pointer;font-size:.93rem;padding:12px 14px;background:linear-gradient(90deg,#eff6ff,#f8fafc);list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
                         <span><b style="color:#1e3a8a;">${escapeHtml(baoGiangGroupLabel(group))} · ${escapeHtml(group.subject)}</b></span>
                         <span style="display:flex;gap:6px;flex-wrap:wrap;font-size:.78rem;"><span style="padding:3px 8px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-weight:700;">${group.items.length} bài/chủ đề</span><span style="padding:3px 8px;border-radius:999px;background:#dcfce7;color:#15803d;font-weight:700;">${totalPeriods} tiết</span><span style="padding:3px 8px;border-radius:999px;background:#f1f5f9;color:#475569;">Đã ghép ${scheduled}</span></span>
                     </summary>
                     <div style="padding:12px 14px;">
-                        <div style="overflow:auto;border:1px solid #e2e8f0;border-radius:8px;"><table class="data-table" style="margin:0;min-width:460px;"><thead><tr><th style="width:48px;text-align:center;">STT</th><th>Bài dạy / chủ đề</th><th style="width:82px;text-align:center;">Số tiết</th></tr></thead><tbody>${lessonRows}</tbody></table></div>
+                        <div style="overflow:auto;border:1px solid #e2e8f0;border-radius:8px;"><table class="data-table" style="margin:0;min-width:640px;"><thead><tr><th style="width:48px;text-align:center;">STT</th><th style="width:62px;text-align:center;">Tuần</th><th>Mạch</th><th>Bài dạy / chủ đề</th><th style="width:82px;text-align:center;">Số tiết</th></tr></thead><tbody>${lessonRows}</tbody></table></div>
                         <details style="margin-top:10px;border:1px solid #e2e8f0;border-radius:8px;padding:9px;background:#f8fafc;"><summary style="cursor:pointer;font-weight:700;font-size:.84rem;color:#334155;"><i class="fas fa-pen"></i> Chỉnh sửa PPCT này</summary>
                             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px;">
                                 <label class="form-group" style="margin:0;">Khối (hoặc lớp riêng)<input id="bg-ppct-class-${index}" class="form-control" style="width:100%;box-sizing:border-box;" value="${escapeHtml(group.class_name)}"></label>
                                 <label class="form-group" style="margin:0;">Môn<input id="bg-ppct-subject-${index}" class="form-control" style="width:100%;box-sizing:border-box;" value="${escapeHtml(group.subject)}"></label>
                             </div>
-                            <label class="form-group" style="display:block;margin:10px 0 0;">Bài dạy | số tiết<textarea id="bg-ppct-items-${index}" class="form-control" style="display:block;width:100%;box-sizing:border-box;min-height:140px;line-height:1.45;" rows="${Math.min(12, Math.max(5, group.items.length + 1))}">${escapeHtml(lessonLines)}</textarea></label>
+                            <label class="form-group" style="display:block;margin:10px 0 0;">Tuần | tiết PPCT | mạch | bài dạy | số tiết <span style="font-size:.78rem;color:#64748b;">(PPCT cũ có thể giữ Bài dạy | số tiết)</span><textarea id="bg-ppct-items-${index}" class="form-control" style="display:block;width:100%;box-sizing:border-box;min-height:140px;line-height:1.45;" rows="${Math.min(12, Math.max(5, group.items.length + 1))}">${escapeHtml(lessonLines)}</textarea></label>
                             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn-small btn-small-primary" onclick="saveBaoGiangCurriculumGroup(${index})"><i class="fas fa-save"></i> Lưu thay đổi</button><button type="button" class="btn-small" onclick="compactBaoGiangCurriculumGroup(${index})"><i class="fas fa-compress"></i> Gộp tiết liền kề cùng bài</button><button type="button" class="btn-small" onclick="deleteBaoGiangCurriculumGroup(${index})"><i class="fas fa-trash"></i> Xóa PPCT này</button></div>
                         </details>
                     </div>
@@ -3171,13 +3243,18 @@
             const className = String(document.getElementById(`bg-ppct-class-${index}`)?.value || '').trim();
             const subject = String(document.getElementById(`bg-ppct-subject-${index}`)?.value || '').trim();
             const itemText = String(document.getElementById(`bg-ppct-items-${index}`)?.value || '');
-            const items = itemText.split(/\r?\n/).map(line => line.split('|').map(value => value.trim())).filter(parts => parts[0]).map(parts => ({ lesson: parts[0], periods: Math.max(1, Number.parseInt(parts[1], 10) || 1) }));
+            const items = itemText.split(/\r?\n/).map(line => line.split('|').map(value => value.trim())).filter(parts => parts[0]).map(parts => {
+                const hasWeekMapping = parts.length >= 5 && /^\d+$/.test(parts[0]);
+                return hasWeekMapping
+                    ? { week: Number(parts[0]), period_no: parts[1], strand: parts[2], lesson: parts[3], periods: Math.max(1, Number.parseInt(parts[4], 10) || 1) }
+                    : { week: null, period_no: '', strand: '', lesson: parts[0], periods: Math.max(1, Number.parseInt(parts[1], 10) || 1) };
+            }).filter(item => item.lesson);
             if (!className || !subject || !items.length) return showToast('PPCT cần có lớp, môn và ít nhất một bài dạy.', 'error');
             const remaining = String(state.bao_giang.curriculum_text || '').split(/\r?\n/).filter(line => {
                 const parts = line.split('|').map(value => value.trim());
                 return parts.length < 4 || baoGiangKey(parts[0], parts[1]) !== oldGroup.key;
             }).filter(line => line.trim());
-            const newLines = items.map(item => `${className} | ${subject} | ${item.lesson} | ${item.periods}`);
+            const newLines = items.map(item => item.week ? `${className} | ${subject} | ${item.week} | ${item.period_no} | ${item.strand} | ${item.lesson} | ${item.periods}` : `${className} | ${subject} | ${item.lesson} | ${item.periods}`);
             state.bao_giang.curriculum_text = [...remaining, ...newLines].join('\n');
             const input = document.getElementById('bg-curriculum');
             if (input) input.value = state.bao_giang.curriculum_text;
@@ -3195,7 +3272,7 @@
                 const parts = line.split('|').map(value => value.trim());
                 return parts.length < 4 || baoGiangKey(parts[0], parts[1]) !== group.key;
             }).filter(line => line.trim());
-            state.bao_giang.curriculum_text = [...remaining, ...compacted.map(item => `${group.class_name} | ${group.subject} | ${item.lesson} | ${item.periods}`)].join('\n');
+            state.bao_giang.curriculum_text = [...remaining, ...compacted.map(item => item.week ? `${group.class_name} | ${group.subject} | ${item.week} | ${item.period_no} | ${item.strand} | ${item.lesson} | ${item.periods}` : `${group.class_name} | ${group.subject} | ${item.lesson} | ${item.periods}`)].join('\n');
             const input = document.getElementById('bg-curriculum');
             if (input) input.value = state.bao_giang.curriculum_text;
             saveToLocal();
@@ -3244,14 +3321,21 @@
                 const text = await extractBaoGiangPpctText(file);
                 if (!text.trim()) throw new Error('Không trích xuất được nội dung từ tệp.');
                 if (status) status.textContent = 'AI đang chuẩn hóa PPCT…';
-                const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"${grade}","subject":"${subjectName}","lesson":"Bài 1. Đơn thức","periods":2}]}. Đây là PPCT môn ${subjectName} dùng chung cho TOÀN BỘ khối ${grade}; class_name BẮT BUỘC là "${grade}" và subject BẮT BUỘC là "${subjectName}" ở mọi phần tử, không ghi từng lớp con. QUAN TRỌNG: xuất đúng thứ tự các BÀI/CHỦ ĐỀ trong tài liệu gốc. Một bài có nhiều tiết thì ghi tổng số tiết của chính bài đó. Nếu các bài/chủ đề ở những phần khác nhau trùng tên (ví dụ nhiều dòng "Luyện tập chung", "Ôn tập"), PHẢI giữ thành các phần tử riêng theo thứ tự xuất hiện; không cộng tiết, không gộp theo tên. Chỉ gộp các dòng tiết liền kề khi tài liệu khẳng định chúng thuộc cùng một bài. CẤM coi "Tiết 1", "Tiết 2", các mục nhỏ, hoạt động hoặc dòng bảng là bài riêng. Giữ nguyên tên bài và số tiết nếu có trong tài liệu; không tự bịa dữ liệu. Không đưa dòng tiêu đề học kỳ/chương nếu không có số tiết.\n\nPPCT:\n${text.slice(0, 70000)}`;
+                const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"${grade}","subject":"${subjectName}","week":2,"period_no":"3-4","strand":"Đại số","lesson":"Bài 1. Đơn thức","periods":2}]}. Đây là PPCT môn ${subjectName} dùng chung cho TOÀN BỘ khối ${grade}; class_name BẮT BUỘC là "${grade}" và subject BẮT BUỘC là "${subjectName}" ở mọi phần tử, không ghi từng lớp con. BẮT BUỘC trích chính xác tuần (week), tiết PPCT (period_no) và mạch/phân môn (strand) nếu tài liệu có. Nếu PPCT chia Đại số và Hình học riêng nhưng cùng Tuần 2, phải trả các phần tử riêng cùng week=2; không xếp hết Đại số rồi mới đến Hình học. Xuất đúng thứ tự tuần tăng dần, trong mỗi tuần giữ đúng thứ tự từng mạch theo tài liệu. Một bài nhiều tiết chỉ ghi tổng tiết của chính bài đó. Các dòng trùng tên ở phần khác nhau phải giữ riêng. Không tự bịa tuần, tiết, mạch hoặc số tiết; nếu tài liệu không thể hiện tuần thì dùng week:null và period_no:"". Không đưa tiêu đề học kỳ/chương nếu không có số tiết.\n\nPPCT:\n${text.slice(0, 70000)}`;
                 const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 16384 } };
                 const response = await fetch('api/khbd_gemini.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ model: 'gemini-2.5-flash', payload, timeout: 90 }) });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || data.ok === false) throw new Error(data.error || data.body?.error?.message || `Không thể gọi AI nhận diện PPCT (mã ${data.status || response.status}).`);
                 const parsed = parseAiJson(extractGeminiText(data));
                 const rows = Array.isArray(parsed.curriculum) ? parsed.curriculum : [];
-                const lines = rows.map(item => ({ lesson: String(item?.lesson || '').trim(), periods: Math.max(1, Number.parseInt(item?.periods, 10) || 1) })).filter(item => item.lesson).map(item => `${grade} | ${subjectName} | ${item.lesson} | ${item.periods}`).filter(line => !/\|\s*\|/.test(line));
+                const lines = rows.filter(item => String(item?.lesson || '').trim()).map(item => {
+                    const week = Number.parseInt(item?.week, 10);
+                    const lesson = String(item?.lesson || '').trim();
+                    const periods = Math.max(1, Number.parseInt(item?.periods, 10) || 1);
+                    return Number.isInteger(week) && week > 0
+                        ? `${grade} | ${subjectName} | ${week} | ${String(item?.period_no || '').trim()} | ${String(item?.strand || '').trim()} | ${lesson} | ${periods}`
+                        : `${grade} | ${subjectName} | ${lesson} | ${periods}`;
+                });
                 if (!lines.length) throw new Error('AI không nhận diện được dòng PPCT hợp lệ.');
                 state.bao_giang.curriculum_text = mergeBaoGiangCurriculumLines(lines);
                 const output = document.getElementById('bg-curriculum');
@@ -3303,15 +3387,8 @@
             const viewStart = baoGiangDate(viewInput.value) || baoGiangDate(cfg.start_date);
             const viewEnd = new Date(viewStart);
             viewEnd.setDate(viewEnd.getDate() + days - 1);
-            const plan = parseBaoGiangCurriculum(cfg.curriculum_text);
-            const allRows = baoGiangRows(baoGiangIso(viewEnd));
-            const counters = new Map();
-            const decorated = allRows.map(row => {
-                const key = baoGiangKey(row.class_name, row.subject);
-                const index = counters.get(key) || 0;
-                counters.set(key, index + 1);
-                return { ...row, lesson: baoGiangPlanFor(plan, row.class_name, row.subject)[index] || null };
-            });
+            const scheduleData = decorateBaoGiangRows(baoGiangIso(viewEnd));
+            const decorated = scheduleData.rows;
             const visible = decorated.filter(row => row.date >= viewInput.value && row.date <= baoGiangIso(viewEnd));
             const exceptions = document.getElementById('bg-exceptions');
             if (exceptions) exceptions.innerHTML = cfg.exceptions.length ? cfg.exceptions.map(ex => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:.85rem;"><b>${escapeHtml(ex.date)}</b><span>${ex.type === 'off' ? 'Nghỉ học' : 'Dạy bù'}</span><span>${escapeHtml(ex.scope === 'all' ? 'Toàn trường' : ex.target)}</span><button class="btn-small" onclick="removeBaoGiangException('${ex.id}')">Xóa</button></div>`).join('') : '<p style="color:#64748b;font-size:.85rem;">Chưa có ngoại lệ.</p>';
@@ -3319,7 +3396,7 @@
             if (recipients) recipients.innerHTML = `<div style="font-weight:800;margin-bottom:6px;">Người nhận email</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${state.teachers.map(t => `<label style="padding:7px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;"><input type="checkbox" ${cfg.recipient_ids.includes(t.id) ? 'checked' : ''} onchange="toggleBaoGiangRecipient('${t.id}',this.checked)"> ${escapeHtml(t.name)} <input aria-label="Email ${escapeHtml(t.name)}" value="${escapeHtml(t.email || '')}" placeholder="email" style="width:150px;border:0;border-bottom:1px solid #cbd5e1;margin-left:4px;" onchange="setBaoGiangEmail('${t.id}',this.value)"></label>`).join('')}</div>`;
             renderBaoGiangCurriculumLibrary(decorated);
             const schedule = document.getElementById('bg-schedule');
-            if (schedule) schedule.innerHTML = visible.length ? `<div style="overflow:auto;"><table class="data-table"><thead><tr><th>Ngày</th><th>Lớp</th><th>Môn</th><th>Tiết</th><th>GV</th><th>Tiết PPCT</th><th>Bài dạy</th><th>Phân đoạn</th></tr></thead><tbody>${visible.map(row => `<tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.class_name)}</td><td>${escapeHtml(row.subject)}</td><td>${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} ${row.period}`)}</td><td>${escapeHtml(row.teacher_name)}</td><td>${row.lesson?.ppct || '<span style="color:#b45309">Chưa có</span>'}</td><td>${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td><td>${escapeHtml(row.lesson?.segment || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p style="padding:16px;color:#64748b;">Chưa có tiết TKB trong khoảng ngày này. Hãy nhập TKB, ngày áp dụng và PPCT.</p>';
+            if (schedule) schedule.innerHTML = `${scheduleData.warnings.length ? `<div style="margin:0 0 12px;padding:12px 14px;border:1px solid #fbbf24;border-radius:8px;background:#fffbeb;color:#92400e;font-size:.88rem;"><b><i class="fas fa-triangle-exclamation"></i> Cần kiểm tra PPCT trước khi gửi email</b><br>${scheduleData.warnings.map(message => escapeHtml(message)).join('<br>')}</div>` : ''}${visible.length ? `<div style="overflow:auto;"><table class="data-table"><thead><tr><th>Ngày</th><th>Lớp</th><th>Môn</th><th>Tiết</th><th>GV</th><th>Tuần / PPCT</th><th>Mạch</th><th>Bài dạy</th><th>Phân đoạn</th></tr></thead><tbody>${visible.map(row => `<tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.class_name)}</td><td>${escapeHtml(row.subject)}</td><td>${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} ${row.period}`)}</td><td>${escapeHtml(row.teacher_name)}</td><td>${row.lesson ? `${row.teaching_week ? `T${row.teaching_week} · ` : ''}${escapeHtml(row.lesson.ppct)}` : '<span style="color:#b45309">Chưa có</span>'}</td><td>${escapeHtml(row.lesson?.strand || '—')}</td><td>${escapeHtml(row.lesson?.lesson || (row.ppct_missing ? 'PPCT tuần này chưa đủ tiết' : 'Chưa khai báo PPCT'))}</td><td>${escapeHtml(row.lesson?.segment || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p style="padding:16px;color:#64748b;">Chưa có tiết TKB trong khoảng ngày này. Hãy nhập TKB, ngày áp dụng và PPCT.</p>'}`;
         }
 
         function switchAppView(viewId) {

@@ -45,7 +45,9 @@ const requiredIds = [
   'sgkDetailSubtitle',
   'sgkDetailContent',
   'btnUseCurBook',
-  'sgkJsonFileInput'
+  'sgkJsonFileInput',
+  'sgkGradeTabs',
+  'btnSeedAllGrade'
 ];
 
 const requiredFunctions = [
@@ -71,7 +73,17 @@ const requiredFunctions = [
   'useSharedSgkBook',
   'getSharedSgkLessonKnowledge',
   'exportSgkKnowledgeJson',
-  'importSgkKnowledgeJson'
+  'importSgkKnowledgeJson',
+  'switchSgkGradeTab',
+  'onSgkSearchInput',
+  'renderSgkSubjectMatrix',
+  'seedSubjectGradeKnowledge',
+  'seedAllSubjectsForGrade',
+  'seedAllGradesAllSubjects',
+  'applyAndUseSubjectGrade',
+  'getSubjectCurriculumKey',
+  'getStandardSubjectYccd',
+  'getStandardCurriculumCatalog'
 ];
 
 for (const { path, isCanvas } of htmlFiles) {
@@ -163,6 +175,10 @@ vm.runInContext(yccdCode, sandbox);
 const standardsCode = fs.readFileSync('js/khbd-standards.js', 'utf8');
 vm.runInContext(standardsCode, sandbox);
 
+// Load CURRICULUM_DATA from js/khbd-curriculum.js
+const curriculumCode = fs.readFileSync('js/khbd-curriculum.js', 'utf8');
+vm.runInContext(curriculumCode, sandbox);
+
 // Load helpers, compactSgkText, lessonOrdinal, ensureFullCurriculumLessons, getSharedSgkLessonKnowledge, lessonAppliedNlsDescription, lessonAppliedAiDescription, appendixOneFallbackOutcome
 const codeToRun = [
   extractFn('isUnfitDigitalEvidence', sourceCode),
@@ -171,6 +187,9 @@ const codeToRun = [
   extractFn('renderSgkDetailNlsBlock', sourceCode),
   extractFn('compactSgkText', sourceCode),
   extractFn('lessonOrdinal', sourceCode),
+  extractFn('getSubjectCurriculumKey', sourceCode),
+  extractFn('getStandardSubjectYccd', sourceCode),
+  extractFn('getStandardCurriculumCatalog', sourceCode),
   extractFn('ensureFullCurriculumLessons', sourceCode),
   extractFn('getSharedSgkLessonKnowledge', sourceCode),
   extractFn('lessonAppliedNlsDescription', sourceCode),
@@ -368,6 +387,38 @@ const desc43 = vm.runInContext("lessonAppliedNlsDescription('4.3.TC1a', '', 'Bà
 assert(desc43.includes('thị giác') || desc43.includes('sức khỏe') || desc43.includes('an toàn'), 'Mã 4.3 phải mô tả bảo vệ thị giác/sức khỏe số');
 
 console.log('  -> Đa dạng hóa 6 phân môn & mô tả sư phạm thực chất: PASS');
+
+// 7. Kiểm tra Hệ thống Tri thức đa môn đa lớp (Toàn bộ 13 môn cấp THCS Lớp 6–9)
+console.log('-> 7. Kiểm tra nạp Tri thức chuẩn đa môn, đa lớp (13 môn x 4 khối lớp)...');
+
+// 7.1: Ngữ văn 6
+const seedVan6 = vm.runInContext("ensureFullCurriculumLessons([], 'Ngữ văn', '6', 'Sách giáo khoa dùng chung (từ 2026-2027)')", sandbox);
+assert(seedVan6.length >= 10, `Ngữ văn 6 phải sinh đủ danh mục bài học (thực tế: ${seedVan6.length} bài)`);
+assert(seedVan6.every(l => l.lesson_title && l.yccd && l.digital_evidence && l.ai_pedagogy_hint), 'Bài Ngữ văn 6 phải có đủ YCCĐ, NLS, AI');
+assert(seedVan6[0].yccd.includes('văn học') || seedVan6[0].yccd.includes('đọc hiểu') || seedVan6[0].yccd.includes('thể loại'), 'YCCĐ Ngữ văn phải đúng đặc thù bộ môn');
+
+// 7.2: Khoa học tự nhiên 7
+const seedKhtn7 = vm.runInContext("ensureFullCurriculumLessons([], 'Khoa học tự nhiên', '7', 'Sách giáo khoa dùng chung (từ 2026-2027)')", sandbox);
+assert(seedKhtn7.length >= 40, `KHTN 7 phải sinh đủ danh mục bài học (thực tế: ${seedKhtn7.length} bài)`);
+assert(seedKhtn7[0].yccd.includes('khoa học') || seedKhtn7[0].yccd.includes('thí nghiệm') || seedKhtn7[0].yccd.includes('khái niệm'), 'YCCĐ KHTN phải đúng đặc thù bộ môn');
+
+// 7.3: Tin học 8
+const seedTin8 = vm.runInContext("ensureFullCurriculumLessons([], 'Tin học', '8', 'Sách giáo khoa dùng chung (từ 2026-2027)')", sandbox);
+assert(seedTin8.length >= 15, `Tin học 8 phải sinh đủ danh mục bài học (thực tế: ${seedTin8.length} bài)`);
+assert(seedTin8[0].yccd.includes('công nghệ số') || seedTin8[0].yccd.includes('máy tính') || seedTin8[0].yccd.includes('thông tin'), 'YCCĐ Tin học phải đúng đặc thù bộ môn');
+
+// 7.4: Lịch sử và Địa lí 9
+const seedSuDia9 = vm.runInContext("ensureFullCurriculumLessons([], 'Lịch sử và Địa lí', '9', 'Sách giáo khoa dùng chung (từ 2026-2027)')", sandbox);
+assert(seedSuDia9.length >= 40, `Lịch sử và Địa lí 9 phải sinh đủ danh mục bài học (thực tế: ${seedSuDia9.length} bài)`);
+assert(seedSuDia9[0].yccd.includes('lịch sử') || seedSuDia9[0].yccd.includes('địa lí') || seedSuDia9[0].yccd.includes('tư liệu'), 'YCCĐ Sử Địa phải đúng đặc thù bộ môn');
+
+// 7.5: Giáo dục địa phương (GDDP) cả 4 khối lớp
+['6', '7', '8', '9'].forEach(g => {
+  const seedGddp = vm.runInContext(`ensureFullCurriculumLessons([], 'Giáo dục địa phương', '${g}', 'Sách giáo khoa dùng chung (từ 2026-2027)')`, sandbox);
+  assert.equal(seedGddp.length, 8, `GDDP lớp ${g} phải có đủ 8 chủ đề/bài học chuẩn`);
+});
+
+console.log('  -> Nạp tri thức chuẩn đa môn, đa khối lớp (Ngữ văn, KHTN, Tin học, Lịch sử - Địa lí, GD địa phương): PASS');
 
 console.log('==================================================');
 console.log('TẤT CẢ TEST KHO TRI THỨC SGK ĐỀU ĐẠT (PASS)!');
