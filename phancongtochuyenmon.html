@@ -2921,7 +2921,18 @@
         function baoGiangDate(value) { const d = new Date(`${value}T00:00:00`); return Number.isNaN(d.getTime()) ? null : d; }
         function baoGiangIso(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
         function baoGiangDayKey(date) { const day = date.getDay(); return day === 0 ? '' : String(day + 1); }
-        function baoGiangKey(className, subject) { return `${foldText(className)}|${foldText(subject)}`; }
+        function baoGiangSubjectKey(subject) {
+            const token = foldText(subject).replace(/Đ/g, 'D');
+            const aliases = {
+                'TIN': 'TIN HOC', 'TIN HOC': 'TIN HOC',
+                'TOAN': 'TOAN', 'TOAN HOC': 'TOAN',
+                'KHTN': 'KHTN', 'KHOA HOC TU NHIEN': 'KHTN',
+                'HDTN': 'HDTN', 'HD TN': 'HDTN', 'HOAT DONG TRAI NGHIEM': 'HDTN',
+                'GDCD': 'GDCD', 'GIAO DUC CONG DAN': 'GDCD'
+            };
+            return aliases[token] || token;
+        }
+        function baoGiangKey(className, subject) { return `${foldText(className)}|${baoGiangSubjectKey(subject)}`; }
         async function extractBaoGiangPpctText(file) { const name = String(file?.name || '').toLowerCase(); if (!file) throw new Error('Hãy chọn tệp PPCT trước.'); if (name.endsWith('.txt') || name.endsWith('.csv')) return file.text(); if (name.endsWith('.docx')) { if (!window.mammoth) throw new Error('Chưa tải được công cụ đọc Word.'); return (await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value; } if (name.endsWith('.xlsx')) { if (!window.XLSX) throw new Error('Chưa tải được công cụ đọc Excel.'); const book = XLSX.read(await file.arrayBuffer(), { type: 'array' }); return book.SheetNames.map(sheet => `[Trang tính: ${sheet}]\n${XLSX.utils.sheet_to_json(book.Sheets[sheet], { header: 1, defval: '', raw: false }).map(row => row.join('\t')).join('\n')}`).join('\n\n'); } if (name.endsWith('.pdf')) { if (!window.pdfjsLib) throw new Error('Chưa tải được công cụ đọc PDF.'); pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise; let text = ''; for (let page = 1; page <= pdf.numPages; page++) text += `${(await (await pdf.getPage(page)).getTextContent()).items.map(item => item.str).join(' ')}\n`; return text; } throw new Error('Chỉ hỗ trợ PDF, DOCX, XLSX, CSV và TXT.'); }
         async function scanBaoGiangPpct() { const file = document.getElementById('bg-ppct-file')?.files?.[0], button = document.getElementById('bg-scan-ppct'), status = document.getElementById('bg-ppct-status'); try { if (button) { button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang nhận diện…'; } if (status) status.textContent = 'Đang đọc tệp PPCT…'; const text = await extractBaoGiangPpctText(file); if (!text.trim()) throw new Error('Không trích xuất được nội dung từ tệp.'); if (status) status.textContent = 'AI đang chuẩn hóa PPCT…'; const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"8A1","subject":"Toán","lesson":"Bài 1. Đơn thức","periods":2}]}. Mỗi phần tử là một bài/chủ đề theo đúng thứ tự PPCT. Giữ nguyên tên lớp, môn, tên bài và số tiết nếu có trong tài liệu; không tự bịa dữ liệu. Nếu PPCT dùng chung cho nhiều lớp mà không ghi lớp, đặt class_name là "*". Không đưa dòng tiêu đề học kỳ/chương nếu không có số tiết.\n\nPPCT:\n${text.slice(0, 70000)}`; const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 16384 } }; const response = await fetch('api/khbd_gemini.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ model: 'gemini-2.5-flash', payload, timeout: 90 }) }); const data = await response.json().catch(() => ({})); if (!response.ok || data.ok === false) throw new Error(data.error || 'Không thể gọi AI nhận diện PPCT.'); const parsed = parseAiJson(extractGeminiText(data)), rows = Array.isArray(parsed.curriculum) ? parsed.curriculum : []; const lines = rows.map(item => `${String(item.class_name || '*').trim()} | ${String(item.subject || '').trim()} | ${String(item.lesson || '').trim()} | ${Math.max(1, Number.parseInt(item.periods, 10) || 1)}`).filter(line => !/\|\s*\|/.test(line)); if (!lines.length) throw new Error('AI không nhận diện được dòng PPCT hợp lệ.'); state.bao_giang.curriculum_text = lines.join('\n'); const output = document.getElementById('bg-curriculum'); if (output) output.value = state.bao_giang.curriculum_text; saveToLocal(); renderBaoGiangView(); if (status) status.textContent = `Đã nhận diện ${lines.length} bài/chủ đề. Hãy rà soát rồi lưu.`; showToast(`Đã đưa ${lines.length} dòng PPCT vào lịch báo giảng.`, 'success'); } catch (error) { if (status) status.textContent = error.message || 'Nhận diện PPCT thất bại.'; showToast(error.message || 'Nhận diện PPCT thất bại.', 'error'); } finally { if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> AI nhận diện PPCT'; } } }
         function parseBaoGiangCurriculum(text) { const plans = new Map(); String(text || '').split(/\r?\n/).forEach((line, lineIndex) => { const parts = line.split('|').map(x => x.trim()); if (parts.length < 4 || !parts[0] || !parts[1] || !parts[2]) return; const count = Math.max(1, Number.parseInt(parts[3], 10) || 1), key = baoGiangKey(parts[0], parts[1]); if (!plans.has(key)) plans.set(key, []); for (let i = 1; i <= count; i++) plans.get(key).push({ ppct: plans.get(key).length + 1, lesson: parts[2], segment: `${i}/${count}`, sourceLine: lineIndex + 1 }); }); return plans; }
@@ -2969,6 +2980,27 @@
             return /^[6-9]$/.test(group.class_name) ? `Khối ${group.class_name}` : `Lớp ${group.class_name}`;
         }
 
+        function normalizeBaoGiangLessonTitle(value) {
+            return String(value || '')
+                .replace(/^\s*tiết\s*\d+(?:\s*[-–]\s*\d+)?\s*[:.)-]?\s*/i, '')
+                .replace(/\s*[(\[]?\s*tiết\s*\d+(?:\s*[-–,]\s*\d+)?\s*[)\]]?\s*$/i, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function compactBaoGiangLessonRows(rows) {
+            const compacted = new Map();
+            (rows || []).forEach(row => {
+                const lesson = normalizeBaoGiangLessonTitle(row.lesson);
+                if (!lesson) return;
+                const key = foldText(lesson);
+                const current = compacted.get(key) || { lesson, periods: 0 };
+                current.periods += Math.max(1, Number.parseInt(row.periods, 10) || 1);
+                compacted.set(key, current);
+            });
+            return [...compacted.values()];
+        }
+
         // Ưu tiên PPCT chung cả khối; dữ liệu theo lớp từ phiên bản cũ chỉ là phương án dự phòng.
         function baoGiangPlanFor(plans, className, subject) {
             return plans.get(baoGiangKey(baoGiangGrade(className), subject))
@@ -3006,7 +3038,7 @@
                 return `<details style="margin-top:10px;border:1px solid #bfdbfe;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.05);">
                     <summary style="cursor:pointer;font-size:.93rem;padding:12px 14px;background:linear-gradient(90deg,#eff6ff,#f8fafc);list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
                         <span><b style="color:#1e3a8a;">${escapeHtml(baoGiangGroupLabel(group))} · ${escapeHtml(group.subject)}</b></span>
-                        <span style="display:flex;gap:6px;flex-wrap:wrap;font-size:.78rem;"><span style="padding:3px 8px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-weight:700;">${group.items.length} bài</span><span style="padding:3px 8px;border-radius:999px;background:#dcfce7;color:#15803d;font-weight:700;">${totalPeriods} tiết</span><span style="padding:3px 8px;border-radius:999px;background:#f1f5f9;color:#475569;">Đã ghép ${scheduled}</span></span>
+                        <span style="display:flex;gap:6px;flex-wrap:wrap;font-size:.78rem;"><span style="padding:3px 8px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-weight:700;">${group.items.length} bài/chủ đề</span><span style="padding:3px 8px;border-radius:999px;background:#dcfce7;color:#15803d;font-weight:700;">${totalPeriods} tiết</span><span style="padding:3px 8px;border-radius:999px;background:#f1f5f9;color:#475569;">Đã ghép ${scheduled}</span></span>
                     </summary>
                     <div style="padding:12px 14px;">
                         <div style="overflow:auto;border:1px solid #e2e8f0;border-radius:8px;"><table class="data-table" style="margin:0;min-width:460px;"><thead><tr><th style="width:48px;text-align:center;">STT</th><th>Bài dạy / chủ đề</th><th style="width:82px;text-align:center;">Số tiết</th></tr></thead><tbody>${lessonRows}</tbody></table></div>
@@ -3016,7 +3048,7 @@
                                 <label class="form-group" style="margin:0;">Môn<input id="bg-ppct-subject-${index}" class="form-control" style="width:100%;box-sizing:border-box;" value="${escapeHtml(group.subject)}"></label>
                             </div>
                             <label class="form-group" style="display:block;margin:10px 0 0;">Bài dạy | số tiết<textarea id="bg-ppct-items-${index}" class="form-control" style="display:block;width:100%;box-sizing:border-box;min-height:140px;line-height:1.45;" rows="${Math.min(12, Math.max(5, group.items.length + 1))}">${escapeHtml(lessonLines)}</textarea></label>
-                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn-small btn-small-primary" onclick="saveBaoGiangCurriculumGroup(${index})"><i class="fas fa-save"></i> Lưu thay đổi</button><button type="button" class="btn-small" onclick="deleteBaoGiangCurriculumGroup(${index})"><i class="fas fa-trash"></i> Xóa PPCT này</button></div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn-small btn-small-primary" onclick="saveBaoGiangCurriculumGroup(${index})"><i class="fas fa-save"></i> Lưu thay đổi</button><button type="button" class="btn-small" onclick="compactBaoGiangCurriculumGroup(${index})"><i class="fas fa-compress"></i> Gộp các tiết cùng bài</button><button type="button" class="btn-small" onclick="deleteBaoGiangCurriculumGroup(${index})"><i class="fas fa-trash"></i> Xóa PPCT này</button></div>
                         </details>
                     </div>
                 </details>`;
@@ -3044,6 +3076,23 @@
             saveToLocal();
             renderBaoGiangView();
             showToast(`Đã lưu PPCT ${className} · ${subject}.`, 'success');
+        }
+
+        function compactBaoGiangCurriculumGroup(index) {
+            const group = getBaoGiangCurriculumGroups()[index];
+            if (!group) return;
+            const compacted = compactBaoGiangLessonRows(group.items);
+            if (compacted.length >= group.items.length) return showToast('Không có dòng tiết trùng bài để gộp.', 'info');
+            const remaining = String(state.bao_giang.curriculum_text || '').split(/\r?\n/).filter(line => {
+                const parts = line.split('|').map(value => value.trim());
+                return parts.length < 4 || baoGiangKey(parts[0], parts[1]) !== group.key;
+            }).filter(line => line.trim());
+            state.bao_giang.curriculum_text = [...remaining, ...compacted.map(item => `${group.class_name} | ${group.subject} | ${item.lesson} | ${item.periods}`)].join('\n');
+            const input = document.getElementById('bg-curriculum');
+            if (input) input.value = state.bao_giang.curriculum_text;
+            saveToLocal();
+            renderBaoGiangView();
+            showToast(`Đã gộp ${group.items.length} dòng thành ${compacted.length} bài/chủ đề.`, 'success');
         }
 
         function deleteBaoGiangCurriculumGroup(index) {
@@ -3087,14 +3136,15 @@
                 const text = await extractBaoGiangPpctText(file);
                 if (!text.trim()) throw new Error('Không trích xuất được nội dung từ tệp.');
                 if (status) status.textContent = 'AI đang chuẩn hóa PPCT…';
-                const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"${grade}","subject":"${subjectName}","lesson":"Bài 1. Đơn thức","periods":2}]}. Đây là PPCT môn ${subjectName} dùng chung cho TOÀN BỘ khối ${grade}; class_name BẮT BUỘC là "${grade}" và subject BẮT BUỘC là "${subjectName}" ở mọi phần tử, không ghi từng lớp con. Mỗi phần tử là một bài/chủ đề theo đúng thứ tự PPCT. Giữ nguyên tên bài và số tiết nếu có trong tài liệu; không tự bịa dữ liệu. Không đưa dòng tiêu đề học kỳ/chương nếu không có số tiết.\n\nPPCT:\n${text.slice(0, 70000)}`;
+                const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"${grade}","subject":"${subjectName}","lesson":"Bài 1. Đơn thức","periods":2}]}. Đây là PPCT môn ${subjectName} dùng chung cho TOÀN BỘ khối ${grade}; class_name BẮT BUỘC là "${grade}" và subject BẮT BUỘC là "${subjectName}" ở mọi phần tử, không ghi từng lớp con. QUAN TRỌNG: chỉ tạo MỘT phần tử cho mỗi BÀI/CHỦ ĐỀ của SGK; nếu bài có nhiều tiết thì cộng tổng số tiết vào periods. CẤM coi "Tiết 1", "Tiết 2", các mục nhỏ, hoạt động hoặc dòng bảng là bài riêng. Giữ nguyên tên bài và số tiết nếu có trong tài liệu; không tự bịa dữ liệu. Không đưa dòng tiêu đề học kỳ/chương nếu không có số tiết.\n\nPPCT:\n${text.slice(0, 70000)}`;
                 const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 16384 } };
                 const response = await fetch('api/khbd_gemini.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ model: 'gemini-2.5-flash', payload, timeout: 90 }) });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || data.ok === false) throw new Error(data.error || data.body?.error?.message || `Không thể gọi AI nhận diện PPCT (mã ${data.status || response.status}).`);
                 const parsed = parseAiJson(extractGeminiText(data));
                 const rows = Array.isArray(parsed.curriculum) ? parsed.curriculum : [];
-                const lines = rows.map(item => `${grade} | ${subjectName} | ${String(item.lesson || '').trim()} | ${Math.max(1, Number.parseInt(item.periods, 10) || 1)}`).filter(line => !/\|\s*\|/.test(line));
+                const compactedRows = compactBaoGiangLessonRows(rows);
+                const lines = compactedRows.map(item => `${grade} | ${subjectName} | ${item.lesson} | ${item.periods}`).filter(line => !/\|\s*\|/.test(line));
                 if (!lines.length) throw new Error('AI không nhận diện được dòng PPCT hợp lệ.');
                 state.bao_giang.curriculum_text = mergeBaoGiangCurriculumLines(lines);
                 const output = document.getElementById('bg-curriculum');

@@ -239,3 +239,41 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
    - Đồng bộ 100% trên cả 3 file: `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
    - Tạo mới test suite `tests/sgk-knowledge-smoke.js`: Kiểm thử cấu trúc DB PHP, DOM hooks/functions trên 3 file HTML, và hành vi nạp/kế thừa tri thức trong VM sandbox.
    - Toàn bộ 59 test suite (`node tests/run-all-tests.js`) đạt 100% PASS.
+
+## Triển khai Nâng cấp: Sách Giáo Khoa Dùng Chung (từ 2026-2027) & Cơ Chế Bảo Đảm Bao Phủ 100% Tất Cả Bài Học (Curriculum Assurance)
+1. **Định danh Bộ sách Chuẩn Quốc gia Mới**:
+   - Thêm `<option value="Sách giáo khoa dùng chung (từ 2026-2027)" selected>Sách giáo khoa dùng chung (từ 2026-2027)</option>` ở vị trí số 1 trong dropdown `#bookSeries`.
+   - Cập nhật giá trị `boSach` mặc định trong hàm `getConfig()` trên cả 3 tệp (`xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`).
+2. **Khắc phục Triệt để Giới hạn Cắt ngắn của `compactSgkText`**:
+   - Nhận diện và ưu tiên giữ trọn vẹn toàn bộ phần Mục lục (TOC) của sách.
+   - Bổ sung nhận diện các phân đoạn: `hoạt động thực hành`, `luyện tập chung`, `ôn tập`, `bài tập cuối chương`, `học xong bài này`.
+   - Nâng giới hạn trích xuất từ 220 dòng / 30.000 ký tự lên **2.500 dòng và 150.000 ký tự**, đảm bảo toàn bộ các chương cuối (Chương 3, 4, 5...) không bị cắt bỏ.
+3. **Cơ chế 2 Lớp Bảo Đảm Bao Phủ 100% Bài Học (`ensureFullCurriculumLessons`)**:
+   - Tự động đối chiếu danh sách bài học trích xuất với danh mục chuẩn CTGDPT 2018 (`KHBD_YCCD.toan[grade]`).
+   - Tự động bù đắp các bài còn thiếu (Toán 6: 43 bài, Toán 7: 37-40 bài, Toán 8: 39 bài, Toán 9: 32 bài) nếu người dùng chỉ tải PDF Tập 1 hoặc tệp scan thiếu trang.
+   - Tự động điền đầy đủ YCCD chuẩn, NLS công cụ thực tế (máy tính Casio, GeoGebra, Desmos, bảng tính Excel) và gợi ý AI theo khung QĐ 2422 cho mọi bài học (kể cả bài có sẵn lẫn bài được bù đắp).
+4. **Tính năng Khởi tạo Nhanh 1-Click (`seedStandardSgkKnowledge`)**:
+   - Cho phép giáo viên bấm `⚡ Khởi tạo Kho Tri thức Chuẩn (100% bài)` để nạp trọn bộ tri thức chuẩn vào CSDL hoặc bộ nhớ máy trong 1 click, không cần phải tìm và tải PDF nặng.
+5. **Tối ưu Hóa Hàm `extractAndSaveSharedSgk` & Sửa Lỗi Kỹ thuật**:
+   - Bổ sung chỉ thị Prompt khóa chặt yêu cầu quét toàn bộ sách và bắt buộc trích xuất 100% số bài học, cấm dừng lại ở 5-10 bài đầu.
+   - Nâng ngữ cảnh gửi lên AI lên 120.000 ký tự.
+   - Sửa lỗi runtime `ReferenceError` của biến `payload` (khai báo trước khi tạo `localKey`).
+   - Tự động lưu cache trình duyệt khi kết nối mạng hosting tạm thời gián đoạn.
+6. **Đồng bộ và Kiểm thử**:
+   - Đồng bộ 100% giữa `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+   - Mở rộng `tests/sgk-knowledge-smoke.js` kiểm tra tùy chọn dropdown, hàm `compactSgkText` (> 220 dòng) và `ensureFullCurriculumLessons` (bù đắp đủ 100% bài học).
+
+## Triển khai Tối ưu Luồng UI: Đưa Khối "Thông tin & Cấu hình Sư phạm" lên Đầu Trang Cùng "Kho Tri thức SGK"
+1. **Vấn đề giải quyết**:
+   - Trước đây, khối Cấu hình Sư phạm nằm ở Mục 4, bị ngăn cách bởi Mục 3 (Bảng chọn tiết AI với 40+ bài học rất dài).
+   - Người dùng muốn thay đổi Môn học, Khối lớp, Bộ sách hoặc tỉ lệ NLS/AI phải cuộn chuột qua toàn bộ bảng Mục 3, sau đó lại phải cuộn ngược lên Mục 2 để bấm Đọc SGK hoặc xem Kho Tri thức.
+2. **Tái cấu trúc Thứ tự Section (Workflow Chuẩn Sư phạm)**:
+   - **Mục 1: Thông tin & cấu hình sư phạm**: Đặt ngay đầu trang. Giáo viên mở trang ra là có thể chọn ngay Khối lớp, Môn học, Bộ sách, Năm học, Trường, Tổ chuyên môn, Giáo viên, và cấu hình NLS/AI độc lập.
+   - **Mục 2: Tài liệu & dữ liệu nguồn**: Nằm liền kề ngay dưới Mục 1. Ngay khi giáo viên thay đổi Khối lớp/Môn học/Bộ sách ở trên, hộp `Kho Tri thức SGK dùng chung` tại đây lập tức phản ánh trạng thái tri thức tương ứng, cho phép nạp/đồng bộ tri thức tức thì. Các nút tải PPCT, đọc SGK, nạp cấu trúc mẫu nằm thuận tiện ngay tầm mắt.
+   - **Mục 3: Chọn loại phụ lục**: Chọn Phụ lục 1, 2, 3 hoặc Trọn bộ 1-2-3 một cách trực quan, gọn gàng.
+   - **Mục 4: Chọn chính xác tiết tích hợp AI (`#aiLessonPickerCard`)**: Đưa bảng chọn tiết dài xuống vị trí số 4. Tại đây, giáo viên đã có đủ dữ liệu từ các bước trên để tick chọn 12 tiết AI chuẩn xác mà không che khuất các phần điều khiển chính.
+   - **Mục 5: Ý tưởng / chỉ đạo riêng**, **Mục 6: Tiến trình xử lý**, **Mục 7: Xem trước & xuất Word**.
+3. **Đồng bộ và Kiểm thử**:
+   - Đã đồng bộ 100% trên cả 3 file: `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+   - Giữ nguyên toàn bộ ID, CSS class và event listener, bảo đảm không gãy bất kỳ logic JS hay DOM hook nào.
+   - Chạy toàn bộ 59 test suites (`node tests/run-all-tests.js`), kết quả đạt 100% PASS.

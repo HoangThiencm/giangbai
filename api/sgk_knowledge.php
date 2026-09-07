@@ -286,6 +286,43 @@ try {
         ]);
     }
 
+    if (($method === 'POST' || $method === 'GET') && $action === 'delete') {
+        $body = $method === 'POST' ? json_body() : [];
+        $bookId = (int)($body['book_id'] ?? $body['id'] ?? $_GET['book_id'] ?? $_GET['id'] ?? 0);
+
+        if ($bookId <= 0) {
+            $bookKey = trim((string)($body['book_key'] ?? $_GET['book_key'] ?? ''));
+            if ($bookKey !== '') {
+                $stmtFind = $pdo->prepare('SELECT id FROM sgk_books WHERE book_key = ? LIMIT 1');
+                $stmtFind->execute([$bookKey]);
+                $bookId = (int)$stmtFind->fetchColumn();
+            }
+        }
+
+        if ($bookId <= 0) {
+            respond(['error' => 'Mã bộ sách cần xóa không hợp lệ.'], 422);
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $delLessons = $pdo->prepare('DELETE FROM sgk_lessons WHERE book_id = ?');
+            $delLessons->execute([$bookId]);
+
+            $delBook = $pdo->prepare('DELETE FROM sgk_books WHERE id = ?');
+            $delBook->execute([$bookId]);
+
+            $pdo->commit();
+            respond([
+                'ok' => true,
+                'message' => 'Đã xóa bộ sách và toàn bộ bài học khỏi Kho Tri thức dùng chung.',
+                'deleted_id' => $bookId
+            ]);
+        } catch (Throwable $ex) {
+            $pdo->rollBack();
+            respond(['error' => 'Lỗi xóa bộ sách: ' . $ex->getMessage()], 500);
+        }
+    }
+
     respond(['error' => 'Action or method not allowed.'], 405);
 } catch (Throwable $e) {
     respond(['error' => 'Lỗi kết nối hoặc xử lý Kho Tri thức SGK: ' . $e->getMessage()], 500);

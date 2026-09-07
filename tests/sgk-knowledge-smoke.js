@@ -51,6 +51,8 @@ const requiredFunctions = [
   'onBookSeriesChange',
   'checkSharedSgkKnowledge',
   'syncSharedSgkToApp',
+  'ensureFullCurriculumLessons',
+  'seedStandardSgkKnowledge',
   'extractAndSaveSharedSgk',
   'openSgkLibraryModal',
   'closeSgkLibraryModal',
@@ -76,6 +78,10 @@ for (const { path, isCanvas } of htmlFiles) {
       `File ${path} thiếu function ${fn}`
     );
   }
+  assert(
+    content.includes('<option value="Sách giáo khoa dùng chung (từ 2026-2027)" selected>Sách giáo khoa dùng chung (từ 2026-2027)</option>'),
+    `File ${path} phải có option "Sách giáo khoa dùng chung (từ 2026-2027)" được selected làm mặc định đầu tiên`
+  );
   assert(content.includes('boSach:'), `File ${path} thiếu boSach trong getConfig()`);
   assert(content.includes('SGK_API_ENDPOINT'), `File ${path} thiếu định nghĩa SGK_API_ENDPOINT`);
   if (isCanvas) {
@@ -89,7 +95,7 @@ for (const { path, isCanvas } of htmlFiles) {
       `File ${path} phải dùng endpoint nội bộ api/sgk_knowledge.php`
     );
   }
-  console.log(`  -> ${path}: Đầy đủ 100% IDs và hàm JS: PASS`);
+  console.log(`  -> ${path}: Đầy đủ 100% IDs, hàm JS và option Sách giáo khoa dùng chung: PASS`);
 }
 
 // 3. Kiểm tra logic sư phạm tích hợp trong VM Sandbox
@@ -128,13 +134,24 @@ const sandbox = {
   cleanLessonDescription: s => String(s || '').replace(/^(bài|chủ đề|tiết)\s*\d+[\s:.-]*/i, '').trim(),
   foldText: s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd'),
   formatOutcomeLines: s => String(s || '').trim(),
-  loadedSharedSgkKnowledge: null
+  loadedSharedSgkKnowledge: null,
+  lessonsMatch: (t1, t2) => {
+    const s1 = String(t1).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const s2 = String(t2).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    return s1 && s2 && (s1.includes(s2) || s2.includes(s1));
+  }
 };
 
 vm.createContext(sandbox);
 
-// Load getSharedSgkLessonKnowledge, lessonAppliedNlsDescription, lessonAppliedAiDescription, appendixOneFallbackOutcome
+// Load KHBD_YCCD from js/khbd-yccd.js
+const yccdCode = fs.readFileSync('js/khbd-yccd.js', 'utf8');
+vm.runInContext(yccdCode, sandbox);
+
+// Load compactSgkText, ensureFullCurriculumLessons, getSharedSgkLessonKnowledge, lessonAppliedNlsDescription, lessonAppliedAiDescription, appendixOneFallbackOutcome
 const codeToRun = [
+  extractFn('compactSgkText', sourceCode),
+  extractFn('ensureFullCurriculumLessons', sourceCode),
   extractFn('getSharedSgkLessonKnowledge', sourceCode),
   extractFn('lessonAppliedNlsDescription', sourceCode),
   extractFn('lessonAppliedAiDescription', sourceCode),
@@ -184,6 +201,54 @@ console.log('  -> AI tự động lấy từ Bản đồ Tri thức dùng chung:
 const yccdFromKnowledge = vm.runInContext("appendixOneFallbackOutcome('Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn', {lop:'9',monHoc:'Toán học'})", sandbox);
 assert(yccdFromKnowledge.includes('Nhận biết được phương trình bậc nhất hai ẩn'), 'YCCD phải lấy chuẩn từ SGK dùng chung');
 console.log('  -> YCCD tự động lấy từ Bản đồ Tri thức dùng chung: PASS');
+
+// 4. Kiểm tra compactSgkText & độ bao phủ SGK
+console.log('-> 4. Kiểm tra compactSgkText & độ bao phủ SGK...');
+const sampleLines = [];
+sampleLines.push('Mục lục');
+for (let i = 1; i <= 40; i++) {
+  sampleLines.push(`Chương ${Math.ceil(i / 8)}: Chủ đề toán học`);
+  sampleLines.push(`Bài ${i}. Tên bài học toán học số ${i}`);
+  sampleLines.push(`Mục tiêu bài ${i}: Yêu cầu cần đạt chuẩn`);
+  sampleLines.push(`Hoạt động khởi động bài ${i}`);
+  sampleLines.push(`Khám phá kiến thức bài ${i}`);
+  sampleLines.push(`Luyện tập vận dụng bài ${i} với máy tính cầm tay và GeoGebra`);
+  sampleLines.push(`Bài tập cuối chương cho bài ${i}`);
+  sampleLines.push(`Trang ${i * 5}`);
+}
+sandbox.sampleText = sampleLines.join('\n');
+const compacted = vm.runInContext("compactSgkText(sampleText)", sandbox);
+const compactedLines = compacted.split('\n');
+assert(compactedLines.length > 220, `compactSgkText phải giữ được trên 220 dòng khi sách dài (thực tế: ${compactedLines.length} dòng)`);
+assert(compacted.includes('Bài 40.'), 'compactSgkText phải giữ được bài cuối cùng (Bài 40)');
+console.log(`  -> compactSgkText giữ được ${compactedLines.length} dòng, bao phủ đến bài 40: PASS`);
+
+// 5. Kiểm tra ensureFullCurriculumLessons (Curriculum Assurance bù đủ 100% bài học)
+console.log('-> 5. Kiểm tra ensureFullCurriculumLessons (Curriculum Assurance)...');
+const sample9Lessons = [
+  { lesson_order: 1, lesson_title: 'Bài 1. Tập hợp các số hữu tỉ' },
+  { lesson_order: 2, lesson_title: 'Bài 2. Cộng, trừ, nhân, chia số hữu tỉ' },
+  { lesson_order: 3, lesson_title: 'Bài 3. Luỹ thừa với số mũ tự nhiên của một số hữu tỉ' },
+  { lesson_order: 4, lesson_title: 'Bài 4. Thứ tự thực hiện các phép tính. Quy tắc chuyển vế' },
+  { lesson_order: 5, lesson_title: 'Hoạt động thực hành trải nghiệm' },
+  { lesson_order: 6, lesson_title: 'Bài tập cuối chương I' },
+  { lesson_order: 7, lesson_title: 'Bài 6. Số vô tỉ. Căn bậc hai số học' },
+  { lesson_order: 8, lesson_title: 'Bài 7. Tập hợp các số thực' },
+  { lesson_order: 9, lesson_title: 'Bài tập cuối chương II' }
+];
+sandbox.sample9Lessons = sample9Lessons;
+const fullToan7 = vm.runInContext("ensureFullCurriculumLessons(sample9Lessons, 'Toán học', '7', 'Sách giáo khoa dùng chung (từ 2026-2027)')", sandbox);
+assert(fullToan7.length >= 35, `ensureFullCurriculumLessons phải bù đắp đủ toàn bộ năm học (thực tế: ${fullToan7.length} bài)`);
+assert.equal(fullToan7[0].lesson_order, 1, 'Bài đầu tiên phải có order = 1');
+assert.equal(fullToan7[fullToan7.length - 1].lesson_order, fullToan7.length, `Bài cuối cùng phải có order = ${fullToan7.length}`);
+assert(fullToan7.every(l => l.lesson_order && l.lesson_title && l.digital_evidence && l.ai_pedagogy_hint), 'Mỗi bài học bù đắp phải có đủ STT, tên bài, minh chứng NLS và gợi ý AI');
+assert(fullToan7.every(l => !l.digital_evidence.includes('lịch sử ra đời')), 'NLS bù đắp không được chứa chatbot lịch sử');
+console.log(`  -> ensureFullCurriculumLessons bù đắp từ 9 bài lên đủ 100% (${fullToan7.length} bài) cho Toán 7: PASS`);
+
+// Kiểm tra seed danh mục chuẩn từ mảng rỗng
+const seedToan6 = vm.runInContext("ensureFullCurriculumLessons([], 'Toán học', '6', 'Sách giáo khoa dùng chung (từ 2026-2027)')", sandbox);
+assert(seedToan6.length >= 40, `Seed Toán 6 phải có ít nhất 40 bài (thực tế: ${seedToan6.length} bài)`);
+console.log(`  -> Khởi tạo chuẩn 100% bài học Toán 6 (${seedToan6.length} bài): PASS`);
 
 console.log('==================================================');
 console.log('TẤT CẢ TEST KHO TRI THỨC SGK ĐỀU ĐẠT (PASS)!');

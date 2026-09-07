@@ -193,4 +193,18 @@ Khảo sát trực tiếp từ hình ảnh thực tế người dùng cung cấp
 6. **Kiểm thử**:
    - Nâng cấp `tests/sgk-knowledge-smoke.js` và đảm bảo toàn bộ 59 test suites đạt 100% PASS.
 
+---
 
+# PLAN: Tối ưu Hóa Luồng Giao diện Người dùng (UI Flow) - Đưa Cấu hình Sư phạm & Tri thức lên Đầu Trang
+
+## Hiện trạng & Bất tiện Người dùng Phản hồi
+- Mục 4 (Thông tin & cấu hình sư phạm) nằm dưới Mục 3 (Bảng chọn tiết AI dài 40+ hàng).
+- Giáo viên muốn chọn Khối lớp, Môn học, Bộ sách, cấu hình NLS/AI phải cuộn chuột dài xuống dưới, rồi lại cuộn ngược lên trên để bấm Nhận diện hoặc xem Kho Tri thức.
+
+## Giải pháp Triển khai
+1. Đưa Khối **Thông tin & cấu hình sư phạm** lên làm **Mục 1** ngay đầu trang.
+2. Đặt Khối **Tài liệu nguồn & Kho Tri thức SGK dùng chung** làm **Mục 2** ngay liền kề, giúp phản ánh trạng thái tri thức theo đúng Môn/Lớp/Bộ sách vừa chọn.
+3. Chuyển Khối **Chọn loại phụ lục** thành **Mục 3**.
+4. Chuyển Bảng dài **Chọn chính xác tiết tích hợp AI** xuống **Mục 4**.
+5. Đồng bộ 100% trên `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`.
+6. Giữ nguyên vẹn toàn bộ ID, class, logic JS và bảo đảm 59 test suites PASS 100%.
