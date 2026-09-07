@@ -3000,14 +3000,23 @@
                 const totalPeriods = group.items.reduce((sum, item) => sum + item.periods, 0);
                 const scheduled = decoratedRows.filter(row => (group.class_name === '*' ? foldText(row.subject) === foldText(group.subject) : /^[6-9]$/.test(group.class_name) ? baoGiangGrade(row.class_name) === group.class_name && foldText(row.subject) === foldText(group.subject) : baoGiangKey(row.class_name, row.subject) === group.key) && row.lesson).length;
                 const lessonLines = group.items.map(item => `${item.lesson} | ${item.periods}`).join('\n');
-                return `<details style="margin-top:8px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;background:#fff;">
-                    <summary style="cursor:pointer;font-size:.86rem;"><b>${escapeHtml(baoGiangGroupLabel(group))} · ${escapeHtml(group.subject)}</b> — ${group.items.length} bài, ${totalPeriods} tiết <span style="color:#64748b">· đã ghép ${scheduled} lịch đang xem</span></summary>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px;">
-                        <label class="form-group" style="margin:0;">Khối (hoặc lớp riêng)<input id="bg-ppct-class-${index}" class="form-control" value="${escapeHtml(group.class_name)}"></label>
-                        <label class="form-group" style="margin:0;">Môn<input id="bg-ppct-subject-${index}" class="form-control" value="${escapeHtml(group.subject)}"></label>
+                const lessonRows = group.items.map((item, lessonIndex) => `<tr><td style="width:48px;text-align:center;color:#64748b;">${lessonIndex + 1}</td><td>${escapeHtml(item.lesson)}</td><td style="width:82px;text-align:center;font-weight:700;color:#1d4ed8;">${item.periods}</td></tr>`).join('');
+                return `<details style="margin-top:10px;border:1px solid #bfdbfe;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.05);">
+                    <summary style="cursor:pointer;font-size:.93rem;padding:12px 14px;background:linear-gradient(90deg,#eff6ff,#f8fafc);list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                        <span><b style="color:#1e3a8a;">${escapeHtml(baoGiangGroupLabel(group))} · ${escapeHtml(group.subject)}</b></span>
+                        <span style="display:flex;gap:6px;flex-wrap:wrap;font-size:.78rem;"><span style="padding:3px 8px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-weight:700;">${group.items.length} bài</span><span style="padding:3px 8px;border-radius:999px;background:#dcfce7;color:#15803d;font-weight:700;">${totalPeriods} tiết</span><span style="padding:3px 8px;border-radius:999px;background:#f1f5f9;color:#475569;">Đã ghép ${scheduled}</span></span>
+                    </summary>
+                    <div style="padding:12px 14px;">
+                        <div style="overflow:auto;border:1px solid #e2e8f0;border-radius:8px;"><table class="data-table" style="margin:0;min-width:460px;"><thead><tr><th style="width:48px;text-align:center;">STT</th><th>Bài dạy / chủ đề</th><th style="width:82px;text-align:center;">Số tiết</th></tr></thead><tbody>${lessonRows}</tbody></table></div>
+                        <details style="margin-top:10px;border:1px solid #e2e8f0;border-radius:8px;padding:9px;background:#f8fafc;"><summary style="cursor:pointer;font-weight:700;font-size:.84rem;color:#334155;"><i class="fas fa-pen"></i> Chỉnh sửa PPCT này</summary>
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px;">
+                                <label class="form-group" style="margin:0;">Khối (hoặc lớp riêng)<input id="bg-ppct-class-${index}" class="form-control" style="width:100%;box-sizing:border-box;" value="${escapeHtml(group.class_name)}"></label>
+                                <label class="form-group" style="margin:0;">Môn<input id="bg-ppct-subject-${index}" class="form-control" style="width:100%;box-sizing:border-box;" value="${escapeHtml(group.subject)}"></label>
+                            </div>
+                            <label class="form-group" style="display:block;margin:10px 0 0;">Bài dạy | số tiết<textarea id="bg-ppct-items-${index}" class="form-control" style="display:block;width:100%;box-sizing:border-box;min-height:140px;line-height:1.45;" rows="${Math.min(12, Math.max(5, group.items.length + 1))}">${escapeHtml(lessonLines)}</textarea></label>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn-small btn-small-primary" onclick="saveBaoGiangCurriculumGroup(${index})"><i class="fas fa-save"></i> Lưu thay đổi</button><button type="button" class="btn-small" onclick="deleteBaoGiangCurriculumGroup(${index})"><i class="fas fa-trash"></i> Xóa PPCT này</button></div>
+                        </details>
                     </div>
-                    <label class="form-group" style="display:block;margin:8px 0 0;">Bài dạy | số tiết<textarea id="bg-ppct-items-${index}" class="form-control" rows="${Math.min(8, Math.max(3, group.items.length + 1))}">${escapeHtml(lessonLines)}</textarea></label>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" class="btn-small btn-small-primary" onclick="saveBaoGiangCurriculumGroup(${index})"><i class="fas fa-save"></i> Lưu PPCT này</button><button type="button" class="btn-small" onclick="deleteBaoGiangCurriculumGroup(${index})"><i class="fas fa-trash"></i> Xóa PPCT này</button></div>
                 </details>`;
             }).join('');
             container.innerHTML = `<div style="margin-top:12px;padding:10px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;"><b>Kho PPCT đã nạp:</b> ${groups.length} khối/lớp–môn · ${entries.filter(row => row.valid).length} bài/chủ đề.${invalidCount ? ` <span style="color:#b45309">Có ${invalidCount} dòng sai định dạng, không dùng để ghép lịch.</span>` : ''}</div>${groupCards}`;

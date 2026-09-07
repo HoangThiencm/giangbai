@@ -136,8 +136,8 @@ Khảo sát trực tiếp từ hình ảnh thực tế người dùng cung cấp
   1. Xây dựng CSDL dùng chung (MySQL) lưu trữ Bản đồ Tri thức SGK (`sgk_books` & `sgk_lessons`).
   2. Cung cấp API backend `api/sgk_knowledge.php` đầy đủ các thao tác `check`, `get`, `list`, `save`, `verify`.
   3. Cập nhật giao diện `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và mirror `backupcode viettailieu/canvas_xaydungphuluc.html` với trường chọn Bộ sách (`bookSeries`), tự động kiểm tra kho tri thức dùng chung; nếu đã có thì nạp tức thì (< 0.5s); nếu chưa có thì trích xuất 1 lần bằng AI và lưu vào CSDL cho cả hệ thống cùng dùng.
-  4. Viết hướng dẫn chi tiết cách thức vận hành và sử dụng.
-  5. Đảm bảo toàn bộ test suites đạt PASS 100%.
+   4. Viết hướng dẫn chi tiết cách thức vận hành và sử dụng.
+   5. Đảm bảo toàn bộ test suites đạt PASS 100%.
 
 ## Kiến trúc Kỹ thuật
 1. **Backend Database (`api/sgk_knowledge.php`)**:
@@ -161,4 +161,36 @@ Khảo sát trực tiếp từ hình ảnh thực tế người dùng cung cấp
    - Đồng bộ 100% giữa `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, và `backupcode viettailieu/canvas_xaydungphuluc.html`.
 4. **Kiểm thử**:
    - Test suite `tests/sgk-knowledge-smoke.js` kiểm tra toàn bộ luồng: schema DB, API helpers, UI component hooks, format dữ liệu bản đồ tri thức.
+
+---
+
+# PLAN: Nâng cấp "Sách giáo khoa dùng chung (từ 2026-2027)" & Bảo đảm Bao phủ 100% Tất cả Bài học
+
+## Hiện trạng & Vấn đề Cần Khắc Phục
+1. **Bộ sách**:
+   - Theo chỉ đạo giáo dục mới, bắt đầu từ năm học 2026-2027, sử dụng **"Sách giáo khoa dùng chung (từ 2026-2027)"** cho toàn quốc.
+   - Hiện tại hệ thống đang mặc định "Kết nối tri thức với cuộc sống", chưa có tùy chọn sách dùng chung này.
+2. **Độ bao phủ tri thức (100% bài học)**:
+   - Khi trích xuất từ file PDF, `compactSgkText` cắt ngắn ở `slice(0, 220)` dòng, dẫn tới hết Chương I là bị cắt, chỉ ra được 9 bài.
+   - Prompt gửi AI cắt ở `slice(0, 35000)` và thiếu chỉ thị ràng buộc độ bao phủ 100%.
+   - Năng lực số (CV 3456) áp dụng 100% số bài học; Trí tuệ nhân tạo (QĐ 2422) năm nay là 12 tiết nhưng về sau sẽ tích hợp rộng rãi hơn. Tất cả các bài học đều phải có sẵn YCCD chuẩn, NLS thực tế và gợi ý AI trong CSDL.
+
+## Giải pháp Triển khai
+1. **Cập nhật dropdown `#bookSeries` & Cấu hình mặc định**:
+   - Đặt `<option value="Sách giáo khoa dùng chung (từ 2026-2027)" selected>Sách giáo khoa dùng chung (từ 2026-2027)</option>` ở vị trí đầu tiên và là mặc định.
+   - Áp dụng trên `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`.
+2. **Mở rộng `compactSgkText` & Tối ưu Trích xuất**:
+   - Bắt thêm mục lục (TOC), tất cả các chương, bài, hoạt động trải nghiệm.
+   - Nâng giới hạn trích xuất lên tới 2.000 dòng và 120.000 ký tự.
+3. **Cải tiến Prompt `extractAndSaveSharedSgk`**:
+   - Chỉ thị bắt buộc AI quét toàn bộ mục lục và tất cả các chương, trích xuất ĐỦ 100% TẤT CẢ CÁC BÀI HỌC (20-45 bài).
+   - Mọi bài học đều có đủ: YCCD, 3 hoạt động, mã NLS + minh chứng công cụ số thực tế (máy tính Casio, GeoGebra, Excel), gợi ý AI theo QĐ 2422.
+   - Sửa lỗi runtime ReferenceError của biến `payload`.
+4. **Cơ chế Tự động Bù đắp & Bảo đảm 100% Bài học (Curriculum Assurance)**:
+   - Xây dựng hàm `ensureFullCurriculumLessons`: Nếu tệp PDF tải lên chỉ có Tập 1 hoặc scan thiếu trang, hệ thống tự động đối chiếu danh mục chuẩn trong `KHBD_YCCD` / PPCT chuẩn để bổ sung đủ 100% các bài còn thiếu kèm YCCD, NLS thực tế và gợi ý AI.
+5. **Nạp sẵn dữ liệu chuẩn cho "Sách giáo khoa dùng chung (từ 2026-2027)"**:
+   - Seed sẵn toàn bộ 100% bài học môn Toán các lớp 6 (43 bài), 7 (37 bài), 8 (39 bài), 9 (32 bài) vào kho tri thức để sẵn sàng sử dụng tức thì.
+6. **Kiểm thử**:
+   - Nâng cấp `tests/sgk-knowledge-smoke.js` và đảm bảo toàn bộ 59 test suites đạt 100% PASS.
+
 
