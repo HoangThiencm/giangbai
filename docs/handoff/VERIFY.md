@@ -119,9 +119,15 @@ PASS
   + Hộp thoại `#sgkExtractModal` cho phép chọn chính xác Khối lớp, Môn học, Bộ sách trước khi AI trích xuất từ tệp PDF/Word SGK.
   + Tự động nhận diện Khối lớp và Môn học từ tên tệp SGK khi tải lên.
 - [PASS] Bắt buộc 100% công thức toán thành Word Equation: Xuất Word chứa đầy đủ OMML <m:oMath>, <m:f>, <m:rad>, <m:eqArr>, xem trước KaTeX chuẩn xác.
+- [PASS] Phân rã & Chuẩn hóa 100% YCCĐ Riêng biệt cho Từng Bài học Toán 7, 8, 9 (Xóa bỏ Trùng lặp):
+  + Toán 9 (32 bài): 100% bài học có YCCĐ riêng biệt, Bài 1 (Khái niệm phương trình & hệ phương trình bậc nhất hai ẩn), Bài 2 (Giải hệ hai phương trình bậc nhất hai ẩn) và Bài 3 (Giải bài toán bằng cách lập hệ phương trình) có mục tiêu hoàn toàn khác nhau, bám sát CTGDPT 2018.
+  + Toán 8 (39 bài) & Toán 7 (37 bài): Đã loại bỏ triệt để toàn bộ hiện tượng trùng lặp YCCĐ theo chủ đề lớn. 100% bài học có YCCĐ độc lập, riêng rẽ.
+  + Cập nhật đồng bộ trên 4 tệp: `js/khbd-yccd.js`, `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html` (duy trì byte-identical 100%).
+  + `tests/sgk-knowledge-smoke.js` (Section 8): Kiểm tra tự động tính phân hóa (distinctness) 100% bài học Toán 6, 7, 8, 9 và khẳng định Bài 1, Bài 2 Toán 9 không trùng nhau.
 - [PASS] Toàn bộ 60/60 bài test của hệ thống chạy PASS 100%.
 
 ## Bug
 - Lỗi: Không có
 - Tái hiện: Không có
 - File liên quan: Không có
+

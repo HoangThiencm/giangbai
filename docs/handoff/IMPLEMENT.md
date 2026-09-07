@@ -499,3 +499,38 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
 7. **Kiểm thử tự động**:
    - Tạo mới `tests/xaydungphuluc-math-smoke.js`: Trích xuất trực tiếp `word/document.xml` từ gói ZIP docx để xác minh sự hiện diện của `<m:oMath>`, `<m:f>`, `<m:rad>`, `<m:eqArr>`, ký hiệu `∉`, `≠`.
    - Chạy `tests/run-all-tests.js`: **ALL 60 TEST SUITES PASSED 100%!**
+
+---
+
+## Rà soát Sư phạm & Phân rã YCCĐ Riêng biệt Từng Bài học Toán 7, 8, 9 (Xóa bỏ Trùng lặp)
+
+### 1. Phản hồi Người dùng & Vấn đề Cốt lõi
+- **Yêu cầu trực tiếp từ User**: *"ở kho tri thức tôi thấy toán 9 bài 1 và bài 2 mục tiêu yêu cầu cần đạt giống nhau. Vậy rà soát lại xem"*
+- **Nguyên nhân kỹ thuật & sư phạm**:
+  + Trong dữ liệu nguồn CTGDPT 2018 (trích xuất từ bảng Excel `Yêu cầu cần đạt môn Toán 6–12 – CTGDPT 2018.xlsx`), các YCCĐ được Bộ GD&ĐT quy định theo từng Chủ đề/Mạch kiến thức lớn (ví dụ Chủ đề *"Phương trình và hệ phương trình bậc nhất hai ẩn"* có 5 YCCĐ chung).
+  + Trước đây, codebase mới chỉ xây dựng bộ phân tách riêng lẻ cho Toán 6 (`splitToan6TopicWideYccd`), trong khi dữ liệu Toán 7, 8, 9 vẫn giữ mảng YCCĐ gộp của toàn chương.
+  + Hệ quả: Các bài học trong cùng một chủ đề bị gán 100% YCCĐ giống nhau:
+    * Toán 9: Bài 1, Bài 2, Bài 3 có cùng YCCĐ; Bài 5 và Bài 6 trùng nhau; Bài 8 và Bài 9 trùng nhau; Bài 11 và Bài 12 trùng nhau; Bài 13, 14, 15, 17 trùng nhau; Bài 19, 20, 21 trùng nhau; Bài 22, 23, 24 trùng nhau; Bài 25, 26 trùng nhau; Bài 31, 32 trùng nhau.
+    * Toán 8: Bài 1–5 (Đơn thức, Đa thức...) trùng nhau; Bài 6–9 (Hằng đẳng thức) trùng nhau; Bài 11–14 (Tứ giác) trùng nhau; Bài 21–24 (Phân thức) trùng nhau; Bài 25–26 trùng nhau; Bài 28–29 trùng nhau; Bài 30–32 trùng nhau; Bài 33, 34, 36 trùng nhau; Bài 38, 39 trùng nhau.
+    * Toán 7: Bài 2–4 trùng nhau; Bài 5–7 trùng nhau; Bài 9–10 trùng nhau; Bài 12–16 trùng nhau; Bài 20–21 trùng nhau; Bài 22–23 trùng nhau; Bài 25–28 trùng nhau; Bài 29–30 trùng nhau; Bài 31–35 trùng nhau.
+
+### 2. Các Cải tiến Kỹ thuật & Sư phạm Đã Triển khai
+1. **Phân rã & Biên soạn Chuẩn mực 100% YCCĐ Từng Bài học**:
+   - **Toán 9 (32 bài học)**:
+     * *Bài 1 (Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn)*: Nhận biết khái niệm phương trình bậc nhất hai ẩn, hệ hai phương trình bậc nhất hai ẩn; nhận biết khái niệm nghiệm và tập nghiệm.
+     * *Bài 2 (Giải hệ hai phương trình bậc nhất hai ẩn)*: Giải được hệ hai phương trình bậc nhất hai ẩn bằng phương pháp thế và phương pháp cộng đại số; tìm nghiệm bằng máy tính cầm tay.
+     * *Bài 3 (Giải bài toán bằng cách lập hệ phương trình)*: Giải quyết các vấn đề thực tiễn gắn với hệ hai phương trình bậc nhất hai ẩn (chuyển động, năng suất, quan hệ số, cân bằng hóa học...).
+     * *Bài 4 -> 32*: Toàn bộ 29 bài còn lại đều được phân rã chi tiết, riêng biệt 100%.
+   - **Toán 8 (39 bài học)**: Phân rã 100% bài học đơn thức, đa thức, 7 hằng đẳng thức, phân tích nhân tử, tứ giác, Thalès, phân thức, phương trình bậc nhất, hàm số bậc nhất, tam giác đồng dạng, hình chóp.
+   - **Toán 7 (37 bài học)**: Phân rã 100% bài học số hữu tỉ, luỹ thừa, quy tắc chuyển vế, số vô tỉ, căn bậc hai, các trường hợp bằng nhau của tam giác, tỉ lệ thức, đa thức một biến, xác suất, các đường đồng quy.
+
+2. **Cập nhật Đồng bộ Cấu trúc Dữ liệu Đa tầng**:
+   - `js/khbd-yccd.js`: Cập nhật `KHBD_YCCD.toan` cho các khối "7", "8", "9" với các mảng `items` độc lập, loại bỏ hoàn toàn trùng lặp.
+   - `DEFAULT_MATH_CATALOG`: Cập nhật trong `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` với chuỗi `yccd` tương ứng cho từng bài.
+   - Bảo đảm tính đối xứng và nhất quán tuyệt đối giữa `items` (mảng) và `yccd` (chuỗi có gạch đầu dòng).
+
+3. **Kiểm thử Tự động Chặt chẽ**:
+   - Bổ sung Section 8 vào `tests/sgk-knowledge-smoke.js`: Duyệt qua toàn bộ bài học của cả 4 khối lớp Toán 6, 7, 8, 9, kiểm tra tính duy nhất (Set uniqueness) của YCCĐ.
+   - Khẳng định: Toán 9 Bài 1, Bài 2 và Bài 3 tuyệt đối không trùng lặp (`assert.notEqual`).
+   - Chạy `node tests/run-all-tests.js`: **ALL 60 TEST SUITES PASSED 100%**.
+

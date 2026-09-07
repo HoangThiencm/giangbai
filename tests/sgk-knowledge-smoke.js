@@ -431,7 +431,27 @@ assert(seedSuDia9[0].yccd.includes('lịch sử') || seedSuDia9[0].yccd.includes
 
 console.log('  -> Nạp tri thức chuẩn đa môn, đa khối lớp (Ngữ văn, KHTN, Tin học, Lịch sử - Địa lí, GD địa phương): PASS');
 
+// ==================================================
+// 8. KIỂM TRA PHÂN HÓA YCCĐ TOÁN 6, 7, 8, 9 (KHÔNG TRÙNG LẶP)
+// ==================================================
+console.log('-> 8. Kiểm tra tính phân hóa YCCĐ Toán 6-9 (đặc biệt Toán 9 Bài 1 và Bài 2 không trùng nhau)...');
+['6', '7', '8', '9'].forEach(g => {
+  const seedToan = vm.runInContext(`ensureFullCurriculumLessons([], 'Toán học', '${g}', 'Sách giáo khoa dùng chung (từ 2026-2027)')`, sandbox);
+  assert(seedToan.length >= 30, `Toán ${g} phải có đủ danh mục bài học`);
+  const seenYccd = new Set();
+  seedToan.forEach((item, idx) => {
+    assert(item.yccd && item.yccd.trim().length > 10, `Toán ${g} bài ${idx + 1} phải có YCCĐ`);
+    assert(!seenYccd.has(item.yccd), `Toán ${g} bài ${idx + 1} (${item.lesson_title}) bị trùng YCCĐ!`);
+    seenYccd.add(item.yccd);
+  });
+});
+const toan9Lessons = vm.runInContext("ensureFullCurriculumLessons([], 'Toán học', '9', 'Sách giáo khoa dùng chung (từ 2026-2027)')", sandbox);
+assert.notEqual(toan9Lessons[0].yccd, toan9Lessons[1].yccd, 'Toán 9 Bài 1 và Bài 2 không được có cùng YCCĐ!');
+assert.notEqual(toan9Lessons[1].yccd, toan9Lessons[2].yccd, 'Toán 9 Bài 2 và Bài 3 không được có cùng YCCĐ!');
+console.log('  -> 100% bài học Toán 6, 7, 8, 9 có YCCĐ riêng biệt, Toán 9 Bài 1 và Bài 2 hoàn toàn khác biệt: PASS');
+
 console.log('==================================================');
 console.log('TẤT CẢ TEST KHO TRI THỨC SGK ĐỀU ĐẠT (PASS)!');
 console.log('==================================================');
+
 

@@ -362,3 +362,21 @@ Khảo sát trực tiếp từ hình ảnh thực tế người dùng cung cấp
 5. Cập nhật `exportDocx` (`para`, `outcomeCell`, `cell`, `integrationCell`).
 6. Cập nhật prompt AI trong `standards()` yêu cầu bọc công thức trong `$ ... $`.
 7. Viết smoke test `tests/xaydungphuluc-math-smoke.js` và kiểm thử toàn bộ 60/60 test suites.
+
+---
+
+## Kế hoạch Triển khai: Rà soát Sư phạm & Phân rã YCCĐ Riêng biệt Từng Bài học Toán 7, 8, 9 (Xóa bỏ Trùng lặp)
+
+### 1. Mục tiêu
+- Phản hồi User: *"ở kho tri thức tôi thấy toán 9 bài 1 và bài 2 mục tiêu yêu cầu cần đạt giống nhau. Vậy rà soát lại xem"*
+- Xóa bỏ 100% tình trạng trùng lặp YCCĐ giữa các bài học liên tiếp trong cùng một chương ở môn Toán (Toán 9, Toán 8, Toán 7).
+- Đảm bảo mỗi bài học có mục tiêu YCCĐ riêng biệt, chính xác theo chuẩn CTGDPT 2018 (Thông tư 32/2018/TT-BGDĐT) và bám sát nội dung từng bài trong SGK.
+
+### 2. Các bước triển khai
+1. Rà soát toàn bộ 32 bài học Toán 9, 39 bài học Toán 8, 37 bài học Toán 7.
+2. Biên soạn danh mục YCCĐ phân rã chi tiết, riêng biệt cho từng bài học.
+3. Cập nhật `DEFAULT_MATH_CATALOG` trong `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+4. Cập nhật `KHBD_YCCD.toan` trong `js/khbd-yccd.js`.
+5. Bổ sung Section 8 vào `tests/sgk-knowledge-smoke.js` kiểm tra tính duy nhất (distinctness) của YCCĐ Toán 6–9.
+6. Chạy kiểm thử toàn diện `node tests/run-all-tests.js` (60/60 suites pass 100%).
+
