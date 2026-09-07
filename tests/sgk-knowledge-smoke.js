@@ -18,6 +18,7 @@ assert(phpContent.includes("action === 'get'"), 'Thiếu endpoint lấy chi ti�
 assert(phpContent.includes("action === 'list'"), 'Thiếu endpoint liệt kê thư viện sách');
 assert(phpContent.includes("action === 'save'"), 'Thiếu endpoint lưu bản đồ tri thức');
 assert(phpContent.includes("action === 'verify'"), 'Thiếu endpoint kiểm định sách');
+assert(phpContent.includes("action === 'delete'"), 'Thiếu endpoint xóa bản đồ tri thức');
 assert(phpContent.includes('beginTransaction'), 'Thiếu cơ chế transaction khi lưu');
 assert(phpContent.includes('normalize_sgk_book_key'), 'Thiếu hàm chuẩn hóa khóa sách');
 console.log('  -> api/sgk_knowledge.php: PASS');
@@ -60,6 +61,8 @@ const requiredFunctions = [
   'renderFilteredSgkLibrary',
   'openSgkDetailModal',
   'closeSgkDetailModal',
+  'deleteSgkBook',
+  'deleteCurrentDetailBook',
   'useCurrentDetailBook',
   'useSharedSgkBook',
   'getSharedSgkLessonKnowledge',
@@ -139,6 +142,10 @@ const sandbox = {
     const s1 = String(t1).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     const s2 = String(t2).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     return s1 && s2 && (s1.includes(s2) || s2.includes(s1));
+  },
+  lessonOrdinal: s => {
+    const m = String(s || '').match(/\bbài\s*(\d+)\b/i);
+    return m ? Number(m[1]) : null;
   }
 };
 
@@ -148,9 +155,10 @@ vm.createContext(sandbox);
 const yccdCode = fs.readFileSync('js/khbd-yccd.js', 'utf8');
 vm.runInContext(yccdCode, sandbox);
 
-// Load compactSgkText, ensureFullCurriculumLessons, getSharedSgkLessonKnowledge, lessonAppliedNlsDescription, lessonAppliedAiDescription, appendixOneFallbackOutcome
+// Load compactSgkText, lessonOrdinal, ensureFullCurriculumLessons, getSharedSgkLessonKnowledge, lessonAppliedNlsDescription, lessonAppliedAiDescription, appendixOneFallbackOutcome
 const codeToRun = [
   extractFn('compactSgkText', sourceCode),
+  extractFn('lessonOrdinal', sourceCode),
   extractFn('ensureFullCurriculumLessons', sourceCode),
   extractFn('getSharedSgkLessonKnowledge', sourceCode),
   extractFn('lessonAppliedNlsDescription', sourceCode),
@@ -245,10 +253,37 @@ assert(fullToan7.every(l => l.lesson_order && l.lesson_title && l.digital_eviden
 assert(fullToan7.every(l => !l.digital_evidence.includes('lịch sử ra đời')), 'NLS bù đắp không được chứa chatbot lịch sử');
 console.log(`  -> ensureFullCurriculumLessons bù đắp từ 9 bài lên đủ 100% (${fullToan7.length} bài) cho Toán 7: PASS`);
 
-// Kiểm tra seed danh mục chuẩn từ mảng rỗng
+// Kiểm tra seed danh mục chuẩn từ mảng rỗng: BẮT BUỘC ĐỦ 43 BÀI TOÁN 6
 const seedToan6 = vm.runInContext("ensureFullCurriculumLessons([], 'Toán học', '6', 'Sách giáo khoa dùng chung (từ 2026-2027)')", sandbox);
-assert(seedToan6.length >= 40, `Seed Toán 6 phải có ít nhất 40 bài (thực tế: ${seedToan6.length} bài)`);
-console.log(`  -> Khởi tạo chuẩn 100% bài học Toán 6 (${seedToan6.length} bài): PASS`);
+assert.equal(seedToan6.length, 43, `Seed Toán 6 phải có ĐÚNG 43 bài (thực tế: ${seedToan6.length} bài)`);
+assert.equal(seedToan6[0].lesson_order, 1, 'Bài đầu tiên phải là Bài 1');
+assert.equal(seedToan6[2].lesson_order, 3, 'Bài thứ ba phải là Bài 3');
+assert(seedToan6[2].lesson_title.includes('Bài 3.'), 'Bài 3 phải là Thứ tự trong tập hợp các số tự nhiên');
+assert.equal(seedToan6[42].lesson_order, 43, 'Bài cuối cùng phải là Bài 43');
+assert(seedToan6[42].lesson_title.includes('Bài 43.'), 'Bài 43 phải là Xác suất thực nghiệm');
+console.log(`  -> Khởi tạo chuẩn 100% bài học Toán 6 (ĐỦ 43/43 bài, có Bài 3 và Bài 43): PASS`);
+
+// Kiểm tra trường hợp AI chỉ nhận diện được 25 bài và nhảy cóc mất Bài 3
+const aiTruncated25 = [];
+for (let i = 1; i <= 25; i++) {
+  if (i === 3) continue; // Giả lập AI bỏ sót Bài 3
+  aiTruncated25.push({
+    lesson_order: aiTruncated25.length + 1,
+    lesson_title: `Bài ${i}. Tên bài ${i} từ SGK`,
+    page_start: i * 4,
+    page_end: i * 4 + 3,
+    yccd: `YCCD chi tiết từ sách cho bài ${i}`
+  });
+}
+sandbox.aiTruncated25 = aiTruncated25;
+const compensatedToan6 = vm.runInContext("ensureFullCurriculumLessons(aiTruncated25, 'Toán học', '6', 'Sách giáo khoa dùng chung (từ 2026-2027)')", sandbox);
+assert.equal(compensatedToan6.length, 43, `Sau khi bù đắp, Toán 6 phải đủ 43 bài (thực tế: ${compensatedToan6.length} bài)`);
+assert(compensatedToan6[2].lesson_title.includes('Bài 3.'), 'Bài 3 bị mất phải được tự động bù đắp vào vị trí thứ 3');
+assert.equal(compensatedToan6[2].lesson_order, 3, 'Bài 3 phải có order = 3');
+assert.equal(compensatedToan6[0].page_start, 4, 'Trang sách do AI trích xuất của bài 1 phải được giữ nguyên');
+assert.equal(compensatedToan6[24].page_start, 100, 'Trang sách do AI trích xuất của bài 25 phải được giữ nguyên');
+assert(compensatedToan6[25].lesson_title.includes('Bài 26.'), 'Bài 26 bị thiếu do AI dừng sớm phải được bù đắp chuẩn');
+console.log(`  -> Bù đắp an toàn 100% khi AI nhận diện thiếu bài (tự khôi phục Bài 3 và bù đủ 43 bài): PASS`);
 
 console.log('==================================================');
 console.log('TẤT CẢ TEST KHO TRI THỨC SGK ĐỀU ĐẠT (PASS)!');

@@ -41,6 +41,13 @@ define('SHOPAIKEY_API_KEY', '');
 define('SHOPAIKEY_MODEL', 'deepseek-v4-flash');
 define('SHOPAIKEY_ENABLED', true);
 
+// Gửi lịch báo giảng cá nhân qua Gmail SMTP.
+// Chỉ đặt APP PASSWORD 16 ký tự trong api/config.php trên hosting; tuyệt đối không đưa vào trình duyệt hoặc Git.
+// Bật Xác minh 2 bước cho Gmail trước khi tạo App Password.
+define('BAOGIANG_GMAIL_FROM', 'hoangthiencm@gmail.com');
+define('BAOGIANG_GMAIL_APP_PASSWORD', '');
+define('BAOGIANG_GMAIL_TO_SELF_ONLY', true);
+
 // Google Drive storage (nộp bài, quản lý văn bản, Padlet, lộ trình...).
 // Bật Google Drive API trong Google Cloud Console.
 //

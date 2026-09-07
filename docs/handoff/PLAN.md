@@ -208,3 +208,38 @@ Khảo sát trực tiếp từ hình ảnh thực tế người dùng cung cấp
 4. Chuyển Bảng dài **Chọn chính xác tiết tích hợp AI** xuống **Mục 4**.
 5. Đồng bộ 100% trên `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`.
 6. Giữ nguyên vẹn toàn bộ ID, class, logic JS và bảo đảm 59 test suites PASS 100%.
+
+---
+
+# PLAN: Xóa Tri thức Sai & Bảo đảm Nhận diện Đủ 100% Bài học (Toán 6 đủ 43 bài)
+
+## Vấn đề Cần Giải Quyết
+1. **Thiếu bài trong nhận diện & nhảy cóc bài (Toán 6 chỉ ra 25 bài, thiếu Bài 3)**:
+   - Khi người dùng trích xuất từ PDF SGK, do giới hạn độ dài phản hồi một lần của mô hình AI nên danh sách bị dừng ở bài 25.
+   - Hàm `lessonsMatch` trước đây có thể match nhầm số thứ tự khiến Bài 3 bị bỏ qua.
+   - Script ngoài `https://hoangthiencm.id.vn/js/khbd-yccd.js` bị obfuscate dạng IIFE không xuất biến ra `window`, dẫn đến `KHBD_YCCD` bị undefined trong trình duyệt, khiến hàm bù đắp bài học không chạy được.
+2. **Không xóa được bản đồ tri thức nhận diện sai**:
+   - Trong Thư viện SGK dùng chung (`sgkLibraryModal`) và Modal chi tiết (`sgkDetailModal`) chưa có nút Xóa bộ sách nhận diện sai hoặc bị thiếu bài.
+
+## Giải pháp Triển khai
+1. **Backend (`api/sgk_knowledge.php`)**:
+   - Bổ sung endpoint `action=delete` (hỗ trợ cả POST và GET, nhận `book_id` hoặc `book_key`), sử dụng transaction an toàn xóa sạch `sgk_lessons` trước rồi xóa `sgk_books`.
+2. **Frontend UI - Thao tác Xóa An Toàn**:
+   - Thêm nút `🗑 Xóa` bên cạnh mỗi bộ sách trong Thư viện SGK (`sgkLibraryModal`).
+   - Thêm nút `🗑 Xóa bộ sách này` trong chân Modal chi tiết bài học (`sgkDetailModal`).
+   - Cài đặt hàm `deleteSgkBook(bookId, bookTitle)` và `deleteCurrentDetailBook()`:
+     + Hiển thị hộp thoại xác nhận `canvasConfirm` cảnh báo hành động không thể hoàn tác.
+     + Gọi API `?action=delete`.
+     + Tự động dọn dẹp cache `localStorage` nếu bộ sách đang được nạp.
+     + Làm mới danh sách và cập nhật trạng thái kho tri thức tức thì.
+3. **Bảo đảm 100% Đủ 43 Bài Học Môn Toán 6 (Chậm nhưng chắc)**:
+   - Nhúng trực tiếp từ điển chuẩn `DEFAULT_MATH_CATALOG` (Toán 6 đủ 43 bài, Toán 7 đủ 37 bài, Toán 8 đủ 39 bài, Toán 9 đủ 32 bài) ngay trong mã nguồn, giải phóng hoàn toàn sự phụ thuộc vào script mạng ngoài.
+   - Sửa hàm `ensureFullCurriculumLessons`:
+     + Đối chiếu từng bài từ 1 đến 43 theo số thứ tự và tên bài.
+     + Bài nào AI trích xuất được từ PDF: giữ nguyên số trang, hoạt động chi tiết, YCCD riêng của bài.
+     + Bài nào bị AI bỏ sót (như Bài 3) hoặc bị dừng giữa chừng (bài 26-43): tự động bù đắp chuẩn xác theo CTGDPT 2018, trang bị đầy đủ minh chứng NLS thực tế (Casio/GeoGebra) và gợi ý AI (QĐ 2422).
+     + Đảm bảo kết quả luôn ĐỦ 43 bài môn Toán 6, không nhảy cóc, sắp xếp đúng thứ tự 1..43.
+4. **Đồng bộ và Kiểm thử**:
+   - Đồng bộ 100% giữa `canvas_xaydungphuluc.html`, `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+   - Cập nhật `tests/sgk-knowledge-smoke.js` kiểm tra chặt chẽ 43 bài và tính năng xóa.
+   - Bảo đảm 59 test suites chạy PASS 100%.

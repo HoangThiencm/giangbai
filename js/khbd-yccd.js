@@ -229,6 +229,18 @@ function getCurrentCurriculumNotice({ subjectId, grade } = {}) {
   return "Căn cứ cập nhật: CT GDPT 2018/Thông tư 32/2018/TT-BGDĐT, các sửa đổi liên quan còn hiệu lực. TT 17/2025/TT-BGDĐT không sửa YCCĐ của môn này ở cấp THCS.";
 }
 
+if (typeof window !== "undefined") {
+  window.KHBD_YCCD = KHBD_YCCD;
+  window.KHBD_CURRICULUM_AMENDMENTS = KHBD_CURRICULUM_AMENDMENTS;
+  window.getOfficialYccd = getOfficialYccd;
+  window.getCleanOfficialYccd = getCleanOfficialYccd;
+  window.findOfficialYccdRows = findOfficialYccdRows;
+  window.generatePedagogicalOutcome = generatePedagogicalOutcome;
+  window.getCurrentCurriculumNotice = getCurrentCurriculumNotice;
+}
+if (typeof globalThis !== "undefined") {
+  globalThis.KHBD_YCCD = KHBD_YCCD;
+}
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { KHBD_YCCD, KHBD_CURRICULUM_AMENDMENTS, getOfficialYccd, getCleanOfficialYccd, findOfficialYccdRows, generatePedagogicalOutcome, getCurrentCurriculumNotice };
 }

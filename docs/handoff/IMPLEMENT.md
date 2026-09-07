@@ -277,3 +277,37 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
    - Đã đồng bộ 100% trên cả 3 file: `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, và `backupcode viettailieu/canvas_xaydungphuluc.html`.
    - Giữ nguyên toàn bộ ID, CSS class và event listener, bảo đảm không gãy bất kỳ logic JS hay DOM hook nào.
    - Chạy toàn bộ 59 test suites (`node tests/run-all-tests.js`), kết quả đạt 100% PASS.
+
+## Triển khai: Xóa Tri thức SGK Nhận diện Sai & Bảo đảm Đủ 100% (43 bài Toán 6)
+1. **Backend API `api/sgk_knowledge.php` (Action `delete`)**:
+   - Hỗ trợ cả `POST` và `GET` với tham số `book_id` hoặc `book_key`.
+   - Bọc trong `PDO transaction`: xóa toàn bộ các dòng liên kết trong `sgk_lessons` theo `book_id`, sau đó xóa bản ghi trong `sgk_books`.
+   - Trả về JSON `{ok: true, message: "..."}` hoặc HTTP 422/500 nếu có lỗi.
+2. **Frontend UI - Thao tác Xóa An Toàn**:
+   - Trong `renderFilteredSgkLibrary()`: Thêm nút `<button class="btn secondary text-xs py-1 px-2 text-red-600 hover:bg-red-50 border-red-200" onclick="deleteSgkBook(...)">🗑 Xóa</button>` cho từng bộ sách trong danh sách Thư viện.
+   - Trong `sgkDetailModal`: Thêm nút `<button class="btn secondary text-sm text-red-600 hover:bg-red-50 border-red-200" onclick="deleteCurrentDetailBook()">🗑 Xóa bộ sách này</button>` vào chân Modal bên trái nút "Sử dụng bộ sách này".
+   - Cài đặt 2 hàm JS:
+     + `deleteSgkBook(bookId, bookTitle)`: Bật hộp thoại `canvasConfirm` yêu cầu xác nhận xóa vĩnh viễn; gọi API `?action=delete`; nếu bộ sách đang nạp trong phiên làm việc thì xóa sạch `localStorage` tương ứng; dọn dẹp `cachedSgkLibrary`; gọi `renderFilteredSgkLibrary()` và `checkSharedSgkKnowledge(true)` để giao diện cập nhật ngay lập tức.
+     + `deleteCurrentDetailBook()`: Lấy `currentDetailBookId`, đóng Modal chi tiết và chuyển tiếp sang `deleteSgkBook`.
+3. **Khắc phục Triệt để Vấn đề Thiếu Bài & Bỏ sót Bài 3 (Toán 6 ĐỦ 43 Bài)**:
+   - **Nguyên nhân cốt lõi phát hiện**:
+     + File `https://hoangthiencm.id.vn/js/khbd-yccd.js` bị obfuscate dạng IIFE độc lập, không gán biến vào `window` hay `globalThis`, khiến `typeof KHBD_YCCD === 'undefined'` trong môi trường client.
+     + Khi AI dừng sớm ở bài 25 do giới hạn token sinh một lần, hàm `ensureFullCurriculumLessons` không tìm thấy `catalog` nên không thể bù đắp, dẫn đến danh sách chỉ có 25 bài. Đồng thời AI trích xuất có thể nhảy cóc làm sót Bài 3.
+   - **Giải pháp giải quyết**:
+     + Nhúng trực tiếp từ điển chuẩn `DEFAULT_MATH_CATALOG` (Toán 6: 43 bài, Toán 7: 37 bài, Toán 8: 39 bài, Toán 9: 32 bài) vào mã nguồn cả 3 file HTML.
+     + Bổ sung lệnh gán `window.KHBD_YCCD` và `globalThis.KHBD_YCCD` vào file `js/khbd-yccd.js`.
+     + Viết lại thuật toán `ensureFullCurriculumLessons`:
+       * Duyệt danh mục chuẩn 43 bài môn Toán 6: tìm theo số thứ tự bài (`lessonOrdinal`) hoặc độ tương đồng tên bài.
+       * Nếu AI đã trích xuất được: giữ nguyên số trang (`page_start`, `page_end`), hoạt động và YCCD riêng của bài từ PDF.
+       * Nếu AI bỏ sót (như Bài 3) hoặc dừng giữa chừng (từ bài 26 đến 43): tự động bù đắp chuẩn xác từ catalog, cấp mã bài `bai_X`, hoạt động 3 bước, minh chứng NLS thực tế (Casio/GeoGebra) và gợi ý AI chuẩn QĐ 2422.
+       * Các hoạt động thực hành trải nghiệm bổ sung ngoài catalog cũng được tự động cấp NLS và AI.
+       * Sắp xếp bài học theo đúng số thứ tự 1..43.
+     + Sửa giá trị mặc định của `seedStandardSgkKnowledge`: mặc định khối lớp theo ô chọn `#grade` (mặc định Lớp 6 ra đủ 43 bài).
+4. **Đồng bộ và Kiểm thử**:
+   - Đồng bộ 100% trên `canvas_xaydungphuluc.html`, `xaydungphuluc.html`, và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+   - Nâng cấp `tests/sgk-knowledge-smoke.js`:
+     * Kiểm tra endpoint `action=delete` trong PHP.
+     * Kiểm tra hàm `deleteSgkBook` và `deleteCurrentDetailBook`.
+     * Kiểm tra khởi tạo mảng rỗng Toán 6 ra ĐÚNG 43 bài (có Bài 3 và Bài 43).
+     * Kiểm tra ca AI trả 25 bài và mất Bài 3: tự động phục hồi Bài 3 vào vị trí số 3, bảo lưu số trang trích xuất của bài 1..25, và bù đắp chuẩn các bài 26..43, tổng cộng đủ 43 bài.
+   - Chạy `node tests/run-all-tests.js`: Toàn bộ 59 test suites PASS 100%.

@@ -50,6 +50,10 @@ PASS
 - [PASS] Chuẩn hóa toàn diện Phụ lục 2: dữ liệu mẫu 6 hoạt động trải nghiệm/STEM/AI Day, prompt chỉ thị đúng bản chất, bảng 10 cột có cột STT, khối tiêu đề hành chính Quốc hiệu/Tên trường/Tổ, chữ ký Tổ trưởng (bên trái) và Hiệu trưởng (bên phải).
 - [PASS] Đồng bộ 100% NLS & AI giữa Phụ lục 1 và Phụ lục 3: Kế thừa chính xác từ Phụ lục 1 (Single Source of Truth), cập nhật realtime 2 chiều khi chỉnh sửa ô NLS/AI.
 - [PASS] Tối ưu luồng giao diện người dùng (UI Flow): Đưa "1. Thông tin & cấu hình sư phạm" lên đầu trang, kế tiếp là "2. Tài liệu & dữ liệu nguồn (Kho Tri thức SGK)". Bảng chọn tiết AI dài được xếp ở Mục 4, giúp giáo viên không cần cuộn chuột lên xuống khi chọn môn học, bộ sách và nhận diện tri thức SGK.
+- [PASS] Xóa bản đồ tri thức nhận diện sai: Backend `api/sgk_knowledge.php?action=delete` bọc trong transaction an toàn; giao diện Thư viện (`sgkLibraryModal`) và Modal chi tiết (`sgkDetailModal`) có nút `🗑 Xóa` với xác nhận `canvasConfirm`, tự động dọn sạch cache `localStorage` và làm mới giao diện ngay lập tức.
+- [PASS] Khắc phục triệt để thiếu bài và nhảy cóc Bài 3 (Toán 6 đủ 43 bài):
+  + Nhúng trực tiếp `DEFAULT_MATH_CATALOG` 43 bài Toán 6 (và các khối 7, 8, 9) vào chính file nguồn, không phụ thuộc mạng/obfuscator ngoài.
+  + Hàm `ensureFullCurriculumLessons` bù đắp hoàn chỉnh 100% (đủ 43 bài Toán 6), tự động chèn lại Bài 3 vào đúng vị trí số 3 khi AI nhảy cóc, bù đắp đủ các bài 26..43 khi AI dừng sớm, giữ nguyên vẹn số trang và YCCD chi tiết của các bài trích xuất thành công.
 - [PASS] Toàn bộ 59/59 bài test của hệ thống chạy PASS 100%.
 
 ## Bug
