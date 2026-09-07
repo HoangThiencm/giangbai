@@ -1962,7 +1962,7 @@
             <label class="form-group" style="display:block;margin:10px 0 0;max-width:300px;"><b>Khối của PPCT đang nạp</b><select id="bg-ppct-grade" class="form-control" onchange="updateBaoGiangSettings()"><option value="">Chọn khối trước khi AI nhận diện</option><option value="6">Khối 6</option><option value="7">Khối 7</option><option value="8">Khối 8</option><option value="9">Khối 9</option></select></label><p style="font-size:.82rem;color:#64748b;margin:5px 0 0;">Nạp một lần cho mỗi môn/khối, ví dụ <b>Toán · khối 7</b>. Mọi lớp 7 sẽ dùng PPCT này và tự tính tiến độ theo TKB riêng.</p>
             <label class="form-group" style="display:block;margin:10px 0 0;max-width:300px;"><b>Môn của PPCT đang nạp</b><input id="bg-ppct-subject" class="form-control" list="bg-ppct-subject-options" oninput="updateBaoGiangSettings()" placeholder="Ví dụ: Toán hoặc Tin"></label><datalist id="bg-ppct-subject-options"></datalist><p style="font-size:.82rem;color:#64748b;margin:5px 0 0;">Chọn/nhập đúng tên môn đang có trong TKB để lịch ghép chính xác.</p>
             <details style="margin-top:12px;"><summary style="font-weight:800;cursor:pointer;">Ngày nghỉ và dạy bù</summary><p style="font-size:.82rem;color:#64748b;">Dùng “Tôi nghỉ cả ngày” khi không cần nhớ bài. Nếu biết chính xác bài nào/tiết nào, chọn “Đúng một tiết/bài của tôi” rồi chọn dòng lịch bên dưới; bài đó sẽ tự dồn sang lần dạy thực tế kế tiếp.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px;"><label class="form-group">Ngày<input id="bg-ex-date" class="form-control" type="date" onchange="refreshBaoGiangPersonalLessonOptions()"></label><label class="form-group">Loại<select id="bg-ex-type" class="form-control"><option value="off">Nghỉ học</option><option value="makeup">Dạy bù</option></select></label><label class="form-group">Phạm vi nghỉ<select id="bg-ex-scope" class="form-control" onchange="refreshBaoGiangPersonalLessonOptions()"><option value="self">Tôi nghỉ cả ngày</option><option value="self_lesson">Đúng một tiết/bài của tôi</option><option value="self_subject">Một môn tôi dạy</option><option value="all">Toàn trường</option><option value="class">Một lớp</option><option value="teacher">Một giáo viên</option><option value="subject">Một môn toàn trường</option></select></label><label class="form-group">Mục tiêu<input id="bg-ex-target" class="form-control" placeholder="Để trống khi “Tôi nghỉ cả ngày”; nhập tên môn khi cần"></label><label class="form-group" style="grid-column:1/-1;">Tiết/bài cụ thể của tôi<select id="bg-ex-lesson" class="form-control"><option value="">Chọn ngày để xem các tiết của tôi</option></select></label></div><button class="btn-small" type="button" onclick="addBaoGiangException()"><i class="fas fa-plus"></i> Thêm ngoại lệ</button><div id="bg-exceptions" style="margin-top:8px;"></div></details>
-            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-small btn-small-primary" onclick="renderBaoGiangView()"><i class="fas fa-rotate"></i> Tính lại lịch</button><button class="btn-small btn-small-primary" onclick="sendBaoGiangWeeklyToSelf()"><i class="fas fa-paper-plane"></i> Gửi lịch tuần tới cho tôi</button></div>
+            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;"><button class="btn-small btn-small-primary" onclick="renderBaoGiangView()"><i class="fas fa-rotate"></i> Tính lại lịch</button><label class="form-group" style="margin:0;min-width:170px;"><span style="font-size:.8rem;font-weight:700;">Tuần cần gửi</span><input id="bg-send-week" class="form-control" type="week" onchange="updateBaoGiangSendWeekLabel()"></label><span id="bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 4px;"></span><button class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToSelf()"><i class="fas fa-paper-plane"></i> Gửi lịch tuần đã chọn</button></div>
             <div id="bg-schedule" style="margin-top:14px;"></div>
         </div>
     </div>
@@ -2973,8 +2973,16 @@
             const sessionOrder = { morning: 0, afternoon: 1, makeup: 2 };
             const scheduleRows = rows.sort((a, b) => a.date.localeCompare(b.date) || (sessionOrder[a.session] ?? 9) - (sessionOrder[b.session] ?? 9) || Number(a.period) - Number(b.period) || String(a.class_name).localeCompare(String(b.class_name)) || String(a.subject).localeCompare(String(b.subject)));
             const list = scheduleRows.map(row => `${row.date} | ${row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period}`} | Lớp ${row.class_name} | ${row.subject} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'} | Tiết PPCT ${row.lesson?.ppct || '—'}${row.lesson?.segment ? ` (${row.lesson.segment})` : ''}`).join('\n');
-            const htmlRows = scheduleRows.map((row, index) => `<tr style="background:${index % 2 ? '#f8fafc' : '#ffffff'};"><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#334155;white-space:nowrap;">${escapeHtml(row.date)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#334155;white-space:nowrap;">${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} · Tiết ${row.period}`)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;color:#1e3a8a;">${escapeHtml(row.class_name)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;"><span style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:3px 7px;border-radius:999px;font-weight:700;font-size:12px;">${escapeHtml(row.subject)}</span></td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#0f172a;line-height:1.4;">${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;color:#047857;font-weight:700;white-space:nowrap;">${escapeHtml(`${row.lesson?.ppct || '—'}${row.lesson?.segment ? ` · ${row.lesson.segment}` : ''}`)}</td></tr>`).join('');
-            const html = `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:980px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,.12);"><div style="padding:24px 28px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;">Lịch báo giảng cá nhân</div><div style="font-size:25px;font-weight:700;margin-top:6px;">Tuần ${escapeHtml(viewDate)} – ${escapeHtml(baoGiangIso(viewEnd))}</div><div style="font-size:14px;margin-top:8px;opacity:.9;">${scheduleRows.length} tiết dạy đã được ghép theo TKB và PPCT</div></div><div style="padding:22px 28px 8px;"><p style="margin:0 0 16px;color:#475569;font-size:14px;">Thứ tự: ngày, buổi/tiết, lớp, môn, bài dạy và tiết PPCT.</p><div style="overflow-x:auto;"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;min-width:760px;font-size:13px;"><thead><tr style="background:#eff6ff;color:#1e3a8a;"><th align="left" style="padding:10px 8px;border-bottom:2px solid #bfdbfe;">Ngày</th><th align="left" style="padding:10px 8px;border-bottom:2px solid #bfdbfe;">Buổi / tiết</th><th style="padding:10px 8px;border-bottom:2px solid #bfdbfe;">Lớp</th><th align="left" style="padding:10px 8px;border-bottom:2px solid #bfdbfe;">Môn</th><th align="left" style="padding:10px 8px;border-bottom:2px solid #bfdbfe;">Bài dạy</th><th style="padding:10px 8px;border-bottom:2px solid #bfdbfe;">PPCT</th></tr></thead><tbody>${htmlRows}</tbody></table></div></div><div style="padding:16px 28px 22px;color:#64748b;font-size:12px;border-top:1px solid #e2e8f0;">Lịch được tạo tự động từ thời khóa biểu, PPCT và các ngày nghỉ/dạy bù đã khai báo.</div></div></div>`;
+            const sessionMeta = {
+                morning: { label: 'Buổi sáng', background: '#fff7ed', color: '#9a3412' },
+                afternoon: { label: 'Buổi chiều', background: '#eff6ff', color: '#1d4ed8' },
+                makeup: { label: 'Dạy bù', background: '#f0fdf4', color: '#047857' }
+            };
+            const rowsByDate = scheduleRows.reduce((groups, row) => {
+                (groups.get(row.date) || (groups.set(row.date, []), groups.get(row.date))).push(row);
+                return groups;
+            }, new Map());
+            const html = `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:980px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,.12);"><div style="padding:24px 28px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;">Lịch báo giảng cá nhân</div><div style="font-size:25px;font-weight:700;margin-top:6px;">Tuần ${escapeHtml(viewDate)} – ${escapeHtml(baoGiangIso(viewEnd))}</div><div style="font-size:14px;margin-top:8px;opacity:.9;">${scheduleRows.length} tiết dạy đã được ghép theo TKB và PPCT</div></div><div style="padding:22px 28px 8px;"><p style="margin:0 0 16px;color:#475569;font-size:14px;">Lịch được gom theo ngày; buổi sáng và buổi chiều được ngăn cách rõ ràng.</p>${[...rowsByDate.entries()].map(([date, dayRows]) => { const sessions = ['morning', 'afternoon', 'makeup'].map(session => { const items = dayRows.filter(row => row.session === session); if (!items.length) return ''; const meta = sessionMeta[session]; return `<tr><td colspan="5" style="padding:9px 10px;background:${meta.background};color:${meta.color};font-weight:700;border-top:2px solid #cbd5e1;">${meta.label}</td></tr>${items.map((row, index) => `<tr style="background:${index % 2 ? '#f8fafc' : '#ffffff'};"><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#334155;white-space:nowrap;">${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `Tiết ${row.period}`)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;color:#1e3a8a;">${escapeHtml(row.class_name)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;"><span style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:3px 7px;border-radius:999px;font-weight:700;font-size:12px;">${escapeHtml(row.subject)}</span></td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#0f172a;line-height:1.4;">${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;color:#047857;font-weight:700;white-space:nowrap;">${escapeHtml(`${row.lesson?.ppct || '—'}${row.lesson?.segment ? ` · ${row.lesson.segment}` : ''}`)}</td></tr>`).join('')}`; }).join(''); return `<div style="margin:0 0 18px;border:1px solid #dbeafe;border-radius:10px;overflow:hidden;"><div style="padding:11px 12px;background:#dbeafe;color:#1e3a8a;font-weight:700;font-size:15px;">Ngày ${escapeHtml(date)}</div><div style="overflow-x:auto;"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;min-width:640px;font-size:13px;"><thead><tr style="background:#f8fafc;color:#475569;"><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Tiết</th><th style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Lớp</th><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Môn</th><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Bài dạy</th><th style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">PPCT</th></tr></thead><tbody>${sessions}</tbody></table></div></div>`; }).join('')}</div><div style="padding:16px 28px 22px;color:#64748b;font-size:12px;border-top:1px solid #e2e8f0;">Lịch được tạo tự động từ thời khóa biểu, PPCT và các ngày nghỉ/dạy bù đã khai báo.</div></div></div>`;
             return {
                 subject: `Lịch báo giảng cá nhân tuần ${viewDate} – ${baoGiangIso(viewEnd)}`,
                 body: `LỊCH BÁO GIẢNG CÁ NHÂN\nTừ ${viewDate} đến ${baoGiangIso(viewEnd)}\n\nThứ tự: ngày | buổi/tiết | lớp | môn | bài dạy | tiết PPCT\n\n${list}\n\nTrân trọng.`,
@@ -2987,6 +2995,38 @@
             const delta = (8 - date.getDay()) % 7 || 7;
             date.setDate(date.getDate() + delta);
             return baoGiangIso(date);
+        }
+
+        function baoGiangWeekValueFromDate(isoDate) {
+            const date = baoGiangDate(isoDate);
+            if (!date) return '';
+            const thursday = new Date(date);
+            thursday.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+            const firstThursday = new Date(thursday.getFullYear(), 0, 4);
+            firstThursday.setDate(firstThursday.getDate() + 3 - ((firstThursday.getDay() + 6) % 7));
+            const week = 1 + Math.round((thursday - firstThursday) / 604800000);
+            return `${thursday.getFullYear()}-W${String(week).padStart(2, '0')}`;
+        }
+
+        function baoGiangWeekRange(weekValue) {
+            const match = String(weekValue || '').match(/^(\d{4})-W(\d{2})$/);
+            if (!match) return null;
+            const year = Number(match[1]), week = Number(match[2]);
+            const jan4 = new Date(year, 0, 4);
+            const monday = new Date(jan4);
+            monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (week - 1) * 7);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            return { start: baoGiangIso(monday), end: baoGiangIso(sunday) };
+        }
+
+        function updateBaoGiangSendWeekLabel() {
+            const input = document.getElementById('bg-send-week');
+            const label = document.getElementById('bg-send-week-label');
+            if (!input || !label) return;
+            if (!input.value) input.value = baoGiangWeekValueFromDate(baoGiangNextMonday());
+            const range = baoGiangWeekRange(input.value);
+            label.textContent = range ? `Từ ${range.start} đến ${range.end}` : 'Chọn một tuần hợp lệ';
         }
 
         async function sendBaoGiangToSelf(viewDate = '', days = 0) {
@@ -3003,14 +3043,15 @@
             }
         }
 
-        function sendBaoGiangWeeklyToSelf() {
-            const monday = baoGiangNextMonday();
+        function sendBaoGiangSelectedWeekToSelf() {
+            const range = baoGiangWeekRange(document.getElementById('bg-send-week')?.value);
+            if (!range) return showToast('Hãy chọn tuần cần gửi.', 'error');
             const viewInput = document.getElementById('bg-view-date');
             const daysInput = document.getElementById('bg-days');
-            if (viewInput) viewInput.value = monday;
+            if (viewInput) viewInput.value = range.start;
             if (daysInput) daysInput.value = '7';
             renderBaoGiangView();
-            sendBaoGiangToSelf(monday, 7);
+            sendBaoGiangToSelf(range.start, 7);
         }
 
         // Kho PPCT: dữ liệu vẫn được lưu ở curriculum_text để tương thích bản cũ,
@@ -3250,6 +3291,9 @@
             const subjectOptions = document.getElementById('bg-ppct-subject-options');
             if (!startInput || !viewInput || !curriculum) return;
             if (!viewInput.value) viewInput.value = cfg.start_date;
+            const sendWeekInput = document.getElementById('bg-send-week');
+            if (sendWeekInput && !sendWeekInput.value) sendWeekInput.value = baoGiangWeekValueFromDate(baoGiangNextMonday());
+            updateBaoGiangSendWeekLabel();
             startInput.value = cfg.start_date;
             curriculum.value = cfg.curriculum_text || '';
             if (gradeInput) gradeInput.value = cfg.ppct_default_grade || '';
