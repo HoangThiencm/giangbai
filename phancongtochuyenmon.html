@@ -1958,7 +1958,7 @@
                 <label class="form-group">Xem từ ngày<input class="form-control" id="bg-view-date" type="date" onchange="renderBaoGiangView()"></label>
                 <label class="form-group">Số ngày xem<input class="form-control" id="bg-days" type="number" min="7" max="90" value="14" onchange="renderBaoGiangView()"></label>
             </div>
-            <details open><summary style="font-weight:800;cursor:pointer;">PPCT theo lớp / môn</summary><p style="font-size:.82rem;color:#64748b;">Tải PPCT PDF, Word, Excel, CSV hoặc TXT; AI sẽ trích xuất tuần, mạch kiến thức, bài và số tiết để ghép đúng lịch. Bạn luôn có thể rà soát trước khi lưu.</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><input id="bg-ppct-file" class="form-control" style="max-width:420px" type="file" accept=".pdf,.docx,.xlsx,.csv,.txt"><button id="bg-scan-ppct" class="btn-small btn-small-primary" type="button" onclick="scanBaoGiangPpct()"><i class="fas fa-wand-magic-sparkles"></i> AI nhận diện PPCT</button><button class="btn-small" type="button" onclick="clearBaoGiangCurriculum()"><i class="fas fa-trash"></i> Xóa toàn bộ PPCT</button><span id="bg-ppct-status" style="font-size:.82rem;color:#64748b"></span></div><p style="font-size:.82rem;color:#64748b;">Định dạng mới: <b>Khối | Môn | Tuần | Tiết PPCT | Mạch | Bài | Số tiết</b>. Ví dụ: <code>9 | Toán | 2 | 3-4 | Đại số | Bài 1. Đơn thức | 2</code>. Dữ liệu 4 cột cũ vẫn được giữ nguyên và đọc tương thích.</p><textarea id="bg-curriculum" class="form-control" rows="7" oninput="updateBaoGiangSettings()" placeholder="9 | Toán | 2 | 3-4 | Đại số | Bài 1. Đơn thức | 2"></textarea><div id="bg-ppct-library" style="margin-top:12px;"></div></details>
+            <details open><summary style="font-weight:800;cursor:pointer;">PPCT theo lớp / môn</summary><p style="font-size:.82rem;color:#64748b;">Tải PPCT PDF, Word, Excel, CSV hoặc TXT; AI sẽ trích xuất tuần, mạch kiến thức, bài và số tiết để ghép đúng lịch. Bạn luôn có thể rà soát trước khi lưu.</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><input id="bg-ppct-file" class="form-control" style="max-width:420px" type="file" accept=".pdf,.docx,.xlsx,.csv,.txt"><button id="bg-scan-ppct" class="btn-small btn-small-primary" type="button" onclick="scanBaoGiangPpct()"><i class="fas fa-wand-magic-sparkles"></i> AI nhận diện PPCT</button><button class="btn-small" type="button" onclick="clearBaoGiangCurriculum()"><i class="fas fa-trash"></i> Xóa toàn bộ PPCT</button><span id="bg-ppct-status" style="font-size:.82rem;color:#64748b"></span></div><div id="bg-ppct-notice" role="status" style="display:none;margin-top:10px;padding:10px 12px;border-radius:8px;font-size:.86rem;"></div><p style="font-size:.82rem;color:#64748b;">Định dạng mới: <b>Khối | Môn | Tuần | Tiết PPCT | Mạch | Bài | Số tiết</b>. Ví dụ: <code>9 | Toán | 2 | 3-4 | Đại số | Bài 1. Đơn thức | 2</code>. Dữ liệu 4 cột cũ vẫn được giữ nguyên và đọc tương thích.</p><textarea id="bg-curriculum" class="form-control" rows="7" oninput="updateBaoGiangSettings()" placeholder="9 | Toán | 2 | 3-4 | Đại số | Bài 1. Đơn thức | 2"></textarea><div id="bg-ppct-library" style="margin-top:12px;"></div></details>
             <label class="form-group" style="display:block;margin:10px 0 0;max-width:300px;"><b>Khối của PPCT đang nạp</b><select id="bg-ppct-grade" class="form-control" onchange="updateBaoGiangSettings()"><option value="">Chọn khối trước khi AI nhận diện</option><option value="6">Khối 6</option><option value="7">Khối 7</option><option value="8">Khối 8</option><option value="9">Khối 9</option></select></label><p style="font-size:.82rem;color:#64748b;margin:5px 0 0;">Nạp một lần cho mỗi môn/khối, ví dụ <b>Toán · khối 7</b>. Mọi lớp 7 sẽ dùng PPCT này và tự tính tiến độ theo TKB riêng.</p>
             <label class="form-group" style="display:block;margin:10px 0 0;max-width:300px;"><b>Môn của PPCT đang nạp</b><input id="bg-ppct-subject" class="form-control" list="bg-ppct-subject-options" oninput="updateBaoGiangSettings()" placeholder="Ví dụ: Toán hoặc Tin"></label><datalist id="bg-ppct-subject-options"></datalist><p style="font-size:.82rem;color:#64748b;margin:5px 0 0;">Chọn/nhập đúng tên môn đang có trong TKB để lịch ghép chính xác.</p>
             <details style="margin-top:12px;"><summary style="font-weight:800;cursor:pointer;">Ngày nghỉ và dạy bù</summary><p style="font-size:.82rem;color:#64748b;">Dùng “Tôi nghỉ cả ngày” khi không cần nhớ bài. Nếu biết chính xác bài nào/tiết nào, chọn “Đúng một tiết/bài của tôi” rồi chọn dòng lịch bên dưới; bài đó sẽ tự dồn sang lần dạy thực tế kế tiếp.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px;"><label class="form-group">Ngày<input id="bg-ex-date" class="form-control" type="date" onchange="refreshBaoGiangPersonalLessonOptions()"></label><label class="form-group">Loại<select id="bg-ex-type" class="form-control"><option value="off">Nghỉ học</option><option value="makeup">Dạy bù</option></select></label><label class="form-group">Phạm vi nghỉ<select id="bg-ex-scope" class="form-control" onchange="refreshBaoGiangPersonalLessonOptions()"><option value="self">Tôi nghỉ cả ngày</option><option value="self_lesson">Đúng một tiết/bài của tôi</option><option value="self_subject">Một môn tôi dạy</option><option value="all">Toàn trường</option><option value="class">Một lớp</option><option value="teacher">Một giáo viên</option><option value="subject">Một môn toàn trường</option></select></label><label class="form-group">Mục tiêu<input id="bg-ex-target" class="form-control" placeholder="Để trống khi “Tôi nghỉ cả ngày”; nhập tên môn khi cần"></label><label class="form-group" style="grid-column:1/-1;">Tiết/bài cụ thể của tôi<select id="bg-ex-lesson" class="form-control"><option value="">Chọn ngày để xem các tiết của tôi</option></select></label></div><button class="btn-small" type="button" onclick="addBaoGiangException()"><i class="fas fa-plus"></i> Thêm ngoại lệ</button><div id="bg-exceptions" style="margin-top:8px;"></div></details>
@@ -3306,6 +3306,22 @@
             showToast('Đã xóa toàn bộ PPCT.', 'info');
         }
 
+        function setBaoGiangPpctNotice(message = '', type = 'info') {
+            const notice = document.getElementById('bg-ppct-notice');
+            if (!notice) return;
+            if (!message) { notice.style.display = 'none'; notice.textContent = ''; return; }
+            const palette = type === 'error'
+                ? { background: '#fef2f2', border: '#fecaca', color: '#991b1b' }
+                : type === 'success'
+                    ? { background: '#ecfdf5', border: '#a7f3d0', color: '#065f46' }
+                    : { background: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' };
+            notice.style.display = 'block';
+            notice.style.background = palette.background;
+            notice.style.border = `1px solid ${palette.border}`;
+            notice.style.color = palette.color;
+            notice.textContent = message;
+        }
+
         // Nạp thêm PPCT không được làm mất môn khác: chỉ thay nhóm trùng Khối – Môn.
         async function scanBaoGiangPpct() {
             const file = document.getElementById('bg-ppct-file')?.files?.[0];
@@ -3314,6 +3330,7 @@
             const grade = String(document.getElementById('bg-ppct-grade')?.value || state.bao_giang.ppct_default_grade || '').trim();
             const subjectName = String(document.getElementById('bg-ppct-subject')?.value || state.bao_giang.ppct_default_subject || '').trim();
             try {
+                setBaoGiangPpctNotice('Đang chuẩn bị nhận diện PPCT…');
                 if (!/^[6-9]$/.test(grade)) throw new Error('Hãy chọn khối của PPCT trước khi AI nhận diện.');
                 if (!subjectName) throw new Error('Hãy chọn hoặc nhập môn của PPCT trước khi AI nhận diện.');
                 if (button) { button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang nhận diện…'; }
@@ -3335,6 +3352,7 @@
                     parsed = parseBaoGiangPpctAiJson(extractGeminiText(firstResult));
                 } catch (_) {
                     if (status) status.textContent = 'Kết quả đầu chưa trọn vẹn, AI đang kiểm tra và nhận diện lại…';
+                    setBaoGiangPpctNotice('Kết quả đầu chưa trọn vẹn; AI đang kiểm tra và nhận diện lại.');
                     const retryPayload = JSON.parse(JSON.stringify(payload));
                     retryPayload.contents[0].parts[0].text += '\n\nLẦN KIỂM TRA LẠI: Chỉ trả một JSON hoàn chỉnh. Bắt buộc đóng đủ ] và }; giữa hai đối tượng phải có dấu phẩy. Không cắt dở danh sách.';
                     parsed = parseBaoGiangPpctAiJson(extractGeminiText(await requestPpctRecognition(retryPayload)));
@@ -3355,9 +3373,11 @@
                 saveToLocal();
                 renderBaoGiangView();
                 if (status) status.textContent = `Đã cập nhật ${lines.length} bài/chủ đề khối ${grade}; các khối/môn khác được giữ nguyên.`;
+                setBaoGiangPpctNotice(`Đã nhận diện ${lines.length} bài/chủ đề cho khối ${grade} · ${subjectName}.`, 'success');
                 showToast(`Đã cập nhật ${lines.length} dòng PPCT khối ${grade}, không ghi đè môn khác.`, 'success');
             } catch (error) {
                 if (status) status.textContent = error.message || 'Nhận diện PPCT thất bại.';
+                setBaoGiangPpctNotice(error.message || 'Không thể nhận diện PPCT. PPCT đang có vẫn được giữ nguyên.', 'error');
                 showToast(error.message || 'Nhận diện PPCT thất bại.', 'error');
             } finally {
                 if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> AI nhận diện PPCT'; }
