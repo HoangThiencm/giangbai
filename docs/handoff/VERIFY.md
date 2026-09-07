@@ -4,30 +4,33 @@
 PASS
 
 ## Đối chiếu scope
-- [x] Chuẩn hóa cột Biểu hiện năng lực số trong Phụ lục 1: Loại bỏ nhãn `[NLS: …]`, chỉ hiển thị mã và nội dung (VD: `1.1.TC2a - Sử dụng công cụ số để tìm kiếm thông tin theo yêu cầu`).
-- [x] Chuẩn hóa cột Biểu hiện năng lực AI trong Phụ lục 1: Loại bỏ nhãn `[AI: …]`, chỉ hiển thị mã, nội dung và phạm vi tiết (VD: `8.A1.1 - Nhận diện vai trò dữ liệu đầu vào trong mô hình AI (Áp dụng: tiết 1, 2).`).
-- [x] Hàng không chọn tiết AI trong Phụ lục 1 luôn tự động điền một dấu `-`.
-- [x] Giữ nguyên nhãn phân biệt `[NLS:` và `[AI:` trong cột gộp Phụ lục 3 và cấu trúc PPCT gốc.
-- [x] Báo cáo thẩm định sư phạm và xuất file Word (.docx) hoạt động chính xác với định dạng mã sạch, giữ đúng màu xanh NLS `#0070C0` và tím AI `#7030A0`.
-- [x] Đồng bộ code 1-1 sang `backupcode viettailieu/canvas_xaydungphuluc.html`.
-- [x] Backend `api/user_phuluc_draft.php` đã mở CORS, preflight OPTIONS 204 và fallback nhận diện `username`.
-- [x] Bộ 4 nút cứu hộ nháp LocalStorage và File JSON trên Canvas hoạt động mượt mà độc lập.
+- Đạt: Khắc phục triệt để việc sót lại dấu `]` ở cuối câu mô tả NLS và AI khi có dấu chấm `.`, phẩy `,`, chấm phẩy `;` hoặc đứng trước cụm `(Áp dụng: tiết …)`.
+- Đạt: Bộ điều khiển phân bổ NLS thông minh theo số tiết & AI (1 tiết: 2 mã; ≥2 tiết có AI: 2 mã; ≥2 tiết không AI: tùy chọn 2–3 mã) trên UI Mục 4 của cả hai giao diện.
+- Đạt: Cột AI trong Phụ lục 1 để ô trống hoàn toàn (chuỗi rỗng `''`) đối với bài không có tích hợp AI; xuất Word DOCX để ô trống.
+- Đạt: Timeout client/proxy đồng nhất 120s cho tài liệu cả năm học.
+- Đạt: Bảo toàn định dạng Phụ lục 3 và không tác động ngoài scope.
 
 ## Test đã chạy
-- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
-- `node tests/xaydungphuluc-smoke.js`: PASS.
-- `node tests/xaydungphuluc-integration-smoke.js`: PASS.
-- Kiểm tra cú pháp script inline bằng Node vm: PASS.
+1. `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+2. `node tests/xaydungphuluc-smoke.js`: PASS.
+3. `node tests/xaydungphuluc-integration-smoke.js`: PASS.
+4. Kiểm thử hồi quy regex làm sạch:
+   - `cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng phần mềm GeoGebra].')` -> `"5.3.TC2a - Sử dụng phần mềm GeoGebra."` (PASS: sạch dấu `]`).
+   - `cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng phần mềm GeoGebra],')` -> `"5.3.TC2a - Sử dụng phần mềm GeoGebra"` (PASS).
+   - `cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng phần mềm GeoGebra] .')` -> `"5.3.TC2a - Sử dụng phần mềm GeoGebra."` (PASS).
+   - `cleanAiColumnText('[AI: 8.A1.1 - Học sinh sử dụng AI]. (Áp dụng: tiết 1).')` -> `"8.A1.1 - Học sinh sử dụng AI. (Áp dụng: tiết 1)."` (PASS: sạch dấu `]`).
+   - `cleanAiColumnText('[AI: 8.A1.1 - Học sinh sử dụng AI] (Áp dụng: tiết 1).')` -> `"8.A1.1 - Học sinh sử dụng AI (Áp dụng: tiết 1)."` (PASS).
+   - `cleanAiColumnText('[AI: 8.A1.1 - Học sinh sử dụng AI].')` -> `"8.A1.1 - Học sinh sử dụng AI."` (PASS).
+   - `cleanAiColumnText('8.A1.1 - Học sinh sử dụng AI]')` -> `"8.A1.1 - Học sinh sử dụng AI"` (PASS).
+   - `cleanAiColumnText('')` -> `""` (PASS: ô rỗng).
+5. Kiểm thử phân bổ NLS: bài 1 tiết -> 2 mã; bài ≥2 tiết có AI -> 2 mã; bài ≥2 tiết không AI -> 2-3 mã: PASS.
 
 ## Pass / Fail từng tiêu chí
-- [x] Bỏ `[NLS: ` và `]` trong cột Biểu hiện năng lực số: PASS.
-- [x] Bỏ `[AI: ` và `]` trong cột Biểu hiện năng lực AI: PASS.
-- [x] Tự động điền dấu `-` cho các dòng không có AI: PASS.
-- [x] Hiển thị và màu sắc trên giao diện HTML: PASS.
-- [x] Xuất DOCX định dạng mã sạch: PASS.
-- [x] Báo cáo thẩm định sư phạm đạt chuẩn: PASS.
-- [x] Cứu hộ nháp Local/JSON trong Canvas: PASS.
-- [x] Toàn bộ test tự động: PASS.
+- [PASS] Loại bỏ triệt để dấu `]` ở cuối câu mô tả NLS kể cả khi có dấu chấm `].` hoặc `] .`.
+- [PASS] Loại bỏ triệt để dấu `]` trong mô tả AI khi nằm trước dấu chấm hoặc trước cụm `(Áp dụng: tiết X)`.
+- [PASS] Giao diện Mục 4 có bộ chọn phân bổ NLS theo tiết & AI trực quan và đồng bộ cấu hình.
+- [PASS] Cột AI để trống hoàn toàn (chuỗi rỗng `''`) khi không chọn AI.
+- [PASS] Toàn bộ 3 bộ smoke tests chạy thành công.
 
 ## Bug
 Không có.

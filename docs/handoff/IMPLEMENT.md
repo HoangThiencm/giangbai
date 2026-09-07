@@ -48,3 +48,15 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
 - Logic hậu xử lý nhận số tiết trực tiếp từ từng dòng PPCT và chỉ coi bài có AI khi có ít nhất một tiết AI được chọn. Kết quả được bù mã khi AI trả thiếu, giới hạn tối đa 3 mã ở lựa chọn 2–3 và giữ 2 mã ở các trường hợp còn lại.
 - Prompt Phụ lục 1 của cả hai bản nêu rõ quy tắc để AI sinh đúng số lượng mã; smoke tests kiểm tra điều khiển, cấu hình và các nhánh quy tắc.
 - Đã chạy PASS: `node tests/canvas-xaydungphuluc-smoke.js`, `node tests/xaydungphuluc-smoke.js`, `node tests/xaydungphuluc-integration-smoke.js`, và `git diff --check`.
+
+## Sửa theo PLAN: Làm sạch dấu ngoặc thừa và timeout Canvas
+- `cleanNlsColumnText`, `enrichNlsCode` và `cleanAiColumnText` ở hai giao diện Phụ lục 1 giờ loại bỏ dấu `]` thừa khi nó đứng trước `.`/`,`/`;`, kể cả biến thể có khoảng trắng và trước phạm vi `(Áp dụng: tiết …)`. Dấu câu và phạm vi tiết được giữ nguyên.
+- Giữ nguyên chế độ phân bổ NLS theo tiết/AI và quy ước ô AI rỗng cho bài không tích hợp.
+- Cả giao diện thường và Gemini Canvas dùng timeout client/payload đồng nhất 120 giây.
+- Hai smoke test có fixture hồi quy cho `].`, `],`, `] .`, AI có phạm vi tiết và AI rỗng. Không sửa Phụ lục 3, CSDL hoặc các tệp backup khác.
+
+## Sửa theo PLAN: Tương phản khung cấu hình NLS tự động
+- Đồng bộ `#nlsAdaptiveOptions` của giao diện thường và Gemini Canvas với biến theme `--paper`, `--line` và `--ink`; đã bỏ class Tailwind `dark:bg-slate-800` gây nền tối lệch theme.
+- Hai nhãn “2 mã NLS” dùng `--brand`. Ô chọn `#nlsNoAiDensity` dùng nền `--card`, chữ `--ink` và viền `--line` để rõ ở cả hai chế độ giao diện.
+- Hai smoke test kiểm tra các ràng buộc theme này, gồm việc không còn class nền tối Tailwind trong khung tùy chỉnh.
+- Đã chạy PASS: `node tests/xaydungphuluc-smoke.js`, `node tests/canvas-xaydungphuluc-smoke.js`, `node tests/xaydungphuluc-integration-smoke.js`, và `git diff --check`.

@@ -15,6 +15,10 @@ for(const name of sourceFunctions)assert(targetFunctions.has(name),`missing orig
 assert(targetIds.has('canvasHostBanner'),'missing Canvas connection banner');
 ['function enrichNlsCode','function cleanNlsColumnText','function cleanAiColumnText','hasCode:hasAiCode(value)','return lines.length?lines.join(\'\\n\'):\'\''].forEach(value=>assert(target.includes(value),`missing clean Appendix 1 integration behavior: ${value}`));
 ['nlsAdaptiveOptions','nlsNoAiDensity','Tự động theo tiết &amp; AI (Khuyên dùng)','function toggleNlsCustomDensity','function getExpectedNlsCount','noAiDensity','row.lesson,row.periods','QUY TẮC PHÂN BỔ NLS'].forEach(value=>assert(target.includes(value),`missing adaptive NLS behavior: ${value}`));
+const adaptiveOptionsMarkup=target.match(/<div id="nlsAdaptiveOptions"[\s\S]*?<\/div><\/div><div class="border rounded-xl p-4">/);
+assert(adaptiveOptionsMarkup,'Canvas adaptive NLS options markup missing');
+assert(!adaptiveOptionsMarkup[0].includes('dark:bg-slate-800'),'Canvas adaptive NLS options must not use Tailwind dark background');
+['background:var(--paper)','border-color:var(--line)','color:var(--ink)','color:var(--brand)','id="nlsNoAiDensity"','background:var(--card)'].forEach(value=>assert(adaptiveOptionsMarkup[0].includes(value),`Canvas adaptive NLS theme missing: ${value}`));
 
 for(const text of [
   '<script src="https://hoangthiencm.id.vn/js/khbd-yccd.js"></script>',
@@ -24,7 +28,7 @@ for(const text of [
   'Đã kết nối Gemini Canvas · gemini-3-flash-preview',
   'Gemini Canvas · gemini-3-flash-preview (Hệ thống cấp)',
   "apiKeys=['canvas-session']",'mistralKeys=[]',
-  "method:'POST'","credentials:'omit'",'body:JSON.stringify({payload,timeout:75})',
+  "method:'POST'","credentials:'omit'",'body:JSON.stringify({payload,timeout:120})','GEMINI_TIMEOUT_MS=120000',
   'envelope?.body','width:11906,height:16838','orientation:PageOrientation.LANDSCAPE',
   'Biểu hiện năng lực số','Biểu hiện năng lực AI','0070C0','7030A0'
 ])assert(target.includes(text),`missing Canvas requirement: ${text}`);
@@ -50,6 +54,13 @@ assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,{nls:{density:'ad
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,adaptiveNlsConfig),3,'the 2–3 option must cap a multi-period lesson without AI at three NLS codes');
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,false,adaptiveNlsConfig),2,'one-period lessons must cap NLS at two codes');
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,true,adaptiveNlsConfig),2,'AI-selected multi-period lessons must cap NLS at two codes');
+const cleanIntegrationSandbox={};vm.createContext(cleanIntegrationSandbox);
+vm.runInContext(sliceNamedFunction('enrichNlsCode')+'\n'+sliceNamedFunction('cleanNlsColumnText')+'\n'+sliceNamedFunction('cleanAiColumnText'),cleanIntegrationSandbox);
+assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra].'),'5.3.TC2a - Sử dụng GeoGebra.','Canvas must remove a bracket before a final NLS period');
+assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra],'),'5.3.TC2a - Sử dụng GeoGebra','Canvas must remove a bracket before a final NLS comma');
+assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra] .'),'5.3.TC2a - Sử dụng GeoGebra.','Canvas must remove a spaced NLS bracket before a period');
+assert.equal(cleanIntegrationSandbox.cleanAiColumnText('[AI: 6.A1.1 - Hỗ trợ bài tập]. (Áp dụng: tiết 1).'),'6.A1.1 - Hỗ trợ bài tập. (Áp dụng: tiết 1).','Canvas must retain AI scope while removing its stray bracket');
+assert.equal(cleanIntegrationSandbox.cleanAiColumnText(''),'','Canvas must preserve the blank Appendix 1 AI cell');
 assert(target.includes('function canvasConfirm(message)'), 'Canvas must provide an in-DOM confirmation modal');
 assert(!/\bconfirm\(/.test(target), 'Canvas must not call the browser confirm() API in a sandbox');
 for(const name of ['loadDraftById','deleteDraftFromServer','restoreCanvasDraft','resetData','deletePpctRowAt'])assert(target.includes(`await canvasConfirm(`),`${name} must await the Canvas confirmation modal`);
@@ -121,7 +132,7 @@ const sandbox={console,AbortController,clearTimeout,setTimeout,fetch:async(url,i
 }};
 vm.createContext(sandbox);
 vm.runInContext(
-  `const CANVAS_ENDPOINT=${JSON.stringify(endpoint)},GEMINI_TIMEOUT_MS=75000,DEFAULT_GEMINI_MODEL='gemini-3-flash-preview';let aborter=null;function isUserAbort(){return false};`+
+  `const CANVAS_ENDPOINT=${JSON.stringify(endpoint)},GEMINI_TIMEOUT_MS=120000,DEFAULT_GEMINI_MODEL='gemini-3-flash-preview';let aborter=null;function isUserAbort(){return false};`+
   sliceFunction('fetchWithGeminiTimeout')+'\n'+sliceFunction('requestGemini')+'\n'+sliceFunction('readGeminiResponse')+'\n'+sliceFunction('callGemini'),sandbox
 );
 (async()=>{
@@ -133,7 +144,7 @@ vm.runInContext(
   assert.equal(calls[0].init.credentials,'omit');
   assert.equal(calls[0].init.headers['content-type'],'application/json');
   const body=JSON.parse(calls[0].init.body);
-  assert.equal(body.timeout,75);
+  assert.equal(body.timeout,120);
   assert.equal(body.payload.contents[0].parts[0].text,'kiểm tra Canvas');
   console.log('canvas-xaydungphuluc-smoke: PASS');
 })().catch(error=>{console.error(error);process.exit(1)});
