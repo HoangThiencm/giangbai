@@ -42,6 +42,8 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('canvasConfirm'), `${relPath} phải có hàm xác nhận modal nội bộ canvasConfirm`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-docx.js"'), `${relPath} phải nạp khbd-docx.js cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-docx.js'), `${relPath} phải giữ nguồn khbd-docx.js từ hosting khi chạy Canvas`);
+  assert.ok(!targetHtml.includes('<\\\\/script>'), `${relPath} không được escape kép thẻ đóng của bộ nạp khbd-docx.js`);
+  assert.ok(targetHtml.includes('"><\\/script>`);'), `${relPath} phải tạo thẻ đóng </script> hợp lệ cho bộ nạp khbd-docx.js`);
 
   // 3. Kiểm tra nút 1-Click
   assert.ok(targetIds.has('btn1ClickGenerate'), `${relPath} phải có nút #btn1ClickGenerate`);

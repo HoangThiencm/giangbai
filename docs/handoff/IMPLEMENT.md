@@ -125,3 +125,8 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
 - Hai bản `canvas_soankhbd.html` nạp `js/khbd-docx.js` cục bộ khi mở từ `file:` hoặc `localhost`, và vẫn dùng nguồn hosting trong Gemini Canvas.
 - Mở rộng smoke tests tạo DOCX mẫu, kiểm tra XML có `m:begChr`, `m:eqArr`, các dòng phương trình và không có chuỗi LaTeX rác; bổ sung ca KaTeX tiếng Việt và kiểm tra bộ nạp Canvas.
 - Đã chạy PASS: `node tests/khbd-docx-math-smoke.js`, `node tests/khbd-docx-format-smoke.js`, `node tests/khbd-docx-layout-smoke.js`, `node tests/khbd-docx-illustration-fallback-smoke.js`, `node tests/khbd-katex-vn-smoke.js`, `node tests/canvas-soankhbd-smoke.js`.
+
+## Sửa theo PLAN: Bộ nạp khbd-docx.js của Canvas
+- Hai bản `canvas_soankhbd.html` dùng một dấu escape trong chuỗi đóng script động, nhờ đó `document.write()` tạo đúng thẻ `</script>` và tải đủ `khbd-docx.js` từ host hoặc local.
+- `tests/canvas-soankhbd-smoke.js` chặn lại dạng escape kép gây thẻ đóng lỗi, đồng thời kiểm tra chuỗi nạp động đúng.
+- Đã chạy PASS: `node tests/canvas-soankhbd-smoke.js`, `node tests/khbd-docx-math-smoke.js`, `node tests/khbd-katex-vn-smoke.js`, và `git diff --check`.
