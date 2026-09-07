@@ -209,3 +209,33 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
      + `cleanNlsColumnText('[NLS: 6.1.TC2a - Sử dụng chatbot AI để tìm hiểu lịch sử ra đời...]', ...)` -> loại bỏ chatbot lịch sử, thay bằng mô tả luyện tập công cụ số.
      + `recommendOfficialStandards('digital', ...)` cho Toán 9 phương trình -> 100% không chứa mã 6.x, ưu tiên `5.3.TC2a`.
    - Toàn bộ 58 test suite (`node tests/run-all-tests.js`) đạt 100% PASS.
+
+## Triển khai theo PLAN: Kho Tri thức Sách Giáo Khoa (SGK) Dùng Chung Trên CSDL Hệ Thống
+1. **Kiến trúc CSDL & Backend API (`api/sgk_knowledge.php`)**:
+   - Tạo cơ chế tự động thiết lập schema qua `ensure_sgk_knowledge_tables($pdo)`:
+     + Bảng `sgk_books`: Lưu trữ thông tin định danh sách (`id, book_key, subject, grade, series, semester, publisher, total_lessons, is_verified, created_by, created_at, updated_at`), index `idx_sgk_books_lookup (subject, grade, series)`.
+     + Bảng `sgk_lessons`: Lưu trữ từng bài học thuộc sách (`id, book_id, lesson_order, chapter, lesson_code, lesson_title, page_start, page_end, yccd, activities_json, digital_candidates, digital_evidence, ai_pedagogy_hint`), index `idx_sgk_lessons_book (book_id)` và `idx_sgk_lessons_title`.
+   - Cung cấp các endpoints chuẩn RESTful:
+     + `GET ?action=check&subject=...&grade=...&series=...`: Kiểm tra sách đã có trong kho chưa.
+     + `GET ?action=get&book_id=...`: Lấy toàn bộ sách kèm mảng bài học chuẩn hóa.
+     + `GET ?action=list`: Liệt kê danh mục tất cả sách đã số hóa trong CSDL.
+     + `POST ?action=save`: Nhận payload sách + mảng bài học, bọc trong Database Transaction (`beginTransaction`, `commit`, `rollBack`), tự động upsert sách và nạp các bài học.
+     + `POST ?action=verify`: Xác thực kiểm định chuẩn sư phạm.
+2. **Giao diện Người dùng trong `xaydungphuluc.html` & `canvas_xaydungphuluc.html`**:
+   - **Mục 2 (Tài liệu nguồn)**: Tích hợp Container `sharedSgkContainer` hiển thị trạng thái kết nối tri thức thời gian thực:
+     + Trạng thái xanh: Đã có sẵn bản đồ tri thức trong CSDL dùng chung -> Nút `⚡ Đồng bộ Tri thức vào Phụ lục`, `👁 Xem bài học`, `📚 Kho tri thức`. Tự động nạp tức thì (< 0.5s) mà không cần tải lại file PDF nặng!
+     + Trạng thái vàng/cam: Chưa có tri thức cho bộ sách -> Hướng dẫn giáo viên tải SGK PDF/DOCX lên và bấm `🚀 Trích xuất & Lưu CSDL` để đóng góp cho toàn trường.
+   - **Mục 4 (Cấu hình)**: Thêm dropdown `bookSeries` ("Kết nối tri thức với cuộc sống", "Cánh diều", "Chân trời sáng tạo", "Bộ sách khác") kết nối sự kiện `onBookSeriesChange()`, tự động kiểm tra CSDL mỗi khi đổi Môn/Khối/Bộ sách.
+   - **Thư viện Sách (`sgkLibraryModal`) & Chi tiết bài học (`sgkDetailModal`)**:
+     + Cho phép duyệt qua tất cả các bộ sách trong kho, tìm kiếm nhanh theo tên/môn.
+     + Xem trước chi tiết từng bài học: Tên bài, Trang, Yêu cầu cần đạt chuẩn SGK, Minh chứng Năng lực số (CV 3456) và Gợi ý Ứng dụng AI (QĐ 2422).
+     + Nút `⚡ Dùng bộ này`: Tự động nạp cấu hình và liên kết tri thức vào phiên làm việc hiện tại.
+3. **Tích hợp Sư phạm sâu vào Phụ lục 1, 2, 3**:
+   - Hàm tra cứu `getSharedSgkLessonKnowledge(lessonName)`: Tìm kiếm bài học tương ứng trong tri thức đã nạp.
+   - `appendixOneFallbackOutcome`: Tự động lấy trực tiếp Yêu cầu cần đạt chuẩn xác từ SGK.
+   - `lessonAppliedNlsDescription`: Tự động lấy trực tiếp minh chứng công nghệ số thực tế từ SGK (máy tính cầm tay, GeoGebra, bảng tính...).
+   - `lessonAppliedAiDescription`: Tự động lấy trực tiếp gợi ý ứng dụng AI chuẩn QĐ 2422.
+4. **Đồng bộ 1-1 và Kiểm thử Toàn diện**:
+   - Đồng bộ 100% trên cả 3 file: `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+   - Tạo mới test suite `tests/sgk-knowledge-smoke.js`: Kiểm thử cấu trúc DB PHP, DOM hooks/functions trên 3 file HTML, và hành vi nạp/kế thừa tri thức trong VM sandbox.
+   - Toàn bộ 59 test suite (`node tests/run-all-tests.js`) đạt 100% PASS.

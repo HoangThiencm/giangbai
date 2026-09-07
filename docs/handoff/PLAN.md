@@ -125,3 +125,40 @@ Khảo sát trực tiếp từ hình ảnh thực tế người dùng cung cấp
 2. Cột Trí tuệ nhân tạo (QĐ 2422) luôn có đầy đủ cả mã chuẩn, mô tả ứng dụng sư phạm cụ thể gắn với bài học, và phạm vi tiết (không bao giờ bị cụt chỉ có mã).
 3. Bản xuất Word và Preview hiển thị chuẩn xác, chuyên nghiệp, đúng tinh thần đổi mới giáo dục.
 4. Toàn bộ test suites đạt 100% PASS.
+
+---
+
+# PLAN: Triển khai Kho Tri thức Sách Giáo Khoa (SGK) Dùng Chung Trên Toàn Hệ Thống
+
+## Hiện trạng & Mục tiêu
+- **Hiện trạng**: Mỗi lần xây dựng Phụ lục, người dùng phải tải file SGK nặng lên để AI quét tóm tắt cục bộ, tốn tài nguyên và thời gian chờ, không chia sẻ được cho các giáo viên khác cùng môn/khối.
+- **Mục tiêu**:
+  1. Xây dựng CSDL dùng chung (MySQL) lưu trữ Bản đồ Tri thức SGK (`sgk_books` & `sgk_lessons`).
+  2. Cung cấp API backend `api/sgk_knowledge.php` đầy đủ các thao tác `check`, `get`, `list`, `save`, `verify`.
+  3. Cập nhật giao diện `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và mirror `backupcode viettailieu/canvas_xaydungphuluc.html` với trường chọn Bộ sách (`bookSeries`), tự động kiểm tra kho tri thức dùng chung; nếu đã có thì nạp tức thì (< 0.5s); nếu chưa có thì trích xuất 1 lần bằng AI và lưu vào CSDL cho cả hệ thống cùng dùng.
+  4. Viết hướng dẫn chi tiết cách thức vận hành và sử dụng.
+  5. Đảm bảo toàn bộ test suites đạt PASS 100%.
+
+## Kiến trúc Kỹ thuật
+1. **Backend Database (`api/sgk_knowledge.php`)**:
+   - Tự động tạo bảng `sgk_books` và `sgk_lessons` (nếu chưa tồn tại).
+   - `sgk_books`: `id, book_key, subject, grade, series, semester, publisher, total_lessons, is_verified, created_by, updated_at`.
+   - `sgk_lessons`: `id, book_id, lesson_order, chapter, lesson_code, lesson_title, page_start, page_end, yccd, activities_json, digital_candidates, digital_evidence, ai_pedagogy_hint`.
+   - Các action API:
+     + `GET ?action=check&subject=...&grade=...&series=...&semester=...`
+     + `GET ?action=get&book_id=...` hoặc qua thông tin sách
+     + `GET ?action=list` (thư viện sách đã số hóa)
+     + `POST ?action=save` (lưu sách + mảng bài học)
+     + `POST ?action=verify` (đánh dấu sách đã kiểm định chuẩn)
+2. **Frontend UI/UX**:
+   - Thêm dropdown chọn Bộ sách: `Kết nối tri thức với cuộc sống`, `Cánh diều`, `Chân trời sáng tạo`, `Khác`.
+   - Badge trạng thái trực quan:
+     + Xanh lá: `✓ Đã có Bản đồ Tri thức SGK dùng chung (N bài học) · Tự động nạp sẵn sàng`.
+     + Vàng/Xanh dương: `ℹ Chưa có tri thức SGK dùng chung cho bộ sách này · Tải SGK để trích xuất & lưu vào kho`.
+   - Nút `🚀 Trích xuất & Lưu vào Kho Tri thức Dùng chung` và nút `📚 Xem Thư viện SGK đã có`.
+   - Khi có tri thức: tự động điền Yêu cầu cần đạt chuẩn SGK, minh chứng NLS thực tế và gợi ý AI chuẩn QĐ 2422.
+3. **Đồng bộ mã nguồn**:
+   - Đồng bộ 100% giữa `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+4. **Kiểm thử**:
+   - Test suite `tests/sgk-knowledge-smoke.js` kiểm tra toàn bộ luồng: schema DB, API helpers, UI component hooks, format dữ liệu bản đồ tri thức.
+

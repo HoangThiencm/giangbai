@@ -1958,7 +1958,7 @@
                 <label class="form-group">Xem từ ngày<input class="form-control" id="bg-view-date" type="date" onchange="renderBaoGiangView()"></label>
                 <label class="form-group">Số ngày xem<input class="form-control" id="bg-days" type="number" min="7" max="90" value="14" onchange="renderBaoGiangView()"></label>
             </div>
-            <details open><summary style="font-weight:800;cursor:pointer;">PPCT theo lớp / môn</summary><p style="font-size:.82rem;color:#64748b;">Tải PPCT PDF, Word, Excel, CSV hoặc TXT; AI sẽ trích xuất lớp, môn, bài và số tiết, sau đó tự đưa vào lịch. Bạn luôn có thể rà soát trước khi lưu.</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><input id="bg-ppct-file" class="form-control" style="max-width:420px" type="file" accept=".pdf,.docx,.xlsx,.csv,.txt"><button id="bg-scan-ppct" class="btn-small btn-small-primary" type="button" onclick="scanBaoGiangPpct()"><i class="fas fa-wand-magic-sparkles"></i> AI nhận diện PPCT</button><span id="bg-ppct-status" style="font-size:.82rem;color:#64748b"></span></div><p style="font-size:.82rem;color:#64748b;">Định dạng kết quả: <b>Lớp | Môn | Tên bài | Số tiết</b>. Ví dụ: <code>8A1 | Toán | Bài 1. Đơn thức | 2</code>.</p><textarea id="bg-curriculum" class="form-control" rows="7" oninput="updateBaoGiangSettings()" placeholder="8A1 | Toán | Bài 1. Đơn thức | 2"></textarea></details>
+            <details open><summary style="font-weight:800;cursor:pointer;">PPCT theo lớp / môn</summary><p style="font-size:.82rem;color:#64748b;">Tải PPCT PDF, Word, Excel, CSV hoặc TXT; AI sẽ trích xuất lớp, môn, bài và số tiết, sau đó tự đưa vào lịch. Bạn luôn có thể rà soát trước khi lưu.</p><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><input id="bg-ppct-file" class="form-control" style="max-width:420px" type="file" accept=".pdf,.docx,.xlsx,.csv,.txt"><button id="bg-scan-ppct" class="btn-small btn-small-primary" type="button" onclick="scanBaoGiangPpct()"><i class="fas fa-wand-magic-sparkles"></i> AI nhận diện PPCT</button><button class="btn-small" type="button" onclick="clearBaoGiangCurriculum()"><i class="fas fa-trash"></i> Xóa toàn bộ PPCT</button><span id="bg-ppct-status" style="font-size:.82rem;color:#64748b"></span></div><p style="font-size:.82rem;color:#64748b;">Định dạng kết quả: <b>Lớp | Môn | Tên bài | Số tiết</b>. Ví dụ: <code>75 | Toán | Bài 1. Đơn thức | 2</code>. Tên lớp và môn phải khớp với TKB; dùng <code>* | Toán | ...</code> cho PPCT dùng chung mọi lớp.</p><textarea id="bg-curriculum" class="form-control" rows="7" oninput="updateBaoGiangSettings()" placeholder="75 | Toán | Bài 1. Đơn thức | 2"></textarea><div id="bg-ppct-library" style="margin-top:12px;"></div></details>
             <details style="margin-top:12px;"><summary style="font-weight:800;cursor:pointer;">Ngày nghỉ và dạy bù</summary><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px;"><label class="form-group">Ngày<input id="bg-ex-date" class="form-control" type="date"></label><label class="form-group">Loại<select id="bg-ex-type" class="form-control"><option value="off">Nghỉ học</option><option value="makeup">Dạy bù</option></select></label><label class="form-group">Phạm vi nghỉ<select id="bg-ex-scope" class="form-control"><option value="all">Toàn trường</option><option value="class">Một lớp</option><option value="teacher">Một giáo viên</option></select></label><label class="form-group">Mục tiêu<input id="bg-ex-target" class="form-control" placeholder="Nghỉ: 8A1/mã GV · Bù: 8A1 | Toán"></label></div><button class="btn-small" type="button" onclick="addBaoGiangException()"><i class="fas fa-plus"></i> Thêm ngoại lệ</button><div id="bg-exceptions" style="margin-top:8px;"></div></details>
             <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-small btn-small-primary" onclick="renderBaoGiangView()"><i class="fas fa-rotate"></i> Tính lại lịch</button><button class="btn-small" onclick="composeBaoGiangEmail()"><i class="fas fa-envelope"></i> Soạn email cho GV được chọn</button></div>
             <div id="bg-recipient-list" style="margin-top:14px;"></div><div id="bg-schedule" style="margin-top:14px;"></div>
@@ -2931,6 +2931,148 @@
         function toggleBaoGiangRecipient(id, checked) { const list = state.bao_giang.recipient_ids; state.bao_giang.recipient_ids = checked ? [...new Set([...list, id])] : list.filter(x => x !== id); saveToLocal(); }
         function setBaoGiangEmail(id, email) { const teacher = state.teachers.find(t => t.id === id); if (teacher) teacher.email = String(email || '').trim(); saveToLocal(); }
         function composeBaoGiangEmail() { const ids = new Set(state.bao_giang.recipient_ids), recipients = state.teachers.filter(t => ids.has(t.id)).map(t => t.email || (String(t.username || '').includes('@') ? t.username : '')).filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)); if (!recipients.length) return showToast('Hãy chọn giáo viên và nhập email hợp lệ cho ít nhất một người.', 'error'); const viewDate = document.getElementById('bg-view-date')?.value || state.bao_giang.start_date, days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14)), viewEnd = baoGiangDate(viewDate); viewEnd.setDate(viewEnd.getDate() + days - 1); const plan = parseBaoGiangCurriculum(state.bao_giang.curriculum_text), counters = new Map(), lessons = baoGiangRows(baoGiangIso(viewEnd)).map(row => { const key = baoGiangKey(row.class_name, row.subject), index = counters.get(key) || 0; counters.set(key, index + 1); return { ...row, lesson: baoGiangPlanFor(plan, row.class_name, row.subject)[index] || null }; }).filter(row => ids.has(row.teacher_id) && row.date >= viewDate && row.date <= baoGiangIso(viewEnd)); const list = lessons.map(row => `${row.date} | ${row.teacher_name} | ${row.class_name} | ${row.subject} | ${row.session === 'makeup' ? 'Dạy bù' : `Tiết ${row.period}`} | PPCT ${row.lesson?.ppct || '—'} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'}${row.lesson?.segment ? ` (${row.lesson.segment})` : ''}`).join('\n'); const subject = `Lịch báo giảng ${state.info?.title || ''} từ ${viewDate}`.trim(), body = `Kính gửi thầy/cô,\n\nLịch báo giảng trong ${days} ngày tới:\n${list || 'Chưa có tiết phù hợp trong khoảng thời gian này.'}\n\nVui lòng phản hồi tổ chuyên môn nếu có điều chỉnh.\n\nTrân trọng.`; window.location.href = `mailto:${recipients.map(encodeURIComponent).join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; }
+
+        // Kho PPCT: dữ liệu vẫn được lưu ở curriculum_text để tương thích bản cũ,
+        // nhưng được quản lý trực quan theo từng cặp Lớp – Môn.
+        function parseBaoGiangCurriculumEntries(text) {
+            return String(text || '').split(/\r?\n/).map((raw, lineIndex) => {
+                const parts = raw.split('|').map(x => x.trim());
+                if (parts.length < 4 || !parts[0] || !parts[1] || !parts[2]) return { raw, lineIndex, valid: false };
+                return {
+                    raw, lineIndex, valid: true,
+                    class_name: parts[0], subject: parts[1], lesson: parts[2],
+                    periods: Math.max(1, Number.parseInt(parts[3], 10) || 1)
+                };
+            });
+        }
+
+        function getBaoGiangCurriculumGroups(text = state.bao_giang.curriculum_text) {
+            const groups = new Map();
+            parseBaoGiangCurriculumEntries(text).filter(row => row.valid).forEach(row => {
+                const key = baoGiangKey(row.class_name, row.subject);
+                if (!groups.has(key)) groups.set(key, { key, class_name: row.class_name, subject: row.subject, items: [] });
+                groups.get(key).items.push(row);
+            });
+            return [...groups.values()];
+        }
+
+        function renderBaoGiangCurriculumLibrary(decoratedRows = []) {
+            const container = document.getElementById('bg-ppct-library');
+            if (!container) return;
+            const entries = parseBaoGiangCurriculumEntries(state.bao_giang.curriculum_text);
+            const groups = getBaoGiangCurriculumGroups();
+            const invalidCount = entries.filter(row => row.raw.trim() && !row.valid).length;
+            if (!groups.length) {
+                container.innerHTML = `<div style="padding:12px;border:1px dashed #cbd5e1;border-radius:8px;color:#64748b;font-size:.85rem;">Chưa có PPCT. Chọn tệp rồi bấm <b>AI nhận diện PPCT</b>, hoặc nhập theo mẫu ở trên.</div>`;
+                return;
+            }
+            const groupCards = groups.map((group, index) => {
+                const totalPeriods = group.items.reduce((sum, item) => sum + item.periods, 0);
+                const scheduled = decoratedRows.filter(row => (group.class_name === '*' ? foldText(row.subject) === foldText(group.subject) : baoGiangKey(row.class_name, row.subject) === group.key) && row.lesson).length;
+                const lessonLines = group.items.map(item => `${item.lesson} | ${item.periods}`).join('\n');
+                return `<details style="margin-top:8px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;background:#fff;">
+                    <summary style="cursor:pointer;font-size:.86rem;"><b>${escapeHtml(group.class_name === '*' ? 'Mọi lớp' : `Lớp ${group.class_name}`)} · ${escapeHtml(group.subject)}</b> — ${group.items.length} bài, ${totalPeriods} tiết <span style="color:#64748b">· đã ghép ${scheduled} lịch đang xem</span></summary>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px;">
+                        <label class="form-group" style="margin:0;">Lớp<input id="bg-ppct-class-${index}" class="form-control" value="${escapeHtml(group.class_name)}"></label>
+                        <label class="form-group" style="margin:0;">Môn<input id="bg-ppct-subject-${index}" class="form-control" value="${escapeHtml(group.subject)}"></label>
+                    </div>
+                    <label class="form-group" style="display:block;margin:8px 0 0;">Bài dạy | số tiết<textarea id="bg-ppct-items-${index}" class="form-control" rows="${Math.min(8, Math.max(3, group.items.length + 1))}">${escapeHtml(lessonLines)}</textarea></label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" class="btn-small btn-small-primary" onclick="saveBaoGiangCurriculumGroup(${index})"><i class="fas fa-save"></i> Lưu PPCT này</button><button type="button" class="btn-small" onclick="deleteBaoGiangCurriculumGroup(${index})"><i class="fas fa-trash"></i> Xóa PPCT này</button></div>
+                </details>`;
+            }).join('');
+            container.innerHTML = `<div style="margin-top:12px;padding:10px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;"><b>Kho PPCT đã nạp:</b> ${groups.length} lớp/môn · ${entries.filter(row => row.valid).length} bài/chủ đề.${invalidCount ? ` <span style="color:#b45309">Có ${invalidCount} dòng sai định dạng, không dùng để ghép lịch.</span>` : ''}</div>${groupCards}`;
+        }
+
+        function saveBaoGiangCurriculumGroup(index) {
+            const groups = getBaoGiangCurriculumGroups();
+            const oldGroup = groups[index];
+            if (!oldGroup) return showToast('Không tìm thấy PPCT cần lưu.', 'error');
+            const className = String(document.getElementById(`bg-ppct-class-${index}`)?.value || '').trim();
+            const subject = String(document.getElementById(`bg-ppct-subject-${index}`)?.value || '').trim();
+            const itemText = String(document.getElementById(`bg-ppct-items-${index}`)?.value || '');
+            const items = itemText.split(/\r?\n/).map(line => line.split('|').map(value => value.trim())).filter(parts => parts[0]).map(parts => ({ lesson: parts[0], periods: Math.max(1, Number.parseInt(parts[1], 10) || 1) }));
+            if (!className || !subject || !items.length) return showToast('PPCT cần có lớp, môn và ít nhất một bài dạy.', 'error');
+            const remaining = String(state.bao_giang.curriculum_text || '').split(/\r?\n/).filter(line => {
+                const parts = line.split('|').map(value => value.trim());
+                return parts.length < 4 || baoGiangKey(parts[0], parts[1]) !== oldGroup.key;
+            }).filter(line => line.trim());
+            const newLines = items.map(item => `${className} | ${subject} | ${item.lesson} | ${item.periods}`);
+            state.bao_giang.curriculum_text = [...remaining, ...newLines].join('\n');
+            const input = document.getElementById('bg-curriculum');
+            if (input) input.value = state.bao_giang.curriculum_text;
+            saveToLocal();
+            renderBaoGiangView();
+            showToast(`Đã lưu PPCT ${className} · ${subject}.`, 'success');
+        }
+
+        function deleteBaoGiangCurriculumGroup(index) {
+            const group = getBaoGiangCurriculumGroups()[index];
+            if (!group) return;
+            if (!confirm(`Xóa toàn bộ PPCT của ${group.class_name} · ${group.subject}?`)) return;
+            state.bao_giang.curriculum_text = String(state.bao_giang.curriculum_text || '').split(/\r?\n/).filter(line => {
+                const parts = line.split('|').map(value => value.trim());
+                return parts.length < 4 || baoGiangKey(parts[0], parts[1]) !== group.key;
+            }).filter(line => line.trim()).join('\n');
+            const input = document.getElementById('bg-curriculum');
+            if (input) input.value = state.bao_giang.curriculum_text;
+            saveToLocal();
+            renderBaoGiangView();
+            showToast(`Đã xóa PPCT ${group.class_name} · ${group.subject}.`, 'info');
+        }
+
+        function clearBaoGiangCurriculum() {
+            if (!String(state.bao_giang.curriculum_text || '').trim()) return;
+            if (!confirm('Xóa toàn bộ PPCT đã nạp? Lịch báo giảng sẽ không còn ghép bài dạy.')) return;
+            state.bao_giang.curriculum_text = '';
+            const input = document.getElementById('bg-curriculum');
+            if (input) input.value = '';
+            saveToLocal();
+            renderBaoGiangView();
+            showToast('Đã xóa toàn bộ PPCT.', 'info');
+        }
+
+        function updateBaoGiangSettings() {
+            const data = state.bao_giang;
+            data.start_date = document.getElementById('bg-start-date')?.value || data.start_date;
+            data.curriculum_text = document.getElementById('bg-curriculum')?.value || '';
+            saveToLocal();
+            renderBaoGiangCurriculumLibrary();
+        }
+
+        function renderBaoGiangView() {
+            const cfg = state.bao_giang;
+            const today = new Date();
+            const fallbackStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            if (!cfg.start_date) cfg.start_date = fallbackStart;
+            const startInput = document.getElementById('bg-start-date');
+            const viewInput = document.getElementById('bg-view-date');
+            const curriculum = document.getElementById('bg-curriculum');
+            if (!startInput || !viewInput || !curriculum) return;
+            if (!viewInput.value) viewInput.value = cfg.start_date;
+            startInput.value = cfg.start_date;
+            curriculum.value = cfg.curriculum_text || '';
+            const days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14));
+            const viewStart = baoGiangDate(viewInput.value) || baoGiangDate(cfg.start_date);
+            const viewEnd = new Date(viewStart);
+            viewEnd.setDate(viewEnd.getDate() + days - 1);
+            const plan = parseBaoGiangCurriculum(cfg.curriculum_text);
+            const allRows = baoGiangRows(baoGiangIso(viewEnd));
+            const counters = new Map();
+            const decorated = allRows.map(row => {
+                const key = baoGiangKey(row.class_name, row.subject);
+                const index = counters.get(key) || 0;
+                counters.set(key, index + 1);
+                return { ...row, lesson: baoGiangPlanFor(plan, row.class_name, row.subject)[index] || null };
+            });
+            const visible = decorated.filter(row => row.date >= viewInput.value && row.date <= baoGiangIso(viewEnd));
+            const exceptions = document.getElementById('bg-exceptions');
+            if (exceptions) exceptions.innerHTML = cfg.exceptions.length ? cfg.exceptions.map(ex => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:.85rem;"><b>${escapeHtml(ex.date)}</b><span>${ex.type === 'off' ? 'Nghỉ học' : 'Dạy bù'}</span><span>${escapeHtml(ex.scope === 'all' ? 'Toàn trường' : ex.target)}</span><button class="btn-small" onclick="removeBaoGiangException('${ex.id}')">Xóa</button></div>`).join('') : '<p style="color:#64748b;font-size:.85rem;">Chưa có ngoại lệ.</p>';
+            const recipients = document.getElementById('bg-recipient-list');
+            if (recipients) recipients.innerHTML = `<div style="font-weight:800;margin-bottom:6px;">Người nhận email</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${state.teachers.map(t => `<label style="padding:7px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;"><input type="checkbox" ${cfg.recipient_ids.includes(t.id) ? 'checked' : ''} onchange="toggleBaoGiangRecipient('${t.id}',this.checked)"> ${escapeHtml(t.name)} <input aria-label="Email ${escapeHtml(t.name)}" value="${escapeHtml(t.email || '')}" placeholder="email" style="width:150px;border:0;border-bottom:1px solid #cbd5e1;margin-left:4px;" onchange="setBaoGiangEmail('${t.id}',this.value)"></label>`).join('')}</div>`;
+            renderBaoGiangCurriculumLibrary(decorated);
+            const schedule = document.getElementById('bg-schedule');
+            if (schedule) schedule.innerHTML = visible.length ? `<div style="overflow:auto;"><table class="data-table"><thead><tr><th>Ngày</th><th>Lớp</th><th>Môn</th><th>Tiết</th><th>GV</th><th>Tiết PPCT</th><th>Bài dạy</th><th>Phân đoạn</th></tr></thead><tbody>${visible.map(row => `<tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.class_name)}</td><td>${escapeHtml(row.subject)}</td><td>${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} ${row.period}`)}</td><td>${escapeHtml(row.teacher_name)}</td><td>${row.lesson?.ppct || '<span style="color:#b45309">Chưa có</span>'}</td><td>${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td><td>${escapeHtml(row.lesson?.segment || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p style="padding:16px;color:#64748b;">Chưa có tiết TKB trong khoảng ngày này. Hãy nhập TKB, ngày áp dụng và PPCT.</p>';
+        }
 
         function switchAppView(viewId) {
             document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
