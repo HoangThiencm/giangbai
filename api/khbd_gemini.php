@@ -57,12 +57,16 @@ function khbd_gemini_should_rotate(int $status, string $error): bool
     return str_contains($message, 'quota')
         || str_contains($message, 'resource exhausted')
         || str_contains($message, 'rate limit')
-        || str_contains($message, 'too many requests');
+        || str_contains($message, 'too many requests')
+        || str_contains($message, 'operation timed out')
+        || str_contains($message, 'timed out')
+        || str_contains($message, 'could not connect');
 }
 
 $lastStatus = 502;
 $lastError = 'Máy chủ không nhận được phản hồi từ Gemini.';
 $attempted = 0;
+$perKeyTimeout = count($keys) > 1 ? min($timeout, 40) : $timeout;
 
 foreach ($keys as $keyIndex => $key) {
     $attempted++;
@@ -74,7 +78,7 @@ foreach ($keys as $keyIndex => $key) {
         CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
         CURLOPT_POSTFIELDS => $encoded,
         CURLOPT_CONNECTTIMEOUT => 10,
-        CURLOPT_TIMEOUT => $timeout,
+        CURLOPT_TIMEOUT => $perKeyTimeout,
     ]);
     $raw = curl_exec($ch);
     $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
