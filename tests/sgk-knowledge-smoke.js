@@ -47,7 +47,12 @@ const requiredIds = [
   'btnUseCurBook',
   'sgkJsonFileInput',
   'sgkGradeTabs',
-  'btnSeedAllGrade'
+  'btnSeedAllGrade',
+  'sgkExtractModal',
+  'sgkExtractGrade',
+  'sgkExtractSubject',
+  'sgkExtractSeries',
+  'sgkExtractFileName'
 ];
 
 const requiredFunctions = [
@@ -83,7 +88,13 @@ const requiredFunctions = [
   'applyAndUseSubjectGrade',
   'getSubjectCurriculumKey',
   'getStandardSubjectYccd',
-  'getStandardCurriculumCatalog'
+  'getStandardCurriculumCatalog',
+  'detectGradeAndSubjectFromFileName',
+  'setQuickGrade',
+  'updateQuickGradeButtons',
+  'openSgkExtractModal',
+  'closeSgkExtractModal',
+  'confirmAndExecuteSgkExtract'
 ];
 
 for (const { path, isCanvas } of htmlFiles) {

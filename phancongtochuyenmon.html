@@ -3321,12 +3321,12 @@
                 const text = await extractBaoGiangPpctText(file);
                 if (!text.trim()) throw new Error('Không trích xuất được nội dung từ tệp.');
                 if (status) status.textContent = 'AI đang chuẩn hóa PPCT…';
-                const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"${grade}","subject":"${subjectName}","week":2,"period_no":"3-4","strand":"Đại số","lesson":"Bài 1. Đơn thức","periods":2}]}. Đây là PPCT môn ${subjectName} dùng chung cho TOÀN BỘ khối ${grade}; class_name BẮT BUỘC là "${grade}" và subject BẮT BUỘC là "${subjectName}" ở mọi phần tử, không ghi từng lớp con. BẮT BUỘC trích chính xác tuần (week), tiết PPCT (period_no) và mạch/phân môn (strand) nếu tài liệu có. Nếu PPCT chia Đại số và Hình học riêng nhưng cùng Tuần 2, phải trả các phần tử riêng cùng week=2; không xếp hết Đại số rồi mới đến Hình học. Xuất đúng thứ tự tuần tăng dần, trong mỗi tuần giữ đúng thứ tự từng mạch theo tài liệu. Một bài nhiều tiết chỉ ghi tổng tiết của chính bài đó. Các dòng trùng tên ở phần khác nhau phải giữ riêng. Không tự bịa tuần, tiết, mạch hoặc số tiết; nếu tài liệu không thể hiện tuần thì dùng week:null và period_no:"". Không đưa tiêu đề học kỳ/chương nếu không có số tiết.\n\nPPCT:\n${text.slice(0, 70000)}`;
+                const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"${grade}","subject":"${subjectName}","week":2,"period_no":"3-4","strand":"Đại số","lesson":"Bài 1. Đơn thức","periods":2}]}. Đây là PPCT môn ${subjectName} dùng chung cho TOÀN BỘ khối ${grade}; class_name BẮT BUỘC là "${grade}" và subject BẮT BUỘC là "${subjectName}" ở mọi phần tử, không ghi từng lớp con. BẮT BUỘC trích chính xác tuần (week), tiết PPCT (period_no) và mạch/phân môn (strand) nếu tài liệu có. Nếu PPCT chia Đại số và Hình học riêng nhưng cùng Tuần 2, phải trả các phần tử riêng cùng week=2; không xếp hết Đại số rồi mới đến Hình học. Xuất đúng thứ tự tuần tăng dần, trong mỗi tuần giữ đúng thứ tự từng mạch theo tài liệu. Một bài nhiều tiết chỉ ghi tổng tiết của chính bài đó. Các dòng trùng tên ở phần khác nhau phải giữ riêng. Không tự bịa tuần, tiết, mạch hoặc số tiết; nếu tài liệu không thể hiện tuần thì dùng week:null và period_no:"". Không đưa tiêu đề học kỳ/chương nếu không có số tiết. QUY TẮC JSON BẮT BUỘC: mọi phần tử trong mảng curriculum phải ngăn cách bằng dấu phẩy, không có dấu phẩy thừa ở phần tử cuối, không dùng markdown hay giải thích; tự kiểm tra JSON trước khi trả lời.\n\nPPCT:\n${text.slice(0, 70000)}`;
                 const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 16384 } };
                 const response = await fetch('api/khbd_gemini.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ model: 'gemini-2.5-flash', payload, timeout: 90 }) });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || data.ok === false) throw new Error(data.error || data.body?.error?.message || `Không thể gọi AI nhận diện PPCT (mã ${data.status || response.status}).`);
-                const parsed = parseAiJson(extractGeminiText(data));
+                const parsed = parseBaoGiangPpctAiJson(extractGeminiText(data));
                 const rows = Array.isArray(parsed.curriculum) ? parsed.curriculum : [];
                 const lines = rows.filter(item => String(item?.lesson || '').trim()).map(item => {
                     const week = Number.parseInt(item?.week, 10);
@@ -5619,6 +5619,29 @@
             const end = raw.lastIndexOf('}');
             if (start < 0 || end <= start) throw new Error('AI không trả về JSON hợp lệ.');
             return JSON.parse(raw.slice(start, end + 1));
+        }
+
+        // Gemini đôi khi bỏ dấu phẩy giữa hai đối tượng liên tiếp trong mảng PPCT.
+        // Chỉ sửa lỗi phân cách này trong kết quả tạm thời; PPCT chỉ được lưu sau khi JSON hợp lệ.
+        function parseBaoGiangPpctAiJson(text) {
+            try {
+                return parseAiJson(text);
+            } catch (originalError) {
+                const raw = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+                const start = raw.indexOf('{');
+                const end = raw.lastIndexOf('}');
+                if (start < 0 || end <= start) throw originalError;
+                const repaired = raw.slice(start, end + 1)
+                    .replace(/[\u201C\u201D]/g, '"')
+                    .replace(/[\u2018\u2019]/g, "'")
+                    .replace(/}\s*(?={)/g, '},')
+                    .replace(/,\s*([}\]])/g, '$1');
+                try {
+                    return JSON.parse(repaired);
+                } catch (_) {
+                    throw new Error('AI trả danh sách PPCT chưa đúng cấu trúc JSON (thiếu hoặc sai dấu phân cách). PPCT hiện có chưa bị thay đổi; hãy bấm nhận diện lại.');
+                }
+            }
         }
 
         async function scanTimetableWithAI() {

@@ -27,7 +27,8 @@
   <section class="card p-5"><h2 class="font-black mb-3">1. Thông tin & cấu hình sư phạm</h2><div class="grid md:grid-cols-4 gap-3"><div><label class="label">Cấp học</label><input class="field" value="THCS" readonly></div><div><label class="label">Khối lớp</label><select id="grade" class="field" onchange="refreshSubjects();loadDefaultPpctStructure(true);checkSharedSgkKnowledge(true)"><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8">Lớp 8</option><option value="9">Lớp 9</option><option value="6-9">Tất cả khối 6–9</option></select></div><div><label class="label">Môn học</label><select id="subject" class="field" onchange="loadDefaultPpctStructure(true);checkSharedSgkKnowledge(true)"></select></div><div><label class="label" for="bookSeries">Bộ sách</label><select id="bookSeries" class="field" onchange="onBookSeriesChange()"><option value="Sách giáo khoa dùng chung (từ 2026-2027)" selected>Sách giáo khoa dùng chung (từ 2026-2027)</option><option value="Kết nối tri thức với cuộc sống">Kết nối tri thức với cuộc sống</option><option value="Cánh diều">Cánh diều</option><option value="Chân trời sáng tạo">Chân trời sáng tạo</option><option value="Bộ sách khác">Bộ sách khác</option></select></div><div><label class="label">Năm học</label><input id="schoolYear" class="field" value="2026-2027"></div><div><label class="label">Tên trường</label><input class="field" id="school" placeholder="THCS Trần Phú"></div><div><label class="label">Tổ chuyên môn</label><input class="field" id="department" placeholder="Tổ Toán - Tin"></div><div><label class="label">Giáo viên / Tổ trưởng</label><input class="field" id="teacher" placeholder="Nguyễn Văn A"></div><div><label class="label">Số lớp</label><input class="field" id="classCount" inputmode="numeric" placeholder="4"></div><div><label class="label">Số học sinh</label><input class="field" id="studentCount" inputmode="numeric" placeholder="160"></div><div><label class="label">Số giáo viên</label><input class="field" id="teacherCount" inputmode="numeric" placeholder="4"></div></div>
     <div class="grid md:grid-cols-2 gap-4 mt-5"><div class="border rounded-xl p-4"><div class="flex justify-between"><label><input id="nlsEnabled" type="checkbox" checked> <b>Năng lực số (CV 3456 / TT 02)</b></label><output id="nlsRateOut">50%</output></div><input id="nlsRate" class="w-full" type="range" min="0" max="100" value="50" oninput="syncRanges()"><label class="label mt-2">Phân bổ số lượng mã NLS / bài</label><select id="nlsDensity" class="field" onchange="toggleNlsCustomDensity(this.value)"><option value="adaptive" selected>Tự động theo tiết &amp; AI (Khuyên dùng)</option><option value="1-2">Cố định 1–2 mã/bài</option><option value="2-3">Cố định 2–3 mã/bài</option><option value="3-4">Cố định 3–4 mã/bài</option></select><div id="nlsAdaptiveOptions" class="mt-2 text-xs space-y-1 p-2.5 rounded-lg border" style="background:var(--paper);border-color:var(--line);color:var(--ink);"><div>• Bài 1 tiết: <b style="color:var(--brand)">2 mã NLS</b></div><div>• Bài từ 2 tiết có AI: <b style="color:var(--brand)">2 mã NLS</b></div><label class="flex items-center gap-2"><span>• Bài từ 2 tiết không có AI:</span><select id="nlsNoAiDensity" class="field text-xs py-0.5 px-1.5 w-auto" style="background:var(--card);color:var(--ink);border-color:var(--line);"><option value="2-3" selected>2–3 mã</option><option value="2">2 mã</option></select></label></div></div><div class="border rounded-xl p-4"><div class="flex justify-between"><label><input id="aiEnabled" type="checkbox" checked> <b>Trí tuệ nhân tạo (QĐ 2422)</b></label><output id="aiRateOut">30%</output></div><input id="aiRate" class="w-full" type="range" min="0" max="100" value="30" oninput="syncAiSelectionFromRate()"><label class="label mt-2">Mật độ mã AI / tiết đã chọn</label><select id="aiDensity" class="field"><option value="1-2" selected>1–2 mã/bài</option><option value="2-3">2–3 mã/bài</option><option value="3-4">3–4 mã/bài</option></select></div></div>
     <div class="mt-4 flex flex-wrap gap-4"><label><input id="clil" type="checkbox"> Thêm thuật ngữ Tiếng Anh chuyên ngành / CLIL</label><label><input id="inclusive" type="checkbox"> Giáo dục hòa nhập HS khuyết tật</label></div></section>
-  <section class="card p-5"><h2 class="font-black mb-3">2. Tài liệu & dữ liệu nguồn</h2><p class="mb-4 rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm text-teal-900"><b>Đối chiếu chuẩn tự động:</b> Hệ thống dùng Catalog chuẩn Bộ GD&amp;ĐT (CTGDPT 2018, CV 3456 và QĐ 2422) kết hợp PPCT của trường. Bạn chỉ cần nạp PPCT; SGK là tài liệu bổ trợ tùy chọn, không cần tải toàn văn.</p><div class="grid md:grid-cols-2 gap-4"><label class="block border-2 border-dashed rounded-xl p-5 text-center cursor-pointer"><input id="ppctFiles" class="hidden" type="file" multiple accept=".docx,.xlsx,.pdf" onchange="stageFiles(this.files,'ppct')"><b>📄 Tải lên Phân phối chương trình</b><p class="text-sm opacity-70">Chọn tệp trước, sau đó bấm Nhận diện PPCT.</p></label><label class="block border-2 border-dashed rounded-xl p-5 text-center cursor-pointer"><input id="sgkFiles" class="hidden" type="file" multiple accept=".pdf,.docx" onchange="stageFiles(this.files,'sgk')"><b>📚 Tải lên Sách Giáo Khoa (tùy chọn)</b><p class="text-sm opacity-70">Chỉ lấy mục lục và hoạt động trọng tâm để bổ trợ ngữ cảnh.</p></label></div><div class="mt-4 flex flex-wrap items-center gap-3"><button type="button" class="btn primary" onclick="recognizeStagedPpct()">🔍 Nhận diện PPCT</button><button type="button" class="btn primary" onclick="readStagedSgk()">📖 Đọc SGK</button><button type="button" class="btn secondary" onclick="loadDefaultPpctStructure()">Nạp cấu trúc mẫu</button><span id="sgkStatus" class="text-sm font-bold text-green-700" aria-live="polite"></span></div><div id="fileList" class="mt-3 text-sm space-y-1"></div><div id="sharedSgkContainer" class="mt-4 p-4 rounded-xl border border-teal-200 bg-teal-50/70 text-sm"><div class="flex flex-wrap items-center justify-between gap-3"><div><div class="flex items-center gap-2"><span class="text-lg">📚</span><strong id="sharedSgkTitle" class="text-teal-900 font-bold">Kho Tri thức SGK dùng chung</strong></div><p id="sharedSgkDesc" class="text-xs text-teal-800 mt-0.5">Đang kiểm tra CSDL tri thức dùng chung cho môn học &amp; khối lớp đã chọn…</p></div><div id="sharedSgkActions" class="flex flex-wrap items-center gap-2"><button type="button" class="btn primary text-xs" onclick="syncSharedSgkToApp()">⚡ Đồng bộ Tri thức vào Phụ lục</button><button type="button" class="btn secondary text-xs" onclick="extractAndSaveSharedSgk()">🚀 Trích xuất &amp; Lưu CSDL</button><button type="button" class="btn secondary text-xs" onclick="openSgkLibraryModal()">📚 Thư viện sách</button></div></div></div></section>
+  <section class="card p-5"><h2 class="font-black mb-3">2. Tài liệu & dữ liệu nguồn</h2><p class="mb-4 rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm text-teal-900"><b>Đối chiếu chuẩn tự động:</b> Hệ thống dùng Catalog chuẩn Bộ GD&amp;ĐT (CTGDPT 2018, CV 3456 và QĐ 2422) kết hợp PPCT của trường. Bạn chỉ cần nạp PPCT; SGK là tài liệu bổ trợ tùy chọn, không cần tải toàn văn.</p><div class="grid md:grid-cols-2 gap-4"><label class="block border-2 border-dashed rounded-xl p-5 text-center cursor-pointer"><input id="ppctFiles" class="hidden" type="file" multiple accept=".docx,.xlsx,.pdf" onchange="stageFiles(this.files,'ppct')"><b>📄 Tải lên Phân phối chương trình</b><p class="text-sm opacity-70">Chọn tệp trước, sau đó bấm Nhận diện PPCT.</p></label><label class="block border-2 border-dashed rounded-xl p-5 text-center cursor-pointer"><input id="sgkFiles" class="hidden" type="file" multiple accept=".pdf,.docx" onchange="stageFiles(this.files,'sgk')"><b>📚 Tải lên Sách Giáo Khoa (tùy chọn)</b><p class="text-sm opacity-70">Chỉ lấy mục lục và hoạt động trọng tâm để bổ trợ ngữ cảnh.</p></label></div><div class="mt-4 flex flex-wrap items-center gap-3"><button type="button" class="btn primary" onclick="recognizeStagedPpct()">🔍 Nhận diện PPCT</button><button type="button" class="btn primary" onclick="readStagedSgk()">📖 Đọc SGK</button><button type="button" class="btn secondary" onclick="loadDefaultPpctStructure()">Nạp cấu trúc mẫu</button><span id="sgkStatus" class="text-sm font-bold text-green-700" aria-live="polite"></span></div><div id="fileList" class="mt-3 text-sm space-y-1"></div><div id="sharedSgkContainer" class="mt-4 p-4 rounded-xl border border-teal-200 bg-teal-50/70 text-sm"><div class="flex flex-wrap items-center justify-between gap-3"><div><div class="flex items-center gap-2"><span class="text-lg">📚</span><strong id="sharedSgkTitle" class="text-teal-900 font-bold">Kho Tri thức SGK dùng chung</strong></div><p id="sharedSgkDesc" class="text-xs text-teal-800 mt-0.5">Đang kiểm tra CSDL tri thức dùng chung cho môn học &amp; khối lớp đã chọn…</p></div><div class="flex items-center gap-1.5 flex-wrap mt-2 pt-2 border-t" style="border-color:var(--line)"><span class="text-xs font-semibold opacity-75">Khối lớp áp dụng:</span><button type="button" class="btn text-xs py-1 px-2.5 rounded-lg border btn-grade-quick" data-grade="6" onclick="setQuickGrade('6')">Lớp 6</button><button type="button" class="btn text-xs py-1 px-2.5 rounded-lg border btn-grade-quick" data-grade="7" onclick="setQuickGrade('7')">Lớp 7</button><button type="button" class="btn text-xs py-1 px-2.5 rounded-lg border btn-grade-quick" data-grade="8" onclick="setQuickGrade('8')">Lớp 8</button><button type="button" class="btn text-xs py-1 px-2.5 rounded-lg border btn-grade-quick" data-grade="9" onclick="setQuickGrade('9')">Lớp 9</button></div>
+<div id="sharedSgkActions" class="flex flex-wrap items-center gap-2"><button type="button" class="btn primary text-xs" onclick="syncSharedSgkToApp()">⚡ Đồng bộ Tri thức vào Phụ lục</button><button type="button" class="btn secondary text-xs" onclick="openSgkExtractModal()">🚀 Trích xuất &amp; Lưu CSDL</button><button type="button" class="btn secondary text-xs" onclick="openSgkLibraryModal()">📚 Thư viện sách</button></div></div></div></section>
   <section class="card p-5"><h2 class="font-black mb-3">3. Chọn loại phụ lục</h2><div id="appendixChoices" class="grid md:grid-cols-4 gap-3"><label class="p-3 rounded-xl border cursor-pointer"><input type="radio" name="appendix" value="1"> <b>Phụ lục 1</b><br><small>Kế hoạch dạy học tổ chuyên môn</small></label><label class="p-3 rounded-xl border cursor-pointer"><input type="radio" name="appendix" value="2"> <b>Phụ lục 2</b><br><small>Hoạt động giáo dục</small></label><label class="p-3 rounded-xl border cursor-pointer"><input type="radio" name="appendix" value="3"> <b>Phụ lục 3</b><br><small>Kế hoạch giáo dục giáo viên</small></label><label class="p-3 rounded-xl border cursor-pointer bg-teal-50 text-slate-800"><input type="radio" name="appendix" value="all" checked> <b>⚡ Trọn bộ 1–2–3</b><br><small>Quy trình một lần bấm</small></label></div></section>
   <section id="aiLessonPickerCard" class="card p-5 w-full"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-black">4. Chọn chính xác tiết tích hợp AI</h2><p class="text-sm opacity-70">Mã AI chỉ sinh cho đúng tiết được chọn từ PPCT; mã NLS vẫn đối chiếu Catalog chuẩn theo từng bài học.</p></div><div class="flex flex-wrap items-center gap-2"><strong id="aiSelectionCount">🎯 Đã chọn: 0/12 tiết AI</strong><button type="button" class="btn secondary" onclick="appendPpctRow(false)">➕ Thêm bài học mới</button><button type="button" class="btn secondary" onclick="appendPpctRow(true)">➕ Thêm tiêu đề</button><button type="button" class="btn secondary" onclick="recalculatePpctSequences()">🔄 Tính lại Tiết CT &amp; Tuần tự động</button><button type="button" class="btn secondary" onclick="suggestAiLessons()">✨ Gợi ý 12 tiết chuẩn</button><button type="button" class="btn secondary" onclick="clearAiLessons()">✕ Bỏ chọn tất cả</button></div></div><div id="aiLessonPicker" class="w-full mt-3 overflow-x-auto"></div></section>
   <section class="card p-5"><h2 class="font-black mb-2">5. Ý tưởng / chỉ đạo riêng</h2><textarea id="instructions" class="field" rows="3" placeholder="Ví dụ: ưu tiên STEM, hoạt động trải nghiệm tại địa phương, …"></textarea></section>
@@ -44,6 +45,7 @@
 <input id="sgkJsonFileInput" type="file" accept=".json,application/json" class="hidden" onchange="importSgkKnowledgeJson(this)">
 <div id="sgkLibraryModal" class="modal hidden"><section class="card p-5 max-w-4xl w-full"><div class="flex justify-between items-center gap-3"><div><h2 class="font-black text-lg text-teal-800 dark:text-teal-300">📚 Kho Tri thức &amp; Trung tâm Nạp SGK Dùng Chung (CTGDPT 2018)</h2><p class="text-xs opacity-75 mt-0.5">Khởi tạo &amp; số hóa Bản đồ Tri thức chuẩn 100% bài học cho từng môn ở mỗi khối lớp (Lớp 6, 7, 8, 9).</p></div><button class="btn secondary" onclick="closeSgkLibraryModal()">✕</button></div><div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-b pb-2" style="border-color:var(--line)"><div class="flex flex-wrap gap-1" id="sgkGradeTabs"><button type="button" class="tab btn secondary text-xs px-3 py-1.5 active" data-grade="6" onclick="switchSgkGradeTab('6')">Lớp 6</button><button type="button" class="tab btn secondary text-xs px-3 py-1.5" data-grade="7" onclick="switchSgkGradeTab('7')">Lớp 7</button><button type="button" class="tab btn secondary text-xs px-3 py-1.5" data-grade="8" onclick="switchSgkGradeTab('8')">Lớp 8</button><button type="button" class="tab btn secondary text-xs px-3 py-1.5" data-grade="9" onclick="switchSgkGradeTab('9')">Lớp 9</button><button type="button" class="tab btn secondary text-xs px-3 py-1.5" data-grade="saved" onclick="switchSgkGradeTab('saved')">💾 Đã lưu CSDL</button></div><div class="flex flex-wrap gap-1.5"><button type="button" id="btnSeedAllGrade" class="btn primary text-xs py-1.5 px-2.5" onclick="seedAllSubjectsForGrade(currentSgkGradeTab)">⚡ Nạp tất cả môn Khối Lớp 6</button><button type="button" class="btn secondary text-xs py-1.5 px-2.5 text-teal-700" onclick="seedAllGradesAllSubjects()">⚡ Nạp trọn bộ Lớp 6–9</button></div></div><div class="mt-3 flex gap-2"><input id="sgkLibrarySearch" class="field text-sm" placeholder="Tìm theo môn học hoặc từ khóa…" oninput="onSgkSearchInput()"><button class="btn secondary text-xs" onclick="fetchAndRenderSgkLibrary()">🔄 Làm mới</button><button type="button" class="btn secondary text-xs" onclick="document.querySelector('#sgkJsonFileInput').click()">📥 Nhập JSON</button></div><div id="sgkLibraryList" class="mt-3 space-y-2 max-h-[60vh] overflow-y-auto" aria-live="polite"></div></section></div>
 <div id="sgkDetailModal" class="modal hidden"><section class="card p-5 max-w-5xl w-full"><div class="flex justify-between items-center gap-3"><div><h2 id="sgkDetailTitle" class="font-black text-lg">Chi tiết Bản đồ Tri thức</h2><p id="sgkDetailSubtitle" class="text-xs opacity-75">Danh mục bài học, YCCD, hoạt động số &amp; gợi ý AI</p></div><button class="btn secondary" onclick="closeSgkDetailModal()">✕</button></div><div id="sgkDetailContent" class="mt-4 max-h-[68vh] overflow-y-auto" aria-live="polite"></div><div class="mt-4 flex justify-between items-center gap-2"><button type="button" class="btn secondary text-sm text-red-600 hover:bg-red-50 border-red-200" onclick="deleteCurrentDetailBook()">🗑 Xóa bộ sách này</button><div class="flex gap-2"><button id="btnUseCurBook" class="btn primary text-sm" onclick="useCurrentDetailBook()">⚡ Sử dụng bộ sách này cho Phụ lục</button><button class="btn secondary text-sm" onclick="closeSgkDetailModal()">Đóng</button></div></div></section></div>
+<div id="sgkExtractModal" class="modal hidden"><section class="card p-5 max-w-lg w-full"><div class="flex justify-between items-center gap-3"><h2 class="font-black text-lg text-teal-800 dark:text-teal-300">🚀 Trích xuất Tri thức từ PDF SGK</h2><button type="button" class="btn secondary" onclick="closeSgkExtractModal()">✕</button></div><p class="text-xs opacity-75 mt-1">Chọn chính xác Khối lớp và Môn học của tệp SGK để AI trích xuất đúng 100% chương trình vào CSDL dùng chung.</p><div class="mt-3 space-y-3"><div><label class="label text-xs font-bold">Tệp SGK đã nạp:</label><div id="sgkExtractFileName" class="text-xs p-2.5 rounded-lg border truncate font-mono" style="background:var(--paper);border-color:var(--line)">Chưa chọn tệp</div></div><div class="grid grid-cols-2 gap-3"><div><label class="label text-xs font-bold" for="sgkExtractGrade">Khối lớp</label><select id="sgkExtractGrade" class="field text-sm"><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8">Lớp 8</option><option value="9">Lớp 9</option></select></div><div><label class="label text-xs font-bold" for="sgkExtractSubject">Môn học</label><select id="sgkExtractSubject" class="field text-sm"></select></div></div><div><label class="label text-xs font-bold" for="sgkExtractSeries">Bộ sách</label><select id="sgkExtractSeries" class="field text-sm"><option value="Sách giáo khoa dùng chung (từ 2026-2027)" selected>Sách giáo khoa dùng chung (từ 2026-2027)</option><option value="Kết nối tri thức với cuộc sống">Kết nối tri thức với cuộc sống</option><option value="Cánh diều">Cánh diều</option><option value="Chân trời sáng tạo">Chân trời sáng tạo</option><option value="Bộ sách khác">Bộ sách khác</option></select></div></div><div class="mt-4 flex justify-between items-center gap-2"><button type="button" class="btn secondary text-xs" onclick="document.querySelector('#sgkFiles').click()">📁 Đổi tệp SGK</button><div class="flex gap-2"><button type="button" class="btn secondary text-sm" onclick="closeSgkExtractModal()">Hủy</button><button type="button" class="btn primary text-sm font-bold" onclick="confirmAndExecuteSgkExtract()">🚀 Bắt đầu trích xuất</button></div></div></section></div>
 <script>
 /* Client-side application: API keys are kept per signed-in account and synchronized on demand. */
 const storedUserEmail=String(readCanvasStorage('userEmail')||'').trim().toLowerCase();
@@ -238,13 +240,14 @@ function compactSgkText(text){
   }
   return [...new Set(keep)].slice(0,2500).join('\n').slice(0,150000);
 }
-function stageFiles(files,kind){const staged=Array.from(files||[]);if(kind==='ppct')stagedPpctFiles=staged;else stagedSgkFiles=staged;const label=staged.map(file=>esc(file.name)).join(', ');fileList.innerHTML=`<div>✓ Đã chọn ${staged.length} tệp ${kind==='ppct'?'PPCT':'SGK'}: ${label||'—'}. Sẵn sàng, hãy bấm nút thao tác tương ứng.</div>`;notify(`Đã lưu tệp ${kind==='ppct'?'PPCT':'SGK'}; chưa xử lý.`)}
+function stageFiles(files,kind){const staged=Array.from(files||[]);if(kind==='ppct'){stagedPpctFiles=staged;}else{stagedSgkFiles=staged;if(staged[0]){const det=detectGradeAndSubjectFromFileName(staged[0].name);if(det.grade){const gel=document.querySelector('#grade');if(gel&&gel.value!==det.grade){gel.value=det.grade;if(typeof refreshSubjects==='function')refreshSubjects();if(typeof loadDefaultPpctStructure==='function')loadDefaultPpctStructure(true);}}if(det.subject){const sel=document.querySelector('#subject');if(sel)sel.value=det.subject;}if(det.grade||det.subject){checkSharedSgkKnowledge(true);updateQuickGradeButtons(det.grade);}}}const label=staged.map(file=>esc(file.name)).join(', ');fileList.innerHTML=`<div>✓ Đã chọn ${staged.length} tệp ${kind==='ppct'?'PPCT':'SGK'}: ${label||'—'}. Sẵn sàng, hãy bấm nút thao tác tương ứng.</div>`;notify(`Đã lưu tệp ${kind==='ppct'?'PPCT':'SGK'}; chưa xử lý.`)}
 async function recognizeStagedPpct(){if(!stagedPpctFiles.length)return notify('Hãy chọn tệp PPCT trước.');return parseFiles(stagedPpctFiles,'ppct')}
 async function readStagedSgk(){if(!stagedSgkFiles.length)return notify('Hãy chọn tệp SGK trước.');sgkCompactContext='';sgkKnowledgeBase='';await parseFiles(stagedSgkFiles,'sgk');if(!sgkCompactContext.trim())return notify('Không trích xuất được nội dung SGK; tệp có thể là bản scan cần OCR.');try{setProgress(55,'AI đang đọc ngữ cảnh SGK…');const analysis=await callAiJson(`Đọc ngữ cảnh SGK đã tinh gọn sau và chỉ trả JSON {"summary":"...","lessons":["..."]}; không tạo phụ lục, không suy diễn mã.\n${sgkCompactContext.slice(0,30000)}`);sgkKnowledgeBase=JSON.stringify(analysis);sgkCompactContext+=`\n[AI hiểu SGK]\n${sgkKnowledgeBase}`;const count=Array.isArray(analysis.lessons)?analysis.lessons.length:0;const message=`✓ Đã hiểu thông tin SGK (${stagedSgkFiles.map(file=>file.name).join(', ')} — ${count||'các'} bài học/hoạt động)`;const status=document.querySelector('#sgkStatus');if(status)status.textContent=message;fileList.innerHTML+=`<div class="font-bold text-green-700">${esc(message)}</div>`;notify('Đã hiểu thông tin SGK');setProgress(100,'Đã hiểu thông tin SGK',true,3000)}catch(error){const message=`Không thể đọc SGK bằng AI: ${error.message}`;fileList.innerHTML+=`<div class="text-red-600">✗ ${esc(message)}</div>`;notify(message);setProgress(100,message,true,3000)}}
 
 function onBookSeriesChange(){checkSharedSgkKnowledge(true)}
 async function checkSharedSgkKnowledge(silent=false){
   const mon=document.querySelector('#subject')?.value||'',lop=document.querySelector('#grade')?.value||'',series=document.querySelector('#bookSeries')?.value||'';
+  updateQuickGradeButtons(lop);
   if(!mon||!lop||!series)return;
   const container=document.querySelector('#sharedSgkContainer');
   const titleEl=document.querySelector('#sharedSgkTitle');
@@ -272,7 +275,7 @@ async function checkSharedSgkKnowledge(silent=false){
       titleEl.innerHTML=`ℹ Chưa có Bản đồ Tri thức SGK trong CSDL (${esc(series)} - ${esc(mon)} ${esc(lop)})`;
       descEl.innerHTML=`Bạn có thể bấm <b>"⚡ Nạp Tri thức chuẩn"</b> để nạp tức thì 100% bài học của môn <b>${esc(mon)} ${esc(lop)}</b>, hoặc mở <b>"📚 Bảng nạp tất cả các môn"</b> để quản lý toàn trường.`;
       if(actionsEl){
-        actionsEl.innerHTML=`<button type="button" class="btn primary text-xs" onclick="seedStandardSgkKnowledge()">⚡ Nạp Tri thức chuẩn: ${esc(mon)} ${esc(lop)} (100% bài)</button><button type="button" class="btn secondary text-xs" onclick="openSgkLibraryModal()">📚 Bảng nạp tất cả các môn</button><button type="button" class="btn secondary text-xs" onclick="extractAndSaveSharedSgk()">🚀 Trích xuất từ PDF SGK</button>`;
+        actionsEl.innerHTML=`<button type="button" class="btn primary text-xs" onclick="seedStandardSgkKnowledge()">⚡ Nạp Tri thức chuẩn: ${esc(mon)} ${esc(lop)} (100% bài)</button><button type="button" class="btn secondary text-xs" onclick="openSgkLibraryModal()">📚 Bảng nạp tất cả các môn</button><button type="button" class="btn secondary text-xs" onclick="openSgkExtractModal()">🚀 Trích xuất từ PDF SGK</button>`;
       }
       loadedSharedSgkKnowledge=null;
     }
@@ -678,6 +681,100 @@ async function seedStandardSgkKnowledge(subject,grade,series,silent=false){
     checkSharedSgkKnowledge(true);
     if(!silent){notify(`✓ Đã lưu Bản đồ Tri thức ${mon} ${lop} (${lessons.length} bài) vào bộ nhớ máy.`);setProgress(100,`Đã nạp ${lessons.length} bài học!`,true,3000);}
   }
+}
+
+function detectGradeAndSubjectFromFileName(fileName) {
+  const s = String(fileName || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+  let grade = null;
+  const gradeMatch = s.match(/(?:lop|k|khoi)\s*([6-9])\b/) || s.match(/[\b_ -]([6-9])[\b_ -]/) || s.match(/([6-9])(?:\.pdf|\.docx|\.txt)/);
+  if (gradeMatch) grade = gradeMatch[1];
+  let subject = null;
+  if (/toan/i.test(s)) subject = 'Toán học';
+  else if (/ngu van|van/i.test(s)) subject = 'Ngữ văn';
+  else if (/khoa hoc tu nhien|khtn/i.test(s)) subject = 'Khoa học tự nhiên';
+  else if (/lich su|dia li|su.*dia/i.test(s)) subject = 'Lịch sử và Địa lí';
+  else if (/tin hoc|tin/i.test(s)) subject = 'Tin học';
+  else if (/cong nghe/i.test(s)) subject = 'Công nghệ';
+  else if (/giao duc cong dan|gdcd/i.test(s)) subject = 'Giáo dục công dân';
+  else if (/tieng anh|english/i.test(s)) subject = 'Tiếng Anh (Ngoại ngữ 1)';
+  else if (/am nhac/i.test(s)) subject = 'Âm nhạc';
+  else if (/mi thuat/i.test(s)) subject = 'Mĩ thuật';
+  else if (/the chat|gdtc/i.test(s)) subject = 'Giáo dục thể chất';
+  else if (/trai nghiem|hdtn/i.test(s)) subject = 'Hoạt động trải nghiệm, hướng nghiệp';
+  else if (/dia phuong|gddp/i.test(s)) subject = 'Giáo dục địa phương';
+  return { grade, subject };
+}
+
+function setQuickGrade(grade) {
+  const gradeEl = document.querySelector('#grade');
+  if (gradeEl) {
+    gradeEl.value = String(grade);
+    if (typeof refreshSubjects === 'function') refreshSubjects();
+    if (typeof loadDefaultPpctStructure === 'function') loadDefaultPpctStructure(true);
+    checkSharedSgkKnowledge(true);
+  }
+  updateQuickGradeButtons(grade);
+}
+
+function updateQuickGradeButtons(activeGrade) {
+  const cur = activeGrade || document.querySelector('#grade')?.value || '6';
+  document.querySelectorAll('.btn-grade-quick').forEach(b => {
+    if (b.getAttribute('data-grade') === String(cur)) {
+      b.className = 'btn primary text-xs py-1 px-2.5 rounded-lg font-bold btn-grade-quick active';
+    } else {
+      b.className = 'btn secondary text-xs py-1 px-2.5 rounded-lg btn-grade-quick';
+    }
+  });
+}
+
+function openSgkExtractModal() {
+  if (!stagedSgkFiles.length) {
+    notify('Vui lòng chọn tệp SGK (PDF hoặc Word) để trích xuất.');
+    const fileInput = document.querySelector('#sgkFiles');
+    if (fileInput) fileInput.click();
+    return;
+  }
+  const modal = document.querySelector('#sgkExtractModal');
+  if (!modal) return extractAndSaveSharedSgk();
+  const fileNames = stagedSgkFiles.map(f => f.name).join(', ');
+  const fileNameEl = document.querySelector('#sgkExtractFileName');
+  if (fileNameEl) fileNameEl.textContent = fileNames;
+  const gradeEl = document.querySelector('#sgkExtractGrade');
+  const subjectEl = document.querySelector('#sgkExtractSubject');
+  const seriesEl = document.querySelector('#sgkExtractSeries');
+  const detected = detectGradeAndSubjectFromFileName(stagedSgkFiles[0]?.name);
+  const curGrade = detected.grade || document.querySelector('#grade')?.value || '6';
+  const curSubject = detected.subject || document.querySelector('#subject')?.value || 'Toán học';
+  const curSeries = document.querySelector('#bookSeries')?.value || 'Sách giáo khoa dùng chung (từ 2026-2027)';
+  if (gradeEl) gradeEl.value = curGrade === '6-9' ? '6' : curGrade;
+  if (subjectEl) {
+    subjectEl.innerHTML = (typeof KHBD_ALL_SUBJECTS !== 'undefined' ? KHBD_ALL_SUBJECTS : [
+      {name:'Toán học',icon:'📐'},{name:'Ngữ văn',icon:'📖'},{name:'Khoa học tự nhiên',icon:'🔬'},{name:'Lịch sử và Địa lí',icon:'🌏'},{name:'Tin học',icon:'💻'},{name:'Công nghệ',icon:'⚙️'},{name:'Giáo dục công dân',icon:'⚖️'},{name:'Tiếng Anh (Ngoại ngữ 1)',icon:'🌐'},{name:'Hoạt động trải nghiệm, hướng nghiệp',icon:'🏕'},{name:'Âm nhạc',icon:'🎵'},{name:'Mĩ thuật',icon:'🎨'},{name:'Giáo dục thể chất',icon:'🏃'},{name:'Giáo dục địa phương',icon:'🏛'}
+    ]).map(s => `<option value="${esc(s.name)}"${s.name === curSubject ? ' selected' : ''}>${s.icon} ${esc(s.name)}</option>`).join('');
+  }
+  if (seriesEl) seriesEl.value = curSeries;
+  modal.classList.remove('hidden');
+}
+
+function closeSgkExtractModal() {
+  const modal = document.querySelector('#sgkExtractModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function confirmAndExecuteSgkExtract() {
+  const gradeVal = document.querySelector('#sgkExtractGrade')?.value || '6';
+  const subjectVal = document.querySelector('#sgkExtractSubject')?.value || 'Toán học';
+  const seriesVal = document.querySelector('#sgkExtractSeries')?.value || 'Sách giáo khoa dùng chung (từ 2026-2027)';
+  const gradeEl = document.querySelector('#grade');
+  const subjectEl = document.querySelector('#subject');
+  const seriesEl = document.querySelector('#bookSeries');
+  if (gradeEl) gradeEl.value = gradeVal;
+  if (typeof refreshSubjects === 'function') refreshSubjects();
+  if (subjectEl) subjectEl.value = subjectVal;
+  if (seriesEl) seriesEl.value = seriesVal;
+  updateQuickGradeButtons(gradeVal);
+  closeSgkExtractModal();
+  await extractAndSaveSharedSgk();
 }
 
 async function extractAndSaveSharedSgk(){

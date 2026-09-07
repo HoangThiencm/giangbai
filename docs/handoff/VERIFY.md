@@ -63,6 +63,15 @@ PASS
   + `buildLessonDigitalEvidence` xây dựng minh chứng hành động sư phạm riêng biệt cho từng mã.
   + Modal Chi tiết SGK (`renderSgkDetailNlsBlock`) hiển thị trực quan các badge mã NLS và danh sách minh chứng hành động riêng rẽ.
   + Tự động phân bổ vào Phụ lục 1 và Phụ lục 3 theo mật độ NLS đã chọn.
+- [PASS] Hệ thống Nạp Tri thức Toàn diện cho Từng Môn ở Mỗi Lớp (Lớp 6–9):
+  + Section 2 tự động cập nhật theo Môn & Lớp với hook `#grade.onchange`, hiển thị nút nạp tức thì cho đúng môn và khối lớp.
+  + Modal `#sgkLibraryModal` trang bị Tab Khối lớp (Lớp 6, 7, 8, 9, Đã lưu CSDL) và ma trận 13 môn học kèm nút bấm riêng (`⚡ Nạp tri thức môn này`, `⚡ Chọn dùng môn này`).
+  + Hỗ trợ nút nạp hàng loạt: `⚡ Nạp tất cả môn Khối Lớp X` và `⚡ Nạp trọn bộ Lớp 6–9` (52 bộ môn THCS).
+  + Khả năng sinh tự động 100% bài học kèm YCCĐ chuẩn cho tất cả 13 môn THCS từ `js/khbd-curriculum.js`.
+- [PASS] Tùy chọn Khối Lớp Trực tiếp khi Nạp Tri thức từ tệp SGK:
+  + Thanh nút chuyển nhanh Khối lớp `[ Lớp 6 ] [ Lớp 7 ] [ Lớp 8 ] [ Lớp 9 ]` ngay trong Section 2.
+  + Hộp thoại `#sgkExtractModal` cho phép chọn chính xác Khối lớp, Môn học, Bộ sách trước khi AI trích xuất từ tệp PDF/Word SGK.
+  + Tự động nhận diện Khối lớp và Môn học từ tên tệp SGK khi tải lên.
 - [PASS] Toàn bộ 59/59 bài test của hệ thống chạy PASS 100%.
 
 ## Bug

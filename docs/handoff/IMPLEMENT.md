@@ -422,3 +422,25 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
   + `tests/xaydungphuluc-smoke.js`: Chạy PASS 100%.
   + `tests/run-all-tests.js`: **ALL 59 TEST SUITES PASSED 100%**.
 
+---
+
+## Nâng cấp Trải nghiệm: Tùy chọn Khối Lớp Trực tiếp khi Nạp Tri thức từ tệp SGK
+
+### 1. Phản hồi Người dùng & Vấn đề Cốt lõi
+- **Phản hồi**: *"nhưng nạp tri thức từ sgk không chọn lớp được à"*
+- **Nguyên nhân**: Trường Khối lớp (`#grade`) ban đầu nằm ở Mục 1. Khi giáo viên cuộn xuống Mục 2 để tải tệp SGK hoặc bấm "🚀 Trích xuất từ PDF SGK", tại Mục 2 không có chỉ báo hoặc dropdown chọn Khối lớp, và hàm `extractAndSaveSharedSgk` âm thầm lấy giá trị của `#grade` ở Mục 1, gây cảm giác không thể chọn lớp khi nạp SGK.
+
+### 2. Các Cải tiến Kỹ thuật Đã Triển khai
+1. **Thanh Chọn nhanh Khối Lớp ngay trong Khung Tri thức Mục 2**:
+   - Bổ sung hàng nút chuyển nhanh: `Khối lớp áp dụng: [ Lớp 6 ] [ Lớp 7 ] [ Lớp 8 ] [ Lớp 9 ]` ngay trong `#sharedSgkContainer`.
+   - Hàm `setQuickGrade(grade)`: Chuyển đổi Khối lớp tức thì, tự động cập nhật `#grade`, làm mới môn học, nạp cấu trúc mẫu và cập nhật trạng thái kho tri thức mà không cần cuộn lên Mục 1.
+2. **Hộp thoại Chọn Lớp & Môn khi Trích xuất SGK (`#sgkExtractModal`)**:
+   - Khi bấm **"🚀 Trích xuất từ PDF SGK"**: Mở modal trực quan hiển thị tên tệp SGK đã chọn, dropdown **Khối lớp (Lớp 6, 7, 8, 9)**, **Môn học (13 môn)** và **Bộ sách**.
+   - Giáo viên có thể chủ động kiểm tra hoặc đổi lại đúng Khối lớp và Môn học trước khi bấm **"🚀 Bắt đầu trích xuất"**.
+3. **Tự động Nhận diện Khối Lớp & Môn học từ Tên Tệp (`detectGradeAndSubjectFromFileName`)**:
+   - Khi giáo viên chọn tệp SGK (ví dụ: `Toan_7_tap_1.pdf`, `KHTN_8.docx`, `Lich_su_9.pdf`...), hàm `stageFiles` tự động phát hiện số lớp và môn học từ tên tệp để điền sẵn vào Khối lớp và Môn học.
+4. **Kiểm thử**:
+   - Bổ sung kiểm tra DOM IDs (`#sgkExtractModal`, `#sgkExtractGrade`, `#sgkExtractSubject`, `#sgkExtractSeries`, `#sgkExtractFileName`) và các hàm mới vào `tests/sgk-knowledge-smoke.js`.
+   - Chạy `tests/run-all-tests.js`: Toàn bộ 59/59 test suites PASS 100%.
+
+
