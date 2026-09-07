@@ -3096,16 +3096,17 @@
         }
 
         function compactBaoGiangLessonRows(rows) {
-            const compacted = new Map();
-            (rows || []).forEach(row => {
+            // Chỉ gộp những dòng liền kề của cùng một bài (ví dụ Bài 1 - tiết 1, tiết 2).
+            // Tuyệt đối không gộp các bài trùng tên nhưng nằm ở những phần khác nhau của PPCT.
+            return (rows || []).reduce((compacted, row) => {
                 const lesson = normalizeBaoGiangLessonTitle(row.lesson);
-                if (!lesson) return;
-                const key = foldText(lesson);
-                const current = compacted.get(key) || { lesson, periods: 0 };
-                current.periods += Math.max(1, Number.parseInt(row.periods, 10) || 1);
-                compacted.set(key, current);
-            });
-            return [...compacted.values()];
+                if (!lesson) return compacted;
+                const periods = Math.max(1, Number.parseInt(row.periods, 10) || 1);
+                const previous = compacted[compacted.length - 1];
+                if (previous && foldText(previous.lesson) === foldText(lesson)) previous.periods += periods;
+                else compacted.push({ lesson, periods });
+                return compacted;
+            }, []);
         }
 
         // Ưu tiên PPCT chung cả khối; dữ liệu theo lớp từ phiên bản cũ chỉ là phương án dự phòng.
@@ -3155,7 +3156,7 @@
                                 <label class="form-group" style="margin:0;">Môn<input id="bg-ppct-subject-${index}" class="form-control" style="width:100%;box-sizing:border-box;" value="${escapeHtml(group.subject)}"></label>
                             </div>
                             <label class="form-group" style="display:block;margin:10px 0 0;">Bài dạy | số tiết<textarea id="bg-ppct-items-${index}" class="form-control" style="display:block;width:100%;box-sizing:border-box;min-height:140px;line-height:1.45;" rows="${Math.min(12, Math.max(5, group.items.length + 1))}">${escapeHtml(lessonLines)}</textarea></label>
-                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn-small btn-small-primary" onclick="saveBaoGiangCurriculumGroup(${index})"><i class="fas fa-save"></i> Lưu thay đổi</button><button type="button" class="btn-small" onclick="compactBaoGiangCurriculumGroup(${index})"><i class="fas fa-compress"></i> Gộp các tiết cùng bài</button><button type="button" class="btn-small" onclick="deleteBaoGiangCurriculumGroup(${index})"><i class="fas fa-trash"></i> Xóa PPCT này</button></div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn-small btn-small-primary" onclick="saveBaoGiangCurriculumGroup(${index})"><i class="fas fa-save"></i> Lưu thay đổi</button><button type="button" class="btn-small" onclick="compactBaoGiangCurriculumGroup(${index})"><i class="fas fa-compress"></i> Gộp tiết liền kề cùng bài</button><button type="button" class="btn-small" onclick="deleteBaoGiangCurriculumGroup(${index})"><i class="fas fa-trash"></i> Xóa PPCT này</button></div>
                         </details>
                     </div>
                 </details>`;
@@ -3243,15 +3244,14 @@
                 const text = await extractBaoGiangPpctText(file);
                 if (!text.trim()) throw new Error('Không trích xuất được nội dung từ tệp.');
                 if (status) status.textContent = 'AI đang chuẩn hóa PPCT…';
-                const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"${grade}","subject":"${subjectName}","lesson":"Bài 1. Đơn thức","periods":2}]}. Đây là PPCT môn ${subjectName} dùng chung cho TOÀN BỘ khối ${grade}; class_name BẮT BUỘC là "${grade}" và subject BẮT BUỘC là "${subjectName}" ở mọi phần tử, không ghi từng lớp con. QUAN TRỌNG: chỉ tạo MỘT phần tử cho mỗi BÀI/CHỦ ĐỀ của SGK; nếu bài có nhiều tiết thì cộng tổng số tiết vào periods. CẤM coi "Tiết 1", "Tiết 2", các mục nhỏ, hoạt động hoặc dòng bảng là bài riêng. Giữ nguyên tên bài và số tiết nếu có trong tài liệu; không tự bịa dữ liệu. Không đưa dòng tiêu đề học kỳ/chương nếu không có số tiết.\n\nPPCT:\n${text.slice(0, 70000)}`;
+                const prompt = `Bạn là chuyên viên xây dựng kế hoạch giáo dục THCS. Đọc PPCT dưới đây và chỉ trả JSON hợp lệ: {"curriculum":[{"class_name":"${grade}","subject":"${subjectName}","lesson":"Bài 1. Đơn thức","periods":2}]}. Đây là PPCT môn ${subjectName} dùng chung cho TOÀN BỘ khối ${grade}; class_name BẮT BUỘC là "${grade}" và subject BẮT BUỘC là "${subjectName}" ở mọi phần tử, không ghi từng lớp con. QUAN TRỌNG: xuất đúng thứ tự các BÀI/CHỦ ĐỀ trong tài liệu gốc. Một bài có nhiều tiết thì ghi tổng số tiết của chính bài đó. Nếu các bài/chủ đề ở những phần khác nhau trùng tên (ví dụ nhiều dòng "Luyện tập chung", "Ôn tập"), PHẢI giữ thành các phần tử riêng theo thứ tự xuất hiện; không cộng tiết, không gộp theo tên. Chỉ gộp các dòng tiết liền kề khi tài liệu khẳng định chúng thuộc cùng một bài. CẤM coi "Tiết 1", "Tiết 2", các mục nhỏ, hoạt động hoặc dòng bảng là bài riêng. Giữ nguyên tên bài và số tiết nếu có trong tài liệu; không tự bịa dữ liệu. Không đưa dòng tiêu đề học kỳ/chương nếu không có số tiết.\n\nPPCT:\n${text.slice(0, 70000)}`;
                 const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 16384 } };
                 const response = await fetch('api/khbd_gemini.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ model: 'gemini-2.5-flash', payload, timeout: 90 }) });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || data.ok === false) throw new Error(data.error || data.body?.error?.message || `Không thể gọi AI nhận diện PPCT (mã ${data.status || response.status}).`);
                 const parsed = parseAiJson(extractGeminiText(data));
                 const rows = Array.isArray(parsed.curriculum) ? parsed.curriculum : [];
-                const compactedRows = compactBaoGiangLessonRows(rows);
-                const lines = compactedRows.map(item => `${grade} | ${subjectName} | ${item.lesson} | ${item.periods}`).filter(line => !/\|\s*\|/.test(line));
+                const lines = rows.map(item => ({ lesson: String(item?.lesson || '').trim(), periods: Math.max(1, Number.parseInt(item?.periods, 10) || 1) })).filter(item => item.lesson).map(item => `${grade} | ${subjectName} | ${item.lesson} | ${item.periods}`).filter(line => !/\|\s*\|/.test(line));
                 if (!lines.length) throw new Error('AI không nhận diện được dòng PPCT hợp lệ.');
                 state.bao_giang.curriculum_text = mergeBaoGiangCurriculumLines(lines);
                 const output = document.getElementById('bg-curriculum');
