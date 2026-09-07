@@ -13,7 +13,8 @@ const sourceFunctions=new Set(functions(source)),targetFunctions=new Set(functio
 for(const id of sourceIds){if(!['selectModel','keyBadge'].includes(id))assert(targetIds.has(id),`missing original DOM id #${id}`)}
 for(const name of sourceFunctions)assert(targetFunctions.has(name),`missing original function ${name}`);
 assert(targetIds.has('canvasHostBanner'),'missing Canvas connection banner');
-['function cleanNlsColumnText','function cleanAiColumnText','hasCode:hasAiCode(value)'].forEach(value=>assert(target.includes(value),`missing clean Appendix 1 integration behavior: ${value}`));
+['function enrichNlsCode','function cleanNlsColumnText','function cleanAiColumnText','hasCode:hasAiCode(value)','return lines.length?lines.join(\'\\n\'):\'\''].forEach(value=>assert(target.includes(value),`missing clean Appendix 1 integration behavior: ${value}`));
+['nlsAdaptiveOptions','nlsNoAiDensity','Tự động theo tiết &amp; AI (Khuyên dùng)','function toggleNlsCustomDensity','function getExpectedNlsCount','noAiDensity','row.lesson,row.periods','QUY TẮC PHÂN BỔ NLS'].forEach(value=>assert(target.includes(value),`missing adaptive NLS behavior: ${value}`));
 
 for(const text of [
   '<script src="https://hoangthiencm.id.vn/js/khbd-yccd.js"></script>',
@@ -36,10 +37,54 @@ function sliceFunction(name){
   return target.slice(start,target.indexOf('\n',start));
 }
 function sliceNamedFunction(name){
-  const start=target.indexOf(`function ${name}(`);
+  const start=[target.indexOf(`function ${name}(`),target.indexOf(`async function ${name}(`)].filter(index=>index>=0).sort((a,b)=>a-b)[0];
   assert(start>=0,`missing ${name}`);
   return target.slice(start,target.indexOf('\n',start));
 }
+const adaptiveNlsSandbox={};vm.createContext(adaptiveNlsSandbox);vm.runInContext(sliceNamedFunction('getExpectedNlsCount')+'\n'+sliceNamedFunction('getExpectedNlsMaxCount'),adaptiveNlsSandbox);
+const adaptiveNlsConfig={nls:{density:'adaptive',noAiDensity:'2-3'}};
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,false,adaptiveNlsConfig),2,'one-period lessons must use two NLS codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,true,adaptiveNlsConfig),2,'AI-selected multi-period lessons must use two NLS codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,false,adaptiveNlsConfig),2,'the 2–3 setting must permit a two-code fallback');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,{nls:{density:'adaptive',noAiDensity:'2'}}),2,'the two-code option must cap a multi-period lesson without AI at two NLS codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,adaptiveNlsConfig),3,'the 2–3 option must cap a multi-period lesson without AI at three NLS codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,false,adaptiveNlsConfig),2,'one-period lessons must cap NLS at two codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,true,adaptiveNlsConfig),2,'AI-selected multi-period lessons must cap NLS at two codes');
+assert(target.includes('function canvasConfirm(message)'), 'Canvas must provide an in-DOM confirmation modal');
+assert(!/\bconfirm\(/.test(target), 'Canvas must not call the browser confirm() API in a sandbox');
+for(const name of ['loadDraftById','deleteDraftFromServer','restoreCanvasDraft','resetData','deletePpctRowAt'])assert(target.includes(`await canvasConfirm(`),`${name} must await the Canvas confirmation modal`);
+
+// Gemini Canvas does not grant allow-modals, so confirmation must be rendered
+// in the document and resolved only by its own buttons or backdrop.
+let renderedConfirmModal;
+const confirmSandbox={
+  esc:value=>String(value).replace(/</g,'&lt;'),
+  document:{
+    createElement(){
+      const actions={cancel:{},ok:{}};
+      return {className:'',style:{},innerHTML:'',removed:false,
+        querySelector(selector){return actions[selector.includes('cancel')?'cancel':'ok']},
+        addEventListener(_event,handler){this.backdropHandler=handler},
+        remove(){this.removed=true}
+      };
+    },
+    body:{appendChild(modal){renderedConfirmModal=modal}}
+  }
+};
+vm.createContext(confirmSandbox);
+vm.runInContext(sliceNamedFunction('canvasConfirm'),confirmSandbox);
+(async()=>{
+  const accepted=confirmSandbox.canvasConfirm('Mở <b>nháp</b>?');
+  assert.equal(renderedConfirmModal.className,'modal');
+  assert(renderedConfirmModal.innerHTML.includes('Mở &lt;b>nháp&lt;/b>?'));
+  renderedConfirmModal.querySelector('[data-action="ok"]').onclick();
+  assert.equal(await accepted,true);
+  assert.equal(renderedConfirmModal.removed,true);
+  const cancelled=confirmSandbox.canvasConfirm('Xóa?');
+  renderedConfirmModal.backdropHandler({target:renderedConfirmModal});
+  assert.equal(await cancelled,false);
+  console.log('canvas in-DOM confirmation: PASS');
+})().catch(error=>{console.error(error);process.exitCode=1});
 assert(target.includes('function getConfig({includeAiSelection=true}={})'),
   'getConfig must support suppressing AI selection while bootstrapping PPCT');
 assert(target.includes('defaultPpctRows(getConfig({includeAiSelection:false}))'),
@@ -102,18 +147,19 @@ for(const id of ['saveDraftAccount','loadDraftAccount','draftJsonInput'])assert(
 for(const name of ['submitSaveDraft','fetchAndRenderDraftList','loadDraftById','deleteDraftFromServer'])assert(sliceFunction(name).includes('requestCanvasDraft('));
 const storage=new Map(),draftCalls=[],messages=[];
 const draftPayload={version:1,config:{giaoVien:'Giáo viên',monHoc:'Toán học'},sourcePpctRows:[{lesson:'Bài 1'}],results:{'1':{title:'Phụ lục'}}};
-let restored=null,download=null,allowRestore=true;
+let restored=null,download=null;
 const draftSandbox={URLSearchParams,Blob,console,
+  allowRestore:true,
   localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},
   document:{querySelector:()=>null},
-  notify:message=>messages.push(message),confirm:()=>allowRestore,
+  notify:message=>messages.push(message),
   buildDraftPayload:()=>draftPayload,draftDefaultTitle:()=> 'Kế hoạch mẫu',
   applyDraftPayload:value=>{restored=value},setDraftStatus(){},closeSaveDraftModal(){},closeLoadDraftModal(){},
   saveAs:(blob,name)=>{download={blob,name}},
   fetch:async(url,init)=>{draftCalls.push({url,init});return {ok:true}},
 };
 vm.createContext(draftSandbox);
-vm.runInContext(`const DRAFT_API_ENDPOINT=${JSON.stringify(draftEndpoint)};let currentDraftId=42,currentDraftTitle='';`+
+vm.runInContext(`const DRAFT_API_ENDPOINT=${JSON.stringify(draftEndpoint)};let currentDraftId=42,currentDraftTitle='';async function canvasConfirm(){return allowRestore;}`+
   sliceNamedFunction('readCanvasStorage')+"\nlet canvasDraftAccount=readCanvasStorage('canvas_xdpl_user');\n"+
   ['setCanvasDraftAccount','savedCanvasDraft','restoreCanvasDraft','saveDraftLocally','loadDraftLocally','exportDraftJson'].map(sliceNamedFunction).join('\n')+'\n'+
   sliceFunction('requestCanvasDraft')+'\n'+sliceFunction('importDraftJson'),draftSandbox);
@@ -132,16 +178,21 @@ vm.runInContext(`const DRAFT_API_ENDPOINT=${JSON.stringify(draftEndpoint)};let c
     assert.equal(call.init.credentials,'omit');
     if(options.body)assert.equal(JSON.parse(call.init.body).user_account,'teacher1');
   }
+  vm.runInContext(sliceFunction('loadDraftById'),draftSandbox);
+  restored=null;
+  draftSandbox.fetch=async()=>({ok:true,json:async()=>({ok:true,id:19,title:'Mở từ CSDL',draft:draftPayload})});
+  assert.equal(await draftSandbox.loadDraftById(19),true,'opening a draft must proceed after the in-DOM confirmation');
+  assert.deepEqual(JSON.parse(JSON.stringify(restored)),draftPayload);
   draftSandbox.saveDraftLocally();
-  draftSandbox.loadDraftLocally();
+  await draftSandbox.loadDraftLocally();
   assert.deepEqual(JSON.parse(JSON.stringify(restored)),draftPayload);
   restored=null;
-  assert.throws(()=>draftSandbox.restoreCanvasDraft({unrelated:true}),/hợp lệ/);
+  await assert.rejects(()=>draftSandbox.restoreCanvasDraft({unrelated:true}),/hợp lệ/);
   assert.equal(restored,null,'invalid JSON must not erase current work');
-  allowRestore=false;
-  draftSandbox.restoreCanvasDraft(JSON.parse(storage.get('canvas_xdpl_draft')));
+  draftSandbox.allowRestore=false;
+  await draftSandbox.restoreCanvasDraft(JSON.parse(storage.get('canvas_xdpl_draft')));
   assert.equal(restored,null,'cancel must preserve current work');
-  allowRestore=true;
+  draftSandbox.allowRestore=true;
   draftSandbox.exportDraftJson();
   assert.equal(download.name,'ke-hoach-phu-luc.json');
   const exported=await download.blob.text();

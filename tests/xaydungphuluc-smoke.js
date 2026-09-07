@@ -1,7 +1,7 @@
 /* Smoke test for the standalone THCS Appendix Builder. Run: node tests/xaydungphuluc-smoke.js */
 const fs=require('fs'),path=require('path'),assert=require('assert'),vm=require('vm');
 const {getCleanOfficialYccd,generatePedagogicalOutcome,KHBD_YCCD}=require('../js/khbd-yccd.js');
-const {recommendOfficialStandards}=require('../js/khbd-standards.js');
+const {recommendOfficialStandards,KHBD_STANDARDS}=require('../js/khbd-standards.js');
 async function run(){
 const file=path.join(__dirname,'..','xaydungphuluc.html');
 const html=fs.readFileSync(file,'utf8');
@@ -22,6 +22,18 @@ assert(!/sessionStorage\.(?:setItem|getItem)/i.test(html),'API keys must never u
 assert(!html.includes('readStoredKeyList')&&!html.includes('cacheUserKeys'),'legacy API-key cache helpers must be removed');
 ['Đang đọc tệp dữ liệu PPCT…','Đang gửi ngữ cảnh lên AI (Gemini/Mistral)…','AI đang phân tích và trích xuất bảng PPCT…','Đang khởi tạo Bảng PPCT 8 cột…','Đã nhận diện hoàn tất bảng PPCT!','await ensureKeysLoaded()'].forEach(has);
 ['nlsRate','nlsDensity','aiRate','aiDensity','NLS và AI ĐỘC LẬP','1–2 mã/bài','2–3 mã/bài','3–4 mã/bài'].forEach(has);
+['nlsAdaptiveOptions','nlsNoAiDensity','Tự động theo tiết &amp; AI (Khuyên dùng)','function toggleNlsCustomDensity','function getExpectedNlsCount','noAiDensity','row.lesson,row.periods','QUY TẮC PHÂN BỔ NLS'].forEach(has);
+const adaptiveNlsFunction=html.slice(html.indexOf('function getExpectedNlsCount'),html.indexOf('\n',html.indexOf('function getExpectedNlsCount')));
+const adaptiveNlsMaxFunction=html.slice(html.indexOf('function getExpectedNlsMaxCount'),html.indexOf('\n',html.indexOf('function getExpectedNlsMaxCount')));
+const adaptiveNlsSandbox={};vm.createContext(adaptiveNlsSandbox);vm.runInContext(adaptiveNlsFunction+'\n'+adaptiveNlsMaxFunction,adaptiveNlsSandbox);
+const adaptive={nls:{density:'adaptive',noAiDensity:'2-3'}};
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,false,adaptive),2,'one-period lessons must use two NLS codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,true,adaptive),2,'multi-period lessons with at least one AI period must use two NLS codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,false,adaptive),2,'the 2–3 option must allow the two-code fallback');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,{nls:{density:'adaptive',noAiDensity:'2'}}),2,'the two-code option must cap a multi-period lesson without AI at two NLS codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,adaptive),3,'the 2–3 option must cap a multi-period lesson without AI at three NLS codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,false,adaptive),2,'one-period lessons must cap NLS at two codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,true,adaptive),2,'multi-period lessons with AI must cap NLS at two codes');
 ['appendixPrompt','NGUYÊN TẮC BẢO TOÀN PPCT NGUỒN','giữ nguyên 100%','Tuần 1 đến Tuần 35','Phụ lục 1','Phụ lục 2','Phụ lục 3','Công văn 5512','TT 38/2021','TT 14/2020'].forEach(has);
 ['parseFiles','extractPpctRows','extractDocxTables','ingestSourceTables','preserveSourceSchedule','mammoth.extractRawText','pdfjsLib','XLSX.read','generateSelected','exportDocx','contenteditable','exportAll'].forEach(has);
 has('max-w-[98%]');
@@ -56,7 +68,7 @@ const script=html.match(/<script>\s*(\/\* Client-side[\s\S]*?)<\/script>/);
 assert(script,'inline application script missing');
 const sandbox={
   window:{},
-  KHBD_YCCD:{toan:{'6':Array.from({length:43},(_,i)=>({lesson:`Bài ${i+1}. Toán 6`})),'7':Array.from({length:37},(_,i)=>({lesson:`Bài ${i+1}. Toán 7`})),'8':Array.from({length:39},(_,i)=>({lesson:`Bài ${i+1}. Toán 8`})),'9':Array.from({length:32},(_,i)=>({lesson:`Bài ${i+1}. Toán 9`}))}},
+  KHBD_YCCD:{toan:{'6':Array.from({length:43},(_,i)=>({lesson:`Bài ${i+1}. Toán 6`})),'7':Array.from({length:37},(_,i)=>({lesson:`Bài ${i+1}. Toán 7`})),'8':Array.from({length:39},(_,i)=>({lesson:`Bài ${i+1}. Toán 8`})),'9':Array.from({length:32},(_,i)=>({lesson:`Bài ${i+1}. Toán 9`}))}},KHBD_STANDARDS,
   document:{querySelector(){return null},querySelectorAll(){return []},addEventListener(){},createElement(){return {className:'',textContent:'',append(){},remove(){}}}},
   localStorage:{getItem(){return null},setItem(){}},
   console,
@@ -171,6 +183,7 @@ assert(!html.includes('id="aiLessonPickerCard" class="card p-5 hidden"'),'AI les
 has('slice(0,aiSelectionLimit())','AI suggestion must cap the selection at 12 periods');
 has(':period:','AI selections must use stable per-period identifiers');
 ['NLS: mã - mô tả','AI TUYỆT ĐỐI chỉ được xuất','[AI: mã - mô tả]','0070C0','7030A0','nls-code','ai-code','integrationHtml','integrationCell'].forEach(has);
+['official.digital.map(item=>`${item.officialCode} - ${item.officialLabel}`)','tuyệt đối không ghi mã trần','children:children.length?children:[new Paragraph({children:[new TextRun({text:\'\'})]})]'].forEach(has);
 assert.equal(typeof sandbox.compactSgkText,'function','compact SGK index must be defined');
 const compact=vm.runInContext("compactSgkText('BÀI 1. Tập hợp\\nMục tiêu cần đạt: nhận biết tập hợp.\\nNội dung giới thiệu dài không giữ lại.\\nHoạt động khám phá: lập tập hợp.\\nLuyện tập: viết tập hợp.')",sandbox);
 assert(compact.includes('BÀI 1. Tập hợp')&&compact.includes('Mục tiêu cần đạt')&&compact.includes('Hoạt động khám phá'),'SGK compact index must retain lesson, objective and activity');
@@ -182,7 +195,9 @@ const codesFor=topic=>recommendOfficialStandards('digital',{grade:6,topic,vision
 assert(codesFor('Bài toán về số nguyên và phân số').some(code=>code.startsWith('5.3.TC1a')),'algebra must prioritize 5.3.TC1a');
 assert(codesFor('Tam giác, đo góc và vẽ hình với GeoGebra').some(code=>code.startsWith('3.1.TC1a')),'geometry must prioritize 3.1.TC1a');
 assert(codesFor('Bảng số liệu và biểu đồ cột').some(code=>code.startsWith('1.1.TC1a')||code.startsWith('1.2.TC1a')),'statistics must prioritize data standards');
-assert.equal(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]',false,0,{ai:{enabled:true},lop:'6'})",sandbox),'[NLS: 1.1.6a - Khai thác học liệu.]','unselected lesson must not retain AI integration');
+const noAiIntegration=vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]',false,0,{ai:{enabled:true},lop:'6',nls:{density:'adaptive',noAiDensity:'2-3'}})",sandbox);
+assert(!noAiIntegration.includes('[AI:'),'unselected lesson must not retain AI integration');
+assert.equal((noAiIntegration.match(/\[NLS:/g)||[]).length,2,'one-period lessons must be supplemented to two NLS codes');
 assert(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.]',true,0,{ai:{enabled:true},lop:'6'})",sandbox).includes('[AI:'),'selected lesson must receive an AI integration when AI is enabled');
 assert(vm.runInContext("integrationHtml('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]')",sandbox).includes('nls-code')&&vm.runInContext("integrationHtml('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]')",sandbox).includes('ai-code'),'preview must distinguish NLS and AI integration colors');
 assert.equal(vm.runInContext("integrationText([{text:'[NLS: 1.1.TC1a - Học liệu số]',ai:false},{label:'[AI: 6.A1.1 - Hỗ trợ]',ai:true}])",sandbox),'[NLS: 1.1.TC1a - Học liệu số]\n[AI: 6.A1.1 - Hỗ trợ]','integration objects must be converted to text before rendering');
@@ -268,12 +283,18 @@ sandbox.getCleanOfficialYccd=()=>'- Thực hiện được phép cộng và phé
 
 const splitValue='[NLS: 1.1.TC1a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]';
 const splitConfig={lop:'6',monHoc:'Toán học',nls:{enabled:true,rate:100},ai:{enabled:true}};
+const enrichedNls=sandbox.cleanNlsColumnText('[5.3.TC2a], [1.1.TC2a]');
+assert(enrichedNls.includes('5.3.TC2a - Sử dụng sáng tạo công nghệ số')&&enrichedNls.includes('1.1.TC2a - Duyệt, tìm kiếm và lọc dữ liệu'),'bare comma-separated NLS codes must receive their official labels');
+assert(!/[\[\]]/.test(enrichedNls)&&!/(?:TC\w+),/i.test(enrichedNls),'clean NLS text must remove brackets and trailing code commas');
+assert.equal(sandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra để kiểm tra kết quả.]'),'5.3.TC2a - Sử dụng GeoGebra để kiểm tra kết quả.','clean NLS text must preserve a lesson-specific application');
+assert.equal(sandbox.cleanAiColumnText('[AI: 6.A1.1 - Hỗ trợ bài tập] (Áp dụng: tiết 1).'),'6.A1.1 - Hỗ trợ bài tập (Áp dụng: tiết 1).','clean AI text must preserve its scoped application');
+assert.equal(sandbox.cleanAiColumnText(''),'','empty AI text must remain an empty Appendix 1 cell');
 const separate=sandbox.separateIntegration(splitValue,[1,3],0,splitConfig,'Bài mẫu');
 assert(/^1\.1\.TC\w+/i.test(separate.nlsText)&&!/[\[\]]/.test(separate.nlsText),'NLS column must contain only a clean NLS code');
 assert(/^6\.A\d+\.\d+/i.test(separate.aiText)&&!/[\[\]]/.test(separate.aiText)&&separate.aiText.includes('Áp dụng: tiết 1, 3'),'AI column must isolate a clean code and scope multiple selected periods');
-assert.equal(sandbox.separateIntegration(splitValue,[],0,splitConfig).aiText,'-','unselected lesson must not contain AI');
-assert.equal(sandbox.separateIntegration(splitValue,[1],0,{...splitConfig,ai:{enabled:false}}).aiText,'-','AI disabled must suppress selected codes');
-assert.equal(sandbox.separateIntegration(splitValue,[1],0,{...splitConfig,nls:{enabled:false}}).nlsText,'-','NLS disabled must suppress provided codes');
+assert.equal(sandbox.separateIntegration(splitValue,[],0,splitConfig).aiText,'','unselected lesson must leave the AI cell blank');
+assert.equal(sandbox.separateIntegration(splitValue,[1],0,{...splitConfig,ai:{enabled:false}}).aiText,'','AI disabled must leave the AI cell blank');
+assert.equal(sandbox.separateIntegration(splitValue,[1],0,{...splitConfig,nls:{enabled:false}}).nlsText,'','NLS disabled must leave its cell blank');
 assert(/^\d+\.\d+\.TC\w+/i.test(sandbox.separateIntegration('-',[],0,splitConfig).nlsText),'enabled NLS must receive a clean catalog/fallback code');
 const splitModel={columns:Array.from(appendixOne.columns),rows:[{cells:['CHƯƠNG I'],isHeader:true},{cells:['1','Bài mẫu','140','- Nhận biết được kiến thức.',separate.nlsText,separate.aiText],isHeader:false}]};
 assert.deepEqual(JSON.parse(JSON.stringify(sandbox.normalizeIntegrationTable(splitModel))).columns,splitModel.columns,'normalization must retain six separate columns');
