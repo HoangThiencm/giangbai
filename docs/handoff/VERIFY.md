@@ -54,6 +54,15 @@ PASS
 - [PASS] Khắc phục triệt để thiếu bài và nhảy cóc Bài 3 (Toán 6 đủ 43 bài):
   + Nhúng trực tiếp `DEFAULT_MATH_CATALOG` 43 bài Toán 6 (và các khối 7, 8, 9) vào chính file nguồn, không phụ thuộc mạng/obfuscator ngoài.
   + Hàm `ensureFullCurriculumLessons` bù đắp hoàn chỉnh 100% (đủ 43 bài Toán 6), tự động chèn lại Bài 3 vào đúng vị trí số 3 khi AI nhảy cóc, bù đắp đủ các bài 26..43 khi AI dừng sớm, giữ nguyên vẹn số trang và YCCD chi tiết của các bài trích xuất thành công.
+- [PASS] Khắc phục triệt để lỗi sư phạm "kiểm tra nghiệm" / "vẽ đồ thị" ở bài Số học (Bài 3 Toán 6):
+  + Phân loại rạch ròi 5 phân môn: Số học (`isArith`), Hình học (`isGeo`), Thống kê (`isStat`), Phương trình (`isEquation`), Hàm số (`isFunction`).
+  + Bài Số học gán minh chứng chuẩn: dùng máy tính cầm tay thực hiện tính toán, so sánh thứ tự hai số và phần mềm trực quan tia số/trục số; tuyệt đối không còn chữ "nghiệm" hay "đồ thị".
+  + Bộ lọc `isUnfitDigitalEvidence` và thanh lọc CSDL PHP tự động quét sạch mọi dữ liệu cũ.
+- [PASS] Tích hợp và thể hiện đa mã Năng lực số (2–3 mã NLS theo CV 3456):
+  + Tự động gợi ý 2–3 mã NLS chuẩn: `5.3.TC1a, 5.2.TC1a, 1.1.TC1a` (Lớp 6–7) hoặc `5.3.TC2a, 5.2.TC2a, 1.1.TC2a` (Lớp 8–9).
+  + `buildLessonDigitalEvidence` xây dựng minh chứng hành động sư phạm riêng biệt cho từng mã.
+  + Modal Chi tiết SGK (`renderSgkDetailNlsBlock`) hiển thị trực quan các badge mã NLS và danh sách minh chứng hành động riêng rẽ.
+  + Tự động phân bổ vào Phụ lục 1 và Phụ lục 3 theo mật độ NLS đã chọn.
 - [PASS] Toàn bộ 59/59 bài test của hệ thống chạy PASS 100%.
 
 ## Bug

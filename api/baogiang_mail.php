@@ -34,7 +34,7 @@ function baogiang_smtp_expect($socket, string $command, array $codes): void
     }
 }
 
-function baogiang_send_gmail(string $recipient, string $subject, string $body): void
+function baogiang_send_gmail(string $recipient, string $subject, string $body, string $html = ''): void
 {
     $from = trim((string) BAOGIANG_GMAIL_FROM);
     $appPassword = preg_replace('/\s+/', '', (string) BAOGIANG_GMAIL_APP_PASSWORD);
@@ -51,9 +51,19 @@ function baogiang_send_gmail(string $recipient, string $subject, string $body): 
         baogiang_smtp_expect($socket, 'RCPT TO:<' . $recipient . '>', [250, 251]);
         baogiang_smtp_expect($socket, 'DATA', [354]);
         $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
-        $headers = "From: <$from>\r\nTo: <$recipient>\r\nSubject: $encodedSubject\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64";
+        $headers = "From: <$from>\r\nTo: <$recipient>\r\nSubject: $encodedSubject\r\nMIME-Version: 1.0";
         $encodedBody = rtrim(chunk_split(base64_encode($body), 76, "\r\n"));
-        baogiang_smtp_expect($socket, $headers . "\r\n\r\n" . $encodedBody . "\r\n.", [250]);
+        if ($html !== '') {
+            $boundary = '=_BaoGiang_' . bin2hex(random_bytes(12));
+            $encodedHtml = rtrim(chunk_split(base64_encode($html), 76, "\r\n"));
+            $message = $headers . "\r\nContent-Type: multipart/alternative; boundary=\"$boundary\"\r\n\r\n"
+                . "--$boundary\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n$encodedBody\r\n"
+                . "--$boundary\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n$encodedHtml\r\n"
+                . "--$boundary--";
+        } else {
+            $message = $headers . "\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . $encodedBody;
+        }
+        baogiang_smtp_expect($socket, $message . "\r\n.", [250]);
         baogiang_smtp_expect($socket, 'QUIT', [221]);
     } finally {
         fclose($socket);
@@ -83,16 +93,17 @@ if (!baogiang_mail_configured()) {
 $payload = json_body();
 $subject = trim((string) ($payload['subject'] ?? ''));
 $body = trim((string) ($payload['body'] ?? ''));
+$html = trim((string) ($payload['html'] ?? ''));
 if ($subject === '' || $body === '') {
     respond(['ok' => false, 'error' => 'Nội dung email chưa đầy đủ.'], 422);
 }
-if (mb_strlen($subject) > 200 || mb_strlen($body) > 30000) {
+if (mb_strlen($subject) > 200 || mb_strlen($body) > 30000 || mb_strlen($html) > 200000) {
     respond(['ok' => false, 'error' => 'Nội dung email quá dài.'], 422);
 }
 
 try {
     // Chế độ cá nhân: luôn gửi lại chính Gmail đã cấu hình, không nhận người nhận từ trình duyệt.
-    baogiang_send_gmail((string) BAOGIANG_GMAIL_FROM, $subject, $body);
+    baogiang_send_gmail((string) BAOGIANG_GMAIL_FROM, $subject, $body, $html);
     respond(['ok' => true, 'message' => 'Đã gửi lịch báo giảng tới email cá nhân.']);
 } catch (Throwable $e) {
     respond(['ok' => false, 'error' => $e->getMessage()], 502);

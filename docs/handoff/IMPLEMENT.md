@@ -311,3 +311,60 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
      * Kiểm tra khởi tạo mảng rỗng Toán 6 ra ĐÚNG 43 bài (có Bài 3 và Bài 43).
      * Kiểm tra ca AI trả 25 bài và mất Bài 3: tự động phục hồi Bài 3 vào vị trí số 3, bảo lưu số trang trích xuất của bài 1..25, và bù đắp chuẩn các bài 26..43, tổng cộng đủ 43 bài.
    - Chạy `node tests/run-all-tests.js`: Toàn bộ 59 test suites PASS 100%.
+
+---
+
+## Triển khai: Sửa Lỗi Sư phạm "Kiểm tra nghiệm" Bài Số học & Tích hợp 2–3 Mã NLS (CV 3456)
+
+### 1. Khắc phục Triệt để Lỗi Sư phạm "Kiểm tra nghiệm" / "Vẽ đồ thị" ở các bài Số học
+- **Nguyên nhân gốc rễ**:
+  + Trước đây logic phân loại môn Toán dùng regex `isMath` rơi vào nhánh mặc định của Đại số nếu không phải Hình học (`isGeo`) hay Thống kê (`isStat`).
+  + Các bài Số học (như Bài 3 Toán 6: *Thứ tự trong tập hợp các số tự nhiên*, số nguyên, phân số, số thập phân...) bị gán minh chứng: *"Sử dụng phần mềm vẽ đồ thị (GeoGebra/Desmos) và máy tính cầm tay để minh họa hình học, kiểm tra nghiệm của bài..."*. Cụm từ "kiểm tra nghiệm" và "vẽ đồ thị" là hoàn toàn sai lệch về mặt sư phạm đối với nội dung Số học lớp 6.
+- **Giải pháp kỹ thuật**:
+  1. **Bộ lọc phát hiện nội dung phi lý (`isUnfitDigitalEvidence`)**:
+     ```javascript
+     function isUnfitDigitalEvidence(ev, lesson) {
+       var s = String(ev || '').toLowerCase();
+       var l = String(lesson || '').toLowerCase();
+       var isArith = /số tự nhiên|thứ tự|số nguyên|phân số|số thập phân|chia hết|ước|bội|phép tính số|tập hợp/i.test(l);
+       if (isArith && (s.includes('nghiệm') || s.includes('vẽ đồ thị') || s.includes('geogebra') || s.includes('desmos'))) return true;
+       return false;
+     }
+     ```
+  2. **Chuẩn hóa phân loại sư phạm trong `lessonAppliedNlsDescription`**:
+     - Tách rõ 5 phân môn:
+       + `isArith`: Bài Số học -> *"Sử dụng máy tính cầm tay để thực hiện tính toán, kiểm tra kết quả so sánh thứ tự hai số và khai thác phần mềm/ứng dụng trực quan tia số hoặc trục số trong bài [Tên bài]"*.
+       + `isEquation`: Bài Phương trình / Hệ phương trình -> *"Sử dụng máy tính cầm tay và phần mềm đồ thị để kiểm tra nghiệm và đối chiếu kết quả bài [Tên bài]"*.
+       + `isFunction`: Bài Hàm số -> *"Sử dụng phần mềm vẽ đồ thị (GeoGebra/Desmos) để trực quan hóa đồ thị và khảo sát hàm số bài [Tên bài]"*.
+       + `isGeo`: Bài Hình học -> *"Sử dụng phần mềm hình học động (GeoGebra) hoặc công cụ đo vẽ trực quan hóa hình vẽ bài [Tên bài]"*.
+       + `isStat`: Bài Thống kê / Xác suất -> *"Sử dụng bảng tính (Excel/Google Sheets) hoặc công cụ số để thu thập, lập bảng số liệu và vẽ biểu đồ bài [Tên bài]"*.
+  3. **Thanh lọc Backend PHP (`api/sgk_knowledge.php`)**:
+     - Thêm logic tự động làm sạch trong `action=get` và `action=save`: nếu bài học khớp số học mà cột `digital_evidence` chứa "kiem tra nghiem" hoặc "ve do thi", tự động thay thế bằng mô tả số học chuẩn xác.
+  4. **Tự động làm sạch ở Frontend (`enrichNlsCode`)**:
+     - Tự động phát hiện `isUnfitForArith` để viết lại câu mô tả chuẩn khi hiển thị hoặc đưa vào phụ lục.
+
+### 2. Cơ chế Tích hợp & Thể hiện Đa mã Năng lực số (2–3 Mã NLS) theo CV 3456
+- **Cơ chế phân bổ 2–3 mã NLS**:
+  1. `recommendLessonDigitalCandidates(lessonTitle, grade, subject, yccd)`:
+     - Tự động gợi ý bộ 2–3 mã NLS chuẩn:
+       + Lớp 6–7: `5.3.TC1a, 5.2.TC1a, 1.1.TC1a`.
+       + Lớp 8–9: `5.3.TC2a, 5.2.TC2a, 1.1.TC2a`.
+  2. `buildLessonDigitalEvidence(candidatesStr, lessonTitle)`:
+     - Tự động tạo minh chứng chi tiết cho từng mã riêng biệt:
+       + `[5.3.TC1a]`: Sử dụng máy tính cầm tay thực hành tính toán, so sánh thứ tự và phần mềm trực quan tia số/trục số.
+       + `[5.2.TC1a]`: Lựa chọn và sử dụng công cụ tính toán số (MTCT, phần mềm tia số) phù hợp với nhiệm vụ bài học.
+       + `[1.1.TC1a]`: Khai thác học liệu số, mô phỏng trực quan tia số/trục số phục vụ tìm hiểu nội dung bài học.
+  3. **Giao diện Modal Chi tiết SGK (`renderSgkDetailNlsBlock`)**:
+     - Render hàng badge trực quan: Mỗi mã là một badge tím bo góc `[Mã NLS: 5.3.TC1a] [Mã NLS: 5.2.TC1a] [Mã NLS: 1.1.TC1a]`.
+     - Bên dưới là danh sách hành động sư phạm ứng với từng mã, giải thích cụ thể học sinh làm gì với công cụ số nào.
+  4. **Trong Phụ lục 1 và Phụ lục 3**:
+     - Hàm `fallbackNlsCodes` phân bổ 1, 2 hoặc 3 mã theo cấu hình mật độ NLS mà giáo viên lựa chọn.
+     - Mỗi mã đều có câu mô tả chuẩn sư phạm, không trùng lặp, không gượng ép.
+
+### 3. Đồng bộ & Kiểm thử
+- Đồng bộ 100% trên `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`, và `xaydungphuluc.html`.
+- Cập nhật `tests/sgk-knowledge-smoke.js`:
+  + Thêm Test 3.3: Khẳng định không có "kiểm tra nghiệm" hay "vẽ đồ thị" trong bài Toán 6 số tự nhiên.
+  + Thêm Test 3.4: Kiểm tra đa mã NLS có minh chứng riêng biệt theo từng tiêu chí.
+  + Thêm Test 3.5: Kiểm tra hàm `renderSgkDetailNlsBlock` render đầy đủ badge và danh sách hành động.
+- Chạy `node tests/run-all-tests.js`: **ALL 59 TEST SUITES PASSED 100%**.

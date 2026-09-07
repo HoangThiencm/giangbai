@@ -52,6 +52,10 @@ const requiredFunctions = [
   'onBookSeriesChange',
   'checkSharedSgkKnowledge',
   'syncSharedSgkToApp',
+  'isUnfitDigitalEvidence',
+  'recommendLessonDigitalCandidates',
+  'buildLessonDigitalEvidence',
+  'renderSgkDetailNlsBlock',
   'ensureFullCurriculumLessons',
   'seedStandardSgkKnowledge',
   'extractAndSaveSharedSgk',
@@ -155,8 +159,16 @@ vm.createContext(sandbox);
 const yccdCode = fs.readFileSync('js/khbd-yccd.js', 'utf8');
 vm.runInContext(yccdCode, sandbox);
 
-// Load compactSgkText, lessonOrdinal, ensureFullCurriculumLessons, getSharedSgkLessonKnowledge, lessonAppliedNlsDescription, lessonAppliedAiDescription, appendixOneFallbackOutcome
+// Load KHBD_STANDARDS from js/khbd-standards.js
+const standardsCode = fs.readFileSync('js/khbd-standards.js', 'utf8');
+vm.runInContext(standardsCode, sandbox);
+
+// Load helpers, compactSgkText, lessonOrdinal, ensureFullCurriculumLessons, getSharedSgkLessonKnowledge, lessonAppliedNlsDescription, lessonAppliedAiDescription, appendixOneFallbackOutcome
 const codeToRun = [
+  extractFn('isUnfitDigitalEvidence', sourceCode),
+  extractFn('recommendLessonDigitalCandidates', sourceCode),
+  extractFn('buildLessonDigitalEvidence', sourceCode),
+  extractFn('renderSgkDetailNlsBlock', sourceCode),
   extractFn('compactSgkText', sourceCode),
   extractFn('lessonOrdinal', sourceCode),
   extractFn('ensureFullCurriculumLessons', sourceCode),
@@ -209,6 +221,36 @@ console.log('  -> AI tự động lấy từ Bản đồ Tri thức dùng chung:
 const yccdFromKnowledge = vm.runInContext("appendixOneFallbackOutcome('Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn', {lop:'9',monHoc:'Toán học'})", sandbox);
 assert(yccdFromKnowledge.includes('Nhận biết được phương trình bậc nhất hai ẩn'), 'YCCD phải lấy chuẩn từ SGK dùng chung');
 console.log('  -> YCCD tự động lấy từ Bản đồ Tri thức dùng chung: PASS');
+
+// Test 3.3: Kiểm tra bài Số tự nhiên Toán 6 tuyệt đối không có "kiểm tra nghiệm" hay "vẽ đồ thị"
+const nlsArith = vm.runInContext("lessonAppliedNlsDescription('5.3.TC1a', '', 'Bài 3. Thứ tự trong tập hợp các số tự nhiên')", sandbox);
+assert(!nlsArith.includes('kiểm tra nghiệm'), 'Bài Toán 6 Số tự nhiên không được chứa "kiểm tra nghiệm"');
+assert(!nlsArith.includes('vẽ đồ thị'), 'Bài Toán 6 Số tự nhiên không được chứa "vẽ đồ thị"');
+assert(nlsArith.includes('máy tính cầm tay') && (nlsArith.includes('so sánh') || nlsArith.includes('tia số')), 'Bài Toán 6 phải dùng MTCT tính toán/so sánh hoặc tia số');
+console.log('  -> NLS Toán 6 chuẩn sư phạm (không nghiệm, không đồ thị): PASS');
+
+// Test 3.4: Khi bài học có 2-3 mã năng lực số, mỗi mã phải có minh chứng tương ứng riêng biệt
+const nls11 = vm.runInContext("lessonAppliedNlsDescription('1.1.TC1a', '', 'Bài 3. Thứ tự trong tập hợp các số tự nhiên')", sandbox);
+const nls52 = vm.runInContext("lessonAppliedNlsDescription('5.2.TC1a', '', 'Bài 3. Thứ tự trong tập hợp các số tự nhiên')", sandbox);
+assert(nls11 !== nlsArith, 'Mã 1.1 phải có mô tả khác mã 5.3');
+assert(nls52 !== nlsArith, 'Mã 5.2 phải có mô tả khác mã 5.3');
+assert(nls11.includes('học liệu số') || nls11.includes('tia số'), 'Mã 1.1 phải thể hiện khai thác học liệu số');
+console.log('  -> Đa mã NLS phân hóa theo từng tiêu chí chuẩn: PASS');
+
+// Test 3.5: Modal chi tiết bài học render đầy đủ các Badge mã NLS và minh chứng cho từng mã
+const sampleLessonModal = {
+  lesson_title: 'Bài 3. Thứ tự trong tập hợp các số tự nhiên',
+  digital_candidates: '5.3.TC1a, 5.2.TC1a, 1.1.TC1a',
+  digital_evidence: 'Sử dụng phần mềm vẽ đồ thị (GeoGebra/Desmos) và máy tính cầm tay để minh họa hình học, kiểm tra nghiệm của bài Thứ tự trong tập hợp các số tự nhiên.'
+};
+sandbox.sampleLessonModal = sampleLessonModal;
+const renderedModalHtml = vm.runInContext("renderSgkDetailNlsBlock(sampleLessonModal)", sandbox);
+assert(renderedModalHtml.includes('Mã NLS: 5.3.TC1a'), 'Modal phải có badge Mã NLS: 5.3.TC1a');
+assert(renderedModalHtml.includes('Mã NLS: 5.2.TC1a'), 'Modal phải có badge Mã NLS: 5.2.TC1a');
+assert(renderedModalHtml.includes('Mã NLS: 1.1.TC1a'), 'Modal phải có badge Mã NLS: 1.1.TC1a');
+assert(!renderedModalHtml.includes('kiểm tra nghiệm'), 'Modal phải lọc bỏ nội dung không phù hợp "kiểm tra nghiệm"');
+console.log('  -> Render khối NLS chi tiết với Badge và phân rã 2-3 mã: PASS');
+
 
 // 4. Kiểm tra compactSgkText & độ bao phủ SGK
 console.log('-> 4. Kiểm tra compactSgkText & độ bao phủ SGK...');

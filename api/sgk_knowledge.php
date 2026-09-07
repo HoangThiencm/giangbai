@@ -149,6 +149,14 @@ try {
         foreach ($rawLessons as $row) {
             $act = json_decode((string)$row['activities_json'], true);
             $row['activities'] = is_array($act) ? $act : [];
+            $titleFold = mb_strtolower((string)($row['lesson_title'] ?? ''));
+            $evFold = mb_strtolower((string)($row['digital_evidence'] ?? ''));
+            if (preg_match('/(so tu nhien|so nguyen|phan so|so thap phan|so huu ti|chia het|uoc chung|boi chung|so nguyen to|tap hop)/i', $titleFold) &&
+                preg_match('/(kiem tra nghiem|ve do thi|giai he)/i', $evFold)) {
+                $cleanT = preg_replace('/^(bài|tiết)\s*\d+[\s:.-]*/iu', '', (string)$row['lesson_title']);
+                $cleanT = trim($cleanT);
+                $row['digital_evidence'] = "Sử dụng máy tính cầm tay để thực hành tính toán, kiểm tra kết quả so sánh và phần mềm trực quan tia số/trục số trong bài $cleanT.";
+            }
             $lessons[] = $row;
         }
 
@@ -232,6 +240,14 @@ try {
                 $actJson = is_string($activities) ? $activities : json_encode($activities, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 $digitalCandidates = trim((string)($les['digital_candidates'] ?? ''));
                 $digitalEvidence = trim((string)($les['digital_evidence'] ?? ''));
+                $titleFold = mb_strtolower($title);
+                $evFold = mb_strtolower($digitalEvidence);
+                if (preg_match('/(so tu nhien|so nguyen|phan so|so thap phan|so huu ti|chia het|uoc chung|boi chung|so nguyen to|tap hop)/i', $titleFold) &&
+                    preg_match('/(kiem tra nghiem|ve do thi|giai he)/i', $evFold)) {
+                    $cleanT = preg_replace('/^(bài|tiết)\s*\d+[\s:.-]*/iu', '', $title);
+                    $cleanT = trim($cleanT);
+                    $digitalEvidence = "Sử dụng máy tính cầm tay để thực hành tính toán, kiểm tra kết quả so sánh và phần mềm trực quan tia số/trục số trong bài $cleanT.";
+                }
                 $aiPedagogyHint = trim((string)($les['ai_pedagogy_hint'] ?? ''));
 
                 $insLessonStmt->execute([

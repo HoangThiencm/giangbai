@@ -243,3 +243,50 @@ Khảo sát trực tiếp từ hình ảnh thực tế người dùng cung cấp
    - Đồng bộ 100% giữa `canvas_xaydungphuluc.html`, `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
    - Cập nhật `tests/sgk-knowledge-smoke.js` kiểm tra chặt chẽ 43 bài và tính năng xóa.
    - Bảo đảm 59 test suites chạy PASS 100%.
+
+---
+
+# PLAN: Khắc phục Lỗi Sư phạm "Kiểm tra nghiệm" ở Bài Số học & Hoàn thiện Cơ chế Tích hợp 2–3 Mã Năng lực số (CV 3456)
+
+## Hiện trạng & Phản ánh của Người dùng
+1. **Lỗi sư phạm phi lý trong bài học Số học (Toán 6 Bài 3 - Thứ tự trong tập hợp các số tự nhiên)**:
+   - Minh chứng NLS hiển thị: *"Sử dụng phần mềm vẽ đồ thị (GeoGebra/Desmos) và máy tính cầm tay để minh họa hình học, kiểm tra nghiệm của bài..."*.
+   - Đây là lỗi sư phạm: Bài 3 Toán 6 học về thứ tự số tự nhiên (so sánh $a < b$, biểu diễn trên tia số), hoàn toàn không có "phương trình", không có "nghiệm", và không dùng "đồ thị GeoGebra/Desmos".
+   - *Nguyên nhân*: Regex phân loại môn Toán trước đây gom chung các bài vào nhóm đại số/phương trình nếu không khớp hình học/thống kê, dẫn đến gán nhầm cụm từ "kiểm tra nghiệm".
+2. **Thắc mắc về cơ chế tích hợp 2–3 mã Năng lực số (CV 3456)**:
+   - Người dùng hỏi: *"Rồi có 2-3 mã năng lực thì sao?"*.
+   - Cần thể hiện rõ ràng: Một bài học khi tích hợp 2–3 mã NLS thì giao diện hiển thị các mã đó như thế nào (từng badge riêng biệt) và minh chứng hành động sư phạm của từng mã ra sao thay vì chỉ ghi chung chung một câu.
+
+## Giải pháp Triển khai
+1. **Phân loại sư phạm chính xác tuyệt đối theo phân môn**:
+   - `isArith`: Bài Số học (Số tự nhiên, thứ tự, số nguyên, phân số, số thập phân, ước, bội, chia hết...).
+     -> Hành động NLS: Sử dụng máy tính cầm tay thực hiện các phép tính số học, kiểm tra kết quả tính toán, so sánh thứ tự hai số; khai thác phần mềm hoặc công cụ trực quan tia số/trục số. (Tuyệt đối KHÔNG có chữ "nghiệm" hay "đồ thị").
+   - `isGeo`: Hình học (hình trực quan, góc, tam giác, tứ giác...).
+     -> Hành động NLS: Sử dụng phần mềm hình học động (GeoGebra) hoặc công cụ đo vẽ trực quan hóa hình vẽ.
+   - `isStat`: Thống kê & Xác suất.
+     -> Hành động NLS: Sử dụng bảng tính (Excel/Sheets) hoặc công cụ số để thu thập, lập bảng số liệu và vẽ biểu đồ.
+   - `isEquation`: Phương trình & Hệ phương trình.
+     -> Hành động NLS: Sử dụng MTCT và phần mềm đồ thị kiểm tra nghiệm và đối chiếu kết quả.
+   - `isFunction`: Hàm số & Đồ thị.
+     -> Hành động NLS: Sử dụng phần mềm vẽ đồ thị (GeoGebra/Desmos) khảo sát hàm số.
+2. **Thanh lọc dữ liệu cũ và CSDL Backend**:
+   - Hàm `isUnfitDigitalEvidence(ev, lesson)`: Phát hiện tức thì các câu chứa "nghiệm", "đồ thị" ở bài Số học.
+   - `api/sgk_knowledge.php`: Tự động làm sạch các minh chứng unfit trong `action=get` và `action=save`.
+   - `enrichNlsCode`: Tự động thay thế bằng mô tả số học chuẩn xác.
+3. **Cơ chế Phân rã & Thể hiện 2–3 Mã NLS (CV 3456)**:
+   - Hàm `recommendLessonDigitalCandidates(lessonTitle, grade, subject, yccd)`: Tự động đề xuất danh sách 2–3 mã NLS chuẩn:
+     + Lớp 6–7: `5.3.TC1a, 5.2.TC1a, 1.1.TC1a`.
+     + Lớp 8–9: `5.3.TC2a, 5.2.TC2a, 1.1.TC2a`.
+   - Hàm `buildLessonDigitalEvidence(candidatesStr, lessonTitle)`: Xây dựng minh chứng sư phạm riêng cho từng mã:
+     + Mã 5.3: Thực hành tính toán trên máy tính cầm tay, kiểm tra so sánh và công cụ tia số/trục số.
+     + Mã 5.2: Lựa chọn và sử dụng công cụ tính toán số phù hợp với bài học.
+     + Mã 1.1: Khai thác học liệu số, mô phỏng trực quan tia số/trục số để tìm hiểu bài học.
+   - Giao diện Modal Chi tiết SGK (`renderSgkDetailNlsBlock`):
+     + Hiển thị hàng badge trực quan: `[Mã NLS: 5.3.TC1a] [Mã NLS: 5.2.TC1a] [Mã NLS: 1.1.TC1a]`.
+     + Kèm danh sách các hành động sư phạm riêng biệt ứng với từng mã.
+   - Trong Phụ lục 1 & 3: Tự động phân bổ 1–3 mã theo cấu hình mật độ NLS, giữ cấu trúc `Mã - Mô tả`.
+4. **Đồng bộ và Kiểm thử Toàn diện**:
+   - Đồng bộ trên cả 3 tệp HTML: `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`, `xaydungphuluc.html`.
+   - Smoke tests: `tests/sgk-knowledge-smoke.js`, `tests/canvas-xaydungphuluc-smoke.js`.
+   - Chạy toàn bộ 59/59 test suites PASS 100%.
+
