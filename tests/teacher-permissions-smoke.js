@@ -30,6 +30,7 @@ requireMatch(admin, /editingStudent\.role === 'teacher'[\s\S]*?Array\.isArray\(e
 requireAbsent(index, /grantWorkspaceTools/, 'Portal must not implicitly grant workspace tools.');
 requireAbsent(index, /augmentTeacherAllowedSet[\s\S]*?set\.add\(tool\)/, 'Portal must not add global_config user_features to teacher permissions.');
 requireMatch(index, /const allowed = allowedSet\.has\(tool\);/, 'Portal tool cards must require an explicit allowed page.');
+requireMatch(index, /\.tool-tile\.hidden\s*\{\s*display:\s*none\s*!important;\s*\}/, 'Hidden tool cards must override the flex display rule.');
 
 const tools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'thanhtich', 'soankhbd', 'taovideo', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc'];
 for (const tool of tools) {

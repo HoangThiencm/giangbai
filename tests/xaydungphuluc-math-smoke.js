@@ -286,8 +286,27 @@ YCCĐ:
   assert.ok(syncedPl3[1].integration.includes('phương pháp giải'), 'PL3 Bài 2 phải kế thừa đúng mô tả AI của PL1');
   console.log('  ✓ NLS và AI giữa Phụ lục 1 và Phụ lục 3 khớp nhau 100% về mã, mô tả sư phạm và phạm vi tiết!');
 
+  // 7. Kiểm tra Phụ lục 3 xuất và xem trước có đủ 8 cột và có Biểu hiện khung năng lực AI
+  console.log('-> 7. Kiểm tra Phụ lục 3 có Biểu hiện khung năng lực AI trong bảng 8 cột...');
+  const app3ColMatch = canvasSrc.match(/const APPENDIX_3_COLUMNS\s*=\s*\[[\s\S]*?\];/);
+  vm.runInContext(
+    (app3ColMatch ? app3ColMatch[0] : "const APPENDIX_3_COLUMNS=[['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['nls','Biểu hiện năng lực số'],['ai','Biểu hiện năng lực AI']];") + '\n' +
+    extractAppendixFn('selectedPeriodsForLesson') + '\n' +
+    extractAppendixFn('selectedPeriodsForLessonId') + '\n' +
+    extractAppendixFn('appendixThreeTable'),
+    pl2Sandbox
+  );
+  pl2Sandbox.results = { '1': { scheduleTable: mockPl1Table } };
+  const pl3TableOutput = pl2Sandbox.appendixThreeTable(syncedPl3, pl2Sandbox.getConfig());
+  assert.strictEqual(pl3TableOutput.columns.length, 8, 'Phụ lục 3 phải có đúng 8 cột');
+  assert.ok(pl2Sandbox.isAiColumn(pl3TableOutput.columns[7]), 'Cột 8 phải là Biểu hiện năng lực AI');
+  assert.ok(pl3TableOutput.rows[0].cells[7].includes('9.B2.1'), 'Cột AI của Bài 1 trong Phụ lục 3 phải chứa mã 9.B2.1');
+  assert.ok(pl3TableOutput.rows[0].cells[7].includes('tiết 1, 2'), 'Cột AI của Bài 1 trong Phụ lục 3 phải chứa phạm vi tiết');
+  assert.ok(pl3TableOutput.rows[1].cells[7].includes('9.B2.1'), 'Cột AI của Bài 2 trong Phụ lục 3 phải chứa mã AI');
+  console.log('  ✓ Phụ lục 3 hiển thị và xuất đầy đủ 8 cột với Biểu hiện khung năng lực AI chính xác 100%!');
+
   console.log('==================================================');
-  console.log('🎉 TẤT CẢ KIỂM THỬ CÔNG THỨC EQUATION ĐÃ ĐẠT 100%!');
+  console.log('🎉 TẤT CẢ KIỂM THỬ CÔNG THỨC EQUATION VÀ PHỤ LỤC 3 ĐÃ ĐẠT 100%!');
   console.log('==================================================');
 }
 

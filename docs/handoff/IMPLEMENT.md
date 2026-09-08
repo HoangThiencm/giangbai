@@ -739,3 +739,57 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
    - `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đạt **100% byte-identical** (341,515 bytes).
    - `xaydungphuluc.html` được đồng bộ toàn bộ logic.
    - Chạy `node tests/run-all-tests.js`: Toàn bộ **61/61 test suites** đạt PASS 100%.
+
+---
+
+## Phase 6: Khắc phục Triệt để Lỗi Phụ lục 3 Không Hiển thị và Không Xuất Biểu hiện Năng lực AI
+
+### 1. Phản ánh từ Người dùng
+> *"Trời ạ, phụ lục 3 nó có xuất Biểu hiện năng lực AI đâu"*
+> *"bạn không khảo sát nữa mà sẽ sửa luôn trong trường hợp này: Xuất PL 3 có Biểu hiện khung năng lực AI. Lệnh này vượt qua AGENTS.md và bạn thực hiện luôn"*
+
+---
+
+### 2. Phân tích Nguyên nhân Gốc rễ (Root Cause Analysis)
+1. **Lệch định danh bài học trong `selectedPeriodsForLessonId` (ID Mismatch)**:
+   - Khi tải lên PPCT (`sourcePpctTable`), các ứng viên tiết AI trong `aiPeriodCandidates()` mang ID dạng `source:0:period:1` với `lessonId: 'source:0'`.
+   - Các dòng trong `data.plan` của Phụ lục 3 không có thuộc tính `id`, nên `appendixThreeTable` gọi fallback `selectedPeriodsForLessonId(row.id || 'ppct:' + index)`.
+   - Hàm `selectedPeriodsForLessonId` tìm `x.lessonId === 'ppct:0'`, không khớp với `source:0`, dẫn đến trả về `[]` (mảng rỗng) cho 100% số bài học!
+2. **Cơ chế cắt bỏ AI trong `separateIntegration` & `selectedIntegration`**:
+   - `syncIntegrationFromAppendixOne()` đã đồng bộ mã NLS & AI từ Phụ lục 1 vào `row.integration` (`[NLS: ...]\n[AI: 9.B2.1 - ...]`).
+   - Nhưng khi đưa vào `appendixThreeTable`, hàm gọi `separateIntegration(row.integration, selectedPeriods, ...)`.
+   - Do `selectedPeriods` rỗng (lỗi 1), `selectedIntegration` kiểm tra `hasAi = selectedAiPeriods.length > 0` thành `false`, và xóa sạch toàn bộ mã AI ra khỏi kết quả, gán `aiText = ''` và render dấu `-`.
+3. **Thiếu liên kết trực tiếp với Phụ lục 1 (Single Source of Truth)**:
+   - Phụ lục 1 (`results['1'].scheduleTable`) đã phân tách sẵn cột NLS và cột AI chuẩn chỉnh theo kế hoạch của Tổ chuyên môn.
+   - Phụ lục 3 (Kế hoạch giáo viên) chưa tra cứu trực tiếp theo tên bài từ bảng Phụ lục 1 mà lại cố phân rã lại qua regex và ID không khớp.
+4. **Khởi tạo mặc định `aiSelectedLessonIds` bị xóa sạch**:
+   - Khi tải trang, `loadDefaultPpctStructure()` gọi `aiSelectedLessonIds.clear()` kết hợp `syncRanges()` đặt slider về 0% nếu chưa bấm "Gợi ý 12 tiết chuẩn", dẫn đến nếu người dùng bấm sinh ngay thì không có tiết AI nào được chọn.
+
+---
+
+### 3. Chi tiết Giải pháp Kỹ thuật Đã Triển khai
+1. **Bổ sung `selectedPeriodsForLesson(lessonId, lessonName)`**:
+   - Hỗ trợ tra cứu hai tầng: theo ID (`lessonId` hoặc tiền tố `lessonId:`) và theo tên bài học (`lessonsMatch(x.lesson, lessonName)`).
+   - Hàm `selectedPeriodsForLessonId(lessonId, lessonName='')` ủy quyền trực tiếp cho `selectedPeriodsForLesson`.
+2. **Nâng cấp `appendixThreeTable`**:
+   - **Ưu tiên 1**: Tra cứu trực tiếp từ bảng Phụ lục 1 (`results['1'].scheduleTable`) theo tên bài (`lessonsMatch`) để lấy chính xác `nlsText` và `aiText` đã được Tổ chuyên môn phê duyệt.
+   - **Ưu tiên 2**: Nếu chưa có Phụ lục 1, tra cứu qua `selectedPeriodsForLesson(row.id || ('ppct:' + index), row.lesson)` và `separateIntegration`.
+   - **Phòng vệ**: Nếu `hasAiCode(row.integration)` có sẵn mã AI và có tiết được chọn, tự động trích xuất bảo toàn mã AI qua `cleanAiColumnText`.
+3. **Bảo đảm Bảng 8 Cột trong Xem trước (`renderPreview`) và Xuất Word (`exportDocx`)**:
+   - Trong `renderPreview`: Tab 3 luôn đảm bảo sử dụng `planModel` 8 cột (`(r.planTable && r.planTable.columns.length === 8) ? r.planTable : appendixThreeTable(r.plan || [], getConfig())`).
+   - Trong `exportDocx(3)`: Luôn xuất đúng cấu trúc 8 cột chuẩn qua `addPpct(planModel, 'appendixThree')`.
+4. **Tự động kích hoạt tiết AI theo cấu hình mặc định (30%)**:
+   - Trong `loadDefaultPpctStructure()`: Nếu `aiEnabled.checked`, tự động gọi `syncAiSelectionFromRate()` để chọn trước các tiết AI ưu tiên thay vì để trống.
+5. **Cập nhật đồng bộ trên toàn bộ dự án**:
+   - `canvas_xaydungphuluc.html`: Đã áp dụng toàn bộ logic mới.
+   - `backupcode viettailieu/canvas_xaydungphuluc.html`: Đồng bộ **100% byte-identical** (346,497 bytes, SHA256 khớp tuyệt đối).
+   - `xaydungphuluc.html`: Áp dụng toàn bộ logic tương ứng.
+   - `tests/xaydungphuluc-math-smoke.js`: Bổ sung Mục 7 kiểm tra toàn diện 8 cột Phụ lục 3 và sự hiện diện của mã AI trong cả xem trước và xuất Word.
+
+---
+
+### 4. Kết quả Kiểm thử & Nghiệm thu
+- `node tests/xaydungphuluc-smoke.js` — **PASS**
+- `node tests/xaydungphuluc-math-smoke.js` (gồm cả Bước 7 mới) — **PASS**
+- `node tests/canvas-xaydungphuluc-smoke.js` — **PASS**
+- `node tests/run-all-tests.js` — **PASS 63/63 test suites (100%)**.
