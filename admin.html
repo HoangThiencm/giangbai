@@ -2134,7 +2134,7 @@
                     syncClassNameLabels(role);
                     renderPageChecks(
                         'createAllowedPages',
-                        preserved.length ? preserved : (role === 'teacher' ? defaultTeacherPages : ['lotrinhtoan6']),
+                        preserved.length ? preserved : (role === 'teacher' ? [] : ['lotrinhtoan6']),
                         role
                     );
                 });
@@ -2571,7 +2571,7 @@
             const container = document.getElementById(containerId);
             if (!container) return;
             ensureTeacherPermStyles();
-            const normalizedPages = (selectedPages || ['lotrinhtoan6']).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
+            const normalizedPages = (Array.isArray(selectedPages) ? selectedPages : []).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
             const selected = new Set(normalizedPages);
             container.innerHTML = teacherFeatureGroups.map(group => `
                 <section class="teacher-perm-group">
@@ -2674,17 +2674,7 @@
         }
 
         function ensureTeacherToolPages(allowedPages) {
-            const pages = Array.isArray(allowedPages) ? [...allowedPages] : [];
-            const hasLotrinh = mathRouteOrder.some(id => pages.includes(id));
-            const hasHub = pages.includes('quanlyvanban') || pages.includes('theodoiai') || pages.includes('thongketientrinh');
-            const hasTool = CLIENT_FEATURE_CHECKS.some(id => pages.includes(id));
-            if (!hasLotrinh || !hasHub || hasTool) {
-                return pages;
-            }
-            CLIENT_FEATURE_CHECKS.forEach(id => {
-                if (!pages.includes(id)) pages.push(id);
-            });
-            return pages;
+            return Array.isArray(allowedPages) ? [...allowedPages] : [];
         }
 
         function normalizeAllowedPagesForAdmin(pages) {
@@ -3051,7 +3041,7 @@
                 form.reset();
                 const roleSelect = document.querySelector('#createStudentForm select[name="role"]');
                 const resetRole = roleSelect?.value || 'student';
-                renderPageChecks('createAllowedPages', resetRole === 'teacher' ? defaultTeacherPages : ['lotrinhtoan6'], resetRole);
+                renderPageChecks('createAllowedPages', resetRole === 'teacher' ? [] : ['lotrinhtoan6'], resetRole);
                 renderDurationOptions('createDurationOption', 'forever');
                 if (roleSelect) {
                     syncAllowedPagesLabels(roleSelect.value);
@@ -3113,7 +3103,10 @@
                 </div>
                 <div id="editAllowedPages" class="space-y-2"></div>
             `;
-            renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinhtoan6'], editingStudent.role || 'student');
+            const initialPages = editingStudent.role === 'teacher'
+                ? (Array.isArray(editingStudent.allowed_pages) ? editingStudent.allowed_pages : [])
+                : (editingStudent.allowed_pages || ['lotrinhtoan6']);
+            renderPageChecks('editAllowedPages', initialPages, editingStudent.role || 'student');
             syncAllowedPagesLabels(editingStudent.role || 'student');
             syncClassNameLabels(editingStudent.role || 'student', editingStudent.class_name || '');
             const editRoleSelect = document.getElementById('editRole');
@@ -3125,7 +3118,7 @@
                     syncClassNameLabels(editRoleSelect.value, preservedClass);
                     renderPageChecks(
                         'editAllowedPages',
-                        preservedPages.length ? preservedPages : ['lotrinhtoan6'],
+                        preservedPages.length ? preservedPages : (editRoleSelect.value === 'teacher' ? [] : ['lotrinhtoan6']),
                         editRoleSelect.value
                     );
                 };

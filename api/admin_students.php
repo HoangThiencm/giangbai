@@ -28,7 +28,7 @@ if ($action === 'create') {
     if ($role === 'teacher' && $className !== '') {
         $className = normalize_teacher_class_name($className);
     }
-    $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6']);
+    $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6'], $role === 'teacher');
     $expiry = resolve_account_expiry($data['duration_option'] ?? 'forever');
 
     if ($username === '' || $password === '' || $fullName === '') {
@@ -95,7 +95,7 @@ if ($action === 'update') {
         $className = normalize_teacher_class_name($className);
     }
     $isActive = !empty($data['is_active']) ? 1 : 0;
-    $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6']);
+    $allowedPages = normalize_pages($data['allowed_pages'] ?? ['lotrinhtoan6'], $role === 'teacher');
 
     if ($role === 'teacher' && !$allowedPages) {
         respond(['error' => 'Giao vien can duoc mo it nhat mot chuc nang.'], 422);

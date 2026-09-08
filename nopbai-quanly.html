@@ -496,5 +496,6 @@
         function exportSubmissionsExcel(){if(!window.XLSX){toast('Chưa tải thư viện Excel (SheetJS).');return}const {assignment:a,submissions:s}=state.detail;const {rows,cols}=buildSubmissionExportRows(a,s);const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=rows[0].map((_,c)=>{let max=String(rows[0][c]||'').length;rows.forEach(r=>{max=Math.max(max,String(r[c]||'').split('\n')[0].length)});return{wch:Math.min(42,Math.max(12,max+2))}});const range=XLSX.utils.decode_range(ws['!ref']||'A1');const firstCustom=6;const lastCustom=5+cols.length;for(let R=1;R<=range.e.r;R++){for(let C=firstCustom;C<=lastCustom&&cols.length;C++){const addr=XLSX.utils.encode_cell({r:R,c:C});if(!ws[addr])continue;ws[addr].t='s';ws[addr].z='@';ws[addr].v=String(ws[addr].v??'')}}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Tong hop');XLSX.writeFile(wb,`tong-hop-${a.public_code}.xlsx`)}
         load();
     </script>
+<script src="access-control.js"></script>
 </body>
 </html>

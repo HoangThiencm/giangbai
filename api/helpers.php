@@ -153,31 +153,24 @@ function teacher_tool_pages_from_user_features(string $username): array
 
 function teacher_allowed_pages_resolved(array $user): array
 {
-    $pages = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true));
-    if (($user['role'] ?? '') !== 'teacher') {
-        return $pages;
-    }
-
-    $username = trim((string)($user['username'] ?? ''));
-    $fromFeatures = teacher_tool_pages_from_user_features($username);
-    if ($fromFeatures) {
-        $pages = normalize_pages(array_merge($pages, $fromFeatures));
-    }
-
-    return $pages;
+    $raw = json_decode($user['allowed_pages_json'] ?? '[]', true);
+    // allowed_pages_json is the sole source of per-teacher permissions.
+    $allowEmpty = ($user['role'] ?? '') === 'teacher';
+    return normalize_pages(is_array($raw) ? $raw : [], $allowEmpty);
 }
 
-function normalize_pages($pages): array
+function normalize_pages($pages, bool $allowEmpty = true): array
 {
     $catalog = page_catalog();
     $aliases = ['lotrinh' => 'lotrinhtoan6'];
-    if (!is_array($pages)) return ['lotrinhtoan6'];
+    if (!is_array($pages)) return $allowEmpty ? [] : ['lotrinhtoan6'];
     $clean = [];
     foreach ($pages as $page) {
         $page = $aliases[$page] ?? $page;
         if (isset($catalog[$page])) $clean[] = $page;
     }
-    return array_values(array_unique($clean)) ?: ['lotrinhtoan6'];
+    $unique = array_values(array_unique($clean));
+    return ($unique || $allowEmpty) ? $unique : ['lotrinhtoan6'];
 }
 
 function lotrinh_page_subjects(): array
@@ -263,27 +256,8 @@ function lotrinh_route_order(): array
 
 function ensure_teacher_lotrinh_scope(array $pages): array
 {
-    $pages = normalize_pages($pages);
-    $lotrinhKeys = array_keys(lotrinh_page_subjects());
-    $hasLotrinh = (bool) array_intersect($pages, $lotrinhKeys);
-    if (!$hasLotrinh || in_array('lotrinhtoan4', $pages, true)) {
-        return $pages;
-    }
-
-    $merged = array_values(array_unique(array_merge(['lotrinhtoan4'], $pages)));
-    $order = array_flip(lotrinh_route_order());
-    $lotrinh = [];
-    $other = [];
-    foreach ($merged as $page) {
-        if (isset($order[$page])) {
-            $lotrinh[] = $page;
-        } else {
-            $other[] = $page;
-        }
-    }
-    usort($lotrinh, static fn(string $a, string $b): int => $order[$a] <=> $order[$b]);
-
-    return array_merge($lotrinh, $other);
+    // Do not expand teacher scope: preserve exactly the pages selected by Admin.
+    return normalize_pages($pages, true);
 }
 
 function maybe_upgrade_teacher_allowed_pages(PDO $pdo, array $user): array
@@ -292,25 +266,8 @@ function maybe_upgrade_teacher_allowed_pages(PDO $pdo, array $user): array
         return $user;
     }
 
-    $current = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true));
+    $current = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true), true);
     $upgraded = ensure_teacher_lotrinh_scope($current);
-
-    $toolPages = teacher_workspace_page_ids();
-    $hasTools = (bool) array_intersect($upgraded, $toolPages);
-    $lotrinhKeys = array_keys(lotrinh_page_subjects());
-    $hasLotrinh = (bool) array_intersect($upgraded, $lotrinhKeys);
-    $hasTeacherHub = in_array('quanlyvanban', $upgraded, true)
-        || in_array('theodoiai', $upgraded, true)
-        || in_array('thongketientrinh', $upgraded, true);
-
-    // GV đã có lộ trình + tab quản lý nhưng DB thiếu mã công cụ (Thi Online, Ma trận…)
-    if ($hasLotrinh && $hasTeacherHub && !$hasTools) {
-        $fromFeatures = teacher_tool_pages_from_user_features((string)($user['username'] ?? ''));
-        $upgraded = normalize_pages(array_merge(
-            $upgraded,
-            $fromFeatures ?: $toolPages
-        ));
-    }
 
     if ($upgraded === $current) {
         return $user;

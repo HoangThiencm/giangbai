@@ -32,6 +32,7 @@ async function accessControlMain() {
         'vietbaocao.html': 'vietbaocao',
         'rutgon.html': 'rutgon',
         'thanhtich.html': 'thanhtich',
+        'soankhbd.html': 'soankhbd',
         'thoikhoabieu.html': 'thoikhoabieu',
         'phancongtochuyenmon.html': 'phancongtochuyenmon',
         'xaydungphuluc.html': 'xaydungphuluc', 'duyetgiaoan.html': 'duyetgiaoan', 'duyetde.html': 'duyetde', 'nghiencuubaihoc.html': 'nghiencuubaihoc'
@@ -59,15 +60,18 @@ async function accessControlMain() {
         vietbaocao: 'vietbaocao.html',
         rutgon: 'rutgon.html',
         thanhtich: 'thanhtich.html',
+        soankhbd: 'soankhbd.html',
         thoikhoabieu: 'thoikhoabieu.html',
         phancongtochuyenmon: 'phancongtochuyenmon.html',
-        xaydungphuluc: 'xaydungphuluc.html', duyetgiaoan: 'duyetgiaoan.html', duyetde: 'duyetde.html', nghiencuubaihoc: 'nghiencuubaihoc.html'
+        xaydungphuluc: 'xaydungphuluc.html', duyetgiaoan: 'duyetgiaoan.html', duyetde: 'duyetde.html', nghiencuubaihoc: 'nghiencuubaihoc.html', taovideo: 'taovideo/index.html'
     };
     const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
     const lotrinhRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
 
     const fileName = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
-    const pageKey = pageKeys[fileName];
+    const pageKey = window.location.pathname.toLowerCase().endsWith('/taovideo/index.html')
+        ? 'taovideo'
+        : pageKeys[fileName];
     const params = new URLSearchParams(window.location.search);
     const isOpenExamLink = pageKey === 'thitructuyen'
         && params.get('mode') === 'student'
@@ -273,7 +277,12 @@ async function accessControlMain() {
         return;
     }
 
-    const teacherWorkspaceTools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thoikhoabieu'];
+    const teacherWorkspaceTools = [
+        'gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde',
+        'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao',
+        'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'thanhtich',
+        'soankhbd', 'taovideo', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc'
+    ];
     if (role === 'teacher' && teacherWorkspaceTools.includes(pageKey)) {
         if (!canOpenPage(pageKey, allowedPages)) {
             alert('Tài khoản chưa được admin cấp quyền mở công cụ này.');

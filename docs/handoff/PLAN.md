@@ -1,271 +1,288 @@
 # KẾ HOẠCH BÀN GIAO TRIỂN KHAI (HANDOFF PLAN)
+## Khắc phục lỗi: Cấp quyền 1 chức năng nhưng giáo viên đăng nhập lại nhận Full chức năng
+
+---
 
 ## 1. Hiện trạng & Phản ánh từ Người dùng
-1. **Vấn đề 1 (Câu văn ngô nghê/vô nghĩa do ghép thô tên bài học)**:
-   - **Phản ánh từ User**:
-     > *"Nó sinh ra các câu vô nghĩa, khi nó gắn tên bài vô cho có:*
-     > *`[NLS: 5.3.TC2a - Sử dụng máy tính cầm tay (chức năng tính giá trị biểu thức / phím CALC) để kiểm tra các cặp số/giá trị cho trước có phải là nghiệm của Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn hay không.]`*
-     > *Nghiệm của khái niệm phương trình là gì?"*
-   - **Bản chất vấn đề**:
-     Tên bài học trong chương trình/SGK thường chứa các từ ngữ chỉ mục tiêu sư phạm như `"Khái niệm phương trình..."`, `"Nhận biết tam giác đều..."`, `"Mở đầu về số hữu tỉ..."`. Khi engine tự động nối thô chuỗi `${clean}` vào vị trí thực thể toán học (`nghiệm của ${clean}`), câu văn trở thành *"nghiệm của Khái niệm phương trình..."*, gây phi lý về mặt thuật ngữ toán học và sư phạm.
-
-2. **Vấn đề 2 (Cấu trúc bảng Phụ lục 3 - Kế hoạch giáo dục của giáo viên)**:
-   - **Phản ánh từ User**:
-     > *"Ở phụ lục 3 chúng ta cũng nên tách ra cột Biểu hiện khung năng lực số và biểu hiện khung năng lực AI đi nhỉ,"*
-   - **Bản chất vấn đề**:
-     - Trong Phụ lục 1 (Kế hoạch dạy học của Tổ chuyên môn), bảng đã được tách thành 2 cột riêng biệt:
-       * Cột 5: `Biểu hiện năng lực số` (Màu xanh lam `#0070C0`)
-       * Cột 6: `Biểu hiện năng lực AI` (Màu tím `#7030A0`)
-     - Trong khi đó, Phụ lục 3 hiện tại vẫn dùng bảng 7 cột truyền thống, trong đó cột 7 là `Mã NLS & AI (CV 3456 & QĐ 2422)` gộp chung cả hai nội dung vào cùng một ô.
-     - Giáo viên và nhà trường cần sự đồng bộ tuyệt đối về mặt hình thức giữa Phụ lục 1 và Phụ lục 3: Tách Phụ lục 3 thành 8 cột, có 2 cột riêng biệt cho NLS và AI.
+- **Phản ánh từ User**:
+  > *"hiện tại khi tôi mở admin phân quyền cho 1 user đăng ký, tôi cấp 1 năm sử dụng và tôi mở chức năng vẽ hình AI hoặc bất kỳ 1 chức năng khác cho họ xài thì khi họ đăng nhập lại sử dụng toàn bộ các chức năng (full)."*
 
 ---
 
 ## 2. Khảo sát Gốc rễ Mã nguồn (Root Cause Analysis)
 
-### Gốc rễ Vấn đề 1: Ghép thô `${clean}` trong `lessonAppliedNlsDescription` và `lessonAppliedAiDescription`
-- **Vị trí**:
-  - `canvas_xaydungphuluc.html` (dòng 1443–1446)
-  - `backupcode viettailieu/canvas_xaydungphuluc.html` (dòng 1443–1446)
-  - `xaydungphuluc.html` (dòng 1428–1431)
-- **Cơ chế gây lỗi**:
-  Hàm `cleanLessonDescription(lesson)` hiện tại chỉ lọc bỏ các tiền tố `"Bài 1."`, `"Chủ đề 2."`, nhưng giữ nguyên nội dung bài:
-  `"Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn"` $\rightarrow$ `clean = "Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn"`.
-  Tại dòng 1444 (`lessonAppliedNlsDescription`):
-  ```javascript
-  if (isConceptEq) return `Sử dụng máy tính cầm tay (chức năng tính giá trị biểu thức / phím CALC) để kiểm tra các cặp số/giá trị cho trước có phải là nghiệm của ${clean} hay không.`;
-  ```
-  $\rightarrow$ Biến thành: `...có phải là nghiệm của Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn hay không.` (Khái niệm không thể có nghiệm, chỉ có phương trình/hệ phương trình mới có nghiệm).
-- **Các mẫu câu khác bị ảnh hưởng tương tự**:
-  1. `c.startsWith('1.1')`: `...nhận biết khái niệm và các trường hợp nghiệm của ${clean}.`
-  2. `c.startsWith('3.1')`: `...hệ thống hóa định nghĩa, dạng tổng quát và tập nghiệm bài ${clean}.`
-  3. `lessonAppliedAiDescription` (domain B): `...kiểm tra nghiệm bài ${clean}; giải thích lý do vì sao một trường hợp thỏa mãn hoặc không thỏa mãn định nghĩa.`
-  4. `lessonAppliedAiDescription` (domain A): `...dẫn đến khái niệm bài ${clean}...`
+Qua rà soát toàn bộ chu trình Đăng ký -> Duyệt/Cấp quyền Admin -> Đăng nhập -> Kiểm soát quyền truy cập, phát hiện **5 gốc rễ** dẫn đến hiện tượng bị mở Full tính năng:
 
-### Gốc rễ Vấn đề 2: Cấu trúc 7 cột của Phụ lục 3
-- **Vị trí**:
-  - `canvas_xaydungphuluc.html` (dòng 66–68, dòng 216–220, dòng 1506–1511, dòng 1545)
-  - `backupcode viettailieu/canvas_xaydungphuluc.html`
-  - `xaydungphuluc.html`
-  - `tests/xaydungphuluc-smoke.js` (dòng 136)
-- **Cơ chế hiện tại**:
-  1. `PPCT_COLUMNS` và `PLAN_COLUMNS` đang dùng chung cấu hình 7 cột:
-     `[['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['integration','Mã NLS & AI (CV 3456 & QĐ 2422)']]`
-  2. Trong `normalizeAppendix('3', c)`:
-     `data.planTable = preservedPpctTable(data.plan, c)`
-     `preservedPpctTable` gọi `ppctTableFromRows`, vốn trả về 7 cột gộp chung mã `row.integration`.
-  3. `DOCX_WIDTHS.appendixThree` chỉ có 7 kích thước `[22, 6, 8, 6, 18, 16, 24]`.
-  4. Báo cáo thẩm định `calculateComplianceReport` kiểm tra tính đồng bộ NLS & AI giữa PL1 và PL3 dựa trên trường `row.integration` của `data.plan`.
+### Gốc rễ 1: Cơ chế tự động "nâng cấp ngầm" (Auto-upgrade) tự ý bung full 20 công cụ
+- **Vị trí 1 - `api/helpers.php` (`maybe_upgrade_teacher_allowed_pages`, dòng 306–314)**:
+  ```php
+  // GV đã có lộ trình + tab quản lý nhưng DB thiếu mã công cụ (Thi Online, Ma trận…)
+  if ($hasLotrinh && $hasTeacherHub && !$hasTools) {
+      $fromFeatures = teacher_tool_pages_from_user_features((string)($user['username'] ?? ''));
+      $upgraded = normalize_pages(array_merge(
+          $upgraded,
+          $fromFeatures ?: $toolPages
+      ));
+  }
+  ```
+  Khi tài khoản có lộ trình (vốn bị ép mặc định là Toán 6) VÀ có 1 tính năng quản trị (`quanlyvanban`, `theodoiai`, `thongketientrinh`), hệ thống coi là "thiếu công cụ" và tự động nhét toàn bộ 20 công cụ của `teacher_workspace_page_ids()` vào `allowed_pages_json` rồi ghi đè thẳng vào MySQL database!
+- **Vị trí 2 - `admin.html` (`ensureTeacherToolPages`, dòng 2676–2688)**:
+  ```javascript
+  function ensureTeacherToolPages(allowedPages) {
+      ...
+      if (!hasLotrinh || !hasHub || hasTool) return pages;
+      CLIENT_FEATURE_CHECKS.forEach(id => {
+          if (!pages.includes(id)) pages.push(id);
+      });
+      return pages;
+  }
+  ```
+  Nếu Admin cấp quyền quản lý (như Quản lý văn bản) mà chưa chọn công cụ giảng dạy nào, hàm này tự động nhồi toàn bộ danh sách `CLIENT_FEATURE_CHECKS` (20 công cụ) vào payload lưu lên server!
+- **Vị trí 3 - `index.html` (`applyTeacherAllowedPagesVisibility`, dòng 994–997)**:
+  ```javascript
+  const grantWorkspaceTools = teacherHasWorkspaceHub(allowedSet) && !teacherHasAnyToolPage(allowedSet);
+  Object.entries(TOOL_PAGE_LINKS).forEach(([tool]) => {
+      const allowed = allowedSet.has(tool) || grantWorkspaceTools;
+      ...
+  ```
+  Giao diện phía client tự động coi tất cả các công cụ là được phép nếu giáo viên có lộ trình và hub quản lý.
+
+### Gốc rễ 2: Ép mặc định `lotrinhtoan6` cho mảng quyền rỗng `[]`
+- **Vị trí 1 - `api/helpers.php` (`normalize_pages`, dòng 180)**:
+  ```php
+  return array_values(array_unique($clean)) ?: ['lotrinhtoan6'];
+  ```
+  Khi user mới đăng ký, `allowed_pages_json` trong DB là `[]`. Hàm `normalize_pages` tự động đổi mảng rỗng thành `['lotrinhtoan6']`.
+- **Vị trí 2 - `admin.html` (`openStudentConfig`, dòng 3116)**:
+  ```javascript
+  renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinhtoan6'], editingStudent.role || 'student');
+  ```
+  Ô "Lộ trình tự học Toán 6" bị **tự động tick sẵn (CHECKED)** ngay khi Admin mở form. Admin không hề muốn cấp lộ trình nhưng hệ thống đã coi là có lộ trình, kết hợp với Gốc rễ 1 kích hoạt chuỗi tự động bung full công cụ.
+
+### Gốc rễ 3: Xung đột và đồng bộ thất bại giữa 2 kho quyền (`MySQL users.allowed_pages_json` vs `global_config.json: user_features`)
+- **Vị trí 1 - `admin.html` (`syncTeacherUserFeaturesFromPages`, dòng 2660–2664)**:
+  Cố ghi quyền vào `global_config.json` qua `api/global_config.php`. Nếu hosting phân quyền không cho ghi file, khối `try...catch` nuốt chửng lỗi (`console.warn`).
+- **Vị trí 2 - `index.html` (`mergeAccountFeatures`, dòng 914–919)**:
+  Do `global_config.json` không lưu được tài khoản mới, `config.user_features[account]` rỗng. Hàm lấy fallback từ `config.features` toàn cục (vốn đặt tất cả là `true`!).
+- **Vị trí 3 - `api/helpers.php` (`teacher_allowed_pages_resolved`, dòng 162–165)**:
+  Tự ý `array_merge` quyền từ `user_features` vào `allowed_pages` từ database, gây xung đột và làm mất tính độc lập của bảng MySQL `users`.
+- **Giải pháp**: MySQL `users.allowed_pages_json` là **nguồn sự thật duy nhất (Single Source of Truth)** cho phân quyền tài khoản trên Hosting. Không để `global_config.json` can thiệp hay tự động cấp thêm quyền.
+
+### Gốc rễ 4: `access-control.js` thiếu hàng loạt công cụ giáo viên mới trong danh sách chặn
+- **Vị trí - `access-control.js` (dòng 20–38 & dòng 276–283)**:
+  ```javascript
+  const teacherWorkspaceTools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thoikhoabieu'];
+  ```
+  - Danh sách hoàn toàn **thiếu 7 công cụ**: `soankhbd`, `taovideo`, `xaydungphuluc`, `duyetgiaoan`, `duyetde`, `nghiencuubaihoc`, `thanhtich`.
+  - Thậm chí `soankhbd.html` còn không được khai báo trong `pageKeys`.
+  - Hậu quả: Dù Admin không cấp quyền các công cụ này, giáo viên mở trực tiếp link (hoặc click từ menu) vẫn vào được 100%, không hề bị chặn hay cảnh báo!
+
+### Gốc rễ 5: Giao diện `index.html` hiển thị toàn bộ thẻ công cụ ở HTML tĩnh trước khi lọc
+- **Vị trí - `index.html` (dòng 1185–1405 & dòng 1013–1017)**:
+  Các thẻ trong `#mainToolsGrid` ban đầu không có class `hidden`. Nếu tài khoản giáo viên có `allowedSet` rỗng hoặc xử lý lọc gặp lỗi, `resetMainToolsGridVisibility()` xóa class `hidden` và không ẩn các thẻ chưa được cấp, khiến người dùng nhìn thấy và bấm được toàn bộ công cụ.
 
 ---
 
-## 3. Phạm vi Giải quyết (Scope)
+## 3. Phạm vi Triển khai (Scope)
 - **Thuộc phạm vi (In Scope)**:
-  1. Xây dựng hàm chuẩn hóa thực thể toán học `cleanMathEntityName(lessonName)` để tách các cụm sư phạm (`Khái niệm`, `Mở đầu về`, `Làm quen với`...) ra khỏi tên đối tượng toán học.
-  2. Rà soát và sửa toàn bộ các câu ghép chuỗi trong `lessonAppliedNlsDescription` và `lessonAppliedAiDescription` bảo đảm chuẩn 100% ngữ pháp tiếng Việt và ngôn ngữ học thuật toán học.
-  3. Tách cấu trúc Phụ lục 3 thành 8 cột:
-     - Cột 1: `Bài học`
-     - Cột 2: `Số tiết`
-     - Cột 3: `Tiết CT`
-     - Cột 4: `Tuần`
-     - Cột 5: `Thiết bị dạy học (*)`
-     - Cột 6: `Địa điểm dạy học (**)`
-     - Cột 7: `Biểu hiện năng lực số` (hoặc `Biểu hiện khung năng lực số`)
-     - Cột 8: `Biểu hiện năng lực AI` (hoặc `Biểu hiện khung năng lực AI`)
-  4. Cập nhật bảng xem trước HTML (`dynamicPpctTable` và `renderPreview`).
-  5. Cập nhật bảng xuất Word DOCX (`DOCX_WIDTHS.appendixThree`, `exportDocx`, `addPpct`).
-  6. Mở rộng regex `isNlsColumn` và `isAiColumn` để khớp linh hoạt cả "Biểu hiện năng lực số" và "Biểu hiện khung năng lực số".
-  7. Đồng bộ cả 3 file: `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html` (đảm bảo byte-identical), và `xaydungphuluc.html`.
-  8. Cập nhật các bộ kiểm thử smoke tests (`tests/xaydungphuluc-smoke.js`, `tests/xaydungphuluc-math-smoke.js`).
+  1. `api/helpers.php`:
+     - Sửa `normalize_pages`: Cho phép trả về mảng rỗng `[]` khi đầu vào rỗng (không tự ép `['lotrinhtoan6']` cho giáo viên).
+     - Xóa bỏ hoàn toàn logic auto-grant full công cụ trong `maybe_upgrade_teacher_allowed_pages`.
+     - `teacher_allowed_pages_resolved`: Lấy chuẩn 100% từ `users.allowed_pages_json` trong MySQL.
+  2. `admin.html`:
+     - Sửa `ensureTeacherToolPages`: Không tự động nhét toàn bộ `CLIENT_FEATURE_CHECKS` vào quyền của giáo viên. Giữ đúng những gì Admin đã tick chọn.
+     - Sửa `openStudentConfig` & `renderTeacherPageToggles`: Không tự động tick sẵn `lotrinhtoan6` nếu tài khoản đang có `allowed_pages` rỗng.
+     - Đảm bảo Admin cấp đúng chức năng nào thì lưu chính xác chức năng đó.
+  3. `access-control.js`:
+     - Bổ sung `'soankhbd.html': 'soankhbd'` vào `pageKeys` và `pageUrls`.
+     - Cập nhật `teacherWorkspaceTools` đầy đủ tất cả các công cụ giáo viên (bao gồm `soankhbd`, `xaydungphuluc`, `duyetgiaoan`, `duyetde`, `nghiencuubaihoc`, `thanhtich`, `taovideo`).
+     - Đảm bảo bất kỳ trang nào không có trong `allowedPages` đều bị chặn và redirect về `index.html`.
+  4. `index.html`:
+     - Xóa bỏ cờ `grantWorkspaceTools` trong `applyTeacherAllowedPagesVisibility`.
+     - Công cụ chỉ hiển thị nếu `allowedSet.has(tool)` là TRUE.
+     - Đảm bảo tài khoản giáo viên chỉ nhìn thấy đúng những công cụ được Admin bật.
+  5. Viết bộ kiểm thử tự động (Smoke Test) để thẩm định chu trình phân quyền giáo viên.
 - **Ngoài phạm vi (Out of Scope)**:
-  - Không thay đổi bảng Phụ lục 1 hoặc Phụ lục 2.
-  - Không thay đổi logic chia tiết, phân phối số tiết (PPCT) của môn học.
-  - Không làm thay đổi cơ chế báo cáo thẩm định 100% CV 5512.
+  - Không thay đổi cơ chế phân quyền của học sinh (`role === 'student'`).
+  - Không thay đổi cấu trúc bảng CSDL `users` (dùng nguyên cột `allowed_pages_json`).
 
 ---
 
 ## 4. Danh sách File Tác động (Target Files)
-1. `canvas_xaydungphuluc.html`
-2. `backupcode viettailieu/canvas_xaydungphuluc.html` (bắt buộc giống hệt file 1)
-3. `xaydungphuluc.html`
-4. `tests/xaydungphuluc-smoke.js`
-5. `tests/xaydungphuluc-math-smoke.js`
+1. `api/helpers.php`
+2. `admin.html`
+3. `access-control.js`
+4. `index.html`
+5. `tests/teacher-permissions-smoke.js` (Tạo mới để kiểm thử)
 
 ---
 
 ## 5. Kế hoạch Triển khai Chi tiết cho ChatGPT (Step-by-step Implementation Plan)
 
-### Bước 1: Xử lý Lỗi ghép chuỗi vô nghĩa trong mô tả NLS và AI
-1. **Thêm hàm bóc tách thực thể toán học `cleanMathEntityName`**:
-   Đặt ngay sau `cleanLessonDescription`:
+### Bước 1: Chuẩn hóa logic cấp quyền tại Backend (`api/helpers.php`)
+1. **Sửa hàm `normalize_pages`**:
+   - Hiện tại:
+     ```php
+     function normalize_pages($pages): array
+     {
+         $catalog = page_catalog();
+         $aliases = ['lotrinh' => 'lotrinhtoan6'];
+         if (!is_array($pages)) return ['lotrinhtoan6'];
+         $clean = [];
+         foreach ($pages as $page) {
+             $page = $aliases[$page] ?? $page;
+             if (isset($catalog[$page])) $clean[] = $page;
+         }
+         return array_values(array_unique($clean)) ?: ['lotrinhtoan6'];
+     }
+     ```
+   - Chuyển thành: Thêm tham số `$defaultToLotrinh6 = false` (hoặc khi mảng rỗng thì trả về `[]`, chỉ học sinh hoặc khi gọi chỉ định mới fallback `lotrinhtoan6`). Cụ thể:
+     ```php
+     function normalize_pages($pages, bool $allowEmpty = true): array
+     {
+         $catalog = page_catalog();
+         $aliases = ['lotrinh' => 'lotrinhtoan6'];
+         if (!is_array($pages)) return $allowEmpty ? [] : ['lotrinhtoan6'];
+         $clean = [];
+         foreach ($pages as $page) {
+             $page = $aliases[$page] ?? $page;
+             if (isset($catalog[$page])) $clean[] = $page;
+         }
+         $unique = array_values(array_unique($clean));
+         if (empty($unique) && !$allowEmpty) {
+             return ['lotrinhtoan6'];
+         }
+         return $unique;
+     }
+     ```
+2. **Sửa hàm `teacher_allowed_pages_resolved`**:
+   - Nguồn sự thật cho phân quyền giáo viên là trường `allowed_pages_json` trong MySQL.
+   - Không tự ý lấy cờ từ `global_config.json` để ghi đè hay merge thêm quyền công cụ nếu Admin đã cấu hình trong DB:
+     ```php
+     function teacher_allowed_pages_resolved(array $user): array
+     {
+         $raw = json_decode($user['allowed_pages_json'] ?? '[]', true);
+         $pages = normalize_pages(is_array($raw) ? $raw : [], true);
+         return $pages;
+     }
+     ```
+3. **Sửa hàm `maybe_upgrade_teacher_allowed_pages`**:
+   - Loại bỏ hoàn toàn khối tự động cấp full công cụ:
+     ```php
+     // XÓA BỎ HOẶC VÔ HIỆU HÓA KHỐI:
+     // if ($hasLotrinh && $hasTeacherHub && !$hasTools) { ... $upgraded = normalize_pages(array_merge($upgraded, $toolPages)); }
+     ```
+   - Chỉ giữ việc chuẩn hóa mảng và đảm bảo cấu trúc hợp lệ, không tự động thêm bất kỳ trang nào ngoài những gì Admin đã lưu.
+
+---
+
+### Bước 2: Chuẩn hóa trang Quản trị viên (`admin.html`)
+1. **Sửa hàm `ensureTeacherToolPages` (dòng 2676–2688)**:
+   - Hiện tại hàm này tự động inject tất cả `CLIENT_FEATURE_CHECKS` nếu giáo viên có `hasLotrinh && hasHub && !hasTool`.
+   - Cần sửa để trả về đúng `allowedPages` mà Admin chọn, tuyệt đối không tự chèn thêm công cụ:
+     ```javascript
+     function ensureTeacherToolPages(allowedPages) {
+         return Array.isArray(allowedPages) ? [...allowedPages] : [];
+     }
+     ```
+2. **Sửa hàm `openStudentConfig` và `renderPageChecks`**:
+   - Tại dòng 3116:
+     ```javascript
+     // Trước:
+     renderPageChecks('editAllowedPages', editingStudent.allowed_pages || ['lotrinhtoan6'], editingStudent.role || 'student');
+     // Sau: Nếu role là teacher, giữ nguyên mảng allowed_pages (kể cả rỗng []), không fallback về ['lotrinhtoan6']
+     const initialPages = editingStudent.role === 'teacher'
+         ? (Array.isArray(editingStudent.allowed_pages) ? editingStudent.allowed_pages : [])
+         : (editingStudent.allowed_pages || ['lotrinhtoan6']);
+     renderPageChecks('editAllowedPages', initialPages, editingStudent.role || 'student');
+     ```
+3. **Sửa `renderTeacherPageToggles` (dòng 2574–2575)**:
+   - Không ép `selectedPages || ['lotrinhtoan6']`:
+     ```javascript
+     const normalizedPages = (Array.isArray(selectedPages) ? selectedPages : []).map(page => page === 'lotrinh' ? 'lotrinhtoan6' : page);
+     const selected = new Set(normalizedPages);
+     ```
+4. **Kiểm tra lưu cấu hình (`saveUserConfig`)**:
+   - Khi Admin chỉ chọn `vehinh` (Vẽ hình học AI), `allowedPages` gửi lên `api/admin_students.php` chỉ chứa đúng `['vehinh']`.
+
+---
+
+### Bước 3: Hoàn thiện lá chắn bảo vệ Route (`access-control.js`)
+1. **Bổ sung `soankhbd.html` vào `pageKeys` và `pageUrls`**:
    ```javascript
-   function cleanMathEntityName(lessonName) {
-     const clean = typeof cleanLessonDescription === 'function' ? cleanLessonDescription(lessonName) : String(lessonName || '').trim();
-     return clean.replace(/^(?:khái niệm về|khái niệm|nhận biết|mở đầu về|làm quen với|định nghĩa về|tìm hiểu về)\s+/i, '').trim() || clean;
+   // Trong pageKeys:
+   'soankhbd.html': 'soankhbd',
+   // Trong pageUrls:
+   soankhbd: 'soankhbd.html',
+   ```
+2. **Cập nhật đầy đủ mảng `teacherWorkspaceTools` (dòng 276)**:
+   ```javascript
+   const teacherWorkspaceTools = [
+       'gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde',
+       'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao',
+       'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'thanhtich',
+       'soankhbd', 'taovideo', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc'
+   ];
+   ```
+3. Đảm bảo nếu `role === 'teacher'` mà truy cập vào bất kỳ trang nào trong `teacherWorkspaceTools` mà không có trong `allowedPages`, lập tức bị chặn:
+   ```javascript
+   if (role === 'teacher' && teacherWorkspaceTools.includes(pageKey)) {
+       if (!canOpenPage(pageKey, allowedPages)) {
+           alert('Tài khoản chưa được admin cấp quyền mở công cụ này.');
+           window.location.href = 'index.html';
+           return;
+       }
+       return;
    }
    ```
-2. **Cập nhật trong `lessonAppliedNlsDescription(code, label, lesson)`**:
-   - Lấy thêm: `const entity = cleanMathEntityName(clean);`
-   - Tại nhánh `c.startsWith('5.3')`:
-     - Khi `isConceptEq`:
-       * Cũ: `Sử dụng máy tính cầm tay (chức năng tính giá trị biểu thức / phím CALC) để kiểm tra các cặp số/giá trị cho trước có phải là nghiệm của ${clean} hay không.`
-       * Mới: `Sử dụng máy tính cầm tay (chức năng tính giá trị biểu thức / phím CALC) để kiểm tra các cặp số/giá trị cho trước có phải là nghiệm của ${entity} hay không.`
-       $\rightarrow$ Kết quả: `...có phải là nghiệm của phương trình và hệ hai phương trình bậc nhất hai ẩn hay không.`
-   - Tại nhánh `c.startsWith('1.1') || c.startsWith('1.')`:
-     - Khi `isConceptEq`:
-       * Cũ: `Khai thác học liệu số, video bài giảng trực quan nhận biết khái niệm và các trường hợp nghiệm của ${clean}.`
-       * Mới: `Khai thác học liệu số, video bài giảng trực quan nhận biết khái niệm, dạng tổng quát và các trường hợp nghiệm của ${entity}.`
-   - Tại nhánh `c.startsWith('3.1') || c.startsWith('3.')`:
-     - Khi `isConceptEq`:
-       * Cũ: `Sử dụng công cụ số (phần mềm vẽ sơ đồ tư duy / bảng biểu) để hệ thống hóa định nghĩa, dạng tổng quát và tập nghiệm bài ${clean}.`
-       * Mới: `Sử dụng công cụ số (phần mềm vẽ sơ đồ tư duy / bảng biểu) để hệ thống hóa định nghĩa, dạng tổng quát và tập nghiệm của ${entity}.`
-   - Tại nhánh `c.startsWith('5.2')`:
-     - Khi `isConceptEq`:
-       * Đổi: `...quan sát và kiểm tra các dấu hiệu nhận biết trong bài ${clean}.` (thêm chữ "trong").
-3. **Cập nhật trong `lessonAppliedAiDescription(code, label, lesson)`**:
-   - Lấy thêm: `const entity = cleanMathEntityName(clean);`
-   - Tại nhánh `domain === 'B'`:
-     - Khi `isConceptEq`:
-       * Cũ: `Ứng dụng công cụ AI hỗ trợ tạo các ví dụ ngẫu nhiên về số liệu/phương trình để học sinh luyện tập nhận biết khái niệm và kiểm tra nghiệm bài ${clean}; giải thích lý do vì sao một trường hợp thỏa mãn hoặc không thỏa mãn định nghĩa.`
-       * Mới: `Ứng dụng công cụ AI hỗ trợ tạo các ví dụ ngẫu nhiên về số liệu/phương trình để học sinh luyện tập nhận biết khái niệm và kiểm tra nghiệm của ${entity}; giải thích lý do vì sao một trường hợp thỏa mãn hoặc không thỏa mãn định nghĩa.`
-   - Tại nhánh `domain === 'A'`:
-     - Khi `isConceptEq`:
-       * Đổi: `Sử dụng trợ lý AI gợi mở tình huống thực tiễn dẫn đến khái niệm trong bài ${clean}, học sinh chủ động trao đổi, đối chiếu với SGK và giữ quyền quyết định cuối cùng.`
 
 ---
 
-### Bước 2: Nâng cấp Phụ lục 3 thành 8 cột (Tách riêng NLS và AI)
-1. **Định nghĩa danh mục cột cho Phụ lục 3 (`APPENDIX_3_COLUMNS`)**:
-   - Trong phần khai báo hằng số đầu file (dòng 65–68):
-     ```javascript
-     const APPENDIX_1_COLUMNS=[['stt','STT'],['lesson','Bài học'],['periods','Số tiết'],['outcomes','Yêu cầu cần đạt'],['nls','Biểu hiện năng lực số'],['ai','Biểu hiện năng lực AI']];
-     const PPCT_COLUMNS=[['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['integration','Mã NLS & AI (CV 3456 & QĐ 2422)']];
-     const APPENDIX_3_COLUMNS=[['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['nls','Biểu hiện năng lực số'],['ai','Biểu hiện năng lực AI']];
-     const SCHEDULE_COLUMNS=PPCT_COLUMNS,PLAN_COLUMNS=APPENDIX_3_COLUMNS;
-     ```
-2. **Cập nhật regex nhận diện cột (`isNlsColumn`, `isAiColumn`)**:
-   - Cho phép cả cụm từ "Biểu hiện năng lực số" và "Biểu hiện khung năng lực số":
-     ```javascript
-     function isNlsColumn(label){return /^biểu hiện\s+(?:khung\s+)?năng\s+lực\s+số$/i.test(String(label||'').trim())}
-     function isAiColumn(label){return /^biểu hiện\s+(?:khung\s+)?năng\s+lực\s+ai$/i.test(String(label||'').trim())}
-     ```
-3. **Xây dựng hàm `appendixThreeTable(planRows, c)`**:
-   - Viết hàm chuyên trách tạo bảng 8 cột cho Phụ lục 3:
-     ```javascript
-     function appendixThreeTable(planRows, c) {
-       const columns = APPENDIX_3_COLUMNS.map(x => x[1]);
-       let normal = 0;
-       const rows = (planRows || []).map((row, index) => {
-         if (row.isHeader) return { isHeader: true, cells: [row.lesson] };
-         const { nlsText, aiText } = separateIntegration(
-           row.integration,
-           selectedPeriodsForLessonId(row.id || `ppct:${index}`),
-           normal,
-           c,
-           row.lesson,
-           row.periods
-         );
-         normal++;
-         return {
-           isHeader: false,
-           cells: [
-             String(row.lesson || '').trim(),
-             String(row.periods || '').trim(),
-             String(row.tietCT || '').trim(),
-             String(row.week || '').trim(),
-             String(row.devices || '').trim(),
-             String(row.location || '').trim(),
-             nlsText || '-',
-             aiText || '-'
-           ]
-         };
+### Bước 4: Chuẩn hóa hiển thị giao diện Portal (`index.html`)
+1. **Xóa bỏ cơ chế `grantWorkspaceTools` (dòng 994)**:
+   ```javascript
+   function applyTeacherAllowedPagesVisibility(allowedSet, features) {
+       if (localStorage.getItem('userRole') !== 'teacher') return;
+       Object.entries(TOOL_PAGE_LINKS).forEach(([tool]) => {
+           // Quyền công cụ chỉ được bật khi allowedSet THỰC SỰ có mã công cụ đó
+           const allowed = allowedSet.has(tool);
+           const visible = allowed && features[tool] !== false;
+           setToolCardsVisible(`#mainToolsGrid > [data-tool="${tool}"]`, visible);
        });
-       return { columns, rows, lessonIndex: 0 };
-     }
-     ```
-4. **Cập nhật `normalizeAppendix('3', c)`**:
-   - Sử dụng `appendixThreeTable` để gán vào `data.planTable`:
-     ```javascript
-     }else if(no==='3'){
-       const defaultEquip=(typeof EQUIPMENT!=='undefined'&&c&&(EQUIPMENT[c.monHoc]||EQUIPMENT.default))?(EQUIPMENT[c.monHoc]||EQUIPMENT.default).slice(0,2).join(', '):'Thiết bị dạy học tối thiểu';
-       data.plan=(data.plan||[]).map((row,i)=>{
-         const r=ppctRow(row,i,c);
-         if(!r.isHeader){
-           if(!r.devices)r.devices=defaultEquip;
-           if(!r.location)r.location='Lớp học';
-         }
-         return r;
-       }).filter(row=>row.lesson&&!isAdminLesson(row.lesson));
-       if(!results['1'])results['1']=normalizeAppendix(fallback('1',c),'1',c);
-       data.plan=syncIntegrationFromAppendixOne(data.plan,results['1'].scheduleTable,c);
-       data.planTable=appendixThreeTable(data.plan,c);
-     }
-     ```
-5. **Cập nhật hiển thị xem trước Preview Phụ lục 3 trong `renderPreview`**:
-   - Dòng 1536:
-     ```javascript
-     if(activeTab==='3'){
-       preview.innerHTML=`<h3 class="font-black text-center my-4">${esc(r.title||'PHỤ LỤC')}</h3><h4 class="font-bold">I. Phân phối chương trình</h4>${dynamicPpctTable(r.planTable||appendixThreeTable(r.plan||[],getConfig()))}<h4 class="font-bold mt-4">II. Chuyên đề lựa chọn</h4>${table([['topic','Chuyên đề'],['time','Thời điểm'],['devices','Thiết bị'],['location','Địa điểm']],r.specialties||[],'specialties')}`;
-       return;
-     }
-     ```
-6. **Cập nhật độ rộng cột xuất Word DOCX (`DOCX_WIDTHS.appendixThree`)**:
-   - Dòng 1545:
-     ```javascript
-     appendixThree: [20, 5, 6, 5, 14, 12, 19, 19]
-     ```
-     (Tổng 100%: Bài học 20%, Số tiết 5%, Tiết CT 6%, Tuần 5%, Thiết bị 14%, Địa điểm 12%, NLS 19%, AI 19%).
-   - Trong `exportDocx(n)`:
-     `addPpct(r.planTable || appendixThreeTable(r.plan || [], getConfig()), 'appendixThree');`
+       const hasLotrinh = LOTRINH_PAGE_KEYS.some(key => allowedSet.has(key));
+       setToolCardsVisible('[data-tool="teacher-lotrinh-design"]', hasLotrinh && features.teacher_design !== false);
+       setToolCardsVisible('[data-tool="teacher-documents"]', allowedSet.has('quanlyvanban'));
+       setToolCardsVisible(
+           'a[href="thongketientrinh.html"]',
+           allowedSet.has('thongketientrinh') && features.teacher_progress_stats !== false
+       );
+       setToolCardsVisible(
+           'a[href="theodoi-ai.html"]',
+           allowedSet.has('theodoiai') && features.teacher_ai_stats !== false
+       );
+   }
+   ```
+2. **Sửa `applyTeacherHubVisibility` khi `allowedSet` rỗng**:
+   - Nếu giáo viên chưa được cấp quyền nào (`allowedSet.size === 0`), ẩn toàn bộ thẻ công cụ và hiển thị thông báo "Chưa mở công cụ giảng dạy — liên hệ Admin để cấp quyền".
+3. **Sửa `augmentTeacherAllowedSet` (dòng 942–957)**:
+   - Không tự ý thêm tool vào `set` từ `global_config.json` nếu DB không có. Quyền từ DB MySQL (`allowedPages`) là quyết định cao nhất.
 
 ---
 
-### Bước 3: Đồng bộ Backup và Cập nhật Smoke Tests
-1. **Đồng bộ file backup**:
-   - Sao chép toàn bộ nội dung từ `canvas_xaydungphuluc.html` sang `backupcode viettailieu/canvas_xaydungphuluc.html` để đảm bảo 100% byte-identical.
-2. **Cập nhật `tests/xaydungphuluc-smoke.js`**:
-   - Cập nhật chuỗi kiểm tra `appendixThree`:
-     * Cũ: `'appendixThree:[22,6,8,6,18,16,24]'`
-     * Mới: `'appendixThree:[20,5,6,5,14,12,19,19]'`
-   - Bổ sung kiểm tra sự hiện diện của `APPENDIX_3_COLUMNS` và `appendixThreeTable`.
-3. **Cập nhật `tests/xaydungphuluc-math-smoke.js`**:
-   - Bổ sung assertion kiểm tra Phụ lục 3 có đúng 8 cột dữ liệu:
-     * Cột 7: `isNlsColumn` trả về true.
-     * Cột 8: `isAiColumn` trả về true.
-     * Kiểm tra văn bản sinh ra không còn chứa cụm từ vô nghĩa `"nghiệm của Khái niệm phương trình"`.
+### Bước 5: Kiểm thử và Thẩm định Tự động
+Tạo file kiểm thử `tests/teacher-permissions-smoke.js` dùng Node.js để kiểm tra tính toàn vẹn:
+1. `access-control.js` chứa đầy đủ 20 công cụ trong `teacherWorkspaceTools` và có `soankhbd.html` trong `pageKeys`.
+2. `admin.html` không chứa logic tự động nhồi full tool `CLIENT_FEATURE_CHECKS` trong `ensureTeacherToolPages`.
+3. `api/helpers.php` không tự động gộp `$toolPages` trong `maybe_upgrade_teacher_allowed_pages`.
+4. `index.html` không sử dụng cờ `grantWorkspaceTools` để ép mở thẻ.
+5. Chạy `node tests/teacher-permissions-smoke.js` để xác nhận PASS 100%.
 
 ---
 
-## 6. Rủi ro & Phương án Giảm thiểu (Risks & Mitigations)
-1. **Rủi ro phá vỡ tính tương thích ngược của `normalizeIntegrationTable`**:
-   - *Phân tích*: Nếu bảng đầu vào có cả `isNlsColumn` và `isAiColumn`, hàm `normalizeIntegrationTable` phải giữ nguyên 8 cột mà không được tự ý gộp lại thành `INTEGRATION_COLUMN_LABEL`.
-   - *Giải pháp*: `normalizeIntegrationTable` đã có sẵn dòng kiểm tra `if(columns.some(isNlsColumn)&&columns.some(isAiColumn)) return ...;`. Việc nâng cấp regex `isNlsColumn` và `isAiColumn` bảo đảm điều kiện này luôn được kích hoạt an toàn.
-2. **Rủi ro đứt gãy đồng bộ dữ liệu giữa Phụ lục 1 và Phụ lục 3**:
-   - *Phân tích*: Báo cáo thẩm định `calculateComplianceReport` kiểm tra trường `row.integration` trong mảng `data.plan`.
-   - *Giải pháp*: `data.plan` tiếp tục lưu trữ trường `row.integration` (kế thừa 100% từ Phụ lục 1 qua `syncIntegrationFromAppendixOne`). Bảng `data.planTable` chỉ làm nhiệm vụ phân rã thành 8 cột để hiển thị UI và xuất Word. Nhờ vậy, tiêu chí thẩm định *"Đồng bộ NLS & AI (PL1–PL3)"* luôn đạt 100%.
-
----
-
-## 7. Kế hoạch Kiểm thử & Thẩm định (Verification Plan)
-1. **Kiểm thử tự động (Unit / Smoke Tests)**:
-   - Chạy lệnh: `node tests/xaydungphuluc-smoke.js`
-   - Chạy lệnh: `node tests/xaydungphuluc-math-smoke.js`
-   - Chạy toàn bộ test suite: `node tests/run-all-tests.js` (yêu cầu 61/61 suites PASS 100%).
-2. **Kiểm tra ngữ nghĩa chuỗi sinh ra**:
-   - Với bài học `"Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn"`:
-     * Mô tả NLS 5.3: `...nghiệm của phương trình và hệ hai phương trình bậc nhất hai ẩn hay không.` (Không còn chữ "Khái niệm").
-     * Mô tả AI 9.B2.1: `...kiểm tra nghiệm của phương trình và hệ hai phương trình bậc nhất hai ẩn;...`
-3. **Kiểm tra Phụ lục 3 có 8 cột**:
-   - Cột 7: `Biểu hiện năng lực số`, chứa mã NLS và mô tả màu xanh `#0070C0`.
-   - Cột 8: `Biểu hiện năng lực AI`, chứa mã AI và mô tả màu tím `#7030A0`.
-   - Xuất Word Phụ lục 3 ra file `.docx` kiểm tra bảng có đúng 8 cột, công thức Toán OMML nguyên vẹn.
-
----
-
-## 8. Tiêu chí Nghiệm thu (Acceptance Criteria)
-1. `cleanMathEntityName` loại bỏ triệt để các tiền tố sư phạm khi ghép vào đối tượng nghiệm toán học.
-2. Tuyệt đối không còn bất kỳ câu nào có dạng `"nghiệm của Khái niệm phương trình..."`.
-3. Phụ lục 3 có đúng 8 cột ở cả giao diện HTML Preview lẫn trong file Word DOCX xuất ra.
-4. Cột 7 và 8 của Phụ lục 3 hiển thị tách biệt rõ ràng giữa NLS và AI, khớp 100% với Phụ lục 1.
-5. Cả 61 bộ kiểm thử `node tests/run-all-tests.js` đều PASS 100%.
-6. File `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đồng nhất 100% (byte-for-byte).
+## 6. Kế hoạch Kiểm thử & Xác minh (Verification Plan)
+1. **Kiểm tra tĩnh**: Chạy file test `tests/teacher-permissions-smoke.js`.
+2. **Kiểm tra hành vi**:
+   - Giả lập tài khoản giáo viên mới được cấp `['vehinh']`:
+     * Truy cập `index.html`: Chỉ duy nhất thẻ "Vẽ hình học AI" hiển thị trong danh sách công cụ. Các thẻ khác (Soạn KHBD, Thi trực tuyến, Trình chiếu slides...) đều có class `hidden`.
+     * Truy cập trực tiếp `soankhbd.html` hoặc `gslides.html`: Bị `access-control.js` chặn lại, bật alert thông báo chưa cấp quyền và chuyển về `index.html`.
+     * Truy cập `vehinh.html`: Vào sử dụng bình thường.

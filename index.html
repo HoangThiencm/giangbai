@@ -940,20 +940,9 @@
         }
 
         function augmentTeacherAllowedSet(allowedPages, config) {
-            const set = new Set(
+            return new Set(
                 (Array.isArray(allowedPages) ? allowedPages : []).map(page => (page === 'lotrinh' ? 'lotrinhtoan6' : page))
             );
-            const account = localStorage.getItem('userEmail') || '';
-            const userFeat = config?.user_features?.[account];
-            if (!userFeat || typeof userFeat !== 'object') {
-                return set;
-            }
-            Object.entries(TOOL_PAGE_LINKS).forEach(([tool]) => {
-                if (userFeat[tool]) {
-                    set.add(tool);
-                }
-            });
-            return set;
         }
 
         function hideToolCards(selector) {
@@ -990,10 +979,9 @@
         }
 
         function applyTeacherAllowedPagesVisibility(allowedSet, features) {
-            if (localStorage.getItem('userRole') !== 'teacher' || !allowedSet.size) return;
-            const grantWorkspaceTools = teacherHasWorkspaceHub(allowedSet) && !teacherHasAnyToolPage(allowedSet);
+            if (localStorage.getItem('userRole') !== 'teacher') return;
             Object.entries(TOOL_PAGE_LINKS).forEach(([tool]) => {
-                const allowed = allowedSet.has(tool) || grantWorkspaceTools;
+                const allowed = allowedSet.has(tool);
                 const visible = allowed && features[tool] !== false;
                 setToolCardsVisible(`#mainToolsGrid > [data-tool="${tool}"]`, visible);
             });
@@ -1012,7 +1000,9 @@
 
         function applyTeacherHubVisibility(features, allowedSet) {
             if (localStorage.getItem('userRole') !== 'teacher') return;
-            resetMainToolsGridVisibility();
+            document.querySelectorAll('#mainToolsGrid > [data-tool]').forEach(card => {
+                card.classList.add('hidden');
+            });
             applyTeacherAllowedPagesVisibility(allowedSet, features);
         }
 
@@ -1530,7 +1520,17 @@
                 applyTeacherHubVisibility(accountFeatures, allowedSet);
             }
 
-            if (!hasTeacherWorkspace) return;
+            if (!hasTeacherWorkspace) {
+                const emptyDivider = document.getElementById('teacherToolsDivider');
+                emptyDivider?.classList.remove('hidden');
+                document.getElementById('defaultToolsHeader')?.classList.add('hidden');
+                document.getElementById('toolsDeck')?.classList.add('tools-deck--teacher');
+                const emptyToolsSub = emptyDivider?.querySelector('.tools-deck-sub');
+                if (emptyToolsSub) {
+                    emptyToolsSub.textContent = 'Chưa mở công cụ giảng dạy — liên hệ Admin để cấp quyền.';
+                }
+                return;
+            }
 
             const hub = document.getElementById('teacherLotrinhHub');
             const panel = document.getElementById('teacherLotrinhPanel');
@@ -1550,7 +1550,7 @@
                 const grantedCount = allowedSet.size;
                 toolsSub.textContent = visibleTools > 0
                     ? `Đang mở ${visibleTools} công cụ (${grantedCount} quyền từ admin). F5 nếu thiếu sau khi admin cấp quyền.`
-                    : 'Chưa mở công cụ giảng dạy — admin bấm Cấp full hoặc Bật tất cả trong Cài đặt tài khoản.';
+                    : 'Chưa mở công cụ giảng dạy — liên hệ Admin để cấp quyền.';
             }
 
             const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
