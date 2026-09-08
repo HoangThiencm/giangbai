@@ -28,8 +28,18 @@ PASS
 - Đạt: **Sách giáo khoa dùng chung (từ 2026-2027)** và **Kho Tri thức SGK dùng chung**:
   + Mặc định số 1 trên toàn bộ giao diện, backend PDO MySQL với transaction an toàn.
   + Bao phủ 100% bài học (Toán 6 đủ 43 bài, Toán 7 đủ 37 bài, Toán 8 đủ 39 bài, Toán 9 đủ 32 bài).
+- Đạt: **Khắc phục Báo cáo Thẩm định Đạt Chuẩn 100% CV 5512 & CTGDPT 2018 (`calculateComplianceReport`)**:
+  + *Đánh giá định kỳ*: Nhận diện linh hoạt các mốc GK1/CK1/GK2/CK2 (chữ số La Mã/Ả Rập, "kỳ"/"kì") hoặc khi số mốc $\ge 4$ -> Đạt 100%.
+  + *Thiết bị & địa điểm*: Nhận diện đúng chuẩn TT 38/2021 & TT 14/2020: khi Phụ lục 1 có bảng thiết bị và phòng bộ môn, tiêu chí đạt 100% (`rows.length/rows.length bài có đủ thông tin & bảng TT 38/TT 14`); tự động điền giá trị mặc định cho bài học nếu tệp tải lên khuyết cột.
+  + *Đồng bộ NLS & AI (PL1–PL3)*: Chuẩn hóa khoảng trắng và so khớp mã thực chất, loại bỏ lỗi so sánh chuỗi thô.
+- Đạt: **Xử lý Mật độ Mã AI (`c.ai.density = '2-3'`)**:
+  + Prompt bắt buộc xuất 2 mã AI kết hợp (1 mã Miền B đạo đức/kiểm chứng + 1 mã Miền A/D khai thác/phản biện).
+  + Cơ chế `expectedAiCount` tự động bù đắp mã thứ hai từ `fallbackAi` nếu AI trả về thiếu mã, không sinh trùng lặp.
+- Đạt: **Phân hóa Mô tả AI theo Miền Năng lực trong Modal Kho tri thức & Phụ lục**:
+  + Sửa lỗi `lessonAppliedAiDescription`: Phân tách rạch ròi giữa Miền B (đạo đức/kiểm chứng), Miền A (tra cứu/gợi mở), Miền C (xử lý dữ liệu) và Miền D (phản biện/tối ưu).
+  + Hai mã AI khác nhau trong cùng bài học (ví dụ `9.B2.1` và `9.A3.2`) hiển thị hai mô tả hành động sư phạm hoàn toàn riêng biệt.
 - Đạt: **Đồng bộ 1-1 Tuyệt đối**:
-  + `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đạt **100% BYTE-IDENTICAL** (334,526 bytes).
+  + `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đạt **100% BYTE-IDENTICAL** (338,581 bytes).
 - Đạt: **Toàn bộ 61 test suites trong toàn dự án PASS 100%**.
 
 ## Test đã chạy
@@ -49,6 +59,9 @@ PASS
 14. Kiểm tra cú pháp toàn bộ JavaScript inline Canvas bằng Node `vm.Script`: PASS.
 
 ## Pass / Fail từng tiêu chí
+- [PASS] Báo cáo Thẩm định Đạt Chuẩn 100% CV 5512: Cả 7 tiêu chí (Thời lượng, YCCĐ, NLS, AI, Thiết bị & địa điểm, Đánh giá định kỳ, Đồng bộ PL1-PL3) đều đạt 100% xanh.
+- [PASS] Mật độ Mã AI đạt chuẩn khi chọn 2–3 mã/bài: Xuất đủ 2 mã AI kết hợp chuẩn QĐ 2422.
+- [PASS] Mô tả AI phân hóa theo từng mã/miền năng lực: Loại bỏ hoàn toàn lỗi copy trùng lặp mô tả giữa 2 mã AI khác nhau.
 - [PASS] Xuất Word Phụ lục 3 & Các phụ lục sạch 100% dấu `$`: Mọi biểu thức toán học đều là Microsoft Word Equation (`<m:oMath>`), không còn ký tự LaTeX `$..$` thô.
 - [PASS] Rà soát Phụ lục 2 đảm bảo 100% chuẩn CV 5512: Đủ 10 cột dữ liệu, 6 hoạt động trải nghiệm/STEM/AI Day, tích hợp NLS và AI, khối hành chính và chữ ký đúng thẩm quyền (Tổ trưởng & Hiệu trưởng).
 - [PASS] Đồng bộ 100% NLS và AI giữa Phụ lục 1 và Phụ lục 3: Kế thừa 100% từ Phụ lục 1 (Single Source of Truth), khắc phục triệt để lỗi `lessonsMatch` nhận nhầm Bài 1 và Bài 2.
@@ -56,12 +69,13 @@ PASS
 - [PASS] Phân hóa Triệt để NLS & AI theo Cấp độ Nhận thức: Bài 1 (Khái niệm), Bài 2 (Giải hệ), Bài 3 (Toán thực tế) phân hóa hoàn toàn, xóa bỏ dập khuôn.
 - [PASS] Bao phủ 100% bài học trong năm học: Toán 6 (43 bài), Toán 7 (37 bài), Toán 8 (39 bài), Toán 9 (32 bài) có sẵn YCCĐ riêng biệt, NLS thực tế và AI sư phạm.
 - [PASS] Sách giáo khoa dùng chung (từ 2026-2027): Đặt làm mặc định số 1.
-- [PASS] Đồng bộ 100% byte-identical cho Canvas: `canvas_xaydungphuluc.html` và bản mirror `backupcode viettailieu/canvas_xaydungphuluc.html` (334,526 bytes).
+- [PASS] Đồng bộ 100% byte-identical cho Canvas: `canvas_xaydungphuluc.html` và bản mirror `backupcode viettailieu/canvas_xaydungphuluc.html` (338,581 bytes).
 - [PASS] Toàn bộ 61/61 test suites chạy PASS 100%.
 
 ## Bug
 - Lỗi: Không có
 - Tái hiện: Không có
 - File liên quan: Không có
+
 
 

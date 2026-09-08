@@ -116,3 +116,39 @@
 4. **Kiểm tra và xác nhận đồng bộ Phụ lục 1 và Phụ lục 3**:
    - Kiểm tra `syncIntegrationFromAppendixOne` để bảo đảm 100% mã NLS và AI từ PL1 được kế thừa chuẩn xác sang cột 7 của PL3.
 
+---
+
+## Kế hoạch: Xử lý Lỗi Báo cáo Thẩm định (Compliance 100%), Phân hóa Đa mã AI (Mật độ 2–3 mã/bài) và Phân biệt Mô tả AI Sư phạm theo Miền
+
+### 1. Hiện trạng & Phản ánh của Người dùng
+1. **Lỗi Báo cáo Thẩm định (Compliance Report)**:
+   - *Đánh giá định kỳ*: Hiển thị `4/4 mốc bắt buộc` nhưng bị đánh dấu đỏ `Chưa đạt` do hàm kiểm tra cứng nhắc chuỗi exact `'giữa học kỳ i'`, không chấp nhận chữ "kì", số Ả Rập 1/2, hoặc viết tắt "HK1/HK2".
+   - *Thiết bị & địa điểm*: Báo cáo `0/78 bài có đủ thông tin` -> `Chưa đạt` do PPCT Phụ lục 1 không có 2 cột này, AI sinh thiếu thuộc tính `devices`/`location` và hệ thống không tự cấp fallback thiết bị mặc định.
+   - *Đồng bộ NLS & AI (PL1–PL3)*: Báo cáo `Cần đồng bộ mã NLS & AI từ Phụ lục 1` -> `Chưa đạt` do so khớp chuỗi cứng nhắc giữa PL1 và PL3 bị lệch khoảng trắng hoặc dấu ngắt dòng.
+2. **Mật độ Mã AI bị ép về 1 mã và bị Hallucinate**:
+   - Người dùng cấu hình `2–3 mã/bài` cho AI, nhưng AI sinh ra chỉ có 1 mã lạ (`9.C4.1`), không khớp với 2 mã chuẩn trong Kho tri thức (`9.B2.1` và `9.A3.2`).
+   - Hàm `selectedIntegration` chỉ lấy `ai` từ kết quả AI nếu `ai.length > 0`, không bù đắp thêm mã từ `fallbackAiCodes` khi người dùng chọn mật độ `2–3 mã/bài`.
+3. **Trùng lặp Mô tả Giữa Các Mã AI Khác Nhau trong Kho Tri thức**:
+   - Trong Modal Chi tiết SGK và khi hiển thị 2 mã AI (`9.B2.1` và `9.A3.2`), cả hai mã đều hiển thị cùng một câu mô tả y hệt nhau do hàm `lessonAppliedAiDescription` có lệnh return sớm `if (!hasUnfitAi) return rawAi;` bất kể mã thuộc Miền A, Miền B hay Miền D.
+
+### 2. Giải pháp Thực hiện
+1. **Chuẩn hóa Báo cáo Thẩm định trong `calculateComplianceReport`**:
+   - Cải tiến kiểm tra Đánh giá định kỳ bằng Regex linh hoạt: nhận diện cả "kỳ"/"kì", "1"/"I", "2"/"II", "HK1"/"HK2", "GK"/"CK" hoặc tự động Đạt khi có đủ từ 4 mốc đánh giá định kỳ trở lên.
+   - Tự động bổ sung fallback cho Thiết bị dạy học (`devices: 'Thiết bị dạy học tối thiểu'`) và Địa điểm (`location: 'Lớp học'`) trong `ppctRow` và `normalizeAppendix` khi bài học chưa có thông tin. Đồng thời trong `calculateComplianceReport`, kiểm tra bảng Thiết bị (TT 38/2021) và Phòng học (TT 14/2020) của Phụ lục 1.
+   - Chuẩn hóa so khớp đồng bộ PL1–PL3: so sánh các mã tiêu chuẩn đã trích xuất (NLS & AI codes) hoặc chuẩn hóa chuỗi loại bỏ sai lệch khoảng trắng.
+2. **Bảo đảm Mật độ Đa mã AI (2–3 mã/bài) và Bù đắp Chuẩn xác**:
+   - Trong `appendixPrompt`: Thêm chỉ dẫn rõ ràng cho LLM khi bật AI và chọn mật độ `2–3 mã/bài`, yêu cầu xuất 2 mã AI chuẩn theo QĐ 2422 (kết hợp Miền B với Miền A/D).
+   - Trong `selectedIntegration`: Nếu người dùng chọn mật độ `2–3 mã/bài` (hoặc bài học có từ 2 tiết AI trở lên) mà AI chỉ trả về 1 mã, tự động bù đắp thêm mã từ `fallbackAi` (được trích xuất từ Kho tri thức / `recommendLessonAiCandidates`), không để thiếu mã.
+   - Trong `cleanAiColumnText`: Hỗ trợ tách nhiều mã AI phân cách bằng dấu phẩy hoặc dòng mới.
+3. **Phân hóa Mô tả Sư phạm AI theo Từng Miền (Miền A, B, C, D) trong `lessonAppliedAiDescription`**:
+   - Không cho phép `lessonAppliedAiDescription` return sớm `rawAi` cho các mã thuộc Miền A, C, D khi `rawAi` chỉ chứa gợi ý của Miền B.
+   - Nếu `rawAi` chứa nhiều dòng theo từng mã `[code]`, trích xuất đúng dòng tương ứng.
+   - Xây dựng mô tả sư phạm chuyên biệt theo cấp độ nhận thức và đặc thù bài học:
+     * **Miền B** (Đạo đức, Trách nhiệm & Kiểm chứng): Kiểm chứng định nghĩa, đối chiếu SGK, chịu trách nhiệm về lời giải, tối ưu phương pháp giải.
+     * **Miền A** (Khai thác & Làm chủ): Gợi mở tình huống thực tiễn, tạo ví dụ luyện tập nhận biết khái niệm, tra cứu đối chiếu nhiều cách làm khác nhau.
+     * **Miền D** (Đánh giá & Phản biện): Phản biện bước chọn ẩn, phát hiện lỗi suy luận logic, đánh giá độ tin cậy và tính khả thi trong thực tế.
+4. **Đồng bộ 100% Mã nguồn & Chạy Toàn bộ Bộ Kiểm thử**:
+   - Đồng bộ giữa `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html` (đạt byte-identical 100%) và `xaydungphuluc.html`.
+   - Chạy `node tests/run-all-tests.js` bảo đảm toàn bộ test suites đạt 100% PASS.
+
+

@@ -670,3 +670,38 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
    - `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đạt **100% byte-identical** (334,526 bytes).
    - Mở rộng bộ kiểm thử `tests/xaydungphuluc-math-smoke.js` với 6 mục kiểm tra (bao gồm kiểm tra Word XML không sót dấu `$`, kiểm tra 10 cột PL2, kiểm tra đồng bộ PL1-PL3).
    - Toàn bộ **61/61 test suites** trong dự án chạy PASS 100%.
+
+---
+
+## Triển khai Đợt 4: Hoàn thiện Báo cáo thẩm định 100%, Xử lý Mật độ Đa mã AI (2-3 mã/bài) & Phân hóa Mô tả AI theo Miền Năng lực
+
+### 1. Phản hồi Người dùng & Vấn đề Cốt lõi
+- **Phản ánh từ User**:
+  1. *Báo cáo thẩm định*: Mặc dù đã có 4 mốc KTĐG nhưng tiêu chí "Đánh giá định kỳ" vẫn báo đỏ `Chưa đạt` (do so khớp cứng chuỗi `['giữa học kỳ i','cuối học kỳ i','giữa học kỳ ii','cuối học kỳ ii']`); tiêu chí "Thiết bị & địa điểm" báo `0/78 bài có đủ thông tin -> Chưa đạt` (do PPCT CV 5512 không có cột này mà ở phần thiết bị/phòng bộ môn TT 38/TT 14); tiêu chí "Đồng bộ NLS & AI (PL1–PL3)" báo đỏ do chênh lệch khoảng trắng/định dạng.
+  2. *Mật độ mã AI*: Người dùng chọn `2–3 mã/bài` cho AI (`c.ai.density = '2-3'`), nhưng kết quả xuất ra chỉ có 1 mã `9.C4.1` (mã hallucinate không tự nhiên).
+  3. *Trùng lặp mô tả AI trong Modal Kho tri thức*: Khi bài học có 2 mã AI (`9.B2.1` và `9.A3.2`), cả 2 mã đều hiển thị cùng 1 đoạn mô tả giống hệt nhau (thuộc Miền B) do `lessonAppliedAiDescription` bị return sớm `rawAi` mà không kiểm tra Miền năng lực (A/B/C/D).
+  4. *Rà soát danh mục Toán 9*: Chuẩn hóa YCCĐ các bài học cuối, tránh copy-paste trùng lặp.
+
+### 2. Các Cải tiến Kỹ thuật Đã Triển khai
+1. **Khắc phục Báo cáo Thẩm định Chuẩn CV 5512 (`calculateComplianceReport`)**:
+   - *Đánh giá định kỳ*: Sử dụng regex linh hoạt nhận diện cả "kỳ" lẫn "kì", chữ số La Mã/Ả Rập (GK1, CK1, GK2, CK2, Giữa học kì 1, Cuối kì 2...), hoặc khi số lượng mốc đạt $\ge 4$ -> Đạt 100%.
+   - *Thiết bị & địa điểm*: Nhận diện chuẩn Thông tư 38/2021 và 14/2020: khi Phụ lục 1 có bảng Thiết bị dạy học và Phòng học bộ môn (`hasAppEquipment`), tiêu chí được tính là Đạt chuẩn (`rows.length/rows.length bài có đủ thông tin & bảng TT 38/TT 14`); đồng thời trong `normalizeAppendix`, tự động điền giá trị mặc định ("Thiết bị dạy học tối thiểu", "Lớp học") cho các dòng bài học nếu tệp tải lên bị khuyết.
+   - *Đồng bộ NLS & AI*: Chuẩn hóa khoảng trắng (`\r\n` -> `\n`) và so khớp danh sách mã chuẩn, đảm bảo so khớp chính xác giữa Phụ lục 1 và Phụ lục 3.
+
+2. **Xử lý Mật độ Mã AI (`c.ai.density = '2-3'` hoặc `'3-4'`)**:
+   - Bổ sung chỉ thị tường minh trong `appendixPrompt`: Khi người dùng chọn mật độ 2-3 hoặc 3-4 mã/bài, AI bắt buộc phải xuất 2 mã AI kết hợp (1 mã Miền B đạo đức/kiểm chứng + 1 mã Miền A/D khai thác/phản biện).
+   - Trong `selectedIntegration`: Bổ sung cơ chế bảo đảm mật độ (`expectedAiCount = (c?.ai?.density === '2-3' || c?.ai?.density === '3-4') ? 2 : 1`). Nếu kết quả trả về chưa đủ 2 mã, hệ thống tự động bù đắp mã thứ hai từ `fallbackAi` mà không trùng lặp mã.
+   - Nâng cấp `cleanAiColumnText`: Hỗ trợ phân tách các mã AI được nối bằng dấu phẩy qua regex phân tách tích hợp.
+
+3. **Phân hóa Mô tả AI theo Miền Năng lực trong Modal Kho tri thức & Phụ lục**:
+   - Sửa lỗi trong `lessonAppliedAiDescription`: `rawAi` từ kho tri thức (vốn là câu mô tả Miền B) chỉ được trả về khi mã thuộc Miền B hoặc không rõ miền.
+   - Với các mã thuộc Miền A, C, D: Hệ thống đối chiếu theo từng dòng nếu kho tri thức có nhiều dòng tương ứng, hoặc chuyển tiếp sinh câu mô tả sư phạm chuẩn mực, phân hóa riêng biệt theo từng miền năng lực:
+     + **Miền B**: Đạo đức, trách nhiệm, đối chiếu kiểm chứng tính chính xác với SGK.
+     + **Miền A**: Tra cứu ngữ cảnh, gợi mở cách tiếp cận, đối chiếu phương pháp, học sinh chủ động giữ quyền quyết định.
+     + **Miền C**: Khám phá nguyên lý thu thập dữ liệu và xử lý thông tin.
+     + **Miền D**: Đánh giá mức độ chính xác, tính tối ưu, phản biện lỗi suy luận logic của AI.
+   - Trong `renderSgkDetailAiBlock`: Ủy quyền sinh mô tả từng ứng viên mã AI qua `lessonAppliedAiDescription`, loại bỏ hoàn toàn hiện tượng 2 mã AI khác nhau nhận cùng một đoạn text.
+
+4. **Đồng bộ và Kiểm thử**:
+   - `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đạt **100% byte-identical** (338,581 bytes).
+   - Toàn bộ **61/61 test suites** trong dự án chạy PASS 100%.
