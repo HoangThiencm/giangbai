@@ -250,8 +250,7 @@
             </div>
             <div id="guestIdentity" class="mb-2 grid gap-2 sm:grid-cols-2">
                 <input id="postAuthorName" class="field sm:col-span-2" placeholder="Họ và tên *">
-                <input id="postAuthorRole" class="field" placeholder="Vai trò (tùy chọn)">
-                <input id="postAuthorGroup" class="field" placeholder="Lớp / nhóm (tùy chọn)">
+                <input id="postAuthorRole" class="field sm:col-span-2" placeholder="Vai trò (tùy chọn)">
             </div>
             <div id="postColumnWrap" class="mt-3 hidden">
                 <span class="label">Đăng vào cột</span>
@@ -490,7 +489,6 @@
             <button type="button" class="settings-tab active" data-tab="title" onclick="switchSettingsTab('title')">Tiêu đề</button>
             <button type="button" class="settings-tab" data-tab="appearance" onclick="switchSettingsTab('appearance')">Giao diện</button>
             <button type="button" class="settings-tab" data-tab="layout" onclick="switchSettingsTab('layout')">Bố cục</button>
-            <button type="button" class="settings-tab" data-tab="posts" onclick="switchSettingsTab('posts')">Bài đăng</button>
             <button type="button" class="settings-tab" data-tab="interaction" onclick="switchSettingsTab('interaction')">Tương tác</button>
             <button type="button" class="settings-tab" data-tab="content" onclick="switchSettingsTab('content')">Nội dung</button>
             <button type="button" class="settings-tab" data-tab="advanced" onclick="switchSettingsTab('advanced')">Nâng cao</button>
@@ -555,18 +553,6 @@
                     <span class="mb-2 block text-xs font-bold text-slate-400">Các cột / mục</span>
                     <div id="setColumnRows" class="space-y-2"></div>
                     <button type="button" onclick="settingsAddColumn()" class="mt-2 text-sm font-bold text-yellow-400"><i class="fas fa-plus mr-1"></i>Thêm cột</button>
-                </div>
-            </div>
-            <div id="settingsPosts" class="settings-section hidden">
-                <div class="settings-card flex items-center justify-between gap-3">
-                    <div>
-                        <div class="text-sm font-bold">Tên tác giả và thời gian</div>
-                        <div class="mt-1 text-xs text-slate-500">Hiển thị dưới mỗi bài đăng</div>
-                    </div>
-                    <label class="relative inline-flex cursor-pointer items-center">
-                        <input id="setShowAuthor" type="checkbox" class="peer sr-only" checked>
-                        <span class="h-7 w-12 rounded-full bg-slate-600 peer-checked:bg-yellow-500 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5"></span>
-                    </label>
                 </div>
             </div>
             <div id="settingsInteraction" class="settings-section hidden">
@@ -956,7 +942,7 @@
                 font_family: b.font_family || 'inter',
                 post_size: b.post_size || 'standard',
                 post_position: b.post_position || 'first',
-                show_author: b.show_author === undefined ? true : !!Number(b.show_author),
+                show_author: true,
                 default_column_id: b.default_column_id || null,
                 access_mode: b.access_mode,
                 target_class: b.target_class || '',
@@ -1035,7 +1021,7 @@
                 font_family: b.font_family || 'inter',
                 post_size: b.post_size || 'standard',
                 post_position: b.post_position || 'first',
-                show_author: !!Number(b.show_author ?? 1),
+                show_author: true,
                 comments_enabled: !!Number(b.comments_enabled),
                 reactions_enabled: !!Number(b.reactions_enabled),
                 moderation_enabled: !!Number(b.moderation_enabled),
@@ -1045,7 +1031,6 @@
             document.getElementById('setTitle').value = state.settingsDraft.title;
             document.getElementById('setDescription').value = state.settingsDraft.description;
             document.getElementById('setLayout').value = state.settingsDraft.layout_type;
-            document.getElementById('setShowAuthor').checked = state.settingsDraft.show_author;
             document.getElementById('setComments').checked = state.settingsDraft.comments_enabled;
             document.getElementById('setReactions').checked = state.settingsDraft.reactions_enabled;
             document.getElementById('setModeration').value = state.settingsDraft.moderation_enabled ? '1' : '0';
@@ -1083,7 +1068,7 @@
         function switchSettingsTab(tab) {
             document.querySelectorAll('.settings-tab').forEach((el) => el.classList.toggle('active', el.dataset.tab === tab));
             document.querySelectorAll('.settings-section').forEach((el) => el.classList.add('hidden'));
-            const map = { title: 'settingsTitle', appearance: 'settingsAppearance', layout: 'settingsLayout', posts: 'settingsPosts', interaction: 'settingsInteraction', content: 'settingsContent', advanced: 'settingsAdvanced' };
+            const map = { title: 'settingsTitle', appearance: 'settingsAppearance', layout: 'settingsLayout', interaction: 'settingsInteraction', content: 'settingsContent', advanced: 'settingsAdvanced' };
             document.getElementById(map[tab])?.classList.remove('hidden');
         }
 
@@ -1178,7 +1163,7 @@
                         font_family: d.font_family,
                         post_size: d.post_size,
                         post_position: d.post_position,
-                        show_author: document.getElementById('setShowAuthor').checked,
+                        show_author: true,
                         access_mode: state.board.access_mode,
                         target_class: state.board.target_class || '',
                         status: document.getElementById('setOpen').checked ? 'open' : 'closed',
@@ -1705,17 +1690,17 @@
                 ? `<span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-black text-amber-700">${isPending ? 'CHỜ DUYỆT' : 'TỪ CHỐI'}</span>`
                 : '';
 
-            const actions = state.canManage ? `
+            const actions = (state.canManage || p.can_delete) ? `
                 <div class="post-action mt-3 flex flex-wrap gap-2 border-t border-slate-900/10 pt-3">
-                    ${isPending ? `
+                    ${state.canManage && isPending ? `
                         <button type="button" onclick="moderate(${p.id},'publish')" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white">
                             <i class="fas fa-check mr-1"></i>Duyệt
                         </button>
                         <button type="button" onclick="moderate(${p.id},'reject')" class="rounded-lg bg-amber-500 px-3 py-2 font-bold text-white">Từ chối
                         </button>` : ''}
-                    <button type="button" onclick="moderate(${p.id},'pin')" class="rounded-lg bg-white/70 px-3 py-2 font-bold text-slate-700">
+                    ${state.canManage ? `<button type="button" onclick="moderate(${p.id},'pin')" class="rounded-lg bg-white/70 px-3 py-2 font-bold text-slate-700">
                         <i class="fas fa-thumbtack mr-1"></i>${p.pinned ? 'Bỏ ghim' : 'Ghim'}
-                    </button>
+                    </button>` : ''}
                     <button type="button" onclick="moderate(${p.id},'delete')" class="rounded-lg bg-red-50 px-3 py-2 font-bold text-red-700">
                         <i class="fas fa-trash-can mr-1"></i>Xóa
                     </button>
@@ -1751,11 +1736,7 @@
 
             const compactClass = compact ? ' min-h-[180px]' : '';
             const wideClass = state.board?.post_size === 'wide' ? ' post-wide' : '';
-            const showAuthor = state.board?.show_author === undefined ? true : !!Number(state.board.show_author);
-            const authorLine = showAuthor ? `
-                <div class="post-meta mt-3 border-t border-slate-900/10 pt-2 font-bold text-slate-500">
-                    ${esc(p.author_name)}${p.author_group ? ` · ${esc(p.author_group)}` : ''} · ${esc(fmt(p.created_at))}
-                </div>` : '';
+            const authorLine = `<div class="post-meta mt-3 border-t border-slate-900/10 pt-3 font-bold text-slate-500">${esc(p.author_name || 'Ẩn danh')} · ${esc(fmt(p.created_at))}</div>`;
 
             return `<article draggable="${state.canManage ? 'true' : 'false'}" data-post="${p.id}"
                 data-status="${p.status}" class="padlet-card post-${esc(p.card_color)} overflow-hidden rounded-2xl border border-slate-900/10 p-5 shadow-sm${compactClass}${wideClass} ${isPending && state.canManage ? 'ring-2 ring-amber-300' : ''}">
@@ -2311,7 +2292,6 @@
             fd.append('card_color', state.postColor);
             fd.append('author_name', document.getElementById('postAuthorName').value);
             fd.append('author_role', document.getElementById('postAuthorRole').value);
-            fd.append('author_group', document.getElementById('postAuthorGroup').value);
             [...document.getElementById('postFiles').files].forEach((f) => fd.append('files[]', f));
 
             const btn = document.getElementById('postSubmit');

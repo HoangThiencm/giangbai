@@ -391,7 +391,7 @@ function padlet_delete_drive_files_for_post(PDO $pdo, int $postId): array
     return $failed;
 }
 
-function padlet_payload(PDO $pdo, array $board, bool $includeAll = false): array
+function padlet_payload(PDO $pdo, array $board, bool $includeAll = false, ?array $currentUser = null): array
 {
     $columns = padlet_columns($pdo, (int)$board['id']);
     $sql = 'SELECT * FROM padlet_posts WHERE board_id = ?' . ($includeAll ? '' : " AND status = 'published'") . ' ORDER BY pinned DESC, order_index ASC, created_at DESC';
@@ -409,6 +409,10 @@ function padlet_payload(PDO $pdo, array $board, bool $includeAll = false): array
     }
     foreach ($posts as &$post) {
         $post['id'] = (int)$post['id']; $post['column_id'] = $post['column_id'] ? (int)$post['column_id'] : null; $post['pinned'] = (bool)$post['pinned'];
+        // Deletion is granted only to the board owner/manager or to the signed-in
+        // account that created this post. Never infer ownership from a display name.
+        $post['can_delete'] = $includeAll || ($currentUser && !empty($post['author_user_id'])
+            && (int)$currentUser['id'] === (int)$post['author_user_id']);
         $post['pos_x'] = $post['pos_x'] !== null ? (int)$post['pos_x'] : null;
         $post['pos_y'] = $post['pos_y'] !== null ? (int)$post['pos_y'] : null;
         $post['files'] = $filesByPost[(int)$post['id']] ?? []; $post['comments'] = $commentsByPost[(int)$post['id']] ?? []; $post['reactions'] = $reactionsByPost[(int)$post['id']] ?? [];
@@ -466,7 +470,9 @@ if ($method === 'POST' && $action === 'save-board') {
     $fontFamily = padlet_font_family((string)($data['font_family'] ?? 'inter'));
     $postSize = padlet_post_size((string)($data['post_size'] ?? 'standard'));
     $postPosition = padlet_post_position((string)($data['post_position'] ?? 'first'));
-    $showAuthor = !empty($data['show_author']) ? 1 : 0;
+    // Author and timestamp are core post metadata; older clients may still send
+    // show_author, but must not be able to hide it.
+    $showAuthor = 1;
     $defaultColumnId = (int)($data['default_column_id'] ?? 0) ?: null;
     $pdo->beginTransaction();
     try {
@@ -536,7 +542,7 @@ if ($method === 'POST' && $action === 'delete-board') {
 if ($method === 'GET' && $action === 'board') {
     $board = padlet_board($pdo, 0, (string)($_GET['code'] ?? '')); if (!$board) respond(['error' => 'Không tìm thấy bảng chia sẻ.'], 404);
     $user = padlet_current_user($pdo); $accessUser = padlet_access($pdo, $board, $user); $canManage = $accessUser && ($accessUser['role'] ?? '') === 'teacher' && (int)$board['owner_id'] === (int)$accessUser['id'];
-    $payload = padlet_payload($pdo, $board, $canManage);
+    $payload = padlet_payload($pdo, $board, $canManage, $accessUser);
     $payload['ok'] = true; $payload['can_manage'] = $canManage; $payload['user'] = $accessUser ? public_user($accessUser) : null;
     respond($payload);
 }
@@ -547,8 +553,8 @@ if ($method === 'POST' && $action === 'post') {
     $user = padlet_access($pdo, $board, padlet_current_user($pdo));
     $body = trim((string)($_POST['body'] ?? '')); $link = trim((string)($_POST['link_url'] ?? ''));
     if ($link !== '' && !filter_var($link, FILTER_VALIDATE_URL)) respond(['error' => 'Liên kết không hợp lệ.'], 422);
-    if ($user) { $name = $user['full_name']; $role = $user['role'] === 'teacher' ? 'Giáo viên' : 'Học sinh'; $group = $user['class_name'] ?? ''; }
-    else { $name = trim((string)($_POST['author_name'] ?? '')); $role = trim((string)($_POST['author_role'] ?? '')); $group = trim((string)($_POST['author_group'] ?? '')); if ($name === '') respond(['error' => 'Vui lòng nhập họ tên người đăng.'], 422); }
+    if ($user) { $name = $user['full_name']; $role = $user['role'] === 'teacher' ? 'Giáo viên' : 'Học sinh'; $group = ''; }
+    else { $name = trim((string)($_POST['author_name'] ?? '')); $role = trim((string)($_POST['author_role'] ?? '')); $group = ''; if ($name === '') respond(['error' => 'Vui lòng nhập họ tên người đăng.'], 422); }
     $files = array_values(array_filter(padlet_file_input(), fn($file) => (int)$file['error'] !== UPLOAD_ERR_NO_FILE));
     if ($body === '' && $link === '' && !$files) respond(['error' => 'Hãy nhập nội dung, liên kết hoặc đính kèm tệp.'], 422);
     if (count($files) > 5) respond(['error' => 'Mỗi bài đăng tối đa 5 tệp.'], 422);
@@ -633,8 +639,16 @@ if ($method === 'POST' && $action === 'reaction') {
 }
 
 if ($method === 'POST' && $action === 'moderate') {
-    $teacher = padlet_require_teacher($pdo); $data = json_body(); $board = padlet_require_owner($pdo, $teacher, (int)($data['board_id'] ?? 0)); $postId = (int)($data['post_id'] ?? 0); $operation = (string)($data['operation'] ?? '');
-    $check = $pdo->prepare('SELECT id FROM padlet_posts WHERE id = ? AND board_id = ? LIMIT 1'); $check->execute([$postId, (int)$board['id']]); if (!$check->fetch()) respond(['error' => 'Không tìm thấy bài đăng.'], 404);
+    $data = json_body(); $board = padlet_board($pdo, (int)($data['board_id'] ?? 0)); $postId = (int)($data['post_id'] ?? 0); $operation = (string)($data['operation'] ?? '');
+    if (!$board) respond(['error' => 'Không tìm thấy bảng.'], 404);
+    $user = padlet_current_user($pdo);
+    // Preserve class-board access rules before checking post ownership.
+    padlet_access($pdo, $board, $user);
+    $isOwner = $user && ($user['role'] ?? '') === 'teacher' && (int)$board['owner_id'] === (int)$user['id'];
+    $check = $pdo->prepare('SELECT id, author_user_id FROM padlet_posts WHERE id = ? AND board_id = ? LIMIT 1'); $check->execute([$postId, (int)$board['id']]); $post = $check->fetch(); if (!$post) respond(['error' => 'Không tìm thấy bài đăng.'], 404);
+    $isAuthor = $user && !empty($post['author_user_id']) && (int)$user['id'] === (int)$post['author_user_id'];
+    if (in_array($operation, ['publish','reject','pin'], true) && !$isOwner) respond(['error' => 'Bạn không có quyền quản lý bài đăng này.'], 403);
+    if ($operation === 'delete' && !($isOwner || $isAuthor)) respond(['error' => 'Bạn chỉ có thể xóa bài do chính tài khoản của mình đăng.'], 403);
     if (in_array($operation, ['publish','reject'], true)) $pdo->prepare('UPDATE padlet_posts SET status = ? WHERE id = ?')->execute([$operation === 'publish' ? 'published' : 'rejected', $postId]);
     elseif ($operation === 'pin') $pdo->prepare('UPDATE padlet_posts SET pinned = 1 - pinned WHERE id = ?')->execute([$postId]);
     elseif ($operation === 'delete') {
