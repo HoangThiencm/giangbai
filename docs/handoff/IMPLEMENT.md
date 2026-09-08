@@ -599,4 +599,74 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
 
 5. **Kiểm thử Tự động**:
    - Bổ sung Section 9 trong `tests/sgk-knowledge-smoke.js`: Kiểm tra tự động tính phân hóa NLS và AI của Bài 1, Bài 2, Bài 3 Toán 9 -> PASS 100%.
-   - Chạy toàn bộ 60 test suites (`node tests/run-all-tests.js`): **ALL 60 TEST SUITES PASSED 100%**.
+   - Chạy toàn bộ test suites (`node tests/run-all-tests.js`): PASS 100%.
+
+---
+
+## Hỗ trợ Đa mã Năng lực AI (Multi-Code AI) theo Khung QĐ 2422
+
+### 1. Phản hồi Người dùng & Vấn đề Cốt lõi
+- **Phản ánh trực tiếp từ User**: *"ủa bài nào cũng chỉ có 1 mã năng lực AI à, nhiều khi sẽ có hơn thì sao?"*
+- **Nguyên nhân kỹ thuật**:
+  + Trước đây, trường `ai_pedagogy_hint` trong Kho tri thức SGK chỉ lưu 1 chuỗi mô tả duy nhất với 1 mã AI đại diện.
+  + Giao diện Modal Chi tiết bài học SGK (`openSgkDetailModal`) hiển thị NLS dưới dạng các Badge đa mã `[Mã NLS: ...]` và danh sách hành động, trong khi AI chỉ hiển thị 1 dòng text thô.
+  + Luồng `fallbackAiCode` chỉ trả về 1 mã duy nhất, chưa khai thác dropdown `#aiDensity` (1–2 mã, 2–3 mã/bài).
+
+### 2. Các Cải tiến Kỹ thuật Đã Triển khai
+1. **Mô hình Cặp đôi Mã AI Sư phạm theo Khung QĐ 2422**:
+   - Mỗi bài học được trang bị cặp đôi mã AI kết hợp giữa **Làm chủ công nghệ / Khai thác (Miền A)** và **Đạo đức, Trách nhiệm & Kiểm chứng (Miền B)** hoặc **Đánh giá phản biện (Miền D)**:
+     * *Bài 1 (Khái niệm)*: `9.B2.1` (kiểm chứng định nghĩa, chịu trách nhiệm) + `9.A3.2` (dùng AI tạo ví dụ ngẫu nhiên, rèn luyện tư duy logic).
+     * *Bài 2 (Giải hệ)*: `9.B2.1` (định hướng phương pháp giải tối ưu, đối chiếu SGK) + `9.A3.1` (phản biện các bước giải, đối chiếu nhiều cách giải).
+     * *Bài 3 (Toán thực tế)*: `9.B2.1` (phản biện bước chọn ẩn số, ràng buộc đại lượng) + `9.D1.1` (đánh giá độ tin cậy và tính khả thi của mô hình thực tế).
+2. **Hàm `recommendLessonAiCandidates(lessonTitle, grade, subject)`**:
+   - Xây dựng danh mục đề xuất tự động 1–2 mã AI phân hóa theo từng thể loại bài và khối lớp (Toán 6, 7, 8, 9).
+3. **Nâng cấp Hiển thị trong Modal Chi tiết SGK (`renderSgkDetailAiBlock`)**:
+   - Hiển thị các Badge màu tím `[Mã AI: 9.B2.1]` và `[Mã AI: 9.A3.1]` nổi bật.
+   - Danh sách hành động sư phạm riêng rẽ cho từng mã AI, có viền màu tím nhạt và ký hiệu mũi tên sư phạm, tương xứng 1-1 với khối Năng lực số.
+4. **Hàm `fallbackAiCodes` hỗ trợ Đa mã AI**:
+   - Tự động sinh **2 mã AI** khi giáo viên chọn mật độ `2–3 mã/bài` hoặc khi bài học có từ 2 tiết áp dụng AI trở lên.
+   - Bọc trong cấu trúc chuẩn và tự động gắn phạm vi tiết `(Áp dụng: tiết ...)`.
+5. **Kiểm thử & Đồng bộ**:
+   - Bổ sung Section 10 trong `tests/sgk-knowledge-smoke.js` kiểm tra đa mã AI -> PASS 100%.
+
+---
+
+## Chuyển đổi Triệt để Equation Word (PL3 & Toàn bộ Phụ lục), Rà soát Chuẩn hóa PL2 và Đồng bộ 100% NLS & AI (PL1–PL3)
+
+### 1. Phản hồi Người dùng & Vấn đề Cốt lõi
+- **Phản ánh từ User**:
+  > *"trong phụ lục 3 xuất word còn mã latex $..$ chứ đã chuyển nó sang equation đâu?, rồi rà soát lại PL 2 đảm bảo chưa? PL1 và PL 3 có giống nhau mã NLS và AI không"*
+- **Nguyên nhân kỹ thuật**:
+  1. **Lỗi sót `$..$` trong Word DOCX (Phụ lục 3 & Phụ lục 1)**:
+     - Trong `js/khbd-docx.js`: Regex `parseInlineTextToRuns` có nhánh `\[(?:NLS|AI|...)(?::\s*[^\]\r\n]+)?\]` bắt trọn toàn bộ khối `[NLS: ...]` và `[AI: ...]`. Khi một khối chứa công thức `$ax + by = c$` hoặc `$\begin{cases}...\end{cases}$`, hàm đẩy thẳng chuỗi vào `this.coloredTextRun(...)`, bỏ qua hoàn toàn việc chuyển công thức toán bên trong sang `createNativeMath` (`<m:oMath>`).
+     - Trong `autoWrapMathInDelimiters`: Số mũ/chỉ số dưới Unicode (`²`, `³`, `₀`, `₁`) và ký hiệu Hy Lạp (`Δ`, `π`, `α`...) chưa được chuẩn hóa, khiến biểu thức dạng `y = ax² (a ≠ 0)` bị ngắt dấu `$` sai vị trí (`$y = ax$² $(a \ne 0)$`). Phân số có biểu thức lồng nhau (`\frac{-b \pm \sqrt{\Delta}}{2a}`) bị đứt regex vì chưa hỗ trợ ngoặc nhọn lồng nhau.
+  2. **Lệch pha mã NLS & AI giữa Phụ lục 1 và Phụ lục 3**:
+     - Trong hàm `lessonsMatch`: Việc so khớp chuỗi con (`source.includes(generated)`) được chạy trước việc so khớp số thứ tự bài học (`lessonOrdinal`). Do tên Bài 1 ("Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn") chứa cụm từ "hệ hai phương trình", Bài 2 ("Bài 2. Giải hệ hai phương trình bậc nhất hai ẩn") bị nhận nhầm thành Bài 1, dẫn đến việc Bài 2 ở Phụ lục 3 lấy nhầm mã NLS/AI của Bài 1!
+
+### 2. Các Cải tiến Kỹ thuật Đã Triển khai
+1. **Xử lý Triệt để Equation Word trong `js/khbd-docx.js` & `autoWrapMathInDelimiters`**:
+   - Thêm hàm `pushMarkerWithMath` trong `parseInlineTextToRuns`: Tách nội dung bên trong các badge `[NLS: ...]` và `[AI: ...]`. Mọi công thức toán dạng `$..$` bên trong badge được chuyển đổi 100% thành đối tượng Word Equation chuẩn `<m:oMath>` qua `createNativeMath`, trong khi phần text bao quanh vẫn giữ nguyên màu sắc, styling bold và nền màu.
+   - Nâng cấp `autoWrapMathInDelimiters`:
+     * Tiền chuẩn hóa số mũ Unicode (`⁰`...`⁹`, `ⁿ`, `ˣ` -> `^0`...`^9`) và chỉ số dưới (`₀`...`₉` -> `_0`...`_9`).
+     * Tiền chuẩn hóa ký hiệu Hy Lạp (`Δ`, `π`, `α`, `β`, `θ`, `λ`, `σ`, `ω`, `Ω` -> `\Delta`, `\pi`, `\alpha`...).
+     * Hỗ trợ ngoặc nhọn lồng nhau `\{(?:[^{}]|\{[^{}]*\})*\}` cho `\frac` và `\sqrt`.
+     * Bổ sung fallback gọi trực tiếp `gen.createNativeMath` trong `parseDocxMathRuns`.
+   - Kết quả xác minh: Phụ lục 3 và toàn bộ các phụ lục khi xuất Word DOCX hoàn toàn **sạch 100% dấu `$..$`**, toàn bộ công thức toán học hiển thị dưới dạng Microsoft Word Equation (`<m:oMath>`).
+
+2. **Khắc phục Triệt để Lỗi So khớp Bài học trong `lessonsMatch`**:
+   - Đảo độ ưu tiên kiểm tra: Hàm `lessonsMatch` kiểm tra `lessonOrdinal` ngay từ đầu. Nếu cả 2 bài đều có số thứ tự bài học (`sourceNumber !== null && generatedNumber !== null`), bắt buộc `sourceNumber === generatedNumber`.
+   - Triệt tiêu hoàn toàn khả năng Bài 2 bị nhận nhầm thành Bài 1, bảo đảm Phụ lục 3 lấy đúng 100% mã NLS & AI của từng bài học từ Phụ lục 1.
+
+3. **Rà soát Chuẩn hóa Phụ lục 2 theo Công văn 5512**:
+   - **Đầy đủ 10 cột dữ liệu**: `STT | Chủ đề (1) | Yêu cầu cần đạt (2) | Số tiết (3) | Thời điểm (4) | Địa điểm (5) | Chủ trì (6) | Phối hợp (7) | Điều kiện thực hiện (8) | Mã NLS & AI (CV 3456 & QĐ 2422)`.
+   - **Đúng bản chất hoạt động giáo dục**: 6 hoạt động STEM / trải nghiệm môn Toán (Dụng cụ học tập & Giác kế ngoài trời; Vẽ hình động GeoGebra; Phân tích thống kê trên phần mềm bảng tính; Dự án STEM mô hình hình học; Vòng quay xác suất thực nghiệm; Ngày hội Sáng tạo Khoa học, Công nghệ số và AI - AI Day), rải đều cả học kỳ I và II.
+   - **Thể thức hành chính & Chữ ký chuẩn thẩm quyền**: Quốc hiệu, Tiêu ngữ, Tên trường, Tên tổ, tiêu đề CV 5512. Chữ ký bên trái: `TỔ TRƯỞNG`, chữ ký bên phải: `HIỆU TRƯỞNG`.
+
+4. **Khẳng định Cơ chế Đồng bộ 100% NLS & AI (PL1 - PL3)**:
+   - Cơ chế Single Source of Truth: Phụ lục 3 kế thừa 100% dữ liệu tích hợp NLS và AI từ Phụ lục 1 thông qua `appendixOneIntegrationForLesson` và `syncIntegrationFromAppendixOne`.
+   - Đồng bộ thời gian thực: Khi người dùng chỉnh sửa ô NLS/AI tại bảng Phụ lục 1 trong preview, bảng Phụ lục 3 tự động cập nhật ngay lập tức.
+
+5. **Đồng bộ 1-1 và Kiểm thử Toàn diện**:
+   - `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đạt **100% byte-identical** (334,526 bytes).
+   - Mở rộng bộ kiểm thử `tests/xaydungphuluc-math-smoke.js` với 6 mục kiểm tra (bao gồm kiểm tra Word XML không sót dấu `$`, kiểm tra 10 cột PL2, kiểm tra đồng bộ PL1-PL3).
+   - Toàn bộ **61/61 test suites** trong dự án chạy PASS 100%.

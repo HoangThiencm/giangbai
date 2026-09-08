@@ -554,6 +554,33 @@ class DocxGenerator {
       }));
     };
 
+    const mathSplitRegex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$))/g;
+
+    const pushMarkerWithMath = (token, markerInfo, baseStyles) => {
+      if (!mathSplitRegex.test(token)) {
+        runs.push(this.coloredTextRun(token, {
+          bold: markerInfo ? markerInfo.bold : baseStyles.bold,
+          color: markerInfo ? markerInfo.color : color,
+          shading: markerInfo ? markerInfo.shading : undefined
+        }));
+        return;
+      }
+      const parts = token.split(mathSplitRegex);
+      for (const part of parts) {
+        if (!part) continue;
+        const isMath = /^(?:\$\$|\$|\\\(|\\\[)/.test(part) && /(?:\$\$|\$|\\\)|\\\])$/.test(part);
+        if (isMath) {
+          pushMath(part, part.startsWith("$$") || part.startsWith("\\["));
+        } else {
+          runs.push(this.coloredTextRun(part, {
+            bold: markerInfo ? markerInfo.bold : baseStyles.bold,
+            color: markerInfo ? markerInfo.color : color,
+            shading: markerInfo ? markerInfo.shading : undefined
+          }));
+        }
+      }
+    };
+
     while ((match = regex.exec(text)) !== null) {
       if (match.index > lastIndex) {
         const plain = text.substring(lastIndex, match.index);
@@ -570,25 +597,13 @@ class DocxGenerator {
         const boldText = token.substring(2, token.length - 2);
         const markerInfo = this.markerRunColor(boldText);
         if (markerInfo) {
-          runs.push(this.coloredTextRun(boldText, {
-            bold: markerInfo.bold,
-            color: markerInfo.color,
-            shading: markerInfo.shading
-          }));
+          pushMarkerWithMath(boldText, markerInfo, { ...styles, bold: markerInfo.bold });
         } else {
           runs.push(...this.parseInlineTextToRuns(boldText, color, { ...styles, bold: true }));
         }
       } else if (token.startsWith("[")) {
         const markerInfo = this.markerRunColor(token);
-        if (markerInfo) {
-          runs.push(this.coloredTextRun(token, {
-            bold: markerInfo.bold,
-            color: markerInfo.color,
-            shading: markerInfo.shading
-          }));
-        } else {
-          runs.push(this.coloredTextRun(token, { color }));
-        }
+        pushMarkerWithMath(token, markerInfo, styles);
       } else if ((token.startsWith("*") && token.endsWith("*")) || (token.startsWith("_") && token.endsWith("_"))) {
         const italicText = token.substring(1, token.length - 1);
         runs.push(...this.parseInlineTextToRuns(italicText, color, { ...styles, italics: true }));

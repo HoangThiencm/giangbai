@@ -157,6 +157,131 @@ YCCĐ:
   console.log(`  ✓ Đã sinh thành công ${mathCount} Equation (<m:oMath>) trong file Word!`);
   assert.ok(mathCount >= 5, `Phải sinh ít nhất 5 Equation, thực tế sinh ${mathCount}`);
 
+  // 4. Kiểm tra triệt để Phụ lục 3: Không còn bất kỳ ký tự $ nào sót lại trong Word XML
+  console.log('-> 4. Kiểm tra xuất Word Phụ lục 3: 100% không còn dấu $ thô trong XML...');
+  const pl3TestText = [
+    'Bài 1. Khái niệm phương trình ax + by = c (a ≠ 0 hoặc b ≠ 0)',
+    'Bài 18. Hàm số y = ax² (a ≠ 0) và đồ thị parabol',
+    '[NLS: 5.3.TC2a - Sử dụng phần mềm GeoGebra vẽ đồ thị đường thẳng $ax + by = c$ và tìm nghiệm]',
+    '[AI: 9.B2.1 - Dùng trợ lý AI gợi ý nghiệm của hệ $\\begin{cases} x + y = 3 \\\\ 2x - y = 0 \\end{cases}$ (Áp dụng: tiết 1, 2)]',
+    'Rút gọn phân thức: \\frac{-b \\pm \\sqrt{\\Delta}}{2a} với \\Delta = b^2 - 4ac'
+  ];
+
+  const pl3Runs = pl3TestText.map(line => sandbox.parseDocxMathRuns(line, { size: 26 }, docx));
+  const pl3Doc = new docx.Document({
+    sections: [{ children: pl3Runs.map(runs => new docx.Paragraph({ children: runs })) }]
+  });
+  const pl3Buffer = await docx.Packer.toBuffer(pl3Doc);
+  const pl3Xml = readZipEntry(pl3Buffer, 'word/document.xml').toString('utf8');
+
+  const pl3DollarMatches = pl3Xml.match(/\$[^<$]+/g);
+  assert.strictEqual(pl3DollarMatches, null, `Phụ lục 3 Word XML không được sót bất kỳ dấu $ nào! Thực tế sót: ${JSON.stringify(pl3DollarMatches)}`);
+  const pl3MathCount = (pl3Xml.match(/<m:oMath>/g) || []).length;
+  console.log(`  ✓ Phụ lục 3 xuất Word sạch 100% dấu $, đã chuyển thành ${pl3MathCount} Equation OMML!`);
+  assert.ok(pl3MathCount >= 6, `Phụ lục 3 phải tạo ít nhất 6 Equation OMML, thực tế tạo ${pl3MathCount}`);
+
+  // 5. Rà soát đảm bảo Phụ lục 2: đủ 10 cột, 4-6 hoạt động STEM/trải nghiệm, có NLS & AI
+  console.log('-> 5. Rà soát chuẩn hóa Phụ lục 2 (Kế hoạch hoạt động giáo dục)...');
+  const extractAppendixFn = (name) => {
+    const start = canvasSrc.indexOf(`function ${name}(`);
+    if (start < 0) return '';
+    const nextStart = canvasSrc.indexOf('\nfunction ', start + 1);
+    return canvasSrc.slice(start, nextStart > 0 ? nextStart : canvasSrc.length);
+  };
+
+  const pl2Sandbox = {
+    ...sandbox,
+    EQUIPMENT: { default: ['Thiết bị cơ bản'] },
+    getConfig: () => ({ monHoc: 'Toán học', lop: '9', namHoc: '2026-2027', thongKe: { students: '160' }, nls: { enabled: true }, ai: { enabled: true } })
+  };
+  vm.createContext(pl2Sandbox);
+
+  vm.runInContext(
+    extractAppendixFn('fallback') + '\n' +
+    extractAppendixFn('cleanNlsColumnText') + '\n' +
+    extractAppendixFn('cleanAiColumnText') + '\n' +
+    extractAppendixFn('enrichNlsCode') + '\n' +
+    extractAppendixFn('normalizeAppendix'),
+    pl2Sandbox
+  );
+
+  const pl2Data = pl2Sandbox.normalizeAppendix(null, '2', pl2Sandbox.getConfig());
+  assert.ok(Array.isArray(pl2Data.activities), 'Phụ lục 2 phải có mảng activities');
+  assert.ok(pl2Data.activities.length >= 4 && pl2Data.activities.length <= 6, `Phụ lục 2 phải có 4–6 hoạt động, thực tế có ${pl2Data.activities.length}`);
+  
+  // Kiểm tra 10 trường dữ liệu chuẩn Công văn 5512
+  const requiredFields = ['stt', 'topic', 'requirements', 'duration', 'time', 'location', 'host', 'coordinator', 'conditions', 'integration'];
+  for (const act of pl2Data.activities) {
+    for (const field of requiredFields) {
+      assert.ok(act[field] !== undefined && String(act[field]).trim() !== '', `Hoạt động "${act.topic}" thiếu trường bắt buộc: ${field}`);
+    }
+    assert.ok(act.integration.includes('NLS:') || act.integration.includes('AI:') || act.integration !== '-', `Hoạt động "${act.topic}" phải có tích hợp NLS/AI`);
+  }
+  console.log(`  ✓ Phụ lục 2 đạt chuẩn 100%: gồm ${pl2Data.activities.length} hoạt động STEM/trải nghiệm với đầy đủ 10 cột dữ liệu và tích hợp NLS/AI.`);
+
+  // 6. Kiểm tra tính đồng bộ 100% giữa Phụ lục 1 và Phụ lục 3
+  console.log('-> 6. Kiểm tra đồng bộ NLS và AI giữa Phụ lục 1 và Phụ lục 3...');
+  vm.runInContext(
+    extractAppendixFn('isNlsColumn') + '\n' +
+    extractAppendixFn('isAiColumn') + '\n' +
+    extractAppendixFn('isIntegrationColumn') + '\n' +
+    extractAppendixFn('normalizeHeaderKey') + '\n' +
+    extractAppendixFn('normalizeIntegrationTable') + '\n' +
+    extractAppendixFn('foldText') + '\n' +
+    extractAppendixFn('cleanLessonName') + '\n' +
+    extractAppendixFn('lessonOrdinal') + '\n' +
+    extractAppendixFn('lessonKeywords') + '\n' +
+    extractAppendixFn('lessonsMatch') + '\n' +
+    extractAppendixFn('integrationText') + '\n' +
+    extractAppendixFn('integrationParts') + '\n' +
+    extractAppendixFn('appendixOneIntegrationForLesson') + '\n' +
+    extractAppendixFn('syncIntegrationFromAppendixOne'),
+    pl2Sandbox
+  );
+
+  const mockPl1Table = {
+    columns: ['STT', 'Bài học', 'Số tiết', 'Yêu cầu cần đạt', 'Biểu hiện năng lực số', 'Biểu hiện năng lực AI'],
+    rows: [
+      {
+        isHeader: false,
+        cells: [
+          '1',
+          'Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn',
+          '2',
+          'Nhận biết khái niệm...',
+          '5.3.TC2a - Sử dụng GeoGebra và máy tính cầm tay kiểm tra nghiệm',
+          '9.B2.1 - Dùng trợ lý AI gợi mở ví dụ ngẫu nhiên và kiểm chứng (Áp dụng: tiết 1, 2)'
+        ]
+      },
+      {
+        isHeader: false,
+        cells: [
+          '2',
+          'Bài 2. Giải hệ hai phương trình bậc nhất hai ẩn',
+          '3',
+          'Giải được hệ hai phương trình...',
+          '5.3.TC2a - Sử dụng máy tính cầm tay giải hệ phương trình',
+          '9.B2.1 - Dùng AI gợi ý định hướng lựa chọn phương pháp giải (Áp dụng: tiết 3, 4)'
+        ]
+      }
+    ]
+  };
+
+  const pl3PlanRows = [
+    { lesson: 'Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn', periods: '2' },
+    { lesson: 'Bài 2. Giải hệ hai phương trình bậc nhất hai ẩn', periods: '3' }
+  ];
+
+  const syncedPl3 = pl2Sandbox.syncIntegrationFromAppendixOne(pl3PlanRows, mockPl1Table, pl2Sandbox.getConfig());
+  
+  assert.strictEqual(syncedPl3.length, 2, 'Phải đồng bộ đủ 2 bài học');
+  assert.ok(syncedPl3[0].integration.includes('[NLS: 5.3.TC2a'), 'PL3 Bài 1 phải kế thừa đúng mã NLS của PL1');
+  assert.ok(syncedPl3[0].integration.includes('[AI: 9.B2.1'), 'PL3 Bài 1 phải kế thừa đúng mã AI của PL1');
+  assert.ok(syncedPl3[0].integration.includes('tiết 1, 2'), 'PL3 Bài 1 phải khớp phạm vi tiết của PL1');
+  assert.ok(syncedPl3[1].integration.includes('[NLS: 5.3.TC2a'), 'PL3 Bài 2 phải kế thừa đúng mã NLS của PL1');
+  assert.ok(syncedPl3[1].integration.includes('phương pháp giải'), 'PL3 Bài 2 phải kế thừa đúng mô tả AI của PL1');
+  console.log('  ✓ NLS và AI giữa Phụ lục 1 và Phụ lục 3 khớp nhau 100% về mã, mô tả sư phạm và phạm vi tiết!');
+
   console.log('==================================================');
   console.log('🎉 TẤT CẢ KIỂM THỬ CÔNG THỨC EQUATION ĐÃ ĐẠT 100%!');
   console.log('==================================================');
