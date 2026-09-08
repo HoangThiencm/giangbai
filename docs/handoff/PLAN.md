@@ -1,154 +1,271 @@
-# PLAN: Phân hóa Triệt để Năng lực số (NLS) và Trợ lý AI Sư phạm theo Cấp độ Nhận thức từng Bài học trong Kho Tri thức SGK
+# KẾ HOẠCH BÀN GIAO TRIỂN KHAI (HANDOFF PLAN)
 
-## Hiện trạng & Phản ánh của Người dùng
-- **Phản ánh từ User**:
-  > *"nhưng mà năng lực số của cả các bài này giống nhau đều được hả? bài 1 mới nhận biết thôi mà. Bài 2 mới giải hệ pt, bài 3 thì lại liên quan giải bài toán bằng cách lập pt. Đây là tôi ví dụ. Mỗi bài đều có năng lực số, AI khác nhau chứ. Cho dù là nạp từ SGK hay nạp từ tri thức. Chỗ này bị nhầm lẫn nè"*
+## 1. Hiện trạng & Phản ánh từ Người dùng
+1. **Vấn đề 1 (Câu văn ngô nghê/vô nghĩa do ghép thô tên bài học)**:
+   - **Phản ánh từ User**:
+     > *"Nó sinh ra các câu vô nghĩa, khi nó gắn tên bài vô cho có:*
+     > *`[NLS: 5.3.TC2a - Sử dụng máy tính cầm tay (chức năng tính giá trị biểu thức / phím CALC) để kiểm tra các cặp số/giá trị cho trước có phải là nghiệm của Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn hay không.]`*
+     > *Nghiệm của khái niệm phương trình là gì?"*
+   - **Bản chất vấn đề**:
+     Tên bài học trong chương trình/SGK thường chứa các từ ngữ chỉ mục tiêu sư phạm như `"Khái niệm phương trình..."`, `"Nhận biết tam giác đều..."`, `"Mở đầu về số hữu tỉ..."`. Khi engine tự động nối thô chuỗi `${clean}` vào vị trí thực thể toán học (`nghiệm của ${clean}`), câu văn trở thành *"nghiệm của Khái niệm phương trình..."*, gây phi lý về mặt thuật ngữ toán học và sư phạm.
 
-- **Khảo sát gốc rễ mã nguồn**:
-  1. **Trong `js/khbd-standards.js`**:
-     - Hàm `scoreOfficialStandard` khi chấm điểm nhánh `algebra`:
-       Gom chung toàn bộ bài học có chữ "phuong trinh" vào một rổ, luôn cộng điểm tối đa cho `5.3`, `3.1`, `5.2`.
-       Không phân biệt bài **Khái niệm / Nhận biết** (Bài 1) với bài **Rèn kỹ năng giải** (Bài 2) với bài **Mô hình hóa thực tế** (Bài 3).
-  2. **Trong `recommendLessonDigitalCandidates` (`xaydungphuluc.html` & Canvas)**:
-     - Dùng regex gộp trả về cùng bộ mã `5.3.TC2a, 3.1.TC2a, 5.2.TC2a` cho cả 3 bài.
-  3. **Trong `lessonAppliedNlsDescription` (`xaydungphuluc.html` & Canvas)**:
-     - Khi kiểm tra `isEquation`, sinh ra đúng một mẫu văn bản dập khuôn:
-       * 5.3: *"Sử dụng máy tính cầm tay để tìm nghiệm, kiểm tra nghiệm và phần mềm GeoGebra/Desmos vẽ đồ thị minh họa nghiệm hình học..."*
-       * 3.1: *"Sử dụng công cụ số (GeoGebra/trình chiếu) để mô hình hóa và trình bày các bước giải..."*
-     - Hậu quả sư phạm: Bài 1 mới học "Khái niệm phương trình" (chưa học cách giải) nhưng bị gán "trình bày các bước giải" và "vẽ đồ thị minh họa nghiệm hình học"!
-  4. **Trong `lessonAppliedAiDescription` (`xaydungphuluc.html` & Canvas)**:
-     - Nhánh domain B luôn trả về câu cố định:
-       *"Ứng dụng công cụ AI hỗ trợ gợi ý các bước giải bài ${clean}, học sinh đối chiếu kết quả với SGK..."*
-     - Cả Bài 1, Bài 2, Bài 3 đều có chung một câu gợi ý giải bài tập, làm mất tính sư phạm phân hóa.
-  5. **Dữ liệu CSDL máy chủ hosting (`hoangthiencm.id.vn`)**:
-     - Kho tri thức Toán 9 đang lưu 32 bài học, trong đó Bài 1, Bài 2, Bài 3 đang chứa cùng các đoạn minh chứng NLS và gợi ý AI dập khuôn do được sinh từ engine cũ.
+2. **Vấn đề 2 (Cấu trúc bảng Phụ lục 3 - Kế hoạch giáo dục của giáo viên)**:
+   - **Phản ánh từ User**:
+     > *"Ở phụ lục 3 chúng ta cũng nên tách ra cột Biểu hiện khung năng lực số và biểu hiện khung năng lực AI đi nhỉ,"*
+   - **Bản chất vấn đề**:
+     - Trong Phụ lục 1 (Kế hoạch dạy học của Tổ chuyên môn), bảng đã được tách thành 2 cột riêng biệt:
+       * Cột 5: `Biểu hiện năng lực số` (Màu xanh lam `#0070C0`)
+       * Cột 6: `Biểu hiện năng lực AI` (Màu tím `#7030A0`)
+     - Trong khi đó, Phụ lục 3 hiện tại vẫn dùng bảng 7 cột truyền thống, trong đó cột 7 là `Mã NLS & AI (CV 3456 & QĐ 2422)` gộp chung cả hai nội dung vào cùng một ô.
+     - Giáo viên và nhà trường cần sự đồng bộ tuyệt đối về mặt hình thức giữa Phụ lục 1 và Phụ lục 3: Tách Phụ lục 3 thành 8 cột, có 2 cột riêng biệt cho NLS và AI.
 
 ---
 
-## Mục tiêu Cần đạt
-1. **Phân hóa rõ rệt 3 cấp độ nhận thức sư phạm cho chủ đề Phương trình & Hệ phương trình (điển hình Toán 9 Bài 1, 2, 3)**:
-   - **Bài 1 (Khái niệm, Nhận biết)**:
-     * NLS: `1.1.TC2a, 5.3.TC2a, 3.1.TC2a`
-     * Minh chứng: Khai thác video/học liệu số nhận diện dạng ax+by=c; Dùng máy tính cầm tay (CALC / tính giá trị biểu thức) kiểm tra cặp số (x0; y0) có là nghiệm không; Phần mềm sơ đồ tư duy hệ thống hóa cấu trúc tổng quát và tập nghiệm.
-     * AI: Trợ lý AI tạo ví dụ ngẫu nhiên cặp số và phương trình/hệ phương trình để học sinh luyện tập kiểm tra nghiệm, phân tích nguyên nhân thỏa mãn hoặc không thỏa mãn định nghĩa.
-   - **Bài 2 (Kỹ năng giải, Thuật toán giải)**:
-     * NLS: `5.3.TC2a, 5.1.TC2a, 5.2.TC2a`
-     * Minh chứng: Sử dụng chức năng giải hệ (EQUATION/SIMULT) trên máy tính cầm tay kiểm tra kết quả giải bằng phương pháp thế hoặc cộng đại số; Xử lý thông báo vô số nghiệm (Infinite Solutions) / vô nghiệm (No Solution) hoặc lỗi cú pháp; GeoGebra minh họa giao điểm 2 đường thẳng biểu diễn số nghiệm.
-     * AI: Trợ lý AI phân tích hệ số đề xuất lựa chọn phương pháp giải tối ưu (phương pháp thế hay cộng đại số); học sinh tự biến đổi và kiểm chứng kết quả.
-   - **Bài 3 (Giải bài toán thực tế / Mô hình hóa toán học)**:
-     * NLS: `3.1.TC2a, 5.3.TC2a, 1.2.TC2a`
-     * Minh chứng: Bảng tính Excel/Sheets lập bảng phân tích đại lượng (vận tốc, thời gian, quãng đường; năng suất...); Máy tính cầm tay giải hệ và kiểm tra đối chiếu điều kiện thực tế của ẩn (nghiệm nguyên, dương, nằm trong khoảng cho phép); Đánh giá tính hợp lý và độ tin cậy của kết quả số so với đời sống.
-     * AI: Trợ lý AI phản biện bước chọn ẩn số, đặt điều kiện thực tế và gợi mở mối liên hệ ràng buộc giữa các đại lượng; học sinh tự xây dựng hệ phương trình, giải và chịu trách nhiệm.
+## 2. Khảo sát Gốc rễ Mã nguồn (Root Cause Analysis)
 
-2. **Mở rộng phân hóa sư phạm cho toàn bộ các dạng bài học Toán và các môn học**:
-   - Khái niệm / Mở đầu vs Thuật toán / Biến đổi / Phép tính vs Bài toán thực tế / Mô hình hóa.
-   - Hàm số & Đồ thị: Khái niệm (bảng giá trị TABLE) vs Vẽ đồ thị (GeoGebra khảo sát đỉnh/hướng) vs Bài toán thực tế.
-   - Hình học: Khái niệm mở đầu vs Định lý/Tính toán (tỉ số lượng giác, hệ thức lượng) vs Hình học không gian 3D.
-   - Thống kê: Bảng số liệu & Tần số vs Bảng tần số tương đối/ghép nhóm vs Phép thử & Xác suất thực nghiệm.
+### Gốc rễ Vấn đề 1: Ghép thô `${clean}` trong `lessonAppliedNlsDescription` và `lessonAppliedAiDescription`
+- **Vị trí**:
+  - `canvas_xaydungphuluc.html` (dòng 1443–1446)
+  - `backupcode viettailieu/canvas_xaydungphuluc.html` (dòng 1443–1446)
+  - `xaydungphuluc.html` (dòng 1428–1431)
+- **Cơ chế gây lỗi**:
+  Hàm `cleanLessonDescription(lesson)` hiện tại chỉ lọc bỏ các tiền tố `"Bài 1."`, `"Chủ đề 2."`, nhưng giữ nguyên nội dung bài:
+  `"Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn"` $\rightarrow$ `clean = "Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn"`.
+  Tại dòng 1444 (`lessonAppliedNlsDescription`):
+  ```javascript
+  if (isConceptEq) return `Sử dụng máy tính cầm tay (chức năng tính giá trị biểu thức / phím CALC) để kiểm tra các cặp số/giá trị cho trước có phải là nghiệm của ${clean} hay không.`;
+  ```
+  $\rightarrow$ Biến thành: `...có phải là nghiệm của Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn hay không.` (Khái niệm không thể có nghiệm, chỉ có phương trình/hệ phương trình mới có nghiệm).
+- **Các mẫu câu khác bị ảnh hưởng tương tự**:
+  1. `c.startsWith('1.1')`: `...nhận biết khái niệm và các trường hợp nghiệm của ${clean}.`
+  2. `c.startsWith('3.1')`: `...hệ thống hóa định nghĩa, dạng tổng quát và tập nghiệm bài ${clean}.`
+  3. `lessonAppliedAiDescription` (domain B): `...kiểm tra nghiệm bài ${clean}; giải thích lý do vì sao một trường hợp thỏa mãn hoặc không thỏa mãn định nghĩa.`
+  4. `lessonAppliedAiDescription` (domain A): `...dẫn đến khái niệm bài ${clean}...`
 
-3. **Đồng bộ mã nguồn & CSDL**:
-   - Cập nhật engine đề xuất trong `js/khbd-standards.js`.
-   - Cập nhật các hàm sinh NLS & AI trong `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`.
-   - Cập nhật danh mục `DEFAULT_MATH_CATALOG` (Toán 6, 7, 8, 9).
-   - Đẩy dữ liệu chuẩn hóa lên CSDL máy chủ hosting `hoangthiencm.id.vn` qua API `action=save`.
-   - Bổ sung bộ kiểm thử tự động trong `tests/sgk-knowledge-smoke.js` và đảm bảo 100% test suites PASS.
-
----
-
-## Kế hoạch: Hỗ trợ Đa mã Năng lực AI (Multi-Code AI) theo Khung QĐ 2422
-
-### 1. Hiện trạng & Phản ánh của Người dùng
-- **Phản ánh từ User**:
-  > *"ủa bài nào cũng chỉ có 1 mã năng lực AI à, nhiều khi sẽ có hơn thì sao?"*
-- **Khảo sát gốc rễ mã nguồn**:
-  + Trong Kho Tri thức SGK (`sgk_lessons`), trường `ai_pedagogy_hint` trước đây chỉ lưu 1 câu mô tả đơn lẻ, không có mảng `ai_candidates` như `digital_candidates` của NLS.
-  + Trong Modal Chi tiết SGK (`openSgkDetailModal`), NLS được hiển thị đẹp mắt với Badge đa mã `[Mã NLS: 5.3.TC2a] [Mã NLS: 5.1.TC2a] [Mã NLS: 5.2.TC2a]` và danh sách hành động phân rã, trong khi AI chỉ hiển thị đúng 1 dòng văn bản thô.
-  + Hàm `fallbackAiCode` chỉ trả về 1 mã duy nhất (`[AI: ${code} - ${desc}]`).
-  + Dù giao diện đã có dropdown `#aiDensity` với các lựa chọn `1–2 mã/bài`, `2–3 mã/bài`, `3–4 mã/bài`, luồng fallback và nạp tri thức vẫn bị gò bó vào 1 mã đơn lẻ.
-
-### 2. Mục tiêu Sư phạm & Kỹ thuật
-1. **Cặp đôi mã AI chuẩn mực theo QĐ 2422**:
-   - Kết hợp giữa **Làm chủ kỹ thuật / Ra lệnh / Khai thác (Miền A)** và **Đạo đức, Trách nhiệm & Đối chiếu kiểm chứng (Miền B)** hoặc **Đánh giá phản biện (Miền D)**:
-     * *Bài 1 (Khái niệm)*: `9.B2.1` (kiểm chứng định nghĩa, chịu trách nhiệm) + `9.A3.2` (dùng AI tạo ví dụ ngẫu nhiên, rèn luyện tư duy logic).
-     * *Bài 2 (Giải hệ)*: `9.B2.1` (định hướng phương pháp giải tối ưu, đối chiếu SGK) + `9.A3.1` (phản biện các bước giải, đối chiếu nhiều cách giải khác nhau).
-     * *Bài 3 (Toán thực tế)*: `9.B2.1` (phản biện bước chọn ẩn số, ràng buộc đại lượng) + `9.D1.1` (đánh giá mức độ tin cậy và tính khả thi của mô hình thực tế).
-2. **Xây dựng hàm `recommendLessonAiCandidates(lessonTitle, grade, subject)`**:
-   - Trả về bộ 1–2 mã AI phân hóa theo từng dạng bài và khối lớp (Toán 6, 7, 8, 9).
-3. **Xây dựng `renderSgkDetailAiBlock(l, grade)` trong Modal Chi tiết SGK**:
-   - Hiển thị các Badge màu tím `[Mã AI: 9.B2.1] [Mã AI: 9.A3.1]` nổi bật.
-   - Danh sách hành động sư phạm riêng cho từng mã AI, có viền `border-purple-400` tương xứng và đồng bộ 100% với khối Năng lực số.
-4. **Nâng cấp `fallbackAiCodes(index, c, lesson, lessonPeriods, selectedAiPeriods)`**:
-   - Tự động cấp **2 mã AI** khi giáo viên chọn mật độ `2–3 mã/bài` hoặc khi bài học có từ 2 tiết AI trở lên (`selectedAiPeriods.length >= 2`).
-   - Cả 2 mã đều được bọc trong cấu trúc chuẩn và nhận đúng phạm vi tiết `(Áp dụng: tiết ...)`.
-5. **Đồng bộ 1-1 và Kiểm thử Toàn diện**:
-   - Đồng bộ `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` (đạt 100% byte-identical cho Canvas).
-   - Chạy `tests/run-all-tests.js` bảo đảm ALL 60 test suites PASS 100%.
+### Gốc rễ Vấn đề 2: Cấu trúc 7 cột của Phụ lục 3
+- **Vị trí**:
+  - `canvas_xaydungphuluc.html` (dòng 66–68, dòng 216–220, dòng 1506–1511, dòng 1545)
+  - `backupcode viettailieu/canvas_xaydungphuluc.html`
+  - `xaydungphuluc.html`
+  - `tests/xaydungphuluc-smoke.js` (dòng 136)
+- **Cơ chế hiện tại**:
+  1. `PPCT_COLUMNS` và `PLAN_COLUMNS` đang dùng chung cấu hình 7 cột:
+     `[['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['integration','Mã NLS & AI (CV 3456 & QĐ 2422)']]`
+  2. Trong `normalizeAppendix('3', c)`:
+     `data.planTable = preservedPpctTable(data.plan, c)`
+     `preservedPpctTable` gọi `ppctTableFromRows`, vốn trả về 7 cột gộp chung mã `row.integration`.
+  3. `DOCX_WIDTHS.appendixThree` chỉ có 7 kích thước `[22, 6, 8, 6, 18, 16, 24]`.
+  4. Báo cáo thẩm định `calculateComplianceReport` kiểm tra tính đồng bộ NLS & AI giữa PL1 và PL3 dựa trên trường `row.integration` của `data.plan`.
 
 ---
 
-## Kế hoạch: Xử lý Triệt để Equation Word (PL3), Rà soát PL2 và Đồng bộ 100% NLS & AI (PL1–PL3)
-
-### 1. Hiện trạng & Phản ánh của Người dùng
-- **Phản ánh từ User**:
-  > *"trong phụ lục 3 xuất word còn mã latex $..$ chứ đã chuyển nó sang equation đâu?, rồi rà soát lại PL 2 đảm bảo chưa? PL1 và PL 3 có giống nhau mã NLS và AI không"*
-
-- **Khảo sát gốc rễ mã nguồn**:
-  1. **Về lỗi sót `$..$` trong Phụ lục 3**:
-     - Trong `js/khbd-docx.js`: Regex `parseInlineTextToRuns` có nhánh `\[(?:NLS|AI|...)(?::\s*[^\]\r\n]+)?\]` bắt trọn toàn bộ khối `[NLS: ...]` và `[AI: ...]`. Khi một khối chứa công thức `$ax + by = c$` hoặc `$\begin{cases}...\end{cases}$`, nhánh này đẩy thẳng toàn bộ chuỗi vào `this.coloredTextRun(token, ...)`, bỏ qua hoàn toàn việc convert công thức toán bên trong thành `createNativeMath`! Vì vậy, các mã NLS/AI ở Phụ lục 3 (cột 7) và Phụ lục 1 xuất Word bị lộ nguyên ký tự `$`.
-     - Trong `autoWrapMathInDelimiters`:
-       * Các số mũ/chỉ số dưới dạng Unicode (`²`, `³`, `₀`, `₁`) không được nhận diện trong `eqRegex`, khiến phương trình dạng `y = ax² (a ≠ 0)` bị đóng dấu `$` sai vị trí (`$y = ax$² $(a \ne 0)$`).
-       * Phân số có biểu thức lồng nhau như `\frac{-b \pm \sqrt{\Delta}}{2a}` bị dừng sớm do regex `\{[^{}]*\}` không hỗ trợ ngoặc nhọn lồng nhau.
-  2. **Về rà soát Phụ lục 2**:
-     - Phụ lục 2 là "Khung kế hoạch tổ chức các hoạt động giáo dục của tổ chuyên môn" theo CV 5512.
-     - Yêu cầu chuẩn: 10 cột dữ liệu (STT, Chủ đề (1), Yêu cầu cần đạt (2), Số tiết (3), Thời điểm (4), Địa điểm (5), Chủ trì (6), Phối hợp (7), Điều kiện thực hiện (8), Mã NLS & AI). Số lượng từ 4 đến 6 hoạt động STEM / trải nghiệm, rải đều học kỳ I và II.
-  3. **Về sự đồng bộ NLS và AI giữa Phụ lục 1 và Phụ lục 3**:
-     - Về nguyên tắc sư phạm của CV 5512: Phụ lục 3 (Kế hoạch giáo dục của giáo viên) phải kế thừa và thống nhất 100% với Phụ lục 1 (Kế hoạch dạy học của Tổ chuyên môn).
-     - Trong hàm `lessonsMatch`: Có lỗi so khớp substring (`source.includes(generated)`) chạy trước kiểm tra thứ tự bài (`sourceNumber === generatedNumber`). Khi Bài 1 có tên "Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn" chứa cụm "hệ hai phương trình bậc nhất hai ẩn", nó khiến Bài 2 ("Bài 2. Giải hệ hai phương trình bậc nhất hai ẩn") bị nhận nhầm thành Bài 1, dẫn đến việc lấy sai mã NLS/AI của Bài 1 cho Bài 2!
-
-### 2. Giải pháp Thực hiện
-1. **Xử lý triệt để Equation Word trong `js/khbd-docx.js`**:
-   - Thêm `pushMarkerWithMath` trong `parseInlineTextToRuns`: Tách nội dung bên trong badge `[NLS: ...]` và `[AI: ...]`, chuyển 100% công thức toán thành `createNativeMath` (`<m:oMath>`), đồng thời giữ nguyên màu sắc, shading và bold cho văn bản bao quanh.
-   - Nâng cấp `autoWrapMathInDelimiters`: Tiền chuẩn hóa số mũ Unicode (`⁰`...`⁹`, `ⁿ`, `ˣ`), ký hiệu Hy Lạp (`Δ`, `π`, `α`...), hỗ trợ ngoặc lồng nhau `\{(?:[^{}]|\{[^{}]*\})*\}` cho `\frac` và `\sqrt`.
-2. **Sửa dứt điểm hàm `lessonsMatch`**:
-   - Ưu tiên kiểm tra `lessonOrdinal` trước: Nếu cả 2 bài đều có số thứ tự bài (Bài 1 vs Bài 2) thì bắt buộc `sourceNumber === generatedNumber`. Không bao giờ để Bài 2 bị nhầm sang Bài 1.
-3. **Kiểm tra và xác nhận Phụ lục 2**:
-   - Đảm bảo đầy đủ 10 cột theo CV 5512, 4–6 hoạt động STEM/trải nghiệm và tích hợp NLS/AI.
-4. **Kiểm tra và xác nhận đồng bộ Phụ lục 1 và Phụ lục 3**:
-   - Kiểm tra `syncIntegrationFromAppendixOne` để bảo đảm 100% mã NLS và AI từ PL1 được kế thừa chuẩn xác sang cột 7 của PL3.
+## 3. Phạm vi Giải quyết (Scope)
+- **Thuộc phạm vi (In Scope)**:
+  1. Xây dựng hàm chuẩn hóa thực thể toán học `cleanMathEntityName(lessonName)` để tách các cụm sư phạm (`Khái niệm`, `Mở đầu về`, `Làm quen với`...) ra khỏi tên đối tượng toán học.
+  2. Rà soát và sửa toàn bộ các câu ghép chuỗi trong `lessonAppliedNlsDescription` và `lessonAppliedAiDescription` bảo đảm chuẩn 100% ngữ pháp tiếng Việt và ngôn ngữ học thuật toán học.
+  3. Tách cấu trúc Phụ lục 3 thành 8 cột:
+     - Cột 1: `Bài học`
+     - Cột 2: `Số tiết`
+     - Cột 3: `Tiết CT`
+     - Cột 4: `Tuần`
+     - Cột 5: `Thiết bị dạy học (*)`
+     - Cột 6: `Địa điểm dạy học (**)`
+     - Cột 7: `Biểu hiện năng lực số` (hoặc `Biểu hiện khung năng lực số`)
+     - Cột 8: `Biểu hiện năng lực AI` (hoặc `Biểu hiện khung năng lực AI`)
+  4. Cập nhật bảng xem trước HTML (`dynamicPpctTable` và `renderPreview`).
+  5. Cập nhật bảng xuất Word DOCX (`DOCX_WIDTHS.appendixThree`, `exportDocx`, `addPpct`).
+  6. Mở rộng regex `isNlsColumn` và `isAiColumn` để khớp linh hoạt cả "Biểu hiện năng lực số" và "Biểu hiện khung năng lực số".
+  7. Đồng bộ cả 3 file: `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html` (đảm bảo byte-identical), và `xaydungphuluc.html`.
+  8. Cập nhật các bộ kiểm thử smoke tests (`tests/xaydungphuluc-smoke.js`, `tests/xaydungphuluc-math-smoke.js`).
+- **Ngoài phạm vi (Out of Scope)**:
+  - Không thay đổi bảng Phụ lục 1 hoặc Phụ lục 2.
+  - Không thay đổi logic chia tiết, phân phối số tiết (PPCT) của môn học.
+  - Không làm thay đổi cơ chế báo cáo thẩm định 100% CV 5512.
 
 ---
 
-## Kế hoạch: Xử lý Lỗi Báo cáo Thẩm định (Compliance 100%), Phân hóa Đa mã AI (Mật độ 2–3 mã/bài) và Phân biệt Mô tả AI Sư phạm theo Miền
+## 4. Danh sách File Tác động (Target Files)
+1. `canvas_xaydungphuluc.html`
+2. `backupcode viettailieu/canvas_xaydungphuluc.html` (bắt buộc giống hệt file 1)
+3. `xaydungphuluc.html`
+4. `tests/xaydungphuluc-smoke.js`
+5. `tests/xaydungphuluc-math-smoke.js`
 
-### 1. Hiện trạng & Phản ánh của Người dùng
-1. **Lỗi Báo cáo Thẩm định (Compliance Report)**:
-   - *Đánh giá định kỳ*: Hiển thị `4/4 mốc bắt buộc` nhưng bị đánh dấu đỏ `Chưa đạt` do hàm kiểm tra cứng nhắc chuỗi exact `'giữa học kỳ i'`, không chấp nhận chữ "kì", số Ả Rập 1/2, hoặc viết tắt "HK1/HK2".
-   - *Thiết bị & địa điểm*: Báo cáo `0/78 bài có đủ thông tin` -> `Chưa đạt` do PPCT Phụ lục 1 không có 2 cột này, AI sinh thiếu thuộc tính `devices`/`location` và hệ thống không tự cấp fallback thiết bị mặc định.
-   - *Đồng bộ NLS & AI (PL1–PL3)*: Báo cáo `Cần đồng bộ mã NLS & AI từ Phụ lục 1` -> `Chưa đạt` do so khớp chuỗi cứng nhắc giữa PL1 và PL3 bị lệch khoảng trắng hoặc dấu ngắt dòng.
-2. **Mật độ Mã AI bị ép về 1 mã và bị Hallucinate**:
-   - Người dùng cấu hình `2–3 mã/bài` cho AI, nhưng AI sinh ra chỉ có 1 mã lạ (`9.C4.1`), không khớp với 2 mã chuẩn trong Kho tri thức (`9.B2.1` và `9.A3.2`).
-   - Hàm `selectedIntegration` chỉ lấy `ai` từ kết quả AI nếu `ai.length > 0`, không bù đắp thêm mã từ `fallbackAiCodes` khi người dùng chọn mật độ `2–3 mã/bài`.
-3. **Trùng lặp Mô tả Giữa Các Mã AI Khác Nhau trong Kho Tri thức**:
-   - Trong Modal Chi tiết SGK và khi hiển thị 2 mã AI (`9.B2.1` và `9.A3.2`), cả hai mã đều hiển thị cùng một câu mô tả y hệt nhau do hàm `lessonAppliedAiDescription` có lệnh return sớm `if (!hasUnfitAi) return rawAi;` bất kể mã thuộc Miền A, Miền B hay Miền D.
+---
 
-### 2. Giải pháp Thực hiện
-1. **Chuẩn hóa Báo cáo Thẩm định trong `calculateComplianceReport`**:
-   - Cải tiến kiểm tra Đánh giá định kỳ bằng Regex linh hoạt: nhận diện cả "kỳ"/"kì", "1"/"I", "2"/"II", "HK1"/"HK2", "GK"/"CK" hoặc tự động Đạt khi có đủ từ 4 mốc đánh giá định kỳ trở lên.
-   - Tự động bổ sung fallback cho Thiết bị dạy học (`devices: 'Thiết bị dạy học tối thiểu'`) và Địa điểm (`location: 'Lớp học'`) trong `ppctRow` và `normalizeAppendix` khi bài học chưa có thông tin. Đồng thời trong `calculateComplianceReport`, kiểm tra bảng Thiết bị (TT 38/2021) và Phòng học (TT 14/2020) của Phụ lục 1.
-   - Chuẩn hóa so khớp đồng bộ PL1–PL3: so sánh các mã tiêu chuẩn đã trích xuất (NLS & AI codes) hoặc chuẩn hóa chuỗi loại bỏ sai lệch khoảng trắng.
-2. **Bảo đảm Mật độ Đa mã AI (2–3 mã/bài) và Bù đắp Chuẩn xác**:
-   - Trong `appendixPrompt`: Thêm chỉ dẫn rõ ràng cho LLM khi bật AI và chọn mật độ `2–3 mã/bài`, yêu cầu xuất 2 mã AI chuẩn theo QĐ 2422 (kết hợp Miền B với Miền A/D).
-   - Trong `selectedIntegration`: Nếu người dùng chọn mật độ `2–3 mã/bài` (hoặc bài học có từ 2 tiết AI trở lên) mà AI chỉ trả về 1 mã, tự động bù đắp thêm mã từ `fallbackAi` (được trích xuất từ Kho tri thức / `recommendLessonAiCandidates`), không để thiếu mã.
-   - Trong `cleanAiColumnText`: Hỗ trợ tách nhiều mã AI phân cách bằng dấu phẩy hoặc dòng mới.
-3. **Phân hóa Mô tả Sư phạm AI theo Từng Miền (Miền A, B, C, D) trong `lessonAppliedAiDescription`**:
-   - Không cho phép `lessonAppliedAiDescription` return sớm `rawAi` cho các mã thuộc Miền A, C, D khi `rawAi` chỉ chứa gợi ý của Miền B.
-   - Nếu `rawAi` chứa nhiều dòng theo từng mã `[code]`, trích xuất đúng dòng tương ứng.
-   - Xây dựng mô tả sư phạm chuyên biệt theo cấp độ nhận thức và đặc thù bài học:
-     * **Miền B** (Đạo đức, Trách nhiệm & Kiểm chứng): Kiểm chứng định nghĩa, đối chiếu SGK, chịu trách nhiệm về lời giải, tối ưu phương pháp giải.
-     * **Miền A** (Khai thác & Làm chủ): Gợi mở tình huống thực tiễn, tạo ví dụ luyện tập nhận biết khái niệm, tra cứu đối chiếu nhiều cách làm khác nhau.
-     * **Miền D** (Đánh giá & Phản biện): Phản biện bước chọn ẩn, phát hiện lỗi suy luận logic, đánh giá độ tin cậy và tính khả thi trong thực tế.
-4. **Đồng bộ 100% Mã nguồn & Chạy Toàn bộ Bộ Kiểm thử**:
-   - Đồng bộ giữa `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html` (đạt byte-identical 100%) và `xaydungphuluc.html`.
-   - Chạy `node tests/run-all-tests.js` bảo đảm toàn bộ test suites đạt 100% PASS.
+## 5. Kế hoạch Triển khai Chi tiết cho ChatGPT (Step-by-step Implementation Plan)
 
+### Bước 1: Xử lý Lỗi ghép chuỗi vô nghĩa trong mô tả NLS và AI
+1. **Thêm hàm bóc tách thực thể toán học `cleanMathEntityName`**:
+   Đặt ngay sau `cleanLessonDescription`:
+   ```javascript
+   function cleanMathEntityName(lessonName) {
+     const clean = typeof cleanLessonDescription === 'function' ? cleanLessonDescription(lessonName) : String(lessonName || '').trim();
+     return clean.replace(/^(?:khái niệm về|khái niệm|nhận biết|mở đầu về|làm quen với|định nghĩa về|tìm hiểu về)\s+/i, '').trim() || clean;
+   }
+   ```
+2. **Cập nhật trong `lessonAppliedNlsDescription(code, label, lesson)`**:
+   - Lấy thêm: `const entity = cleanMathEntityName(clean);`
+   - Tại nhánh `c.startsWith('5.3')`:
+     - Khi `isConceptEq`:
+       * Cũ: `Sử dụng máy tính cầm tay (chức năng tính giá trị biểu thức / phím CALC) để kiểm tra các cặp số/giá trị cho trước có phải là nghiệm của ${clean} hay không.`
+       * Mới: `Sử dụng máy tính cầm tay (chức năng tính giá trị biểu thức / phím CALC) để kiểm tra các cặp số/giá trị cho trước có phải là nghiệm của ${entity} hay không.`
+       $\rightarrow$ Kết quả: `...có phải là nghiệm của phương trình và hệ hai phương trình bậc nhất hai ẩn hay không.`
+   - Tại nhánh `c.startsWith('1.1') || c.startsWith('1.')`:
+     - Khi `isConceptEq`:
+       * Cũ: `Khai thác học liệu số, video bài giảng trực quan nhận biết khái niệm và các trường hợp nghiệm của ${clean}.`
+       * Mới: `Khai thác học liệu số, video bài giảng trực quan nhận biết khái niệm, dạng tổng quát và các trường hợp nghiệm của ${entity}.`
+   - Tại nhánh `c.startsWith('3.1') || c.startsWith('3.')`:
+     - Khi `isConceptEq`:
+       * Cũ: `Sử dụng công cụ số (phần mềm vẽ sơ đồ tư duy / bảng biểu) để hệ thống hóa định nghĩa, dạng tổng quát và tập nghiệm bài ${clean}.`
+       * Mới: `Sử dụng công cụ số (phần mềm vẽ sơ đồ tư duy / bảng biểu) để hệ thống hóa định nghĩa, dạng tổng quát và tập nghiệm của ${entity}.`
+   - Tại nhánh `c.startsWith('5.2')`:
+     - Khi `isConceptEq`:
+       * Đổi: `...quan sát và kiểm tra các dấu hiệu nhận biết trong bài ${clean}.` (thêm chữ "trong").
+3. **Cập nhật trong `lessonAppliedAiDescription(code, label, lesson)`**:
+   - Lấy thêm: `const entity = cleanMathEntityName(clean);`
+   - Tại nhánh `domain === 'B'`:
+     - Khi `isConceptEq`:
+       * Cũ: `Ứng dụng công cụ AI hỗ trợ tạo các ví dụ ngẫu nhiên về số liệu/phương trình để học sinh luyện tập nhận biết khái niệm và kiểm tra nghiệm bài ${clean}; giải thích lý do vì sao một trường hợp thỏa mãn hoặc không thỏa mãn định nghĩa.`
+       * Mới: `Ứng dụng công cụ AI hỗ trợ tạo các ví dụ ngẫu nhiên về số liệu/phương trình để học sinh luyện tập nhận biết khái niệm và kiểm tra nghiệm của ${entity}; giải thích lý do vì sao một trường hợp thỏa mãn hoặc không thỏa mãn định nghĩa.`
+   - Tại nhánh `domain === 'A'`:
+     - Khi `isConceptEq`:
+       * Đổi: `Sử dụng trợ lý AI gợi mở tình huống thực tiễn dẫn đến khái niệm trong bài ${clean}, học sinh chủ động trao đổi, đối chiếu với SGK và giữ quyền quyết định cuối cùng.`
 
+---
+
+### Bước 2: Nâng cấp Phụ lục 3 thành 8 cột (Tách riêng NLS và AI)
+1. **Định nghĩa danh mục cột cho Phụ lục 3 (`APPENDIX_3_COLUMNS`)**:
+   - Trong phần khai báo hằng số đầu file (dòng 65–68):
+     ```javascript
+     const APPENDIX_1_COLUMNS=[['stt','STT'],['lesson','Bài học'],['periods','Số tiết'],['outcomes','Yêu cầu cần đạt'],['nls','Biểu hiện năng lực số'],['ai','Biểu hiện năng lực AI']];
+     const PPCT_COLUMNS=[['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['integration','Mã NLS & AI (CV 3456 & QĐ 2422)']];
+     const APPENDIX_3_COLUMNS=[['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['nls','Biểu hiện năng lực số'],['ai','Biểu hiện năng lực AI']];
+     const SCHEDULE_COLUMNS=PPCT_COLUMNS,PLAN_COLUMNS=APPENDIX_3_COLUMNS;
+     ```
+2. **Cập nhật regex nhận diện cột (`isNlsColumn`, `isAiColumn`)**:
+   - Cho phép cả cụm từ "Biểu hiện năng lực số" và "Biểu hiện khung năng lực số":
+     ```javascript
+     function isNlsColumn(label){return /^biểu hiện\s+(?:khung\s+)?năng\s+lực\s+số$/i.test(String(label||'').trim())}
+     function isAiColumn(label){return /^biểu hiện\s+(?:khung\s+)?năng\s+lực\s+ai$/i.test(String(label||'').trim())}
+     ```
+3. **Xây dựng hàm `appendixThreeTable(planRows, c)`**:
+   - Viết hàm chuyên trách tạo bảng 8 cột cho Phụ lục 3:
+     ```javascript
+     function appendixThreeTable(planRows, c) {
+       const columns = APPENDIX_3_COLUMNS.map(x => x[1]);
+       let normal = 0;
+       const rows = (planRows || []).map((row, index) => {
+         if (row.isHeader) return { isHeader: true, cells: [row.lesson] };
+         const { nlsText, aiText } = separateIntegration(
+           row.integration,
+           selectedPeriodsForLessonId(row.id || `ppct:${index}`),
+           normal,
+           c,
+           row.lesson,
+           row.periods
+         );
+         normal++;
+         return {
+           isHeader: false,
+           cells: [
+             String(row.lesson || '').trim(),
+             String(row.periods || '').trim(),
+             String(row.tietCT || '').trim(),
+             String(row.week || '').trim(),
+             String(row.devices || '').trim(),
+             String(row.location || '').trim(),
+             nlsText || '-',
+             aiText || '-'
+           ]
+         };
+       });
+       return { columns, rows, lessonIndex: 0 };
+     }
+     ```
+4. **Cập nhật `normalizeAppendix('3', c)`**:
+   - Sử dụng `appendixThreeTable` để gán vào `data.planTable`:
+     ```javascript
+     }else if(no==='3'){
+       const defaultEquip=(typeof EQUIPMENT!=='undefined'&&c&&(EQUIPMENT[c.monHoc]||EQUIPMENT.default))?(EQUIPMENT[c.monHoc]||EQUIPMENT.default).slice(0,2).join(', '):'Thiết bị dạy học tối thiểu';
+       data.plan=(data.plan||[]).map((row,i)=>{
+         const r=ppctRow(row,i,c);
+         if(!r.isHeader){
+           if(!r.devices)r.devices=defaultEquip;
+           if(!r.location)r.location='Lớp học';
+         }
+         return r;
+       }).filter(row=>row.lesson&&!isAdminLesson(row.lesson));
+       if(!results['1'])results['1']=normalizeAppendix(fallback('1',c),'1',c);
+       data.plan=syncIntegrationFromAppendixOne(data.plan,results['1'].scheduleTable,c);
+       data.planTable=appendixThreeTable(data.plan,c);
+     }
+     ```
+5. **Cập nhật hiển thị xem trước Preview Phụ lục 3 trong `renderPreview`**:
+   - Dòng 1536:
+     ```javascript
+     if(activeTab==='3'){
+       preview.innerHTML=`<h3 class="font-black text-center my-4">${esc(r.title||'PHỤ LỤC')}</h3><h4 class="font-bold">I. Phân phối chương trình</h4>${dynamicPpctTable(r.planTable||appendixThreeTable(r.plan||[],getConfig()))}<h4 class="font-bold mt-4">II. Chuyên đề lựa chọn</h4>${table([['topic','Chuyên đề'],['time','Thời điểm'],['devices','Thiết bị'],['location','Địa điểm']],r.specialties||[],'specialties')}`;
+       return;
+     }
+     ```
+6. **Cập nhật độ rộng cột xuất Word DOCX (`DOCX_WIDTHS.appendixThree`)**:
+   - Dòng 1545:
+     ```javascript
+     appendixThree: [20, 5, 6, 5, 14, 12, 19, 19]
+     ```
+     (Tổng 100%: Bài học 20%, Số tiết 5%, Tiết CT 6%, Tuần 5%, Thiết bị 14%, Địa điểm 12%, NLS 19%, AI 19%).
+   - Trong `exportDocx(n)`:
+     `addPpct(r.planTable || appendixThreeTable(r.plan || [], getConfig()), 'appendixThree');`
+
+---
+
+### Bước 3: Đồng bộ Backup và Cập nhật Smoke Tests
+1. **Đồng bộ file backup**:
+   - Sao chép toàn bộ nội dung từ `canvas_xaydungphuluc.html` sang `backupcode viettailieu/canvas_xaydungphuluc.html` để đảm bảo 100% byte-identical.
+2. **Cập nhật `tests/xaydungphuluc-smoke.js`**:
+   - Cập nhật chuỗi kiểm tra `appendixThree`:
+     * Cũ: `'appendixThree:[22,6,8,6,18,16,24]'`
+     * Mới: `'appendixThree:[20,5,6,5,14,12,19,19]'`
+   - Bổ sung kiểm tra sự hiện diện của `APPENDIX_3_COLUMNS` và `appendixThreeTable`.
+3. **Cập nhật `tests/xaydungphuluc-math-smoke.js`**:
+   - Bổ sung assertion kiểm tra Phụ lục 3 có đúng 8 cột dữ liệu:
+     * Cột 7: `isNlsColumn` trả về true.
+     * Cột 8: `isAiColumn` trả về true.
+     * Kiểm tra văn bản sinh ra không còn chứa cụm từ vô nghĩa `"nghiệm của Khái niệm phương trình"`.
+
+---
+
+## 6. Rủi ro & Phương án Giảm thiểu (Risks & Mitigations)
+1. **Rủi ro phá vỡ tính tương thích ngược của `normalizeIntegrationTable`**:
+   - *Phân tích*: Nếu bảng đầu vào có cả `isNlsColumn` và `isAiColumn`, hàm `normalizeIntegrationTable` phải giữ nguyên 8 cột mà không được tự ý gộp lại thành `INTEGRATION_COLUMN_LABEL`.
+   - *Giải pháp*: `normalizeIntegrationTable` đã có sẵn dòng kiểm tra `if(columns.some(isNlsColumn)&&columns.some(isAiColumn)) return ...;`. Việc nâng cấp regex `isNlsColumn` và `isAiColumn` bảo đảm điều kiện này luôn được kích hoạt an toàn.
+2. **Rủi ro đứt gãy đồng bộ dữ liệu giữa Phụ lục 1 và Phụ lục 3**:
+   - *Phân tích*: Báo cáo thẩm định `calculateComplianceReport` kiểm tra trường `row.integration` trong mảng `data.plan`.
+   - *Giải pháp*: `data.plan` tiếp tục lưu trữ trường `row.integration` (kế thừa 100% từ Phụ lục 1 qua `syncIntegrationFromAppendixOne`). Bảng `data.planTable` chỉ làm nhiệm vụ phân rã thành 8 cột để hiển thị UI và xuất Word. Nhờ vậy, tiêu chí thẩm định *"Đồng bộ NLS & AI (PL1–PL3)"* luôn đạt 100%.
+
+---
+
+## 7. Kế hoạch Kiểm thử & Thẩm định (Verification Plan)
+1. **Kiểm thử tự động (Unit / Smoke Tests)**:
+   - Chạy lệnh: `node tests/xaydungphuluc-smoke.js`
+   - Chạy lệnh: `node tests/xaydungphuluc-math-smoke.js`
+   - Chạy toàn bộ test suite: `node tests/run-all-tests.js` (yêu cầu 61/61 suites PASS 100%).
+2. **Kiểm tra ngữ nghĩa chuỗi sinh ra**:
+   - Với bài học `"Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn"`:
+     * Mô tả NLS 5.3: `...nghiệm của phương trình và hệ hai phương trình bậc nhất hai ẩn hay không.` (Không còn chữ "Khái niệm").
+     * Mô tả AI 9.B2.1: `...kiểm tra nghiệm của phương trình và hệ hai phương trình bậc nhất hai ẩn;...`
+3. **Kiểm tra Phụ lục 3 có 8 cột**:
+   - Cột 7: `Biểu hiện năng lực số`, chứa mã NLS và mô tả màu xanh `#0070C0`.
+   - Cột 8: `Biểu hiện năng lực AI`, chứa mã AI và mô tả màu tím `#7030A0`.
+   - Xuất Word Phụ lục 3 ra file `.docx` kiểm tra bảng có đúng 8 cột, công thức Toán OMML nguyên vẹn.
+
+---
+
+## 8. Tiêu chí Nghiệm thu (Acceptance Criteria)
+1. `cleanMathEntityName` loại bỏ triệt để các tiền tố sư phạm khi ghép vào đối tượng nghiệm toán học.
+2. Tuyệt đối không còn bất kỳ câu nào có dạng `"nghiệm của Khái niệm phương trình..."`.
+3. Phụ lục 3 có đúng 8 cột ở cả giao diện HTML Preview lẫn trong file Word DOCX xuất ra.
+4. Cột 7 và 8 của Phụ lục 3 hiển thị tách biệt rõ ràng giữa NLS và AI, khớp 100% với Phụ lục 1.
+5. Cả 61 bộ kiểm thử `node tests/run-all-tests.js` đều PASS 100%.
+6. File `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đồng nhất 100% (byte-for-byte).

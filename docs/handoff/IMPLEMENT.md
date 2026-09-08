@@ -705,3 +705,37 @@ Ngày: 2026-09-07. Đã triển khai; chờ Tester `/verify` trên môi trườn
 4. **Đồng bộ và Kiểm thử**:
    - `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đạt **100% byte-identical** (338,581 bytes).
    - Toàn bộ **61/61 test suites** trong dự án chạy PASS 100%.
+
+---
+
+## Phase 5: Hoàn thiện Cơ chế Nạp lại Tri thức SGK (1-Click Re-seeding & Runtime Sync)
+
+### 1. Phản hồi từ User
+> *"phải nạp lại tri thức chứ"*
+
+### 2. Chi tiết Giải pháp Kỹ thuật Đã Triển khai
+1. **Bổ sung Nút 1-Click "↻ Nạp lại vào CSDL"**:
+   - Trong `checkSharedSgkKnowledge`: Khi bản đồ tri thức SGK đã tồn tại (`data.exists === true`), thêm nút `↻ Nạp lại vào CSDL` ngay trong thanh hành động (`actionsEl`):
+     ```html
+     <button type="button" class="btn secondary text-xs" onclick="seedStandardSgkKnowledge('${esc(b.subject)}','${esc(b.grade)}','${esc(b.series)}')">↻ Nạp lại vào CSDL</button>
+     ```
+   - Trong `sgkDetailModal`: Bổ sung nút `↻ Nạp lại bản chuẩn vào CSDL` vào phần chân hộp thoại (`reseedCurrentDetailBook()`), cho phép giáo viên nạp đè phiên bản tri thức phân hóa mới nhất trực tiếp khi đang xem danh mục bài học.
+
+2. **Tạo trực tiếp Multi-line AI Hints & AI Candidates khi Nạp CSDL (`ensureFullCurriculumLessons`)**:
+   - Nâng cấp `ensureFullCurriculumLessons`: Khi tạo mới hoặc chuẩn hóa danh mục bài học, trường `ai_candidates` được lưu trữ đầy đủ (ví dụ: `'9.B2.1, 9.A3.2'`), và `ai_pedagogy_hint` được tạo dưới dạng đa dòng theo từng mã:
+     ```
+     [9.B2.1] Ứng dụng công cụ AI hỗ trợ tạo các ví dụ ngẫu nhiên về số liệu/phương trình để học sinh luyện tập nhận biết khái niệm và kiểm tra nghiệm...
+     [9.A3.2] Sử dụng trợ lý AI gợi mở tình huống thực tiễn dẫn đến khái niệm bài..., học sinh chủ động trao đổi, đối chiếu với SGK và giữ quyền quyết định cuối cùng.
+     ```
+   - Định dạng này được lưu cố định vào bảng `sgk_lessons` trong CSDL MySQL hosting và `localStorage`.
+
+3. **Cập nhật Giao diện Ngay khi Nạp Tri thức (`syncSharedSgkToApp`)**:
+   - Khi người dùng bấm `⚡ Nạp Tri thức vào Phụ lục`, `syncSharedSgkToApp` tự động gọi `renderPreview()` nếu đã có bảng PPCT, giúp phụ lục cập nhật tức thì với các mô tả sư phạm mới mà không cần thao tác thêm.
+
+4. **Ưu tiên Lấy Mã AI từ Kho Tri thức Đã Nạp (`fallbackAiCodes`)**:
+   - Trong `fallbackAiCodes`: Kiểm tra `sharedK?.ai_candidates` từ tri thức SGK đã nạp trước khi gọi `recommendLessonAiCandidates`, đảm bảo sự đồng nhất tuyệt đối giữa Kho tri thức và nội dung xuất ra Phụ lục 1 / Phụ lục 3.
+
+5. **Đồng bộ File & Kiểm thử Toàn diện**:
+   - `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đạt **100% byte-identical** (341,515 bytes).
+   - `xaydungphuluc.html` được đồng bộ toàn bộ logic.
+   - Chạy `node tests/run-all-tests.js`: Toàn bộ **61/61 test suites** đạt PASS 100%.

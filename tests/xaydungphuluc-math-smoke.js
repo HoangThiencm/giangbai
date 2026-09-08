@@ -77,6 +77,10 @@ async function main() {
     assert.ok(content.includes('QUY TẮC CÔNG THỨC TOÁN HỌC (BẮT BUỘC ĐẶT TRONG EQUATION)'), `${rel} thiếu quy tắc công thức toán trong standards`);
     assert.ok(content.includes('children:parseDocxMathRuns('), `${rel} thiếu parseDocxMathRuns trong para/exportDocx`);
     assert.ok(content.includes('katex.min.js'), `${rel} thiếu thư viện KaTeX`);
+    assert.ok(content.includes('APPENDIX_3_COLUMNS'), `${rel} thiếu cấu trúc 8 cột Phụ lục 3`);
+    assert.ok(content.includes('function appendixThreeTable'), `${rel} thiếu bộ tách cột NLS/AI Phụ lục 3`);
+    assert.ok(content.includes('appendixThree:[20,5,6,5,14,12,19,19]'), `${rel} thiếu độ rộng Word 8 cột Phụ lục 3`);
+    assert.ok(content.includes('function cleanMathEntityName'), `${rel} thiếu bộ làm sạch thực thể toán học`);
     console.log(`  ✓ ${rel}: PASS`);
   }
 

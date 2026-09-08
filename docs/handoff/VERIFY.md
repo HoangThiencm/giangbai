@@ -66,10 +66,12 @@ PASS
 - [PASS] Rà soát Phụ lục 2 đảm bảo 100% chuẩn CV 5512: Đủ 10 cột dữ liệu, 6 hoạt động trải nghiệm/STEM/AI Day, tích hợp NLS và AI, khối hành chính và chữ ký đúng thẩm quyền (Tổ trưởng & Hiệu trưởng).
 - [PASS] Đồng bộ 100% NLS và AI giữa Phụ lục 1 và Phụ lục 3: Kế thừa 100% từ Phụ lục 1 (Single Source of Truth), khắc phục triệt để lỗi `lessonsMatch` nhận nhầm Bài 1 và Bài 2.
 - [PASS] Hỗ trợ Đa mã Năng lực AI (Multi-Code AI theo QĐ 2422): Cặp đôi mã Miền A + Miền B/D, hỗ trợ mật độ 2–3 mã/bài, Modal chi tiết hiển thị badge tím trực quan.
+- [PASS] Nút 1-Click "↻ Nạp lại vào CSDL": Có mặt tại thanh hành động Mục 2 và chân hộp thoại Chi tiết SGK, hỗ trợ re-seed đè phiên bản phân hóa mới vào MySQL/localStorage.
+- [PASS] Tri thức SGK lưu trữ trực tiếp Multi-line AI hint: `ensureFullCurriculumLessons` tạo đầy đủ `ai_candidates` và `ai_pedagogy_hint` đa dòng `[Mã] Mô tả` cho 100% bài học.
 - [PASS] Phân hóa Triệt để NLS & AI theo Cấp độ Nhận thức: Bài 1 (Khái niệm), Bài 2 (Giải hệ), Bài 3 (Toán thực tế) phân hóa hoàn toàn, xóa bỏ dập khuôn.
 - [PASS] Bao phủ 100% bài học trong năm học: Toán 6 (43 bài), Toán 7 (37 bài), Toán 8 (39 bài), Toán 9 (32 bài) có sẵn YCCĐ riêng biệt, NLS thực tế và AI sư phạm.
 - [PASS] Sách giáo khoa dùng chung (từ 2026-2027): Đặt làm mặc định số 1.
-- [PASS] Đồng bộ 100% byte-identical cho Canvas: `canvas_xaydungphuluc.html` và bản mirror `backupcode viettailieu/canvas_xaydungphuluc.html` (338,581 bytes).
+- [PASS] Đồng bộ 100% byte-identical cho Canvas: `canvas_xaydungphuluc.html` và bản mirror `backupcode viettailieu/canvas_xaydungphuluc.html` (341,515 bytes).
 - [PASS] Toàn bộ 61/61 test suites chạy PASS 100%.
 
 ## Bug
