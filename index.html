@@ -3,6 +3,12 @@
 
 <head>
     <script src="js/security-guard.js"></script>
+    <script>
+        // Do not paint any tool before the server has confirmed this signed-in user's permissions.
+        if (localStorage.getItem('authToken')) {
+            document.documentElement.classList.add('permissions-pending');
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ thống tự học và ôn luyện cho học sinh</title>
@@ -167,6 +173,10 @@
         }
 
         .tool-tile.hidden {
+            display: none !important;
+        }
+
+        .permissions-pending #mainToolsGrid > [data-tool] {
             display: none !important;
         }
 
@@ -1455,6 +1465,11 @@
                 ai_stats: true,
             };
             let allowedPages = [];
+            let roleIsKnown = false;
+            let allowedPagesAreKnown = false;
+            const removePermissionsPending = () => {
+                document.documentElement.classList.remove('permissions-pending');
+            };
             try {
                 const res = await fetch('api/me.php', { cache: 'no-store', credentials: 'include' });
                 if (res.status === 401) {
@@ -1465,21 +1480,45 @@
                 if (res.ok) {
                     const user = (await res.json()).user || {};
                     allowedPages = Array.isArray(user.allowed_pages) ? user.allowed_pages : [];
+                    allowedPagesAreKnown = true;
                     localStorage.setItem('allowedPages', JSON.stringify(allowedPages));
-                    if (user.role) localStorage.setItem('userRole', user.role);
+                    if (user.role) {
+                        localStorage.setItem('userRole', user.role);
+                        roleIsKnown = true;
+                    }
                     if (user.full_name) localStorage.setItem('userName', user.full_name);
                     if (user.username) localStorage.setItem('userEmail', user.username);
                     if (user.id != null) localStorage.setItem('userId', String(user.id));
                     if (user.class_name !== undefined) localStorage.setItem('userClassName', user.class_name || '');
                     applyVideoToolPermission(allowedPages);
                 } else {
-                    allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]');
+                    const cachedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]');
+                    if (Array.isArray(cachedPages)) {
+                        allowedPages = cachedPages;
+                        allowedPagesAreKnown = true;
+                    }
+                    roleIsKnown = localStorage.getItem('userRole') === 'teacher';
                 }
             } catch {
-                try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
+                try {
+                    const cachedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]');
+                    if (Array.isArray(cachedPages)) {
+                        allowedPages = cachedPages;
+                        allowedPagesAreKnown = true;
+                    }
+                } catch {}
+                roleIsKnown = localStorage.getItem('userRole') === 'teacher';
             }
 
-            if (localStorage.getItem('userRole') !== 'teacher') return;
+            if (localStorage.getItem('userRole') !== 'teacher') {
+                if (roleIsKnown) removePermissionsPending();
+                return;
+            }
+
+            if (!roleIsKnown || !allowedPagesAreKnown) {
+                // Keep the cards concealed when neither the server nor a valid cached permission set is available.
+                return;
+            }
 
             try {
                 const cfgRes = await fetch('global_config.json', { cache: 'no-store' });
@@ -1523,6 +1562,7 @@
             if (mainToolsGridEarly) {
                 applyTeacherHubVisibility(accountFeatures, allowedSet);
             }
+            removePermissionsPending();
 
             if (!hasTeacherWorkspace) {
                 const emptyDivider = document.getElementById('teacherToolsDivider');
