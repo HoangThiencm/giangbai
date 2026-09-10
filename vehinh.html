@@ -454,6 +454,22 @@
                         class="w-full flex items-center justify-center gap-2 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500 transition-all disabled:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
                         <i data-lucide="rotate-cw"></i> <span>Vẽ lại</span>
                     </button>
+                    <div id="ai-progress-widget" class="hidden rounded-lg border border-indigo-500/50 bg-gray-900/90 p-3 space-y-2">
+                        <div class="flex items-center justify-between text-xs text-indigo-300">
+                            <span id="ai-progress-status" class="font-semibold flex items-center gap-1.5">
+                                <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>
+                                <span>Đang khởi động AI...</span>
+                            </span>
+                            <span id="ai-progress-timer" class="font-mono text-emerald-400 font-bold">⏱️ 0.0s</span>
+                        </div>
+                        <div class="w-full bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                            <div id="ai-progress-bar" class="bg-indigo-500 h-full rounded-full transition-all duration-300 w-0"></div>
+                        </div>
+                    </div>
+                    <button id="replay-construction-btn" type="button"
+                        class="hidden w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold py-2 px-3 rounded-lg shadow transition">
+                        <i data-lucide="play"></i> <span>Tái hiện từng bước vẽ</span>
+                    </button>
                 </div>
 
                 <div id="geogebra-construction-panel" class="hidden rounded-lg border border-indigo-500/40 bg-gray-900 p-3 space-y-2">
@@ -463,7 +479,11 @@
                     <div class="flex flex-col space-y-2">
                         <button id="copy-geogebra-btn" type="button"
                             class="w-full flex items-center justify-center gap-2 bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">
-                            📋 Sao chép lệnh GeoGebra
+                            📋 Sao chép lệnh (Dán 1 lần vào GeoGebra)
+                        </button>
+                        <button id="inject-geogebra-btn" type="button"
+                            class="w-full flex items-center justify-center gap-2 bg-amber-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-amber-500">
+                            ⚡ Nạp trực tiếp vào GeoGebra
                         </button>
                         <button id="open-geogebra-btn" type="button"
                             class="w-full flex items-center justify-center gap-2 bg-gray-700 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600">
@@ -502,7 +522,7 @@
     </div>
 
     <div id="vehinh-toast" class="fixed top-4 right-4 hidden z-[70] max-w-sm px-4 py-2 rounded shadow text-sm border bg-emerald-50 text-emerald-800 border-emerald-200"></div>
-    <script src="app.js?v=20260910-vehinh-coord"></script>
+    <script src="app.js?v=20260910-vehinh-ggb"></script>
     <script>
         lucide.createIcons();
         document.addEventListener('DOMContentLoaded', function () {

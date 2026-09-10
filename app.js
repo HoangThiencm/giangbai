@@ -562,7 +562,18 @@ document.addEventListener('DOMContentLoaded', function () {
     allDOMElements.accordionHeaders.forEach(header => { header.addEventListener('click', () => { const content = header.nextElementSibling; header.classList.toggle('active'); content.classList.toggle('active'); }); });
     allDOMElements.geogebraToggle.addEventListener('click', () => { allDOMElements.geogebraContainer.classList.toggle('hidden'); allDOMElements.geogebraToggle.querySelector('i').classList.toggle('rotate-180'); });
     document.getElementById('copy-geogebra-btn')?.addEventListener('click', () => { copyGeoGebraCommands(); });
+    document.getElementById('inject-geogebra-btn')?.addEventListener('click', () => { injectCommandsToGeoGebra(); });
     document.getElementById('open-geogebra-btn')?.addEventListener('click', () => { openGeoGebraPanel(); });
+    document.getElementById('replay-construction-btn')?.addEventListener('click', async () => {
+        const aiObjects = canvas.getObjects().filter((o) => o.source === 'ai_primitive' || o.source === 'ai');
+        if (!aiObjects.length) return;
+        isAiDrawing = true;
+        try {
+            await animateDrawingSteps(aiObjects);
+        } finally {
+            isAiDrawing = false;
+        }
+    });
 
     async function copy() { const activeObject = canvas.getActiveObject(); if (!activeObject) return; activeObject.clone(cloned => _clipboard = cloned, ['source']); try { const dataUrl = activeObject.toDataURL({ format: 'png', quality: 1, multiplier: 2 }); const blob = await (await fetch(dataUrl)).blob(); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); } catch (err) { console.error('Sao chép ảnh thất bại.', err); } }
     function paste() { if (!_clipboard) return; _clipboard.clone(clonedObj => { canvas.discardActiveObject(); clonedObj.set({ left: clonedObj.left + 15, top: clonedObj.top + 15, evented: true, source: 'user' }); if (clonedObj.type === 'activeSelection') { clonedObj.canvas = canvas; clonedObj.forEachObject(obj => canvas.add(obj)); clonedObj.setCoords(); } else { canvas.add(clonedObj); } _clipboard.top += 15; _clipboard.left += 15; canvas.setActiveObject(clonedObj); canvas.requestRenderAll(); }); }
@@ -585,6 +596,53 @@ document.addEventListener('DOMContentLoaded', function () {
         localStorage.setItem(AI_THROTTLE_STORAGE_KEY, String(Date.now()));
     }
 
+    let progressTimerInterval = null;
+    let progressStartTime = 0;
+
+    function startProgressIndicator(modelName) {
+        const widget = document.getElementById('ai-progress-widget');
+        const statusEl = document.getElementById('ai-progress-status');
+        const timerEl = document.getElementById('ai-progress-timer');
+        const barEl = document.getElementById('ai-progress-bar');
+        if (!widget) return;
+        widget.classList.remove('hidden');
+        progressStartTime = Date.now();
+        if (timerEl) timerEl.textContent = '⏱️ 0.0s';
+        if (barEl) barEl.style.width = '10%';
+        if (statusEl) statusEl.innerHTML = '<span>🔍 Đang nhận diện câu hỏi &amp; trích xuất dữ kiện...</span>';
+        clearInterval(progressTimerInterval);
+        progressTimerInterval = setInterval(() => {
+            const elapsedNum = (Date.now() - progressStartTime) / 1000;
+            const elapsed = elapsedNum.toFixed(1);
+            if (timerEl) timerEl.textContent = `⏱️ ${elapsed}s`;
+            if (elapsedNum < 1.5) {
+                if (statusEl) statusEl.innerHTML = '<span>🔍 Đang nhận diện câu hỏi &amp; trích xuất dữ kiện...</span>';
+                if (barEl) barEl.style.width = '30%';
+            } else if (elapsedNum < 3.5) {
+                if (statusEl) statusEl.innerHTML = `<span>📐 Đang thiết lập hệ tọa độ &amp; tính toán giải tích (${modelName})...</span>`;
+                if (barEl) barEl.style.width = '60%';
+            } else {
+                if (statusEl) statusEl.innerHTML = '<span>🎨 Đang hoàn thiện mã Fabric.js &amp; GeoGebra Script...</span>';
+                if (barEl) barEl.style.width = '85%';
+            }
+        }, 200);
+    }
+
+    function stopProgressIndicator(successText = '') {
+        clearInterval(progressTimerInterval);
+        progressTimerInterval = null;
+        const widget = document.getElementById('ai-progress-widget');
+        const statusEl = document.getElementById('ai-progress-status');
+        const barEl = document.getElementById('ai-progress-bar');
+        if (barEl) barEl.style.width = '100%';
+        if (statusEl && successText) {
+            statusEl.innerHTML = `<span>✅ ${successText}</span>`;
+        }
+        setTimeout(() => {
+            if (widget) widget.classList.add('hidden');
+        }, 2500);
+    }
+
     // === AI GENERATION LOGIC (UPDATED WITH PRIORITY & FALLBACK) ===
     async function handleGenerateClick(isRegenerating = false) {
         const userPrompt = allDOMElements.promptInput.value;
@@ -598,6 +656,8 @@ document.addEventListener('DOMContentLoaded', function () {
         allDOMElements.loader.classList.remove('hidden');
         allDOMElements.generateBtn.disabled = true; allDOMElements.regenerateBtn.disabled = true;
         allDOMElements.analysisOutput.innerHTML = `AI đang phân tích bằng Gemini · ${selectedModel}${fallbackText}...`;
+        document.getElementById('replay-construction-btn')?.classList.add('hidden');
+        startProgressIndicator(selectedModel);
 
         canvas.getObjects().slice().forEach(obj => { if (obj.source === 'ai' || obj.source === 'ai_primitive') { canvas.remove(obj); } });
         canvas.renderAll();
@@ -625,10 +685,10 @@ QUY TẮC BẮT BUỘC: PHƯƠNG PHÁP TỌA ĐỘ HÓA TOÁN HỌC (ANALYTIC GE
 4. Ký hiệu góc vuông và đoạn bằng nhau: Gọi đúng thứ tự điểm để ký hiệu nằm bên trong góc.
 PHẢN HỒI BẮT BUỘC 3 PHẦN.
 PHẦN 1: PHÂN TÍCH trong <analysis>...</analysis> — chỉ 3-5 gạch đầu dòng, súc tích.
-PHẦN 2: MÃ JAVASCRIPT đầy đủ, không cắt giữa chừng, CHỈ trong thẻ <javascript>...</javascript>. NGHIÊM CẤM markdown backtick (\`\`\`javascript hoặc \`\`\`js) bên trong thẻ <javascript>. Dùng Fabric.js, addPoint, addText, drawLine, addRightAngleSymbol, addEqualityTick, addAngleArc, drawBarChart, drawPieChart. KHÔNG khai báo lại biến canvas. Cuối cùng gọi canvas.renderAll();
+PHẦN 2: MÃ JAVASCRIPT đầy đủ, không cắt giữa chừng, CHỈ trong thẻ <javascript>...</javascript>. NGHIÊM CẤM markdown backtick (\`\`\`javascript hoặc \`\`\`js) bên trong thẻ <javascript>. Dùng Fabric.js, addPoint, addText, drawLine, addRightAngleSymbol, addEqualityTick, addAngleArc, drawBarChart, drawPieChart. Biến 'canvas' và 'fabric' ĐÃ CÓ SẴN. TUYỆT ĐỐI KHÔNG viết const canvas = ... hoặc new fabric.Canvas(...). Cuối cùng gọi canvas.renderAll();
 PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebra>...</geogebra>:
-- Phần mô tả các bước dựng hình sư phạm (Bước 1, Bước 2...).
-- Khối lệnh GeoGebra Script, mỗi dòng một lệnh chuẩn quốc tế tiếng Anh (A=(0,0), B=(6,0), C=(2,4), Polygon(A,B,C), Segment(A,B), PerpendicularLine(C, Segment(A,B)), Circle, Midpoint, Intersect).`;
+- Mô tả các bước dựng hình sư phạm (Bước 1, Bước 2...).
+- Khối lệnh GeoGebra Script: mỗi dòng một lệnh chuẩn tiếng Anh (O=(0, 0), R=3, A=(...), Segment(...)). TUYỆT ĐỐI KHÔNG viết chú thích // hoặc # trong khối lệnh GeoGebra. Mọi biến số và điểm gốc (O, R, A...) phải được định nghĩa trước khi dùng.`;
         let userInstruction = `Phân tích và vẽ hình cho yêu cầu sau: ${userPrompt}`;
         if (isRegenerating) { userInstruction += " Vui lòng vẽ lại hình này nhưng sử dụng các tọa độ và tỷ lệ khác với lần trước."; }
         try {
@@ -662,12 +722,16 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
                 throw err;
             }
             const fullResponseText = data.text || '';
+            lastFullAiText = fullResponseText;
             allDOMElements.analysisOutput.innerHTML = fullResponseText.replace(/\n/g, '<br>');
             renderGeoGebraPanel(fullResponseText);
-            executeAiCode(fullResponseText);
+            const statusEl = document.getElementById('ai-progress-status');
+            if (statusEl) statusEl.innerHTML = '<span>✨ Bắt đầu vẽ từng bước lên bảng...</span>';
+            await executeAiCode(fullResponseText);
         } catch (error) {
             console.error('Lỗi AI vẽ hình:', error);
             allDOMElements.analysisOutput.innerHTML = `<span class="text-red-400">Lỗi AI vẽ hình:</span> ${error.message}`;
+            stopProgressIndicator();
             allDOMElements.loader.classList.add('hidden');
             allDOMElements.generateBtn.disabled = false;
             allDOMElements.regenerateBtn.disabled = false;
@@ -695,20 +759,30 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
         return tagged ? tagged[1].trim() : '';
     }
 
+    let lastFullAiText = '';
+    let lastGeoGebraParts = { steps: '', commands: '', commandsArray: [], raw: '' };
+
     function splitGeoGebraBlocks(raw) {
         const text = String(raw || '').trim();
         const steps = [];
         const commands = [];
         text.split(/\r?\n/).forEach((line) => {
-            const trimmed = line.trim().replace(/^[-*•]\s*/, '');
+            let trimmed = line.trim().replace(/^[-*•]\s*/, '');
+            trimmed = trimmed.replace(/\/\/.*$/, '').replace(/#.*$/, '').trim();
             if (!trimmed) return;
-            if (/^[A-Za-z][\w]*\s*=/.test(trimmed) || /^(Segment|Polygon|PerpendicularLine|Circle|Midpoint|Intersect|Line|Angle|Point|Vector|Ray|Arc|Tangent|Translate|Rotate|Dilate|Reflect|Distance|Area|AngleBisector|PerpendicularBisector|Circumcircle|Incircle)\s*\(/i.test(trimmed)) {
+            if (/^[A-Za-z][\w]*\s*=/.test(trimmed) || /^(Segment|Polygon|PerpendicularLine|Circle|Midpoint|Intersect|Line|Angle|Point|Vector|Ray|Arc|Tangent|Translate|Rotate|Dilate|Reflect|Distance|Area|AngleBisector|PerpendicularBisector|Circumcircle|Incircle|Execute)\s*\(/i.test(trimmed)) {
                 commands.push(trimmed);
             } else {
-                steps.push(trimmed);
+                steps.push(line.trim());
             }
         });
-        return { steps: steps.join('\n'), commands: commands.join('\n'), raw: text };
+        return { steps: steps.join('\n'), commands: commands.join('\n'), commandsArray: commands, raw: text };
+    }
+
+    function formatGeoGebraExecuteCommand(commandsArray) {
+        if (!commandsArray || !commandsArray.length) return '';
+        const escaped = commandsArray.map((cmd) => JSON.stringify(cmd));
+        return `Execute({${escaped.join(', ')}})`;
     }
 
     function showVehinhToast(message) {
@@ -731,25 +805,53 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
             return;
         }
         const parts = splitGeoGebraBlocks(raw);
+        lastGeoGebraParts = parts;
         if (stepsEl) stepsEl.textContent = parts.steps || raw;
-        if (commandsEl) commandsEl.textContent = parts.commands || raw;
+        if (commandsEl) commandsEl.textContent = formatGeoGebraExecuteCommand(parts.commandsArray) || parts.commands || raw;
         panel.classList.remove('hidden');
     }
 
-    function getGeoGebraCommandsText() {
-        return String(document.getElementById('geogebra-commands')?.textContent || '').trim();
+    function getGeoGebraCommandsArray() {
+        if (lastGeoGebraParts.commandsArray && lastGeoGebraParts.commandsArray.length) {
+            return lastGeoGebraParts.commandsArray;
+        }
+        const displayed = String(document.getElementById('geogebra-commands')?.textContent || '').trim();
+        return splitGeoGebraBlocks(displayed).commandsArray;
+    }
+
+    async function copyTextToClipboard(text) {
+        try {
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+        } catch (err) {}
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return ok;
+        } catch (err) {
+            return false;
+        }
     }
 
     async function copyGeoGebraCommands() {
-        const text = getGeoGebraCommandsText();
-        if (!text) {
+        const executeCmd = formatGeoGebraExecuteCommand(getGeoGebraCommandsArray());
+        if (!executeCmd) {
             showVehinhToast('Chưa có lệnh GeoGebra để sao chép.');
             return;
         }
-        try {
-            await navigator.clipboard.writeText(text);
-            showVehinhToast('Đã sao chép lệnh GeoGebra. Dán vào thanh Input của GeoGebra.');
-        } catch (err) {
+        const ok = await copyTextToClipboard(executeCmd);
+        if (ok) {
+            showVehinhToast('Đã sao chép Execute({...}) 1 dòng. Dán vào ô Input GeoGebra.');
+        } else {
             showVehinhToast('Không sao chép được. Hãy bôi đen khối lệnh và copy thủ công.');
         }
     }
@@ -759,11 +861,33 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
         const icon = allDOMElements.geogebraToggle?.querySelector('i');
         if (icon) icon.classList.add('rotate-180');
         allDOMElements.geogebraContainer?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        const commands = getGeoGebraCommandsText();
-        if (commands) {
-            navigator.clipboard?.writeText(commands).catch(() => {});
-            showVehinhToast('Đã mở GeoGebra và sao chép lệnh. Dán (Ctrl+V) vào thanh Input.');
+        const executeCmd = formatGeoGebraExecuteCommand(getGeoGebraCommandsArray());
+        if (executeCmd) {
+            copyTextToClipboard(executeCmd);
+            showVehinhToast('Đã mở GeoGebra & copy lệnh Execute. Nhấn Ctrl+V vào ô Input!');
         }
+    }
+
+    function injectCommandsToGeoGebra() {
+        const source = lastFullAiText || document.getElementById('geogebra-commands')?.textContent || '';
+        const parts = lastGeoGebraParts.commandsArray?.length
+            ? lastGeoGebraParts
+            : splitGeoGebraBlocks(extractGeoGebraContent(source) || source);
+        if (!parts.commandsArray.length) {
+            showVehinhToast('Chưa có lệnh GeoGebra để nạp.');
+            return;
+        }
+        const iframeWin = document.querySelector('#geogebra-container iframe')?.contentWindow;
+        const ggb = window.ggbApplet || iframeWin?.ggbApplet;
+        if (ggb && typeof ggb.evalCommand === 'function') {
+            parts.commandsArray.forEach((cmd) => ggb.evalCommand(cmd));
+            showVehinhToast('⚡ Đã vẽ xong hình vào GeoGebra!');
+            openGeoGebraPanel();
+            return;
+        }
+        copyGeoGebraCommands();
+        openGeoGebraPanel();
+        showVehinhToast('Đã mở GeoGebra & copy lệnh Execute. Nhấn Ctrl+V vào ô Input!');
     }
 
     function looksLikeCanvas(arg) {
@@ -833,29 +957,106 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
         targetCanvas.renderAll();
     }
 
-    function executeAiCode(fullText) {
-        const codeText = extractDrawingJavascript(fullText);
-        if (codeText) {
-            try {
-                isAiDrawing = true; canvas.renderOnAddRemove = false;
-                const drawFunction = new Function('canvas', 'fabric', 'addPoint', 'addText', 'drawLine', 'addRightAngleSymbol', 'addEqualityTick', 'addAngleArc', 'drawBarChart', 'drawPieChart', codeText);
-                drawFunction(
-                    canvas,
-                    fabric,
-                    wrapAddPoint,
-                    wrapAddText,
-                    drawLine,
-                    wrapCanvasHelper(addRightAngleSymbol),
-                    wrapCanvasHelper(addEqualityTick),
-                    wrapCanvasHelper(addAngleArc),
-                    wrapCanvasHelper(drawBarChart),
-                    wrapCanvasHelper(drawPieChart)
-                );
-                canvas.getObjects().forEach(obj => { if (!obj.source) obj.set({ source: 'ai_primitive' }); if (obj.type === 'line' || obj.type === 'polyline' || obj.type === 'path') { obj.set({ objectCaching: false }); } });
-                autoCenterAndFitDrawing(canvas);
-                applyAiLockState(); sendPointsToFront();
-            } catch (e) { const errorHtml = `<br><br><strong class="text-red-400">Lỗi thực thi mã vẽ:</strong> ${e.message}`; if (!allDOMElements.analysisOutput.innerHTML.includes(errorHtml)) { allDOMElements.analysisOutput.innerHTML += errorHtml; } } finally { canvas.renderOnAddRemove = true; canvas.renderAll(); isAiDrawing = false; saveHistory(); allDOMElements.loader.classList.add('hidden'); allDOMElements.generateBtn.disabled = false; allDOMElements.regenerateBtn.disabled = false; }
-        } else { const warningHtml = `<br><br><strong class="text-yellow-400">Cảnh báo:</strong> Không tìm thấy mã JavaScript trong phản hồi của AI.`; if (!allDOMElements.analysisOutput.innerHTML.includes(warningHtml)) { allDOMElements.analysisOutput.innerHTML += warningHtml; } allDOMElements.loader.classList.add('hidden'); allDOMElements.generateBtn.disabled = false; allDOMElements.regenerateBtn.disabled = false; }
+    function sanitizeAiDrawingCode(code) {
+        let text = String(code || '');
+        text = text.replace(/(?:const|let|var)\s+canvas\s*=\s*new\s+fabric\.Canvas\s*\([\s\S]*?\)\s*;?/gi, '// [canvas already provided]');
+        text = text.replace(/^[ \t]*(?:const|let|var)\s+canvas\b(?:\s*=\s*[^;]+)?;/gmi, '// [canvas parameter provided]');
+        text = text.replace(/new\s+fabric\.Canvas\s*\([\s\S]*?\)/gi, 'canvas');
+        text = text.replace(/^[ \t]*(?:const|let|var)\s+fabric\b(?:\s*=\s*[^;]+)?;/gmi, '// [fabric parameter provided]');
+        return text;
+    }
+
+    async function animateDrawingSteps(objects) {
+        if (!objects || !objects.length) return;
+        objects.forEach((obj) => obj.set({ opacity: 0 }));
+        canvas.renderAll();
+        const statusEl = document.getElementById('ai-progress-status');
+        const total = objects.length;
+        for (let i = 0; i < total; i++) {
+            const obj = objects[i];
+            if (statusEl) statusEl.innerHTML = `<span>✏️ Đang vẽ nét ${i + 1}/${total}...</span>`;
+            if (typeof obj.animate === 'function') {
+                obj.animate('opacity', 1, {
+                    duration: 200,
+                    onChange: () => canvas.renderAll()
+                });
+            } else {
+                obj.set({ opacity: 1 });
+                canvas.renderAll();
+            }
+            await new Promise((res) => setTimeout(res, 200));
+        }
+        objects.forEach((obj) => obj.set({ opacity: 1 }));
+        canvas.renderAll();
+        saveHistory();
+        const replayBtn = document.getElementById('replay-construction-btn');
+        if (replayBtn) replayBtn.classList.remove('hidden');
+    }
+
+    async function executeAiCode(fullText) {
+        const rawCode = extractDrawingJavascript(fullText);
+        if (!rawCode) {
+            const warningHtml = `<br><br><strong class="text-yellow-400">Cảnh báo:</strong> Không tìm thấy mã JavaScript trong phản hồi của AI.`;
+            if (!allDOMElements.analysisOutput.innerHTML.includes(warningHtml)) {
+                allDOMElements.analysisOutput.innerHTML += warningHtml;
+            }
+            stopProgressIndicator();
+            allDOMElements.loader.classList.add('hidden');
+            allDOMElements.generateBtn.disabled = false;
+            allDOMElements.regenerateBtn.disabled = false;
+            return;
+        }
+        const codeText = sanitizeAiDrawingCode(rawCode);
+        try {
+            isAiDrawing = true;
+            canvas.renderOnAddRemove = false;
+            const drawFunction = new Function(
+                'canvas', 'fabric', 'addPoint', 'addText', 'drawLine',
+                'addRightAngleSymbol', 'addEqualityTick', 'addAngleArc',
+                'drawBarChart', 'drawPieChart',
+                codeText
+            );
+            const initialCount = canvas.getObjects().length;
+            drawFunction(
+                canvas,
+                fabric,
+                wrapAddPoint,
+                wrapAddText,
+                drawLine,
+                wrapCanvasHelper(addRightAngleSymbol),
+                wrapCanvasHelper(addEqualityTick),
+                wrapCanvasHelper(addAngleArc),
+                wrapCanvasHelper(drawBarChart),
+                wrapCanvasHelper(drawPieChart)
+            );
+            const newAiObjects = canvas.getObjects().slice(initialCount);
+            newAiObjects.forEach((obj) => {
+                if (!obj.source) obj.set({ source: 'ai_primitive' });
+                if (obj.type === 'line' || obj.type === 'polyline' || obj.type === 'path') {
+                    obj.set({ objectCaching: false });
+                }
+            });
+            autoCenterAndFitDrawing(canvas);
+            applyAiLockState();
+            sendPointsToFront();
+            canvas.renderOnAddRemove = true;
+            await animateDrawingSteps(newAiObjects);
+            stopProgressIndicator('Đã vẽ xong');
+        } catch (e) {
+            const errorHtml = `<br><br><strong class="text-red-400">Lỗi thực thi mã vẽ:</strong> ${e.message}`;
+            if (!allDOMElements.analysisOutput.innerHTML.includes(errorHtml)) {
+                allDOMElements.analysisOutput.innerHTML += errorHtml;
+            }
+            stopProgressIndicator();
+        } finally {
+            canvas.renderOnAddRemove = true;
+            canvas.renderAll();
+            isAiDrawing = false;
+            saveHistory();
+            allDOMElements.loader.classList.add('hidden');
+            allDOMElements.generateBtn.disabled = false;
+            allDOMElements.regenerateBtn.disabled = false;
+        }
     }
 
     function resetDrawingState() { if (activeToolCleanup) { activeToolCleanup(); activeToolCleanup = null; } canvas.isDrawingMode = false; canvas.selection = true; canvas.defaultCursor = 'default'; document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active')); document.querySelector('button[data-tool="select"]').classList.add('active'); }

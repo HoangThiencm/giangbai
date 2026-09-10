@@ -209,6 +209,11 @@ function extractNamed(source, name) {
 }
 
 const vm = require('vm');
+assert.ok(appJs.includes('sanitizeAiDrawingCode'), 'app.js must sanitize AI drawing code');
+assert.ok(appJs.includes('startProgressIndicator'), 'app.js must start live progress');
+assert.ok(appJs.includes('animateDrawingSteps'), 'app.js must animate construction steps');
+assert.ok(appJs.includes("TUYỆT ĐỐI KHÔNG viết const canvas"), 'system prompt must forbid redeclaring canvas');
+
 const extractSrc = [
     extractNamed(appJs, 'stripJavascriptFences'),
     extractNamed(appJs, 'extractDrawingJavascript'),
@@ -216,6 +221,8 @@ const extractSrc = [
     extractNamed(appJs, 'splitGeoGebraBlocks'),
     extractNamed(appJs, 'getSystemDrawingModel'),
     extractNamed(appJs, 'getSystemDrawingFallbackModel'),
+    extractNamed(appJs, 'sanitizeAiDrawingCode'),
+    extractNamed(appJs, 'formatGeoGebraExecuteCommand'),
 ].join('\n');
 const store = {};
 const sandbox = {
@@ -240,11 +247,42 @@ const parts = sandbox.splitGeoGebraBlocks(ggb);
 assert.ok(parts.commands.includes('Polygon(A,B,C)'), 'GeoGebra commands must be split out');
 assert.ok(parts.steps.includes('Bước 1'), 'GeoGebra steps must be split out');
 
+const commentedGgb = sandbox.splitGeoGebraBlocks([
+    'O=(0,0)',
+    'R=3 // radius',
+    'Tangent(M, Circle(O, R)) // This will create two tangents',
+    '# ignore this line',
+    'Segment(A, B)',
+].join('\n'));
+assert.ok(!commentedGgb.commands.includes('//'), 'GeoGebra commands must strip // comments');
+assert.ok(!commentedGgb.commands.includes('#'), 'GeoGebra commands must strip # comments');
+assert.ok(commentedGgb.commandsArray.includes('R=3'), 'assignment after comment strip must remain');
+assert.ok(commentedGgb.commandsArray.some((cmd) => cmd.startsWith('Tangent(')), 'command after trailing comment must remain');
+const executeLine = sandbox.formatGeoGebraExecuteCommand(['O=(0,0)', 'R=3', 'Segment(A, B)']);
+assert.strictEqual(executeLine, 'Execute({"O=(0,0)", "R=3", "Segment(A, B)"})', 'must wrap commands as one-line Execute({...})');
+assert.ok(!executeLine.includes('\n'), 'Execute payload must be a single line');
+
 store.khbd_gemini_model = 'gemini-3.7-flash';
 store.default_gemini_module = 'gemini-3.6-flash';
 assert.strictEqual(sandbox.getSystemDrawingModel(), 'gemini-3.7-flash', 'primary must prefer khbd_gemini_model');
 store.khbd_gemini_fallback_model = 'gemini-2.5-flash';
 assert.strictEqual(sandbox.getSystemDrawingFallbackModel(), 'gemini-2.5-flash', 'fallback must prefer khbd_gemini_fallback_model');
+
+const dirtySamples = [
+    'const canvas = new fabric.Canvas("geometry-canvas");\ncanvas.add(item);',
+    'let canvas = document.getElementById("geometry-canvas");\ncanvas.add(item);',
+    'var canvas = window.canvas || canvas;\ncanvas.add(item);',
+    'const fabric = window.fabric;\ncanvas.add(item);',
+];
+for (const dirty of dirtySamples) {
+    const clean = sandbox.sanitizeAiDrawingCode(dirty);
+    assert.doesNotMatch(clean, /(?:const|let|var)\s+canvas\b/, 'must strip canvas redeclare: ' + dirty.split('\n')[0]);
+    assert.doesNotMatch(clean, /(?:const|let|var)\s+fabric\b/, 'must strip fabric redeclare');
+    assert.doesNotThrow(() => new Function('canvas', 'fabric', clean), 'sanitized code must compile: ' + dirty.split('\n')[0]);
+}
+const keepWidth = sandbox.sanitizeAiDrawingCode('const canvasWidth = 400;\ncanvas.add(item);');
+assert.match(keepWidth, /const canvasWidth = 400/, 'must not rewrite canvasWidth');
+assert.doesNotThrow(() => new Function('canvas', 'fabric', keepWidth));
 
 const resolveSandbox = {
     FOLLOW_SYSTEM_MODEL: '__system__',
@@ -268,8 +306,19 @@ assert.ok(drawIdx > uploadIdx, 'draw buttons must follow question/image inputs')
 assert.ok(generateIdx > drawIdx, 'generate button lives in relocated action cluster');
 assert.ok(analysisIdx > generateIdx, 'analysis panel stays below draw buttons');
 assert.ok(vehinhHtml.includes('id="geogebra-construction-panel"'), 'GeoGebra construction panel');
-assert.ok(vehinhHtml.includes('📋 Sao chép lệnh GeoGebra'), 'copy GeoGebra button');
+assert.ok(vehinhHtml.includes('📋 Sao chép lệnh (Dán 1 lần vào GeoGebra)'), 'copy GeoGebra as one-line Execute');
+assert.ok(vehinhHtml.includes('id="inject-geogebra-btn"'), 'inject GeoGebra button');
+assert.ok(vehinhHtml.includes('⚡ Nạp trực tiếp vào GeoGebra'), 'inject GeoGebra label');
 assert.ok(vehinhHtml.includes('🚀 Mở khung GeoGebra'), 'open GeoGebra button');
+assert.ok(appJs.includes('formatGeoGebraExecuteCommand'), 'app.js must format Execute({...})');
+assert.ok(appJs.includes('injectCommandsToGeoGebra'), 'app.js must inject commands into GeoGebra');
+assert.ok(appJs.includes('TUYỆT ĐỐI KHÔNG viết chú thích // hoặc #'), 'prompt must forbid GeoGebra comments');
+assert.ok(vehinhHtml.includes('id="ai-progress-widget"'), 'live progress widget');
+assert.ok(vehinhHtml.includes('id="ai-progress-timer"'), 'live timer');
+assert.ok(vehinhHtml.includes('id="ai-progress-bar"'), 'progress bar');
+assert.ok(vehinhHtml.includes('id="ai-progress-status"'), 'multi-stage status');
+assert.ok(vehinhHtml.includes('id="replay-construction-btn"'), 'replay construction button');
+assert.ok(vehinhHtml.includes('Tái hiện từng bước vẽ'), 'replay button label');
 
 const aiDesignConfigJs = fs.readFileSync(path.join(__dirname, '..', 'ai-design-config.js'), 'utf8');
 assert.ok(aiDesignConfigJs.includes('gemini-3.6-flash'), 'ai-design-config.js must support gemini-3.6-flash');

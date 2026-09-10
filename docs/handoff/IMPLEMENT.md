@@ -1,3 +1,57 @@
+# IMPLEMENT — GeoGebra Execute 1 dòng + nạp trực tiếp, giữ sanitize canvas
+
+Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` (lọc comment GeoGebra, `Execute({...})` 1 dòng, nút nạp trực tiếp; giữ khử lỗi `canvas` trùng và tiến trình vẽ từng nét).
+
+## File đã sửa
+- `app.js`
+- `vehinh.html`
+- `tests/game-quiz-importer-smoke.js`
+
+## GeoGebra
+- `splitGeoGebraBlocks` gỡ `//` và `#`, trả `commandsArray`.
+- `formatGeoGebraExecuteCommand` gói thành `Execute({"cmd1", "cmd2", ...})` một dòng.
+- Nút **Sao chép lệnh (Dán 1 lần vào GeoGebra)** copy chuỗi Execute; fallback `execCommand('copy')`.
+- Nút **⚡ Nạp trực tiếp vào GeoGebra** (`#inject-geogebra-btn`): `ggbApplet.evalCommand` nếu có, không thì copy + mở khung.
+- Prompt cấm chú thích `//`/`#` trong `<geogebra>`, bắt buộc định nghĩa `O`, `R` trước khi dùng.
+
+## Đã giữ từ vòng trước
+- `sanitizeAiDrawingCode` trước `new Function`.
+- Widget tiến trình live + `animateDrawingSteps` + nút tái hiện.
+
+## Kiểm thử
+- `node tests/game-quiz-importer-smoke.js`: PASS — strip `//`, sinh `Execute({...})` 1 dòng, DOM inject/copy.
+- `node tests/run-all-tests.js`: PASS — **66/66 test suites**.
+
+---
+
+# IMPLEMENT — Khử lỗi `canvas` trùng, tiến trình live, vẽ từng nét
+
+Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` (sanitize mã AI, widget tiến trình, animation dựng hình, nút tái hiện).
+
+## File đã sửa
+- `app.js`
+- `vehinh.html`
+- `tests/game-quiz-importer-smoke.js`
+
+## Bước 1 — Sanitize mã vẽ
+- `sanitizeAiDrawingCode()` gỡ `const/let/var canvas = ...`, `new fabric.Canvas(...)`, `const fabric = ...` (có ranh giới từ, không đụng `canvasWidth`).
+- `executeAiCode` sanitize trước `new Function('canvas', ...)`.
+- Prompt: *Biến 'canvas' và 'fabric' ĐÃ CÓ SẴN. TUYỆT ĐỐI KHÔNG viết const canvas = ... hoặc new fabric.Canvas(...).*
+
+## Bước 2 — Widget tiến trình
+- `#ai-progress-widget`: live timer `⏱️ xs`, thanh 0–100%, trạng thái đa chặng (nhận diện → tọa độ → Fabric/GeoGebra).
+- Khi có dữ liệu: `✨ Bắt đầu vẽ từng bước lên bảng...`
+
+## Bước 3 — Vẽ từng nét + tái hiện
+- `animateDrawingSteps`: fade-in ~200ms/nét, hiện `Đang vẽ nét i/total`.
+- Nút `#replay-construction-btn` **Tái hiện từng bước vẽ**.
+
+## Kiểm thử
+- `node tests/game-quiz-importer-smoke.js`: PASS — sanitize 4 kiểu khai báo canvas/fabric, compile `new Function` không lỗi Identifier, widget + nút replay có trong DOM.
+- `node tests/run-all-tests.js`: PASS — **66/66 test suites**.
+
+---
+
 # IMPLEMENT — Tôn trọng model chọn tay + tăng tốc gọi AI vẽ hình
 
 Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` (không ghi đè `gemini-2.5-flash`, timeout 30s, candidate 2–3 model, fast-fail, throttle 1s).
