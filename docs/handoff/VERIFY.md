@@ -4,25 +4,40 @@
 PASS
 
 ## Đối chiếu scope
-- Nhiệm vụ 1: Sửa lỗi Vẽ hình AI không đọc cấu hình, module từ cài đặt (Model gemini-2.5-flash deprecated) — Đạt yêu cầu. Đã mở rộng catalog model Gemini hiện đại (`gemini-3.6-flash`, `gemini-3.7-flash`...), cơ chế tự động fallback retry, đồng bộ `default_gemini_module`, tăng token trần 16384, tắt thinking budget ngầm để chống đứt cụt mã.
-- Nhiệm vụ 2: Tích hợp chức năng đọc câu hỏi từ Word / LaTeX công thức cho các Game giáo dục — Đạt yêu cầu. Đã tạo `js/game-quiz-importer.js`, tích hợp tab đọc Word/LaTeX tại Game Hub `trochoi.html` & `trochoi.compiled.js`, giữ nguyên 100% công thức KaTeX và đồng bộ 8 game con.
-- Nhiệm vụ 3: Tích hợp cấu trúc hiển thị 4 Bước chuẩn Bộ GD&ĐT (Công văn 5555) vào Nghiên cứu bài học AI (`nghiencuubaihoc.html`) — Đạt yêu cầu. Đã tích hợp hằng số `PHASES_4`, thanh định vị `#phaseBar` 4 giai đoạn chuẩn của Bộ, điều hướng 2 chiều với 12 bước vi mô (`goToPhase`/`goStep`), modal tra cứu sơ đồ CV 5555, giữ nguyên 100% logic AI và lưu trữ CSDL.
+- **Dynamic Model & Fallback Model (Không gán cứng)**:
+  - `app.js`: Đã có `getSystemDrawingModel()` đọc ưu tiên `khbd_gemini_model` → `default_gemini_module` → `gemini-3.7-flash`; `getSystemDrawingFallbackModel()` đọc `khbd_gemini_fallback_model` → `default_gemini_fallback` → `gemini-2.5-flash`.
+  - Dropdown `#ai-model-select` hiển thị đúng: `✨ Theo Cài đặt chung (${primary} · DP: ${fallback})`.
+  - Client gửi cả `model` và `fallback_model` lên backend trong body request POST.
+  - `api/vehinh_ai.php`: Đã tiếp nhận `$requestedFallback`, xếp vào `$modelCandidates` ngay sau `$initialModel`, không còn mảng `$fallbackList` gán cứng tĩnh.
+- **Khắc phục lỗi `"" is not a function`**:
+  - `app.js`: Đã thêm `stripJavascriptFences()` và nâng cấp `extractDrawingJavascript()` loại bỏ triệt để mọi markdown fence ````javascript ... ```` lồng trong thẻ `<javascript>`.
+  - `executeAiCode()`: Đã truyền đầy đủ các helper `addPoint`, `addText`, `drawLine`, `addRightAngleSymbol`, `addEqualityTick`, `addAngleArc`, `drawBarChart`, `drawPieChart` với cơ chế bọc linh hoạt (`wrapCanvasHelper`, `wrapAddPoint`, `wrapAddText`) chấp nhận cả chữ ký có và không có tham số `canvas`.
+- **Phương pháp Tọa độ hóa (Coordinate Geometry) đảm bảo độ chính xác tối đa**:
+  - `systemPrompt` trong `app.js` đã đưa quy tắc tọa độ hóa giải tích toán học làm quy tắc bắt buộc số 1: thiết lập hệ tọa độ mốc, tính toán chân đường cao, trung điểm, trọng tâm, tâm đường tròn bằng công thức trước khi vẽ; nhãn điểm tự động offset không đè đỉnh/cạnh.
+  - Đã bổ sung hàm `autoCenterAndFitDrawing(canvas)` tự động tính bounding box tập hợp, căn giữa và điều chỉnh scale vừa vặn khung nhìn.
+- **Tích hợp xuất hình vẽ sang GeoGebra**:
+  - `systemPrompt` yêu cầu PHẦN 3 sinh thẻ `<geogebra>...</geogebra>` gồm các bước dựng hình sư phạm và mã lệnh GeoGebra Script tiếng Anh chuẩn quốc tế.
+  - `vehinh.html` đã bổ sung panel `#geogebra-construction-panel`, `#geogebra-steps`, `#geogebra-commands`, nút `📋 Sao chép lệnh GeoGebra` và nút `🚀 Mở khung GeoGebra`.
+- **Tái cấu trúc vị trí nút Vẽ Hình / Vẽ lại**:
+  - Đã chuyển cụm nút `#generate-btn` và `#regenerate-btn` xuống khối `#draw-action-buttons` ngay sau Accordion "Nhập đề bài" và "Tải ảnh lên", nằm ngay phía trên khung "Phân tích của AI".
+  - Giữ nguyên phím tắt `Ctrl+Q` hoạt động thông suốt.
 
 ## Test đã chạy
-- `node tests/nghiencuubaihoc-phases-test.js` (PASS — phủ 12 bước đúng 4 phase, badge tiến độ, điều hướng phase, DOM phaseBar và modal CV 5555)
-- `node tests/nghiencuubaihoc-smoke.js` (PASS — 12 bước, 6 vùng, 12 AI task, đồng bộ key, lưu CSDL)
-- `node tests/game-quiz-importer-smoke.js` (PASS — 6/6 test: MCQ Word/LaTeX, bảng đáp án cuối bài, matching, schema 8 game, catalog model vẽ hình AI)
-- `node tests/run-all-tests.js` (PASS — 65/65 test suites đạt 100%)
+1. `node tests/game-quiz-importer-smoke.js`:
+   - Kiểm tra model/fallback động từ `localStorage`: PASS.
+   - Kiểm tra bóc tách và làm sạch mã JS lồng markdown backticks: PASS.
+   - Kiểm tra bóc tách khối GeoGebra (steps và commands): PASS.
+   - Kiểm tra vị trí cụm nút trong DOM `vehinh.html` nằm sau khu vực nhập đề bài: PASS.
+2. `node tests/run-all-tests.js`:
+   - Toàn bộ **66/66 test suites** đều vượt qua thành công 100% (PASS).
 
 ## Pass / Fail từng tiêu chí
-- [x] Ánh xạ 4 bước chuẩn CV 5555 bao phủ 12 bước vi mô không trùng, không sót: PASS
-- [x] Thanh `#phaseBar` hiển thị 4 card, highlight active phase và đếm tiến độ bước con: PASS
-- [x] Điều hướng `goToPhase` và click bước con đồng bộ 2 chiều: PASS
-- [x] Modal `#phaseGuideModal` tra cứu bảng đối chiếu CV 5555 đầy đủ: PASS
-- [x] Bảo toàn toàn bộ chức năng cũ của NCBH (12 AI task, lưu CSDL, xuất hồ sơ): PASS
-- [x] Sửa lỗi AI vẽ hình báo deprecated model & tràn token: PASS
-- [x] Module bóc tách câu hỏi Word/LaTeX cho 8 game giáo dục: PASS
-- [x] Toàn bộ 65 test suites trong hệ thống đạt 100% PASS: PASS
+1. Module vẽ hình AI đọc động và tôn trọng 100% cấu hình Model ưu tiên và Model dự phòng từ Cài đặt chung của người dùng, không gán cứng cố định: **PASS**
+2. Khắc phục triệt để lỗi thực thi `"" is not a function`, loại bỏ sạch markdown code fence lồng nhau: **PASS**
+3. Ứng dụng phương pháp tọa độ hóa giải tích và hàm `autoCenterAndFitDrawing` giúp hình vẽ đạt độ chính xác tối đa: **PASS**
+4. AI sinh đầy đủ các bước dựng hình và khối lệnh GeoGebra Script; giao diện có nút sao chép 1-click và liên kết thuận tiện với khung GeoGebra: **PASS**
+5. Cụm nút "Vẽ Hình" và "Vẽ lại" nằm ngay sau phần nhận diện câu hỏi, loại bỏ thao tác cuộn trang lên xuống: **PASS**
+6. Toàn bộ 66/66 test suites trong hệ thống đều PASS 100%: **PASS**
 
 ## Bug
-- Không có lỗi tồn đọng.
+- Không có (None).

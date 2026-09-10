@@ -1,3 +1,114 @@
+# IMPLEMENT — Vẽ hình AI: model động, tọa độ hóa, GeoGebra, nút Vẽ Hình
+
+Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` (dynamic model/fallback, khắc phục `"" is not a function`, phương pháp tọa độ, xuất GeoGebra, chuyển nút vẽ).
+
+## File đã sửa
+- `app.js`
+- `vehinh.html`
+- `api/vehinh_ai.php`
+- `tests/game-quiz-importer-smoke.js`
+
+## Bước 1 — Dynamic Model & Fallback
+- `getSystemDrawingModel()`: `khbd_gemini_model` → `default_gemini_module` → `gemini-3.7-flash`.
+- `getSystemDrawingFallbackModel()`: `khbd_gemini_fallback_model` → `default_gemini_fallback` → `gemini-2.5-flash`.
+- Dropdown `#ai-model-select`: `✨ Theo Cài đặt chung (${primary} · DP: ${fallback})`.
+- Request POST gửi cả `model` và `fallback_model`.
+- `api/vehinh_ai.php`: ứng viên = model chọn → fallback người dùng → catalog; không còn mảng fallback cứng.
+
+## Bước 2 — Tọa độ hóa + lỗi `"" is not a function`
+- `systemPrompt` bắt buộc hệ tọa độ giải tích, `toScreen`, offset nhãn, cấm markdown backtick trong `<javascript>`.
+- `stripJavascriptFences()` + `extractDrawingJavascript()` gỡ ` ```javascript ` lồng trong thẻ.
+- `executeAiCode` inject `addPoint`, `addText`, `drawLine`, `addRightAngleSymbol`, `addEqualityTick`, `addAngleArc`, `drawBarChart`, `drawPieChart` (chấp nhận cả chữ ký có/không `canvas`).
+- `autoCenterAndFitDrawing(canvas)` căn giữa và scale vừa khung.
+
+## Bước 3 — GeoGebra
+- Prompt PHẦN 3 trong `<geogebra>...</geogebra>` (bước dựng hình + lệnh tiếng Anh).
+- Panel `📐 Các bước dựng hình & Lệnh GeoGebra`, nút `📋 Sao chép lệnh GeoGebra`, `🚀 Mở khung GeoGebra`.
+
+## Bước 4 — Layout nút
+- `#generate-btn` / `#regenerate-btn` chuyển xuống `#draw-action-buttons` ngay sau accordion đề bài & tải ảnh, phía trên khung phân tích.
+- `Ctrl+Q` vẫn vẽ, kể cả khi đang gõ trong textarea.
+
+## Kiểm thử
+- `node tests/game-quiz-importer-smoke.js`: PASS — model/fallback động, strip fence lồng nhau, GeoGebra extract, vị trí nút vẽ.
+- `node tests/run-all-tests.js`: PASS — **66/66 test suites**.
+
+---
+
+# IMPLEMENT — Tự động nạp hồ sơ Hosting khi khởi động + nhận diện email/username
+
+Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` (nạp hồ sơ khi mở trang, widget tài khoản trên header, backend khớp email hoặc username).
+
+## File đã sửa
+- `api/user_phuluc_draft.php`
+- `backupcode viettailieu/taobaocao.html`
+- `tests/taobaocao-account-sync-smoke.js`
+- `tests/xaydungphuluc-smoke.js` (cập nhật hợp đồng SQL Canvas: khớp email hoặc username)
+
+## Bước 1 — Backend nhận diện linh hoạt
+- `api/user_phuluc_draft.php`: đối chiếu `username = $account` **hoặc** phần trước `@` (`explode('@', $account)[0]`).
+- `hoangthiencm@gmail.com` và `hoangthiencm` cùng khớp user đang kích hoạt, không còn 401 vì lệch chuỗi.
+
+## Bước 2 — Nạp hồ sơ tự động lúc khởi động
+- `getCurrentUserEmail()` đọc lần lượt `userEmail` → `userName` → `canvas_xdpl_user` → `#accUserEmail`, rồi ghi lại `userEmail`.
+- `autoSyncAccountProfileOnStartup()` gọi `loadAccountSettingsFromGitHub(false, true)` (`forceApply = true`) khi đã có tài khoản.
+- IIFE khởi động: `await autoSyncAccountProfileOnStartup()` thay cho `loadAccountSettingsFromGitHub(false, false)`.
+- `loadAccountProfileFromHosting` tìm draft theo `appendix_type === "account-profile"` hoặc `title === "Hồ sơ tổ chuyên môn"`.
+- `applyAccountProfileToSetupInputs` vẫn chỉ ghi `unitNamePreset` / `unitParentPreset` — không đụng trích yếu, số hiệu, ngày tháng.
+
+## Bước 3 — Widget tài khoản trên Header
+- `#headerAccountBadge`: `👤 [tài khoản]` + `🟢 Đã nạp từ Hosting` / `⚪ Chưa nạp`.
+- Nút `🔄 Nạp lại hồ sơ` → `loadAccountSettingsFromGitHub(true, true)`.
+- Toast `#accountSyncToast` khi nạp tự động thành công.
+
+## Kiểm thử
+- `node tests/taobaocao-account-sync-smoke.js`: PASS — backend email/username, `canvas_xdpl_user` lúc khởi động, `forceApply = true`, badge header, nút nạp lại, toast, không ghi đè trích yếu.
+- `node tests/run-all-tests.js`: PASS — **66/66 test suites**.
+
+---
+
+# IMPLEMENT — Sửa lỗi Đồng bộ Hosting & GitHub trong Cài đặt tài khoản (`backupcode viettailieu/taobaocao.html`)
+
+Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` cho môi trường Gemini Canvas (sandboxed iframe).
+
+## File đã sửa
+- `global_config.json`
+- `backupcode viettailieu/taobaocao.html`
+- `api/user_phuluc_draft.php`
+- `tests/taobaocao-account-sync-smoke.js` (tạo mới)
+
+## 3.1 Dọn token chết
+- `global_config.json`: `"github_pat": ""`. Token `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` đã bị GitHub Secret Scanning thu hồi nên không còn trong repo.
+
+## 3.2 Endpoint Hosting đa môi trường
+- `DEFAULT_HOSTING_ENDPOINT = 'https://hoangthiencm.id.vn/api/user_phuluc_draft.php'`.
+- `getAccountHostingEndpoint()`: (1) URL tùy chỉnh `#accHostingCustomUrl` / `tthc_custom_hosting_url`; (2) cùng origin HTTP(S) không phải Canvas/`file:`/`localhost` → `../api/user_phuluc_draft.php`; (3) Canvas / `file:` / localhost → endpoint tuyệt đối của trường.
+- `saveAccountProfileToHosting` và `loadAccountProfileFromHosting`: `credentials: 'omit'`, `cache: 'no-store'`, header `X-User-Account`, body `user_account`; lỗi lấy từ `data.error` hoặc `response.statusText`.
+
+## 3.3 Modal Cài đặt tài khoản
+- Banner: `✦ Chế độ Gemini Canvas · Máy chủ kết nối: hoangthiencm.id.vn` + hướng dẫn username trên `hoangthiencm.id.vn`.
+- Label/placeholder: `Username / Tài khoản giáo viên (trên hoangthiencm.id.vn)` / `Nhập username đăng nhập (VD: tranphu_gv1)`.
+- Ô `#accHostingCustomUrl` mặc định `https://hoangthiencm.id.vn`.
+- Nút `🔌 Kiểm tra kết nối Hosting` → `testHostingConnection()` (`action=list`).
+- Hướng dẫn 3 bước tạo Fine-grained/Classic PAT (`Contents: Read and write`).
+- Nút `🔍 Kiểm tra kết nối GitHub` → `testGitHubConnection()`.
+- Nút `Xóa token đã lưu` → `clearGitHubPat()`.
+- Alert lưu lỗi Hosting: `Hồ sơ đã được lưu vào bộ nhớ trình duyệt (Local-First).\nLỗi đồng bộ Hosting: ` + `e.message`.
+
+## 3.4 GitHub REST API
+- `githubReadJsonFile` / `githubListDirectory` / `githubWriteJsonFile`: `Authorization: Bearer ${pat}`.
+- 401 Bad credentials hướng dẫn bấm **Xóa token đã lưu** rồi nhập PAT mới.
+
+## 3.5 Backend
+- CORS giữ `Access-Control-Allow-Origin: *` và `X-User-Account`.
+- 401: `Tài khoản '$account' chưa đăng ký hoặc chưa kích hoạt trên hoangthiencm.id.vn.`
+
+## Kiểm thử
+- `node tests/taobaocao-account-sync-smoke.js`: PASS — endpoint Canvas/custom/same-origin, `credentials: 'omit'` + `X-User-Account`, Bearer PAT, token chết đã xóa, UI nút kiểm tra/xóa PAT, CORS/401 backend.
+- `node tests/run-all-tests.js`: PASS — **66/66 test suites**.
+
+---
+
 # IMPLEMENT — Vá Vẽ hình AI (model Cài đặt chung + tràn token) theo PLAN cập nhật
 
 Ngày triển khai: 2026-09-10 (vòng 2). PLAN.md đã bổ sung gốc rễ: `vehinh_ai_model_gemini` ghim `gemini-2.5-flash` đè Cài đặt chung; `maxOutputTokens=4096` + thiếu `thinkingBudget: 0` cắt phản hồi trước khối `<javascript>`; `executeAiCode()` chỉ bắt một kiểu thẻ.

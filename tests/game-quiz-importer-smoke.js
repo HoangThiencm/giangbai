@@ -138,33 +138,118 @@ assert.ok(vehinhAiPhp.includes('int $timeout = 90') || /vehinh_post_json\([^;]*9
 const runtimeConfigPhp = fs.readFileSync(path.join(__dirname, '..', 'api', 'ai_runtime_config.php'), 'utf8');
 assert.ok(runtimeConfigPhp.includes('gemini-3.6-flash'), 'api/ai_runtime_config.php must default to gemini-3.6-flash');
 
+assert.ok(vehinhAiPhp.includes("fallback_model"), 'api/vehinh_ai.php must accept fallback_model from client');
+assert.ok(vehinhAiPhp.includes('$requestedFallback'), 'api/vehinh_ai.php must read requested fallback');
+assert.ok(vehinhAiPhp.includes("vehinh_provider_models()['gemini']"), 'api/vehinh_ai.php must append catalog after user fallback');
+assert.ok(!vehinhAiPhp.includes("$fallbackList = ['gemini-3.6-flash', 'gemini-3.7-flash'"), 'api/vehinh_ai.php must not hardcode a static fallback list');
+
 const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 assert.ok(appJs.includes('gemini-3.6-flash'), 'app.js must include gemini-3.6-flash in DRAWING_AI_MODEL_CATALOG');
 assert.ok(appJs.includes('getSystemDrawingModel'), 'app.js must read system drawing model from settings');
+assert.ok(appJs.includes('getSystemDrawingFallbackModel'), 'app.js must read system fallback model');
+assert.ok(appJs.includes("localStorage.getItem('khbd_gemini_model')"), 'app.js must prefer khbd_gemini_model');
 assert.ok(appJs.includes("localStorage.getItem('default_gemini_module')"), 'app.js must read default_gemini_module');
+assert.ok(appJs.includes("localStorage.getItem('khbd_gemini_fallback_model')"), 'app.js must read khbd_gemini_fallback_model');
+assert.ok(appJs.includes("localStorage.getItem('default_gemini_fallback')"), 'app.js must read default_gemini_fallback');
 assert.ok(appJs.includes('clearDeprecatedSavedDrawingModel'), 'app.js must clear deprecated vehinh_ai_model_gemini');
-assert.ok(appJs.includes('gemini-2.5-flash') && appJs.includes('DEPRECATED_DRAWING_MODELS'), 'app.js must treat gemini-2.5-flash as deprecated');
+assert.ok(appJs.includes('gemini-2.5-flash') && appJs.includes('DEPRECATED_DRAWING_MODELS'), 'app.js must treat gemini-2.5-flash as deprecated saved drawing model');
 assert.ok(appJs.includes('Theo Cài đặt chung'), 'app.js dropdown must include Theo Cài đặt chung');
+assert.ok(appJs.includes('DP:'), 'dropdown must show fallback model');
 assert.ok(appJs.includes('FOLLOW_SYSTEM_MODEL'), 'app.js must have follow-system sentinel');
 assert.ok(appJs.includes('extractDrawingJavascript'), 'app.js must extract JS from AI responses flexibly');
 assert.ok(appJs.includes('<javascript>([\\s\\S]*?)<\\/javascript>'), 'app.js must parse <javascript> tags');
 assert.ok(appJs.includes('```(?:javascript|js)'), 'app.js must parse markdown javascript fences');
+assert.ok(appJs.includes('stripJavascriptFences'), 'app.js must strip nested markdown fences');
 assert.ok(appJs.includes('3-5 gạch đầu dòng'), 'system prompt must keep analysis short');
+assert.ok(appJs.includes('PHƯƠNG PHÁP TỌA ĐỘ HÓA'), 'system prompt must require coordinate geometry');
+assert.ok(appJs.includes('NGHIÊM CẤM markdown backtick'), 'system prompt must forbid markdown fences in javascript tag');
+assert.ok(appJs.includes('<geogebra>'), 'system prompt must request GeoGebra block');
+assert.ok(appJs.includes('fallback_model: selectedFallbackModel'), 'generate request must send fallback_model');
 assert.ok(appJs.includes('resolveDrawingRequestModel'), 'generate request must resolve __system__ to a real model');
 assert.ok(appJs.includes('global_gemini_keys'), 'drawing request must send global_gemini_keys');
+assert.ok(appJs.includes('autoCenterAndFitDrawing'), 'app.js must auto-center AI drawings');
+assert.ok(appJs.includes("'addPoint', 'addText', 'drawLine'"), 'executeAiCode must inject addPoint/addText/drawLine');
 
-function extractDrawingJavascript(fullText) {
-    const source = String(fullText || '');
-    const tagged = source.match(/<javascript>([\s\S]*?)<\/javascript>/i);
-    if (tagged && tagged[1].trim()) return tagged[1].trim();
-    const fenced = source.match(/```(?:javascript|js)\s*([\s\S]*?)```/i);
-    if (fenced && fenced[1].trim()) return fenced[1].trim();
-    return null;
+function extractNamed(source, name) {
+    const needles = [`async function ${name}(`, `function ${name}(`];
+    let start = -1;
+    for (const needle of needles) {
+        start = source.indexOf(needle);
+        if (start >= 0) break;
+    }
+    assert(start >= 0, `missing function ${name}`);
+    const paren = source.indexOf('(', start);
+    let parenDepth = 0, afterParams = -1;
+    for (let i = paren; i < source.length; i++) {
+        if (source[i] === '(') parenDepth += 1;
+        else if (source[i] === ')') {
+            parenDepth -= 1;
+            if (parenDepth === 0) { afterParams = i; break; }
+        }
+    }
+    const brace = source.indexOf('{', afterParams);
+    let depth = 0;
+    for (let i = brace; i < source.length; i++) {
+        if (source[i] === '{') depth += 1;
+        else if (source[i] === '}') {
+            depth -= 1;
+            if (depth === 0) return source.slice(start, i + 1);
+        }
+    }
+    throw new Error(`unterminated function ${name}`);
 }
-assert.strictEqual(extractDrawingJavascript('<javascript>canvas.renderAll();</javascript>'), 'canvas.renderAll();');
-assert.strictEqual(extractDrawingJavascript('```javascript\nconst a = 1;\n```'), 'const a = 1;');
-assert.strictEqual(extractDrawingJavascript('```js\nconst b = 2;\n```'), 'const b = 2;');
-assert.strictEqual(extractDrawingJavascript('no code here'), null);
+
+const vm = require('vm');
+const extractSrc = [
+    extractNamed(appJs, 'stripJavascriptFences'),
+    extractNamed(appJs, 'extractDrawingJavascript'),
+    extractNamed(appJs, 'extractGeoGebraContent'),
+    extractNamed(appJs, 'splitGeoGebraBlocks'),
+    extractNamed(appJs, 'getSystemDrawingModel'),
+    extractNamed(appJs, 'getSystemDrawingFallbackModel'),
+].join('\n');
+const store = {};
+const sandbox = {
+    localStorage: {
+        getItem(key) { return Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null; },
+        setItem(key, value) { store[key] = String(value); }
+    }
+};
+vm.createContext(sandbox);
+vm.runInContext(extractSrc, sandbox);
+
+assert.strictEqual(sandbox.extractDrawingJavascript('<javascript>canvas.renderAll();</javascript>'), 'canvas.renderAll();');
+assert.strictEqual(sandbox.extractDrawingJavascript('```javascript\nconst a = 1;\n```'), 'const a = 1;');
+assert.strictEqual(sandbox.extractDrawingJavascript('```js\nconst b = 2;\n```'), 'const b = 2;');
+assert.strictEqual(sandbox.extractDrawingJavascript('<javascript>```javascript\ncanvas.renderAll();\n```</javascript>'), 'canvas.renderAll();');
+assert.strictEqual(sandbox.extractDrawingJavascript('no code here'), null);
+assert.ok(!sandbox.extractDrawingJavascript('<javascript>```javascript foo() ```</javascript>').includes('```'), 'nested fences must be stripped');
+
+const ggb = sandbox.extractGeoGebraContent('<geogebra>\nBước 1: Đặt A.\nA=(0,0)\nB=(6,0)\nPolygon(A,B,C)\n</geogebra>');
+assert.ok(ggb.includes('A=(0,0)'), 'extractGeoGebraContent must keep commands');
+const parts = sandbox.splitGeoGebraBlocks(ggb);
+assert.ok(parts.commands.includes('Polygon(A,B,C)'), 'GeoGebra commands must be split out');
+assert.ok(parts.steps.includes('Bước 1'), 'GeoGebra steps must be split out');
+
+store.khbd_gemini_model = 'gemini-3.7-flash';
+store.default_gemini_module = 'gemini-3.6-flash';
+assert.strictEqual(sandbox.getSystemDrawingModel(), 'gemini-3.7-flash', 'primary must prefer khbd_gemini_model');
+store.khbd_gemini_fallback_model = 'gemini-2.5-flash';
+assert.strictEqual(sandbox.getSystemDrawingFallbackModel(), 'gemini-2.5-flash', 'fallback must prefer khbd_gemini_fallback_model');
+
+const vehinhHtml = fs.readFileSync(path.join(__dirname, '..', 'vehinh.html'), 'utf8');
+const promptIdx = vehinhHtml.indexOf('id="prompt-input"');
+const uploadIdx = vehinhHtml.indexOf('id="image-upload"');
+const drawIdx = vehinhHtml.indexOf('id="draw-action-buttons"');
+const generateIdx = vehinhHtml.indexOf('id="generate-btn"');
+const analysisIdx = vehinhHtml.indexOf('id="analysis-output"');
+assert.ok(promptIdx > 0 && uploadIdx > promptIdx, 'image upload follows prompt');
+assert.ok(drawIdx > uploadIdx, 'draw buttons must follow question/image inputs');
+assert.ok(generateIdx > drawIdx, 'generate button lives in relocated action cluster');
+assert.ok(analysisIdx > generateIdx, 'analysis panel stays below draw buttons');
+assert.ok(vehinhHtml.includes('id="geogebra-construction-panel"'), 'GeoGebra construction panel');
+assert.ok(vehinhHtml.includes('📋 Sao chép lệnh GeoGebra'), 'copy GeoGebra button');
+assert.ok(vehinhHtml.includes('🚀 Mở khung GeoGebra'), 'open GeoGebra button');
 
 const aiDesignConfigJs = fs.readFileSync(path.join(__dirname, '..', 'ai-design-config.js'), 'utf8');
 assert.ok(aiDesignConfigJs.includes('gemini-3.6-flash'), 'ai-design-config.js must support gemini-3.6-flash');

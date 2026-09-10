@@ -357,17 +357,6 @@
             </header>
 
             <div class="flex-1 p-4 space-y-4 overflow-y-auto">
-                <div class="flex flex-col space-y-2">
-                    <button id="generate-btn"
-                        class="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500 transition-all transform hover:scale-105 active:scale-100">
-                        <i data-lucide="wand-2"></i> <span>Vẽ Hình (Ctrl+Q)</span>
-                    </button>
-                    <button id="regenerate-btn"
-                        class="w-full flex items-center justify-center gap-2 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500 transition-all disabled:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i data-lucide="rotate-cw"></i> <span>Vẽ lại</span>
-                    </button>
-                </div>
-
                 <div class="rounded-lg border border-gray-700 bg-gray-900 p-3">
                     <label for="ai-provider-select" class="mb-2 block text-sm font-semibold text-gray-200">Chọn AI vẽ hình</label>
                     <select id="ai-provider-select"
@@ -408,7 +397,7 @@
                                         class="w-full p-2 border border-gray-600 rounded-lg text-sm bg-gray-700 text-green-400 font-mono">
                                         ...
                                     </div>
-                                    <script>document.getElementById('current-model-display').innerText = localStorage.getItem('default_gemini_module') || localStorage.getItem('khbd_gemini_model') || 'gemini-3.6-flash';</script>
+                                    <script>document.getElementById('current-model-display').innerText = (localStorage.getItem('khbd_gemini_model') || localStorage.getItem('default_gemini_module') || 'gemini-3.7-flash') + ' · DP: ' + (localStorage.getItem('khbd_gemini_fallback_model') || localStorage.getItem('default_gemini_fallback') || 'gemini-2.5-flash');</script>
                                 </div>
                             </div>
                         </div>
@@ -456,6 +445,33 @@
                     </div>
                 </div>
 
+                <div id="draw-action-buttons" class="flex flex-col space-y-2">
+                    <button id="generate-btn"
+                        class="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500 transition-all transform hover:scale-105 active:scale-100">
+                        <i data-lucide="wand-2"></i> <span>Vẽ Hình (Ctrl+Q)</span>
+                    </button>
+                    <button id="regenerate-btn"
+                        class="w-full flex items-center justify-center gap-2 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500 transition-all disabled:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="rotate-cw"></i> <span>Vẽ lại</span>
+                    </button>
+                </div>
+
+                <div id="geogebra-construction-panel" class="hidden rounded-lg border border-indigo-500/40 bg-gray-900 p-3 space-y-2">
+                    <h3 class="font-semibold text-indigo-200">📐 Các bước dựng hình &amp; Lệnh GeoGebra</h3>
+                    <div id="geogebra-steps" class="text-xs text-gray-300 whitespace-pre-wrap leading-5"></div>
+                    <pre class="text-xs bg-gray-950 border border-gray-700 rounded p-2 overflow-x-auto"><code id="geogebra-commands" class="text-emerald-300"></code></pre>
+                    <div class="flex flex-col space-y-2">
+                        <button id="copy-geogebra-btn" type="button"
+                            class="w-full flex items-center justify-center gap-2 bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-600">
+                            📋 Sao chép lệnh GeoGebra
+                        </button>
+                        <button id="open-geogebra-btn" type="button"
+                            class="w-full flex items-center justify-center gap-2 bg-gray-700 text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600">
+                            🚀 Mở khung GeoGebra
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
             <footer class="p-4 border-t border-gray-700">
@@ -485,7 +501,8 @@
         </div>
     </div>
 
-    <script src="app.js?v=20260627-gemini-models"></script>
+    <div id="vehinh-toast" class="fixed top-4 right-4 hidden z-[70] max-w-sm px-4 py-2 rounded shadow text-sm border bg-emerald-50 text-emerald-800 border-emerald-200"></div>
+    <script src="app.js?v=20260910-vehinh-coord"></script>
     <script>
         lucide.createIcons();
         document.addEventListener('DOMContentLoaded', function () {

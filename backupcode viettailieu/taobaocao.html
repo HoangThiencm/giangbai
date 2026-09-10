@@ -614,13 +614,22 @@
 </head>
 
 <body class="p-3 md:p-5 w-full max-w-none mx-auto">
+    <div id="accountSyncToast" class="fixed top-4 right-4 hidden z-[70] max-w-sm px-4 py-2 rounded shadow text-sm border"></div>
     <div class="mb-4 flex justify-between items-center">
         <!-- NÚT HOME -->
         <a href="index.html"
             class="inline-flex items-center text-slate-500 hover:text-purple-600 font-medium transition-colors">
             <i class="fas fa-arrow-left mr-2"></i> Quay về Trang chủ
         </a>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap justify-end">
+            <div id="headerAccountBadge" class="inline-flex items-center gap-2 px-3 py-2 rounded border border-sky-200 bg-white text-sky-800 text-xs">
+                <span id="headerAccountName" class="font-semibold">👤 Chưa có tài khoản</span>
+                <span id="headerAccountSyncStatus" class="text-slate-400">⚪ Chưa nạp</span>
+            </div>
+            <button type="button" onclick="loadAccountSettingsFromGitHub(true, true)"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold">
+                🔄 Nạp lại hồ sơ
+            </button>
             <button type="button" onclick="openAccountSettingsModal()"
                 class="inline-flex items-center gap-2 px-3 py-2 rounded border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 text-xs font-bold">
                 <i class="fas fa-id-badge"></i> Cài đặt tài khoản
@@ -1291,6 +1300,10 @@
                 <button type="button" onclick="closeAccountSettingsModal()" class="px-3 py-1 rounded text-gray-600 hover:text-gray-900">Đóng</button>
             </div>
             <div class="p-5 space-y-4">
+                <div class="rounded border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-900">
+                    <div class="font-semibold">✦ Chế độ Gemini Canvas · Máy chủ kết nối: hoangthiencm.id.vn</div>
+                    <p class="text-xs mt-1 leading-relaxed">Tài khoản giáo viên là <code>username</code> đăng ký trên hệ thống hoangthiencm.id.vn.</p>
+                </div>
                 <div class="bg-sky-50 border border-sky-200 rounded p-3 text-sm text-sky-800">
                     Hồ sơ được lưu cục bộ ngay lập tức; bạn có thể chọn đồng bộ Hosting hoặc GitHub khi cần.
                     <div id="accountSettingsStatus" class="text-xs text-sky-700 mt-1 italic">Chưa tải hồ sơ.</div>
@@ -1298,22 +1311,42 @@
 
                 <div class="rounded border border-sky-200 bg-slate-50 p-3 space-y-3">
                     <h4 class="font-bold text-sky-900">Thông tin tài khoản &amp; nơi lưu trữ</h4>
-                    <label class="block text-sm font-semibold text-gray-700">Email / tên tài khoản
-                        <input id="accUserEmail" type="text" class="w-full p-2 border border-sky-300 rounded font-bold text-sky-900 mt-1" placeholder="Nhập email hoặc tên tài khoản (VD: thcs.tranphu@gmail.com)">
+                    <label class="block text-sm font-semibold text-gray-700">Username / Tài khoản giáo viên (trên hoangthiencm.id.vn)
+                        <input id="accUserEmail" type="text" class="w-full p-2 border border-sky-300 rounded font-bold text-sky-900 mt-1" placeholder="Nhập username đăng nhập (VD: tranphu_gv1)">
                     </label>
+                    <label class="block text-sm font-semibold text-gray-700">URL Hosting máy chủ
+                        <input id="accHostingCustomUrl" type="url" class="w-full p-2 border border-sky-300 rounded mt-1" placeholder="https://hoangthiencm.id.vn" value="https://hoangthiencm.id.vn">
+                    </label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="testHostingConnection()" class="px-3 py-1.5 text-xs border border-emerald-300 text-emerald-700 rounded hover:bg-emerald-100 font-semibold">🔌 Kiểm tra kết nối Hosting</button>
+                    </div>
                     <label class="block text-sm font-semibold text-gray-700">Phương thức đồng bộ
                         <select id="accStorageMode" class="w-full p-2 border border-sky-300 rounded mt-1" onchange="toggleAccountStorageFields()">
                             <option value="hosting">Hosting &amp; cục bộ (Khuyên dùng — không cần GitHub token)</option>
                             <option value="github">Đồng bộ GitHub Cloud</option>
                         </select>
                     </label>
-                    <div id="accGithubFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <label class="block text-sm font-semibold text-gray-700">GitHub repo
-                            <input id="accGithubRepo" type="text" class="w-full p-2 border border-slate-300 rounded mt-1" placeholder="owner/repository">
-                        </label>
-                        <label class="block text-sm font-semibold text-gray-700">GitHub PAT
-                            <input id="accGithubPat" type="password" class="w-full p-2 border border-slate-300 rounded mt-1" placeholder="github_pat_…">
-                        </label>
+                    <div id="accGithubFields" class="hidden space-y-3">
+                        <div class="text-xs text-slate-600 leading-relaxed rounded border border-slate-200 bg-white p-3">
+                            <div class="font-semibold text-slate-800 mb-1">Tạo GitHub PAT (Fine-grained hoặc Classic) — 3 bước:</div>
+                            <ol class="list-decimal ml-4 space-y-1">
+                                <li>GitHub → Settings → Developer settings → Personal access tokens.</li>
+                                <li>Tạo Fine-grained hoặc Classic token, cấp quyền <strong>Contents: Read and write</strong> cho repo.</li>
+                                <li>Dán token vào ô GitHub PAT bên dưới. Không commit token lên git.</li>
+                            </ol>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="block text-sm font-semibold text-gray-700">GitHub repo
+                                <input id="accGithubRepo" type="text" class="w-full p-2 border border-slate-300 rounded mt-1" placeholder="owner/repository">
+                            </label>
+                            <label class="block text-sm font-semibold text-gray-700">GitHub PAT
+                                <input id="accGithubPat" type="password" class="w-full p-2 border border-slate-300 rounded mt-1" placeholder="github_pat_…">
+                            </label>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="testGitHubConnection()" class="px-3 py-1.5 text-xs border border-sky-300 text-sky-700 rounded hover:bg-sky-100 font-semibold">🔍 Kiểm tra kết nối GitHub</button>
+                            <button type="button" onclick="clearGitHubPat()" class="px-3 py-1.5 text-xs border border-rose-300 text-rose-700 rounded hover:bg-rose-50 font-semibold">Xóa token đã lưu</button>
+                        </div>
                     </div>
                 </div>
 
@@ -2147,10 +2180,11 @@ ${profile.guide}
                 goToStep(1);
             }
             applyAccountProfileToSetupInputs(accountProfile, false);
+            updateHeaderAccountWidget("");
             (async () => {
                 await tryLoadDefaultSignatureAssets();
                 await tryLoadBundledAccountWorkbook();
-                await loadAccountSettingsFromGitHub(false, false);
+                await autoSyncAccountProfileOnStartup();
             })();
 
             bindDraftAutoSave();
@@ -2801,13 +2835,71 @@ ${profile.guide}
 
         function getCurrentUserEmail(allowPrompt = true) {
             const input = document.getElementById("accUserEmail");
-            let email = String(input?.value || localStorage.getItem("userEmail") || localStorage.getItem("userName") || "").trim().toLowerCase();
-            if (!email && allowPrompt && typeof prompt === "function") email = String(prompt("Vui lòng nhập email hoặc tên tài khoản để lưu hồ sơ:") || "").trim().toLowerCase();
+            let email = String(
+                localStorage.getItem("userEmail") ||
+                localStorage.getItem("userName") ||
+                localStorage.getItem("canvas_xdpl_user") ||
+                input?.value ||
+                ""
+            ).trim().toLowerCase();
+            if (!email && allowPrompt && typeof prompt === "function") {
+                email = String(prompt("Vui lòng nhập email hoặc tên tài khoản để lưu hồ sơ:") || "").trim().toLowerCase();
+            }
             if (email) {
                 localStorage.setItem("userEmail", email);
-                if (input) input.value = email;
+                if (input && !String(input.value || "").trim()) input.value = email;
             }
             return email;
+        }
+
+        let headerAccountSyncState = "";
+
+        function showAccountSyncToast(message, tone = "success") {
+            const el = document.getElementById("accountSyncToast");
+            if (!el) return;
+            el.textContent = String(message || "");
+            const toneClass = tone === "error"
+                ? "bg-rose-50 text-rose-800 border-rose-200"
+                : tone === "info"
+                    ? "bg-sky-50 text-sky-800 border-sky-200"
+                    : "bg-emerald-50 text-emerald-800 border-emerald-200";
+            el.className = `fixed top-4 right-4 z-[70] max-w-sm px-4 py-2 rounded shadow text-sm border ${toneClass}`;
+            el.classList.remove("hidden");
+            clearTimeout(showAccountSyncToast._timer);
+            showAccountSyncToast._timer = setTimeout(() => el.classList.add("hidden"), 3200);
+        }
+
+        function updateHeaderAccountWidget(syncState) {
+            if (arguments.length > 0) headerAccountSyncState = String(syncState || "");
+            const nameEl = document.getElementById("headerAccountName");
+            const statusEl = document.getElementById("headerAccountSyncStatus");
+            const email = getCurrentUserEmail(false);
+            if (nameEl) nameEl.textContent = email ? `👤 ${email}` : "👤 Chưa có tài khoản";
+            if (!statusEl) return;
+            if (headerAccountSyncState === "hosting") {
+                statusEl.textContent = "🟢 Đã nạp từ Hosting";
+                statusEl.className = "text-emerald-700 font-semibold";
+                return;
+            }
+            if (headerAccountSyncState === "github") {
+                statusEl.textContent = "🟢 Đã nạp từ GitHub";
+                statusEl.className = "text-emerald-700 font-semibold";
+                return;
+            }
+            if (headerAccountSyncState === "cache") {
+                statusEl.textContent = "🟡 Đã nạp cache cục bộ";
+                statusEl.className = "text-amber-700 font-semibold";
+                return;
+            }
+            statusEl.textContent = "⚪ Chưa nạp";
+            statusEl.className = "text-slate-400";
+        }
+
+        async function autoSyncAccountProfileOnStartup() {
+            const email = getCurrentUserEmail(false);
+            updateHeaderAccountWidget("");
+            if (!email) return;
+            await loadAccountSettingsFromGitHub(false, true);
         }
 
         function normalizeGitHubRepo(raw = "") {
@@ -2866,8 +2958,10 @@ ${profile.guide}
             if (modeInput) modeInput.value = localStorage.getItem("tthc_account_storage_mode") === "github" ? "github" : "hosting";
             const repoInput = document.getElementById("accGithubRepo");
             const patInput = document.getElementById("accGithubPat");
+            const hostingUrlInput = document.getElementById("accHostingCustomUrl");
             if (repoInput) repoInput.value = localStorage.getItem("github_repo") || "";
             if (patInput) patInput.value = localStorage.getItem("github_pat") || "";
+            if (hostingUrlInput) hostingUrlInput.value = localStorage.getItem("tthc_custom_hosting_url") || "https://hoangthiencm.id.vn";
             toggleAccountStorageFields();
             fillAccountSettingsForm(accountProfile);
             renderSignatureAssetPreviews();
@@ -3665,8 +3759,56 @@ ${profile.guide}
             return `tthc_account_profile_hosting_draft:${String(email || "").trim().toLowerCase()}`;
         }
 
+        const DEFAULT_HOSTING_ENDPOINT = 'https://hoangthiencm.id.vn/api/user_phuluc_draft.php';
+
+        function persistCustomHostingUrl() {
+            const input = document.getElementById("accHostingCustomUrl");
+            if (!input) return;
+            const url = String(input.value || "").trim();
+            if (url) localStorage.setItem("tthc_custom_hosting_url", url);
+            else localStorage.removeItem("tthc_custom_hosting_url");
+        }
+
         function getAccountHostingEndpoint() {
-            return new URL("../api/user_phuluc_draft.php", window.location.href).toString();
+            // 1. Nếu người dùng cấu hình URL Hosting tùy chỉnh:
+            const customUrl = String(
+                document.getElementById("accHostingCustomUrl")?.value ||
+                localStorage.getItem("tthc_custom_hosting_url") || ""
+            ).trim();
+            if (customUrl) {
+                return `${customUrl.replace(/\/+$/, '')}/api/user_phuluc_draft.php`;
+            }
+
+            // 2. Nếu đang chạy trực tiếp trên web server cùng backend (không phải Canvas, không phải file://):
+            const isLocalOrCanvas = typeof window !== "undefined" && (
+                window.location.protocol === "file:" ||
+                window.location.hostname.includes("googleusercontent.com") ||
+                /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)
+            );
+            if (!isLocalOrCanvas && window.location.protocol.startsWith("http")) {
+                try {
+                    return new URL("../api/user_phuluc_draft.php", window.location.href).toString();
+                } catch (e) {}
+            }
+
+            // 3. Mặc định cho môi trường Gemini Canvas hoặc chạy độc lập:
+            return DEFAULT_HOSTING_ENDPOINT;
+        }
+
+        function hostingFetchOptions(account, extra = {}) {
+            return {
+                credentials: "omit",
+                cache: "no-store",
+                ...extra,
+                headers: {
+                    "X-User-Account": account,
+                    ...(extra.headers || {})
+                }
+            };
+        }
+
+        function hostingErrorMessage(response, data) {
+            return (data && data.error) || response.statusText || `HTTP ${response.status}`;
         }
 
         async function saveAccountProfileToHosting(email, payload) {
@@ -3676,7 +3818,7 @@ ${profile.guide}
                 config: { monHoc: "Hồ sơ tổ chuyên môn", lop: "", namHoc: "" },
                 account_profile_payload: payload
             };
-            const response = await fetch(getAccountHostingEndpoint(), {
+            const response = await fetch(getAccountHostingEndpoint(), hostingFetchOptions(email, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "X-User-Account": email },
                 body: JSON.stringify({
@@ -3687,9 +3829,9 @@ ${profile.guide}
                     appendix_type: "account-profile",
                     draft
                 })
-            });
+            }));
             const data = await response.json().catch(() => ({}));
-            if (!response.ok || !data.ok) throw new Error(data.error || "Không thể lưu hồ sơ lên Hosting.");
+            if (!response.ok || !data.ok) throw new Error(hostingErrorMessage(response, data) || "Không thể lưu hồ sơ lên Hosting.");
             const savedId = Number(data.draft_info?.id || 0);
             if (savedId) localStorage.setItem(getAccountHostingDraftIdKey(email), String(savedId));
             return data;
@@ -3699,19 +3841,55 @@ ${profile.guide}
             let id = Number(localStorage.getItem(getAccountHostingDraftIdKey(email)) || 0);
             const headers = { "X-User-Account": email };
             if (!id) {
-                const listResponse = await fetch(`${getAccountHostingEndpoint()}?action=list&user_account=${encodeURIComponent(email)}`, { headers });
+                const listResponse = await fetch(
+                    `${getAccountHostingEndpoint()}?action=list&user_account=${encodeURIComponent(email)}`,
+                    hostingFetchOptions(email, { headers })
+                );
                 const listData = await listResponse.json().catch(() => ({}));
-                if (!listResponse.ok || !listData.ok) throw new Error(listData.error || "Không thể tìm hồ sơ Hosting.");
-                id = Number((listData.drafts || []).find(item => item.title === "Hồ sơ tổ chuyên môn")?.id || 0);
+                if (!listResponse.ok || !listData.ok) throw new Error(hostingErrorMessage(listResponse, listData) || "Không thể tìm hồ sơ Hosting.");
+                id = Number((listData.drafts || []).find(item => item.appendix_type === "account-profile" || item.title === "Hồ sơ tổ chuyên môn")?.id || 0);
             }
             if (!id) return null;
-            const response = await fetch(`${getAccountHostingEndpoint()}?id=${id}&user_account=${encodeURIComponent(email)}`, { headers });
+            const response = await fetch(
+                `${getAccountHostingEndpoint()}?id=${id}&user_account=${encodeURIComponent(email)}`,
+                hostingFetchOptions(email, { headers })
+            );
             const data = await response.json().catch(() => ({}));
-            if (!response.ok || !data.ok) throw new Error(data.error || "Không thể tải hồ sơ từ Hosting.");
+            if (!response.ok || !data.ok) throw new Error(hostingErrorMessage(response, data) || "Không thể tải hồ sơ từ Hosting.");
             const payload = data.draft?.account_profile_payload || null;
             if (!payload?.profile) return null;
             localStorage.setItem(getAccountHostingDraftIdKey(email), String(id));
             return payload;
+        }
+
+        async function testHostingConnection() {
+            persistCustomHostingUrl();
+            const account = getCurrentUserEmail(false);
+            if (!account) {
+                setAccountSettingsStatus("Hãy nhập username tài khoản giáo viên trước khi kiểm tra Hosting.", "error");
+                return;
+            }
+            try {
+                const endpoint = getAccountHostingEndpoint();
+                const response = await fetch(
+                    `${endpoint}?action=list&user_account=${encodeURIComponent(account)}`,
+                    hostingFetchOptions(account)
+                );
+                const data = await response.json().catch(() => ({}));
+                let hostLabel = "hoangthiencm.id.vn";
+                try { hostLabel = new URL(endpoint).hostname || hostLabel; } catch (e) {}
+                if (response.ok && data.ok) {
+                    setAccountSettingsStatus(`✅ Kết nối máy chủ ${hostLabel} thành công! Tài khoản hợp lệ.`, "success");
+                    return;
+                }
+                if (response.status === 401) {
+                    setAccountSettingsStatus("❌ Lỗi 401: Tài khoản chưa đăng ký hoặc chưa kích hoạt trên hoangthiencm.id.vn.", "error");
+                    return;
+                }
+                setAccountSettingsStatus(`❌ Lỗi Hosting (${response.status}): ${hostingErrorMessage(response, data)}`, "error");
+            } catch (e) {
+                setAccountSettingsStatus("❌ Không kết nối được tới máy chủ (kiểm tra lại mạng hoặc URL).", "error");
+            }
         }
 
         async function applyAccountProfilePayload(payload, forceApply = false) {
@@ -3866,20 +4044,33 @@ ${profile.guide}
             return `${ACCOUNT_PROFILE_LEGACY_DIR}/${slug}_${hash}.json`;
         }
 
+        function githubAuthHeaders(pat, extra = {}) {
+            return {
+                Authorization: `Bearer ${pat}`,
+                Accept: "application/vnd.github.v3+json",
+                ...extra
+            };
+        }
+
+        function formatGitHubApiError(action, status, txt) {
+            const snippet = String(txt || "").slice(0, 160);
+            if (status === 401 || /Bad credentials/i.test(snippet)) {
+                return `GitHub ${action} lỗi (401): Bad credentials. Token đã hết hạn hoặc bị thu hồi. Hãy bấm "Xóa token đã lưu" rồi nhập Personal Access Token mới (Contents: Read and write). Chi tiết: ${snippet}`;
+            }
+            return `GitHub ${action} lỗi (${status}): ${snippet}`;
+        }
+
         async function githubReadJsonFile(path) {
             const { pat, repo } = getGitHubCloudConfig();
             if (!pat || !repo) throw new Error("Chưa cấu hình GitHub PAT/repo trong trang index.");
             const url = `https://api.github.com/repos/${repo}/contents/${path}`;
             const res = await fetch(url, {
-                headers: {
-                    Authorization: `token ${pat}`,
-                    Accept: "application/vnd.github.v3+json"
-                }
+                headers: githubAuthHeaders(pat)
             });
             if (res.status === 404) return null;
             if (!res.ok) {
                 const txt = await res.text();
-                throw new Error(`GitHub read lỗi (${res.status}): ${txt.slice(0, 160)}`);
+                throw new Error(formatGitHubApiError("read", res.status, txt));
             }
             const data = await res.json();
             const decoded = base64ToUtf8(data.content || "");
@@ -3894,15 +4085,12 @@ ${profile.guide}
             if (!pat || !repo) throw new Error("Chưa cấu hình GitHub PAT/repo trong trang index.");
             const url = `https://api.github.com/repos/${repo}/contents/${path}`;
             const res = await fetch(url, {
-                headers: {
-                    Authorization: `token ${pat}`,
-                    Accept: "application/vnd.github.v3+json"
-                }
+                headers: githubAuthHeaders(pat)
             });
             if (res.status === 404) return [];
             if (!res.ok) {
                 const txt = await res.text();
-                throw new Error(`GitHub list lỗi (${res.status}): ${txt.slice(0, 160)}`);
+                throw new Error(formatGitHubApiError("list", res.status, txt));
             }
             const data = await res.json();
             return Array.isArray(data) ? data : [];
@@ -3921,18 +4109,46 @@ ${profile.guide}
             const url = `https://api.github.com/repos/${repo}/contents/${path}`;
             const res = await fetch(url, {
                 method: "PUT",
-                headers: {
-                    Authorization: `token ${pat}`,
-                    Accept: "application/vnd.github.v3+json",
-                    "Content-Type": "application/json"
-                },
+                headers: githubAuthHeaders(pat, { "Content-Type": "application/json" }),
                 body: JSON.stringify(body)
             });
             if (!res.ok) {
                 const txt = await res.text();
-                throw new Error(`GitHub save lỗi (${res.status}): ${txt.slice(0, 200)}`);
+                throw new Error(formatGitHubApiError("save", res.status, txt));
             }
             return await res.json();
+        }
+
+        async function testGitHubConnection() {
+            const { pat, repo } = getGitHubCloudConfig();
+            if (!pat || !repo) {
+                setAccountSettingsStatus("❌ Thiếu GitHub repo hoặc PAT. Hãy nhập cả hai rồi kiểm tra lại.", "error");
+                return;
+            }
+            try {
+                const res = await fetch(`https://api.github.com/repos/${repo}`, {
+                    headers: githubAuthHeaders(pat)
+                });
+                const txt = await res.text();
+                if (res.status === 401 || /Bad credentials/i.test(txt)) {
+                    setAccountSettingsStatus("❌ GitHub 401 Bad credentials. Hãy bấm \"Xóa token đã lưu\" rồi nhập token mới.", "error");
+                    return;
+                }
+                if (!res.ok) {
+                    setAccountSettingsStatus(`❌ ${formatGitHubApiError("kết nối", res.status, txt)}`, "error");
+                    return;
+                }
+                setAccountSettingsStatus(`✅ Kết nối GitHub thành công! Repo ${repo} hợp lệ.`, "success");
+            } catch (e) {
+                setAccountSettingsStatus(`❌ Không kết nối được GitHub: ${e?.message || e}`, "error");
+            }
+        }
+
+        function clearGitHubPat() {
+            localStorage.removeItem("github_pat");
+            const patInput = document.getElementById("accGithubPat");
+            if (patInput) patInput.value = "";
+            setAccountSettingsStatus("Đã xóa token GitHub đã lưu. Hãy nhập Personal Access Token mới.", "info");
         }
 
         function compactAccountPromptValue(value = "", maxChars = 180) {
@@ -4104,6 +4320,7 @@ ${profile.guide}
             const email = getCurrentUserEmail(false);
             if (!email) {
                 setAccountSettingsStatus("Hãy mở Cài đặt tài khoản và nhập email hoặc tên tài khoản để tải hồ sơ.", "info");
+                updateHeaderAccountWidget("");
                 return;
             }
             const shouldForceApply = Boolean(forceApply);
@@ -4116,6 +4333,8 @@ ${profile.guide}
                         await applyAccountProfilePayload(hostedPayload, shouldForceApply);
                         cacheAccountProfileLocally(email, hostedPayload);
                         setAccountSettingsStatus("Đã tải hồ sơ tài khoản từ Hosting.", "success");
+                        updateHeaderAccountWidget("hosting");
+                        if (!showAlert) showAccountSyncToast("Đã nạp hồ sơ từ Hosting.");
                         if (showAlert) alert("Đã tải hồ sơ tài khoản từ Hosting.");
                         return;
                     }
@@ -4126,10 +4345,12 @@ ${profile.guide}
                 if (cache?.profile) {
                     await applyAccountProfilePayload(cache, shouldForceApply);
                     setAccountSettingsStatus("Đã nạp hồ sơ cache cục bộ.", "success");
+                    updateHeaderAccountWidget("cache");
                     if (showAlert) alert("Đã nạp hồ sơ cache cục bộ.");
                     return;
                 }
                 setAccountSettingsStatus("Chưa có hồ sơ đã lưu cho tài khoản này.", "info");
+                updateHeaderAccountWidget("");
                 if (showAlert) alert("Chưa có hồ sơ đã lưu cho tài khoản này.");
                 return;
             }
@@ -4163,10 +4384,12 @@ ${profile.guide}
                         refreshRenderedFooterFromCurrentMeta();
                         renderSignatureAssetPreviews();
                         setAccountSettingsStatus("Không thấy file trên GitHub, đã nạp hồ sơ cache cục bộ.", "info");
+                        updateHeaderAccountWidget("cache");
                         if (showAlert) alert("Không thấy hồ sơ trên GitHub. Đã nạp bản cache cục bộ.");
                         return;
                     }
                     setAccountSettingsStatus("Chưa có hồ sơ trên GitHub cho tài khoản này.", "info");
+                    updateHeaderAccountWidget("");
                     if (showAlert) alert("Chưa có hồ sơ tài khoản trên GitHub.");
                     return;
                 }
@@ -4210,6 +4433,8 @@ ${profile.guide}
                 }
 
                 setAccountSettingsStatus(`Đã tải hồ sơ tài khoản từ GitHub (${sourceLabel}).`, "success");
+                updateHeaderAccountWidget("github");
+                if (!showAlert) showAccountSyncToast("Đã nạp hồ sơ từ GitHub.");
                 if (showAlert) alert("Đã tải hồ sơ tài khoản từ GitHub.");
             } catch (e) {
                 const cache = loadAccountProfileCache(email);
@@ -4223,10 +4448,12 @@ ${profile.guide}
                     refreshRenderedFooterFromCurrentMeta();
                     renderSignatureAssetPreviews();
                     setAccountSettingsStatus(`Lỗi mạng/GitHub, đã nạp cache cục bộ: ${e?.message || e}`, "info");
+                    updateHeaderAccountWidget("cache");
                     if (showAlert) alert("Lỗi tải từ GitHub, đã nạp cache cục bộ.");
                     return;
                 }
                 setAccountSettingsStatus(`Lỗi tải hồ sơ: ${e?.message || e}`, "error");
+                updateHeaderAccountWidget("");
                 if (showAlert) alert("Lỗi tải hồ sơ tài khoản: " + (e?.message || e));
             }
         }
@@ -4259,11 +4486,12 @@ ${profile.guide}
                     setAccountSettingsStatus("Đã lưu cục bộ; đang đồng bộ hồ sơ lên Hosting…", "info");
                     await saveAccountProfileToHosting(email, payload);
                     setAccountSettingsStatus("Đã lưu hồ sơ và danh sách các tổ chuyên môn vào Hosting thành công.", "success");
+                    updateHeaderAccountWidget("hosting");
                     alert("Đã lưu hồ sơ cục bộ và đồng bộ Hosting thành công.");
                     closeAccountSettingsModal();
                 } catch (e) {
                     setAccountSettingsStatus(`Đã lưu cục bộ. Chưa đồng bộ được Hosting: ${e?.message || e}`, "info");
-                    alert("Hồ sơ và danh sách các tổ đã được lưu trên máy. Hosting sẽ đồng bộ lại khi kết nối/tài khoản hợp lệ.");
+                    alert("Hồ sơ đã được lưu vào bộ nhớ trình duyệt (Local-First).\nLỗi đồng bộ Hosting: " + (e?.message || e));
                 }
                 return;
             }
@@ -4304,6 +4532,7 @@ ${profile.guide}
                 ["input", "change"].forEach((eventName) => emailInput.addEventListener(eventName, () => {
                     const email = String(emailInput.value || "").trim().toLowerCase();
                     if (email) localStorage.setItem("userEmail", email);
+                    updateHeaderAccountWidget();
                 }));
             }
 
@@ -4319,6 +4548,11 @@ ${profile.guide}
                     getGitHubCloudConfig();
                 }));
             });
+
+            const hostingUrlInput = document.getElementById("accHostingCustomUrl");
+            if (hostingUrlInput) {
+                ["input", "change"].forEach((eventName) => hostingUrlInput.addEventListener(eventName, persistCustomHostingUrl));
+            }
 
             ["board", "department", "staff", "party"].forEach((type) => {
                 const conf = getAccountListConfig(type);

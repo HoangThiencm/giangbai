@@ -23,18 +23,20 @@ function draft_summary(array $draft): string { $rows=is_array($draft['sourcePpct
 function draft_title(array $draft,string $title): string { if($title!=='')return mb_substr($title,0,255); return mb_substr(trim('Kế hoạch '.draft_config_value($draft,'monHoc').' '.draft_config_value($draft,'lop').' - Năm học '.draft_config_value($draft,'namHoc')),0,255); }
 
 $userId=(int)($_SESSION['user_id'] ?? 0); $method=$_SERVER['REQUEST_METHOD']??'GET'; $action=$_GET['action']??'';
+$account='';
 try {
     $body=in_array($method,['POST','DELETE'],true)?json_body():[];
     if ($userId <= 0) {
         $accountValue=$_SERVER['HTTP_X_USER_ACCOUNT'] ?? $_GET['user_account'] ?? $body['user_account'] ?? '';
         $account=is_string($accountValue)?trim($accountValue):'';
         if ($account !== '') {
-            $user=$pdo->prepare('SELECT id FROM users WHERE username = ? AND is_active = 1 LIMIT 1');
-            $user->execute([$account]);
-            $userId=(int)$user->fetchColumn();
+            $altAccount = strpos($account, '@') !== false ? explode('@', $account)[0] : $account;
+            $user = $pdo->prepare('SELECT id FROM users WHERE (username = ? OR username = ?) AND is_active = 1 LIMIT 1');
+            $user->execute([$account, $altAccount]);
+            $userId = (int)$user->fetchColumn();
         }
     }
-    if ($userId <= 0) respond(['error'=>'Chưa đăng nhập hoặc chưa chọn tài khoản giáo viên hợp lệ.'],401);
+    if ($userId <= 0) respond(['error' => "Tài khoản '$account' chưa đăng ký hoặc chưa kích hoạt trên hoangthiencm.id.vn."], 401);
     ensure_user_phuluc_drafts_table($pdo);
     if ($method==='GET'&&$action==='list') { $where=['user_id=?'];$params=[$userId];foreach(['mon_hoc','lop','nam_hoc'] as $f)if(trim((string)($_GET[$f]??''))!==''){$where[]="$f=?";$params[]=trim((string)$_GET[$f]);}$s=$pdo->prepare('SELECT id,title,mon_hoc,lop,nam_hoc,appendix_type,summary,created_at,updated_at FROM user_phuluc_drafts WHERE '.implode(' AND ',$where).' ORDER BY updated_at DESC,id DESC');$s->execute($params);respond(['ok'=>true,'drafts'=>$s->fetchAll()]); }
     if ($method==='GET'&&isset($_GET['id'])) { $s=$pdo->prepare('SELECT id,title,mon_hoc,lop,nam_hoc,appendix_type,summary,draft_data,created_at,updated_at FROM user_phuluc_drafts WHERE id=? AND user_id=?');$s->execute([(int)$_GET['id'],$userId]);$row=$s->fetch();if(!$row)respond(['error'=>'Không tìm thấy bản kế hoạch.'],404);$row['draft']=json_decode((string)$row['draft_data'],true);unset($row['draft_data']);if(!is_array($row['draft']))respond(['error'=>'Bản nháp đã lưu không hợp lệ.'],422);respond(['ok'=>true]+$row); }

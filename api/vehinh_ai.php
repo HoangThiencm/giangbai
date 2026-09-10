@@ -83,7 +83,7 @@ function vehinh_resolve_model(array $runtime, ?string $requestedModel = null): s
     return $defaultFallback;
 }
 
-function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userInstruction, ?array $image, ?string $requestedModel = null): array
+function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userInstruction, ?array $image, ?string $requestedModel = null, ?string $requestedFallback = null): array
 {
     $keys = $runtime['gemini_keys'] ?? [];
     $initialModel = vehinh_resolve_model($runtime, $requestedModel);
@@ -112,10 +112,14 @@ function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userIn
         ],
     ];
 
-    // Build model candidate list with fallback if chosen model is deprecated or unavailable
     $modelCandidates = [$initialModel];
-    $fallbackList = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3-flash-preview', 'gemini-2.0-flash'];
-    foreach ($fallbackList as $fb) {
+    $requestedFallback = trim((string)$requestedFallback);
+    if ($requestedFallback !== '' && (in_array($requestedFallback, vehinh_provider_models()['gemini'], true) || preg_match('/^gemini-[\w\.\-]+$/i', $requestedFallback))) {
+        if (!in_array($requestedFallback, $modelCandidates, true)) {
+            $modelCandidates[] = $requestedFallback;
+        }
+    }
+    foreach (vehinh_provider_models()['gemini'] as $fb) {
         if (!in_array($fb, $modelCandidates, true)) {
             $modelCandidates[] = $fb;
         }
@@ -184,6 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $data = json_body();
 $requestedModel = trim((string)($data['model'] ?? ''));
+$requestedFallback = trim((string)($data['fallback_model'] ?? ''));
 
 // Nếu server chưa nạp được key từ session/DB, hỗ trợ dùng key gửi từ client (Cài đặt cá nhân / hệ thống)
 $clientKeys = normalize_api_keys($data['api_keys'] ?? ($data['keys'] ?? []));
@@ -210,7 +215,7 @@ ai_student_rate_limit_require($currentUserId, $currentUserRole);
 ai_student_rate_limit_touch($currentUserId, $currentUserRole);
 ai_student_quota_require($currentUserId, $currentUserRole);
 
-$result = vehinh_call_gemini($runtime, $systemPrompt, $userInstruction, $image, $requestedModel);
+$result = vehinh_call_gemini($runtime, $systemPrompt, $userInstruction, $image, $requestedModel, $requestedFallback);
 
 $ok = empty($result['error']) && trim((string)($result['text'] ?? '')) !== '';
 ai_usage_record([
