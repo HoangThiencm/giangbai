@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 
 <head>
@@ -11,6 +11,8 @@
     <script src="vendor/babel.min.js"></script>
     <link rel="stylesheet" href="vendor/katex.min.css">
     <script src="vendor/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="js/game-quiz-importer.js?v=20260910"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .katex {
@@ -225,6 +227,29 @@
             const [timeLeft, setTimeLeft] = useState(30);
             const [timerActive, setTimerActive] = useState(false);
 
+            // Auto-load questions from trochoi.html if available
+            useEffect(() => {
+                try {
+                    const raw = localStorage.getItem('gameData');
+                    if (!raw) return;
+                    const parsed = JSON.parse(raw);
+                    if (parsed.gameType === 'elimination' && parsed.content?.questions?.length > 0) {
+                        const loaded = parsed.content.questions.map((q, idx) => ({
+                            id: q.id || `q${idx + 1}`,
+                            prompt: q.prompt || '',
+                            choices: q.choices || [],
+                            answer: typeof q.answer === 'number' ? q.answer : 0,
+                            explanation: q.explanation || ''
+                        })).filter(q => q.prompt && q.choices && q.choices.length >= 2);
+                        if (loaded.length > 0) {
+                            setQuestions(loaded);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Lỗi đọc gameData:", e);
+                }
+            }, []);
+
             // Initialize players when game starts
             useEffect(() => {
                 if (currentScreen === 'game' && players.length === 0 && questions.length > 0) {
@@ -335,7 +360,7 @@
                         return;
                     }
 
-                    const defaultModule = localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+                    const defaultModule = localStorage.getItem('default_gemini_module') || 'gemini-3.6-flash';
 
                     // Build prompt
                     const prompt = `Bạn là trợ lý tạo câu hỏi trắc nghiệm.
@@ -605,11 +630,26 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                 </div>
                             </div>
 
+                            {questions.length > 0 && (
+                                <div className="mt-4 p-4 bg-green-50 border border-green-300 rounded-xl text-center">
+                                    <p className="text-green-800 font-bold text-sm mb-2">
+                                        <i className="fas fa-check-circle mr-1 text-green-600"></i>
+                                        Đã có sẵn {questions.length} câu hỏi (từ bộ tạo game / Word LaTeX)!
+                                    </p>
+                                    <button
+                                        onClick={() => setCurrentScreen('modeSelection')}
+                                        className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:shadow-lg transition"
+                                    >
+                                        <i className="fas fa-play mr-2"></i>Chơi ngay với {questions.length} câu đã có
+                                    </button>
+                                </div>
+                            )}
+
                             <button
                                 onClick={() => setCurrentScreen('questionSource')}
-                                className="w-full mt-6 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
+                                className="w-full mt-4 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition"
                             >
-                                <i className="fas fa-arrow-right mr-2"></i>Tiếp tục
+                                <i className="fas fa-arrow-right mr-2"></i>{questions.length > 0 ? 'Tạo hoặc đổi bộ câu hỏi khác' : 'Tiếp tục'}
                             </button>
 
                             <button
@@ -625,29 +665,87 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
 
             // SCREEN: Question Source
             if (currentScreen === 'questionSource') {
-                const savedGameData = localStorage.getItem('gameData');
-                const hasSavedQuestions = savedGameData && JSON.parse(savedGameData).content?.questions?.length > 0;
+                let savedQs = [];
+                try {
+                    const savedGameData = localStorage.getItem('gameData');
+                    if (savedGameData) {
+                        const parsed = JSON.parse(savedGameData);
+                        savedQs = parsed.content?.questions || [];
+                    }
+                } catch (e) {}
+
+                const handleDirectWordFile = async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                        let text = '';
+                        if (window.GameQuizImporter) {
+                            text = await window.GameQuizImporter.extractTextFromFile(file);
+                        } else if (file.name.endsWith('.docx') && window.mammoth) {
+                            const buf = await file.arrayBuffer();
+                            const res = await window.mammoth.extractRawText({ arrayBuffer: buf });
+                            text = res.value;
+                        } else {
+                            text = await file.text();
+                        }
+                        if (!text.trim()) throw new Error('File rỗng.');
+                        const parsed = window.GameQuizImporter.parseQuizQuestions(text);
+                        if (!parsed || !parsed.length) throw new Error('Không bóc tách được câu hỏi trắc nghiệm hợp lệ.');
+                        setQuestions(parsed);
+                        setCurrentScreen('modeSelection');
+                    } catch (err) {
+                        alert('Lỗi đọc file: ' + err.message);
+                    }
+                    e.target.value = '';
+                };
 
                 return (
                     <div className="fixed inset-0 bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-3xl w-full fade-in max-h-[90vh] overflow-y-auto">
                             <h2 className="text-3xl font-bold text-center text-red-700 mb-6">
                                 <i className="fas fa-question-circle mr-2"></i>Chọn nguồn câu hỏi
                             </h2>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {savedQs.length > 0 && (
+                                <div className="mb-6 p-4 bg-green-50 border-2 border-green-400 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                                    <div>
+                                        <div className="font-bold text-green-900">
+                                            <i className="fas fa-check-circle mr-2 text-green-600"></i>
+                                            Đã có sẵn {savedQs.length} câu hỏi từ bộ tạo game / Word LaTeX
+                                        </div>
+                                        <p className="text-xs text-green-700">Dùng ngay câu hỏi đã chuẩn bị sẵn để vào trận đấu</p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const loaded = savedQs.map((q, idx) => ({
+                                                id: q.id || `q${idx + 1}`,
+                                                prompt: q.prompt || '',
+                                                choices: q.choices || [],
+                                                answer: typeof q.answer === 'number' ? q.answer : 0,
+                                                explanation: q.explanation || ''
+                                            })).filter(q => q.prompt && q.choices && q.choices.length >= 2);
+                                            setQuestions(loaded);
+                                            setCurrentScreen('modeSelection');
+                                        }}
+                                        className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl whitespace-nowrap shadow transition text-sm"
+                                    >
+                                        <i className="fas fa-play mr-1"></i>Dùng ngay
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <button
                                     onClick={() => {
                                         setQuestions([]);
                                         setCurrentScreen('questionCreation');
                                     }}
-                                    className="border-4 border-blue-500 rounded-2xl p-6 hover:bg-blue-50 transition text-left"
+                                    className="border-2 border-blue-500 rounded-2xl p-5 hover:bg-blue-50 transition text-left"
                                 >
-                                    <div className="text-5xl mb-4 text-center">✏️</div>
-                                    <h3 className="text-2xl font-bold text-blue-700 mb-3">Tạo câu hỏi mới</h3>
-                                    <p className="text-gray-600 mb-2">• Tự tạo câu hỏi riêng</p>
-                                    <p className="text-gray-600 mb-2">• Linh hoạt, sáng tạo</p>
-                                    <p className="text-gray-600">• Phù hợp với bài học</p>
+                                    <div className="text-4xl mb-3 text-center">✏️</div>
+                                    <h3 className="text-xl font-bold text-blue-700 mb-2">Tạo thủ công</h3>
+                                    <p className="text-xs text-gray-600">• Tự tạo từng câu</p>
+                                    <p className="text-xs text-gray-600">• Nhập tay hoặc dán ảnh</p>
                                 </button>
 
                                 <button
@@ -656,14 +754,26 @@ Trong đó answer là chỉ số (0-3) của đáp án đúng.`;
                                         setQuestionCreationMethod('ai');
                                         setCurrentScreen('questionCreation');
                                     }}
-                                    className="border-4 border-purple-500 hover:bg-purple-50 rounded-2xl p-6 transition text-left"
+                                    className="border-2 border-purple-500 hover:bg-purple-50 rounded-2xl p-5 transition text-left"
                                 >
-                                    <div className="text-5xl mb-4 text-center">🤖</div>
-                                    <h3 className="text-2xl font-bold text-purple-700 mb-3">Tạo tự động bằng AI</h3>
-                                    <p className="text-gray-600 mb-2">• AI tạo câu hỏi tự động</p>
-                                    <p className="text-gray-600 mb-2">• Chọn môn, chủ đề, độ khó</p>
-                                    <p className="text-gray-600">• Nhanh chóng, tiện lợi</p>
+                                    <div className="text-4xl mb-3 text-center">🤖</div>
+                                    <h3 className="text-xl font-bold text-purple-700 mb-2">Tạo bằng AI</h3>
+                                    <p className="text-xs text-gray-600">• Gemini sinh tự động</p>
+                                    <p className="text-xs text-gray-600">• Chọn môn, chủ đề</p>
                                 </button>
+
+                                <label className="border-2 border-green-500 hover:bg-green-50 rounded-2xl p-5 transition text-left cursor-pointer relative block">
+                                    <input
+                                        type="file"
+                                        accept=".docx,.txt"
+                                        onChange={handleDirectWordFile}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <div className="text-4xl mb-3 text-center">📄</div>
+                                    <h3 className="text-xl font-bold text-green-700 mb-2">File Word / LaTeX</h3>
+                                    <p className="text-xs text-gray-600">• Chọn file .docx/.txt</p>
+                                    <p className="text-xs text-gray-600">• Tự đọc câu hỏi & KaTeX</p>
+                                </label>
                             </div>
 
                             <button

@@ -57,8 +57,13 @@ function vehinh_provider_models(): array
 {
     return [
         'gemini' => [
+            'gemini-3.6-flash',
+            'gemini-3.7-flash',
             'gemini-3-flash-preview',
+            'gemini-2.0-flash',
+            'gemini-2.5-pro',
             'gemini-2.5-flash',
+            'gemini-2.0-flash-lite',
         ],
     ];
 }
@@ -66,24 +71,24 @@ function vehinh_provider_models(): array
 function vehinh_resolve_model(array $runtime, ?string $requestedModel = null): string
 {
     $allowed = vehinh_provider_models()['gemini'] ?? [];
-    $runtimeModel = trim((string)($runtime['gemini_model'] ?? 'gemini-2.5-flash'));
-    $fallback = $runtimeModel !== '' ? $runtimeModel : (($allowed[0] ?? '') ?: 'gemini-2.5-flash');
+    $defaultFallback = $allowed[0] ?? 'gemini-3.6-flash';
     $requested = trim((string)$requestedModel);
-    if ($requested !== '' && in_array($requested, $allowed, true)) {
+    if ($requested !== '' && (in_array($requested, $allowed, true) || preg_match('/^gemini-[\w\.\-]+$/i', $requested))) {
         return $requested;
     }
-    if ($runtimeModel !== '' && in_array($runtimeModel, $allowed, true)) {
+    $runtimeModel = trim((string)($runtime['gemini_model'] ?? ''));
+    if ($runtimeModel !== '' && (in_array($runtimeModel, $allowed, true) || preg_match('/^gemini-[\w\.\-]+$/i', $runtimeModel))) {
         return $runtimeModel;
     }
-    return $fallback;
+    return $defaultFallback;
 }
 
 function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userInstruction, ?array $image, ?string $requestedModel = null): array
 {
     $keys = $runtime['gemini_keys'] ?? [];
-    $model = vehinh_resolve_model($runtime, $requestedModel);
+    $initialModel = vehinh_resolve_model($runtime, $requestedModel);
     if (empty($runtime['gemini_enabled']) || empty($keys)) {
-        return ['error' => 'Gemini chưa bật hoặc chưa có key trong Admin.'];
+        return ['error' => 'Gemini chưa bật hoặc chưa có key trong Cài đặt / Admin.'];
     }
 
     $parts = [['text' => $systemPrompt . "\n\n" . $userInstruction]];
@@ -104,31 +109,47 @@ function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userIn
         ],
     ];
 
-    $lastError = 'Gemini không phản hồi.';
-    foreach ($keys as $key) {
-        $key = trim((string)$key);
-        if ($key === '') {
-            continue;
+    // Build model candidate list with fallback if chosen model is deprecated or unavailable
+    $modelCandidates = [$initialModel];
+    $fallbackList = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3-flash-preview', 'gemini-2.0-flash'];
+    foreach ($fallbackList as $fb) {
+        if (!in_array($fb, $modelCandidates, true)) {
+            $modelCandidates[] = $fb;
         }
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent?key=' . rawurlencode($key);
-        $response = vehinh_post_json($url, [], $payload);
-        if (!$response['ok']) {
-            $lastError = $response['error'] ?: ($response['json']['error']['message'] ?? ('Gemini HTTP ' . $response['status']));
-            continue;
-        }
-        $text = vehinh_extract_gemini_text($response['json']);
-        if ($text === '') {
-            $lastError = 'Gemini không trả về nội dung vẽ hình.';
-            continue;
-        }
-        return array_merge([
-            'text' => $text,
-            'provider' => 'gemini',
-            'model' => $model,
-        ], ai_usage_extract_gemini_tokens($response['json']));
     }
 
-    return ['error' => $lastError, 'provider' => 'gemini', 'model' => $model];
+    $lastError = 'Gemini không phản hồi.';
+    foreach ($modelCandidates as $model) {
+        foreach ($keys as $key) {
+            $key = trim((string)$key);
+            if ($key === '') {
+                continue;
+            }
+            $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent?key=' . rawurlencode($key);
+            $response = vehinh_post_json($url, [], $payload);
+            if (!$response['ok']) {
+                $errMsg = (string)($response['error'] ?: ($response['json']['error']['message'] ?? ('Gemini HTTP ' . $response['status'])));
+                $lastError = $errMsg;
+                // If model is deprecated or not found for this user, try the next model candidate
+                if (stripos($errMsg, 'no longer available') !== false || $response['status'] === 404) {
+                    break; // break inner key loop, try next model candidate
+                }
+                continue;
+            }
+            $text = vehinh_extract_gemini_text($response['json']);
+            if ($text === '') {
+                $lastError = 'Gemini không trả về nội dung vẽ hình.';
+                continue;
+            }
+            return array_merge([
+                'text' => $text,
+                'provider' => 'gemini',
+                'model' => $model,
+            ], ai_usage_extract_gemini_tokens($response['json']));
+        }
+    }
+
+    return ['error' => $lastError, 'provider' => 'gemini', 'model' => $initialModel];
 }
 
 vehinh_require_login();
@@ -160,6 +181,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $data = json_body();
 $requestedModel = trim((string)($data['model'] ?? ''));
+
+// Nếu server chưa nạp được key từ session/DB, hỗ trợ dùng key gửi từ client (Cài đặt cá nhân / hệ thống)
+$clientKeys = normalize_api_keys($data['api_keys'] ?? ($data['keys'] ?? []));
+if (empty($runtime['gemini_keys']) && !empty($clientKeys)) {
+    $runtime['gemini_keys'] = $clientKeys;
+    $runtime['gemini_enabled'] = true;
+}
 
 $systemPrompt = trim((string)($data['system_prompt'] ?? ''));
 $userInstruction = trim((string)($data['user_instruction'] ?? ''));

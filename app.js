@@ -172,11 +172,24 @@ document.addEventListener('DOMContentLoaded', function () {
     const VEHINH_PROVIDER_STORAGE_KEY = 'vehinh_ai_provider';
     const VEHINH_MODEL_STORAGE_PREFIX = 'vehinh_ai_model_';
     const DRAWING_AI_MODEL_CATALOG = {
-        gemini: ['gemini-3-flash-preview', 'gemini-2.5-flash'],
+        gemini: [
+            'gemini-3.6-flash',
+            'gemini-3.7-flash',
+            'gemini-3-flash-preview',
+            'gemini-2.0-flash',
+            'gemini-2.5-pro',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash-lite'
+        ],
     };
     const DRAWING_MODEL_LABELS = {
-        'gemini-3-flash-preview': 'Gemini 3 Flash (mới nhất)',
-        'gemini-2.5-flash': 'Gemini 2.5 Flash (ổn định)',
+        'gemini-3.6-flash': 'Gemini 3.6 Flash (khuyên dùng)',
+        'gemini-3.7-flash': 'Gemini 3.7 Flash',
+        'gemini-3-flash-preview': 'Gemini 3 Flash Preview',
+        'gemini-2.0-flash': 'Gemini 2.0 Flash',
+        'gemini-2.5-pro': 'Gemini 2.5 Pro',
+        'gemini-2.5-flash': 'Gemini 2.5 Flash',
+        'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
     };
 
     function normalizeDrawingProvider(provider) {
@@ -200,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     label: 'Google Gemini',
                     configured: false,
                     enabled: true,
-                    model: localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash',
+                    model: localStorage.getItem('default_gemini_module') || localStorage.getItem('khbd_gemini_model') || 'gemini-3.6-flash',
                     models: [...DRAWING_AI_MODEL_CATALOG.gemini],
                     keys_count: 0,
                     supports_image: true,
@@ -252,9 +265,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const providerConfig = getDrawingProviderConfig(key);
         const savedModel = getSavedDrawingModel(key);
         if (savedModel && models.includes(savedModel)) return savedModel;
+        const systemModel = localStorage.getItem('default_gemini_module') || localStorage.getItem('khbd_gemini_model');
+        if (systemModel && models.includes(systemModel)) return systemModel;
         const configured = providerConfig?.model || '';
         if (configured && models.includes(configured)) return configured;
-        return models[0] || '';
+        if (systemModel) return systemModel;
+        return models[0] || 'gemini-3.6-flash';
     }
 
     function syncDrawingModelSelect() {
@@ -532,6 +548,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const imagePayload = imageFile
                 ? { mime_type: imageFile.type, data: await imageToBase64(imageFile) }
                 : null;
+            const clientKeys = (apiKeysFromFile && apiKeysFromFile.length)
+                ? apiKeysFromFile
+                : (function () {
+                    try { return JSON.parse(localStorage.getItem('global_gemini_keys') || '[]'); } catch { return []; }
+                })();
             const response = await fetch('api/vehinh_ai.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -539,6 +560,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({
                     provider: selectedProvider,
                     model: selectedModel,
+                    api_keys: clientKeys,
                     system_prompt: systemPrompt,
                     user_instruction: userInstruction,
                     image: imagePayload,

@@ -1,3 +1,73 @@
+# IMPLEMENT — Khắc phục Lỗi AI Vẽ Hình & Tích hợp Đọc Câu hỏi Word / LaTeX cho Game Giáo Dục
+
+## 1. Khắc phục Lỗi AI Vẽ Hình (`vehinh.html` / `app.js` / `api/vehinh_ai.php`)
+- **Nguyên nhân gốc**:
+  + `api/vehinh_ai.php` khóa cứng danh mục model chỉ cho phép `['gemini-3-flash-preview', 'gemini-2.5-flash']`. Bất kỳ model nào người dùng cấu hình trong Cài đặt hệ thống (như `gemini-3.6-flash`, `gemini-3.7-flash`...) đều bị ép về mặc định cũ `gemini-2.5-flash`.
+  + Google vừa dừng hỗ trợ `models/gemini-2.5-flash` cho người dùng mới và báo lỗi: `"This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.6-flash"`.
+  + `app.js` không đồng bộ model từ `localStorage.getItem('default_gemini_module')` / `khbd_gemini_model` và không truyền API keys từ client (`global_gemini_keys`) sang backend `vehinh_ai.php`.
+- **Giải pháp triển khai**:
+  + **`api/ai_runtime_config.php`**: Cập nhật default model từ `gemini-2.5-flash` sang `gemini-3.6-flash`.
+  + **`api/vehinh_ai.php`**:
+    * Mở rộng catalog `vehinh_provider_models()`: bổ sung `gemini-3.6-flash`, `gemini-3.7-flash`, `gemini-3-flash-preview`, `gemini-2.0-flash`, `gemini-2.5-pro`, `gemini-2.5-flash`.
+    * Cập nhật `vehinh_resolve_model()` ưu tiên nhận model từ client/runtime và kiểm tra tính hợp lệ, mặc định là `gemini-3.6-flash`.
+    * Tự động fallback retry trong `vehinh_call_gemini()` nếu Google trả về mã 404 hoặc thông báo `no longer available` / `not found`.
+    * Hỗ trợ nhận mảng `api_keys` từ payload client gửi kèm làm fallback khi session/DB server chưa cấu hình key.
+  + **`app.js` & `vehinh.html`**:
+    * Cập nhật `DRAWING_AI_MODEL_CATALOG` và `DRAWING_MODEL_LABELS` với `gemini-3.6-flash` (Khuyên dùng) và `gemini-3.7-flash`.
+    * Tự động đọc và ưu tiên `localStorage.getItem('default_gemini_module')` hoặc `khbd_gemini_model` khi khởi tạo trang vẽ hình.
+    * Gửi kèm danh sách keys từ `global_gemini_keys` trong request vẽ hình.
+  + **`ai-design-config.js`**: Bổ sung `gemini-3.6-flash` và `gemini-3.7-flash` vào danh sách tùy chọn cấu hình AI, đặt mặc định `gemini-3.6-flash`.
+
+---
+
+## 2. Module Đọc Câu Hỏi từ Word / LaTeX cho Game Giáo Dục (`js/game-quiz-importer.js`)
+- **Tạo thư viện độc lập `js/game-quiz-importer.js`**:
+  + **Đọc file Word (.docx) & văn bản (.txt)**: Tích hợp thư viện Mammoth để trích xuất văn bản thô từ file Word một cách trung thực.
+  + **Bóc tách câu hỏi trắc nghiệm MCQ**:
+    * Regex nhận diện bắt đầu câu: `Câu 1:`, `Câu 1.`, `1.`, `[Câu 1]`, `Question 1:`, `Bài 1:`, v.v.
+    * Regex nhận diện các lựa chọn: `A.`, `B.`, `C.`, `D.` (hỗ trợ cả xuống dòng và nằm trên cùng một dòng).
+    * Hỗ trợ 2 kiểu đáp án đúng:
+      - Inline: `Đáp án: A`, `Đ/A: A`, `Key: A` đặt ngay dưới từng câu hỏi.
+      - Bảng đáp án cuối bài: Tự động tách phần `BẢNG ĐÁP ÁN: 1.A 2.B 3.C...` ở cuối đề để gán chính xác vào từng câu.
+    * Trích xuất lời giải / hướng dẫn giải: `Lời giải:`, `Hướng dẫn giải:`, `Giải thích:`.
+  + **Bóc tách câu hỏi ghép đôi Matching**:
+    * Định dạng `[Vế trái] - [Vế phải]` trên từng dòng, hoặc tự chuyển đổi từ MCQ sang cặp ghép.
+  + **Bảo toàn 100% công thức toán học LaTeX**:
+    * Giữ nguyên vẹn các công thức viết bằng KaTeX/LaTeX như `\(...\)`, `$..$`, `$$...$$`, `\[...\]` (`\frac{a}{b}`, `\sqrt{x}`, `\int_0^1`, `\log_2(x)`, v.v.).
+  + **Bộ định dạng Schema cho cả 8 Game Giáo Dục (`formatForGame`)**:
+    * `elimination`: `{ questions: [{ id, prompt, choices, answer, explanation }] }`
+    * `speedscore`: `{ questions: [{ id, type, prompt, choices, answer, items, leftItems, rightItems, powerUp, explanation }] }`
+    * `tower`: `{ questions: [{ id, level, difficulty: 'easy'|'medium'|'hard', type, prompt, choices, answer, explanation }] }`
+    * `unlock`: `{ codeWord, knowledgeCard: { title, summary }, questions: [{ id, type, prompt, choices, answer, hint1, hint2, explanation }] }`
+    * `teambattle`: `{ questions: [{ id, type, prompt, choices, answer, individual, value, explanation }] }`
+    * `matching`: `{ topicTitle, codewordHint, pairs: [{ id, left, right, chip, explanation }] }`
+    * `treasure` (Đua vịt): `{ raceTitle, questions: [{ id, type, prompt, choices, answer, explanation }] }`
+    * `escape` (Hứng trứng): `{ questions: [{ id, type, prompt, choices, answer, explanation }] }`
+
+---
+
+## 3. Tích hợp Giao diện và Luồng Dữ liệu vào Game Hub & Game Con
+- **`trochoi.html` & `trochoi.compiled.js`**:
+  + Nhúng `mammoth.browser.min.js` và `js/game-quiz-importer.js`.
+  + Màn hình `SETUP`: Thêm thanh chuyển Tab:
+    1. `1. Tạo nội dung với AI (Gemini)`
+    2. `2. Đọc từ Word / LaTeX`
+  + Tab Word/LaTeX cung cấp:
+    * Khu vực kéo thả / chọn file Word (.docx, .txt).
+    * Ô văn bản linh hoạt kèm nút "Chèn mẫu thử" và "Xem định dạng".
+    * Hỗ trợ đầy đủ khối Danh sách học sinh đua vịt (nhập tay hoặc import Excel) khi chọn game `treasure`.
+    * Nút "Xử lý câu hỏi & Chuyển sang xem trước": chạy `GameQuizImporter` và đưa sang màn hình `REVIEW`.
+    * Màn hình `REVIEW`: Hiển thị công thức toán học KaTeX sắc nét, cho phép chỉnh sửa hoặc bấm "Chơi luôn" (`handleStartGame`).
+  + Cập nhật fallback `default_gemini_module` sang `gemini-3.6-flash`.
+- **Nâng cấp đồng bộ các Game con (`game-*.html`)**:
+  + `game-elimination.html`, `game-speedscore.html`, `game-tower.html`, `game-unlock.html`, `game-teambattle.html`:
+    * Nhúng `mammoth.browser.min.js` và `js/game-quiz-importer.js`.
+    * Bổ sung `useEffect` trên mount đọc `localStorage.getItem('gameData')` để tự động nạp mảng câu hỏi đã tạo từ Game Hub.
+    * Riêng `game-elimination.html`: Hiển thị nút "Chơi ngay với câu hỏi đã nạp" tại màn hình hướng dẫn và bổ sung thêm nút tải file Word/LaTeX trực tiếp tại màn hình `questionSource`.
+    * Cập nhật tất cả các fallback model Gemini từ các mã cũ sang `gemini-3.6-flash`.
+
+---
+
 # IMPLEMENT — Chuẩn hóa Toàn diện Phụ lục 2 & Đồng bộ NLS/AI Phụ lục 1 - Phụ lục 3
 
 ## Chuẩn hóa Phụ lục 2 (Hoạt động Giáo dục/Trải nghiệm/STEM) theo Công văn 5512 & Đồng bộ 100% NLS/AI giữa Phụ lục 1 và Phụ lục 3

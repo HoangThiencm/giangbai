@@ -20,7 +20,7 @@ function load_ai_runtime_config(): array
         'cloudflare_ai_model' => '@cf/qwen/qwen3-30b-a3b-fp8',
         'gemini_enabled' => true,
         'gemini_keys' => [],
-        'gemini_model' => 'gemini-2.5-flash',
+        'gemini_model' => 'gemini-3.6-flash',
         'shopaikey_api_key' => '',
         'shopaikey_enabled' => true,
         'shopaikey_model' => 'deepseek-v4-flash',

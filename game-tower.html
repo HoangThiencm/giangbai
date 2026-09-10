@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 
 <head>
@@ -11,6 +11,8 @@
     <script src="vendor/babel.min.js"></script>
     <link rel="stylesheet" href="vendor/katex.min.css">
     <script src="vendor/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="js/game-quiz-importer.js?v=20260910"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .katex {
@@ -242,7 +244,7 @@
                 return keys ? JSON.parse(keys) : [];
             },
             getDefaultModule: () => {
-                return localStorage.getItem('default_gemini_module') || 'gemini-2.0-flash-exp';
+                return localStorage.getItem('default_gemini_module') || 'gemini-3.6-flash';
             },
             generate: async (params) => {
                 const { subject, gradeMax, topic, counts } = params;
@@ -341,6 +343,35 @@ JSON format:
                     checkAnswer(true); // Auto submit on timeout
                 }
             }, [timeLeft, timerActive, showResult]);
+
+            // Auto-load questions from trochoi.html if available
+            useEffect(() => {
+                try {
+                    const raw = localStorage.getItem('gameData');
+                    if (!raw) return;
+                    const parsed = JSON.parse(raw);
+                    if (parsed.gameType === 'tower' && parsed.content?.questions?.length > 0) {
+                        const loaded = parsed.content.questions.map((q, idx) => ({
+                            id: q.id || `q${idx + 1}`,
+                            type: q.type || 'mcq',
+                            difficulty: q.difficulty || (idx < 3 ? 'easy' : idx < 7 ? 'medium' : 'hard'),
+                            prompt: q.prompt || '',
+                            choices: q.choices || [],
+                            answer: typeof q.answer === 'number' ? q.answer : 0,
+                            items: q.items || [],
+                            correctOrder: q.correctOrder || [],
+                            explanation: q.explanation || ''
+                        })).filter(q => q.prompt);
+                        if (loaded.length > 0) {
+                            setQuestions(loaded);
+                            setShowInstructions(false);
+                            setScreen('PREVIEW');
+                        }
+                    }
+                } catch (e) {
+                    console.error("Lỗi đọc gameData:", e);
+                }
+            }, []);
 
             // Question Generation
             const generateQuestions = async () => {

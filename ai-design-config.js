@@ -55,8 +55,12 @@
                         </label>
                         <label class="mt-2 block text-sm font-bold text-slate-700">Model Gemini</label>
                         <select id="adcGeminiModel" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="gemini-3-flash-preview">Gemini 3 Flash (Mới nhất)</option>
-                            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Ổn định)</option>
+                            <option value="gemini-3.6-flash">Gemini 3.6 Flash (Khuyên dùng)</option>
+                            <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+                            <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                         </select>
                     </div>
                     <hr class="border-slate-200" />
@@ -104,7 +108,7 @@
         getGroqKeys: () => parseJson(LS.groq, []).filter(Boolean),
         getHFTokens: () => parseJson(LS.hf, []).filter(Boolean),
         getMistralKeys: () => parseJson(LS.mistral, []).filter(Boolean),
-        getModule: () => localStorage.getItem(LS.geminiModel) || 'gemini-2.5-flash',
+        getModule: () => localStorage.getItem(LS.geminiModel) || 'gemini-3.6-flash',
         getGroqModule: () => localStorage.getItem(LS.groqModel) || 'llama-3.3-70b-versatile',
         getMistralModel: () => localStorage.getItem(LS.mistralModel) || 'mistral-ocr-latest',
         isMistralEnabled: () => localStorage.getItem(LS.mistralEnabled) !== 'false',
@@ -172,7 +176,7 @@
                 const keys = lines.filter((l) => l.length > 5 && !l.startsWith('hf_') && !l.startsWith('gsk_'));
                 if (!keys.length) return alert('Không tìm thấy Gemini Key hợp lệ.');
                 localStorage.setItem(LS.gemini, JSON.stringify(keys));
-                localStorage.setItem(LS.geminiModel, 'gemini-2.5-flash');
+                localStorage.setItem(LS.geminiModel, 'gemini-3.6-flash');
                 alert(`Đã nạp ${keys.length} Gemini Keys.`);
             } else if (type === 'groq') {
                 const keys = lines.filter((l) => l.length > 5);

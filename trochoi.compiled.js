@@ -13,7 +13,7 @@ const ContentService = {
     return keys ? JSON.parse(keys) : [];
   },
   getDefaultModule: () => {
-    return localStorage.getItem('default_gemini_module') || 'gemini-2.5-flash';
+    return localStorage.getItem('default_gemini_module') || 'gemini-3.6-flash';
   },
   // Generate content từ Gemini
   generate: async (gameType, params) => {
@@ -435,6 +435,10 @@ const App = () => {
   const [manualParticipantText, setManualParticipantText] = useState('');
   const [participants, setParticipants] = useState([]);
   const [participantExcelHint, setParticipantExcelHint] = useState('');
+  const [inputMethod, setInputMethod] = useState('ai'); // 'ai' | 'word_latex'
+  const [wordLatexText, setWordLatexText] = useState('');
+  const [importingFile, setImportingFile] = useState(false);
+  const [showSampleGuide, setShowSampleGuide] = useState(false);
 
   // EDIT screen states - MUST be at top level, not inside conditional!
   const [editingContent, setEditingContent] = useState(null);
@@ -571,6 +575,69 @@ const App = () => {
     event.target.value = '';
   };
 
+  const renderDuckSection = () => /*#__PURE__*/React.createElement("div", {
+    className: "border-2 border-cyan-200 bg-cyan-50 rounded-2xl p-5 space-y-4 my-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-cyan-900 text-lg"
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "fas fa-users mr-2"
+  }), "Danh sách học sinh đua vịt"), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-cyan-800 mt-1"
+  }, "Nhập tay hoặc import Excel — mỗi học sinh là một vịt trên đường đua")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: downloadDuckRaceTemplate,
+    className: "px-4 py-2 bg-white border border-cyan-300 text-cyan-800 rounded-lg text-sm font-bold hover:bg-cyan-100"
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "fas fa-download mr-1"
+  }), "Tải mẫu Excel")), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setParticipantMode('manual'),
+    className: `px-4 py-2 rounded-lg text-sm font-bold transition ${participantMode === 'manual' ? 'bg-cyan-600 text-white' : 'bg-white text-cyan-800 border border-cyan-200'}`
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "fas fa-keyboard mr-1"
+  }), "Nhập tay"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setParticipantMode('excel'),
+    className: `px-4 py-2 rounded-lg text-sm font-bold transition ${participantMode === 'excel' ? 'bg-cyan-600 text-white' : 'bg-white text-cyan-800 border border-cyan-200'}`
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "fas fa-file-excel mr-1"
+  }), "Import Excel")), participantMode === 'manual' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block font-bold mb-2 text-gray-700"
+  }, "Mỗi dòng một học sinh"), /*#__PURE__*/React.createElement("textarea", {
+    value: manualParticipantText,
+    onChange: e => syncManualParticipants(e.target.value),
+    className: "w-full p-3 border-2 border-gray-200 rounded-xl focus:border-cyan-500 outline-none min-h-[140px] font-mono text-sm",
+    placeholder: "Nguyễn Văn An\nTrần Thị Bình\nLê Văn Cường\n..."
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 mt-2"
+  }, "Gợi ý: dán danh sách từ Word/Excel hoặc gõ trực tiếp, mỗi tên một dòng.")) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block font-bold mb-2 text-gray-700"
+  }, "Chọn file Excel (.xlsx, .xls, .csv)"), /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: ".xlsx,.xls,.csv",
+    onChange: handleParticipantExcel,
+    className: "block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-cyan-700"
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 mt-2"
+  }, "Hỗ trợ cột ", /*#__PURE__*/React.createElement("strong", null, "Họ và tên"), " / ", /*#__PURE__*/React.createElement("strong", null, "Họ tên"), " — hoặc file mẫu từ Admin."), participantExcelHint && /*#__PURE__*/React.createElement("p", {
+    className: "text-sm font-semibold text-cyan-800 mt-2"
+  }, participantExcelHint)), participants.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-white border border-cyan-200 rounded-xl p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-bold text-cyan-900 mb-2"
+  }, "Đã có ", participants.length, " học sinh:"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-2 max-h-28 overflow-y-auto"
+  }, participants.slice(0, 30).map((p, idx) => /*#__PURE__*/React.createElement("span", {
+    key: p.id,
+    className: "px-2 py-1 bg-cyan-100 text-cyan-900 rounded-lg text-xs font-semibold"
+  }, idx + 1, ". ", p.name)), participants.length > 30 && /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-gray-500"
+  }, "... và ", participants.length - 30, " học sinh nữa"))));
+
   const handleGenerateContent = async () => {
     if (!formData.topic.trim()) {
       alert('Vui lòng nhập chủ đề!');
@@ -593,6 +660,81 @@ const App = () => {
       setLoading(false);
     }
   };
+
+  const handleWordFileInput = async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImportingFile(true);
+    try {
+      let text = '';
+      if (window.GameQuizImporter) {
+        text = await window.GameQuizImporter.extractTextFromFile(file);
+      } else if (file.name.endsWith('.docx') && window.mammoth) {
+        const buf = await file.arrayBuffer();
+        const res = await window.mammoth.extractRawText({ arrayBuffer: buf });
+        text = res.value;
+      } else {
+        text = await file.text();
+      }
+      setWordLatexText(text);
+      if (!formData.topic.trim()) {
+        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+        setFormData(prev => ({ ...prev, topic: nameWithoutExt }));
+      }
+    } catch (err) {
+      alert('Lỗi đọc file: ' + (err.message || 'Không thể đọc file'));
+    } finally {
+      setImportingFile(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleParseAndReview = () => {
+    if (!wordLatexText.trim()) {
+      alert('Vui lòng chọn file Word (.docx) hoặc dán nội dung câu hỏi có công thức LaTeX vào ô bên dưới!');
+      return;
+    }
+    if (selectedGame.id === 'treasure' && participants.length < 1) {
+      alert('Vui lòng nhập ít nhất 1 học sinh tham gia đua vịt!');
+      return;
+    }
+    try {
+      const importer = window.GameQuizImporter;
+      if (!importer) throw new Error('Chưa nạp thư viện GameQuizImporter.');
+
+      let content;
+      if (selectedGame.id === 'matching') {
+        const pairs = importer.parseMatchingPairs(wordLatexText);
+        if (!pairs || !pairs.length) {
+          throw new Error('Không tìm thấy cặp ghép nào. Mỗi dòng nên có dạng: [Khái niệm] - [Định nghĩa] hoặc câu hỏi trắc nghiệm A-D.');
+        }
+        content = importer.formatForGame([], 'matching', {
+          rawPairs: pairs,
+          topic: formData.topic || 'Ghép đôi kiến thức',
+          codewordHint: 'Ghép đúng các cặp'
+        });
+      } else {
+        const parsedQs = importer.parseQuizQuestions(wordLatexText);
+        if (!parsedQs || !parsedQs.length) {
+          throw new Error('Không tìm thấy câu hỏi trắc nghiệm hợp lệ.\\nĐịnh dạng chuẩn:\\nCâu 1: Cho biểu thức \\(x + 1\\)...\\nA. 1\\nB. 2\\nC. 3\\nD. 4\\nĐáp án: A');
+        }
+        content = importer.formatForGame(parsedQs, selectedGame.id, {
+          topic: formData.topic || 'Câu hỏi từ Word/LaTeX'
+        });
+      }
+
+      setGeneratedContent(content);
+      setFormData(prev => ({
+        ...prev,
+        topic: prev.topic || 'Câu hỏi từ Word/LaTeX',
+        numQuestions: content.questions?.length || content.pairs?.length || 10
+      }));
+      setStep('REVIEW');
+    } catch (err) {
+      alert('Lỗi nạp câu hỏi: ' + err.message);
+    }
+  };
+
   const handleStartGame = () => {
     // Lưu vào localStorage để các trang game con lấy
     localStorage.setItem('gameData', JSON.stringify({
@@ -677,6 +819,20 @@ const App = () => {
     }, selectedGame.name), /*#__PURE__*/React.createElement("p", {
       className: "text-gray-600"
     }, selectedGame.description)), /*#__PURE__*/React.createElement("div", {
+      className: "flex border-b border-gray-200 mb-6"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setInputMethod('ai'),
+      className: `flex-1 py-3 text-center font-bold text-sm md:text-base border-b-2 transition flex items-center justify-center gap-2 ${inputMethod === 'ai' ? 'border-purple-600 text-purple-600 bg-purple-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-robot"
+    }), "1. Tạo nội dung với AI"), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setInputMethod('word_latex'),
+      className: `flex-1 py-3 text-center font-bold text-sm md:text-base border-b-2 transition flex items-center justify-center gap-2 ${inputMethod === 'word_latex' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-500 hover:text-gray-700'}`
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-file-word text-blue-600"
+    }), "2. Đọc từ Word / LaTeX")), inputMethod === 'ai' ? /*#__PURE__*/React.createElement("div", {
       className: "space-y-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-4"
@@ -735,73 +891,88 @@ const App = () => {
         numQuestions: parseInt(e.target.value)
       }),
       className: "w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
-    }))), selectedGame.id === 'treasure' && /*#__PURE__*/React.createElement("div", {
-      className: "border-2 border-cyan-200 bg-cyan-50 rounded-2xl p-5 space-y-4"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-wrap items-center justify-between gap-2"
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
-      className: "font-bold text-cyan-900 text-lg"
-    }, /*#__PURE__*/React.createElement("i", {
-      className: "fas fa-users mr-2"
-    }), "Danh sách học sinh đua vịt"), /*#__PURE__*/React.createElement("p", {
-      className: "text-sm text-cyan-800 mt-1"
-    }, "Nhập tay hoặc import Excel — mỗi học sinh là một vịt trên đường đua")), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: downloadDuckRaceTemplate,
-      className: "px-4 py-2 bg-white border border-cyan-300 text-cyan-800 rounded-lg text-sm font-bold hover:bg-cyan-100"
-    }, /*#__PURE__*/React.createElement("i", {
-      className: "fas fa-download mr-1"
-    }), "Tải mẫu Excel")), /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-2"
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => setParticipantMode('manual'),
-      className: `px-4 py-2 rounded-lg text-sm font-bold transition ${participantMode === 'manual' ? 'bg-cyan-600 text-white' : 'bg-white text-cyan-800 border border-cyan-200'}`
-    }, /*#__PURE__*/React.createElement("i", {
-      className: "fas fa-keyboard mr-1"
-    }), "Nhập tay"), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => setParticipantMode('excel'),
-      className: `px-4 py-2 rounded-lg text-sm font-bold transition ${participantMode === 'excel' ? 'bg-cyan-600 text-white' : 'bg-white text-cyan-800 border border-cyan-200'}`
-    }, /*#__PURE__*/React.createElement("i", {
-      className: "fas fa-file-excel mr-1"
-    }), "Import Excel")), participantMode === 'manual' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-      className: "block font-bold mb-2 text-gray-700"
-    }, "Mỗi dòng một học sinh"), /*#__PURE__*/React.createElement("textarea", {
-      value: manualParticipantText,
-      onChange: e => syncManualParticipants(e.target.value),
-      className: "w-full p-3 border-2 border-gray-200 rounded-xl focus:border-cyan-500 outline-none min-h-[140px] font-mono text-sm",
-      placeholder: "Nguyễn Văn An\nTrần Thị Bình\nLê Văn Cường\n..."
-    }), /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-gray-500 mt-2"
-    }, "Gợi ý: dán danh sách từ Word/Excel hoặc gõ trực tiếp, mỗi tên một dòng.")) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-      className: "block font-bold mb-2 text-gray-700"
-    }, "Chọn file Excel (.xlsx, .xls, .csv)"), /*#__PURE__*/React.createElement("input", {
-      type: "file",
-      accept: ".xlsx,.xls,.csv",
-      onChange: handleParticipantExcel,
-      className: "block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-cyan-700"
-    }), /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-gray-500 mt-2"
-    }, "Hỗ trợ cột ", /*#__PURE__*/React.createElement("strong", null, "Họ và tên"), " / ", /*#__PURE__*/React.createElement("strong", null, "Họ tên"), " — hoặc file mẫu từ Admin."), participantExcelHint && /*#__PURE__*/React.createElement("p", {
-      className: "text-sm font-semibold text-cyan-800 mt-2"
-    }, participantExcelHint)), participants.length > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "bg-white border border-cyan-200 rounded-xl p-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-sm font-bold text-cyan-900 mb-2"
-    }, "Đã có ", participants.length, " học sinh:"), /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-wrap gap-2 max-h-28 overflow-y-auto"
-    }, participants.slice(0, 30).map((p, idx) => /*#__PURE__*/React.createElement("span", {
-      key: p.id,
-      className: "px-2 py-1 bg-cyan-100 text-cyan-900 rounded-lg text-xs font-semibold"
-    }, idx + 1, ". ", p.name)), participants.length > 30 && /*#__PURE__*/React.createElement("span", {
-      className: "text-xs text-gray-500"
-    }, "... và ", participants.length - 30, " học sinh nữa")))), /*#__PURE__*/React.createElement("button", {
+    }))), selectedGame.id === 'treasure' && renderDuckSection(), /*#__PURE__*/React.createElement("button", {
       onClick: handleGenerateContent,
       className: "w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition mt-6"
     }, /*#__PURE__*/React.createElement("i", {
       className: "fas fa-magic mr-2"
-    }), "Tạo nội dung với AI"))));
+    }), "Tạo nội dung với AI")) : /*#__PURE__*/React.createElement("div", {
+      className: "space-y-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-info-circle text-blue-600 text-xl mt-0.5"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "text-sm text-blue-900 leading-relaxed"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "font-bold mb-1"
+    }, "Nhập câu hỏi từ đề cương Word (.docx) hoặc dán trực tiếp:"), /*#__PURE__*/React.createElement("p", null, "Hỗ trợ câu hỏi trắc nghiệm A-D, bảng đáp án cuối bài và ", /*#__PURE__*/React.createElement("strong", null, "bảo toàn 100% công thức LaTeX"), " (như ", /*#__PURE__*/React.createElement("code", { className: "bg-white px-1.5 py-0.5 rounded border text-blue-800" }, "\\(x^2 + y^2 = 1\\)"), ", ", /*#__PURE__*/React.createElement("code", { className: "bg-white px-1.5 py-0.5 rounded border text-blue-800" }, "\\frac{a}{b}"), ") để chạy game."))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block font-bold mb-2 text-gray-700"
+    }, "Tên chủ đề / Bài học (tùy chọn)"), /*#__PURE__*/React.createElement("input", {
+      type: "text",
+      value: formData.topic,
+      onChange: e => setFormData({
+        ...formData,
+        topic: e.target.value
+      }),
+      className: "w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none",
+      placeholder: "VD: Ôn tập chương 1, Khảo sát hàm số,..."
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block font-bold mb-2 text-gray-700"
+    }, "1. Chọn file Word (.docx) hoặc Text (.txt)"), /*#__PURE__*/React.createElement("div", {
+      className: "relative border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50/50 rounded-2xl p-6 text-center cursor-pointer transition group"
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "file",
+      accept: ".docx,.txt",
+      onChange: handleWordFileInput,
+      disabled: importingFile,
+      className: "absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+    }), /*#__PURE__*/React.createElement("i", {
+      className: `fas ${importingFile ? 'fa-spinner fa-spin text-blue-600' : 'fa-file-word text-blue-500 group-hover:scale-110'} text-4xl mb-2 transition transform`
+    }), /*#__PURE__*/React.createElement("p", {
+      className: "font-bold text-gray-700 text-base"
+    }, importingFile ? "Đang trích xuất nội dung từ file..." : "Bấm vào đây để chọn file Word (.docx) hoặc kéo thả vào đây"), /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-gray-500 mt-1"
+    }, "Tự động trích xuất toàn bộ câu hỏi và công thức toán học"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-wrap items-center justify-between gap-2 mb-2"
+    }, /*#__PURE__*/React.createElement("label", {
+      className: "font-bold text-gray-700 text-sm"
+    }, "2. Hoặc xem/chỉnh sửa nội dung văn bản câu hỏi tại đây:"), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => {
+        if (selectedGame.id === 'matching') {
+          setWordLatexText("f'(x) > 0, \\forall x \\in (a, b) - Hàm số đồng biến trên (a, b)\nf'(x) < 0, \\forall x \\in (a, b) - Hàm số nghịch biến trên (a, b)\n\\int x^\\alpha dx - \\frac{x^{\\alpha+1}}{\\alpha+1} + C (\\alpha \\ne -1)\n\\lim_{x \\to 0} \\frac{\\sin x}{x} - 1\n\\vec{a} \\cdot \\vec{b} = 0 - Hai vectơ vuông góc");
+        } else {
+          setWordLatexText("Câu 1: Cho hàm số \\(y = f(x)\\) có bảng biến thiên. Giá trị cực tiểu của hàm số là:\nA. \\(y_{ct} = -2\\)\nB. \\(y_{ct} = 0\\)\nC. \\(y_{ct} = 3\\)\nD. \\(y_{ct} = 5\\)\nĐáp án: A\nLời giải: Dựa vào bảng biến thiên, điểm cực tiểu là \\(x = 1, y = -2\\).\n\nCâu 2: Nghiệm của phương trình \\(\\log_2(x - 1) = 3\\) là:\nA. \\(x = 7\\)\nB. \\(x = 8\\)\nC. \\(x = 9\\)\nD. \\(x = 10\\)\nĐáp án: C\n\nCâu 3: Nguyên hàm của hàm số \\(f(x) = 2x + \\sin x\\) là:\nA. \\(F(x) = x^2 - \\cos x + C\\)\nB. \\(F(x) = x^2 + \\cos x + C\\)\nC. \\(F(x) = 2 - \\cos x + C\\)\nD. \\(F(x) = x^2 + \\sin x + C\\)\nĐáp án: A");
+        }
+      },
+      className: "text-xs px-2.5 py-1 bg-purple-100 text-purple-700 font-bold rounded-lg hover:bg-purple-200 transition"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-magic mr-1"
+    }), "Chèn mẫu thử"), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setShowSampleGuide(!showSampleGuide),
+      className: "text-xs px-2.5 py-1 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-question-circle mr-1"
+    }), showSampleGuide ? "Ẩn hướng dẫn" : "Xem định dạng"))), showSampleGuide && /*#__PURE__*/React.createElement("div", {
+      className: "p-4 mb-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 space-y-1.5"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "font-bold"
+    }, "Cấu trúc định dạng hỗ trợ:"), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Câu hỏi:"), " Bắt đầu bằng ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "Câu 1:"), ", ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "Câu 1."), ", ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "1."), ",..."), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Lựa chọn:"), " ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "A. ... B. ... C. ... D. ..."), " (xuống dòng hoặc trên cùng một dòng đều được)."), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Đáp án đúng:"), " Có thể để ngay dưới câu ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "Đáp án: A"), " hoặc để bảng đáp án cuối bài (VD: ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "1.A 2.B 3.C"), ")."), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Công thức toán:"), " Đặt trong ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "\\(...\\)"), " hoặc ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "$...$"), "."), selectedGame.id === 'matching' && /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Ghép đôi:"), " Mỗi dòng một cặp: ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "[Vế trái] - [Vế phải]"))), /*#__PURE__*/React.createElement("textarea", {
+      value: wordLatexText,
+      onChange: e => setWordLatexText(e.target.value),
+      placeholder: selectedGame.id === 'matching' ? "Dán nội dung các cặp ghép đôi vào đây (hoặc câu hỏi trắc nghiệm A-D):\nVD:\nKhái niệm 1 - Định nghĩa 1\nKhái niệm 2 - Định nghĩa 2" : "Dán nội dung câu hỏi vào đây...\nVD:\nCâu 1: Cho biểu thức \\(P = x^2 + 1\\)...\nA. 1\nB. 2\nC. 3\nD. 4\nĐáp án: A",
+      className: "w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none min-h-[220px] font-mono text-sm leading-relaxed"
+    })), selectedGame.id === 'treasure' && renderDuckSection(), /*#__PURE__*/React.createElement("button", {
+      onClick: handleParseAndReview,
+      disabled: importingFile,
+      className: "w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition mt-4 disabled:opacity-50 flex items-center justify-center gap-2"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-check-circle"
+    }), "Xử lý câu hỏi & Chuyển sang xem trước"))));
   }
 
   // GENERATING

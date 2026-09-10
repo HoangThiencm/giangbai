@@ -1,7 +1,55 @@
-# VERIFY
+# VERIFY — Khắc phục Lỗi AI Vẽ Hình & Tích hợp Đọc Câu hỏi Word / LaTeX cho Game Giáo Dục
 
 ## Kết luận
 PASS 100%
+
+## Đối chiếu Scope & Nghiệp vụ
+1. **Nhiệm vụ 1: Sửa lỗi AI Vẽ Hình không đọc cấu hình, module từ cài đặt và báo lỗi deprecated model**:
+   - `api/vehinh_ai.php` đã cập nhật danh mục model hỗ trợ các model Gemini hiện đại: `gemini-3.6-flash`, `gemini-3.7-flash`, `gemini-3-flash-preview`, `gemini-2.0-flash`, `gemini-2.5-pro`, `gemini-2.5-flash`.
+   - `vehinh_resolve_model()` ưu tiên nhận model từ client/runtime và kiểm tra tính hợp lệ, mặc định là `gemini-3.6-flash`.
+   - Cơ chế fallback retry tự động trong `vehinh_call_gemini()`: khi Google báo lỗi 404 hoặc `no longer available` / `not found`, hệ thống tự động thử lại với `gemini-3.6-flash` / `gemini-3.7-flash`.
+   - Hỗ trợ client truyền `api_keys` làm phương án dự phòng khi server chưa có key.
+   - `app.js` và `vehinh.html`: Cập nhật `DRAWING_AI_MODEL_CATALOG` và nhãn hiển thị; tự động đồng bộ model từ `localStorage.getItem('default_gemini_module')` hoặc `khbd_gemini_model`.
+   - `ai-design-config.js` đã hỗ trợ chọn `gemini-3.6-flash` và `gemini-3.7-flash`, mặc định `gemini-3.6-flash`.
+
+2. **Nhiệm vụ 2: Tích hợp chức năng đọc câu hỏi từ Word / LaTeX công thức để chạy Game giáo dục**:
+   - Tạo thư viện `js/game-quiz-importer.js`:
+     + Trích xuất nội dung văn bản thô từ file Word (.docx) qua Mammoth và file text (.txt).
+     + Bóc tách trắc nghiệm 4 lựa chọn (A/B/C/D), hỗ trợ cả xuống dòng và inline.
+     + Nhận diện đáp án đúng inline (`Đáp án: A`) và bảng đáp án cuối bài (`1.A 2.B...`).
+     + Nhận diện các cặp ghép đôi (`[Vế trái] - [Vế phải]`).
+     + Bảo toàn 100% cú pháp công thức toán học LaTeX (`\(...\)`, `$..$`, `$$...$$`, `\[...\]`).
+     + Tự động định dạng đúng chuẩn Schema của cả 8 Game Giáo Dục (`elimination`, `speedscore`, `tower`, `unlock`, `teambattle`, `matching`, `treasure`, `escape`).
+   - Giao diện trung tâm `trochoi.html` & `trochoi.compiled.js`:
+     + Thêm tab "2. Đọc từ Word / LaTeX" cạnh tab "1. Tạo nội dung với AI".
+     + Hỗ trợ chọn file Word (.docx), xem định dạng mẫu, dán văn bản có công thức LaTeX.
+     + Hỗ trợ kèm danh sách học sinh đua vịt cho game `treasure`.
+     + Màn hình xem trước `REVIEW` hiển thị sắc nét công thức KaTeX, cho phép chỉnh sửa hoặc bấm "Chơi luôn" (`handleStartGame`).
+   - Đồng bộ các Game con (`game-*.html`):
+     + `game-elimination.html`, `game-speedscore.html`, `game-tower.html`, `game-unlock.html`, `game-teambattle.html` đã được tích hợp hook `useEffect` nạp trực tiếp `localStorage.getItem('gameData')`.
+     + `game-elimination.html` có nút chơi ngay với câu hỏi đã nạp và hỗ trợ tải file Word/LaTeX trực tiếp tại màn hình `questionSource`.
+     + Cập nhật các fallback model Gemini từ các mã lỗi thời sang `gemini-3.6-flash`.
+
+## Test đã chạy
+1. `node tests/game-quiz-importer-smoke.js` — **PASS 100%** (6/6 sub-tests: MCQ với LaTeX inline, bảng đáp án cuối bài, cặp ghép Matching, Schema 8 game, Model catalog & fallback AI vẽ hình, tích hợp game).
+2. `node tests/run-all-tests.js` — **PASS 100%** (Toàn bộ 64/64 test suites thành công, exit code 0).
+3. `node -c trochoi.compiled.js` — **PASS** (Cú pháp JS hợp lệ, không lỗi compile).
+
+## Bảng tiêu chí Thẩm định
+- [x] Sửa lỗi AI vẽ hình báo deprecated model: PASS
+- [x] AI vẽ hình đồng bộ model từ cài đặt hệ thống (`gemini-3.6-flash`): PASS
+- [x] Backend `api/vehinh_ai.php` có cơ chế fallback retry khi model lỗi: PASS
+- [x] Thư viện `js/game-quiz-importer.js` bóc tách câu hỏi từ Word và LaTeX: PASS
+- [x] Giữ nguyên 100% công thức toán KaTeX/LaTeX: PASS
+- [x] Nhận diện đúng đáp án inline và bảng đáp án cuối bài: PASS
+- [x] Định dạng chuẩn cho tất cả 8 game giáo dục: PASS
+- [x] `trochoi.html` có tab chọn tạo bằng AI hoặc đọc từ Word/LaTeX: PASS
+- [x] Game con (`game-*.html`) tự động nạp câu hỏi từ `gameData`: PASS
+- [x] Toàn bộ 64 test suites trong hệ thống đạt 100% PASS: PASS
+
+---
+
+# VERIFY
 
 ## Đối chiếu scope
 1. **Khắc phục lỗi Phụ lục 3 không xuất / không hiển thị Biểu hiện năng lực AI**:

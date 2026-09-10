@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 
 <head>
@@ -11,6 +11,8 @@
     <script src="vendor/babel.min.js"></script>
     <link rel="stylesheet" href="vendor/katex.min.css">
     <script src="vendor/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="js/game-quiz-importer.js?v=20260910"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- MathLive for visual math editing -->
     <script defer src="https://unpkg.com/mathlive"></script>
@@ -658,7 +660,7 @@
         // ============ GEMINI AI SERVICE ============
         const GeminiService = {
             getApiKeys: () => { const keys = localStorage.getItem('global_gemini_keys'); return keys ? JSON.parse(keys) : []; },
-            getDefaultModule: () => localStorage.getItem('default_gemini_module') || 'gemini-2.0-flash-exp',
+            getDefaultModule: () => localStorage.getItem('default_gemini_module') || 'gemini-3.6-flash',
 
             buildPrompt: (params) => {
                 const { subject, gradeMax, topic, difficulty, numQuestions, questionTypes } = params;
@@ -823,6 +825,35 @@ JSON format:
                 if (!token) {
                     alert("Chưa đăng nhập!");
                     window.location.href = 'login.html';
+                }
+            }, []);
+
+            // Auto-load questions from trochoi.html if available
+            useEffect(() => {
+                try {
+                    const raw = localStorage.getItem('gameData');
+                    if (!raw) return;
+                    const parsed = JSON.parse(raw);
+                    if (parsed.gameType === 'unlock' && parsed.content) {
+                        const loaded = (parsed.content.questions || []).map((q, idx) => ({
+                            id: q.id || `q${idx + 1}`,
+                            type: q.type || 'mcq',
+                            prompt: q.prompt || '',
+                            choices: q.choices || [],
+                            answer: typeof q.answer === 'number' ? q.answer : 0,
+                            hint1: q.hint1 || '',
+                            hint2: q.hint2 || '',
+                            explanation: q.explanation || ''
+                        })).filter(q => q.prompt);
+                        if (loaded.length > 0) {
+                            setQuestions(loaded);
+                            if (parsed.content.codeWord) setCodeWord(parsed.content.codeWord);
+                            if (parsed.content.knowledgeCard) setKnowledgeCard(parsed.content.knowledgeCard);
+                            setCurrentScreen('QUESTION_LIST');
+                        }
+                    }
+                } catch (e) {
+                    console.error("Lỗi đọc gameData:", e);
                 }
             }, []);
 

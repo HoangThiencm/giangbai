@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 
 <head>
@@ -11,6 +11,8 @@
     <script src="vendor/babel.min.js"></script>
     <link rel="stylesheet" href="vendor/katex.min.css">
     <script src="vendor/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="js/game-quiz-importer.js?v=20260910"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .katex {
@@ -140,7 +142,7 @@
         // ============ GEMINI SERVICE ============
         const GeminiService = {
             getApiKeys: () => { const keys = localStorage.getItem('global_gemini_keys'); return keys ? JSON.parse(keys) : []; },
-            getDefaultModule: () => localStorage.getItem('default_gemini_module') || 'gemini-2.0-flash-exp',
+            getDefaultModule: () => localStorage.getItem('default_gemini_module') || 'gemini-3.6-flash',
             buildPrompt: (questionType, params) => {
                 const { subject, gradeMax, topic, difficulty, numQuestions } = params;
                 let typeInstructions = '';
@@ -223,6 +225,36 @@ LƯU Ý: 20% câu có powerUp ("double","streakSaver","timeBonus"), công thức
             });
 
             useEffect(() => { const token = localStorage.getItem('authToken'); if (!token) { alert("Chưa đăng nhập!"); window.location.href = 'login.html'; } }, []);
+
+            // Auto-load questions from trochoi.html if available
+            useEffect(() => {
+                try {
+                    const raw = localStorage.getItem('gameData');
+                    if (!raw) return;
+                    const parsed = JSON.parse(raw);
+                    if (parsed.gameType === 'speedscore' && parsed.content?.questions?.length > 0) {
+                        const loaded = parsed.content.questions.map((q, idx) => ({
+                            id: q.id || `q${idx + 1}`,
+                            type: q.type || 'mcq',
+                            prompt: q.prompt || '',
+                            choices: q.choices || [],
+                            answer: typeof q.answer === 'number' ? q.answer : 0,
+                            items: q.items || [],
+                            leftItems: q.leftItems || [],
+                            rightItems: q.rightItems || [],
+                            powerUp: q.powerUp || null,
+                            explanation: q.explanation || ''
+                        })).filter(q => q.prompt);
+                        if (loaded.length > 0) {
+                            setQuestions(loaded);
+                            setShowInstructions(false);
+                            setCurrentScreen('QUESTION_LIST');
+                        }
+                    }
+                } catch (e) {
+                    console.error("Lỗi đọc gameData:", e);
+                }
+            }, []);
 
             const showCommentary = (message) => { setCommentary(message); setTimeout(() => setCommentary(''), 2000); };
             const unlockAchievement = (badge) => {
