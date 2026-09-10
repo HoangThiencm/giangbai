@@ -4,30 +4,25 @@
 PASS
 
 ## Đối chiếu scope
-- **Tôn trọng lựa chọn model trực tiếp (Direct Model Selection)**:
-  - `app.js`: Hàm `resolveDrawingRequestModel()` đã được sửa để khi `#ai-model-select` có giá trị cụ thể (khác `FOLLOW_SYSTEM_MODEL`), hệ thống trả về đúng 100% model người dùng đã chọn (ví dụ: `gemini-2.5-flash`), không bị `DEPRECATED_DRAWING_MODELS` ghi đè về `gemini-3.7-flash`.
-  - Mảng `DEPRECATED_DRAWING_MODELS` chỉ còn chứa các mã model thực sự đã bị Google khai tử (`gemini-1.5-flash`, `gemini-1.0-pro`).
-  - Dòng trạng thái `analysisOutput` hiển thị chuẩn xác: `AI đang phân tích bằng Gemini · gemini-2.5-flash...`.
-- **Tối ưu hóa độ trễ & Tốc độ gọi AI**:
-  - `api/vehinh_ai.php`:
-    + Timeout cURL trong `vehinh_post_json` giảm từ 90s xuống **30 giây**.
-    + Danh sách ứng viên `$modelCandidates` rút gọn tối đa **2–3 model** (Model người dùng chọn → Fallback người dùng chọn → Tối đa 1 safe fallback `gemini-3.6-flash`), không còn duyệt toàn bộ 7 model.
-    + Bổ sung cơ chế Fast-fail (ngắt nhanh): Khi gặp lỗi cấp Model (HTTP 400, 404, hoặc `"no longer available"` / `"not supported"`), backend lập tức ngắt vòng lặp key để chuyển sang model kế tiếp trong 1–2 giây, không thử lại các key khác với model lỗi.
-    + `maxOutputTokens` tối ưu về **8192**.
-  - `app.js`: `waitForAiThrottle` giảm ngưỡng xuống 1000ms, không còn delay nhân tạo 2–3s trước mỗi lượt vẽ.
+- Khử lỗi `Identifier 'canvas' has already been declared`: Đạt. Hàm `sanitizeAiDrawingCode()` trong `app.js` loại bỏ triệt để các khai báo `const/let/var canvas`, `new fabric.Canvas(...)` và `const fabric`, cho phép `new Function` biên dịch an toàn mà không phá vỡ instance canvas Fabric hiện tại.
+- Khắc phục lỗi GeoGebra `Giá trị nhập vào không hợp lệ: ent(D, F)Segment(B, F)`: Đạt. Hàm `splitGeoGebraBlocks()` lọc sạch hoàn toàn comment `//` và `#`. Hàm `formatGeoGebraExecuteCommand()` đóng gói toàn bộ lệnh thành chuỗi `Execute({"cmd1", "cmd2", ...})` 1 dòng duy nhất, dán 1 lần ăn ngay vào ô Input của GeoGebra không bị dính chữ.
+- Bổ sung nút tiện ích GeoGebra: Đạt. Nút "📋 Sao chép lệnh (Dán 1 lần vào GeoGebra)" copy chuỗi Execute; nút "⚡ Nạp trực tiếp vào GeoGebra" (`#inject-geogebra-btn`) gọi trực tiếp `ggbApplet.evalCommand` hoặc tự động mở khung nạp lệnh.
+- Cập nhật chỉ thị `systemPrompt`: Đạt. Khóa cứng quy tắc biến 'canvas' và 'fabric' đã có sẵn, cấm comment `//` trong GeoGebra, bắt buộc định nghĩa trước biến số và điểm mốc (O, R...).
+- Widget tiến trình thực tế: Đạt. Thêm `#ai-progress-widget` gồm đồng hồ đếm giây live timer (`⏱️ xs`), thanh tiến trình đa chặng 0–100% và trạng thái từng giai đoạn (nhận diện → tọa độ → Fabric/GeoGebra).
+- Hoạt cảnh vẽ từng nét: Đạt. Hàm `animateDrawingSteps()` cho các đối tượng fade-in tuần tự từng nét (~200ms/nét), hiển thị nút "▶️ Tái hiện từng bước vẽ" (`#replay-construction-btn`).
 
 ## Test đã chạy
-1. `node tests/game-quiz-importer-smoke.js`:
-   - Kiểm tra khi chọn `gemini-2.5-flash`, `resolveDrawingRequestModel` trả về đúng `'gemini-2.5-flash'`: PASS.
-   - Kiểm tra timeout cURL 30s và candidate list rút gọn: PASS.
-   - Kiểm tra Fast-fail khi gặp 400/404: PASS.
-2. `node tests/run-all-tests.js`:
-   - Toàn bộ **66/66 test suites** đều vượt qua thành công 100% (PASS).
+- `scratch/verify-checks.js`: PASS 100% các ca kiểm tra sanitize canvas/fabric, gỡ comment GeoGebra, sinh `Execute({...})` và kiểm tra toàn bộ DOM element trong `vehinh.html`.
+- `node tests/game-quiz-importer-smoke.js`: PASS 100% (6/6 nhóm kiểm thử).
+- `node tests/run-all-tests.js`: PASS 100% (**66/66 test suites** trong toàn bộ hệ thống).
 
 ## Pass / Fail từng tiêu chí
-1. Chọn trực tiếp model (như Gemini 2.5 Flash) được hệ thống tôn trọng 100%, gửi đúng lên API và hiển thị đúng trên giao diện: **PASS**
-2. Khắc phục triệt để tình trạng "chạy rất lâu": timeout giảm còn 30s, candidate giới hạn 2-3 model, fast-fail ngắt nhanh khi model lỗi: **PASS**
-3. Toàn bộ 66/66 test suites trong hệ thống đều PASS 100%: **PASS**
+- Tiêu chí 1 (Khử lỗi trùng canvas): PASS
+- Tiêu chí 2 (Khử lỗi cú pháp GeoGebra & dán 1 dòng Execute): PASS
+- Tiêu chí 3 (Nút nạp trực tiếp GeoGebra & copy an toàn): PASS
+- Tiêu chí 4 (Widget tiến trình thực tế Live Timer & Bar): PASS
+- Tiêu chí 5 (Hoạt cảnh vẽ từng nét & Nút Tái hiện): PASS
+- Tiêu chí 6 (100% 66 test suites trong hệ thống PASS): PASS
 
 ## Bug
-- Không có (None).
+Không có
