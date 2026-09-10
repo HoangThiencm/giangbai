@@ -1,3 +1,37 @@
+# IMPLEMENT — 4 bước chuẩn CV 5555 trong Nghiên cứu bài học AI + Vẽ hình AI + Word/LaTeX Game
+
+Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` (3 nhiệm vụ). Phần 1 và Phần 2 đã có trong mã nguồn từ vòng trước; vòng này hoàn tất Phần 3 và ghi nhận toàn bộ bàn giao.
+
+---
+
+## Phần 3 (mới): Tích hợp cấu trúc hiển thị 4 Bước chuẩn Bộ GD&ĐT (Công văn 5555) vào `nghiencuubaihoc.html`
+
+### File đã sửa
+- `nghiencuubaihoc.html`
+- `tests/nghiencuubaihoc-phases-test.js` (tạo mới)
+
+### Việc đã làm
+1. **Hằng số `PHASES_4`** — 4 giai đoạn chuẩn CV 5555, ánh xạ kín 12 bước vi mô không trùng, không sót:
+   - Giai đoạn 1 (emerald, `fa-book-open-reader`): Bước 1–7 — Xây dựng bài dạy minh họa / KHBD 2 lớp. Sản phẩm 1–9.
+   - Giai đoạn 2 (blue, `fa-chalkboard-user`): Bước 8 — Dạy minh họa & dự giờ. Sản phẩm 10.
+   - Giai đoạn 3 (amber, `fa-comments`): Bước 9–10 — Phân tích bài học sau tiết dạy. Sản phẩm 11–12.
+   - Giai đoạn 4 (purple, `fa-award`): Bước 11–12 — Vận dụng & hoàn thiện hồ sơ. Sản phẩm 13 (Bước 12 đóng gói trọn bộ).
+2. **Header trang**: subtitle đổi thành `Chu trình NCBH sư phạm · 4 bước chuẩn Bộ GD&ĐT (Công văn 5555) · 12 bước số hóa chuyên sâu · KHBD 2 lớp`. Thêm nút `📖 Sơ đồ 4 bước chuẩn CV 5555`.
+3. **Thanh `#phaseBar`** đặt trên `#stepperBar`:
+   - 4 card giai đoạn, highlight active (viền màu, gradient, glow), badge `Đang thực hiện` / `Hoàn thành (X/Y bước)` / `Chưa bắt đầu`, thanh tiến độ `X/Y`.
+   - Click card gọi `goToPhase(id)` → nhảy tới bước con đầu tiên chưa hoàn thành (hoặc bước đầu) của giai đoạn đó.
+4. **Thanh 12 bước vi mô `#stepperBar`**: mỗi nút có viền màu Phase mẹ (`phase-1`…`phase-4`) và nhãn `GĐ n · Bước n`. Giữ nguyên `goStep(n)`, `state.currentStep`, `state.completedSteps`.
+5. **Modal `#phaseGuideModal`**: bảng ánh xạ 4 bước Bộ → mục đích sư phạm → 12 bước phần mềm → 13 sản phẩm bàn giao. Đóng bằng nút Đóng, click overlay, hoặc phím Escape.
+6. **Bảo toàn logic**: không đổi `state` / `emptyState()` / `STEPS` / `PRODUCTS_13` / `CAN_CU`; không đụng `runAiTask`, `saveSession`, `loadSessionById`, `exportDocx`, `exportZip`.
+
+### Kiểm thử
+- `node tests/nghiencuubaihoc-phases-test.js`: PASS — phủ 12 bước đúng 4 phase, badge tiến độ, `goToPhase`/`firstOpenStepOfPhase`, DOM `#phaseBar` + modal CV 5555.
+- `node tests/nghiencuubaihoc-smoke.js`: PASS — hồi quy 12 bước / 6 vùng / 12 AI task / lưu CSDL.
+- `node tests/game-quiz-importer-smoke.js`: PASS — Phần 1 (catalog `gemini-3.6-flash`) và Phần 2 (Word/LaTeX + 8 game) vẫn đúng.
+- `node tests/run-all-tests.js`: PASS — **65/65 test suites**.
+
+---
+
 # IMPLEMENT — Khắc phục Lỗi AI Vẽ Hình & Tích hợp Đọc Câu hỏi Word / LaTeX cho Game Giáo Dục
 
 ## 1. Khắc phục Lỗi AI Vẽ Hình (`vehinh.html` / `app.js` / `api/vehinh_ai.php`)

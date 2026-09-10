@@ -44,6 +44,30 @@
         .ready-badge { display: inline-flex; align-items: center; border-radius: 999px; background: #d1fae5; color: #065f46; font-weight: 800; font-size: .75rem; padding: .35rem .75rem; letter-spacing: .02em; }
         .layer-grid { display: grid; gap: .75rem; }
         @media (min-width: 1024px) { .layer-grid { grid-template-columns: 1fr 1fr; } }
+        #phaseBar { display: grid; gap: .75rem; }
+        @media (min-width: 768px) { #phaseBar { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        .phase-card { position: relative; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 1.15rem; background: #fff; padding: .9rem 1rem; text-align: left; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+        .phase-card:hover { transform: translateY(-2px); }
+        .phase-card.active { border-width: 2px; }
+        .phase-card .phase-glow { position: absolute; inset: auto -1.5rem -2rem auto; width: 6rem; height: 6rem; border-radius: 999px; opacity: .18; pointer-events: none; }
+        .phase-badge { display: inline-flex; align-items: center; border-radius: 999px; font-size: .65rem; font-weight: 800; padding: .2rem .55rem; letter-spacing: .01em; }
+        .phase-meter { height: .35rem; width: 100%; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
+        .phase-meter > span { display: block; height: 100%; border-radius: 999px; }
+        .stepper-btn.phase-1 { border-color: #6ee7b7; border-top-width: 3px; }
+        .stepper-btn.phase-2 { border-color: #93c5fd; border-top-width: 3px; }
+        .stepper-btn.phase-3 { border-color: #fcd34d; border-top-width: 3px; }
+        .stepper-btn.phase-4 { border-color: #d8b4fe; border-top-width: 3px; }
+        .stepper-btn.phase-1.active { background: #047857; }
+        .stepper-btn.phase-2.active { background: #1d4ed8; box-shadow: 0 8px 18px rgba(29,78,216,.28); }
+        .stepper-btn.phase-3.active { background: #b45309; box-shadow: 0 8px 18px rgba(180,83,9,.28); }
+        .stepper-btn.phase-4.active { background: #7e22ce; box-shadow: 0 8px 18px rgba(126,34,206,.28); }
+        .stepper-btn.phase-1.done { background: #ecfdf5; color: #047857; }
+        .stepper-btn.phase-2.done { background: #eff6ff; color: #1d4ed8; }
+        .stepper-btn.phase-3.done { background: #fffbeb; color: #b45309; }
+        .stepper-btn.phase-4.done { background: #faf5ff; color: #7e22ce; }
+        #phaseGuideModal { display: none; position: fixed; inset: 0; z-index: 80; align-items: center; justify-content: center; background: rgba(15,23,42,.55); padding: 1rem; }
+        #phaseGuideModal.open { display: flex; }
+        #phaseGuideModal .guide-card { max-height: min(90vh, 52rem); overflow: auto; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-800">
@@ -51,23 +75,38 @@
     <header class="rounded-3xl bg-gradient-to-br from-slate-950 via-indigo-900 to-cyan-700 p-6 text-white shadow-xl">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
-                <p class="text-xs font-bold uppercase tracking-[.2em] text-cyan-100">Chu trình NCBH sư phạm · 12 bước · KHBD 2 lớp</p>
+                <p class="text-xs font-bold uppercase tracking-[.2em] text-cyan-100">Chu trình NCBH sư phạm · 4 bước chuẩn Bộ GD&amp;ĐT (Công văn 5555) · 12 bước số hóa chuyên sâu · KHBD 2 lớp</p>
                 <h1 class="mt-2 text-3xl font-black">Nghiên cứu bài học AI</h1>
                 <p id="keyStatus" class="mt-2 text-sm text-cyan-50">Đang đồng bộ Gemini &amp; Mistral API Key từ CSDL…</p>
                 <p id="saveStatus" class="mt-1 text-xs text-cyan-100/80">Chưa lưu hồ sơ.</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <a href="index.html" class="rounded-xl bg-white/15 px-4 py-2 text-sm font-bold hover:bg-white/25">← Trang chủ</a>
+                <button type="button" onclick="openPhaseGuide()" class="rounded-xl bg-white/15 px-4 py-2 text-sm font-bold hover:bg-white/25">📖 Sơ đồ 4 bước chuẩn CV 5555</button>
                 <button type="button" onclick="saveSession(false)" class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-400">Lưu CSDL</button>
                 <button type="button" onclick="loadSessions()" class="rounded-xl bg-white/15 px-4 py-2 text-sm font-bold hover:bg-white/25">Mở hồ sơ cũ</button>
             </div>
         </div>
     </header>
 
-    <nav id="stepperBar" class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-12"></nav>
+    <nav id="phaseBar" aria-label="4 bước chuẩn Bộ GD&amp;ĐT Công văn 5555"></nav>
+    <nav id="stepperBar" class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-12" aria-label="12 bước vi mô NCBH"></nav>
     <section id="stepRoot" class="space-y-4"></section>
     <section id="history" class="space-y-2"></section>
 </main>
+<div id="phaseGuideModal" role="dialog" aria-modal="true" aria-labelledby="phaseGuideTitle" onclick="if (event.target === this) closePhaseGuide()">
+    <div class="guide-card w-full max-w-5xl rounded-3xl bg-white p-5 shadow-2xl md:p-7">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <p class="text-[11px] font-extrabold uppercase tracking-[.18em] text-teal-700">Công văn 5555/BGDĐT-GDTrH</p>
+                <h2 id="phaseGuideTitle" class="mt-1 text-xl font-black text-slate-900">Sơ đồ 4 bước chuẩn CV 5555</h2>
+                <p class="mt-1 text-sm text-slate-600">Ánh xạ 4 bước Bộ GD&amp;ĐT → mục đích sư phạm → 12 bước phần mềm → 13 sản phẩm bàn giao. Không xếp loại giáo viên.</p>
+            </div>
+            <button type="button" class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold hover:bg-slate-50" onclick="closePhaseGuide()">Đóng</button>
+        </div>
+        <div id="phaseGuideBody" class="mt-4 overflow-x-auto"></div>
+    </div>
+</div>
 <script>
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -130,6 +169,56 @@ const STEPS = [
     { n: 11, title: 'Điều chỉnh bài học (KHBD Phiên bản 2)', short: 'KHBD v2', ai: 'Lesson Reviser', product: 'KHBD minh họa - phiên bản 2' },
     { n: 12, title: 'Hoàn thiện hồ sơ NCBH', short: 'Xuất hồ sơ', ai: 'Report Generator', product: 'Bộ 13 sản phẩm hồ sơ NCBH' }
 ];
+
+const PHASES_4 = [
+    {
+        id: 1,
+        title: 'Bước 1: Xây dựng bài dạy minh họa',
+        shortTitle: 'Bước 1: Xây dựng KHBD',
+        desc: 'Chuẩn bị, nghiên cứu bài học, xác định vấn đề và thiết kế KHBD 2 lớp',
+        color: 'emerald',
+        steps: [1, 2, 3, 4, 5, 6, 7],
+        icon: 'fa-book-open-reader',
+        purpose: 'Cùng nhau thiết kế KHBD, dự kiến phản ứng HS, chuẩn bị công cụ quan sát'
+    },
+    {
+        id: 2,
+        title: 'Bước 2: Tổ chức dạy minh họa & dự giờ',
+        shortTitle: 'Bước 2: Dạy & Dự giờ',
+        desc: 'Dự giờ tập trung vào hoạt động học của HS, ghi chép và thu thập minh chứng',
+        color: 'blue',
+        steps: [8],
+        icon: 'fa-chalkboard-user',
+        purpose: 'Dạy thực tế, dự giờ tập trung vào việc học của HS, chụp ảnh minh chứng'
+    },
+    {
+        id: 3,
+        title: 'Bước 3: Phân tích bài học sau tiết dạy',
+        shortTitle: 'Bước 3: Phân tích bài học',
+        desc: 'Thảo luận tổ chuyên môn dựa trên minh chứng thực tế, không xếp loại GV',
+        color: 'amber',
+        steps: [9, 10],
+        icon: 'fa-comments',
+        purpose: 'Thảo luận chuyên môn dựa trên minh chứng, không xếp loại GV'
+    },
+    {
+        id: 4,
+        title: 'Bước 4: Vận dụng kết quả vào thực tiễn',
+        shortTitle: 'Bước 4: Vận dụng & Hoàn thiện',
+        desc: 'Điều chỉnh bài học (KHBD v2), hoàn thiện và đóng gói trọn bộ hồ sơ NCBH',
+        color: 'purple',
+        steps: [11, 12],
+        icon: 'fa-award',
+        purpose: 'Điều chỉnh KHBD và áp dụng vào các bài học hàng ngày'
+    }
+];
+
+const PHASE_THEME = {
+    emerald: { border: '#10b981', bg: '#ecfdf5', text: '#047857', ring: 'rgba(16,185,129,.32)', bar: '#059669', soft: '#d1fae5', activeBg: 'linear-gradient(180deg,#ecfdf5 0%,#fff 70%)' },
+    blue: { border: '#3b82f6', bg: '#eff6ff', text: '#1d4ed8', ring: 'rgba(59,130,246,.32)', bar: '#2563eb', soft: '#dbeafe', activeBg: 'linear-gradient(180deg,#eff6ff 0%,#fff 70%)' },
+    amber: { border: '#f59e0b', bg: '#fffbeb', text: '#b45309', ring: 'rgba(245,158,11,.32)', bar: '#d97706', soft: '#fde68a', activeBg: 'linear-gradient(180deg,#fffbeb 0%,#fff 70%)' },
+    purple: { border: '#a855f7', bg: '#faf5ff', text: '#7e22ce', ring: 'rgba(168,85,247,.32)', bar: '#9333ea', soft: '#e9d5ff', activeBg: 'linear-gradient(180deg,#faf5ff 0%,#fff 70%)' }
+};
 
 const REVIEW_ASPECTS = ['Mục tiêu / YCCĐ', 'Nội dung dạy học', 'Phương pháp và kỹ thuật', 'Tổ chức 4 hoạt động CV 5512', 'Sản phẩm học tập', 'Kiểm tra đánh giá', 'Thiết bị / học liệu (TT 38/2021, TT 14/2020)', 'Tích hợp NLS (CV 3456) & Khung AI (QĐ 2422)'];
 const REVIEW_LEVELS = ['Giữ nguyên', 'Giữ nhưng bổ sung', 'Cần điều chỉnh', 'Nên thiết kế lại'];
@@ -560,11 +649,84 @@ async function deleteSession(id) {
     loadSessions();
 }
 
+function phaseOfStep(n) {
+    return PHASES_4.find(p => p.steps.includes(Number(n))) || PHASES_4[0];
+}
+
+function productsOfPhase(phase) {
+    return PRODUCTS_13.filter(p => phase.steps.includes(p.step));
+}
+
+function phaseProgress(phase, currentStep, completedSteps) {
+    const step = currentStep == null ? state.currentStep : currentStep;
+    const doneList = completedSteps || state.completedSteps || [];
+    const done = phase.steps.filter(n => doneList.includes(n)).length;
+    const total = phase.steps.length;
+    const active = phase.steps.includes(step);
+    const complete = done === total && total > 0;
+    let badge;
+    let kind;
+    if (complete) {
+        badge = `Hoàn thành (${done}/${total} bước)`;
+        kind = 'done';
+    } else if (active) {
+        badge = `Đang thực hiện · ${done}/${total}`;
+        kind = 'active';
+    } else if (done > 0) {
+        badge = `Đang thực hiện (${done}/${total} bước)`;
+        kind = 'partial';
+    } else {
+        badge = 'Chưa bắt đầu';
+        kind = 'pending';
+    }
+    return { done, total, active, complete, badge, kind };
+}
+
+function firstOpenStepOfPhase(phase, completedSteps) {
+    const doneList = completedSteps || state.completedSteps || [];
+    return phase.steps.find(n => !doneList.includes(n)) || phase.steps[0];
+}
+
+function goToPhase(phaseId) {
+    const phase = PHASES_4.find(p => p.id === Number(phaseId));
+    if (!phase) return;
+    goStep(firstOpenStepOfPhase(phase));
+}
+
+function renderPhaseBar() {
+    const el = document.getElementById('phaseBar');
+    if (!el) return;
+    el.innerHTML = PHASES_4.map(phase => {
+        const theme = PHASE_THEME[phase.color] || PHASE_THEME.emerald;
+        const p = phaseProgress(phase);
+        const pct = Math.round((p.done / Math.max(1, p.total)) * 100);
+        const kindClass = p.kind === 'active' ? 'active' : (p.kind === 'done' ? 'done' : '');
+        const style = `border-color:${theme.border};${p.active ? `box-shadow:0 10px 24px ${theme.ring};background:${theme.activeBg};` : p.complete ? `background:${theme.bg};` : ''}`;
+        const badgeStyle = p.kind === 'pending'
+            ? 'background:#f1f5f9;color:#475569'
+            : `background:${theme.soft};color:${theme.text}`;
+        return `<button type="button" class="phase-card ${kindClass}" style="${style}" onclick="goToPhase(${phase.id})" aria-current="${p.active ? 'step' : 'false'}">
+            <span class="phase-glow" style="background:${theme.border}"></span>
+            <span class="flex items-start justify-between gap-2">
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-white" style="background:${theme.bar}"><i class="fa-solid ${esc(phase.icon)}"></i></span>
+                <span class="phase-badge" style="${badgeStyle}">${esc(p.badge)}</span>
+            </span>
+            <span class="mt-2 block text-[11px] font-extrabold uppercase tracking-wide" style="color:${theme.text}">Giai đoạn ${phase.id}/4</span>
+            <span class="mt-0.5 block text-sm font-black leading-snug text-slate-900">${esc(phase.shortTitle)}</span>
+            <span class="mt-1 block text-[11px] leading-snug text-slate-500">${esc(phase.desc)}</span>
+            <span class="phase-meter mt-3"><span style="width:${pct}%;background:${theme.bar}"></span></span>
+            <span class="mt-1 block text-[10px] font-bold text-slate-400">${phase.steps.length === 1 ? 'Bước ' + phase.steps[0] : 'Bước ' + phase.steps[0] + '–' + phase.steps[phase.steps.length - 1]} · ${p.done}/${p.total}</span>
+        </button>`;
+    }).join('');
+}
+
 function renderStepper() {
+    renderPhaseBar();
     document.getElementById('stepperBar').innerHTML = STEPS.map(s => {
+        const phase = phaseOfStep(s.n);
         const active = state.currentStep === s.n ? 'active' : '';
         const done = state.completedSteps.includes(s.n) ? 'done' : '';
-        return `<button type="button" class="stepper-btn ${active} ${done} rounded-xl border border-slate-200 bg-white px-2 py-2 text-left text-[11px] font-bold leading-tight" onclick="goStep(${s.n})"><span class="block text-[10px] opacity-70">Bước ${s.n}</span>${esc(s.short)}</button>`;
+        return `<button type="button" class="stepper-btn ${active} ${done} phase-${phase.id} rounded-xl border border-slate-200 bg-white px-2 py-2 text-left text-[11px] font-bold leading-tight" onclick="goStep(${s.n})"><span class="block text-[10px] font-extrabold opacity-70">GĐ ${phase.id} · Bước ${s.n}</span>${esc(s.short)}</button>`;
     }).join('');
 }
 
@@ -575,6 +737,48 @@ function goStep(n) {
     renderStepper();
     renderStep();
     persistLocal();
+}
+
+function openPhaseGuide() {
+    const body = document.getElementById('phaseGuideBody');
+    if (body) {
+        body.innerHTML = `<table class="min-w-full border-collapse text-sm">
+            <thead>
+                <tr class="bg-slate-50 text-left text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                    <th class="border border-slate-200 px-3 py-2">4 bước Bộ GD&amp;ĐT</th>
+                    <th class="border border-slate-200 px-3 py-2">Mục đích sư phạm</th>
+                    <th class="border border-slate-200 px-3 py-2">12 bước phần mềm</th>
+                    <th class="border border-slate-200 px-3 py-2">13 sản phẩm bàn giao</th>
+                </tr>
+            </thead>
+            <tbody>${PHASES_4.map(phase => {
+                const theme = PHASE_THEME[phase.color] || PHASE_THEME.emerald;
+                const products = productsOfPhase(phase);
+                const stepLabels = phase.steps.map(n => {
+                    const s = STEPS.find(x => x.n === n);
+                    return `Bước ${n}: ${s ? s.short : ''}`;
+                }).join('<br>');
+                const productLabels = products.map((p, i) => `${PRODUCTS_13.indexOf(p) + 1}. ${esc(p.title)}`).join('<br>');
+                return `<tr>
+                    <td class="border border-slate-200 px-3 py-3 align-top">
+                        <div class="font-black" style="color:${theme.text}">${esc(phase.title)}</div>
+                        <div class="mt-1 text-xs text-slate-500">${esc(phase.desc)}</div>
+                    </td>
+                    <td class="border border-slate-200 px-3 py-3 align-top text-slate-700">${esc(phase.purpose)}</td>
+                    <td class="border border-slate-200 px-3 py-3 align-top text-slate-700">${stepLabels}</td>
+                    <td class="border border-slate-200 px-3 py-3 align-top text-slate-700">${productLabels}${phase.id === 4 ? '<br>Bước 12: đóng gói trọn bộ 13 sản phẩm' : ''}</td>
+                </tr>`;
+            }).join('')}</tbody>
+        </table>
+        <p class="mt-3 text-xs text-slate-500">Nguồn: Công văn 5555/BGDĐT-GDTrH — sinh hoạt chuyên môn theo Nghiên cứu bài học. 12 bước vi mô và 13 sản phẩm là hiện thực hóa số hóa, không thay thế 4 bước chuẩn của Bộ.</p>`;
+    }
+    const modal = document.getElementById('phaseGuideModal');
+    if (modal) modal.classList.add('open');
+}
+
+function closePhaseGuide() {
+    const modal = document.getElementById('phaseGuideModal');
+    if (modal) modal.classList.remove('open');
 }
 
 function zone(title, body) {
@@ -636,8 +840,10 @@ function teacherOrgCommentsBox() {
 
 function renderStep() {
     const s = STEPS[state.currentStep - 1];
+    const phase = phaseOfStep(s.n);
+    const theme = PHASE_THEME[phase.color] || PHASE_THEME.emerald;
     const nav = `<div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-        <div><p class="text-xs font-bold uppercase tracking-widest text-teal-700">Bước ${s.n}/12 · ${esc(s.ai)}</p><h2 class="text-xl font-black">${esc(s.title)}</h2></div>
+        <div><p class="text-xs font-bold uppercase tracking-widest" style="color:${theme.text}">Giai đoạn ${phase.id}/4 · ${esc(phase.shortTitle)} · Bước ${s.n}/12 · ${esc(s.ai)}</p><h2 class="text-xl font-black">${esc(s.title)}</h2></div>
         <div class="flex gap-2"><button type="button" class="rounded-lg border px-3 py-2 text-sm font-bold" onclick="goStep(${Math.max(1, s.n - 1)})">← Trước</button><button type="button" class="rounded-lg bg-teal-700 px-3 py-2 text-sm font-bold text-white" onclick="completeAndNext()">Hoàn thành bước →</button></div>
     </div>`;
     document.getElementById('stepRoot').innerHTML = nav + stepBody(s) + teacherOrgCommentsBox() + sixZones(
@@ -1128,6 +1334,9 @@ async function exportZip() {
 
 function slug(s) { return String(s || 'ncbh').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-'); }
 
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closePhaseGuide();
+});
 syncUserKeysFromServer();
 restoreLocal();
 renderStepper();

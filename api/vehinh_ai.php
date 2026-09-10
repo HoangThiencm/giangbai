@@ -29,7 +29,7 @@ function vehinh_extract_gemini_text(array $response): string
     return trim($out);
 }
 
-function vehinh_post_json(string $url, array $headers, array $payload, int $timeout = 60): array
+function vehinh_post_json(string $url, array $headers, array $payload, int $timeout = 90): array
 {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -105,7 +105,10 @@ function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userIn
         'contents' => [['parts' => $parts]],
         'generationConfig' => [
             'temperature' => 0.2,
-            'maxOutputTokens' => 4096,
+            'maxOutputTokens' => 16384,
+            'thinkingConfig' => [
+                'thinkingBudget' => 0,
+            ],
         ],
     ];
 
@@ -126,7 +129,7 @@ function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userIn
                 continue;
             }
             $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent?key=' . rawurlencode($key);
-            $response = vehinh_post_json($url, [], $payload);
+            $response = vehinh_post_json($url, [], $payload, 90);
             if (!$response['ok']) {
                 $errMsg = (string)($response['error'] ?: ($response['json']['error']['message'] ?? ('Gemini HTTP ' . $response['status'])));
                 $lastError = $errMsg;
