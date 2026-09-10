@@ -130,12 +130,41 @@ console.log('-> 4. Format schema for all 8 educational games: PASS');
 const vehinhAiPhp = fs.readFileSync(path.join(__dirname, '..', 'api', 'vehinh_ai.php'), 'utf8');
 assert.ok(vehinhAiPhp.includes('gemini-3.6-flash'), 'api/vehinh_ai.php must include gemini-3.6-flash in catalog');
 assert.ok(vehinhAiPhp.includes('no longer available') || vehinhAiPhp.includes('404'), 'api/vehinh_ai.php must support fallback retry logic');
+assert.ok(vehinhAiPhp.includes("'maxOutputTokens' => 16384"), 'api/vehinh_ai.php must raise maxOutputTokens to 16384');
+assert.ok(!vehinhAiPhp.includes("'maxOutputTokens' => 4096"), 'api/vehinh_ai.php must not keep the old 4096 token cap');
+assert.ok(vehinhAiPhp.includes("'thinkingBudget' => 0"), 'api/vehinh_ai.php must disable thinking budget');
+assert.ok(vehinhAiPhp.includes('int $timeout = 90') || /vehinh_post_json\([^;]*90/.test(vehinhAiPhp), 'api/vehinh_ai.php must use 90s curl timeout');
 
 const runtimeConfigPhp = fs.readFileSync(path.join(__dirname, '..', 'api', 'ai_runtime_config.php'), 'utf8');
 assert.ok(runtimeConfigPhp.includes('gemini-3.6-flash'), 'api/ai_runtime_config.php must default to gemini-3.6-flash');
 
 const appJs = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 assert.ok(appJs.includes('gemini-3.6-flash'), 'app.js must include gemini-3.6-flash in DRAWING_AI_MODEL_CATALOG');
+assert.ok(appJs.includes('getSystemDrawingModel'), 'app.js must read system drawing model from settings');
+assert.ok(appJs.includes("localStorage.getItem('default_gemini_module')"), 'app.js must read default_gemini_module');
+assert.ok(appJs.includes('clearDeprecatedSavedDrawingModel'), 'app.js must clear deprecated vehinh_ai_model_gemini');
+assert.ok(appJs.includes('gemini-2.5-flash') && appJs.includes('DEPRECATED_DRAWING_MODELS'), 'app.js must treat gemini-2.5-flash as deprecated');
+assert.ok(appJs.includes('Theo Cài đặt chung'), 'app.js dropdown must include Theo Cài đặt chung');
+assert.ok(appJs.includes('FOLLOW_SYSTEM_MODEL'), 'app.js must have follow-system sentinel');
+assert.ok(appJs.includes('extractDrawingJavascript'), 'app.js must extract JS from AI responses flexibly');
+assert.ok(appJs.includes('<javascript>([\\s\\S]*?)<\\/javascript>'), 'app.js must parse <javascript> tags');
+assert.ok(appJs.includes('```(?:javascript|js)'), 'app.js must parse markdown javascript fences');
+assert.ok(appJs.includes('3-5 gạch đầu dòng'), 'system prompt must keep analysis short');
+assert.ok(appJs.includes('resolveDrawingRequestModel'), 'generate request must resolve __system__ to a real model');
+assert.ok(appJs.includes('global_gemini_keys'), 'drawing request must send global_gemini_keys');
+
+function extractDrawingJavascript(fullText) {
+    const source = String(fullText || '');
+    const tagged = source.match(/<javascript>([\s\S]*?)<\/javascript>/i);
+    if (tagged && tagged[1].trim()) return tagged[1].trim();
+    const fenced = source.match(/```(?:javascript|js)\s*([\s\S]*?)```/i);
+    if (fenced && fenced[1].trim()) return fenced[1].trim();
+    return null;
+}
+assert.strictEqual(extractDrawingJavascript('<javascript>canvas.renderAll();</javascript>'), 'canvas.renderAll();');
+assert.strictEqual(extractDrawingJavascript('```javascript\nconst a = 1;\n```'), 'const a = 1;');
+assert.strictEqual(extractDrawingJavascript('```js\nconst b = 2;\n```'), 'const b = 2;');
+assert.strictEqual(extractDrawingJavascript('no code here'), null);
 
 const aiDesignConfigJs = fs.readFileSync(path.join(__dirname, '..', 'ai-design-config.js'), 'utf8');
 assert.ok(aiDesignConfigJs.includes('gemini-3.6-flash'), 'ai-design-config.js must support gemini-3.6-flash');

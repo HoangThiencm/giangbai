@@ -191,6 +191,8 @@ document.addEventListener('DOMContentLoaded', function () {
         'gemini-2.5-flash': 'Gemini 2.5 Flash',
         'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
     };
+    const FOLLOW_SYSTEM_MODEL = '__system__';
+    const DEPRECATED_DRAWING_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 
     function normalizeDrawingProvider(provider) {
         return 'gemini';
@@ -254,6 +256,24 @@ document.addEventListener('DOMContentLoaded', function () {
         return localStorage.getItem(`${VEHINH_MODEL_STORAGE_PREFIX}${provider}`) || '';
     }
 
+    function getSystemDrawingModel() {
+        return localStorage.getItem('default_gemini_module') || localStorage.getItem('khbd_gemini_model') || '';
+    }
+
+    function isDeprecatedDrawingModel(model) {
+        return DEPRECATED_DRAWING_MODELS.includes(String(model || '').trim());
+    }
+
+    function clearDeprecatedSavedDrawingModel(provider) {
+        const key = `${VEHINH_MODEL_STORAGE_PREFIX}${normalizeDrawingProvider(provider)}`;
+        const saved = localStorage.getItem(key) || '';
+        if (saved && isDeprecatedDrawingModel(saved)) {
+            localStorage.removeItem(key);
+            return true;
+        }
+        return false;
+    }
+
     function getActiveDrawingProvider() {
         const raw = allDOMElements.aiProviderSelect?.value || drawingAiConfig?.default_provider || 'gemini';
         return normalizeDrawingProvider(raw);
@@ -261,16 +281,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getCurrentDrawingModel(provider) {
         const key = normalizeDrawingProvider(provider);
+        clearDeprecatedSavedDrawingModel(key);
         const models = getProviderModelCatalog(key);
         const providerConfig = getDrawingProviderConfig(key);
         const savedModel = getSavedDrawingModel(key);
-        if (savedModel && models.includes(savedModel)) return savedModel;
-        const systemModel = localStorage.getItem('default_gemini_module') || localStorage.getItem('khbd_gemini_model');
-        if (systemModel && models.includes(systemModel)) return systemModel;
+        const systemModel = getSystemDrawingModel();
+        const looksLikeGemini = (id) => /^gemini-[\w.\-]+$/i.test(String(id || '').trim());
+
+        if (savedModel && savedModel !== FOLLOW_SYSTEM_MODEL && !isDeprecatedDrawingModel(savedModel)) {
+            if (models.includes(savedModel) || looksLikeGemini(savedModel)) return savedModel;
+        }
+        if (systemModel && !isDeprecatedDrawingModel(systemModel) && (models.includes(systemModel) || looksLikeGemini(systemModel))) {
+            return systemModel;
+        }
         const configured = providerConfig?.model || '';
-        if (configured && models.includes(configured)) return configured;
-        if (systemModel) return systemModel;
-        return models[0] || 'gemini-3.6-flash';
+        if (configured && !isDeprecatedDrawingModel(configured) && (models.includes(configured) || looksLikeGemini(configured))) {
+            return configured;
+        }
+        return models.find((model) => !isDeprecatedDrawingModel(model)) || 'gemini-3.6-flash';
+    }
+
+    function resolveDrawingRequestModel(provider) {
+        const raw = allDOMElements.aiModelSelect?.value || '';
+        if (raw && raw !== FOLLOW_SYSTEM_MODEL && !isDeprecatedDrawingModel(raw)) return raw;
+        return getCurrentDrawingModel(provider);
     }
 
     function syncDrawingModelSelect() {
@@ -278,9 +312,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!select) return;
 
         const provider = getActiveDrawingProvider();
+        clearDeprecatedSavedDrawingModel(provider);
         const models = getProviderModelCatalog(provider);
+        const systemModel = getSystemDrawingModel() || getCurrentDrawingModel(provider) || 'gemini-3.6-flash';
 
         select.innerHTML = '';
+        const followOpt = document.createElement('option');
+        followOpt.value = FOLLOW_SYSTEM_MODEL;
+        followOpt.textContent = `✨ Theo Cài đặt chung (${getDrawingModelLabel(systemModel)})`;
+        select.appendChild(followOpt);
         models.forEach((model) => {
             const option = document.createElement('option');
             option.value = model;
@@ -288,9 +328,13 @@ document.addEventListener('DOMContentLoaded', function () {
             select.appendChild(option);
         });
         select.disabled = models.length === 0;
-        const currentModel = getCurrentDrawingModel(provider);
-        select.value = currentModel;
-        if (!select.value && models.length) select.value = models[0];
+        const savedModel = getSavedDrawingModel(provider);
+        if (!savedModel || savedModel === FOLLOW_SYSTEM_MODEL || isDeprecatedDrawingModel(savedModel)) {
+            select.value = FOLLOW_SYSTEM_MODEL;
+        } else {
+            select.value = savedModel;
+            if (!select.value) select.value = FOLLOW_SYSTEM_MODEL;
+        }
     }
 
     function handleDrawingProviderChange() {
@@ -450,12 +494,17 @@ document.addEventListener('DOMContentLoaded', function () {
         const supportsImage = selected.supports_image ? 'có hỗ trợ ảnh' : 'chỉ mô tả chữ';
         const readyText = selected.configured ? 'Đã cấu hình' : 'Chưa cấu hình trên server';
         const extra = ` · ${gemini.keys_count || 0} key`;
+        const savedModel = getSavedDrawingModel(provider);
+        const followSystem = !savedModel || savedModel === FOLLOW_SYSTEM_MODEL || isDeprecatedDrawingModel(savedModel);
+        const followLine = followSystem
+            ? ` · theo Cài đặt chung (${getSystemDrawingModel() || currentModel || 'gemini-3.6-flash'})`
+            : '';
         const errorLine = loadError
             ? `<div class="text-amber-300 mt-1">Không đọc cấu hình server: ${loadError}. Vẫn chọn được model bên trên.</div>`
             : '';
         allDOMElements.aiModelSummary.innerHTML = `
             <div><strong>${selected.label || provider}</strong>: <code>${currentModel || selected.model || '---'}</code></div>
-            <div>${getDrawingModelLabel(currentModel || selected.model || '')} · ${readyText}${extra} · ${supportsImage}</div>
+            <div>${getDrawingModelLabel(currentModel || selected.model || '')}${followLine} · ${readyText}${extra} · ${supportsImage}</div>
             ${errorLine}
         `;
     }
@@ -532,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const imageFile = activeImageFile;
         if (!userPrompt && !imageFile) { allDOMElements.analysisOutput.innerHTML = '<span class="text-red-400">Lỗi: Vui lòng nhập đề bài hoặc tải ảnh.</span>'; return; }
         const selectedProvider = getActiveDrawingProvider();
-        const selectedModel = allDOMElements.aiModelSelect?.value || getCurrentDrawingModel(selectedProvider) || '';
+        const selectedModel = resolveDrawingRequestModel(selectedProvider) || '';
         allDOMElements.loader.classList.remove('hidden');
         allDOMElements.generateBtn.disabled = true; allDOMElements.regenerateBtn.disabled = true;
         allDOMElements.analysisOutput.innerHTML = `AI đang phân tích bằng Gemini${selectedModel ? ` · ${selectedModel}` : ''}...`;
@@ -540,7 +589,7 @@ document.addEventListener('DOMContentLoaded', function () {
         canvas.getObjects().slice().forEach(obj => { if (obj.source === 'ai' || obj.source === 'ai_primitive') { canvas.remove(obj); } });
         canvas.renderAll();
 
-        const systemPrompt = `Bạn là một chuyên gia phân tích hình học, thống kê và lập trình viên JavaScript. Nhiệm vụ của bạn là nhận một mô tả hoặc hình ảnh và tạo ra mã JavaScript để vẽ lại hình học hoặc biểu đồ một cách SẠCH SẼ, RÕ NÉT, và CHÍNH XÁC bằng thư viện Fabric.js. PHẢN HỒI CỦA BẠN PHẢI CÓ 2 PHẦN: PHẦN 1: PHÂN TÍCH trong thẻ <analysis>...</analysis>. PHẦN 2: MÃ JAVASCRIPT trong thẻ <javascript>...</javascript>. A. QUY TẮC HÌNH HỌC: 1. Khai báo điểm trước: const diemA = {x: 150, y: 100}; 2. Dùng trực tiếp Fabric.js: new fabric.Circle(...). 3. Mọi đối tượng phải có selectable, hasControls, hasBorders, originX/Y 'center'. 4. Dùng hàm vẽ ký hiệu: addRightAngleSymbol(), addEqualityTick(), addAngleArc(). B. QUY TẮC BIỂU ĐỒ: 1. Dùng hàm chuyên dụng: drawBarChart(), drawPieChart(). 2. Định dạng data: [{ label: 'Tổ 1', value: 50 }, ...]. 3. ĐỂ IN ĐEN TRẮNG, LUÔN LUÔN đặt usePatterns: true trong options. Môi trường thực thi: KHÔNG khai báo lại biến 'canvas'. Cuối cùng phải gọi canvas.renderAll();`;
+        const systemPrompt = `Bạn là chuyên gia hình học, thống kê và lập trình Fabric.js. Trả lời NGẮN GỌN: ưu tiên sinh đủ mã vẽ, không viết dài. PHẢN HỒI BẮT BUỘC 2 PHẦN. PHẦN 1: PHÂN TÍCH trong <analysis>...</analysis> — chỉ 3-5 gạch đầu dòng, súc tích. PHẦN 2: MÃ JAVASCRIPT đầy đủ, không cắt giữa chừng, trong thẻ <javascript>...</javascript> (có thể thêm khối markdown \`\`\`javascript). Tập trung toàn lực hoàn thiện khối mã. A. QUY TẮC HÌNH HỌC: 1. Khai báo điểm trước: const diemA = {x: 150, y: 100}; 2. Dùng trực tiếp Fabric.js: new fabric.Circle(...). 3. Mọi đối tượng phải có selectable, hasControls, hasBorders, originX/Y 'center'. 4. Dùng hàm vẽ ký hiệu: addRightAngleSymbol(), addEqualityTick(), addAngleArc(). B. QUY TẮC BIỂU ĐỒ: 1. Dùng hàm chuyên dụng: drawBarChart(), drawPieChart(). 2. Định dạng data: [{ label: 'Tổ 1', value: 50 }, ...]. 3. ĐỂ IN ĐEN TRẮNG, LUÔN LUÔN đặt usePatterns: true trong options. Môi trường thực thi: KHÔNG khai báo lại biến 'canvas'. Cuối cùng phải gọi canvas.renderAll();`;
         let userInstruction = `Phân tích và vẽ hình cho yêu cầu sau: ${userPrompt}`;
         if (isRegenerating) { userInstruction += " Vui lòng vẽ lại hình này nhưng sử dụng các tọa độ và tỷ lệ khác với lần trước."; }
         try {
@@ -584,8 +633,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function extractDrawingJavascript(fullText) {
+        const source = String(fullText || '');
+        const tagged = source.match(/<javascript>([\s\S]*?)<\/javascript>/i);
+        if (tagged && tagged[1].trim()) return tagged[1].trim();
+        const fenced = source.match(/```(?:javascript|js)\s*([\s\S]*?)```/i);
+        if (fenced && fenced[1].trim()) return fenced[1].trim();
+        return null;
+    }
+
     function executeAiCode(fullText) {
-        const codeMatch = fullText.match(/<javascript>([\s\S]*?)<\/javascript>/); const codeText = codeMatch ? codeMatch[1].trim() : null;
+        const codeText = extractDrawingJavascript(fullText);
         if (codeText) {
             try {
                 isAiDrawing = true; canvas.renderOnAddRemove = false;

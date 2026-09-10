@@ -1,3 +1,38 @@
+# IMPLEMENT — Vá Vẽ hình AI (model Cài đặt chung + tràn token) theo PLAN cập nhật
+
+Ngày triển khai: 2026-09-10 (vòng 2). PLAN.md đã bổ sung gốc rễ: `vehinh_ai_model_gemini` ghim `gemini-2.5-flash` đè Cài đặt chung; `maxOutputTokens=4096` + thiếu `thinkingBudget: 0` cắt phản hồi trước khối `<javascript>`; `executeAiCode()` chỉ bắt một kiểu thẻ.
+
+## File đã sửa
+- `api/vehinh_ai.php`
+- `app.js`
+- `tests/game-quiz-importer-smoke.js`
+
+## Phần 1 — Vẽ hình AI
+
+### Backend `api/vehinh_ai.php`
+- `generationConfig.maxOutputTokens`: `4096` → `16384` để đủ chỗ cho mã vẽ, không bị `finishReason: MAX_TOKENS` cắt giữa chừng.
+- Thêm `thinkingConfig.thinkingBudget = 0`: vẽ hình trực tiếp, không tốn 15–30s thinking ngầm.
+- Timeout curl: mặc định và lúc gọi `vehinh_post_json(..., 90)`.
+- Giữ catalog hiện đại, `vehinh_resolve_model()` mặc định `gemini-3.6-flash`, fallback khi model deprecated, nhận `api_keys` từ client.
+
+### Frontend `app.js`
+- `getSystemDrawingModel()` đọc `default_gemini_module` / `khbd_gemini_model`.
+- `clearDeprecatedSavedDrawingModel()`: nếu `vehinh_ai_model_gemini` là `gemini-2.5-flash` (hoặc `gemini-2.5-flash-lite`) thì xóa ngay, không còn đè Cài đặt chung.
+- `getCurrentDrawingModel()`: bỏ model lỗi thời → theo Cài đặt chung → model server → `gemini-3.6-flash`.
+- Dropdown `#ai-model-select` thêm option đầu `✨ Theo Cài đặt chung (${systemModel})` (`FOLLOW_SYSTEM_MODEL = '__system__'`). `resolveDrawingRequestModel()` đổi sentinel thành model thật trước khi POST.
+- System prompt: phân tích chỉ 3–5 gạch đầu dòng, tập trung sinh đủ khối `<javascript>`.
+- `extractDrawingJavascript()` + `executeAiCode()`: bắt `<javascript>...</javascript>`, ` ```javascript ` và ` ```js `.
+- Vẫn gửi `api_keys` từ `global_gemini_keys`.
+
+## Phần 2 & 3
+Không đổi. Word/LaTeX game và thanh 4 bước CV 5555 (`nghiencuubaihoc.html`) giữ nguyên từ vòng trước.
+
+## Kiểm thử
+- `node tests/game-quiz-importer-smoke.js`: PASS (catalog, 16384 tokens, thinkingBudget 0, timeout 90s, dọn `gemini-2.5-flash`, dropdown Theo Cài đặt chung, parse `<javascript>` + markdown fence).
+- `node tests/run-all-tests.js`: PASS — **65/65 test suites**.
+
+---
+
 # IMPLEMENT — 4 bước chuẩn CV 5555 trong Nghiên cứu bài học AI + Vẽ hình AI + Word/LaTeX Game
 
 Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` (3 nhiệm vụ). Phần 1 và Phần 2 đã có trong mã nguồn từ vòng trước; vòng này hoàn tất Phần 3 và ghi nhận toàn bộ bàn giao.
