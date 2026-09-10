@@ -29,7 +29,7 @@ function vehinh_extract_gemini_text(array $response): string
     return trim($out);
 }
 
-function vehinh_post_json(string $url, array $headers, array $payload, int $timeout = 90): array
+function vehinh_post_json(string $url, array $headers, array $payload, int $timeout = 30): array
 {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -105,7 +105,7 @@ function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userIn
         'contents' => [['parts' => $parts]],
         'generationConfig' => [
             'temperature' => 0.2,
-            'maxOutputTokens' => 16384,
+            'maxOutputTokens' => 8192,
             'thinkingConfig' => [
                 'thinkingBudget' => 0,
             ],
@@ -114,15 +114,12 @@ function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userIn
 
     $modelCandidates = [$initialModel];
     $requestedFallback = trim((string)$requestedFallback);
-    if ($requestedFallback !== '' && (in_array($requestedFallback, vehinh_provider_models()['gemini'], true) || preg_match('/^gemini-[\w\.\-]+$/i', $requestedFallback))) {
-        if (!in_array($requestedFallback, $modelCandidates, true)) {
-            $modelCandidates[] = $requestedFallback;
-        }
+    if ($requestedFallback !== '' && !in_array($requestedFallback, $modelCandidates, true)) {
+        $modelCandidates[] = $requestedFallback;
     }
-    foreach (vehinh_provider_models()['gemini'] as $fb) {
-        if (!in_array($fb, $modelCandidates, true)) {
-            $modelCandidates[] = $fb;
-        }
+    $safeFallback = 'gemini-3.6-flash';
+    if (!in_array($safeFallback, $modelCandidates, true)) {
+        $modelCandidates[] = $safeFallback;
     }
 
     $lastError = 'Gemini không phản hồi.';
@@ -133,13 +130,13 @@ function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userIn
                 continue;
             }
             $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent?key=' . rawurlencode($key);
-            $response = vehinh_post_json($url, [], $payload, 90);
+            $response = vehinh_post_json($url, [], $payload, 30);
             if (!$response['ok']) {
                 $errMsg = (string)($response['error'] ?: ($response['json']['error']['message'] ?? ('Gemini HTTP ' . $response['status'])));
                 $lastError = $errMsg;
-                // If model is deprecated or not found for this user, try the next model candidate
-                if (stripos($errMsg, 'no longer available') !== false || $response['status'] === 404) {
-                    break; // break inner key loop, try next model candidate
+                $status = (int)$response['status'];
+                if ($status === 404 || $status === 400 || stripos($errMsg, 'not found') !== false || stripos($errMsg, 'no longer available') !== false || stripos($errMsg, 'not supported') !== false) {
+                    break;
                 }
                 continue;
             }

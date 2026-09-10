@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
     };
     const FOLLOW_SYSTEM_MODEL = '__system__';
-    const DEPRECATED_DRAWING_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    const DEPRECATED_DRAWING_MODELS = ['gemini-1.5-flash', 'gemini-1.0-pro'];
 
     function normalizeDrawingProvider(provider) {
         return 'gemini';
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function resolveDrawingRequestModel(provider) {
         const raw = allDOMElements.aiModelSelect?.value || '';
-        if (raw && raw !== FOLLOW_SYSTEM_MODEL && !isDeprecatedDrawingModel(raw)) return raw;
+        if (raw && raw !== FOLLOW_SYSTEM_MODEL) return raw;
         return getCurrentDrawingModel(provider);
     }
 
@@ -576,12 +576,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const AI_THROTTLE_STORAGE_KEY = 'giangbai_ai_last_request_at';
 
-    async function waitForAiThrottle(minMs = 2000, maxMs = 3000) {
-        const required = minMs + Math.floor(Math.random() * (maxMs - minMs + 1));
+    async function waitForAiThrottle(minMs = 1000) {
         const last = Number(localStorage.getItem(AI_THROTTLE_STORAGE_KEY) || 0);
         const elapsed = Date.now() - last;
-        if (last > 0 && elapsed < required) {
-            await new Promise(resolve => setTimeout(resolve, required - elapsed));
+        if (last > 0 && elapsed < minMs) {
+            await new Promise(resolve => setTimeout(resolve, minMs - elapsed));
         }
         localStorage.setItem(AI_THROTTLE_STORAGE_KEY, String(Date.now()));
     }
@@ -594,9 +593,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const selectedProvider = getActiveDrawingProvider();
         const selectedModel = resolveDrawingRequestModel(selectedProvider) || getSystemDrawingModel();
         const selectedFallbackModel = getSystemDrawingFallbackModel();
+        const isCustomSelection = (allDOMElements.aiModelSelect?.value && allDOMElements.aiModelSelect.value !== FOLLOW_SYSTEM_MODEL);
+        const fallbackText = isCustomSelection ? '' : (selectedFallbackModel ? ` · DP: ${selectedFallbackModel}` : '');
         allDOMElements.loader.classList.remove('hidden');
         allDOMElements.generateBtn.disabled = true; allDOMElements.regenerateBtn.disabled = true;
-        allDOMElements.analysisOutput.innerHTML = `AI đang phân tích bằng Gemini${selectedModel ? ` · ${selectedModel}` : ''}${selectedFallbackModel ? ` · DP: ${selectedFallbackModel}` : ''}...`;
+        allDOMElements.analysisOutput.innerHTML = `AI đang phân tích bằng Gemini · ${selectedModel}${fallbackText}...`;
 
         canvas.getObjects().slice().forEach(obj => { if (obj.source === 'ai' || obj.source === 'ai_primitive') { canvas.remove(obj); } });
         canvas.renderAll();

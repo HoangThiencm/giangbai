@@ -130,10 +130,14 @@ console.log('-> 4. Format schema for all 8 educational games: PASS');
 const vehinhAiPhp = fs.readFileSync(path.join(__dirname, '..', 'api', 'vehinh_ai.php'), 'utf8');
 assert.ok(vehinhAiPhp.includes('gemini-3.6-flash'), 'api/vehinh_ai.php must include gemini-3.6-flash in catalog');
 assert.ok(vehinhAiPhp.includes('no longer available') || vehinhAiPhp.includes('404'), 'api/vehinh_ai.php must support fallback retry logic');
-assert.ok(vehinhAiPhp.includes("'maxOutputTokens' => 16384"), 'api/vehinh_ai.php must raise maxOutputTokens to 16384');
-assert.ok(!vehinhAiPhp.includes("'maxOutputTokens' => 4096"), 'api/vehinh_ai.php must not keep the old 4096 token cap');
+assert.ok(vehinhAiPhp.includes("'maxOutputTokens' => 8192"), 'api/vehinh_ai.php must use 8192 maxOutputTokens for faster drawing');
+assert.ok(!vehinhAiPhp.includes("'maxOutputTokens' => 16384"), 'api/vehinh_ai.php must not keep the slow 16384 token cap');
 assert.ok(vehinhAiPhp.includes("'thinkingBudget' => 0"), 'api/vehinh_ai.php must disable thinking budget');
-assert.ok(vehinhAiPhp.includes('int $timeout = 90') || /vehinh_post_json\([^;]*90/.test(vehinhAiPhp), 'api/vehinh_ai.php must use 90s curl timeout');
+assert.ok(vehinhAiPhp.includes('int $timeout = 30'), 'api/vehinh_ai.php must use 30s curl timeout');
+assert.ok(!/int \$timeout = 90/.test(vehinhAiPhp) && !/vehinh_post_json\([^;]*90/.test(vehinhAiPhp), 'api/vehinh_ai.php must not keep 90s timeout');
+assert.ok(vehinhAiPhp.includes("$safeFallback = 'gemini-3.6-flash'"), 'candidate list must cap with one safe fallback');
+assert.ok(!vehinhAiPhp.includes('foreach (vehinh_provider_models()[\'gemini\'] as $fb)'), 'must not iterate the full 7-model catalog as candidates');
+assert.ok(vehinhAiPhp.includes('$status === 400') && vehinhAiPhp.includes('not supported'), 'fast-fail on 400/unsupported model errors');
 
 const runtimeConfigPhp = fs.readFileSync(path.join(__dirname, '..', 'api', 'ai_runtime_config.php'), 'utf8');
 assert.ok(runtimeConfigPhp.includes('gemini-3.6-flash'), 'api/ai_runtime_config.php must default to gemini-3.6-flash');
@@ -152,7 +156,8 @@ assert.ok(appJs.includes("localStorage.getItem('default_gemini_module')"), 'app.
 assert.ok(appJs.includes("localStorage.getItem('khbd_gemini_fallback_model')"), 'app.js must read khbd_gemini_fallback_model');
 assert.ok(appJs.includes("localStorage.getItem('default_gemini_fallback')"), 'app.js must read default_gemini_fallback');
 assert.ok(appJs.includes('clearDeprecatedSavedDrawingModel'), 'app.js must clear deprecated vehinh_ai_model_gemini');
-assert.ok(appJs.includes('gemini-2.5-flash') && appJs.includes('DEPRECATED_DRAWING_MODELS'), 'app.js must treat gemini-2.5-flash as deprecated saved drawing model');
+assert.ok(/DEPRECATED_DRAWING_MODELS\s*=\s*\[[^\]]*gemini-1\.5-flash/.test(appJs), 'deprecated list must only cover retired 1.x models');
+assert.ok(!/DEPRECATED_DRAWING_MODELS\s*=\s*\[[^\]]*gemini-2\.5-flash/.test(appJs), 'gemini-2.5-flash must not be treated as deprecated');
 assert.ok(appJs.includes('Theo Cài đặt chung'), 'app.js dropdown must include Theo Cài đặt chung');
 assert.ok(appJs.includes('DP:'), 'dropdown must show fallback model');
 assert.ok(appJs.includes('FOLLOW_SYSTEM_MODEL'), 'app.js must have follow-system sentinel');
@@ -166,6 +171,10 @@ assert.ok(appJs.includes('NGHIÊM CẤM markdown backtick'), 'system prompt must
 assert.ok(appJs.includes('<geogebra>'), 'system prompt must request GeoGebra block');
 assert.ok(appJs.includes('fallback_model: selectedFallbackModel'), 'generate request must send fallback_model');
 assert.ok(appJs.includes('resolveDrawingRequestModel'), 'generate request must resolve __system__ to a real model');
+assert.match(extractNamed(appJs, 'resolveDrawingRequestModel'), /if \(raw && raw !== FOLLOW_SYSTEM_MODEL\) return raw;/, 'explicit dropdown selection must win');
+assert.match(extractNamed(appJs, 'waitForAiThrottle'), /minMs = 1000/, 'throttle must wait at most the remaining 1s gap');
+assert.match(appJs, /AI đang phân tích bằng Gemini · \$\{selectedModel\}/, 'status must show the selected model');
+assert.match(appJs, /isCustomSelection \? ''/, 'custom model status must omit fallback DP line');
 assert.ok(appJs.includes('global_gemini_keys'), 'drawing request must send global_gemini_keys');
 assert.ok(appJs.includes('autoCenterAndFitDrawing'), 'app.js must auto-center AI drawings');
 assert.ok(appJs.includes("'addPoint', 'addText', 'drawLine'"), 'executeAiCode must inject addPoint/addText/drawLine');
@@ -236,6 +245,17 @@ store.default_gemini_module = 'gemini-3.6-flash';
 assert.strictEqual(sandbox.getSystemDrawingModel(), 'gemini-3.7-flash', 'primary must prefer khbd_gemini_model');
 store.khbd_gemini_fallback_model = 'gemini-2.5-flash';
 assert.strictEqual(sandbox.getSystemDrawingFallbackModel(), 'gemini-2.5-flash', 'fallback must prefer khbd_gemini_fallback_model');
+
+const resolveSandbox = {
+    FOLLOW_SYSTEM_MODEL: '__system__',
+    allDOMElements: { aiModelSelect: { value: 'gemini-2.5-flash' } },
+    getCurrentDrawingModel() { return 'gemini-3.7-flash'; }
+};
+vm.createContext(resolveSandbox);
+vm.runInContext(extractNamed(appJs, 'resolveDrawingRequestModel'), resolveSandbox);
+assert.strictEqual(resolveSandbox.resolveDrawingRequestModel('gemini'), 'gemini-2.5-flash', 'direct 2.5-flash selection must not be overwritten');
+resolveSandbox.allDOMElements.aiModelSelect.value = '__system__';
+assert.strictEqual(resolveSandbox.resolveDrawingRequestModel('gemini'), 'gemini-3.7-flash', 'follow-system sentinel still uses current model');
 
 const vehinhHtml = fs.readFileSync(path.join(__dirname, '..', 'vehinh.html'), 'utf8');
 const promptIdx = vehinhHtml.indexOf('id="prompt-input"');

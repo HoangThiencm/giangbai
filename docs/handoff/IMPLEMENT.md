@@ -1,3 +1,30 @@
+# IMPLEMENT — Tôn trọng model chọn tay + tăng tốc gọi AI vẽ hình
+
+Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` (không ghi đè `gemini-2.5-flash`, timeout 30s, candidate 2–3 model, fast-fail, throttle 1s).
+
+## File đã sửa
+- `app.js`
+- `api/vehinh_ai.php`
+- `tests/game-quiz-importer-smoke.js`
+
+## Bước 1 — Frontend
+- `resolveDrawingRequestModel`: nếu `#ai-model-select` khác `FOLLOW_SYSTEM_MODEL` thì trả đúng model đó, không lọc deprecated.
+- `DEPRECATED_DRAWING_MODELS` chỉ còn `gemini-1.5-flash`, `gemini-1.0-pro`. `gemini-2.5-flash` được chọn trực tiếp / dùng làm fallback.
+- Trạng thái: chọn tay hiện `AI đang phân tích bằng Gemini · gemini-2.5-flash...` (không gắn `DP:`); chế độ Cài đặt chung mới hiện fallback.
+- `waitForAiThrottle(1000)`: chỉ chờ phần còn thiếu nếu hai lần bấm cách nhau dưới 1 giây.
+
+## Bước 2 — Backend
+- `vehinh_post_json` timeout mặc định **30s**.
+- `$modelCandidates`: model chọn → fallback người dùng → tối đa 1 `gemini-3.6-flash`. Không duyệt 7 model catalog.
+- Fast-fail: HTTP 400/404 hoặc `"no longer available"` / `"not found"` / `"not supported"` → `break` sang model kế, không vét hết key.
+- `maxOutputTokens`: **8192**.
+
+## Kiểm thử
+- `node tests/game-quiz-importer-smoke.js`: PASS — chọn `gemini-2.5-flash` không bị đè, timeout 30s, candidate rút gọn, fast-fail.
+- `node tests/run-all-tests.js`: PASS — **66/66 test suites**.
+
+---
+
 # IMPLEMENT — Vẽ hình AI: model động, tọa độ hóa, GeoGebra, nút Vẽ Hình
 
 Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` (dynamic model/fallback, khắc phục `"" is not a function`, phương pháp tọa độ, xuất GeoGebra, chuyển nút vẽ).

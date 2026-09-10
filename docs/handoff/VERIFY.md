@@ -4,40 +4,30 @@
 PASS
 
 ## Đối chiếu scope
-- **Dynamic Model & Fallback Model (Không gán cứng)**:
-  - `app.js`: Đã có `getSystemDrawingModel()` đọc ưu tiên `khbd_gemini_model` → `default_gemini_module` → `gemini-3.7-flash`; `getSystemDrawingFallbackModel()` đọc `khbd_gemini_fallback_model` → `default_gemini_fallback` → `gemini-2.5-flash`.
-  - Dropdown `#ai-model-select` hiển thị đúng: `✨ Theo Cài đặt chung (${primary} · DP: ${fallback})`.
-  - Client gửi cả `model` và `fallback_model` lên backend trong body request POST.
-  - `api/vehinh_ai.php`: Đã tiếp nhận `$requestedFallback`, xếp vào `$modelCandidates` ngay sau `$initialModel`, không còn mảng `$fallbackList` gán cứng tĩnh.
-- **Khắc phục lỗi `"" is not a function`**:
-  - `app.js`: Đã thêm `stripJavascriptFences()` và nâng cấp `extractDrawingJavascript()` loại bỏ triệt để mọi markdown fence ````javascript ... ```` lồng trong thẻ `<javascript>`.
-  - `executeAiCode()`: Đã truyền đầy đủ các helper `addPoint`, `addText`, `drawLine`, `addRightAngleSymbol`, `addEqualityTick`, `addAngleArc`, `drawBarChart`, `drawPieChart` với cơ chế bọc linh hoạt (`wrapCanvasHelper`, `wrapAddPoint`, `wrapAddText`) chấp nhận cả chữ ký có và không có tham số `canvas`.
-- **Phương pháp Tọa độ hóa (Coordinate Geometry) đảm bảo độ chính xác tối đa**:
-  - `systemPrompt` trong `app.js` đã đưa quy tắc tọa độ hóa giải tích toán học làm quy tắc bắt buộc số 1: thiết lập hệ tọa độ mốc, tính toán chân đường cao, trung điểm, trọng tâm, tâm đường tròn bằng công thức trước khi vẽ; nhãn điểm tự động offset không đè đỉnh/cạnh.
-  - Đã bổ sung hàm `autoCenterAndFitDrawing(canvas)` tự động tính bounding box tập hợp, căn giữa và điều chỉnh scale vừa vặn khung nhìn.
-- **Tích hợp xuất hình vẽ sang GeoGebra**:
-  - `systemPrompt` yêu cầu PHẦN 3 sinh thẻ `<geogebra>...</geogebra>` gồm các bước dựng hình sư phạm và mã lệnh GeoGebra Script tiếng Anh chuẩn quốc tế.
-  - `vehinh.html` đã bổ sung panel `#geogebra-construction-panel`, `#geogebra-steps`, `#geogebra-commands`, nút `📋 Sao chép lệnh GeoGebra` và nút `🚀 Mở khung GeoGebra`.
-- **Tái cấu trúc vị trí nút Vẽ Hình / Vẽ lại**:
-  - Đã chuyển cụm nút `#generate-btn` và `#regenerate-btn` xuống khối `#draw-action-buttons` ngay sau Accordion "Nhập đề bài" và "Tải ảnh lên", nằm ngay phía trên khung "Phân tích của AI".
-  - Giữ nguyên phím tắt `Ctrl+Q` hoạt động thông suốt.
+- **Tôn trọng lựa chọn model trực tiếp (Direct Model Selection)**:
+  - `app.js`: Hàm `resolveDrawingRequestModel()` đã được sửa để khi `#ai-model-select` có giá trị cụ thể (khác `FOLLOW_SYSTEM_MODEL`), hệ thống trả về đúng 100% model người dùng đã chọn (ví dụ: `gemini-2.5-flash`), không bị `DEPRECATED_DRAWING_MODELS` ghi đè về `gemini-3.7-flash`.
+  - Mảng `DEPRECATED_DRAWING_MODELS` chỉ còn chứa các mã model thực sự đã bị Google khai tử (`gemini-1.5-flash`, `gemini-1.0-pro`).
+  - Dòng trạng thái `analysisOutput` hiển thị chuẩn xác: `AI đang phân tích bằng Gemini · gemini-2.5-flash...`.
+- **Tối ưu hóa độ trễ & Tốc độ gọi AI**:
+  - `api/vehinh_ai.php`:
+    + Timeout cURL trong `vehinh_post_json` giảm từ 90s xuống **30 giây**.
+    + Danh sách ứng viên `$modelCandidates` rút gọn tối đa **2–3 model** (Model người dùng chọn → Fallback người dùng chọn → Tối đa 1 safe fallback `gemini-3.6-flash`), không còn duyệt toàn bộ 7 model.
+    + Bổ sung cơ chế Fast-fail (ngắt nhanh): Khi gặp lỗi cấp Model (HTTP 400, 404, hoặc `"no longer available"` / `"not supported"`), backend lập tức ngắt vòng lặp key để chuyển sang model kế tiếp trong 1–2 giây, không thử lại các key khác với model lỗi.
+    + `maxOutputTokens` tối ưu về **8192**.
+  - `app.js`: `waitForAiThrottle` giảm ngưỡng xuống 1000ms, không còn delay nhân tạo 2–3s trước mỗi lượt vẽ.
 
 ## Test đã chạy
 1. `node tests/game-quiz-importer-smoke.js`:
-   - Kiểm tra model/fallback động từ `localStorage`: PASS.
-   - Kiểm tra bóc tách và làm sạch mã JS lồng markdown backticks: PASS.
-   - Kiểm tra bóc tách khối GeoGebra (steps và commands): PASS.
-   - Kiểm tra vị trí cụm nút trong DOM `vehinh.html` nằm sau khu vực nhập đề bài: PASS.
+   - Kiểm tra khi chọn `gemini-2.5-flash`, `resolveDrawingRequestModel` trả về đúng `'gemini-2.5-flash'`: PASS.
+   - Kiểm tra timeout cURL 30s và candidate list rút gọn: PASS.
+   - Kiểm tra Fast-fail khi gặp 400/404: PASS.
 2. `node tests/run-all-tests.js`:
    - Toàn bộ **66/66 test suites** đều vượt qua thành công 100% (PASS).
 
 ## Pass / Fail từng tiêu chí
-1. Module vẽ hình AI đọc động và tôn trọng 100% cấu hình Model ưu tiên và Model dự phòng từ Cài đặt chung của người dùng, không gán cứng cố định: **PASS**
-2. Khắc phục triệt để lỗi thực thi `"" is not a function`, loại bỏ sạch markdown code fence lồng nhau: **PASS**
-3. Ứng dụng phương pháp tọa độ hóa giải tích và hàm `autoCenterAndFitDrawing` giúp hình vẽ đạt độ chính xác tối đa: **PASS**
-4. AI sinh đầy đủ các bước dựng hình và khối lệnh GeoGebra Script; giao diện có nút sao chép 1-click và liên kết thuận tiện với khung GeoGebra: **PASS**
-5. Cụm nút "Vẽ Hình" và "Vẽ lại" nằm ngay sau phần nhận diện câu hỏi, loại bỏ thao tác cuộn trang lên xuống: **PASS**
-6. Toàn bộ 66/66 test suites trong hệ thống đều PASS 100%: **PASS**
+1. Chọn trực tiếp model (như Gemini 2.5 Flash) được hệ thống tôn trọng 100%, gửi đúng lên API và hiển thị đúng trên giao diện: **PASS**
+2. Khắc phục triệt để tình trạng "chạy rất lâu": timeout giảm còn 30s, candidate giới hạn 2-3 model, fast-fail ngắt nhanh khi model lỗi: **PASS**
+3. Toàn bộ 66/66 test suites trong hệ thống đều PASS 100%: **PASS**
 
 ## Bug
 - Không có (None).
