@@ -2345,8 +2345,8 @@
                 </div>
                 <div style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
                     <label class="checkbox-group" style="width:100%; font-size: 0.82rem; background:transparent; border:none; padding:0;">
-                        <input type="checkbox" id="qp-inherit-assignments" checked>
-                        <span><b>Kế thừa phân công từ đợt hiện tại</b> (khuyên dùng để chỉ cần chỉnh sửa các lớp thay đổi)</span>
+                        <input type="checkbox" id="qp-inherit-assignments">
+                        <span><b>Kế thừa phân công &amp; TKB từ đợt hiện tại</b> (mặc định để trống để làm rỗng và nhận diện lại TKB mới cho chính xác)</span>
                     </label>
                 </div>
             </div>
@@ -2920,6 +2920,11 @@
         // ================= LỊCH BÁO GIẢNG: TKB + PPCT + NGOẠI LỆ =================
         function baoGiangDate(value) { const d = new Date(`${value}T00:00:00`); return Number.isNaN(d.getTime()) ? null : d; }
         function baoGiangIso(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
+        function baoGiangWeekdayLabel(dateValue) {
+            const date = dateValue instanceof Date ? dateValue : baoGiangDate(dateValue);
+            if (!date) return '';
+            return ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'][date.getDay()] || '';
+        }
         function baoGiangDayKey(date) { const day = date.getDay(); return day === 0 ? '' : String(day + 1); }
         function baoGiangSubjectKey(subject) {
             const token = foldText(subject).replace(/Đ/g, 'D');
@@ -2949,7 +2954,19 @@
         function renderBaoGiangView() { const cfg = state.bao_giang, today = new Date(), fallbackStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; if (!cfg.start_date) cfg.start_date = fallbackStart; const startInput = document.getElementById('bg-start-date'), viewInput = document.getElementById('bg-view-date'), curriculum = document.getElementById('bg-curriculum'); if (!startInput) return; if (!viewInput.value) viewInput.value = cfg.start_date; startInput.value = cfg.start_date; curriculum.value = cfg.curriculum_text || ''; const days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14)), viewStart = baoGiangDate(viewInput.value), viewEnd = new Date(viewStart); viewEnd.setDate(viewEnd.getDate() + days - 1); const plan = parseBaoGiangCurriculum(cfg.curriculum_text), allRows = baoGiangRows(baoGiangIso(viewEnd)), counters = new Map(); const decorated = allRows.map(row => { const key = baoGiangKey(row.class_name, row.subject), index = counters.get(key) || 0; counters.set(key, index + 1); return { ...row, lesson: baoGiangPlanFor(plan, row.class_name, row.subject)[index] || null }; }), visible = decorated.filter(row => row.date >= viewInput.value && row.date <= baoGiangIso(viewEnd)); const schedule = document.getElementById('bg-schedule'); const exceptions = document.getElementById('bg-exceptions'); exceptions.innerHTML = cfg.exceptions.length ? cfg.exceptions.map(ex => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:.85rem;"><b>${escapeHtml(ex.date)}</b><span>${ex.type === 'off' ? 'Nghỉ học' : 'Dạy bù'}</span><span>${escapeHtml(ex.scope === 'all' ? 'Toàn trường' : ex.target)}</span><button class="btn-small" onclick="removeBaoGiangException('${ex.id}')">Xóa</button></div>`).join('') : '<p style="color:#64748b;font-size:.85rem;">Chưa có ngoại lệ.</p>'; const recipients = document.getElementById('bg-recipient-list'); recipients.innerHTML = `<div style="font-weight:800;margin-bottom:6px;">Người nhận email</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${state.teachers.map(t => `<label style="padding:7px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;"><input type="checkbox" ${cfg.recipient_ids.includes(t.id) ? 'checked' : ''} onchange="toggleBaoGiangRecipient('${t.id}',this.checked)"> ${escapeHtml(t.name)} <input aria-label="Email ${escapeHtml(t.name)}" value="${escapeHtml(t.email || '')}" placeholder="email" style="width:150px;border:0;border-bottom:1px solid #cbd5e1;margin-left:4px;" onchange="setBaoGiangEmail('${t.id}',this.value)"></label>`).join('')}</div>`; schedule.innerHTML = visible.length ? `<div style="overflow:auto;"><table class="data-table"><thead><tr><th>Ngày</th><th>Lớp</th><th>Môn</th><th>Tiết</th><th>GV</th><th>Tiết PPCT</th><th>Bài dạy</th><th>Phân đoạn</th></tr></thead><tbody>${visible.map(row => `<tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.class_name)}</td><td>${escapeHtml(row.subject)}</td><td>${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} ${row.period}`)}</td><td>${escapeHtml(row.teacher_name)}</td><td>${row.lesson?.ppct || '<span style="color:#b45309">Chưa có</span>'}</td><td>${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td><td>${escapeHtml(row.lesson?.segment || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p style="padding:16px;color:#64748b;">Chưa có tiết TKB trong khoảng ngày này. Hãy nhập TKB, ngày áp dụng và PPCT.</p>'; }
         function toggleBaoGiangRecipient(id, checked) { const list = state.bao_giang.recipient_ids; state.bao_giang.recipient_ids = checked ? [...new Set([...list, id])] : list.filter(x => x !== id); saveToLocal(); }
         function setBaoGiangEmail(id, email) { const teacher = state.teachers.find(t => t.id === id); if (teacher) teacher.email = String(email || '').trim(); saveToLocal(); }
-        function composeBaoGiangEmail() { const ids = new Set(state.bao_giang.recipient_ids), recipients = state.teachers.filter(t => ids.has(t.id)).map(t => t.email || (String(t.username || '').includes('@') ? t.username : '')).filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)); if (!recipients.length) return showToast('Hãy chọn giáo viên và nhập email hợp lệ cho ít nhất một người.', 'error'); const viewDate = document.getElementById('bg-view-date')?.value || state.bao_giang.start_date, days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14)), viewEnd = baoGiangDate(viewDate); viewEnd.setDate(viewEnd.getDate() + days - 1); const scheduleData = decorateBaoGiangRows(baoGiangIso(viewEnd)); if (scheduleData.warnings.length) return showToast(`${scheduleData.warnings[0]} Cần kiểm tra PPCT trước khi gửi.`, 'error'); const lessons = scheduleData.rows.filter(row => ids.has(row.teacher_id) && row.date >= viewDate && row.date <= baoGiangIso(viewEnd)); const list = lessons.map(row => `${row.date} | ${row.teacher_name} | ${row.class_name} | ${row.subject} | ${row.session === 'makeup' ? 'Dạy bù' : `Tiết ${row.period}`} | PPCT ${row.lesson?.ppct || '—'} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'}${row.lesson?.segment ? ` (${row.lesson.segment})` : ''}`).join('\n'); const subject = `Lịch báo giảng ${state.info?.title || ''} từ ${viewDate}`.trim(), body = `Kính gửi thầy/cô,\n\nLịch báo giảng trong ${days} ngày tới:\n${list || 'Chưa có tiết phù hợp trong khoảng thời gian này.'}\n\nVui lòng phản hồi tổ chuyên môn nếu có điều chỉnh.\n\nTrân trọng.`; window.location.href = `mailto:${recipients.map(encodeURIComponent).join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; }
+        function composeBaoGiangEmail() {
+            const ids = new Set(state.bao_giang.recipient_ids);
+            const recipients = state.teachers.filter(t => ids.has(t.id)).map(t => t.email || (String(t.username || '').includes('@') ? t.username : '')).filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+            if (!recipients.length) return showToast('Hãy chọn giáo viên và nhập email hợp lệ cho ít nhất một người.', 'error');
+            const viewDate = document.getElementById('bg-view-date')?.value || state.bao_giang.start_date, days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14)), viewEnd = baoGiangDate(viewDate);
+            viewEnd.setDate(viewEnd.getDate() + days - 1);
+            const scheduleData = decorateBaoGiangRows(baoGiangIso(viewEnd));
+            if (scheduleData.warnings.length) return showToast(`${scheduleData.warnings[0]} Cần kiểm tra PPCT trước khi gửi.`, 'error');
+            const lessons = scheduleData.rows.filter(row => ids.has(row.teacher_id) && row.date >= viewDate && row.date <= baoGiangIso(viewEnd));
+            const list = lessons.map(row => `${baoGiangWeekdayLabel(row.date)}, ${formatVnDate(row.date)} | ${row.teacher_name} | ${row.class_name} | ${row.subject} | ${row.session === 'makeup' ? 'Dạy bù' : `Tiết ${row.period}`} | PPCT ${row.lesson?.ppct || '—'} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'}${row.lesson?.segment ? ` (${row.lesson.segment})` : ''}`).join('\n');
+            const subject = `Lịch báo giảng ${state.info?.title || ''} từ ${viewDate}`.trim(), body = `Kính gửi thầy/cô,\n\nLịch báo giảng trong ${days} ngày tới:\n${list || 'Chưa có tiết phù hợp trong khoảng thời gian này.'}\n\nVui lòng phản hồi tổ chuyên môn nếu có điều chỉnh.\n\nTrân trọng.`;
+            window.location.href = `mailto:${recipients.map(encodeURIComponent).join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        }
 
         function buildBaoGiangSelfEmail(viewDateOverride = '', daysOverride = 0) {
             const owner = systemData?.current_user || {};
@@ -2968,21 +2985,22 @@
             if (warnings.length) throw new Error(`${warnings[0]} Cần kiểm tra PPCT trước khi gửi.`);
             const sessionOrder = { morning: 0, afternoon: 1, makeup: 2 };
             const scheduleRows = rows.sort((a, b) => a.date.localeCompare(b.date) || (sessionOrder[a.session] ?? 9) - (sessionOrder[b.session] ?? 9) || Number(a.period) - Number(b.period) || String(a.class_name).localeCompare(String(b.class_name)) || String(a.subject).localeCompare(String(b.subject)));
-            const list = scheduleRows.map(row => `${row.date} | ${row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period}`} | Lớp ${row.class_name} | ${row.subject} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'} | Tiết PPCT ${row.lesson?.ppct || '—'}${row.lesson?.segment ? ` (${row.lesson.segment})` : ''}`).join('\n');
+            const list = scheduleRows.map(row => `${baoGiangWeekdayLabel(row.date)}, ${formatVnDate(row.date)} | ${row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period}`} | Lớp ${row.class_name} | ${row.subject} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'} | Tiết PPCT ${row.lesson?.ppct || '—'}${row.lesson?.segment ? ` (${row.lesson.segment})` : ''}`).join('\n');
             const sessionMeta = {
                 morning: { label: 'Buổi sáng', background: '#fff7ed', color: '#9a3412' },
                 afternoon: { label: 'Buổi chiều', background: '#eff6ff', color: '#1d4ed8' },
                 makeup: { label: 'Dạy bù', background: '#f0fdf4', color: '#047857' }
             };
             const rowsByDate = scheduleRows.reduce((groups, row) => {
-                (groups.get(row.date) || (groups.set(row.date, []), groups.get(row.date))).push(row);
+                const dateLabel = `${baoGiangWeekdayLabel(row.date)}, ngày ${formatVnDate(row.date)}`;
+                (groups.get(dateLabel) || (groups.set(dateLabel, []), groups.get(dateLabel))).push(row);
                 return groups;
             }, new Map());
             const html = `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:980px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,.12);"><div style="padding:24px 28px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;">Lịch báo giảng cá nhân</div><div style="font-size:25px;font-weight:700;margin-top:6px;">Tuần ${escapeHtml(viewDate)} – ${escapeHtml(baoGiangIso(viewEnd))}</div><div style="font-size:14px;margin-top:8px;opacity:.9;">${scheduleRows.length} tiết dạy đã được ghép theo TKB và PPCT</div></div><div style="padding:22px 28px 8px;"><p style="margin:0 0 16px;color:#475569;font-size:14px;">Lịch được gom theo ngày; buổi sáng và buổi chiều được ngăn cách rõ ràng.</p>${[...rowsByDate.entries()].map(([date, dayRows]) => { const sessions = ['morning', 'afternoon', 'makeup'].map(session => { const items = dayRows.filter(row => row.session === session); if (!items.length) return ''; const meta = sessionMeta[session]; return `<tr><td colspan="5" style="padding:9px 10px;background:${meta.background};color:${meta.color};font-weight:700;border-top:2px solid #cbd5e1;">${meta.label}</td></tr>${items.map((row, index) => `<tr style="background:${index % 2 ? '#f8fafc' : '#ffffff'};"><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#334155;white-space:nowrap;">${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `Tiết ${row.period}`)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;color:#1e3a8a;">${escapeHtml(row.class_name)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;"><span style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:3px 7px;border-radius:999px;font-weight:700;font-size:12px;">${escapeHtml(row.subject)}</span></td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#0f172a;line-height:1.4;">${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;color:#047857;font-weight:700;white-space:nowrap;">${escapeHtml(`${row.lesson?.ppct || '—'}${row.lesson?.segment ? ` · ${row.lesson.segment}` : ''}`)}</td></tr>`).join('')}`; }).join(''); return `<div style="margin:0 0 18px;border:1px solid #dbeafe;border-radius:10px;overflow:hidden;"><div style="padding:11px 12px;background:#dbeafe;color:#1e3a8a;font-weight:700;font-size:15px;">Ngày ${escapeHtml(date)}</div><div style="overflow-x:auto;"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;min-width:640px;font-size:13px;"><thead><tr style="background:#f8fafc;color:#475569;"><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Tiết</th><th style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Lớp</th><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Môn</th><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Bài dạy</th><th style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">PPCT</th></tr></thead><tbody>${sessions}</tbody></table></div></div>`; }).join('')}</div><div style="padding:16px 28px 22px;color:#64748b;font-size:12px;border-top:1px solid #e2e8f0;">Lịch được tạo tự động từ thời khóa biểu, PPCT và các ngày nghỉ/dạy bù đã khai báo.</div></div></div>`;
             return {
                 subject: `Lịch báo giảng cá nhân tuần ${viewDate} – ${baoGiangIso(viewEnd)}`,
                 body: `LỊCH BÁO GIẢNG CÁ NHÂN\nTừ ${viewDate} đến ${baoGiangIso(viewEnd)}\n\nThứ tự: ngày | buổi/tiết | lớp | môn | bài dạy | tiết PPCT\n\n${list}\n\nTrân trọng.`,
-                html
+                html: html.replace('>Ngày ', '>')
             };
         }
 
@@ -3088,10 +3106,19 @@
         // PPCT mới được tra theo tuần; PPCT 4 cột cũ giữ cách chạy cũ để không thay đổi dữ liệu đã có.
         function parseBaoGiangCurriculum(text) {
             const plans = new Map();
+            const blocksByPlan = new Map();
             parseBaoGiangCurriculumEntries(text).filter(entry => entry.valid).forEach(entry => {
                 const key = baoGiangKey(entry.class_name, entry.subject);
                 if (!plans.has(key)) plans.set(key, { all: [], byWeek: new Map(), usesWeek: false });
                 const plan = plans.get(key);
+                const strandKey = foldText(entry.strand || '');
+                const lessonKey = foldText(normalizeBaoGiangLessonTitle(entry.lesson));
+                const previousBlock = blocksByPlan.get(key);
+                const block = previousBlock && previousBlock.strandKey === strandKey && previousBlock.lessonKey === lessonKey
+                    ? previousBlock
+                    : { strandKey, lessonKey, totalPeriods: 0, allocatedPeriods: 0 };
+                block.totalPeriods += entry.periods;
+                blocksByPlan.set(key, block);
                 const periodNumbers = baoGiangExpandPeriodNumbers(entry.period_no, entry.periods);
                 for (let index = 0; index < entry.periods; index++) {
                     const lesson = {
@@ -3099,7 +3126,8 @@
                         lesson: entry.lesson,
                         strand: entry.strand,
                         week: entry.week,
-                        segment: `${index + 1}/${entry.periods}`,
+                        segment: `${block.allocatedPeriods + index + 1}/${block.totalPeriods}`,
+                        _segmentBlock: block,
                         sourceLine: entry.lineIndex + 1
                     };
                     plan.all.push(lesson);
@@ -3109,6 +3137,14 @@
                         plan.byWeek.get(entry.week).push(lesson);
                     }
                 }
+                block.allocatedPeriods += entry.periods;
+            });
+            plans.forEach(plan => {
+                plan.all.forEach(lesson => {
+                    const block = lesson._segmentBlock;
+                    if (block) lesson.segment = lesson.segment.replace(/\/\d+$/, `/${block.totalPeriods}`);
+                    delete lesson._segmentBlock;
+                });
             });
             return plans;
         }
@@ -3136,6 +3172,8 @@
             return String(value || '')
                 .replace(/^\s*tiết\s*\d+(?:\s*[-–]\s*\d+)?\s*[:.)-]?\s*/i, '')
                 .replace(/\s*[(\[]?\s*tiết\s*\d+(?:\s*[-–,]\s*\d+)?\s*[)\]]?\s*$/i, '')
+                .replace(/\s*\((?:tiếp theo|t\.t|tiếp)\)\s*$/i, '')
+                .replace(/\s*-\s*tiếp theo\s*$/i, '')
                 .replace(/\s+/g, ' ')
                 .trim();
         }
@@ -3553,7 +3591,9 @@
             viewEnd.setDate(viewEnd.getDate() + days - 1);
             const scheduleData = decorateBaoGiangRows(baoGiangIso(viewEnd));
             const decorated = scheduleData.rows;
-            const visible = decorated.filter(row => row.date >= viewInput.value && row.date <= baoGiangIso(viewEnd));
+            const visible = decorated
+                .filter(row => row.date >= viewInput.value && row.date <= baoGiangIso(viewEnd))
+                .map(row => ({ ...row, date: `${baoGiangWeekdayLabel(row.date)} · ${formatVnDate(row.date)}` }));
             const exceptions = document.getElementById('bg-exceptions');
             if (exceptions) exceptions.innerHTML = cfg.exceptions.length ? cfg.exceptions.map(ex => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:.85rem;"><b>${escapeHtml(ex.date)}</b><span>${ex.type === 'off' ? 'Nghỉ học' : 'Dạy bù'}</span><span>${escapeHtml(ex.scope === 'all' ? 'Toàn trường' : ex.target)}</span><button class="btn-small" onclick="removeBaoGiangException('${ex.id}')">Xóa</button></div>`).join('') : '<p style="color:#64748b;font-size:.85rem;">Chưa có ngoại lệ.</p>';
             const recipients = document.getElementById('bg-recipient-list');
@@ -3618,9 +3658,12 @@
                 state.unassigned = JSON.parse(JSON.stringify(snap.unassigned || state.unassigned));
             } else {
                 if (!state.phase_assignments) state.phase_assignments = {};
+                const freshTeachers = state.teachers.map(t => ({ ...t, assignments: {}, timetable: emptyTimetable(), school_duties: Array.isArray(t.school_duties) ? [...t.school_duties] : [] }));
+                const freshUnassigned = {};
+                state.subjects.forEach(sub => { freshUnassigned[sub.key] = getSubjectDutyType(sub) === 'school_duty' ? [] : [...state.classes]; });
                 state.phase_assignments[phaseId] = {
-                    teachers: JSON.parse(JSON.stringify(state.teachers)),
-                    unassigned: JSON.parse(JSON.stringify(state.unassigned))
+                    teachers: freshTeachers,
+                    unassigned: freshUnassigned
                 };
             }
 
@@ -3692,7 +3735,7 @@
             document.getElementById('qp-date-start').value = new Date().toISOString().slice(0, 10);
             document.getElementById('qp-date-end').value = '';
             document.getElementById('qp-note').value = 'Điều chỉnh phân công khi có thay đổi GV/Lớp';
-            document.getElementById('qp-inherit-assignments').checked = true;
+            document.getElementById('qp-inherit-assignments').checked = false;
 
             document.getElementById('quick-phase-modal').classList.add('active');
         }
@@ -3755,10 +3798,10 @@
                     unassigned: JSON.parse(JSON.stringify(state.unassigned))
                 };
             } else {
-                const freshTeachers = state.teachers.map(t => ({ ...t, assignments: {} }));
+                const freshTeachers = state.teachers.map(t => ({ ...t, assignments: {}, timetable: emptyTimetable(), school_duties: Array.isArray(t.school_duties) ? [...t.school_duties] : [] }));
                 const freshUnassigned = {};
                 state.subjects.forEach(sub => {
-                    freshUnassigned[sub.key] = [...state.classes];
+                    freshUnassigned[sub.key] = getSubjectDutyType(sub) === 'school_duty' ? [] : [...state.classes];
                 });
                 state.phase_assignments[newPhaseId] = {
                     teachers: freshTeachers,
@@ -3769,6 +3812,10 @@
             state.info.current_phase_id = newPhaseId;
             state.teachers = JSON.parse(JSON.stringify(state.phase_assignments[newPhaseId].teachers));
             state.unassigned = JSON.parse(JSON.stringify(state.phase_assignments[newPhaseId].unassigned));
+            if (!inherit) {
+                editingTimetable = emptyTimetable();
+                clearTimetablePreview();
+            }
 
             saveToLocal();
             closeQuickNewPhaseModal();
