@@ -20,8 +20,9 @@ assert.ok(entries.every(entry => entry.label && entry.id && entry.code), "Mỗi 
 const digital = KHBD_STANDARDS.digital.entries;
 const nls67 = digital.filter(entry => entry.grades.includes(6));
 const nls89 = digital.filter(entry => entry.grades.includes(8));
-assert.strictEqual(nls67.length, 24, "Lớp 6–7 phải hiện đủ 24 năng lực thành phần NLS");
-assert.strictEqual(nls89.length, 24, "Lớp 8–9 phải hiện đủ 24 năng lực thành phần NLS");
+assert.strictEqual(nls67.length, 21, "Lớp 6–7 phải hiện đủ 21 năng lực thành phần NLS (5 Miền)");
+assert.strictEqual(nls89.length, 21, "Lớp 8–9 phải hiện đủ 21 năng lực thành phần NLS (5 Miền)");
+assert.ok(digital.every(entry => !String(entry.code || "").startsWith("6.") && !String(entry.componentCode || "").startsWith("6.")), "NLS không được chứa mã Miền 6");
 assert.ok(nls67.every(entry => entry.band.includes("6–7") && entry.descriptor.includes("vấn đề đơn giản")), "Lớp 6 chỉ dùng mô tả Trung cấp 1");
 assert.ok(nls89.every(entry => entry.band.includes("8–9") && entry.descriptor.includes("không theo thông lệ")), "Lớp 8 chỉ dùng mô tả Trung cấp 2");
 assert.ok(nls67.every(entry => !nls89.some(other => other.id === entry.id)), "Không được dùng chung lựa chọn giữa hai dải NLS");

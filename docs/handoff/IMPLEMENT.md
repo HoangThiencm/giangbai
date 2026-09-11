@@ -1,3 +1,90 @@
+# IMPLEMENT — Bảo toàn SGK/PPCT khi đổi tên bài / chuyển bước
+
+Ngày triển khai: 2026-09-11. Thực hiện đúng `docs/handoff/PLAN.md` (không xóa OCR/file SGK khi gõ tên bài hoặc chọn bài từ danh mục).
+
+## File đã sửa
+- `js/khbd-app.js`
+- `tests/khbd-draft-preservation-smoke.js` (tạo mới)
+
+## Bước 1 — `emptyDraftForTarget(..., { preserveSource = false })`
+- Mặc định vẫn reset sạch `vision`, `images`, `pdfAttachments`, PPCT (tương thích `khbd-ppct-integration-smoke.js`).
+- Khi `preserveSource: true`: giữ vision, PPCT, ảnh/PDF SGK, ảnh/PDF PPCT và `ocrReady`.
+
+## Bước 2 — `applyDraftData(data, { preserveSource = true })`
+- Nếu bản nháp lưu không có `vision`/`ppctAnalysis` mà phiên hiện tại vừa OCR: giữ nội dung đang có, bật `ocrReady`.
+
+## Bước 3 — `switchDraft(target, { preserveSource = true })`
+- Draft đã lưu: `applyDraftData` với preserve.
+- Draft mới: tự bật preserve nếu phiên đang có SGK/PPCT.
+
+## Bước 4 — Đổi tên bài thông minh
+- `commitCustomTopicName`: nếu chưa có draft trùng tên thì chỉ đổi `customTopic` + lưu key mới, không gọi `emptyDraftForTarget`.
+- `#inputTopicCustom` blur dùng hàm này thay vì `switchDraft` vô điều kiện.
+
+## Bước 5 — Autofill sau OCR
+- `readTextbookWithMistral` và `handleGenerateVision` gọi `autoDetectAndFillLessonMetadata({ ocrText, silent: true })` ngay sau khi có nội dung SGK.
+
+## Bước 6 — Nút xóa SGK
+- Xác nhận xong: xóa ảnh/PDF **và** `content.vision`, editor, preview; lưu state.
+
+## Kiểm thử
+- `node tests/khbd-draft-preservation-smoke.js`: PASS (5/5 case)
+- `node tests/khbd-autofill-metadata-smoke.js`: PASS
+- `node tests/khbd-ppct-integration-smoke.js`: PASS
+- `node tests/khbd-mistral-ocr-smoke.js`: PASS
+- `node tests/khbd-clear-all-smoke.js`: PASS
+
+---
+
+# IMPLEMENT — Tách bạch NLS 5 Miền (CV 3456) và Khung AI QĐ 2422
+
+Ngày triển khai: 2026-09-11. Thực hiện đúng `docs/handoff/PLAN.md` (Phương án 1: xóa Miền 6 khỏi NLS, AI độc lập 4 Miền A–D).
+
+## File đã sửa
+- `js/khbd-standards.js`
+- `js/khbd-prompts.js`
+- `js/khbd-app.js`
+- `soankhbd.html`
+- `canvas_soankhbd.html`
+- `backupcode viettailieu/canvas_soankhbd.html`
+- `xaydungphuluc.html`
+- `canvas_xaydungphuluc.html`
+- `backupcode viettailieu/canvas_xaydungphuluc.html`
+- `tests/khbd-ai-catalog-smoke.js`
+- `tests/xaydungphuluc-smoke.js`
+- `tests/canvas-xaydungphuluc-smoke.js`
+
+## Bước 1 — Catalog (`js/khbd-standards.js`)
+- Xóa `6.1` / `6.2` / `6.3` khỏi `KHBD_STANDARDS.digital.entries` → NLS còn **21 mục/dải** (L6–7 TC1a, L8–9 TC2a).
+- Xóa `isMath && /^6\./` trong `isUnnaturalOfficialStandard`.
+- Xóa nhánh chấm điểm `Ứng dụng trí tuệ nhân tạo` trong `scoreOfficialStandard`.
+- `KHBD_STANDARDS.ai` giữ đủ **88** YCCĐ QĐ 2422.
+
+## Bước 2 — Giao diện soạn KHBD
+- Khối 3: tiêu đề **5 Miền nền tảng**; mô tả Miền 1–5; nhãn checkbox **5 Miền**.
+- Khối AI: mô tả 4 Miền A/B/C/D theo QĐ 2422, mặc định tắt.
+- `standardsOfKind("digital")` loại bản nháp cũ mã `6.x.TC` / `tt02-*-6-*`.
+- Panel catalog ghi rõ 5 Miền NLS vs 4 Miền AI.
+
+## Bước 3 — Prompt (`js/khbd-prompts.js`)
+- `SYSTEM_ROLE` mục 5: AI QĐ 2422, 4 Miền A–D; mục 6: NLS 5 Miền + TC1/TC2.
+- `GENERATE_OBJECTIVES`: 2.c chỉ `[1-5].x.TC...`; 2.d chỉ `[6-9].[A-D]...`; cấm `6.x.TC`.
+
+## Bước 4 — Phụ lục
+- Cột NLS lọc bỏ mã `6.x.TC`; prompt cấm Miền 6 NLS.
+- Fallback mẫu dùng `5.3.TC2a` thay `6.2.TC2a`.
+
+## Kiểm thử
+- `node tests/khbd-ai-catalog-smoke.js`: PASS
+- `node tests/khbd-4steps-workflow-smoke.js`: PASS
+- `node tests/khbd-integrations-smoke.js`: PASS
+- `node tests/xaydungphuluc-smoke.js`: PASS
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS
+- `node tests/canvas-soankhbd-smoke.js`: PASS
+- `node tests/run-all-tests.js`: không chạy hết trên máy này vì thiếu module `docx` (lỗi môi trường sẵn có).
+
+---
+
 # IMPLEMENT — 1 chạm: mở liên kết và tự động nộp bài
 
 Ngày triển khai: 2026-09-11. Thực hiện đúng `docs/handoff/PLAN.md` (bỏ iframe, nút vừa mở tab mới vừa gọi `submitFiles()`).

@@ -455,11 +455,43 @@ function migrateLegacyActivitiesPortfolio(activities) {
   return activities;
 }
 
-function applyDraftData(data) {
+function applyDraftData(data, { preserveSource = true } = {}) {
   if (!data) return;
-  Object.assign(appState, { selectedGrade: clampKhbdGrade(data.selectedGrade || "6"), selectedSubject: data.selectedSubject || "TOAN", selectedLesson: data.selectedLesson || "", customTopic: data.customTopic || "", school: data.school || appState.school, group: data.group || appState.group, teacher: data.teacher || appState.teacher, subject: data.subject || appState.subject, duration: data.duration || appState.duration });
+  Object.assign(appState, {
+    selectedGrade: clampKhbdGrade(data.selectedGrade || "6"),
+    selectedSubject: data.selectedSubject || "TOAN",
+    selectedLesson: data.selectedLesson || "",
+    customTopic: data.customTopic || "",
+    school: data.school || appState.school,
+    group: data.group || appState.group,
+    teacher: data.teacher || appState.teacher,
+    subject: data.subject || appState.subject,
+    duration: data.duration || appState.duration
+  });
   appState.teachingContext = normalizeTeachingContext(data.teachingContext);
-  if (data.content) { const a = data.content.activities || {}; appState.content = { ppctAnalysis: data.content.ppctAnalysis || "", vision: data.content.vision || "", objectives: data.content.objectives || "", materials: data.content.materials || "", activities: migrateLegacyActivitiesPortfolio(Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""]))), illustrations: Array.isArray(data.content.illustrations) ? data.content.illustrations : [] }; }
+  if (data.content) {
+    const a = data.content.activities || {};
+    const savedVision = typeof data.content.vision === "string" ? data.content.vision : "";
+    const activeVision = (preserveSource && appState.content?.vision) ? appState.content.vision : "";
+    const finalVision = savedVision.trim() ? savedVision : activeVision;
+
+    const savedPpct = typeof data.content.ppctAnalysis === "string" ? data.content.ppctAnalysis : "";
+    const activePpct = (preserveSource && appState.content?.ppctAnalysis) ? appState.content.ppctAnalysis : "";
+    const finalPpct = savedPpct.trim() ? savedPpct : activePpct;
+
+    appState.content = {
+      ppctAnalysis: finalPpct,
+      vision: finalVision,
+      objectives: data.content.objectives || "",
+      materials: data.content.materials || "",
+      activities: migrateLegacyActivitiesPortfolio(Object.fromEntries(Object.keys(appState.content.activities).map(k => [k, a[k] || ""]))),
+      illustrations: Array.isArray(data.content.illustrations) ? data.content.illustrations : []
+    };
+
+    if (finalVision && !savedVision.trim()) {
+      if (appState.teachingContext) appState.teachingContext.ocrReady = true;
+    }
+  }
 }
 function renderDraftControls() {
   const select = document.getElementById("selectMyDraft"); if (!select) return;
@@ -469,24 +501,90 @@ function renderDraftControls() {
   const btnLegacy = document.getElementById("btnImportLegacyDraft");
   if (btnLegacy) btnLegacy.hidden = !(localStorage.getItem("khbd_kntt_saved_state") || localStorage.getItem("khbd_app_saved_state"));
 }
-function emptyDraftForTarget({ grade, lesson, topic }) {
+function emptyDraftForTarget({ grade, lesson, topic }, { preserveSource = false } = {}) {
   const common = { school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration };
-  appState.selectedGrade = clampKhbdGrade(grade); appState.selectedLesson = lesson; appState.customTopic = topic;
+
+  const savedVision = preserveSource ? (appState.content?.vision || "") : "";
+  const savedPpct = preserveSource ? (appState.content?.ppctAnalysis || "") : "";
+  const savedImages = preserveSource && Array.isArray(appState.images) ? [...appState.images] : [];
+  const savedPdfs = preserveSource && Array.isArray(appState.pdfAttachments) ? [...appState.pdfAttachments] : [];
+  const savedPpctImages = preserveSource && Array.isArray(appState.ppctImages) ? [...appState.ppctImages] : [];
+  const savedPpctPdfs = preserveSource && Array.isArray(appState.ppctPdfAttachments) ? [...appState.ppctPdfAttachments] : [];
+  const savedOcrReady = preserveSource ? Boolean(appState.teachingContext?.ocrReady) : false;
+
+  appState.selectedGrade = clampKhbdGrade(grade);
+  appState.selectedLesson = lesson;
+  appState.customTopic = topic;
   Object.assign(appState, common);
   appState.teachingContext = normalizeTeachingContext({});
-  appState.content = { ppctAnalysis: "", vision: "", objectives: "", materials: "", activities: { A: "", B: "", C: "", D: "", E: "", F: "", G: "" }, illustrations: [] };
-  appState.images = [];
-  appState.pdfAttachments = [];
-  appState.ppctImages = [];
-  appState.ppctPdfAttachments = [];
+  if (savedOcrReady) {
+    appState.teachingContext.ocrReady = true;
+  }
+  appState.content = {
+    ppctAnalysis: savedPpct,
+    vision: savedVision,
+    objectives: "",
+    materials: "",
+    activities: { A: "", B: "", C: "", D: "", E: "", F: "", G: "" },
+    illustrations: []
+  };
+  appState.images = savedImages;
+  appState.pdfAttachments = savedPdfs;
+  appState.ppctImages = savedPpctImages;
+  appState.ppctPdfAttachments = savedPpctPdfs;
 }
-function switchDraft(target) {
+function switchDraft(target, { preserveSource = true } = {}) {
   saveStateToLocalStorage();
   const id = buildDraftId(target.grade, target.lesson, target.topic);
   const saved = localStorage.getItem(getDraftKey(id));
-  if (saved) applyDraftData(JSON.parse(saved)); else { emptyDraftForTarget(target); saveStateToLocalStorage(); }
+  if (saved) {
+    applyDraftData(JSON.parse(saved), { preserveSource });
+  } else {
+    const shouldPreserve = preserveSource && (
+      Boolean(String(appState.content?.vision || "").trim()) ||
+      hasTextbookMedia() ||
+      Boolean(String(appState.content?.ppctAnalysis || "").trim()) ||
+      Boolean((appState.ppctImages || []).length || (appState.ppctPdfAttachments || []).length)
+    );
+    emptyDraftForTarget(target, { preserveSource: shouldPreserve });
+    saveStateToLocalStorage();
+  }
   localStorage.setItem(`khbd_drafts_v2:${getDraftScope()}:active`, id);
-  populateLessonDropdown(); syncDraftDom(); renderAllTabsPreview(); renderImageGallery(); renderPpctGallery();
+  populateLessonDropdown();
+  syncDraftDom();
+  renderAllTabsPreview();
+  renderImageGallery();
+  renderPpctGallery();
+}
+
+function commitCustomTopicName(topic) {
+  topic = String(topic || "").trim();
+  if (!topic || topic === appState.customTopic) return;
+  const targetId = buildDraftId(appState.selectedGrade, appState.selectedLesson || "", topic);
+  const existingSaved = localStorage.getItem(getDraftKey(targetId));
+
+  if (existingSaved) {
+    switchDraft({ grade: appState.selectedGrade, lesson: appState.selectedLesson || "", topic }, { preserveSource: true });
+    return;
+  }
+
+  const oldId = getDraftId();
+  const oldTopic = appState.customTopic;
+  const oldLesson = appState.selectedLesson;
+
+  appState.customTopic = topic;
+  saveStateToLocalStorage();
+
+  if (!oldTopic && !oldLesson && oldId !== targetId) {
+    localStorage.removeItem(getDraftKey(oldId));
+    const indexKey = getDraftIndexKey();
+    const index = JSON.parse(localStorage.getItem(indexKey) || "[]").filter(item => item.id !== oldId);
+    localStorage.setItem(indexKey, JSON.stringify(index));
+  }
+
+  renderDraftControls();
+  updateWorkflowStepper();
+  showToast(`Đã lưu tên bài học: "${topic}"`, "success", 3000);
 }
 function loadStateFromLocalStorage() {
   try {
@@ -555,7 +653,7 @@ function normalizeTeachingContext(context) {
   const source = context && typeof context === "object" ? context : {};
   const integrations = source.integrations && typeof source.integrations === "object" ? source.integrations : {};
   const mergedIntegrations = Object.assign({
-    digital: true,
+    digital: integrations.digital !== undefined ? Boolean(integrations.digital) : true,
     ai: Boolean(integrations.ai),
     foreignLanguage: Boolean(integrations.foreignLanguage),
     inclusive: Boolean(integrations.inclusive)
@@ -852,6 +950,14 @@ function standardsOfKind(kind) {
     .map(item => {
       const entry = (catalog.entries || []).find(candidate => candidate.id === item.catalogId);
       return entry ? { ...item, standardKind: kind, officialCode: item.officialCode || entry.code, officialLabel: item.officialLabel || entry.label } : item;
+    })
+    .filter(item => {
+      if (kind !== "digital") return true;
+      const code = String(item.officialCode || "");
+      const id = String(item.catalogId || "");
+      if (/^6\.\d+\.TC/i.test(code)) return false;
+      if (/tt02-(?:67|89)-6-[123]\b/i.test(id)) return false;
+      return true;
     });
 }
 
@@ -1260,7 +1366,13 @@ function applyPpctDetectedStandards(detected, { showModal = true } = {}) {
   const grade = Number(appState.selectedGrade) || 6;
   [["digital", "toggleDigitalCompetency"], ["ai", "toggleAiCompetency"]].forEach(([kind, toggleId]) => {
     const entries = detected[kind] || [];
-    if (!entries.length || !KHBD_STANDARDS?.[kind]) return;
+    if (!entries.length || !KHBD_STANDARDS?.[kind]) {
+      if (kind === "digital") {
+        const toggle = document.getElementById(toggleId);
+        if (toggle && !toggle.checked) appState.teachingContext.integrations.digital = false;
+      }
+      return;
+    }
     const toggle = document.getElementById(toggleId); if (toggle) toggle.checked = true;
     appState.teachingContext.integrations[kind] = true;
     applySuggestedStandardRecords(kind, KHBD_STANDARDS[kind], entries.map(entry => standardToRecord(kind, entry, grade, true)), { skipRender: true, preserveDetected: true });
@@ -2135,18 +2247,21 @@ async function triggerStep3PedagogyAndDigitalRecommendations() {
   );
   try {
     const toggleDigital = document.getElementById("toggleDigitalCompetency");
-    if (toggleDigital) toggleDigital.checked = true;
+    const isDigitalActive = toggleDigital ? toggleDigital.checked : Boolean(appState.teachingContext?.integrations?.digital);
     appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
-    appState.teachingContext.integrations.digital = true;
+    appState.teachingContext.integrations.digital = isDigitalActive;
     ensurePedagogyFromLesson({ force: true, silent: true, skipRender: true });
     let digitalOk = false;
-    if (hasOcrReadyLessonContent()) {
+    if (isDigitalActive && hasOcrReadyLessonContent()) {
       digitalOk = await requestStructuredIntegrationCandidates("digital", { silent: true, skipRender: true, force: true });
     }
-    if (!digitalOk || standardsOfKind("digital").length < 2) {
+    if (isDigitalActive && (!digitalOk || standardsOfKind("digital").length < 2)) {
       ensureIntegrationStandards({ force: true, silent: true, skipRender: true });
     }
-    showToast("✅ Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và Năng lực số (NLS) bám sát nội dung SGK.", "success", 5000);
+    showToast(isDigitalActive
+      ? "✅ Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và Năng lực số (NLS) bám sát nội dung SGK."
+      : "✅ Đã đề xuất PPDH và kỹ thuật dạy học 4 pha. Năng lực số đang tắt cho bài này.",
+      "success", 5000);
     return true;
   } finally {
     renderPedagogyCatalogs();
@@ -2181,9 +2296,9 @@ function renderStandardsCatalog() {
     const selectable = enabled;
     const band = kind === "digital"
       ? (grade <= 7
-        ? `Lớp ${grade} — dải Trung cấp 1 (TT 02, chung lớp 6–7). Không dùng dải lớp 8–9.`
-        : `Lớp ${grade} — dải Trung cấp 2 (TT 02, chung lớp 8–9). Không dùng dải lớp 6–7.`)
-      : `Lớp ${grade}`;
+        ? `Lớp ${grade} — 5 Miền NLS (TT 02 / CV 3456), dải Trung cấp 1, chung lớp 6–7. Không dùng dải lớp 8–9.`
+        : `Lớp ${grade} — 5 Miền NLS (TT 02 / CV 3456), dải Trung cấp 2, chung lớp 8–9. Không dùng dải lớp 6–7.`)
+      : `Lớp ${grade} — Khung AI QĐ 2422 (4 Miền A, B, C, D)`;
     const waitHint = enabled
       ? `Khung áp dụng: ${band}. Đã chọn sẵn mục theo lớp; bạn có thể sửa, tối đa ${maxSelect} mục.`
       : `Khung áp dụng: ${band}. Bật tích hợp tương ứng để chọn mục.`;
@@ -2292,7 +2407,7 @@ function setupEventListeners() {
   });
   document.getElementById("inputTopicCustom").addEventListener("blur", e => {
     const topic = (e.target.dataset.pendingTopic ?? e.target.value).trim();
-    if (topic && topic !== appState.customTopic) switchDraft({ grade: appState.selectedGrade, lesson: "", topic });
+    commitCustomTopicName(topic);
   });
 
   document.getElementById("selectModel").addEventListener("change", (e) => {
@@ -2491,12 +2606,18 @@ function setupEventListeners() {
   if (btnClearVision) {
     btnClearVision.addEventListener("click", () => {
       if (appState.images.length === 0 && !(appState.pdfAttachments || []).length) return;
-      if (userConfirm(`Bạn có chắc muốn xóa tất cả ảnh trang SGK đã tải lên?`)) {
+      if (userConfirm(`Bạn có chắc muốn xóa tất cả ảnh/file SGK đã tải lên?`)) {
         appState.images = [];
         appState.pdfAttachments = [];
+        appState.content.vision = "";
+        const editor = document.getElementById("editorVision");
+        if (editor) editor.value = "";
+        renderMathPreview("", "previewVision");
         updateImageCounts();
         renderImageGallery();
-        showToast("Đã xóa toàn bộ ảnh SGK.", "info");
+        saveStateToLocalStorage();
+        updateWorkflowStepper();
+        showToast("Đã xóa toàn bộ học liệu SGK.", "info");
       }
     });
   }
@@ -2762,7 +2883,8 @@ function populateLessonDropdown() {
   }
   const select = document.getElementById("selectLesson");
   const chapters = getLessonsForBook(appState.selectedSubject, "standard", appState.selectedGrade);
-  
+  if (!select) return;
+
   select.innerHTML = `<option value="">${chapters.length ? "-- Chọn bài học từ SGK --" : "-- Tự nhập tên bài ở ô bên dưới --"}</option>`;
 
   chapters.forEach(ch => {
@@ -3303,6 +3425,7 @@ function updateImageCounts() {
 function renderImageGallery() {
   const list = appState.images;
   const gallery = document.getElementById("imageGallery");
+  if (!gallery) return;
   gallery.innerHTML = "";
 
   if (list.length === 0) {
@@ -5985,6 +6108,14 @@ async function readTextbookWithMistral() {
     }
     await applyTextbookOcrResult(ocrText, { silent: false });
 
+    try {
+      if (typeof autoDetectAndFillLessonMetadata === "function") {
+        autoDetectAndFillLessonMetadata({ ocrText, silent: true });
+      }
+    } catch (autoFillErr) {
+      console.warn("Lỗi tự động nhận diện metadata sau OCR SGK:", autoFillErr);
+    }
+
     // Tự động mở khung chi tiết để xem kết quả
     const details = document.getElementById("detailsVisionContent");
     if (details) details.open = true;
@@ -6023,6 +6154,13 @@ async function handleGenerateVision() {
     const periods = Number(data.periodCount); if (Number.isInteger(periods) && periods > 0 && periods <= 20) appState.duration = String(periods);
     appState.content.vision = String(data.summary || "").trim() || JSON.stringify(data, null, 2);
     appState.teachingContext.ocrReady = true; syncDraftDom(); saveStateToLocalStorage(); renderMathPreview(appState.content.vision, "previewVision");
+    try {
+      if (typeof autoDetectAndFillLessonMetadata === "function") {
+        autoDetectAndFillLessonMetadata({ ocrText: appState.content.vision, silent: true });
+      }
+    } catch (autoFillErr) {
+      console.warn("Lỗi tự động nhận diện metadata sau OCR SGK:", autoFillErr);
+    }
     updateProgress(100, "Đã đọc SGK."); setTimeout(hideProgress, 1000);
   } catch (error) { hideProgress(); showToast(`Lỗi đọc SGK: ${error.message}`, "danger", 7000); }
   finally { appState.isGenerating = false; if (btn) btn.disabled = false; }
@@ -6835,6 +6973,14 @@ if (typeof module !== 'undefined' && module.exports) {
     handleClearAllContent,
     syncDraftDom,
     emptyDraftForTarget,
+    applyDraftData,
+    switchDraft,
+    commitCustomTopicName,
+    hasTextbookMedia,
+    getDraftKey,
+    getDraftId,
+    buildDraftId,
+    saveStateToLocalStorage,
     normalizeTeachingContext,
     prepareGeminiMedia,
     parseKhbdSections,

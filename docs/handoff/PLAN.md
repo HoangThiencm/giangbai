@@ -1,198 +1,233 @@
-# PLAN
+# PLAN: Cấu hình Năng Lực Số (CV 3456) theo Tỉ trọng & Cho phép Người dùng Tự chọn Bài/Tiết Tích hợp
 
-## Hiện trạng
+## 1. Hiện trạng & Phân tích Nguyên nhân
 
-1. **Vấn đề tâm lý & trải nghiệm của giáo viên khi nộp bài qua liên kết ngoài**:
-   - Khi đợt nộp yêu cầu điền vào một đường dẫn bên ngoài (Google Sheets, Google Forms, Drive...), việc nhúng khung `<iframe>` trực tiếp vào trang web thường gây chật chội, khó thao tác trên màn hình nhỏ/điện thoại và dễ gặp lỗi chặn đăng nhập tài khoản Google.
-   - Ngược lại, nếu chỉ hiển thị nút mở tab mới và để nút "Nộp bài" riêng biệt ở chân trang: Giáo viên sau khi bấm mở link sang tab mới để điền dữ liệu thì **90% sẽ quên quay lại tab ban đầu để kéo xuống bấm nút "Nộp bài"**.
-   - Hậu quả: Dù giáo viên đã điền xong dữ liệu trên Google Sheets, hệ thống quản trị vẫn báo giáo viên đó ở trạng thái "Chưa nộp", người quản lý vẫn phải mất thời gian đi nhắc nhở và kiểm tra thủ công.
+### Hiện trạng thực tế
+- Người dùng phản ánh đúng thực tế sư phạm: **"Không phải tiết nào cũng tích hợp năng lực số mà là chỉ chiếm tỉ trọng thôi, do người dùng chọn"**.
+- Theo chương trình GDPT 2018 và hướng dẫn thực hiện CV 5512, CV 3456, TT 02/2025:
+  + Môn học (như Toán THCS với 105–140 tiết/năm) có rất nhiều dạng bài: hình thành kiến thức mới, luyện tập bảng phấn, kiểm tra định kỳ (GK1, CK1, GK2, CK2), ôn tập cuối chương...
+  + Năng lực số (NLS) chỉ nên tích hợp vào **các bài/tiết thực sự có điều kiện và học liệu số phù hợp** (vẽ hình GeoGebra, máy tính cầm tay, bảng tính Excel, mô phỏng số, biểu đồ thống kê, bài thực hành trải nghiệm, bài có AI...).
+  + Do đó, NLS chỉ nên chiếm một **TỈ TRỌNG** nhất định (ví dụ 30%, 40%, 50% tổng số bài/tiết), và giáo viên / tổ chuyên môn được quyền **TỰ CHỌN** bài/tiết nào tích hợp.
 
-2. **Yêu cầu cải tiến từ người dùng**:
-   - Đối với trường loại Liên kết (Link), không cần nhúng iframe cồng kềnh.
-   - Thiết kế cơ chế **"1 chạm"**: Khi giáo viên nhấn vào nút mở liên kết, hệ thống sẽ **mở trang mới để giáo viên nhập liệu, ĐỒNG THỜI tự động kích hoạt chức năng "Nộp bài"** trên hệ thống ngay lúc đó.
-
----
-
-## Phạm vi
-
-1. **Cập nhật giao diện nộp bài (`nopbai.html`)**:
-   - Đơn giản hóa giao diện trường `link`: Không cần hiển thị khung `<iframe>` to cồng kềnh.
-   - Thiết kế nút bấm hành động nổi bật:
-     `[ 🚀 Nhấn vào đây để mở liên kết & Nộp bài ]` (kèm icon mở tab mới và biểu tượng xác nhận nộp).
-   - Kèm ghi chú chỉ dẫn rõ ràng: *"Hệ thống sẽ tự động ghi nhận bài nộp và mở liên kết nhập liệu trong thẻ mới."*
-   - Xử lý sự kiện khi nhấn nút:
-     + Mở đường dẫn đích trong tab mới (`window.open(targetUrl, '_blank')`) ngay trong event click của người dùng để tránh bị trình duyệt chặn popup.
-     + Tự động gán giá trị xác nhận cho trường liên kết (ví dụ: `"Đã mở và nộp qua liên kết trực tuyến"` nếu người nộp chưa gõ nội dung tùy chỉnh).
-     + Tự động kích hoạt hàm gửi bài nộp `submitFiles()` lên máy chủ.
-     + Nếu form có các trường bắt buộc khác (`required`): Kiểm tra tính hợp lệ trước khi gửi; nếu đã hợp lệ thì gửi ngay và mở link.
-     + Chuyển sang màn hình thông báo nộp bài thành công rõ ràng:
-       *"Hệ thống đã ghi nhận thời gian nộp bài của thầy/cô. Thầy/cô vui lòng hoàn thành nội dung trên trang bảng tính vừa mở."*
-   - Nút "Nộp bài" ở chân trang vẫn hoạt động bình thường như phương thức nộp dự phòng.
-
-2. **Cập nhật trình quản lý biểu mẫu (`nopbai-quanly.html`)**:
-   - Trong dropdown loại trường, giữ nguyên tùy chọn **Liên kết (Link)**.
-   - Cho phép quản trị viên nhập Tiêu đề chỉ tiêu và Đường dẫn URL liên kết (Google Sheets, Forms, Drive...).
-   - Đơn giản hóa cấu hình: Lược bỏ checkbox nhúng iframe phức tạp, chuẩn hóa theo cơ chế mở link kèm tự động nộp bài tiện lợi.
-
-3. **Backend API (`api/submissions.php`)**:
-   - Duy trì hỗ trợ kiểu trường `'link'` trong `$types` và chuẩn hóa lưu trữ `url`.
-   - Tiếp nhận dữ liệu nộp tự động từ frontend một cách trơn tru, ghi nhận trạng thái đã nộp vào database.
-
-4. **Kiểm thử tự động (`tests/nopbai-report-link-smoke.js`)**:
-   - Cập nhật bài test smoke kiểm tra sự hiện diện của cơ chế mở link và kích hoạt nộp bài tự động.
+### Lỗi thiết kế hiện tại trong Mã nguồn
+1. **Trong Xây dựng Phụ lục (`xaydungphuluc.html` & `canvas_xaydungphuluc.html`)**:
+   - Giao diện **đã có sẵn** thanh trượt tỉ trọng `#nlsRate` (0%–100%, mặc định 50%) và checkbox `#nlsEnabled`.
+   - **Tuy nhiên, trong code xử lý (`selectedIntegration` và `fallbackNlsCodes`)**:
+     Hàm `selectedIntegration` (dòng 1456) gọi `fallbackNlsCodes` một cách **vô điều kiện cho 100% tất cả các dòng bài học**.
+     Dù người dùng kéo `#nlsRate` về 30% hay 50%, thì **100% bài học đều bị nhét mã NLS**! Không có bài nào được để trống hay ghi `-`.
+   - Trong khi phần AI có cơ chế chọn tiết rất rõ ràng (`aiLessonPickerCard`, `aiSelectedLessonIds`, `syncAiSelectionFromRate`), phần NLS **chưa có cơ chế chọn bài/tiết** (`nlsSelectedLessonIds`), khiến người dùng không thể chủ động tick chọn bài nào tích hợp NLS.
+2. **Trong Soạn KHBD (`soankhbd.html`, `canvas_soankhbd.html`, `js/khbd-app.js`)**:
+   - `normalizeTeachingContext` (dòng 656) đang gán cứng `digital: true` làm giá trị mặc định không thể tắt sạch.
+   - Nút đề xuất Bước 3 (`triggerStep3PedagogyAndDigitalRecommendations`, dòng 2244) tự động ép `toggleDigital.checked = true` và `integrations.digital = true`, không tôn trọng việc giáo viên đã chủ động tắt NLS cho bài này.
 
 ---
 
-## Ngoài phạm vi
+## 2. Giải pháp Kiến trúc Chi tiết
 
-- Không thay đổi cấu trúc bảng cơ sở dữ liệu MySQL.
-- Không can thiệp vào các đợt nộp dạng tệp (`submission_type = 'file'`).
-- Không can thiệp vào nội dung bảng tính bên trong Google Sheets.
-- Tuân thủ quy định `AGENTS.md`: Antigravity chỉ khảo sát và lập kế hoạch, không tự ý sửa source code.
+### Mục tiêu
+1. **Tỉ trọng NLS thực chất (`nlsRate`)**:
+   - Thanh trượt `nlsRate` (ví dụ 40%) sẽ xác định chính xác số lượng bài học cần tích hợp NLS:
+     $$K = \text{round}\left(\frac{\text{nlsRate}}{100} \times \text{Tổng số bài}\right)$$
+   - Chỉ đúng $K$ bài học được chọn mới có mã NLS. Các bài còn lại **không có mã NLS** (cột NLS ghi `-`).
+2. **Người dùng được quyền tự chọn ("do người dùng chọn")**:
+   - **Tự động gợi ý theo tỉ trọng**: Hệ thống xếp hạng ưu tiên sư phạm của các bài (bài có GeoGebra, máy tính cầm tay, Excel, STEM, AI đứng đầu; bài ôn tập, kiểm tra đứng cuối) và tự động chọn $K$ bài tối ưu nhất.
+   - **Chủ động tick chọn tay**: Trong bảng danh mục bài học, người dùng có thể tick / bỏ tick checkbox NLS cho từng bài học theo đúng ý đồ của mình.
+   - Có nút **"💻 Gợi ý NLS theo tỉ trọng"** và **"✕ Bỏ chọn NLS"**.
+3. **Đồng bộ 100% giữa Phụ lục 1 và Phụ lục 3**:
+   - Cột NLS ở Phụ lục 1 (Kế hoạch Tổ) và Phụ lục 3 (Kế hoạch Giáo viên) hoàn toàn khớp nhau: bài nào có NLS thì cả 2 cùng có; bài nào không tích hợp thì cả 2 cùng ghi `-`.
+4. **Tôn trọng quyền bật/tắt trong Soạn KHBD (`soankhbd.html`)**:
+   - `toggleDigitalCompetency` không bị ép bật `true`.
+   - Nếu bài học trong PPCT không có NLS (ghi `-`), hệ thống tự động tắt công tắc NLS khi soạn bài đó.
 
 ---
 
-## File dự kiến tác động
+## 3. Chi tiết các Bước Triển khai (Dành cho ChatGPT thực hiện)
 
-1. `nopbai.html` (Frontend Người dùng nộp bài: cơ chế 1 chạm mở link + nộp bài tự động)
-2. `nopbai-quanly.html` (Frontend Quản lý: cấu hình trường link gọn gàng)
-3. `api/submissions.php` (Backend API: đảm bảo nhận dữ liệu nộp trường link)
-4. `tests/nopbai-report-link-smoke.js` (Cập nhật bài kiểm thử tự động)
+### Bước 1: Xây dựng Cơ chế Quản lý Bài học NLS trong `canvas_xaydungphuluc.html` & `xaydungphuluc.html`
 
----
-
-## Các bước thực hiện chi tiết
-
-### Bước 1: Cập nhật `nopbai.html` (Cơ chế Mở link & Tự động nộp bài)
-
-1. **Xây dựng hàm `openLinkAndSubmit(fieldKey, targetUrl)`**:
+1. **Khai báo biến trạng thái tập bài chọn NLS**:
    ```javascript
-   function openLinkAndSubmit(fieldKey, targetUrl) {
-       if (!targetUrl) return;
-       // 1. Mở tab mới ngay lập tức trong event handler để không bị chặn popup
-       const win = window.open(targetUrl, '_blank');
-       if (!win) {
-           // Dự phòng nếu popup bị chặn
-           location.href = targetUrl;
-           return;
-       }
+   let nlsSelectedLessonIds = new Set();
+   ```
 
-       // 2. Tự động điền giá trị xác nhận nếu ô input chưa có giá trị
-       const input = document.querySelector(`[name="report_${fieldKey}"]`);
-       if (input && !input.value.trim()) {
-           input.value = 'Đã mở và nộp qua liên kết trực tuyến';
-       }
+2. **Hàm tính toán danh sách bài ứng viên và độ ưu tiên sư phạm cho NLS**:
+   ```javascript
+   function nlsCandidates() {
+     return aiCandidates(); // Danh sách các bài học hợp lệ từ PPCT (không tính header, kiểm tra)
+   }
 
-       // 3. Kiểm tra tính hợp lệ của form (các trường required khác nếu có)
-       const form = document.getElementById('submitForm');
-       if (form && !form.checkValidity()) {
-           form.reportValidity();
-           return;
-       }
-
-       // 4. Kích hoạt nộp bài tự động
-       const event = new Event('submit', { cancelable: true });
-       submitFiles(event);
+   function prioritizedNlsLessons() {
+     // Đánh giá điểm ưu tiên sư phạm công nghệ số của bài học môn học
+     const candidates = nlsCandidates();
+     const scoreLesson = (lessonName) => {
+       const text = foldText(cleanLessonDescription(lessonName));
+       let score = 5;
+       if (/hinh hoc|tam giac|tu giac|duong tron|goc|doi xung|dong dang|dinh ly|thales|pythagore|lang tru|hinh hop/.test(text)) score += 5; // GeoGebra
+       if (/thong ke|xac suat|bieu do|bang so lieu|du lieu|tan suat/.test(text)) score += 5; // Bảng tính Excel
+       if (/thuc hanh va trai nghiem|trai nghiem|du an|stem/.test(text)) score += 4; // STEM / Thực hành
+       if (/ham so|do thi|parabol|toa do/.test(text)) score += 4; // Vẽ đồ thị
+       if (/phuong trinh|he phuong trinh|bat phuong trinh|nghiem|giai he/.test(text)) score += 3; // Máy tính Casio
+       if (selectedAiLessons().some(l => l.includes(lessonName))) score += 2; // Bài có AI
+       if (/on tap|kiem tra|danh gia|giua ky|cuoi ky/.test(text)) score -= 6; // Không ưu tiên NLS
+       return score;
+     };
+     return [...candidates].sort((a, b) => scoreLesson(b.lesson) - scoreLesson(a.lesson));
    }
    ```
 
-2. **Cập nhật hàm `renderReportFields(a)` cho trường `field.type === 'link'`**:
-   - Hiển thị card liên kết hiện đại, đẹp mắt:
-     ```javascript
-     } else if (field.type === 'link') {
-         const targetUrl = field.url ? field.url.trim() : '';
-         const rawUrl = targetUrl ? (/^https?:\/\//i.test(targetUrl) ? targetUrl : `https://${targetUrl}`) : '';
-         input = `
-             <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50/80 via-emerald-50/50 to-white p-5 shadow-sm">
-                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                     <div class="min-w-0 flex-1">
-                         <div class="flex items-center gap-2 text-sm font-black text-teal-900">
-                             <span class="grid h-7 w-7 place-items-center rounded-lg bg-teal-600 text-white text-xs"><i class="fas fa-arrow-up-right-from-square"></i></span>
-                             <span>Mở liên kết để nhập thông tin</span>
-                         </div>
-                         ${rawUrl ? `<p class="mt-1.5 truncate text-xs text-slate-500 font-mono" title="${esc(rawUrl)}">${esc(rawUrl)}</p>` : '<p class="mt-1.5 text-xs text-amber-600">Chưa cấu hình đường dẫn liên kết.</p>'}
-                         <p class="mt-1 text-[11px] font-bold text-teal-700"><i class="fas fa-bolt mr-1 text-amber-500"></i>Nhấn nút bên cạnh sẽ mở trang nhập liệu và tự động ghi nhận hoàn thành nộp bài.</p>
-                     </div>
-                     ${rawUrl ? `
-                         <button type="button" onclick="openLinkAndSubmit('${esc(field.key)}', '${esc(rawUrl)}')" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-xs font-black text-white shadow-md shadow-teal-700/25 transition hover:bg-teal-800 hover:scale-[1.02] active:scale-95">
-                             <i class="fas fa-paper-plane"></i>
-                             <span>Nhấn vào đây để nộp & mở link</span>
-                         </button>
-                     ` : ''}
-                 </div>
-                 <div class="mt-3.5 pt-3 border-t border-teal-100/80">
-                     <label class="block text-xs font-bold text-slate-600 mb-1">Ghi chú xác nhận (tùy chọn):</label>
-                     <input class="field text-sm !bg-white" type="text" name="report_${esc(field.key)}" ${field.required ? 'required' : ''} placeholder="Có thể để trống hoặc ghi chú thêm nếu cần...">
-                 </div>
-             </div>
-         `;
+3. **Đồng bộ giữa Thanh trượt `nlsRate` và Tập bài được chọn**:
+   ```javascript
+   function syncNlsRateFromSelection() {
+     const total = nlsCandidates().length;
+     const selectedCount = nlsSelectedLessonIds.size;
+     const rate = total ? Math.round(selectedCount / total * 100) : 0;
+     const nlsRateEl = document.querySelector('#nlsRate');
+     const nlsRateOutEl = document.querySelector('#nlsRateOut');
+     if (nlsRateEl) nlsRateEl.value = String(rate);
+     if (nlsRateOutEl) nlsRateOutEl.value = `${rate}% (${selectedCount}/${total} bài)`;
+     return rate;
+   }
+
+   function syncNlsSelectionFromRate() {
+     const total = nlsCandidates().length;
+     const rate = Number(document.querySelector('#nlsRate')?.value) || 0;
+     const targetCount = Math.round(rate / 100 * total);
+     const prioritized = prioritizedNlsLessons();
+     nlsSelectedLessonIds = new Set(prioritized.slice(0, targetCount).map(x => x.id));
+     syncNlsRateFromSelection();
+     updateAiPicker(); // Cập nhật lại giao diện bảng tick chọn
+   }
+   ```
+
+4. **Cho phép người dùng tick/bỏ tick NLS từng bài**:
+   ```javascript
+   function toggleNlsLesson(lessonId, checked) {
+     if (checked) nlsSelectedLessonIds.add(lessonId);
+     else nlsSelectedLessonIds.delete(lessonId);
+     syncNlsRateFromSelection();
+     updateAiPicker();
+   }
+
+   function suggestNlsLessons() {
+     syncNlsSelectionFromRate();
+     notify(`Đã gợi ý ${nlsSelectedLessonIds.size} bài học tích hợp NLS theo tỉ trọng.`);
+   }
+
+   function clearNlsLessons() {
+     nlsSelectedLessonIds.clear();
+     syncNlsRateFromSelection();
+     updateAiPicker();
+     notify('Đã bỏ chọn tất cả bài học NLS.');
+   }
+   ```
+
+---
+
+### Bước 2: Nâng cấp Giao diện Bảng Phân phối / Chọn tiết trong `canvas_xaydungphuluc.html` & `xaydungphuluc.html`
+
+1. **Cập nhật tiêu đề Card Mục 4**:
+   Đổi từ:
+   `4. Chọn chính xác tiết tích hợp AI`
+   Thành:
+   `4. Chọn chính xác bài tích hợp NLS & tiết tích hợp AI (Do người dùng quyết định)`
+2. **Thêm nút điều khiển NLS trên thanh công cụ**:
+   - Nút `💻 Gợi ý NLS theo tỉ trọng` (`onclick="suggestNlsLessons()"`)
+   - Nút `✕ Bỏ NLS` (`onclick="clearNlsLessons()"`)
+   - Huy hiệu thống kê: `📊 NLS: ${nlsSelectedLessonIds.size}/${total} bài (${nlsRate}%) · 🎯 AI: ${aiSelected.size}/${limit} tiết`
+3. **Thêm cột checkbox NLS trong bảng `updateAiPicker()`**:
+   - Thêm cột `<th>Tích hợp NLS (CV 3456)</th>` trước hoặc sau cột AI.
+   - Mỗi dòng hiển thị:
+     `<label class="font-semibold whitespace-nowrap"><input type="checkbox" ${nlsSelectedLessonIds.has(row.id)?'checked':''} onchange="toggleNlsLesson('${row.id}', this.checked)"> Tích hợp NLS</label>`
+
+---
+
+### Bước 3: Nâng cấp hàm `selectedIntegration` & `separateIntegration`
+
+1. **Kiểm tra điều kiện xuất NLS theo lựa chọn của người dùng**:
+   ```javascript
+   function isLessonNlsSelected(lessonId, lessonName, c) {
+     if (!c?.nls?.enabled) return false;
+     // Nếu người dùng có danh sách chọn cụ thể
+     if (typeof nlsSelectedLessonIds !== 'undefined' && nlsSelectedLessonIds.size > 0) {
+       if (lessonId && nlsSelectedLessonIds.has(lessonId)) return true;
+       if (lessonName) {
+         const match = nlsCandidates().find(x => typeof lessonsMatch === 'function' ? lessonsMatch(x.lesson, lessonName) : x.lesson === lessonName);
+         if (match && nlsSelectedLessonIds.has(match.id)) return true;
+       }
+       return false;
      }
-     ```
-
-3. **Cập nhật màn hình thông báo thành công (`#successState` trong `nopbai.html`)**:
-   - Bổ sung thông điệp nhắc nhở thân thiện:
-     *"Hệ thống đã ghi nhận thời gian nộp bài của bạn. Bạn vui lòng tiếp tục hoàn thành nội dung trên trang vừa mở."*
-
----
-
-### Bước 2: Cập nhật `nopbai-quanly.html`
-
-1. **Đơn giản hóa giao diện cấu hình trường `link` trong `renderReportFields()`**:
-   - Giữ lại ô nhập Tiêu đề chỉ tiêu và ô nhập URL liên kết.
-   - Bỏ checkbox nhúng iframe phức tạp (đã chuyển sang cơ chế 1 chạm tối ưu).
-   - Dropdown thể loại hiển thị: `Liên kết / Bảng tính ngoài (Link)`.
-
----
-
-### Bước 3: Cập nhật `api/submissions.php`
-
-1. Giữ nguyên `$types` bao gồm `'link'`, chuẩn hóa `url` (tối đa 500 ký tự, chặn mã độc `javascript:`).
-2. Khi người nộp gửi bài, dữ liệu trường `link` được lưu nguyên vẹn vào `report_data_json`.
+     // Fallback nếu chưa khởi tạo bảng chọn: dựa theo tỉ trọng nlsRate
+     const rate = Number(c?.nls?.rate ?? 50);
+     if (rate <= 0) return false;
+     if (rate >= 100) return true;
+     const prioritized = typeof prioritizedNlsLessons === 'function' ? prioritizedNlsLessons() : [];
+     const targetCount = Math.round(rate / 100 * prioritized.length);
+     const topIds = new Set(prioritized.slice(0, targetCount).map(x => x.id));
+     if (lessonId && topIds.has(lessonId)) return true;
+     return false;
+   }
+   ```
+2. **Áp dụng vào `selectedIntegration`**:
+   - Nếu `!isLessonNlsSelected(rowId, lesson, c)`:
+     `cleanNls = []` (Tuyệt đối không sinh mã NLS cho bài này).
+   - Nếu `cleanNls.length === 0 && !hasAi`:
+     Trả về `'-'`!
+3. **Áp dụng vào `separateIntegration`**:
+   - Dòng bài không có NLS: `nlsText = '-'`.
+   - Dòng bài có NLS: `nlsText = cleanNlsColumnText(...)`.
 
 ---
 
-### Bước 4: Cập nhật bài kiểm thử `tests/nopbai-report-link-smoke.js`
+### Bước 4: Chuẩn hóa `normalizeTeachingContext` & Đề xuất trong `js/khbd-app.js`
 
-- Kiểm tra sự hiện diện của hàm `openLinkAndSubmit` trong `nopbai.html`.
-- Kiểm tra việc gắn sự kiện click gọi `openLinkAndSubmit` và kích hoạt nộp bài.
-- Chạy test tự động với `node tests/nopbai-report-link-smoke.js` để đảm bảo PASS 100%.
+1. Trong `normalizeTeachingContext`:
+   ```javascript
+   const mergedIntegrations = Object.assign({
+     digital: integrations.digital !== undefined ? Boolean(integrations.digital) : true,
+     ai: Boolean(integrations.ai),
+     foreignLanguage: Boolean(integrations.foreignLanguage),
+     inclusive: Boolean(integrations.inclusive)
+   }, Object.fromEntries(SUBJECT_CONTEXT_INTEGRATIONS.map(item => [item.id, Boolean(integrations[item.id])])));
+   ```
+2. Trong `triggerStep3PedagogyAndDigitalRecommendations`:
+   Không cưỡng ép `toggleDigital.checked = true` nếu người dùng đã chủ động tắt NLS cho bài này:
+   ```javascript
+   const toggleDigital = document.getElementById("toggleDigitalCompetency");
+   const isDigitalActive = toggleDigital ? toggleDigital.checked : Boolean(appState.teachingContext?.integrations?.digital);
+   appState.teachingContext.integrations.digital = isDigitalActive;
+   ```
+3. Khi nhận diện từ PPCT (`applyPpctDetectedStandards`):
+   Nếu bài học trong PPCT không có NLS (ghi `-` hoặc không chứa mã NLS), giữ `toggleDigitalCompetency.checked = false` và không nạp mã NLS.
 
 ---
 
-## Rủi ro & Giải pháp giảm thiểu
+## 4. Danh sách File Tác động
 
-1. **Trình duyệt chặn Popup khi mở tab mới (`window.open`)**:
-   - *Giải pháp*: Gọi `window.open` ngay dòng đầu tiên của sự kiện click chuột trực tiếp của người dùng. Nếu popup bị chặn, tự động fallback điều hướng bằng `location.href`.
-2. **Trường hợp form có các trường bắt buộc khác chưa điền**:
-   - *Giải pháp*: Dùng `form.checkValidity()` và `form.reportValidity()`, nếu form chưa hợp lệ thì trỏ đến trường còn thiếu yêu cầu điền trước khi nộp.
-3. **Người dùng bấm nhầm**:
-   - *Giải pháp*: Người quản lý có thể xem danh sách bài nộp và luôn có sẵn nút "Xóa bài nộp (để cho nộp lại)" nếu cần cấp quyền nộp lại.
+1. `xaydungphuluc.html` (Thêm cơ chế chọn bài NLS, slider có hiệu lực thực, checkbox NLS từng hàng).
+2. `canvas_xaydungphuluc.html` (Đồng bộ 1-1 với xaydungphuluc.html cho Google Canvas).
+3. `backupcode viettailieu/canvas_xaydungphuluc.html` (Đồng bộ bản backup mirror).
+4. `js/khbd-app.js` (Tôn trọng trạng thái bật/tắt NLS do người dùng chọn, không ép cứng `digital: true`).
+5. `tests/khbd-nls-rate-smoke.js` (Tạo mới smoke test kiểm thử tỉ trọng NLS).
+6. `tests/xaydungphuluc-smoke.js` & `tests/canvas-xaydungphuluc-smoke.js` (Cập nhật kiểm thử).
+7. `docs/handoff/IMPLEMENT.md` (ChatGPT ghi nhận triển khai).
+8. `docs/handoff/VERIFY.md` (Antigravity thực hiện `/verify` nghiệm thu).
 
 ---
 
-## Cách kiểm thử
+## 5. Kế hoạch Kiểm thử & Thẩm định (Verification Plan)
 
-### 1. Kiểm thử tự động
-```bash
-node tests/nopbai-report-link-smoke.js
+### Automated Tests
+Tạo bài test `tests/khbd-nls-rate-smoke.js`:
+1. **Case 1 (Tỉ trọng 0%)**: Khi `nlsRate = 0%` hoặc `nlsEnabled = false` -> 100% các dòng bài học trong Phụ lục 1 và 3 đều có cột NLS ghi `-`.
+2. **Case 2 (Tỉ trọng 50%)**: Khi `nlsRate = 50%` -> Số bài có mã NLS đạt đúng xấp xỉ 50%, các bài còn lại ghi `-`.
+3. **Case 3 (Chọn bài thủ công)**: Khi người dùng tick chọn 3 bài cụ thể trong `nlsSelectedLessonIds` -> Đúng 3 bài đó có mã NLS, tất cả các bài khác ghi `-`.
+4. **Case 4 (Ưu tiên Sư phạm)**: Các bài Hình học (GeoGebra) và Thống kê (Excel) được ưu tiên chọn NLS trước các bài lý thuyết, kiểm tra.
+5. **Case 5 (Đồng bộ PL1 & PL3)**: Phụ lục 1 và Phụ lục 3 khớp 100% cột NLS theo từng bài.
+6. **Case 6 (Soạn KHBD)**: Tắt `toggleDigitalCompetency` thì giáo án không sinh mục tiêu NLS.
+
+### Lệnh chạy kiểm thử:
+```powershell
+& "C:\Users\HoangThien\AppData\Local\OpenAI\Codex\runtimes\cua_node\b474a88d5d105afa\bin\node.exe" tests/khbd-nls-rate-smoke.js
+& "C:\Users\HoangThien\AppData\Local\OpenAI\Codex\runtimes\cua_node\b474a88d5d105afa\bin\node.exe" tests/xaydungphuluc-smoke.js
+& "C:\Users\HoangThien\AppData\Local\OpenAI\Codex\runtimes\cua_node\b474a88d5d105afa\bin\node.exe" tests/canvas-xaydungphuluc-smoke.js
 ```
-Kết quả mong muốn: Exit code 0, `nopbai report link smoke: passed`.
-
-### 2. Kiểm thử thủ công
-1. Vào `nopbai-quanly.html`, chọn tạo đợt nộp Báo cáo biểu mẫu.
-2. Thêm trường loại `Liên kết / Bảng tính ngoài (Link)`, dán link Google Sheets. Bấm **Lưu đợt nộp**.
-3. Mở link nộp bài bằng `nopbai.html?code=XYZ&person=P123`.
-4. Nhấn nút **"Nhấn vào đây để nộp & mở link"**:
-   - Xác nhận tab mới tự động mở ra link Google Sheets.
-   - Xác nhận tab nộp bài tự động kích hoạt nộp bài và chuyển sang màn hình xanh **"Nộp bài thành công"**.
-5. Quay lại trang Quản lý: Xác nhận người nộp đã được tích xanh trạng thái **"Đã nộp"**.
-
----
-
-## Tiêu chí nghiệm thu
-
-- [x] Không còn khung nhúng iframe cồng kềnh, giao diện gọn gàng, tương thích 100% trên cả PC và di động.
-- [x] Nút bấm hành động duy nhất: vừa mở tab mới dẫn đến link đích, vừa tự động kích hoạt nộp bài.
-- [x] Người nộp không cần phải nhớ quay lại bấm nút Nộp bài nữa.
-- [x] Hệ thống ghi nhận trạng thái đã nộp tức thì vào cơ sở dữ liệu.
-- [x] Toàn bộ test tự động `tests/nopbai-report-link-smoke.js` chạy thành công.

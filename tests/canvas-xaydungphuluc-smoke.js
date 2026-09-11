@@ -64,9 +64,10 @@ assert.equal(cleanIntegrationSandbox.cleanAiColumnText(''),'','Canvas must prese
 const canvasBareAi = cleanIntegrationSandbox.cleanAiColumnText('9.B2.1 - (Áp dụng: tiết 1, 2).', 'Bài 1: Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn');
 assert(!canvasBareAi.includes('9.B2.1 - (Áp dụng:'), 'Canvas: bare AI code without description must be enriched');
 assert(canvasBareAi.includes('9.B2.1 - Ứng dụng công cụ AI') && canvasBareAi.includes('(Áp dụng: tiết 1, 2).'), 'Canvas: AI code 9.B2.1 must have pedagogical description and retain scope');
-const canvasUnpedagogicalNls = cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 6.1.TC2a - Sử dụng chatbot AI để tìm hiểu lịch sử ra đời của hệ phương trình bậc nhất.;]', 'Bài 1: Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn');
+const canvasUnpedagogicalNls = cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng chatbot AI để tìm hiểu lịch sử ra đời của hệ phương trình bậc nhất.;]', 'Bài 1: Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn');
 assert(!canvasUnpedagogicalNls.includes('chatbot') && !canvasUnpedagogicalNls.includes('lịch sử ra đời'), 'Canvas: unpedagogical chatbot history NLS must be filtered out');
-assert(canvasUnpedagogicalNls.includes('6.1.TC2a - Sử dụng công cụ số hỗ trợ luyện tập'), 'Canvas: NLS code must have meaningful pedagogical description');
+assert(canvasUnpedagogicalNls.includes('5.3.TC2a'), 'Canvas: NLS code must keep a valid Miền 1–5 code after rewrite');
+assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 6.1.TC2a - Hiểu biết về hệ thống trí tuệ nhân tạo]', 'Bài 1: Tập hợp'), '-', 'Canvas: legacy NLS miền 6 must be dropped');
 assert(target.includes('function canvasConfirm(message)'), 'Canvas must provide an in-DOM confirmation modal');
 assert(!/\bconfirm\(/.test(target), 'Canvas must not call the browser confirm() API in a sandbox');
 for(const name of ['loadDraftById','deleteDraftFromServer','restoreCanvasDraft','resetData','deletePpctRowAt'])assert(target.includes(`await canvasConfirm(`),`${name} must await the Canvas confirmation modal`);

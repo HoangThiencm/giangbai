@@ -4,32 +4,38 @@
 PASS
 
 ## Đối chiếu scope
-- [x] `nopbai-quanly.html`: Dropdown thể loại trường bổ sung kiểu `link` — "Liên kết / Nhúng bảng tính (Link)".
-- [x] `nopbai-quanly.html`: Có ô nhập URL liên kết và checkbox nhúng iframe (mặc định bật).
-- [x] `nopbai-quanly.html`: Bổ sung nút sao chép link nộp trực tiếp (`submissionParticipantUrl` kèm `?code=&person=`) tại bảng người nộp chỉ định (`renderDetail`).
-- [x] `nopbai-quanly.html`: Xuất CSV danh sách mã có thêm cột "Đường link nộp trực tiếp".
-- [x] `nopbai-quanly.html`: Render link có thể click được trong bảng tổng hợp bài nộp (`renderSubmissionsTable`).
-- [x] `nopbai.html`: Có hàm `formatEmbedUrl` tự động chuyển link Google Sheets/Forms sang dạng nhúng tối ưu (`widget=true&headers=false&chrome=false` / `embedded=true`).
-- [x] `nopbai.html`: Khung nhúng iframe chiều cao 560px, banner chỉ dẫn 2 bước chống quên bấm nộp bài, nút dự phòng "Mở tab mới", ô nhập xác nhận `name="report_${esc(field.key)}"`.
-- [x] `api/submissions.php`: `$types` chứa `'link'`, chuẩn hóa URL (chặn `javascript:`, `data:`, `vbscript:`, tự động bổ sung `https://`), lưu trữ `url` và `embed`.
-- [x] `tests/nopbai-report-link-smoke.js`: Tạo mới bài test smoke kiểm tra toàn bộ logic cấu trúc code, regex, hàm nhúng và tham số URL.
+- [x] `js/khbd-standards.js`: Đã xóa bỏ hoàn toàn 3 mục Miền 6 (`6.1`, `6.2`, `6.3`) khỏi `KHBD_STANDARDS.digital.entries`.
+- [x] `js/khbd-standards.js`: NLS thu gọn chuẩn xác còn đúng 21 mục cho Lớp 6–7 (`TC1a`) và 21 mục cho Lớp 8–9 (`TC2a`) thuộc 5 Miền nền tảng (CV 3456).
+- [x] `js/khbd-standards.js`: Đã loại bỏ logic cấm cứng `isMath && /^6\./` trong `isUnnaturalOfficialStandard` và nhánh chấm điểm `Ứng dụng trí tuệ nhân tạo` của NLS.
+- [x] `js/khbd-standards.js`: Bảo toàn 100% danh mục 88 YCCĐ chuẩn QĐ 2422 (4 Miền A, B, C, D) cho các khối lớp 6, 7, 8, 9.
+- [x] `soankhbd.html` & `canvas_soankhbd.html`: Cập nhật tiêu đề Khối 3: "Phương pháp dạy học & Năng lực số (TT 02 / CV 3456 - 5 Miền nền tảng)"; mô tả và nhãn checkbox ghi rõ 5 Miền; panel NLS chỉ hiển thị 5 Miền.
+- [x] `soankhbd.html` & `canvas_soankhbd.html`: Khối AI đứng độc lập là "✨ Tích hợp Khung Năng lực AI (QĐ 2422/QĐ-BGDĐT)", giải thích rõ 4 Miền A–D theo lớp.
+- [x] `js/khbd-app.js`: `standardsOfKind("digital")` lọc sạch mã `6.x.TC` và ID `tt02-*-6-*` cũ; phân định rạch ròi giữa NLS và AI.
+- [x] `js/khbd-prompts.js`: `SYSTEM_ROLE` và `GENERATE_OBJECTIVES` khẳng định NLS gồm 5 Miền (CV 3456) và AI gồm 4 Miền (QĐ 2422), cấm lẫn lộn mã AI vào NLS.
+- [x] `canvas_xaydungphuluc.html` & `xaydungphuluc.html`: Đồng bộ quy chuẩn NLS Miền 1–5 và AI QĐ 2422.
+- [x] `tests/khbd-ai-catalog-smoke.js`: Đã cập nhật chỉ số kiểm thử 21 mục NLS cho cả 2 dải lớp và khẳng định NLS không chứa mã Miền 6.
 
 ## Test đã chạy
-- Lệnh: `node tests/nopbai-report-link-smoke.js`
-- Kết quả: `nopbai report link smoke: passed` (Exit code: 0)
-- Kiểm tra tính tương thích cú pháp và regex: PASS 100%.
+- `node tests/khbd-ai-catalog-smoke.js`: PASS (21 mục NLS L6–7, 21 mục NLS L8–9, 88 mục AI QĐ 2422)
+- `node tests/khbd-4steps-workflow-smoke.js`: PASS (Kiểm thử quy trình 4 bước và khung mã NLS 5 Miền & AI QĐ 2422)
+- `node tests/khbd-integrations-smoke.js`: PASS (Khóa gate tích hợp NLS và AI)
+- `node tests/khbd-competencies-smoke.js`: PASS (Khung năng lực chung và đặc thù)
+- `node tests/khbd-subject-integrations-smoke.js`: PASS (Tích hợp bối cảnh theo môn)
+- `node tests/khbd-recommendation-flow-smoke.js`: PASS (Luồng đề xuất PPDH / NLS / AI)
+- `node tests/soankhbd-ppct-standards-smoke.js`: PASS (Chuẩn hóa chuẩn tích hợp từ PPCT)
+- `node tests/khbd-ai-integration-gate.test.js`: PASS (Gate bật/tắt AI tích hợp)
+- `node tests/xaydungphuluc-smoke.js`: PASS (Đồng bộ Phụ lục 1, 2, 3)
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS (Đồng bộ Phụ lục bản Canvas)
+- `node tests/canvas-soankhbd-smoke.js`: PASS (Đồng bộ Canvas Soạn KHBD 1-1)
 
 ## Pass / Fail từng tiêu chí
-- **Tiêu chí 1**: Dropdown thể loại trường trong trình tạo báo cáo có mục "Liên kết / Nhúng bảng tính (Link)" -> PASS
-- **Tiêu chí 2**: Có ô nhập URL liên kết và checkbox nhúng iframe đi kèm khi chọn loại trường Liên kết -> PASS
-- **Tiêu chí 3**: Trang nộp bài (`nopbai.html`) nhúng trực tiếp khung Google Sheets/Forms mượt mà, tự động tối ưu hóa URL không thanh menu rườm rà -> PASS
-- **Tiêu chí 4**: Có chỉ dẫn 2 bước và nút dự phòng "Mở tab mới" cho người dùng điện thoại -> PASS
-- **Tiêu chí 5**: Người nộp có thể xác nhận/ghi chú tại trường liên kết và bấm nút Nộp bài để lưu vào hệ thống -> PASS
-- **Tiêu chí 6**: Có nút sao chép link nộp bài trực tiếp cho từng người trong danh sách chỉ định -> PASS
-- **Tiêu chí 7**: Xuất file CSV danh sách có kèm cột đường link nộp trực tiếp -> PASS
-- **Tiêu chí 8**: Backend `api/submissions.php` hỗ trợ đầy đủ kiểu `link`, bảo toàn trường `url` và `embed` -> PASS
-- **Tiêu chí 9**: Toàn bộ test tự động `tests/nopbai-report-link-smoke.js` chạy thành công -> PASS
-- **Tiêu chí 10**: Không làm ảnh hưởng đến các chức năng hiện có của hệ thống -> PASS
+- **Tiêu chí 1**: Miền 6 (AI) được loại bỏ hoàn toàn khỏi danh mục Năng lực số (CV 3456) -> PASS
+- **Tiêu chí 2**: NLS chuẩn hóa đúng 5 Miền nền tảng với 21 năng lực thành phần cho Lớp 6–7 và 21 năng lực thành phần cho Lớp 8–9 -> PASS
+- **Tiêu chí 3**: Khung Năng lực AI hoạt động độc lập theo chuẩn QĐ 2422 với 4 Miền (A, B, C, D) và đủ 88 YCCĐ -> PASS
+- **Tiêu chí 4**: Giao diện `soankhbd.html` và `canvas_soankhbd.html` phân định rạch ròi giữa Khối 3 (NLS 5 Miền) và Khối AI (QĐ 2422) -> PASS
+- **Tiêu chí 5**: Prompt Gemini và Kế hoạch bài dạy sinh ra không còn tình trạng trùng lặp mục tiêu AI trong NLS -> PASS
+- **Tiêu chí 6**: Các tệp Phụ lục 5512 giữ vững tính đồng bộ cột NLS và cột AI -> PASS
+- **Tiêu chí 7**: Toàn bộ các bộ smoke tests liên quan chạy thành công 100% -> PASS
 
 ## Bug
 Không phát hiện lỗi.

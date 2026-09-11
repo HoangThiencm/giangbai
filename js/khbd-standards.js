@@ -27,8 +27,7 @@ const KHBD_STANDARDS = {
       ...digitalEntry("2.1", "Giao tiếp và hợp tác trong môi trường số", "Tương tác thông qua công nghệ số"), ...digitalEntry("2.2", "Giao tiếp và hợp tác trong môi trường số", "Chia sẻ thông tin và nội dung thông qua công nghệ số"), ...digitalEntry("2.3", "Giao tiếp và hợp tác trong môi trường số", "Sử dụng công nghệ số để thực hiện trách nhiệm công dân"), ...digitalEntry("2.4", "Giao tiếp và hợp tác trong môi trường số", "Hợp tác thông qua công nghệ số"), ...digitalEntry("2.5", "Giao tiếp và hợp tác trong môi trường số", "Quy tắc ứng xử trên mạng"), ...digitalEntry("2.6", "Giao tiếp và hợp tác trong môi trường số", "Quản lý danh tính số"),
       ...digitalEntry("3.1", "Sáng tạo nội dung số", "Phát triển nội dung số"), ...digitalEntry("3.2", "Sáng tạo nội dung số", "Tích hợp và tạo lại nội dung số"), ...digitalEntry("3.3", "Sáng tạo nội dung số", "Thực thi bản quyền và giấy phép"), ...digitalEntry("3.4", "Sáng tạo nội dung số", "Lập trình"),
       ...digitalEntry("4.1", "An toàn", "Bảo vệ thiết bị"), ...digitalEntry("4.2", "An toàn", "Bảo vệ dữ liệu cá nhân và quyền riêng tư"), ...digitalEntry("4.3", "An toàn", "Bảo vệ sức khỏe và an sinh số"), ...digitalEntry("4.4", "An toàn", "Bảo vệ môi trường"),
-      ...digitalEntry("5.1", "Giải quyết vấn đề", "Giải quyết vấn đề kỹ thuật"), ...digitalEntry("5.2", "Giải quyết vấn đề", "Xác định nhu cầu và giải pháp công nghệ"), ...digitalEntry("5.3", "Giải quyết vấn đề", "Sử dụng sáng tạo công nghệ số"), ...digitalEntry("5.4", "Giải quyết vấn đề", "Xác định các vấn đề cần cải thiện năng lực số"),
-      ...digitalEntry("6.1", "Ứng dụng trí tuệ nhân tạo", "Hiểu biết về hệ thống trí tuệ nhân tạo"), ...digitalEntry("6.2", "Ứng dụng trí tuệ nhân tạo", "Sử dụng hệ thống trí tuệ nhân tạo"), ...digitalEntry("6.3", "Ứng dụng trí tuệ nhân tạo", "Đánh giá trí tuệ nhân tạo")
+      ...digitalEntry("5.1", "Giải quyết vấn đề", "Giải quyết vấn đề kỹ thuật"), ...digitalEntry("5.2", "Giải quyết vấn đề", "Xác định nhu cầu và giải pháp công nghệ"), ...digitalEntry("5.3", "Giải quyết vấn đề", "Sử dụng sáng tạo công nghệ số"), ...digitalEntry("5.4", "Giải quyết vấn đề", "Xác định các vấn đề cần cải thiện năng lực số")
     ]
   },
   ai: {
@@ -175,9 +174,7 @@ function isUnnaturalOfficialStandard(kind, entry, ctx) {
   const code = String(entry.componentCode || entry.code || "");
   const facilities = ctx.facilities || {};
   const hasStudentTech = Boolean(facilities.devices || facilities.internet);
-  const isMath = Boolean(branch || /toan/i.test(foldStandardText(ctx.subjectName || "")));
   if (kind === "digital") {
-    if (isMath && /^6\./.test(code)) return true;
     if (branch === "geometry" && (/^3\.4/.test(code) || /^3\.3/.test(code))) return true;
     if (branch === "algebra" && /^4\.2/.test(code)) return true;
     if (!hasStudentTech && (/^3\.4/.test(code) || /^3\.3/.test(code))) return true;
@@ -216,14 +213,6 @@ function scoreOfficialStandard(kind, entry, ctx) {
     } else if (entry.domain === "Giải quyết vấn đề") {
       if (/van de|du an|thuc tien|giai quyet|van dung/.test(hay)) score += 4;
       score += 2;
-    } else if (entry.domain === "Ứng dụng trí tuệ nhân tạo") {
-      if (isMath) {
-        score = 0;
-      } else {
-        if (ctx.aiOn) score += 5;
-        if (!hasTech && !ctx.aiOn) score -= 3;
-        if (/\bai\b|chatbot|gemini|tri tue nhan tao/.test(hay)) score += 4;
-      }
     }
     const topicHay = foldStandardText(ctx.topic || "");
     const isExperiential = /thuc hanh va trai nghiem|hoat dong thuc hanh|trai nghiem|stem|du an|clb/i.test(topicHay);
