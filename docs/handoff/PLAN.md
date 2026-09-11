@@ -1,190 +1,123 @@
-# PLAN: Khắc phục triệt để lỗi thanh kéo % tỉ lệ Năng lực số và Năng lực AI không hoạt động
+# PLAN: Thiết kế phân bổ Năng lực số và AI linh hoạt theo Số tiết / Số bài dạy bài mới
 
-Trạng thái: ĐÃ DUYỆT
+Trạng thái: CHỜ DUYỆT (Coder chuẩn bị thực hiện)
 
-## 1. Hiện trạng & Nguyên nhân gốc rễ (Root Cause)
+## 1. Mục tiêu & Yêu cầu từ Người dùng
 
-Khi người dùng thao tác kéo thanh trượt `<input type="range">` cho **Năng lực số (`#nlsRate`)** hoặc **Trí tuệ nhân tạo (`#aiRate`)**, giao diện bị đơ/treo cứng, nhãn phần trăm vĩnh viễn không đổi (vẫn hiển thị 50% cho NLS và 30% cho AI) do 4 nguyên nhân kỹ thuật cụ thể sau:
-
-### 1.1. Thủ phạm trực tiếp: Tràn ngăn xếp đệ quy vô hạn (`RangeError: Maximum call stack size exceeded`)
-- Trong `xaydungphuluc.html`:
-  - Khi kéo chuột, sự kiện `oninput="syncNlsSelectionFromRate()"` kích hoạt.
-  - Chuỗi gọi hàm:
-    `syncNlsSelectionFromRate()` → `nlsCandidates()` → `aiCandidates()` → `aiPickerRows()` → `defaultPpctRows(getConfig())`.
-  - Trong `xaydungphuluc.html`, hàm `getConfig()` khai báo không tham số:
-    `getConfig()` → `ai: { selectedLessons: selectedAiLessons(), selectedPeriods: selectedAiPeriods() }`.
-  - Hàm `selectedAiPeriods()` gọi `aiPeriodCandidates()` → `aiCandidates()` → `aiPickerRows()` → `defaultPpctRows(getConfig())`...
-  - **Vòng lặp đệ quy khép kín**: `getConfig()` gọi `selectedAiPeriods()`, mà `selectedAiPeriods()` lại gọi `getConfig()`.
-  - **Hậu quả**: Trình duyệt ném ngoại lệ `RangeError: Maximum call stack size exceeded` ngay tại dòng lệnh đầu tiên của `syncNlsSelectionFromRate()`. Mã lệnh bị sập ngay lập tức trước khi kịp chạy đến dòng cập nhật nhãn `nlsRateOutEl.value = ...`. Do đó nhãn `%` không bao giờ được cập nhật, vĩnh viễn bị treo ở giá trị HTML tĩnh ban đầu là `50%` và `30%`.
-- Trong `canvas_xaydungphuluc.html` (và bản backup):
-  - Hàm `getConfig({includeAiSelection=true}={})` có nhận tham số, NHƯNG các vị trí gọi nội bộ lại dùng cú pháp:
-    `const cfg = getConfig.length ? getConfig({includeAiSelection:false}) : getConfig();`
-    (tại các hàm `nlsLessonPriorityScore`, `aiSelectionLimit`, `prioritizedAiPeriods`).
-  - Trong chuẩn JavaScript ES6, một hàm có tham số mặc định destructuring (`{includeAiSelection=true}={}`) thì thuộc tính `getConfig.length` luôn luôn bằng `0`!
-  - Do đó biểu thức `getConfig.length ? ... : getConfig()` luôn đánh giá vào nhánh `else: getConfig()` (không đối số, mặc định `includeAiSelection=true`), gây đệ quy vô tận và sập call stack tương tự.
-
-### 1.2. Nghẽn hiệu năng O(N log N) & vòng lặp lồng nhau gây giật lag
-- Trong `selectedAiPeriods()`:
-  `for(const period of aiPeriodCandidates()) if(selectedAiPeriodIds().has(period.id))`
-  Hàm `selectedAiPeriodIds()` bị gọi lặp lại 140 lần bên trong điều kiện `if` của từng vòng lặp, mỗi lần lại tính toán lại danh sách ứng viên và mức trần.
-- Trong `prioritizedNlsLessons()`:
-  `[...nlsCandidates()].sort((a,b)=>nlsLessonPriorityScore(b.lesson)-nlsLessonPriorityScore(a.lesson)...)`
-  Hàm `nlsLessonPriorityScore` bị gọi hàng trăm lần lặp đi lặp lại trong quá trình sort thay vì tính điểm trước (map/score) rồi mới sort, làm kéo chuột bị nghẽn CPU hàng chục giây.
-
-### 1.3. Khóa trần thanh trượt AI ở mức 9% (`aiRate.max`)
-- Trong `syncAiRateFromSelection()`, mã lệnh gán:
-  `aiRate.max = String(aiRateMaximum(candidates));`
-  Với môn 140 tiết (như Toán 6), định mức trần AI là 12 tiết, khiến `aiRateMaximum` chỉ bằng `Math.round(12/140*100) = 9%`.
-- Việc ép `max = 9` khiến thanh trượt chỉ kéo được trong khoảng 0% đến 9%, kéo sang phải (20%, 30%, 50%) bị dội ngược lại hoặc không di chuyển được.
-
-### 1.4. Gán đè ngược lại `slider.value` trong sự kiện kéo `oninput`
-- Cả `syncNlsRateFromSelection` và `syncAiRateFromSelection` đều gán `slider.value = String(rate)` ngay trong luồng `oninput`, gây xung đột với trạng thái drag chuột của trình duyệt, làm con trượt bị nhảy giật lùi về vị trí cũ.
+1. **Linh hoạt 2 phương án phân bổ (cả NLS và AI)**:
+   - **Phương án 1 - Theo số tiết**: Phân bổ theo số lượng tiết hoặc tỉ lệ % do người dùng quy định, ghi rõ là **"tiết dạy bài mới"** (ví dụ: `20/95 tiết dạy bài mới`).
+   - **Phương án 2 - Theo số bài**: Phân bổ theo số lượng bài hoặc tỉ lệ % do người dùng quy định, ghi rõ là **"bài dạy bài mới"** (ví dụ: `9/47 bài dạy bài mới`).
+2. **Không khóa cứng trần**:
+   - Bỏ hoàn toàn việc khóa cứng trần (như trần 12 tiết AI trước đây). Người dùng có quyền tự do kéo hoặc nhập số tiết/bài theo nhu cầu thực tế của nhà trường (từ 0 đến toàn bộ 100% số tiết/bài dạy bài mới).
+3. **Phạm vi áp dụng**:
+   - **Chỉ điều chỉnh duy nhất trên file `xaydungphuluc.html`** (và bộ test `tests/xaydungphuluc-smoke.js`).
+   - Không thay đổi `canvas_xaydungphuluc.html` hay các bản backup.
 
 ---
 
-## 2. Phạm vi thay đổi
+## 2. Thiết kế Giao diện (UI) trên `xaydungphuluc.html`
 
-Khắc phục triệt để và đồng bộ 100% trên cả 3 file:
-1. `xaydungphuluc.html` (Mã nguồn web chính)
-2. `canvas_xaydungphuluc.html` (Mã nguồn bản Canvas)
-3. `backupcode viettailieu/canvas_xaydungphuluc.html` (Bản đồng bộ dự phòng 1:1)
-4. `tests/xaydungphuluc-smoke.js` và `tests/canvas-xaydungphuluc-smoke.js` (Bổ sung kiểm thử tự động cho tương tác kéo trượt slider).
+Tại Mục 1 (khối thẻ NLS và AI, dòng ~31 trong `xaydungphuluc.html`):
 
----
+### 2.1. Thẻ Năng lực số (CV 3456 / TT 02)
+- **Chọn chế độ phân bổ**:
+  - Bổ sung `<select id="nlsUnit" class="field text-xs py-1 px-2 w-auto" onchange="onNlsUnitChange(this.value)">`:
+    - `<option value="period" selected>Theo số tiết dạy bài mới</option>`
+    - `<option value="lesson">Theo số bài dạy bài mới</option>`
+- **Thanh kéo & Ô nhập số lượng trực tiếp**:
+  - Thanh trượt `%`: `<input id="nlsRate" class="w-full" type="range" min="0" max="100" value="50" oninput="syncNlsSelectionFromRate()">`
+  - Ô nhập số lượng trực tiếp cạnh nhãn: `<input id="nlsCountInput" type="number" min="0" class="field text-xs py-0.5 px-1.5 w-16 text-center" onchange="syncNlsSelectionFromCount(this.value)">`
+  - Nhãn hiển thị `<output id="nlsRateOut">`:
+    - Khi chế độ là **Theo số tiết**:
+      `${rate}% (${selectedPeriods}/${totalPeriods} tiết dạy bài mới · ${selectedLessons}/${totalLessons} bài)`
+      *(Ví dụ: `21% (20/95 tiết dạy bài mới · 10/47 bài)`)*
+    - Khi chế độ là **Theo số bài**:
+      `${rate}% (${selectedLessons}/${totalLessons} bài dạy bài mới · ${selectedPeriods}/${totalPeriods} tiết)`
+      *(Ví dụ: `21% (10/47 bài dạy bài mới · 20/95 tiết)`)*
 
-## 3. Giải pháp kỹ thuật chi tiết cho Coder
+### 2.2. Thẻ Trí tuệ nhân tạo (QĐ 2422)
+- **Chọn chế độ phân bổ**:
+  - Bổ sung `<select id="aiUnit" class="field text-xs py-1 px-2 w-auto" onchange="onAiUnitChange(this.value)">`:
+    - `<option value="period" selected>Theo số tiết dạy bài mới</option>`
+    - `<option value="lesson">Theo số bài dạy bài mới</option>`
+- **Thanh kéo & Ô nhập số lượng trực tiếp**:
+  - Thanh trượt `%`: `<input id="aiRate" class="w-full" type="range" min="0" max="100" value="30" oninput="syncAiSelectionFromRate()">`
+  - Ô nhập số lượng trực tiếp: `<input id="aiCountInput" type="number" min="0" class="field text-xs py-0.5 px-1.5 w-16 text-center" onchange="syncAiSelectionFromCount(this.value)">`
+  - Nhãn hiển thị `<output id="aiRateOut">`:
+    - Khi chế độ là **Theo số tiết**:
+      `${rate}% (${selectedPeriods}/${totalPeriods} tiết dạy bài mới · ${selectedLessons}/${totalLessons} bài)`
+      *(Ví dụ: `21% (20/95 tiết dạy bài mới · 9/47 bài)`)*
+    - Khi chế độ là **Theo số bài**:
+      `${rate}% (${selectedLessons}/${totalLessons} bài dạy bài mới · ${selectedPeriods}/${totalPeriods} tiết)`
+- **Xóa bỏ khóa cứng trần**:
+  - Giữ `aiRate.max = '100'`. Không chặn trần ở 12 tiết nữa.
+  - Định mức 12 tiết cũ chỉ giữ vai trò gợi ý tham khảo nếu cần, không khóa hành vi người dùng.
 
-### Bước 1: Bảo vệ `getConfig` chống đệ quy (Áp dụng cho cả 3 file HTML)
-- Thêm cờ bảo vệ re-entrancy `let _isGettingConfig = false;` (hoặc kiểm tra cờ tham số `opts` an toàn):
-  ```javascript
-  let _isGettingConfig = false;
-  function getConfig(opts){
-    const includeAi = (opts && opts.includeAiSelection === false) || _isGettingConfig ? false : true;
-    _isGettingConfig = true;
-    try {
-      return {
-        capHoc: 'THCS',
-        lop: grade.value,
-        monHoc: subject.value,
-        boSach: (typeof bookSeries !== 'undefined' && bookSeries ? bookSeries.value : 'Sách giáo khoa dùng chung (từ 2026-2027)'),
-        namHoc: schoolYear.value,
-        truong: school.value,
-        toChuyenMon: department.value,
-        giaoVien: teacher.value,
-        thongKe: {
-          classes: classCount.value.trim(),
-          students: studentCount.value.trim(),
-          teachers: teacherCount.value.trim()
-        },
-        nls: {
-          enabled: nlsEnabled.checked,
-          rate: +nlsRate.value,
-          density: nlsDensity.value,
-          noAiDensity: typeof nlsNoAiDensity !== 'undefined' ? nlsNoAiDensity.value : '2-3'
-        },
-        ai: {
-          enabled: aiEnabled.checked,
-          rate: +aiRate.value,
-          density: aiDensity.value,
-          selectedLessons: includeAi && typeof selectedAiLessons === 'function' ? selectedAiLessons() : [],
-          selectedPeriods: includeAi && typeof selectedAiPeriods === 'function' ? selectedAiPeriods() : []
-        },
-        clil: clil.checked,
-        hoaNhap: inclusive.checked,
-        chiDao: instructions.value,
-        sgkContext: sgkCompactContext
-      };
-    } finally {
-      _isGettingConfig = false;
-    }
-  }
-  ```
-- Thay thế toàn bộ biểu thức lỗi `getConfig.length ? getConfig({includeAiSelection:false}) : getConfig()` thành `getConfig({includeAiSelection:false})`.
-- Trong `aiPickerRows()`: gọi `defaultPpctRows(getConfig({includeAiSelection:false}))`.
-
-### Bước 2: Tối ưu hiệu năng `selectedAiPeriods` & `prioritizedNlsLessons` (Áp dụng cho cả 3 file HTML)
-- Trong `selectedAiPeriods()`: Hoisting `selectedAiPeriodIds()` ra ngoài vòng lặp:
-  ```javascript
-  function selectedAiPeriods(){
-    const groups = new Map(), selected = selectedAiPeriodIds();
-    for (const period of aiPeriodCandidates()) {
-      if (selected.has(period.id)) {
-        if (!groups.has(period.lessonId)) {
-          groups.set(period.lessonId, { lesson: period.lesson, lessonId: period.lessonId, periods: [] });
-        }
-        groups.get(period.lessonId).periods.push(period.period);
-      }
-    }
-    return [...groups.values()];
-  }
-  ```
-- Trong `prioritizedNlsLessons()`: Tính điểm 1 lần (map) rồi mới sort:
-  ```javascript
-  function prioritizedNlsLessons(){
-    const candidates = nlsCandidates(), scored = candidates.map((x, i) => ({
-      ...x,
-      score: nlsLessonPriorityScore(x.lesson),
-      index: i
-    }));
-    return scored.sort((a, b) => b.score - a.score || a.index - b.index || String(a.id).localeCompare(String(b.id)));
-  }
-  ```
-
-### Bước 3: Sửa logic thanh trượt `#aiRate` & `#nlsRate`
-- **Thanh trượt `#aiRate`**:
-  - Không gán `aiRate.max = String(aiRateMaximum(candidates))`. Giữ `aiRate.max = '100'`.
-  - Trong `syncAiSelectionFromRate()`:
-    - Đọc tỉ lệ người dùng đang kéo: `const rate = Number(aiRate.value) || 0`.
-    - Tính số lượng tiết mục tiêu theo tỉ lệ, chặn trần `aiSelectionLimit()`:
-      `const total = aiPeriodCandidates().length;`
-      `const limit = aiSelectionLimit();`
-      `const target = Math.min(limit, Math.max(0, Math.round(rate / 100 * total)));`
-      `aiSelectedLessonIds = new Set(prioritizedAiPeriods().slice(0, target).map(x => x.id));`
-    - Cập nhật nhãn `#aiRateOut`:
-      `if (typeof aiRateOut !== 'undefined') aiRateOut.value = `${rate}% (${aiSelectedLessonIds.size}/${total} tiết, tối đa ${limit} tiết)``;
-    - Gọi `updateAiPicker()`.
-  - Trong `syncAiRateFromSelection(candidates, selected)`:
-    - Chỉ gán `aiRate.value = String(rate)` khi người dùng tick chọn checkbox thủ công trong bảng (không gán đè khi đang kéo `oninput`).
-- **Thanh trượt `#nlsRate`**:
-  - Trong `syncNlsSelectionFromRate()`:
-    - Lấy giá trị thanh kéo: `const rate = Number(nlsRate.value) || 0`.
-    - Tính số bài: `const total = nlsCandidates().length, targetCount = Math.round(rate / 100 * total);`
-    - Gán `nlsSelectedLessonIds = new Set(prioritizedNlsLessons().slice(0, targetCount).map(x => x.id));`
-    - Cập nhật trực tiếp nhãn: `if (nlsRateOutEl) nlsRateOutEl.value = `${rate}% (${targetCount}/${total} bài)``;
-    - Không gán đè `nlsRate.value` trong `syncNlsSelectionFromRate()`.
-    - Gọi `updateAiPicker()`.
-
-### Bước 4: Bổ sung smoke test xác thực tương tác kéo trượt slider
-- Bổ sung test case vào `tests/xaydungphuluc-smoke.js` và `tests/canvas-xaydungphuluc-smoke.js`:
-  - Mô phỏng kéo `#nlsRate` về `0` và `80`: xác nhận `nlsRateOut.value` cập nhật tương ứng `0%` và `80%`, không văng `RangeError`.
-  - Mô phỏng kéo `#aiRate` về `0` và `50`: xác nhận `aiRateOut.value` cập nhật đúng theo thời gian thực.
+### 2.3. Bảng chọn Mục 4 (`#aiLessonPicker`)
+- Dòng thông tin tổng hợp trên thanh công cụ:
+  `📊 NLS: ${nlsPeriods} tiết dạy bài mới (${nlsLessons} bài) · 🎯 AI: ${aiPeriods} tiết dạy bài mới (${aiLessons} bài)`
+- Cột NLS: Checkbox từng bài hiển thị kèm số tiết: `Tích hợp NLS (${row.periodCount} tiết)`.
+- Cột AI: Bỏ giới hạn chặn `if (selected.size >= limit) { notify(...); return; }` khi tick thủ công. Người dùng có thể tick tùy ý bao nhiêu tiết tùy nhu cầu.
 
 ---
 
-## 4. Ngoài phạm vi
-- Không thay đổi danh mục năng lực số CV 3456, tiêu chí AI QĐ 2422.
-- Không thay đổi cấu trúc xuất tệp DOCX Phụ lục 1, 2, 3 hay API CSDL nháp.
+## 3. Logic & Thuật toán chi tiết cho Coder
+
+### 3.1. Dữ liệu nền tảng
+- `totalLessons = aiCandidates().length` (Số bài dạy bài mới, ví dụ Toán 6: 47 bài).
+- `totalPeriods = aiPeriodCandidates().length` (Số tiết của các bài dạy bài mới, ví dụ Toán 6: 95 tiết).
+
+### 3.2. Thuật toán phân bổ NLS (`syncNlsSelectionFromRate` & `syncNlsSelectionFromCount`)
+1. **Nếu `nlsUnit === 'period'` (Theo số tiết)**:
+   - Từ `%` hoặc số lượng người dùng nhập, tính số tiết mục tiêu: `targetPeriods`.
+   - Lấy danh sách bài đã ưu tiên: `prioritizedNlsLessons()`.
+   - Lần lượt duyệt các bài trong danh sách ưu tiên, cộng dồn số tiết của từng bài vào tập chọn cho đến khi đạt hoặc xấp xỉ gần nhất với `targetPeriods`.
+   - Lưu vào `nlsSelectedLessonIds`.
+   - Cập nhật nhãn và ô số lượng: `${rate}% (${currentPeriods}/${totalPeriods} tiết dạy bài mới · ${currentLessons}/${totalLessons} bài)`.
+2. **Nếu `nlsUnit === 'lesson'` (Theo số bài)**:
+   - Từ `%` hoặc số lượng người dùng nhập, tính số bài mục tiêu: `targetLessons`.
+   - Chọn đúng `targetLessons` bài đầu tiên trong `prioritizedNlsLessons()`.
+   - Cập nhật nhãn và ô số lượng: `${rate}% (${targetLessons}/${totalLessons} bài dạy bài mới · ${currentPeriods}/${totalPeriods} tiết)`.
+
+### 3.3. Thuật toán phân bổ AI (`syncAiSelectionFromRate` & `syncAiSelectionFromCount`)
+1. **Nếu `aiUnit === 'period'` (Theo số tiết)**:
+   - Tính số tiết mục tiêu: `targetPeriods = Math.round(rate / 100 * totalPeriods)` (hoặc lấy từ `aiCountInput`).
+   - Lấy danh sách tiết ưu tiên: `prioritizedAiPeriods()`.
+   - Chọn đúng `targetPeriods` tiết đầu tiên: `aiSelectedLessonIds = new Set(prioritizedAiPeriods().slice(0, targetPeriods).map(x => x.id))`.
+   - Không áp đặt trần `Math.min(limit, ...)`.
+   - Cập nhật nhãn và ô số lượng: `${rate}% (${targetPeriods}/${totalPeriods} tiết dạy bài mới · ${selectedLessonsCount}/${totalLessons} bài)`.
+2. **Nếu `aiUnit === 'lesson'` (Theo số bài)**:
+   - Tính số bài mục tiêu: `targetLessons = Math.round(rate / 100 * totalLessons)`.
+   - Lấy `targetLessons` bài ưu tiên trong danh sách, chọn tất cả các tiết thuộc các bài đó.
+   - Cập nhật nhãn và ô số lượng: `${rate}% (${targetLessons}/${totalLessons} bài dạy bài mới · ${selectedPeriodsCount}/${totalPeriods} tiết)`.
+
+### 3.4. Đồng bộ 2 chiều giữa Slider `%` và Ô nhập số lượng
+- Khi kéo Slider `%`: tính ra số lượng tiết/bài và điền vào ô input số lượng.
+- Khi gõ số lượng vào ô input: tính ngược lại ra `%` tương ứng và cập nhật vị trí con trượt Slider.
+
+### 3.5. Lưu / Tải bản nháp (Draft Config)
+- Trong `getConfig()`: bổ sung `nls.unit` và `ai.unit`.
+- Trong `applyDraftPayload()`: phục hồi `nlsUnit.value` và `aiUnit.value`.
+
+---
+
+## 4. Phạm vi File tác động
+1. `xaydungphuluc.html`: Toàn bộ điều chỉnh UI, logic phân bổ, nhãn text và gỡ khóa cứng.
+2. `tests/xaydungphuluc-smoke.js`: Cập nhật assertion kiểm tra 2 chế độ (theo số tiết và theo số bài), xác nhận nhãn có cụm từ "tiết dạy bài mới" / "bài dạy bài mới" và không bị khóa cứng trần 12 tiết.
 
 ---
 
 ## 5. Tiêu chí nghiệm thu (Acceptance Criteria)
-1. Kéo thanh `#nlsRate` về `0%`: Nhãn hiển thị ngay lập tức `0% (0/... bài)`, danh sách bài NLS được bỏ tick tương ứng.
-2. Kéo thanh `#nlsRate` lên các mốc (25%, 50%, 80%, 100%): Nhãn cập nhật tức thì, con trượt mượt mà không bị kẹt hay giật lùi.
-3. Kéo thanh `#aiRate` từ 0% đến 100%: Con trượt di chuyển tự do toàn dải 0–100% (không bị khóa cứng ở 9%), nhãn hiển thị rõ tỉ lệ % và số tiết đã chọn (chặn trần định mức theo quy định).
-4. Cả 3 file `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` đồng bộ nhất quán.
-5. Toàn bộ các bộ kiểm thử tự động đạt kết quả **PASS**:
+1. Có thể chuyển đổi qua lại giữa 2 chế độ: "Theo số tiết dạy bài mới" và "Theo số bài dạy bài mới" cho cả NLS và AI.
+2. Gõ trực tiếp ví dụ `20` vào ô số lượng:
+   - NLS tự động chọn các bài có tổng khoảng 20 tiết dạy bài mới.
+   - AI tự động chọn đúng 20 tiết dạy bài mới.
+3. Kéo slider: Vị trí slider và ô số lượng đồng bộ 2 chiều mượt mà.
+4. Nhãn hiển thị ghi rõ ràng:
+   - `${...} tiết dạy bài mới`
+   - `${...} bài dạy bài mới`
+5. AI hoàn toàn không bị kẹt ở 12 tiết, người dùng có thể chọn 20 tiết, 30 tiết hoặc kéo đến 100%.
+6. Tất cả smoke tests tự động đạt PASS:
    ```bash
-   node tests/khbd-nls-rate-smoke.js
-   node tests/canvas-xaydungphuluc-smoke.js
    node tests/xaydungphuluc-smoke.js
    ```
-
----
-
-# KẾ HOẠCH ĐÃ DUYỆT — Điều chỉnh kỹ thuật bắt buộc
-
-- Không dùng `getConfig.length` để nhận biết chữ ký hàm, vì tham số mặc định làm giá trị đó bằng `0`. Mọi helper nội bộ cần gọi trực tiếp `getConfig({includeAiSelection:false})`.
-- Chuẩn hoá `getConfig({includeAiSelection=true}={})` cho cả ba trang. Ở chế độ `false`, hai mảng chọn AI phải rỗng để chặn đường đệ quy; không dựa chỉ vào cờ re-entrancy.
-- `selectedAiPeriods()` phải tính candidate set và selected set một lần; `prioritizedNlsLessons()` phải tính score một lần trước khi sort.
-- Luồng `oninput` cho hai slider phải truyền `preserveSlider` qua `updateAiPicker`/các hàm đồng bộ để không bị ghi ngược sau khi render. Cập nhật nhãn bằng tỷ lệ người dùng vừa kéo, còn số lựa chọn vẫn tuân thủ mức trần.
-- Test phải thay assertion cũ đòi AI slider snap về `92` thành xác nhận `max=100`; bổ sung mô phỏng NLS 0/80 và AI 0/50, kiểm tra nhãn, không ném `RangeError`, giá trị slider giữ nguyên và số AI không vượt trần.

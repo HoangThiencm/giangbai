@@ -40,8 +40,8 @@ const sandbox = {
   nlsSelectedLessonIds: new Set(),
   nlsEnabled: { checked: true },
   nlsRate: { value: '50' },
-  nlsRateOut: { value: '' },
-  document: { querySelector(sel) { return sel === '#nlsRate' ? sandbox.nlsRate : sel === '#nlsRateOut' ? sandbox.nlsRateOut : null; } },
+  nlsRateOut: { value: '' }, nlsUnit:{value:'period'}, nlsCountInput:{value:''},
+  document: { querySelector(sel) { return {'#nlsRate':sandbox.nlsRate,'#nlsRateOut':sandbox.nlsRateOut,'#nlsUnit':sandbox.nlsUnit,'#nlsCountInput':sandbox.nlsCountInput}[sel]||null; } },
   notify() {},
   updateAiPicker() {},
   selectedAiLessons() { return []; },
@@ -53,11 +53,18 @@ const sandbox = {
   _cands: []
 };
 sandbox.nlsCandidates = function nlsCandidates() { return sandbox._cands; };
+sandbox.validPeriodCount = value => Number(value) || 1;
+sandbox.aiPeriodCandidates = () => sandbox._cands.flatMap(row => Array.from({length:sandbox.validPeriodCount(row.periods,row.tietCT)},(_,index)=>({id:`${row.id}:period:${index+1}`,lessonId:row.id})));
 vm.createContext(sandbox);
 vm.runInContext(
   extract('nlsLessonPriorityScore') + '\n' +
   extract('prioritizedNlsLessons') + '\n' +
   extract('isLessonNlsSelected') + '\n' +
+  extract('allocationUnit') + '\n' +
+  extract('allocationTotals') + '\n' +
+  extract('nlsSelectedPeriodCount') + '\n' +
+  extract('chooseNlsLessonsForPeriods') + '\n' +
+  extract('allocationSummary') + '\n' +
   extract('syncNlsRateFromSelection') + '\n' +
   extract('syncNlsSelectionFromRate') + '\n' +
   extract('toggleNlsLesson') + '\n' +

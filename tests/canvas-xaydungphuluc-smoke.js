@@ -16,6 +16,8 @@ assert(targetIds.has('canvasHostBanner'),'missing Canvas connection banner');
 assert(target.indexOf('<meta charset="utf-8">')<target.indexOf('<title>'),'charset must be declared before other document resources');
 assert(target.indexOf('<meta name="viewport"')<target.indexOf('<title>'),'viewport must be declared before other document resources');
 assert(!target.includes('cdn.tailwindcss.com'),'Canvas must not load runtime Tailwind CDN to avoid CSP worker blocks');
+assert(!target.includes('AI_SELECTION_LIMIT'),'Canvas source must not retain the legacy AI hard-cap constant');
+assert(!target.includes('tối đa 12 tiết AI'),'Canvas source must not tell users that AI selection is capped at 12 periods');
 assert(target.includes('html,body{display:block!important;visibility:visible!important'),'Canvas must force-visible html/body against Tailwind FOUC');
 assert(target.includes("setProperty('display','block','important')"),'Canvas must keep html/body visible if the host injects a hide style');
 assert(target.indexOf('html,body{display:block!important')<target.indexOf('https://hoangthiencm.id.vn/css/khbd-styles.css'),'first-paint CSS must precede external stylesheets');
@@ -77,12 +79,12 @@ const bootstrapCalls=[];
 const lifecycleSandbox={
   window:{},
   refreshSubjects(){bootstrapCalls.push('subjects')},loadDefaultPpctStructure(value){bootstrapCalls.push(['ppct',value])},checkSharedSgkKnowledge(value){bootstrapCalls.push(['knowledge',value])},syncRanges(){bootstrapCalls.push('ranges')},prefillTeacherIdentity(){bootstrapCalls.push('identity')},readCanvasStorage(){return 'dark'},
-  document:{documentElement:{classList:{add:value=>bootstrapCalls.push(['theme',value])}}},initCanvasEventBridge(){bootstrapCalls.push('bridge')},restoreLayoutPrefs(){bootstrapCalls.push('layout')},updateKeyBadge(){bootstrapCalls.push('badge')},renderPreview(){bootstrapCalls.push('preview')},loadDraftFromServer(value){bootstrapCalls.push(['draft',value])},checkCanvasHostConnection(){bootstrapCalls.push('connection')},reportCanvasError(error){throw error}
+  document:{documentElement:{classList:{add:value=>bootstrapCalls.push(['theme',value])}}},initCanvasEventBridge(){bootstrapCalls.push('bridge')},bindFlexibleAllocationControls(){bootstrapCalls.push('allocation-controls')},restoreLayoutPrefs(){bootstrapCalls.push('layout')},updateKeyBadge(){bootstrapCalls.push('badge')},renderPreview(){bootstrapCalls.push('preview')},loadDraftFromServer(value){bootstrapCalls.push(['draft',value])},checkCanvasHostConnection(){bootstrapCalls.push('connection')},reportCanvasError(error){throw error}
 };
 vm.createContext(lifecycleSandbox);
 vm.runInContext(sliceNamedFunction('initApp'),lifecycleSandbox);
 lifecycleSandbox.initApp();
-assert.deepEqual(JSON.parse(JSON.stringify(bootstrapCalls)),['bridge','subjects',['ppct',true],['knowledge',true],'ranges','identity',['theme','dark'],'layout','badge','preview',['draft',{silent:true}],'connection'],'initApp must initialize a document that is already complete');
+assert.deepEqual(JSON.parse(JSON.stringify(bootstrapCalls)),['bridge','allocation-controls','subjects',['ppct',true],['knowledge',true],'ranges','identity',['theme','dark'],'layout','badge','preview',['draft',{silent:true}],'connection'],'initApp must initialize a document that is already complete');
 const adaptiveNlsSandbox={};vm.createContext(adaptiveNlsSandbox);vm.runInContext(sliceNamedFunction('getExpectedNlsCount')+'\n'+sliceNamedFunction('getExpectedNlsMaxCount'),adaptiveNlsSandbox);
 const adaptiveNlsConfig={nls:{density:'adaptive',noAiDensity:'2-3'}};
 assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,false,adaptiveNlsConfig),2,'one-period lessons must use two NLS codes');
@@ -158,7 +160,7 @@ const bootstrapSandbox={
   classCount:{value:''},studentCount:{value:''},teacherCount:{value:''},
   nlsEnabled:{checked:false},nlsRate:{value:'0'},nlsDensity:{value:'1'},
   aiEnabled:{checked:true},aiRate:{value:'0'},aiDensity:{value:'1'},
-  clil:{checked:false},inclusive:{checked:false},instructions:{value:''},sgkCompactContext:'',
+  clil:{checked:false},inclusive:{checked:false},instructions:{value:''},sgkCompactContext:'',allocationUnit(){return 'period'},
   defaultPpctRows(config){
     assert.deepEqual(JSON.parse(JSON.stringify(config.ai.selectedLessons)),[]);
     assert.deepEqual(JSON.parse(JSON.stringify(config.ai.selectedPeriods)),[]);
@@ -172,12 +174,12 @@ vm.createContext(bootstrapSandbox);
 vm.runInContext('let _isGettingConfig=false;\n'+sliceNamedFunction('getConfig'),bootstrapSandbox);
 assert.equal(vm.runInContext('defaultPpctRows(getConfig({includeAiSelection:false})).length',bootstrapSandbox),1,
   'empty PPCT must create its default rows without recursively reading AI selection');
-const sliderNodes={'#nlsRate':{value:'0'},'#nlsRateOut':{value:''}};
+const sliderNodes={'#nlsRate':{value:'0'},'#nlsRateOut':{value:''},'#nlsUnit':{value:'period'},'#aiUnit':{value:'period'},'#nlsCountInput':{value:''},'#aiCountInput':{value:''}};
 const sliderSandbox={
   document:{querySelector:selector=>sliderNodes[selector]||null},
   foldText:value=>String(value||'').toUpperCase(),cleanLessonDescription:value=>String(value||''),
   selectedAiLessons:()=>[],getSharedSgkLessonKnowledge:()=>null,
-  SUBJECTS:[['Toán học',140]],AI_SELECTION_LIMIT:12,
+  SUBJECTS:[['Toán học',140]],
   getConfig:()=>({monHoc:'Toán học'}),
   nlsCandidates:()=>sliderSandbox.candidates,aiCandidates:()=>sliderSandbox.candidates,
   validPeriodCount:value=>Number(value)||1,updateAiPicker:()=>{},
@@ -187,7 +189,7 @@ const sliderSandbox={
   aiRate:{value:'0',min:'0',max:'100',disabled:false},aiRateOut:{value:''}
 };
 vm.createContext(sliderSandbox);
-vm.runInContext(['nlsLessonPriorityScore','prioritizedNlsLessons','syncNlsRateFromSelection','syncNlsSelectionFromRate','aiPeriodCandidates','aiSelectionLimit','selectedAiPeriodIds','aiSelectionPercentage','prioritizedAiPeriods','syncAiRateFromSelection','syncAiSelectionFromRate'].map(name=>extractNamed(target,name)).join('\n'),sliderSandbox);
+vm.runInContext(['nlsLessonPriorityScore','prioritizedNlsLessons','allocationUnit','aiPeriodCandidates','allocationTotals','nlsSelectedPeriodCount','chooseNlsLessonsForPeriods','selectedAiPeriodIds','allocationSummary','syncNlsRateFromSelection','syncNlsSelectionFromRate','syncNlsSelectionFromCount','prioritizedAiPeriods','syncAiRateFromSelection','syncAiSelectionFromRate','syncAiSelectionFromCount'].map(name=>extractNamed(target,name)).join('\n'),sliderSandbox);
 sliderSandbox.syncNlsSelectionFromRate();
 assert(sliderNodes['#nlsRateOut'].value.startsWith('0%'),'Canvas NLS slider must update at 0% without RangeError');
 sliderNodes['#nlsRate'].value='80';sliderSandbox.syncNlsSelectionFromRate();
@@ -197,10 +199,16 @@ sliderSandbox.syncAiSelectionFromRate();
 assert(sliderSandbox.aiRateOut.value.startsWith('0%'),'Canvas AI slider must update at 0% without RangeError');
 sliderSandbox.aiRate.value='50';sliderSandbox.syncAiSelectionFromRate();
 assert(sliderSandbox.aiRateOut.value.startsWith('50%'),'Canvas AI slider must update at 50% without RangeError');
-assert(sliderSandbox.aiRateOut.value.includes('tối đa'),'Canvas AI slider label must retain its maximum-period guidance after picker rendering');
+assert(sliderSandbox.aiRateOut.value.includes('tiết dạy bài mới'),'Canvas AI slider label must identify new-lesson periods after picker rendering');
 assert.equal(sliderSandbox.aiRate.value,'50','Canvas AI slider must preserve the active drag value');
 assert.equal(sliderSandbox.aiRate.max,'100','Canvas AI slider must retain the full 0–100 range');
-assert(sliderSandbox.aiSelectedLessonIds.size<=sliderSandbox.aiSelectionLimit(),'Canvas AI slider selection must respect its period cap');
+assert.equal(sliderSandbox.aiSelectedLessonIds.size,5,'Canvas AI slider must not retain the old 12-period cap');
+sliderSandbox.aiRate.value='100';sliderSandbox.syncAiSelectionFromRate();
+assert.equal(sliderSandbox.aiSelectedLessonIds.size,10,'Canvas AI slider must select every available period at 100%');
+sliderNodes['#nlsUnit'].value='lesson';sliderSandbox.syncNlsSelectionFromCount(3);
+assert(sliderNodes['#nlsRateOut'].value.includes('bài dạy bài mới'),'Canvas NLS count input must support the lesson unit');
+sliderNodes['#aiUnit'].value='lesson';sliderSandbox.syncAiSelectionFromCount(4);
+assert(sliderSandbox.aiRateOut.value.includes('bài dạy bài mới'),'Canvas AI count input must support the lesson unit');
 const calls=[];
 const sandbox={console,AbortController,clearTimeout,setTimeout,fetch:async(url,init)=>{
   calls.push({url,init});
@@ -305,7 +313,6 @@ assert(target.includes('function toggleCompactMode('),'compact layout toggle mus
 assert(target.includes('function toggleHeroBanner('),'hero banner must be collapsible');
 assert(target.includes('function defaultPpctRows('),'defaultPpctRows must be defined');
 assert(target.includes('SUBJECT_SAMPLE_TOPICS'),'non-math subjects must have sample PPCT topics');
-assert(target.includes('annual>0&&annual<70'),'low-period subjects must cap AI periods at 20%');
 assert(target.includes('title="Gemini Canvas · gemini-3-flash-preview (Hệ thống cấp)"'),'model badge must keep the Canvas model identity');
 assert(target.includes('>Gemini Canvas<'),'model badge label must be shortened for narrow screens');
 assert(target.includes('PPCT:')&&target.includes('NLS/AI:'),'Mục 4 actions must be grouped');
@@ -326,7 +333,6 @@ const pickerSandbox={
   selectedAiLessons(){return []},
   getSharedSgkLessonKnowledge(){return null},
   SUBJECTS:[['Toán học',140],['Ngữ văn',140],['Tiếng Anh (Ngoại ngữ 1)',105],['Khoa học tự nhiên',140],['Tin học',35],['Giáo dục công dân',35]],
-  AI_SELECTION_LIMIT:12,
   getConfig(){return {monHoc:pickerSandbox.monHoc||'Toán học',lop:'7'}},
   nlsCandidates(){return pickerSandbox._cands},
   aiCandidates(){return pickerSandbox._cands},
@@ -338,7 +344,6 @@ vm.runInContext(
   extractNamed(target,'nlsLessonPriorityScore')+'\n'+
   extractNamed(target,'prioritizedNlsLessons')+'\n'+
   extractNamed(target,'aiPeriodCandidates')+'\n'+
-  extractNamed(target,'aiSelectionLimit')+'\n'+
   extractNamed(target,'prioritizedAiPeriods'),
   pickerSandbox
 );
@@ -365,9 +370,5 @@ pickerSandbox.monHoc='Ngữ văn';
 const ranked=pickerSandbox.prioritizedAiPeriods();
 assert.equal(ranked.length,5,'all periods remain available after ranking');
 const firstTwo=ranked.slice(0,2).map(x=>x.week);
-assert.ok(firstTwo.some(w=>Number(w)<19)&&firstTwo.some(w=>Number(w)>=19),'12-period AI suggestions must mix both semesters');
-pickerSandbox.getConfig=()=>({monHoc:'Tin học',lop:'8'});
-assert.equal(pickerSandbox.aiSelectionLimit(Array.from({length:35},(_,i)=>({id:i}))),7,'35-period subjects cap AI at 20%');
-pickerSandbox.getConfig=()=>({monHoc:'Toán học',lop:'6'});
-assert.equal(pickerSandbox.aiSelectionLimit(Array.from({length:13},(_,i)=>({id:i}))),12,'Toán still allows 12 AI periods');
+assert.ok(firstTwo.some(w=>Number(w)<19)&&firstTwo.some(w=>Number(w)>=19),'AI suggestions must mix both semesters');
 console.log('canvas responsive layout and multi-subject picker: PASS');

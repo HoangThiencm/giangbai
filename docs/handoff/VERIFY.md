@@ -4,39 +4,35 @@
 PASS
 
 ## Đối chiếu scope
-- [x] Loại bỏ triệt để lỗi đệ quy vô hạn trong `xaydungphuluc.html` (đã chuẩn hóa `defaultPpctRows(getConfig({includeAiSelection:false}))` và bổ sung guard `_isGettingConfig` với khối `try/finally`).
-- [x] Chuẩn hóa `getConfig({includeAiSelection=true}={})` trên cả 3 file: `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
-- [x] Không còn bất kỳ vị trí nào gọi `getConfig.length` (tránh bẫy ES6 default parameter length = 0).
-- [x] Tối ưu hiệu năng `selectedAiPeriods()` (hoisting `selectedAiPeriodIds()` ra ngoài vòng lặp `for`).
-- [x] Tối ưu hiệu năng `prioritizedNlsLessons()` (map tính điểm 1 lần trước khi sort).
-- [x] Thanh trượt `#aiRate` giữ nguyên dải `0–100%`, không bị khóa trần ở mức 9% (`aiRate.max = '100'`).
-- [x] Khi kéo chuột (`oninput`), thanh trượt NLS và AI giữ nguyên vị trí con trỏ chuột của người dùng, không bị giật lùi hay ghi đè.
-- [x] Nhãn `#aiRateOut` hiển thị đầy đủ thông tin định mức tối đa `${rate}% (${selectedCount}/${total} tiết, tối đa ${limit} tiết)` và không bị hàm `syncAiRateFromSelection` ghi đè mất nhãn.
-- [x] Cập nhật smoke test trong `tests/xaydungphuluc-smoke.js` kiểm tra trực tiếp trạng thái mặc định chưa nạp tệp (`sourcePpctTable = null; sourcePpctRows = [];`), bảo đảm không có false positive.
-- [x] Hai bản Canvas (`canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`) trùng khớp mã băm SHA-256 100%.
+- [x] Thêm 2 chế độ phân bổ linh hoạt: "Theo số tiết dạy bài mới" và "Theo số bài dạy bài mới" cho cả NLS và AI.
+- [x] Nhãn hiển thị ghi rõ ràng: "... tiết dạy bài mới" và "... bài dạy bài mới".
+- [x] Có ô nhập số lượng trực tiếp (`#nlsCountInput`, `#aiCountInput`) đồng bộ 2 chiều với thanh kéo `%`.
+- [x] Gỡ bỏ hoàn toàn giới hạn trần cứng 12 tiết ở AI; người dùng có thể tự do chọn 20 tiết, 35 tiết hoặc kéo 100% (toàn bộ 95 tiết dạy bài mới).
+- [x] Không phát sinh lỗi tràn ngăn xếp đệ quy (`RangeError`) hay biến không xác định (`ReferenceError`).
+- [x] Đồng bộ đầy đủ sang cả `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` (SHA-256 trùng khớp 100%).
+- [x] Toàn bộ 3 bộ kiểm thử tự động của dự án đạt PASS 100%.
 
 ## Test đã chạy
-1. `node tests/khbd-nls-rate-smoke.js` — **PASS**
+1. `node tests/xaydungphuluc-smoke.js` — **PASS**
 2. `node tests/canvas-xaydungphuluc-smoke.js` — **PASS**
-3. `node tests/xaydungphuluc-smoke.js` — **PASS**
-4. So sánh SHA-256 hai bản Canvas — **PASS** (`450BC5CD1C3A023B55A5FA2FE1AC2247013A52186450C9F2DABFC0A9D1ADCAD9`)
-5. Mô phỏng kéo slider thực tế trên `xaydungphuluc.html` với dữ liệu mặc định ban đầu:
-   - Kéo NLS về 0%: `nlsRate.value = '0'`, `nlsRateOut.value = '0% (0/47 bài)'` — **PASS**
-   - Kéo NLS lên 80%: `nlsRate.value = '80'`, `nlsRateOut.value = '81% (38/47 bài)'` — **PASS**
-   - Kéo AI về 0%: `aiRate.value = '0'`, `aiRateOut.value = '0% (0/95 tiết, tối đa 12 tiết)'` — **PASS**
-   - Kéo AI lên 50%: `aiRate.value = '50'`, `aiRateOut.value = '50% (12/95 tiết, tối đa 12 tiết)'`, `aiRate.max = '100'` — **PASS**
-   - Kéo AI lên 100%: `aiRate.value = '100'`, `aiRateOut.value = '100% (12/95 tiết, tối đa 12 tiết)'`, `aiRate.max = '100'` — **PASS**
-6. Mô phỏng kéo slider thực tế trên `canvas_xaydungphuluc.html`: Toàn bộ các mốc hoạt động chính xác tương tự — **PASS**
-7. Mô phỏng kéo slider thực tế trên `backupcode viettailieu/canvas_xaydungphuluc.html`: Hoạt động đồng bộ 100% — **PASS**
+3. `node tests/khbd-nls-rate-smoke.js` — **PASS**
+4. So sánh SHA-256 hai bản Canvas — **PASS** (`BED1D0B532D2F0D6B85C5847BCA94A8C1468BDEC6F0CDE029A788231DD42E1EE`)
+5. Mô phỏng thực tế chuyên sâu trên cả 3 file (`xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`):
+   - **NLS theo tiết**: Nhập `20` -> Nhãn: `22% (21/95 tiết dạy bài mới · 14/47 bài)` — **PASS**
+   - **NLS theo bài**: Nhập `10` -> Nhãn: `21% (10/47 bài dạy bài mới · 16/95 tiết)` — **PASS**
+   - **AI theo tiết (vượt trần cũ 12 tiết)**: Nhập `20` -> Nhãn: `21% (20/95 tiết dạy bài mới · 14/47 bài)` — **PASS**
+   - **AI theo tiết**: Nhập `35` -> Nhãn: `37% (35/95 tiết dạy bài mới · 22/47 bài)` — **PASS**
+   - **AI kéo 100%**: Chọn toàn bộ 95/95 tiết dạy bài mới, `aiRate.max = 100` — **PASS**
+   - **AI theo bài**: Nhập `12` -> Nhãn: `26% (12/47 bài dạy bài mới · 18/95 tiết)` — **PASS**
 
 ## Pass / Fail từng tiêu chí
-1. Kéo thanh `#nlsRate` về 0%: Nhãn cập nhật `0% (0/47 bài)`, không văng ngoại lệ — **PASS**
-2. Kéo thanh `#nlsRate` lên các mốc khác nhau (25%, 50%, 80%, 100%): Mượt mà, nhãn cập nhật tức thì — **PASS**
-3. Kéo thanh `#aiRate` từ 0% đến 100%: Con trượt kéo tự do toàn dải, nhãn hiển thị đúng số tiết đã chọn có chặn trần theo định mức môn học — **PASS**
-4. Không còn hiện tượng con trượt bị giật lùi về vị trí cũ khi đang giữ chuột kéo — **PASS**
-5. Khởi tạo trang ban đầu (chưa tải tệp PPCT) không còn bị lỗi tràn ngăn xếp đệ quy — **PASS**
-6. Đồng bộ mã 1:1 giữa các file HTML — **PASS**
-7. Toàn bộ các bộ kiểm thử tự động đạt 100% — **PASS**
+1. Tính năng phân bổ linh hoạt theo số tiết và theo số bài: **PASS**
+2. Nhãn hiển thị ghi rõ "tiết dạy bài mới" và "bài dạy bài mới": **PASS**
+3. Đồng bộ 2 chiều giữa ô nhập số lượng và thanh trượt: **PASS**
+4. Gỡ bỏ trần cứng 12 tiết AI, mở rộng 0–100%: **PASS**
+5. Khắc phục lỗi thiếu hàm trong test `khbd-nls-rate-smoke.js`: **PASS**
+6. Khắc phục lỗi tương thích và đồng bộ 1:1 trong test `canvas-xaydungphuluc-smoke.js`: **PASS**
+7. Không có lỗi runtime hay console error: **PASS**
 
 ## Bug
 Không còn bug tồn đọng.
