@@ -180,7 +180,7 @@ function submission_field_key(string $value, int $index): string
 function submission_normalize_form_fields($input): array
 {
     if (!is_array($input)) return [];
-    $types = ['text', 'textarea', 'number', 'date', 'select', 'heading'];
+    $types = ['text', 'textarea', 'number', 'date', 'select', 'heading', 'link'];
     $fields = [];
     $used = [];
     foreach (array_slice($input, 0, 40) as $index => $raw) {
@@ -202,6 +202,15 @@ function submission_normalize_form_fields($input): array
                 if ($option !== '' && !in_array($option, $options, true)) $options[] = substr($option, 0, 180);
             }
         }
+        $rawUrl = trim((string)($raw['url'] ?? ''));
+        if ($type === 'link' && $rawUrl !== '') {
+            if (preg_match('#^(javascript|data|vbscript):#i', $rawUrl)) {
+                $rawUrl = '';
+            } elseif (!preg_match('#^https?://#i', $rawUrl)) {
+                $rawUrl = 'https://' . $rawUrl;
+            }
+        }
+        $embed = $type === 'link' ? ($raw['embed'] ?? true) : false;
         $fields[] = [
             'key' => $key,
             'label' => substr($label, 0, 220),
@@ -210,6 +219,8 @@ function submission_normalize_form_fields($input): array
             'allow_evidence' => $type !== 'heading' && !empty($raw['allow_evidence']),
             'evidence_required' => $type !== 'heading' && !empty($raw['allow_evidence']) && !empty($raw['evidence_required']),
             'options' => $type === 'select' ? array_slice($options, 0, 50) : [],
+            'url' => $type === 'link' ? substr($rawUrl, 0, 500) : '',
+            'embed' => (bool)$embed,
         ];
     }
     return $fields;

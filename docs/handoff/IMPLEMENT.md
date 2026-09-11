@@ -1,3 +1,38 @@
+# IMPLEMENT — Trường Liên kết / Nhúng bảng tính + link nộp trực tiếp
+
+Ngày triển khai: 2026-09-11. Thực hiện đúng `docs/handoff/PLAN.md` (loại trường `link`, iframe Google Sheets/Forms chống quên nộp bài, sao chép link `?code=&person=`).
+
+## File đã sửa
+- `nopbai-quanly.html`
+- `nopbai.html`
+- `api/submissions.php`
+- `tests/nopbai-report-link-smoke.js` (tạo mới)
+
+## Bước 1 — Quản trị biểu mẫu (`nopbai-quanly.html`)
+- Dropdown loại trường thêm `link` — **Liên kết / Nhúng bảng tính (Link)**.
+- Khi chọn `link`: ô URL + checkbox nhúng iframe (mặc định bật).
+- `addReportField` mặc định `url: ''`, `embed: true`.
+- Bảng chỉ định: nút **Link nộp** gọi `copyParticipantLink` → `nopbai.html?code=...&person=...`.
+- `exportParticipants` thêm cột **Đường link nộp trực tiếp**.
+- `renderSubmissionsTable`: giá trị bắt đầu bằng `http://`/`https://` thành `<a target="_blank">`.
+
+## Bước 2 — Trang nộp (`nopbai.html`)
+- `formatEmbedUrl`: Sheets → `/edit?widget=true&headers=false&chrome=false`; Forms → `embedded=true`.
+- Trường `link` + `embed !== false`: iframe ~560px, banner 2 bước, nút **Mở tab mới**, ô ghi chú `name="report_${esc(field.key)}"`.
+- `embed === false` hoặc thiếu URL: nút mở tab ngoài + ô xác nhận.
+- Không bọc iframe trong `<label>` để tránh focus nhầm.
+
+## Bước 3 — API (`api/submissions.php`)
+- `$types` thêm `'link'`.
+- Chuẩn hóa `url` (tối đa 500, chỉ `http`/`https`, chặn `javascript`/`data`/`vbscript`) và `embed` (mặc định `true` với `link`).
+- Nộp bài: trường `link` bắt buộc vẫn đi qua kiểm tra `required` (bỏ qua `heading`).
+
+## Kiểm thử
+- `node tests/nopbai-report-link-smoke.js`: PASS — `nopbai report link smoke: passed`.
+- `node tests/run-all-tests.js`: không chạy hết trên máy này vì thiếu module `docx` (lỗi môi trường sẵn có, không liên quan thay đổi này).
+
+---
+
 # IMPLEMENT — GeoGebra Execute 1 dòng + nạp trực tiếp, giữ sanitize canvas
 
 Ngày triển khai: 2026-09-10. Thực hiện đúng `docs/handoff/PLAN.md` (lọc comment GeoGebra, `Execute({...})` 1 dòng, nút nạp trực tiếp; giữ khử lỗi `canvas` trùng và tiến trình vẽ từng nét).
