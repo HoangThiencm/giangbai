@@ -13,6 +13,19 @@ const sourceFunctions=new Set(functions(source)),targetFunctions=new Set(functio
 for(const id of sourceIds){if(!['selectModel','keyBadge'].includes(id))assert(targetIds.has(id),`missing original DOM id #${id}`)}
 for(const name of sourceFunctions)assert(targetFunctions.has(name),`missing original function ${name}`);
 assert(targetIds.has('canvasHostBanner'),'missing Canvas connection banner');
+assert(target.indexOf('<meta charset="utf-8">')<target.indexOf('<title>'),'charset must be declared before other document resources');
+assert(target.indexOf('<meta name="viewport"')<target.indexOf('<title>'),'viewport must be declared before other document resources');
+assert(!target.includes('cdn.tailwindcss.com'),'Canvas must not load runtime Tailwind CDN to avoid CSP worker blocks');
+assert(target.includes('html,body{display:block!important;visibility:visible!important'),'Canvas must force-visible html/body against Tailwind FOUC');
+assert(target.includes("setProperty('display','block','important')"),'Canvas must keep html/body visible if the host injects a hide style');
+assert(target.indexOf('html,body{display:block!important')<target.indexOf('https://hoangthiencm.id.vn/css/khbd-styles.css'),'first-paint CSS must precede external stylesheets');
+assert(target.includes('https://hoangthiencm.id.vn/css/khbd-styles.css'),'Canvas must load the static KHBD stylesheet');
+assert(target.includes("pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'"),'Canvas must configure a CSP-safe PDF.js worker');
+assert(target.includes('const memoryStorage=Object.create(null);'),'Canvas must provide in-memory storage when sandbox storage is blocked');
+assert(target.includes('function getCanvasStorage()'),'Canvas must safely probe browser storage');
+assert(target.includes("document.readyState==='loading'"),'Canvas bootstrap must handle an already-complete document');
+assert(target.includes("window.addEventListener('error'"),'Canvas must surface script errors in the host banner');
+assert(target.includes("window.addEventListener('unhandledrejection'"),'Canvas must surface rejected promises in the host banner');
 ['function enrichNlsCode','function cleanNlsColumnText','function cleanAiColumnText','hasCode:hasAiCode(value)','return lines.length?lines.join(\'\\n\'):\'\''].forEach(value=>assert(target.includes(value),`missing clean Appendix 1 integration behavior: ${value}`));
 ['nlsAdaptiveOptions','nlsNoAiDensity','Tự động theo tiết &amp; AI (Khuyên dùng)','function toggleNlsCustomDensity','function getExpectedNlsCount','noAiDensity','row.lesson,row.periods','QUY TẮC PHÂN BỔ NLS'].forEach(value=>assert(target.includes(value),`missing adaptive NLS behavior: ${value}`));
 const adaptiveOptionsMarkup=target.match(/<div id="nlsAdaptiveOptions"[\s\S]*?<\/div><\/div><div class="border rounded-xl p-4">/);
@@ -45,6 +58,31 @@ function sliceNamedFunction(name){
   assert(start>=0,`missing ${name}`);
   return target.slice(start,target.indexOf('\n',start));
 }
+['function initCanvasEventBridge','function captureCanvasInlineHandlers','function parseCanvasInlineActions','function runCanvasInlineActions','removeAttribute(attribute)','new MutationObserver','addEventListener(type,event=>','Tương tác Canvas đã sẵn sàng.'].forEach(value=>assert(target.includes(value),`missing CSP-safe Canvas event bridge: ${value}`));
+assert(!target.includes('eval(')&&!target.includes('Function('),'Canvas event bridge must not execute inline handlers dynamically');
+const bridgeCalls=[];
+const bridgeSandbox={
+  window:{refreshSubjects(){bridgeCalls.push('subjects')},stageFiles(files,kind){bridgeCalls.push([files,kind])},print(){bridgeCalls.push('print')}},
+  document:{querySelector(selector){return {click(){bridgeCalls.push(['click',selector])}}}}
+};
+vm.createContext(bridgeSandbox);
+vm.runInContext(['splitCanvasActionParts','parseCanvasString','parseCanvasActionArgument','parseCanvasInlineActions','resolveCanvasActionArgument','runCanvasInlineActions'].map(sliceNamedFunction).join('\n'),bridgeSandbox);
+const bridgeElement={value:'7',files:['ppct.docx'],checked:true,textContent:'Bài 1'};
+const bridgeActions=bridgeSandbox.parseCanvasInlineActions("refreshSubjects();stageFiles(this.files,'ppct');document.querySelector('#draftJsonInput').click();window.print()");
+assert.equal(bridgeActions.length,4,'event bridge must parse approved handler statements');
+bridgeSandbox.runCanvasInlineActions(bridgeActions,bridgeElement,{type:'change'});
+assert.deepEqual(JSON.parse(JSON.stringify(bridgeCalls)),['subjects',[['ppct.docx'],'ppct'],['click','#draftJsonInput'],'print'],'event bridge must dispatch approved calls without eval');
+assert.equal(bridgeSandbox.parseCanvasInlineActions('refreshSubjects();alert(document.cookie)'),null,'event bridge must reject arbitrary expressions');
+const bootstrapCalls=[];
+const lifecycleSandbox={
+  window:{},
+  refreshSubjects(){bootstrapCalls.push('subjects')},loadDefaultPpctStructure(value){bootstrapCalls.push(['ppct',value])},checkSharedSgkKnowledge(value){bootstrapCalls.push(['knowledge',value])},syncRanges(){bootstrapCalls.push('ranges')},prefillTeacherIdentity(){bootstrapCalls.push('identity')},readCanvasStorage(){return 'dark'},
+  document:{documentElement:{classList:{add:value=>bootstrapCalls.push(['theme',value])}}},initCanvasEventBridge(){bootstrapCalls.push('bridge')},restoreLayoutPrefs(){bootstrapCalls.push('layout')},updateKeyBadge(){bootstrapCalls.push('badge')},renderPreview(){bootstrapCalls.push('preview')},loadDraftFromServer(value){bootstrapCalls.push(['draft',value])},checkCanvasHostConnection(){bootstrapCalls.push('connection')},reportCanvasError(error){throw error}
+};
+vm.createContext(lifecycleSandbox);
+vm.runInContext(sliceNamedFunction('initApp'),lifecycleSandbox);
+lifecycleSandbox.initApp();
+assert.deepEqual(JSON.parse(JSON.stringify(bootstrapCalls)),['bridge','subjects',['ppct',true],['knowledge',true],'ranges','identity',['theme','dark'],'layout','badge','preview',['draft',{silent:true}],'connection'],'initApp must initialize a document that is already complete');
 const adaptiveNlsSandbox={};vm.createContext(adaptiveNlsSandbox);vm.runInContext(sliceNamedFunction('getExpectedNlsCount')+'\n'+sliceNamedFunction('getExpectedNlsMaxCount'),adaptiveNlsSandbox);
 const adaptiveNlsConfig={nls:{density:'adaptive',noAiDensity:'2-3'}};
 assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,false,adaptiveNlsConfig),2,'one-period lessons must use two NLS codes');
@@ -105,6 +143,8 @@ vm.runInContext(sliceNamedFunction('canvasConfirm'),confirmSandbox);
 })().catch(error=>{console.error(error);process.exitCode=1});
 assert(target.includes('function getConfig({includeAiSelection=true}={})'),
   'getConfig must support suppressing AI selection while bootstrapping PPCT');
+assert(target.includes('let _isGettingConfig=false;')&&target.includes('finally{_isGettingConfig=wasGettingConfig}'),
+  'getConfig must restore its re-entrancy guard after every call');
 assert(target.includes('defaultPpctRows(getConfig({includeAiSelection:false}))'),
   'empty PPCT fallbacks must not recursively read AI selection');
 
@@ -129,9 +169,38 @@ const bootstrapSandbox={
   selectedAiPeriods(){throw new RangeError('AI selection must not run while PPCT is bootstrapping')}
 };
 vm.createContext(bootstrapSandbox);
-vm.runInContext(sliceNamedFunction('getConfig'),bootstrapSandbox);
+vm.runInContext('let _isGettingConfig=false;\n'+sliceNamedFunction('getConfig'),bootstrapSandbox);
 assert.equal(vm.runInContext('defaultPpctRows(getConfig({includeAiSelection:false})).length',bootstrapSandbox),1,
   'empty PPCT must create its default rows without recursively reading AI selection');
+const sliderNodes={'#nlsRate':{value:'0'},'#nlsRateOut':{value:''}};
+const sliderSandbox={
+  document:{querySelector:selector=>sliderNodes[selector]||null},
+  foldText:value=>String(value||'').toUpperCase(),cleanLessonDescription:value=>String(value||''),
+  selectedAiLessons:()=>[],getSharedSgkLessonKnowledge:()=>null,
+  SUBJECTS:[['Toán học',140]],AI_SELECTION_LIMIT:12,
+  getConfig:()=>({monHoc:'Toán học'}),
+  nlsCandidates:()=>sliderSandbox.candidates,aiCandidates:()=>sliderSandbox.candidates,
+  validPeriodCount:value=>Number(value)||1,updateAiPicker:()=>{},
+  candidates:Array.from({length:10},(_,index)=>({id:`ppct:${index}`,lesson:`Bài slider ${index+1}`,periods:'1',tietCT:String(index+1),week:'1'})),
+  nlsSelectedLessonIds:new Set(),aiSelectedLessonIds:new Set(),
+  nlsRate:sliderNodes['#nlsRate'],nlsRateOut:sliderNodes['#nlsRateOut'],
+  aiRate:{value:'0',min:'0',max:'100',disabled:false},aiRateOut:{value:''}
+};
+vm.createContext(sliderSandbox);
+vm.runInContext(['nlsLessonPriorityScore','prioritizedNlsLessons','syncNlsRateFromSelection','syncNlsSelectionFromRate','aiPeriodCandidates','aiSelectionLimit','selectedAiPeriodIds','aiSelectionPercentage','prioritizedAiPeriods','syncAiRateFromSelection','syncAiSelectionFromRate'].map(name=>extractNamed(target,name)).join('\n'),sliderSandbox);
+sliderSandbox.syncNlsSelectionFromRate();
+assert(sliderNodes['#nlsRateOut'].value.startsWith('0%'),'Canvas NLS slider must update at 0% without RangeError');
+sliderNodes['#nlsRate'].value='80';sliderSandbox.syncNlsSelectionFromRate();
+assert(sliderNodes['#nlsRateOut'].value.startsWith('80%'),'Canvas NLS slider must update at 80% without RangeError');
+assert.equal(sliderNodes['#nlsRate'].value,'80','Canvas NLS slider must preserve the active drag value');
+sliderSandbox.syncAiSelectionFromRate();
+assert(sliderSandbox.aiRateOut.value.startsWith('0%'),'Canvas AI slider must update at 0% without RangeError');
+sliderSandbox.aiRate.value='50';sliderSandbox.syncAiSelectionFromRate();
+assert(sliderSandbox.aiRateOut.value.startsWith('50%'),'Canvas AI slider must update at 50% without RangeError');
+assert(sliderSandbox.aiRateOut.value.includes('tối đa'),'Canvas AI slider label must retain its maximum-period guidance after picker rendering');
+assert.equal(sliderSandbox.aiRate.value,'50','Canvas AI slider must preserve the active drag value');
+assert.equal(sliderSandbox.aiRate.max,'100','Canvas AI slider must retain the full 0–100 range');
+assert(sliderSandbox.aiSelectedLessonIds.size<=sliderSandbox.aiSelectionLimit(),'Canvas AI slider selection must respect its period cap');
 const calls=[];
 const sandbox={console,AbortController,clearTimeout,setTimeout,fetch:async(url,init)=>{
   calls.push({url,init});
@@ -168,7 +237,7 @@ const draftPayload={version:1,config:{giaoVien:'Giáo viên',monHoc:'Toán học
 let restored=null,download=null;
 const draftSandbox={URLSearchParams,Blob,console,
   allowRestore:true,
-  localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},
+  window:{localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key)}},
   document:{querySelector:()=>null},
   notify:message=>messages.push(message),
   buildDraftPayload:()=>draftPayload,draftDefaultTitle:()=> 'Kế hoạch mẫu',
@@ -178,7 +247,7 @@ const draftSandbox={URLSearchParams,Blob,console,
 };
 vm.createContext(draftSandbox);
 vm.runInContext(`const DRAFT_API_ENDPOINT=${JSON.stringify(draftEndpoint)};let currentDraftId=42,currentDraftTitle='';async function canvasConfirm(){return allowRestore;}`+
-  sliceNamedFunction('readCanvasStorage')+"\nlet canvasDraftAccount=readCanvasStorage('canvas_xdpl_user');\n"+
+  "\nconst memoryStorage=Object.create(null);\n"+sliceNamedFunction('getCanvasStorage')+"\nconst canvasStorage=getCanvasStorage();\n"+sliceNamedFunction('readCanvasStorage')+"\nlet canvasDraftAccount=readCanvasStorage('canvas_xdpl_user');\n"+
   ['setCanvasDraftAccount','savedCanvasDraft','restoreCanvasDraft','saveDraftLocally','loadDraftLocally','exportDraftJson'].map(sliceNamedFunction).join('\n')+'\n'+
   sliceFunction('requestCanvasDraft')+'\n'+sliceFunction('importDraftJson'),draftSandbox);
 (async()=>{
@@ -218,10 +287,12 @@ vm.runInContext(`const DRAFT_API_ENDPOINT=${JSON.stringify(draftEndpoint)};let c
   await draftSandbox.importDraftJson(input);
   assert.deepEqual(JSON.parse(JSON.stringify(restored)),draftPayload);
   assert.equal(input.value,'');
-  draftSandbox.localStorage={getItem(){throw new Error('SecurityError')},setItem(){throw new Error('QuotaExceededError')}};
-  assert.equal(draftSandbox.readCanvasStorage('canvas_xdpl_user'),'');
+  draftSandbox.window.localStorage.getItem=()=>{throw new Error('SecurityError')};
+  draftSandbox.window.localStorage.setItem=()=>{throw new Error('QuotaExceededError')};
+  assert.equal(draftSandbox.readCanvasStorage('canvas_xdpl_user'),'teacher1');
   draftSandbox.saveDraftLocally();
-  assert(messages.at(-1).includes('Xuất file JSON'));
+  assert(messages.at(-1).includes('Đã lưu bản nháp'));
+  assert.equal(JSON.parse(vm.runInContext("canvasStorage.getItem('canvas_xdpl_draft')",draftSandbox)).format,'canvas-xdpl-draft');
   draftSandbox.exportDraftJson();
   assert.equal(JSON.parse(await download.blob.text()).format,'canvas-xdpl-draft');
   console.log('canvas draft transport and offline recovery: PASS');

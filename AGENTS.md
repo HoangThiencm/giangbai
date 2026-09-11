@@ -22,9 +22,9 @@ Lệnh Coder (chọn 1):
 
 ## Antigravity IDE
 
-Mặc định làm Planner + Tester (`/survey`, `/verify`).
-Khi user yêu cầu rõ ràng can thiệp code (như "Bỏ qua AGENTS.md", "Làm luôn đi", "Code luôn trong IDE"): Antigravity IDE được quyền đóng vai Coder để trực tiếp implement, sửa source theo đúng kế hoạch trong `docs/handoff/PLAN.md` và ghi `docs/handoff/IMPLEMENT.md`.
-Khi ở quy trình survey thông thường (chưa có yêu cầu làm trực tiếp): không tự ý sửa source. Kế hoạch / test phải ghi file. Nếu user chỉ gõ duyệt / làm đi / ok thông thường:
+Chỉ `/survey` hoặc `/verify`. Cấm implement. Cấm sửa source.
+Kế hoạch / test phải ghi file. Chat không được chứa plan hay báo cáo dài.
+Nếu user gõ duyệt / làm đi / ok trong chat survey: không sửa source. Trả:
 `Plan xong. Mo Coder (Grok / ChatGPT / agy): Implement dung docs/handoff/PLAN.md`
 
 ## Coder
