@@ -63,5 +63,26 @@ async function run(responses, expectedCalls, success = false, input = 'PPCT') {
     assert.equal(page, 'Bài 2\t3\nTuần 2');
     const legacy = vm.runInContext('baoGiangRecognizedLines({curriculum:[{week:null,lesson:"Bài cũ",periods:2}]},"6","Tin")', context);
     assert.equal(legacy[0], '6 | Tin | Bài cũ | 2');
+    assert.match(html, /function baoGiangWeekdayLabel\(/);
+    assert.match(html, /<b>\$\{escapeHtml\(baoGiangWeekdayLabel\(row\.date\)\)\}<\/b><br><small style="color:#64748b;">\$\{escapeHtml\(formatVnDate\(row\.date\)\)\}<\/small>/);
+    assert.match(html, /\$\{escapeHtml\(baoGiangWeekdayLabel\(date\)\)\}, ngày \$\{escapeHtml\(formatVnDate\(date\)\)\}/);
+    function nextDeclaration(name) {
+        const start = html.lastIndexOf(`function ${name}(`);
+        assert(start >= 0, name);
+        const next = html.indexOf('\n        function ', start + 1);
+        return html.slice(start, next < 0 ? html.length : next);
+    }
+    const parseSource = ['baoGiangDate', 'baoGiangWeekdayLabel', 'baoGiangSubjectKey', 'baoGiangKey', 'parseBaoGiangCurriculumEntries', 'baoGiangExpandPeriodNumbers', 'parseBaoGiangCurriculum', 'normalizeBaoGiangLessonTitle'].map(nextDeclaration).join('\n');
+    const parseContext = vm.createContext({
+        Map, Date, String, Number, Array,
+        foldText: value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim()
+    });
+    vm.runInContext(parseSource, parseContext);
+    const plan = vm.runInContext(`parseBaoGiangCurriculum([
+        '9 | Toán | 1 | 1 | Hình học | Bài 11. Tỉ số lượng giác của góc nhọn | 1',
+        '9 | Toán | 2 | 2-3 | Hình học | Bài 11. Tỉ số lượng giác của góc nhọn (tiếp theo) | 2'
+    ].join('\\n')).get(baoGiangKey('9', 'Toán')).all`, parseContext);
+    assert.deepEqual(JSON.parse(JSON.stringify(plan.map(item => [item.ppct, item.segment]))), [['1', '1/3'], ['2', '2/3'], ['3', '3/3']]);
+    assert.equal(vm.runInContext("baoGiangWeekdayLabel('2026-09-09')", parseContext), 'Thứ Tư');
     console.log('PASS: scripts compile; PPCT success/retry, transport/blocked/truncation preservation, strict rows, legacy and PDF rows.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

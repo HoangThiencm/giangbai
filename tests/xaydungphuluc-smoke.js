@@ -178,7 +178,7 @@ assert(sandbox.setProgress.toString().includes('safe>=100')||sandbox.setProgress
 assert(typeof sandbox.hideProgress==='function','hideProgress must be defined');
 assert.equal(typeof sandbox.extractDocxTables,'function');
 assert.equal(typeof sandbox.ingestSourceTables,'function');
-['aiLessonPickerCard','aiLessonPicker','aiSelectionCount','toggleAiLesson','toggleAiLessonRow','suggestAiLessons','aiPeriodCandidates','prioritizedAiPeriods','prioritizedNlsLessons','allocationTotals','allocationSummary','onNlsUnitChange','onAiUnitChange','syncNlsSelectionFromRate','syncNlsSelectionFromCount','syncAiSelectionFromRate','syncAiSelectionFromCount','updatePpctLessonPeriods','validPeriodCount','compactSgkText','isSgkFile','looksLikeSgkText','selectedAiLessons','sgkCompactContext','id="nlsUnit"','id="nlsCountInput"','id="aiUnit"','id="aiCountInput"','Theo số tiết dạy bài mới','Theo số bài dạy bài mới'].forEach(has);
+['aiLessonPickerCard','aiLessonPicker','aiSelectionCount','toggleAiLesson','toggleAiLessonRow','suggestAiLessons','aiPeriodCandidates','prioritizedAiPeriods','prioritizedNlsLessons','allocationTotals','allocationSummary','onNlsUnitChange','onAiUnitChange','onNlsEnabledChange','onAiEnabledChange','onchange="onNlsEnabledChange(this.checked)"','onchange="onAiEnabledChange(this.checked)"','syncNlsSelectionFromRate','syncNlsSelectionFromCount','syncAiSelectionFromRate','syncAiSelectionFromCount','updatePpctLessonPeriods','validPeriodCount','compactSgkText','isSgkFile','looksLikeSgkText','selectedAiLessons','sgkCompactContext','id="nlsUnit"','id="nlsCountInput"','id="aiUnit"','id="aiCountInput"','Theo số tiết dạy bài mới','Theo số bài dạy bài mới'].forEach(has);
 ['ppctFiles','sgkFiles',"stageFiles(this.files,'ppct')","stageFiles(this.files,'sgk')",'Nhận diện PPCT','Đọc SGK','recognizeStagedPpct','readStagedSgk','loadDefaultPpctStructure','clearAiLessons','Bỏ chọn tất cả'].forEach(has);
 ['recalculatePpctSequences','periodsPerWeekForSubject','onclick="recalculatePpctSequences()"','🔄 Tính lại Tiết CT &amp; Tuần tự động'].forEach(has);
 ['schedulePreviewUpdate','officialYccdCache','standardCompetenciesCache','periodsByLesson'].forEach(has);
@@ -573,6 +573,49 @@ vm.runInContext("apiKeys=['mock-key'];mistralKeys=[];results={};getConfig=()=>({
 await sandbox.generateSelected('all');
 assert.deepEqual(Array.from(vm.runInContext('Object.keys(results).sort()',sandbox)),['1','2','3'],'generateSelected(all) must generate all three appendices');
 assert.equal(allRadio.checked,true,'generateSelected(all) must synchronize the all radio button');
+const toggleNlsAi=vm.runInContext(`(()=>{
+  const controls={
+    '#nlsEnabled':{checked:true},'#aiEnabled':{checked:true},
+    '#nlsRate':{value:'50'},'#aiRate':{value:'30'},
+    '#nlsUnit':{value:'period'},'#aiUnit':{value:'period'},
+    '#nlsCountInput':{value:''},'#aiCountInput':{value:''},
+    '#nlsRateOut':{value:''},'#aiRateOut':{value:''},
+    '#aiLessonPickerCard':null,'#aiLessonPicker':null,'#aiSelectionCount':null
+  };
+  document.querySelector=selector=>controls[selector]||null;
+  nlsEnabled=controls['#nlsEnabled'];aiEnabled=controls['#aiEnabled'];
+  nlsRate=controls['#nlsRate'];aiRate=controls['#aiRate'];
+  nlsRateOut=controls['#nlsRateOut'];aiRateOut=controls['#aiRateOut'];
+  sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:Array.from({length:10},(_,i)=>({cells:['Bài '+(i+1),'2'],isHeader:false}))};
+  sourcePpctRows=[];nlsSelectedLessonIds=new Set();aiSelectedLessonIds=new Set();
+  const originalUpdate=updateAiPicker;updateAiPicker=()=>{};notify=()=>{};
+  syncNlsSelectionFromRate();syncAiSelectionFromRate();
+  const afterInit={nls:nlsSelectedLessonIds.size,ai:aiSelectedLessonIds.size};
+  onNlsEnabledChange(false);onAiEnabledChange(false);
+  const afterOff={nls:nlsSelectedLessonIds.size,ai:aiSelectedLessonIds.size,nlsRate:nlsRate.value,aiRate:aiRate.value};
+  onNlsEnabledChange(true);onAiEnabledChange(true);
+  const afterOn={nls:nlsSelectedLessonIds.size,ai:aiSelectedLessonIds.size,nlsRate:nlsRate.value,aiRate:aiRate.value};
+  nlsEnabled.checked=false;aiEnabled.checked=false;nlsRate.value='0';aiRate.value='0';nlsSelectedLessonIds.clear();aiSelectedLessonIds.clear();
+  suggestNlsLessons();suggestAiLessons();
+  const afterSuggest={nls:nlsSelectedLessonIds.size,ai:aiSelectedLessonIds.size,nlsRate:nlsRate.value,aiRate:aiRate.value,nlsChecked:nlsEnabled.checked,aiChecked:aiEnabled.checked};
+  updateAiPicker=originalUpdate;
+  return {afterInit,afterOff,afterOn,afterSuggest};
+})()`,sandbox);
+assert(toggleNlsAi.afterInit.nls>0&&toggleNlsAi.afterInit.ai>0,'initial NLS/AI rates must select lessons and periods');
+assert.equal(toggleNlsAi.afterOff.nls,0,'unchecking NLS must clear every selected lesson');
+assert.equal(toggleNlsAi.afterOff.ai,0,'unchecking AI must clear every selected period');
+assert(Number(toggleNlsAi.afterOff.nlsRate)<=0,'unchecking NLS must sync the rate to 0');
+assert(Number(toggleNlsAi.afterOff.aiRate)<=0,'unchecking AI must sync the rate to 0');
+assert(toggleNlsAi.afterOn.nls>0,'rechecking NLS must restore prioritized lessons');
+assert(toggleNlsAi.afterOn.ai>0,'rechecking AI must restore prioritized periods');
+assert.equal(toggleNlsAi.afterOn.nlsRate,'50','rechecking NLS must restore the 50% default rate');
+assert.equal(toggleNlsAi.afterOn.aiRate,'30','rechecking AI must restore the 30% default rate');
+assert(toggleNlsAi.afterSuggest.nls>0,'suggest NLS must produce a non-zero lesson selection');
+assert(toggleNlsAi.afterSuggest.ai>0,'suggest AI must produce a non-zero period selection');
+assert.equal(toggleNlsAi.afterSuggest.nlsChecked,true,'suggest NLS must turn the NLS checkbox back on');
+assert.equal(toggleNlsAi.afterSuggest.aiChecked,true,'suggest AI must turn the AI checkbox back on');
+assert.equal(toggleNlsAi.afterSuggest.nlsRate,'50','suggest NLS must restore 50% when the rate is 0');
+assert.equal(toggleNlsAi.afterSuggest.aiRate,'30','suggest AI must restore 30% when the rate is 0');
 console.log('PASS xaydungphuluc smoke: PPCT 7-column form, independent table ingest, no admin-header leak, density ranges and auto-hiding progress UI are present.');
 }
 run().catch(error=>{console.error(error);process.exitCode=1});
