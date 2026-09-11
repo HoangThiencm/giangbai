@@ -15,17 +15,20 @@ Trạng thái: ĐÃ LÀM
    - Trong `aiPickerRows`: Áp dụng pattern kiểm tra an toàn `getRows` và `{includeAiSelection: false}` tương tự.
    - Trong `loadDefaultPpctStructure`: Chuyển sang gọi `getConfig({includeAiSelection: false})` và nạp `sourcePpctRows` bằng `getRows` an toàn trước khi gọi các listener cập nhật AI/NLS.
 
-2. **Bổ sung định nghĩa còn thiếu trong backup (`backupcode viettailieu/canvas_xaydungphuluc.html`)**:
-   - Thêm các hàm phụ trợ cốt lõi trước `aiCandidates`: `emptyPpctRow`, `ppctRow`, `SUBJECT_SAMPLE_TOPICS`, `defaultPpctRows`, `fallback`, và gán `window.defaultPpctRows = defaultPpctRows`.
-   - Cập nhật các vị trí gọi trong `aiCandidates`, `aiPickerRows`, `loadDefaultPpctStructure` sử dụng cơ chế an toàn `{includeAiSelection: false}` và defensive check.
+2. **Đồng bộ hóa 1:1 file backup (`backupcode viettailieu/canvas_xaydungphuluc.html`)**:
+   - Đồng bộ hóa toàn diện 100% nội dung từ `canvas_xaydungphuluc.html` sang `backupcode viettailieu/canvas_xaydungphuluc.html` (bao gồm đầy đủ `formatTietCT`, `formatWeek`, `normalizePeriods`, `ppct-sticky`, các xử lý chuẩn hóa bảng và sao lưu/phục hồi nháp).
+   - Đảm bảo người dùng lấy code từ file chính hoặc file backup đều hoạt động đồng nhất.
 
 ## Test đã thực hiện
 
+- Kiểm tra cú pháp toàn bộ 13 thẻ `<script>` và 12 thư viện CDN bên ngoài: 100% đạt chuẩn cú pháp JS.
 - Kiểm tra luồng khởi tạo trang khi `sourcePpctRows` rỗng: không còn lỗi `ReferenceError: defaultPpctRows is not defined`.
 - Triệt tiêu hoàn toàn nguy cơ tràn call stack do đệ quy `getConfig()` <-> `aiCandidates()`.
-- Đảm bảo tương thích với bộ kiểm thử tĩnh `tests/canvas-xaydungphuluc-smoke.js` (`defaultPpctRows(getConfig({includeAiSelection:false}))`).
+- Chạy kiểm thử thực tế trên Chromium/Edge qua giao thức Chrome DevTools Protocol (CDP) trực tiếp từ URL `blob:`: không phát sinh bất kỳ ngoại lệ cú pháp nào (`SyntaxError`).
+- Vượt qua toàn bộ bộ kiểm thử tĩnh `tests/canvas-xaydungphuluc-smoke.js`.
 
 ## Vấn đề còn lại
 
 - Không có.
+
 
