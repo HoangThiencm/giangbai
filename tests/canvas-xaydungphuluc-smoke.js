@@ -1,7 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 
 const source=fs.readFileSync('xaydungphuluc.html','utf8');
-const target=fs.readFileSync('backupcode viettailieu/canvas_xaydungphuluc.html','utf8');
+const target=fs.readFileSync('canvas_xaydungphuluc.html','utf8');
 const endpoint='https://hoangthiencm.id.vn/api/canvas_gemini.php';
 const ids=html=>[...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]);
 const functions=html=>[...html.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(match=>match[1]);
@@ -226,3 +226,77 @@ vm.runInContext(`const DRAFT_API_ENDPOINT=${JSON.stringify(draftEndpoint)};let c
   assert.equal(JSON.parse(await download.blob.text()).format,'canvas-xdpl-draft');
   console.log('canvas draft transport and offline recovery: PASS');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
+assert(target.includes('grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5'),'Mục 1 form must stay at least 2 columns on a narrow Canvas');
+assert(target.includes('py-1.5'),'header padding must be compact');
+assert(target.includes('ppct-sticky-lesson'),'lesson column must be sticky while scrolling horizontally');
+assert(target.includes('function toggleCompactMode('),'compact layout toggle must exist');
+assert(target.includes('function toggleHeroBanner('),'hero banner must be collapsible');
+assert(target.includes('function defaultPpctRows('),'defaultPpctRows must be defined');
+assert(target.includes('SUBJECT_SAMPLE_TOPICS'),'non-math subjects must have sample PPCT topics');
+assert(target.includes('annual>0&&annual<70'),'low-period subjects must cap AI periods at 20%');
+assert(target.includes('title="Gemini Canvas · gemini-3-flash-preview (Hệ thống cấp)"'),'model badge must keep the Canvas model identity');
+assert(target.includes('>Gemini Canvas<'),'model badge label must be shortened for narrow screens');
+assert(target.includes('PPCT:')&&target.includes('NLS/AI:'),'Mục 4 actions must be grouped');
+
+function extractNamed(src,name){
+  const start=src.indexOf(`function ${name}(`);
+  assert(start>=0,name+' missing');
+  let depth=0,end=src.indexOf('{',start);
+  for(let i=end;i<src.length;i++){
+    if(src[i]==='{')depth++;
+    else if(src[i]==='}'){depth--;if(depth===0)return src.slice(start,i+1)}
+  }
+  throw new Error('unterminated '+name);
+}
+const pickerSandbox={
+  foldText(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim()},
+  cleanLessonDescription(s){return String(s||'')},
+  selectedAiLessons(){return []},
+  getSharedSgkLessonKnowledge(){return null},
+  SUBJECTS:[['Toán học',140],['Ngữ văn',140],['Tiếng Anh (Ngoại ngữ 1)',105],['Khoa học tự nhiên',140],['Tin học',35],['Giáo dục công dân',35]],
+  AI_SELECTION_LIMIT:12,
+  getConfig(){return {monHoc:pickerSandbox.monHoc||'Toán học',lop:'7'}},
+  nlsCandidates(){return pickerSandbox._cands},
+  aiCandidates(){return pickerSandbox._cands},
+  validPeriodCount(periods,tietCT){return Number(periods)||(String(tietCT||'').match(/\d+/g)||[]).length||1},
+  _cands:[]
+};
+vm.createContext(pickerSandbox);
+vm.runInContext(
+  extractNamed(target,'nlsLessonPriorityScore')+'\n'+
+  extractNamed(target,'prioritizedNlsLessons')+'\n'+
+  extractNamed(target,'aiPeriodCandidates')+'\n'+
+  extractNamed(target,'aiSelectionLimit')+'\n'+
+  extractNamed(target,'prioritizedAiPeriods'),
+  pickerSandbox
+);
+pickerSandbox.monHoc='Toán học';
+assert.ok(pickerSandbox.nlsLessonPriorityScore('Bài 18. Tam giác đều, hình vuông')>pickerSandbox.nlsLessonPriorityScore('Kiểm tra giữa kỳ I'),'Toán geometry must outrank tests');
+assert.ok(pickerSandbox.nlsLessonPriorityScore('Bài 38. Dữ liệu và thu thập dữ liệu')>pickerSandbox.nlsLessonPriorityScore('Ôn tập và Bài tập cuối chương II'),'Toán statistics must outrank review');
+pickerSandbox.monHoc='Ngữ văn';
+assert.ok(pickerSandbox.nlsLessonPriorityScore('Viết: Viết bài văn nghị luận','Ngữ văn')>pickerSandbox.nlsLessonPriorityScore('Đọc hiểu: Thơ trữ tình','Ngữ văn'),'Ngữ văn writing must outrank pure poetry');
+pickerSandbox.monHoc='Tiếng Anh (Ngoại ngữ 1)';
+assert.ok(pickerSandbox.nlsLessonPriorityScore('Unit Project: Digital poster','Tiếng Anh (Ngoại ngữ 1)')>pickerSandbox.nlsLessonPriorityScore('Pronunciation and language focus','Tiếng Anh (Ngoại ngữ 1)'),'English projects must outrank pronunciation drills');
+pickerSandbox.monHoc='Khoa học tự nhiên';
+assert.ok(pickerSandbox.nlsLessonPriorityScore('Bài thực hành thí nghiệm đo lường','Khoa học tự nhiên')>pickerSandbox.nlsLessonPriorityScore('Ôn tập học kì I','Khoa học tự nhiên'),'KHTN labs must outrank review');
+pickerSandbox.getSharedSgkLessonKnowledge=()=>({digital_evidence:'Excel',ai_pedagogy_hint:'AI gợi ý'});
+assert.ok(pickerSandbox.nlsLessonPriorityScore('Bài thường','Ngữ văn')>5,'SGK digital evidence must boost NLS priority');
+pickerSandbox.getSharedSgkLessonKnowledge=()=>null;
+pickerSandbox._cands=[
+  {id:'ppct:0',lesson:'Viết: Viết bài văn nghị luận',periods:'1',tietCT:'1',week:'2'},
+  {id:'ppct:1',lesson:'Đọc hiểu: Thơ trữ tình',periods:'1',tietCT:'2',week:'3'},
+  {id:'ppct:2',lesson:'Nói và nghe: Thuyết trình',periods:'1',tietCT:'80',week:'20'},
+  {id:'ppct:3',lesson:'Dự án đọc sách',periods:'1',tietCT:'81',week:'21'},
+  {id:'ppct:4',lesson:'Ôn tập học kì II',periods:'1',tietCT:'90',week:'30'}
+];
+pickerSandbox.monHoc='Ngữ văn';
+const ranked=pickerSandbox.prioritizedAiPeriods();
+assert.equal(ranked.length,5,'all periods remain available after ranking');
+const firstTwo=ranked.slice(0,2).map(x=>x.week);
+assert.ok(firstTwo.some(w=>Number(w)<19)&&firstTwo.some(w=>Number(w)>=19),'12-period AI suggestions must mix both semesters');
+pickerSandbox.getConfig=()=>({monHoc:'Tin học',lop:'8'});
+assert.equal(pickerSandbox.aiSelectionLimit(Array.from({length:35},(_,i)=>({id:i}))),7,'35-period subjects cap AI at 20%');
+pickerSandbox.getConfig=()=>({monHoc:'Toán học',lop:'6'});
+assert.equal(pickerSandbox.aiSelectionLimit(Array.from({length:13},(_,i)=>({id:i}))),12,'Toán still allows 12 AI periods');
+console.log('canvas responsive layout and multi-subject picker: PASS');

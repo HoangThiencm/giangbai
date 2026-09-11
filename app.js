@@ -894,7 +894,21 @@ PHẦN 1: PHÂN TÍCH trong <analysis>...</analysis> — chỉ 3-5 gạch đầu
 PHẦN 2: MÃ JAVASCRIPT đầy đủ, không cắt giữa chừng, CHỈ trong thẻ <javascript>...</javascript>. NGHIÊM CẤM markdown backtick (\`\`\`javascript hoặc \`\`\`js) bên trong thẻ <javascript>. Dùng Fabric.js, addPoint, addText, drawLine, addRightAngleSymbol, addEqualityTick, addAngleArc, drawBarChart, drawPieChart. Biến 'canvas' và 'fabric' ĐÃ CÓ SẴN. TUYỆT ĐỐI KHÔNG viết const canvas = ... hoặc new fabric.Canvas(...). Cuối cùng gọi canvas.renderAll();
 PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebra>...</geogebra>:
 - Mô tả các bước dựng hình sư phạm (Bước 1, Bước 2...).
-- Khối lệnh GeoGebra Script: mỗi dòng một lệnh chuẩn tiếng Anh (O=(0, 0), R=3, A=(...), Segment(...)). TUYỆT ĐỐI KHÔNG viết chú thích // hoặc # trong khối lệnh GeoGebra. Mọi biến số và điểm gốc (O, R, A...) phải được định nghĩa trước khi dùng.`;
+- Khối lệnh GeoGebra Script chuẩn tiếng Anh, tuân thủ nghiêm ngặt các quy tắc:
+  + Hai lệnh đầu tiên LUÔN LÀ:
+    ShowAxes(false)
+    ShowGrid(false)
+    (Trừ khi đề bài vẽ đồ thị hàm số / hệ trục tọa độ Oxy thì bỏ qua 2 lệnh này).
+  + KHÔNG RÁC NHÃN: GeoGebra mặc định tự hiện tên mọi đoạn thẳng, đường thẳng, đường tròn. Hãy thêm lệnh ẩn nhãn cho chúng: ShowLabel(tên_đối_tượng, false). CHỈ GIỮ LẠI NHÃN CỦA ĐIỂM (A, B, C, O, M...).
+  + KHÔNG DÙNG ĐƯỜNG THẲNG VÔ HẠN (Line) để nối cạnh: Mọi cạnh tam giác, tứ giác, bán kính, dây cung BẮT BUỘC dùng Segment(A, B).
+  + QUY TẮC DỰNG GIAO ĐIỂM "DỰNG → LẤY → ẨN → NỐI":
+    * Khi cần kẻ tiếp tuyến, đường vuông góc, hoặc kéo dài đường thẳng để tìm giao điểm:
+    * Bước 1 (Dựng): Dùng tiền tố aux_ cho đường phụ vô hạn, ví dụ: aux_l = PerpendicularLine(A, BC) hoặc aux_d = Line(A, B).
+    * Bước 2 (Lấy): Lấy giao điểm: H = Intersect(aux_l, BC).
+    * Bước 3 (Ẩn): Ẩn ngay đường phụ vô tận để không xé nát hình vẽ: SetVisibleInView(aux_l, 1, false).
+    * Bước 4 (Nối): Vẽ đoạn thẳng thực tế nối điểm: Segment(A, H).
+  + ẨN ĐIỂM GỐC TỌA ĐỘ PHỤ TRỢ: Nếu định nghĩa gốc tọa độ tạm (ví dụ Origin = (0, 0)), hãy ẩn nó: SetVisibleInView(Origin, 1, false).
+  + TUYỆT ĐỐI KHÔNG viết chú thích // hoặc # trong khối lệnh GeoGebra. Mọi biến số và điểm gốc (O, R, A...) phải được định nghĩa trước khi dùng. Mỗi dòng một lệnh.`;
         let userInstruction = `Phân tích và vẽ hình cho yêu cầu sau: ${userPrompt}`;
         if (isRegenerating) { userInstruction += " Vui lòng vẽ lại hình này nhưng sử dụng các tọa độ và tỷ lệ khác với lần trước."; }
         try {
@@ -976,7 +990,7 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
             let trimmed = line.trim().replace(/^[-*•]\s*/, '');
             trimmed = trimmed.replace(/\/\/.*$/, '').replace(/#.*$/, '').trim();
             if (!trimmed) return;
-            if (/^[A-Za-z][\w]*\s*=/.test(trimmed) || /^(Segment|Polygon|PerpendicularLine|Circle|Midpoint|Intersect|Line|Angle|Point|Vector|Ray|Arc|Tangent|Translate|Rotate|Dilate|Reflect|Distance|Area|AngleBisector|PerpendicularBisector|Circumcircle|Incircle|Execute)\s*\(/i.test(trimmed)) {
+            if (/^[A-Za-z_][\w]*\s*=/.test(trimmed) || /^(Segment|Polygon|PerpendicularLine|Circle|Midpoint|Intersect|Line|Angle|Point|Vector|Ray|Arc|Tangent|Translate|Rotate|Dilate|Reflect|Distance|Area|AngleBisector|PerpendicularBisector|Circumcircle|Incircle|Execute|ShowAxes|ShowGrid|ShowLabel|SetVisibleInView|SetColor|SetLineThickness|SetCaption|SetPointSize|CenterView|ZoomIn|ZoomOut|SetFixed|SetLayer)\s*[\(\[]/i.test(trimmed)) {
                 commands.push(trimmed);
             } else {
                 steps.push(line.trim());
@@ -985,9 +999,29 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
         return { steps: steps.join('\n'), commands: commands.join('\n'), commandsArray: commands, raw: text };
     }
 
+    function isGeoGebraCoordinateRequested(commandsArray = [], promptText = '') {
+        const text = [
+            promptText,
+            allDOMElements.promptInput ? allDOMElements.promptInput.value : '',
+            ...(Array.isArray(commandsArray) ? commandsArray : [])
+        ].join(' ');
+        return /(đồ\s*thị|hàm\s*số|parabol|hệ\s*trục|trục\s*tọa\s*độ|tọa\s*độ\s*oxy|bảng\s*biến\s*thiên|function\s*\(|polynomial\s*\()/i.test(text);
+    }
+
     function formatGeoGebraExecuteCommand(commandsArray) {
         if (!commandsArray || !commandsArray.length) return '';
-        const escaped = commandsArray.map((cmd) => JSON.stringify(cmd));
+        let list = [...commandsArray];
+        if (!isGeoGebraCoordinateRequested(list)) {
+            const hasShowAxes = list.some(cmd => /ShowAxes\s*[\(\[]/i.test(cmd));
+            const hasShowGrid = list.some(cmd => /ShowGrid\s*[\(\[]/i.test(cmd));
+            const prefixes = [];
+            if (!hasShowAxes) prefixes.push('ShowAxes(false)');
+            if (!hasShowGrid) prefixes.push('ShowGrid(false)');
+            if (prefixes.length) {
+                list = [...prefixes, ...list];
+            }
+        }
+        const escaped = list.map((cmd) => JSON.stringify(cmd));
         return `Execute({${escaped.join(', ')}})`;
     }
 
@@ -1092,6 +1126,11 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
                     if (pendingGgbCommands) {
                         runCommandsOnGeoGebra(pendingGgbCommands);
                         pendingGgbCommands = null;
+                    } else if (!isGeoGebraCoordinateRequested([])) {
+                        try { if (typeof api.setAxesVisible === 'function') api.setAxesVisible(1, false, false, false); } catch (e) {}
+                        try { if (typeof api.setGridVisible === 'function') api.setGridVisible(1, false); } catch (e) {}
+                        try { api.evalCommand('ShowAxes(false)'); } catch (e) {}
+                        try { api.evalCommand('ShowGrid(false)'); } catch (e) {}
                     }
                     if (callback) callback();
                 }
@@ -1101,15 +1140,65 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
         }
     }
 
+    function cleanUpGeoGebraObjects() {
+        if (!window.ggbApplet || typeof window.ggbApplet.getAllObjectNames !== 'function') return;
+        try {
+            const names = window.ggbApplet.getAllObjectNames() || [];
+            names.forEach(name => {
+                if (!name) return;
+                const type = (typeof window.ggbApplet.getObjectType === 'function' ? window.ggbApplet.getObjectType(name) || '' : '').toLowerCase();
+                const isAux = /^(aux_|temp_)/i.test(name) || name.toLowerCase() === 'origin' || name.toLowerCase() === 'temp_origin';
+
+                if (isAux) {
+                    try { if (typeof window.ggbApplet.setVisible === 'function') window.ggbApplet.setVisible(name, false); } catch (e) {}
+                    try { if (typeof window.ggbApplet.showLabel === 'function') window.ggbApplet.showLabel(name, false); } catch (e) {}
+                    return;
+                }
+
+                // Chỉ giữ nhãn điểm và chữ; ẩn nhãn rác của đoạn thẳng, đường thẳng, đường tròn, góc, đa giác
+                if (type === 'point' || type === 'text') {
+                    try { if (typeof window.ggbApplet.showLabel === 'function') window.ggbApplet.showLabel(name, true); } catch (e) {}
+                } else {
+                    try { if (typeof window.ggbApplet.showLabel === 'function') window.ggbApplet.showLabel(name, false); } catch (e) {}
+                }
+            });
+        } catch (e) {
+            console.warn('GeoGebra cleanup warning:', e);
+        }
+    }
+
     function runCommandsOnGeoGebra(commandsArray) {
         if (!window.ggbApplet || typeof window.ggbApplet.evalCommand !== 'function') return false;
         try {
             if (typeof window.ggbApplet.reset === 'function') window.ggbApplet.reset();
+            const isCoord = isGeoGebraCoordinateRequested(commandsArray);
+            if (!isCoord) {
+                try { if (typeof window.ggbApplet.setAxesVisible === 'function') window.ggbApplet.setAxesVisible(1, false, false, false); } catch (e) {}
+                try { if (typeof window.ggbApplet.setAxesVisible === 'function') window.ggbApplet.setAxesVisible(false, false); } catch (e) {}
+                try { if (typeof window.ggbApplet.setGridVisible === 'function') window.ggbApplet.setGridVisible(1, false); } catch (e) {}
+                try { if (typeof window.ggbApplet.setGridVisible === 'function') window.ggbApplet.setGridVisible(false); } catch (e) {}
+                try { window.ggbApplet.evalCommand('ShowAxes(false)'); } catch (e) {}
+                try { window.ggbApplet.evalCommand('ShowGrid(false)'); } catch (e) {}
+            }
+
             commandsArray.forEach(cmd => {
                 if (cmd && cmd.trim()) {
                     window.ggbApplet.evalCommand(cmd.trim());
                 }
             });
+
+            if (!isCoord) {
+                try { if (typeof window.ggbApplet.setAxesVisible === 'function') window.ggbApplet.setAxesVisible(1, false, false, false); } catch (e) {}
+                try { if (typeof window.ggbApplet.setAxesVisible === 'function') window.ggbApplet.setAxesVisible(false, false); } catch (e) {}
+                try { if (typeof window.ggbApplet.setGridVisible === 'function') window.ggbApplet.setGridVisible(1, false); } catch (e) {}
+                try { if (typeof window.ggbApplet.setGridVisible === 'function') window.ggbApplet.setGridVisible(false); } catch (e) {}
+                try { window.ggbApplet.evalCommand('ShowAxes(false)'); } catch (e) {}
+                try { window.ggbApplet.evalCommand('ShowGrid(false)'); } catch (e) {}
+            }
+
+            cleanUpGeoGebraObjects();
+            setTimeout(cleanUpGeoGebraObjects, 150);
+
             showVehinhToast('⚡ Đã nạp thành công hình vẽ vào GeoGebra!');
             return true;
         } catch (err) {
