@@ -1,3 +1,34 @@
+# IMPLEMENT — 1 chạm: mở liên kết và tự động nộp bài
+
+Ngày triển khai: 2026-09-11. Thực hiện đúng `docs/handoff/PLAN.md` (bỏ iframe, nút vừa mở tab mới vừa gọi `submitFiles()`).
+
+## File đã sửa
+- `nopbai.html`
+- `nopbai-quanly.html`
+- `tests/nopbai-report-link-smoke.js`
+- `api/submissions.php` (giữ `'link'` + chuẩn hóa `url`; không đổi schema)
+
+## Bước 1 — Trang nộp (`nopbai.html`)
+- Xóa `formatEmbedUrl` và khung `<iframe>`.
+- Thêm `openLinkAndSubmit(fieldKey, targetUrl)`: `window.open` ngay trong click (fallback `location.href` nếu bị chặn popup) → tự điền `"Đã mở và nộp qua liên kết trực tuyến"` nếu ô trống → `form.checkValidity()` / `reportValidity()` → `submitFiles(event)`.
+- Card trường `link`: nút **Nhấn vào đây để nộp & mở link**.
+- Nút **Nộp bài** ở chân form giữ làm đường dự phòng.
+- `#successState`: *Hệ thống đã ghi nhận thời gian nộp bài của bạn. Bạn vui lòng tiếp tục hoàn thành nội dung trên trang vừa mở.*
+
+## Bước 2 — Quản trị (`nopbai-quanly.html`)
+- Dropdown: **Liên kết / Bảng tính ngoài (Link)**.
+- Giữ ô URL; lược bỏ checkbox nhúng iframe.
+- Giữ nút **Link nộp**, cột CSV link trực tiếp, và ô báo cáo dạng URL bấm được (từ vòng trước).
+
+## Bước 3 — API
+- `$types` vẫn có `'link'`; `url` tối đa 500, chặn `javascript:` / `data:` / `vbscript:`.
+- Nộp bài lưu nguyên `report_data` vào `report_data_json`.
+
+## Kiểm thử
+- `node tests/nopbai-report-link-smoke.js`: PASS — `nopbai report link smoke: passed`.
+
+---
+
 # IMPLEMENT — Trường Liên kết / Nhúng bảng tính + link nộp trực tiếp
 
 Ngày triển khai: 2026-09-11. Thực hiện đúng `docs/handoff/PLAN.md` (loại trường `link`, iframe Google Sheets/Forms chống quên nộp bài, sao chép link `?code=&person=`).

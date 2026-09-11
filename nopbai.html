@@ -141,7 +141,7 @@
             <section id="successState" class="hidden p-8 text-center sm:p-12">
                 <div class="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-50 text-3xl text-emerald-600"><i class="fas fa-check"></i></div>
                 <h2 class="mt-5 text-2xl font-black">Nộp bài thành công</h2>
-                <p class="mt-2 text-sm text-slate-500">Hệ thống đã lưu tệp và ghi nhận thời gian nộp.</p>
+                <p class="mt-2 text-sm text-slate-500">Hệ thống đã ghi nhận thời gian nộp bài của bạn. Bạn vui lòng tiếp tục hoàn thành nội dung trên trang vừa mở.</p>
                 <div id="receipt" class="mx-auto mt-5 max-w-sm rounded-2xl bg-slate-50 p-4 text-sm text-slate-600"></div>
                 <button onclick="location.reload()" class="mt-5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700">Quay lại</button>
             </section>
@@ -394,24 +394,32 @@
             }
         }
 
-        function formatEmbedUrl(url) {
-            if (!url) return '';
-            let clean = url.trim();
-            if (!/^https?:\/\//i.test(clean)) clean = 'https://' + clean;
-            // Google Sheets: Chuyển sang dạng nhúng widget tối giản không thanh menu
-            if (clean.includes('docs.google.com/spreadsheets')) {
-                const match = clean.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-                if (match && match[1]) {
-                    return `https://docs.google.com/spreadsheets/d/${match[1]}/edit?widget=true&headers=false&chrome=false`;
-                }
+        function openLinkAndSubmit(fieldKey, targetUrl) {
+            if (!targetUrl) return;
+            // 1. Mở tab mới ngay lập tức trong event handler để không bị chặn popup
+            const win = window.open(targetUrl, '_blank');
+            if (!win) {
+                // Dự phòng nếu popup bị chặn
+                location.href = targetUrl;
+                return;
             }
-            // Google Forms: Thêm ?embedded=true
-            if (clean.includes('docs.google.com/forms')) {
-                if (!clean.includes('embedded=true')) {
-                    clean += (clean.includes('?') ? '&' : '?') + 'embedded=true';
-                }
+
+            // 2. Tự động điền giá trị xác nhận nếu ô input chưa có giá trị
+            const input = document.querySelector(`[name="report_${fieldKey}"]`);
+            if (input && !input.value.trim()) {
+                input.value = 'Đã mở và nộp qua liên kết trực tuyến';
             }
-            return clean;
+
+            // 3. Kiểm tra tính hợp lệ của form (các trường required khác nếu có)
+            const form = document.getElementById('submitForm');
+            if (form && !form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // 4. Kích hoạt nộp bài tự động
+            const event = new Event('submit', { cancelable: true });
+            submitFiles(event);
         }
 
         function renderReportFields(a) {
@@ -435,61 +443,30 @@
                 } else if (field.type === 'link') {
                     const targetUrl = field.url ? field.url.trim() : '';
                     const rawUrl = targetUrl ? (/^https?:\/\//i.test(targetUrl) ? targetUrl : `https://${targetUrl}`) : '';
-                    const embedUrl = formatEmbedUrl(rawUrl);
-                    const isEmbed = field.embed !== false && embedUrl;
-
-                    if (isEmbed) {
-                        input = `
-                            <div class="rounded-2xl border border-teal-200 bg-white p-4 shadow-sm">
-                                <div class="mb-3 rounded-xl border border-teal-100 bg-teal-50/80 p-3 text-xs text-teal-900">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <div class="font-black text-sm text-teal-950">
-                                            <i class="fas fa-file-waveform text-teal-600 mr-1.5"></i>Bảng nhập liệu trực tiếp
-                                        </div>
-                                        <a href="${esc(rawUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 rounded-lg border border-teal-200 bg-white px-2.5 py-1 text-[11px] font-bold text-teal-800 shadow-sm hover:bg-teal-50" title="Mở bảng tính toàn màn hình trong tab mới nếu màn hình nhỏ">
-                                            <i class="fas fa-up-right-from-square text-[10px]"></i>
-                                            <span>Mở tab mới</span>
-                                        </a>
+                    input = `
+                        <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50/80 via-emerald-50/50 to-white p-5 shadow-sm">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-2 text-sm font-black text-teal-900">
+                                        <span class="grid h-7 w-7 place-items-center rounded-lg bg-teal-600 text-white text-xs"><i class="fas fa-arrow-up-right-from-square"></i></span>
+                                        <span>Mở liên kết để nhập thông tin</span>
                                     </div>
-                                    <div class="mt-2 grid gap-1 sm:grid-cols-2 text-[11px] font-semibold text-slate-700">
-                                        <div class="flex items-center gap-1.5"><span class="grid h-4 w-4 place-items-center rounded-full bg-teal-600 text-[10px] font-black text-white">1</span><span>Nhập dữ liệu vào bảng tính bên dưới.</span></div>
-                                        <div class="flex items-center gap-1.5"><span class="grid h-4 w-4 place-items-center rounded-full bg-teal-600 text-[10px] font-black text-white">2</span><span>Sau khi nhập xong, cuộn xuống bấm nút <b>"Nộp bài"</b>.</span></div>
-                                    </div>
+                                    ${rawUrl ? `<p class="mt-1.5 truncate text-xs text-slate-500 font-mono" title="${esc(rawUrl)}">${esc(rawUrl)}</p>` : '<p class="mt-1.5 text-xs text-amber-600">Chưa cấu hình đường dẫn liên kết.</p>'}
+                                    <p class="mt-1 text-[11px] font-bold text-teal-700"><i class="fas fa-bolt mr-1 text-amber-500"></i>Nhấn nút bên cạnh sẽ mở trang nhập liệu và tự động ghi nhận hoàn thành nộp bài.</p>
                                 </div>
-                                <div class="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50" style="height: 560px;">
-                                    <iframe src="${esc(embedUrl)}" class="h-full w-full border-0" allow="clipboard-read; clipboard-write"></iframe>
-                                </div>
-                                <div class="mt-3.5 pt-3 border-t border-slate-100">
-                                    <label class="block text-xs font-bold text-slate-600 mb-1">Ghi chú xác nhận hoàn thành (hoặc dán link kết quả)${field.required ? ' *' : ''}:</label>
-                                    <input class="field text-sm !bg-slate-50" type="text" name="report_${esc(field.key)}" ${field.required ? 'required' : ''} placeholder="Ví dụ: Đã hoàn thành nhập liệu trên bảng tính...">
-                                </div>
+                                ${rawUrl ? `
+                                    <button type="button" onclick="openLinkAndSubmit('${esc(field.key)}', '${esc(rawUrl)}')" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-xs font-black text-white shadow-md shadow-teal-700/25 transition hover:bg-teal-800 hover:scale-[1.02] active:scale-95">
+                                        <i class="fas fa-paper-plane"></i>
+                                        <span>Nhấn vào đây để nộp &amp; mở link</span>
+                                    </button>
+                                ` : ''}
                             </div>
-                        `;
-                    } else {
-                        input = `
-                            <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50/70 to-emerald-50/40 p-4 shadow-sm">
-                                <div class="flex flex-wrap items-center justify-between gap-3">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center gap-2 text-sm font-black text-teal-900">
-                                            <i class="fas fa-arrow-up-right-from-square text-teal-600"></i>
-                                            <span>Mở đường dẫn để nhập thông tin</span>
-                                        </div>
-                                        ${rawUrl ? `<p class="mt-1 truncate text-xs text-slate-500 font-mono">${esc(rawUrl)}</p>` : '<p class="mt-1 text-xs text-amber-600">Chưa cấu hình đường dẫn liên kết.</p>'}
-                                    </div>
-                                    ${rawUrl ? `
-                                        <a href="${esc(rawUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-teal-700/20 transition hover:bg-teal-800 hover:scale-[1.02] active:scale-95">
-                                            <i class="fas fa-external-link-alt"></i>
-                                            <span>Nhấn vào đây để nhập</span>
-                                        </a>
-                                    ` : ''}
-                                </div>
-                                <div class="mt-3.5 pt-3 border-t border-teal-100">
-                                    <label class="block text-xs font-bold text-slate-600 mb-1">Ghi chú xác nhận hoặc dán link kết quả${field.required ? ' *' : ''}:</label>
-                                    <input class="field text-sm !bg-white" type="text" name="report_${esc(field.key)}" ${field.required ? 'required' : ''} placeholder="Nhập ghi chú hoặc mã xác nhận...">
-                                </div>
+                            <div class="mt-3.5 pt-3 border-t border-teal-100/80">
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Ghi chú xác nhận (tùy chọn):</label>
+                                <input class="field text-sm !bg-white" type="text" name="report_${esc(field.key)}" ${field.required ? 'required' : ''} placeholder="Có thể để trống hoặc ghi chú thêm nếu cần...">
                             </div>
-                        `;
-                    }
+                        </div>
+                    `;
                 } else {
                     input = `<input class="field" type="${field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}" name="report_${esc(field.key)}" ${field.required ? 'required' : ''} placeholder="${esc(field.label)}">`;
                 }

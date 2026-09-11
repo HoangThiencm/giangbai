@@ -2,359 +2,197 @@
 
 ## Hiện trạng
 
-1. **Giao diện thiết kế biểu mẫu báo cáo (`nopbai-quanly.html`)**:
-   - Khi tạo hoặc chỉnh sửa một đợt nộp có loại là **Báo cáo biểu mẫu** (`submissionType === 'report'`), quản trị viên thiết kế các chỉ tiêu báo cáo (`state.reportFields`) trong khung `#reportBuilder`.
-   - Danh sách các loại trường dữ liệu hiện tại trong dropdown (như trong ảnh người dùng cung cấp) chỉ có 6 loại:
-     + `text`: Văn bản ngắn
-     + `textarea`: Đoạn văn
-     + `number`: Số
-     + `date`: Ngày
-     + `select`: Chọn đáp án
-     + `heading`: Tiêu đề nhóm
-   - **Chưa có loại trường Liên kết (`link`)**: Quản trị viên/giáo viên không thể chèn một trường có sẵn đường link (Google Sheets, Google Forms, Drive, trang web nhập liệu ngành, bảng tính số liệu...) để người nộp mở ra nhập liệu nhanh.
+1. **Vấn đề tâm lý & trải nghiệm của giáo viên khi nộp bài qua liên kết ngoài**:
+   - Khi đợt nộp yêu cầu điền vào một đường dẫn bên ngoài (Google Sheets, Google Forms, Drive...), việc nhúng khung `<iframe>` trực tiếp vào trang web thường gây chật chội, khó thao tác trên màn hình nhỏ/điện thoại và dễ gặp lỗi chặn đăng nhập tài khoản Google.
+   - Ngược lại, nếu chỉ hiển thị nút mở tab mới và để nút "Nộp bài" riêng biệt ở chân trang: Giáo viên sau khi bấm mở link sang tab mới để điền dữ liệu thì **90% sẽ quên quay lại tab ban đầu để kéo xuống bấm nút "Nộp bài"**.
+   - Hậu quả: Dù giáo viên đã điền xong dữ liệu trên Google Sheets, hệ thống quản trị vẫn báo giáo viên đó ở trạng thái "Chưa nộp", người quản lý vẫn phải mất thời gian đi nhắc nhở và kiểm tra thủ công.
 
-2. **Giao diện người nộp báo cáo (`nopbai.html`) & Vấn đề tâm lý người dùng quên nộp bài**:
-   - Hàm `renderReportFields(a)` hiện tại chỉ render các trường nhập liệu thông thường (`<input type="text|number|date">`, `<textarea>`, `<select>`, hoặc `<div class="heading">`).
-   - Nếu chỉ mở link ra tab ngoài/app ngoài (ví dụ mở Google Sheets trong tab mới): Giáo viên/người nộp sau khi điền xong trên Google Sheets thường nghĩ mình đã hoàn thành và tắt tab luôn, **quên quay lại trang web nộp bài để bấm nút "Nộp bài"**. Hậu quả là hệ thống vẫn ghi nhận trạng thái "Chưa nộp", quản trị viên phải đi dò thủ công từng người.
-   - Do đó, cần có giải pháp **Nhúng trực tiếp (Embed Iframe)** bảng tính/form ngay trong trang nộp bài để giáo viên không rời khỏi giao diện, nhập xong là thấy ngay nút "Xác nhận & Nộp bài" ở dưới.
-
-3. **Backend xử lý và chuẩn hóa dữ liệu (`api/submissions.php`)**:
-   - Trong hàm `submission_normalize_form_fields($input)` (dòng 183):
-     `$types = ['text', 'textarea', 'number', 'date', 'select', 'heading'];`
-   - Chưa bao gồm kiểu `'link'`. Nếu frontend gửi `'link'`, hàm sẽ tự động fallback về `'text'`.
-   - Cấu trúc trường trong mảng kết quả chưa lưu trữ thuộc tính `url` và cấu hình nhúng `embed`.
-
-4. **Nhu cầu sao chép và gửi link nộp nhanh trực tiếp cho người dùng**:
-   - Hiện tại, trong modal chi tiết đợt nộp (`renderDetail` tại `nopbai-quanly.html`), phần danh sách người được chỉ định (`participants`) chỉ có nút sao chép mã định danh cá nhân (`p.participant_code`), người nộp phải tự truy cập link tổng rồi dò tên hoặc nhập mã.
-   - Trong khi đó, `nopbai.html` đã hỗ trợ sẵn tham số URL `person=...` (dòng 155, 197 `nopbai.html`) để nhận diện ngay người nộp và mở thẳng vào form mà không cần qua bước chọn tên/nhập mã. Thiếu nút "Sao chép link nộp trực tiếp" cho từng người và thiếu cột link này khi xuất file CSV danh sách người nộp (`exportParticipants()`).
+2. **Yêu cầu cải tiến từ người dùng**:
+   - Đối với trường loại Liên kết (Link), không cần nhúng iframe cồng kềnh.
+   - Thiết kế cơ chế **"1 chạm"**: Khi giáo viên nhấn vào nút mở liên kết, hệ thống sẽ **mở trang mới để giáo viên nhập liệu, ĐỒNG THỜI tự động kích hoạt chức năng "Nộp bài"** trên hệ thống ngay lúc đó.
 
 ---
 
 ## Phạm vi
 
-Kế hoạch tập trung xử lý toàn diện các vấn đề:
+1. **Cập nhật giao diện nộp bài (`nopbai.html`)**:
+   - Đơn giản hóa giao diện trường `link`: Không cần hiển thị khung `<iframe>` to cồng kềnh.
+   - Thiết kế nút bấm hành động nổi bật:
+     `[ 🚀 Nhấn vào đây để mở liên kết & Nộp bài ]` (kèm icon mở tab mới và biểu tượng xác nhận nộp).
+   - Kèm ghi chú chỉ dẫn rõ ràng: *"Hệ thống sẽ tự động ghi nhận bài nộp và mở liên kết nhập liệu trong thẻ mới."*
+   - Xử lý sự kiện khi nhấn nút:
+     + Mở đường dẫn đích trong tab mới (`window.open(targetUrl, '_blank')`) ngay trong event click của người dùng để tránh bị trình duyệt chặn popup.
+     + Tự động gán giá trị xác nhận cho trường liên kết (ví dụ: `"Đã mở và nộp qua liên kết trực tuyến"` nếu người nộp chưa gõ nội dung tùy chỉnh).
+     + Tự động kích hoạt hàm gửi bài nộp `submitFiles()` lên máy chủ.
+     + Nếu form có các trường bắt buộc khác (`required`): Kiểm tra tính hợp lệ trước khi gửi; nếu đã hợp lệ thì gửi ngay và mở link.
+     + Chuyển sang màn hình thông báo nộp bài thành công rõ ràng:
+       *"Hệ thống đã ghi nhận thời gian nộp bài của thầy/cô. Thầy/cô vui lòng hoàn thành nội dung trên trang bảng tính vừa mở."*
+   - Nút "Nộp bài" ở chân trang vẫn hoạt động bình thường như phương thức nộp dự phòng.
 
-1. **Bổ sung loại trường "Liên kết / Bảng tính nhúng" (`link`) vào danh mục thể loại chỉ tiêu biểu mẫu**:
-   - Thêm tùy chọn `Liên kết / Nhúng bảng tính (Link)` vào dropdown thể loại trường trong `nopbai-quanly.html`.
-   - Khi chọn loại `link`: Hiển thị ô nhập URL liên kết (`url`, ví dụ link Google Sheets, Google Forms, Drive...) và tùy chọn nhúng `embed` (mặc định bật chế độ nhúng trực tiếp nếu là Google Sheets/Forms để người dùng không rời trang).
-   - Tại trang nộp báo cáo (`nopbai.html`):
-     + **Tự động tối ưu hóa URL Google Sheets sang dạng Embed**: Chuyển đổi link Google Sheets thông thường thành dạng nhúng không thanh menu thừa (`/edit?widget=true&headers=false&chrome=false`).
-     + **Khung nhúng trực tiếp (Embedded Iframe)**: Chiều cao tối ưu (~550px), cuộn mượt mà ngay trên trang.
-     + **Cơ chế chống quên bấm nộp bài (Anti-forget UX)**:
-       * Banner chỉ dẫn 2 bước nổi bật: `Bước 1: Nhập dữ liệu trực tiếp vào bảng tính bên dưới` -> `Bước 2: Bấm nút Nộp bài để hệ thống ghi nhận`.
-       * Ô xác nhận hoàn thành hoặc dán ghi chú kết quả ngay dưới khung nhúng.
-       * Nút dự phòng: `Mở toàn màn hình / Tab mới` cho người dùng điện thoại màn hình nhỏ hoặc trường hợp trình duyệt chặn iframe.
-   - Tại backend (`api/submissions.php`): Cho phép kiểu `link` trong danh sách `$types` hợp lệ, chuẩn hóa và bảo vệ thuộc tính `url`, `embed`.
+2. **Cập nhật trình quản lý biểu mẫu (`nopbai-quanly.html`)**:
+   - Trong dropdown loại trường, giữ nguyên tùy chọn **Liên kết (Link)**.
+   - Cho phép quản trị viên nhập Tiêu đề chỉ tiêu và Đường dẫn URL liên kết (Google Sheets, Forms, Drive...).
+   - Đơn giản hóa cấu hình: Lược bỏ checkbox nhúng iframe phức tạp, chuẩn hóa theo cơ chế mở link kèm tự động nộp bài tiện lợi.
 
-2. **Bổ sung tiện ích sao chép và gửi link nộp trực tiếp cho người dùng**:
-   - Tại bảng danh sách người nộp chỉ định trong `nopbai-quanly.html` (`renderDetail`): Thêm nút "Sao chép link nộp" cho từng người (tự động gắn sẵn `?code=...&person=...`), quản trị viên chỉ cần bấm là sao chép link cá nhân hóa để gửi qua Zalo/Email.
-   - Trong chức năng xuất danh sách mã (`exportParticipants`): Bổ sung cột "Link nộp trực tiếp" trong file CSV để gửi hàng loạt nhanh chóng.
-   - Hiển thị link có thể click được trong bảng tổng hợp kết quả báo cáo (`renderSubmissionsTable`) khi người nộp điền đường link.
+3. **Backend API (`api/submissions.php`)**:
+   - Duy trì hỗ trợ kiểu trường `'link'` trong `$types` và chuẩn hóa lưu trữ `url`.
+   - Tiếp nhận dữ liệu nộp tự động từ frontend một cách trơn tru, ghi nhận trạng thái đã nộp vào database.
 
-3. **Xây dựng bộ kiểm thử tự động (`tests/nopbai-report-link-smoke.js`)**:
-   - Kiểm tra tính đúng đắn về cú pháp, cấu trúc các trường, logic chuyển đổi URL nhúng, logic render, regex và tính toàn vẹn của API.
+4. **Kiểm thử tự động (`tests/nopbai-report-link-smoke.js`)**:
+   - Cập nhật bài test smoke kiểm tra sự hiện diện của cơ chế mở link và kích hoạt nộp bài tự động.
 
 ---
 
 ## Ngoài phạm vi
 
-- Không thay đổi cấu trúc bảng cơ sở dữ liệu MySQL (trường `form_fields_json` đã lưu dạng JSON text, tương thích hoàn toàn không cần migrate DB).
-- Không ảnh hưởng đến các đợt nộp dạng tệp thông thường (`submission_type = 'file'`).
-- Không can thiệp vào quyền hạn nội bộ của Google (người tạo file Google Sheets vẫn cần cài quyền "Bất kỳ ai có liên kết đều có thể chỉnh sửa" để người dùng không bị Google chặn đăng nhập trong iframe).
-- Tuyệt đối không tự ý sửa source code trong vai trò Antigravity (đúng quy định `AGENTS.md`). Việc triển khai code sẽ do ChatGPT thực hiện.
+- Không thay đổi cấu trúc bảng cơ sở dữ liệu MySQL.
+- Không can thiệp vào các đợt nộp dạng tệp (`submission_type = 'file'`).
+- Không can thiệp vào nội dung bảng tính bên trong Google Sheets.
+- Tuân thủ quy định `AGENTS.md`: Antigravity chỉ khảo sát và lập kế hoạch, không tự ý sửa source code.
 
 ---
 
 ## File dự kiến tác động
 
-1. `nopbai-quanly.html` (Frontend Quản trị đợt nộp & Thiết kế chỉ tiêu báo cáo)
-2. `nopbai.html` (Frontend Người dùng xem và nộp báo cáo)
-3. `api/submissions.php` (Backend API chuẩn hóa dữ liệu chỉ tiêu và nộp bài)
-4. `tests/nopbai-report-link-smoke.js` (Tạo mới smoke test kiểm thử tự động)
+1. `nopbai.html` (Frontend Người dùng nộp bài: cơ chế 1 chạm mở link + nộp bài tự động)
+2. `nopbai-quanly.html` (Frontend Quản lý: cấu hình trường link gọn gàng)
+3. `api/submissions.php` (Backend API: đảm bảo nhận dữ liệu nộp trường link)
+4. `tests/nopbai-report-link-smoke.js` (Cập nhật bài kiểm thử tự động)
 
 ---
 
 ## Các bước thực hiện chi tiết
 
-### Bước 1: Cập nhật `nopbai-quanly.html` (Trình quản lý & Thiết kế biểu mẫu)
+### Bước 1: Cập nhật `nopbai.html` (Cơ chế Mở link & Tự động nộp bài)
 
-1. **Bổ sung giá trị mặc định cho `addReportField`**:
-   - Cập nhật tham số mặc định của `addReportField`:
-     ```javascript
-     function addReportField(field = { label: '', type: 'text', required: false, allow_evidence: false, evidence_required: false, options: [], url: '', embed: true }) {
-         state.reportFields.push(field);
-         renderReportFields();
-     }
-     ```
-
-2. **Cập nhật `renderReportFields()`**:
-   - Trong dropdown chọn kiểu trường (`<select>`):
-     ```html
-     <option value="text" ${f.type === 'text' ? 'selected' : ''}>Văn bản ngắn</option>
-     <option value="textarea" ${f.type === 'textarea' ? 'selected' : ''}>Đoạn văn</option>
-     <option value="number" ${f.type === 'number' ? 'selected' : ''}>Số</option>
-     <option value="date" ${f.type === 'date' ? 'selected' : ''}>Ngày</option>
-     <option value="select" ${f.type === 'select' ? 'selected' : ''}>Chọn đáp án</option>
-     <option value="heading" ${f.type === 'heading' ? 'selected' : ''}>Tiêu đề nhóm</option>
-     <option value="link" ${f.type === 'link' ? 'selected' : ''}>Liên kết / Nhúng bảng tính (Link)</option>
-     ```
-   - Bổ sung cấu hình khi `f.type === 'link'`:
-     ```javascript
-     ${f.type === 'link' ? `
-         <div class="mt-2 space-y-2">
-             <div class="flex items-center gap-2">
-                 <div class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-teal-100 text-teal-800"><i class="fas fa-link text-xs"></i></div>
-                 <input class="field !py-2 text-sm" value="${esc(f.url || '')}" oninput="state.reportFields[${i}].url=this.value" placeholder="Đường dẫn Google Sheets / biểu mẫu (ví dụ: https://docs.google.com/spreadsheets/d/...)">
-             </div>
-             <div class="flex items-center gap-2 text-xs text-slate-600 pl-1">
-                 <label class="flex items-center gap-1.5 font-bold cursor-pointer">
-                     <input type="checkbox" ${f.embed !== false ? 'checked' : ''} onchange="state.reportFields[${i}].embed=this.checked" class="accent-teal-700">
-                     <span>Nhúng trực tiếp vào trang nộp bài (Iframe) để người dùng không quên bấm Nộp bài</span>
-                 </label>
-             </div>
-         </div>
-     ` : ''}
-     ```
-
-3. **Bổ sung hàm tạo link cá nhân hóa và nút sao chép link nộp trực tiếp**:
-   - Thêm hàm hỗ trợ:
-     ```javascript
-     function submissionParticipantUrl(code, personCode) {
-         const url = new URL('nopbai.html', location.href);
-         url.searchParams.set('code', code);
-         if (personCode) url.searchParams.set('person', personCode);
-         return url.href;
-     }
-     async function copyParticipantLink(code, personCode) {
-         await navigator.clipboard.writeText(submissionParticipantUrl(code, personCode));
-         toast('Đã sao chép đường link nộp bài trực tiếp');
-     }
-     ```
-   - Trong hàm `renderDetail()`, tại bảng "Danh sách được chỉ định":
-     Bổ sung nút sao chép link trực tiếp cạnh nút sao chép mã cá nhân:
-     ```html
-     <div class="flex items-center gap-1.5">
-         <button onclick="navigator.clipboard.writeText('${esc(p.participant_code)}');toast('Đã chép mã')" class="rounded-lg bg-slate-100 px-2 py-1 font-mono text-xs font-black" title="Sao chép mã">${esc(p.participant_code)}</button>
-         <button onclick="copyParticipantLink('${esc(a.public_code)}','${esc(p.participant_code)}')" class="rounded-lg border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-bold text-teal-800 hover:bg-teal-100" title="Sao chép link nộp trực tiếp cho người này"><i class="fas fa-link mr-1"></i>Link nộp</button>
-     </div>
-     ```
-
-4. **Cập nhật hàm `exportParticipants()`**:
-   - Bổ sung cột "Đường link nộp trực tiếp" vào file CSV:
-     ```javascript
-     function exportParticipants() {
-         const { assignment: a, participants: p } = state.detail;
-         downloadCsv(`danh-sach-ma-${a.public_code}.csv`, [
-             ['Mã cá nhân', 'Đường link nộp trực tiếp', 'Họ tên', 'Vai trò', 'Nhóm/đơn vị', 'Liên hệ', 'Trạng thái'],
-             ...p.map(x => [
-                 x.participant_code,
-                 submissionParticipantUrl(a.public_code, x.participant_code),
-                 x.full_name,
-                 x.role_label,
-                 x.group_name,
-                 x.contact,
-                 Number(x.submission_count) ? 'Đã nộp' : 'Chưa nộp'
-             ])
-         ]);
-     }
-     ```
-
-5. **Hiển thị link click được trong bảng tổng hợp bài nộp (`renderSubmissionsTable`)**:
-   - Khi giá trị ô báo cáo bắt đầu bằng `http://` hoặc `https://`, bọc trong thẻ `<a href="..." target="_blank" class="text-teal-700 underline font-semibold">` để người xem có thể bấm mở trực tiếp.
-
----
-
-### Bước 2: Cập nhật `nopbai.html` (Giao diện người nộp báo cáo)
-
-1. **Thêm hàm chuyển đổi URL Google Sheets/Forms sang dạng Embed**:
+1. **Xây dựng hàm `openLinkAndSubmit(fieldKey, targetUrl)`**:
    ```javascript
-   function formatEmbedUrl(url) {
-       if (!url) return '';
-       let clean = url.trim();
-       if (!/^https?:\/\//i.test(clean)) clean = 'https://' + clean;
-       // Google Sheets: Chuyển sang dạng nhúng widget tối giản không thanh menu
-       if (clean.includes('docs.google.com/spreadsheets')) {
-           const match = clean.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-           if (match && match[1]) {
-               return `https://docs.google.com/spreadsheets/d/${match[1]}/edit?widget=true&headers=false&chrome=false`;
-           }
+   function openLinkAndSubmit(fieldKey, targetUrl) {
+       if (!targetUrl) return;
+       // 1. Mở tab mới ngay lập tức trong event handler để không bị chặn popup
+       const win = window.open(targetUrl, '_blank');
+       if (!win) {
+           // Dự phòng nếu popup bị chặn
+           location.href = targetUrl;
+           return;
        }
-       // Google Forms: Thêm ?embedded=true
-       if (clean.includes('docs.google.com/forms')) {
-           if (!clean.includes('embedded=true')) {
-               clean += (clean.includes('?') ? '&' : '?') + 'embedded=true';
-           }
+
+       // 2. Tự động điền giá trị xác nhận nếu ô input chưa có giá trị
+       const input = document.querySelector(`[name="report_${fieldKey}"]`);
+       if (input && !input.value.trim()) {
+           input.value = 'Đã mở và nộp qua liên kết trực tuyến';
        }
-       return clean;
+
+       // 3. Kiểm tra tính hợp lệ của form (các trường required khác nếu có)
+       const form = document.getElementById('submitForm');
+       if (form && !form.checkValidity()) {
+           form.reportValidity();
+           return;
+       }
+
+       // 4. Kích hoạt nộp bài tự động
+       const event = new Event('submit', { cancelable: true });
+       submitFiles(event);
    }
    ```
 
-2. **Nâng cấp `renderReportFields(a)` xử lý trường hợp `field.type === 'link'`**:
-   - Nếu `field.embed !== false` và có URL:
-     Hiển thị khung iframe nhúng trực tiếp kèm hướng dẫn 2 bước chống quên bấm nộp bài:
+2. **Cập nhật hàm `renderReportFields(a)` cho trường `field.type === 'link'`**:
+   - Hiển thị card liên kết hiện đại, đẹp mắt:
      ```javascript
      } else if (field.type === 'link') {
          const targetUrl = field.url ? field.url.trim() : '';
          const rawUrl = targetUrl ? (/^https?:\/\//i.test(targetUrl) ? targetUrl : `https://${targetUrl}`) : '';
-         const embedUrl = formatEmbedUrl(rawUrl);
-         const isEmbed = field.embed !== false && embedUrl;
-
-         if (isEmbed) {
-             input = `
-                 <div class="rounded-2xl border border-teal-200 bg-white p-4 shadow-sm">
-                     <div class="mb-3 rounded-xl border border-teal-100 bg-teal-50/80 p-3 text-xs text-teal-900">
-                         <div class="flex items-center justify-between gap-2">
-                             <div class="font-black text-sm text-teal-950">
-                                 <i class="fas fa-file-waveform text-teal-600 mr-1.5"></i>Bảng nhập liệu trực tiếp
-                             </div>
-                             <a href="${esc(rawUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 rounded-lg border border-teal-200 bg-white px-2.5 py-1 text-[11px] font-bold text-teal-800 shadow-sm hover:bg-teal-50" title="Mở bảng tính toàn màn hình trong tab mới nếu màn hình nhỏ">
-                                 <i class="fas fa-up-right-from-square text-[10px]"></i>
-                                 <span>Mở tab mới</span>
-                             </a>
+         input = `
+             <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50/80 via-emerald-50/50 to-white p-5 shadow-sm">
+                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                     <div class="min-w-0 flex-1">
+                         <div class="flex items-center gap-2 text-sm font-black text-teal-900">
+                             <span class="grid h-7 w-7 place-items-center rounded-lg bg-teal-600 text-white text-xs"><i class="fas fa-arrow-up-right-from-square"></i></span>
+                             <span>Mở liên kết để nhập thông tin</span>
                          </div>
-                         <div class="mt-2 grid gap-1 sm:grid-cols-2 text-[11px] font-semibold text-slate-700">
-                             <div class="flex items-center gap-1.5"><span class="grid h-4 w-4 place-items-center rounded-full bg-teal-600 text-[10px] font-black text-white">1</span><span>Nhập dữ liệu vào bảng tính bên dưới.</span></div>
-                             <div class="flex items-center gap-1.5"><span class="grid h-4 w-4 place-items-center rounded-full bg-teal-600 text-[10px] font-black text-white">2</span><span>Sau khi nhập xong, cuộn xuống bấm nút <b>"Nộp bài"</b>.</span></div>
-                         </div>
+                         ${rawUrl ? `<p class="mt-1.5 truncate text-xs text-slate-500 font-mono" title="${esc(rawUrl)}">${esc(rawUrl)}</p>` : '<p class="mt-1.5 text-xs text-amber-600">Chưa cấu hình đường dẫn liên kết.</p>'}
+                         <p class="mt-1 text-[11px] font-bold text-teal-700"><i class="fas fa-bolt mr-1 text-amber-500"></i>Nhấn nút bên cạnh sẽ mở trang nhập liệu và tự động ghi nhận hoàn thành nộp bài.</p>
                      </div>
-                     <div class="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50" style="height: 560px;">
-                         <iframe src="${esc(embedUrl)}" class="h-full w-full border-0" allow="clipboard-read; clipboard-write"></iframe>
-                     </div>
-                     <div class="mt-3.5 pt-3 border-t border-slate-100">
-                         <label class="block text-xs font-bold text-slate-600 mb-1">Ghi chú xác nhận hoàn thành (hoặc dán link kết quả)${field.required ? ' *' : ''}:</label>
-                         <input class="field text-sm !bg-slate-50" type="text" name="report_${esc(field.key)}" ${field.required ? 'required' : ''} placeholder="Ví dụ: Đã hoàn thành nhập liệu trên bảng tính...">
-                     </div>
+                     ${rawUrl ? `
+                         <button type="button" onclick="openLinkAndSubmit('${esc(field.key)}', '${esc(rawUrl)}')" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-xs font-black text-white shadow-md shadow-teal-700/25 transition hover:bg-teal-800 hover:scale-[1.02] active:scale-95">
+                             <i class="fas fa-paper-plane"></i>
+                             <span>Nhấn vào đây để nộp & mở link</span>
+                         </button>
+                     ` : ''}
                  </div>
-             `;
-         } else {
-             // Dạng nút bấm mở liên kết ngoài
-             input = `
-                 <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50/70 to-emerald-50/40 p-4 shadow-sm">
-                     <div class="flex flex-wrap items-center justify-between gap-3">
-                         <div class="min-w-0 flex-1">
-                             <div class="flex items-center gap-2 text-sm font-black text-teal-900">
-                                 <i class="fas fa-arrow-up-right-from-square text-teal-600"></i>
-                                 <span>Mở đường dẫn để nhập thông tin</span>
-                             </div>
-                             ${rawUrl ? `<p class="mt-1 truncate text-xs text-slate-500 font-mono">${esc(rawUrl)}</p>` : '<p class="mt-1 text-xs text-amber-600">Chưa cấu hình đường dẫn liên kết.</p>'}
-                         </div>
-                         ${rawUrl ? `
-                             <a href="${esc(rawUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-teal-700/20 transition hover:bg-teal-800 hover:scale-[1.02] active:scale-95">
-                                 <i class="fas fa-external-link-alt"></i>
-                                 <span>Nhấn vào đây để nhập</span>
-                             </a>
-                         ` : ''}
-                     </div>
-                     <div class="mt-3.5 pt-3 border-t border-teal-100">
-                         <label class="block text-xs font-bold text-slate-600 mb-1">Ghi chú xác nhận hoặc dán link kết quả${field.required ? ' *' : ''}:</label>
-                         <input class="field text-sm !bg-white" type="text" name="report_${esc(field.key)}" ${field.required ? 'required' : ''} placeholder="Nhập ghi chú hoặc mã xác nhận...">
-                     </div>
+                 <div class="mt-3.5 pt-3 border-t border-teal-100/80">
+                     <label class="block text-xs font-bold text-slate-600 mb-1">Ghi chú xác nhận (tùy chọn):</label>
+                     <input class="field text-sm !bg-white" type="text" name="report_${esc(field.key)}" ${field.required ? 'required' : ''} placeholder="Có thể để trống hoặc ghi chú thêm nếu cần...">
                  </div>
-             `;
-         }
-     ```
-
----
-
-### Bước 3: Cập nhật `api/submissions.php` (Backend API)
-
-1. **Cập nhật danh sách loại trường hợp lệ trong `submission_normalize_form_fields`**:
-   - Dòng 183:
-     ```php
-     $types = ['text', 'textarea', 'number', 'date', 'select', 'heading', 'link'];
-     ```
-   - Chuẩn hóa thuộc tính `url` và `embed`:
-     ```php
-     $rawUrl = trim((string)($raw['url'] ?? ''));
-     if ($type === 'link' && $rawUrl !== '' && !preg_match('#^https?://#i', $rawUrl)) {
-         $rawUrl = 'https://' . $rawUrl;
+             </div>
+         `;
      }
-     $embed = $type === 'link' ? ($raw['embed'] ?? true) : false;
-     ```
-   - Gán `url` và `embed` vào mảng thông tin trường:
-     ```php
-     $fields[] = [
-         'key' => $key,
-         'label' => substr($label, 0, 220),
-         'type' => $type,
-         'required' => $type !== 'heading' && !empty($raw['required']),
-         'allow_evidence' => $type !== 'heading' && !empty($raw['allow_evidence']),
-         'evidence_required' => $type !== 'heading' && !empty($raw['allow_evidence']) && !empty($raw['evidence_required']),
-         'options' => $type === 'select' ? array_slice($options, 0, 50) : [],
-         'url' => $type === 'link' ? substr($rawUrl, 0, 500) : '',
-         'embed' => (bool)$embed,
-     ];
      ```
 
-2. **Xác thực khi nộp dữ liệu biểu mẫu (`$action === 'submit'`)**:
-   - Kiểm tra tính hợp lệ: Nếu trường `link` được đánh dấu `required`, kiểm tra `trim((string)($reportData[$field['key']] ?? '')) !== ''`.
+3. **Cập nhật màn hình thông báo thành công (`#successState` trong `nopbai.html`)**:
+   - Bổ sung thông điệp nhắc nhở thân thiện:
+     *"Hệ thống đã ghi nhận thời gian nộp bài của bạn. Bạn vui lòng tiếp tục hoàn thành nội dung trên trang vừa mở."*
 
 ---
 
-### Bước 4: Xây dựng bài kiểm thử tự động `tests/nopbai-report-link-smoke.js`
+### Bước 2: Cập nhật `nopbai-quanly.html`
 
-- Tạo script test Node.js kiểm tra:
-  + `api/submissions.php`: Có chứa `'link'` trong danh sách `$types`, chuẩn hóa `url` và `embed`.
-  + `nopbai-quanly.html`: Có option `value="link"`, có input cấu hình `f.url` và checkbox `f.embed`, có hàm `submissionParticipantUrl`, `copyParticipantLink` và cập nhật `exportParticipants`.
-  + `nopbai.html`: Có hàm `formatEmbedUrl`, có render iframe nhúng trực tiếp kèm nút mở tab mới và ô nhập `name="report_${esc(field.key)}"`.
-  + Chạy test bằng lệnh `node tests/nopbai-report-link-smoke.js` và đảm bảo Passed 100%.
+1. **Đơn giản hóa giao diện cấu hình trường `link` trong `renderReportFields()`**:
+   - Giữ lại ô nhập Tiêu đề chỉ tiêu và ô nhập URL liên kết.
+   - Bỏ checkbox nhúng iframe phức tạp (đã chuyển sang cơ chế 1 chạm tối ưu).
+   - Dropdown thể loại hiển thị: `Liên kết / Bảng tính ngoài (Link)`.
+
+---
+
+### Bước 3: Cập nhật `api/submissions.php`
+
+1. Giữ nguyên `$types` bao gồm `'link'`, chuẩn hóa `url` (tối đa 500 ký tự, chặn mã độc `javascript:`).
+2. Khi người nộp gửi bài, dữ liệu trường `link` được lưu nguyên vẹn vào `report_data_json`.
+
+---
+
+### Bước 4: Cập nhật bài kiểm thử `tests/nopbai-report-link-smoke.js`
+
+- Kiểm tra sự hiện diện của hàm `openLinkAndSubmit` trong `nopbai.html`.
+- Kiểm tra việc gắn sự kiện click gọi `openLinkAndSubmit` và kích hoạt nộp bài.
+- Chạy test tự động với `node tests/nopbai-report-link-smoke.js` để đảm bảo PASS 100%.
 
 ---
 
 ## Rủi ro & Giải pháp giảm thiểu
 
-1. **Rủi ro người dùng dùng điện thoại nhỏ khó thao tác trong Iframe**:
-   - *Giải pháp*: Bổ sung nút bấm `"Mở tab mới"` ngay góc trên của khung nhúng để người dùng có thể chuyển sang App Google Sheets bất kỳ lúc nào nếu cần.
-2. **Rủi ro quên bấm Nộp bài**:
-   - *Giải pháp*: Nhúng trực tiếp giữ người dùng ở lại trang, banner chỉ dẫn 2 bước to rõ ràng, ô xác nhận và nút Nộp bài cố định ngay dưới khung bảng tính.
-3. **Rủi ro XSS qua URL độc hại (`javascript:`)**:
-   - *Giải pháp*: Chỉ chấp nhận giao thức `http://` hoặc `https://`, mọi dữ liệu hiển thị ra HTML đều đi qua hàm `esc()` (frontend) hoặc `htmlspecialchars` (backend).
-4. **Tương thích ngược**:
-   - *Giải pháp*: Các đợt nộp đã tạo từ trước không có trường `url` hay `embed` vẫn hoạt động nguyên vẹn; các trường loại cũ giữ nguyên 100% logic.
+1. **Trình duyệt chặn Popup khi mở tab mới (`window.open`)**:
+   - *Giải pháp*: Gọi `window.open` ngay dòng đầu tiên của sự kiện click chuột trực tiếp của người dùng. Nếu popup bị chặn, tự động fallback điều hướng bằng `location.href`.
+2. **Trường hợp form có các trường bắt buộc khác chưa điền**:
+   - *Giải pháp*: Dùng `form.checkValidity()` và `form.reportValidity()`, nếu form chưa hợp lệ thì trỏ đến trường còn thiếu yêu cầu điền trước khi nộp.
+3. **Người dùng bấm nhầm**:
+   - *Giải pháp*: Người quản lý có thể xem danh sách bài nộp và luôn có sẵn nút "Xóa bài nộp (để cho nộp lại)" nếu cần cấp quyền nộp lại.
 
 ---
 
 ## Cách kiểm thử
 
-### 1. Kiểm thử tự động (Automated Smoke Test)
-Chạy lệnh kiểm tra tính toàn vẹn:
+### 1. Kiểm thử tự động
 ```bash
 node tests/nopbai-report-link-smoke.js
 ```
-Kết quả mong muốn: Exit code 0, in thông báo `nopbai report link smoke: passed`.
+Kết quả mong muốn: Exit code 0, `nopbai report link smoke: passed`.
 
-### 2. Kiểm thử thủ công (Manual Test Flow)
-1. **Kiểm tra giao diện Quản lý (`nopbai-quanly.html`)**:
-   - Đăng nhập quyền giáo viên/admin, chọn **Tạo đợt nộp mới**.
-   - Chọn loại **Báo cáo biểu mẫu** -> Bấm **Thêm trường**.
-   - Mở dropdown thể loại trường: Xác nhận có mục **Liên kết / Nhúng bảng tính (Link)**.
-   - Chọn **Liên kết / Nhúng bảng tính (Link)**: Xác nhận hiển thị ô nhập URL và checkbox "Nhúng trực tiếp vào trang nộp bài (Iframe)".
-   - Nhập link Google Sheets: `https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit`.
-   - Bấm **Lưu đợt nộp** -> Mở lại để sửa -> Xác nhận dữ liệu loại trường, URL và trạng thái checkbox embed được giữ nguyên.
-2. **Kiểm tra giao diện Người nộp (`nopbai.html`)**:
-   - Mở link nộp bài bằng mã đợt nộp vừa tạo.
-   - Xác nhận thấy khung bảng tính Google Sheets được nhúng trực tiếp ngay trong trang, không có thanh menu thừa của Google.
-   - Thử nhập dữ liệu vào ô tính trong iframe: Thao tác bình thường.
-   - Bấm nút **Mở tab mới**: Trình duyệt mở sang tab mới dẫn đến link gốc.
-   - Điền ghi chú xác nhận vào ô input bên dưới và bấm **Nộp bài**.
-   - Xác nhận bài nộp được gửi thành công và lưu vào cơ sở dữ liệu.
-3. **Kiểm tra sao chép link nộp trực tiếp cho từng người**:
-   - Tại trang quản lý, mở xem chi tiết đợt nộp (`openDetail`).
-   - Bấm nút **Link nộp** ở từng người trong danh sách: Xác nhận thông báo "Đã sao chép đường link nộp bài trực tiếp" và link có dạng `nopbai.html?code=XYZ&person=P123`.
-   - Mở link vừa copy trong tab ẩn danh: Xác nhận hệ thống tự động nhận diện đúng người nộp và vào thẳng biểu mẫu.
-   - Bấm **Xuất danh sách mã**: Mở file CSV, xác nhận có cột "Đường link nộp trực tiếp".
+### 2. Kiểm thử thủ công
+1. Vào `nopbai-quanly.html`, chọn tạo đợt nộp Báo cáo biểu mẫu.
+2. Thêm trường loại `Liên kết / Bảng tính ngoài (Link)`, dán link Google Sheets. Bấm **Lưu đợt nộp**.
+3. Mở link nộp bài bằng `nopbai.html?code=XYZ&person=P123`.
+4. Nhấn nút **"Nhấn vào đây để nộp & mở link"**:
+   - Xác nhận tab mới tự động mở ra link Google Sheets.
+   - Xác nhận tab nộp bài tự động kích hoạt nộp bài và chuyển sang màn hình xanh **"Nộp bài thành công"**.
+5. Quay lại trang Quản lý: Xác nhận người nộp đã được tích xanh trạng thái **"Đã nộp"**.
 
 ---
 
 ## Tiêu chí nghiệm thu
 
-- [x] Dropdown thể loại trường trong trình tạo báo cáo có mục **Liên kết / Nhúng bảng tính (Link)**.
-- [x] Có ô nhập URL liên kết và checkbox nhúng iframe đi kèm khi chọn loại trường Liên kết.
-- [x] Trang nộp bài (`nopbai.html`) nhúng trực tiếp khung Google Sheets/Forms mượt mà, tự động tối ưu hóa URL không thanh menu rườm rà.
-- [x] Có chỉ dẫn 2 bước và nút dự phòng "Mở tab mới" cho người dùng điện thoại.
-- [x] Người nộp có thể xác nhận/ghi chú tại trường liên kết và bấm nút Nộp bài để lưu vào hệ thống.
-- [x] Có nút sao chép link nộp bài trực tiếp cho từng người trong danh sách chỉ định.
-- [x] Xuất file CSV danh sách có kèm cột đường link nộp trực tiếp.
-- [x] Backend `api/submissions.php` hỗ trợ đầy đủ kiểu `link`, bảo toàn trường `url` và `embed`.
+- [x] Không còn khung nhúng iframe cồng kềnh, giao diện gọn gàng, tương thích 100% trên cả PC và di động.
+- [x] Nút bấm hành động duy nhất: vừa mở tab mới dẫn đến link đích, vừa tự động kích hoạt nộp bài.
+- [x] Người nộp không cần phải nhớ quay lại bấm nút Nộp bài nữa.
+- [x] Hệ thống ghi nhận trạng thái đã nộp tức thì vào cơ sở dữ liệu.
 - [x] Toàn bộ test tự động `tests/nopbai-report-link-smoke.js` chạy thành công.
-- [x] Tuyệt đối không làm ảnh hưởng đến các chức năng hiện có của hệ thống.
