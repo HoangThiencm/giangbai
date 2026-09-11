@@ -1,3 +1,41 @@
+# IMPLEMENT — Chấm điểm/nhãn Fabric.js + nạp trực tiếp GeoGebra (deployggb.js)
+
+Ngày triển khai: 2026-09-11. Thực hiện đúng `docs/handoff/PLAN.md` (hiển thị chấm điểm + tên điểm trên Canvas; nạp lệnh GeoGebra cùng origin, không bị SOP).
+
+## File đã sửa
+- `vehinh.html`
+- `app.js`
+- `tests/game-quiz-importer-smoke.js`
+
+## Bước 1 — Nhúng `deployggb.js` (`vehinh.html`)
+- Thêm `<script src="https://www.geogebra.org/apps/deployggb.js"></script>` trong `<head>`.
+- Thay iframe `https://www.geogebra.org/classic` bằng `#geogebra-container` rỗng (cùng origin). Applet HTML5 được `GGBApplet.inject` lúc cần.
+
+## Bước 2 — Nạp trực tiếp lệnh GeoGebra (`app.js`)
+- `ensureGeoGebraAppletLoaded`: khởi tạo `GGBApplet` (classic, 850×600, `appletOnLoad` gán `window.ggbApplet`).
+- `runCommandsOnGeoGebra`: `reset()` rồi `evalCommand` từng lệnh.
+- `injectCommandsToGeoGebra`: mở khung → nạp ngay nếu applet sẵn sàng; không thì `pendingGgbCommands` chờ `appletOnLoad`.
+- Fallback: nếu `deployggb.js` chưa tải được, copy `Execute({...})` 1 dòng như cũ.
+- Nút **Sao chép lệnh** giữ nguyên.
+
+## Bước 3 — `smartAddPoint` / `smartAddText`
+- `parseSmartPointArgs` nhận: `(pt, 'Tên')`, `(x, y, 'Tên')`, `('Tên', pt)`, `('Tên', x, y)`, `(canvas, ...)`, kèm màu `#...`.
+- Chấm `fabric.Circle` radius 3.5, origin center, `source: 'ai_primitive'`.
+- Nhãn `fabric.IText` Inter 16 bold, offset `(x + 8, y - 18)`, `source: 'ai_primitive'`.
+- Bỏ qua tọa độ `NaN` (không còn truyền `{x,y}` vào `left`).
+- `wrapAddPoint` / `wrapAddText` ủy quyền sang hai hàm trên. Tool click tay vẫn dùng `addPoint`/`addText` cũ.
+
+## Bước 4 — Prompt + auto-recovery
+- `systemPrompt` thêm **QUY TẮC BẮT BUỘC: ĐẶT TÊN VÀ CHẤM ĐIỂM** với mẫu `addPoint(O, 'O')`.
+- `executeAiCode` dump biến `const O = ...` sau khi chạy mã; nếu canvas có nét nhưng 0 nhãn, `recoverMissingAiPointLabels` tự bù chấm + tên.
+
+## Kiểm thử
+- `node tests/game-quiz-importer-smoke.js`: PASS — parse `(pt,'O')`/`(x,y,'A')` không NaN, chấm radius 3.5 + nhãn Inter 16 bold offset (x+8,y-18), `deployggb.js` + `evalCommand`/`runCommandsOnGeoGebra`, prompt labeling, auto-recovery.
+- `node tests/run-all-tests.js`: dừng sớm vì suite sẵn có `canvas-xaydungphuluc-smoke.js` (thiếu `emptyPpctRow` trên bản Canvas, không thuộc phạm vi vehinh).
+- Chạy rời 71 suite: **68 PASS / 3 FAIL sẵn có** (`canvas-xaydungphuluc-smoke.js`, `kttx-smoke.js`, `xaydungphuluc-math-smoke.js`) — không liên quan `vehinh.html`/`app.js`.
+
+---
+
 # IMPLEMENT — Bảo toàn SGK/PPCT khi đổi tên bài / chuyển bước
 
 Ngày triển khai: 2026-09-11. Thực hiện đúng `docs/handoff/PLAN.md` (không xóa OCR/file SGK khi gõ tên bài hoặc chọn bài từ danh mục).

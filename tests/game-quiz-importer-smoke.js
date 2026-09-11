@@ -319,6 +319,135 @@ assert.ok(vehinhHtml.includes('id="ai-progress-bar"'), 'progress bar');
 assert.ok(vehinhHtml.includes('id="ai-progress-status"'), 'multi-stage status');
 assert.ok(vehinhHtml.includes('id="replay-construction-btn"'), 'replay construction button');
 assert.ok(vehinhHtml.includes('Tái hiện từng bước vẽ'), 'replay button label');
+assert.ok(vehinhHtml.includes('https://www.geogebra.org/apps/deployggb.js'), 'vehinh.html must embed deployggb.js');
+assert.ok(!vehinhHtml.includes('src="https://www.geogebra.org/classic"'), 'vehinh.html must not use a cross-origin GeoGebra iframe');
+assert.ok(appJs.includes('runCommandsOnGeoGebra'), 'app.js must run GeoGebra commands via evalCommand');
+assert.ok(appJs.includes('evalCommand'), 'app.js must call ggbApplet.evalCommand');
+assert.ok(appJs.includes('ensureGeoGebraAppletLoaded'), 'app.js must lazy-load the GeoGebra applet');
+assert.ok(appJs.includes('QUY TẮC BẮT BUỘC: ĐẶT TÊN VÀ CHẤM ĐIỂM'), 'system prompt must require point labels');
+assert.ok(appJs.includes("addPoint(O, 'O')"), 'system prompt must show addPoint(pt, name) samples');
+assert.ok(appJs.includes('recoverMissingAiPointLabels'), 'executeAiCode must auto-recover missing point labels');
+assert.match(extractNamed(appJs, 'wrapAddPoint'), /smartAddPoint\(canvas/, 'wrapAddPoint must delegate to smartAddPoint');
+assert.match(extractNamed(appJs, 'wrapAddText'), /smartAddText\(canvas/, 'wrapAddText must delegate to smartAddText');
+
+const pointSrc = [
+    extractNamed(appJs, 'looksLikeCanvas'),
+    extractNamed(appJs, 'isPointLike'),
+    extractNamed(appJs, 'isColorToken'),
+    extractNamed(appJs, 'isLabelToken'),
+    extractNamed(appJs, 'parseSmartPointArgs'),
+    extractNamed(appJs, 'parseSmartTextArgs'),
+    extractNamed(appJs, 'smartAddPoint'),
+    extractNamed(appJs, 'smartAddText'),
+    extractNamed(appJs, 'extractUppercasePointNames'),
+    extractNamed(appJs, 'buildAiPointDumpTail'),
+    extractNamed(appJs, 'isGeometryPointLabel'),
+    extractNamed(appJs, 'recoverMissingAiPointLabels'),
+].join('\n');
+const addedPointObjs = [];
+const mockDrawCanvas = {
+    add(obj) { addedPointObjs.push(obj); },
+    getObjects() { return addedPointObjs.slice(); },
+    renderAll() {}
+};
+const pointSandbox = {
+    pointLabelCounter: 0,
+    defaultProps: { originX: 'center', originY: 'center' },
+    fabric: {
+        Circle: function (opts) {
+            Object.assign(this, opts);
+            this.type = 'circle';
+        },
+        IText: function (text, opts) {
+            Object.assign(this, opts || {});
+            this.text = text;
+            if (!this.type) this.type = 'i-text';
+        }
+    }
+};
+vm.createContext(pointSandbox);
+vm.runInContext(pointSrc, pointSandbox);
+
+const parsedPt = pointSandbox.parseSmartPointArgs([{ x: 100, y: 200 }, 'O']);
+assert.strictEqual(parsedPt.x, 100, 'parseSmartPointArgs(pt, name) must read pt.x');
+assert.strictEqual(parsedPt.y, 200, 'parseSmartPointArgs(pt, name) must read pt.y');
+assert.strictEqual(parsedPt.label, 'O', 'parseSmartPointArgs(pt, name) must keep label O');
+assert.ok(Number.isFinite(parsedPt.x) && Number.isFinite(parsedPt.y), 'object point must not become NaN');
+
+const parsedXY = pointSandbox.parseSmartPointArgs([50, 60, 'A']);
+assert.strictEqual(parsedXY.x, 50);
+assert.strictEqual(parsedXY.y, 60);
+assert.strictEqual(parsedXY.label, 'A');
+
+const parsedNamePt = pointSandbox.parseSmartPointArgs(['B', { x: 1, y: 2 }]);
+assert.strictEqual(parsedNamePt.label, 'B');
+assert.strictEqual(parsedNamePt.x, 1);
+
+const parsedNameXY = pointSandbox.parseSmartPointArgs(['C', 3, 4, '#ff0000']);
+assert.strictEqual(parsedNameXY.label, 'C');
+assert.strictEqual(parsedNameXY.x, 3);
+assert.strictEqual(parsedNameXY.color, '#ff0000');
+
+const parsedCanvasFirst = pointSandbox.parseSmartPointArgs([mockDrawCanvas, { x: 8, y: 9 }, 'M']);
+assert.strictEqual(parsedCanvasFirst.label, 'M');
+assert.strictEqual(parsedCanvasFirst.x, 8);
+
+const parsedTextXY = pointSandbox.parseSmartTextArgs([10, 20, 'O']);
+assert.strictEqual(parsedTextXY.text, 'O');
+assert.strictEqual(parsedTextXY.x, 10);
+const parsedTextNameFirst = pointSandbox.parseSmartTextArgs(['H', 11, 22]);
+assert.strictEqual(parsedTextNameFirst.text, 'H');
+assert.strictEqual(parsedTextNameFirst.y, 22);
+const parsedTextPt = pointSandbox.parseSmartTextArgs([{ x: 5, y: 6 }, 'F']);
+assert.strictEqual(parsedTextPt.text, 'F');
+assert.ok(Number.isFinite(parsedTextPt.x), 'addText(pt, text) must not yield NaN');
+
+addedPointObjs.length = 0;
+const skippedNaN = pointSandbox.smartAddPoint(mockDrawCanvas, { not: 'a point' }, 'O');
+assert.ok(Array.isArray(skippedNaN) && skippedNaN.length === 0, 'invalid point object must not be drawn');
+assert.strictEqual(addedPointObjs.length, 0);
+
+const drawn = pointSandbox.smartAddPoint(mockDrawCanvas, { x: 100, y: 200 }, 'O');
+assert.strictEqual(drawn.length, 2, 'smartAddPoint must add a dot and a label');
+assert.strictEqual(addedPointObjs.length, 2);
+assert.strictEqual(addedPointObjs[0].left, 100);
+assert.strictEqual(addedPointObjs[0].top, 200);
+assert.strictEqual(addedPointObjs[0].radius, 3.5);
+assert.ok(!Number.isNaN(addedPointObjs[0].left) && !Number.isNaN(addedPointObjs[0].top), 'circle coords must not be NaN');
+assert.strictEqual(addedPointObjs[0].source, 'ai_primitive');
+assert.strictEqual(addedPointObjs[1].text, 'O');
+assert.strictEqual(addedPointObjs[1].left, 108);
+assert.strictEqual(addedPointObjs[1].top, 182);
+assert.strictEqual(addedPointObjs[1].fontWeight, 'bold');
+assert.strictEqual(addedPointObjs[1].fontSize, 16);
+assert.strictEqual(addedPointObjs[1].source, 'ai_primitive');
+assert.ok(!Number.isNaN(addedPointObjs[1].left) && !Number.isNaN(addedPointObjs[1].top), 'label coords must not be NaN');
+
+addedPointObjs.length = 0;
+pointSandbox.smartAddPoint(mockDrawCanvas, 15, 25, 'A');
+assert.strictEqual(addedPointObjs[0].left, 15);
+assert.strictEqual(addedPointObjs[1].text, 'A');
+
+addedPointObjs.length = 0;
+const textObj = pointSandbox.smartAddText(mockDrawCanvas, { x: 7, y: 9 }, 'H');
+assert.ok(textObj);
+assert.strictEqual(textObj.text, 'H');
+assert.strictEqual(textObj.left, 7);
+assert.ok(!Number.isNaN(textObj.left));
+
+const extractedNames = pointSandbox.extractUppercasePointNames('const O = toScreen(0,0);\nconst A = {x:1,y:2};\nconst scale = 10;\nconst toScreen = () => {};');
+assert.strictEqual(extractedNames.join(','), 'O,A', 'extractUppercasePointNames must keep O and A only');
+assert.match(pointSandbox.buildAiPointDumpTail('const O = toScreen(0,0);'), /__aiPointDump/);
+
+addedPointObjs.length = 0;
+addedPointObjs.push({ type: 'line' });
+const recovered = pointSandbox.recoverMissingAiPointLabels(mockDrawCanvas, { O: { x: 10, y: 20 }, A: { x: 30, y: 40 } });
+assert.ok(recovered.length >= 4, 'auto-recovery must add dots and labels for dumped points');
+assert.ok(addedPointObjs.some((o) => o.text === 'O'));
+assert.ok(addedPointObjs.some((o) => o.text === 'A'));
+
+const alreadyLabeled = pointSandbox.recoverMissingAiPointLabels(mockDrawCanvas, { B: { x: 1, y: 2 } });
+assert.strictEqual(alreadyLabeled.length, 0, 'auto-recovery must not duplicate when labels already exist');
 
 const aiDesignConfigJs = fs.readFileSync(path.join(__dirname, '..', 'ai-design-config.js'), 'utf8');
 assert.ok(aiDesignConfigJs.includes('gemini-3.6-flash'), 'ai-design-config.js must support gemini-3.6-flash');

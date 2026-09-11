@@ -42,6 +42,194 @@ function addText(canvas, x, y, color, textContent = 'Tên') {
     if (textContent === 'Tên') { text.enterEditing(); text.selectAll(); }
 }
 
+function looksLikeCanvas(arg) {
+    return !!(arg && typeof arg === 'object' && typeof arg.add === 'function' && typeof arg.renderAll === 'function');
+}
+
+function isPointLike(value) {
+    return !!(value && typeof value === 'object' && !Array.isArray(value) && !looksLikeCanvas(value)
+        && typeof value.x === 'number' && typeof value.y === 'number'
+        && Number.isFinite(value.x) && Number.isFinite(value.y));
+}
+
+function isColorToken(value) {
+    if (typeof value !== 'string') return false;
+    const s = value.trim();
+    if (!s) return false;
+    if (s.charAt(0) === '#') return true;
+    if (/^(rgb|rgba|hsl|hsla)\(/i.test(s)) return true;
+    return /^(black|white|red|blue|green|gray|grey|orange|purple|yellow|navy|teal|cyan|magenta|pink|brown|indigo)$/i.test(s);
+}
+
+function isLabelToken(value) {
+    return typeof value === 'string' && value.trim() !== '' && !isColorToken(value);
+}
+
+function parseSmartPointArgs(args, defaultCanvas) {
+    const list = Array.prototype.slice.call(args);
+    let targetCanvas = defaultCanvas || null;
+    if (looksLikeCanvas(list[0])) targetCanvas = list.shift();
+    let color = '#111827';
+    if (list.length && isColorToken(list[list.length - 1])) color = list.pop().trim();
+    let x = NaN;
+    let y = NaN;
+    let label = '';
+    if (isLabelToken(list[0])) {
+        label = list[0].trim();
+        if (isPointLike(list[1])) {
+            x = list[1].x;
+            y = list[1].y;
+        } else {
+            x = Number(list[1]);
+            y = Number(list[2]);
+        }
+    } else if (isPointLike(list[0])) {
+        x = list[0].x;
+        y = list[0].y;
+        if (isLabelToken(list[1])) label = list[1].trim();
+    } else {
+        x = Number(list[0]);
+        y = Number(list[1]);
+        if (isLabelToken(list[2])) label = list[2].trim();
+    }
+    return { canvas: targetCanvas, x, y, label, color };
+}
+
+function parseSmartTextArgs(args, defaultCanvas) {
+    const list = Array.prototype.slice.call(args);
+    let targetCanvas = defaultCanvas || null;
+    if (looksLikeCanvas(list[0])) targetCanvas = list.shift();
+    let color = '#111827';
+    if (list.length && isColorToken(list[list.length - 1])) color = list.pop().trim();
+    let x = NaN;
+    let y = NaN;
+    let text = '';
+    if (isPointLike(list[0])) {
+        x = list[0].x;
+        y = list[0].y;
+        text = list[1] != null ? String(list[1]) : '';
+    } else if (isLabelToken(list[0]) && (isPointLike(list[1]) || (typeof list[1] === 'number' && typeof list[2] === 'number'))) {
+        text = list[0];
+        if (isPointLike(list[1])) {
+            x = list[1].x;
+            y = list[1].y;
+        } else {
+            x = Number(list[1]);
+            y = Number(list[2]);
+        }
+    } else {
+        x = Number(list[0]);
+        y = Number(list[1]);
+        text = list[2] != null ? String(list[2]) : 'Tên';
+    }
+    return { canvas: targetCanvas, x, y, text, color };
+}
+
+function smartAddPoint(targetCanvas, ...args) {
+    const parsed = parseSmartPointArgs(args, targetCanvas);
+    const drawCanvas = parsed.canvas || targetCanvas;
+    if (!drawCanvas || !Number.isFinite(parsed.x) || !Number.isFinite(parsed.y)) return [];
+    const color = parsed.color || '#111827';
+    const label = parsed.label || String.fromCharCode(65 + (pointLabelCounter++ % 26));
+    const point = new fabric.Circle({
+        ...defaultProps,
+        left: parsed.x,
+        top: parsed.y,
+        radius: 3.5,
+        fill: color,
+        stroke: color,
+        strokeWidth: 1,
+        originX: 'center',
+        originY: 'center',
+        source: 'ai_primitive',
+        role: 'point-dot'
+    });
+    const text = new fabric.IText(label, {
+        ...defaultProps,
+        left: parsed.x + 8,
+        top: parsed.y - 18,
+        fontFamily: 'Inter',
+        fontSize: 16,
+        fontWeight: 'bold',
+        fill: color,
+        stroke: null,
+        source: 'ai_primitive',
+        role: 'point-label'
+    });
+    drawCanvas.add(point);
+    drawCanvas.add(text);
+    return [point, text];
+}
+
+function smartAddText(targetCanvas, ...args) {
+    const parsed = parseSmartTextArgs(args, targetCanvas);
+    const drawCanvas = parsed.canvas || targetCanvas;
+    if (!drawCanvas || !Number.isFinite(parsed.x) || !Number.isFinite(parsed.y)) return null;
+    const text = new fabric.IText(parsed.text || 'Tên', {
+        ...defaultProps,
+        left: parsed.x,
+        top: parsed.y,
+        fontFamily: 'Inter',
+        fontSize: 16,
+        fontWeight: 'bold',
+        fill: parsed.color || '#111827',
+        stroke: null,
+        source: 'ai_primitive'
+    });
+    drawCanvas.add(text);
+    return text;
+}
+
+function extractUppercasePointNames(codeText) {
+    const names = [];
+    const re = /(?:const|let|var)\s+([A-Z][0-9]?)\s*=/g;
+    let match;
+    while ((match = re.exec(String(codeText || '')))) {
+        if (!names.includes(match[1])) names.push(match[1]);
+    }
+    return names;
+}
+
+function buildAiPointDumpTail(codeText) {
+    const names = extractUppercasePointNames(codeText);
+    if (!names.length) return '\n;return {};';
+    const body = names.map((n) => {
+        const key = JSON.stringify(n);
+        return `try{if(typeof ${n}!=="undefined"&&${n}&&typeof ${n}.x==="number")__aiPointDump[${key}]={x:${n}.x,y:${n}.y};}catch(__e){}`;
+    }).join('');
+    return `\n;var __aiPointDump={};${body};return __aiPointDump;`;
+}
+
+function isGeometryPointLabel(obj) {
+    if (!obj) return false;
+    if (obj.type === 'point_group' || obj.type === 'point_label' || obj.role === 'point-label') return true;
+    const text = String(obj.text || '').trim();
+    return (obj.type === 'i-text' || obj.type === 'text') && /^[A-Z][0-9]?$/.test(text);
+}
+
+function recoverMissingAiPointLabels(targetCanvas, dumpedPoints) {
+    if (!targetCanvas || typeof targetCanvas.getObjects !== 'function') return [];
+    const objects = targetCanvas.getObjects();
+    if (!objects.length) return [];
+    const labelCount = objects.filter(isGeometryPointLabel).length;
+    if (labelCount > 0) return [];
+    const hasStrokes = objects.some((obj) => {
+        const t = obj.type;
+        return t === 'line' || t === 'polyline' || t === 'path' || t === 'polygon'
+            || (t === 'circle' && Number(obj.radius) > 5);
+    });
+    if (!hasStrokes) return [];
+    const added = [];
+    Object.keys(dumpedPoints || {}).forEach((name) => {
+        const pt = dumpedPoints[name];
+        if (pt && Number.isFinite(pt.x) && Number.isFinite(pt.y)) {
+            const created = smartAddPoint(targetCanvas, pt, name);
+            if (created && created.length) added.push.apply(added, created);
+        }
+    });
+    return added;
+}
+
 function addRightAngleSymbol(canvas, p1, vertex, p2, color, size = 15) {
     const v1 = { x: p1.x - vertex.x, y: p1.y - vertex.y }; const v2 = { x: p2.x - vertex.x, y: p2.y - vertex.y };
     const dist1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y); const dist2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
@@ -560,10 +748,19 @@ document.addEventListener('DOMContentLoaded', function () {
     allDOMElements.deleteBtn.addEventListener('click', () => { const activeObjects = canvas.getActiveObjects(); if (activeObjects.length) { activeObjects.forEach(obj => { if (!isAiLocked || (obj.source !== 'ai' && obj.source !== 'ai_primitive')) { canvas.remove(obj); } }); canvas.discardActiveObject().renderAll(); } });
     allDOMElements.lockAiBtn.addEventListener('click', () => { isAiLocked = !isAiLocked; applyAiLockState(); });
     allDOMElements.accordionHeaders.forEach(header => { header.addEventListener('click', () => { const content = header.nextElementSibling; header.classList.toggle('active'); content.classList.toggle('active'); }); });
-    allDOMElements.geogebraToggle.addEventListener('click', () => { allDOMElements.geogebraContainer.classList.toggle('hidden'); allDOMElements.geogebraToggle.querySelector('i').classList.toggle('rotate-180'); });
+    allDOMElements.geogebraToggle.addEventListener('click', () => {
+        allDOMElements.geogebraContainer.classList.toggle('hidden');
+        allDOMElements.geogebraToggle.querySelector('i').classList.toggle('rotate-180');
+        if (!allDOMElements.geogebraContainer.classList.contains('hidden')) {
+            ensureGeoGebraAppletLoaded();
+        }
+    });
     document.getElementById('copy-geogebra-btn')?.addEventListener('click', () => { copyGeoGebraCommands(); });
     document.getElementById('inject-geogebra-btn')?.addEventListener('click', () => { injectCommandsToGeoGebra(); });
-    document.getElementById('open-geogebra-btn')?.addEventListener('click', () => { openGeoGebraPanel(); });
+    document.getElementById('open-geogebra-btn')?.addEventListener('click', () => {
+        openGeoGebraPanel();
+        copyGeoGebraCommands();
+    });
     document.getElementById('replay-construction-btn')?.addEventListener('click', async () => {
         const aiObjects = canvas.getObjects().filter((o) => o.source === 'ai_primitive' || o.source === 'ai');
         if (!aiObjects.length) return;
@@ -682,6 +879,15 @@ QUY TẮC BẮT BUỘC: PHƯƠNG PHÁP TỌA ĐỘ HÓA TOÁN HỌC (ANALYTIC GE
    - Đỉnh phía trên: offset y - 20, x giữ nguyên.
    - Đáy bên trái: offset x - 15, y + 15.
    - Đáy bên phải: offset x + 15, y + 15.
+QUY TẮC BẮT BUỘC: ĐẶT TÊN VÀ CHẤM ĐIỂM (LABELING):
+- Mọi đỉnh và điểm mốc hình học (O, A, B, C, M, H, F...) BẮT BUỘC PHẢI CÓ TÊN HIỂN THỊ TRÊN HÌNH.
+- Sau khi tính tọa độ và dựng các đường, BẮT BUỘC gọi addPoint(pt, 'Tên') cho TỪNG ĐIỂM:
+  Ví dụ:
+    addPoint(O, 'O');
+    addPoint(A, 'A');
+    addPoint(B, 'B');
+    addPoint(M, 'M');
+- TUYỆT ĐỐI KHÔNG ĐƯỢC BỎ SÓT ĐIỂM NÀO KHÔNG ĐẶT TÊN.
 4. Ký hiệu góc vuông và đoạn bằng nhau: Gọi đúng thứ tự điểm để ký hiệu nằm bên trong góc.
 PHẢN HỒI BẮT BUỘC 3 PHẦN.
 PHẦN 1: PHÂN TÍCH trong <analysis>...</analysis> — chỉ 3-5 gạch đầu dòng, súc tích.
@@ -856,16 +1062,68 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
         }
     }
 
+    let ggbAppletInstance = null;
+    let isGgbAppletReady = false;
+    let pendingGgbCommands = null;
+
+    function ensureGeoGebraAppletLoaded(callback) {
+        const container = document.getElementById('geogebra-container');
+        if (!container) return;
+        if (isGgbAppletReady && window.ggbApplet) {
+            if (callback) callback();
+            return;
+        }
+        if (typeof GGBApplet === 'function' && !ggbAppletInstance) {
+            const params = {
+                "appName": "classic",
+                "width": container.clientWidth || 850,
+                "height": 600,
+                "showToolBar": true,
+                "showAlgebraInput": true,
+                "showMenuBar": true,
+                "enableLabelDrags": true,
+                "enableShiftDragZoom": true,
+                "enableRightClick": true,
+                "showResetIcon": true,
+                "language": "vi",
+                "appletOnLoad": function(api) {
+                    window.ggbApplet = api;
+                    isGgbAppletReady = true;
+                    if (pendingGgbCommands) {
+                        runCommandsOnGeoGebra(pendingGgbCommands);
+                        pendingGgbCommands = null;
+                    }
+                    if (callback) callback();
+                }
+            };
+            ggbAppletInstance = new GGBApplet(params, true);
+            ggbAppletInstance.inject('geogebra-container');
+        }
+    }
+
+    function runCommandsOnGeoGebra(commandsArray) {
+        if (!window.ggbApplet || typeof window.ggbApplet.evalCommand !== 'function') return false;
+        try {
+            if (typeof window.ggbApplet.reset === 'function') window.ggbApplet.reset();
+            commandsArray.forEach(cmd => {
+                if (cmd && cmd.trim()) {
+                    window.ggbApplet.evalCommand(cmd.trim());
+                }
+            });
+            showVehinhToast('⚡ Đã nạp thành công hình vẽ vào GeoGebra!');
+            return true;
+        } catch (err) {
+            console.error('Lỗi evalCommand GeoGebra:', err);
+            return false;
+        }
+    }
+
     function openGeoGebraPanel() {
         allDOMElements.geogebraContainer?.classList.remove('hidden');
         const icon = allDOMElements.geogebraToggle?.querySelector('i');
         if (icon) icon.classList.add('rotate-180');
         allDOMElements.geogebraContainer?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        const executeCmd = formatGeoGebraExecuteCommand(getGeoGebraCommandsArray());
-        if (executeCmd) {
-            copyTextToClipboard(executeCmd);
-            showVehinhToast('Đã mở GeoGebra & copy lệnh Execute. Nhấn Ctrl+V vào ô Input!');
-        }
+        ensureGeoGebraAppletLoaded();
     }
 
     function injectCommandsToGeoGebra() {
@@ -877,21 +1135,21 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
             showVehinhToast('Chưa có lệnh GeoGebra để nạp.');
             return;
         }
-        const iframeWin = document.querySelector('#geogebra-container iframe')?.contentWindow;
-        const ggb = window.ggbApplet || iframeWin?.ggbApplet;
-        if (ggb && typeof ggb.evalCommand === 'function') {
-            parts.commandsArray.forEach((cmd) => ggb.evalCommand(cmd));
-            showVehinhToast('⚡ Đã vẽ xong hình vào GeoGebra!');
+        if (window.ggbApplet && isGgbAppletReady) {
             openGeoGebraPanel();
+            runCommandsOnGeoGebra(parts.commandsArray);
             return;
         }
-        copyGeoGebraCommands();
+        pendingGgbCommands = parts.commandsArray;
         openGeoGebraPanel();
-        showVehinhToast('Đã mở GeoGebra & copy lệnh Execute. Nhấn Ctrl+V vào ô Input!');
-    }
-
-    function looksLikeCanvas(arg) {
-        return !!(arg && typeof arg === 'object' && typeof arg.add === 'function' && typeof arg.renderAll === 'function');
+        if (typeof GGBApplet === 'function' || ggbAppletInstance) {
+            ensureGeoGebraAppletLoaded();
+            showVehinhToast('Đang khởi động GeoGebra và chuẩn bị nạp lệnh...');
+        } else {
+            pendingGgbCommands = null;
+            copyGeoGebraCommands();
+            showVehinhToast('Không tải được GeoGebra API. Đã copy lệnh Execute — dán vào ô Input.');
+        }
     }
 
     function wrapCanvasHelper(fn) {
@@ -899,13 +1157,11 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
     }
 
     function wrapAddPoint(...args) {
-        if (looksLikeCanvas(args[0])) return addPoint(args[0], args[1], args[2], args[3] || '#111827');
-        return addPoint(canvas, args[0], args[1], args[3] || (typeof args[2] === 'string' && args[2].startsWith('#') ? args[2] : '#111827'));
+        return smartAddPoint(canvas, ...args);
     }
 
     function wrapAddText(...args) {
-        if (looksLikeCanvas(args[0])) return addText(args[0], args[1], args[2], args[3], args[4]);
-        return addText(canvas, args[0], args[1], args[3] || '#111827', args[2]);
+        return smartAddText(canvas, ...args);
     }
 
     function drawLine(p1, p2, options = {}) {
@@ -1014,10 +1270,10 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
                 'canvas', 'fabric', 'addPoint', 'addText', 'drawLine',
                 'addRightAngleSymbol', 'addEqualityTick', 'addAngleArc',
                 'drawBarChart', 'drawPieChart',
-                codeText
+                codeText + buildAiPointDumpTail(codeText)
             );
             const initialCount = canvas.getObjects().length;
-            drawFunction(
+            const dumpedPoints = drawFunction(
                 canvas,
                 fabric,
                 wrapAddPoint,
@@ -1028,14 +1284,16 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
                 wrapCanvasHelper(addAngleArc),
                 wrapCanvasHelper(drawBarChart),
                 wrapCanvasHelper(drawPieChart)
-            );
-            const newAiObjects = canvas.getObjects().slice(initialCount);
+            ) || {};
+            let newAiObjects = canvas.getObjects().slice(initialCount);
             newAiObjects.forEach((obj) => {
                 if (!obj.source) obj.set({ source: 'ai_primitive' });
                 if (obj.type === 'line' || obj.type === 'polyline' || obj.type === 'path') {
                     obj.set({ objectCaching: false });
                 }
             });
+            const recovered = recoverMissingAiPointLabels(canvas, dumpedPoints);
+            if (recovered.length) newAiObjects = newAiObjects.concat(recovered);
             autoCenterAndFitDrawing(canvas);
             applyAiLockState();
             sendPointsToFront();

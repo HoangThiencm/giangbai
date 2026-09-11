@@ -1,233 +1,258 @@
-# PLAN: Cấu hình Năng Lực Số (CV 3456) theo Tỉ trọng & Cho phép Người dùng Tự chọn Bài/Tiết Tích hợp
+# PLAN
 
-## 1. Hiện trạng & Phân tích Nguyên nhân
+## Hiện trạng
 
-### Hiện trạng thực tế
-- Người dùng phản ánh đúng thực tế sư phạm: **"Không phải tiết nào cũng tích hợp năng lực số mà là chỉ chiếm tỉ trọng thôi, do người dùng chọn"**.
-- Theo chương trình GDPT 2018 và hướng dẫn thực hiện CV 5512, CV 3456, TT 02/2025:
-  + Môn học (như Toán THCS với 105–140 tiết/năm) có rất nhiều dạng bài: hình thành kiến thức mới, luyện tập bảng phấn, kiểm tra định kỳ (GK1, CK1, GK2, CK2), ôn tập cuối chương...
-  + Năng lực số (NLS) chỉ nên tích hợp vào **các bài/tiết thực sự có điều kiện và học liệu số phù hợp** (vẽ hình GeoGebra, máy tính cầm tay, bảng tính Excel, mô phỏng số, biểu đồ thống kê, bài thực hành trải nghiệm, bài có AI...).
-  + Do đó, NLS chỉ nên chiếm một **TỈ TRỌNG** nhất định (ví dụ 30%, 40%, 50% tổng số bài/tiết), và giáo viên / tổ chuyên môn được quyền **TỰ CHỌN** bài/tiết nào tích hợp.
+1. **Vấn đề 1: Canvas Fabric.js thiếu hoàn toàn chấm điểm và nhãn chữ tên điểm**:
+   - Khi người dùng chạy chức năng Vẽ hình AI (ví dụ: bài toán tiếp tuyến từ M đến đường tròn (O; R)), canvas Fabric.js vẽ được các đường tròn, tiếp tuyến và đoạn thẳng, nhưng **hoàn toàn không hiển thị bất kỳ chấm điểm hay nhãn chữ tên điểm nào (O, A, B, C, M, H, F...)** (ảnh người dùng cung cấp).
+   - Trong khi đó, ở phần kịch bản GeoGebra, AI vẫn sinh ra các lệnh `Point(O)`, `Point(A)`, `Point(B)`... chứng tỏ AI hoàn toàn nhận thức được sự tồn tại của các điểm, nhưng phía Fabric.js lại bị mất toàn bộ tên điểm.
+   - **Nguyên nhân kỹ thuật gốc rễ**:
+     - **`addPoint()` trong `app.js` không hỗ trợ tham số tên điểm từ AI**: Hàm `addPoint()` cũ chỉ phục vụ người dùng click chuột thủ công, tự động tạo nhãn A, B, C tăng dần (`pointLabelCounter++`), hoàn toàn không nhận tham số tên điểm cụ thể (như `'O'`, `'M'`, `'H'`).
+     - **`wrapAddPoint()` không giải nén được tọa độ dạng Object `{x, y}`**: AI tính toán giải tích trả về điểm dạng `const O = toScreen(0, 0)`. Khi AI gọi `addPoint(O, 'O')`, `wrapAddPoint` truyền thẳng `{x, y}` vào vị trí `x`, khiến Fabric.js nhận `left: NaN, top: NaN`.
+     - **`wrapAddText()` sai lệch thứ tự tham số**: `addText(canvas, x, y, color, textContent)` đặt nội dung chữ ở vị trí thứ 5, làm AI gọi theo chuẩn `addText(x, y, 'O')` hoặc `addText('O', x, y)` bị lỗi `NaN` hoặc mất chữ.
+     - **`systemPrompt` thiếu code mẫu hướng dẫn gọi `addPoint`**: Prompt chỉ có quy tắc vị trí nhưng không có mẫu code `addPoint(pt, 'Tên')`, khiến AI thường bỏ sót gọi hàm vẽ điểm trên Canvas.
 
-### Lỗi thiết kế hiện tại trong Mã nguồn
-1. **Trong Xây dựng Phụ lục (`xaydungphuluc.html` & `canvas_xaydungphuluc.html`)**:
-   - Giao diện **đã có sẵn** thanh trượt tỉ trọng `#nlsRate` (0%–100%, mặc định 50%) và checkbox `#nlsEnabled`.
-   - **Tuy nhiên, trong code xử lý (`selectedIntegration` và `fallbackNlsCodes`)**:
-     Hàm `selectedIntegration` (dòng 1456) gọi `fallbackNlsCodes` một cách **vô điều kiện cho 100% tất cả các dòng bài học**.
-     Dù người dùng kéo `#nlsRate` về 30% hay 50%, thì **100% bài học đều bị nhét mã NLS**! Không có bài nào được để trống hay ghi `-`.
-   - Trong khi phần AI có cơ chế chọn tiết rất rõ ràng (`aiLessonPickerCard`, `aiSelectedLessonIds`, `syncAiSelectionFromRate`), phần NLS **chưa có cơ chế chọn bài/tiết** (`nlsSelectedLessonIds`), khiến người dùng không thể chủ động tick chọn bài nào tích hợp NLS.
-2. **Trong Soạn KHBD (`soankhbd.html`, `canvas_soankhbd.html`, `js/khbd-app.js`)**:
-   - `normalizeTeachingContext` (dòng 656) đang gán cứng `digital: true` làm giá trị mặc định không thể tắt sạch.
-   - Nút đề xuất Bước 3 (`triggerStep3PedagogyAndDigitalRecommendations`, dòng 2244) tự động ép `toggleDigital.checked = true` và `integrations.digital = true`, không tôn trọng việc giáo viên đã chủ động tắt NLS cho bài này.
-
----
-
-## 2. Giải pháp Kiến trúc Chi tiết
-
-### Mục tiêu
-1. **Tỉ trọng NLS thực chất (`nlsRate`)**:
-   - Thanh trượt `nlsRate` (ví dụ 40%) sẽ xác định chính xác số lượng bài học cần tích hợp NLS:
-     $$K = \text{round}\left(\frac{\text{nlsRate}}{100} \times \text{Tổng số bài}\right)$$
-   - Chỉ đúng $K$ bài học được chọn mới có mã NLS. Các bài còn lại **không có mã NLS** (cột NLS ghi `-`).
-2. **Người dùng được quyền tự chọn ("do người dùng chọn")**:
-   - **Tự động gợi ý theo tỉ trọng**: Hệ thống xếp hạng ưu tiên sư phạm của các bài (bài có GeoGebra, máy tính cầm tay, Excel, STEM, AI đứng đầu; bài ôn tập, kiểm tra đứng cuối) và tự động chọn $K$ bài tối ưu nhất.
-   - **Chủ động tick chọn tay**: Trong bảng danh mục bài học, người dùng có thể tick / bỏ tick checkbox NLS cho từng bài học theo đúng ý đồ của mình.
-   - Có nút **"💻 Gợi ý NLS theo tỉ trọng"** và **"✕ Bỏ chọn NLS"**.
-3. **Đồng bộ 100% giữa Phụ lục 1 và Phụ lục 3**:
-   - Cột NLS ở Phụ lục 1 (Kế hoạch Tổ) và Phụ lục 3 (Kế hoạch Giáo viên) hoàn toàn khớp nhau: bài nào có NLS thì cả 2 cùng có; bài nào không tích hợp thì cả 2 cùng ghi `-`.
-4. **Tôn trọng quyền bật/tắt trong Soạn KHBD (`soankhbd.html`)**:
-   - `toggleDigitalCompetency` không bị ép bật `true`.
-   - Nếu bài học trong PPCT không có NLS (ghi `-`), hệ thống tự động tắt công tắc NLS khi soạn bài đó.
+2. **Vấn đề 2: Không nạp lệnh được vào khung GeoGebra bên dưới**:
+   - Khi người dùng bấm nút **"⚡ Nạp trực tiếp vào GeoGebra"**, khung GeoGebra bên dưới hoàn toàn không tự động vẽ hình.
+   - **Nguyên nhân kỹ thuật gốc rễ**:
+     - Khung GeoGebra hiện tại trong `vehinh.html` đang nhúng bằng thẻ `<iframe>` từ nguồn ngoại vi:
+       `<iframe src="https://www.geogebra.org/classic"></iframe>`
+     - Theo chính sách bảo mật **Same-Origin Policy (SOP)** của trình duyệt, JavaScript trên trang hiện tại (`app.js`) **hoàn toàn bị trình duyệt chặn** không được phép truy cập vào thuộc tính hoặc hàm của frame ngoại vi (`iframeWin.ggbApplet` ném lỗi `DOMException: Blocked a frame with origin from accessing a cross-origin frame`).
+     - Do đó, câu lệnh `const ggb = iframeWin?.ggbApplet` luôn bị lỗi/trả về `undefined`.
+     - Hàm `injectCommandsToGeoGebra()` luôn rơi vào nhánh fallback: chỉ sao chép chuỗi `Execute({...})` vào clipboard và hiện toast yêu cầu người dùng tự bấm phím dán vào GeoGebra, chứ không thể nạp trực tiếp vào GeoGebra được.
 
 ---
 
-## 3. Chi tiết các Bước Triển khai (Dành cho ChatGPT thực hiện)
+## Phạm vi
 
-### Bước 1: Xây dựng Cơ chế Quản lý Bài học NLS trong `canvas_xaydungphuluc.html` & `xaydungphuluc.html`
+- **Frontend `vehinh.html`**:
+  - Tích hợp thư viện Web API chính thức của GeoGebra:
+    `<script src="https://www.geogebra.org/apps/deployggb.js"></script>`
+  - Thay thế thẻ `<iframe>` cứng bằng thẻ `<div id="geogebra-container"></div>` cho phép `deployggb.js` nhúng applet HTML5 trực tiếp trong cùng ngữ cảnh (same window context), tạo sẵn đối tượng `window.ggbApplet` có đầy đủ quyền gọi `evalCommand()`.
 
-1. **Khai báo biến trạng thái tập bài chọn NLS**:
-   ```javascript
-   let nlsSelectedLessonIds = new Set();
+- **Frontend `app.js`**:
+  1. **Nạp trực tiếp lệnh vào GeoGebra (`deployggb.js` + `evalCommand`)**:
+     - Khởi tạo applet GeoGebra thông qua `GGBApplet`:
+       ```javascript
+       const params = {
+           "appName": "classic",
+           "width": 850,
+           "height": 600,
+           "showToolBar": true,
+           "showAlgebraInput": true,
+           "showMenuBar": true,
+           "appletOnLoad": function(api) { window.ggbApplet = api; }
+       };
+       ```
+     - Cài đặt hàm `injectCommandsToGeoGebra()`:
+       + Mở khung GeoGebra `#geogebra-container`.
+       + Gọi trực tiếp `window.ggbApplet.reset()` và `parts.commandsArray.forEach(cmd => window.ggbApplet.evalCommand(cmd))`.
+       + Toàn bộ đường tròn, tiếp tuyến, giao điểm, tên điểm lập tức xuất hiện trực tiếp trong GeoGebra mà người dùng không cần sao chép/dán thủ công!
+       + Vẫn giữ nút "Sao chép lệnh" dạng `Execute({...})` 1 dòng làm phương án dự phòng khi giáo viên muốn dán vào phần mềm GeoGebra cài ngoài máy tính.
+  2. **Nâng cấp `wrapAddPoint` & `addPoint` thông minh cho Fabric.js**:
+     - Hỗ trợ toàn bộ các kiểu gọi của AI:
+       + `addPoint(pt, 'Tên', color)`
+       + `addPoint(x, y, 'Tên', color)`
+       + `addPoint('Tên', pt)` / `addPoint('Tên', x, y)`
+       + `addPoint(canvas, ...)`
+     - Vẽ 1 chấm tròn `fabric.Circle` (radius 3.5px, màu đậm, `originX: 'center', originY: 'center'`, `source: 'ai_primitive'`).
+     - Vẽ 1 nhãn chữ `fabric.IText` (font Inter, size 16px, in đậm `bold`, offset tự động `x + 8, y - 18`, `source: 'ai_primitive'`).
+  3. **Nâng cấp `wrapAddText` thông minh**:
+     - Tự động bóc tách đúng vị trí và nội dung: `addText(x, y, text)`, `addText(text, x, y)`, `addText(pt, text)`.
+  4. **Cập nhật `systemPrompt`**:
+     - Thêm quy tắc và code mẫu bắt buộc cho việc đặt tên điểm:
+       ```javascript
+       QUY TẮC BẮT BUỘC: ĐẶT TÊN VÀ CHẤM ĐIỂM (LABELING):
+       - Mọi đỉnh và điểm mốc hình học (O, A, B, C, M, H, F...) BẮT BUỘC PHẢI CÓ TÊN TRÊN HÌNH.
+       - Sau khi tính tọa độ và vẽ các đường, BẮT BUỘC gọi addPoint(pt, 'Tên') cho TỪNG ĐIỂM:
+         Ví dụ:
+           addPoint(O, 'O');
+           addPoint(A, 'A');
+           addPoint(B, 'B');
+           addPoint(M, 'M');
+       ```
+  5. **Cơ chế bảo hiểm tự động (Auto-Recovery Heuristic) trong `executeAiCode`**:
+     - Nếu canvas đã vẽ các đường nét nhưng số lượng nhãn tên điểm bằng 0, tự động trích xuất các biến điểm viết hoa `const ([A-Z][0-9]?)` trong mã để tự động bù chấm điểm và nhãn tên.
+
+- **Kiểm thử tự động `tests/game-quiz-importer-smoke.js`**:
+  - Kiểm tra `wrapAddPoint` nhận diện đúng các dạng tham số `(pt, 'O')`, `(x, y, 'A')`, tạo đủ chấm tròn và nhãn chữ hợp lệ (không chứa `NaN`).
+  - Kiểm tra sự hiện diện của `deployggb.js` trong `vehinh.html` và hàm nạp lệnh `evalCommand`.
+
+---
+
+## Ngoài phạm vi
+- Backend `api/vehinh_ai.php` (đã hoàn thiện, không cần sửa).
+- Không tự ý sửa source code trong vai trò Antigravity (ChatGPT sẽ implement).
+
+---
+
+## File dự kiến tác động
+1. `vehinh.html`
+2. `app.js`
+3. `tests/game-quiz-importer-smoke.js`
+
+---
+
+## Các bước thực hiện chi tiết
+
+### Bước 1: Nhúng `deployggb.js` trong `vehinh.html`
+
+1. Thêm thẻ script nhúng GeoGebra API trong `<head>`:
+   ```html
+   <script src="https://www.geogebra.org/apps/deployggb.js"></script>
    ```
-
-2. **Hàm tính toán danh sách bài ứng viên và độ ưu tiên sư phạm cho NLS**:
-   ```javascript
-   function nlsCandidates() {
-     return aiCandidates(); // Danh sách các bài học hợp lệ từ PPCT (không tính header, kiểm tra)
-   }
-
-   function prioritizedNlsLessons() {
-     // Đánh giá điểm ưu tiên sư phạm công nghệ số của bài học môn học
-     const candidates = nlsCandidates();
-     const scoreLesson = (lessonName) => {
-       const text = foldText(cleanLessonDescription(lessonName));
-       let score = 5;
-       if (/hinh hoc|tam giac|tu giac|duong tron|goc|doi xung|dong dang|dinh ly|thales|pythagore|lang tru|hinh hop/.test(text)) score += 5; // GeoGebra
-       if (/thong ke|xac suat|bieu do|bang so lieu|du lieu|tan suat/.test(text)) score += 5; // Bảng tính Excel
-       if (/thuc hanh va trai nghiem|trai nghiem|du an|stem/.test(text)) score += 4; // STEM / Thực hành
-       if (/ham so|do thi|parabol|toa do/.test(text)) score += 4; // Vẽ đồ thị
-       if (/phuong trinh|he phuong trinh|bat phuong trinh|nghiem|giai he/.test(text)) score += 3; // Máy tính Casio
-       if (selectedAiLessons().some(l => l.includes(lessonName))) score += 2; // Bài có AI
-       if (/on tap|kiem tra|danh gia|giua ky|cuoi ky/.test(text)) score -= 6; // Không ưu tiên NLS
-       return score;
-     };
-     return [...candidates].sort((a, b) => scoreLesson(b.lesson) - scoreLesson(a.lesson));
-   }
-   ```
-
-3. **Đồng bộ giữa Thanh trượt `nlsRate` và Tập bài được chọn**:
-   ```javascript
-   function syncNlsRateFromSelection() {
-     const total = nlsCandidates().length;
-     const selectedCount = nlsSelectedLessonIds.size;
-     const rate = total ? Math.round(selectedCount / total * 100) : 0;
-     const nlsRateEl = document.querySelector('#nlsRate');
-     const nlsRateOutEl = document.querySelector('#nlsRateOut');
-     if (nlsRateEl) nlsRateEl.value = String(rate);
-     if (nlsRateOutEl) nlsRateOutEl.value = `${rate}% (${selectedCount}/${total} bài)`;
-     return rate;
-   }
-
-   function syncNlsSelectionFromRate() {
-     const total = nlsCandidates().length;
-     const rate = Number(document.querySelector('#nlsRate')?.value) || 0;
-     const targetCount = Math.round(rate / 100 * total);
-     const prioritized = prioritizedNlsLessons();
-     nlsSelectedLessonIds = new Set(prioritized.slice(0, targetCount).map(x => x.id));
-     syncNlsRateFromSelection();
-     updateAiPicker(); // Cập nhật lại giao diện bảng tick chọn
-   }
-   ```
-
-4. **Cho phép người dùng tick/bỏ tick NLS từng bài**:
-   ```javascript
-   function toggleNlsLesson(lessonId, checked) {
-     if (checked) nlsSelectedLessonIds.add(lessonId);
-     else nlsSelectedLessonIds.delete(lessonId);
-     syncNlsRateFromSelection();
-     updateAiPicker();
-   }
-
-   function suggestNlsLessons() {
-     syncNlsSelectionFromRate();
-     notify(`Đã gợi ý ${nlsSelectedLessonIds.size} bài học tích hợp NLS theo tỉ trọng.`);
-   }
-
-   function clearNlsLessons() {
-     nlsSelectedLessonIds.clear();
-     syncNlsRateFromSelection();
-     updateAiPicker();
-     notify('Đã bỏ chọn tất cả bài học NLS.');
-   }
+2. Thay thế `<iframe>` cứng trong `#geogebra-container`:
+   ```html
+   <div id="geogebra-container" class="mt-2 w-full h-[600px] border rounded-lg overflow-hidden shadow hidden bg-white">
+       <!-- Applet GeoGebra HTML5 được khởi tạo động qua deployggb.js -->
+   </div>
    ```
 
 ---
 
-### Bước 2: Nâng cấp Giao diện Bảng Phân phối / Chọn tiết trong `canvas_xaydungphuluc.html` & `xaydungphuluc.html`
+### Bước 2: Cài đặt nạp trực tiếp GeoGebra trong `app.js`
 
-1. **Cập nhật tiêu đề Card Mục 4**:
-   Đổi từ:
-   `4. Chọn chính xác tiết tích hợp AI`
-   Thành:
-   `4. Chọn chính xác bài tích hợp NLS & tiết tích hợp AI (Do người dùng quyết định)`
-2. **Thêm nút điều khiển NLS trên thanh công cụ**:
-   - Nút `💻 Gợi ý NLS theo tỉ trọng` (`onclick="suggestNlsLessons()"`)
-   - Nút `✕ Bỏ NLS` (`onclick="clearNlsLessons()"`)
-   - Huy hiệu thống kê: `📊 NLS: ${nlsSelectedLessonIds.size}/${total} bài (${nlsRate}%) · 🎯 AI: ${aiSelected.size}/${limit} tiết`
-3. **Thêm cột checkbox NLS trong bảng `updateAiPicker()`**:
-   - Thêm cột `<th>Tích hợp NLS (CV 3456)</th>` trước hoặc sau cột AI.
-   - Mỗi dòng hiển thị:
-     `<label class="font-semibold whitespace-nowrap"><input type="checkbox" ${nlsSelectedLessonIds.has(row.id)?'checked':''} onchange="toggleNlsLesson('${row.id}', this.checked)"> Tích hợp NLS</label>`
-
----
-
-### Bước 3: Nâng cấp hàm `selectedIntegration` & `separateIntegration`
-
-1. **Kiểm tra điều kiện xuất NLS theo lựa chọn của người dùng**:
+1. Quản lý khởi tạo và nạp lệnh GeoGebra:
    ```javascript
-   function isLessonNlsSelected(lessonId, lessonName, c) {
-     if (!c?.nls?.enabled) return false;
-     // Nếu người dùng có danh sách chọn cụ thể
-     if (typeof nlsSelectedLessonIds !== 'undefined' && nlsSelectedLessonIds.size > 0) {
-       if (lessonId && nlsSelectedLessonIds.has(lessonId)) return true;
-       if (lessonName) {
-         const match = nlsCandidates().find(x => typeof lessonsMatch === 'function' ? lessonsMatch(x.lesson, lessonName) : x.lesson === lessonName);
-         if (match && nlsSelectedLessonIds.has(match.id)) return true;
+   let ggbAppletInstance = null;
+   let isGgbAppletReady = false;
+   let pendingGgbCommands = null;
+
+   function ensureGeoGebraAppletLoaded(callback) {
+       const container = document.getElementById('geogebra-container');
+       if (!container) return;
+       if (isGgbAppletReady && window.ggbApplet) {
+           if (callback) callback();
+           return;
        }
-       return false;
-     }
-     // Fallback nếu chưa khởi tạo bảng chọn: dựa theo tỉ trọng nlsRate
-     const rate = Number(c?.nls?.rate ?? 50);
-     if (rate <= 0) return false;
-     if (rate >= 100) return true;
-     const prioritized = typeof prioritizedNlsLessons === 'function' ? prioritizedNlsLessons() : [];
-     const targetCount = Math.round(rate / 100 * prioritized.length);
-     const topIds = new Set(prioritized.slice(0, targetCount).map(x => x.id));
-     if (lessonId && topIds.has(lessonId)) return true;
-     return false;
+       if (typeof GGBApplet === 'function' && !ggbAppletInstance) {
+           const params = {
+               "appName": "classic",
+               "width": container.clientWidth || 850,
+               "height": 600,
+               "showToolBar": true,
+               "showAlgebraInput": true,
+               "showMenuBar": true,
+               "enableLabelDrags": true,
+               "enableShiftDragZoom": true,
+               "enableRightClick": true,
+               "showResetIcon": true,
+               "language": "vi",
+               "appletOnLoad": function(api) {
+                   window.ggbApplet = api;
+                   isGgbAppletReady = true;
+                   if (pendingGgbCommands) {
+                       runCommandsOnGeoGebra(pendingGgbCommands);
+                       pendingGgbCommands = null;
+                   }
+                   if (callback) callback();
+               }
+           };
+           ggbAppletInstance = new GGBApplet(params, true);
+           ggbAppletInstance.inject('geogebra-container');
+       }
+   }
+
+   function runCommandsOnGeoGebra(commandsArray) {
+       if (!window.ggbApplet || typeof window.ggbApplet.evalCommand !== 'function') return false;
+       try {
+           window.ggbApplet.reset();
+           commandsArray.forEach(cmd => {
+               if (cmd && cmd.trim()) {
+                   window.ggbApplet.evalCommand(cmd.trim());
+               }
+           });
+           showVehinhToast('⚡ Đã nạp thành công hình vẽ vào GeoGebra!');
+           return true;
+       } catch (err) {
+           console.error('Lỗi evalCommand GeoGebra:', err);
+           return false;
+       }
+   }
+
+   function injectCommandsToGeoGebra() {
+       const source = lastFullAiText || document.getElementById('geogebra-commands')?.textContent || '';
+       const parts = lastGeoGebraParts.commandsArray?.length
+           ? lastGeoGebraParts
+           : splitGeoGebraBlocks(extractGeoGebraContent(source) || source);
+       if (!parts.commandsArray.length) {
+           showVehinhToast('Chưa có lệnh GeoGebra để nạp.');
+           return;
+       }
+       openGeoGebraPanel();
+       if (window.ggbApplet && isGgbAppletReady) {
+           runCommandsOnGeoGebra(parts.commandsArray);
+       } else {
+           pendingGgbCommands = parts.commandsArray;
+           ensureGeoGebraAppletLoaded();
+           showVehinhToast('Đang khởi động GeoGebra và chuẩn bị nạp lệnh...');
+       }
    }
    ```
-2. **Áp dụng vào `selectedIntegration`**:
-   - Nếu `!isLessonNlsSelected(rowId, lesson, c)`:
-     `cleanNls = []` (Tuyệt đối không sinh mã NLS cho bài này).
-   - Nếu `cleanNls.length === 0 && !hasAi`:
-     Trả về `'-'`!
-3. **Áp dụng vào `separateIntegration`**:
-   - Dòng bài không có NLS: `nlsText = '-'`.
-   - Dòng bài có NLS: `nlsText = cleanNlsColumnText(...)`.
 
 ---
 
-### Bước 4: Chuẩn hóa `normalizeTeachingContext` & Đề xuất trong `js/khbd-app.js`
+### Bước 3: Nâng cấp `wrapAddPoint` và `wrapAddText` thông minh trong `app.js`
 
-1. Trong `normalizeTeachingContext`:
+1. `smartAddPoint`:
+   - Bóc tách mọi kiểu tham số `(pt, 'Tên')`, `(x, y, 'Tên')`, `('Tên', pt)`.
+   - Tạo chấm tròn `fabric.Circle` (radius 3.5, origin center, `source: 'ai_primitive'`).
+   - Tạo nhãn chữ `fabric.IText` (font Inter, size 16 bold, offset `x + 8, y - 18`, `source: 'ai_primitive'`).
+   - Thêm trực tiếp vào `canvas`.
+2. `smartAddText`:
+   - Nhận diện `(x, y, text)`, `(text, x, y)`, `(pt, text)`.
+   - Tạo `fabric.IText` không bị lỗi tọa độ `NaN`.
+
+---
+
+### Bước 4: Cập nhật `systemPrompt` và Cơ chế bảo hiểm tự động
+
+1. Thêm chỉ thị bắt buộc trong `systemPrompt`:
    ```javascript
-   const mergedIntegrations = Object.assign({
-     digital: integrations.digital !== undefined ? Boolean(integrations.digital) : true,
-     ai: Boolean(integrations.ai),
-     foreignLanguage: Boolean(integrations.foreignLanguage),
-     inclusive: Boolean(integrations.inclusive)
-   }, Object.fromEntries(SUBJECT_CONTEXT_INTEGRATIONS.map(item => [item.id, Boolean(integrations[item.id])])));
+   QUY TẮC BẮT BUỘC: ĐẶT TÊN VÀ CHẤM ĐIỂM (LABELING):
+   - Mọi đỉnh và điểm mốc hình học (O, A, B, C, M, H, F...) BẮT BUỘC PHẢI CÓ TÊN HIỂN THỊ TRÊN HÌNH.
+   - Sau khi tính tọa độ và dựng các đường, BẮT BUỘC gọi addPoint(pt, 'Tên') cho TỪNG ĐIỂM:
+     Ví dụ:
+       addPoint(O, 'O');
+       addPoint(A, 'A');
+       addPoint(B, 'B');
+       addPoint(M, 'M');
+   - TUYỆT ĐỐI KHÔNG ĐƯỢC BỎ SÓT ĐIỂM NÀO KHÔNG ĐẶT TÊN.
    ```
-2. Trong `triggerStep3PedagogyAndDigitalRecommendations`:
-   Không cưỡng ép `toggleDigital.checked = true` nếu người dùng đã chủ động tắt NLS cho bài này:
-   ```javascript
-   const toggleDigital = document.getElementById("toggleDigitalCompetency");
-   const isDigitalActive = toggleDigital ? toggleDigital.checked : Boolean(appState.teachingContext?.integrations?.digital);
-   appState.teachingContext.integrations.digital = isDigitalActive;
-   ```
-3. Khi nhận diện từ PPCT (`applyPpctDetectedStandards`):
-   Nếu bài học trong PPCT không có NLS (ghi `-` hoặc không chứa mã NLS), giữ `toggleDigitalCompetency.checked = false` và không nạp mã NLS.
+2. Thêm logic bảo hiểm (Auto-Recovery) trong `executeAiCode()`: Nếu canvas không có bất kỳ nhãn điểm nào, tự động quét các biến điểm viết hoa (`const O = ...`, `const A = ...`) để bù nhãn điểm.
 
 ---
 
-## 4. Danh sách File Tác động
+### Bước 5: Cập nhật kiểm thử tự động trong `tests/game-quiz-importer-smoke.js`
 
-1. `xaydungphuluc.html` (Thêm cơ chế chọn bài NLS, slider có hiệu lực thực, checkbox NLS từng hàng).
-2. `canvas_xaydungphuluc.html` (Đồng bộ 1-1 với xaydungphuluc.html cho Google Canvas).
-3. `backupcode viettailieu/canvas_xaydungphuluc.html` (Đồng bộ bản backup mirror).
-4. `js/khbd-app.js` (Tôn trọng trạng thái bật/tắt NLS do người dùng chọn, không ép cứng `digital: true`).
-5. `tests/khbd-nls-rate-smoke.js` (Tạo mới smoke test kiểm thử tỉ trọng NLS).
-6. `tests/xaydungphuluc-smoke.js` & `tests/canvas-xaydungphuluc-smoke.js` (Cập nhật kiểm thử).
-7. `docs/handoff/IMPLEMENT.md` (ChatGPT ghi nhận triển khai).
-8. `docs/handoff/VERIFY.md` (Antigravity thực hiện `/verify` nghiệm thu).
+1. Kiểm tra unit test `smartAddPoint` và `smartAddText`.
+2. Kiểm tra `vehinh.html` có thẻ nhúng `deployggb.js` và hàm `runCommandsOnGeoGebra`.
+3. Chạy `node tests/run-all-tests.js` đảm bảo 100% test suites PASS.
 
 ---
 
-## 5. Kế hoạch Kiểm thử & Thẩm định (Verification Plan)
+## Rủi ro
 
-### Automated Tests
-Tạo bài test `tests/khbd-nls-rate-smoke.js`:
-1. **Case 1 (Tỉ trọng 0%)**: Khi `nlsRate = 0%` hoặc `nlsEnabled = false` -> 100% các dòng bài học trong Phụ lục 1 và 3 đều có cột NLS ghi `-`.
-2. **Case 2 (Tỉ trọng 50%)**: Khi `nlsRate = 50%` -> Số bài có mã NLS đạt đúng xấp xỉ 50%, các bài còn lại ghi `-`.
-3. **Case 3 (Chọn bài thủ công)**: Khi người dùng tick chọn 3 bài cụ thể trong `nlsSelectedLessonIds` -> Đúng 3 bài đó có mã NLS, tất cả các bài khác ghi `-`.
-4. **Case 4 (Ưu tiên Sư phạm)**: Các bài Hình học (GeoGebra) và Thống kê (Excel) được ưu tiên chọn NLS trước các bài lý thuyết, kiểm tra.
-5. **Case 5 (Đồng bộ PL1 & PL3)**: Phụ lục 1 và Phụ lục 3 khớp 100% cột NLS theo từng bài.
-6. **Case 6 (Soạn KHBD)**: Tắt `toggleDigitalCompetency` thì giáo án không sinh mục tiêu NLS.
+- *Rủi ro*: Mạng internet chậm làm `deployggb.js` tải mất vài giây trong lần đầu tiên mở GeoGebra.
+- *Biện pháp*: Biến `pendingGgbCommands` sẽ lưu trữ danh sách lệnh và tự động thực thi ngay khi `appletOnLoad` hoàn tất; đồng thời vẫn giữ nút copy lệnh dạng `Execute({...})` 1 dòng làm fallback.
 
-### Lệnh chạy kiểm thử:
-```powershell
-& "C:\Users\HoangThien\AppData\Local\OpenAI\Codex\runtimes\cua_node\b474a88d5d105afa\bin\node.exe" tests/khbd-nls-rate-smoke.js
-& "C:\Users\HoangThien\AppData\Local\OpenAI\Codex\runtimes\cua_node\b474a88d5d105afa\bin\node.exe" tests/xaydungphuluc-smoke.js
-& "C:\Users\HoangThien\AppData\Local\OpenAI\Codex\runtimes\cua_node\b474a88d5d105afa\bin\node.exe" tests/canvas-xaydungphuluc-smoke.js
-```
+---
+
+## Cách kiểm thử
+
+1. **Kiểm thử tự động**:
+   - `node tests/game-quiz-importer-smoke.js`
+   - `node tests/run-all-tests.js`
+2. **Kiểm thử thủ công**:
+   - Mở `vehinh.html`, nhập đề bài tiếp tuyến đường tròn (O; R) và bấm "Vẽ Hình (Ctrl+Q)".
+   - Kiểm tra Canvas Fabric.js: tất cả các điểm O, M, A, B, C, D, H, F đều có chấm tròn và nhãn chữ tên điểm đặt cạnh ngay ngắn.
+   - Bấm nút **"⚡ Nạp trực tiếp vào GeoGebra"**:
+     + Khung GeoGebra mở ra.
+     + Toàn bộ hình vẽ (đường tròn, các đoạn thẳng, tiếp tuyến và tên điểm) được vẽ trực tiếp vào GeoGebra một cách mượt mà, **không cần người dùng phải bấm sao chép và dán thủ công**.
+
+---
+
+## Tiêu chí nghiệm thu
+
+1. **100% các điểm hình học trên Canvas Fabric.js đều có chấm điểm và nhãn chữ tên điểm rõ nét**.
+2. **Nút "⚡ Nạp trực tiếp vào GeoGebra" vẽ trực tiếp thành công hình học vào GeoGebra applet** mà không bị lỗi Same-Origin Policy.
+3. Toàn bộ 66+ test suites trong hệ thống đều PASS 100%.
