@@ -1,3 +1,36 @@
+# IMPLEMENT: Khắc phục thẩm định Năng lực số theo đơn vị PPCT
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `canvas_xaydungphuluc.html` và `xaydungphuluc.html`
+  - `calculateComplianceReport()` nay phân biệt đơn vị NLS đã cấu hình.
+  - Với `unit: 'period'`, báo cáo cộng số tiết thực tế của các dòng có mã NLS bằng `parsePeriodCount`, lấy tổng tiết PPCT làm mẫu số, làm tròn mục tiêu theo tỉ lệ phần trăm và cho phép lệch tối đa 1 tiết.
+  - Chi tiết hiển thị rõ `x/y tiết (a/b bài), mục tiêu z tiết`; dòng NLS không có số tiết hợp lệ vẫn được thông tin trong số bài nhưng đóng góp 0 tiết.
+  - Với `unit: 'lesson'`, giữ nguyên mục tiêu `ceil` theo số bài và điều kiện đạt theo số bài.
+  - Không thay đổi prompt, schema hoặc thuật toán phân bổ NLS/AI.
+- `tests/canvas-xaydungphuluc-smoke.js` và `tests/xaydungphuluc-smoke.js`
+  - Bổ sung fixture 140 tiết/87 bài: 29 tiết NLS ở 16 bài với 21% đạt theo đơn vị tiết nhưng không đạt theo đơn vị bài (mục tiêu 19 bài).
+  - Kiểm tra nhãn chính xác của cả hai đơn vị và dòng NLS thiếu số tiết không được tự suy diễn thành tiết hợp lệ.
+
+## Kiểm tra đã chạy
+
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/daythay-suggest-smoke.js`: PASS.
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `node tests/timetable-render-smoke.js`: PASS.
+- `node tests/auto-reload-smoke.js`: PASS.
+- `git diff --check`: không có lỗi trong phạm vi thay đổi; còn cảnh báo dòng trống cuối tệp đã có tại `docs/handoff/PLAN.md`.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- Cần `/verify` trực quan với một PPCT thực tế có cấu hình NLS theo tổng số tiết PPCT.
+
+---
+
 # IMPLEMENT: Tối ưu luồng chọn giáo viên nghỉ và xem nhanh TKB Dạy thay
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`

@@ -395,6 +395,20 @@ assert.equal(sandbox.calculateComplianceReport(complianceConfig,missingNls).crit
 assert.equal(sandbox.calculateComplianceReport({...complianceConfig,nls:{enabled:false}},missingNls).isCompliant,true,'disabled NLS does not require a code');
 const tooManyAi={...complianceConfig,ai:{enabled:true,selectedPeriods:[{lesson:'Bài mẫu',periods:Array.from({length:13},(_,i)=>i+1)}]}};
 assert.equal(sandbox.calculateComplianceReport(tooManyAi,complianceData).criteria[3].pass,false,'AI cap must count periods, not lesson groups');
+const nlsPeriodRows=Array.from({length:87},(_,index)=>{
+  const periods=index<13?'2':index<16?'1':index===16?'111':'';
+  return {cells:[String(index+1),`Bài ${index+1}`,periods,'Đạt',index<16?'1.1.TC1a':'-','-'],isHeader:false};
+});
+const nlsPeriodData={'1':{scheduleTable:{columns:['STT','Bài học','Số tiết','Yêu cầu cần đạt','Mã NLS','Mã AI'],rows:nlsPeriodRows},schedule:[],assessments:[]}};
+const nlsPeriodReport=sandbox.calculateComplianceReport({monHoc:'Toán học',nls:{enabled:true,unit:'period',rate:21},ai:{enabled:false}},nlsPeriodData).criteria[2];
+assert.equal(nlsPeriodReport.pass,true,'29 NLS periods across 16 lessons must meet a 21% period target of 140 PPCT periods');
+assert.equal(nlsPeriodReport.detail,'29/140 tiết (16/87 bài), mục tiêu 29 tiết','period-unit NLS compliance must show periods plus the informative lesson count');
+const nlsLessonReport=sandbox.calculateComplianceReport({monHoc:'Toán học',nls:{enabled:true,unit:'lesson',rate:21},ai:{enabled:false}},nlsPeriodData).criteria[2];
+assert.equal(nlsLessonReport.pass,false,'the same 16 NLS lessons must remain below the ceil 19-lesson target');
+assert.equal(nlsLessonReport.detail,'16/87 bài, mục tiêu 19 bài','lesson-unit NLS compliance must retain its exact lesson label');
+const nlsInvalidPeriodData=JSON.parse(JSON.stringify(nlsPeriodData));nlsInvalidPeriodData['1'].scheduleTable.rows[17].cells[4]='1.1.TC1a';
+const nlsInvalidPeriodReport=sandbox.calculateComplianceReport({monHoc:'Toán học',nls:{enabled:true,unit:'period',rate:21},ai:{enabled:false}},nlsInvalidPeriodData).criteria[2];
+assert.equal(nlsInvalidPeriodReport.detail,'29/140 tiết (17/87 bài), mục tiêu 29 tiết','an NLS row without a valid period must count as a lesson but contribute zero periods');
 
 
 const repeatedLessonCoverage=vm.runInContext("(()=>{const originalSource=sourcePpctTable;sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Luyện tập chung','1']},{cells:['Luyện tập chung','1']}]};const table={columns:APPENDIX_1_COLUMNS.map(x=>x[1]),rows:[{cells:['1','Luyện tập chung','1','Đạt','-','-']},{cells:['2','Luyện tập chung','1','Đạt','-','6.A1.1 - Hỗ trợ. (Áp dụng: tiết 1).']}]};const report=appendixAiCoverage(table,{ai:{enabled:true,selectedPeriods:[{lessonId:'source:1',lesson:'Luyện tập chung',periods:[1]}]}});sourcePpctTable=originalSource;return report})()",sandbox);

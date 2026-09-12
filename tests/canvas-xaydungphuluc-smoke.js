@@ -370,6 +370,26 @@ function extractNamed(src,name){
   }
   throw new Error('unterminated '+name);
 }
+const canvasComplianceSandbox={
+  SUBJECTS:[['Toán học',140]],
+  ppctTableFromRows(){return {columns:[],rows:[]}},
+  normalizeIntegrationTable:model=>model,
+  isIntegrationColumn:label=>/Mã NLS/.test(label),
+  isNlsColumn:label=>/Mã NLS/.test(label),
+  appendixAiCoverage(){return {covered:0,expected:0,pass:true}}
+};
+vm.createContext(canvasComplianceSandbox);
+vm.runInContext(extractNamed(target,'parsePeriodCount')+'\n'+extractNamed(target,'calculateComplianceReport'),canvasComplianceSandbox);
+const canvasNlsPeriodRows=Array.from({length:87},(_,index)=>({cells:[String(index+1),`Bài ${index+1}`,index<13?'2':index<16?'1':index===16?'111':'','Đạt',index<16?'1.1.TC1a':'-','-'],isHeader:false}));
+const canvasNlsPeriodData={'1':{scheduleTable:{columns:['STT','Bài học','Số tiết','Yêu cầu cần đạt','Mã NLS','Mã AI'],rows:canvasNlsPeriodRows},schedule:[],assessments:[]}};
+const canvasNlsPeriodReport=canvasComplianceSandbox.calculateComplianceReport({monHoc:'Toán học',nls:{enabled:true,unit:'period',rate:21},ai:{enabled:false}},canvasNlsPeriodData).criteria[2];
+assert.equal(canvasNlsPeriodReport.pass,true,'Canvas must assess NLS period allocations by PPCT periods, not lesson count');
+assert.equal(canvasNlsPeriodReport.detail,'29/140 tiết (16/87 bài), mục tiêu 29 tiết','Canvas must show the exact NLS period-unit detail');
+const canvasNlsLessonReport=canvasComplianceSandbox.calculateComplianceReport({monHoc:'Toán học',nls:{enabled:true,unit:'lesson',rate:21},ai:{enabled:false}},canvasNlsPeriodData).criteria[2];
+assert.equal(canvasNlsLessonReport.pass,false,'Canvas lesson-unit NLS compliance must preserve the ceil lesson target');
+assert.equal(canvasNlsLessonReport.detail,'16/87 bài, mục tiêu 19 bài','Canvas must keep the exact NLS lesson-unit label');
+const canvasNlsInvalidPeriodData=JSON.parse(JSON.stringify(canvasNlsPeriodData));canvasNlsInvalidPeriodData['1'].scheduleTable.rows[17].cells[4]='1.1.TC1a';
+assert.equal(canvasComplianceSandbox.calculateComplianceReport({monHoc:'Toán học',nls:{enabled:true,unit:'period',rate:21},ai:{enabled:false}},canvasNlsInvalidPeriodData).criteria[2].detail,'29/140 tiết (17/87 bài), mục tiêu 29 tiết','Canvas must not invent periods for an NLS row without a valid period');
 const importGuardSandbox={window:{}};
 vm.createContext(importGuardSandbox);
 vm.runInContext(extractNamed(target,'documentImportUnavailable'),importGuardSandbox);

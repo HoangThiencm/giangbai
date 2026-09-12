@@ -4,33 +4,37 @@
 PASS
 
 ## Đối chiếu scope
-- `phancongtochuyenmon.html`:
-  - Đã xử lý triệt để tính vô lý khi chọn giáo viên nghỉ không có tiết dạy: khung preview hiển thị thông báo rõ ràng, vô hiệu hóa nút chọn buổi không có tiết, và chặn lưu lượt dạy thay 0 tiết.
-  - Bảng đề xuất `#daythay-suggestion-panel` không bị ẩn mất tích khi số tiết = 0: hiển thị thông báo hướng dẫn rõ ràng khi giáo viên không có tiết buổi đó, hoặc hướng dẫn tick chọn tiết cần thay khi có lịch dạy.
-  - Khi giáo viên có tiết và các tiết được nạp, bảng đề xuất 2 cột hiển thị đầy đủ (GV trống cả buổi và GV có mặt, trống tiết cần thay) kèm nút gán nhanh.
-  - Nhật ký chi tiết mặc định tự động sắp xếp theo trình tự thời gian tăng dần (Ngày -> Buổi Sáng trước Chiều -> Tiết bắt đầu).
-  - Tích hợp HTML5 Drag & Drop reorder (tay nắm kéo thả, hiệu ứng viền drop target, hoán đổi vị trí trong mảng và kích hoạt autosave).
-  - Bổ sung nút "Sắp xếp theo ngày" trên thanh công cụ Nhật ký để sắp xếp lại mảng gốc bất kỳ lúc nào.
-- `tests/daythay-suggest-smoke.js`:
-  - Bổ sung kiểm thử panel đề xuất luôn hiển thị hướng dẫn khi 0 tiết hoặc không có tiết.
-  - Bổ sung kiểm thử bộ so sánh thời gian `compareDayThayJournalRecords`.
-  - Bổ sung kiểm thử hàm hoán đổi vị trí kéo thả `reorderDayThayJournalRecords` và nút khôi phục thứ tự thời gian `sortDayThayJournalByDate`.
+- `canvas_xaydungphuluc.html` và `xaydungphuluc.html`:
+  - Đã khắc phục triệt để lỗi đánh giá sai mục tiêu Năng lực số trong `calculateComplianceReport()`.
+  - Khi cấu hình NLS theo đơn vị `unit: 'period'` (Theo tổng số tiết PPCT):
+    - Tính tổng số tiết thực tế của các dòng có mã NLS bằng `parsePeriodCount`.
+    - Tính mục tiêu số tiết dựa trên tổng số tiết chương trình và tỉ lệ % cấu hình: `Math.round(periods * rate / 100)`.
+    - Chi tiết hiển thị rõ ràng: `${nlsPeriods}/${periods} tiết (${nlsRows.length}/${rows.length} bài), mục tiêu ${nlsTarget} tiết`.
+    - Điều kiện Đạt chuẩn xác theo số tiết (`nlsPeriods >= nlsTarget || Math.abs(nlsPeriods - nlsTarget) <= 1`).
+  - Khi cấu hình NLS theo đơn vị `unit: 'lesson'` (Theo tổng số bài PPCT):
+    - Giữ nguyên cơ chế tính mục tiêu và đánh giá theo số bài học.
+  - Không thay đổi prompt AI, schema hay logic xuất bản phụ lục.
+- `tests/canvas-xaydungphuluc-smoke.js` và `tests/xaydungphuluc-smoke.js`:
+  - Bổ sung kiểm thử fixture thực tế: 140 tiết / 87 bài, 21% NLS với 29 tiết trên 16 bài học.
+  - Kiểm thử đánh giá Đạt chính xác khi chọn theo đơn vị tiết (không bị đánh trượt theo mục tiêu 19 bài).
+  - Kiểm thử dòng NLS không có số tiết hợp lệ không bị tính sai lệch.
 
 ## Test đã chạy
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS
+- `node tests/xaydungphuluc-smoke.js`: PASS
 - `node tests/daythay-suggest-smoke.js`: PASS
 - `node tests/baogiang-weekday-segment-smoke.js`: PASS
 - `node tests/timetable-render-smoke.js`: PASS
-- `node tests/canvas-xaydungphuluc-smoke.js`: PASS
 - `node tests/auto-reload-smoke.js`: PASS
 - `git diff --check`: PASS (không lỗi cú pháp/khoảng trắng)
 
 ## Pass / Fail từng tiêu chí
-- Tiêu chí 1: Khi GV nghỉ không có tiết, hệ thống cảnh báo rõ ràng và không cho lưu rỗng -> PASS
-- Tiêu chí 2: Bảng đề xuất thông minh luôn hiển thị, có thông báo hướng dẫn khi 0 tiết -> PASS
-- Tiêu chí 3: Khi GV nghỉ có tiết, bảng đề xuất 2 cột phân loại chính xác GV trống buổi và GV trống tiết -> PASS
-- Tiêu chí 4: Bảng Nhật ký chi tiết tự động sắp xếp theo ngày tăng dần (Thứ Tư trước Thứ Năm) -> PASS
-- Tiêu chí 5: Kéo thả (Drag & Drop) các dòng trong Nhật ký chi tiết hoạt động mượt mà, lưu vị trí ổn định -> PASS
-- Tiêu chí 6: Toàn bộ các bộ kiểm thử smoke của dự án PASS 100% -> PASS
+- Tiêu chí 1: Tiêu chí Năng lực số phân biệt chính xác đơn vị 'period' vs 'lesson' -> PASS
+- Tiêu chí 2: Cấu hình theo tiết đánh giá đúng dựa trên tổng số tiết NLS (29/140 tiết) thay vì ép theo 19 bài -> PASS
+- Tiêu chí 3: Nhãn chi tiết thể hiện đầy đủ số tiết và số bài (${nlsPeriods}/${periods} tiết (${nlsRows}/${rows.length} bài)) -> PASS
+- Tiêu chí 4: Báo cáo thẩm định đạt chuẩn 100% khi đủ tiết theo cấu hình -> PASS
+- Tiêu chí 5: Cả 2 giao diện Canvas và Thường đồng bộ 100% logic thẩm định -> PASS
+- Tiêu chí 6: Toàn bộ 6 bộ kiểm thử smoke của hệ thống đều PASS -> PASS
 
 ## Bug
 Không phát hiện bug tồn đọng.
