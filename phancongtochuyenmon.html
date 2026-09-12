@@ -6090,6 +6090,42 @@ Quy tắc:
             }, {})]));
         }
 
+        function matchTeacherByName(rawName, teachers, currentTeacherId) {
+            const normalizedTokens = value => String(foldText(value) || '')
+                .replace(/[^a-z0-9]+/gi, ' ')
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean);
+            const labelTokens = new Set(['giao', 'vien', 'gv', 'thay', 'co', 'teacher', 'name']);
+            const rawTokens = normalizedTokens(rawName).filter(token => !labelTokens.has(token));
+            if (!rawTokens.length) return null;
+
+            const target = rawTokens.join(' ');
+            const targetLast = rawTokens[rawTokens.length - 1];
+            const candidates = (teachers || []).map(teacher => {
+                const tokens = normalizedTokens(teacher?.name);
+                const last = tokens[tokens.length - 1];
+                return { teacher, tokens, last, fullName: tokens.join(' ') };
+            }).filter(candidate => candidate.last === targetLast);
+            if (!candidates.length) return null;
+
+            const current = candidates.find(candidate => String(candidate.teacher.id) === String(currentTeacherId));
+            if (current && (current.fullName === target || current.last === targetLast)) return current.teacher;
+
+            const exact = candidates.filter(candidate => candidate.fullName === target);
+            if (exact.length === 1) return exact[0].teacher;
+            if (exact.length > 1) return null;
+
+            const targetNonLast = new Set(rawTokens.slice(0, -1));
+            const scored = candidates.map(candidate => ({
+                ...candidate,
+                score: candidate.tokens.slice(0, -1).reduce((count, token) => count + (targetNonLast.has(token) ? 1 : 0), 0)
+            }));
+            const bestScore = Math.max(...scored.map(candidate => candidate.score));
+            const best = scored.filter(candidate => candidate.score === bestScore);
+            return best.length === 1 ? best[0].teacher : null;
+        }
+
         function applyAiTimetableResult(raw) {
             const next = emptyTimetable();
             next.school_year = raw.school_year || state.info?.school_year || '';
@@ -6109,11 +6145,7 @@ Quy tắc:
             editingTimetable = next;
             const name = String(raw.teacher_name || '').trim();
             if (name) {
-                const foldedName = foldText(name);
-                const match = (state.teachers || []).find(t => {
-                    const folded = foldText(t.name);
-                    return folded === foldedName || folded.includes(foldedName) || foldedName.includes(folded);
-                });
+                const match = matchTeacherByName(name, state.teachers || [], selectedTimetableTeacherId);
                 if (match) selectedTimetableTeacherId = match.id;
             }
             const yearEl = document.getElementById('tt-school-year');

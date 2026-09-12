@@ -78,7 +78,8 @@ function emptyTimetable() {
     let workspaceRenders = 0;
     let listRenders = 0;
     const context = vm.createContext({
-        state: { info: {}, teachers: [{ id: 123, name: 'Cô An' }] },
+        state: { info: {}, teachers: [{ id: 1, name: 'Hồ Đăng Danh' }, { id: 2, name: 'Hoàng Xuân Ánh' }, { id: 123, name: 'Cô An' }] },
+        selectedTimetableTeacherId: null,
         TT_DAYS: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
         emptyTimetable,
         getSessionPeriods: () => [],
@@ -92,16 +93,36 @@ function emptyTimetable() {
         renderTimetableTeacherList() { listRenders++; },
         showToast() {}, console: { error() {} }, Date
     });
-    vm.runInContext([declaration('alignSessionPeriods'), declaration('applyAiTimetableResult')].join('\n'), context);
+    vm.runInContext([declaration('alignSessionPeriods'), declaration('matchTeacherByName'), declaration('applyAiTimetableResult')].join('\n'), context);
     vm.runInContext("applyAiTimetableResult({ teacher_name: 'Cô An' })", context);
     assert.equal(workspaceRenders, 1, 'the timetable workspace renders even when assignment sync fails');
     assert.equal(listRenders, 1, 'the timetable teacher list refreshes after AI recognition');
+    vm.runInContext("applyAiTimetableResult({ teacher_name: 'Giáo viên: Ánh' })", context);
+    assert.equal(vm.runInContext('selectedTimetableTeacherId', context), 2, 'AI timetable import assigns Ánh to Hoàng Xuân Ánh instead of Hồ Đăng Danh');
+}
+
+{
+    const teachers = [
+        { id: 1, name: 'Hồ Đăng Danh' },
+        { id: 2, name: 'Hoàng Xuân Ánh' }
+    ];
+    const context = vm.createContext({
+        teachers, String, Set, Math,
+        foldText: value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase()
+    });
+    vm.runInContext(declaration('matchTeacherByName'), context);
+    assert.equal(vm.runInContext("matchTeacherByName('Giáo viên: Ánh', teachers, null)?.id", context), 2, 'terminal given name Ánh matches Hoàng Xuân Ánh, not Hồ Đăng Danh');
+    assert.equal(vm.runInContext("matchTeacherByName('Hoàng Xuân Ánh', teachers, null)?.id", context), 2, 'the full normalized name matches exactly');
+    assert.equal(vm.runInContext("matchTeacherByName('Ánh', [{ id: 1, name: 'Hồ Đăng Danh' }], null)", context), null, 'a name token never matches a substring inside another token');
+    assert.equal(vm.runInContext("matchTeacherByName('Ánh', [{ id: 2, name: 'Hoàng Xuân Ánh' }, { id: 3, name: 'Nguyễn Thị Ánh' }], 3)?.id", context), 3, 'a selected teacher with the same terminal given name is retained');
+    assert.equal(vm.runInContext("matchTeacherByName('Ánh', [{ id: 2, name: 'Hoàng Xuân Ánh' }, { id: 3, name: 'Nguyễn Thị Ánh' }], null)", context), null, 'ambiguous given names do not select the wrong teacher');
 }
 
 {
     const days = ['2', '3', '4', '5', '6', '7'];
     const context = vm.createContext({
         state: { info: {}, teachers: [] },
+        selectedTimetableTeacherId: null,
         TT_DAYS: days,
         emptyTimetable: () => ({
             morning: Object.fromEntries(days.map(day => [day, {}])),
@@ -114,7 +135,7 @@ function emptyTimetable() {
         persistAndSaveTimetableLocal() {}, renderTimetableWorkspace() {}, renderTimetableTeacherList() {},
         showToast() {}, Date, Object, Set, Map, String, Number, parseInt
     });
-    vm.runInContext([declaration('alignSessionPeriods'), declaration('applyAiTimetableResult')].join('\n'), context);
+    vm.runInContext([declaration('alignSessionPeriods'), declaration('matchTeacherByName'), declaration('applyAiTimetableResult')].join('\n'), context);
     vm.runInContext(`applyAiTimetableResult({ afternoon: { '2': {
         '6': 'Toán - 61', '7': 'Toán - 62', '8': 'Toán - 63'
     } } })`, context);

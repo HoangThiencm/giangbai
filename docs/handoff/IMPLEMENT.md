@@ -21,6 +21,55 @@ Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
 ## Chưa thực hiện
 
 - Chưa commit hoặc push.
+
+---
+
+# IMPLEMENT: Khớp chính xác tên giáo viên khi AI nhận diện Thời khóa biểu
+
+## Phạm vi đã triển khai
+
+- `phancongtochuyenmon.html`
+  - Thêm `matchTeacherByName(rawName, teachers, currentTeacherId)` và dùng hàm này trong `applyAiTimetableResult()`.
+  - Chuẩn hóa/tách tên thành từng từ, bỏ tiền tố như “Giáo viên”, và chỉ xét giáo viên có từ cuối (tên chính) trùng khớp.
+  - Ưu tiên giáo viên đang được chọn khi tên đầy đủ hoặc tên chính khớp; khớp tên đầy đủ chính xác; dùng số từ họ/đệm trùng để phân giải; trả về `null` khi vẫn mơ hồ.
+  - Không còn so khớp chuỗi con, nên “Ánh” không thể bị gán nhầm sang “Hồ Đăng Danh”.
+- `tests/timetable-render-smoke.js`
+  - Bổ sung kiểm thử “Giáo viên: Ánh” → “Hoàng Xuân Ánh”, tên đầy đủ, giữ giáo viên đang chọn đúng tên chính, trường hợp mơ hồ và trường hợp không được khớp theo chuỗi con.
+
+## Kiểm tra đã chạy
+
+- `node Tests/timetable-render-smoke.js`: PASS.
+- `node Tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `node Tests/auto-reload-smoke.js`: PASS.
+- `git diff --check`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+
+---
+
+# IMPLEMENT: Phân bổ NLS/AI theo tổng PPCT
+
+## Phạm vi đã triển khai
+
+- `xaydungphuluc.html` và `canvas_xaydungphuluc.html`
+  - Đổi bộ chọn sang “Theo tổng số tiết PPCT” và “Theo tổng số bài PPCT” cho cả NLS lẫn AI.
+  - Thay toàn bộ phần tóm tắt/số đếm bằng “tiết PPCT” và “bài PPCT”.
+  - Viết lại Mục 4: AI đề xuất bài/tiết phù hợp từ PPCT và ngữ cảnh SGK; người dùng vẫn có thể rà soát, tick hoặc bỏ tick để điều chỉnh.
+  - Gỡ toàn bộ wording ngụ ý giới hạn 12 tiết; không thay đổi thuật toán phân bổ, thứ tự ưu tiên hoặc các ID/handler điều khiển.
+- `tests/xaydungphuluc-smoke.js` và `tests/canvas-xaydungphuluc-smoke.js`
+  - Kiểm tra nhãn mới, không còn cụm “dạy bài mới”, tổng PPCT vẫn gồm dòng ôn tập/kiểm tra không phải tiêu đề, và hành vi ưu tiên gợi ý được giữ nguyên.
+
+## Kiểm tra đã chạy
+
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `git diff --check`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
 - Cần chạy `/verify` để xác nhận các trang không còn tự refresh.
 
 ---
