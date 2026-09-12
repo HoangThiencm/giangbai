@@ -51,7 +51,7 @@ assert(target.includes("document.readyState==='loading'"),'Canvas bootstrap must
 assert(target.includes("window.addEventListener('error'"),'Canvas must surface script errors in the host banner');
 assert(target.includes("window.addEventListener('unhandledrejection'"),'Canvas must surface rejected promises in the host banner');
 ['function enrichNlsCode','function cleanNlsColumnText','function cleanAiColumnText','hasCode:hasAiCode(value)','return lines.length?lines.join(\'\\n\'):\'\''].forEach(value=>assert(target.includes(value),`missing clean Appendix 1 integration behavior: ${value}`));
-['nlsAdaptiveOptions','nlsNoAiDensity','Tự động theo tiết &amp; AI (Khuyên dùng)','function toggleNlsCustomDensity','function getExpectedNlsCount','noAiDensity','row.lesson,row.periods','QUY TẮC PHÂN BỔ NLS'].forEach(value=>assert(target.includes(value),`missing adaptive NLS behavior: ${value}`));
+['nlsAdaptiveOptions','nlsNoAiDensity','Tự động theo tiết &amp; AI (Khuyên dùng)','function toggleNlsCustomDensity','function getExpectedNlsCount','noAiDensity','row.lesson,row.periods','QUY TẮC PHÂN BỔ NLS','KHUNG SƯ PHẠM TỔNG QUÁT','CẤM TUYỆT ĐỐI gán mã Miền A','mô phỏng bánh răng','function subjectPedagogyGroup','function lessonAppliedNlsFallback','function recommendLessonAiCandidates'].forEach(value=>assert(target.includes(value),`missing adaptive NLS behavior: ${value}`));
 const adaptiveOptionsMarkup=target.match(/<div id="nlsAdaptiveOptions"[\s\S]*?<\/div><\/div><div class="border rounded-xl p-4">/);
 assert(adaptiveOptionsMarkup,'Canvas adaptive NLS options markup missing');
 assert(!adaptiveOptionsMarkup[0].includes('dark:bg-slate-800'),'Canvas adaptive NLS options must not use Tailwind dark background');
@@ -137,13 +137,15 @@ assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,false,adaptiveNlsConfig
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,true,adaptiveNlsConfig),0,'one-period lessons with AI must cap NLS at zero codes');
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,true,adaptiveNlsConfig),1,'AI-selected multi-period lessons must cap NLS at one code');
 const cleanIntegrationSandbox={};vm.createContext(cleanIntegrationSandbox);
-vm.runInContext(sliceNamedFunction('foldText')+'\n'+sliceNamedFunction('cleanLessonDescription')+'\n'+sliceNamedFunction('lessonAppliedNlsDescription')+'\n'+sliceNamedFunction('lessonAppliedAiDescription')+'\n'+sliceNamedFunction('enrichNlsCode')+'\n'+sliceNamedFunction('cleanNlsColumnText')+'\n'+sliceNamedFunction('cleanAiColumnText'),cleanIntegrationSandbox);
+vm.runInContext(sliceNamedFunction('foldText')+'\n'+sliceNamedFunction('foldSubjectName')+'\n'+sliceNamedFunction('currentSubjectName')+'\n'+sliceNamedFunction('isInformaticsSubject')+'\n'+sliceNamedFunction('subjectPedagogyGroup')+'\n'+sliceNamedFunction('nlsSubjectToolkit')+'\n'+sliceNamedFunction('lessonAppliedNlsFallback')+'\n'+sliceNamedFunction('lessonAppliedAiFallback')+'\n'+sliceNamedFunction('recommendLessonAiCandidates')+'\n'+sliceNamedFunction('cleanLessonDescription')+'\n'+sliceNamedFunction('lessonAppliedNlsDescription')+'\n'+sliceNamedFunction('lessonAppliedAiDescription')+'\n'+sliceNamedFunction('enrichNlsCode')+'\n'+sliceNamedFunction('cleanNlsColumnText')+'\n'+sliceNamedFunction('cleanAiColumnText'),cleanIntegrationSandbox);
 assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra].'),'5.3.TC2a - Sử dụng GeoGebra.','Canvas must remove a bracket before a final NLS period');
 assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra],'),'5.3.TC2a - Sử dụng GeoGebra','Canvas must remove a bracket before a final NLS comma');
 assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra] .'),'5.3.TC2a - Sử dụng GeoGebra.','Canvas must remove a spaced NLS bracket before a period');
 const malformedNls=cleanIntegrationSandbox.cleanNlsColumnText('5.3.TC1a - [1.2.TC1a] Đánh giá dữ liệu\n[1.1.TC1a] Thu thập dữ liệu\n[1.1.TC1a] Thu thập dữ liệu đầy đủ hơn','Bài 17. Thu thập và phân loại dữ liệu');
 assert.equal((malformedNls.match(/1\.1\.TC1a/g)||[]).length,1,'Canvas must de-duplicate NLS by code');
 assert(!/ - \]|5\.3\.TC1a - \[1\.2\.TC1a\]/.test(malformedNls),'Canvas must remove nested NLS code and stray brackets');
+assert.deepEqual(cleanIntegrationSandbox.recommendLessonAiCandidates('Bài 1. Tập hợp','6','Toán học'),['6.B2.1','6.D1.1'],'Canvas Toán must recommend AI domain B then D');
+assert.deepEqual(cleanIntegrationSandbox.recommendLessonAiCandidates('Văn bản nghị luận','8','Ngữ văn'),['8.B2.1','8.D1.1'],'Canvas Ngữ văn must recommend AI domain B then D');
 assert.equal(cleanIntegrationSandbox.cleanAiColumnText('[AI: 6.A1.1 - Hỗ trợ bài tập]. (Áp dụng: tiết 1).'),'6.A1.1 - Hỗ trợ bài tập. (Áp dụng: tiết 1).','Canvas must retain AI scope while removing its stray bracket');
 assert.equal(cleanIntegrationSandbox.cleanAiColumnText(''),'','Canvas must preserve the blank Appendix 1 AI cell');
 const canvasBareAi = cleanIntegrationSandbox.cleanAiColumnText('9.B2.1 - (Áp dụng: tiết 1, 2).', 'Bài 1: Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn');

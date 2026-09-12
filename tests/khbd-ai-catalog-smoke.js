@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { KHBD_STANDARDS, recommendOfficialStandards, entriesForGrade } = require("../js/khbd-standards.js");
+const { KHBD_STANDARDS, recommendOfficialStandards, entriesForGrade, isUnnaturalOfficialStandard } = require("../js/khbd-standards.js");
 
 const expectedCodes = {
   6: "A1.1 A1.2 A1.3 A3.1 A3.2 A3.3 A3.4 B1.1 B2.1 C1.1 C1.MR1 C1.MR2 C1.2 C1.MR3 C2.1 C2.2 C2.MR1 C3.1 C3.MR1 D1.1 D1.MR1 D2.1 D2.MR1 D2.MR2".split(" "),
@@ -47,5 +47,13 @@ assert.deepStrictEqual(recommendOfficialStandards("ai", { ...baseContext, grade:
 for (const grade of [6, 7, 8, 9]) {
   const recommended = recommendOfficialStandards("ai", { ...baseContext, grade, aiOn: true });
   assert.ok(recommended.every(entry => entry.grade === grade && entry.officialCode.startsWith(`${grade}.`)), `Chỉ đề xuất mã AI đúng lớp ${grade}`);
+  assert.ok(recommended.every(entry => !/^\d+\.A/i.test(entry.officialCode)), `Toán lớp ${grade} không được gán mã Miền A`);
+  assert.ok(recommended.some(entry => /^\d+\.B2/i.test(entry.officialCode) || /^\d+\.D1/i.test(entry.officialCode)), `Toán lớp ${grade} phải ưu tiên Miền B hoặc D`);
 }
+assert.ok(isUnnaturalOfficialStandard("ai", { code: "6.A1.1" }, { subjectName: "Toán học" }), "Miền A phải unnatural với môn Toán");
+assert.ok(isUnnaturalOfficialStandard("ai", { code: "8.A3.2" }, { subjectName: "Ngữ văn" }), "Miền A phải unnatural với môn Ngữ văn");
+assert.ok(!isUnnaturalOfficialStandard("ai", { code: "6.A1.1" }, { subjectName: "Tin học" }), "Miền A vẫn hợp lệ với môn Tin học");
+assert.ok(!isUnnaturalOfficialStandard("ai", { code: "6.B2.1" }, { subjectName: "Toán học" }), "Miền B vẫn hợp lệ với môn không phải Tin học");
+const tinRecommended = recommendOfficialStandards("ai", { ...baseContext, subjectName: "Tin học", grade: 6, aiOn: true });
+assert.ok(tinRecommended.some(entry => /^\d+\.A/i.test(entry.officialCode)) || tinRecommended.length > 0, "Tin học vẫn được đề xuất mã AI, gồm cả Miền A nếu phù hợp");
 console.log("khbd AI catalog smoke: passed");

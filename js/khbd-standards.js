@@ -169,6 +169,10 @@ function detectLessonMathBranch(topic, vision) {
   return "";
 }
 
+function isInformaticsSubjectName(subjectName) {
+  return /tin hoc|cong nghe thong tin|lap trinh/.test(foldStandardText(subjectName || ""));
+}
+
 function isUnnaturalOfficialStandard(kind, entry, ctx) {
   const branch = detectLessonMathBranch(ctx.topic, ctx.vision);
   const code = String(entry.componentCode || entry.code || "");
@@ -180,6 +184,8 @@ function isUnnaturalOfficialStandard(kind, entry, ctx) {
     if (!hasStudentTech && (/^3\.4/.test(code) || /^3\.3/.test(code))) return true;
   }
   if (kind === "ai") {
+    const subjectName = ctx.subjectName || ctx.subject || "";
+    if (!isInformaticsSubjectName(subjectName) && /^\d+\.A/i.test(code)) return true;
     const label = foldStandardText(entry.label);
     if ((branch === "geometry" || branch === "algebra") && /dao duc|ban quyen|du lieu ca nhan|quyen rieng tu|thien vi|gia mao/.test(label)) return true;
   }
@@ -281,6 +287,12 @@ function scoreOfficialStandard(kind, entry, ctx) {
   } else if (kind === "ai") {
     if (!ctx.aiOn && !/\bai\b|chatbot|gemini|tri tue nhan tao/.test(hay)) return 0;
     score = 0;
+    const isTin = isInformaticsSubjectName(ctx.subjectName || ctx.subject || "");
+    if (!isTin) {
+      if (/^\d+\.B2/i.test(code)) score += 8;
+      if (/^\d+\.D1/i.test(code)) score += 7;
+      if (/^\d+\.C/i.test(code) && /du an|stem|trai nghiem|thuc hanh/.test(hay)) score += 6;
+    }
     const labelWords = foldStandardText(entry.label).split(" ").filter(word => word.length >= 5);
     const lessonWords = new Set(hay.split(" "));
     score += labelWords.filter(word => lessonWords.has(word)).length;
@@ -329,5 +341,5 @@ function recommendOfficialStandards(kind, ctx) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { KHBD_STANDARDS, recommendOfficialStandards, standardToRecord, entriesForGrade, detectLessonMathBranch, isUnnaturalOfficialStandard };
+  module.exports = { KHBD_STANDARDS, recommendOfficialStandards, standardToRecord, entriesForGrade, detectLessonMathBranch, isUnnaturalOfficialStandard, isInformaticsSubjectName };
 }

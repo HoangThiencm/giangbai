@@ -47,7 +47,7 @@ assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,adaptive),3,'the 
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,false,adaptive),1,'one-period lessons without AI must cap NLS at one code');
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,true,adaptive),0,'one-period lessons with AI must cap NLS at zero codes');
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,true,adaptive),1,'multi-period lessons with AI must cap NLS at one code');
-['appendixPrompt','NGUYÊN TẮC BẢO TOÀN PPCT NGUỒN','giữ nguyên 100%','Tuần 1 đến Tuần 35','Phụ lục 1','Phụ lục 2','Phụ lục 3','Công văn 5512','TT 38/2021','TT 14/2020'].forEach(has);
+['appendixPrompt','NGUYÊN TẮC BẢO TOÀN PPCT NGUỒN','giữ nguyên 100%','Tuần 1 đến Tuần 35','Phụ lục 1','Phụ lục 2','Phụ lục 3','Công văn 5512','TT 38/2021','TT 14/2020','KHUNG SƯ PHẠM TỔNG QUÁT','CẤM TUYỆT ĐỐI gán mã Miền A','mô phỏng bánh răng','function subjectPedagogyGroup','function lessonAppliedNlsFallback','function lessonAppliedAiFallback'].forEach(has);
 ['parseFiles','extractPpctRows','extractDocxTables','ingestSourceTables','preserveSourceSchedule','mammoth.extractRawText','pdfjsLib','XLSX.read','generateSelected','exportDocx','contenteditable','exportAll'].forEach(has);
 has('max-w-[98%]');
 has('min-width:900px');
@@ -380,6 +380,16 @@ assert.equal(sandbox.cleanMathEntityName(conceptLesson),'phương trình và h�
 assert(!sandbox.lessonAppliedNlsDescription('5.3.TC2a','',conceptLesson).includes('nghiệm của Khái niệm phương trình'),'NLS must not describe a solution of a concept');
 assert(sandbox.lessonAppliedNlsDescription('5.3.TC2a','',conceptLesson).includes('nghiệm của phương trình'),'NLS must use the mathematical entity for solutions');
 assert(!sandbox.lessonAppliedAiDescription('9.B2.1','',conceptLesson).includes('nghiệm của Khái niệm phương trình'),'AI must not describe a solution of a concept');
+assert.deepEqual(sandbox.recommendLessonAiCandidates('Bài 1. Tập hợp','6','Toán học'),['6.B2.1','6.D1.1'],'Toán must recommend AI domain B then D, never A');
+assert.deepEqual(sandbox.recommendLessonAiCandidates('Bài thơ lục bát','8','Ngữ văn'),['8.B2.1','8.D1.1'],'Ngữ văn must recommend AI domain B then D');
+assert.deepEqual(sandbox.recommendLessonAiCandidates('Hoạt động thực hành trải nghiệm STEM','7','Khoa học tự nhiên'),['7.B2.1','7.C4.1'],'experiential/STEM lessons may use domain C with B');
+assert.deepEqual(sandbox.recommendLessonAiCandidates('Thuật toán tìm kiếm','6','Tin học'),['6.A1.1','6.B2.1'],'Tin học may still use domain A');
+const vanNls=sandbox.lessonAppliedNlsFallback('3.1.TC1a','Bài 2. Văn bản nghị luận','Ngữ văn');
+assert(vanNls.includes('sơ đồ tư duy')||vanNls.includes('tư liệu số')||vanNls.includes('bản đồ số'),'NLS for social-science subjects must name a real digital tool');
+assert(vanNls.includes('Bài 2. Văn bản nghị luận'),'NLS fallback must keep the lesson title');
+const toanAiA=sandbox.lessonAppliedAiDescription('6.A1.1','','Bài văn tả cảnh');
+assert(!/lap trinh|may hoc|nguyen ly/i.test(sandbox.foldText(toanAiA)),'non-IT domain A codes must not talk about programming AI');
+assert(toanAiA.includes('trợ lý AI')&&toanAiA.includes('đối chiếu'),'non-IT AI descriptions must use the assistant + verification formula');
 const separate=sandbox.separateIntegration(splitValue,[1,3],0,splitConfig,'Bài mẫu');
 assert.equal(separate.nlsText,'-','one-period AI lessons must not emit an NLS code');
 assert(/^6\.A\d+\.\d+/i.test(separate.aiText)&&!/[\[\]]/.test(separate.aiText)&&separate.aiText.includes('Áp dụng: tiết 1, 3'),'AI column must isolate a clean code and scope multiple selected periods');

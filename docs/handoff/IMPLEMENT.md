@@ -1,3 +1,36 @@
+# IMPLEMENT: Loại trừ NLS/AI bài 1 tiết, Canvas mở rộng và khung sư phạm tổng quát
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- PHẦN A — `canvas_xaydungphuluc.html` và `xaydungphuluc.html`
+  - Giữ loại trừ lẫn nhau NLS/AI trên bài 1 tiết (gợi ý tự động + checkbox). Chọn NLS bù đủ mục tiêu tiết khi bài 1 tiết đã có AI.
+- PHẦN B — 6 công cụ `backupcode viettailieu`
+  - Layout mở rộng, anti-FOUC, banner Canvas, `canvasConfirm`/`canvasStorage`, nút Gọn, PDF Worker an toàn. Không sửa file backup gốc.
+- PHẦN C — khung sư phạm tổng quát
+  - `js/khbd-standards.js`: `isUnnaturalOfficialStandard` đánh dấu mọi mã Miền A là unnatural với môn không phải Tin học/CNTT/lập trình; ưu tiên điểm Miền B2 và D1.
+  - `xaydungphuluc.html` và `canvas_xaydungphuluc.html`: ma trận công cụ theo môn; fallback mô tả NLS/AI theo công thức 3 thành phần; `recommendLessonAiCandidates` trả B2.1+D1.1 (hoặc B+C với bài trải nghiệm/STEM); prompt Gemini cấm Miền A và ngữ cảnh gượng ép (bánh răng, lịch sử chatbot).
+- Tests
+  - `tests/khbd-ai-catalog-smoke.js`, `tests/xaydungphuluc-smoke.js`, `tests/canvas-xaydungphuluc-smoke.js`, `tests/sgk-knowledge-smoke.js` đồng bộ quy tắc B/D cho môn không phải Tin học.
+
+## Kiểm tra đã chạy
+
+- `node tests/khbd-ai-catalog-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS (gồm mô phỏng 28/140 tiết NLS).
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-math-smoke.js`: PASS.
+- `node tests/sgk-knowledge-smoke.js`: PASS.
+- `node tests/backupcode-canvas-smoke.js`: PASS.
+- `node tests/khbd-structured-candidates-smoke.js`: PASS.
+- `node tests/khbd-4steps-workflow-smoke.js`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+
+---
+
 # IMPLEMENT: Loại trừ NLS/AI bài một tiết và hoàn thiện Canvas mở rộng
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`

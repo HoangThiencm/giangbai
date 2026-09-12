@@ -493,20 +493,21 @@ const aiCandidatesB3 = sandbox.recommendLessonAiCandidates(b3.lesson_title, 9);
 assert(Array.isArray(aiCandidatesB1) && aiCandidatesB1.length >= 2, 'Bài 1 phải có ít nhất 2 mã AI đề xuất');
 assert(Array.isArray(aiCandidatesB2) && aiCandidatesB2.length >= 2, 'Bài 2 phải có ít nhất 2 mã AI đề xuất');
 assert(Array.isArray(aiCandidatesB3) && aiCandidatesB3.length >= 2, 'Bài 3 phải có ít nhất 2 mã AI đề xuất');
-assert(aiCandidatesB1.includes('9.B2.1') && aiCandidatesB1.includes('9.A3.2'), 'Bài 1 phải kết hợp Miền B (kiểm chứng định nghĩa) và Miền A (tạo ví dụ, tư duy logic)');
-assert(aiCandidatesB2.includes('9.B2.1') && aiCandidatesB2.includes('9.A3.1'), 'Bài 2 phải kết hợp Miền B (phương pháp giải tối ưu) và Miền A (phản biện các bước giải)');
-assert(aiCandidatesB3.includes('9.B2.1') && aiCandidatesB3.includes('9.D1.1'), 'Bài 3 phải kết hợp Miền B (chọn ẩn số) và Miền D (đánh giá mức độ tin cậy mô hình)');
+assert(aiCandidatesB1.includes('9.B2.1') && aiCandidatesB1.includes('9.D1.1'), 'Bài 1 Toán phải dùng Miền B (trợ lý học tập) và Miền D (kiểm chứng), không dùng Miền A');
+assert(aiCandidatesB2.includes('9.B2.1') && aiCandidatesB2.includes('9.D1.1'), 'Bài 2 Toán phải dùng Miền B và Miền D, không dùng Miền A');
+assert(aiCandidatesB3.includes('9.B2.1') && aiCandidatesB3.includes('9.D1.1'), 'Bài 3 Toán phải dùng Miền B và Miền D, không dùng Miền A');
+assert([aiCandidatesB1, aiCandidatesB2, aiCandidatesB3].every(list => list.every(code => !/^\d+\.A/i.test(code))), 'Môn Toán không được gán mã Miền A');
 
 // Kiểm tra fallbackAiCodes khi chọn mật độ 2-3 mã/bài
-const multiAiCodes = sandbox.fallbackAiCodes(0, { lop: '9', ai: { density: '2-3' } }, b2.lesson_title, 2, [1, 2]);
+const multiAiCodes = sandbox.fallbackAiCodes(0, { lop: '9', monHoc: 'Toán học', ai: { density: '2-3' } }, b2.lesson_title, 2, [1, 2]);
 assert.equal(multiAiCodes.length, 2, 'Khi mật độ 2-3 mã/bài, fallbackAiCodes phải sinh đủ 2 mã AI');
-assert(multiAiCodes[0].text.includes('9.B2.1') && multiAiCodes[1].text.includes('9.A3.1'), 'Phải sinh đúng 2 mã AI phân hóa');
+assert(multiAiCodes[0].text.includes('9.B2.1') && multiAiCodes[1].text.includes('9.D1.1'), 'Phải sinh đúng 2 mã AI Miền B và D cho môn Toán');
 
 // Kiểm tra renderSgkDetailAiBlock trong modal chi tiết
 const renderedAiHtml = sandbox.renderSgkDetailAiBlock(b1, 9);
 assert(renderedAiHtml.includes('Trí tuệ nhân tạo (QĐ 2422):'), 'Phải render khối AI');
-assert(renderedAiHtml.includes('Mã AI: 9.B2.1') && renderedAiHtml.includes('Mã AI: 9.A3.2'), 'Phải render cả 2 badge mã AI');
-assert(renderedAiHtml.includes('[9.B2.1]') && renderedAiHtml.includes('[9.A3.2]'), 'Phải có mô tả hành động phân rã riêng cho từng mã');
+assert(renderedAiHtml.includes('Mã AI: 9.B2.1') && renderedAiHtml.includes('Mã AI: 9.D1.1'), 'Phải render badge Miền B và D');
+assert(renderedAiHtml.includes('[9.B2.1]') && renderedAiHtml.includes('[9.D1.1]'), 'Phải có mô tả hành động phân rã riêng cho từng mã');
 
 console.log('  -> Hỗ trợ Đa mã AI (Multi-Code AI) theo khung QĐ 2422: PASS');
 
