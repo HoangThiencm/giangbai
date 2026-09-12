@@ -732,10 +732,10 @@
         #tt-right-panel {
             flex: 1;
             overflow-y: auto;
-            padding: 16px 20px 24px;
+            padding: 10px 14px 12px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
         }
         .tt-teacher-item {
             display: flex;
@@ -901,24 +901,35 @@
         }
         .tt-dropzone.dragover { background: #eef2ff; border-color: #818cf8; }
         .tt-preview { max-height: 180px; max-width: 100%; border-radius: 8px; margin-top: 8px; display: none; }
-        .tt-grid { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-        .tt-grid th, .tt-grid td { border: 1px solid #e2e8f0; padding: 4px; text-align: center; min-width: 86px; }
-        .tt-grid th { background: #f8fafc; font-weight: 800; color: #334155; }
+        .tt-import-card { border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; padding: 4px 10px; }
+        .tt-import-summary { cursor: pointer; font-size: 0.78rem; font-weight: 700; color: #4338ca; display: flex; justify-content: space-between; align-items: center; padding: 4px 0; user-select: none; }
+        .tt-import-badge { font-size: 0.68rem; color: #64748b; font-weight: normal; }
+        .tt-import-body { padding-top: 8px; border-top: 1px solid #f1f5f9; margin-top: 4px; }
+        .tt-sessions-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+        .tt-session-col { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .tt-session-title { font-size: 0.78rem; font-weight: 800; color: #1e293b; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+        .tt-grid { width: 100%; border-collapse: collapse; font-size: 0.68rem; table-layout: fixed; }
+        .tt-grid th, .tt-grid td { border: 1px solid #e2e8f0; padding: 2px; text-align: center; }
+        .tt-grid th { background: #f8fafc; font-weight: 800; color: #334155; padding: 2px 1px; font-size: 0.68rem; line-height: 1.1; }
         .tt-cell {
-            min-height: 44px;
+            min-height: 26px;
             width: 100%;
             border: none;
             background: #eef2ff;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
             font-family: inherit;
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             font-weight: 700;
             color: #312e81;
-            padding: 4px 3px;
-            line-height: 1.25;
+            padding: 2px 1px;
+            line-height: 1.1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
-        .tt-cell.empty { background: #f8fafc; color: #94a3b8; font-weight: 600; }
+        .tt-cell.empty { background: #fafafa; color: #94a3b8; font-weight: 500; font-size: 0.62rem; min-height: 22px; }
         .tt-cell:hover { outline: 2px solid #818cf8; }
         .period-slot .slot-fields {
             display: flex;
@@ -1553,10 +1564,16 @@
             left: 0;
             z-index: 2;
             background: #f8fafc;
-            min-width: 64px;
+            min-width: 44px;
+            width: 44px;
+            padding: 2px 3px;
+            font-size: 0.66rem;
             box-shadow: 4px 0 8px -4px rgba(15, 23, 42, 0.18);
         }
         .tt-grid thead th:first-child { z-index: 3; }
+        @media (max-width: 1024px) {
+            .tt-sessions-container { grid-template-columns: 1fr; }
+        }
         .dt-filter-label { font-size: 0.8rem; font-weight: 800; color: #1e293b; }
         .dt-filter-month { width: 130px; font-weight: 700; padding: 5px 10px; }
         .dt-filter-teacher { min-width: 180px; padding: 5px 10px; }
@@ -1911,35 +1928,46 @@
         </aside>
         <main id="tt-right-panel">
             <div id="tt-workspace-header"></div>
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin:0;">
-                <div class="form-group">
-                    <label>Năm học:</label>
-                    <input type="text" class="form-control" id="tt-school-year" placeholder="VD: 2026 - 2027" onchange="persistAndSaveTimetableLocal()">
+            <details class="tt-import-card" id="tt-import-details">
+                <summary class="tt-import-summary"><span><i class="fas fa-image"></i> Nhập ảnh Thời khóa biểu</span><span class="tt-import-badge">Dán, kéo thả hoặc chọn ảnh</span></summary>
+                <div class="tt-import-body">
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin:0;">
+                        <div class="form-group">
+                            <label>Năm học:</label>
+                            <input type="text" class="form-control" id="tt-school-year" placeholder="VD: 2026 - 2027" onchange="persistAndSaveTimetableLocal()">
+                        </div>
+                        <div class="form-group">
+                            <label>Học kỳ:</label>
+                            <input type="text" class="form-control" id="tt-semester" placeholder="VD: Học kỳ 1" onchange="persistAndSaveTimetableLocal()">
+                        </div>
+                    </div>
+                    <div class="tt-dropzone" id="tt-dropzone" onclick="document.getElementById('tt-file-input').click()">
+                        <input type="file" id="tt-file-input" accept="image/*" class="hidden" onchange="handleTimetableFile(this.files && this.files[0])">
+                        <div><i class="fas fa-image" style="font-size:1.4rem; color:#4338ca;"></i></div>
+                        <p style="margin:8px 0 4px; font-weight:800;">Dán ảnh TKB (Ctrl+V), kéo thả hoặc bấm để chọn file</p>
+                        <p style="margin:0; color:#64748b; font-size:0.8rem;">Ảnh chụp màn hình Thời khoá biểu giáo viên (JPG/PNG)</p>
+                        <div style="margin-top:8px;">
+                            <img id="tt-preview" class="tt-preview" alt="Xem trước TKB">
+                            <button type="button" class="btn-small" id="tt-clear-preview" style="display:none;" onclick="event.stopPropagation(); clearTimetablePreview()">Xóa ảnh</button>
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end;">
+                        <button type="button" class="btn-small btn-small-primary" id="btn-ai-scan-tt" onclick="scanTimetableWithAI()">
+                            <i class="fas fa-wand-magic-sparkles"></i> AI nhận diện TKB
+                        </button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Học kỳ:</label>
-                    <input type="text" class="form-control" id="tt-semester" placeholder="VD: Học kỳ 1" onchange="persistAndSaveTimetableLocal()">
-                </div>
+            </details>
+            <div class="tt-sessions-container">
+                <section class="tt-session-col">
+                    <div class="tt-session-title"><i class="fas fa-sun"></i> Buổi sáng</div>
+                    <div class="tt-grid-scroll" id="tt-morning-wrap"></div>
+                </section>
+                <section class="tt-session-col">
+                    <div class="tt-session-title"><i class="fas fa-moon"></i> Buổi chiều</div>
+                    <div class="tt-grid-scroll" id="tt-afternoon-wrap"></div>
+                </section>
             </div>
-            <div class="tt-dropzone" id="tt-dropzone" onclick="document.getElementById('tt-file-input').click()">
-                <input type="file" id="tt-file-input" accept="image/*" class="hidden" onchange="handleTimetableFile(this.files && this.files[0])">
-                <div><i class="fas fa-image" style="font-size:1.4rem; color:#4338ca;"></i></div>
-                <p style="margin:8px 0 4px; font-weight:800;">Dán ảnh TKB (Ctrl+V), kéo thả hoặc bấm để chọn file</p>
-                <p style="margin:0; color:#64748b; font-size:0.8rem;">Ảnh chụp màn hình Thời khoá biểu giáo viên (JPG/PNG)</p>
-                <div style="margin-top:8px;">
-                    <img id="tt-preview" class="tt-preview" alt="Xem trước TKB">
-                    <button type="button" class="btn-small" id="tt-clear-preview" style="display:none;" onclick="event.stopPropagation(); clearTimetablePreview()">Xóa ảnh</button>
-                </div>
-            </div>
-            <div style="display:flex; justify-content:flex-end;">
-                <button type="button" class="btn-small btn-small-primary" id="btn-ai-scan-tt" onclick="scanTimetableWithAI()">
-                    <i class="fas fa-wand-magic-sparkles"></i> AI nhận diện TKB
-                </button>
-            </div>
-            <h4 style="margin:0 0 8px; font-size:0.88rem; font-weight:800;">Buổi sáng</h4>
-            <div class="tt-grid-scroll" id="tt-morning-wrap"></div>
-            <h4 style="margin:8px 0; font-size:0.88rem; font-weight:800;">Buổi chiều</h4>
-            <div class="tt-grid-scroll" id="tt-afternoon-wrap"></div>
             <div class="tt-toolbar">
                 <label class="checkbox-group" style="margin:0;">
                     <input type="checkbox" id="tt-auto-apply-assign" checked>
@@ -5865,7 +5893,11 @@
                     e.preventDefault();
                     zone.classList.remove('dragover');
                     const file = e.dataTransfer?.files?.[0];
-                    if (file) handleTimetableFile(file);
+                    if (file) {
+                        const details = document.getElementById('tt-import-details');
+                        if (details) details.open = true;
+                        handleTimetableFile(file);
+                    }
                 });
             }
             if (!ttPasteBound) {
@@ -5877,6 +5909,8 @@
                     for (const item of items) {
                         if (item.type && item.type.startsWith('image/')) {
                             e.preventDefault();
+                            const details = document.getElementById('tt-import-details');
+                            if (details) details.open = true;
                             handleTimetableFile(item.getAsFile());
                             break;
                         }
@@ -5897,6 +5931,8 @@
 
         function setTimetablePreview(dataUrl) {
             ttImageDataUrl = dataUrl;
+            const details = document.getElementById('tt-import-details');
+            if (details && dataUrl) details.open = true;
             const preview = document.getElementById('tt-preview');
             if (preview && dataUrl) {
                 preview.src = dataUrl;
@@ -5967,6 +6003,8 @@
                 const compressed = await compressTimetableImage(ttImageDataUrl);
                 const parts = splitImageDataUrl(compressed);
                 if (!parts) throw new Error('Không đọc được dữ liệu ảnh.');
+                const mPeriods = getSessionPeriods('morning');
+                const aPeriods = getSessionPeriods('afternoon');
                 const prompt = `Bạn là trợ lý AI chuyên nhận diện bảng Thời khóa biểu giáo viên THCS tại Việt Nam.
 Hãy đọc ảnh Thời khóa biểu đính kèm và trích xuất thành định dạng JSON chuẩn.
 Cấu trúc JSON yêu cầu:
@@ -5994,7 +6032,9 @@ Cấu trúc JSON yêu cầu:
 }
 Quy tắc:
 - Key của các ngày: "2" (Thứ 2), "3" (Thứ 3), "4" (Thứ 4), "5" (Thứ 5), "6" (Thứ 6), "7" (Thứ 7).
-- Key của các tiết là số tiết (ví dụ: "1", "2", "3", "4", "5", hoặc "7", "8", "9").
+- Khung tiết thực tế của trường: Buổi sáng gồm ${mPeriods.join(', ')}; Buổi chiều gồm ${aPeriods.join(', ')}.
+- Key tiết trong "morning" BẮT BUỘC chỉ là một trong: ${mPeriods.join(', ')}. Key tiết trong "afternoon" BẮT BUỘC chỉ là một trong: ${aPeriods.join(', ')}.
+- Nếu ảnh không in số tiết hoặc chỉ có các hàng, BẮT BUỘC ghép các hàng từ trên xuống theo đúng thứ tự khung tiết: hàng đầu là tiết đầu tiên của buổi, hàng kế là tiết tiếp theo. Tuyệt đối không tự suy đoán tiết 6 khi buổi chiều của trường bắt đầu từ tiết ${aPeriods[0] || ''}.
 - Giá trị mỗi tiết là chuỗi định dạng "TênMôn - TênLớp" (ví dụ: "Toán - 63", "HĐTN - 64"), nếu tiết trống thì bỏ qua hoặc để rỗng "".
 - Chỉ trả về duy nhất khối JSON hợp lệ, không bọc thêm văn bản giải thích.`;
                 const payload = {
@@ -6030,6 +6070,26 @@ Quy tắc:
             }
         }
 
+        function alignSessionPeriods(srcSessionObj, configuredPeriods) {
+            const configured = [...new Set((configuredPeriods || []).map(period => parseInt(period, 10)).filter(period => period > 0))];
+            if (!configured.length || !srcSessionObj || typeof srcSessionObj !== 'object') return srcSessionObj || {};
+            const sourcePeriods = [...new Set(Object.values(srcSessionObj).flatMap(day => Object.keys(day || {}).map(period => parseInt(period, 10)).filter(period => period > 0)))].sort((a, b) => a - b);
+            const configuredSet = new Set(configured);
+            const matchesConfigured = sourcePeriods.length === configured.length && sourcePeriods.every(period => configuredSet.has(period));
+            if (matchesConfigured || sourcePeriods.length > configured.length) return srcSessionObj;
+
+            const periodMap = new Map(sourcePeriods.map((period, index) => [String(period), String(configured[index])]));
+            return Object.fromEntries(Object.entries(srcSessionObj).map(([day, cells]) => [day, Object.entries(cells || {}).reduce((aligned, [period, value]) => {
+                const target = periodMap.get(String(parseInt(period, 10))) || String(period);
+                if (Object.prototype.hasOwnProperty.call(aligned, target)) {
+                    aligned[String(period)] = value;
+                } else {
+                    aligned[target] = value;
+                }
+                return aligned;
+            }, {})]));
+        }
+
         function applyAiTimetableResult(raw) {
             const next = emptyTimetable();
             next.school_year = raw.school_year || state.info?.school_year || '';
@@ -6037,8 +6097,9 @@ Quy tắc:
             next.updated_at = new Date().toISOString().slice(0, 10);
             ['morning', 'afternoon'].forEach(session => {
                 const src = raw[session] && typeof raw[session] === 'object' ? raw[session] : {};
+                const alignedSrc = alignSessionPeriods(src, getSessionPeriods(session));
                 TT_DAYS.forEach(day => {
-                    const cells = src[day] || src[Number(day)] || {};
+                    const cells = alignedSrc[day] || alignedSrc[Number(day)] || {};
                     Object.keys(cells || {}).forEach(period => {
                         const parsed = parseTimetableCell(cells[period]);
                         if (parsed) next[session][day][String(period)] = parsed;

@@ -81,6 +81,7 @@ function emptyTimetable() {
         state: { info: {}, teachers: [{ id: 123, name: 'Cô An' }] },
         TT_DAYS: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
         emptyTimetable,
+        getSessionPeriods: () => [],
         parseTimetableCell: value => value,
         foldText: value => String(value).toLowerCase(),
         document: { getElementById: id => id === 'tt-auto-apply-assign' ? { checked: true } : null },
@@ -91,11 +92,45 @@ function emptyTimetable() {
         renderTimetableTeacherList() { listRenders++; },
         showToast() {}, console: { error() {} }, Date
     });
-    vm.runInContext(declaration('applyAiTimetableResult'), context);
+    vm.runInContext([declaration('alignSessionPeriods'), declaration('applyAiTimetableResult')].join('\n'), context);
     vm.runInContext("applyAiTimetableResult({ teacher_name: 'Cô An' })", context);
     assert.equal(workspaceRenders, 1, 'the timetable workspace renders even when assignment sync fails');
     assert.equal(listRenders, 1, 'the timetable teacher list refreshes after AI recognition');
 }
+
+{
+    const days = ['2', '3', '4', '5', '6', '7'];
+    const context = vm.createContext({
+        state: { info: {}, teachers: [] },
+        TT_DAYS: days,
+        emptyTimetable: () => ({
+            morning: Object.fromEntries(days.map(day => [day, {}])),
+            afternoon: Object.fromEntries(days.map(day => [day, {}]))
+        }),
+        getSessionPeriods: session => session === 'afternoon' ? [7, 8, 9] : [1, 2, 3, 4],
+        parseTimetableCell: value => value,
+        foldText: value => String(value).toLowerCase(),
+        document: { getElementById: () => null },
+        persistAndSaveTimetableLocal() {}, renderTimetableWorkspace() {}, renderTimetableTeacherList() {},
+        showToast() {}, Date, Object, Set, Map, String, Number, parseInt
+    });
+    vm.runInContext([declaration('alignSessionPeriods'), declaration('applyAiTimetableResult')].join('\n'), context);
+    vm.runInContext(`applyAiTimetableResult({ afternoon: { '2': {
+        '6': 'Toán - 61', '7': 'Toán - 62', '8': 'Toán - 63'
+    } } })`, context);
+    const afternoon = JSON.parse(JSON.stringify(context.editingTimetable.afternoon['2']));
+    assert.deepEqual(afternoon, { '7': 'Toán - 61', '8': 'Toán - 62', '9': 'Toán - 63' }, 'AI periods 6–8 align to the configured afternoon periods 7–9');
+    assert.equal(afternoon['6'], undefined, 'period 6 is not created when the afternoon begins at period 7');
+    const alreadyAligned = JSON.parse(JSON.stringify(vm.runInContext(`alignSessionPeriods({ '2': {
+        '7': 'Toán - 71', '8': 'Toán - 72', '9': 'Toán - 73'
+    } }, [7, 8, 9])`, context)));
+    assert.deepEqual(alreadyAligned, { '2': { '7': 'Toán - 71', '8': 'Toán - 72', '9': 'Toán - 73' } }, 'already configured AI periods remain unchanged');
+}
+
+assert.match(html, /<details class="tt-import-card" id="tt-import-details">/, 'timetable import controls are collapsible');
+assert.match(html, /<div class="tt-sessions-container">[\s\S]*id="tt-morning-wrap"[\s\S]*id="tt-afternoon-wrap"/, 'morning and afternoon grids share the sessions container');
+assert.match(html, /\.tt-sessions-container\s*\{\s*display:\s*grid;\s*grid-template-columns:\s*1fr 1fr;/, 'desktop timetable layout uses two columns');
+assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\s*\{\s*grid-template-columns:\s*1fr;/, 'small screens collapse timetable sessions to one column');
 
 {
     const source = ['emptyDayMap', 'emptyTimetable', 'splitSubjectAndClass', 'parseTimetableCell', 'normalizeTeacherTimetable', 'timetableHasLessons', 'countTimetableLessons', 'periodsForTimetableSession', 'timetableEmailSessionTable', 'buildSelectedTeachersTimetableEmail'].map(declaration).join('\n');
@@ -133,4 +168,4 @@ function emptyTimetable() {
     assert(html.includes(token), `missing selected-teacher timetable email control: ${token}`);
 });
 
-console.log('PASS: timetable view loads numeric IDs and JSON data, preserves grid fallbacks, renders after AI sync errors, and builds selected-teacher timetable email.');
+console.log('PASS: timetable view loads numeric IDs and JSON data, uses a compact responsive layout, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');
