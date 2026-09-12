@@ -95,6 +95,10 @@ assert.equal(parserSandbox.safeParseAiJson(rawControl(9)).note,'Dòng một\tDò
 assert.equal(parserSandbox.safeParseAiJson(rawControl(1)).note,`Dòng một${String.fromCharCode(1)}Dòng hai`,'other raw control characters must be preserved through Unicode escaping');
 assert.deepEqual(JSON.parse(JSON.stringify(parserSandbox.safeParseAiJson('Lời dẫn\n```json\n{"items":[1,2,],}\n```\nLời kết'))),{items:[1,2]},'parser must extract fenced JSON from prose and recover trailing commas');
 assert.equal(parserSandbox.safeParseAiJson(String.raw`{"formula":"\alpha"}`).formula,'\\alpha','a bare LaTex backslash must be converted into a JSON-safe literal backslash');
+for(const command of ['frac{a}{b}','begin{cases}','text{mẫu}','neq']){
+  const formula=parserSandbox.safeParseAiJson(`{"formula":"\\${command}"}`).formula;
+  assert.equal(formula,`\\${command}`,`LaTeX \\${command} must survive JSON parsing without a control character`);
+}
 assert.throws(()=>parserSandbox.safeParseAiJson('không phải JSON'),/AI trả về JSON không hợp lệ/,'unrepairable AI output must report a useful parser error');
 ['function initCanvasEventBridge','function captureCanvasInlineHandlers','function parseCanvasInlineActions','function runCanvasInlineActions','removeAttribute(attribute)','new MutationObserver','addEventListener(type,event=>','Tương tác Canvas đã sẵn sàng.'].forEach(value=>assert(target.includes(value),`missing CSP-safe Canvas event bridge: ${value}`));
 assert(!target.includes('eval(')&&!target.includes('Function('),'Canvas event bridge must not execute inline handlers dynamically');
@@ -123,18 +127,23 @@ lifecycleSandbox.initApp();
 assert.deepEqual(JSON.parse(JSON.stringify(bootstrapCalls)),['bridge','allocation-controls','subjects',['ppct',true],['knowledge',true],'ranges','identity',['theme','dark'],'layout','badge','preview',['draft',{silent:true}],'connection'],'initApp must initialize a document that is already complete');
 const adaptiveNlsSandbox={};vm.createContext(adaptiveNlsSandbox);vm.runInContext(sliceNamedFunction('getExpectedNlsCount')+'\n'+sliceNamedFunction('getExpectedNlsMaxCount'),adaptiveNlsSandbox);
 const adaptiveNlsConfig={nls:{density:'adaptive',noAiDensity:'2-3'}};
-assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,false,adaptiveNlsConfig),2,'one-period lessons must use two NLS codes');
-assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,true,adaptiveNlsConfig),2,'AI-selected multi-period lessons must use two NLS codes');
-assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,false,adaptiveNlsConfig),2,'the 2–3 setting must permit a two-code fallback');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,false,adaptiveNlsConfig),1,'one-period lessons without AI must use one NLS code');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,true,adaptiveNlsConfig),0,'one-period lessons with AI must not use NLS codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,true,adaptiveNlsConfig),1,'AI-selected multi-period lessons must use one NLS code');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,false,adaptiveNlsConfig),2,'multi-period lessons without AI must use two NLS codes');
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,{nls:{density:'adaptive',noAiDensity:'2'}}),2,'the two-code option must cap a multi-period lesson without AI at two NLS codes');
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,adaptiveNlsConfig),3,'the 2–3 option must cap a multi-period lesson without AI at three NLS codes');
-assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,false,adaptiveNlsConfig),2,'one-period lessons must cap NLS at two codes');
-assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,true,adaptiveNlsConfig),2,'AI-selected multi-period lessons must cap NLS at two codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,false,adaptiveNlsConfig),1,'one-period lessons without AI must cap NLS at one code');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,true,adaptiveNlsConfig),0,'one-period lessons with AI must cap NLS at zero codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,true,adaptiveNlsConfig),1,'AI-selected multi-period lessons must cap NLS at one code');
 const cleanIntegrationSandbox={};vm.createContext(cleanIntegrationSandbox);
 vm.runInContext(sliceNamedFunction('foldText')+'\n'+sliceNamedFunction('cleanLessonDescription')+'\n'+sliceNamedFunction('lessonAppliedNlsDescription')+'\n'+sliceNamedFunction('lessonAppliedAiDescription')+'\n'+sliceNamedFunction('enrichNlsCode')+'\n'+sliceNamedFunction('cleanNlsColumnText')+'\n'+sliceNamedFunction('cleanAiColumnText'),cleanIntegrationSandbox);
 assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra].'),'5.3.TC2a - Sử dụng GeoGebra.','Canvas must remove a bracket before a final NLS period');
 assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra],'),'5.3.TC2a - Sử dụng GeoGebra','Canvas must remove a bracket before a final NLS comma');
 assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra] .'),'5.3.TC2a - Sử dụng GeoGebra.','Canvas must remove a spaced NLS bracket before a period');
+const malformedNls=cleanIntegrationSandbox.cleanNlsColumnText('5.3.TC1a - [1.2.TC1a] Đánh giá dữ liệu\n[1.1.TC1a] Thu thập dữ liệu\n[1.1.TC1a] Thu thập dữ liệu đầy đủ hơn','Bài 17. Thu thập và phân loại dữ liệu');
+assert.equal((malformedNls.match(/1\.1\.TC1a/g)||[]).length,1,'Canvas must de-duplicate NLS by code');
+assert(!/ - \]|5\.3\.TC1a - \[1\.2\.TC1a\]/.test(malformedNls),'Canvas must remove nested NLS code and stray brackets');
 assert.equal(cleanIntegrationSandbox.cleanAiColumnText('[AI: 6.A1.1 - Hỗ trợ bài tập]. (Áp dụng: tiết 1).'),'6.A1.1 - Hỗ trợ bài tập. (Áp dụng: tiết 1).','Canvas must retain AI scope while removing its stray bracket');
 assert.equal(cleanIntegrationSandbox.cleanAiColumnText(''),'','Canvas must preserve the blank Appendix 1 AI cell');
 const canvasBareAi = cleanIntegrationSandbox.cleanAiColumnText('9.B2.1 - (Áp dụng: tiết 1, 2).', 'Bài 1: Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn');
@@ -230,12 +239,13 @@ const sliderSandbox={
   aiRate:{value:'0',min:'0',max:'100',disabled:false},aiRateOut:{value:''}
 };
 vm.createContext(sliderSandbox);
-vm.runInContext(['nlsLessonPriorityScore','prioritizedNlsLessons','allocationUnit','aiPeriodCandidates','allocationTotals','nlsSelectedPeriodCount','chooseNlsLessonsForPeriods','selectedAiPeriodIds','allocationSummary','syncNlsRateFromSelection','syncNlsSelectionFromRate','syncNlsSelectionFromCount','prioritizedAiPeriods','syncAiRateFromSelection','syncAiSelectionFromRate','syncAiSelectionFromCount'].map(name=>extractNamed(target,name)).join('\n'),sliderSandbox);
+vm.runInContext(['nlsLessonPriorityScore','prioritizedNlsLessons','allocationUnit','aiPeriodCandidates','selectedAiPeriodIds','selectedPeriodsForLesson','isSinglePeriodLesson','hasAiSelectionForLesson','canUseNlsLesson','allocationTotals','nlsSelectedPeriodCount','chooseNlsLessonsForPeriods','allocationSummary','syncNlsRateFromSelection','nlsAutoCandidates','syncNlsSelectionFromRate','syncNlsSelectionFromCount','prioritizedAiPeriods','canUseAiPeriod','aiAutoLessons','syncAiRateFromSelection','syncAiSelectionFromRate','syncAiSelectionFromCount','toggleNlsLesson','toggleAiLesson','toggleAiLessonRow'].map(name=>extractNamed(target,name)).join('\n'),sliderSandbox);
 sliderSandbox.syncNlsSelectionFromRate();
 assert(sliderNodes['#nlsRateOut'].value.startsWith('0%'),'Canvas NLS slider must update at 0% without RangeError');
 sliderNodes['#nlsRate'].value='80';sliderSandbox.syncNlsSelectionFromRate();
 assert(sliderNodes['#nlsRateOut'].value.startsWith('80%'),'Canvas NLS slider must update at 80% without RangeError');
 assert.equal(sliderNodes['#nlsRate'].value,'80','Canvas NLS slider must preserve the active drag value');
+sliderSandbox.nlsSelectedLessonIds=new Set();
 sliderSandbox.syncAiSelectionFromRate();
 assert(sliderSandbox.aiRateOut.value.startsWith('0%'),'Canvas AI slider must update at 0% without RangeError');
 sliderSandbox.aiRate.value='50';sliderSandbox.syncAiSelectionFromRate();
@@ -252,6 +262,17 @@ sliderNodes['#nlsUnit'].value='lesson';sliderSandbox.syncNlsSelectionFromCount(3
 assert(sliderNodes['#nlsRateOut'].value.includes('bài PPCT'),'Canvas NLS count input must support the lesson unit');
 sliderNodes['#aiUnit'].value='lesson';sliderSandbox.syncAiSelectionFromCount(4);
 assert(sliderSandbox.aiRateOut.value.includes('bài PPCT'),'Canvas AI count input must support the lesson unit');
+// 140 PPCT periods, 12 one-period AI lessons: NLS must skip them and still fill 28 actual periods.
+sliderNodes['#nlsUnit'].value='period';sliderNodes['#aiUnit'].value='period';
+sliderSandbox.candidates=Array.from({length:140},(_,index)=>({id:`ppct:${index}`,lesson:`Bài ${index+1}`,periods:'1',tietCT:String(index+1),week:'1'}));
+sliderSandbox.aiSelectedLessonIds=new Set(Array.from({length:12},(_,index)=>`ppct:${index}:period:1`));
+sliderSandbox.nlsSelectedLessonIds=new Set();sliderSandbox.syncNlsSelectionFromCount(28);
+assert.equal(sliderSandbox.nlsSelectedLessonIds.size,28,'Canvas must compensate with 28 eligible NLS periods after excluding one-period AI lessons');
+for(const lessonId of sliderSandbox.nlsSelectedLessonIds)assert.equal(sliderSandbox.selectedPeriodsForLesson(lessonId).length,0,'Canvas automatic allocation must never select both NLS and AI on a one-period lesson');
+sliderSandbox.aiSelectedLessonIds.add('ppct:12:period:1');sliderSandbox.toggleNlsLesson('ppct:12',true);
+assert.equal(sliderSandbox.selectedPeriodsForLesson('ppct:12').length,0,'checking NLS must immediately clear AI from a one-period lesson');
+sliderSandbox.toggleAiLesson('ppct:12:period:1',true);
+assert(!sliderSandbox.nlsSelectedLessonIds.has('ppct:12'),'checking AI must immediately clear NLS from a one-period lesson');
 const calls=[];
 const sandbox={console,AbortController,clearTimeout,setTimeout,fetch:async(url,init)=>{
   calls.push({url,init});

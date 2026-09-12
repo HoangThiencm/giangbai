@@ -5,6 +5,23 @@
 
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      html, body { display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 100%; }
+      #canvasHostBanner { display: block !important; visibility: visible !important; }
+    </style>
+    <script>
+    (function(){
+      function reveal(){
+        var h=document.documentElement, b=document.body;
+        if(h){h.style.setProperty('display','block','important');h.style.setProperty('visibility','visible','important');h.removeAttribute('hidden')}
+        if(b){b.style.setProperty('display','block','important');b.style.setProperty('visibility','visible','important');b.style.setProperty('opacity','1','important');b.removeAttribute('hidden')}
+      }
+      reveal();
+      var obs=new MutationObserver(function(ms){ms.forEach(function(m){if(m.type==='attributes')reveal()})});
+      obs.observe(document.documentElement,{childList:true,subtree:false,attributes:true,attributeFilter:['style','hidden','class']});
+      document.addEventListener('DOMContentLoaded',reveal);
+    })();
+    </script>
     <title>Trợ lý Hành Chính AI</title>
 
     <!-- Libraries -->
@@ -610,10 +627,15 @@
         #processingIndicator {
             display: none !important;
         }
+        .compact-ui .card, .compact-ui .panel { padding: 0.75rem !important; }
+        .compact-ui input, .compact-ui select, .compact-ui textarea { padding: 0.3rem 0.5rem !important; font-size: 0.85rem !important; }
     </style>
 </head>
 
-<body class="p-3 md:p-5 w-full max-w-none mx-auto">
+<body class="w-full max-w-[98%] 2xl:max-w-[1750px] mx-auto p-3 md:p-4">
+    <div id="canvasHostBanner" style="display:block!important;visibility:visible!important;padding:.4rem 1rem;text-align:center;font-size:.78rem;font-weight:700;background:#e0f2fe;color:#075985">
+      Đã kết nối Gemini Canvas · Môi trường mở rộng toàn màn hình
+    </div>
     <div id="accountSyncToast" class="fixed top-4 right-4 hidden z-[70] max-w-sm px-4 py-2 rounded shadow text-sm border"></div>
     <div class="mb-4 flex justify-between items-center">
         <!-- NÚT HOME -->
@@ -633,6 +655,10 @@
             <button type="button" onclick="openAccountSettingsModal()"
                 class="inline-flex items-center gap-2 px-3 py-2 rounded border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 text-xs font-bold">
                 <i class="fas fa-id-badge"></i> Cài đặt tài khoản
+            </button>
+            <button id="compactModeBtn" type="button" onclick="toggleCompactMode()" aria-pressed="false" title="Giao diện gọn"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold">
+                🗜 Gọn
             </button>
             <button type="button" onclick="resetWorkspaceState()"
                 class="inline-flex items-center gap-2 px-3 py-2 rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 text-xs font-bold">
@@ -1634,6 +1660,50 @@
         window.alert = function (message) {
             window.customAlert(message);
         };
+        const memoryStorage = Object.create(null);
+        function getCanvasStorage() {
+            let nativeStorage = null;
+            try {
+                nativeStorage = window.localStorage;
+                const probe = '__taobaocao_canvas_probe__';
+                nativeStorage.setItem(probe, '1');
+                nativeStorage.removeItem(probe);
+            } catch (e) {}
+            return {
+                getItem(key) {
+                    try {
+                        const value = nativeStorage?.getItem(key);
+                        return value ?? memoryStorage[key] ?? null;
+                    } catch (e) {
+                        return memoryStorage[key] ?? null;
+                    }
+                },
+                setItem(key, value) {
+                    const text = String(value);
+                    memoryStorage[key] = text;
+                    try { nativeStorage?.setItem(key, text); } catch (e) {}
+                },
+                removeItem(key) {
+                    delete memoryStorage[key];
+                    try { nativeStorage?.removeItem(key); } catch (e) {}
+                }
+            };
+        }
+        const canvasStorage = getCanvasStorage();
+        function canvasConfirm(message) { return window.customConfirm(message); }
+        function canvasAlert(message) { return window.customAlert(message); }
+        function toggleCompactMode() {
+            const on = document.documentElement.classList.toggle('compact-ui');
+            canvasStorage.setItem('taobaocao_compact', on ? '1' : '0');
+            const btn = document.querySelector('#compactModeBtn');
+            if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            return on;
+        }
+        if (canvasStorage.getItem('taobaocao_compact') === '1') {
+            document.documentElement.classList.add('compact-ui');
+            const compactBtn = document.querySelector('#compactModeBtn');
+            if (compactBtn) compactBtn.setAttribute('aria-pressed', 'true');
+        }
 
         let geminiServiceUnavailableUntil = 0;
         let cancelGeneration = false; // Biến để hủy generation
@@ -6831,9 +6901,7 @@ Trả đúng JSON, không thêm chữ ngoài JSON:
         }
 
         async function removeAppendix(appendixId) {
-            const approved = window.customConfirm
-                ? await window.customConfirm("Bạn có chắc muốn xóa phụ lục này không?")
-                : window.confirm("Bạn có chắc muốn xóa phụ lục này không?");
+            const approved = await canvasConfirm("Bạn có chắc muốn xóa phụ lục này không?");
             if (!approved) return;
             syncAppendicesFromDom();
             currentAppendices = currentAppendices.filter(item => String(item.id) !== String(appendixId));

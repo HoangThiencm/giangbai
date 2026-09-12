@@ -38,13 +38,15 @@ const adaptiveNlsFunction=html.slice(html.indexOf('function getExpectedNlsCount'
 const adaptiveNlsMaxFunction=html.slice(html.indexOf('function getExpectedNlsMaxCount'),html.indexOf('\n',html.indexOf('function getExpectedNlsMaxCount')));
 const adaptiveNlsSandbox={};vm.createContext(adaptiveNlsSandbox);vm.runInContext(adaptiveNlsFunction+'\n'+adaptiveNlsMaxFunction,adaptiveNlsSandbox);
 const adaptive={nls:{density:'adaptive',noAiDensity:'2-3'}};
-assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,false,adaptive),2,'one-period lessons must use two NLS codes');
-assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,true,adaptive),2,'multi-period lessons with at least one AI period must use two NLS codes');
-assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,false,adaptive),2,'the 2–3 option must allow the two-code fallback');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,false,adaptive),1,'one-period lessons without AI must use one NLS code');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,true,adaptive),0,'one-period lessons with AI must not use NLS codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,true,adaptive),1,'multi-period lessons with AI must use one NLS code');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(2,false,adaptive),2,'multi-period lessons without AI must use two NLS codes');
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,{nls:{density:'adaptive',noAiDensity:'2'}}),2,'the two-code option must cap a multi-period lesson without AI at two NLS codes');
 assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,false,adaptive),3,'the 2–3 option must cap a multi-period lesson without AI at three NLS codes');
-assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,false,adaptive),2,'one-period lessons must cap NLS at two codes');
-assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,true,adaptive),2,'multi-period lessons with AI must cap NLS at two codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,false,adaptive),1,'one-period lessons without AI must cap NLS at one code');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(1,true,adaptive),0,'one-period lessons with AI must cap NLS at zero codes');
+assert.equal(adaptiveNlsSandbox.getExpectedNlsMaxCount(2,true,adaptive),1,'multi-period lessons with AI must cap NLS at one code');
 ['appendixPrompt','NGUYÊN TẮC BẢO TOÀN PPCT NGUỒN','giữ nguyên 100%','Tuần 1 đến Tuần 35','Phụ lục 1','Phụ lục 2','Phụ lục 3','Công văn 5512','TT 38/2021','TT 14/2020'].forEach(has);
 ['parseFiles','extractPpctRows','extractDocxTables','ingestSourceTables','preserveSourceSchedule','mammoth.extractRawText','pdfjsLib','XLSX.read','generateSelected','exportDocx','contenteditable','exportAll'].forEach(has);
 has('max-w-[98%]');
@@ -186,6 +188,7 @@ assert(typeof sandbox.hideProgress==='function','hideProgress must be defined');
 assert.equal(typeof sandbox.extractDocxTables,'function');
 assert.equal(typeof sandbox.ingestSourceTables,'function');
 ['aiLessonPickerCard','aiLessonPicker','aiSelectionCount','toggleAiLesson','toggleAiLessonRow','suggestAiLessons','aiPeriodCandidates','prioritizedAiPeriods','prioritizedNlsLessons','allocationTotals','allocationSummary','onNlsUnitChange','onAiUnitChange','onNlsEnabledChange','onAiEnabledChange','onchange="onNlsEnabledChange(this.checked)"','onchange="onAiEnabledChange(this.checked)"','syncNlsSelectionFromRate','syncNlsSelectionFromCount','syncAiSelectionFromRate','syncAiSelectionFromCount','updatePpctLessonPeriods','validPeriodCount','compactSgkText','isSgkFile','looksLikeSgkText','selectedAiLessons','sgkCompactContext','id="nlsUnit"','id="nlsCountInput"','id="aiUnit"','id="aiCountInput"','Theo tổng số tiết PPCT','Theo tổng số bài PPCT','AI tự đề xuất bài/tiết phù hợp dựa trên PPCT và ngữ cảnh SGK'].forEach(has);
+['function isSinglePeriodLesson','function canUseNlsLesson','function canUseAiPeriod','toggleAiLessonRow(lessonId,false)'].forEach(has);
 assert(!html.includes('dạy bài mới'),'allocation wording must not imply that only new-teaching lessons count');
 ['ppctFiles','sgkFiles',"stageFiles(this.files,'ppct')","stageFiles(this.files,'sgk')",'Nhận diện PPCT','Đọc SGK','recognizeStagedPpct','readStagedSgk','loadDefaultPpctStructure','clearAiLessons','Bỏ chọn tất cả'].forEach(has);
 ['recalculatePpctSequences','periodsPerWeekForSubject','onclick="recalculatePpctSequences()"','🔄 Tính lại Tiết CT &amp; Tuần tự động'].forEach(has);
@@ -209,6 +212,7 @@ const flexibleAllocation=vm.runInContext(`(()=>{
   nlsSelectedLessonIds=new Set();aiSelectedLessonIds=new Set();
   syncNlsSelectionFromCount(4);
   const nlsPeriods=nlsSelectedPeriodCount();
+  nlsSelectedLessonIds=new Set();
   syncAiSelectionFromCount(13);
   const aiAll=aiSelectedLessonIds.size;
   controls['#aiUnit'].value='lesson';syncAiSelectionFromCount(3);
@@ -225,6 +229,17 @@ assert.equal(flexibleAllocation.aiLessonCount,3,'AI lesson mode must select the 
 assert.equal(flexibleAllocation.aiLessonPeriods,4,'AI lesson mode must select every period belonging to selected lessons');
 assert(flexibleAllocation.aiLabel.includes('bài PPCT'),'AI lesson mode label must name PPCT lessons');
 assert.equal(flexibleAllocation.aiMax,'100','AI rate slider must remain freely usable through 100%');
+const mutualExclusionAllocation=vm.runInContext(`(()=>{
+  const controls={'#nlsUnit':{value:'period'},'#aiUnit':{value:'period'},'#nlsRate':{value:'20'},'#aiRate':{value:'9'},'#nlsCountInput':{value:''},'#aiCountInput':{value:''},'#nlsRateOut':{value:''},'#aiRateOut':{value:''}};
+  document.querySelector=selector=>controls[selector]||null;
+  nlsRate=controls['#nlsRate'];aiRate=controls['#aiRate'];nlsRateOut=controls['#nlsRateOut'];aiRateOut=controls['#aiRateOut'];
+  sourcePpctRows=[];sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:Array.from({length:140},(_,index)=>({cells:[\`Bài \${index+1}\`,'1'],isHeader:false}))};
+  aiSelectedLessonIds=new Set(Array.from({length:12},(_,index)=>\`source:\${index}:period:1\`));nlsSelectedLessonIds=new Set();
+  const originalUpdate=updateAiPicker;updateAiPicker=()=>{};syncNlsSelectionFromCount(28);const nls=[...nlsSelectedLessonIds],nlsPeriods=nlsSelectedPeriodCount(),overlap=nls.filter(id=>selectedPeriodsForLesson(id).length);toggleNlsLesson('source:12',true);const nlsClearsAi=selectedPeriodsForLesson('source:12').length===0;toggleAiLesson('source:12:period:1',true);const aiClearsNls=!nlsSelectedLessonIds.has('source:12');updateAiPicker=originalUpdate;return {nlsPeriods,overlap,nlsClearsAi,aiClearsNls};
+})()`,sandbox);
+assert.equal(mutualExclusionAllocation.nlsPeriods,28,'NLS must compensate to exactly 28 of 140 PPCT periods');
+assert.deepEqual(JSON.parse(JSON.stringify(mutualExclusionAllocation.overlap)),[],'one-period lessons must never retain automatic NLS and AI together');
+assert(mutualExclusionAllocation.nlsClearsAi&&mutualExclusionAllocation.aiClearsNls,'manual one-period checkbox changes must be mutually exclusive');
 const draftUnitRoundTrip=vm.runInContext(`(()=>{
   const controls={'#nlsUnit':{value:'period'},'#aiUnit':{value:'period'},'#nlsAdaptiveOptions':{classList:{toggle(){}}}};
   document.querySelector=selector=>controls[selector]||null;
@@ -250,7 +265,7 @@ assert(codesFor('Tam giác, đo góc và vẽ hình với GeoGebra').some(code=>
 assert(codesFor('Bảng số liệu và biểu đồ cột').some(code=>code.startsWith('1.1.TC1a')||code.startsWith('1.2.TC1a')),'statistics must prioritize data standards');
 const noAiIntegration=vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]',false,0,{ai:{enabled:true},lop:'6',nls:{density:'adaptive',noAiDensity:'2-3'}})",sandbox);
 assert(!noAiIntegration.includes('[AI:'),'unselected lesson must not retain AI integration');
-assert.equal((noAiIntegration.match(/\[NLS:/g)||[]).length,2,'one-period lessons must be supplemented to two NLS codes');
+assert.equal((noAiIntegration.match(/\[NLS:/g)||[]).length,1,'one-period lessons without AI must receive one NLS code');
 assert(vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.]',true,0,{ai:{enabled:true},lop:'6'})",sandbox).includes('[AI:'),'selected lesson must receive an AI integration when AI is enabled');
 assert(vm.runInContext("integrationHtml('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]')",sandbox).includes('nls-code')&&vm.runInContext("integrationHtml('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ bài tập.]')",sandbox).includes('ai-code'),'preview must distinguish NLS and AI integration colors');
 assert.equal(vm.runInContext("integrationText([{text:'[NLS: 1.1.TC1a - Học liệu số]',ai:false},{label:'[AI: 6.A1.1 - Hỗ trợ]',ai:true}])",sandbox),'[NLS: 1.1.TC1a - Học liệu số]\n[AI: 6.A1.1 - Hỗ trợ]','integration objects must be converted to text before rendering');
@@ -266,7 +281,7 @@ assert.equal(vm.runInContext("formatTietCT('8 9')",sandbox),'8, 9','Tiết CT mu
 assert.equal(vm.runInContext("formatWeek('Tuần 3 3')",sandbox),'3','week display must remove duplicate weeks');
 const scopedIntegration=vm.runInContext("selectedIntegration('[NLS: 1.1.6a - Khai thác học liệu.] [AI: 6.A1.1 - Hỗ trợ.] Áp dụng: tiết 1, 2. Áp dụng: tiết 1, 2.',[1,2],0,{ai:{enabled:true},lop:'6'})",sandbox);
 assert.equal((scopedIntegration.match(/Áp dụng:/g)||[]).length,1,'selected AI integration must keep exactly one scope');
-assert(scopedIntegration.includes('[NLS:')&&scopedIntegration.includes('[AI:'),'selected AI integration must retain NLS alongside AI');
+assert(!scopedIntegration.includes('[NLS:')&&scopedIntegration.includes('[AI:'),'one-period AI integration must contain AI only');
 
 const zlib=require('zlib');
 function zipRead(buf,entryName){
@@ -343,6 +358,9 @@ assert.equal(sandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra �
 assert.equal(sandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra].'),'5.3.TC2a - Sử dụng GeoGebra.','clean NLS text must remove a bracket before a final period');
 assert.equal(sandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra],'),'5.3.TC2a - Sử dụng GeoGebra','clean NLS text must remove a bracket before a final comma');
 assert.equal(sandbox.cleanNlsColumnText('[NLS: 5.3.TC2a - Sử dụng GeoGebra] .'),'5.3.TC2a - Sử dụng GeoGebra.','clean NLS text must remove a spaced bracket before a final period');
+const malformedNls=sandbox.cleanNlsColumnText('5.3.TC1a - [1.2.TC1a] Đánh giá dữ liệu\n[1.1.TC1a] Thu thập dữ liệu\n[1.1.TC1a] Thu thập dữ liệu đầy đủ hơn','Bài 17. Thu thập và phân loại dữ liệu');
+assert.equal((malformedNls.match(/1\.1\.TC1a/g)||[]).length,1,'clean NLS text must de-duplicate by code');
+assert(!/ - \]|5\.3\.TC1a - \[1\.2\.TC1a\]/.test(malformedNls),'clean NLS text must remove nested code and stray brackets');
 assert.equal(sandbox.cleanAiColumnText('[AI: 6.A1.1 - Hỗ trợ bài tập] (Áp dụng: tiết 1).'),'6.A1.1 - Hỗ trợ bài tập (Áp dụng: tiết 1).','clean AI text must preserve its scoped application');
 assert.equal(sandbox.cleanAiColumnText('[AI: 6.A1.1 - Hỗ trợ bài tập]. (Áp dụng: tiết 1).'),'6.A1.1 - Hỗ trợ bài tập. (Áp dụng: tiết 1).','clean AI text must remove a bracket before its scoped period');
 assert.equal(sandbox.cleanAiColumnText('[AI: 6.A1.1 - Hỗ trợ bài tập] .'),'6.A1.1 - Hỗ trợ bài tập.','clean AI text must remove a spaced bracket before a final period');
@@ -363,7 +381,7 @@ assert(!sandbox.lessonAppliedNlsDescription('5.3.TC2a','',conceptLesson).include
 assert(sandbox.lessonAppliedNlsDescription('5.3.TC2a','',conceptLesson).includes('nghiệm của phương trình'),'NLS must use the mathematical entity for solutions');
 assert(!sandbox.lessonAppliedAiDescription('9.B2.1','',conceptLesson).includes('nghiệm của Khái niệm phương trình'),'AI must not describe a solution of a concept');
 const separate=sandbox.separateIntegration(splitValue,[1,3],0,splitConfig,'Bài mẫu');
-assert(/^1\.1\.TC\w+/i.test(separate.nlsText)&&!/[\[\]]/.test(separate.nlsText),'NLS column must contain only a clean NLS code');
+assert.equal(separate.nlsText,'-','one-period AI lessons must not emit an NLS code');
 assert(/^6\.A\d+\.\d+/i.test(separate.aiText)&&!/[\[\]]/.test(separate.aiText)&&separate.aiText.includes('Áp dụng: tiết 1, 3'),'AI column must isolate a clean code and scope multiple selected periods');
 assert.equal(sandbox.separateIntegration(splitValue,[],0,splitConfig).aiText,'','unselected lesson must leave the AI cell blank');
 assert.equal(sandbox.separateIntegration(splitValue,[1],0,{...splitConfig,ai:{enabled:false}}).aiText,'','AI disabled must leave the AI cell blank');
@@ -374,16 +392,16 @@ assert.deepEqual(JSON.parse(JSON.stringify(sandbox.normalizeIntegrationTable(spl
 assert.deepEqual(JSON.parse(JSON.stringify(sandbox.normalizeIntegrationTable(splitModel))).rows,splitModel.rows,'normalization must preserve cells and spanning headers');
 const splitPreview=sandbox.dynamicPpctTable(splitModel,true);
 assert.equal((splitPreview.match(/<th>/g)||[]).length,6,'preview must have six headers');
-assert(splitPreview.includes('colspan="6"')&&splitPreview.includes('class="nls-code">1.1.TC')&&splitPreview.includes('class="ai-code">6.A'),'preview must span six columns, use clean text, and color each code column');
+assert(splitPreview.includes('colspan="6"')&&splitPreview.includes('class="ai-code">6.A'),'one-period AI preview must span six columns and show its clean AI code');
 const appendixThree=sandbox.appendixThreeTable([{lesson:'Bài mẫu',periods:'1',integration:splitValue}],splitConfig);
 assert.equal(appendixThree.columns.length,8,'PL3 must retain eight columns');
 assert(sandbox.isNlsColumn(appendixThree.columns[6])&&sandbox.isAiColumn(appendixThree.columns[7]),'PL3 must split NLS and AI into dedicated columns');
-assert.equal(appendixThree.rows[0].cells[6],separate.nlsText,'PL3 NLS column must preserve its isolated NLS text');
+assert(/^\d+\.\d+\.TC\w+/i.test(appendixThree.rows[0].cells[6]),'PL3 one-period lessons without selected AI must retain one clean NLS code');
 assert.equal(appendixThree.rows[0].cells[7],'-','PL3 AI column must stay blank when no matching AI period is selected');
 const complianceConfig={...splitConfig,ai:{enabled:true,selectedPeriods:[{lesson:'Bài mẫu',periods:[1,3]}]}};
 const complianceData={'1':{scheduleTable:splitModel,schedule:[{lesson:'Bài mẫu',devices:'Máy chiếu',location:'Lớp học'}],assessments:['Giữa học kỳ I','Cuối học kỳ I','Giữa học kỳ II','Cuối học kỳ II'].map(milestone=>({milestone}))}};
 const completeReport=sandbox.calculateComplianceReport(complianceConfig,complianceData);
-assert.equal(completeReport.isCompliant,true,'complete separate-column data must achieve 100%');
+assert.equal(completeReport.criteria[2].pass,false,'a configured NLS target must not count the intentionally absent NLS code of a one-period AI lesson');
 const missingAi=JSON.parse(JSON.stringify(complianceData));missingAi['1'].scheduleTable.rows[1].cells[5]='-';
 assert.equal(sandbox.calculateComplianceReport(complianceConfig,missingAi).criteria[3].pass,false,'configured AI selections without output codes must fail');
 const partialAi=JSON.parse(JSON.stringify(complianceData));partialAi['1'].scheduleTable.rows[1].cells[5]='6.A1.1 - Hỗ trợ. (Áp dụng: tiết 1).';

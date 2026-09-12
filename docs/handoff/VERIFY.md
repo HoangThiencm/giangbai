@@ -5,38 +5,42 @@ PASS
 
 ## Đối chiếu scope
 - `canvas_xaydungphuluc.html` và `xaydungphuluc.html`:
-  - Đã khắc phục triệt để lỗi đánh giá sai mục tiêu Năng lực số trong `calculateComplianceReport()`.
-  - Khi cấu hình NLS theo đơn vị `unit: 'period'` (Theo tổng số tiết PPCT):
-    - Tính tổng số tiết thực tế của các dòng có mã NLS bằng `parsePeriodCount`.
-    - Tính mục tiêu số tiết dựa trên tổng số tiết chương trình và tỉ lệ % cấu hình: `Math.round(periods * rate / 100)`.
-    - Chi tiết hiển thị rõ ràng: `${nlsPeriods}/${periods} tiết (${nlsRows.length}/${rows.length} bài), mục tiêu ${nlsTarget} tiết`.
-    - Điều kiện Đạt chuẩn xác theo số tiết (`nlsPeriods >= nlsTarget || Math.abs(nlsPeriods - nlsTarget) <= 1`).
-  - Khi cấu hình NLS theo đơn vị `unit: 'lesson'` (Theo tổng số bài PPCT):
-    - Giữ nguyên cơ chế tính mục tiêu và đánh giá theo số bài học.
-  - Không thay đổi prompt AI, schema hay logic xuất bản phụ lục.
-- `tests/canvas-xaydungphuluc-smoke.js` và `tests/xaydungphuluc-smoke.js`:
-  - Bổ sung kiểm thử fixture thực tế: 140 tiết / 87 bài, 21% NLS với 29 tiết trên 16 bài học.
-  - Kiểm thử đánh giá Đạt chính xác khi chọn theo đơn vị tiết (không bị đánh trượt theo mục tiêu 19 bài).
-  - Kiểm thử dòng NLS không có số tiết hợp lệ không bị tính sai lệch.
+  - Giao diện người dùng `#nlsAdaptiveOptions`: hiển thị chính xác quy tắc mới:
+    - Bài 1 tiết: Có AI → 0 NLS (1 AI); Không AI → 1 mã NLS.
+    - Bài từ 2 tiết có AI: 1 mã NLS.
+    - Bài từ 2 tiết không có AI: dropdown mặc định 2 mã (`value="2"`), có tuỳ chọn 2–3 mã.
+  - Hàm `getExpectedNlsCount` và `getExpectedNlsMaxCount`:
+    - Bài 1 tiết có AI: min = 0, max = 0.
+    - Bài 1 tiết không AI: min = 1, max = 1.
+    - Bài từ 2 tiết có AI: min = 1, max = 1.
+    - Bài từ 2 tiết không AI: min = 2, max = 2 (hoặc 3 nếu chọn option 2-3).
+  - Hàm `fallbackNlsCodes`: khi bài 1 tiết có AI (`count === 0`), trả về mảng rỗng `[]`, không sinh fallback NLS.
+  - Hàm `selectedIntegration`:
+    - Với bài 1 tiết có AI: không sinh NLS (`cleanNls = []`), ép buộc `expectedAiCount = 1` (chỉ đúng 1 mã AI).
+    - Với bài 1 tiết không AI: đúng 1 mã NLS, không có AI.
+    - Với bài từ 2 tiết có AI: đúng 1 mã NLS kèm 1 hoặc 2 mã AI theo cấu hình.
+    - Với bài từ 2 tiết không có AI: đúng 2 mã NLS (hoặc 2-3 mã).
+  - AI Prompt (`appendixPrompt`): đồng bộ 100% quy tắc phân bổ NLS/AI mới.
+- Tests (`tests/canvas-xaydungphuluc-smoke.js` và `tests/xaydungphuluc-smoke.js`):
+  - Cập nhật đầy đủ các assert kiểm tra logic và markup mới.
 
 ## Test đã chạy
 - `node tests/canvas-xaydungphuluc-smoke.js`: PASS
 - `node tests/xaydungphuluc-smoke.js`: PASS
-- `node tests/daythay-suggest-smoke.js`: PASS
-- `node tests/baogiang-weekday-segment-smoke.js`: PASS
-- `node tests/timetable-render-smoke.js`: PASS
-- `node tests/auto-reload-smoke.js`: PASS
-- `git diff --check`: PASS (không lỗi cú pháp/khoảng trắng)
+- `node tests/xaydungphuluc-math-smoke.js`: PASS
+- `node tests/sgk-knowledge-smoke.js`: PASS
+- `node scratch/verify_adaptive_rules.js`: PASS 100% trên cả 2 tệp HTML
 
 ## Pass / Fail từng tiêu chí
-- Tiêu chí 1: Tiêu chí Năng lực số phân biệt chính xác đơn vị 'period' vs 'lesson' -> PASS
-- Tiêu chí 2: Cấu hình theo tiết đánh giá đúng dựa trên tổng số tiết NLS (29/140 tiết) thay vì ép theo 19 bài -> PASS
-- Tiêu chí 3: Nhãn chi tiết thể hiện đầy đủ số tiết và số bài (${nlsPeriods}/${periods} tiết (${nlsRows}/${rows.length} bài)) -> PASS
-- Tiêu chí 4: Báo cáo thẩm định đạt chuẩn 100% khi đủ tiết theo cấu hình -> PASS
-- Tiêu chí 5: Cả 2 giao diện Canvas và Thường đồng bộ 100% logic thẩm định -> PASS
-- Tiêu chí 6: Toàn bộ 6 bộ kiểm thử smoke của hệ thống đều PASS -> PASS
+- Tiêu chí 1: Bài 1 tiết có AI không có mã NLS (0 mã) và chỉ có đúng 1 mã AI -> PASS
+- Tiêu chí 2: Bài 1 tiết không có AI có đúng 1 mã NLS và 0 mã AI -> PASS
+- Tiêu chí 3: Bài từ 2 tiết trở lên có AI có đúng 1 mã NLS và 1–2 mã AI -> PASS
+- Tiêu chí 4: Bài từ 2 tiết trở lên không có AI mặc định đúng 2 mã NLS -> PASS
+- Tiêu chí 5: Giao diện và dropdown `#nlsAdaptiveOptions` hiển thị chuẩn sư phạm, mặc định 2 mã -> PASS
+- Tiêu chí 6: Đồng bộ 100% giữa `canvas_xaydungphuluc.html` và `xaydungphuluc.html` -> PASS
 
 ## Bug
 Không phát hiện bug tồn đọng.
+
 
 

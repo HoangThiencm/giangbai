@@ -1,3 +1,136 @@
+# IMPLEMENT: Loại trừ NLS/AI bài một tiết và hoàn thiện Canvas mở rộng
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `canvas_xaydungphuluc.html` và `xaydungphuluc.html`
+  - Bài một tiết được loại trừ lẫn nhau ở cả gợi ý tự động và checkbox thủ công: chọn NLS sẽ bỏ AI; chọn AI sẽ bỏ NLS.
+  - Chọn NLS theo số tiết chỉ nhận các bài hợp lệ; thuật toán chọn tổ hợp theo số tiết để bù đúng mục tiêu khi có thể, không còn hụt tiết do các bài một tiết đã có AI.
+  - Chọn AI tự động bỏ qua bài một tiết đang chọn NLS, nhưng vẫn giữ đầy đủ mục tiêu bằng các bài/tiết hợp lệ khác.
+- `tests/canvas-xaydungphuluc-smoke.js` và `tests/xaydungphuluc-smoke.js`
+  - Bổ sung hồi quy 140 tiết PPCT: 12 tiết AI ở bài một tiết và mục tiêu 28 tiết NLS; xác nhận chọn đủ 28, không giao nhau, và hai checkbox loại trừ tức thì.
+- `backupcode viettailieu/taobaitap.html` và `backupcode viettailieu/taobaocao.html`
+  - Xóa lệnh xác nhận trình duyệt còn sót lại ở thao tác xóa; dùng `canvasConfirm` DOM an toàn trong sandbox Canvas.
+- `tests/backupcode-canvas-smoke.js`
+  - Nghiệm thu 6 công cụ Canvas: tài liệu hoàn chỉnh, banner, anti-FOUC, layout mở rộng, nút Gọn, lưu trữ dự phòng trong bộ nhớ và hộp thoại Canvas; xác nhận file backup được bảo vệ vẫn tồn tại.
+
+## Kiểm tra đã chạy
+
+- `node tests/backupcode-canvas-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS (gồm mô phỏng 28/140).
+- `node tests/xaydungphuluc-smoke.js`: PASS (gồm mô phỏng 28/140).
+- `node tests/xaydungphuluc-math-smoke.js`: PASS.
+- `node tests/sgk-knowledge-smoke.js`: PASS.
+- `git diff --check` trong phạm vi thay đổi: PASS (chỉ có cảnh báo chuyển đổi CRLF của Git).
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+
+---
+
+# IMPLEMENT: Nâng cấp công cụ backupcode viettailieu cho Gemini Canvas mở rộng toàn màn hình
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `backupcode viettailieu/canvas_soankhbd.html`
+  - Chống FOUC ngay đầu `<head>`, mở rộng `.app-body` sang `max-w-[98%]` / `1750px`, banner Canvas, `canvasStorage`, `canvasAlert`, nút Gọn, và `setupPdfJsForCanvas` (không gán PDF Worker CDN khi sandbox chặn Worker).
+- `backupcode viettailieu/soanbaigemini.html`
+  - Chống FOUC trước Tailwind CDN, container `max-w-[98%] 2xl:max-w-[1750px]`, banner Canvas, `canvasConfirm` / `canvasAlert` / `canvasStorage`, nút Gọn.
+- `backupcode viettailieu/taobaitap.html`
+  - Chống FOUC trước Tailwind CDN, hai khối chính `max-w-7xl` / `max-w-6xl` đổi sang `max-w-[98%] 2xl:max-w-[1750px]`, banner Canvas, nút Gọn, `canvasStorage` / `canvasConfirm`.
+- `backupcode viettailieu/taobaocao.html`
+  - Chống FOUC, body `max-w-[98%] 2xl:max-w-[1750px]`, banner Canvas, `canvasStorage` và `canvasConfirm` (bọc modal DOM sẵn có), nút Gọn.
+- `backupcode viettailieu/sangkien.html`
+  - Chống FOUC, container chính `max-w-[98%] 2xl:max-w-[1750px]`, banner Canvas, `canvasConfirm` / `canvasStorage`, nút Gọn, `setupPdfJsForCanvas`.
+- `backupcode viettailieu/chuyenpdf.html`
+  - Chống FOUC, `.app-shell` `max-w-[98%]` / `1750px`, banner Canvas, `canvasConfirm` / `canvasStorage`, nút Gọn, `setupPdfJsForCanvas`.
+- Không chỉnh `backupcode viettailieu/soanbaigemini_bakcup_khong đụng tới.html`.
+- `tests/backupcode-canvas-smoke.js`
+  - Kiểm tra 6 tệp: banner, anti-FOUC, layout mở rộng, compact UI, canvasConfirm/storage, PDF Worker fallback, cú pháp JS inline; xác nhận bản sao lưu gốc không bị sửa.
+
+## Kiểm tra đã chạy
+
+- `node tests/backupcode-canvas-smoke.js`: PASS.
+- `node tests/canvas-soankhbd-smoke.js`: PASS.
+- `node tests/soanbaigemini-plan-smoke.js`: PASS.
+- `node tests/taobaitap-plan-smoke.js`: PASS.
+- `node tests/taobaocao-account-sync-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-math-smoke.js`: PASS.
+- `node tests/sgk-knowledge-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: FAIL sẵn có ngoài phạm vi (`AI lesson mode must select the requested number of lessons`, actual 2 expected 3). Không sửa `xaydungphuluc.html`.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- Cần `/verify` trực quan trong Gemini Canvas: mở rộng toàn màn hình, banner, nút Gọn, và đọc PDF khi Worker bị chặn.
+
+---
+
+# IMPLEMENT: Điều chỉnh phân bổ NLS/AI adaptive
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `canvas_xaydungphuluc.html` và `xaydungphuluc.html`
+  - Giao diện adaptive hiển thị đúng quy tắc mới và mặc định chọn `2 mã` cho bài từ 2 tiết không AI.
+  - Phân bổ NLS theo số tiết và AI: bài 1 tiết có AI không có NLS; bài 1 tiết không AI có 1 NLS; bài từ 2 tiết có AI có 1 NLS; bài từ 2 tiết không AI có 2 hoặc tối đa 3 NLS theo lựa chọn.
+  - Fallback không sinh mã NLS khi mức yêu cầu là 0; đầu ra lọc bỏ NLS trong trường hợp này.
+  - Bài 1 tiết có AI bị giới hạn đúng 1 mã AI; bài từ 2 tiết giữ 1 hoặc 2 mã theo mật độ AI.
+  - Prompt sinh phụ lục đồng bộ các quy tắc NLS/AI trên, gồm cả prompt chi tiết của Phụ lục 1.
+- `tests/canvas-xaydungphuluc-smoke.js` và `tests/xaydungphuluc-smoke.js`
+  - Cập nhật hồi quy cho toàn bộ ngưỡng min/max adaptive và trường hợp bài 1 tiết có AI không xuất mã NLS.
+
+## Kiểm tra đã chạy
+
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-math-smoke.js`: PASS.
+- `node tests/sgk-knowledge-smoke.js`: PASS.
+- `git diff --check` trong phạm vi thay đổi: PASS (chỉ cảnh báo CRLF của Git).
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+
+---
+
+# IMPLEMENT: Bảo toàn LaTeX và chuẩn hóa mô tả Năng lực số
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `canvas_xaydungphuluc.html` và `xaydungphuluc.html`
+  - `safeParseAiJson()` bảo vệ lệnh LaTeX trước khi gọi `JSON.parse`, gồm `\\frac`, `\\begin`, `\\text`, `\\neq` và các lệnh toán học phổ biến; tránh giải mã nhầm thành ký tự điều khiển.
+  - Khôi phục dữ liệu cũ chứa Form Feed trước `rac{...}` thành `\\frac{...}` trước khi bọc công thức.
+  - Không còn trả nguyên khối `digital_evidence` nhiều dòng cho một mã NLS không khớp; chỉ dùng dòng khớp mã, hoặc minh chứng một dòng an toàn.
+  - Làm sạch mã lồng, dấu `]`, khử trùng lặp theo mã NLS và chặn tích hợp trùng mã giữa dữ liệu AI/fallback.
+- `js/khbd-docx.js`
+  - Phục hồi Form Feed của dữ liệu cũ trước khi chuẩn hóa/biến đổi LaTeX sang OMML.
+- Smoke tests
+  - Thêm hồi quy cho LaTeX, Form Feed và chuỗi NLS nhiều mã bị lồng/lặp.
+
+## Kiểm tra đã chạy
+
+- `node tests/xaydungphuluc-math-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/sgk-knowledge-smoke.js`: PASS.
+- `git diff --check` trên phạm vi thay đổi: không có lỗi (chỉ cảnh báo CRLF của Git).
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- Cần `/verify` trực quan với công thức phân số và một bài có nhiều mã NLS.
+
+---
+
 # IMPLEMENT: Khắc phục thẩm định Năng lực số theo đơn vị PPCT
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`

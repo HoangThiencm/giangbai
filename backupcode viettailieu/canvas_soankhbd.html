@@ -3,6 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body { display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 100%; }
+    #canvasHostBanner { display: block !important; visibility: visible !important; }
+  </style>
+  <script>
+  (function(){
+    function reveal(){
+      var h=document.documentElement, b=document.body;
+      if(h){h.style.setProperty('display','block','important');h.style.setProperty('visibility','visible','important');h.removeAttribute('hidden')}
+      if(b){b.style.setProperty('display','block','important');b.style.setProperty('visibility','visible','important');b.style.setProperty('opacity','1','important');b.removeAttribute('hidden')}
+    }
+    reveal();
+    var obs=new MutationObserver(function(ms){ms.forEach(function(m){if(m.type==='attributes')reveal()})});
+    obs.observe(document.documentElement,{childList:true,subtree:false,attributes:true,attributeFilter:['style','hidden','class']});
+    document.addEventListener('DOMContentLoaded',reveal);
+  })();
+  </script>
   <title>Soạn Kế hoạch Bài dạy AI — Gemini Canvas (gemini-3-flash-preview)</title>
   
   <!-- Favicon -->
@@ -31,9 +48,42 @@
   <!-- PDF.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
-    if (window.pdfjsLib) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    function setupPdfJsForCanvas(workerSrc) {
+      if (!window.pdfjsLib) return false;
+      var allowed = false;
+      try {
+        if (typeof Worker !== 'undefined') {
+          var url = URL.createObjectURL(new Blob(['/*pdf-worker-probe*/'], { type: 'text/javascript' }));
+          try {
+            var worker = new Worker(url);
+            worker.terminate();
+            allowed = true;
+          } finally {
+            URL.revokeObjectURL(url);
+          }
+        }
+      } catch (err) {
+        allowed = false;
+      }
+      if (allowed && workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+        return true;
+      }
+      window.__PDF_WORKER_BLOCKED__ = true;
+      try { pdfjsLib.disableWorker = true; } catch (e) {}
+      try { if (pdfjsLib.GlobalWorkerOptions) pdfjsLib.GlobalWorkerOptions.workerSrc = ''; } catch (e) {}
+      function noteBlocked() {
+        var banner = document.getElementById('canvasHostBanner');
+        if (banner && !banner.dataset.pdfWorkerNoted) {
+          banner.dataset.pdfWorkerNoted = '1';
+          banner.textContent = 'Gemini Canvas chặn PDF Worker. Hãy dùng DOCX/ảnh, hoặc đọc PDF trên luồng chính.';
+        }
+      }
+      if (document.body) noteBlocked();
+      else document.addEventListener('DOMContentLoaded', noteBlocked);
+      return false;
     }
+    setupPdfJsForCanvas('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');
   </script>
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
@@ -94,10 +144,14 @@
     .tab-pane { display: none; }
     .tab-pane.active { display: block; }
     #tabVision.tab-pane.active { display: flex; flex-direction: column; }
+    .app-body { max-width: 98% !important; width: 100%; margin-left: auto; margin-right: auto; }
+    @media (min-width: 1536px) { .app-body { max-width: 1750px !important; } }
+    .compact-ui .card, .compact-ui .panel { padding: 0.75rem !important; }
+    .compact-ui input, .compact-ui select, .compact-ui textarea { padding: 0.3rem 0.5rem !important; font-size: 0.85rem !important; }
   </style>
 </head>
 <body>
-  <div id="canvasHostBanner">Đang kết nối host <code>hoangthiencm.id.vn</code>…</div>
+  <div id="canvasHostBanner" style="display:block!important;visibility:visible!important;padding:.4rem 1rem;text-align:center;font-size:.78rem;font-weight:700;background:#e0f2fe;color:#075985">Đã kết nối Gemini Canvas · Môi trường mở rộng toàn màn hình</div>
 
   <!-- =========================================================================
        APP HEADER & TOOLBAR
@@ -123,6 +177,9 @@
         </button>
         <button id="btnManageKeys" class="btn btn-outline" title="Canvas dùng Gemini key hệ thống do Admin cấu hình" style="pointer-events:none;opacity:.85">
           <i data-lucide="sparkles"></i> Canvas · <span id="keyCountBadge">gemini-3-flash-preview</span>
+        </button>
+        <button id="compactModeBtn" class="btn btn-outline" type="button" onclick="toggleCompactMode()" title="Giao diện gọn" aria-pressed="false">
+          🗜 Gọn
         </button>
         <button id="btnClearAll" class="btn btn-danger" title="Xóa toàn bộ nội dung đã soạn">
           <i data-lucide="trash-2"></i> Xóa tất cả
@@ -203,7 +260,7 @@
   <!-- =========================================================================
        APP MAIN CONTENT
        ========================================================================= -->
-  <main class="app-body">
+  <main class="app-body w-full max-w-[98%] 2xl:max-w-[1750px] mx-auto p-3 md:p-4">
 
     <!-- -----------------------------------------------------------------------
          TAB 0: THIẾT LẬP CHUNG & THÔNG TIN BÀI DẠY
@@ -900,6 +957,65 @@
 
   <!-- Patch Gemini Runtime + Canvas Confirm TRƯỚC khbd-app.js -->
   <script>
+    const memoryStorage = Object.create(null);
+    function getCanvasStorage() {
+      var nativeStorage = null;
+      try {
+        nativeStorage = window.localStorage;
+        var probe = '__khbd_canvas_probe__';
+        nativeStorage.setItem(probe, '1');
+        nativeStorage.removeItem(probe);
+      } catch (e) {}
+      return {
+        getItem: function (key) {
+          try {
+            var value = nativeStorage && nativeStorage.getItem(key);
+            return value != null ? value : (memoryStorage[key] || null);
+          } catch (e) {
+            return memoryStorage[key] || null;
+          }
+        },
+        setItem: function (key, value) {
+          var text = String(value);
+          memoryStorage[key] = text;
+          try { if (nativeStorage) nativeStorage.setItem(key, text); } catch (e) {}
+        },
+        removeItem: function (key) {
+          delete memoryStorage[key];
+          try { if (nativeStorage) nativeStorage.removeItem(key); } catch (e) {}
+        }
+      };
+    }
+    var canvasStorage = getCanvasStorage();
+    function canvasEscHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function canvasAlert(message) {
+      return new Promise(function (resolve) {
+        var modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:rgba(15,23,42,.55);padding:1rem';
+        modal.innerHTML = '<section style="background:#fff;border:1px solid #dbe5ee;border-radius:16px;max-width:28rem;width:100%;padding:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,.18)"><h3 style="margin:0 0 .5rem;font-size:1rem;font-weight:700">Thông báo</h3><p style="margin:0 0 1rem;font-size:.9rem;white-space:pre-wrap;color:#334155">' + canvasEscHtml(message) + '</p><div style="display:flex;justify-content:flex-end"><button type="button" data-action="ok" class="btn btn-primary">Đồng ý</button></div></section>';
+        document.body.appendChild(modal);
+        var done = false;
+        function finish() { if (done) return; done = true; modal.remove(); resolve(); }
+        modal.querySelector('[data-action="ok"]').onclick = finish;
+        modal.addEventListener('click', function (e) { if (e.target === modal) finish(); });
+      });
+    }
+    function toggleCompactMode() {
+      var on = document.documentElement.classList.toggle('compact-ui');
+      canvasStorage.setItem('khbd_compact', on ? '1' : '0');
+      var btn = document.querySelector('#compactModeBtn');
+      if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      return on;
+    }
+    if (canvasStorage.getItem('khbd_compact') === '1') {
+      document.documentElement.classList.add('compact-ui');
+      var compactBtn = document.querySelector('#compactModeBtn');
+      if (compactBtn) compactBtn.setAttribute('aria-pressed', 'true');
+    }
     /* Hộp thoại xác nhận nội bộ DOM cho Gemini Canvas Sandbox */
     function canvasConfirm(message) {
       return new Promise(function (resolve) {

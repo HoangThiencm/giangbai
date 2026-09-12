@@ -4,6 +4,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      html, body { display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 100%; }
+      #canvasHostBanner { display: block !important; visibility: visible !important; }
+    </style>
+    <script>
+    (function(){
+      function reveal(){
+        var h=document.documentElement, b=document.body;
+        if(h){h.style.setProperty('display','block','important');h.style.setProperty('visibility','visible','important');h.removeAttribute('hidden')}
+        if(b){b.style.setProperty('display','block','important');b.style.setProperty('visibility','visible','important');b.style.setProperty('opacity','1','important');b.removeAttribute('hidden')}
+      }
+      reveal();
+      var obs=new MutationObserver(function(ms){ms.forEach(function(m){if(m.type==='attributes')reveal()})});
+      obs.observe(document.documentElement,{childList:true,subtree:false,attributes:true,attributeFilter:['style','hidden','class']});
+      document.addEventListener('DOMContentLoaded',reveal);
+    })();
+    </script>
     <title>Viết Sáng Kiến - Hệ Thống Trợ Lý AI</title>
     <script>
         function logout() {
@@ -553,6 +570,8 @@
             }
         }
 
+        .compact-ui .card, .compact-ui .panel { padding: 0.75rem !important; }
+        .compact-ui input, .compact-ui select, .compact-ui textarea { padding: 0.3rem 0.5rem !important; font-size: 0.85rem !important; }
         @media (max-width: 640px) {
             .floating-progress-panel {
                 right: 10px;
@@ -565,6 +584,9 @@
 </head>
 
 <body class="p-6">
+    <div id="canvasHostBanner" style="display:block!important;visibility:visible!important;padding:.4rem 1rem;text-align:center;font-size:.78rem;font-weight:700;background:#e0f2fe;color:#075985">
+      Đã kết nối Gemini Canvas · Môi trường mở rộng toàn màn hình
+    </div>
     <!-- TOP BAR -->
     <div class="absolute top-4 right-4 flex gap-2 z-40">
         <div class="bg-white/80 hover:bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full shadow-sm text-sm font-bold transition-all backdrop-blur-sm border border-emerald-100 flex items-center gap-2">
@@ -598,6 +620,10 @@
             class="bg-white/80 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-full shadow-sm text-sm font-bold transition-all backdrop-blur-sm border border-slate-200 flex items-center">
             <i class="fab fa-github mr-2"></i><span>Ket noi GitHub</span>
         </button>
+        <button id="compactModeBtn" type="button" onclick="toggleCompactMode()" aria-pressed="false" title="Giao diện gọn"
+            class="bg-white/80 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-full shadow-sm text-sm font-bold transition-all backdrop-blur-sm border border-slate-200 flex items-center">
+            🗜 Gọn
+        </button>
         <button onclick="goHome()"
             class="bg-white/80 hover:bg-orange-50 text-orange-600 px-4 py-2 rounded-full shadow-sm text-sm font-bold transition-all backdrop-blur-sm border border-orange-100 flex items-center">
             <i class="fas fa-home mr-2"></i> Trang chủ
@@ -624,7 +650,7 @@
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto mt-16">
+    <div class="w-full max-w-[98%] 2xl:max-w-[1750px] mx-auto mt-16 p-3 md:p-4">
         <!-- HEADER -->
         <div class="text-center mb-8">
             <div class="inline-block p-4 rounded-full bg-orange-600 text-white mb-4 shadow-lg">
@@ -1830,6 +1856,78 @@
         </footer>
     </div>
 
+    <script>
+        const memoryStorage = Object.create(null);
+        function getCanvasStorage() {
+            let nativeStorage = null;
+            try {
+                nativeStorage = window.localStorage;
+                const probe = '__sangkien_canvas_probe__';
+                nativeStorage.setItem(probe, '1');
+                nativeStorage.removeItem(probe);
+            } catch (e) {}
+            return {
+                getItem(key) {
+                    try {
+                        const value = nativeStorage?.getItem(key);
+                        return value ?? memoryStorage[key] ?? null;
+                    } catch (e) {
+                        return memoryStorage[key] ?? null;
+                    }
+                },
+                setItem(key, value) {
+                    const text = String(value);
+                    memoryStorage[key] = text;
+                    try { nativeStorage?.setItem(key, text); } catch (e) {}
+                },
+                removeItem(key) {
+                    delete memoryStorage[key];
+                    try { nativeStorage?.removeItem(key); } catch (e) {}
+                }
+            };
+        }
+        const canvasStorage = getCanvasStorage();
+        function canvasEscHtml(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function canvasConfirm(message) {
+            return new Promise(resolve => {
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:rgba(15,23,42,.55);padding:1rem';
+                modal.innerHTML = `<section style="background:#fff;border:1px solid #dbe5ee;border-radius:16px;max-width:28rem;width:100%;padding:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,.18)"><h3 style="margin:0 0 .5rem;font-size:1rem;font-weight:700">Xác nhận</h3><p style="margin:0 0 1rem;font-size:.9rem;white-space:pre-wrap;color:#334155">${canvasEscHtml(message)}</p><div style="display:flex;justify-content:flex-end;gap:.5rem"><button type="button" data-action="cancel" style="border:1px solid #cbd5e1;background:#fff;border-radius:9px;padding:.45rem .8rem;font-weight:700;cursor:pointer">Hủy</button><button type="button" data-action="ok" style="background:#ea580c;color:#fff;border:0;border-radius:9px;padding:.45rem .8rem;font-weight:700;cursor:pointer">Đồng ý</button></div></section>`;
+                document.body.appendChild(modal);
+                let done = false;
+                const finish = value => { if (done) return; done = true; modal.remove(); resolve(value); };
+                modal.querySelector('[data-action="cancel"]').onclick = () => finish(false);
+                modal.querySelector('[data-action="ok"]').onclick = () => finish(true);
+                modal.addEventListener('click', event => { if (event.target === modal) finish(false); });
+            });
+        }
+        function canvasAlert(message) {
+            return new Promise(resolve => {
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:rgba(15,23,42,.55);padding:1rem';
+                modal.innerHTML = `<section style="background:#fff;border:1px solid #dbe5ee;border-radius:16px;max-width:28rem;width:100%;padding:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,.18)"><h3 style="margin:0 0 .5rem;font-size:1rem;font-weight:700">Thông báo</h3><p style="margin:0 0 1rem;font-size:.9rem;white-space:pre-wrap;color:#334155">${canvasEscHtml(message)}</p><div style="display:flex;justify-content:flex-end"><button type="button" data-action="ok" style="background:#ea580c;color:#fff;border:0;border-radius:9px;padding:.45rem .8rem;font-weight:700;cursor:pointer">Đồng ý</button></div></section>`;
+                document.body.appendChild(modal);
+                let done = false;
+                const finish = () => { if (done) return; done = true; modal.remove(); resolve(); };
+                modal.querySelector('[data-action="ok"]').onclick = finish;
+                modal.addEventListener('click', event => { if (event.target === modal) finish(); });
+            });
+        }
+        function toggleCompactMode() {
+            const on = document.documentElement.classList.toggle('compact-ui');
+            canvasStorage.setItem('sangkien_compact', on ? '1' : '0');
+            const btn = document.querySelector('#compactModeBtn');
+            if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            return on;
+        }
+        if (canvasStorage.getItem('sangkien_compact') === '1') {
+            document.documentElement.classList.add('compact-ui');
+            const compactBtn = document.querySelector('#compactModeBtn');
+            if (compactBtn) compactBtn.setAttribute('aria-pressed', 'true');
+        }
+    </script>
     <script type="module">
         // Global variables
         window.currentStep = 1;
@@ -2836,9 +2934,38 @@
         // Initialize
         loadAPIConfig();
 
-        if (window["pdfjsLib"]) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+        function setupPdfJsForCanvas(workerSrc) {
+            if (!window.pdfjsLib) return false;
+            var allowed = false;
+            try {
+                if (typeof Worker !== 'undefined') {
+                    var url = URL.createObjectURL(new Blob(['/*pdf-worker-probe*/'], { type: 'text/javascript' }));
+                    try {
+                        var worker = new Worker(url);
+                        worker.terminate();
+                        allowed = true;
+                    } finally {
+                        URL.revokeObjectURL(url);
+                    }
+                }
+            } catch (err) {
+                allowed = false;
+            }
+            if (allowed && workerSrc) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+                return true;
+            }
+            window.__PDF_WORKER_BLOCKED__ = true;
+            try { pdfjsLib.disableWorker = true; } catch (e) {}
+            try { if (pdfjsLib.GlobalWorkerOptions) pdfjsLib.GlobalWorkerOptions.workerSrc = ''; } catch (e) {}
+            var banner = document.getElementById('canvasHostBanner');
+            if (banner && !banner.dataset.pdfWorkerNoted) {
+                banner.dataset.pdfWorkerNoted = '1';
+                banner.textContent = 'Gemini Canvas chặn PDF Worker. Hãy dùng DOCX/ảnh, hoặc đọc PDF trên luồng chính.';
+            }
+            return false;
         }
+        setupPdfJsForCanvas("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js");
 
         function parseJsonFromModel(text) {
             try { return JSON.parse(text); } catch (e) { }

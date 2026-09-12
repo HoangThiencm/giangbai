@@ -43,7 +43,7 @@ class DocxGenerator {
 
   stripRepeatedLatexSpacing(text) {
     if (!text) return "";
-    let s = String(text);
+    let s = String(text).replace(/\frac(?=\{)/g, '\\frac');
     s = s.replace(/\$\$([\s\S]*?)\$\$/g, (full, inner) => (this.isGarbageLatexMathInner(inner) ? "" : full));
     s = s.replace(/\$([^$\n]+?)\$/g, (full, inner) => (this.isGarbageLatexMathInner(inner) ? "" : full));
     s = s.replace(/(?:\\(?:quad|qquad)\s*){3,}/g, " ");
@@ -96,7 +96,7 @@ class DocxGenerator {
    */
   latexToUnicodeMath(latex) {
     if (!latex) return "";
-    let s = this.stripRepeatedLatexSpacing(String(latex)).trim();
+    let s = this.stripRepeatedLatexSpacing(String(latex).replace(/\frac(?=\{)/g, '\\frac')).trim();
     if (!s) return "";
 
     // Loại bỏ dấu bao bọc $ hoặc $$

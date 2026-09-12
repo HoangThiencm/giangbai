@@ -119,6 +119,8 @@ async function main() {
   const w3 = sandbox.autoWrapMathInDelimiters('Tính phân số \\frac{a}{b} + \\frac{c}{d} và căn \\sqrt{x^2 + 1}');
   assert.ok(w3.includes('$\\frac{a}{b}$'), 'Phải bọc phân số trong $');
   assert.ok(w3.includes('$\\sqrt{x^2 + 1}$'), 'Phải bọc căn thức trong $');
+  const repairedFormFeed = sandbox.autoWrapMathInDelimiters(`Tỉ số ${String.fromCharCode(12)}rac{a}{b}`);
+  assert.ok(repairedFormFeed.includes('$\\frac{a}{b}$'), 'Phải phục hồi Form Feed cũ thành lệnh phân số LaTeX');
 
   const w4 = sandbox.autoWrapMathInDelimiters('Quan hệ a ∈ A và b ∉ A, x ≤ 5 và y ≥ 0');
   assert.ok(w4.includes('$\\in') || w4.includes('$a \\in'), 'Phải chuyển ký hiệu thuộc về LaTeX');
