@@ -19,28 +19,31 @@ function flush() {
     return new Promise(resolve => setImmediate(resolve));
 }
 
-function makeSandbox(options) {
-    const local = Object.assign({}, options.local);
-    const session = Object.assign({}, options.session);
+function makeSandbox() {
+    const local = {};
+    const session = {};
     const documentListeners = {};
     const windowListeners = {};
     const intervals = [];
     const reloads = [];
     let fetchCalls = 0;
+    const fetchUrls = [];
     const document = {
         hidden: false,
         addEventListener(type, callback) {
             (documentListeners[type] || (documentListeners[type] = [])).push(callback);
-        }
+        },
+        getElementById() { return null; }
     };
     const window = {
         location: { hostname: 'hoangthiencm.id.vn', protocol: 'https:', reload(force) { reloads.push(force); } },
         localStorage: { getItem(key) { return Object.prototype.hasOwnProperty.call(local, key) ? local[key] : null; }, setItem(key, value) { local[key] = String(value); } },
         sessionStorage: { getItem(key) { return Object.prototype.hasOwnProperty.call(session, key) ? session[key] : null; }, setItem(key, value) { session[key] = String(value); } },
         addEventListener(type, callback) { (windowListeners[type] || (windowListeners[type] = [])).push(callback); },
-        fetch(url, optionsArg) {
+        fetch(url) {
             fetchCalls += 1;
-            return Promise.resolve(options.fetchResponse(url, optionsArg, fetchCalls));
+            fetchUrls.push(url);
+            return Promise.resolve({ ok: true, json() { return Promise.resolve({ version: 'sha-one' }); } });
         },
         console: { clear() {}, log() {}, debug() {}, info() {}, dir() {}, dirxml() {}, trace() {}, table() {}, group() {}, groupCollapsed() {}, groupEnd() {}, warn() {}, error() {} },
         navigator: { userAgent: 'test', maxTouchPoints: 0 },
@@ -49,28 +52,36 @@ function makeSandbox(options) {
     };
     const sandbox = { window, document, localStorage: window.localStorage, sessionStorage: window.sessionStorage, navigator: window.navigator, console: window.console, Promise, Date, Number, String, Boolean, Math, Error, Function, setInterval(callback, delay) { intervals.push({ callback, delay }); return intervals.length; } };
     vm.createContext(sandbox);
-    const instrumented = guardSrc.replace(/\}\)\(\);\s*$/, 'window.__autoReloadHooks = { checkAppVersionUpdate: checkAppVersionUpdate };\n})();');
-    vm.runInContext(instrumented, sandbox, { filename: 'security-guard.js' });
-    return { local, session, documentListeners, windowListeners, intervals, reloads, get fetchCalls() { return fetchCalls; }, hooks: window.__autoReloadHooks };
+    vm.runInContext(guardSrc, sandbox, { filename: 'security-guard.js' });
+    return { documentListeners, windowListeners, intervals, reloads, fetchUrls, get fetchCalls() { return fetchCalls; } };
 }
 
 (async function run() {
-    const manifest = version => ({ ok: true, json() { return Promise.resolve({ version }); } });
-    const firstVisit = makeSandbox({ fetchResponse: () => manifest('sha-one') });
-    await flush(); await flush();
-    assert('first visit records server version without reload', firstVisit.local.__system_app_version__ === 'sha-one' && firstVisit.reloads.length === 0);
-    assert('manifest request bypasses cache', firstVisit.fetchCalls === 1);
-    assert('checks every 60 seconds and on focus/visibility', firstVisit.intervals.some(item => item.delay === 60000) && firstVisit.windowListeners.focus && firstVisit.documentListeners.visibilitychange);
+    assert('security-guard.js does not define initAutoUpdateChecker', !/\binitAutoUpdateChecker\b/.test(guardSrc));
+    assert('security-guard.js does not define checkAppVersionUpdate', !/\bcheckAppVersionUpdate\b/.test(guardSrc));
+    assert('security-guard.js does not fetch version.json', !/version\.json/.test(guardSrc) && !/\bfetch\s*\(/.test(guardSrc));
 
-    const changedVersion = makeSandbox({ local: { __system_app_version__: 'sha-one' }, fetchResponse: () => manifest('sha-two') });
-    await flush(); await flush();
-    assert('changed version reloads once and stores the new version', changedVersion.local.__system_app_version__ === 'sha-two' && changedVersion.reloads.length === 1);
-    await changedVersion.hooks.checkAppVersionUpdate();
-    assert('reload debounce prevents a second reload within 10 seconds', changedVersion.reloads.length === 1);
+    const autoReloadCall = /window\.location\.reload/.test(guardSrc) &&
+        !/Nhập mã xác thực Admin để mở khóa DevTools[\s\S]*window\.location\.reload\(\);/.test(guardSrc);
+    assert('security-guard.js does not auto-call window.location.reload()', !autoReloadCall);
 
-    const networkFailure = makeSandbox({ local: { __system_app_version__: 'sha-one' }, fetchResponse: () => Promise.reject(new Error('offline')) });
-    await flush(); await flush();
-    assert('network failure does not reload or interrupt the page', networkFailure.reloads.length === 0);
+    const sandbox = makeSandbox();
+    await flush();
+    await flush();
+
+    if (sandbox.windowListeners.focus) {
+        sandbox.windowListeners.focus.forEach(callback => callback());
+    }
+    if (sandbox.documentListeners.visibilitychange) {
+        sandbox.documentListeners.visibilitychange.forEach(callback => callback());
+    }
+    await flush();
+    await flush();
+
+    assert('loading security-guard.js does not reload the page', sandbox.reloads.length === 0);
+    assert('loading security-guard.js does not fetch a version manifest', sandbox.fetchCalls === 0 && sandbox.fetchUrls.every(url => String(url).indexOf('version.json') === -1));
+    assert('no 60-second auto-update interval is registered', !sandbox.intervals.some(item => item.delay === 60000));
+    assert('focus and visibilitychange do not trigger a reload', sandbox.reloads.length === 0);
 
     const workflow = fs.readFileSync(workflowPath, 'utf8');
     const htaccess = fs.readFileSync(htaccessPath, 'utf8');

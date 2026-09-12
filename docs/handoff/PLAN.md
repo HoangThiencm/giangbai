@@ -1,122 +1,79 @@
-﻿# PLAN: Đưa bộ chọn tích hợp theo "Tổng số tiết" và "Tỉ lệ %" trực quan vào Mục 1 Xây dựng Phụ lục
+﻿# PLAN: Gỡ bỏ hoàn toàn cơ chế tự động refresh (Auto-Reload) và trả về nguyên trạng
 
 ## Hiện trạng
 
-1. **Người dùng mong muốn 2 hướng chọn khi cấu hình tích hợp**:
-   - Hướng 1: Chọn tích hợp theo **Tổng số tiết** (nhập trực tiếp số tiết cần tích hợp).
-   - Hướng 2: Chọn tích hợp theo **Tỉ lệ %** (kéo thanh trượt % như hiện tại).
-2. **Nguyên nhân hiện tại chỉ thấy thanh trượt %**:
-   - Về logic JS (`canvas_xaydungphuluc.html` và `xaydungphuluc.html`): Hệ thống **đã có sẵn** đầy đủ các hàm xử lý tính toán hai chiều:
-     + `syncNlsSelectionFromRate()` / `syncAiSelectionFromRate()`: Chọn theo tỉ lệ %.
-     + `syncNlsSelectionFromCount(value)` / `syncAiSelectionFromCount(value)`: Chọn theo số tiết hoặc số bài.
-     + `syncNlsRateFromSelection()` / `syncAiRateFromSelection()`: Đồng bộ ngược từ số bài/tiết đã chọn về % và số lượng.
-     + `allocationUnit(kind)`: Đơn vị phân bổ (`period` - theo số tiết, `lesson` - theo số bài).
-   - Về giao diện HTML trên `canvas_xaydungphuluc.html` (trang Canvas chính):
-     + Cụm thẻ nhập số tiết `#nlsCountInput`, `#aiCountInput` và `#nlsUnit`, `#aiUnit` vô tình bị đặt trong một `<section class="card p-4">` phụ nằm ở **tận cuối trang** (dưới Mục 7 - Xem trước & xuất Word, dòng 73).
-     + Trong khi đó, tại **Mục 1 (Thông tin & cấu hình sư phạm)** - nơi người dùng thao tác trực tiếp với NLS và AI, chỉ hiển thị mỗi thanh trượt `#nlsRate` và `#aiRate`.
-     + Do đó, người dùng nhìn vào khung Mục 1 chỉ thấy thanh trượt % mà không thấy ô nhập / chọn theo Tổng số tiết.
+1. **Hiện tượng người dùng gặp phải**:
+   - Toàn bộ các trang trong hệ thống (bao gồm trang Quản lý tổ chuyên môn `phancongtochuyenmon.html` và các trang khác) liên tục tự động refresh / reload dù người dùng không thao tác gì hoặc đang nhập liệu.
+   - Nguyên nhân:
+     - Trong file `js/security-guard.js` (được nạp trên toàn bộ các trang HTML của hệ thống), cơ chế `initAutoUpdateChecker()` lắng nghe các sự kiện `focus`, `visibilitychange` và `setInterval(60000)` để gọi `checkAppVersionUpdate()`.
+     - Khi kiểm tra manifest `/version.json`, việc fetch hoặc đọc/ghi bộ nhớ `localStorage`/`sessionStorage` giữa các tab hoặc do chênh lệch phiên bản kích hoạt lệnh `window.location.reload()`, gây ra tình trạng tải lại trang liên tục (refresh loop), làm gián đoạn người dùng và mất dữ liệu đang nhập dở.
+2. **Yêu cầu của người dùng**:
+   - Gỡ bỏ hoàn toàn tính năng tự động refresh này, trả về nguyên trạng như cũ. Không cho phép script tự động reload trang dưới bất kỳ hình thức nào.
 
 ---
 
 ## Mục tiêu & Giải pháp thiết kế
 
-1. **Đưa bộ chọn 2 hướng (Số tiết / Tỉ lệ %) trực tiếp vào từng thẻ NLS và AI tại Mục 1**:
-   - Trong thẻ **Năng lực số (CV 3456 / TT 02)**:
-     + Hiển thị rõ ràng 2 cách điều chỉnh song hành, đồng bộ 2 chiều:
-       * **Cách 1 - Theo tỉ lệ %**: Thanh trượt `0% - 100%`.
-       * **Cách 2 - Theo tổng số tiết / bài**: Có ô chọn đơn vị (`Theo số tiết dạy bài mới` / `Theo số bài dạy bài mới`) và ô nhập số lượng trực tiếp (`#nlsCountInput`).
-     + Người dùng có thể kéo thanh trượt % hoặc nhập trực tiếp số tiết (ví dụ nhập `36` tiết) -> hệ thống tự quy đổi % và tự động tích chọn các bài tương ứng trong bảng PPCT.
-   - Trong thẻ **Trí tuệ nhân tạo (QĐ 2422)**:
-     + Tương tự, đặt bộ chọn đơn vị (`#aiUnit`) và ô nhập số lượng trực tiếp (`#aiCountInput`) ngay dưới tiêu đề thẻ AI, liên kết 2 chiều với thanh trượt `#aiRate`.
-2. **Dọn dẹp thẻ phụ thừa ở cuối trang**:
-   - Xóa bỏ `<section class="card p-4" aria-label="Phân bổ linh hoạt NLS và AI">` ở cuối trang (dòng 73) sau Mục 7 để giao diện gọn gàng, tránh trùng lặp id.
-3. **Đồng bộ trên cả 2 tệp giao diện**:
-   - `canvas_xaydungphuluc.html`
-   - `xaydungphuluc.html`
-   - `backupcode viettailieu/canvas_xaydungphuluc.html` (nếu cần tương thích)
+1. **Gỡ bỏ hoàn toàn module Auto-Update Checker trong `js/security-guard.js`**:
+   - Xóa bỏ các biến và hàm:
+     - `appVersionStorageKey`, `appVersionReloadAtKey`, `appVersionReloadDebounceMs`, `appVersionCheckInFlight`.
+     - `getVersionValue(payload)`.
+     - `checkAppVersionUpdate()`.
+     - `initAutoUpdateChecker()`.
+     - Lệnh gọi `initAutoUpdateChecker();`.
+   - Đảm bảo `js/security-guard.js` chỉ thực hiện các chức năng bảo vệ cơ bản như cũ, hoàn toàn không có bất kỳ lệnh `fetch('/version.json')` hay `window.location.reload()` tự động nào.
+2. **Cập nhật bộ test tự động**:
+   - Cập nhật file test `tests/auto-reload-smoke.js` (hoặc loại bỏ việc kiểm tra auto-reload bắt buộc) để xác nhận hệ thống an toàn, không còn tự reload.
+   - Chạy lại toàn bộ test suites (`baogiang-weekday-segment-smoke.js`, `timetable-render-smoke.js`).
+3. **Giữ nguyên các cải tiến đã đạt tiêu chuẩn trước đó**:
+   - Giữ nguyên giao diện Thời khoá biểu 2 cột thu gọn không cần trượt con lăn.
+   - Giữ nguyên thuật toán căn chỉnh tiết AI buổi chiều (7–9).
+   - Giữ nguyên các tính năng Báo giảng và PPCT đa tuần.
 
 ---
 
 ## Phạm vi thực hiện
 
-1. **`canvas_xaydungphuluc.html`**:
-   - Chuyển cụm `#nlsUnit`, `#nlsCountInput`, `#aiUnit`, `#aiCountInput` từ dòng 73 vào trong thẻ NLS và AI ở Mục 1 (dòng 64).
-   - Thiết kế giao diện nhỏ gọn, hài hòa (dạng inline flex: Dropdown đơn vị + Input số tiết nằm cạnh nhau ngay trên thanh trượt).
-   - Xóa bỏ section thừa ở dòng 73.
-2. **`xaydungphuluc.html`**:
-   - Đảm bảo cụm `#nlsUnit`, `#nlsCountInput`, `#aiUnit`, `#aiCountInput` được bố trí đẹp mắt, trực quan và đồng bộ.
-3. **Smoke test**:
-   - Chạy `tests/canvas-xaydungphuluc-smoke.js` và `tests/xaydungphuluc-smoke.js` để đảm bảo tất cả các selector và luồng đồng bộ 2 chiều đạt PASS.
+1. `js/security-guard.js`:
+   - Gỡ bỏ hoàn toàn logic kiểm tra phiên bản và tự động reload trang (dòng 34 đến dòng 105).
+2. `tests/auto-reload-smoke.js`:
+   - Cập nhật test để xác nhận `js/security-guard.js` không còn kích hoạt `window.location.reload()`.
 
 ---
 
 ## Ngoài phạm vi
 
-- Không thay đổi thuật toán gợi ý mã NLS/AI.
-- Không thay đổi cấu trúc bảng PPCT hay xuất file Word.
+- Không sửa đổi các logic chuyên môn khác trong `phancongtochuyenmon.html`.
+- Giữ nguyên cấu hình build cơ bản trong `.github/workflows/ftp-deploy.yml`.
 
 ---
 
 ## File dự kiến tác động
 
-1. `canvas_xaydungphuluc.html`
-2. `xaydungphuluc.html`
-3. `tests/canvas-xaydungphuluc-smoke.js`
+1. `js/security-guard.js`
+2. `tests/auto-reload-smoke.js`
 
 ---
 
 ## Các bước thực hiện
 
-### Bước 1: Điều chỉnh HTML trong `canvas_xaydungphuluc.html`
-- Tại Mục 1, thẻ NLS:
-  ```html
-  <div class="flex justify-between items-center">
-    <label><input id="nlsEnabled" type="checkbox" checked onchange="onNlsEnabledChange(this.checked)"> <b>Năng lực số (CV 3456 / TT 02)</b></label>
-    <output id="nlsRateOut">50%</output>
-  </div>
-  <div class="flex gap-2 items-center mt-2 mb-1">
-    <select id="nlsUnit" class="field text-xs py-1 px-2 w-auto" onchange="onNlsUnitChange(this.value)">
-      <option value="period" selected>Theo số tiết dạy bài mới</option>
-      <option value="lesson">Theo số bài dạy bài mới</option>
-    </select>
-    <input id="nlsCountInput" type="number" min="0" class="field text-xs py-0.5 px-1.5 w-16 text-center" onchange="syncNlsSelectionFromCount(this.value)" aria-label="Số tiết hoặc bài NLS">
-    <span class="text-xs opacity-70">hoặc kéo tỉ lệ % bên dưới:</span>
-  </div>
-  <input id="nlsRate" class="w-full" type="range" min="0" max="100" value="50" oninput="syncNlsSelectionFromRate()">
-  ```
-- Tương tự cho thẻ AI:
-  ```html
-  <div class="flex justify-between items-center">
-    <label><input id="aiEnabled" type="checkbox" checked onchange="onAiEnabledChange(this.checked)"> <b>Trí tuệ nhân tạo (QĐ 2422)</b></label>
-    <output id="aiRateOut">30%</output>
-  </div>
-  <div class="flex gap-2 items-center mt-2 mb-1">
-    <select id="aiUnit" class="field text-xs py-1 px-2 w-auto" onchange="onAiUnitChange(this.value)">
-      <option value="period" selected>Theo số tiết dạy bài mới</option>
-      <option value="lesson">Theo số bài dạy bài mới</option>
-    </select>
-    <input id="aiCountInput" type="number" min="0" class="field text-xs py-0.5 px-1.5 w-16 text-center" onchange="syncAiSelectionFromCount(this.value)" aria-label="Số tiết hoặc bài AI">
-    <span class="text-xs opacity-70">hoặc kéo tỉ lệ % bên dưới:</span>
-  </div>
-  <input id="aiRate" class="w-full" type="range" min="0" max="100" value="30" oninput="syncAiSelectionFromRate()">
-  ```
-- Xóa `<section class="card p-4" aria-label="Phân bổ linh hoạt NLS và AI">` ở cuối trang.
+### Bước 1: Xóa bỏ module auto-reload trong `js/security-guard.js`
+- Xóa toàn bộ đoạn code từ `// Kiểm tra manifest deploy độc lập...` đến hết `initAutoUpdateChecker();` (dòng 34 đến 105).
+- Trả `js/security-guard.js` về trạng thái an toàn, không có cơ chế tự refresh.
 
-### Bước 2: Kiểm tra liên kết sự kiện trong JS
-- Đảm bảo các hàm `onNlsUnitChange`, `syncNlsSelectionFromCount`, `syncNlsSelectionFromRate`, `onAiUnitChange`, `syncAiSelectionFromCount`, `syncAiSelectionFromRate` hoạt động đồng bộ hai chiều chính xác.
+### Bước 2: Cập nhật kiểm thử `tests/auto-reload-smoke.js`
+- Điều chỉnh nội dung kiểm thử để xác nhận rằng `js/security-guard.js` không còn chứa `initAutoUpdateChecker` và không còn tự gọi `reload()`.
 
-### Bước 3: Chạy test tự động
-- Chạy:
-  - `node tests/canvas-xaydungphuluc-smoke.js`
-  - `node tests/xaydungphuluc-smoke.js`
+### Bước 3: Chạy toàn bộ các test suites
+- `node tests/baogiang-weekday-segment-smoke.js`
+- `node tests/timetable-render-smoke.js`
+- `node tests/auto-reload-smoke.js`
+- `git diff --check`
 
 ---
 
 ## Tiêu chí nghiệm thu
 
-1. Tại Mục 1 trên giao diện Xây dựng phụ lục, cả 2 thẻ NLS và AI đều hiển thị đầy đủ 2 hướng cấu hình:
-   - Nhập trực tiếp **Tổng số tiết** (hoặc số bài).
-   - Kéo thanh trượt **Tỉ lệ %**.
-2. Nhập số tiết thì thanh trượt % tự động nhảy theo; kéo thanh trượt % thì ô số tiết tự động cập nhật số lượng tương ứng.
-3. Không còn thẻ thừa ở cuối trang.
-4. Toàn bộ các bộ test đạt **PASS 100%**.
+1. `js/security-guard.js` hoàn toàn không còn mã tự động fetch `/version.json` và không còn tự gọi `window.location.reload()`.
+2. Toàn bộ hệ thống hoạt động ổn định, mở trang bình thường, không bao giờ bị tự động reload/refresh ngoài ý muốn.
+3. Toàn bộ các bộ test tự động đạt **PASS 100%**.

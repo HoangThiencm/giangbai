@@ -7,6 +7,15 @@ const ids=html=>[...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]
 const functions=html=>[...html.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(match=>match[1]);
 const sourceIds=new Set(ids(source)),targetIds=new Set(ids(target));
 const sourceFunctions=new Set(functions(source)),targetFunctions=new Set(functions(target));
+const defaultSchoolInfo={schoolYear:'2026-2027',school:'THCS Trần Phú',department:'Tổ Toán - Tin',teacher:'Hoàng Tấn Thiên'};
+for(const [id,value] of Object.entries(defaultSchoolInfo)){
+  const input=target.match(new RegExp(`<input[^>]*\\bid="${id}"[^>]*>`));
+  assert(input,`Canvas missing default school-info input #${id}`);
+  assert(input[0].includes(`value="${value}"`),`Canvas #${id} must have its editable default value`);
+  assert(!/\\b(?:readonly|disabled)\\b/.test(input[0]),`Canvas #${id} must remain editable`);
+}
+['Theo tổng số tiết PPCT','Theo tổng số bài PPCT','AI tự đề xuất bài/tiết phù hợp dựa trên PPCT và ngữ cảnh SGK'].forEach(label=>assert(target.includes(label),`Canvas missing updated allocation wording: ${label}`));
+assert(!target.includes('dạy bài mới'),'Canvas allocation wording must not imply that only new-teaching lessons count');
 
 for(const id of ['nlsUnit','nlsCountInput','aiUnit','aiCountInput'])assert.equal(ids(target).filter(value=>value===id).length,1,`Canvas must keep exactly one #${id}`);
 assert(!target.includes('aria-label="Phân bổ linh hoạt NLS và AI"'),'Canvas must not retain the duplicate flexible-allocation card');
@@ -163,7 +172,7 @@ assert(target.includes('defaultPpctRows(getConfig({includeAiSelection:false}))')
 const bootstrapSandbox={
   sourcePpctRows:[],sourcePpctTable:null,
   grade:{value:'6'},subject:{value:'Toán học'},schoolYear:{value:'2026-2027'},
-  school:{value:''},department:{value:''},teacher:{value:''},
+  school:{value:'THCS Trần Phú'},department:{value:'Tổ Toán - Tin'},teacher:{value:'Hoàng Tấn Thiên'},
   classCount:{value:''},studentCount:{value:''},teacherCount:{value:''},
   nlsEnabled:{checked:false},nlsRate:{value:'0'},nlsDensity:{value:'1'},
   aiEnabled:{checked:true},aiRate:{value:'0'},aiDensity:{value:'1'},
@@ -181,6 +190,11 @@ vm.createContext(bootstrapSandbox);
 vm.runInContext('let _isGettingConfig=false;\n'+sliceNamedFunction('getConfig'),bootstrapSandbox);
 assert.equal(vm.runInContext('defaultPpctRows(getConfig({includeAiSelection:false})).length',bootstrapSandbox),1,
   'empty PPCT must create its default rows without recursively reading AI selection');
+assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext('getConfig({includeAiSelection:false})',bootstrapSandbox))),{
+  capHoc:'THCS',lop:'6',monHoc:'Toán học',boSach:'Sách giáo khoa dùng chung (từ 2026-2027)',namHoc:'2026-2027',truong:'THCS Trần Phú',toChuyenMon:'Tổ Toán - Tin',giaoVien:'Hoàng Tấn Thiên',thongKe:{classes:'',students:'',teachers:''},nls:{enabled:false,rate:0,unit:'period',density:'1',noAiDensity:'2-3'},ai:{enabled:true,rate:0,unit:'period',density:'1',selectedLessons:[],selectedPeriods:[]},clil:false,hoaNhap:false,chiDao:'',sgkContext:''
+},'Canvas getConfig must read the default school information');
+bootstrapSandbox.school.value='THCS Tự Chọn';
+assert.equal(vm.runInContext('getConfig({includeAiSelection:false}).truong',bootstrapSandbox),'THCS Tự Chọn','Canvas getConfig must retain manual school edits');
 const sliderNodes={'#nlsRate':{value:'0'},'#nlsRateOut':{value:''},'#nlsUnit':{value:'period'},'#aiUnit':{value:'period'},'#nlsCountInput':{value:''},'#aiCountInput':{value:''}};
 const sliderSandbox={
   document:{querySelector:selector=>sliderNodes[selector]||null},
@@ -190,7 +204,7 @@ const sliderSandbox={
   getConfig:()=>({monHoc:'Toán học'}),
   nlsCandidates:()=>sliderSandbox.candidates,aiCandidates:()=>sliderSandbox.candidates,
   validPeriodCount:value=>Number(value)||1,updateAiPicker:()=>{},
-  candidates:Array.from({length:10},(_,index)=>({id:`ppct:${index}`,lesson:`Bài slider ${index+1}`,periods:'1',tietCT:String(index+1),week:'1'})),
+  candidates:Array.from({length:10},(_,index)=>({id:`ppct:${index}`,lesson:index===0?'Ôn tập chương I':index===1?'Kiểm tra giữa kỳ I':`Bài slider ${index+1}`,periods:'1',tietCT:String(index+1),week:'1'})),
   nlsSelectedLessonIds:new Set(),aiSelectedLessonIds:new Set(),
   nlsRate:sliderNodes['#nlsRate'],nlsRateOut:sliderNodes['#nlsRateOut'],
   aiRate:{value:'0',min:'0',max:'100',disabled:false},aiRateOut:{value:''}
@@ -206,16 +220,18 @@ sliderSandbox.syncAiSelectionFromRate();
 assert(sliderSandbox.aiRateOut.value.startsWith('0%'),'Canvas AI slider must update at 0% without RangeError');
 sliderSandbox.aiRate.value='50';sliderSandbox.syncAiSelectionFromRate();
 assert(sliderSandbox.aiRateOut.value.startsWith('50%'),'Canvas AI slider must update at 50% without RangeError');
-assert(sliderSandbox.aiRateOut.value.includes('tiết dạy bài mới'),'Canvas AI slider label must identify new-lesson periods after picker rendering');
+assert(sliderSandbox.aiRateOut.value.includes('tiết PPCT'),'Canvas AI slider label must identify new-lesson periods after picker rendering');
 assert.equal(sliderSandbox.aiRate.value,'50','Canvas AI slider must preserve the active drag value');
 assert.equal(sliderSandbox.aiRate.max,'100','Canvas AI slider must retain the full 0–100 range');
 assert.equal(sliderSandbox.aiSelectedLessonIds.size,5,'Canvas AI slider must not retain the old 12-period cap');
+assert.equal(vm.runInContext('allocationTotals().totalLessons',sliderSandbox),10,'Canvas totals must include non-header review and test lessons');
+assert.equal(vm.runInContext('allocationTotals().totalPeriods',sliderSandbox),10,'Canvas period totals must include non-header review and test lessons');
 sliderSandbox.aiRate.value='100';sliderSandbox.syncAiSelectionFromRate();
 assert.equal(sliderSandbox.aiSelectedLessonIds.size,10,'Canvas AI slider must select every available period at 100%');
 sliderNodes['#nlsUnit'].value='lesson';sliderSandbox.syncNlsSelectionFromCount(3);
-assert(sliderNodes['#nlsRateOut'].value.includes('bài dạy bài mới'),'Canvas NLS count input must support the lesson unit');
+assert(sliderNodes['#nlsRateOut'].value.includes('bài PPCT'),'Canvas NLS count input must support the lesson unit');
 sliderNodes['#aiUnit'].value='lesson';sliderSandbox.syncAiSelectionFromCount(4);
-assert(sliderSandbox.aiRateOut.value.includes('bài dạy bài mới'),'Canvas AI count input must support the lesson unit');
+assert(sliderSandbox.aiRateOut.value.includes('bài PPCT'),'Canvas AI count input must support the lesson unit');
 const calls=[];
 const sandbox={console,AbortController,clearTimeout,setTimeout,fetch:async(url,init)=>{
   calls.push({url,init});
