@@ -1,114 +1,94 @@
-﻿# PLAN: Sửa lỗi nhận diện nhầm giáo viên Hoàng Xuân Ánh sang Hồ Đăng Danh, Gỡ bỏ Auto-Reload, và Cấu hình Phụ lục
+# PLAN: Xử lý lỗi "Bad control character in string literal in JSON" khi Gemini sinh Phụ lục trên Canvas và Xây dựng Phụ lục
 
-## Hiện trạng
+## Hiện trạng & Phân tích nguyên nhân
 
-### 1. Vấn đề 1: Dán Thời khóa biểu thầy "Hoàng Xuân Ánh" bị nhận diện nhầm thành thầy "Hồ Đăng Danh"
-- **Hiện tượng**:
-  - Khi dán hoặc nhận diện ảnh TKB của thầy Hoàng Xuân Ánh, hệ thống luôn tự động gán vào thầy Hồ Đăng Danh; trong khi các giáo viên khác đều nhận diện đúng.
-- **Nguyên nhân cốt lõi**:
-  - Trong hàm `applyAiTimetableResult()` (dòng 6110–6118 của `phancongtochuyenmon.html`):
-    ```javascript
-    const foldedName = foldText(name);
-    const match = (state.teachers || []).find(t => {
-        const folded = foldText(t.name);
-        return folded === foldedName || folded.includes(foldedName) || foldedName.includes(folded);
-    });
-    ```
-  - Trong ảnh TKB, tên giáo viên ghi là "Ánh" (hoặc "Giáo viên: Ánh") -> `foldedName = "ANH"`.
-  - Tên thầy Hồ Đăng Danh được chuẩn hóa thành `folded = "HO DANG DANH"`.
-  - Do dùng lệnh kiểm tra chuỗi con `.includes("ANH")`, chữ **D-A-N-H** chứa chuỗi con **A-N-H** nên `"HO DANG DANH".includes("ANH")` trả về **`true`**!
-  - Vì thầy Hồ Đăng Danh đứng trước thầy Hoàng Xuân Ánh trong danh sách giáo viên, hàm `.find()` dừng ngay tại thầy Hồ Đăng Danh và gán TKB cho thầy Danh, không bao giờ duyệt tới thầy Ánh!
-
-### 2. Vấn đề 2: Hệ thống bị tự động refresh / reload liên tục
-- **Hiện tượng**: Toàn bộ hệ thống hoangthiencm.id.vn tự động reload liên tục do cơ chế `initAutoUpdateChecker()` trong `js/security-guard.js`.
-- **Yêu cầu**: Gỡ bỏ hoàn toàn cơ chế auto-reload, trả về nguyên trạng như cũ, không bao giờ tự động reload trang.
-
-### 3. Vấn đề 3: Đưa bộ chọn tích hợp theo "Tổng số tiết" và "Tỉ lệ %" vào Mục 1 Xây dựng Phụ lục
-- **Hiện tượng**: Trên `canvas_xaydungphuluc.html`, các ô nhập số tiết `#nlsCountInput`, `#aiCountInput` bị đặt nhầm xuống tận cuối trang sau Mục 7.
-- **Yêu cầu**: Đưa cụm chọn đơn vị và nhập số tiết vào trực tiếp trong thẻ NLS & AI tại Mục 1, đồng bộ 2 chiều với thanh trượt %.
+1. **Hiện tượng lỗi**:
+   - Khi chạy "Sinh trọn bộ Phụ lục" hoặc "Sinh PL 1" trên `canvas_xaydungphuluc.html` (chạy trên môi trường Google Gemini Canvas):
+     - Sau khi nhận diện xong 87 dòng PPCT từ tệp, hệ thống chuyển sang Giai đoạn 2: *sinh nội dung phụ lục...*
+     - Gọi AI cho Phụ lục 1...
+     - Lỗi xuất hiện ngay tại hộp thoại tiến trình:
+       `Lỗi AI: Bad control character in string literal in JSON at position 12828 (line 222 column 73)`
+2. **Nguyên nhân kỹ thuật**:
+   - Trong `canvas_xaydungphuluc.html` (dòng 247) và `xaydungphuluc.html` (dòng 185):
+     ```javascript
+     async function readGeminiResponse(result) {
+         ...
+         return JSON.parse(String(text).replace(/^```json\s*|\s*```$/g, ''));
+     }
+     ```
+   - Khi phân tích PPCT lớn (ví dụ 87 bài/tiết), Gemini 2.5 Flash trả về phản hồi JSON có dung lượng lớn (15KB - 30KB).
+   - Trong chuỗi giá trị (string literal) của các trường như `lesson`, `muc_tieu`, `noi_dung`, `ghi_chu`, hoặc `yeu_cau_can_dat`, mô hình AI thường chèn các ký tự điều khiển thô (raw unescaped control characters) như:
+     - Xuống dòng thô `0x0A` (`\n`) hoặc `0x0D` (`\r`) thay vì chuỗi thoát `\n` (`\\n`).
+     - Ký tự tab thô `0x09` (`\t`).
+     - Các mã điều khiển ASCII từ `0x00` đến `0x1F`.
+   - Theo đặc tả chuẩn JSON (RFC 8259, mục 7 "Strings"): tất cả ký tự điều khiển trong dải U+0000 đến U+001F bắt buộc phải được escape (`\n`, `\r`, `\t`, `\u00XX`). Nếu để thô bên trong cặp dấu ngoặc kép `"..."`, hàm `JSON.parse()` của trình duyệt (V8 / Chromium) sẽ lập tức văng lỗi `SyntaxError: Bad control character in string literal in JSON at position ...`.
+   - Ngoài ra, AI đôi khi có thể để lại trailing comma (dấu phẩy thừa trước `}` hoặc `]`) hoặc trả về các ký tự backslash LaTeX chưa escape (`\alpha`, `\times`).
 
 ---
 
 ## Mục tiêu & Giải pháp thiết kế
 
-### 1. Xây dựng thuật toán so khớp tên giáo viên chuẩn xác (`matchTeacherByName`)
-1. **Khớp trọn từ (Word Token Matching)**:
-   - Tách tên thành các từ riêng biệt bằng khoảng trắng `split(/\s+/)`.
-   - Tuyệt đối không dùng `.includes()` trên cả chuỗi họ tên để tránh các từ như `DANH`, `THANH`, `MANH`, `HANH` bị nhận nhầm thành `ANH`.
-2. **Quy tắc ưu tiên**:
-   - **Ưu tiên 1**: Nếu trên màn hình người dùng đang chọn sẵn một giáo viên (`currentTeacherId`), và tên trong ảnh khớp hoàn toàn hoặc từ cuối (tên chính) trùng khớp với giáo viên đang chọn -> Giữ nguyên giáo viên đang chọn, không nhảy sang người khác.
-   - **Ưu tiên 2**: Khớp chính xác 100% cả họ và tên (`folded === target`).
-   - **Ưu tiên 3**: Bắt buộc từ cuối cùng (Tên chính) phải trùng khớp nhau (`tLastWord === targetLastWord`). Ví dụ: Tên ảnh là "ANH" thì từ cuối của GV bắt buộc phải là "ANH" (loại trừ ngay "DANH").
-   - **Ưu tiên 4**: Nếu có nhiều người trùng tên chính (ví dụ "Hoàng Xuân Ánh" và "Nguyễn Thị Ánh"), so khớp các từ họ đệm để chọn người có độ trùng khớp cao nhất.
+### 1. Xây dựng bộ phân tích cú pháp an toàn `safeParseAiJson(raw)`
+Triển khai hàm `safeParseAiJson(raw)` trong cả `canvas_xaydungphuluc.html` và `xaydungphuluc.html`:
+1. **Làm sạch định dạng cơ bản**:
+   - Xóa bỏ các khối bọc markdown code fence: `replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')`.
+2. **Fast-path**:
+   - Thử gọi `JSON.parse(str)` trực tiếp trước. Nếu JSON chuẩn hoàn toàn, trả về ngay lập tức để đạt hiệu năng cao nhất.
+3. **Trích xuất cấu trúc JSON ngoài cùng**:
+   - Nếu AI trả kèm lời thoại ("Dưới đây là JSON:", "Hy vọng giúp ích..."), tìm vị trí `{` hoặc `[` đầu tiên và `}` hoặc `]` cuối cùng để cắt đúng phạm vi JSON.
+4. **Bộ quét (Scanner) xử lý ký tự điều khiển bên trong chuỗi**:
+   - Duyệt qua từng ký tự của chuỗi với trạng thái `inString`:
+     - Theo dõi dấu backslash `\` và cặp dấu ngoặc kép `"`.
+     - Khi `inString === true`:
+       - Nếu gặp ký tự có mã `code < 32`:
+         - `\n` -> thay bằng chuỗi thoát `\\n`.
+         - `\r` -> thay bằng chuỗi thoát `\\r`.
+         - `\t` -> thay bằng chuỗi thoát `\\t`.
+         - Ký tự điều khiển khác -> thay bằng `\\u` + mã hex 4 chữ số (`code.toString(16).padStart(4, '0')`).
+       - Nếu gặp backslash thoát không hợp lệ trong JSON (ví dụ LaTeX `\alpha`), tự động chuẩn hóa thành `\\alpha`.
+5. **Xử lý dấu phẩy thừa (Trailing Comma Recovery)**:
+   - Nếu vẫn lỗi, xóa dấu phẩy thừa trước dấu đóng: `replace(/,\s*([\}\]])/g, '$1')` và thử lại `JSON.parse()`.
 
-### 2. Gỡ bỏ hoàn toàn Auto-Reload trong `js/security-guard.js`
-- Xóa bỏ các hàm và biến liên quan đến `initAutoUpdateChecker`, `checkAppVersionUpdate`, `version.json`, và `window.location.reload()`.
-
-### 3. Bố trí bộ chọn số tiết & tỉ lệ % vào Mục 1 Xây dựng Phụ lục
-- Đưa `#nlsUnit`, `#nlsCountInput`, `#aiUnit`, `#aiCountInput` vào bên trong thẻ NLS và AI ở Mục 1 `canvas_xaydungphuluc.html` và xóa thẻ thừa dòng 73.
+### 2. Tích hợp vào các luồng gọi AI
+- Trong `canvas_xaydungphuluc.html`:
+  - Thay thế `JSON.parse(String(text).replace(/^```json\s*|\s*```$/g,''))` trong `readGeminiResponse` bằng `safeParseAiJson(text)`.
+- Trong `xaydungphuluc.html`:
+  - Cập nhật `readGeminiResponse` và `callMistral` sử dụng `safeParseAiJson`.
+- Đảm bảo tính nhất quán giữa hai trang để thỏa mãn điều kiện đồng bộ hàm `for(const name of sourceFunctions) assert(targetFunctions.has(name))` trong bộ test.
 
 ---
 
 ## Phạm vi thực hiện
 
-1. `phancongtochuyenmon.html`:
-   - Thêm hàm `matchTeacherByName(rawName, teachers, currentTeacherId)`.
-   - Trong `applyAiTimetableResult()`: Gọi `matchTeacherByName(name, state.teachers, selectedTimetableTeacherId)` thay cho đoạn so khớp thô cũ.
-2. `js/security-guard.js`:
-   - Gỡ bỏ hoàn toàn module auto-reload (dòng 34–105).
-3. `canvas_xaydungphuluc.html`:
-   - Chuyển `#nlsUnit`, `#nlsCountInput`, `#aiUnit`, `#aiCountInput` vào Mục 1, xóa thẻ thừa dòng 73.
-4. `tests/timetable-render-smoke.js`:
-   - Bổ sung test case xác nhận: Tên "Ánh" trong ảnh phải khớp với "Hoàng Xuân Ánh", không được khớp với "Hồ Đăng Danh".
-5. `tests/auto-reload-smoke.js`:
-   - Cập nhật test xác nhận `security-guard.js` không còn chứa lệnh auto-reload.
+1. `canvas_xaydungphuluc.html`:
+   - Thêm hàm `safeParseAiJson(raw)`.
+   - Cập nhật `readGeminiResponse` gọi `safeParseAiJson`.
+2. `xaydungphuluc.html`:
+   - Thêm hàm `safeParseAiJson(raw)`.
+   - Cập nhật `readGeminiResponse` và `callMistral` gọi `safeParseAiJson`.
+3. `tests/canvas-xaydungphuluc-smoke.js`:
+   - Bổ sung test kiểm thử `safeParseAiJson` với các trường hợp:
+     - Ký tự xuống dòng thô trong chuỗi JSON (`Bad control character`).
+     - Ký tự tab thô trong chuỗi JSON.
+     - Dấu phẩy thừa (`trailing comma`).
+     - Khối code markdown và lời thoại bao quanh.
+4. `tests/xaydungphuluc-smoke.js`:
+   - Xác nhận bộ test vượt qua 100%.
 
 ---
 
 ## Ngoài phạm vi
 
-- Không sửa đổi thuật toán AI trích xuất tiết học.
-- Không sửa đổi cấu trúc dữ liệu lưu CSDL.
+- Không thay đổi prompt hoặc cấu trúc trả về của Phụ lục 1, 2, 3.
+- Không can thiệp vào logic chuẩn hóa dữ liệu sau khi parse (`normalizeAppendix`).
 
 ---
 
-## File dự kiến tác động
+## Kế hoạch kiểm thử (Verification Plan)
 
-1. `phancongtochuyenmon.html`
-2. `js/security-guard.js`
-3. `canvas_xaydungphuluc.html`
-4. `tests/timetable-render-smoke.js`
-5. `tests/auto-reload-smoke.js`
-
----
-
-## Các bước thực hiện
-
-### Bước 1: Sửa thuật toán so khớp tên trong `phancongtochuyenmon.html`
-- Định nghĩa hàm `matchTeacherByName(rawName, teachers, currentTeacherId)` với cơ chế khớp từ ranh giới từ và ưu tiên tên chính.
-- Trong `applyAiTimetableResult`:
-  ```javascript
-  const matchedTeacher = matchTeacherByName(name, state.teachers || [], selectedTimetableTeacherId);
-  if (matchedTeacher) selectedTimetableTeacherId = matchedTeacher.id;
-  ```
-
-### Bước 2: Gỡ bỏ auto-reload trong `js/security-guard.js`
-- Xóa dòng 34 đến 105 trong `js/security-guard.js`.
-
-### Bước 3: Cập nhật giao diện Mục 1 trong `canvas_xaydungphuluc.html`
-- Đặt `#nlsUnit`, `#nlsCountInput` vào thẻ NLS, `#aiUnit`, `#aiCountInput` vào thẻ AI; xóa thẻ thừa ở dòng 73.
-
-### Bước 4: Chạy toàn bộ các bài kiểm thử
-- `node tests/baogiang-weekday-segment-smoke.js`
-- `node tests/timetable-render-smoke.js`
-- `node tests/auto-reload-smoke.js`
-- `git diff --check`
-
----
-
-## Tiêu chí nghiệm thu
-
-1. Khi dán hoặc nhận diện ảnh TKB có tên "Ánh" hoặc "Hoàng Xuân Ánh", hệ thống chọn chính xác thầy **Hoàng Xuân Ánh**, tuyệt đối không bị nhảy sang thầy **Hồ Đăng Danh**.
-2. Hệ thống hoàn toàn không còn tự reload trang bất thường.
-3. Mục 1 Xây dựng Phụ lục có đầy đủ ô chọn/nhập theo Tổng số tiết và kéo theo Tỉ lệ %.
-4. Tất cả các test suites đạt **PASS 100%**.
+1. `node tests/canvas-xaydungphuluc-smoke.js`: PASS toàn bộ kiểm thử cấu trúc và `safeParseAiJson`.
+2. `node tests/xaydungphuluc-smoke.js`: PASS.
+3. `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+4. `node tests/timetable-render-smoke.js`: PASS.
+5. `node tests/auto-reload-smoke.js`: PASS.
+6. `git diff --check`: PASS, không có lỗi định dạng hay khoảng trắng thừa.

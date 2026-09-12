@@ -1,3 +1,61 @@
+# IMPLEMENT: Khóa cố định mốc Ngày bắt đầu áp dụng (Tuần 1) trong Lịch báo giảng
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `phancongtochuyenmon.html`
+  - Bổ sung `start_date_locked`; dữ liệu đã có ngày Tuần 1 hợp lệ tự được khóa khi nạp, còn dữ liệu chưa có ngày không tự lấy ngày hiện tại.
+  - Nhãn đổi thành “Ngày bắt đầu áp dụng (Tuần 1)”, có badge Chưa thiết lập / Đang mở khóa / Đã khóa và nút Mở khóa sửa / Khóa lại.
+  - Khi khóa, ô ngày bị `disabled` và `readOnly`, có kiểu hiển thị không thể chỉnh sửa. DOM bị thay đổi bên ngoài cũng không thể ghi đè ngày đã khóa qua `updateBaoGiangSettings`.
+  - Mở khóa yêu cầu xác nhận cảnh báo nghiêm ngặt; chọn một ngày hợp lệ sẽ lưu cục bộ, khóa lại ngay và thông báo rõ ràng. Có thể khóa lại ngày không đổi bằng nút riêng.
+- `tests/baogiang-weekday-segment-smoke.js`
+  - Kiểm thử hydrate dữ liệu cũ thành trạng thái khóa, kiểm tra ngày hợp lệ, bảo vệ khỏi DOM thay đổi, Cancel/OK khi mở khóa, tự khóa khi chọn ngày mới và khóa lại thủ công.
+
+## Kiểm tra đã chạy
+
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `node tests/timetable-render-smoke.js`: PASS.
+- `node tests/auto-reload-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `git diff --check`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- Cần `/verify` trực quan: mở tab Lịch báo giảng, thử Cancel/OK ở Mở khóa sửa và chọn ngày mới.
+
+---
+
+# IMPLEMENT: Khắc phục Canvas Xây dựng Phụ lục trắng trang trong Gemini
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `canvas_xaydungphuluc.html`
+  - Gỡ PDF.js và cấu hình PDF Worker từ xa; Canvas không còn tạo hoặc nạp Worker, phù hợp Content Security Policy của Gemini Canvas.
+  - Khởi tạo giao diện chính không phụ thuộc thư viện xử lý tài liệu tùy chọn.
+  - Khi chọn PDF, ứng dụng hiển thị thông báo rõ rằng Gemini Canvas không thể đọc PDF trực tiếp và hướng dẫn dùng DOCX/XLSX hoặc dán văn bản; không còn lỗi trắng trang hoặc crash.
+  - Các đường đọc DOCX/XLSX kiểm tra sự hiện diện của thư viện tương ứng trước khi chạy và hiển thị thông báo phục hồi nếu CDN không tải được.
+- `tests/canvas-xaydungphuluc-smoke.js`
+  - Bổ sung kiểm thử không còn PDF.js, PDF Worker, `new Worker` hay `importScripts`.
+  - Kiểm thử thông báo dự phòng PDF/DOCX/XLSX và xác nhận `initApp()` không phụ thuộc thư viện nhập tài liệu.
+
+## Kiểm tra đã chạy
+
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/sgk-knowledge-smoke.js`: PASS.
+- `git diff --check`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- Cần mở lại ứng dụng trong Gemini Canvas để xác nhận giao diện hiển thị trên môi trường thực tế.
+
+---
+
 # IMPLEMENT: Gỡ bỏ hoàn toàn cơ chế tự động refresh (Auto-Reload)
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`

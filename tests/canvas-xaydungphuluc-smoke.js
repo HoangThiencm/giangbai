@@ -38,7 +38,13 @@ assert(target.includes('html,body{display:block!important;visibility:visible!imp
 assert(target.includes("setProperty('display','block','important')"),'Canvas must keep html/body visible if the host injects a hide style');
 assert(target.indexOf('html,body{display:block!important')<target.indexOf('https://hoangthiencm.id.vn/css/khbd-styles.css'),'first-paint CSS must precede external stylesheets');
 assert(target.includes('https://hoangthiencm.id.vn/css/khbd-styles.css'),'Canvas must load the static KHBD stylesheet');
-assert(target.includes("pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'"),'Canvas must configure a CSP-safe PDF.js worker');
+assert(!target.includes('pdfjsLib'),'Canvas must not load PDF.js in the CSP-restricted Gemini sandbox');
+assert(!target.includes('pdf.worker'),'Canvas must not configure a remote PDF Worker');
+assert(!target.includes('GlobalWorkerOptions.workerSrc'),'Canvas must not configure a PDF Worker');
+assert(!target.includes('new Worker('),'Canvas app must not create a Worker in Gemini');
+assert(!target.includes('importScripts('),'Canvas app must not load worker scripts');
+assert(target.includes('function documentImportUnavailable('),'Canvas must detect unsupported document import dependencies');
+assert(target.includes('Gemini Canvas không thể đọc PDF trực tiếp vì môi trường này chặn PDF Worker.'),'Canvas must explain the PDF fallback to users');
 assert(target.includes('const memoryStorage=Object.create(null);'),'Canvas must provide in-memory storage when sandbox storage is blocked');
 assert(target.includes('function getCanvasStorage()'),'Canvas must safely probe browser storage');
 assert(target.includes("document.readyState==='loading'"),'Canvas bootstrap must handle an already-complete document');
@@ -350,6 +356,15 @@ function extractNamed(src,name){
   }
   throw new Error('unterminated '+name);
 }
+const importGuardSandbox={window:{}};
+vm.createContext(importGuardSandbox);
+vm.runInContext(extractNamed(target,'documentImportUnavailable'),importGuardSandbox);
+assert.match(importGuardSandbox.documentImportUnavailable('PPCT.pdf'),/không thể đọc PDF trực tiếp/,'PDF imports must fail with a visible Canvas-safe explanation');
+assert.match(importGuardSandbox.documentImportUnavailable('PPCT.docx'),/Thư viện đọc DOCX chưa tải được/,'DOCX imports must be guarded when their optional library is unavailable');
+assert.match(importGuardSandbox.documentImportUnavailable('PPCT.xlsx'),/Thư viện đọc XLSX chưa tải được/,'XLSX imports must be guarded when their optional library is unavailable');
+assert.equal(importGuardSandbox.documentImportUnavailable('PPCT.txt'),'','text imports must remain available without optional libraries');
+const canvasInitCode=extractNamed(target,'initApp');
+assert(!/mammoth|XLSX|pdfjsLib|documentImportUnavailable/.test(canvasInitCode),'initial Canvas UI must not depend on optional document-import libraries');
 const pickerSandbox={
   foldText(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim()},
   cleanLessonDescription(s){return String(s||'')},

@@ -1990,7 +1990,7 @@
                 <button class="btn-small btn-small-primary" onclick="saveToDB()"><i class="fas fa-save"></i> Lưu kế hoạch</button>
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0;">
-                <label class="form-group">Ngày bắt đầu áp dụng<input class="form-control" id="bg-start-date" type="date" onchange="updateBaoGiangSettings()"></label>
+                <label class="form-group"><span>Ngày bắt đầu áp dụng (Tuần 1)</span> <span id="bg-start-date-lock-status" aria-live="polite"></span><input class="form-control" id="bg-start-date" type="date" onchange="updateBaoGiangSettings('start-date')"><button type="button" id="bg-unlock-start-date-btn" class="btn-small" style="margin-top:7px;" onclick="unlockBaoGiangStartDate()"><i class="fas fa-lock-open"></i> Mở khóa sửa</button></label>
                 <label class="form-group">Xem từ ngày<input class="form-control" id="bg-view-date" type="date" onchange="renderBaoGiangView()"></label>
                 <label class="form-group">Số ngày xem<input class="form-control" id="bg-days" type="number" min="7" max="90" value="14" onchange="renderBaoGiangView()"></label>
             </div>
@@ -2810,7 +2810,7 @@
                 records: {},
                 substitutes: {}
             },
-            bao_giang: { start_date: '', curriculum_text: '', ppct_default_grade: '', ppct_default_subject: '', exceptions: [], recipient_ids: [] }
+            bao_giang: { start_date: '', start_date_locked: false, curriculum_text: '', ppct_default_grade: '', ppct_default_subject: '', exceptions: [], recipient_ids: [] }
         };
 
         // State hiện tại
@@ -2879,6 +2879,13 @@
             if (!s.attendance.records) s.attendance.records = {};
             if (!s.attendance.substitutes) s.attendance.substitutes = {};
             if (!s.bao_giang || typeof s.bao_giang !== 'object') s.bao_giang = { start_date: '', curriculum_text: '', exceptions: [], recipient_ids: [] };
+            if (!isBaoGiangStartDateValid(s.bao_giang.start_date)) {
+                s.bao_giang.start_date = '';
+                s.bao_giang.start_date_locked = false;
+            } else if (typeof s.bao_giang.start_date_locked !== 'boolean') {
+                // Dữ liệu các năm học đã có mốc Tuần 1 được khóa ngay khi nâng cấp.
+                s.bao_giang.start_date_locked = true;
+            }
             if (typeof s.bao_giang.ppct_default_grade !== 'string') s.bao_giang.ppct_default_grade = '';
             if (typeof s.bao_giang.ppct_default_subject !== 'string') s.bao_giang.ppct_default_subject = '';
             if (!Array.isArray(s.bao_giang.exceptions)) s.bao_giang.exceptions = [];
@@ -3618,9 +3625,25 @@
             }
         }
 
-        function updateBaoGiangSettings() {
+        function isBaoGiangStartDateValid(value) {
+            const date = baoGiangDate(value);
+            return Boolean(/^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) && date && baoGiangIso(date) === value);
+        }
+
+        function updateBaoGiangSettings(source) {
             const data = state.bao_giang;
-            data.start_date = document.getElementById('bg-start-date')?.value || data.start_date;
+            const startInput = document.getElementById('bg-start-date');
+            if (source === 'start-date' && !data.start_date_locked) {
+                const selectedDate = startInput?.value || '';
+                if (isBaoGiangStartDateValid(selectedDate)) {
+                    data.start_date = selectedDate;
+                    data.start_date_locked = true;
+                    saveToLocal();
+                    renderBaoGiangView();
+                    showToast('Đã lưu và khóa cố định mốc ngày bắt đầu áp dụng (Tuần 1) cho năm học.', 'success');
+                    return;
+                }
+            }
             data.curriculum_text = document.getElementById('bg-curriculum')?.value || '';
             data.ppct_default_grade = document.getElementById('bg-ppct-grade')?.value || data.ppct_default_grade || '';
             data.ppct_default_subject = document.getElementById('bg-ppct-subject')?.value || data.ppct_default_subject || '';
@@ -3628,27 +3651,68 @@
             renderBaoGiangCurriculumLibrary();
         }
 
+        function unlockBaoGiangStartDate() {
+            const data = state.bao_giang;
+            if (!data.start_date_locked) return lockBaoGiangStartDate();
+            const warning = 'CẢNH BÁO QUAN TRỌNG:\n\nNgày bắt đầu áp dụng xác định mốc Tuần 1 cho toàn bộ năm học.\nThay đổi mốc này sẽ làm dịch chuyển số thứ tự tuần của toàn bộ lịch báo giảng của tất cả giáo viên.\n\nBạn có chắc chắn muốn mở khóa để chỉnh sửa không?';
+            if (typeof confirm === 'function' && !confirm(warning)) return;
+            data.start_date_locked = false;
+            saveToLocal();
+            renderBaoGiangView();
+        }
+
+        function lockBaoGiangStartDate() {
+            const data = state.bao_giang;
+            const selectedDate = document.getElementById('bg-start-date')?.value || data.start_date;
+            if (!isBaoGiangStartDateValid(selectedDate)) {
+                showToast('Hãy chọn đúng ngày bắt đầu áp dụng (Tuần 1) trước khi khóa.', 'error');
+                return;
+            }
+            data.start_date = selectedDate;
+            data.start_date_locked = true;
+            saveToLocal();
+            renderBaoGiangView();
+            showToast('Đã khóa cố định mốc ngày bắt đầu áp dụng (Tuần 1).', 'success');
+        }
+
         function renderBaoGiangView() {
             const cfg = state.bao_giang;
-            const today = new Date();
-            const fallbackStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            if (!cfg.start_date) cfg.start_date = fallbackStart;
             const startInput = document.getElementById('bg-start-date');
             const viewInput = document.getElementById('bg-view-date');
             const curriculum = document.getElementById('bg-curriculum');
             const gradeInput = document.getElementById('bg-ppct-grade');
             const subjectInput = document.getElementById('bg-ppct-subject');
             const subjectOptions = document.getElementById('bg-ppct-subject-options');
+            const schedule = document.getElementById('bg-schedule');
             if (!startInput || !viewInput || !curriculum) return;
-            if (!viewInput.value) viewInput.value = cfg.start_date;
+            const hasStartDate = isBaoGiangStartDateValid(cfg.start_date);
+            const startDateLocked = Boolean(cfg.start_date_locked && hasStartDate);
+            if (!viewInput.value && hasStartDate) viewInput.value = cfg.start_date;
             const sendWeekInput = document.getElementById('bg-send-week');
             if (sendWeekInput && !sendWeekInput.value) sendWeekInput.value = baoGiangWeekValueFromDate(baoGiangNextMonday());
             updateBaoGiangSendWeekLabel();
-            startInput.value = cfg.start_date;
+            startInput.value = hasStartDate ? cfg.start_date : '';
+            startInput.disabled = startDateLocked;
+            startInput.readOnly = startDateLocked;
+            startInput.style.cursor = startDateLocked ? 'not-allowed' : '';
+            startInput.style.background = startDateLocked ? '#f1f5f9' : '';
+            startInput.style.borderColor = startDateLocked ? '#cbd5e1' : '';
+            const lockStatus = document.getElementById('bg-start-date-lock-status');
+            if (lockStatus) lockStatus.innerHTML = startDateLocked
+                ? '<span class="badge-locked" style="display:inline-block;padding:2px 7px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:.75rem;font-weight:800;">🔒 Đã khóa mốc Tuần 1</span>'
+                : `<span class="badge-unlocked" style="display:inline-block;padding:2px 7px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:.75rem;font-weight:800;">${hasStartDate ? '🔓 Đang mở khóa để sửa' : 'ℹ️ Chưa thiết lập'}</span>`;
+            const unlockButton = document.getElementById('bg-unlock-start-date-btn');
+            if (unlockButton) unlockButton.innerHTML = startDateLocked
+                ? '<i class="fas fa-lock-open"></i> Mở khóa sửa'
+                : '<i class="fas fa-lock"></i> Khóa lại';
             curriculum.value = cfg.curriculum_text || '';
             if (gradeInput) gradeInput.value = cfg.ppct_default_grade || '';
             if (subjectInput) subjectInput.value = cfg.ppct_default_subject || '';
             if (subjectOptions) subjectOptions.innerHTML = [...new Set((state.subjects || []).map(item => String(item.name || '').trim()).filter(Boolean))].map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+            if (!hasStartDate) {
+                if (schedule) schedule.innerHTML = '<p style="padding:16px;color:#92400e;background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;">Hãy chủ động chọn <b>Ngày bắt đầu áp dụng (Tuần 1)</b> đúng với tuần khai giảng trước khi xem hoặc gửi lịch báo giảng. Mốc này sẽ được khóa sau khi lưu.</p>';
+                return;
+            }
             const days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14));
             const viewStart = baoGiangDate(viewInput.value) || baoGiangDate(cfg.start_date);
             const viewEnd = new Date(viewStart);
@@ -3662,7 +3726,6 @@
             const recipients = document.getElementById('bg-recipient-list');
             if (recipients) recipients.innerHTML = `<div style="font-weight:800;margin-bottom:6px;">Người nhận email</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${state.teachers.map(t => `<label style="padding:7px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;"><input type="checkbox" ${cfg.recipient_ids.includes(t.id) ? 'checked' : ''} onchange="toggleBaoGiangRecipient('${t.id}',this.checked)"> ${escapeHtml(t.name)} <input aria-label="Email ${escapeHtml(t.name)}" value="${escapeHtml(t.email || '')}" placeholder="email" style="width:150px;border:0;border-bottom:1px solid #cbd5e1;margin-left:4px;" onchange="setBaoGiangEmail('${t.id}',this.value)"></label>`).join('')}</div>`;
             renderBaoGiangCurriculumLibrary(decorated);
-            const schedule = document.getElementById('bg-schedule');
             if (schedule) schedule.innerHTML = `${scheduleData.warnings.length ? `<div style="margin:0 0 12px;padding:12px 14px;border:1px solid #fbbf24;border-radius:8px;background:#fffbeb;color:#92400e;font-size:.88rem;"><b><i class="fas fa-triangle-exclamation"></i> Cần kiểm tra PPCT trước khi gửi email</b><br>${scheduleData.warnings.map(message => escapeHtml(message)).join('<br>')}</div>` : ''}${visible.length ? `<div style="overflow:auto;"><table class="data-table"><thead><tr><th>Ngày</th><th>Lớp</th><th>Môn</th><th>Tiết</th><th>GV</th><th>Tuần / PPCT</th><th>Mạch</th><th>Bài dạy</th><th>Phân đoạn</th></tr></thead><tbody>${visible.map(row => `<tr><td><b>${escapeHtml(baoGiangWeekdayLabel(row.date))}</b><br><small style="color:#64748b;">${escapeHtml(formatVnDate(row.date))}</small></td><td>${escapeHtml(row.class_name)}</td><td>${escapeHtml(row.subject)}</td><td>${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} ${row.period}`)}</td><td>${escapeHtml(row.teacher_name)}</td><td>${row.lesson ? `Tuần ${row.teaching_week || '—'} · ${escapeHtml(row.lesson.ppct)}` : '<span style="color:#b45309">Chưa có</span>'}</td><td>${escapeHtml(row.lesson?.strand || '—')}</td><td>${escapeHtml(row.lesson ? `Tuần ${row.teaching_week || '—'}  ${row.lesson.lesson} (tiết ppct: ${row.lesson.ppct}) ${row.lesson.segment || '—'}` : (row.ppct_missing ? 'PPCT tuần này chưa đủ tiết' : 'Chưa khai báo PPCT'))}</td><td>${escapeHtml(row.lesson?.segment || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p style="padding:16px;color:#64748b;">Chưa có tiết TKB trong khoảng ngày này. Hãy nhập TKB, ngày áp dụng và PPCT.</p>'}`;
         }
 

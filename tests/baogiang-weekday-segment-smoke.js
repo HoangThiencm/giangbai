@@ -64,4 +64,71 @@ assert.match(html, /id="qp-inherit-assignments"(?! checked)/);
 assert.match(html, /assignments: \{\}, timetable: emptyTimetable\(\)/);
 assert.match(html, /baoGiangWeekdayLabel\(row\.date\)\}, \$\{formatVnDate\(row\.date\)\}/);
 assert.match(html, /const htmlRows = scheduleRows\.map\(row => .*formatBaoGiangLessonDisplay\(row\)/);
-console.log('PASS: PPCT đa tuần, cảnh báo hai giáo viên và lọc cảnh báo tuần đã qua.');
+
+// Khóa mốc Tuần 1: kiểm tra đúng các hàm cuối cùng đang được trang sử dụng,
+// không chỉ các khai báo cũ nằm trước đó trong file.
+const lockSource = ['baoGiangDate', 'baoGiangIso', 'isBaoGiangStartDateValid', 'updateBaoGiangSettings', 'unlockBaoGiangStartDate', 'lockBaoGiangStartDate'].map(declaration).join('\n');
+const elements = {
+    'bg-start-date': { value: '2026-09-07', disabled: false, readOnly: false, style: {} },
+    'bg-curriculum': { value: '', style: {} },
+    'bg-ppct-grade': { value: '', style: {} },
+    'bg-ppct-subject': { value: '', style: {} }
+};
+let saves = 0;
+let renders = 0;
+let confirms = [];
+const lockContext = vm.createContext({
+    Date, String, Number, Array, Object, RegExp,
+    state: { bao_giang: { start_date: '2026-09-07', start_date_locked: true, curriculum_text: '', ppct_default_grade: '', ppct_default_subject: '' } },
+    document: { getElementById: id => elements[id] || null },
+    saveToLocal: () => { saves += 1; },
+    renderBaoGiangView: () => { renders += 1; },
+    renderBaoGiangCurriculumLibrary: () => {},
+    showToast: () => {},
+    confirm: message => { confirms.push(message); return false; }
+});
+vm.runInContext(lockSource, lockContext);
+assert.equal(vm.runInContext("isBaoGiangStartDateValid('2026-09-07')", lockContext), true);
+assert.equal(vm.runInContext("isBaoGiangStartDateValid('2026-02-31')", lockContext), false);
+
+const normalizeContext = vm.createContext({
+    Date, String, Number, Array, Object, RegExp, JSON, Set,
+    defaultState: { info: { morning_periods: '1-5', afternoon_periods: '1-4', current_phase_id: '' } },
+    ROLE_DEFAULTS: {},
+    getSubjectDutyType: () => 'core',
+    normalizeTeacherTimetable: value => value || {}
+});
+vm.runInContext(['baoGiangDate', 'baoGiangIso', 'isBaoGiangStartDateValid', 'normalizeState'].map(declaration).join('\n'), normalizeContext);
+const hydrated = vm.runInContext("normalizeState({ bao_giang: { start_date: '2026-09-07' } })", normalizeContext);
+assert.equal(hydrated.bao_giang.start_date_locked, true, 'Ngày đã lưu trước khi nâng cấp phải tự khóa');
+
+// Kể cả DOM bị script khác sửa, trạng thái khóa không được update settings ghi đè.
+elements['bg-start-date'].value = '2026-09-14';
+vm.runInContext('updateBaoGiangSettings(\'start-date\')', lockContext);
+assert.equal(lockContext.state.bao_giang.start_date, '2026-09-07');
+
+// Cancel giữ nguyên khóa; OK mới mở khóa và hiển thị đúng cảnh báo nghiêm ngặt.
+vm.runInContext('unlockBaoGiangStartDate()', lockContext);
+assert.equal(lockContext.state.bao_giang.start_date_locked, true);
+assert.match(confirms[0], /CẢNH BÁO QUAN TRỌNG/);
+lockContext.confirm = message => { confirms.push(message); return true; };
+vm.runInContext('unlockBaoGiangStartDate()', lockContext);
+assert.equal(lockContext.state.bao_giang.start_date_locked, false);
+assert.equal(renders, 1);
+
+// Chọn ngày mới phải tự lưu và khóa lại ngay; nút Khóa lại cũng khóa được ngày không đổi.
+elements['bg-start-date'].value = '2026-09-14';
+vm.runInContext('updateBaoGiangSettings(\'start-date\')', lockContext);
+assert.equal(lockContext.state.bao_giang.start_date, '2026-09-14');
+assert.equal(lockContext.state.bao_giang.start_date_locked, true);
+lockContext.state.bao_giang.start_date_locked = false;
+vm.runInContext('lockBaoGiangStartDate()', lockContext);
+assert.equal(lockContext.state.bao_giang.start_date_locked, true);
+assert.ok(saves >= 3);
+
+assert.match(html, /Ngày bắt đầu áp dụng \(Tuần 1\)/);
+assert.match(html, /id="bg-start-date-lock-status"/);
+assert.match(html, /startInput\.disabled = startDateLocked/);
+assert.match(html, /if \(source === 'start-date' && !data\.start_date_locked\)/);
+assert.doesNotMatch(declaration('renderBaoGiangView'), /fallbackStart/);
+console.log('PASS: PPCT đa tuần, cảnh báo hai giáo viên, và khóa mốc Tuần 1.');
