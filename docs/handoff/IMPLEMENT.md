@@ -1,3 +1,25 @@
+# IMPLEMENT: Sửa ReferenceError stageFiles trên Gemini Canvas
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `canvas_xaydungphuluc.html`
+  - Gemini Canvas chạy script ngoài global scope nên `onchange="stageFiles(...)"` không thấy hàm. `exposeCanvasWindowHandlers()` gán các handler inline (gồm `stageFiles`) lên `window`.
+  - Event bridge chỉ gỡ `onchange` khi parse được; handler gốc được giữ nếu không parse được.
+- `tests/canvas-xaydungphuluc-smoke.js`
+  - Kiểm tra `window.stageFiles=stageFiles` và hàm expose.
+
+## Kiểm tra đã chạy
+
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+
+---
+
 # IMPLEMENT: Loại trừ NLS/AI bài 1 tiết, Canvas mở rộng và khung sư phạm tổng quát
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`

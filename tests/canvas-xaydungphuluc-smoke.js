@@ -155,6 +155,8 @@ const canvasUnpedagogicalNls = cleanIntegrationSandbox.cleanNlsColumnText('[NLS:
 assert(!canvasUnpedagogicalNls.includes('chatbot') && !canvasUnpedagogicalNls.includes('lịch sử ra đời'), 'Canvas: unpedagogical chatbot history NLS must be filtered out');
 assert(canvasUnpedagogicalNls.includes('5.3.TC2a'), 'Canvas: NLS code must keep a valid Miền 1–5 code after rewrite');
 assert.equal(cleanIntegrationSandbox.cleanNlsColumnText('[NLS: 6.1.TC2a - Hiểu biết về hệ thống trí tuệ nhân tạo]', 'Bài 1: Tập hợp'), '-', 'Canvas: legacy NLS miền 6 must be dropped');
+assert(target.includes('function exposeCanvasWindowHandlers()'), 'Canvas must expose inline handlers onto window for Gemini sandbox scope');
+assert(target.includes("if(typeof stageFiles==='function')window.stageFiles=stageFiles"), 'Canvas must publish stageFiles on window so file inputs work in Gemini');
 assert(target.includes('function canvasConfirm(message)'), 'Canvas must provide an in-DOM confirmation modal');
 assert(!/\bconfirm\(/.test(target), 'Canvas must not call the browser confirm() API in a sandbox');
 for(const name of ['loadDraftById','deleteDraftFromServer','restoreCanvasDraft','resetData','deletePpctRowAt'])assert(target.includes(`await canvasConfirm(`),`${name} must await the Canvas confirmation modal`);
