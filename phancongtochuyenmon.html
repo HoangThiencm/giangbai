@@ -2057,6 +2057,10 @@
                 </div>
             </div>
 
+            <div id="daythay-suggestion-panel" hidden aria-live="polite" style="margin:0 0 14px; padding:14px; border:1px solid #c7d2fe; border-radius:12px; background:#f8faff;">
+                <!-- Được render từ TKB theo ngày, buổi và các tiết đã chọn. Chỉ có hai nhóm gợi ý. -->
+            </div>
+
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px;">
                 <div class="period-slots-toolbar">
                     <span style="font-size:0.82rem; font-weight:800; color:#1e293b;">
@@ -5437,6 +5441,7 @@
             updateSlotsTotal();
             renderQuickSlotButtons();
             updateSessionSelectLabels();
+            renderDayThaySuggestions();
         }
 
         function refreshSlotOptions() {
@@ -7249,10 +7254,18 @@ ${listText}`;
         }
 
         function maybeAutoSuggestSlotsFromTimetable() {
-            if (editingSubId) return false;
+            if (editingSubId) {
+                renderDayThaySuggestions();
+                return false;
+            }
             const type = document.getElementById('new-sub-type')?.value || 'replacement';
-            if (type === 'makeup') return false;
-            return autoSuggestSlotsFromTimetable({ silentEmpty: true });
+            if (type === 'makeup') {
+                renderDayThaySuggestions();
+                return false;
+            }
+            const suggested = autoSuggestSlotsFromTimetable({ silentEmpty: true });
+            renderDayThaySuggestions();
+            return suggested;
         }
 
         function onSlotToggle(cb) {
@@ -7269,6 +7282,7 @@ ${listText}`;
                 }
             }
             updateSlotsTotal();
+            renderDayThaySuggestions();
         }
 
         function updateSlotState(slot) {
@@ -7292,6 +7306,7 @@ ${listText}`;
                 }
             });
             updateSlotsTotal();
+            renderDayThaySuggestions();
         }
 
         function clearAllSlots() {
@@ -7302,6 +7317,72 @@ ${listText}`;
             const count = document.querySelectorAll('#period-slots-builder .slot-enable:checked').length;
             const badge = document.getElementById('slots-total-badge');
             if (badge) badge.innerHTML = `<i class="fas fa-hashtag"></i> Tổng cộng: ${count} tiết`;
+        }
+
+        function computeDayThayTeacherAvailability(date, session, forTeacherId, neededPeriods) {
+            const dayNum = weekdayNumberFromDate(date);
+            const result = { dayNum, freeSessionTeachers: [], freeSlotTeachers: [], busyConflictTeachers: [] };
+            if (!dayNum || !['morning', 'afternoon'].includes(session)) return result;
+            const needed = [...new Set((neededPeriods || []).map(n => parseInt(n, 10)).filter(n => n > 0))];
+            (state.teachers || []).forEach(teacher => {
+                if (String(teacher.id) === String(forTeacherId)) return;
+                const slots = getTimetableDaySlots(teacher, session, dayNum);
+                const busyPeriods = slots.map(slot => slot.period_num);
+                const item = { teacher, slots, busyPeriods, neededPeriods: needed };
+                if (!slots.length) result.freeSessionTeachers.push(item);
+                else if (busyPeriods.every(period => !needed.includes(period))) result.freeSlotTeachers.push(item);
+                else result.busyConflictTeachers.push(item);
+            });
+            return result;
+        }
+
+        function renderDayThaySuggestions() {
+            const panel = document.getElementById('daythay-suggestion-panel');
+            const teacherSelect = document.getElementById('new-sub-teacher');
+            if (!panel || !teacherSelect) return;
+            const type = document.getElementById('new-sub-type')?.value || 'replacement';
+            const date = document.getElementById('new-sub-date')?.value || '';
+            const session = document.getElementById('new-sub-session')?.value || '';
+            const forTeacherId = document.getElementById('new-sub-for-teacher')?.value || '';
+            const neededPeriods = snapshotPeriodSlots().filter(slot => slot.enabled).map(slot => slot.period_num);
+            const availability = computeDayThayTeacherAvailability(date, session, forTeacherId, neededPeriods);
+            const canSuggest = type !== 'makeup' && Boolean(forTeacherId) && Boolean(availability.dayNum) && neededPeriods.length > 0;
+            panel.hidden = !canSuggest;
+            if (!canSuggest) {
+                panel.innerHTML = '';
+                return;
+            }
+
+            const statusById = new Map();
+            availability.freeSessionTeachers.forEach(item => statusById.set(String(item.teacher.id), 'Trống cả buổi'));
+            availability.freeSlotTeachers.forEach(item => statusById.set(String(item.teacher.id), `Trống tiết ${neededPeriods.join(', ')}${item.busyPeriods.length ? ` - Dạy tiết ${item.busyPeriods.join(', ')}` : ''}`));
+            availability.busyConflictTeachers.forEach(item => statusById.set(String(item.teacher.id), '⚠️ Trùng lịch'));
+            const current = teacherSelect.value;
+            teacherSelect.innerHTML = (state.teachers || []).map(teacher => {
+                const status = String(teacher.id) === String(forTeacherId) ? 'Giáo viên nghỉ' : (statusById.get(String(teacher.id)) || 'Chưa có TKB');
+                return `<option value="${escapeHtml(teacher.id)}">${escapeHtml(teacher.name)} (${escapeHtml(teacher.role || 'GV')}) — ${escapeHtml(status)}</option>`;
+            }).join('');
+            if ([...teacherSelect.options].some(option => String(option.value) === String(current))) teacherSelect.value = current;
+
+            const card = (item, kind) => {
+                const teacher = item.teacher;
+                const busy = item.busyPeriods.length ? `Dạy tiết ${item.busyPeriods.join(', ')}` : 'Không có tiết trong buổi';
+                const detail = kind === 'session' ? 'Trống toàn bộ buổi' : `Rảnh tiết ${neededPeriods.join(', ')} · ${busy}`;
+                const selected = String(teacherSelect.value) === String(teacher.id);
+                const color = kind === 'session' ? '#16a34a' : '#4f46e5';
+                return `<div class="daythay-suggestion-card ${selected ? 'active' : ''}" style="padding:10px;border:1px solid ${selected ? color : '#dbeafe'};border-radius:9px;background:${selected ? '#eef2ff' : '#fff'};margin-top:8px;"><b>${escapeHtml(teacher.name)}</b><div style="font-size:.78rem;color:#64748b;margin-top:2px;">${escapeHtml(teacher.role || 'Giáo viên')} · ${escapeHtml(detail)}</div><button type="button" class="btn-small" style="margin-top:7px;background:${color};color:#fff;border-color:${color};" onclick="selectDayThaySuggestedTeacher(decodeURIComponent('${encodeURIComponent(String(teacher.id))}'))">Chọn dạy thay</button></div>`;
+            };
+            const column = (title, items, kind) => `<div style="min-width:0;flex:1 1 270px;"><div style="font-weight:800;color:#1e293b;">${title} <span style="display:inline-block;padding:1px 7px;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:.78rem;">${items.length}</span></div>${items.length ? items.map(item => card(item, kind)).join('') : '<div style="font-size:.82rem;color:#64748b;padding:10px 0;">Chưa có giáo viên phù hợp.</div>'}</div>`;
+            panel.innerHTML = `<div style="font-weight:800;color:#312e81;margin-bottom:8px;">💡 Đề xuất giáo viên dạy thay (${escapeHtml(TT_DAY_LABELS[availability.dayNum] || '')} - Buổi ${session === 'afternoon' ? 'Chiều' : 'Sáng'} · Cần thay tiết: ${neededPeriods.join(', ')})</div><div style="display:flex;gap:14px;flex-wrap:wrap;">${column('Trống cả buổi', availability.freeSessionTeachers, 'session')}${column('Có mặt, trống tiết cần thay', availability.freeSlotTeachers, 'slot')}</div>`;
+        }
+
+        function selectDayThaySuggestedTeacher(teacherId) {
+            const teacher = (state.teachers || []).find(item => String(item.id) === String(teacherId));
+            const select = document.getElementById('new-sub-teacher');
+            if (!teacher || !select) return;
+            select.value = String(teacher.id);
+            renderDayThaySuggestions();
+            showToast(`Đã chọn thầy/cô ${teacher.name} làm giáo viên dạy thay.`, 'success');
         }
 
         function populateDayThayFormSelects() {
@@ -7324,6 +7405,7 @@ ${listText}`;
                 filterT.innerHTML = `<option value="">Tất cả giáo viên</option>` + teacherOpts;
                 if (filterVal && [...filterT.options].some(o => o.value === filterVal)) filterT.value = filterVal;
             }
+            renderDayThaySuggestions();
         }
 
         function renderDayThayView() {
@@ -7339,6 +7421,7 @@ ${listText}`;
                 renderQuickSlotButtons();
             }
             toggleSubTypeLabel(document.getElementById('new-sub-type')?.value || 'replacement');
+            renderDayThaySuggestions();
             renderDayThayJournal();
         }
 
@@ -7352,6 +7435,7 @@ ${listText}`;
                 if (label) label.textContent = 'Dạy thay cho giáo viên:';
                 if (group) group.style.opacity = '1';
             }
+            renderDayThaySuggestions();
         }
 
         function monthFromDate(dateStr) {
@@ -7580,6 +7664,7 @@ ${listText}`;
             if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Lưu vào Sổ Dạy Thay';
             const title = document.getElementById('daythay-form-title');
             if (title) title.textContent = 'Ghi nhận lượt Dạy thay / Dạy bù';
+            renderDayThaySuggestions();
         }
 
         function removeDayThayRecord(id) {

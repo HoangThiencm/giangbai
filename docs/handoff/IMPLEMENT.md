@@ -1,3 +1,34 @@
+# IMPLEMENT: Đề xuất thông minh giáo viên dạy thay theo Thời khóa biểu
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `phancongtochuyenmon.html`
+  - Bổ sung panel `#daythay-suggestion-panel` ngay dưới cụm chọn giáo viên; panel chỉ có hai cột: **Trống cả buổi** và **Có mặt, trống tiết cần thay**.
+  - Thêm `computeDayThayTeacherAvailability(date, session, forTeacherId, neededPeriods)`: kiểm tra ngày hợp lệ Thứ 2–Thứ 7, loại giáo viên nghỉ, lấy tiết thực tế bằng `getTimetableDaySlots`, rồi phân loại trống cả buổi / trống các tiết cần thay / trùng lịch.
+  - Thêm `renderDayThaySuggestions()` để lấy các tiết đang bật, xử lý thiếu dữ liệu hoặc Chủ nhật an toàn, ẩn gợi ý với Dạy bù, đồng thời ghi trạng thái rảnh/trùng lịch vào dropdown giáo viên thực dạy.
+  - Bấm “Chọn dạy thay” tự điền dropdown, tô nổi thẻ đang chọn và báo toast xác nhận. ID được mã hóa khi gắn vào sự kiện chọn.
+  - Đồng bộ gợi ý khi đổi ngày, buổi, giáo viên nghỉ, các tiết đã chọn, khi nạp lại dropdown, tạo/reset lưới tiết hoặc chuyển loại Dạy thay/Dạy bù. Không thay đổi dữ liệu lưu Sổ Dạy thay, báo cáo hay in thông báo.
+- `tests/daythay-suggest-smoke.js`
+  - Kiểm tra ba nhóm khả dụng từ TKB thực tế, loại trừ giáo viên nghỉ, xử lý Chủ nhật, chọn một chạm cập nhật dropdown/toast và cấu trúc panel hai cột/ẩn khi Dạy bù.
+
+## Kiểm tra đã chạy
+
+- `node tests/daythay-suggest-smoke.js`: PASS.
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `node tests/timetable-render-smoke.js`: PASS.
+- `node tests/auto-reload-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `git diff --check`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- Cần `/verify` trực quan: chọn ngày có TKB, giáo viên nghỉ và các tiết cần thay; xác nhận hai cột cùng trạng thái dropdown khớp lịch thật.
+
+---
+
 # IMPLEMENT: Khôi phục JSON phản hồi AI an toàn cho Xây dựng Phụ lục
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
