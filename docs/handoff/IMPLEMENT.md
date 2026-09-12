@@ -1,21 +1,23 @@
-# IMPLEMENT: Khắc phục phân đoạn PPCT đa tuần và hiển thị Thời khoá biểu
+# IMPLEMENT: Báo giảng — PPCT đa tuần và cảnh báo TKB
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
 
 ## Thay đổi đã thực hiện
+
 - `phancongtochuyenmon.html`
-  - Đổi việc theo dõi cụm bài PPCT từ theo Lớp–Môn sang theo Lớp–Môn–Mạch kiến thức. Vì vậy, dòng Đại số nằm giữa các dòng Hình học không còn cắt Bài 11 thành `1/1` và `1/2`.
-  - Giữ cơ chế chuẩn hóa tên bài như hậu tố “(tiếp theo)”; Bài 11 dạy 1 tiết tuần 1 và 2 tiết tuần 2 nay có phân đoạn `1/3`, `2/3`, `3/3`.
-  - `normalizeTeacherTimetable()` đọc an toàn dữ liệu TKB ở dạng chuỗi JSON trước khi chuẩn hóa. Đây là trường hợp có thể làm TKB đã lưu không được nạp để hiển thị.
-  - Giữ các cải tiến TKB đã có: nạp GV khi mở tab, so sánh ID an toàn, khung tiết fallback, và render lại ngay cả khi tự đồng bộ phân công gặp lỗi.
+  - Gom bài PPCT theo tên đã chuẩn hóa qua các tuần liên tiếp, kể cả khi mạch khác xen giữa; Bài 11 ba tuần nhận đúng `1/3`, `2/3`, `3/3`.
+  - Chỉ tạo cảnh báo từ tuần đang xem trở đi; tuần cũ không còn xuất hiện trong cảnh báo hoặc ảnh hưởng tới gửi email.
+  - Phát hiện nhiều giáo viên cùng có TKB cho một lớp/môn/tuần và liệt kê tên cùng tổng số tiết.
+  - Email cá nhân chỉ xét cảnh báo thuộc các lớp/môn của giáo viên đăng nhập. Cảnh báo trở thành hộp xác nhận tiếp tục gửi, không còn chặn cứng.
+  - Chuẩn hóa bài dạy trên bảng web, email văn bản, email HTML cá nhân và email tổ: `Tuần [X]  [Tên bài] (tiết ppct: [Y]) [A/B]`. Email HTML dùng chung hàm định dạng này trong cột Bài dạy.
 - `tests/baogiang-weekday-segment-smoke.js`
-  - Bổ sung tình huống thực tế: Đại số và Hình học xen kẽ giữa tuần 1 và tuần 2; xác nhận Bài 11 hiển thị `1/3`, `2/3`, `3/3`.
-- `tests/timetable-render-smoke.js`
-  - Bổ sung kiểm tra nạp dữ liệu TKB từ chuỗi JSON, bên cạnh ID chuỗi, khung tiết fallback và render sau lỗi đồng bộ.
+  - Kiểm tra Bài 11 qua tuần 4–6, phát hiện hai giáo viên cùng dạy, loại trừ cảnh báo tuần đã qua, và định dạng bài dạy chuẩn cho email HTML.
 
 ## Kiểm tra
-- `git diff --check`: đạt, không có lỗi khoảng trắng.
-- Không thể chạy các bài kiểm tra Node trong máy hiện tại: Windows chặn `node.exe` đi kèm môi trường với cảnh báo tệp có thể không an toàn. Các bài kiểm tra đã sẵn sàng để chạy lại trong `/verify`.
 
-## Bàn giao
-Đề nghị Antigravity IDE chạy `/verify` và cập nhật `docs/handoff/VERIFY.md` với kết quả hai bài kiểm tra cùng kiểm tra giao diện TKB thực tế.
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `git diff --check`: PASS.
+
+## Cần xác minh trong `/verify`
+
+- Hiển thị cảnh báo khi đổi ngày xem và hộp xác nhận gửi email trên trình duyệt.
