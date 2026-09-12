@@ -44,4 +44,11 @@ RewriteRule ^(docs|agent-tools|mcps|tests|\.agents|backupcode.*)(/|$) - [F,L]
     Header set X-Content-Type-Options "nosniff"
     Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Luôn kiểm tra lại HTML và version manifest sau mỗi lần deploy.
+    <FilesMatch "\.(html|htm|json)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
 </IfModule>

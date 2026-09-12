@@ -1892,6 +1892,14 @@
                 <button type="button" class="btn-small btn-small-primary" style="width:100%; justify-content:center; margin-bottom:8px;" onclick="syncAllAssignmentsFromTimetables()">
                     <i class="fas fa-bolt"></i> Nạp phân công toàn tổ
                 </button>
+                <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn-small" onclick="selectAllTimetableTeachers()">Chọn tất cả GV có TKB</button>
+                    <button type="button" class="btn-small" onclick="clearTimetableTeacherSelection()">Bỏ chọn</button>
+                </div>
+                <div id="tt-selected-count" style="font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:8px;">Đã chọn: 0 giáo viên</div>
+                <button type="button" class="btn-small btn-small-primary" style="width:100%; justify-content:center; margin-bottom:8px;" onclick="sendSelectedTeachersTimetableEmail()">
+                    <i class="fas fa-envelope"></i> Gửi TKB các GV đã chọn qua email
+                </button>
                 <input type="text" class="search-input" id="tt-teacher-search" placeholder="Tìm giáo viên..." oninput="renderTimetableTeacherList()">
                 <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
                     <button type="button" class="tt-filter-btn active" id="tt-filter-all" onclick="setTimetableTeacherFilter('all')">Tất cả</button>
@@ -5422,6 +5430,7 @@
         let ttImageDataUrl = '';
         let ttPasteBound = false;
         let selectedTimetableTeacherId = '';
+        let selectedTimetableTeacherIds = new Set();
         let ttTeacherFilter = 'all';
         let ttCellSaveTimer = null;
         const TT_DAYS = ['2', '3', '4', '5', '6', '7'];
@@ -5610,9 +5619,13 @@
         function renderTimetableTeacherList() {
             const list = document.getElementById('tt-teacher-list');
             const progress = document.getElementById('tt-progress');
+            const selectedCount = document.getElementById('tt-selected-count');
             const all = state.teachers || [];
+            const availableIds = new Set(all.map(t => String(t.id)));
+            selectedTimetableTeacherIds = new Set([...selectedTimetableTeacherIds].filter(id => availableIds.has(String(id))));
             const hasCount = all.filter(t => timetableHasLessons(t.timetable)).length;
             if (progress) progress.textContent = `Đã có TKB: ${hasCount} / ${all.length} giáo viên`;
+            if (selectedCount) selectedCount.textContent = `Đã chọn: ${selectedTimetableTeacherIds.size} giáo viên`;
             if (!list) return;
             const rows = filteredTimetableTeachers();
             if (!rows.length) {
@@ -5623,12 +5636,14 @@
                 const has = timetableHasLessons(t.timetable);
                 const n = countTimetableLessons(t.timetable);
                 const active = String(t.id) === String(selectedTimetableTeacherId) ? 'active' : '';
+                const checked = selectedTimetableTeacherIds.has(String(t.id)) ? 'checked' : '';
                 const badge = has
                     ? `<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:999px; padding:2px 7px; font-size:0.68rem; font-weight:800;">✓ Đã có TKB (${n} tiết)</span>`
                     : `<span style="background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; border-radius:999px; padding:2px 7px; font-size:0.68rem; font-weight:800;">⏳ Chưa có TKB</span>`;
                 const unsaved = hasUnsavedChanges ? '<span class="tt-unsaved-dot" title="Chưa lưu CSDL"></span>' : '';
                 return `
                     <div class="tt-teacher-item ${active}" onclick="selectTimetableTeacher('${t.id}')">
+                        <input type="checkbox" value="${escapeHtml(String(t.id))}" ${checked} aria-label="Chọn ${escapeHtml(t.name)}" onclick="event.stopPropagation()" onchange="toggleTimetableTeacherSelection(this.value, this.checked)">
                         <i class="fas fa-user-tie" style="color:#4338ca;"></i>
                         <div style="flex:1; min-width:0;">
                             <div style="font-weight:800; font-size:0.82rem;">${escapeHtml(t.name)}</div>
@@ -5638,6 +5653,64 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        function toggleTimetableTeacherSelection(teacherId, checked) {
+            const id = String(teacherId);
+            if (checked) selectedTimetableTeacherIds.add(id);
+            else selectedTimetableTeacherIds.delete(id);
+            renderTimetableTeacherList();
+        }
+
+        function selectAllTimetableTeachers() {
+            selectedTimetableTeacherIds = new Set((state.teachers || []).filter(t => timetableHasLessons(t.timetable)).map(t => String(t.id)));
+            renderTimetableTeacherList();
+        }
+
+        function clearTimetableTeacherSelection() {
+            selectedTimetableTeacherIds.clear();
+            renderTimetableTeacherList();
+        }
+
+        function timetableEmailSessionTable(teacher, session) {
+            const timetable = normalizeTeacherTimetable(teacher.timetable);
+            const periods = periodsForTimetableSession(session, timetable);
+            const title = session === 'morning' ? 'Buổi sáng' : 'Buổi chiều';
+            const rows = periods.map(period => `<tr><th style="padding:8px;border:1px solid #cbd5e1;background:#f8fafc;text-align:left;white-space:nowrap;">Tiết ${period}</th>${TT_DAYS.map(day => {
+                const cell = parseTimetableCell(timetable[session]?.[day]?.[String(period)]);
+                const value = cell ? `${escapeHtml(cell.subject || '—')}<br><span style="color:#475569;font-size:12px;">${escapeHtml(cell.class_name || '')}</span>` : '<span style="color:#94a3b8;">—</span>';
+                return `<td style="padding:8px;border:1px solid #cbd5e1;text-align:center;vertical-align:top;min-width:82px;">${value}</td>`;
+            }).join('')}</tr>`).join('');
+            return `<div style="margin-top:16px;"><div style="padding:8px 10px;background:${session === 'morning' ? '#fff7ed' : '#eff6ff'};color:${session === 'morning' ? '#9a3412' : '#1d4ed8'};font-weight:700;">${title}</div><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-size:13px;"><thead><tr><th style="padding:8px;border:1px solid #cbd5e1;background:#e2e8f0;text-align:left;">Tiết</th>${TT_DAYS.map(day => `<th style="padding:8px;border:1px solid #cbd5e1;background:#e2e8f0;">${TT_DAY_LABELS[day]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+        }
+
+        function buildSelectedTeachersTimetableEmail(teacherIds) {
+            const ids = new Set((teacherIds || []).map(String));
+            const teachers = (state.teachers || []).filter(t => ids.has(String(t.id)) && timetableHasLessons(t.timetable));
+            if (!teachers.length) throw new Error('Hãy chọn ít nhất một giáo viên đã có Thời khóa biểu.');
+            const schoolYear = state.info?.school_year || teachers[0]?.timetable?.school_year || '';
+            const semester = state.info?.semester || teachers[0]?.timetable?.semester || '';
+            const cards = teachers.map(teacher => `<section style="margin:0 0 22px;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#fff;"><div style="padding:16px 18px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;"><div style="font-size:19px;font-weight:700;">${escapeHtml(teacher.name || 'Giáo viên')}</div><div style="margin-top:4px;font-size:13px;opacity:.9;">${escapeHtml(teacher.role || 'GV')} · ${countTimetableLessons(teacher.timetable)} tiết</div></div><div style="padding:0 14px 14px;overflow-x:auto;">${timetableEmailSessionTable(teacher, 'morning')}${timetableEmailSessionTable(teacher, 'afternoon')}</div></section>`).join('');
+            const plain = teachers.map(teacher => `${teacher.name || 'Giáo viên'} (${teacher.role || 'GV'}) — ${countTimetableLessons(teacher.timetable)} tiết`).join('\n');
+            return {
+                subject: `Thời khóa biểu ${teachers.length} giáo viên${schoolYear ? ` - ${schoolYear}` : ''}${semester ? ` ${semester}` : ''}`,
+                body: `THỜI KHÓA BIỂU GIÁO VIÊN\n${schoolYear ? `Năm học: ${schoolYear}\n` : ''}${semester ? `Học kỳ: ${semester}\n` : ''}\n${plain}`,
+                html: `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:1040px;margin:0 auto;"><div style="padding:22px 24px;margin-bottom:18px;background:#0f3b82;color:#fff;border-radius:12px;"><div style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;opacity:.86;">Thời khóa biểu giáo viên</div><div style="font-size:24px;font-weight:700;margin-top:6px;">${teachers.length} giáo viên${schoolYear ? ` · ${escapeHtml(schoolYear)}` : ''}${semester ? ` · ${escapeHtml(semester)}` : ''}</div></div>${cards}</div></div>`
+            };
+        }
+
+        async function sendSelectedTeachersTimetableEmail() {
+            try {
+                const email = buildSelectedTeachersTimetableEmail([...selectedTimetableTeacherIds]);
+                const response = await fetch('api/baogiang_mail.php', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify(email)
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể gửi Thời khóa biểu.');
+                showToast(data.message || 'Đã gửi Thời khóa biểu các giáo viên đã chọn tới email cá nhân.', 'success');
+            } catch (error) {
+                showToast(error.message || 'Không thể gửi Thời khóa biểu.', 'error', 8000);
+            }
         }
 
         function selectTimetableTeacher(teacherId) {

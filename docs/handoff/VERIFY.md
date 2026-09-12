@@ -4,35 +4,45 @@
 PASS
 
 ## Đối chiếu scope
-- [x] Thêm 2 chế độ phân bổ linh hoạt: "Theo số tiết dạy bài mới" và "Theo số bài dạy bài mới" cho cả NLS và AI.
-- [x] Nhãn hiển thị ghi rõ ràng: "... tiết dạy bài mới" và "... bài dạy bài mới".
-- [x] Có ô nhập số lượng trực tiếp (`#nlsCountInput`, `#aiCountInput`) đồng bộ 2 chiều với thanh kéo `%`.
-- [x] Gỡ bỏ hoàn toàn giới hạn trần cứng 12 tiết ở AI; người dùng có thể tự do chọn 20 tiết, 35 tiết hoặc kéo 100% (toàn bộ 95 tiết dạy bài mới).
-- [x] Không phát sinh lỗi tràn ngăn xếp đệ quy (`RangeError`) hay biến không xác định (`ReferenceError`).
-- [x] Đồng bộ đầy đủ sang cả `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html` (SHA-256 trùng khớp 100%).
-- [x] Toàn bộ 3 bộ kiểm thử tự động của dự án đạt PASS 100%.
+- [x] Bỏ qua các tuần đã qua trong quá khứ khỏi danh sách cảnh báo và không làm ảnh hưởng/chặn gửi email.
+- [x] Phát hiện và cảnh báo cụ thể khi 1 lớp có 2 giáo viên cùng dạy trong cùng tuần (liệt kê tên các giáo viên và tổng số tiết TKB).
+- [x] Gửi email cá nhân không còn bị chặn cứng (`throw new Error`), chuyển thành hộp xác nhận tiếp tục gửi khi có cảnh báo.
+- [x] Thuật toán PPCT đa tuần hỗ trợ trọn vẹn 3 tuần liên tiếp trở lên (Bài 11 dạy tuần 4, 5, 6 nhận chuẩn xác `1/3, 2/3, 3/3`).
+- [x] Chuẩn hóa định dạng hiển thị bài dạy trên Web Lịch báo giảng, email văn bản, email HTML cá nhân và email tổ: `Tuần [X]  [Tên bài] (tiết ppct: [Y]) [A/B]`.
+- [x] Thêm checkbox chọn từng giáo viên, nút chọn tất cả GV có TKB, bỏ chọn trong tab Thời khóa biểu (`#view-timetable`).
+- [x] Xây dựng tính năng gửi Thời khóa biểu các giáo viên được tick chọn về email cá nhân qua `api/baogiang_mail.php`: phân tách rõ ràng từng giáo viên, dạng lưới TKB trực quan, hoàn toàn không kèm lịch báo giảng hay PPCT.
+- [x] Tự động sinh manifest `version.json` trong workflow GitHub Actions `.github/workflows/ftp-deploy.yml` mỗi lần push lên GitHub.
+- [x] Cấu hình file `.htaccess` chống cache cho tệp `.html`, `.htm`, `.json` trên máy chủ hosting `hoangthiencm.id.vn`.
+- [x] Tích hợp module auto-reload vào `js/security-guard.js`: tự động phát hiện bản deploy mới từ GitHub và reload toàn bộ hệ thống trang web trên `hoangthiencm.id.vn`.
 
 ## Test đã chạy
-1. `node tests/xaydungphuluc-smoke.js` — **PASS**
-2. `node tests/canvas-xaydungphuluc-smoke.js` — **PASS**
-3. `node tests/khbd-nls-rate-smoke.js` — **PASS**
-4. So sánh SHA-256 hai bản Canvas — **PASS** (`BED1D0B532D2F0D6B85C5847BCA94A8C1468BDEC6F0CDE029A788231DD42E1EE`)
-5. Mô phỏng thực tế chuyên sâu trên cả 3 file (`xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`):
-   - **NLS theo tiết**: Nhập `20` -> Nhãn: `22% (21/95 tiết dạy bài mới · 14/47 bài)` — **PASS**
-   - **NLS theo bài**: Nhập `10` -> Nhãn: `21% (10/47 bài dạy bài mới · 16/95 tiết)` — **PASS**
-   - **AI theo tiết (vượt trần cũ 12 tiết)**: Nhập `20` -> Nhãn: `21% (20/95 tiết dạy bài mới · 14/47 bài)` — **PASS**
-   - **AI theo tiết**: Nhập `35` -> Nhãn: `37% (35/95 tiết dạy bài mới · 22/47 bài)` — **PASS**
-   - **AI kéo 100%**: Chọn toàn bộ 95/95 tiết dạy bài mới, `aiRate.max = 100` — **PASS**
-   - **AI theo bài**: Nhập `12` -> Nhãn: `26% (12/47 bài dạy bài mới · 18/95 tiết)` — **PASS**
+1. `node tests/baogiang-weekday-segment-smoke.js`: **PASS**
+   - Bài 11 học 3 tuần (Tuần 4 tiết 6, Tuần 5 tiết 7, Tuần 6 tiết 8) đạt đúng phân đoạn `1/3, 2/3, 3/3`.
+   - Hàm `formatBaoGiangLessonDisplay` định dạng chuẩn `Tuần 4  Bài 11. Tỉ số lượng giác của góc nhọn (tiết ppct: 6) 1/3`.
+   - Cảnh báo tuần đã qua được loại trừ khỏi danh sách cảnh báo.
+   - Phát hiện chính xác trường hợp 1 lớp 2 giáo viên cùng dạy.
+2. `node tests/timetable-render-smoke.js`: **PASS**
+   - Tab Thời khóa biểu hỗ trợ nạp ID số và chuỗi JSON.
+   - Kiểm tra đầy đủ giao diện checkbox, nút chọn tất cả / bỏ chọn.
+   - Hàm `buildSelectedTeachersTimetableEmail` dựng email HTML TKB nhiều giáo viên dạng card tách biệt, có đầy đủ lưới sáng/chiều, Thứ 2–Thứ 7, môn/lớp và không kèm lịch báo giảng hay PPCT.
+3. `node tests/auto-reload-smoke.js`: **PASS**
+   - Lần truy cập đầu ghi nhận phiên bản mà không reload.
+   - Request kiểm tra manifest luôn bỏ qua cache (`cache: 'no-store'`).
+   - Tự động kiểm tra định kỳ mỗi 60 giây và khi focus/visibilitychange.
+   - Khi phát hiện SHA mới trên server, tự động reload và cập nhật `localStorage`.
+   - Debounce reload 10 giây ngăn chặn vòng lặp reload.
+   - Lỗi mạng hoặc manifest tạm thời không làm gián đoạn trang web.
+   - Workflow GitHub Actions tạo `version.json` trước khi FTP sync.
+   - File `.htaccess` vô hiệu hóa cache cho HTML và JSON.
 
 ## Pass / Fail từng tiêu chí
-1. Tính năng phân bổ linh hoạt theo số tiết và theo số bài: **PASS**
-2. Nhãn hiển thị ghi rõ "tiết dạy bài mới" và "bài dạy bài mới": **PASS**
-3. Đồng bộ 2 chiều giữa ô nhập số lượng và thanh trượt: **PASS**
-4. Gỡ bỏ trần cứng 12 tiết AI, mở rộng 0–100%: **PASS**
-5. Khắc phục lỗi thiếu hàm trong test `khbd-nls-rate-smoke.js`: **PASS**
-6. Khắc phục lỗi tương thích và đồng bộ 1:1 trong test `canvas-xaydungphuluc-smoke.js`: **PASS**
-7. Không có lỗi runtime hay console error: **PASS**
+1. Bỏ qua các tuần đã qua khỏi danh sách cảnh báo: **PASS**
+2. Phát hiện và cảnh báo 1 lớp 2 giáo viên cùng dạy: **PASS**
+3. Phân đoạn đa tuần 3 tuần liên tiếp (Bài 11 tuần 4, 5, 6 đạt `1/3, 2/3, 3/3`): **PASS**
+4. Chuẩn hóa chuỗi hiển thị `Tuần X  Bài ... (tiết ppct: Y) A/B`: **PASS**
+5. Tick chọn nhiều GV và gửi TKB qua email cá nhân dạng lưới TKB riêng biệt: **PASS**
+6. Tự động reload toàn bộ web sau mỗi lần push lên GitHub cho `hoangthiencm.id.vn`: **PASS**
+7. Toàn bộ 3 bộ test tự động của dự án: **PASS 100%**
 
 ## Bug
-Không còn bug tồn đọng.
+Không có bug tồn đọng.
