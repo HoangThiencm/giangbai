@@ -8,6 +8,13 @@ const functions=html=>[...html.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$
 const sourceIds=new Set(ids(source)),targetIds=new Set(ids(target));
 const sourceFunctions=new Set(functions(source)),targetFunctions=new Set(functions(target));
 
+for(const id of ['nlsUnit','nlsCountInput','aiUnit','aiCountInput'])assert.equal(ids(target).filter(value=>value===id).length,1,`Canvas must keep exactly one #${id}`);
+assert(!target.includes('aria-label="Phân bổ linh hoạt NLS và AI"'),'Canvas must not retain the duplicate flexible-allocation card');
+for(const [control,cardTitle,rateControl] of [['nlsUnit','Năng lực số (CV 3456 / TT 02)','nlsRate'],['aiUnit','Trí tuệ nhân tạo (QĐ 2422)','aiRate']]){
+  const controlIndex=target.indexOf(`id="${control}"`),cardIndex=target.indexOf(cardTitle),rateIndex=target.indexOf(`id="${rateControl}"`,cardIndex);
+  assert(controlIndex>cardIndex&&controlIndex<rateIndex,`Canvas #${control} must appear in its Mục 1 card before its rate slider`);
+}
+
 // Canvas only replaces the model/key controls. Every other original DOM hook and
 // function must remain available so this page continues to be a 1:1 copy.
 for(const id of sourceIds){if(!['selectModel','keyBadge'].includes(id))assert(targetIds.has(id),`missing original DOM id #${id}`)}
