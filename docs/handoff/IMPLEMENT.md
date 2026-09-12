@@ -194,6 +194,33 @@ Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
 
 ---
 
+# IMPLEMENT: Tùy chọn Buổi dạy “Cả ngày” trong Sổ Dạy thay
+
+## Phạm vi đã triển khai
+
+- `phancongtochuyenmon.html`
+  - Thêm lựa chọn `Cả ngày (Sáng & Chiều)` vào Buổi dạy; nhãn tự hiển thị hai khung tiết đã cấu hình.
+  - Gộp/loại trùng khung tiết cho form; đồng thời lấy và sắp xếp toàn bộ tiết sáng/chiều từ TKB và đề xuất giáo viên khi chọn `all_day`.
+  - Phân loại đúng giáo viên trống cả ngày, trống các tiết cần thay hoặc trùng lịch; tiêu đề và thẻ gợi ý hiển thị “Cả ngày”.
+  - Khi lập thông báo, từng tiết của bản ghi cả ngày được ghi theo buổi thực tế (Sáng hoặc Chiều); lưu, sửa và các bảng/xuất sổ vẫn giữ giá trị `all_day`.
+- `tests/daythay-suggest-smoke.js`
+  - Kiểm tra lựa chọn giao diện, gộp khung tiết/TKB và phân loại độ khả dụng cho cả ngày.
+
+## Kiểm tra đã chạy
+
+- `node tests/daythay-suggest-smoke.js`: PASS.
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `node tests/timetable-render-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/auto-reload-smoke.js`: PASS.
+- `git diff --check`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+
+---
+
 # IMPLEMENT: Giá trị mặc định thông tin đơn vị tại Xây dựng Phụ lục
 
 ## Phạm vi đã triển khai

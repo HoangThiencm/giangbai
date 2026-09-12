@@ -5,13 +5,13 @@ PASS
 
 ## Đối chiếu scope
 - `phancongtochuyenmon.html`:
-  - Đã bổ sung markup panel `#daythay-suggestion-panel` gồm 2 cột trực quan: **Trống cả buổi** và **Có mặt, trống tiết cần thay**.
-  - Đã triển khai hàm `computeDayThayTeacherAvailability(date, session, forTeacherId, neededPeriods)` để quét và phân loại chính xác các nhóm giáo viên theo TKB thực tế từ Thứ 2 đến Thứ 7, tự động loại trừ giáo viên nghỉ.
-  - Đã triển khai hàm `renderDayThaySuggestions()` và `selectDayThaySuggestedTeacher(teacherId)` hỗ trợ chọn 1 chạm, highlight thẻ giáo viên và cập nhật trạng thái vào dropdown `#new-sub-teacher`.
-  - Đã kích hoạt đồng bộ gợi ý khi thay đổi ngày dạy, buổi dạy, giáo viên nghỉ, thay đổi các tiết cần thay, nạp lại form, hoặc chuyển loại Dạy thay/Dạy bù. Ẩn gợi ý an toàn khi là Dạy bù (`makeup`).
-  - Không làm thay đổi cấu trúc lưu trữ CSDL Sổ Dạy Thay, in phiếu thông báo hay xuất báo cáo.
+  - Đã bổ sung option `all_day` vào dropdown `#new-sub-session` với nhãn `Cả ngày (Sáng & Chiều)`.
+  - Đã cập nhật `updateSessionSelectLabels()`, `getSessionLabel(session)` trả về `'Cả ngày'`, và `getSessionPeriods('all_day')` gộp đúng các tiết sáng và chiều.
+  - Đã cập nhật `getTimetableDaySlots(teacher, 'all_day', dayNum)` thu thập đầy đủ tiết từ cả 2 buổi sáng và chiều trong TKB của giáo viên.
+  - Đã cập nhật `computeDayThayTeacherAvailability()` và `renderDayThaySuggestions()` hỗ trợ đầy đủ `session === 'all_day'`, phân loại đúng giáo viên trống cả ngày và giáo viên trống tiết cần thay.
+  - Đã cập nhật hiển thị badge buổi trong bảng sổ dạy thay, in ấn, bảng thông báo và xuất báo cáo.
 - `tests/daythay-suggest-smoke.js`:
-  - Bài kiểm thử smoke mới xác nhận phân loại chính xác 3 nhóm khả dụng, hỗ trợ chọn 1 chạm, và ẩn gợi ý khi loại hình là dạy bù.
+  - Bổ sung kiểm tra giao diện 3 tùy chọn buổi dạy, gộp tiết TKB cho cả ngày và thuật toán phân loại độ khả dụng cho `all_day`.
 
 ## Test đã chạy
 - `node tests/daythay-suggest-smoke.js`: PASS
@@ -22,12 +22,11 @@ PASS
 - `git diff --check`: PASS (không lỗi cú pháp/khoảng trắng)
 
 ## Pass / Fail từng tiêu chí
-- Tiêu chí 1: Hiển thị bảng đề xuất gồm đúng 2 cột (Trống cả buổi & Trống tiết cần thay) khi chọn ngày, buổi và giáo viên nghỉ -> PASS
-- Tiêu chí 2: Phân loại chính xác giáo viên dựa trên thời khóa biểu thực tế -> PASS
-- Tiêu chí 3: Tương tác 1 chạm cập nhật trực tiếp giáo viên thực dạy và hiển thị thông báo toast -> PASS
-- Tiêu chí 4: Hiển thị trạng thái khả dụng ngay trong dropdown `#new-sub-teacher` -> PASS
-- Tiêu chí 5: Ẩn bảng đề xuất khi loại hình là Dạy bù -> PASS
-- Tiêu chí 6: Toàn bộ các bộ kiểm thử smoke của hệ thống đạt PASS 100% -> PASS
+- Tiêu chí 1: Dropdown Buổi dạy có đủ 3 tùy chọn Sáng / Chiều / Cả ngày -> PASS
+- Tiêu chí 2: Khi chọn Cả ngày, hệ thống gom đủ tiết cả sáng và chiều từ TKB giáo viên nghỉ -> PASS
+- Tiêu chí 3: Bảng đề xuất thông minh tính toán và hiển thị đúng giáo viên trống cả ngày hoặc trống tiết cần thay -> PASS
+- Tiêu chí 4: Lưu, sửa, xem nhật ký và thông báo thể hiện đúng buổi Cả ngày / từng tiết -> PASS
+- Tiêu chí 5: Toàn bộ 5 bộ kiểm thử smoke của hệ thống đều PASS 100% -> PASS
 
 ## Bug
 Không phát hiện bug tồn đọng.

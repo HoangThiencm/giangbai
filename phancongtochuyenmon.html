@@ -2027,6 +2027,7 @@
                     <select class="form-control" id="new-sub-session" onchange="onDayThaySessionChange()">
                         <option value="morning">Sáng (tiết 1 - 5)</option>
                         <option value="afternoon">Chiều (tiết 1 - 4)</option>
+                        <option value="all_day">Cả ngày (Sáng &amp; Chiều)</option>
                     </select>
                 </div>
             </div>
@@ -5223,6 +5224,7 @@
         }
 
         function getSessionLabel(session) {
+            if (session === 'all_day') return 'Cả ngày';
             return session === 'afternoon' ? 'Chiều' : 'Sáng';
         }
 
@@ -5331,6 +5333,10 @@
         }
 
         function getSessionPeriods(session) {
+            if (session === 'all_day') {
+                return [...new Set([...getSessionPeriods('morning'), ...getSessionPeriods('afternoon')])]
+                    .sort((a, b) => a - b);
+            }
             const isAfternoon = session === 'afternoon';
             const raw = isAfternoon ? state.info?.afternoon_periods : state.info?.morning_periods;
             const fallback = isAfternoon ? [1, 2, 3, 4] : [1, 2, 3, 4, 5];
@@ -5352,8 +5358,10 @@
             if (!sel) return;
             const optM = sel.querySelector('option[value="morning"]');
             const optA = sel.querySelector('option[value="afternoon"]');
+            const optAllDay = sel.querySelector('option[value="all_day"]');
             if (optM) optM.textContent = `Sáng (tiết ${mLabel})`;
             if (optA) optA.textContent = `Chiều (tiết ${aLabel})`;
+            if (optAllDay) optAllDay.textContent = `Cả ngày (tiết ${mLabel}, ${aLabel})`;
         }
 
         function getVisibleSlotNumbers() {
@@ -6552,7 +6560,6 @@ Quy tắc:
             const rows = [];
             const want = announcementSessionKey(sessionFilter);
             getSubstituteRecordsForDate(dateStr).forEach(item => {
-                if (want && announcementSessionKey(item.session) !== want) return;
                 const details = getPeriodsDetail(item);
                 const sessionLabel = getSessionLabel(item.session);
                 const subTeacher = teacherNameById(item.teacher_id);
@@ -6560,8 +6567,12 @@ Quy tắc:
                 const note = item.type === 'makeup' ? 'Dạy bù' : '';
                 if (details.length) {
                     details.forEach(p => {
+                        const rowSession = item.session === 'all_day'
+                            ? (getSessionPeriods('morning').includes(p.period_num) ? 'Sáng' : 'Chiều')
+                            : sessionLabel;
+                        if (want && announcementSessionKey(rowSession) !== want) return;
                         rows.push({
-                            session: sessionLabel,
+                            session: rowSession,
                             period: p.period_num,
                             class_name: p.class_name || item.class_name || '',
                             subject: p.subject || '',
@@ -6571,6 +6582,7 @@ Quy tắc:
                         });
                     });
                 } else {
+                    if (want && announcementSessionKey(sessionLabel) !== want) return;
                     rows.push({
                         session: sessionLabel,
                         period: item.period || '—',
@@ -6596,7 +6608,9 @@ Quy tắc:
             const absentCell = buildAnnouncementAbsentCell(type, forId, type === 'makeup' ? 'Tự dạy bù lớp' : '', reason);
             const note = type === 'makeup' ? 'Dạy bù' : '';
             return slots.map(p => ({
-                session: getSessionLabel(session),
+                session: session === 'all_day'
+                    ? (getSessionPeriods('morning').includes(p.period_num) ? 'Sáng' : 'Chiều')
+                    : getSessionLabel(session),
                 period: p.period_num,
                 class_name: p.class_name || '',
                 subject: p.subject || '',
@@ -7211,6 +7225,11 @@ ${listText}`;
         }
 
         function getTimetableDaySlots(teacher, session, dayNum) {
+            if (session === 'all_day') {
+                return ['morning', 'afternoon']
+                    .flatMap(part => getTimetableDaySlots(teacher, part, dayNum))
+                    .sort((a, b) => a.period_num - b.period_num);
+            }
             const block = teacher?.timetable?.[session === 'afternoon' ? 'afternoon' : 'morning'];
             const day = block?.[String(dayNum)] || {};
             return Object.keys(day).map(period => {
@@ -7243,7 +7262,7 @@ ${listText}`;
             }
             const slots = getTimetableDaySlots(teacher, session, dayNum);
             if (!slots.length) {
-                if (!silentEmpty) showToast(`${teacher.name} không có tiết ${session === 'afternoon' ? 'chiều' : 'sáng'} ${TT_DAY_LABELS[dayNum] || ''}.`, 'info');
+                if (!silentEmpty) showToast(`${teacher.name} không có tiết ${getSessionLabel(session).toLowerCase()} ${TT_DAY_LABELS[dayNum] || ''}.`, 'info');
                 return false;
             }
             extraPeriodSlots = slots.map(s => s.period_num);
@@ -7322,7 +7341,7 @@ ${listText}`;
         function computeDayThayTeacherAvailability(date, session, forTeacherId, neededPeriods) {
             const dayNum = weekdayNumberFromDate(date);
             const result = { dayNum, freeSessionTeachers: [], freeSlotTeachers: [], busyConflictTeachers: [] };
-            if (!dayNum || !['morning', 'afternoon'].includes(session)) return result;
+            if (!dayNum || !['morning', 'afternoon', 'all_day'].includes(session)) return result;
             const needed = [...new Set((neededPeriods || []).map(n => parseInt(n, 10)).filter(n => n > 0))];
             (state.teachers || []).forEach(teacher => {
                 if (String(teacher.id) === String(forTeacherId)) return;
@@ -7354,7 +7373,8 @@ ${listText}`;
             }
 
             const statusById = new Map();
-            availability.freeSessionTeachers.forEach(item => statusById.set(String(item.teacher.id), 'Trống cả buổi'));
+            const fullScopeLabel = session === 'all_day' ? 'Trống cả ngày' : 'Trống cả buổi';
+            availability.freeSessionTeachers.forEach(item => statusById.set(String(item.teacher.id), fullScopeLabel));
             availability.freeSlotTeachers.forEach(item => statusById.set(String(item.teacher.id), `Trống tiết ${neededPeriods.join(', ')}${item.busyPeriods.length ? ` - Dạy tiết ${item.busyPeriods.join(', ')}` : ''}`));
             availability.busyConflictTeachers.forEach(item => statusById.set(String(item.teacher.id), '⚠️ Trùng lịch'));
             const current = teacherSelect.value;
@@ -7366,14 +7386,14 @@ ${listText}`;
 
             const card = (item, kind) => {
                 const teacher = item.teacher;
-                const busy = item.busyPeriods.length ? `Dạy tiết ${item.busyPeriods.join(', ')}` : 'Không có tiết trong buổi';
-                const detail = kind === 'session' ? 'Trống toàn bộ buổi' : `Rảnh tiết ${neededPeriods.join(', ')} · ${busy}`;
+                const busy = item.busyPeriods.length ? `Dạy tiết ${item.busyPeriods.join(', ')}` : `Không có tiết trong ${session === 'all_day' ? 'ngày' : 'buổi'}`;
+                const detail = kind === 'session' ? `Trống toàn bộ ${session === 'all_day' ? 'ngày' : 'buổi'}` : `Rảnh tiết ${neededPeriods.join(', ')} · ${busy}`;
                 const selected = String(teacherSelect.value) === String(teacher.id);
                 const color = kind === 'session' ? '#16a34a' : '#4f46e5';
                 return `<div class="daythay-suggestion-card ${selected ? 'active' : ''}" style="padding:10px;border:1px solid ${selected ? color : '#dbeafe'};border-radius:9px;background:${selected ? '#eef2ff' : '#fff'};margin-top:8px;"><b>${escapeHtml(teacher.name)}</b><div style="font-size:.78rem;color:#64748b;margin-top:2px;">${escapeHtml(teacher.role || 'Giáo viên')} · ${escapeHtml(detail)}</div><button type="button" class="btn-small" style="margin-top:7px;background:${color};color:#fff;border-color:${color};" onclick="selectDayThaySuggestedTeacher(decodeURIComponent('${encodeURIComponent(String(teacher.id))}'))">Chọn dạy thay</button></div>`;
             };
             const column = (title, items, kind) => `<div style="min-width:0;flex:1 1 270px;"><div style="font-weight:800;color:#1e293b;">${title} <span style="display:inline-block;padding:1px 7px;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:.78rem;">${items.length}</span></div>${items.length ? items.map(item => card(item, kind)).join('') : '<div style="font-size:.82rem;color:#64748b;padding:10px 0;">Chưa có giáo viên phù hợp.</div>'}</div>`;
-            panel.innerHTML = `<div style="font-weight:800;color:#312e81;margin-bottom:8px;">💡 Đề xuất giáo viên dạy thay (${escapeHtml(TT_DAY_LABELS[availability.dayNum] || '')} - Buổi ${session === 'afternoon' ? 'Chiều' : 'Sáng'} · Cần thay tiết: ${neededPeriods.join(', ')})</div><div style="display:flex;gap:14px;flex-wrap:wrap;">${column('Trống cả buổi', availability.freeSessionTeachers, 'session')}${column('Có mặt, trống tiết cần thay', availability.freeSlotTeachers, 'slot')}</div>`;
+            panel.innerHTML = `<div style="font-weight:800;color:#312e81;margin-bottom:8px;">💡 Đề xuất giáo viên dạy thay (${escapeHtml(TT_DAY_LABELS[availability.dayNum] || '')} - Buổi ${getSessionLabel(session)} · Cần thay tiết: ${neededPeriods.join(', ')})</div><div style="display:flex;gap:14px;flex-wrap:wrap;">${column(fullScopeLabel, availability.freeSessionTeachers, 'session')}${column('Có mặt, trống tiết cần thay', availability.freeSlotTeachers, 'slot')}</div>`;
         }
 
         function selectDayThaySuggestedTeacher(teacherId) {
@@ -7518,7 +7538,9 @@ ${listText}`;
                     : `<span style="background:#f5f3ff; color:#6d28d9; padding:2px 7px; border-radius:5px; font-weight:800; font-size:0.72rem;"><i class="fas fa-rotate"></i> Dạy bù</span>`;
                 const sessionBadge = item.session === 'morning'
                     ? `<span class="session-badge session-morning"><i class="fas fa-sun"></i> Sáng</span>`
-                    : `<span class="session-badge session-afternoon"><i class="fas fa-moon"></i> Chiều</span>`;
+                    : item.session === 'all_day'
+                        ? `<span class="session-badge session-afternoon"><i class="fas fa-calendar-day"></i> Cả ngày</span>`
+                        : `<span class="session-badge session-afternoon"><i class="fas fa-moon"></i> Chiều</span>`;
                 const count = getSubPeriodCount(item);
                 const weekday = weekdayLabel(item.date);
                 return `
@@ -7747,7 +7769,7 @@ ${listText}`;
                         <td style="padding:6px; text-align:center;">${idx + 1}</td>
                         <td style="padding:6px; text-align:center;">${item.type === 'replacement' ? 'Dạy thay' : 'Dạy bù'}</td>
                         <td style="padding:6px; text-align:center;">${item.date || ''} ${weekdayLabel(item.date)}</td>
-                        <td style="padding:6px; text-align:center;">${item.session === 'afternoon' ? 'Chiều' : 'Sáng'}</td>
+                        <td style="padding:6px; text-align:center;">${getSessionLabel(item.session)}</td>
                         <td style="padding:6px;">${detailText}</td>
                         <td style="padding:6px; text-align:center; font-weight:bold;">${getSubPeriodCount(item)}</td>
                         <td style="padding:6px; font-weight:bold;">${t ? t.name : '—'}</td>
@@ -8034,7 +8056,7 @@ ${listText}`;
                         <td style="padding: 5px; text-align: center;">${idx + 1}</td>
                         <td style="padding: 5px; text-align: center;">${item.type === 'replacement' ? 'Dạy thay' : 'Dạy bù'}</td>
                         <td style="padding: 5px; text-align: center;">${item.date}</td>
-                        <td style="padding: 5px; text-align: center;">${item.session === 'morning' ? 'Sáng' : 'Chiều'}</td>
+                        <td style="padding: 5px; text-align: center;">${getSessionLabel(item.session)}</td>
                         <td style="padding: 5px; text-align: center;">${item.period || (getPeriodsDetail(item).map(p => 'Tiết ' + p.period_num).join(', ')) || '—'}</td>
                         <td style="padding: 5px; text-align: center; font-weight: bold;">${item.class_name || (getPeriodsDetail(item).map(p => p.class_name).filter(Boolean).join(', ')) || '—'}</td>
                         <td style="padding: 5px; font-weight: bold;">${t ? t.name : '—'}</td>

@@ -1,106 +1,88 @@
-# PLAN: Đề xuất thông minh Giáo viên Dạy thay theo Thời khóa biểu (2 cột: Trống cả buổi & Trống tiết cần thay)
+# PLAN: Bổ sung tùy chọn Buổi dạy "Cả ngày" (Sáng / Chiều / Cả ngày) trong Sổ Dạy thay
 
-## Hiện trạng & Nhu cầu người dùng
+## Hiện trạng & Yêu cầu người dùng
 
-1. **Hiện trạng quy trình ghi nhận Dạy thay (`#view-daythay`)**:
-   - Khi có một giáo viên nghỉ dạy (do công tác, ốm, việc bận...), Tổ trưởng chuyên môn chọn:
-     - Ngày dạy (`#new-sub-date`)
-     - Buổi dạy (`#new-sub-session`: Sáng / Chiều)
-     - Giáo viên được thay / nghỉ (`#new-sub-for-teacher`)
-   - Hệ thống đã có sẵn tính năng tự động trích xuất các tiết cần dạy thay từ TKB của giáo viên nghỉ (`autoSuggestSlotsFromTimetable`).
-   - Tuy nhiên, tại ô **"Giáo viên thực dạy" (`#new-sub-teacher`)**, hệ thống chỉ hiển thị một danh sách phẳng toàn bộ giáo viên trong tổ.
-   - Tổ trưởng không biết giáo viên nào rảnh cả buổi, giáo viên nào đang có mặt ở trường nhưng trống tiết đó, hoặc giáo viên nào bị trùng giờ dạy. Người dùng phải tự nhớ hoặc tra cứu thủ công TKB của từng người rất mất thời gian.
+1. **Hiện trạng**:
+   - Tại form ghi nhận Dạy thay / Dạy bù (`#view-daythay`), dropdown **Buổi dạy** (`#new-sub-session`) hiện chỉ có 2 lựa chọn:
+     - `Sáng (tiết ...)`
+     - `Chiều (tiết ...)`
+   - Khi một giáo viên nghỉ trọn vẹn cả ngày (ví dụ: đi công tác cả ngày, nghỉ ốm, hội nghị...), Tổ trưởng phải tạo tách rời làm 2 lượt (1 lượt sáng, 1 lượt chiều) hoặc không thể lấy đồng thời toàn bộ các tiết dạy trong ngày của giáo viên đó từ TKB.
 
-2. **Nhu cầu người dùng**:
-   - Khi chọn một giáo viên nghỉ dạy và buổi nghỉ:
-     - Tự động lọc và hiển thị danh sách đề xuất giáo viên dạy thay chia làm **2 cột trực quan**:
-       - **Cột 1**: Giáo viên trống cả buổi (không có bất kỳ tiết nào trong buổi đó).
-       - **Cột 2**: Giáo viên có mặt tại trường nhưng trống đúng các tiết cần dạy thay (có tiết dạy trong buổi đó nhưng không trùng các tiết cần thay).
-     - Bấm chọn 1 chạm vào bất kỳ giáo viên nào trong 2 cột là tự động điền vào ô "Giáo viên thực dạy".
+2. **Yêu cầu người dùng**:
+   - Thêm lựa chọn **"Cả ngày"** vào mục Buổi dạy (`#new-sub-session`):
+     - `Sáng (tiết ...)`
+     - `Chiều (tiết ...)`
+     - `Cả ngày (Sáng & Chiều)`
 
 ---
 
 ## Mục tiêu & Giải pháp thiết kế
 
-### 1. Thuật toán phân loại giáo viên rảnh dạy thay (`computeDayThayTeacherAvailability`)
-Xây dựng hàm phân tích lịch dạy của tất cả giáo viên trong tổ cho một ngày và buổi cụ thể:
-- **Đầu vào**:
-  - `date`: Ngày dạy (`YYYY-MM-DD`).
-  - `session`: `'morning'` hoặc `'afternoon'`.
-  - `forTeacherId`: ID của giáo viên nghỉ dạy.
-  - `neededPeriods`: Mảng các tiết cần dạy thay (ví dụ: `[1, 2]` lấy từ các tiết đang được chọn/bật trong `#period-slots-builder`).
-- **Xử lý**:
-  - `dayNum = weekdayNumberFromDate(date)` (2 đến 7). Nếu là Chủ nhật hoặc không hợp lệ -> bỏ qua.
-  - Duyệt qua danh sách `state.teachers`, loại trừ giáo viên nghỉ (`t.id !== forTeacherId`):
-    - Lấy các tiết dạy của giáo viên đó trong buổi và thứ tương ứng: `slots = getTimetableDaySlots(t, session, dayNum)`.
-    - `busyPeriods = slots.map(s => s.period_num)`.
-    - **Nhóm 1: Trống cả buổi (`freeSessionTeachers`)**:
-      - Điều kiện: `slots.length === 0`.
-      - Đây là những giáo viên không có tiết nào trong buổi đó, hoàn toàn rảnh cả buổi.
-    - **Nhóm 2: Có mặt, trống đúng các tiết cần thay (`freeSlotTeachers`)**:
-      - Điều kiện: `slots.length > 0` VÀ không có bất kỳ tiết nào trong `busyPeriods` trùng với `neededPeriods` (tức là `busyPeriods.every(p => !neededPeriods.includes(p))`).
-      - Ví dụ: Cần thay tiết 1, 2; giáo viên này dạy tiết 3, 4 -> rảnh tiết 1, 2 và có mặt sẵn ở trường.
-    - **Nhóm 3: Bị trùng tiết (`busyConflictTeachers`)**:
-      - Điều kiện: Có ít nhất 1 tiết trong `busyPeriods` trùng với `neededPeriods`.
+### 1. Cập nhật giao diện Dropdown Buổi dạy (`#new-sub-session`)
+- Trong HTML `phancongtochuyenmon.html` (dòng 2027):
+  ```html
+  <select class="form-control" id="new-sub-session" onchange="onDayThaySessionChange()">
+      <option value="morning">Sáng</option>
+      <option value="afternoon">Chiều</option>
+      <option value="all_day">Cả ngày (Sáng & Chiều)</option>
+  </select>
+  ```
+- Cập nhật hàm `updateSessionSelectLabels()`:
+  - Cập nhật text option `morning`: `Sáng (tiết ${mLabel})`
+  - Cập nhật text option `afternoon`: `Chiều (tiết ${aLabel})`
+  - Cập nhật text option `all_day`: `Cả ngày (Sáng & Chiều)` hoặc `Cả ngày (tiết ${mLabel}, ${aLabel})`
 
-### 2. Giao diện người dùng (UI / UX)
-- Tại `#view-daythay` (ngay dưới cụm chọn Giáo viên thực dạy và Giáo viên được thay):
-  - Bổ sung một panel đề xuất thông minh `#daythay-suggestion-panel`:
-    - Tiêu đề: `💡 Đề xuất giáo viên dạy thay (Thứ X - Buổi Sáng/Chiều · Cần thay tiết: 1, 2)`.
-    - **Cột 1 — Giáo viên trống cả buổi**:
-      - Badge số lượng giáo viên.
-      - Danh sách thẻ giáo viên: Tên, môn/tổ, nút `[Chọn dạy thay]` (màu xanh lá `#16a34a`).
-    - **Cột 2 — Giáo viên có mặt, trống tiết cần thay**:
-      - Badge số lượng giáo viên.
-      - Danh sách thẻ giáo viên: Tên, thông tin tiết rảnh/bận (ví dụ: `Rảnh tiết 1, 2 · Dạy tiết 3, 4 lớp 7A1`), nút `[Chọn dạy thay]` (màu tím xanh `#4f46e5`).
-  - **Tương tác một chạm**:
-    - Khi bấm nút `[Chọn dạy thay]` ở bất kỳ thẻ giáo viên nào:
-      - Tự động gán giá trị vào dropdown `#new-sub-teacher`.
-      - Đánh dấu active/highlight thẻ giáo viên vừa chọn.
-      - Hiển thị toast thông báo: `"Đã chọn thầy/cô [Tên] làm giáo viên dạy thay."`.
-  - **Nâng cấp dropdown `#new-sub-teacher`**:
-    - Thêm nhãn trạng thái trực tiếp vào từng option trong thẻ `<select>`:
-      - `Nguyễn Văn A (Trống cả buổi)`
-      - `Trần Thị B (Trống tiết 1, 2 - Dạy tiết 3, 4)`
-      - `Lê Văn C ⚠️ (Trùng lịch)`
-
-### 3. Tự động kích hoạt đồng bộ
-Hàm `renderDayThaySuggestions()` sẽ tự động chạy khi:
-- Người dùng chọn hoặc thay đổi:
-  - Ngày dạy (`#new-sub-date`)
-  - Buổi dạy (`#new-sub-session`)
-  - Giáo viên được thay (`#new-sub-for-teacher`)
-  - Bật/tắt các tiết cần thay trong lưới `#period-slots-builder`
-- Khi `Loại hình` là `makeup` (dạy bù): tự động ẩn panel đề xuất (vì dạy bù là cho chính lớp của mình, không cần tìm người dạy thay).
+### 2. Xử lý logic khung tiết và TKB cho "Cả ngày" (`all_day`)
+1. **Hàm `getSessionLabel(session)`**:
+   - Trả về `'Cả ngày'` nếu `session === 'all_day'`, `'Chiều'` nếu `session === 'afternoon'`, ngược lại `'Sáng'`.
+2. **Hàm `getSessionPeriods(session)`**:
+   - Khi `session === 'all_day'`: Lấy cả danh sách tiết sáng và tiết chiều gộp lại và sắp xếp tăng dần:
+     `return [...new Set([...mPeriods, ...aPeriods])].sort((a, b) => a - b);`
+3. **Hàm `getTimetableDaySlots(teacher, session, dayNum)`**:
+   - Khi `session === 'all_day'`: Thu thập toàn bộ các tiết từ cả hai khối sáng (`'morning'`) và chiều (`'afternoon'`):
+     `return [...getTimetableDaySlots(teacher, 'morning', dayNum), ...getTimetableDaySlots(teacher, 'afternoon', dayNum)].sort((a, b) => a.period_num - b.period_num);`
+   - Khi bấm "Lấy tiết từ TKB" (`autoSuggestSlotsFromTimetable`), hệ thống sẽ nạp tự động đầy đủ tất cả các tiết trong ngày (cả sáng và chiều) của giáo viên nghỉ.
+4. **Hàm `initPeriodSlotsBuilder` và `getVisibleSlotNumbers`**:
+   - Hiển thị đầy đủ các ô tiết của cả sáng và chiều để người dùng tick chọn phân bổ cho từng lớp.
+5. **Đề xuất giáo viên dạy thay thông minh (`computeDayThayTeacherAvailability` & `renderDayThaySuggestions`)**:
+   - Hỗ trợ `session === 'all_day'`:
+     - **Trống cả buổi (Trống cả ngày)**: Giáo viên không có bất kỳ tiết nào trong cả sáng lẫn chiều của ngày hôm đó (`slots.length === 0`).
+     - **Có mặt, trống tiết cần thay**: Giáo viên có giờ dạy trong ngày nhưng toàn bộ các tiết dạy không trùng với bất kỳ tiết nào cần thay.
+     - **Trùng lịch**: Giáo viên có ít nhất một tiết trùng với các tiết cần thay.
+     - Tiêu đề đề xuất hiển thị: `Buổi Cả ngày · Cần thay tiết: ...`
+6. **Bảng thông báo / Xuất sổ dạy thay (`collectFormAnnouncementRows`)**:
+   - Khi lưu bản ghi với `session === 'all_day'`, phân tách buổi của từng tiết theo đúng khung giờ: tiết thuộc sáng ghi "Sáng", tiết thuộc chiều ghi "Chiều".
+7. **Bản ghi Sổ Dạy thay (`saveDayThayRecord` & `editDayThayRecord`)**:
+   - Lưu trữ an toàn giá trị `session: 'all_day'` vào bản ghi `state.attendance.substitutes`.
+   - Khi chỉnh sửa (`editDayThayRecord`), khôi phục đúng giá trị `#new-sub-session` là `'all_day'`.
 
 ---
 
 ## Phạm vi thực hiện
 
 1. `phancongtochuyenmon.html`:
-   - Bổ sung markup HTML của `#daythay-suggestion-panel` gồm 2 cột (Trống cả buổi & Trống tiết).
-   - Thêm hàm `computeDayThayTeacherAvailability(date, session, forTeacherId, neededPeriods)`.
-   - Thêm hàm `renderDayThaySuggestions()`.
-   - Thêm hàm `selectDayThaySuggestedTeacher(teacherId)`.
-   - Tích hợp gọi `renderDayThaySuggestions()` vào các hàm: `maybeAutoSuggestSlotsFromTimetable()`, `onDayThaySessionChange()`, `onSlotToggle()`, `setQuickSlots()`, `clearAllSlots()`, `populateDayThayFormSelects()`, `resetDayThayForm()`.
+   - Bổ sung `<option value="all_day">` vào `#new-sub-session`.
+   - Cập nhật `updateSessionSelectLabels()`, `getSessionLabel()`, `getSessionPeriods()`, `getTimetableDaySlots()`.
+   - Cập nhật `computeDayThayTeacherAvailability()` và `renderDayThaySuggestions()` hỗ trợ `'all_day'`.
+   - Cập nhật `collectFormAnnouncementRows()` xác định buổi từng tiết khi `'all_day'`.
 2. `tests/daythay-suggest-smoke.js`:
-   - Viết bài test smoke chuyên biệt:
-     - Kiểm tra thuật toán phân loại đúng 3 nhóm: trống cả buổi, trống tiết phù hợp, và trùng lịch.
-     - Kiểm tra hàm `selectDayThaySuggestedTeacher` cập nhật đúng `#new-sub-teacher`.
-     - Kiểm tra ẩn panel khi loại hình là `makeup`.
+   - Bổ sung test kiểm tra:
+     - Dropdown `#new-sub-session` có đủ 3 lựa chọn (Sáng, Chiều, Cả ngày).
+     - `getSessionPeriods('all_day')` trả về kết hợp tiết sáng và chiều.
+     - `getTimetableDaySlots(teacher, 'all_day', dayNum)` gom đủ tiết cả sáng và chiều.
+     - `computeDayThayTeacherAvailability` tính đúng độ khả dụng cho `all_day`.
 
 ---
 
 ## Ngoài phạm vi
 
-- Không thay đổi cấu trúc dữ liệu lưu trữ bản ghi Sổ Dạy Thay (`state.attendance.substitutes`).
-- Không thay đổi định dạng in thông báo dạy thay hoặc xuất báo cáo.
+- Không làm thay đổi cấu trúc bảng CSDL của `phancong.php` hay file JSON sao lưu.
 
 ---
 
 ## Kế hoạch kiểm thử (Verification Plan)
 
-1. `node tests/daythay-suggest-smoke.js`: PASS toàn bộ logic tính toán độ khả dụng và phân loại 2 cột.
+1. `node tests/daythay-suggest-smoke.js`: PASS toàn bộ kiểm thử `all_day`, lấy tiết TKB và gợi ý giáo viên.
 2. `node tests/baogiang-weekday-segment-smoke.js`: PASS.
 3. `node tests/timetable-render-smoke.js`: PASS.
 4. `node tests/canvas-xaydungphuluc-smoke.js`: PASS.

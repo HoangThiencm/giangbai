@@ -20,6 +20,28 @@ const teachers = [
 ];
 
 {
+    const allDayTeachers = [
+        { id: 'absent', name: 'Cô Nghỉ', timetable: { morning: { '2': { '1': 'Toán - 8A1' } }, afternoon: { '2': { '6': 'Toán - 8A1' } } } },
+        { id: 'whole', name: 'Thầy Rảnh Cả Ngày', timetable: { morning: { '2': {} }, afternoon: { '2': {} } } },
+        { id: 'slots', name: 'Cô Rảnh Tiết', timetable: { morning: { '2': { '3': 'Tin - 8A2' } }, afternoon: { '2': { '8': 'Tin - 8A2' } } } },
+        { id: 'busy', name: 'Thầy Trùng Lịch', timetable: { morning: { '2': { '1': 'Toán - 9A1' } }, afternoon: { '2': { '6': 'Toán - 9A1' } } } }
+    ];
+    const source = ['parsePeriodsConfig', 'getSessionPeriods', 'weekdayNumberFromDate', 'getTimetableDaySlots', 'computeDayThayTeacherAvailability'].map(declaration).join('\n');
+    const context = vm.createContext({
+        state: { teachers: allDayTeachers, info: { morning_periods: '1, 2, 3', afternoon_periods: '6, 7, 8' } },
+        parseTimetableCell: value => typeof value === 'string' ? { subject: value.split(' - ')[0], class_name: value.split(' - ')[1] } : value,
+        Date, String, Object, Set, Map, Number, parseInt
+    });
+    vm.runInContext(source, context);
+    assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext("getSessionPeriods('all_day')", context))), [1, 2, 3, 6, 7, 8], 'all-day periods merge the configured morning and afternoon frames');
+    assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext("getTimetableDaySlots(state.teachers[0], 'all_day', 2).map(slot => slot.period_num)", context))), [1, 6], 'all-day timetable slots merge both sessions');
+    const availability = vm.runInContext("computeDayThayTeacherAvailability('2026-09-14', 'all_day', 'absent', [1, 6])", context);
+    assert.deepEqual(JSON.parse(JSON.stringify(availability.freeSessionTeachers.map(item => item.teacher.id))), ['whole'], 'a teacher with no lessons all day is free for the whole day');
+    assert.deepEqual(JSON.parse(JSON.stringify(availability.freeSlotTeachers.map(item => item.teacher.id))), ['slots'], 'a teacher teaching only other all-day periods is available');
+    assert.deepEqual(JSON.parse(JSON.stringify(availability.busyConflictTeachers.map(item => item.teacher.id))), ['busy'], 'all-day collisions are marked as conflicts');
+}
+
+{
     const source = ['weekdayNumberFromDate', 'getTimetableDaySlots', 'computeDayThayTeacherAvailability'].map(declaration).join('\n');
     const context = vm.createContext({
         state: { teachers },
@@ -71,7 +93,7 @@ const teachers = [
         'new-sub-session': { value: 'morning' },
         'new-sub-for-teacher': { value: 'absent' }
     };
-    const source = ['weekdayNumberFromDate', 'getTimetableDaySlots', 'computeDayThayTeacherAvailability', 'renderDayThaySuggestions'].map(declaration).join('\n');
+    const source = ['getSessionLabel', 'weekdayNumberFromDate', 'getTimetableDaySlots', 'computeDayThayTeacherAvailability', 'renderDayThaySuggestions'].map(declaration).join('\n');
     const context = vm.createContext({
         state: { teachers },
         document: { getElementById: id => fields[id] || null },
@@ -91,6 +113,7 @@ const teachers = [
 }
 
 assert.match(html, /id="daythay-suggestion-panel"/, 'daythay suggestion panel exists');
+assert.match(html, /<option value="all_day">Cả ngày/, 'session dropdown offers an all-day choice');
 assert.match(html, /Trống cả buổi[\s\S]*Có mặt, trống tiết cần thay/, 'suggestion panel has exactly the two user-facing availability columns');
 assert.match(html, /Trống cả buổi[\s\S]*Trống tiết[\s\S]*⚠️ Trùng lịch/, 'teacher dropdown status labels include availability and conflict safely');
 
