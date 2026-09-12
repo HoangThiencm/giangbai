@@ -5496,7 +5496,7 @@
         function persistTeacherTimetable(teacherId, timetable) {
             const copy = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
             const apply = teachers => {
-                const t = (teachers || []).find(x => x.id === teacherId);
+                const t = (teachers || []).find(x => String(x.id) === String(teacherId));
                 if (t) t.timetable = JSON.parse(JSON.stringify(copy));
             };
             apply(state.teachers);
@@ -5565,9 +5565,13 @@
 
         function renderTimetableView() {
             bindTimetableInputEvents();
-            if (!selectedTimetableTeacherId && state.teachers[0]) selectedTimetableTeacherId = state.teachers[0].id;
-            renderTimetableTeacherList();
-            renderTimetableWorkspace();
+            const targetId = selectedTimetableTeacherId || (state.teachers[0] ? state.teachers[0].id : null);
+            if (targetId) {
+                selectTimetableTeacher(targetId);
+            } else {
+                renderTimetableTeacherList();
+                renderTimetableWorkspace();
+            }
         }
 
         function renderTimetableTeacherList() {
@@ -5585,7 +5589,7 @@
             list.innerHTML = rows.map(t => {
                 const has = timetableHasLessons(t.timetable);
                 const n = countTimetableLessons(t.timetable);
-                const active = t.id === selectedTimetableTeacherId ? 'active' : '';
+                const active = String(t.id) === String(selectedTimetableTeacherId) ? 'active' : '';
                 const badge = has
                     ? `<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:999px; padding:2px 7px; font-size:0.68rem; font-weight:800;">✓ Đã có TKB (${n} tiết)</span>`
                     : `<span style="background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; border-radius:999px; padding:2px 7px; font-size:0.68rem; font-weight:800;">⏳ Chưa có TKB</span>`;
@@ -5606,7 +5610,7 @@
         function selectTimetableTeacher(teacherId) {
             if (!teacherId) return;
             selectedTimetableTeacherId = teacherId;
-            const teacher = state.teachers.find(t => t.id === teacherId);
+            const teacher = (state.teachers || []).find(t => String(t.id) === String(teacherId));
             editingTimetable = normalizeTeacherTimetable(teacher?.timetable);
             if (!editingTimetable.school_year) editingTimetable.school_year = state.info?.school_year || '';
             if (!editingTimetable.semester) editingTimetable.semester = state.info?.semester || '';
@@ -5621,7 +5625,7 @@
 
         function renderTimetableWorkspace() {
             const header = document.getElementById('tt-workspace-header');
-            const teacher = state.teachers.find(t => t.id === selectedTimetableTeacherId);
+            const teacher = (state.teachers || []).find(t => String(t.id) === String(selectedTimetableTeacherId));
             if (header) {
                 if (!teacher) {
                     header.innerHTML = '<div style="padding:24px; color:#94a3b8; font-weight:700;">Chưa có giáo viên. Hãy khai báo tổ trước.</div>';
@@ -5651,7 +5655,7 @@
         function goToPrevTimetableTeacher() {
             const list = filteredTimetableTeachers();
             if (!list.length) return;
-            const idx = list.findIndex(t => t.id === selectedTimetableTeacherId);
+            const idx = list.findIndex(t => String(t.id) === String(selectedTimetableTeacherId));
             const prev = list[(idx <= 0 ? list.length : idx) - 1];
             if (prev) selectTimetableTeacher(prev.id);
         }
@@ -5659,7 +5663,7 @@
         function goToNextTimetableTeacher(onlyMissing = false) {
             if (onlyMissing) {
                 const all = state.teachers || [];
-                const curIdx = all.findIndex(t => t.id === selectedTimetableTeacherId);
+                const curIdx = all.findIndex(t => String(t.id) === String(selectedTimetableTeacherId));
                 const after = all.slice(curIdx + 1).find(t => !timetableHasLessons(t.timetable));
                 const wrap = all.slice(0, Math.max(0, curIdx)).find(t => !timetableHasLessons(t.timetable));
                 const next = after || wrap;
@@ -5672,7 +5676,7 @@
             }
             const list = filteredTimetableTeachers();
             if (!list.length) return;
-            const idx = list.findIndex(t => t.id === selectedTimetableTeacherId);
+            const idx = list.findIndex(t => String(t.id) === String(selectedTimetableTeacherId));
             const next = list[(idx + 1) % list.length];
             if (next) selectTimetableTeacher(next.id);
         }
@@ -5695,7 +5699,8 @@
         }
 
         function periodsForTimetableSession(session, timetable) {
-            const base = getSessionPeriods(session);
+            const configured = getSessionPeriods(session);
+            const base = configured.length ? configured : (session === 'morning' ? [1, 2, 3, 4, 5] : [1, 2, 3, 4]);
             const extra = [];
             const block = timetable?.[session] || {};
             Object.values(block).forEach(day => {
@@ -5949,17 +5954,23 @@ Quy tắc:
             if (yearEl) yearEl.value = next.school_year || '';
             if (semEl) semEl.value = next.semester || '';
             persistAndSaveTimetableLocal();
-            const teacher = state.teachers.find(t => t.id === selectedTimetableTeacherId);
+            const teacher = (state.teachers || []).find(t => String(t.id) === String(selectedTimetableTeacherId));
             const teacherName = teacher ? teacher.name : '';
             const autoApply = document.getElementById('tt-auto-apply-assign')?.checked;
             let classCount = 0;
             if (autoApply && selectedTimetableTeacherId) {
-                classCount = applyTimetableToAssignments(selectedTimetableTeacherId, { silent: true, skipRender: true }) || 0;
-                renderLiveStatsBanner();
-                renderPool();
-                renderTeachers();
+                try {
+                    classCount = applyTimetableToAssignments(selectedTimetableTeacherId, { silent: true, skipRender: true }) || 0;
+                    renderLiveStatsBanner();
+                    renderPool();
+                    renderTeachers();
+                } catch (err) {
+                    console.error('Không thể tự động đồng bộ phân công từ TKB:', err);
+                    showToast('Đã lưu Thời khoá biểu, nhưng chưa thể tự động đồng bộ phân công.', 'info');
+                }
             }
             renderTimetableWorkspace();
+            renderTimetableTeacherList();
             if (autoApply) {
                 showToast(`Đã nhận diện, lưu TKB và tự động phiên ${classCount} lớp sang phân công cho GV ${teacherName}!`, 'success');
             } else {
@@ -5975,7 +5986,7 @@ Quy tắc:
             }
             persistAndSaveTimetableLocal();
             const autoApply = document.getElementById('tt-auto-apply-assign')?.checked;
-            const teacher = state.teachers.find(t => t.id === teacherId);
+            const teacher = (state.teachers || []).find(t => String(t.id) === String(teacherId));
             if (autoApply) applyTimetableToAssignments(teacherId, { skipRender: false });
             else showToast(`Đã lưu Thời khoá biểu của ${teacher ? teacher.name : 'giáo viên'} vào máy.`, 'success');
         }
@@ -6068,7 +6079,7 @@ Quy tắc:
         }
 
         function applyTimetableToAssignments(teacherId, options = {}) {
-            const teacher = state.teachers.find(t => t.id === teacherId);
+            const teacher = (state.teachers || []).find(t => String(t.id) === String(teacherId));
             if (!teacher) {
                 showToast('Không tìm thấy giáo viên.', 'error');
                 return 0;
@@ -6091,7 +6102,7 @@ Quy tắc:
                         state.classes.sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
                     }
                     state.teachers.forEach(other => {
-                        if (other.id === teacherId || !other.assignments?.[subjectKey]) return;
+                        if (String(other.id) === String(teacherId) || !other.assignments?.[subjectKey]) return;
                         other.assignments[subjectKey] = other.assignments[subjectKey].filter(c => c !== className);
                     });
                     if (!teacher.assignments) teacher.assignments = {};
