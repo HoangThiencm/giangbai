@@ -112,7 +112,113 @@ const teachers = [
     assert.doesNotMatch(panel.innerHTML, /Bị trùng tiết/, 'conflicts are not rendered as a third user-facing panel');
 }
 
+{
+    const preview = { hidden: true, innerHTML: '' };
+    const fields = {
+        'daythay-absent-schedule-preview': preview,
+        'new-sub-type': { value: 'replacement' },
+        'new-sub-date': { value: '2026-09-14' },
+        'new-sub-for-teacher': { value: 'absent' },
+        'new-sub-session': { value: 'afternoon' }
+    };
+    let sessionChanges = 0;
+    let suggestions = 0;
+    const source = ['weekdayNumberFromDate', 'getTimetableDaySlots', 'getDayThayAbsentContextKey', 'renderAbsentTeacherSchedulePreview'].map(declaration).join('\n');
+    const context = vm.createContext({
+        state: { teachers },
+        daythaySessionAuto: { scope: '2026-09-14|absent', manual: false, applied: false },
+        editingSubId: null,
+        document: { getElementById: id => fields[id] || null },
+        parseTimetableCell: value => typeof value === 'string' ? { subject: value.split(' - ')[0], class_name: value.split(' - ')[1] } : value,
+        escapeHtml: value => String(value), TT_DAY_LABELS: { 2: 'Thứ 2' },
+        onDayThaySessionChange: options => { assert.equal(options.auto, true); sessionChanges++; },
+        renderDayThaySuggestions: () => { suggestions++; },
+        Date, String, Object, Set, Map, Number, parseInt
+    });
+    vm.runInContext(source, context);
+    vm.runInContext('renderAbsentTeacherSchedulePreview()', context);
+    assert.equal(preview.hidden, false, 'absent teacher preview is shown after valid date and teacher selection');
+    assert.match(preview.innerHTML, /Tiết 1[\s\S]*8A1[\s\S]*Toán/, 'preview renders actual timetable period, class and subject data');
+    assert.match(preview.innerHTML, /Buổi sáng[\s\S]*Buổi chiều/, 'preview always shows both morning and afternoon sections');
+    assert.equal(fields['new-sub-session'].value, 'morning', 'morning-only teacher auto-selects morning');
+    assert.equal(sessionChanges, 1, 'auto session load happens exactly once for a context');
+    vm.runInContext('renderAbsentTeacherSchedulePreview()', context);
+    assert.equal(sessionChanges, 1, 'harmless preview rerender does not reload the automatically selected session');
+
+    context.daythaySessionAuto = { scope: '2026-09-14|absent', manual: true, applied: true };
+    fields['new-sub-session'].value = 'afternoon';
+    vm.runInContext('renderAbsentTeacherSchedulePreview()', context);
+    assert.equal(fields['new-sub-session'].value, 'afternoon', 'a manual session choice survives harmless preview rerendering');
+
+    fields['new-sub-date'].value = '2026-09-15';
+    context.daythaySessionAuto = { scope: '2026-09-15|absent', manual: false, applied: false };
+    vm.runInContext('renderAbsentTeacherSchedulePreview()', context);
+    assert.equal(fields['new-sub-session'].value, 'afternoon', 'no automatic session is chosen when the newly selected day has no lessons');
+
+    fields['new-sub-type'].value = 'makeup';
+    vm.runInContext('renderAbsentTeacherSchedulePreview()', context);
+    assert.equal(preview.hidden, true, 'makeup records hide the absent-teacher schedule preview');
+    assert.ok(suggestions >= 1, 'preview refresh keeps substitute suggestions synchronized');
+}
+
+{
+    const preview = { hidden: true, innerHTML: '' };
+    const afternoonTeacher = { id: 'afternoon', name: 'Cô Chiều', timetable: { morning: {}, afternoon: { '2': { '6': 'Tin - 9A1' } } } };
+    const bothTeacher = { id: 'both', name: 'Thầy Cả Ngày', timetable: { morning: { '2': { '1': 'Toán - 9A2' } }, afternoon: { '2': { '6': 'Toán - 9A2' } } } };
+    const fields = {
+        'daythay-absent-schedule-preview': preview,
+        'new-sub-type': { value: 'replacement' },
+        'new-sub-date': { value: '2026-09-14' },
+        'new-sub-for-teacher': { value: 'afternoon' },
+        'new-sub-session': { value: 'morning' }
+    };
+    const source = ['weekdayNumberFromDate', 'getTimetableDaySlots', 'getDayThayAbsentContextKey', 'renderAbsentTeacherSchedulePreview'].map(declaration).join('\n');
+    const context = vm.createContext({
+        state: { teachers: [afternoonTeacher, bothTeacher] }, daythaySessionAuto: { scope: '2026-09-14|afternoon', manual: false, applied: false }, editingSubId: null,
+        document: { getElementById: id => fields[id] || null }, parseTimetableCell: value => ({ subject: value.split(' - ')[0], class_name: value.split(' - ')[1] }),
+        escapeHtml: value => String(value), TT_DAY_LABELS: { 2: 'Thứ 2' }, onDayThaySessionChange() {}, renderDayThaySuggestions() {},
+        Date, String, Object, Set, Map, Number, parseInt
+    });
+    vm.runInContext(source, context);
+    vm.runInContext('renderAbsentTeacherSchedulePreview()', context);
+    assert.equal(fields['new-sub-session'].value, 'afternoon', 'afternoon-only teacher auto-selects afternoon');
+    fields['new-sub-for-teacher'].value = 'both';
+    context.daythaySessionAuto = { scope: '2026-09-14|both', manual: false, applied: false };
+    vm.runInContext('renderAbsentTeacherSchedulePreview()', context);
+    assert.equal(fields['new-sub-session'].value, 'all_day', 'teacher with morning and afternoon lessons auto-selects all day');
+}
+
+{
+    const fields = {
+        'new-sub-date': { value: '2026-09-14' },
+        'new-sub-for-teacher': { value: 'absent' },
+        'new-sub-session': { value: 'morning' }
+    };
+    let previewRenders = 0;
+    let sessionCalls = 0;
+    const source = ['getDayThayAbsentContextKey', 'onDayThayAbsentContextChange', 'chooseDayThayPreviewSession'].map(declaration).join('\n');
+    const context = vm.createContext({
+        daythaySessionAuto: { scope: '2026-09-14|absent', manual: true, applied: true },
+        document: { getElementById: id => fields[id] || null },
+        updateDateWeekday() {}, renderAbsentTeacherSchedulePreview() { previewRenders++; },
+        onDayThaySessionChange(options) { assert.equal(options.manual, true); sessionCalls++; },
+        String
+    });
+    vm.runInContext(source, context);
+    vm.runInContext("chooseDayThayPreviewSession('afternoon')", context);
+    assert.equal(fields['new-sub-session'].value, 'afternoon', 'preview quick action changes session in one click');
+    assert.equal(context.daythaySessionAuto.manual, true, 'preview quick action is treated as a manual override');
+    assert.equal(sessionCalls, 1, 'preview quick action uses the existing session-change flow once');
+    fields['new-sub-date'].value = '2026-09-15';
+    vm.runInContext('onDayThayAbsentContextChange()', context);
+    assert.deepEqual(JSON.parse(JSON.stringify(context.daythaySessionAuto)), { scope: '2026-09-15|absent', manual: false, applied: false }, 'changing absent date re-enables automatic session detection');
+    assert.equal(previewRenders, 1, 'absent context change renders the schedule preview once');
+}
+
 assert.match(html, /id="daythay-suggestion-panel"/, 'daythay suggestion panel exists');
+assert.match(html, /id="daythay-absent-schedule-preview"/, 'absent-teacher schedule preview exists');
+assert.ok(html.indexOf('id="new-sub-for-teacher"') < html.indexOf('id="new-sub-session"'), 'absent teacher is selected before session in visible form order');
+assert.ok(html.indexOf('id="daythay-absent-schedule-preview"') < html.indexOf('id="daythay-suggestion-panel"'), 'absent preview appears before suggestion panel');
 assert.match(html, /<option value="all_day">Cả ngày/, 'session dropdown offers an all-day choice');
 assert.match(html, /Trống cả buổi[\s\S]*Có mặt, trống tiết cần thay/, 'suggestion panel has exactly the two user-facing availability columns');
 assert.match(html, /Trống cả buổi[\s\S]*Trống tiết[\s\S]*⚠️ Trùng lịch/, 'teacher dropdown status labels include availability and conflict safely');

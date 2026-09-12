@@ -2019,9 +2019,18 @@
                 </div>
                 <div class="form-group">
                     <label>Ngày dạy:</label>
-                    <input type="date" class="form-control" id="new-sub-date" onchange="updateDateWeekday(); maybeAutoSuggestSlotsFromTimetable()">
+                    <input type="date" class="form-control" id="new-sub-date" onchange="onDayThayAbsentContextChange()">
                     <span class="weekday-hint" id="new-sub-weekday"></span>
                 </div>
+                <div class="form-group" id="group-for-teacher">
+                    <label id="label-for-teacher">Dạy thay cho giáo viên:</label>
+                    <select class="form-control" id="new-sub-for-teacher" onchange="onDayThayAbsentContextChange()">
+                        <!-- Render từ teachers -->
+                    </select>
+                </div>
+            </div>
+            <div id="daythay-absent-schedule-preview" hidden aria-live="polite" style="margin:0 0 14px; padding:14px; border:1px solid #fde68a; border-radius:12px; background:#fffbeb;"></div>
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 14px;">
                 <div class="form-group">
                     <label>Buổi dạy:</label>
                     <select class="form-control" id="new-sub-session" onchange="onDayThaySessionChange()">
@@ -2030,17 +2039,9 @@
                         <option value="all_day">Cả ngày (Sáng &amp; Chiều)</option>
                     </select>
                 </div>
-            </div>
-            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 14px;">
                 <div class="form-group">
                     <label>Giáo viên thực dạy:</label>
                     <select class="form-control" id="new-sub-teacher">
-                        <!-- Render từ teachers -->
-                    </select>
-                </div>
-                <div class="form-group" id="group-for-teacher">
-                    <label id="label-for-teacher">Dạy thay cho giáo viên:</label>
-                    <select class="form-control" id="new-sub-for-teacher" onchange="maybeAutoSuggestSlotsFromTimetable()">
                         <!-- Render từ teachers -->
                     </select>
                 </div>
@@ -2829,6 +2830,9 @@
         let isSavingInProgress = false;
         let hasUnsavedChanges = false;
         let editingSubId = null;
+        // A manual session choice is kept for the selected absent-teacher/date pair.
+        // Changing either input creates a new context and enables one safe auto-detect.
+        let daythaySessionAuto = { scope: '', manual: false, applied: false };
         let extraPeriodSlots = [];
         let hiddenPeriodSlots = new Set();
         let currentAnnouncementTheme = 'modern';
@@ -5461,7 +5465,29 @@
             });
         }
 
-        function onDayThaySessionChange() {
+        function getDayThayAbsentContextKey(date, teacherId) {
+            return `${date || ''}|${teacherId || ''}`;
+        }
+
+        function onDayThayAbsentContextChange() {
+            updateDateWeekday();
+            const date = document.getElementById('new-sub-date')?.value || '';
+            const teacherId = document.getElementById('new-sub-for-teacher')?.value || '';
+            const scope = getDayThayAbsentContextKey(date, teacherId);
+            if (daythaySessionAuto.scope !== scope) daythaySessionAuto = { scope, manual: false, applied: false };
+            renderAbsentTeacherSchedulePreview();
+        }
+
+        function chooseDayThayPreviewSession(session) {
+            const sessionEl = document.getElementById('new-sub-session');
+            if (!sessionEl || !['morning', 'afternoon', 'all_day'].includes(session)) return;
+            daythaySessionAuto.manual = true;
+            sessionEl.value = session;
+            onDayThaySessionChange({ manual: true });
+        }
+
+        function onDayThaySessionChange(options = {}) {
+            if (!options.auto) daythaySessionAuto.manual = true;
             extraPeriodSlots = [];
             hiddenPeriodSlots = new Set();
             if (!maybeAutoSuggestSlotsFromTimetable()) initPeriodSlotsBuilder();
@@ -7240,6 +7266,48 @@ ${listText}`;
             }).filter(Boolean).sort((a, b) => a.period_num - b.period_num);
         }
 
+        function renderAbsentTeacherSchedulePreview() {
+            const preview = document.getElementById('daythay-absent-schedule-preview');
+            if (!preview) return false;
+            const type = document.getElementById('new-sub-type')?.value || 'replacement';
+            const date = document.getElementById('new-sub-date')?.value || '';
+            const teacherId = document.getElementById('new-sub-for-teacher')?.value || '';
+            const dayNum = weekdayNumberFromDate(date);
+            const teacher = (state.teachers || []).find(item => String(item.id) === String(teacherId));
+            const scope = getDayThayAbsentContextKey(date, teacherId);
+
+            if (type === 'makeup' || !teacher || !dayNum) {
+                preview.hidden = true;
+                preview.innerHTML = '';
+                renderDayThaySuggestions();
+                return false;
+            }
+
+            const morningSlots = getTimetableDaySlots(teacher, 'morning', dayNum);
+            const afternoonSlots = getTimetableDaySlots(teacher, 'afternoon', dayNum);
+            const slotList = (slots, emptyText) => slots.length
+                ? slots.map(slot => `<span style="display:inline-block;margin:5px 5px 0 0;padding:4px 7px;border-radius:7px;background:#fff;border:1px solid #e2e8f0;font-size:.82rem;"><b>Tiết ${slot.period_num}</b> · ${escapeHtml(slot.class_name || 'Chưa rõ lớp')} · ${escapeHtml(slot.subject || 'Chưa rõ môn')}</span>`).join('')
+                : `<span style="font-size:.82rem;color:#64748b;font-style:italic;">${emptyText}</span>`;
+            const buttons = [
+                morningSlots.length ? '<button type="button" class="btn-small" onclick="chooseDayThayPreviewSession(\'morning\')">Chọn buổi Sáng</button>' : '',
+                afternoonSlots.length ? '<button type="button" class="btn-small" onclick="chooseDayThayPreviewSession(\'afternoon\')">Chọn buổi Chiều</button>' : '',
+                morningSlots.length && afternoonSlots.length ? '<button type="button" class="btn-small btn-small-primary" onclick="chooseDayThayPreviewSession(\'all_day\')">Chọn Cả ngày</button>' : ''
+            ].filter(Boolean).join(' ');
+            preview.hidden = false;
+            preview.innerHTML = `<div style="font-weight:800;color:#92400e;margin-bottom:8px;">📅 Lịch dạy ${escapeHtml(TT_DAY_LABELS[dayNum] || '')} của thầy/cô ${escapeHtml(teacher.name)}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"><div style="padding:9px;border-radius:9px;background:#fff7d6;"><b style="color:#a16207;">☀️ Buổi sáng</b><div>${slotList(morningSlots, 'Không có tiết buổi sáng.')}</div></div><div style="padding:9px;border-radius:9px;background:#eff6ff;"><b style="color:#1d4ed8;">🌙 Buổi chiều</b><div>${slotList(afternoonSlots, 'Không có tiết buổi chiều.')}</div></div></div>${buttons ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${buttons}</div>` : ''}`;
+
+            const autoSession = morningSlots.length && afternoonSlots.length ? 'all_day' : (morningSlots.length ? 'morning' : (afternoonSlots.length ? 'afternoon' : ''));
+            const sessionEl = document.getElementById('new-sub-session');
+            if (!editingSubId && autoSession && sessionEl && daythaySessionAuto.scope === scope && !daythaySessionAuto.manual && !daythaySessionAuto.applied) {
+                if (sessionEl.value !== autoSession) sessionEl.value = autoSession;
+                daythaySessionAuto.applied = true;
+                onDayThaySessionChange({ auto: true });
+                return true;
+            }
+            renderDayThaySuggestions();
+            return false;
+        }
+
         function autoSuggestSlotsFromTimetable(options = {}) {
             const silentEmpty = Boolean(options.silentEmpty);
             const date = document.getElementById('new-sub-date')?.value;
@@ -7441,7 +7509,7 @@ ${listText}`;
                 renderQuickSlotButtons();
             }
             toggleSubTypeLabel(document.getElementById('new-sub-type')?.value || 'replacement');
-            renderDayThaySuggestions();
+            renderAbsentTeacherSchedulePreview();
             renderDayThayJournal();
         }
 
@@ -7455,7 +7523,7 @@ ${listText}`;
                 if (label) label.textContent = 'Dạy thay cho giáo viên:';
                 if (group) group.style.opacity = '1';
             }
-            renderDayThaySuggestions();
+            renderAbsentTeacherSchedulePreview();
         }
 
         function monthFromDate(dateStr) {
@@ -7653,11 +7721,13 @@ ${listText}`;
             if (tSel) tSel.value = item.teacher_id || '';
             if (forTSel) forTSel.value = item.for_teacher_id || '';
             if (reasonEl) reasonEl.value = item.reason || '';
+            daythaySessionAuto = { scope: getDayThayAbsentContextKey(item.date || '', item.for_teacher_id || ''), manual: true, applied: true };
             toggleSubTypeLabel(item.type || 'replacement');
             updateDateWeekday();
             extraPeriodSlots = [];
             hiddenPeriodSlots = new Set();
             initPeriodSlotsBuilder(getPeriodsDetail(item));
+            renderAbsentTeacherSchedulePreview();
             const btn = document.getElementById('btn-save-daythay');
             if (btn) btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Cập nhật thay đổi';
             const title = document.getElementById('daythay-form-title');
@@ -7677,6 +7747,7 @@ ${listText}`;
             if (sessionEl) sessionEl.value = 'morning';
             if (reasonEl) reasonEl.value = '';
             if (forTSel) forTSel.value = '';
+            daythaySessionAuto = { scope: '', manual: false, applied: false };
             toggleSubTypeLabel('replacement');
             updateDateWeekday();
             extraPeriodSlots = [];

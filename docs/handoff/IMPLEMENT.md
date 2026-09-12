@@ -1,3 +1,34 @@
+# IMPLEMENT: Tối ưu luồng chọn giáo viên nghỉ và xem nhanh TKB Dạy thay
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `phancongtochuyenmon.html`
+  - Sắp xếp lại form theo luồng nghiệp vụ: Loại hình, Ngày dạy và Giáo viên nghỉ trước; khung xem nhanh TKB ngay bên dưới; sau đó mới đến Buổi dạy, Giáo viên thực dạy và Lý do; panel đề xuất giữ ở dưới các thông tin phân công.
+  - Thêm `#daythay-absent-schedule-preview`: khi đã chọn ngày hợp lệ và giáo viên nghỉ cho Dạy thay, hiển thị toàn bộ tiết thực tế của cả Buổi sáng và Buổi chiều, gồm tiết, lớp và môn. Khung tự ẩn với Dạy bù, chưa đủ dữ liệu hoặc Chủ nhật.
+  - Thêm `renderAbsentTeacherSchedulePreview()` cùng nút chọn nhanh Sáng, Chiều, Cả ngày. Lịch có một buổi sẽ tự chọn đúng buổi; lịch có hai buổi tự chọn Cả ngày và nạp tiết/gợi ý qua đúng luồng `onDayThaySessionChange()` có sẵn.
+  - Thêm trạng thái theo cặp ngày + giáo viên nghỉ để một lựa chọn buổi thủ công không bị render vô hại ghi đè. Khi đổi ngày hoặc giáo viên nghỉ, trạng thái này được làm mới và cho phép tự nhận diện lại một lần; không tạo vòng lặp nạp tiết/gợi ý.
+  - Không đổi ID biểu mẫu, cấu trúc lưu Sổ Dạy thay, báo cáo hoặc quyết toán.
+- `tests/daythay-suggest-smoke.js`
+  - Kiểm tra preview dùng dữ liệu TKB thật (tiết/lớp/môn) cho cả hai buổi, auto-detect Sáng/Chiều/Cả ngày, thao tác nhanh, tính bền của chọn thủ công, làm mới auto-detect khi đổi ngày, ẩn với Dạy bù và thứ tự DOM của form.
+
+## Kiểm tra đã chạy
+
+- `node tests/daythay-suggest-smoke.js`: PASS.
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `node tests/timetable-render-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/auto-reload-smoke.js`: PASS.
+- `git diff --check`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- Cần `/verify` trực quan: chọn một giáo viên chỉ dạy sáng, chỉ dạy chiều và cả ngày; thử chọn lại buổi bằng tay rồi đổi ngày/giáo viên nghỉ.
+
+---
+
 # IMPLEMENT: Đề xuất thông minh giáo viên dạy thay theo Thời khóa biểu
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
