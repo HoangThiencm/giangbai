@@ -25,6 +25,37 @@ Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
 ## Chưa thực hiện
 
 - Chưa commit hoặc push.
+
+---
+
+# IMPLEMENT: Luôn hiển thị gợi ý Dạy thay và sắp xếp Nhật ký
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `phancongtochuyenmon.html`
+  - Panel đề xuất chỉ ẩn với Dạy bù, thiếu giáo viên nghỉ hoặc ngày không hợp lệ. Khi giáo viên nghỉ không có tiết trong buổi/ngày, panel vẫn hiển thị hướng dẫn chọn lại ngày/buổi; khi chưa tick tiết, panel hướng dẫn tick tiết cần thay.
+  - Preview TKB hiển thị cảnh báo rõ ràng nếu không có lịch dạy; các nút chọn buổi không có tiết bị vô hiệu hóa và nút Cả ngày chỉ bật khi có ít nhất một tiết.
+  - Chặn lưu một lượt Dạy thay 0 tiết do giáo viên nghỉ không có lịch trong ngày/buổi đã chọn; không thay đổi schema lưu trữ.
+  - Nhật ký mặc định sắp xếp bản sao ổn định theo ngày, Sáng → Chiều → Cả ngày, rồi tiết đầu tiên. Nút “Sắp xếp theo ngày” sắp lại mảng đã lưu theo chính thứ tự này.
+  - Thêm tay nắm và HTML5 drag/drop. Kéo thả đổi trực tiếp thứ tự mảng theo ID bản ghi, lưu và kích hoạt autosave. Để thao tác kéo nhìn thấy ngay, tháng đó dùng thứ tự thủ công cho tới khi bấm nút sắp xếp theo ngày; không thêm trường dữ liệu mới.
+- `tests/daythay-suggest-smoke.js`
+  - Kiểm tra panel 0 tiết vẫn hiện đúng hướng dẫn, preview cảnh báo/nút vô hiệu hóa, comparator theo thời gian, kéo thả đổi đúng mảng, và nút sắp xếp khôi phục thứ tự thời gian.
+
+## Kiểm tra đã chạy
+
+- `node tests/daythay-suggest-smoke.js`: PASS.
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `node tests/timetable-render-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/auto-reload-smoke.js`: PASS.
+- `git diff --check -- phancongtochuyenmon.html tests/daythay-suggest-smoke.js`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- Cần `/verify` trực quan: chọn ngày giáo viên không có tiết, chọn ngày có tiết, kéo một dòng Nhật ký rồi bấm “Sắp xếp theo ngày”.
 - Cần `/verify` trực quan: chọn một giáo viên chỉ dạy sáng, chỉ dạy chiều và cả ngày; thử chọn lại buổi bằng tay rồi đổi ngày/giáo viên nghỉ.
 
 ---

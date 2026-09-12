@@ -110,6 +110,11 @@ const teachers = [
     assert.equal(panel.hidden, false, 'replacement records show suggestions when inputs are complete');
     assert.match(panel.innerHTML, /Trống cả buổi[\s\S]*Có mặt, trống tiết cần thay/, 'shown panel contains two availability columns');
     assert.doesNotMatch(panel.innerHTML, /Bị trùng tiết/, 'conflicts are not rendered as a third user-facing panel');
+
+    fields['new-sub-date'].value = '2026-09-15';
+    vm.runInContext('renderDayThaySuggestions()', context);
+    assert.equal(panel.hidden, false, 'replacement panel remains visible when the absent teacher has no lessons');
+    assert.match(panel.innerHTML, /không có tiết dạy/, 'visible panel explains that no replacement is needed');
 }
 
 {
@@ -154,11 +159,42 @@ const teachers = [
     context.daythaySessionAuto = { scope: '2026-09-15|absent', manual: false, applied: false };
     vm.runInContext('renderAbsentTeacherSchedulePreview()', context);
     assert.equal(fields['new-sub-session'].value, 'afternoon', 'no automatic session is chosen when the newly selected day has no lessons');
+    assert.match(preview.innerHTML, /Không có tiết cần phân công dạy thay/, 'preview explicitly warns when the absent teacher has no schedule');
+    assert.match(preview.innerHTML, /disabled/, 'quick session buttons are disabled when their session has zero lessons');
 
     fields['new-sub-type'].value = 'makeup';
     vm.runInContext('renderAbsentTeacherSchedulePreview()', context);
     assert.equal(preview.hidden, true, 'makeup records hide the absent-teacher schedule preview');
     assert.ok(suggestions >= 1, 'preview refresh keeps substitute suggestions synchronized');
+}
+
+{
+    const source = ['getPeriodsDetail', 'dayThaySessionSortRank', 'firstDayThayPeriod', 'compareDayThayJournalRecords', 'sortDayThayJournalByDate', 'reorderDayThayJournalRecords'].map(declaration).join('\n');
+    let saves = 0;
+    let autosaves = 0;
+    const records = [
+        { id: 'late', date: '2026-09-17', session: 'morning', periods_detail: [{ period_num: 2 }] },
+        { id: 'afternoon', date: '2026-09-16', session: 'afternoon', periods_detail: [{ period_num: 1 }] },
+        { id: 'morning2', date: '2026-09-16', session: 'morning', periods_detail: [{ period_num: 2 }] },
+        { id: 'morning1', date: '2026-09-16', session: 'morning', periods_detail: [{ period_num: 1 }] }
+    ];
+    const context = vm.createContext({
+        state: { attendance: { substitutes: { m_9: records } } }, daythayJournalManualOrderMonths: new Set(),
+        getPeriodsDetail: item => item.periods_detail || [], Number, String, Math,
+        saveToLocal: () => { saves++; }, triggerAutoSave: () => { autosaves++; },
+        getMonthKey: () => 'm_9', renderDayThayJournal() {}, showToast() {}
+    });
+    vm.runInContext(source, context);
+    const chronological = vm.runInContext("state.attendance.substitutes.m_9.slice().sort(compareDayThayJournalRecords).map(item => item.id)", context);
+    assert.deepEqual(JSON.parse(JSON.stringify(chronological)), ['morning1', 'morning2', 'afternoon', 'late'], 'journal comparator orders date, morning/afternoon, then first period');
+    assert.equal(vm.runInContext("reorderDayThayJournalRecords('m_9', 'morning1', 'late')", context), true, 'drag reorder mutates the actual stored list by record id');
+    assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext("state.attendance.substitutes.m_9.map(item => item.id)", context))), ['morning1', 'late', 'afternoon', 'morning2'], 'manual order is persisted in the underlying array and remains displayable');
+    assert.equal(vm.runInContext("daythayJournalManualOrderMonths.has('m_9')", context), true, 'drag switches the month to its visible manual ordering mode');
+    assert.equal(saves, 1, 'drag reorder saves immediately');
+    assert.equal(autosaves, 1, 'drag reorder requests the normal autosave path');
+    vm.runInContext('sortDayThayJournalByDate()', context);
+    assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext("state.attendance.substitutes.m_9.map(item => item.id)", context))), ['morning1', 'morning2', 'afternoon', 'late'], 'sort button resets the actual array to chronological order');
+    assert.equal(vm.runInContext("daythayJournalManualOrderMonths.has('m_9')", context), false, 'sort button resets visible manual ordering mode');
 }
 
 {
@@ -222,5 +258,7 @@ assert.ok(html.indexOf('id="daythay-absent-schedule-preview"') < html.indexOf('i
 assert.match(html, /<option value="all_day">Cả ngày/, 'session dropdown offers an all-day choice');
 assert.match(html, /Trống cả buổi[\s\S]*Có mặt, trống tiết cần thay/, 'suggestion panel has exactly the two user-facing availability columns');
 assert.match(html, /Trống cả buổi[\s\S]*Trống tiết[\s\S]*⚠️ Trùng lịch/, 'teacher dropdown status labels include availability and conflict safely');
+assert.match(html, /Sắp xếp theo ngày/, 'journal has a chronological sort toolbar button');
+assert.match(html, /draggable="true"/, 'journal rows support HTML5 drag and drop');
 
 console.log('PASS: daythay suggestions classify availability, select a substitute teacher, and hide for makeup.');

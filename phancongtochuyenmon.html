@@ -1035,6 +1035,10 @@
             z-index: 10;
         }
         .attendance-table td.text-left { text-align: left; }
+        #substitute-table-body tr[draggable="true"] { cursor: grab; }
+        #substitute-table-body tr.daythay-dragging { opacity: .45; }
+        #substitute-table-body tr.daythay-drop-target { outline: 2px dashed #4f46e5; outline-offset: -2px; }
+        .drag-handle { color: #64748b; cursor: grab; padding-right: 5px; }
 
         .att-input {
             width: 100%;
@@ -2096,6 +2100,7 @@
                     <i class="fas fa-list-check" style="color:#4338ca;"></i> Nhật ký chi tiết
                 </h3>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn-small" onclick="sortDayThayJournalByDate()"><i class="fas fa-arrow-down-short-wide"></i> Sắp xếp theo ngày</button>
                     <button type="button" class="btn-small btn-small-primary" onclick="openDayThayAnnouncementModal()">
                         <i class="fas fa-image"></i> Tạo ảnh thông báo
                     </button>
@@ -2833,6 +2838,9 @@
         // A manual session choice is kept for the selected absent-teacher/date pair.
         // Changing either input creates a new context and enables one safe auto-detect.
         let daythaySessionAuto = { scope: '', manual: false, applied: false };
+        // A drag is intentionally visible immediately. The chronological button resets this
+        // display mode; the underlying array is still saved without adding a data field.
+        const daythayJournalManualOrderMonths = new Set();
         let extraPeriodSlots = [];
         let hiddenPeriodSlots = new Set();
         let currentAnnouncementTheme = 'modern';
@@ -7289,12 +7297,14 @@ ${listText}`;
                 ? slots.map(slot => `<span style="display:inline-block;margin:5px 5px 0 0;padding:4px 7px;border-radius:7px;background:#fff;border:1px solid #e2e8f0;font-size:.82rem;"><b>Tiết ${slot.period_num}</b> · ${escapeHtml(slot.class_name || 'Chưa rõ lớp')} · ${escapeHtml(slot.subject || 'Chưa rõ môn')}</span>`).join('')
                 : `<span style="font-size:.82rem;color:#64748b;font-style:italic;">${emptyText}</span>`;
             const buttons = [
-                morningSlots.length ? '<button type="button" class="btn-small" onclick="chooseDayThayPreviewSession(\'morning\')">Chọn buổi Sáng</button>' : '',
-                afternoonSlots.length ? '<button type="button" class="btn-small" onclick="chooseDayThayPreviewSession(\'afternoon\')">Chọn buổi Chiều</button>' : '',
-                morningSlots.length && afternoonSlots.length ? '<button type="button" class="btn-small btn-small-primary" onclick="chooseDayThayPreviewSession(\'all_day\')">Chọn Cả ngày</button>' : ''
-            ].filter(Boolean).join(' ');
+                `<button type="button" class="btn-small" ${morningSlots.length ? '' : 'disabled aria-disabled="true"'} onclick="chooseDayThayPreviewSession('morning')">Chọn buổi Sáng</button>`,
+                `<button type="button" class="btn-small" ${afternoonSlots.length ? '' : 'disabled aria-disabled="true"'} onclick="chooseDayThayPreviewSession('afternoon')">Chọn buổi Chiều</button>`,
+                `<button type="button" class="btn-small btn-small-primary" ${morningSlots.length || afternoonSlots.length ? '' : 'disabled aria-disabled="true"'} onclick="chooseDayThayPreviewSession('all_day')">Chọn Cả ngày</button>`
+            ].join(' ');
             preview.hidden = false;
-            preview.innerHTML = `<div style="font-weight:800;color:#92400e;margin-bottom:8px;">📅 Lịch dạy ${escapeHtml(TT_DAY_LABELS[dayNum] || '')} của thầy/cô ${escapeHtml(teacher.name)}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"><div style="padding:9px;border-radius:9px;background:#fff7d6;"><b style="color:#a16207;">☀️ Buổi sáng</b><div>${slotList(morningSlots, 'Không có tiết buổi sáng.')}</div></div><div style="padding:9px;border-radius:9px;background:#eff6ff;"><b style="color:#1d4ed8;">🌙 Buổi chiều</b><div>${slotList(afternoonSlots, 'Không có tiết buổi chiều.')}</div></div></div>${buttons ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${buttons}</div>` : ''}`;
+            const noLessons = !morningSlots.length && !afternoonSlots.length
+                ? `<div role="alert" style="margin:0 0 10px;padding:9px;border-radius:8px;background:#fef3c7;color:#92400e;font-weight:700;">⚠️ Thầy/cô ${escapeHtml(teacher.name)} không có lịch dạy vào ${escapeHtml(TT_DAY_LABELS[dayNum] || '')}, ngày ${escapeHtml(date)}. Không có tiết cần phân công dạy thay.</div>` : '';
+            preview.innerHTML = `${noLessons}<div style="font-weight:800;color:#92400e;margin-bottom:8px;">📅 Lịch dạy ${escapeHtml(TT_DAY_LABELS[dayNum] || '')} của thầy/cô ${escapeHtml(teacher.name)}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"><div style="padding:9px;border-radius:9px;background:#fff7d6;"><b style="color:#a16207;">☀️ Buổi sáng</b><div>${slotList(morningSlots, 'Không có tiết buổi sáng.')}</div></div><div style="padding:9px;border-radius:9px;background:#eff6ff;"><b style="color:#1d4ed8;">🌙 Buổi chiều</b><div>${slotList(afternoonSlots, 'Không có tiết buổi chiều.')}</div></div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${buttons}</div>`;
 
             const autoSession = morningSlots.length && afternoonSlots.length ? 'all_day' : (morningSlots.length ? 'morning' : (afternoonSlots.length ? 'afternoon' : ''));
             const sessionEl = document.getElementById('new-sub-session');
@@ -7433,10 +7443,21 @@ ${listText}`;
             const forTeacherId = document.getElementById('new-sub-for-teacher')?.value || '';
             const neededPeriods = snapshotPeriodSlots().filter(slot => slot.enabled).map(slot => slot.period_num);
             const availability = computeDayThayTeacherAvailability(date, session, forTeacherId, neededPeriods);
-            const canSuggest = type !== 'makeup' && Boolean(forTeacherId) && Boolean(availability.dayNum) && neededPeriods.length > 0;
+            const canSuggest = type !== 'makeup' && Boolean(forTeacherId) && Boolean(availability.dayNum);
             panel.hidden = !canSuggest;
             if (!canSuggest) {
                 panel.innerHTML = '';
+                return;
+            }
+
+            const absentTeacher = (state.teachers || []).find(teacher => String(teacher.id) === String(forTeacherId));
+            const absentSlots = getTimetableDaySlots(absentTeacher, session, availability.dayNum);
+            if (!absentSlots.length) {
+                panel.innerHTML = `<div role="alert" style="padding:10px;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-weight:700;">ℹ️ Thầy/cô ${escapeHtml(absentTeacher?.name || '')} không có tiết dạy trong ${escapeHtml(getSessionLabel(session))} này. Hãy chọn buổi khác hoặc ngày khác có lịch dạy để hệ thống đề xuất.</div>`;
+                return;
+            }
+            if (!neededPeriods.length) {
+                panel.innerHTML = '<div style="padding:10px;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-weight:700;">💡 Hãy tick chọn các tiết cần dạy thay bên dưới để hệ thống tính toán giáo viên phù hợp.</div>';
                 return;
             }
 
@@ -7545,6 +7566,83 @@ ${listText}`;
             return null;
         }
 
+        function dayThaySessionSortRank(session) {
+            return session === 'morning' ? 0 : (session === 'afternoon' ? 1 : 2);
+        }
+
+        function firstDayThayPeriod(item) {
+            const detail = getPeriodsDetail(item);
+            const values = detail.map(slot => parseInt(slot.period_num, 10)).filter(Number.isFinite);
+            if (values.length) return Math.min(...values);
+            const matched = String(item?.period || '').match(/\d+/);
+            return matched ? parseInt(matched[0], 10) : Number.MAX_SAFE_INTEGER;
+        }
+
+        // Pure comparator: date, morning/afternoon/all-day, then first period. Modern engines
+        // keep ties stable, and the original list index is retained as a final safeguard.
+        function compareDayThayJournalRecords(a, b) {
+            const dateCompare = String(a?.date || '').localeCompare(String(b?.date || ''));
+            if (dateCompare) return dateCompare;
+            const sessionCompare = dayThaySessionSortRank(a?.session) - dayThaySessionSortRank(b?.session);
+            if (sessionCompare) return sessionCompare;
+            return firstDayThayPeriod(a) - firstDayThayPeriod(b);
+        }
+
+        function sortDayThayJournalByDate() {
+            const mKey = getMonthKey();
+            const list = state.attendance?.substitutes?.[mKey];
+            if (!Array.isArray(list)) return;
+            list.sort(compareDayThayJournalRecords);
+            daythayJournalManualOrderMonths.delete(mKey);
+            saveToLocal();
+            renderDayThayJournal();
+            showToast('Đã sắp xếp Nhật ký theo ngày, buổi và tiết.', 'success');
+        }
+
+        function onDayThayJournalDragStart(event, recordId) {
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', recordId);
+            event.currentTarget.classList.add('daythay-dragging');
+        }
+
+        function onDayThayJournalDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            event.currentTarget.classList.add('daythay-drop-target');
+        }
+
+        function onDayThayJournalDragLeave(event) {
+            event.currentTarget.classList.remove('daythay-drop-target');
+        }
+
+        function onDayThayJournalDragEnd() {
+            document.querySelectorAll('#substitute-table-body .daythay-dragging, #substitute-table-body .daythay-drop-target').forEach(row => row.classList.remove('daythay-dragging', 'daythay-drop-target'));
+        }
+
+        function reorderDayThayJournalRecords(mKey, sourceId, targetId) {
+            const list = state.attendance?.substitutes?.[mKey];
+            if (!Array.isArray(list) || !sourceId || !targetId || sourceId === targetId) return false;
+            const sourceIndex = list.findIndex(item => String(item.id) === String(sourceId));
+            const targetIndex = list.findIndex(item => String(item.id) === String(targetId));
+            if (sourceIndex < 0 || targetIndex < 0) return false;
+            const [record] = list.splice(sourceIndex, 1);
+            // The source may have been before the target, so resolve the target again
+            // after removal to consistently insert the dragged row before the target row.
+            list.splice(list.findIndex(item => String(item.id) === String(targetId)), 0, record);
+            daythayJournalManualOrderMonths.add(mKey);
+            saveToLocal();
+            triggerAutoSave();
+            return true;
+        }
+
+        function onDayThayJournalDrop(event, targetId) {
+            event.preventDefault();
+            const sourceId = event.dataTransfer.getData('text/plain');
+            const changed = reorderDayThayJournalRecords(getMonthKey(), sourceId, targetId);
+            onDayThayJournalDragEnd();
+            if (changed) renderDayThayJournal();
+        }
+
         function renderDayThayJournal() {
             const tbody = document.getElementById('substitute-table-body');
             if (!tbody) return;
@@ -7557,7 +7655,7 @@ ${listText}`;
             const typeFilter = document.getElementById('dt-filter-type')?.value || '';
             const q = (document.getElementById('dt-search')?.value || '').trim().toLowerCase();
 
-            const filtered = list.filter(item => {
+            let filtered = list.filter(item => {
                 if (teacherFilter && item.teacher_id !== teacherFilter && item.for_teacher_id !== teacherFilter) return false;
                 if (typeFilter && item.type !== typeFilter) return false;
                 if (q) {
@@ -7577,6 +7675,12 @@ ${listText}`;
                 }
                 return true;
             });
+
+            if (!daythayJournalManualOrderMonths.has(mKey)) {
+                filtered = filtered.map((item, index) => ({ item, index }))
+                    .sort((a, b) => compareDayThayJournalRecords(a.item, b.item) || a.index - b.index)
+                    .map(entry => entry.item);
+            }
 
             const replacePeriods = list.filter(i => i.type === 'replacement').reduce((s, i) => s + getSubPeriodCount(i), 0);
             const makeupPeriods = list.filter(i => i.type === 'makeup').reduce((s, i) => s + getSubPeriodCount(i), 0);
@@ -7612,8 +7716,8 @@ ${listText}`;
                 const count = getSubPeriodCount(item);
                 const weekday = weekdayLabel(item.date);
                 return `
-                    <tr>
-                        <td style="text-align:center;">${index + 1}</td>
+                    <tr draggable="true" data-record-id="${escapeHtml(encodeURIComponent(String(item.id)))}" ondragstart="onDayThayJournalDragStart(event, decodeURIComponent('${encodeURIComponent(String(item.id))}'))" ondragover="onDayThayJournalDragOver(event)" ondragleave="onDayThayJournalDragLeave(event)" ondrop="onDayThayJournalDrop(event, decodeURIComponent('${encodeURIComponent(String(item.id))}'))" ondragend="onDayThayJournalDragEnd()">
+                        <td style="text-align:center;"><i class="fas fa-grip-vertical drag-handle" title="Kéo để đổi thứ tự" aria-hidden="true"></i>${index + 1}</td>
                         <td>${typeBadge}</td>
                         <td><b>${escapeHtml(item.date || '')}</b>${weekday ? `<div style="font-size:0.72rem; color:#64748b; font-weight:700;">${weekday}</div>` : ''}</td>
                         <td style="text-align:center;">${sessionBadge}</td>
@@ -7643,6 +7747,15 @@ ${listText}`;
             const for_teacher_id = document.getElementById('new-sub-for-teacher')?.value || '';
             const reason = (document.getElementById('new-sub-reason')?.value || '').trim();
             const periods_detail = collectPeriodSlots();
+
+            if (type === 'replacement') {
+                const absentTeacher = (state.teachers || []).find(item => String(item.id) === String(for_teacher_id));
+                const dayNum = weekdayNumberFromDate(date);
+                if (!absentTeacher || !dayNum || !getTimetableDaySlots(absentTeacher, session, dayNum).length) {
+                    alert('Giáo viên nghỉ không có tiết trong ngày/buổi đã chọn. Không cần phân công dạy thay; hãy chọn ngày hoặc buổi có lịch dạy.');
+                    return;
+                }
+            }
 
             if (!teacher_id) {
                 alert('Vui lòng chọn giáo viên thực dạy!');
