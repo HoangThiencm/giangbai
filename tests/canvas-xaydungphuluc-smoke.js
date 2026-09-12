@@ -82,6 +82,20 @@ function sliceNamedFunction(name){
   assert(start>=0,`missing ${name}`);
   return target.slice(start,target.indexOf('\n',start));
 }
+const sourceSafeParse=source.slice(source.indexOf('function safeParseAiJson('),source.indexOf('\n',source.indexOf('function safeParseAiJson(')));
+const targetSafeParse=sliceNamedFunction('safeParseAiJson');
+assert.equal(targetSafeParse,sourceSafeParse,'Canvas and standard interfaces must use the same safe AI JSON parser');
+const parserSandbox={JSON,Error,String,RegExp};
+vm.createContext(parserSandbox);
+vm.runInContext(targetSafeParse,parserSandbox);
+const rawControl=code=>`{"note":"Dòng một${String.fromCharCode(code)}Dòng hai"}`;
+assert.deepEqual(JSON.parse(JSON.stringify(parserSandbox.safeParseAiJson('{"ok":true,"escaped":"\\\\n"}'))),{ok:true,escaped:'\\n'},'valid JSON and escaped sequences must remain unchanged');
+assert.equal(parserSandbox.safeParseAiJson(rawControl(10)).note,'Dòng một\nDòng hai','raw newlines inside AI strings must be escaped before parsing');
+assert.equal(parserSandbox.safeParseAiJson(rawControl(9)).note,'Dòng một\tDòng hai','raw tabs inside AI strings must be escaped before parsing');
+assert.equal(parserSandbox.safeParseAiJson(rawControl(1)).note,`Dòng một${String.fromCharCode(1)}Dòng hai`,'other raw control characters must be preserved through Unicode escaping');
+assert.deepEqual(JSON.parse(JSON.stringify(parserSandbox.safeParseAiJson('Lời dẫn\n```json\n{"items":[1,2,],}\n```\nLời kết'))),{items:[1,2]},'parser must extract fenced JSON from prose and recover trailing commas');
+assert.equal(parserSandbox.safeParseAiJson(String.raw`{"formula":"\alpha"}`).formula,'\\alpha','a bare LaTex backslash must be converted into a JSON-safe literal backslash');
+assert.throws(()=>parserSandbox.safeParseAiJson('không phải JSON'),/AI trả về JSON không hợp lệ/,'unrepairable AI output must report a useful parser error');
 ['function initCanvasEventBridge','function captureCanvasInlineHandlers','function parseCanvasInlineActions','function runCanvasInlineActions','removeAttribute(attribute)','new MutationObserver','addEventListener(type,event=>','Tương tác Canvas đã sẵn sàng.'].forEach(value=>assert(target.includes(value),`missing CSP-safe Canvas event bridge: ${value}`));
 assert(!target.includes('eval(')&&!target.includes('Function('),'Canvas event bridge must not execute inline handlers dynamically');
 const bridgeCalls=[];
@@ -246,7 +260,7 @@ const sandbox={console,AbortController,clearTimeout,setTimeout,fetch:async(url,i
 vm.createContext(sandbox);
 vm.runInContext(
   `const CANVAS_ENDPOINT=${JSON.stringify(endpoint)},GEMINI_TIMEOUT_MS=120000,DEFAULT_GEMINI_MODEL='gemini-3-flash-preview';let aborter=null;function isUserAbort(){return false};`+
-  sliceFunction('fetchWithGeminiTimeout')+'\n'+sliceFunction('requestGemini')+'\n'+sliceFunction('readGeminiResponse')+'\n'+sliceFunction('callGemini'),sandbox
+  sliceFunction('fetchWithGeminiTimeout')+'\n'+sliceFunction('requestGemini')+'\n'+sliceNamedFunction('safeParseAiJson')+'\n'+sliceFunction('readGeminiResponse')+'\n'+sliceFunction('callGemini'),sandbox
 );
 (async()=>{
   const result=await vm.runInContext("callGemini('kiểm tra Canvas')",sandbox);

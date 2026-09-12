@@ -1,3 +1,34 @@
+# IMPLEMENT: Khôi phục JSON phản hồi AI an toàn cho Xây dựng Phụ lục
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `canvas_xaydungphuluc.html` và `xaydungphuluc.html`
+  - Thêm cùng một hàm `safeParseAiJson(raw)`: ưu tiên `JSON.parse` nguyên bản, sau đó lấy đúng cấu trúc JSON ngoài cùng bằng bộ quét nhận biết chuỗi/escape.
+  - Khi AI tạo ký tự điều khiển thô trong chuỗi, tự chuyển thành escape JSON hợp lệ; backslash LaTex đơn như `\alpha` cũng được giữ lại dưới dạng chuỗi thay vì làm lỗi parse.
+  - Khôi phục được dấu phẩy thừa trước `}` hoặc `]`, nhưng không sửa dữ liệu nằm bên trong chuỗi JSON hợp lệ.
+  - `readGeminiResponse` ở hai giao diện và `callMistral` ở giao diện thường đều dùng bộ đọc này. Prompt, schema và logic chuẩn hóa Phụ lục không thay đổi.
+- `tests/canvas-xaydungphuluc-smoke.js`
+  - Kiểm thử JSON chuẩn không bị thay đổi, newline/tab/ký tự điều khiển thô, prose + code fence, dấu phẩy thừa, backslash LaTex và lỗi không thể khôi phục.
+  - Xác nhận hai giao diện dùng cùng implementation parser.
+
+## Kiểm tra đã chạy
+
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `node tests/timetable-render-smoke.js`: PASS.
+- `node tests/auto-reload-smoke.js`: PASS.
+- `git diff --check`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- Cần `/verify` với một PPCT lớn trên cả Canvas và giao diện thường để xác nhận phản hồi AI thực tế được xử lý ổn định.
+
+---
+
 # IMPLEMENT: Khóa cố định mốc Ngày bắt đầu áp dụng (Tuần 1) trong Lịch báo giảng
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`

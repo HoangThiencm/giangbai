@@ -1,28 +1,28 @@
-﻿# VERIFY
+# VERIFY
 
 ## Kết luận
 PASS
 
 ## Đối chiếu scope
-- Thu gọn khung nhìn tab Thời khoá biểu giáo viên: Đạt.
-  - Cụm tải ảnh, năm học, học kỳ và nút AI được đưa vào `<details id="tt-import-details">`, mặc định đóng lại, tự động mở khi dán hoặc kéo thả ảnh.
-  - Hai bảng Buổi sáng và Buổi chiều được bố trí song song 2 cột trên màn hình >= 1024px bằng `.tt-sessions-container` và co về 1 cột trên màn hình nhỏ.
-  - Tối giản phần đệm, cột tiết và ô bài dạy (`.tt-cell`, `.tt-grid`), chiều cao toàn màn hình vừa khít, không cần trượt con lăn chuột.
-- Căn chỉnh số tiết AI nhận diện lệch buổi chiều (6–8 về 7–9): Đạt.
-  - `scanTimetableWithAI()` truyền cấu hình tiết sáng/chiều thực tế của trường vào prompt Gemini và quy định chặt chẽ thứ tự ánh xạ hàng khi ảnh không có cột số tiết.
-  - `alignSessionPeriods()` trong `applyAiTimetableResult()` tự động căn chỉnh tập tiết do AI trả về (ví dụ `6, 7, 8` hoặc `1, 2, 3`) tương ứng vào khung tiết cấu hình của buổi (`[7, 8, 9]`), không làm phát sinh tiết 6. Kết quả đã khớp hoặc dữ liệu vượt khung được giữ nguyên.
+- `canvas_xaydungphuluc.html`: Đã thêm hàm `safeParseAiJson(raw)` và cập nhật `readGeminiResponse(result)` sử dụng bộ đọc JSON an toàn.
+- `xaydungphuluc.html`: Đã thêm cùng hàm `safeParseAiJson(raw)` và cập nhật cả `readGeminiResponse(result)` lẫn `callMistral(prompt)`.
+- `tests/canvas-xaydungphuluc-smoke.js`: Đã bổ sung bộ test kiểm thử `safeParseAiJson` cho JSON chuẩn, newline thô (0x0A), tab thô (0x09), control char U+0001..U+001F, markdown code fences, lời dẫn văn bản, trailing commas, LaTeX backslash đơn và báo lỗi rõ ràng khi không phải JSON.
+- Không sửa đổi prompt, schema hay logic chuẩn hóa Phụ lục.
 
 ## Test đã chạy
-- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
-- `node tests/timetable-render-smoke.js`: PASS (kiểm tra layout 2 cột, `<details>`, breakpoint responsive và căn chỉnh tiết AI 6–8 sang 7–9).
-- `node tests/auto-reload-smoke.js`: PASS.
-- `git diff --check`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS
+- `node tests/xaydungphuluc-smoke.js`: PASS
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS
+- `node tests/timetable-render-smoke.js`: PASS
+- `node tests/auto-reload-smoke.js`: PASS
+- `git diff --check`: PASS (không lỗi cú pháp/khoảng trắng)
 
 ## Pass / Fail từng tiêu chí
-1. Cả Buổi sáng và Buổi chiều hiển thị song song 2 cột trên cùng một màn hình chuẩn máy tính, không cần trượt con lăn chuột: PASS.
-2. Khối nhập liệu / upload TKB thu gọn dưới dạng `<details>`, tự mở khi dán hoặc chọn ảnh: PASS.
-3. Khi cấu hình chiều `7-9`, nhận diện ảnh TKB (kể cả ảnh không có cột số tiết) tự động đưa vào đúng Tiết 7, 8, 9, không bị gán vào Tiết 6: PASS.
-4. Toàn bộ các bộ test tự động đạt 100%: PASS.
+- Tiêu chí 1: Xử lý triệt để lỗi "Bad control character in string literal in JSON" khi phản hồi chứa ký tự xuống dòng/tab thô -> PASS
+- Tiêu chí 2: Khôi phục được JSON có markdown fence, lời dẫn, trailing commas hoặc LaTeX backslash -> PASS
+- Tiêu chí 3: Giữ nguyên tính toàn vẹn của JSON chuẩn và chuỗi đã escape hợp lệ -> PASS
+- Tiêu chí 4: Đồng bộ 100% giữa Canvas và giao diện Xây dựng Phụ lục thường -> PASS
+- Tiêu chí 5: Tất cả 5 bộ smoke test của hệ thống đều PASS 100% -> PASS
 
 ## Bug
-Không có.
+Không phát hiện bug tồn đọng.
