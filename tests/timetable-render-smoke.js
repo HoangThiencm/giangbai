@@ -53,6 +53,18 @@ function emptyTimetable() {
 }
 
 {
+    const source = ['emptyDayMap', 'emptyTimetable', 'splitSubjectAndClass', 'parseTimetableCell', 'normalizeTeacherTimetable'].map(declaration).join('\n');
+    const context = vm.createContext({ TT_DAYS: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'], JSON, String, Object });
+    vm.runInContext(source, context);
+    const normalized = vm.runInContext(`normalizeTeacherTimetable(JSON.stringify({
+        school_year: '2026-2027',
+        morning: { mon: { 1: { subject: 'Toán', class_name: '9A1' } } }
+    }))`, context);
+    assert.equal(normalized.school_year, '2026-2027', 'JSON-string timetables retain metadata');
+    assert.deepEqual(JSON.parse(JSON.stringify(normalized.morning.mon['1'])), { subject: 'Toán', class_name: '9A1' }, 'JSON-string timetables retain lessons');
+}
+
+{
     const context = vm.createContext({
         getSessionPeriods: () => [],
         Object, Set, parseInt
@@ -85,4 +97,4 @@ function emptyTimetable() {
     assert.equal(listRenders, 1, 'the timetable teacher list refreshes after AI recognition');
 }
 
-console.log('PASS: timetable view loads numeric IDs, preserves grid fallbacks, and renders after AI sync errors.');
+console.log('PASS: timetable view loads numeric IDs and JSON data, preserves grid fallbacks, and renders after AI sync errors.');

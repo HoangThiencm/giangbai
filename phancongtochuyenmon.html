@@ -3105,19 +3105,20 @@
         // PPCT mới được tra theo tuần; PPCT 4 cột cũ giữ cách chạy cũ để không thay đổi dữ liệu đã có.
         function parseBaoGiangCurriculum(text) {
             const plans = new Map();
-            const blocksByPlan = new Map();
+            const blocksByStrand = new Map();
             parseBaoGiangCurriculumEntries(text).filter(entry => entry.valid).forEach(entry => {
                 const key = baoGiangKey(entry.class_name, entry.subject);
                 if (!plans.has(key)) plans.set(key, { all: [], byWeek: new Map(), usesWeek: false });
                 const plan = plans.get(key);
                 const strandKey = foldText(entry.strand || '');
+                const strandBlockKey = `${key}::${strandKey}`;
                 const lessonKey = foldText(normalizeBaoGiangLessonTitle(entry.lesson));
-                const previousBlock = blocksByPlan.get(key);
-                const block = previousBlock && previousBlock.strandKey === strandKey && previousBlock.lessonKey === lessonKey
+                const previousBlock = blocksByStrand.get(strandBlockKey);
+                const block = previousBlock && previousBlock.lessonKey === lessonKey
                     ? previousBlock
                     : { strandKey, lessonKey, totalPeriods: 0, allocatedPeriods: 0 };
                 block.totalPeriods += entry.periods;
-                blocksByPlan.set(key, block);
+                blocksByStrand.set(strandBlockKey, block);
                 const periodNumbers = baoGiangExpandPeriodNumbers(entry.period_no, entry.periods);
                 for (let index = 0; index < entry.periods; index++) {
                     const lesson = {
@@ -5419,13 +5420,17 @@
         }
 
         function normalizeTeacherTimetable(raw) {
+            let parsedRaw = raw;
+            if (typeof parsedRaw === 'string') {
+                try { parsedRaw = JSON.parse(parsedRaw); } catch (_) { parsedRaw = null; }
+            }
             const base = emptyTimetable();
-            if (!raw || typeof raw !== 'object') return base;
-            base.updated_at = raw.updated_at || '';
-            base.school_year = raw.school_year || '';
-            base.semester = raw.semester || '';
+            if (!parsedRaw || typeof parsedRaw !== 'object') return base;
+            base.updated_at = parsedRaw.updated_at || '';
+            base.school_year = parsedRaw.school_year || '';
+            base.semester = parsedRaw.semester || '';
             ['morning', 'afternoon'].forEach(session => {
-                const src = raw[session] && typeof raw[session] === 'object' ? raw[session] : {};
+                const src = parsedRaw[session] && typeof parsedRaw[session] === 'object' ? parsedRaw[session] : {};
                 TT_DAYS.forEach(day => {
                     const cells = src[day] && typeof src[day] === 'object' ? src[day] : {};
                     const clean = {};

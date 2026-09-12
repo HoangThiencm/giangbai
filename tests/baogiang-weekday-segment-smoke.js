@@ -22,8 +22,16 @@ const plan = vm.runInContext(`parseBaoGiangCurriculum([
     '9 | Toán | 2 | 2-3 | Hình học | Bài 11. Tỉ số lượng giác của góc nhọn (tiếp theo) | 2'
 ].join('\\n')).get(baoGiangKey('9', 'Toán')).all`, context);
 assert.deepEqual(JSON.parse(JSON.stringify(plan.map(item => [item.ppct, item.segment]))), [['1', '1/3'], ['2', '2/3'], ['3', '3/3']]);
+const interleavedPlan = vm.runInContext(`parseBaoGiangCurriculum([
+    '9 | Toán | 1 | 1-2 | Đại số | Bài 1. Căn bậc hai | 2',
+    '9 | Toán | 1 | 1 | Hình học | Bài 11. Tỉ số lượng giác của góc nhọn | 1',
+    '9 | Toán | 2 | 3-4 | Đại số | Bài 2. Hàm số | 2',
+    '9 | Toán | 2 | 2-3 | Hình học | Bài 11. Tỉ số lượng giác của góc nhọn (tiếp theo) | 2'
+].join('\\n')).get(baoGiangKey('9', 'Toán')).all
+    .filter(item => item.strand === 'Hình học')`, context);
+assert.deepEqual(JSON.parse(JSON.stringify(interleavedPlan.map(item => [item.week, item.ppct, item.segment]))), [[1, '1', '1/3'], [2, '2', '2/3'], [2, '3', '3/3']]);
 assert.equal(vm.runInContext("baoGiangWeekdayLabel('2026-09-09')", context), 'Thứ Tư');
 assert.match(html, /id="qp-inherit-assignments"(?! checked)/);
 assert.match(html, /assignments: \{\}, timetable: emptyTimetable\(\)/);
 assert.match(html, /baoGiangWeekdayLabel\(row\.date\)\}, \$\{formatVnDate\(row\.date\)\}/);
-console.log('PASS: PPCT đa tuần có phân đoạn 1/3, 2/3, 3/3; thứ tiếng Việt và đợt mới rỗng được kiểm tra.');
+console.log('PASS: PPCT đa tuần, kể cả khi Đại số và Hình học xen kẽ, có phân đoạn 1/3, 2/3, 3/3.');
