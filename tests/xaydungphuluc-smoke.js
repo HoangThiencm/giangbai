@@ -405,6 +405,10 @@ assert.equal((splitPreview.match(/<th>/g)||[]).length,6,'preview must have six h
 assert(splitPreview.includes('colspan="6"')&&splitPreview.includes('class="ai-code">6.A'),'one-period AI preview must span six columns and show its clean AI code');
 const appendixThree=sandbox.appendixThreeTable([{lesson:'Bài mẫu',periods:'1',integration:splitValue}],splitConfig);
 assert.equal(appendixThree.columns.length,8,'PL3 must retain eight columns');
+vm.runInContext("sourcePpctRows=[{lesson:'Bài PPCT dự phòng',periods:'1',isHeader:false}]",sandbox);
+const emptyPlanOutput=sandbox.appendixThreeTable([],splitConfig);
+assert.ok(emptyPlanOutput.rows.length>0,'appendixThreeTable must fallback and never return 0 rows when default PPCT exists');
+assert.equal(emptyPlanOutput.columns.length,8,'appendixThreeTable must retain 8 columns when falling back');
 assert(sandbox.isNlsColumn(appendixThree.columns[6])&&sandbox.isAiColumn(appendixThree.columns[7]),'PL3 must split NLS and AI into dedicated columns');
 assert(/^\d+\.\d+\.TC\w+/i.test(appendixThree.rows[0].cells[6]),'PL3 one-period lessons without selected AI must retain one clean NLS code');
 assert.equal(appendixThree.rows[0].cells[7],'-','PL3 AI column must stay blank when no matching AI period is selected');

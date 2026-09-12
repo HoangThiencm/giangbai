@@ -1,142 +1,272 @@
-# PLAN: Khắc phục lỗi Gợi ý tích hợp & Thẩm định NLS chưa đạt & Nâng cấp Canvas mở rộng
-
-## PHẦN A: Khắc phục triệt để lỗi gợi ý cả NLS và AI trên bài 1 tiết & Thẩm định NLS chưa đạt (22/140 tiết)
-
-### 1. Hiện trạng & Nguyên nhân gốc rễ (Root Cause)
-- **Hiện tượng người dùng phản ánh qua ảnh chụp**:
-  1. Trong bảng chọn bài học (Mục 1 / `aiPickerRows`), các **bài 1 tiết** (ví dụ: *Bài 1. Tập hợp*, *Bài 2. Cách ghi số tự nhiên*, *Bài 3. Thứ tự trong tập hợp*, *Bài 4. Phép cộng và phép trừ*) đang bị hệ thống gợi ý **tích chọn cả hai cột**:
-     - Cột *Tích hợp NLS*: `[x] Tích hợp NLS` (được tích).
-     - Cột *Tích hợp AI*: `[x] Cả bài` / `[x] Tiết 1` (cũng được tích).
-  2. Sự mâu thuẫn này dẫn trực tiếp đến lỗi Thẩm định:
-     - Giao diện Mục 1 đếm đủ **28 tiết NLS** (do đếm theo checkbox đã tích).
-     - Nhưng khi render bảng Phụ lục 1, hàm `selectedIntegration` áp dụng đúng quy tắc sư phạm đã thống nhất:
-       `Bài 1 tiết có AI → 0 mã NLS, chỉ có 1 mã AI` (`if (p <= 1) return hasAi ? 0 : 1;`).
-     - Vì vậy, 6 bài 1 tiết có AI này bị **xóa mã NLS** trong bảng Phụ lục 1, thực tế chỉ còn **22 tiết NLS** (13 bài).
-     - Báo cáo Thẩm định (`calculateComplianceReport`) đếm các dòng thực tế có mã NLS trong bảng Phụ lục 1 thì chỉ thấy **22/140 tiết (mục tiêu 28 tiết)** -> Báo **Chưa đạt**!
-
-- **Nguyên nhân kỹ thuật**:
-  1. Thuật toán tự động gợi ý chọn bài NLS (`chooseNlsLessonsForPeriods` / `syncNlsSelectionFromRate`) và AI (`prioritizedAiPeriods` / `syncAiSelectionFromRate`) đang chạy **hoàn toàn độc lập**. Khi người dùng kéo thanh tỉ lệ (hoặc mở trang mẫu), cả hai hàm cùng ưu tiên các bài học đầu tiên (các bài 1 tiết của Chương I) mà không có cơ chế **loại trừ lẫn nhau (mutual exclusion)** đối với bài 1 tiết.
-  2. Các hàm tương tác checkbox (`toggleNlsLesson`, `toggleAiLesson`, `toggleAiLessonRow`) chưa có logic ràng buộc loại trừ cho bài 1 tiết: khi người dùng hoặc hệ thống tích chọn AI cho bài 1 tiết thì chưa tự động hủy chọn NLS của bài đó, và ngược lại.
+# PLAN: Di chuyển khối Cấu hình NLS & AI và Khắc phục lỗi Phụ lục 3 rỗng bảng
 
 ---
 
-### 2. Giải pháp kỹ thuật khắc phục triệt để
-Áp dụng trên cả 2 tệp: `canvas_xaydungphuluc.html` và `xaydungphuluc.html`:
+## 1. Yêu cầu & Mục tiêu
 
-1. **Nguyên tắc loại trừ lẫn nhau (Mutual Exclusion) cho bài 1 tiết khi gợi ý tự động**:
-   - Khi gợi ý NLS (`chooseNlsLessonsForPeriods` / `syncNlsSelectionFromRate`):
-     - Duyệt danh sách bài học ưu tiên, nếu gặp bài 1 tiết mà **đã được chọn tiết AI** (`selectedPeriodsForLesson(lesson.id).length > 0`) -> **Bỏ qua không chọn NLS cho bài đó**, tiếp tục chọn các bài khác (bài từ 2 tiết trở lên, hoặc bài 1 tiết chưa có AI) cho đến khi đạt đủ mục tiêu `target` số tiết NLS (đủ 28 tiết).
-   - Khi gợi ý AI (`prioritizedAiPeriods` / `syncAiSelectionFromRate`):
-     - Nếu bài 1 tiết đã được chọn NLS -> không tự động chọn AI cho bài đó (ưu tiên bài từ 2 tiết hoặc bài 1 tiết chưa có NLS).
+### Nhiệm vụ 1: Di chuyển khối Cấu hình NLS & AI
+- **Vị trí hiện tại**: Đang nằm trong Mục 1 (cùng thẻ card với 11 trường thông tin hành chính trường học & giáo viên).
+- **Vị trí mới**: Di chuyển xuống đặt **sau Mục 2** (Tài liệu & dữ liệu nguồn) và **trên Mục 3** (Chọn loại phụ lục).
+- **Đánh số lại các mục**:
+  - `1. Thông tin trường học & giáo viên` (trước là `1. Thông tin & cấu hình sư phạm`)
+  - `2. Tài liệu & dữ liệu nguồn` (giữ nguyên)
+  - `3. Cấu hình Năng lực số & Trí tuệ nhân tạo` (khối mới chuyển xuống)
+  - `4. Chọn loại phụ lục` (trước là 3)
+  - `5. AI đề xuất bài/tiết tích hợp NLS & AI; bạn rà soát và điều chỉnh` (trước là 4)
+  - `6. Ý tưởng / chỉ đạo riêng` (trước là 5)
+  - `7. Tiến trình xử lý` (trước là 6)
+  - `8. Xem trước & xuất Word` (trước là 7)
+- **Ý nghĩa**: Sau khi nạp thông tin trường (Mục 1) và nạp PPCT/tài liệu nguồn (Mục 2), hệ thống tính ra tổng số tiết và số bài PPCT thực tế (ví dụ: `95 tiết PPCT · 47 bài`). Người dùng cấu hình tỉ lệ % hoặc số tiết/bài NLS & AI ngay tại Mục 3 sẽ chuẩn xác và tiện lợi hơn.
 
-2. **Ràng buộc loại trừ tức thì trên giao diện (Interactive Checkboxes)**:
-   - Trong `toggleNlsLesson(lessonId, checked)`:
-     - Nếu `checked = true` và bài đó là bài 1 tiết: Tự động bỏ chọn tất cả tiết AI của bài đó trong `aiSelectedLessonIds` (`toggleAiLessonRow(lessonId, false)`).
-   - Trong `toggleAiLesson(periodId, checked)` và `toggleAiLessonRow(lessonId, checked)`:
-     - Nếu `checked = true` và bài đó là bài 1 tiết: Tự động bỏ chọn NLS của bài đó trong `nlsSelectedLessonIds` (`nlsSelectedLessonIds.delete(lessonId)`).
-   - Cập nhật lại thanh trượt tỉ lệ và số lượng hiển thị tức thì.
-
-3. **Kết quả đạt được**:
-   - Trên bảng giao diện Mục 1: **Tuyệt đối không có bài 1 tiết nào bị tích cả NLS lẫn AI**.
-   - Mục tiêu 28 tiết NLS sẽ được phân bổ chính xác vào 28 tiết thực tế (các bài >= 2 tiết hoặc bài 1 tiết không có AI).
-   - Bảng Phụ lục 1 xuất ra đủ đúng 28 tiết có mã NLS.
-   - Báo cáo Thẩm định Sư phạm đếm đúng **28/140 tiết (Đạt 100%)**.
-
----
-
-## PHẦN B: Nâng cấp các công cụ trong "backupcode viettailieu" chạy môi trường Gemini Canvas mở rộng
-
-### 1. Mục tiêu
-- **Tối ưu hiển thị mở rộng (Full-width / Expanded Canvas Mode)**: Tự động co giãn phủ rộng toàn màn hình (`w-full max-w-[98%] 2xl:max-w-[1750px] mx-auto`), không bị đóng khung hẹp cố định (`max-w-7xl` ~ 1280px hay `1440px`), tận dụng tối đa không gian khi người dùng nhấn nút mở rộng/toàn màn hình trong Gemini Canvas.
-- **Tương thích tuyệt đối Sandbox Iframe của Gemini Canvas**:
-  - Chống FOUC / màn hình trắng (Force visible styles & MutationObserver).
-  - An toàn CSP: Tránh lỗi chặn Worker (PDF.js worker), tránh chặn popup (`window.confirm`/`alert`).
-  - Hộp thoại tương tác DOM (`canvasConfirm`) thay cho `confirm()` vốn bị browser sandbox chặn.
-  - Lưu trữ an toàn (`canvasStorage`) có bộ nhớ tạm in-memory khi `localStorage` bị hạn chế quyền truy cập.
-  - Banner trạng thái kết nối Gemini Canvas (`canvasHostBanner`).
-  - Nút chuyển giao diện "Gọn" (`toggleCompactMode`) để xem được nhiều nội dung hơn trên màn hình Canvas.
-
-### 2. Danh mục tệp tin & Nội dung triển khai
-1. `canvas_xaydungphuluc.html` & `xaydungphuluc.html`: Áp dụng bản vá Phần A (chọn bài NLS bù trừ thông minh chống hụt tiết).
-2. `backupcode viettailieu/canvas_soankhbd.html`: Mở rộng layout `.app-body`, bổ sung `canvasConfirm` và xử lý an toàn sandbox.
-3. `backupcode viettailieu/soanbaigemini.html`: Mở rộng layout `max-w-[98%]`, thêm banner canvas, anti-FOUC, `canvasConfirm`, `canvasStorage`.
-4. `backupcode viettailieu/taobaitap.html`: Mở rộng layout 2 khối chính, thêm banner canvas, anti-FOUC.
-5. `backupcode viettailieu/taobaocao.html`: Thêm banner canvas, mở rộng layout, anti-FOUC.
-6. `backupcode viettailieu/sangkien.html`: Mở rộng layout container chính sang `max-w-[98%]`, thêm banner canvas, anti-FOUC.
-7. `backupcode viettailieu/chuyenpdf.html`: Mở rộng `.app-shell` sang `max-w-[98%] 2xl:max-w-[1750px]`, thêm banner canvas, anti-FOUC.
-## PHẦN C: Khung mã hoá Sư phạm Tổng quát cho toàn bộ ứng dụng (NLS & AI cho mọi môn học và khối lớp)
-
-### 1. Hiện trạng & Định hướng Kiến trúc Tổng quát
-- **Vấn đề cốt lõi người dùng chỉ ra**:
-  *"vấn đề là chúng ta phải để cho nó mã hoá thực sự hợp lý ở tất cả các nội dung cần mã hoá chứ không phải 1 hay 2 mã cụ thể, cái chúng ta viết là tổng quát cho ứng dụng"*.
-  - Ứng dụng không chỉ dành riêng cho 1 bài Toán cụ thể hay 1 mã riêng lẻ, mà là công cụ tổng quát phục vụ **tất cả các môn học** (Toán, KHTN, Ngữ văn, Lịch sử - Địa lí, Ngoại ngữ, Tin học, GDCD, Công nghệ...) và **tất cả các khối lớp** (6, 7, 8, 9).
-  - Lỗi sinh câu mô tả gượng ép, phi lý (như *"AI mô phỏng bánh răng để minh họa BCNN"*) là triệu chứng của việc **thiếu một cơ chế phân loại sư phạm tổng quát** giữa bản chất môn học và mục tiêu của từng Miền năng lực.
+### Nhiệm vụ 2: Khắc phục triệt để lỗi Phụ lục 3 mở ra / xuất Word không có dòng dữ liệu nào (bảng rỗng)
+- **Hiện tượng**: Khi mở Phụ lục 3 (Tab 3) hoặc xuất file Word Phụ lục 3 (`Phu-luc-3-Toan-hoc.docx`), bảng "I. Phân phối chương trình" có 8 cột tiêu đề (`Bài học`, `Số tiết`, `Tiết CT`, `Tuần`, `Thiết bị dạy học (*)`, `Địa điểm dạy học (**)`, `Biểu hiện năng lực số`, `Biểu hiện năng lực AI`), nhưng **phần thân bảng hoàn toàn rỗng (0 dòng)**.
+- **Nguyên nhân gốc**:
+  1. Khi AI sinh Phụ lục 3, do giới hạn token hoặc do prompt hướng dẫn ("bạn chỉ trả nội dung cột integration..."), AI thường:
+     - Bỏ qua thuộc tính `plan` (chỉ trả `{ title, specialties, duties }`), hoặc
+     - Trả thuộc tính mang tên `schedule` hoặc `ppct` hoặc `items` thay vì `plan`, hoặc
+     - Trả mảng `plan: []`.
+  2. Trong hàm `normalizeAppendix(data, '3', c)`:
+     - `data.plan = (data.plan || [])...` khiến `data.plan` nhận giá trị mảng rỗng `[]`.
+     - `syncIntegrationFromAppendixOne(data.plan, ...)` duyệt qua `[]` trả về `[]`.
+     - `appendixThreeTable(appendix.plan || [], c)` duyệt qua `[]` trả về `rows: []`.
+  3. `appendixThreeTable` và `syncIntegrationFromAppendixOne` không có cơ chế fallback về `results['1']?.schedule`, `sourcePpctRows`, hay `defaultPpctRows(c)` khi `planRows` bị rỗng.
+  4. Trong `renderPreview()` và `exportDocx(3)`: Chưa có rào chắn tự động phát hiện `planModel.rows.length === 0` để tái tạo lại từ PPCT nguồn/Phụ lục 1.
 
 ---
 
-### 2. Khung quy tắc Sư phạm Tổng quát (Universal Pedagogical Framework)
+## 2. Phạm vi tệp tin cần sửa đổi (Scope)
 
-#### A. Phân định Miền Năng lực AI (QĐ 2422) theo Bản chất Nhóm môn học:
-1. **Nhóm môn Công nghệ & Tin học**:
-   - Học sinh học trực tiếp về nguyên lý, máy học, lập trình và cấu trúc dữ liệu AI.
-   - Được phép sử dụng cả 4 Miền: **Miền A (Hiểu biết AI)**, **Miền B (Ứng dụng)**, **Miền C (Sáng tạo giải pháp)**, **Miền D (Đạo đức & Tác động)**.
-2. **Nhóm tất cả các môn học còn lại (Toán, KHTN, Ngữ văn, Lịch sử - Địa lí, Ngoại ngữ, GDCD...)**:
-   - Học sinh tiếp cận AI với vai trò là **Trợ lý học tập thông minh (Smart Learning Assistant)** phục vụ môn học đó, KHÔNG học về kỹ thuật/lập trình AI.
-   - **Quy tắc phân bổ mã bắt buộc**:
-     - **Miền B (Ứng dụng AI - mã `[6-9].B2.x`)**: Dùng trợ lý AI hỗ trợ gợi mở cách tiếp cận, tìm kiếm thông tin, gợi ý các bước giải quyết nhiệm vụ bài học.
-     - **Miền D (Đạo đức, Liêm chính & Kiểm chứng - mã `[6-9].D1.x`)**: Đánh giá độ tin cậy của thông tin do AI cung cấp, đối chiếu với SGK, phát hiện sai sót/thiên vị, rèn luyện liêm chính học thuật và tự chịu trách nhiệm về sản phẩm học tập.
-     - **Miền C (Sáng tạo cùng AI - mã `[6-9].C...`)**: Dành riêng cho các bài dự án học tập, thực hành trải nghiệm, STEM.
-     - **CẤM TUYỆT ĐỐI gán mã Miền A** (`[6-9].A...` - Giải thích con người lập trình AI, máy học, nguyên lý kỹ thuật) vào các bài học của nhóm môn này.
+Coder thực hiện đồng bộ trên 3 tệp HTML và 1 tệp test:
+1. `xaydungphuluc.html`
+2. `canvas_xaydungphuluc.html`
+3. `backupcode viettailieu/canvas_xaydungphuluc.html`
+4. `tests/xaydungphuluc-smoke.js` (bổ sung test kiểm tra fallback Phụ lục 3 không bao giờ rỗng)
 
-#### B. Phân bổ Năng lực Số (CV 3456 / TT 02/2024) gắn liền Công cụ thực tế của môn học:
-- **Nguyên tắc**: Biểu hiện NLS phải nêu đích danh công cụ số thực tế mà học sinh thao tác trong giờ học của môn đó:
-  - **Môn Toán**: Máy tính cầm tay (tính toán, kiểm tra nghiệm, phím chức năng), phần mềm GeoGebra/Desmos (vẽ đồ thị, dựng hình động), bảng tính Excel (xử lý dữ liệu thống kê).
-  - **Môn KHTN (Lý - Hóa - Sinh)**: Video mô phỏng thí nghiệm ảo, mô hình 3D tương tác cấu tạo phân tử/tế bào, cảm biến số hoặc bảng số liệu đo đạc thực nghiệm.
-  - **Môn KHXH (Ngữ văn, Lịch sử - Địa lí, GDCD)**: Bản đồ số (Google Earth/bản đồ tương tác), bảo tàng ảo/tư liệu số lịch sử, phần mềm sơ đồ tư duy (Canva/Mindmap) để tóm tắt và báo cáo sản phẩm.
-  - **Môn Ngoại ngữ**: Từ điển số, phần mềm phát âm, công cụ luyện nghe nói tương tác.
+---
 
-#### C. Công thức Sư phạm 3 thành phần chuẩn mực cho câu mô tả (Áp dụng toàn hệ thống):
-Mọi câu mô tả NLS và AI (dù do Gemini sinh hay hàm fallback sinh) đều bắt buộc tuân theo cấu trúc 3 thành phần:
-```text
-[Công cụ số / Trợ lý AI cụ thể] + [Hành động học tập cụ thể gắn với nội dung bài học] + [Kiểm chứng đối chiếu / Trách nhiệm / Sản phẩm của học sinh]
+## 3. Hướng dẫn chi tiết cho Coder
+
+### PHẦN A: Di chuyển khối giao diện NLS & AI
+
+Áp dụng đồng nhất cho cả 3 tệp (`xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`):
+
+#### 1. Mục 1: Thu gọn chỉ còn thông tin trường học & giáo viên
+- Sửa tiêu đề thẻ `<h2>`:
+  ```html
+  <h2 class="font-black mb-3">1. Thông tin trường học &amp; giáo viên</h2>
+  ```
+- Giữ nguyên toàn bộ lưới input hành chính (Trường, Tổ, Môn học, Khối lớp, Năm học, Giáo viên, Bộ sách, Số lớp, Số HS, Số GV...).
+- **Cắt bỏ** toàn bộ:
+  - Khối chứa 2 card NLS và AI: `<div class="grid md:grid-cols-2 gap-4 mt-5">...</div>` (hoặc `mt-4`).
+  - Khối chứa 2 checkbox CLIL & Giáo dục hòa nhập: `<div class="mt-4 flex flex-wrap gap-4">...</div>`.
+- Đóng thẻ `</section>` của Mục 1 ngay sau lưới input hành chính.
+
+#### 2. Mục 3 mới: Tạo card Cấu hình Năng lực số & Trí tuệ nhân tạo
+- Đặt thẻ `<section class="card p-5">` mới ngay dưới `</section>` của Mục 2 (Tài liệu & dữ liệu nguồn) và trước Mục "Chọn loại phụ lục":
+  ```html
+    <section class="card p-5"><h2 class="font-black mb-3">3. Cấu hình Năng lực số &amp; Trí tuệ nhân tạo</h2><div class="grid md:grid-cols-2 gap-4"><div class="border rounded-xl p-4"><div class="flex justify-between"><label><input id="nlsEnabled" type="checkbox" checked onchange="onNlsEnabledChange(this.checked)"> <b>Năng lực số (CV 3456 / TT 02)</b></label><output id="nlsRateOut">50%</output></div><div class="flex gap-2 items-center mt-2 mb-1"><select id="nlsUnit" class="field text-xs py-1 px-2 w-auto" onchange="onNlsUnitChange(this.value)"><option value="period" selected>Theo tổng số tiết PPCT</option><option value="lesson">Theo tổng số bài PPCT</option></select><input id="nlsCountInput" type="number" min="0" class="field text-xs py-0.5 px-1.5 w-16 text-center" onchange="syncNlsSelectionFromCount(this.value)" aria-label="Số tiết hoặc bài NLS"><span class="text-xs opacity-70">hoặc kéo tỉ lệ % bên dưới:</span></div><input id="nlsRate" class="w-full" type="range" min="0" max="100" value="50" oninput="syncNlsSelectionFromRate()"><label class="label mt-2">Phân bổ số lượng mã NLS / bài</label><select id="nlsDensity" class="field" onchange="toggleNlsCustomDensity(this.value)"><option value="adaptive" selected>Tự động theo tiết &amp; AI (Khuyên dùng)</option><option value="1-2">Cố định 1–2 mã/bài</option><option value="2-3">Cố định 2–3 mã/bài</option><option value="3-4">Cố định 3–4 mã/bài</option></select><div id="nlsAdaptiveOptions" class="mt-2 text-xs space-y-1 p-2.5 rounded-lg border" style="background:var(--paper);border-color:var(--line);color:var(--ink);"><div>• Bài 1 tiết: <b style="color:var(--brand)">Có AI → 0 NLS (1 AI); Không AI → 1 mã NLS</b></div><div>• Bài từ 2 tiết có AI: <b style="color:var(--brand)">1 mã NLS</b></div><label class="flex items-center gap-2"><span>• Bài từ 2 tiết không có AI:</span><select id="nlsNoAiDensity" class="field text-xs py-0.5 px-1.5 w-auto" style="background:var(--card);color:var(--ink);border-color:var(--line);"><option value="2" selected>2 mã</option><option value="2-3">2–3 mã</option></select></label></div></div><div class="border rounded-xl p-4"><div class="flex justify-between"><label><input id="aiEnabled" type="checkbox" checked onchange="onAiEnabledChange(this.checked)"> <b>Trí tuệ nhân tạo (QĐ 2422)</b></label><output id="aiRateOut">30%</output></div><div class="flex gap-2 items-center mt-2 mb-1"><select id="aiUnit" class="field text-xs py-1 px-2 w-auto" onchange="onAiUnitChange(this.value)"><option value="period" selected>Theo tổng số tiết PPCT</option><option value="lesson">Theo tổng số bài PPCT</option></select><input id="aiCountInput" type="number" min="0" class="field text-xs py-0.5 px-1.5 w-16 text-center" onchange="syncAiSelectionFromCount(this.value)" aria-label="Số tiết hoặc bài AI"><span class="text-xs opacity-70">hoặc kéo tỉ lệ % bên dưới:</span></div><input id="aiRate" class="w-full" type="range" min="0" max="100" value="30" oninput="syncAiSelectionFromRate()"><label class="label mt-2">Mật độ mã AI / tiết đã chọn</label><select id="aiDensity" class="field"><option value="1-2" selected>1–2 mã/bài</option><option value="2-3">2–3 mã/bài</option><option value="3-4">3–4 mã/bài</option></select></div></div></div><div class="mt-4 flex flex-wrap gap-4"><label><input id="clil" type="checkbox"> Thêm thuật ngữ Tiếng Anh chuyên ngành / CLIL</label><label><input id="inclusive" type="checkbox"> Giáo dục hòa nhập HS khuyết tật</label></div></section>
+  ```
+  *(Lưu ý: trong `canvas_xaydungphuluc.html`, các thẻ `select` và `input` không cần thuộc tính `onchange` inline vì hàm `bindFlexibleAllocationControls()` đã gán listener qua selector, nhưng giữ nguyên các `id` chuẩn).*
+
+#### 3. Đánh số lại các mục tiếp theo:
+- Đổi tiêu đề:
+  - `4. Chọn loại phụ lục`
+  - `5. AI đề xuất bài/tiết tích hợp NLS & AI; bạn rà soát và điều chỉnh`
+  - `6. Ý tưởng / chỉ đạo riêng`
+  - `7. Tiến trình xử lý`
+  - `8. Xem trước & xuất Word`
+- Cập nhật thông báo text trong code (nếu có chuỗi `Mục 3`, `Mục 7` liên quan đến fileList, đổi thành `Mục 5` và `Mục 8`).
+
+---
+
+### PHẦN B: Khắc phục triệt để lỗi Phụ lục 3 rỗng bảng
+
+#### 1. Cập nhật hàm `appendixThreeTable(planRows, c)`
+Trong cả 3 tệp HTML:
+Tìm định nghĩa hàm `function appendixThreeTable(planRows,c){...}`:
+Bổ sung cơ chế fallback ngay đầu hàm nếu `planRows` không có phần tử:
+```javascript
+function appendixThreeTable(planRows,c){
+  const columns=APPENDIX_3_COLUMNS.map(x=>x[1]);
+  let normal=0;
+  const pl1Model=results?.['1']?.scheduleTable?normalizeIntegrationTable(results['1'].scheduleTable):null;
+  const pl1NlsIdx=pl1Model?pl1Model.columns.findIndex(isNlsColumn):-1;
+  const pl1AiIdx=pl1Model?pl1Model.columns.findIndex(isAiColumn):-1;
+  const pl1LessonIdx=pl1Model?pl1Model.columns.map(normalizeHeaderKey).indexOf('lesson'):-1;
+  
+  // Tự động fallback nếu planRows rỗng hoặc undefined
+  let effectiveRows = (Array.isArray(planRows) && planRows.length) ? planRows : [];
+  if(!effectiveRows.length){
+    if(results?.['1']?.schedule && Array.isArray(results['1'].schedule) && results['1'].schedule.length){
+      effectiveRows = results['1'].schedule;
+    } else if(typeof sourcePpctRows !== 'undefined' && Array.isArray(sourcePpctRows) && sourcePpctRows.length){
+      effectiveRows = sourcePpctRows;
+    } else if(typeof defaultPpctRows === 'function'){
+      effectiveRows = defaultPpctRows(c || (typeof getConfig==='function'?getConfig():{}));
+    }
+  }
+
+  const rows=(effectiveRows||[]).map((row,index)=>{
+    if(row.isHeader)return {isHeader:true,cells:[row.lesson]};
+    let nlsText='',aiText='';
+    if(pl1Model&&pl1LessonIdx>=0){
+      const pl1Row=pl1Model.rows.find(item=>!item.isHeader&&lessonsMatch((item.cells||[])[pl1LessonIdx],row.lesson));
+      if(pl1Row){
+        if(pl1NlsIdx>=0)nlsText=String((pl1Row.cells||[])[pl1NlsIdx]||'').trim();
+        if(pl1AiIdx>=0)aiText=String((pl1Row.cells||[])[pl1AiIdx]||'').trim();
+      }
+    }
+    if(!nlsText&&!aiText){
+      const selected=selectedPeriodsForLesson(row.id||`ppct:${index}`,row.lesson);
+      const sep=separateIntegration(row.integration,selected,normal,c,row.lesson,row.periods,row.id||`ppct:${index}`);
+      nlsText=sep.nlsText;aiText=sep.aiText;
+    }
+    if(!aiText&&c?.ai?.enabled&&hasAiCode(row.integration)){
+      const selected=selectedPeriodsForLesson(row.id||`ppct:${index}`,row.lesson);
+      if(selected.length){aiText=cleanAiColumnText(row.integration,row.lesson);}
+    }
+    normal++;
+    return {
+      isHeader:false,
+      cells:[
+        String(row.lesson||'').trim(),
+        String(row.periods||'').trim(),
+        String(row.tietCT||'').trim(),
+        String(row.week||'').trim(),
+        String(row.devices||'').trim(),
+        String(row.location||'').trim(),
+        nlsText||'-',
+        aiText||'-'
+      ]
+    };
+  });
+  return {columns,rows,lessonIndex:0};
+}
 ```
-- **Ví dụ NLS**:
-  - *Toán học*: `[NLS: 5.3.TC1a - Sử dụng máy tính cầm tay để thực hiện các phép tính và kiểm tra kết quả bài [Tên bài].]`
-  - *KHTN*: `[NLS: 1.1.TC1a - Khai thác video thí nghiệm mô phỏng để quan sát hiện tượng và tìm hiểu nội dung bài [Tên bài].]`
-  - *Ngữ văn / Lịch sử*: `[NLS: 3.1.TC1a - Sử dụng công cụ số (sơ đồ tư duy / bài trình chiếu) để hệ thống hóa kiến thức và trình bày sản phẩm bài [Tên bài].]`
-- **Ví dụ AI (Miền B - Ứng dụng)**:
-  - `[AI: [Mã].B2.1 - Sử dụng trợ lý AI gợi mở cách tiếp cận, gợi ý các bước thực hiện nhiệm vụ bài [Tên bài]; học sinh tự đối chiếu với SGK để kiểm chứng và hoàn thành bài tập.] (Áp dụng: tiết X, Y).`
-- **Ví dụ AI (Miền D - Kiểm chứng & Trách nhiệm)**:
-  - `[AI: [Mã].D1.1 - Đánh giá tính chính xác và độ tin cậy của thông tin do AI gợi ý về bài [Tên bài]; đối chiếu với SGK và tự chịu trách nhiệm về kết quả học tập.] (Áp dụng: tiết X, Y).`
+
+#### 2. Cập nhật hàm `syncIntegrationFromAppendixOne(targetPlanRows, appendixOneTable, config)`
+Trong cả 3 tệp HTML:
+Tìm hàm `function syncIntegrationFromAppendixOne(targetPlanRows,appendixOneTable,config){...}`:
+Bổ sung fallback nếu `targetPlanRows` rỗng:
+```javascript
+function syncIntegrationFromAppendixOne(targetPlanRows,appendixOneTable,config){
+  let rows = (Array.isArray(targetPlanRows) && targetPlanRows.length) ? targetPlanRows : [];
+  if(!rows.length){
+    if(results?.['1']?.schedule && Array.isArray(results['1'].schedule) && results['1'].schedule.length){
+      rows = results['1'].schedule;
+    } else if(typeof sourcePpctRows !== 'undefined' && Array.isArray(sourcePpctRows) && sourcePpctRows.length){
+      rows = sourcePpctRows;
+    } else if(typeof defaultPpctRows === 'function'){
+      rows = defaultPpctRows(config);
+    }
+  }
+  return (rows||[]).map((row,index)=>{
+    if(row.isHeader)return row;
+    const integration=appendixOneIntegrationForLesson(row.lesson,{scheduleTable:appendixOneTable})||selectedIntegration(row.integration,selectedPeriodsForLesson(row.id||`ppct:${index}`,row.lesson),index,config,row.lesson,row.periods,row.id||`ppct:${index}`);
+    return {...row,integration};
+  });
+}
+```
+
+#### 3. Cập nhật nhánh `no==='3'` trong `normalizeAppendix(data, no, c)`
+Trong cả 3 tệp HTML:
+Tìm đoạn:
+```javascript
+}else if(no==='3'){
+  const defaultEquip=(typeof EQUIPMENT!=='undefined'&&c&&(EQUIPMENT[c.monHoc]||EQUIPMENT.default))?(EQUIPMENT[c.monHoc]||EQUIPMENT.default).slice(0,2).join(', '):'Thiết bị dạy học tối thiểu';
+  data.plan=(data.plan||[]).map((row,i)=>{...
+```
+Sửa thành:
+```javascript
+}else if(no==='3'){
+  const defaultEquip=(typeof EQUIPMENT!=='undefined'&&c&&(EQUIPMENT[c.monHoc]||EQUIPMENT.default))?(EQUIPMENT[c.monHoc]||EQUIPMENT.default).slice(0,2).join(', '):'Thiết bị dạy học tối thiểu';
+  let planCandidate = (Array.isArray(data.plan) && data.plan.length) ? data.plan :
+                      (Array.isArray(data.schedule) && data.schedule.length) ? data.schedule :
+                      (Array.isArray(data.ppct) && data.ppct.length) ? data.ppct :
+                      (Array.isArray(data.items) && data.items.length) ? data.items :
+                      (Array.isArray(data.rows) && data.rows.length) ? data.rows : [];
+  if (!planCandidate.length) {
+    if (results['1'] && Array.isArray(results['1'].schedule) && results['1'].schedule.length) {
+      planCandidate = results['1'].schedule;
+    } else if (typeof sourcePpctRows !== 'undefined' && Array.isArray(sourcePpctRows) && sourcePpctRows.length) {
+      planCandidate = sourcePpctRows;
+    } else if (typeof defaultPpctRows === 'function') {
+      planCandidate = defaultPpctRows(c);
+    }
+  }
+  data.plan=(planCandidate||[]).map((row,i)=>{
+    const r=ppctRow(row,i,c);
+    if(!r.isHeader){
+      if(!r.devices)r.devices=defaultEquip;
+      if(!r.location)r.location='Lớp học';
+    }
+    return r;
+  }).filter(row=>row.lesson&&!isAdminLesson(row.lesson));
+  if(!results['1'])results['1']=normalizeAppendix(fallback('1',c),'1',c);
+  data.plan=syncIntegrationFromAppendixOne(data.plan,results['1'].scheduleTable,c);
+  data.planTable=appendixThreeTable(data.plan,c);
+}
+```
+
+#### 4. Cập nhật `renderPreview()` cho `activeTab === '3'`
+Trong cả 3 tệp HTML:
+Tìm `if(activeTab==='3'){`:
+Thay vì chỉ lấy `r.planTable`, bảo đảm luôn có dữ liệu hàng:
+```javascript
+if(activeTab==='3'){
+  let planModel=(r.planTable&&r.planTable.columns&&r.planTable.columns.length===8&&r.planTable.rows&&r.planTable.rows.length)?r.planTable:null;
+  if(!planModel){
+    if(!results['1']) results['1']=normalizeAppendix(fallback('1',getConfig()),'1',getConfig());
+    planModel=appendixThreeTable(r.plan||[],getConfig());
+    r.planTable=planModel;
+  }
+  preview.innerHTML=`<h3 class="font-black text-center my-4">${esc(r.title||'PHỤ LỤC 3 – KẾ HOẠCH GIÁO DỤC CỦA GIÁO VIÊN')}</h3><h4 class="font-bold">I. Phân phối chương trình</h4>${dynamicPpctTable(planModel)}<h4 class="font-bold mt-4">II. Chuyên đề lựa chọn</h4>${table([['topic','Chuyên đề'],['time','Thời điểm'],['devices','Thiết bị'],['location','Địa điểm']],r.specialties||[],'specialties')}`;
+  return;
+}
+```
+
+#### 5. Cập nhật `exportDocx(n, save=true)` cho Phụ lục 3
+Trong cả 3 tệp HTML:
+Tìm đoạn xuất docx của Phụ lục 3:
+```javascript
+}else{
+  add(r.title||`PHỤ LỤC ${n}`,{center:true,bold:true,size:28});
+  add('I. Phân phối chương trình',{bold:true});
+  let planModel=(r.planTable&&r.planTable.columns&&r.planTable.columns.length===8&&r.planTable.rows&&r.planTable.rows.length)?r.planTable:null;
+  if(!planModel){
+    if(!results['1']) results['1']=normalizeAppendix(fallback('1',getConfig()),'1',getConfig());
+    planModel=appendixThreeTable(r.plan||[],getConfig());
+    r.planTable=planModel;
+  }
+  addPpct(planModel,'appendixThree');
+  add('II. Chuyên đề lựa chọn',{bold:true});
+  addTable([['topic','Chuyên đề'],['time','Thời điểm'],['devices','Thiết bị'],['location','Địa điểm']],r.specialties||[]);
+};
+```
 
 ---
 
-### 3. Kế hoạch Triển khai Kỹ thuật Tổng quát
-Áp dụng trên toàn bộ hệ thống: `js/khbd-standards.js`, `canvas_xaydungphuluc.html`, `xaydungphuluc.html`:
+## 4. Kiểm tra và xác minh (Verification Plan)
 
-1. **Nâng cấp bộ lọc `isUnnaturalOfficialStandard` trong `js/khbd-standards.js`**:
-   - Tự động nhận diện môn học: Nếu `kind === "ai"` và môn học không phải là "Tin học" (`!/tin hoc|cong nghe thong tin|lap trinh/i.test(ctx.subjectName)`), mọi mã thuộc Miền A (`/^\d+\.A/i.test(code)`) đều bị đánh dấu `unnatural = true` (không gán cho bài học).
-   - Nhờ đó, thuật toán đề xuất mã AI của mọi môn học sẽ luôn tự động chọn đúng các mã **Miền B (`[g].B2.1`)** và **Miền D (`[g].D1.1`)** cho mọi khối lớp 6, 7, 8, 9.
-2. **Nâng cấp hàm Fallback `lessonAppliedAiDescription` và `lessonAppliedNlsDescription`**:
-   - Xây dựng ma trận bộ môn tổng quát (Toán học, KHTN, Khoa học xã hội, Ngữ văn, Ngoại ngữ, Tin học...).
-   - Tự động sinh mô tả theo đúng công thức 3 thành phần chuẩn mực theo đặc thù môn học và khối lớp, loại bỏ hoàn toàn các câu văn cứng nhắc hoặc gượng ép.
-3. **Nâng cấp Chỉ dẫn Sư phạm trong Prompt Gemini (`appendixPrompt`)**:
-   - Quy định rõ ràng trong prompt nguyên tắc phân môn: Với các môn học khác ngoài Tin học, mã AI bắt buộc đóng vai trò trợ lý hỗ trợ học tập (Miền B) và đối chiếu kiểm chứng (Miền D).
-   - Cấm tuyệt đối Gemini tự chế các ngữ cảnh phi thực tế, gượng ép (như "mô phỏng chuyển động bánh răng", "tìm hiểu lịch sử chatbot"). Mọi mô tả phải bám sát nội dung bài học và năng lực thực hành của học sinh.
+Coder thực hiện các bước kiểm tra sau:
 
----
+### 1. Bổ sung test tự động trong `tests/xaydungphuluc-smoke.js`
+Thêm kiểm thử chứng minh Phụ lục 3 không rỗng ngay cả khi AI trả về `{ plan: [] }` hoặc dữ liệu rỗng:
+```javascript
+const emptyPlanOutput = sandbox.appendixThreeTable([], splitConfig);
+assert.ok(emptyPlanOutput.rows.length > 0, 'appendixThreeTable must fallback and never return 0 rows when default PPCT exists');
+assert.equal(emptyPlanOutput.columns.length, 8, 'appendixThreeTable must retain 8 columns');
+```
 
-## 4. Kế hoạch kiểm thử (Verification Plan)
+### 2. Chạy toàn bộ các bộ test tự động:
+```bash
+node tests/xaydungphuluc-smoke.js
+node tests/canvas-xaydungphuluc-smoke.js
+node tests/xaydungphuluc-math-smoke.js
+node tests/sgk-knowledge-smoke.js
+```
+Tất cả đều phải trả về **PASS** 100%.
 
-1. **Kiểm thử Thẩm định NLS (Phần A)**:
-   - Chạy mô phỏng kiểm thử với cấu hình 140 tiết, 20% NLS (28 tiết), 9% AI (12 tiết).
-   - Xác nhận bảng Phụ lục 1 xuất ra đủ 28 tiết có mã NLS, không bị hụt 6 tiết.
-   - Xác nhận `calculateComplianceReport` trả về `pass: true` cho tiêu chí Năng lực số.
-2. **Kiểm thử Canvas mở rộng (Phần B)**:
-   - Tạo và chạy `tests/backupcode-canvas-smoke.js` kiểm tra toàn bộ 6 tệp trong `backupcode viettailieu`: cú pháp hợp lệ, container mở rộng, anti-FOUC và banner canvas.
-3. **Hồi quy hệ thống**:
-   - `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
-   - `node tests/xaydungphuluc-smoke.js`: PASS.
-   - `node tests/xaydungphuluc-math-smoke.js`: PASS.
-   - `node tests/sgk-knowledge-smoke.js`: PASS.
-
+### 3. Ghi chép bàn giao
+Sau khi hoàn tất, Coder ghi toàn bộ nội dung đã sửa và kết quả kiểm thử vào tệp:
+`docs/handoff/IMPLEMENT.md`.

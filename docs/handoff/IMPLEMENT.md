@@ -1,3 +1,31 @@
+# IMPLEMENT: Di chuyển cấu hình NLS & AI và chặn bảng trống Phụ lục 3
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, và `backupcode viettailieu/canvas_xaydungphuluc.html`
+  - Di chuyển cấu hình NLS & AI sau phần tài liệu nguồn, chuẩn hoá lại số thứ tự các mục 1–8, và gộp các điều khiển tỉ lệ/số tiết vào khối cấu hình mới.
+  - `appendixThreeTable()` và `syncIntegrationFromAppendixOne()` tự lấy dữ liệu lần lượt từ Phụ lục 1, PPCT nguồn, rồi PPCT mặc định khi nhận mảng rỗng.
+  - `normalizeAppendix(..., '3', ...)` nhận các biến thể phản hồi AI `plan`, `schedule`, `ppct`, `items`, và `rows`; sau đó đồng bộ mã tích hợp từ Phụ lục 1.
+  - Xem trước và xuất Word Phụ lục 3 không chấp nhận mô hình bảng 8 cột nhưng không có dòng; chúng tự tái dựng bảng và lưu lại mô hình đã khôi phục.
+- `tests/xaydungphuluc-smoke.js`
+  - Bổ sung hồi quy cho `appendixThreeTable([])`: vẫn có hàng PPCT dự phòng và giữ đủ 8 cột.
+
+## Kiểm tra đã chạy
+
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-math-smoke.js`: PASS.
+- `node tests/sgk-knowledge-smoke.js`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- `docs/handoff/.lock` đang ở trạng thái đã xóa từ trước khi triển khai; không khôi phục để tránh ghi đè thay đổi hiện có.
+
+---
+
 # IMPLEMENT: Sửa ReferenceError stageFiles trên Gemini Canvas
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
