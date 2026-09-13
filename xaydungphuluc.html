@@ -1460,6 +1460,7 @@ function updateAiPicker({preserveSlider=false}={}){
   if(!card||!list||!count)return;
   const rows=aiPickerRows(),candidates=aiPeriodCandidates(),periodsByLesson=new Map(),selected=selectedAiPeriodIds(candidates),total=candidates.length,rate=syncAiRateFromSelection(candidates,selected,preserveSlider);
   candidates.forEach(period=>{if(!periodsByLesson.has(period.lessonId))periodsByLesson.set(period.lessonId,[]);periodsByLesson.get(period.lessonId).push(period)});
+  for(const [lessonId,periods] of periodsByLesson)if(isSinglePeriodLesson(lessonId)&&nlsSelectedLessonIds.has(lessonId))periods.forEach(period=>selected.delete(period.id));
   const totals={lessons:nlsCandidates(),periods:candidates,totalLessons:nlsCandidates().length,totalPeriods:candidates.length},nlsRate=typeof syncNlsRateFromSelection==='function'?syncNlsRateFromSelection(preserveSlider,totals):0;
   const nlsPeriods=nlsSelectedPeriodCount(),aiLessons=new Set([...selected].map(id=>String(id).replace(/:period:\d+$/,''))).size;
   card.classList.remove('hidden');count.textContent=`📊 NLS: ${nlsPeriods} tiết PPCT (${nlsSelectedLessonIds.size} bài) · 🎯 AI: ${selected.size} tiết PPCT (${aiLessons} bài)`;
@@ -1467,14 +1468,7 @@ function updateAiPicker({preserveSlider=false}={}){
 }
 function toggleAiLesson(id,checked){const selected=selectedAiPeriodIds(),period=aiPeriodCandidates().find(item=>item.id===id);if(checked&&period&&isSinglePeriodLesson(period.lessonId))nlsSelectedLessonIds.delete(period.lessonId);if(checked)selected.add(id);else selected.delete(id);syncNlsRateFromSelection();updateAiPicker();schedulePreviewUpdate();}
 function toggleAiLessonRow(lessonId,checked){const periods=aiPeriodCandidates().filter(x=>x.lessonId===lessonId),selected=selectedAiPeriodIds();if(checked&&isSinglePeriodLesson(lessonId))nlsSelectedLessonIds.delete(lessonId);if(checked)periods.forEach(period=>selected.add(period.id));else periods.forEach(period=>selected.delete(period.id));syncNlsRateFromSelection();updateAiPicker();schedulePreviewUpdate();}
-function suggestAiLessons(){
-  const aiCheckbox=document.querySelector('#aiEnabled');
-  if(aiCheckbox&&!aiCheckbox.checked) aiCheckbox.checked=true;
-  const rateEl=document.querySelector('#aiRate');
-  if(rateEl&&Number(rateEl.value)<=0) rateEl.value='30';
-  syncAiSelectionFromRate();
-  notify(`Đã gợi ý ${aiSelectedLessonIds.size} tiết AI.`);
-}
+function suggestAiLessons(){const aiCheckbox=document.querySelector('#aiEnabled');if(aiCheckbox&&!aiCheckbox.checked)aiCheckbox.checked=true;const countVal=Number(document.querySelector('#aiCountInput')?.value);if(countVal>0)syncAiSelectionFromCount(countVal);else{if(Number(aiRate.value)<=0)aiRate.value='30';syncAiSelectionFromRate()}notify(`Đã gợi ý chính xác ${selectedAiPeriodIds().size} tiết AI (${selectedAiLessons().length} bài) theo độ phù hợp sư phạm.`)}
 function clearAiLessons(){aiSelectedLessonIds.clear();updateAiPicker();notify('Đã bỏ chọn tất cả tiết AI.')}
 function updatePpctLessonPeriods(rowId,value){const count=validPeriodCount(value);if(String(value).trim()!==String(count))notify('Số tiết không hợp lệ; đã dùng 1 tiết.');const index=Number(rowId.split(':')[1]);if(rowId.startsWith('source:')&&sourcePpctTable){const table=sourcePpctTable,periodsIndex=(table.columns||[]).map(normalizeHeaderKey).indexOf('periods');if(periodsIndex>=0&&table.rows[index])table.rows[index].cells[periodsIndex]=String(count);if(sourcePpctRows[index])sourcePpctRows[index].periods=String(count);}else if(rowId.startsWith('ppct:')&&sourcePpctRows[index])sourcePpctRows[index].periods=String(count);refreshPpctDependents();}
 function loadDefaultPpctStructure(silent=false){
@@ -1723,6 +1717,7 @@ normalizeAppendix=function(data,no,c){
     const source=(typeof sourcePpctRows!=='undefined'&&Array.isArray(sourcePpctRows)&&sourcePpctRows.length?sourcePpctRows:(typeof defaultPpctRows==='function'?defaultPpctRows(c):[])).filter(row=>!row.isHeader);let normalIndex=0;
     normalized.schedule=(normalized.schedule||[]).map(row=>{if(row.isHeader)return row;const src=source[normalIndex++]||{};return {...row,tietCT:row.tietCT||src.tietCT||'',week:row.week||src.week||'',devices:row.devices||src.devices||'Thiết bị dạy học tối thiểu',location:row.location||src.location||'Lớp học'}});
     normalized.scheduleTable=appendixOneTable(normalized.schedule,c);
+    const standard=fallback('1',c);normalized.devices=(sourceDevices.length?sourceDevices:(Array.isArray(normalized.devices)&&normalized.devices.length?normalized.devices:standard.devices))||[];normalized.rooms=(sourceRooms.length?sourceRooms:(Array.isArray(normalized.rooms)&&normalized.rooms.length?normalized.rooms:standard.rooms))||[];
   }
   return normalized;
 };

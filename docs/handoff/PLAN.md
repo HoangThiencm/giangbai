@@ -154,13 +154,98 @@
      Giữ nguyên merger dòng tiêu đề (`colspan: columns.length`) và bảng 7 cột chuẩn của Phụ lục 3 (`appendixThree`: `[20, 5, 6, 5, 15, 14, 35]`).
   4. Đồng bộ các sửa đổi sang file `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
 
+### Bước 4: Sửa triệt để lỗi Gợi ý AI chọn 140 tiết, bài 1 tiết bị chọn cả NLS và AI, và thiếu Bảng Thiết bị / Phòng học ở Phụ lục 1
+
+1. **Sửa hàm `suggestAiLessons`**:
+   - **Nguyên nhân**: Hàm cũ viết `aiSelectedLessonIds = new Set(prioritizedAiPeriods().map(x=>x.id));` nên khi người dùng bấm nút "Gợi ý chọn tiết AI", nó chọn toàn bộ 140 tiết của cả năm học, làm bài nào cũng có AI.
+   - **Cách sửa**:
+     ```javascript
+     function suggestAiLessons(){
+       const countVal = Number(document.querySelector('#aiCountInput')?.value);
+       if (countVal > 0) syncAiSelectionFromCount(countVal);
+       else syncAiSelectionFromRate();
+       notify(`Đã gợi ý chính xác ${selectedAiPeriodIds().size} tiết AI (${selectedAiLessons().length} bài) theo độ phù hợp sư phạm.`);
+     }
+     ```
+
+2. **Quy ước bài 1 tiết chỉ có NLS hoặc AI (Ràng buộc loại trừ tuyệt đối)**:
+   - **Nguyên tắc Sư phạm**: Bài 1 tiết chỉ có thời lượng 45 phút, không được ôm đồm cả NLS và AI. Nếu đã tích hợp NLS thì không tích hợp AI, và ngược lại.
+   - **Cơ chế hoạt động**:
+     - Khi chọn NLS cho bài 1 tiết: Hệ thống tự động xóa toàn bộ tiết AI của bài đó (`toggleAiLessonRow(lessonId, false)`).
+     - Khi chọn AI cho bài 1 tiết: Hệ thống tự động bỏ tick NLS của bài đó (`nlsSelectedLessonIds.delete(lessonId)`).
+     - Trong `canUseAiPeriod`: Bỏ qua các bài 1 tiết đã có trong `nlsSelectedLessonIds`.
+     - Trong `canUseNlsLesson`: Bỏ qua các bài 1 tiết đã có tiết AI được chọn.
+     - Trong bảng Mục 5 (`updateAiPicker`): Với bài 1 tiết, nếu đã tick NLS thì checkbox AI bị bỏ tick; nếu đã tick AI thì checkbox NLS bị bỏ tick. Tuyệt đối không cho phép 1 bài 1 tiết được tick cả hai.
+
+3. **Bảo toàn hiển thị NLS trong cột Ghi chú Phụ lục 1**:
+   - Khi bài 1 tiết được chọn NLS và không có AI, `getExpectedNlsCount(1, false, c)` trả về `1` $\rightarrow$ mã NLS được xuất đầy đủ vào cột Ghi chú (không còn bị rỗng hay chỉ xuất mã AI).
+
+4. **Khôi phục Bảng Thiết bị (Mục 3) và Phòng học (Mục 4) của Phụ lục 1**:
+   - Khi tệp PPCT tải lên không có bảng thiết bị/phòng học riêng, `normalizeAppendix` cho Phụ lục 1 phải tự động nạp thiết bị và phòng học chuẩn theo quy định CV 5512 từ `fallback('1', c)`:
+     ```javascript
+     data.devices = (sourceDevices.length ? sourceDevices : (Array.isArray(data.devices) && data.devices.length ? data.devices : fallback('1', c).devices)) || [];
+     data.rooms = (sourceRooms.length ? sourceRooms : (Array.isArray(data.rooms) && data.rooms.length ? data.rooms : fallback('1', c).rooms)) || [];
+     ```
+   - Trong `data.schedule`: Đảm bảo mỗi dòng bài học đều có `devices` (nếu thiếu thì gán `defaultEquip`) và `location` (nếu thiếu thì gán `'Lớp học'`), giúp tiêu chí Thiết bị & địa điểm trong Thẩm định đạt 89/89 bài (100% Đạt).
+
+### Bước 5: Thông báo Popup số tiết đã chọn / còn lại khi chọn bằng tay & Khóa chặn khi vượt quá hạn mức
+
+1. **Yêu cầu & Hành vi người dùng**:
+   - Khi giáo viên tick hoặc bỏ tick bằng tay ở bảng Mục 5 (cho cả NLS và AI):
+     - Hiển thị popup toast thông báo tức thì: **Đã chọn bao nhiêu tiết / Mục tiêu bao nhiêu tiết / Còn lại bao nhiêu tiết**.
+     - **Nếu vượt quá mục tiêu đã cài đặt**: Tuyệt đối **không cho chọn nữa**; tự động hoàn tác checkbox (bỏ tick ngay) và bật popup cảnh báo:
+       `⚠️ Đã đạt giới hạn mục tiêu (X/Y tiết). Không thể chọn thêm bài này (Z tiết). Số tiết còn lại: 0.`
+
+2. **Triển khai kỹ thuật**:
+   - **Với NLS (`toggleNlsLesson(lessonId, checked, el)`)**:
+     - Lấy số tiết của bài học `p = lesson.periodCount || validPeriodCount(...) || 1`.
+     - Lấy số tiết mục tiêu: `target = Number(document.querySelector('#nlsCountInput')?.value) || Math.round((Number(document.querySelector('#nlsRate')?.value)||0)/100 * allocationTotals().totalPeriods)`.
+     - Khi `checked === true`:
+       - Nếu `target > 0 && currentCount + p > target`:
+         - Revert checkbox: `if (el) el.checked = false;`
+         - Bật toast cảnh báo: `⚠️ Đã đạt giới hạn: Đã chọn ${currentCount}/${target} tiết NLS. Không thể chọn thêm bài này (${p} tiết). Còn lại: ${Math.max(0, target - currentCount)} tiết.`
+         - Kết thúc, không thêm vào `nlsSelectedLessonIds`.
+       - Nếu hợp lệ:
+         - Thêm vào `nlsSelectedLessonIds`.
+         - Nếu là bài 1 tiết: tự động hủy AI của bài đó (`toggleAiLessonRow(lessonId, false)`).
+         - Bật toast: `✓ Đã chọn NLS: ${afterCount}/${target||'∞'} tiết (${nlsSelectedLessonIds.size} bài). Còn lại: ${target > 0 ? Math.max(0, target - afterCount) : '—'} tiết.`
+     - Khi `checked === false`:
+       - Xóa khỏi `nlsSelectedLessonIds`.
+       - Bật toast: `Đã bỏ chọn NLS bài này (-${p} tiết). Hiện tại: ${afterCount}/${target||'∞'} tiết. Còn lại: ${target > 0 ? Math.max(0, target - afterCount) : '—'} tiết.`
+
+   - **Với AI (`toggleAiLesson(id, checked, el)` và `toggleAiLessonRow(lessonId, checked, el)`)**:
+     - Lấy số tiết mục tiêu AI: `target = Number(document.querySelector('#aiCountInput')?.value) || Math.round((Number(document.querySelector('#aiRate')?.value)||0)/100 * allocationTotals().totalPeriods)`.
+     - Khi `checked === true`:
+       - Kiểm tra nếu `target > 0 && currentAiCount + addCount > target`:
+         - Revert checkbox: `if (el) el.checked = false;`
+         - Bật toast: `⚠️ Đã đạt giới hạn: Đã chọn ${currentAiCount}/${target} tiết AI. Không thể chọn thêm (${addCount} tiết). Còn lại: ${Math.max(0, target - currentAiCount)} tiết.`
+         - Kết thúc, không thêm vào `aiSelectedLessonIds`.
+       - Nếu hợp lệ:
+         - Nếu là bài 1 tiết: tự động bỏ tick NLS của bài đó (`nlsSelectedLessonIds.delete(lessonId)`).
+         - Thêm vào `aiSelectedLessonIds`.
+         - Bật toast: `✓ Đã chọn AI: ${afterCount}/${target||'∞'} tiết. Còn lại: ${target > 0 ? Math.max(0, target - afterCount) : '—'} tiết.`
+     - Khi `checked === false`:
+       - Xóa khỏi `aiSelectedLessonIds`.
+       - Bật toast: `Đã bỏ chọn tiết AI. Hiện tại: ${afterCount}/${target||'∞'} tiết. Còn lại: ${target > 0 ? Math.max(0, target - afterCount) : '—'} tiết.`
+
+   - Trong template HTML của `updateAiPicker`:
+     Truyền tham chiếu `this` vào các hàm:
+     `onchange="toggleNlsLesson('${row.id}',this.checked,this)"`
+     `onchange="toggleAiLessonRow('${row.id}',this.checked,this)"`
+     `onchange="toggleAiLesson('${x.id}',this.checked,this)"`
+
+3. **Đồng bộ**: Áp dụng đồng thời trên `canvas_xaydungphuluc.html`, `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+
 ---
 
 ## 3. Tiêu chí nghiệm thu (Verification Criteria)
-1. **Lỗi Fetch Header**: Mở modal Tải/Lưu CSDL khi tài khoản là `"Hoàng Tấn Thiên"`, không ném lỗi `String contains non ISO-8859-1 code point`.
-2. **Chọn tiết NLS**: Nhập `28` tiết vào ô `#nlsCountInput` $\rightarrow$ Hệ thống chọn các bài có điểm ưu tiên sư phạm cao nhất và đạt đúng **chính xác 28 tiết**, không tự ý nhảy thành 30 tiết.
-3. **Phụ lục 3 chuẩn mẫu Word CV 5512**:
-   - Xuất Word Phụ lục 3 có đầy đủ cột `Tiết CT` và `Tuần` như file PPCT tải lên.
-   - Hiển thị đầy đủ các dòng tiêu đề Học kỳ, Chương (`HỌC KÌ I`, `CHƯƠNG I...`) merge toàn bộ 7 cột, căn giữa, in đậm.
-   - Cột `Ghi chú` hiển thị đầy đủ mã NLS & AI đồng bộ 100% với Phụ lục 1.
-4. Chạy smoke test `tests/canvas-xaydungphuluc-smoke.js` và `tests/xaydungphuluc-smoke.js` đạt PASS 100%.
+1. **Chọn tay NLS**:
+   - Khi tick bài học: Popup hiển thị rõ số tiết đã chọn và số tiết còn lại theo mục tiêu.
+   - Khi tổng số tiết cộng dồn vượt quá số tiết mục tiêu (ví dụ quá 28 tiết): Checkbox tự bỏ tick và hiện cảnh báo không cho chọn tiếp.
+2. **Chọn tay AI**:
+   - Khi tick tiết AI: Popup hiển thị số tiết đã chọn và số tiết còn lại.
+   - Khi vượt quá hạn mức AI đã cài đặt: Checkbox tự bỏ tick và hiện thông báo khóa chặn.
+3. **Quy ước bài 1 tiết**: Tuyệt đối không bài 1 tiết nào được chọn đồng thời cả NLS và AI.
+4. **Báo cáo Thẩm định Sư phạm**: Đạt chuẩn 100% tất cả các tiêu chí.
+5. Chạy smoke test `tests/canvas-xaydungphuluc-smoke.js` và `tests/xaydungphuluc-smoke.js` đạt PASS 100%.
+
