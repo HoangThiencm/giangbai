@@ -1,187 +1,140 @@
-# PLAN: Sửa hiển thị tiêu đề NLS/AI và hoàn thiện đầy đủ danh sách bài học, cột Ghi chú cho Phụ lục 3
+# PLAN: Khắc phục lỗi Header Fetch, Tối ưu chọn NLS/AI chuẩn sư phạm & chính xác tuyệt đối, Đồng bộ 100% Phụ lục 3 từ Phụ lục 1
 
-## Hiện trạng & Nguyên nhân gốc rễ
+## 1. Tổng quan các vấn đề khảo sát & Phản biện Sư phạm
 
-### 1. Mất tiêu đề "Năng lực số" và "Năng lực AI" khi có từ 2 mã trở lên
-- **Hiện trạng**: Bài 1 mã NLS/AI hiển thị đầy đủ dòng `- Năng lực số: Mã : Mô tả`. Nhưng khi bài có 2 mã trở lên, chỉ hiển thị các dòng con `+ Mã 1 : ...`, `+ Mã 2 : ...`, mất hẳn dòng tiêu đề `- Năng lực số:`.
-- **Nguyên nhân**: Trong `integrationParts(value)` (dòng 1544 của `xaydungphuluc.html` và tương ứng trong các file canvas), khi `subItems.length > 0`, hàm chỉ lặp và `push` các dòng con `sub` vào `results`, bỏ rơi dòng tiêu đề `lines[0]` (`- Năng lực số:` hoặc `- Năng lực AI:`).
+### Vấn đề 1: Lỗi `String contains non ISO-8859-1 code point` khi Mở Modal Tải/Lưu CSDL
+- **Nguyên nhân**: `prefillCanvasDraftAccount` tự động lấy tên giáo viên có dấu (`"Hoàng Tấn Thiên"`) làm username và truyền vào HTTP Header `'X-User-Account'` trong `requestCanvasDraft`. Trình duyệt chuẩn W3C Fetch API cấm ký tự Unicode mã > 255 trong Header, gây ném ngoại lệ ngay lập tức.
+- **Giải pháp**:
+  - Dùng `encodeURIComponent(account)` khi gán vào `'X-User-Account'`.
+  - Backend PHP `api/user_phuluc_draft.php` dùng `rawurldecode()`.
+  - Sửa `prefillCanvasDraftAccount`: chỉ lấy username hợp lệ, không tự ý gán họ tên giáo viên có dấu vào ô username.
 
-### 2. Phụ lục 3 chỉ làm được mấy bài ("làm mấy bài thôi, không đầy đủ")
-- **Hiện trạng**: Xuất Phụ lục 3 chỉ ra 9–10 bài đầu (Chương I và đầu Chương II), mất toàn bộ phần còn lại của năm học (30–40 bài).
-- **Nguyên nhân**:
-  1. `appendixPrompt(3, c)` yêu cầu AI sinh lại toàn bộ bảng PPCT `{plan: [...]}`. Do giới hạn token, Gemini bị cắt ngắn, chỉ trả về được 9–10 bài đầu.
-  2. Trong `normalizeAppendix(data, '3', c)` (dòng 1637):
+---
+
+### Vấn đề 2: Chọn 28 tiết NLS lại ra 30 tiết (Không tuân thủ số tiết đã chọn)
+- **Phản biện Sư phạm & Kỹ thuật**:
+  - **Không phải "vét bừa" các bài 1 tiết**: Việc tích hợp NLS và AI vào môn học bắt buộc phải dựa trên **độ phù hợp sư phạm của từng bài học** (ví dụ: các bài có thực hành số, hình học trực quan GeoGebra, biểu đồ thống kê Excel, hoạt động trải nghiệm/STEM được tính điểm ưu tiên sư phạm cao; các bài ôn tập, kiểm tra định kỳ có điểm ưu tiên thấp).
+  - **Tuyệt đối tuân thủ con số người dùng đã chọn**: Khi giáo viên đã định mức chọn **đúng 28 tiết NLS** (hoặc 12 tiết AI), hệ thống **tuyệt đối không được tự ý nhảy cóc lên 30 tiết** hay xê dịch làm tròn.
+  - **Nguyên nhân code cũ bị nhảy số**:
+    1. Cơ chế đồng bộ bị phụ thuộc vào thanh trượt `%` (`#nlsRate`), khi bấm gợi ý nó tự động quy đổi ngược từ % với phép làm tròn `Math.round`, làm ghi đè mất con số 28 tiết chính xác mà giáo viên đã nhập.
+    2. Thuật toán chọn bài cũ dùng phép duyệt tham lam (Greedy) và ràng buộc cứng loại trừ bài đơn tiết, dẫn đến việc khi thiếu bài lẻ nó nhảy cóc sang bài 2-3 tiết làm vượt ngưỡng lên 30.
+- **Giải pháp chuẩn xác**:
+  - Áp dụng bài toán **0/1 Knapsack tối ưu hóa Sư phạm có ràng buộc Dung lượng chính xác (Exact Capacity Knapsack)**:
+    - **Mục tiêu**: Tối đa hóa tổng điểm ưu tiên sư phạm $\sum \text{Score}_i$ của các bài học được tích hợp (ưu tiên các bài học phù hợp nhất với NLS theo Catalog chương trình).
+    - **Ràng buộc cứng**: Tổng số tiết của các bài học được chọn $\sum \text{Periods}_i = \text{Target}$ **(chính xác tuyệt đối 100% bằng đúng con số giáo viên yêu cầu, ví dụ đúng 28 tiết)**.
+  - Lắng nghe tức thì sự kiện `input` trên ô `#nlsCountInput` và `#aiCountInput`. Khi giáo viên đã chỉ định số lượng cụ thể, hệ thống cố định con số này, không để thanh trượt `%` làm tròn đè lên.
+
+---
+
+### Vấn đề 3: Phụ lục 3 bị mất Tiết CT, mất Tuần, mất tiêu đề Học kỳ/Chương và lệch so với Phụ lục 1
+- **Phản biện Sư phạm**:
+  - Nhận định của giáo viên: **"Phụ lục 1 làm chuẩn, Phụ lục 3 chỉ điều chỉnh lại từ Phụ lục 1"** là **chuẩn tắc 100% theo Công văn 5512/BGDĐT-GDTrH**:
+    - Phụ lục 1 là Kế hoạch dạy học của Tổ chuyên môn, phê duyệt khung phân phối chương trình chung của cả khối.
+    - Phụ lục 3 là Kế hoạch giáo dục của cá nhân giáo viên, bắt buộc phải kế thừa nguyên vẹn 100% khung PPCT đã duyệt của Tổ chuyên môn (Bài học, Số tiết, Tiết CT, Tuần, Thiết bị, Địa điểm, dòng tiêu đề Học kỳ/Chương).
+    - Cột 7 của Phụ lục 3 là `Ghi chú`: đồng bộ nội dung tích hợp NLS & AI tương ứng từng bài từ Phụ lục 1.
+- **Nguyên nhân code cũ gây lỗi**:
+  - Khi sinh Phụ lục 3, code lại gửi prompt gọi AI Gemini sinh lại bảng PPCT. AI văn bản không thể ghi nhớ và khớp chính xác số thứ tự Tiết CT (1, 2, 5, 6...) và Tuần từ tệp tải lên, đồng thời AI tự tiện bỏ qua các dòng tiêu đề Học kỳ/Chương.
+- **Giải pháp triệt để**:
+  - **Tuyệt đối không cho AI sinh lại bảng PPCT ở Phụ lục 3**.
+  - Kế thừa trực tiếp 100% từ Bảng nguồn PPCT / Phụ lục 1 sang Phụ lục 3:
+    - Giữ nguyên từng bài, số tiết, **Tiết CT**, **Tuần**, thiết bị, địa điểm.
+    - Giữ nguyên các dòng tiêu đề phân cấp: `HỌC KÌ I`, `1. SỐ HỌC 6`, `CHƯƠNG I. TẬP HỢP SỐ TỰ NHIÊN (13 tiết)` (`isHeader: true`).
+    - Cột `Ghi chú`: Đồng bộ 100% từ cột Ghi chú của Phụ lục 1.
+  - Khi xuất Word (`exportDocx`): Các dòng `isHeader: true` được merge toàn bộ 7 cột (`colspan="7"`), căn giữa, in đậm đúng chuẩn mẫu CV 5512.
+
+---
+
+## 2. Chi tiết các bước thực hiện cho Coder
+
+### Bước 1: Sửa lỗi Fetch Header trong `canvas_xaydungphuluc.html` và `api/user_phuluc_draft.php`
+1. Tại `canvas_xaydungphuluc.html`:
+   - Hàm `requestCanvasDraft`: Bọc `'X-User-Account': encodeURIComponent(account)`.
+   - Hàm `prefillCanvasDraftAccount`: Không lấy `#teacher` nếu có dấu tiếng Việt hoặc khoảng trắng.
+2. Tại `api/user_phuluc_draft.php`:
+   - Thêm `if (strpos($account, '%') !== false) $account = rawurldecode($account);`.
+
+### Bước 2: Chuẩn hóa thuật toán Knapsack Tối ưu Sư phạm & Tuyệt đối đúng số tiết đã chọn
+1. Tại `canvas_xaydungphuluc.html`:
+   - Bổ sung sự kiện `input` trên `#nlsCountInput`:
      ```javascript
-     let planCandidate = Array.isArray(data.plan) && data.plan.length ? data.plan : ...
+     document.querySelector('#nlsCountInput')?.addEventListener('input', e => syncNlsSelectionFromCount(e.target.value));
      ```
-     Vì `data.plan` có 9 bài do AI trả về, `planCandidate` lấy luôn mảng 9 bài này và vứt bỏ toàn bộ danh sách đầy đủ 47 bài của PPCT nguồn / Phụ lục 1.
-  3. Trong `renderPreview` (dòng 1662) và `exportDocx` (dòng 1674):
-     Điều kiện kiểm tra `r.planTable.columns.length === 8` bị sai lệch vì bảng Phụ lục 3 chuẩn hiện hành có 7 cột (kết thúc bằng `Ghi chú`). Do `7 === 8` luôn trả về `false`, `planModel` bị hủy và buộc phải chạy lại hàm tạo bảng trên dữ liệu thiếu.
+   - Nâng cấp hàm `chooseNlsLessonsForPeriods(target)` bằng giải thuật Quy hoạch động Knapsack tối ưu điểm sư phạm (`score` từ `nlsLessonPriorityScore`):
+     ```javascript
+     function chooseNlsLessonsForPeriods(target, candidates = nlsCandidates()){
+       const targetNum = Number(target) || 0;
+       if (targetNum <= 0) return new Set();
+       const eligible = candidates.filter(item => !item.isHeader && item.lesson);
+       
+       // dp[w] lưu { score: tổng_điểm_sư_phạm, ids: [danh_sách_id] }
+       const dp = new Map();
+       dp.set(0, { score: 0, ids: [] });
 
-### 3. Phụ lục 3 không đưa ra được Ghi chú (toàn bộ cột Ghi chú bị dấu gạch `-`)
-- **Hiện trạng**: Toàn bộ các dòng trong cột Ghi chú của Phụ lục 3 bị gạch ngang `-`, không hiển thị NLS và AI.
-- **Nguyên nhân**:
-  1. Trong `appendixThreeTable` (dòng 211 / dòng 1690): Hàm tìm `isNlsColumn` và `isAiColumn` trên `pl1Model`, nhưng Phụ lục 1 đã gộp 2 cột này thành cột `Ghi chú` (`isNoteColumn`). Hàm không tìm thấy (`-1`) và không lấy nội dung cột `Ghi chú` của Phụ lục 1.
-  2. Hàm sau đó fallback sang `separateIntegration(row.integration, ...)`. Trong `separateIntegration`, hàm `isLessonNlsSelected(lessonId, lessonName, ...)` kiểm tra ID: các dòng của Phụ lục 3 có ID dạng `ppct:0` trong khi danh sách tick chọn có ID dạng `source:0`. Do `hasId` là `true` nhưng không khớp, dòng 1396 trả về `false` ngay lập tức mà không tiếp tục so sánh theo `lessonName`. NLS bị xóa sạch thành `'-'`, khiến `formatNoteIntegration` trả về `'-'`.
+       for (const item of eligible){
+         const p = item.periodCount || validPeriodCount(item.periods, item.tietCT) || 1;
+         const s = typeof nlsLessonPriorityScore === 'function' ? nlsLessonPriorityScore(item.lesson) : 5;
+         const currentEntries = [...dp.entries()];
+         for (const [w, state] of currentEntries){
+           const nextW = w + p;
+           if (nextW <= targetNum){
+             const nextScore = state.score + s;
+             if (!dp.has(nextW) || dp.get(nextW).score < nextScore){
+               dp.set(nextW, { score: nextScore, ids: [...state.ids, item.id] });
+             }
+           }
+         }
+       }
 
----
+       // Ưu tiên cao nhất: Tìm đúng tổ hợp có tổng số tiết = targetNum và điểm sư phạm cao nhất
+       if (dp.has(targetNum)) return new Set(dp.get(targetNum).ids);
 
-## Phạm vi thực hiện
+       // Nếu không có cách ghép chính xác bằng targetNum, lấy tổ hợp có tổng tiết gần nhất (<= targetNum) với điểm sư phạm cao nhất
+       const bestWeight = [...dp.keys()].reduce((max, w) => w > max ? w : max, 0);
+       return new Set(dp.get(bestWeight)?.ids || []);
+     }
+     ```
+   - Hàm `suggestNlsLessons()`:
+     ```javascript
+     function suggestNlsLessons(){
+       const countVal = Number(document.querySelector('#nlsCountInput')?.value);
+       if (countVal > 0) {
+         syncNlsSelectionFromCount(countVal);
+       } else {
+         syncNlsSelectionFromRate();
+       }
+       notify(`Đã gợi ý chính xác ${nlsSelectedPeriodCount()} tiết NLS (${nlsSelectedLessonIds.size} bài) theo độ phù hợp sư phạm.`);
+     }
+     ```
 
-1. **Sửa `integrationParts(value)`**: Khi phân tách khối có các dòng con `subItems` (`+ ...`), bắt buộc đưa dòng tiêu đề `lines[0]` vào kết quả trước khi đưa các dòng `subItems`.
-2. **Sửa `normalizeAppendix` cho Phụ lục 3**: Bảo đảm danh sách bài học của Phụ lục 3 luôn lấy trọn vẹn 100% từ tiến trình chuẩn (`results['1']?.schedule`, `sourcePpctRows` hoặc `defaultPpctRows(c)`), không bao giờ bị cắt cụt bởi kết quả AI trả về thiếu bài.
-3. **Đồng bộ chuẩn xác cột Ghi chú cho Phụ lục 3 trong `appendixThreeTable`**:
-   - Ưu tiên lấy trực tiếp nội dung cột `Ghi chú` đã có từ `pl1Model` (Phụ lục 1) theo bài học tương ứng để đảm bảo đồng bộ 100% giữa Tổ chuyên môn và Giáo viên.
-   - Nếu không có bảng Phụ lục 1, sử dụng `formatNoteIntegration` từ chính `row.integration` của bài học.
-4. **Sửa `isLessonNlsSelected`**: Khi `hasId` không khớp trong Set thì không được `return false` ngay mà phải tiếp tục đối chiếu theo `lessonName`.
-5. **Sửa điều kiện kiểm tra số cột Phụ lục 3 trong `renderPreview` và `exportDocx`**: Chuyển từ `length === 8` sang `length === 7` (hoặc `APPENDIX_3_COLUMNS.length`).
-6. **Đồng bộ 1:1 sang các file Canvas và cập nhật smoke test**.
-
----
-
-## Ngoài phạm vi
-- Không thay đổi các tiêu chí và công thức tính tỷ lệ NLS / AI.
-- Không thay đổi cấu trúc bảng hay thông tin hành chính của Phụ lục 1 và Phụ lục 2.
-
----
-
-## File dự kiến tác động
-- `xaydungphuluc.html`
-- `canvas_xaydungphuluc.html`
-- `backupcode viettailieu/canvas_xaydungphuluc.html`
-- `tests/xaydungphuluc-smoke.js`
-- `tests/canvas-xaydungphuluc-smoke.js`
-
----
-
-## Chi tiết các bước thực hiện
-
-### Bước 1: Sửa hàm `integrationParts(value)` (giữ dòng tiêu đề `- Năng lực số:` / `- Năng lực AI:`)
-Tại dòng 1544 trong `xaydungphuluc.html` (và tương ứng trong các file canvas):
-```javascript
-if (subItems.length) {
-  if (lines[0]) results.push({ text: lines[0], ai: isAi });
-  for (const sub of subItems) results.push({ text: sub, ai: isAi });
-} else {
-  results.push({ text: b, ai: isAi });
-}
-```
-
-### Bước 2: Sửa `isLessonNlsSelected` (tránh nuốt NLS khi ID có prefix khác nhau)
-Tại dòng 1395:
-```javascript
-if (hasExplicit) {
-  if (hasId && nlsSelectedLessonIds.has(lessonId)) return true;
-  if (lessonName) {
-    const match = nlsCandidates().find(x => typeof lessonsMatch === 'function' ? lessonsMatch(x.lesson, lessonName) : x.lesson === lessonName);
-    if (match && nlsSelectedLessonIds.has(match.id)) return true;
-  }
-  return false;
-}
-```
-Và tại dòng 1410:
-```javascript
-if (hasId && topIds.has(lessonId)) return true;
-if (lessonName) {
-  const match = prioritized.slice(0, targetCount).find(x => typeof lessonsMatch === 'function' ? lessonsMatch(x.lesson, lessonName) : x.lesson === lessonName);
-  if (match) return true;
-}
-return false;
-```
-
-### Bước 3: Sửa `normalizeAppendix` cho Phụ lục 3 (bảo toàn 100% danh sách bài học, không bị AI cắt cụt)
-Tại dòng 1637 trong `normalizeAppendix` nhánh `no === '3'`:
-Lấy `fullSchedule` từ `results['1']?.schedule` hoặc `sourcePpctRows` hoặc `defaultPpctRows(c)`.
-Ánh xạ toàn bộ danh sách `fullSchedule`:
-```javascript
-const defaultEquip = (typeof EQUIPMENT !== 'undefined' && c && (EQUIPMENT[c.monHoc] || EQUIPMENT.default)) ? (EQUIPMENT[c.monHoc] || EQUIPMENT.default).slice(0, 2).join(', ') : 'Thiết bị dạy học tối thiểu';
-let fullSchedule = [];
-if (results['1'] && Array.isArray(results['1'].schedule) && results['1'].schedule.length) fullSchedule = results['1'].schedule;
-else if (typeof sourcePpctRows !== 'undefined' && Array.isArray(sourcePpctRows) && sourcePpctRows.length) fullSchedule = sourcePpctRows;
-else if (typeof defaultPpctRows === 'function') fullSchedule = defaultPpctRows(c);
-
-const aiPlan = Array.isArray(data?.plan) && data.plan.length ? data.plan : (Array.isArray(data?.schedule) ? data.schedule : []);
-data.plan = fullSchedule.map((baseRow, idx) => {
-  if (baseRow.isHeader) return ppctRow(baseRow, idx, c);
-  const matchingAi = aiPlan.find(r => !r.isHeader && typeof lessonsMatch === 'function' && lessonsMatch(r.lesson, baseRow.lesson));
-  return ppctRow({
-    ...baseRow,
-    devices: matchingAi?.devices || baseRow.devices || defaultEquip,
-    location: matchingAi?.location || baseRow.location || 'Lớp học',
-    integration: matchingAi?.integration || baseRow.integration || ''
-  }, idx, c);
-}).filter(row => row.lesson && !isAdminLesson(row.lesson));
-
-if (!results['1']) results['1'] = normalizeAppendix(fallback('1', c), '1', c);
-data.plan = syncIntegrationFromAppendixOne(data.plan, results['1'].scheduleTable, c);
-data.planTable = appendixThreeTable(data.plan, c);
-```
-
-### Bước 4: Sửa `appendixThreeTable` (đồng bộ trực tiếp Ghi chú từ Phụ lục 1)
-Tại dòng 1690 trong `xaydungphuluc.html`:
-```javascript
-appendixThreeTable = function(rows, c) {
-  const pl1Model = results?.['1']?.scheduleTable ? normalizeIntegrationTable(results['1'].scheduleTable) : null;
-  const pl1NoteIdx = pl1Model ? pl1Model.columns.findIndex(isNoteColumn) : -1;
-  const pl1LessonIdx = pl1Model ? pl1Model.columns.map(normalizeHeaderKey).indexOf('lesson') : -1;
-  const usedPl1 = new Set();
-  let normal = 0;
-
-  const table = legacyAppendixThreeTableForNote(rows, c);
-  const nlsIdx = table.columns.findIndex(isNlsColumn);
-  const aiIdx = table.columns.findIndex(isAiColumn);
-  const nlsCol = nlsIdx >= 0 ? nlsIdx : 6;
-  const aiCol = aiIdx >= 0 ? aiIdx : 7;
-
-  return {
-    ...table,
-    columns: APPENDIX_3_COLUMNS.map(([, label]) => label),
-    rows: table.rows.map((row, idx) => {
-      if (row.isHeader) return row;
-      let note = '';
-      if (pl1Model && pl1NoteIdx >= 0) {
-        const pl1Row = typeof pickAppendixOneRow === 'function' ? pickAppendixOneRow(pl1Model, row.cells[0], usedPl1, normal) : pl1Model.rows.find(item => !item.isHeader && lessonsMatch((item.cells || [])[pl1LessonIdx], row.cells[0]));
-        if (pl1Row) {
-          note = String((pl1Row.cells || [])[pl1NoteIdx] || '').trim();
-        }
-      }
-      if (!note || note === '-') {
-        const nlsText = row.cells[nlsCol];
-        const aiText = row.cells[aiCol];
-        note = formatNoteIntegration(nlsText, aiText, row.cells[0]);
-      }
-      normal++;
-      return { ...row, cells: [...row.cells.slice(0, 6), note || '-'] };
-    })
-  };
-};
-```
-
-### Bước 5: Sửa điều kiện kiểm tra cột Phụ lục 3 trong `renderPreview` và `exportDocx`
-Đổi `columns.length === 8` thành `columns.length === 7` (hoặc `columns.length === APPENDIX_3_COLUMNS.length`):
-- Trong `renderPreview` (dòng 1662)
-- Trong `exportDocx` (dòng 1674)
-- Áp dụng tương tự cho các file canvas.
-
-### Bước 6: Đồng bộ sang `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`
-Đảm bảo đồng bộ 100% logic trên cả 3 file.
-
-### Bước 7: Cập nhật smoke test và kiểm chứng
-1. Cập nhật `tests/xaydungphuluc-smoke.js`:
-   - Kiểm tra `multiNoteParts` có đủ dòng tiêu đề `- Năng lực số:` và `- Năng lực AI:`.
-   - Kiểm tra `appendixThreeTable` giữ đủ toàn bộ danh sách bài học và cột `Ghi chú` khớp với Phụ lục 1.
-2. Cập nhật `tests/canvas-xaydungphuluc-smoke.js` tương tự.
-3. Chạy toàn bộ 4 suite test kiểm tra bảo đảm 100% PASS:
-   - `node tests/xaydungphuluc-smoke.js`
-   - `node tests/canvas-xaydungphuluc-smoke.js`
-   - `node tests/xaydungphuluc-math-smoke.js`
-   - `node tests/xaydungphuluc-integration-smoke.js`
+### Bước 3: Đồng bộ 100% Phụ lục 3 từ Phụ lục 1 / File Nguồn PPCT
+1. Khi sinh nội dung Phụ lục 3 trong `generateSelected` và `normalizeAppendix`:
+   - Bảng I của Phụ lục 3 kế thừa 100% từ cấu trúc nguồn PPCT / Phụ lục 1 (`sourcePpctRows` hoặc `results['1']?.schedule`):
+     - Dòng `isHeader === true`: Giữ nguyên dòng tiêu đề (`lesson: row.lesson`, `isHeader: true`).
+     - Dòng bài học: Giữ nguyên `lesson`, `periods`, `tietCT`, `week`, `devices`, `location`.
+     - Cột `Ghi chú`: Đồng bộ từ cột Ghi chú của Phụ lục 1 (hoặc hàm `formatNoteIntegration`).
+2. Hàm `appendixThreeTable`:
+   - Trả về cấu trúc 7 cột chuẩn: `['Bài học', 'Số tiết', 'Tiết CT', 'Tuần', 'Thiết bị dạy học (*)', 'Địa điểm dạy học (**)', 'Ghi chú']`.
+   - Dòng `row.isHeader`: Trả về `{isHeader: true, cells: [row.lesson]}`.
+   - Dòng bài học: Trả về `[row.lesson, row.periods, row.tietCT, row.week, row.devices, row.location, note || '-']`.
+3. Xuất Word trong `exportDocx`:
+   - Hàm `addPpct` khi gặp dòng `row.isHeader` xuất ra ô merge toàn bộ bảng `colspan="7"`, căn giữa, in đậm:
+     ```javascript
+     if (row.isHeader) {
+       return new TableRow({
+         cantSplit: true,
+         children: [cell((row.cells || []).filter(Boolean).join(' '), { center: true, bold: true, colspan: columns.length, width: 100 })]
+       });
+     }
+     ```
+4. Đồng bộ các sửa đổi sang file `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
 
 ---
 
-## Tiêu chí nghiệm thu
-1. Cột Ghi chú của bài có từ 2 mã NLS/AI trở lên luôn giữ dòng tiêu đề `- Năng lực số:` / `- Năng lực AI:` trước các bullet con `+ `.
-2. Phụ lục 3 hiển thị và xuất Word trọn vẹn 100% số bài học của năm học (đủ 35 tuần / toàn bộ các chương), không bị dừng lại sau 9–10 bài.
-3. Cột Ghi chú trong Phụ lục 3 cập nhật đầy đủ nội dung biểu hiện NLS và AI, khớp 100% với Phụ lục 1.
-4. Báo cáo thẩm định đạt tiêu chí "Đồng bộ NLS & AI (PL1–PL3)" 100%.
-5. Tất cả bài smoke test đều PASS.
+## 3. Tiêu chí nghiệm thu (Verification Criteria)
+1. **Lỗi Fetch Header**: Mở modal Tải/Lưu CSDL khi tài khoản là `"Hoàng Tấn Thiên"`, không ném lỗi `String contains non ISO-8859-1 code point`.
+2. **Chọn tiết NLS**: Nhập `28` tiết vào ô `#nlsCountInput` $\rightarrow$ Hệ thống chọn các bài có điểm ưu tiên sư phạm cao nhất và đạt đúng **chính xác 28 tiết**, không tự ý nhảy thành 30 tiết.
+3. **Phụ lục 3 chuẩn mẫu Word CV 5512**:
+   - Xuất Word Phụ lục 3 có đầy đủ cột `Tiết CT` và `Tuần` như file PPCT tải lên.
+   - Hiển thị đầy đủ các dòng tiêu đề Học kỳ, Chương (`HỌC KÌ I`, `CHƯƠNG I...`) merge toàn bộ 7 cột, căn giữa, in đậm.
+   - Cột `Ghi chú` hiển thị đầy đủ mã NLS & AI đồng bộ 100% với Phụ lục 1.
+4. Chạy smoke test `tests/canvas-xaydungphuluc-smoke.js` và `tests/xaydungphuluc-smoke.js` đạt PASS 100%.

@@ -29,6 +29,7 @@ try {
     if ($userId <= 0) {
         $accountValue=$_SERVER['HTTP_X_USER_ACCOUNT'] ?? $_GET['user_account'] ?? $body['user_account'] ?? '';
         $account=is_string($accountValue)?trim($accountValue):'';
+        if (strpos($account, '%') !== false) $account = rawurldecode($account);
         if ($account !== '') {
             $altAccount = strpos($account, '@') !== false ? explode('@', $account)[0] : $account;
             $user = $pdo->prepare('SELECT id FROM users WHERE (username = ? OR username = ?) AND is_active = 1 LIMIT 1');

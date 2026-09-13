@@ -1,16 +1,18 @@
-# IMPLEMENT: Sửa hiển thị NLS/AI và Phụ lục 3
+# IMPLEMENT
 
-## Đã thực hiện
+## Đã triển khai
 
-- Giữ lại dòng tiêu đề `- Năng lực số:` và `- Năng lực AI:` khi ghi chú có nhiều mã.
-- Cho phép đối chiếu NLS theo tên bài khi mã bài dùng tiền tố khác nhau.
-- Phụ lục 3 luôn dựng lại từ toàn bộ tiến trình chuẩn (ưu tiên Phụ lục 1), chỉ dùng phản hồi AI để bổ sung thiết bị, địa điểm và tích hợp cho bài khớp.
-- Đồng bộ trực tiếp cột `Ghi chú` của Phụ lục 1 sang Phụ lục 3; chỉ tự tạo ghi chú từ `integration` khi chưa có dữ liệu Phụ lục 1.
-- Dùng số cột thực tế của `APPENDIX_3_COLUMNS` khi xem trước và xuất Word.
-- Đồng bộ logic sang cả hai bản Canvas và mở rộng smoke test cho tiêu đề nhiều mã, lịch đầy đủ và mô hình 7 cột.
+- Mã hóa tài khoản trước khi gửi `X-User-Account`, giải mã an toàn ở API, và không còn dùng tên giáo viên có dấu/khoảng trắng làm tài khoản nháp.
+- Thay chọn NLS bằng knapsack 0/1 tối ưu điểm sư phạm, ưu tiên tổng số tiết đúng bằng số nhập; ô số tiết NLS/AI đồng bộ ngay khi nhập.
+- Phụ lục 3 không gọi AI để tái tạo PPCT; bảng kế thừa đầy đủ lịch Phụ lục 1, gồm dòng tiêu đề, Tiết CT, Tuần, thiết bị, địa điểm và Ghi chú tích hợp.
+- Đồng bộ thay đổi giao diện sang `canvas_xaydungphuluc.html`, `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
 
-## Kiểm chứng
+## Kiểm thử
 
-- `git diff --check`: đạt.
-- Đã kiểm tra tĩnh sự có mặt của toàn bộ thay đổi trên cả ba bản HTML.
-- Không chạy được bốn smoke test Node vì Windows chặn runtime `node.exe` của môi trường với thông báo tệp có khả năng không an toàn (`ResourceUnavailable`). Cần gỡ chặn hoặc cài Node hợp lệ rồi chạy lại đầy đủ các lệnh trong `PLAN.md`.
+- `node tests/canvas-xaydungphuluc-smoke.js` — PASS.
+- `node tests/xaydungphuluc-smoke.js` — PASS.
+- Không chạy được kiểm tra cú pháp PHP vì môi trường hiện tại không có lệnh `php`.
+
+## Vấn đề còn lại
+
+Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` theo quy trình trước khi commit/push.
