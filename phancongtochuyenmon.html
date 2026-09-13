@@ -1919,7 +1919,10 @@
                 </div>
                 <div id="tt-selected-count" style="font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:8px;">Đã chọn: 0 giáo viên</div>
                 <button type="button" class="btn-small btn-small-primary" style="width:100%; justify-content:center; margin-bottom:8px;" onclick="sendSelectedTeachersTimetableEmail()">
-                    <i class="fas fa-envelope"></i> Gửi TKB các GV đã chọn qua email
+                    <i class="fas fa-envelope"></i> Gửi bản tổng hợp TKB về email cá nhân
+                </button>
+                <button type="button" class="btn-small" style="width:100%; justify-content:center; margin-bottom:8px;" onclick="sendSelectedTeachersIndividualTimetableEmail()">
+                    <i class="fas fa-paper-plane"></i> Gửi riêng TKB cho từng GV đã chọn
                 </button>
                 <input type="text" class="search-input" id="tt-teacher-search" placeholder="Tìm giáo viên..." oninput="renderTimetableTeacherList()">
                 <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
@@ -2002,7 +2005,7 @@
             <label class="form-group" style="display:block;margin:10px 0 0;max-width:300px;"><b>Khối của PPCT đang nạp</b><select id="bg-ppct-grade" class="form-control" onchange="updateBaoGiangSettings()"><option value="">Chọn khối trước khi AI nhận diện</option><option value="6">Khối 6</option><option value="7">Khối 7</option><option value="8">Khối 8</option><option value="9">Khối 9</option></select></label><p style="font-size:.82rem;color:#64748b;margin:5px 0 0;">Nạp một lần cho mỗi môn/khối, ví dụ <b>Toán · khối 7</b>. Mọi lớp 7 sẽ dùng PPCT này và tự tính tiến độ theo TKB riêng.</p>
             <label class="form-group" style="display:block;margin:10px 0 0;max-width:300px;"><b>Môn của PPCT đang nạp</b><input id="bg-ppct-subject" class="form-control" list="bg-ppct-subject-options" oninput="updateBaoGiangSettings()" placeholder="Ví dụ: Toán hoặc Tin"></label><datalist id="bg-ppct-subject-options"></datalist><p style="font-size:.82rem;color:#64748b;margin:5px 0 0;">Chọn/nhập đúng tên môn đang có trong TKB để lịch ghép chính xác.</p>
             <details style="margin-top:12px;"><summary style="font-weight:800;cursor:pointer;">Ngày nghỉ và dạy bù</summary><p style="font-size:.82rem;color:#64748b;">Dùng “Tôi nghỉ cả ngày” khi không cần nhớ bài. Nếu biết chính xác bài nào/tiết nào, chọn “Đúng một tiết/bài của tôi” rồi chọn dòng lịch bên dưới; bài đó sẽ tự dồn sang lần dạy thực tế kế tiếp.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px;"><label class="form-group">Ngày<input id="bg-ex-date" class="form-control" type="date" onchange="refreshBaoGiangPersonalLessonOptions()"></label><label class="form-group">Loại<select id="bg-ex-type" class="form-control"><option value="off">Nghỉ học</option><option value="makeup">Dạy bù</option></select></label><label class="form-group">Phạm vi nghỉ<select id="bg-ex-scope" class="form-control" onchange="refreshBaoGiangPersonalLessonOptions()"><option value="self">Tôi nghỉ cả ngày</option><option value="self_lesson">Đúng một tiết/bài của tôi</option><option value="self_subject">Một môn tôi dạy</option><option value="all">Toàn trường</option><option value="class">Một lớp</option><option value="teacher">Một giáo viên</option><option value="subject">Một môn toàn trường</option></select></label><label class="form-group">Mục tiêu<input id="bg-ex-target" class="form-control" placeholder="Để trống khi “Tôi nghỉ cả ngày”; nhập tên môn khi cần"></label><label class="form-group" style="grid-column:1/-1;">Tiết/bài cụ thể của tôi<select id="bg-ex-lesson" class="form-control"><option value="">Chọn ngày để xem các tiết của tôi</option></select></label></div><button class="btn-small" type="button" onclick="addBaoGiangException()"><i class="fas fa-plus"></i> Thêm ngoại lệ</button><div id="bg-exceptions" style="margin-top:8px;"></div></details>
-            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;"><button class="btn-small btn-small-primary" onclick="renderBaoGiangView()"><i class="fas fa-rotate"></i> Tính lại lịch</button><label class="form-group" style="margin:0;min-width:170px;"><span style="font-size:.8rem;font-weight:700;">Tuần cần gửi</span><input id="bg-send-week" class="form-control" type="week" onchange="updateBaoGiangSendWeekLabel()"></label><span id="bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 4px;"></span><button class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToSelf()"><i class="fas fa-paper-plane"></i> Gửi lịch tuần đã chọn</button></div>
+            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;"><button class="btn-small btn-small-primary" onclick="renderBaoGiangView()"><i class="fas fa-rotate"></i> Tính lại lịch</button><label class="form-group" style="margin:0;min-width:170px;"><span style="font-size:.8rem;font-weight:700;">Tuần cần gửi</span><input id="bg-send-week" class="form-control" type="week" onchange="updateBaoGiangSendWeekLabel()"></label><span id="bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 4px;"></span><button class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToSelf()"><i class="fas fa-paper-plane"></i> Gửi lịch tuần đã chọn (cá nhân)</button><button class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers()"><i class="fas fa-paper-plane"></i> Gửi lịch tuần cho các GV đã chọn</button></div>
             <div id="bg-schedule" style="margin-top:14px;"></div>
         </div>
     </div>
@@ -3129,6 +3132,34 @@
             if (daysInput) daysInput.value = '7';
             renderBaoGiangView();
             sendBaoGiangToSelf(range.start, 7);
+        }
+
+        function buildTeacherBaoGiangWeekEmail(teacher, range) {
+            const endDate = baoGiangDate(range.end);
+            const scheduleData = decorateBaoGiangRows(baoGiangIso(endDate), range.start);
+            const rows = scheduleData.rows.filter(row => row.date >= range.start && row.date <= range.end && String(row.teacher_id) === String(teacher.id));
+            if (!rows.length) throw new Error(`Không có lịch báo giảng của ${teacher.name} trong tuần đã chọn.`);
+            const ordered = rows.slice().sort((a, b) => a.date.localeCompare(b.date) || String(a.session).localeCompare(String(b.session)) || Number(a.period) - Number(b.period));
+            const bodyRows = ordered.map(row => `${baoGiangWeekdayLabel(row.date)}, ${formatVnDate(row.date)} | ${row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period}`} | Lớp ${row.class_name} | ${row.subject} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'} | PPCT ${row.lesson?.ppct || '—'}`).join('\n');
+            const tableRows = ordered.map(row => `<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(`${baoGiangWeekdayLabel(row.date)} ${formatVnDate(row.date)}`)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} ${row.period}`)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(row.class_name)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(row.subject)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td></tr>`).join('');
+            return { to: teacher.email.trim(), subject: `Lịch báo giảng - ${teacher.name} (${range.start} đến ${range.end})`, body: `Kính gửi thầy/cô ${teacher.name},\n\nLỊCH BÁO GIẢNG TUẦN ${range.start} – ${range.end}\n\n${bodyRows}\n\nTrân trọng.`, html: `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:920px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;"><div style="padding:22px;background:#1e3a8a;color:#fff;"><div style="font-size:23px;font-weight:700;">Lịch báo giảng - ${escapeHtml(teacher.name)}</div><div style="margin-top:6px;">Tuần ${escapeHtml(range.start)} – ${escapeHtml(range.end)}</div></div><div style="padding:18px;overflow-x:auto;"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-size:13px;"><thead><tr style="background:#e2e8f0;"><th style="padding:8px;text-align:left;">Ngày</th><th style="padding:8px;text-align:left;">Buổi / tiết</th><th style="padding:8px;text-align:left;">Lớp</th><th style="padding:8px;text-align:left;">Môn</th><th style="padding:8px;text-align:left;">Bài dạy</th></tr></thead><tbody>${tableRows}</tbody></table></div></div></div>` };
+        }
+
+        async function sendBaoGiangSelectedWeekToTeachers() {
+            try {
+                const range = baoGiangWeekRange(document.getElementById('bg-send-week')?.value);
+                if (!range) throw new Error('Hãy chọn tuần cần gửi.');
+                const ids = new Set(state.bao_giang.recipient_ids || []);
+                const teachers = (state.teachers || []).filter(t => ids.has(t.id));
+                if (!teachers.length) throw new Error('Hãy tích chọn ít nhất một giáo viên nhận lịch ở danh sách Người nhận email.');
+                const missing = teachers.filter(t => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(t.email || '')));
+                if (missing.length) throw new Error(`Hãy bổ sung email hợp lệ cho: ${missing.map(t => t.name).join(', ')}.`);
+                const deliveries = teachers.map(teacher => buildTeacherBaoGiangWeekEmail(teacher, range));
+                const response = await fetch('api/baogiang_mail.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ deliveries }) });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể gửi lịch báo giảng.');
+                showToast(data.message || `Đã gửi lịch báo giảng tuần ${range.start} thành công cho ${data.sent_count || deliveries.length} giáo viên.`, 'success');
+            } catch (error) { showToast(error.message || 'Không thể gửi lịch báo giảng.', 'error', 8000); }
         }
 
         // Kho PPCT: dữ liệu vẫn được lưu ở curriculum_text để tương thích bản cũ,
@@ -5786,6 +5817,7 @@
                         <div style="flex:1; min-width:0;">
                             <div style="font-weight:800; font-size:0.82rem;">${escapeHtml(t.name)}</div>
                             <div style="font-size:0.7rem; color:#64748b; font-weight:700;">${t.role || 'GV'}</div>
+                            <input value="${escapeHtml(t.email || '')}" placeholder="email giáo viên" aria-label="Email ${escapeHtml(t.name)}" style="margin-top:3px;width:100%;font-size:.7rem;border:0;border-bottom:1px solid #cbd5e1;background:transparent;" onclick="event.stopPropagation()" onchange="setTimetableTeacherEmail('${t.id}',this.value)">
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">${badge}${unsaved}</div>
                     </div>
@@ -5808,6 +5840,13 @@
         function clearTimetableTeacherSelection() {
             selectedTimetableTeacherIds.clear();
             renderTimetableTeacherList();
+        }
+
+        function setTimetableTeacherEmail(teacherId, email) {
+            const teacher = (state.teachers || []).find(t => String(t.id) === String(teacherId));
+            if (!teacher) return;
+            teacher.email = String(email || '').trim();
+            saveToLocal();
         }
 
         function timetableEmailSessionTable(teacher, session) {
@@ -5837,6 +5876,15 @@
             };
         }
 
+        function buildTeacherIndividualTimetableEmail(teacher) {
+            if (!teacher?.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(teacher.email)) throw new Error(`Giáo viên ${teacher?.name || ''} chưa có email hợp lệ.`);
+            if (!timetableHasLessons(teacher.timetable)) throw new Error(`Giáo viên ${teacher.name} chưa có Thời khóa biểu.`);
+            const schoolYear = state.info?.school_year || teacher.timetable?.school_year || '';
+            const semester = state.info?.semester || teacher.timetable?.semester || '';
+            const plain = ['morning', 'afternoon'].map(session => `${session === 'morning' ? 'Buổi sáng' : 'Buổi chiều'}:\n${periodsForTimetableSession(session, normalizeTeacherTimetable(teacher.timetable)).map(period => `Tiết ${period}: ${TT_DAYS.map(day => { const cell=parseTimetableCell(normalizeTeacherTimetable(teacher.timetable)[session]?.[day]?.[String(period)]); return `${TT_DAY_LABELS[day]} ${cell ? `${cell.subject} (${cell.class_name})` : '—'}`; }).join(' | ')}`).join('\n')}`).join('\n\n');
+            return { to: teacher.email.trim(), subject: `Thời khóa biểu - ${teacher.name}${schoolYear ? ` (${schoolYear})` : ''}`, body: `Kính gửi thầy/cô ${teacher.name},\n\n${plain}\n\nTrân trọng.`, html: `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:900px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;"><div style="padding:22px;background:#0f3b82;color:#fff;"><div style="font-size:24px;font-weight:700;">Thời khóa biểu - ${escapeHtml(teacher.name)}</div><div style="margin-top:5px;">${escapeHtml([schoolYear, semester].filter(Boolean).join(' · '))}</div></div><div style="padding:0 16px 18px;overflow-x:auto;">${timetableEmailSessionTable(teacher, 'morning')}${timetableEmailSessionTable(teacher, 'afternoon')}</div></div></div>` };
+        }
+
         async function sendSelectedTeachersTimetableEmail() {
             try {
                 const email = buildSelectedTeachersTimetableEmail([...selectedTimetableTeacherIds]);
@@ -5849,6 +5897,19 @@
             } catch (error) {
                 showToast(error.message || 'Không thể gửi Thời khóa biểu.', 'error', 8000);
             }
+        }
+
+        async function sendSelectedTeachersIndividualTimetableEmail() {
+            try {
+                const teachers = (state.teachers || []).filter(t => selectedTimetableTeacherIds.has(String(t.id)) && timetableHasLessons(t.timetable));
+                if (!teachers.length) throw new Error('Hãy chọn ít nhất một giáo viên đã có Thời khóa biểu.');
+                const missing = teachers.filter(t => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(t.email || '')));
+                if (missing.length) throw new Error(`Hãy bổ sung email hợp lệ cho: ${missing.map(t => t.name).join(', ')}.`);
+                const response = await fetch('api/baogiang_mail.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ deliveries: teachers.map(buildTeacherIndividualTimetableEmail) }) });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể gửi Thời khóa biểu.');
+                showToast(data.message || `Đã gửi Thời khóa biểu riêng cho ${data.sent_count || teachers.length} giáo viên.`, 'success');
+            } catch (error) { showToast(error.message || 'Không thể gửi Thời khóa biểu.', 'error', 8000); }
         }
 
         function selectTimetableTeacher(teacherId) {

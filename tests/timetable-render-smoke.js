@@ -154,7 +154,7 @@ assert.match(html, /\.tt-sessions-container\s*\{\s*display:\s*grid;\s*grid-templ
 assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\s*\{\s*grid-template-columns:\s*1fr;/, 'small screens collapse timetable sessions to one column');
 
 {
-    const source = ['emptyDayMap', 'emptyTimetable', 'splitSubjectAndClass', 'parseTimetableCell', 'normalizeTeacherTimetable', 'timetableHasLessons', 'countTimetableLessons', 'periodsForTimetableSession', 'timetableEmailSessionTable', 'buildSelectedTeachersTimetableEmail'].map(declaration).join('\n');
+    const source = ['emptyDayMap', 'emptyTimetable', 'splitSubjectAndClass', 'parseTimetableCell', 'normalizeTeacherTimetable', 'timetableHasLessons', 'countTimetableLessons', 'periodsForTimetableSession', 'timetableEmailSessionTable', 'buildSelectedTeachersTimetableEmail', 'buildTeacherIndividualTimetableEmail'].map(declaration).join('\n');
     const timetable = {
         morning: { 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} },
         afternoon: { 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} }
@@ -163,7 +163,7 @@ assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\
     timetable.afternoon['7']['4'] = { subject: 'Toán', class_name: '72' };
     const context = vm.createContext({
         state: { info: { school_year: '2026-2027', semester: 'HK1' }, teachers: [
-            { id: 1, name: 'Cô An', role: 'GV', timetable },
+            { id: 1, name: 'Cô An', role: 'GV', email: 'an@example.edu.vn', timetable },
             { id: 2, name: 'Thầy Bình', role: 'TTCM', timetable }
         ] },
         TT_DAYS: ['2', '3', '4', '5', '6', '7'],
@@ -183,9 +183,13 @@ assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\
     assert.match(email.html, /Toán/, 'email retains subject data');
     assert.match(email.html, /71/, 'email retains class data');
     assert.doesNotMatch(email.html, /báo giảng|PPCT/i, 'timetable email contains no lesson-plan content');
+    const individual = vm.runInContext('buildTeacherIndividualTimetableEmail(state.teachers[0])', context);
+    assert.equal(individual.to, 'an@example.edu.vn', 'individual timetable email targets the selected teacher');
+    assert.match(individual.subject, /Cô An/, 'individual timetable subject identifies its teacher');
+    assert.doesNotMatch(individual.html, /Thầy Bình/, 'individual timetable email must not include another teacher');
 }
 
-['selectedTimetableTeacherIds', 'selectAllTimetableTeachers', 'clearTimetableTeacherSelection', 'buildSelectedTeachersTimetableEmail', 'sendSelectedTeachersTimetableEmail', 'Chọn tất cả GV có TKB', 'Gửi TKB các GV đã chọn qua email'].forEach(token => {
+['selectedTimetableTeacherIds', 'selectAllTimetableTeachers', 'clearTimetableTeacherSelection', 'buildSelectedTeachersTimetableEmail', 'buildTeacherIndividualTimetableEmail', 'sendSelectedTeachersTimetableEmail', 'sendSelectedTeachersIndividualTimetableEmail', 'Chọn tất cả GV có TKB', 'Gửi bản tổng hợp TKB về email cá nhân', 'Gửi riêng TKB cho từng GV đã chọn', 'sendBaoGiangSelectedWeekToTeachers', 'Gửi lịch tuần cho các GV đã chọn'].forEach(token => {
     assert(html.includes(token), `missing selected-teacher timetable email control: ${token}`);
 });
 

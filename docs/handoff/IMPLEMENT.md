@@ -1,3 +1,36 @@
+# IMPLEMENT: Gửi Thời khóa biểu và Lịch báo giảng trực tiếp cho giáo viên qua Email
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `api/baogiang_mail.php`
+  - Nhận `deliveries`, `recipients`, hoặc `recipient`; mỗi gói gửi có thể có tiêu đề và nội dung riêng.
+  - Xác thực email, giới hạn 50 gói/lần, gửi tuần tự cách nhau 150ms và trả `sent_count` cùng lỗi từng gói.
+  - Tôn trọng `BAOGIANG_GMAIL_TO_SELF_ONLY`: bật thì điều hướng về Gmail cá nhân; tắt thì gửi đến email giáo viên.
+- `api/config.sample.php`
+  - Mặc định mẫu cho phép gửi trực tiếp và bổ sung hướng dẫn rõ ràng cho cờ an toàn.
+- `phancongtochuyenmon.html`
+  - Thêm trường email nhanh trong danh sách TKB; bổ sung lựa chọn gửi bản tổng hợp về email cá nhân hoặc gửi TKB riêng cho từng giáo viên.
+  - Thêm nút gửi lịch báo giảng tuần đến giáo viên đã chọn; mỗi email chỉ có các tiết của chính giáo viên đó.
+- `tests/timetable-render-smoke.js`
+  - Kiểm tra email TKB cá nhân có đúng người nhận, đúng tên giáo viên và không lẫn TKB người khác.
+
+## Kiểm tra đã chạy
+
+- `node tests/timetable-render-smoke.js`: PASS.
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `node tests/daythay-suggest-smoke.js`: PASS.
+- `node tests/baogiang-recognition-smoke.js`: PASS.
+- `git diff --check` trong phạm vi thay đổi: PASS.
+- Không thể chạy `php -l`: máy hiện không có PHP CLI trong PATH.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+
+---
+
 # IMPLEMENT: Di chuyển cấu hình NLS & AI và chặn bảng trống Phụ lục 3
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`

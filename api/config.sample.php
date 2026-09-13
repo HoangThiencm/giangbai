@@ -46,7 +46,8 @@ define('SHOPAIKEY_ENABLED', true);
 // Bật Xác minh 2 bước cho Gmail trước khi tạo App Password.
 define('BAOGIANG_GMAIL_FROM', 'hoangthiencm@gmail.com');
 define('BAOGIANG_GMAIL_APP_PASSWORD', '');
-define('BAOGIANG_GMAIL_TO_SELF_ONLY', true);
+// Đặt false để cho phép gửi email trực tiếp tới từng giáo viên trong tổ; đặt true nếu chỉ muốn gửi về email cá nhân người gửi.
+define('BAOGIANG_GMAIL_TO_SELF_ONLY', false);
 
 // Google Drive storage (nộp bài, quản lý văn bản, Padlet, lộ trình...).
 // Bật Google Drive API trong Google Cloud Console.

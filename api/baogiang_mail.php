@@ -94,17 +94,53 @@ $payload = json_body();
 $subject = trim((string) ($payload['subject'] ?? ''));
 $body = trim((string) ($payload['body'] ?? ''));
 $html = trim((string) ($payload['html'] ?? ''));
-if ($subject === '' || $body === '') {
-    respond(['ok' => false, 'error' => 'Nội dung email chưa đầy đủ.'], 422);
-}
-if (mb_strlen($subject) > 200 || mb_strlen($body) > 30000 || mb_strlen($html) > 200000) {
-    respond(['ok' => false, 'error' => 'Nội dung email quá dài.'], 422);
+$deliveries = [];
+
+if (is_array($payload['deliveries'] ?? null)) {
+    foreach ($payload['deliveries'] as $item) {
+        if (!is_array($item)) continue;
+        $deliveries[] = [
+            'to' => trim((string) ($item['to'] ?? '')),
+            'subject' => trim((string) ($item['subject'] ?? $subject)),
+            'body' => trim((string) ($item['body'] ?? $body)),
+            'html' => trim((string) ($item['html'] ?? $html)),
+        ];
+    }
+} else {
+    $recipients = is_array($payload['recipients'] ?? null) ? $payload['recipients'] : [$payload['recipient'] ?? BAOGIANG_GMAIL_FROM];
+    foreach ($recipients as $recipient) {
+        $deliveries[] = ['to' => trim((string) $recipient), 'subject' => $subject, 'body' => $body, 'html' => $html];
+    }
 }
 
-try {
-    // Chế độ cá nhân: luôn gửi lại chính Gmail đã cấu hình, không nhận người nhận từ trình duyệt.
-    baogiang_send_gmail((string) BAOGIANG_GMAIL_FROM, $subject, $body, $html);
-    respond(['ok' => true, 'message' => 'Đã gửi lịch báo giảng tới email cá nhân.']);
-} catch (Throwable $e) {
-    respond(['ok' => false, 'error' => $e->getMessage()], 502);
+$selfOnly = !defined('BAOGIANG_GMAIL_TO_SELF_ONLY') || BAOGIANG_GMAIL_TO_SELF_ONLY === true;
+$deliveries = array_slice($deliveries, 0, 50);
+$sentCount = 0;
+$errors = [];
+foreach ($deliveries as $delivery) {
+    if (!filter_var($delivery['to'], FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'Địa chỉ email không hợp lệ: ' . ($delivery['to'] ?: '(trống)');
+        continue;
+    }
+    $to = $selfOnly ? (string) BAOGIANG_GMAIL_FROM : $delivery['to'];
+    if ($delivery['subject'] === '' || $delivery['body'] === '') {
+        $errors[] = 'Nội dung email chưa đầy đủ cho ' . $to;
+        continue;
+    }
+    if (mb_strlen($delivery['subject']) > 200 || mb_strlen($delivery['body']) > 30000 || mb_strlen($delivery['html']) > 200000) {
+        $errors[] = 'Nội dung email quá dài cho ' . $to;
+        continue;
+    }
+    try {
+        baogiang_send_gmail($to, $delivery['subject'], $delivery['body'], $delivery['html']);
+        $sentCount++;
+        if ($sentCount < count($deliveries)) usleep(150000);
+    } catch (Throwable $e) {
+        $errors[] = $to . ': ' . $e->getMessage();
+    }
 }
+if (!$sentCount) respond(['ok' => false, 'error' => $errors[0] ?? 'Không có email hợp lệ để gửi.'], 422);
+$message = $selfOnly
+    ? "Đã gửi $sentCount email về email cá nhân do chế độ chỉ gửi cho chính mình đang bật."
+    : "Đã gửi email thành công cho $sentCount giáo viên.";
+respond(['ok' => true, 'sent_count' => $sentCount, 'message' => $message, 'errors' => $errors]);
