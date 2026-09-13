@@ -1,20 +1,16 @@
-# IMPLEMENT
+# IMPLEMENT: Sửa hiển thị NLS/AI và Phụ lục 3
 
-## Đã triển khai
-- Sửa bọc `appendixOneTable` / `appendixThreeTable` trên cả 3 file HTML: nếu `findIndex(isNlsColumn/isAiColumn)` trả về `-1` (cột đã gộp thành `Ghi chú`) thì lấy NLS/AI ở vị trí legacy mặc định (PL1: 4/5, PL3: 6/7) rồi gọi `formatNoteIntegration`.
-- Thêm `schedulePreviewUpdate()` vào `toggleNlsLesson`, `toggleAiLesson`, `toggleAiLessonRow` để tick chọn Mục 5 làm mới bảng xem trước và thẻ thẩm định.
-- Nâng cấp `integrationParts` để tách khối `- Năng lực số:` / `- Năng lực AI:` (kể cả dòng `+`), vẫn giữ nhánh `[NLS:]` / `[AI:]` cũ. `appendixAiCoverage` và xuất Word nhờ đó đếm/phân màu đúng từ cột Ghi chú.
-- Đồng bộ 1:1: `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`.
-- Bổ sung smoke test: ô Ghi chú không còn `'-'` khi đã chọn NLS/AI; toggle gọi `schedulePreviewUpdate`; `appendixAiCoverage` và `calculateComplianceReport` đạt khi đọc mã từ Ghi chú.
+## Đã thực hiện
 
-## Kiểm thử
-- PASS: `node tests/xaydungphuluc-smoke.js`
-- PASS: `node tests/canvas-xaydungphuluc-smoke.js`
-- PASS: `node tests/xaydungphuluc-math-smoke.js`
-- PASS: `node tests/xaydungphuluc-integration-smoke.js`
+- Giữ lại dòng tiêu đề `- Năng lực số:` và `- Năng lực AI:` khi ghi chú có nhiều mã.
+- Cho phép đối chiếu NLS theo tên bài khi mã bài dùng tiền tố khác nhau.
+- Phụ lục 3 luôn dựng lại từ toàn bộ tiến trình chuẩn (ưu tiên Phụ lục 1), chỉ dùng phản hồi AI để bổ sung thiết bị, địa điểm và tích hợp cho bài khớp.
+- Đồng bộ trực tiếp cột `Ghi chú` của Phụ lục 1 sang Phụ lục 3; chỉ tự tạo ghi chú từ `integration` khi chưa có dữ liệu Phụ lục 1.
+- Dùng số cột thực tế của `APPENDIX_3_COLUMNS` khi xem trước và xuất Word.
+- Đồng bộ logic sang cả hai bản Canvas và mở rộng smoke test cho tiêu đề nhiều mã, lịch đầy đủ và mô hình 7 cột.
 
-Không chạy được xác minh trình duyệt (không có browser tools trong phiên này). Hành vi Ghi chú, tick Mục 5 và thẩm định đã được kiểm tra bằng smoke test.
+## Kiểm chứng
 
-## Không thực hiện
-- Không commit hoặc push.
-- Không đổi kiến trúc hay thêm chức năng ngoài `docs/handoff/PLAN.md`.
+- `git diff --check`: đạt.
+- Đã kiểm tra tĩnh sự có mặt của toàn bộ thay đổi trên cả ba bản HTML.
+- Không chạy được bốn smoke test Node vì Windows chặn runtime `node.exe` của môi trường với thông báo tệp có khả năng không an toàn (`ResourceUnavailable`). Cần gỡ chặn hoặc cài Node hợp lệ rồi chạy lại đầy đủ các lệnh trong `PLAN.md`.

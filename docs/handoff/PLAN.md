@@ -1,222 +1,187 @@
-# PLAN: Khắc phục lỗi cột Ghi chú chưa cập nhật biểu hiện NLS & AI và Báo cáo thẩm định Chưa đạt (0 tiết)
+# PLAN: Sửa hiển thị tiêu đề NLS/AI và hoàn thiện đầy đủ danh sách bài học, cột Ghi chú cho Phụ lục 3
 
-## Hiện trạng & Kết quả điều tra chi tiết
+## Hiện trạng & Nguyên nhân gốc rễ
 
-Người dùng đã tích chọn đúng số tiết NLS và AI ở Mục 5, nhưng:
-1. **Trong cột Ghi chú (Phụ lục 1 và Phụ lục 3)**: Hoàn toàn không hiển thị biểu hiện NLS và AI (chỉ hiển thị dấu gạch ngang `'-'`).
-2. **Trong Báo cáo thẩm định**:
-   - Năng lực số: `0/140 tiết (0/89 bài), mục tiêu 28 tiết` -> **Chưa đạt**
-   - Trí tuệ nhân tạo: `0/12 tiết AI đã chọn có mã và phạm vi` -> **Chưa đạt**
+### 1. Mất tiêu đề "Năng lực số" và "Năng lực AI" khi có từ 2 mã trở lên
+- **Hiện trạng**: Bài 1 mã NLS/AI hiển thị đầy đủ dòng `- Năng lực số: Mã : Mô tả`. Nhưng khi bài có 2 mã trở lên, chỉ hiển thị các dòng con `+ Mã 1 : ...`, `+ Mã 2 : ...`, mất hẳn dòng tiêu đề `- Năng lực số:`.
+- **Nguyên nhân**: Trong `integrationParts(value)` (dòng 1544 của `xaydungphuluc.html` và tương ứng trong các file canvas), khi `subItems.length > 0`, hàm chỉ lặp và `push` các dòng con `sub` vào `results`, bỏ rơi dòng tiêu đề `lines[0]` (`- Năng lực số:` hoặc `- Năng lực AI:`).
 
----
+### 2. Phụ lục 3 chỉ làm được mấy bài ("làm mấy bài thôi, không đầy đủ")
+- **Hiện trạng**: Xuất Phụ lục 3 chỉ ra 9–10 bài đầu (Chương I và đầu Chương II), mất toàn bộ phần còn lại của năm học (30–40 bài).
+- **Nguyên nhân**:
+  1. `appendixPrompt(3, c)` yêu cầu AI sinh lại toàn bộ bảng PPCT `{plan: [...]}`. Do giới hạn token, Gemini bị cắt ngắn, chỉ trả về được 9–10 bài đầu.
+  2. Trong `normalizeAppendix(data, '3', c)` (dòng 1637):
+     ```javascript
+     let planCandidate = Array.isArray(data.plan) && data.plan.length ? data.plan : ...
+     ```
+     Vì `data.plan` có 9 bài do AI trả về, `planCandidate` lấy luôn mảng 9 bài này và vứt bỏ toàn bộ danh sách đầy đủ 47 bài của PPCT nguồn / Phụ lục 1.
+  3. Trong `renderPreview` (dòng 1662) và `exportDocx` (dòng 1674):
+     Điều kiện kiểm tra `r.planTable.columns.length === 8` bị sai lệch vì bảng Phụ lục 3 chuẩn hiện hành có 7 cột (kết thúc bằng `Ghi chú`). Do `7 === 8` luôn trả về `false`, `planModel` bị hủy và buộc phải chạy lại hàm tạo bảng trên dữ liệu thiếu.
 
-## Ba nguyên nhân gốc rễ (Root Causes)
-
-### 1. Nguyên nhân 1 (Gây mất trắng dữ liệu cột Ghi chú thành `'-'`): Sai lệch chỉ số cột trong hàm bọc `appendixOneTable` và `appendixThreeTable`
-- Tại cuối file (`xaydungphuluc.html` dòng 1688–1689, `canvas_xaydungphuluc.html` dòng 1762–1763):
-  ```javascript
-  appendixOneTable = function(generated, c) {
-    const table = legacyAppendixOneTableForNote(generated, c),
-          nls = table.columns.findIndex(isNlsColumn),
-          ai = table.columns.findIndex(isAiColumn);
-    return {
-      ...table,
-      columns: APPENDIX_1_COLUMNS.map(([, label]) => label),
-      rows: table.rows.map(row => row.isHeader ? row : {
-        ...row,
-        cells: [...row.cells.slice(0, 4), formatNoteIntegration(row.cells[nls], row.cells[ai], row.cells[1])]
-      })
-    };
-  };
-  ```
-- **Lý do**: Khi gộp sang 5 cột (`APPENDIX_1_COLUMNS`), bảng trả về từ `legacyAppendixOneTableForNote` đã có cột là `['STT', 'Bài học', 'Số tiết', 'Yêu cầu cần đạt', 'Ghi chú']`. Các cột không còn nhãn `Biểu hiện năng lực số` hay `Biểu hiện năng lực AI`.
-- Do đó `table.columns.findIndex(isNlsColumn)` và `findIndex(isAiColumn)` luôn trả về `-1`.
-- Trong JS, `row.cells[-1]` là `undefined`.
-- Hàm `formatNoteIntegration(undefined, undefined, ...)` trả về giá trị mặc định là `'-'`.
-- Toàn bộ nội dung `nlsText` (ở `row.cells[4]`) và `aiText` (ở `row.cells[5]`) được tính toán chuẩn xác từ `separateIntegration` bị bỏ rơi hoàn toàn, thay thế bằng `'-'`.
-- Tương tự với Phụ lục 3: `legacyAppendixThreeTableForNote` trả về `nlsText` ở `cells[6]` và `aiText` ở `cells[7]`, nhưng `findIndex()` cũng trả về `-1`, khiến ô Ghi chú của PL3 cũng bị biến thành `'-'`.
-
-### 2. Nguyên nhân 2: Các hàm tick chọn NLS/AI ở Mục 5 chưa kích hoạt cập nhật lại bảng xem trước
-- Tại các hàm sự kiện tick chọn:
-  - `toggleNlsLesson(lessonId, checked)` (dòng 1341)
-  - `toggleAiLesson(id, checked)` (dòng 1474)
-  - `toggleAiLessonRow(lessonId, checked)` (dòng 1475)
-- Các hàm này chỉ gọi `syncNlsRateFromSelection()` và `updateAiPicker()`, **hoàn toàn không gọi `schedulePreviewUpdate()`** (hoặc `refreshPpctDependents()`).
-- Khi người dùng tick chọn các ô checkbox NLS hoặc AI trong bảng Mục 5, bảng xem trước Phụ lục 1 / Phụ lục 3 ở Mục 8 và Báo cáo thẩm định không được thông báo để tính toán và vẽ lại theo các tiết vừa chọn.
-
-### 3. Nguyên nhân 3: `integrationParts(value)` không nhận diện định dạng khối `- Năng lực AI:`
-- Tại dòng 1544:
-  ```javascript
-  function integrationParts(value) {
-    const raw = integrationText(value);
-    if (!raw || raw === '-') return [];
-    const parts = /^\s*\d+\.[A-Z]/i.test(raw) ? [raw] : raw.split(/(?=\[\s*(?:AI\s*:|NLS\s*:|\d+\.[A-Z]))/i).filter(Boolean);
-    return parts.map(text => ({ text: integrationText(text), ai: /^\s*(?:\[\s*AI\s*:|\d+\.[A-Z])/i.test(text) }));
-  }
-  ```
-- Định dạng mới trong ô Ghi chú là:
-  ```text
-  - Năng lực số: 1.1.TC1a : ...
-  - Năng lực AI: 6.B2.1 : ... (Áp dụng: tiết 1, 2)
-  ```
-  hoặc danh sách gạch đầu dòng ` + `.
-- Regex cũ chỉ tìm `[` ngoặc vuông hoặc chuỗi bắt đầu bằng `\d+\.[A-Z]`, nên không nhận diện được `- Năng lực AI:` và gán `ai: false`.
-- Dẫn đến `appendixAiCoverage` bóc tách danh sách tiết AI bị rỗng `[]`, khiến số tiết AI thẩm định luôn bằng `0/12`.
+### 3. Phụ lục 3 không đưa ra được Ghi chú (toàn bộ cột Ghi chú bị dấu gạch `-`)
+- **Hiện trạng**: Toàn bộ các dòng trong cột Ghi chú của Phụ lục 3 bị gạch ngang `-`, không hiển thị NLS và AI.
+- **Nguyên nhân**:
+  1. Trong `appendixThreeTable` (dòng 211 / dòng 1690): Hàm tìm `isNlsColumn` và `isAiColumn` trên `pl1Model`, nhưng Phụ lục 1 đã gộp 2 cột này thành cột `Ghi chú` (`isNoteColumn`). Hàm không tìm thấy (`-1`) và không lấy nội dung cột `Ghi chú` của Phụ lục 1.
+  2. Hàm sau đó fallback sang `separateIntegration(row.integration, ...)`. Trong `separateIntegration`, hàm `isLessonNlsSelected(lessonId, lessonName, ...)` kiểm tra ID: các dòng của Phụ lục 3 có ID dạng `ppct:0` trong khi danh sách tick chọn có ID dạng `source:0`. Do `hasId` là `true` nhưng không khớp, dòng 1396 trả về `false` ngay lập tức mà không tiếp tục so sánh theo `lessonName`. NLS bị xóa sạch thành `'-'`, khiến `formatNoteIntegration` trả về `'-'`.
 
 ---
 
-## Phạm vi file sửa đổi
+## Phạm vi thực hiện
 
-1. **`xaydungphuluc.html`**
-2. **`canvas_xaydungphuluc.html`**
-3. **`backupcode viettailieu/canvas_xaydungphuluc.html`**
-4. **`tests/xaydungphuluc-smoke.js`**
-5. **`tests/canvas-xaydungphuluc-smoke.js`**
+1. **Sửa `integrationParts(value)`**: Khi phân tách khối có các dòng con `subItems` (`+ ...`), bắt buộc đưa dòng tiêu đề `lines[0]` vào kết quả trước khi đưa các dòng `subItems`.
+2. **Sửa `normalizeAppendix` cho Phụ lục 3**: Bảo đảm danh sách bài học của Phụ lục 3 luôn lấy trọn vẹn 100% từ tiến trình chuẩn (`results['1']?.schedule`, `sourcePpctRows` hoặc `defaultPpctRows(c)`), không bao giờ bị cắt cụt bởi kết quả AI trả về thiếu bài.
+3. **Đồng bộ chuẩn xác cột Ghi chú cho Phụ lục 3 trong `appendixThreeTable`**:
+   - Ưu tiên lấy trực tiếp nội dung cột `Ghi chú` đã có từ `pl1Model` (Phụ lục 1) theo bài học tương ứng để đảm bảo đồng bộ 100% giữa Tổ chuyên môn và Giáo viên.
+   - Nếu không có bảng Phụ lục 1, sử dụng `formatNoteIntegration` từ chính `row.integration` của bài học.
+4. **Sửa `isLessonNlsSelected`**: Khi `hasId` không khớp trong Set thì không được `return false` ngay mà phải tiếp tục đối chiếu theo `lessonName`.
+5. **Sửa điều kiện kiểm tra số cột Phụ lục 3 trong `renderPreview` và `exportDocx`**: Chuyển từ `length === 8` sang `length === 7` (hoặc `APPENDIX_3_COLUMNS.length`).
+6. **Đồng bộ 1:1 sang các file Canvas và cập nhật smoke test**.
 
 ---
 
-## Các bước triển khai chi tiết cho Coder
+## Ngoài phạm vi
+- Không thay đổi các tiêu chí và công thức tính tỷ lệ NLS / AI.
+- Không thay đổi cấu trúc bảng hay thông tin hành chính của Phụ lục 1 và Phụ lục 2.
 
-### Bước 1: Sửa hàm `appendixOneTable` và `appendixThreeTable` (Bảo đảm lấy đúng NLS & AI)
-Tại cuối mỗi file HTML (đoạn bọc `appendixOneTable` và `appendixThreeTable`):
-1. **Với Phụ lục 1 (`appendixOneTable`)**:
-   ```javascript
-   appendixOneTable = function(generated, c) {
-     const table = legacyAppendixOneTableForNote(generated, c);
-     const nlsIdx = table.columns.findIndex(isNlsColumn);
-     const aiIdx = table.columns.findIndex(isAiColumn);
-     // Fallback sang vị trí mặc định của legacy table nếu cột đã bị đổi thành Ghi chú: nls=4, ai=5
-     const nlsCol = nlsIdx >= 0 ? nlsIdx : 4;
-     const aiCol = aiIdx >= 0 ? aiIdx : 5;
-     return {
-       ...table,
-       columns: APPENDIX_1_COLUMNS.map(([, label]) => label),
-       rows: table.rows.map(row => {
-         if (row.isHeader) return row;
-         const nlsText = row.cells[nlsCol];
-         const aiText = row.cells[aiCol];
-         const note = formatNoteIntegration(nlsText, aiText, row.cells[1]);
-         return {
-           ...row,
-           cells: [...row.cells.slice(0, 4), note]
-         };
-       })
-     };
-   };
-   ```
-2. **Với Phụ lục 3 (`appendixThreeTable`)**:
-   ```javascript
-   appendixThreeTable = function(rows, c) {
-     const table = legacyAppendixThreeTableForNote(rows, c);
-     const nlsIdx = table.columns.findIndex(isNlsColumn);
-     const aiIdx = table.columns.findIndex(isAiColumn);
-     // Fallback sang vị trí mặc định của legacy table nếu cột đã bị đổi thành Ghi chú: nls=6, ai=7
-     const nlsCol = nlsIdx >= 0 ? nlsIdx : 6;
-     const aiCol = aiIdx >= 0 ? aiIdx : 7;
-     return {
-       ...table,
-       columns: APPENDIX_3_COLUMNS.map(([, label]) => label),
-       rows: table.rows.map(row => {
-         if (row.isHeader) return row;
-         const nlsText = row.cells[nlsCol];
-         const aiText = row.cells[aiCol];
-         const note = formatNoteIntegration(nlsText, aiText, row.cells[0]);
-         return {
-           ...row,
-           cells: [...row.cells.slice(0, 6), note]
-         };
-       })
-     };
-   };
-   ```
+---
 
-### Bước 2: Thêm `schedulePreviewUpdate()` vào các sự kiện tick chọn Mục 5
-Trong các hàm:
-1. `toggleNlsLesson`:
-   ```javascript
-   function toggleNlsLesson(lessonId, checked) {
-     if (checked && isSinglePeriodLesson(lessonId)) toggleAiLessonRow(lessonId, false);
-     if (checked) nlsSelectedLessonIds.add(lessonId); else nlsSelectedLessonIds.delete(lessonId);
-     syncNlsRateFromSelection();
-     updateAiPicker();
-     schedulePreviewUpdate();
-   }
-   ```
-2. `toggleAiLesson`:
-   ```javascript
-   function toggleAiLesson(id, checked) {
-     const selected = selectedAiPeriodIds(), period = aiPeriodCandidates().find(item => item.id === id);
-     if (checked && period && isSinglePeriodLesson(period.lessonId)) nlsSelectedLessonIds.delete(period.lessonId);
-     if (checked) selected.add(id); else selected.delete(id);
-     syncNlsRateFromSelection();
-     updateAiPicker();
-     schedulePreviewUpdate();
-   }
-   ```
-3. `toggleAiLessonRow`:
-   ```javascript
-   function toggleAiLessonRow(lessonId, checked) {
-     const periods = aiPeriodCandidates().filter(x => x.lessonId === lessonId), selected = selectedAiPeriodIds();
-     if (checked && isSinglePeriodLesson(lessonId)) nlsSelectedLessonIds.delete(lessonId);
-     if (checked) periods.forEach(period => selected.add(period.id)); else periods.forEach(period => selected.delete(period.id));
-     syncNlsRateFromSelection();
-     updateAiPicker();
-     schedulePreviewUpdate();
-   }
-   ```
-
-### Bước 3: Nâng cấp `integrationParts(value)` để phân tách chuẩn xác khối NLS và AI trong Ghi chú
-Cập nhật hàm `integrationParts`:
-```javascript
-function integrationParts(value) {
-  const raw = integrationText(value);
-  if (!raw || raw === '-') return [];
-  // Phân tách định dạng Ghi chú mới: - Năng lực số / - Năng lực AI
-  if (/-\s*Năng lực\s*(?:số|AI)/i.test(raw)) {
-    const blocks = raw.split(/(?=-\s*Năng lực\s*(?:số|AI))/i);
-    const results = [];
-    for (const block of blocks) {
-      const b = block.trim();
-      if (!b) continue;
-      const isAi = /^-\s*Năng lực\s*AI/i.test(b);
-      const lines = b.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      const subItems = lines.slice(1).filter(l => l.startsWith('+'));
-      if (subItems.length) {
-        for (const sub of subItems) {
-          results.push({ text: sub, ai: isAi });
-        }
-      } else {
-        results.push({ text: b, ai: isAi });
-      }
-    }
-    return results;
-  }
-  // Định dạng ngoặc vuông legacy: [NLS: ...] [AI: ...]
-  const parts = /^\s*\d+\.[A-Z]/i.test(raw) ? [raw] : raw.split(/(?=\[\s*(?:AI\s*:|NLS\s*:|\d+\.[A-Z]))/i).filter(Boolean);
-  return parts.map(text => ({ text: integrationText(text), ai: /^\s*(?:\[\s*AI\s*:|\d+\.[A-Z])/i.test(text) }));
-}
-```
-
-### Bước 4: Đồng bộ 1:1 trên cả 3 file mã nguồn
-Cập nhật đầy đủ, đồng nhất trên:
+## File dự kiến tác động
 - `xaydungphuluc.html`
 - `canvas_xaydungphuluc.html`
 - `backupcode viettailieu/canvas_xaydungphuluc.html`
-
-### Bước 5: Cập nhật kiểm thử tự động
-Trong `tests/xaydungphuluc-smoke.js` và `tests/canvas-xaydungphuluc-smoke.js`:
-1. Kiểm tra khi gọi `appendixOneTable(...)`: ô `cells[4]` phải chứa chuỗi định dạng `- Năng lực số:` hoặc mã NLS, và `- Năng lực AI:` hoặc mã AI (tuyệt đối không được bằng `'-'`).
-2. Kiểm tra `toggleAiLesson` / `toggleNlsLesson`: kích hoạt `schedulePreviewUpdate` và cập nhật lại bảng xem trước.
-3. Kiểm tra `appendixAiCoverage` và `calculateComplianceReport`: tính toán đúng số tiết AI và NLS từ cột Ghi chú, đạt `pass === true`.
+- `tests/xaydungphuluc-smoke.js`
+- `tests/canvas-xaydungphuluc-smoke.js`
 
 ---
 
-## Tiêu chí nghiệm thu (Acceptance Criteria)
-1. Trong bảng xem trước Phụ lục 1 (Mục 8) và Phụ lục 3: Cột `Ghi chú` hiển thị đầy đủ biểu hiện NLS và biểu hiện AI theo đúng quy chuẩn 1 mã hoặc nhiều mã `+`.
-2. Khi tick chọn / bỏ chọn ở Mục 5: Bảng xem trước và thẻ thẩm định cập nhật tức thì.
-3. Báo cáo thẩm định:
-   - Năng lực số: Đạt đủ số tiết theo mục tiêu (ví dụ `28/140 tiết`, Đạt).
-   - Trí tuệ nhân tạo: Đạt đủ số tiết AI đã chọn (ví dụ `12/12 tiết`, Đạt).
-   - Đạt chuẩn 100% CV 5512 & CTGDPT 2018.
-4. Xuất Word (.docx): Cột `Ghi chú` chứa đủ nội dung, phân màu đúng chuẩn (AI tím, NLS xanh).
-5. Tất cả smoke tests đều PASS.
+## Chi tiết các bước thực hiện
+
+### Bước 1: Sửa hàm `integrationParts(value)` (giữ dòng tiêu đề `- Năng lực số:` / `- Năng lực AI:`)
+Tại dòng 1544 trong `xaydungphuluc.html` (và tương ứng trong các file canvas):
+```javascript
+if (subItems.length) {
+  if (lines[0]) results.push({ text: lines[0], ai: isAi });
+  for (const sub of subItems) results.push({ text: sub, ai: isAi });
+} else {
+  results.push({ text: b, ai: isAi });
+}
+```
+
+### Bước 2: Sửa `isLessonNlsSelected` (tránh nuốt NLS khi ID có prefix khác nhau)
+Tại dòng 1395:
+```javascript
+if (hasExplicit) {
+  if (hasId && nlsSelectedLessonIds.has(lessonId)) return true;
+  if (lessonName) {
+    const match = nlsCandidates().find(x => typeof lessonsMatch === 'function' ? lessonsMatch(x.lesson, lessonName) : x.lesson === lessonName);
+    if (match && nlsSelectedLessonIds.has(match.id)) return true;
+  }
+  return false;
+}
+```
+Và tại dòng 1410:
+```javascript
+if (hasId && topIds.has(lessonId)) return true;
+if (lessonName) {
+  const match = prioritized.slice(0, targetCount).find(x => typeof lessonsMatch === 'function' ? lessonsMatch(x.lesson, lessonName) : x.lesson === lessonName);
+  if (match) return true;
+}
+return false;
+```
+
+### Bước 3: Sửa `normalizeAppendix` cho Phụ lục 3 (bảo toàn 100% danh sách bài học, không bị AI cắt cụt)
+Tại dòng 1637 trong `normalizeAppendix` nhánh `no === '3'`:
+Lấy `fullSchedule` từ `results['1']?.schedule` hoặc `sourcePpctRows` hoặc `defaultPpctRows(c)`.
+Ánh xạ toàn bộ danh sách `fullSchedule`:
+```javascript
+const defaultEquip = (typeof EQUIPMENT !== 'undefined' && c && (EQUIPMENT[c.monHoc] || EQUIPMENT.default)) ? (EQUIPMENT[c.monHoc] || EQUIPMENT.default).slice(0, 2).join(', ') : 'Thiết bị dạy học tối thiểu';
+let fullSchedule = [];
+if (results['1'] && Array.isArray(results['1'].schedule) && results['1'].schedule.length) fullSchedule = results['1'].schedule;
+else if (typeof sourcePpctRows !== 'undefined' && Array.isArray(sourcePpctRows) && sourcePpctRows.length) fullSchedule = sourcePpctRows;
+else if (typeof defaultPpctRows === 'function') fullSchedule = defaultPpctRows(c);
+
+const aiPlan = Array.isArray(data?.plan) && data.plan.length ? data.plan : (Array.isArray(data?.schedule) ? data.schedule : []);
+data.plan = fullSchedule.map((baseRow, idx) => {
+  if (baseRow.isHeader) return ppctRow(baseRow, idx, c);
+  const matchingAi = aiPlan.find(r => !r.isHeader && typeof lessonsMatch === 'function' && lessonsMatch(r.lesson, baseRow.lesson));
+  return ppctRow({
+    ...baseRow,
+    devices: matchingAi?.devices || baseRow.devices || defaultEquip,
+    location: matchingAi?.location || baseRow.location || 'Lớp học',
+    integration: matchingAi?.integration || baseRow.integration || ''
+  }, idx, c);
+}).filter(row => row.lesson && !isAdminLesson(row.lesson));
+
+if (!results['1']) results['1'] = normalizeAppendix(fallback('1', c), '1', c);
+data.plan = syncIntegrationFromAppendixOne(data.plan, results['1'].scheduleTable, c);
+data.planTable = appendixThreeTable(data.plan, c);
+```
+
+### Bước 4: Sửa `appendixThreeTable` (đồng bộ trực tiếp Ghi chú từ Phụ lục 1)
+Tại dòng 1690 trong `xaydungphuluc.html`:
+```javascript
+appendixThreeTable = function(rows, c) {
+  const pl1Model = results?.['1']?.scheduleTable ? normalizeIntegrationTable(results['1'].scheduleTable) : null;
+  const pl1NoteIdx = pl1Model ? pl1Model.columns.findIndex(isNoteColumn) : -1;
+  const pl1LessonIdx = pl1Model ? pl1Model.columns.map(normalizeHeaderKey).indexOf('lesson') : -1;
+  const usedPl1 = new Set();
+  let normal = 0;
+
+  const table = legacyAppendixThreeTableForNote(rows, c);
+  const nlsIdx = table.columns.findIndex(isNlsColumn);
+  const aiIdx = table.columns.findIndex(isAiColumn);
+  const nlsCol = nlsIdx >= 0 ? nlsIdx : 6;
+  const aiCol = aiIdx >= 0 ? aiIdx : 7;
+
+  return {
+    ...table,
+    columns: APPENDIX_3_COLUMNS.map(([, label]) => label),
+    rows: table.rows.map((row, idx) => {
+      if (row.isHeader) return row;
+      let note = '';
+      if (pl1Model && pl1NoteIdx >= 0) {
+        const pl1Row = typeof pickAppendixOneRow === 'function' ? pickAppendixOneRow(pl1Model, row.cells[0], usedPl1, normal) : pl1Model.rows.find(item => !item.isHeader && lessonsMatch((item.cells || [])[pl1LessonIdx], row.cells[0]));
+        if (pl1Row) {
+          note = String((pl1Row.cells || [])[pl1NoteIdx] || '').trim();
+        }
+      }
+      if (!note || note === '-') {
+        const nlsText = row.cells[nlsCol];
+        const aiText = row.cells[aiCol];
+        note = formatNoteIntegration(nlsText, aiText, row.cells[0]);
+      }
+      normal++;
+      return { ...row, cells: [...row.cells.slice(0, 6), note || '-'] };
+    })
+  };
+};
+```
+
+### Bước 5: Sửa điều kiện kiểm tra cột Phụ lục 3 trong `renderPreview` và `exportDocx`
+Đổi `columns.length === 8` thành `columns.length === 7` (hoặc `columns.length === APPENDIX_3_COLUMNS.length`):
+- Trong `renderPreview` (dòng 1662)
+- Trong `exportDocx` (dòng 1674)
+- Áp dụng tương tự cho các file canvas.
+
+### Bước 6: Đồng bộ sang `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`
+Đảm bảo đồng bộ 100% logic trên cả 3 file.
+
+### Bước 7: Cập nhật smoke test và kiểm chứng
+1. Cập nhật `tests/xaydungphuluc-smoke.js`:
+   - Kiểm tra `multiNoteParts` có đủ dòng tiêu đề `- Năng lực số:` và `- Năng lực AI:`.
+   - Kiểm tra `appendixThreeTable` giữ đủ toàn bộ danh sách bài học và cột `Ghi chú` khớp với Phụ lục 1.
+2. Cập nhật `tests/canvas-xaydungphuluc-smoke.js` tương tự.
+3. Chạy toàn bộ 4 suite test kiểm tra bảo đảm 100% PASS:
+   - `node tests/xaydungphuluc-smoke.js`
+   - `node tests/canvas-xaydungphuluc-smoke.js`
+   - `node tests/xaydungphuluc-math-smoke.js`
+   - `node tests/xaydungphuluc-integration-smoke.js`
+
+---
+
+## Tiêu chí nghiệm thu
+1. Cột Ghi chú của bài có từ 2 mã NLS/AI trở lên luôn giữ dòng tiêu đề `- Năng lực số:` / `- Năng lực AI:` trước các bullet con `+ `.
+2. Phụ lục 3 hiển thị và xuất Word trọn vẹn 100% số bài học của năm học (đủ 35 tuần / toàn bộ các chương), không bị dừng lại sau 9–10 bài.
+3. Cột Ghi chú trong Phụ lục 3 cập nhật đầy đủ nội dung biểu hiện NLS và AI, khớp 100% với Phụ lục 1.
+4. Báo cáo thẩm định đạt tiêu chí "Đồng bộ NLS & AI (PL1–PL3)" 100%.
+5. Tất cả bài smoke test đều PASS.

@@ -519,8 +519,10 @@ const noteParts=sandbox.integrationParts('- Năng lực số: 1.1.TC1a : Khai th
 assert(noteParts.some(part=>!part.ai&&/1\.1\.TC1a/.test(part.text)),'integrationParts must treat Năng lực số blocks as NLS');
 assert(noteParts.some(part=>part.ai&&/6\.B2\.1/.test(part.text)),'integrationParts must treat Năng lực AI blocks as AI');
 const multiNoteParts=sandbox.integrationParts('- Năng lực số:\n + 1.1.TC1a : Khai thác.\n + 5.3.TC2a : GeoGebra.\n- Năng lực AI:\n + 6.B2.1 : Hỗ trợ. (Áp dụng: tiết 1)\n + 6.D1.1 : Đánh giá. (Áp dụng: tiết 2)');
-assert.equal(multiNoteParts.filter(part=>!part.ai).length,2,'integrationParts must split + NLS sub-items');
-assert.equal(multiNoteParts.filter(part=>part.ai).length,2,'integrationParts must split + AI sub-items');
+assert.equal(multiNoteParts.filter(part=>!part.ai).length,3,'integrationParts must retain the NLS heading and split + sub-items');
+assert.equal(multiNoteParts.filter(part=>part.ai).length,3,'integrationParts must retain the AI heading and split + sub-items');
+assert(multiNoteParts.some(part=>!part.ai&&part.text==='- Năng lực số:'),'integrationParts must retain the NLS heading');
+assert(multiNoteParts.some(part=>part.ai&&part.text==='- Năng lực AI:'),'integrationParts must retain the AI heading');
 const noteTable=vm.runInContext(`(()=>{
   sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[{cells:['Bài 1. Tập hợp','2'],isHeader:false}]};
   sourcePpctRows=[];aiSelectedLessonIds=new Set(['source:0:period:1','source:0:period:2']);nlsSelectedLessonIds=new Set(['source:0']);
@@ -542,6 +544,8 @@ const noteThreeCell=String((noteThree.rows.find(row=>!row.isHeader)||{cells:[]})
 assert.notEqual(noteThreeCell,'-','PL3 Ghi chú must not collapse selected NLS/AI to a dash');
 assert(/Năng lực số|1\.1\.TC/i.test(noteThreeCell),'PL3 Ghi chú must include NLS label or code');
 assert(/Năng lực AI|6\.[A-Z]/i.test(noteThreeCell),'PL3 Ghi chú must include AI label or code');
+assert(html.includes("fullSchedule=results['1']?.schedule?.length"),'PL3 normalization must prioritize the complete Appendix 1 schedule');
+assert(html.includes('columns.length===APPENDIX_3_COLUMNS.length'),'PL3 preview and DOCX must accept the seven-column table model');
 const noteCoverageTable={columns:['STT','Bài học','Số tiết','Yêu cầu cần đạt','Ghi chú'],rows:[{cells:['1','Bài mẫu','2','Đạt','- Năng lực số: 1.1.TC1a : Khai thác học liệu.\n- Năng lực AI: 6.B2.1 : Hỗ trợ. (Áp dụng: tiết 1, 2)'],isHeader:false}]};
 const noteCoverage=sandbox.appendixAiCoverage(noteCoverageTable,{ai:{enabled:true,selectedPeriods:[{lesson:'Bài mẫu',periods:[1,2]}]}});
 assert.equal(noteCoverage.covered,2,'appendixAiCoverage must count both scoped AI periods from Ghi chú');
