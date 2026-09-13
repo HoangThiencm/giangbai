@@ -77,9 +77,9 @@ async function main() {
     assert.ok(content.includes('QUY TẮC CÔNG THỨC TOÁN HỌC (BẮT BUỘC ĐẶT TRONG EQUATION)'), `${rel} thiếu quy tắc công thức toán trong standards`);
     assert.ok(content.includes('children:parseDocxMathRuns('), `${rel} thiếu parseDocxMathRuns trong para/exportDocx`);
     assert.ok(content.includes('katex.min.js'), `${rel} thiếu thư viện KaTeX`);
-    assert.ok(content.includes('APPENDIX_3_COLUMNS'), `${rel} thiếu cấu trúc 8 cột Phụ lục 3`);
+    assert.ok(content.includes('APPENDIX_3_COLUMNS'), `${rel} thiếu cấu trúc 7 cột Phụ lục 3`);
     assert.ok(content.includes('function appendixThreeTable'), `${rel} thiếu bộ tách cột NLS/AI Phụ lục 3`);
-    assert.ok(content.includes('appendixThree:[20,5,6,5,14,12,19,19]'), `${rel} thiếu độ rộng Word 8 cột Phụ lục 3`);
+    assert.ok(content.includes('appendixThree:[20,5,6,5,15,14,35]'), `${rel} thiếu độ rộng Word 7 cột Phụ lục 3`);
     assert.ok(content.includes('function cleanMathEntityName'), `${rel} thiếu bộ làm sạch thực thể toán học`);
     console.log(`  ✓ ${rel}: PASS`);
   }
@@ -288,11 +288,11 @@ YCCĐ:
   assert.ok(syncedPl3[1].integration.includes('phương pháp giải'), 'PL3 Bài 2 phải kế thừa đúng mô tả AI của PL1');
   console.log('  ✓ NLS và AI giữa Phụ lục 1 và Phụ lục 3 khớp nhau 100% về mã, mô tả sư phạm và phạm vi tiết!');
 
-  // 7. Kiểm tra Phụ lục 3 xuất và xem trước có đủ 8 cột và có Biểu hiện khung năng lực AI
-  console.log('-> 7. Kiểm tra Phụ lục 3 có Biểu hiện khung năng lực AI trong bảng 8 cột...');
+  // 7. Kiểm tra Phụ lục 3 xuất và xem trước có đủ 7 cột với cột Ghi chú.
+  console.log('-> 7. Kiểm tra Phụ lục 3 có cột Ghi chú trong bảng 7 cột...');
   const app3ColMatch = canvasSrc.match(/const APPENDIX_3_COLUMNS\s*=\s*\[[\s\S]*?\];/);
   vm.runInContext(
-    (app3ColMatch ? app3ColMatch[0] : "const APPENDIX_3_COLUMNS=[['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['nls','Biểu hiện năng lực số'],['ai','Biểu hiện năng lực AI']];") + '\n' +
+    (app3ColMatch ? app3ColMatch[0] : "const APPENDIX_3_COLUMNS=[['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['note','Ghi chú']];") + '\n' +
     extractAppendixFn('selectedPeriodsForLesson') + '\n' +
     extractAppendixFn('selectedPeriodsForLessonId') + '\n' +
     extractAppendixFn('appendixThreeTable'),
@@ -300,12 +300,12 @@ YCCĐ:
   );
   pl2Sandbox.results = { '1': { scheduleTable: mockPl1Table } };
   const pl3TableOutput = pl2Sandbox.appendixThreeTable(syncedPl3, pl2Sandbox.getConfig());
-  assert.strictEqual(pl3TableOutput.columns.length, 8, 'Phụ lục 3 phải có đúng 8 cột');
-  assert.ok(pl2Sandbox.isAiColumn(pl3TableOutput.columns[7]), 'Cột 8 phải là Biểu hiện năng lực AI');
+  assert.strictEqual(pl3TableOutput.columns.length, 7, 'Phụ lục 3 phải có đúng 7 cột');
+  assert.strictEqual(pl3TableOutput.columns[6], 'Ghi chú', 'Cột 7 phải là Ghi chú');
   assert.ok(pl3TableOutput.rows[0].cells[7].includes('9.B2.1'), 'Cột AI của Bài 1 trong Phụ lục 3 phải chứa mã 9.B2.1');
   assert.ok(pl3TableOutput.rows[0].cells[7].includes('tiết 1, 2'), 'Cột AI của Bài 1 trong Phụ lục 3 phải chứa phạm vi tiết');
   assert.ok(pl3TableOutput.rows[1].cells[7].includes('9.B2.1'), 'Cột AI của Bài 2 trong Phụ lục 3 phải chứa mã AI');
-  console.log('  ✓ Phụ lục 3 hiển thị và xuất đầy đủ 8 cột với Biểu hiện khung năng lực AI chính xác 100%!');
+  console.log('  ✓ Phụ lục 3 hiển thị và xuất đầy đủ 7 cột với Ghi chú chính xác 100%!');
 
   console.log('==================================================');
   console.log('🎉 TẤT CẢ KIỂM THỬ CÔNG THỨC EQUATION VÀ PHỤ LỤC 3 ĐÃ ĐẠT 100%!');

@@ -1,106 +1,111 @@
-# PLAN: Khắc phục lỗi tính số tiết Năng lực số (NLS) và Trí tuệ nhân tạo (AI) không chuẩn trong Xây dựng phụ lục
+# PLAN
 
----
+## Hiện trạng
+- Trong `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, và `backupcode viettailieu/canvas_xaydungphuluc.html`:
+  - Phụ lục 1 đang được định nghĩa 6 cột: `['STT', 'Bài học', 'Số tiết', 'Yêu cầu cần đạt', 'Biểu hiện năng lực số', 'Biểu hiện năng lực AI']` (`APPENDIX_1_COLUMNS`).
+  - Phụ lục 3 đang được định nghĩa 8 cột: `['Bài học', 'Số tiết', 'Tiết CT', 'Tuần', 'Thiết bị dạy học (*)', 'Địa điểm dạy học (**)', 'Biểu hiện năng lực số', 'Biểu hiện năng lực AI']` (`APPENDIX_3_COLUMNS`).
+  - Mã NLS và mã AI hiện đang tách thành 2 cột riêng rẽ thông qua `separateIntegration()`, làm bảng biểu bị kéo dài theo chiều ngang trong cả bản xem trước HTML lẫn file Word (.docx) xuất ra.
+  - Các hàm chuẩn hóa bảng (`normalizeIntegrationTable`), thẩm định chuẩn hóa (`calculateComplianceReport`, `appendixAiCoverage`), trích xuất tích hợp (`appendixOneIntegrationForLesson`, `syncIntegrationFromAppendixOne`), và xuất Word (`exportDocx`, `DOCX_WIDTHS`) đang gắn chặt với số lượng cột và nhãn cột cũ (`length === 8`, `isNlsColumn`, `isAiColumn`).
 
-## 1. Yêu cầu & Mục tiêu
-- **Vấn đề người dùng phản ánh**: Khi người dùng cấu hình/yêu cầu tích hợp đúng **28 tiết Năng lực số** và **12 tiết AI**, khi đếm trong bảng phụ lục (hoặc xem kết quả) thì lại ra **30 tiết Năng lực số** và **14 tiết AI** (bị dôi ra +2 tiết NLS và +2 tiết AI).
-- **Mục tiêu**: Đảm bảo hệ thống tính toán, phân bổ và hiển thị số tiết NLS và AI chuẩn xác 100% theo đúng số lượng tiết (hoặc bài) mà người dùng yêu cầu; loại bỏ hoàn toàn hiện tượng dôi/tràn tiết do so khớp chéo (false-positive match) giữa các bài học có tên tương tự.
+## Phạm vi
+- **Phụ lục 1**: Gộp 2 cột `Biểu hiện năng lực số` và `Biểu hiện năng lực AI` thành 1 cột duy nhất là `Ghi chú`. Số cột giảm từ 6 cột xuống 5 cột: `STT`, `Bài học`, `Số tiết`, `Yêu cầu cần đạt`, `Ghi chú`.
+- **Phụ lục 3**: Gộp 2 cột `Biểu hiện năng lực số` và `Biểu hiện năng lực AI` thành 1 cột duy nhất là `Ghi chú`. Số cột giảm từ 8 cột xuống 7 cột: `Bài học`, `Số tiết`, `Tiết CT`, `Tuần`, `Thiết bị dạy học (*)`, `Địa điểm dạy học (**)`, `Ghi chú`.
+- **Quy tắc định dạng nội dung cột Ghi chú**:
+  - Đối với Năng lực số:
+    + Nếu có đúng 1 mã: ghi trên cùng dòng theo dạng `- Năng lực số: Mã: Mô tả`
+    + Nếu có từ 2 mã trở lên:
+      ```text
+      - Năng lực số:
+       + Mã 1: Mô tả
+       + Mã 2: Mô tả
+      ```
+  - Đối với Năng lực AI:
+    + Nếu có đúng 1 mã: ghi trên cùng dòng theo dạng `- Năng lực AI: Mã: Mô tả (Áp dụng: tiết ...)`
+    + Nếu có từ 2 mã trở lên:
+      ```text
+      - Năng lực AI:
+       + Mã 1: Mô tả (Áp dụng: tiết ...)
+       + Mã 2: Mô tả (Áp dụng: tiết ...)
+      ```
+  - Khi một bài học có cả NLS và AI: gộp cả hai khối vào ô Ghi chú theo đúng định dạng trên, ngăn cách nhau bằng dòng mới.
+  - Khi một bài học không có NLS lẫn AI: hiển thị `-`.
+- Giữ nguyên 100% logic tạo/sinh dữ liệu (Gemini prompt, nguyên tắc bảo toàn PPCT nguồn, tỷ lệ %, mật độ mã adaptive, danh mục bài học SGK/CTGDPT 2018).
+- Cập nhật bảng xem trước HTML (`dynamicPpctTable`, `renderPreview`, chỉnh sửa inline `contenteditable` cho ô Ghi chú).
+- Cập nhật cơ chế thẩm định dữ liệu (`calculateComplianceReport`, `appendixAiCoverage`) và cơ chế đồng bộ Phụ lục 1 sang Phụ lục 3 (`appendixOneIntegrationForLesson`, `syncIntegrationFromAppendixOne`) để phân tích chuẩn xác mã NLS và AI từ cột Ghi chú.
+- Cập nhật cấu hình xuất Word DOCX (`DOCX_WIDTHS` và logic dựng bảng trong `exportDocx`).
+- Đồng bộ nhất quán trên cả 3 file mã nguồn: `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`.
+- Cập nhật các test suite tương ứng (`tests/xaydungphuluc-smoke.js`, `tests/canvas-xaydungphuluc-smoke.js`, `tests/xaydungphuluc-math-smoke.js`).
 
----
+## Ngoài phạm vi
+- Không thay đổi bảng Phân phối chương trình nguồn (PPCT 7 cột chuẩn ban đầu).
+- Không thay đổi Phụ lục 2 (Kế hoạch tổ chức các hoạt động giáo dục).
+- Không thay đổi logic trích xuất PDF SGK hay API lưu trữ draft (`user_phuluc_draft.php`).
 
-## 2. Phân tích Nguyên nhân gốc rễ (Root Causes)
+## File dự kiến tác động
+- `xaydungphuluc.html`
+- `canvas_xaydungphuluc.html`
+- `backupcode viettailieu/canvas_xaydungphuluc.html`
+- `tests/xaydungphuluc-smoke.js`
+- `tests/canvas-xaydungphuluc-smoke.js`
+- `tests/xaydungphuluc-math-smoke.js`
 
-1. **Lỗi so khớp chéo (Fuzzy Match Collision) trong `isLessonNlsSelected` và `selectedPeriodsForLesson`**:
-   - Trong `isLessonNlsSelected(lessonId, lessonName, c, index)`:
-     Khi `lessonId` được truyền vào (ví dụ `ppct:27`), nếu bài này **không được chọn** (`nlsSelectedLessonIds.has(lessonId) === false`), hàm lại tiếp tục chạy xuống:
-     ```javascript
-     if (lessonName) {
-       const match = nlsCandidates().find(x => typeof lessonsMatch === 'function' ? lessonsMatch(x.lesson, lessonName) : x.lesson === lessonName);
-       if (match && nlsSelectedLessonIds.has(match.id)) return true;
-     }
-     ```
-   - Tương tự trong `selectedPeriodsForLesson(lessonId, lessonName)`:
-     Khi `lessonId` có truyền vào nhưng bài đó không có tiết AI (`byId.length === 0`), hàm lại fallback sang so khớp tên bài bằng `lessonsMatch(x.lesson, lessonName)`.
-   - Trong khi đó, `lessonsMatch` có quy tắc kiểm tra từ khóa trùng lặp (`overlap >= 2`), nhưng hàm `cleanLessonName` và `lessonKeywords` lại **chưa loại bỏ** các từ chung như `'TRAI'`, `'NGHIEM'`, `'VA'`, `'HINH'`, cụm `"THỰC HÀNH VÀ TRẢI NGHIỆM"`.
-   - Hậu quả: Bài học A (được chọn NLS/AI, ví dụ bài trải nghiệm 2 tiết) bị khớp nhầm sang Bài học B (không hề được chọn NLS/AI, cũng là bài trải nghiệm 2 tiết). Kết quả là Bài B tự động bị gán ké NLS và AI, dẫn đến tổng số tiết bị dôi ra đúng 2 tiết NLS (28 -> 30) và 2 tiết AI (12 -> 14)!
+## Các bước thực hiện
+1. **Xây dựng hàm định dạng ô Ghi chú**:
+   - Viết hàm `formatNoteIntegration(nlsText, aiText, lesson)`:
+     - Tách từng dòng mã từ `nlsText` và `aiText`.
+     - Phân tích `{ code, desc }` cho từng mục. Đảm bảo thay thế định dạng `code - desc` thành `code: desc`.
+     - Áp dụng điều kiện độ dài: 1 mã thì ghi thẳng sau nhãn `- Năng lực số: Mã: Mô tả`; >= 2 mã thì xuống dòng với thụt đầu dòng ` + Mã: Mô tả`.
+     - Tương tự cho Năng lực AI với tiền tố `- Năng lực AI:`.
+     - Ghép khối NLS và khối AI thành chuỗi văn bản hoàn chỉnh cho ô Ghi chú.
+2. **Cập nhật định nghĩa cột Phụ lục 1 và Phụ lục 3**:
+   - `APPENDIX_1_COLUMNS = [['stt','STT'],['lesson','Bài học'],['periods','Số tiết'],['outcomes','Yêu cầu cần đạt'],['note','Ghi chú']]`
+   - `APPENDIX_3_COLUMNS = [['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['note','Ghi chú']]`
+   - Gán `PLAN_COLUMNS = APPENDIX_3_COLUMNS`.
+3. **Cập nhật hàm dựng bảng Phụ lục 1 & 3**:
+   - `appendixOneTable`: Sinh 5 cột, gọi `formatNoteIntegration(nlsText, aiText, row.lesson)` để điền vào cột `note`.
+   - `appendixThreeTable`: Sinh 7 cột, gọi `formatNoteIntegration(nlsText, aiText, row.lesson)` để điền vào cột `note`.
+4. **Cập nhật nhận diện cột tích hợp và chuẩn hóa**:
+   - Bổ sung nhận diện nhãn cột `Ghi chú` trong `isIntegrationColumn(label)` và hàm kiểm tra `isNoteColumn(label)`.
+   - Điều chỉnh `normalizeIntegrationTable` để xử lý mượt mà bảng 5 cột (PL1) và 7 cột (PL3).
+5. **Cập nhật đồng bộ PL1 -> PL3 và kiểm tra thẩm định**:
+   - Điều chỉnh `appendixOneIntegrationForLesson` trích xuất thông tin tích hợp từ cột Ghi chú của Phụ lục 1.
+   - Cập nhật `appendixAiCoverage` và `calculateComplianceReport` để bóc tách mã NLS (`\b\d+\.\d+\.TC\w+`) và mã AI (`\b\d+\.[A-Z]\d+` kèm phạm vi tiết) từ ô Ghi chú, bảo đảm tỷ lệ thẩm định đạt 100%.
+6. **Cập nhật giao diện xem trước HTML và xuất file Word**:
+   - Trong `dynamicPpctTable`: Cột `Ghi chú` hiển thị đa dòng đẹp mắt (hỗ trợ xuống dòng, giữ định dạng bullet `+ `), cho phép `contenteditable` chỉnh sửa trực tiếp.
+   - Trong `renderPreview` và `exportDocx`: Đổi điều kiện kiểm tra số cột PL3 `planModel.columns.length === 7` (thay vì `=== 8`).
+   - Cập nhật độ rộng Word `DOCX_WIDTHS`:
+     - `appendixOne`: `[5, 22, 6, 37, 30]` (tổng 100%).
+     - `appendixThree`: `[20, 5, 6, 5, 15, 14, 35]` (tổng 100%).
+7. **Đồng bộ hóa 1:1 sang Canvas và bản sao lưu**:
+   - Đồng bộ toàn bộ các hàm và hằng số đã sửa sang `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+8. **Cập nhật kiểm thử tự động**:
+   - Điều chỉnh các assert về số lượng cột và tên cột trong `tests/xaydungphuluc-smoke.js`, `tests/canvas-xaydungphuluc-smoke.js`, `tests/xaydungphuluc-math-smoke.js`.
+   - Chạy toàn bộ test suites bảo đảm 100% PASS.
 
-2. **Lỗi đồng bộ mã tích hợp sang Phụ lục 3 (`appendixThreeTable` & `syncIntegrationFromAppendixOne`)**:
-   - Khi nối dữ liệu từ Phụ lục 1 sang Phụ lục 3:
-     `const pl1Row = pl1Model.rows.find(item => !item.isHeader && lessonsMatch((item.cells||[])[pl1LessonIdx], row.lesson));`
-   - Việc dùng `find` với `lessonsMatch` khiến nhiều dòng có tên chung (như "Ôn tập", "Luyện tập chung", "Thực hành trải nghiệm") ở các học kỳ khác nhau cùng trỏ về một dòng duy nhất của Phụ lục 1, làm nhân bản mã NLS/AI sang các dòng không mong muốn.
+## Rủi ro
+- **Nhận diện mã AI/NLS khi thẩm định**: Chuỗi trong cột Ghi chú có tiền tố `- Năng lực số:` và ` + ` có thể làm lệch regex nhận diện mã hoặc phạm vi tiết `(Áp dụng: tiết ...)`.
+  -> Khắc phục: Giữ nguyên chuẩn mã regex `\b\d+\.\d+\.TC\w+` và `\b\d+\.[A-Z]\d+`, bảo toàn nguyên vẹn cụm `(Áp dụng: tiết ...)` trong mô tả AI.
+- **Đồng bộ từ Phụ lục 1 sang Phụ lục 3**: Khi người dùng chỉnh sửa trực tiếp ô Ghi chú của Phụ lục 1, Phụ lục 3 cần đồng bộ chính xác.
+  -> Khắc phục: Hàm `appendixOneIntegrationForLesson` đọc nguyên văn nội dung ô Ghi chú từ Phụ lục 1 và truyền sang Phụ lục 3.
+- **Lệch layout khi xuất Word DOCX**: Nếu tỉ lệ phần trăm cột không tròn 100% có thể gây tràn viền Word.
+  -> Khắc phục: Cân đối tỉ lệ phần trăm `DOCX_WIDTHS` chính xác đạt tổng 100%, ưu tiên cột Ghi chú chiếm 30% (PL1) và 35% (PL3).
 
-3. **Prompt sinh Phụ lục của AI thiếu danh sách bài học NLS được chọn**:
-   - Trong `appendixPrompt(no, c)`: Prompt có danh sách tiết AI (`selectedText`) và yêu cầu nghiêm ngặt cấm xuất mã AI ngoài danh sách. Tuy nhiên, với NLS, prompt chỉ ghi quy tắc phân bổ chung chung mà **hoàn toàn không có danh sách các bài NLS được chọn** (`nlsSelectedText`). Do đó AI tự ý gán NLS vào nhiều bài khác, và do bug so khớp ở mục 1, các mã NLS này được chấp nhận vào bảng.
+## Cách kiểm thử
+1. Chạy các lệnh kiểm thử tự động:
+   - `node tests/xaydungphuluc-smoke.js`
+   - `node tests/canvas-xaydungphuluc-smoke.js`
+   - `node tests/xaydungphuluc-math-smoke.js`
+   - `node tests/xaydungphuluc-integration-smoke.js`
+2. Kiểm tra dữ liệu trực quan trên sandbox/runtime:
+   - Bài có 1 mã NLS: hiển thị `- Năng lực số: [Mã]: [Mô tả]`.
+   - Bài có 2+ mã NLS: hiển thị `- Năng lực số:\n + [Mã 1]: [Mô tả 1]\n + [Mã 2]: [Mô tả 2]`.
+   - Bài có mã AI: hiển thị tương ứng `- Năng lực AI: ...` hoặc dạng danh sách bullet ` + `.
+   - Bảng Phụ lục 1 có đúng 5 cột; Bảng Phụ lục 3 có đúng 7 cột.
+   - Báo cáo thẩm định CV 5512 đạt 100%.
 
-4. **Thuật toán chọn tiết trong `chooseNlsLessonsForPeriods` và `syncAiSelectionFromCount`**:
-   - Cần đảm bảo khi người dùng nhập 28 tiết NLS và 12 tiết AI, danh sách chọn bài (`nlsSelectedLessonIds` và `aiSelectedLessonIds`) có tổng số tiết chuẩn xác, đồng bộ nhất quán giữa số hiển thị ở Section 3, Section 5 và các bảng kết quả ở Section 8.
-
----
-
-## 3. Phạm vi tệp tin cần sửa đổi (Scope)
-1. `xaydungphuluc.html`
-2. `backupcode viettailieu/canvas_xaydungphuluc.html`
-3. `canvas_xaydungphuluc.html` (đồng bộ từ bản canvas để đảm bảo môi trường kiểm thử đầy đủ)
-4. `tests/xaydungphuluc-smoke.js`
-
----
-
-## 4. Hướng dẫn chi tiết cho Coder
-
-### PHẦN A: Sửa logic so khớp trong `xaydungphuluc.html` và các file canvas
-
-1. **Sửa hàm `isLessonNlsSelected(lessonId, lessonName, c, index)`**:
-   - Khi `lessonId` được cung cấp (khác rỗng):
-     - Chỉ kiểm tra duy nhất: `if (nlsSelectedLessonIds.has(lessonId)) return true; else return false;`.
-     - **Tuyệt đối không** fallback xuống `lessonName` / `lessonsMatch` khi `lessonId` đã xác định rõ ràng.
-   - Chỉ fallback sang `lessonName` / `lessonsMatch` khi `lessonId` là `null`, `undefined` hoặc rỗng `''` (ví dụ khi dữ liệu từ AI trả về không có ID).
-
-2. **Sửa hàm `selectedPeriodsForLesson(lessonId, lessonName = '')`**:
-   - Khi `lessonId` được cung cấp:
-     - Lấy các tiết theo `lessonId`:
-       ```javascript
-       const byId = all.filter(x => (x.lessonId === lessonId || x.id.startsWith(lessonId + ':')) && selectedIds.has(x.id)).map(x => x.period);
-       return byId;
-       ```
-     - Nếu `lessonId` đã có, trả về `byId` (dù rỗng cũng trả về rỗng). **Tuyệt đối không** fallback xuống kiểm tra `lessonName` khi `lessonId` đã được cung cấp.
-
-3. **Cải tiến `cleanLessonName` và `lessonKeywords`**:
-   - Bổ sung cụm regex loại bỏ `"THỰC HÀNH VÀ TRẢI NGHIỆM"`, `"HOẠT ĐỘNG THỰC HÀNH VÀ TRẢI NGHIỆM"`.
-   - Trong `lessonKeywords`, bổ sung các từ chung không mang nghĩa phân biệt bài học: `'TRAI'`, `'NGHIEM'`, `'THUC'`, `'HANH'`, `'CHUONG'`, `'HOAT'`, `'DONG'`.
-   - Trong `lessonsMatch`: Đối với các bài không có số thứ tự bài (không có `lessonOrdinal`), nếu độ dài từ khóa quá ngắn hoặc chỉ trùng các từ chung thì không được coi là khớp.
-
-4. **Sửa logic đồng bộ Phụ lục 3 (`appendixThreeTable` & `syncIntegrationFromAppendixOne`)**:
-   - Khi ghép dòng từ Phụ lục 1 sang Phụ lục 3:
-     - Ưu tiên ghép 1-1 theo thứ tự bài học trong danh sách (`rowIndex` / `normal`), hoặc nếu ghép theo tên thì phải đánh dấu dòng Phụ lục 1 đã dùng (`usedPl1Indices.add(pl1Index)`), không cho phép nhiều dòng Phụ lục 3 cùng ăn theo một dòng Phụ lục 1.
-
-5. **Bổ sung danh sách bài NLS vào `getConfig` và `appendixPrompt`**:
-   - Trong `getConfig()`: Bổ sung `selectedLessons` và `selectedLessonIds` vào object `nls` (tương tự như `ai.selectedLessons`).
-   - Trong `appendixPrompt(no, c)`:
-     - Khai báo danh sách bài NLS được chọn:
-       `const nlsSelectedText = nlsList.length ? nlsList.map(x => `“${x.lesson}”`).join('; ') : '(không có bài nào)';`
-     - Bổ sung chỉ thị ràng buộc AI:
-       `NLS TUYỆT ĐỐI chỉ được xuất cho đúng các bài sau: ${nlsSelectedText}. CẤM xuất mã NLS cho bất kỳ bài học nào khác ngoài danh sách này.`
-
-6. **Đồng bộ mã nguồn sang file Canvas**:
-   - Cập nhật tương ứng sang `backupcode viettailieu/canvas_xaydungphuluc.html`.
-   - Tạo/đồng bộ sang `canvas_xaydungphuluc.html` ở thư mục gốc để đảm bảo các bài test `tests/sgk-knowledge-smoke.js` và `tests/xaydungphuluc-math-smoke.js` chạy thông suốt.
-
----
-
-## 5. Kế hoạch Kiểm thử & Xác minh (Verification Plan)
-
-Coder thực hiện các kiểm tra sau:
-
-1. **Kiểm tra tự động với smoke test**:
-   - Bổ sung test case trong `tests/xaydungphuluc-smoke.js`:
-     - Thiết lập cấu hình NLS 28 tiết, AI 12 tiết.
-     - Khẳng định bảng Phụ lục 1 và Phụ lục 3 tính ra chính xác 28 tiết NLS và 12 tiết AI, không bị dôi thành 30 tiết NLS hay 14 tiết AI.
-     - Khẳng định không bị match chéo giữa các bài "Hoạt động thực hành và trải nghiệm" khác nhau.
-   - Chạy các test:
-     - `node tests/xaydungphuluc-smoke.js`: PASS.
-     - `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
-     - `node tests/xaydungphuluc-math-smoke.js`: PASS.
-     - `node tests/sgk-knowledge-smoke.js`: PASS.
-2. **Ghi chép bàn giao**:
-   - Ghi lại toàn bộ nội dung đã sửa và kết quả kiểm thử vào `docs/handoff/IMPLEMENT.md`.
-
+## Tiêu chí nghiệm thu
+- Phụ lục 1 hiển thị và xuất file Word đúng 5 cột: `STT`, `Bài học`, `Số tiết`, `Yêu cầu cần đạt`, `Ghi chú`.
+- Phụ lục 3 hiển thị và xuất file Word đúng 7 cột: `Bài học`, `Số tiết`, `Tiết CT`, `Tuần`, `Thiết bị dạy học (*)`, `Địa điểm dạy học (**)`, `Ghi chú`.
+- Cột `Ghi chú` hiển thị chuẩn xác quy tắc định dạng 1 mã vs từ 2 mã trở lên cho cả NLS và AI.
+- Logic sinh dữ liệu AI, tỷ lệ NLS/AI và các tính năng khác được giữ nguyên trọn vẹn.
+- Toàn bộ các bài kiểm thử tự động đều PASS.

@@ -67,7 +67,7 @@ for(const text of [
   "apiKeys=['canvas-session']",'mistralKeys=[]',
   "method:'POST'","credentials:'omit'",'body:JSON.stringify({payload,timeout:120})','GEMINI_TIMEOUT_MS=120000',
   'envelope?.body','width:11906,height:16838','orientation:PageOrientation.LANDSCAPE',
-  'Biểu hiện năng lực số','Biểu hiện năng lực AI','0070C0','7030A0'
+  'Ghi chú','formatNoteIntegration','0070C0','7030A0'
 ])assert(target.includes(text),`missing Canvas requirement: ${text}`);
 assert(!/src=["'][^"']*(?:security-guard|access-control)\.js/.test(target),'Canvas must not load access/security scripts');
 assert(!/(?:generativelanguage\.googleapis\.com|api\.mistral\.ai|api\/user_gemini_keys\.php)/.test(target),'Canvas must not call direct provider or user-key services');
