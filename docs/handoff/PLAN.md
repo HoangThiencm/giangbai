@@ -1,111 +1,222 @@
-# PLAN
+# PLAN: Khắc phục lỗi cột Ghi chú chưa cập nhật biểu hiện NLS & AI và Báo cáo thẩm định Chưa đạt (0 tiết)
 
-## Hiện trạng
-- Trong `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, và `backupcode viettailieu/canvas_xaydungphuluc.html`:
-  - Phụ lục 1 đang được định nghĩa 6 cột: `['STT', 'Bài học', 'Số tiết', 'Yêu cầu cần đạt', 'Biểu hiện năng lực số', 'Biểu hiện năng lực AI']` (`APPENDIX_1_COLUMNS`).
-  - Phụ lục 3 đang được định nghĩa 8 cột: `['Bài học', 'Số tiết', 'Tiết CT', 'Tuần', 'Thiết bị dạy học (*)', 'Địa điểm dạy học (**)', 'Biểu hiện năng lực số', 'Biểu hiện năng lực AI']` (`APPENDIX_3_COLUMNS`).
-  - Mã NLS và mã AI hiện đang tách thành 2 cột riêng rẽ thông qua `separateIntegration()`, làm bảng biểu bị kéo dài theo chiều ngang trong cả bản xem trước HTML lẫn file Word (.docx) xuất ra.
-  - Các hàm chuẩn hóa bảng (`normalizeIntegrationTable`), thẩm định chuẩn hóa (`calculateComplianceReport`, `appendixAiCoverage`), trích xuất tích hợp (`appendixOneIntegrationForLesson`, `syncIntegrationFromAppendixOne`), và xuất Word (`exportDocx`, `DOCX_WIDTHS`) đang gắn chặt với số lượng cột và nhãn cột cũ (`length === 8`, `isNlsColumn`, `isAiColumn`).
+## Hiện trạng & Kết quả điều tra chi tiết
 
-## Phạm vi
-- **Phụ lục 1**: Gộp 2 cột `Biểu hiện năng lực số` và `Biểu hiện năng lực AI` thành 1 cột duy nhất là `Ghi chú`. Số cột giảm từ 6 cột xuống 5 cột: `STT`, `Bài học`, `Số tiết`, `Yêu cầu cần đạt`, `Ghi chú`.
-- **Phụ lục 3**: Gộp 2 cột `Biểu hiện năng lực số` và `Biểu hiện năng lực AI` thành 1 cột duy nhất là `Ghi chú`. Số cột giảm từ 8 cột xuống 7 cột: `Bài học`, `Số tiết`, `Tiết CT`, `Tuần`, `Thiết bị dạy học (*)`, `Địa điểm dạy học (**)`, `Ghi chú`.
-- **Quy tắc định dạng nội dung cột Ghi chú**:
-  - Đối với Năng lực số:
-    + Nếu có đúng 1 mã: ghi trên cùng dòng theo dạng `- Năng lực số: Mã: Mô tả`
-    + Nếu có từ 2 mã trở lên:
-      ```text
-      - Năng lực số:
-       + Mã 1: Mô tả
-       + Mã 2: Mô tả
-      ```
-  - Đối với Năng lực AI:
-    + Nếu có đúng 1 mã: ghi trên cùng dòng theo dạng `- Năng lực AI: Mã: Mô tả (Áp dụng: tiết ...)`
-    + Nếu có từ 2 mã trở lên:
-      ```text
-      - Năng lực AI:
-       + Mã 1: Mô tả (Áp dụng: tiết ...)
-       + Mã 2: Mô tả (Áp dụng: tiết ...)
-      ```
-  - Khi một bài học có cả NLS và AI: gộp cả hai khối vào ô Ghi chú theo đúng định dạng trên, ngăn cách nhau bằng dòng mới.
-  - Khi một bài học không có NLS lẫn AI: hiển thị `-`.
-- Giữ nguyên 100% logic tạo/sinh dữ liệu (Gemini prompt, nguyên tắc bảo toàn PPCT nguồn, tỷ lệ %, mật độ mã adaptive, danh mục bài học SGK/CTGDPT 2018).
-- Cập nhật bảng xem trước HTML (`dynamicPpctTable`, `renderPreview`, chỉnh sửa inline `contenteditable` cho ô Ghi chú).
-- Cập nhật cơ chế thẩm định dữ liệu (`calculateComplianceReport`, `appendixAiCoverage`) và cơ chế đồng bộ Phụ lục 1 sang Phụ lục 3 (`appendixOneIntegrationForLesson`, `syncIntegrationFromAppendixOne`) để phân tích chuẩn xác mã NLS và AI từ cột Ghi chú.
-- Cập nhật cấu hình xuất Word DOCX (`DOCX_WIDTHS` và logic dựng bảng trong `exportDocx`).
-- Đồng bộ nhất quán trên cả 3 file mã nguồn: `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`.
-- Cập nhật các test suite tương ứng (`tests/xaydungphuluc-smoke.js`, `tests/canvas-xaydungphuluc-smoke.js`, `tests/xaydungphuluc-math-smoke.js`).
+Người dùng đã tích chọn đúng số tiết NLS và AI ở Mục 5, nhưng:
+1. **Trong cột Ghi chú (Phụ lục 1 và Phụ lục 3)**: Hoàn toàn không hiển thị biểu hiện NLS và AI (chỉ hiển thị dấu gạch ngang `'-'`).
+2. **Trong Báo cáo thẩm định**:
+   - Năng lực số: `0/140 tiết (0/89 bài), mục tiêu 28 tiết` -> **Chưa đạt**
+   - Trí tuệ nhân tạo: `0/12 tiết AI đã chọn có mã và phạm vi` -> **Chưa đạt**
 
-## Ngoài phạm vi
-- Không thay đổi bảng Phân phối chương trình nguồn (PPCT 7 cột chuẩn ban đầu).
-- Không thay đổi Phụ lục 2 (Kế hoạch tổ chức các hoạt động giáo dục).
-- Không thay đổi logic trích xuất PDF SGK hay API lưu trữ draft (`user_phuluc_draft.php`).
+---
 
-## File dự kiến tác động
+## Ba nguyên nhân gốc rễ (Root Causes)
+
+### 1. Nguyên nhân 1 (Gây mất trắng dữ liệu cột Ghi chú thành `'-'`): Sai lệch chỉ số cột trong hàm bọc `appendixOneTable` và `appendixThreeTable`
+- Tại cuối file (`xaydungphuluc.html` dòng 1688–1689, `canvas_xaydungphuluc.html` dòng 1762–1763):
+  ```javascript
+  appendixOneTable = function(generated, c) {
+    const table = legacyAppendixOneTableForNote(generated, c),
+          nls = table.columns.findIndex(isNlsColumn),
+          ai = table.columns.findIndex(isAiColumn);
+    return {
+      ...table,
+      columns: APPENDIX_1_COLUMNS.map(([, label]) => label),
+      rows: table.rows.map(row => row.isHeader ? row : {
+        ...row,
+        cells: [...row.cells.slice(0, 4), formatNoteIntegration(row.cells[nls], row.cells[ai], row.cells[1])]
+      })
+    };
+  };
+  ```
+- **Lý do**: Khi gộp sang 5 cột (`APPENDIX_1_COLUMNS`), bảng trả về từ `legacyAppendixOneTableForNote` đã có cột là `['STT', 'Bài học', 'Số tiết', 'Yêu cầu cần đạt', 'Ghi chú']`. Các cột không còn nhãn `Biểu hiện năng lực số` hay `Biểu hiện năng lực AI`.
+- Do đó `table.columns.findIndex(isNlsColumn)` và `findIndex(isAiColumn)` luôn trả về `-1`.
+- Trong JS, `row.cells[-1]` là `undefined`.
+- Hàm `formatNoteIntegration(undefined, undefined, ...)` trả về giá trị mặc định là `'-'`.
+- Toàn bộ nội dung `nlsText` (ở `row.cells[4]`) và `aiText` (ở `row.cells[5]`) được tính toán chuẩn xác từ `separateIntegration` bị bỏ rơi hoàn toàn, thay thế bằng `'-'`.
+- Tương tự với Phụ lục 3: `legacyAppendixThreeTableForNote` trả về `nlsText` ở `cells[6]` và `aiText` ở `cells[7]`, nhưng `findIndex()` cũng trả về `-1`, khiến ô Ghi chú của PL3 cũng bị biến thành `'-'`.
+
+### 2. Nguyên nhân 2: Các hàm tick chọn NLS/AI ở Mục 5 chưa kích hoạt cập nhật lại bảng xem trước
+- Tại các hàm sự kiện tick chọn:
+  - `toggleNlsLesson(lessonId, checked)` (dòng 1341)
+  - `toggleAiLesson(id, checked)` (dòng 1474)
+  - `toggleAiLessonRow(lessonId, checked)` (dòng 1475)
+- Các hàm này chỉ gọi `syncNlsRateFromSelection()` và `updateAiPicker()`, **hoàn toàn không gọi `schedulePreviewUpdate()`** (hoặc `refreshPpctDependents()`).
+- Khi người dùng tick chọn các ô checkbox NLS hoặc AI trong bảng Mục 5, bảng xem trước Phụ lục 1 / Phụ lục 3 ở Mục 8 và Báo cáo thẩm định không được thông báo để tính toán và vẽ lại theo các tiết vừa chọn.
+
+### 3. Nguyên nhân 3: `integrationParts(value)` không nhận diện định dạng khối `- Năng lực AI:`
+- Tại dòng 1544:
+  ```javascript
+  function integrationParts(value) {
+    const raw = integrationText(value);
+    if (!raw || raw === '-') return [];
+    const parts = /^\s*\d+\.[A-Z]/i.test(raw) ? [raw] : raw.split(/(?=\[\s*(?:AI\s*:|NLS\s*:|\d+\.[A-Z]))/i).filter(Boolean);
+    return parts.map(text => ({ text: integrationText(text), ai: /^\s*(?:\[\s*AI\s*:|\d+\.[A-Z])/i.test(text) }));
+  }
+  ```
+- Định dạng mới trong ô Ghi chú là:
+  ```text
+  - Năng lực số: 1.1.TC1a : ...
+  - Năng lực AI: 6.B2.1 : ... (Áp dụng: tiết 1, 2)
+  ```
+  hoặc danh sách gạch đầu dòng ` + `.
+- Regex cũ chỉ tìm `[` ngoặc vuông hoặc chuỗi bắt đầu bằng `\d+\.[A-Z]`, nên không nhận diện được `- Năng lực AI:` và gán `ai: false`.
+- Dẫn đến `appendixAiCoverage` bóc tách danh sách tiết AI bị rỗng `[]`, khiến số tiết AI thẩm định luôn bằng `0/12`.
+
+---
+
+## Phạm vi file sửa đổi
+
+1. **`xaydungphuluc.html`**
+2. **`canvas_xaydungphuluc.html`**
+3. **`backupcode viettailieu/canvas_xaydungphuluc.html`**
+4. **`tests/xaydungphuluc-smoke.js`**
+5. **`tests/canvas-xaydungphuluc-smoke.js`**
+
+---
+
+## Các bước triển khai chi tiết cho Coder
+
+### Bước 1: Sửa hàm `appendixOneTable` và `appendixThreeTable` (Bảo đảm lấy đúng NLS & AI)
+Tại cuối mỗi file HTML (đoạn bọc `appendixOneTable` và `appendixThreeTable`):
+1. **Với Phụ lục 1 (`appendixOneTable`)**:
+   ```javascript
+   appendixOneTable = function(generated, c) {
+     const table = legacyAppendixOneTableForNote(generated, c);
+     const nlsIdx = table.columns.findIndex(isNlsColumn);
+     const aiIdx = table.columns.findIndex(isAiColumn);
+     // Fallback sang vị trí mặc định của legacy table nếu cột đã bị đổi thành Ghi chú: nls=4, ai=5
+     const nlsCol = nlsIdx >= 0 ? nlsIdx : 4;
+     const aiCol = aiIdx >= 0 ? aiIdx : 5;
+     return {
+       ...table,
+       columns: APPENDIX_1_COLUMNS.map(([, label]) => label),
+       rows: table.rows.map(row => {
+         if (row.isHeader) return row;
+         const nlsText = row.cells[nlsCol];
+         const aiText = row.cells[aiCol];
+         const note = formatNoteIntegration(nlsText, aiText, row.cells[1]);
+         return {
+           ...row,
+           cells: [...row.cells.slice(0, 4), note]
+         };
+       })
+     };
+   };
+   ```
+2. **Với Phụ lục 3 (`appendixThreeTable`)**:
+   ```javascript
+   appendixThreeTable = function(rows, c) {
+     const table = legacyAppendixThreeTableForNote(rows, c);
+     const nlsIdx = table.columns.findIndex(isNlsColumn);
+     const aiIdx = table.columns.findIndex(isAiColumn);
+     // Fallback sang vị trí mặc định của legacy table nếu cột đã bị đổi thành Ghi chú: nls=6, ai=7
+     const nlsCol = nlsIdx >= 0 ? nlsIdx : 6;
+     const aiCol = aiIdx >= 0 ? aiIdx : 7;
+     return {
+       ...table,
+       columns: APPENDIX_3_COLUMNS.map(([, label]) => label),
+       rows: table.rows.map(row => {
+         if (row.isHeader) return row;
+         const nlsText = row.cells[nlsCol];
+         const aiText = row.cells[aiCol];
+         const note = formatNoteIntegration(nlsText, aiText, row.cells[0]);
+         return {
+           ...row,
+           cells: [...row.cells.slice(0, 6), note]
+         };
+       })
+     };
+   };
+   ```
+
+### Bước 2: Thêm `schedulePreviewUpdate()` vào các sự kiện tick chọn Mục 5
+Trong các hàm:
+1. `toggleNlsLesson`:
+   ```javascript
+   function toggleNlsLesson(lessonId, checked) {
+     if (checked && isSinglePeriodLesson(lessonId)) toggleAiLessonRow(lessonId, false);
+     if (checked) nlsSelectedLessonIds.add(lessonId); else nlsSelectedLessonIds.delete(lessonId);
+     syncNlsRateFromSelection();
+     updateAiPicker();
+     schedulePreviewUpdate();
+   }
+   ```
+2. `toggleAiLesson`:
+   ```javascript
+   function toggleAiLesson(id, checked) {
+     const selected = selectedAiPeriodIds(), period = aiPeriodCandidates().find(item => item.id === id);
+     if (checked && period && isSinglePeriodLesson(period.lessonId)) nlsSelectedLessonIds.delete(period.lessonId);
+     if (checked) selected.add(id); else selected.delete(id);
+     syncNlsRateFromSelection();
+     updateAiPicker();
+     schedulePreviewUpdate();
+   }
+   ```
+3. `toggleAiLessonRow`:
+   ```javascript
+   function toggleAiLessonRow(lessonId, checked) {
+     const periods = aiPeriodCandidates().filter(x => x.lessonId === lessonId), selected = selectedAiPeriodIds();
+     if (checked && isSinglePeriodLesson(lessonId)) nlsSelectedLessonIds.delete(lessonId);
+     if (checked) periods.forEach(period => selected.add(period.id)); else periods.forEach(period => selected.delete(period.id));
+     syncNlsRateFromSelection();
+     updateAiPicker();
+     schedulePreviewUpdate();
+   }
+   ```
+
+### Bước 3: Nâng cấp `integrationParts(value)` để phân tách chuẩn xác khối NLS và AI trong Ghi chú
+Cập nhật hàm `integrationParts`:
+```javascript
+function integrationParts(value) {
+  const raw = integrationText(value);
+  if (!raw || raw === '-') return [];
+  // Phân tách định dạng Ghi chú mới: - Năng lực số / - Năng lực AI
+  if (/-\s*Năng lực\s*(?:số|AI)/i.test(raw)) {
+    const blocks = raw.split(/(?=-\s*Năng lực\s*(?:số|AI))/i);
+    const results = [];
+    for (const block of blocks) {
+      const b = block.trim();
+      if (!b) continue;
+      const isAi = /^-\s*Năng lực\s*AI/i.test(b);
+      const lines = b.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const subItems = lines.slice(1).filter(l => l.startsWith('+'));
+      if (subItems.length) {
+        for (const sub of subItems) {
+          results.push({ text: sub, ai: isAi });
+        }
+      } else {
+        results.push({ text: b, ai: isAi });
+      }
+    }
+    return results;
+  }
+  // Định dạng ngoặc vuông legacy: [NLS: ...] [AI: ...]
+  const parts = /^\s*\d+\.[A-Z]/i.test(raw) ? [raw] : raw.split(/(?=\[\s*(?:AI\s*:|NLS\s*:|\d+\.[A-Z]))/i).filter(Boolean);
+  return parts.map(text => ({ text: integrationText(text), ai: /^\s*(?:\[\s*AI\s*:|\d+\.[A-Z])/i.test(text) }));
+}
+```
+
+### Bước 4: Đồng bộ 1:1 trên cả 3 file mã nguồn
+Cập nhật đầy đủ, đồng nhất trên:
 - `xaydungphuluc.html`
 - `canvas_xaydungphuluc.html`
 - `backupcode viettailieu/canvas_xaydungphuluc.html`
-- `tests/xaydungphuluc-smoke.js`
-- `tests/canvas-xaydungphuluc-smoke.js`
-- `tests/xaydungphuluc-math-smoke.js`
 
-## Các bước thực hiện
-1. **Xây dựng hàm định dạng ô Ghi chú**:
-   - Viết hàm `formatNoteIntegration(nlsText, aiText, lesson)`:
-     - Tách từng dòng mã từ `nlsText` và `aiText`.
-     - Phân tích `{ code, desc }` cho từng mục. Đảm bảo thay thế định dạng `code - desc` thành `code: desc`.
-     - Áp dụng điều kiện độ dài: 1 mã thì ghi thẳng sau nhãn `- Năng lực số: Mã: Mô tả`; >= 2 mã thì xuống dòng với thụt đầu dòng ` + Mã: Mô tả`.
-     - Tương tự cho Năng lực AI với tiền tố `- Năng lực AI:`.
-     - Ghép khối NLS và khối AI thành chuỗi văn bản hoàn chỉnh cho ô Ghi chú.
-2. **Cập nhật định nghĩa cột Phụ lục 1 và Phụ lục 3**:
-   - `APPENDIX_1_COLUMNS = [['stt','STT'],['lesson','Bài học'],['periods','Số tiết'],['outcomes','Yêu cầu cần đạt'],['note','Ghi chú']]`
-   - `APPENDIX_3_COLUMNS = [['lesson','Bài học'],['periods','Số tiết'],['tietCT','Tiết CT'],['week','Tuần'],['devices','Thiết bị dạy học (*)'],['location','Địa điểm dạy học (**)'],['note','Ghi chú']]`
-   - Gán `PLAN_COLUMNS = APPENDIX_3_COLUMNS`.
-3. **Cập nhật hàm dựng bảng Phụ lục 1 & 3**:
-   - `appendixOneTable`: Sinh 5 cột, gọi `formatNoteIntegration(nlsText, aiText, row.lesson)` để điền vào cột `note`.
-   - `appendixThreeTable`: Sinh 7 cột, gọi `formatNoteIntegration(nlsText, aiText, row.lesson)` để điền vào cột `note`.
-4. **Cập nhật nhận diện cột tích hợp và chuẩn hóa**:
-   - Bổ sung nhận diện nhãn cột `Ghi chú` trong `isIntegrationColumn(label)` và hàm kiểm tra `isNoteColumn(label)`.
-   - Điều chỉnh `normalizeIntegrationTable` để xử lý mượt mà bảng 5 cột (PL1) và 7 cột (PL3).
-5. **Cập nhật đồng bộ PL1 -> PL3 và kiểm tra thẩm định**:
-   - Điều chỉnh `appendixOneIntegrationForLesson` trích xuất thông tin tích hợp từ cột Ghi chú của Phụ lục 1.
-   - Cập nhật `appendixAiCoverage` và `calculateComplianceReport` để bóc tách mã NLS (`\b\d+\.\d+\.TC\w+`) và mã AI (`\b\d+\.[A-Z]\d+` kèm phạm vi tiết) từ ô Ghi chú, bảo đảm tỷ lệ thẩm định đạt 100%.
-6. **Cập nhật giao diện xem trước HTML và xuất file Word**:
-   - Trong `dynamicPpctTable`: Cột `Ghi chú` hiển thị đa dòng đẹp mắt (hỗ trợ xuống dòng, giữ định dạng bullet `+ `), cho phép `contenteditable` chỉnh sửa trực tiếp.
-   - Trong `renderPreview` và `exportDocx`: Đổi điều kiện kiểm tra số cột PL3 `planModel.columns.length === 7` (thay vì `=== 8`).
-   - Cập nhật độ rộng Word `DOCX_WIDTHS`:
-     - `appendixOne`: `[5, 22, 6, 37, 30]` (tổng 100%).
-     - `appendixThree`: `[20, 5, 6, 5, 15, 14, 35]` (tổng 100%).
-7. **Đồng bộ hóa 1:1 sang Canvas và bản sao lưu**:
-   - Đồng bộ toàn bộ các hàm và hằng số đã sửa sang `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
-8. **Cập nhật kiểm thử tự động**:
-   - Điều chỉnh các assert về số lượng cột và tên cột trong `tests/xaydungphuluc-smoke.js`, `tests/canvas-xaydungphuluc-smoke.js`, `tests/xaydungphuluc-math-smoke.js`.
-   - Chạy toàn bộ test suites bảo đảm 100% PASS.
+### Bước 5: Cập nhật kiểm thử tự động
+Trong `tests/xaydungphuluc-smoke.js` và `tests/canvas-xaydungphuluc-smoke.js`:
+1. Kiểm tra khi gọi `appendixOneTable(...)`: ô `cells[4]` phải chứa chuỗi định dạng `- Năng lực số:` hoặc mã NLS, và `- Năng lực AI:` hoặc mã AI (tuyệt đối không được bằng `'-'`).
+2. Kiểm tra `toggleAiLesson` / `toggleNlsLesson`: kích hoạt `schedulePreviewUpdate` và cập nhật lại bảng xem trước.
+3. Kiểm tra `appendixAiCoverage` và `calculateComplianceReport`: tính toán đúng số tiết AI và NLS từ cột Ghi chú, đạt `pass === true`.
 
-## Rủi ro
-- **Nhận diện mã AI/NLS khi thẩm định**: Chuỗi trong cột Ghi chú có tiền tố `- Năng lực số:` và ` + ` có thể làm lệch regex nhận diện mã hoặc phạm vi tiết `(Áp dụng: tiết ...)`.
-  -> Khắc phục: Giữ nguyên chuẩn mã regex `\b\d+\.\d+\.TC\w+` và `\b\d+\.[A-Z]\d+`, bảo toàn nguyên vẹn cụm `(Áp dụng: tiết ...)` trong mô tả AI.
-- **Đồng bộ từ Phụ lục 1 sang Phụ lục 3**: Khi người dùng chỉnh sửa trực tiếp ô Ghi chú của Phụ lục 1, Phụ lục 3 cần đồng bộ chính xác.
-  -> Khắc phục: Hàm `appendixOneIntegrationForLesson` đọc nguyên văn nội dung ô Ghi chú từ Phụ lục 1 và truyền sang Phụ lục 3.
-- **Lệch layout khi xuất Word DOCX**: Nếu tỉ lệ phần trăm cột không tròn 100% có thể gây tràn viền Word.
-  -> Khắc phục: Cân đối tỉ lệ phần trăm `DOCX_WIDTHS` chính xác đạt tổng 100%, ưu tiên cột Ghi chú chiếm 30% (PL1) và 35% (PL3).
+---
 
-## Cách kiểm thử
-1. Chạy các lệnh kiểm thử tự động:
-   - `node tests/xaydungphuluc-smoke.js`
-   - `node tests/canvas-xaydungphuluc-smoke.js`
-   - `node tests/xaydungphuluc-math-smoke.js`
-   - `node tests/xaydungphuluc-integration-smoke.js`
-2. Kiểm tra dữ liệu trực quan trên sandbox/runtime:
-   - Bài có 1 mã NLS: hiển thị `- Năng lực số: [Mã]: [Mô tả]`.
-   - Bài có 2+ mã NLS: hiển thị `- Năng lực số:\n + [Mã 1]: [Mô tả 1]\n + [Mã 2]: [Mô tả 2]`.
-   - Bài có mã AI: hiển thị tương ứng `- Năng lực AI: ...` hoặc dạng danh sách bullet ` + `.
-   - Bảng Phụ lục 1 có đúng 5 cột; Bảng Phụ lục 3 có đúng 7 cột.
-   - Báo cáo thẩm định CV 5512 đạt 100%.
-
-## Tiêu chí nghiệm thu
-- Phụ lục 1 hiển thị và xuất file Word đúng 5 cột: `STT`, `Bài học`, `Số tiết`, `Yêu cầu cần đạt`, `Ghi chú`.
-- Phụ lục 3 hiển thị và xuất file Word đúng 7 cột: `Bài học`, `Số tiết`, `Tiết CT`, `Tuần`, `Thiết bị dạy học (*)`, `Địa điểm dạy học (**)`, `Ghi chú`.
-- Cột `Ghi chú` hiển thị chuẩn xác quy tắc định dạng 1 mã vs từ 2 mã trở lên cho cả NLS và AI.
-- Logic sinh dữ liệu AI, tỷ lệ NLS/AI và các tính năng khác được giữ nguyên trọn vẹn.
-- Toàn bộ các bài kiểm thử tự động đều PASS.
+## Tiêu chí nghiệm thu (Acceptance Criteria)
+1. Trong bảng xem trước Phụ lục 1 (Mục 8) và Phụ lục 3: Cột `Ghi chú` hiển thị đầy đủ biểu hiện NLS và biểu hiện AI theo đúng quy chuẩn 1 mã hoặc nhiều mã `+`.
+2. Khi tick chọn / bỏ chọn ở Mục 5: Bảng xem trước và thẻ thẩm định cập nhật tức thì.
+3. Báo cáo thẩm định:
+   - Năng lực số: Đạt đủ số tiết theo mục tiêu (ví dụ `28/140 tiết`, Đạt).
+   - Trí tuệ nhân tạo: Đạt đủ số tiết AI đã chọn (ví dụ `12/12 tiết`, Đạt).
+   - Đạt chuẩn 100% CV 5512 & CTGDPT 2018.
+4. Xuất Word (.docx): Cột `Ghi chú` chứa đủ nội dung, phân màu đúng chuẩn (AI tím, NLS xanh).
+5. Tất cả smoke tests đều PASS.

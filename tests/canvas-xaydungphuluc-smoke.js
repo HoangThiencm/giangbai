@@ -236,7 +236,7 @@ const sliderSandbox={
   SUBJECTS:[['Toán học',140]],
   getConfig:()=>({monHoc:'Toán học'}),
   nlsCandidates:()=>sliderSandbox.candidates,aiCandidates:()=>sliderSandbox.candidates,
-  validPeriodCount:value=>Number(value)||1,updateAiPicker:()=>{},
+  validPeriodCount:value=>Number(value)||1,updateAiPicker:()=>{},schedulePreviewUpdate:()=>{},
   candidates:Array.from({length:10},(_,index)=>({id:`ppct:${index}`,lesson:index===0?'Ôn tập chương I':index===1?'Kiểm tra giữa kỳ I':`Bài slider ${index+1}`,periods:'1',tietCT:String(index+1),week:'1'})),
   nlsSelectedLessonIds:new Set(),aiSelectedLessonIds:new Set(),
   nlsRate:sliderNodes['#nlsRate'],nlsRateOut:sliderNodes['#nlsRateOut'],
@@ -468,4 +468,38 @@ const ranked=pickerSandbox.prioritizedAiPeriods();
 assert.equal(ranked.length,5,'all periods remain available after ranking');
 const firstTwo=ranked.slice(0,2).map(x=>x.week);
 assert.ok(firstTwo.some(w=>Number(w)<19)&&firstTwo.some(w=>Number(w)>=19),'AI suggestions must mix both semesters');
+assert(extractNamed(target,'toggleNlsLesson').includes('schedulePreviewUpdate()'),'Canvas toggleNlsLesson must refresh preview');
+assert(extractNamed(target,'toggleAiLesson').includes('schedulePreviewUpdate()'),'Canvas toggleAiLesson must refresh preview');
+assert(extractNamed(target,'toggleAiLessonRow').includes('schedulePreviewUpdate()'),'Canvas toggleAiLessonRow must refresh preview');
+assert(target.includes('nlsIdx>=0?nlsIdx:4'),'Canvas PL1 note wrapper must fall back to cells[4] when NLS column labels are gone');
+assert(target.includes('nlsIdx>=0?nlsIdx:6'),'Canvas PL3 note wrapper must fall back to cells[6] when NLS column labels are gone');
+assert(target.includes('-\\s*Năng lực\\s*(?:số|AI)'),'Canvas integrationParts must recognize Ghi chú Năng lực blocks');
+const canvasNoteSandbox={
+  isAiColumn:label=>/^biểu hiện\s+(?:khung\s+)?năng\s+lực\s+AI$/i.test(String(label||'').trim()),
+  isIntegrationColumn:label=>/^ghi\s*chú$/i.test(String(label||'').trim())||/mã\s*nls|nls\s*&\s*ai|tích\s*hợp/i.test(String(label||'')),
+  sourcePpctRowsForAppendixOne(){return []},
+  foldText(value){return String(value||'').toLowerCase()},
+  integrationText(value){if(Array.isArray(value))return value.map(canvasNoteSandbox.integrationText).filter(Boolean).join('\n');if(value&&typeof value==='object')return canvasNoteSandbox.integrationText(value.text??value.label??value.value??'');return String(value??'').trim()}
+};
+vm.createContext(canvasNoteSandbox);
+vm.runInContext(extractNamed(target,'integrationParts')+'\n'+extractNamed(target,'hasAiCode')+'\n'+extractNamed(target,'normalizeHeaderKey')+'\n'+extractNamed(target,'appendixAiCoverage'),canvasNoteSandbox);
+const canvasNoteParts=canvasNoteSandbox.integrationParts('- Năng lực số: 1.1.TC1a : Khai thác học liệu.\n- Năng lực AI: 6.B2.1 : Hỗ trợ. (Áp dụng: tiết 1, 2)');
+assert(canvasNoteParts.some(part=>!part.ai&&/1\.1\.TC1a/.test(part.text)),'Canvas integrationParts must treat Năng lực số blocks as NLS');
+assert(canvasNoteParts.some(part=>part.ai&&/6\.B2\.1/.test(part.text)),'Canvas integrationParts must treat Năng lực AI blocks as AI');
+const canvasNoteCoverage=canvasNoteSandbox.appendixAiCoverage({columns:['STT','Bài học','Số tiết','Yêu cầu cần đạt','Ghi chú'],rows:[{cells:['1','Bài mẫu','2','Đạt','- Năng lực số: 1.1.TC1a : Khai thác.\n- Năng lực AI: 6.B2.1 : Hỗ trợ. (Áp dụng: tiết 1, 2)'],isHeader:false}]},{ai:{enabled:true,selectedPeriods:[{lesson:'Bài mẫu',periods:[1,2]}]}});
+assert.equal(canvasNoteCoverage.covered,2,'Canvas appendixAiCoverage must count AI periods from Ghi chú');
+assert.equal(canvasNoteCoverage.pass,true,'Canvas appendixAiCoverage must pass when Ghi chú lists every selected AI period');
+const canvasNoteReportSandbox={
+  SUBJECTS:[['Toán học',140]],
+  ppctTableFromRows(){return {columns:[],rows:[]}},
+  normalizeIntegrationTable:model=>model,
+  isIntegrationColumn:label=>/^ghi\s*chú$/i.test(String(label||'').trim())||/Mã NLS/.test(label),
+  isNlsColumn:label=>/^biểu hiện\s+(?:khung\s+)?năng\s+lực\s+số$/i.test(String(label||'').trim()),
+  appendixAiCoverage:()=>canvasNoteCoverage
+};
+vm.createContext(canvasNoteReportSandbox);
+vm.runInContext(extractNamed(target,'parsePeriodCount')+'\n'+extractNamed(target,'calculateComplianceReport'),canvasNoteReportSandbox);
+const canvasNoteReport=canvasNoteReportSandbox.calculateComplianceReport({monHoc:'Toán học',nls:{enabled:true,unit:'period',rate:100},ai:{enabled:true,selectedPeriods:[{lesson:'Bài mẫu',periods:[1,2]}]}},{'1':{scheduleTable:{columns:['STT','Bài học','Số tiết','Yêu cầu cần đạt','Ghi chú'],rows:[{cells:['1','Bài mẫu','2','Đạt','- Năng lực số: 1.1.TC1a : Khai thác.\n- Năng lực AI: 6.B2.1 : Hỗ trợ. (Áp dụng: tiết 1, 2)'],isHeader:false}]},schedule:[{lesson:'Bài mẫu',devices:'Máy chiếu',location:'Lớp học'}],assessments:['Giữa học kỳ I','Cuối học kỳ I','Giữa học kỳ II','Cuối học kỳ II'].map(milestone=>({milestone}))}});
+assert.equal(canvasNoteReport.criteria[2].pass,true,'Canvas NLS codes in Ghi chú must count toward compliance');
+assert.equal(canvasNoteReport.criteria[3].pass,true,'Canvas AI codes in Ghi chú must count toward compliance');
 console.log('canvas responsive layout and multi-subject picker: PASS');

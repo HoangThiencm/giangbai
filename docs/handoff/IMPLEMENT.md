@@ -1,11 +1,11 @@
 # IMPLEMENT
 
 ## Đã triển khai
-- Gộp cột NLS và AI của Phụ lục 1 thành cột `Ghi chú` (5 cột) và của Phụ lục 3 thành `Ghi chú` (7 cột) trên cả ba bản HTML.
-- Thêm định dạng nội dung Ghi chú: một mã nằm cùng dòng với nhãn; nhiều mã dùng các dòng `+`; giữ nguyên mô tả và phạm vi tiết AI.
-- Bảo toàn đồng bộ PL1 → PL3 bằng cách chuyển nội dung Ghi chú trở lại dữ liệu tích hợp khi cần.
-- Cập nhật chỉnh sửa trực tiếp cột Ghi chú và cấu hình độ rộng DOCX: PL1 `5,22,6,37,30`; PL3 `20,5,6,5,15,14,35`.
-- Cập nhật các smoke test liên quan đến số cột, nhãn Ghi chú và độ rộng DOCX.
+- Sửa bọc `appendixOneTable` / `appendixThreeTable` trên cả 3 file HTML: nếu `findIndex(isNlsColumn/isAiColumn)` trả về `-1` (cột đã gộp thành `Ghi chú`) thì lấy NLS/AI ở vị trí legacy mặc định (PL1: 4/5, PL3: 6/7) rồi gọi `formatNoteIntegration`.
+- Thêm `schedulePreviewUpdate()` vào `toggleNlsLesson`, `toggleAiLesson`, `toggleAiLessonRow` để tick chọn Mục 5 làm mới bảng xem trước và thẻ thẩm định.
+- Nâng cấp `integrationParts` để tách khối `- Năng lực số:` / `- Năng lực AI:` (kể cả dòng `+`), vẫn giữ nhánh `[NLS:]` / `[AI:]` cũ. `appendixAiCoverage` và xuất Word nhờ đó đếm/phân màu đúng từ cột Ghi chú.
+- Đồng bộ 1:1: `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`.
+- Bổ sung smoke test: ô Ghi chú không còn `'-'` khi đã chọn NLS/AI; toggle gọi `schedulePreviewUpdate`; `appendixAiCoverage` và `calculateComplianceReport` đạt khi đọc mã từ Ghi chú.
 
 ## Kiểm thử
 - PASS: `node tests/xaydungphuluc-smoke.js`
@@ -13,7 +13,8 @@
 - PASS: `node tests/xaydungphuluc-math-smoke.js`
 - PASS: `node tests/xaydungphuluc-integration-smoke.js`
 
-Các assert smoke về thẩm định đã được điều chỉnh để kiểm tra đúng cột Ghi chú, bao gồm trường hợp tắt NLS. Không còn lỗi kiểm thử đã biết.
+Không chạy được xác minh trình duyệt (không có browser tools trong phiên này). Hành vi Ghi chú, tick Mục 5 và thẩm định đã được kiểm tra bằng smoke test.
 
 ## Không thực hiện
 - Không commit hoặc push.
+- Không đổi kiến trúc hay thêm chức năng ngoài `docs/handoff/PLAN.md`.
