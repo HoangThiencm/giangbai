@@ -233,6 +233,7 @@ assert.equal(flexibleAllocation.aiLessonPeriods,4,'AI lesson mode must select ev
 assert(flexibleAllocation.aiLabel.includes('bài PPCT'),'AI lesson mode label must name PPCT lessons');
 assert.equal(flexibleAllocation.aiMax,'100','AI rate slider must remain freely usable through 100%');
 const mutualExclusionAllocation=vm.runInContext(`(()=>{
+  handoffManualTargets.nls=null;handoffManualTargets.ai=null;
   const controls={'#nlsUnit':{value:'period'},'#aiUnit':{value:'period'},'#nlsRate':{value:'20'},'#aiRate':{value:'9'},'#nlsCountInput':{value:''},'#aiCountInput':{value:''},'#nlsRateOut':{value:''},'#aiRateOut':{value:''}};
   document.querySelector=selector=>controls[selector]||null;
   nlsRate=controls['#nlsRate'];aiRate=controls['#aiRate'];nlsRateOut=controls['#nlsRateOut'];aiRateOut=controls['#aiRateOut'];

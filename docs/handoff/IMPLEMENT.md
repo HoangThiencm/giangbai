@@ -18,3 +18,15 @@
 ## Vấn đề còn lại
 
 Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` theo quy trình trước khi commit/push.
+
+## Bổ sung triển khai chọn thủ công
+
+- Lưu riêng hạn mức giáo viên nhập cho NLS/AI để số mục tiêu không bị thanh trượt hoặc thao tác chọn/bỏ từng dòng ghi đè.
+- Khi chọn thủ công vượt hạn mức, hệ thống không thêm lựa chọn, hoàn tác checkbox khi có tham chiếu phần tử và thông báo số tiết đã chọn/mục tiêu/còn lại.
+- Khi chọn hoặc bỏ chọn hợp lệ, hệ thống thông báo tức thì số tiết NLS/AI và số tiết còn lại; bài một tiết vẫn loại trừ lẫn nhau giữa NLS và AI.
+- Đã đồng bộ logic trên ba bản HTML.
+
+## Kiểm thử bổ sung
+
+- `node tests/canvas-xaydungphuluc-smoke.js` — PASS; bổ sung ca NLS vượt 28 tiết, xác nhận checkbox được hoàn tác và tập lựa chọn không tăng.
+- `node tests/xaydungphuluc-smoke.js` — PASS; fixture reset hạn mức giữa các ca để kiểm tra riêng đúng hành vi loại trừ bài một tiết.

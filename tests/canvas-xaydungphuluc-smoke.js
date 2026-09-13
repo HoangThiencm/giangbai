@@ -236,14 +236,14 @@ const sliderSandbox={
   SUBJECTS:[['Toán học',140]],
   getConfig:()=>({monHoc:'Toán học'}),
   nlsCandidates:()=>sliderSandbox.candidates,aiCandidates:()=>sliderSandbox.candidates,
-  validPeriodCount:value=>Number(value)||1,updateAiPicker:()=>{},schedulePreviewUpdate:()=>{},
+  validPeriodCount:value=>Number(value)||1,updateAiPicker:()=>{},schedulePreviewUpdate:()=>{},notify:()=>{},
   candidates:Array.from({length:10},(_,index)=>({id:`ppct:${index}`,lesson:index===0?'Ôn tập chương I':index===1?'Kiểm tra giữa kỳ I':`Bài slider ${index+1}`,periods:'1',tietCT:String(index+1),week:'1'})),
   nlsSelectedLessonIds:new Set(),aiSelectedLessonIds:new Set(),
   nlsRate:sliderNodes['#nlsRate'],nlsRateOut:sliderNodes['#nlsRateOut'],
   aiRate:{value:'0',min:'0',max:'100',disabled:false},aiRateOut:{value:''}
 };
 vm.createContext(sliderSandbox);
-vm.runInContext(['nlsLessonPriorityScore','prioritizedNlsLessons','allocationUnit','aiPeriodCandidates','selectedAiPeriodIds','selectedPeriodsForLesson','isSinglePeriodLesson','hasAiSelectionForLesson','canUseNlsLesson','allocationTotals','nlsSelectedPeriodCount','chooseNlsLessonsForPeriods','allocationSummary','syncNlsRateFromSelection','nlsAutoCandidates','syncNlsSelectionFromRate','syncNlsSelectionFromCount','prioritizedAiPeriods','canUseAiPeriod','aiAutoLessons','syncAiRateFromSelection','syncAiSelectionFromRate','syncAiSelectionFromCount','toggleNlsLesson','toggleAiLesson','toggleAiLessonRow'].map(name=>extractNamed(target,name)).join('\n'),sliderSandbox);
+vm.runInContext(['nlsLessonPriorityScore','prioritizedNlsLessons','allocationUnit','aiPeriodCandidates','selectedAiPeriodIds','selectedPeriodsForLesson','isSinglePeriodLesson','hasAiSelectionForLesson','canUseNlsLesson','allocationTotals','nlsSelectedPeriodCount','chooseNlsLessonsForPeriods','allocationSummary','syncNlsRateFromSelection','nlsAutoCandidates','syncNlsSelectionFromRate','syncNlsSelectionFromCount','prioritizedAiPeriods','canUseAiPeriod','aiAutoLessons','syncAiRateFromSelection','syncAiSelectionFromRate','syncAiSelectionFromCount','allocationTarget','toggleNlsLesson','toggleAiLesson','toggleAiLessonRow'].map(name=>extractNamed(target,name)).join('\n'),sliderSandbox);
 sliderSandbox.syncNlsSelectionFromRate();
 assert(sliderNodes['#nlsRateOut'].value.startsWith('0%'),'Canvas NLS slider must update at 0% without RangeError');
 sliderNodes['#nlsRate'].value='80';sliderSandbox.syncNlsSelectionFromRate();
@@ -275,8 +275,14 @@ assert.equal(sliderSandbox.nlsSelectedLessonIds.size,28,'Canvas must compensate 
 for(const lessonId of sliderSandbox.nlsSelectedLessonIds)assert.equal(sliderSandbox.selectedPeriodsForLesson(lessonId).length,0,'Canvas automatic allocation must never select both NLS and AI on a one-period lesson');
 sliderSandbox.aiSelectedLessonIds.add('ppct:12:period:1');sliderSandbox.toggleNlsLesson('ppct:12',true);
 assert.equal(sliderSandbox.selectedPeriodsForLesson('ppct:12').length,0,'checking NLS must immediately clear AI from a one-period lesson');
+sliderNodes['#aiCountInput'].value='140';
 sliderSandbox.toggleAiLesson('ppct:12:period:1',true);
 assert(!sliderSandbox.nlsSelectedLessonIds.has('ppct:12'),'checking AI must immediately clear NLS from a one-period lesson');
+sliderSandbox.nlsSelectedLessonIds=new Set(Array.from({length:28},(_,index)=>`ppct:${index+20}`));sliderNodes['#nlsCountInput'].value='28';
+const overflowCheckbox={checked:true},nlsBeforeOverflow=sliderSandbox.nlsSelectedLessonIds.size;
+sliderSandbox.toggleNlsLesson('ppct:90',true,overflowCheckbox);
+assert.equal(overflowCheckbox.checked,false,'NLS checkbox must be reverted when the teacher exceeds the period target');
+assert.equal(sliderSandbox.nlsSelectedLessonIds.size,nlsBeforeOverflow,'NLS selection must not increase beyond the period target');
 const calls=[];
 const sandbox={console,AbortController,clearTimeout,setTimeout,fetch:async(url,init)=>{
   calls.push({url,init});
