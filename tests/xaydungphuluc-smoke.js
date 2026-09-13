@@ -316,6 +316,33 @@ assert.equal(nlsAiOverflowGuard.nls28,28,'PL1 must emit exactly 28 NLS periods, 
 assert.equal(nlsAiOverflowGuard.ai28,12,'PL1 must emit exactly 12 AI periods, not 14');
 assert.equal(nlsAiOverflowGuard.nls28pl3,28,'PL3 must emit exactly 28 NLS periods, not 30');
 assert.equal(nlsAiOverflowGuard.ai28pl3,12,'PL3 must emit exactly 12 AI periods, not 14');
+const pl1Pl3SyncReport=vm.runInContext(`(()=>{
+  const pl1={scheduleTable:{columns:['STT','Bài học','Số tiết','Yêu cầu cần đạt','Biểu hiện năng lực số','Biểu hiện năng lực AI'],rows:[
+    {isHeader:false,cells:['1','Bài 1. Tập hợp','1','Đạt','5.3.TC2a - GeoGebra bài 1','6.B2.1 - AI bài 1']},
+    {isHeader:false,cells:['2','Hoạt động thực hành và trải nghiệm','2','Đạt','1.1.TC1a - Trải nghiệm 1','-']},
+    {isHeader:false,cells:['3','Hoạt động thực hành và trải nghiệm','2','Đạt','-','-']}
+  ]},schedule:[],assessments:[]};
+  const pl3Rows=[
+    {isHeader:false,cells:['Bài 1. Tập hợp','1','1','1','','','5.3.TC2a - GeoGebra bài 1','6.B2.1 - AI bài 1']},
+    {isHeader:false,cells:['Hoạt động thực hành và trải nghiệm','2','2, 3','1','','','1.1.TC1a - Trải nghiệm 1','-']},
+    {isHeader:false,cells:['Hoạt động thực hành và trải nghiệm','2','4, 5','2','','','-','-']}
+  ];
+  const pl3Table={columns:['Bài học','Số tiết','Tiết CT','Tuần','Thiết bị dạy học (*)','Địa điểm dạy học (**)','Biểu hiện năng lực số','Biểu hiện năng lực AI'],rows:pl3Rows};
+  const cfg={monHoc:'Toán học',nls:{enabled:true,unit:'period',rate:21},ai:{enabled:false}};
+  const aligned=calculateComplianceReport(cfg,{'1':pl1,'3':{planTable:pl3Table,plan:[]}}).criteria.find(item=>item.name.startsWith('Đồng bộ'));
+  const swapped={columns:pl3Table.columns,rows:[pl3Rows[0],pl3Rows[2],pl3Rows[1]]};
+  const mismatched=calculateComplianceReport(cfg,{'1':pl1,'3':{planTable:swapped,plan:[]}}).criteria.find(item=>item.name.startsWith('Đồng bộ'));
+  const nameOnly=calculateComplianceReport(cfg,{'1':pl1,'3':{plan:[
+    {lesson:'Bài 1. Tập hợp',integration:'[NLS: 5.3.TC2a]\\n[AI: 6.B2.1]'},
+    {lesson:'Hoạt động thực hành và trải nghiệm',integration:'[NLS: 1.1.TC1a]'},
+    {lesson:'Hoạt động thực hành và trải nghiệm',integration:'-'}
+  ]}}).criteria.find(item=>item.name.startsWith('Đồng bộ'));
+  return {aligned:aligned.pass,alignedDetail:aligned.detail,mismatched:mismatched.pass,nameOnly:nameOnly.pass};
+})()`,sandbox);
+assert.equal(pl1Pl3SyncReport.aligned,true,'1-1 PL1/PL3 tables with duplicate experiential titles must count as synced');
+assert.equal(pl1Pl3SyncReport.alignedDetail,'Khớp 100% mã tích hợp giữa Tổ và Giáo viên','synced PL3 must show the matching-detail label');
+assert.equal(pl1Pl3SyncReport.mismatched,false,'a swapped experiential row must still fail PL1-PL3 sync');
+assert.equal(pl1Pl3SyncReport.nameOnly,true,'plan-only PL3 lookup must consume PL1 rows in order for duplicate titles');
 const draftUnitRoundTrip=vm.runInContext(`(()=>{
   const controls={'#nlsUnit':{value:'period'},'#aiUnit':{value:'period'},'#nlsAdaptiveOptions':{classList:{toggle(){}}}};
   document.querySelector=selector=>controls[selector]||null;

@@ -1,3 +1,28 @@
+# IMPLEMENT: Sửa tiêu chí đồng bộ NLS & AI (PL1–PL3) báo Chưa đạt oan
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`
+  - Báo cáo thẩm định so khớp Phụ lục 3 với Phụ lục 1 **theo thứ tự dòng 1-1** (bảng 8 cột), không còn tìm theo tên bài nên các dòng “Hoạt động thực hành và trải nghiệm” / “Ôn tập” không bị đối chiếu nhầm.
+  - `pickAppendixOneRow` không còn rơi về dòng Phụ lục 1 đầu tiên khi không có ID/thứ tự.
+- `tests/xaydungphuluc-smoke.js`
+  - Hồi quy: hai bài trải nghiệm trùng tên, bảng PL3 khớp 1-1 thì tiêu chí Đồng bộ **Đạt**; đổi chỗ dòng thì **Chưa đạt**.
+
+## Kiểm tra đã chạy
+
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-math-smoke.js`: PASS.
+- `node tests/sgk-knowledge-smoke.js`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+
+---
+
 # IMPLEMENT: Khắc phục lỗi tính số tiết NLS/AI không chuẩn trong Xây dựng phụ lục
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
