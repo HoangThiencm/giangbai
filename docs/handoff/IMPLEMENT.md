@@ -58,3 +58,14 @@ Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` t
 - `node tests/canvas-xaydungphuluc-smoke.js` — PASS; bao gồm default account, tự đồng bộ khi khởi động và contract truy vấn backend không dùng `email`.
 - `git diff --check` — PASS.
 - Không chạy được PHP lint vì môi trường hiện tại không có lệnh `php` trong PATH.
+
+## Bổ sung đề xuất NLS/AI theo PPCT
+
+- Hai nút gợi ý NLS và AI giờ gọi Gemini qua Canvas proxy ở tầng `high_reasoning`, yêu cầu JSON chỉ chứa ID PPCT hợp lệ và số lượng theo mục tiêu người dùng nhập.
+- Kết quả AI được lọc, khử trùng lặp và kiểm tra chặt với danh sách PPCT. Nếu AI lỗi, trả ID sai hoặc chưa đủ lựa chọn, Canvas hoàn tất bằng phân bổ xác định theo PPCT, đồng thời ghi log/thông báo rõ.
+- Bảng lựa chọn luôn hiển thị tổng đã chọn/mục tiêu/còn lại của cả NLS và AI; quy tắc hoàn tác checkbox khi vượt quota và loại trừ bài một tiết vẫn được giữ nguyên.
+
+## Kiểm thử bổ sung đề xuất NLS/AI
+
+- `node tests/canvas-xaydungphuluc-smoke.js` — PASS; kiểm tra contract gọi AI/validate/fallback và hoàn tác quota thủ công cho NLS, AI.
+- `git diff --check` — PASS.

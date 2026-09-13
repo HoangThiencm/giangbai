@@ -70,6 +70,7 @@ for(const text of [
   'Ghi chú','formatNoteIntegration','0070C0','7030A0'
 ])assert(target.includes(text),`missing Canvas requirement: ${text}`);
 ['canvasKeyBadge','function updateCanvasKeyBadge','function syncCanvasUserKeyStatus','action:\'key_status\'','tier:\'heavy_io\'','tier:\'high_reasoning\'','preferredModel:\'gemini-3.8-flash\'','quota_key_indexes','Key cá nhân ${index} chạm hạn mức'].forEach(text=>assert(target.includes(text),`missing Canvas multi-tier/key-status requirement: ${text}`));
+['function allocationProposalPrompt','function proposalIdsFromAi','function deterministicNlsProposal','async function suggestAllocationWithAi','callAiJson(allocationProposalPrompt(kind,target,candidates),{tier:\'high_reasoning\',preferredModel:\'gemini-3.8-flash\'})','async function suggestNlsLessons(){return suggestAllocationWithAi(\'nls\')}','async function suggestAiLessons(){','Chỉ được chọn ID có trong danh sách','có bổ sung dự phòng','NLS: ${nlsActual}/${nlsTarget} tiết · còn ${Math.max(0,nlsTarget-nlsActual)}','AI: ${aiActual}/${aiTarget} tiết · còn ${Math.max(0,aiTarget-aiActual)}'].forEach(text=>assert(target.includes(text),`missing AI proposal/manual allocation contract: ${text}`));
 assert(target.includes("const CANVAS_DEFAULT_ACCOUNT='hoangthiencm@gmail.com';"),'Canvas must define the requested default teacher account');
 assert(target.includes("let canvasDraftAccount=readCanvasStorage('canvas_xdpl_user')||CANVAS_DEFAULT_ACCOUNT;"),'Canvas must use the saved account or the requested default on startup');
 assert(target.includes("function prefillCanvasDraftAccount(){setCanvasDraftAccount(readCanvasStorage('canvas_xdpl_user')||CANVAS_DEFAULT_ACCOUNT)}"),'Canvas account prefill must not infer an account from the teacher name');
@@ -298,6 +299,12 @@ const overflowCheckbox={checked:true},nlsBeforeOverflow=sliderSandbox.nlsSelecte
 sliderSandbox.toggleNlsLesson('ppct:90',true,overflowCheckbox);
 assert.equal(overflowCheckbox.checked,false,'NLS checkbox must be reverted when the teacher exceeds the period target');
 assert.equal(sliderSandbox.nlsSelectedLessonIds.size,nlsBeforeOverflow,'NLS selection must not increase beyond the period target');
+sliderSandbox.aiSelectedLessonIds.clear();sliderNodes['#aiCountInput'].value='1';
+sliderSandbox.toggleAiLesson('ppct:0:period:1',true);
+const aiOverflowCheckbox={checked:true};
+sliderSandbox.toggleAiLesson('ppct:1:period:1',true,aiOverflowCheckbox);
+assert.equal(aiOverflowCheckbox.checked,false,'AI checkbox must be reverted when the teacher exceeds the period target');
+assert.equal(sliderSandbox.aiSelectedLessonIds.size,1,'AI selection must not increase beyond the period target');
 const calls=[];
 const sandbox={console,AbortController,clearTimeout,setTimeout,fetch:async(url,init)=>{
   calls.push({url,init});
