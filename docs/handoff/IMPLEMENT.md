@@ -37,10 +37,24 @@ Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` t
 - Proxy nhận `tier` và `preferred_model`: tác vụ `heavy_io` luôn dùng `gemini-3-flash-preview` với key hệ thống; `high_reasoning` thử tuần tự key cá nhân với `gemini-3.8-flash`, sau đó fallback an toàn về model nội bộ.
 - `canvas_xaydungphuluc.html` hiển thị badge tài khoản/số key, modal đồng bộ trạng thái, chuyển PPCT/SGK sang `heavy_io` và sinh phụ lục sang `high_reasoning`; nhật ký hiển thị key cá nhân hoặc fallback.
 - Khi key cá nhân chạm quota trước một key thành công, proxy trả `quota_key_indexes` và `rotation_count` không chứa key thô; Canvas ghi rõ lần chuyển sang key kế tiếp trong nhật ký.
+- Khắc phục CORS Canvas: `syncCanvasUserKeyStatus` chỉ gửi `action` và `user_account` trong query với `credentials:'omit'`/`cache:'no-store'`; `requestGemini` chỉ gửi `user_account` trong JSON body. Cả hai không còn gửi header `X-User-Account`, tránh preflight bị reverse proxy chặn.
 - Smoke test được bổ sung các kiểm tra contract proxy, badge, key-status và phân tầng, vẫn bảo đảm Canvas không gọi trực tiếp nhà cung cấp AI.
 
 ## Kiểm thử multi-tier Gemini Canvas
 
 - `node tests/canvas-xaydungphuluc-smoke.js` — PASS.
+- `git diff --check` — PASS.
+- Không chạy được PHP lint vì môi trường hiện tại không có lệnh `php` trong PATH.
+
+## Bổ sung tài khoản Canvas mặc định và trạng thái lỗi
+
+- Canvas mặc định dùng `hoangthiencm@gmail.com` khi chưa có tài khoản đã lưu, tự kiểm tra số key ngay khi khởi động và không còn suy luận tài khoản từ tên giáo viên.
+- Badge hiển thị rõ trạng thái chưa đồng bộ nếu endpoint kiểm tra key lỗi, thay vì hiển thị nhầm là không có key.
+- `api/canvas_gemini.php` chỉ truy vấn `username` và `gemini_keys` theo username đầy đủ hoặc tiền tố trước `@`, đồng thời yêu cầu tài khoản đang hoạt động; không còn phụ thuộc cột `email`.
+- Lỗi CSDL/giải mã key được chặn và trả JSON an toàn cho `key_status`, tránh HTTP 500 không có nội dung và không lộ key.
+
+## Kiểm thử bổ sung tài khoản mặc định
+
+- `node tests/canvas-xaydungphuluc-smoke.js` — PASS; bao gồm default account, tự đồng bộ khi khởi động và contract truy vấn backend không dùng `email`.
 - `git diff --check` — PASS.
 - Không chạy được PHP lint vì môi trường hiện tại không có lệnh `php` trong PATH.

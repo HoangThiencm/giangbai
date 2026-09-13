@@ -69,9 +69,21 @@ for(const text of [
   'envelope?.body','width:11906,height:16838','orientation:PageOrientation.LANDSCAPE',
   'Ghi chú','formatNoteIntegration','0070C0','7030A0'
 ])assert(target.includes(text),`missing Canvas requirement: ${text}`);
-['canvasKeyBadge','function updateCanvasKeyBadge','function syncCanvasUserKeyStatus','action:\'key_status\'','tier:\'heavy_io\'','tier:\'high_reasoning\'','preferredModel:\'gemini-3.8-flash\'','quota_key_indexes','Key cá nhân ${index} chạm hạn mức','X-User-Account'].forEach(text=>assert(target.includes(text),`missing Canvas multi-tier/key-status requirement: ${text}`));
+['canvasKeyBadge','function updateCanvasKeyBadge','function syncCanvasUserKeyStatus','action:\'key_status\'','tier:\'heavy_io\'','tier:\'high_reasoning\'','preferredModel:\'gemini-3.8-flash\'','quota_key_indexes','Key cá nhân ${index} chạm hạn mức'].forEach(text=>assert(target.includes(text),`missing Canvas multi-tier/key-status requirement: ${text}`));
+assert(target.includes("const CANVAS_DEFAULT_ACCOUNT='hoangthiencm@gmail.com';"),'Canvas must define the requested default teacher account');
+assert(target.includes("let canvasDraftAccount=readCanvasStorage('canvas_xdpl_user')||CANVAS_DEFAULT_ACCOUNT;"),'Canvas must use the saved account or the requested default on startup');
+assert(target.includes("function prefillCanvasDraftAccount(){setCanvasDraftAccount(readCanvasStorage('canvas_xdpl_user')||CANVAS_DEFAULT_ACCOUNT)}"),'Canvas account prefill must not infer an account from the teacher name');
 const canvasProxy=fs.readFileSync('api/canvas_gemini.php','utf8');
 ['key_status','parse_stored_api_keys','mask_user_api_key','high_reasoning','heavy_io','gemini-3.8-flash','fallback_system','key_index','total_user_keys','rotation_count','quota_key_indexes','X-User-Account'].forEach(text=>assert(canvasProxy.includes(text),`Canvas proxy missing ${text}`));
+assert(canvasProxy.includes('SELECT username, gemini_keys FROM users WHERE (username = ? OR username = ?) AND is_active = 1 LIMIT 1'),'Canvas key lookup must use the active username-compatible production query');
+assert(!canvasProxy.includes('SELECT username, email, gemini_keys'),'Canvas key lookup must not rely on an email column');
+assert(canvasProxy.includes("return [[], [], 'Không thể đồng bộ API Key lúc này.'];"),'Canvas key lookup must turn database failures into a safe status response');
+const keyStatusTransport=sliceNamedFunction('syncCanvasUserKeyStatus'),geminiTransport=sliceFunction('requestGemini');
+assert(keyStatusTransport.includes("credentials:'omit'")&&keyStatusTransport.includes("cache:'no-store'"),'key status must use a cache-free credential-free Canvas request');
+assert(keyStatusTransport.includes('action:\'key_status\'')&&keyStatusTransport.includes('user_account:canvasDraftAccount'),'key status must keep user account in the query');
+assert(!keyStatusTransport.includes('X-User-Account'),'key status must not trigger CORS preflight with a custom account header');
+assert(geminiTransport.includes("headers:{'content-type':'application/json'}")&&geminiTransport.includes('user_account:canvasDraftAccount||\'\''),'Gemini request must retain JSON body account transport');
+assert(!geminiTransport.includes('X-User-Account'),'Gemini request must not trigger CORS preflight with a custom account header');
 assert(!/src=["'][^"']*(?:security-guard|access-control)\.js/.test(target),'Canvas must not load access/security scripts');
 assert(!/(?:generativelanguage\.googleapis\.com|api\.mistral\.ai|api\/user_gemini_keys\.php)/.test(target),'Canvas must not call direct provider or user-key services');
 
@@ -121,13 +133,13 @@ assert.equal(bridgeSandbox.parseCanvasInlineActions('refreshSubjects();alert(doc
 const bootstrapCalls=[];
 const lifecycleSandbox={
   window:{},
-  canvasDraftAccount:'',refreshSubjects(){bootstrapCalls.push('subjects')},loadDefaultPpctStructure(value){bootstrapCalls.push(['ppct',value])},checkSharedSgkKnowledge(value){bootstrapCalls.push(['knowledge',value])},syncRanges(){bootstrapCalls.push('ranges')},prefillTeacherIdentity(){bootstrapCalls.push('identity')},prefillCanvasDraftAccount(){bootstrapCalls.push('account')},readCanvasStorage(){return 'dark'},
-  document:{documentElement:{classList:{add:value=>bootstrapCalls.push(['theme',value])}}},initCanvasEventBridge(){bootstrapCalls.push('bridge')},bindFlexibleAllocationControls(){bootstrapCalls.push('allocation-controls')},restoreLayoutPrefs(){bootstrapCalls.push('layout')},updateKeyBadge(){bootstrapCalls.push('badge')},renderPreview(){bootstrapCalls.push('preview')},loadDraftFromServer(value){bootstrapCalls.push(['draft',value])},checkCanvasHostConnection(){bootstrapCalls.push('connection')},reportCanvasError(error){throw error}
+  canvasDraftAccount:'hoangthiencm@gmail.com',refreshSubjects(){bootstrapCalls.push('subjects')},loadDefaultPpctStructure(value){bootstrapCalls.push(['ppct',value])},checkSharedSgkKnowledge(value){bootstrapCalls.push(['knowledge',value])},syncRanges(){bootstrapCalls.push('ranges')},prefillTeacherIdentity(){bootstrapCalls.push('identity')},prefillCanvasDraftAccount(){bootstrapCalls.push('account')},readCanvasStorage(){return 'dark'},
+  document:{documentElement:{classList:{add:value=>bootstrapCalls.push(['theme',value])}}},initCanvasEventBridge(){bootstrapCalls.push('bridge')},bindFlexibleAllocationControls(){bootstrapCalls.push('allocation-controls')},restoreLayoutPrefs(){bootstrapCalls.push('layout')},updateKeyBadge(){bootstrapCalls.push('badge')},syncCanvasUserKeyStatus(account){bootstrapCalls.push(['key-status',account]);return {catch(){}}},renderPreview(){bootstrapCalls.push('preview')},loadDraftFromServer(value){bootstrapCalls.push(['draft',value])},checkCanvasHostConnection(){bootstrapCalls.push('connection')},reportCanvasError(error){throw error}
 };
 vm.createContext(lifecycleSandbox);
 vm.runInContext(sliceNamedFunction('initApp'),lifecycleSandbox);
 lifecycleSandbox.initApp();
-assert.deepEqual(JSON.parse(JSON.stringify(bootstrapCalls)),['bridge','allocation-controls','subjects',['ppct',true],['knowledge',true],'ranges','identity','account',['theme','dark'],'layout','badge','preview',['draft',{silent:true}],'connection'],'initApp must initialize a document that is already complete');
+assert.deepEqual(JSON.parse(JSON.stringify(bootstrapCalls)),['bridge','allocation-controls','subjects',['ppct',true],['knowledge',true],'ranges','identity','account',['theme','dark'],'layout','badge',['key-status','hoangthiencm@gmail.com'],'preview',['draft',{silent:true}],'connection'],'initApp must self-sync the default/saved account when a document is already complete');
 const adaptiveNlsSandbox={};vm.createContext(adaptiveNlsSandbox);vm.runInContext(sliceNamedFunction('getExpectedNlsCount')+'\n'+sliceNamedFunction('getExpectedNlsMaxCount'),adaptiveNlsSandbox);
 const adaptiveNlsConfig={nls:{density:'adaptive',noAiDensity:'2-3'}};
 assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,false,adaptiveNlsConfig),1,'one-period lessons without AI must use one NLS code');
