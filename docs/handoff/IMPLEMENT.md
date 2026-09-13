@@ -1,3 +1,31 @@
+# IMPLEMENT: Khắc phục lỗi tính số tiết NLS/AI không chuẩn trong Xây dựng phụ lục
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, và `backupcode viettailieu/canvas_xaydungphuluc.html`
+  - `isLessonNlsSelected`: khi đã có `lessonId` thì chỉ kiểm tra đúng ID, không fallback `lessonsMatch` theo tên.
+  - `selectedPeriodsForLesson`: khi đã có `lessonId` thì trả về tiết theo ID kể cả khi rỗng, không khớp ké bài cùng tên.
+  - `cleanLessonName` / `lessonKeywords` / `lessonsMatch`: loại cụm “Hoạt động thực hành và trải nghiệm”, bỏ từ chung (`TRAI`, `NGHIEM`, `CHUONG`, `HOAT`, `DONG`, …); bài không có số thứ tự không còn bị khớp vì trùng từ chung.
+  - `pickAppendixOneRow` + `appendixThreeTable` / `syncIntegrationFromAppendixOne`: ghép Phụ lục 1 → Phụ lục 3 1-1 theo thứ tự, đánh dấu dòng đã dùng, không nhân bản mã NLS/AI sang bài trùng tên.
+  - `getConfig().nls` có `selectedLessons` / `selectedLessonIds`; `appendixPrompt` cấm AI xuất NLS ngoài danh sách bài đã chọn.
+- `tests/xaydungphuluc-smoke.js`
+  - Hồi quy: hai bài “Hoạt động thực hành và trải nghiệm” không khớp chéo; cấu hình 28 tiết NLS + 12 tiết AI ra đúng 28/12 ở Phụ lục 1 và Phụ lục 3, không dôi thành 30/14.
+
+## Kiểm tra đã chạy
+
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-math-smoke.js`: PASS.
+- `node tests/sgk-knowledge-smoke.js`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+
+---
+
 # IMPLEMENT: Gửi Thời khóa biểu và Lịch báo giảng trực tiếp cho giáo viên qua Email
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
