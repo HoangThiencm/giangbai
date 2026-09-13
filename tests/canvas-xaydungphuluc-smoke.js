@@ -489,7 +489,7 @@ assert(canvasNoteParts.some(part=>part.ai&&/6\.B2\.1/.test(part.text)),'Canvas i
 const canvasMultiNoteParts=canvasNoteSandbox.integrationParts('- Năng lực số:\n + 1.1.TC1a : Khai thác.\n + 5.3.TC2a : GeoGebra.\n- Năng lực AI:\n + 6.B2.1 : Hỗ trợ.\n + 6.D1.1 : Đánh giá.');
 assert(canvasMultiNoteParts.some(part=>!part.ai&&part.text==='- Năng lực số:'),'Canvas integrationParts must retain the NLS heading');
 assert(canvasMultiNoteParts.some(part=>part.ai&&part.text==='- Năng lực AI:'),'Canvas integrationParts must retain the AI heading');
-assert(target.includes("fullSchedule=results['1']?.schedule?.length"),'Canvas PL3 must prioritize the complete Appendix 1 schedule');
+assert(target.includes("fullSchedule=typeof sourcePpctRows!=='undefined'&&Array.isArray(sourcePpctRows)&&sourcePpctRows.length?sourcePpctRows"),'Canvas PL3 must prioritize uploaded PPCT rows before the AI-reduced Appendix 1 schedule');
 assert(target.includes('columns.length===APPENDIX_3_COLUMNS.length'),'Canvas PL3 preview and DOCX must accept the seven-column table model');
 const canvasNoteCoverage=canvasNoteSandbox.appendixAiCoverage({columns:['STT','Bài học','Số tiết','Yêu cầu cần đạt','Ghi chú'],rows:[{cells:['1','Bài mẫu','2','Đạt','- Năng lực số: 1.1.TC1a : Khai thác.\n- Năng lực AI: 6.B2.1 : Hỗ trợ. (Áp dụng: tiết 1, 2)'],isHeader:false}]},{ai:{enabled:true,selectedPeriods:[{lesson:'Bài mẫu',periods:[1,2]}]}});
 assert.equal(canvasNoteCoverage.covered,2,'Canvas appendixAiCoverage must count AI periods from Ghi chú');

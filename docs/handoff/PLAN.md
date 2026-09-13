@@ -53,80 +53,106 @@
 2. Tại `api/user_phuluc_draft.php`:
    - Thêm `if (strpos($account, '%') !== false) $account = rawurldecode($account);`.
 
-### Bước 2: Chuẩn hóa thuật toán Knapsack Tối ưu Sư phạm & Tuyệt đối đúng số tiết đã chọn
-1. Tại `canvas_xaydungphuluc.html`:
-   - Bổ sung sự kiện `input` trên `#nlsCountInput`:
-     ```javascript
-     document.querySelector('#nlsCountInput')?.addEventListener('input', e => syncNlsSelectionFromCount(e.target.value));
-     ```
-   - Nâng cấp hàm `chooseNlsLessonsForPeriods(target)` bằng giải thuật Quy hoạch động Knapsack tối ưu điểm sư phạm (`score` từ `nlsLessonPriorityScore`):
-     ```javascript
-     function chooseNlsLessonsForPeriods(target, candidates = nlsCandidates()){
-       const targetNum = Number(target) || 0;
-       if (targetNum <= 0) return new Set();
-       const eligible = candidates.filter(item => !item.isHeader && item.lesson);
-       
-       // dp[w] lưu { score: tổng_điểm_sư_phạm, ids: [danh_sách_id] }
-       const dp = new Map();
-       dp.set(0, { score: 0, ids: [] });
+### Bước 2: Chuẩn hóa thuật toán Knapsack Tối ưu Sư phạm & Khắc phục triệt để lỗi 30/28 tiết
 
-       for (const item of eligible){
-         const p = item.periodCount || validPeriodCount(item.periods, item.tietCT) || 1;
-         const s = typeof nlsLessonPriorityScore === 'function' ? nlsLessonPriorityScore(item.lesson) : 5;
-         const currentEntries = [...dp.entries()];
-         for (const [w, state] of currentEntries){
-           const nextW = w + p;
-           if (nextW <= targetNum){
-             const nextScore = state.score + s;
-             if (!dp.has(nextW) || dp.get(nextW).score < nextScore){
-               dp.set(nextW, { score: nextScore, ids: [...state.ids, item.id] });
-             }
-           }
+1. Tại `canvas_xaydungphuluc.html` (và đồng bộ sang `xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`):
+   - **Điểm 1 (Sửa `ppctRow` khoảng dòng 226)**:
+     Thay:
+     `integration: isHeader ? '' : (row.integration || (c ? integrationText(i, c, lesson) : '')),`
+     Bằng:
+     `integration: isHeader ? '' : (row.integration && row.integration !== '-' && row.integration !== '0' && row.integration !== String(i) ? row.integration : ''),`
+     (Không gọi `integrationText(i, c, lesson)` vì hàm `integrationText(value)` chỉ nhận 1 tham số và trả về `String(i)`, làm ô tích hợp bị nhiễm số nguyên `0`, `1`...).
+
+   - **Điểm 2 (Sửa `isLessonNlsSelected` khoảng dòng 1417)**:
+     Thay thế toàn bộ hàm để bỏ so khớp lỏng lẻo `lessonsMatch(x.lesson, lessonName)` (nguyên nhân chính làm trùng bài "Bài 1", "Luyện tập chung" giữa HK1 và HK2, dẫn đến đếm dư 2 tiết làm 28 nhảy thành 30):
+     ```javascript
+     function isLessonNlsSelected(lessonId, lessonName, c, index){
+       if(c?.nls && c.nls.enabled === false) return false;
+       if(typeof nlsEnabled !== 'undefined' && nlsEnabled && nlsEnabled.checked === false) return false;
+       const hasId = lessonId != null && String(lessonId) !== '';
+       const hasExplicit = typeof nlsSelectedLessonIds !== 'undefined' && nlsSelectedLessonIds.size > 0;
+       if(hasExplicit){
+         if(hasId) return nlsSelectedLessonIds.has(lessonId);
+         if(Number.isInteger(index) && typeof nlsCandidates === 'function'){
+           const cands = nlsCandidates();
+           if(cands[index]) return nlsSelectedLessonIds.has(cands[index].id);
          }
+         if(lessonName && typeof nlsCandidates === 'function'){
+           const match = nlsCandidates().find(x => x.lesson === lessonName);
+           if(match && nlsSelectedLessonIds.has(match.id)) return true;
+         }
+         return false;
        }
-
-       // Ưu tiên cao nhất: Tìm đúng tổ hợp có tổng số tiết = targetNum và điểm sư phạm cao nhất
-       if (dp.has(targetNum)) return new Set(dp.get(targetNum).ids);
-
-       // Nếu không có cách ghép chính xác bằng targetNum, lấy tổ hợp có tổng tiết gần nhất (<= targetNum) với điểm sư phạm cao nhất
-       const bestWeight = [...dp.keys()].reduce((max, w) => w > max ? w : max, 0);
-       return new Set(dp.get(bestWeight)?.ids || []);
-     }
-     ```
-   - Hàm `suggestNlsLessons()`:
-     ```javascript
-     function suggestNlsLessons(){
-       const countVal = Number(document.querySelector('#nlsCountInput')?.value);
-       if (countVal > 0) {
-         syncNlsSelectionFromCount(countVal);
-       } else {
-         syncNlsSelectionFromRate();
+       const rate = Number(c?.nls?.rate);
+       if(Number.isFinite(rate) && rate <= 0) return false;
+       const prioritized = typeof prioritizedNlsLessons === 'function' ? prioritizedNlsLessons() : [];
+       if(!prioritized.length) return c?.nls?.enabled !== false;
+       if(!Number.isFinite(rate)) return true;
+       const targetCount = Math.round(rate / 100 * prioritized.length);
+       const topIds = new Set(prioritized.slice(0, targetCount).map(x => x.id));
+       if(hasId) return topIds.has(lessonId);
+       if(Number.isInteger(index) && prioritized[index]) return topIds.has(prioritized[index].id);
+       if(lessonName){
+         const match = prioritized.find(x => x.lesson === lessonName);
+         if(match && topIds.has(match.id)) return true;
        }
-       notify(`Đã gợi ý chính xác ${nlsSelectedPeriodCount()} tiết NLS (${nlsSelectedLessonIds.size} bài) theo độ phù hợp sư phạm.`);
+       return false;
      }
      ```
 
-### Bước 3: Đồng bộ 100% Phụ lục 3 từ Phụ lục 1 / File Nguồn PPCT
-1. Khi sinh nội dung Phụ lục 3 trong `generateSelected` và `normalizeAppendix`:
-   - Bảng I của Phụ lục 3 kế thừa 100% từ cấu trúc nguồn PPCT / Phụ lục 1 (`sourcePpctRows` hoặc `results['1']?.schedule`):
-     - Dòng `isHeader === true`: Giữ nguyên dòng tiêu đề (`lesson: row.lesson`, `isHeader: true`).
-     - Dòng bài học: Giữ nguyên `lesson`, `periods`, `tietCT`, `week`, `devices`, `location`.
-     - Cột `Ghi chú`: Đồng bộ từ cột Ghi chú của Phụ lục 1 (hoặc hàm `formatNoteIntegration`).
-2. Hàm `appendixThreeTable`:
-   - Trả về cấu trúc 7 cột chuẩn: `['Bài học', 'Số tiết', 'Tiết CT', 'Tuần', 'Thiết bị dạy học (*)', 'Địa điểm dạy học (**)', 'Ghi chú']`.
-   - Dòng `row.isHeader`: Trả về `{isHeader: true, cells: [row.lesson]}`.
-   - Dòng bài học: Trả về `[row.lesson, row.periods, row.tietCT, row.week, row.devices, row.location, note || '-']`.
-3. Xuất Word trong `exportDocx`:
-   - Hàm `addPpct` khi gặp dòng `row.isHeader` xuất ra ô merge toàn bộ bảng `colspan="7"`, căn giữa, in đậm:
+   - **Điểm 3 (Sửa `getConfig` khoảng dòng 1514)**:
+     Trong object `nls:` thêm `count: Number(document.querySelector('#nlsCountInput')?.value) || 0`.
+
+   - **Điểm 4 (Sửa `calculateComplianceReport` khoảng dòng 1669)**:
+     Thay:
+     `isNlsPeriodUnit=c.nls?.unit==='period',nlsTarget=c.nls?.enabled?(isNlsPeriodUnit?Math.round(periods*(Number(c.nls.rate)||0)/100):Math.ceil(rows.length*(Number(c.nls.rate)||0)/100)):0,`
+     Bằng:
+     `isNlsPeriodUnit=c.nls?.unit==='period',nlsTarget=c.nls?.enabled?(c.nls?.count>0?c.nls.count:(isNlsPeriodUnit?Math.round(periods*(Number(c.nls.rate)||0)/100):Math.ceil(rows.length*(Number(c.nls.rate)||0)/100))):0,`
+
+   - **Điểm 5 (Sửa `integrationParts` khoảng dòng 1564)**:
+     Thêm guard loại bỏ chuỗi không phải mã:
+     `if(typeof raw==='string'&&!/(?:NLS|AI|TC|\d+\.[A-Z])/i.test(raw))return [];`
+
+### Bước 3: Khắc phục triệt để lỗi Phụ lục 3 mất Tiết CT, Tuần, Tiêu đề chương
+
+- **Nguyên nhân**:
+  1. Khi sinh Phụ lục 1, AI chỉ trả về `{index, lesson, periods, outcomes}` (không có `tietCT` và `week`).
+  2. Tại dòng 1709, `normalizeAppendix` cho `no === '3'` lại ưu tiên lấy `results['1'].schedule` trước `sourcePpctRows`:
+     `const fullSchedule = results['1']?.schedule?.length ? results['1'].schedule : ...`
+     Do `results['1'].schedule` đã bị AI lược bỏ `tietCT`, `week` và các dòng tiêu đề chương `isHeader: true`, Phụ lục 3 bị mất sạch toàn bộ thông tin này!
+
+- **Cách sửa chi tiết**:
+  1. **Tại dòng 1709 (`normalizeAppendix` cho `no === '3'`)**:
+     Thay thế:
      ```javascript
-     if (row.isHeader) {
-       return new TableRow({
-         cantSplit: true,
-         children: [cell((row.cells || []).filter(Boolean).join(' '), { center: true, bold: true, colspan: columns.length, width: 100 })]
-       });
-     }
+     const fullSchedule=results['1']?.schedule?.length?results['1'].schedule:typeof sourcePpctRows!=='undefined'&&Array.isArray(sourcePpctRows)&&sourcePpctRows.length?sourcePpctRows:typeof defaultPpctRows==='function'?defaultPpctRows(c):[];
      ```
-4. Đồng bộ các sửa đổi sang file `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+     Bằng (Ưu tiên tuyệt đối bảng nguồn PPCT đã tải lên `sourcePpctRows` hoặc PPCT chuẩn `defaultPpctRows`):
+     ```javascript
+     const fullSchedule=(typeof sourcePpctRows!=='undefined'&&Array.isArray(sourcePpctRows)&&sourcePpctRows.length)?sourcePpctRows:(typeof defaultPpctRows==='function'?defaultPpctRows(c):(results['1']?.schedule||[]));
+     ```
+
+  2. **Tại dòng 1649 (`normalizeAppendix` cho `no === '1'`)**:
+     Khôi phục `tietCT`, `week`, `devices`, `location` từ nguồn PPCT khi map `data.schedule`:
+     ```javascript
+     let normalIndex=0;
+     const sourceList=(sourcePpctRows.length?sourcePpctRows:(typeof defaultPpctRows==='function'?defaultPpctRows(c):[])).filter(r=>!r.isHeader);
+     data.schedule=(data.schedule||[]).map((row,i)=>{
+       const r=ppctRow(row,i,c);
+       if(!r.isHeader){
+         const src=sourceList[normalIndex++]||{};
+         if(!r.tietCT&&src.tietCT) r.tietCT=src.tietCT;
+         if(!r.week&&src.week) r.week=src.week;
+         if(!r.devices) r.devices=src.devices||defaultEquip;
+         if(!r.location) r.location=src.location||'Lớp học';
+       }
+       return {...r,outcomes:String(row.outcomes||row.outcome||row.requirements||'').trim()};
+     }).filter(row=>row.lesson&&!isAdminLesson(row.lesson));
+     ```
+
+  3. **Xuất Word trong `exportDocx`**:
+     Giữ nguyên merger dòng tiêu đề (`colspan: columns.length`) và bảng 7 cột chuẩn của Phụ lục 3 (`appendixThree`: `[20, 5, 6, 5, 15, 14, 35]`).
+  4. Đồng bộ các sửa đổi sang file `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
 
 ---
 

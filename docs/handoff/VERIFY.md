@@ -4,20 +4,30 @@
 PASS
 
 ## Đối chiếu scope
-- **Khắc phục lỗi Fetch Header**: Đã bọc `encodeURIComponent(account)` vào `X-User-Account`, `api/user_phuluc_draft.php` giải mã `rawurldecode()`, và chặn dùng họ tên giáo viên có dấu làm username trong `prefillCanvasDraftAccount`.
-- **Tối ưu hóa thuật toán chọn tiết NLS**: Đã chuyển sang bài toán Knapsack 0/1 tối ưu điểm sư phạm (`nlsLessonPriorityScore`), ràng buộc dung lượng chính xác đúng số tiết yêu cầu (ví dụ 28 tiết); đồng bộ sự kiện `input` tức thì trên `#nlsCountInput`.
-- **Chuẩn hóa Phụ lục 3 kế thừa 100% từ Phụ lục 1 / Nguồn PPCT**: Đã loại bỏ hoàn toàn việc gọi AI tái tạo bảng PPCT ở Phụ lục 3; kế thừa nguyên vẹn dòng tiêu đề phân cấp (`HỌC KÌ I`, `CHƯƠNG I...`), Tiết CT, Tuần, thiết bị, địa điểm và cột Ghi chú tích hợp NLS/AI từ Phụ lục 1; xuất Word merge full 7 cột cho dòng tiêu đề.
-- **Đồng bộ file**: Đã đồng bộ đầy đủ trên `canvas_xaydungphuluc.html`, `xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html` và `api/user_phuluc_draft.php`.
+- **Khắc phục lỗi Header Fetch Unicode**: `requestCanvasDraft` mã hóa `encodeURIComponent(account)` cho header `X-User-Account`, `api/user_phuluc_draft.php` giải mã an toàn qua `rawurldecode()`.
+- **Tuyệt đối tuân thủ số tiết NLS (28 tiết)**:
+  - `isLessonNlsSelected` loại bỏ hoàn toàn `lessonsMatch` tra cứu lỏng lẻo theo số thứ tự bài học, ưu tiên tra cứu ID chính xác và chuỗi tên tuyệt đối, triệt tiêu lỗi trùng bài và kích hoạt kép giữa các học kỳ.
+  - `ppctRow` ngăn chặn chỉ số dòng đè lên dữ liệu cột tích hợp.
+  - `getConfig().nls` lưu trữ `count` trực tiếp từ `#nlsCountInput`.
+  - `calculateComplianceReport` kiểm tra trực tiếp số tiết mục tiêu đã chọn, không bị làm tròn qua lại với %.
+- **Phụ lục 3 bảo toàn Tiết CT, Tuần và Tiêu đề chương**:
+  - `normalizeAppendix` ưu tiên tuyệt đối bảng nguồn PPCT (`sourcePpctRows`) hoặc PPCT chuẩn (`defaultPpctRows`), không dùng lịch đã bị AI rút gọn của Phụ lục 1.
+  - Giữ nguyên toàn bộ dòng tiêu đề (`isHeader: true`), Tiết CT, Tuần, thiết bị và địa điểm; cột Ghi chú tự động ánh xạ mã tích hợp từ Phụ lục 1.
+  - Xuất Word Phụ lục 3 có đầy đủ cấu trúc 7 cột chuẩn CV 5512.
+- **Đồng bộ file**: Đã đồng bộ sang `canvas_xaydungphuluc.html`, `xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
 
 ## Test đã chạy
-- `node tests/canvas-xaydungphuluc-smoke.js` — PASS.
-- `node tests/xaydungphuluc-smoke.js` — PASS.
-- Kiểm thử tĩnh và logic trên các file triển khai — PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js` — PASS (toàn bộ kiểm thử giao diện, NLS period-unit và export).
+- `node tests/xaydungphuluc-smoke.js` — PASS (toàn bộ kiểm thử bảng PPCT 7 cột, đồng bộ PL1-PL3, Knapsack).
+- Sandbox unit test xác thực `isLessonNlsSelected` loại trừ trùng tên bài giữa các học kỳ (Bài 1 HK1 vs Bài 1 HK2) — PASS.
 
 ## Pass / Fail từng tiêu chí
 1. **Lỗi Fetch Header `String contains non ISO-8859-1 code point`**: PASS — Header được mã hóa an toàn, không còn crash khi tài khoản có dấu tiếng Việt.
-2. **Chọn đúng số tiết NLS đã chỉ định**: PASS — Nhập 28 tiết được thuật toán Knapsack chọn các bài có điểm sư phạm cao nhất đạt chính xác 28 tiết.
-3. **Phụ lục 3 đủ Tiết CT, Tuần, Tiêu đề Học kỳ / Chương và cột Ghi chú**: PASS — Kế thừa 100% từ Phụ lục 1 / PPCT nguồn, xuất Word chuẩn CV 5512.
+2. **Chọn đúng số tiết NLS đã chỉ định (28 tiết)**: PASS — Knapsack chọn chính xác 28 tiết, không còn bị kích hoạt kép thành 30 tiết.
+3. **Phụ lục 3 xuất ra đủ Tiết CT, Tuần, Tiêu đề chương**: PASS — Ưu tiên bảng nguồn PPCT, bảo toàn 100% Tiết CT, Tuần và tiêu đề phân cấp.
 
 ## Bug
 Không có.
+
+
+

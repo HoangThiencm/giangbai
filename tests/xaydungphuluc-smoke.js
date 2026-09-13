@@ -93,7 +93,7 @@ const sandbox={
   DOMParser:class{parseFromString(){return {querySelectorAll(){return []}}}},
 };
 vm.createContext(sandbox);
-try{vm.runInContext(script[1].replace(/document\.addEventListener\('DOMContentLoaded'[\s\S]*\);\s*$/,''),sandbox);}
+try{vm.runInContext(script[1].replace(/document\.addEventListener\('DOMContentLoaded'[\s\S]*?\}\);\s*/,''),sandbox);}
 catch(e){assert.fail('inline JavaScript failed to parse: '+e.message)}
 sandbox.originalGetConfig=sandbox.getConfig;
 assert.equal(typeof sandbox.extractPpctRows,'function','extractPpctRows must be defined');
@@ -544,7 +544,7 @@ const noteThreeCell=String((noteThree.rows.find(row=>!row.isHeader)||{cells:[]})
 assert.notEqual(noteThreeCell,'-','PL3 Ghi chú must not collapse selected NLS/AI to a dash');
 assert(/Năng lực số|1\.1\.TC/i.test(noteThreeCell),'PL3 Ghi chú must include NLS label or code');
 assert(/Năng lực AI|6\.[A-Z]/i.test(noteThreeCell),'PL3 Ghi chú must include AI label or code');
-assert(html.includes("fullSchedule=results['1']?.schedule?.length"),'PL3 normalization must prioritize the complete Appendix 1 schedule');
+assert(html.includes("fullSchedule=typeof sourcePpctRows!=='undefined'&&Array.isArray(sourcePpctRows)&&sourcePpctRows.length?sourcePpctRows"),'PL3 normalization must prioritize uploaded PPCT rows before the AI-reduced Appendix 1 schedule');
 assert(html.includes('columns.length===APPENDIX_3_COLUMNS.length'),'PL3 preview and DOCX must accept the seven-column table model');
 const noteCoverageTable={columns:['STT','Bài học','Số tiết','Yêu cầu cần đạt','Ghi chú'],rows:[{cells:['1','Bài mẫu','2','Đạt','- Năng lực số: 1.1.TC1a : Khai thác học liệu.\n- Năng lực AI: 6.B2.1 : Hỗ trợ. (Áp dụng: tiết 1, 2)'],isHeader:false}]};
 const noteCoverage=sandbox.appendixAiCoverage(noteCoverageTable,{ai:{enabled:true,selectedPeriods:[{lesson:'Bài mẫu',periods:[1,2]}]}});
@@ -836,6 +836,34 @@ const previewToggle=vm.runInContext(`(()=>{
 assert(previewToggle.afterNls>=1,'toggleNlsLesson must call schedulePreviewUpdate');
 assert(previewToggle.afterAi>previewToggle.afterNls,'toggleAiLesson must call schedulePreviewUpdate');
 assert(previewToggle.afterRow>previewToggle.afterAi,'toggleAiLessonRow must call schedulePreviewUpdate');
+const exactNlsAndAppendixThree=vm.runInContext(`(()=>{
+  normalizeAppendix=planOriginalNormalizeAppendix;
+  const nodes={'#nlsCountInput':{value:'28'},'#nlsRate':{value:'50'},'#nlsRateOut':{value:''},'#nlsUnit':{value:'period'},'#aiUnit':{value:'period'}};
+  document.querySelector=selector=>nodes[selector]||null;
+  const candidates=[
+    {id:'hk1:bai1',lesson:'Bài 1',periodCount:10,periods:'10',tietCT:'1-10'},
+    {id:'hk1:bai2',lesson:'Bài 2',periodCount:8,periods:'8',tietCT:'11-18'},
+    {id:'hk2:bai1',lesson:'Bài 1',periodCount:6,periods:'6',tietCT:'19-24'},
+    {id:'hk2:bai2',lesson:'Bài 2',periodCount:4,periods:'4',tietCT:'25-28'}
+  ];
+  const selected=chooseNlsLessonsForPeriods(28,candidates);
+  nlsSelectedLessonIds=selected;
+  const oldCandidates=nlsCandidates;nlsCandidates=()=>candidates;
+  const duplicateNameWithoutId=isLessonNlsSelected(null,'Bài 1',{},2);
+  const selectedHk1=isLessonNlsSelected('hk1:bai1','Bài 1',{},0),selectedHk2=isLessonNlsSelected('hk2:bai1','Bài 1',{},2);
+  nlsCandidates=oldCandidates;
+  sourcePpctRows=[{lesson:'HỌC KÌ I',isHeader:true},{lesson:'Bài nguồn',periods:'2',tietCT:'5, 6',week:'Tuần 3',devices:'Máy chiếu',location:'Lớp học',isHeader:false}];
+  results={'1':{schedule:[{lesson:'Bài AI rút gọn',periods:'2',isHeader:false}],scheduleTable:null}};
+  const pl3=normalizeAppendix({plan:[{lesson:'Bài AI rút gọn',periods:'2'}]},'3',{monHoc:'Toán học',lop:'6',nls:{enabled:true,rate:50,count:28,unit:'period'},ai:{enabled:false,rate:0}});
+  return {periods:[...selected].reduce((sum,id)=>sum+(candidates.find(item=>item.id===id)?.periodCount||0),0),selectedHk1,selectedHk2,duplicateNameWithoutId,plan:pl3.plan};
+})()`,sandbox);
+assert.equal(exactNlsAndAppendixThree.periods,28,'NLS exact-capacity selection must preserve a requested 28 periods');
+assert.equal(exactNlsAndAppendixThree.selectedHk1,true,'NLS selection must use the precise PPCT row id');
+assert.equal(exactNlsAndAppendixThree.selectedHk2,true,'two lessons with the same name in different semesters must remain independently selected');
+assert.equal(exactNlsAndAppendixThree.duplicateNameWithoutId,true,'index fallback must resolve the matching PPCT row rather than a loose lesson-name match');
+assert.equal(exactNlsAndAppendixThree.plan[0].isHeader,true,'Appendix 3 must retain PPCT semester/chapter header rows even when PL1 was reduced by AI');
+assert.equal(exactNlsAndAppendixThree.plan[1].tietCT,'5, 6','Appendix 3 must use Tiết CT from the PPCT source, not the reduced PL1 schedule');
+assert.equal(exactNlsAndAppendixThree.plan[1].week,'3','Appendix 3 must use the Tuần value from the PPCT source, not the reduced PL1 schedule');
 console.log('PASS xaydungphuluc smoke: PPCT 7-column form, independent table ingest, no admin-header leak, density ranges and auto-hiding progress UI are present.');
 }
 run().catch(error=>{console.error(error);process.exitCode=1});
