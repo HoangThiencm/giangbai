@@ -26,7 +26,7 @@ for(const [control,cardTitle,rateControl] of [['nlsUnit','Năng lực số (CV 3
 
 // Canvas only replaces the model/key controls. Every other original DOM hook and
 // function must remain available so this page continues to be a 1:1 copy.
-for(const id of sourceIds){if(!['selectModel','keyBadge'].includes(id))assert(targetIds.has(id),`missing original DOM id #${id}`)}
+for(const id of sourceIds){if(!['selectModel','keyBadge','keyInput','mistralKeyInput'].includes(id))assert(targetIds.has(id),`missing original DOM id #${id}`)}
 for(const name of sourceFunctions)assert(targetFunctions.has(name),`missing original function ${name}`);
 assert(targetIds.has('canvasHostBanner'),'missing Canvas connection banner');
 assert(target.indexOf('<meta charset="utf-8">')<target.indexOf('<title>'),'charset must be declared before other document resources');
@@ -65,10 +65,13 @@ for(const text of [
   'Đã kết nối Gemini Canvas · gemini-3-flash-preview',
   'Gemini Canvas · gemini-3-flash-preview (Hệ thống cấp)',
   "apiKeys=['canvas-session']",'mistralKeys=[]',
-  "method:'POST'","credentials:'omit'",'body:JSON.stringify({payload,timeout:120})','GEMINI_TIMEOUT_MS=120000',
+  "method:'POST'","credentials:'omit'",'tier:options.tier',"preferred_model:options.preferredModel",'GEMINI_TIMEOUT_MS=120000',
   'envelope?.body','width:11906,height:16838','orientation:PageOrientation.LANDSCAPE',
   'Ghi chú','formatNoteIntegration','0070C0','7030A0'
 ])assert(target.includes(text),`missing Canvas requirement: ${text}`);
+['canvasKeyBadge','function updateCanvasKeyBadge','function syncCanvasUserKeyStatus','action:\'key_status\'','tier:\'heavy_io\'','tier:\'high_reasoning\'','preferredModel:\'gemini-3.8-flash\'','quota_key_indexes','Key cá nhân ${index} chạm hạn mức','X-User-Account'].forEach(text=>assert(target.includes(text),`missing Canvas multi-tier/key-status requirement: ${text}`));
+const canvasProxy=fs.readFileSync('api/canvas_gemini.php','utf8');
+['key_status','parse_stored_api_keys','mask_user_api_key','high_reasoning','heavy_io','gemini-3.8-flash','fallback_system','key_index','total_user_keys','rotation_count','quota_key_indexes','X-User-Account'].forEach(text=>assert(canvasProxy.includes(text),`Canvas proxy missing ${text}`));
 assert(!/src=["'][^"']*(?:security-guard|access-control)\.js/.test(target),'Canvas must not load access/security scripts');
 assert(!/(?:generativelanguage\.googleapis\.com|api\.mistral\.ai|api\/user_gemini_keys\.php)/.test(target),'Canvas must not call direct provider or user-key services');
 
@@ -118,13 +121,13 @@ assert.equal(bridgeSandbox.parseCanvasInlineActions('refreshSubjects();alert(doc
 const bootstrapCalls=[];
 const lifecycleSandbox={
   window:{},
-  refreshSubjects(){bootstrapCalls.push('subjects')},loadDefaultPpctStructure(value){bootstrapCalls.push(['ppct',value])},checkSharedSgkKnowledge(value){bootstrapCalls.push(['knowledge',value])},syncRanges(){bootstrapCalls.push('ranges')},prefillTeacherIdentity(){bootstrapCalls.push('identity')},readCanvasStorage(){return 'dark'},
+  canvasDraftAccount:'',refreshSubjects(){bootstrapCalls.push('subjects')},loadDefaultPpctStructure(value){bootstrapCalls.push(['ppct',value])},checkSharedSgkKnowledge(value){bootstrapCalls.push(['knowledge',value])},syncRanges(){bootstrapCalls.push('ranges')},prefillTeacherIdentity(){bootstrapCalls.push('identity')},prefillCanvasDraftAccount(){bootstrapCalls.push('account')},readCanvasStorage(){return 'dark'},
   document:{documentElement:{classList:{add:value=>bootstrapCalls.push(['theme',value])}}},initCanvasEventBridge(){bootstrapCalls.push('bridge')},bindFlexibleAllocationControls(){bootstrapCalls.push('allocation-controls')},restoreLayoutPrefs(){bootstrapCalls.push('layout')},updateKeyBadge(){bootstrapCalls.push('badge')},renderPreview(){bootstrapCalls.push('preview')},loadDraftFromServer(value){bootstrapCalls.push(['draft',value])},checkCanvasHostConnection(){bootstrapCalls.push('connection')},reportCanvasError(error){throw error}
 };
 vm.createContext(lifecycleSandbox);
 vm.runInContext(sliceNamedFunction('initApp'),lifecycleSandbox);
 lifecycleSandbox.initApp();
-assert.deepEqual(JSON.parse(JSON.stringify(bootstrapCalls)),['bridge','allocation-controls','subjects',['ppct',true],['knowledge',true],'ranges','identity',['theme','dark'],'layout','badge','preview',['draft',{silent:true}],'connection'],'initApp must initialize a document that is already complete');
+assert.deepEqual(JSON.parse(JSON.stringify(bootstrapCalls)),['bridge','allocation-controls','subjects',['ppct',true],['knowledge',true],'ranges','identity','account',['theme','dark'],'layout','badge','preview',['draft',{silent:true}],'connection'],'initApp must initialize a document that is already complete');
 const adaptiveNlsSandbox={};vm.createContext(adaptiveNlsSandbox);vm.runInContext(sliceNamedFunction('getExpectedNlsCount')+'\n'+sliceNamedFunction('getExpectedNlsMaxCount'),adaptiveNlsSandbox);
 const adaptiveNlsConfig={nls:{density:'adaptive',noAiDensity:'2-3'}};
 assert.equal(adaptiveNlsSandbox.getExpectedNlsCount(1,false,adaptiveNlsConfig),1,'one-period lessons without AI must use one NLS code');
@@ -290,7 +293,7 @@ const sandbox={console,AbortController,clearTimeout,setTimeout,fetch:async(url,i
 }};
 vm.createContext(sandbox);
 vm.runInContext(
-  `const CANVAS_ENDPOINT=${JSON.stringify(endpoint)},GEMINI_TIMEOUT_MS=120000,DEFAULT_GEMINI_MODEL='gemini-3-flash-preview';let aborter=null;function isUserAbort(){return false};`+
+  `const CANVAS_ENDPOINT=${JSON.stringify(endpoint)},GEMINI_TIMEOUT_MS=120000,DEFAULT_GEMINI_MODEL='gemini-3-flash-preview';let aborter=null,canvasDraftAccount='teacher1';function isUserAbort(){return false};function log(){}function notify(){}`+
   sliceFunction('fetchWithGeminiTimeout')+'\n'+sliceFunction('requestGemini')+'\n'+sliceNamedFunction('safeParseAiJson')+'\n'+sliceFunction('readGeminiResponse')+'\n'+sliceFunction('callGemini'),sandbox
 );
 (async()=>{
@@ -303,6 +306,8 @@ vm.runInContext(
   assert.equal(calls[0].init.headers['content-type'],'application/json');
   const body=JSON.parse(calls[0].init.body);
   assert.equal(body.timeout,120);
+  assert.equal(body.tier,'heavy_io');
+  assert.equal(body.user_account,'teacher1');
   assert.equal(body.payload.contents[0].parts[0].text,'kiểm tra Canvas');
   console.log('canvas-xaydungphuluc-smoke: PASS');
 })().catch(error=>{console.error(error);process.exit(1)});
@@ -323,7 +328,7 @@ const draftSandbox={URLSearchParams,Blob,console,
   document:{querySelector:()=>null},
   notify:message=>messages.push(message),
   buildDraftPayload:()=>draftPayload,draftDefaultTitle:()=> 'Kế hoạch mẫu',
-  applyDraftPayload:value=>{restored=value},setDraftStatus(){},closeSaveDraftModal(){},closeLoadDraftModal(){},
+  applyDraftPayload:value=>{restored=value},setDraftStatus(){},updateCanvasKeyBadge(){},syncCanvasUserKeyStatus(){return Promise.resolve()},closeSaveDraftModal(){},closeLoadDraftModal(){},
   saveAs:(blob,name)=>{download={blob,name}},
   fetch:async(url,init)=>{draftCalls.push({url,init});return {ok:true}},
 };

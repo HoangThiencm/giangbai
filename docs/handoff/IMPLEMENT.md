@@ -30,3 +30,17 @@ Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` t
 
 - `node tests/canvas-xaydungphuluc-smoke.js` — PASS; bổ sung ca NLS vượt 28 tiết, xác nhận checkbox được hoàn tác và tập lựa chọn không tăng.
 - `node tests/xaydungphuluc-smoke.js` — PASS; fixture reset hạn mức giữa các ca để kiểm tra riêng đúng hành vi loại trừ bài một tiết.
+
+## Bổ sung multi-tier Gemini Canvas
+
+- `api/canvas_gemini.php` nhận `action=key_status` qua GET/POST, đọc và giải mã `users.gemini_keys`, chỉ trả số lượng và key đã che mờ.
+- Proxy nhận `tier` và `preferred_model`: tác vụ `heavy_io` luôn dùng `gemini-3-flash-preview` với key hệ thống; `high_reasoning` thử tuần tự key cá nhân với `gemini-3.8-flash`, sau đó fallback an toàn về model nội bộ.
+- `canvas_xaydungphuluc.html` hiển thị badge tài khoản/số key, modal đồng bộ trạng thái, chuyển PPCT/SGK sang `heavy_io` và sinh phụ lục sang `high_reasoning`; nhật ký hiển thị key cá nhân hoặc fallback.
+- Khi key cá nhân chạm quota trước một key thành công, proxy trả `quota_key_indexes` và `rotation_count` không chứa key thô; Canvas ghi rõ lần chuyển sang key kế tiếp trong nhật ký.
+- Smoke test được bổ sung các kiểm tra contract proxy, badge, key-status và phân tầng, vẫn bảo đảm Canvas không gọi trực tiếp nhà cung cấp AI.
+
+## Kiểm thử multi-tier Gemini Canvas
+
+- `node tests/canvas-xaydungphuluc-smoke.js` — PASS.
+- `git diff --check` — PASS.
+- Không chạy được PHP lint vì môi trường hiện tại không có lệnh `php` trong PATH.
