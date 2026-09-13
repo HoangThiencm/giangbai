@@ -1813,20 +1813,23 @@
                 <button class="view-tab-btn" id="tab-nav-timetable" onclick="switchAppView('view-timetable')">
                     <i class="fas fa-calendar-days"></i> 2. Thời khoá biểu GV
                 </button>
+                <button class="view-tab-btn" id="tab-nav-email" onclick="switchAppView('view-email')">
+                    <i class="fas fa-envelope"></i> 3. Gửi email
+                </button>
                 <button class="view-tab-btn" id="tab-nav-baogiang" onclick="switchAppView('view-baogiang')">
-                    <i class="fas fa-calendar-week"></i> 3. Lịch báo giảng
+                    <i class="fas fa-calendar-week"></i> 4. Lịch báo giảng
                 </button>
                 <button class="view-tab-btn" id="tab-nav-daythay" onclick="switchAppView('view-daythay')">
-                    <i class="fas fa-book-bookmark"></i> 4. Sổ Dạy Thay - Bù
+                    <i class="fas fa-book-bookmark"></i> 5. Sổ Dạy Thay - Bù
                 </button>
                 <button class="view-tab-btn" id="tab-nav-chamcong" onclick="switchAppView('view-chamcong')">
-                    <i class="fas fa-calendar-check"></i> 5. Chấm công GV
+                    <i class="fas fa-calendar-check"></i> 6. Chấm công GV
                 </button>
                 <button class="view-tab-btn" id="tab-nav-tanggio" onclick="switchAppView('view-tanggio')">
-                    <i class="fas fa-calculator"></i> 6. Tăng Giờ
+                    <i class="fas fa-calculator"></i> 7. Tăng Giờ
                 </button>
                 <button class="view-tab-btn" id="tab-nav-baocao" onclick="switchAppView('view-baocao')">
-                    <i class="fas fa-chart-pie"></i> 7. Báo cáo &amp; Thống kê
+                    <i class="fas fa-chart-pie"></i> 8. Báo cáo &amp; Thống kê
                 </button>
             </div>
 
@@ -1918,12 +1921,6 @@
                     <button type="button" class="btn-small" onclick="clearTimetableTeacherSelection()">Bỏ chọn</button>
                 </div>
                 <div id="tt-selected-count" style="font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:8px;">Đã chọn: 0 giáo viên</div>
-                <button type="button" class="btn-small btn-small-primary" style="width:100%; justify-content:center; margin-bottom:8px;" onclick="sendSelectedTeachersTimetableEmail()">
-                    <i class="fas fa-envelope"></i> Gửi bản tổng hợp TKB về email cá nhân
-                </button>
-                <button type="button" class="btn-small" style="width:100%; justify-content:center; margin-bottom:8px;" onclick="sendSelectedTeachersIndividualTimetableEmail()">
-                    <i class="fas fa-paper-plane"></i> Gửi riêng TKB cho từng GV đã chọn
-                </button>
                 <input type="text" class="search-input" id="tt-teacher-search" placeholder="Tìm giáo viên..." oninput="renderTimetableTeacherList()">
                 <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
                     <button type="button" class="tt-filter-btn active" id="tt-filter-all" onclick="setTimetableTeacherFilter('all')">Tất cả</button>
@@ -1989,6 +1986,33 @@
         </main>
     </div>
 
+    <!-- GỬI EMAIL: tập trung toàn bộ luồng gửi để không lẫn với nhập TKB/lịch -->
+    <div class="app-view" id="view-email" style="padding:20px; overflow:auto; background:#f8fafc;">
+        <div class="panel-card" style="max-width:1100px; margin:0 auto; padding:20px;">
+            <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:start;">
+                <div><h2 style="margin:0;color:#1e3a8a;"><i class="fas fa-envelope"></i> Gửi email</h2><p style="margin:6px 0;color:#64748b;">Chọn đúng loại lịch cần gửi. Email cá nhân của bạn dùng cấu hình gửi của hệ thống; email từng giáo viên khai báo trong phần Giáo viên.</p></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 12px;">
+                <button type="button" class="btn-small btn-small-primary email-tab-btn active" data-email-tab="mine" onclick="switchEmailTab('mine')">1. TKB của tôi</button>
+                <button type="button" class="btn-small email-tab-btn" data-email-tab="all" onclick="switchEmailTab('all')">2. TKB tất cả GV → email tôi</button>
+                <button type="button" class="btn-small email-tab-btn" data-email-tab="baogiang" onclick="switchEmailTab('baogiang')">3. LBG cá nhân từng GV</button>
+            </div>
+            <section class="email-tab-pane" data-email-pane="mine" style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
+                <h3 style="margin:0 0 8px;color:#1e3a8a;">Thời khóa biểu của tôi</h3><p style="margin:0 0 12px;color:#475569;">Hệ thống tự tìm giáo viên khớp tài khoản đang đăng nhập (mã tài khoản hoặc họ tên) và gửi TKB đó về email cá nhân của bạn.</p>
+                <button type="button" class="btn-small btn-small-primary" onclick="sendMyTimetableEmail()"><i class="fas fa-paper-plane"></i> Gửi TKB của tôi về email cá nhân</button>
+            </section>
+            <section class="email-tab-pane" data-email-pane="all" hidden style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
+                <h3 style="margin:0 0 8px;color:#1e3a8a;">Tổng hợp TKB giáo viên</h3><p style="margin:0 0 12px;color:#475569;">Chọn giáo viên tại tab <b>Thời khóa biểu GV</b>, rồi gửi bản tổng hợp về email cá nhân của bạn.</p>
+                <button type="button" class="btn-small btn-small-primary" onclick="sendSelectedTeachersTimetableEmail()"><i class="fas fa-envelope"></i> Gửi TKB đã chọn về email tôi</button>
+            </section>
+            <section class="email-tab-pane" data-email-pane="baogiang" hidden style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
+                <h3 style="margin:0 0 8px;color:#1e3a8a;">Lịch báo giảng cá nhân từng giáo viên</h3><p style="margin:0 0 12px;color:#475569;">Chọn tuần, tích giáo viên và kiểm tra email trước khi gửi. Mỗi người chỉ nhận lịch của chính mình.</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;"><label class="form-group" style="margin:0;min-width:180px;"><span>Tuần cần gửi</span><input id="email-bg-send-week" class="form-control" type="week" onchange="syncBaoGiangEmailWeek(this.value)"></label><span id="email-bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span><button type="button" class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers('email-bg-send-week')"><i class="fas fa-paper-plane"></i> Gửi lịch cho GV đã chọn</button></div>
+                <div id="email-bg-recipient-list" style="margin-top:14px;"></div>
+            </section>
+        </div>
+    </div>
+
     <!-- 2. VIEW SỔ THEO DÕI DẠY THAY & DẠY BÙ (TAB RIÊNG) -->
     <div class="app-view" id="view-baogiang" style="padding:20px; overflow:auto; background:#f8fafc;">
         <div class="panel-card" style="max-width:1200px; margin:0 auto; padding:20px;">
@@ -2005,7 +2029,7 @@
             <label class="form-group" style="display:block;margin:10px 0 0;max-width:300px;"><b>Khối của PPCT đang nạp</b><select id="bg-ppct-grade" class="form-control" onchange="updateBaoGiangSettings()"><option value="">Chọn khối trước khi AI nhận diện</option><option value="6">Khối 6</option><option value="7">Khối 7</option><option value="8">Khối 8</option><option value="9">Khối 9</option></select></label><p style="font-size:.82rem;color:#64748b;margin:5px 0 0;">Nạp một lần cho mỗi môn/khối, ví dụ <b>Toán · khối 7</b>. Mọi lớp 7 sẽ dùng PPCT này và tự tính tiến độ theo TKB riêng.</p>
             <label class="form-group" style="display:block;margin:10px 0 0;max-width:300px;"><b>Môn của PPCT đang nạp</b><input id="bg-ppct-subject" class="form-control" list="bg-ppct-subject-options" oninput="updateBaoGiangSettings()" placeholder="Ví dụ: Toán hoặc Tin"></label><datalist id="bg-ppct-subject-options"></datalist><p style="font-size:.82rem;color:#64748b;margin:5px 0 0;">Chọn/nhập đúng tên môn đang có trong TKB để lịch ghép chính xác.</p>
             <details style="margin-top:12px;"><summary style="font-weight:800;cursor:pointer;">Ngày nghỉ và dạy bù</summary><p style="font-size:.82rem;color:#64748b;">Dùng “Tôi nghỉ cả ngày” khi không cần nhớ bài. Nếu biết chính xác bài nào/tiết nào, chọn “Đúng một tiết/bài của tôi” rồi chọn dòng lịch bên dưới; bài đó sẽ tự dồn sang lần dạy thực tế kế tiếp.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px;"><label class="form-group">Ngày<input id="bg-ex-date" class="form-control" type="date" onchange="refreshBaoGiangPersonalLessonOptions()"></label><label class="form-group">Loại<select id="bg-ex-type" class="form-control"><option value="off">Nghỉ học</option><option value="makeup">Dạy bù</option></select></label><label class="form-group">Phạm vi nghỉ<select id="bg-ex-scope" class="form-control" onchange="refreshBaoGiangPersonalLessonOptions()"><option value="self">Tôi nghỉ cả ngày</option><option value="self_lesson">Đúng một tiết/bài của tôi</option><option value="self_subject">Một môn tôi dạy</option><option value="all">Toàn trường</option><option value="class">Một lớp</option><option value="teacher">Một giáo viên</option><option value="subject">Một môn toàn trường</option></select></label><label class="form-group">Mục tiêu<input id="bg-ex-target" class="form-control" placeholder="Để trống khi “Tôi nghỉ cả ngày”; nhập tên môn khi cần"></label><label class="form-group" style="grid-column:1/-1;">Tiết/bài cụ thể của tôi<select id="bg-ex-lesson" class="form-control"><option value="">Chọn ngày để xem các tiết của tôi</option></select></label></div><button class="btn-small" type="button" onclick="addBaoGiangException()"><i class="fas fa-plus"></i> Thêm ngoại lệ</button><div id="bg-exceptions" style="margin-top:8px;"></div></details>
-            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;"><button class="btn-small btn-small-primary" onclick="renderBaoGiangView()"><i class="fas fa-rotate"></i> Tính lại lịch</button><label class="form-group" style="margin:0;min-width:170px;"><span style="font-size:.8rem;font-weight:700;">Tuần cần gửi</span><input id="bg-send-week" class="form-control" type="week" onchange="updateBaoGiangSendWeekLabel()"></label><span id="bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 4px;"></span><button class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToSelf()"><i class="fas fa-paper-plane"></i> Gửi lịch tuần đã chọn (cá nhân)</button><button class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers()"><i class="fas fa-paper-plane"></i> Gửi lịch tuần cho các GV đã chọn</button></div>
+            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;"><button class="btn-small btn-small-primary" onclick="renderBaoGiangView()"><i class="fas fa-rotate"></i> Tính lại lịch</button><span style="font-size:.84rem;color:#475569;">Gửi lịch báo giảng tại tab <b>Gửi email</b>.</span></div>
             <div id="bg-schedule" style="margin-top:14px;"></div>
         </div>
     </div>
@@ -2599,6 +2623,7 @@
                             <tr>
                                 <th style="width: 35px; text-align:center;">STT</th>
                                 <th>Họ và Tên Giáo viên</th>
+                                <th style="min-width:190px;">Email nhận</th>
                                 <th style="width: 175px;">Chức vụ / Vai trò</th>
                                 <th style="width: 90px; text-align:center;">Định mức</th>
                                 <th style="width: 90px; text-align:center;">Giảm trừ</th>
@@ -2910,6 +2935,7 @@
             if (typeof s.bao_giang.ppct_default_subject !== 'string') s.bao_giang.ppct_default_subject = '';
             if (!Array.isArray(s.bao_giang.exceptions)) s.bao_giang.exceptions = [];
             if (!Array.isArray(s.bao_giang.recipient_ids)) s.bao_giang.recipient_ids = [];
+            s.bao_giang.recipient_ids = [...new Set(s.bao_giang.recipient_ids.map(String))];
             Object.keys(s.attendance.substitutes).forEach(k => {
                 if (!Array.isArray(s.attendance.substitutes[k])) s.attendance.substitutes[k] = [];
                 s.attendance.substitutes[k].forEach((item, i) => {
@@ -2934,6 +2960,7 @@
             });
 
             s.teachers.forEach(t => {
+                if (typeof t.email !== 'string') t.email = '';
                 if (!t.assignments) t.assignments = {};
                 if (typeof t.quota !== 'number') {
                     t.quota = (t.role === 'HT' ? 2 : ((t.role === 'HP' || t.role === 'PHT') ? 4 : 19));
@@ -3015,8 +3042,17 @@
         function removeBaoGiangException(id) { state.bao_giang.exceptions = state.bao_giang.exceptions.filter(x => x.id !== id); saveToLocal(); renderBaoGiangView(); }
         function baoGiangRows(until) { const cfg = state.bao_giang, start = baoGiangDate(cfg.start_date); if (!start) return []; const end = baoGiangDate(until); if (!end || end < start) return []; const rows = []; for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) { const day = baoGiangDayKey(date); if (!day) continue; state.teachers.forEach(teacher => { const timetable = normalizeTeacherTimetable(teacher.timetable); ['morning', 'afternoon'].forEach(session => Object.entries(timetable[session]?.[day] || {}).sort((a, b) => Number(a[0]) - Number(b[0])).forEach(([period, cell]) => { const value = parseTimetableCell(cell); if (!value?.class_name || !value?.subject) return; const row = { date: baoGiangIso(date), session, period, class_name: value.class_name, subject: value.subject, teacher_id: teacher.id, teacher_name: teacher.name }; const off = cfg.exceptions.some(ex => ex.type === 'off' && ex.date === row.date && baoGiangMatchesException(ex, row)); if (!off) rows.push(row); })); }); cfg.exceptions.filter(ex => ex.type === 'makeup' && ex.date === baoGiangIso(date)).forEach(ex => { const [className, subject] = String(ex.target || '').split('|').map(x => x.trim()); if (!className || !subject) return; const teacher = state.teachers.find(t => Object.values(t.timetable || {}).some(session => Object.values(session || {}).some(day => Object.values(day || {}).some(cell => { const c = parseTimetableCell(cell); return c && foldText(c.class_name) === foldText(className) && foldText(c.subject) === foldText(subject); })))); rows.push({ date: ex.date, session: 'makeup', period: 'Bù', class_name: className, subject, teacher_id: teacher?.id || '', teacher_name: teacher?.name || 'Chưa xác định GV' }); }); } return rows.sort((a, b) => `${a.date}|${a.session}|${String(a.period).padStart(2, '0')}`.localeCompare(`${b.date}|${b.session}|${String(b.period).padStart(2, '0')}`)); }
         function renderBaoGiangView() { const cfg = state.bao_giang, today = new Date(), fallbackStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; if (!cfg.start_date) cfg.start_date = fallbackStart; const startInput = document.getElementById('bg-start-date'), viewInput = document.getElementById('bg-view-date'), curriculum = document.getElementById('bg-curriculum'); if (!startInput) return; if (!viewInput.value) viewInput.value = cfg.start_date; startInput.value = cfg.start_date; curriculum.value = cfg.curriculum_text || ''; const days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14)), viewStart = baoGiangDate(viewInput.value), viewEnd = new Date(viewStart); viewEnd.setDate(viewEnd.getDate() + days - 1); const plan = parseBaoGiangCurriculum(cfg.curriculum_text), allRows = baoGiangRows(baoGiangIso(viewEnd)), counters = new Map(); const decorated = allRows.map(row => { const key = baoGiangKey(row.class_name, row.subject), index = counters.get(key) || 0; counters.set(key, index + 1); return { ...row, lesson: baoGiangPlanFor(plan, row.class_name, row.subject)[index] || null }; }), visible = decorated.filter(row => row.date >= viewInput.value && row.date <= baoGiangIso(viewEnd)); const schedule = document.getElementById('bg-schedule'); const exceptions = document.getElementById('bg-exceptions'); exceptions.innerHTML = cfg.exceptions.length ? cfg.exceptions.map(ex => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:.85rem;"><b>${escapeHtml(ex.date)}</b><span>${ex.type === 'off' ? 'Nghỉ học' : 'Dạy bù'}</span><span>${escapeHtml(ex.scope === 'all' ? 'Toàn trường' : ex.target)}</span><button class="btn-small" onclick="removeBaoGiangException('${ex.id}')">Xóa</button></div>`).join('') : '<p style="color:#64748b;font-size:.85rem;">Chưa có ngoại lệ.</p>'; const recipients = document.getElementById('bg-recipient-list'); recipients.innerHTML = `<div style="font-weight:800;margin-bottom:6px;">Người nhận email</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${state.teachers.map(t => `<label style="padding:7px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;"><input type="checkbox" ${cfg.recipient_ids.includes(t.id) ? 'checked' : ''} onchange="toggleBaoGiangRecipient('${t.id}',this.checked)"> ${escapeHtml(t.name)} <input aria-label="Email ${escapeHtml(t.name)}" value="${escapeHtml(t.email || '')}" placeholder="email" style="width:150px;border:0;border-bottom:1px solid #cbd5e1;margin-left:4px;" onchange="setBaoGiangEmail('${t.id}',this.value)"></label>`).join('')}</div>`; schedule.innerHTML = visible.length ? `<div style="overflow:auto;"><table class="data-table"><thead><tr><th>Ngày</th><th>Lớp</th><th>Môn</th><th>Tiết</th><th>GV</th><th>Tiết PPCT</th><th>Bài dạy</th><th>Phân đoạn</th></tr></thead><tbody>${visible.map(row => `<tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.class_name)}</td><td>${escapeHtml(row.subject)}</td><td>${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} ${row.period}`)}</td><td>${escapeHtml(row.teacher_name)}</td><td>${row.lesson?.ppct || '<span style="color:#b45309">Chưa có</span>'}</td><td>${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td><td>${escapeHtml(row.lesson?.segment || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p style="padding:16px;color:#64748b;">Chưa có tiết TKB trong khoảng ngày này. Hãy nhập TKB, ngày áp dụng và PPCT.</p>'; }
-        function toggleBaoGiangRecipient(id, checked) { const list = state.bao_giang.recipient_ids; state.bao_giang.recipient_ids = checked ? [...new Set([...list, id])] : list.filter(x => x !== id); saveToLocal(); }
-        function setBaoGiangEmail(id, email) { const teacher = state.teachers.find(t => t.id === id); if (teacher) teacher.email = String(email || '').trim(); saveToLocal(); }
+        function toggleBaoGiangRecipient(id, checked) {
+            const normalizedId = String(id);
+            const list = (state.bao_giang.recipient_ids || []).map(String);
+            state.bao_giang.recipient_ids = checked ? [...new Set([...list, normalizedId])] : list.filter(x => x !== normalizedId);
+            saveToLocal(); renderEmailRecipientList();
+        }
+        function setBaoGiangEmail(id, email) {
+            const teacher = state.teachers.find(t => String(t.id) === String(id));
+            if (teacher) teacher.email = String(email || '').trim();
+            saveToLocal(); renderEmailRecipientList();
+        }
         function composeBaoGiangEmail() {
             const ids = new Set(state.bao_giang.recipient_ids);
             const recipients = state.teachers.filter(t => ids.has(t.id)).map(t => t.email || (String(t.username || '').includes('@') ? t.username : '')).filter(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
@@ -3145,13 +3181,13 @@
             return { to: teacher.email.trim(), subject: `Lịch báo giảng - ${teacher.name} (${range.start} đến ${range.end})`, body: `Kính gửi thầy/cô ${teacher.name},\n\nLỊCH BÁO GIẢNG TUẦN ${range.start} – ${range.end}\n\n${bodyRows}\n\nTrân trọng.`, html: `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:920px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;"><div style="padding:22px;background:#1e3a8a;color:#fff;"><div style="font-size:23px;font-weight:700;">Lịch báo giảng - ${escapeHtml(teacher.name)}</div><div style="margin-top:6px;">Tuần ${escapeHtml(range.start)} – ${escapeHtml(range.end)}</div></div><div style="padding:18px;overflow-x:auto;"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-size:13px;"><thead><tr style="background:#e2e8f0;"><th style="padding:8px;text-align:left;">Ngày</th><th style="padding:8px;text-align:left;">Buổi / tiết</th><th style="padding:8px;text-align:left;">Lớp</th><th style="padding:8px;text-align:left;">Môn</th><th style="padding:8px;text-align:left;">Bài dạy</th></tr></thead><tbody>${tableRows}</tbody></table></div></div></div>` };
         }
 
-        async function sendBaoGiangSelectedWeekToTeachers() {
+        async function sendBaoGiangSelectedWeekToTeachers(weekInputId = 'bg-send-week') {
             try {
-                const range = baoGiangWeekRange(document.getElementById('bg-send-week')?.value);
+                const range = baoGiangWeekRange(document.getElementById(weekInputId)?.value);
                 if (!range) throw new Error('Hãy chọn tuần cần gửi.');
                 const ids = new Set(state.bao_giang.recipient_ids || []);
-                const teachers = (state.teachers || []).filter(t => ids.has(t.id));
-                if (!teachers.length) throw new Error('Hãy tích chọn ít nhất một giáo viên nhận lịch ở danh sách Người nhận email.');
+                const teachers = (state.teachers || []).filter(t => ids.has(String(t.id)));
+                if (!teachers.length) throw new Error('Hãy tích chọn ít nhất một giáo viên nhận lịch.');
                 const missing = teachers.filter(t => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(t.email || '')));
                 if (missing.length) throw new Error(`Hãy bổ sung email hợp lệ cho: ${missing.map(t => t.name).join(', ')}.`);
                 const deliveries = teachers.map(teacher => buildTeacherBaoGiangWeekEmail(teacher, range));
@@ -3160,6 +3196,28 @@
                 if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể gửi lịch báo giảng.');
                 showToast(data.message || `Đã gửi lịch báo giảng tuần ${range.start} thành công cho ${data.sent_count || deliveries.length} giáo viên.`, 'success');
             } catch (error) { showToast(error.message || 'Không thể gửi lịch báo giảng.', 'error', 8000); }
+        }
+
+        function switchEmailTab(tabName) {
+            document.querySelectorAll('.email-tab-btn').forEach(button => button.classList.toggle('active', button.dataset.emailTab === tabName));
+            document.querySelectorAll('.email-tab-pane').forEach(pane => { pane.hidden = pane.dataset.emailPane !== tabName; });
+            if (tabName === 'baogiang') renderEmailRecipientList();
+        }
+
+        function syncBaoGiangEmailWeek(value) {
+            const range = baoGiangWeekRange(value);
+            const label = document.getElementById('email-bg-send-week-label');
+            if (label) label.textContent = range ? `Từ ${formatVnDate(range.start)} đến ${formatVnDate(range.end)}` : '';
+        }
+
+        function renderEmailRecipientList() {
+            const container = document.getElementById('email-bg-recipient-list');
+            if (!container) return;
+            const ids = new Set((state.bao_giang.recipient_ids || []).map(String));
+            container.innerHTML = `<div style="font-weight:800;margin-bottom:7px;">Giáo viên nhận lịch</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:8px;">${(state.teachers || []).map(teacher => `<label style="padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.86rem;background:#fff;"><input type="checkbox" ${ids.has(String(teacher.id)) ? 'checked' : ''} onchange="toggleBaoGiangRecipient('${escapeHtml(String(teacher.id))}',this.checked)"> <b>${escapeHtml(teacher.name)}</b><input aria-label="Email ${escapeHtml(teacher.name)}" type="email" value="${escapeHtml(teacher.email || '')}" placeholder="Email nhận lịch" style="width:100%;box-sizing:border-box;margin-top:7px;padding:6px;border:1px solid #cbd5e1;border-radius:5px;" onchange="setBaoGiangEmail('${escapeHtml(String(teacher.id))}',this.value)"></label>`).join('')}</div>`;
+            const week = document.getElementById('email-bg-send-week');
+            if (week && !week.value) week.value = baoGiangWeekValueFromDate(baoGiangNextMonday());
+            if (week) syncBaoGiangEmailWeek(week.value);
         }
 
         // Kho PPCT: dữ liệu vẫn được lưu ở curriculum_text để tương thích bản cũ,
@@ -5876,13 +5934,35 @@
             };
         }
 
-        function buildTeacherIndividualTimetableEmail(teacher) {
-            if (!teacher?.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(teacher.email)) throw new Error(`Giáo viên ${teacher?.name || ''} chưa có email hợp lệ.`);
+        function buildTeacherIndividualTimetableEmail(teacher, recipient = teacher?.email, requireRecipient = true) {
+            if (requireRecipient && (!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient))) throw new Error(`Giáo viên ${teacher?.name || ''} chưa có email hợp lệ.`);
             if (!timetableHasLessons(teacher.timetable)) throw new Error(`Giáo viên ${teacher.name} chưa có Thời khóa biểu.`);
             const schoolYear = state.info?.school_year || teacher.timetable?.school_year || '';
             const semester = state.info?.semester || teacher.timetable?.semester || '';
             const plain = ['morning', 'afternoon'].map(session => `${session === 'morning' ? 'Buổi sáng' : 'Buổi chiều'}:\n${periodsForTimetableSession(session, normalizeTeacherTimetable(teacher.timetable)).map(period => `Tiết ${period}: ${TT_DAYS.map(day => { const cell=parseTimetableCell(normalizeTeacherTimetable(teacher.timetable)[session]?.[day]?.[String(period)]); return `${TT_DAY_LABELS[day]} ${cell ? `${cell.subject} (${cell.class_name})` : '—'}`; }).join(' | ')}`).join('\n')}`).join('\n\n');
-            return { to: teacher.email.trim(), subject: `Thời khóa biểu - ${teacher.name}${schoolYear ? ` (${schoolYear})` : ''}`, body: `Kính gửi thầy/cô ${teacher.name},\n\n${plain}\n\nTrân trọng.`, html: `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:900px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;"><div style="padding:22px;background:#0f3b82;color:#fff;"><div style="font-size:24px;font-weight:700;">Thời khóa biểu - ${escapeHtml(teacher.name)}</div><div style="margin-top:5px;">${escapeHtml([schoolYear, semester].filter(Boolean).join(' · '))}</div></div><div style="padding:0 16px 18px;overflow-x:auto;">${timetableEmailSessionTable(teacher, 'morning')}${timetableEmailSessionTable(teacher, 'afternoon')}</div></div></div>` };
+            const email = { subject: `Thời khóa biểu - ${teacher.name}${schoolYear ? ` (${schoolYear})` : ''}`, body: `Kính gửi thầy/cô ${teacher.name},\n\n${plain}\n\nTrân trọng.`, html: `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:900px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;"><div style="padding:22px;background:#0f3b82;color:#fff;"><div style="font-size:24px;font-weight:700;">Thời khóa biểu - ${escapeHtml(teacher.name)}</div><div style="margin-top:5px;">${escapeHtml([schoolYear, semester].filter(Boolean).join(' · '))}</div></div><div style="padding:0 16px 18px;overflow-x:auto;">${timetableEmailSessionTable(teacher, 'morning')}${timetableEmailSessionTable(teacher, 'afternoon')}</div></div></div>` };
+            if (recipient) email.to = String(recipient).trim();
+            return email;
+        }
+
+        function currentUserTeacher() {
+            const owner = systemData?.current_user || {};
+            const ownerId = owner.id ? `u_${owner.id}` : '';
+            const ownerName = String(owner.full_name || owner.name || '').trim();
+            return (state.teachers || []).find(teacher => String(teacher.id) === ownerId)
+                || (ownerName ? (state.teachers || []).find(teacher => foldText(teacher.name) === foldText(ownerName)) : null);
+        }
+
+        async function sendMyTimetableEmail() {
+            try {
+                const teacher = currentUserTeacher();
+                if (!teacher) throw new Error('Chưa tìm thấy giáo viên khớp với tài khoản đang đăng nhập. Hãy kiểm tra mã hoặc họ tên giáo viên.');
+                const email = buildTeacherIndividualTimetableEmail(teacher, '', false);
+                const response = await fetch('api/baogiang_mail.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify(email) });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể gửi Thời khóa biểu của bạn.');
+                showToast(data.message || 'Đã gửi Thời khóa biểu của bạn về email cá nhân.', 'success');
+            } catch (error) { showToast(error.message || 'Không thể gửi Thời khóa biểu của bạn.', 'error', 8000); }
         }
 
         async function sendSelectedTeachersTimetableEmail() {
@@ -8510,6 +8590,9 @@ ${listText}`;
                         <input type="text" class="form-control" style="padding:4px 8px;" value="${escapeHtml(t.name)}" onchange="updateEditingTeacher(${index}, 'name', this.value)">
                     </td>
                     <td>
+                        <input type="email" class="form-control" style="padding:4px 8px;" value="${escapeHtml(t.email || '')}" placeholder="ten@truong.edu.vn" onchange="updateEditingTeacher(${index}, 'email', this.value.trim())">
+                    </td>
+                    <td>
                         <select class="form-control" style="padding:4px 8px; font-weight:700;" onchange="updateEditingTeacherRole(${index}, this.value)">
                             <option value="GV" ${t.role === 'GV' ? 'selected' : ''}>Giáo viên (ĐM 19t)</option>
                             <option value="TTCM" ${t.role === 'TTCM' ? 'selected' : ''}>Tổ trưởng CM (ĐM 19t, -3t)</option>
@@ -8542,6 +8625,7 @@ ${listText}`;
             editingConfig.teachers.push({
                 id: newId,
                 name: 'Giáo viên mới',
+                email: '',
                 role: 'GV',
                 quota: 19,
                 allowance: 0,
@@ -8581,14 +8665,15 @@ ${listText}`;
                 return;
             }
 
-            const existingNames = new Set(editingConfig.teachers.map(t => t.name.trim().toLowerCase()));
             let addedCount = 0;
 
             systemData.teachers.forEach(st => {
-                if (!existingNames.has(st.name.trim().toLowerCase())) {
+                const existing = editingConfig.teachers.find(t => t.name.trim().toLowerCase() === st.name.trim().toLowerCase());
+                if (!existing) {
                     editingConfig.teachers.push({
                         id: st.id || ('t_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
                         name: st.name,
+                        email: String(st.email || st.username || '').includes('@') ? String(st.email || st.username).trim() : '',
                         role: 'GV',
                         quota: 19,
                         allowance: 0,
@@ -8597,6 +8682,8 @@ ${listText}`;
                         school_duties: []
                     });
                     addedCount++;
+                } else if (!existing.email && String(st.email || st.username || '').includes('@')) {
+                    existing.email = String(st.email || st.username).trim();
                 }
             });
 

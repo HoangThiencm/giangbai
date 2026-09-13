@@ -189,8 +189,21 @@ assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\
     assert.doesNotMatch(individual.html, /Thầy Bình/, 'individual timetable email must not include another teacher');
 }
 
-['selectedTimetableTeacherIds', 'selectAllTimetableTeachers', 'clearTimetableTeacherSelection', 'buildSelectedTeachersTimetableEmail', 'buildTeacherIndividualTimetableEmail', 'sendSelectedTeachersTimetableEmail', 'sendSelectedTeachersIndividualTimetableEmail', 'Chọn tất cả GV có TKB', 'Gửi bản tổng hợp TKB về email cá nhân', 'Gửi riêng TKB cho từng GV đã chọn', 'sendBaoGiangSelectedWeekToTeachers', 'Gửi lịch tuần cho các GV đã chọn'].forEach(token => {
-    assert(html.includes(token), `missing selected-teacher timetable email control: ${token}`);
+{
+    const context = vm.createContext({
+        state: { teachers: [{ id: 'u_12', name: 'Cô An' }, { id: 't_2', name: 'Thầy Bình' }] },
+        systemData: { current_user: { id: 12, full_name: 'Tên không cần khớp' } },
+        String,
+        foldText: value => String(value).toLowerCase()
+    });
+    vm.runInContext(declaration('currentUserTeacher'), context);
+    assert.equal(vm.runInContext('currentUserTeacher().name', context), 'Cô An', 'my timetable resolves the logged-in user by u_id before name matching');
+}
+
+['view-email', 'switchEmailTab', 'sendMyTimetableEmail', 'currentUserTeacher', 'renderEmailRecipientList', 'sendSelectedTeachersTimetableEmail', 'sendBaoGiangSelectedWeekToTeachers', 'Email nhận', 'TKB của tôi', 'TKB tất cả GV → email tôi', 'LBG cá nhân từng GV', 'Gửi TKB của tôi về email cá nhân', 'Gửi TKB đã chọn về email tôi', 'Gửi lịch cho GV đã chọn'].forEach(token => {
+    assert(html.includes(token), `missing centralized email control: ${token}`);
 });
+
+assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail\(\)"/, 'individual timetable sending is not duplicated outside the centralized email flow');
 
 console.log('PASS: timetable view loads numeric IDs and JSON data, uses a compact responsive layout, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');

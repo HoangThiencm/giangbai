@@ -4,35 +4,32 @@
 PASS
 
 ## Đối chiếu scope
-- `xaydungphuluc.html`, `canvas_xaydungphuluc.html`, `backupcode viettailieu/canvas_xaydungphuluc.html`:
-  - Mục 1: Thu gọn chỉ còn thông tin trường học & giáo viên (`1. Thông tin trường học &amp; giáo viên`), loại bỏ khối NLS/AI và checkbox khỏi Mục 1.
-  - Mục 3 mới: Tạo card cấu hình Năng lực số & Trí tuệ nhân tạo (`3. Cấu hình Năng lực số &amp; Trí tuệ nhân tạo`), đặt sau Mục 2 (Tài liệu & dữ liệu nguồn) và trước Mục "Chọn loại phụ lục".
-  - Đánh số lại các mục tiếp theo: Mục 4 (Chọn loại phụ lục), Mục 5 (AI đề xuất bài/tiết tích hợp NLS & AI...), Mục 6 (Ý tưởng / chỉ đạo riêng), Mục 7 (Tiến trình xử lý), Mục 8 (Xem trước & xuất Word).
-  - Phụ lục 3 phòng chống rỗng dữ liệu:
-    - `appendixThreeTable()`: Tự động fallback về `results['1'].schedule` -> `sourcePpctRows` -> `defaultPpctRows(c)` khi `planRows` rỗng.
-    - `syncIntegrationFromAppendixOne()`: Tự động fallback tương tự khi `targetPlanRows` rỗng.
-    - `normalizeAppendix()` cho `no === '3'`: Hỗ trợ đa dạng cấu trúc trả về từ AI (`plan`, `schedule`, `ppct`, `items`, `rows`) và fallback tự động nếu không có dòng nào.
-    - `renderPreview()`: Khi mở Phụ lục 3, tự động tái dựng `planModel` 8 cột có dữ liệu nếu bảng rỗng.
-    - `exportDocx(3)`: Tự động kiểm tra và đảm bảo bảng 8 cột luôn có dữ liệu trước khi đóng gói file Word.
-- `tests/xaydungphuluc-smoke.js`:
-  - Thêm test case khẳng định `appendixThreeTable([])` luôn có dòng dữ liệu dự phòng và đủ 8 cột.
+- `api/baogiang_mail.php`: Đã hỗ trợ payload `deliveries`, `recipients`, `recipient`, tôn trọng cờ `BAOGIANG_GMAIL_TO_SELF_ONLY`, lọc email hợp lệ, giới hạn 50 email/lần, giãn cách 150ms chống spam/chặn SMTP.
+- `api/config.sample.php`: Đã cập nhật cờ `BAOGIANG_GMAIL_TO_SELF_ONLY = false` kèm ghi chú hướng dẫn chi tiết.
+- `phancongtochuyenmon.html`:
+  - Thẻ Thời khóa biểu: Bổ sung xem/sửa nhanh email giáo viên; thêm hàm `buildTeacherIndividualTimetableEmail` và các nút gửi riêng TKB cho từng GV đã chọn cũng như gửi bản tổng hợp cá nhân.
+  - Thẻ Lịch báo giảng: Bổ sung nút "Gửi lịch tuần cho các GV đã chọn" (`sendBaoGiangSelectedWeekToTeachers`), lọc đúng tiết của từng GV trong tuần, tạo email cá nhân hóa và gửi qua `deliveries`.
+- `tests/timetable-render-smoke.js`: Đã cập nhật test case kiểm thử email TKB cá nhân và các thành phần giao diện mới.
 
 ## Test đã chạy
-- `node tests/xaydungphuluc-smoke.js`: PASS
-- `node tests/canvas-xaydungphuluc-smoke.js`: PASS
-- `node tests/xaydungphuluc-math-smoke.js`: PASS
-- `node tests/sgk-knowledge-smoke.js`: PASS
+- `node tests/timetable-render-smoke.js`: PASS
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS
+- `node tests/daythay-suggest-smoke.js`: PASS
+- `node tests/baogiang-recognition-smoke.js`: PASS
+- Rà soát mã nguồn PHP `api/baogiang_mail.php` và `api/config.sample.php`: Cú pháp chuẩn xác, bảo mật và an toàn.
 
 ## Pass / Fail từng tiêu chí
-- Tiêu chí 1: Di chuyển khối Cấu hình NLS & AI xuống sau Mục 2 và trước Mục 3 (thành Mục 3 mới) -> PASS
-- Tiêu chí 2: Đánh số lại các mục từ 1 đến 8 đồng bộ trên 3 tệp HTML -> PASS
-- Tiêu chí 3: Phụ lục 3 mở xem trước không bị rỗng bảng (tự động khôi phục dữ liệu bài học) -> PASS
-- Tiêu chí 4: Xuất Word Phụ lục 3 có đầy đủ các dòng bài học trong bảng 8 cột, không bị 0 dòng -> PASS
-- Tiêu chí 5: Fallback an toàn khi AI không trả về trường `plan` hoặc trả về mảng rỗng -> PASS
-- Tiêu chí 6: Bộ test tự động smoke tests và math tests đều đạt 100% -> PASS
+- [PASS] Hỗ trợ gửi TKB riêng lẻ cho từng giáo viên đã chọn.
+- [PASS] Hỗ trợ gửi Lịch báo giảng tuần riêng cho từng giáo viên đã chọn.
+- [PASS] Kiểm tra hợp lệ email và thông báo khi thiếu email giáo viên.
+- [PASS] Bảo vệ chế độ thử nghiệm qua cờ `BAOGIANG_GMAIL_TO_SELF_ONLY`.
+- [PASS] Giữ tương thích hoàn toàn với luồng gửi email cá nhân cũ.
 
 ## Bug
-Không có bug tồn đọng.
+- Lỗi: Không có.
+- Tái hiện: Không có.
+- File liên quan: Không có.
+
 
 
 

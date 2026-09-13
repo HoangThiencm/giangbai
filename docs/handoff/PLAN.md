@@ -1,125 +1,106 @@
-# PLAN: Nâng cấp gửi Thời khóa biểu và Lịch báo giảng trực tiếp cho các giáo viên trong tổ qua Email
+# PLAN: Khắc phục lỗi tính số tiết Năng lực số (NLS) và Trí tuệ nhân tạo (AI) không chuẩn trong Xây dựng phụ lục
 
 ---
 
 ## 1. Yêu cầu & Mục tiêu
-- **Yêu cầu**: Nâng cấp hệ thống gửi email trong Quản lý tổ chuyên môn (`phancongtochuyenmon.html`) và backend (`api/baogiang_mail.php`) để có thể gửi Thời khóa biểu và Lịch báo giảng trực tiếp đến hòm thư (email) của từng giáo viên trong tổ chuyên môn, thay vì chỉ gửi về email cá nhân (`BAOGIANG_GMAIL_FROM`).
-- **Mục tiêu chi tiết**:
-  1. **Backend (`api/baogiang_mail.php`)**:
-     - Hỗ trợ gửi danh sách email người nhận (`recipients`: mảng email hoặc mảng `deliveries: [{ to, subject, body, html }]`).
-     - Tôn trọng cờ cấu hình `BAOGIANG_GMAIL_TO_SELF_ONLY`: nếu `true` thì chuyển hướng an toàn về `BAOGIANG_GMAIL_FROM`; nếu `false` thì cho phép gửi thẳng đến các email đích được chỉ định.
-     - Xác thực tính hợp lệ của từng địa chỉ email trước khi gửi (`filter_var(..., FILTER_VALIDATE_EMAIL)`).
-     - Giới hạn an toàn: tối đa 50 email / lần gửi để chống spam và tránh nghẽn SMTP Gmail.
-     - Giãn cách an toàn (`usleep(150000)`) giữa các lần gửi liên tiếp để Gmail SMTP không chặn kết nối.
-  2. **Thời khóa biểu (`phancongtochuyenmon.html` - view-timetable)**:
-     - Tại danh sách giáo viên có TKB, bên cạnh nút chọn tất cả, bổ sung tùy chọn gửi email:
-       - Tùy chọn 1: *Gửi riêng TKB cho từng GV đã chọn* (mỗi thầy cô nhận email chứa bảng TKB của chính mình).
-       - Tùy chọn 2: *Gửi bản tổng hợp TKB các GV đã chọn về email cá nhân* (giữ nguyên tính năng cũ).
-  3. **Lịch báo giảng (`phancongtochuyenmon.html` - view-baogiang)**:
-     - Tại mục "Người nhận email" (`#bg-recipient-list`), người dùng đã tích chọn các giáo viên và điền email.
-     - Bổ sung nút: **"Gửi lịch tuần cho các GV đã chọn"** bên cạnh nút "Gửi lịch tuần đã chọn (cá nhân)".
-     - Khi bấm nút này: hệ thống lọc đúng các tiết dạy trong tuần của từng giáo viên đã chọn, tạo email lịch báo giảng cá nhân hóa cho từng thầy cô và gửi thẳng đến email của họ.
-  4. **Cấu hình mẫu (`api/config.sample.php`)**:
-     - Cập nhật hướng dẫn và giá trị mẫu `BAOGIANG_GMAIL_TO_SELF_ONLY` để người dùng hosting dễ dàng kích hoạt.
+- **Vấn đề người dùng phản ánh**: Khi người dùng cấu hình/yêu cầu tích hợp đúng **28 tiết Năng lực số** và **12 tiết AI**, khi đếm trong bảng phụ lục (hoặc xem kết quả) thì lại ra **30 tiết Năng lực số** và **14 tiết AI** (bị dôi ra +2 tiết NLS và +2 tiết AI).
+- **Mục tiêu**: Đảm bảo hệ thống tính toán, phân bổ và hiển thị số tiết NLS và AI chuẩn xác 100% theo đúng số lượng tiết (hoặc bài) mà người dùng yêu cầu; loại bỏ hoàn toàn hiện tượng dôi/tràn tiết do so khớp chéo (false-positive match) giữa các bài học có tên tương tự.
 
 ---
 
-## 2. Phạm vi tệp tin cần sửa đổi (Scope)
-1. `api/baogiang_mail.php`
-2. `api/config.sample.php`
-3. `phancongtochuyenmon.html`
-4. `tests/timetable-render-smoke.js`
+## 2. Phân tích Nguyên nhân gốc rễ (Root Causes)
 
----
-
-## 3. Hướng dẫn chi tiết cho Coder
-
-### PHẦN A: Nâng cấp Backend `api/baogiang_mail.php`
-
-1. **Hỗ trợ đa người nhận / đa gói gửi (deliveries)**:
-   - Đọc payload JSON:
-     - Hỗ trợ `deliveries` (mảng các object `{ to, subject, body, html }`).
-     - Hoặc `recipients` (mảng email) dùng chung `subject`, `body`, `html`.
-     - Hoặc `recipient` đơn lẻ / mặc định fallback về `BAOGIANG_GMAIL_FROM`.
-2. **Kiểm tra cờ `BAOGIANG_GMAIL_TO_SELF_ONLY`**:
-   ```php
-   $selfOnly = !defined('BAOGIANG_GMAIL_TO_SELF_ONLY') || BAOGIANG_GMAIL_TO_SELF_ONLY === true;
-   ```
-   - Nếu `$selfOnly === true`: tất cả email đều được gửi về `(string) BAOGIANG_GMAIL_FROM` kèm lời chú thích trong kết quả.
-   - Nếu `$selfOnly === false`: gửi trực tiếp đến địa chỉ email đích hợp lệ của từng giáo viên.
-3. **Thực thi vòng lặp gửi an toàn**:
-   - Lọc các email hợp lệ bằng `filter_var($to, FILTER_VALIDATE_EMAIL)`.
-   - Giới hạn mảng tối đa 50 người nhận.
-   - Với mỗi người nhận:
-     - Gọi `baogiang_send_gmail($to, $itemSubject, $itemBody, $itemHtml)`.
-     - Dừng nhẹ `usleep(150000)` (150ms) giữa các email.
-   - Đếm số lượng thành công `$sentCount` và ghi nhận lỗi nếu có.
-   - Trả về JSON:
-     ```json
-     {
-       "ok": true,
-       "sent_count": 5,
-       "message": "Đã gửi email thành công cho 5 giáo viên."
+1. **Lỗi so khớp chéo (Fuzzy Match Collision) trong `isLessonNlsSelected` và `selectedPeriodsForLesson`**:
+   - Trong `isLessonNlsSelected(lessonId, lessonName, c, index)`:
+     Khi `lessonId` được truyền vào (ví dụ `ppct:27`), nếu bài này **không được chọn** (`nlsSelectedLessonIds.has(lessonId) === false`), hàm lại tiếp tục chạy xuống:
+     ```javascript
+     if (lessonName) {
+       const match = nlsCandidates().find(x => typeof lessonsMatch === 'function' ? lessonsMatch(x.lesson, lessonName) : x.lesson === lessonName);
+       if (match && nlsSelectedLessonIds.has(match.id)) return true;
      }
      ```
+   - Tương tự trong `selectedPeriodsForLesson(lessonId, lessonName)`:
+     Khi `lessonId` có truyền vào nhưng bài đó không có tiết AI (`byId.length === 0`), hàm lại fallback sang so khớp tên bài bằng `lessonsMatch(x.lesson, lessonName)`.
+   - Trong khi đó, `lessonsMatch` có quy tắc kiểm tra từ khóa trùng lặp (`overlap >= 2`), nhưng hàm `cleanLessonName` và `lessonKeywords` lại **chưa loại bỏ** các từ chung như `'TRAI'`, `'NGHIEM'`, `'VA'`, `'HINH'`, cụm `"THỰC HÀNH VÀ TRẢI NGHIỆM"`.
+   - Hậu quả: Bài học A (được chọn NLS/AI, ví dụ bài trải nghiệm 2 tiết) bị khớp nhầm sang Bài học B (không hề được chọn NLS/AI, cũng là bài trải nghiệm 2 tiết). Kết quả là Bài B tự động bị gán ké NLS và AI, dẫn đến tổng số tiết bị dôi ra đúng 2 tiết NLS (28 -> 30) và 2 tiết AI (12 -> 14)!
+
+2. **Lỗi đồng bộ mã tích hợp sang Phụ lục 3 (`appendixThreeTable` & `syncIntegrationFromAppendixOne`)**:
+   - Khi nối dữ liệu từ Phụ lục 1 sang Phụ lục 3:
+     `const pl1Row = pl1Model.rows.find(item => !item.isHeader && lessonsMatch((item.cells||[])[pl1LessonIdx], row.lesson));`
+   - Việc dùng `find` với `lessonsMatch` khiến nhiều dòng có tên chung (như "Ôn tập", "Luyện tập chung", "Thực hành trải nghiệm") ở các học kỳ khác nhau cùng trỏ về một dòng duy nhất của Phụ lục 1, làm nhân bản mã NLS/AI sang các dòng không mong muốn.
+
+3. **Prompt sinh Phụ lục của AI thiếu danh sách bài học NLS được chọn**:
+   - Trong `appendixPrompt(no, c)`: Prompt có danh sách tiết AI (`selectedText`) và yêu cầu nghiêm ngặt cấm xuất mã AI ngoài danh sách. Tuy nhiên, với NLS, prompt chỉ ghi quy tắc phân bổ chung chung mà **hoàn toàn không có danh sách các bài NLS được chọn** (`nlsSelectedText`). Do đó AI tự ý gán NLS vào nhiều bài khác, và do bug so khớp ở mục 1, các mã NLS này được chấp nhận vào bảng.
+
+4. **Thuật toán chọn tiết trong `chooseNlsLessonsForPeriods` và `syncAiSelectionFromCount`**:
+   - Cần đảm bảo khi người dùng nhập 28 tiết NLS và 12 tiết AI, danh sách chọn bài (`nlsSelectedLessonIds` và `aiSelectedLessonIds`) có tổng số tiết chuẩn xác, đồng bộ nhất quán giữa số hiển thị ở Section 3, Section 5 và các bảng kết quả ở Section 8.
 
 ---
 
-### PHẦN B: Cập nhật Cấu hình mẫu `api/config.sample.php`
-
-- Dòng 49:
-  ```php
-  // Đặt false để cho phép gửi email trực tiếp tới từng giáo viên trong tổ; đặt true nếu chỉ muốn gửi về email cá nhân người gửi.
-  define('BAOGIANG_GMAIL_TO_SELF_ONLY', false);
-  ```
+## 3. Phạm vi tệp tin cần sửa đổi (Scope)
+1. `xaydungphuluc.html`
+2. `backupcode viettailieu/canvas_xaydungphuluc.html`
+3. `canvas_xaydungphuluc.html` (đồng bộ từ bản canvas để đảm bảo môi trường kiểm thử đầy đủ)
+4. `tests/xaydungphuluc-smoke.js`
 
 ---
 
-### PHẦN C: Nâng cấp Giao diện và Logic gửi Mail trong `phancongtochuyenmon.html`
+## 4. Hướng dẫn chi tiết cho Coder
 
-#### 1. Tại Thẻ "Thời khoá biểu" (`view-timetable`):
-- Trong danh sách giáo viên bên trái (`#tt-teacher-list`):
-  - Cho phép xem/nhập nhanh email của từng giáo viên nếu chưa có (lấy từ `t.email` trong `state.teachers`).
-- Bổ sung hàm xây dựng TKB riêng cho từng GV:
-  - `buildTeacherIndividualTimetableEmail(teacher)`: Trả về `{ to: teacher.email, subject: `Thời khóa biểu - ${teacher.name} (${state.info?.school_year || ''})`, body: ..., html: ... }` chỉ chứa các buổi, thứ, tiết của riêng thầy cô đó.
-- Nâng cấp hàm `sendSelectedTeachersTimetableEmail()`:
-  - Kiểm tra xem các giáo viên được chọn có email hay không.
-  - Cho phép người dùng chọn:
-    - Nếu gửi riêng cho từng GV: Gửi danh sách `deliveries` tới `api/baogiang_mail.php`.
-    - Nếu GV nào chưa có email, thông báo để người dùng bổ sung email.
-  - Giữ tương thích 100% với smoke test hiện có (`tests/timetable-render-smoke.js`).
+### PHẦN A: Sửa logic so khớp trong `xaydungphuluc.html` và các file canvas
 
-#### 2. Tại Thẻ "Lịch báo giảng" (`view-baogiang`):
-- Tại cụm nút gửi lịch tuần (dòng ~3010):
-  - Bổ sung nút:
-    ```html
-    <button class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers()"><i class="fas fa-paper-plane"></i> Gửi lịch tuần cho các GV đã chọn</button>
-    ```
-- Xây dựng hàm `sendBaoGiangSelectedWeekToTeachers()`:
-  - Lấy tuần được chọn từ `#bg-send-week`.
-  - Lấy danh sách giáo viên được tích chọn trong `state.bao_giang.recipient_ids`.
-  - Lọc các giáo viên có email hợp lệ (`t.email`).
-  - Xây dựng lịch báo giảng cá nhân riêng cho từng giáo viên (chỉ chứa các tiết dạy trong tuần của giáo viên đó, không chứa tiết của người khác).
-  - Gửi mảng `deliveries` lên `api/baogiang_mail.php`.
-  - Hiển thị thông báo toast: *"Đã gửi lịch báo giảng tuần ... thành công cho X giáo viên."*
+1. **Sửa hàm `isLessonNlsSelected(lessonId, lessonName, c, index)`**:
+   - Khi `lessonId` được cung cấp (khác rỗng):
+     - Chỉ kiểm tra duy nhất: `if (nlsSelectedLessonIds.has(lessonId)) return true; else return false;`.
+     - **Tuyệt đối không** fallback xuống `lessonName` / `lessonsMatch` khi `lessonId` đã xác định rõ ràng.
+   - Chỉ fallback sang `lessonName` / `lessonsMatch` khi `lessonId` là `null`, `undefined` hoặc rỗng `''` (ví dụ khi dữ liệu từ AI trả về không có ID).
+
+2. **Sửa hàm `selectedPeriodsForLesson(lessonId, lessonName = '')`**:
+   - Khi `lessonId` được cung cấp:
+     - Lấy các tiết theo `lessonId`:
+       ```javascript
+       const byId = all.filter(x => (x.lessonId === lessonId || x.id.startsWith(lessonId + ':')) && selectedIds.has(x.id)).map(x => x.period);
+       return byId;
+       ```
+     - Nếu `lessonId` đã có, trả về `byId` (dù rỗng cũng trả về rỗng). **Tuyệt đối không** fallback xuống kiểm tra `lessonName` khi `lessonId` đã được cung cấp.
+
+3. **Cải tiến `cleanLessonName` và `lessonKeywords`**:
+   - Bổ sung cụm regex loại bỏ `"THỰC HÀNH VÀ TRẢI NGHIỆM"`, `"HOẠT ĐỘNG THỰC HÀNH VÀ TRẢI NGHIỆM"`.
+   - Trong `lessonKeywords`, bổ sung các từ chung không mang nghĩa phân biệt bài học: `'TRAI'`, `'NGHIEM'`, `'THUC'`, `'HANH'`, `'CHUONG'`, `'HOAT'`, `'DONG'`.
+   - Trong `lessonsMatch`: Đối với các bài không có số thứ tự bài (không có `lessonOrdinal`), nếu độ dài từ khóa quá ngắn hoặc chỉ trùng các từ chung thì không được coi là khớp.
+
+4. **Sửa logic đồng bộ Phụ lục 3 (`appendixThreeTable` & `syncIntegrationFromAppendixOne`)**:
+   - Khi ghép dòng từ Phụ lục 1 sang Phụ lục 3:
+     - Ưu tiên ghép 1-1 theo thứ tự bài học trong danh sách (`rowIndex` / `normal`), hoặc nếu ghép theo tên thì phải đánh dấu dòng Phụ lục 1 đã dùng (`usedPl1Indices.add(pl1Index)`), không cho phép nhiều dòng Phụ lục 3 cùng ăn theo một dòng Phụ lục 1.
+
+5. **Bổ sung danh sách bài NLS vào `getConfig` và `appendixPrompt`**:
+   - Trong `getConfig()`: Bổ sung `selectedLessons` và `selectedLessonIds` vào object `nls` (tương tự như `ai.selectedLessons`).
+   - Trong `appendixPrompt(no, c)`:
+     - Khai báo danh sách bài NLS được chọn:
+       `const nlsSelectedText = nlsList.length ? nlsList.map(x => `“${x.lesson}”`).join('; ') : '(không có bài nào)';`
+     - Bổ sung chỉ thị ràng buộc AI:
+       `NLS TUYỆT ĐỐI chỉ được xuất cho đúng các bài sau: ${nlsSelectedText}. CẤM xuất mã NLS cho bất kỳ bài học nào khác ngoài danh sách này.`
+
+6. **Đồng bộ mã nguồn sang file Canvas**:
+   - Cập nhật tương ứng sang `backupcode viettailieu/canvas_xaydungphuluc.html`.
+   - Tạo/đồng bộ sang `canvas_xaydungphuluc.html` ở thư mục gốc để đảm bảo các bài test `tests/sgk-knowledge-smoke.js` và `tests/xaydungphuluc-math-smoke.js` chạy thông suốt.
 
 ---
 
-## 4. Kiểm tra và xác minh (Verification Plan)
+## 5. Kế hoạch Kiểm thử & Xác minh (Verification Plan)
 
 Coder thực hiện các kiểm tra sau:
 
 1. **Kiểm tra tự động với smoke test**:
-   - Cập nhật và chạy `tests/timetable-render-smoke.js`:
-     - Kiểm tra hàm `buildTeacherIndividualTimetableEmail` hoặc mở rộng của `sendSelectedTeachersTimetableEmail`.
-     - Chạy `node tests/timetable-render-smoke.js`: PASS.
-   - Chạy các test liên quan đến phân công / báo giảng:
-     - `node tests/baogiang-weekday-segment-smoke.js`: PASS.
-     - `node tests/daythay-suggest-smoke.js`: PASS.
-     - `node tests/baogiang-recognition-smoke.js`: PASS.
-2. **Kiểm tra cú pháp PHP của backend**:
-   - `php -l api/baogiang_mail.php`: No syntax errors detected.
-   - `php -l api/config.sample.php`: No syntax errors detected.
-3. **Ghi chép bàn giao**:
+   - Bổ sung test case trong `tests/xaydungphuluc-smoke.js`:
+     - Thiết lập cấu hình NLS 28 tiết, AI 12 tiết.
+     - Khẳng định bảng Phụ lục 1 và Phụ lục 3 tính ra chính xác 28 tiết NLS và 12 tiết AI, không bị dôi thành 30 tiết NLS hay 14 tiết AI.
+     - Khẳng định không bị match chéo giữa các bài "Hoạt động thực hành và trải nghiệm" khác nhau.
+   - Chạy các test:
+     - `node tests/xaydungphuluc-smoke.js`: PASS.
+     - `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+     - `node tests/xaydungphuluc-math-smoke.js`: PASS.
+     - `node tests/sgk-knowledge-smoke.js`: PASS.
+2. **Ghi chép bàn giao**:
    - Ghi lại toàn bộ nội dung đã sửa và kết quả kiểm thử vào `docs/handoff/IMPLEMENT.md`.
 

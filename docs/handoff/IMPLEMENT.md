@@ -31,6 +31,32 @@ Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
 
 ---
 
+# IMPLEMENT: Tập trung gửi email thời khóa biểu và lịch báo giảng
+
+## Phạm vi đã triển khai
+
+- `phancongtochuyenmon.html`
+  - Thêm trường **Email nhận** vào Khai báo giáo viên; email được khởi tạo cho dữ liệu cũ, giữ lại khi thêm giáo viên và bổ sung từ CSDL khi dữ liệu nguồn có email/tài khoản email.
+  - Thêm tab cấp cao **Gửi email**, gồm ba luồng tách biệt: **TKB của tôi**, **TKB tất cả GV → email tôi**, và **LBG cá nhân từng GV**.
+  - Luồng TKB của tôi tìm giáo viên theo `u_<current_user.id>` trước, sau đó mới theo họ tên; email được gửi về email cá nhân cấu hình ở backend nên không đòi email của giáo viên.
+  - Chuyển nút gửi TKB/lịch báo giảng rải rác sang khu vực này. LBG có chọn tuần, checkbox và ô email rõ ràng; `recipient_ids` được chuẩn hóa thành chuỗi để tương thích ID số/từ CSDL và mỗi delivery vẫn được tạo theo lịch của đúng giáo viên.
+- `tests/timetable-render-smoke.js`
+  - Cập nhật kiểm tra giao diện gửi email tập trung, cột Email nhận và quy tắc nhận diện TKB của tài khoản đang đăng nhập.
+
+## Kiểm tra đã chạy
+
+- `node tests/timetable-render-smoke.js`: PASS.
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `node tests/daythay-suggest-smoke.js`: PASS.
+- `node tests/baogiang-recognition-smoke.js`: PASS.
+- `git diff --check`: FAIL do dòng trống cuối tệp đã tồn tại trong `docs/handoff/VERIFY.md` (ngoài phạm vi); các thay đổi triển khai không có lỗi whitespace.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+
+---
+
 # IMPLEMENT: Di chuyển cấu hình NLS & AI và chặn bảng trống Phụ lục 3
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
