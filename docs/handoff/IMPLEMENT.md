@@ -273,6 +273,37 @@ Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
 
 ---
 
+# IMPLEMENT: Minh bạch chế độ gửi trực tiếp lịch báo giảng
+
+Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`
+
+## Phạm vi đã triển khai
+
+- `api/baogiang_mail.php`
+  - API trạng thái `GET` trả thêm `delivery_mode` (`self`/`direct`) và `direct_delivery` để giao diện biết chính xác máy chủ có cho gửi thẳng tới giáo viên hay không.
+  - Giữ nguyên chốt an toàn `BAOGIANG_GMAIL_TO_SELF_ONLY`: không gửi vòng qua chốt này và không đụng tới `api/config.php` trên môi trường thực tế.
+  - Khi chốt đang bật, phản hồi gửi nêu rõ: cần đặt `BAOGIANG_GMAIL_TO_SELF_ONLY` thành `false` trong `api/config.php` để bật gửi trực tiếp.
+- `phancongtochuyenmon.html`
+  - Tab **Gửi email** tự đọc trạng thái máy chủ, hiển thị banner chế độ hiện hành và khóa nút gửi lịch báo giảng tới giáo viên khi đang ở chế độ chỉ gửi về email cá nhân.
+  - Hàm gửi cũng chặn lại trước khi POST nếu trạng thái đã xác nhận là self-only, tránh người dùng nhận nhầm kết quả gửi về email cá nhân.
+  - Mẫu LBG gửi từng giáo viên được nâng cấp cùng cấu trúc với mẫu gửi cho chính mình: header, gom theo ngày/buổi, bảng rõ tiết–lớp–môn–bài, pill môn học, PPCT/phân đoạn và footer.
+- `tests/baogiang-mail-smoke.js`, `tests/timetable-render-smoke.js`
+  - Bổ sung hồi quy cho trạng thái gửi, chốt self-only, nút khóa gửi trực tiếp và các phần chính của mẫu email LBG giáo viên.
+
+## Kiểm tra đã chạy
+
+- `node tests/baogiang-mail-smoke.js`: PASS.
+- `node tests/timetable-render-smoke.js`: PASS.
+- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
+- `git diff --check`: PASS.
+
+## Chưa thực hiện
+
+- Chưa commit hoặc push.
+- Cần `/verify` trực quan cả hai trạng thái: self-only (nút gửi GV bị khóa) và direct (`BAOGIANG_GMAIL_TO_SELF_ONLY = false`, nút được bật).
+
+---
+
 # IMPLEMENT: Khắc phục thẩm định Năng lực số theo đơn vị PPCT
 
 Trạng thái: ĐÃ THỰC HIỆN — chờ `/verify`

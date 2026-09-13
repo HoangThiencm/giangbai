@@ -240,6 +240,82 @@ const mutualExclusionAllocation=vm.runInContext(`(()=>{
 assert.equal(mutualExclusionAllocation.nlsPeriods,28,'NLS must compensate to exactly 28 of 140 PPCT periods');
 assert.deepEqual(JSON.parse(JSON.stringify(mutualExclusionAllocation.overlap)),[],'one-period lessons must never retain automatic NLS and AI together');
 assert(mutualExclusionAllocation.nlsClearsAi&&mutualExclusionAllocation.aiClearsNls,'manual one-period checkbox changes must be mutually exclusive');
+['function pickAppendixOneRow','function selectedNlsLessons','NLS TUYỆT ĐỐI chỉ được xuất','CẤM xuất mã NLS cho bất kỳ bài học nào khác','HOAT DONG THUC HANH VA TRAI NGHIEM'].forEach(has);
+assert.equal(sandbox.lessonsMatch('Hoạt động thực hành và trải nghiệm','Hoạt động thực hành và trải nghiệm'),false,'generic experiential lessons must not fuzzy-match each other');
+assert.equal(sandbox.lessonsMatch('Ôn tập','Ôn tập chương II'),false,'generic review titles must not fuzzy-match across chapters');
+assert.equal(sandbox.lessonsMatch('Bài 1. Tập hợp','Bài 1. Tập hợp số tự nhiên'),true,'lessons with the same ordinal must still match');
+const nlsAiOverflowGuard=vm.runInContext(`(()=>{
+  const originalUpdate=updateAiPicker;updateAiPicker=()=>{};
+  sourcePpctRows=[];
+  sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:[
+    {cells:['HỌC KÌ I'],isHeader:true},
+    {cells:['Hoạt động thực hành và trải nghiệm','2'],isHeader:false},
+    ...Array.from({length:68},(_,index)=>({cells:[\`Bài HK1 \${index+1}\`,'2'],isHeader:false})),
+    {cells:['HỌC KÌ II'],isHeader:true},
+    {cells:['Hoạt động thực hành và trải nghiệm','2'],isHeader:false},
+    ...Array.from({length:68},(_,index)=>({cells:[\`Bài HK2 \${index+1}\`,'2'],isHeader:false}))
+  ]};
+  nlsSelectedLessonIds=new Set(['source:1']);
+  aiSelectedLessonIds=new Set(['source:1:period:1','source:1:period:2']);
+  const nlsFirst=isLessonNlsSelected('source:1','Hoạt động thực hành và trải nghiệm');
+  const nlsSecond=isLessonNlsSelected('source:71','Hoạt động thực hành và trải nghiệm');
+  const aiFirst=selectedPeriodsForLesson('source:1','Hoạt động thực hành và trải nghiệm');
+  const aiSecond=selectedPeriodsForLesson('source:71','Hoạt động thực hành và trải nghiệm');
+  const cfg={lop:'6',monHoc:'Toán học',nls:{enabled:true,rate:20,density:'adaptive',noAiDensity:'2-3'},ai:{enabled:true,density:'1-2'}};
+  const generated=[
+    {lesson:'Hoạt động thực hành và trải nghiệm',periods:'2',outcomes:'Đạt trải nghiệm 1.',integration:'[NLS: 5.3.TC2a - GeoGebra 1] [AI: 6.B2.1 - AI 1]'},
+    ...Array.from({length:68},(_,index)=>({lesson:\`Bài HK1 \${index+1}\`,periods:'2',outcomes:'Đạt.',integration:'-'})),
+    {lesson:'Hoạt động thực hành và trải nghiệm',periods:'2',outcomes:'Đạt trải nghiệm 2.',integration:'[NLS: 5.3.TC2a - GeoGebra 2] [AI: 6.B2.1 - AI 2]'},
+    ...Array.from({length:68},(_,index)=>({lesson:\`Bài HK2 \${index+1}\`,periods:'2',outcomes:'Đạt.',integration:'-'}))
+  ];
+  const pl1=appendixOneTable(generated,cfg);
+  results={'1':{scheduleTable:pl1,schedule:generated}};
+  const planRows=sourcePpctTable.rows.map((row,index)=>({id:'source:'+index,lesson:row.cells[0],periods:row.cells[1]||'',isHeader:!!row.isHeader}));
+  const pl3=appendixThreeTable(planRows,cfg);
+  const nlsCode=text=>/(?:\\[\\s*NLS\\s*:\\s*)?\\b\\d+\\.\\d+\\.TC\\w+/i.test(String(text||''));
+  const aiCode=text=>/(?:\\[\\s*AI\\s*:\\s*|\\b)\\d+\\.[A-Z]\\d+/i.test(String(text||''));
+  const pl1NlsPeriods=pl1.rows.filter(row=>!row.isHeader&&nlsCode(row.cells[4])).reduce((sum,row)=>sum+(parsePeriodCount(row.cells[2])||0),0);
+  const pl1AiPeriods=pl1.rows.filter(row=>!row.isHeader&&aiCode(row.cells[5])).reduce((sum,row)=>sum+(parsePeriodCount(row.cells[2])||0),0);
+  const pl3NlsPeriods=pl3.rows.filter(row=>!row.isHeader&&nlsCode(row.cells[6])).reduce((sum,row)=>sum+(parsePeriodCount(row.cells[1])||0),0);
+  const pl3AiPeriods=pl3.rows.filter(row=>!row.isHeader&&aiCode(row.cells[7])).reduce((sum,row)=>sum+(parsePeriodCount(row.cells[1])||0),0);
+  const firstPl1=pl1.rows.find(row=>!row.isHeader);
+  const secondExp=pl1.rows.filter(row=>!row.isHeader&&/thực hành và trải nghiệm/i.test(row.cells[1]))[1];
+  const firstPl3=pl3.rows.find(row=>!row.isHeader);
+  const secondExp3=pl3.rows.filter(row=>!row.isHeader&&/thực hành và trải nghiệm/i.test(row.cells[0]))[1];
+  nlsSelectedLessonIds=new Set();aiSelectedLessonIds=new Set();
+  sourcePpctTable={columns:['Bài học','Số tiết'],lessonIndex:0,rows:Array.from({length:140},(_,index)=>({cells:[\`Bài \${index+1}\`,'1'],isHeader:false}))};
+  syncNlsSelectionFromCount(28);syncAiSelectionFromCount(12);
+  const counted={nls:nlsSelectedPeriodCount(),ai:aiSelectedLessonIds.size};
+  const cfg28={lop:'6',monHoc:'Toán học',nls:{enabled:true,rate:20,density:'adaptive',noAiDensity:'2-3'},ai:{enabled:true,density:'1-2'}};
+  const generated28=sourcePpctTable.rows.map((row,index)=>({lesson:row.cells[0],periods:'1',outcomes:'Đạt.',integration:'-'}));
+  const pl1_28=appendixOneTable(generated28,cfg28);
+  results={'1':{scheduleTable:pl1_28,schedule:generated28}};
+  const pl3_28=appendixThreeTable(sourcePpctTable.rows.map((row,index)=>({id:'source:'+index,lesson:row.cells[0],periods:row.cells[1],isHeader:false})),cfg28);
+  const nls28=pl1_28.rows.filter(row=>!row.isHeader&&nlsCode(row.cells[4])).reduce((sum,row)=>sum+(parsePeriodCount(row.cells[2])||0),0);
+  const ai28=pl1_28.rows.filter(row=>!row.isHeader&&aiCode(row.cells[5])).reduce((sum,row)=>sum+(parsePeriodCount(row.cells[2])||0),0);
+  const nls28pl3=pl3_28.rows.filter(row=>!row.isHeader&&nlsCode(row.cells[6])).reduce((sum,row)=>sum+(parsePeriodCount(row.cells[1])||0),0);
+  const ai28pl3=pl3_28.rows.filter(row=>!row.isHeader&&aiCode(row.cells[7])).reduce((sum,row)=>sum+(parsePeriodCount(row.cells[1])||0),0);
+  updateAiPicker=originalUpdate;
+  return {nlsFirst,nlsSecond,aiFirst,aiSecond,pl1NlsPeriods,pl1AiPeriods,pl3NlsPeriods,pl3AiPeriods,firstPl1Nls:firstPl1&&firstPl1.cells[4],secondExpNls:secondExp&&secondExp.cells[4],firstPl1Ai:firstPl1&&firstPl1.cells[5],secondExpAi:secondExp&&secondExp.cells[5],firstPl3Nls:firstPl3&&firstPl3.cells[6],secondExp3Nls:secondExp3&&secondExp3.cells[6],firstPl3Ai:firstPl3&&firstPl3.cells[7],secondExp3Ai:secondExp3&&secondExp3.cells[7],counted,nls28,ai28,nls28pl3,ai28pl3};
+})()`,sandbox);
+assert.equal(nlsAiOverflowGuard.nlsFirst,true,'selected experiential lesson must keep NLS');
+assert.equal(nlsAiOverflowGuard.nlsSecond,false,'unselected experiential lesson must not inherit NLS by name');
+assert.deepEqual(JSON.parse(JSON.stringify(nlsAiOverflowGuard.aiFirst)),[1,2],'selected experiential lesson must keep its AI periods');
+assert.deepEqual(JSON.parse(JSON.stringify(nlsAiOverflowGuard.aiSecond)),[],'unselected experiential lesson must not inherit AI periods by name');
+assert.equal(nlsAiOverflowGuard.pl1NlsPeriods,2,'PL1 must not duplicate NLS onto the second experiential lesson');
+assert.equal(nlsAiOverflowGuard.pl1AiPeriods,2,'PL1 must not duplicate AI onto the second experiential lesson');
+assert.equal(nlsAiOverflowGuard.pl3NlsPeriods,2,'PL3 must not copy NLS from one experiential lesson onto another');
+assert.equal(nlsAiOverflowGuard.pl3AiPeriods,2,'PL3 must not copy AI from one experiential lesson onto another');
+assert(nlsAiOverflowGuard.secondExpNls==='-'||!nlsAiOverflowGuard.secondExpNls,'second experiential PL1 row must stay without NLS');
+assert(!nlsAiOverflowGuard.secondExpAi||nlsAiOverflowGuard.secondExpAi==='-','second experiential PL1 row must stay without AI');
+assert(nlsAiOverflowGuard.secondExp3Nls==='-'||!nlsAiOverflowGuard.secondExp3Nls,'second experiential PL3 row must stay without NLS');
+assert(!nlsAiOverflowGuard.secondExp3Ai||nlsAiOverflowGuard.secondExp3Ai==='-','second experiential PL3 row must stay without AI');
+assert.equal(nlsAiOverflowGuard.counted.nls,28,'NLS count input of 28 must select exactly 28 periods');
+assert.equal(nlsAiOverflowGuard.counted.ai,12,'AI count input of 12 must select exactly 12 periods');
+assert.equal(nlsAiOverflowGuard.nls28,28,'PL1 must emit exactly 28 NLS periods, not 30');
+assert.equal(nlsAiOverflowGuard.ai28,12,'PL1 must emit exactly 12 AI periods, not 14');
+assert.equal(nlsAiOverflowGuard.nls28pl3,28,'PL3 must emit exactly 28 NLS periods, not 30');
+assert.equal(nlsAiOverflowGuard.ai28pl3,12,'PL3 must emit exactly 12 AI periods, not 14');
 const draftUnitRoundTrip=vm.runInContext(`(()=>{
   const controls={'#nlsUnit':{value:'period'},'#aiUnit':{value:'period'},'#nlsAdaptiveOptions':{classList:{toggle(){}}}};
   document.querySelector=selector=>controls[selector]||null;

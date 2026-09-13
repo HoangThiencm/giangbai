@@ -1997,6 +1997,7 @@
                 <button type="button" class="btn-small email-tab-btn" data-email-tab="all" onclick="switchEmailTab('all')">2. TKB tất cả GV → email tôi</button>
                 <button type="button" class="btn-small email-tab-btn" data-email-tab="baogiang" onclick="switchEmailTab('baogiang')">3. LBG cá nhân từng GV</button>
             </div>
+            <div id="email-mail-status" role="status" style="margin:0 0 12px;padding:11px 13px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#475569;font-size:.88rem;">Đang kiểm tra chế độ gửi email…</div>
             <section class="email-tab-pane" data-email-pane="mine" style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
                 <h3 style="margin:0 0 8px;color:#1e3a8a;">Thời khóa biểu của tôi</h3><p style="margin:0 0 12px;color:#475569;">Hệ thống tự tìm giáo viên khớp tài khoản đang đăng nhập (mã tài khoản hoặc họ tên) và gửi TKB đó về email cá nhân của bạn.</p>
                 <button type="button" class="btn-small btn-small-primary" onclick="sendMyTimetableEmail()"><i class="fas fa-paper-plane"></i> Gửi TKB của tôi về email cá nhân</button>
@@ -2007,7 +2008,7 @@
             </section>
             <section class="email-tab-pane" data-email-pane="baogiang" hidden style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
                 <h3 style="margin:0 0 8px;color:#1e3a8a;">Lịch báo giảng cá nhân từng giáo viên</h3><p style="margin:0 0 12px;color:#475569;">Chọn tuần, tích giáo viên và kiểm tra email trước khi gửi. Mỗi người chỉ nhận lịch của chính mình.</p>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;"><label class="form-group" style="margin:0;min-width:180px;"><span>Tuần cần gửi</span><input id="email-bg-send-week" class="form-control" type="week" onchange="syncBaoGiangEmailWeek(this.value)"></label><span id="email-bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span><button type="button" class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers('email-bg-send-week')"><i class="fas fa-paper-plane"></i> Gửi lịch cho GV đã chọn</button></div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;"><label class="form-group" style="margin:0;min-width:180px;"><span>Tuần cần gửi</span><input id="email-bg-send-week" class="form-control" type="week" onchange="syncBaoGiangEmailWeek(this.value)"></label><span id="email-bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span><button id="email-bg-send-teachers" type="button" class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers('email-bg-send-week')"><i class="fas fa-paper-plane"></i> Gửi lịch cho GV đã chọn</button></div>
                 <div id="email-bg-recipient-list" style="margin-top:14px;"></div>
             </section>
         </div>
@@ -3170,19 +3171,37 @@
             sendBaoGiangToSelf(range.start, 7);
         }
 
+        function buildTeacherBaoGiangWeekHtml(teacher, range, ordered) {
+            const sessionMeta = { morning: { label: 'Buổi sáng', background: '#fff7ed', color: '#9a3412' }, afternoon: { label: 'Buổi chiều', background: '#eff6ff', color: '#1d4ed8' }, makeup: { label: 'Dạy bù', background: '#f0fdf4', color: '#047857' } };
+            const byDate = ordered.reduce((groups, row) => { (groups.get(row.date) || (groups.set(row.date, []), groups.get(row.date))).push(row); return groups; }, new Map());
+            const days = [...byDate.entries()].map(([date, dayRows]) => {
+                const sessions = ['morning', 'afternoon', 'makeup'].map(session => {
+                    const rows = dayRows.filter(row => row.session === session);
+                    if (!rows.length) return '';
+                    const meta = sessionMeta[session];
+                    return `<tr><td colspan="5" style="padding:9px 10px;background:${meta.background};color:${meta.color};font-weight:700;border-top:2px solid #cbd5e1;">${meta.label}</td></tr>${rows.map((row, index) => `<tr style="background:${index % 2 ? '#f8fafc' : '#ffffff'};"><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#334155;white-space:nowrap;">${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `Tiết ${row.period}`)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;color:#1e3a8a;">${escapeHtml(row.class_name)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;"><span style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:3px 7px;border-radius:999px;font-weight:700;font-size:12px;">${escapeHtml(row.subject)}</span></td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#0f172a;line-height:1.4;">${escapeHtml(row.lesson ? formatBaoGiangLessonDisplay(row) : 'Chưa khai báo PPCT')}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;color:#047857;font-weight:700;white-space:nowrap;">${escapeHtml(`${row.lesson?.ppct || '—'}${row.lesson?.segment ? ` · ${row.lesson.segment}` : ''}`)}</td></tr>`).join('')}`;
+                }).join('');
+                return `<div style="margin:0 0 18px;border:1px solid #dbeafe;border-radius:10px;overflow:hidden;"><div style="padding:11px 12px;background:#dbeafe;color:#1e3a8a;font-weight:700;font-size:15px;">${escapeHtml(baoGiangWeekdayLabel(date))}, ngày ${escapeHtml(formatVnDate(date))}</div><div style="overflow-x:auto;"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;min-width:640px;font-size:13px;"><thead><tr style="background:#f8fafc;color:#475569;"><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Tiết</th><th style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Lớp</th><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Môn</th><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Bài dạy</th><th style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">PPCT</th></tr></thead><tbody>${sessions}</tbody></table></div></div>`;
+            }).join('');
+            return `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:980px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,.12);"><div style="padding:24px 28px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;">Lịch báo giảng cá nhân</div><div style="font-size:25px;font-weight:700;margin-top:6px;">${escapeHtml(teacher.name)}</div><div style="font-size:14px;margin-top:8px;opacity:.9;">Tuần ${escapeHtml(range.start)} – ${escapeHtml(range.end)} · ${ordered.length} tiết dạy đã được ghép theo TKB và PPCT</div></div><div style="padding:22px 28px 8px;"><p style="margin:0 0 16px;color:#475569;font-size:14px;">Lịch được gom theo ngày; buổi sáng và buổi chiều được ngăn cách rõ ràng.</p>${days}</div><div style="padding:16px 28px 22px;color:#64748b;font-size:12px;border-top:1px solid #e2e8f0;">Lịch được tạo tự động từ thời khóa biểu, PPCT và các ngày nghỉ/dạy bù đã khai báo.</div></div></div>`;
+        }
+
         function buildTeacherBaoGiangWeekEmail(teacher, range) {
             const endDate = baoGiangDate(range.end);
             const scheduleData = decorateBaoGiangRows(baoGiangIso(endDate), range.start);
             const rows = scheduleData.rows.filter(row => row.date >= range.start && row.date <= range.end && String(row.teacher_id) === String(teacher.id));
             if (!rows.length) throw new Error(`Không có lịch báo giảng của ${teacher.name} trong tuần đã chọn.`);
-            const ordered = rows.slice().sort((a, b) => a.date.localeCompare(b.date) || String(a.session).localeCompare(String(b.session)) || Number(a.period) - Number(b.period));
-            const bodyRows = ordered.map(row => `${baoGiangWeekdayLabel(row.date)}, ${formatVnDate(row.date)} | ${row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period}`} | Lớp ${row.class_name} | ${row.subject} | ${row.lesson?.lesson || 'Chưa khai báo PPCT'} | PPCT ${row.lesson?.ppct || '—'}`).join('\n');
-            const tableRows = ordered.map(row => `<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(`${baoGiangWeekdayLabel(row.date)} ${formatVnDate(row.date)}`)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} ${row.period}`)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(row.class_name)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(row.subject)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td></tr>`).join('');
-            return { to: teacher.email.trim(), subject: `Lịch báo giảng - ${teacher.name} (${range.start} đến ${range.end})`, body: `Kính gửi thầy/cô ${teacher.name},\n\nLỊCH BÁO GIẢNG TUẦN ${range.start} – ${range.end}\n\n${bodyRows}\n\nTrân trọng.`, html: `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:920px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;"><div style="padding:22px;background:#1e3a8a;color:#fff;"><div style="font-size:23px;font-weight:700;">Lịch báo giảng - ${escapeHtml(teacher.name)}</div><div style="margin-top:6px;">Tuần ${escapeHtml(range.start)} – ${escapeHtml(range.end)}</div></div><div style="padding:18px;overflow-x:auto;"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-size:13px;"><thead><tr style="background:#e2e8f0;"><th style="padding:8px;text-align:left;">Ngày</th><th style="padding:8px;text-align:left;">Buổi / tiết</th><th style="padding:8px;text-align:left;">Lớp</th><th style="padding:8px;text-align:left;">Môn</th><th style="padding:8px;text-align:left;">Bài dạy</th></tr></thead><tbody>${tableRows}</tbody></table></div></div></div>` };
+            const sessionOrder = { morning: 0, afternoon: 1, makeup: 2 };
+            const ordered = rows.slice().sort((a, b) => a.date.localeCompare(b.date) || (sessionOrder[a.session] ?? 9) - (sessionOrder[b.session] ?? 9) || Number(a.period) - Number(b.period));
+            const bodyRows = ordered.map(row => `${baoGiangWeekdayLabel(row.date)}, ${formatVnDate(row.date)} | ${row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period}`} | Lớp ${row.class_name} | ${row.subject} | ${row.lesson ? formatBaoGiangLessonDisplay(row) : 'Chưa khai báo PPCT'} | PPCT ${row.lesson?.ppct || '—'}`).join('\n');
+            return { to: teacher.email.trim(), subject: `Lịch báo giảng - ${teacher.name} (${range.start} đến ${range.end})`, body: `Kính gửi thầy/cô ${teacher.name},\n\nLỊCH BÁO GIẢNG TUẦN ${range.start} – ${range.end}\n\n${bodyRows}\n\nTrân trọng.`, html: buildTeacherBaoGiangWeekHtml(teacher, range, ordered) };
         }
 
         async function sendBaoGiangSelectedWeekToTeachers(weekInputId = 'bg-send-week') {
             try {
+                if (baogiangMailStatus.loaded && !baogiangMailStatus.direct_delivery) {
+                    throw new Error('Chế độ hiện tại chỉ gửi về email cá nhân. Để gửi trực tiếp cho giáo viên, đặt BAOGIANG_GMAIL_TO_SELF_ONLY thành false trong api/config.php.');
+                }
                 const range = baoGiangWeekRange(document.getElementById(weekInputId)?.value);
                 if (!range) throw new Error('Hãy chọn tuần cần gửi.');
                 const ids = new Set(state.bao_giang.recipient_ids || []);
@@ -3198,9 +3217,53 @@
             } catch (error) { showToast(error.message || 'Không thể gửi lịch báo giảng.', 'error', 8000); }
         }
 
+        let baogiangMailStatus = { loaded: false, loading: false, configured: false, self_only: true, direct_delivery: false };
+
+        function renderBaoGiangMailStatus() {
+            const banner = document.getElementById('email-mail-status');
+            const directButton = document.getElementById('email-bg-send-teachers');
+            if (!banner && !directButton) return;
+            const directAllowed = baogiangMailStatus.loaded && baogiangMailStatus.direct_delivery === true;
+            if (directButton) {
+                directButton.disabled = !directAllowed;
+                directButton.title = directAllowed ? '' : 'Chế độ hiện tại chỉ gửi về email cá nhân. Để gửi trực tiếp cho giáo viên, đặt BAOGIANG_GMAIL_TO_SELF_ONLY thành false trong api/config.php.';
+            }
+            if (!banner) return;
+            if (baogiangMailStatus.loading || !baogiangMailStatus.loaded) {
+                banner.style.cssText = 'margin:0 0 12px;padding:11px 13px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#475569;font-size:.88rem;';
+                banner.textContent = 'Đang kiểm tra chế độ gửi email…';
+            } else if (!baogiangMailStatus.configured) {
+                banner.style.cssText = 'margin:0 0 12px;padding:11px 13px;border:1px solid #fbbf24;border-radius:8px;background:#fffbeb;color:#92400e;font-size:.88rem;';
+                banner.textContent = 'Gửi email chưa được cấu hình trên máy chủ.';
+            } else if (!directAllowed) {
+                banner.style.cssText = 'margin:0 0 12px;padding:11px 13px;border:1px solid #fbbf24;border-radius:8px;background:#fffbeb;color:#92400e;font-size:.88rem;';
+                banner.textContent = 'Chế độ hiện tại chỉ gửi về email cá nhân. Để gửi trực tiếp cho giáo viên, đặt BAOGIANG_GMAIL_TO_SELF_ONLY thành false trong api/config.php.';
+            } else {
+                banner.style.cssText = 'margin:0 0 12px;padding:11px 13px;border:1px solid #86efac;border-radius:8px;background:#f0fdf4;color:#166534;font-size:.88rem;';
+                banner.textContent = 'Đã bật gửi trực tiếp: mỗi giáo viên sẽ nhận lịch báo giảng của chính mình.';
+            }
+        }
+
+        async function loadBaoGiangMailStatus() {
+            if (baogiangMailStatus.loading) return;
+            baogiangMailStatus.loading = true;
+            renderBaoGiangMailStatus();
+            try {
+                const response = await fetch('api/baogiang_mail.php', { credentials: 'include' });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể đọc chế độ gửi email.');
+                baogiangMailStatus = { ...baogiangMailStatus, ...data, loaded: true, loading: false, direct_delivery: data.direct_delivery === true };
+            } catch (error) {
+                baogiangMailStatus = { ...baogiangMailStatus, loaded: true, loading: false, configured: false, direct_delivery: false, error: error.message || '' };
+            }
+            renderBaoGiangMailStatus();
+        }
+
         function switchEmailTab(tabName) {
             document.querySelectorAll('.email-tab-btn').forEach(button => button.classList.toggle('active', button.dataset.emailTab === tabName));
             document.querySelectorAll('.email-tab-pane').forEach(pane => { pane.hidden = pane.dataset.emailPane !== tabName; });
+            renderBaoGiangMailStatus();
+            loadBaoGiangMailStatus();
             if (tabName === 'baogiang') renderEmailRecipientList();
         }
 
@@ -3846,6 +3909,8 @@
 
             if (viewId === 'view-timetable') {
                 renderTimetableView();
+            } else if (viewId === 'view-email') {
+                switchEmailTab('mine');
             } else if (viewId === 'view-baogiang') {
                 renderBaoGiangView();
             } else if (viewId === 'view-daythay') {

@@ -75,11 +75,14 @@ if (empty($_SESSION['user_id'])) {
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    $selfOnly = !defined('BAOGIANG_GMAIL_TO_SELF_ONLY') || BAOGIANG_GMAIL_TO_SELF_ONLY === true;
     respond([
         'ok' => true,
         'configured' => baogiang_mail_configured(),
         'from' => defined('BAOGIANG_GMAIL_FROM') ? (string) BAOGIANG_GMAIL_FROM : '',
-        'self_only' => !defined('BAOGIANG_GMAIL_TO_SELF_ONLY') || BAOGIANG_GMAIL_TO_SELF_ONLY === true,
+        'self_only' => $selfOnly,
+        'delivery_mode' => $selfOnly ? 'self' : 'direct',
+        'direct_delivery' => !$selfOnly,
     ]);
 }
 
@@ -141,6 +144,6 @@ foreach ($deliveries as $delivery) {
 }
 if (!$sentCount) respond(['ok' => false, 'error' => $errors[0] ?? 'Không có email hợp lệ để gửi.'], 422);
 $message = $selfOnly
-    ? "Đã gửi $sentCount email về email cá nhân do chế độ chỉ gửi cho chính mình đang bật."
+    ? "Đã gửi $sentCount email về email cá nhân vì chế độ chỉ gửi cho chính mình đang bật. Để gửi trực tiếp cho giáo viên, đặt BAOGIANG_GMAIL_TO_SELF_ONLY thành false trong api/config.php."
     : "Đã gửi email thành công cho $sentCount giáo viên.";
-respond(['ok' => true, 'sent_count' => $sentCount, 'message' => $message, 'errors' => $errors]);
+respond(['ok' => true, 'sent_count' => $sentCount, 'message' => $message, 'errors' => $errors, 'delivery_mode' => $selfOnly ? 'self' : 'direct', 'direct_delivery' => !$selfOnly]);

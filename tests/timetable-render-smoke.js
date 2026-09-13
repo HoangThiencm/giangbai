@@ -203,6 +203,9 @@ assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\
 ['view-email', 'switchEmailTab', 'sendMyTimetableEmail', 'currentUserTeacher', 'renderEmailRecipientList', 'sendSelectedTeachersTimetableEmail', 'sendBaoGiangSelectedWeekToTeachers', 'Email nhận', 'TKB của tôi', 'TKB tất cả GV → email tôi', 'LBG cá nhân từng GV', 'Gửi TKB của tôi về email cá nhân', 'Gửi TKB đã chọn về email tôi', 'Gửi lịch cho GV đã chọn'].forEach(token => {
     assert(html.includes(token), `missing centralized email control: ${token}`);
 });
+['email-mail-status', 'loadBaoGiangMailStatus', 'email-bg-send-teachers', 'buildTeacherBaoGiangWeekHtml', 'directButton.disabled = !directAllowed'].forEach(token => {
+    assert(html.includes(token), `missing safe direct-email control: ${token}`);
+});
 
 assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail\(\)"/, 'individual timetable sending is not duplicated outside the centralized email flow');
 
