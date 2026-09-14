@@ -1,137 +1,134 @@
-# PLAN
+# PLAN: Xây dựng ứng dụng web giaoantichhop.html (Không cần đăng nhập, xuất Word OMML chuẩn)
 
-## Hiện trạng
-- `canvas_xaydungphuluc.html` hiện tại gọi cố định qua endpoint duy nhất: `CANVAS_ENDPOINT = 'https://hoangthiencm.id.vn/api/canvas_gemini.php'` với model cố định `gemini-3-flash-preview` ở phía máy chủ bằng system key của Admin.
-- Các hàm quản lý key trên Canvas (`openKeyModal`, `saveKeys`, `checkKeys`, `updateKeyBadge`) hiện đang bị vô hiệu hóa với thông báo: *"Gemini Canvas được hệ thống cấp sẵn."*
-- Canvas đã có sẵn cơ chế nhận diện tài khoản giáo viên qua `canvasDraftAccount` (lưu trong `localStorage`/`memoryStorage` với key `canvas_xdpl_user` hoặc lấy từ `#teacher`), gửi qua Header `X-User-Account` và tham số `user_account` tới `api/user_phuluc_draft.php`.
-- CSDL `users` đã có cột `gemini_keys` lưu trữ danh sách API keys đã mã hóa của người dùng (quản lý bởi `api/user_gemini_keys.php`).
-- Môi trường Google Canvas chạy trong iframe sandbox nghiêm ngặt: cấm gọi trực tiếp `generativelanguage.googleapis.com` hoặc các endpoint session-cookie truyền thống (như đã được ràng buộc trong `tests/canvas-xaydungphuluc-smoke.js`).
-- Các tác vụ hiện tại chưa được phân tầng: tác vụ bóc tách văn bản lớn (đọc file SGK hàng chục ngàn từ, nhận diện PPCT) và tác vụ tư duy sư phạm sâu (sinh Phụ lục 1, 2, 3) đều đi chung một model cố định.
+## Hiện trạng & Bối cảnh
+- **Vấn đề từ phía người dùng:** Gemini Chat không thể tự tạo và đính kèm trực tiếp file `.docx` chứa Microsoft Word Equation chuẩn OMML trong khung chat thông thường. Các prompt ép buộc quá mức khiến Gemini tự kích hoạt cơ chế dừng và từ chối xử lý.
+- **Giải pháp tối ưu:** Phân tách vai trò:
+  - **Gemini / LLM:** Đóng vai trò chuyên gia sư phạm, đọc SGK/giáo án gốc, tích hợp mã NLS (CV 3456) và AI (QĐ 2422) theo chuẩn CV 5512, xuất ra định dạng Markdown kèm công thức LaTeX `$ ... $`.
+  - **Web Tool `giaoantichhop.html`:** Đóng vai trò bộ chuyển đổi định dạng và xuất bản tài liệu Word chuẩn thể thức hành chính Việt Nam và công thức Microsoft Word Equation (OMML) chỉnh sửa được 100%.
+- **Quy chế truy cập:** Ứng dụng phải mở được trực tiếp qua link hoặc mở file cục bộ, **không cần đăng nhập**, không kiểm tra `authToken`, không gọi `access-control.js`.
+- **Hạ tầng sẵn có trong repo:**
+  - Kỹ thuật chuyển đổi LaTeX qua KaTeX MathML bọc `<m:oMath>` / `<m:oMathPara>` đã được chứng minh hiệu quả trong `kttx.html` và `sangkien.html`.
+  - Thư viện KaTeX, Tailwind CSS, FileSaver.js có sẵn qua CDN chất lượng cao.
 
-## Phạm vi
-1. **Kết nối tài khoản & Hiển thị số lượng API Key trên Canvas**:
-   - Mở rộng `api/canvas_gemini.php` hỗ trợ action `key_status` (qua GET hoặc POST) nhận `user_account` (qua query hoặc header `X-User-Account`).
-   - Truy vấn CSDL `users`, giải mã và đếm số lượng `gemini_keys` hợp lệ của tài khoản.
-   - Trả về payload an toàn: `{ ok: true, user_account: ..., gemini_key_count: N, masked_keys: [...] }` (tuyệt đối không lộ key thô ra client).
-   - Trên giao diện `canvas_xaydungphuluc.html`:
-     - Header hiển thị Badge kết nối trực quan kèm số lượng key:
-       - Có key: `⚡ Gemini 3.8 Flash · [account] ([N] keys)` (màu xanh/tím nổi bật).
-       - Chưa có key/chưa kết nối: `🛡 Gemini 3 Flash Preview · Nội bộ (0 key cá nhân)`.
-     - Cho phép click badge mở Modal Quản lý API Key / Kết nối tài khoản để kiểm tra trạng thái, xem masked keys và đổi tài khoản kết nối.
-2. **Thiết kế Đa tầng (Multi-tier Hybrid Routing)**:
-   - **Tầng 1 - Nặng Token / I/O-heavy (Đọc SGK & Nhận diện PPCT)**:
-     - `recognizePpctWithAi` và `buildSgkKnowledgeBase` / `readStagedSgk`: gửi request với `tier: 'heavy_io'`.
-     - Backend `api/canvas_gemini.php` xử lý bằng model hệ thống nội bộ `gemini-3-flash-preview` (dùng system keys của Admin). Giữ trọn vẹn quota cá nhân cho giáo viên.
-   - **Tầng 2 - Tư duy cao / High-reasoning (Sinh Phụ lục 1, 2, 3)**:
-     - `callGemini` khi sinh Phụ lục (trong `generateSelected`): gửi request với `tier: 'high_reasoning'`, `preferred_model: 'gemini-3.8-flash'`.
-     - Backend `api/canvas_gemini.php`:
-       - Đọc danh sách key của user từ DB (`users.gemini_keys`).
-       - Gọi `gemini-3.8-flash` với key của user.
-       - **Tự động xoay key (Key Rotation)**: Nếu gặp lỗi HTTP 429 (ResourceExhausted / Quota Exceeded), tự động chuyển sang key kế tiếp của user.
-       - **Fallback an toàn (Graceful Fallback)**: Nếu tất cả key của user bị lỗi/hết hạn mức hoặc tài khoản chưa có key, tự động chuyển về system key với `gemini-3-flash-preview`.
-       - Trả về kết quả kèm thông tin định tuyến: `{ ok: true, body: ..., model: '...', tier: 'user_key'|'fallback_system'|'system_key', key_index: i, total_user_keys: N }`.
-   - **Thông báo & Nhật ký (Log & Toast)**:
-     - Ghi nhận trạng thái rõ ràng trên khung log của Canvas:
-       - Ví dụ: `[AI] Đang sinh Phụ lục 1 bằng Gemini 3.8 Flash (Key cá nhân 1/3)...`
-       - Khi xoay key: `[AI] Key cá nhân 1 chạm hạn mức, tự động chuyển sang key 2/3...`
-       - Khi fallback: `[AI] Key cá nhân tạm hết hạn mức, tự động chuyển về Gemini 3 Flash Preview nội bộ.`
-3. **Bảo toàn kiểm thử & Chuẩn sandbox**:
-   - Cập nhật `tests/canvas-xaydungphuluc-smoke.js` để kiểm thử logic đa tầng, hiển thị badge số lượng key và cơ chế fallback mà vẫn đảm bảo 100% tuân thủ sandbox (không gọi trực tiếp domain bị cấm từ client).
+## Phạm vi triển khai
+1. **Tạo trang web độc lập `giaoantichhop.html` tại thư mục gốc:**
+   - Hoàn toàn chạy phía Client (Client-side pure JS/HTML), không phụ thuộc backend hay database.
+   - Không chứa bất kỳ rào cản xác thực nào (`access-control.js`, `localStorage.getItem('authToken')`).
+2. **Giao diện người dùng (UI/UX hiện đại, tinh gọn):**
+   - Header: Tiêu đề "Hệ thống Xuất Kế hoạch Bài dạy Tích hợp NLS & AI", trạng thái hoạt động "Sẵn sàng (Công khai - Không cần đăng nhập)".
+   - Thanh công cụ tiện ích:
+     - Nút **"Sao chép Prompt gửi Gemini"**: Copy ngay prompt chuẩn (đã gỡ các điều kiện tự sát, yêu cầu Gemini xuất Markdown + LaTeX chuẩn).
+     - Nút **"Nạp giáo án mẫu"**: Tải ngay một bài dạy mẫu (Toán 8 - Hình chóp tam giác đều) đã tích hợp NLS/AI để người dùng bấm thử nghiệm xuất file ngay.
+     - Nút **"Xóa trắng"**: Làm sạch ô nhập liệu.
+   - Khu vực nhập liệu (Form):
+     - Môn học & Khối lớp (VD: Môn Toán lớp 8).
+     - Tên bài dạy (VD: Hình chóp tam giác đều).
+     - Thời lượng (tiết) (VD: 2 tiết).
+     - Họ tên giáo viên / Đơn vị (tùy chọn).
+     - Khung văn bản lớn (Textarea) dán toàn văn giáo án Markdown từ Gemini.
+   - Khu vực xem trước trực quan (Live Preview):
+     - Hiển thị song song hoặc tab chuyển đổi giữa "Biên tập" và "Xem trước trang in A4".
+     - Render KaTeX thời gian thực cho các công thức toán `$ ... $` và `$$ ... $$`.
+     - Tự động nhận diện và tô màu nổi bật cho các mã NLS (xanh lá cây `#16a34a`) và mã AI (màu tím `#9333ea`).
+     - Render bảng biểu chuẩn CV 5512 và Bảng tổng hợp cuối giáo án.
+3. **Bộ chuyển đổi và xuất file Word chuẩn Microsoft Word Equation (OMML):**
+   - **Xử lý công thức Toán học:**
+     - Sử dụng KaTeX chuyển đổi toàn bộ biểu thức LaTeX `$ ... $` và `$$ ... $$` thành thẻ MathML `<math>...</math>`.
+     - Bọc thẻ MathML vào thẻ `<m:oMath>` (cho inline) hoặc `<m:oMathPara><m:oMath>` (cho display/khối) với namespace `xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"` và `xmlns:w="urn:schemas-microsoft-com:office:word"`.
+     - Khi mở bằng Microsoft Word, Word tự động nhận diện và chuyển thành **Microsoft Word Equation** chuẩn, cho phép nhấp chuột vào sửa từng thành phần (phân số, căn thức, lũy thừa, ma trận, vector...) bằng Equation Editor.
+   - **Xử lý định dạng thể thức văn bản:**
+     - Khổ giấy: A4 chuẩn.
+     - Lề trang: Trái 2.0 cm, Phải 1.5 cm, Trên 1.5 cm, Dưới 1.5 cm.
+     - Phông chữ: Times New Roman, cỡ 13pt (tiêu đề 14pt in đậm).
+     - Giãn dòng: 1.15 line spacing, khoảng cách đoạn 3-6pt.
+     - Căn lề: Căn đều hai bên (Justified text).
+     - Màu sắc quy ước: Nội dung/mã Năng lực số màu xanh lá cây (`#16a34a`), Năng lực AI màu tím (`#9333ea`).
+     - Phân cấp mục thủ công: Cấp 1 "-", Cấp 2 "+", Cấp 3 ".".
+     - Bảng biểu: Bảng tiến trình dạy học và Bảng tổng hợp cuối bài có viền kẻ đơn nét mảnh đen, tiêu đề bảng nền xám nhạt `#f3f4f6`.
+   - **Tên file tải về:** Tự động đặt theo cú pháp: `[Tên_Bài_Dạy]_Tich_hop_NLS_AI.doc` (định dạng Word XML/HTML hỗ trợ OMML trọn vẹn).
 
 ## Ngoài phạm vi
-- Không thay đổi bất kỳ logic sư phạm hay quy tắc nghiệp vụ nào đã ổn định của Phụ lục 1, 2, 3 (không thay đổi thuật toán phân bổ NLS/AI, bảo toàn bảng PPCT, cấu trúc 7 cột/8 cột, công thức KaTeX, bộ xuất Word `exportDocx`).
-- Không sửa file `xaydungphuluc.html` (chỉ áp dụng cho bản Canvas `canvas_xaydungphuluc.html` và backend `api/canvas_gemini.php`).
-- Không sửa đổi cấu trúc bảng CSDL `users` (tận dụng cột `gemini_keys` đã có).
+- Không can thiệp hay sửa đổi các file hệ thống khác (`login.html`, `access-control.js`, `soankhbd.html`).
+- Không tạo backend PHP mới vì ứng dụng này chạy thuần túy phía client.
+- Không yêu cầu kết nối Gemini API trong ứng dụng này (người dùng tự dán kết quả từ Gemini Web vào, giúp tiết kiệm chi phí và không phụ thuộc API key).
 
 ## File dự kiến tác động
-- `api/canvas_gemini.php`: Bổ sung xử lý `action=key_status` kiểm tra số lượng key user; bổ sung định tuyến đa tầng (`tier: 'heavy_io' | 'high_reasoning'`), xoay vòng key user cho `gemini-3.8-flash` và fallback về `gemini-3-flash-preview`.
-- `canvas_xaydungphuluc.html`:
-  - Thêm badge hiển thị số lượng key và trạng thái kết nối tài khoản trên Header.
-  - Cập nhật hàm `updateCanvasKeyBadge`, `openKeyModal`, `fetchCanvasKeyStatus`.
-  - Phân loại tham số `tier` và `preferred_model` trong `requestGemini` và `callGemini`.
-  - Hiển thị thông báo trạng thái xoay key và fallback trên giao diện và log.
-- `tests/canvas-xaydungphuluc-smoke.js`: Cập nhật các khẳng định kiểm thử về multi-tier routing, badge hiển thị key count và đảm bảo toàn bộ bộ test cũ tiếp tục PASS.
+- `giaoantichhop.html` (Mới): Toàn bộ mã nguồn trang web độc lập, chứa giao diện UI, parser Markdown/LaTeX, bộ tạo tài liệu Word OMML.
 
-## Các bước thực hiện
-### Bước 1: Nâng cấp Backend `api/canvas_gemini.php`
-1. Đón nhận `X-User-Account` từ Header hoặc `user_account` từ query/body. Giải mã URI an toàn.
-2. Thêm endpoint kiểm tra trạng thái key:
-   - Nếu `action === 'key_status'` (hoặc qua GET `?action=key_status&user_account=...`):
-     - Truy vấn `users` theo `username` hoặc prefix email.
-     - Đọc và giải mã `gemini_keys` bằng `parse_stored_api_keys`.
-     - Trả về JSON:
-       ```json
-       {
-         "ok": true,
-         "user_account": "...",
-         "key_count": N,
-         "masked_keys": ["AIzaSy...****"],
-         "has_user_keys": true
-       }
-       ```
-3. Nâng cấp luồng xử lý gọi Gemini trong `canvas_gemini.php`:
-   - Tiếp nhận `$body['tier']` (`'heavy_io'` hoặc `'high_reasoning'`) và `$body['preferred_model']` (mặc định `'gemini-3.8-flash'` cho high-reasoning).
-   - Nếu `$tier === 'high_reasoning'` và có `user_account`:
-     - Lấy danh sách keys người dùng `$userKeys`.
-     - Lặp qua `$userKeys`, gọi API tới `gemini-3.8-flash`.
-     - Nếu trả về 200: trả về ngay với metadata `{ ok: true, body: ..., model: 'gemini-3.8-flash', tier: 'user_key', key_index: $idx + 1, total_user_keys: count($userKeys) }`.
-     - Nếu trả về 429 hoặc lỗi quota: ghi nhận lỗi, tiếp tục vòng lặp sang key kế tiếp của user.
-   - Nếu toàn bộ key của user hết hạn mức HOẶC tác vụ là `heavy_io` HOẶC không có user keys:
-     - Fallback sang danh sách `$runtime['gemini_keys']` hệ thống với model `gemini-3-flash-preview`.
-     - Trả về metadata `{ ok: true, body: ..., model: 'gemini-3-flash-preview', tier: 'system_key', fallback_used: true }`.
+## Các bước thực hiện chi tiết cho Coder
+### Bước 1: Khởi tạo khung HTML và nạp tài nguyên CDN
+- Tạo file `giaoantichhop.html` tại thư mục gốc.
+- Nạp các thư viện:
+  - Tailwind CSS (`https://cdn.tailwindcss.com`)
+  - KaTeX CSS & JS (`https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/...`)
+  - FileSaver.js (`https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js`)
+  - FontAwesome 6 (`https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css`)
+  - Font Google: Inter & Times New Roman.
+- **LƯU Ý QUAN TRỌNG:** Tuyệt đối KHÔNG nhúng `access-control.js` hay bất kỳ đoạn script kiểm tra đăng nhập nào.
 
-### Bước 2: Nâng cấp Frontend `canvas_xaydungphuluc.html`
-1. Khai báo các biến trạng thái:
-   - `let canvasUserKeyCount = 0, canvasUserMaskedKeys = [];`
-2. Viết hàm `syncCanvasUserKeyStatus(account)`:
-   - Gửi fetch tới `CANVAS_ENDPOINT + '?action=key_status&user_account=' + encodeURIComponent(account)`.
-   - Lưu `canvasUserKeyCount` và gọi `updateCanvasKeyBadge()`.
-3. Nâng cấp hiển thị Badge trên Header:
-   - Thay thẻ span tĩnh trên Header bằng element tương tác có id `canvasKeyBadge`:
-     - Khi `canvasUserKeyCount > 0`: hiển thị `⚡ Gemini 3.8 Flash · [account] ([count] keys)` với nút bấm mở Modal Key.
-     - Khi `0 keys`: hiển thị `🛡 Gemini 3 Flash Preview (Nội bộ)` + nút `[Kết nối Key]`.
-4. Cập nhật Modal `#keyModal`:
-   - Hiển thị tài khoản giáo viên đang kết nối.
-   - Hiển thị số lượng API Key đã nạp trên hệ thống và danh sách các key đã được che mờ (`masked_keys`).
-   - Có nút "Kiểm tra & Đồng bộ lại" để cập nhật ngay khi giáo viên vừa thêm key trên trang cá nhân.
-5. Phân tầng gọi API trong các hàm:
-   - `recognizePpctWithAi`: gọi qua `callGemini(prompt, { tier: 'heavy_io' })`.
-   - `buildSgkKnowledgeBase`: gọi qua `callAiJson(prompt, { tier: 'heavy_io' })`.
-   - `generateSelected` (sinh Phụ lục 1, 2, 3): gọi qua `callGemini(prompt, { tier: 'high_reasoning', preferredModel: 'gemini-3.8-flash' })`.
-6. Cập nhật `readGeminiResponse` và hiển thị nhật ký:
-   - Bóc tách `envelope.tier`, `envelope.model`, `envelope.fallback_used`.
-   - Nếu `tier === 'user_key'`: log `✓ Sử dụng Gemini 3.8 Flash (Key cá nhân ${envelope.key_index}/${envelope.total_user_keys})`.
-   - Nếu `fallback_used`: log và thông báo nhẹ `⚠ Key cá nhân chạm hạn mức, đã tự động chuyển về Gemini 3 Flash Preview nội bộ.`
+### Bước 2: Xây dựng giao diện người dùng
+1. **Header & Thanh thao tác nhanh:**
+   - Tiêu đề bắt mắt, huy hiệu "Công khai · Không cần tài khoản".
+   - Nút "Sao chép Prompt cho Gemini" kèm Modal hoặc Toast hiển thị prompt đã được tinh chỉnh hoàn hảo.
+   - Nút "Nạp dữ liệu mẫu" để người dùng kiểm thử ngay lập tức.
+2. **Khu vực nhập liệu:**
+   - 4 trường thông tin đầu vào: Môn học (Toán 6/7/8/9/10/11/12), Tên bài dạy, Thời lượng (số tiết), Tên giáo viên.
+   - Textarea lớn với placeholder hướng dẫn rõ ràng.
+3. **Khu vực Preview & Nút Xuất file:**
+   - Chuyển tab giữa "Nhập liệu" và "Xem trước trang A4".
+   - Nút bấm nổi bật: **"Xuất file Word (.doc / OMML)"**.
 
-### Bước 3: Cập nhật Smoke Test
-1. Mở rộng `tests/canvas-xaydungphuluc-smoke.js`:
-   - Xác nhận có `canvasKeyBadge`, hàm `updateCanvasKeyBadge`, hàm `syncCanvasUserKeyStatus`.
-   - Xác nhận tham số `tier` được truyền đúng ở các luồng I/O và reasoning.
-   - Kiểm thử contract của `canvas_gemini.php` khi nhận `action=key_status` và khi gọi với `tier`.
-   - Đảm bảo kiểm thử cũ không bị vi phạm (giữ nguyên không gọi trực tiếp domain ngoài từ client).
+### Bước 3: Phát triển bộ xử lý Markdown, Bảng biểu và OMML Word
+1. Viết hàm `convertLatexToOMML(latex, isDisplay)`:
+   - Sử dụng `katex.renderToString(latex, { output: 'mathml', displayMode: isDisplay })`.
+   - Trích xuất thẻ `<math>...</math>`.
+   - Bổ sung thuộc tính `xmlns="http://www.w3.org/1998/Math/MathML"`.
+   - Bọc trong `<m:oMathPara><m:oMath>...</m:oMath></m:oMathPara>` (nếu display) hoặc `<m:oMath>...</m:oMath>` (nếu inline).
+2. Viết hàm `parseMarkdownToWordHtml(markdownText)`:
+   - Xử lý phân đoạn văn bản, tiêu đề `#`, `##`, `###`.
+   - Xử lý bảng biểu Markdown `| Cột 1 | Cột 2 |` thành bảng HTML `<table>` với định dạng Word.
+   - Xử lý nhận diện mã NLS (ví dụ `[TC1.NLa...]`, `NLS...`, `Màu xanh lá`) $\to$ bọc thẻ `<span style="color:#16a34a; font-weight:bold;">`.
+   - Xử lý nhận diện mã AI (ví dụ `[8.AI...]`, `AI...`, `Màu tím`) $\to$ bọc thẻ `<span style="color:#7c3aed; font-weight:bold;">`.
+   - Xử lý phân cấp danh sách `-`, `+`, `.` với khoảng thụt lề chuẩn.
+3. Viết hàm `exportWordDocument()`:
+   - Tạo cấu trúc tài liệu Word hoàn chỉnh với các khai báo XML namespaces:
+     ```html
+     <html xmlns:o="urn:schemas-microsoft-com:office:office"
+           xmlns:w="urn:schemas-microsoft-com:office:word"
+           xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
+           xmlns="http://www.w3.org/TR/REC-html40">
+     ```
+   - Định dạng `@page` khổ A4, lề: `margin: 1.5cm 1.5cm 1.5cm 2.0cm;` (Trên, Phải, Dưới, Trái).
+   - Style font chữ: `'Times New Roman', serif`, cỡ chữ `13pt`, line-height `1.15`, text-align `justify`.
+   - Đóng gói file thành Blob với MIME `application/msword` kèm BOM UTF-8 `\ufeff`.
+   - Dùng `saveAs` tải về với tên `[Tên_Bài_Dạy]_Tich_hop_NLS_AI.doc`.
 
-## Rủi ro
-- **Rủi ro 1: Vi phạm CSP/CORS của Google Canvas Sandbox.**
-  - *Biện pháp*: Giữ nguyên nguyên tắc toàn bộ yêu cầu đều đi qua proxy `CANVAS_ENDPOINT` (`api/canvas_gemini.php`), client không gọi trực tiếp Google AI hay CSDL.
-- **Rủi ro 2: Key cá nhân của user bị cạn quota (429) làm gián đoạn việc soạn giáo án.**
-  - *Biện pháp*: Vòng lặp xoay key tự động; nếu hết toàn bộ lập tức trượt nhẹ nhàng (Graceful Fallback) về hệ thống nội bộ `gemini-3-flash-preview`.
-- **Rủi ro 3: Model 3.8 Flash trả về cú pháp JSON khác lạ.**
-  - *Biện pháp*: Đã có `safeParseAiJson` đã qua kiểm nghiệm nhiều cấp (tự escape newline, tab, khôi phục markdown, bọc LaTeX) đảm bảo phân tích an toàn.
+### Bước 4: Tích hợp Prompt mẫu tối ưu cho giáo viên
+- Cung cấp sẵn mẫu Prompt chuẩn hóa trong ứng dụng để giáo viên sao chép, trong đó:
+  - Yêu cầu Gemini giữ nguyên cấu trúc bài dạy chuẩn 5512.
+  - Tích hợp đúng mã NLS (CV 3456) và AI (QĐ 2422) theo định mức tiết học.
+  - Định dạng công thức toán dưới dạng chuẩn LaTeX `$ ... $`.
+  - Không bắt Gemini xuất file binary (để tránh Gemini từ chối).
 
 ## Cách kiểm thử
-1. Chạy smoke test tự động: `node tests/canvas-xaydungphuluc-smoke.js`.
-2. Kiểm tra các kịch bản thực tế:
-   - Kịch bản A: Tài khoản có 2 keys -> Gọi thành công với `gemini-3.8-flash`, badge hiển thị `(2 keys)`.
-   - Kịch bản B: Key 1 bị lỗi 429 -> Hệ thống tự động chuyển sang Key 2 để hoàn tất yêu cầu.
-   - Kịch bản C: Tất cả key cá nhân đều 429 hoặc tài khoản không có key -> Tự động fallback sang `gemini-3-flash-preview` nội bộ, thông báo rõ ràng cho giáo viên.
-   - Kịch bản D: Tác vụ đọc SGK hoặc nhận diện PPCT -> Luôn chạy trên `gemini-3-flash-preview` nội bộ để tiết kiệm token.
-3. Kiểm tra xuất file Word: Đảm bảo bảng Phụ lục 1, 2, 3 giữ nguyên 100% định dạng, merge tiêu đề, công thức toán và mã NLS/AI.
+1. **Kiểm tra truy cập không cần đăng nhập:**
+   - Mở trình duyệt ẩn danh (Incognito mode, không có bất kỳ cookie hay localStorage nào), truy cập `giaoantichhop.html`.
+   - Xác nhận trang tải thành công 100%, không bị chuyển hướng về `login.html`.
+2. **Kiểm tra chức năng Nạp mẫu & Preview:**
+   - Nhấp nút "Nạp giáo án mẫu".
+   - Xác nhận nội dung hiển thị trong khung nhập, tab Xem trước hiển thị đầy đủ công thức toán KaTeX, các mã NLS màu xanh lá, mã AI màu tím, bảng tổng hợp hiển thị ngay ngắn.
+3. **Kiểm tra xuất file Word và mở bằng Microsoft Word:**
+   - Nhấp nút "Xuất file Word".
+   - Xác nhận file tải về đúng tên `[Tên_Bài_Dạy]_Tich_hop_NLS_AI.doc`.
+   - Mở file bằng Microsoft Word trên máy tính:
+     - Kiểm tra lề trang đúng A4 (Trái 2cm, Phải 1.5cm, Trên 1.5cm, Dưới 1.5cm).
+     - Kiểm tra font Times New Roman cỡ 13pt.
+     - **Kiểm tra trọng tâm:** Nhấp đúp chuột vào công thức toán (phân số, căn bậc hai, lũy thừa) $\to$ Word phải hiển thị thanh công cụ **Equation**, cho phép gõ/sửa trực tiếp từng ký tự.
 
 ## Tiêu chí nghiệm thu
-- [ ] Giao diện Canvas hiển thị trực quan số lượng API key của tài khoản người dùng (`N keys`).
-- [ ] Cho phép kết nối và kiểm tra đồng bộ API key của tài khoản giáo viên.
-- [ ] Tác vụ đọc SGK và nhận diện PPCT chạy qua tầng nội bộ `gemini-3-flash-preview` (`tier: 'heavy_io'`).
-- [ ] Tác vụ sinh nội dung Phụ lục 1, 2, 3 ưu tiên chạy `gemini-3.8-flash` với key cá nhân (`tier: 'high_reasoning'`).
-- [ ] Khi key cá nhân gặp lỗi 429, tự động xoay sang key kế tiếp; nếu hết thì tự động fallback về model nội bộ.
-- [ ] Giữ nguyên 100% logic sư phạm, bảng dữ liệu và tính năng xuất file Word.
-- [ ] Lệnh kiểm thử `node tests/canvas-xaydungphuluc-smoke.js` PASS 100%.
+- [ ] File `giaoantichhop.html` được tạo mới độc lập, mở được trực tiếp qua link mà không yêu cầu đăng nhập.
+- [ ] Giao diện hiện đại, thân thiện, có nút sao chép Prompt cho Gemini và nút nạp dữ liệu mẫu để thử nghiệm.
+- [ ] Xuất file Word mở được trực tiếp trong Microsoft Word.
+- [ ] Toàn bộ công thức toán học hiển thị chuẩn xác và chỉnh sửa được bằng Microsoft Word Equation Editor (OMML).
+- [ ] Đúng phông Times New Roman 13pt, lề chuẩn Trái 2.0cm, Phải 1.5cm, Trên 1.5cm, Dưới 1.5cm, giãn dòng 1.15.
+- [ ] Giữ nguyên màu xanh lá cây cho NLS và màu tím cho AI.

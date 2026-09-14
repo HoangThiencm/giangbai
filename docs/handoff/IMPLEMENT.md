@@ -69,3 +69,24 @@ Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` t
 
 - `node tests/canvas-xaydungphuluc-smoke.js` — PASS; kiểm tra contract gọi AI/validate/fallback và hoàn tác quota thủ công cho NLS, AI.
 - `git diff --check` — PASS.
+
+## Bổ sung trạng thái AI nổi
+
+- Thêm bảng trạng thái AI nổi, responsive ở góc phải dưới, để xem ngay tiến trình đề xuất NLS/AI, đọc SGK và sinh phụ lục mà không thay đổi nhật ký đầy đủ ở cuối trang.
+- Bảng dùng `role="status"` và `aria-live="polite"`, có nút ẩn; tự hiển thị khi có log AI/tiến trình, báo hoàn tất hoặc lỗi trong vài giây và không che thao tác ngoài vùng bảng.
+
+## Kiểm thử trạng thái AI nổi
+
+- `node tests/canvas-xaydungphuluc-smoke.js` — PASS; kiểm tra markup truy cập được, CSS không chặn thao tác và đường cập nhật trạng thái từ log/tiến trình.
+- `git diff --check` — PASS.
+
+## Bổ sung fallback khi key cá nhân timeout
+
+- Với tác vụ `high_reasoning`, mỗi key cá nhân chỉ được thử trong ngân sách ngắn 25 giây; chỉ lỗi quota/429 mới được xoay sang key tiếp theo.
+- Lỗi timeout, mạng hoặc lỗi tạm thời từ key cá nhân chuyển ngay sang key hệ thống, với ngân sách còn lại được giới hạn theo deadline backend để phản hồi trước timeout 120 giây của Canvas.
+- Metadata `fallback_reason` phân biệt timeout key cá nhân với quota; Canvas hiển thị đúng lý do fallback thay vì luôn báo hết quota.
+
+## Kiểm thử fallback timeout
+
+- `node tests/canvas-xaydungphuluc-smoke.js` — PASS; kiểm tra giới hạn key cá nhân, chỉ xoay quota, deadline fallback hệ thống và thông báo timeout.
+- `git diff --check` — PASS.
