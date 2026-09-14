@@ -38,3 +38,11 @@
 - Nạp DOCX giữ nguyên `ArrayBuffer`; AI chỉ sinh JSON delta cho mục tiêu, hoạt động và bảng tổng hợp.
 - Dùng JSZip mở `word/document.xml`, cấy các node Word mới rồi nén lại DOCX. Các phần sẵn có của gói ZIP (font, ảnh, header/footer, bảng gộp, watermark và định dạng) không bị tái tạo.
 - Xuất `.docx` ưu tiên bản cấy OOXML; PDF/TXT và nội dung không có DOCX vẫn dùng `DocxGenerator` dự phòng.
+
+## Bổ sung: tái thiết kế giao diện
+- Chuyển giao diện sang phong cách ứng dụng giáo dục tối giản: nền trung tính, một màu nhấn xanh đậm, đường viền nhẹ và bỏ gradient/shadow nặng.
+- Bổ sung thanh quy trình “Nạp giáo án → Thêm ghi chú PPCT → Tạo & xuất”; giảm vai trò thao tác phụ, tăng ưu tiên cho xem trước A4 và xuất Word.
+- Hai cột đầu vào/xuất bản dùng panel phẳng, nhất quán; bản xem trước được ghim trên màn hình lớn để giáo viên luôn thấy kết quả.
+
+## Bổ sung: xuất Word một nút
+- Gộp xuất `.doc` và `.docx` thành nút “Xuất Word”. Khi có DOCX đã cấy OOXML, nút xuất bản `.docx` bảo toàn gốc; các trường hợp khác xuất Word có công thức OMML.
