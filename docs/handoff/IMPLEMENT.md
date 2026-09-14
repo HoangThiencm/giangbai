@@ -146,3 +146,8 @@ Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` t
 - Prompt yêu cầu mọi nội dung NLS/AI được thêm mới dùng Markdown `***...***`: NLS có ngữ nghĩa xanh lá, AI có ngữ nghĩa tím.
 - Parser xử lý triple emphasis trước double emphasis thành `strong > em`; lớp mã NLS/AI giữ màu, đậm và nghiêng an toàn trong preview lẫn Word xuất ra.
 - Mẫu dùng `***...***` cho toàn bộ nội dung tích hợp bổ sung và các mã trong bảng tổng hợp.
+
+## Nguồn PPCT ưu tiên
+
+- Thêm hai ô tùy chọn để dán nguyên văn nội dung NLS và AI từ PPCT; chúng được nạp cùng mẫu, xóa cùng biểu mẫu và đưa vào prompt động.
+- Prompt xem PPCT là nguồn ưu tiên cao nhất: giữ nguyên mã/nội dung/gợi ý, không sửa PPCT hay tự chuẩn hóa. Mã tick chỉ là bắt buộc khi đã tick; nếu xung đột, prompt giữ PPCT và chỉ yêu cầu cờ xung đột rõ ràng cho giáo viên.

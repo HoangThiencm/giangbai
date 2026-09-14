@@ -45,6 +45,7 @@
           <label class="text-sm font-semibold">Giáo viên / Đơn vị<input id="teacher" class="mt-1 w-full rounded-lg border-slate-300" placeholder="Nguyễn Văn A – Trường THCS..."></label>
         </div>
         <fieldset class="mt-4 rounded-xl border border-slate-200 p-3"><legend class="px-1 text-sm font-bold">Khung tích hợp chính thức</legend><div class="flex flex-wrap gap-4"><label class="inline-flex items-center gap-2 font-semibold text-sm"><input id="enableNls" type="checkbox" class="rounded text-emerald-600">Tích hợp NLS (TT 02/CV 3456)</label><label class="inline-flex items-center gap-2 font-semibold text-sm"><input id="enableAi" type="checkbox" class="rounded text-violet-600">Tích hợp AI (QĐ 2422)</label><button id="suggestStandards" type="button" class="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-bold text-white hover:bg-slate-900"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Gợi ý mã phù hợp</button></div><p id="standardCount" class="mt-2 text-sm font-medium text-slate-600" role="status"></p><div class="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2"><div><h3 class="text-sm font-extrabold text-emerald-700">Danh mục NLS chính thức</h3><div id="nlsCatalog" class="mt-1 max-h-56 overflow-y-auto rounded-lg border border-emerald-100 p-2 text-sm"></div></div><div><h3 class="text-sm font-extrabold text-violet-700">Danh mục AI chính thức</h3><div id="aiCatalog" class="mt-1 max-h-56 overflow-y-auto rounded-lg border border-violet-100 p-2 text-sm"></div></div></div></fieldset>
+        <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2"><label class="block text-sm font-semibold">Nội dung NLS từ PPCT (nếu có)<textarea id="ppctNls" class="mt-1 w-full min-h-28 rounded-xl border-slate-300 text-sm" placeholder="Dán nguyên văn mã, nội dung hoặc gợi ý NLS từ PPCT…"></textarea></label><label class="block text-sm font-semibold">Nội dung AI từ PPCT (nếu có)<textarea id="ppctAi" class="mt-1 w-full min-h-28 rounded-xl border-slate-300 text-sm" placeholder="Dán nguyên văn mã, nội dung hoặc gợi ý AI từ PPCT…"></textarea></label></div>
         <label class="block text-sm font-semibold mt-4">Giáo án Markdown từ Gemini<textarea id="markdown" class="mt-1 w-full min-h-[470px] rounded-xl border-slate-300 font-mono text-sm" placeholder="Dán toàn văn giáo án Markdown vào đây…"></textarea></label>
       </div>
       <div class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200 flex flex-col">
@@ -58,7 +59,7 @@
   (() => {
     'use strict';
     const $ = id => document.getElementById(id);
-    const fields = ['subject','grade','title','duration','teacher','markdown'].map($);
+    const fields = ['subject','grade','title','duration','teacher','ppctNls','ppctAi','markdown'].map($);
     const selectedStandards = new Set();
     const frameworks = () => ({ nls: $('enableNls').checked, ai: $('enableAi').checked });
     const catalogEntries = kind => typeof entriesForGrade === 'function' ? entriesForGrade(kind, Number($('grade').value)) : [];
@@ -84,12 +85,15 @@
       const duration = Math.max(1, Number.parseInt($('duration').value, 10) || 1);
       const teacher = $('teacher').value.trim() || '[chưa nhập]';
       const original = $('markdown').value.trim();
+      const ppctNls = $('ppctNls').value.trim();
+      const ppctAi = $('ppctAi').value.trim();
       const enabled = frameworks();
       const chosen = allSelected();
       const catalogText = kind => catalogEntries(kind).map(entry => `- [${entry.code}] ${entry.label}${entry.descriptor ? ' — '+entry.descriptor : ''}`).join('\n');
       const selectionText = chosen.length
         ? `CÁC MÃ ĐƯỢC GIÁO VIÊN CHỌN (bắt buộc, độc quyền; không thay thế hoặc thêm mã khác):\n${chosen.map(item => `- ***[${item.entry.code}] ${item.entry.label}${item.entry.descriptor ? ' — '+item.entry.descriptor : ''}***\n  Gợi ý tích hợp: ***${integrationSuggestion(item)}***`).join('\n')}`
         : `${enabled.nls || enabled.ai ? 'GIÁO VIÊN ĐÃ BẬT KHUNG NHƯNG CHƯA CHỌN MÃ: chỉ được chọn mã từ danh mục cục bộ bên dưới; không tự tạo mã. Chọn ít nhất cần thiết, phù hợp ngữ cảnh và đúng hạn mức.' : 'GIÁO VIÊN CHƯA BẬT KHUNG NLS/AI: không tự thêm mã tích hợp.'}\n${enabled.nls ? '\nDanh mục NLS chính thức hiển thị cho lớp đã chọn:\n'+catalogText('digital') : ''}${enabled.ai ? '\nDanh mục AI chính thức hiển thị cho lớp đã chọn:\n'+catalogText('ai') : ''}`;
+      const ppctSource = (ppctNls || ppctAi) ? `NGUỒN PPCT ƯU TIÊN CAO NHẤT (bảo toàn từng ký tự, không thay mã/nội dung/gợi ý, không chỉnh sửa PPCT):\n${ppctNls ? `NLS từ PPCT:\n${ppctNls}` : ''}${ppctNls && ppctAi ? '\n\n' : ''}${ppctAi ? `AI từ PPCT:\n${ppctAi}` : ''}\n\nMọi bổ sung tích hợp phải ưu tiên lấy từ nguồn PPCT này khi phù hợp. Mã tick do giáo viên chọn chỉ bắt buộc khi thực sự được tick. Nếu mã tick xung đột với PPCT, giữ nguyên PPCT, không âm thầm thay thế/chuẩn hóa; chỉ thêm một dòng nhãn rõ “Cờ xung đột PPCT/mã đã chọn” để báo giáo viên, không viết lại nguồn.` : 'Không có nội dung PPCT bổ sung được dán; chỉ áp dụng mã tick khi giáo viên đã tick.';
       const limits = duration === 1
         ? 'Bài 1 tiết: tối đa 01 mã TỔNG CỘNG, chọn NLS HOẶC AI (không dùng cả hai trừ khi người dùng yêu cầu rõ).'
         : 'Bài từ 2 tiết trở lên: tối đa 02 mã TỔNG CỘNG. Nếu chỉ tích hợp NLS thì tối đa 02 mã NLS; nếu chỉ tích hợp AI thì tối đa 02 mã AI; nếu tích hợp cả hai thì đúng 01 mã NLS + 01 mã AI.';
@@ -114,6 +118,8 @@ NGUYÊN TẮC BẮT BUỘC:
 7. Dùng Markdown an toàn, rõ ràng: #/##/###, danh sách -, +, .; bảng Markdown. Công thức ghi LaTeX inline $...$ hoặc dạng khối $$...$$.
 
 ${selectionText}
+
+${ppctSource}
 
 ${objectiveFormat}
 
@@ -149,7 +155,7 @@ ${original || '[Chưa dán giáo án gốc. Hãy tạo một mẫu có cấu tr�
     function updatePreview(){ $('preview').innerHTML=markdownToHtml($('markdown').value,false) || '<p class="text-slate-400" style="text-align:center">Nạp mẫu hoặc dán Markdown để xem trước.</p>'; }
     function safeFileName(value){return String(value||'Ke_hoach_bai_day').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_|_$/g,'')||'Ke_hoach_bai_day';}
     function exportWordDocument(){ if(!$('markdown').value.trim()){show('Hãy dán nội dung giáo án trước khi xuất.',true);return;} const name=esc(String($('title').value||'Kế hoạch bài dạy').toUpperCase()); const meta=`<p style="text-align:center;font-weight:bold;font-size:14pt;margin:0">KẾ HOẠCH BÀI DẠY</p><p style="text-align:center;font-weight:bold;font-size:14pt;margin:3pt 0 8pt">${name}</p><p><b>Môn học:</b> ${esc($('subject').value)} &nbsp;&nbsp; <b>Thời lượng:</b> ${esc($('duration').value)} tiết</p>${$('teacher').value?'<p><b>Giáo viên / Đơn vị:</b> '+esc($('teacher').value)+'</p>':''}`; const doc=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>@page{size:A4;margin:1.5cm 1.5cm 1.5cm 2cm;}body{font-family:'Times New Roman',serif;font-size:13pt;line-height:1.15;text-align:justify;}h1,h2{font-size:14pt;font-weight:bold}h3{font-size:13pt;font-weight:bold}p{margin:3pt 0 6pt}table{width:100%;border-collapse:collapse;margin:6pt 0}th,td{border:1px solid #000;padding:5px;vertical-align:top}th{background:#f3f4f6}.nls{color:#16a34a;font-weight:bold;font-style:italic}.ai{color:#9333ea;font-weight:bold;font-style:italic}ul{margin:3pt 0 6pt}</style></head><body>${meta}${markdownToHtml($('markdown').value,true)}</body></html>`; saveAs(new Blob(['\ufeff',doc],{type:'application/msword;charset=utf-8'}),safeFileName($('title').value)+'_Tich_hop_NLS_AI.doc');show('Đã tạo file Word .doc có công thức OMML.'); }
-    const officialSample = { subject:'Toán lớp 8', title:'Hình chóp tam giác đều', duration:'2', teacher:'Nguyễn Văn A – Trường THCS', markdown:`# KẾ HOẠCH BÀI DẠY
+    const officialSample = { subject:'Toán lớp 8', title:'Hình chóp tam giác đều', duration:'2', teacher:'Nguyễn Văn A – Trường THCS', ppctNls:'[1.1.TC2a] Duyệt, tìm kiếm và lọc dữ liệu, thông tin và nội dung số.', ppctAi:'[8.A1.2] Kiểm chứng nguồn thông tin khi sử dụng AI tạo sinh.', markdown:`# KẾ HOẠCH BÀI DẠY
 ## Bài: HÌNH CHÓP TAM GIÁC ĐỀU
 **Môn học:** Toán 8
 **Thời lượng:** 2 tiết
