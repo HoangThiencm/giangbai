@@ -50,3 +50,10 @@
 ## Bổ sung: tích hợp có cấu trúc sư phạm
 - Delta AI giờ tạo riêng mục NLS/AI và chi tiết hoạt động gồm nhiệm vụ học sinh, sản phẩm/minh chứng, kiểm chứng và cách giáo viên đánh giá.
 - Khi cấy DOCX, chuẩn hóa “Năng lực chung” thành a), “Năng lực đặc thù/riêng” thành b); chỉ thêm c)/d) theo khung thực sự được chọn. Nội dung không chọn hoàn toàn không xuất hiện.
+
+## Bổ sung: Sổ Điểm & KTTX
+- Tạo `sodiem.html`: sổ điểm bốn tab gồm nhập điểm, vòng quay may mắn, ngân hàng câu hỏi/đồng hồ và thống kê/xuất Excel.
+- Danh sách lớp và học sinh được nạp từ `api/exam.php`; đồng thời hỗ trợ Excel/CSV, dán danh sách, sao lưu JSON và lưu cục bộ.
+- Vòng quay ưu tiên học sinh chưa có điểm; ở chế độ hạn chế, mỗi học sinh chưa có điểm có trọng số 20 còn học sinh đã có điểm có trọng số 1 (5% tương đối).
+- Tạo `api/sodiem.php`, đăng ký quyền `sodiem` và bổ sung smoke test tương ứng.
+- Kiểm thử: `node tests/teacher-permissions-smoke.js`, `node tests/sodiem-smoke.js`, kiểm tra cú pháp JavaScript inline và `git diff --check` đều PASS. PHP CLI không có trong môi trường nên chưa chạy được `php -l`.

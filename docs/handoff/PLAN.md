@@ -1,103 +1,141 @@
-# PLAN
+# Kế hoạch Triển khai: Chức năng Sổ Điểm & Kiểm Tra Thường Xuyên (sodiem.html)
 
 ## Hiện trạng & Phân tích Kiến trúc
-- Hiện tại hệ thống trích xuất nội dung DOCX sang Markdown, gửi toàn văn sang Gemini tái tạo lại rồi biên dịch ngược từ Markdown sang Word (.docx / .doc).
-- Đúng như đánh giá kiến trúc của người dùng: **Quy trình qua trung gian Markdown không thể cam kết 100% file gốc**, vì sẽ luôn có nguy cơ:
-  + Mất cấu trúc ô gộp phức tạp (`w:vMerge`, `w:gridSpan`);
-  + Mất định dạng Word chi tiết: font chữ riêng của trường/tổ, tab stop, header/footer, số trang, hình ảnh, shape, watermark;
-  + Mất cách xuống dòng và căn lề riêng trong từng ô bảng;
-  + AI có thể tự ý viết lại hoặc làm lệch thứ tự câu từ.
-- **Giải pháp triệt để:** Triển khai cơ chế **Can thiệp trực tiếp cấu trúc gói OOXML (Direct OOXML Injection)**:
-  + Giữ nguyên 100% gói tệp `.docx` gốc (Binary ZIP).
-  + AI chỉ sinh các đoạn tích hợp (Delta / Surgical Snippets): mục tiêu NLS/AI cho Mục I, nhiệm vụ tích hợp cho Mục III, và bảng tổng hợp cuối bài.
-  + Thư viện `JSZip` giải nén `word/document.xml` trong bộ nhớ, dùng DOMParser chèn đúng các node `<w:p>` và `<w:tbl>` vào các vị trí tương ứng, sau đó nén lại thành file `.docx`.
-  + **Kết quả:** Đạt 100% bảo toàn file Word gốc đúng nghĩa (giữ nguyên từng font, lề, header, footer, ảnh và bảng biểu phức tạp), không có bất kỳ rủi ro nào về việc AI viết lại hay phá vỡ cấu trúc.
+- Hệ thống đã có các phân hệ phục vụ giảng dạy và kiểm tra:
+  + `kttx.html`: Soạn đề kiểm tra thường xuyên từ ảnh SGK/PDF, lưu đề vào `saved_exams` (localStorage/GitHub).
+  + `thitructuyen.html` & `api/exam.php`: Đã có sẵn API phân cấp lấy danh sách lớp học (`api/exam.php/student-classes`) và danh sách học sinh theo lớp (`api/exam.php/class-students?class_name=...`) từ bảng `users` (`role = 'student'`).
+  + Hệ thống phân quyền giáo viên (`access-control.js`, `api/helpers.php`, `admin.html`, `index.html`) kiểm soát chặt chẽ các module công cụ theo cơ chế Least Privilege, được kiểm định qua smoke test `tests/teacher-permissions-smoke.js`.
+- Yêu cầu mới từ người dùng:
+  + Mở trang mới: `sodiem.html` để phục vụ Sổ điểm Kiểm tra thường xuyên (KTTX).
+  + Lấy danh sách học sinh theo từng lớp từ hệ thống (kèm hỗ trợ nạp Excel/dán danh sách linh hoạt).
+  + Tab quay số chiếc nón kỳ diệu (Lucky Wheel) để bốc thăm học sinh gọi lên bảng kiểm tra miệng / KTTX.
+  + Cơ chế quay thông minh: Hạn chế tối đa hoặc loại trừ những học sinh đã có điểm ở cột hiện tại; khi toàn bộ lớp đã đủ điểm cột đó thì tự động kích hoạt vòng mới.
+  + Mở rộng tiện ích sư phạm: Tích hợp ngân hàng đề/câu hỏi trực quan (kèm đồng hồ đếm ngược) khi gọi học sinh lên bảng, tính điểm trung bình KTTX, xuất Excel chuẩn mẫu.
 
 ## Phạm vi
-1. **Lưu trữ nhị phân gói DOCX gốc (`currentDocxBuffer`):**
-   - Khi người dùng nạp file `.docx`, lưu nguyên vẹn `ArrayBuffer` của tệp vào bộ nhớ trình duyệt.
-   - Nạp thư viện `JSZip` (`https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js`).
-2. **AI Sinh đoạn tích hợp can thiệp (Surgical / Delta Generation):**
-   - Trích xuất tóm tắt ngắn gọn cấu trúc bài dạy để Gemini phân tích (tiết kiệm token, phản hồi cực nhanh dưới 5s).
-   - Gemini chỉ trả về JSON chứa đúng 3 phần cần chèn:
-     ```json
-     {
-       "mucTieu": "c) Năng lực số: [1.2.TC1a] ...",
-       "hoatDongMuc3": {
-         "tenHoatDong": "Hoạt động 2",
-         "noiDungChen": "[Tích hợp NLS: 1.2.TC1a] Học sinh..."
-       },
-       "bangTongHop": [
-         {"noiDung": "Hoạt động 2", "nls": "[1.2.TC1a]", "ai": "", "minhChung": "..."}
-       ]
-     }
-     ```
-   - Quy tắc nghiêm ngặt: Năng lực nào không chọn thì không sinh, không bao giờ sinh câu "Không tích hợp...".
-3. **Module Chèn trực tiếp OOXML (`injectIntegrationIntoDocx`):**
-   - Mở `word/document.xml` từ `JSZip`.
-   - Tìm đoạn Mục I (sau `Năng lực đặc thù` hoặc `Mục tiêu`): Tạo node `<w:p>` với định dạng màu sắc (NLS xanh lá, AI tím) và chèn vào cây XML.
-   - Tìm vị trí hoạt động tại Mục III: Chèn đoạn `<w:p>` tích hợp vào ngay sau hoạt động hoặc trong ô tương ứng.
-   - Chèn bảng tổng hợp `<w:tbl>` trước `<w:sectPr>` cuối tài liệu.
-   - Lưu đè `word/document.xml` và xuất file `.docx` mới từ `zip.generateAsync`.
-4. **Chế độ Dự phòng (Fallback):**
-   - Nếu người dùng nạp PDF, TXT hoặc tự soạn thảo không có file DOCX gốc, hệ thống tự động fallback sang chế độ xuất Markdown qua `docxGenerator` / `DocxGenerator` như hiện tại.
-   - Nút xuất Word (.doc OMML) tiếp tục phục vụ nhu cầu chỉnh sửa công thức toán Equation.
+1. **Trang giao diện ứng dụng `sodiem.html`:**
+   - Xây dựng giao diện Responsive, chuẩn thiết kế hệ thống (Tailwind CSS, FontAwesome 6, Google Fonts, bảo vệ bằng `security-guard.js` và `access-control.js`).
+   - Tích hợp 4 Tab chức năng mượt mà:
+     - **Tab 1 - Sổ điểm điện tử:** Quản lý danh sách lớp, các cột điểm KTTX (KTTX 1, KTTX 2, KTTX 3, KTTX 4, điểm miệng, 15 phút...), tính ĐTBtx, nhận xét, nhập điểm inline bằng bàn phím (hỗ trợ phím mũi tên / Enter).
+     - **Tab 2 - Chiếc nón kỳ diệu (Vòng quay may mắn):** Vẽ Canvas HTML5 bánh xe quay động, hiệu ứng âm thanh AudioContext, pháo hoa confetti, thuật toán ưu tiên học sinh chưa có điểm, tự động sang vòng mới khi đủ 1 cột, popup nhập điểm ngay khi quay trúng.
+     - **Tab 3 - Đề kiểm tra & Câu hỏi vấn đáp:** Hiển thị câu hỏi to rõ cho học sinh trả lời, hỗ trợ công thức Toán KaTeX, đồng hồ bấm giờ đếm ngược (30s, 60s, 120s...), liên kết đề đã lưu từ `kttx.html` hoặc ngân hàng câu hỏi nhanh.
+     - **Tab 4 - Thống kê & Xuất dữ liệu:** Biểu đồ phổ điểm, tỷ lệ hoàn thành cột điểm, xuất bảng điểm ra Excel (`.xlsx`) bằng SheetJS, in ấn.
+2. **Nguồn dữ liệu học sinh & Lưu trữ:**
+   - Gọi API có sẵn `api/exam.php/student-classes` và `api/exam.php/class-students` để nạp danh sách lớp và học sinh thực tế.
+   - Hỗ trợ nhập file Excel danh sách học sinh (kéo thả `.xlsx`, `.xls`, `.csv`).
+   - Lưu trữ tự động tại `localStorage` theo từng lớp, môn, năm học; hỗ trợ xuất/nhập tệp sao lưu JSON.
+   - Xây dựng API `api/sodiem.php` (hoặc tích hợp backend) để lưu trữ đồng bộ bảng điểm lên cơ sở dữ liệu khi có kết nối mạng.
+3. **Cấu hình phân quyền & Điều hướng toàn hệ thống:**
+   - Cập nhật `access-control.js`: Khai báo route `sodiem.html` <-> `sodiem`, thêm vào `teacherWorkspacePageKeys`.
+   - Cập nhật `api/helpers.php`: Thêm `sodiem` vào `page_catalog()`, `teacher_workspace_page_ids()`, `teacher_feature_keys_for_pages()`.
+   - Cập nhật `admin.html`: Thêm checkbox cấp quyền "Sổ Điểm & KTTX" (`cfg_sodiem`) cho tài khoản giáo viên.
+   - Cập nhật `index.html`: Thêm thẻ công cụ "Sổ Điểm & KTTX" vào Bento Grid trên trang chủ.
+   - Cập nhật `tests/teacher-permissions-smoke.js` và tạo test mới `tests/sodiem-smoke.js`.
 
 ## Ngoài phạm vi
-- Không gửi file DOCX qua máy chủ trung gian (toàn bộ ZIP và XML DOM xử lý 100% trong bộ nhớ trình duyệt).
-- Không sửa đổi `soankhbd.html`.
-- Không bắt buộc đăng nhập.
+- Không can thiệp vào các trang công cụ khác (`kttx.html`, `thitructuyen.html`, `matrande.html`, `soankhbd.html`).
+- Không sửa đổi cấu trúc bảng `users` trong cơ sở dữ liệu.
 
 ## File dự kiến tác động
-- `giaoantichhop.html`:
-  + Nạp thêm `jszip.min.js`.
-  + Thêm biến lưu `currentDocxBuffer` và `currentDocxName`.
-  + Viết hàm `injectIntegrationIntoDocx(docxBuffer, deltaData)` thao tác XML DOM.
-  + Nâng cấp prompt và hàm `integrateAi` để hỗ trợ chế độ Delta Injection khi có file DOCX gốc.
-  + Nút "Xuất .docx" ưu tiên xuất từ file DOCX đã được chèn trực tiếp (giữ 100% gốc).
+1. **Tạo mới:** `sodiem.html` — Ứng dụng Sổ điểm & Chiếc nón kỳ diệu gọi học sinh lấy điểm KTTX.
+2. **Tạo mới:** `api/sodiem.php` — API backend quản lý lưu trữ và đồng bộ dữ liệu sổ điểm theo giáo viên và lớp.
+3. **Cập nhật:** `access-control.js` — Đăng ký route guard cho `sodiem.html`.
+4. **Cập nhật:** `api/helpers.php` — Đăng ký page catalog và workspace permission cho `sodiem`.
+5. **Cập nhật:** `admin.html` — Đăng ký quyền công cụ trong bảng quản trị admin.
+6. **Cập nhật:** `index.html` — Thêm thẻ mở Sổ Điểm KTTX trên trang chủ giáo viên.
+7. **Cập nhật:** `tests/teacher-permissions-smoke.js` — Bổ sung `sodiem` vào static contract tests.
+8. **Tạo mới:** `tests/sodiem-smoke.js` — Smoke test tự động kiểm tra cú pháp, cấu trúc tab, Canvas wheel và tính toàn vẹn của `sodiem.html`.
 
-## Các bước thực hiện
-### Bước 1: Nạp JSZip và lưu giữ gói DOCX gốc
-- Thêm `<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>` vào `<head>`.
-- Trong `readLessonFile`:
-  + Khi `ext === 'docx'`: `currentDocxBuffer = await file.arrayBuffer(); currentDocxName = file.name;`
-  + Tiếp tục hiển thị preview bằng `convertMammothHtmlToMarkdown` để giáo viên xem trước trên web.
+## Các bước thực hiện chi tiết
 
-### Bước 2: Xây dựng hàm chèn OOXML can thiệp trực tiếp
-- Viết hàm `injectDocxOxml(arrayBuffer, delta)`:
-  1. `const zip = await JSZip.loadAsync(arrayBuffer);`
-  2. `const xmlText = await zip.file('word/document.xml').async('text');`
-  3. `const doc = new DOMParser().parseFromString(xmlText, 'application/xml');`
-  4. Tạo node `<w:p>` với thẻ `<w:r>` có styling chuẩn Word (`<w:b/>`, `<w:i/>`, `<w:color w:val="16A34A"/>` cho NLS, `<w:color w:val="9333EA"/>` cho AI).
-  5. Quét tìm đoạn "Năng lực đặc thù" hoặc "Mục tiêu": chèn đoạn mục tiêu tích hợp ngay sau đó.
-  6. Quét tìm hoạt động phù hợp trong Mục III: chèn đoạn nhiệm vụ tích hợp ngay sau đó.
-  7. Tạo bảng `<w:tbl>` tổng hợp và chèn vào cuối `<w:body>`.
-  8. `zip.file('word/document.xml', new XMLSerializer().serializeToString(doc));`
-  9. Trả về `await zip.generateAsync({type: 'blob'});`
+### Bước 1: Khai báo hạ tầng phân quyền và liên kết hệ thống
+- Trong `api/helpers.php`:
+  + Thêm phần tử `'sodiem' => ['title' => 'Sổ điểm & KTTX', 'url' => 'sodiem.html']` vào hàm `page_catalog()`.
+  + Thêm `'sodiem'` vào danh sách `teacher_workspace_page_ids()`.
+  + Thêm `'sodiem' => 'sodiem'` vào `teacher_feature_keys_for_pages()`.
+- Trong `access-control.js`:
+  + Thêm `'sodiem.html': 'sodiem'` vào `pageKeys`.
+  + Thêm `'sodiem': 'sodiem.html'` vào `pageUrls`.
+  + Thêm `'sodiem'` vào mảng danh sách các trang workspace giáo viên.
+- Trong `admin.html`:
+  + Thêm checkbox `cfg_sodiem` vào phần cấu hình quyền công cụ giáo viên.
+  + Bổ sung `'sodiem'` vào mảng `CLIENT_FEATURE_CHECKS` và các bảng mã trang giáo viên.
+- Trong `index.html`:
+  + Thêm khối thẻ `tool-tile` cho `data-tool="sodiem"`, liên kết tới `sodiem.html` với biểu tượng sổ điểm và mô tả tính năng.
+- Chạy cập nhật `tests/teacher-permissions-smoke.js` để xác nhận hợp đồng phân quyền đạt PASS.
 
-### Bước 3: Chuẩn hóa AI Delta Prompt
-- Khi có `currentDocxBuffer`, Gemini chỉ cần trả về JSON delta chứa các đoạn cần chèn (thay vì viết lại 10 trang giáo án).
-- Nếu Gemini trả về Markdown thông thường, hàm chèn OOXML vẫn trích xuất được khối Mục tiêu và Hoạt động để cấy ghép vào file gốc.
+### Bước 2: Xây dựng Backend API `api/sodiem.php`
+- Kiểm tra phiên bản schema tự động (`gradebooks` table):
+  ```sql
+  CREATE TABLE IF NOT EXISTS gradebooks (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      teacher_id INT NOT NULL,
+      class_name VARCHAR(80) NOT NULL,
+      subject VARCHAR(80) NOT NULL,
+      academic_year VARCHAR(30) NOT NULL DEFAULT '2025-2026',
+      columns_config_json TEXT DEFAULT NULL,
+      students_data_json LONGTEXT DEFAULT NULL,
+      history_log_json LONGTEXT DEFAULT NULL,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_teacher_class_sub (teacher_id, class_name, subject, academic_year),
+      INDEX idx_gradebooks_class (class_name)
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  ```
+- Cung cấp các hành động (Actions):
+  + `GET ?action=load&class_name=...&subject=...`: Tải sổ điểm đã lưu của giáo viên.
+  + `POST ?action=save`: Lưu/cập nhật toàn bộ sổ điểm (cấu hình cột, điểm số học sinh, lịch sử quay).
+  + `GET ?action=classes`: Trả về danh sách lớp học và sĩ số.
 
-### Bước 4: Kiểm thử và hoàn thiện xuất file
-- Khi giáo viên bấm "Xuất .docx":
-  + Nếu có `currentDocxBuffer`: Tải ngay bản DOCX đã cấy ghép trực tiếp (giữ nguyên 100% font, ảnh, bảng biểu phức tạp của file gốc).
-  + Nếu không có: Fallback sang `docxGenerator`.
+### Bước 3: Phát triển giao diện và logic hoàn chỉnh cho `sodiem.html`
+- **Head & Thư viện:**
+  + Tích hợp `security-guard.js`, `access-control.js`.
+  + Nạp Tailwind CSS CDN, FontAwesome 6, KaTeX (để hiển thị công thức toán đề bài), SheetJS `xlsx.full.min.js` (nhập/xuất Excel), Canvas Confetti (`canvas-confetti`).
+- **Thanh tác vụ & Chọn lớp:**
+  + Bộ chọn lớp: Nạp danh sách lớp từ `api/exam.php/student-classes` hoặc `api/sodiem.php`.
+  + Khi chuyển lớp: Nạp danh sách học sinh từ API `class-students`, tự động map vào bảng điểm.
+  + Nút chức năng: Thêm học sinh, Nhập Excel danh sách, Xuất Excel bảng điểm, Lưu dữ liệu, Cài đặt vòng quay.
+- **Tab 1 - Sổ điểm điện tử:**
+  + Render bảng danh sách học sinh: STT, Mã định danh/SBD, Họ và tên, các cột điểm KTTX 1, KTTX 2, KTTX 3, KTTX 4 (có nút thêm cột tùy chọn), ĐTBtx, Nhận xét nhanh.
+  + Hỗ trợ chỉnh sửa điểm trực tiếp (inline edit): Giới hạn 0 - 10, tự động bôi màu theo thang điểm.
+  + Điều hướng bàn phím: Enter xuống dòng, Tab sang cột kế tiếp, mũi tên điều hướng ô nhập.
+  + Nút icon gọi nhanh học sinh đó sang tab vòng quay / kiểm tra miệng.
+- **Tab 2 - Vòng quay may mắn (Chiếc nón kỳ diệu):**
+  + Canvas bánh xe quay mượt mà 60fps với các múi màu sinh động và tên học sinh.
+  + Bộ chọn: "Đang kiểm tra cột điểm nào?" (mặc định KTTX 1 hoặc cột giáo viên chọn).
+  + Logic lọc thông minh:
+    * Đếm số học sinh đã có điểm / chưa có điểm ở cột đang chọn.
+    * Tùy chọn lọc: **Chỉ quay HS chưa có điểm** (ưu tiên 100%) hoặc **Hạn chế HS đã có điểm** (trọng số giảm còn 5%).
+    * **Kiểm tra hoàn thành vòng:** Nếu tất cả học sinh đều đã có điểm ở cột này (100%), hiển thị thông báo "Đã hoàn thành vòng kiểm tra [Tên cột]!" và tự động kích hoạt vòng mới (cho phép quay lại từ đầu hoặc chuyển sang cột KTTX tiếp theo).
+  + Hiệu ứng âm thanh bằng Web Audio API: Tiếng gõ kim tạch tạch theo gia tốc quay của bánh xe và tiếng chuông reo vui tai khi dừng.
+  + Popup/Modal vinh danh học sinh: Hiện tên học sinh trúng số, kèm đề bài gợi ý, ô nhập điểm tại chỗ (0 - 10) và nút lưu ngay vào sổ điểm mà không cần chuyển tab.
+- **Tab 3 - Ngân hàng đề & Câu hỏi vấn đáp:**
+  + Bộ câu hỏi kiểm tra nhanh theo khối (Toán 6, 7, 8, 9) hoặc lấy từ các đề `saved_exams` của `kttx.html`.
+  + Cho phép giáo viên dán danh sách câu hỏi nhanh của riêng mình.
+  + Giao diện trình chiếu câu hỏi chữ lớn, rõ ràng cho máy chiếu lớp học.
+  + Đồng hồ bấm giờ đếm ngược (Countdown Timer) 15s, 30s, 60s, 2 phút kèm âm báo khi hết giờ.
+  + Nút bốc thăm câu hỏi ngẫu nhiên không trùng lặp cho mỗi lượt gọi học sinh.
+- **Tab 4 - Báo cáo & Thống kê:**
+  + Thống kê tiến độ lấy điểm theo từng cột (Bao nhiêu % đã có điểm).
+  + Phổ điểm trực quan, tỷ lệ Giỏi, Khá, Đạt, Chưa đạt.
+  + Xuất file Excel bảng điểm chuẩn form.
+
+### Bước 4: Kiểm thử và hoàn thiện
+- Chạy kiểm tra tĩnh và hợp đồng phân quyền: `node tests/teacher-permissions-smoke.js`.
+- Tạo và chạy test: `node tests/sodiem-smoke.js` kiểm tra sự tồn tại của các thành phần bắt buộc trong `sodiem.html`.
 
 ## Rủi ro & Giải pháp
-- **Rủi ro:** Cấu trúc XML trong `word/document.xml` của một số phần mềm (WPS Office, LibreOffice) có thể dùng namespace hoặc cấu trúc khác biệt một chút.
-  - **Giải pháp:** Sử dụng các bộ chọn linh hoạt (quét textContent trong `<w:t>`) và tạo các node XML với đúng namespace `http://schemas.openxmlformats.org/wordprocessingml/2006/main`. Nếu cấy ghép gặp lỗi, tự động fallback sang `docxGenerator` an toàn.
-
-## Cách kiểm thử
-1. Nạp 1 file Word `.docx` có bảng biểu phức tạp (gộp hàng `rowspan`, gộp cột `colspan`), có hình ảnh, header/footer và font chữ tùy chỉnh.
-2. Bấm "Bắt đầu tích hợp".
-3. Bấm "Xuất .docx" và mở file tải về trong Microsoft Word:
-   - Kiểm tra font chữ, căn lề, header, footer, hình ảnh: hoàn toàn nguyên bản 100%.
-   - Kiểm tra các bảng biểu phức tạp: không bị lệch cột, không mất ô gộp.
-   - Kiểm tra các phần tích hợp: hiển thị đúng tại Mục I và Mục III với màu sắc nổi bật.
+1. **Rủi ro:** Khi lớp học chưa có danh sách trong database, giáo viên không dùng được vòng quay.
+   - **Giải pháp:** Tích hợp nút nạp file Excel hoặc dán danh sách thủ công trực tiếp trên giao diện, lưu vào `localStorage`, giáo viên dùng được ngay cả khi không có kết nối cơ sở dữ liệu.
+2. **Rủi ro:** Lớp đông (40 - 45 học sinh), các nan quạt trên bánh xe bị quá hẹp chữ.
+   - **Giải pháp:** Khi danh sách trên 30 học sinh, Canvas tự động hiển thị số thứ tự (STT) hoặc tên ngắn gọn trên nan quạt kèm bảng chỉ số bên cạnh, hoặc chỉ nạp vào bánh xe danh sách những học sinh chưa có điểm (thường từ 10 - 20 em mỗi đợt quay), giúp bánh xe luôn thông thoáng, chữ to rõ.
+3. **Rủi ro:** Trình duyệt chặn âm thanh tự động (Autoplay Policy).
+   - **Giải pháp:** Khởi tạo `AudioContext` sau cú click chuột đầu tiên của người dùng (khi bấm nút QUAY), đảm bảo âm thanh phát mượt mà trên mọi trình duyệt.
 
 ## Tiêu chí nghiệm thu
-- Cam kết giữ 100% file gốc cho mọi tệp `.docx` được nạp vào qua cơ chế Direct OOXML Injection.
-- Không phụ thuộc vào việc AI tái tạo lại bảng biểu hay định dạng.
-- Hoạt động mượt mà, độc lập client-side trên trình duyệt.
-- Không sửa đổi `soankhbd.html`.
+1. Truy cập `sodiem.html` có route guard chuẩn phân quyền giáo viên, liên kết từ `index.html` và hiển thị trong `admin.html`.
+2. Lấy được danh sách lớp học và học sinh từ API `exam.php` hoặc tải từ file Excel.
+3. Vòng quay chiếc nón kỳ diệu hoạt động mượt mà, có âm thanh quay và pháo hoa chúc mừng.
+4. Thuật toán hạn chế/loại trừ học sinh đã có điểm hoạt động chính xác; khi 100% học sinh đã có điểm ở một cột thì bắt đầu vòng mới theo đúng yêu cầu.
+5. Nhập điểm trực tiếp trên sổ điểm hoặc ngay trên popup sau khi quay, dữ liệu được bảo lưu an toàn.
+6. Có tính năng hiển thị câu hỏi/đề kiểm tra kèm đồng hồ đếm ngược.
+7. Toàn bộ smoke test (`teacher-permissions-smoke.js`, `sodiem-smoke.js`) đạt PASS.

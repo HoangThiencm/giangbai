@@ -27,6 +27,7 @@ async function accessControlMain() {
         'tronde.html': 'tronde',
         'thitructuyen.html': 'thitructuyen',
         'kttx.html': 'kttx',
+        'sodiem.html': 'sodiem',
         'nopbai-quanly.html': 'nopbai',
         'padlet_ht.html': 'padlet',
         'vietbaocao.html': 'vietbaocao',
@@ -55,6 +56,7 @@ async function accessControlMain() {
         tronde: 'tronde.html',
         thitructuyen: 'thitructuyen.html',
         kttx: 'kttx.html',
+        sodiem: 'sodiem.html',
         nopbai: 'nopbai-quanly.html',
         padlet: 'padlet_ht.html',
         vietbaocao: 'vietbaocao.html',
@@ -279,7 +281,7 @@ async function accessControlMain() {
 
     const teacherWorkspaceTools = [
         'gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde',
-        'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao',
+        'thitructuyen', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao',
         'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'thanhtich',
         'soankhbd', 'taovideo', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc'
     ];

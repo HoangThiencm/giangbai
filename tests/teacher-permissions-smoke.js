@@ -35,17 +35,19 @@ requireMatch(index, /localStorage\.getItem\('authToken'\)[\s\S]*?document\.docum
 requireMatch(index, /\.permissions-pending #mainToolsGrid > \[data-tool\]\s*\{\s*display:\s*none\s*!important;\s*\}/, 'Pending permission checks must conceal every main tool card.');
 requireMatch(index, /applyTeacherHubVisibility\(accountFeatures, allowedSet\);\s*}\s*removePermissionsPending\(\);/, 'Teacher permission-pending state must be removed only after teacher tools are filtered.');
 
-const tools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'nopbai', 'padlet', 'vietbaocao', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'thanhtich', 'soankhbd', 'taovideo', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc'];
+const tools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'thanhtich', 'soankhbd', 'taovideo', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc'];
 for (const tool of tools) {
     requireMatch(access, new RegExp(`['"]${tool}['"]`), `Missing teacher route guard for ${tool}.`);
 }
 requireMatch(access, /'soankhbd\.html': 'soankhbd'/, 'soankhbd must have a page key.');
+requireMatch(access, /'sodiem\.html': 'sodiem'/, 'sodiem must have a page key.');
 requireMatch(access, /endsWith\('\/taovideo\/index\.html'\)[\s\S]*?'taovideo'/, 'taovideo/index.html must be recognized.');
 
 const entries = {
     'gslides.html': 'access-control.js', 'vehinh.html': 'access-control.js', 'smartquiz.html': 'access-control.js',
     'matrande.html': 'access-control.js', 'tronde.html': 'access-control.js', 'thitructuyen.html': 'access-control.js',
     'kttx.html': 'access-control.js', 'nopbai-quanly.html': 'access-control.js', 'padlet_ht.html': 'access-control.js',
+    'sodiem.html': 'access-control.js',
     'vietbaocao.html': 'access-control.js', 'thoikhoabieu.html': 'access-control.js', 'phancongtochuyenmon.html': 'access-control.js',
     'rutgon.html': 'access-control.js', 'thanhtich.html': 'access-control.js', 'soankhbd.html': 'access-control.js',
     'xaydungphuluc.html': 'access-control.js', 'duyetgiaoan.html': 'access-control.js', 'duyetde.html': 'access-control.js', 'nghiencuubaihoc.html': 'access-control.js',
