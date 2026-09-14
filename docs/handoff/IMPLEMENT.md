@@ -115,3 +115,34 @@ Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` t
 
 - Bài 1 tiết chỉ cho phép tối đa một mã tổng cộng: NLS hoặc AI; chỉ dùng cả hai khi người dùng yêu cầu rõ.
 - Bài từ hai tiết chỉ cho phép tối đa hai mã tổng cộng: riêng NLS hoặc AI tối đa hai mã, còn tích hợp hỗn hợp là đúng một NLS và một AI. Prompt nêu rõ đây là mức tối đa, không bắt buộc dùng đủ.
+
+## Bổ sung lựa chọn mã tích hợp chính thức
+
+- `giaoantichhop.html` nạp danh mục cục bộ `js/khbd-standards.js`, thêm chọn khối 6–9, bật/tắt khung NLS/AI và danh sách checkbox có mã cùng mô tả chính thức theo khối.
+- Nút gợi ý chỉ dùng `recommendOfficialStandards` với ngữ cảnh môn, tên bài và giáo án; không tạo mã mới. Danh sách được nhóm, cuộn được và có trạng thái chọn/giới hạn dễ theo dõi.
+- UI chặn đúng hạn mức tổng: một tiết chỉ một mã NLS hoặc AI; từ hai tiết tối đa hai, tích hợp hỗn hợp chỉ một NLS và một AI.
+- Prompt nêu các mã được chọn là bắt buộc/độc quyền, đưa đủ mô tả chính thức và gợi ý hoạt động–nhiệm vụ học sinh–minh chứng–kiểm chứng. Nếu chỉ bật khung mà chưa chọn mã, prompt chỉ cho Gemini chọn từ danh mục chính thức đã chèn vào prompt.
+
+## Kiểm thử lựa chọn mã tích hợp
+
+- Trích xuất JavaScript nội tuyến và chạy `node --check` — PASS.
+- Kiểm tra tĩnh catalog, control, hàm gợi ý chuẩn, contract prompt và không gọi auth/backend — PASS.
+- `git diff --check` — PASS.
+
+## Bổ sung Mục tiêu bốn tiểu mục
+
+- Prompt bắt buộc phần `I. MỤC TIÊU` có đúng bốn tiểu mục: a) Năng lực chung, b) Năng lực đặc thù, c) Năng lực số, d) Năng lực AI; a/b giữ năng lực gốc và không thêm mã tự tạo.
+- c/d đưa mã cùng tên/mô tả chính thức đã chọn và toàn bộ nội dung tích hợp ở hai mục được bôi đậm; khi không chọn AI, prompt yêu cầu đúng câu `Không tích hợp năng lực AI`.
+- Giáo án mẫu hiện dùng mã chính thức lớp 8 `1.1.TC2a` và `8.A1.2`, minh họa bốn tiểu mục, mã/câu tích hợp in đậm và kiểm chứng AI bằng SGK.
+
+## Chế độ chỉ tích hợp, bảo toàn giáo án nguồn
+
+- Prompt chuyển sang tạo bản sao bảo toàn nguồn: cấm viết lại, sửa, rút gọn, thêm/xóa/đổi thứ tự mọi đoạn, công thức, thời lượng, mã có sẵn, bảng, hàng/cột và từng ô; bảng hai cột được giữ hai cột.
+- Chỉ cho phép nối mục c/d sau a/b khi Mục I gốc có sẵn; nếu không có cấu trúc đó thì nối khối `Bổ sung tích hợp NLS/AI` sau toàn bộ nguồn. Dòng tích hợp chỉ được nối bên dưới hoạt động phù hợp nằm ngoài bảng; bảng tổng hợp chỉ nối cuối tài liệu.
+- Thêm nhắc trực quan “Chế độ chỉ tích hợp — giáo án/bảng gốc không bị đổi”; mẫu thể hiện a/b nguồn giữ nguyên, mục c/d bổ sung và dòng tích hợp nằm ngoài bảng gốc.
+
+## Định dạng tích hợp đậm, nghiêng và màu
+
+- Prompt yêu cầu mọi nội dung NLS/AI được thêm mới dùng Markdown `***...***`: NLS có ngữ nghĩa xanh lá, AI có ngữ nghĩa tím.
+- Parser xử lý triple emphasis trước double emphasis thành `strong > em`; lớp mã NLS/AI giữ màu, đậm và nghiêng an toàn trong preview lẫn Word xuất ra.
+- Mẫu dùng `***...***` cho toàn bộ nội dung tích hợp bổ sung và các mã trong bảng tổng hợp.
