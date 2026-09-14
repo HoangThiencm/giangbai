@@ -61,3 +61,14 @@
 ## Sửa lỗi: hiển thị Sổ Điểm trên hub giáo viên
 - Bổ sung ánh xạ `sodiem: 'sodiem.html'` vào `TOOL_PAGE_LINKS` của `index.html`, để thẻ Sổ Điểm được xử lý theo quyền `sodiem` do Admin cấp.
 - Bổ sung hồi quy trong `tests/teacher-permissions-smoke.js` để yêu cầu ánh xạ này luôn tồn tại.
+
+## Bổ sung: sửa vị trí cấy NLS/AI và xem trước DOCX
+- Prompt delta dùng mảng độc lập cho từng mã NLS/AI, nhận trực tiếp nguồn PPCT nguyên văn và yêu cầu giữ mô tả cụ thể của giáo viên; không gộp mã hoặc tạo ngoặc vuông lồng nhau.
+- Mục I được cấy ngay trước ranh giới `Phẩm chất` hoặc `Thiết bị dạy học`/`Mục II`, nhờ đó không tách các gạch đầu dòng của năng lực đặc thù.
+- Mỗi mã Mục III được định vị theo riêng Hoạt động 2/3/4 rồi mới tìm `d) Tổ chức thực hiện` (hoặc `thực hiện nhiệm vụ`) trong phạm vi hoạt động đó. Nội dung cấy gồm đúng bốn bước CV 5512 và không dùng Hoạt động Khởi động làm mốc mặc định.
+- Sau cấy, màn hình xem trước được Mammoth dựng lại trực tiếp từ `injectedDocxBlob` và cuộn mượt đến dòng tích hợp.
+
+## Kiểm tra bổ sung
+- `git diff --check`: đạt, không có lỗi whitespace.
+- Đã đối chiếu tĩnh luồng cấy để xác nhận Mục I tìm mốc kết thúc trước khi thêm node và Mục III giới hạn tìm kiếm trong hoạt động đã chỉ định.
+- Headless Edge DOM dump hoàn tất, DOM kết xuất 99.215 ký tự, không phát sinh lỗi JS.
