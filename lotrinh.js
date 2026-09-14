@@ -1235,6 +1235,7 @@
         if (teacher && typeof window.mountTeacherLotrinhNav === 'function') {
             window.mountTeacherLotrinhNav({ mode: preview ? 'preview' : 'design', subject: PAGE_SUBJECT });
         }
+        document.getElementById('teacherClassPublishToolbar')?.remove();
         if (teacher && !preview) {
             refreshTeacherQuotaBanner();
         } else {
@@ -5198,6 +5199,8 @@
         state.user = data.user;
         ensureStudentOnAllowedLotrinhPage(state.user);
         state.lessons = (data.lessons || []).map(lesson => ({ ...lesson, _detailLoaded: false })).filter(lesson => lessonMatchesPageSubject(lesson));
+        // The API already returns only lessons opened to this student's class. Keep this
+        // list intact so chapter progress and completion statistics use that same scope.
         if ((state.user?.role || data.user?.role) === 'student') {
             state.lessons = state.lessons.filter(lesson => !!lesson.is_published);
         }

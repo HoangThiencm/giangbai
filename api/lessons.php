@@ -73,6 +73,7 @@ function lesson_row_to_summary(array $row): array
         'slug' => $row['slug'] ?? '',
         'order_index' => (int)($row['order_index'] ?? 0),
         'is_published' => (bool)($row['is_published'] ?? 0),
+        'published_classes' => parse_json_or_default($row['published_classes_json'] ?? null, []),
         'goal' => $row['goal_text'] ?? '',
         'skills' => parse_json_or_default($row['skills_json'] ?? null, []),
     ];
@@ -106,6 +107,7 @@ function lesson_row_to_payload(array $row): array
         'slug' => $row['slug'] ?? '',
         'order_index' => (int)($row['order_index'] ?? 0),
         'is_published' => (bool)($row['is_published'] ?? 0),
+        'published_classes' => parse_json_or_default($row['published_classes_json'] ?? null, []),
         'goal' => $row['goal_text'] ?? '',
         'theory' => parse_json_or_default($row['theory_json'] ?? null, []),
         'examples' => parse_json_or_default($row['examples_json'] ?? null, []),
@@ -118,6 +120,25 @@ function lesson_row_to_payload(array $row): array
         'tasks' => parse_json_or_default($row['tasks_json'] ?? null, []),
         'skills' => parse_json_or_default($row['skills_json'] ?? null, []),
     ];
+}
+
+function normalize_published_classes($classes): array
+{
+    if (!is_array($classes)) return [];
+    $result = [];
+    foreach ($classes as $className) {
+        $className = trim((string)$className);
+        if ($className !== '') $result[] = $className;
+    }
+    return array_values(array_unique($result));
+}
+
+function lesson_is_available_to_student(array $lesson, array $user): bool
+{
+    if (empty($lesson['is_published'])) return false;
+    $classes = $lesson['published_classes'] ?? parse_json_or_default($lesson['published_classes_json'] ?? null, []);
+    if (!is_array($classes) || !$classes || in_array('*', $classes, true)) return true;
+    return in_array(trim((string)($user['class_name'] ?? '')), $classes, true);
 }
 
 function ensure_login(): array
@@ -155,6 +176,7 @@ function ensure_lesson_schema(PDO $pdo): void
             slug VARCHAR(120) NOT NULL UNIQUE,
             order_index INT NOT NULL DEFAULT 0,
             is_published TINYINT(1) NOT NULL DEFAULT 0,
+            published_classes_json TEXT DEFAULT NULL,
             goal_text TEXT DEFAULT NULL,
             theory_json LONGTEXT DEFAULT NULL,
             examples_json LONGTEXT DEFAULT NULL,
@@ -180,7 +202,8 @@ function ensure_lesson_schema(PDO $pdo): void
             'drag_json LONGTEXT DEFAULT NULL',
             'videos_json LONGTEXT DEFAULT NULL',
             'tasks_json LONGTEXT DEFAULT NULL',
-            'skills_json LONGTEXT DEFAULT NULL'
+            'skills_json LONGTEXT DEFAULT NULL',
+            'published_classes_json TEXT DEFAULT NULL'
         ];
         foreach ($columns as $definition) {
             $name = trim(strtok($definition, ' '));
@@ -232,7 +255,7 @@ function ensure_progress_schema(PDO $pdo): void
     }
 }
 
-const LESSON_SCHEMA_VERSION = '20260624-lessons-v1';
+const LESSON_SCHEMA_VERSION = '20260914-lessons-class-publish-v1';
 
 function ensure_lesson_tables_ready(PDO $pdo): void
 {
@@ -335,9 +358,7 @@ if ($method === 'GET' && !empty($_GET['admin'])) {
     if (!$canManageLessons) {
         ensure_login();
     }
-    if (!table_exists($pdo, 'lessons')) {
-        ensure_lesson_tables_ready($pdo);
-    }
+    ensure_lesson_tables_ready($pdo);
     if (!table_exists($pdo, 'lessons')) {
         respond([
             'error' => 'Chưa có bảng lessons trên database.',
@@ -355,7 +376,7 @@ if ($method === 'GET' && !empty($_GET['admin'])) {
     }
     $useSummary = empty($_GET['full']);
     if ($useSummary) {
-        $stmt = $pdo->query('SELECT id, subject, chapter, title, slug, order_index, is_published, goal_text, skills_json FROM lessons ORDER BY order_index ASC, id ASC');
+        $stmt = $pdo->query('SELECT id, subject, chapter, title, slug, order_index, is_published, published_classes_json, goal_text, skills_json FROM lessons ORDER BY order_index ASC, id ASC');
         respond(['ok' => true, 'lessons' => array_map('lesson_row_to_summary', $stmt->fetchAll())]);
     }
     $stmt = $pdo->query('SELECT * FROM lessons ORDER BY order_index ASC, id ASC');
@@ -364,15 +385,13 @@ if ($method === 'GET' && !empty($_GET['admin'])) {
 
 if ($method === 'GET' && !empty($_GET['lesson_id']) && empty($_GET['admin'])) {
     $user = ensure_login();
-    if (!table_exists($pdo, 'lessons')) {
-        ensure_lesson_tables_ready($pdo);
-    }
+    ensure_lesson_tables_ready($pdo);
     $lessonId = (int)$_GET['lesson_id'];
     $row = fetch_lesson_row($pdo, $lessonId);
     if (!$row) {
         respond(['error' => 'Không tìm thấy bài học.'], 404);
     }
-    if ($user['role'] === 'student' && empty($row['is_published'])) {
+    if ($user['role'] === 'student' && !lesson_is_available_to_student($row, $user)) {
         respond(['error' => 'Bài học chưa được mở cho học sinh.'], 403);
     }
     $requestedSubject = trim((string)($_GET['subject'] ?? ''));
@@ -384,9 +403,7 @@ if ($method === 'GET' && !empty($_GET['lesson_id']) && empty($_GET['admin'])) {
 
 if ($method === 'GET') {
     $user = ensure_login();
-    if (!table_exists($pdo, 'lessons')) {
-        ensure_lesson_tables_ready($pdo);
-    }
+    ensure_lesson_tables_ready($pdo);
     if (!table_exists($pdo, 'lessons')) {
         respond([
             'error' => 'Chưa có bảng lessons trên database.',
@@ -395,7 +412,7 @@ if ($method === 'GET') {
     }
     $useSummary = !empty($_GET['summary']);
     if ($useSummary) {
-        $stmt = $pdo->query('SELECT id, subject, chapter, title, slug, order_index, is_published, goal_text, skills_json FROM lessons ORDER BY order_index ASC, id ASC');
+        $stmt = $pdo->query('SELECT id, subject, chapter, title, slug, order_index, is_published, published_classes_json, goal_text, skills_json FROM lessons ORDER BY order_index ASC, id ASC');
         $lessons = array_map('lesson_row_to_summary', $stmt->fetchAll());
     } else {
         $stmt = $pdo->query('SELECT * FROM lessons ORDER BY order_index ASC, id ASC');
@@ -419,7 +436,7 @@ if ($method === 'GET') {
                 fn($lesson) => in_array(trim((string)($lesson['subject'] ?? '')), $allowedSubjects, true)
             ));
         }
-        $lessons = array_values(array_filter($lessons, fn($lesson) => $lesson['is_published']));
+        $lessons = array_values(array_filter($lessons, fn($lesson) => lesson_is_available_to_student($lesson, $user)));
     }
 
     $progressMap = [];
@@ -546,6 +563,18 @@ if ($method === 'POST' && $action === 'save_content') {
     $slug = trim($data['slug'] ?? '');
     if ($slug === '') respond(['error' => 'Thiếu slug.'], 422);
 
+    $publishedClasses = normalize_published_classes($data['published_classes'] ?? (!empty($data['is_published']) ? ['*'] : []));
+    if (!$isAdmin && ($sessionUser['role'] ?? '') === 'teacher') {
+        $managedClasses = teacher_managed_classes($sessionUser);
+        if (in_array('*', $publishedClasses, true)) {
+            $publishedClasses = $managedClasses;
+        }
+        foreach ($publishedClasses as $className) {
+            if (!in_array($className, $managedClasses, true)) {
+                respond(['error' => 'Bạn chỉ có thể mở bài cho các lớp mình phụ trách.'], 403);
+            }
+        }
+    }
     $payload = [
         'subject' => trim($data['subject'] ?? 'Toán 6'),
         'chapter' => trim($data['chapter'] ?? ''),
@@ -562,7 +591,8 @@ if ($method === 'POST' && $action === 'save_content') {
         'tasks_json' => json_encode($data['tasks'] ?? [], JSON_UNESCAPED_UNICODE),
         'skills_json' => json_encode($data['skills'] ?? [], JSON_UNESCAPED_UNICODE),
         'order_index' => (int)($data['order_index'] ?? 0),
-        'is_published' => !empty($data['is_published']) ? 1 : 0,
+        'published_classes_json' => json_encode($publishedClasses, JSON_UNESCAPED_UNICODE),
+        'is_published' => !empty($data['is_published']) && !empty($publishedClasses) ? 1 : 0,
     ];
 
     $existing = find_lesson_by_id_or_slug($pdo, $lessonId, '');
@@ -575,7 +605,7 @@ if ($method === 'POST' && $action === 'save_content') {
         }
         $update = $pdo->prepare('
             UPDATE lessons
-            SET subject = ?, chapter = ?, title = ?, slug = ?, goal_text = ?, theory_json = ?, examples_json = ?, self_practice_json = ?, questions_json = ?, essay_json = ?, fill_json = ?, drag_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
+            SET subject = ?, chapter = ?, title = ?, slug = ?, goal_text = ?, theory_json = ?, examples_json = ?, self_practice_json = ?, questions_json = ?, essay_json = ?, fill_json = ?, drag_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?, published_classes_json = ?
             WHERE id = ?
         ');
         $update->execute([
@@ -596,6 +626,7 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['skills_json'],
             $payload['order_index'],
             $payload['is_published'],
+            $payload['published_classes_json'],
             (int)$existing['id']
         ]);
         $wasPublished = !empty($existing['is_published']);
@@ -615,7 +646,7 @@ if ($method === 'POST' && $action === 'save_content') {
     if ($existingBySlug) {
         $update = $pdo->prepare('
             UPDATE lessons
-            SET subject = ?, chapter = ?, title = ?, goal_text = ?, theory_json = ?, examples_json = ?, self_practice_json = ?, questions_json = ?, essay_json = ?, fill_json = ?, drag_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?
+            SET subject = ?, chapter = ?, title = ?, goal_text = ?, theory_json = ?, examples_json = ?, self_practice_json = ?, questions_json = ?, essay_json = ?, fill_json = ?, drag_json = ?, videos_json = ?, tasks_json = ?, skills_json = ?, order_index = ?, is_published = ?, published_classes_json = ?
             WHERE slug = ?
         ');
         $update->execute([
@@ -635,6 +666,7 @@ if ($method === 'POST' && $action === 'save_content') {
             $payload['skills_json'],
             $payload['order_index'],
             $payload['is_published'],
+            $payload['published_classes_json'],
             $slug
         ]);
         $wasPublished = !empty($existingBySlug['is_published']);
@@ -648,8 +680,8 @@ if ($method === 'POST' && $action === 'save_content') {
     }
 
     $insert = $pdo->prepare('
-        INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, goal_text, theory_json, examples_json, self_practice_json, questions_json, essay_json, fill_json, drag_json, videos_json, tasks_json, skills_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO lessons (subject, chapter, title, slug, order_index, is_published, published_classes_json, goal_text, theory_json, examples_json, self_practice_json, questions_json, essay_json, fill_json, drag_json, videos_json, tasks_json, skills_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
     $insert->execute([
         $payload['subject'],
@@ -658,6 +690,7 @@ if ($method === 'POST' && $action === 'save_content') {
         $slug,
         $payload['order_index'],
         $payload['is_published'],
+        $payload['published_classes_json'],
         $payload['goal_text'],
         $payload['theory_json'],
         $payload['examples_json'],
@@ -675,6 +708,35 @@ if ($method === 'POST' && $action === 'save_content') {
         notify_students_for_lesson($pdo, $newLessonId, $payload['subject'], $payload['title']);
     }
     respond(['ok' => true, 'id' => $newLessonId, 'slug' => $slug]);
+}
+
+if ($method === 'POST' && $action === 'update_published_classes') {
+    $data = $requestData;
+    $lessonId = (int)($data['lesson_id'] ?? 0);
+    $lesson = find_lesson_by_id_or_slug($pdo, $lessonId, '');
+    if (!$lesson) respond(['error' => 'Không tìm thấy bài học.'], 404);
+    require_lesson_manager($isAdmin, $sessionUser, trim($lesson['subject'] ?? ''));
+    $classes = normalize_published_classes($data['published_classes'] ?? []);
+    if (!$isAdmin && ($sessionUser['role'] ?? '') === 'teacher') {
+        $managedClasses = teacher_managed_classes($sessionUser);
+        foreach ($classes as $className) {
+            if (!in_array($className, $managedClasses, true)) {
+                respond(['error' => 'Bạn chỉ có thể cập nhật các lớp mình phụ trách.'], 403);
+            }
+        }
+        // Preserve classes owned by another teacher; this action only changes the selected teacher's scope.
+        $existing = normalize_published_classes(parse_json_or_default($lesson['published_classes_json'] ?? null, []));
+        if (in_array('*', $existing, true)) {
+            // A legacy all-class lesson must become an explicit class list before one
+            // teacher can close it for just one of their classes.
+            $classStmt = $pdo->query("SELECT DISTINCT class_name FROM users WHERE role = 'student' AND class_name IS NOT NULL AND TRIM(class_name) <> ''");
+            $existing = normalize_published_classes($classStmt->fetchAll(PDO::FETCH_COLUMN));
+        }
+        $classes = array_values(array_unique(array_merge(array_diff($existing, $managedClasses), $classes)));
+    }
+    $stmt = $pdo->prepare('UPDATE lessons SET published_classes_json = ?, is_published = ? WHERE id = ?');
+    $stmt->execute([json_encode($classes, JSON_UNESCAPED_UNICODE), $classes ? 1 : 0, $lessonId]);
+    respond(['ok' => true, 'lesson_id' => $lessonId, 'published_classes' => $classes]);
 }
 
 if ($method === 'POST' && $action === 'delete_lesson') {
