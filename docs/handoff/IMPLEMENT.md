@@ -25,3 +25,6 @@
 
 ## Lưu ý phạm vi
 - `tichhopgiaoan.html` không được tạo lại theo yêu cầu xóa mới nhất của người dùng, dù kế hoạch còn nêu alias này.
+
+## Bổ sung ngoài kế hoạch
+- Sửa nháy trang chủ khi chưa đăng nhập: `index.html` luôn ẩn nội dung trong lúc xác thực phiên; chỉ hiện sau khi kiểm tra thành công hoặc dùng dữ liệu quyền đã biết. Phiên không hợp lệ dùng `location.replace('login.html')` để chuyển thẳng sang trang đăng nhập.
