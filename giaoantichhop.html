@@ -3,209 +3,185 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Xuất Kế hoạch Bài dạy Tích hợp NLS & AI</title>
+  <title>Tích hợp NLS & AI vào giáo án DOCX</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Inter, Arial, sans-serif; background:#f8fafc; }
-    .paper { background:#fff; width:210mm; min-height:297mm; margin:auto; padding:15mm 15mm 15mm 20mm; box-shadow:0 8px 28px #0f172a22; font-family:"Times New Roman",serif; font-size:13pt; line-height:1.15; text-align:justify; }
-    .paper h1 { font-size:14pt; font-weight:bold; text-align:center; text-transform:uppercase; margin:6pt 0; }
-    .paper h2 { font-size:14pt; font-weight:bold; margin:10pt 0 5pt; }
-    .paper h3 { font-size:13pt; font-weight:bold; margin:8pt 0 4pt; }
-    .paper p { margin:3pt 0 6pt; } .paper table{width:100%;border-collapse:collapse;margin:6pt 0}.paper th,.paper td{border:1px solid #111;padding:5px;vertical-align:top}.paper th{background:#f3f4f6;font-weight:bold}.paper ul{margin:3pt 0 6pt;padding-left:22pt}.nls{color:#16a34a;font-weight:bold;font-style:italic}.ai{color:#9333ea;font-weight:bold;font-style:italic}
-    @media print { body{background:#fff}.no-print{display:none!important}.paper{box-shadow:none;margin:0;width:auto;min-height:0} }
+    body{font-family:Inter,Arial,sans-serif;background:#f8fafc}.card{background:#fff;border:1px solid #e2e8f0;border-radius:1rem;box-shadow:0 1px 2px #0f172a0d}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.scroll{scrollbar-width:thin}.pill{display:inline-flex;align-items:center;gap:.35rem;border-radius:999px;padding:.2rem .55rem;font-size:.75rem;font-weight:700}.pill-nls{background:#dcfce7;color:#166534}.pill-ai{background:#f3e8ff;color:#7e22ce}.anchor{white-space:pre-wrap;word-break:break-word}.insert-card{border-left:4px solid #64748b}.insert-card.nls{border-left-color:#16a34a}.insert-card.ai{border-left-color:#9333ea}
   </style>
 </head>
 <body class="text-slate-800">
-  <main class="max-w-7xl mx-auto p-4 md:p-8">
-    <header class="no-print rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 text-white p-6 shadow-lg mb-6">
-      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><h1 class="text-2xl font-extrabold">Hệ thống Xuất Kế hoạch Bài dạy Tích hợp NLS &amp; AI</h1><p class="mt-1 text-emerald-50">Chuyển Markdown từ Gemini thành tài liệu Word có công thức OMML chỉnh sửa được.</p></div><span class="w-fit rounded-full bg-white/20 px-3 py-1 text-sm font-semibold"><i class="fa-solid fa-unlock mr-1"></i>Công khai · Không cần tài khoản</span></div>
-    </header>
-    <section class="no-print rounded-2xl bg-white p-4 shadow-sm border border-slate-200 mb-5 flex flex-wrap gap-3">
+<main class="max-w-7xl mx-auto p-4 md:p-8">
+  <header class="rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-700 text-white p-6 shadow-lg mb-5">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div><h1 class="text-2xl font-extrabold">Hệ thống Tích hợp NLS &amp; AI vào giáo án DOCX</h1><p class="mt-1 text-emerald-50">Giữ nguyên file Word gốc; AI chỉ đề xuất nội dung cần chèn.</p></div>
+      <span class="w-fit rounded-full bg-white/20 px-3 py-1 text-sm font-semibold"><i class="fa-solid fa-shield-halved mr-1"></i>Không tái tạo giáo án</span>
+    </div>
+  </header>
+
+  <section class="card p-4 mb-5">
+    <div class="flex flex-wrap gap-3 items-center">
+      <label class="rounded-xl bg-emerald-700 px-4 py-2.5 text-white font-bold hover:bg-emerald-800 cursor-pointer">
+        <i class="fa-solid fa-file-word mr-2"></i>Chọn giáo án DOCX
+        <input id="docxFile" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="hidden">
+      </label>
       <button id="copyPrompt" class="rounded-xl bg-violet-600 px-4 py-2.5 text-white font-bold hover:bg-violet-700"><i class="fa-regular fa-copy mr-2"></i>Sao chép Prompt cho Gemini</button>
-      <button id="loadSample" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-white font-bold hover:bg-emerald-700"><i class="fa-solid fa-flask mr-2"></i>Nạp giáo án mẫu</button>
+      <button id="loadSampleJson" class="rounded-xl bg-slate-800 px-4 py-2.5 text-white font-bold hover:bg-slate-900"><i class="fa-solid fa-flask mr-2"></i>Nạp JSON mẫu</button>
       <button id="clearAll" class="rounded-xl bg-slate-100 px-4 py-2.5 font-bold hover:bg-slate-200"><i class="fa-solid fa-eraser mr-2"></i>Xóa trắng</button>
-      <span id="notice" class="self-center text-sm font-medium text-slate-500" role="status"></span>
-      <p class="basis-full text-sm text-slate-600"><i class="fa-solid fa-circle-info text-violet-600 mr-1"></i><b>Chế độ chỉ tích hợp — giáo án/bảng gốc không bị đổi.</b> Bước 1: đính kèm PDF giáo án và dán prompt vào Gemini. Bước 2: dán Markdown Gemini trả về tại đây để xem trước/xuất Word.</p>
-    </section>
-    <section class="no-print grid grid-cols-1 lg:grid-cols-2 gap-5">
-      <div class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-        <h2 class="font-extrabold text-lg mb-4"><i class="fa-solid fa-pen-to-square text-emerald-600 mr-2"></i>Thông tin bài dạy</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label class="text-sm font-semibold">Môn học<input id="subject" class="mt-1 w-full rounded-lg border-slate-300" value="Toán lớp 8"></label>
-          <label class="text-sm font-semibold">Khối lớp<select id="grade" class="mt-1 w-full rounded-lg border-slate-300"><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8" selected>Lớp 8</option><option value="9">Lớp 9</option></select></label>
-          <label class="text-sm font-semibold">Tên bài dạy<input id="title" class="mt-1 w-full rounded-lg border-slate-300" value="Hình chóp tam giác đều"></label>
-          <label class="text-sm font-semibold">Thời lượng (tiết)<input id="duration" type="number" min="1" class="mt-1 w-full rounded-lg border-slate-300" value="2"></label>
-          <label class="text-sm font-semibold">Giáo viên / Đơn vị<input id="teacher" class="mt-1 w-full rounded-lg border-slate-300" placeholder="Nguyễn Văn A – Trường THCS..."></label>
+      <span id="notice" class="text-sm font-semibold text-slate-500" role="status"></span>
+    </div>
+    <div class="mt-3 grid gap-2 md:grid-cols-2 text-sm">
+      <p class="text-slate-600"><i class="fa-solid fa-circle-info text-emerald-700 mr-1"></i><b>Khuyến nghị:</b> dùng file <b>.docx</b>. Hệ thống sửa trực tiếp bản sao của DOCX gốc nên bảng, ô gộp, độ rộng cột, header/footer, căn lề và style gốc được giữ lại.</p>
+      <p class="text-amber-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>PDF hoặc .doc cũ không được nhận ở chế độ bảo toàn form. Hãy mở bằng Word và lưu lại thành .docx trước.</p>
+    </div>
+    <div id="fileStatus" class="mt-3 rounded-xl border border-dashed border-slate-300 p-3 text-sm text-slate-500">Chưa chọn giáo án DOCX.</div>
+  </section>
+
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div class="card p-5">
+      <h2 class="font-extrabold text-lg mb-4"><i class="fa-solid fa-pen-to-square text-emerald-600 mr-2"></i>Thông tin bài dạy &amp; khung tích hợp</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label class="text-sm font-semibold">Môn học<input id="subject" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value="Toán lớp 8"></label>
+        <label class="text-sm font-semibold">Khối lớp<select id="grade" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8" selected>Lớp 8</option><option value="9">Lớp 9</option></select></label>
+        <label class="text-sm font-semibold">Tên bài dạy<input id="title" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Nhập tên bài dạy"></label>
+        <label class="text-sm font-semibold">Thời lượng (tiết)<input id="duration" type="number" min="1" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value="1"></label>
+        <label class="text-sm font-semibold sm:col-span-2">Giáo viên / Đơn vị<input id="teacher" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Nguyễn Văn A – Trường THCS..."></label>
+      </div>
+
+      <fieldset class="mt-4 rounded-xl border border-slate-200 p-3">
+        <legend class="px-1 text-sm font-bold">Khung tích hợp chính thức</legend>
+        <div class="flex flex-wrap gap-4 items-center">
+          <label class="inline-flex items-center gap-2 font-semibold text-sm"><input id="enableNls" type="checkbox" class="rounded">Tích hợp NLS (TT 02/CV 3456)</label>
+          <label class="inline-flex items-center gap-2 font-semibold text-sm"><input id="enableAi" type="checkbox" class="rounded">Tích hợp AI (QĐ 2422)</label>
+          <button id="suggestStandards" type="button" class="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-bold text-white hover:bg-slate-900"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Gợi ý mã phù hợp</button>
         </div>
-        <fieldset class="mt-4 rounded-xl border border-slate-200 p-3"><legend class="px-1 text-sm font-bold">Khung tích hợp chính thức</legend><div class="flex flex-wrap gap-4"><label class="inline-flex items-center gap-2 font-semibold text-sm"><input id="enableNls" type="checkbox" class="rounded text-emerald-600">Tích hợp NLS (TT 02/CV 3456)</label><label class="inline-flex items-center gap-2 font-semibold text-sm"><input id="enableAi" type="checkbox" class="rounded text-violet-600">Tích hợp AI (QĐ 2422)</label><button id="suggestStandards" type="button" class="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-bold text-white hover:bg-slate-900"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Gợi ý mã phù hợp</button></div><p id="standardCount" class="mt-2 text-sm font-medium text-slate-600" role="status"></p><div class="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2"><div><h3 class="text-sm font-extrabold text-emerald-700">Danh mục NLS chính thức</h3><div id="nlsCatalog" class="mt-1 max-h-56 overflow-y-auto rounded-lg border border-emerald-100 p-2 text-sm"></div></div><div><h3 class="text-sm font-extrabold text-violet-700">Danh mục AI chính thức</h3><div id="aiCatalog" class="mt-1 max-h-56 overflow-y-auto rounded-lg border border-violet-100 p-2 text-sm"></div></div></div></fieldset>
-        <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2"><label class="block text-sm font-semibold">Nội dung NLS từ PPCT (nếu có)<textarea id="ppctNls" class="mt-1 w-full min-h-28 rounded-xl border-slate-300 text-sm" placeholder="Dán nguyên văn mã, nội dung hoặc gợi ý NLS từ PPCT…"></textarea></label><label class="block text-sm font-semibold">Nội dung AI từ PPCT (nếu có)<textarea id="ppctAi" class="mt-1 w-full min-h-28 rounded-xl border-slate-300 text-sm" placeholder="Dán nguyên văn mã, nội dung hoặc gợi ý AI từ PPCT…"></textarea></label></div>
-        <label class="block text-sm font-semibold mt-4">Giáo án Markdown từ Gemini<textarea id="markdown" class="mt-1 w-full min-h-[470px] rounded-xl border-slate-300 font-mono text-sm" placeholder="Dán toàn văn giáo án Markdown vào đây…"></textarea></label>
+        <p id="standardCount" class="mt-2 text-sm font-medium text-slate-600"></p>
+        <div class="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <div><h3 class="text-sm font-extrabold text-emerald-700">Danh mục NLS chính thức</h3><div id="nlsCatalog" class="scroll mt-1 max-h-56 overflow-y-auto rounded-lg border border-emerald-100 p-2 text-sm"></div></div>
+          <div><h3 class="text-sm font-extrabold text-violet-700">Danh mục AI chính thức</h3><div id="aiCatalog" class="scroll mt-1 max-h-56 overflow-y-auto rounded-lg border border-violet-100 p-2 text-sm"></div></div>
+        </div>
+      </fieldset>
+
+      <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <label class="block text-sm font-semibold">Nội dung NLS từ PPCT (nếu có)<textarea id="ppctNls" class="mt-1 w-full min-h-28 rounded-xl border border-slate-300 p-3 text-sm" placeholder="Dán nguyên văn mã/nội dung NLS từ PPCT..."></textarea></label>
+        <label class="block text-sm font-semibold">Nội dung AI từ PPCT (nếu có)<textarea id="ppctAi" class="mt-1 w-full min-h-28 rounded-xl border border-slate-300 p-3 text-sm" placeholder="Dán nguyên văn mã/nội dung AI từ PPCT..."></textarea></label>
       </div>
-      <div class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200 flex flex-col">
-        <div class="flex items-center justify-between gap-3 mb-4"><h2 class="font-extrabold text-lg"><i class="fa-regular fa-file-lines text-violet-600 mr-2"></i>Xem trước trang in A4</h2><button id="exportWord" class="rounded-xl bg-blue-700 px-4 py-2.5 text-white font-bold hover:bg-blue-800"><i class="fa-solid fa-file-word mr-2"></i>Xuất Word (.doc / OMML)</button></div>
-        <div class="overflow-auto bg-slate-100 rounded-xl p-3 flex-1"><article id="preview" class="paper"><p class="text-slate-400" style="text-align:center">Nạp mẫu hoặc dán Markdown để xem trước.</p></article></div>
+
+      <label class="block text-sm font-semibold mt-4">JSON do Gemini trả về<textarea id="geminiJson" class="mono mt-1 w-full min-h-[320px] rounded-xl border border-slate-300 p-3 text-sm" placeholder='Dán JSON từ Gemini vào đây, ví dụ: {"insertions":[...]}'></textarea></label>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button id="validateJson" class="rounded-xl bg-emerald-700 px-4 py-2.5 text-white font-bold hover:bg-emerald-800"><i class="fa-solid fa-check-double mr-2"></i>Kiểm tra JSON</button>
+        <button id="showSource" class="rounded-xl bg-slate-100 px-4 py-2.5 font-bold hover:bg-slate-200"><i class="fa-solid fa-list-ol mr-2"></i>Xem danh sách đoạn</button>
       </div>
-    </section>
-  </main>
-  <script src="js/khbd-standards.js"></script>
-  <script>
-  (() => {
-    'use strict';
-    const $ = id => document.getElementById(id);
-    const fields = ['subject','grade','title','duration','teacher','ppctNls','ppctAi','markdown'].map($);
-    const selectedStandards = new Set();
-    const frameworks = () => ({ nls: $('enableNls').checked, ai: $('enableAi').checked });
-    const catalogEntries = kind => typeof entriesForGrade === 'function' ? entriesForGrade(kind, Number($('grade').value)) : [];
-    const allSelected = () => ['digital','ai'].flatMap(kind => catalogEntries(kind).filter(entry => selectedStandards.has(entry.id)).map(entry => ({kind, entry})));
-    const selectionLimit = () => Number($('duration').value) <= 1 ? 1 : 2;
-    const selectedByKind = kind => allSelected().filter(item => item.kind === kind);
-    const integrationSuggestion = item => `Hoạt động gắn với bài “${$('title').value.trim() || 'bài dạy'}”: học sinh thực hiện nhiệm vụ phù hợp với [${item.entry.code}] ${item.entry.label}; nộp sản phẩm/phiếu học tập làm minh chứng, giáo viên quan sát và đối chiếu với mục tiêu bài học${item.kind === 'ai' ? ', kiểm chứng kết quả AI bằng SGK hoặc nguồn tin cậy trước khi sử dụng' : ''}.`;
-    function renderCatalogs() {
-      const enabled = frameworks();
-      [['digital','nlsCatalog','nls'],['ai','aiCatalog','ai']].forEach(([kind,target,flag]) => {
-        const root=$(target), allowed=enabled[flag], entries=catalogEntries(kind); root.innerHTML='';
-        if (!entries.length) { root.textContent='Chưa tải được danh mục chuẩn.'; return; }
-        const groups={}; entries.forEach(entry=>{const group=kind==='digital' ? `${entry.domain} · ${entry.band}` : `Lớp ${$('grade').value}`;(groups[group] ||= []).push(entry);});
-        Object.entries(groups).forEach(([group, rows])=>{const heading=document.createElement('p');heading.className='mt-1 font-bold text-slate-700';heading.textContent=group;root.append(heading);rows.forEach(entry=>{const label=document.createElement('label');label.className='flex gap-2 rounded p-1.5 '+(allowed?'hover:bg-slate-50':'opacity-50');const input=document.createElement('input');input.type='checkbox';input.className='mt-1';input.checked=selectedStandards.has(entry.id);input.disabled=!allowed;input.dataset.kind=kind;input.dataset.id=entry.id;input.addEventListener('change',()=>toggleStandard(kind,entry,input));const text=document.createElement('span');text.innerHTML='<b>'+esc(entry.code)+'</b> — '+esc(entry.label)+(entry.descriptor?' <span class="text-slate-500">('+esc(entry.descriptor)+')</span>':'');label.append(input,text);root.append(label);});});
-      }); updateStandardCount();
-    }
-    function updateStandardCount() { const nls=selectedByKind('digital').length, ai=selectedByKind('ai').length, limit=selectionLimit(); $('standardCount').textContent=`Đã chọn ${nls + ai}/${limit} mã tổng cộng · NLS: ${nls} · AI: ${ai}. ${limit === 1 ? 'Bài 1 tiết chỉ chọn NLS hoặc AI.' : 'Nếu chọn cả hai, tối đa 1 NLS + 1 AI.'}`; }
-    function toggleStandard(kind, entry, input) { if (!input.checked) { selectedStandards.delete(entry.id); updateStandardCount(); return; } const count=allSelected().length, same=selectedByKind(kind).length, limit=selectionLimit(); const invalid=count >= limit || (limit === 1 && count > 0) || (limit === 2 && same >= 2) || (limit === 2 && selectedByKind(kind === 'digital' ? 'ai' : 'digital').length && same >= 1); if (invalid) { input.checked=false; show(limit === 1 ? 'Bài 1 tiết chỉ được chọn một mã NLS hoặc AI.' : 'Tối đa 2 mã; khi tích hợp hỗn hợp chỉ chọn 1 NLS và 1 AI.',true); return; } selectedStandards.add(entry.id); updateStandardCount(); }
-    function clearUnavailableSelections(){ const active=new Set([...catalogEntries('digital'),...catalogEntries('ai')].map(e=>e.id)); [...selectedStandards].forEach(id=>{if(!active.has(id))selectedStandards.delete(id);}); }
-    function buildPrompt() {
-      const subject = $('subject').value.trim() || '[chưa nhập môn học]';
-      const title = $('title').value.trim() || '[chưa nhập tên bài]';
-      const duration = Math.max(1, Number.parseInt($('duration').value, 10) || 1);
-      const teacher = $('teacher').value.trim() || '[chưa nhập]';
-      const original = $('markdown').value.trim();
-      const ppctNls = $('ppctNls').value.trim();
-      const ppctAi = $('ppctAi').value.trim();
-      const enabled = frameworks();
-      const chosen = allSelected();
-      const catalogText = kind => catalogEntries(kind).map(entry => `- [${entry.code}] ${entry.label}${entry.descriptor ? ' — '+entry.descriptor : ''}`).join('\n');
-      const selectionText = chosen.length
-        ? `MÃ ĐƯỢC GIÁO VIÊN CHỌN (bắt buộc, độc quyền; không thay thế hoặc thêm mã khác):\n${chosen.map(item => `- ***[${item.entry.code}] ${item.entry.label}${item.entry.descriptor ? ' — '+item.entry.descriptor : ''}***`).join('\n')}\nKhi bổ sung, đặt mã này dưới hoạt động gốc thực sự phù hợp, nêu nhiệm vụ học sinh, sản phẩm/minh chứng và kiểm chứng AI khi áp dụng.`
-        : `${enabled.nls || enabled.ai ? 'GIÁO VIÊN ĐÃ BẬT KHUNG NHƯNG CHƯA CHỌN MÃ: chỉ được chọn mã từ danh mục cục bộ bên dưới; không tự tạo mã. Chọn ít nhất cần thiết, phù hợp ngữ cảnh và đúng hạn mức.' : 'GIÁO VIÊN CHƯA BẬT KHUNG NLS/AI: không tự thêm mã tích hợp.'}\n${enabled.nls ? '\nDanh mục NLS chính thức hiển thị cho lớp đã chọn:\n'+catalogText('digital') : ''}${enabled.ai ? '\nDanh mục AI chính thức hiển thị cho lớp đã chọn:\n'+catalogText('ai') : ''}`;
-      const ppctSource = (ppctNls || ppctAi) ? `NGUỒN PPCT ƯU TIÊN CAO NHẤT (bảo toàn từng ký tự, không thay mã/nội dung/gợi ý, không chỉnh sửa PPCT):\n${ppctNls ? `NLS từ PPCT:\n${ppctNls}` : ''}${ppctNls && ppctAi ? '\n\n' : ''}${ppctAi ? `AI từ PPCT:\n${ppctAi}` : ''}\n\nMọi bổ sung tích hợp phải ưu tiên lấy từ nguồn PPCT này khi phù hợp. Mã tick do giáo viên chọn chỉ bắt buộc khi thực sự được tick. Nếu mã tick xung đột với PPCT, giữ nguyên PPCT, không âm thầm thay thế/chuẩn hóa; chỉ thêm một dòng nhãn rõ “Cờ xung đột PPCT/mã đã chọn” để báo giáo viên, không viết lại nguồn.` : 'Không có nội dung PPCT bổ sung được dán; chỉ áp dụng mã tick khi giáo viên đã tick.';
-      const sourceMode = original
-        ? `CHẾ ĐỘ B — MARKDOWN ĐÃ DÁN: Markdown giữa delimiter dưới đây là nguồn duy nhất. Phải giữ nguyên văn từng ký tự, tiêu đề, đoạn, danh sách, bảng, công thức, hàng/cột/ô và thứ tự.`
-        : `CHẾ ĐỘ A — PDF ĐÍNH KÈM: Tệp PDF giáo án người dùng đính kèm trong cuộc trò chuyện này là nguồn duy nhất. Đọc PDF và chép lại sang Markdown chính xác nhất có thể, giữ mọi tiêu đề, đoạn, danh sách, bảng, công thức, hàng/cột/ô và thứ tự; không tạo mẫu, không tái tạo hay thêm giáo án mới. Nếu PDF không có hoặc không đọc được, chỉ trả đúng câu: Hãy đính kèm tệp PDF giáo án gốc.`;
-      const sourceBlock = original ? `--- BẮT ĐẦU GIÁO ÁN NGUỒN (GIỮ NGUYÊN) ---\n${original}\n--- KẾT THÚC GIÁO ÁN NGUỒN (GIỮ NGUYÊN) ---` : 'PDF giáo án gốc được người dùng đính kèm riêng trong cuộc trò chuyện.';
-      const limits = duration === 1
-        ? 'Bài 1 tiết: tối đa 01 mã TỔNG CỘNG, chọn NLS HOẶC AI (không dùng cả hai trừ khi người dùng yêu cầu rõ).'
-        : 'Bài từ 2 tiết trở lên: tối đa 02 mã TỔNG CỘNG. Nếu chỉ tích hợp NLS thì tối đa 02 mã NLS; nếu chỉ tích hợp AI thì tối đa 02 mã AI; nếu tích hợp cả hai thì đúng 01 mã NLS + 01 mã AI.';
-      const nlsObjective = selectedByKind('digital').length ? 'sao chép đúng mã và tên từ danh sách mã giáo viên chọn ở trên.' : 'Không tích hợp năng lực số.';
-      const aiObjective = selectedByKind('ai').length ? 'sao chép đúng mã và tên từ danh sách mã giáo viên chọn ở trên.' : 'Không tích hợp năng lực AI';
-      const objectiveFormat = `XỬ LÝ PHẦN “I. MỤC TIÊU” KHÔNG ĐƯỢC SỬA NGUỒN: Nếu nguồn đã có Mục I với a) Năng lực chung và b) Năng lực đặc thù, giữ nguyên từng ký tự a/b và chỉ nối c) Năng lực số — ${nlsObjective}; d) Năng lực AI — ${aiObjective}. c/d dùng Markdown ***...***; NLS xanh lá, AI tím. Nếu nguồn không có đúng các đề mục trên, không tạo hay cơ cấu lại Mục I; chỉ thêm khối “Bổ sung tích hợp NLS/AI” sau nguồn.`;
-      return `Bạn là chuyên gia sư phạm Việt Nam, am hiểu Thông tư 02/2025/TT-BGDĐT, Công văn 3456/BGDĐT-GDPT (Năng lực số), Quyết định 2422/QĐ-BGDĐT (năng lực AI) và Công văn 5512/BGDĐT-GDTrH.
+    </div>
 
-NHIỆM VỤ: Trích xuất bổ sung tích hợp có kiểm soát từ giáo án nguồn dưới đây.
-- Môn học: ${subject}
-- Tên bài dạy: ${title}
-- Thời lượng: ${duration} tiết
-- Giáo viên / đơn vị: ${teacher}
+    <div class="card p-5 flex flex-col min-h-[780px]">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div><h2 class="font-extrabold text-lg"><i class="fa-regular fa-file-lines text-violet-600 mr-2"></i>Xem trước phần sẽ chèn</h2><p class="text-xs text-slate-500 mt-1">Không dựng lại giáo án trên web. Chỉ hiển thị nội dung bổ sung để duyệt.</p></div>
+        <button id="createDocx" class="rounded-xl bg-blue-700 px-4 py-2.5 text-white font-bold hover:bg-blue-800"><i class="fa-solid fa-file-word mr-2"></i>Tạo giáo án tích hợp (.docx)</button>
+      </div>
+      <div id="review" class="flex-1 rounded-xl bg-slate-50 border border-slate-200 p-4 overflow-auto"><p class="text-slate-400 text-center mt-16">Chọn DOCX, sao chép prompt cho Gemini và dán JSON kết quả để xem trước.</p></div>
+      <details id="sourceDetails" class="mt-4 rounded-xl border border-slate-200 bg-white"><summary class="cursor-pointer px-4 py-3 font-bold">Danh sách đoạn văn đã đánh số trong DOCX</summary><div id="sourceList" class="scroll max-h-72 overflow-auto border-t border-slate-200 p-3 text-sm"></div></details>
+    </div>
+  </section>
+</main>
+<script src="js/khbd-standards.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const selectedStandards = new Set();
+  let originalFile = null;
+  let originalBuffer = null;
+  let paragraphMap = [];
+  let parsedInsertions = [];
 
-NGUYÊN TẮC BẮT BUỘC:
-1. BẢO TOÀN BẤT BIẾN NGUỒN: phải tái hiện nguyên văn toàn bộ giáo án gốc, gồm mọi đoạn văn, tiêu đề, danh sách, công thức, thời lượng, mã NLS/AI đã có, bảng, tiêu đề bảng, số lượng/thứ tự hàng và cột, và từng ô bảng. Tuyệt đối không viết lại, diễn đạt lại, sửa lỗi, rút gọn, bổ sung, xóa, đổi vị trí hay thay cột/hàng/cell của nguồn. Một bảng 2 cột phải vẫn là bảng 2 cột.
-2. Chỉ được bổ sung theo ba cách sau: (a) áp dụng đúng quy tắc Mục I bên dưới; (b) ngay dưới một hoạt động gốc thực sự liên quan và nằm ngoài bảng, nối dòng có nhãn rõ ràng, in đậm, chứa mã/tên chuẩn đã chọn, nhiệm vụ AI/giáo viên/học sinh, sản phẩm-minh chứng và kiểm chứng; không sửa chữ hoặc ô của hoạt động gốc; (c) chỉ sau TOÀN BỘ nội dung gốc mới được nối bảng tổng hợp tích hợp. Không thay thế hay sửa bất kỳ bảng gốc nào.
-3. Tích hợp NLS theo CV 3456 và AI theo QĐ 2422 đúng ngữ cảnh, có ích cho hoạt động học, không gán khiên cưỡng. ${limits} Đây là mức tối đa, không bắt buộc phải dùng đủ; hãy dùng ít hơn hoặc không dùng khi không có hoạt động phù hợp.
-4. Ghi mã NLS theo đúng kiểu mã của khung năng lực số (ví dụ [1.1.TC2a]); ghi mã AI theo đúng kiểu mã năng lực AI (ví dụ [8.A1.1]). Không tự chế mã. Mỗi tích hợp phải nêu rõ tên năng lực/mã, việc học sinh thực hiện, sản phẩm/minh chứng và cách giáo viên quan sát/đánh giá.
-5. Với hoạt động có AI, nêu quy trình dùng AI an toàn: giao nhiệm vụ rõ, kiểm tra nguồn/đối chiếu SGK hoặc dữ liệu tin cậy, yêu cầu học sinh giải thích và tự chịu trách nhiệm về kết quả; giáo viên kiểm chứng trước khi chấp nhận. Không coi câu trả lời AI là đáp án mặc định.
-6. Mọi phần bổ sung tích hợp NLS phải dùng Markdown ***...*** (đậm + nghiêng, ngữ nghĩa xanh lá); mọi phần bổ sung tích hợp AI phải dùng Markdown ***...*** (đậm + nghiêng, ngữ nghĩa tím). Không áp dụng định dạng này để sửa nội dung nguồn.
-7. Dùng Markdown an toàn, rõ ràng: #/##/###, danh sách -, +, .; bảng Markdown. Công thức ghi LaTeX inline $...$ hoặc dạng khối $$...$$.
+  const frameworks = () => ({ nls:$('enableNls').checked, ai:$('enableAi').checked });
+  const catalogEntries = kind => typeof entriesForGrade === 'function' ? entriesForGrade(kind, Number($('grade').value)) : [];
+  const allSelected = () => ['digital','ai'].flatMap(kind => catalogEntries(kind).filter(entry => selectedStandards.has(entry.id)).map(entry => ({kind,entry})));
+  const selectedByKind = kind => allSelected().filter(item => item.kind === kind);
+  const selectionLimit = () => Number($('duration').value) <= 1 ? 1 : 2;
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const codeKey = s => String(s||'').trim().replace(/^\[|\]$/g,'');
 
-${selectionText}
+  function show(msg,error=false){const n=$('notice');n.textContent=msg;n.className='text-sm font-semibold '+(error?'text-rose-600':'text-emerald-700');setTimeout(()=>{if(n.textContent===msg)n.textContent='';},5000);}
 
-${ppctSource}
+  function renderCatalogs(){
+    const enabled=frameworks();
+    [['digital','nlsCatalog','nls'],['ai','aiCatalog','ai']].forEach(([kind,target,flag])=>{
+      const root=$(target), allowed=enabled[flag], entries=catalogEntries(kind); root.innerHTML='';
+      if(!entries.length){root.textContent='Chưa tải được danh mục chuẩn.';return;}
+      const groups={}; entries.forEach(entry=>{const group=kind==='digital'?`${entry.domain||'NLS'} · ${entry.band||'Khối '+$('grade').value}`:`Lớp ${$('grade').value}`;(groups[group] ||= []).push(entry);});
+      Object.entries(groups).forEach(([group,rows])=>{const h=document.createElement('p');h.className='mt-1 font-bold text-slate-700';h.textContent=group;root.append(h);rows.forEach(entry=>{const label=document.createElement('label');label.className='flex gap-2 rounded p-1.5 '+(allowed?'hover:bg-slate-50':'opacity-50');const input=document.createElement('input');input.type='checkbox';input.className='mt-1';input.checked=selectedStandards.has(entry.id);input.disabled=!allowed;input.addEventListener('change',()=>toggleStandard(kind,entry,input));const span=document.createElement('span');span.innerHTML='<b>'+esc(entry.code)+'</b> — '+esc(entry.label)+(entry.descriptor?' <span class="text-slate-500">('+esc(entry.descriptor)+')</span>':'');label.append(input,span);root.append(label);});});
+    });
+    updateStandardCount();
+  }
 
-${sourceMode}
+  function updateStandardCount(){const nls=selectedByKind('digital').length, ai=selectedByKind('ai').length, limit=selectionLimit();$('standardCount').textContent=`Đã chọn ${nls+ai}/${limit} mã tổng cộng · NLS: ${nls} · AI: ${ai}. ${limit===1?'Bài 1 tiết chỉ chọn NLS hoặc AI.':'Nếu chọn cả hai, tối đa 1 NLS + 1 AI.'}`;}
+  function toggleStandard(kind,entry,input){if(!input.checked){selectedStandards.delete(entry.id);updateStandardCount();return;}const count=allSelected().length,same=selectedByKind(kind).length,other=selectedByKind(kind==='digital'?'ai':'digital').length,limit=selectionLimit();const invalid=count>=limit||(limit===1&&count>0)||(limit===2&&other>0&&same>=1);if(invalid){input.checked=false;show(limit===1?'Bài 1 tiết chỉ được chọn một mã NLS hoặc AI.':'Tối đa 2 mã; nếu tích hợp hỗn hợp chỉ chọn 1 NLS + 1 AI.',true);return;}selectedStandards.add(entry.id);updateStandardCount();}
+  function clearUnavailableSelections(){const active=new Set([...catalogEntries('digital'),...catalogEntries('ai')].map(e=>e.id));[...selectedStandards].forEach(id=>{if(!active.has(id))selectedStandards.delete(id);});}
 
-${objectiveFormat}
+  function paragraphText(p){const out=[];p.childNodes.forEach(node=>collectText(node,out));return out.join('').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').trim();}
+  function collectText(node,out){if(node.nodeType!==1)return;const local=node.localName;if(local==='t')out.push(node.textContent||'');else if(local==='tab')out.push('\t');else if(local==='br'||local==='cr')out.push(' ');else Array.from(node.childNodes).forEach(ch=>collectText(ch,out));}
 
-QUY TRÌNH ĐẦU RA: Chỉ trả về Markdown + công thức LaTeX. Ở Chế độ B, nguồn phải xuất hiện CHÍNH XÁC MỘT LẦN giữa hai delimiter, nguyên văn trước mọi bổ sung. Ở Chế độ A, trước hết chép lại nguồn từ PDF sang Markdown bảo toàn cấu trúc tối đa; sau phần nguồn chỉ được thêm khối có nhãn “Bổ sung tích hợp NLS/AI”. Nếu PDF không có hoặc không đọc được, chỉ trả đúng câu: Hãy đính kèm tệp PDF giáo án gốc. Nếu nguồn khác không thể bảo toàn, chỉ trả đúng câu: Không thể bảo toàn nguyên văn giáo án nguồn. Không tạo bản thay thế, mẫu hay giáo án mới; không tạo/đính kèm .doc/.docx/PDF hay binary.
+  async function loadDocx(file){
+    if(!file || !file.name.toLowerCase().endsWith('.docx')){show('Chỉ nhận file .docx để bảo toàn định dạng.',true);return;}
+    try{
+      const buf=await file.arrayBuffer(); const zip=await JSZip.loadAsync(buf); const docFile=zip.file('word/document.xml'); if(!docFile)throw new Error('Không tìm thấy word/document.xml');
+      const xmlText=await docFile.async('text'); const xml=new DOMParser().parseFromString(xmlText,'application/xml'); if(xml.getElementsByTagName('parsererror').length)throw new Error('Không đọc được XML tài liệu');
+      const ps=Array.from(xml.getElementsByTagNameNS(W_NS,'p')); paragraphMap=ps.map((p,index)=>({id:'P'+String(index+1).padStart(4,'0'),index,text:paragraphText(p)})).filter(x=>x.text);
+      originalFile=file; originalBuffer=buf; parsedInsertions=[]; $('geminiJson').value=''; $('fileStatus').innerHTML=`<b class="text-emerald-700">✓ Đã đọc:</b> ${esc(file.name)} · ${paragraphMap.length} đoạn có nội dung. <span class="text-slate-500">File gốc chưa bị thay đổi.</span>`; renderSourceList(); renderReview(); show('Đã đọc DOCX và đánh số các đoạn để Gemini tham chiếu.');
+    }catch(err){originalFile=null;originalBuffer=null;paragraphMap=[];$('fileStatus').textContent='Không đọc được file DOCX.';renderSourceList();renderReview();show('Lỗi đọc DOCX: '+err.message,true);}
+  }
 
-${sourceBlock}`;
-    }
-    const sample = { subject:'Toán lớp 8', title:'Hình chóp tam giác đều', duration:'2', teacher:'Nguyễn Văn A – Trường THCS', markdown:`# KẾ HOẠCH BÀI DẠY\n## Bài: HÌNH CHÓP TAM GIÁC ĐỀU\n**Môn học:** Toán 8  \n**Thời lượng:** 2 tiết\n\n## I. Mục tiêu\n- Nhận biết được hình chóp tam giác đều; tính được diện tích xung quanh và thể tích. [TC1.NLa]\n- Sử dụng công cụ số để mô phỏng hình không gian và kiểm chứng kết quả. [8.AI.1]\n\n## II. Thiết bị dạy học và học liệu\n+ Mô hình hình chóp tam giác đều, phiếu học tập, máy tính hoặc phần mềm hình học động.\n+ Học sinh chuẩn bị thước thẳng, giấy nháp.\n\n## III. Tiến trình dạy học\n### 1. Hoạt động khởi động\n- Giáo viên cho học sinh quan sát mô hình mái nhà có dạng hình chóp. [TC2.NLb]\n- Học sinh dự đoán các mặt bên và đáy của hình.\n\n### 2. Hoạt động hình thành kiến thức\nVới cạnh đáy $a$, trung đoạn $l$ và chiều cao $h$, diện tích xung quanh là $S_{xq}=\\frac{3al}{2}$.\n\n$$V=\\frac{1}{3}S_{đáy}h=\\frac{a^2\\sqrt{3}h}{12}$$\n\n| Hoạt động | Sản phẩm | Mã tích hợp |\n| --- | --- | --- |\n| Khám phá mô hình | Phiếu nhận diện các yếu tố | [TC1.NLa] |\n| Dùng phần mềm dựng hình | Tệp mô phỏng và nhận xét | [8.AI.1] |\n\n### 3. Hoạt động luyện tập\n. Tính $S_{xq}$ khi $a=6\\,cm$, $l=5\\,cm$.\n. Thảo luận cách kiểm tra kết quả bằng mô hình số. [AI.2]\n\n## IV. Bảng tổng hợp tích hợp\n| Nội dung | NLS | AI | Minh chứng |\n| --- | --- | --- | --- |\n| Khám phá hình chóp | [TC1.NLa] | [8.AI.1] | Phiếu học tập, tệp mô phỏng |\n| Luyện tập | [TC2.NLb] | [AI.2] | Bài làm của học sinh |` };
-    const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    const katexMath = (latex, display, word) => {
-      try { const raw = katex.renderToString(latex, {throwOnError:false, output:'mathml', displayMode:display}); const match = raw.match(/<math[\s\S]*?<\/math>/); if (!match) return esc(latex); let math = match[0].replace('<math ', '<math xmlns="http://www.w3.org/1998/Math/MathML" '); if (!word) return raw; return display ? '<m:oMathPara><m:oMath>'+math+'</m:oMath></m:oMathPara>' : '<m:oMath>'+math+'</m:oMath>'; } catch (_) { return esc(latex); }
-    };
-    const colourCodes = html => html.replace(/(\[(?:[^\]]*(?:\d+\.\d+\.TC\d+[a-z]?|TC\d+\.NL|NLS)[^\]]*)\]|\b(?:NLS|TC\d+\.NL|\d+\.\d+\.TC\d+[a-z]?)[A-Za-z0-9._-]*)/g,'<span class="nls">$1</span>').replace(/(\[(?:[^\]]*(?:\d+\.[A-D]\d+(?:\.[A-Z0-9]+)?|\d+\.AI|AI)[^\]]*)\]|\b(?:AI|\d+\.AI|\d+\.[A-D]\d+(?:\.[A-Z0-9]+)?)[A-Za-z0-9._-]*)/g,'<span class="ai">$1</span>');
-    const rich = (text, word=false) => {
-      let out='', pos=0, re=/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, m;
-      const normal = value => colourCodes(esc(value).replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>'));
-      while ((m=re.exec(text))) { out += normal(text.slice(pos,m.index)); out += katexMath(m[1] || m[2],!!m[1],word); pos=re.lastIndex; }
-      return out + normal(text.slice(pos));
-    };
-    const cells = line => line.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
-    const isSeparator = row => row.every(c => /^:?-{3,}:?$/.test(c.replace(/\s/g,'')));
-    function markdownToHtml(markdown, word=false) {
-      const lines=String(markdown||'').replace(/\r/g,'').split('\n'); let html='', i=0, list='';
-      const endList=()=>{if(list){html+='</ul>';list='';}};
-      while(i<lines.length){const line=lines[i];
-        if(/^\s*\|/.test(line) && i+1<lines.length && isSeparator(cells(lines[i+1]))){ endList(); const header=cells(line); i+=2; let rows=''; while(i<lines.length && /^\s*\|/.test(lines[i])){rows+='<tr>'+cells(lines[i++]).map(c=>'<td>'+rich(c,word)+'</td>').join('')+'</tr>';} html+='<table><thead><tr>'+header.map(c=>'<th>'+rich(c,word)+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table>'; continue; }
-        let h=line.match(/^(#{1,3})\s+(.+)$/); if(h){endList(); const n=h[1].length; html+=`<h${n}>${rich(h[2],word)}</h${n}>`;i++;continue;}
-        let li=line.match(/^\s*([-+.] )\s*(.*)$/); if(li){const type=li[1][0]; if(list!==type){endList();list=type;html+='<ul style="list-style-type:'+(type==='-'?'disc':type==='+'?'circle':'square')+'">';}html+='<li>'+rich(li[2],word)+'</li>';i++;continue;}
-        if(!line.trim()){endList();i++;continue;} endList();html+='<p>'+rich(line,word)+'</p>';i++;
-      } endList();return html;
-    }
-    function updatePreview(){ $('preview').innerHTML=markdownToHtml($('markdown').value,false) || '<p class="text-slate-400" style="text-align:center">Nạp mẫu hoặc dán Markdown để xem trước.</p>'; }
-    function safeFileName(value){return String(value||'Ke_hoach_bai_day').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_|_$/g,'')||'Ke_hoach_bai_day';}
-    function exportWordDocument(){ if(!$('markdown').value.trim()){show('Hãy dán nội dung giáo án trước khi xuất.',true);return;} const name=esc(String($('title').value||'Kế hoạch bài dạy').toUpperCase()); const meta=`<p style="text-align:center;font-weight:bold;font-size:14pt;margin:0">KẾ HOẠCH BÀI DẠY</p><p style="text-align:center;font-weight:bold;font-size:14pt;margin:3pt 0 8pt">${name}</p><p><b>Môn học:</b> ${esc($('subject').value)} &nbsp;&nbsp; <b>Thời lượng:</b> ${esc($('duration').value)} tiết</p>${$('teacher').value?'<p><b>Giáo viên / Đơn vị:</b> '+esc($('teacher').value)+'</p>':''}`; const doc=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>@page{size:A4;margin:1.5cm 1.5cm 1.5cm 2cm;}body{font-family:'Times New Roman',serif;font-size:13pt;line-height:1.15;text-align:justify;}h1,h2{font-size:14pt;font-weight:bold}h3{font-size:13pt;font-weight:bold}p{margin:3pt 0 6pt}table{width:100%;border-collapse:collapse;margin:6pt 0}th,td{border:1px solid #000;padding:5px;vertical-align:top}th{background:#f3f4f6}.nls{color:#16a34a;font-weight:bold;font-style:italic}.ai{color:#9333ea;font-weight:bold;font-style:italic}ul{margin:3pt 0 6pt}</style></head><body>${meta}${markdownToHtml($('markdown').value,true)}</body></html>`; saveAs(new Blob(['\ufeff',doc],{type:'application/msword;charset=utf-8'}),safeFileName($('title').value)+'_Tich_hop_NLS_AI.doc');show('Đã tạo file Word .doc có công thức OMML.'); }
-    const officialSample = { subject:'Toán lớp 8', title:'Hình chóp tam giác đều', duration:'2', teacher:'Nguyễn Văn A – Trường THCS', ppctNls:'[1.1.TC2a] Duyệt, tìm kiếm và lọc dữ liệu, thông tin và nội dung số.', ppctAi:'[8.A1.2] Kiểm chứng nguồn thông tin khi sử dụng AI tạo sinh.', markdown:`# KẾ HOẠCH BÀI DẠY
-## Bài: HÌNH CHÓP TAM GIÁC ĐỀU
-**Môn học:** Toán 8
-**Thời lượng:** 2 tiết
+  function renderSourceList(){const root=$('sourceList'); root.innerHTML=''; if(!paragraphMap.length){root.innerHTML='<p class="text-slate-400">Chưa có dữ liệu.</p>';return;} paragraphMap.forEach(row=>{const div=document.createElement('div');div.className='grid grid-cols-[72px_1fr] gap-2 py-1 border-b border-slate-100';div.innerHTML=`<b class="mono text-slate-500">${row.id}</b><span class="anchor">${esc(row.text)}</span>`;root.append(div);});}
+  function selectedCodeMap(){const m=new Map();allSelected().forEach(({kind,entry})=>m.set(codeKey(entry.code),{kind,entry}));return m;}
 
-## I. Mục tiêu
-### a) Năng lực chung
-- Tự chủ, tự học; giao tiếp và hợp tác khi thực hiện nhiệm vụ.
-### b) Năng lực đặc thù
-- Nhận biết hình chóp tam giác đều; tính được diện tích xung quanh và thể tích.
-> **Bổ sung tích hợp NLS/AI — chỉ nối thêm; nội dung gốc tại a/b được giữ nguyên.**
-### c) Năng lực số
-- ***[1.1.TC2a] Duyệt, tìm kiếm và lọc dữ liệu, thông tin và nội dung số: học sinh khai thác mô hình số, ghi phiếu quan sát làm minh chứng.***
-### d) Năng lực AI
-- ***[8.A1.2] Nhận biết rủi ro lạm dụng AI tạo sinh và kiểm chứng nguồn thông tin: học sinh đối chiếu gợi ý AI với SGK trước khi sử dụng.***
+  function buildPrompt(){
+    if(!paragraphMap.length)throw new Error('Hãy chọn giáo án DOCX trước.'); const chosen=allSelected(); if(!chosen.length)throw new Error('Hãy chọn ít nhất một mã NLS hoặc AI trước.');
+    const duration=Math.max(1,parseInt($('duration').value,10)||1); const source=paragraphMap.map(p=>`[${p.id}] ${p.text}`).join('\n');
+    const selectedText=chosen.map(({kind,entry})=>`- ${kind==='digital'?'NLS':'AI'} [${entry.code}] ${entry.label}${entry.descriptor?' — '+entry.descriptor:''}`).join('\n');
+    const ppct=[$('ppctNls').value.trim()?`NLS từ PPCT:\n${$('ppctNls').value.trim()}`:'',$('ppctAi').value.trim()?`AI từ PPCT:\n${$('ppctAi').value.trim()}`:''].filter(Boolean).join('\n\n')||'Không có PPCT bổ sung.';
+    return `Bạn là chuyên gia sư phạm Việt Nam. Nhiệm vụ duy nhất của bạn là ĐỀ XUẤT CÁC ĐOẠN CẦN CHÈN vào giáo án, không được viết lại giáo án.\n\nTHÔNG TIN:\n- Môn học: ${$('subject').value.trim()||'[chưa nhập]'}\n- Khối lớp: ${$('grade').value}\n- Tên bài: ${$('title').value.trim()||'[chưa nhập]'}\n- Thời lượng: ${duration} tiết\n- Giáo viên/đơn vị: ${$('teacher').value.trim()||'[chưa nhập]'}\n\nMÃ GIÁO VIÊN ĐÃ CHỌN — BẮT BUỘC VÀ ĐỘC QUYỀN:\n${selectedText}\n\nPPCT ƯU TIÊN:\n${ppct}\n\nQUY TẮC TUYỆT ĐỐI:\n1. KHÔNG chép lại giáo án; KHÔNG sửa, tóm tắt, diễn đạt lại, đổi thứ tự hoặc tái cấu trúc nội dung gốc.\n2. Chỉ đề xuất nội dung mới để chèn thêm.\n3. Chỉ được dùng đúng các mã đã liệt kê ở phần “MÃ GIÁO VIÊN ĐÃ CHỌN”. Không tự tạo, không thay mã, không thêm mã khác.\n4. Mỗi đề xuất phải tham chiếu đúng một paragraphId có thật trong danh sách nguồn, ví dụ P0017. paragraphId dùng để xác định chính xác vị trí chèn ngay SAU đoạn đó.\n5. Ưu tiên chèn vào phần Mục tiêu và/hoặc hoạt động học thực sự phù hợp. Không gán khiên cưỡng. Nếu mã đã chọn không phù hợp với giáo án, trả mảng insertions rỗng và ghi lý do ngắn trong note.\n6. Với NLS: nêu rõ nhiệm vụ học sinh, sản phẩm/minh chứng và cách giáo viên quan sát/đánh giá.\n7. Với AI: bắt buộc có bước kiểm chứng kết quả AI bằng SGK/nguồn tin cậy, học sinh giải thích và chịu trách nhiệm về kết quả, giáo viên kiểm chứng trước khi chấp nhận.\n8. Không dùng Markdown trong content. Không dùng HTML. Không dùng ký hiệu <br>.\n9. Đầu ra CHỈ là JSON hợp lệ, không đặt trong khối mã, không giải thích ngoài JSON.\n10. Tối đa ${duration<=1?'1':'2'} đề xuất tổng cộng theo đúng giới hạn mã đã chọn.\n\nSCHEMA BẮT BUỘC:\n{\n  "note": "chuỗi ngắn hoặc rỗng",\n  "insertions": [\n    {\n      "paragraphId": "P0001",\n      "category": "NLS hoặc AI",\n      "code": "mã đúng như đã chọn, không có ngoặc vuông",\n      "title": "tên năng lực/ngắn gọn",\n      "content": "một đoạn hoàn chỉnh để chèn vào giáo án",\n      "evidence": "sản phẩm/minh chứng",\n      "verification": "cách giáo viên kiểm tra; với AI phải nêu đối chiếu SGK/nguồn tin cậy"\n    }\n  ]\n}\n\nDANH SÁCH ĐOẠN TRONG GIÁO ÁN GỐC:\n${source}`;
+  }
 
-## II. Thiết bị dạy học và học liệu
-+ Mô hình hình chóp tam giác đều, phiếu học tập, máy tính hoặc phần mềm hình học động.
+  function normalizeGeminiJson(raw){const trimmed=String(raw||'').trim();const unwrapped=trimmed.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();return JSON.parse(unwrapped);}
+  function validateInsertions(){
+    if(!paragraphMap.length)throw new Error('Chưa có giáo án DOCX.'); const data=normalizeGeminiJson($('geminiJson').value); if(!data||!Array.isArray(data.insertions))throw new Error('JSON phải có mảng insertions.');
+    const ids=new Map(paragraphMap.map(p=>[p.id,p])),selected=selectedCodeMap(),seenTargets=new Set(),limit=selectionLimit(); if(data.insertions.length>limit)throw new Error(`Vượt giới hạn: chỉ được tối đa ${limit} đề xuất.`);
+    const valid=data.insertions.map((row,i)=>{const pid=String(row.paragraphId||'').trim();if(!ids.has(pid))throw new Error(`Dòng ${i+1}: paragraphId ${pid||'(trống)'} không tồn tại trong DOCX.`);if(seenTargets.has(pid))throw new Error(`Dòng ${i+1}: paragraphId ${pid} bị lặp.`);seenTargets.add(pid);const category=String(row.category||'').trim().toUpperCase();if(!['NLS','AI'].includes(category))throw new Error(`Dòng ${i+1}: category phải là NLS hoặc AI.`);const code=codeKey(row.code),chosen=selected.get(code);if(!chosen)throw new Error(`Dòng ${i+1}: mã ${row.code||'(trống)'} không nằm trong danh sách giáo viên đã chọn.`);const expected=chosen.kind==='digital'?'NLS':'AI';if(category!==expected)throw new Error(`Dòng ${i+1}: mã ${code} thuộc ${expected}, không phải ${category}.`);const content=String(row.content||'').trim();if(!content)throw new Error(`Dòng ${i+1}: content đang trống.`);if(/<\/?[a-z][^>]*>/i.test(content))throw new Error(`Dòng ${i+1}: content không được chứa HTML.`);if(category==='AI'&&!/SGK|nguồn tin cậy|đối chiếu|kiểm chứng/i.test(String(row.verification||'')+' '+content))throw new Error(`Dòng ${i+1}: tích hợp AI phải nêu bước kiểm chứng/đối chiếu SGK hoặc nguồn tin cậy.`);return {paragraphId:pid,category,code,title:String(row.title||chosen.entry.label||'').trim(),content,evidence:String(row.evidence||'').trim(),verification:String(row.verification||'').trim(),anchor:ids.get(pid).text};});
+    parsedInsertions=valid;renderReview(String(data.note||''));return valid;
+  }
 
-## III. Tiến trình dạy học
-### 1. Hoạt động hình thành kiến thức
-Với cạnh đáy $a$, trung đoạn $l$ và chiều cao $h$, diện tích xung quanh là $S_{xq}=\\frac{3al}{2}$.
+  function renderReview(note=''){const root=$('review');if(!parsedInsertions.length){root.innerHTML='<p class="text-slate-400 text-center mt-16">Chưa có nội dung tích hợp hợp lệ để xem trước.</p>';return;}root.innerHTML=(note?`<div class="mb-3 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800"><b>Ghi chú Gemini:</b> ${esc(note)}</div>`:'')+parsedInsertions.map(x=>`<article class="insert-card ${x.category==='NLS'?'nls':'ai'} rounded-xl bg-white border border-slate-200 p-4 mb-3"><div class="flex flex-wrap gap-2 items-center"><span class="pill ${x.category==='NLS'?'pill-nls':'pill-ai'}">${x.category}</span><b>[${esc(x.code)}] ${esc(x.title)}</b></div><p class="mt-3 text-xs font-bold text-slate-500">CHÈN SAU ${esc(x.paragraphId)}</p><p class="anchor mt-1 rounded-lg bg-slate-50 p-2 text-sm text-slate-600">${esc(x.anchor)}</p><p class="mt-3"><b>Nội dung chèn:</b> ${esc(x.content)}</p>${x.evidence?`<p class="mt-2 text-sm"><b>Minh chứng:</b> ${esc(x.evidence)}</p>`:''}${x.verification?`<p class="mt-1 text-sm"><b>Kiểm tra/đánh giá:</b> ${esc(x.verification)}</p>`:''}</article>`).join('');}
 
-$$V=\\frac{1}{3}S_{đáy}h=\\frac{a^2\\sqrt{3}h}{12}$$
+  function cloneFormattingFromAnchor(xml,anchor,category){const p=xml.createElementNS(W_NS,'w:p');const pPr=Array.from(anchor.childNodes).find(n=>n.nodeType===1&&n.localName==='pPr');if(pPr)p.appendChild(pPr.cloneNode(true));const r=xml.createElementNS(W_NS,'w:r');const firstRun=Array.from(anchor.getElementsByTagNameNS(W_NS,'r'))[0];const sourceRPr=firstRun?Array.from(firstRun.childNodes).find(n=>n.nodeType===1&&n.localName==='rPr'):null;const rPr=sourceRPr?sourceRPr.cloneNode(true):xml.createElementNS(W_NS,'w:rPr');const b=xml.createElementNS(W_NS,'w:b'),i=xml.createElementNS(W_NS,'w:i'),color=xml.createElementNS(W_NS,'w:color');color.setAttributeNS(W_NS,'w:val',category==='NLS'?'16A34A':'9333EA');rPr.append(b,i,color);r.appendChild(rPr);p.appendChild(r);return {p,r};}
+  function appendText(xml,run,text){const t=xml.createElementNS(W_NS,'w:t');t.setAttribute('xml:space','preserve');t.textContent=text;run.appendChild(t);}
+  function buildInsertionParagraph(xml,anchor,item){const {p,r}=cloneFormattingFromAnchor(xml,anchor,item.category);const prefix=`[Tích hợp ${item.category} – ${item.code}] `;const extras=[item.evidence?`Minh chứng: ${item.evidence}`:'',item.verification?`Kiểm tra/đánh giá: ${item.verification}`:''].filter(Boolean).join(' ');appendText(xml,r,prefix+item.content+(extras?' '+extras:''));return p;}
 
-| Hoạt động | Sản phẩm |
-| --- | --- |
-| Khám phá mô hình số | Phiếu quan sát |
-| Đối chiếu gợi ý AI với SGK | Nhận xét |
+  async function createIntegratedDocx(){
+    if(!originalBuffer||!originalFile){show('Hãy chọn giáo án DOCX trước.',true);return;}let items;try{items=validateInsertions();}catch(err){show(err.message,true);return;}if(!items.length){show('Không có đề xuất tích hợp để chèn.',true);return;}
+    try{const zip=await JSZip.loadAsync(originalBuffer.slice(0));const docFile=zip.file('word/document.xml');const xmlText=await docFile.async('text');const xml=new DOMParser().parseFromString(xmlText,'application/xml');const ps=Array.from(xml.getElementsByTagNameNS(W_NS,'p'));const idToIndex=new Map(paragraphMap.map(p=>[p.id,p.index]));const ordered=[...items].sort((a,b)=>idToIndex.get(b.paragraphId)-idToIndex.get(a.paragraphId));ordered.forEach(item=>{const idx=idToIndex.get(item.paragraphId),anchor=ps[idx];if(!anchor)throw new Error(`Không tìm thấy neo ${item.paragraphId} trong tài liệu khi xuất.`);const newP=buildInsertionParagraph(xml,anchor,item),parent=anchor.parentNode;parent.insertBefore(newP,anchor.nextSibling);});const outXml=new XMLSerializer().serializeToString(xml);zip.file('word/document.xml',outXml);const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});const base=originalFile.name.replace(/\.docx$/i,'');saveAs(blob,base+'_Tich_hop_NLS_AI.docx');show('Đã tạo DOCX tích hợp từ bản gốc.');}catch(err){show('Không tạo được DOCX: '+err.message,true);}
+  }
 
-***Bổ sung tích hợp dưới hoạt động trên (không sửa bảng gốc): [1.1.TC2a] Học sinh khai thác mô hình số, nộp phiếu quan sát; giáo viên đối chiếu với mục tiêu bài học. [8.A1.2] Học sinh đối chiếu gợi ý AI với SGK trước khi sử dụng, nộp nhận xét đã kiểm chứng.***
-
-## IV. Bảng tổng hợp tích hợp
-| Nội dung | NLS | AI | Minh chứng |
-| --- | --- | --- | --- |
-| Khám phá hình chóp | ***[1.1.TC2a]*** |  | Phiếu học tập, tệp mô phỏng |
-| Luyện tập |  | ***[8.A1.2]*** | Bài làm đã đối chiếu SGK |` };
-    function show(msg,error=false){const n=$('notice');n.textContent=msg;n.className='self-center text-sm font-medium '+(error?'text-rose-600':'text-emerald-700');setTimeout(()=>{if(n.textContent===msg)n.textContent='';},4200);}
-    $('copyPrompt').onclick=async()=>{const promptText=buildPrompt();try{await navigator.clipboard.writeText(promptText);show($('markdown').value.trim()?'Đã sao chép Prompt bảo toàn Markdown nguồn.':'Đã sao chép Prompt dùng PDF giáo án đính kèm.');}catch(_){const t=document.createElement('textarea');t.value=promptText;document.body.append(t);t.select();document.execCommand('copy');t.remove();show($('markdown').value.trim()?'Đã sao chép Prompt bảo toàn Markdown nguồn.':'Đã sao chép Prompt dùng PDF giáo án đính kèm.');}};
-    $('loadSample').onclick=()=>{Object.entries(officialSample).forEach(([key,val])=>$(key).value=val);$('grade').value='8';$('enableNls').checked=true;$('enableAi').checked=true;selectedStandards.clear();['1.1.TC2a','8.A1.2'].forEach(code=>{['digital','ai'].forEach(kind=>{const entry=catalogEntries(kind).find(item=>item.code===code);if(entry)selectedStandards.add(entry.id);});});renderCatalogs();updatePreview();show('Đã nạp giáo án mẫu.');};
-    $('clearAll').onclick=()=>{fields.forEach(f=>f.value='');$('grade').value='6';$('enableNls').checked=false;$('enableAi').checked=false;selectedStandards.clear();renderCatalogs();updatePreview();show('Đã xóa nội dung.');};
-    $('suggestStandards').onclick=()=>{if(typeof recommendOfficialStandards!=='function'){show('Danh mục chuẩn chưa sẵn sàng.',true);return;} const enabled=frameworks();if(!enabled.nls&&!enabled.ai){show('Hãy bật ít nhất một khung NLS hoặc AI trước.',true);return;} selectedStandards.clear();const ctx={grade:Number($('grade').value),subjectName:$('subject').value,topic:$('title').value,vision:$('markdown').value,aiOn:enabled.ai,facilities:{devices:true,internet:true},activities:[$('markdown').value]};(enabled.nls?recommendOfficialStandards('digital',ctx):[]).concat(enabled.ai?recommendOfficialStandards('ai',ctx):[]).forEach(row=>{const kind=row.standardKind, entry=catalogEntries(kind).find(e=>e.id===row.catalogId);if(!entry)return;const count=allSelected().length, same=selectedByKind(kind).length, other=selectedByKind(kind==='digital'?'ai':'digital').length, limit=selectionLimit();if(count<limit && !(limit===2&&other&&same>=1))selectedStandards.add(entry.id);});renderCatalogs();show('Đã chọn gợi ý từ danh mục chính thức.');};
-    $('exportWord').onclick=exportWordDocument; fields.forEach(f=>f.addEventListener('input',updatePreview)); $('grade').addEventListener('change',()=>{clearUnavailableSelections();renderCatalogs();}); ['enableNls','enableAi'].forEach(id=>$(id).addEventListener('change',()=>{const flag=id==='enableNls'?'nls':'ai';if(!frameworks()[flag])selectedByKind(flag==='nls'?'digital':'ai').forEach(item=>selectedStandards.delete(item.entry.id));renderCatalogs();})); $('duration').addEventListener('input',()=>{while(allSelected().length>selectionLimit())selectedStandards.delete(allSelected().at(-1).entry.id);renderCatalogs();});
-    window.convertLatexToOMML=(latex,isDisplay)=>katexMath(latex,isDisplay,true); window.parseMarkdownToWordHtml=markdown=>markdownToHtml(markdown,true); window.exportWordDocument=exportWordDocument;
-    renderCatalogs(); updatePreview();
-  })();
-  </script>
+  $('docxFile').addEventListener('change',e=>loadDocx(e.target.files?.[0]));
+  $('copyPrompt').onclick=async()=>{try{const text=buildPrompt();await navigator.clipboard.writeText(text);show('Đã sao chép prompt. Gemini chỉ được trả JSON phần cần chèn.');}catch(err){show(err.message,true);}};
+  $('validateJson').onclick=()=>{try{validateInsertions();show('JSON hợp lệ. Có thể tạo giáo án tích hợp.');}catch(err){parsedInsertions=[];renderReview();show(err.message,true);}};
+  $('createDocx').onclick=createIntegratedDocx;
+  $('showSource').onclick=()=>{$('sourceDetails').open=true;$('sourceDetails').scrollIntoView({behavior:'smooth',block:'nearest'});};
+  $('loadSampleJson').onclick=()=>{const chosen=allSelected()[0];if(!paragraphMap.length){show('Hãy chọn DOCX trước để JSON mẫu có paragraphId hợp lệ.',true);return;}if(!chosen){show('Hãy chọn ít nhất một mã trước.',true);return;}const category=chosen.kind==='digital'?'NLS':'AI',p=paragraphMap[Math.min(3,paragraphMap.length-1)];$('geminiJson').value=JSON.stringify({note:'JSON mẫu để kiểm tra luồng.',insertions:[{paragraphId:p.id,category,code:chosen.entry.code,title:chosen.entry.label,content:category==='AI'?'Học sinh sử dụng AI để đề xuất cách giải, sau đó đối chiếu với SGK hoặc nguồn tin cậy, giải thích lựa chọn và tự chịu trách nhiệm về kết quả.':'Học sinh sử dụng công cụ số phù hợp để thực hiện nhiệm vụ học tập và nộp sản phẩm số làm minh chứng.',evidence:'Phiếu học tập hoặc sản phẩm số của học sinh',verification:category==='AI'?'Giáo viên yêu cầu học sinh đối chiếu SGK/nguồn tin cậy và kiểm chứng trước khi chấp nhận.':'Giáo viên quan sát thao tác và đối chiếu sản phẩm với mục tiêu bài học.'}]},null,2);show('Đã nạp JSON mẫu.');};
+  $('clearAll').onclick=()=>{originalFile=null;originalBuffer=null;paragraphMap=[];parsedInsertions=[];$('docxFile').value='';$('geminiJson').value='';$('ppctNls').value='';$('ppctAi').value='';$('title').value='';$('teacher').value='';$('fileStatus').textContent='Chưa chọn giáo án DOCX.';selectedStandards.clear();$('enableNls').checked=false;$('enableAi').checked=false;renderCatalogs();renderSourceList();renderReview();show('Đã xóa dữ liệu phiên làm việc.');};
+  $('suggestStandards').onclick=()=>{if(typeof recommendOfficialStandards!=='function'){show('Danh mục chuẩn chưa sẵn sàng.',true);return;}const enabled=frameworks();if(!enabled.nls&&!enabled.ai){show('Hãy bật ít nhất một khung NLS hoặc AI.',true);return;}selectedStandards.clear();const ctx={grade:Number($('grade').value),subjectName:$('subject').value,topic:$('title').value,vision:paragraphMap.map(p=>p.text).join('\n'),aiOn:enabled.ai,facilities:{devices:true,internet:true},activities:paragraphMap.map(p=>p.text)};(enabled.nls?recommendOfficialStandards('digital',ctx):[]).concat(enabled.ai?recommendOfficialStandards('ai',ctx):[]).forEach(row=>{const kind=row.standardKind,entry=catalogEntries(kind).find(e=>e.id===row.catalogId);if(!entry)return;const limit=selectionLimit(),count=allSelected().length,same=selectedByKind(kind).length,other=selectedByKind(kind==='digital'?'ai':'digital').length;if(count<limit&&!(limit===2&&other&&same>=1))selectedStandards.add(entry.id);});renderCatalogs();show('Đã chọn gợi ý từ danh mục chính thức.');};
+  $('grade').addEventListener('change',()=>{clearUnavailableSelections();renderCatalogs();parsedInsertions=[];renderReview();});
+  ['enableNls','enableAi'].forEach(id=>$(id).addEventListener('change',()=>{const kind=id==='enableNls'?'digital':'ai';if(!$(id).checked)selectedByKind(kind).forEach(item=>selectedStandards.delete(item.entry.id));renderCatalogs();parsedInsertions=[];renderReview();}));
+  $('duration').addEventListener('input',()=>{while(allSelected().length>selectionLimit())selectedStandards.delete(allSelected().at(-1).entry.id);renderCatalogs();});
+  renderCatalogs();renderSourceList();renderReview();
+})();
+</script>
 </body>
 </html>

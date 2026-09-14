@@ -95,7 +95,6 @@
     const LS_TEACHER_PREVIEW_KEY = `lotrinh_teacher_preview_${PAGE_STORAGE_KEY}`;
     const LS_STUDY_MINUTES_KEY = `lotrinh_study_minutes_${PAGE_STORAGE_KEY}`;
     const LS_LESSON_NAV_VIEW_KEY = `lotrinh_lesson_nav_view_${PAGE_STORAGE_KEY}`;
-    const LS_TEACHER_CLASS_FILTER_KEY = `lotrinh_teacher_class_filter_${PAGE_STORAGE_KEY}`;
     const LS_MOTIVATION_KEY_PREFIX = `lotrinh_motivation_${PAGE_STORAGE_KEY}`;
     const SS_FORCE_NOTIFICATION_POPUP_KEY = 'lotrinh_force_notification_popup';
     const REVIEW_STALE_DAYS = 7;
@@ -1214,91 +1213,6 @@
         return isTeacher() && localStorage.getItem(LS_TEACHER_PREVIEW_KEY) === '1';
     }
 
-    function teacherManagedClasses() {
-        return String(state.user?.class_name || '')
-            .split(/[,;|]+/)
-            .map(className => className.trim())
-            .filter(Boolean)
-            .filter((className, index, items) => items.indexOf(className) === index);
-    }
-
-    function lessonIsOpenForClass(lesson, className) {
-        if (!lesson?.is_published || !className) return false;
-        const classes = Array.isArray(lesson.published_classes) ? lesson.published_classes : [];
-        // Empty scope is the backwards-compatible representation of an old all-class lesson.
-        return !classes.length || classes.includes('*') || classes.includes(className);
-    }
-
-    async function toggleTeacherLessonClass(lesson, className) {
-        const stored = Array.isArray(lesson.published_classes) ? lesson.published_classes : [];
-        const managed = teacherManagedClasses();
-        const wasOpen = lessonIsOpenForClass(lesson, className);
-        // Convert a legacy all-class scope into explicit classes before changing one class.
-        const base = (!stored.length || stored.includes('*')) ? managed : stored;
-        const publishedClasses = wasOpen
-            ? base.filter(item => item !== className)
-            : [...new Set([...base, className])];
-        const response = await api('api/lessons.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'update_published_classes', lesson_id: lesson.id, published_classes: publishedClasses })
-        });
-        const nextClasses = Array.isArray(response.published_classes) ? response.published_classes : publishedClasses;
-        const index = state.lessons.findIndex(item => String(item.id) === String(lesson.id));
-        if (index >= 0) {
-            state.lessons[index] = { ...state.lessons[index], published_classes: nextClasses, is_published: nextClasses.length > 0 };
-        }
-        renderTeacherClassPublishToolbar();
-    }
-
-    function renderTeacherClassPublishToolbar() {
-        const existing = document.getElementById('teacherClassPublishToolbar');
-        if (!isTeacher() || isTeacherPreview() || !els.teacherLessonDesigner) {
-            existing?.remove();
-            return;
-        }
-        const classes = teacherManagedClasses();
-        if (!classes.length) {
-            existing?.remove();
-            return;
-        }
-        let selectedClass = localStorage.getItem(LS_TEACHER_CLASS_FILTER_KEY) || 'all';
-        if (selectedClass !== 'all' && !classes.includes(selectedClass)) selectedClass = 'all';
-        const lessons = state.lessons.filter(lessonMatchesPageSubject);
-        const toolbar = existing || document.createElement('section');
-        toolbar.id = 'teacherClassPublishToolbar';
-        toolbar.className = 'mb-4 rounded-xl border border-teal-200 bg-teal-50 p-4';
-        const cards = selectedClass === 'all'
-            ? lessons.map(lesson => {
-                const scope = Array.isArray(lesson.published_classes) ? lesson.published_classes : [];
-                const label = !lesson.is_published ? 'Đang đóng' : (!scope.length || scope.includes('*') ? 'Mở tất cả lớp' : `Mở: ${scope.join(', ')}`);
-                return `<span class="rounded border border-teal-100 bg-white px-2 py-1 text-xs text-slate-700">${escapeHtml(lesson.title)} · ${escapeHtml(label)}</span>`;
-            }).join('')
-            : lessons.map(lesson => {
-                const open = lessonIsOpenForClass(lesson, selectedClass);
-                return `<div class="flex items-center justify-between gap-3 rounded border border-teal-100 bg-white px-3 py-2 text-sm"><span class="min-w-0 truncate font-semibold text-slate-700">${escapeHtml(lesson.title)}</span><button type="button" data-toggle-lesson-class="${lesson.id}" class="shrink-0 rounded px-2 py-1 text-xs font-bold ${open ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'}">${open ? 'Đang mở · Khóa' : 'Đang đóng · Mở'}</button></div>`;
-            }).join('') || '<p class="text-sm text-slate-500">Chưa có bài học trong lộ trình này.</p>';
-        toolbar.innerHTML = `<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><h3 class="font-bold text-teal-900"><i class="fas fa-users-gear mr-1"></i>Mở bài theo lớp</h3><p class="text-xs text-teal-800">Chọn lớp để mở hoặc khóa nhanh từng bài học.</p></div><label class="text-sm font-semibold text-teal-900">Lớp <select id="teacherClassPublishSelect" class="ml-1 rounded border border-teal-300 bg-white px-2 py-1"><option value="all">Tất cả</option>${classes.map(className => `<option value="${escapeHtml(className)}" ${selectedClass === className ? 'selected' : ''}>${escapeHtml(className)}</option>`).join('')}</select></label></div><div class="mt-3 grid gap-2 md:grid-cols-2">${cards}</div>`;
-        if (!existing) els.teacherLessonDesigner.prepend(toolbar);
-        document.getElementById('teacherClassPublishSelect').onchange = event => {
-            localStorage.setItem(LS_TEACHER_CLASS_FILTER_KEY, event.target.value);
-            renderTeacherClassPublishToolbar();
-        };
-        toolbar.querySelectorAll('[data-toggle-lesson-class]').forEach(button => {
-            button.onclick = async () => {
-                const lesson = state.lessons.find(item => String(item.id) === button.dataset.toggleLessonClass);
-                if (!lesson) return;
-                button.disabled = true;
-                try {
-                    await toggleTeacherLessonClass(lesson, selectedClass);
-                } catch (error) {
-                    alert(error.message || 'Không cập nhật được trạng thái mở bài.');
-                    button.disabled = false;
-                }
-            };
-        });
-    }
-
     function applyRoleView() {
         const teacher = isTeacher();
         const preview = isTeacherPreview();
@@ -1321,7 +1235,7 @@
         if (teacher && typeof window.mountTeacherLotrinhNav === 'function') {
             window.mountTeacherLotrinhNav({ mode: preview ? 'preview' : 'design', subject: PAGE_SUBJECT });
         }
-        renderTeacherClassPublishToolbar();
+        document.getElementById('teacherClassPublishToolbar')?.remove();
         if (teacher && !preview) {
             refreshTeacherQuotaBanner();
         } else {
