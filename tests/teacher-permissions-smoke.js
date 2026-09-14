@@ -34,6 +34,7 @@ requireMatch(index, /\.tool-tile\.hidden\s*\{\s*display:\s*none\s*!important;\s*
 requireMatch(index, /localStorage\.getItem\('authToken'\)[\s\S]*?document\.documentElement\.classList\.add\('permissions-pending'\)/, 'Signed-in users must enter the permission-pending state before tools can render.');
 requireMatch(index, /\.permissions-pending #mainToolsGrid > \[data-tool\]\s*\{\s*display:\s*none\s*!important;\s*\}/, 'Pending permission checks must conceal every main tool card.');
 requireMatch(index, /applyTeacherHubVisibility\(accountFeatures, allowedSet\);\s*}\s*removePermissionsPending\(\);/, 'Teacher permission-pending state must be removed only after teacher tools are filtered.');
+requireMatch(index, /sodiem:\s*'sodiem\.html'/, 'Sổ Điểm must be mapped in the teacher hub tool list.');
 
 const tools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'thanhtich', 'soankhbd', 'taovideo', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc'];
 for (const tool of tools) {

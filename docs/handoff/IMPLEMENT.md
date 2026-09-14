@@ -57,3 +57,7 @@
 - Vòng quay ưu tiên học sinh chưa có điểm; ở chế độ hạn chế, mỗi học sinh chưa có điểm có trọng số 20 còn học sinh đã có điểm có trọng số 1 (5% tương đối).
 - Tạo `api/sodiem.php`, đăng ký quyền `sodiem` và bổ sung smoke test tương ứng.
 - Kiểm thử: `node tests/teacher-permissions-smoke.js`, `node tests/sodiem-smoke.js`, kiểm tra cú pháp JavaScript inline và `git diff --check` đều PASS. PHP CLI không có trong môi trường nên chưa chạy được `php -l`.
+
+## Sửa lỗi: hiển thị Sổ Điểm trên hub giáo viên
+- Bổ sung ánh xạ `sodiem: 'sodiem.html'` vào `TOOL_PAGE_LINKS` của `index.html`, để thẻ Sổ Điểm được xử lý theo quyền `sodiem` do Admin cấp.
+- Bổ sung hồi quy trong `tests/teacher-permissions-smoke.js` để yêu cầu ánh xạ này luôn tồn tại.
