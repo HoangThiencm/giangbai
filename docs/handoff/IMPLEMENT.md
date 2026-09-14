@@ -103,3 +103,15 @@ Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` t
 - Kiểm tra tĩnh xác nhận có các hành động chính, OMML và định dạng trang; không có `access-control.js`, `authToken`, `fetch`, `localStorage` hoặc `XMLHttpRequest` — PASS.
 - `git diff --check` — PASS.
 - Không thể mở Microsoft Word trong môi trường hiện tại để kiểm tra trực tiếp Equation Editor; cần xác nhận việc chỉnh sửa OMML bằng Microsoft Word trên máy người dùng.
+
+## Bổ sung prompt tích hợp động
+
+- Nút sao chép prompt giờ tạo prompt từ môn học, tên bài, số tiết, giáo viên/đơn vị và giáo án gốc đang nhập; khi chưa có giáo án gốc, vẫn sao chép mẫu dùng được và nhắc giáo viên dán nội dung để kết quả sát bài.
+- Prompt quy định nguồn TT 02/2025, CV 3456, QĐ 2422 và CV 5512; giữ giáo án gốc, tích hợp đúng ngữ cảnh, định mức mã theo bài 1 tiết hoặc từ 2 tiết, mã NLS/AI đúng kiểu, quy trình kiểm chứng AI và bảng tổng hợp cuối bài.
+- Prompt yêu cầu bôi đậm câu tích hợp và mã NLS/AI; parser hiện giữ được thẻ `strong` lồng với màu NLS/AI an toàn.
+- Đầu ra bị giới hạn rõ là Markdown và `$...$` / `$$...$$`; Gemini không được tạo binary hay `.docx`, vì trang đảm nhiệm chuyển Word/OMML.
+
+## Điều chỉnh hạn mức mã trong prompt
+
+- Bài 1 tiết chỉ cho phép tối đa một mã tổng cộng: NLS hoặc AI; chỉ dùng cả hai khi người dùng yêu cầu rõ.
+- Bài từ hai tiết chỉ cho phép tối đa hai mã tổng cộng: riêng NLS hoặc AI tối đa hai mã, còn tích hợp hỗn hợp là đúng một NLS và một AI. Prompt nêu rõ đây là mức tối đa, không bắt buộc dùng đủ.

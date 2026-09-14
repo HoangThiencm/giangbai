@@ -32,6 +32,7 @@
       <button id="loadSample" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-white font-bold hover:bg-emerald-700"><i class="fa-solid fa-flask mr-2"></i>Nạp giáo án mẫu</button>
       <button id="clearAll" class="rounded-xl bg-slate-100 px-4 py-2.5 font-bold hover:bg-slate-200"><i class="fa-solid fa-eraser mr-2"></i>Xóa trắng</button>
       <span id="notice" class="self-center text-sm font-medium text-slate-500" role="status"></span>
+      <p class="basis-full text-sm text-slate-600"><i class="fa-solid fa-circle-info text-violet-600 mr-1"></i>Prompt lấy thông tin bạn đang nhập. Gemini chỉ trả Markdown và LaTeX; trang này mới là nơi chuyển sang Word/OMML.</p>
     </section>
     <section class="no-print grid grid-cols-1 lg:grid-cols-2 gap-5">
       <div class="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
@@ -55,7 +56,37 @@
     'use strict';
     const $ = id => document.getElementById(id);
     const fields = ['subject','title','duration','teacher','markdown'].map($);
-    const promptText = `Bạn là chuyên gia sư phạm Việt Nam. Dựa trên giáo án/SGK tôi cung cấp, hãy soạn KẾ HOẠCH BÀI DẠY theo Công văn 5512. Giữ cấu trúc rõ ràng; tích hợp đúng mã Năng lực số theo CV 3456 và năng lực AI theo QĐ 2422 phù hợp với từng hoạt động, không gán khiên cưỡng. Xuất duy nhất Markdown: dùng #/##/###, danh sách -, +, ., bảng Markdown cho tiến trình và bảng tổng hợp cuối bài. Công thức Toán phải ghi LaTeX: inline $...$ và khối $$...$$. Không tạo file, không xuất mã nhị phân.`;
+    function buildPrompt() {
+      const subject = $('subject').value.trim() || '[chưa nhập môn học]';
+      const title = $('title').value.trim() || '[chưa nhập tên bài]';
+      const duration = Math.max(1, Number.parseInt($('duration').value, 10) || 1);
+      const teacher = $('teacher').value.trim() || '[chưa nhập]';
+      const original = $('markdown').value.trim();
+      const limits = duration === 1
+        ? 'Bài 1 tiết: tối đa 01 mã TỔNG CỘNG, chọn NLS HOẶC AI (không dùng cả hai trừ khi người dùng yêu cầu rõ).'
+        : 'Bài từ 2 tiết trở lên: tối đa 02 mã TỔNG CỘNG. Nếu chỉ tích hợp NLS thì tối đa 02 mã NLS; nếu chỉ tích hợp AI thì tối đa 02 mã AI; nếu tích hợp cả hai thì đúng 01 mã NLS + 01 mã AI.';
+      return `Bạn là chuyên gia sư phạm Việt Nam, am hiểu Thông tư 02/2025/TT-BGDĐT, Công văn 3456/BGDĐT-GDPT (Năng lực số), Quyết định 2422/QĐ-BGDĐT (năng lực AI) và Công văn 5512/BGDĐT-GDTrH.
+
+NHIỆM VỤ: Hoàn thiện KẾ HOẠCH BÀI DẠY tích hợp NLS và AI cho thông tin sau.
+- Môn học: ${subject}
+- Tên bài dạy: ${title}
+- Thời lượng: ${duration} tiết
+- Giáo viên / đơn vị: ${teacher}
+
+NGUYÊN TẮC BẮT BUỘC:
+1. Giữ nguyên tối đa cấu trúc, mục tiêu chuyên môn, nội dung, tiến trình và dữ liệu đúng của giáo án gốc; chỉ bổ sung/chỉnh sửa tối thiểu để tích hợp. Không bịa thêm hoạt động, thiết bị hay yêu cầu không có căn cứ.
+2. Tích hợp NLS theo CV 3456 và AI theo QĐ 2422 đúng ngữ cảnh, có ích cho hoạt động học, không gán khiên cưỡng. ${limits} Đây là mức tối đa, không bắt buộc phải dùng đủ; hãy dùng ít hơn hoặc không dùng khi không có hoạt động phù hợp.
+3. Ghi mã NLS theo đúng kiểu mã của khung năng lực số (ví dụ [TC1.NLa]); ghi mã AI theo đúng kiểu mã năng lực AI (ví dụ [8.AI.1]). Không tự chế mã. Mỗi tích hợp phải nêu rõ tên năng lực/mã, việc học sinh thực hiện, sản phẩm/minh chứng và cách giáo viên quan sát/đánh giá.
+4. Với hoạt động có AI, nêu quy trình dùng AI an toàn: giao nhiệm vụ rõ, kiểm tra nguồn/đối chiếu SGK hoặc dữ liệu tin cậy, yêu cầu học sinh giải thích và tự chịu trách nhiệm về kết quả; giáo viên kiểm chứng trước khi chấp nhận. Không coi câu trả lời AI là đáp án mặc định.
+5. Trình bày theo CV 5512: mục tiêu; thiết bị và học liệu; tiến trình từng hoạt động (mục tiêu, nội dung, sản phẩm, tổ chức thực hiện); cuối bài bắt buộc có bảng tổng hợp Nội dung/hoạt động | Mã NLS | Mã AI | Minh chứng đánh giá.
+6. Tất cả mã/tên NLS hoặc AI VÀ câu mô tả tích hợp liên quan phải được bôi đậm bằng Markdown **...** để dễ nhận diện. Ví dụ: **[TC1.NLa] Học sinh dùng công cụ số để…**.
+7. Dùng Markdown an toàn, rõ ràng: #/##/###, danh sách -, +, .; bảng Markdown. Công thức ghi LaTeX inline $...$ hoặc dạng khối $$...$$.
+
+QUY TRÌNH ĐẦU RA RẤT QUAN TRỌNG: Chỉ trả về duy nhất toàn văn Markdown hoàn chỉnh + công thức LaTeX. Không tạo hay đính kèm .doc/.docx/PDF, không xuất binary, không từ chối vì yêu cầu xuất Word. Trang web giaoantichhop.html sẽ tự chuyển Markdown này sang Word/OMML.
+
+GIÁO ÁN GỐC / NỘI DUNG CẦN GIỮ:
+${original || '[Chưa dán giáo án gốc. Hãy tạo một mẫu có cấu trúc 5512 để giáo viên thay thế bằng giáo án gốc sau đó.]'}`;
+    }
     const sample = { subject:'Toán lớp 8', title:'Hình chóp tam giác đều', duration:'2', teacher:'Nguyễn Văn A – Trường THCS', markdown:`# KẾ HOẠCH BÀI DẠY\n## Bài: HÌNH CHÓP TAM GIÁC ĐỀU\n**Môn học:** Toán 8  \n**Thời lượng:** 2 tiết\n\n## I. Mục tiêu\n- Nhận biết được hình chóp tam giác đều; tính được diện tích xung quanh và thể tích. [TC1.NLa]\n- Sử dụng công cụ số để mô phỏng hình không gian và kiểm chứng kết quả. [8.AI.1]\n\n## II. Thiết bị dạy học và học liệu\n+ Mô hình hình chóp tam giác đều, phiếu học tập, máy tính hoặc phần mềm hình học động.\n+ Học sinh chuẩn bị thước thẳng, giấy nháp.\n\n## III. Tiến trình dạy học\n### 1. Hoạt động khởi động\n- Giáo viên cho học sinh quan sát mô hình mái nhà có dạng hình chóp. [TC2.NLb]\n- Học sinh dự đoán các mặt bên và đáy của hình.\n\n### 2. Hoạt động hình thành kiến thức\nVới cạnh đáy $a$, trung đoạn $l$ và chiều cao $h$, diện tích xung quanh là $S_{xq}=\\frac{3al}{2}$.\n\n$$V=\\frac{1}{3}S_{đáy}h=\\frac{a^2\\sqrt{3}h}{12}$$\n\n| Hoạt động | Sản phẩm | Mã tích hợp |\n| --- | --- | --- |\n| Khám phá mô hình | Phiếu nhận diện các yếu tố | [TC1.NLa] |\n| Dùng phần mềm dựng hình | Tệp mô phỏng và nhận xét | [8.AI.1] |\n\n### 3. Hoạt động luyện tập\n. Tính $S_{xq}$ khi $a=6\\,cm$, $l=5\\,cm$.\n. Thảo luận cách kiểm tra kết quả bằng mô hình số. [AI.2]\n\n## IV. Bảng tổng hợp tích hợp\n| Nội dung | NLS | AI | Minh chứng |\n| --- | --- | --- | --- |\n| Khám phá hình chóp | [TC1.NLa] | [8.AI.1] | Phiếu học tập, tệp mô phỏng |\n| Luyện tập | [TC2.NLb] | [AI.2] | Bài làm của học sinh |` };
     const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const katexMath = (latex, display, word) => {
@@ -84,7 +115,7 @@
     function safeFileName(value){return String(value||'Ke_hoach_bai_day').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_|_$/g,'')||'Ke_hoach_bai_day';}
     function exportWordDocument(){ if(!$('markdown').value.trim()){show('Hãy dán nội dung giáo án trước khi xuất.',true);return;} const name=esc(String($('title').value||'Kế hoạch bài dạy').toUpperCase()); const meta=`<p style="text-align:center;font-weight:bold;font-size:14pt;margin:0">KẾ HOẠCH BÀI DẠY</p><p style="text-align:center;font-weight:bold;font-size:14pt;margin:3pt 0 8pt">${name}</p><p><b>Môn học:</b> ${esc($('subject').value)} &nbsp;&nbsp; <b>Thời lượng:</b> ${esc($('duration').value)} tiết</p>${$('teacher').value?'<p><b>Giáo viên / Đơn vị:</b> '+esc($('teacher').value)+'</p>':''}`; const doc=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>@page{size:A4;margin:1.5cm 1.5cm 1.5cm 2cm;}body{font-family:'Times New Roman',serif;font-size:13pt;line-height:1.15;text-align:justify;}h1,h2{font-size:14pt;font-weight:bold}h3{font-size:13pt;font-weight:bold}p{margin:3pt 0 6pt}table{width:100%;border-collapse:collapse;margin:6pt 0}th,td{border:1px solid #000;padding:5px;vertical-align:top}th{background:#f3f4f6}.nls{color:#16a34a;font-weight:bold}.ai{color:#9333ea;font-weight:bold}ul{margin:3pt 0 6pt}</style></head><body>${meta}${markdownToHtml($('markdown').value,true)}</body></html>`; saveAs(new Blob(['\ufeff',doc],{type:'application/msword;charset=utf-8'}),safeFileName($('title').value)+'_Tich_hop_NLS_AI.doc');show('Đã tạo file Word .doc có công thức OMML.'); }
     function show(msg,error=false){const n=$('notice');n.textContent=msg;n.className='self-center text-sm font-medium '+(error?'text-rose-600':'text-emerald-700');setTimeout(()=>{if(n.textContent===msg)n.textContent='';},4200);}
-    $('copyPrompt').onclick=async()=>{try{await navigator.clipboard.writeText(promptText);show('Đã sao chép Prompt cho Gemini.');}catch(_){const t=document.createElement('textarea');t.value=promptText;document.body.append(t);t.select();document.execCommand('copy');t.remove();show('Đã sao chép Prompt cho Gemini.');}};
+    $('copyPrompt').onclick=async()=>{const promptText=buildPrompt();const emptyOriginal=!$('markdown').value.trim();try{await navigator.clipboard.writeText(promptText);show(emptyOriginal?'Đã sao chép mẫu prompt; hãy dán giáo án gốc để có kết quả sát bài.':'Đã sao chép Prompt cho Gemini.');}catch(_){const t=document.createElement('textarea');t.value=promptText;document.body.append(t);t.select();document.execCommand('copy');t.remove();show(emptyOriginal?'Đã sao chép mẫu prompt; hãy dán giáo án gốc để có kết quả sát bài.':'Đã sao chép Prompt cho Gemini.');}};
     $('loadSample').onclick=()=>{Object.entries(sample).forEach(([key,val])=>$(key).value=val);updatePreview();show('Đã nạp giáo án mẫu.');};
     $('clearAll').onclick=()=>{fields.forEach(f=>f.value='');updatePreview();show('Đã xóa nội dung.');};
     $('exportWord').onclick=exportWordDocument; fields.forEach(f=>f.addEventListener('input',updatePreview));
