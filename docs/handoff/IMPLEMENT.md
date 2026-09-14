@@ -1,5 +1,34 @@
 # IMPLEMENT
 
+## Triển khai mở bài theo lớp và danh sách tài khoản (2026-09-14)
+
+### Bổ sung thao tác nhanh trên lộ trình giáo viên
+
+- `lotrinh.js` có thanh **Mở bài theo lớp** cho giáo viên: chọn `Tất cả` hoặc một lớp phụ trách; khi chọn lớp, từng bài có nút mở/khóa nhanh gọi `update_published_classes`.
+- Thanh này hiển thị đúng trạng thái mở theo lớp; lựa chọn lớp được ghi nhớ riêng theo lộ trình.
+- Khi thay đổi một bài cũ từng mở toàn khối, API chuyển phạm vi đó thành danh sách lớp học sinh hiện có trước khi áp dụng thay đổi, để thao tác khóa một lớp không vô tình giữ lại ký tự đại diện `*`.
+
+### Đã triển khai
+
+- `api/lessons.php` tự nâng cấp bảng `lessons` với `published_classes_json`; API trả `published_classes`, lọc danh sách và chặn truy cập trực tiếp của học sinh không thuộc lớp được mở. Các bài cũ có trường lớp rỗng vẫn được xem như mở toàn khối.
+- Lưu bài học nhận danh sách lớp, đồng bộ trạng thái xuất bản; giáo viên chỉ có thể lưu/mở cho các lớp mình phụ trách. Thêm action `update_published_classes` để cập nhật nhanh quyền mở theo lớp.
+- Trình soạn bài cho phép chọn tất cả lớp hoặc tick từng lớp, gửi dữ liệu lớp khi lưu và hiển thị phạm vi mở bài trong danh sách chọn bài.
+- Lộ trình học dùng chính tập bài API đã lọc theo lớp, nên tiến độ chương và thống kê học sinh chỉ dựa trên các bài được mở cho lớp đó.
+- Danh sách tài khoản Admin được tách thành tab Học sinh/Giáo viên; tab Học sinh có pill lớp động, tìm kiếm, lọc trạng thái, đếm riêng và giữ tab/lớp đã chọn trong `localStorage`. Tab Giáo viên hiển thị lớp phụ trách, quyền được cấp và thao tác nghiệp vụ tương ứng.
+
+### Kiểm thử
+
+- `node --check admin-lesson-manager.js` — PASS.
+- `node --check lotrinh.js` — PASS.
+- Kiểm tra cú pháp toàn bộ JavaScript nội tuyến trong `admin.html` bằng `node --check` — PASS.
+- `git diff --check` — PASS.
+- Không chạy được PHP lint vì môi trường không có lệnh `php` trong `PATH`.
+
+### Vấn đề còn lại
+
+- Chưa có kiểm thử tích hợp với CSDL/tài khoản thật trong môi trường hiện tại; cần chạy `/verify` theo kịch bản trong `PLAN.md` trước khi commit/push.
+
+
 ## Đã triển khai
 
 - Mã hóa tài khoản trước khi gửi `X-User-Account`, giải mã an toàn ở API, và không dùng tên giáo viên có dấu/khoảng trắng làm tài khoản nháp.

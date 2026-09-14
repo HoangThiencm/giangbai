@@ -223,6 +223,45 @@
         return [...new Set(subjects)];
     }
 
+    function lessonScopeClasses() {
+        if (localStorage.getItem('userRole') === 'teacher') {
+            return String(localStorage.getItem('userClassName') || '').split(/[,;|]+/).map(item => item.trim()).filter(Boolean);
+        }
+        try {
+            return [...new Set((window.cachedUsers || [])
+                .filter(user => user.role === 'student' && String(user.class_name || '').trim())
+                .map(user => String(user.class_name).trim()))].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function syncLessonClassScope(selected = []) {
+        const container = el('lessonClassScopeContainer');
+        if (!container) return;
+        const selectedClasses = Array.isArray(selected) ? selected : [];
+        const all = selectedClasses.includes('*');
+        const classes = lessonScopeClasses();
+        const teacher = localStorage.getItem('userRole') === 'teacher';
+        container.innerHTML = `
+            <label class="inline-flex items-center gap-1 text-xs font-semibold text-slate-700"><input id="lessonAllClasses" type="checkbox" ${all ? 'checked' : ''}> ${teacher ? 'Mở cho tất cả lớp phụ trách' : 'Mở cho tất cả các lớp'}</label>
+            <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1">${classes.map(className => `<label class="inline-flex items-center gap-1 text-xs text-slate-600"><input class="lesson-class-scope" type="checkbox" value="${escapeHtml(className)}" ${all || selectedClasses.includes(className) ? 'checked' : ''} ${all ? 'disabled' : ''}> ${escapeHtml(className)}</label>`).join('') || '<span class="text-xs text-amber-700">Chưa có lớp để chọn.</span>'}</div>`;
+        el('lessonAllClasses')?.addEventListener('change', event => {
+            container.querySelectorAll('.lesson-class-scope').forEach(input => {
+                input.disabled = event.target.checked;
+                if (event.target.checked) input.checked = true;
+            });
+        });
+    }
+
+    function selectedLessonClasses() {
+        if (!el('lessonPublished')?.checked) return [];
+        if (el('lessonAllClasses')?.checked) {
+            return localStorage.getItem('userRole') === 'teacher' ? lessonScopeClasses() : ['*'];
+        }
+        return [...document.querySelectorAll('.lesson-class-scope:checked')].map(input => input.value);
+    }
+
     function scopedSubjects() {
         const allowed = new Set(getTeacherAllowedSubjects());
         if (localStorage.getItem('userRole') !== 'teacher') {
@@ -1864,6 +1903,7 @@
                         </div>
                     </label>
                 </div>
+                <div id="lessonClassScopeContainer" class="md:col-span-2 xl:col-span-2 rounded border border-slate-200 bg-slate-50 px-2 py-1.5"></div>
                 <div class="text-[11px] text-slate-500 self-end pb-1 hidden xl:block">Dùng tab bên dưới để soạn nội dung linh hoạt. Dán ảnh khi cần.</div>
             </div>
 
@@ -2049,6 +2089,10 @@
 
         el('lessonReloadBtn').onclick = refreshLessons;
         el('lessonSelect').onchange = () => { void fillForm(el('lessonSelect').value); };
+        el('lessonPublished').onchange = () => {
+            const scope = el('lessonClassScopeContainer');
+            if (scope) scope.classList.toggle('opacity-50', !el('lessonPublished').checked);
+        };
         el('newLessonBtn').onclick = newLesson;
         el('testLessonBtn').onclick = testCurrentLessonAsStudent;
         el('duplicateLessonBtn').onclick = duplicateLesson;
@@ -2251,10 +2295,13 @@
         select.innerHTML = items.map(lesson => {
             const chapter = String(lesson.chapter || '').trim();
             const prefix = chapter ? `${chapter} · ` : '';
+            const scope = Array.isArray(lesson.published_classes) && lesson.published_classes.length
+                ? ` [Mở: ${lesson.published_classes.includes('*') ? 'tất cả lớp' : lesson.published_classes.join(', ')}]`
+                : (lesson.is_published ? ' [Mở: tất cả lớp]' : ' [Đang đóng]');
             const label = scoped
                 ? `${prefix}${lesson.title}`
                 : `${prefix}${lesson.title} (${lesson.subject})`;
-            return `<option value="${escapeHtml(lesson.slug)}">${escapeHtml(label)}</option>`;
+            return `<option value="${escapeHtml(lesson.slug)}">${escapeHtml(label + scope)}</option>`;
         }).join('');
         if (items.some(item => item.slug === currentSlug)) select.value = currentSlug;
         renderChapterOptions();
@@ -2305,6 +2352,7 @@
         el('lessonTitleInput').value = lesson.title || '';
         el('lessonOrder').value = lesson.order_index || 1;
         el('lessonPublished').checked = !!lesson.is_published;
+        syncLessonClassScope(lesson.published_classes || (lesson.is_published ? ['*'] : []));
         el('lessonGoalInput').value = lesson.goal || lesson.goal_text || '';
         const theoryText = formatTheoryBlocks(lesson.theory);
         const examplesText = formatExamples(lesson.examples);
@@ -2541,6 +2589,7 @@
             title: el('lessonTitleInput').value.trim(),
             order_index: Number(el('lessonOrder').value) || 0,
             is_published: el('lessonPublished').checked,
+            published_classes: selectedLessonClasses(),
             goal_text: el('lessonGoalInput').value.trim(),
             theory: parseTheoryBlocks(el('lessonTheory').value),
             examples: parseExamples(el('lessonExamples').value),
