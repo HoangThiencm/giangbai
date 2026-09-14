@@ -1,93 +1,103 @@
-﻿# PLAN
+# PLAN
 
-## Hiện trạng
-- Khu vực `Ghi chú PPCT & nhận diện tích hợp` trong `giaoantichhop.html` hiện tại chỉ hỗ trợ dán văn bản thô vào ô textarea `ppctRaw`.
-- Trong thực tế giảng dạy, giáo viên thường có sẵn ảnh chụp màn hình bảng Phân phối chương trình (PPCT) hoặc Kế hoạch giáo dục (chụp từ file Word, Excel, PDF hoặc sổ kế hoạch có ghi chú cột NLS/AI).
-- Giáo viên cần tính năng: chụp màn hình rồi bấm `Ctrl+V` dán thẳng ảnh vào khung PPCT (hoặc tải tệp ảnh lên), hệ thống tự động nhận diện văn bản (OCR) bằng Gemini Vision và bóc tách ngay các mã NLS, AI để đưa vào cấu hình.
+## Hiện trạng & Phân tích Kiến trúc
+- Hiện tại hệ thống trích xuất nội dung DOCX sang Markdown, gửi toàn văn sang Gemini tái tạo lại rồi biên dịch ngược từ Markdown sang Word (.docx / .doc).
+- Đúng như đánh giá kiến trúc của người dùng: **Quy trình qua trung gian Markdown không thể cam kết 100% file gốc**, vì sẽ luôn có nguy cơ:
+  + Mất cấu trúc ô gộp phức tạp (`w:vMerge`, `w:gridSpan`);
+  + Mất định dạng Word chi tiết: font chữ riêng của trường/tổ, tab stop, header/footer, số trang, hình ảnh, shape, watermark;
+  + Mất cách xuống dòng và căn lề riêng trong từng ô bảng;
+  + AI có thể tự ý viết lại hoặc làm lệch thứ tự câu từ.
+- **Giải pháp triệt để:** Triển khai cơ chế **Can thiệp trực tiếp cấu trúc gói OOXML (Direct OOXML Injection)**:
+  + Giữ nguyên 100% gói tệp `.docx` gốc (Binary ZIP).
+  + AI chỉ sinh các đoạn tích hợp (Delta / Surgical Snippets): mục tiêu NLS/AI cho Mục I, nhiệm vụ tích hợp cho Mục III, và bảng tổng hợp cuối bài.
+  + Thư viện `JSZip` giải nén `word/document.xml` trong bộ nhớ, dùng DOMParser chèn đúng các node `<w:p>` và `<w:tbl>` vào các vị trí tương ứng, sau đó nén lại thành file `.docx`.
+  + **Kết quả:** Đạt 100% bảo toàn file Word gốc đúng nghĩa (giữ nguyên từng font, lề, header, footer, ảnh và bảng biểu phức tạp), không có bất kỳ rủi ro nào về việc AI viết lại hay phá vỡ cấu trúc.
 
 ## Phạm vi
-1. **Hỗ trợ dán ảnh từ Clipboard (Ctrl+V) & Tải tệp ảnh tại khu vực PPCT:**
-   - Lắng nghe sự kiện `paste` trên ô `ppctRaw` và toàn bộ khối PPCT: Nếu clipboard chứa dữ liệu hình ảnh (`image/*`), tự động bắt lấy file ảnh.
-   - Bổ sung nút bấm trực quan: **"🖼️ Nạp ảnh PPCT"** (kèm input file ẩn hỗ trợ `.png`, `.jpg`, `.jpeg`, `.webp`).
-   - Vùng kéo thả ảnh trực tiếp vào khu vực PPCT.
-2. **Giao diện xem trước ảnh PPCT nhỏ gọn, tinh tế:**
-   - Khi có ảnh: Hiển thị thumbnail thu nhỏ của ảnh, tên ảnh, dung lượng và nút "Xóa ảnh" hoặc "Đổi ảnh khác".
-   - Hiển thị thông báo trạng thái: "⚡ Đang nhận diện nội dung từ ảnh PPCT bằng Gemini..." kèm spinner.
-3. **Module Gemini Multimodal OCR trực tiếp phía Client:**
-   - Tận dụng `callGemini` sẵn có, bổ sung khả năng gửi `inlineData` dạng base64 ảnh tới Gemini REST API (`gemini-3.8-flash`, tự động fallback sang `gemini-2.5-flash`).
-   - Sử dụng prompt OCR chuyên dụng cho bảng PPCT:
-     + Trích xuất toàn bộ văn bản trong ảnh bảng PPCT.
-     + Đặc biệt tập trung nhận diện chính xác: tên bài dạy, số tiết, các ghi chú hoặc cột tích hợp Năng lực số (NLS), mã NLS, Năng lực AI, mã AI.
-4. **Tự động kích hoạt Smart PPCT Parser sau khi nhận diện:**
-   - Kết quả văn bản OCR được điền tự động vào ô `ppctRaw`.
-   - Ngay lập tức gọi hàm `parsePpctIntegration(ppctRaw.value)` để quét mã NLS/AI, hiển thị các huy hiệu (badges) trực quan và tự động chọn các mã chuẩn tương ứng trong danh mục.
-   - Giáo viên có thể xem lại hoặc chỉnh sửa trực tiếp văn bản vừa trích xuất nếu muốn bổ sung.
+1. **Lưu trữ nhị phân gói DOCX gốc (`currentDocxBuffer`):**
+   - Khi người dùng nạp file `.docx`, lưu nguyên vẹn `ArrayBuffer` của tệp vào bộ nhớ trình duyệt.
+   - Nạp thư viện `JSZip` (`https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js`).
+2. **AI Sinh đoạn tích hợp can thiệp (Surgical / Delta Generation):**
+   - Trích xuất tóm tắt ngắn gọn cấu trúc bài dạy để Gemini phân tích (tiết kiệm token, phản hồi cực nhanh dưới 5s).
+   - Gemini chỉ trả về JSON chứa đúng 3 phần cần chèn:
+     ```json
+     {
+       "mucTieu": "c) Năng lực số: [1.2.TC1a] ...",
+       "hoatDongMuc3": {
+         "tenHoatDong": "Hoạt động 2",
+         "noiDungChen": "[Tích hợp NLS: 1.2.TC1a] Học sinh..."
+       },
+       "bangTongHop": [
+         {"noiDung": "Hoạt động 2", "nls": "[1.2.TC1a]", "ai": "", "minhChung": "..."}
+       ]
+     }
+     ```
+   - Quy tắc nghiêm ngặt: Năng lực nào không chọn thì không sinh, không bao giờ sinh câu "Không tích hợp...".
+3. **Module Chèn trực tiếp OOXML (`injectIntegrationIntoDocx`):**
+   - Mở `word/document.xml` từ `JSZip`.
+   - Tìm đoạn Mục I (sau `Năng lực đặc thù` hoặc `Mục tiêu`): Tạo node `<w:p>` với định dạng màu sắc (NLS xanh lá, AI tím) và chèn vào cây XML.
+   - Tìm vị trí hoạt động tại Mục III: Chèn đoạn `<w:p>` tích hợp vào ngay sau hoạt động hoặc trong ô tương ứng.
+   - Chèn bảng tổng hợp `<w:tbl>` trước `<w:sectPr>` cuối tài liệu.
+   - Lưu đè `word/document.xml` và xuất file `.docx` mới từ `zip.generateAsync`.
+4. **Chế độ Dự phòng (Fallback):**
+   - Nếu người dùng nạp PDF, TXT hoặc tự soạn thảo không có file DOCX gốc, hệ thống tự động fallback sang chế độ xuất Markdown qua `docxGenerator` / `DocxGenerator` như hiện tại.
+   - Nút xuất Word (.doc OMML) tiếp tục phục vụ nhu cầu chỉnh sửa công thức toán Equation.
 
 ## Ngoài phạm vi
-- Không gửi ảnh qua bất kỳ máy chủ backend nào (ảnh được xử lý base64 ngay trên trình duyệt và gửi trực tiếp tới Google API qua kết nối mã hóa HTTPS).
-- Không làm thay đổi `soankhbd.html` hoặc các module hệ thống khác.
-- Giữ vững nguyên tắc không cần đăng nhập.
+- Không gửi file DOCX qua máy chủ trung gian (toàn bộ ZIP và XML DOM xử lý 100% trong bộ nhớ trình duyệt).
+- Không sửa đổi `soankhbd.html`.
+- Không bắt buộc đăng nhập.
 
 ## File dự kiến tác động
-- `giaoantichhop.html`: Bổ sung xử lý dán ảnh, upload ảnh, giao diện thumbnail và gọi Gemini Multimodal OCR tại khối PPCT.
+- `giaoantichhop.html`:
+  + Nạp thêm `jszip.min.js`.
+  + Thêm biến lưu `currentDocxBuffer` và `currentDocxName`.
+  + Viết hàm `injectIntegrationIntoDocx(docxBuffer, deltaData)` thao tác XML DOM.
+  + Nâng cấp prompt và hàm `integrateAi` để hỗ trợ chế độ Delta Injection khi có file DOCX gốc.
+  + Nút "Xuất .docx" ưu tiên xuất từ file DOCX đã được chèn trực tiếp (giữ 100% gốc).
 
 ## Các bước thực hiện
-### Bước 1: Nâng cấp UI khu vực "Ghi chú PPCT & nhận diện tích hợp"
-- Bổ sung thanh thao tác nhỏ phía trên textarea `ppctRaw`:
-  + Nút bấm: `<label class="cursor-pointer text-xs font-bold text-amber-900 hover:text-amber-700"><i class="fa-solid fa-image mr-1"></i>Nạp ảnh PPCT<input id="ppctImageInput" type="file" accept="image/*" class="hidden"></label>`.
-  + Gợi ý phím tắt: `<span class="text-xs text-slate-500">hoặc bấm Ctrl+V để dán ảnh</span>`.
-- Bổ sung container hiển thị thumbnail ảnh xem trước (`#ppctImagePreview`) kèm nút xóa ảnh (`#removePpctImage`).
-- Thêm nhãn trạng thái OCR (`#ppctOcrStatus`).
+### Bước 1: Nạp JSZip và lưu giữ gói DOCX gốc
+- Thêm `<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>` vào `<head>`.
+- Trong `readLessonFile`:
+  + Khi `ext === 'docx'`: `currentDocxBuffer = await file.arrayBuffer(); currentDocxName = file.name;`
+  + Tiếp tục hiển thị preview bằng `convertMammothHtmlToMarkdown` để giáo viên xem trước trên web.
 
-### Bước 2: Bắt sự kiện Dán ảnh (Paste) và Kéo thả (Drop)
-- Bắt sự kiện `paste` trên `ppctRaw` và container PPCT:
-  + Quét `e.clipboardData.items` tìm item có kiểu `type.startsWith('image/')`.
-  + Ngăn chặn hành vi mặc định và lấy `item.getAsFile()`.
-- Bắt sự kiện `change` trên `#ppctImageInput`.
-- Chuyển file ảnh thành Base64 qua `FileReader.readAsDataURL(file)`.
+### Bước 2: Xây dựng hàm chèn OOXML can thiệp trực tiếp
+- Viết hàm `injectDocxOxml(arrayBuffer, delta)`:
+  1. `const zip = await JSZip.loadAsync(arrayBuffer);`
+  2. `const xmlText = await zip.file('word/document.xml').async('text');`
+  3. `const doc = new DOMParser().parseFromString(xmlText, 'application/xml');`
+  4. Tạo node `<w:p>` với thẻ `<w:r>` có styling chuẩn Word (`<w:b/>`, `<w:i/>`, `<w:color w:val="16A34A"/>` cho NLS, `<w:color w:val="9333EA"/>` cho AI).
+  5. Quét tìm đoạn "Năng lực đặc thù" hoặc "Mục tiêu": chèn đoạn mục tiêu tích hợp ngay sau đó.
+  6. Quét tìm hoạt động phù hợp trong Mục III: chèn đoạn nhiệm vụ tích hợp ngay sau đó.
+  7. Tạo bảng `<w:tbl>` tổng hợp và chèn vào cuối `<w:body>`.
+  8. `zip.file('word/document.xml', new XMLSerializer().serializeToString(doc));`
+  9. Trả về `await zip.generateAsync({type: 'blob'});`
 
-### Bước 3: Nâng cấp hàm `callGemini` hỗ trợ Multimodal
-- Bổ sung tham số `imagePayload = { mimeType, base64Data }` vào `callGemini`.
-- Khi có `imagePayload`, cấu trúc `parts` gửi đi sẽ bao gồm:
-  ```json
-  [
-    { "inlineData": { "mimeType": imagePayload.mimeType, "data": imagePayload.base64Data } },
-    { "text": promptText }
-  ]
-  ```
-- Duy trì đầy đủ cơ chế ưu tiên `gemini-3.8-flash` và fallback `gemini-2.5-flash`, cùng cơ chế xoay vòng API key.
+### Bước 3: Chuẩn hóa AI Delta Prompt
+- Khi có `currentDocxBuffer`, Gemini chỉ cần trả về JSON delta chứa các đoạn cần chèn (thay vì viết lại 10 trang giáo án).
+- Nếu Gemini trả về Markdown thông thường, hàm chèn OOXML vẫn trích xuất được khối Mục tiêu và Hoạt động để cấy ghép vào file gốc.
 
-### Bước 4: Xây dựng quy trình xử lý OCR ảnh PPCT
-- Viết hàm `recognizePpctFromImage(file)`:
-  1. Kiểm tra danh sách API key (`savedKeys()`). Nếu chưa có, mở modal nhắc giáo viên nhập key.
-  2. Hiển thị thumbnail ảnh thu nhỏ và thông báo "Đang đọc nội dung từ ảnh PPCT...".
-  3. Gửi ảnh tới Gemini kèm prompt:
-     `"Hãy đọc và trích xuất toàn bộ văn bản trong ảnh chụp bảng Phân phối chương trình (PPCT) hoặc Kế hoạch dạy học này. Giữ nguyên thông tin về: tên bài dạy, số tiết, và đặc biệt là các ghi chú hoặc cột tích hợp Năng lực số (NLS), mã NLS, Năng lực AI, mã AI."`
-  4. Nhận kết quả text, gán vào `$('ppctRaw').value`.
-  5. Gọi `parsePpctIntegration($('ppctRaw').value)` để hiển thị ngay các huy hiệu mã NLS/AI được nhận diện.
-  6. Cập nhật trạng thái "✓ Đã nhận diện xong từ ảnh".
+### Bước 4: Kiểm thử và hoàn thiện xuất file
+- Khi giáo viên bấm "Xuất .docx":
+  + Nếu có `currentDocxBuffer`: Tải ngay bản DOCX đã cấy ghép trực tiếp (giữ nguyên 100% font, ảnh, bảng biểu phức tạp của file gốc).
+  + Nếu không có: Fallback sang `docxGenerator`.
 
-### Bước 5: Kiểm thử và hoàn thiện
-- Thử nghiệm chụp ảnh màn hình bằng Snipping Tool/Lightshot rồi bấm `Ctrl+V` vào ô PPCT.
-- Thử nghiệm chọn tệp ảnh qua nút nạp ảnh.
-- Kiểm tra tính chuẩn xác khi trích xuất bảng PPCT có cột NLS/AI.
-
-## Rủi ro
-- Giáo viên dán ảnh khi chưa nhập API key:
-  + Biện pháp: Tự động hiển thị modal nhập API key kèm thông báo hướng dẫn rõ ràng.
-- Ảnh chụp dung lượng quá lớn làm chậm mạng:
-  + Biện pháp: Tự động nén/resize nhẹ ảnh trên canvas trước khi gửi API nếu kích thước vượt quá 2048px.
+## Rủi ro & Giải pháp
+- **Rủi ro:** Cấu trúc XML trong `word/document.xml` của một số phần mềm (WPS Office, LibreOffice) có thể dùng namespace hoặc cấu trúc khác biệt một chút.
+  - **Giải pháp:** Sử dụng các bộ chọn linh hoạt (quét textContent trong `<w:t>`) và tạo các node XML với đúng namespace `http://schemas.openxmlformats.org/wordprocessingml/2006/main`. Nếu cấy ghép gặp lỗi, tự động fallback sang `docxGenerator` an toàn.
 
 ## Cách kiểm thử
-1. Kiểm tra dán ảnh bằng phím tắt: Bấm `Ctrl+V` khi đang có ảnh trong clipboard -> Ảnh hiển thị thumbnail, hệ thống bắt đầu gọi OCR.
-2. Kiểm tra chọn tệp ảnh: Bấm "Nạp ảnh PPCT" và chọn tệp `.png`/`.jpg` -> Hệ thống tiếp nhận và xử lý OCR.
-3. Kiểm tra trích xuất nội dung: Văn bản trong ảnh được chuyển thành chữ và đổ vào `ppctRaw`.
-4. Kiểm tra nhận diện tích hợp: Các mã NLS/AI trong ảnh tự động được phát hiện và hiển thị huy hiệu (badges).
-5. Kiểm tra Fallback model: Gemini 3.8 Flash và fallback 2.5 Flash xử lý ảnh mượt mà.
+1. Nạp 1 file Word `.docx` có bảng biểu phức tạp (gộp hàng `rowspan`, gộp cột `colspan`), có hình ảnh, header/footer và font chữ tùy chỉnh.
+2. Bấm "Bắt đầu tích hợp".
+3. Bấm "Xuất .docx" và mở file tải về trong Microsoft Word:
+   - Kiểm tra font chữ, căn lề, header, footer, hình ảnh: hoàn toàn nguyên bản 100%.
+   - Kiểm tra các bảng biểu phức tạp: không bị lệch cột, không mất ô gộp.
+   - Kiểm tra các phần tích hợp: hiển thị đúng tại Mục I và Mục III với màu sắc nổi bật.
 
 ## Tiêu chí nghiệm thu
-- Cho phép dán ảnh chụp màn hình trực tiếp bằng `Ctrl+V` hoặc chọn tệp ảnh tại khu vực Ghi chú PPCT.
-- Hiển thị thumbnail ảnh và trạng thái OCR trực quan.
-- Gemini nhận diện chính xác văn bản PPCT và tự động bóc tách các mã NLS/AI.
-- Không gửi ảnh qua server trung gian, giữ nguyên tính công khai và bảo mật.
-- Không ảnh hưởng đến `soankhbd.html`.
+- Cam kết giữ 100% file gốc cho mọi tệp `.docx` được nạp vào qua cơ chế Direct OOXML Injection.
+- Không phụ thuộc vào việc AI tái tạo lại bảng biểu hay định dạng.
+- Hoạt động mượt mà, độc lập client-side trên trình duyệt.
+- Không sửa đổi `soankhbd.html`.

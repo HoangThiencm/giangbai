@@ -28,3 +28,13 @@
 
 ## Bổ sung ngoài kế hoạch
 - Sửa nháy trang chủ khi chưa đăng nhập: `index.html` luôn ẩn nội dung trong lúc xác thực phiên; chỉ hiện sau khi kiểm tra thành công hoặc dùng dữ liệu quyền đã biết. Phiên không hợp lệ dùng `location.replace('login.html')` để chuyển thẳng sang trang đăng nhập.
+
+## Bổ sung: bảo toàn bảng và xuất Word
+- DOCX nạp vào dùng `mammoth.convertToHtml`, sau đó chuyển sang Markdown bảo toàn bảng, ngắt dòng trong ô và định dạng cơ bản; các hàng thiếu ô được bù để bảng hợp lệ.
+- Prompt không còn yêu cầu xuất đề mục cho năng lực không được chọn; khi chỉ có AI, AI dùng mục c), khi có cả hai dùng NLS c) và AI d).
+- Xuất `.docx` chuyển sang `docxGenerator.exportFullLessonPlan` từ `js/khbd-docx.js`, thay cho việc ghi từng dòng Markdown thô.
+
+## Bổ sung: Direct OOXML Injection
+- Nạp DOCX giữ nguyên `ArrayBuffer`; AI chỉ sinh JSON delta cho mục tiêu, hoạt động và bảng tổng hợp.
+- Dùng JSZip mở `word/document.xml`, cấy các node Word mới rồi nén lại DOCX. Các phần sẵn có của gói ZIP (font, ảnh, header/footer, bảng gộp, watermark và định dạng) không bị tái tạo.
+- Xuất `.docx` ưu tiên bản cấy OOXML; PDF/TXT và nội dung không có DOCX vẫn dùng `DocxGenerator` dự phòng.

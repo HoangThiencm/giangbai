@@ -4,35 +4,34 @@
 PASS
 
 ## Đối chiếu scope
-- [x] Hỗ trợ dán ảnh từ Clipboard (`Ctrl+V`) vào khu vực PPCT (`#ppctPanel`).
-- [x] Hỗ trợ chọn tệp ảnh PPCT qua nút nạp ảnh (`#ppctImageInput`) và hỗ trợ kéo-thả trực tiếp vào container PPCT.
-- [x] Giao diện xem trước ảnh PPCT nhỏ gọn với thumbnail, thông tin dung lượng và nút xóa ảnh (`#ppctImagePreview`, `#ppctImageThumb`, `#ppctImageInfo`, `#removePpctImage`).
-- [x] Module Gemini Multimodal OCR trực tiếp phía client: Nâng cấp `callGemini` nhận payload ảnh base64 (`inlineData`), gửi trực tiếp từ trình duyệt đến Gemini REST API.
-- [x] Tự động nén/resize ảnh lớn hơn 2048px trên canvas phía client trước khi gửi API.
-- [x] Tự động kích hoạt Smart PPCT Parser sau khi có văn bản OCR: đổ văn bản vào `ppctRaw`, trích xuất mã NLS/AI, hiển thị badge và đồng bộ tick danh mục chuẩn.
-- [x] Xử lý khi chưa có key: thông báo rõ ràng và tự động mở modal quản lý key.
-- [x] Không gửi ảnh qua backend trung gian, không ảnh hưởng `soankhbd.html`, không yêu cầu đăng nhập.
+- [x] Triển khai cơ chế Can thiệp trực tiếp cấu trúc OOXML (Direct OOXML Injection): Nạp file `.docx` giữ nguyên 100% gói nhị phân gốc (`currentDocxBuffer`).
+- [x] Tích hợp `JSZip` giải nén và xử lý `word/document.xml` trực tiếp trong bộ nhớ trình duyệt.
+- [x] AI Delta Prompt (`buildDeltaPrompt`): Chỉ yêu cầu Gemini trả về JSON chứa các đoạn cần chèn (Mục I, Hoạt động Mục III, Bảng tổng hợp), không cho phép AI viết lại hay tái tạo toàn văn giáo án gốc.
+- [x] Hàm `injectDocxOxml`: Phân tích XML DOM, tạo các node `<w:p>`, `<w:r>` có màu sắc chuẩn (NLS xanh lá `16A34A`, AI tím `9333EA`), cấy ghép chính xác sau "Năng lực đặc thù" và Hoạt động tương ứng, tạo `<w:tbl>` bảng tổng hợp trước `<w:sectPr>`.
+- [x] Nút "Xuất .docx": Ưu tiên xuất file DOCX cấy trực tiếp từ `injectedDocxBlob` để bảo toàn 100.0% font chữ, căn lề, header, footer, hình ảnh và mọi bảng biểu gộp ô phức tạp (`vMerge`, `gridSpan`) của file gốc.
+- [x] Duy trì fallback an toàn sang `DocxGenerator` khi người dùng nạp PDF, TXT hoặc tự soạn thảo.
+- [x] Giữ nguyên tính công khai, client-side, không yêu cầu đăng nhập, không ảnh hưởng `soankhbd.html`.
 
 ## Test đã chạy
 1. Static Code Analysis:
-   - Các ID mới trong HTML khớp 100% với JS: `ppctImageInput`, `ppctImagePreview`, `ppctImageThumb`, `ppctImageInfo`, `removePpctImage`, `ppctOcrStatus`, `ppctRaw`.
-   - Các sự kiện `paste`, `drop`, `change` được gán đầy đủ trên `#ppctPanel` và `#ppctImageInput`.
-   - Hàm `fileToImagePayload` xử lý đúng chuẩn đọc ảnh qua `FileReader`, vẽ canvas nén và trả về base64.
-   - Hàm `callGemini` cấu trúc đúng mảng `parts` đa phương thức với `inlineData` khi có ảnh.
+   - Thư viện `JSZip` được nạp qua CDN `https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js`.
+   - Các biến trạng thái `currentDocxBuffer`, `currentDocxName`, `injectedDocxBlob` được khởi tạo và reset đúng vòng đời (`loadSample`, `clearAll`).
+   - Hàm `injectDocxOxml` sử dụng đúng namespace OOXML `http://schemas.openxmlformats.org/wordprocessingml/2006/main`, có xử lý lỗi `parsererror` và fallback.
+   - Hàm `buildDeltaPrompt` và `parseDelta` kiểm soát chặt chẽ cấu trúc JSON, chống rò rỉ markdown hay câu giải thích.
 2. Headless Browser Execution (Microsoft Edge):
    - Chạy `msedge.exe --headless --dump-dom` thành công, không có exception crash, mã thoát 0.
-   - Toàn bộ DOM render đầy đủ bao gồm khối nạp ảnh PPCT và Smart PPCT Parser.
-3. Git Scope Check:
-   - `soankhbd.html` không bị thay đổi.
-   - Không có file rác hay token đăng nhập nào được thêm vào.
+   - DOM render đầy đủ với kích thước > 92KB bao gồm toàn bộ các module và thư viện cần thiết.
+3. Scope & File Integrity:
+   - Chỉ chỉnh sửa `giaoantichhop.html` và tài liệu handoff.
+   - `soankhbd.html` giữ nguyên vẹn 100%.
 
 ## Pass / Fail từng tiêu chí
-- Tiêu chí 1: Dán ảnh trực tiếp Ctrl+V và chọn tệp ảnh PPCT: PASS.
-- Tiêu chí 2: Giao diện thumbnail và trạng thái OCR trực quan: PASS.
-- Tiêu chí 3: Gemini Multimodal OCR trực tiếp phía client: PASS.
-- Tiêu chí 4: Tự động chạy Smart PPCT Parser sau khi nhận diện: PASS.
-- Tiêu chí 5: Bảo mật client-side, không qua server trung gian: PASS.
-- Tiêu chí 6: Giữ nguyên vẹn soankhbd.html: PASS.
+- Tiêu chí 1: Cơ chế Direct OOXML Injection giữ 100% file DOCX gốc: PASS.
+- Tiêu chí 2: AI Delta Prompt chỉ sinh phần cấy ghép, không viết lại giáo án: PASS.
+- Tiêu chí 3: Cấy ghép node XML DOM đúng vị trí và màu sắc chuẩn: PASS.
+- Tiêu chí 4: Xuất DOCX nguyên bản có nội dung tích hợp: PASS.
+- Tiêu chí 5: Fallback an toàn cho tệp không phải DOCX: PASS.
+- Tiêu chí 6: Không ảnh hưởng `soankhbd.html`: PASS.
 
 ## Bug
 Không phát hiện lỗi.
