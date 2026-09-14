@@ -151,3 +151,15 @@ Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` t
 
 - Thêm hai ô tùy chọn để dán nguyên văn nội dung NLS và AI từ PPCT; chúng được nạp cùng mẫu, xóa cùng biểu mẫu và đưa vào prompt động.
 - Prompt xem PPCT là nguồn ưu tiên cao nhất: giữ nguyên mã/nội dung/gợi ý, không sửa PPCT hay tự chuẩn hóa. Mã tick chỉ là bắt buộc khi đã tick; nếu xung đột, prompt giữ PPCT và chỉ yêu cầu cờ xung đột rõ ràng cho giáo viên.
+
+## Chặn prompt khi thiếu giáo án nguồn
+
+- `buildPrompt()` không tạo prompt khi ô giáo án nguồn trống; nút sao chép không ghi clipboard, báo “Hãy dán giáo án gốc trước; chế độ này không tạo giáo án mới.” và đưa focus về ô dán.
+- Prompt bỏ mọi placeholder/mẫu nguồn và đổi nhiệm vụ thành trích xuất bổ sung tích hợp có kiểm soát. Nguồn được bao trong delimiter bắt đầu/kết thúc, phải xuất hiện một lần nguyên văn trước khối bổ sung; nếu không bảo toàn được thì chỉ trả câu lỗi quy định, không tạo bản thay thế.
+- Rút gọn nội dung mã đã chọn để mã/mô tả chính thức chỉ lặp một lần trong prompt, đồng thời vẫn giữ PPCT ưu tiên và quy tắc mã tick.
+
+## Prompt nguồn PDF đính kèm
+
+- Bỏ chặn sao chép khi ô Markdown trống: prompt tự dùng Chế độ A, yêu cầu Gemini đọc PDF giáo án đính kèm làm nguồn duy nhất và chép sang Markdown bảo toàn cấu trúc trước khi thêm tích hợp.
+- Khi có Markdown đã dán, Chế độ B bảo toàn trực tiếp nội dung này. Cả hai chế độ cấm tạo mẫu/giáo án mới; PDF không có hoặc không đọc được chỉ trả câu yêu cầu đính kèm PDF.
+- Hướng dẫn trên giao diện nêu rõ hai bước: đính kèm PDF + dán prompt trong Gemini, rồi dán Markdown trả về để xem trước/xuất Word.
