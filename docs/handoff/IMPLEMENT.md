@@ -46,3 +46,7 @@
 
 ## Bổ sung: xuất Word một nút
 - Gộp xuất `.doc` và `.docx` thành nút “Xuất Word”. Khi có DOCX đã cấy OOXML, nút xuất bản `.docx` bảo toàn gốc; các trường hợp khác xuất Word có công thức OMML.
+
+## Bổ sung: tích hợp có cấu trúc sư phạm
+- Delta AI giờ tạo riêng mục NLS/AI và chi tiết hoạt động gồm nhiệm vụ học sinh, sản phẩm/minh chứng, kiểm chứng và cách giáo viên đánh giá.
+- Khi cấy DOCX, chuẩn hóa “Năng lực chung” thành a), “Năng lực đặc thù/riêng” thành b); chỉ thêm c)/d) theo khung thực sự được chọn. Nội dung không chọn hoàn toàn không xuất hiện.
