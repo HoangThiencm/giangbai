@@ -1,5 +1,22 @@
 # IMPLEMENT
 
+## Gỡ toolbar lưới mở bài theo lớp trên lộ trình (2026-09-14)
+
+- Đã gỡ hoàn toàn `renderTeacherClassPublishToolbar`, `toggleTeacherLessonClass` và khóa lọc cục bộ chỉ phục vụ toolbar khỏi `lotrinh.js`.
+- Luồng render không còn tạo card bài học hoặc gọi API cập nhật nhanh theo lớp. `applyRoleView()` dọn bỏ `#teacherClassPublishToolbar` nếu phần tử cũ còn tồn tại trong DOM.
+- Không thay đổi `api/lessons.php`, `admin-lesson-manager.js`, hay cơ chế chọn phạm vi lớp `#lessonClassScopeContainer` trong form Thiết kế bài học.
+
+### Kiểm thử
+
+- `node --check lotrinh.js` — PASS.
+- `node --check admin-lesson-manager.js` — PASS.
+- Rà soát tĩnh: không còn hàm render/toggle hay khóa localStorage của toolbar; form chọn lớp vẫn có đủ các tham chiếu `#lessonClassScopeContainer` — PASS.
+- `git diff --check` — PASS.
+
+### Vấn đề còn lại
+
+- Chưa thực hiện kiểm thử giao diện với tài khoản giáo viên thật; cần `/verify` theo kịch bản trong `PLAN.md` trước khi commit/push.
+
 ## Triển khai mở bài theo lớp và danh sách tài khoản (2026-09-14)
 
 ### Bổ sung thao tác nhanh trên lộ trình giáo viên
