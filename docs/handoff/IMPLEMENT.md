@@ -90,3 +90,16 @@ Không có vấn đề chức năng đã biết. Cần thực hiện `/verify` t
 
 - `node tests/canvas-xaydungphuluc-smoke.js` — PASS; kiểm tra giới hạn key cá nhân, chỉ xoay quota, deadline fallback hệ thống và thông báo timeout.
 - `git diff --check` — PASS.
+
+## Bổ sung giaoantichhop.html
+
+- Tạo `giaoantichhop.html` độc lập, chạy hoàn toàn phía trình duyệt; không dùng đăng nhập, token, `access-control.js` hay backend.
+- Có nút sao chép prompt Gemini, nạp giáo án Toán 8 mẫu, xóa trắng, nhập Markdown/metadata, xem trước A4, render KaTeX và tô màu NLS xanh lá / AI tím.
+- Hỗ trợ Markdown tiêu đề, bảng, danh sách `-` / `+` / `.`; xuất Word `.doc` HTML dùng MathML bọc `m:oMath` / `m:oMathPara`, A4 lề trái 2cm và ba lề còn lại 1.5cm, Times New Roman 13pt, giãn dòng 1.15.
+
+## Kiểm thử giaoantichhop.html
+
+- Trích xuất JavaScript nội tuyến và chạy `node --check` — PASS.
+- Kiểm tra tĩnh xác nhận có các hành động chính, OMML và định dạng trang; không có `access-control.js`, `authToken`, `fetch`, `localStorage` hoặc `XMLHttpRequest` — PASS.
+- `git diff --check` — PASS.
+- Không thể mở Microsoft Word trong môi trường hiện tại để kiểm tra trực tiếp Equation Editor; cần xác nhận việc chỉnh sửa OMML bằng Microsoft Word trên máy người dùng.
