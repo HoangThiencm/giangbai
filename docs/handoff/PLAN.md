@@ -1,102 +1,93 @@
 ﻿# PLAN
 
 ## Hiện trạng
-- Giao diện hiện tại của `giaoantichhop.html` bị phản hồi là rườm rà, chưa tối ưu trải nghiệm người dùng:
-  + Vẫn còn nút "Sao chép Markdown" và khung dán Markdown gây hiểu lầm người dùng phải xử lý mã nguồn thô, trong khi mục tiêu là nhận giáo án gốc, AI chèn nội dung tích hợp và xuất thẳng ra Word có công thức Equation (OMML).
-  + Chưa có cơ chế nhận diện tự động thông minh khi giáo viên dán nội dung Phân phối chương trình (PPCT) có sẵn ghi chú tích hợp NLS và AI.
-  + Bố cục hiển thị nhiều ô nhập liệu rời rạc, thiếu tính liền mạch của quy trình nghiệp vụ giáo viên.
-- Điểm mạnh sẵn có cần giữ vững:
-  + Công nghệ xuất Word có công thức Microsoft Word Equation (OMML `<m:oMath>`) chỉnh sửa được 100%.
-  + Cơ chế gọi Gemini API trực tiếp phía client (ưu tiên `gemini-3.8-flash`, tự động fallback sang `gemini-2.5-flash`), xoay vòng key, lưu an toàn tại `localStorage` không cần đăng nhập tài khoản.
-  + Bộ thư viện chuẩn: `mammoth.js` (đọc DOCX), `pdf.js` (đọc PDF), `js/khbd-standards.js` (chuẩn TT 02 / CV 3456 và QĐ 2422).
+- Khu vực `Ghi chú PPCT & nhận diện tích hợp` trong `giaoantichhop.html` hiện tại chỉ hỗ trợ dán văn bản thô vào ô textarea `ppctRaw`.
+- Trong thực tế giảng dạy, giáo viên thường có sẵn ảnh chụp màn hình bảng Phân phối chương trình (PPCT) hoặc Kế hoạch giáo dục (chụp từ file Word, Excel, PDF hoặc sổ kế hoạch có ghi chú cột NLS/AI).
+- Giáo viên cần tính năng: chụp màn hình rồi bấm `Ctrl+V` dán thẳng ảnh vào khung PPCT (hoặc tải tệp ảnh lên), hệ thống tự động nhận diện văn bản (OCR) bằng Gemini Vision và bóc tách ngay các mã NLS, AI để đưa vào cấu hình.
 
 ## Phạm vi
-1. **Thiết kế lại giao diện tinh gọn, chuyên nghiệp, hiện đại (loại bỏ hoàn toàn rườm rà):**
-   - Ẩn hoàn toàn khái niệm Markdown đối với người dùng cuối: Không còn nút "Sao chép Markdown", không bắt người dùng nhìn mã markdown thô.
-   - Bố cục 2 cột rõ ràng, trực quan:
-     + **Cột trái (Thiết lập & Dữ liệu đầu vào):**
-       * Khối 1: Nạp giáo án gốc (Dropzone kéo thả DOCX/PDF/TXT tinh gọn, xem nhanh tệp đã nạp).
-       * Khối 2: Thông tin bài dạy gọn gàng trên 1 hàng (Môn, Lớp 6–9, Tên bài, Thời lượng tiết).
-       * Khối 3: **Khu vực Dán & Nhận diện PPCT thông minh (Trọng tâm mới):** Ô dán nguyên văn tiến trình/ghi chú PPCT; bộ nhận diện tự động bóc tách mã/nội dung NLS và AI; hiển thị huy hiệu (tags/pills) kết quả nhận diện trực quan; cho phép chọn thêm chuẩn chính thức nếu PPCT chưa đủ mã.
-       * Khối 4: Nút hành động duy nhất: **"⚡ BẮT ĐẦU TÍCH HỢP VÀO GIÁO ÁN"** kèm thanh tiến trình thời gian thực.
-     + **Cột phải (Xem trước A4 & Xuất Word trực tiếp):**
-       * Xem trước trang giấy in A4 sống động: Hiển thị nguyên văn giáo án đã chèn tích hợp Mục I (NLS xanh lá, AI tím), Mục III (các hoạt động với marker chuẩn thực chiến) và Bảng tổng hợp cuối bài.
-       * Công thức toán học render KaTeX sắc nét chuẩn thể thức.
-       * Nút xuất bản chính: **"📥 Xuất file Word (.doc có Equation OMML)"** và nút **"Xuất .docx"**.
-   - Quản lý API Key: Nút nhỏ gọn trên Header `🔑 Gemini API Key`, modal nhập key có che mờ và kiểm tra tính hợp lệ, lưu `localStorage`.
-
-2. **Cơ chế Nhận diện Tự động từ PPCT (Smart PPCT Parser):**
-   - Cho phép giáo viên dán văn bản phân phối chương trình có ghi chú tích hợp (ví dụ: `Tiết 12: Hình chóp - NLS: [1.1.TC2a] tìm kiếm thông tin; AI: [8.A1.2] kiểm chứng nguồn tin`).
-   - Tự động nhận diện từ khóa, mã hiệu và nội dung:
-     + Phát hiện phần NLS (`NLS`, `Năng lực số`, `TT 02`, `CV 3456`, các mã `1.1.TC...`, `TC...`).
-     + Phát hiện phần AI (`AI`, `Trí tuệ nhân tạo`, `QĐ 2422`, các mã `6.A...`, `7.A...`, `8.A...`, `9.A...`).
-   - Tự động đồng bộ sang danh mục chuẩn và đưa toàn bộ nội dung PPCT làm chỉ thị ràng buộc ưu tiên cao nhất cho AI.
-
-3. **Chèn trực tiếp vào giáo án & Xuất Word có công thức Equation OMML:**
-   - AI xử lý và chèn trực tiếp các đoạn tích hợp vào giáo án gốc:
-     + Mục I: Nối `c) Năng lực số` và `d) Năng lực AI` (bảo toàn tuyệt đối a/b).
-     + Mục III: Chèn các khối tích hợp thực chiến dưới hoạt động tương ứng (kèm marker, nhiệm vụ học sinh, sản phẩm minh chứng, kiểm chứng an toàn).
-     + Cuối bài: Chèn Bảng tổng hợp tích hợp chuẩn 4 cột.
-   - Xuất file Word `.doc` với công thức toán dạng Microsoft Word Equation (OMML) chỉnh sửa được trực tiếp bằng Equation Editor trong Word.
+1. **Hỗ trợ dán ảnh từ Clipboard (Ctrl+V) & Tải tệp ảnh tại khu vực PPCT:**
+   - Lắng nghe sự kiện `paste` trên ô `ppctRaw` và toàn bộ khối PPCT: Nếu clipboard chứa dữ liệu hình ảnh (`image/*`), tự động bắt lấy file ảnh.
+   - Bổ sung nút bấm trực quan: **"🖼️ Nạp ảnh PPCT"** (kèm input file ẩn hỗ trợ `.png`, `.jpg`, `.jpeg`, `.webp`).
+   - Vùng kéo thả ảnh trực tiếp vào khu vực PPCT.
+2. **Giao diện xem trước ảnh PPCT nhỏ gọn, tinh tế:**
+   - Khi có ảnh: Hiển thị thumbnail thu nhỏ của ảnh, tên ảnh, dung lượng và nút "Xóa ảnh" hoặc "Đổi ảnh khác".
+   - Hiển thị thông báo trạng thái: "⚡ Đang nhận diện nội dung từ ảnh PPCT bằng Gemini..." kèm spinner.
+3. **Module Gemini Multimodal OCR trực tiếp phía Client:**
+   - Tận dụng `callGemini` sẵn có, bổ sung khả năng gửi `inlineData` dạng base64 ảnh tới Gemini REST API (`gemini-3.8-flash`, tự động fallback sang `gemini-2.5-flash`).
+   - Sử dụng prompt OCR chuyên dụng cho bảng PPCT:
+     + Trích xuất toàn bộ văn bản trong ảnh bảng PPCT.
+     + Đặc biệt tập trung nhận diện chính xác: tên bài dạy, số tiết, các ghi chú hoặc cột tích hợp Năng lực số (NLS), mã NLS, Năng lực AI, mã AI.
+4. **Tự động kích hoạt Smart PPCT Parser sau khi nhận diện:**
+   - Kết quả văn bản OCR được điền tự động vào ô `ppctRaw`.
+   - Ngay lập tức gọi hàm `parsePpctIntegration(ppctRaw.value)` để quét mã NLS/AI, hiển thị các huy hiệu (badges) trực quan và tự động chọn các mã chuẩn tương ứng trong danh mục.
+   - Giáo viên có thể xem lại hoặc chỉnh sửa trực tiếp văn bản vừa trích xuất nếu muốn bổ sung.
 
 ## Ngoài phạm vi
-- Không giữ các nút hay giao diện hiển thị Markdown gây rối người dùng.
-- Không sửa đổi bất kỳ file nào thuộc `soankhbd.html` hoặc thư viện hệ thống khác.
-- Không yêu cầu đăng nhập tài khoản.
+- Không gửi ảnh qua bất kỳ máy chủ backend nào (ảnh được xử lý base64 ngay trên trình duyệt và gửi trực tiếp tới Google API qua kết nối mã hóa HTTPS).
+- Không làm thay đổi `soankhbd.html` hoặc các module hệ thống khác.
+- Giữ vững nguyên tắc không cần đăng nhập.
 
 ## File dự kiến tác động
-- `giaoantichhop.html`: Tái cấu trúc toàn bộ giao diện và logic theo hướng tinh gọn, thông minh, loại bỏ rườm rà.
-- `tichhopgiaoan.html`: Đồng bộ chuyển hướng sang `giaoantichhop.html`.
+- `giaoantichhop.html`: Bổ sung xử lý dán ảnh, upload ảnh, giao diện thumbnail và gọi Gemini Multimodal OCR tại khối PPCT.
 
 ## Các bước thực hiện
-### Bước 1: Thiết kế lại giao diện UI/UX hiện đại, tinh giản
-- Bỏ các nút sao chép Markdown, bỏ các nhãn kỹ thuật không cần thiết.
-- Tinh chỉnh header với màu sắc thanh lịch, nút quản lý API key gọn gàng.
-- Thiết kế Dropzone nhỏ gọn kết hợp thông tin bài học cô đọng.
-- Thiết kế ô nhập PPCT nổi bật kèm khu vực hiển thị kết quả nhận diện tự động (badges màu xanh cho NLS, màu tím cho AI).
-- Nút xuất file Word `.doc OMML` và `.docx` đặt nổi bật ngay trên đầu khung xem trước A4.
+### Bước 1: Nâng cấp UI khu vực "Ghi chú PPCT & nhận diện tích hợp"
+- Bổ sung thanh thao tác nhỏ phía trên textarea `ppctRaw`:
+  + Nút bấm: `<label class="cursor-pointer text-xs font-bold text-amber-900 hover:text-amber-700"><i class="fa-solid fa-image mr-1"></i>Nạp ảnh PPCT<input id="ppctImageInput" type="file" accept="image/*" class="hidden"></label>`.
+  + Gợi ý phím tắt: `<span class="text-xs text-slate-500">hoặc bấm Ctrl+V để dán ảnh</span>`.
+- Bổ sung container hiển thị thumbnail ảnh xem trước (`#ppctImagePreview`) kèm nút xóa ảnh (`#removePpctImage`).
+- Thêm nhãn trạng thái OCR (`#ppctOcrStatus`).
 
-### Bước 2: Phát triển Bộ nhận diện PPCT thông minh (Smart PPCT Parser)
-- Viết hàm `parsePpctIntegration(text)`:
-  + Tự động quét và phát hiện các mẫu NLS: mã `\d+\.\d+\.TC\d+[a-z]?`, từ khóa "năng lực số", "NLS", "công cụ số", "phần mềm".
-  + Tự động quét và phát hiện các mẫu AI: mã `\d+\.[A-D]\d+(?:\.[A-Z0-9]+)?`, từ khóa "trí tuệ nhân tạo", "AI", "kiểm chứng", "prompt".
-  + Khớp với danh mục `js/khbd-standards.js` để tự động tick chọn mã tương ứng.
-  + Cập nhật huy hiệu hiển thị trực quan cho giáo viên thấy ngay kết quả nhận diện.
+### Bước 2: Bắt sự kiện Dán ảnh (Paste) và Kéo thả (Drop)
+- Bắt sự kiện `paste` trên `ppctRaw` và container PPCT:
+  + Quét `e.clipboardData.items` tìm item có kiểu `type.startsWith('image/')`.
+  + Ngăn chặn hành vi mặc định và lấy `item.getAsFile()`.
+- Bắt sự kiện `change` trên `#ppctImageInput`.
+- Chuyển file ảnh thành Base64 qua `FileReader.readAsDataURL(file)`.
 
-### Bước 3: Nâng cấp luồng xử lý AI tự động chèn vào giáo án
-- Khi giáo viên bấm "⚡ Bắt đầu tích hợp vào giáo án":
-  + Lấy giáo án gốc từ tệp tải lên (DOCX/PDF/TXT).
-  + Tạo prompt tích hợp chuẩn CV 5512, TT 02 (CV 3456) và QĐ 2422, gắn thông tin bóc tách từ PPCT làm ưu tiên cao nhất.
-  + Gọi `callGemini`: Ưu tiên `gemini-3.8-flash`, tự động fallback sang `gemini-2.5-flash` nếu quá tải/hạn ngạch, tự động xoay vòng key.
-  + Nhận kết quả và cập nhật ngay vào khung xem trước A4 (được tô màu chuẩn NLS xanh lá, AI tím, công thức toán KaTeX).
+### Bước 3: Nâng cấp hàm `callGemini` hỗ trợ Multimodal
+- Bổ sung tham số `imagePayload = { mimeType, base64Data }` vào `callGemini`.
+- Khi có `imagePayload`, cấu trúc `parts` gửi đi sẽ bao gồm:
+  ```json
+  [
+    { "inlineData": { "mimeType": imagePayload.mimeType, "data": imagePayload.base64Data } },
+    { "text": promptText }
+  ]
+  ```
+- Duy trì đầy đủ cơ chế ưu tiên `gemini-3.8-flash` và fallback `gemini-2.5-flash`, cùng cơ chế xoay vòng API key.
 
-### Bước 4: Tối ưu bộ xuất Word Equation OMML
-- Đảm bảo toàn bộ công thức toán `$ ... $` và `$$ ... $$` trong giáo án đã tích hợp được chuyển thành `<m:oMath>` / `<m:oMathPara>` chuẩn Microsoft Word Equation.
-- Khi người dùng bấm nút Xuất Word, tải ngay file `.doc` chuẩn in ấn A4 (Times New Roman 13pt, căn lề 2-1.5-1.5-1.5cm, bảng biểu viền nét đơn, công thức toán sửa được bằng Equation Editor).
+### Bước 4: Xây dựng quy trình xử lý OCR ảnh PPCT
+- Viết hàm `recognizePpctFromImage(file)`:
+  1. Kiểm tra danh sách API key (`savedKeys()`). Nếu chưa có, mở modal nhắc giáo viên nhập key.
+  2. Hiển thị thumbnail ảnh thu nhỏ và thông báo "Đang đọc nội dung từ ảnh PPCT...".
+  3. Gửi ảnh tới Gemini kèm prompt:
+     `"Hãy đọc và trích xuất toàn bộ văn bản trong ảnh chụp bảng Phân phối chương trình (PPCT) hoặc Kế hoạch dạy học này. Giữ nguyên thông tin về: tên bài dạy, số tiết, và đặc biệt là các ghi chú hoặc cột tích hợp Năng lực số (NLS), mã NLS, Năng lực AI, mã AI."`
+  4. Nhận kết quả text, gán vào `$('ppctRaw').value`.
+  5. Gọi `parsePpctIntegration($('ppctRaw').value)` để hiển thị ngay các huy hiệu mã NLS/AI được nhận diện.
+  6. Cập nhật trạng thái "✓ Đã nhận diện xong từ ảnh".
 
 ### Bước 5: Kiểm thử và hoàn thiện
-- Thử nghiệm kéo thả tệp DOCX/PDF.
-- Thử nghiệm dán PPCT có ghi chú NLS/AI và xác nhận bộ nhận diện hoạt động chính xác.
-- Thử nghiệm gọi AI, xem trước A4 và xuất Word OMML.
+- Thử nghiệm chụp ảnh màn hình bằng Snipping Tool/Lightshot rồi bấm `Ctrl+V` vào ô PPCT.
+- Thử nghiệm chọn tệp ảnh qua nút nạp ảnh.
+- Kiểm tra tính chuẩn xác khi trích xuất bảng PPCT có cột NLS/AI.
 
 ## Rủi ro
-- Định dạng PPCT do mỗi trường/giáo viên viết có thể khác nhau:
-  + Biện pháp: Dùng regex mềm dẻo kết hợp từ khóa; hiển thị kết quả nhận diện dạng badges cho phép giáo viên bấm chỉnh sửa hoặc chọn thêm mã từ danh mục chuẩn nếu muốn.
-- Giáo viên chưa có API Key Gemini:
-  + Biện pháp: Hiển thị hướng dẫn ngắn gọn, trực quan kèm link mở Google AI Studio tạo key miễn phí trong 1 phút.
+- Giáo viên dán ảnh khi chưa nhập API key:
+  + Biện pháp: Tự động hiển thị modal nhập API key kèm thông báo hướng dẫn rõ ràng.
+- Ảnh chụp dung lượng quá lớn làm chậm mạng:
+  + Biện pháp: Tự động nén/resize nhẹ ảnh trên canvas trước khi gửi API nếu kích thước vượt quá 2048px.
 
 ## Cách kiểm thử
-1. Kiểm tra giao diện: Giao diện sạch sẽ, hiện đại, không còn chữ/nút Markdown rườm rà.
-2. Kiểm tra nhận diện PPCT: Dán đoạn PPCT có ghi chú NLS/AI -> Hệ thống tự động nhận diện đúng mã và nội dung tích hợp, hiển thị badges tương ứng.
-3. Kiểm tra nạp giáo án: Kéo thả file DOCX/PDF -> Hệ thống đọc được nội dung bài dạy.
-4. Kiểm tra gọi AI: Bấm nút tích hợp -> Hệ thống gọi Gemini 3.8 (fallback 2.5), hiển thị thanh tiến trình.
-5. Kiểm tra chèn tích hợp: Giáo án sau tích hợp có đủ Mục I (NLS c, AI d), Mục III (các hoạt động với marker chuẩn), Bảng tổng hợp cuối bài.
-6. Kiểm tra xuất Word: File Word tải về mở bằng Microsoft Word có công thức Equation OMML chỉnh sửa được 100%.
+1. Kiểm tra dán ảnh bằng phím tắt: Bấm `Ctrl+V` khi đang có ảnh trong clipboard -> Ảnh hiển thị thumbnail, hệ thống bắt đầu gọi OCR.
+2. Kiểm tra chọn tệp ảnh: Bấm "Nạp ảnh PPCT" và chọn tệp `.png`/`.jpg` -> Hệ thống tiếp nhận và xử lý OCR.
+3. Kiểm tra trích xuất nội dung: Văn bản trong ảnh được chuyển thành chữ và đổ vào `ppctRaw`.
+4. Kiểm tra nhận diện tích hợp: Các mã NLS/AI trong ảnh tự động được phát hiện và hiển thị huy hiệu (badges).
+5. Kiểm tra Fallback model: Gemini 3.8 Flash và fallback 2.5 Flash xử lý ảnh mượt mà.
 
 ## Tiêu chí nghiệm thu
-- Giao diện tinh gọn, chuyên nghiệp, không rườm rà, loại bỏ hoàn toàn các yếu tố Markdown thô.
-- Có ô dán PPCT và tự động nhận diện thông minh nội dung tích hợp NLS & AI từ PPCT.
-- Chèn trực tiếp nội dung tích hợp vào giáo án và hiển thị xem trước trực quan A4.
-- Xuất file Word có công thức Microsoft Word Equation (OMML) chỉnh sửa được.
-- Chạy hoàn toàn độc lập, không cần đăng nhập, bảo mật API key cá nhân tại `localStorage`.
+- Cho phép dán ảnh chụp màn hình trực tiếp bằng `Ctrl+V` hoặc chọn tệp ảnh tại khu vực Ghi chú PPCT.
+- Hiển thị thumbnail ảnh và trạng thái OCR trực quan.
+- Gemini nhận diện chính xác văn bản PPCT và tự động bóc tách các mã NLS/AI.
+- Không gửi ảnh qua server trung gian, giữ nguyên tính công khai và bảo mật.
 - Không ảnh hưởng đến `soankhbd.html`.
