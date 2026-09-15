@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <script src="js/security-guard.js"></script>
@@ -762,6 +762,8 @@
                 const data = await api(`${API}?action=manager`);
                 state.boards = data.boards || [];
                 state.user = data.user;
+                state.isTeacher = data.is_teacher !== false;
+                state.studentClass = data.student_class || '';
                 document.body.className = 'manager-view min-h-screen pb-16';
                 renderManager();
             } catch {
@@ -818,7 +820,7 @@
             if (!state.boards.length) {
                 return `<div class="rounded-2xl border border-dashed border-white/15 bg-white/5 p-12 text-center">
                     <i class="fas fa-folder-open text-4xl text-white/30"></i>
-                    <p class="mt-4 text-white/60">Chưa có bảng — chọn mẫu phía trên để tạo.</p>
+                    <p class="mt-4 text-white/60">${state.isTeacher === false ? 'Chưa có bảng nào được chia sẻ cho lớp của bạn.' : 'Chưa có bảng — chọn mẫu phía trên để tạo.'}</p>
                 </div>`;
             }
             return `<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -826,6 +828,7 @@
                     <article class="overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a]">
                         <a href="${boardUrl(b.public_code)}" class="relative block aspect-[5/3] board-bg-${boardCardTheme(b)}">
                             <span class="absolute left-3 top-3 rounded-full bg-black/35 px-2.5 py-1 text-[10px] font-extrabold text-white">${LAYOUT_LABELS[b.layout_type] || 'Bảng'}</span>
+                            ${b.access_mode === 'class' && b.target_class ? `<span class="absolute ${b.pending_count > 0 ? 'left-20' : 'right-3'} top-3 rounded-full bg-teal-600/90 border border-teal-300/30 px-2.5 py-1 text-[10px] font-extrabold text-white"><i class="fas fa-users-rectangle mr-1"></i>Lớp ${esc(b.target_class)}</span>` : ''}
                             ${b.pending_count > 0 ? `<span class="absolute right-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-extrabold text-white">${b.pending_count} chờ</span>` : ''}
                             <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 pt-10">
                                 <h3 class="truncate font-black text-white">${esc(b.title)}</h3>
@@ -834,21 +837,48 @@
                         </a>
                         <div class="flex flex-wrap gap-2 p-3">
                             <button type="button" onclick="copyLink('${b.public_code}')" class="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/15"><i class="fas fa-link mr-1"></i>Link</button>
-                            <button type="button" onclick="openBoardEditor(${b.id})" class="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/15"><i class="fas fa-pen mr-1"></i>Sửa</button>
-                            <button type="button" onclick="deleteBoard(${b.id})" class="rounded-lg bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-300"><i class="fas fa-trash-can mr-1"></i>Xóa</button>
+                            ${state.isTeacher !== false ? `
+                                <button type="button" onclick="openBoardEditor(${b.id})" class="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/15"><i class="fas fa-pen mr-1"></i>Sửa</button>
+                                <button type="button" onclick="deleteBoard(${b.id})" class="rounded-lg bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-300"><i class="fas fa-trash-can mr-1"></i>Xóa</button>
+                            ` : `
+                                <a href="${boardUrl(b.public_code)}" class="flex-1 text-center rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-500"><i class="fas fa-arrow-right-to-bracket mr-1"></i>Vào bảng</a>
+                            `}
                         </div>
                     </article>`).join('')}
             </div>`;
         }
 
         function renderManager() {
-            const name = state.user?.full_name?.split(' ').pop() || state.user?.full_name || 'Giáo viên';
+            const isTeacher = state.isTeacher !== false;
+            const name = state.user?.full_name?.split(' ').pop() || state.user?.full_name || (isTeacher ? 'Giáo viên' : 'Học sinh');
             const totalPending = state.boards.reduce((s, b) => s + (b.pending_count || 0), 0);
 
             document.getElementById('topActions').innerHTML = `
                 <a href="index.html" class="hidden rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-bold text-white sm:inline-flex">
-                    <i class="fas fa-home mr-1"></i>Trang chủ GV
+                    <i class="fas fa-home mr-1"></i>Trang chủ
                 </a>`;
+
+            if (!isTeacher) {
+                const studentClass = state.studentClass || state.user?.class_name || '';
+                document.getElementById('app').innerHTML = `
+                    <div class="mb-8">
+                        <p class="text-sm text-white/50">Xin chào <strong class="text-white">${esc(name)}</strong>${studentClass ? ` · Lớp <span class="text-teal-400 font-bold">${esc(studentClass)}</span>` : ''}</p>
+                        <div class="mt-4">
+                            <h1 class="text-3xl font-black tracking-tight text-white sm:text-4xl">Bảng chia sẻ của lớp</h1>
+                            <p class="mt-2 max-w-2xl text-sm text-white/55">Các bảng tương tác, thảo luận được giáo viên chia sẻ cho lớp của bạn.</p>
+                        </div>
+                    </div>
+
+                    <section class="mt-6">
+                        <div class="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 class="text-xl font-black text-white">Danh sách bảng (${state.boards.length})</h2>
+                            </div>
+                        </div>
+                        ${renderLibrary()}
+                    </section>`;
+                return;
+            }
 
             document.getElementById('app').innerHTML = `
                 <div class="mb-8">
@@ -1468,6 +1498,9 @@
             document.getElementById('boardDescription').value = board?.description || '';
             document.getElementById('boardAcademicYear').value = board?.academic_year || schoolYear();
             document.querySelector(`input[name="boardAccess"][value="${board?.access_mode || 'public'}"]`).checked = true;
+            if (board?.target_class && !state.classes.includes(board.target_class)) {
+                state.classes.unshift(board.target_class);
+            }
             document.getElementById('boardClass').innerHTML = '<option value="">-- Chọn lớp --</option>'
                 + state.classes.map((c) => `<option>${esc(c)}</option>`).join('');
             document.getElementById('boardClass').value = board?.target_class || '';

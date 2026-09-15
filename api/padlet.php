@@ -349,11 +349,11 @@ function padlet_normalize_columns($input): array
 
 function padlet_access(PDO $pdo, array $board, ?array $user): ?array
 {
-    if ($user && ($user['role'] ?? '') === 'teacher' && (int)$board['owner_id'] === (int)$user['id']) return $user;
+    if ($user && in_array(($user['role'] ?? ''), ['teacher', 'admin'], true) && (int)$board['owner_id'] === (int)$user['id']) return $user;
     if ($board['access_mode'] === 'public') return $user;
     if (!$user) respond(['error' => 'Bảng này dành cho thành viên lớp. Vui lòng đăng nhập.'], 401);
     if (($user['role'] ?? '') !== 'student' || trim((string)$user['class_name']) !== trim((string)$board['target_class'])) {
-        respond(['error' => 'Tài khoản không thuộc lớp được phép tham gia bảng này.'], 403);
+        respond(['error' => 'Bảng này được chia sẻ riêng cho lớp ' . htmlspecialchars($board['target_class'] ?? '') . '. Tài khoản của bạn không thuộc lớp này.'], 403);
     }
     return $user;
 }
@@ -426,12 +426,23 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = trim((string)($_GET['action'] ?? ''));
 
 if ($method === 'GET' && $action === 'manager') {
-    $teacher = padlet_require_teacher($pdo);
-    $stmt = $pdo->prepare("SELECT b.*, COUNT(DISTINCT p.id) AS post_count, SUM(p.status = 'pending') AS pending_count FROM padlet_boards b LEFT JOIN padlet_posts p ON p.board_id = b.id WHERE b.owner_id = ? GROUP BY b.id ORDER BY b.created_at DESC");
-    $stmt->execute([(int)$teacher['id']]);
-    $boards = $stmt->fetchAll();
-    foreach ($boards as &$board) { $board['id'] = (int)$board['id']; $board['post_count'] = (int)$board['post_count']; $board['pending_count'] = (int)$board['pending_count']; }
-    respond(['ok' => true, 'user' => public_user($teacher), 'boards' => $boards]);
+    $user = padlet_current_user($pdo);
+    if (!$user) respond(['error' => 'Chưa đăng nhập.'], 401);
+    $isTeacher = in_array(($user['role'] ?? ''), ['teacher', 'admin'], true);
+    if ($isTeacher) {
+        $stmt = $pdo->prepare("SELECT b.*, COUNT(DISTINCT p.id) AS post_count, SUM(p.status = 'pending') AS pending_count FROM padlet_boards b LEFT JOIN padlet_posts p ON p.board_id = b.id WHERE b.owner_id = ? GROUP BY b.id ORDER BY b.created_at DESC");
+        $stmt->execute([(int)$user['id']]);
+        $boards = $stmt->fetchAll();
+        foreach ($boards as &$board) { $board['id'] = (int)$board['id']; $board['post_count'] = (int)$board['post_count']; $board['pending_count'] = (int)$board['pending_count']; }
+        respond(['ok' => true, 'user' => public_user($user), 'boards' => $boards, 'is_teacher' => true]);
+    } else {
+        $studentClass = trim((string)($user['class_name'] ?? ''));
+        $stmt = $pdo->prepare("SELECT b.*, COUNT(DISTINCT p.id) AS post_count, 0 AS pending_count FROM padlet_boards b LEFT JOIN padlet_posts p ON p.board_id = b.id AND p.status = 'published' WHERE b.status = 'open' AND ((b.access_mode = 'class' AND TRIM(b.target_class) = ?) OR (b.access_mode = 'public')) GROUP BY b.id ORDER BY b.created_at DESC");
+        $stmt->execute([$studentClass]);
+        $boards = $stmt->fetchAll();
+        foreach ($boards as &$board) { $board['id'] = (int)$board['id']; $board['post_count'] = (int)$board['post_count']; $board['pending_count'] = 0; }
+        respond(['ok' => true, 'user' => public_user($user), 'boards' => $boards, 'is_teacher' => false, 'student_class' => $studentClass]);
+    }
 }
 
 if ($method === 'GET' && $action === 'board-detail') {
