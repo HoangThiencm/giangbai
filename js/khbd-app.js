@@ -6183,7 +6183,9 @@ async function extractTextbookOcrTextWithGemini(onProgress) {
 // Canvas must not turn a textbook into a verbatim OCR request.  Apart from
 // avoiding copyright-sensitive output, this gives the lesson generator the
 // small, useful context it actually needs.
-const CANVAS_TEXTBOOK_BATCH_SIZE = 3;
+// One page/image per Canvas request bounds media and prevents one slow page
+// from making an entire textbook request wait until the global deadline.
+const CANVAS_TEXTBOOK_BATCH_SIZE = 1;
 
 function canvasTextbookAnalysisPrompt(batchLabel) {
   return [
@@ -6239,7 +6241,10 @@ async function analyzeCanvasTextbookSafely(onProgress) {
   for (let index = 0; index < batches.length; index++) {
     const batch = batches[index];
     if (typeof onProgress === "function") onProgress(`Đang phân tích SGK ${index + 1}/${batches.length}...`, Math.round(20 + ((index + 1) / batches.length) * 70));
-    const raw = await geminiAPI.generateContent(canvasTextbookAnalysisPrompt(batch.label), batch.media, getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1, null, { maxOutputTokens: 900 });
+    const raw = await geminiAPI.generateContent(canvasTextbookAnalysisPrompt(batch.label), batch.media, getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1, null, {
+      maxOutputTokens: 900,
+      timeoutMs: 105000
+    });
     analyses.push(parseCanvasTextbookAnalysis(raw));
   }
   const first = analyses[0] || {};

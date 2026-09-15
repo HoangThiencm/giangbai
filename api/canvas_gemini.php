@@ -11,7 +11,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') { http_response_code(204);
 function canvas_gemini_call(string $model, string $key, string $encoded, int $timeout): array {
     $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent?key=' . rawurlencode($key);
     $ch = curl_init($url);
-    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Content-Type: application/json'], CURLOPT_POSTFIELDS => $encoded, CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_TIMEOUT => $timeout]);
+    $connectTimeout = min(10, max(1, $timeout - 1));
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_HTTPHEADER => ['Content-Type: application/json'], CURLOPT_POSTFIELDS => $encoded, CURLOPT_CONNECTTIMEOUT => $connectTimeout, CURLOPT_TIMEOUT => max(1, $timeout)]);
     $raw = curl_exec($ch);
     $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
@@ -41,11 +42,19 @@ if (!$systemAvailable) respond(['ok' => false, 'error' => 'Gemini Canvas chưa �
 
 // preferred_model is the current Canvas contract; model is accepted for older Canvas pages.
 $preferredModel = canvas_model((string)($body['preferred_model'] ?? $body['model'] ?? 'gemini-3-flash-preview'));
-$timeout = max(10, min(90, (int)($body['timeout'] ?? 75)));
+$timeout = max(10, min(85, (int)($body['timeout'] ?? 85)));
+$deadline = microtime(true) + $timeout;
 $last = ['status' => 502, 'error' => 'Không gọi được Gemini Canvas.'];
 
 foreach ($systemKeys as $key) {
-    $attempt = canvas_gemini_call($preferredModel, $key, $encoded, $timeout);
+    // All system keys share this single request budget, rather than each key
+    // receiving a fresh long cURL timeout.
+    $remaining = (int)floor($deadline - microtime(true));
+    if ($remaining < 2) {
+        respond(['ok' => false, 'error' => 'Gemini Canvas đã hết thời hạn xử lý chung. Hãy giảm số trang SGK hoặc thử lại.', 'meta' => ['tier' => 'system_key', 'route' => 'system_deadline', 'model' => $preferredModel, 'fallback_used' => false, 'system_key_available' => true]], 504);
+    }
+    $attemptTimeout = min(55, max(1, $remaining));
+    $attempt = canvas_gemini_call($preferredModel, $key, $encoded, $attemptTimeout);
     if ($attempt['ok']) {
         respond([
             'ok' => true,
@@ -59,6 +68,10 @@ foreach ($systemKeys as $key) {
         ]);
     }
     $last = $attempt;
+}
+
+if (microtime(true) >= $deadline) {
+    respond(['ok' => false, 'error' => 'Gemini Canvas đã hết thời hạn xử lý chung. Hãy giảm số trang SGK hoặc thử lại.', 'meta' => ['tier' => 'system_key', 'route' => 'system_deadline', 'model' => $preferredModel, 'fallback_used' => false, 'system_key_available' => true]], 504);
 }
 
 respond([

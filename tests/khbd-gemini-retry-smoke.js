@@ -240,6 +240,7 @@ async function case9_canvasWithoutKeyUsesSystemEndpointOnce() {
   assert(calls[0].url === "https://hoangthiencm.id.vn/api/canvas_gemini.php", "case9: Canvas uses only the configured proxy endpoint");
   assert(JSON.stringify(Object.keys(sent).sort()) === JSON.stringify(["payload", "preferred_model", "timeout"]), "case9: endpoint payload contains no key or client identity");
   assert(sent.preferred_model === "gemini-3-flash-preview", "case9: Canvas sends its configured model");
+  assert(sent.timeout === 85, "case9: Canvas requests the 85-second server deadline while retaining a client margin");
   delete global.window;
 }
 

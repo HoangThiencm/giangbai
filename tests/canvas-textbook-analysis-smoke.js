@@ -8,7 +8,8 @@ const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'js', 'khbd-app.js'), 'utf8');
 
 assert.match(app, /async function analyzeCanvasTextbookSafely/, 'Canvas phải có luồng phân tích SGK riêng');
-assert.match(app, /CANVAS_TEXTBOOK_BATCH_SIZE\s*=\s*3/, 'Canvas phải giới hạn lô ảnh/trang nhỏ');
+assert.match(app, /CANVAS_TEXTBOOK_BATCH_SIZE\s*=\s*1/, 'Canvas phải gửi một trang/ảnh cho mỗi lô an toàn');
+assert.match(app, /timeoutMs:\s*105000/, 'Canvas phải gửi timeout rõ ràng cho phân tích cấu trúc SGK');
 assert.match(app, /prepareCanvasTextbookAnalysisBatches/, 'Canvas phải gom ảnh/PDF đã chọn theo lô');
 assert.match(app, /selectedPages: pages/, 'Canvas phải tôn trọng các trang PDF đã chọn');
 assert.match(app, /Không sao chép câu, đoạn, bảng, bài tập hoặc công thức/, 'Prompt Canvas phải cấm tái tạo nội dung nguồn');

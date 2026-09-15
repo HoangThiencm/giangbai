@@ -1,5 +1,38 @@
 # Báo cáo triển khai: Gemini Canvas hệ thống không cần key cá nhân
 
+## Cập nhật: giới hạn thời gian Canvas v5
+
+- `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`
+  - Đồng bộ toàn bộ nguồn `khbd-prompts.js`, `khbd-gemini.js`, `khbd-docx.js` và `khbd-app.js` sang cache-bust `20260915-canvas-system-v5`; không còn tham chiếu Canvas v3.
+- `js/khbd-gemini.js`
+  - Tuyến Canvas vẫn là một yêu cầu duy nhất tới proxy hệ thống, không gửi key/định danh trình duyệt và không rơi về Google trực tiếp.
+  - Proxy được yêu cầu tối đa 85 giây, còn trình duyệt chờ 105 giây để nhận chẩn đoán từ máy chủ. Nếu trình duyệt thực sự quá hạn, thông báo hướng dẫn giảm số trang hoặc thử lại.
+  - Phản hồi HTTP 200 rỗng/`RECITATION` vẫn không tự retry.
+- `api/canvas_gemini.php`
+  - Mọi system key dùng chung một deadline toàn cục tối đa 85 giây. Mỗi lần cURL chỉ được dùng phần thời gian còn lại (và tối đa 55 giây), không còn tình huống nhiều key nối tiếp nhiều lượt chờ dài.
+  - Khi hết deadline, trả HTTP 504 cùng thông báo an toàn `system_deadline`.
+- `js/khbd-app.js`
+  - Canvas phân tích một trang PDF hoặc một ảnh SGK trong mỗi yêu cầu, giữ tiến độ `trang/ảnh i/n` hiển thị rõ và chỉ lấy JSON diễn đạt lại về cấu trúc bài.
+  - Mỗi lô truyền rõ `timeoutMs: 105000`; không trích xuất nguyên văn SGK.
+- Kiểm thử đã cập nhật cho cache v5, chênh lệch deadline client/server, deadline proxy toàn cục, và lô SGK một trang/ảnh.
+
+### Kiểm thử cập nhật v5
+
+- `node tests/canvas-soankhbd-smoke.js`: PASS.
+- `node tests/khbd-gemini-retry-smoke.js`: PASS.
+- `node tests/canvas-gemini-api-smoke.js`: PASS.
+- `node tests/canvas-textbook-analysis-smoke.js`: PASS.
+- `node tests/khbd-vision-batching-smoke.js`: PASS.
+- `node tests/khbd-mistral-ocr-smoke.js`: PASS.
+- `node tests/khbd-4steps-workflow-smoke.js`: PASS.
+- `node tests/backupcode-canvas-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/soanbaigemini-plan-smoke.js`: PASS.
+- `node --check js/khbd-gemini.js` và `node --check js/khbd-app.js`: PASS.
+- `git diff --check`: PASS. PHP lint không chạy được vì máy không có `php` trong PATH.
+
+Không commit, push hay deploy. `docs/handoff/PLAN.md` không bị sửa.
+
 ## Cập nhật: Phân tích SGK Canvas không chép nội dung nguồn
 
 - `js/khbd-app.js`

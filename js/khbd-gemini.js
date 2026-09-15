@@ -507,14 +507,30 @@ class GeminiAPIManager {
   }
 
   async fetchCanvasSystemGenerate(config, model, payload, signal, timeoutMs) {
-    const response = await this.fetchWithTimeout(config.endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "omit",
-      // Never send a browser key, account, or other client identity to this route.
-      body: JSON.stringify({ preferred_model: model, payload, timeout: Math.max(10, Math.round((timeoutMs || 75000) / 1000)) }),
-      signal
-    }, timeoutMs || 75000);
+    // The proxy has an 85-second shared server deadline. Leave the browser a
+    // margin to receive its diagnostic instead of aborting the request first.
+    const CANVAS_SERVER_TIMEOUT_MS = 85000;
+    const CANVAS_CLIENT_MARGIN_MS = 20000;
+    const serverTimeoutMs = Math.min(CANVAS_SERVER_TIMEOUT_MS, Math.max(10000, (timeoutMs || 105000) - CANVAS_CLIENT_MARGIN_MS));
+    const clientTimeoutMs = Math.max(serverTimeoutMs + CANVAS_CLIENT_MARGIN_MS, timeoutMs || 105000);
+    let response;
+    try {
+      response = await this.fetchWithTimeout(config.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "omit",
+        // Never send a browser key, account, or other client identity to this route.
+        body: JSON.stringify({ preferred_model: model, payload, timeout: Math.round(serverTimeoutMs / 1000) }),
+        signal
+      }, clientTimeoutMs);
+    } catch (error) {
+      if (error?.name === "TimeoutError") {
+        const timeoutError = new Error(`Gemini Canvas không phản hồi sau ${Math.round(clientTimeoutMs / 1000)}s. Máy chủ đã giới hạn một yêu cầu phân tích; hãy giảm số trang hoặc thử lại.`);
+        timeoutError.name = "TimeoutError";
+        throw timeoutError;
+      }
+      throw error;
+    }
     const envelope = await response.json().catch(() => ({}));
     const metadata = envelope && typeof envelope.meta === "object" && envelope.meta
       ? envelope.meta
@@ -632,7 +648,7 @@ class GeminiAPIManager {
       const activeModel = canvasSystem.model || this.selectedModel;
       try {
         this.emitGeminiStatus({ type: "call", message: `Đang gọi Gemini Canvas (${activeModel})...`, model: activeModel }, options);
-        const response = await this.fetchCanvasSystemGenerate(canvasSystem, activeModel, payload, signal, options.timeoutMs || 75000);
+        const response = await this.fetchCanvasSystemGenerate(canvasSystem, activeModel, payload, signal, options.timeoutMs || 105000);
         const metadata = response.canvasMeta || {};
         this.emitGeminiStatus({ type: "canvas_route", message: `Gemini Canvas: tuyến ${metadata.fallback_used ? "dự phòng hệ thống" : "hệ thống"} · ${metadata.model || activeModel}`, route: metadata.route, model: metadata.model || activeModel, fallback: Boolean(metadata.fallback_used) }, options);
         if (!response.ok) {
