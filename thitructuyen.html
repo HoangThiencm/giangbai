@@ -49,7 +49,63 @@
     <script src="vendor/react-dom.production.min.js"></script>
     <script src="vendor/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="hf-fallback-client.js?v=20260624"></script>
+    <script>
+        // Fallback tự động khởi tạo GiangBaiApi nếu hf-fallback-client.js bị lỗi hoặc chưa tải xong
+        (function () {
+            function hostingApiFile(filename) {
+                var override = localStorage.getItem('hosting_api_url');
+                if (override) return override.replace(/\/$/, '') + '/' + filename;
+                var path = window.location.pathname.replace(/[^/]*$/, '');
+                return window.location.origin + path + 'api/' + filename;
+            }
+            function hfUrl() {
+                return (localStorage.getItem('hf_space_url') || 'https://hoangthiencm-giangbai.hf.space').replace(/\/$/, '');
+            }
+            window.GiangBaiApi = window.GiangBaiApi || {
+                hostingApiFile: hostingApiFile,
+                examUrl: function (route) {
+                    var base = hostingApiFile('exam.php');
+                    var r = String(route || '').replace(/^\//, '');
+                    return base + '?route=' + encodeURIComponent(r);
+                },
+                examAiUrl: function (route) {
+                    var base = hostingApiFile('exam_ai.php');
+                    var r = String(route || '').replace(/^\//, '');
+                    return r ? base + '?route=' + encodeURIComponent(r) : base;
+                },
+                trondeUrl: function (route) {
+                    var base = hostingApiFile('tronde.php');
+                    var r = String(route || '').replace(/^\//, '');
+                    return r ? base + '?route=' + encodeURIComponent(r) : base;
+                },
+                hfExamUrl: function (route) {
+                    var r = String(route || '').replace(/^\//, '');
+                    return hfUrl() + '/api/exam/' + r;
+                },
+                hfTrondeUrl: function (route) {
+                    var r = String(route || '').replace(/^\//, '');
+                    return hfUrl() + '/' + r;
+                },
+                fetchWithFallback: async function (hostUrl, _hf, init) {
+                    return fetch(hostUrl, Object.assign({ credentials: 'same-origin' }, init || {}));
+                },
+                fetchJsonWithFallback: async function (hostUrl, hf, init, label) {
+                    var res = await fetch(hostUrl, Object.assign({ credentials: 'same-origin' }, init || {}));
+                    var data = await res.json().catch(function () { return {}; });
+                    return { res: res, data: data, source: 'hosting' };
+                },
+                axiosPostWithFallback: async function (ax, hostUrl, _hf, body, config) {
+                    var cfg = Object.assign({ withCredentials: true }, config || {});
+                    var res = await ax.post(hostUrl, body, cfg);
+                    return { res: res, source: 'hosting' };
+                },
+                openProgressStream: function () {
+                    return null;
+                }
+            };
+        })();
+    </script>
+    <script src="hf-fallback-client.js?v=20260915-fix"></script>
     <script src="ai-design-config.js?v=20260624-admin-sync"></script>
     <script src="ai-usage-reporter.js?v=20260622-ai-exam-log2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -530,27 +586,39 @@
 
     <script type="text/babel" data-presets="env,react">
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
-        const examUrl = (route) => GiangBaiApi.examUrl(route);
+        const examUrl = (route) => {
+            if (window.GiangBaiApi && typeof window.GiangBaiApi.examUrl === 'function') {
+                return window.GiangBaiApi.examUrl(route);
+            }
+            return 'api/exam.php?route=' + encodeURIComponent(route || '');
+        };
 
         const aiPost = async (route, body, config = {}) => {
-            const { res } = await GiangBaiApi.axiosPostWithFallback(
-                axios,
-                GiangBaiApi.examAiUrl(route),
-                GiangBaiApi.hfExamUrl(route),
-                body,
-                config,
-                'exam-ai'
-            );
-            return res;
+            if (window.GiangBaiApi && typeof window.GiangBaiApi.axiosPostWithFallback === 'function') {
+                const { res } = await window.GiangBaiApi.axiosPostWithFallback(
+                    axios,
+                    window.GiangBaiApi.examAiUrl ? window.GiangBaiApi.examAiUrl(route) : ('api/exam_ai.php?route=' + encodeURIComponent(route)),
+                    window.GiangBaiApi.hfExamUrl ? window.GiangBaiApi.hfExamUrl(route) : '',
+                    body,
+                    config,
+                    'exam-ai'
+                );
+                return res;
+            }
+            return (await axios.post('api/exam_ai.php?route=' + encodeURIComponent(route), body, config));
         };
 
         const aiPostForm = async (route, formData) => {
-            const res = await GiangBaiApi.fetchWithFallback(
-                GiangBaiApi.examAiUrl(route),
-                GiangBaiApi.hfExamUrl(route),
-                { method: 'POST', body: formData },
-                'process_paper'
-            );
+            if (window.GiangBaiApi && typeof window.GiangBaiApi.fetchWithFallback === 'function') {
+                const res = await window.GiangBaiApi.fetchWithFallback(
+                    window.GiangBaiApi.examAiUrl ? window.GiangBaiApi.examAiUrl(route) : ('api/exam_ai.php?route=' + encodeURIComponent(route)),
+                    window.GiangBaiApi.hfExamUrl ? window.GiangBaiApi.hfExamUrl(route) : '',
+                    { method: 'POST', body: formData },
+                    'process_paper'
+                );
+                return res.json();
+            }
+            const res = await fetch('api/exam_ai.php?route=' + encodeURIComponent(route), { method: 'POST', body: formData });
             return res.json();
         };
 
@@ -1651,17 +1719,21 @@
                             via = 'Gemini Vision (không có OCR)';
                         }
                     } catch (browserErr) {
-                        progressStream = GiangBaiApi.openProgressStream(page.id, (value) => {
+                        progressStream = window.GiangBaiApi?.openProgressStream ? window.GiangBaiApi.openProgressStream(page.id, (value) => {
                             setPageProgress(prev => ({ ...prev, [page.id]: value }));
-                        });
-                        const { res } = await GiangBaiApi.axiosPostWithFallback(
-                            axios,
-                            GiangBaiApi.examAiUrl('normalize_segment'),
-                            null,
-                            { image_data: imageData, api_keys: keys, model, page_id: page.id },
-                            { timeout: 120000 },
-                            'exam-ai'
-                        );
+                        }) : null;
+                        const normalizeUrl = window.GiangBaiApi?.examAiUrl ? window.GiangBaiApi.examAiUrl('normalize_segment') : 'api/exam_ai.php?route=normalize_segment';
+                        const hfNormUrl = window.GiangBaiApi?.hfExamUrl ? window.GiangBaiApi.hfExamUrl('normalize_segment') : '';
+                        const { res } = window.GiangBaiApi?.axiosPostWithFallback
+                            ? await window.GiangBaiApi.axiosPostWithFallback(
+                                axios,
+                                normalizeUrl,
+                                hfNormUrl,
+                                { image_data: imageData, api_keys: keys, model, page_id: page.id },
+                                { timeout: 120000 },
+                                'exam-ai'
+                            )
+                            : { res: await axios.post(normalizeUrl, { image_data: imageData, api_keys: keys, model, page_id: page.id }, { timeout: 120000, withCredentials: true }) };
                         payload = res.data || {};
                         via = 'Hosting';
                         if (!payload || payload.status !== 'ok') {
