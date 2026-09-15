@@ -113,3 +113,12 @@
 
 ### 8. Khắc phục workflow deploy
 - Sửa dấu đóng ngoặc nhọn thừa ngay trước khóa gdcd trong js/khbd-curriculum.js. Lỗi cú pháp này là nguyên nhân javascript-obfuscator dừng với Unexpected token khi workflow deploy chạy.
+
+### 9. Chuẩn hóa mô tả NLS & AI
+- Đồng bộ ma trận mô tả theo từng mã NLS/AI vào canvas_xaydungphuluc.html và xaydungphuluc.html.
+- Mỗi mã NLS từ 1.1 đến 5.4 có hành vi sư phạm riêng; mỗi nhóm mã AI A1, A3, B1, B2, B3, C, D có nội hàm riêng.
+- Dùng bộ công cụ chuyên biệt theo môn; không còn sử dụng nhận diện từ khóa Toán để áp mô tả Toán cho môn khác.
+
+### 10. Kiểm tra
+- git diff --check cho hai tệp giao diện: PASS.
+- Không chạy được các smoke test Node vì Windows Defender chặn node.exe của runtime Codex là tệp có thể là virus/PUA.
