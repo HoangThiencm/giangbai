@@ -843,10 +843,12 @@ function autoPedagogyState() {
 }
 
 function renderPedagogyItem(item, className, extraAttrs, checked, autoIds) {
-  const rec = hasAnalyzedLessonContent()
+  const heavyBlocked = isSinglePeriodLesson() && isHeavyPedagogyId(item.id);
+  const rec = !heavyBlocked
+    && hasAnalyzedLessonContent()
     && typeof isPedagogyRecommended === "function"
     && isPedagogyRecommended(item, pedagogyRecommendCtx());
-  const auto = (autoIds || []).includes(item.id);
+  const auto = !heavyBlocked && (autoIds || []).includes(item.id);
   const badge = auto ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : (rec ? ' <small class="pedagogy-fit">Phù hợp môn này</small>' : "");
   return `<label class="pedagogy-item${auto || rec ? " is-recommended" : ""}"><input type="checkbox" class="${className}" ${extraAttrs} value="${item.id}" ${checked ? "checked" : ""}> <span><strong>${item.label}</strong><br><small>${item.description || ""}${badge}</small></span></label>`;
 }
@@ -860,6 +862,7 @@ function renderPedagogyCatalogs() {
   if (typeof KHBD_PEDAGOGY_CATALOG === "undefined") return;
   const catalog = KHBD_PEDAGOGY_CATALOG;
   appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+  enforceTimeBudgetGateOnCurrentPedagogy();
   const context = appState.teachingContext;
   const auto = autoPedagogyState();
   const methods = new Set(context.methods || []);
@@ -2124,62 +2127,106 @@ function getLessonPeriodsCount() {
   return isSinglePeriodLesson() ? 1 : 2;
 }
 
+const KHBD_HEAVY_PEDAGOGY_RE = /jigsaw|station|mini-project|gallery|pbl|steam|du-an|flipped|product|tram/;
+const KHBD_HEAVY_METHOD_IDS = ["pbl", "steam", "flipped", "project", "station", "jigsaw", "gallery"];
+const KHBD_LIGHT_B_TECHNIQUES = ["tps-tech", "tablecloth", "5w1h"];
+
+function isHeavyPedagogyId(id) {
+  return KHBD_HEAVY_PEDAGOGY_RE.test(String(id || ""));
+}
+
 function applyTimeBudgetGateToPedagogy(rec, periodsCount) {
   if (!rec) return rec;
   const periods = periodsCount != null ? Number(periodsCount) : getLessonPeriodsCount();
   rec.techniques = rec.techniques || { A: [], B: [], C: [], D: [] };
-  const heavy = /jigsaw|station|mini-project|gallery-tech|pbl|steam|du-an/;
+  rec.activities = rec.activities || [];
+  rec.methods = rec.methods || [];
 
   if (periods <= 1) {
-    // 1 tiết (45 phút): 1 PPDH + tối đa 1–2 KTDH nhẹ; chặn kỹ thuật nặng
-    rec.methods = (rec.methods || []).filter(id => !["pbl", "steam", "flipped", "project", "station"].includes(id)).slice(0, 1);
-    const lightB = ["tps-tech", "tablecloth", "5w1h"];
-    const currentB = (rec.techniques.B || []).filter(id => !heavy.test(String(id)));
-    const chosenB = lightB.find(id => currentB.includes(id)) || currentB[0] || "tps-tech";
-    rec.techniques.B = [chosenB];
-    ["A", "C", "D"].forEach(phase => {
-      rec.techniques[phase] = (rec.techniques[phase] || []).filter(id => !heavy.test(String(id))).slice(0, 1);
-    });
-    let totalCount = 0;
-    ["B", "A", "C", "D"].forEach(phase => {
-      if (totalCount >= 2) rec.techniques[phase] = [];
-      else totalCount += (rec.techniques[phase] || []).length;
-    });
+    rec.methods = rec.methods.filter(id => !KHBD_HEAVY_METHOD_IDS.includes(id) && !isHeavyPedagogyId(id)).slice(0, 1);
+    const currentB = (rec.techniques.B || []).filter(id => !isHeavyPedagogyId(id));
+    const chosenB = KHBD_LIGHT_B_TECHNIQUES.find(id => currentB.includes(id)) || currentB[0] || "tps-tech";
+    rec.techniques.B = chosenB && !isHeavyPedagogyId(chosenB) ? [chosenB] : ["tps-tech"];
+    rec.techniques.A = [];
+    rec.techniques.C = [];
+    rec.techniques.D = [];
+    rec.activities = rec.activities.filter(id => !isHeavyPedagogyId(id)).slice(0, 1);
   } else if (periods === 2) {
-    // 2 tiết (90 phút): tối đa 2 PPDH + 2–3 KTDH
-    rec.methods = (rec.methods || []).slice(0, 2);
+    rec.methods = rec.methods.filter(id => !isHeavyPedagogyId(id)).slice(0, 2);
     let totalTech = 0;
     ["B", "C", "A", "D"].forEach(phase => {
-      rec.techniques[phase] = (rec.techniques[phase] || []).slice(0, 1);
-      totalTech += (rec.techniques[phase] || []).length;
+      rec.techniques[phase] = (rec.techniques[phase] || []).filter(id => !isHeavyPedagogyId(id)).slice(0, 1);
+      totalTech += rec.techniques[phase].length;
       if (totalTech > 3) rec.techniques[phase] = [];
     });
+    rec.activities = rec.activities.filter(id => !isHeavyPedagogyId(id)).slice(0, 2);
   } else {
-    // 3+ tiết: tối đa 2 PPDH + 3–4 KTDH
-    rec.methods = (rec.methods || []).slice(0, 2);
+    rec.methods = rec.methods.slice(0, 2);
     let totalTech = 0;
     ["B", "C", "A", "D"].forEach(phase => {
       rec.techniques[phase] = (rec.techniques[phase] || []).slice(0, 1);
-      totalTech += (rec.techniques[phase] || []).length;
+      totalTech += rec.techniques[phase].length;
       if (totalTech > 4) rec.techniques[phase] = [];
     });
+    rec.activities = rec.activities.slice(0, 2);
   }
   return rec;
 }
 
+function enforceTimeBudgetGateOnCurrentPedagogy() {
+  if (typeof appState === "undefined" || !appState.teachingContext) return;
+  const ctx = appState.teachingContext;
+  const gated = applyTimeBudgetGateToPedagogy({
+    methods: Array.isArray(ctx.methods) ? ctx.methods.slice() : [],
+    techniques: {
+      A: ctx.phasePedagogy?.A?.techniques || [],
+      B: ctx.phasePedagogy?.B?.techniques || [],
+      C: ctx.phasePedagogy?.C?.techniques || [],
+      D: ctx.phasePedagogy?.D?.techniques || []
+    },
+    activities: Array.isArray(ctx.subjectActivities) ? ctx.subjectActivities.slice() : []
+  });
+  ctx.methods = gated.methods;
+  ctx.phasePedagogy ||= { A: {}, B: {}, C: {}, D: {} };
+  ["A", "B", "C", "D"].forEach(phase => {
+    ctx.phasePedagogy[phase] ||= {};
+    ctx.phasePedagogy[phase].techniques = gated.techniques[phase] || [];
+  });
+  ctx.subjectActivities = gated.activities;
+  if (ctx.autoPedagogy) {
+    ctx.autoPedagogy = applyTimeBudgetGateToPedagogy({
+      methods: Array.isArray(ctx.autoPedagogy.methods) ? ctx.autoPedagogy.methods.slice() : [],
+      techniques: ctx.autoPedagogy.techniques && typeof ctx.autoPedagogy.techniques === "object"
+        ? {
+            A: ctx.autoPedagogy.techniques.A || [],
+            B: ctx.autoPedagogy.techniques.B || [],
+            C: ctx.autoPedagogy.techniques.C || [],
+            D: ctx.autoPedagogy.techniques.D || []
+          }
+        : { A: [], B: [], C: [], D: [] },
+      activities: Array.isArray(ctx.autoPedagogy.activities) ? ctx.autoPedagogy.activities.slice() : []
+    });
+  }
+}
+
 /** Chuẩn hóa xuống dòng phân vai GV/HS trong Cột trái bảng d) (CV 5512). */
 function formatKhbdRoleLineBreaks(text) {
-  let content = String(text || "");
-  // GV: hoặc **GV:** dính liền sau nội dung khác mà chưa có <br> → chèn <br>- **GV:**
-  content = content.replace(/([^\n>])\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1<br>- **GV:**");
-  // HS: hoặc **HS:** dính liền → chèn <br>- **HS:**
-  content = content.replace(/([^\n>])\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1<br>- **HS:**");
-  // Chuẩn hóa sau <br>
-  content = content.replace(/<br>\s*-\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "<br>- **GV:**");
-  content = content.replace(/<br>\s*-\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "<br>- **HS:**");
-  // Dòng bắt đầu bằng GV:/HS: không có - **
-  content = content.replace(/(^|<br>)\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1- **GV:**");
-  content = content.replace(/(^|<br>)\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1- **HS:**");
+  return String(text || "").split("\n").map(formatKhbdRoleLine).join("\n");
+}
+
+function formatKhbdRoleLine(line) {
+  let content = String(line || "").replace(/<br\s*\/?>/gi, "<br>");
+  const isTable = /^\s*\|/.test(content);
+  content = content.replace(/(?:<br>\s*)?-\s*\*\*(GV|HS):\*\*/gi, (_, role) => `§BR§§${role.toUpperCase()}§`);
+  if (!isTable) {
+    content = content.replace(/\s*\|\s*(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, (_, role) => `§BR§§${role.toUpperCase()}§`);
+  }
+  content = content.replace(/(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, (_, role) => `§BR§§${role.toUpperCase()}§`);
+  content = content.replace(/§BR§/g, "<br>- ");
+  content = content.replace(/§GV§/g, "**GV:**");
+  content = content.replace(/§HS§/g, "**HS:**");
+  content = content.replace(/^(\s*)(?:<br>)+/, "$1");
+  if (isTable) content = content.replace(/(\|\s*)(?:<br>)+/g, "$1");
   return content;
 }
 
@@ -2187,6 +2234,7 @@ function ensurePedagogyFromLesson({ force = false, silent = false, skipRender = 
   if (typeof recommendPedagogyFromLesson !== "function") return false;
   if (!hasAnalyzedLessonContent()) return false;
   const rec = applyTimeBudgetGateToPedagogy(recommendPedagogyFromLesson(pedagogyRecommendFullCtx()));
+  enforceTimeBudgetGateOnCurrentPedagogy();
   const auto = autoPedagogyState();
   let changed = false;
   const notices = [];
@@ -4774,7 +4822,7 @@ function getFullLessonPlanMarkdown(options = {}) {
   if (appendixE) {
     body.push(`\n---\n`, `# IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)`, appendixE);
   }
-  if (options.includeHeader === false) return body.join("\n\n");
+  if (options.includeHeader === false) return formatKhbdRoleLineBreaks(body.join("\n\n"));
   const header = [
     `**TRƯỜNG:** ${appState.school || "................................................"}`,
     `**TỔ CHUYÊN MÔN:** ${appState.group || "................................"}`,
@@ -4788,7 +4836,7 @@ function getFullLessonPlanMarkdown(options = {}) {
     `**THỜI LƯỢNG THỰC HIỆN:** ${duration}`,
     `\n---\n`
   ];
-  return [...header, ...body].join("\n\n");
+  return formatKhbdRoleLineBreaks([...header, ...body].join("\n\n"));
 }
 
 function renderFullLessonPreview() {
@@ -4863,7 +4911,7 @@ function buildPedagogicalContext() {
 - CẤM bịa mã ngoài danh sách. Khi viết mục tiêu: chỉ mô tả năng lực một dòng, CẤM nhãn Biểu hiện / Nhiệm vụ / Minh chứng.
 ${aiOn ? `- TÍCH HỢP NLS & AI THỰC CHIẾN GẮN MÔN HỌC: NLS/AI chỉ là công cụ thực hành môn ${subjectName}, TUYỆT ĐỐI KHÔNG dạy lý thuyết Tin học hay hỏi lý thuyết AI suông trong giờ học (cấm GV hỏi: "AI là gì?", "Em hãy kể tên công cụ AI?", "Làm gì để kiểm chứng thông tin từ AI?"). CHỈ tích hợp tại 1–2 vị trí then chốt, đắc địa nhất theo 3 dạng: (1) Kiểm chứng phản biện lỗi sai AI, (2) Prompting gợi mở bước giải, (3) Thao tác phần mềm chuyên ngành (GeoGebra/Excel/PhET...). TUYỆT ĐỐI CẤM rải tag dồn dập nhiều mã [AI: ...].` : `- NĂNG LỰC AI (QĐ 2422): KHÔNG BẬT. CẤM tự ý đưa kịch bản AI, prompt AI hay marker [AI] vào bất kỳ hoạt động nào.`}
 ${digitalOn ? `- TÍCH HỢP TỰ NHIÊN — KHÔNG GƯỢNG ÉP: Chỉ gắn NLS/AI khi khớp nội dung SGK. Bài Hình học: ưu tiên thước, compa, mô hình, GeoGebra nếu có máy; CẤM mã Lập trình (3.4) và Bản quyền số (3.3). Bài Đại số lý thuyết: CẤM gán Bảo vệ dữ liệu cá nhân (4.2) hay đạo đức AI gượng ép. Bài Thống kê/Xác suất: ưu tiên 1.1, 1.2, 1.3.` : `- NĂNG LỰC SỐ (CV 3456): KHÔNG BẬT. CẤM tự ý đưa kịch bản NLS hay marker [NLS] vào giáo án.`}
-- TIME-BUDGET GATE: ${isSinglePeriodLesson() ? "Bài 1 tiết (45 phút): tối đa 1 kỹ thuật nhẹ ở pha B (Think-Pair-Share 3–5 phút hoặc Khăn trải bàn ngắn 5 phút). CẤM kết hợp Mảnh ghép, Trạm/Góc học tập và Dự án trong cùng 1 tiết." : "Bài 2–3 tiết: được phân bổ kỹ thuật sâu (Mảnh ghép, Trạm/Góc học tập, Dự án nhỏ) nếu phù hợp."}
+- TIME-BUDGET GATE: ${isSinglePeriodLesson() ? "Bài 1 tiết (45 phút): đúng 1 PPDH; tối đa 1 kỹ thuật nhẹ ở pha B (Think-Pair-Share 3–5 phút hoặc Khăn trải bàn ngắn 5 phút). Pha A/C/D dùng vấn đáp/luyện tập tự nhiên. CẤM Mảnh ghép, Trạm/Góc học tập, Station Rotation, Gallery Walk, Dự án và HĐ đặc thù Trạm." : "Bài 2–3 tiết: được phân bổ kỹ thuật sâu (Mảnh ghép, Trạm/Góc học tập, Dự án nhỏ) nếu phù hợp."}
 - FACILITY GATE: ${!(context.facilities || {}).devices && !(context.facilities || {}).internet ? "Lớp KHÔNG có thiết bị học sinh và KHÔNG có Internet. TUYỆT ĐỐI CẤM yêu cầu học sinh lên mạng tra cứu, dùng điện thoại quét mã, thiết kế Canva, dùng laptop/chatbot trong giờ. Chỉ dùng thước, compa, bảng, phiếu giấy, máy tính cầm tay nếu bài cần." : "Có thể dùng công nghệ số khi khớp bài và thiết bị đã tick."}
 - Nếu một thành phần không được bật hoặc không được chọn ở trên, TUYỆT ĐỐI không tự thêm mục tiêu, hoạt động, học liệu, đánh giá hay nhiệm vụ liên quan đến thành phần đó. Ràng buộc này ưu tiên hơn mọi gợi ý chung trong mẫu prompt.
 
@@ -5824,6 +5872,7 @@ function clipKhbdActivityMarkdown(actKey, text) {
     clipped = keepBestActivityBlock(clipped, "D");
   }
   clipped = stripDisabledActivityIntegrations(clipped);
+  clipped = formatKhbdRoleLineBreaks(clipped);
   return normalizeActivityTimeHeadings(clipped, { fourActivities: actKey !== "E" });
 }
 
@@ -7018,6 +7067,11 @@ if (typeof window !== 'undefined') {
   window.revealTab0WorkflowStep = revealTab0WorkflowStep;
   window.closePpctStandardsModal = closePpctStandardsModal;
   window.goToStep3Pedagogy = goToStep3Pedagogy;
+  window.applyTimeBudgetGateToPedagogy = applyTimeBudgetGateToPedagogy;
+  window.formatKhbdRoleLineBreaks = formatKhbdRoleLineBreaks;
+  window.getLessonPeriodsCount = getLessonPeriodsCount;
+  window.isHeavyPedagogyId = isHeavyPedagogyId;
+  window.enforceTimeBudgetGateOnCurrentPedagogy = enforceTimeBudgetGateOnCurrentPedagogy;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -7076,6 +7130,8 @@ if (typeof module !== 'undefined' && module.exports) {
     isSinglePeriodLesson,
     getLessonPeriodsCount,
     formatKhbdRoleLineBreaks,
+    isHeavyPedagogyId,
+    enforceTimeBudgetGateOnCurrentPedagogy,
     applyTextbookOcrResult,
     triggerStep3PedagogyAndDigitalRecommendations,
     triggerAiCompetencyRecommendations,

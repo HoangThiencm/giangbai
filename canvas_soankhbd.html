@@ -31,7 +31,7 @@
       window.__KHBD_CANVAS__ = {
         host: "https://hoangthiencm.id.vn",
         model: "gemini-3-flash-preview",
-        version: "20260915-nls-ai-bi",
+        version: "20260915-ppdh-gvhs",
         connected: false
       };
     })();
@@ -1276,8 +1276,241 @@
         document.write('<script src="js/khbd-standards.js"><\/script>');
         document.write('<script src="js/khbd-app.js"><\/script>');
       } else if (typeof document !== "undefined") {
-        document.write('<script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260915-nls-ai-bi"><\/script>');
+        document.write('<script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260915-ppdh-gvhs"><\/script>');
       }
+    })();
+  </script>
+
+  <!-- Patch Canvas: định mức 1 tiết + xuống dòng GV/HS (không phụ thuộc JS host cũ) -->
+  <script>
+    (function canvasTimeBudgetAndRoleBreaks() {
+      const HEAVY = /jigsaw|station|mini-project|gallery|pbl|steam|du-an|flipped|product|tram/i;
+      const LIGHT_B = ["tps-tech", "tablecloth", "5w1h"];
+
+      function periodsCount() {
+        if (typeof getLessonPeriodsCount === "function") {
+          const n = Number(getLessonPeriodsCount());
+          if (Number.isFinite(n) && n > 0) return n;
+        }
+        const v = String((typeof appState !== "undefined" && appState && appState.duration) || (document.getElementById("inputDuration") || {}).value || "");
+        if (/3\s*ti[eế]t|135\s*phút/i.test(v)) return 3;
+        if (/2\s*ti[eế]t|90\s*phút/i.test(v)) return 2;
+        if (/1\s*ti[eế]t|01\s*tiết|45\s*phút/i.test(v)) return 1;
+        return 2;
+      }
+      function isOnePeriod() { return periodsCount() <= 1; }
+
+      function formatRoles(text) {
+        return String(text || "").split("\n").map(function (line) {
+          var c = String(line || "").replace(/<br\s*\/?>/gi, "<br>");
+          var isTable = /^\s*\|/.test(c);
+          c = c.replace(/(?:<br>\s*)?-\s*\*\*(GV|HS):\*\*/gi, function (_, role) { return "§BR§§" + String(role).toUpperCase() + "§"; });
+          if (!isTable) {
+            c = c.replace(/\s*\|\s*(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, function (_, role) { return "§BR§§" + String(role).toUpperCase() + "§"; });
+          }
+          c = c.replace(/(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, function (_, role) { return "§BR§§" + String(role).toUpperCase() + "§"; });
+          c = c.replace(/§BR§/g, "<br>- ");
+          c = c.replace(/§GV§/g, "**GV:**");
+          c = c.replace(/§HS§/g, "**HS:**");
+          c = c.replace(/^(\s*)(?:<br>)+/, "$1");
+          if (isTable) c = c.replace(/(\|\s*)(?:<br>)+/g, "$1");
+          return c;
+        }).join("\n");
+      }
+
+      function applyGate(rec, periodsHint) {
+        if (!rec) return rec;
+        var periods = periodsHint != null ? Number(periodsHint) : periodsCount();
+        rec.techniques = rec.techniques || { A: [], B: [], C: [], D: [] };
+        rec.activities = rec.activities || [];
+        rec.methods = rec.methods || [];
+        if (periods <= 1) {
+          rec.methods = rec.methods.filter(function (id) { return !HEAVY.test(String(id)); }).slice(0, 1);
+          var currentB = (rec.techniques.B || []).filter(function (id) { return !HEAVY.test(String(id)); });
+          var chosenB = LIGHT_B.filter(function (id) { return currentB.indexOf(id) !== -1; })[0] || currentB[0] || "tps-tech";
+          rec.techniques.B = [chosenB];
+          rec.techniques.A = [];
+          rec.techniques.C = [];
+          rec.techniques.D = [];
+          rec.activities = rec.activities.filter(function (id) { return !HEAVY.test(String(id)); }).slice(0, 1);
+        } else if (periods === 2) {
+          rec.methods = rec.methods.slice(0, 2);
+          var totalTech = 0;
+          ["B", "C", "A", "D"].forEach(function (phase) {
+            rec.techniques[phase] = (rec.techniques[phase] || []).slice(0, 1);
+            totalTech += rec.techniques[phase].length;
+            if (totalTech > 3) rec.techniques[phase] = [];
+          });
+          rec.activities = rec.activities.slice(0, 2);
+        }
+        return rec;
+      }
+
+      function pruneAppState() {
+        if (typeof appState === "undefined" || !appState.teachingContext) return;
+        var ctx = appState.teachingContext;
+        var gated = applyGate({
+          methods: (ctx.methods || []).slice(),
+          techniques: {
+            A: (ctx.phasePedagogy && ctx.phasePedagogy.A && ctx.phasePedagogy.A.techniques) || [],
+            B: (ctx.phasePedagogy && ctx.phasePedagogy.B && ctx.phasePedagogy.B.techniques) || [],
+            C: (ctx.phasePedagogy && ctx.phasePedagogy.C && ctx.phasePedagogy.C.techniques) || [],
+            D: (ctx.phasePedagogy && ctx.phasePedagogy.D && ctx.phasePedagogy.D.techniques) || []
+          },
+          activities: (ctx.subjectActivities || []).slice()
+        });
+        ctx.methods = gated.methods;
+        ctx.phasePedagogy = ctx.phasePedagogy || { A: {}, B: {}, C: {}, D: {} };
+        ["A", "B", "C", "D"].forEach(function (p) {
+          ctx.phasePedagogy[p] = ctx.phasePedagogy[p] || {};
+          ctx.phasePedagogy[p].techniques = gated.techniques[p] || [];
+        });
+        ctx.subjectActivities = gated.activities;
+        if (ctx.autoPedagogy) {
+          ctx.autoPedagogy = applyGate({
+            methods: (ctx.autoPedagogy.methods || []).slice(),
+            techniques: ctx.autoPedagogy.techniques || { A: [], B: [], C: [], D: [] },
+            activities: (ctx.autoPedagogy.activities || []).slice()
+          });
+        }
+      }
+
+      function pruneChecked(selector, keepFn) {
+        Array.from(document.querySelectorAll(selector)).forEach(function (el) {
+          if (!el.checked) return;
+          if (!keepFn(el)) {
+            el.checked = false;
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        });
+      }
+
+      function pruneUi() {
+        if (!isOnePeriod()) return;
+        var methodKept = 0;
+        pruneChecked(".pedagogy-method", function (el) {
+          if (HEAVY.test(String(el.value || ""))) return false;
+          if (methodKept >= 1) return false;
+          methodKept += 1;
+          return true;
+        });
+        pruneChecked(".pedagogy-technique", function (el) {
+          if (HEAVY.test(String(el.value || ""))) return false;
+          return el.getAttribute("data-phase") === "B";
+        });
+        var bKept = 0;
+        pruneChecked('.pedagogy-technique[data-phase="B"]', function (el) {
+          if (HEAVY.test(String(el.value || ""))) return false;
+          if (bKept >= 1) return false;
+          bKept += 1;
+          return true;
+        });
+        var actKept = 0;
+        pruneChecked(".pedagogy-activity", function (el) {
+          if (HEAVY.test(String(el.value || ""))) return false;
+          if (actKept >= 1) return false;
+          actKept += 1;
+          return true;
+        });
+      }
+
+      function wrapFn(obj, name, wrapper) {
+        if (!obj || typeof obj[name] !== "function" || obj[name].__khbdCanvasGate) return false;
+        var orig = obj[name];
+        obj[name] = wrapper(orig);
+        obj[name].__khbdCanvasGate = true;
+        return true;
+      }
+
+      function install() {
+        window.formatKhbdRoleLineBreaks = formatRoles;
+        if (typeof window.applyTimeBudgetGateToPedagogy === "function") {
+          wrapFn(window, "applyTimeBudgetGateToPedagogy", function (orig) {
+            return function (rec, periodsHint) {
+              return applyGate(orig(rec, periodsHint), periodsHint);
+            };
+          });
+        } else {
+          window.applyTimeBudgetGateToPedagogy = applyGate;
+        }
+        wrapFn(window, "recommendPedagogyFromLesson", function (orig) {
+          return function (ctx) { return applyGate(orig(ctx)); };
+        });
+        wrapFn(window, "ensurePedagogyFromLesson", function (orig) {
+          return function () {
+            var result = orig.apply(this, arguments);
+            pruneAppState();
+            pruneUi();
+            return result;
+          };
+        });
+        wrapFn(window, "renderPedagogyCatalogs", function (orig) {
+          return function () {
+            pruneAppState();
+            var r = orig.apply(this, arguments);
+            pruneUi();
+            return r;
+          };
+        });
+        wrapFn(window, "isPedagogyRecommended", function (orig) {
+          return function (item, ctx) {
+            if (isOnePeriod() && item && HEAVY.test(String(item.id || ""))) return false;
+            return orig.apply(this, arguments);
+          };
+        });
+        wrapFn(window, "getFullLessonPlanMarkdown", function (orig) {
+          return function () { return formatRoles(orig.apply(this, arguments)); };
+        });
+        wrapFn(window, "applyActivityOutput", function (orig) {
+          return function () {
+            var p = orig.apply(this, arguments);
+            if (p && typeof p.then === "function") {
+              return p.then(function (text) { return formatRoles(text); });
+            }
+            return formatRoles(p);
+          };
+        });
+        wrapFn(window, "buildDetailedPedagogyGuide", function (orig) {
+          return function () { return formatRoles(orig.apply(this, arguments)); };
+        });
+        if (typeof DocxGenerator !== "undefined" && DocxGenerator.prototype && !DocxGenerator.prototype.__khbdRolePatched) {
+          var origParse = DocxGenerator.prototype.parseTableCellParagraphs;
+          if (typeof origParse === "function") {
+            DocxGenerator.prototype.parseTableCellParagraphs = function (text, isHeader) {
+              var next = isHeader ? text : formatRoles(text).replace(/<br\s*\/?>/gi, "\n");
+              return origParse.call(this, next, isHeader);
+            };
+            DocxGenerator.prototype.__khbdRolePatched = true;
+          }
+        }
+        ["editorActivity", "editorObjectives"].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (!el || el.__khbdRolePatched) return;
+          el.__khbdRolePatched = true;
+          el.addEventListener("blur", function () {
+            var next = formatRoles(el.value);
+            if (next !== el.value) el.value = next;
+          });
+        });
+        pruneAppState();
+        pruneUi();
+        return true;
+      }
+
+      document.addEventListener("click", function (ev) {
+        var t = ev.target && ev.target.closest && ev.target.closest("#btnStep3PedagogyDigital, #btnSuggestPedagogyStandards, #btnStep3Recommend, #btn1ClickGenerate, #btnExportFullDocx, #btnExportCurrentActDocx");
+        if (!t) return;
+        setTimeout(function () { pruneAppState(); pruneUi(); }, 80);
+        setTimeout(function () { pruneAppState(); pruneUi(); }, 400);
+        setTimeout(function () { pruneAppState(); pruneUi(); }, 1200);
+      }, true);
+
+      var tries = 0;
+      (function boot() {
+        install();
+        tries += 1;
+        if (tries < 25) setTimeout(boot, 300);
+      })();
     })();
   </script>
 

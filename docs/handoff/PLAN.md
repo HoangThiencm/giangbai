@@ -1,162 +1,131 @@
-# Kế hoạch Triển khai: Định Mức PPDH/KTDH Theo Số Tiết & Xuống Dòng Phân Vai GV/HS Chuẩn 5512
+# Kế hoạch Triển khai: Mở Công Khai giaoantichhop.html & Fix Triệt Để Xuống Dòng Phân Vai (Cache-Busting)
 
 ## 1. Yêu cầu & Căn cứ Thực tiễn
 
-### Yêu cầu 1: Định mức Phương pháp (PPDH) và Kỹ thuật dạy học (KTDH) theo số tiết
-- **Hiện trạng:** Hệ thống tự động đề xuất quá nhiều PPDH và KTDH cho bài 1 tiết (45 phút), rải khắp các kỹ thuật nặng (Trạm/Station, Mảnh ghép/Jigsaw, Phòng tranh/Gallery Walk, Dự án/PBL). Trong thực tế 45 phút, giáo viên không thể tổ chức nhiều kỹ thuật cồng kềnh như vậy, dẫn đến quá tải sư phạm và chắc chắn cháy giáo án.
+### Yêu cầu 1: Khắc phục lỗi `giaoantichhop.html` bắt đăng nhập
+- **Hiện trạng:** Người dùng vào `giaoantichhop.html` bị chuyển hướng ép đăng nhập vào `login.html`.
+- **Nguyên nhân gốc rễ:**
+  1. File `giaoantichhop.html` tại dòng 4 nạp `<script src="access-control.js"></script>`.
+  2. File `access-control.js` tại dòng 41 chứa cấu hình: `'giaoantichhop.html': 'soankhbd',`.
+  3. Mặc dù giao diện header của `giaoantichhop.html` ghi rõ: `"Công khai · Không cần tài khoản"` (dòng 52), nhưng script `access-control.js` tự động kiểm tra `authToken` và chuyển hướng về `login.html` khi người dùng chưa đăng nhập.
 - **Quy tắc chuẩn hóa:**
-  1. **Bài 1 tiết (<= 45 phút):**
-     - PPDH: Đúng **1 phương pháp chủ đạo** (ví dụ: Dạy học Khám phá HOẶC Giải quyết vấn đề; loại bỏ các phương pháp cồng kềnh như Dạy học Dự án, STEAM, Flipped classroom).
-     - KTDH: Tối đa **1 – 2 kỹ thuật nhẹ, tinh gọn** trên toàn bài.
-     - Phân bổ pha: Pha B chỉ dùng **1 kỹ thuật nhẹ** (*Think-Pair-Share* hoặc *Khăn trải bàn rút gọn*); các pha A, C, D dùng hình thức tự nhiên (Vấn đáp, Luyện tập cặp đôi); **chặn tuyệt đối** các kỹ thuật nặng (*Jigsaw, Station, Gallery walk, Mini-project, PBL, STEAM*).
-  2. **Bài 2 tiết (90 phút):**
-     - PPDH: Tối đa **2 phương pháp** (1 chủ đạo + 1 bổ trợ).
-     - KTDH: Tối đa **2 – 3 kỹ thuật** trên toàn bài (cho phép 1 kỹ thuật hợp tác sâu như Khăn trải bàn, Sơ đồ tư duy ở Pha B hoặc C; Pha A/D dùng kỹ thuật nhanh).
-  3. **Bài từ 3 tiết trở lên:**
-     - PPDH: Tối đa **2 phương pháp**.
-     - KTDH: Tối đa **3 – 4 kỹ thuật** (cho phép kỹ thuật phức hợp như Dự án, Bàn tay nặn bột).
+  1. `giaoantichhop.html` là công cụ **hoàn toàn công khai**, bất kỳ ai cũng có thể sử dụng trực tiếp mà không cần tài khoản.
+  2. Xóa bỏ hoàn toàn `<script src="access-control.js"></script>` khỏi `giaoantichhop.html`.
+  3. Xóa bỏ `'giaoantichhop.html': 'soankhbd',` khỏi `access-control.js`.
 
-### Yêu cầu 2: Xuống dòng phân vai GV và HS trong bảng tổ chức thực hiện
-- **Hiện trạng:** Trong Cột trái bảng d) (Hoạt động của GV và HS), các bước tổ chức thực hiện đang bị dính liền thành một dòng/đoạn văn duy nhất:
-  `+ Bước 1: Chuyển giao nhiệm vụ: (Kỹ thuật...) GV: Trình chiếu... HS: Quan sát...`
-  Điều này làm văn bản bị dính chùm, rất rối mắt, vi phạm thể thức phân vai của Công văn 5512 và gây khó khăn khi giáo viên cầm giáo án lên lớp hoặc nộp thanh tra.
-- **Quy tắc chuẩn hóa:**
-  1. Trong từng bước (Bước 1, 2, 3, 4), **bắt buộc xuống dòng tách bạch rõ ràng**:
-     - Dòng 1: Tiêu đề bước kèm phương pháp/kỹ thuật: `+ Bước 1: Chuyển giao nhiệm vụ (Kỹ thuật...):`
-     - Dòng 2 (thụt lề): Lời thoại, câu lệnh, phát hiện lỗi sai của giáo viên: `<br>- **GV:** [Câu thoại trong ngoặc kép "...", hướng dẫn, can thiệp phân hóa]`
-     - Dòng 3 (thụt lề): Hành động, sản phẩm trung gian của học sinh: `<br>- **HS:** [Thao tác cá nhân -> thảo luận nhóm -> báo cáo và phản biện]`
-  2. Áp dụng cơ chế **2 lớp bảo vệ**:
-     - *Lớp 1 (Prompt):* Chỉ đạo Gemini chèn `<br>` và format đúng cấu trúc `- **GV:**` và `- **HS:**`.
-     - *Lớp 2 (Hậu xử lý tự động trong code):* Cả khi render web preview và khi xuất file Word (.docx), hệ thống tự động quét và chèn `<br>- ` trước `GV:` / `HS:` nếu chưa có ngắt dòng, đảm bảo 100% giáo án cũ lẫn mới đều tự động xuống dòng đẹp mắt.
+---
+
+### Yêu cầu 2: Khắc phục triệt để "sao tôi không thấy thay đổi gì đâu" (Xuống dòng phân vai GV/HS)
+- **Hiện trạng:**
+  - Ảnh chụp thực tế của người dùng cho thấy các bước hoạt động vẫn nằm trên cùng 1 dòng:
+    `+ Bước 1: Chuyển giao nhiệm vụ: (Kỹ thuật 5W1H) GV: Trình chiếu... HS: Quan sát...`
+    `+ Bước 2: Thực hiện nhiệm vụ: (Kỹ thuật Think-Pair-Share) HS: ... GV: ...`
+- **Nguyên nhân gốc rễ:**
+  1. **Bộ nhớ đệm (Browser/CDN Cache):**
+     - File `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html` đang nạp các tệp script từ `https://hoangthiencm.id.vn/` với query param cũ:
+       `?v=20260915-nls-ai-bi`
+     - File `soankhbd.html` nạp script không kèm version query string (`js/khbd-app.js`, `js/khbd-docx.js`, `js/khbd-prompts.js`).
+     - Trình duyệt và Cloudflare tiếp tục phân phối phiên bản `khbd-app.js` và `khbd-docx.js` cũ trong cache, chưa có logic tách dòng và khóa định mức.
+  2. **Tiêu đề Bước dính liền GV/HS:**
+     - Trong ảnh thực tế: `+ Bước 1: Chuyển giao nhiệm vụ: (Kỹ thuật 5W1H) GV:` — nhãn `GV:` đứng liền sau tiêu đề bước mà không có ngắt dòng `<br>`.
+     - Hàm `formatKhbdRoleLineBreaks` cần đảm bảo tách dòng cả khi `GV:` hoặc `HS:` xuất hiện ngay sau tiêu đề bước `+ Bước X: ...`.
+  3. **Khâu hiển thị xem trước (Preview):**
+     - Cần đảm bảo `formatKhbdRoleLineBreaks` được gọi khi xem trước Markdown (`renderMathPreview`), khi tổng hợp toàn bộ giáo án (`getFullLessonPlanMarkdown`) và khi nạp bản nháp.
 
 ---
 
 ## 2. Phạm vi Tệp Cần Tác Động
 
-1. `js/khbd-app.js`:
-   - Nâng cấp `applyTimeBudgetGateToPedagogy()` và `recommendPedagogyFromLesson()`:
-     + Khi `isSinglePeriodLesson()`: Ép `methods` tối đa 1 mục, KTDH tối đa 1–2 mục nhẹ; loại bỏ toàn bộ kỹ thuật nặng (`jigsaw`, `station`, `gallery-tech`, `mini-project`, `pbl`, `steam`).
-     + Khi 2 tiết: Giới hạn tối đa 2 PPDH và 2–3 KTDH.
-   - Thêm hàm chuẩn hóa nội dung phân vai `formatKhbdRoleLineBreaks(markdown)` để tự động chèn `<br>- ` trước `GV:` và `HS:` trong bảng 2 cột mục d).
-2. `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`:
-   - Đồng bộ logic lọc định mức thời lượng và tự động xuống dòng phân vai cho môi trường Canvas.
-3. `js/khbd-prompts.js`:
-   - Bổ sung quy tắc thời lượng vào hợp đồng sư phạm: Bài 1 tiết BẮT BUỘC chỉ 1 PPDH và 1–2 KTDH nhẹ.
-   - Cập nhật quy tắc Cột TRÁI bảng d): Mỗi bước BẮT BUỘC tách dòng bằng `<br>`:
-     `+ Bước X: [Tên bước]:`
-     `<br>- **GV:** [Lời thoại trong "...", hành động cụ thể]`
-     `<br>- **HS:** [Hành động, sản phẩm cụ thể]`
-4. `js/khbd-docx.js`:
-   - Trong `parseTableCellParagraphs()`: Tự động nhận diện và tách dòng trước các nhãn `- **GV:**`, `- **HS:**`, `**GV:**`, `**HS:**`, `GV:`, `HS:` để tạo thành các đoạn (`Paragraph`) riêng biệt có thụt đầu dòng rõ ràng trong file Word.
-5. `tests/khbd-pedagogy-rate-smoke.js` (Tạo mới hoặc cập nhật):
-   - Kiểm thử định mức PPDH/KTDH cho bài 1 tiết và 2 tiết.
-   - Kiểm thử tách dòng GV/HS trong bảng Markdown và TextRun/Paragraph Word.
+1. `giaoantichhop.html`:
+   - Xóa thẻ `<script src="access-control.js"></script>` ở dòng 4.
+2. `access-control.js`:
+   - Xóa `'giaoantichhop.html': 'soankhbd',` tại dòng 41.
+3. `canvas_soankhbd.html`:
+   - Nâng `version` trong `window.__KHBD_CANVAS__` thành `"20260915-rolebreak-v2"`.
+   - Nâng query parameter cache-bust cho:
+     + `khbd-prompts.js?v=20260915-rolebreak-v2`
+     + `khbd-docx.js?v=20260915-rolebreak-v2`
+     + `khbd-app.js?v=20260915-rolebreak-v2`
+4. `backupcode viettailieu/canvas_soankhbd.html`:
+   - Đồng bộ tương tự như `canvas_soankhbd.html`.
+5. `soankhbd.html`:
+   - Thêm `?v=20260915-rolebreak-v2` cho các thẻ script `js/khbd-prompts.js`, `js/khbd-docx.js`, `js/khbd-app.js`.
+6. `js/khbd-app.js`:
+   - Nâng cấp `formatKhbdRoleLineBreaks(text)` để nhận diện triệt để:
+     + Nhãn `GV:` hoặc `HS:` đứng sau tiêu đề bước `+ Bước ...:` hoặc sau dấu ngoặc đơn `(...)` -> ngắt dòng `<br>- **GV:**` hoặc `<br>- **HS:**`.
+     + Áp dụng `formatKhbdRoleLineBreaks` trong `getFullLessonPlanMarkdown()`, `renderMathPreview()` và khi nạp nội dung hoạt động.
+7. `tests/giaoantichhop-public-access-smoke.js`:
+   - Tạo mới test tĩnh: đảm bảo `giaoantichhop.html` không nạp `access-control.js` và `access-control.js` không khóa route `giaoantichhop.html`.
 
 ---
 
 ## 3. Chi tiết Kỹ thuật Cần Triển Khai
 
-### A. Chuẩn hóa định mức thời lượng (`js/khbd-app.js` & `canvas_soankhbd.html`)
-```javascript
-function applyTimeBudgetGateToPedagogy(rec, periodsCount) {
-  if (!rec) return rec;
-  const periods = periodsCount != null ? Number(periodsCount) : (isSinglePeriodLesson() ? 1 : 2);
-  rec.techniques = rec.techniques || { A: [], B: [], C: [], D: [] };
-  
-  if (periods <= 1) {
-    // 1 tiết (45 phút): 1 PPDH + 1-2 KTDH nhẹ
-    rec.methods = (rec.methods || []).filter(id => !["pbl", "steam", "flipped", "project", "station"].includes(id)).slice(0, 1);
-    const heavy = /jigsaw|station|mini-project|gallery-tech|pbl|steam|du-an/;
-    const lightB = ["tps-tech", "tablecloth", "5w1h"];
-    const currentB = (rec.techniques.B || []).filter(id => !heavy.test(String(id)));
-    const chosenB = lightB.find(id => currentB.includes(id)) || currentB[0] || "tps-tech";
-    rec.techniques.B = [chosenB];
-    
-    // Pha A, C, D: Tối đa 1 kỹ thuật nhẹ hoặc rỗng
-    ["A", "C", "D"].forEach(phase => {
-      rec.techniques[phase] = (rec.techniques[phase] || []).filter(id => !heavy.test(String(id))).slice(0, 1);
-    });
-    // Tổng số KTDH toàn bài không quá 2
-    let totalCount = 0;
-    ["B", "A", "C", "D"].forEach(phase => {
-      if (totalCount >= 2) rec.techniques[phase] = [];
-      else totalCount += rec.techniques[phase].length;
-    });
-  } else if (periods === 2) {
-    // 2 tiết (90 phút): Tối đa 2 PPDH + 2-3 KTDH
-    rec.methods = (rec.methods || []).slice(0, 2);
-    let totalTech = 0;
-    ["B", "C", "A", "D"].forEach(phase => {
-      rec.techniques[phase] = (rec.techniques[phase] || []).slice(0, 1);
-      totalTech += rec.techniques[phase].length;
-      if (totalTech > 3) rec.techniques[phase] = [];
-    });
-  }
-  return rec;
-}
+### A. Gỡ bỏ quyền truy cập khỏi `giaoantichhop.html` & `access-control.js`
+
+Trong `giaoantichhop.html`:
+```html
+<!-- XÓA DÒNG NÀY: -->
+<script src="access-control.js"></script>
 ```
 
-### B. Tự động xuống dòng phân vai GV/HS (`js/khbd-app.js` & `js/khbd-docx.js`)
-Hàm chuẩn hóa tách dòng phân vai:
+Trong `access-control.js`:
+```javascript
+// XÓA MỤC NÀY:
+'giaoantichhop.html': 'soankhbd',
+```
+
+### B. Nâng cấp Cache-Busting Version String
+
+Tại `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`:
+```javascript
+window.__KHBD_CANVAS__ = {
+  host: "https://hoangthiencm.id.vn",
+  model: "gemini-3-flash-preview",
+  version: "20260915-rolebreak-v2",
+  connected: false
+};
+```
+Và tại các vị trí nạp script hosting:
+```html
+<script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260915-rolebreak-v2"></script>
+<script src="https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260915-rolebreak-v2"></script>
+<script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260915-rolebreak-v2"></script>
+```
+
+### C. Hoàn thiện hàm chuẩn hóa `formatKhbdRoleLineBreaks(text)`
+
 ```javascript
 function formatKhbdRoleLineBreaks(text) {
   let content = String(text || "");
-  // Nếu GV: hoặc **GV:** dính liền sau tiêu đề bước hoặc nội dung khác mà chưa có <br>, chèn <br>- 
+  // 1. Tách GV: sau tiêu đề bước hoặc nội dung khác mà chưa có <br>
   content = content.replace(/([^\n>])\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1<br>- **GV:**");
-  // Nếu HS: hoặc **HS:** dính liền sau GV mà chưa có <br>, chèn <br>- 
+  // 2. Tách HS: sau nội dung khác mà chưa có <br>
   content = content.replace(/([^\n>])\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1<br>- **HS:**");
-  // Đảm bảo sau <br> có dạng chuẩn - **GV:** và - **HS:**
+  // 3. Chuẩn hóa định dạng chuẩn có gạch đầu dòng sau <br>
   content = content.replace(/<br>\s*-\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "<br>- **GV:**");
   content = content.replace(/<br>\s*-\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "<br>- **HS:**");
+  // 4. Dòng bắt đầu bằng GV:/HS: không có dấu gạch
+  content = content.replace(/(^|<br>)\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1- **GV:**");
+  content = content.replace(/(^|<br>)\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1- **HS:**");
   return content;
 }
 ```
-Trong `js/khbd-docx.js` (`parseTableCellParagraphs`):
-- Khi gặp dòng có chứa `GV:` hoặc `HS:`, nếu có `<br>` hoặc gạch đầu dòng `- `, tự động bóc tách thành các đoạn `Paragraph` riêng với `indent: { left: 360 }` cho dòng vai trò.
-
-### C. Prompt sư phạm (`js/khbd-prompts.js`)
-- Cập nhật chỉ dẫn cấu trúc Cột TRÁI:
-  ```text
-  - CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG (ngăn các bước và vai trò bằng <br>):
-    BẮT BUỘC từng bước phải xuống dòng riêng cho GV và HS theo mẫu sau:
-    + Bước 1: Chuyển giao nhiệm vụ (Kỹ thuật...):
-    <br>- **GV:** [Câu lệnh ngắn gọn trong ngoặc kép "...", hướng dẫn nhiệm vụ...]
-    <br>- **HS:** [Tiếp nhận nhiệm vụ, hành động cụ thể...]
-    <br>+ Bước 2: Thực hiện nhiệm vụ:
-    <br>- **HS:** [Làm việc cá nhân X phút -> thảo luận cặp/nhóm Y phút tạo sản phẩm trung gian...]
-    <br>- **GV:** [Quan sát, dự kiến 1 lỗi sai điển hình trong SGK và can thiệp phân hóa...]
-    <br>+ Bước 3: Báo cáo, thảo luận:
-    <br>- **HS:** [Đại diện báo cáo, các nhóm phản biện...]
-    <br>- **GV:** [Điều hành, đặt câu hỏi gợi mở...]
-    <br>+ Bước 4: Kết luận, nhận định:
-    <br>- **GV:** [Nhận xét, chốt kiến thức cốt lõi...]
-    <br>- **HS:** [Ghi bài vào vở...]
-  - TUYỆT ĐỐI CẤM viết dính liền GV và HS trên cùng một dòng.
-  ```
 
 ---
 
-## 4. Kế Hoạch Kiểm Thử (Verification Plan)
+## 4. Kế hoạch Kiểm thử (Verification Plan)
 
-1. **Kiểm thử Smoke tự động:**
-   - Tạo bộ kiểm thử `tests/khbd-pedagogy-rate-smoke.js`:
-     + Test case 1: Bài 1 tiết (`duration = "45 phút"` hoặc `1 tiết`): PPDH <= 1, KTDH <= 2, không có kỹ thuật nặng (`jigsaw`, `station`, `gallery`).
-     + Test case 2: Bài 2 tiết (`duration = "90 phút"` hoặc `2 tiết`): PPDH <= 2, KTDH <= 3.
-     + Test case 3: Dữ liệu Cột trái có dính liền `GV:... HS:...` được hàm chuẩn hóa tách thành các dòng `<br>- **GV:**` và `<br>- **HS:**`.
-     + Test case 4: File Word export sinh ra đủ các `Paragraph` độc lập cho Bước, GV và HS.
-   - Chạy toàn bộ các test hiện có:
-     + `node tests/canvas-soankhbd-smoke.js`: PASS.
-     + `node tests/khbd-integrations-smoke.js`: PASS.
-     + `node tests/khbd-nls-ai-bold-italic-smoke.js`: PASS.
-     + `node tests/khbd-docx-format-smoke.js`: PASS.
-2. **Kiểm tra trực quan:**
-   - Xem trước giao diện Web và file DOCX mẫu: Từng bước hiển thị rõ ràng 3 phần: Tiêu đề bước -> `- GV:` -> `- HS:`.
+### Automated Tests:
+1. `node tests/giaoantichhop-public-access-smoke.js`:
+   - Xác nhận `giaoantichhop.html` không chứa `access-control.js`.
+   - Xác nhận `access-control.js` không chứa `giaoantichhop.html`.
+2. `node tests/teacher-permissions-smoke.js`:
+   - Xác nhận hệ thống phân quyền giáo viên vẫn hoạt động chính xác.
+3. `node tests/khbd-pedagogy-rate-smoke.js`:
+   - Xác nhận `formatKhbdRoleLineBreaks` tách đúng dòng cho các mẫu văn bản thực tế từ người dùng.
+4. `node tests/canvas-soankhbd-smoke.js`:
+   - Xác nhận `canvas_soankhbd.html` nạp script với version mới.
 
 ---
-
-## 5. Tiêu Chí Nghiệm Thu (Acceptance Criteria)
-
-1. Khi chọn bài 1 tiết: Hệ thống chỉ đề xuất duy nhất 1 PPDH và tối đa 1–2 KTDH nhẹ, loại bỏ các kỹ thuật nặng.
-2. Khi chọn bài 2 tiết: Hệ thống đề xuất tối đa 2 PPDH và 2–3 KTDH.
-3. Trong bảng tổ chức hoạt động dạy học: Tiêu đề bước, **GV:** và **HS:** luôn xuống dòng riêng biệt, có thụt đầu dòng chuẩn mực, không còn tình trạng dính chùm trên 1 dòng như ảnh phản ánh.
-4. Cả `soankhbd.html` và `canvas_soankhbd.html` đều hoạt động đồng bộ và vượt qua 100% bài kiểm thử.
+Mời Coder triển khai đúng theo kế hoạch trên.

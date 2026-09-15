@@ -49,6 +49,11 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-prompts.js"'), `${relPath} phải nạp khbd-prompts.js cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-prompts.js'), `${relPath} phải giữ nguồn khbd-prompts.js từ hosting khi chạy Canvas`);
   assert.ok(targetHtml.includes('?v=20260915-nls-ai-bi'), `${relPath} phải cache-bust CSS/JS NLS-AI in đậm in nghiêng`);
+  assert.ok(targetHtml.includes('canvasTimeBudgetAndRoleBreaks'), `${relPath} phải nhúng patch định mức 1 tiết + GV/HS`);
+  assert.ok(targetHtml.includes('pedagogy-activity'), `${relPath} patch phải lọc hoạt động đặc thù`);
+  assert.ok(/HEAVY\s*=\s*\/[^\n]*station/.test(targetHtml), `${relPath} patch phải chặn Station/Trạm`);
+  assert.ok(targetHtml.includes('__khbdRolePatched'), `${relPath} phải vá parseTableCellParagraphs khi xuất Word`);
+  assert.ok(targetHtml.includes('v=20260915-ppdh-gvhs'), `${relPath} phải cache-bust bản PPDH/GV-HS`);
   assert.ok(/\.khbd-badge-nls\s*\{[^}]*font-style:\s*italic/.test(targetHtml), `${relPath} badge NLS Canvas phải italic`);
   assert.ok(/\.khbd-badge-ai\s*\{[^}]*font-style:\s*italic/.test(targetHtml), `${relPath} badge AI Canvas phải italic`);
   assert.ok(/\.preview-rendered \.khbd-nls[\s\S]{0,180}font-style:\s*italic/.test(targetHtml), `${relPath} preview NLS Canvas phải italic`);

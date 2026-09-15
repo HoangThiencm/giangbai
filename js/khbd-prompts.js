@@ -250,7 +250,7 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
   <br>- **GV:** [Nhận xét, chốt kiến thức cốt lõi...]
   <br>- **HS:** [Ghi bài vào vở...]
   + Định mức PPDH/KTDH theo số tiết (TIME-BUDGET GATE):
-    * Bài 1 tiết (<= 45 phút): ĐÚNG 1 PPDH chủ đạo; tối đa 1–2 KTDH nhẹ (Think-Pair-Share, Khăn trải bàn rút gọn). CẤM Jigsaw, Station, Gallery Walk, Mini-project, PBL, STEAM.
+    * Bài 1 tiết (<= 45 phút): ĐÚNG 1 PPDH chủ đạo; tối đa 1–2 KTDH nhẹ (Think-Pair-Share, Khăn trải bàn rút gọn). CẤM Jigsaw, Station/Trạm học tập, Gallery Walk, Mini-project, PBL, STEAM. CẤM hoạt động đặc thù Trạm xoay vòng (station-act) và sản phẩm/dự án mini.
     * Bài 2 tiết (90 phút): tối đa 2 PPDH; tối đa 2–3 KTDH.
     * Bài từ 3 tiết: tối đa 2 PPDH; tối đa 3–4 KTDH.
   + Trong từng bước, BẮT BUỘC nêu tên Kỹ thuật/Phương pháp dạy học được áp dụng và PHÂN VAI RÕ RÀNG:

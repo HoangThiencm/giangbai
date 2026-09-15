@@ -34,6 +34,21 @@ assert.ok(['tps-tech', 'tablecloth', '5w1h'].includes(gated1.techniques.B[0]), '
 const total1 = ['A', 'B', 'C', 'D'].reduce((n, p) => n + (gated1.techniques[p] || []).length, 0);
 assert.ok(total1 <= 2, `1 tiết: tổng KTDH <= 2, nhận ${total1}`);
 assert.ok(!(gated1.techniques.C || []).some(id => /jigsaw|station|gallery|mini-project|pbl|steam/.test(String(id))), '1 tiết: không kỹ thuật nặng pha C');
+assert.deepStrictEqual(gated1.techniques.A, [], '1 tiết: pha A không đề xuất KTDH (dùng vấn đáp tự nhiên)');
+assert.deepStrictEqual(gated1.techniques.C, [], '1 tiết: pha C không đề xuất KTDH nặng/thêm');
+assert.deepStrictEqual(gated1.techniques.D, [], '1 tiết: pha D không đề xuất KTDH nặng/thêm');
+const gatedAct = app.applyTimeBudgetGateToPedagogy({
+  methods: ['cooperative'],
+  techniques: { A: ['5w1h'], B: ['tps-tech'], C: ['station'], D: [] },
+  activities: ['station-act', 'station', 'experiment', 'product']
+}, 1);
+assert.ok(!(gatedAct.activities || []).includes('station'), '1 tiết: không Station trong HĐ đặc thù');
+assert.ok(!(gatedAct.activities || []).includes('station-act'), '1 tiết: không Trạm xoay vòng (station-act)');
+assert.ok(!(gatedAct.activities || []).includes('product'), '1 tiết: không sản phẩm/dự án mini');
+assert.ok((gatedAct.activities || []).length <= 1, '1 tiết: tối đa 1 HĐ đặc thù');
+assert.deepStrictEqual(gatedAct.techniques.A, [], '1 tiết: không giữ 5W1H ở pha A cùng TPS pha B');
+assert.deepStrictEqual(gatedAct.techniques.C, [], '1 tiết: không giữ Station ở pha C');
+assert.ok(!(gatedAct.activities || []).some(id => /station|product/.test(String(id))), '1 tiết: HĐ đặc thù phải lọc hết kỹ thuật nặng');
 console.log('✓ Gate 1 tiết đạt.');
 
 // --- 2. Time-budget gate: 2 tiết ---
@@ -63,6 +78,19 @@ assert.ok(!/GV:\s*[^*"][\s\S]{0,40}HS:/.test(fixed.replace(/<br>/g, '\n')) || fi
 const already = '+ Bước 2:<br>- **GV:** "Quan sát."<br>- **HS:** Thảo luận.';
 const stable = app.formatKhbdRoleLineBreaks(already);
 assert.ok(stable.includes('- **GV:**') && stable.includes('- **HS:**'), 'Giữ format đã chuẩn');
+assert.strictEqual(app.formatKhbdRoleLineBreaks(stable), stable, 'Format đã chuẩn phải idempotent, không nhân đôi <br>');
+const piped = '+ Bước 1 (Chuyển giao): GV: "Mở SGK." | HS: Quan sát hình.';
+const pipedFixed = app.formatKhbdRoleLineBreaks(piped);
+assert.ok(pipedFixed.includes('<br>- **GV:**'), 'Tách GV sau dấu |');
+assert.ok(pipedFixed.includes('<br>- **HS:**'), 'Tách HS sau dấu |');
+const tableRow = '| + Bước 1: Giao việc GV: "Mở SGK trang 12." HS: Quan sát hình. | Định nghĩa tập hợp |';
+const tableFixed = app.formatKhbdRoleLineBreaks(tableRow);
+assert.ok(tableFixed.includes('<br>- **GV:**'), 'Trong ô bảng phải tách GV');
+assert.ok(tableFixed.includes('<br>- **HS:**'), 'Trong ô bảng phải tách HS');
+assert.ok(tableFixed.startsWith('|'), 'Không phá hàng bảng Markdown');
+const tableLines = tableFixed.replace(/<br>/g, '\n').split('\n');
+assert.ok(tableLines.some(line => /\*\*GV:\*\*/.test(line) && !/\*\*HS:\*\*/.test(line)), 'GV phải tách riêng dòng trong bảng');
+assert.ok(tableLines.some(line => /\*\*HS:\*\*/.test(line) && !/\*\*GV:\*\*/.test(line)), 'HS phải tách riêng dòng trong bảng');
 console.log('✓ formatKhbdRoleLineBreaks đạt.');
 
 // --- 4. applyActivityOutput pipeline gọi formatKhbdRoleLineBreaks ---

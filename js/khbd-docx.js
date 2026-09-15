@@ -1010,11 +1010,16 @@ class DocxGenerator {
     // Tách GV:/HS: dính liền trên cùng dòng thành các dòng riêng trước khi parse
     let normalized = String(text || "");
     if (!isHeader) {
-      normalized = normalized
-        .replace(/([^\n>])\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1<br>- **GV:**")
-        .replace(/([^\n>])\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1<br>- **HS:**")
-        .replace(/<br>\s*-\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "<br>- **GV:**")
-        .replace(/<br>\s*-\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "<br>- **HS:**");
+      const formatter = (typeof window !== "undefined" && typeof window.formatKhbdRoleLineBreaks === "function")
+        ? window.formatKhbdRoleLineBreaks
+        : null;
+      normalized = formatter
+        ? formatter(normalized)
+        : normalized
+          .replace(/([^\n>])\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1<br>- **GV:**")
+          .replace(/([^\n>])\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1<br>- **HS:**")
+          .replace(/<br>\s*-\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "<br>- **GV:**")
+          .replace(/<br>\s*-\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "<br>- **HS:**");
     }
     const lines = normalized.replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
     const usable = lines.length ? lines : [""];
