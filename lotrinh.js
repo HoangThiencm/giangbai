@@ -80,7 +80,7 @@
         const allowedPages = studentAllowedPages(user);
         localStorage.setItem('allowedPages', JSON.stringify(allowedPages));
         if (!studentCanOpenPageKey(PAGE_KEY, allowedPages)) {
-            const fallback = primaryLotrinhUrl(allowedPages) || 'login.html';
+            const fallback = primaryLotrinhUrl(allowedPages) || 'index.html';
             window.location.replace(fallback);
         }
     }

@@ -88,11 +88,19 @@
        + Ẩn toàn bộ giao diện và công cụ giáo viên (`#toolsDeck`, `#teacherLotrinhHub`, `#defaultToolsHeader`, accordion hướng dẫn nhanh, nút "Cài đặt AI & Key"...).
        + Đổi tiêu đề Navbar thành: *CỔNG HỌC TẬP VÀ RÈN LUYỆN CHO HỌC SINH*, hiển thị rõ tên học sinh và lớp, badge *Cổng Học Sinh*.
      - Giữ nguyên vẹn 100% logic không gian làm việc cho role `teacher`.
-  3. **`access-control.js`**:
-     - Bổ sung danh sách toàn bộ các trang công cụ chỉ dành cho giáo viên (`soankhbd`, `xaydungphuluc`, `duyetgiaoan`, `duyetde`, `nghiencuubaihoc`, `matrande`, `tronde`, `kttx`, `sodiem`, `phancongtochuyenmon`, `thoikhoabieu`, `thongketientrinh`, `theodoiai`, `quanlyvanban`, `rutgon`, `vietbaocao`, `thanhtich`, `taovideo`).
-     - Khi role là `student`, nếu cố tình truy cập vào bất kỳ trang nào của giáo viên hoặc trang chưa được cấp quyền, hệ thống sẽ chặn lại ngay và điều hướng về `index.html` (Trang chủ học sinh).
+   3. **`access-control.js` & `lotrinh.js`**:
+      - Bổ sung danh sách toàn bộ các trang công cụ chỉ dành cho giáo viên (`soankhbd`, `xaydungphuluc`, `duyetgiaoan`, `duyetde`, `nghiencuubaihoc`, `matrande`, `tronde`, `kttx`, `sodiem`, `phancongtochuyenmon`, `thoikhoabieu`, `thongketientrinh`, `theodoiai`, `quanlyvanban`, `rutgon`, `vietbaocao`, `thanhtich`, `taovideo`).
+      - Khi role là `student`, nếu cố tình truy cập vào bất kỳ trang nào của giáo viên hoặc trang chưa được cấp quyền, hệ thống sẽ chặn lại ngay và điều hướng về `index.html` (Trang chủ học sinh).
+      - Áp dụng Route Guard cho cả giáo viên: chỉ mở được các khối Lộ trình Toán có trong `allowedPages`.
+      - Khóa chặn toàn diện bằng universal route guard: bất kỳ user nào truy cập vào trang không có trong `allowedPages` sẽ bị chặn và điều hướng về `index.html`.
+      - `lotrinh.js`: Cập nhật chuyển hướng dự phòng khi không được cấp quyền Toán từ `login.html` thành `index.html`.
 
-### 6. Kiểm thử & Đảm bảo chất lượng
+### 6. Khóa chặn bảo mật Đặc quyền tối thiểu toàn diện (Universal Least-Privilege Route Guards)
+- Nhúng `<script src="access-control.js"></script>` vào 100% tất cả 34 file HTML nghiệp vụ trong hệ thống (bao gồm `canvas_xaydungphuluc.html`, `giaoantichhop.html`, `nopbai.html`, `trochoi.html`, `taobaitap.html`, `matrande copy.html`, và 8 minigames `game-*.html`).
+- Đăng ký đầy đủ ánh xạ `pageKey` cho tất cả các trang phụ và minigames về quyền cha tương ứng (ví dụ: `game-*.html` -> `smartquiz`).
+- Đảm bảo người dùng (kể cả học sinh hay giáo viên) không thể vượt quyền bằng cách gõ trực tiếp URL thanh địa chỉ trình duyệt.
+
+### 7. Kiểm thử & Đảm bảo chất lượng
 - Kiểm thử toàn diện 100% pass:
   - `verify_patch.py`: Kiểm tra giao diện, logic nút tick bỏ qua tổng số tiết, cấu trúc dữ liệu trên cả `canvas_xaydungphuluc.html` và `xaydungphuluc.html`.
   - `verify_period_bypass.py`: Kiểm tra tính toán thẩm định sư phạm với nhiều mức tiết khác nhau (48, 50, 52, 53, 54 tiết).
@@ -100,7 +108,8 @@
   - `audit_server_books.py`: Quét toàn bộ 52 đầu sách trên server hosting live, phát hiện: **0 sách bị nhiễm bẩn** (`Total contaminated books found: 0`).
   - `test_smoke_contracts.py`: Đảm bảo 100% hợp đồng phân quyền giáo viên theo nguyên tắc đặc quyền tối thiểu (least privilege) không bị ảnh hưởng.
   - `test_student_portal.py`: Kiểm thử chuyển hướng đăng nhập học sinh, kiểm thử route guard của `access-control.js`, kiểm thử rendering Cổng học sinh phân quyền trên `index.html` (3/3 PASSED).
+  - `test_strict_permissions.py`: Kiểm thử toàn diện 34 file HTML nghiệp vụ đều được bảo vệ bởi `access-control.js` và có ánh xạ quyền hợp lệ (34/34 PASSED).
   - Toàn bộ bài test PASSED.
 
-### 7. Khắc phục workflow deploy
+### 8. Khắc phục workflow deploy
 - Sửa dấu đóng ngoặc nhọn thừa ngay trước khóa gdcd trong js/khbd-curriculum.js. Lỗi cú pháp này là nguyên nhân javascript-obfuscator dừng với Unexpected token khi workflow deploy chạy.

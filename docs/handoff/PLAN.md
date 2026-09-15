@@ -44,11 +44,14 @@
 5. **Chuẩn hóa nhận diện môn học và làm sạch Kho Tri thức**:
    - Cập nhật `foldText()`: bổ sung `.replace(/[đĐ]/g, 'D')`.
    - Sửa hàm `getSubjectCurriculumKey()`: chuẩn hóa không dấu, kiểm tra `diali` trước `vatli` (tránh xung đột từ `\bli\b`), hỗ trợ trọn vẹn `vatli`, `hoahoc`, `sinhhoc`, `lichsu`, `diali`, `gddp`.
-   - Dọn sạch CSDL server và re-seed toàn bộ SGK dùng chung cho 4 khối lớp.
 6. **Cổng học tập học sinh & Điều hướng đăng nhập (`login.html`, `index.html`, `access-control.js`)**:
    - `login.html`: `landingPageFor` trả về `index.html` cho học sinh.
    - `index.html`: Xóa bỏ đoạn mã ép chuyển hướng học sinh ở đầu trang; bổ sung hàm `setupStudentPortal()` và container `#studentPortalDeck`.
    - `access-control.js`: Chặn toàn bộ các trang giáo viên đối với role `student` và chuyển hướng về `index.html`.
+7. **Kiểm soát quyền truy cập nghiêm ngặt toàn hệ thống (Strict Least-Privilege Route Guards)**:
+   - Gắn `access-control.js` vào 100% tất cả các file HTML nghiệp vụ trong hệ thống (bao gồm `canvas_xaydungphuluc.html`, `giaoantichhop.html`, `nopbai.html`, `trochoi.html`, `taobaitap.html`, các file `game-*.html`).
+   - Mọi user (dù là `teacher`, `student`, hay bất kỳ vai trò nào) khi mở bất kỳ trang nào đều phải có quyền tương ứng trong `allowedPages` do Admin cấp; nếu không có quyền, hệ thống chặn truy cập ngay lập tức (`alert`) và đẩy về `index.html`.
+   - Khóa chặn cả các khối lớp Lộ trình Toán đối với giáo viên và học sinh nếu không được admin gán khối lớp đó.
 
 ## 3. Tiêu chí Nghiệm thu
 - [x] Checkbox "Bỏ qua ràng buộc tổng số tiết" hiển thị rõ ràng ở Mục 1 và Mục 3, mặc định tick chọn.
@@ -58,4 +61,5 @@
 - [x] Nạp 100% mục lục bài học chuẩn xác từ lớp 6 đến lớp 9 theo SGK Thống nhất.
 - [x] Kho Tri thức SGK dùng chung trên máy chủ sạch 100%, Địa lí 8 nạp đúng 14 bài địa lí (không dính Toán).
 - [x] Tài khoản học sinh đăng nhập vào đúng giao diện User học sinh, hiển thị đúng các chức năng được phân quyền, không bị ép nhảy thẳng vào lộ trình và không truy cập được công cụ giáo viên.
+- [x] User (giáo viên và học sinh) chỉ được sử dụng đúng các chức năng do admin phân quyền; 100% các trang nghiệp vụ đều có Route Guard bảo vệ, ngăn chặn triệt để việc gõ URL trực tiếp để truy cập lậu.
 - [x] Tuyệt đối không xuất hiện chuỗi "Kết nối tri thức" / "KNTT" trong hệ thống.

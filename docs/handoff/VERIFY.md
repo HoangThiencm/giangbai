@@ -38,6 +38,10 @@ PASS
     + Ẩn toàn bộ công cụ giáo viên, bảng điều khiển giáo viên, nút Cài đặt AI & Key, hướng dẫn nhanh.
     + Bảo lưu 100% không gian làm việc và bộ công cụ cho role `teacher`.
   - `access-control.js`: Chặn toàn bộ 18 trang công cụ giáo viên đối với học sinh và điều hướng về `index.html`.
+- [x] **Khóa chặn bảo mật Đặc quyền tối thiểu toàn diện (Universal Least-Privilege Route Guards):**
+  - Đã tích hợp `access-control.js` vào 100% tất cả 34 file HTML nghiệp vụ trong hệ thống.
+  - Người dùng (kể cả giáo viên hay học sinh) chỉ được truy cập đúng các chức năng được admin phân quyền trong `allowedPages`.
+  - Mọi hành vi nhập URL trực tiếp để truy cập trái phép đều bị phát hiện, kích hoạt thông báo và lập tức điều hướng về `index.html`.
 - [x] **Không đề cập tên bộ sách trong hệ thống:**
   - Regex phủ định `!/kntt|kết nối tri thức/i` pass trên toàn bộ cấu hình, tên môn, nhãn và danh mục.
 - [x] **Đường dẫn tài nguyên ổn định:**
@@ -68,6 +72,10 @@ PASS
    - `test_access_control_guards`: PASSED
    - `test_index_student_portal`: PASSED
    - Kết quả: **ALL STUDENT PORTAL TESTS PASSED (100%)!**
+7. `python test_strict_permissions.py`:
+   - Kiểm tra 100% 34 file HTML nghiệp vụ đều nhúng `access-control.js`: PASSED (34/34).
+   - Kiểm tra 100% 34 file HTML nghiệp vụ đều có ánh xạ `pageKey` trong `access-control.js`: PASSED (34/34).
+   - Kết quả: **ALL STRICT PERMISSION CHECKS PASSED (100%)!**
 
 ## Bug
 Không có.
