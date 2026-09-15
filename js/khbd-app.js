@@ -2116,19 +2116,71 @@ function isSinglePeriodLesson() {
   return Number(periods) <= 1;
 }
 
-function applyTimeBudgetGateToPedagogy(rec) {
-  if (!rec || !isSinglePeriodLesson()) return rec;
-  const lightB = ["tps-tech", "tablecloth"];
-  const currentB = rec.techniques?.B || [];
-  const chosen = lightB.find(id => currentB.includes(id)) || "tps-tech";
+function getLessonPeriodsCount() {
+  if (typeof parsePeriodsFromInput === "function") {
+    const n = Number(parsePeriodsFromInput(appState.duration, appState.selectedGrade));
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return isSinglePeriodLesson() ? 1 : 2;
+}
+
+function applyTimeBudgetGateToPedagogy(rec, periodsCount) {
+  if (!rec) return rec;
+  const periods = periodsCount != null ? Number(periodsCount) : getLessonPeriodsCount();
   rec.techniques = rec.techniques || { A: [], B: [], C: [], D: [] };
-  rec.techniques.B = [chosen];
-  const heavy = /jigsaw|station|mini-project|gallery-tech|pbl|steam/;
-  ["A", "C", "D"].forEach(phase => {
-    rec.techniques[phase] = (rec.techniques[phase] || []).filter(id => !heavy.test(String(id))).slice(0, 1);
-  });
-  rec.methods = (rec.methods || []).filter(id => !["pbl", "steam", "flipped"].includes(id)).slice(0, 1);
+  const heavy = /jigsaw|station|mini-project|gallery-tech|pbl|steam|du-an/;
+
+  if (periods <= 1) {
+    // 1 tiết (45 phút): 1 PPDH + tối đa 1–2 KTDH nhẹ; chặn kỹ thuật nặng
+    rec.methods = (rec.methods || []).filter(id => !["pbl", "steam", "flipped", "project", "station"].includes(id)).slice(0, 1);
+    const lightB = ["tps-tech", "tablecloth", "5w1h"];
+    const currentB = (rec.techniques.B || []).filter(id => !heavy.test(String(id)));
+    const chosenB = lightB.find(id => currentB.includes(id)) || currentB[0] || "tps-tech";
+    rec.techniques.B = [chosenB];
+    ["A", "C", "D"].forEach(phase => {
+      rec.techniques[phase] = (rec.techniques[phase] || []).filter(id => !heavy.test(String(id))).slice(0, 1);
+    });
+    let totalCount = 0;
+    ["B", "A", "C", "D"].forEach(phase => {
+      if (totalCount >= 2) rec.techniques[phase] = [];
+      else totalCount += (rec.techniques[phase] || []).length;
+    });
+  } else if (periods === 2) {
+    // 2 tiết (90 phút): tối đa 2 PPDH + 2–3 KTDH
+    rec.methods = (rec.methods || []).slice(0, 2);
+    let totalTech = 0;
+    ["B", "C", "A", "D"].forEach(phase => {
+      rec.techniques[phase] = (rec.techniques[phase] || []).slice(0, 1);
+      totalTech += (rec.techniques[phase] || []).length;
+      if (totalTech > 3) rec.techniques[phase] = [];
+    });
+  } else {
+    // 3+ tiết: tối đa 2 PPDH + 3–4 KTDH
+    rec.methods = (rec.methods || []).slice(0, 2);
+    let totalTech = 0;
+    ["B", "C", "A", "D"].forEach(phase => {
+      rec.techniques[phase] = (rec.techniques[phase] || []).slice(0, 1);
+      totalTech += (rec.techniques[phase] || []).length;
+      if (totalTech > 4) rec.techniques[phase] = [];
+    });
+  }
   return rec;
+}
+
+/** Chuẩn hóa xuống dòng phân vai GV/HS trong Cột trái bảng d) (CV 5512). */
+function formatKhbdRoleLineBreaks(text) {
+  let content = String(text || "");
+  // GV: hoặc **GV:** dính liền sau nội dung khác mà chưa có <br> → chèn <br>- **GV:**
+  content = content.replace(/([^\n>])\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1<br>- **GV:**");
+  // HS: hoặc **HS:** dính liền → chèn <br>- **HS:**
+  content = content.replace(/([^\n>])\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1<br>- **HS:**");
+  // Chuẩn hóa sau <br>
+  content = content.replace(/<br>\s*-\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "<br>- **GV:**");
+  content = content.replace(/<br>\s*-\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "<br>- **HS:**");
+  // Dòng bắt đầu bằng GV:/HS: không có - **
+  content = content.replace(/(^|<br>)\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1- **GV:**");
+  content = content.replace(/(^|<br>)\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1- **HS:**");
+  return content;
 }
 
 function ensurePedagogyFromLesson({ force = false, silent = false, skipRender = false } = {}) {
@@ -6273,6 +6325,7 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
     console.info(`Hoạt động ${actKey} đã lưu; kiểm tra cấu trúc chưa khớp hoàn toàn:`, problem.message);
   }
   finalResult = stripDisabledActivityIntegrations(finalResult);
+  finalResult = formatKhbdRoleLineBreaks(finalResult);
   appState.content.activities[actKey] = clipKhbdActivityMarkdown(actKey, finalResult);
   syncIllustrationsIntoContent();
   saveStateToLocalStorage();
@@ -7021,6 +7074,8 @@ if (typeof module !== 'undefined' && module.exports) {
     downloadIllustration,
     applyTimeBudgetGateToPedagogy,
     isSinglePeriodLesson,
+    getLessonPeriodsCount,
+    formatKhbdRoleLineBreaks,
     applyTextbookOcrResult,
     triggerStep3PedagogyAndDigitalRecommendations,
     triggerAiCompetencyRecommendations,

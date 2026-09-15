@@ -235,12 +235,24 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
 | :--- | :--- |
 - Bảng Markdown CHỈ GỒM ĐÚNG 1 HÀNG DỮ LIỆU DUY NHẤT (CẤM tách thành 4 hàng riêng).
 - TUYỆT ĐỐI chỉ tạo đúng 2 cột theo hai tiêu đề trên; CẤM thêm cột thứ 3 dưới mọi hình thức. Trong công thức hoặc văn bản có ký hiệu gạch đứng, dùng \\vert hoặc \\| thay cho dấu | thô để không làm vỡ cột Markdown.
-- CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG (ngăn các bước bằng <br>, mỗi bước chỉ 1–2 câu ngắn gọn):
-  + Đủ 4 bước chuẩn Công văn 5512:
-    * + Bước 1: Chuyển giao nhiệm vụ: Nêu kỹ thuật dạy học, GV nói 1 câu lệnh ngắn gọn trong ngoặc kép "...", HS tiếp nhận.
-    * + Bước 2: Thực hiện nhiệm vụ: HS làm cá nhân rồi thảo luận; GV quan sát, nêu 1 lỗi sai/ngộ nhận điển hình và hướng xử lý phân hóa.
-    * + Bước 3: Báo cáo, thảo luận: HS báo cáo và phản biện; GV điều hành 1 câu gợi mở.
-    * + Bước 4: Kết luận, nhận định: GV nhận xét, chốt kiến thức cốt lõi; HS ghi bài vào vở.
+- CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG (ngăn các bước và vai trò bằng <br>):
+  BẮT BUỘC từng bước phải xuống dòng riêng cho GV và HS theo mẫu sau (TUYỆT ĐỐI CẤM viết dính liền GV và HS trên cùng một dòng):
+  + Bước 1: Chuyển giao nhiệm vụ (Kỹ thuật...):
+  <br>- **GV:** [Câu lệnh ngắn gọn trong ngoặc kép "...", hướng dẫn nhiệm vụ...]
+  <br>- **HS:** [Tiếp nhận nhiệm vụ, hành động cụ thể...]
+  <br>+ Bước 2: Thực hiện nhiệm vụ:
+  <br>- **HS:** [Làm việc cá nhân X phút -> thảo luận cặp/nhóm Y phút tạo sản phẩm trung gian...]
+  <br>- **GV:** [Quan sát, dự kiến 1 lỗi sai điển hình trong SGK và can thiệp phân hóa...]
+  <br>+ Bước 3: Báo cáo, thảo luận:
+  <br>- **HS:** [Đại diện báo cáo, các nhóm phản biện...]
+  <br>- **GV:** [Điều hành, đặt câu hỏi gợi mở...]
+  <br>+ Bước 4: Kết luận, nhận định:
+  <br>- **GV:** [Nhận xét, chốt kiến thức cốt lõi...]
+  <br>- **HS:** [Ghi bài vào vở...]
+  + Định mức PPDH/KTDH theo số tiết (TIME-BUDGET GATE):
+    * Bài 1 tiết (<= 45 phút): ĐÚNG 1 PPDH chủ đạo; tối đa 1–2 KTDH nhẹ (Think-Pair-Share, Khăn trải bàn rút gọn). CẤM Jigsaw, Station, Gallery Walk, Mini-project, PBL, STEAM.
+    * Bài 2 tiết (90 phút): tối đa 2 PPDH; tối đa 2–3 KTDH.
+    * Bài từ 3 tiết: tối đa 2 PPDH; tối đa 3–4 KTDH.
   + Trong từng bước, BẮT BUỘC nêu tên Kỹ thuật/Phương pháp dạy học được áp dụng và PHÂN VAI RÕ RÀNG:
     * **GV (Giáo viên):** Nói câu lệnh/câu hỏi trực tiếp trong ngoặc kép "..." ngắn gọn, dự kiến lỗi sai điển hình / ngộ nhận gắn đúng khái niệm bài học SGK (CẤM lỗi generic lặp lại mọi bài; dạng: "Dự kiến: nhầm [thuật ngữ X trong SGK] với [thuật ngữ Y trong SGK]"), can thiệp hỗ trợ phân hóa súc tích.
     * **HS (Học sinh):** Hành động cụ thể: (1) Thao tác cá nhân X phút vào vở/nháp/phiếu -> (2) Thảo luận cặp/nhóm Y phút tạo **sản phẩm trung gian** -> (3) Đại diện báo cáo và phản biện trước lớp.

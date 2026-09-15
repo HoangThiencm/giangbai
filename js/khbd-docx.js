@@ -1007,7 +1007,16 @@ class DocxGenerator {
 
   parseTableCellParagraphs(text, isHeader = false) {
     const { Paragraph } = window.docx;
-    const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
+    // Tách GV:/HS: dính liền trên cùng dòng thành các dòng riêng trước khi parse
+    let normalized = String(text || "");
+    if (!isHeader) {
+      normalized = normalized
+        .replace(/([^\n>])\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1<br>- **GV:**")
+        .replace(/([^\n>])\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1<br>- **HS:**")
+        .replace(/<br>\s*-\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "<br>- **GV:**")
+        .replace(/<br>\s*-\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "<br>- **HS:**");
+    }
+    const lines = normalized.replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
     const usable = lines.length ? lines : [""];
     return usable.flatMap(line => {
       const illParts = this.splitIllustrationSegments(line);
@@ -1028,11 +1037,17 @@ class DocxGenerator {
           })];
         });
       }
-      const listMatch = !isHeader ? line.match(/^([-+.•])\s+(.+)$/) : null;
-      const marker = listMatch ? listMatch[1] : "";
-      const contentText = listMatch ? listMatch[2] : line;
-      const displayLine = listMatch ? `${marker} ${contentText}` : (line || " ");
-      const indentLeft = marker === "+" ? 360 : (marker === "." || marker === "•") ? 720 : 0;
+      const roleMatch = !isHeader ? line.match(/^(-\s*)?(?:\*\*)?(GV|HS)\s*:(?:\*\*)?\s*(.*)$/i) : null;
+      const listMatch = !isHeader && !roleMatch ? line.match(/^([-+.•])\s+(.+)$/) : null;
+      const marker = listMatch ? listMatch[1] : (roleMatch ? "-" : "");
+      const contentText = roleMatch
+        ? `**${roleMatch[2].toUpperCase()}:** ${roleMatch[3] || ""}`.trim()
+        : (listMatch ? listMatch[2] : line);
+      const displayLine = roleMatch
+        ? `- ${contentText}`
+        : (listMatch ? `${marker} ${contentText}` : (line || " "));
+      const isRoleLine = !!roleMatch || /^-\s*\*\*(?:GV|HS):\*\*/i.test(line);
+      const indentLeft = isRoleLine ? 360 : (marker === "+" ? 360 : (marker === "." || marker === "•") ? 720 : 0);
       const lineColor = isHeader ? undefined : this.lineIntegrationColor(displayLine, null);
       const runs = isHeader
         ? [this.coloredTextRun(line || " ", { bold: true })]

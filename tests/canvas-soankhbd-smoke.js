@@ -44,6 +44,25 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-docx.js'), `${relPath} phải giữ nguồn khbd-docx.js từ hosting khi chạy Canvas`);
   assert.ok(!targetHtml.includes('<\\\\/script>'), `${relPath} không được escape kép thẻ đóng của bộ nạp khbd-docx.js`);
   assert.ok(targetHtml.includes('"><\\/script>`);'), `${relPath} phải tạo thẻ đóng </script> hợp lệ cho bộ nạp khbd-docx.js`);
+  assert.ok(targetHtml.includes('isLocal ? "css/khbd-styles.css"'), `${relPath} phải nạp khbd-styles.css cục bộ khi chạy file/localhost`);
+  assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/css/khbd-styles.css'), `${relPath} phải giữ nguồn khbd-styles.css từ hosting khi chạy Canvas`);
+  assert.ok(targetHtml.includes('isLocal ? "js/khbd-prompts.js"'), `${relPath} phải nạp khbd-prompts.js cục bộ khi chạy file/localhost`);
+  assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-prompts.js'), `${relPath} phải giữ nguồn khbd-prompts.js từ hosting khi chạy Canvas`);
+  assert.ok(targetHtml.includes('?v=20260915-nls-ai-bi'), `${relPath} phải cache-bust CSS/JS NLS-AI in đậm in nghiêng`);
+  assert.ok(/\.khbd-badge-nls\s*\{[^}]*font-style:\s*italic/.test(targetHtml), `${relPath} badge NLS Canvas phải italic`);
+  assert.ok(/\.khbd-badge-ai\s*\{[^}]*font-style:\s*italic/.test(targetHtml), `${relPath} badge AI Canvas phải italic`);
+  assert.ok(/\.preview-rendered \.khbd-nls[\s\S]{0,180}font-style:\s*italic/.test(targetHtml), `${relPath} preview NLS Canvas phải italic`);
+  assert.ok(/\.preview-rendered \.khbd-ai[\s\S]{0,180}font-style:\s*italic/.test(targetHtml), `${relPath} preview AI Canvas phải italic`);
+
+  // 2b. Fallback KHBD_STANDARDS + polling kết nối (host script có thể rỗng 0 bytes)
+  assert.ok(targetHtml.includes('ensureKhbdStandardsFallback'), `${relPath} phải có fallback ensureKhbdStandardsFallback`);
+  assert.ok(targetHtml.includes('typeof window.KHBD_STANDARDS === "undefined"'), `${relPath} phải guard typeof KHBD_STANDARDS === undefined`);
+  assert.ok(targetHtml.includes('Thông tư 02/2025/TT-BGDĐT & Công văn 3456/BGDĐT-GDPT'), `${relPath} fallback NLS phải ghi framework TT 02/CV 3456`);
+  assert.ok(targetHtml.includes('Quyết định 2422/QĐ-BGDĐT'), `${relPath} fallback AI phải ghi QĐ 2422`);
+  assert.ok(targetHtml.includes('pollConnection'), `${relPath} phải có cơ chế pollConnection`);
+  assert.ok(targetHtml.includes('pollConnection(15)'), `${relPath} phải thăm dò tối đa 15 lần (~4.5s)`);
+  assert.ok(targetHtml.includes('setTimeout(function () { pollConnection(retriesLeft - 1); }, 300)'), `${relPath} phải retry mỗi 300ms`);
+  assert.ok(!/setTimeout\(function \(\) \{\s*initConnection\(\);\s*bindCanvasEvents\(\);\s*\}, 350\)/.test(targetHtml), `${relPath} không còn setTimeout(initConnection, 350) đơn lẻ`);
 
   // 3. Kiểm tra nút 1-Click
   assert.ok(targetIds.has('btn1ClickGenerate'), `${relPath} phải có nút #btn1ClickGenerate`);
