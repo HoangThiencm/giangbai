@@ -1134,26 +1134,29 @@
                     </div>
                 </div>
 
-                <!-- Nhóm 1: Lộ trình bài học theo khối lớp -->
-                <div id="studentLotrinhSection" class="mb-8">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <p class="section-kicker text-teal-600">Lộ trình học tập</p>
-                            <h3 class="text-xl font-extrabold text-slate-900">Bài học &amp; Luyện tập theo SGK</h3>
+                <!-- Container dàn ngang 2 cột khi có cả 2 khối nội dung -->
+                <div id="studentSectionsWrap" class="grid grid-cols-1 gap-8 mb-8">
+                    <!-- Nhóm 1: Lộ trình bài học theo khối lớp -->
+                    <div id="studentLotrinhSection" class="flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <p class="section-kicker text-teal-600">Lộ trình học tập</p>
+                                <h3 class="text-xl font-extrabold text-slate-900">Bài học &amp; Luyện tập theo SGK</h3>
+                            </div>
                         </div>
+                        <div id="studentLotrinhGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1"></div>
                     </div>
-                    <div id="studentLotrinhGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-                </div>
 
-                <!-- Nhóm 2: Hoạt động & Tiện ích được phân quyền -->
-                <div id="studentActivitiesSection" class="mb-8">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <p class="section-kicker text-indigo-600">Hoạt động lớp học</p>
-                            <h3 class="text-xl font-extrabold text-slate-900">Hoạt động &amp; Tiện ích được phân quyền</h3>
+                    <!-- Nhóm 2: Hoạt động & Tiện ích được phân quyền -->
+                    <div id="studentActivitiesSection" class="flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <p class="section-kicker text-indigo-600">Hoạt động lớp học</p>
+                                <h3 class="text-xl font-extrabold text-slate-900">Hoạt động &amp; Tiện ích được phân quyền</h3>
+                            </div>
                         </div>
+                        <div id="studentActivitiesGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1"></div>
                     </div>
-                    <div id="studentActivitiesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                 </div>
 
                 <!-- Khi chưa được phân quyền bất kỳ trang nào -->
@@ -1694,6 +1697,41 @@
                     `).join('');
                 } else {
                     activitiesSection.classList.add('hidden');
+                }
+            }
+
+            // Coordinate responsive layout for the two student portal sections.
+            const hasMath = allowedMath.length > 0;
+            const hasTools = allowedTools.length > 0;
+            const sectionsWrap = document.getElementById('studentSectionsWrap');
+
+            if (sectionsWrap) {
+                if (hasMath && hasTools) {
+                    // Both groups have content: use two balanced columns on large screens.
+                    sectionsWrap.className = 'grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8';
+                    if (lotrinhSection) lotrinhSection.className = 'flex flex-col';
+                    if (activitiesSection) activitiesSection.className = 'flex flex-col';
+                    if (lotrinhGrid) {
+                        lotrinhGrid.className = allowedMath.length > 1
+                            ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1'
+                            : 'grid grid-cols-1 gap-4 flex-1';
+                    }
+                    if (activitiesGrid) {
+                        activitiesGrid.className = allowedTools.length > 1
+                            ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1'
+                            : 'grid grid-cols-1 gap-4 flex-1';
+                    }
+                } else {
+                    // A single visible group keeps the previous full-width three-column layout.
+                    sectionsWrap.className = 'grid grid-cols-1 gap-8 mb-8';
+                    if (hasMath && lotrinhSection && lotrinhGrid) {
+                        lotrinhSection.className = 'w-full';
+                        lotrinhGrid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
+                    }
+                    if (hasTools && activitiesSection && activitiesGrid) {
+                        activitiesSection.className = 'w-full';
+                        activitiesGrid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
+                    }
                 }
             }
 

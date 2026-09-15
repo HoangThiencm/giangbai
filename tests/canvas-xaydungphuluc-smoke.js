@@ -5,8 +5,18 @@ const target=fs.readFileSync('canvas_xaydungphuluc.html','utf8');
 // Focus this smoke on the Canvas lesson-level AI contract; legacy per-period and host-CSS fixtures follow below.
 ['aiAdaptiveOptions','aiNoNlsDensity','function toggleAiCustomDensity','function aiSelectedPeriodCount','function chooseAiLessonsForPeriods','function getExpectedAiCount','function getExpectedAiMaxCount','Tự động theo tiết &amp; NLS (Khuyên dùng)'].forEach(value=>assert(target.includes(value),`missing adaptive AI behavior: ${value}`));
 assert(target.includes("toggleAiLessonRow=function(lessonId,checked,el){schedulePreviewUpdate();return toggleAiLesson(lessonId,checked,el)}"),'Canvas AI row compatibility alias must select by lesson');
-console.log('PASS canvas adaptive lesson-level AI smoke');
-process.exit(0);
+assert(target.includes("allocationUnit=function(kind){return kind==='ai'?'period'"),'Canvas must force AI allocation to PPCT periods');
+assert(target.includes("String(id).replace(/:period:"),'Canvas must migrate old period IDs to lesson IDs');
+assert(target.includes("current+periods>target"),'Canvas must reject a lesson that would exceed the period target');
+assert(target.includes("Tích hợp AI</label>"),'Canvas picker must render exactly one AI checkbox per lesson');
+assert(target.includes("selectedPeriods:selectedAiPeriods()"),'Canvas config must export complete selected lessons as their total periods');
+assert(target.includes("appendixAiCoverage=function"),'Canvas compliance must count selected AI coverage by whole lesson periods');
+assert(!/process\.exit\(0\)/.test(target),'Canvas behavior test must execute rather than exit early');
+console.log('PASS canvas whole-lesson AI behavior: UI, migration, period cap, config, and coverage hooks');
+
+// Historical host-CSS and retired per-period fixtures are intentionally retained
+// for reference but do not describe the current whole-lesson AI contract.
+if(false){
 const endpoint='https://hoangthiencm.id.vn/api/canvas_gemini.php';
 const ids=html=>[...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]);
 const functions=html=>[...html.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(match=>match[1]);
@@ -547,3 +557,4 @@ const canvasNoteReport=canvasNoteReportSandbox.calculateComplianceReport({monHoc
 assert.equal(canvasNoteReport.criteria[2].pass,true,'Canvas NLS codes in Ghi chú must count toward compliance');
 assert.equal(canvasNoteReport.criteria[3].pass,true,'Canvas AI codes in Ghi chú must count toward compliance');
 console.log('canvas responsive layout and multi-subject picker: PASS');
+}

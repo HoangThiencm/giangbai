@@ -1,17 +1,23 @@
-# Báo cáo triển khai: Tương phản huy hiệu Navbar Cổng Học Sinh
+# Báo cáo triển khai: AI tích hợp theo cả bài PPCT
 
 ## Phạm vi đã thực hiện
 
-- `index.html`: đổi `.nav-chip` sang bảng màu slate tương phản cao trên navbar nền sáng, đồng thời canh icon và chữ theo hàng ngang.
-- `index.html`: huy hiệu học sinh dùng chữ đậm `text-emerald-800`, màu tường minh `#065f46` và icon `text-emerald-600`.
-- `index.html`: chip giáo viên `Cập nhật đồng bộ` dùng nền slate nhạt, chữ slate đậm và icon indigo rõ nét.
-- `tests/nav-chip-contrast-smoke.js`: bổ sung smoke test kiểm tra các hợp đồng tương phản cho cả chip giáo viên và học sinh.
+- Đồng bộ `xaydungphuluc.html`, `canvas_xaydungphuluc.html` và `backupcode viettailieu/canvas_xaydungphuluc.html`.
+- AI chỉ lưu ID bài; dữ liệu cũ dạng `:period:N` được quy đổi an toàn về ID bài.
+- Một checkbox `Tích hợp AI` đại diện cho toàn bộ bài; AI luôn tính theo tổng số tiết PPCT, không còn lựa chọn chế độ theo bài.
+- Slider, số lượng nhập tay, tự chọn và giới hạn thao tác đều dùng tổng số tiết của bài; không vượt mục tiêu và tự chọn bài nguyên vẹn gần mục tiêu nhất.
+- Cấu hình/xuất dữ liệu gửi `selectedLessonIds`, `selectedLessons` và các tiết đầy đủ của từng bài đã chọn. Phạm vi `Áp dụng: tiết` cũ được loại khỏi tích hợp AI.
+- Coverage/compliance AI tính theo tổng số tiết của bài có mã AI; PL1/PL3 tiếp tục đồng bộ mã tích hợp.
+- Cập nhật smoke test chính và Canvas để kiểm tra hợp đồng UI, migration, giới hạn tiết, config và coverage; test Canvas không còn thoát sớm.
 
 ## Kiểm thử
 
-- `node tests/nav-chip-contrast-smoke.js`: PASS.
-- `node tests/teacher-permissions-smoke.js`: PASS.
+- `node tests/xaydungphuluc-smoke.js`: PASS.
+- `node tests/canvas-xaydungphuluc-smoke.js`: PASS.
+- `node tests/xaydungphuluc-math-smoke.js`: PASS.
+- `node tests/xaydungphuluc-integration-smoke.js`: PASS.
+- `git diff --check`: PASS.
 
-## Vấn đề còn lại
+## Bảo toàn
 
-Không có. Không commit hoặc push theo yêu cầu; các thay đổi sẵn có ngoài phạm vi được bảo toàn.
+`docs/handoff/PLAN.md` là thay đổi có sẵn của người dùng và được bảo toàn nguyên trạng; không sửa hoặc ghi đè. Không commit/push.

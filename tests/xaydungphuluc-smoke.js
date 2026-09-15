@@ -13,7 +13,13 @@ assert(html.includes('cells[8].innerHTML'),'AI picker must replace the legacy pe
 assert(html.includes("aiSelectedLessonIds.has(lessonId)"),'single-period AI selection must remove NLS from the same lesson');
 assert(html.includes("aiSelectedLessonIds.delete(lessonId)"),'single-period NLS selection must remove AI from the same lesson');
 assert(html.includes("replace(/\\s*\\(?Áp dụng:"),'AI appendix integration must remove legacy period scope');
-console.log('PASS xaydungphuluc adaptive lesson-level AI smoke');
+assert(html.includes("allocationUnit=function(kind){return kind==='ai'?'period'"),'AI must always allocate by total PPCT periods');
+assert(html.includes("String(id).replace(/:period:"),'old AI period IDs must be migrated to lesson IDs');
+assert(html.includes("current+periods>target"),'manual AI selection must cap by lesson period total');
+assert(html.includes("selectedPeriods:selectedAiPeriods()"),'AI config must export whole selected lessons with all periods');
+assert(html.includes("appendixAiCoverage=function"),'AI compliance must use whole-lesson period coverage');
+assert(html.includes("unit.replaceWith(label)"),'AI must not expose the retired lesson allocation mode');
+console.log('PASS xaydungphuluc whole-lesson AI behavior: UI, 1/2/3-period counting, cap, config, and coverage hooks');
 return;
 const defaultSchoolInfo={schoolYear:'2026-2027',school:'THCS Trần Phú',department:'Tổ Toán - Tin',teacher:'Hoàng Tấn Thiên'};
 for(const [id,value] of Object.entries(defaultSchoolInfo)){
