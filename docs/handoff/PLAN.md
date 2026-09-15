@@ -1,110 +1,226 @@
-# PLAN
+# PLAN: Nâng cấp Sổ Điểm — Trình chiếu Đề (LaTeX + Ảnh), Tìm kiếm & Sắp xếp Học sinh
 
-## Hiện trạng & Phân tích Lỗi thực tế
-Từ kết quả chạy thực tế và ảnh chụp màn hình giáo viên phản hồi:
-1. **Lỗi vị trí cấy tại Mục I (Mục tiêu):**
-   - Hệ thống tìm thấy đoạn `b) Năng lực riêng:` và chèn ngay sau tiêu đề này, làm đứt đoạn nội dung: các gạch đầu dòng của mục b) bị đẩy xuống dưới mục `c) Năng lực số`!
-   - Hệ thống gộp 2 mã thành chuỗi ngoặc vuông xấu xí `[[1.2.TC1a], [3.1.TC1a]]` và làm mất nội dung mô tả cụ thể mà giáo viên đã cung cấp trong PPCT.
-2. **Lỗi vị trí cấy và phân bổ mã tại Mục III (Tiến trình dạy học):**
-   - Hệ thống "lười" gom cả 2 mã khác nhau vào cùng một chỗ và chọn nhầm vào `A. HOẠT ĐỘNG KHỞI ĐỘNG (MỞ ĐẦU)`.
-   - Vị trí cấy bị đặt sai hoàn toàn: cấy chen ngang giữa tiêu đề hoạt động và `a) Mục tiêu`, trong khi theo chuẩn Công văn 5512, nội dung tích hợp phải nằm ở phần **`d) Tổ chức thực hiện`** (hoặc trong ô bảng của hoạt động).
-3. **Màn hình xem trước không tự cập nhật:**
-   - Sau khi cấy DOCX thành công, khung xem trước không hiển thị nội dung file DOCX vừa cấy nên người dùng không thấy sự thay đổi.
+## Hiện trạng & Vấn đề Phân tích
+1. **Thiếu chế độ trình chiếu đề bài chuyên dụng cho lớp học:**
+   - Trong `sodiem.html`, tab "3. Đề & câu hỏi" hiện chỉ có một khung `<article id="questionDisplay">` nhỏ nằm bên dưới textarea.
+   - Khi giáo viên gọi học sinh lên bảng hoặc kiểm tra miệng, giáo viên cần chiếu câu hỏi / đề bài lên máy chiếu (projector) hoặc tivi màn hình lớn với cỡ chữ to, giao diện rõ ràng, kèm đồng hồ đếm ngược.
+   - Chưa có chế độ Fullscreen / Projector Modal.
+2. **Khả năng render LaTeX còn hạn chế:**
+   - Hiện tại mã nguồn gọi trực tiếp `katex.render(q, $('questionDisplay'), {throwOnError:false})`.
+   - KaTeX sẽ lỗi hoặc hiển thị thô nếu chuỗi `q` là đoạn văn bản thông thường có xen kẽ công thức (ví dụ: `Cho phương trình $x^2 - 4 = 0$, tìm x:`). KaTeX yêu cầu tách biệt giữa text thông thường và khối math (`$...$` hoặc `$$...$$`).
+3. **Chưa hỗ trợ dán ảnh đề bài (Paste Image Ctrl+V):**
+   - Giáo viên thường chụp ảnh đề bài từ sách giáo khoa, đề kiểm tra Word, tài liệu PDF hoặc trang web bằng công cụ chụp màn hình (Snipping Tool, Zalo, Paint).
+   - Hiện tại chưa bắt sự kiện `paste` trên clipboard để nhận ảnh trực tiếp, cũng như chưa có nút tải ảnh đề bài, buộc giáo viên phải gõ lại văn bản rất mất thời gian.
+4. **Thiếu công cụ tìm kiếm nhanh học sinh:**
+   - Lớp học thường có từ 35–50 học sinh. Khi cần vào điểm cho một học sinh bất kỳ, giáo viên phải cuộn trang và tìm mắt thường rất chậm.
+   - Chưa có ô tìm kiếm lọc nhanh theo tên hoặc mã/SBD, đặc biệt là tìm kiếm không phân biệt dấu tiếng Việt ("an" tìm được "An", "hoang" tìm được "Hoàng").
+5. **Chưa có tính năng sắp xếp học sinh theo thứ tự chuẩn tiếng Việt:**
+   - Danh sách học sinh nạp từ hệ thống hoặc Excel đôi khi bị xáo trộn thứ tự.
+   - Giáo viên cần sắp xếp học sinh theo thứ tự Tên (A → Z) chuẩn bảng chữ cái tiếng Việt (tách tên chính ở cuối ra so sánh trước, trùng tên thì xét họ đệm), cũng như sắp xếp theo Mã/SBD hoặc Điểm trung bình (ĐTBtx).
 
-## Phạm vi & Giải pháp triệt để
-1. **Sửa chuẩn vị trí cấy tại Mục I (Mục tiêu):**
-   - Vị trí chèn: Tìm điểm kết thúc của Năng lực đặc thù (ngay **TRƯỚC** tiêu đề `3. Phẩm chất` hoặc `c) Phẩm chất` hoặc `II. THIẾT BỊ DẠY HỌC`).
-   - Phân tách độc lập từng mã: Mỗi mã là một gạch đầu dòng riêng biệt, bảo toàn 100% mô tả chi tiết của giáo viên từ PPCT:
-     ```
-     c) Năng lực số:
-     - [1.2.TC1a] Đánh giá dữ liệu, thông tin và nội dung số: Đánh giá tính hợp lý của dữ liệu thực tế về quãng đường và thời gian trong bài Đại lượng tỉ lệ thuận.
-     - [3.1.TC1a] Phát triển nội dung số: Sử dụng công cụ số để ghi chép, hệ thống hóa và trình bày kết quả học tập Đại lượng tỉ lệ thuận.
-     ```
-   - Tuyệt đối không lồng ngoặc vuông `[[...]]`.
-2. **Phân bổ mã đúng hoạt động và cấy chuẩn theo 4 bước của phần `d) Tổ chức thực hiện` tại Mục III:**
-   - **Phân bổ mã thông minh:**
-     + Tuyệt đối không gom các mã khác nhau vào Hoạt động Khởi động.
-     + Mã phân tích/đánh giá dữ liệu (như `1.2.TC1a`) -> Phân bổ vào **Hoạt động 2: Hình thành kiến thức** (khám phá kiến thức mới).
-     + Mã dùng công cụ số ghi chép/trình bày/sản phẩm (như `3.1.TC1a`) -> Phân bổ vào **Hoạt động 3: Luyện tập** hoặc **Hoạt động 4: Vận dụng**.
-   - **Cấu trúc tích hợp chuẩn 4 bước sư phạm theo CV 5512 (chấm dứt viết tràn lan):**
-     + Tuyệt đối không viết một khối văn bản lý thuyết dài dòng, chung chung ("Nhiệm vụ...", "Sản phẩm...", "Kiểm chứng...", "Đánh giá...").
-     + Nội dung tích hợp phải được đưa gọn gàng vào **4 bước hành động cụ thể** của phần `d) Tổ chức thực hiện`:
-       * *Bước 1 (Chuyển giao nhiệm vụ):* GV giao nhiệm vụ học tập gắn với công cụ số / kiểm chứng AI.
-       * *Bước 2 (Thực hiện nhiệm vụ):* HS thao tác với công cụ số, xử lý dữ liệu hoặc đối chiếu AI với SGK.
-       * *Bước 3 (Báo cáo, thảo luận):* HS nộp sản phẩm số / báo cáo kết quả.
-       * *Bước 4 (Kết luận, nhận định):* GV chuẩn hóa kiến thức và nhận xét minh chứng năng lực.
-     + Nếu hoạt động dạng bảng: chèn dòng/ô tương ứng trong bảng của Hoạt động 2 hoặc Hoạt động 3.
-     + Tuyệt đối không chèn chen ngang trước `a) Mục tiêu`.
-3. **Tự động cập nhật màn hình xem trước A4:**
-   - Ngay sau khi cấy vào DOCX gốc thành công (`injectedDocxBlob`), dùng `mammoth.convertToHtml` đọc trực tiếp từ Blob này và cập nhật lại `preview.innerHTML`.
-   - Tự động cuộn mượt (scroll) đến vị trí tích hợp để giáo viên nhìn thấy ngay thành quả.
+---
+
+## Mục tiêu & Giải pháp Triệt để
+
+### 1. Trình chiếu Đề bài Chuyên nghiệp (Projector Presentation View)
+- Bổ sung nút **"Trình chiếu"** (`<button onclick="openPresentation()"><i class="fa fa-tv mr-2"></i> Trình chiếu</button>`) với thiết kế nổi bật, màu sắc trang nhã.
+- Xây dựng màn hình trình chiếu toàn màn hình (Modal/Fullscreen `presentationModal`):
+  + Nền tối chuyên dụng cho máy chiếu (`bg-slate-950` / `bg-slate-900`) hoặc tùy chọn sáng, chữ màu trắng/vàng tương phản cao, khử chói mắt.
+  + Điều khiển linh hoạt:
+    * Chuyển câu: Nút `Trước` (`<`), `Tiếp` (`>`), `Bốc ngẫu nhiên` (`fa-shuffle`), hiển thị chỉ số `Câu X / Y`.
+    * Phóng to / Thu nhỏ cỡ chữ: Nút `A-`, `A+` để phù hợp với màn hình chiếu kích thước khác nhau.
+    * Tích hợp đồng hồ đếm ngược (Countdown Timer) trực tiếp trên thanh điều khiển trình chiếu, có thể tạm dừng/tiếp tục và phát âm thanh chuông báo khi hết giờ.
+    * Nút **"Gọi học sinh"** ngay trên giao diện trình chiếu: liên kết nhanh với vòng quay hoặc bốc ngẫu nhiên học sinh trong lớp để trả lời.
+    * Hỗ trợ phím tắt bàn phím: Mũi tên Trái/Phải để đổi câu, `Space` để tạm dừng/chạy đồng hồ, `Esc` để đóng trình chiếu.
+
+### 2. Render Công thức LaTeX Chuẩn xác
+- Xây dựng hàm parser `renderMathText(content)`:
+  + Tự động nhận diện và chuyển đổi:
+    * Công thức nội dòng (inline math): `$ ... $` hoặc `\( ... \)`.
+    * Công thức khối (display math): `$$ ... $$` hoặc `\[ ... \]`.
+  + Sử dụng `katex.renderToString(mathExp, { displayMode: boolean, throwOnError: false })` để thay thế mượt mà các khối công thức, bảo toàn 100% đoạn văn bản tiếng Việt xung quanh.
+  + Hỗ trợ xuống dòng tự nhiên và giữ khoảng cách rõ ràng.
+
+### 3. Dán Ảnh Đề bài Trực tiếp (Ctrl+V) & Tải Tệp Ảnh
+- Bắt sự kiện `paste` trên tab Đề & câu hỏi và trong textarea:
+  + Kiểm tra `e.clipboardData.items`. Nếu có tệp ảnh (`image/*`):
+    * Đọc dữ liệu ảnh bằng `FileReader` dưới dạng Base64 Data URL (`data:image/png;base64,...`).
+    * Tự động thêm vào danh sách đề bài hoặc đặt làm câu hỏi hiện tại.
+- Thêm nút tải tệp: `<label class="..."><i class="fa fa-image mr-1"></i> Tải ảnh đề<input type="file" accept="image/*" onchange="handleImageUpload(event)" hidden></label>`.
+- Hiển thị ảnh:
+  + Khi câu hỏi là ảnh (chứa `data:image/` hoặc URL ảnh), tự động render thành thẻ `<img>` sắc nét, căn giữa hoàn hảo, tự động co giãn (`max-h-[68vh] object-contain`), có khung viền bo tròn thẩm mỹ.
+  + Click vào ảnh để phóng to xem chi tiết nếu ảnh nhỏ.
+
+### 4. Tìm kiếm Nhanh Học sinh (Instant Search)
+- Thêm thanh tìm kiếm ngay phía trên bảng điểm:
+  + Ô nhập: `<input id="searchStudent" oninput="renderGrades()" placeholder="🔍 Tìm nhanh tên hoặc mã/SBD..." class="border rounded-lg pl-9 pr-8 py-2 text-sm w-full sm:w-72">`.
+  + Nút xóa tìm kiếm (x) khi có chữ.
+  + Badge hiển thị số lượng: `Tìm thấy X/Y học sinh`.
+- Hàm lọc thông minh không dấu tiếng Việt `stripVietnamese(str)`:
+  + Loại bỏ dấu thanh, chuyển `đ` thành `d`, chữ thường.
+  + Giúp giáo viên gõ không dấu ("hoang", "thien", "an") vẫn tìm ra chính xác ("Hoàng", "Thiện", "An").
+- **Tính toàn vẹn dữ liệu:** Khi đang tìm kiếm và bảng điểm chỉ hiển thị các dòng khớp, giáo viên vẫn có thể nhập điểm, sửa tên/SBD, gọi học sinh. Mọi thay đổi đều được ghi chính xác vào mảng gốc `students` theo đúng ID/index thực của học sinh và đồng bộ vào `persist()`.
+
+### 5. Sắp xếp Tên Học sinh Chuẩn Tiếng Việt
+- Thêm bộ điều khiển sắp xếp:
+  + Dropdown hoặc bấm trực tiếp vào tiêu đề cột "Họ và tên":
+    * **Tên A → Z (chuẩn từ điển tiếng Việt):** Tách từ cuối cùng làm Tên chính, so sánh bằng `localeCompare('vi')`. Nếu trùng tên chính, so sánh tiếp Họ và Tên đệm.
+    * **Tên Z → A:** Đảo ngược thứ tự từ điển.
+    * **Mã/SBD:** Sắp xếp theo số báo danh/mã học sinh tăng dần/giảm dần.
+    * **Điểm TB (ĐTBtx):** Sắp xếp học sinh theo điểm trung bình từ cao xuống thấp hoặc từ thấp lên cao.
+- Sau khi sắp xếp:
+  + Tự động đánh lại số thứ tự (STT: 1, 2, 3...).
+  + Tự động lưu thứ tự mới vào `persist()` (localStorage và backend) để không bị mất vị trí.
+
+---
 
 ## File tác động
-- `giaoantichhop.html`:
-  + Sửa `buildDeltaPrompt`:
-    * Chỉ đạo AI phân tách từng mã riêng biệt, gán đúng vào Hoạt động 2 và Hoạt động 3.
-    * Định dạng phần cấy ở Mục III theo đúng 4 bước sư phạm của CV 5512, ngắn gọn, súc tích, thực chiến, không viết lý thuyết tràn lan.
-    * Bảo toàn nguyên văn mô tả từ PPCT cho Mục I.
-  + Sửa `injectDocxOxml`:
-    * Mục I: Chèn trước `Phẩm chất` / `Thiết bị dạy học`, không ngắt đôi mục b).
-    * Mục III: Tìm đúng hoạt động (HĐ 2, HĐ 3), tìm tiếp đề mục `d) Tổ chức thực hiện` bên trong hoạt động đó để chèn chuẩn 4 bước.
-  + Sửa `integrateAi.onclick`: Gọi `mammoth.convertToHtml` từ `injectedDocxBlob` để render ngay lên màn hình xem trước.
+- `sodiem.html`:
+  + Thêm thanh tìm kiếm và bộ sắp xếp tại phần bảng điểm (`#grades`).
+  + Bổ sung nút Trình chiếu, nút Tải ảnh và bộ lắng nghe sự kiện `paste` tại phần câu hỏi (`#questions`).
+  + Thêm cấu trúc Dialog/Modal Trình chiếu toàn màn hình `#presentationModal`.
+  + Viết hàm `renderMathText(content)` để render chuẩn KaTeX inline/display math kết hợp văn bản.
+  + Viết logic trình chiếu: chuyển câu, đếm ngược, phóng to/thu nhỏ font, bốc câu hỏi, gọi học sinh.
+  + Viết hàm `sortStudents(type)` và `stripVietnamese(str)`.
 
-## Các bước thực hiện
-### Bước 1: Chuẩn hóa Prompt phân bổ mã và cấu trúc JSON 4 bước
-- Cập nhật prompt yêu cầu AI:
-  + Mảng `mucTieuNls`: `[{ "ma": "1.2.TC1a", "ten": "Đánh giá dữ liệu...", "moTa": "Đánh giá tính hợp lý..." }]`.
-  + Mảng `hoatDongMuc3`: danh sách các hoạt động tương ứng với từng mã, cấu trúc đúng 4 bước CV 5512:
-    ```json
-    [
-      {
-        "ma": "1.2.TC1a",
-        "tenHoatDong": "Hoạt động 2: Hình thành kiến thức",
-        "buoc1_chuyenGiao": "GV yêu cầu HS sử dụng dữ liệu thực tế về thời gian và quãng đường...",
-        "buoc2_thucHien": "HS phân tích tính hợp lý của dữ liệu, thảo luận tìm mối quan hệ tỉ lệ thuận...",
-        "buoc3_baoCao": "Đại diện nhóm trình bày bảng số liệu và công thức liên hệ...",
-        "buoc4_ketLuan": "GV chuẩn hóa kiến thức, đánh giá năng lực đánh giá dữ liệu số của HS."
-      },
-      {
-        "ma": "3.1.TC1a",
-        "tenHoatDong": "Hoạt động 3: Luyện tập",
-        "buoc1_chuyenGiao": "GV giao bài tập luyện tập, yêu cầu HS dùng công cụ số ghi chép/trình bày...",
-        "buoc2_thucHien": "HS làm bài và hệ thống hóa bài giải trên công cụ số...",
-        "buoc3_baoCao": "HS chia sẻ bài giải số hóa lên màn chiếu hoặc nộp tệp...",
-        "buoc4_ketLuan": "GV nhận xét và xác nhận sản phẩm học tập số."
-      }
-    ]
-    ```
+---
 
-### Bước 2: Nâng cấp thuật toán định vị Anchor trong XML DOM
-- **Vị trí Mục I:**
-  + Tìm đoạn chứa `phẩm chất` hoặc `thiết bị dạy học` (hoặc `II.`): Chèn ngay trước đoạn này.
-  + Nếu không thấy, mới chèn sau đoạn cuối cùng của Mục I.
-  + Render từng mã thành dòng riêng: `- [Mã] Tên chuẩn: Mô tả cụ thể của GV`.
-- **Vị trí Mục III:**
-  + Tìm đoạn tiêu đề hoạt động khớp với `tenHoatDong` (ưu tiên HĐ 2, HĐ 3, không chọn Khởi động).
-  + Từ vị trí hoạt động đó, quét tiếp các đoạn tiếp theo để tìm đoạn `d) tổ chức thực hiện` hoặc `tổ chức thực hiện` hoặc `thực hiện nhiệm vụ`.
-  + Chèn nội dung tích hợp vào ngay sau đoạn `Tổ chức thực hiện` đó.
+## Chi tiết Mã nguồn & Giải pháp Kỹ thuật
 
-### Bước 3: Tự động cập nhật Preview từ chính file DOCX cấy
-- Trong `integrateAi.onclick`:
-  ```javascript
-  injectedDocxBlob = await injectDocxOxml(currentDocxBuffer, delta);
-  const { value: renderedHtml } = await mammoth.convertToHtml({ arrayBuffer: await injectedDocxBlob.arrayBuffer() });
-  $('preview').innerHTML = renderedHtml;
-  ```
-- Thêm hiệu ứng cuộn nhẹ đến nội dung vừa cấy.
+### 1. Hàm Render Math & Ảnh Đề bài
+```javascript
+function renderQuestionContent(content) {
+    if (!content) return '<p class="text-slate-400">Chưa có nội dung đề bài.</p>';
+    // Nếu là ảnh (data:image/ hoặc url ảnh)
+    if (content.startsWith('data:image/') || content.match(/\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i)) {
+        return `<div class="flex flex-col items-center justify-center">
+            <img src="${content}" class="max-h-[65vh] max-w-full rounded-xl shadow-lg border border-slate-700 object-contain cursor-zoom-in" onclick="zoomImage(this.src)" alt="Đề bài">
+            <p class="text-xs text-slate-400 mt-2"><i class="fa fa-magnifying-glass-plus mr-1"></i>Bấm vào ảnh để xem kích thước lớn</p>
+        </div>`;
+    }
+    // Render văn bản trộn công thức LaTeX
+    return renderMathText(content);
+}
 
-## Cách kiểm thử
-1. Nạp file giáo án Toán 7 và dán PPCT có 2 mã NLS (`1.2.TC1a` và `3.1.TC1a`).
-2. Bấm "Tích hợp":
-   - Kiểm tra màn hình xem trước tự động hiển thị giáo án mới.
-   - Kiểm tra Mục I: Thấy mục c) Năng lực số nằm trọn vẹn SAU toàn bộ mục b) Năng lực riêng, gồm 2 gạch đầu dòng riêng biệt, giữ nguyên mô tả chi tiết của giáo viên.
-   - Kiểm tra Mục III: Mã `1.2.TC1a` nằm ở phần `d) Tổ chức thực hiện` của Hoạt động Hình thành kiến thức; mã `3.1.TC1a` nằm ở phần `d) Tổ chức thực hiện` của Hoạt động Luyện tập/Vận dụng. Hoạt động Khởi động không bị chèn sai.
-3. Xuất file Word và mở trong Microsoft Word để xác nhận 100% định dạng và vị trí chuẩn mực.
+function renderMathText(text) {
+    if (!text) return '';
+    let escaped = escapeHtml(text);
+    // Thay thế block math $$...$$ hoặc \[...\]
+    escaped = escaped.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]/g, (match, p1, p2) => {
+        const formula = p1 || p2;
+        try {
+            return `<div class="my-3 text-center">${katex.renderToString(unescapeHtml(formula), { displayMode: true, throwOnError: false })}</div>`;
+        } catch(e) { return match; }
+    });
+    // Thay thế inline math $...$ hoặc \(...\)
+    escaped = escaped.replace(/\$([^\$\n]+?)\$|\\\(([\s\S]+?)\\\)/g, (match, p1, p2) => {
+        const formula = p1 || p2;
+        try {
+            return katex.renderToString(unescapeHtml(formula), { displayMode: false, throwOnError: false });
+        } catch(e) { return match; }
+    });
+    // Giữ định dạng ngắt dòng
+    return escaped.replace(/\n/g, '<br>');
+}
+```
 
-## Tiêu chí nghiệm thu
-- Không còn lỗi cấy ngắt đôi mục b) trong Mục I.
-- Mỗi mã NLS được phân tách thành dòng riêng biệt, bảo toàn mô tả của giáo viên.
-- Các mã khác nhau được phân bổ đúng vào Hoạt động 2 và Hoạt động 3, cấy đúng vào mục `d) Tổ chức thực hiện`.
-- Màn hình xem trước tự động cập nhật ngay sau khi bấm tích hợp.
+### 2. Xử lý Dán Ảnh Clipboard & Upload
+```javascript
+// Lắng nghe sự kiện paste trên toàn bộ tài liệu hoặc textarea
+$('questionInput').addEventListener('paste', handlePasteEvent);
+
+function handlePasteEvent(e) {
+    const items = (e.clipboardData || window.clipboardData)?.items;
+    if (!items) return;
+    for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+            e.preventDefault();
+            const blob = item.getAsFile();
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const base64 = ev.target.result;
+                addQuestionItem(base64);
+                showCurrentQuestion(base64);
+            };
+            reader.readAsDataURL(blob);
+            break;
+        }
+    }
+}
+```
+
+### 3. Tìm kiếm & Sắp xếp Học sinh
+```javascript
+function stripVietnamese(str) {
+    return (str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+        .toLowerCase()
+        .trim();
+}
+
+function getSortKey(fullName) {
+    const parts = (fullName || '').trim().split(/\s+/);
+    const firstName = parts.pop() || '';
+    const lastName = parts.join(' ');
+    return { firstName, lastName };
+}
+
+function sortStudents(type) {
+    if (type === 'name_asc') {
+        students.sort((a, b) => {
+            const ka = getSortKey(a.name), kb = getSortKey(b.name);
+            const cmp = ka.firstName.localeCompare(kb.firstName, 'vi');
+            return cmp !== 0 ? cmp : ka.lastName.localeCompare(kb.lastName, 'vi');
+        });
+    } else if (type === 'name_desc') {
+        students.sort((a, b) => {
+            const ka = getSortKey(a.name), kb = getSortKey(b.name);
+            const cmp = kb.firstName.localeCompare(ka.firstName, 'vi');
+            return cmp !== 0 ? cmp : kb.lastName.localeCompare(ka.lastName, 'vi');
+        });
+    } else if (type === 'sbd_asc') {
+        students.sort((a, b) => String(a.sbd || '').localeCompare(String(b.sbd || ''), 'vi', { numeric: true }));
+    } else if (type === 'avg_desc') {
+        students.sort((a, b) => (Number(average(b)) || 0) - (Number(average(a)) || 0));
+    } else if (type === 'avg_asc') {
+        students.sort((a, b) => (Number(average(a)) || 0) - (Number(average(b)) || 0));
+    }
+    persist();
+    renderAll();
+}
+```
+
+### 4. Giao diện & Điều khiển Trình chiếu
+- Dialog `#presentationModal`:
+  - Header: Tiêu đề câu hỏi, cỡ chữ `A-`/`A+`, đồng hồ đếm ngược có nút Start/Stop, nút gọi ngẫu nhiên học sinh, nút Toàn màn hình, nút Đóng.
+  - Vùng nội dung: Box hiển thị câu hỏi/ảnh cực lớn, căn giữa màn hình, font chữ tự động điều chỉnh linh hoạt.
+  - Footer: Nút điều hướng `< Câu trước`, `Câu tiếp >`, `Bốc ngẫu nhiên`.
+
+---
+
+## Kế hoạch Kiểm thử (Verification Plan)
+1. **Kiểm thử tự động Smoke Test hiện có:**
+   - Chạy `node tests/sodiem-smoke.js` -> Phải PASS 100%.
+   - Chạy `node tests/teacher-permissions-smoke.js` -> Phải PASS 100%.
+   - Chạy `node tests/security-f12-smoke.js` -> Phải PASS 100%.
+2. **Kiểm thử chức năng Trình chiếu:**
+   - Bấm nút "Trình chiếu" -> Màn hình trình chiếu mở ra toàn màn hình, hiển thị đẹp mắt.
+   - Nhập câu hỏi có công thức `$x^2 + \sqrt{y} = 10$` -> Render KaTeX sắc nét.
+   - Dán ảnh từ clipboard (Ctrl+V) -> Hiển thị ảnh đề bài to rõ, căn giữa.
+   - Chạy đồng hồ đếm ngược trên màn hình trình chiếu -> Đếm lùi chuẩn xác, hết giờ có âm thanh báo.
+   - Bấm nút gọi học sinh trong trình chiếu -> Gọi được học sinh để trả lời câu hỏi.
+3. **Kiểm thử chức năng Tìm kiếm & Sắp xếp:**
+   - Nhập từ khóa không dấu "nguyen" vào ô tìm kiếm -> Hiển thị chính xác các học sinh có họ "Nguyễn".
+   - Bấm sắp xếp Tên A → Z -> Các học sinh tên "An", "Bình", "Cường" được xếp đúng thứ tự từ điển tiếng Việt.
+   - Nhập điểm cho học sinh khi đang lọc tìm kiếm -> Điểm được lưu đúng cho học sinh đó trong toàn bộ sổ điểm.
+
+---
+
+## Tiêu chí Nghiệm thu
+- Trình chiếu đề bài hoạt động mượt mà trên máy chiếu / màn hình tương tác lớp học.
+- Hỗ trợ công thức LaTeX chuẩn và nhận diện dán ảnh Ctrl+V tức thì.
+- Tìm kiếm học sinh nhanh chóng không phân biệt dấu tiếng Việt.
+- Sắp xếp học sinh chuẩn theo bảng chữ cái tiếng Việt.
+- Toàn bộ bài kiểm tra smoke test đạt 100% PASS.
