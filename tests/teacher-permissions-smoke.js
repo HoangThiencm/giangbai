@@ -36,7 +36,7 @@ requireMatch(index, /\.permissions-pending #mainToolsGrid > \[data-tool\]\s*\{\s
 requireMatch(index, /applyTeacherHubVisibility\(accountFeatures, allowedSet\);\s*}\s*removePermissionsPending\(\);/, 'Teacher permission-pending state must be removed only after teacher tools are filtered.');
 requireMatch(index, /sodiem:\s*'sodiem\.html'/, 'Sổ Điểm must be mapped in the teacher hub tool list.');
 
-const tools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'thanhtich', 'soankhbd', 'taovideo', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc'];
+const tools = ['gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'thanhtich', 'soankhbd', 'taovideo', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc', 'taobaitap'];
 for (const tool of tools) {
     requireMatch(access, new RegExp(`['"]${tool}['"]`), `Missing teacher route guard for ${tool}.`);
 }
