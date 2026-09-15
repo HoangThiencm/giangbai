@@ -12,7 +12,60 @@ assert(target.includes("Tích hợp AI</label>"),'Canvas picker must render exac
 assert(target.includes("selectedPeriods:selectedAiPeriods()"),'Canvas config must export complete selected lessons as their total periods');
 assert(target.includes("appendixAiCoverage=function"),'Canvas compliance must count selected AI coverage by whole lesson periods');
 assert(!/process\.exit\(0\)/.test(target),'Canvas behavior test must execute rather than exit early');
+
+// The final whole-lesson wrapper must not normalize selection during the
+// no-selection bootstrap path: aiCandidates() uses that path for empty PPCT.
+const finalConfigStart=target.lastIndexOf('getConfig=function(options={}){');
+const finalConfigWrapper=target.slice(finalConfigStart,target.indexOf('\napplyDraftPayload=function',finalConfigStart)).trim();
+assert(finalConfigWrapper,'Canvas final whole-lesson getConfig wrapper missing');
+assert(finalConfigWrapper.includes('if(options.includeAiSelection===false)return config;'),
+  'Canvas final wrapper must return before AI normalization when selection is suppressed');
+const wrapperSandbox={Set};
+vm.createContext(wrapperSandbox);
+vm.runInContext(`
+  let aiSelectedLessonIds=new Set(['ppct:two']),bootstrapCalls=0,normalizeCalls=0;
+  function wholeLessonAiGetConfig(options){bootstrapCalls++;return {ai:{base:true,includeAiSelection:options.includeAiSelection}}}
+  function normalizeWholeLessonAiState(){normalizeCalls++;aiCandidates();return aiSelectedLessonIds}
+  function aiCandidates(){return [getConfig({includeAiSelection:false})]}
+  function selectedAiLessons(){return [{id:'ppct:two',lesson:'Bài 2 tiết'}]}
+  function selectedAiPeriods(){return [{lessonId:'ppct:two',periods:[1,2]}]}
+  ${finalConfigWrapper}`,wrapperSandbox);
+const emptyPpctBootstrap=vm.runInContext('getConfig({includeAiSelection:false})',wrapperSandbox);
+assert.equal(emptyPpctBootstrap.ai.base,true,'empty PPCT bootstrap must retain the base config');
+assert.equal(vm.runInContext('normalizeCalls',wrapperSandbox),0,'empty PPCT bootstrap must not recurse through AI normalization');
+const wholeLessonConfig=vm.runInContext('getConfig()',wrapperSandbox);
+assert.deepEqual(JSON.parse(JSON.stringify(wholeLessonConfig.ai)),{
+  base:true,unit:'period',selectedLessonIds:['ppct:two'],
+  selectedLessons:[{id:'ppct:two',lesson:'Bài 2 tiết'}],
+  selectedPeriods:[{lessonId:'ppct:two',periods:[1,2]}]
+},'normal Canvas config must retain whole-lesson IDs and both periods');
 console.log('PASS canvas whole-lesson AI behavior: UI, migration, period cap, config, and coverage hooks');
+
+function canvasBridgeFunction(name){
+  const start=target.indexOf(`function ${name}(`);
+  assert(start>=0,`missing Canvas bridge function: ${name}`);
+  return target.slice(start,target.indexOf('\n',start));
+}
+const canvasBridgeCalls=[],canvasBridgeErrors=[];
+const canvasBridgeSandbox={
+  activeTab:'3',
+  window:{
+    exportDocx(tab){canvasBridgeCalls.push(['export',tab]);return {catch(handler){handler(new Error('DOCX unavailable'));}};},
+    addRow(tab){canvasBridgeCalls.push(['add',tab]);}
+  },
+  document:{querySelector(){return null;}},
+  reportCanvasError(error){canvasBridgeErrors.push(error.message);}
+};
+vm.createContext(canvasBridgeSandbox);
+vm.runInContext(['splitCanvasActionParts','parseCanvasString','parseCanvasActionArgument','parseCanvasInlineActions','resolveCanvasActionArgument','runCanvasInlineActions'].map(canvasBridgeFunction).join('\n'),canvasBridgeSandbox);
+const canvasTabActions=canvasBridgeSandbox.parseCanvasInlineActions('exportDocx(activeTab);addRow(activeTab)');
+assert(canvasTabActions&&canvasTabActions.length===2,'Canvas bridge must parse approved activeTab calls');
+canvasBridgeSandbox.runCanvasInlineActions(canvasTabActions,{}, {type:'click'});
+assert.deepEqual(JSON.parse(JSON.stringify(canvasBridgeCalls)),[['export','3'],['add','3']],'Canvas bridge must pass the current tab to DOCX export and row insertion');
+assert.deepEqual(JSON.parse(JSON.stringify(canvasBridgeErrors)),['DOCX unavailable'],'Canvas bridge must show asynchronous export failures');
+assert.equal(canvasBridgeSandbox.parseCanvasInlineActions('exportDocx(activeTab + 1)'),null,'Canvas bridge must reject arbitrary activeTab expressions');
+assert.equal(canvasBridgeSandbox.parseCanvasInlineActions('exportDocx(window.activeTab)'),null,'Canvas bridge must allow only the activeTab identifier');
+console.log('PASS Canvas inline bridge: active tab handlers and async error reporting');
 
 // Historical host-CSS and retired per-period fixtures are intentionally retained
 // for reference but do not describe the current whole-lesson AI contract.
@@ -91,6 +144,14 @@ assert(target.includes("const CANVAS_DEFAULT_ACCOUNT='hoangthiencm@gmail.com';")
 assert(target.includes("let canvasDraftAccount=readCanvasStorage('canvas_xdpl_user')||CANVAS_DEFAULT_ACCOUNT;"),'Canvas must use the saved account or the requested default on startup');
 assert(target.includes("function prefillCanvasDraftAccount(){setCanvasDraftAccount(readCanvasStorage('canvas_xdpl_user')||CANVAS_DEFAULT_ACCOUNT)}"),'Canvas account prefill must not infer an account from the teacher name');
 const canvasProxy=fs.readFileSync('api/canvas_gemini.php','utf8');
+assert(canvasProxy.includes("$systemAvailable=!empty($runtime['gemini_enabled'])&&!empty($systemKeys)"),'Canvas proxy must treat the system key as optional when a personal key exists');
+assert(canvasProxy.includes("'fallback_outcome'=>'system_unavailable'"),'Canvas proxy must return a safe system-unavailable fallback outcome');
+assert(canvasProxy.includes("if($userKeys)foreach($userKeys as $index=>$key)"),'Canvas proxy must try personal keys independently of the system-key configuration');
+assert(target.includes("replace(/:period:\\d+$/,'')"),'legacy period-level AI IDs must migrate to whole-lesson IDs');
+assert(target.includes('const wholeLessonSuggestAllocation=suggestAllocationWithAi;'),'Canvas must preserve the NLS suggester before overriding whole-lesson AI suggestions');
+assert(target.includes("candidates=aiCandidates().filter(row=>!isSinglePeriodLesson(row.id)||!nlsSelectedLessonIds.has(row.id))"),'whole-lesson AI suggestions must exclude 1-period NLS lessons');
+assert(target.includes('for(const id of chooseAiLessonsForPeriods(target-actual,remaining))'),'whole-lesson AI suggestions must fill only complete lessons without exceeding the target');
+assert(target.includes("manualAllocationTargets.ai=target"),'only an explicit AI count input may establish a manual AI target');
 ['key_status','parse_stored_api_keys','mask_user_api_key','high_reasoning','heavy_io','gemini-3.8-flash','fallback_system','key_index','total_user_keys','rotation_count','quota_key_indexes','X-User-Account'].forEach(text=>assert(canvasProxy.includes(text),`Canvas proxy missing ${text}`));
 ['canvas_is_quota_failure','canvas_is_timeout_or_transient_failure','$userAttemptTimeout=min(25,max(10,$timeout-35))','if(canvas_is_quota_failure($attempt))','$fallbackReason=canvas_is_timeout_or_transient_failure($attempt)?\'user_key_timeout\':\'user_key_error\';break;','$remaining=(int)floor($deadline-microtime(true)-3)','$systemAttemptTimeout=min(55,$remaining)','fallback_reason'].forEach(text=>assert(canvasProxy.includes(text),`Canvas timeout fallback contract missing ${text}`));
 assert(!canvasProxy.includes('canvas_gemini_call($preferredModel,$key,$encoded,$timeout)'),'a user key must not consume the full Canvas request budget before fallback');

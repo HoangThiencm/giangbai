@@ -4899,7 +4899,7 @@ function buildIntegrationActivityConstraint(phase) {
   if (digitalOn && !aiOn) {
     const lines = [
       `TÍCH HỢP NLS THỰC CHIẾN PHA ${phase}: Lồng vào bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.`,
-      `Khi pha ${phase} có tích hợp NLS, BẮT BUỘC dùng DUY NHẤT kịch bản phần mềm chuyên dụng NLS (HS trực tiếp thao tác GeoGebra, Desmos, bảng tính Excel, máy tính cầm tay, PhET... để vẽ hình, xử lý số liệu, kiểm chứng; marker **[NLS: {Miền/Mã} - {Tên phần mềm}]**).`,
+      `Khi pha ${phase} có tích hợp NLS, BẮT BUỘC dùng DUY NHẤT kịch bản phần mềm chuyên dụng NLS (HS trực tiếp thao tác GeoGebra, Desmos, bảng tính Excel, máy tính cầm tay, PhET... để vẽ hình, xử lý số liệu, kiểm chứng; marker ***[NLS: {Miền/Mã} - {Tên phần mềm}]***).`,
       `CẤM TUYỆT ĐỐI: Giáo viên KHÔNG bật Khung năng lực AI (QĐ 2422). TUYỆT ĐỐI CẤM kịch bản kiểm chứng phản hồi AI, CẤM prompting AI, TUYỆT ĐỐI CẤM chèn bất kỳ tag [AI], [AI: ...] nào.`
     ];
     if (nls.length) lines.push(`Chuẩn NLS đã chọn: ${nls.join("; ")}.`);
@@ -4911,8 +4911,8 @@ function buildIntegrationActivityConstraint(phase) {
       `TÍCH HỢP AI THỰC CHIẾN PHA ${phase}: Lồng vào bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.`,
       `QUY TẮC BẮT BUỘC: AI chỉ là công cụ thực hành môn học, TUYỆT ĐỐI CẤM GV hỏi lý thuyết suông về AI. TUYỆT ĐỐI CẤM rải tag dồn dập. Toàn bộ bài chỉ tích hợp 1–2 điểm đắc địa nhất.`,
       `Khi pha ${phase} có tích hợp AI, BẮT BUỘC dùng đúng 1 trong 2 dạng kịch bản thực chiến:`,
-      `- Dạng 1: Kiểm chứng & Phản biện lỗi sai của AI (GV chiếu câu trả lời AI chứa lỗi/ngộ nhận môn học, HS đối chiếu SGK phát hiện lỗi và sửa đúng; marker **[AI: {Mã} - Kiểm chứng phản hồi AI]**).`,
-      `- Dạng 2: Prompting tư duy môn học (GV hướng dẫn Prompt gợi mở bước giải trong "...", HS chạy prompt tự giải bài; marker **[AI: {Mã} - Prompting gợi mở & Tự giải]**).`,
+      `- Dạng 1: Kiểm chứng & Phản biện lỗi sai của AI (GV chiếu câu trả lời AI chứa lỗi/ngộ nhận môn học, HS đối chiếu SGK phát hiện lỗi và sửa đúng; marker ***[AI: {Mã} - Kiểm chứng phản hồi AI]***).`,
+      `- Dạng 2: Prompting tư duy môn học (GV hướng dẫn Prompt gợi mở bước giải trong "...", HS chạy prompt tự giải bài; marker ***[AI: {Mã} - Prompting gợi mở & Tự giải]***).`,
       `NĂNG LỰC SỐ (CV 3456): KHÔNG BẬT. CẤM tự ý đưa kịch bản NLS hay marker [NLS] vào giáo án.`
     ];
     if (ai.length) lines.push(`Chuẩn AI đã chọn: ${ai.join("; ")}.`);
@@ -4923,9 +4923,9 @@ function buildIntegrationActivityConstraint(phase) {
     `TÍCH HỢP NLS/AI THỰC CHIẾN PHA ${phase}: Lồng vào bài/câu đã có trong SGK; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.`,
     `QUY TẮC BẮT BUỘC: NLS/AI chỉ là công cụ thực hành môn học, TUYỆT ĐỐI CẤM GV hỏi lý thuyết suông về AI (như hỏi định nghĩa AI, hỏi kể tên công cụ, hỏi cách kết hợp AI). TUYỆT ĐỐI CẤM rải tag dồn dập. Toàn bộ bài chỉ tích hợp 1–2 điểm đắc địa nhất.`,
     `Khi pha ${phase} có tích hợp NLS/AI, BẮT BUỘC dùng đúng 1 trong 3 dạng kịch bản thực chiến:`,
-    `- Dạng 1: Kiểm chứng & Phản biện lỗi sai của AI (GV chiếu câu trả lời AI chứa lỗi/ngộ nhận môn học, HS đối chiếu SGK phát hiện lỗi và sửa đúng; marker **[AI: {Mã} - Kiểm chứng phản hồi AI]**).`,
-    `- Dạng 2: Prompting tư duy môn học (GV hướng dẫn Prompt gợi mở bước giải trong "...", HS chạy prompt tự giải bài; marker **[AI: {Mã} - Prompting gợi mở & Tự giải]**).`,
-    `- Dạng 3: Phần mềm chuyên dụng NLS (HS trực tiếp thao tác GeoGebra, Desmos, Excel, PhET... để vẽ hình, xử lý số liệu, kiểm chứng; marker **[NLS: {Miền/Mã} - {Tên phần mềm}]**).`
+    `- Dạng 1: Kiểm chứng & Phản biện lỗi sai của AI (GV chiếu câu trả lời AI chứa lỗi/ngộ nhận môn học, HS đối chiếu SGK phát hiện lỗi và sửa đúng; marker ***[AI: {Mã} - Kiểm chứng phản hồi AI]***).`,
+    `- Dạng 2: Prompting tư duy môn học (GV hướng dẫn Prompt gợi mở bước giải trong "...", HS chạy prompt tự giải bài; marker ***[AI: {Mã} - Prompting gợi mở & Tự giải]***).`,
+    `- Dạng 3: Phần mềm chuyên dụng NLS (HS trực tiếp thao tác GeoGebra, Desmos, Excel, PhET... để vẽ hình, xử lý số liệu, kiểm chứng; marker ***[NLS: {Miền/Mã} - {Tên phần mềm}]***).`
   ];
   if (digitalOn && nls.length) lines.push(`Chuẩn NLS đã chọn: ${nls.join("; ")}.`);
   if (aiOn && ai.length) lines.push(`Chuẩn AI đã chọn: ${ai.join("; ")}.`);
@@ -4938,13 +4938,13 @@ function stripDisabledActivityIntegrations(markdown) {
   const aiOn = Boolean(context.integrations.ai);
   let text = String(markdown || "");
   if (!aiOn) {
-    text = text.replace(/\*\*\[?AI(?::[^\]\n]+)?\]?\*\*/gi, "")
+    text = text.replace(/\*{1,3}\[?AI(?::[^\]\n]+)?\]?\*{1,3}/gi, "")
                .replace(/\[AI(?::[^\]\n]+)?\]/gi, "");
     text = text.replace(/^[ \t]*[-+*]?[ \t]*Hướng dẫn Prompt AI.*$/gmi, "")
                .replace(/^[ \t]*[-+*]?[ \t]*Mẫu Prompt:.*$/gmi, "");
   }
   if (!digitalOn) {
-    text = text.replace(/\*\*\[?NLS(?::[^\]\n]+)?\]?\*\*/gi, "")
+    text = text.replace(/\*{1,3}\[?NLS(?::[^\]\n]+)?\]?\*{1,3}/gi, "")
                .replace(/\[NLS(?::[^\]\n]+)?\]/gi, "");
   }
   return text;
@@ -5180,14 +5180,14 @@ function insertObjectivesMissingStandards(text, missing) {
     result = upsertObjectivesStandardSection(result, {
       matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực số\b/i,
       headingLine: "### c) Năng lực số",
-      bulletLines: digital.map(row => `- ${row.item.officialCode}: ${row.item.officialLabel}`)
+      bulletLines: digital.map(row => `- ***${row.item.officialCode}:*** *${row.item.officialLabel}*`)
     });
   }
   if (ai.length) {
     result = upsertObjectivesStandardSection(result, {
       matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực\s*AI\b/i,
       headingLine: "### d) Năng lực AI",
-      bulletLines: ai.map(row => `- ${row.item.officialCode}: ${row.item.officialLabel}`)
+      bulletLines: ai.map(row => `- ***${row.item.officialCode}:*** *${row.item.officialLabel}*`)
     });
   }
   return result;
@@ -5243,8 +5243,8 @@ function assertActivityIntegrations(phase, text) {
   const aiOn = Boolean(context.integrations.ai);
   if (!digitalOn && !aiOn) return;
   const raw = String(text || "");
-  const nlsOk = /\*\*\[?NLS(?::[^\]\n]+)?\]?\*\*|\[NLS(?::[^\]\n]+)?\]|\bNLS\b/.test(raw) || standardsOfKind("digital").some(item => pedagogyLabelInText(raw, item.officialLabel));
-  const aiOk = /\*\*\[?AI(?::[^\]\n]+)?\]?\*\*|\[AI(?::[^\]\n]+)?\]|\bAI\b/.test(raw) || standardsOfKind("ai").some(item => item.officialCode && raw.includes(item.officialCode));
+  const nlsOk = /\*{1,3}\[?NLS(?::[^\]\n]+)?\]?\*{1,3}|\[NLS(?::[^\]\n]+)?\]|\bNLS\b/.test(raw) || standardsOfKind("digital").some(item => pedagogyLabelInText(raw, item.officialLabel));
+  const aiOk = /\*{1,3}\[?AI(?::[^\]\n]+)?\]?\*{1,3}|\[AI(?::[^\]\n]+)?\]|\bAI\b/.test(raw) || standardsOfKind("ai").some(item => item.officialCode && raw.includes(item.officialCode));
   if (phase === "A") {
     if (digitalOn && !nlsOk && !/năng lực số/i.test(raw)) throw new Error("Pha A chưa có móc NLS.");
     if (aiOn && !aiOk && !/\bAI\b|năng lực\s*AI/i.test(raw)) throw new Error("Pha A chưa có móc AI.");
@@ -5252,10 +5252,10 @@ function assertActivityIntegrations(phase, text) {
   }
   if (digitalOn && !nlsOk) throw new Error("Chưa có nhiệm vụ NLS.");
   if (aiOn && !aiOk) throw new Error("Chưa có nhiệm vụ AI.");
-  if (digitalOn && nlsOk && !hasRoleNearMarker(raw, /\*\*\[?NLS(?::[^\]\n]+)?\]?\*\*|\[NLS(?::[^\]\n]+)?\]|\bNLS\b|năng lực số/i)) {
+  if (digitalOn && nlsOk && !hasRoleNearMarker(raw, /\*{1,3}\[?NLS(?::[^\]\n]+)?\]?\*{1,3}|\[NLS(?::[^\]\n]+)?\]|\bNLS\b|năng lực số/i)) {
     throw new Error("NLS chưa gắn nhiệm vụ GV và HS.");
   }
-  if (aiOn && aiOk && !hasRoleNearMarker(raw, /\*\*\[?AI(?::[^\]\n]+)?\]?\*\*|\[AI(?::[^\]\n]+)?\]|\bAI\b|năng lực\s*AI|\d+\.[A-Z]\d+\.\d+/i)) {
+  if (aiOn && aiOk && !hasRoleNearMarker(raw, /\*{1,3}\[?AI(?::[^\]\n]+)?\]?\*{1,3}|\[AI(?::[^\]\n]+)?\]|\bAI\b|năng lực\s*AI|\d+\.[A-Z]\d+\.\d+/i)) {
     throw new Error("AI chưa gắn nhiệm vụ GV và HS.");
   }
 }
@@ -6254,7 +6254,7 @@ Giữ nguyên định dạng Markdown KHBD và bảng 2 cột mục d).
 Yêu cầu sửa:
 - Cột TRÁI bảng d): Bắt buộc đủ 4 bước (ngăn bằng <br>), phân định rõ vai trò **GV:** (nói câu cụ thể trong ngoặc kép "...", hành động cụ thể, phát hiện lỗi sai điển hình, can thiệp phân hóa) và **HS:** (làm việc cá nhân -> thảo luận nhóm -> tạo sản phẩm trung gian, báo cáo và phản biện) theo đúng kỹ thuật dạy học đã chọn.
 - Cột PHẢI bảng d): Chỉ ghi nội dung bảng/vở chốt cho HS chép (công thức LaTeX, định nghĩa, ví dụ). CẤM mô tả việc GV/HS ở cột phải.
-- Nếu bật NLS/AI: lồng nhiệm vụ GV và HS với marker **NLS** / **AI** vào bài SGK đã có; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.
+- Nếu bật NLS/AI: lồng nhiệm vụ GV và HS với marker ***[NLS]*** / ***[AI]*** vào bài SGK đã có; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.
 Lỗi cần sửa: ${problem.message}
 
 ${finalResult}${buildPhasePedagogyContext(actKey)}`);
@@ -7032,6 +7032,7 @@ if (typeof module !== 'undefined' && module.exports) {
     buildIntegrationActivityConstraint,
     stripDisabledActivityIntegrations,
     stripActivitiesOfDisabledIntegrations,
+    insertObjectivesMissingStandards,
     handlePpctFiles,
     renderPpctGallery,
     deletePpctImage,

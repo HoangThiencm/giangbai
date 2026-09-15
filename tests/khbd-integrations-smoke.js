@@ -59,13 +59,13 @@ function main() {
   const generator = new DocxGenerator();
   
   const nlsBadge = generator.markerRunColor("[NLS: Miền 1 - GeoGebra]");
-  assert.deepStrictEqual(nlsBadge, { color: "0369A1", shading: "E0F2FE", bold: true }, "NLS badge phải có màu chữ 0369A1 và nền E0F2FE");
+  assert.deepStrictEqual(nlsBadge, { color: "0369A1", shading: "E0F2FE", bold: true, italics: true }, "NLS badge phải có màu chữ 0369A1, nền E0F2FE, in đậm và in nghiêng");
 
   const aiBadge1 = generator.markerRunColor("[AI: 1.A1.1 - Kiểm chứng phản hồi AI]");
-  assert.deepStrictEqual(aiBadge1, { color: "6D28D9", shading: "F3E8FF", bold: true }, "AI badge 1 phải có màu chữ 6D28D9 và nền F3E8FF");
+  assert.deepStrictEqual(aiBadge1, { color: "6D28D9", shading: "F3E8FF", bold: true, italics: true }, "AI badge 1 phải có màu chữ 6D28D9, nền F3E8FF, in đậm và in nghiêng");
 
   const aiBadge2 = generator.markerRunColor("[AI: 1.A1.2 - Prompting gợi mở & Tự giải]");
-  assert.deepStrictEqual(aiBadge2, { color: "6D28D9", shading: "F3E8FF", bold: true }, "AI badge 2 phải có màu chữ 6D28D9 và nền F3E8FF");
+  assert.deepStrictEqual(aiBadge2, { color: "6D28D9", shading: "F3E8FF", bold: true, italics: true }, "AI badge 2 phải có màu chữ 6D28D9, nền F3E8FF, in đậm và in nghiêng");
 
   assert.strictEqual(generator.headingIntegrationColor("### c) Năng lực số"), "0369A1", "Heading NLS phải có màu 0369A1");
   assert.strictEqual(generator.headingIntegrationColor("### d) Năng lực AI"), "6D28D9", "Heading AI phải có màu 6D28D9");

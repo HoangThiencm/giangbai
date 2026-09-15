@@ -19,6 +19,7 @@ assert(html.includes("current+periods>target"),'manual AI selection must cap by 
 assert(html.includes("selectedPeriods:selectedAiPeriods()"),'AI config must export whole selected lessons with all periods');
 assert(html.includes("appendixAiCoverage=function"),'AI compliance must use whole-lesson period coverage');
 assert(html.includes("unit.replaceWith(label)"),'AI must not expose the retired lesson allocation mode');
+assert(html.includes('if(options.includeAiSelection===false)return config;'),'whole-lesson config must skip AI normalization while PPCT bootstrap suppresses selection');
 console.log('PASS xaydungphuluc whole-lesson AI behavior: UI, 1/2/3-period counting, cap, config, and coverage hooks');
 return;
 const defaultSchoolInfo={schoolYear:'2026-2027',school:'THCS Trần Phú',department:'Tổ Toán - Tin',teacher:'Hoàng Tấn Thiên'};
@@ -217,6 +218,9 @@ assert(!html.includes('AI_SELECTION_LIMIT'),'AI allocation must not retain a leg
 assert(!html.includes('aiSelectionLimit('),'AI allocation must not retain a legacy selection-limit helper');
 assert(!html.includes('tối đa 12 tiết AI')&&!html.includes('tối đa 12)')&&!html.includes('expected<=12'),'AI allocation and compliance must not retain a 12-period cap');
 has('function aiSelectedPeriodCount','AI selections must calculate periods from lesson identifiers');
+has("replace(/:period:\\d+$/,'')",'legacy AI period IDs must migrate to their lesson ID');
+has('const wholeLessonSuggestAllocation=suggestAllocationWithAi;','whole-lesson AI suggestions must retain the NLS suggester');
+has("manualAllocationTargets.ai=target",'manual AI target state must only be set by the explicit count handler');
 const flexibleAllocation=vm.runInContext(`(()=>{
   const controls={
     '#nlsUnit':{value:'period'},'#aiUnit':{value:'period'},'#nlsRate':{value:'50'},'#aiRate':{value:'50'},

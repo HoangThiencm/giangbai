@@ -1,120 +1,153 @@
-# Kế hoạch Triển khai: Dàn Ngang Cân Đối Các Khối Tiện Ích Cổng Học Sinh (index.html)
+# Kế hoạch Triển khai: Chuẩn Hóa In Đậm & In Nghiêng Cho Năng Lực Số (NLS) và Năng Lực AI
 
-## 1. Hiện trạng & Phân tích Nguyên nhân
+## 1. Yêu cầu & Căn cứ Chuyên môn
 
-### Hiện trạng thực tế:
-- Khi học sinh đăng nhập vào hệ thống (như tài khoản học sinh Bùi Thị Mỹ Dung, Lớp 9/2), phần thân trang hiển thị 2 khối:
-  1. Khối 1: **Lộ trình học tập — Bài học & Luyện tập theo SGK** (hiện đang có 1 thẻ bài học: `Toán 9`).
-  2. Khối 2: **Hoạt động lớp học — Hoạt động & Tiện ích được phân quyền** (hiện đang có 1 thẻ tiện ích: `Bảng chia sẻ Padlet`).
-- Người dùng phản ánh: *"Sao không dàn ngang cho đẹp với nhau"* kèm ảnh chụp màn hình thực tế.
-- Quan sát ảnh chụp:
-  + Cả hai khối đều chiếm toàn bộ chiều ngang màn hình một cách độc lập (`div.mb-8` xếp dọc từ trên xuống dưới).
-  + Khối 1 chỉ có 1 thẻ `Toán 9` nằm bên trái, để trống 2/3 khoảng trắng bên phải.
-  + Khối 2 nằm tút xuống bên dưới với tiêu đề riêng, cũng chỉ có 1 thẻ `Bảng chia sẻ Padlet` nằm bên trái và để trống 2/3 khoảng trắng bên phải.
-  + Hai thẻ có kích thước, kiểu dáng và thiết kế hoàn toàn tương đồng (icon vuông góc trái, badge trạng thái góc phải, tiêu đề in đậm, mô tả tóm tắt và nút mũi tên hành động), nhưng lại bị xếp dọc rời rạc, làm lãng phí không gian màn hình lớn và tạo cảm giác mất cân đối.
-
-### Mục tiêu kỹ thuật:
-- Khi học sinh có cả nội dung Lộ trình học tập và Hoạt động tiện ích, hai khối này được dàn ngang cạnh nhau (bố cục 2 cột cân đối `lg:grid-cols-2` trên màn hình máy tính/tablet):
-  + Cột trái: Khối Lộ trình học tập (Tiêu đề + Thẻ bài học `Toán 9`).
-  + Cột phải: Khối Hoạt động lớp học (Tiêu đề + Thẻ tiện ích `Bảng chia sẻ Padlet`).
-- Hai tiêu đề thẳng hàng ngang phía trên, hai thẻ bài học/tiện ích dàn ngang đối xứng phía dưới, tạo nên giao diện hiện đại, lấp đầy không gian hài hòa và trực quan.
-- Tự động thích ứng linh hoạt:
-  + Nếu học sinh chỉ có 1 trong 2 khối (chỉ có Lộ trình hoặc chỉ có Hoạt động), khối đó tự động mở rộng toàn màn hình (`lg:col-span-2`) với lưới 3 cột như cũ.
-  + Trên thiết bị di động (`< lg`), hai khối tự động xếp chồng dọc mượt mà.
+- **Yêu cầu từ Chuyên môn / Thanh tra GD:**
+  Tại tất cả các vị trí tích hợp **Khung Năng lực Số (NLS)** (Thông tư 02/2025/TT-BGDĐT, CV 3456/BGDĐT-GDPT) và **Khung Năng lực Trí tuệ Nhân tạo (AI)** (QĐ 2422/QĐ-BGDĐT), văn bản giáo án **bắt buộc phải được IN ĐẬM VÀ IN NGHIÊNG** (`bold` + `italic`) để làm nổi bật minh chứng tích hợp khi thẩm định và thanh tra chuyên môn.
+- **Phạm vi áp dụng trong Kế hoạch bài dạy (KHBD):**
+  1. **Mục I. MỤC TIÊU:**
+     - Tiêu đề mục: `***c) Năng lực số***` và `***d) Năng lực AI***` (hoặc Heading 3 có thuộc tính in nghiêng).
+     - Các dòng chỉ tiêu / mã năng lực con: Cả mã năng lực và nội dung chỉ báo phải được in đậm & in nghiêng (ví dụ: `- ***1.1.TC1a:*** *Học sinh sử dụng phần mềm GeoGebra để vẽ hình và kiểm chứng kết quả.*` hoặc `- ***[NLS: 1.1.TC1a]***: *...*`).
+  2. **Mục III. TIẾN TRÌNH DẠY HỌC (Các Hoạt động A, B, C, D, E):**
+     - Các thẻ Marker tích hợp: `***[NLS: {Miền/Mã} - {Tên phần mềm}]***` (hoặc `***[NLS]***`), `***[AI: {Mã} - Nội dung tích hợp]***` (hoặc `***[AI]***`) phải vừa in đậm, vừa in nghiêng.
+     - Khi xuất file Word (.docx): Marker NLS / AI nhận `bold: true` VÀ `italics: true` (kèm màu và shading nhận diện).
+     - Trên giao diện Web: Badge `.khbd-badge-nls` và `.khbd-badge-ai` hiển thị với `font-weight: 700; font-style: italic;`.
+  3. **Bộ Sinh Prompt & Chuẩn Hóa Tự Động (Gemini):**
+     - Prompt chỉ đạo AI sinh đúng cú pháp Markdown `***...***` cho các thẻ NLS / AI và mục tiêu NLS / AI.
+     - Parser Markdown sang Docx hỗ trợ đầy đủ cú pháp 3 sao `***...***` (chuyển thành `TextRun` có `bold: true` và `italics: true`).
+     - Bộ lọc/dọn dẹp tag (`stripDisabledActivityIntegrations`, `ensureObjectivesDigitalCodes`) tương thích trơn tru với định dạng 3 sao.
 
 ---
 
-## 2. Phạm vi & Tệp Cần Chỉnh sửa
+## 2. Danh sách Tệp Cần Chỉnh Sửa
 
-1. `index.html`: Bọc `studentLotrinhSection` và `studentActivitiesSection` vào container lưới 2 cột `studentSectionsWrap`, đồng thời cập nhật logic trong hàm `renderStudentPortal()` để tự động điều chỉnh layout linh hoạt.
-2. `tests/student-portal-layout-smoke.js`: Tạo mới smoke test tự động kiểm tra bố cục dàn ngang của Cổng Học Sinh.
-
----
-
-## 3. Chi tiết Yêu cầu Kỹ thuật cho Coder
-
-### A. Cấu trúc HTML trong `index.html`
-- Tại vùng hiển thị Cổng học sinh (`#studentPortalDeck`, khoảng dòng 1136–1158):
-  Bọc cả 2 khối `#studentLotrinhSection` và `#studentActivitiesSection` vào một container chung `#studentSectionsWrap`:
-  ```html
-  <!-- Container dàn ngang 2 cột khi có cả 2 khối nội dung -->
-  <div id="studentSectionsWrap" class="grid grid-cols-1 gap-8 mb-8">
-      <!-- Nhóm 1: Lộ trình bài học theo khối lớp -->
-      <div id="studentLotrinhSection" class="flex flex-col">
-          <div class="flex items-center justify-between mb-4">
-              <div>
-                  <p class="section-kicker text-teal-600">Lộ trình học tập</p>
-                  <h3 class="text-xl font-extrabold text-slate-900">Bài học &amp; Luyện tập theo SGK</h3>
-              </div>
-          </div>
-          <div id="studentLotrinhGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1"></div>
-      </div>
-
-      <!-- Nhóm 2: Hoạt động & Tiện ích được phân quyền -->
-      <div id="studentActivitiesSection" class="flex flex-col">
-          <div class="flex items-center justify-between mb-4">
-              <div>
-                  <p class="section-kicker text-indigo-600">Hoạt động lớp học</p>
-                  <h3 class="text-xl font-extrabold text-slate-900">Hoạt động &amp; Tiện ích được phân quyền</h3>
-              </div>
-          </div>
-          <div id="studentActivitiesGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1"></div>
-      </div>
-  </div>
-  ```
-
-### B. Logic Điều phối Layout trong JavaScript (`index.html`)
-- Trong hàm `renderStudentPortal(allowedPages, userName, userClassName)`:
-  Sau khi tính toán `allowedMath` và `allowedTools`:
-  ```javascript
-  const hasMath = allowedMath.length > 0;
-  const hasTools = studentToolsAllowed.length > 0;
-  const wrap = document.getElementById('studentSectionsWrap');
-
-  if (wrap) {
-      if (hasMath && hasTools) {
-          // Cả 2 khối cùng có nội dung -> Dàn ngang 2 cột đối xứng
-          wrap.className = 'grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8';
-          lotrinhSection.className = 'flex flex-col';
-          activitiesSection.className = 'flex flex-col';
-          lotrinhGrid.className = allowedMath.length > 1 ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1' : 'grid grid-cols-1 gap-4 flex-1';
-          activitiesGrid.className = studentToolsAllowed.length > 1 ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1' : 'grid grid-cols-1 gap-4 flex-1';
-      } else {
-          // Chỉ có 1 khối -> Tràn đều toàn màn hình dạng lưới 3 cột
-          wrap.className = 'grid grid-cols-1 gap-8 mb-8';
-          if (hasMath) {
-              lotrinhSection.className = 'w-full';
-              lotrinhGrid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
-          }
-          if (hasTools) {
-              activitiesSection.className = 'w-full';
-              activitiesGrid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
-          }
-      }
-  }
-  ```
-
-### C. Tạo Smoke Test Tự Động (`tests/student-portal-layout-smoke.js`)
-- Kiểm tra tính toàn vẹn của cấu trúc DOM:
-  1. Tồn tại container `#studentSectionsWrap`.
-  2. `#studentLotrinhSection` và `#studentActivitiesSection` nằm trong `#studentSectionsWrap`.
-  3. Khi có cả môn học và tiện ích, container kích hoạt layout `lg:grid-cols-2` dàn ngang 2 cột.
-  4. Thẻ bên trong mỗi khối co giãn cân đối và không để trống khoảng trắng bất thường.
+1. `js/khbd-docx.js`:
+   - Bổ sung `italics: true` cho NLS và AI trong `markerRunColor()`.
+   - Chuyển tiếp thuộc tính `italics` trong `pushMarkerWithMath()`.
+   - Mở rộng regex và bộ bóc tách inline Markdown trong `parseInlineTextToRuns()` để hỗ trợ khối 3 sao `***...***` và 3 gạch dưới `___...___`.
+2. `css/khbd-styles.css`:
+   - Bổ sung `font-style: italic;` cho `.khbd-badge-nls`, `.khbd-badge-ai` (hoặc `.khbd-badge`).
+   - Cập nhật `.preview-rendered .khbd-nls` và `.preview-rendered .khbd-ai` để đảm bảo văn bản tích hợp thể hiện rõ nét phong cách in đậm / in nghiêng.
+3. `js/khbd-prompts.js`:
+   - Nâng cấp marker mẫu trong hợp đồng đầu ra và các prompt pha A, B, C, D sang dạng `***[NLS: ...]***` và `***[AI: ...]***`.
+   - Cập nhật `digitalObjectivesSection` và `aiObjectivesSection` trong `getPromptTemplate()` sang định dạng `***[Mã]***: *[Mô tả]*`.
+   - Bổ sung quy tắc: "BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (dùng cú pháp Markdown ***...***)".
+4. `js/khbd-app.js`:
+   - Cập nhật hàm `insertObjectivesMissingStandards()` để xuất bullet lines NLS/AI dạng `- ***${code}:*** *${label}*`.
+   - Nâng cấp regex làm sạch và kiểm định trong `stripDisabledActivityIntegrations()`, `activityOutputProblem()` hỗ trợ cú pháp `***`.
+5. `tests/khbd-integrations-smoke.js` & `tests/khbd-dynamic-integrations-smoke.js`:
+   - Cập nhật các assertion kiểm tra `markerRunColor` cho NLS và AI khớp với `{ ..., bold: true, italics: true }`.
+6. `tests/khbd-nls-ai-bold-italic-smoke.js` (Tạo mới):
+   - Kiểm tra toàn diện quy trình in đậm & in nghiêng: parse markdown `***`, thuộc tính Docx TextRun, CSS badge, và prompt contract.
 
 ---
 
-## 4. Tiêu chí Nghiệm thu (Acceptance Criteria)
+## 3. Chi tiết Kỹ thuật Cần Triển khai
 
-1. **Giao diện Cổng Học Sinh trên máy tính (Desktop):**
-   - Khi tài khoản học sinh được phân quyền 1 môn học (`Toán 9`) và 1 tiện ích (`Bảng chia sẻ Padlet`):
-     + Khối `Lộ trình học tập` nằm ở cột bên trái.
-     + Khối `Hoạt động lớp học` nằm ở cột bên phải.
-     + Hai tiêu đề nằm ngang bằng nhau ở hàng trên; hai thẻ `Toán 9` và `Bảng chia sẻ Padlet` nằm ngang bằng nhau ở hàng dưới.
-     + Khoảng cách cân đối, không còn khoảng trống thừa 2/3 màn hình.
-2. **Khả năng thích ứng:**
-   - Trên màn hình nhỏ (điện thoại), hai khối tự động xếp chồng theo thứ tự Lộ trình -> Hoạt động.
-   - Nếu tài khoản chỉ có Lộ trình (không có Hoạt động) hoặc ngược lại, khối đó tự bung rộng 3 cột bình thường.
-3. **Kiểm thử:**
-   - `node tests/student-portal-layout-smoke.js`: PASS 100%.
-   - `node tests/teacher-permissions-smoke.js`: PASS 100%.
-   - `node tests/nav-chip-contrast-smoke.js`: PASS 100%.
+### A. Module Xuất Word: `js/khbd-docx.js`
+1. Tại `markerRunColor(text)`:
+   ```javascript
+   if (/^\[?NLS(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0369A1", shading: "E0F2FE", bold: true, italics: true };
+   if (/^\[?AI(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "6D28D9", shading: "F3E8FF", bold: true, italics: true };
+   ```
+2. Tại `pushMarkerWithMath(token, markerInfo, baseStyles)`:
+   ```javascript
+   runs.push(this.coloredTextRun(token, {
+     bold: markerInfo ? markerInfo.bold : baseStyles.bold,
+     italics: markerInfo ? (markerInfo.italics ?? baseStyles.italics) : baseStyles.italics,
+     color: markerInfo ? markerInfo.color : color,
+     shading: markerInfo ? markerInfo.shading : undefined
+   }));
+   ```
+3. Tại `parseInlineTextToRuns(text, color, styles)`:
+   Cập nhật `regex` inline để bắt `\*\*\*[\s\S]+?\*\*\*` trước `\*\*` và `\*`:
+   ```javascript
+   const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*\*[\s\S]+?\*\*\*|\*\*[\s\S]+?\*\*|(?<![\w\\])___(?!\s|_)[^_\n]+?(?<!\s)___(?!\w)|(?<![\w\\])__(?!\s|_)[^_\n]+?(?<!\s)__(?!\w)|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|(?<![\w\\])_(?!\s|_)[^_\n]+?(?<!\s)_(?![\w_])|`[^`]+?`|\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
+   ```
+   Xử lý token bắt đầu bằng `***` hoặc `___`:
+   ```javascript
+   } else if ((token.startsWith("***") && token.endsWith("***")) || (token.startsWith("___") && token.endsWith("___"))) {
+     const biText = token.substring(3, token.length - 3);
+     const markerInfo = this.markerRunColor(biText);
+     if (markerInfo) {
+       pushMarkerWithMath(biText, markerInfo, { ...styles, bold: true, italics: true });
+     } else {
+       runs.push(...this.parseInlineTextToRuns(biText, color, { ...styles, bold: true, italics: true }));
+     }
+   }
+   ```
+
+### B. CSS Giao diện Web: `css/khbd-styles.css`
+1. Bổ sung `font-style: italic;` cho các thẻ badge NLS và AI:
+   ```css
+   .khbd-badge-nls {
+     background-color: #e0f2fe;
+     color: #0369a1;
+     border: 1px solid #7dd3fc;
+     font-style: italic;
+   }
+
+   .khbd-badge-ai {
+     background-color: #f3e8ff;
+     color: #6d28d9;
+     border: 1px solid #c084fc;
+     font-style: italic;
+   }
+   ```
+2. Đảm bảo phần hiển thị xem trước của các heading và nội dung NLS/AI:
+   ```css
+   .preview-rendered .khbd-nls,
+   .preview-rendered .khbd-nls * {
+     color: #0369a1;
+   }
+   .preview-rendered .khbd-ai,
+   .preview-rendered .khbd-ai * {
+     color: #6d28d9;
+   }
+   ```
+
+### C. Prompts & Xử lý Logic: `js/khbd-prompts.js` & `js/khbd-app.js`
+1. Trong `js/khbd-prompts.js`:
+   - Thay toàn bộ các hướng dẫn marker `**[NLS: ...]**` thành `***[NLS: ...]***` và `**[AI: ...]**` thành `***[AI: ...]***`.
+   - Trong `getPromptTemplate()`:
+     ```javascript
+     const digitalObjectivesSection = context.digitalCompetencyEnabled
+       ? `### c) Năng lực số\n- ***[Mã NLS đã chọn, ví dụ 1.1.TC1a]:*** *[Mô tả nhiệm vụ số gắn với bài]*`
+       : '';
+     const aiObjectivesSection = context.aiCompetencyEnabled
+       ? `### d) Năng lực AI\n- ***[Mã AI đã chọn]:*** *[Mô tả nhiệm vụ AI gắn với bài]*`
+       : '';
+     ```
+2. Trong `js/khbd-app.js`:
+   - Tại `insertObjectivesMissingStandards()`:
+     ```javascript
+     bulletLines: digital.map(row => `- ***${row.item.officialCode}:*** *${row.item.officialLabel}*`)
+     ```
+     ```javascript
+     bulletLines: ai.map(row => `- ***${row.item.officialCode}:*** *${row.item.officialLabel}*`)
+     ```
+   - Tại `stripDisabledActivityIntegrations()`:
+     Cập nhật regex loại bỏ marker khi tắt để bắt cả `\*{1,3}`:
+     ```javascript
+     text = text.replace(/\*{1,3}\[?NLS(?::[^\]\n]+)?\]?\*{1,3}/gi, "")
+                .replace(/\[NLS(?::[^\]\n]+)?\]/gi, "");
+     ```
+     (Tương tự với AI).
+
+---
+
+## 4. Kiểm thử & Tiêu chí Nghiệm thu (Verification Plan)
+
+1. **Smoke Tests Tự Động:**
+   - Chạy `node tests/khbd-integrations-smoke.js`: PASS.
+   - Chạy `node tests/khbd-dynamic-integrations-smoke.js`: PASS.
+   - Chạy `node tests/khbd-docx-format-smoke.js`: PASS.
+   - Tạo và chạy `node tests/khbd-nls-ai-bold-italic-smoke.js`: PASS 100%.
+2. **Kiểm tra File Word (.docx):**
+   - Khi gọi `generator.parseInlineTextToRuns("***[NLS: 1.1.TC1a - GeoGebra]***")`:
+     Run sinh ra phải có `w:b` (bold = true) VÀ `w:i` (italics = true), mã màu `0369A1`, shading `E0F2FE`.
+   - Khi gọi `generator.parseInlineTextToRuns("***[AI: 8.A1.1 - Kiểm chứng phản hồi AI]***")`:
+     Run sinh ra phải có `w:b` (bold = true) VÀ `w:i` (italics = true), mã màu `6D28D9`, shading `F3E8FF`.
+3. **Kiểm tra Giao diện Web:**
+   - Badge NLS và AI trên giao diện preview có cả `font-weight: 700` và `font-style: italic`.
+   - Mục I.2.c và I.2.d hiển thị đúng quy cách in đậm & in nghiêng theo yêu cầu chuyên môn.

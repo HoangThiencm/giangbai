@@ -470,8 +470,8 @@ class DocxGenerator {
 
   markerRunColor(text) {
     const t = String(text || "").trim();
-    if (/^\[?NLS(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0369A1", shading: "E0F2FE", bold: true };
-    if (/^\[?AI(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "6D28D9", shading: "F3E8FF", bold: true };
+    if (/^\[?NLS(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0369A1", shading: "E0F2FE", bold: true, italics: true };
+    if (/^\[?AI(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "6D28D9", shading: "F3E8FF", bold: true, italics: true };
     if (/^\[?GDQPAN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B91C1C", shading: "FEE2E2", bold: true };
     if (/^\[?HCM(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B45309", shading: "FEF3C7", bold: true };
     if (/^\[?QCN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "047857", shading: "D1FAE5", bold: true };
@@ -491,8 +491,8 @@ class DocxGenerator {
 
   lineIntegrationColor(text, inherited) {
     const raw = String(text || "");
-    const nls = /\*\*\[?NLS(?::[^\]\n]+)?\]?\*\*|\[NLS(?::[^\]\n]+)?\]|\bNLS\b/.test(raw);
-    const aiMarker = /\*\*\[?AI(?::[^\]\n]+)?\]?\*\*|\[AI(?::[^\]\n]+)?\]/.test(raw);
+    const nls = /\*{1,3}\[?NLS(?::[^\]\n]+)?\]?\*{1,3}|\[NLS(?::[^\]\n]+)?\]|\bNLS\b/.test(raw);
+    const aiMarker = /\*{1,3}\[?AI(?::[^\]\n]+)?\]?\*{1,3}|\[AI(?::[^\]\n]+)?\]/.test(raw);
     const aiCode = /\d+\.[A-Z]\d+\.\d+/.test(raw) && (/\bAI\b|năng lực\s*AI/i.test(raw) || inherited === "6D28D9");
     const ai = aiMarker || aiCode;
     if (nls && !ai) return "0369A1";
@@ -531,7 +531,7 @@ class DocxGenerator {
 
     const runs = [];
     // Công thức đứng trước định dạng Markdown để x_1, a_{ij} trong $...$ không bị hiểu là italic.
-    const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*[\s\S]+?\*\*|(?<![\w\\])__(?!\s|_)[^_\n]+?(?<!\s)__(?!\w)|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|(?<![\w\\])_(?!\s|_)[^_\n]+?(?<!\s)_(?![\w_])|`[^`]+?`|\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
+    const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*\*[\s\S]+?\*\*\*|\*\*[\s\S]+?\*\*|(?<![\w\\])___(?!\s|_)[^_\n]+?(?<!\s)___(?!\w)|(?<![\w\\])__(?!\s|_)[^_\n]+?(?<!\s)__(?!\w)|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|(?<![\w\\])_(?!\s|_)[^_\n]+?(?<!\s)_(?![\w_])|`[^`]+?`|\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
     let lastIndex = 0;
     let match;
 
@@ -560,6 +560,7 @@ class DocxGenerator {
       if (!mathSplitRegex.test(token)) {
         runs.push(this.coloredTextRun(token, {
           bold: markerInfo ? markerInfo.bold : baseStyles.bold,
+          italics: markerInfo ? (markerInfo.italics ?? baseStyles.italics) : baseStyles.italics,
           color: markerInfo ? markerInfo.color : color,
           shading: markerInfo ? markerInfo.shading : undefined
         }));
@@ -574,6 +575,7 @@ class DocxGenerator {
         } else {
           runs.push(this.coloredTextRun(part, {
             bold: markerInfo ? markerInfo.bold : baseStyles.bold,
+            italics: markerInfo ? (markerInfo.italics ?? baseStyles.italics) : baseStyles.italics,
             color: markerInfo ? markerInfo.color : color,
             shading: markerInfo ? markerInfo.shading : undefined
           }));
@@ -593,11 +595,19 @@ class DocxGenerator {
         pushMath(token, true);
       } else if ((token.startsWith("$") && token.endsWith("$")) || (token.startsWith("\\(") && token.endsWith("\\)"))) {
         pushMath(token, false);
+      } else if ((token.startsWith("***") && token.endsWith("***")) || (token.startsWith("___") && token.endsWith("___"))) {
+        const biText = token.substring(3, token.length - 3);
+        const markerInfo = this.markerRunColor(biText);
+        if (markerInfo) {
+          pushMarkerWithMath(biText, markerInfo, { ...styles, bold: true, italics: true });
+        } else {
+          runs.push(...this.parseInlineTextToRuns(biText, color, { ...styles, bold: true, italics: true }));
+        }
       } else if ((token.startsWith("**") && token.endsWith("**")) || (token.startsWith("__") && token.endsWith("__"))) {
         const boldText = token.substring(2, token.length - 2);
         const markerInfo = this.markerRunColor(boldText);
         if (markerInfo) {
-          pushMarkerWithMath(boldText, markerInfo, { ...styles, bold: markerInfo.bold });
+          pushMarkerWithMath(boldText, markerInfo, { ...styles, bold: markerInfo.bold, italics: markerInfo.italics ?? true });
         } else {
           runs.push(...this.parseInlineTextToRuns(boldText, color, { ...styles, bold: true }));
         }
@@ -728,7 +738,7 @@ class DocxGenerator {
         elements.push(new Paragraph({
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
           children: [
-            this.coloredTextRun(headingText, { size: this.fontSizeH3, bold: true, color: runColor })
+            this.coloredTextRun(headingText, { size: this.fontSizeH3, bold: true, italics: Boolean(runColor), color: runColor })
           ]
         }));
         i++;

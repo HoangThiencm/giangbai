@@ -248,9 +248,10 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
     * NGUYÊN TẮC CỐT LÕI: NLS, AI và Tích hợp môn học CHỈ LÀ CÔNG CỤ THỰC HÀNH MÔN HỌC, lồng ghép tự nhiên vào bài học SGK. CHỈ tích hợp tại 1 đến 2 vị trí then chốt, đắc địa nhất trong toàn bộ bài dạy (ở Hoạt động B hoặc C hoặc D), TUYỆT ĐỐI KHÔNG rải bừa bãi.
     * ĐIỀU KHOẢN CẤM NGHIÊM NGẶT: TUYỆT ĐỐI CẤM giáo viên hỏi miệng chung chung về định nghĩa hay lý thuyết AI (ví dụ cấm hỏi: "Em hãy kể tên công cụ AI?", "Khi AI đưa thông tin ta làm gì để kiểm chứng?", "Em có đề xuất gì về kết hợp AI?"). TUYỆT ĐỐI CẤM rải tag dồn dập nhiều mã [AI: ...] sau mỗi câu hỏi của giáo viên.
     * BẮT BUỘC CHỌN ĐÚNG 1 TRONG 3 DẠNG KỊCH BẢN NLS/AI THỰC CHIẾN (khi bật NLS/AI):
-      - Dạng 1 (Kiểm chứng & Phản biện lỗi sai của AI): GV trình chiếu câu trả lời / lời giải do AI sinh ra có chứa lỗi sai / ngộ nhận kiến thức môn học cụ thể. GV yêu cầu HS dùng kiến thức SGK/bài học để đối chiếu, phát hiện lỗi sai và giải thích -> HS thảo luận, phản biện, sửa lại cho đúng. Marker: **[AI: {Mã} - Kiểm chứng phản hồi AI]** (hoặc **[AI]**).
-      - Dạng 2 (Prompting tư duy môn học): GV hướng dẫn HS sử dụng câu lệnh Prompt cụ thể trong ngoặc kép "..." để AI gợi mở các bước giải mà không giải hộ -> HS thực hành prompt và tự giải bài tập. Marker: **[AI: {Mã} - Prompting gợi mở & Tự giải]** (hoặc **[AI]**).
-      - Dạng 3 (Phần mềm chuyên dụng NLS): HS trực tiếp thao tác trên thiết bị với phần mềm chuyên ngành (GeoGebra, Desmos, bảng tính Excel, máy tính cầm tay, phần mềm mô phỏng PhET...) để vẽ hình, dựng đồ thị, xử lý số liệu hoặc kiểm chứng kết quả bài học. Marker: **[NLS: {Miền/Mã} - {Tên phần mềm}]** (hoặc **[NLS]**).
+      - Dạng 1 (Kiểm chứng & Phản biện lỗi sai của AI): GV trình chiếu câu trả lời / lời giải do AI sinh ra có chứa lỗi sai / ngộ nhận kiến thức môn học cụ thể. GV yêu cầu HS dùng kiến thức SGK/bài học để đối chiếu, phát hiện lỗi sai và giải thích -> HS thảo luận, phản biện, sửa lại cho đúng. Marker: ***[AI: {Mã} - Kiểm chứng phản hồi AI]*** (hoặc ***[AI]***).
+      - Dạng 2 (Prompting tư duy môn học): GV hướng dẫn HS sử dụng câu lệnh Prompt cụ thể trong ngoặc kép "..." để AI gợi mở các bước giải mà không giải hộ -> HS thực hành prompt và tự giải bài tập. Marker: ***[AI: {Mã} - Prompting gợi mở & Tự giải]*** (hoặc ***[AI]***).
+      - Dạng 3 (Phần mềm chuyên dụng NLS): HS trực tiếp thao tác trên thiết bị với phần mềm chuyên ngành (GeoGebra, Desmos, bảng tính Excel, máy tính cầm tay, phần mềm mô phỏng PhET...) để vẽ hình, dựng đồ thị, xử lý số liệu hoặc kiểm chứng kết quả bài học. Marker: ***[NLS: {Miền/Mã} - {Tên phần mềm}]*** (hoặc ***[NLS]***).
+    * BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (dùng cú pháp Markdown ***...***).
     * KỊCH BẢN TÍCH HỢP THEO MÔN HỌC (CHỈ mục GV đã tick, lồng đúng 1 lần tại B/C/D):
       - Giáo dục Quốc phòng & An ninh (TT 08/2024/TT-BGDĐT): Lồng ghép truyền thống yêu nước, tự hào dân tộc, chủ quyền biển đảo Tổ quốc; gắn marker **[GDQPAN]** hoặc **[GDQPAN: ...]**.
       - Tư tưởng, đạo đức, phong cách Hồ Chí Minh (Chỉ thị 05-CT/TW): Gắn tấm gương Bác Hồ, tinh thần tự học, tiết kiệm, yêu thương con người qua bài học cụ thể; gắn marker **[HCM]** hoặc **[HCM: ...]**.
@@ -284,6 +285,7 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - Kế hoạch bài dạy hoàn chỉnh đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trực diện vào bản chất kiến thức và hành động cốt lõi của GV/HS; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không dùng câu thoại diễn giải lòng vòng, không lặp lại nội dung giữa các mục.
 - Kế hoạch bài dạy phải là một KỊCH BẢN LỚP HỌC THỰC CHIẾN: Giáo viên có câu thoại dẫn dắt trực tiếp trong ngoặc kép "...", hành động sư phạm rõ ràng; Học sinh có thao tác cụ thể, sản phẩm rõ nét; chỉ ra lỗi sai điển hình và cách xử lý sư phạm.
 - Năng lực Số (NLS) và Trí tuệ Nhân tạo (AI) là công cụ thực hành của môn học; TUYỆT ĐỐI KHÔNG dạy lý thuyết Tin học/AI hay hỏi lý thuyết AI suông trong môn chuyên ngành. Tích hợp thực chiến đúng 1–2 điểm then chốt (kiểm chứng lỗi sai AI / prompting gợi mở / thao tác phần mềm chuyên ngành).
+- BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (dùng cú pháp Markdown ***...***).
 - Thiết kế mục tiêu tinh gọn cho bài dạy 1–2 tiết: chọn 1–2 năng lực chung cốt lõi phù hợp đặc thù môn học, 2–3 năng lực đặc thù nổi trội, 1–2 phẩm chất gắn liền nội dung bài.
 - Sử dụng tiếng Việt chuẩn mực, sư phạm, trang trọng.
 - Định dạng Markdown chuẩn, phân cấp tiêu đề #, ##, ###, #### mạch lạc.
@@ -298,6 +300,7 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - TUYỆT ĐỐI CẤM để lại dấu ba chấm "..." hoặc ngoặc vuông "[...]" chưa điền. Mọi đề bài, câu hỏi, công thức, ví dụ mẫu và lời giải PHẢI ĐƯỢC VIẾT ĐẦY ĐỦ CHI TIẾT.
 - Danh sách nội dung có đúng 3 cấp: ý lớn bắt đầu bằng "- ", ý con "+ ", ý chi tiết ". ". Không dùng "1.", "2." làm danh sách nội dung trừ khi là số thứ tự bài tập hoặc bước CV 5512.
 - CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu. Màu sắc và font chữ do ứng dụng xử lý.
+- BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (dùng cú pháp Markdown ***...***). Marker chuẩn: ***[NLS: ...]***, ***[AI: ...]***.
 - ĐỘ DÀI & VĂN PHONG CHUẨN: Toàn bộ Kế hoạch bài dạy đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trọng tâm; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không lặp lại câu hỏi dài dòng.
 - KHÓA TỔNG THỜI LƯỢNG: Tổng A + B + C + D BẮT BUỘC KHỚP 100% với thời lượng tiết dạy {duration}; ví dụ 01 tiết = 45 phút, 02 tiết = đúng 90 phút, 03 tiết = 135 phút. Hoạt động B BẮT BUỘC đúng {time_budget_B}. Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút).
 ${LATEX_SPACING_BAN}`,
@@ -658,7 +661,7 @@ ${LATEX_SPACING_BAN}
       + Nêu rõ tên Kỹ thuật dạy học (Think-Pair-Share, Khăn trải bàn, Mảnh ghép, Trạm học tập...).
       + **GV:** Nói câu lệnh trong ngoặc kép "...", hành động cụ thể, **DỰ KIẾN LỖI SAI / NGỘ NHẬN ĐIỂN HÌNH CỦA HỌC SINH ĐỐI VỚI TIỂU MỤC NÀY** và can thiệp hỗ trợ phân hóa.
       + **HS:** Làm việc cá nhân X phút -> Thảo luận nhóm Y phút tạo sản phẩm trung gian trên bảng phụ/phiếu -> Báo cáo và phản biện trước lớp.
-      + Khi có NLS/AI: Tích hợp thực chiến theo đúng 1 trong 3 dạng (Dạng 1: Kiểm chứng phản hồi AI có lỗi ngộ nhận; Dạng 2: Prompting gợi mở bước giải trong "..."; Dạng 3: Thao tác phần mềm chuyên ngành GeoGebra/bảng tính/mô phỏng). CẤM hỏi lý thuyết AI suông, CẤM rải tag bừa bãi. Gắn marker chuẩn **[AI: {Mã} - Kiểm chứng phản hồi AI]**, **[AI: {Mã} - Prompting gợi mở & Tự giải]**, **[NLS: {Miền/Mã} - {Tên phần mềm}]** (hoặc **[NLS]**, **[AI]**).
+      + Khi có NLS/AI: Tích hợp thực chiến theo đúng 1 trong 3 dạng (Dạng 1: Kiểm chứng phản hồi AI có lỗi ngộ nhận; Dạng 2: Prompting gợi mở bước giải trong "..."; Dạng 3: Thao tác phần mềm chuyên ngành GeoGebra/bảng tính/mô phỏng). CẤM hỏi lý thuyết AI suông, CẤM rải tag bừa bãi. Gắn marker chuẩn ***[AI: {Mã} - Kiểm chứng phản hồi AI]***, ***[AI: {Mã} - Prompting gợi mở & Tự giải]***, ***[NLS: {Miền/Mã} - {Tên phần mềm}]*** (hoặc ***[NLS]***, ***[AI]***).
     * CỘT PHẢI: NỘI DUNG GHI BẢNG CHỐT KIẾN THỨC CHO HS CHÉP VỞ (Định nghĩa, quy tắc, công thức LaTeX, chú ý, ví dụ mẫu kèm đề bài và lời giải chi tiết từng bước). CẤM viết hành động của GV/HS ở cột phải.
 
 ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B})
@@ -703,7 +706,7 @@ ${LATEX_SPACING_BAN}
   + Áp dụng Kỹ thuật dạy học (ví dụ: Bài tập phân hóa 3 mức, Đánh giá đồng đẳng, Sửa lỗi theo cặp...).
   + **GV:** Nói câu giao việc trong ngoặc kép "...", hướng dẫn HS làm 1–2 bài tập trọng tâm, di chuyển quan sát phát hiện lỗi sai tính toán/lập luận điển hình, trực tiếp hướng dẫn phân hóa.
   + **HS:** Giải bài cá nhân vào vở -> Đổi vở kiểm tra chéo hoặc thảo luận cặp -> Lên bảng trình bày, lớp phản biện.
-  + Khi có NLS/AI: Tích hợp thực chiến theo 3 dạng (phần mềm chuyên ngành/máy tính kiểm chứng kết quả; hoặc GV chiếu lời giải AI có lỗi sai ngộ nhận để HS phát hiện phản biện; hoặc HS dùng prompt gợi mở bước giải). CẤM hỏi lý thuyết AI suông. Dùng marker **[NLS: ...]** hoặc **[AI: ...]**.
+  + Khi có NLS/AI: Tích hợp thực chiến theo 3 dạng (phần mềm chuyên ngành/máy tính kiểm chứng kết quả; hoặc GV chiếu lời giải AI có lỗi sai ngộ nhận để HS phát hiện phản biện; hoặc HS dùng prompt gợi mở bước giải). CẤM hỏi lý thuyết AI suông. Dùng marker ***[NLS: ...]*** hoặc ***[AI: ...]***.
 - Cột PHẢI mục d): Chép rõ Đề bài và Lời giải chi tiết từng bước của 1–2 bài tập trọng tâm được chọn trong SGK (không để dấu "...").
 
 ## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C})
@@ -755,7 +758,7 @@ ${LATEX_SPACING_BAN}
     2. Làm bài tập: Hoàn thành các bài tập còn lại trong SGK và Sách bài tập (SBT) (nêu rõ số bài, kèm gợi ý).
     3. Chuẩn bị bài mới: Đọc trước bài tiếp theo trong SGK và chuẩn bị học liệu.
     4. Vận dụng, tìm tòi mở rộng: Tìm hiểu ứng dụng thực tế hoặc dùng công cụ số/AI (khi GV đã bật NLS/AI).
-  + Khi có NLS/AI: Vận dụng phần mềm chuyên ngành (GeoGebra, Excel, PhET...) hoặc công cụ AI mô hình hóa, giải quyết bài toán thực tế và kiểm chứng tính khả thi. CẤM hỏi lý thuyết AI suông. Dùng marker **[NLS: ...]** hoặc **[AI: ...]**.
+  + Khi có NLS/AI: Vận dụng phần mềm chuyên ngành (GeoGebra, Excel, PhET...) hoặc công cụ AI mô hình hóa, giải quyết bài toán thực tế và kiểm chứng tính khả thi. CẤM hỏi lý thuyết AI suông. Dùng marker ***[NLS: ...]*** hoặc ***[AI: ...]***.
 - Cột PHẢI mục d): Đề bài vận dụng thực tế + Lời giải chi tiết + Khung nhiệm vụ tự học cho học sinh ghi vở.
 - CẤM viết mục E / Hướng dẫn về nhà thành khối riêng; nhiệm vụ tự học được giao ngay trong Bước 4 của Hoạt động D.
 
@@ -926,7 +929,7 @@ PHA A — MỞ ĐẦU:
 - Tiêu đề: \`## A. HOẠT ĐỘNG 1: MỞ ĐẦU ({time_budget_A})\`.
 - Đủ a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất).
 - Bám sát tình huống mở đầu trong SGK; không bịa tình huống ngoài nguồn.
-- Khi có NLS/AI: Tích hợp công cụ số hoặc câu hỏi/prompt AI mở đầu ngắn gọn (marker **[NLS: ...]** hoặc **[AI: ...]**). CẤM hỏi lý thuyết AI suông.
+- Khi có NLS/AI: Tích hợp công cụ số hoặc câu hỏi/prompt AI mở đầu ngắn gọn (marker ***[NLS: ...]*** hoặc ***[AI: ...]***). CẤM hỏi lý thuyết AI suông.
 
 PHA B — HÌNH THÀNH KIẾN THỨC:
 - Tiêu đề: \`## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B})\`. Tổng các nhánh 2.1, 2.2, ... BẮT BUỘC đúng bằng {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM 45 phút + 30 phút = 75 phút).
@@ -934,7 +937,7 @@ PHA B — HÌNH THÀNH KIẾN THỨC:
 - TUYỆT ĐỐI LOẠI BỎ việc tách câu hỏi nhỏ/bài tập con thành hoạt động riêng. Toàn bộ ví dụ, khám phá, thực hành con phải nằm trọn vẹn bên trong hoạt động của mục lớn tương ứng.
 - Mỗi hoạt động con đủ #### a) b) c) d) + đúng 1 bảng 2 cột duy nhất.
 - Cột Trái: Kịch bản phân vai GV (lời thoại trong "...", chỉ rõ lỗi sai điển hình) và HS (cá nhân -> nhóm -> báo cáo).
-- Khi có NLS/AI: Tích hợp thực chiến theo 3 dạng (Kiểm chứng phản hồi AI có lỗi sai / Prompting gợi mở bước giải / Thao tác phần mềm GeoGebra/bảng tính/mô phỏng). CẤM hỏi lý thuyết AI suông, CẤM rải tag bừa bãi. Gắn marker **[AI: {Mã} - Kiểm chứng phản hồi AI]**, **[AI: {Mã} - Prompting gợi mở & Tự giải]**, **[NLS: {Miền/Mã} - {Tên phần mềm}]** (hoặc **[NLS: ...]**, **[AI: ...]**).
+- Khi có NLS/AI: Tích hợp thực chiến theo 3 dạng (Kiểm chứng phản hồi AI có lỗi sai / Prompting gợi mở bước giải / Thao tác phần mềm GeoGebra/bảng tính/mô phỏng). CẤM hỏi lý thuyết AI suông, CẤM rải tag bừa bãi. Gắn marker ***[AI: {Mã} - Kiểm chứng phản hồi AI]***, ***[AI: {Mã} - Prompting gợi mở & Tự giải]***, ***[NLS: {Miền/Mã} - {Tên phần mềm}]*** (hoặc ***[NLS: ...]***, ***[AI: ...]***).
 - Cột Phải: Nội dung ghi bảng chốt kiến thức, công thức LaTeX, ví dụ mẫu kèm đề và lời giải chi tiết. TUYỆT ĐỐI CẤM để dấu "...".
 
 PHA C — LUYỆN TẬP:
@@ -1006,7 +1009,7 @@ PHA A — MỞ ĐẦU:
 - Tiêu đề: \`## A. HOẠT ĐỘNG 1: MỞ ĐẦU ({time_budget_A})\`.
 - Đủ a) Mục tiêu, b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (1 bảng 2 cột duy nhất).
 - Bám sát tình huống mở đầu trong SGK; không bịa tình huống ngoài nguồn.
-- Khi có NLS/AI: Tích hợp công cụ số hoặc câu hỏi/prompt AI mở đầu ngắn gọn (marker **[NLS: ...]** hoặc **[AI: ...]**). CẤM hỏi lý thuyết AI suông.
+- Khi có NLS/AI: Tích hợp công cụ số hoặc câu hỏi/prompt AI mở đầu ngắn gọn (marker ***[NLS: ...]*** hoặc ***[AI: ...]***). CẤM hỏi lý thuyết AI suông.
 
 PHA B — HÌNH THÀNH KIẾN THỨC:
 - Tiêu đề: \`## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B})\`. Tổng các nhánh 2.1, 2.2, ... BẮT BUỘC đúng bằng {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM 45 phút + 30 phút = 75 phút).
@@ -1014,7 +1017,7 @@ PHA B — HÌNH THÀNH KIẾN THỨC:
 - TUYỆT ĐỐI LOẠI BỎ việc tách câu hỏi nhỏ/bài tập con thành hoạt động riêng. Toàn bộ ví dụ, khám phá, thực hành con phải nằm trọn vẹn bên trong hoạt động của mục lớn tương ứng.
 - Mỗi hoạt động con đủ #### a) b) c) d) + đúng 1 bảng 2 cột duy nhất.
 - Cột Trái: Kịch bản phân vai GV (lời thoại trong "...", chỉ rõ lỗi sai điển hình) và HS (cá nhân -> nhóm -> báo cáo).
-- Khi có NLS/AI: Tích hợp thực chiến theo 3 dạng (Kiểm chứng phản hồi AI có lỗi sai / Prompting gợi mở bước giải / Thao tác phần mềm GeoGebra/bảng tính/mô phỏng). CẤM hỏi lý thuyết AI suông, CẤM rải tag bừa bãi. Gắn marker **[AI: {Mã} - Kiểm chứng phản hồi AI]**, **[AI: {Mã} - Prompting gợi mở & Tự giải]**, **[NLS: {Miền/Mã} - {Tên phần mềm}]** (hoặc **[NLS: ...]**, **[AI: ...]**).
+- Khi có NLS/AI: Tích hợp thực chiến theo 3 dạng (Kiểm chứng phản hồi AI có lỗi sai / Prompting gợi mở bước giải / Thao tác phần mềm GeoGebra/bảng tính/mô phỏng). CẤM hỏi lý thuyết AI suông, CẤM rải tag bừa bãi. Gắn marker ***[AI: {Mã} - Kiểm chứng phản hồi AI]***, ***[AI: {Mã} - Prompting gợi mở & Tự giải]***, ***[NLS: {Miền/Mã} - {Tên phần mềm}]*** (hoặc ***[NLS: ...]***, ***[AI: ...]***).
 - Cột Phải: Nội dung ghi bảng chốt kiến thức, công thức LaTeX, ví dụ mẫu kèm đề và lời giải chi tiết. TUYỆT ĐỐI CẤM để dấu "...".
 
 PHA C — LUYỆN TẬP:
@@ -1362,10 +1365,10 @@ function getPromptTemplate(templateKey, context) {
   // Insert competencies
   const competencies = context.competencies ? context.competencies.join('; ') : '';
   const digitalObjectivesSection = context.digitalCompetencyEnabled
-    ? `### c) Năng lực số\n- [Mã NLS đã chọn, ví dụ 1.1.TC1a]: [Mô tả nhiệm vụ số gắn với bài]`
+    ? `### c) Năng lực số\n- ***[Mã NLS đã chọn, ví dụ 1.1.TC1a]:*** *[Mô tả nhiệm vụ số gắn với bài]*`
     : '';
   const aiObjectivesSection = context.aiCompetencyEnabled
-    ? `### d) Năng lực AI\n- [Mã AI đã chọn]: [Mô tả nhiệm vụ AI gắn với bài]`
+    ? `### d) Năng lực AI\n- ***[Mã AI đã chọn]:*** *[Mô tả nhiệm vụ AI gắn với bài]*`
     : '';
   
   const rawTextbook = context.textbook_content || '';

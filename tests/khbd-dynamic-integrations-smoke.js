@@ -262,8 +262,8 @@ assert.deepStrictEqual(gen.markerRunColor('[GDTC: Quản lý tài chính]'), { c
 assert.deepStrictEqual(gen.markerRunColor('[STEM: Mô hình hóa]'), { color: '0E7490', shading: 'CFFAFE', bold: true });
 assert.deepStrictEqual(gen.markerRunColor('[TN-AO: PhET Simulation]'), { color: '0284C7', shading: 'E0F2FE', bold: true });
 assert.deepStrictEqual(gen.markerRunColor('[MT-NLX: Năng lượng xanh]'), { color: '4D7C0F', shading: 'ECFCCB', bold: true });
-assert.deepStrictEqual(gen.markerRunColor('[NLS: 1.1]'), { color: '0369A1', shading: 'E0F2FE', bold: true });
-assert.deepStrictEqual(gen.markerRunColor('[AI: 2.1]'), { color: '6D28D9', shading: 'F3E8FF', bold: true });
+assert.deepStrictEqual(gen.markerRunColor('[NLS: 1.1]'), { color: '0369A1', shading: 'E0F2FE', bold: true, italics: true });
+assert.deepStrictEqual(gen.markerRunColor('[AI: 2.1]'), { color: '6D28D9', shading: 'F3E8FF', bold: true, italics: true });
 assert.strictEqual(gen.markerRunColor('[RandomText]'), null);
 
 console.log('✓ DOCX Generator gán đúng màu chữ, shading và in đậm cho mọi marker.');
