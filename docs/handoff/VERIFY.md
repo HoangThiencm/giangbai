@@ -52,3 +52,13 @@ PASS
 
 ## Bug
 Không có.
+
+---
+
+## Bổ sung nghiệm thu: Loại bỏ khối Thông tin bài dạy rườm rà (giaoantichhop.html)
+- [x] Khối "Thông tin bài dạy" (Môn học, Khối lớp, Tên bài dạy, Thời lượng) đã được gỡ bỏ hoàn toàn khỏi giao diện chính.
+- [x] Cột trái liền mạch trực tiếp từ "Nạp giáo án gốc" xuống "Ghi chú PPCT & nhận diện tích hợp".
+- [x] Bộ chọn Khối lớp tinh gọn được đưa vào trong `<details>` (Chọn thêm chuẩn chính thức nếu PPCT chưa đủ).
+- [x] Tự động trích xuất Tên bài từ tên file nạp và tự động nhận diện Khối lớp từ nội dung giáo án / PPCT / mã AI.
+- [x] Các trường ẩn và hàm JavaScript (`loadSample`, `clearAll`, `suggestStandards`, `exportWord`) hoạt động trơn tru 100%.
+- [x] Headless Edge DOM dump hoàn tất, mã thoát 0, không có lỗi JavaScript. Kết luận: PASS.

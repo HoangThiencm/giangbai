@@ -3,7 +3,7 @@ require_once __DIR__ . '/helpers.php';
 
 function sodiem_teacher(PDO $pdo): array {
     if (empty($_SESSION['user_id'])) respond(['error' => 'Cần đăng nhập tài khoản giáo viên.'], 401);
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ? AND role = 'teacher' AND is_active = 1 LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ? AND role IN ('teacher', 'admin') AND is_active = 1 LIMIT 1");
     $stmt->execute([(int)$_SESSION['user_id']]);
     $teacher = $stmt->fetch();
     if (!$teacher) respond(['error' => 'Cần đăng nhập tài khoản giáo viên.'], 401);
@@ -26,15 +26,24 @@ function ensure_gradebook_schema(PDO $pdo): void {
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 }
 
-$teacher = sodiem_teacher($pdo);
-ensure_gradebook_schema($pdo);
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $action = trim((string)($_GET['action'] ?? ''));
+ensure_gradebook_schema($pdo);
 
 if ($method === 'GET' && $action === 'classes') {
-    $rows = $pdo->query("SELECT class_name, COUNT(*) AS count FROM users WHERE role = 'student' AND is_active = 1 AND TRIM(class_name) <> '' GROUP BY class_name ORDER BY class_name")->fetchAll();
-    respond(['classes' => array_map(fn($row) => ['class_name' => $row['class_name'], 'count' => (int)$row['count']], $rows)]);
+    $rows = $pdo->query("SELECT class_name, COUNT(*) AS count FROM users WHERE role = 'student' AND is_active = 1 AND TRIM(class_name) <> '' GROUP BY class_name UNION SELECT class_name, 0 AS count FROM gradebooks WHERE TRIM(class_name) <> '' GROUP BY class_name ORDER BY class_name")->fetchAll();
+    $details = [];
+    foreach ($rows as $row) {
+        $className = trim((string)$row['class_name']);
+        if ($className === '') continue;
+        $details[$className] = max((int)($details[$className] ?? 0), (int)$row['count']);
+    }
+    $classes = array_keys($details);
+    sort($classes, SORT_NATURAL | SORT_FLAG_CASE);
+    respond(['classes' => $classes, 'details' => array_map(fn($className) => ['class_name' => $className, 'count' => $details[$className]], $classes)]);
 }
+
+$teacher = sodiem_teacher($pdo);
 
 if ($method === 'GET' && $action === 'load') {
     $class = trim((string)($_GET['class_name'] ?? ''));
@@ -44,7 +53,9 @@ if ($method === 'GET' && $action === 'load') {
     $stmt = $pdo->prepare('SELECT columns_config_json, students_data_json, history_log_json, updated_at FROM gradebooks WHERE teacher_id = ? AND class_name = ? AND subject = ? AND academic_year = ? LIMIT 1');
     $stmt->execute([(int)$teacher['id'], $class, $subject, $year]);
     $book = $stmt->fetch();
-    respond(['gradebook' => $book ?: null]);
+    $rosterStmt = $pdo->prepare("SELECT id, username, full_name, class_name FROM users WHERE role = 'student' AND is_active = 1 AND class_name = ? ORDER BY full_name, username");
+    $rosterStmt->execute([$class]);
+    respond(['gradebook' => $book ?: null, 'roster' => $rosterStmt->fetchAll()]);
 }
 
 if ($method === 'POST' && $action === 'save') {
