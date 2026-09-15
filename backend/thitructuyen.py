@@ -587,8 +587,25 @@ async def submit_exam(data: Submission):
     meta = variants[0].get("meta", {}) if variants and isinstance(variants[0], dict) else {}
     exam_format = meta.get("exam_format", "standard_mc")
 
+    mc_count = 0
+    tf_count = 0
+    short_count = 0
+    for q in questions:
+        t = q.get("type")
+        if not t:
+            if "correct_answers" in q: t = "tf"
+            elif "correct_answer" in q and "options" not in q: t = "short_answer"
+            else: t = "mc"
+        if t == "tf": tf_count += 1
+        elif t == "short_answer": short_count += 1
+        else: mc_count += 1
+
+    is_cv7991 = (exam_format == "cv7991" or (tf_count > 0 or short_count > 0))
+    mc_weight = (6.0 / mc_count) if (is_cv7991 and mc_count > 0) else 1.0
+    short_weight = (2.0 / short_count) if (is_cv7991 and short_count > 0) else 1.0
+    tf_scale = (2.0 / (tf_count * 1.0)) if (is_cv7991 and tf_count > 0 and tf_count != 2) else 1.0
+
     earned_score = 0.0
-    max_possible_score = 0.0
     correct_count = 0
     wrong = []
 
@@ -605,7 +622,6 @@ async def submit_exam(data: Submission):
         user_ans = data.answers.get(str(i))
 
         if q_type == "tf":
-            max_possible_score += 1.0
             correct_answers = q.get("correct_answers", [])
             options = q.get("options", [])
             user_tf = user_ans if isinstance(user_ans, (dict, list)) else {}
@@ -634,12 +650,13 @@ async def submit_exam(data: Submission):
                 if u_bool is not None and u_bool == t_bool:
                     sub_correct += 1
 
-            q_pts = 0.0
-            if sub_correct == 1: q_pts = 0.1
-            elif sub_correct == 2: q_pts = 0.25
-            elif sub_correct == 3: q_pts = 0.5
-            elif sub_correct >= 4: q_pts = 1.0
+            raw_tf_pts = 0.0
+            if sub_correct == 1: raw_tf_pts = 0.1
+            elif sub_correct == 2: raw_tf_pts = 0.25
+            elif sub_correct == 3: raw_tf_pts = 0.5
+            elif sub_correct >= 4: raw_tf_pts = 1.0
 
+            q_pts = raw_tf_pts * tf_scale
             earned_score += q_pts
             if sub_correct >= 4:
                 correct_count += 1
@@ -652,10 +669,9 @@ async def submit_exam(data: Submission):
                 })
 
         elif q_type == "short_answer":
-            max_possible_score += 1.0
             is_correct = compare_short_answers(user_ans, q.get("correct_answer", ""))
             if is_correct:
-                earned_score += 1.0
+                earned_score += short_weight
                 correct_count += 1
             else:
                 wrong.append({
@@ -666,7 +682,6 @@ async def submit_exam(data: Submission):
                 })
 
         else: # "mc"
-            max_possible_score += 1.0
             true_ans = q.get("correct_index", -1)
             u_ans_int = -1
             try:
@@ -675,7 +690,7 @@ async def submit_exam(data: Submission):
                 u_ans_int = -1
 
             if u_ans_int == true_ans and true_ans != -1:
-                earned_score += 1.0
+                earned_score += mc_weight
                 correct_count += 1
             else:
                 options = q.get("options", [])
@@ -686,10 +701,13 @@ async def submit_exam(data: Submission):
                     "ans": correct_label
                 })
 
-    score = round((earned_score / max_possible_score) * 10, 2) if max_possible_score > 0 else 0.0
+    if is_cv7991:
+        score = round(min(10.0, max(0.0, earned_score)), 2)
+    else:
+        score = round((correct_count / len(questions)) * 10, 2) if len(questions) > 0 else 0.0
     
     # --- [NEW] AI FEEDBACK GENERATION ---
-    fb = f"Bạn làm đúng {correct_count}/{len(questions)} câu."
+    fb = f"Bạn làm đúng {correct_count}/{len(questions)} câu. Đạt {score}/10 điểm."
     try:
         api_keys = json.loads(res.data[0]["api_keys_backup"])
         if api_keys and wrong:

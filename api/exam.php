@@ -852,6 +852,24 @@ function compare_short_answers($userVal, $trueVal): bool
     $earnedPoints = 0.0;
     $total = count($questions);
 
+    // Phát hiện định dạng đề thi
+    $examFormat = $exam['exam_format'] ?? ($examInfo['exam_format'] ?? 'standard_mc');
+    $mcCount = 0;
+    $tfCount = 0;
+    $shortCount = 0;
+    foreach ($questions as $q) {
+        $t = $q['type'] ?? (isset($q['correct_answers']) ? 'tf' : (isset($q['correct_answer']) && empty($q['options']) ? 'short_answer' : 'mc'));
+        if ($t === 'tf') $tfCount++;
+        elseif ($t === 'short_answer') $shortCount++;
+        else $mcCount++;
+    }
+    $isCv7991 = ($examFormat === 'cv7991' || ($tfCount > 0 || $shortCount > 0));
+
+    // Điểm cho mỗi câu theo CV 7991 (chuẩn: 12 câu TN = 6đ; 2 câu Đ/S = 2đ; 4 câu Ngắn = 2đ)
+    $mcWeight = ($isCv7991 && $mcCount > 0) ? (6.0 / $mcCount) : 1.0;
+    $shortWeight = ($isCv7991 && $shortCount > 0) ? (2.0 / $shortCount) : 1.0;
+    $tfScale = ($isCv7991 && $tfCount > 0 && $tfCount != 2) ? (2.0 / ($tfCount * 1.0)) : 1.0;
+
     foreach ($questions as $i => $q) {
         $userAns = $answers[(string)$i] ?? $answers[$i] ?? null;
         $type = $q['type'] ?? (isset($q['correct_answers']) ? 'tf' : (isset($q['correct_answer']) && empty($q['options']) ? 'short_answer' : 'mc'));
@@ -864,7 +882,7 @@ function compare_short_answers($userVal, $trueVal): bool
             for ($k = 0; $k < 4; $k++) {
                 $uVal = null;
                 if (is_array($userAns)) {
-                    $uVal = $userAns[$k] ?? $userAns[(string)$k] ?? null;
+                    $uVal = $userAns[(string)$k] ?? $userAns[$k] ?? null;
                     if ($uVal === null) {
                         $letters = ['a', 'b', 'c', 'd'];
                         $uVal = $userAns[$letters[$k]] ?? null;
@@ -879,12 +897,13 @@ function compare_short_answers($userVal, $trueVal): bool
                 }
             }
             // Điểm theo chuẩn Bộ GD&ĐT (CV 7991): 1 ý: 0.1đ, 2 ý: 0.25đ, 3 ý: 0.50đ, 4 ý: 1.00đ
-            $qScore = 0.0;
-            if ($correctItems === 1) $qScore = 0.1;
-            elseif ($correctItems === 2) $qScore = 0.25;
-            elseif ($correctItems === 3) $qScore = 0.50;
-            elseif ($correctItems === 4) $qScore = 1.00;
+            $rawTfScore = 0.0;
+            if ($correctItems === 1) $rawTfScore = 0.1;
+            elseif ($correctItems === 2) $rawTfScore = 0.25;
+            elseif ($correctItems === 3) $rawTfScore = 0.50;
+            elseif ($correctItems === 4) $rawTfScore = 1.00;
 
+            $qScore = $rawTfScore * $tfScale;
             $earnedPoints += $qScore;
             if ($correctItems === 4) {
                 $correct++;
@@ -902,7 +921,7 @@ function compare_short_answers($userVal, $trueVal): bool
             $trueAns = trim((string)($q['correct_answer'] ?? ''));
             $isMatch = $userAns !== null && compare_short_answers($userAns, $trueAns);
             if ($isMatch) {
-                $earnedPoints += 1.0;
+                $earnedPoints += $shortWeight;
                 $correct++;
             } else {
                 $wrong[] = [
@@ -916,7 +935,7 @@ function compare_short_answers($userVal, $trueVal): bool
             // Mặc định: Trắc nghiệm nhiều lựa chọn (mc)
             $trueAns = isset($q['correct_index']) ? (int)$q['correct_index'] : -1;
             if ($userAns !== null && (int)$userAns === $trueAns) {
-                $earnedPoints += 1.0;
+                $earnedPoints += $mcWeight;
                 $correct++;
             } else {
                 $options = $q['options'] ?? [];
@@ -930,9 +949,12 @@ function compare_short_answers($userVal, $trueVal): bool
         }
     }
 
-    $totalPoints = $total * 1.0;
-    $score = $totalPoints > 0 ? round(($earnedPoints / $totalPoints) * 10, 2) : 0;
-    $feedback = "Bạn làm đúng {$correct}/{$total} câu.";
+    if ($isCv7991) {
+        $score = round(min(10.0, max(0.0, $earnedPoints)), 2);
+    } else {
+        $score = $total > 0 ? round(($correct / $total) * 10, 2) : 0;
+    }
+    $feedback = "Bạn làm đúng {$correct}/{$total} câu. Đạt {$score}/10 điểm.";
 
     $stmt = $pdo->prepare('INSERT INTO exam_submissions (exam_id, student_id, student_name, sbd, student_class, score, correct_count, total_questions, details_json, ai_feedback) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $stmt->execute([
