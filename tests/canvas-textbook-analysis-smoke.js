@@ -13,6 +13,10 @@ assert.match(app, /timeoutMs:\s*105000/, 'Canvas phải gửi timeout rõ ràng 
 assert.match(app, /prepareCanvasTextbookAnalysisBatches/, 'Canvas phải gom ảnh/PDF đã chọn theo lô');
 assert.match(app, /selectedPages: pages/, 'Canvas phải tôn trọng các trang PDF đã chọn');
 assert.match(app, /Không sao chép câu, đoạn, bảng, bài tập hoặc công thức/, 'Prompt Canvas phải cấm tái tạo nội dung nguồn');
+assert.match(app, /\\?"subsections\\?"/, 'Schema Canvas phải có cấu trúc tiểu mục');
+assert.match(app, /\\?"weight\\?":1,\\?"complexity\\?":1,\\?"signals\\?"/, 'Schema Canvas phải có trọng số, độ phức tạp và tín hiệu');
+assert.match(app, /subsectionProfiles: canvasRoute \? canvasAnalysis\?\.subsections : null/, 'Hồ sơ Canvas phải được chuyển sang ngữ cảnh giáo án');
+assert.match(app, /appState\.textbookSubsectionProfiles = Array\.isArray\(subsectionProfiles\)/, 'Hồ sơ Canvas phải được giữ để phân bổ thời lượng');
 assert.doesNotMatch(app.match(/function canvasTextbookAnalysisPrompt[\s\S]*?function parseCanvasTextbookAnalysis/)?.[0] || '', /trích nguyên văn|toàn bộ chữ|không tóm tắt/i, 'Prompt Canvas không được yêu cầu chép nguyên văn');
 assert.match(app, /if \(canvasRoute\) \{[\s\S]{0,900}analyzeCanvasTextbookSafely/, 'Canvas phải dùng tuyến hệ thống phân tích thay cho OCR');
 assert.match(app, /applyTextbookOcrResult\(ocrText/, 'Kết quả Canvas phải đi vào context/ocrReady hiện có');

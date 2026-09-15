@@ -1,3 +1,30 @@
+# Báo cáo triển khai: Phân bổ thời lượng KHBD theo khối lượng tiểu mục
+
+## Cập nhật mới
+
+- `js/khbd-prompts.js`: bổ sung hồ sơ tiểu mục (tên, độ phức tạp, tín hiệu, trọng số) và phân bổ largest-remainder có chặn, giữ nguyên chia đều khi thiếu trọng số hợp lệ.
+- `js/khbd-app.js`: dùng cùng hồ sơ SGK/Canvas khi tạo từng pha, chuẩn hóa tiêu đề và ghép/xuất giáo án; không suy định mức từ độ dài văn bản AI sinh.
+- Canvas phân tích cấu trúc 1–4 tiểu mục bằng diễn đạt lại, lưu trọng số phục vụ soạn bài; cache-bust nâng lên `canvas-system-v7` ở hai bản Canvas. Bản thường nạp `khbd-*-weighted-v7`.
+- Thêm `tests/khbd-weighted-duration-smoke.js`.
+
+### Hoàn tất luồng trọng số
+
+- Prompt tạo Hoạt động B nay nhận hồ sơ tiểu mục từ Canvas ngay cả khi Canvas chỉ lưu ngữ cảnh cấu trúc, không có OCR nguyên văn. Do đó AI nhận đúng tên từng mục và số phút đã phân bổ, thay vì quay về chia đều.
+- Trọng số chỉ nhận trong thang 1–6; thuật toán largest-remainder giữ tối thiểu 3 phút cho mỗi nhánh khi ngân sách cho phép. Khi thiếu hoặc sai hồ sơ, hệ thống giữ cơ chế chia đều tương thích dữ liệu cũ.
+- Hồ sơ được truyền xuyên suốt: đọc SGK/Canvas → trạng thái bản nháp → prompt → chuẩn hóa tiêu đề từng pha → ghép và xuất Word. Đọc SGK mới ngoài Canvas cũng tự thay hồ sơ cũ, tránh dùng nhầm trọng số bài trước.
+
+### Kiểm thử
+
+- `node --check js/khbd-prompts.js`: PASS
+- `node --check js/khbd-app.js`: PASS
+- `node tests/khbd-weighted-duration-smoke.js`: PASS
+- `node tests/khbd-dynamic-time-budgets-smoke.js`: PASS
+- `node tests/khbd-activity-d-dedupe-smoke.js`: PASS
+- `node tests/canvas-soankhbd-smoke.js`: PASS
+- `node tests/canvas-textbook-analysis-smoke.js`: PASS
+- `node tests/khbd-docx-layout-smoke.js`: PASS
+- `git diff --check` (các tệp trong phạm vi): PASS
+
 # Báo cáo triển khai: Đồng bộ thời lượng KHBD theo số nhánh Hoạt động 2
 
 ## Cập nhật: khóa tổng thời lượng 90 phút khi tạo từng pha riêng

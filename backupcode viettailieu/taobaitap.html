@@ -2,24 +2,9 @@
 <html lang="vi">
 
 <head>
+    <script src="js/security-guard.js"></script>
+  <script src="access-control.js"></script>
     <meta charset="UTF-8">
-    <style>
-      html, body { display: block !important; visibility: visible !important; opacity: 1 !important; min-height: 100%; }
-      #canvasHostBanner { display: block !important; visibility: visible !important; }
-    </style>
-    <script>
-    (function(){
-      function reveal(){
-        var h=document.documentElement, b=document.body;
-        if(h){h.style.setProperty('display','block','important');h.style.setProperty('visibility','visible','important');h.removeAttribute('hidden')}
-        if(b){b.style.setProperty('display','block','important');b.style.setProperty('visibility','visible','important');b.style.setProperty('opacity','1','important');b.removeAttribute('hidden')}
-      }
-      reveal();
-      var obs=new MutationObserver(function(ms){ms.forEach(function(m){if(m.type==='attributes')reveal()})});
-      obs.observe(document.documentElement,{childList:true,subtree:false,attributes:true,attributeFilter:['style','hidden','class']});
-      document.addEventListener('DOMContentLoaded',reveal);
-    })();
-    </script>
     <title>SmartQuiz AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -13316,91 +13301,11 @@ module.exports = {
             font-size: 1.8em !important;
             line-height: 1.6;
         }
-        .compact-ui .card, .compact-ui .panel { padding: 0.75rem !important; }
-        .compact-ui input, .compact-ui select, .compact-ui textarea { padding: 0.3rem 0.5rem !important; font-size: 0.85rem !important; }
     </style>
 </head>
 
 <body class="bg-slate-50 min-h-screen font-sans">
-    <div id="canvasHostBanner" style="display:block!important;visibility:visible!important;padding:.4rem 1rem;text-align:center;font-size:.78rem;font-weight:700;background:#e0f2fe;color:#075985">
-      Đã kết nối Gemini Canvas · Môi trường mở rộng toàn màn hình
-      <button id="compactModeBtn" type="button" onclick="toggleCompactMode()" aria-pressed="false" title="Giao diện gọn" style="margin-left:.75rem;border:1px solid #7dd3fc;background:#fff;border-radius:999px;padding:.15rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer">🗜 Gọn</button>
-    </div>
     <div id="root"></div>
-    <script>
-      (function () {
-        var memoryStorage = Object.create(null);
-        function getCanvasStorage() {
-          var nativeStorage = null;
-          try {
-            nativeStorage = window.localStorage;
-            var probe = '__taobaitap_canvas_probe__';
-            nativeStorage.setItem(probe, '1');
-            nativeStorage.removeItem(probe);
-          } catch (e) {}
-          return {
-            getItem: function (key) {
-              try {
-                var value = nativeStorage && nativeStorage.getItem(key);
-                return value != null ? value : (memoryStorage[key] || null);
-              } catch (e) { return memoryStorage[key] || null; }
-            },
-            setItem: function (key, value) {
-              var text = String(value);
-              memoryStorage[key] = text;
-              try { if (nativeStorage) nativeStorage.setItem(key, text); } catch (e) {}
-            },
-            removeItem: function (key) {
-              delete memoryStorage[key];
-              try { if (nativeStorage) nativeStorage.removeItem(key); } catch (e) {}
-            }
-          };
-        }
-        window.canvasStorage = getCanvasStorage();
-        function canvasEscHtml(s) {
-          return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-          });
-        }
-        window.canvasConfirm = function (message) {
-          return new Promise(function (resolve) {
-            var modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:rgba(15,23,42,.55);padding:1rem';
-            modal.innerHTML = '<section style="background:#fff;border:1px solid #dbe5ee;border-radius:16px;max-width:28rem;width:100%;padding:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,.18)"><h3 style="margin:0 0 .5rem;font-size:1rem;font-weight:700">Xác nhận</h3><p style="margin:0 0 1rem;font-size:.9rem;white-space:pre-wrap;color:#334155">' + canvasEscHtml(message) + '</p><div style="display:flex;justify-content:flex-end;gap:.5rem"><button type="button" data-action="cancel" style="border:1px solid #cbd5e1;background:#fff;border-radius:9px;padding:.45rem .8rem;font-weight:700;cursor:pointer">Hủy</button><button type="button" data-action="ok" style="background:#4f46e5;color:#fff;border:0;border-radius:9px;padding:.45rem .8rem;font-weight:700;cursor:pointer">Đồng ý</button></div></section>';
-            document.body.appendChild(modal);
-            var done = false;
-            function finish(value) { if (done) return; done = true; modal.remove(); resolve(value); }
-            modal.querySelector('[data-action="cancel"]').onclick = function () { finish(false); };
-            modal.querySelector('[data-action="ok"]').onclick = function () { finish(true); };
-            modal.addEventListener('click', function (e) { if (e.target === modal) finish(false); });
-          });
-        };
-        window.canvasAlert = function (message) {
-          return new Promise(function (resolve) {
-            var modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:rgba(15,23,42,.55);padding:1rem';
-            modal.innerHTML = '<section style="background:#fff;border:1px solid #dbe5ee;border-radius:16px;max-width:28rem;width:100%;padding:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,.18)"><h3 style="margin:0 0 .5rem;font-size:1rem;font-weight:700">Thông báo</h3><p style="margin:0 0 1rem;font-size:.9rem;white-space:pre-wrap;color:#334155">' + canvasEscHtml(message) + '</p><div style="display:flex;justify-content:flex-end"><button type="button" data-action="ok" style="background:#4f46e5;color:#fff;border:0;border-radius:9px;padding:.45rem .8rem;font-weight:700;cursor:pointer">Đồng ý</button></div></section>';
-            document.body.appendChild(modal);
-            var done = false;
-            function finish() { if (done) return; done = true; modal.remove(); resolve(); }
-            modal.querySelector('[data-action="ok"]').onclick = finish;
-            modal.addEventListener('click', function (e) { if (e.target === modal) finish(); });
-          });
-        };
-        window.toggleCompactMode = function () {
-          var on = document.documentElement.classList.toggle('compact-ui');
-          window.canvasStorage.setItem('taobaitap_compact', on ? '1' : '0');
-          var btn = document.querySelector('#compactModeBtn');
-          if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-          return on;
-        };
-        if (window.canvasStorage.getItem('taobaitap_compact') === '1') {
-          document.documentElement.classList.add('compact-ui');
-          var compactBtn = document.querySelector('#compactModeBtn');
-          if (compactBtn) compactBtn.setAttribute('aria-pressed', 'true');
-        }
-      })();
-    </script>
 
     <script type="text/babel" data-presets="env,react">
         const { useState, useEffect, useRef, useCallback } = React;
@@ -14198,7 +14103,7 @@ module.exports = {
                         </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col justify-center items-center w-full max-w-[98%] 2xl:max-w-[1750px] mx-auto p-2">
+                    <div className="flex-1 flex flex-col justify-center items-center max-w-7xl mx-auto w-full p-2">
                         <div className="bg-white text-slate-900 p-6 md:p-10 rounded-3xl shadow-2xl w-full min-h-[70vh] flex flex-col justify-center relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-100 rounded-bl-full -z-0 opacity-50"></div>
                             <h3 className="text-3xl md:text-4xl font-bold mb-8 leading-relaxed text-slate-800 z-10 border-l-8 border-indigo-500 pl-6 presentation-question"><MathText text={q.question} /></h3>
@@ -14463,7 +14368,7 @@ module.exports = {
                         <div className="text-xl font-bold text-white">Bài {idx + 1} <span className="text-sm font-normal text-gray-300">/ {essays.length}</span></div>
                         <button onClick={() => setShowSolution(!showSolution)} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold rounded-lg transition">{showSolution ? <><i className="fas fa-eye-slash"></i> Ẩn Lời giải</> : <><i className="fas fa-eye"></i> Hiện Lời giải</>}</button>
                     </div>
-                    <div className="flex-1 flex flex-col w-full max-w-[98%] 2xl:max-w-[1750px] mx-auto gap-6">
+                    <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full gap-6">
                         <div className="bg-white text-slate-900 p-6 md:p-8 rounded-2xl shadow-2xl flex-1">
                             <h3 className="text-xl font-bold text-blue-600 mb-4">Đề bài:</h3>
                             <div className="text-lg leading-relaxed"><MathText text={essay.question} /></div>
@@ -14553,9 +14458,10 @@ module.exports = {
                 }
             };
 
-            const handleDeleteQuestion = async (index) => {
-                const approved = await window.canvasConfirm(`Bạn có chắc chắn muốn xóa ${mode === 'quiz' ? 'Câu' : 'Bài'} ${index + 1}?`);
-                if (approved) setEditedData(prev => prev.filter((_, i) => i !== index));
+            const handleDeleteQuestion = (index) => {
+                if (confirm(`Bạn có chắc chắn muốn xóa ${mode === 'quiz' ? 'Câu' : 'Bài'} ${index + 1}?`)) {
+                    setEditedData(prev => prev.filter((_, i) => i !== index));
+                }
             };
 
             const handleFinalSave = () => {
@@ -14763,6 +14669,13 @@ module.exports = {
             const [pendingSourceImages, setPendingSourceImages] = useState([]);
             const [sourceProgress, setSourceProgress] = useState({ active: false, percent: 0, message: "" });
             const [sourceNotice, setSourceNotice] = useState("");
+            const [generationProgress, setGenerationProgress] = useState({
+                visible: false,
+                status: "idle",
+                percent: 0,
+                message: "",
+                elapsedSeconds: 0
+            });
             const [sourceOnly, setSourceOnly] = useState(true);
             const [synthCount, setSynthCount] = useState(10);
             const [synthForm, setSynthForm] = useState('mixed-quiz');
@@ -14772,6 +14685,8 @@ module.exports = {
             const sourceDropZoneRef = useRef(null);
             const sourceFileInputRef = useRef(null);
             const sourceNoticeTimerRef = useRef(null);
+            const generationElapsedTimerRef = useRef(null);
+            const generationDismissTimerRef = useRef(null);
             const [presentationSettings, setPresentationSettings] = useState({
                 shuffleOptions: false,
                 countdownTime: 0,
@@ -14806,8 +14721,59 @@ module.exports = {
             useEffect(() => {
                 return () => {
                     if (sourceNoticeTimerRef.current) clearTimeout(sourceNoticeTimerRef.current);
+                    if (generationElapsedTimerRef.current) clearInterval(generationElapsedTimerRef.current);
+                    if (generationDismissTimerRef.current) clearTimeout(generationDismissTimerRef.current);
                 };
             }, []);
+
+            const beginGenerationProgress = () => {
+                if (generationElapsedTimerRef.current) clearInterval(generationElapsedTimerRef.current);
+                if (generationDismissTimerRef.current) clearTimeout(generationDismissTimerRef.current);
+                setGenerationProgress({
+                    visible: true,
+                    status: "running",
+                    percent: 8,
+                    message: "Đang chuẩn bị và gửi yêu cầu tới AI...",
+                    elapsedSeconds: 0
+                });
+                generationElapsedTimerRef.current = setInterval(() => {
+                    setGenerationProgress(prev => prev.status === "running"
+                        ? { ...prev, elapsedSeconds: prev.elapsedSeconds + 1 }
+                        : prev);
+                }, 1000);
+            };
+
+            const updateGenerationProgress = (percent, message) => {
+                setGenerationProgress(prev => ({
+                    ...prev,
+                    visible: true,
+                    status: "running",
+                    percent: Math.max(prev.percent, percent),
+                    message
+                }));
+            };
+
+            const finishGenerationProgress = (status, message) => {
+                if (generationDismissTimerRef.current) {
+                    clearTimeout(generationDismissTimerRef.current);
+                    generationDismissTimerRef.current = null;
+                }
+                if (generationElapsedTimerRef.current) {
+                    clearInterval(generationElapsedTimerRef.current);
+                    generationElapsedTimerRef.current = null;
+                }
+                setGenerationProgress(prev => ({
+                    ...prev,
+                    visible: true,
+                    status,
+                    percent: status === "success" ? 100 : prev.percent,
+                    message
+                }));
+                generationDismissTimerRef.current = setTimeout(() => {
+                    setGenerationProgress(prev => ({ ...prev, visible: false }));
+                    generationDismissTimerRef.current = null;
+                }, status === "success" ? 5000 : 10000);
+            };
 
             // --- CÁC HÀM QUẢN LÝ CHỦ ĐỀ ---
             const addTopic = () => {
@@ -15146,12 +15112,15 @@ module.exports = {
 
                 const emptyTopics = topicsToGenerate.filter(t => !t.name.trim());
                 if (emptyTopics.length > 0) {
-                    showSourceNotice("Vui lòng nhập tên cho các chủ đề!");
+                    const validationMessage = "Vui lòng nhập tên cho các chủ đề trước khi tạo bài.";
+                    finishGenerationProgress("error", validationMessage);
+                    showSourceNotice(validationMessage);
                     return;
                 }
 
                 setLoading(true);
                 setRetryCount(0);
+                beginGenerationProgress();
 
                 const totalQuestions = topicsToGenerate.reduce((sum, t) => sum + t.count, 0);
                 const structurePrompt = topicsToGenerate.map((t, idx) => {
@@ -15219,15 +15188,23 @@ module.exports = {
                 }
 
                 try {
+                    updateGenerationProgress(18, "Đã gửi yêu cầu. AI đang tạo nội dung...");
                     const response = await GeminiModule.callGeminiAPI(prompt, setRetryCount);
+                    updateGenerationProgress(72, "Đã nhận phản hồi từ AI. Đang đọc dữ liệu...");
                     let parsedData;
                     try {
                         parsedData = GeminiModule.parseJSONResponse(response);
                     } catch (parseError) {
+                        updateGenerationProgress(80, "Phản hồi cần hiệu chỉnh. AI đang sửa định dạng dữ liệu...");
                         parsedData = await GeminiModule.repairJSONResponse(response, parseError.message, setRetryCount);
                     }
+                    updateGenerationProgress(90, "Đang kiểm tra và chuẩn hóa kết quả...");
                     if (mode === "quiz") {
                         parsedData = normalizeQuizItems(parsedData);
+                    }
+
+                    if (!Array.isArray(parsedData) || parsedData.length === 0) {
+                        throw new Error("AI không trả về câu hỏi hoặc bài tập hợp lệ.");
                     }
 
                     if (mode === "quiz") {
@@ -15243,9 +15220,12 @@ module.exports = {
                             setEssays(parsedData);
                         }
                     }
+                    finishGenerationProgress("success", `Đã tạo thành công ${parsedData.length} ${mode === "quiz" ? "câu hỏi" : "bài tập"}.`);
                     setStep(2);
                 } catch (error) {
-                    showSourceNotice(`Thất bại! Lỗi: ${error.message}`);
+                    const errorMessage = error && error.message ? error.message : "Không xác định được nguyên nhân.";
+                    finishGenerationProgress("error", `Không tạo được bài tập: ${errorMessage}`);
+                    showSourceNotice(`Không tạo được bài tập: ${errorMessage}`);
                 } finally {
                     setLoading(false);
                 }
@@ -15254,7 +15234,9 @@ module.exports = {
             const generateSynthesizedFromSource = async () => {
                 const sourceContext = getSourceContext();
                 if (!sourceContext.trim()) {
-                    showSourceNotice("Hãy nạp PDF, Word hoặc ảnh vào nguồn kiến thức trước khi tạo bài tập tổng hợp từ file.");
+                    const validationMessage = "Hãy nạp PDF, Word hoặc ảnh vào nguồn kiến thức trước khi tạo bài tập tổng hợp từ file.";
+                    finishGenerationProgress("error", validationMessage);
+                    showSourceNotice(validationMessage);
                     return;
                 }
                 const count = Math.max(1, Math.min(50, Number(synthCount) || 10));
@@ -15266,6 +15248,8 @@ module.exports = {
                 let typeInstruction = '';
                 if (isEssay) {
                     typeInstruction = 'Hình thức: Tự luận có lời giải chi tiết.';
+                } else if (synthForm === 'cv7991') {
+                    typeInstruction = 'Hình thức: ĐỀ THI CHUẨN CÔNG VĂN 7991 / BGDĐT gồm 03 phần: Phần I: Trắc nghiệm 4 lựa chọn (type: multiple-choice); Phần II: Đúng/Sai (type: true-false); Phần III: Trả lời ngắn với kết quả số ngắn gọn (type: short-answer). Tỉ lệ các phần cân đối (khoảng 50% Phần I, 25% Phần II, 25% Phần III).';
                 } else if (synthForm === 'mixed-quiz') {
                     typeInstruction = 'Hình thức TỔNG HỢP: trộn Nhiều lựa chọn, Đúng/Sai, Điền khuyết, Trả lời ngắn, Nối ô (mỗi loại ít nhất 1 câu nếu số câu >= 5).';
                 } else if (synthForm === 'multiple-choice') {
@@ -15282,6 +15266,7 @@ module.exports = {
 
                 setLoading(true);
                 setRetryCount(0);
+                beginGenerationProgress();
                 try {
                     let prompt = '';
                     if (!isEssay) {
@@ -15319,13 +15304,17 @@ NGUỒN KIẾN THỨC:
 ${sourceContext}`;
                     }
 
+                    updateGenerationProgress(18, "Đã gửi yêu cầu. AI đang tạo bài tập tổng hợp từ file...");
                     const response = await GeminiModule.callGeminiAPI(prompt, setRetryCount);
+                    updateGenerationProgress(72, "Đã nhận phản hồi từ AI. Đang đọc dữ liệu...");
                     let parsedData;
                     try {
                         parsedData = GeminiModule.parseJSONResponse(response);
                     } catch (parseError) {
+                        updateGenerationProgress(80, "Phản hồi cần hiệu chỉnh. AI đang sửa định dạng dữ liệu...");
                         parsedData = await GeminiModule.repairJSONResponse(response, parseError.message, setRetryCount);
                     }
+                    updateGenerationProgress(90, "Đang kiểm tra và chuẩn hóa kết quả...");
                     if (!isEssay) parsedData = normalizeQuizItems(parsedData);
                     if (!parsedData || parsedData.length === 0) throw new Error("AI không sinh được bài tập từ file đã nạp.");
 
@@ -15336,18 +15325,269 @@ ${sourceContext}`;
                         setMode("quiz");
                         setQuestions(parsedData);
                     }
+                    finishGenerationProgress("success", `Đã tạo thành công ${parsedData.length} ${isEssay ? "bài tập tự luận" : "câu hỏi"} từ file.`);
                     setStep(2);
                 } catch (error) {
-                    showSourceNotice(`Thất bại khi tạo bài tập tổng hợp từ file: ${error.message}`);
+                    const errorMessage = error && error.message ? error.message : "Không xác định được nguyên nhân.";
+                    finishGenerationProgress("error", `Thất bại khi tạo bài tập tổng hợp từ file: ${errorMessage}`);
+                    showSourceNotice(`Thất bại khi tạo bài tập tổng hợp từ file: ${errorMessage}`);
                 } finally {
                     setLoading(false);
                 }
             };
 
+            const exportWordCV7991 = () => {
+                const header = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'><title>Đề thi theo Công văn 7991</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #000; }
+                        h1 { text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
+                        .sub-title { text-align: center; font-style: italic; font-size: 11pt; margin-bottom: 20px; }
+                        .section-title { font-weight: bold; font-size: 12pt; text-transform: uppercase; margin-top: 18px; margin-bottom: 4px; }
+                        .section-guide { font-style: italic; font-size: 11pt; margin-bottom: 12px; }
+                        .question-block { margin-bottom: 14pt; text-align: justify; }
+                        .options-table { width: 100%; border-collapse: collapse; margin-top: 4pt; }
+                        .options-table td { padding: 2pt 0; vertical-align: top; }
+                        .tf-item { margin-left: 20pt; margin-top: 2pt; margin-bottom: 2pt; }
+                        .answer-line { margin-top: 4pt; font-weight: bold; }
+                        .essay-block { margin-bottom: 20pt; }
+                        .solution { margin-top: 10pt; padding: 10pt; background: #f5f5f5; border-left: 4px solid #4CAF50; }
+                    </style>
+                </head><body>`;
+
+                const dataToExport = mode === "quiz" ? questions : essays;
+                if (!dataToExport || dataToExport.length === 0) {
+                    showSourceNotice("Chưa có câu hỏi để xuất!");
+                    return;
+                }
+
+                let bodyContent = `<h1>ĐỀ KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT</h1>`;
+                bodyContent += `<div class="sub-title">Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút</div>`;
+
+                if (mode === "quiz") {
+                    const part1 = dataToExport.filter(q => q.type === "multiple-choice");
+                    const part2 = dataToExport.filter(q => q.type === "true-false");
+                    const part3 = dataToExport.filter(q => q.type === "short-answer" || q.type === "fill-blank" || q.type === "matching");
+
+                    let currentQNum = 1;
+
+                    // PHẦN I
+                    if (part1.length > 0 || (part2.length === 0 && part3.length === 0)) {
+                        const list1 = part1.length > 0 ? part1 : dataToExport;
+                        const start1 = currentQNum;
+                        const end1 = currentQNum + list1.length - 1;
+                        bodyContent += `<div class="section-title">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>`;
+                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start1} đến câu ${end1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án.</div>`;
+                        
+                        list1.forEach((q) => {
+                            const optA = cleanOptionText(q.options?.[0] || '');
+                            const optB = cleanOptionText(q.options?.[1] || '');
+                            const optC = cleanOptionText(q.options?.[2] || '');
+                            const optD = cleanOptionText(q.options?.[3] || '');
+                            const isA = q.correctAnswerIndex === 0 ? '*' : '';
+                            const isB = q.correctAnswerIndex === 1 ? '*' : '';
+                            const isC = q.correctAnswerIndex === 2 ? '*' : '';
+                            const isD = q.correctAnswerIndex === 3 ? '*' : '';
+
+                            bodyContent += `
+                            <div class="question-block">
+                                <b>Câu ${currentQNum}:</b> ${q.question}<br>
+                                <table class="options-table">
+                                    <tr><td width="50%">A. ${optA}${isA}</td><td width="50%">B. ${optB}${isB}</td></tr>
+                                    <tr><td width="50%">C. ${optC}${isC}</td><td width="50%">D. ${optD}${isD}</td></tr>
+                                </table>
+                            </div>`;
+                            currentQNum++;
+                        });
+                    }
+
+                    // PHẦN II
+                    if (part2.length > 0) {
+                        const start2 = currentQNum;
+                        const end2 = currentQNum + part2.length - 1;
+                        bodyContent += `<div class="section-title">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI</div>`;
+                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start2} đến câu ${end2}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai.</div>`;
+
+                        part2.forEach((q) => {
+                            if (Array.isArray(q.subItems) && q.subItems.length > 0) {
+                                bodyContent += `<div class="question-block"><b>Câu ${currentQNum}:</b> ${q.question}<br>`;
+                                q.subItems.forEach((item, sIdx) => {
+                                    const label = String.fromCharCode(97 + sIdx);
+                                    const tag = item.isCorrect ? '[Đúng]' : '[Sai]';
+                                    bodyContent += `<div class="tf-item">${label}) ${item.text} ${tag}</div>`;
+                                });
+                                bodyContent += `</div>`;
+                            } else {
+                                const tag = q.correctAnswerIndex === 0 ? '[Đúng]' : '[Sai]';
+                                bodyContent += `
+                                <div class="question-block">
+                                    <b>Câu ${currentQNum}:</b> ${q.question}<br>
+                                    <div class="tf-item">a) Mệnh đề trên là ${tag}</div>
+                                </div>`;
+                            }
+                            currentQNum++;
+                        });
+                    }
+
+                    // PHẦN III
+                    if (part3.length > 0) {
+                        const start3 = currentQNum;
+                        const end3 = currentQNum + part3.length - 1;
+                        bodyContent += `<div class="section-title">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN</div>`;
+                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start3} đến câu ${end3}. Thí sinh ghi đáp án vào ô trả lời.</div>`;
+
+                        part3.forEach((q) => {
+                            const ans = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");
+                            bodyContent += `
+                            <div class="question-block">
+                                <b>Câu ${currentQNum}:</b> ${q.question}<br>
+                                <div class="answer-line">Đáp án: ${ans}</div>
+                            </div>`;
+                            currentQNum++;
+                        });
+                    }
+                } else {
+                    dataToExport.forEach((essay, i) => {
+                        bodyContent += `<div class="essay-block"><b>Bài ${i + 1}:</b> ${essay.question}<div class="solution"><b>Lời giải:</b> ${essay.solution}</div></div>`;
+                    });
+                }
+
+                try {
+                    saveDocxFromHtml(header + bodyContent + "</body></html>", `De_Thi_CV7991.docx`);
+                } catch (error) {
+                    showSourceNotice(`Lỗi khi xuất DOCX: ${error.message}`);
+                }
+            };
+
+            const exportWord100TN = () => {
+                const header = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'><title>Đề thi 100% Trắc Nghiệm</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #000; }
+                        h1 { text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
+                        .sub-title { text-align: center; font-style: italic; font-size: 11pt; margin-bottom: 20px; }
+                        .question-block { margin-bottom: 14pt; text-align: justify; }
+                        .options-table { width: 100%; border-collapse: collapse; margin-top: 4pt; }
+                        .options-table td { padding: 2pt 0; vertical-align: top; }
+                        .answer-key { margin-top: 24px; border-top: 1px solid #000; padding-top: 10px; }
+                        .answer-key h2 { font-size: 12pt; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase; }
+                        .answer-key p { margin: 0; line-height: 1.8; font-weight: bold; }
+                        .essay-block { margin-bottom: 20pt; }
+                        .solution { margin-top: 10pt; padding: 10pt; background: #f5f5f5; border-left: 4px solid #4CAF50; }
+                    </style>
+                </head><body>`;
+
+                const dataToExport = mode === "quiz" ? questions : essays;
+                if (!dataToExport || dataToExport.length === 0) {
+                    showSourceNotice("Chưa có câu hỏi để xuất!");
+                    return;
+                }
+
+                let bodyContent = `<h1>ĐỀ MINH HỌA KIỂM TRA 100% TRẮC NGHIỆM TRUYỀN THỐNG</h1>`;
+                bodyContent += `<div class="sub-title">Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút</div>`;
+
+                if (mode === "quiz") {
+                    const answerKeys = [];
+                    dataToExport.forEach((q, i) => {
+                        const optA = cleanOptionText(q.options?.[0] || 'Phương án A');
+                        const optB = cleanOptionText(q.options?.[1] || 'Phương án B');
+                        const optC = cleanOptionText(q.options?.[2] || 'Phương án C');
+                        const optD = cleanOptionText(q.options?.[3] || 'Phương án D');
+                        const isA = q.correctAnswerIndex === 0 ? '*' : '';
+                        const isB = q.correctAnswerIndex === 1 ? '*' : '';
+                        const isC = q.correctAnswerIndex === 2 ? '*' : '';
+                        const isD = q.correctAnswerIndex === 3 ? '*' : '';
+                        
+                        const correctLetter = String.fromCharCode(65 + (q.correctAnswerIndex >= 0 ? q.correctAnswerIndex : 0));
+                        answerKeys.push(`${i + 1}${correctLetter}`);
+
+                        bodyContent += `
+                        <div class="question-block">
+                            <b>Câu ${i + 1}:</b> ${q.question}<br>
+                            <table class="options-table">
+                                <tr><td width="50%">A. ${optA}${isA}</td><td width="50%">B. ${optB}${isB}</td></tr>
+                                <tr><td width="50%">C. ${optC}${isC}</td><td width="50%">D. ${optD}${isD}</td></tr>
+                            </table>
+                        </div>`;
+                    });
+
+                    bodyContent += `
+                    <div class="answer-key">
+                        <h2>BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):</h2>
+                        <p>Đáp án: ${answerKeys.join(' ')}</p>
+                    </div>`;
+                } else {
+                    dataToExport.forEach((essay, i) => {
+                        bodyContent += `<div class="essay-block"><b>Bài ${i + 1}:</b> ${essay.question}<div class="solution"><b>Lời giải:</b> ${essay.solution}</div></div>`;
+                    });
+                }
+
+                try {
+                    saveDocxFromHtml(header + bodyContent + "</body></html>", `De_Thi_100_Trac_Nghiem.docx`);
+                } catch (error) {
+                    showSourceNotice(`Lỗi khi xuất DOCX: ${error.message}`);
+                }
+            };
+
+            const exportTextCV7991 = () => {
+                const dataToExport = mode === "quiz" ? questions : essays;
+                if (!dataToExport || dataToExport.length === 0) {
+                    showSourceNotice("Chưa có câu hỏi để xuất!");
+                    return;
+                }
+                let text = "ĐỀ KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT\nMôn thi: TOÁN HỌC - Thời gian làm bài: 45 phút\n\n";
+                if (mode === "quiz") {
+                    const part1 = dataToExport.filter(q => q.type === "multiple-choice");
+                    const part2 = dataToExport.filter(q => q.type === "true-false");
+                    const part3 = dataToExport.filter(q => q.type === "short-answer" || q.type === "fill-blank" || q.type === "matching");
+                    let cur = 1;
+                    if (part1.length > 0 || (part2.length === 0 && part3.length === 0)) {
+                        const l1 = part1.length > 0 ? part1 : dataToExport;
+                        text += `PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN\nThí sinh trả lời từ câu ${cur} đến câu ${cur + l1.length - 1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án.\n\n`;
+                        l1.forEach(q => {
+                            text += `Câu ${cur}: ${q.question}\n`;
+                            text += `A. ${cleanOptionText(q.options?.[0] || '')}${q.correctAnswerIndex === 0 ? '*' : ''}\n`;
+                            text += `B. ${cleanOptionText(q.options?.[1] || '')}${q.correctAnswerIndex === 1 ? '*' : ''}\n`;
+                            text += `C. ${cleanOptionText(q.options?.[2] || '')}${q.correctAnswerIndex === 2 ? '*' : ''}\n`;
+                            text += `D. ${cleanOptionText(q.options?.[3] || '')}${q.correctAnswerIndex === 3 ? '*' : ''}\n\n`;
+                            cur++;
+                        });
+                    }
+                    if (part2.length > 0) {
+                        text += `PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI\nThí sinh trả lời từ câu ${cur} đến câu ${cur + part2.length - 1}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai.\n\n`;
+                        part2.forEach(q => {
+                            text += `Câu ${cur}: ${q.question}\n`;
+                            const tag = q.correctAnswerIndex === 0 ? '[Đúng]' : '[Sai]';
+                            text += `a) Mệnh đề trên là ${tag}\n\n`;
+                            cur++;
+                        });
+                    }
+                    if (part3.length > 0) {
+                        text += `PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN\nThí sinh trả lời từ câu ${cur} đến câu ${cur + part3.length - 1}. Thí sinh ghi đáp án vào ô trả lời.\n\n`;
+                        part3.forEach(q => {
+                            const ans = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");
+                            text += `Câu ${cur}: ${q.question}\nĐáp án: ${ans}\n\n`;
+                            cur++;
+                        });
+                    }
+                } else {
+                    dataToExport.forEach((essay, i) => {
+                        text += `Bài ${i + 1}: ${essay.question}\nLời giải: ${essay.solution}\n\n`;
+                    });
+                }
+                const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+                saveAs(blob, "De_Thi_CV7991.txt");
+            };
+
             const exportWord = () => {
                 const header = `
                 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head><meta charset='utf-8'><title>Export</title>
+                <head>
+                    <meta charset='utf-8'><title>Export</title>
                     <style>
                         body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; }
                         h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; }
@@ -15443,7 +15683,8 @@ ${sourceContext}`;
             const exportWordLatex = () => {
                 const header = `
                 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head><meta charset='utf-8'><title>Export LaTeX</title>
+                <head>
+                    <meta charset='utf-8'><title>Export LaTeX</title>
                     <style>
                         body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; }
                         h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; }
@@ -15569,6 +15810,41 @@ ${sourceContext}`;
 
             return (
                 <div className="max-w-4xl mx-auto p-4 md:p-8 font-sans">
+                    {generationProgress.visible && (
+                        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-xl" role="status" aria-live="assertive">
+                            <div className={`rounded-2xl border px-5 py-4 shadow-2xl backdrop-blur-sm ${generationProgress.status === "error"
+                                ? "bg-red-50/95 border-red-300 text-red-900"
+                                : generationProgress.status === "success"
+                                    ? "bg-emerald-50/95 border-emerald-300 text-emerald-900"
+                                    : "bg-white/95 border-indigo-200 text-slate-800"}`}>
+                                <div className="flex items-start gap-3">
+                                    <i className={`fas mt-0.5 text-xl ${generationProgress.status === "error"
+                                        ? "fa-circle-exclamation text-red-600"
+                                        : generationProgress.status === "success"
+                                            ? "fa-circle-check text-emerald-600"
+                                            : "fa-circle-notch fa-spin text-indigo-600"}`}></i>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex justify-between gap-3 text-sm font-bold">
+                                            <span>{generationProgress.status === "error" ? "Tạo bài thất bại" : generationProgress.status === "success" ? "Tạo bài hoàn tất" : "Đang tạo bài tập"}</span>
+                                            <span className="whitespace-nowrap">{generationProgress.percent}%{generationProgress.status === "running" ? ` · ${generationProgress.elapsedSeconds}s` : ""}</span>
+                                        </div>
+                                        <p className="mt-1 text-sm leading-5 break-words">{generationProgress.message}</p>
+                                        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-500 ${generationProgress.status === "error" ? "bg-red-500" : generationProgress.status === "success" ? "bg-emerald-500" : "bg-gradient-to-r from-indigo-500 to-blue-500"}`}
+                                                style={{ width: `${generationProgress.percent}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                    {generationProgress.status !== "running" && (
+                                        <button type="button" onClick={() => setGenerationProgress(prev => ({ ...prev, visible: false }))} className="-mr-1 text-current opacity-60 hover:opacity-100" aria-label="Đóng thông báo">
+                                            <i className="fas fa-times"></i>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <div className="flex justify-between items-center mb-8">
                         <button onClick={() => window.location.href = 'index.html'} className="text-slate-500 hover:text-indigo-600 font-bold transition flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
                             <i className="fas fa-arrow-left"></i> Về Trang Chủ
@@ -15775,8 +16051,9 @@ ${sourceContext}`;
                                             onChange={(e) => setSynthForm(e.target.value)}
                                             className="mt-1 w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
                                         >
+                                            <option value="cv7991">⭐ Chuẩn Công văn 7991 (3 phần: TN - Đúng/Sai - Trả lời ngắn)</option>
+                                            <option value="multiple-choice">100% Trắc nghiệm 4 lựa chọn (A, B, C, D)</option>
                                             <option value="mixed-quiz">Trắc nghiệm tổng hợp</option>
-                                            <option value="multiple-choice">Nhiều lựa chọn</option>
                                             <option value="true-false">Đúng/Sai</option>
                                             <option value="fill-blank">Điền khuyết</option>
                                             <option value="short-answer">Trả lời ngắn</option>
@@ -15942,14 +16219,20 @@ ${sourceContext}`;
                                         )}
                                     </p>
                                 </div>
-                                <div className="flex gap-2 flex-wrap">
-                                    <button onClick={() => setStep(1)} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-bold text-sm transition"><i className="fas fa-redo"></i> Tạo lại</button>
-                                    <button onClick={startEditing} className="px-4 py-2 bg-red-100 text-red-600 border border-red-200 rounded-lg hover:bg-red-200 font-bold text-sm transition"><i className="fas fa-pencil-alt"></i> Sửa</button>
+                                <div className="flex gap-2 flex-wrap items-center">
+                                    <button onClick={() => setStep(1)} className="px-3.5 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-bold text-sm transition"><i className="fas fa-redo"></i> Tạo lại</button>
+                                    <button onClick={startEditing} className="px-3.5 py-2 bg-red-100 text-red-600 border border-red-200 rounded-lg hover:bg-red-200 font-bold text-sm transition"><i className="fas fa-pencil-alt"></i> Sửa</button>
                                     {mode === "quiz" && (
-                                        <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-purple-50 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-100 font-bold text-sm transition"><i className="fas fa-cog"></i> Cài đặt</button>
+                                        <button onClick={() => setShowSettings(true)} className="px-3.5 py-2 bg-purple-50 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-100 font-bold text-sm transition"><i className="fas fa-cog"></i> Cài đặt</button>
                                     )}
-                                    <button onClick={exportWord} className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 font-bold text-sm transition"><i className="fas fa-file-word"></i> Word</button>
-                                    <button onClick={exportWordLatex} className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 font-bold text-sm transition"><i className="fas fa-file-word"></i> Word LaTeX</button>
+                                    <button onClick={exportWordCV7991} className="px-3.5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold text-sm shadow-sm transition flex items-center gap-1.5" title="Xuất file Word cấu trúc 3 phần theo Công văn 7991">
+                                        <i className="fas fa-file-word text-indigo-200"></i> Xuất Mẫu CV 7991
+                                    </button>
+                                    <button onClick={exportWord100TN} className="px-3.5 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-bold text-sm shadow-sm transition flex items-center gap-1.5" title="Xuất file Word 100% trắc nghiệm 4 phương án">
+                                        <i className="fas fa-file-word text-emerald-400"></i> Xuất 100% TN
+                                    </button>
+                                    <button onClick={exportTextCV7991} className="px-3 py-2 bg-white text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-50 font-bold text-sm transition" title="Tải file Text .txt để copy nhanh"><i className="fas fa-file-alt"></i> .txt</button>
+                                    <button onClick={exportWordLatex} className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 font-bold text-sm transition" title="Xuất Word định dạng công thức LaTeX"><i className="fas fa-file-word"></i> LaTeX</button>
                                     <button onClick={startPresentation} className="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold hover:shadow-lg hover:-translate-y-0.5 transition flex items-center gap-2 text-sm shadow-green-200"><i className="fas fa-chalkboard-teacher"></i> DẠY NGAY</button>
                                 </div>
                             </div>

@@ -48,7 +48,7 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/css/khbd-styles.css'), `${relPath} phải giữ nguồn khbd-styles.css từ hosting khi chạy Canvas`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-prompts.js"'), `${relPath} phải nạp khbd-prompts.js cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-prompts.js'), `${relPath} phải giữ nguồn khbd-prompts.js từ hosting khi chạy Canvas`);
-  assert.ok(targetHtml.includes('?v=20260915-canvas-system-v6'), `${relPath} phải cache-bust bản Canvas hệ thống v6`);
+  assert.ok(targetHtml.includes('?v=20260915-canvas-system-v7'), `${relPath} phải cache-bust bản Canvas hệ thống v7`);
   assert.ok(!targetHtml.includes('canvas-system-v3'), `${relPath} không được nạp Canvas cache v3 cũ`);
   assert.ok(targetHtml.includes('systemGemini: true'), `${relPath} phải bật rõ tuyến Gemini hệ thống Canvas`);
   assert.ok(targetHtml.includes('geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php"'), `${relPath} phải khai báo endpoint Gemini Canvas tin cậy`);
@@ -56,7 +56,7 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('pedagogy-activity'), `${relPath} patch phải lọc hoạt động đặc thù`);
   assert.ok(/HEAVY\s*=\s*\/[^\n]*station/.test(targetHtml), `${relPath} patch phải chặn Station/Trạm`);
   assert.ok(targetHtml.includes('__khbdRolePatched'), `${relPath} phải vá parseTableCellParagraphs khi xuất Word`);
-  assert.ok(targetHtml.includes('v=20260915-canvas-system-v6'), `${relPath} phải cache-bust khbd-app bản Canvas hệ thống v6`);
+  assert.ok(targetHtml.includes('v=20260915-canvas-system-v7'), `${relPath} phải cache-bust khbd-app bản Canvas hệ thống v7`);
   assert.ok(targetHtml.includes('Phân tích SGK'), `${relPath} phải hướng người dùng dùng luồng phân tích SGK Canvas`);
   assert.ok(/\.khbd-badge-nls\s*\{[^}]*font-style:\s*italic/.test(targetHtml), `${relPath} badge NLS Canvas phải italic`);
   assert.ok(/\.khbd-badge-ai\s*\{[^}]*font-style:\s*italic/.test(targetHtml), `${relPath} badge AI Canvas phải italic`);

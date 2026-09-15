@@ -193,11 +193,34 @@ function calculateActivityTimeBudgets(durationStr, subsectionCount, grade, optio
     }
   }
 
-  const bSubsections = [];
-  const baseSub = Math.floor(timeB / subCount);
-  const remSub = timeB % subCount;
-  for (let i = 0; i < subCount; i++) {
-    bSubsections.push(baseSub + (i < remSub ? 1 : 0));
+  // Không có trọng số hợp lệ thì giữ nguyên quy tắc cũ (chia đều, phần dư ở
+  // các mục đầu) để bản nháp/dữ liệu cũ cho cùng kết quả như trước.
+  const rawWeights = Array.isArray(options && options.subsectionWeights) ? options.subsectionWeights : [];
+  // Hồ sơ có thể đến từ Canvas hoặc từ việc phân tích nguồn SGK cũ. Chỉ nhận
+  // các giá trị dương hữu hạn và chặn chúng trong thang 1–6 để một giá trị
+  // bất thường không nuốt gần hết thời lượng của các mục còn lại.
+  const weights = rawWeights.slice(0, subCount).map(item => {
+    const value = Number(typeof item === "object" ? item.weight : item);
+    return Number.isFinite(value) && value > 0 ? Math.max(1, Math.min(6, value)) : value;
+  });
+  const validWeights = weights.length === subCount && weights.every(w => Number.isFinite(w) && w > 0);
+  let bSubsections;
+  if (!validWeights) {
+    const baseSub = Math.floor(timeB / subCount);
+    const remSub = timeB % subCount;
+    bSubsections = Array.from({ length: subCount }, (_, i) => baseSub + (i < remSub ? 1 : 0));
+  } else {
+    // Largest remainder có định mức nền 3 phút/mục nếu ngân sách cho phép;
+    // nhờ vậy một tiểu mục vẫn có đủ thời gian để thực hiện một nhiệm vụ.
+    const minimum = timeB >= subCount * 3 ? 3 : (timeB >= subCount ? 1 : 0);
+    const distributable = timeB - minimum * subCount;
+    const sum = weights.reduce((a, b) => a + b, 0);
+    const quotas = weights.map(w => distributable * w / sum);
+    bSubsections = quotas.map(q => minimum + Math.floor(q));
+    let left = timeB - bSubsections.reduce((a, b) => a + b, 0);
+    quotas.map((q, i) => ({ i, remainder: q - Math.floor(q) }))
+      .sort((a, b) => b.remainder - a.remainder || a.i - b.i)
+      .slice(0, left).forEach(({ i }) => { bSubsections[i] += 1; });
   }
 
   return {
@@ -220,6 +243,27 @@ function calculateActivityTimeBudgets(durationStr, subsectionCount, grade, optio
   };
 }
 
+function normalizeTextbookSubsectionProfiles(content) {
+  const structured = Array.isArray(content) ? content : null;
+  const source = structured ? "" : String(content || "");
+  const bases = structured || extractTextbookSubsections(source);
+  return bases.slice(0, 4).map((item, i, list) => {
+    const title = String(item && (item.title || item.name) || "").trim();
+    const start = source.toLowerCase().indexOf(title.toLowerCase());
+    const nextTitle = String(list[i + 1] && (list[i + 1].title || list[i + 1].name) || "").trim();
+    const next = nextTitle ? source.toLowerCase().indexOf(nextTitle.toLowerCase(), Math.max(0, start + title.length)) : -1;
+    const inferredBlock = start >= 0 ? source.slice(start, next > start ? next : start + 1600) : "";
+    const block = String(item && (item.block || item.content || item.summary) || inferredBlock || "");
+    const signals = Array.isArray(item && item.signals) ? item.signals.map(String).filter(Boolean).slice(0, 5) : [];
+    const complexity = Math.max(1, Math.min(4, Number(item && (item.complexity || item.weight)) || 1));
+    // Độ dài chỉ là tín hiệu phụ, tránh để văn AI dài quyết định định mức.
+    const lengthSignal = block ? Math.min(2, Math.floor(block.length / 350)) : 0;
+    const pedagogySignal = signals.length ? 1 : 0;
+    const weight = Math.max(1, Math.min(6, Number(item && item.weight) || complexity + lengthSignal + pedagogySignal));
+    return { index: i + 1, title, weight, complexity, signals, blockLength: block.length };
+  }).filter(item => item.title);
+}
+
 const LATEX_SPACING_BAN = `- CẤM TUYỆT ĐỐI dùng chuỗi lệnh LaTeX khoảng trắng liên tiếp (\`\\quad \\quad \\quad...\`, \`\\qquad\`, \`\\hspace{...}\`, \`\\phantom{...}\`) để mô phỏng hình vẽ, giả lập trục số hoặc tạo khoảng trống làm bài.
 - Đối với bài tập vẽ hình/trục số: BẮT BUỘC mô tả lời giải bằng các bước thực hiện tường minh (ví dụ: "Vẽ trục số nằm ngang, chọn điểm 0 làm gốc, chia các đoạn đơn vị bằng nhau... Điểm biểu diễn -5 nằm bên trái gốc 0 cách 5 đơn vị...") hoặc định vị hình minh họa SVG chuẩn SGK \`![caption](khbd-ill:id)\`.
 - Lời giải trong cột Nội dung phải là các bước giải chi tiết hoàn chỉnh, không để khoảng trống vô nghĩa.`;
@@ -227,7 +271,7 @@ const LATEX_SPACING_BAN = `- CẤM TUYỆT ĐỐI dùng chuỗi lệnh LaTeX kho
 const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠM THỰC CHIẾN TRONG BẢNG 2 CỘT (Chuẩn CV 5512 & GDPT 2018):
 - YÊU CẦU ĐỘ DÀI & VĂN PHONG SÚC TÍCH: Toàn bộ Kế hoạch bài dạy hoàn chỉnh đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trực diện vào bản chất kiến thức và hành động cốt lõi của GV/HS; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không dùng câu thoại diễn giải lòng vòng, không lặp lại nội dung giữa các mục.
 - THỜI LƯỢNG HOẠT ĐỘNG: BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề các Hoạt động (A, B, C, D, E) và từng hoạt động nhánh trong Mục B, ví dụ: \`## A. HOẠT ĐỘNG 1: MỞ ĐẦU (5 phút)\`, \`### 1. Hoạt động 2.1: [Tên mục] (15 phút)\`, \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP (10 phút)\`, \`## D. HOẠT ĐỘNG 4: VẬN DỤNG (5 phút)\`, \`## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (3 phút)\`. CẤM TUYỆT ĐỐI ghi từ "Khoảng" hoặc dải thời gian dạng "X - Y phút".
-- KHÓA TỔNG THỜI LƯỢNG: Tổng thời lượng tất cả hoạt động nhánh trong B BẮT BUỘC đúng bằng {time_budget_B}; tổng A + B + C + D BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration} (02 tiết = đúng 90 phút). Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). Không tự tăng thời lượng một nhánh hoặc tổng toàn bài.
+- KHÓA TỔNG THỜI LƯỢNG: Tổng thời lượng tất cả hoạt động nhánh trong B BẮT BUỘC đúng bằng {time_budget_B}; tổng A + B + C + D BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy {duration} (02 tiết = đúng 90 phút). Thời lượng từng nhánh B được hệ thống phân bổ theo khối lượng/độ phức tạp, KHÔNG chia đều; phải dùng đúng số phút đã cho và tổng N nhánh đúng bằng {time_budget_B}. Không tự tăng thời lượng một nhánh hoặc tổng toàn bài.
 - Chỉ dùng dấu gạch đầu dòng -, +, *; không dùng cú pháp gạch dưới để định dạng như _Trạm X:_ hoặc __tiêu đề__.
 - Mục a) Mục tiêu, b) Nội dung, c) Sản phẩm: dùng 3 cấp danh sách: ý lớn \`-\`, ý con \`+\`, ý chi tiết \`.\`. Trình bày súc tích, trọng tâm (mục a: tối đa 2 ý; mục b: tối đa 2–3 ý, không chép lại toàn văn SGK; mục c: tối đa 2 ý kết quả cốt lõi).
 - Mục d) Tổ chức thực hiện: BẮT BUỘC ĐÚNG MỘT bảng Markdown 2 cột, tiêu đề:
@@ -1384,9 +1428,16 @@ function getPromptTemplate(templateKey, context) {
     : '';
   
   const rawTextbook = context.textbook_content || '';
-  const subsections = extractTextbookSubsections(rawTextbook);
+  const extractedSubsections = extractTextbookSubsections(rawTextbook);
+  const subsectionProfiles = normalizeTextbookSubsectionProfiles(context.subsectionProfiles || rawTextbook);
+  // Canvas chỉ lưu bản đồ cấu trúc diễn đạt lại, không lưu OCR nguyên văn. Khi
+  // đó dùng chính hồ sơ Canvas làm danh sách nhánh B; bản SGK văn bản cũ vẫn
+  // ưu tiên các heading đã trích xuất để giữ tương thích.
+  const subsections = extractedSubsections.length
+    ? extractedSubsections
+    : subsectionProfiles.map(item => ({ index: item.index, title: item.title }));
   const fourActivities = templateKey !== 'GENERATE_ACTIVITIES_AE' && templateKey !== 'GENERATE_ACTIVITY_E';
-  const budgets = calculateActivityTimeBudgets(context.duration, subsections.length, context.grade, { fourActivities });
+  const budgets = calculateActivityTimeBudgets(context.duration, subsections.length, context.grade, { fourActivities, subsectionWeights: subsectionProfiles.map(item => item.weight) });
   const aiHomeworkPromptNote = context.aiCompetencyEnabled
     ? `- Hướng dẫn Prompt AI an toàn (khi giáo viên chủ động bật AI): Mẫu Prompt AI an toàn mẫu mực hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai gia sư gợi mở tư duy khi gặp khó khăn, TUYỆT ĐỐI không giải bài hộ, không thay thế việc tự học):\n  + Mẫu Prompt: "Em là học sinh lớp ${context.grade || '6'}, em đang tự học bài ${context.topic || ''} và gặp khó khăn ở [nêu bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự tìm ra cách giải, đừng giải hộ em nhé!"`
     : '';
@@ -1567,11 +1618,12 @@ if (typeof window !== 'undefined') {
   window.getPromptTemplate = getPromptTemplate;
   window.calculateActivityTimeBudgets = calculateActivityTimeBudgets;
   window.extractTextbookSubsections = extractTextbookSubsections;
+  window.normalizeTextbookSubsectionProfiles = normalizeTextbookSubsectionProfiles;
   window.extractTextbookLessonMap = extractTextbookLessonMap;
   window.getGeneralCompetenciesForSubject = getGeneralCompetenciesForSubject;
   window.formatGeneralCompetenciesGuide = formatGeneralCompetenciesGuide;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { PROMPTS, calculateActivityTimeBudgets, isEnglishSubject, getSystemRole, getPromptTemplate, extractTextbookSubsections, extractTextbookLessonMap, getGeneralCompetenciesForSubject, formatGeneralCompetenciesGuide };
+  module.exports = { PROMPTS, calculateActivityTimeBudgets, isEnglishSubject, getSystemRole, getPromptTemplate, extractTextbookSubsections, normalizeTextbookSubsectionProfiles, extractTextbookLessonMap, getGeneralCompetenciesForSubject, formatGeneralCompetenciesGuide };
 }

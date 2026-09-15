@@ -15245,10 +15245,11 @@ module.exports = {
                     ? 'Hỗn hợp phân hóa 4 mức độ: Nhận biết, Thông hiểu, Vận dụng, Vận dụng thực tế (chia đều nếu được).'
                     : synthLevel;
 
+                let typeInstruction = '';
                 if (isEssay) {
                     typeInstruction = 'Hình thức: Tự luận có lời giải chi tiết.';
                 } else if (synthForm === 'cv7991') {
-                    typeInstruction = 'Hình thức: ĐỀ THI CHUẨN CÔNG VĂN 7991 / BGDĐT gồm 03 phần: Phần I: Trắc nghiệm 4 lựa chọn (type: multiple-choice); Phần II: Đúng/Sai (type: true-false); Phần III: Trả lời ngắn với kết quả số ngắn gọn (type: short-answer). Tỉ lệ các phần cân đối (khoảng 50% Phần I, 25% Phần II, 25% Phần III).';
+                    typeInstruction = 'Hình thức: ĐỀ THI CHUẨN CÔNG VĂN 7991 / BGDĐT (18 câu - 10.0 điểm) gồm 03 phần: Phần I: 12 câu trắc nghiệm 4 lựa chọn (type: multiple-choice, mỗi câu 0.5đ = 6.0đ); Phần II: 2 câu Đúng/Sai 4 ý (type: true-false, mỗi câu 1.0đ = 2.0đ); Phần III: 4 câu Trả lời ngắn kết quả số ngắn gọn (type: short-answer, mỗi câu 0.5đ = 2.0đ). Tổng cộng 18 câu = 10.0 điểm.';
                 } else if (synthForm === 'mixed-quiz') {
                     typeInstruction = 'Hình thức TỔNG HỢP: trộn Nhiều lựa chọn, Đúng/Sai, Điền khuyết, Trả lời ngắn, Nối ô (mỗi loại ít nhất 1 câu nếu số câu >= 5).';
                 } else if (synthForm === 'multiple-choice') {
@@ -15362,8 +15363,8 @@ ${sourceContext}`;
                     return;
                 }
 
-                let bodyContent = `<h1>ĐỀ KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT</h1>`;
-                bodyContent += `<div class="sub-title">Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút</div>`;
+                let bodyContent = `<h1>ĐỀ MINH HỌA KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT</h1>`;
+                bodyContent += `<div class="sub-title">Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút - Thang điểm: 10 điểm</div>`;
 
                 if (mode === "quiz") {
                     const part1 = dataToExport.filter(q => q.type === "multiple-choice");
@@ -15377,8 +15378,8 @@ ${sourceContext}`;
                         const list1 = part1.length > 0 ? part1 : dataToExport;
                         const start1 = currentQNum;
                         const end1 = currentQNum + list1.length - 1;
-                        bodyContent += `<div class="section-title">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>`;
-                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start1} đến câu ${end1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án.</div>`;
+                        bodyContent += `<div class="section-title">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN (6.0 điểm)</div>`;
+                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start1} đến câu ${end1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án. Mỗi câu đúng được 0.5 điểm.</div>`;
                         
                         list1.forEach((q) => {
                             const optA = cleanOptionText(q.options?.[0] || '');
@@ -15406,8 +15407,8 @@ ${sourceContext}`;
                     if (part2.length > 0) {
                         const start2 = currentQNum;
                         const end2 = currentQNum + part2.length - 1;
-                        bodyContent += `<div class="section-title">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI</div>`;
-                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start2} đến câu ${end2}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai.</div>`;
+                        bodyContent += `<div class="section-title">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI (2.0 điểm)</div>`;
+                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start2} đến câu ${end2}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai. Điểm tối đa mỗi câu là 1.0 điểm (Đúng 1 ý: 0.1đ; 2 ý: 0.25đ; 3 ý: 0.5đ; 4 ý: 1.0đ).</div>`;
 
                         part2.forEach((q) => {
                             if (Array.isArray(q.subItems) && q.subItems.length > 0) {
@@ -15434,8 +15435,8 @@ ${sourceContext}`;
                     if (part3.length > 0) {
                         const start3 = currentQNum;
                         const end3 = currentQNum + part3.length - 1;
-                        bodyContent += `<div class="section-title">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN</div>`;
-                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start3} đến câu ${end3}. Thí sinh ghi đáp án vào ô trả lời.</div>`;
+                        bodyContent += `<div class="section-title">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN (2.0 điểm)</div>`;
+                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start3} đến câu ${end3}. Thí sinh ghi đáp án vào ô trả lời. Mỗi câu đúng được 0.5 điểm.</div>`;
 
                         part3.forEach((q) => {
                             const ans = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");

@@ -78,6 +78,7 @@ const appState = {
     },
     illustrations: []
   },
+  textbookSubsectionProfiles: [],
 
   activeTab: "tabVision",
   activeActSubtab: "A",
@@ -421,7 +422,7 @@ function getDraftId() { return buildDraftId(appState.selectedGrade, appState.sel
 function getDraftIndexKey() { return `khbd_drafts_v2:${getDraftScope()}:index`; }
 function getDraftKey(id = getDraftId()) { return `khbd_drafts_v2:${getDraftScope()}:${id}`; }
 function currentDraftData() {
-  return { selectedGrade: appState.selectedGrade, selectedSubject: appState.selectedSubject, selectedLesson: appState.selectedLesson, customTopic: appState.customTopic, school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration, teachingContext: appState.teachingContext, content: appState.content };
+  return { selectedGrade: appState.selectedGrade, selectedSubject: appState.selectedSubject, selectedLesson: appState.selectedLesson, customTopic: appState.customTopic, school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration, teachingContext: appState.teachingContext, content: appState.content, textbookSubsectionProfiles: appState.textbookSubsectionProfiles };
 }
 function saveStateToLocalStorage() {
   try {
@@ -490,6 +491,7 @@ function applyDraftData(data, { preserveSource = true } = {}) {
     duration: data.duration || appState.duration
   });
   appState.teachingContext = normalizeTeachingContext(data.teachingContext);
+  appState.textbookSubsectionProfiles = Array.isArray(data.textbookSubsectionProfiles) ? data.textbookSubsectionProfiles : [];
   if (data.content) {
     const a = data.content.activities || {};
     const savedVision = typeof data.content.vision === "string" ? data.content.vision : "";
@@ -4812,10 +4814,11 @@ function getFullLessonPlanMarkdown(options = {}) {
   const metadata = getLessonPlanMetadata();
   const c = appState.content;
   const actParts = [];
-  const sharedBSubsectionCount = resolveSharedBSubsectionCount(c.activities.B);
+  const sharedProfiles = resolveSharedBSubsectionProfiles({ subsectionProfiles: appState.textbookSubsectionProfiles });
+  const sharedBSubsectionCount = sharedProfiles.length || resolveSharedBSubsectionCount(c.activities.B);
   activityKeysForFullPlan(c).forEach(k => {
     if (c.activities[k] && c.activities[k].trim()) {
-      actParts.push(clipKhbdActivityMarkdown(k, c.activities[k], { subsectionCount: sharedBSubsectionCount }));
+      actParts.push(clipKhbdActivityMarkdown(k, c.activities[k], { subsectionCount: sharedBSubsectionCount, subsectionProfiles: sharedProfiles }));
     }
   });
   const fullActMarkdown = actParts.join("\n\n---\n\n");
@@ -4966,6 +4969,7 @@ function getGenerationPromptContext(params = {}) {
     duration: appState.duration,
     lesson_scope: (appState.teachingContext && appState.teachingContext.lessonScope) || '',
     ppct_content: appState.content.ppctAnalysis || '',
+    subsectionProfiles: Array.isArray(appState.textbookSubsectionProfiles) ? appState.textbookSubsectionProfiles : [],
     competencies: getSubjectCompetencies(appState.selectedSubject),
     textbook_content: resolveTextbookContent(),
     objectives_content: appState.content.objectives || "",
@@ -5824,6 +5828,16 @@ function resolveSharedBSubsectionCount(localContent = "", options = {}) {
   return countBBranchHeadings(localContent) || 1;
 }
 
+// Thời lượng là metadata từ SGK/Canvas, không suy ngược từ văn bản giáo án do
+// AI sinh (văn càng dài không đồng nghĩa phải dạy lâu hơn).
+function resolveSharedBSubsectionProfiles(options = {}) {
+  const explicit = options.subsectionProfiles;
+  if (Array.isArray(explicit) && explicit.length) return explicit;
+  const textbookContent = options.textbookContent !== undefined ? options.textbookContent : appState?.content?.vision;
+  if (typeof normalizeTextbookSubsectionProfiles === "function") return normalizeTextbookSubsectionProfiles(textbookContent);
+  return [];
+}
+
 function replaceHeadingMinutes(line, minutes) {
   const next = `(${minutes} phút)`;
   if (/\(\s*(?:khoảng\s*)?\d+\s*(?:[-–]\s*\d+\s*)?phút\s*\)/i.test(line)) {
@@ -5857,7 +5871,8 @@ function normalizeActivityTimeHeadings(text, options = {}) {
     Number(options.subsectionCount) || countBBranchHeadings(source) || 1
   );
   const fourActivities = options.fourActivities !== false;
-  const budgets = calc(duration, subsectionCount, grade, { fourActivities });
+  const profiles = resolveSharedBSubsectionProfiles(options);
+  const budgets = calc(duration, subsectionCount, grade, { fourActivities, subsectionWeights: profiles.slice(0, subsectionCount).map(item => item.weight) });
   const headingRe = {
     A: activityHeadingRegex("A"),
     B: /^#{1,3}\s*(?:B[\.\s:]|HOẠT[ \t]*ĐỘNG[ \t]*2(?!\.\d)|HÌNH[ \t]*THÀNH)/i,
@@ -5916,7 +5931,7 @@ function clipKhbdActivityMarkdown(actKey, text, options = {}) {
     1,
     Number(options.subsectionCount) || resolveSharedBSubsectionCount(clipped, options)
   );
-  return normalizeActivityTimeHeadings(clipped, { fourActivities: actKey !== "E", subsectionCount });
+  return normalizeActivityTimeHeadings(clipped, { fourActivities: actKey !== "E", subsectionCount, subsectionProfiles: options.subsectionProfiles, textbookContent: options.textbookContent });
 }
 
 function finalizeParsedKhbdSection(key, text) {
@@ -6218,8 +6233,8 @@ function canvasTextbookAnalysisPrompt(batchLabel) {
     "Không sao chép câu, đoạn, bảng, bài tập hoặc công thức từ học liệu. Không tái tạo văn bản nguồn.",
     "Chỉ diễn đạt lại bằng lời của bạn, thật ngắn gọn. Nếu không chắc, ghi vào unknowns thay vì suy đoán.",
     `Phạm vi lô đang phân tích: ${batchLabel}.`,
-    "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"lessonScope\":\"\",\"majorPoints\":[\"\"],\"summary\":\"\",\"unknowns\":[\"\"]}.",
-    "majorPoints có từ 1 đến 3 ý về kiến thức hoặc hoạt động chính; summary tối đa 90 từ."
+    "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"lessonScope\":\"\",\"majorPoints\":[\"\"],\"subsections\":[{\"title\":\"\",\"weight\":1,\"complexity\":1,\"signals\":[\"\"]}],\"summary\":\"\",\"unknowns\":[\"\"]}.",
+    "subsections gồm 1-4 mục kiến thức theo cấu trúc bài, diễn đạt lại (không OCR); weight/complexity là 1-4, signals là tín hiệu khối lượng như nhiều bước, khái niệm mới, thực hành. majorPoints có từ 1 đến 3 ý; summary tối đa 90 từ."
   ].join("\\n");
 }
 
@@ -6228,10 +6243,11 @@ function parseCanvasTextbookAnalysis(raw) {
   const parsed = JSON.parse((clean.match(/\{[\s\S]*\}/) || [""])[0]);
   const points = (Array.isArray(parsed.majorPoints) ? parsed.majorPoints : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 3);
   const unknowns = (Array.isArray(parsed.unknowns) ? parsed.unknowns : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 3);
+  const subsections = (typeof normalizeTextbookSubsectionProfiles === "function" ? normalizeTextbookSubsectionProfiles(parsed.subsections) : []).slice(0, 4);
   return {
     subject: String(parsed.subject || "").trim(), grade: String(parsed.grade || "").trim(), topic: String(parsed.topic || "").trim(),
     periodCount: Number(parsed.periodCount) || null, lessonScope: String(parsed.lessonScope || "").trim(),
-    majorPoints: points, summary: String(parsed.summary || "").trim().slice(0, 800), unknowns
+    majorPoints: points, subsections, summary: String(parsed.summary || "").trim().slice(0, 800), unknowns
   };
 }
 
@@ -6276,7 +6292,8 @@ async function analyzeCanvasTextbookSafely(onProgress) {
   const majorPoints = analyses.flatMap(item => item.majorPoints || []).filter(Boolean).slice(0, 6);
   const unknowns = analyses.flatMap(item => item.unknowns || []).filter(Boolean).slice(0, 6);
   const summary = analyses.map(item => item.summary).filter(Boolean).join(" ").slice(0, 1400);
-  return { ...first, majorPoints, unknowns, summary, batches: analyses.length };
+  const subsections = (typeof normalizeTextbookSubsectionProfiles === "function" ? normalizeTextbookSubsectionProfiles(analyses.flatMap(item => item.subsections || [])) : []).slice(0, 4);
+  return { ...first, majorPoints, subsections, unknowns, summary, batches: analyses.length };
 }
 
 function formatCanvasTextbookContext(data) {
@@ -6284,12 +6301,20 @@ function formatCanvasTextbookContext(data) {
     "## Ngữ cảnh SGK đã phân tích", data.topic && `- Chủ đề: ${data.topic}`, data.subject && `- Môn: ${data.subject}`,
     data.grade && `- Khối lớp: ${data.grade}`, data.periodCount && `- Số tiết tham khảo: ${data.periodCount}`,
     data.lessonScope && `- Phạm vi bài: ${data.lessonScope}`, data.majorPoints?.length && `- Ý chính: ${data.majorPoints.join("; ")}`,
+    data.subsections?.length && "## Cấu trúc kiến thức", ...(data.subsections || []).map(item => `- ${item.index}. ${item.title} (khối lượng ${item.weight}/6; ${item.signals.join(", ") || "một ý trọng tâm"})`),
     data.summary && `- Tóm lược: ${data.summary}`, data.unknowns?.length && `- Cần xác minh: ${data.unknowns.join("; ")}`
   ].filter(Boolean).join("\n");
 }
 
-async function applyTextbookOcrResult(ocrText, { silent = false } = {}) {
+async function applyTextbookOcrResult(ocrText, { silent = false, subsectionProfiles = null } = {}) {
   appState.content.vision = ocrText;
+  // Canvas đã trả metadata trọng số an toàn, không nguyên văn. Với luồng OCR
+  // cũ, suy hồ sơ từ chính nội dung vừa đọc để không giữ trọng số của SGK trước.
+  appState.textbookSubsectionProfiles = Array.isArray(subsectionProfiles)
+    ? subsectionProfiles
+    : (typeof normalizeTextbookSubsectionProfiles === "function"
+      ? normalizeTextbookSubsectionProfiles(ocrText)
+      : []);
   appState.teachingContext.ocrReady = true;
   saveStateToLocalStorage();
   const editor = document.getElementById("editorVision");
@@ -6314,17 +6339,18 @@ async function readTextbookWithMistral() {
     const status = document.getElementById("statusFooterText");
     let ocrText = "";
     let ocrProvider = "Gemini";
+    let canvasAnalysis = null;
 
     const canvasRoute = isCanvasGeminiRoute();
     updateProgress(15, canvasRoute ? "Đang phân tích ngữ cảnh SGK bằng Gemini Canvas..." : "Đang nhận diện SGK bằng Mistral OCR...");
     if (status) status.textContent = canvasRoute ? "Đang phân tích ngữ cảnh SGK bằng Gemini Canvas..." : "Đang nhận diện SGK bằng Mistral OCR...";
     if (canvasRoute) {
-      const analysis = await analyzeCanvasTextbookSafely((msg, pct) => updateProgress(pct, msg));
-      ocrText = formatCanvasTextbookContext(analysis);
+      canvasAnalysis = await analyzeCanvasTextbookSafely((msg, pct) => updateProgress(pct, msg));
+      ocrText = formatCanvasTextbookContext(canvasAnalysis);
       ocrProvider = "Gemini Canvas";
-      if (analysis.topic) appState.customTopic = analysis.topic;
-      if (analysis.lessonScope) appState.teachingContext.lessonScope = analysis.lessonScope;
-      if (Number.isInteger(analysis.periodCount) && analysis.periodCount > 0 && analysis.periodCount <= 20) appState.duration = String(analysis.periodCount);
+      if (canvasAnalysis.topic) appState.customTopic = canvasAnalysis.topic;
+      if (canvasAnalysis.lessonScope) appState.teachingContext.lessonScope = canvasAnalysis.lessonScope;
+      if (Number.isInteger(canvasAnalysis.periodCount) && canvasAnalysis.periodCount > 0 && canvasAnalysis.periodCount <= 20) appState.duration = String(canvasAnalysis.periodCount);
     }
     if (!canvasRoute && canUseMistralOcr()) {
       try {
@@ -6346,7 +6372,7 @@ async function readTextbookWithMistral() {
     if (!ocrText.replace(/\s+/g, " ").trim()) {
       throw new Error(`${ocrProvider} không đọc được chữ trên trang đã chọn.`);
     }
-    await applyTextbookOcrResult(ocrText, { silent: false });
+    await applyTextbookOcrResult(ocrText, { silent: false, subsectionProfiles: canvasRoute ? canvasAnalysis?.subsections : null });
 
     try {
       if (typeof autoDetectAndFillLessonMetadata === "function") {
@@ -6520,7 +6546,8 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
   appState.content.activities[actKey] = clipKhbdActivityMarkdown(actKey, finalResult, {
     // Khi vừa nhận lại B, dùng chính nội dung này như B đã lưu để không giữ
     // số nhánh của một bản B cũ trong lúc chuẩn hóa bản thay thế.
-    storedBContent: actKey === "B" ? finalResult : undefined
+    storedBContent: actKey === "B" ? finalResult : undefined,
+    subsectionProfiles: appState.textbookSubsectionProfiles
   });
   syncIllustrationsIntoContent();
   saveStateToLocalStorage();
