@@ -14661,11 +14661,32 @@ module.exports = {
                 { id: Date.now(), name: '', count: 5, level: 'Trung bình', quizType: 'multiple-choice' }
             ]);
 
-            const [questions, setQuestions] = useState([]);
-            const [essays, setEssays] = useState([]);
+            const [questions, setQuestions] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('smartquiz_questions');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) {
+                    return [];
+                }
+            });
+            const [essays, setEssays] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('smartquiz_essays');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) {
+                    return [];
+                }
+            });
             const [loading, setLoading] = useState(false);
             const [sourceLoading, setSourceLoading] = useState(false);
-            const [sourceMaterials, setSourceMaterials] = useState([]);
+            const [sourceMaterials, setSourceMaterials] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('smartquiz_source_materials');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) {
+                    return [];
+                }
+            });
             const [pendingSourceImages, setPendingSourceImages] = useState([]);
             const [sourceProgress, setSourceProgress] = useState({ active: false, percent: 0, message: "" });
             const [sourceNotice, setSourceNotice] = useState("");
@@ -14677,8 +14698,8 @@ module.exports = {
                 elapsedSeconds: 0
             });
             const [sourceOnly, setSourceOnly] = useState(true);
-            const [synthCount, setSynthCount] = useState(10);
-            const [synthForm, setSynthForm] = useState('mixed-quiz');
+            const [synthCount, setSynthCount] = useState(20);
+            const [synthForm, setSynthForm] = useState('cv7991');
             const [synthLevel, setSynthLevel] = useState('Hỗn hợp');
             const [retryCount, setRetryCount] = useState(0);
             const [showSettings, setShowSettings] = useState(false);
@@ -14694,14 +14715,33 @@ module.exports = {
                 pointsPerQuestion: 1
             });
 
-            // [NEW] áº¨n hiá»‡n mÃ n hÃ¬nh chá»‰nh sá»­a
+            // Đồng bộ localStorage khi dữ liệu thay đổi
+            useEffect(() => {
+                try {
+                    localStorage.setItem('smartquiz_source_materials', JSON.stringify(sourceMaterials));
+                } catch (e) {}
+            }, [sourceMaterials]);
+
+            useEffect(() => {
+                try {
+                    localStorage.setItem('smartquiz_questions', JSON.stringify(questions));
+                } catch (e) {}
+            }, [questions]);
+
+            useEffect(() => {
+                try {
+                    localStorage.setItem('smartquiz_essays', JSON.stringify(essays));
+                } catch (e) {}
+            }, [essays]);
+
+            // [NEW] Ẩn hiện màn hình chỉnh sửa
             const [isEditing, setIsEditing] = useState(false);
 
-            // Sá»¬A: Check auth â€” bá» redirect trong mÃ´i trÆ°á»ng Canvas
+            // SỬA: Check auth — bỏ redirect trong môi trường Canvas
             useEffect(() => {
                 const token = localStorage.getItem('authToken');
                 if (!token) {
-                    console.warn("SmartQuiz: ChÆ°a cÃ³ authToken, bá» qua kiá»ƒm tra Ä‘Äƒng nháº­p (Canvas mode).");
+                    console.warn("SmartQuiz: Chưa có authToken, bỏ qua kiểm tra đăng nhập (Canvas mode).");
                 }
             }, []);
 
@@ -15093,6 +15133,19 @@ module.exports = {
 
                     if (!parsedData || parsedData.length === 0) throw new Error("Không nhận diện được câu hỏi nào từ file.");
 
+                    // Lưu tài liệu vào danh sách nguồn để không bị mất khi quay lại Step 1
+                    setSourceMaterials(prev => {
+                        const exists = prev.some(m => m.name === file.name);
+                        if (!exists) {
+                            return [...prev, {
+                                id: `${Date.now()}-${file.name}`,
+                                name: file.name,
+                                text: extractedText.trim()
+                            }];
+                        }
+                        return prev;
+                    });
+
                     setMode("quiz");
                     setQuestions(parsedData);
                     setStep(2);
@@ -15253,7 +15306,7 @@ module.exports = {
                 } else if (synthForm === 'mixed-quiz') {
                     typeInstruction = 'Hình thức TỔNG HỢP: trộn Nhiều lựa chọn, Đúng/Sai, Điền khuyết, Trả lời ngắn, Nối ô (mỗi loại ít nhất 1 câu nếu số câu >= 5).';
                 } else if (synthForm === 'multiple-choice') {
-                    typeInstruction = 'Hình thức: chỉ Trắc nghiệm nhiều lựa chọn (4 phương án A,B,C,D).';
+                    typeInstruction = `Hình thức: 100% TRẮC NGHIỆM 4 LỰA CHỌN (A, B, C, D) gồm ${count} câu (mỗi câu 0.5 điểm, tổng thang điểm 10.0 điểm). Mỗi câu có 4 phương án A, B, C, D với duy nhất 1 đáp án đúng và 3 phương án sai hợp lý.`;
                 } else if (synthForm === 'true-false') {
                     typeInstruction = 'Hình thức: chỉ Đúng/Sai.';
                 } else if (synthForm === 'fill-blank') {
@@ -15488,7 +15541,7 @@ ${sourceContext}`;
                 }
 
                 let bodyContent = `<h1>ĐỀ MINH HỌA KIỂM TRA 100% TRẮC NGHIỆM TRUYỀN THỐNG</h1>`;
-                bodyContent += `<div class="sub-title">Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút</div>`;
+                bodyContent += `<div class="sub-title">Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút - Thang điểm: 10.0 điểm (Mỗi câu đúng được 0.5 điểm)</div>`;
 
                 if (mode === "quiz") {
                     const answerKeys = [];
@@ -15865,6 +15918,46 @@ ${sourceContext}`;
                     {step === 1 && (
                         <div className="bg-white p-6 md:p-10 rounded-3xl shadow-xl border border-indigo-50 relative overflow-hidden fade-in">
                             <div className="absolute top-0 right-0 bg-gradient-to-l from-indigo-100 to-transparent w-40 h-full opacity-50 pointer-events-none"></div>
+                            
+                            {/* Banner thông báo nếu đã có kết quả đề trước đó */}
+                            {(questions.length > 0 || essays.length > 0) && (
+                                <div className="mb-6 bg-gradient-to-r from-indigo-50 to-emerald-50 border border-indigo-200 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+                                            <i className="fas fa-clipboard-check text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-indigo-950 text-sm">
+                                                Đang lưu kết quả bài tập đã tạo ({mode === "quiz" ? questions.length : essays.length} {mode === "quiz" ? "câu hỏi" : "bài tập"})
+                                            </p>
+                                            <p className="text-xs text-indigo-700">Tài liệu nguồn PDF/Word và toàn bộ câu hỏi đã tạo được giữ nguyên vẹn.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setStep(2)}
+                                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition flex items-center gap-2 shadow whitespace-nowrap"
+                                        >
+                                            Xem lại kết quả đề <i className="fas fa-arrow-right"></i>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (window.confirm("Bạn có chắc chắn muốn xóa bộ câu hỏi đã tạo để làm lại từ đầu không? (File nguồn vẫn được giữ)")) {
+                                                    setQuestions([]);
+                                                    setEssays([]);
+                                                }
+                                            }}
+                                            className="px-3 py-2 bg-white text-red-500 hover:text-red-700 border border-red-200 rounded-xl font-bold text-xs transition"
+                                            title="Xóa bộ câu hỏi hiện tại"
+                                        >
+                                            <i className="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             <h2 className="text-2xl font-bold text-slate-800 mb-6">THIẾT LẬP YÊU CẦU</h2>
                             <p className="text-slate-600 mb-6 text-sm">Mỗi chủ đề có thể chọn hình thức trắc nghiệm riêng; nếu nạp học liệu nguồn, AI sẽ tạo câu hỏi bám theo nội dung đó để tránh vượt phạm vi chương trình.</p>
 
@@ -16022,14 +16115,17 @@ ${sourceContext}`;
                                         <div className="mt-1 flex gap-2">
                                             <select
                                                 value={synthCount}
-                                                onChange={(e) => setSynthCount(parseInt(e.target.value, 10) || 10)}
+                                                onChange={(e) => setSynthCount(parseInt(e.target.value, 10) || 20)}
                                                 className="w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
                                             >
+                                                <option value={20}>20 câu (Chuẩn 100% TN - 10đ)</option>
+                                                <option value={18}>18 câu (Chuẩn CV 7991 - 10đ)</option>
                                                 <option value={5}>5 câu</option>
                                                 <option value={10}>10 câu</option>
                                                 <option value={15}>15 câu</option>
-                                                <option value={20}>20 câu</option>
-                                                {![5, 10, 15, 20].includes(synthCount) && (
+                                                <option value={25}>25 câu</option>
+                                                <option value={30}>30 câu</option>
+                                                {![5, 10, 15, 18, 20, 25, 30].includes(synthCount) && (
                                                     <option value={synthCount}>{synthCount} câu (tùy chỉnh)</option>
                                                 )}
                                             </select>
@@ -16048,11 +16144,16 @@ ${sourceContext}`;
                                         Hình thức
                                         <select
                                             value={synthForm}
-                                            onChange={(e) => setSynthForm(e.target.value)}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setSynthForm(val);
+                                                if (val === 'cv7991') setSynthCount(18);
+                                                else if (val === 'multiple-choice') setSynthCount(20);
+                                            }}
                                             className="mt-1 w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
                                         >
-                                            <option value="cv7991">⭐ Chuẩn Công văn 7991 (3 phần: TN - Đúng/Sai - Trả lời ngắn)</option>
-                                            <option value="multiple-choice">100% Trắc nghiệm 4 lựa chọn (A, B, C, D)</option>
+                                            <option value="cv7991">⭐ Chuẩn Công văn 7991 (18 câu - 10đ: 12 TN + 2 Đ/S + 4 TL ngắn)</option>
+                                            <option value="multiple-choice">⭐ 100% Trắc nghiệm 4 lựa chọn (20 câu - 10đ: mỗi câu 0.5đ)</option>
                                             <option value="mixed-quiz">Trắc nghiệm tổng hợp</option>
                                             <option value="true-false">Đúng/Sai</option>
                                             <option value="fill-blank">Điền khuyết</option>
@@ -16220,7 +16321,13 @@ ${sourceContext}`;
                                     </p>
                                 </div>
                                 <div className="flex gap-2 flex-wrap items-center">
-                                    <button onClick={() => setStep(1)} className="px-3.5 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-bold text-sm transition"><i className="fas fa-redo"></i> Tạo lại</button>
+                                    <button
+                                        onClick={() => setStep(1)}
+                                        className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg hover:border-indigo-300 font-bold text-sm transition flex items-center gap-1.5 shadow-sm"
+                                        title="Quay lại vùng chọn file PDF/Word và điều chỉnh thiết lập (file nguồn và kết quả đều được lưu giữ)"
+                                    >
+                                        <i className="fas fa-arrow-left"></i> Quay lại chọn file & thiết lập
+                                    </button>
                                     <button onClick={startEditing} className="px-3.5 py-2 bg-red-100 text-red-600 border border-red-200 rounded-lg hover:bg-red-200 font-bold text-sm transition"><i className="fas fa-pencil-alt"></i> Sửa</button>
                                     {mode === "quiz" && (
                                         <button onClick={() => setShowSettings(true)} className="px-3.5 py-2 bg-purple-50 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-100 font-bold text-sm transition"><i className="fas fa-cog"></i> Cài đặt</button>
