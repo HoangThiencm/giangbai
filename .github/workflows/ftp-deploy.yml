@@ -32,8 +32,14 @@ jobs:
         if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm install --no-save javascript-obfuscator@4.1.1
 
+      - name: Verify required Canvas assets before build
+        run: node tools/check-required-assets.js
+
       - name: Obfuscate first-party JavaScript
         run: node tools/build-obfuscate.js --in-place
+
+      - name: Verify required Canvas assets after build
+        run: node tools/check-required-assets.js
 
       - name: Generate version manifest
         run: |

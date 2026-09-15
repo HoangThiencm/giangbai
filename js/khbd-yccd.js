@@ -1,3 +1,4 @@
+const KHBD_YCCD_DEPLOY_VERSION = "canvas-module-v8";
 /**
  * YCCĐ Toán lớp 6–9, trích xuất theo từng bài từ
  * GIAO AN/Yêu cầu cần đạt môn Toán 6–12 – CTGDPT 2018.xlsx.

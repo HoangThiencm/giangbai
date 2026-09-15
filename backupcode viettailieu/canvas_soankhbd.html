@@ -31,7 +31,7 @@
       window.__KHBD_CANVAS__ = {
         host: "https://hoangthiencm.id.vn",
         model: "gemini-3-flash-preview",
-        version: "20260915-canvas-system-v7",
+        version: "20260916-canvas-module-v8",
         systemGemini: true,
         geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php",
         connected: false
@@ -993,29 +993,42 @@
   <!-- =========================================================================
        SCRIPTS
        ========================================================================= -->
-  <script src="https://hoangthiencm.id.vn/ai-design-config.js"></script>
   <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js"></script>
+  <script>
+  (function () {
+    var cfg = window.__KHBD_CANVAS__ || (window.__KHBD_CANVAS__ = {}), host = cfg.host || "https://hoangthiencm.id.vn", v = "20260916-canvas-module-v8";
+    cfg.moduleFallback = cfg.moduleFallback || {};
+    function curriculumOk() { return !!(window.CURRICULUM_DATA && Array.isArray(window.CURRICULUM_DATA.subjects) && window.CURRICULUM_DATA.subjects.length); }
+    function load(url, valid) { return new Promise(function (resolve) { var done = false, script = document.createElement("script"), timer; function finish(ok) { if (done) return; done = true; clearTimeout(timer); resolve(Boolean(ok && valid())); } script.src = url + "?v=" + v; script.async = true; script.onload = function () { finish(true); }; script.onerror = function () { finish(false); }; timer = setTimeout(function () { try { script.remove(); } catch (_) {} finish(false); }, 8000); document.head.appendChild(script); }); }
+    function fallbackCurriculum() {
+      if (curriculumOk()) return;
+      var pairs = "toan|Toán,nguvan|Ngữ văn,khtn|Khoa học tự nhiên,vatli|Vật lí,hoahoc|Hoá học,sinhhoc|Sinh học,lichsu|Lịch sử,diali|Địa lí,lichsudialy|Lịch sử và Địa lí,gdcd|Giáo dục công dân,tinhoc|Tin học,congnghe|Công nghệ,amnhac|Âm nhạc,mithuat|Mĩ thuật,gdtc|Giáo dục thể chất,hdtn-hn|Hoạt động trải nghiệm, hướng nghiệp,tienganh|Tiếng Anh".split(",");
+      var subjects = pairs.map(function (x) { var p = x.split("|"); return { id: p[0], name: p[1], grades: [6, 7, 8, 9] }; }), bySubject = {};
+      subjects.forEach(function (s) { var lessons = s.id === "toan" ? ["Bài 1: Tập hợp", "Bài 2: Cách ghi số tự nhiên", "Bài 3: Thứ tự trong tập hợp các số tự nhiên", "Bài 4: Phép cộng và phép trừ số tự nhiên", "Bài 5: Phép nhân và phép chia số tự nhiên", "Bài 6: Lũy thừa với số mũ tự nhiên", "Bài 7: Thứ tự thực hiện các phép tính"] : ["Bài 1: Khởi động và làm quen môn " + s.name, "Bài 2: Nội dung học tập cơ bản"]; bySubject[s.id] = { "6": [{ chapter: "Lớp 6", items: lessons }] }; });
+      window.CURRICULUM_DATA = { version: "canvas-fallback-v8", grades: [{ id: "6", name: "Lớp 6" }, { id: "7", name: "Lớp 7" }, { id: "8", name: "Lớp 8" }, { id: "9", name: "Lớp 9" }], subjects: subjects, books: [{ id: "standard", label: "Danh mục bài học dự phòng" }], lessons: { "6": bySubject.toan["6"] }, lessonsBySubject: bySubject, __fallback: true };
+      window.SUBJECT_COMPETENCIES = window.SUBJECT_COMPETENCIES || {}; window.getCurriculumLessons = function (g) { return window.CURRICULUM_DATA.lessons[String(g)] || []; }; window.getSubjectsForGrade = function (g) { return subjects.filter(function (s) { return s.grades.indexOf(Number(g)) >= 0; }); }; window.getLessonsForBook = function (s, _b, g) { return ((bySubject[String(s || "").toLowerCase()] || {})[String(g)] || []); }; window.getAllLessonsFlat = function (g) { return window.getCurriculumLessons(g).reduce(function (out, c) { return out.concat(c.items.map(function (lesson) { return { chapter: c.chapter, lesson: lesson, fullTitle: lesson + " (" + c.chapter + ")" }; })); }, []); }; window.getSubjectCompetencies = function (s) { return window.SUBJECT_COMPETENCIES[s] || []; }; cfg.moduleFallback.curriculum = true;
+    }
+    window.__KHBD_CANVAS_CORE_READY__ = Promise.all([load(host + "/ai-design-config.js", function () { return !!window.AiDesignConfig; }), load(host + "/js/khbd-curriculum.js", curriculumOk), load(host + "/js/khbd-standards.js", function () { return !!window.KHBD_STANDARDS; }), load(host + "/js/khbd-yccd.js", function () { return !!window.KHBD_YCCD; })]).then(function (ok) { if (!ok[0]) { window.AiDesignConfig = { loadHostingFallbackConfig: function () { return Promise.resolve(); } }; cfg.moduleFallback.config = true; } if (!ok[1]) fallbackCurriculum(); if (!ok[2]) cfg.moduleFallback.standards = true; if (!ok[3]) cfg.moduleFallback.yccd = true; return cfg.moduleFallback; });
+  })();
+  </script>
   <script>
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260915-canvas-system-v7"}"><\/script>`);
+        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-canvas-module-v8"}"><\/script>`);
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260915-canvas-system-v7"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260916-canvas-module-v8"></script>
   <script>
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-        document.write(`<script src="${isLocal ? "js/khbd-docx.js" : "https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260915-canvas-system-v7"}"><\/script>`);
+        document.write(`<script src="${isLocal ? "js/khbd-docx.js" : "https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260916-canvas-module-v8"}"><\/script>`);
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-standards.js"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js"></script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-yccd.js"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260916-canvas-module-v8"></script>
 
   <!-- Fallback nhúng: khi host trả về file rỗng (0 bytes) hoặc lỗi mạng -->
   <script>
-  (function ensureKhbdStandardsFallback() {
+  (window.__KHBD_CANVAS_CORE_READY__ || Promise.resolve()).then(function ensureKhbdStandardsFallback() {
     if (typeof window.KHBD_STANDARDS === "undefined" || !window.KHBD_STANDARDS) {
       function aiEntry(code, label) {
         return {
@@ -1086,7 +1099,7 @@
       window.KHBD_YCCD.__fallback = true;
       console.info("[KHBD Canvas] KHBD_YCCD fallback stub activated.");
     }
-  })();
+  });
   </script>
 
   <!-- Patch Gemini Runtime + Canvas Confirm TRƯỚC khbd-app.js -->
@@ -1262,10 +1275,14 @@
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
       if (isLocal && typeof document !== "undefined") {
-        document.write('<script src="js/khbd-standards.js"><\/script>');
         document.write('<script src="js/khbd-app.js"><\/script>');
       } else if (typeof document !== "undefined") {
-        document.write('<script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260915-canvas-system-v7"><\/script>');
+        (window.__KHBD_CANVAS_CORE_READY__ || Promise.resolve()).then(function () {
+          var app = document.createElement("script");
+          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-canvas-module-v8";
+          app.onerror = function () { console.error("[KHBD Canvas] Không nạp được khbd-app.js từ host."); };
+          document.head.appendChild(app);
+        });
       }
     })();
   </script>
@@ -1531,7 +1548,12 @@
         if (footerModel) footerModel.textContent = MODEL;
         if (badge) badge.textContent = MODEL;
 
-        if (hostOk) {
+        const usingCurriculumFallback = Boolean(cfg.moduleFallback && cfg.moduleFallback.curriculum);
+        if (hostOk && usingCurriculumFallback) {
+          cfg.connected = true;
+          setBanner("Không tải được danh mục chương trình từ host; đang dùng danh mục dự phòng để chọn môn và bài học.", "err");
+          if (footer) footer.textContent = "Đang dùng danh mục bài học dự phòng.";
+        } else if (hostOk) {
           cfg.connected = true;
           setBanner("Đã kết nối host " + HOST.replace(/^https:\/\//, "") + " — dùng Gemini Canvas (" + MODEL + ") do hệ thống cấp, không cần API key.", "ok");
           if (footer) footer.textContent = "Đã kết nối host. Sẵn sàng.";

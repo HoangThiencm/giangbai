@@ -1,4 +1,5 @@
 /* Catalog đối chiếu văn bản gốc: NLS theo dải L6–7/L8–9; AI tuyệt đối đúng lớp. */
+const KHBD_STANDARDS_DEPLOY_VERSION = "canvas-module-v8";
 function aiEntry(code, label) {
   return {
     // Giữ quy ước id cũ (vd. qd2422-6-a13) để bản nháp đã lưu vẫn chọn đúng mục.

@@ -2,6 +2,7 @@
  * Cấu hình AI trên từng trang công cụ (không còn ở hub giáo viên).
  */
 (function (global) {
+    global.__AI_DESIGN_CONFIG_DEPLOY_VERSION__ = 'canvas-module-v8';
     const LS = {
         gemini: 'global_gemini_keys',
         groq: 'global_groq_keys',

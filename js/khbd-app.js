@@ -203,7 +203,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     marker: "[STEM]",
     promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
-                                                                                                                                                                            {
+                                                                                                                                                                              {
     id: "virtualLab",
     label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
     legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
@@ -306,8 +306,7 @@ function localityProvinceSelectHtml() {
 // =============================================================================
 // KHỞI CHẠY KHI TRANG SẴN SÀNG
 // =============================================================================
-if (typeof document !== "undefined") {
-  document.addEventListener("DOMContentLoaded", async () => {
+async function initializeKhbdApp() {
     initLucideIcons();
     loadStateFromLocalStorage();
     appState.selectedGrade = clampKhbdGrade(appState.selectedGrade);
@@ -341,7 +340,16 @@ if (typeof document !== "undefined") {
     renderSubjectIntegrations();
     setActiveDropzoneTarget("sgk");
     updateWorkflowStepper();
-  });
+}
+
+if (typeof document !== "undefined") {
+  // Canvas loads the curriculum modules defensively.  Do not lose startup when
+  // its asynchronous module loader finishes after DOMContentLoaded.
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    Promise.resolve().then(initializeKhbdApp);
+  } else {
+    document.addEventListener("DOMContentLoaded", initializeKhbdApp, { once: true });
+  }
 }
 
 function initLucideIcons() {

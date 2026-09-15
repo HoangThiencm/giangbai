@@ -6,6 +6,7 @@
  */
 
 
+const KHBD_CURRICULUM_DEPLOY_VERSION = "canvas-module-v8";
 const SUBJECT_COMPETENCIES = {
   toan: ['Tư duy và lập luận toán học', 'Mô hình hoá toán học', 'Giải quyết vấn đề toán học', 'Giao tiếp toán học', 'Sử dụng công cụ, phương tiện toán học'],
   nguvan: ['Năng lực ngôn ngữ (Đọc, Viết, Nói, Nghe)', 'Năng lực văn học (Cảm thụ và thưởng thức thẩm mĩ)'],

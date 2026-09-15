@@ -153,3 +153,25 @@ Không commit, push hay deploy. `docs/handoff/PLAN.md` không bị sửa.
 - Không sửa `docs/handoff/PLAN.md`.
 - Không commit hoặc push.
 - Giữ nguyên các thay đổi không liên quan đã có trong worktree.
+
+## Cập nhật: Canvas dự phòng danh mục môn học khi module host lỗi/rỗng
+
+- `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`
+  - Nạp tuần tự có kiểm tra timeout cho `ai-design-config.js`, curriculum, standards và YCCĐ trước khi nạp `khbd-app.js`; HTTP 200 nhưng tệp rỗng được xem là lỗi nạp.
+  - Khi curriculum host không khả dụng, dùng danh mục dự phòng gồm toàn bộ môn THCS hỗ trợ và các bài Lớp 6 (Toán có các bài 1–7), nên ô Môn học/Bài học không còn rỗng.
+  - Banner phân biệt rõ đang dùng danh mục dự phòng, thay cho thông báo chung “không kết nối mạng”. Cache-bust đồng bộ `20260916-canvas-module-v8`.
+- `js/khbd-app.js`: khởi động được cả khi ứng dụng được nạp sau `DOMContentLoaded`, tránh race giữa loader Canvas và app.
+- `.github/workflows/ftp-deploy.yml` và `tools/check-required-assets.js`: chặn deploy nếu một trong bốn module bắt buộc thiếu hoặc 0 byte, kiểm tra cả trước và sau bước build; marker phiên bản v8 làm các asset này được FTP cập nhật lại.
+- Thêm `tests/canvas-module-fallback-smoke.js`; cập nhật smoke Canvas sang v8.
+
+### Kiểm thử
+
+- `node tools/check-required-assets.js`: PASS.
+- `node tests/canvas-module-fallback-smoke.js`: PASS (mô phỏng module rỗng và module bình thường).
+- `node tests/canvas-soankhbd-smoke.js`: PASS.
+- `node tests/khbd-4steps-workflow-smoke.js`: PASS.
+- `node tests/khbd-autofill-metadata-smoke.js`: PASS.
+- `node --check js/khbd-app.js`: PASS.
+- `git diff --check` cho các tệp trong phạm vi: PASS. Các cảnh báo whitespace ở `taobaitap.html`/`thitructuyen.html` là thay đổi có sẵn ngoài phạm vi.
+
+Không commit, push hoặc deploy. `docs/handoff/PLAN.md` không bị sửa.
