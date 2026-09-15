@@ -39,7 +39,6 @@ async function accessControlMain() {
         'xaydungphuluc.html': 'xaydungphuluc', 'duyetgiaoan.html': 'duyetgiaoan', 'duyetde.html': 'duyetde', 'nghiencuubaihoc.html': 'nghiencuubaihoc',
         'canvas_xaydungphuluc.html': 'xaydungphuluc',
         'giaoantichhop.html': 'soankhbd',
-        'nopbai.html': 'nopbai',
         'trochoi.html': 'smartquiz',
         'taobaitap.html': 'smartquiz',
         'matrande copy.html': 'matrande',

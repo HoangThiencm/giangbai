@@ -72,6 +72,13 @@ assert.match(nopbai, /Hệ thống đã ghi nhận thời gian nộp bài của 
 assert.match(nopbai, /id="submitButton"/, 'footer submit button must remain as fallback');
 assert.doesNotMatch(nopbai, /<iframe\b/i, 'nopbai must not embed an iframe for link fields');
 assert.doesNotMatch(nopbai, /function formatEmbedUrl/, 'nopbai must not keep unused formatEmbedUrl');
+assert.doesNotMatch(nopbai, /href=["']index\.html["']/, 'nopbai must not link to index.html to prevent unexpected login redirect');
+assert.doesNotMatch(nopbai, /href=["']login\.html["']/, 'nopbai must not link to login.html');
+assert.doesNotMatch(nopbai, /access-control\.js/, 'nopbai must not load access-control.js');
+assert.match(nopbai, /Không cần đăng nhập/i, 'nopbai must explicitly reassure users that no login is needed');
+assert.match(nopbai, /không cần tài khoản hay mật khẩu đăng nhập/i, 'nopbai must explain that no account or password is needed');
+assert.match(nopbai, /id="participantSelect"/, 'nopbai must keep participant selection available');
+assert.match(nopbai, /function confirmSelectedParticipant\(\)/, 'nopbai must keep the participant confirmation flow');
 
 const openFn = extractFunction(nopbai, 'openLinkAndSubmit');
 const openTabIdx = openFn.indexOf("window.open(targetUrl, '_blank')");
