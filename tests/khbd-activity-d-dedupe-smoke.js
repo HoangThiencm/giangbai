@@ -2,7 +2,9 @@
 
 const assert = require('assert');
 const {
+  appState,
   clipKhbdActivityMarkdown,
+  getFullLessonPlanMarkdown,
   parseKhbdSections,
   normalizeActivityTimeHeadings
 } = require('../js/khbd-app.js');
@@ -150,7 +152,51 @@ assert.doesNotMatch(normalized, /\(75 phút\)/);
 assert.doesNotMatch(normalized, /Hoạt động 2\.2:[^\n]*\(30 phút\)/);
 console.log('  -> normalizeActivityTimeHeadings 90 phút: PASS');
 
-console.log('-> 4. Prompt khóa thời lượng B và cấm lặp D...');
+console.log('-> 4. Pha C/D riêng lẻ kế thừa đúng 3 nhánh B cho bài 90 phút...');
+appState.duration = '02 tiết (90 phút)';
+appState.selectedGrade = '6';
+appState.content.vision = '';
+appState.content.activities.A = '';
+appState.content.activities.B = clipKhbdActivityMarkdown('B', `## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI (75 phút)
+### 1. Hoạt động 2.1: Nhân số tự nhiên (25 phút)
+Nội dung 2.1
+### 2. Hoạt động 2.2: Tính chất của phép nhân (25 phút)
+Nội dung 2.2
+### 3. Hoạt động 2.3: Chia số tự nhiên (25 phút)
+Nội dung 2.3`);
+appState.content.activities.A = clipKhbdActivityMarkdown('A', '## A. HOẠT ĐỘNG 1: MỞ ĐẦU (10 phút)\nMở đầu');
+appState.content.activities.C = clipKhbdActivityMarkdown('C', '## C. HOẠT ĐỘNG 3: LUYỆN TẬP (28 phút)\nLuyện tập');
+appState.content.activities.D = clipKhbdActivityMarkdown('D', '## D. HOẠT ĐỘNG 4: VẬN DỤNG (12 phút)\nVận dụng');
+
+assert.match(appState.content.activities.A, /\(8 phút\)/);
+assert.match(appState.content.activities.B, /HÌNH THÀNH KIẾN THỨC MỚI \(48 phút\)/);
+assert.deepStrictEqual(
+  [...appState.content.activities.B.matchAll(/Hoạt động 2\.\d+:[^\n]*\((\d+) phút\)/g)].map(match => Number(match[1])),
+  [16, 16, 16],
+  'Ba nhánh B phải chia đều 48 phút'
+);
+assert.match(appState.content.activities.C, /\(22 phút\)/, 'C riêng lẻ phải dùng ngữ cảnh 3 nhánh B');
+assert.match(appState.content.activities.D, /\(12 phút\)/, 'D riêng lẻ phải dùng ngữ cảnh 3 nhánh B');
+
+appState.content.activities.B = '';
+appState.content.vision = 'I. Nhân số tự nhiên\nII. Tính chất của phép nhân\nIII. Phép chia số tự nhiên';
+const cFromTextbook = clipKhbdActivityMarkdown('C', '## C. HOẠT ĐỘNG 3: LUYỆN TẬP (28 phút)\nLuyện tập');
+assert.match(cFromTextbook, /\(22 phút\)/, 'C phải dùng số tiểu mục từ ngữ cảnh SGK khi B chưa được lưu');
+appState.content.activities.B = clipKhbdActivityMarkdown('B', `## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI (75 phút)
+### 1. Hoạt động 2.1: Nhân số tự nhiên (25 phút)
+Nội dung 2.1
+### 2. Hoạt động 2.2: Tính chất của phép nhân (25 phút)
+Nội dung 2.2
+### 3. Hoạt động 2.3: Chia số tự nhiên (25 phút)
+Nội dung 2.3`);
+
+const assembled = getFullLessonPlanMarkdown({ includeHeader: false });
+const mainMinutes = [...assembled.matchAll(/^## [A-D]\.[^\n]*\((\d+) phút\)/gm)].map(match => Number(match[1]));
+assert.deepStrictEqual(mainMinutes, [8, 48, 22, 12]);
+assert.strictEqual(mainMinutes.reduce((sum, minutes) => sum + minutes, 0), 90, 'Giáo án ghép A–D phải đủ 90 phút');
+console.log('  -> Pha riêng lẻ và giáo án ghép 90 phút: PASS');
+
+console.log('-> 5. Prompt khóa thời lượng B và cấm lặp D...');
 const promptAE = getPromptTemplate('GENERATE_ACTIVITIES_AE', {
   subjectName: 'Toán',
   topic: 'Tập hợp',

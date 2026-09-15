@@ -1,3 +1,33 @@
+# Báo cáo triển khai: Đồng bộ thời lượng KHBD theo số nhánh Hoạt động 2
+
+## Cập nhật: khóa tổng thời lượng 90 phút khi tạo từng pha riêng
+
+- `js/khbd-app.js`
+  - Thêm bộ phân giải số nhánh dùng chung cho Hoạt động 2: ưu tiên nội dung B đã lưu, sau đó suy từ ngữ cảnh SGK bằng `extractTextbookSubsections`, cuối cùng mới dùng đoạn đang xử lý hoặc 1 nhánh.
+  - `clipKhbdActivityMarkdown`, luồng nhận kết quả từng pha và luồng ghép/xuất toàn bộ giáo án đều truyền cùng số nhánh B vào bộ chuẩn hóa tiêu đề thời lượng.
+  - Với bài 90 phút có 3 nhánh B, thời lượng luôn là A 8 phút, B 48 phút (3 × 16), C 22 phút, D 12 phút; tổng đúng 90 phút.
+- `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`
+  - Nâng cache-bust Canvas lên `20260915-canvas-system-v6` cho các tệp dùng chung, bao gồm `khbd-app.js`.
+- `soankhbd.html`
+  - Thêm cache-bust riêng cho `khbd-app.js` để trang soạn bài tải bản sửa thời lượng.
+- `tests/khbd-activity-d-dedupe-smoke.js`
+  - Bổ sung hồi quy: tạo B 3 nhánh trước rồi tạo A/C/D riêng lẻ, đồng thời kiểm tra đường ghép giáo án đầy đủ 90 phút.
+- `tests/canvas-soankhbd-smoke.js`
+  - Cập nhật kỳ vọng cache-bust Canvas v6.
+
+### Kiểm thử
+
+- `node --check js/khbd-app.js`: PASS.
+- `node tests/khbd-activity-d-dedupe-smoke.js`: PASS.
+- `node tests/khbd-time-budgets-smoke.js`: PASS.
+- `node tests/khbd-activities-ad-standard-smoke.js`: PASS.
+- `node tests/canvas-soankhbd-smoke.js`: PASS.
+- `node tests/backupcode-canvas-smoke.js`: PASS.
+- `node tests/khbd-docx-layout-smoke.js`: PASS.
+- `git diff --check` (tệp trong phạm vi): PASS.
+
+Không commit, push hoặc deploy. `docs/handoff/PLAN.md` không bị sửa.
+
 # Báo cáo triển khai: Gemini Canvas hệ thống không cần key cá nhân
 
 ## Cập nhật: giới hạn thời gian Canvas v5

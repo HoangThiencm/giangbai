@@ -4812,9 +4812,10 @@ function getFullLessonPlanMarkdown(options = {}) {
   const metadata = getLessonPlanMetadata();
   const c = appState.content;
   const actParts = [];
+  const sharedBSubsectionCount = resolveSharedBSubsectionCount(c.activities.B);
   activityKeysForFullPlan(c).forEach(k => {
     if (c.activities[k] && c.activities[k].trim()) {
-      actParts.push(clipKhbdActivityMarkdown(k, c.activities[k]));
+      actParts.push(clipKhbdActivityMarkdown(k, c.activities[k], { subsectionCount: sharedBSubsectionCount }));
     }
   });
   const fullActMarkdown = actParts.join("\n\n---\n\n");
@@ -5803,6 +5804,26 @@ function countBBranchHeadings(text) {
   return String(text || "").split(/\r?\n/).filter(line => re.test(line.trim())).length;
 }
 
+// Các pha C/D thường được AI trả về sau pha B. Vì vậy, không được suy số nhánh B
+// chỉ từ từng đoạn đang xử lý: điều đó khiến định mức của C/D bị tính theo 1 nhánh.
+function resolveSharedBSubsectionCount(localContent = "", options = {}) {
+  const storedB = options.storedBContent !== undefined
+    ? options.storedBContent
+    : appState?.content?.activities?.B;
+  const storedCount = countBBranchHeadings(storedB);
+  if (storedCount) return storedCount;
+
+  const textbookContent = options.textbookContent !== undefined
+    ? options.textbookContent
+    : appState?.content?.vision;
+  if (typeof extractTextbookSubsections === "function") {
+    const textbookCount = extractTextbookSubsections(String(textbookContent || "")).length;
+    if (textbookCount) return textbookCount;
+  }
+
+  return countBBranchHeadings(localContent) || 1;
+}
+
 function replaceHeadingMinutes(line, minutes) {
   const next = `(${minutes} phút)`;
   if (/\(\s*(?:khoảng\s*)?\d+\s*(?:[-–]\s*\d+\s*)?phút\s*\)/i.test(line)) {
@@ -5863,7 +5884,7 @@ function normalizeActivityTimeHeadings(text, options = {}) {
   }).join("\n");
 }
 
-function clipKhbdActivityMarkdown(actKey, text) {
+function clipKhbdActivityMarkdown(actKey, text, options = {}) {
   const source = String(text || "").replace(/^\uFEFF/, "").trim();
   if (!source) return source;
   const keys = ["A", "B", "C", "D", "E", "F"];
@@ -5891,7 +5912,11 @@ function clipKhbdActivityMarkdown(actKey, text) {
   }
   clipped = stripDisabledActivityIntegrations(clipped);
   clipped = formatKhbdRoleLineBreaks(clipped);
-  return normalizeActivityTimeHeadings(clipped, { fourActivities: actKey !== "E" });
+  const subsectionCount = Math.max(
+    1,
+    Number(options.subsectionCount) || resolveSharedBSubsectionCount(clipped, options)
+  );
+  return normalizeActivityTimeHeadings(clipped, { fourActivities: actKey !== "E", subsectionCount });
 }
 
 function finalizeParsedKhbdSection(key, text) {
@@ -6492,7 +6517,11 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
   }
   finalResult = stripDisabledActivityIntegrations(finalResult);
   finalResult = formatKhbdRoleLineBreaks(finalResult);
-  appState.content.activities[actKey] = clipKhbdActivityMarkdown(actKey, finalResult);
+  appState.content.activities[actKey] = clipKhbdActivityMarkdown(actKey, finalResult, {
+    // Khi vừa nhận lại B, dùng chính nội dung này như B đã lưu để không giữ
+    // số nhánh của một bản B cũ trong lúc chuẩn hóa bản thay thế.
+    storedBContent: actKey === "B" ? finalResult : undefined
+  });
   syncIllustrationsIntoContent();
   saveStateToLocalStorage();
   return appState.content.activities[actKey];
