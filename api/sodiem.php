@@ -53,6 +53,11 @@ if ($method === 'GET' && $action === 'load') {
     $stmt = $pdo->prepare('SELECT columns_config_json, students_data_json, history_log_json, updated_at FROM gradebooks WHERE teacher_id = ? AND class_name = ? AND subject = ? AND academic_year = ? LIMIT 1');
     $stmt->execute([(int)$teacher['id'], $class, $subject, $year]);
     $book = $stmt->fetch();
+    if (!$book) {
+        $fallbackStmt = $pdo->prepare('SELECT columns_config_json, students_data_json, history_log_json, updated_at FROM gradebooks WHERE class_name = ? AND subject = ? AND academic_year = ? ORDER BY updated_at DESC LIMIT 1');
+        $fallbackStmt->execute([$class, $subject, $year]);
+        $book = $fallbackStmt->fetch();
+    }
     $rosterStmt = $pdo->prepare("SELECT id, username, full_name, class_name FROM users WHERE role = 'student' AND is_active = 1 AND class_name = ? ORDER BY full_name, username");
     $rosterStmt->execute([$class]);
     respond(['gradebook' => $book ?: null, 'roster' => $rosterStmt->fetchAll()]);
