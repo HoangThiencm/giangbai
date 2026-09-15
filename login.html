@@ -226,8 +226,7 @@
                 return 'index.html';
             }
             if (user?.role === 'student') {
-                const primary = routeOrder.find(pageKey => canOpen(pageKey) && pageUrls[pageKey]);
-                return primary ? pageUrls[primary] : 'lotrinhtoan6.html';
+                return 'index.html';
             }
             return 'index.html';
         }

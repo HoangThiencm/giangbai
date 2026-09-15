@@ -887,23 +887,6 @@
 
         // Auto check auth on load
         if (!localStorage.getItem('authToken')) window.location.href = 'login.html';
-        if (localStorage.getItem('userRole') === 'student') {
-            let allowedPages = [];
-            try { allowedPages = JSON.parse(localStorage.getItem('allowedPages') || '[]'); } catch {}
-            const routeMap = {
-                lotrinhtoan4: 'lotrinhtoan4.html',
-                lotrinhtoan5: 'lotrinhtoan5.html',
-                lotrinhtoan6: 'lotrinhtoan6.html',
-                lotrinhtoan7: 'lotrinhtoan7.html',
-                lotrinhtoan8: 'lotrinhtoan8.html',
-                lotrinhtoan9: 'lotrinhtoan9.html'
-            };
-            const routeOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
-            const canOpen = pageKey => allowedPages.includes(pageKey)
-                || (pageKey === 'lotrinhtoan6' && allowedPages.includes('lotrinh'));
-            const primary = routeOrder.find(pageKey => canOpen(pageKey) && routeMap[pageKey]);
-            window.location.href = primary ? routeMap[primary] : 'lotrinhtoan6.html';
-        }
 
         const TOOL_PAGE_LINKS = {
             thitructuyen: 'thitructuyen.html',
@@ -1128,7 +1111,62 @@
 
     <main class="mx-auto max-w-7xl px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <section>
-            <div id="defaultToolsHeader" class="mb-4 flex items-center justify-between gap-3">
+                        <!-- CỔNG HỌC TẬP HỌC SINH (CHỈ HIỆN CHO ROLE = STUDENT) -->
+            <section id="studentPortalDeck" class="hidden mb-10">
+                <!-- Welcome Banner -->
+                <div class="rounded-3xl bg-gradient-to-r from-indigo-700 via-blue-600 to-teal-500 p-6 sm:p-8 text-white shadow-xl shadow-indigo-100 mb-8">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-xs font-bold uppercase tracking-wider backdrop-blur-sm mb-3">
+                                <i class="fas fa-sparkles text-amber-300"></i> Không gian học tập cá nhân
+                            </div>
+                            <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Xin chào, <span id="studentWelcomeName">học sinh</span>! 👋</h2>
+                            <p class="mt-2 text-white/90 text-sm sm:text-base max-w-2xl leading-relaxed">
+                                Chào mừng em đến với hệ thống tự học. Hãy chọn lộ trình môn học hoặc tham gia các hoạt động kiểm tra, nộp bài tập được giao dưới đây.
+                            </p>
+                        </div>
+                        <div id="studentClassBadge" class="shrink-0 px-5 py-3.5 rounded-2xl bg-white/15 border border-white/20 text-center backdrop-blur-sm shadow-inner">
+                            <div class="text-xs font-medium text-white/80 uppercase tracking-wider">Lớp học</div>
+                            <div id="studentWelcomeClass" class="text-xl sm:text-2xl font-black text-white mt-0.5">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nhóm 1: Lộ trình bài học theo khối lớp -->
+                <div id="studentLotrinhSection" class="mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <p class="section-kicker text-teal-600">Lộ trình học tập</p>
+                            <h3 class="text-xl font-extrabold text-slate-900">Bài học &amp; Luyện tập theo SGK</h3>
+                        </div>
+                    </div>
+                    <div id="studentLotrinhGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- Nhóm 2: Hoạt động & Tiện ích được phân quyền -->
+                <div id="studentActivitiesSection" class="mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <p class="section-kicker text-indigo-600">Hoạt động lớp học</p>
+                            <h3 class="text-xl font-extrabold text-slate-900">Hoạt động &amp; Tiện ích được phân quyền</h3>
+                        </div>
+                    </div>
+                    <div id="studentActivitiesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- Khi chưa được phân quyền bất kỳ trang nào -->
+                <div id="studentEmptyState" class="hidden text-center py-12 px-4 rounded-3xl bg-white border border-slate-200 shadow-sm">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-3xl">
+                        <i class="fas fa-user-clock"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-800">Tài khoản đang chờ phân quyền</h4>
+                    <p class="mt-2 text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+                        Tài khoản của em hiện chưa được mở lộ trình bài học hoặc hoạt động nào. Vui lòng liên hệ Thầy/Cô để được cấp quyền mở đúng môn và lớp nhé!
+                    </p>
+                </div>
+            </section>
+
+<div id="defaultToolsHeader" class="mb-4 flex items-center justify-between gap-3">
                 <div>
                     <p class="section-kicker text-indigo-600">Công cụ AI</p>
                     <h3 class="mt-2 text-xl font-extrabold tracking-tight text-slate-900">Bộ công cụ giảng dạy</h3>
@@ -1470,7 +1508,201 @@
     <script src="js/user-ai-settings.js"></script>
     <script src="ai-stats-panel.js?v=20260708"></script>
     <script>
-        (async function setupTeacherLotrinhHub() {
+                function setupStudentPortal(allowedPages) {
+            const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+
+            const userName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Học sinh';
+            const userClassName = (localStorage.getItem('userClassName') || '').trim();
+
+            // 1. Hide teacher-specific controls & sections
+            document.getElementById('btnOpenUserAiSettings')?.classList.add('hidden');
+            document.getElementById('defaultToolsHeader')?.classList.add('hidden');
+            document.getElementById('guideContent')?.closest('.overflow-hidden')?.classList.add('hidden');
+            document.getElementById('teacherLotrinhHub')?.classList.add('hidden');
+            document.getElementById('teacherToolsDivider')?.classList.add('hidden');
+            document.getElementById('toolsDeck')?.classList.add('hidden');
+            document.getElementById('studentLotrinhCategory')?.classList.add('hidden');
+            document.getElementById('heroKeyStatus')?.classList.add('hidden');
+
+            // 2. Adjust Navbar for Student
+            const navTitle = document.querySelector('nav h1');
+            if (navTitle) navTitle.textContent = 'HỆ THỐNG TỰ HỌC & ÔN LUYỆN CHO HỌC SINH';
+
+            const navSubtitle = document.querySelector('nav p.text-xs');
+            if (navSubtitle) {
+                navSubtitle.innerHTML = `Học sinh: <strong class="text-indigo-600">${escapeHtml(userName)}</strong>${userClassName ? ` · Lớp: <strong class="text-indigo-600">${escapeHtml(userClassName)}</strong>` : ''}`;
+            }
+
+            const navBadge = document.querySelector('nav .nav-chip');
+            if (navBadge) {
+                navBadge.className = 'nav-chip rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm';
+                navBadge.innerHTML = '<i class="fas fa-graduation-cap mr-1 text-emerald-500"></i> Cổng Học Sinh';
+            }
+
+            // 3. Show & populate student portal deck
+            const portalDeck = document.getElementById('studentPortalDeck');
+            if (!portalDeck) return;
+            portalDeck.classList.remove('hidden');
+
+            const welcomeName = document.getElementById('studentWelcomeName');
+            if (welcomeName) welcomeName.textContent = userName;
+
+            const welcomeClass = document.getElementById('studentWelcomeClass');
+            if (welcomeClass) {
+                welcomeClass.textContent = userClassName || 'Chưa gán';
+            }
+
+            const allowedSet = new Set((Array.isArray(allowedPages) ? allowedPages : []).map(p => p === 'lotrinh' ? 'lotrinhtoan6' : p));
+
+            // Populate Math Lotrinh Cards
+            const mathRoutes = [
+                { key: 'lotrinhtoan4', grade: 4, label: 'Toán 4', url: 'lotrinhtoan4.html', color: 'from-amber-500 to-orange-500' },
+                { key: 'lotrinhtoan5', grade: 5, label: 'Toán 5', url: 'lotrinhtoan5.html', color: 'from-orange-500 to-rose-500' },
+                { key: 'lotrinhtoan6', grade: 6, label: 'Toán 6', url: 'lotrinhtoan6.html', color: 'from-blue-600 to-indigo-600' },
+                { key: 'lotrinhtoan7', grade: 7, label: 'Toán 7', url: 'lotrinhtoan7.html', color: 'from-indigo-600 to-purple-600' },
+                { key: 'lotrinhtoan8', grade: 8, label: 'Toán 8', url: 'lotrinhtoan8.html', color: 'from-teal-600 to-emerald-600' },
+                { key: 'lotrinhtoan9', grade: 9, label: 'Toán 9', url: 'lotrinhtoan9.html', color: 'from-emerald-600 to-cyan-600' }
+            ];
+
+            const allowedMath = mathRoutes.filter(r => allowedSet.has(r.key));
+            const lotrinhGrid = document.getElementById('studentLotrinhGrid');
+            const lotrinhSection = document.getElementById('studentLotrinhSection');
+
+            if (lotrinhGrid && lotrinhSection) {
+                if (allowedMath.length > 0) {
+                    lotrinhSection.classList.remove('hidden');
+                    lotrinhGrid.innerHTML = allowedMath.map(r => `
+                        <a href="${r.url}" class="group relative flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-indigo-500 transition-all duration-200 hover:-translate-y-1">
+                            <div class="flex items-start justify-between gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${r.color} text-white flex items-center justify-center font-black text-xl shadow-md">
+                                    ${r.grade}
+                                </div>
+                                <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <i class="fas fa-unlock-keyhole text-emerald-500"></i> Đang mở
+                                </span>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors">${escapeHtml(r.label)}</h4>
+                                <p class="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">Lộ trình bài học theo SGK, bài tập trắc nghiệm và tự luận có AI hỗ trợ giải thích chi tiết.</p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-indigo-600 group-hover:text-indigo-700">
+                                <span>Vào học bài ngay</span>
+                                <i class="fas fa-arrow-right group-hover:translate-x-1.5 transition-transform"></i>
+                            </div>
+                        </a>
+                    `).join('');
+                } else {
+                    lotrinhSection.classList.add('hidden');
+                }
+            }
+
+            // Populate Student Activities / Tools
+            const studentTools = [
+                {
+                    key: 'thitructuyen',
+                    title: 'Thi trực tuyến',
+                    badge: 'Kiểm tra',
+                    desc: 'Tham gia các bài thi, bài kiểm tra trắc nghiệm online được giáo viên phân công.',
+                    url: 'thitructuyen.html',
+                    icon: 'fa-laptop-code',
+                    color: 'from-violet-600 to-indigo-600',
+                    actionText: 'Vào phòng thi'
+                },
+                {
+                    key: 'nopbai',
+                    title: 'Giao & Nộp bài tập',
+                    badge: 'Bài tập',
+                    desc: 'Nộp ảnh/tài liệu bài tập về nhà cho thầy cô, theo dõi kết quả chấm và lời nhận xét.',
+                    url: 'nopbai-quanly.html',
+                    icon: 'fa-file-arrow-up',
+                    color: 'from-emerald-600 to-teal-600',
+                    actionText: 'Mở nộp bài'
+                },
+                {
+                    key: 'padlet',
+                    title: 'Bảng chia sẻ Padlet',
+                    badge: 'Lớp học',
+                    desc: 'Xem góc học tập của lớp, chia sẻ sản phẩm học tập và cùng thảo luận với bạn bè.',
+                    url: 'padlet_ht.html',
+                    icon: 'fa-chalkboard-user',
+                    color: 'from-amber-500 to-yellow-600',
+                    actionText: 'Xem bảng chia sẻ'
+                },
+                {
+                    key: 'smartquiz',
+                    title: 'Trò chơi ôn luyện SmartQuiz',
+                    badge: 'Mini-game',
+                    desc: 'Tham gia các câu hỏi tương tác, trò chơi ôn tập kiến thức sinh động.',
+                    url: 'smartquiz.html',
+                    icon: 'fa-gamepad',
+                    color: 'from-pink-500 to-rose-600',
+                    actionText: 'Vào chơi ôn tập'
+                },
+                {
+                    key: 'gslides',
+                    title: 'Trình chiếu bài giảng',
+                    badge: 'Tài liệu',
+                    desc: 'Xem slides và tài liệu bài giảng trực quan do thầy cô bộ môn chia sẻ.',
+                    url: 'gslides.html',
+                    icon: 'fa-file-powerpoint',
+                    color: 'from-rose-500 to-red-600',
+                    actionText: 'Mở bài giảng'
+                },
+                {
+                    key: 'vehinh',
+                    title: 'Vẽ hình học AI',
+                    badge: 'Công cụ',
+                    desc: 'Công cụ vẽ hình học toán học thông minh, hỗ trợ làm bài tập trực quan.',
+                    url: 'vehinh.html',
+                    icon: 'fa-draw-polygon',
+                    color: 'from-sky-500 to-blue-600',
+                    actionText: 'Mở công cụ vẽ'
+                }
+            ];
+
+            const allowedTools = studentTools.filter(t => allowedSet.has(t.key));
+            const activitiesGrid = document.getElementById('studentActivitiesGrid');
+            const activitiesSection = document.getElementById('studentActivitiesSection');
+
+            if (activitiesGrid && activitiesSection) {
+                if (allowedTools.length > 0) {
+                    activitiesSection.classList.remove('hidden');
+                    activitiesGrid.innerHTML = allowedTools.map(t => `
+                        <a href="${t.url}" class="group relative flex flex-col justify-between p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-indigo-500 transition-all duration-200 hover:-translate-y-1">
+                            <div class="flex items-start justify-between gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${t.color} text-white flex items-center justify-center text-xl shadow-md">
+                                    <i class="fas ${t.icon}"></i>
+                                </div>
+                                <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                    ${escapeHtml(t.badge)}
+                                </span>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors">${escapeHtml(t.title)}</h4>
+                                <p class="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">${escapeHtml(t.desc)}</p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-indigo-600 group-hover:text-indigo-700">
+                                <span>${escapeHtml(t.actionText)}</span>
+                                <i class="fas fa-arrow-right group-hover:translate-x-1.5 transition-transform"></i>
+                            </div>
+                        </a>
+                    `).join('');
+                } else {
+                    activitiesSection.classList.add('hidden');
+                }
+            }
+
+            // If zero permissions at all
+            const emptyState = document.getElementById('studentEmptyState');
+            if (emptyState) {
+                const hasAny = allowedMath.length > 0 || allowedTools.length > 0;
+                emptyState.classList.toggle('hidden', hasAny);
+            }
+        }
+
+(async function setupTeacherLotrinhHub() {
             let accountFeatures = {};
             let globalConfig = null;
             let teacherTabs = {
@@ -1523,6 +1755,12 @@
                     }
                 } catch {}
                 roleIsKnown = localStorage.getItem('userRole') === 'teacher';
+            }
+
+            if (localStorage.getItem('userRole') === 'student') {
+                setupStudentPortal(allowedPages);
+                removePermissionsPending();
+                return;
             }
 
             if (localStorage.getItem('userRole') !== 'teacher') {

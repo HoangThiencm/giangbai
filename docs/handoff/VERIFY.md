@@ -28,6 +28,16 @@ PASS
   - Nạp đầy đủ SGK chuẩn cho toàn bộ 5 phân môn mới (Lịch sử, Địa lí, Vật lí, Hoá học, Sinh học) và Giáo dục địa phương ở cả 4 khối (6, 7, 8, 9).
   - Sửa hàm gập ký tự `Đ`/`đ` trong `foldText` và regex nhận diện môn trong `canvas_xaydungphuluc.html` và `xaydungphuluc.html`.
   - Cơ chế Auto-purge Cache tự động kích hoạt nếu phát hiện cache cũ lưu nhầm bài Toán.
+- [x] **Cổng học tập học sinh & Phân quyền giao diện User**:
+  - `login.html`: `landingPageFor` điều hướng tài khoản `student` về đúng `index.html` (Cổng học sinh), không ép nhảy thẳng vào một trang lộ trình cố định.
+  - `index.html`:
+    + Bỏ đoạn mã ép đá học sinh sang lộ trình ở đầu trang.
+    + Thêm container `#studentPortalDeck` với giao diện người học: Lời chào, tên học sinh, lớp học.
+    + Lọc hiển thị đúng các khối lớp Toán được phân quyền (`lotrinhtoan4` đến `lotrinhtoan9`).
+    + Lọc hiển thị đúng các hoạt động/tiện ích được cấp quyền (`thitructuyen`, `nopbai`, `padlet`, `smartquiz`, `gslides`, `vehinh`).
+    + Ẩn toàn bộ công cụ giáo viên, bảng điều khiển giáo viên, nút Cài đặt AI & Key, hướng dẫn nhanh.
+    + Bảo lưu 100% không gian làm việc và bộ công cụ cho role `teacher`.
+  - `access-control.js`: Chặn toàn bộ 18 trang công cụ giáo viên đối với học sinh và điều hướng về `index.html`.
 - [x] **Không đề cập tên bộ sách trong hệ thống:**
   - Regex phủ định `!/kntt|kết nối tri thức/i` pass trên toàn bộ cấu hình, tên môn, nhãn và danh mục.
 - [x] **Đường dẫn tài nguyên ổn định:**
@@ -51,6 +61,13 @@ PASS
    - Kiểm tra 32 unit test phân tách chuỗi tên môn trong Javascript (`Địa lí`, `ĐỊA LÍ 8`, `Lịch sử 8`, `Vật lí 8`, `Hoá học 8`, `Sinh học 8`...): 32/32 PASSED.
 4. `python audit_server_books.py`:
    - Quét toàn bộ sách trên cơ sở dữ liệu server live: Phát hiện **0 sách bị nhiễm bẩn** (`Total contaminated books found: 0`).
+5. `python test_smoke_contracts.py`:
+   - Kiểm tra hợp đồng Least-Privilege cho role Giáo viên trên `index.html`: PASSED.
+6. `python test_student_portal.py`:
+   - `test_login_landing_page`: PASSED
+   - `test_access_control_guards`: PASSED
+   - `test_index_student_portal`: PASSED
+   - Kết quả: **ALL STUDENT PORTAL TESTS PASSED (100%)!**
 
 ## Bug
 Không có.

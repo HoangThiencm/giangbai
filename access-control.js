@@ -36,7 +36,21 @@ async function accessControlMain() {
         'soankhbd.html': 'soankhbd',
         'thoikhoabieu.html': 'thoikhoabieu',
         'phancongtochuyenmon.html': 'phancongtochuyenmon',
-        'xaydungphuluc.html': 'xaydungphuluc', 'duyetgiaoan.html': 'duyetgiaoan', 'duyetde.html': 'duyetde', 'nghiencuubaihoc.html': 'nghiencuubaihoc'
+        'xaydungphuluc.html': 'xaydungphuluc', 'duyetgiaoan.html': 'duyetgiaoan', 'duyetde.html': 'duyetde', 'nghiencuubaihoc.html': 'nghiencuubaihoc',
+        'canvas_xaydungphuluc.html': 'xaydungphuluc',
+        'giaoantichhop.html': 'soankhbd',
+        'nopbai.html': 'nopbai',
+        'trochoi.html': 'smartquiz',
+        'taobaitap.html': 'smartquiz',
+        'matrande copy.html': 'matrande',
+        'game-elimination.html': 'smartquiz',
+        'game-escape.html': 'smartquiz',
+        'game-matching.html': 'smartquiz',
+        'game-speedscore.html': 'smartquiz',
+        'game-teambattle.html': 'smartquiz',
+        'game-tower.html': 'smartquiz',
+        'game-treasure.html': 'smartquiz',
+        'game-unlock.html': 'smartquiz'
     };
     const pageUrls = {
         lotrinh: 'lotrinhtoan6.html',
@@ -212,12 +226,14 @@ async function accessControlMain() {
     }
 
     if (role === 'student') {
-        if (pageKey === 'thongketientrinh' || pageKey === 'theodoiai' || pageKey === 'rutgon' || pageKey === 'thoikhoabieu' || pageKey === 'quanlyvanban' || pageKey === 'sodiem' || pageKey === 'phancongtochuyenmon') {
-            const msg = pageKey === 'rutgon'
-                ? 'Trang rút gọn link chỉ dành cho giáo viên.'
-                : (pageKey === 'thoikhoabieu' ? 'Trang xếp thời khóa biểu chỉ dành cho giáo viên.' : (pageKey === 'theodoiai' ? 'Trang theo dõi AI chỉ dành cho giáo viên.' : (pageKey === 'quanlyvanban' ? 'Trang quản lý văn bản chỉ dành cho giáo viên.' : (pageKey === 'sodiem' ? 'Trang sổ điểm chỉ dành cho giáo viên.' : (pageKey === 'phancongtochuyenmon' ? 'Trang phân công chuyên môn chỉ dành cho giáo viên.' : 'Trang thống kê chỉ dành cho giáo viên.')))));
-            alert(msg);
-            window.location.href = firstAllowedPageUrl(allowedPages) || 'login.html';
+        const teacherOnlyPageKeys = new Set([
+            'thongketientrinh', 'theodoiai', 'rutgon', 'thoikhoabieu', 'quanlyvanban', 'sodiem', 'phancongtochuyenmon',
+            'soankhbd', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc', 'matrande', 'tronde', 'kttx',
+            'vietbaocao', 'thanhtich', 'taovideo'
+        ]);
+        if (teacherOnlyPageKeys.has(pageKey)) {
+            alert('Chức năng này chỉ dành cho giáo viên.');
+            window.location.href = 'index.html';
             return;
         }
 
@@ -230,9 +246,9 @@ async function accessControlMain() {
                 }
             }
 
-            const fallback = firstAllowedPageUrl(allowedPages);
-            alert('Tài khoản của em chưa được giáo viên mở trang này. Vui lòng liên hệ giáo viên để được mở đúng lộ trình.');
-            window.location.href = fallback || 'login.html';
+            alert('Tài khoản của em chưa được phân quyền mở trang này. Vui lòng liên hệ Thầy/Cô để được cấp quyền.');
+            window.location.href = 'index.html';
+            return;
         }
         return;
     }
@@ -315,7 +331,15 @@ async function accessControlMain() {
             }
             alert('Tài khoản chưa được admin mở lộ trình này để soạn bài.');
             window.location.href = fallback || 'index.html';
+            return;
         }
+    }
+
+    // Catch-all for any user role: must have permission in allowedPages
+    if (!canOpenPage(pageKey, allowedPages)) {
+        alert('Tài khoản chưa được admin phân quyền sử dụng chức năng này.');
+        window.location.href = 'index.html';
+        return;
     }
 }
 

@@ -70,10 +70,37 @@
      - Tạo mới Book ID 66: Địa lí 8 chuẩn xác 14 bài của CTGDPT 2018 (bắt đầu bằng *Bài 1: Vị trí địa lí và phạm vi lãnh thổ Việt Nam*).
      - Nạp mới và kiểm tra toàn diện 100% các môn Lịch sử (khối 6-9), Địa lí (khối 6-9), Vật lí (khối 6-9), Hoá học (khối 6-9), Sinh học (khối 6-9), Giáo dục địa phương (khối 6-9).
 
-### 5. Kiểm thử & Đảm bảo chất lượng
+### 5. Cổng học tập học sinh & Phân quyền giao diện User (`login.html`, `index.html`, `access-control.js`)
+- **Vấn đề trước đây**:
+  - Khi học sinh đăng nhập, hàm `landingPageFor()` trong `login.html` tự động ép chuyển hướng thẳng vào một trang lộ trình cố định (vd: `lotrinhtoan6.html` hoặc `primary`), khiến học sinh bị cô lập bên trong lộ trình mà không thể mở các chức năng khác được giao (Thi trực tuyến, Giao & nộp bài, Padlet, SmartQuiz...).
+  - Trang chủ `index.html` cũng có đoạn mã ép đá học sinh sang lộ trình bài học ở đầu trang. Nếu truy cập vào `index.html`, học sinh lại thấy toàn bộ công cụ của giáo viên (Soạn KHBD, Xây dựng phụ lục, Duyệt đề, Sổ điểm, Quản lý văn bản, Cài đặt AI & Key...).
+- **Giải pháp triển khai**:
+  1. **`login.html`**:
+     - `landingPageFor(user)`: Với role `student`, trả về `index.html` (Cổng học tập học sinh) thay vì ép nhảy thẳng vào lộ trình bài học.
+  2. **`index.html`**:
+     - Xóa bỏ đoạn mã ép chuyển hướng học sinh ở đầu trang.
+     - Bổ sung cấu trúc giao diện User riêng biệt `#studentPortalDeck` với Tailwind CSS hiện đại:
+       + Welcome Banner: Lời chào thân thiện, tên học sinh, lớp học.
+       + Khối Lộ trình tự học Toán: Lọc hiển thị chính xác các khối lớp Toán mà học sinh được phân quyền (`lotrinhtoan4` đến `lotrinhtoan9`).
+       + Khối Hoạt động & Tiện ích học tập: Lọc hiển thị chính xác các chức năng được cấp quyền trong `allowed_pages` (`thitructuyen`, `nopbai`, `padlet`, `smartquiz`, `gslides`, `vehinh`).
+       + Trạng thái chờ: Nếu học sinh chưa có quyền nào, hiển thị thông báo hướng dẫn liên hệ giáo viên.
+     - Hàm `setupStudentPortal(allowedPages)`:
+       + Ẩn toàn bộ giao diện và công cụ giáo viên (`#toolsDeck`, `#teacherLotrinhHub`, `#defaultToolsHeader`, accordion hướng dẫn nhanh, nút "Cài đặt AI & Key"...).
+       + Đổi tiêu đề Navbar thành: *CỔNG HỌC TẬP VÀ RÈN LUYỆN CHO HỌC SINH*, hiển thị rõ tên học sinh và lớp, badge *Cổng Học Sinh*.
+     - Giữ nguyên vẹn 100% logic không gian làm việc cho role `teacher`.
+  3. **`access-control.js`**:
+     - Bổ sung danh sách toàn bộ các trang công cụ chỉ dành cho giáo viên (`soankhbd`, `xaydungphuluc`, `duyetgiaoan`, `duyetde`, `nghiencuubaihoc`, `matrande`, `tronde`, `kttx`, `sodiem`, `phancongtochuyenmon`, `thoikhoabieu`, `thongketientrinh`, `theodoiai`, `quanlyvanban`, `rutgon`, `vietbaocao`, `thanhtich`, `taovideo`).
+     - Khi role là `student`, nếu cố tình truy cập vào bất kỳ trang nào của giáo viên hoặc trang chưa được cấp quyền, hệ thống sẽ chặn lại ngay và điều hướng về `index.html` (Trang chủ học sinh).
+
+### 6. Kiểm thử & Đảm bảo chất lượng
 - Kiểm thử toàn diện 100% pass:
   - `verify_patch.py`: Kiểm tra giao diện, logic nút tick bỏ qua tổng số tiết, cấu trúc dữ liệu trên cả `canvas_xaydungphuluc.html` và `xaydungphuluc.html`.
   - `verify_period_bypass.py`: Kiểm tra tính toán thẩm định sư phạm với nhiều mức tiết khác nhau (48, 50, 52, 53, 54 tiết).
   - `verify_all_subjects_catalog.py`: Kiểm tra live API cho Địa lí 8 và kiểm thử 32 trường hợp chuỗi tên môn trong Javascript.
   - `audit_server_books.py`: Quét toàn bộ 52 đầu sách trên server hosting live, phát hiện: **0 sách bị nhiễm bẩn** (`Total contaminated books found: 0`).
+  - `test_smoke_contracts.py`: Đảm bảo 100% hợp đồng phân quyền giáo viên theo nguyên tắc đặc quyền tối thiểu (least privilege) không bị ảnh hưởng.
+  - `test_student_portal.py`: Kiểm thử chuyển hướng đăng nhập học sinh, kiểm thử route guard của `access-control.js`, kiểm thử rendering Cổng học sinh phân quyền trên `index.html` (3/3 PASSED).
   - Toàn bộ bài test PASSED.
+
+### 7. Khắc phục workflow deploy
+- Sửa dấu đóng ngoặc nhọn thừa ngay trước khóa gdcd trong js/khbd-curriculum.js. Lỗi cú pháp này là nguyên nhân javascript-obfuscator dừng với Unexpected token khi workflow deploy chạy.

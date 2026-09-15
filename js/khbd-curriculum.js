@@ -2458,7 +2458,7 @@ CURRICULUM_DATA.lessonsBySubject = {
               ]
           }
       ]
-  }  },
+  },
   "gdcd": {
     "6": [
       {

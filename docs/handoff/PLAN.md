@@ -19,7 +19,14 @@
    - Phát hiện môn Địa lí 8 bị nạp 39 bài của Toán 8 do hàm gập chuỗi tiếng Việt (`foldText`) không gập ký tự `Đ`/`đ` khi dùng `NFD`, dẫn đến hàm `getSubjectCurriculumKey` rơi vào fallback trả về môn Toán (`toan`).
    - Rà soát toàn bộ máy chủ hosting `https://hoangthiencm.id.vn/api/sgk_knowledge.php`, xóa bỏ sách rác/nạp nhầm và nạp lại chuẩn 100% cho 5 phân môn độc lập và Giáo dục địa phương ở cả 4 khối (6, 7, 8, 9).
    - Thêm cơ chế tự động thanh lọc bộ nhớ cache phía Client (nếu môn phi-Toán chứa từ khóa Toán học thì tự động xóa cache và nạp lại bản chuẩn mới nhất).
-5. **Ràng buộc tuyệt đối**: Không đề cập tên bộ sách ("Kết nối tri thức", "KNTT") trong nhãn hệ thống hoặc tiêu đề danh mục.
+5. **Phân quyền Giao diện User (Học sinh) & Bỏ ép chuyển hướng thẳng vào lộ trình**:
+   - Khi tài khoản học sinh (`role === 'student'`) đăng nhập, hệ thống điều hướng vào Cổng học tập học sinh (User Portal) trên `index.html`, thay vì ép nhảy thẳng vào một trang bài học cố định (`lotrinhtoan*.html`) làm học sinh mất khả năng chọn các chức năng khác.
+   - Giao diện User của học sinh chỉ hiển thị các chức năng mà học sinh được phân quyền (`allowed_pages`):
+     + **Lộ trình tự học Toán**: Các khối lớp được mở (Toán 4, 5, 6, 7, 8, 9).
+     + **Hoạt động & Công cụ học tập được cấp quyền**: Thi trực tuyến (`thitructuyen`), Giao & nộp bài (`nopbai`), Bảng chia sẻ Padlet (`padlet`), Trò chơi ôn luyện SmartQuiz (`smartquiz`), Trình chiếu slides (`gslides`), Vẽ hình học AI (`vehinh`).
+   - Ẩn hoàn toàn toàn bộ công cụ của giáo viên (Soạn KHBD, Xây dựng phụ lục, Duyệt đề, Duyệt giáo án, Ma trận đề, Sổ điểm, Quản lý văn bản, Cài đặt AI & Key...).
+   - Chặn tuyệt đối học sinh truy cập các trang công cụ giáo viên thông qua `access-control.js`.
+6. **Ràng buộc tuyệt đối**: Không đề cập tên bộ sách ("Kết nối tri thức", "KNTT") trong nhãn hệ thống hoặc tiêu đề danh mục.
 
 ## 2. Giải pháp Kỹ thuật
 1. **Giao diện người dùng (`canvas_xaydungphuluc.html` & `xaydungphuluc.html`)**:
@@ -38,6 +45,10 @@
    - Cập nhật `foldText()`: bổ sung `.replace(/[đĐ]/g, 'D')`.
    - Sửa hàm `getSubjectCurriculumKey()`: chuẩn hóa không dấu, kiểm tra `diali` trước `vatli` (tránh xung đột từ `\bli\b`), hỗ trợ trọn vẹn `vatli`, `hoahoc`, `sinhhoc`, `lichsu`, `diali`, `gddp`.
    - Dọn sạch CSDL server và re-seed toàn bộ SGK dùng chung cho 4 khối lớp.
+6. **Cổng học tập học sinh & Điều hướng đăng nhập (`login.html`, `index.html`, `access-control.js`)**:
+   - `login.html`: `landingPageFor` trả về `index.html` cho học sinh.
+   - `index.html`: Xóa bỏ đoạn mã ép chuyển hướng học sinh ở đầu trang; bổ sung hàm `setupStudentPortal()` và container `#studentPortalDeck`.
+   - `access-control.js`: Chặn toàn bộ các trang giáo viên đối với role `student` và chuyển hướng về `index.html`.
 
 ## 3. Tiêu chí Nghiệm thu
 - [x] Checkbox "Bỏ qua ràng buộc tổng số tiết" hiển thị rõ ràng ở Mục 1 và Mục 3, mặc định tick chọn.
@@ -46,4 +57,5 @@
 - [x] Tách riêng 5 môn: Lịch sử (52), Địa lí (53), Vật lí (47), Hoá học (43), Sinh học (50) và giữ KHTN (140), Lịch sử & Địa lí (105).
 - [x] Nạp 100% mục lục bài học chuẩn xác từ lớp 6 đến lớp 9 theo SGK Thống nhất.
 - [x] Kho Tri thức SGK dùng chung trên máy chủ sạch 100%, Địa lí 8 nạp đúng 14 bài địa lí (không dính Toán).
+- [x] Tài khoản học sinh đăng nhập vào đúng giao diện User học sinh, hiển thị đúng các chức năng được phân quyền, không bị ép nhảy thẳng vào lộ trình và không truy cập được công cụ giáo viên.
 - [x] Tuyệt đối không xuất hiện chuỗi "Kết nối tri thức" / "KNTT" trong hệ thống.
