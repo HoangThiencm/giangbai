@@ -28,6 +28,8 @@ assert.match(html, /Đọc sách giáo khoa/, "Nút đọc SGK chuẩn hóa nhã
 assert.match(app, /async function extractTextbookOcrText/, "Đọc SGK phải gọi Mistral OCR");
 assert.match(app, /function canUseMistralOcr/, "Cần kiểm tra key Mistral trước khi OCR");
 assert.match(app, /async function readTextbookWithMistral/, "Nút Đọc nội dung dùng Mistral trước");
+assert.match(app, /CANVAS_TEXTBOOK_BATCH_SIZE\s*=\s*1/, "Canvas chỉ phân tích một trang/ảnh trong mỗi lô vision");
+assert.match(app, /timeoutMs:\s*105000/, "Canvas truyền timeout rõ ràng cho phân tích SGK");
 assert.match(app, /unwrapVietnameseMathForKatex/, "Preview KaTeX phải tách chữ Việt khỏi math");
 assert.match(prompts, /GENERATE_CORE_LESSON/, "Cần prompt I+II gộp");
 assert.match(prompts, /GENERATE_ACTIVITIES_AD/, "Cần prompt A–D gộp");
