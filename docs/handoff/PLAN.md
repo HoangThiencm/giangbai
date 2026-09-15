@@ -1,44 +1,108 @@
-# Kế hoạch Triển khai: Tối ưu Trải nghiệm Không cần Đăng nhập cho Đường link Khảo sát Nộp bài (nopbai.html)
+# Kế hoạch Triển khai: Sửa Lỗi Tương Phản Màu Chữ Huy Hiệu Navbar trên Cổng Học Sinh (index.html)
 
-## Hiện trạng & Phân tích Nguyên nhân
-- **Khảo sát thực tế đường link người dùng cung cấp (`https://www.hoangthiencm.id.vn/nopbai.html?code=E6N2XG3F`):**
-  + Đây là đợt nộp thuộc loại **Báo cáo biểu mẫu** (`submission_type = 'report'`) phục vụ khảo sát/nhập liệu qua Google Sheets:
-    * Tiêu đề: *"Danh sách học sinh tham gia VioEdu năm học 2026-2027"*.
-    * Mô tả: *"Thầy cô nhấn vào link chọn đúng tên của mình và nhập danh sách học sinh của lớp mình phụ trách có học sinh tham gia"*.
-    * Chế độ nạp đối tượng: `access_mode = 'school_list'` (danh sách dùng chung Tổ Toán Tin gồm 10 giáo viên).
-    * Trường khảo sát: Đường link Google Sheets ngoài (`https://docs.google.com/spreadsheets/d/1KUq6PFNT3LYDyO9H0NTWEJxJL2_0odJJ/edit?...`).
-- **Phân tích kỹ thuật hệ thống:**
-  + Về mặt backend API: Cả `GET api/submissions.php?action=public` và `POST api/submissions.php?action=submit` đều **hoàn toàn là API công khai**, không đòi hỏi token xác thực (`authToken`), không yêu cầu session người dùng đăng nhập.
-  + Trang `nopbai.html` không nạp `access-control.js` và không có cơ chế chặn đăng nhập.
-- **Nguyên nhân gốc rễ khiến giáo viên/người dùng phản ánh hoặc nhầm lẫn "cần đăng nhập":**
-  1. **Nạp nhầm route guard `access-control.js`:** Trước đó `nopbai.html` bị nhúng thẻ `<script src="access-control.js"></script>` và khai báo trong `pageKeys` của `access-control.js`, khiến bất kỳ ai mở link nộp bài mà chưa có `authToken` giáo viên đều bị đá về `login.html`.
-  2. **Cái bẫy chuyển hướng ở Logo Header:** Thẻ tiêu đề ở đầu trang `nopbai.html` từng đặt `<a href="index.html">`. Khi người dùng bấm vào logo hoặc dòng chữ "HỆ THỐNG NỘP DỮ LIỆU", trình duyệt chuyển sang `index.html` và tự động `location.replace('login.html')`.
-  3. **Giao diện xác nhận tạo cảm giác như form Login/Xác thực tài khoản:**
-     - Khối `<section id="accessSection">` với tiêu đề "Xác nhận người nộp bài" chưa có nhãn thông báo rõ ràng khẳng định: *"Không cần tài khoản hay mật khẩu hệ thống"*, dẫn đến việc giáo viên lầm tưởng phải có tài khoản/mật khẩu.
+## 1. Hiện trạng & Phân tích Nguyên nhân
 
-## Phạm vi
-1. **Trang tiếp nhận nộp bài `nopbai.html`:**
-   - Xóa bỏ hoàn toàn `<script src="access-control.js"></script>` khỏi `nopbai.html`.
-   - Khắc phục nguy cơ chuyển hướng đăng nhập ngoài ý muốn: Đổi thẻ link logo header `<a href="index.html">` thành liên kết an toàn nội bộ (`nopbai.html` hoặc `href=""`), không dẫn người nộp bài về `index.html` hay `login.html`.
-   - Bổ sung Huy hiệu / Thông báo nổi bật ngay đầu trang và trong khối xác nhận:
-     * Badge rõ ràng: `✓ Không cần đăng nhập`.
-     * Dòng hướng dẫn: *"Đường link mở công khai — Thầy/cô và các bạn không cần tài khoản hay mật khẩu đăng nhập. Chỉ cần chọn đúng họ và tên để hệ thống ghi nhận."*
-   - Cải tiến giao diện khối `accessSection`: Làm nổi bật thanh tìm kiếm và hộp chọn tên giáo viên/người nộp; thu gọn mục nhập mã cá nhân thủ công thành tùy chọn phụ.
-2. **Hệ thống phân quyền `access-control.js`:**
-   - Xóa `'nopbai.html': 'nopbai'` khỏi `pageKeys` trong `access-control.js` để route guard không can thiệp vào link nộp bài công khai. (Giữ `'nopbai-quanly.html': 'nopbai'` cho trang quản trị của giáo viên).
-3. **Trang quản trị `nopbai-quanly.html`:**
-   - Cập nhật thông báo sau khi sao chép link chung và link cá nhân, phân biệt rõ link công khai tự chọn tên và link cá nhân mở sẵn tên.
-4. **Kiểm thử tự động (Smoke tests):**
-   - Bổ sung các kiểm tra tĩnh trong `tests/nopbai-report-link-smoke.js` nhằm đảm bảo:
-     * `nopbai.html` không chứa liên kết trỏ sang `index.html` hoặc `login.html`.
-     * `nopbai.html` không nạp `access-control.js`.
-     * `nopbai.html` có chứa thông điệp rõ ràng khẳng định không cần đăng nhập tài khoản.
-     * Quy trình chọn người nộp và nộp bài biểu mẫu khảo sát vẫn hoạt động chính xác.
+### Hiện trạng thực tế:
+- Khi học sinh đăng nhập vào hệ thống (`index.html`), trên thanh điều hướng (Navbar) ở góc phải xuất hiện huy hiệu:
+  `[icon mũ cử nhân] Cổng Học Sinh`
+- Người dùng phản ánh: *"Chữ ở trên bị điệp với màu nền nhìn không rõ"*.
+- Quan sát ảnh chụp thực tế màn hình của học sinh Bùi Thị Mỹ Dung (Lớp 9/2):
+  + Nền navbar là nền sáng (`bg-white/90` viền `border-slate-200/70`).
+  + Huy hiệu có icon màu xanh lá (`text-emerald-500`) nhưng dòng chữ **"Cổng Học Sinh"** lại có màu trắng xám nhợt nhạt gần như tàng hình, hoàn toàn chìm vào màu nền xanh nhạt (`bg-emerald-50`), gây khó đọc và mất thẩm mỹ nghiêm trọng.
+  + Tương tự, ở giao diện giáo viên, chip `[icon sao] Cập nhật đồng bộ` cũng gặp tình trạng chữ trắng trên nền trắng.
 
-## Tiêu chí nghiệm thu
-1. Truy cập `nopbai.html?code=E6N2XG3F` (ở cả chế độ ẩn danh không có tài khoản):
-   - Không bị `access-control.js` chặn chuyển hướng sang `login.html`.
-   - Bấm vào logo/header trang không bị văng sang `login.html`.
-   - Giao diện có thông báo nổi bật khẳng định không cần đăng nhập tài khoản hay mật khẩu.
-   - Thao tác tìm kiếm, chọn tên trong danh sách Tổ Toán Tin và bấm nút tiếp tục diễn ra mượt mà, trực tiếp mở link khảo sát Google Sheets và ghi nhận hoàn thành.
-2. Toàn bộ smoke test tự động `tests/nopbai-report-link-smoke.js` và `tests/teacher-permissions-smoke.js` đạt PASS 100%.
+### Nguyên nhân kỹ thuật gốc rễ:
+1. **Quy tắc CSS `.nav-chip` lỗi thời từ giao diện Dark Mode cũ:**
+   Trong thẻ `<style>` của `index.html` (dòng 674–678):
+   ```css
+   .nav-chip {
+       background: rgba(255, 255, 255, 0.08);
+       border: 1px solid rgba(255, 255, 255, 0.12);
+       color: #e2e8f0; /* <-- ĐÂY LÀ NGUYÊN NHÂN CHÍNH: Màu chữ xám trắng nhạt */
+   }
+   ```
+   Trước đây khi navbar dùng màu nền đen tối, `color: #e2e8f0` hiển thị bình thường. Nhưng khi navbar chuyển sang nền trắng (`bg-white/90`), quy tắc CSS này vẫn giữ nguyên `color: #e2e8f0`.
+2. **Độ ưu tiên CSS đè lên class Tailwind:**
+   Trong JavaScript khi khởi tạo giao diện học sinh (dòng 1540):
+   ```javascript
+   navBadge.className = 'nav-chip rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm';
+   navBadge.innerHTML = '<i class="fas fa-graduation-cap mr-1 text-emerald-500"></i> Cổng Học Sinh';
+   ```
+   Mặc dù có class Tailwind `text-emerald-700`, nhưng quy tắc `.nav-chip { color: #e2e8f0; }` trong `<style>` nội bộ được trình duyệt áp dụng với mức ưu tiên tương đương hoặc ghi đè sau class tiện ích Tailwind CDN, khiến màu chữ bị cưỡng ép về `#e2e8f0` (trắng nhạt).
+
+---
+
+## 2. Phạm vi & Tệp Cần Chỉnh sửa
+
+1. `index.html`: Cập nhật CSS `.nav-chip` và lớp màu chữ của huy hiệu Cổng Học Sinh trong JS.
+2. `tests/nav-chip-contrast-smoke.js`: Tạo mới bộ kiểm thử tự động kiểm tra tương phản màu chữ thanh navbar cho cả giáo viên và học sinh.
+
+---
+
+## 3. Chi tiết Yêu cầu Kỹ thuật cho Coder
+
+### A. Cập nhật CSS `.nav-chip` trong `index.html`
+- Tại dòng 674–678 của `index.html`, thay đổi quy tắc CSS `.nav-chip` để phù hợp với nền navbar sáng (`bg-white/90`):
+  ```css
+  /* CŨ */
+  .nav-chip {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e2e8f0;
+  }
+
+  /* MỚI: Tông màu Slate nhã nhặn, tương phản cao, rõ ràng trên nền sáng */
+  .nav-chip {
+      display: inline-flex;
+      align-items: center;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+  }
+  ```
+
+### B. Cập nhật Huy hiệu Học sinh trong JavaScript (`index.html`)
+- Tại dòng 1540 của `index.html`, khi gán giao diện Cổng Học Sinh:
+  ```javascript
+  /* CŨ */
+  navBadge.className = 'nav-chip rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm';
+  navBadge.innerHTML = '<i class="fas fa-graduation-cap mr-1 text-emerald-500"></i> Cổng Học Sinh';
+
+  /* MỚI: Sử dụng class màu đậm rõ nét text-emerald-800 và icon text-emerald-600, kèm màu chữ tường minh để không bao giờ bị đè */
+  navBadge.className = 'nav-chip rounded-full px-3 py-1.5 text-xs font-bold whitespace-nowrap bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-sm';
+  navBadge.style.color = '#065f46';
+  navBadge.innerHTML = '<i class="fas fa-graduation-cap mr-1.5 text-emerald-600"></i> Cổng Học Sinh';
+  ```
+
+### C. Cập nhật Chip Mặc định Giáo viên trong HTML (`index.html`)
+- Tại dòng 1098–1100 của `index.html`:
+  ```html
+  <!-- CŨ -->
+  <span class="nav-chip rounded-full px-3 py-2 text-xs font-semibold whitespace-nowrap">
+      <i class="fas fa-sparkles mr-1 text-indigo-300"></i> Cập nhật đồng bộ
+  </span>
+
+  <!-- MỚI: Tương phản rõ ràng trên nền trắng -->
+  <span class="nav-chip rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap bg-slate-100 text-slate-700 border border-slate-200">
+      <i class="fas fa-sparkles mr-1.5 text-indigo-500"></i> Cập nhật đồng bộ
+  </span>
+  ```
+
+### D. Bổ sung Smoke Test Kiểm tra Tương phản (`tests/nav-chip-contrast-smoke.js`)
+- Tạo bài kiểm thử tự động đảm bảo:
+  1. `.nav-chip` trong `index.html` không chứa `color: #e2e8f0`.
+  2. Huy hiệu Cổng Học sinh dùng màu chữ đậm (`#065f46` / `text-emerald-800`), độ tương phản chuẩn WCAG AA trên nền `bg-emerald-50`.
+  3. Chip mặc định giáo viên có icon và chữ dễ đọc trên nền sáng.
+
+---
+
+## 4. Tiêu chí Nghiệm thu (Acceptance Criteria)
+
+1. **Hiển thị trực quan:**
+   - Mở `index.html` với tài khoản học sinh (như học sinh Bùi Thị Mỹ Dung, Lớp 9/2):
+     Huy hiệu `Cổng Học Sinh` hiển thị chữ màu xanh đậm ngọc bích (`#065f46`), sắc nét, nổi bật và tương phản hoàn hảo trên nền xanh ngọc nhẹ (`bg-emerald-50`), hoàn toàn không bị chìm/điệp với màu nền.
+   - Mở `index.html` với tài khoản giáo viên:
+     Chip `Cập nhật đồng bộ` hiển thị chữ xám đậm rõ ràng trên nền xám nhạt, không còn tình trạng chữ trắng trên nền trắng.
+2. **Kiểm thử tự động:**
+   - Chạy `node tests/nav-chip-contrast-smoke.js` đạt PASS 100%.
+   - Chạy `node tests/teacher-permissions-smoke.js` đạt PASS 100%.

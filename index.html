@@ -672,9 +672,11 @@
         }
 
         .nav-chip {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: #e2e8f0;
+            display: inline-flex;
+            align-items: center;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #334155;
         }
 
         .teacher-lotrinh-panel {
@@ -1095,8 +1097,8 @@
                 </div>
             </div>
             <div class="flex shrink-0 flex-nowrap items-center gap-2">
-                <span class="nav-chip rounded-full px-3 py-2 text-xs font-semibold whitespace-nowrap">
-                    <i class="fas fa-sparkles mr-1 text-indigo-300"></i> Cập nhật đồng bộ
+                <span class="nav-chip rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap bg-slate-100 text-slate-700 border border-slate-200">
+                    <i class="fas fa-sparkles mr-1.5 text-indigo-500"></i> Cập nhật đồng bộ
                 </span>
 
                 <button type="button" onclick="UserAiSettings.openModal()" id="btnOpenUserAiSettings" class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 shadow-sm transition hover:bg-indigo-100 hover:border-indigo-300"><i class="fas fa-sliders-h text-indigo-600"></i> Cài đặt AI & Key</button>
@@ -1537,8 +1539,9 @@
 
             const navBadge = document.querySelector('nav .nav-chip');
             if (navBadge) {
-                navBadge.className = 'nav-chip rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm';
-                navBadge.innerHTML = '<i class="fas fa-graduation-cap mr-1 text-emerald-500"></i> Cổng Học Sinh';
+                navBadge.className = 'nav-chip rounded-full px-3 py-1.5 text-xs font-bold whitespace-nowrap bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-sm';
+                navBadge.style.color = '#065f46';
+                navBadge.innerHTML = '<i class="fas fa-graduation-cap mr-1.5 text-emerald-600"></i> Cổng Học Sinh';
             }
 
             // 3. Show & populate student portal deck

@@ -1,33 +1,22 @@
-# Báo cáo kiểm thử: Đảm bảo đường link khảo sát nộp bài không cần đăng nhập
+# VERIFY
 
 ## Kết luận
 PASS
 
-## Đối chiếu Scope & Tính năng
-- `nopbai.html`:
-  + Đã loại bỏ hoàn toàn thẻ `<script src="access-control.js"></script>` để cổng nộp bài công khai không bị route guard chặn hay điều hướng sang `login.html`.
-  + Đã thay thế liên kết header `<a href="index.html">` thành liên kết nội bộ an toàn, loại bỏ nguy cơ người dùng vô tình chạm/click bị điều hướng về `index.html` rồi văng sang `login.html`.
-  + Đã bổ sung huy hiệu "Không cần đăng nhập" trên thanh header và alert banner trong khối `accessSection` khẳng định rõ ràng không cần tài khoản hay mật khẩu hệ thống.
-  + Khối nhập mã cá nhân thủ công được bổ sung chú thích rõ ràng, làm rõ đây chỉ là phương án phụ khi cần, tránh gây hiểu lầm là bước đăng nhập tài khoản.
-- `access-control.js`:
-  + Đã loại bỏ `'nopbai.html': 'nopbai'` khỏi `pageKeys` để cổng nộp bài công khai không bị route guard chặn (`nopbai-quanly.html` vẫn bảo vệ cho giáo viên).
-- `nopbai-quanly.html`:
-  + Cập nhật thông báo sau khi sao chép link chung và link cá nhân, nêu rõ tính chất không cần đăng nhập của link nộp bài.
-- `tests/nopbai-report-link-smoke.js`:
-  + Bổ sung kiểm tra tĩnh khẳng định không nạp `access-control.js`, không có liên kết tới `index.html`/`login.html`, có thông điệp không cần tài khoản và bảo toàn đầy đủ luồng nộp bài.
+## Đối chiếu scope
+- Sửa quy tắc CSS `.nav-chip`: loại bỏ màu chữ xám trắng cũ `#e2e8f0`, chuyển sang nền `#f1f5f9` và chữ sẫm `#334155` rõ nét trên nền navbar sáng `index.html`.
+- Sửa huy hiệu Cổng Học Sinh trong JS: gán lớp `text-emerald-800` và thuộc tính màu tường minh `style.color = '#065f46'`, icon `text-emerald-600`. Chữ hiển thị đậm, độ tương phản sắc nét trên nền `bg-emerald-50`, không còn bị điệp màu nền.
+- Sửa chip giáo viên `Cập nhật đồng bộ` trong HTML: chuyển sang `bg-slate-100 text-slate-700 border-slate-200` và icon `text-indigo-500`, hiển thị rõ ràng trên nền sáng.
+- Bổ sung smoke test tự động `tests/nav-chip-contrast-smoke.js` kiểm tra toàn diện hợp đồng CSS, JS và HTML.
 
 ## Test đã chạy
-- `node tests/nopbai-report-link-smoke.js`: PASS (`nopbai report link smoke: passed`).
-- `node tests/teacher-permissions-smoke.js`: PASS (`teacher permissions smoke: passed`).
-- `git diff --check`: PASS.
+- `node tests/nav-chip-contrast-smoke.js`: PASS (100%)
+- `node tests/teacher-permissions-smoke.js`: PASS (100%)
 
 ## Pass / Fail từng tiêu chí
-1. `nopbai.html` không nạp `access-control.js` và không có route guard chặn: PASS.
-2. `nopbai.html` không còn liên kết điều hướng sang `index.html` hay `login.html`: PASS.
-3. Giao diện hiển thị huy hiệu và thông báo rõ ràng "Không cần đăng nhập tài khoản / mật khẩu": PASS.
-4. Luồng chọn người nộp bài theo danh sách chỉ định/danh sách dùng chung hoạt động chuẩn xác: PASS.
-5. Cơ chế mở liên kết khảo sát (Google Sheets/Forms) và ghi nhận nộp bài tự động vẫn bảo toàn: PASS.
-6. Kiểm thử tự động `tests/nopbai-report-link-smoke.js` và `tests/teacher-permissions-smoke.js` đạt 100%: PASS.
+- Tiêu chí 1: Huy hiệu "Cổng Học Sinh" có chữ màu xanh ngọc bích sẫm `#065f46` (`text-emerald-800`), tương phản cao, không bị chìm/điệp với màu nền: PASS
+- Tiêu chí 2: Chip giáo viên "Cập nhật đồng bộ" có chữ xám sẫm `#334155` (`text-slate-700`) trên nền xám nhạt `bg-slate-100`, không còn tình trạng chữ trắng trên nền trắng: PASS
+- Tiêu chí 3: Bộ kiểm thử tự động `tests/nav-chip-contrast-smoke.js` và `tests/teacher-permissions-smoke.js` vượt qua 100%: PASS
 
 ## Bug
 Không có.

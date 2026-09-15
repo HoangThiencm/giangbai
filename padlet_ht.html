@@ -104,23 +104,24 @@
         .link-preview-card img { max-height: 180px; object-fit: cover; width: 100%; }
         body.board-view header { background: rgba(255,255,255,.82); }
         body.board-view { color: #0f172a; }
-        body.manager-view { background: #0d0d0d; color: #f8fafc; }
-        body.manager-view header { background: #141414; border-color: #2a2a2a; }
-        body.manager-view header .text-teal-700 { color: #5eead4 !important; }
-        body.manager-view header strong, body.manager-view header a { color: #f8fafc; }
-        body.manager-view header a.rounded-xl { background: #1f1f1f; border-color: #333; }
+        body.manager-view { background: #f8fafc; color: #0f172a; }
+        body.manager-view header { background: rgba(255,255,255,.92); border-color: #e2e8f0; backdrop-filter: blur(12px); }
+        body.manager-view header .text-teal-700 { color: #0f766e !important; }
+        body.manager-view header strong, body.manager-view header a { color: #0f172a; }
+        body.manager-view header a.rounded-xl { background: #fff; border-color: #cbd5e1; color: #334155; }
+        body.manager-view header a.rounded-xl:hover { background: #f1f5f9; }
+        body.manager-view #fabPost { display: none !important; }
         .template-card { transition: transform .2s ease, box-shadow .2s ease; cursor: pointer; }
-        .template-card:hover { transform: translateY(-4px) scale(1.015); box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+        .template-card:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(15,23,42,.12); }
         .template-soon { opacity: .45; cursor: not-allowed; }
         .template-soon:hover { transform: none; box-shadow: none; }
-        .tpl-preview { background: rgba(0,0,0,.22); }
+        .tpl-preview { background: #f0fdfa; }
         .board-bg-emerald { background: linear-gradient(145deg, #064e3b 0%, #059669 45%, #6ee7b7 100%); }
         .timeline-track { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.4) transparent; }
         .timeline-track::-webkit-scrollbar { height: 8px; }
         .timeline-track::-webkit-scrollbar-thumb { background: rgba(255,255,255,.35); border-radius: 99px; }
         #padletMap { height: min(52vh, 480px); border-radius: 1rem; z-index: 1; }
         .leaflet-container { font-family: inherit; }
-        .rainbow-bar { height: 4px; border-radius: 99px; background: linear-gradient(90deg, #ec4899, #f97316, #eab308, #22c55e, #06b6d4, #3b82f6, #8b5cf6); }
         body.board-whiteboard { background: #f4f4f5; color: #18181b; }
         body.board-whiteboard header { background: rgba(255,255,255,.92); }
         .whiteboard-canvas {
@@ -680,19 +681,19 @@
         };
 
         const PADLET_TEMPLATES = [
-            { key: 'wall', name: 'Tường', desc: 'Thu thập ảnh, video và link', layout: 'wall', theme: 'rose', gradient: 'from-rose-600 to-rose-950', preview: 'wall' },
-            { key: 'columns', name: 'Cột', desc: 'Sắp xếp theo chủ đề', layout: 'columns', theme: 'peach', gradient: 'from-pink-400 to-rose-300', preview: 'columns', columnPreset: 'groups' },
-            { key: 'grid', name: 'Bảng', desc: 'Lưới thẻ gọn gàng', layout: 'grid', theme: 'amber', gradient: 'from-yellow-700 to-stone-900', preview: 'grid' },
-            { key: 'timeline', name: 'Dòng thời gian', desc: 'Theo trình tự thời gian', layout: 'timeline', theme: 'emerald', gradient: 'from-emerald-600 to-emerald-950', preview: 'timeline' },
-            { key: 'map', name: 'Bản đồ', desc: 'Gắn bài theo địa điểm', layout: 'map', theme: 'violet', gradient: 'from-violet-600 to-violet-950', preview: 'map' }
+            { key: 'wall', name: 'Tường', desc: 'Thu thập ảnh, video và link', layout: 'wall', theme: 'rose', preview: 'wall', previewClass: 'bg-teal-50/70' },
+            { key: 'columns', name: 'Cột', desc: 'Sắp xếp theo chủ đề', layout: 'columns', theme: 'peach', preview: 'columns', previewClass: 'bg-sky-50/70', columnPreset: 'groups' },
+            { key: 'grid', name: 'Bảng', desc: 'Lưới thẻ gọn gàng', layout: 'grid', theme: 'amber', preview: 'grid', previewClass: 'bg-amber-50/70' },
+            { key: 'timeline', name: 'Dòng thời gian', desc: 'Theo trình tự thời gian', layout: 'timeline', theme: 'emerald', preview: 'timeline', previewClass: 'bg-rose-50/70' },
+            { key: 'map', name: 'Bản đồ', desc: 'Gắn bài theo địa điểm', layout: 'map', theme: 'violet', preview: 'map', previewClass: 'bg-indigo-50/70' }
         ];
 
         const CREATIVE_TEMPLATES = [
-            { key: 'whiteboard', name: 'Bảng trắng', desc: 'Ghi chú tự do, kéo thả', layout: 'whiteboard', theme: 'slate', gradient: 'from-zinc-500 to-zinc-900', preview: 'whiteboard', icon: 'fa-shapes' },
-            { key: 'mindmap', name: 'Sơ đồ tư duy', desc: 'Ý tưởng tỏa từ trung tâm', layout: 'mindmap', theme: 'amber', gradient: 'from-orange-600 to-stone-900', preview: 'mindmap', icon: 'fa-diagram-project', columnPreset: 'mindmap' },
-            { key: 'presentation', name: 'Thuyết trình', desc: 'Slide lớn, trình chiếu', layout: 'presentation', theme: 'blue', gradient: 'from-blue-700 to-indigo-950', preview: 'presentation', icon: 'fa-list-ol' },
-            { key: 'venn', name: 'Venn', desc: 'So sánh hai tập hợp', layout: 'venn', theme: 'violet', gradient: 'from-fuchsia-700 to-violet-950', preview: 'venn', icon: 'fa-circle-nodes' },
-            { key: 'question', name: 'Câu hỏi ngày', desc: 'Một câu hỏi, nhiều câu trả lời', layout: 'question', theme: 'rose', gradient: 'from-purple-700 to-fuchsia-950', preview: 'question', icon: 'fa-circle-question' }
+            { key: 'whiteboard', name: 'Bảng trắng', desc: 'Ghi chú tự do, kéo thả', layout: 'whiteboard', theme: 'slate', preview: 'whiteboard', icon: 'fa-shapes', iconClass: 'bg-teal-50 text-teal-700' },
+            { key: 'mindmap', name: 'Sơ đồ tư duy', desc: 'Ý tưởng tỏa từ trung tâm', layout: 'mindmap', theme: 'amber', preview: 'mindmap', icon: 'fa-diagram-project', iconClass: 'bg-amber-50 text-amber-700', columnPreset: 'mindmap' },
+            { key: 'presentation', name: 'Thuyết trình', desc: 'Slide lớn, trình chiếu', layout: 'presentation', theme: 'blue', preview: 'presentation', icon: 'fa-list-ol', iconClass: 'bg-blue-50 text-blue-700' },
+            { key: 'venn', name: 'Venn', desc: 'So sánh hai tập hợp', layout: 'venn', theme: 'violet', preview: 'venn', icon: 'fa-circle-nodes', iconClass: 'bg-rose-50 text-rose-700' },
+            { key: 'question', name: 'Câu hỏi ngày', desc: 'Một câu hỏi, nhiều câu trả lời', layout: 'question', theme: 'rose', preview: 'question', icon: 'fa-circle-question', iconClass: 'bg-purple-50 text-purple-700' }
         ];
 
         function allTemplates() { return [...PADLET_TEMPLATES, ...CREATIVE_TEMPLATES]; }
@@ -773,15 +774,15 @@
 
         function templatePreviewHtml(type) {
             const boxes = (n) => Array.from({ length: n }, (_, i) =>
-                `<div class="rounded-sm" style="background:rgba(255,255,255,${0.22 + (i % 3) * 0.12});min-height:${28 + (i % 4) * 12}px"></div>`).join('');
+                `<div class="rounded-sm" style="background:${['#99f6e4','#bae6fd','#fde68a'][i % 3]};min-height:${28 + (i % 4) * 12}px"></div>`).join('');
             if (type === 'wall') return `<div class="grid grid-cols-3 gap-1.5 p-3 h-full">${boxes(6)}</div>`;
             if (type === 'columns') return `<div class="grid grid-cols-3 gap-2 p-3 h-full">${[0, 1, 2].map(() => `<div class="space-y-1">${boxes(2)}</div>`).join('')}</div>`;
             if (type === 'grid') return `<div class="grid grid-cols-4 gap-1 p-3 h-full">${boxes(8)}</div>`;
-            if (type === 'timeline') return `<div class="flex items-end gap-2 p-3 h-full">${[0, 1, 2, 3].map((i) => `<div class="w-8 rounded-t" style="background:rgba(255,255,255,${0.3 + i * 0.15});height:${40 + i * 18}%"></div>`).join('')}</div>`;
-            if (type === 'map') return `<div class="relative h-full p-3"><div class="absolute inset-3 rounded-lg bg-white/10"></div><div class="absolute left-6 top-8 h-3 w-3 rounded-full bg-rose-300"></div><div class="absolute right-10 bottom-8 h-3 w-3 rounded-full bg-sky-300"></div></div>`;
+            if (type === 'timeline') return `<div class="flex items-end gap-2 p-3 h-full">${[0, 1, 2, 3].map((i) => `<div class="w-8 rounded-t" style="background:#fda4af;height:${40 + i * 18}%"></div>`).join('')}</div>`;
+            if (type === 'map') return `<div class="relative h-full p-3"><div class="absolute inset-3 rounded-lg bg-indigo-100"></div><div class="absolute left-6 top-8 h-3 w-3 rounded-full bg-rose-400"></div><div class="absolute right-10 bottom-8 h-3 w-3 rounded-full bg-sky-400"></div></div>`;
             if (type === 'whiteboard') return `<div class="grid grid-cols-4 gap-1 p-3 h-full" style="background:repeating-linear-gradient(#fff 0 20px,#f4f4f5 20px 21px)">${boxes(4)}</div>`;
-            if (type === 'mindmap') return `<div class="relative h-full p-3"><div class="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/50"></div>${[0,1,2,3].map(i => `<div class="absolute h-2 w-2 rounded-full bg-white/40" style="left:${20+i*18}%;top:${25+(i%2)*35}%"></div>`).join('')}</div>`;
-            if (type === 'presentation') return `<div class="flex h-full flex-col gap-1 p-3"><div class="flex-1 rounded bg-white/30"></div><div class="h-2 rounded bg-white/20"></div></div>`;
+            if (type === 'mindmap') return `<div class="relative h-full p-3"><div class="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-300"></div>${[0,1,2,3].map(i => `<div class="absolute h-2 w-2 rounded-full bg-amber-200" style="left:${20+i*18}%;top:${25+(i%2)*35}%"></div>`).join('')}</div>`;
+            if (type === 'presentation') return `<div class="flex h-full flex-col gap-1 p-3"><div class="flex-1 rounded bg-blue-200"></div><div class="h-2 rounded bg-blue-100"></div></div>`;
             if (type === 'venn') return `<div class="relative h-full"><div class="absolute left-3 top-1/2 h-16 w-16 -translate-y-1/2 rounded-full bg-blue-400/50"></div><div class="absolute right-3 top-1/2 h-16 w-16 -translate-y-1/2 rounded-full bg-rose-400/50"></div></div>`;
             if (type === 'question') return `<div class="flex h-full flex-col items-center justify-center p-3 text-center"><div class="text-3xl font-black text-white/70">?</div><div class="mt-2 h-2 w-3/4 rounded bg-white/25"></div></div>`;
             return `<div class="grid grid-cols-3 gap-1.5 p-3 h-full">${boxes(6)}</div>`;
@@ -790,10 +791,10 @@
         function renderTemplateGallery() {
             return `<div class="template-scroll pb-1">
                 ${PADLET_TEMPLATES.map((t) => `
-                    <button type="button" onclick="pickTemplate('${t.key}')" class="padlet-tpl-card template-card overflow-hidden rounded-2xl bg-gradient-to-br ${t.gradient} p-3 text-left">
-                        <div class="tpl-preview mb-3 aspect-[4/3] overflow-hidden rounded-xl">${templatePreviewHtml(t.preview)}</div>
-                        <h3 class="text-base font-black text-white">${esc(t.name)}</h3>
-                        <p class="mt-1 text-[11px] leading-snug text-white/75">${esc(t.desc)}</p>
+                    <button type="button" onclick="pickTemplate('${t.key}')" class="padlet-tpl-card template-card overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3.5 text-left shadow-sm transition-all duration-200 hover:border-teal-500 hover:shadow-md">
+                        <div class="tpl-preview ${t.previewClass} mb-3 aspect-[4/3] overflow-hidden rounded-xl">${templatePreviewHtml(t.preview)}</div>
+                        <h3 class="text-base font-bold text-slate-900">${esc(t.name)}</h3>
+                        <p class="mt-1 text-xs leading-relaxed text-slate-500">${esc(t.desc)}</p>
                     </button>`).join('')}
             </div>`;
         }
@@ -801,12 +802,12 @@
         function renderCreativeGallery() {
             return `<div class="template-scroll pb-1">
                 ${CREATIVE_TEMPLATES.map((t) => `
-                    <button type="button" onclick="pickTemplate('${t.key}')" class="padlet-tpl-card creative-card template-card rounded-2xl p-3 text-left">
-                        <div class="tpl-preview mb-3 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl">
-                            ${t.icon ? `<i class="fas ${t.icon} text-3xl text-white/55"></i>` : templatePreviewHtml(t.preview)}
+                    <button type="button" onclick="pickTemplate('${t.key}')" class="padlet-tpl-card creative-card template-card rounded-2xl border border-slate-200/90 bg-white p-3.5 text-left shadow-sm transition-all duration-200 hover:border-teal-500 hover:shadow-md">
+                        <div class="${t.iconClass} mb-3 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl">
+                            ${t.icon ? `<i class="fas ${t.icon} text-3xl"></i>` : templatePreviewHtml(t.preview)}
                         </div>
-                        <p class="text-base font-black text-white/90">${esc(t.name)}</p>
-                        <p class="mt-1 text-[11px] leading-snug text-white/50">${esc(t.desc)}</p>
+                        <p class="text-base font-bold text-slate-800">${esc(t.name)}</p>
+                        <p class="mt-1 text-xs leading-relaxed text-slate-500">${esc(t.desc)}</p>
                     </button>`).join('')}
             </div>`;
         }
@@ -818,31 +819,31 @@
 
         function renderLibrary() {
             if (!state.boards.length) {
-                return `<div class="rounded-2xl border border-dashed border-white/15 bg-white/5 p-12 text-center">
-                    <i class="fas fa-folder-open text-4xl text-white/30"></i>
-                    <p class="mt-4 text-white/60">${state.isTeacher === false ? 'Chưa có bảng nào được chia sẻ cho lớp của bạn.' : 'Chưa có bảng — chọn mẫu phía trên để tạo.'}</p>
+                return `<div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center text-slate-500">
+                    <i class="fas fa-folder-open text-4xl text-slate-400"></i>
+                    <p class="mt-4">${state.isTeacher === false ? 'Chưa có bảng nào được chia sẻ cho lớp của bạn.' : 'Chưa có bảng — chọn mẫu phía trên để tạo.'}</p>
                 </div>`;
             }
             return `<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 ${state.boards.map((b) => `
-                    <article class="overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a]">
+                    <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md">
                         <a href="${boardUrl(b.public_code)}" class="relative block aspect-[5/3] board-bg-${boardCardTheme(b)}">
-                            <span class="absolute left-3 top-3 rounded-full bg-black/35 px-2.5 py-1 text-[10px] font-extrabold text-white">${LAYOUT_LABELS[b.layout_type] || 'Bảng'}</span>
-                            ${b.access_mode === 'class' && b.target_class ? `<span class="absolute ${b.pending_count > 0 ? 'left-20' : 'right-3'} top-3 rounded-full bg-teal-600/90 border border-teal-300/30 px-2.5 py-1 text-[10px] font-extrabold text-white"><i class="fas fa-users-rectangle mr-1"></i>Lớp ${esc(b.target_class)}</span>` : ''}
+                            <span class="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-slate-700 shadow-sm">${LAYOUT_LABELS[b.layout_type] || 'Bảng'}</span>
+                            ${b.access_mode === 'class' && b.target_class ? `<span class="absolute ${b.pending_count > 0 ? 'left-20' : 'right-3'} top-3 rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-[10px] font-extrabold text-teal-800"><i class="fas fa-users-rectangle mr-1"></i>Lớp ${esc(b.target_class)}</span>` : ''}
                             ${b.pending_count > 0 ? `<span class="absolute right-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-extrabold text-white">${b.pending_count} chờ</span>` : ''}
-                            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 pt-10">
-                                <h3 class="truncate font-black text-white">${esc(b.title)}</h3>
-                                <p class="mt-1 text-[11px] font-bold text-white/70">${b.post_count} bài · #${esc(b.public_code)}</p>
-                            </div>
                         </a>
-                        <div class="flex flex-wrap gap-2 p-3">
-                            <button type="button" onclick="copyLink('${b.public_code}')" class="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/15"><i class="fas fa-link mr-1"></i>Link</button>
+                        <div class="p-3.5">
+                            <h3 class="truncate font-bold text-slate-900">${esc(b.title)}</h3>
+                            <p class="mt-1 text-xs text-slate-500">${b.post_count} bài · ${fmt(b.updated_at || b.created_at) || 'Mới tạo'}</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" onclick="copyLink('${b.public_code}')" class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200"><i class="fas fa-link mr-1"></i>Link</button>
                             ${state.isTeacher !== false ? `
-                                <button type="button" onclick="openBoardEditor(${b.id})" class="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/15"><i class="fas fa-pen mr-1"></i>Sửa</button>
-                                <button type="button" onclick="deleteBoard(${b.id})" class="rounded-lg bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-300"><i class="fas fa-trash-can mr-1"></i>Xóa</button>
+                                <button type="button" onclick="openBoardEditor(${b.id})" class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200"><i class="fas fa-pen mr-1"></i>Sửa</button>
+                                <button type="button" onclick="deleteBoard(${b.id})" class="rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100"><i class="fas fa-trash-can mr-1"></i>Xóa</button>
                             ` : `
                                 <a href="${boardUrl(b.public_code)}" class="flex-1 text-center rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-500"><i class="fas fa-arrow-right-to-bracket mr-1"></i>Vào bảng</a>
                             `}
+                            </div>
                         </div>
                     </article>`).join('')}
             </div>`;
@@ -853,26 +854,24 @@
             const name = state.user?.full_name?.split(' ').pop() || state.user?.full_name || (isTeacher ? 'Giáo viên' : 'Học sinh');
             const totalPending = state.boards.reduce((s, b) => s + (b.pending_count || 0), 0);
 
-            document.getElementById('topActions').innerHTML = `
-                <a href="index.html" class="hidden rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-bold text-white sm:inline-flex">
-                    <i class="fas fa-home mr-1"></i>Trang chủ
-                </a>`;
+            document.getElementById('topActions').innerHTML = '';
+            document.getElementById('fabPost')?.classList.add('hidden');
 
             if (!isTeacher) {
                 const studentClass = state.studentClass || state.user?.class_name || '';
                 document.getElementById('app').innerHTML = `
                     <div class="mb-8">
-                        <p class="text-sm text-white/50">Xin chào <strong class="text-white">${esc(name)}</strong>${studentClass ? ` · Lớp <span class="text-teal-400 font-bold">${esc(studentClass)}</span>` : ''}</p>
+                        <p class="text-sm text-slate-600">Xin chào <strong class="text-slate-900">${esc(name)}</strong>${studentClass ? ` · Lớp <span class="font-bold text-teal-700">${esc(studentClass)}</span>` : ''}</p>
                         <div class="mt-4">
-                            <h1 class="text-3xl font-black tracking-tight text-white sm:text-4xl">Bảng chia sẻ của lớp</h1>
-                            <p class="mt-2 max-w-2xl text-sm text-white/55">Các bảng tương tác, thảo luận được giáo viên chia sẻ cho lớp của bạn.</p>
+                            <h1 class="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Bảng chia sẻ của lớp</h1>
+                            <p class="mt-2 max-w-2xl text-sm text-slate-600">Danh sách bảng tương tác được giáo viên chia sẻ cho lớp của bạn.</p>
                         </div>
                     </div>
 
                     <section class="mt-6">
                         <div class="mb-4 flex items-center justify-between gap-3">
                             <div>
-                                <h2 class="text-xl font-black text-white">Danh sách bảng (${state.boards.length})</h2>
+                                <h2 class="text-xl font-black text-slate-900">Danh sách bảng (${state.boards.length})</h2>
                             </div>
                         </div>
                         ${renderLibrary()}
@@ -882,34 +881,36 @@
 
             document.getElementById('app').innerHTML = `
                 <div class="mb-8">
-                    <p class="text-sm text-white/50">Xin chào <strong class="text-white">${esc(name)}</strong></p>
+                    <p class="text-sm text-slate-600">Xin chào <strong class="text-slate-900">${esc(name)}</strong> · Bảng chia sẻ lớp học</p>
                     <div class="mt-4 flex flex-wrap items-end justify-between gap-4">
                         <div>
-                            <h1 class="text-3xl font-black tracking-tight text-white sm:text-4xl">Tạo một bảng</h1>
-                            <p class="mt-2 max-w-2xl text-sm text-white/55">Chọn mẫu giống Padlet — tạo xong mở bảng ngay, gửi link cho lớp.</p>
+                            <h1 class="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Tạo một bảng</h1>
+                            <p class="mt-2 max-w-2xl text-sm text-slate-600">Chọn mẫu bên dưới để tạo bảng tương tác cho học sinh thảo luận, làm việc nhóm hoặc nộp bài.</p>
                         </div>
-                        ${totalPending ? `<span class="rounded-full bg-amber-500/20 px-4 py-2 text-sm font-bold text-amber-200"><i class="fas fa-clock mr-1"></i>${totalPending} bài chờ duyệt</span>` : ''}
+                        ${totalPending ? `<span class="rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-800"><i class="fas fa-clock mr-1"></i>${totalPending} bài chờ duyệt</span>` : ''}
                     </div>
                 </div>
 
                 <section>
-                    <h2 class="mb-1 text-sm font-extrabold uppercase tracking-wider text-white/40">Bố cục</h2>
-                    <p class="mb-3 text-sm text-white/50">Nhấn mẫu — tạo bảng và mở ngay (giống Padlet)</p>
+                    <h2 class="mb-1 text-sm font-extrabold uppercase tracking-wider text-slate-500">Bố cục</h2>
+                    <p class="mb-3 text-sm text-slate-500">Nhấn mẫu để tạo bảng và mở ngay.</p>
                     ${renderTemplateGallery()}
                 </section>
 
                 <section class="mt-10">
-                    <div class="rainbow-bar mb-4 max-w-xs"></div>
-                    <h2 class="text-sm font-extrabold uppercase tracking-wider text-white/40">Sáng tạo & tư duy</h2>
-                    <p class="mb-3 mt-1 text-sm text-white/50">Bảng trắng, sơ đồ tư duy, thuyết trình...</p>
+                    <div class="mb-1 flex items-center gap-2">
+                        <span class="grid h-6 w-6 place-items-center rounded-lg bg-teal-100/80 text-xs font-bold text-teal-800"><i class="fas fa-lightbulb"></i></span>
+                        <h2 class="text-xs font-extrabold uppercase tracking-wider text-slate-500">Sáng tạo &amp; Tư duy</h2>
+                    </div>
+                    <p class="mb-3 text-sm text-slate-500">Bảng trắng, sơ đồ tư duy, thuyết trình và công cụ tương tác</p>
                     ${renderCreativeGallery()}
                 </section>
 
                 <section class="mt-12">
                     <div class="mb-4 flex items-center justify-between gap-3">
                         <div>
-                            <h2 class="text-xl font-black text-white">Thư viện của bạn</h2>
-                            <p class="mt-1 text-sm text-white/45">${state.boards.length} bảng</p>
+                            <h2 class="text-xl font-black text-slate-900">Thư viện của bạn</h2>
+                            <p class="mt-1 text-sm text-slate-500">${state.boards.length} bảng</p>
                         </div>
                     </div>
                     ${renderLibrary()}

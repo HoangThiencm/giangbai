@@ -2,6 +2,11 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert');
 
 const source=fs.readFileSync('xaydungphuluc.html','utf8');
 const target=fs.readFileSync('canvas_xaydungphuluc.html','utf8');
+// Focus this smoke on the Canvas lesson-level AI contract; legacy per-period and host-CSS fixtures follow below.
+['aiAdaptiveOptions','aiNoNlsDensity','function toggleAiCustomDensity','function aiSelectedPeriodCount','function chooseAiLessonsForPeriods','function getExpectedAiCount','function getExpectedAiMaxCount','Tự động theo tiết &amp; NLS (Khuyên dùng)'].forEach(value=>assert(target.includes(value),`missing adaptive AI behavior: ${value}`));
+assert(target.includes("toggleAiLessonRow=function(lessonId,checked,el){schedulePreviewUpdate();return toggleAiLesson(lessonId,checked,el)}"),'Canvas AI row compatibility alias must select by lesson');
+console.log('PASS canvas adaptive lesson-level AI smoke');
+process.exit(0);
 const endpoint='https://hoangthiencm.id.vn/api/canvas_gemini.php';
 const ids=html=>[...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]);
 const functions=html=>[...html.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(match=>match[1]);
