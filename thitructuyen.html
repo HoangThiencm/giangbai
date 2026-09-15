@@ -1231,7 +1231,10 @@
                 const next = questionMatches[index + 1];
                 let block = text.slice(item.bodyStart, next ? next.markerStart : text.length).trim();
 
-                const inlineAnswerMatch = block.match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|answer)\s*[:：]\s*([^\n]+)/i);
+                // Loại bỏ tiêu đề phần nếu nằm ở cuối block (trước câu tiếp theo)
+                block = block.replace(/\n\s*PHẦN\s+(?:I|II|III)\b[^\n]*/gi, '').trim();
+
+                const inlineAnswerMatch = block.match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|đáp\s*số|kết\s*quả|đs|answer|ans)\s*[:：=]\s*([^\n]+)/i);
                 let inlineAnswer = "";
                 if (inlineAnswerMatch) {
                     inlineAnswer = inlineAnswerMatch[1].trim();
@@ -1263,15 +1266,26 @@
                 const isTF = (tfMatches.length >= 2 && mcMatches.length < 2) || /đúng\s*[-/]?\s*sai/i.test(inlineAnswer);
                 if (isTF && tfMatches.length >= 2) {
                     const question = block.slice(0, tfMatches[0].markerStart).trim();
-                    const options = ["a", "b", "c", "d"].map((letter) => {
+                    const correctAnswers = [true, false, false, false];
+
+                    const options = ["a", "b", "c", "d"].map((letter, optIdx) => {
                         const cur = tfMatches.find(m => m.letter === letter);
                         if (!cur) return "";
                         const curIdx = tfMatches.indexOf(cur);
                         const nextMarker = tfMatches[curIdx + 1]?.markerStart ?? block.length;
-                        return block.slice(cur.bodyStart, nextMarker).trim();
+                        let optText = block.slice(cur.bodyStart, nextMarker).trim();
+
+                        // Kiểm tra đánh dấu [Đúng] / [Sai] ngay trong từng ý
+                        if (/\[(đúng|đ|true|t)\]|\((đúng|đ|true|t)\)/i.test(optText)) {
+                            correctAnswers[optIdx] = true;
+                            optText = optText.replace(/\[(đúng|đ|true|t|sai|s|false|f)\]|\((đúng|đ|true|t|sai|s|false|f)\)/gi, '').trim();
+                        } else if (/\[(sai|s|false|f)\]|\((sai|s|false|f)\)/i.test(optText)) {
+                            correctAnswers[optIdx] = false;
+                            optText = optText.replace(/\[(đúng|đ|true|t|sai|s|false|f)\]|\((đúng|đ|true|t|sai|s|false|f)\)/gi, '').trim();
+                        }
+                        return optText;
                     });
 
-                    const correctAnswers = [true, false, false, false];
                     if (inlineAnswer) {
                         ["a", "b", "c", "d"].forEach((letter, idx) => {
                             const re = new RegExp(`${letter}\\s*[:：\\-\\.]?\\s*(đ|s|đúng|sai|t|f|true|false)`, 'i');
@@ -1303,14 +1317,27 @@
                 if (mcMatches.length >= 2) {
                     const question = block.slice(0, mcMatches[0].markerStart).trim();
                     const optionsByLetter = {};
+                    let asteriskCorrectIndex = -1;
+
                     mcMatches.forEach((option, optionIndex) => {
                         const optionEnd = mcMatches[optionIndex + 1]?.markerStart ?? block.length;
-                        optionsByLetter[option.letter] = block.slice(option.bodyStart, optionEnd).trim();
+                        let optText = block.slice(option.bodyStart, optionEnd).trim();
+
+                        // Kiểm tra đánh dấu * hoặc [x] hoặc [v] ở phương án đúng
+                        if (/\*|\[x\]|\[v\]/i.test(optText) || block.slice(option.markerStart, option.bodyStart).includes('*')) {
+                            asteriskCorrectIndex = "ABCD".indexOf(option.letter);
+                            optText = optText.replace(/\*|\[x\]|\[v\]/gi, '').trim();
+                        }
+                        optionsByLetter[option.letter] = optText;
                     });
+
                     const options = ["A", "B", "C", "D"].map(letter => optionsByLetter[letter] || "");
                     const ansLetterMatch = inlineAnswer.match(/\b([A-D])\b/i);
                     const answerLetter = (ansLetterMatch ? ansLetterMatch[1] : (answerKey[item.number] || "")).toUpperCase();
-                    const correctIndex = "ABCD".indexOf(answerLetter);
+                    let correctIndex = "ABCD".indexOf(answerLetter);
+                    if (correctIndex < 0 && asteriskCorrectIndex >= 0) {
+                        correctIndex = asteriskCorrectIndex;
+                    }
 
                     return {
                         id: Date.now() + Math.random(),
