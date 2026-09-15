@@ -1,0 +1,22 @@
+'use strict';
+
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const root = path.join(__dirname, '..');
+const app = fs.readFileSync(path.join(root, 'js', 'khbd-app.js'), 'utf8');
+
+assert.match(app, /async function analyzeCanvasTextbookSafely/, 'Canvas phải có luồng phân tích SGK riêng');
+assert.match(app, /CANVAS_TEXTBOOK_BATCH_SIZE\s*=\s*3/, 'Canvas phải giới hạn lô ảnh/trang nhỏ');
+assert.match(app, /prepareCanvasTextbookAnalysisBatches/, 'Canvas phải gom ảnh/PDF đã chọn theo lô');
+assert.match(app, /selectedPages: pages/, 'Canvas phải tôn trọng các trang PDF đã chọn');
+assert.match(app, /Không sao chép câu, đoạn, bảng, bài tập hoặc công thức/, 'Prompt Canvas phải cấm tái tạo nội dung nguồn');
+assert.doesNotMatch(app.match(/function canvasTextbookAnalysisPrompt[\s\S]*?function parseCanvasTextbookAnalysis/)?.[0] || '', /trích nguyên văn|toàn bộ chữ|không tóm tắt/i, 'Prompt Canvas không được yêu cầu chép nguyên văn');
+assert.match(app, /if \(canvasRoute\) \{[\s\S]{0,900}analyzeCanvasTextbookSafely/, 'Canvas phải dùng tuyến hệ thống phân tích thay cho OCR');
+assert.match(app, /applyTextbookOcrResult\(ocrText/, 'Kết quả Canvas phải đi vào context/ocrReady hiện có');
+assert.match(app, /Gemini không thể phân tích tệp này[\s\S]*không tự gửi lại yêu cầu/, 'RECITATION Canvas phải hướng dẫn, không tự gửi lại');
+assert.match(app, /if \(!canvasRoute && canUseMistralOcr\(\)\)/, 'Luồng không phải Canvas vẫn ưu tiên Mistral');
+assert.match(app, /extractTextbookOcrTextWithGemini/, 'Fallback Gemini cũ vẫn dành cho luồng không phải Canvas');
+
+console.log('canvas textbook analysis smoke: passed');

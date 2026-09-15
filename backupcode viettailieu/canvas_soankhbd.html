@@ -386,14 +386,14 @@
               <div id="dropzoneContainer" class="dropzone-container" tabindex="0">
                 <div class="dropzone-icon">📋</div>
                 <div class="dropzone-text">
-                  <h4>Dán ảnh SGK (Ctrl + V) hoặc Chọn file Ảnh / PDF từ máy tính</h4>
-                  <p>Click vùng này để chọn SGK (viền xanh). Bấm "Đọc sách giáo khoa" chỉ trích xuất văn bản — chưa tự tick PPDH/NLS.</p>
+                  <h4>Dán ảnh SGK (Ctrl + V) hoặc chọn ảnh / PDF từ máy tính</h4>
+                  <p>Chọn SGK (viền xanh), rồi bấm “Phân tích SGK”. AI chỉ tạo ngữ cảnh tóm lược cho Bước 3–4, không chép lại nội dung sách.</p>
                   <p class="dropzone-active-hint">Đang chọn SGK — Bấm Ctrl+V để dán</p>
                 </div>
                 <input type="file" id="fileInputImages" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
               </div>
               <button id="btnAnalyzeVision" class="btn btn-primary khbd-read-source-btn" type="button">
-                <i data-lucide="scan-text"></i> 📖 Đọc sách giáo khoa
+                <i data-lucide="scan-text"></i> ✨ Phân tích SGK
               </button>
 
               <!-- Image Gallery Grid -->
@@ -1265,7 +1265,7 @@
         document.write('<script src="js/khbd-standards.js"><\/script>');
         document.write('<script src="js/khbd-app.js"><\/script>');
       } else if (typeof document !== "undefined") {
-        document.write('<script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260915-canvas-system-v3"><\/script>');
+        document.write('<script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260915-canvas-system-v4"><\/script>');
       }
     })();
   </script>

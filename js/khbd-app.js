@@ -6180,6 +6180,84 @@ async function extractTextbookOcrTextWithGemini(onProgress) {
   ) || "").trim();
 }
 
+// Canvas must not turn a textbook into a verbatim OCR request.  Apart from
+// avoiding copyright-sensitive output, this gives the lesson generator the
+// small, useful context it actually needs.
+const CANVAS_TEXTBOOK_BATCH_SIZE = 3;
+
+function canvasTextbookAnalysisPrompt(batchLabel) {
+  return [
+    "Phân tích học liệu SGK đính kèm để tạo ngữ cảnh ngắn cho việc thiết kế bài dạy.",
+    "Không sao chép câu, đoạn, bảng, bài tập hoặc công thức từ học liệu. Không tái tạo văn bản nguồn.",
+    "Chỉ diễn đạt lại bằng lời của bạn, thật ngắn gọn. Nếu không chắc, ghi vào unknowns thay vì suy đoán.",
+    `Phạm vi lô đang phân tích: ${batchLabel}.`,
+    "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"lessonScope\":\"\",\"majorPoints\":[\"\"],\"summary\":\"\",\"unknowns\":[\"\"]}.",
+    "majorPoints có từ 1 đến 3 ý về kiến thức hoặc hoạt động chính; summary tối đa 90 từ."
+  ].join("\\n");
+}
+
+function parseCanvasTextbookAnalysis(raw) {
+  const clean = String(raw || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const parsed = JSON.parse((clean.match(/\{[\s\S]*\}/) || [""])[0]);
+  const points = (Array.isArray(parsed.majorPoints) ? parsed.majorPoints : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 3);
+  const unknowns = (Array.isArray(parsed.unknowns) ? parsed.unknowns : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 3);
+  return {
+    subject: String(parsed.subject || "").trim(), grade: String(parsed.grade || "").trim(), topic: String(parsed.topic || "").trim(),
+    periodCount: Number(parsed.periodCount) || null, lessonScope: String(parsed.lessonScope || "").trim(),
+    majorPoints: points, summary: String(parsed.summary || "").trim().slice(0, 800), unknowns
+  };
+}
+
+async function prepareCanvasTextbookAnalysisBatches() {
+  const batches = [];
+  for (const att of (appState.pdfAttachments || []).filter(att => att?.dataUrl)) {
+    const selected = (Array.isArray(att.selectedPages) && att.selectedPages.length ? att.selectedPages : Array.from({ length: Number(att.pageCount) || 1 }, (_, i) => i + 1));
+    for (let i = 0; i < selected.length; i += CANVAS_TEXTBOOK_BATCH_SIZE) {
+      const pages = selected.slice(i, i + CANVAS_TEXTBOOK_BATCH_SIZE);
+      const part = await buildPdfMediaPart({ ...att, selectedPages: pages, pageCount: Math.max(Number(att.pageCount) || 0, pages.length + 1) });
+      batches.push({ label: `${att.name || "PDF SGK"}, trang ${pages.join(", ")}`, media: [part] });
+    }
+  }
+  const images = (appState.images || []).filter(image => image?.dataUrl && image.sourceType !== "pdf");
+  for (let i = 0; i < images.length; i += CANVAS_TEXTBOOK_BATCH_SIZE) {
+    const slice = images.slice(i, i + CANVAS_TEXTBOOK_BATCH_SIZE);
+    const media = [];
+    for (const image of slice) {
+      const compressed = await compressDataUrl(image.dataUrl);
+      media.push({ mimeType: compressed.mimeType, dataUrl: compressed.dataUrl });
+    }
+    batches.push({ label: `ảnh SGK ${i + 1}-${i + slice.length}`, media });
+  }
+  return batches;
+}
+
+async function analyzeCanvasTextbookSafely(onProgress) {
+  if (typeof geminiAPI === "undefined" || typeof geminiAPI.generateContent !== "function") throw new Error("Gemini Canvas chưa sẵn sàng.");
+  const batches = await prepareCanvasTextbookAnalysisBatches();
+  if (!batches.length) throw new Error("Không có trang hoặc ảnh SGK đã chọn để phân tích.");
+  const analyses = [];
+  for (let index = 0; index < batches.length; index++) {
+    const batch = batches[index];
+    if (typeof onProgress === "function") onProgress(`Đang phân tích SGK ${index + 1}/${batches.length}...`, Math.round(20 + ((index + 1) / batches.length) * 70));
+    const raw = await geminiAPI.generateContent(canvasTextbookAnalysisPrompt(batch.label), batch.media, getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1, null, { maxOutputTokens: 900 });
+    analyses.push(parseCanvasTextbookAnalysis(raw));
+  }
+  const first = analyses[0] || {};
+  const majorPoints = analyses.flatMap(item => item.majorPoints || []).filter(Boolean).slice(0, 6);
+  const unknowns = analyses.flatMap(item => item.unknowns || []).filter(Boolean).slice(0, 6);
+  const summary = analyses.map(item => item.summary).filter(Boolean).join(" ").slice(0, 1400);
+  return { ...first, majorPoints, unknowns, summary, batches: analyses.length };
+}
+
+function formatCanvasTextbookContext(data) {
+  return [
+    "## Ngữ cảnh SGK đã phân tích", data.topic && `- Chủ đề: ${data.topic}`, data.subject && `- Môn: ${data.subject}`,
+    data.grade && `- Khối lớp: ${data.grade}`, data.periodCount && `- Số tiết tham khảo: ${data.periodCount}`,
+    data.lessonScope && `- Phạm vi bài: ${data.lessonScope}`, data.majorPoints?.length && `- Ý chính: ${data.majorPoints.join("; ")}`,
+    data.summary && `- Tóm lược: ${data.summary}`, data.unknowns?.length && `- Cần xác minh: ${data.unknowns.join("; ")}`
+  ].filter(Boolean).join("\n");
+}
+
 async function applyTextbookOcrResult(ocrText, { silent = false } = {}) {
   appState.content.vision = ocrText;
   appState.teachingContext.ocrReady = true;
@@ -6208,8 +6286,16 @@ async function readTextbookWithMistral() {
     let ocrProvider = "Gemini";
 
     const canvasRoute = isCanvasGeminiRoute();
-    updateProgress(15, canvasRoute ? "Đang nhận diện SGK bằng Gemini Canvas..." : "Đang nhận diện SGK bằng Mistral OCR...");
-    if (status) status.textContent = canvasRoute ? "Đang nhận diện SGK bằng Gemini Canvas..." : "Đang nhận diện SGK bằng Mistral OCR...";
+    updateProgress(15, canvasRoute ? "Đang phân tích ngữ cảnh SGK bằng Gemini Canvas..." : "Đang nhận diện SGK bằng Mistral OCR...");
+    if (status) status.textContent = canvasRoute ? "Đang phân tích ngữ cảnh SGK bằng Gemini Canvas..." : "Đang nhận diện SGK bằng Mistral OCR...";
+    if (canvasRoute) {
+      const analysis = await analyzeCanvasTextbookSafely((msg, pct) => updateProgress(pct, msg));
+      ocrText = formatCanvasTextbookContext(analysis);
+      ocrProvider = "Gemini Canvas";
+      if (analysis.topic) appState.customTopic = analysis.topic;
+      if (analysis.lessonScope) appState.teachingContext.lessonScope = analysis.lessonScope;
+      if (Number.isInteger(analysis.periodCount) && analysis.periodCount > 0 && analysis.periodCount <= 20) appState.duration = String(analysis.periodCount);
+    }
     if (!canvasRoute && canUseMistralOcr()) {
       try {
         ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(pct, msg));
@@ -6222,7 +6308,7 @@ async function readTextbookWithMistral() {
       showToast("Chưa có Mistral API Key; đang dùng Gemini để đọc SGK.", "info", 4500);
     }
 
-    if (!ocrText) {
+    if (!canvasRoute && !ocrText) {
       if (status) status.textContent = "Đang nhận diện SGK bằng Gemini...";
       ocrText = await extractTextbookOcrTextWithGemini((msg, pct) => updateProgress(pct, msg));
       ocrProvider = "Gemini";
@@ -6244,14 +6330,17 @@ async function readTextbookWithMistral() {
     const details = document.getElementById("detailsVisionContent");
     if (details) details.open = true;
 
-    updateProgress(100, `Đã đọc nội dung SGK (${ocrProvider})!`);
+    updateProgress(100, canvasRoute ? "Đã tạo ngữ cảnh SGK cho các bước tiếp theo!" : `Đã đọc nội dung SGK (${ocrProvider})!`);
     setTimeout(() => hideProgress(), 1500);
-    showToast("Đã xong! Đã đọc và trích xuất nội dung SGK thành công.", "success", 5000);
+    showToast(canvasRoute ? "Đã xong! Đã phân tích ngữ cảnh SGK cho Bước 3 và 4." : "Đã xong! Đã đọc và trích xuất nội dung SGK thành công.", "success", 5000);
     if (status) status.textContent = "Sẵn sàng.";
   } catch (error) {
     console.error("OCR SGK:", error);
     hideProgress();
-    showToast(`Không thể đọc SGK: ${error.message}`, "danger", 7000);
+    const canvasRecitation = isCanvasGeminiRoute() && /finishReason=RECITATION|RECITATION/i.test(String(error?.message || ""));
+    showToast(canvasRecitation
+      ? "Gemini không thể phân tích tệp này. Hãy tải lại Canvas bản mới rồi dùng nút ‘Phân tích SGK’; hệ thống sẽ không tự gửi lại yêu cầu."
+      : `Không thể ${isCanvasGeminiRoute() ? "phân tích" : "đọc"} SGK: ${error.message}`, "danger", 7000);
     const status = document.getElementById("statusFooterText");
     if (status) status.textContent = "Lỗi nhận diện SGK.";
   } finally {

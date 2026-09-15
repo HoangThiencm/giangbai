@@ -1,5 +1,26 @@
 # Báo cáo triển khai: Gemini Canvas hệ thống không cần key cá nhân
 
+## Cập nhật: Phân tích SGK Canvas không chép nội dung nguồn
+
+- `js/khbd-app.js`
+  - Tuyến Canvas không còn dùng fallback Gemini theo kiểu OCR/chép SGK. Thay vào đó, nó gửi ảnh và đúng các trang PDF đã chọn theo lô tối đa 3 đơn vị, rồi nhận JSON ngắn gồm môn, lớp, chủ đề, số tiết/phạm vi, 1–3 ý chính, tóm lược và điểm chưa rõ.
+  - Kết quả được diễn đạt lại, gom thành ngữ cảnh SGK và đi qua `applyTextbookOcrResult`, nên `ocrReady` cùng Bước 3–4 tiếp tục hoạt động mà không có bản sao văn bản SGK.
+  - Không tự gửi lại yêu cầu khi Gemini trả `RECITATION`; thông báo hướng người dùng tải lại Canvas bản mới và dùng “Phân tích SGK”. Luồng không-Canvas vẫn ưu tiên Mistral OCR như cũ.
+- `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`
+  - Đổi nhãn/tin nhắn thành “Phân tích SGK”, nói rõ chỉ tạo ngữ cảnh tóm lược.
+  - Nâng cache-bust `khbd-app.js` lên `20260915-canvas-system-v4`.
+- Kiểm thử bổ sung: `tests/canvas-textbook-analysis-smoke.js`; cập nhật smoke Canvas và workflow 4 bước cho hành vi phân tích mới.
+
+### Kiểm thử cập nhật
+
+- `node --check js/khbd-app.js`: PASS.
+- `node tests/canvas-textbook-analysis-smoke.js`: PASS.
+- `node tests/canvas-soankhbd-smoke.js`: PASS.
+- `node tests/khbd-mistral-ocr-smoke.js`: PASS.
+- `node tests/khbd-vision-batching-smoke.js`: PASS.
+- `node tests/khbd-4steps-workflow-smoke.js`: PASS.
+- `git diff --check` cho tệp phạm vi: PASS. `thitructuyen.html` có whitespace tồn tại sẵn, ngoài phạm vi.
+
 ## Phạm vi đã thực hiện
 
 - `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`

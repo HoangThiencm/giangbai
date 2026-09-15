@@ -87,7 +87,7 @@ console.log("✓ Giao diện HTML đáp ứng quy trình 4 bước.");
 
 console.log("\n[TEST 2] Logic JS từng bước...");
 
-assert.match(appCode, /showToast\("Đã xong/i, "Bước 1 OCR SGK phải toast 'Đã xong'");
+assert.match(appCode, /showToast\(canvasRoute \? "Đã xong/i, "Bước 1 phải báo hoàn thành sau khi có ngữ cảnh SGK");
 assert.match(appCode, /showToast\("Đã đọc/i, "Bước 2 Phân tích PPCT phải toast 'Đã đọc'");
 assert.match(appCode, /async function applyTextbookOcrResult[\s\S]*?ocrReady = true[\s\S]*?updateWorkflowStepper\(\)/, "OCR SGK chỉ lưu text và ocrReady");
 assert.doesNotMatch(
