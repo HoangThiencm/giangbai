@@ -315,6 +315,7 @@ function build_exam_meta(array $data, PDO $pdo): array
         'max_attempts' => $maxAttempts,
         'subject' => $subject,
         'grade' => $grade,
+        'exam_format' => trim((string)($data['exam_format'] ?? 'standard_mc')),
     ];
     if (isset($data['matrixConfig']) && is_array($data['matrixConfig'])) {
         $meta['matrixConfig'] = $data['matrixConfig'];
@@ -382,6 +383,7 @@ function exam_to_public_payload(array $row): array
             'matrixConfig' => $meta['matrixConfig'] ?? null,
             'subject' => $meta['subject'] ?? '',
             'grade' => $meta['grade'] ?? '',
+            'exam_format' => $meta['exam_format'] ?? 'standard_mc',
         ],
         'questions' => $questions,
     ];
@@ -391,7 +393,13 @@ function questions_without_answers(array $questions): array
 {
     return array_map(function ($question) {
         if (!is_array($question)) return $question;
-        unset($question['correct_index'], $question['correctAnswer'], $question['answer']);
+        unset(
+            $question['correct_index'],
+            $question['correctAnswer'],
+            $question['answer'],
+            $question['correct_answers'],
+            $question['correct_answer']
+        );
         return $question;
     }, $questions);
 }
@@ -799,27 +807,131 @@ if ($method === 'POST' && $action === 'submit') {
         }
     }
 
+function normalize_short_answer_val($val): string
+{
+    $str = strtolower(trim((string)$val));
+    $str = str_replace(',', '.', $str);
+    $str = preg_replace('/\s+/', '', $str);
+    return $str;
+}
+
+function compare_short_answers($userVal, $trueVal): bool
+{
+    $u = normalize_short_answer_val($userVal);
+    $t = normalize_short_answer_val($trueVal);
+    if ($u === '' || $t === '') return false;
+    if ($u === $t) return true;
+
+    if (is_numeric($u) && is_numeric($t)) {
+        return abs((float)$u - (float)$t) < 0.0001;
+    }
+
+    $eval_frac = function ($s) {
+        if (preg_match('/^(-?\d+)\/(\d+)$/', $s, $m)) {
+            $denom = (float)$m[2];
+            if ($denom != 0) return (float)$m[1] / $denom;
+        }
+        return null;
+    };
+    $u_frac = $eval_frac($u);
+    $t_frac = $eval_frac($t);
+    $u_num = $u_frac !== null ? $u_frac : (is_numeric($u) ? (float)$u : null);
+    $t_num = $t_frac !== null ? $t_frac : (is_numeric($t) ? (float)$t : null);
+    if ($u_num !== null && $t_num !== null) {
+        return abs($u_num - $t_num) < 0.0001;
+    }
+
+    return false;
+}
+
     $answers = $data['answers'] ?? [];
     if (!is_array($answers)) $answers = [];
 
     $correct = 0;
     $wrong = [];
+    $earnedPoints = 0.0;
+    $total = count($questions);
+
     foreach ($questions as $i => $q) {
         $userAns = $answers[(string)$i] ?? $answers[$i] ?? null;
-        $trueAns = isset($q['correct_index']) ? (int)$q['correct_index'] : -1;
-        if ($userAns !== null && (int)$userAns === $trueAns) {
-            $correct++;
+        $type = $q['type'] ?? (isset($q['correct_answers']) ? 'tf' : (isset($q['correct_answer']) && empty($q['options']) ? 'short_answer' : 'mc'));
+
+        if ($type === 'tf') {
+            $trueAnswers = $q['correct_answers'] ?? [true, false, false, false];
+            $correctItems = 0;
+            $userItemsDesc = [];
+            $trueItemsDesc = [];
+            for ($k = 0; $k < 4; $k++) {
+                $uVal = null;
+                if (is_array($userAns)) {
+                    $uVal = $userAns[$k] ?? $userAns[(string)$k] ?? null;
+                    if ($uVal === null) {
+                        $letters = ['a', 'b', 'c', 'd'];
+                        $uVal = $userAns[$letters[$k]] ?? null;
+                    }
+                }
+                $uBool = ($uVal === true || $uVal === 'true' || $uVal === 1 || $uVal === '1' || strcasecmp((string)$uVal, 'đ') === 0 || strcasecmp((string)$uVal, 't') === 0);
+                $tBool = !empty($trueAnswers[$k]);
+                $userItemsDesc[] = chr(97 + $k) . ': ' . ($uVal !== null ? ($uBool ? 'Đ' : 'S') : '—');
+                $trueItemsDesc[] = chr(97 + $k) . ': ' . ($tBool ? 'Đ' : 'S');
+                if ($uVal !== null && $uBool === $tBool) {
+                    $correctItems++;
+                }
+            }
+            // Điểm theo chuẩn Bộ GD&ĐT (CV 7991): 1 ý: 0.1đ, 2 ý: 0.25đ, 3 ý: 0.50đ, 4 ý: 1.00đ
+            $qScore = 0.0;
+            if ($correctItems === 1) $qScore = 0.1;
+            elseif ($correctItems === 2) $qScore = 0.25;
+            elseif ($correctItems === 3) $qScore = 0.50;
+            elseif ($correctItems === 4) $qScore = 1.00;
+
+            $earnedPoints += $qScore;
+            if ($correctItems === 4) {
+                $correct++;
+            } else {
+                $wrong[] = [
+                    'q' => $q['question'] ?? '',
+                    'type' => 'tf',
+                    'ans' => implode(', ', $trueItemsDesc),
+                    'user_ans' => implode(', ', $userItemsDesc),
+                    'correct_items' => $correctItems,
+                    'earned_score' => $qScore
+                ];
+            }
+        } elseif ($type === 'short_answer') {
+            $trueAns = trim((string)($q['correct_answer'] ?? ''));
+            $isMatch = $userAns !== null && compare_short_answers($userAns, $trueAns);
+            if ($isMatch) {
+                $earnedPoints += 1.0;
+                $correct++;
+            } else {
+                $wrong[] = [
+                    'q' => $q['question'] ?? '',
+                    'type' => 'short_answer',
+                    'ans' => $trueAns !== '' ? $trueAns : '?',
+                    'user_ans' => (string)($userAns ?? 'Chưa trả lời')
+                ];
+            }
         } else {
-            $options = $q['options'] ?? [];
-            $wrong[] = [
-                'q' => $q['question'] ?? '',
-                'ans' => ($trueAns >= 0 && isset($options[$trueAns])) ? $options[$trueAns] : '?',
-            ];
+            // Mặc định: Trắc nghiệm nhiều lựa chọn (mc)
+            $trueAns = isset($q['correct_index']) ? (int)$q['correct_index'] : -1;
+            if ($userAns !== null && (int)$userAns === $trueAns) {
+                $earnedPoints += 1.0;
+                $correct++;
+            } else {
+                $options = $q['options'] ?? [];
+                $wrong[] = [
+                    'q' => $q['question'] ?? '',
+                    'type' => 'mc',
+                    'ans' => ($trueAns >= 0 && isset($options[$trueAns])) ? $options[$trueAns] : '?',
+                    'user_ans' => ($userAns !== null && isset($options[(int)$userAns])) ? $options[(int)$userAns] : 'Chưa chọn'
+                ];
+            }
         }
     }
 
-    $total = count($questions);
-    $score = $total > 0 ? round(($correct / $total) * 10, 2) : 0;
+    $totalPoints = $total * 1.0;
+    $score = $totalPoints > 0 ? round(($earnedPoints / $totalPoints) * 10, 2) : 0;
     $feedback = "Bạn làm đúng {$correct}/{$total} câu.";
 
     $stmt = $pdo->prepare('INSERT INTO exam_submissions (exam_id, student_id, student_name, sbd, student_class, score, correct_count, total_questions, details_json, ai_feedback) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');

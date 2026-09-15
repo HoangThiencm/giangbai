@@ -48,12 +48,14 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/css/khbd-styles.css'), `${relPath} phải giữ nguồn khbd-styles.css từ hosting khi chạy Canvas`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-prompts.js"'), `${relPath} phải nạp khbd-prompts.js cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-prompts.js'), `${relPath} phải giữ nguồn khbd-prompts.js từ hosting khi chạy Canvas`);
-  assert.ok(targetHtml.includes('?v=20260915-nls-ai-bi'), `${relPath} phải cache-bust CSS/JS NLS-AI in đậm in nghiêng`);
+  assert.ok(targetHtml.includes('?v=20260915-canvas-system-v3'), `${relPath} phải cache-bust bản Canvas hệ thống v3`);
+  assert.ok(targetHtml.includes('systemGemini: true'), `${relPath} phải bật rõ tuyến Gemini hệ thống Canvas`);
+  assert.ok(targetHtml.includes('geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php"'), `${relPath} phải khai báo endpoint Gemini Canvas tin cậy`);
   assert.ok(targetHtml.includes('canvasTimeBudgetAndRoleBreaks'), `${relPath} phải nhúng patch định mức 1 tiết + GV/HS`);
   assert.ok(targetHtml.includes('pedagogy-activity'), `${relPath} patch phải lọc hoạt động đặc thù`);
   assert.ok(/HEAVY\s*=\s*\/[^\n]*station/.test(targetHtml), `${relPath} patch phải chặn Station/Trạm`);
   assert.ok(targetHtml.includes('__khbdRolePatched'), `${relPath} phải vá parseTableCellParagraphs khi xuất Word`);
-  assert.ok(targetHtml.includes('v=20260915-ppdh-gvhs'), `${relPath} phải cache-bust bản PPDH/GV-HS`);
+  assert.ok(targetHtml.includes('v=20260915-canvas-system-v3'), `${relPath} phải cache-bust khbd-app bản Canvas hệ thống v3`);
   assert.ok(/\.khbd-badge-nls\s*\{[^}]*font-style:\s*italic/.test(targetHtml), `${relPath} badge NLS Canvas phải italic`);
   assert.ok(/\.khbd-badge-ai\s*\{[^}]*font-style:\s*italic/.test(targetHtml), `${relPath} badge AI Canvas phải italic`);
   assert.ok(/\.preview-rendered \.khbd-nls[\s\S]{0,180}font-style:\s*italic/.test(targetHtml), `${relPath} preview NLS Canvas phải italic`);
@@ -68,6 +70,17 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('pollConnection(15)'), `${relPath} phải thăm dò tối đa 15 lần (~4.5s)`);
   assert.ok(targetHtml.includes('setTimeout(function () { pollConnection(retriesLeft - 1); }, 300)'), `${relPath} phải retry mỗi 300ms`);
   assert.ok(!/setTimeout\(function \(\) \{\s*initConnection\(\);\s*bindCanvasEvents\(\);\s*\}, 350\)/.test(targetHtml), `${relPath} không còn setTimeout(initConnection, 350) đơn lẻ`);
+
+  // Canvas OCR uses exactly the server Gemini route: no fake Mistral key/client
+  // that makes khbd-app attempt OCR twice before falling back.
+  assert.ok(!targetHtml.includes('canvas-session'), `${relPath} không dùng pseudo key canvas-session`);
+  assert.ok(!targetHtml.includes('mistral-ocr-client.js'), `${relPath} không nạp Mistral OCR client trong Canvas`);
+  assert.ok(!targetHtml.includes('window.MistralOcr ='), `${relPath} không giả MistralOcr bằng Gemini`);
+  assert.ok(targetHtml.includes('preferred_model: useModel'), `${relPath} gửi preferred_model tới Canvas API`);
+  assert.ok(targetHtml.includes('allowEmptyKey: true'), `${relPath} cho phép tuyến Gemini hệ thống không cần key trình duyệt`);
+  assert.ok(targetHtml.includes('lastCanvasMeta = metadata'), `${relPath} lưu metadata tuyến/model Canvas an toàn`);
+  assert.ok(targetHtml.includes('type: "canvas_route"'), `${relPath} báo tuyến Gemini Canvas thực tế`);
+  assert.ok(!targetHtml.includes('user_account:'), `${relPath} không gửi danh tính người dùng từ Canvas`);
 
   // 3. Kiểm tra nút 1-Click
   assert.ok(targetIds.has('btn1ClickGenerate'), `${relPath} phải có nút #btn1ClickGenerate`);

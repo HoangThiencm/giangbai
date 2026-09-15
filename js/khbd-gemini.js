@@ -468,6 +468,66 @@ class GeminiAPIManager {
   }
 
   /**
+   * Gemini may return more than one candidate and text can be split across
+   * several parts.  Keep the extraction in one place so a successful HTTP
+   * response is not incorrectly reported as an empty answer.
+   */
+  extractResponseText(data) {
+    const candidates = Array.isArray(data?.candidates) ? data.candidates : [];
+    const text = candidates.flatMap(candidate => {
+      const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
+      return parts.map(part => typeof part?.text === "string" ? part.text : "");
+    }).join("").trim();
+    return text;
+  }
+
+  describeEmptyResponse(data) {
+    const candidate = Array.isArray(data?.candidates) ? data.candidates[0] : null;
+    const finishReason = String(candidate?.finishReason || "").trim();
+    const blockReason = String(data?.promptFeedback?.blockReason || "").trim();
+    const safety = candidate?.safetyRatings || data?.promptFeedback?.safetyRatings;
+    const safetyBlocked = Array.isArray(safety) && safety.some(item => item?.blocked === true);
+    const facts = [];
+    if (finishReason) facts.push(`finishReason=${finishReason}`);
+    if (blockReason) facts.push(`blockReason=${blockReason}`);
+    if (safetyBlocked) facts.push("safety=blocked");
+    const detail = facts.length ? ` (${facts.join(", ")})` : "";
+    return `Gemini trả HTTP 200 nhưng không có nội dung văn bản${detail}. Yêu cầu này không được tự gửi lại; hãy kiểm tra nội dung/tệp nguồn rồi thử lại.`;
+  }
+
+  // Canvas is the sole no-browser-key route. A normal page cannot opt in just
+  // by passing allowEmptyKey: it must set this explicit, trusted configuration.
+  getCanvasSystemConfig() {
+    const root = typeof window !== "undefined" ? window : null;
+    const cfg = root && root.__KHBD_CANVAS__;
+    if (!cfg || cfg.systemGemini !== true) return null;
+    const endpoint = String(cfg.geminiEndpoint || "").trim();
+    if (!/^https:\/\/hoangthiencm\.id\.vn\/api\/canvas_gemini\.php(?:\?.*)?$/i.test(endpoint)) return null;
+    return { endpoint, model: String(cfg.model || "").trim() || null };
+  }
+
+  async fetchCanvasSystemGenerate(config, model, payload, signal, timeoutMs) {
+    const response = await this.fetchWithTimeout(config.endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "omit",
+      // Never send a browser key, account, or other client identity to this route.
+      body: JSON.stringify({ preferred_model: model, payload, timeout: Math.max(10, Math.round((timeoutMs || 75000) / 1000)) }),
+      signal
+    }, timeoutMs || 75000);
+    const envelope = await response.json().catch(() => ({}));
+    const metadata = envelope && typeof envelope.meta === "object" && envelope.meta
+      ? envelope.meta
+      : { tier: envelope?.tier, model: envelope?.model, fallback_used: envelope?.fallback_used };
+    this.lastCanvasMeta = metadata;
+    if (response.ok && envelope?.ok && envelope?.body && typeof envelope.body === "object") {
+      return { ok: true, status: 200, statusText: "OK", headers: response.headers, canvasMeta: metadata, json: async () => envelope.body };
+    }
+    const message = String(envelope?.error || `Không thể gọi Gemini Canvas qua host (HTTP ${response.status || 502}).`);
+    return { ok: false, status: response.status || 502, statusText: response.statusText || "Canvas host error", headers: response.headers, canvasMeta: metadata, json: async () => ({ error: { message } }) };
+  }
+
+  /**
    * Gửi yêu cầu sinh nội dung (Content Generation)
    * @param {string} prompt Nội dung câu lệnh
    * @param {Array<{mimeType: string, dataUrl?: string, base64?: string}>} images Ảnh image/* hoặc PDF application/pdf
@@ -488,11 +548,14 @@ class GeminiAPIManager {
       this.loadKeysFromLocalStorage();
     }
 
-    if (!this.apiKeys || this.apiKeys.length === 0) {
+    const canvasSystem = this.getCanvasSystemConfig();
+    if ((!this.apiKeys || this.apiKeys.length === 0) && !options.allowEmptyKey && !canvasSystem) {
       throw new Error("Bạn chưa cấu hình Gemini API Key cá nhân. Vui lòng bấm 'Quản lý API Key' để dán key hoặc nạp file .txt của bạn.");
     }
 
-    const totalKeys = this.apiKeys.length;
+    // Canvas routes requests through its server-side system key and deliberately
+    // has no browser key. Treat that as one route for retry accounting only.
+    const totalKeys = Math.max((this.apiKeys || []).length, 1);
     const fallbackModel = this._fallbackModelId();
     this._ensureAvailableModel(fallbackModel);
     const selectedModel = this.selectedModel;
@@ -563,6 +626,28 @@ class GeminiAPIManager {
 
     await this._waitMinRequestGap(signal, options);
 
+    // OCR must be one Canvas request, with no retry-loop fall-through to
+    // personal keys or the direct Google endpoint.
+    if (canvasSystem) {
+      const activeModel = canvasSystem.model || this.selectedModel;
+      try {
+        this.emitGeminiStatus({ type: "call", message: `Đang gọi Gemini Canvas (${activeModel})...`, model: activeModel }, options);
+        const response = await this.fetchCanvasSystemGenerate(canvasSystem, activeModel, payload, signal, options.timeoutMs || 75000);
+        const metadata = response.canvasMeta || {};
+        this.emitGeminiStatus({ type: "canvas_route", message: `Gemini Canvas: tuyến ${metadata.fallback_used ? "dự phòng hệ thống" : "hệ thống"} · ${metadata.model || activeModel}`, route: metadata.route, model: metadata.model || activeModel, fallback: Boolean(metadata.fallback_used) }, options);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData?.error?.message || `Lỗi Gemini Canvas (${response.status}).`);
+        }
+        const data = await response.json();
+        const text = this.extractResponseText(data);
+        if (!text) throw new Error(this.describeEmptyResponse(data));
+        return text;
+      } finally {
+        this._lastRequestEndedAt = Date.now();
+      }
+    }
+
     try {
       while (attempts < maxAttempts) {
         if (signal?.aborted) throw new DOMException("Yêu cầu đã bị hủy.", "AbortError");
@@ -588,17 +673,15 @@ class GeminiAPIManager {
             const data = await response.json();
             const candidate = data.candidates?.[0];
 
-            if (!candidate) {
-              throw new Error("Không nhận được phản hồi hợp lệ từ Gemini API.");
-            }
-
-            if (candidate.finishReason === "MAX_TOKENS") {
+            if (candidate?.finishReason === "MAX_TOKENS") {
               console.warn("[Gemini] Phản hồi chạm giới hạn token (MAX_TOKENS). Đã tăng hạn mức output để đảm bảo trích xuất trọn vẹn.");
             }
 
-            const textParts = candidate.content?.parts?.map(p => p.text || "").join("").trim();
+            const textParts = this.extractResponseText(data);
             if (!textParts) {
-              throw new Error("Gemini không trả về nội dung văn bản. Hãy thử lại với yêu cầu ngắn hơn hoặc model khác.");
+              // HTTP 200 empty/safety responses are definitive for this request.
+              // Do not rotate keys, switch models, or retry them automatically.
+              throw new Error(this.describeEmptyResponse(data));
             }
             if (usedFallback) {
               console.warn(`[Gemini] Dùng model ${activeModel} (fallback phiên gọi, không ghi đè khbd_gemini_model).`);

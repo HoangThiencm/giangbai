@@ -46,6 +46,16 @@ function errResponse(status, message, headerMap = {}) {
   };
 }
 
+function emptyOkResponse(payload) {
+  return {
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    headers: { get: () => null },
+    json: async () => payload
+  };
+}
+
 function makeApi() {
   const api = new GeminiAPIManager();
   api.selectedModel = "gemini-3.7-flash";
@@ -161,6 +171,78 @@ async function case5_400noRetry() {
   assert(calls.length === 1, `case5: no retry on 400 (got ${calls.length} fetches)`);
 }
 
+async function case6_textAcrossCandidatesAndParts() {
+  const api = makeApi();
+  let calls = 0;
+  global.fetch = async () => {
+    calls += 1;
+    return emptyOkResponse({
+      candidates: [
+        { content: { parts: [{ text: "Phần một " }] } },
+        { content: { parts: [{ text: "phần hai" }] } }
+      ]
+    });
+  };
+  const text = await api.generateContent("prompt", [], null, 0.3, null, { _testFastRetry: true });
+  assert(text === "Phần một phần hai", "case6: joins text across candidate parts");
+  assert(calls === 1, `case6: text response makes one fetch (got ${calls})`);
+}
+
+async function case7_empty200DoesNotRetry() {
+  const api = makeApi();
+  let calls = 0;
+  global.fetch = async () => {
+    calls += 1;
+    return emptyOkResponse({ candidates: [{ finishReason: "SAFETY", content: { parts: [] }, safetyRatings: [{ blocked: true }] }] });
+  };
+  let thrown = null;
+  try { await api.generateContent("prompt", [], null, 0.3, null, { _testFastRetry: true }); } catch (err) { thrown = err; }
+  assert(Boolean(thrown), "case7: empty 200 throws a diagnostic");
+  assert(/finishReason=SAFETY/.test(String(thrown && thrown.message)), `case7: diagnostic includes finish reason (got ${thrown && thrown.message})`);
+  assert(/safety=blocked/.test(String(thrown && thrown.message)), `case7: diagnostic includes safety state (got ${thrown && thrown.message})`);
+  assert(calls === 1, `case7: empty/safety 200 does not retry or fall back (got ${calls})`);
+}
+
+async function case8_nonCanvasWithoutKeyKeepsGuard() {
+  const api = makeApi();
+  api.apiKeys = [];
+  api.loadKeysFromLocalStorage = function () { this.apiKeys = []; };
+  delete global.window;
+  let calls = 0;
+  global.fetch = async () => { calls += 1; return okResponse("không được gọi"); };
+  let thrown = null;
+  try { await api.generateContent("prompt", [], null, 0.3, null, { _testFastRetry: true }); } catch (err) { thrown = err; }
+  assert(/chưa cấu hình Gemini API Key cá nhân/.test(String(thrown && thrown.message)), "case8: non-Canvas without key keeps the personal-key guard");
+  assert(calls === 0, `case8: guard makes no request (got ${calls})`);
+}
+
+async function case9_canvasWithoutKeyUsesSystemEndpointOnce() {
+  const api = makeApi();
+  api.apiKeys = [];
+  api.loadKeysFromLocalStorage = function () { this.apiKeys = []; };
+  global.window = { __KHBD_CANVAS__: {
+    systemGemini: true,
+    geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php",
+    model: "gemini-3-flash-preview"
+  } };
+  const calls = [];
+  global.fetch = async (url, init) => {
+    calls.push({ url, init });
+    return {
+      ok: true, status: 200, statusText: "OK", headers: { get: () => null },
+      json: async () => ({ ok: true, meta: { route: "system", model: "gemini-3-flash-preview" }, body: { candidates: [{ content: { parts: [{ text: "OCR Canvas hợp lệ" }] } }] } })
+    };
+  };
+  const text = await api.generateContent("OCR SGK", [{ mimeType: "image/jpeg", base64: "aGVsbG8=" }], null, 0.3, null, { _testFastRetry: true });
+  const sent = JSON.parse(calls[0].init.body);
+  assert(text === "OCR Canvas hợp lệ", "case9: Canvas gets text from the system envelope");
+  assert(calls.length === 1, `case9: Canvas OCR calls proxy exactly once (got ${calls.length})`);
+  assert(calls[0].url === "https://hoangthiencm.id.vn/api/canvas_gemini.php", "case9: Canvas uses only the configured proxy endpoint");
+  assert(JSON.stringify(Object.keys(sent).sort()) === JSON.stringify(["payload", "preferred_model", "timeout"]), "case9: endpoint payload contains no key or client identity");
+  assert(sent.preferred_model === "gemini-3-flash-preview", "case9: Canvas sends its configured model");
+  delete global.window;
+}
+
 (async () => {
   try {
     await case1_retry503then200();
@@ -168,6 +250,10 @@ async function case5_400noRetry() {
     await case3_fallbackModelOn503();
     await case4_sameFallbackDoesNotSwitchModels();
     await case5_400noRetry();
+    await case6_textAcrossCandidatesAndParts();
+    await case7_empty200DoesNotRetry();
+    await case8_nonCanvasWithoutKeyKeepsGuard();
+    await case9_canvasWithoutKeyUsesSystemEndpointOnce();
   } catch (err) {
     failed += 1;
     console.error("FAIL: uncaught", err);

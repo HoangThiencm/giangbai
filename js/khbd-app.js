@@ -4301,13 +4301,14 @@ async function handleGeneratePpctAnalysis() {
   try {
     appState.isGenerating = true;
     if (btn) btn.disabled = true;
-    updateProgress(15, "Đang nhận diện PPCT bằng Mistral OCR...");
+    const canvasRoute = isCanvasGeminiRoute();
+    updateProgress(15, canvasRoute ? "Đang nhận diện PPCT bằng Gemini Canvas..." : "Đang nhận diện PPCT bằng Mistral OCR...");
     const status = document.getElementById("statusFooterText");
-    if (status) status.textContent = "Đang nhận diện PPCT bằng Mistral OCR...";
+    if (status) status.textContent = canvasRoute ? "Đang nhận diện PPCT bằng Gemini Canvas..." : "Đang nhận diện PPCT bằng Mistral OCR...";
 
     let ocrText = "";
     let usedMistral = false;
-    if (canUseMistralOcr()) {
+    if (!canvasRoute && canUseMistralOcr()) {
       try {
         ocrText = String(await extractPpctOcrText((msg, pct) => updateProgress(pct, msg)) || "").trim();
         usedMistral = Boolean(ocrText.replace(/\s+/g, " ").trim());
@@ -4316,7 +4317,7 @@ async function handleGeneratePpctAnalysis() {
         console.warn("Mistral OCR PPCT không khả dụng, chuyển sang Gemini:", mistralError);
         showToast("Mistral OCR không dùng được, đang tự chuyển sang Gemini để đọc PPCT.", "info", 4500);
       }
-    } else {
+    } else if (!canvasRoute) {
       showToast("Chưa có Mistral API Key; đang dùng Gemini để đọc PPCT.", "info", 4500);
     }
 
@@ -6034,6 +6035,10 @@ function canUseMistralOcr() {
   return getUserMistralKeys().length > 0;
 }
 
+function isCanvasGeminiRoute() {
+  return typeof window !== "undefined" && Boolean(window.__KHBD_CANVAS__ && window.__KHBD_CANVAS_PATCHED__);
+}
+
 function formatOcrPages(pages, label, selectedPages) {
   const list = Array.isArray(pages) ? pages : [];
   return list.map((page, idx) => {
@@ -6202,9 +6207,10 @@ async function readTextbookWithMistral() {
     let ocrText = "";
     let ocrProvider = "Gemini";
 
-    updateProgress(15, "Đang nhận diện SGK bằng Mistral OCR...");
-    if (status) status.textContent = "Đang nhận diện SGK bằng Mistral OCR...";
-    if (canUseMistralOcr()) {
+    const canvasRoute = isCanvasGeminiRoute();
+    updateProgress(15, canvasRoute ? "Đang nhận diện SGK bằng Gemini Canvas..." : "Đang nhận diện SGK bằng Mistral OCR...");
+    if (status) status.textContent = canvasRoute ? "Đang nhận diện SGK bằng Gemini Canvas..." : "Đang nhận diện SGK bằng Mistral OCR...";
+    if (!canvasRoute && canUseMistralOcr()) {
       try {
         ocrText = await extractTextbookOcrText((msg, pct) => updateProgress(pct, msg));
         ocrProvider = "Mistral OCR";
@@ -6212,7 +6218,7 @@ async function readTextbookWithMistral() {
         console.warn("Mistral OCR không khả dụng, chuyển sang Gemini:", mistralError);
         showToast("Mistral OCR không dùng được, đang tự chuyển sang Gemini để đọc SGK.", "info", 4500);
       }
-    } else {
+    } else if (!canvasRoute) {
       showToast("Chưa có Mistral API Key; đang dùng Gemini để đọc SGK.", "info", 4500);
     }
 

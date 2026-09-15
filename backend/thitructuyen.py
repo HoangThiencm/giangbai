@@ -59,13 +59,14 @@ class SaveExamRequest(BaseModel):
     teacher_email: str
     questions: List[Dict[str, Any]]
     google_sheet_id: Optional[str] = None
+    exam_format: Optional[str] = "standard_mc"
 
 class Submission(BaseModel):
     exam_id: str
     student_name: str
     sbd: str
     student_class: str
-    answers: Dict[str, int]
+    answers: Dict[str, Any]
 
 class NormalizeRequest(BaseModel):
     raw_text: str = ""
@@ -94,6 +95,36 @@ def clean_text(text):
     # Xóa xuống dòng
     text = text.replace('\n', ' ').replace('\r', '')
     return " ".join(text.split())
+
+def normalize_short_answer_val(val: Any) -> str:
+    if val is None:
+        return ""
+    s = str(val).strip().lower()
+    s = re.sub(r'\s+', '', s)
+    s = s.replace(',', '.')
+    m_frac = re.match(r'^(-?\d+)\/(\d+)$', s)
+    if m_frac:
+        denom = float(m_frac.group(2))
+        if denom != 0:
+            val_num = float(m_frac.group(1)) / denom
+            return str(round(val_num, 6)).rstrip('0').rstrip('.')
+    try:
+        f = float(s)
+        return str(round(f, 6)).rstrip('0').rstrip('.')
+    except ValueError:
+        return s
+
+def compare_short_answers(user_ans: Any, correct_ans: Any) -> bool:
+    u = normalize_short_answer_val(user_ans)
+    if not u:
+        return False
+    c_raw = str(correct_ans if correct_ans is not None else "")
+    parts = re.split(r'[|;]', c_raw)
+    for p in parts:
+        c_norm = normalize_short_answer_val(p)
+        if c_norm and u == c_norm:
+            return True
+    return False
 
 def extract_gemini_text(resp):
     """Trích xuất text an toàn từ phản hồi Gemini"""
@@ -479,7 +510,8 @@ async def import_answer_sheet(req: ImportAnswerRequest):
 async def save_exam_to_db(data: SaveExamRequest):
     if not supabase: raise HTTPException(500, "DB Disconnected")
     exam_id = data.id if data.id else str(uuid.uuid4())[:8]
-    variants = [{"exam_code": "ROOT", "questions": data.questions, "meta": {"google_sheet_id": data.google_sheet_id}}]
+    exam_format = getattr(data, "exam_format", None) or "standard_mc"
+    variants = [{"exam_code": "ROOT", "questions": data.questions, "meta": {"google_sheet_id": data.google_sheet_id, "exam_format": exam_format}}]
     payload = {
         "teacher_email": data.teacher_email, "title": data.title, "school": data.school, 
         "duration_mins": int(data.duration), "variants_json": json.dumps(variants), 
@@ -503,12 +535,16 @@ def get_exam(exam_id: str):
     elif end and now_iso > end: exam_status = "expired"
 
     v = json.loads(d["variants_json"])
+    root_meta = v[0].get("meta", {}) if v and isinstance(v[0], dict) else {}
+    exam_format = root_meta.get("exam_format", "standard_mc")
     return { 
         "info": { 
             "title": d["title"], "school": d["school"], "duration_mins": d["duration_mins"], 
-            "id": d["id"], "start_time": start, "end_time": end, "status": exam_status 
+            "id": d["id"], "start_time": start, "end_time": end, "status": exam_status,
+            "exam_format": exam_format
         }, 
-        "questions": v[0]["questions"] 
+        "questions": v[0]["questions"],
+        "exam_format": exam_format
     }
 
 @router.get("/my-exams")
@@ -548,24 +584,119 @@ async def submit_exam(data: Submission):
     
     variants = json.loads(res.data[0]["variants_json"])
     questions = variants[0]["questions"]
-    correct = 0; wrong = []
+    meta = variants[0].get("meta", {}) if variants and isinstance(variants[0], dict) else {}
+    exam_format = meta.get("exam_format", "standard_mc")
+
+    earned_score = 0.0
+    max_possible_score = 0.0
+    correct_count = 0
+    wrong = []
+
     for i, q in enumerate(questions):
+        q_type = q.get("type")
+        if not q_type:
+            if "correct_answers" in q:
+                q_type = "tf"
+            elif "correct_answer" in q and "options" not in q:
+                q_type = "short_answer"
+            else:
+                q_type = "mc"
+
         user_ans = data.answers.get(str(i))
-        true_ans = q.get("correct_index", -1)
-        if user_ans == true_ans: correct += 1
-        else: wrong.append({"q": q["question"], "ans": q["options"][true_ans] if true_ans != -1 else "?"})
+
+        if q_type == "tf":
+            max_possible_score += 1.0
+            correct_answers = q.get("correct_answers", [])
+            options = q.get("options", [])
+            user_tf = user_ans if isinstance(user_ans, (dict, list)) else {}
             
-    score = round((correct/len(questions))*10, 2) if questions else 0
+            sub_correct = 0
+            for opt_idx in range(len(options)):
+                u_val = None
+                if isinstance(user_tf, dict):
+                    u_val = user_tf.get(str(opt_idx), user_tf.get(opt_idx))
+                elif isinstance(user_tf, list) and opt_idx < len(user_tf):
+                    u_val = user_tf[opt_idx]
+                
+                u_bool = None
+                if u_val is True or u_val == 1 or str(u_val).lower() in ("true", "1", "d", "đúng"):
+                    u_bool = True
+                elif u_val is False or u_val == 0 or str(u_val).lower() in ("false", "0", "s", "sai"):
+                    u_bool = False
+                
+                t_val = correct_answers[opt_idx] if opt_idx < len(correct_answers) else None
+                t_bool = None
+                if t_val is True or t_val == 1 or str(t_val).lower() in ("true", "1", "d", "đúng"):
+                    t_bool = True
+                elif t_val is False or t_val == 0 or str(t_val).lower() in ("false", "0", "s", "sai"):
+                    t_bool = False
+
+                if u_bool is not None and u_bool == t_bool:
+                    sub_correct += 1
+
+            q_pts = 0.0
+            if sub_correct == 1: q_pts = 0.1
+            elif sub_correct == 2: q_pts = 0.25
+            elif sub_correct == 3: q_pts = 0.5
+            elif sub_correct >= 4: q_pts = 1.0
+
+            earned_score += q_pts
+            if sub_correct >= 4:
+                correct_count += 1
+            else:
+                wrong.append({
+                    "q": q.get("question", ""),
+                    "type": "tf",
+                    "sub_correct": sub_correct,
+                    "earned": q_pts
+                })
+
+        elif q_type == "short_answer":
+            max_possible_score += 1.0
+            is_correct = compare_short_answers(user_ans, q.get("correct_answer", ""))
+            if is_correct:
+                earned_score += 1.0
+                correct_count += 1
+            else:
+                wrong.append({
+                    "q": q.get("question", ""),
+                    "type": "short_answer",
+                    "ans": str(q.get("correct_answer", "")),
+                    "user_ans": str(user_ans or "")
+                })
+
+        else: # "mc"
+            max_possible_score += 1.0
+            true_ans = q.get("correct_index", -1)
+            u_ans_int = -1
+            try:
+                u_ans_int = int(user_ans) if user_ans is not None else -1
+            except:
+                u_ans_int = -1
+
+            if u_ans_int == true_ans and true_ans != -1:
+                earned_score += 1.0
+                correct_count += 1
+            else:
+                options = q.get("options", [])
+                correct_label = options[true_ans] if (0 <= true_ans < len(options)) else "?"
+                wrong.append({
+                    "q": q.get("question", ""),
+                    "type": "mc",
+                    "ans": correct_label
+                })
+
+    score = round((earned_score / max_possible_score) * 10, 2) if max_possible_score > 0 else 0.0
     
     # --- [NEW] AI FEEDBACK GENERATION ---
-    fb = f"Bạn làm đúng {correct}/{len(questions)} câu."
+    fb = f"Bạn làm đúng {correct_count}/{len(questions)} câu."
     try:
         api_keys = json.loads(res.data[0]["api_keys_backup"])
         if api_keys and wrong:
             # Tạo prompt ngắn gọn cho AI
             wrong_summary = "\n".join([f"- Câu: {w['q'][:100]}..." for w in wrong[:5]]) # Lấy tối đa 5 câu sai để tiết kiệm token
             prompt = f"""
-            Học sinh làm bài thi được {score}/10 điểm. Đúng {correct}/{len(questions)} câu.
+            Học sinh làm bài thi được {score}/10 điểm. Đúng {correct_count}/{len(questions)} câu.
             Một số câu làm sai:
             {wrong_summary}
             
@@ -591,7 +722,7 @@ async def submit_exam(data: Submission):
 
     supabase.table("submissions").insert({
         "exam_id": data.exam_id, "student_name": data.student_name, "sbd": data.sbd, 
-        "student_class": data.student_class, "score": score, "correct_count": correct, 
+        "student_class": data.student_class, "score": score, "correct_count": correct_count, 
         "total_questions": len(questions), "details_json": json.dumps(wrong), "ai_feedback": fb
     }).execute()
     return {"score": score, "total": len(questions), "feedback": fb}

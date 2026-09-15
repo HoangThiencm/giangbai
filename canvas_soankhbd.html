@@ -31,7 +31,9 @@
       window.__KHBD_CANVAS__ = {
         host: "https://hoangthiencm.id.vn",
         model: "gemini-3-flash-preview",
-        version: "20260915-ppdh-gvhs",
+        version: "20260915-canvas-system-v3",
+        systemGemini: true,
+        geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php",
         connected: false
       };
     })();
@@ -870,7 +872,7 @@
           ✓ <b>Chế độ Gemini Canvas:</b> Mặc định kết nối an toàn Gateway máy chủ hoangthiencm.id.vn (model <code>gemini-3-flash-preview</code>). Bạn có thể để trống hoặc nạp key cá nhân nếu muốn.
         </div>
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-          Mỗi tài khoản tự lưu key trên CSDL. <b>Đọc nội dung SGK</b> dùng Mistral OCR; <b>soạn KHBD</b> dùng Gemini. Nếu kiểm tra Gemini treo, máy có thể không tới Google — hệ thống sẽ thử gọi qua máy chủ (tối đa ~15 giây).
+          Canvas dùng Gemini do hệ thống cấp. <b>Đọc nội dung SGK</b> và <b>soạn KHBD</b> đều đi qua tuyến Gemini Canvas; không cần API key cá nhân.
         </p>
 
         <label for="textareaApiKeys" style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem;">Gemini — soạn kế hoạch bài dạy</label>
@@ -888,17 +890,17 @@
           </div>
         </div>
 
-        <label for="textareaMistralKeys" style="display:block; font-size:0.82rem; font-weight:700; margin:1rem 0 0.35rem;">Mistral OCR — đọc nội dung SGK</label>
-        <textarea id="textareaMistralKeys" rows="4" style="width: 100%; padding: 0.6rem; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px;" placeholder="Key Mistral (console.mistral.ai)&#10;Mỗi key một dòng"></textarea>
+        <label for="textareaMistralKeys" style="display:block; font-size:0.82rem; font-weight:700; margin:1rem 0 0.35rem;">Gemini Canvas OCR — do hệ thống cấp</label>
+        <textarea id="textareaMistralKeys" rows="4" disabled style="width: 100%; padding: 0.6rem; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px;" placeholder="Canvas không dùng Mistral hoặc API key cá nhân để OCR."></textarea>
         <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <span id="mistralKeyValidationStatus" style="font-size: 0.82rem; font-weight: 600;"></span>
           <div style="display:flex; gap:0.4rem; align-items:center;">
             <label class="btn btn-outline-dark btn-sm" style="cursor: pointer;">
-              <i data-lucide="file-up"></i> File Mistral
+              <i data-lucide="file-up"></i> Không cần key OCR
               <input type="file" id="fileInputMistralKeyTxt" accept=".txt,text/plain" style="display: none;">
             </label>
-            <button id="btnTestMistralKey" class="btn btn-outline-dark btn-sm">
-              <i data-lucide="check-circle"></i> Kiểm tra Mistral
+            <button id="btnTestMistralKey" class="btn btn-outline-dark btn-sm" disabled>
+              <i data-lucide="check-circle"></i> Gemini Canvas
             </button>
           </div>
         </div>
@@ -993,19 +995,18 @@
        ========================================================================= -->
   <script src="https://hoangthiencm.id.vn/ai-design-config.js"></script>
   <script src="https://hoangthiencm.id.vn/ai-usage-reporter.js"></script>
-  <script src="https://hoangthiencm.id.vn/mistral-ocr-client.js?v=20260826-khbd"></script>
   <script src="https://hoangthiencm.id.vn/js/khbd-curriculum.js"></script>
   <script>
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-      document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260915-nls-ai-bi"}"><\/script>`);
+        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260915-canvas-system-v3"}"><\/script>`);
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260915-canvas-system-v3"></script>
   <script>
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-      document.write(`<script src="${isLocal ? "js/khbd-docx.js" : "https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260915-nls-ai-bi"}"><\/script>`);
+        document.write(`<script src="${isLocal ? "js/khbd-docx.js" : "https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260915-canvas-system-v3"}"><\/script>`);
     })();
   </script>
   <script src="https://hoangthiencm.id.vn/js/khbd-standards.js"></script>
@@ -1181,7 +1182,6 @@
       const MODEL = cfg.model || "gemini-3-flash-preview";
       const HOST = cfg.host || "https://hoangthiencm.id.vn";
       const CANVAS_ENDPOINT = "https://hoangthiencm.id.vn/api/canvas_gemini.php";
-      const SESSION = "canvas-session";
 
       function setBanner(text, state) {
         const el = document.getElementById("canvasHostBanner");
@@ -1202,19 +1202,23 @@
         return;
       }
 
-      geminiAPI.apiKeys = [SESSION];
-      geminiAPI.mistralKeys = [SESSION];
+      geminiAPI.apiKeys = [];
+      geminiAPI.mistralKeys = [];
       geminiAPI.selectedModel = MODEL;
       geminiAPI.currentKeyIndex = 0;
-      geminiAPI.loadKeysFromLocalStorage = function () { this.apiKeys = [SESSION]; };
-      geminiAPI.loadMistralKeysFromLocalStorage = function () { this.mistralKeys = [SESSION]; };
+      geminiAPI.loadKeysFromLocalStorage = function () { this.apiKeys = []; };
+      geminiAPI.loadMistralKeysFromLocalStorage = function () { this.mistralKeys = []; };
       geminiAPI.saveKeysToLocalStorage = function () {};
       geminiAPI.saveMistralKeysToLocalStorage = function () {};
       geminiAPI.setModel = function () { this.selectedModel = MODEL; };
-      geminiAPI.getCurrentKey = function () { return SESSION; };
+      geminiAPI.getCurrentKey = function () { return ""; };
       geminiAPI.syncKeysFromServer = async function () {
-        this.apiKeys = [SESSION];
-        this.mistralKeys = [SESSION];
+        this.apiKeys = [];
+        this.mistralKeys = [];
+      };
+      const canvasGenerateContent = geminiAPI.generateContent.bind(geminiAPI);
+      geminiAPI.generateContent = function (prompt, images, systemRole, temperature, signal, options) {
+        return canvasGenerateContent(prompt, images, systemRole, temperature, signal, Object.assign({}, options || {}, { allowEmptyKey: true }));
       };
       geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
         const useModel = /image/i.test(String(model || "")) ? model : MODEL;
@@ -1222,10 +1226,17 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "omit",
-          body: JSON.stringify({ model: useModel, payload: payload, timeout: Math.max(10, Math.round((timeoutMs || 85000) / 1000)) }),
+          body: JSON.stringify({ preferred_model: useModel, payload: payload, timeout: Math.max(10, Math.round((timeoutMs || 85000) / 1000)) }),
           signal: signal
         }, timeoutMs || 85000);
         const envelope = await response.json().catch(function () { return {}; });
+        const metadata = envelope.meta || { tier: envelope.tier, model: envelope.model, fallback_used: envelope.fallback_used };
+        geminiAPI.lastCanvasMeta = metadata;
+        if (metadata.route) {
+          const routeLabel = metadata.fallback_used ? "dự phòng hệ thống" : "hệ thống";
+          setBanner("Gemini Canvas đang dùng tuyến " + routeLabel + " (" + (metadata.model || MODEL) + ").", metadata.route === "system" ? "ok" : "err");
+          geminiAPI.emitGeminiStatus({ type: "canvas_route", message: "Gemini Canvas: tuyến " + routeLabel + " · " + (metadata.model || MODEL), route: metadata.route, model: metadata.model || MODEL, fallback: Boolean(metadata.fallback_used) });
+        }
         if (!response.ok || !envelope.ok || !envelope.body) {
           const message = envelope.error || "Không thể gọi Gemini Canvas qua host.";
           return new Response(JSON.stringify({ error: { message: message } }), {
@@ -1234,35 +1245,13 @@
             headers: { "Content-Type": "application/json" }
           });
         }
-        return new Response(JSON.stringify(envelope.body), {
+        const geminiResponse = new Response(JSON.stringify(envelope.body), {
           status: 200,
           headers: { "Content-Type": "application/json" }
         });
+        geminiResponse.canvasMeta = metadata;
+        return geminiResponse;
       };
-
-      const OCR_PROMPT = "Đóng vai công cụ OCR tiếng Việt cho SGK. Trích nguyên văn chữ, công thức (LaTeX $...$), bảng. Không thêm lời dẫn, không tóm tắt. Chữ mờ ghi [...].";
-
-      async function canvasOcr(dataUrl, mimeHint) {
-        const data = String(dataUrl || "");
-        const mime = mimeHint
-          || (data.startsWith("data:application/pdf") ? "application/pdf"
-            : (data.match(/^data:([^;]+)/) || [])[1] || "image/jpeg");
-        const text = await geminiAPI.generateContent(OCR_PROMPT, [{ mimeType: mime, dataUrl: data }], null, 0.1, null, { maxOutputTokens: 8192 });
-        return String(text || "").trim();
-      }
-
-      window.MistralOcr = {
-        ocrDocument: async function (dataUrl) {
-          const markdown = await canvasOcr(dataUrl);
-          return { data: { pages: [{ markdown: markdown, text: markdown, index: 0 }] } };
-        },
-        ocrImageDataUrl: async function (dataUrl) {
-          const text = await canvasOcr(dataUrl, "image/jpeg");
-          return { text: text };
-        }
-      };
-
-      window.__canvasOcr = canvasOcr;
       window.__KHBD_CANVAS_PATCHED__ = true;
       cfg.connected = true;
     })();
@@ -1276,7 +1265,7 @@
         document.write('<script src="js/khbd-standards.js"><\/script>');
         document.write('<script src="js/khbd-app.js"><\/script>');
       } else if (typeof document !== "undefined") {
-        document.write('<script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260915-ppdh-gvhs"><\/script>');
+        document.write('<script src="https://hoangthiencm.id.vn/js/khbd-app.js?v=20260915-canvas-system-v3"><\/script>');
       }
     })();
   </script>
