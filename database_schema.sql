@@ -16,6 +16,21 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS teacher_ppct_catalogs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    owner_user_id INT NOT NULL,
+    subject VARCHAR(80) NOT NULL,
+    grade VARCHAR(20) NOT NULL,
+    academic_year VARCHAR(30) NOT NULL DEFAULT '',
+    rows_json LONGTEXT NOT NULL,
+    source_json TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_teacher_ppct_catalog (owner_user_id, subject, grade, academic_year),
+    INDEX idx_teacher_ppct_owner (owner_user_id),
+    CONSTRAINT fk_teacher_ppct_owner FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS lessons (
     id INT AUTO_INCREMENT PRIMARY KEY,
     subject VARCHAR(80) NOT NULL,

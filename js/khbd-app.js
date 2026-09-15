@@ -60,6 +60,9 @@ const appState = {
   // Danh sách file/ảnh PPCT (Tách biệt hoàn toàn với SGK)
   ppctImages: [],
   ppctPdfAttachments: [],
+  // Phụ lục 3 đã chuẩn hoá. Chỉ lưu văn bản cấu trúc và metadata, tuyệt đối
+  // không lưu ảnh/OCR nguồn vào CSDL.
+  ppctCatalog: { rows: [], source: {}, selectedRowId: "", serverId: null },
 
   // Nội dung đã biên soạn
   content: {
@@ -86,6 +89,52 @@ const appState = {
   cancelRequested: false,
   generationController: null
 };
+
+/* JSON from models occasionally contains a bare LaTex backslash (e.g. \cdot).
+ * Do not use a global backslash replacement: it corrupts legitimate JSON
+ * escapes.  Instead find a balanced root, then repair only an invalid escape
+ * while inside a quoted string. */
+function extractBalancedJsonRoot(raw) {
+  const text = String(raw || "").replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");
+  const start = text.search(/[\[{]/);
+  if (start < 0) throw new Error("AI không trả dữ liệu JSON.");
+  const stack = [], pairs = { "{": "}", "[": "]" };
+  let quoted = false, escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) { if (escaped) escaped = false; else if (ch === "\\") escaped = true; else if (ch === '"') quoted = false; continue; }
+    if (ch === '"') { quoted = true; continue; }
+    if (ch === "{" || ch === "[") stack.push(pairs[ch]);
+    else if (ch === "}" || ch === "]") { if (stack.pop() !== ch) throw new Error("JSON AI có dấu ngoặc không khớp."); if (!stack.length) return text.slice(start, i + 1); }
+  }
+  throw new Error("JSON AI chưa đầy đủ (thiếu dấu đóng).");
+}
+
+function repairAiJsonText(text) {
+  let out = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (!quoted) { if (ch === '"') quoted = true; out += ch; continue; }
+    if (ch === '"') { quoted = false; out += ch; continue; }
+    if (ch === "\\") {
+      const next = text[i + 1];
+      if (next && '"\\/bfnrt'.includes(next)) { out += ch + next; i++; continue; }
+      if (next === "u" && /^[0-9a-fA-F]{4}$/.test(text.slice(i + 2, i + 6))) { out += text.slice(i, i + 6); i += 5; continue; }
+      // A single bare backslash in a model string is rendered as a literal one.
+      out += "\\\\"; continue;
+    }
+    out += /[\u0000-\u001f]/.test(ch) ? (ch === "\n" ? "\\n" : ch === "\r" ? "\\r" : ch === "\t" ? "\\t" : "") : ch;
+  }
+  // trailing commas are legal only to remove outside string values
+  let cleaned = "", inString = false, esc = false;
+  for (let i = 0; i < out.length; i++) { const ch = out[i]; if (inString) { cleaned += ch; if (esc) esc=false; else if(ch==='\\')esc=true; else if(ch==='"')inString=false; continue; } if(ch==='"'){inString=true;cleaned+=ch;continue;} if(ch===","){let j=i+1;while(/\s/.test(out[j]||""))j++;if(out[j]==="]"||out[j]==="}")continue;} cleaned+=ch; }
+  return cleaned;
+}
+
+function parseAiJsonSafely(raw, label = "Dữ liệu AI") {
+  try { return JSON.parse(repairAiJsonText(extractBalancedJsonRoot(raw))); }
+  catch (error) { throw new Error(`${label} không đúng JSON: ${error.message}. Hãy thử lại.`); }
+}
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BYTES = 25 * 1024 * 1024;
@@ -327,6 +376,17 @@ async function initializeKhbdApp() {
     renderStandardsCatalog();
     renderPhasePedagogy();
     renderAllTabsPreview();
+    try {
+      if (isCanvasGeminiRoute()) {
+        const local = localStorage.getItem("khbd_ppct_catalog_canvas");
+        if (local && !(appState.ppctCatalog.rows || []).length) appState.ppctCatalog = JSON.parse(local);
+      } else {
+        const response = await fetch(`api/khbd_ppct_catalog.php?subject=${encodeURIComponent(appState.selectedSubject)}&grade=${encodeURIComponent(appState.selectedGrade)}`, { credentials: "same-origin" });
+        const data = await response.json();
+        if (response.ok && data.catalog && Array.isArray(data.catalog.rows)) appState.ppctCatalog = { rows:data.catalog.rows, source:data.catalog.source||{}, selectedRowId:"", serverId:data.catalog.id };
+      }
+    } catch (e) { console.info("Không tải được PPCT từ CSDL; vẫn dùng bản cục bộ."); }
+    renderPpctCatalogReview();
 
     try {
       if (window.AiDesignConfig && typeof AiDesignConfig.loadHostingFallbackConfig === "function") {
@@ -425,12 +485,12 @@ function getDraftScope() {
   return token ? `user-${String(localStorage.getItem("userId") || localStorage.getItem("userEmail") || "authenticated").replace(/[^a-zA-Z0-9_-]/g, "_")}` : "anonymous";
 }
 function normalizeDraftPart(value) { return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
-function buildDraftId(grade, lesson, topic) { return ["kntt", appState.selectedSubject || "TOAN", "none", grade, normalizeDraftPart(lesson), normalizeDraftPart(topic)].join(":"); }
+function buildDraftId(grade, lesson, topic) { return ["kntt", appState.selectedSubject || "TOAN", appState.ppctCatalog?.selectedRowId || "none", grade, normalizeDraftPart(lesson), normalizeDraftPart(topic)].join(":"); }
 function getDraftId() { return buildDraftId(appState.selectedGrade, appState.selectedLesson, appState.customTopic); }
 function getDraftIndexKey() { return `khbd_drafts_v2:${getDraftScope()}:index`; }
 function getDraftKey(id = getDraftId()) { return `khbd_drafts_v2:${getDraftScope()}:${id}`; }
 function currentDraftData() {
-  return { selectedGrade: appState.selectedGrade, selectedSubject: appState.selectedSubject, selectedLesson: appState.selectedLesson, customTopic: appState.customTopic, school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration, teachingContext: appState.teachingContext, content: appState.content, textbookSubsectionProfiles: appState.textbookSubsectionProfiles };
+  return { selectedGrade: appState.selectedGrade, selectedSubject: appState.selectedSubject, selectedLesson: appState.selectedLesson, customTopic: appState.customTopic, school: appState.school, group: appState.group, teacher: appState.teacher, subject: appState.subject, duration: appState.duration, teachingContext: appState.teachingContext, content: appState.content, textbookSubsectionProfiles: appState.textbookSubsectionProfiles, ppctCatalog: appState.ppctCatalog };
 }
 function saveStateToLocalStorage() {
   try {
@@ -491,6 +551,7 @@ function applyDraftData(data, { preserveSource = true } = {}) {
     selectedGrade: clampKhbdGrade(data.selectedGrade || "6"),
     selectedSubject: data.selectedSubject || "TOAN",
     selectedLesson: data.selectedLesson || "",
+    ppctCatalog: data.ppctCatalog && Array.isArray(data.ppctCatalog.rows) ? data.ppctCatalog : { rows: [], source: {}, selectedRowId: "", serverId: null },
     customTopic: data.customTopic || "",
     school: coerceKhbdSchool(data.school || appState.school),
     group: coerceKhbdGroup(data.group || appState.group),
@@ -1115,16 +1176,7 @@ function resolveCandidateEntry(id, entries) {
 }
 
 function parseJsonCandidatePayload(raw) {
-  let jsonText = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
-  let data;
-  try {
-    data = JSON.parse(jsonText);
-  } catch {
-    const start = jsonText.search(/[\[{]/);
-    const end = Math.max(jsonText.lastIndexOf("}"), jsonText.lastIndexOf("]"));
-    if (start < 0 || end <= start) return null;
-    try { data = JSON.parse(jsonText.slice(start, end + 1)); } catch { return null; }
-  }
+  let data; try { data = parseAiJsonSafely(raw, "Danh sách đề xuất"); } catch { return null; }
   if (Array.isArray(data)) return { candidates: data };
   if (data && Array.isArray(data.candidates)) return data;
   if (data && Array.isArray(data.items)) return { candidates: data.items };
@@ -1243,16 +1295,7 @@ function resolveCandidateEntry(id, entries) {
 }
 
 function parseJsonCandidatePayload(raw) {
-  let jsonText = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
-  let data;
-  try {
-    data = JSON.parse(jsonText);
-  } catch {
-    const start = jsonText.search(/[\[{]/);
-    const end = Math.max(jsonText.lastIndexOf("}"), jsonText.lastIndexOf("]"));
-    if (start < 0 || end <= start) return null;
-    try { data = JSON.parse(jsonText.slice(start, end + 1)); } catch { return null; }
-  }
+  let data; try { data = parseAiJsonSafely(raw, "Danh sách đề xuất"); } catch { return null; }
   if (Array.isArray(data)) return { candidates: data };
   if (data && Array.isArray(data.candidates)) return data;
   if (data && Array.isArray(data.items)) return { candidates: data.items };
@@ -1651,15 +1694,7 @@ async function generateSvgDrawing(drawingPrompt, drawingTitle) {
 }
 
 function parseIllustrationSpecs(raw) {
-  let jsonText = String(raw || "").trim().replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
-  let data;
-  try { data = JSON.parse(jsonText); }
-  catch {
-    const start = jsonText.search(/[\[{]/);
-    const end = Math.max(jsonText.lastIndexOf("}"), jsonText.lastIndexOf("]"));
-    if (start < 0 || end <= start) return [];
-    try { data = JSON.parse(jsonText.slice(start, end + 1)); } catch { return []; }
-  }
+  let data; try { data = parseAiJsonSafely(raw, "Danh sách hình minh họa"); } catch { return []; }
   const rows = Array.isArray(data) ? data : (data?.illustrations || data?.candidates || []);
   if (!Array.isArray(rows)) return [];
   const used = new Set();
@@ -4332,6 +4367,9 @@ async function handleGeneratePpctAnalysis() {
     }
 
     const currentTopic = appState.customTopic || appState.selectedLesson || "";
+    // A new analysis replaces the review list; never mix it with an older
+    // subject/grade catalog left in the draft.
+    appState.ppctCatalog.rows = [];
     let cleanedResult = "";
     let parsedDetails = { lessonScopeSuggestion: "", durationSuggestion: "", hasAiIntegration: false, details: {} };
 
@@ -4341,11 +4379,17 @@ async function handleGeneratePpctAnalysis() {
       parsedDetails = parsePpctLessonDetails(ocrText, currentTopic);
     } else {
       updateProgress(60, "Đang trích xuất cấu trúc Phụ lục 3 CV 5512 bằng AI...");
-      const prompt = 'Đọc trực tiếp PPCT PDF/ảnh đính kèm. Không OCR, không chép toàn văn. Chỉ trả JSON: {"topic":"","subject":"","grade":"","periodCount":null,"lessonScope":"","hasAiIntegration":false,"aiEvidence":"","summary":""}. hasAiIntegration chỉ true khi PPCT ghi tích hợp AI; lessonScope giữ cụm tiết như Tiết 50-51.';
+      const prompt = 'Đọc toàn bộ bảng PPCT/Phụ lục 3 đính kèm để lập danh mục cấu trúc, không chép nguyên văn đoạn SGK. Chỉ trả JSON hợp lệ: {"subject":"","grade":"","summary":"","rows":[{"chapter":"","title":"","periods":null,"tietCt":"","week":"","nls":{"enabled":false,"codes":[],"evidence":""},"ai":{"enabled":false,"codes":[],"evidence":""},"notes":""}]}. Trả TẤT CẢ dòng bài học nhìn thấy, giữ chính xác tick/mã NLS và AI nếu có.';
       const raw = await geminiAPI.generateContent(prompt, await prepareGeminiPpctMedia(), getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1);
-      const json = String(raw || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-      const data = JSON.parse((json.match(/\{[\s\S]*\}/) || [""])[0]);
+      const data = parseAiJsonSafely(raw, "Phân tích PPCT");
       cleanedResult = String(data.summary || "").trim() || JSON.stringify(data, null, 2);
+      if (Array.isArray(data.rows) && data.rows.length) {
+        const rows = data.rows.map((row, index) => {
+          const source = `${row.chapter||""}|${row.title||""}|${row.tietCt||""}|${row.week||""}|${JSON.stringify(row.nls||{})}|${JSON.stringify(row.ai||{})}`;
+          return { id: ppctStableId(`${appState.selectedSubject}|${appState.selectedGrade}|${source}|${index}`), chapter:String(row.chapter||"").trim(), header:"", title:String(row.title||"").trim(), periods:Number(row.periods)||null, tietCt:String(row.tietCt||"").trim(), week:String(row.week||"").trim(), devices:"", location:"", nls:{enabled:!!row.nls?.enabled,codes:Array.isArray(row.nls?.codes)?row.nls.codes:[],evidence:String(row.nls?.evidence||"")}, ai:{enabled:!!row.ai?.enabled,codes:Array.isArray(row.ai?.codes)?row.ai.codes:[],evidence:String(row.ai?.evidence||"")}, notes:String(row.notes||""), source:{kind:"appendix3",excerpt:"AI structured row"} };
+        }).filter(row => row.title);
+        if (rows.length) appState.ppctCatalog = { rows, source:{format:"appendix3-ai",analyzedAt:new Date().toISOString(),subject:appState.selectedSubject,grade:appState.selectedGrade}, selectedRowId:"",serverId:appState.ppctCatalog?.serverId||null };
+      }
       parsedDetails = parsePpctLessonDetails(cleanedResult, currentTopic);
       if (data.hasAiIntegration === true) {
         parsedDetails.hasAiIntegration = true;
@@ -4354,6 +4398,11 @@ async function handleGeneratePpctAnalysis() {
     }
 
     appState.content.ppctAnalysis = cleanedResult;
+    const catalogRows = (appState.ppctCatalog.rows || []).length ? appState.ppctCatalog.rows : parsePpctCatalog(cleanedResult, { subject: appState.selectedSubject, grade: appState.selectedGrade });
+    if (catalogRows.length) {
+      appState.ppctCatalog = { rows: catalogRows, source: { format: "appendix3", analyzedAt: new Date().toISOString(), subject: appState.selectedSubject, grade: appState.selectedGrade }, selectedRowId: "", serverId: appState.ppctCatalog?.serverId || null };
+      renderPpctCatalogReview();
+    }
     saveStateToLocalStorage();
 
     if (editor) editor.value = cleanedResult;
@@ -5816,6 +5865,41 @@ function countBBranchHeadings(text) {
   return String(text || "").split(/\r?\n/).filter(line => re.test(line.trim())).length;
 }
 
+function ppctStableId(text) { let h=2166136261; for (const c of String(text)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return `ppct_${(h>>>0).toString(36)}`; }
+function ppctIntegration(text, kind) {
+  const isAi = kind === "ai", explicit = isAi ? /\bAI\b|trí tuệ nhân tạo|QĐ\s*2422|tích hợp AI/i.test(text) : /năng lực số|\bNLS\b|CV\s*3456/i.test(text);
+  const codes = [...String(text).matchAll(isAi ? /(?:AI|NLAI)[._\- ]?\d+(?:\.\d+)*/gi : /(?:NLS|DL)[._\- ]?\d+(?:\.\d+)*/gi)].map(m=>m[0]).filter((v,i,a)=>a.indexOf(v)===i);
+  const enabled = explicit || codes.length > 0;
+  return { enabled, codes, evidence: enabled ? String(text).replace(/\s+/g," ").trim().slice(0,240) : "" };
+}
+/** Parses whole Appendix-3 text, including Markdown/pipe tables. Duplicate titles
+ * deliberately retain distinct stable IDs because period/week context is hashed. */
+function parsePpctCatalog(raw, meta = {}) {
+  const lines=String(raw||"").split(/\r?\n/).map(v=>v.trim()).filter(Boolean), rows=[]; let chapter="", header="";
+  for (const line of lines) {
+    if (/^\|?\s*:?-{3,}/.test(line)) continue;
+    if (/^(chương|chủ đề|mạch kiến thức)/i.test(line) && !/\d+\s*(tiết|tuần)/i.test(line)) { chapter=line.replace(/^#+\s*/,""); continue; }
+    const cells=line.includes("|")?line.replace(/^\||\|$/g,"").split("|").map(v=>v.trim()):[];
+    if (cells.length && cells.every(v=>/nội dung|tên bài|số tiết|tuần|thiết bị|năng lực|ghi chú/i.test(v))) { header=cells.join(" | "); continue; }
+    const candidate=cells.length?cells.join(" | "):line;
+    if (!/(bài\s*\d+|tiết\s*\d+|\d+\s*tiết|tuần\s*\d+)/i.test(candidate)) continue;
+    const title=(cells.find(v=>/bài\s*\d+|chủ đề/i.test(v)) || candidate.match(/(?:bài\s*\d+\s*[:.\-]?\s*)?[^|]{3,}/i)?.[0] || candidate).replace(/^\d+[.)]\s*/,"").trim();
+    const periods=Number((candidate.match(/(\d+)\s*tiết/i)||[])[1]) || null;
+    const tietCt=(candidate.match(/tiết\s*(?:CT)?\s*[:.]?\s*([\d\s,;–\-]+)/i)||[])[1]?.trim()||"";
+    const week=(candidate.match(/tuần\s*[:.]?\s*([\d\s,;–\-]+)/i)||[])[1]?.trim()||"";
+    const source=[chapter,header,candidate].join("|");
+    rows.push({id:ppctStableId(`${meta.subject||""}|${meta.grade||""}|${source}`),chapter,header,title,periods,tietCt,week,devices:"",location:"",nls:ppctIntegration(source,"nls"),ai:ppctIntegration(source,"ai"),notes:"",source:{kind:"appendix3",excerpt:candidate.slice(0,500)}});
+  }
+  return rows;
+}
+function applyPpctCatalogRow(id) { const row=(appState.ppctCatalog.rows||[]).find(r=>r.id===id); if(!row)return; appState.ppctCatalog.selectedRowId=id; appState.selectedLesson=row.title; appState.customTopic=row.title; if(row.periods) appState.duration=formatSmartDuration(`${row.periods} tiết`,appState.selectedGrade); appState.teachingContext.lessonScope=row.tietCt ? `Tiết ${row.tietCt}` : row.week ? `Tuần ${row.week}` : ""; appState.teachingContext.integrations.digital=!!row.nls.enabled; appState.teachingContext.integrations.ai=!!row.ai.enabled; populateLessonDropdown(); renderPpctCatalogReview(); renderStandardsCatalog(); saveStateToLocalStorage(); }
+function renderPpctCatalogReview() { const host=document.getElementById("ppctCatalogReview"); if(!host)return; const rows=appState.ppctCatalog.rows||[]; host.innerHTML=rows.length?`<div class="panel-header"><span>Danh mục Phụ lục 3 (${rows.length} bài) — chọn một bài để soạn</span><button type="button" class="btn btn-outline-dark btn-sm" id="btnSavePpctCatalog">Lưu CSDL</button></div><div style="max-height:270px;overflow:auto"><table class="data-table"><thead><tr><th>Bài</th><th>Tiết</th><th>NLS</th><th>AI</th></tr></thead><tbody>${rows.map(r=>`<tr data-ppct-row="${escapeHtml(r.id)}" style="cursor:pointer;${r.id===appState.ppctCatalog.selectedRowId?'background:#e0f2fe':''}"><td>${escapeHtml(r.title)}</td><td>${escapeHtml(r.tietCt||r.periods||"")}</td><td><input type="checkbox" data-kind="nls" ${r.nls.enabled?"checked":""}></td><td><input type="checkbox" data-kind="ai" ${r.ai.enabled?"checked":""}></td></tr>`).join("")}</tbody></table></div><p class="text-muted" style="font-size:.8rem">NLS/AI là tick của giáo viên; mã và bằng chứng từ Phụ lục 3 được giữ nguyên.</p>`:`<p class="text-muted">Chưa có danh mục PPCT. Đọc toàn bộ Phụ lục 3 rồi kiểm tra và lưu.</p>`;
+  host.querySelectorAll("tr[data-ppct-row]").forEach(tr=>tr.addEventListener("click",e=>{if(e.target.matches("input"))return;applyPpctCatalogRow(tr.dataset.ppctRow);}));
+  host.querySelectorAll("input[data-kind]").forEach(input=>input.addEventListener("change",e=>{const row=rows.find(r=>r.id===e.target.closest("tr").dataset.ppctRow); if(row){row[e.target.dataset.kind].enabled=e.target.checked; row[e.target.dataset.kind].manual=true; saveStateToLocalStorage();}}));
+  host.querySelector("#btnSavePpctCatalog")?.addEventListener("click",savePpctCatalogToServer);
+}
+async function savePpctCatalogToServer() { if(isCanvasGeminiRoute()){localStorage.setItem("khbd_ppct_catalog_canvas",JSON.stringify(appState.ppctCatalog));showToast("Canvas chỉ lưu cục bộ trên trình duyệt; hãy mở Soạn KHBD để lưu CSDL.","info");return;} const body={subject:appState.selectedSubject,grade:appState.selectedGrade,academic_year:"",rows:appState.ppctCatalog.rows,source:appState.ppctCatalog.source}; const res=await fetch("api/khbd_ppct_catalog.php",{method:"PUT",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(body)}); const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||"Không lưu được CSDL");appState.ppctCatalog.serverId=data.catalog.id;saveStateToLocalStorage();showToast("Đã lưu danh mục PPCT vào CSDL.","success"); }
+
 // Các pha C/D thường được AI trả về sau pha B. Vì vậy, không được suy số nhánh B
 // chỉ từ từng đoạn đang xử lý: điều đó khiến định mức của C/D bị tính theo 1 nhánh.
 function resolveSharedBSubsectionCount(localContent = "", options = {}) {
@@ -6247,8 +6331,7 @@ function canvasTextbookAnalysisPrompt(batchLabel) {
 }
 
 function parseCanvasTextbookAnalysis(raw) {
-  const clean = String(raw || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  const parsed = JSON.parse((clean.match(/\{[\s\S]*\}/) || [""])[0]);
+  const parsed = parseAiJsonSafely(raw, "Phân tích cấu trúc SGK");
   const points = (Array.isArray(parsed.majorPoints) ? parsed.majorPoints : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 3);
   const unknowns = (Array.isArray(parsed.unknowns) ? parsed.unknowns : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 3);
   const subsections = (typeof normalizeTextbookSubsectionProfiles === "function" ? normalizeTextbookSubsectionProfiles(parsed.subsections) : []).slice(0, 4);
@@ -6425,8 +6508,7 @@ async function handleGenerateVision() {
     updateProgress(30, "AI đang đọc trực tiếp SGK...");
     const prompt = 'Đọc trực tiếp SGK PDF/ảnh đính kèm. Không OCR, không chép toàn văn. Chỉ trả JSON: {"topic":"","subject":"","grade":"","periodCount":null,"lessonScope":"","hasAiIntegration":false,"aiEvidence":"","summary":""}. summary tóm tắt ngắn bài; hasAiIntegration luôn false.';
     const raw = await geminiAPI.generateContent(prompt, await prepareGeminiMedia(), getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1);
-    const json = String(raw || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-    const data = JSON.parse((json.match(/\{[\s\S]*\}/) || [""])[0]);
+      const data = parseAiJsonSafely(raw, "Phân tích PPCT");
     if (String(data.topic || "").trim()) appState.customTopic = String(data.topic).trim();
     const periods = Number(data.periodCount); if (Number.isInteger(periods) && periods > 0 && periods <= 20) appState.duration = String(periods);
     appState.content.vision = String(data.summary || "").trim() || JSON.stringify(data, null, 2);
@@ -7363,5 +7445,10 @@ if (typeof module !== 'undefined' && module.exports) {
     switchTab0Subtab,
     revealTab0WorkflowStep,
     normalizeClilLevel
+    ,parseAiJsonSafely
+    ,extractBalancedJsonRoot
+    ,parsePpctCatalog
+    ,applyPpctCatalogRow
+    ,savePpctCatalogToServer
   };
 }

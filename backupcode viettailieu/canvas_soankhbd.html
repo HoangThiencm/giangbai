@@ -31,7 +31,7 @@
       window.__KHBD_CANVAS__ = {
         host: "https://hoangthiencm.id.vn",
         model: "gemini-3-flash-preview",
-        version: "20260916-canvas-module-v8",
+        version: "20260916-ppct-catalog-v9",
         systemGemini: true,
         geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php",
         connected: false
@@ -423,7 +423,7 @@
                   </div>
                 </div>
 
-                <div class="editor-preview-container">
+              <div class="editor-preview-container">
                   <div class="panel-box">
                     <div class="panel-header"><span>Nội dung Markdown (Có thể chỉnh sửa)</span></div>
                     <textarea id="editorVision" class="markdown-editor" placeholder="Nội dung phân tích SGK sẽ hiển thị ở đây sau khi AI xử lý..."></textarea>
@@ -431,8 +431,9 @@
                   <div class="panel-box">
                     <div class="panel-header"><span>Xem trước KaTeX &amp; Bảng biểu</span></div>
                     <div id="previewVision" class="preview-rendered"></div>
-                  </div>
-                </div>
+              </div>
+              <div id="ppctCatalogReview" class="panel-box" style="margin-top:1rem;"></div>
+            </div>
               </div>
             </details>
           </div>
@@ -1279,7 +1280,7 @@
       } else if (typeof document !== "undefined") {
         (window.__KHBD_CANVAS_CORE_READY__ || Promise.resolve()).then(function () {
           var app = document.createElement("script");
-          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-canvas-module-v8";
+          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-ppct-catalog-v9";
           app.onerror = function () { console.error("[KHBD Canvas] Không nạp được khbd-app.js từ host."); };
           document.head.appendChild(app);
         });

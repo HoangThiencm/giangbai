@@ -1,3 +1,22 @@
+# Báo cáo triển khai: JSON AI an toàn và Danh mục PPCT/Phụ lục 3
+
+## Đã thực hiện
+
+- `js/khbd-app.js`: thêm `parseAiJsonSafely`, chỉ lấy JSON root cân bằng; sửa duy nhất escape sai trong chuỗi, control raw và dấu phẩy cuối. Các JSON cho Canvas SGK, PPCT, đề xuất và hình minh họa đều dùng chung parser. Lỗi còn lại trả thông báo rõ, không parse kiểu regex tham lam.
+- PPCT nay tạo danh mục Phụ lục 3 theo dòng: mã ổn định, chương/bài, số tiết, tiết CT, tuần, NLS/AI (tick, mã, bằng chứng) và metadata nguồn. Dòng trùng tên vẫn khác nhau theo bối cảnh tuần/tiết. Chọn dòng dùng ngay thời lượng, phạm vi và tick tích hợp; ID bản nháp gồm mã dòng PPCT.
+- `soankhbd.html`: có bảng duyệt danh mục, tick NLS/AI do giáo viên điều chỉnh và nút lưu CSDL. Canvas và bản backup chỉ lưu catalog trong localStorage, không tuyên bố đã lưu máy chủ; asset `khbd-app.js` cache-bust `ppct-catalog-v9`.
+- `api/khbd_ppct_catalog.php` và `database_schema.sql`: API GET/PUT theo session giáo viên, không nhận/trust owner từ client; bảng `teacher_ppct_catalogs` unique theo giáo viên + môn + lớp + năm học. Chỉ lưu hàng cấu trúc/metadata, không lưu ảnh hay OCR thô.
+
+## Kiểm thử
+
+- `node tests/khbd-ppct-catalog-json-smoke.js`: PASS (JSON có fence, LaTex slash, newline hợp lệ, escape sai, lỗi thiếu JSON; PPCT trùng tên).
+- `node tests/khbd-ppct-api-static-smoke.js`: PASS (hợp đồng session/teacher-only/schema).
+- `node --check js/khbd-app.js`: PASS.
+- `git diff --check`: PASS.
+- PHP lint chưa chạy được vì PHP không có trong PATH.
+
+Chưa commit, push hoặc deploy. Máy chủ cần chạy migration `database_schema.sql` (hoặc API tự tạo bảng khi gọi lần đầu) rồi triển khai các asset v9.
+
 # Báo cáo triển khai: Phân bổ thời lượng KHBD theo khối lượng tiểu mục
 
 ## Cập nhật mới
