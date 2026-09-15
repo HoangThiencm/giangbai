@@ -37,10 +37,10 @@ const appState = {
   selectedSubject: "TOAN",
   selectedLesson: "",
   customTopic: "",
-  school: "TRƯỜNG THCS NGUYỄN DU",
+  school: "TRƯỜNG THCS TRẦN PHÚ",
   group: "TỔ TOÁN - TIN HỌC",
-  teacher: "Giáo viên Môn Toán",
-  subject: "TOÁN",
+  teacher: "Hoàng Tấn Thiên",
+  subject: "Toán",
   duration: "02 tiết (90 phút)",
   teachingContext: {
     lessonScope: "",
@@ -455,6 +455,27 @@ function migrateLegacyActivitiesPortfolio(activities) {
   return activities;
 }
 
+function coerceKhbdSchool(value) {
+  const text = String(value || "").trim();
+  if (!text || /NGUYỄN DU/i.test(text) || /\.\.\.\s*$/.test(text)) return "TRƯỜNG THCS TRẦN PHÚ";
+  return text;
+}
+function coerceKhbdGroup(value) {
+  const text = String(value || "").trim();
+  if (!text || /\.\.\.\s*$/.test(text)) return "TỔ TOÁN - TIN HỌC";
+  return text;
+}
+function coerceKhbdTeacher(value) {
+  const text = String(value || "").trim();
+  if (!text || /^Giáo viên Môn Toán$/i.test(text) || /\.\.\.\s*$/.test(text)) return "Hoàng Tấn Thiên";
+  return text;
+}
+function coerceKhbdSubject(value) {
+  const text = String(value || "").trim();
+  if (!text) return "Toán";
+  return text;
+}
+
 function applyDraftData(data, { preserveSource = true } = {}) {
   if (!data) return;
   Object.assign(appState, {
@@ -462,10 +483,10 @@ function applyDraftData(data, { preserveSource = true } = {}) {
     selectedSubject: data.selectedSubject || "TOAN",
     selectedLesson: data.selectedLesson || "",
     customTopic: data.customTopic || "",
-    school: data.school || appState.school,
-    group: data.group || appState.group,
-    teacher: data.teacher || appState.teacher,
-    subject: data.subject || appState.subject,
+    school: coerceKhbdSchool(data.school || appState.school),
+    group: coerceKhbdGroup(data.group || appState.group),
+    teacher: coerceKhbdTeacher(data.teacher || appState.teacher),
+    subject: coerceKhbdSubject(data.subject || appState.subject),
     duration: data.duration || appState.duration
   });
   appState.teachingContext = normalizeTeachingContext(data.teachingContext);
@@ -597,10 +618,10 @@ function loadStateFromLocalStorage() {
       appState.selectedGrade = data.selectedGrade || "6";
       appState.selectedLesson = data.selectedLesson || "";
       appState.customTopic = data.customTopic || "";
-      appState.school = data.school || "TRƯỜNG THCS NGUYỄN DU";
+      appState.school = data.school || "TRƯỜNG THCS TRẦN PHÚ";
       appState.group = data.group || "TỔ TOÁN - TIN HỌC";
-      appState.teacher = data.teacher || "Giáo viên Môn Toán";
-      appState.subject = data.subject || "TOÁN";
+      appState.teacher = data.teacher || "Hoàng Tấn Thiên";
+      appState.subject = data.subject || "Toán";
       appState.duration = data.duration || "02 tiết (90 phút)";
       appState.teachingContext = normalizeTeachingContext(data.teachingContext);
       if (data.content && typeof data.content === "object") {
@@ -2225,6 +2246,8 @@ function formatKhbdRoleLine(line) {
   content = content.replace(/§BR§/g, "<br>- ");
   content = content.replace(/§GV§/g, "**GV:**");
   content = content.replace(/§HS§/g, "**HS:**");
+  content = content.replace(/(\*\*GV:\*\*.*?)([."”])\s+HS\s+(?!:)/g, "$1$2<br>- **HS:** ");
+  content = content.replace(/(\*\*HS:\*\*.*?)([."”])\s+GV\s+(?!:)/g, "$1$2<br>- **GV:** ");
   content = content.replace(/^(\s*)(?:<br>)+/, "$1");
   if (isTable) content = content.replace(/(\|\s*)(?:<br>)+/g, "$1");
   return content;
@@ -2446,12 +2469,6 @@ function setupEventListeners() {
     const nextGrade = e.target.value;
     const before = appState.teachingContext.standards.length;
     
-    // Tự động gợi ý tên trường
-    const levelName = getGradeLevelName(nextGrade).toUpperCase();
-    if (!appState.school || appState.school.startsWith("TRƯỜNG THCS") || appState.school.startsWith("TRƯỜNG THPT") || appState.school.startsWith("TRƯỜNG TIỂU HỌC")) {
-       appState.school = `TRƯỜNG ${levelName} ...`;
-    }
-
     switchDraft({ grade: nextGrade, lesson: "", topic: "" });
     appState.duration = formatSmartDuration(appState.duration, nextGrade);
     renderDurationOptions();
@@ -4824,9 +4841,9 @@ function getFullLessonPlanMarkdown(options = {}) {
   }
   if (options.includeHeader === false) return formatKhbdRoleLineBreaks(body.join("\n\n"));
   const header = [
-    `**TRƯỜNG:** ${appState.school || "................................................"}`,
-    `**TỔ CHUYÊN MÔN:** ${appState.group || "................................"}`,
-    `**HỌ VÀ TÊN GIÁO VIÊN:** ${appState.teacher || "................................"}`,
+    `**TRƯỜNG:** ${coerceKhbdSchool(appState.school)}`,
+    `**TỔ CHUYÊN MÔN:** ${coerceKhbdGroup(appState.group)}`,
+    `**HỌ VÀ TÊN GIÁO VIÊN:** ${coerceKhbdTeacher(appState.teacher)}`,
     `**Ngày soạn:** ${metadata.dateDraft}`,
     `**Ngày dạy:** ${metadata.dateTeach}`,
     ``,

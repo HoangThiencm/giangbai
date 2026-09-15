@@ -91,6 +91,9 @@ assert.ok(tableFixed.startsWith('|'), 'Không phá hàng bảng Markdown');
 const tableLines = tableFixed.replace(/<br>/g, '\n').split('\n');
 assert.ok(tableLines.some(line => /\*\*GV:\*\*/.test(line) && !/\*\*HS:\*\*/.test(line)), 'GV phải tách riêng dòng trong bảng');
 assert.ok(tableLines.some(line => /\*\*HS:\*\*/.test(line) && !/\*\*GV:\*\*/.test(line)), 'HS phải tách riêng dòng trong bảng');
+const implied = 'GV: "Tại sao số 7 lại dùng kí hiệu \\\\notin?". HS giải thích dựa trên vị trí của số 7.';
+const impliedFixed = app.formatKhbdRoleLineBreaks(implied);
+assert.ok(impliedFixed.includes('<br>- **HS:**'), 'Tách HS giải thích sau câu thoại GV');
 console.log('✓ formatKhbdRoleLineBreaks đạt.');
 
 // --- 4. applyActivityOutput pipeline gọi formatKhbdRoleLineBreaks ---

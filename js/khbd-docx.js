@@ -1072,10 +1072,10 @@ class DocxGenerator {
     if (!window.docx) return [];
     const { Paragraph, TextRun, AlignmentType } = window.docx;
 
-    const schoolName = lessonInfo.school || "TRƯỜNG ....................................................";
-    const groupName = lessonInfo.subjectGroup || "TỔ CHUYÊN MÔN: ................................................";
-    const teacherName = lessonInfo.teacher || "................................................";
-    const subject = (lessonInfo.subject || "MÔN HỌC").toUpperCase();
+    const schoolName = String(lessonInfo.school || "").trim() || "TRƯỜNG THCS TRẦN PHÚ";
+    const groupName = String(lessonInfo.subjectGroup || "").trim() || "TỔ TOÁN - TIN HỌC";
+    const teacherName = String(lessonInfo.teacher || "").trim() || "Hoàng Tấn Thiên";
+    const subject = (String(lessonInfo.subject || "").trim() || "Toán").toUpperCase();
     const topic = (lessonInfo.topic || "KẾ HOẠCH BÀI DẠY").toUpperCase();
     const grade = lessonInfo.grade ? String(lessonInfo.grade) : "";
     const duration = lessonInfo.duration || "02 tiết";
