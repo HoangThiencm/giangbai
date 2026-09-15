@@ -1,27 +1,39 @@
-# VERIFY: Phân Quyền Bảng Padlet Theo Lớp Học & Tối Ưu Hiển Thị
+# VERIFY: Tách Riêng Các Môn Lịch Sử, Địa Lí, Vật Lí, Hoá Học, Sinh Học & Nạp Mục Lục SGK Thống Nhất
 
 ## Kết luận
 PASS
 
 ## Đối chiếu Scope & Tính năng
-- [x] **Học sinh lớp 9/2 chỉ thấy bảng của lớp 9/2 (và bảng công khai):**
-  - Truy vấn `action=manager` cho học sinh chỉ lọc ra bảng có `access_mode = 'public'` hoặc `access_mode = 'class' AND TRIM(target_class) = studentClass`.
-  - Không bao giờ trả về bảng của lớp 9/1, 9/3 hay các lớp khác.
-- [x] **Chặn học sinh lớp khác truy cập qua link trực tiếp:**
-  - `padlet_access()` kiểm tra chặt chẽ và trả mã 403 kèm thông báo chi tiết: *"Bảng này được chia sẻ riêng cho lớp [Tên lớp]. Tài khoản của bạn không thuộc lớp này."*
-- [x] **Hiển thị nhãn nhận diện lớp:**
-  - Thẻ bảng hiển thị huy hiệu `Lớp [Tên lớp]` rõ ràng trên góc ảnh bìa.
-- [x] **Giao diện học sinh tinh gọn:**
-  - Tiêu đề "Bảng chia sẻ của lớp", ẩn các khối chọn mẫu tạo bảng, nút "Vào bảng" trực tiếp thay thế các thao tác Sửa/Xóa.
-- [x] **Trình sửa bảng của giáo viên:**
-  - Bảo toàn chính xác lớp đã chọn trong select `boardClass`.
+- [x] **Tách toàn bộ các môn Lịch sử, Địa lí, Vật lí (Lý), Hoá học (Hoá), Sinh học (Sinh):**
+  - `canvas_xaydungphuluc.html` & `xaydungphuluc.html` hiển thị đầy đủ trên thanh chọn môn học:
+    - **Lịch sử**: 52 tiết/năm, icon 🏛
+    - **Địa lí**: 53 tiết/năm, icon 🌍
+    - **Vật lí**: 47 tiết/năm, icon ⚡
+    - **Hoá học**: 43 tiết/năm, icon 🧪
+    - **Sinh học**: 50 tiết/năm, icon 🌱
+    - **Khoa học tự nhiên**: 140 tiết/năm, icon 🔬
+    - **Lịch sử và Địa lí**: 105 tiết/năm, icon 🌏
+- [x] **Nạp mục lục chuẩn SGK Thống nhất (Kết nối tri thức):**
+  - Đã nạp đầy đủ 100% mục lục bài học chuẩn xác, phân chia chương mục rõ ràng cho cả 4 khối (6, 7, 8, 9) vào `js/khbd-curriculum.js` và `agent-tools/thcs-toc.json`:
+    - **Vật lí**: Lớp 6 (23 bài), Lớp 7 (14 bài), Lớp 8 (17 bài), Lớp 9 (16 bài).
+    - **Hoá học**: Lớp 6 (9 bài), Lớp 7 (6 bài), Lớp 8 (12 bài), Lớp 9 (18 bài).
+    - **Sinh học**: Lớp 6 (22 bài), Lớp 7 (22 bài), Lớp 8 (18 bài), Lớp 9 (16 bài).
+    - **Lịch sử**: Lớp 6 (20 bài), Lớp 7 (20 bài), Lớp 8 (21 bài), Lớp 9 (25 bài).
+    - **Địa lí**: Lớp 6 (31 bài), Lớp 7 (21 bài), Lớp 8 (14 bài), Lớp 9 (24 bài).
+- [x] **Không đề cập tên bộ sách trong hệ thống:**
+  - Regex phủ định `!/kntt|kết nối tri thức/i` pass trên toàn bộ cấu hình, tên môn, nhãn và danh mục.
+- [x] **Đường dẫn tài nguyên ổn định:**
+  - Chuyển toàn bộ CDN/remote scripts sang relative paths (`js/khbd-curriculum.js`, `css/khbd-styles.css`,...).
 
 ## Test đã chạy
-1. `node tests/padlet-ownership-smoke.js` -> PASS.
-2. `node tests/sodiem-smoke.js` -> PASS.
-3. `node tests/teacher-permissions-smoke.js` -> PASS.
-4. `node tests/security-f12-smoke.js` -> PASS.
-5. `git diff --check` -> PASS.
+1. `python verify_patch.py`:
+   - `test_curriculum_js`: PASSED
+   - `test_thcs_toc`: PASSED (tất cả các môn cho 4 khối 6, 7, 8, 9)
+   - `test_canvas_html`: PASSED
+   - `test_xaydungphuluc_html`: PASSED
+   - `test_regex_logic`: PASSED
+   - Kết quả: **ALL TESTS PASSED WITH 100% SUCCESS!**
+2. Smoke test `tests/khbd-curriculum-thcs-smoke.js` đã mở rộng kiểm thử cả 7 môn THCS.
 
 ## Bug
 Không có.
