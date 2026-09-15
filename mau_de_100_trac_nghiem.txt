@@ -1,0 +1,29 @@
+ĐỀ MINH HỌA KIỂM TRA 100% TRẮC NGHIỆM TRUYỀN THỐNG
+Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút
+
+Câu 1: Hàm số y = x^4 - 2x^2 + 1 có bao nhiêu điểm cực trị?
+A. 1
+B. 2
+C. 3*
+D. 0
+
+Câu 2: Nghiệm của phương trình 2^(x - 1) = 8 là:
+A. x = 4*
+B. x = 3
+C. x = 2
+D. x = 5
+
+Câu 3: Đạo hàm của hàm số y = e^(2x) là:
+A. y' = e^(2x)
+B. y' = 2e^(2x)*
+C. y' = 2xe^(2x)
+D. y' = e^(x)
+
+Câu 4: Tích phân từ 0 đến 1 của x dx bằng:
+A. 1
+B. 1/2*
+C. 2
+D. 0
+
+BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
+Đáp án: 1C 2A 3B 4B
