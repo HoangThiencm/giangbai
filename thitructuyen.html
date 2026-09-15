@@ -825,6 +825,33 @@
                             <button onClick={onClose} className="hover:bg-indigo-700 w-8 h-8 rounded-full flex items-center justify-center transition"><i className="fas fa-times"></i></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+                            {/* Khối tải đề mẫu chuẩn */}
+                            <div className="mb-6 p-4 bg-emerald-50 border-2 border-emerald-300 rounded-xl shadow-sm">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div>
+                                        <h4 className="font-bold text-emerald-900 text-base flex items-center gap-2">
+                                            <i className="fas fa-file-download text-emerald-600"></i> Tải Đề Thi Mẫu Chuẩn (Word .docx & Text .txt)
+                                        </h4>
+                                        <p className="text-xs text-emerald-700 mt-1">
+                                            Tải về xem định dạng mẫu câu hỏi, ký hiệu đáp án để hệ thống nhận diện tự động chính xác 100%.
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 shrink-0">
+                                        <a href="mau_de_cv7991.docx" download className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-2 rounded-lg shadow transition">
+                                            <i className="fas fa-file-word"></i> Mẫu CV 7991 (.docx)
+                                        </a>
+                                        <a href="mau_de_cv7991.txt" download className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-300 text-xs font-bold px-3 py-2 rounded-lg shadow-sm transition">
+                                            <i className="fas fa-file-alt"></i> File .txt
+                                        </a>
+                                        <a href="mau_de_100_trac_nghiem.docx" download className="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg shadow transition">
+                                            <i className="fas fa-file-word"></i> Mẫu 100% TN (.docx)
+                                        </a>
+                                        <a href="mau_de_100_trac_nghiem.txt" download className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold px-3 py-2 rounded-lg shadow-sm transition">
+                                            <i className="fas fa-file-alt"></i> File .txt
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div>
@@ -1972,13 +1999,19 @@
                                         <div className="text-sm text-emerald-600 mt-1">Hỗ trợ tự động cả 3 phần CV 7991 hoặc 100% TN</div>
                                     </label>
                                 </div>
-                                <div className="mt-4 pt-3 border-t flex flex-wrap justify-center items-center gap-3 text-xs">
+                                <div className="mt-4 pt-3 border-t flex flex-wrap justify-center items-center gap-2 text-xs">
                                     <span className="text-gray-500 font-medium">Tải đề mẫu:</span>
                                     <a href="mau_de_cv7991.docx" download className="inline-flex items-center gap-1.5 text-indigo-700 hover:text-indigo-900 font-bold bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-200 transition">
                                         <i className="fas fa-file-word text-blue-600"></i> Đề mẫu CV 7991 (.docx)
                                     </a>
+                                    <a href="mau_de_cv7991.txt" download className="inline-flex items-center gap-1.5 text-indigo-700 hover:text-indigo-900 font-bold bg-white hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-indigo-200 transition">
+                                        <i className="fas fa-file-alt text-indigo-500"></i> .txt
+                                    </a>
                                     <a href="mau_de_100_trac_nghiem.docx" download className="inline-flex items-center gap-1.5 text-slate-700 hover:text-slate-900 font-bold bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 transition">
                                         <i className="fas fa-file-word text-slate-600"></i> Đề mẫu 100% TN (.docx)
+                                    </a>
+                                    <a href="mau_de_100_trac_nghiem.txt" download className="inline-flex items-center gap-1.5 text-slate-700 hover:text-slate-900 font-bold bg-white hover:bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 transition">
+                                        <i className="fas fa-file-alt text-slate-500"></i> .txt
                                     </a>
                                 </div>
                             </>
@@ -2260,6 +2293,266 @@
             return { code: "standard_mc", label: "100% TN", badgeClass: "bg-slate-100 text-slate-700 border-slate-200" };
         };
 
+        const SAMPLE_CV7991_CONTENT = `ĐỀ MINH HỌA KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT
+Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút
+
+PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN
+Thí sinh trả lời từ câu 1 đến câu 4. Mỗi câu hỏi thí sinh chỉ chọn một phương án.
+
+Câu 1: Cho hàm số y = f(x) có đồ thị là đường cong trong hình vẽ. Điểm cực đại của đồ thị hàm số đã cho có tọa độ là:
+A. (1; 3)*
+B. (3; 1)
+C. (-1; -1)
+D. (0; 2)
+
+Câu 2: Tập xác định của hàm số y = log2(x - 3) là:
+A. [3; +inf)
+B. (3; +inf)*
+C. (-inf; 3)
+D. R \\ {3}
+
+Câu 3: Cho cấp số cộng (un) có u1 = 2 và công sai d = 3. Giá trị của u3 bằng:
+A. 8*
+B. 11
+C. 5
+D. 6
+
+Câu 4: Thể tích khối lập phương có cạnh bằng 3a là:
+A. 9a^3
+B. 27a^3*
+C. 3a^3
+D. 6a^3
+
+PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI
+Thí sinh trả lời từ câu 5 đến câu 6. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai.
+
+Câu 5: Cho hàm số f(x) = (2x - 1) / (x + 1).
+a) Tập xác định của hàm số là D = R \\ {-1}. [Đúng]
+b) Đạo hàm của hàm số là f'(x) = 3 / (x + 1)^2 với mọi x khác -1. [Đúng]
+c) Đồ thị hàm số có đường tiệm cận ngang là y = -1. [Sai]
+d) Hàm số nghịch biến trên khoảng (-1; +inf). [Sai]
+
+Câu 6: Cho hình chóp S.ABC có đáy ABC là tam giác vuông tại B, SA vuông góc với mặt phẳng (ABC), SA = a, AB = a, BC = 2a.
+a) SA vuông góc với BC. [Đúng]
+b) Tam giác SBC là tam giác vuông tại B. [Đúng]
+c) Thể tích khối chóp S.ABC bằng a^3. [Sai]
+d) Góc giữa đường thẳng SC và mặt phẳng (ABC) bằng 45 độ. [Sai]
+
+PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN
+Thí sinh trả lời từ câu 7 đến câu 8. Thí sinh ghi đáp án vào ô trả lời.
+
+Câu 7: Một chất điểm chuyển động với phương trình vận tốc v(t) = 3t^2 - 6t (m/s). Tính quãng đường chất điểm đi được từ thời điểm t = 0 đến t = 3 giây.
+Đáp án: 18
+
+Câu 8: Cho hình chóp tứ giác đều S.ABCD có tất cả các cạnh đều bằng 2. Tính khoảng cách từ điểm S đến mặt phẳng (ABCD). (Làm tròn đến 1 chữ số thập phân)
+Đáp án: 1.4`;
+
+        const SAMPLE_100TN_CONTENT = `ĐỀ MINH HỌA KIỂM TRA 100% TRẮC NGHIỆM TRUYỀN THỐNG
+Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút
+
+Câu 1: Hàm số y = x^4 - 2x^2 + 1 có bao nhiêu điểm cực trị?
+A. 1
+B. 2
+C. 3*
+D. 0
+
+Câu 2: Nghiệm của phương trình 2^(x - 1) = 8 là:
+A. x = 4*
+B. x = 3
+C. x = 2
+D. x = 5
+
+Câu 3: Đạo hàm của hàm số y = e^(2x) là:
+A. y' = e^(2x)
+B. y' = 2e^(2x)*
+C. y' = 2xe^(2x)
+D. y' = e^(x)
+
+Câu 4: Tích phân từ 0 đến 1 của x dx bằng:
+A. 1
+B. 1/2*
+C. 2
+D. 0
+
+BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
+Đáp án: 1C 2A 3B 4B`;
+
+        const SampleFilesModal = ({ onClose }) => {
+            const [tab, setTab] = useState("cv7991");
+            const [copied, setCopied] = useState(false);
+
+            const activeContent = tab === "cv7991" ? SAMPLE_CV7991_CONTENT : SAMPLE_100TN_CONTENT;
+            const docxFileName = tab === "cv7991" ? "mau_de_cv7991.docx" : "mau_de_100_trac_nghiem.docx";
+            const txtFileName = tab === "cv7991" ? "mau_de_cv7991.txt" : "mau_de_100_trac_nghiem.txt";
+
+            const handleDownloadTxt = () => {
+                const blob = new Blob([activeContent], { type: "text/plain;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = txtFileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleCopy = () => {
+                navigator.clipboard.writeText(activeContent);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2100 }}>
+                    <div className="modal-box w-full max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden text-left" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="p-4 bg-emerald-600 text-white flex justify-between items-center shrink-0">
+                            <div className="flex items-center gap-2 font-bold text-lg">
+                                <i className="fas fa-file-download text-xl"></i>
+                                <span>Tải & Xem Đề Mẫu Chuẩn Hệ Thống</span>
+                            </div>
+                            <button type="button" onClick={onClose} className="hover:bg-emerald-700 w-8 h-8 rounded-full flex items-center justify-center transition">
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex border-b bg-gray-50 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setTab("cv7991")}
+                                className={`flex-1 py-3 px-4 font-bold text-sm border-b-2 flex items-center justify-center gap-2 transition ${tab === "cv7991" ? "border-emerald-600 text-emerald-700 bg-white" : "border-transparent text-gray-500 hover:text-gray-800"}`}
+                            >
+                                <i className="fas fa-file-signature text-emerald-600"></i>
+                                <span>1. Mẫu Đề Công Văn 7991 (Bộ GD&ĐT)</span>
+                                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase">Mới</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setTab("standard_mc")}
+                                className={`flex-1 py-3 px-4 font-bold text-sm border-b-2 flex items-center justify-center gap-2 transition ${tab === "standard_mc" ? "border-emerald-600 text-emerald-700 bg-white" : "border-transparent text-gray-500 hover:text-gray-800"}`}
+                            >
+                                <i className="fas fa-list-ol text-slate-600"></i>
+                                <span>2. Mẫu Đề 100% Trắc Nghiệm (Truyền thống)</span>
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+                            {/* Download Action Bar */}
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+                                <div>
+                                    <h4 className="font-bold text-emerald-900 text-base flex items-center gap-2">
+                                        <i className="fas fa-check-circle text-emerald-600"></i>
+                                        {tab === "cv7991" ? "Đề Chuẩn Công Văn 7991/BGDĐT (3 Phần)" : "Đề Chuẩn 100% Trắc Nghiệm (A, B, C, D)"}
+                                    </h4>
+                                    <p className="text-xs text-emerald-800 mt-1">
+                                        {tab === "cv7991" 
+                                            ? "Phần I: TN nhiều lựa chọn | Phần II: Đúng/Sai 4 ý (thang điểm 0.1-0.25-0.5-1.0đ) | Phần III: Trả lời ngắn." 
+                                            : "Các câu hỏi trắc nghiệm truyền thống 4 phương án A, B, C, D. Chấm điểm đều cho mỗi câu."}
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                    <a
+                                        href={docxFileName}
+                                        download
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow inline-flex items-center gap-1.5 transition"
+                                    >
+                                        <i className="fas fa-file-word"></i> Tải File Word (.docx)
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={handleDownloadTxt}
+                                        className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold px-3 py-2 rounded-lg shadow-sm inline-flex items-center gap-1.5 transition"
+                                    >
+                                        <i className="fas fa-file-alt text-slate-500"></i> Tải File Text (.txt)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleCopy}
+                                        className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold px-3 py-2 rounded-lg shadow-sm inline-flex items-center gap-1.5 transition"
+                                    >
+                                        <i className={`fas ${copied ? "fa-check text-green-600" : "fa-copy text-slate-500"}`}></i>
+                                        {copied ? "Đã chép!" : "Sao chép"}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Quy tắc định dạng */}
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs space-y-2 text-slate-700">
+                                <div className="font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                                    <i className="fas fa-info-circle text-blue-600"></i> Quy tắc soạn đề để hệ thống tự động nhận diện 100%:
+                                </div>
+                                {tab === "cv7991" ? (
+                                    <div className="grid md:grid-cols-3 gap-3 pt-1">
+                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                            <div className="font-bold text-indigo-700 mb-1">Phần I. Trắc nghiệm</div>
+                                            <p className="text-gray-600 text-[11px] leading-relaxed">
+                                                Các phương án A, B, C, D. Đánh dấu đáp án đúng bằng dấu <code className="bg-gray-100 text-red-600 px-1 py-0.5 rounded font-mono">*</code> ngay sau phương án (ví dụ: <code className="bg-gray-100 font-mono">A. 8*</code> hoặc <code className="bg-gray-100 font-mono">*A. 8</code>).
+                                            </p>
+                                        </div>
+                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                            <div className="font-bold text-emerald-700 mb-1">Phần II. Đúng / Sai</div>
+                                            <p className="text-gray-600 text-[11px] leading-relaxed">
+                                                Mỗi câu có 4 ý a), b), c), d). Đánh dấu <code className="bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded font-mono">[Đúng]</code> hoặc <code className="bg-red-100 text-red-800 px-1 py-0.5 rounded font-mono">[Sai]</code> ở cuối mỗi ý (hoặc ghi ở bảng đáp án).
+                                            </p>
+                                        </div>
+                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                            <div className="font-bold text-purple-700 mb-1">Phần III. Trả lời ngắn</div>
+                                            <p className="text-gray-600 text-[11px] leading-relaxed">
+                                                Ghi giá trị đáp số ở ngay dòng dưới câu hỏi với tiền tố <code className="bg-purple-100 text-purple-800 px-1 py-0.5 rounded font-mono">Đáp án:</code> hoặc <code className="bg-purple-100 text-purple-800 px-1 py-0.5 rounded font-mono">ĐS:</code> (ví dụ: <code className="bg-gray-100 font-mono">Đáp án: 18</code>).
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid md:grid-cols-2 gap-3 pt-1">
+                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                            <div className="font-bold text-slate-800 mb-1">Dấu hoa thị * trực tiếp</div>
+                                            <p className="text-gray-600 text-[11px] leading-relaxed">
+                                                Đặt dấu <code className="bg-gray-100 text-red-600 px-1 py-0.5 rounded font-mono">*</code> ở phương án đúng (VD: <code className="bg-gray-100 font-mono">C. 3*</code> hoặc <code className="bg-gray-100 font-mono">*C. 3</code>).
+                                            </p>
+                                        </div>
+                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                            <div className="font-bold text-slate-800 mb-1">Bảng đáp án cuối bài</div>
+                                            <p className="text-gray-600 text-[11px] leading-relaxed">
+                                                Hoặc để dòng ở cuối đề thi: <code className="bg-gray-100 font-mono">Đáp án: 1A 2B 3C 4D...</code> hệ thống sẽ tự động đối chiếu và tích chọn phương án đúng.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Code/Text Preview Box */}
+                            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-inner">
+                                <div className="bg-slate-800 text-slate-300 px-4 py-2 text-xs font-mono flex justify-between items-center">
+                                    <span className="flex items-center gap-1.5"><i className="fas fa-code text-slate-400"></i> Nội dung xem trước ({txtFileName})</span>
+                                    <span className="text-[11px] text-slate-400">Có thể copy hoặc tải về trực tiếp</span>
+                                </div>
+                                <pre className="p-4 bg-slate-900 text-slate-100 text-xs font-mono whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto select-all">
+                                    {activeContent}
+                                </pre>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 bg-gray-50 border-t flex justify-between items-center shrink-0">
+                            <span className="text-xs text-gray-500 italic">
+                                File Word mẫu đã kèm theo công thức toán LaTeX và các ký hiệu chuẩn.
+                            </span>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-sm font-bold transition"
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const FormatChoiceModal = ({ isOpen, onClose, onSelect }) => {
             if (!isOpen) return null;
             return (
@@ -2299,6 +2592,15 @@
                                         <span className="text-[11px] bg-white border border-indigo-200 text-indigo-800 px-2 py-0.5 rounded">Thang điểm chuẩn Bộ (Đ/S: 0.1 - 0.25 - 0.5 - 1.0đ)</span>
                                         <span className="text-[11px] bg-white border border-indigo-200 text-indigo-800 px-2 py-0.5 rounded">Tự động nhận diện Word 3 phần</span>
                                     </div>
+                                    <div className="mt-3 pt-2 border-t border-indigo-100 flex flex-wrap items-center gap-2" onClick={e => e.stopPropagation()}>
+                                        <span className="text-[11px] text-gray-500 font-medium">Tải mẫu:</span>
+                                        <a href="mau_de_cv7991.docx" download className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-300 px-2 py-0.5 rounded transition shadow-sm">
+                                            <i className="fas fa-file-word text-blue-600"></i> Word (.docx)
+                                        </a>
+                                        <a href="mau_de_cv7991.txt" download className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 px-2 py-0.5 rounded transition shadow-sm">
+                                            <i className="fas fa-file-alt text-slate-500"></i> Text (.txt)
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2320,6 +2622,15 @@
                                     <div className="flex flex-wrap gap-1.5 mt-2">
                                         <span className="text-[11px] bg-white border border-gray-200 text-gray-700 px-2 py-0.5 rounded">4 phương án A, B, C, D</span>
                                         <span className="text-[11px] bg-white border border-gray-200 text-gray-700 px-2 py-0.5 rounded">Chấm điểm đồng đều</span>
+                                    </div>
+                                    <div className="mt-3 pt-2 border-t border-gray-200 flex flex-wrap items-center gap-2" onClick={e => e.stopPropagation()}>
+                                        <span className="text-[11px] text-gray-500 font-medium">Tải mẫu:</span>
+                                        <a href="mau_de_100_trac_nghiem.docx" download className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 px-2 py-0.5 rounded transition shadow-sm">
+                                            <i className="fas fa-file-word text-emerald-600"></i> Word (.docx)
+                                        </a>
+                                        <a href="mau_de_100_trac_nghiem.txt" download className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 px-2 py-0.5 rounded transition shadow-sm">
+                                            <i className="fas fa-file-alt text-slate-500"></i> Text (.txt)
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -2374,6 +2685,7 @@
             const [qrLink, setQrLink] = useState(null);
             const [showGuide, setShowGuide] = useState(false);
             const [showFormatModal, setShowFormatModal] = useState(false);
+            const [showSampleModal, setShowSampleModal] = useState(false);
             const userEmail = localStorage.getItem('userEmail');
             const normalizedUserEmail = normalizeEmail(userEmail);
 
@@ -2452,12 +2764,16 @@
                 <div className="max-w-6xl mx-auto p-4 md:p-6">
                     {qrLink && <QRModal link={qrLink} onClose={() => setQrLink(null)} />}
                     {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
+                    {showSampleModal && <SampleFilesModal onClose={() => setShowSampleModal(false)} />}
                     <FormatChoiceModal isOpen={showFormatModal} onClose={() => setShowFormatModal(false)} onSelect={(format) => { setShowFormatModal(false); onCreateNew(format); }} />
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 bg-white p-4 md:p-6 rounded-xl shadow border border-indigo-100">
                         <div className="flex items-center gap-4"><div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-2xl shrink-0"><i className="fas fa-user-tie"></i></div><div className="min-w-0"><h1 className="text-xl md:text-2xl font-bold text-gray-800">Quản Lý Thi</h1><p className="text-gray-500 text-sm truncate">{userEmail}</p></div></div>
                         <div className="flex flex-wrap gap-2">
                             <button type="button" onClick={() => window.location.href = 'index.html'} className="px-4 py-2 border rounded hover:bg-gray-50 font-bold text-gray-600 min-h-[44px]">Home</button>
                             <button type="button" onClick={() => setShowGuide(true)} className="bg-yellow-100 text-yellow-700 px-4 py-2 rounded font-bold hover:bg-yellow-200 min-h-[44px]"><i className="fas fa-question-circle"></i> Hướng Dẫn</button>
+                            <button type="button" onClick={() => setShowSampleModal(true)} className="bg-emerald-600 text-white px-4 py-2 rounded font-bold hover:bg-emerald-700 shadow min-h-[44px] flex items-center gap-2">
+                                <i className="fas fa-file-download"></i> Đề Mẫu Chuẩn
+                            </button>
                             <button type="button" onClick={() => setShowFormatModal(true)} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold hover:bg-indigo-700 shadow min-h-[44px] flex-1 md:flex-none"><i className="fas fa-plus"></i> Tạo Đề Mới</button>
                         </div>
                     </div>
