@@ -212,10 +212,10 @@ async function accessControlMain() {
     }
 
     if (role === 'student') {
-        if (pageKey === 'thongketientrinh' || pageKey === 'theodoiai' || pageKey === 'rutgon' || pageKey === 'thoikhoabieu' || pageKey === 'quanlyvanban') {
+        if (pageKey === 'thongketientrinh' || pageKey === 'theodoiai' || pageKey === 'rutgon' || pageKey === 'thoikhoabieu' || pageKey === 'quanlyvanban' || pageKey === 'sodiem' || pageKey === 'phancongtochuyenmon') {
             const msg = pageKey === 'rutgon'
                 ? 'Trang rút gọn link chỉ dành cho giáo viên.'
-                : (pageKey === 'thoikhoabieu' ? 'Trang xếp thời khóa biểu chỉ dành cho giáo viên.' : (pageKey === 'theodoiai' ? 'Trang theo dõi AI chỉ dành cho giáo viên.' : (pageKey === 'quanlyvanban' ? 'Trang quản lý văn bản chỉ dành cho giáo viên.' : 'Trang thống kê chỉ dành cho giáo viên.')));
+                : (pageKey === 'thoikhoabieu' ? 'Trang xếp thời khóa biểu chỉ dành cho giáo viên.' : (pageKey === 'theodoiai' ? 'Trang theo dõi AI chỉ dành cho giáo viên.' : (pageKey === 'quanlyvanban' ? 'Trang quản lý văn bản chỉ dành cho giáo viên.' : (pageKey === 'sodiem' ? 'Trang sổ điểm chỉ dành cho giáo viên.' : (pageKey === 'phancongtochuyenmon' ? 'Trang phân công chuyên môn chỉ dành cho giáo viên.' : 'Trang thống kê chỉ dành cho giáo viên.')))));
             alert(msg);
             window.location.href = firstAllowedPageUrl(allowedPages) || 'login.html';
             return;

@@ -43,10 +43,14 @@
         hostname === '127.0.0.1' ||
         hostname === '[::1]' ||
         hostname.indexOf('192.168.') === 0 ||
+        hostname.indexOf('10.') === 0 ||
+        hostname.indexOf('172.') === 0 ||
         protocol === 'file:'
     );
 
-    var isDebugUnlocked = storageGet(sessionStorage, debugModeKey) === 'true';
+    var storedUserRole = storageGet(localStorage, 'userRole');
+    var isPrivilegedRole = storedUserRole === 'admin' || storedUserRole === 'teacher';
+    var isDebugUnlocked = storageGet(sessionStorage, debugModeKey) === 'true' || isPrivilegedRole;
 
     // Một số trình duyệt iOS có thể gửi desktop UA; kết hợp UA, touch và media query.
     var isMobileOrTablet = false;
@@ -133,9 +137,24 @@
             el.id = overlayId;
             el.setAttribute(
                 'style',
-                'position:fixed;inset:0;z-index:2147483647;background:rgba(8,12,24,0.97);color:#f8fafc;display:flex;align-items:center;justify-content:center;text-align:center;font:600 18px/1.55 system-ui,sans-serif;padding:24px;'
+                'position:fixed;inset:0;z-index:2147483647;background:rgba(8,12,24,0.97);color:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font:600 18px/1.55 system-ui,sans-serif;padding:24px;gap:14px;'
             );
             el.textContent = 'Phát hiện DevTools. Hãy đóng công cụ phát triển để tiếp tục.';
+            try {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = 'Tôi không mở DevTools / Thử lại';
+                btn.setAttribute(
+                    'style',
+                    'margin-top:16px;background:#2563eb;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer;'
+                );
+                btn.onclick = function (e) {
+                    if (e && e.stopPropagation) e.stopPropagation();
+                    hideLockOverlay();
+                    lastStrongDetectAt = 0;
+                };
+                el.appendChild(btn);
+            } catch (btnErr) {}
             var host = document.body || document.documentElement;
             if (host && host.appendChild) host.appendChild(el);
         }
@@ -234,7 +253,7 @@
                 Function('debugger')();
             })();
             var endTime = performance.now();
-            if (endTime - startTime > 100) {
+            if (endTime - startTime > 300) {
                 onDevToolsDetected();
             }
         } catch (err) {}
@@ -243,7 +262,7 @@
     setInterval(triggerDebuggerTrap, 2500);
 
     // 4. Phát hiện DevTools mở bằng cách đo chênh lệch kích thước cửa sổ
-    var devtoolsThreshold = 170;
+    var devtoolsThreshold = 340;
     function checkDevToolsOpen() {
         if (isDebugUnlocked) return;
         if (isMobileOrTablet) return;
