@@ -74,6 +74,24 @@ Chưa commit, push hoặc deploy. Máy chủ cần chạy migration `database_sc
 
 Không commit, push hoặc deploy. `docs/handoff/PLAN.md` không bị sửa.
 
+## Cập nhật: Nhập PPCT trực tiếp từ Word
+
+- `soankhbd.html`, `canvas_soankhbd.html` và bản Canvas backup: bổ sung thư viện JSZip/Mammoth cố định, cho phép chọn `.docx` tại khu vực PPCT; modal Cài đặt PPCT nêu rõ Word được đọc tại máy, không gửi tệp tới AI.
+- `js/khbd-app.js`: đọc trực tiếp `word/document.xml`, tìm bảng PPCT theo các cột Nội dung/Bài học, Số tiết/Tiết CT, Tuần, NLS và AI. Ô gộp ngang/dọc được giữ đúng lưới; mã như `1.1.TC1a` và `6.A1`, cùng bằng chứng NLS/AI, được lấy từ đúng ô. OMML và OLE MathType được đánh dấu an toàn thay vì làm lệch cột.
+- File Word chỉ tồn tại trong bộ nhớ khi phân tích; CSDL chỉ nhận các dòng danh mục đã chuẩn hoá sau khi giáo viên bấm lưu. PDF/ảnh vẫn đi theo luồng cũ.
+
+### Kiểm thử
+
+- `node tests/khbd-ppct-docx-import-smoke.js`: PASS (fixture OOXML 7 cột, ô gộp, OMML, MathType, mã NLS/AI và Canvas parity).
+- `node tests/ppct-settings-import-smoke.js`: PASS.
+- `node tests/khbd-ppct-catalog-json-smoke.js`: PASS.
+- `node tests/khbd-ppct-api-static-smoke.js`: PASS.
+- `node tests/canvas-soankhbd-smoke.js`: PASS.
+- `node --check js/khbd-app.js`: PASS.
+- `git diff --check`: PASS.
+
+Không commit, push hoặc deploy. `docs/handoff/PLAN.md` không bị sửa.
+
 ## Cập nhật: Cài đặt PPCT / Nạp Phụ lục 3 theo môn, lớp, năm học
 
 - `soankhbd.html`: thêm nút và modal **Cài đặt PPCT** độc lập với Quản lý API Key. Modal chọn khối, môn, năm học; nhận nội dung dán hoặc PDF/ảnh; xem trước các bài và tick NLS/AI trước khi lưu.

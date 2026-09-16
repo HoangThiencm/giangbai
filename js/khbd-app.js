@@ -3679,6 +3679,20 @@ function handlePpctFileSelect(e) {
 }
 
 async function handlePpctFiles(files) {
+  const docxFiles = files.filter(f => /\.docx$/i.test(f.name || "") || f.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+  // DOCX is parsed locally as a table, before the PDF/image OCR route.  Do not
+  // keep the raw document in state and never send it to Gemini.
+  for (const docxFile of docxFiles) {
+    try {
+      showToast(`Đang đọc trực tiếp bảng Word PPCT: ${docxFile.name}...`, "info");
+      const rows = await readPpctDocx(docxFile, ppctCatalogMeta());
+      appState.ppctCatalog = { rows, source:{format:"appendix3-docx-table",analyzedAt:new Date().toISOString(),importMode:"docx"}, selectedRowId:"", serverId:null };
+      appState.content.ppctAnalysis = `Đã đọc trực tiếp ${rows.length} dòng PPCT từ Word: ${docxFile.name}`;
+      renderPpctCatalogReview(); renderPpctCatalogSettingsPreview(); updateWorkflowStepper();
+      showToast(`Đã nhận đúng ${rows.length} bài từ bảng Word; giữ nguyên cột NLS/AI và công thức.`, "success");
+    } catch (error) { console.error("Lỗi đọc Word PPCT:",error); showToast(error.message || "Không đọc được bảng Word PPCT.", "danger", 7000); }
+  }
+  files = files.filter(f => !docxFiles.includes(f));
   const pdfFiles = files.filter(f => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
   const imgFiles = files.filter(f => f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf"));
 
@@ -5875,6 +5889,89 @@ function ppctIntegration(text, kind) {
   const enabled = explicit || codes.length > 0;
   return { enabled, codes, evidence: enabled ? String(text).replace(/\s+/g," ").trim().slice(0,240) : "" };
 }
+function ppctCellCodes(text) {
+  const found=[]; const re=/(?:\b(?:NLS|AI|NLAI|DL)\s*[:.-]?\s*)?(\d+(?:\.\d+)*(?:\.[A-ZĐ][A-Za-z0-9]*)?)/g;
+  let match; const source=String(text||"");
+  while((match=re.exec(source))){ const value=match[1]; if((/[A-ZĐ]/i.test(value)||/^\d+\.\d+/.test(value))&&!found.includes(value)) found.push(value); }
+  return found;
+}
+function docxLocalName(node) { return String(node?.localName || node?.nodeName || "").replace(/^.*:/, ""); }
+function docxElements(node, name) { return Array.from(node?.getElementsByTagNameNS?.("*", name) || node?.getElementsByTagName?.("w:"+name) || []).filter(n=>docxLocalName(n)===name); }
+function docxCellText(cell) {
+  const text=docxElements(cell,"t").map(n=>n.textContent||"").join("").replace(/\s+/g," ").trim();
+  const omml=docxElements(cell,"oMath").length||docxElements(cell,"oMathPara").length;
+  const ole=docxElements(cell,"object").length||docxElements(cell,"OLEObject").length||docxElements(cell,"binData").length;
+  return `${text}${omml?`${text?" ":""}[CÔNG THỨC]`:""}${ole?`${text||omml?" ":""}[CÔNG THỨC MathType]`:""}`.trim();
+}
+function docxGridSpan(cell) { const n=docxElements(cell,"gridSpan")[0]; return Math.max(1,Number(n?.getAttribute("w:val")||n?.getAttribute("val")||1)||1); }
+function docxVMerge(cell) { const n=docxElements(cell,"vMerge")[0]; if(!n)return ""; return String(n.getAttribute("w:val")||n.getAttribute("val")||"continue").toLowerCase(); }
+function docxTableGrid(table) {
+  const rows=[]; const previous=[];
+  for(const tr of Array.from(table.children||[]).filter(n=>docxLocalName(n)==="tr")) {
+    const output=[]; let column=0;
+    for(const tc of Array.from(tr.children||[]).filter(n=>docxLocalName(n)==="tc")) {
+      while(output[column]!==undefined)column++;
+      const span=docxGridSpan(tc), merged=docxVMerge(tc), value=docxCellText(tc);
+      for(let i=0;i<span;i++) output[column+i]=merged==="continue" ? (previous[column+i]||value) : value;
+      column+=span;
+    }
+    const width=Math.max(output.length,previous.length);
+    for(let i=0;i<width;i++) if(output[i]===undefined) output[i]="";
+    rows.push(output); previous.splice(0,previous.length,...output);
+  }
+  return rows;
+}
+function ppctHeaderIndex(label) {
+  const value=String(label||"").toLowerCase().replace(/\s+/g," ");
+  if(/năng lực số|\bnls\b|3456/.test(value))return "nls";
+  if(/trí tuệ nhân tạo|\bai\b|2422/.test(value))return "ai";
+  if(/tuần/.test(value))return "week";
+  if(/tiết.*(?:ct|ppct|thực hiện)|(?:ct|ppct).*tiết/.test(value))return "tietCt";
+  if(/số tiết|thời lượng/.test(value))return "periods";
+  if(/nội dung|tên bài|bài học|chủ đề|mạch kiến thức/.test(value))return "title";
+  return "";
+}
+function findPpctDocxTable(tables) {
+  let best=null;
+  tables.forEach((rows,index)=>{
+    const sample=rows.slice(0,6), cols=Math.max(0,...sample.map(r=>r.length)); let map={}, score=0;
+    for(let c=0;c<cols;c++){ const heading=sample.map(r=>r[c]||"").join(" "); const kind=ppctHeaderIndex(heading); if(kind&&!map[kind]){map[kind]=c;score+=kind==="title"?7:3;} }
+    const text=sample.flat().join(" "); if(/phụ lục\s*3|phân phối chương trình|ppct/i.test(text))score+=6;
+    if(map.title&&(map.periods!==undefined||map.tietCt!==undefined))score+=8;
+    if(rows.length<3)score-=8;
+    if(!best||score>best.score)best={rows,index,map,score};
+  });
+  return best&&best.score>=15?best:null;
+}
+/** Read a DOCX PPCT directly from OOXML. This deliberately never calls Gemini or
+ * Mammoth: table cells, merged headings and MathType/OMML markers remain stable. */
+async function readPpctDocx(file, meta={}) {
+  if(!window.JSZip) throw new Error("Chưa tải được công cụ đọc Word (JSZip). Hãy kiểm tra mạng rồi thử lại.");
+  const zip=await window.JSZip.loadAsync(await file.arrayBuffer());
+  const xml=await zip.file("word/document.xml")?.async("text");
+  if(!xml) throw new Error("File Word không có nội dung document.xml hợp lệ.");
+  const documentXml=new DOMParser().parseFromString(xml,"application/xml");
+  if(documentXml.querySelector("parsererror"))throw new Error("Không đọc được cấu trúc XML của file Word.");
+  const tables=docxElements(documentXml,"tbl").map(docxTableGrid).filter(rows=>rows.length);
+  const table=findPpctDocxTable(tables);
+  if(!table)throw new Error("Không tìm thấy bảng PPCT có cột Nội dung/Bài học và Số tiết hoặc Tiết CT. Hãy chọn đúng file Phụ lục 3.");
+  const headerRow=table.rows.findIndex(row=>row.some(cell=>ppctHeaderIndex(cell)==="title")&&(row.some(cell=>["periods","tietCt"].includes(ppctHeaderIndex(cell)))));
+  const headerEnd=Math.max(0,headerRow); const rows=[]; let chapter="";
+  for(let rowIndex=headerEnd+1;rowIndex<table.rows.length;rowIndex++){
+    const cells=table.rows[rowIndex], title=String(cells[table.map.title]||"").trim();
+    const nonempty=cells.filter(Boolean);
+    if(!title){ if(nonempty.length===1&&/^(chương|chủ đề|mạch kiến thức)/i.test(nonempty[0]))chapter=nonempty[0]; continue; }
+    if(/^\s*(chương|chủ đề|mạch kiến thức)\b/i.test(title)&&nonempty.length<=2){chapter=title;continue;}
+    if(/^(nội dung|tên bài|bài học|chủ đề)$/i.test(title))continue;
+    const nlsText=String(cells[table.map.nls]||""), aiText=String(cells[table.map.ai]||"");
+    const periodCell=String(cells[table.map.periods]||""); const tietCt=String(cells[table.map.tietCt]||"").trim();
+    const periods=Number((periodCell.match(/\d+/)||[])[0])||null;
+    const sourceCells=cells.join(" | ");
+    rows.push({id:ppctStableId(`docx-table-${table.index}|${rowIndex}|${meta.subject||""}|${meta.grade||""}|${title}|${tietCt}`),chapter,header:"",title,periods,tietCt,week:String(cells[table.map.week]||"").trim(),devices:"",location:"",nls:{enabled:/✓|☒|x\b|có|tích hợp|năng lực số|\bnls\b/i.test(nlsText)||ppctCellCodes(nlsText).length>0,codes:ppctCellCodes(nlsText),evidence:nlsText},ai:{enabled:/✓|☒|x\b|có|tích hợp|\bai\b|trí tuệ/i.test(aiText)||ppctCellCodes(aiText).length>0,codes:ppctCellCodes(aiText),evidence:aiText},notes:"",source:{kind:"docx-table",table:table.index,row:rowIndex,excerpt:sourceCells.slice(0,500)}});
+  }
+  if(!rows.length)throw new Error("Bảng PPCT không có dòng bài học sau hàng tiêu đề.");
+  return rows;
+}
 /** Parses whole Appendix-3 text, including Markdown/pipe tables. Duplicate titles
  * deliberately retain distinct stable IDs because period/week context is hashed. */
 function parsePpctCatalog(raw, meta = {}) {
@@ -7172,7 +7269,7 @@ function bindKeyFileInput(inputId, textareaId, onLoaded) {
 function setupPpctCatalogSettingsModal() {
   const openBtn=document.getElementById("btnManagePpctCatalog"), file=document.getElementById("ppctCatalogFileInput"), analyze=document.getElementById("btnAnalyzePpctCatalog"), save=document.getElementById("btnSavePpctCatalogSettings");
   openBtn?.addEventListener("click",openPpctCatalogSettings);
-  file?.addEventListener("change",async e=>{ const files=Array.from(e.target.files||[]); if(files.length) { await handlePpctFiles(files); showToast("Đã nạp tệp tạm thời. Bấm Phân tích thành danh mục.","success"); } e.target.value=""; });
+  file?.addEventListener("change",async e=>{ const files=Array.from(e.target.files||[]), docx=files.find(f=>/\.docx$/i.test(f.name||"")||f.type==="application/vnd.openxmlformats-officedocument.wordprocessingml.document"); const meta={subject:document.getElementById("ppctCatalogSubject")?.value,grade:document.getElementById("ppctCatalogGrade")?.value,academic_year:document.getElementById("ppctCatalogYear")?.value?.trim()}; try { if(docx){ const rows=await readPpctDocx(docx,meta); appState.selectedSubject=meta.subject;appState.selectedGrade=meta.grade;appState.ppctCatalogAcademicYear=meta.academic_year;appState.ppctCatalog={rows,source:{format:"appendix3-docx-table",analyzedAt:new Date().toISOString(),importMode:"docx"},selectedRowId:"",serverId:null}; appState.content.ppctAnalysis=""; renderPpctCatalogSettingsPreview();renderPpctCatalogReview();showToast(`Đã đọc trực tiếp ${rows.length} bài từ Word. Không gửi file lên AI.`,"success"); } else if(files.length) { await handlePpctFiles(files); showToast("Đã nạp tệp tạm thời. Bấm Phân tích thành danh mục.","success"); } } catch(error){showToast(error.message||"Không đọc được Word PPCT.","danger",7000);} e.target.value=""; });
   analyze?.addEventListener("click",async()=>{ const meta={subject:document.getElementById("ppctCatalogSubject")?.value,grade:document.getElementById("ppctCatalogGrade")?.value,academic_year:document.getElementById("ppctCatalogYear")?.value?.trim()}; const raw=String(document.getElementById("ppctCatalogRawText")?.value||""); try { analyze.disabled=true; const media=raw.trim()?[]:await prepareGeminiPpctMedia(); await analyzePpctImport({media,rawText:raw,targetMeta:meta,onRows:(rows,source)=>{ appState.selectedSubject=meta.subject;appState.selectedGrade=meta.grade;appState.ppctCatalogAcademicYear=meta.academic_year;appState.ppctCatalog={rows,source,selectedRowId:"",serverId:null};appState.content.ppctAnalysis=raw;renderPpctCatalogSettingsPreview();renderPpctCatalogReview(); }}); showToast("Đã lập danh mục PPCT. Kiểm tra tick NLS/AI rồi lưu.","success"); } catch(error){showToast(error.message,"danger");} finally {analyze.disabled=false;} });
   save?.addEventListener("click",async()=>{ if(!(appState.ppctCatalog.rows||[]).length){showToast("Hãy phân tích PPCT trước khi lưu.","warning");return;} if(isCanvasGeminiRoute()){await savePpctCatalogToServer();return;} const meta={subject:document.getElementById("ppctCatalogSubject")?.value,grade:document.getElementById("ppctCatalogGrade")?.value,academic_year:document.getElementById("ppctCatalogYear")?.value?.trim()}; const changing=meta.subject!==appState.selectedSubject||meta.grade!==appState.selectedGrade||meta.academic_year!==appState.ppctCatalogAcademicYear; if(changing){appState.selectedSubject=meta.subject;appState.selectedGrade=meta.grade;appState.ppctCatalogAcademicYear=meta.academic_year;} try { const existing=await fetch(`api/khbd_ppct_catalog.php?${new URLSearchParams(meta)}`,{credentials:"same-origin"}).then(r=>r.ok?r.json():null); if(existing?.catalog&&!userConfirm("Danh mục PPCT cho khối, môn và năm học này đã có. Thay thế bằng danh mục mới?")) return; await savePpctCatalogToServer(); closeModal("modalPpctCatalogSettings"); } catch(error){showToast(error.message||"Không lưu được PPCT.","danger");} });
 }
@@ -7435,6 +7532,9 @@ if (typeof module !== 'undefined' && module.exports) {
     extractPpctOcrText,
     handleGeneratePpctAnalysis,
     parsePpctLessonDetails,
+    readPpctDocx,
+    findPpctDocxTable,
+    ppctCellCodes,
     extractStandardsFromPpctText,
     applyPpctDetectedStandards,
     showPpctStandardsNotificationModal,
