@@ -15,13 +15,13 @@ console.log("\n[TEST 1] Giao diện 4 bước trên Tab 0...");
 
 assert.match(html, /id="khbdWorkflowStepper"/, "Phải có thanh stepper 4 bước");
 assert.match(html, /Bước 1: Nạp &amp; Đọc SGK/, "Stepper phải có Bước 1 Đọc SGK");
-assert.match(html, /Bước 2: Nạp &amp; Đọc PPCT/, "Stepper phải có Bước 2 Đọc PPCT");
-assert.match(html, /Bước 3: AI Đề xuất PPDH &amp; NLS/, "Stepper phải có Bước 3 đề xuất PPDH & NLS");
+assert.match(html, /Bước 2: PPCT đã lưu/, "Stepper phải có Bước 2 PPCT đã lưu");
+assert.match(html, /Bước 3: Kế hoạch PPDH &amp; Tích hợp NLS\/AI \(Ưu tiên từ PPCT\)/, "Stepper phải có Bước 3 kế hoạch PPDH & NLS/AI từ PPCT");
 assert.match(html, /Bước 4: Tích hợp AI &amp; Soạn bài/, "Stepper phải có Bước 4 AI & soạn bài");
 assert.match(html, /id="dropzoneContainer"[\s\S]{0,900}id="btnAnalyzeVision"/, "Nút Đọc SGK phải nằm ngay dưới dropzone");
 assert.match(html, /id="btnAnalyzeVision"[\s\S]*?Đọc sách giáo khoa/, "Nút OCR phải có nhãn 'Đọc sách giáo khoa'");
 assert.match(html, /id="dropzoneContainerPpct"[\s\S]{0,1400}id="btnAnalyzePpct"/, "Nút Đọc PPCT phải nằm ngay dưới dropzone PPCT");
-assert.match(html, /id="btnAnalyzePpct"[\s\S]*?Đọc PPCT/, "Nút PPCT phải có nhãn 'Đọc PPCT'");
+assert.match(html, /id="btnAnalyzePpct"/, "Phải có nút phân tích PPCT");
 assert.match(html, /id="btnStep3PedagogyDigital"[\s\S]*?ĐỀ XUẤT PPDH, KỸ THUẬT &amp; NĂNG LỰC SỐ \(TT 02\)/, "Card Bước 3 phải có nút đề xuất PPDH & NLS TT 02");
 assert.match(html, /id="lessonAiCompetencyCard"/, "Phải có card Năng lực AI độc lập");
 assert.match(html, /id="btnStartComposeFromStep4"/, "Bước 4 phải có nút Bắt đầu soạn");

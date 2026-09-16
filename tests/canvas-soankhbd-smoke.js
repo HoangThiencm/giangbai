@@ -97,6 +97,7 @@ for (const targetPath of targetPaths) {
   const criticalIds = [
     'khbdWorkflowStepper', 'step1Badge', 'step2Badge', 'step3Badge', 'step4Badge',
     'btnStep3Recommend', 'btnStartComposeFromStep4',
+    'ppctLessonPicker', 'ppctLessonSearch', 'ppctLessonList', 'ppctLessonSummary',
     'tab0-sub-materials', 'tab0-sub-lesson-info', 'tab0-sub-pedagogy-digital', 'tab0-sub-ai-competency', 'tab0-sub-language-inclusive',
     'lessonTextbookAnalysis', 'dropzoneContainer', 'fileInputImages', 'btnAnalyzeVision', 'imageGallery', 'detailsVisionContent', 'editorVision', 'previewVision',
     'lessonPpctAnalysis', 'dropzoneContainerPpct', 'fileInputPpct', 'btnPastePpct', 'btnAnalyzePpct', 'ppctGallery', 'detailsPpctContent', 'editorPpct', 'previewPpct',

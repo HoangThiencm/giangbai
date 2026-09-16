@@ -707,6 +707,7 @@ ${LATEX_SPACING_BAN}
   ...
   TUYỆT ĐỐI CẤM GỘP các mục lớn thành một mục chung. TUYỆT ĐỐI CẤM BỊA THÊM hoạt động ngoài SGK.
   KHÓA TÊN ĐỀ MỤC NGUYÊN VĂN 100%: Tên Hoạt động 2.1, 2.2... BẮT BUỘC là \`### Hoạt động 2.k: [Tên nguyên văn đề mục trong SGK]\`. Nếu SGK có số \`1. ...\` thì \`### Hoạt động 2.1: 1. ...\`; nếu SGK không có số thì \`### Hoạt động 2.1: ...\` (không tự thêm số). CẤM lặp số đúp \`1. 1. ...\`. CẤM diễn đạt lại, CẤM đổi từ, CẤM rút gọn, CẤM thêm/bớt dấu.
+  BẮT BUỘC bắt đầu từ Hoạt động 2.1 đúng Mục 1 của SGK. CẤM bỏ qua Mục 1. CẤM bắt đầu từ Hoạt động 2.2.
   TUYỆT ĐỐI LOẠI BỎ việc tách các câu hỏi phát vấn (Hãy..., Bằng cách..., Nêu...), các bài tập con (Bài 1.1, Thực hành 1, Luyện tập 1) thành các hoạt động riêng biệt. Toàn bộ ví dụ mẫu, câu hỏi khám phá, thực hành con của từng mục phải nằm trọn vẹn bên trong hoạt động của mục đó.
   BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề từng hoạt động con (ví dụ: \`(15 phút)\`, \`(12 phút)\`). CẤM ghi "Khoảng" hoặc dải thời gian "X - Y phút".
 - TỪNG HOẠT ĐỘNG NHÁNH 2.k (hoặc Hoạt động k) PHẢI CÓ ĐỦ 4 PHẦN:
@@ -1560,6 +1561,7 @@ function getPromptTemplate(templateKey, context) {
 Từ dữ liệu SGK được cung cấp, xác định chính xác ${subsections.length} tiểu mục kiến thức lớn sau. Bạn PHẢI tạo đúng ${subsections.length} hoạt động nhánh tương ứng 1-1, KHÔNG ĐƯỢC GỘP, KHÔNG ĐƯỢC BỎ BỚT, KHÔNG ĐƯỢC BỊA THÊM:
 ${subListStr}
 Tên hoạt động nhánh BẮT BUỘC đúng nguyên văn 100% tên đề mục SGK ở trên, không diễn đạt lại, không đổi từ, không rút gọn.
+BẮT BUỘC bắt đầu từ Hoạt động 2.1 đúng tiểu mục đầu tiên (Mục 1). CẤM bỏ qua Mục 1, CẤM bắt đầu từ 2.2.
 Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có thời lượng cố định cụ thể ví dụ (${budgets.formatted.B_subsections[0] || '15 phút'}), đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng). Tuyệt đối không tách câu hỏi nhỏ/bài tập con thành hoạt động riêng.
 Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budgets.formatted.B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). ${fourActivities ? `Tổng A + B + C + D BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.` : `Tổng A + B + C + D + E BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.`} `;
     }

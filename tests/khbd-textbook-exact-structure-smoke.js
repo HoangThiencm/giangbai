@@ -10,7 +10,9 @@ const appSrc = fs.readFileSync(path.join(root, 'js', 'khbd-app.js'), 'utf8');
 const {
   canvasTextbookAnalysisPrompt,
   parseCanvasTextbookAnalysis,
-  formatCanvasTextbookContext
+  formatCanvasTextbookContext,
+  mergeCanvasTextbookSections,
+  filterPpctCatalogRows
 } = require('../js/khbd-app.js');
 const {
   getPromptTemplate,
@@ -129,9 +131,9 @@ console.log('\n[TEST 4] Cache-bust JS mới trên Canvas/soankhbd...');
 assert.match(appSrc, /finishReason=RECITATION/, 'Vẫn hướng dẫn khi RECITATION, không tự gửi lại');
 ['canvas_soankhbd.html', path.join('backupcode viettailieu', 'canvas_soankhbd.html')].forEach(rel => {
   const html = fs.readFileSync(path.join(root, rel), 'utf8');
-  assert.match(html, /textbook-exact-v12/, `${rel} phải cache-bust textbook-exact-v12`);
+  assert.match(html, /textbook-exact-v13/, `${rel} phải cache-bust textbook-exact-v13`);
 });
-console.log('✓ Cache-bust textbook-exact-v12; RECITATION vẫn được bắt.');
+console.log('✓ Cache-bust textbook-exact-v13; RECITATION vẫn được bắt.');
 
 console.log('\n[TEST 5] Giữ đúng chỉ số SGK, không tự đánh số, không lặp số...');
 const numbered = parseCanvasTextbookAnalysis(JSON.stringify({
@@ -144,20 +146,19 @@ const numbered = parseCanvasTextbookAnalysis(JSON.stringify({
 }));
 assert.strictEqual(numbered.sections[0].title, '1. Lũy thừa với số mũ tự nhiên');
 assert.strictEqual(numbered.sections[1].title, 'I. Khái niệm');
-assert.strictEqual(numbered.sections[2].title, 'Khái niệm lũy thừa');
+assert.ok(!numbered.sections.some(item => item.title === 'Khái niệm lũy thừa'), 'Tiểu mục không số cấp 1 phải sáp nhập vào mục lớn trước');
+assert.match(String(numbered.sections[1].coreKnowledge || ''), /Khái niệm lũy thừa/);
 assert.ok(!('index' in numbered.sections[0]), 'Không ép index vào section');
 const numberedCtx = formatCanvasTextbookContext(numbered);
 assert.match(numberedCtx, /### 1\. Lũy thừa với số mũ tự nhiên/);
 assert.doesNotMatch(numberedCtx, /1\. 1\. Lũy thừa/, 'Không lặp số đúp 1. 1.');
 assert.match(numberedCtx, /### I\. Khái niệm/);
 assert.doesNotMatch(numberedCtx, /### 1\. I\. Khái niệm/, 'Không đổi I. thành 1. I.');
-assert.match(numberedCtx, /### Khái niệm lũy thừa/);
-assert.doesNotMatch(numberedCtx, /### \d+\.\s*Khái niệm lũy thừa/, 'Không tự đánh số đề mục không có số');
+assert.doesNotMatch(numberedCtx, /### Khái niệm lũy thừa/, 'Không để tiểu mục in đậm thành đề mục riêng');
 
 const fromNumbered = extractTextbookSubsections(numberedCtx);
 assert.ok(fromNumbered.some(item => item.title === '1. Lũy thừa với số mũ tự nhiên'));
 assert.ok(fromNumbered.some(item => item.title === 'I. Khái niệm'));
-assert.ok(fromNumbered.some(item => item.title === 'Khái niệm lũy thừa'));
 
 const promptNumbered = getPromptTemplate('GENERATE_ACTIVITY_B', {
   subjectName: 'Toán', grade: '6', duration: '02 tiết (90 phút)', topic: 'Lũy thừa',
@@ -165,7 +166,41 @@ const promptNumbered = getPromptTemplate('GENERATE_ACTIVITY_B', {
 });
 assert.match(promptNumbered, /### Hoạt động 2\.1: 1\. Lũy thừa với số mũ tự nhiên/);
 assert.doesNotMatch(promptNumbered, /Hoạt động 2\.1: 1\. 1\./);
-console.log('✓ 1. / I. giữ nguyên; đề mục không số không bị tự đánh số.');
+console.log('✓ 1. / I. giữ nguyên; tiểu mục không số được sáp nhập.');
+
+console.log('\n[TEST 6] Phép nhân/chia: Mục 1 không bị mất, 2.1 bắt đầu đúng...');
+const mulDiv = parseCanvasTextbookAnalysis(JSON.stringify({
+  sections: [
+    { title: 'Tính chất của phép nhân', coreKnowledge: 'Giao hoán, kết hợp.', activities: [] },
+    { title: '1. PHÉP NHÂN SỐ TỰ NHIÊN', coreKnowledge: 'Định nghĩa phép nhân.', activities: [{ label: 'HĐ 1', task: 'Khám phá phép nhân.' }] },
+    { title: '2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ', coreKnowledge: 'Phép chia hết và chia có dư.', activities: [{ label: 'Ví dụ 3', task: 'Chia có dư.' }] }
+  ],
+  exercises: []
+}));
+assert.strictEqual(mulDiv.sections.length, 2);
+assert.strictEqual(mulDiv.sections[0].title, '1. PHÉP NHÂN SỐ TỰ NHIÊN');
+assert.strictEqual(mulDiv.sections[1].title, '2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ');
+assert.match(String(mulDiv.sections[0].coreKnowledge || ''), /Tính chất của phép nhân/);
+const mulDivCtx = formatCanvasTextbookContext(mulDiv);
+const promptMul = getPromptTemplate('GENERATE_ACTIVITY_B', {
+  subjectName: 'Toán', grade: '6', duration: '02 tiết (90 phút)', topic: 'Phép nhân và phép chia số tự nhiên',
+  textbook_content: mulDivCtx
+});
+assert.match(promptMul, /### Hoạt động 2\.1: 1\. PHÉP NHÂN SỐ TỰ NHIÊN/);
+assert.match(promptMul, /### Hoạt động 2\.2: 2\. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ/);
+assert.match(promptMul, /CẤM bỏ qua Mục 1/);
+assert.doesNotMatch(promptMul, /### Hoạt động 2\.1: Tính chất của phép nhân/);
+
+const pickerRows = [
+  { id: '1', title: 'Bài 1', tietCt: '1', nls: { enabled: true, codes: ['1.1'] }, ai: { enabled: false, codes: [] } },
+  { id: '2', title: 'Bài 2', tietCt: '2', nls: { enabled: false, codes: [] }, ai: { enabled: true, codes: ['AI1'] } },
+  { id: '3', title: 'Bài 3', tietCt: '3', nls: { enabled: true, codes: ['1.2'] }, ai: { enabled: true, codes: ['AI2'] } }
+];
+assert.strictEqual(filterPpctCatalogRows(pickerRows, 'nls').length, 2);
+assert.strictEqual(filterPpctCatalogRows(pickerRows, 'ai').length, 2);
+assert.strictEqual(filterPpctCatalogRows(pickerRows, 'nls-ai').length, 1);
+assert.strictEqual(filterPpctCatalogRows(pickerRows, 'all', 'Bài 2').length, 1);
+console.log('✓ Mục 1 làm Hoạt động 2.1; bộ lọc PPCT NLS/AI đúng.');
 
 console.log('\n================================================================================');
 console.log('TẤT CẢ KIỂM THỬ TRÍCH XUẤT SGK NGUYÊN VĂN ĐÃ PASS 100%!');

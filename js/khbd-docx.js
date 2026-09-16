@@ -13,22 +13,22 @@ class DocxGenerator {
     this.fontSizeH1 = 26;
     this.fontSizeH2 = 26;
     this.fontSizeH3 = 26;
-    this.lineSpacing = 276; // Multiple 1.15 (240 * 1.15)
+    this.lineSpacing = 240; // Single
     this.lineRule = "auto";
     this.spaceAfter = 60;   // 3pt (60 dxa)
     this.spaceBefore = 0;
 
-    // Căn lề trang A4 chuẩn (Top: 1.5cm (850 dxa), Bottom: 1.5cm (850 dxa), Left: 2.5cm (1417 dxa), Right: 1.5cm (850 dxa))
+    // A4: Top 1.5cm (850), Bottom 1.5cm (850), Left 2.0cm (1134), Right 1.5cm (850)
     this.pageMargins = {
       top: 850,
       bottom: 850,
-      left: 1417,
+      left: 1134,
       right: 850
     };
     this.pageSize = { width: 11906, height: 16838, orientation: "portrait" };
-    // Vùng in nội dung A4: 11906 - 1417 (trái) - 850 (phải) = 9639 dxa
-    this.tableWidth = 9639;
-    this.columnWidths = [4819, 4820];
+    // Vùng in: 11906 - 1134 - 850 = 9922 dxa
+    this.tableWidth = 9922;
+    this.columnWidths = [4961, 4961];
   }
 
   isGarbageLatexMathInner(inner) {
@@ -1065,90 +1065,134 @@ class DocxGenerator {
     });
   }
 
+  noCellBorders() {
+    const { BorderStyle } = window.docx || {};
+    const none = { style: BorderStyle?.NONE || "none", size: 0, color: "FFFFFF" };
+    return { top: none, bottom: none, left: none, right: none };
+  }
+
+  formatTietBaiHeading(lessonInfo = {}) {
+    const topic = String(lessonInfo.topic || "").trim();
+    const scope = String(lessonInfo.lessonScope || lessonInfo.lesson_scope || "").trim();
+    const tiet = scope.replace(/^tiết\s*/i, "").replace(/-/g, ", ").trim();
+    const baiMatch = topic.match(/bài\s*(\d+[a-z]?)/i);
+    const bai = baiMatch ? baiMatch[1] : "";
+    const name = (topic.replace(/^bài\s*\d+[a-z]?\s*[:.\-]?\s*/i, "").trim() || topic || "KẾ HOẠCH BÀI DẠY").toUpperCase();
+    const parts = [];
+    if (tiet) parts.push(`TIẾT ${tiet.toUpperCase()}`);
+    if (bai) parts.push(`BÀI ${bai}`);
+    if (parts.length) return `${parts.join(" - ")}: ${name}`;
+    return name ? `BÀI: ${name}` : "KẾ HOẠCH BÀI DẠY";
+  }
+
+  formatDurationLine(duration) {
+    const raw = String(duration || "").trim() || "02 tiết";
+    if (/thời lượng thực hiện/i.test(raw)) return raw;
+    return `Thời lượng thực hiện: ${raw}`;
+  }
+
   /**
-   * Tạo phần Header trang trọng cho Giáo án chuẩn (Tên trường, Tổ, Tên bài, Ngày soạn...)
+   * Header trang trọng: Trường / Giáo viên, Chương, TIẾT X - BÀI Y, thời lượng.
    */
   createDocumentHeader(lessonInfo = {}) {
     if (!window.docx) return [];
-    const { Paragraph, TextRun, AlignmentType } = window.docx;
-
-    const schoolName = String(lessonInfo.school || "").trim() || "TRƯỜNG THCS TRẦN PHÚ";
-    const groupName = String(lessonInfo.subjectGroup || "").trim() || "TỔ TOÁN - TIN HỌC";
+    const { Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType } = window.docx;
+    const schoolName = String(lessonInfo.school || "").trim() || "THCS Trần Phú";
     const teacherName = String(lessonInfo.teacher || "").trim() || "Hoàng Tấn Thiên";
-    const subject = (String(lessonInfo.subject || "").trim() || "Toán").toUpperCase();
-    const topic = (lessonInfo.topic || "KẾ HOẠCH BÀI DẠY").toUpperCase();
-    const grade = lessonInfo.grade ? String(lessonInfo.grade) : "";
-    const duration = lessonInfo.duration || "02 tiết";
-    const dateDraft = lessonInfo.dateDraft || ".../.../...";
-    const dateTeach = lessonInfo.dateTeach || ".../.../...";
-
+    const chapter = String(lessonInfo.chapter || "").trim();
+    const spacing = { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule };
     const headers = [];
 
-    headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-      children: [
-        new TextRun({ text: `TRƯỜNG: ${schoolName}`, font: this.fontFamily, size: this.fontSizeBody })
-      ]
-    }));
-    headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-      children: [
-        new TextRun({ text: `TỔ CHUYÊN MÔN: ${groupName}`, font: this.fontFamily, size: this.fontSizeBody })
-      ]
-    }));
-    headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-      children: [
-        new TextRun({ text: `HỌ VÀ TÊN GIÁO VIÊN: ${teacherName}`, font: this.fontFamily, size: this.fontSizeBody })
-      ]
-    }));
-    headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-      children: [
-        new TextRun({ text: `Ngày soạn: ${dateDraft}`, font: this.fontFamily, size: this.fontSizeBody })
-      ]
-    }));
-    headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-      children: [
-        new TextRun({ text: `Ngày dạy: ${dateTeach}`, font: this.fontFamily, size: this.fontSizeBody })
-      ]
-    }));
+    if (Table && TableRow && TableCell) {
+      headers.push(new Table({
+        width: { size: this.tableWidth, type: WidthType?.DXA || "dxa" },
+        columnWidths: this.columnWidths,
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: this.columnWidths[0], type: WidthType?.DXA || "dxa" },
+                borders: this.noCellBorders(),
+                children: [new Paragraph({
+                  spacing,
+                  children: [new TextRun({ text: `Trường ${schoolName.replace(/^trường\s+/i, "")}`, font: this.fontFamily, size: this.fontSizeBody })]
+                })]
+              }),
+              new TableCell({
+                width: { size: this.columnWidths[1], type: WidthType?.DXA || "dxa" },
+                borders: this.noCellBorders(),
+                children: [new Paragraph({
+                  alignment: AlignmentType.RIGHT,
+                  spacing,
+                  children: [new TextRun({ text: `Giáo viên: ${teacherName}`, font: this.fontFamily, size: this.fontSizeBody })]
+                })]
+              })
+            ]
+          })
+        ]
+      }));
+    } else {
+      headers.push(new Paragraph({ spacing, children: [new TextRun({ text: `Trường ${schoolName}`, font: this.fontFamily, size: this.fontSizeBody })] }));
+      headers.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing, children: [new TextRun({ text: `Giáo viên: ${teacherName}`, font: this.fontFamily, size: this.fontSizeBody })] }));
+    }
+
+    if (chapter) {
+      headers.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing,
+        children: [new TextRun({ text: chapter.toUpperCase(), font: this.fontFamily, size: this.fontSizeBody, bold: true })]
+      }));
+    }
 
     headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-      children: [
-        new TextRun({
-          text: "KẾ HOẠCH BÀI DẠY",
-          font: this.fontFamily,
-          size: this.fontSizeH1,
-          bold: true
-        })
-      ]
+      alignment: AlignmentType.CENTER,
+      spacing,
+      children: [new TextRun({ text: this.formatTietBaiHeading(lessonInfo), font: this.fontFamily, size: 28, bold: true })]
     }));
     headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-      children: [new TextRun({ text: `TÊN BÀI SOẠN: ${topic}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })]
-    }));
-    headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-      children: [new TextRun({ text: `MÔN HỌC: ${subject} - LỚP: ${grade}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })]
-    }));
-    headers.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-      children: [new TextRun({ text: `THỜI LƯỢNG THỰC HIỆN: ${duration}`, font: this.fontFamily, size: this.fontSizeBody, bold: true })]
+      alignment: AlignmentType.CENTER,
+      spacing,
+      children: [new TextRun({ text: this.formatDurationLine(lessonInfo.duration), font: this.fontFamily, size: this.fontSizeBody, italics: true })]
     }));
 
     return headers;
+  }
+
+  createDocumentFooter(lessonInfo = {}) {
+    if (!window.docx) return [];
+    const { Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType, PageNumber } = window.docx;
+    const subject = String(lessonInfo.subject || "Toán").trim() || "Toán";
+    const year = String(lessonInfo.academicYear || "").trim() || "";
+    const spacing = { before: 0, after: 0, line: this.lineSpacing, lineRule: this.lineRule };
+    const col = Math.round(this.tableWidth / 3);
+    const pageRuns = [
+      new TextRun({ text: "- Trang ", font: this.fontFamily, size: 22 }),
+      new TextRun({ children: PageNumber?.CURRENT != null ? [PageNumber.CURRENT] : ["X"], font: this.fontFamily, size: 22 }),
+      new TextRun({ text: " -", font: this.fontFamily, size: 22 })
+    ];
+    if (Table && TableRow && TableCell) {
+      return [new Table({
+        width: { size: this.tableWidth, type: WidthType?.DXA || "dxa" },
+        columnWidths: [col, col, this.tableWidth - col * 2],
+        rows: [new TableRow({
+          children: [
+            new TableCell({
+              borders: this.noCellBorders(),
+              children: [new Paragraph({ spacing, children: [new TextRun({ text: `Môn: ${subject}`, font: this.fontFamily, size: 22 })] })]
+            }),
+            new TableCell({
+              borders: this.noCellBorders(),
+              children: [new Paragraph({ alignment: AlignmentType.CENTER, spacing, children: pageRuns })]
+            }),
+            new TableCell({
+              borders: this.noCellBorders(),
+              children: [new Paragraph({ alignment: AlignmentType.RIGHT, spacing, children: [new TextRun({ text: year ? `Năm học: ${year}` : "", font: this.fontFamily, size: 22 })] })]
+            })
+          ]
+        })]
+      })];
+    }
+    return [new Paragraph({ alignment: AlignmentType.CENTER, spacing, children: [new TextRun({ text: `Môn: ${subject}  - Trang X -  ${year ? `Năm học: ${year}` : ""}`, font: this.fontFamily, size: 22 })] })];
   }
 
   safeIllustrationCaption(caption) {
@@ -1314,10 +1358,10 @@ class DocxGenerator {
       throw new Error("Thư viện docx hoặc FileSaver chưa sẵn sàng. Vui lòng kiểm tra kết nối mạng CDN.");
     }
 
-    const { Document, Packer } = window.docx;
+    const { Document, Packer, Header, Footer, AlignmentType } = window.docx;
 
-    // Tạo phần Header trang trọng
     const headerElements = this.createDocumentHeader(lessonInfo);
+    const footerElements = this.createDocumentFooter(lessonInfo);
 
     // Tạo phần thân từ Markdown. Phụ lục phiếu học tập lấy từ activities.E nếu markdown chưa có mục IV.
     let markdown = String(fullMarkdownContent || "");
@@ -1328,22 +1372,40 @@ class DocxGenerator {
       markdown += `\n\n# IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)\n\n${appendixE}`;
     }
     const bodyElements = this.parseMarkdownToDocxElements(markdown);
-
-    const allChildren = [...headerElements, ...bodyElements];
+    const section = {
+      properties: {
+        page: {
+          size: this.pageSize,
+          margin: this.pageMargins
+        }
+      },
+      children: bodyElements
+    };
+    if (typeof Header === "function") {
+      section.headers = { default: new Header({ children: headerElements }) };
+    } else {
+      section.children = [...headerElements, ...bodyElements];
+    }
+    if (typeof Footer === "function") {
+      section.footers = { default: new Footer({ children: footerElements }) };
+    }
 
     const doc = new Document({
       creator: "Trợ lý Soạn Kế hoạch Bài dạy AI",
       title: `KHBD_${lessonInfo.topic || "Bai_Day"}`,
       description: "Kế hoạch bài dạy chuẩn Công văn 5512",
-      sections: [{
-        properties: {
-          page: {
-            size: this.pageSize,
-            margin: this.pageMargins
+      styles: {
+        default: {
+          document: {
+            run: { font: this.fontFamily, size: this.fontSizeBody },
+            paragraph: {
+              spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+              alignment: AlignmentType?.JUSTIFIED
+            }
           }
-        },
-        children: allChildren
-      }]
+        }
+      },
+      sections: [section]
     });
 
     const blob = await Packer.toBlob(doc);

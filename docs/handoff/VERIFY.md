@@ -4,29 +4,38 @@
 PASS
 
 ## Đối chiếu scope
-- Khớp 100% yêu cầu trong `PLAN.md`:
-  + `canvasTextbookAnalysisPrompt`: Ràng buộc AI giữ nguyên văn chỉ số đề mục có trong SGK (`1.`, `I.`, `A.`), và TUYỆT ĐỐI CẤM tự ý đánh thêm số nếu SGK không có số thứ tự.
-  + `normalizeCanvasTextbookSection`: Bỏ hoàn toàn cơ chế ép `index = index + 1`.
-  + `formatCanvasTextbookContext`: Xuất đúng `### ${section.title}` và `- Đề mục: ${section.title}`, loại bỏ hoàn toàn việc tự chèn tiền tố `${idx}. ` hay `Mục ${idx}:`, tránh lặp số `1. 1. ...`.
-  + `js/khbd-prompts.js`: `extractTextbookSubsections` và `GENERATE_ACTIVITY_B` bảo lưu nguyên vẹn 100% đề mục gốc của SGK.
-  + Đồng bộ cache-bust `textbook-exact-v12` trên Canvas và soankhbd.
+- **Module 1: Trích xuất SGK & Đề mục Hoạt động B**:
+  - `canvasTextbookAnalysisPrompt`: Ràng buộc trích xuất đúng đề mục cấp 1 (`1.`, `2.`, `I.`, `II.`), cấm tách tiêu đề con in đậm thành section mới.
+  - `mergeCanvasTextbookSections` & `normalizeCanvasTextbookSection`: Tự động sáp nhập các tiểu mục không có số cấp 1 vào mục lớn trước đó.
+  - `GENERATE_ACTIVITY_B`: Bắt buộc duyệt tuần tự từ phần tử đầu tiên, Hoạt động 2.1 là Mục 1, Hoạt động 2.2 là Mục 2, không bỏ sót Mục 1, không nhảy cóc.
+- **Module 2: UX/UI Bộ chọn bài PPCT & Nguồn sự thật**:
+  - Có ô tìm kiếm và 4 tab lọc nhanh: `Tất cả` | `Có NLS` | `Có AI` | `Có NLS + AI`.
+  - Hiển thị badge `[NLS]` (xanh dương) và `[AI]` (tím) trên từng bài học.
+  - Card tóm tắt bài học hiển thị đầy đủ: Tên bài, Tiết CT, Thời lượng, Tuần, Mã NLS, Mã AI.
+  - Nạp và kế thừa mã NLS/AI từ PPCT sang Bước 3 & Bước 4, đổi nhãn Bước 3 thành `Kế hoạch PPDH & Tích hợp NLS/AI (Ưu tiên từ PPCT)`.
+- **Module 3: Chuẩn hóa xuất file Word (.docx)**:
+  - Căn lề chuẩn: Top 1.5cm (850 dxa), Bottom 1.5cm (850 dxa), Left 2.0cm (1134 dxa), Right 1.5cm (850 dxa).
+  - Spacing After 3pt (60 dxa), Line spacing Single (240 dxa), Căn đều 2 lề (Justified), Table width 9922 dxa (2 cột 4961 dxa).
+  - Header bảng 2 cột: Cột trái `Trường [Tên trường]`, Cột phải `Giáo viên: [Tên GV]`; Dòng Chương; Dòng `TIẾT [X] - BÀI [Y]: [TÊN BÀI]`; Dòng Thời lượng thực hiện in nghiêng.
+  - Footer: Cột trái `Môn: [Tên môn]`, Giữa `- Trang [Page] -`, Cột phải `Năm học: [Năm học]`.
+  - Truyền đầy đủ `lessonScope` vào Header.
 
 ## Test đã chạy
-1. `node tests/khbd-textbook-exact-structure-smoke.js` (PASS 100% 5/5 test cases):
-   - [TEST 1] Prompt phân tích SGK dùng schema fact-extraction nguyên văn.
-   - [TEST 2] `parseCanvasTextbookAnalysis` và `formatCanvasTextbookContext` giữ nguyên văn đề mục, HĐ và bài tập.
-   - [TEST 3] `GENERATE_ACTIVITY_B/C/D` khóa tên đề mục và đề bài nguyên văn 100%.
-   - [TEST 4] Cache-bust JS `textbook-exact-v12`.
-   - [TEST 5] Đề mục có số (`1.`, `I.`) giữ nguyên không bị lặp số; đề mục không số không bị tự động đánh số.
-2. `node tests/canvas-soankhbd-smoke.js` (PASS 100%).
-3. `node tests/canvas-textbook-analysis-smoke.js` (PASS 100%).
-4. `node tests/khbd-activity-b-subsections-smoke.js` (PASS 100%).
-5. `node tests/khbd-weighted-duration-smoke.js` (PASS 100%).
+- `node tests/khbd-textbook-exact-structure-smoke.js`
+- `node tests/docx-export-format-smoke.js`
+- `node tests/canvas-soankhbd-smoke.js`
+- `node tests/khbd-docx-layout-smoke.js`
+- `node tests/khbd-4steps-workflow-smoke.js`
+- `node tests/khbd-activity-b-subsections-smoke.js`
+- `node tests/canvas-textbook-analysis-smoke.js`
+- `node tests/ppct-settings-import-smoke.js`
 
 ## Pass / Fail từng tiêu chí
-- [PASS] Đề mục có chỉ số trong SGK (1, 2, I, II, A, B) giữ đúng 100% chỉ số đó, không bị lặp số đúp (`1. 1. ...`).
-- [PASS] Đề mục không có chỉ số trong SGK tuyệt đối không bị tự động đánh số thêm.
-- [PASS] Tên Hoạt động 2.1, 2.2 hiển thị đúng đề mục gốc của SGK.
+- [PASS] Mục 1 không bị mất trong giáo án Hoạt động B ("1. PHÉP NHÂN SỐ TỰ NHIÊN" -> Hoạt động 2.1; "2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ" -> Hoạt động 2.2).
+- [PASS] Bộ lọc bài PPCT (Tất cả, NLS, AI, NLS+AI), badge và Card tóm tắt hoạt động chính xác.
+- [PASS] Ưu tiên NLS/AI từ PPCT sang Bước 3 & 4.
+- [PASS] File Word xuất ra đúng cấu hình lề A4, spacing, header 2 cột Trường/GV, Chương, Tiết-Bài, thời lượng và footer 3 phần.
+- [PASS] 100% test suites vượt qua.
 
 ## Bug
-Không có.
+Không phát hiện lỗi.

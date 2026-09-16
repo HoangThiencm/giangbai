@@ -64,6 +64,8 @@ const appState = {
   // không lưu ảnh/OCR nguồn vào CSDL.
   ppctCatalog: { rows: [], source: {}, selectedRowId: "", serverId: null },
   ppctCatalogAcademicYear: "",
+  ppctLessonFilter: "all",
+  ppctLessonSearch: "",
 
   // Nội dung đã biên soạn
   content: {
@@ -6026,9 +6028,151 @@ function parsePpctCatalog(raw, meta = {}) {
 function ppctCatalogMeta() { return { subject: String(appState.selectedSubject || "").trim(), grade: String(appState.selectedGrade || "").trim(), academic_year: String(appState.ppctCatalogAcademicYear || "").trim() }; }
 function cleanPpctCatalogSource(source, meta = ppctCatalogMeta()) { const value = source && typeof source === "object" ? source : {}; return { format:String(value.format || "appendix3").slice(0,80), analyzedAt:String(value.analyzedAt || new Date().toISOString()), grade:meta.grade, subject:meta.subject, academicYear:meta.academic_year, importMode:String(value.importMode || "settings").slice(0,40) }; }
 async function loadPpctCatalogForCurrentMeta() { const meta=ppctCatalogMeta(); if(!meta.subject||!meta.grade) return null; const qs=new URLSearchParams(meta); const response=await fetch(`api/khbd_ppct_catalog.php?${qs}`,{credentials:"same-origin"}); const data=await response.json(); if(response.ok && data.catalog && Array.isArray(data.catalog.rows)){ appState.ppctCatalog={rows:data.catalog.rows,source:data.catalog.source||{},selectedRowId:"",serverId:data.catalog.id}; appState.ppctCatalogAcademicYear=String(data.catalog.academic_year||meta.academic_year||""); saveStateToLocalStorage(); return data.catalog; } if(response.ok){ appState.ppctCatalog={rows:[],source:{},selectedRowId:"",serverId:null}; return null; } return null; }
-function applyPpctCatalogRow(id) { const row=(appState.ppctCatalog.rows||[]).find(r=>r.id===id); if(!row)return; appState.ppctCatalog.selectedRowId=id; appState.selectedLesson=row.title; appState.customTopic=row.title; if(row.periods) appState.duration=formatSmartDuration(`${row.periods} tiết`,appState.selectedGrade); appState.teachingContext.lessonScope=row.tietCt ? `Tiết ${row.tietCt}` : row.week ? `Tuần ${row.week}` : ""; appState.teachingContext.integrations.digital=!!row.nls.enabled; appState.teachingContext.integrations.ai=!!row.ai.enabled; populateLessonDropdown(); renderPpctCatalogReview(); renderStandardsCatalog(); saveStateToLocalStorage(); }
+function ppctRowHasNls(row) {
+  return !!(row && (row.nls?.enabled || (row.nls?.codes || []).length || (row.digital_competency || []).length));
+}
+function ppctRowHasAi(row) {
+  return !!(row && (row.ai?.enabled || (row.ai?.codes || []).length || (row.ai_competency || []).length));
+}
+function filterPpctCatalogRows(rows, filter, search) {
+  const q = String(search || "").trim().toLowerCase();
+  return (rows || []).filter(row => {
+    if (filter === "nls" && !ppctRowHasNls(row)) return false;
+    if (filter === "ai" && !ppctRowHasAi(row)) return false;
+    if (filter === "nls-ai" && !(ppctRowHasNls(row) && ppctRowHasAi(row))) return false;
+    if (!q) return true;
+    const hay = [row.chapter, row.title, row.tietCt, row.week, row.periods].map(v => String(v || "").toLowerCase()).join(" ");
+    return hay.includes(q);
+  });
+}
+function ppctRowCodes(row, kind) {
+  if (kind === "nls") {
+    const fromField = Array.isArray(row?.digital_competency) ? row.digital_competency.map(item => item?.code || item).filter(Boolean) : [];
+    return (row?.nls?.codes || []).concat(fromField).map(String).filter(Boolean);
+  }
+  const fromField = Array.isArray(row?.ai_competency) ? row.ai_competency.map(item => item?.code || item).filter(Boolean) : [];
+  return (row?.ai?.codes || []).concat(fromField).map(String).filter(Boolean);
+}
+function applyPpctCatalogRow(id) {
+  const row = (appState.ppctCatalog.rows || []).find(r => r.id === id);
+  if (!row) return;
+  appState.ppctCatalog.selectedRowId = id;
+  appState.selectedLesson = row.title;
+  appState.customTopic = row.title;
+  if (row.periods) appState.duration = formatSmartDuration(`${row.periods} tiết`, appState.selectedGrade);
+  appState.teachingContext.lessonScope = row.tietCt ? `Tiết ${row.tietCt}` : (row.week ? `Tuần ${row.week}` : "");
+  const nlsCodes = ppctRowCodes(row, "nls");
+  const aiCodes = ppctRowCodes(row, "ai");
+  appState.teachingContext.integrations.digital = !!(row.nls?.enabled || nlsCodes.length);
+  appState.teachingContext.integrations.ai = !!(row.ai?.enabled || aiCodes.length);
+  const digitalToggle = document.getElementById("toggleDigitalCompetency");
+  const aiToggle = document.getElementById("toggleAiCompetency");
+  if (digitalToggle) digitalToggle.checked = appState.teachingContext.integrations.digital;
+  if (aiToggle) aiToggle.checked = appState.teachingContext.integrations.ai;
+  const topicEl = document.getElementById("inputTopicCustom");
+  if (topicEl) topicEl.value = row.title;
+  const scopeEl = document.getElementById("inputLessonScope");
+  if (scopeEl) scopeEl.value = appState.teachingContext.lessonScope || "";
+  const durationEl = document.getElementById("inputDuration");
+  if (durationEl && appState.duration) durationEl.value = appState.duration;
+  if (nlsCodes.length || aiCodes.length) {
+    applyPpctDetectedStandards({
+      digital: nlsCodes.map(code => ({ code })),
+      ai: aiCodes.map(code => ({ code }))
+    }, { showModal: false });
+  }
+  populateLessonDropdown();
+  renderPpctCatalogReview();
+  renderStandardsCatalog();
+  saveStateToLocalStorage();
+}
 function ppctRowsTable(rows, options = {}) { return `<div style="max-height:${options.maxHeight||'270px'};overflow:auto"><table class="data-table"><thead><tr><th>Bài</th><th>Tiết</th><th>NLS</th><th>AI</th></tr></thead><tbody>${rows.map(r=>`<tr data-ppct-row="${escapeHtml(r.id)}" style="cursor:pointer;${r.id===appState.ppctCatalog.selectedRowId?'background:#e0f2fe':''}"><td>${escapeHtml(r.title)}</td><td>${escapeHtml(r.tietCt||r.periods||"")}</td><td><input type="checkbox" data-kind="nls" ${r.nls?.enabled?"checked":""}></td><td><input type="checkbox" data-kind="ai" ${r.ai?.enabled?"checked":""}></td></tr>`).join("")}</tbody></table></div>`; }
-function renderPpctCatalogReview() { const rows=appState.ppctCatalog.rows||[]; const stepSelect=document.getElementById("step2PpctLessonSelect"),stepSettings=document.getElementById("btnStep2PpctSettings"); if(stepSelect){ if(rows.length){ const selected=appState.ppctCatalog.selectedRowId||""; stepSelect.innerHTML=`<option value="">— Chọn bài/hoạt động từ PPCT (${rows.length} dòng) —</option>`+rows.map(r=>`<option value="${escapeHtml(r.id)}" ${r.id===selected?"selected":""}>${escapeHtml((r.chapter?`${r.chapter} — `:"")+r.title+(r.tietCt?` (Tiết ${r.tietCt})`:""))}</option>`).join(""); stepSelect.style.display="block"; stepSelect.onchange=()=>{ if(stepSelect.value) applyPpctCatalogRow(stepSelect.value); }; } else { stepSelect.innerHTML=""; stepSelect.style.display="none"; stepSelect.onchange=null; } } if(stepSettings) stepSettings.onclick=openPpctCatalogSettings; const host=document.getElementById("ppctCatalogReview"); if(host){ host.innerHTML=rows.length?`<div class="panel-header"><span>Danh mục Phụ lục 3 (${rows.length} bài) — chọn một bài để soạn</span><button type="button" class="btn btn-outline-dark btn-sm" id="btnOpenPpctCatalogSettings">Cài đặt PPCT</button></div>${ppctRowsTable(rows)}<p class="text-muted" style="font-size:.8rem">NLS/AI là tick của giáo viên; mã và bằng chứng từ Phụ lục 3 được giữ nguyên.</p>`:`<p class="text-muted">Chưa có danh mục PPCT. Mở <b>Cài đặt PPCT</b> để nạp Phụ lục 3 vào CSDL.</p>`; host.querySelectorAll("tr[data-ppct-row]").forEach(tr=>tr.addEventListener("click",e=>{if(e.target.matches("input"))return;applyPpctCatalogRow(tr.dataset.ppctRow);})); host.querySelectorAll("input[data-kind]").forEach(input=>input.addEventListener("change",e=>{const row=rows.find(r=>r.id===e.target.closest("tr").dataset.ppctRow); if(row){row[e.target.dataset.kind].enabled=e.target.checked; row[e.target.dataset.kind].manual=true; saveStateToLocalStorage();}})); host.querySelector("#btnOpenPpctCatalogSettings")?.addEventListener("click",openPpctCatalogSettings); } updateWorkflowStepper(); }
+function renderPpctLessonPicker(rows) {
+  const picker = document.getElementById("ppctLessonPicker");
+  const list = document.getElementById("ppctLessonList");
+  const summary = document.getElementById("ppctLessonSummary");
+  const search = document.getElementById("ppctLessonSearch");
+  if (!picker || !list) return;
+  picker.style.display = rows.length ? "block" : "none";
+  if (search && search.value !== (appState.ppctLessonSearch || "")) search.value = appState.ppctLessonSearch || "";
+  document.querySelectorAll("[data-ppct-filter]").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-ppct-filter") === (appState.ppctLessonFilter || "all"));
+  });
+  const filtered = filterPpctCatalogRows(rows, appState.ppctLessonFilter || "all", appState.ppctLessonSearch);
+  const selectedId = appState.ppctCatalog.selectedRowId || "";
+  list.innerHTML = filtered.length
+    ? filtered.map(row => {
+      const nls = ppctRowHasNls(row) ? `<span class="ppct-badge-nls">[NLS]</span>` : "";
+      const ai = ppctRowHasAi(row) ? `<span class="ppct-badge-ai">[AI]</span>` : "";
+      const tiet = row.tietCt ? `Tiết ${escapeHtml(row.tietCt)}` : (row.periods ? `${escapeHtml(String(row.periods))} tiết` : "");
+      return `<button type="button" class="ppct-lesson-item${row.id === selectedId ? " is-selected" : ""}" data-ppct-pick="${escapeHtml(row.id)}"><span class="ppct-lesson-item-title">${escapeHtml(row.title)}</span><span class="ppct-lesson-item-meta">${tiet}</span>${nls}${ai}</button>`;
+    }).join("")
+    : `<p class="text-muted" style="padding:.5rem;font-size:.8rem;">Không có bài khớp bộ lọc.</p>`;
+  list.querySelectorAll("[data-ppct-pick]").forEach(btn => {
+    btn.addEventListener("click", () => applyPpctCatalogRow(btn.getAttribute("data-ppct-pick")));
+  });
+  const selected = rows.find(r => r.id === selectedId);
+  if (summary) {
+    if (!selected) { summary.style.display = "none"; summary.innerHTML = ""; return; }
+    const nlsCodes = ppctRowCodes(selected, "nls");
+    const aiCodes = ppctRowCodes(selected, "ai");
+    summary.style.display = "block";
+    summary.innerHTML = `<strong>${escapeHtml(selected.title)}</strong>
+      <div>Tiết CT: ${escapeHtml(selected.tietCt || "—")} · Thời lượng: ${escapeHtml(selected.periods != null ? `${selected.periods} tiết` : "—")} · Tuần: ${escapeHtml(selected.week || "—")}</div>
+      <div>Mã NLS: ${escapeHtml(nlsCodes.join(", ") || "—")} · Mã AI: ${escapeHtml(aiCodes.join(", ") || "—")}</div>`;
+  }
+}
+function bindPpctLessonPicker() {
+  const search = document.getElementById("ppctLessonSearch");
+  if (search && !search.dataset.bound) {
+    search.dataset.bound = "1";
+    search.addEventListener("input", () => {
+      appState.ppctLessonSearch = search.value;
+      renderPpctLessonPicker(appState.ppctCatalog.rows || []);
+    });
+  }
+  document.querySelectorAll("[data-ppct-filter]").forEach(btn => {
+    if (btn.dataset.bound) return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      appState.ppctLessonFilter = btn.getAttribute("data-ppct-filter") || "all";
+      renderPpctLessonPicker(appState.ppctCatalog.rows || []);
+    });
+  });
+}
+function renderPpctCatalogReview() {
+  const rows = appState.ppctCatalog.rows || [];
+  const stepSelect = document.getElementById("step2PpctLessonSelect");
+  const stepSettings = document.getElementById("btnStep2PpctSettings");
+  if (stepSelect) {
+    if (rows.length) {
+      const selected = appState.ppctCatalog.selectedRowId || "";
+      stepSelect.innerHTML = `<option value="">— Chọn bài/hoạt động từ PPCT (${rows.length} dòng) —</option>` + rows.map(r => `<option value="${escapeHtml(r.id)}" ${r.id === selected ? "selected" : ""}>${escapeHtml((r.chapter ? `${r.chapter} — ` : "") + r.title + (r.tietCt ? ` (Tiết ${r.tietCt})` : ""))}</option>`).join("");
+      stepSelect.style.display = "none";
+      stepSelect.onchange = () => { if (stepSelect.value) applyPpctCatalogRow(stepSelect.value); };
+    } else {
+      stepSelect.innerHTML = "";
+      stepSelect.style.display = "none";
+      stepSelect.onchange = null;
+    }
+  }
+  if (stepSettings) stepSettings.onclick = openPpctCatalogSettings;
+  bindPpctLessonPicker();
+  renderPpctLessonPicker(rows);
+  const host = document.getElementById("ppctCatalogReview");
+  if (host) {
+    host.innerHTML = rows.length
+      ? `<div class="panel-header"><span>Danh mục Phụ lục 3 (${rows.length} bài) — chọn một bài để soạn</span><button type="button" class="btn btn-outline-dark btn-sm" id="btnOpenPpctCatalogSettings">Cài đặt PPCT</button></div>${ppctRowsTable(rows)}<p class="text-muted" style="font-size:.8rem">NLS/AI là tick của giáo viên; mã và bằng chứng từ Phụ lục 3 được giữ nguyên.</p>`
+      : `<p class="text-muted">Chưa có danh mục PPCT. Mở <b>Cài đặt PPCT</b> để nạp Phụ lục 3 vào CSDL.</p>`;
+    host.querySelectorAll("tr[data-ppct-row]").forEach(tr => tr.addEventListener("click", e => { if (e.target.matches("input")) return; applyPpctCatalogRow(tr.dataset.ppctRow); }));
+    host.querySelectorAll("input[data-kind]").forEach(input => input.addEventListener("change", e => {
+      const row = rows.find(r => r.id === e.target.closest("tr").dataset.ppctRow);
+      if (row) { row[e.target.dataset.kind].enabled = e.target.checked; row[e.target.dataset.kind].manual = true; saveStateToLocalStorage(); renderPpctLessonPicker(rows); }
+    }));
+    host.querySelector("#btnOpenPpctCatalogSettings")?.addEventListener("click", openPpctCatalogSettings);
+  }
+  updateWorkflowStepper();
+}
 async function savePpctCatalogToServer() { if(isCanvasGeminiRoute()){localStorage.setItem("khbd_ppct_catalog_canvas",JSON.stringify(appState.ppctCatalog));showToast("Canvas chỉ lưu cục bộ trên trình duyệt; hãy mở Soạn KHBD trên website để lưu CSDL.","info");return;} const meta=ppctCatalogMeta(); const body={...meta,rows:appState.ppctCatalog.rows,source:cleanPpctCatalogSource(appState.ppctCatalog.source,meta)}; const res=await fetch("api/khbd_ppct_catalog.php",{method:"PUT",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(body)}); const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||"Không lưu được CSDL");appState.ppctCatalog.serverId=data.catalog.id;appState.ppctCatalog.source=body.source;saveStateToLocalStorage();showToast("Đã lưu danh mục PPCT vào CSDL.","success"); }
 
 function fillPpctCatalogSubjectOptions() { const select=document.getElementById("ppctCatalogSubject"); if(!select||select.options.length)return; const subjects=(CURRICULUM_DATA?.subjects||[]); select.innerHTML=subjects.map(s=>`<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join(""); }
@@ -6481,6 +6625,7 @@ function canvasTextbookAnalysisPrompt(batchLabel) {
     "Mỗi trường chỉ chứa đúng thực thể nhìn thấy trên trang/ảnh/PDF người dùng cung cấp.",
     "BẮT BUỘC giữ nguyên văn 100% tên đề mục, tên hoạt động (HĐ, Luyện tập, Thực hành, Vận dụng), mã bài (Bài 1.36) và đề bài/số liệu/công thức. Công thức dùng LaTeX $...$.",
     "VỀ ĐỀ MỤC VÀ CHỈ SỐ: BẮT BUỘC sao chép chính xác 100% tên đề mục và chỉ số nhìn thấy trong SGK. Nếu SGK có ghi số/ký hiệu (ví dụ '1. Lũy thừa...', 'I. Khái niệm...', 'A. Định nghĩa...') thì giữ nguyên. Nếu SGK KHÔNG CÓ số thứ tự (chỉ ghi tiêu đề chữ) thì TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý ĐÁNH SỐ THÊM.",
+    "CHỈ đưa vào sections các ĐỀ MỤC CẤP 1 chính thức (số to 1. 2. hoặc I. II.). CẤM tách tiêu đề con in đậm (Tính chất..., Quy tắc..., Ví dụ 1, 2, 3...) thành section riêng — nhét chúng vào coreKnowledge hoặc activities của mục lớn đứng trước.",
     "CẤM diễn đạt lại, CẤM đổi từ, CẤM rút gọn tên đề mục hoặc đề bài, CẤM bịa thêm mục/bài không nhìn thấy.",
     "TUYỆT ĐỐI KHÔNG điền chỗ trống bằng trí nhớ về bất kỳ bộ SGK nào. Không suy đoán tên đề mục, số mục, số câu, số bài tập hoặc nội dung bài tập nếu chúng không nhìn thấy rõ trong chính trang/ảnh/PDF người dùng cung cấp.",
     "Chỉ coi tên đề mục/chỉ mục/bài tập là dữ kiện khi đọc được rõ ràng và chắc chắn từ nguồn đính kèm; nếu mờ, khuất, thiếu trang hoặc không chắc thì phải ghi vào unknowns là cần đối chiếu SGK, không được biến thành dữ kiện khẳng định.",
@@ -6488,6 +6633,43 @@ function canvasTextbookAnalysisPrompt(batchLabel) {
     "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"sections\":[{\"title\":\"\",\"coreKnowledge\":\"\",\"activities\":[{\"label\":\"HĐ 1\",\"task\":\"\"}]}],\"exercises\":[{\"code\":\"Bài 1.36\",\"statement\":\"\"}],\"unknowns\":[\"\"]}.",
     "sections: 1-4 đề mục lớn, title đúng nguyên văn mục lục SGK (kèm chỉ số nếu SGK có, không tự thêm số nếu SGK không có); coreKnowledge là quy tắc/định nghĩa/công thức LaTeX; activities gồm HĐ, Luyện tập, Thực hành, Vận dụng với task nguyên văn. exercises: toàn bộ bài tập SGK nhìn thấy, statement nguyên văn đủ số liệu."
   ].join("\\n");
+}
+
+function isLevel1SectionTitle(title) {
+  return /^(?:(?:I|II|III|IV|V|VI|VII|VIII|IX|X)[\s.:\-]+|\d+[\s.)\-]+)/.test(String(title || "").trim());
+}
+
+function absorbCanvasTextbookSection(parent, child) {
+  if (!parent || !child) return parent;
+  const bits = [];
+  if (child.title) bits.push(child.title);
+  if (child.coreKnowledge) bits.push(child.coreKnowledge);
+  parent.coreKnowledge = [parent.coreKnowledge, bits.join(": ")].filter(Boolean).join("\n");
+  parent.activities = [...(parent.activities || []), ...(child.activities || [])];
+  return parent;
+}
+
+function mergeCanvasTextbookSections(sections) {
+  const list = (sections || []).filter(Boolean);
+  if (!list.length) return [];
+  if (!list.some(item => isLevel1SectionTitle(item.title))) return list.slice(0, 4);
+  const merged = [];
+  const pending = [];
+  list.forEach(section => {
+    if (isLevel1SectionTitle(section.title)) {
+      const next = { ...section, activities: (section.activities || []).slice() };
+      pending.splice(0).forEach(item => absorbCanvasTextbookSection(next, item));
+      merged.push(next);
+    } else if (merged.length) {
+      absorbCanvasTextbookSection(merged[merged.length - 1], section);
+    } else {
+      pending.push(section);
+    }
+  });
+  pending.forEach(item => {
+    if (merged.length) absorbCanvasTextbookSection(merged[merged.length - 1], item);
+  });
+  return merged.slice(0, 4);
 }
 
 function normalizeCanvasTextbookSection(raw) {
@@ -6513,10 +6695,11 @@ function normalizeCanvasTextbookExercise(raw) {
 
 function parseCanvasTextbookAnalysis(raw) {
   const parsed = parseAiJsonSafely(raw, "Phân tích cấu trúc SGK");
-  const sections = (Array.isArray(parsed.sections) ? parsed.sections : [])
-    .map(item => normalizeCanvasTextbookSection(item))
-    .filter(Boolean)
-    .slice(0, 8);
+  const sections = mergeCanvasTextbookSections(
+    (Array.isArray(parsed.sections) ? parsed.sections : [])
+      .map(item => normalizeCanvasTextbookSection(item))
+      .filter(Boolean)
+  );
   const exercises = (Array.isArray(parsed.exercises) ? parsed.exercises : [])
     .map(normalizeCanvasTextbookExercise)
     .filter(Boolean)
@@ -7156,6 +7339,7 @@ async function handleExportFullDocx() {
     return;
   }
 
+  const selectedPpct = (appState.ppctCatalog.rows || []).find(row => row.id === appState.ppctCatalog.selectedRowId) || {};
   const lessonInfo = {
     school: appState.school,
     subjectGroup: appState.group,
@@ -7164,6 +7348,9 @@ async function handleExportFullDocx() {
     topic: getTopicDisplayName(),
     grade: appState.selectedGrade,
     duration: appState.duration,
+    lessonScope: appState.teachingContext.lessonScope || "",
+    chapter: selectedPpct.chapter || "",
+    academicYear: appState.ppctCatalogAcademicYear || "",
     ...getLessonPlanMetadata(),
   };
 
@@ -7736,8 +7923,11 @@ if (typeof module !== 'undefined' && module.exports) {
     ,canvasTextbookAnalysisPrompt
     ,parseCanvasTextbookAnalysis
     ,formatCanvasTextbookContext
+    ,mergeCanvasTextbookSections
+    ,isLevel1SectionTitle
     ,parsePpctCatalog
     ,applyPpctCatalogRow
+    ,filterPpctCatalogRows
     ,savePpctCatalogToServer
   };
 }
