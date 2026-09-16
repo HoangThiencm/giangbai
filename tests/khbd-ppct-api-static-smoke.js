@@ -1,3 +1,14 @@
-const assert=require('assert'),fs=require('fs'); const api=fs.readFileSync('api/khbd_ppct_catalog.php','utf8'), schema=fs.readFileSync('database_schema.sql','utf8');
+const assert=require('assert'),fs=require('fs');
+const api=fs.readFileSync('api/khbd_ppct_catalog.php','utf8');
+const canvas=fs.readFileSync('api/canvas_ppct_catalog.php','utf8');
+const schema=fs.readFileSync('database_schema.sql','utf8');
+const app=fs.readFileSync('js/khbd-app.js','utf8');
 assert(api.includes("$_SESSION['user_id']")); assert(!api.includes("HTTP_X_USER_ACCOUNT")); assert(api.includes("role='teacher'")); assert(schema.includes('teacher_ppct_catalogs')); assert(schema.includes('uq_teacher_ppct_catalog'));
+assert(canvas.includes("canvas_ppct_catalog.php") || canvas.includes("teacher_ppct_catalogs"));
+assert(canvas.includes("hoangthiencm@gmail.com"));
+assert(canvas.includes("user_account"));
+assert(canvas.includes("role='teacher'"));
+assert(app.includes("canvas_ppct_catalog.php"));
+assert(app.includes("function canvasPpctAccount"));
+assert(!/if\(isCanvasGeminiRoute\(\)\)\{localStorage\.setItem\("khbd_ppct_catalog_canvas"/.test(app));
 console.log('PASS PPCT API auth contract');

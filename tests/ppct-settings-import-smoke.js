@@ -5,8 +5,9 @@ const app = fs.readFileSync('js/khbd-app.js', 'utf8');
 const api = fs.readFileSync('api/khbd_ppct_catalog.php', 'utf8');
 
 assert.match(html, /modalPpctCatalogSettings/);
-assert.match(html, /id="step2PpctLessonSelect"/, 'Bước 2 phải có danh sách PPCT từ CSDL');
-assert.match(html, /Bước 2: PPCT đã lưu/, 'Bước 2 phải phản ánh PPCT đã lưu thay vì yêu cầu nạp lại');
+assert.match(html, /id="step2PpctLessonSelect"/, 'Vẫn giữ select PPCT ẩn để tương thích CSDL');
+assert.match(html, /id="ppctLessonPicker"/, 'Chọn bài PPCT nằm ở thông tin bài học');
+assert.match(html, /tab0-sub-lesson-info[\s\S]*ppctLessonPicker/, 'Picker PPCT phải ở tab thông tin bài & lớp');
 assert.match(html, /id="lessonPpctAnalysis" style="display:none"/, 'Khối PPCT trùng lặp ở tab học liệu phải được ẩn');
 assert.match(html, /Gửi file &amp; Đọc SGK<\/button>/, 'Tab học liệu chính chỉ còn luồng SGK');
 assert.match(html, /ppctCatalogGrade/);

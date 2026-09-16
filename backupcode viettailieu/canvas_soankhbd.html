@@ -34,6 +34,7 @@
         version: "20260916-ppct-settings-v10",
         systemGemini: true,
         geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php",
+        account: "hoangthiencm@gmail.com",
         connected: false
       };
     })();
@@ -247,7 +248,7 @@
         <button id="btnManageKeys" class="btn btn-outline" title="Canvas dùng Gemini key hệ thống do Admin cấu hình" style="pointer-events:none;opacity:.85">
           <i data-lucide="sparkles"></i> Canvas · <span id="keyCountBadge">gemini-3-flash-preview</span>
         </button>
-        <button id="btnManagePpctCatalog" class="btn btn-outline" type="button" title="Danh mục PPCT của Canvas chỉ lưu trên trình duyệt này">
+        <button id="btnManagePpctCatalog" class="btn btn-outline" type="button" title="Đồng bộ danh mục PPCT với CSDL hosting (hoangthiencm@gmail.com)">
           <i data-lucide="database"></i> PPCT cục bộ
         </button>
         <button id="compactModeBtn" class="btn btn-outline" type="button" onclick="toggleCompactMode()" title="Giao diện gọn" aria-pressed="false">
@@ -347,27 +348,15 @@
           </div>
         </div>
         <span class="khbd-step-arrow" aria-hidden="true">→</span>
-        <div class="khbd-step" data-step="2">
+        <div class="khbd-step" data-step="2" hidden style="display:none">
           <span class="khbd-step-num">2</span>
-          <div style="min-width:230px;">
+          <div>
             <strong>Bước 2: PPCT đã lưu</strong>
             <span id="step2Badge" class="khbd-step-badge">Đang kiểm tra dữ liệu...</span>
-            <select id="step2PpctLessonSelect" hidden style="display:none;width:100%;margin-top:.35rem;padding:.28rem .4rem;font-size:.82rem;" aria-label="Chọn bài từ PPCT đã lưu"></select>
-            <div id="ppctLessonPicker" class="ppct-lesson-picker" style="display:none">
-              <input id="ppctLessonSearch" type="search" placeholder="Tìm bài, tiết CT, tuần..." aria-label="Tìm bài PPCT">
-              <div class="ppct-lesson-filters" role="tablist" aria-label="Lọc bài PPCT">
-                <button type="button" data-ppct-filter="all" class="active">Tất cả</button>
-                <button type="button" data-ppct-filter="nls">Có NLS</button>
-                <button type="button" data-ppct-filter="ai">Có AI</button>
-                <button type="button" data-ppct-filter="nls-ai">Có NLS + AI</button>
-              </div>
-              <div id="ppctLessonList" class="ppct-lesson-list"></div>
-              <div id="ppctLessonSummary" class="ppct-lesson-summary" style="display:none"></div>
-            </div>
-            <button id="btnStep2PpctSettings" class="btn btn-outline-dark btn-sm" type="button" style="margin-top:.35rem;">⚙ Cài đặt PPCT</button>
+            <select id="step2PpctLessonSelect" hidden style="display:none" aria-label="Chọn bài từ PPCT đã lưu"></select>
+            <button id="btnStep2PpctSettings" class="btn btn-outline-dark btn-sm" type="button" hidden>⚙ Cài đặt PPCT</button>
           </div>
         </div>
-        <span class="khbd-step-arrow" aria-hidden="true">→</span>
         <div class="khbd-step" data-step="3">
           <span class="khbd-step-num">3</span>
           <div>
@@ -579,6 +568,18 @@
               <button id="btnClearCurrentDraft" class="btn btn-outline-dark btn-sm">Xóa bản nháp này</button>
               <button id="btnImportLegacyDraft" class="btn btn-outline-dark btn-sm" hidden>Nhập bản nháp cũ</button>
             </div>
+          </div>
+          <div id="ppctLessonPicker" class="ppct-lesson-picker" style="display:none;margin:0 1rem 1rem;">
+            <p class="text-muted" style="font-size:.82rem;margin:0 0 .4rem;">Bài học theo lớp/môn từ PPCT đã lưu. Chọn một bài để điền tên, tiết CT và thời lượng.</p>
+            <input id="ppctLessonSearch" type="search" placeholder="Tìm bài, tiết CT, tuần..." aria-label="Tìm bài PPCT">
+            <div class="ppct-lesson-filters" role="tablist" aria-label="Lọc bài PPCT">
+              <button type="button" data-ppct-filter="all" class="active">Tất cả</button>
+              <button type="button" data-ppct-filter="nls">Có NLS</button>
+              <button type="button" data-ppct-filter="ai">Có AI</button>
+              <button type="button" data-ppct-filter="nls-ai">Có NLS + AI</button>
+            </div>
+            <div id="ppctLessonList" class="ppct-lesson-list"></div>
+            <div id="ppctLessonSummary" class="ppct-lesson-summary" style="display:none"></div>
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
             <div class="tool-group">

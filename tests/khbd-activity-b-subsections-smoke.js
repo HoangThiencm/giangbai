@@ -172,6 +172,11 @@ function testPromptTemplateActivityB() {
   assert.ok(/### Hoạt động 2\.1: Khái niệm tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.1 có thời lượng cố định");
   assert.ok(/### Hoạt động 2\.2: Phần tử của tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.2 có thời lượng cố định");
   assert.ok(/### Hoạt động 2\.3: Cách viết tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.3 có thời lượng cố định");
+  assert.ok(promptB.includes("Bài học có 3 mục lớn thì BẮT BUỘC phải sinh đủ 3 nhánh"), "Prompt B phải cấm dừng sau 2.1 khi có 3 mục");
+  const skeleton22 = promptB.lastIndexOf("## B. HOẠT ĐỘNG 2:");
+  const list22 = promptB.indexOf("DANH SÁCH TIỂU MỤC SGK");
+  assert.ok(skeleton22 >= 0 && list22 > skeleton22, "Khung mẫu B phải đứng trước danh sách tiểu mục");
+  assert.ok(promptB.slice(skeleton22, list22).includes("### Hoạt động 2.2:"), "Khung mẫu cuối prompt phải có Hoạt động 2.2, không chỉ 2.1");
 
   console.log("  -> getPromptTemplate Activity B: PASS");
 }
@@ -210,6 +215,13 @@ function testAssertPhasePedagogyOutput() {
 
   // 1. Output hợp lệ 2 nhánh với định dạng Hoạt động 2.1 -> PASS
   assert.doesNotThrow(() => assertPhasePedagogyOutput("B", validOutputB), "Valid multi-branch Hoạt động 2.k phải pass");
+  assert.doesNotThrow(() => assertPhasePedagogyOutput("B", validOutputB, { expectedBranches: 2 }), "2 nhánh đủ 2.1 và 2.2 phải pass");
+  const only21 = validOutputB.replace(/### 2\. Hoạt động 2\.2:[\s\S]*$/, "");
+  assert.throws(
+    () => assertPhasePedagogyOutput("B", only21, { expectedBranches: 2 }),
+    /thiếu Hoạt động 2\.2/i,
+    "Thiếu 2.2 khi có 2 mục lớn phải throw"
+  );
 
   // Định dạng 2: ### 1. Hoạt động 1: ... (15 phút)
   const validOutputBFormat2 = `

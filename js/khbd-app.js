@@ -255,7 +255,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     marker: "[STEM]",
     promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
-                                                                                                                                                                                {
+                                                                                                                                                                                  {
     id: "virtualLab",
     label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
     legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
@@ -380,13 +380,20 @@ async function initializeKhbdApp() {
     renderPhasePedagogy();
     renderAllTabsPreview();
     try {
-      if (isCanvasGeminiRoute()) {
+      await loadPpctCatalogForCurrentMeta();
+      if (isCanvasGeminiRoute() && !(appState.ppctCatalog.rows || []).length) {
         const local = localStorage.getItem("khbd_ppct_catalog_canvas");
-        if (local && !(appState.ppctCatalog.rows || []).length) appState.ppctCatalog = JSON.parse(local);
-      } else {
-        await loadPpctCatalogForCurrentMeta();
+        if (local) appState.ppctCatalog = JSON.parse(local);
       }
-    } catch (e) { console.info("Không tải được PPCT từ CSDL; vẫn dùng bản cục bộ."); }
+    } catch (e) {
+      console.info("Không tải được PPCT từ CSDL; vẫn dùng bản cục bộ.");
+      if (isCanvasGeminiRoute()) {
+        try {
+          const local = localStorage.getItem("khbd_ppct_catalog_canvas");
+          if (local && !(appState.ppctCatalog.rows || []).length) appState.ppctCatalog = JSON.parse(local);
+        } catch (_) {}
+      }
+    }
     renderPpctCatalogReview();
 
     try {
@@ -5233,7 +5240,18 @@ function pedagogyLabelInText(haystack, label) {
   return String(label).split(/[\/()–—-]+/).map(fold).filter(part => part.length >= 5).some(part => hay.includes(part));
 }
 
-function assertPhasePedagogyOutput(phase, output) {
+function expectedActivityBBranchCount(options) {
+  if (options && Number(options.expectedBranches) > 0) return Number(options.expectedBranches);
+  if (options && Array.isArray(options.subsections) && options.subsections.length) {
+    return options.subsections.length;
+  }
+  const profiles = (typeof appState !== "undefined" && Array.isArray(appState.textbookSubsectionProfiles))
+    ? appState.textbookSubsectionProfiles
+    : [];
+  return profiles.length || 0;
+}
+
+function assertPhasePedagogyOutput(phase, output, options) {
   const text = String(output || "");
   if (phase === "E") {
     const hasOnTap = /ôn\s*tập/i.test(text);
@@ -5256,8 +5274,15 @@ function assertPhasePedagogyOutput(phase, output) {
 
   // 2. Với Pha B: Kiểm tra từng hoạt động con (2.1, 2.2, ... hoặc Hoạt động 1, Hoạt động 2, ...)
   if (phase === "B") {
+    const expectedBranches = expectedActivityBBranchCount(options || {});
+    if (expectedBranches >= 2 && !/Hoạt động\s*2\.2\b/i.test(text)) {
+      throw new Error(`Hoạt động B có ${expectedBranches} mục lớn nhưng thiếu Hoạt động 2.2. Phải sinh đủ từ 2.1 đến 2.${expectedBranches}.`);
+    }
     const branchRegex = /(?:^|\n)###\s*(?:\d+\.\s*)?Hoạt động\s*(?:2\.\d+|\d+)[\s\S]*?(?=(?:\n###\s*(?:\d+\.\s*)?Hoạt động\s*(?:2\.\d+|\d+)|\n##\s+[A-Z]|\n#\s+[IVXLCDM]+|$))/gi;
     const branches = text.match(branchRegex);
+    if (expectedBranches >= 2 && branches && branches.length < expectedBranches) {
+      throw new Error(`Hoạt động B có ${expectedBranches} mục lớn nhưng chỉ có ${branches.length} nhánh. Phải sinh đủ từ 2.1 đến 2.${expectedBranches}.`);
+    }
 
     if (branches && branches.length > 0) {
       branches.forEach((branch, idx) => {
@@ -6026,8 +6051,53 @@ function parsePpctCatalog(raw, meta = {}) {
   return rows;
 }
 function ppctCatalogMeta() { return { subject: String(appState.selectedSubject || "").trim(), grade: String(appState.selectedGrade || "").trim(), academic_year: String(appState.ppctCatalogAcademicYear || "").trim() }; }
+function canvasPpctAccount() {
+  if (!isCanvasGeminiRoute()) return "";
+  const fromConfig = typeof window !== "undefined" && window.__KHBD_CANVAS__ && window.__KHBD_CANVAS__.account;
+  return String(fromConfig || (typeof localStorage !== "undefined" && localStorage.getItem("userEmail")) || "hoangthiencm@gmail.com").trim();
+}
+function ppctCatalogEndpoint() {
+  if (isCanvasGeminiRoute()) {
+    const host = (typeof window !== "undefined" && window.__KHBD_CANVAS__ && window.__KHBD_CANVAS__.host) || "https://hoangthiencm.id.vn";
+    return `${String(host).replace(/\/$/, "")}/api/canvas_ppct_catalog.php`;
+  }
+  return "api/khbd_ppct_catalog.php";
+}
+async function ppctCatalogFetch(meta = ppctCatalogMeta(), options = {}) {
+  const params = new URLSearchParams({ subject: meta.subject || "", grade: meta.grade || "" });
+  if (meta.academic_year) params.set("academic_year", meta.academic_year);
+  const account = canvasPpctAccount();
+  if (account) params.set("user_account", account);
+  const headers = { ...(options.headers || {}) };
+  if (account) headers["X-User-Account"] = encodeURIComponent(account);
+  const bodyObj = options.body && typeof options.body === "object" ? { ...options.body, ...(account ? { user_account: account } : {}) } : null;
+  return fetch(`${ppctCatalogEndpoint()}?${params}`, {
+    credentials: isCanvasGeminiRoute() ? "omit" : "same-origin",
+    cache: "no-store",
+    ...options,
+    headers: { "Content-Type": "application/json", ...headers },
+    body: bodyObj ? JSON.stringify(bodyObj) : options.body
+  });
+}
 function cleanPpctCatalogSource(source, meta = ppctCatalogMeta()) { const value = source && typeof source === "object" ? source : {}; return { format:String(value.format || "appendix3").slice(0,80), analyzedAt:String(value.analyzedAt || new Date().toISOString()), grade:meta.grade, subject:meta.subject, academicYear:meta.academic_year, importMode:String(value.importMode || "settings").slice(0,40) }; }
-async function loadPpctCatalogForCurrentMeta() { const meta=ppctCatalogMeta(); if(!meta.subject||!meta.grade) return null; const qs=new URLSearchParams(meta); const response=await fetch(`api/khbd_ppct_catalog.php?${qs}`,{credentials:"same-origin"}); const data=await response.json(); if(response.ok && data.catalog && Array.isArray(data.catalog.rows)){ appState.ppctCatalog={rows:data.catalog.rows,source:data.catalog.source||{},selectedRowId:"",serverId:data.catalog.id}; appState.ppctCatalogAcademicYear=String(data.catalog.academic_year||meta.academic_year||""); saveStateToLocalStorage(); return data.catalog; } if(response.ok){ appState.ppctCatalog={rows:[],source:{},selectedRowId:"",serverId:null}; return null; } return null; }
+async function loadPpctCatalogForCurrentMeta() {
+  const meta = ppctCatalogMeta();
+  if (!meta.subject || !meta.grade) return null;
+  const response = await ppctCatalogFetch(meta);
+  const data = await response.json();
+  if (response.ok && data.catalog && Array.isArray(data.catalog.rows)) {
+    const keepId = appState.ppctCatalog.selectedRowId || "";
+    appState.ppctCatalog = { rows: data.catalog.rows, source: data.catalog.source || {}, selectedRowId: keepId, serverId: data.catalog.id };
+    appState.ppctCatalogAcademicYear = String(data.catalog.academic_year || meta.academic_year || "");
+    saveStateToLocalStorage();
+    return data.catalog;
+  }
+  if (response.ok) {
+    appState.ppctCatalog = { rows: [], source: {}, selectedRowId: "", serverId: null };
+    return null;
+  }
+  return null;
+}
 function ppctRowHasNls(row) {
   return !!(row && (row.nls?.enabled || (row.nls?.codes || []).length || (row.digital_competency || []).length));
 }
@@ -6173,7 +6243,18 @@ function renderPpctCatalogReview() {
   }
   updateWorkflowStepper();
 }
-async function savePpctCatalogToServer() { if(isCanvasGeminiRoute()){localStorage.setItem("khbd_ppct_catalog_canvas",JSON.stringify(appState.ppctCatalog));showToast("Canvas chỉ lưu cục bộ trên trình duyệt; hãy mở Soạn KHBD trên website để lưu CSDL.","info");return;} const meta=ppctCatalogMeta(); const body={...meta,rows:appState.ppctCatalog.rows,source:cleanPpctCatalogSource(appState.ppctCatalog.source,meta)}; const res=await fetch("api/khbd_ppct_catalog.php",{method:"PUT",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(body)}); const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||"Không lưu được CSDL");appState.ppctCatalog.serverId=data.catalog.id;appState.ppctCatalog.source=body.source;saveStateToLocalStorage();showToast("Đã lưu danh mục PPCT vào CSDL.","success"); }
+async function savePpctCatalogToServer() {
+  const meta = ppctCatalogMeta();
+  const body = { ...meta, rows: appState.ppctCatalog.rows, source: cleanPpctCatalogSource(appState.ppctCatalog.source, meta) };
+  const res = await ppctCatalogFetch(meta, { method: "PUT", body });
+  const data = await res.json();
+  if (!res.ok || !data.ok) throw new Error(data.error || "Không lưu được CSDL");
+  appState.ppctCatalog.serverId = data.catalog.id;
+  appState.ppctCatalog.source = body.source;
+  if (isCanvasGeminiRoute()) localStorage.setItem("khbd_ppct_catalog_canvas", JSON.stringify(appState.ppctCatalog));
+  saveStateToLocalStorage();
+  showToast(isCanvasGeminiRoute() ? "Đã lưu danh mục PPCT lên CSDL hosting." : "Đã lưu danh mục PPCT vào CSDL.", "success");
+}
 
 function fillPpctCatalogSubjectOptions() { const select=document.getElementById("ppctCatalogSubject"); if(!select||select.options.length)return; const subjects=(CURRICULUM_DATA?.subjects||[]); select.innerHTML=subjects.map(s=>`<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join(""); }
 function renderPpctCatalogSettingsPreview() {
@@ -6196,7 +6277,7 @@ function renderPpctCatalogSettingsPreview() {
   const uncertainCount=rows.reduce((sum,row)=>sum+(Array.isArray(row.uncertain_fields)&&row.uncertain_fields.length?1:0),0);
   host.innerHTML=`<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem"><b>PPCT tái tạo từ JSON: ${rows.length} dòng</b>${uncertainCount?`<span style="color:#b45309;font-weight:700">⚠ ${uncertainCount} dòng cần đối chiếu nguồn</span>`:'<span style="color:#15803d;font-weight:700">✓ Không có trường chưa chắc chắn</span>'}</div><div style="max-height:420px;overflow:auto;border:1px solid var(--border);border-radius:.5rem"><table class="data-table" style="min-width:1180px"><thead><tr><th>Chương/Chủ đề</th><th>Bài học/Hoạt động</th><th>Số tiết</th><th>Tiết CT</th><th>Tuần</th><th>Thiết bị</th><th>Địa điểm</th><th>Ghi chú / NLS / AI</th></tr></thead><tbody>${body}</tbody></table></div><p class="text-muted" style="font-size:.82rem;margin:.6rem 0 0">Đối chiếu bảng này với PPCT gốc trước khi bấm Lưu. Các dòng nền cam có trường ChatGPT/Gemini đánh dấu chưa chắc chắn.</p>`;
 }
-function openPpctCatalogSettings() { fillPpctCatalogSubjectOptions(); const grade=document.getElementById("ppctCatalogGrade"), subject=document.getElementById("ppctCatalogSubject"), year=document.getElementById("ppctCatalogYear"), raw=document.getElementById("ppctCatalogRawText"); if(grade)grade.value=appState.selectedGrade;if(subject)subject.value=appState.selectedSubject;if(year)year.value=appState.ppctCatalogAcademicYear||"";if(raw)raw.value=appState.content.ppctAnalysis||""; renderPpctCatalogSettingsPreview(); if(isCanvasGeminiRoute()) showToast("Canvas chỉ lưu danh mục cục bộ; hãy dùng website Soạn KHBD để lưu CSDL.","info"); openModal("modalPpctCatalogSettings"); }
+function openPpctCatalogSettings() { fillPpctCatalogSubjectOptions(); const grade=document.getElementById("ppctCatalogGrade"), subject=document.getElementById("ppctCatalogSubject"), year=document.getElementById("ppctCatalogYear"), raw=document.getElementById("ppctCatalogRawText"); if(grade)grade.value=appState.selectedGrade;if(subject)subject.value=appState.selectedSubject;if(year)year.value=appState.ppctCatalogAcademicYear||"";if(raw)raw.value=appState.content.ppctAnalysis||""; renderPpctCatalogSettingsPreview(); openModal("modalPpctCatalogSettings"); }
 /** Shared normalizer for Step 2 and Settings. Raw text never becomes CSDL source. */
 async function analyzePpctImport({ media, rawText, targetMeta, onRows } = {}) { const meta={subject:String(targetMeta?.subject||appState.selectedSubject),grade:String(targetMeta?.grade||appState.selectedGrade),academic_year:String(targetMeta?.academic_year||"")}; let rows=parsePpctCatalog(rawText||"",meta); let importMode=rawText?.trim()?"paste":"media"; if(!rows.length && Array.isArray(media) && media.length){ const prompt='Lập danh mục Phụ lục 3. Chỉ trả JSON hợp lệ: {"rows":[{"chapter":"","title":"","periods":null,"tietCt":"","week":"","nls":{"enabled":false,"codes":[]},"ai":{"enabled":false,"codes":[]},"notes":""}]}. Giữ đúng mã/tick NLS và AI nếu thấy.'; const data=parseAiJsonSafely(await geminiAPI.generateContent(prompt,media,getSystemRole(meta.subject,meta.grade),0.1),"Phân tích PPCT"); rows=(data.rows||[]).map((row,index)=>({id:ppctStableId(`${meta.subject}|${meta.grade}|${row.title||""}|${row.tietCt||""}|${index}`),chapter:String(row.chapter||""),header:"",title:String(row.title||"").trim(),periods:Number(row.periods)||null,tietCt:String(row.tietCt||""),week:String(row.week||""),devices:"",location:"",nls:{enabled:!!row.nls?.enabled,codes:Array.isArray(row.nls?.codes)?row.nls.codes:[],evidence:String(row.nls?.evidence||"")},ai:{enabled:!!row.ai?.enabled,codes:Array.isArray(row.ai?.codes)?row.ai.codes:[],evidence:String(row.ai?.evidence||"")},notes:String(row.notes||""),source:{kind:"appendix3"}})).filter(row=>row.title); }
  if(!rows.length) throw new Error("Chưa nhận diện được dòng bài học. Hãy dán bảng PPCT hoặc chọn ảnh/PDF rõ nét."); if(typeof onRows==="function")onRows(rows,{format:importMode==="paste"?"appendix3-text":"appendix3-ai",analyzedAt:new Date().toISOString(),subject:meta.subject,grade:meta.grade,academicYear:meta.academic_year,importMode}); return rows; }
@@ -7622,7 +7703,7 @@ function setupPpctJsonWorkflow(){const promptBtn=document.getElementById("btnCop
 function setupPpctCatalogSettingsModal() {
   const openBtn=document.getElementById("btnManagePpctCatalog"), save=document.getElementById("btnSavePpctCatalogSettings");
   openBtn?.addEventListener("click",openPpctCatalogSettings);
-  save?.addEventListener("click",async()=>{ if(!(appState.ppctCatalog.rows||[]).length){showToast("Hãy nhập JSON PPCT trước khi lưu.","warning");return;} if(isCanvasGeminiRoute()){await savePpctCatalogToServer();return;} const meta={subject:document.getElementById("ppctCatalogSubject")?.value,grade:document.getElementById("ppctCatalogGrade")?.value,academic_year:document.getElementById("ppctCatalogYear")?.value?.trim()}; const changing=meta.subject!==appState.selectedSubject||meta.grade!==appState.selectedGrade||meta.academic_year!==appState.ppctCatalogAcademicYear; if(changing){appState.selectedSubject=meta.subject;appState.selectedGrade=meta.grade;appState.ppctCatalogAcademicYear=meta.academic_year;} try { const existing=await fetch(`api/khbd_ppct_catalog.php?${new URLSearchParams(meta)}`,{credentials:"same-origin"}).then(r=>r.ok?r.json():null); if(existing?.catalog&&!userConfirm("Danh mục PPCT cho khối, môn và năm học này đã có. Thay thế bằng danh mục mới?")) return; await savePpctCatalogToServer(); closeModal("modalPpctCatalogSettings"); } catch(error){showToast(error.message||"Không lưu được PPCT.","danger");} });
+  save?.addEventListener("click",async()=>{ if(!(appState.ppctCatalog.rows||[]).length){showToast("Hãy nhập JSON PPCT trước khi lưu.","warning");return;} const meta={subject:document.getElementById("ppctCatalogSubject")?.value,grade:document.getElementById("ppctCatalogGrade")?.value,academic_year:document.getElementById("ppctCatalogYear")?.value?.trim()}; const changing=meta.subject!==appState.selectedSubject||meta.grade!==appState.selectedGrade||meta.academic_year!==appState.ppctCatalogAcademicYear; if(changing){appState.selectedSubject=meta.subject;appState.selectedGrade=meta.grade;appState.ppctCatalogAcademicYear=meta.academic_year;} try { const existing=await ppctCatalogFetch(meta).then(r=>r.ok?r.json():null); if(existing?.catalog&&!userConfirm("Danh mục PPCT cho khối, môn và năm học này đã có. Thay thế bằng danh mục mới?")) return; await savePpctCatalogToServer(); closeModal("modalPpctCatalogSettings"); } catch(error){showToast(error.message||"Không lưu được PPCT.","danger");} });
 }
 
 function setupApiKeyModal() {
@@ -7929,5 +8010,7 @@ if (typeof module !== 'undefined' && module.exports) {
     ,applyPpctCatalogRow
     ,filterPpctCatalogRows
     ,savePpctCatalogToServer
+    ,canvasPpctAccount
+    ,ppctCatalogEndpoint
   };
 }

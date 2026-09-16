@@ -189,7 +189,13 @@ const promptMul = getPromptTemplate('GENERATE_ACTIVITY_B', {
 assert.match(promptMul, /### Hoạt động 2\.1: 1\. PHÉP NHÂN SỐ TỰ NHIÊN/);
 assert.match(promptMul, /### Hoạt động 2\.2: 2\. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ/);
 assert.match(promptMul, /CẤM bỏ qua Mục 1/);
+assert.match(promptMul, /Bài học có 2 mục lớn thì BẮT BUỘC phải sinh đủ 2 nhánh/);
+assert.match(promptMul, /TUYỆT ĐỐI CẤM dừng lại hoặc bỏ dở sau khi chỉ sinh Hoạt động 2\.1/);
 assert.doesNotMatch(promptMul, /### Hoạt động 2\.1: Tính chất của phép nhân/);
+const bHeading = promptMul.lastIndexOf("## B. HOẠT ĐỘNG 2:");
+const afterB = promptMul.slice(bHeading, bHeading + 2500);
+assert.match(afterB, /### Hoạt động 2\.1: 1\. PHÉP NHÂN SỐ TỰ NHIÊN/);
+assert.match(afterB, /### Hoạt động 2\.2: 2\. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ/);
 
 const pickerRows = [
   { id: '1', title: 'Bài 1', tietCt: '1', nls: { enabled: true, codes: ['1.1'] }, ai: { enabled: false, codes: [] } },
