@@ -1,38 +1,21 @@
-# Báo cáo: Sinh đủ N nhánh Hoạt động B + bộ chọn PPCT NLS/AI + Word lề/header/footer
+# IMPLEMENT
 
-## 1. Hoạt động B: khung mẫu động theo N mục lớn SGK
+## Đã thực hiện
 
-- `js/khbd-prompts.js`: `activityBBranchSkeleton` + `expandActivityBSkeleton` thay khung tĩnh chỉ có 2.1 bằng đủ `Hoạt động 2.1` … `2.N` (tên đề mục nguyên văn + phút phân bổ).
-- Khung mẫu tĩnh cũng có sẵn 2.2 để AI không dừng sau 2.1 khi chưa expand.
-- Chỉ thay dòng khung mẫu thật (`\n## B. HOẠT ĐỘNG 2:…`), không cắt đoạn hướng dẫn phía trên.
-- Lệnh cấm: *Bài học có N mục lớn thì BẮT BUỘC phải sinh đủ N nhánh… TUYỆT ĐỐI CẤM dừng lại hoặc bỏ dở sau khi chỉ sinh Hoạt động 2.1* (trong template, khung mẫu và DANH SÁCH TIỂU MỤC).
-- `js/khbd-app.js`: `assertPhasePedagogyOutput` ném lỗi nếu `expectedBranches >= 2` mà thiếu `Hoạt động 2.2`. Đếm nhánh từ hồ sơ tiểu mục hoặc `extractTextbookSubsections`.
-- Sau 1 lần sửa, nếu B vẫn thiếu 2.2 thì **không lưu** — báo lỗi để sinh lại.
-- Cache-bust `textbook-exact-v14`.
-- Ví dụ Phép nhân / Phép chia: prompt B có
-  - `### Hoạt động 2.1: 1. PHÉP NHÂN SỐ TỰ NHIÊN`
-  - `### Hoạt động 2.2: 2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ`
+- Cập nhật Stepper trên cả hai bản Canvas thành giao diện 3 bước: các khối logic `data-step="3"` và `data-step="4"` vẫn được giữ nguyên, nhưng hiển thị lần lượt số `2` và `3`.
+- Đặt `aria-label` của Stepper là `Quy trình 3 bước soạn KHBD`; đồng bộ nhãn bước trong bản sao lưu để khớp giao diện chính.
+- Nâng cache-busting của các mô-đun Canvas từ `20260916-canvas-module-v8` lên `20260916-canvas-module-v9`.
+- Cập nhật hai smoke test để yêu cầu phiên bản v9 và xác nhận Stepper vừa giữ `data-step` cũ vừa hiển thị 1–2–3.
 
-## 2. Bộ chọn bài PPCT (Bước 2–3)
+## Hosting
 
-- `soankhbd.html` / `canvas_soankhbd.html`: ô tìm, bộ lọc `Tất cả | Có NLS | Có AI | Có NLS + AI`, badge `[NLS]` / `[AI]`, thẻ tóm tắt (tên bài, Tiết CT, thời lượng, tuần, mã NLS/AI).
-- Chọn bài → nạp tên bài, tiết CT, thời lượng, khóa/ưu tiên NLS & AI từ PPCT.
-- Bước 3: *Kế hoạch PPDH & Tích hợp NLS/AI (Ưu tiên từ PPCT)*.
-
-## 3. Xuất Word
-
-- `js/khbd-docx.js`: A4, lề 850/850/1134/850 dxa, Before 0 / After 60 / Line 240, bảng 9922 (2 cột 4961), căn đều.
-- Header 2 cột không viền: `Trường [Tên trường]` | `Giáo viên: [Tên GV]`; Chương IN HOA ĐẬM; `TIẾT X - BÀI Y: TÊN BÀI` 14pt; thời lượng nghiêng.
-- Footer: `Môn: …` | `- Trang X -` | `Năm học: …`.
+Tệp cục bộ `js/khbd-curriculum.js` đã được xác nhận có 173.676 byte. Không có thông tin xác thực FTP trong workspace, nên chưa thể re-upload trực tiếp lên `hoangthiencm.id.vn`; workflow `.github/workflows/ftp-deploy.yml` sẽ tải tệp này khi thay đổi được triển khai qua quy trình CI hiện có.
 
 ## Kiểm thử
 
-- `node tests/khbd-textbook-exact-structure-smoke.js`: PASS (TEST 6: khung mẫu cuối prompt đủ 2.1 và 2.2)
-- `node tests/khbd-activity-b-subsections-smoke.js`: PASS (3 nhánh; thiếu 2.2 thì throw)
-- `node tests/docx-export-format-smoke.js`: PASS
-- `node tests/canvas-soankhbd-smoke.js`: PASS
-- `node tests/khbd-4steps-workflow-smoke.js`: PASS
-- `node tests/ppct-settings-import-smoke.js`: PASS
-- `node tests/khbd-docx-layout-smoke.js`: PASS
+- Kiểm tra tĩnh: không còn chuỗi phiên bản v8 hoặc `aria-label` 4 bước trong hai trang Canvas; diff không có lỗi khoảng trắng (`git diff --check`).
+- Hai smoke test đã được gọi nhưng chưa chạy được: Windows Security chặn `node.exe` của runtime với thông báo tệp có thể là virus/PUA. Cần chạy lại sau khi runtime Node được cho phép:
+  - `node tests/canvas-module-fallback-smoke.js`
+  - `node tests/canvas-soankhbd-smoke.js`
 
-Không commit. `docs/handoff/PLAN.md` không bị sửa.
+Không commit. `docs/handoff/PLAN.md` không bị sửa thêm.

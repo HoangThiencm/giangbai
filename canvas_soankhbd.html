@@ -339,7 +339,7 @@
          TAB 0: THIẾT LẬP CHUNG & THÔNG TIN BÀI DẠY
          ----------------------------------------------------------------------- -->
     <section id="tabVision" class="tab-pane active">
-      <nav id="khbdWorkflowStepper" class="khbd-workflow-stepper" aria-label="Quy trình 4 bước soạn KHBD">
+      <nav id="khbdWorkflowStepper" class="khbd-workflow-stepper" aria-label="Quy trình 3 bước soạn KHBD">
         <div class="khbd-step" data-step="1">
           <span class="khbd-step-num">1</span>
           <div>
@@ -358,7 +358,7 @@
           </div>
         </div>
         <div class="khbd-step" data-step="3">
-          <span class="khbd-step-num">3</span>
+          <span class="khbd-step-num">2</span>
           <div>
             <strong>Bước 2: Kế hoạch PPDH &amp; Tích hợp NLS/AI (Ưu tiên từ PPCT)</strong>
             <span id="step3Badge" class="khbd-step-badge">Chưa đề xuất</span>
@@ -367,7 +367,7 @@
         </div>
         <span class="khbd-step-arrow" aria-hidden="true">→</span>
         <div class="khbd-step" data-step="4">
-          <span class="khbd-step-num">4</span>
+          <span class="khbd-step-num">3</span>
           <div>
             <strong>Bước 3: Tích hợp AI &amp; Soạn bài</strong>
             <span id="step4Badge" class="khbd-step-badge">AI tắt (tùy chọn)</span>
@@ -1052,7 +1052,7 @@
   (function bootstrapCanvasCoreModules() {
     var cfg = window.__KHBD_CANVAS__ || (window.__KHBD_CANVAS__ = {});
     var host = cfg.host || "https://hoangthiencm.id.vn";
-    var version = "20260916-canvas-module-v8";
+    var version = "20260916-canvas-module-v9";
     cfg.moduleFallback = cfg.moduleFallback || {};
     function hasCurriculum() { return !!(window.CURRICULUM_DATA && Array.isArray(window.CURRICULUM_DATA.subjects) && window.CURRICULUM_DATA.subjects.length); }
     function load(name, url, valid) {
@@ -1112,14 +1112,14 @@
         document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v14"}"><\/script>`);
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260916-canvas-module-v8"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260916-canvas-module-v9"></script>
   <script>
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-        document.write(`<script src="${isLocal ? "js/khbd-docx.js" : "https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260916-canvas-module-v8"}"><\/script>`);
+        document.write(`<script src="${isLocal ? "js/khbd-docx.js" : "https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260916-canvas-module-v9"}"><\/script>`);
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260916-canvas-module-v8"></script>
+  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260916-canvas-module-v9"></script>
 
   <!-- Fallback nhúng: khi host trả về file rỗng (0 bytes) hoặc lỗi mạng -->
   <script>

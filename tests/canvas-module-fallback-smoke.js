@@ -43,9 +43,9 @@ async function runBootstrap(source, normal) {
 (async () => {
   for (const rel of pages) {
     const html = fs.readFileSync(path.join(root, rel), "utf8");
-    assert.match(html, /20260916-canvas-module-v8/, `${rel} uses v8 cache busting`);
+    assert.match(html, /20260916-canvas-module-v9/, `${rel} uses v9 cache busting`);
     assert.match(html, /Không tải được danh mục chương trình từ host; đang dùng danh mục dự phòng/, `${rel} distinguishes fallback banner`);
-    assert.match(html, /khbd-curriculum\.js/, `${rel} loads curriculum through the v8 loader`);
+    assert.match(html, /khbd-curriculum\.js/, `${rel} loads curriculum through the v9 loader`);
     assert.match(html, /[?]v[=]"?\s*[+]\s*(?:version|v)/, `${rel} appends a uniform version to module URLs`);
     assert.match(html, /khbd-standards\.js/, `${rel} loads standards defensively`);
     assert.match(html, /khbd-yccd\.js/, `${rel} loads yccd defensively`);
