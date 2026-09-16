@@ -1282,26 +1282,135 @@
                 .trim();
         };
 
+        const isImportedTfTrue = (token) => /^(đúng|đ|true|t)$/i.test(String(token || "").trim());
+        const isImportedTfToken = (token) => /^(đúng|sai|đ|s|true|false|t|f)$/i.test(String(token || "").trim());
+
+        const classifyImportedAnswerValue = (raw) => {
+            const text = String(raw || "").trim().replace(/[;,]+$/g, "").trim();
+            if (!text) return null;
+
+            const labeledRe = /([a-d])\s*[\.\)\-:]\s*(đúng|sai|đ|s|true|false|t|f)/gi;
+            const labeled = [];
+            let labeledMatch;
+            while ((labeledMatch = labeledRe.exec(text)) !== null) {
+                labeled.push({
+                    letter: labeledMatch[1].toLowerCase(),
+                    value: isImportedTfTrue(labeledMatch[2])
+                });
+            }
+            if (labeled.length >= 2) {
+                const arr = [false, false, false, false];
+                labeled.forEach((item) => {
+                    const idx = "abcd".indexOf(item.letter);
+                    if (idx >= 0) arr[idx] = item.value;
+                });
+                return { type: "tf", value: arr };
+            }
+
+            const tokens = text.split(/[\s,;]+/).map((token) => token.trim()).filter(Boolean);
+            const tfTokens = tokens.filter(isImportedTfToken);
+            if (tfTokens.length >= 2 && tfTokens.length === tokens.length) {
+                const arr = [false, false, false, false];
+                tfTokens.slice(0, 4).forEach((token, idx) => {
+                    arr[idx] = isImportedTfTrue(token);
+                });
+                return { type: "tf", value: arr };
+            }
+
+            if (/^[A-Da-d]$/.test(text)) {
+                return { type: "mc", value: text.toUpperCase() };
+            }
+            if (isImportedTfToken(text)) {
+                return { type: "tf", value: isImportedTfTrue(text) };
+            }
+            return { type: "short_answer", value: text };
+        };
+
+        const matchImportedAnswerSection = (text) => {
+            return String(text || "").match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：][^\n]*(?:\n(?!\s*(?:Câu|Cau|Question|Q)\s*\d+\s*[\.\):：-])[^\n]*)*/i);
+        };
+
+        const importedAnswerKeyLetter = (entry) => {
+            if (entry == null) return "";
+            if (typeof entry === "string") return entry;
+            if (typeof entry === "object" && entry.type === "mc") return String(entry.value || "");
+            return "";
+        };
+
+        const importedAnswerKeyText = (entry) => {
+            if (entry == null || entry === "") return "";
+            if (typeof entry === "boolean") return entry ? "Đúng" : "Sai";
+            if (typeof entry === "string" || typeof entry === "number") return String(entry);
+            if (typeof entry === "object") {
+                if (Array.isArray(entry.value)) {
+                    return entry.value.map((value) => (value ? "Đúng" : "Sai")).join(", ");
+                }
+                if (entry.type === "tf") return entry.value ? "Đúng" : "Sai";
+                if (entry.value != null && entry.value !== "") return String(entry.value);
+            }
+            return "";
+        };
+
+        const importedAnswerKeyTfList = (entry) => {
+            if (entry == null) return null;
+            const val = (typeof entry === "object" && entry !== null && "value" in entry) ? entry.value : entry;
+            if (Array.isArray(val) && val.length >= 2) {
+                const arr = [false, false, false, false];
+                val.slice(0, 4).forEach((value, idx) => {
+                    arr[idx] = !!value;
+                });
+                return arr;
+            }
+            return null;
+        };
+
         const getImportedAnswerKey = (text) => {
             const answerMap = {};
-            const answerSectionMatch = text.match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：][^\n]*(?:\n(?!\s*(?:Câu|Cau|Question|Q)\s*\d+\s*[\.\):：-])[^\n]*)*/i);
+            const answerSectionMatch = matchImportedAnswerSection(text);
             if (!answerSectionMatch) return answerMap;
 
             const answerSection = answerSectionMatch[0];
-            const pairRegex = /(\d{1,3})\s*[\.\)\-:]?\s*([A-D])/gi;
+            const pairRegex = /(\d{1,3})\s*[\.\)\-:]\s*/g;
             let match;
             while ((match = pairRegex.exec(answerSection)) !== null) {
-                answerMap[parseInt(match[1], 10)] = match[2].toUpperCase();
+                const number = parseInt(match[1], 10);
+                const after = answerSection.slice(pairRegex.lastIndex);
+                const labeledPeek = after.match(/^((?:[a-d]\s*[\.\)\-:]\s*(?:đúng|sai|đ|s|true|false|t|f)\s*,?\s*){2,4})/i);
+                if (labeledPeek) {
+                    const classified = classifyImportedAnswerValue(labeledPeek[1]);
+                    if (classified) answerMap[number] = classified;
+                    pairRegex.lastIndex += labeledPeek[0].length;
+                    continue;
+                }
+                const listPeek = after.match(/^((?:đúng|sai|true|false|đ|s|t|f)(?:(?:\s*,\s*|\s+)(?:đúng|sai|true|false|đ|s|t|f)){1,3})(?=\s|$|\d)/i);
+                if (listPeek) {
+                    const classified = classifyImportedAnswerValue(listPeek[1]);
+                    if (classified) answerMap[number] = classified;
+                    pairRegex.lastIndex += listPeek[0].length;
+                    continue;
+                }
+                const tokenPeek = after.match(/^([^\s\t\n\r]+)/);
+                if (!tokenPeek) continue;
+                const classified = classifyImportedAnswerValue(tokenPeek[1]);
+                if (classified) answerMap[number] = classified;
+                pairRegex.lastIndex += tokenPeek[0].length;
+            }
+
+            const oldPairRegex = /(\d{1,3})\s*[\.\)\-:]?\s*([A-D])(?![A-Za-z])/gi;
+            while ((match = oldPairRegex.exec(answerSection)) !== null) {
+                const number = parseInt(match[1], 10);
+                if (answerMap[number] == null) {
+                    answerMap[number] = { type: "mc", value: match[2].toUpperCase() };
+                }
             }
             return answerMap;
         };
 
         const stripImportedAnswerKey = (text) => {
-            const answerSectionMatch = text.match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：][^\n]*(?:\n(?!\s*(?:Câu|Cau|Question|Q)\s*\d+\s*[\.\):：-])[^\n]*)*/i);
+            const answerSectionMatch = matchImportedAnswerSection(text);
             if (!answerSectionMatch) return text;
-
-            const pairCount = (answerSectionMatch[0].match(/\d{1,3}\s*[\.\)\-:]?\s*[A-D]/gi) || []).length;
-            return pairCount ? text.slice(0, answerSectionMatch.index).trim() : text;
+            const pairCount = Object.keys(getImportedAnswerKey(text)).length;
+            return pairCount >= 1 ? text.slice(0, answerSectionMatch.index).trim() : text;
         };
 
         const parseLatexWordQuiz = (rawText) => {
@@ -1362,6 +1471,7 @@
                 if (isTF && tfMatches.length >= 2) {
                     const question = block.slice(0, tfMatches[0].markerStart).trim();
                     const correctAnswers = [true, false, false, false];
+                    let assignedTfFromInline = false;
 
                     const options = ["a", "b", "c", "d"].map((letter, optIdx) => {
                         const cur = tfMatches.find(m => m.letter === letter);
@@ -1373,9 +1483,11 @@
                         // Kiểm tra đánh dấu [Đúng] / [Sai] ngay trong từng ý
                         if (/\[(đúng|đ|true|t)\]|\((đúng|đ|true|t)\)/i.test(optText)) {
                             correctAnswers[optIdx] = true;
+                            assignedTfFromInline = true;
                             optText = optText.replace(/\[(đúng|đ|true|t|sai|s|false|f)\]|\((đúng|đ|true|t|sai|s|false|f)\)/gi, '').trim();
                         } else if (/\[(sai|s|false|f)\]|\((sai|s|false|f)\)/i.test(optText)) {
                             correctAnswers[optIdx] = false;
+                            assignedTfFromInline = true;
                             optText = optText.replace(/\[(đúng|đ|true|t|sai|s|false|f)\]|\((đúng|đ|true|t|sai|s|false|f)\)/gi, '').trim();
                         }
                         return optText;
@@ -1387,6 +1499,7 @@
                             const m = inlineAnswer.match(re);
                             if (m) {
                                 correctAnswers[idx] = /đ|đúng|t|true/i.test(m[1]);
+                                assignedTfFromInline = true;
                             }
                         });
                         if (!/[a-d]\s*[:：\\-\\.]/i.test(inlineAnswer)) {
@@ -1395,7 +1508,17 @@
                                 dsList.slice(0, 4).forEach((ans, idx) => {
                                     correctAnswers[idx] = /đ|đúng|t|true/i.test(ans);
                                 });
+                                assignedTfFromInline = true;
                             }
+                        }
+                    }
+
+                    if (!assignedTfFromInline) {
+                        const tfFromKey = importedAnswerKeyTfList(answerKey[item.number]);
+                        if (tfFromKey) {
+                            tfFromKey.forEach((value, idx) => {
+                                correctAnswers[idx] = value;
+                            });
                         }
                     }
 
@@ -1428,7 +1551,7 @@
 
                     const options = ["A", "B", "C", "D"].map(letter => optionsByLetter[letter] || "");
                     const ansLetterMatch = inlineAnswer.match(/\b([A-D])\b/i);
-                    const answerLetter = (ansLetterMatch ? ansLetterMatch[1] : (answerKey[item.number] || "")).toUpperCase();
+                    const answerLetter = (ansLetterMatch ? ansLetterMatch[1] : importedAnswerKeyLetter(answerKey[item.number])).toUpperCase();
                     let correctIndex = answerLetter ? "ABCD".indexOf(answerLetter) : -1;
                     if (correctIndex < 0 && asteriskCorrectIndex >= 0) {
                         correctIndex = asteriskCorrectIndex;
@@ -1449,7 +1572,7 @@
                     type: "short_answer",
                     question: block || `Câu ${item.number}`,
                     options: [],
-                    correct_answer: inlineAnswer || (answerKey[item.number] ? String(answerKey[item.number]) : ""),
+                    correct_answer: inlineAnswer || importedAnswerKeyText(answerKey[item.number]),
                     question_image: null
                 };
             }).filter(Boolean);

@@ -13,6 +13,14 @@ assert.match(app, /timeoutMs:\s*105000/, 'Canvas phải gửi timeout rõ ràng 
 assert.match(app, /prepareCanvasTextbookAnalysisBatches/, 'Canvas phải gom ảnh/PDF đã chọn theo lô');
 assert.match(app, /selectedPages: pages/, 'Canvas phải tôn trọng các trang PDF đã chọn');
 assert.match(app, /Không sao chép câu, đoạn, bảng, bài tập hoặc công thức/, 'Prompt Canvas phải cấm tái tạo nội dung nguồn');
+assert.match(app, /TUYỆT ĐỐI KHÔNG điền chỗ trống bằng trí nhớ/, 'Prompt Canvas phải cấm AI điền SGK theo trí nhớ');
+assert.match(app, /Không suy đoán tên đề mục, số mục, số câu, số bài tập hoặc nội dung bài tập/, 'Prompt Canvas phải cấm suy đoán chỉ mục và nội dung bài tập');
+assert.match(app, /cần đối chiếu SGK/, 'Thông tin SGK không chắc chắn phải được đánh dấu cần đối chiếu');
+assert.match(app, /function sanitizeTextbookSeriesBranding/, 'Phải có bộ lọc tên thương mại SGK dùng chung');
+assert.match(app, /Kết\\s\*Nối\\s\*Tri\\s\*Thức/, 'Bộ lọc phải chặn Kết nối tri thức');
+assert.match(app, /Cánh\\s\*Diều/, 'Bộ lọc phải chặn Cánh diều');
+assert.match(app, /Chân\\s\*Trời\\s\*Sáng\\s\*Tạo/, 'Bộ lọc phải chặn Chân trời sáng tạo');
+assert.match(app, /Global\\s\*Success/, 'Bộ lọc phải chặn Global Success');
 assert.match(app, /\\?"subsections\\?"/, 'Schema Canvas phải có cấu trúc tiểu mục');
 assert.match(app, /\\?"weight\\?":1,\\?"complexity\\?":1,\\?"signals\\?"/, 'Schema Canvas phải có trọng số, độ phức tạp và tín hiệu');
 assert.match(app, /subsectionProfiles: canvasRoute \? canvasAnalysis\?\.subsections : null/, 'Hồ sơ Canvas phải được chuyển sang ngữ cảnh giáo án');

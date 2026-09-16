@@ -5715,15 +5715,26 @@ function sanitizeLessonMarkdown(rawOutput) {
   return text.trim();
 }
 
+function sanitizeTextbookSeriesBranding(text) {
+  return String(text || "")
+    .replace(/\bKNTT\b/gi, "SGK")
+    .replace(/Kết\s*Nối\s*Tri\s*Thức(?:\s*Với\s*Cuộc\s*Sống)?/gi, "SGK")
+    .replace(/Cánh\s*Diều/gi, "SGK")
+    .replace(/Chân\s*Trời\s*Sáng\s*Tạo/gi, "SGK")
+    .replace(/Global\s*Success/gi, "SGK")
+    .replace(/Sách\s*giáo\s*khoa\s*SGK/gi, "Sách giáo khoa")
+    .replace(/SGK\s*SGK/gi, "SGK");
+}
+
 function normalizeGeminiLessonOutput(rawOutput) {
-  const sanitized = sanitizeLessonMarkdown(rawOutput);
+  const sanitized = sanitizeTextbookSeriesBranding(sanitizeLessonMarkdown(rawOutput));
   const opening = sanitized.slice(0, 400);
   const hasResidualMeta = /(?:tuyệt vời|xin chào|chào bạn|dưới đây|sau đây|với vai trò|mình sẽ)/i.test(opening) || /```/.test(sanitized);
   return { text: sanitized, valid: Boolean(sanitized) && !hasResidualMeta };
 }
 
 async function guardGeminiLessonOutput(rawOutput, signal) {
-  const sanitized = sanitizeLessonMarkdown(rawOutput);
+  const sanitized = sanitizeTextbookSeriesBranding(sanitizeLessonMarkdown(rawOutput));
   const normalized = normalizeGeminiLessonOutput(sanitized);
   // Nếu đã sanitize sạch và có độ dài hợp lệ, trả về luôn để tiết kiệm token và tránh lỗi quá tải 429
   if (normalized.valid && normalized.text.length > 30) {
@@ -6434,6 +6445,8 @@ function canvasTextbookAnalysisPrompt(batchLabel) {
   return [
     "Phân tích học liệu SGK đính kèm để tạo ngữ cảnh ngắn cho việc thiết kế bài dạy.",
     "Không sao chép câu, đoạn, bảng, bài tập hoặc công thức từ học liệu. Không tái tạo văn bản nguồn.",
+    "TUYỆT ĐỐI KHÔNG điền chỗ trống bằng trí nhớ về bất kỳ bộ SGK nào. Không suy đoán tên đề mục, số mục, số câu, số bài tập hoặc nội dung bài tập nếu chúng không nhìn thấy rõ trong chính trang/ảnh/PDF người dùng cung cấp.",
+    "Chỉ coi tên đề mục/chỉ mục/bài tập là dữ kiện khi đọc được rõ ràng và chắc chắn từ nguồn đính kèm; nếu mờ, khuất, thiếu trang hoặc không chắc thì phải ghi vào unknowns là cần đối chiếu SGK, không được biến thành dữ kiện khẳng định.",
     "Chỉ diễn đạt lại bằng lời của bạn, thật ngắn gọn. Nếu không chắc, ghi vào unknowns thay vì suy đoán.",
     `Phạm vi lô đang phân tích: ${batchLabel}.`,
     "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"lessonScope\":\"\",\"majorPoints\":[\"\"],\"subsections\":[{\"title\":\"\",\"weight\":1,\"complexity\":1,\"signals\":[\"\"]}],\"summary\":\"\",\"unknowns\":[\"\"]}.",
