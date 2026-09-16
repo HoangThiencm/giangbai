@@ -365,8 +365,19 @@
               <input type="file" id="fileInputPpct" multiple accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,application/pdf,.pdf" style="display: none;">
             </div>
             <button id="btnAnalyzePpct" class="btn btn-primary khbd-read-source-btn" type="button">
-              <i data-lucide="book-open"></i> 📑 Đọc PPCT
+              <i data-lucide="copy"></i> 📋 Sao chép Prompt PPCT → JSON
             </button>
+            <div class="panel-box" style="margin-top:.75rem;">
+              <div class="panel-header"><span>Nhập dữ liệu PPCT chuẩn từ ChatGPT / Gemini</span></div>
+              <p class="text-muted" style="font-size:.85rem;margin:.25rem 0 .65rem;">Tải Word/PDF PPCT lên ChatGPT hoặc Gemini, dán Prompt ở nút trên, rồi copy JSON trả về và dán vào đây. Hệ thống chỉ đọc JSON, không tự suy đoán PPCT.</p>
+              <textarea id="ppctJsonInput" rows="6" class="markdown-editor" placeholder="Dán JSON PPCT tại đây..."></textarea>
+              <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;">
+                <button id="btnImportPpctJson" type="button" class="btn btn-primary">📥 Nhập JSON</button>
+                <label class="btn btn-outline-dark" style="cursor:pointer;">📂 Chọn file JSON<input id="ppctJsonFileInput" type="file" accept=".json,application/json" hidden></label>
+                <button id="btnCopyPpctJson" type="button" class="btn btn-outline-dark">📋 Copy JSON</button>
+                <button id="btnExportPpctJson" type="button" class="btn btn-outline-dark">⬇ Xuất JSON</button>
+              </div>
+            </div>
 
             <!-- PPCT Gallery Grid -->
             <div id="ppctGallery" class="image-gallery ppct-gallery"></div>
@@ -891,13 +902,13 @@
   <script src="ai-usage-reporter.js"></script>
   <script src="mistral-ocr-client.js?v=20260826-khbd"></script>
   <script src="js/khbd-curriculum.js"></script>
-  <script src="js/khbd-prompts.js?v=20260915-khbd-weighted-v7"></script>
+  <script src="js/khbd-prompts.js?v=20260916-textbook-exact-v11"></script>
   <script src="js/khbd-gemini.js"></script>
   <script src="js/khbd-docx.js?v=20260915-khbd-weighted-v7"></script>
   <script src="js/khbd-standards.js"></script>
   <script src="js/khbd-pedagogy-catalog.js"></script>
   <script src="js/khbd-yccd.js"></script>
-  <script src="js/khbd-app.js?v=20260916-ppct-settings-v10"></script>
+  <script src="js/khbd-app.js?v=20260916-textbook-exact-v11"></script>
   <script src="access-control.js"></script>
 </body>
 </html>

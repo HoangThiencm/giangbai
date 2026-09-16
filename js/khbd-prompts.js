@@ -706,6 +706,7 @@ ${LATEX_SPACING_BAN}
   ### 2. Hoạt động 2.2: [Tên mục 2 trong SGK] (... phút) (hoặc ### 2. Hoạt động 2: [Tên mục 2 trong SGK] (... phút))
   ...
   TUYỆT ĐỐI CẤM GỘP các mục lớn thành một mục chung. TUYỆT ĐỐI CẤM BỊA THÊM hoạt động ngoài SGK.
+  KHÓA TÊN ĐỀ MỤC NGUYÊN VĂN 100%: Tên Hoạt động 2.1, 2.2... BẮT BUỘC trùng khớp 100% với tên đề mục SGK đã trích xuất trong dữ liệu SGK. CẤM diễn đạt lại, CẤM đổi từ, CẤM rút gọn, CẤM thêm/bớt dấu.
   TUYỆT ĐỐI LOẠI BỎ việc tách các câu hỏi phát vấn (Hãy..., Bằng cách..., Nêu...), các bài tập con (Bài 1.1, Thực hành 1, Luyện tập 1) thành các hoạt động riêng biệt. Toàn bộ ví dụ mẫu, câu hỏi khám phá, thực hành con của từng mục phải nằm trọn vẹn bên trong hoạt động của mục đó.
   BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề từng hoạt động con (ví dụ: \`(15 phút)\`, \`(12 phút)\`). CẤM ghi "Khoảng" hoặc dải thời gian "X - Y phút".
 - TỪNG HOẠT ĐỘNG NHÁNH 2.k (hoặc Hoạt động k) PHẢI CÓ ĐỦ 4 PHẦN:
@@ -757,6 +758,7 @@ YÊU CẦU BIÊN SOẠN:
 ${ACTIVITY_TABLE_CONTRACT}
 ${LATEX_SPACING_BAN}
 - CHỈ dùng bài luyện tập / câu hỏi có trong SGK hoặc dữ liệu giáo viên cung cấp (khóa theo phạm vi tiết dạy PPCT nếu có). CẤM invent bài tập trắc nghiệm ngoài sách nếu nguồn không có.
+- KHÓA ĐỀ BÀI NGUYÊN VĂN 100%: Bắt buộc lấy nguyên văn 100% đề bài từ các mục Luyện tập, Thực hành hoặc bài tập SGK đã trích xuất (câu chữ, số liệu, công thức LaTeX). TUYỆT ĐỐI CẤM đổi số liệu, CẤM tự tạo đề bài lạ ngoài sách, CẤM diễn đạt lại đề bài.
 - HƯỚNG DẪN GIÁO VIÊN CHỌN LỌC BÀI TẬP: Chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi nhất của SGK để tổ chức cho học sinh làm và chữa chi tiết ngay trên lớp. Các bài tập luyện tập còn lại trong SGK sẽ được chuyển giao vào Hoạt động E (Hướng dẫn về nhà).
 - Cột TRÁI mục d): Kịch bản phân vai rõ ràng:
   + Áp dụng Kỹ thuật dạy học (ví dụ: Bài tập phân hóa 3 mức, Đánh giá đồng đẳng, Sửa lỗi theo cặp...).
@@ -805,6 +807,7 @@ ${ACTIVITY_TABLE_CONTRACT}
 ${LATEX_SPACING_BAN}
 - KHÓA NHIỆM VỤ VẬN DỤNG TẠI LỚP + GIAO TỰ HỌC: Bài toán vận dụng / Exit Ticket hoàn thành và chốt NGAY TẠI LỚP; ngay Bước 4, GV giao đủ 4 nhiệm vụ tự học ở nhà (không tách thành pha E).
 - CHỈ dùng bài vận dụng / tình huống thực tế có trong SGK hoặc dữ liệu giáo viên cung cấp. CẤM invent số liệu bài toán ngoài nguồn.
+- ƯU TIÊN ĐỀ BÀI VẬN DỤNG NGUYÊN VĂN 100% từ mục Vận dụng trong SGK đã trích xuất (câu chữ, số liệu, công thức LaTeX). CẤM đổi số liệu, CẤM bịa tình huống ngoài sách, CẤM diễn đạt lại đề bài.
 - Cột TRÁI mục d): Kịch bản phân vai rõ ràng, đủ 4 bước CV 5512:
   + Áp dụng Kỹ thuật dạy học (Dự án mini, Phân tích tình huống, Bài tập mở, Exit Ticket...).
   + **GV:** Nói câu định hướng trong ngoặc kép "...", gợi mở liên hệ thực tế, hướng dẫn phân hóa và thu hồi/đánh giá kết quả ngay tại lớp.
@@ -1430,9 +1433,8 @@ function getPromptTemplate(templateKey, context) {
   const rawTextbook = context.textbook_content || '';
   const extractedSubsections = extractTextbookSubsections(rawTextbook);
   const subsectionProfiles = normalizeTextbookSubsectionProfiles(context.subsectionProfiles || rawTextbook);
-  // Canvas chỉ lưu bản đồ cấu trúc diễn đạt lại, không lưu OCR nguyên văn. Khi
-  // đó dùng chính hồ sơ Canvas làm danh sách nhánh B; bản SGK văn bản cũ vẫn
-  // ưu tiên các heading đã trích xuất để giữ tương thích.
+  // Canvas lưu đề mục nguyên văn trong ngữ cảnh SGK. Khi có heading đã trích
+  // xuất thì dùng heading đó cho nhánh B; nếu chưa có thì dùng hồ sơ Canvas.
   const subsections = extractedSubsections.length
     ? extractedSubsections
     : subsectionProfiles.map(item => ({ index: item.index, title: item.title }));
@@ -1531,6 +1533,7 @@ function getPromptTemplate(templateKey, context) {
       result += `\n\nDANH SÁCH TIỂU MỤC SGK BẮT BUỘC ÁP DỤNG (ĐÚNG ${subsections.length} HOẠT ĐỘNG NHÁNH):
 Từ dữ liệu SGK được cung cấp, xác định chính xác ${subsections.length} tiểu mục kiến thức lớn sau. Bạn PHẢI tạo đúng ${subsections.length} hoạt động nhánh tương ứng 1-1, KHÔNG ĐƯỢC GỘP, KHÔNG ĐƯỢC BỎ BỚT, KHÔNG ĐƯỢC BỊA THÊM:
 ${subListStr}
+Tên hoạt động nhánh BẮT BUỘC đúng nguyên văn 100% tên đề mục SGK ở trên, không diễn đạt lại, không đổi từ, không rút gọn.
 Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có thời lượng cố định cụ thể ví dụ (${budgets.formatted.B_subsections[0] || '15 phút'}), đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng). Tuyệt đối không tách câu hỏi nhỏ/bài tập con thành hoạt động riêng.
 Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budgets.formatted.B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). ${fourActivities ? `Tổng A + B + C + D BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.` : `Tổng A + B + C + D + E BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.`} `;
     }
@@ -1558,13 +1561,13 @@ Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budg
 
   if (templateKey === 'GENERATE_ACTIVITY_C' || templateKey === 'GENERATE_ACTIVITY_D') {
     if (context.textbook_content && String(context.textbook_content).trim().length > 0) {
-      result += `\n\nLƯU Ý QUAN TRỌNG VỀ NGUỒN BÀI TẬP: Vì dữ liệu SGK đã được cung cấp ở trên, CẤM ghi "[Không có trong tài liệu đã cung cấp]". BẮT BUỘC phải trích xuất và giải chi tiết các bài tập có trong nguồn.`;
+      result += `\n\nLƯU Ý QUAN TRỌNG VỀ NGUỒN BÀI TẬP: Vì dữ liệu SGK đã được cung cấp ở trên, CẤM ghi "[Không có trong tài liệu đã cung cấp]". BẮT BUỘC phải trích xuất và giải chi tiết các bài tập có trong nguồn. BẮT BUỘC chép nguyên văn 100% đề bài, số liệu và công thức LaTeX từ khối SGK; CẤM đổi số, CẤM bịa đề, CẤM diễn đạt lại đề bài.`;
     }
     if (templateKey === 'GENERATE_ACTIVITY_C' && lessonMap.practice) {
-      result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK (chọn 1-2 bài tập trọng tâm để chữa trên lớp, các bài còn lại dành cho Hoạt động E - Hướng dẫn về nhà):\n"""\n${lessonMap.practice}\n"""`;
+      result += `\n\nMỤC LUYỆN TẬP / BÀI TẬP TRONG SGK (chọn 1-2 bài tập trọng tâm để chữa trên lớp, các bài còn lại dành cho Hoạt động E - Hướng dẫn về nhà; chép nguyên văn 100% đề bài):\n"""\n${lessonMap.practice}\n"""`;
     }
     if (templateKey === 'GENERATE_ACTIVITY_D' && lessonMap.application) {
-      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK (thực hiện và chốt ngay tại lớp; 4 nhiệm vụ tự học giao trong Bước 4 Hoạt động D):\n"""\n${lessonMap.application}\n"""`;
+      result += `\n\nMỤC VẬN DỤNG / BÀI TOÁN THỰC TẾ TRONG SGK (thực hiện và chốt ngay tại lớp; 4 nhiệm vụ tự học giao trong Bước 4 Hoạt động D; ưu tiên nguyên văn 100% đề bài Vận dụng):\n"""\n${lessonMap.application}\n"""`;
     }
   }
 

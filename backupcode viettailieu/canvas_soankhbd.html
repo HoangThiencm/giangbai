@@ -469,8 +469,19 @@
                 <input type="file" id="fileInputPpct" multiple accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,application/pdf,.pdf" style="display: none;">
               </div>
               <button id="btnAnalyzePpct" class="btn btn-primary khbd-read-source-btn" type="button">
-                <i data-lucide="book-open"></i> 📑 Đọc PPCT
+                <i data-lucide="copy"></i> 📋 Sao chép Prompt PPCT → JSON
               </button>
+              <div class="panel-box" style="margin-top:.75rem;">
+                <div class="panel-header"><span>Nhập dữ liệu PPCT chuẩn từ ChatGPT / Gemini</span></div>
+                <p class="text-muted" style="font-size:.85rem;margin:.25rem 0 .65rem;">Tải Word/PDF PPCT lên ChatGPT hoặc Gemini, dán Prompt ở nút trên, rồi copy JSON trả về và dán vào đây. Hệ thống chỉ đọc JSON, không tự suy đoán PPCT.</p>
+                <textarea id="ppctJsonInput" rows="6" class="markdown-editor" placeholder="Dán JSON PPCT tại đây..."></textarea>
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;">
+                  <button id="btnImportPpctJson" type="button" class="btn btn-primary">📥 Nhập JSON</button>
+                  <label class="btn btn-outline-dark" style="cursor:pointer;">📂 Chọn file JSON<input id="ppctJsonFileInput" type="file" accept=".json,application/json" hidden></label>
+                  <button id="btnCopyPpctJson" type="button" class="btn btn-outline-dark">📋 Copy JSON</button>
+                  <button id="btnExportPpctJson" type="button" class="btn btn-outline-dark">⬇ Xuất JSON</button>
+                </div>
+              </div>
 
               <!-- PPCT Gallery Grid -->
               <div id="ppctGallery" class="image-gallery ppct-gallery"></div>
@@ -1020,7 +1031,7 @@
   <script>
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-canvas-module-v8"}"><\/script>`);
+        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v11"}"><\/script>`);
     })();
   </script>
   <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260916-canvas-module-v8"></script>
@@ -1285,7 +1296,7 @@
       } else if (typeof document !== "undefined") {
         (window.__KHBD_CANVAS_CORE_READY__ || Promise.resolve()).then(function () {
           var app = document.createElement("script");
-          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-ppct-settings-v10";
+          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-textbook-exact-v11";
           app.onerror = function () { console.error("[KHBD Canvas] Không nạp được khbd-app.js từ host."); };
           document.head.appendChild(app);
         });

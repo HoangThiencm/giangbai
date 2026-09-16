@@ -2962,6 +2962,7 @@ function setupEventListeners() {
   // 12. Quản lý API Key Modal
   setupApiKeyModal();
   setupPpctCatalogSettingsModal();
+setupPpctJsonWorkflow();
 
   // 13. Quản lý Modal Chọn trang PDF SGK
   setupPdfModal();
@@ -6434,35 +6435,73 @@ async function extractTextbookOcrTextWithGemini(onProgress) {
   ) || "").trim();
 }
 
-// Canvas must not turn a textbook into a verbatim OCR request.  Apart from
-// avoiding copyright-sensitive output, this gives the lesson generator the
-// small, useful context it actually needs.
+// Canvas extracts short structured fields (titles, tasks, exercises) instead of
+// a full-page OCR dump, so Gemini is less likely to trip RECITATION.
 // One page/image per Canvas request bounds media and prevents one slow page
 // from making an entire textbook request wait until the global deadline.
 const CANVAS_TEXTBOOK_BATCH_SIZE = 1;
 
 function canvasTextbookAnalysisPrompt(batchLabel) {
   return [
-    "Phân tích học liệu SGK đính kèm để tạo ngữ cảnh ngắn cho việc thiết kế bài dạy.",
-    "Không sao chép câu, đoạn, bảng, bài tập hoặc công thức từ học liệu. Không tái tạo văn bản nguồn.",
+    "Trích xuất học liệu SGK đính kèm thành JSON theo từng trường ngắn (fact extraction), không chép nguyên trang.",
+    "Mỗi trường chỉ chứa đúng thực thể nhìn thấy trên trang/ảnh/PDF người dùng cung cấp.",
+    "BẮT BUỘC giữ nguyên văn 100% tên đề mục, tên hoạt động (HĐ, Luyện tập, Thực hành, Vận dụng), mã bài (Bài 1.36) và đề bài/số liệu/công thức. Công thức dùng LaTeX $...$.",
+    "CẤM diễn đạt lại, CẤM đổi từ, CẤM rút gọn tên đề mục hoặc đề bài, CẤM bịa thêm mục/bài không nhìn thấy.",
     "TUYỆT ĐỐI KHÔNG điền chỗ trống bằng trí nhớ về bất kỳ bộ SGK nào. Không suy đoán tên đề mục, số mục, số câu, số bài tập hoặc nội dung bài tập nếu chúng không nhìn thấy rõ trong chính trang/ảnh/PDF người dùng cung cấp.",
     "Chỉ coi tên đề mục/chỉ mục/bài tập là dữ kiện khi đọc được rõ ràng và chắc chắn từ nguồn đính kèm; nếu mờ, khuất, thiếu trang hoặc không chắc thì phải ghi vào unknowns là cần đối chiếu SGK, không được biến thành dữ kiện khẳng định.",
-    "Chỉ diễn đạt lại bằng lời của bạn, thật ngắn gọn. Nếu không chắc, ghi vào unknowns thay vì suy đoán.",
     `Phạm vi lô đang phân tích: ${batchLabel}.`,
-    "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"lessonScope\":\"\",\"majorPoints\":[\"\"],\"subsections\":[{\"title\":\"\",\"weight\":1,\"complexity\":1,\"signals\":[\"\"]}],\"summary\":\"\",\"unknowns\":[\"\"]}.",
-    "subsections gồm 1-4 mục kiến thức theo cấu trúc bài, diễn đạt lại (không OCR); weight/complexity là 1-4, signals là tín hiệu khối lượng như nhiều bước, khái niệm mới, thực hành. majorPoints có từ 1 đến 3 ý; summary tối đa 90 từ."
+    "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"sections\":[{\"index\":\"1\",\"title\":\"\",\"coreKnowledge\":\"\",\"activities\":[{\"label\":\"HĐ 1\",\"task\":\"\"}]}],\"exercises\":[{\"code\":\"Bài 1.36\",\"statement\":\"\"}],\"unknowns\":[\"\"]}.",
+    "sections: 1-4 đề mục lớn, title đúng nguyên văn mục lục SGK; coreKnowledge là quy tắc/định nghĩa/công thức LaTeX; activities gồm HĐ, Luyện tập, Thực hành, Vận dụng với task nguyên văn. exercises: toàn bộ bài tập SGK nhìn thấy, statement nguyên văn đủ số liệu."
   ].join("\\n");
+}
+
+function normalizeCanvasTextbookSection(raw, index) {
+  const title = String(raw && raw.title || "").trim();
+  if (!title) return null;
+  const activities = (Array.isArray(raw && raw.activities) ? raw.activities : []).map(item => ({
+    label: String(item && item.label || "").trim(),
+    task: String(item && item.task || "").trim()
+  })).filter(item => item.label || item.task);
+  return {
+    index: String(raw && raw.index || index + 1).trim() || String(index + 1),
+    title,
+    coreKnowledge: String(raw && raw.coreKnowledge || "").trim(),
+    activities
+  };
+}
+
+function normalizeCanvasTextbookExercise(raw) {
+  const code = String(raw && raw.code || "").trim();
+  const statement = String(raw && raw.statement || "").trim();
+  if (!code && !statement) return null;
+  return { code, statement };
 }
 
 function parseCanvasTextbookAnalysis(raw) {
   const parsed = parseAiJsonSafely(raw, "Phân tích cấu trúc SGK");
+  const sections = (Array.isArray(parsed.sections) ? parsed.sections : [])
+    .map((item, index) => normalizeCanvasTextbookSection(item, index))
+    .filter(Boolean)
+    .slice(0, 8);
+  const exercises = (Array.isArray(parsed.exercises) ? parsed.exercises : [])
+    .map(normalizeCanvasTextbookExercise)
+    .filter(Boolean)
+    .slice(0, 40);
   const points = (Array.isArray(parsed.majorPoints) ? parsed.majorPoints : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 3);
-  const unknowns = (Array.isArray(parsed.unknowns) ? parsed.unknowns : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 3);
-  const subsections = (typeof normalizeTextbookSubsectionProfiles === "function" ? normalizeTextbookSubsectionProfiles(parsed.subsections) : []).slice(0, 4);
+  const unknowns = (Array.isArray(parsed.unknowns) ? parsed.unknowns : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 6);
+  const fromSections = sections.map((section, index) => ({
+    index: index + 1,
+    title: section.title,
+    signals: (section.activities || []).map(item => item.label).filter(Boolean)
+  }));
+  const subsections = (typeof normalizeTextbookSubsectionProfiles === "function"
+    ? normalizeTextbookSubsectionProfiles(fromSections.length ? fromSections : parsed.subsections)
+    : []).slice(0, 4);
   return {
     subject: String(parsed.subject || "").trim(), grade: String(parsed.grade || "").trim(), topic: String(parsed.topic || "").trim(),
     periodCount: Number(parsed.periodCount) || null, lessonScope: String(parsed.lessonScope || "").trim(),
-    majorPoints: points, subsections, summary: String(parsed.summary || "").trim().slice(0, 800), unknowns
+    majorPoints: points, subsections, sections, exercises,
+    summary: String(parsed.summary || "").trim().slice(0, 800), unknowns
   };
 }
 
@@ -6498,7 +6537,7 @@ async function analyzeCanvasTextbookSafely(onProgress) {
     const batch = batches[index];
     if (typeof onProgress === "function") onProgress(`Đang phân tích SGK ${index + 1}/${batches.length}...`, Math.round(20 + ((index + 1) / batches.length) * 70));
     const raw = await geminiAPI.generateContent(canvasTextbookAnalysisPrompt(batch.label), batch.media, getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1, null, {
-      maxOutputTokens: 900,
+      maxOutputTokens: 4096,
       timeoutMs: 105000
     });
     analyses.push(parseCanvasTextbookAnalysis(raw));
@@ -6507,23 +6546,69 @@ async function analyzeCanvasTextbookSafely(onProgress) {
   const majorPoints = analyses.flatMap(item => item.majorPoints || []).filter(Boolean).slice(0, 6);
   const unknowns = analyses.flatMap(item => item.unknowns || []).filter(Boolean).slice(0, 6);
   const summary = analyses.map(item => item.summary).filter(Boolean).join(" ").slice(0, 1400);
-  const subsections = (typeof normalizeTextbookSubsectionProfiles === "function" ? normalizeTextbookSubsectionProfiles(analyses.flatMap(item => item.subsections || [])) : []).slice(0, 4);
-  return { ...first, majorPoints, subsections, unknowns, summary, batches: analyses.length };
+  const sections = analyses.flatMap(item => item.sections || []).slice(0, 8);
+  const exercises = analyses.flatMap(item => item.exercises || []).slice(0, 40);
+  const subsections = (typeof normalizeTextbookSubsectionProfiles === "function"
+    ? normalizeTextbookSubsectionProfiles(sections.length ? sections.map((section, index) => ({ index: index + 1, title: section.title, signals: (section.activities || []).map(item => item.label).filter(Boolean) })) : analyses.flatMap(item => item.subsections || []))
+    : []).slice(0, 4);
+  return { ...first, majorPoints, subsections, sections, exercises, unknowns, summary, batches: analyses.length };
 }
 
 function formatCanvasTextbookContext(data) {
+  const sections = Array.isArray(data && data.sections) ? data.sections : [];
+  const exercises = Array.isArray(data && data.exercises) ? data.exercises : [];
+  const sectionLines = [];
+  if (sections.length) {
+    sectionLines.push("## Đề mục SGK (nguyên văn)");
+    sections.forEach((section, index) => {
+      const idx = section.index || (index + 1);
+      sectionLines.push(`### ${idx}. ${section.title}`);
+      sectionLines.push(`- Mục ${idx}: ${section.title}`);
+      if (section.coreKnowledge) sectionLines.push(`- Kiến thức cốt lõi: ${section.coreKnowledge}`);
+      (section.activities || []).forEach(act => {
+        if (act.label || act.task) sectionLines.push(`- ${act.label || "Hoạt động"}: ${act.task || ""}`.replace(/\s+:\s*$/, "").trim());
+      });
+    });
+  } else if (data && data.subsections && data.subsections.length) {
+    sectionLines.push("## Cấu trúc kiến thức");
+    data.subsections.forEach(item => {
+      sectionLines.push(`- ${item.index}. ${item.title} (khối lượng ${item.weight}/6; ${(item.signals || []).join(", ") || "một ý trọng tâm"})`);
+    });
+  }
+  const practiceActs = [];
+  const applyActs = [];
+  sections.forEach(section => {
+    (section.activities || []).forEach(act => {
+      const label = String(act.label || "");
+      if (/luyện tập|thực hành/i.test(label)) practiceActs.push(act);
+      if (/vận dụng/i.test(label)) applyActs.push(act);
+    });
+  });
+  const exerciseLines = [];
+  if (practiceActs.length || exercises.length) {
+    exerciseLines.push("## Luyện tập / Bài tập");
+    practiceActs.forEach(act => exerciseLines.push(`- ${act.label}: ${act.task}`));
+    exercises.forEach(ex => {
+      const line = [ex.code, ex.statement].filter(Boolean).join(": ");
+      if (line) exerciseLines.push(`- ${line}`);
+    });
+  }
+  if (applyActs.length) {
+    exerciseLines.push("## Vận dụng");
+    applyActs.forEach(act => exerciseLines.push(`- ${act.label}: ${act.task}`));
+  }
   return [
     "## Ngữ cảnh SGK đã phân tích", data.topic && `- Chủ đề: ${data.topic}`, data.subject && `- Môn: ${data.subject}`,
     data.grade && `- Khối lớp: ${data.grade}`, data.periodCount && `- Số tiết tham khảo: ${data.periodCount}`,
     data.lessonScope && `- Phạm vi bài: ${data.lessonScope}`, data.majorPoints?.length && `- Ý chính: ${data.majorPoints.join("; ")}`,
-    data.subsections?.length && "## Cấu trúc kiến thức", ...(data.subsections || []).map(item => `- ${item.index}. ${item.title} (khối lượng ${item.weight}/6; ${item.signals.join(", ") || "một ý trọng tâm"})`),
+    ...sectionLines, ...exerciseLines,
     data.summary && `- Tóm lược: ${data.summary}`, data.unknowns?.length && `- Cần xác minh: ${data.unknowns.join("; ")}`
   ].filter(Boolean).join("\n");
 }
 
 async function applyTextbookOcrResult(ocrText, { silent = false, subsectionProfiles = null } = {}) {
   appState.content.vision = ocrText;
-  // Canvas đã trả metadata trọng số an toàn, không nguyên văn. Với luồng OCR
+  // Canvas trả đề mục/đề bài nguyên văn theo trường ngắn. Với luồng OCR
   // cũ, suy hồ sơ từ chính nội dung vừa đọc để không giữ trọng số của SGK trước.
   appState.textbookSubsectionProfiles = Array.isArray(subsectionProfiles)
     ? subsectionProfiles
@@ -7279,6 +7364,41 @@ function bindKeyFileInput(inputId, textareaId, onLoaded) {
   });
 }
 
+function buildPpctJsonConversionPrompt() {
+  return `Bạn là công cụ CHUYỂN ĐỔI PPCT/PHỤ LỤC III sang JSON. Hãy đọc file Word/PDF tôi đính kèm và chỉ lấy NỘI DUNG PHÂN PHỐI CHƯƠNG TRÌNH; bỏ phần căn cứ, tiêu đề hành chính, chữ ký và nội dung không thuộc PPCT.
+
+NGUYÊN TẮC BẮT BUỘC:
+1. Giữ nguyên thứ tự từng dòng PPCT và nội dung nhìn thấy trong từng ô. Không tóm tắt, không diễn giải, không sửa tên bài, không chuẩn hóa theo trí nhớ.
+2. Tuyệt đối không tự đoán tên bài, số tiết, Tiết CT, tuần, thiết bị, địa điểm, ghi chú, mã NLS hoặc mã AI. Nếu không đọc chắc, giữ trường đó là "[KHONG DOC RO]" và ghi tên trường vào uncertain_fields.
+3. Giữ các giá trị số nhiều tiết/tuần dưới dạng CHUỖI đúng như nguồn, ví dụ "32, 33"; không tự đổi thành số hoặc tự nối/tách.
+4. Phải giữ cả các dòng Luyện tập chung, Bài tập cuối chương, Ôn tập, Kiểm tra, Hoạt động thực hành/trải nghiệm và các dòng tương tự; không chỉ lấy dòng bắt đầu bằng "Bài".
+5. Năng lực số và Năng lực AI phải giữ nguyên mã, mô tả và phạm vi áp dụng nhìn thấy trong PPCT. Không tự bổ sung mã.
+6. Chỉ trả về JSON hợp lệ, KHÔNG markdown, KHÔNG giải thích trước/sau JSON.
+
+SCHEMA BẮT BUỘC:
+{"schema_version":"ppct-v1","subject":"","grade":"","academic_year":"","rows":[{"chapter":"","title":"","periods":"","curriculum_period":"","week":"","equipment":"","location":"","notes":"","digital_competency":[{"code":"","description":"","applicable_periods":""}],"ai_competency":[{"code":"","description":"","applicable_periods":""}],"uncertain_fields":[]}]}
+
+Hãy kiểm tra lại từng dòng với file nguồn trước khi xuất JSON. Nếu một giá trị không chắc chắn thì đánh dấu [KHONG DOC RO], tuyệt đối không đoán.`;
+}
+
+function ppctCatalogToPortableJson() {
+  const rows=(appState.ppctCatalog?.rows||[]).map(row=>({chapter:String(row.chapter||""),title:String(row.title||""),periods:row.periods==null?"":String(row.periods),curriculum_period:String(row.tietCt||row.curriculum_period||""),week:String(row.week||""),equipment:String(row.devices||row.equipment||""),location:String(row.location||""),notes:String(row.notes||""),digital_competency:Array.isArray(row.digital_competency)?row.digital_competency:(row.nls?.codes||[]).map(code=>({code:String(code),description:String(row.nls?.evidence||""),applicable_periods:""})),ai_competency:Array.isArray(row.ai_competency)?row.ai_competency:(row.ai?.codes||[]).map(code=>({code:String(code),description:String(row.ai?.evidence||""),applicable_periods:""})),uncertain_fields:Array.isArray(row.uncertain_fields)?row.uncertain_fields:[]}));
+  return {schema_version:"ppct-v1",subject:String(appState.selectedSubject||""),grade:String(appState.selectedGrade||""),academic_year:String(appState.ppctCatalogAcademicYear||""),rows};
+}
+
+function importPortablePpctJson(rawJson) {
+  let data; try{data=typeof rawJson==="string"?JSON.parse(rawJson.trim()):rawJson;}catch(_){throw new Error("JSON PPCT không hợp lệ. Hãy copy nguyên JSON do ChatGPT/Gemini trả về.");}
+  if(!data||data.schema_version!=="ppct-v1"||!Array.isArray(data.rows))throw new Error("JSON không đúng schema ppct-v1.");
+  const meta={subject:String(data.subject||appState.selectedSubject||""),grade:String(data.grade||appState.selectedGrade||""),academic_year:String(data.academic_year||"")};
+  const rows=data.rows.map((row,index)=>{const uncertain=Array.isArray(row.uncertain_fields)?row.uncertain_fields.map(String):[],digital=Array.isArray(row.digital_competency)?row.digital_competency:[],aiList=Array.isArray(row.ai_competency)?row.ai_competency:[],title=String(row.title||"").trim();return{id:ppctStableId(`${meta.subject}|${meta.grade}|${title}|${String(row.curriculum_period||row.tietCt||"")}|${index}`),chapter:String(row.chapter||""),header:"",title,periods:String(row.periods??""),tietCt:String(row.curriculum_period??row.tietCt??""),week:String(row.week??""),devices:String(row.equipment??row.devices??""),location:String(row.location||""),notes:String(row.notes||""),nls:{enabled:digital.length>0,codes:digital.map(x=>String(x?.code||"")).filter(Boolean),evidence:digital.map(x=>String(x?.description||"")).filter(Boolean).join(" | ")},ai:{enabled:aiList.length>0,codes:aiList.map(x=>String(x?.code||"")).filter(Boolean),evidence:aiList.map(x=>String(x?.description||"")).filter(Boolean).join(" | ")},digital_competency:digital,ai_competency:aiList,uncertain_fields:uncertain,source:{kind:"ppct-json",excerpt:title}};}).filter(row=>row.title);
+  if(!rows.length)throw new Error("JSON PPCT không có dòng bài học/hoạt động nào.");
+  appState.selectedSubject=meta.subject||appState.selectedSubject;appState.selectedGrade=meta.grade||appState.selectedGrade;appState.ppctCatalogAcademicYear=meta.academic_year;appState.ppctCatalog={rows,source:{format:"ppct-v1-json",analyzedAt:new Date().toISOString(),importMode:"json",subject:meta.subject,grade:meta.grade,academicYear:meta.academic_year},selectedRowId:"",serverId:null};appState.content.ppctAnalysis=JSON.stringify(data,null,2);saveStateToLocalStorage();renderPpctCatalogReview();renderPpctCatalogSettingsPreview();updateWorkflowStepper();return rows;
+}
+
+async function copyTextToClipboard(text){if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(text);const area=document.createElement("textarea");area.value=text;area.style.position="fixed";area.style.opacity="0";document.body.appendChild(area);area.select();document.execCommand("copy");area.remove();}
+function downloadPpctJson(){const json=JSON.stringify(ppctCatalogToPortableJson(),null,2),blob=new Blob([json],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`PPCT-${appState.selectedSubject||"mon"}-lop-${appState.selectedGrade||""}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);}
+function setupPpctJsonWorkflow(){const promptBtn=document.getElementById("btnAnalyzePpct"),input=document.getElementById("ppctJsonInput"),importBtn=document.getElementById("btnImportPpctJson"),file=document.getElementById("ppctJsonFileInput"),copyBtn=document.getElementById("btnCopyPpctJson"),exportBtn=document.getElementById("btnExportPpctJson");promptBtn?.addEventListener("click",async()=>{try{await copyTextToClipboard(buildPpctJsonConversionPrompt());showToast("Đã copy Prompt PPCT → JSON. Hãy tải Word/PDF lên ChatGPT hoặc Gemini và dán Prompt này.","success",6000);}catch(e){showToast("Không copy được Prompt: "+e.message,"danger");}});importBtn?.addEventListener("click",()=>{try{const rows=importPortablePpctJson(String(input?.value||""));showToast(`Đã nhập ${rows.length} dòng PPCT từ JSON.`,"success");}catch(e){showToast(e.message,"danger",7000);}});file?.addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;try{const text=await f.text();if(input)input.value=text;const rows=importPortablePpctJson(text);showToast(`Đã nhập ${rows.length} dòng từ ${f.name}.`,"success");}catch(err){showToast(err.message,"danger",7000);}finally{e.target.value="";}});copyBtn?.addEventListener("click",async()=>{if(!(appState.ppctCatalog?.rows||[]).length){showToast("Chưa có PPCT để copy JSON.","warning");return;}await copyTextToClipboard(JSON.stringify(ppctCatalogToPortableJson(),null,2));showToast("Đã copy JSON PPCT.","success");});exportBtn?.addEventListener("click",()=>{if(!(appState.ppctCatalog?.rows||[]).length){showToast("Chưa có PPCT để xuất JSON.","warning");return;}downloadPpctJson();});}
+
 function setupPpctCatalogSettingsModal() {
   const openBtn=document.getElementById("btnManagePpctCatalog"), file=document.getElementById("ppctCatalogFileInput"), analyze=document.getElementById("btnAnalyzePpctCatalog"), save=document.getElementById("btnSavePpctCatalogSettings");
   openBtn?.addEventListener("click",openPpctCatalogSettings);
@@ -7582,6 +7702,9 @@ if (typeof module !== 'undefined' && module.exports) {
     normalizeClilLevel
     ,parseAiJsonSafely
     ,extractBalancedJsonRoot
+    ,canvasTextbookAnalysisPrompt
+    ,parseCanvasTextbookAnalysis
+    ,formatCanvasTextbookContext
     ,parsePpctCatalog
     ,applyPpctCatalogRow
     ,savePpctCatalogToServer

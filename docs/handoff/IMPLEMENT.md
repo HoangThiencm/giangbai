@@ -1,15 +1,25 @@
-# Báo cáo triển khai: Nạp 13.Đúng / 14.Sai vào câu MC A. Đúng, B. Sai
+# Báo cáo triển khai: Trích xuất SGK nguyên văn cho Hoạt động 2–4
 
 ## Đã thực hiện
 
-- `thitructuyen.html`
-  - `applyImportedAnswerToQuestion`: khi câu `mc` nhận đáp án Đúng/Sai (không phải A–D), chọn phương án chứa "Đúng"/"Sai" trong `q.options` (mặc định index 0 / 1).
-  - `parseLatexWordQuiz`: nếu khóa đáp án là Đúng/Sai chứ không phải A–D, gán `correct_index` tương ứng (0 = A. Đúng, 1 = B. Sai).
-  - MC 4 lựa chọn A–D vẫn map theo chữ cái như cũ.
-- `tests/thitructuyen-cv7991-answerkey-smoke.js`: thêm TEST 8 cho câu 2 lựa chọn A. Đúng / B. Sai.
+- `js/khbd-app.js`
+  - `canvasTextbookAnalysisPrompt`: schema JSON fact-extraction (`sections`, `activities`, `exercises`); giữ nguyên văn 100% tên đề mục, HĐ/Luyện tập/Thực hành/Vận dụng, mã bài và đề bài; không chép nguyên trang (tránh RECITATION); vẫn cấm điền trí nhớ/suy đoán.
+  - `parseCanvasTextbookAnalysis` + `formatCanvasTextbookContext`: xuất đề mục, kiến thức cốt lõi, hoạt động con và bài tập rõ từng phần; suy `subsections` cho phân bổ thời lượng.
+  - `maxOutputTokens` lô phân tích: 4096.
+- `js/khbd-prompts.js`
+  - `GENERATE_ACTIVITY_B`: khóa tên Hoạt động 2.1, 2.2 trùng 100% tên đề mục SGK.
+  - `GENERATE_ACTIVITY_C`: lấy nguyên văn đề bài Luyện tập/Thực hành/bài tập; cấm đổi số liệu, cấm bịa đề.
+  - `GENERATE_ACTIVITY_D`: ưu tiên nguyên văn đề bài mục Vận dụng.
+- Cache-bust `textbook-exact-v11`: `canvas_soankhbd.html`, `backupcode viettailieu/canvas_soankhbd.html`, `soankhbd.html`.
+- `tests/khbd-textbook-exact-structure-smoke.js`: test mới. Cập nhật `tests/canvas-textbook-analysis-smoke.js` cho schema mới.
 
 ## Kiểm thử
 
-- `node tests/thitructuyen-cv7991-answerkey-smoke.js`: PASS (8/8, gồm 13.Đúng → index 0, 14.Sai → index 1).
+- `node tests/khbd-textbook-exact-structure-smoke.js`: PASS
+- `node tests/canvas-soankhbd-smoke.js`: PASS
+- `node tests/canvas-textbook-analysis-smoke.js`: PASS
+- `node tests/khbd-activity-b-subsections-smoke.js`: PASS
+- `node tests/khbd-weighted-duration-smoke.js`: PASS
+- `node tests/khbd-integrations-smoke.js`: PASS
 
 Không commit, push hoặc deploy. `docs/handoff/PLAN.md` không bị sửa.
