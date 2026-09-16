@@ -35,7 +35,7 @@ assert.ok(clipped.length > 350, "must not truncate the multi-branch activity");
 const root = path.resolve(__dirname, "..");
 for (const rel of ["canvas_soankhbd.html", path.join("backupcode viettailieu", "canvas_soankhbd.html")]) {
   const html = fs.readFileSync(path.join(root, rel), "utf8");
-  assert.match(html, /20260916-textbook-exact-v17/, rel + " uses v17 cache busting");
+  assert.match(html, /20260916-textbook-exact-v18/, rel + " uses v18 cache busting");
 }
 
 console.log("canvas-activity-b-multi-branches-smoke: OK");

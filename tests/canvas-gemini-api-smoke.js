@@ -18,5 +18,8 @@ assert.ok(source.includes("$remaining = (int)floor($deadline - microtime(true))"
 assert.ok(source.includes("$attemptTimeout = min(55, max(1, $remaining))"), "Each cURL timeout is bounded by remaining global budget");
 assert.ok(source.includes("system_deadline"), "Canvas API returns a safe system deadline diagnostic");
 assert.ok(source.includes("], 504)"), "Canvas API returns HTTP 504 on deadline exhaustion");
+assert.ok(source.includes("$fallbackModel = 'gemini-2.5-flash'"), "Canvas API defines the fast fallback model");
+assert.ok(source.includes("$preferredModel !== $fallbackModel"), "Canvas API avoids retrying the same model");
+assert.ok(source.includes("system_fallback"), "Canvas API exposes successful fallback metadata");
 
 console.log("Canvas Gemini API smoke test passed.");

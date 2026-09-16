@@ -6,7 +6,7 @@
  * Soạn KHBD môn Toán THCS theo SGK do giáo viên cung cấp.
  */
 
-// Deploy version: 20260916-textbook-exact-v17
+// Deploy version: 20260916-textbook-exact-v18
 
 if (typeof getPromptTemplate === "undefined" && typeof require !== "undefined") {
   try {
@@ -7383,7 +7383,7 @@ async function executeAIGeneration({ buttonId, targetEditorId, targetPreviewId, 
       getSystemRole(appState.selectedSubject, appState.selectedGrade),
       0.3,
       appState.generationController.signal,
-      maxOutputTokens ? { maxOutputTokens, timeoutMs: 75000 } : { timeoutMs: 75000 }
+      maxOutputTokens ? { maxOutputTokens, timeoutMs: 95000 } : { timeoutMs: 95000 }
     );
     const result = skipGuard ? (normalizeGeminiLessonOutput(rawResult).text || rawResult) : await guardGeminiLessonOutput(rawResult);
 

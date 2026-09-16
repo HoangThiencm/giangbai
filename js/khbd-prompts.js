@@ -7,7 +7,7 @@
  * Khung Năng lực Đặc thù, Khung Năng lực AI (QĐ 2422/QĐ-BGDĐT) và Khung Năng lực Số (TT 02/2025/TT-BGDĐT).
  */
 
-// Deploy version: 20260916-textbook-exact-v17
+// Deploy version: 20260916-textbook-exact-v18
 
 function isEnglishSubject(subjectId) {
   const sid = String(subjectId || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
@@ -295,6 +295,11 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
   <br>+ Bước 4: Kết luận, nhận định:
   <br>- **GV:** [Nhận xét, chốt kiến thức cốt lõi...]
   <br>- **HS:** [Ghi bài vào vở...]
+  + CHI TIẾT BẮT BUỘC CHO KỊCH BẢN 4 BƯỚC:
+    * Bước 1: **GV** phải nêu câu lệnh cụ thể trong ngoặc kép, chỉ rõ công cụ/học liệu (phiếu học tập, bảng nhóm, thẻ số...) và thời gian; **HS** phải nhận nhiệm vụ, phân công vai trò hoặc chuẩn bị đúng học liệu.
+    * Bước 2: **HS** phải mô tả thao tác thực hiện và ghi rõ **Dự kiến câu trả lời của HS** gồm kết quả đúng/sản phẩm dự kiến và ít nhất một lỗi sai hoặc ngộ nhận điển hình gắn với kiến thức bài học; **GV** quan sát, gợi mở và hỗ trợ phân hóa theo lỗi đó.
+    * Bước 3: Phải mô tả diễn biến báo cáo cụ thể (trình chiếu bài, dán bảng nhóm hoặc lên bảng), có câu hỏi chất vấn/phản biện giữa các nhóm và câu hỏi gợi mở trực tiếp của **GV**.
+    * Bước 4: **GV** nhận xét tinh thần học tập, chốt kiến thức chuẩn mực và nêu rõ **quy tắc vàng/chú ý quan trọng** để HS ghi vở; **HS** tự sửa hoặc hoàn thiện sản phẩm theo kết luận.
   + Định mức PPDH/KTDH theo số tiết (TIME-BUDGET GATE):
     * Bài 1 tiết (<= 45 phút): ĐÚNG 1 PPDH chủ đạo; tối đa 1–2 KTDH nhẹ (Think-Pair-Share, Khăn trải bàn rút gọn). CẤM Jigsaw, Station/Trạm học tập, Gallery Walk, Mini-project, PBL, STEAM. CẤM hoạt động đặc thù Trạm xoay vòng (station-act) và sản phẩm/dự án mini.
     * Bài 2 tiết (90 phút): tối đa 2 PPDH; tối đa 2–3 KTDH.
@@ -720,8 +725,8 @@ ${LATEX_SPACING_BAN}
   #### d) Tổ chức thực hiện: (ĐÚNG 1 BẢNG MARKDOWN 2 CỘT, 1 HÀNG DUY NHẤT)
     * CỘT TRÁI: Kịch bản phân vai rõ ràng:
       + Nêu rõ tên Kỹ thuật dạy học (Think-Pair-Share, Khăn trải bàn, Mảnh ghép, Trạm học tập...).
-      + **GV:** Nói câu lệnh trong ngoặc kép "...", hành động cụ thể, **DỰ KIẾN LỖI SAI / NGỘ NHẬN ĐIỂN HÌNH CỦA HỌC SINH ĐỐI VỚI TIỂU MỤC NÀY** và can thiệp hỗ trợ phân hóa.
-      + **HS:** Làm việc cá nhân X phút -> Thảo luận nhóm Y phút tạo sản phẩm trung gian trên bảng phụ/phiếu -> Báo cáo và phản biện trước lớp.
+      + **GV:** Nói câu lệnh trong ngoặc kép "...", chỉ rõ công cụ, thời gian, hành động cụ thể, **DỰ KIẾN CÂU TRẢ LỜI CỦA HS** (kết quả đúng và lỗi sai/ngộ nhận điển hình của tiểu mục) và can thiệp hỗ trợ phân hóa.
+      + **HS:** Làm việc cá nhân X phút -> Thảo luận nhóm Y phút tạo sản phẩm trung gian trên bảng phụ/phiếu; khi báo cáo phải trình chiếu/dán bảng, trả lời câu hỏi gợi mở và phản biện trước lớp.
       + Khi có NLS/AI: Tích hợp thực chiến theo đúng 1 trong 3 dạng (Dạng 1: Kiểm chứng phản hồi AI có lỗi ngộ nhận; Dạng 2: Prompting gợi mở bước giải trong "..."; Dạng 3: Thao tác phần mềm chuyên ngành GeoGebra/bảng tính/mô phỏng). CẤM hỏi lý thuyết AI suông, CẤM rải tag bừa bãi. Gắn marker chuẩn ***[AI: {Mã} - Kiểm chứng phản hồi AI]***, ***[AI: {Mã} - Prompting gợi mở & Tự giải]***, ***[NLS: {Miền/Mã} - {Tên phần mềm}]*** (hoặc ***[NLS]***, ***[AI]***).
     * CỘT PHẢI: NỘI DUNG GHI BẢNG CHỐT KIẾN THỨC CHO HS CHÉP VỞ (Định nghĩa, quy tắc, công thức LaTeX, chú ý, ví dụ mẫu kèm đề bài và lời giải chi tiết từng bước). CẤM viết hành động của GV/HS ở cột phải.
 

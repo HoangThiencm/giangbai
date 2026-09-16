@@ -6,6 +6,8 @@
  * Định dạng bảng biểu, font Times New Roman, căn lề chuẩn hành chính Việt Nam.
  */
 
+// Deploy version: 20260916-textbook-exact-v18
+
 class DocxGenerator {
   constructor() {
     this.fontFamily = "Times New Roman";
@@ -906,7 +908,7 @@ class DocxGenerator {
       && headerCells.some(cell => cell.includes("nội dung"));
     const columnCount = isActivityTwoCol ? 2 : Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
     const columnWidths = isActivityTwoCol
-      ? [4819, 4820]
+      ? [6426, 3213]
       : Array.from({ length: columnCount }, (_, idx) => {
           const base = Math.floor(tableWidth / columnCount);
           return idx === columnCount - 1 ? (tableWidth - base * (columnCount - 1)) : base;

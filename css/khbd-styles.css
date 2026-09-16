@@ -4,6 +4,8 @@
    Chuyên biệt hóa cho bộ sách: KẾT NỐI TRI THỨC VỚI CUỘC SỐNG (KNTT)
    ========================================================================== */
 
+/* Deploy version: 20260916-textbook-exact-v18 */
+
 :root {
   --primary: #0284c7;
   --primary-hover: #0369a1;
@@ -1065,6 +1067,16 @@ body {
   background-color: #e0f2fe;
   font-weight: bold;
   color: #0369a1;
+}
+
+.preview-rendered table th:first-child:nth-last-child(2),
+.preview-rendered table td:first-child:nth-last-child(2) {
+  width: 66.67%;
+}
+
+.preview-rendered table th:last-child:nth-child(2),
+.preview-rendered table td:last-child:nth-child(2) {
+  width: 33.33%;
 }
 
 .preview-rendered blockquote {

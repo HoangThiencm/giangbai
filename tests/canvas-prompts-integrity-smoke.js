@@ -11,7 +11,7 @@ const pages = [
   "canvas_soankhbd.html",
   path.join("backupcode viettailieu", "canvas_soankhbd.html")
 ];
-const version = "20260916-textbook-exact-v17";
+const version = "20260916-textbook-exact-v18";
 
 function read(rel) {
   return fs.readFileSync(path.join(root, rel), "utf8");

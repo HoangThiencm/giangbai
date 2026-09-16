@@ -24,7 +24,7 @@ function canvas_gemini_call(string $model, string $key, string $encoded, int $ti
 
 function canvas_model(string $value): string {
     $value = trim($value);
-    return preg_match('/^gemini-[a-z0-9._-]+$/i', $value) ? $value : 'gemini-3-flash-preview';
+    return preg_match('/^gemini-[a-z0-9._-]+$/i', $value) ? $value : 'gemini-2.5-flash';
 }
 
 $method = $_SERVER['REQUEST_METHOD'] ?? '';
@@ -41,8 +41,9 @@ $systemAvailable = !empty($runtime['gemini_enabled']) && !empty($systemKeys);
 if (!$systemAvailable) respond(['ok' => false, 'error' => 'Gemini Canvas chưa được Admin cấu hình khóa hệ thống.', 'meta' => ['tier' => 'system', 'route' => 'system_unavailable', 'fallback_used' => false, 'system_key_available' => false]], 503);
 
 // preferred_model is the current Canvas contract; model is accepted for older Canvas pages.
-$preferredModel = canvas_model((string)($body['preferred_model'] ?? $body['model'] ?? 'gemini-3-flash-preview'));
-$timeout = max(10, min(85, (int)($body['timeout'] ?? 85)));
+$preferredModel = canvas_model((string)($body['preferred_model'] ?? $body['model'] ?? 'gemini-2.5-flash'));
+$fallbackModel = 'gemini-2.5-flash';
+$timeout = max(10, min(95, (int)($body['timeout'] ?? 95)));
 $deadline = microtime(true) + $timeout;
 $last = ['status' => 502, 'error' => 'Không gọi được Gemini Canvas.'];
 
@@ -68,6 +69,29 @@ foreach ($systemKeys as $key) {
         ]);
     }
     $last = $attempt;
+}
+
+// Retry once through the fast, stable Canvas model before exposing a network
+// or timeout failure to the browser. Do not duplicate the same model request.
+if ($preferredModel !== $fallbackModel) {
+    foreach ($systemKeys as $key) {
+        $remaining = (int)floor($deadline - microtime(true));
+        if ($remaining < 2) break;
+        $attemptTimeout = min(55, max(1, $remaining));
+        $attempt = canvas_gemini_call($fallbackModel, $key, $encoded, $attemptTimeout);
+        if ($attempt['ok']) {
+            respond([
+                'ok' => true,
+                'body' => $attempt['body'],
+                'model' => $fallbackModel,
+                'tier' => 'system_key',
+                'fallback_used' => true,
+                'system_key_available' => true,
+                'meta' => ['tier' => 'system_key', 'route' => 'system_fallback', 'model' => $fallbackModel, 'fallback_used' => true, 'system_key_available' => true]
+            ]);
+        }
+        $last = $attempt;
+    }
 }
 
 if (microtime(true) >= $deadline) {

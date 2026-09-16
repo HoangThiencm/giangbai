@@ -1,6 +1,8 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 
 class DocxValue { constructor(options) { this.options = options; } }
 global.window = {
@@ -18,7 +20,10 @@ const table = generator.createDocxTableFromMarkdown([
   '| **GV:** Nêu nhiệm vụ | $|-5| = 5$ | Ghi nhớ |'
 ]);
 
-assert.deepStrictEqual(table.options.columnWidths, [4819, 4820]);
+assert.deepStrictEqual(table.options.columnWidths, [6426, 3213]);
+const styles = fs.readFileSync(path.join(__dirname, '..', 'css', 'khbd-styles.css'), 'utf8');
+assert.match(styles, /th:first-child:nth-last-child\(2\)[\s\S]*?width:\s*66\.67%/, 'Preview left column must be 66.67%');
+assert.match(styles, /th:last-child:nth-child\(2\)[\s\S]*?width:\s*33\.33%/, 'Preview right column must be 33.33%');
 assert.strictEqual(table.options.rows[0].options.children.length, 2, 'Header phải có đúng 2 cột');
 assert.strictEqual(table.options.rows[1].options.children.length, 2, 'Dữ liệu phải có đúng 2 cột');
 const rightCell = table.options.rows[1].options.children[1];
