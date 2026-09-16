@@ -1,25 +1,23 @@
-# Báo cáo triển khai: Trích xuất SGK nguyên văn cho Hoạt động 2–4
+# Báo cáo triển khai: Không tự đánh số đề mục SGK
 
 ## Đã thực hiện
 
 - `js/khbd-app.js`
-  - `canvasTextbookAnalysisPrompt`: schema JSON fact-extraction (`sections`, `activities`, `exercises`); giữ nguyên văn 100% tên đề mục, HĐ/Luyện tập/Thực hành/Vận dụng, mã bài và đề bài; không chép nguyên trang (tránh RECITATION); vẫn cấm điền trí nhớ/suy đoán.
-  - `parseCanvasTextbookAnalysis` + `formatCanvasTextbookContext`: xuất đề mục, kiến thức cốt lõi, hoạt động con và bài tập rõ từng phần; suy `subsections` cho phân bổ thời lượng.
-  - `maxOutputTokens` lô phân tích: 4096.
+  - `canvasTextbookAnalysisPrompt`: nếu SGK có chỉ số thì giữ nguyên; nếu không có thì cấm tự thêm số.
+  - `normalizeCanvasTextbookSection`: không còn ép `index = index + 1`.
+  - `formatCanvasTextbookContext`: xuất `### ${title}` và `- Đề mục: ${title}`; bỏ `${idx}.` và `Mục ${idx}:`.
 - `js/khbd-prompts.js`
-  - `GENERATE_ACTIVITY_B`: khóa tên Hoạt động 2.1, 2.2 trùng 100% tên đề mục SGK.
-  - `GENERATE_ACTIVITY_C`: lấy nguyên văn đề bài Luyện tập/Thực hành/bài tập; cấm đổi số liệu, cấm bịa đề.
-  - `GENERATE_ACTIVITY_D`: ưu tiên nguyên văn đề bài mục Vận dụng.
-- Cache-bust `textbook-exact-v11`: `canvas_soankhbd.html`, `backupcode viettailieu/canvas_soankhbd.html`, `soankhbd.html`.
-- `tests/khbd-textbook-exact-structure-smoke.js`: test mới. Cập nhật `tests/canvas-textbook-analysis-smoke.js` cho schema mới.
+  - `extractTextbookSubsections`: giữ nguyên văn chỉ số SGK (`1.`, `I.`, `A.`); không tự chèn số vào đề mục không có số.
+  - `GENERATE_ACTIVITY_B`: `### Hoạt động 2.k: [tên nguyên văn]`; nếu SGK có `1. ...` thì `### Hoạt động 2.1: 1. ...`, không lặp `1. 1.`.
+- Cache-bust `textbook-exact-v12` trên `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`.
+- `tests/khbd-textbook-exact-structure-smoke.js`: thêm TEST 5 (có số / La Mã / không số).
 
 ## Kiểm thử
 
 - `node tests/khbd-textbook-exact-structure-smoke.js`: PASS
 - `node tests/canvas-soankhbd-smoke.js`: PASS
-- `node tests/canvas-textbook-analysis-smoke.js`: PASS
 - `node tests/khbd-activity-b-subsections-smoke.js`: PASS
+- `node tests/canvas-textbook-analysis-smoke.js`: PASS
 - `node tests/khbd-weighted-duration-smoke.js`: PASS
-- `node tests/khbd-integrations-smoke.js`: PASS
 
 Không commit, push hoặc deploy. `docs/handoff/PLAN.md` không bị sửa.
