@@ -1717,6 +1717,10 @@ if (typeof window !== 'undefined') {
   window.formatGeneralCompetenciesGuide = formatGeneralCompetenciesGuide;
 }
 
+function isPracticeOrReviewLesson(topic) {
+  return /\b(luyện\s*tập\s*chung|ôn\s*tập|củng\s*cố)\b/i.test(String(topic || ""));
+}
+
 if (typeof globalThis !== 'undefined') {
   globalThis.PROMPTS = PROMPTS;
 }

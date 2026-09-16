@@ -531,6 +531,7 @@ class DocxGenerator {
     if (!window.docx) return [];
     const { TextRun } = window.docx;
 
+    text = String(text || "").replace(/<br\s*\/?>/gi, "\n");
     const runs = [];
     // Công thức đứng trước định dạng Markdown để x_1, a_{ij} trong $...$ không bị hiểu là italic.
     const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*\*[\s\S]+?\*\*\*|\*\*[\s\S]+?\*\*|(?<![\w\\])___(?!\s|_)[^_\n]+?(?<!\s)___(?!\w)|(?<![\w\\])__(?!\s|_)[^_\n]+?(?<!\s)__(?!\w)|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|(?<![\w\\])_(?!\s|_)[^_\n]+?(?<!\s)_(?![\w_])|`[^`]+?`|\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;

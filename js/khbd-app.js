@@ -8,6 +8,10 @@
 
 // Deploy version: 20260916-textbook-exact-v18
 
+function isPracticeOrReviewLesson(topic) {
+  return /\b(luyện\s*tập\s*chung|ôn\s*tập|củng\s*cố)\b/i.test(String(topic || ""));
+}
+
 if (typeof getPromptTemplate === "undefined" && typeof require !== "undefined") {
   try {
     const prompts = require("./khbd-prompts.js");
@@ -2298,7 +2302,7 @@ function formatKhbdRoleLine(line) {
   if (!isTable) {
     content = content.replace(/\s*\|\s*(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, (_, role) => `§BR§§${role.toUpperCase()}§`);
   }
-  content = content.replace(/(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, (_, role) => `§BR§§${role.toUpperCase()}§`);
+  content = content.replace(/(^|<br>\s*|-\s*)(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, (_, prefix, role) => prefix + '§BR§§' + role.toUpperCase() + '§');
   content = content.replace(/§BR§/g, "<br>- ");
   content = content.replace(/§GV§/g, "**GV:**");
   content = content.replace(/§HS§/g, "**HS:**");
@@ -6387,7 +6391,7 @@ function normalizeActivityTimeHeadings(text, options = {}) {
     if (headingRe.B.test(trimmed) && !branchRe.test(trimmed)) return replaceHeadingMinutes(line, budgets.B);
     if (headingRe.C.test(trimmed)) return replaceHeadingMinutes(line, budgets.C);
     if (headingRe.D.test(trimmed)) return replaceHeadingMinutes(line, budgets.D);
-    if (headingRe.E.test(trimmed)) return replaceHeadingMinutes(line, budgets.E);
+    if (headingRe.E.test(trimmed)) return line.replace(/\s*\(\s*\d+\s*phút\s*\)/i, "");
     if (branchRe.test(trimmed)) {
       const minutes = budgets.B_subsections[Math.min(branchIdx, budgets.B_subsections.length - 1)];
       branchIdx += 1;
@@ -6429,7 +6433,7 @@ function clipKhbdActivityMarkdown(actKey, text, options = {}) {
     1,
     Number(options.subsectionCount) || resolveSharedBSubsectionCount(clipped, options)
   );
-  return normalizeActivityTimeHeadings(clipped, { fourActivities: actKey !== "E", subsectionCount, subsectionProfiles: options.subsectionProfiles, textbookContent: options.textbookContent });
+  return normalizeActivityTimeHeadings(clipped, { fourActivities: true, subsectionCount, subsectionProfiles: options.subsectionProfiles, textbookContent: options.textbookContent });
 }
 
 function finalizeParsedKhbdSection(key, text) {

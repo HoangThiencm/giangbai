@@ -1,3 +1,9 @@
+# IMPLEMENT: Phụ lục E và định dạng phân vai
+
+Đã xóa thời lượng Phụ lục E, chuyển thẻ br sang xuống dòng khi xuất Word và giới hạn định dạng GV/HS vào đầu lượt lời để không sửa cụm Nhận xét của GV.
+
+## Lịch sử
+
 # IMPLEMENT: Auto-Save Sổ Điểm
 
 Đã thêm auto-save debounce 1.2 giây, badge trạng thái, lưu keepalive khi rời trang và smoke assertions cho sodiem.html.

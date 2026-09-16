@@ -1,31 +1,36 @@
 # VERIFY
 
 ## Kết luận
-PASS
+FAIL
 
 ## Đối chiếu scope
-- Đã nâng cấp chi tiết kịch bản sư phạm 4 bước trong `js/khbd-prompts.js` (Bước 1: lệnh rõ, công cụ, thời gian; Bước 2: thao tác HS, dự kiến câu trả lời đúng/sai điển hình; Bước 3: diễn biến báo cáo, chất vấn phản biện; Bước 4: quy tắc vàng ghi vở): ĐÚNG SCOPE.
-- Đã cấu hình Canvas sang mô hình `gemini-2.5-flash` và cơ chế fallback tự động trong `api/canvas_gemini.php`, đồng thời tăng timeout sinh hoạt động trong `js/khbd-app.js` lên 95.000ms để triệt tiêu lỗi `Failed to fetch`: ĐÚNG SCOPE.
-- Đã chia tỉ lệ bảng hoạt động dạy học thành 2 : 1 (`6426` dxa và `3213` dxa trong `js/khbd-docx.js`, CSS `66.67%` và `33.33%` trong `css/khbd-styles.css`): ĐÚNG SCOPE.
-- Đã đồng bộ cache-busting `20260916-textbook-exact-v18` và cập nhật các smoke tests tương ứng: ĐÚNG SCOPE.
+- Scope 1: Xóa bỏ hoàn toàn thời gian ở Hồ sơ dạy học (Mục IV / Phụ lục E): ĐÃ LÀM MỘT PHẦN (trong `js/khbd-app.js` đã sửa `normalizeActivityTimeHeadings` xóa `(X phút)` và truyền `fourActivities: true`, nhưng chưa làm sạch tiêu đề con lặp lại khi xuất Word trong `js/khbd-docx.js`).
+- Scope 2: Chuẩn hóa cấu trúc tiến trình cho tiết "Luyện tập chung", "Ôn tập": CHƯA LÀM (chưa có hàm `isPracticeOrReviewLesson`, chưa có prompt chuyên biệt cho tiết luyện tập chung/ôn tập, chưa cấu hình phân bổ thời lượng 75–80% cho Luyện tập).
+- Scope 3: Khắc phục triệt để lỗi rỉ thẻ `<br>- GV:` vào `Nhận xét của GV:` và in thẻ HTML thô ra Word: CHƯA LÀM (`formatKhbdRoleLineBreaks` vẫn biến `*(Nhận xét của GV: ...)*` thành `*(Nhận xét của <br>- **GV:** ...)*`).
+- Scope 4: Bắt buộc cập nhật `docs/handoff/IMPLEMENT.md`: CHƯA LÀM (`IMPLEMENT.md` chưa có nội dung cho đợt thay đổi này).
 
 ## Test đã chạy
-1. `node -c js/khbd-prompts.js js/khbd-docx.js js/khbd-app.js`: PASS.
-2. `node tests/khbd-table-columns-smoke.js`: PASS (xác nhận độ rộng cột xuất Word `[6426, 3213]` tương ứng đúng tỉ lệ 2:1).
-3. `node tests/canvas-activity-b-multi-branches-smoke.js`: PASS (bảo tồn đa nhánh 2.1 và 2.2, kiểm tra cache-busting v18).
-4. `node tests/canvas-gemini-api-smoke.js`: PASS (kiểm tra API proxy Canvas, model mặc định `gemini-2.5-flash` và cơ chế fallback).
-5. `node tests/canvas-prompts-integrity-smoke.js`: PASS (kiểm tra asset guard, export window/globalThis, fallback stub và cache-busting v18).
-6. `node tests/canvas-soankhbd-smoke.js`: PASS 100% (cả bản chính và bản backup).
-7. `node tests/canvas-textbook-analysis-smoke.js`: PASS.
+1. Kiểm tra `isPracticeOrReviewLesson` trong `js/khbd-prompts.js` và `js/khbd-app.js`: FAIL (hàm chưa được định nghĩa).
+2. Kiểm tra `formatKhbdRoleLineBreaks` với chuỗi `*(Nhận xét của GV: ...)*`: FAIL (kết quả trả về vẫn bị chèn `<br>- **GV:**`).
+3. Kiểm tra hàm `clipKhbdActivityMarkdown('E', ...)`: PASS (tiêu đề Phụ lục E đã không còn dính `(4 phút)`).
+4. Chạy `tests/khbd-activity-e-smoke.js`: PASS.
+5. Chạy `tests/khbd-time-budgets-smoke.js`: PASS.
+6. Chạy `tests/khbd-pedagogy-rate-smoke.js`: PASS.
 
 ## Pass / Fail từng tiêu chí
-1. Tiêu chí 1: Cột bảng hoạt động xuất Word (.docx) chia đúng tỉ lệ 2 : 1 (`6.426 dxa` cho GV-HS và `3.213 dxa` cho Nội dung) -> PASS.
-2. Tiêu chí 2: Tạo Hoạt động C trên Canvas phản hồi nhanh, mượt mà, triệt tiêu 100% lỗi `Failed to fetch` -> PASS.
-3. Tiêu chí 3: Kịch bản dạy học có đủ chi tiết sư phạm 4 bước (lệnh GV, thao tác HS, dự kiến câu trả lời/lỗi sai của HS, diễn biến chất vấn - phản biện và chốt kiến thức) -> PASS.
-4. Tiêu chí 4: Toàn bộ test liên quan đạt PASS 100% -> PASS.
+1. Tiêu chí 1: Mục Phụ lục / Hồ sơ dạy học khi xuất ra Word (.docx) hoặc Markdown toàn bài 100% không còn gắn thời gian `(X phút)` -> PASS một phần (cần hoàn thiện thêm ở khâu xuất Word trong `js/khbd-docx.js`).
+2. Tiêu chí 2: Toàn bộ thời lượng bài dạy (45 phút / 90 phút) được bảo toàn nguyên vẹn cho các hoạt động dạy học trên lớp -> PASS.
+3. Tiêu chí 3: Khi soạn tiết "Luyện tập chung" hoặc "Ôn tập" (Khởi động trò chơi -> Bỏ hình thành kiến thức mới -> Trọng tâm Luyện tập 75–80%) -> FAIL (chưa triển khai).
+4. Tiêu chí 4: Triệt tiêu hoàn toàn lỗi chèn `<br>- GV:` vào `Nhận xét của GV:`; file Word xuất ra không chứa thẻ `<br>` thô -> FAIL (chưa sửa regex trong `formatKhbdRoleLine`).
+5. Tiêu chí 5: Bắt buộc ghi `docs/handoff/IMPLEMENT.md` phản ánh đúng các thay đổi -> FAIL (`IMPLEMENT.md` chưa được ghi nhận cho task này).
 
 ## Bug
-Không có bug.
-
-
-
+- Lỗi 1: `formatKhbdRoleLine` chèn `<br>- ` vào giữa cụm `Nhận xét của GV:`.
+  - Tái hiện: Chạy `formatKhbdRoleLineBreaks("*(Nhận xét của GV: ....................)*")`, kết quả trả về `*(Nhận xét của <br>- **GV:** ....................)*`.
+  - File liên quan: `js/khbd-app.js` (dòng 2301) và `canvas_soankhbd.html` (dòng 1421).
+- Lỗi 2: Chưa triển khai tính năng nhận diện và cấu hình cho tiết "Luyện tập chung" / "Ôn tập".
+  - Tái hiện: Thiếu hàm `isPracticeOrReviewLesson` và logic tính thời lượng/prompt luyện tập trong `js/khbd-prompts.js` và `js/khbd-app.js`.
+  - File liên quan: `js/khbd-prompts.js`, `js/khbd-app.js`.
+- Lỗi 3: Chưa cập nhật `docs/handoff/IMPLEMENT.md` cho đợt triển khai này.
+  - Tái hiện: `IMPLEMENT.md` hiện tại chỉ có nội dung của task Auto-Save Sổ Điểm từ trước.
+  - File liên quan: `docs/handoff/IMPLEMENT.md`.
