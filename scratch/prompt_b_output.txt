@@ -1,0 +1,26 @@
+Subsections found: [
+  {
+    "index": 1,
+    "title": "1. PHÉP NHÂN SỐ TỰ NHIÊN"
+  },
+  {
+    "index": 2,
+    "title": "2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ"
+  }
+]
+
+--- PROMPT B TAIL (last 2000 chars) ---
+ n sau. Bạn PHẢI tạo đúng 2 hoạt động nhánh tương ứng 1-1, KHÔNG ĐƯỢC GỘP, KHÔNG ĐƯỢC BỎ BỚT, KHÔNG ĐƯỢC BỊA THÊM:
++ Tiểu mục 1: "1. PHÉP NHÂN SỐ TỰ NHIÊN" -> BẮT BUỘC sinh: ### Hoạt động 2.1: 1. PHÉP NHÂN SỐ TỰ NHIÊN (23 phút)
++ Tiểu mục 2: "2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ" -> BẮT BUỘC sinh: ### Hoạt động 2.2: 2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ (22 phút)
+Tên hoạt động nhánh BẮT BUỘC đúng nguyên văn 100% tên đề mục SGK ở trên, không diễn đạt lại, không đổi từ, không rút gọn.
+BẮT BUỘC bắt đầu từ Hoạt động 2.1 đúng tiểu mục đầu tiên (Mục 1). CẤM bỏ qua Mục 1, CẤM bắt đầu từ 2.2.
+Bài học có 2 mục lớn thì BẮT BUỘC phải sinh đủ 2 nhánh Hoạt động từ 2.1 đến 2.2. TUYỆT ĐỐI CẤM dừng lại hoặc bỏ dở sau khi chỉ sinh Hoạt động 2.1.
+Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có thời lượng cố định cụ thể ví dụ (23 phút), đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng). Tuyệt đối không tách câu hỏi nhỏ/bài tập con thành hoạt động riêng.
+Tổng số phút 2 nhánh BẮT BUỘC ĐÚNG BẰNG 45 phút (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). Tổng A + B + C + D BẮT BUỘC đúng bằng 90 phút. 
+
+QUY TẮC BẮT BUỘC VỀ KHUNG NĂNG LỰC AI: Giáo viên KHÔNG bật tích hợp Khung năng lực AI (QĐ 2422). Bỏ qua mọi gợi ý về AI/Dạng 1/Dạng 2/[AI] ở trên. TUYỆT ĐỐI CẤM chèn bất kỳ marker [AI], [AI: ...], CẤM kịch bản kiểm chứng phản biện AI, CẤM prompting AI vào giáo án.
+
+LỆNH BẮT BUỘC KHÓA NĂNG LỰC AI: Giáo viên KHÔNG kích hoạt Khung năng lực AI (QĐ 2422). Bỏ qua toàn bộ các hướng dẫn hoặc ví dụ mẫu liên quan đến AI (Dạng 1 kiểm chứng phản hồi AI, Dạng 2 prompting AI) trong hợp đồng biên soạn. TUYỆT ĐỐI CẤM đưa nội dung AI hoặc gắn bất kỳ marker [AI], [AI: ...] vào bài.
+
+LỆNH BẮT BUỘC KHÓA NĂNG LỰC SỐ: Giáo viên KHÔNG kích hoạt Năng lực số (CV 3456). TUYỆT ĐỐI CẤM kịch bản NLS hay gắn marker [NLS], [NLS: ...] vào bài.

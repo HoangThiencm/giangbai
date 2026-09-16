@@ -1,165 +1,129 @@
-# PLAN: Sửa triệt để lỗi "PROMPTS is not defined" khi 1-Click Generate trên Gemini Canvas
+# PLAN: Sửa triệt để lỗi Hoạt động B chỉ giữ lại nhánh 2.1 và bị nuốt mất nhánh 2.2
 
 ## 1. Hiện trạng & Nguyên nhân gốc rễ (Root Cause Analysis)
 
-Khi người dùng nhấn nút **1-Click Generate** (Soạn bài 1-Click) trên Gemini Canvas, ứng dụng báo lỗi console:
+Khi người dùng soạn bài (kể cả 1-Click Generate), bài học có 2 mục lớn (như Toán 6 Bài 5: Mục 1 Phép nhân, Mục 2 Phép chia) chỉ xuất hiện:
+```markdown
+### Hoạt động 2.1: 1. PHÉP NHÂN SỐ TỰ NHIÊN (23 phút)
+...
 ```
-[CONSOLE_ERROR] 1-Click Generate Error: Error: PROMPTS is not defined
-Stack: ReferenceError: PROMPTS is not defined
-    at buildPedagogicalPrompt (https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-textbook-exact-v15:1:339454)
-    at executeStep (blob:...:2335:62)
-    at HTMLButtonElement.handle1ClickGenerate (blob:...:2378:17)
-```
+và sau đó dừng luôn ở 2.1 rồi nhảy sang **C. HOẠT ĐỘNG 3: LUYỆN TẬP**, hoàn toàn biến mất **Hoạt động 2.2: 2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ**.
 
-Qua khảo sát thực tế toàn diện hệ thống:
-1. **File trên host `https://hoangthiencm.id.vn/js/khbd-prompts.js` đang rỗng (0 bytes)**:
-   - Kiểm tra trực tiếp HTTP response từ host: `https://hoangthiencm.id.vn/js/khbd-prompts.js` trả về HTTP 200 nhưng độ dài nội dung là **0 bytes** (`Len: 0`).
-   - Khi Canvas nạp thẻ `<script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=..."></script>`, trình duyệt tải về file rỗng nên không có bất kỳ khai báo nào được thực thi.
-2. **CI / CD chưa giám sát `js/khbd-prompts.js`**:
-   - Trong `tools/check-required-assets.js`, danh sách file bắt buộc không có `js/khbd-prompts.js` và `js/khbd-app.js`. Do đó, khi file bị rỗng trên máy chủ FTP, CI không phát hiện được và vẫn báo deploy thành công.
-3. **Khai báo trong `js/khbd-prompts.js` không gán vào `window.PROMPTS`**:
-   - Ở cuối file `js/khbd-prompts.js` (dòng 1702–1712), code chỉ gán:
-     `window.isEnglishSubject = isEnglishSubject;`
-     `window.getSystemRole = getSystemRole;`
-     `window.getPromptTemplate = getPromptTemplate;` ...
-     nhưng **hoàn toàn bỏ quên** `window.PROMPTS = PROMPTS;` và `globalThis.PROMPTS = PROMPTS;`.
-   - Trong môi trường obfuscation, bundling hoặc các thẻ script riêng rẽ, `const PROMPTS` ở phạm vi script không tự động trở thành thuộc tính của `window`.
-4. **`buildPedagogicalPrompt` trong `js/khbd-app.js` truy cập biến trần không an toàn**:
-   - Tại dòng 5046:
+### Kết quả khảo sát thực nghiệm chính xác 100%:
+1. **Gemini API THỰC TẾ ĐÃ SINH ĐẦY ĐỦ CẢ 2.1 VÀ 2.2**:
+   - Khi gửi Prompt B lên API (`canvas_gemini.php`), Gemini trả về HTTP 200, độ dài 5.161 ký tự, chứa cả:
+     - `### Hoạt động 2.1: 1. PHÉP NHÂN SỐ TỰ NHIÊN (23 phút)`
+     - `### Hoạt động 2.2: 2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ (22 phút)`
+2. **Thủ phạm: Hàm hậu xử lý `clipKhbdActivityMarkdown` xén mất nhánh 2.2**:
+   - Sau khi Gemini trả về kết quả, ứng dụng chạy qua pipeline `applyActivityOutput("B", result)` -> gọi `clipKhbdActivityMarkdown("B", finalResult)` (dòng 7191 và dòng 6417 trong `js/khbd-app.js`).
+   - Trong `clipKhbdActivityMarkdown`, dòng 6417 gọi:
+     `let clipped = keepBestActivityBlock(lines.slice(start, end).join("\n").trim(), actKey);`
+   - Trong `keepBestActivityBlock(text, "B")` (dòng 5939 `js/khbd-app.js`):
+     Hàm này tìm các dòng tiêu đề của Hoạt động B bằng regex `activityHeadingRegex("B")`.
+   - Trong `activityHeadingRegex` (dòng 5904 `js/khbd-app.js`):
      ```javascript
-     function buildPedagogicalPrompt(prompt) {
-       let out = `${prompt}\n\n${PROMPTS.OUTPUT_CONTRACT}`;
-       if (typeof isEnglishSubject === "function" && isEnglishSubject(appState.selectedSubject) && PROMPTS.ENGLISH_ELT_DIRECTIVE) {
-         out += `\n\n${PROMPTS.ENGLISH_ELT_DIRECTIVE}`;
-       }
-       return out;
-     }
+     B: "B[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*2\\b|HÌNH[ \\t]*THÀNH"
      ```
-   - Truy cập trực tiếp `PROMPTS.OUTPUT_CONTRACT` mà không qua hàm bọc an toàn hoặc kiểm tra `typeof PROMPTS !== 'undefined'`, gây crash ngay lập tức (`ReferenceError`).
-5. **Canvas thiếu stub fallback dự phòng cho `PROMPTS`**:
-   - Trong `canvas_soankhbd.html` đã có fallback cho `KHBD_STANDARDS`, `KHBD_YCCD`, `getSystemRole`, nhưng chưa có fallback stub cho `PROMPTS` (chứa `OUTPUT_CONTRACT` và `ENGLISH_ELT_DIRECTIVE`).
+   - **LỖI LOGIC REGEX**: Ký hiệu ranh giới từ `\b` sau số `2` coi dấu chấm `.` trong `2.1` và `2.2` là ký tự phân cách từ (`\W`). Do đó:
+     - Dòng `## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI`: khớp regex!
+     - Dòng `### Hoạt động 2.1: 1. PHÉP NHÂN SỐ TỰ NHIÊN`: **cũng khớp regex**!
+     - Dòng `### Hoạt động 2.2: 2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ`: **cũng khớp regex**!
+   - **HẬU QUẢ TAI HẠI**: `keepBestActivityBlock` ngỡ rằng Gemini sinh lặp lại 3 phiên bản Hoạt động 2 trùng lặp (Block 0: tiêu đề chung, Block 1: nhánh 2.1, Block 2: nhánh 2.2).
+   - Hàm này tiến hành chấm điểm `scoreKhbdActivityBlock` cho từng khối và chỉ lấy **duy nhất khối có điểm cao nhất** (Khối 1: nhánh 2.1 dài 2.710 ký tự vs Khối 2 dài 2.368 ký tự).
+   - Kết quả: **Nhánh 2.2 bị vứt bỏ hoàn toàn ngay trong khâu xử lý nội bộ của client**, chỉ còn trơ trọi nhánh 2.1 đưa vào editor!
 
 ---
 
 ## 2. Phạm vi can thiệp
 
-1. **Host & CI Integrity**:
-   - Bổ sung `js/khbd-prompts.js` và `js/khbd-app.js` vào `tools/check-required-assets.js`.
-   - Nâng cache-busting version từ `v15` lên `v16` (`20260916-textbook-exact-v16`) trên tất cả các file để ép trình duyệt và CDN nạp file mới đầy đủ nội dung.
-2. **Xuất biến toàn cục trong `js/khbd-prompts.js`**:
-   - Thêm `window.PROMPTS = PROMPTS;` và `if (typeof globalThis !== 'undefined') globalThis.PROMPTS = PROMPTS;`.
-3. **Phòng thủ đa tầng trong `js/khbd-app.js`**:
-   - Tạo hàm `getSafePrompts()` để truy xuất an toàn từ `PROMPTS`, `window.PROMPTS`, hoặc `globalThis.PROMPTS`.
-   - Cập nhật `buildPedagogicalPrompt` sử dụng `getSafePrompts()` và fallback chuỗi hợp đồng đầu ra chuẩn CV 5512, không bao giờ để ném ngoại lệ `ReferenceError`.
-4. **Dự phòng nhúng trong `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`**:
-   - Thêm fallback stub cho `window.PROMPTS` chứa đầy đủ `OUTPUT_CONTRACT` và `ENGLISH_ELT_DIRECTIVE` trước khi nạp `khbd-app.js`.
+1. **Sửa biểu thức chính quy nhận diện tiêu đề chính `activityHeadingRegex` trong `js/khbd-app.js`**:
+   - Bổ sung negative lookahead `(?!\\.\\d+)` sau các số thứ tự hoạt động 1, 2, 3, 4 để không bao giờ nhận nhầm các tiểu mục con (`2.1`, `2.2`, `2.3`, `1.1`...) thành tiêu đề hoạt động chính.
+2. **Gia cố hàm `keepBestActivityBlock` trong `js/khbd-app.js`**:
+   - Tiêu đề hoạt động cấp lớn bắt buộc là heading cấp 2 (`^##\s+`) hoặc không phải là nhánh con `###\s*Hoạt\s*động\s*\d+\.\d+`.
+   - Khi `actKey === "B"`, tuyệt đối không được phân tách các nhánh con `2.1`, `2.2` thành các block cạnh tranh để loại trừ nhau.
+3. **Nâng version cache-busting**:
+   - Nâng version từ `v16` lên `v17` (`20260916-textbook-exact-v17`) trong `canvas_soankhbd.html`, `backupcode viettailieu/canvas_soankhbd.html`, `js/khbd-app.js`, `js/khbd-prompts.js`.
+4. **Bổ sung test hồi quy**:
+   - Kiểm tra trực tiếp `clipKhbdActivityMarkdown('B', text)` với dữ liệu đa nhánh 2.1 và 2.2, đảm bảo 100% giữ nguyên vẹn toàn bộ các nhánh con.
 
 ---
 
 ## 3. Ngoài phạm vi
 
-- Không thay đổi cấu trúc luồng 1-Click hay logic xử lý AI.
-- Không thay đổi các thuật toán phân tích SGK đa trang đã hoàn thành ở bước trước.
+- Không thay đổi prompt SGK hay prompt sư phạm.
+- Không thay đổi giao diện Canvas.
 
 ---
 
 ## 4. Danh sách file tác động
 
-1. `tools/check-required-assets.js`
-2. `js/khbd-prompts.js`
-3. `js/khbd-app.js`
-4. `canvas_soankhbd.html`
-5. `backupcode viettailieu/canvas_soankhbd.html`
-6. `tests/canvas-prompts-integrity-smoke.js` (Test mới kiểm tra tính toàn vẹn và fallback của PROMPTS)
+1. `js/khbd-app.js`
+2. `canvas_soankhbd.html`
+3. `backupcode viettailieu/canvas_soankhbd.html`
+4. `js/khbd-prompts.js`
+5. `tests/khbd-activity-b-subsections-smoke.js` (hoặc test mới `tests/canvas-activity-b-multi-branches-smoke.js`)
 
 ---
 
 ## 5. Chi tiết các bước triển khai (Dành cho Coder)
 
-### Bước 1: Cập nhật `tools/check-required-assets.js`
-Thêm `"js/khbd-prompts.js"` và `"js/khbd-app.js"` vào mảng `required`:
+### Bước 1: Sửa `activityHeadingRegex` trong `js/khbd-app.js`
+Tại dòng 5901 `js/khbd-app.js`:
 ```javascript
-const required = [
-  "js/khbd-curriculum.js",
-  "js/khbd-standards.js",
-  "js/khbd-yccd.js",
-  "js/khbd-prompts.js",
-  "js/khbd-app.js",
-  "ai-design-config.js"
-];
+function activityHeadingRegex(key) {
+  const map = {
+    A: "A[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*1(?!\\.\\d+)\\b|MỞ[ \\t]*ĐẦU\\b",
+    B: "B[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*2(?!\\.\\d+)\\b|HÌNH[ \\t]*THÀNH",
+    C: "C[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*3(?!\\.\\d+)\\b|LUYỆN[ \\t]*TẬP\\b",
+    D: "D[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*4(?!\\.\\d+)\\b|VẬN[ \\t]*DỤNG\\b",
+    E: "E[\\.\\s:]|HỒ[ \\t]*SƠ|PHIẾU[ \\t]*HỌC[ \\t]*TẬP|PHỤ[ \\t]*LỤC",
+    F: "F[\\.\\s:]|HÌNH[ \\t]*MINH[ \\t]*HỌA"
+  };
+  return new RegExp(`^#{1,3}\\s*(?:${map[key]})`, "i");
+}
 ```
 
-### Bước 2: Xuất toàn cục trong `js/khbd-prompts.js`
-1. Cập nhật header version lên `20260916-textbook-exact-v16`.
-2. Tại khối `if (typeof window !== 'undefined')` (khoảng dòng 1702):
-   ```javascript
-   if (typeof window !== 'undefined') {
-     window.PROMPTS = PROMPTS;
-     window.isEnglishSubject = isEnglishSubject;
-     window.getSystemRole = getSystemRole;
-     window.getPromptTemplate = getPromptTemplate;
-     window.calculateActivityTimeBudgets = calculateActivityTimeBudgets;
-     window.extractTextbookSubsections = extractTextbookSubsections;
-     window.normalizeTextbookSubsectionProfiles = normalizeTextbookSubsectionProfiles;
-     window.extractTextbookLessonMap = extractTextbookLessonMap;
-     window.getGeneralCompetenciesForSubject = getGeneralCompetenciesForSubject;
-     window.formatGeneralCompetenciesGuide = formatGeneralCompetenciesGuide;
-   }
-   if (typeof globalThis !== 'undefined') {
-     globalThis.PROMPTS = PROMPTS;
-   }
-   ```
+### Bước 2: Gia cố `keepBestActivityBlock` trong `js/khbd-app.js`
+Tại dòng 5939 `js/khbd-app.js`:
+Bảo đảm không lấy các dòng tiêu đề tiểu mục `### Hoạt động 2.k:` làm điểm cắt block:
+```javascript
+function keepBestActivityBlock(text, actKey) {
+  const source = String(text || "").trim();
+  if (!source) return source;
+  const headingRe = activityHeadingRegex(actKey);
+  const lines = source.split(/\r?\n/);
+  const starts = [];
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    // Tuyệt đối không coi nhánh con 2.1, 2.2... là điểm bắt đầu một block độc lập cạnh tranh
+    if (/^#{3,4}\s*(?:\d+\.\s*)?Hoạt\s*động\s*\d+\.\d+/i.test(trimmed)) return;
+    if (headingRe.test(trimmed)) starts.push(index);
+  });
+  if (starts.length <= 1) return source;
+  const blocks = starts.map((start, idx) => {
+    const end = idx + 1 < starts.length ? starts[idx + 1] : lines.length;
+    return lines.slice(start, end).join("\n").trim();
+  });
+  return blocks.sort((a, b) => scoreKhbdActivityBlock(b, actKey) - scoreKhbdActivityBlock(a, actKey))[0];
+}
+```
 
-### Bước 3: Phòng thủ trong `js/khbd-app.js`
-1. Thêm hàm trợ giúp an toàn trước `buildPedagogicalPrompt`:
-   ```javascript
-   function getSafePrompts() {
-     if (typeof PROMPTS !== 'undefined' && PROMPTS) return PROMPTS;
-     if (typeof window !== 'undefined' && window.PROMPTS) return window.PROMPTS;
-     if (typeof globalThis !== 'undefined' && globalThis.PROMPTS) return globalThis.PROMPTS;
-     return null;
-   }
-   ```
-2. Viết lại `buildPedagogicalPrompt`:
-   ```javascript
-   function buildPedagogicalPrompt(prompt) {
-     const p = getSafePrompts();
-     const contract = (p && p.OUTPUT_CONTRACT) || (typeof window !== 'undefined' && window.__KHBD_DEFAULT_OUTPUT_CONTRACT) || '';
-     let out = contract ? `${prompt}\n\n${contract}` : prompt;
-     const isEng = typeof isEnglishSubject === 'function' ? isEnglishSubject(appState.selectedSubject) : false;
-     if (isEng && p && p.ENGLISH_ELT_DIRECTIVE) {
-       out += `\n\n${p.ENGLISH_ELT_DIRECTIVE}`;
-     }
-     return out;
-   }
-   ```
+### Bước 3: Đồng bộ Cache Busting `v17`
+- Trong `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`:
+  - `khbd-prompts.js?v=20260916-textbook-exact-v17`
+  - `khbd-app.js?v=20260916-textbook-exact-v17`
+- Trong `js/khbd-prompts.js` và `js/khbd-app.js`: cập nhật header version `v17`.
 
-### Bước 4: Thêm fallback stub trong `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`
-1. Nâng phiên bản cache-busting cho script `khbd-prompts.js` và `khbd-app.js` lên `v16`:
-   `v=20260916-textbook-exact-v16`.
-2. Trong khối script fallback trước `khbd-app.js` (ngay vị trí định nghĩa `window.getSystemRole`):
-   ```javascript
-   if (typeof window.PROMPTS === "undefined") {
-     window.PROMPTS = {
-       OUTPUT_CONTRACT: "HỢP ĐỒNG ĐẦU RA BẮT BUỘC:\n- BẮT ĐẦU NGAY LẬP TỨC bằng tiêu đề/mục chuyên môn phù hợp.\n- TUYỆT ĐỐI CẤM: lời chào hỏi, khen ngợi, giới thiệu, nhận xét ngoài lề, lời chúc ở cuối bài.\n- TUYỆT ĐỐI CẤM dùng code block fence (```markdown hoặc ```). Chỉ xuất Markdown thuần túy.\n- CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu.\n- BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (***...***).",
-       ENGLISH_ELT_DIRECTIVE: "ENGLISH-MEDIUM ELT LESSON PLAN OVERRIDE (subject = Tiếng Anh / English):\nWrite the ENTIRE lesson plan in natural classroom English (100% English)."
-     };
-   }
-   ```
-
-### Bước 5: Viết bài test kiểm chứng `tests/canvas-prompts-integrity-smoke.js`
-- Test 1: Kiểm tra `tools/check-required-assets.js` chạy thành công và quét cả `js/khbd-prompts.js` và `js/khbd-app.js`.
-- Test 2: Kiểm tra `js/khbd-prompts.js` có gán `window.PROMPTS` và `globalThis.PROMPTS`.
-- Test 3: Kiểm tra `buildPedagogicalPrompt` trong `js/khbd-app.js` hoạt động mượt mà khi `PROMPTS` không tồn tại ở scope trần (dùng fallback / window).
-- Test 4: Kiểm tra `canvas_soankhbd.html` và bản backup chứa fallback stub và version `v16`.
+### Bước 4: Viết bài test kiểm chứng `tests/canvas-activity-b-multi-branches-smoke.js`
+- Đưa dữ liệu mẫu có cả Hoạt động 2.1 và 2.2 vào `clipKhbdActivityMarkdown("B", text, { subsectionCount: 2 })`.
+- Xác nhận đầu ra:
+  - BẮT BUỘC chứa cả `Hoạt động 2.1` VÀ `Hoạt động 2.2`.
+  - Độ dài nội dung đầy đủ không bị cắt cụt.
 
 ---
 
 ## 6. Tiêu chí kiểm thử nghiệm thu (Verification Criteria)
 
-1. Chạy bài test mới `node tests/canvas-prompts-integrity-smoke.js` đạt PASS 100%.
-2. Chạy toàn bộ các test canvas hiện có: `tests/canvas-soankhbd-smoke.js`, `tests/canvas-gemini-api-smoke.js`, `tests/canvas-textbook-analysis-smoke.js` đạt PASS 100%.
-3. Sau khi commit và push, chạy kiểm tra từ xa URL:
-   `https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v16`
-   đảm bảo trả về HTTP 200 và độ dài nội dung > 100,000 bytes (không bao giờ còn 0 bytes).
-4. Xác nhận chức năng 1-Click Generate trên Canvas không còn bất kỳ lỗi `ReferenceError: PROMPTS is not defined`.
+1. Test `node tests/canvas-activity-b-multi-branches-smoke.js` đạt PASS 100%.
+2. Tất cả các test canvas hiện có đạt PASS 100%.
+3. Sau khi người dùng 1-Click Generate trên Canvas, Hoạt động B phải hiển thị đầy đủ trọn vẹn cả **Hoạt động 2.1** và **Hoạt động 2.2**, không còn bị dừng giữa chừng.

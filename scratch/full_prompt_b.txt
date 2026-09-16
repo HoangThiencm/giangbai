@@ -1,0 +1,193 @@
+Hãy biên soạn chi tiết toàn bộ **HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI** trong mục III. Tiến trình dạy học môn Toán học chuẩn Công văn 5512 theo GDPT 2018.
+- Môn học: Toán học
+- Tên bài dạy: Bài 5: Phép nhân và phép chia số tự nhiên
+- Phạm vi tiết dạy theo PPCT (nếu có): 
+- Dữ liệu Phân phối chương trình (PPCT nếu có):
+"""
+
+"""
+- Mục tiêu bài học:
+"""
+
+"""
+- Dữ liệu SGK:
+"""
+## Ngữ cảnh SGK đã phân tích
+- Chủ đề: Bài 5: Phép nhân và phép chia số tự nhiên
+- Môn: Toán học
+- Khối lớp: 6
+## Đề mục SGK (nguyên văn)
+### 1. PHÉP NHÂN SỐ TỰ NHIÊN
+- Đề mục: 1. PHÉP NHÂN SỐ TỰ NHIÊN
+- Kiến thức cốt lõi: Phép nhân hai số tự nhiên a và b cho một số tự nhiên gọi là tích.
+- Hoạt động khám phá: HĐ1, HĐ2, HĐ3
+- Luyện tập 1: Tính 834 x 57
+- Vận dụng 1: Tiền in tài liệu
+- Vận dụng 2: Tiền bóng đèn
+### 2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ
+- Đề mục: 2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ
+- Kiến thức cốt lõi: Chia hai số tự nhiên
+- Hoạt động khám phá: HĐ4, HĐ5
+- Luyện tập 3: Đặt tính chia
+- Vận dụng 3: Bài toán xếp xe
+## Bài tập
+- Bài 1.23: Thực hiện phép tính
+"""
+
+YÊU CẦU KỊCH BẢN THỰC CHIẾN & NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO MỤC LỚN SGK:
+YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠM THỰC CHIẾN TRONG BẢNG 2 CỘT (Chuẩn CV 5512 & GDPT 2018):
+- YÊU CẦU ĐỘ DÀI & VĂN PHONG SÚC TÍCH: Toàn bộ Kế hoạch bài dạy hoàn chỉnh đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trực diện vào bản chất kiến thức và hành động cốt lõi của GV/HS; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không dùng câu thoại diễn giải lòng vòng, không lặp lại nội dung giữa các mục.
+- THỜI LƯỢNG HOẠT ĐỘNG: BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề các Hoạt động (A, B, C, D, E) và từng hoạt động nhánh trong Mục B, ví dụ: `## A. HOẠT ĐỘNG 1: MỞ ĐẦU (5 phút)`, `### 1. Hoạt động 2.1: [Tên mục] (15 phút)`, `## C. HOẠT ĐỘNG 3: LUYỆN TẬP (10 phút)`, `## D. HOẠT ĐỘNG 4: VẬN DỤNG (5 phút)`, `## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NHÀ (3 phút)`. CẤM TUYỆT ĐỐI ghi từ "Khoảng" hoặc dải thời gian dạng "X - Y phút".
+- KHÓA TỔNG THỜI LƯỢNG: Tổng thời lượng tất cả hoạt động nhánh trong B BẮT BUỘC đúng bằng 45 phút; tổng A + B + C + D BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy 02 tiết (90 phút) (02 tiết = đúng 90 phút). Thời lượng từng nhánh B được hệ thống phân bổ theo khối lượng/độ phức tạp, KHÔNG chia đều; phải dùng đúng số phút đã cho và tổng N nhánh đúng bằng 45 phút. Không tự tăng thời lượng một nhánh hoặc tổng toàn bài.
+- Chỉ dùng dấu gạch đầu dòng -, +, *; không dùng cú pháp gạch dưới để định dạng như _Trạm X:_ hoặc __tiêu đề__.
+- Mục a) Mục tiêu, b) Nội dung, c) Sản phẩm: dùng 3 cấp danh sách: ý lớn `-`, ý con `+`, ý chi tiết `.`. Trình bày súc tích, trọng tâm (mục a: tối đa 2 ý; mục b: tối đa 2–3 ý, không chép lại toàn văn SGK; mục c: tối đa 2 ý kết quả cốt lõi).
+- Mục d) Tổ chức thực hiện: BẮT BUỘC ĐÚNG MỘT bảng Markdown 2 cột, tiêu đề:
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+- Bảng Markdown CHỈ GỒM ĐÚNG 1 HÀNG DỮ LIỆU DUY NHẤT (CẤM tách thành 4 hàng riêng).
+- TUYỆT ĐỐI chỉ tạo đúng 2 cột theo hai tiêu đề trên; CẤM thêm cột thứ 3 dưới mọi hình thức. Trong công thức hoặc văn bản có ký hiệu gạch đứng, dùng \vert hoặc \| thay cho dấu | thô để không làm vỡ cột Markdown.
+- CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG (ngăn các bước và vai trò bằng <br>):
+  BẮT BUỘC từng bước phải xuống dòng riêng cho GV và HS theo mẫu sau (TUYỆT ĐỐI CẤM viết dính liền GV và HS trên cùng một dòng):
+  + Bước 1: Chuyển giao nhiệm vụ (Kỹ thuật...):
+  <br>- **GV:** [Câu lệnh ngắn gọn trong ngoặc kép "...", hướng dẫn nhiệm vụ...]
+  <br>- **HS:** [Tiếp nhận nhiệm vụ, hành động cụ thể...]
+  <br>+ Bước 2: Thực hiện nhiệm vụ:
+  <br>- **HS:** [Làm việc cá nhân X phút -> thảo luận cặp/nhóm Y phút tạo sản phẩm trung gian...]
+  <br>- **GV:** [Quan sát, dự kiến 1 lỗi sai điển hình trong SGK và can thiệp phân hóa...]
+  <br>+ Bước 3: Báo cáo, thảo luận:
+  <br>- **HS:** [Đại diện báo cáo, các nhóm phản biện...]
+  <br>- **GV:** [Điều hành, đặt câu hỏi gợi mở...]
+  <br>+ Bước 4: Kết luận, nhận định:
+  <br>- **GV:** [Nhận xét, chốt kiến thức cốt lõi...]
+  <br>- **HS:** [Ghi bài vào vở...]
+  + Định mức PPDH/KTDH theo số tiết (TIME-BUDGET GATE):
+    * Bài 1 tiết (<= 45 phút): ĐÚNG 1 PPDH chủ đạo; tối đa 1–2 KTDH nhẹ (Think-Pair-Share, Khăn trải bàn rút gọn). CẤM Jigsaw, Station/Trạm học tập, Gallery Walk, Mini-project, PBL, STEAM. CẤM hoạt động đặc thù Trạm xoay vòng (station-act) và sản phẩm/dự án mini.
+    * Bài 2 tiết (90 phút): tối đa 2 PPDH; tối đa 2–3 KTDH.
+    * Bài từ 3 tiết: tối đa 2 PPDH; tối đa 3–4 KTDH.
+  + Trong từng bước, BẮT BUỘC nêu tên Kỹ thuật/Phương pháp dạy học được áp dụng và PHÂN VAI RÕ RÀNG:
+    * **GV (Giáo viên):** Nói câu lệnh/câu hỏi trực tiếp trong ngoặc kép "..." ngắn gọn, dự kiến lỗi sai điển hình / ngộ nhận gắn đúng khái niệm bài học SGK (CẤM lỗi generic lặp lại mọi bài; dạng: "Dự kiến: nhầm [thuật ngữ X trong SGK] với [thuật ngữ Y trong SGK]"), can thiệp hỗ trợ phân hóa súc tích.
+    * **HS (Học sinh):** Hành động cụ thể: (1) Thao tác cá nhân X phút vào vở/nháp/phiếu -> (2) Thảo luận cặp/nhóm Y phút tạo **sản phẩm trung gian** -> (3) Đại diện báo cáo và phản biện trước lớp.
+  + KỊCH BẢN TÍCH HỢP NĂNG LỰC SỐ (NLS) VÀ NĂNG LỰC AI THỰC CHIẾN GẮN MÔN HỌC & TÍCH HỢP THEO MÔN (CHỈ khi được GV bật trong bối cảnh sư phạm):
+    * NGUYÊN TẮC CỐT LÕI: NLS, AI và Tích hợp môn học CHỈ LÀ CÔNG CỤ THỰC HÀNH MÔN HỌC, lồng ghép tự nhiên vào bài học SGK. CHỈ tích hợp tại 1 đến 2 vị trí then chốt, đắc địa nhất trong toàn bộ bài dạy (ở Hoạt động B hoặc C hoặc D), TUYỆT ĐỐI KHÔNG rải bừa bãi.
+    * ĐIỀU KHOẢN CẤM NGHIÊM NGẶT: TUYỆT ĐỐI CẤM giáo viên hỏi miệng chung chung về định nghĩa hay lý thuyết AI (ví dụ cấm hỏi: "Em hãy kể tên công cụ AI?", "Khi AI đưa thông tin ta làm gì để kiểm chứng?", "Em có đề xuất gì về kết hợp AI?"). TUYỆT ĐỐI CẤM rải tag dồn dập nhiều mã [AI: ...] sau mỗi câu hỏi của giáo viên.
+    * BẮT BUỘC CHỌN ĐÚNG 1 TRONG 3 DẠNG KỊCH BẢN NLS/AI THỰC CHIẾN (khi bật NLS/AI):
+      - Dạng 1 (Kiểm chứng & Phản biện lỗi sai của AI): GV trình chiếu câu trả lời / lời giải do AI sinh ra có chứa lỗi sai / ngộ nhận kiến thức môn học cụ thể. GV yêu cầu HS dùng kiến thức SGK/bài học để đối chiếu, phát hiện lỗi sai và giải thích -> HS thảo luận, phản biện, sửa lại cho đúng. Marker: ***[AI: {Mã} - Kiểm chứng phản hồi AI]*** (hoặc ***[AI]***).
+      - Dạng 2 (Prompting tư duy môn học): GV hướng dẫn HS sử dụng câu lệnh Prompt cụ thể trong ngoặc kép "..." để AI gợi mở các bước giải mà không giải hộ -> HS thực hành prompt và tự giải bài tập. Marker: ***[AI: {Mã} - Prompting gợi mở & Tự giải]*** (hoặc ***[AI]***).
+      - Dạng 3 (Phần mềm chuyên dụng NLS): HS trực tiếp thao tác trên thiết bị với phần mềm chuyên ngành (GeoGebra, Desmos, bảng tính Excel, máy tính cầm tay, phần mềm mô phỏng PhET...) để vẽ hình, dựng đồ thị, xử lý số liệu hoặc kiểm chứng kết quả bài học. Marker: ***[NLS: {Miền/Mã} - {Tên phần mềm}]*** (hoặc ***[NLS]***).
+    * BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (dùng cú pháp Markdown ***...***).
+    * KỊCH BẢN TÍCH HỢP THEO MÔN HỌC (CHỈ mục GV đã tick, lồng đúng 1 lần tại B/C/D):
+      - Giáo dục Quốc phòng & An ninh (TT 08/2024/TT-BGDĐT): Lồng ghép truyền thống yêu nước, tự hào dân tộc, chủ quyền biển đảo Tổ quốc; gắn marker **[GDQPAN]** hoặc **[GDQPAN: ...]**.
+      - Tư tưởng, đạo đức, phong cách Hồ Chí Minh (Chỉ thị 05-CT/TW): Gắn tấm gương Bác Hồ, tinh thần tự học, tiết kiệm, yêu thương con người qua bài học cụ thể; gắn marker **[HCM]** hoặc **[HCM: ...]**.
+      - Quyền con người (QĐ 1309/QĐ-TTg): Tôn trọng phẩm giá, bình đẳng, không phân biệt đối xử, phòng chống bạo lực; gắn marker **[QCN]** hoặc **[QCN: ...]**.
+      - Tích hợp CLIL (CHỈ khi GV bật Ngoại ngữ): bám đúng cấp độ A1 (thuật ngữ), A2 (câu lệnh ngắn), B1 (thảo luận), B2 (báo cáo/sản xuất) trong bối cảnh sư phạm; gắn marker **[CLIL]** hoặc **[CLIL: ...]**.
+      - Giáo dục hòa nhập (CHỈ khi GV bật): bám đúng loại khuyết tật HSKT và giải pháp hỗ trợ đã chọn; gắn marker **[HOANHAP]** hoặc **[HOANHAP: ...]**.
+      - Giáo dục Tài chính (QĐ 149/QĐ-TTg): Tình huống tính toán chi tiêu thông minh, lập ngân sách cá nhân, tiết kiệm, bài toán lãi suất; gắn marker **[GDTC]** hoặc **[TAICHINH]**.
+      - Giáo dục STEM & Mô hình hóa: Quy trình thiết kế kỹ thuật, giải quyết bài toán thực nghiệm liên môn; gắn marker **[STEM]** hoặc **[STEM: ...]**.
+      - Thí nghiệm ảo & Mô phỏng số: Thao tác thí nghiệm ảo PhET, mô phỏng GeoGebra trực quan; gắn marker **[TN-AO]** hoặc **[TN-AO: ...]**.
+      - Môi trường & Năng lượng xanh: Liên hệ giảm rác thải nhựa, sử dụng năng lượng tái tạo, bảo vệ tài nguyên; gắn marker **[MT-NLX]** hoặc **[MT-NLX: ...]**.
+- CỘT PHẢI — NỘI DUNG GHI BẢNG (Kiến thức chuẩn mực chốt cho HS chép vào vở):
+  + Trình bày đề cương kiến thức súc tích, cô đọng, đúng trọng tâm: Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức LaTeX ($...$, $$...$$), chú ý quan trọng, tối đa 1 ví dụ mẫu kèm đề bài và lời giải chuẩn. Dùng `-`, `+`, `.`; ngăn các dòng bằng `<br>`.
+  + CỘT PHẢI CẤM: mô tả hành vi GV/HS, CẤM viết "GV yêu cầu", "HS thảo luận", CẤM để trống, CẤM để dấu "..." hay "[...]".
+- CẤM TUYỆT ĐỐI dùng chuỗi lệnh LaTeX khoảng trắng liên tiếp (`\quad \quad \quad...`, `\qquad`, `\hspace{...}`, `\phantom{...}`) để mô phỏng hình vẽ, giả lập trục số hoặc tạo khoảng trống làm bài.
+- Đối với bài tập vẽ hình/trục số: BẮT BUỘC mô tả lời giải bằng các bước thực hiện tường minh (ví dụ: "Vẽ trục số nằm ngang, chọn điểm 0 làm gốc, chia các đoạn đơn vị bằng nhau... Điểm biểu diễn -5 nằm bên trái gốc 0 cách 5 đơn vị...") hoặc định vị hình minh họa SVG chuẩn SGK `![caption](khbd-ill:id)`.
+- Lời giải trong cột Nội dung phải là các bước giải chi tiết hoàn chỉnh, không để khoảng trống vô nghĩa.
+- CẤM để trống ô. Escape dấu | trong văn bản thành \|.
+- Hoạt động B: Mỗi tiểu mục/nội dung kiến thức dùng một bảng 2 cột (1 hàng) độc lập như trên. Gộp toàn bộ ví dụ mẫu, câu hỏi khám phá con, thực hành của mục đó vào chung một hoạt động nhánh.
+- CẤM TUYỆT ĐỐI dùng chuỗi lệnh LaTeX khoảng trắng liên tiếp (`\quad \quad \quad...`, `\qquad`, `\hspace{...}`, `\phantom{...}`) để mô phỏng hình vẽ, giả lập trục số hoặc tạo khoảng trống làm bài.
+- Đối với bài tập vẽ hình/trục số: BẮT BUỘC mô tả lời giải bằng các bước thực hiện tường minh (ví dụ: "Vẽ trục số nằm ngang, chọn điểm 0 làm gốc, chia các đoạn đơn vị bằng nhau... Điểm biểu diễn -5 nằm bên trái gốc 0 cách 5 đơn vị...") hoặc định vị hình minh họa SVG chuẩn SGK `![caption](khbd-ill:id)`.
+- Lời giải trong cột Nội dung phải là các bước giải chi tiết hoàn chỉnh, không để khoảng trống vô nghĩa.
+- BẮT BUỘC dùng tiêu đề ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI (45 phút). Tổng số phút của TẤT CẢ hoạt động nhánh 2.1, 2.2, 2.3... phải đúng bằng 45 phút; dùng đúng số phút đã phân bổ cho từng tiểu mục, tuyệt đối không tự gán 25–30 phút cho mỗi nhánh. Nếu chia N nhánh con, tổng số phút của N nhánh con cộng lại BẮT BUỘC ĐÚNG BẰNG 45 phút (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). Tổng A + B + C + D + E BẮT BUỘC đúng bằng 02 tiết (90 phút) (02 tiết = đúng 90 phút).
+- ĐẾM SỐ TIỂU MỤC KIẾN THỨC LỚN TRONG SGK: Chỉ ánh xạ đúng các Mục lớn (Đơn vị kiến thức cốt lõi chính thức trong mục lục SGK, thông thường 1–3 mục lớn, tối đa 4 mục). Bạn BẮT BUỘC PHẢI chia Hoạt động B thành đúng N hoạt động con tương ứng 1-1:
+  ### Hoạt động 2.1: [Tên nguyên văn đề mục trong SGK] (... phút)
+  ### Hoạt động 2.2: [Tên nguyên văn đề mục trong SGK] (... phút)
+  ...
+  TUYỆT ĐỐI CẤM GỘP các mục lớn thành một mục chung. TUYỆT ĐỐI CẤM BỊA THÊM hoạt động ngoài SGK.
+  KHÓA TÊN ĐỀ MỤC NGUYÊN VĂN 100%: Tên Hoạt động 2.1, 2.2... BẮT BUỘC là `### Hoạt động 2.k: [Tên nguyên văn đề mục trong SGK]`. Nếu SGK có số `1. ...` thì `### Hoạt động 2.1: 1. ...`; nếu SGK không có số thì `### Hoạt động 2.1: ...` (không tự thêm số). CẤM lặp số đúp `1. 1. ...`. CẤM diễn đạt lại, CẤM đổi từ, CẤM rút gọn, CẤM thêm/bớt dấu.
+  BẮT BUỘC bắt đầu từ Hoạt động 2.1 đúng Mục 1 của SGK. CẤM bỏ qua Mục 1. CẤM bắt đầu từ Hoạt động 2.2.
+  Bài học có N mục lớn thì BẮT BUỘC phải sinh đủ N nhánh Hoạt động từ 2.1 đến 2.N. TUYỆT ĐỐI CẤM dừng lại hoặc bỏ dở sau khi chỉ sinh Hoạt động 2.1.
+  TUYỆT ĐỐI LOẠI BỎ việc tách các câu hỏi phát vấn (Hãy..., Bằng cách..., Nêu...), các bài tập con (Bài 1.1, Thực hành 1, Luyện tập 1) thành các hoạt động riêng biệt. Toàn bộ ví dụ mẫu, câu hỏi khám phá, thực hành con của từng mục phải nằm trọn vẹn bên trong hoạt động của mục đó.
+  BẮT BUỘC ghi số phút cố định cụ thể trong tiêu đề từng hoạt động con (ví dụ: `(15 phút)`, `(12 phút)`). CẤM ghi "Khoảng" hoặc dải thời gian "X - Y phút".
+- TỪNG HOẠT ĐỘNG NHÁNH 2.k (hoặc Hoạt động k) PHẢI CÓ ĐỦ 4 PHẦN:
+  #### a) Mục tiêu:
+  #### b) Nội dung:
+  #### c) Sản phẩm: (Ghi rõ lời giải chi tiết, công thức, định nghĩa hoàn chỉnh, không để dấu "...")
+  #### d) Tổ chức thực hiện: (ĐÚNG 1 BẢNG MARKDOWN 2 CỘT, 1 HÀNG DUY NHẤT)
+    * CỘT TRÁI: Kịch bản phân vai rõ ràng:
+      + Nêu rõ tên Kỹ thuật dạy học (Think-Pair-Share, Khăn trải bàn, Mảnh ghép, Trạm học tập...).
+      + **GV:** Nói câu lệnh trong ngoặc kép "...", hành động cụ thể, **DỰ KIẾN LỖI SAI / NGỘ NHẬN ĐIỂN HÌNH CỦA HỌC SINH ĐỐI VỚI TIỂU MỤC NÀY** và can thiệp hỗ trợ phân hóa.
+      + **HS:** Làm việc cá nhân X phút -> Thảo luận nhóm Y phút tạo sản phẩm trung gian trên bảng phụ/phiếu -> Báo cáo và phản biện trước lớp.
+      + Khi có NLS/AI: Tích hợp thực chiến theo đúng 1 trong 3 dạng (Dạng 1: Kiểm chứng phản hồi AI có lỗi ngộ nhận; Dạng 2: Prompting gợi mở bước giải trong "..."; Dạng 3: Thao tác phần mềm chuyên ngành GeoGebra/bảng tính/mô phỏng). CẤM hỏi lý thuyết AI suông, CẤM rải tag bừa bãi. Gắn marker chuẩn ***[AI: {Mã} - Kiểm chứng phản hồi AI]***, ***[AI: {Mã} - Prompting gợi mở & Tự giải]***, ***[NLS: {Miền/Mã} - {Tên phần mềm}]*** (hoặc ***[NLS]***, ***[AI]***).
+    * CỘT PHẢI: NỘI DUNG GHI BẢNG CHỐT KIẾN THỨC CHO HS CHÉP VỞ (Định nghĩa, quy tắc, công thức LaTeX, chú ý, ví dụ mẫu kèm đề bài và lời giải chi tiết từng bước). CẤM viết hành động của GV/HS ở cột phải.
+
+## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI (45 phút)
+
+### Hoạt động 2.1: 1. PHÉP NHÂN SỐ TỰ NHIÊN (23 phút)
+#### a) Mục tiêu:
+- Học sinh hình thành được kiến thức, hiểu rõ bản chất và vận dụng được quy tắc/định nghĩa của tiểu mục 1.
+#### b) Nội dung:
+- Học sinh thực hiện hoạt động khám phá trong SGK thuộc mục này, trả lời các câu hỏi phát vấn và làm ví dụ mẫu.
+#### c) Sản phẩm:
+- Kết quả câu trả lời, lời giải chi tiết cho hoạt động khám phá và ví dụ mẫu của mục này.
+#### d) Tổ chức thực hiện:
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao hoạt động khám phá trong SGK thuộc mục này. **HS:** Nhận nhiệm vụ.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân rồi thảo luận nhóm. **GV:** Quan sát, phát hiện lỗi sai điển hình, hỗ trợ phân hóa.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện trình bày; lớp phản biện. **GV:** Điều hành, chốt bản chất kiến thức.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chuẩn hóa kiến thức mục này. **HS:** Ghi bài vào vở. | **1. PHÉP NHÂN SỐ TỰ NHIÊN**<br>- Định nghĩa / Quy tắc / Công thức: $...$ |
+
+### Hoạt động 2.2: 2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ (22 phút)
+#### a) Mục tiêu:
+- Học sinh hình thành được kiến thức, hiểu rõ bản chất và vận dụng được quy tắc/định nghĩa của tiểu mục 2.
+#### b) Nội dung:
+- Học sinh thực hiện hoạt động khám phá trong SGK thuộc mục này, trả lời các câu hỏi phát vấn và làm ví dụ mẫu.
+#### c) Sản phẩm:
+- Kết quả câu trả lời, lời giải chi tiết cho hoạt động khám phá và ví dụ mẫu của mục này.
+#### d) Tổ chức thực hiện:
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao hoạt động khám phá trong SGK thuộc mục này. **HS:** Nhận nhiệm vụ.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân rồi thảo luận nhóm. **GV:** Quan sát, phát hiện lỗi sai điển hình, hỗ trợ phân hóa.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện trình bày; lớp phản biện. **GV:** Điều hành, chốt bản chất kiến thức.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chuẩn hóa kiến thức mục này. **HS:** Ghi bài vào vở. | **2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ**<br>- Định nghĩa / Quy tắc / Công thức: $...$ |
+
+Bài học có 2 mục lớn thì BẮT BUỘC phải sinh đủ 2 nhánh Hoạt động từ 2.1 đến 2.2. TUYỆT ĐỐI CẤM dừng lại hoặc bỏ dở sau khi chỉ sinh Hoạt động 2.1.
+
+KHÓA NGUỒN BẮT BUỘC:
+- Nguồn chính = văn bản SGK đã nhận diện (Mistral OCR / tóm tắt Bước 0) và/hoặc file PDF/ảnh đính kèm đúng request này.
+- Kèm theo (nếu có): Tài liệu Phân phối chương trình (PPCT / Phụ lục 3 CV 5512) và phạm vi tiết dạy được phân công.
+- CHỈ dùng các trang PDF/ảnh đã chọn (hoặc đúng văn bản OCR của các trang đó). CẤM dùng trang ngoài danh sách.
+- Chỉ dùng thêm: tên bài/môn/lớp giáo viên chọn, YCCĐ chính thức (TT 32/2018/TT-BGDĐT — CT GDPT 2018), phạm vi tiết dạy theo PPCT và bối cảnh lớp học.
+- CẤM bịa định nghĩa, định lý, công thức, số liệu, đề bài, đáp án, số trang hoặc nhiệm vụ không có trong nguồn.
+- Luyện tập/vận dụng: CHỈ dùng bài, câu, hoạt động có trong PDF/ảnh/OCR đính kèm hoặc dữ liệu SGK. Phải đọc nguồn trước khi giải. Chỉ ghi "[Không có trong tài liệu đã cung cấp]" khi đã đọc kỹ nguồn mà vẫn không có bài/câu vận dụng. CẤM invent trắc nghiệm 4 lựa chọn không có trong sách, không bịa "SBT trang...".
+- Mục tiêu kiến thức phải là Yêu cầu cần đạt của CT GDPT 2018 (hoặc YCCĐ in trên đầu bài SGK). Không tự chế thang Bloom ngoài nguồn.
+- RÀNG BUỘC PPCT & PHẠM VI TIẾT DẠY: Nếu có phạm vi tiết dạy / PPCT được cung cấp, BẮT BUỘC khóa chặt mục tiêu và nội dung hoạt động đúng trong phạm vi số tiết / nội dung được phân công của tiết học đó, không dạy vượt sang phạm vi của tiết khác.
+
+RÀNG BUỘC TÍCH HỢP TỰ NHIÊN — CẤM KHIÊN CƯỠNG:
+- Chỉ tích hợp NLS/AI khi bám sát nội dung SGK, dụng cụ đo/vẽ hoặc máy tính cầm tay của bài. Không gán ghép công nghệ cho đủ khung.
+- Bài Hình học & Đo đạc: ưu tiên trực quan hóa (thước, compa, mô hình, GeoGebra nếu có máy tính). CẤM TUYỆT ĐỐI mã Lập trình (3.4) và Bản quyền số (3.3); CẤM mã AI không liên quan.
+- Bài Đại số & Số học lý thuyết thuần túy: ưu tiên tính toán, máy tính cầm tay, giải quyết vấn đề số học. CẤM gán Bảo vệ dữ liệu cá nhân (4.2) hay đạo đức AI gượng ép.
+- Bài Thống kê & Xác suất: ưu tiên thu thập, đánh giá, biểu diễn bảng/biểu đồ số (1.1, 1.2, 1.3).
+- TIME-BUDGET GATE: Nếu bài 1 tiết (45 phút): tối đa 1 kỹ thuật dạy học tích cực nhẹ ở pha B — Think-Pair-Share (3–5 phút) hoặc Khăn trải bàn ngắn (5 phút). CẤM kết hợp Mảnh ghép + Khăn trải bàn + Dự án trong cùng 1 tiết. Bài 2–3 tiết mới được dùng Mảnh ghép, Trạm/Góc học tập, Dự án nhỏ.
+- FACILITY GATE: Nếu lớp KHÔNG có thiết bị học sinh và KHÔNG có Internet: TUYỆT ĐỐI CẤM yêu cầu học sinh lên mạng tra cứu, dùng điện thoại quét mã, thiết kế Canva, dùng laptop/chatbot trong giờ. Chỉ dùng thước, compa, bảng, phiếu giấy, máy tính cầm tay nếu bài cần.
+
+RÀNG BUỘC NGOẠI NGỮ CLIL & GIÁO DỤC HÒA NHẬP:
+- Ngoại ngữ/CLIL CHỈ khi giáo viên đã bật. Bám đúng cấp độ trong bối cảnh sư phạm. Marker **[CLIL]** (hiển thị màu xanh lục). CẤM biến tiết môn thành tiết tiếng Anh.
+  + A1 — Nhận biết & Thuật ngữ: chú thích 3–5 thuật ngữ Anh–Việt then chốt; không bắt HS nói/viết đoạn tiếng Anh.
+  + A2 — Đọc hiểu & Thao tác: câu lệnh ngắn tiếng Anh gắn thao tác bài học.
+  + B1 — Vận dụng & Giao tiếp: cặp đôi dùng 1–2 câu tiếng Anh khi thảo luận/báo cáo ngắn.
+  + B2 — Tự chủ & Sản xuất: HS tự dùng thuật ngữ chuyên môn để giải thích/báo cáo ngắn bằng tiếng Anh.
+- Giáo dục hòa nhập/HSKT CHỈ khi giáo viên đã bật. Bám đúng loại khuyết tật đã chọn (Nhìn, Nghe, Vận động, Trí tuệ/Phát triển, Ngôn ngữ/Giao tiếp, Khác) và giải pháp hỗ trợ chức năng. Marker **[HOANHAP]** (hiển thị màu tím). CẤM chẩn đoán y khoa, CẤM nêu tên học sinh, CẤM bịa loại khuyết tật không được chọn.
+- Nếu Ngoại ngữ hoặc Hòa nhập không được bật: TUYỆT ĐỐI CẤM tự thêm thuật ngữ CLIL, nhiệm vụ tiếng Anh, điều chỉnh HSKT hay marker [CLIL]/[HOANHAP].
+
+GIỚI HẠN DUNG LƯỢNG: Viết cô đọng để giáo án in Word khoảng 8–12 trang (Times New Roman 13pt). Không viết lại lý thuyết đã có ở mục trước.
+
+DANH SÁCH TIỂU MỤC SGK BẮT BUỘC ÁP DỤNG (ĐÚNG 2 HOẠT ĐỘNG NHÁNH):
+Từ dữ liệu SGK được cung cấp, xác định chính xác 2 tiểu mục kiến thức lớn sau. Bạn PHẢI tạo đúng 2 hoạt động nhánh tương ứng 1-1, KHÔNG ĐƯỢC GỘP, KHÔNG ĐƯỢC BỎ BỚT, KHÔNG ĐƯỢC BỊA THÊM:
++ Tiểu mục 1: "1. PHÉP NHÂN SỐ TỰ NHIÊN" -> BẮT BUỘC sinh: ### Hoạt động 2.1: 1. PHÉP NHÂN SỐ TỰ NHIÊN (23 phút)
++ Tiểu mục 2: "2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ" -> BẮT BUỘC sinh: ### Hoạt động 2.2: 2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ (22 phút)
+Tên hoạt động nhánh BẮT BUỘC đúng nguyên văn 100% tên đề mục SGK ở trên, không diễn đạt lại, không đổi từ, không rút gọn.
+BẮT BUỘC bắt đầu từ Hoạt động 2.1 đúng tiểu mục đầu tiên (Mục 1). CẤM bỏ qua Mục 1, CẤM bắt đầu từ 2.2.
+Bài học có 2 mục lớn thì BẮT BUỘC phải sinh đủ 2 nhánh Hoạt động từ 2.1 đến 2.2. TUYỆT ĐỐI CẤM dừng lại hoặc bỏ dở sau khi chỉ sinh Hoạt động 2.1.
+Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có thời lượng cố định cụ thể ví dụ (23 phút), đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng). Tuyệt đối không tách câu hỏi nhỏ/bài tập con thành hoạt động riêng.
+Tổng số phút 2 nhánh BẮT BUỘC ĐÚNG BẰNG 45 phút (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). Tổng A + B + C + D BẮT BUỘC đúng bằng 90 phút. 
+
+QUY TẮC BẮT BUỘC VỀ KHUNG NĂNG LỰC AI: Giáo viên KHÔNG bật tích hợp Khung năng lực AI (QĐ 2422). Bỏ qua mọi gợi ý về AI/Dạng 1/Dạng 2/[AI] ở trên. TUYỆT ĐỐI CẤM chèn bất kỳ marker [AI], [AI: ...], CẤM kịch bản kiểm chứng phản biện AI, CẤM prompting AI vào giáo án.
+
+LỆNH BẮT BUỘC KHÓA NĂNG LỰC AI: Giáo viên KHÔNG kích hoạt Khung năng lực AI (QĐ 2422). Bỏ qua toàn bộ các hướng dẫn hoặc ví dụ mẫu liên quan đến AI (Dạng 1 kiểm chứng phản hồi AI, Dạng 2 prompting AI) trong hợp đồng biên soạn. TUYỆT ĐỐI CẤM đưa nội dung AI hoặc gắn bất kỳ marker [AI], [AI: ...] vào bài.
+
+LỆNH BẮT BUỘC KHÓA NĂNG LỰC SỐ: Giáo viên KHÔNG kích hoạt Năng lực số (CV 3456). TUYỆT ĐỐI CẤM kịch bản NLS hay gắn marker [NLS], [NLS: ...] vào bài.

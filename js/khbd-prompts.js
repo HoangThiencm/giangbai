@@ -7,7 +7,7 @@
  * Khung Năng lực Đặc thù, Khung Năng lực AI (QĐ 2422/QĐ-BGDĐT) và Khung Năng lực Số (TT 02/2025/TT-BGDĐT).
  */
 
-// Deploy version: 20260916-textbook-exact-v16
+// Deploy version: 20260916-textbook-exact-v17
 
 function isEnglishSubject(subjectId) {
   const sid = String(subjectId || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');

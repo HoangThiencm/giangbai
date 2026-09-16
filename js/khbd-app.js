@@ -6,6 +6,8 @@
  * Soạn KHBD môn Toán THCS theo SGK do giáo viên cung cấp.
  */
 
+// Deploy version: 20260916-textbook-exact-v17
+
 if (typeof getPromptTemplate === "undefined" && typeof require !== "undefined") {
   try {
     const prompts = require("./khbd-prompts.js");
@@ -255,7 +257,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     marker: "[STEM]",
     promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
-                                                                                                                                                                                    {
+                                                                                                                                                                                      {
     id: "virtualLab",
     label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
     legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
@@ -5900,10 +5902,10 @@ function resolveTextbookContent() {
 
 function activityHeadingRegex(key) {
   const map = {
-    A: "A[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*1\\b|MỞ[ \\t]*ĐẦU\\b",
-    B: "B[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*2\\b|HÌNH[ \\t]*THÀNH",
-    C: "C[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*3\\b|LUYỆN[ \\t]*TẬP\\b",
-    D: "D[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*4\\b|VẬN[ \\t]*DỤNG\\b",
+    A: "A[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*1(?!\\.\\d+)\\b|MỞ[ \\t]*ĐẦU\\b",
+    B: "B[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*2(?!\\.\\d+)\\b|HÌNH[ \\t]*THÀNH",
+    C: "C[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*3(?!\\.\\d+)\\b|LUYỆN[ \\t]*TẬP\\b",
+    D: "D[\\.\\s:]|HOẠT[ \\t]*ĐỘNG[ \\t]*4(?!\\.\\d+)\\b|VẬN[ \\t]*DỤNG\\b",
     E: "E[\\.\\s:]|HỒ[ \\t]*SƠ|PHIẾU[ \\t]*HỌC[ \\t]*TẬP|PHỤ[ \\t]*LỤC",
     F: "F[\\.\\s:]|HÌNH[ \\t]*MINH[ \\t]*HỌA"
   };
@@ -5943,7 +5945,10 @@ function keepBestActivityBlock(text, actKey) {
   const lines = source.split(/\r?\n/);
   const starts = [];
   lines.forEach((line, index) => {
-    if (headingRe.test(line.trim())) starts.push(index);
+    const trimmed = line.trim();
+    // Nhánh 2.1, 2.2... thuộc cùng Hoạt động B, không phải bản sao để cạnh tranh.
+    if (/^#{3,4}\s*(?:\d+\.\s*)?Hoạt\s*động\s*\d+\.\d+/i.test(trimmed)) return;
+    if (headingRe.test(trimmed)) starts.push(index);
   });
   if (starts.length <= 1) return source;
   const blocks = starts.map((start, idx) => {
