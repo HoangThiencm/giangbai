@@ -6703,26 +6703,24 @@ async function extractTextbookOcrTextWithGemini(onProgress) {
   ) || "").trim();
 }
 
-// Canvas extracts short structured fields (titles, tasks, exercises) instead of
-// a full-page OCR dump, so Gemini is less likely to trip RECITATION.
-// One page/image per Canvas request bounds media and prevents one slow page
-// from making an entire textbook request wait until the global deadline.
-const CANVAS_TEXTBOOK_BATCH_SIZE = 1;
+// Canvas extracts a pedagogical lesson map rather than a full-page OCR dump,
+// so multi-page lessons retain their structure without triggering RECITATION.
+const CANVAS_TEXTBOOK_BATCH_SIZE = 6;
 
-function canvasTextbookAnalysisPrompt(batchLabel) {
+function canvasTextbookAnalysisPrompt(batchLabel, priorContext = "") {
   return [
-    "Trích xuất học liệu SGK đính kèm thành JSON theo từng trường ngắn (fact extraction), không chép nguyên trang.",
-    "Mỗi trường chỉ chứa đúng thực thể nhìn thấy trên trang/ảnh/PDF người dùng cung cấp.",
-    "BẮT BUỘC giữ nguyên văn 100% tên đề mục, tên hoạt động (HĐ, Luyện tập, Thực hành, Vận dụng), mã bài (Bài 1.36) và đề bài/số liệu/công thức. Công thức dùng LaTeX $...$.",
-    "VỀ ĐỀ MỤC VÀ CHỈ SỐ: BẮT BUỘC sao chép chính xác 100% tên đề mục và chỉ số nhìn thấy trong SGK. Nếu SGK có ghi số/ký hiệu (ví dụ '1. Lũy thừa...', 'I. Khái niệm...', 'A. Định nghĩa...') thì giữ nguyên. Nếu SGK KHÔNG CÓ số thứ tự (chỉ ghi tiêu đề chữ) thì TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý ĐÁNH SỐ THÊM.",
-    "CHỈ đưa vào sections các ĐỀ MỤC CẤP 1 chính thức (số to 1. 2. hoặc I. II.). CẤM tách tiêu đề con in đậm (Tính chất..., Quy tắc..., Ví dụ 1, 2, 3...) thành section riêng — nhét chúng vào coreKnowledge hoặc activities của mục lớn đứng trước.",
-    "CẤM diễn đạt lại, CẤM đổi từ, CẤM rút gọn tên đề mục hoặc đề bài, CẤM bịa thêm mục/bài không nhìn thấy.",
-    "TUYỆT ĐỐI KHÔNG điền chỗ trống bằng trí nhớ về bất kỳ bộ SGK nào. Không suy đoán tên đề mục, số mục, số câu, số bài tập hoặc nội dung bài tập nếu chúng không nhìn thấy rõ trong chính trang/ảnh/PDF người dùng cung cấp.",
-    "Chỉ coi tên đề mục/chỉ mục/bài tập là dữ kiện khi đọc được rõ ràng và chắc chắn từ nguồn đính kèm; nếu mờ, khuất, thiếu trang hoặc không chắc thì phải ghi vào unknowns là cần đối chiếu SGK, không được biến thành dữ kiện khẳng định.",
+    "Trích xuất Bản đồ bài học sư phạm (Pedagogical Lesson Map) từ học liệu SGK đính kèm để phục vụ thiết kế kế hoạch bài dạy; không chép nguyên trang.",
+    "Duy trì cây: Đề mục lớn → mục con/kiến thức cốt lõi → hoạt động, câu hỏi, luyện tập, vận dụng và bài tập. Nội dung đầu lô có thể là phần tiếp nối đề mục của lô trước.",
+    "Giữ chính xác tên đề mục, nhãn HĐ/Luyện tập/Thực hành/Vận dụng, mã bài và công thức/số liệu nhìn thấy. Công thức Toán và KHTN dùng LaTeX $...$; chỉ tóm lược ý nghĩa sư phạm, không sao chép đoạn dài.",
+    "Toán & KHTN: nêu định nghĩa, tính chất, định lý, công thức, hoạt động khám phá, ví dụ, luyện tập và vận dụng theo đúng đề mục. Lịch sử - Địa lí, GDCD, Tin học, Công nghệ và môn khác: nêu cấu trúc đề mục, câu hỏi khai thác tư liệu/hình ảnh/bản đồ, bài tập và vận dụng.",
+    "Ngữ văn: nêu Tri thức ngữ văn, thể loại, câu hỏi Trước khi đọc/Trong khi đọc/Sau khi đọc, Thực hành tiếng Việt và Viết kết nối với đọc. TUYỆT ĐỐI KHÔNG chép nguyên văn toàn văn bản, truyện hoặc thơ dài; chỉ mô tả ngắn nội dung và nhiệm vụ để tránh RECITATION.",
+    "CHỈ đưa vào sections các ĐỀ MỤC CẤP 1 chính thức (số to 1. 2. hoặc I. II.). Tiêu đề con như Tính chất, Quy tắc, Ví dụ phải ở coreKnowledge hoặc activities của đề mục lớn đúng ngữ cảnh, không tự tạo section cấp 1.",
+    "Không suy đoán nội dung không nhìn thấy. Nếu mờ, khuất hoặc thiếu trang, ghi unknowns là cần đối chiếu SGK.",
+    priorContext ? `Ngữ cảnh lô trước để nối tiếp, không lặp lại hoặc gán sang đề mục mới: ${priorContext}` : "",
     `Phạm vi lô đang phân tích: ${batchLabel}.`,
     "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"sections\":[{\"title\":\"\",\"coreKnowledge\":\"\",\"activities\":[{\"label\":\"HĐ 1\",\"task\":\"\"}]}],\"exercises\":[{\"code\":\"Bài 1.36\",\"statement\":\"\"}],\"unknowns\":[\"\"]}.",
-    "sections: 1-4 đề mục lớn, title đúng nguyên văn mục lục SGK (kèm chỉ số nếu SGK có, không tự thêm số nếu SGK không có); coreKnowledge là quy tắc/định nghĩa/công thức LaTeX; activities gồm HĐ, Luyện tập, Thực hành, Vận dụng với task nguyên văn. exercises: toàn bộ bài tập SGK nhìn thấy, statement nguyên văn đủ số liệu."
-  ].join("\\n");
+    "sections chỉ gồm đề mục lớn; coreKnowledge, activities và exercises phải ở đúng thứ tự sư phạm, thuộc đúng đề mục."
+  ].filter(Boolean).join("\\n");
 }
 
 function isLevel1SectionTitle(title) {
@@ -6732,34 +6730,43 @@ function isLevel1SectionTitle(title) {
 function absorbCanvasTextbookSection(parent, child) {
   if (!parent || !child) return parent;
   const bits = [];
-  if (child.title) bits.push(child.title);
+  if (child.title && normalizeCanvasTextbookSectionKey(child.title) !== normalizeCanvasTextbookSectionKey(parent.title)) bits.push(child.title);
   if (child.coreKnowledge) bits.push(child.coreKnowledge);
   parent.coreKnowledge = [parent.coreKnowledge, bits.join(": ")].filter(Boolean).join("\n");
   parent.activities = [...(parent.activities || []), ...(child.activities || [])];
   return parent;
 }
 
+function normalizeCanvasTextbookSectionKey(title) {
+  return String(title || "").toLowerCase().replace(/^[\divxlcdm]+[\s.\-:)]*/i, "").replace(/\s+/g, " ").trim();
+}
+
 function mergeCanvasTextbookSections(sections) {
   const list = (sections || []).filter(Boolean);
   if (!list.length) return [];
-  if (!list.some(item => isLevel1SectionTitle(item.title))) return list.slice(0, 4);
   const merged = [];
-  const pending = [];
+  const leading = [];
+  let last = null;
   list.forEach(section => {
     if (isLevel1SectionTitle(section.title)) {
       const next = { ...section, activities: (section.activities || []).slice() };
-      pending.splice(0).forEach(item => absorbCanvasTextbookSection(next, item));
-      merged.push(next);
-    } else if (merged.length) {
-      absorbCanvasTextbookSection(merged[merged.length - 1], section);
+      const existing = merged.find(item => normalizeCanvasTextbookSectionKey(item.title) === normalizeCanvasTextbookSectionKey(next.title));
+      if (existing) {
+        absorbCanvasTextbookSection(existing, next);
+        last = existing;
+      } else {
+        merged.push(next);
+        last = next;
+      }
+    } else if (last) {
+      absorbCanvasTextbookSection(last, section);
     } else {
-      pending.push(section);
+      // Keep a leading continuation in order. A later, cross-batch merge attaches
+      // it to the final section of the preceding batch instead of the next title.
+      leading.push(section);
     }
   });
-  pending.forEach(item => {
-    if (merged.length) absorbCanvasTextbookSection(merged[merged.length - 1], item);
-  });
-  return merged.slice(0, 4);
+  return [...leading, ...merged].slice(0, 24);
 }
 
 function normalizeCanvasTextbookSection(raw) {
@@ -6835,6 +6842,13 @@ async function prepareCanvasTextbookAnalysisBatches() {
   return batches;
 }
 
+function canvasTextbookBatchStitchContext(analysis) {
+  return (analysis && analysis.sections || []).slice(-3).map(section => {
+    const activities = (section.activities || []).slice(-4).map(item => item.label || item.task).filter(Boolean).join(", ");
+    return [section.title, section.coreKnowledge, activities].filter(Boolean).join(" — ");
+  }).join(" | ").slice(-1800);
+}
+
 async function analyzeCanvasTextbookSafely(onProgress) {
   if (typeof geminiAPI === "undefined" || typeof geminiAPI.generateContent !== "function") throw new Error("Gemini Canvas chưa sẵn sàng.");
   const batches = await prepareCanvasTextbookAnalysisBatches();
@@ -6843,9 +6857,10 @@ async function analyzeCanvasTextbookSafely(onProgress) {
   for (let index = 0; index < batches.length; index++) {
     const batch = batches[index];
     if (typeof onProgress === "function") onProgress(`Đang phân tích SGK ${index + 1}/${batches.length}...`, Math.round(20 + ((index + 1) / batches.length) * 70));
-    const raw = await geminiAPI.generateContent(canvasTextbookAnalysisPrompt(batch.label), batch.media, typeof getSystemRole === "function" ? getSystemRole(appState.selectedSubject, appState.selectedGrade) : (typeof window !== "undefined" && typeof window.getSystemRole === "function" ? window.getSystemRole(appState.selectedSubject, appState.selectedGrade) : ""), 0.1, null, {
+    const priorContext = canvasTextbookBatchStitchContext(analyses[analyses.length - 1]);
+    const raw = await geminiAPI.generateContent(canvasTextbookAnalysisPrompt(batch.label, priorContext), batch.media, typeof getSystemRole === "function" ? getSystemRole(appState.selectedSubject, appState.selectedGrade) : (typeof window !== "undefined" && typeof window.getSystemRole === "function" ? window.getSystemRole(appState.selectedSubject, appState.selectedGrade) : ""), 0.1, null, {
       maxOutputTokens: 4096,
-      timeoutMs: 105000
+      timeoutMs: 120000
     });
     analyses.push(parseCanvasTextbookAnalysis(raw));
   }
@@ -6853,7 +6868,9 @@ async function analyzeCanvasTextbookSafely(onProgress) {
   const majorPoints = analyses.flatMap(item => item.majorPoints || []).filter(Boolean).slice(0, 6);
   const unknowns = analyses.flatMap(item => item.unknowns || []).filter(Boolean).slice(0, 6);
   const summary = analyses.map(item => item.summary).filter(Boolean).join(" ").slice(0, 1400);
-  const sections = analyses.flatMap(item => item.sections || []).slice(0, 8);
+  // Merge only after every batch is available: a leading continuation from a
+  // later batch then belongs to the last heading in the preceding batch.
+  const sections = mergeCanvasTextbookSections(analyses.flatMap(item => item.sections || [])).slice(0, 24);
   const exercises = analyses.flatMap(item => item.exercises || []).slice(0, 40);
   const subsections = (typeof normalizeTextbookSubsectionProfiles === "function"
     ? normalizeTextbookSubsectionProfiles(sections.length ? sections.map((section, index) => ({ index: index + 1, title: section.title, signals: (section.activities || []).map(item => item.label).filter(Boolean) })) : analyses.flatMap(item => item.subsections || []))

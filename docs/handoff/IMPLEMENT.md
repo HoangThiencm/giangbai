@@ -10,6 +10,10 @@
 - Bảo vệ riêng lời gọi trong `analyzeCanvasTextbookSafely`: nếu `getSystemRole` chưa sẵn sàng, dùng `window.getSystemRole` khi có hoặc chuỗi rỗng để OCR không bị `ReferenceError`.
 - Cập nhật cả hai trang Canvas dùng `khbd-prompts.js?v=20260916-textbook-exact-v15` và đặt fallback stub `window.getSystemRole` trước khi nạp `khbd-app.js`.
 - Sửa lỗi từ `VERIFY.md`: đổi duy nhất `KHBD_CURRICULUM_DEPLOY_VERSION` từ `canvas-module-v8` sang `canvas-module-v9`, tạo git diff để FTP Deploy tải lại curriculum 173.676 byte.
+- Nâng batching phân tích SGK Canvas lên tối đa 6 trang/ảnh mỗi lượt. Các bài dài được truyền ngữ cảnh đề mục và hoạt động từ lượt trước sang lượt sau.
+- Sửa gộp section liên trang: nội dung đầu trang không còn bị nuốt vào đề mục lớn kế tiếp; section cùng tên được hợp nhất và giữ thứ tự sư phạm.
+- Chuyển prompt sang Bản đồ bài học sư phạm đa môn, bao gồm hướng dẫn riêng cho Toán/KHTN, Ngữ văn và các môn khác; cấm chép dài văn bản/tác phẩm để tránh RECITATION.
+- Cập nhật smoke test phân tích SGK cho batching 6 trang, stitching và gộp section liên trang.
 
 ## Hosting
 
@@ -21,5 +25,7 @@
 - `python C:\Users\HoangThien\.gemini\antigravity\brain\7ddd6240-4311-4b35-b755-f9a3e9f49765\scratch\test_verify.py`: PASS cho cả hai trang Canvas.
 - `python C:\Users\HoangThien\.gemini\antigravity\brain\7ddd6240-4311-4b35-b755-f9a3e9f49765\scratch\verify_all.py`: ALL CHECKS PASSED sau khi đổi curriculum sang v9.
 - `node tests/canvas-soankhbd-smoke.js`: không chạy được vì Windows Security chặn `node.exe` của runtime với thông báo tệp có thể là virus/PUA.
+- `python C:\Users\HoangThien\.gemini\antigravity\brain\7ddd6240-4311-4b35-b755-f9a3e9f49765\scratch\verify_all.py`: ALL CHECKS PASSED sau cập nhật batching/prompt.
+- `node tests/canvas-textbook-analysis-smoke.js`: không chạy được vì Windows Security tiếp tục chặn `node.exe` của runtime với thông báo tệp có thể là virus/PUA.
 
 Không commit. `docs/handoff/PLAN.md` không bị sửa thêm.
