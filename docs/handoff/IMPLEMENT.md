@@ -3,9 +3,12 @@
 ## 1. Hoạt động B: khung mẫu động theo N mục lớn SGK
 
 - `js/khbd-prompts.js`: `activityBBranchSkeleton` + `expandActivityBSkeleton` thay khung tĩnh chỉ có 2.1 bằng đủ `Hoạt động 2.1` … `2.N` (tên đề mục nguyên văn + phút phân bổ).
+- Khung mẫu tĩnh cũng có sẵn 2.2 để AI không dừng sau 2.1 khi chưa expand.
 - Chỉ thay dòng khung mẫu thật (`\n## B. HOẠT ĐỘNG 2:…`), không cắt đoạn hướng dẫn phía trên.
 - Lệnh cấm: *Bài học có N mục lớn thì BẮT BUỘC phải sinh đủ N nhánh… TUYỆT ĐỐI CẤM dừng lại hoặc bỏ dở sau khi chỉ sinh Hoạt động 2.1* (trong template, khung mẫu và DANH SÁCH TIỂU MỤC).
-- `js/khbd-app.js`: `assertPhasePedagogyOutput` ném lỗi nếu `expectedBranches >= 2` mà thiếu `Hoạt động 2.2`.
+- `js/khbd-app.js`: `assertPhasePedagogyOutput` ném lỗi nếu `expectedBranches >= 2` mà thiếu `Hoạt động 2.2`. Đếm nhánh từ hồ sơ tiểu mục hoặc `extractTextbookSubsections`.
+- Sau 1 lần sửa, nếu B vẫn thiếu 2.2 thì **không lưu** — báo lỗi để sinh lại.
+- Cache-bust `textbook-exact-v14`.
 - Ví dụ Phép nhân / Phép chia: prompt B có
   - `### Hoạt động 2.1: 1. PHÉP NHÂN SỐ TỰ NHIÊN`
   - `### Hoạt động 2.2: 2. PHÉP CHIA HẾT VÀ PHÉP CHIA CÓ DƯ`

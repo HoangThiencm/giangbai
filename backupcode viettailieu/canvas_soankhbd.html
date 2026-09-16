@@ -1058,7 +1058,7 @@
   <script>
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v13"}"><\/script>`);
+        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v14"}"><\/script>`);
     })();
   </script>
   <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260916-canvas-module-v8"></script>
@@ -1323,7 +1323,7 @@
       } else if (typeof document !== "undefined") {
         (window.__KHBD_CANVAS_CORE_READY__ || Promise.resolve()).then(function () {
           var app = document.createElement("script");
-          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-textbook-exact-v13";
+          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-textbook-exact-v14";
           app.onerror = function () { console.error("[KHBD Canvas] Không nạp được khbd-app.js từ host."); };
           document.head.appendChild(app);
         });

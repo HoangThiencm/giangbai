@@ -903,7 +903,7 @@
           <div class="tool-group"><label for="ppctCatalogSubject">Môn học</label><select id="ppctCatalogSubject"></select></div>
           <div class="tool-group"><label for="ppctCatalogYear">Năm học</label><input id="ppctCatalogYear" maxlength="30" placeholder="VD: 2026-2027"></div>
         </div>
-        <div class="panel-box" style="margin-top:1rem;"><div class="panel-header"><span>1. Chuyển Word/PDF thành JSON</span></div><p class="text-muted" style="font-size:.85rem">Chọn file PPCT gốc. Canvas không tự đọc file; hãy tải chính file đó lên ChatGPT/Gemini rồi dán Prompt chuẩn.</p><div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap"><label class="btn btn-outline-dark" style="cursor:pointer">📂 Chọn Word/PDF PPCT<input id="ppctSourceFileInput" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,application/pdf" hidden></label><span id="ppctSourceFileName" class="text-muted" style="font-size:.85rem">Chưa chọn file nguồn.</span></div><button id="btnCopyPpctPrompt" type="button" class="btn btn-primary" style="margin-top:.65rem">📋 Sao chép Prompt PPCT → JSON</button></div>
+        <div class="panel-box" style="margin-top:1rem;"><div class="panel-header"><span>1. Chuyển Word/PDF thành JSON</span></div><p class="text-muted" style="font-size:.85rem">Word được đọc trực tiếp trên máy (không gửi file lên AI). PDF thì chọn file, sao chép Prompt, tải lên ChatGPT/Gemini rồi dán JSON trả về.</p><div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap"><label class="btn btn-outline-dark" style="cursor:pointer">📂 Chọn Word/PDF PPCT<input id="ppctSourceFileInput" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,application/pdf" hidden></label><span id="ppctSourceFileName" class="text-muted" style="font-size:.85rem">Chưa chọn file nguồn.</span></div><button id="btnCopyPpctPrompt" type="button" class="btn btn-primary" style="margin-top:.65rem">📋 Sao chép Prompt PPCT → JSON</button></div>
         <div class="panel-box" style="margin-top:.75rem;"><div class="panel-header"><span>2. Nhập JSON PPCT</span></div><textarea id="ppctJsonInput" rows="8" class="markdown-editor" placeholder="Dán JSON PPCT tại đây..."></textarea><div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;"><button id="btnImportPpctJson" type="button" class="btn btn-primary">📥 Nhập JSON</button><label class="btn btn-outline-dark" style="cursor:pointer;">📂 Chọn file JSON<input id="ppctJsonFileInput" type="file" accept=".json,application/json" hidden></label><button id="btnCopyPpctJson" type="button" class="btn btn-outline-dark">📋 Copy JSON</button><button id="btnExportPpctJson" type="button" class="btn btn-outline-dark">⬇ Xuất JSON</button></div></div>
         <div id="ppctCatalogSettingsPreview" class="panel-box"><p class="text-muted">Chưa có danh mục để xem trước.</p></div>
         <textarea id="ppctCatalogRawText" hidden></textarea><input id="ppctCatalogFileInput" type="file" hidden><button id="btnAnalyzePpctCatalog" type="button" hidden></button>
@@ -1109,7 +1109,7 @@
   <script>
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v13"}"><\/script>`);
+        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v14"}"><\/script>`);
     })();
   </script>
   <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260916-canvas-module-v8"></script>
@@ -1374,7 +1374,7 @@
       } else if (typeof document !== "undefined") {
         (window.__KHBD_CANVAS_CORE_READY__ || Promise.resolve()).then(function () {
           var app = document.createElement("script");
-          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-textbook-exact-v13";
+          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-textbook-exact-v14";
           app.onerror = function () { console.error("[KHBD Canvas] Không nạp được khbd-app.js từ host."); };
           document.head.appendChild(app);
         });

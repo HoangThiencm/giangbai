@@ -199,7 +199,7 @@
         </div>
         <div class="panel-box" style="margin-top:1rem;">
           <div class="panel-header"><span>1. Tạo JSON từ Word/PDF bằng ChatGPT hoặc Gemini</span></div>
-          <p class="text-muted" style="font-size:.85rem;margin:.25rem 0 .65rem;">Chọn file PPCT gốc để ghi nhớ đúng tệp đang xử lý. Hệ thống không tự đọc file này; hãy tải chính file đó lên ChatGPT/Gemini rồi dán Prompt chuẩn.</p>
+          <p class="text-muted" style="font-size:.85rem;margin:.25rem 0 .65rem;">Word được đọc trực tiếp trên máy (không gửi file lên AI). PDF thì chọn file, sao chép Prompt, tải lên ChatGPT/Gemini rồi dán JSON trả về.</p>
           <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
             <label class="btn btn-outline-dark" style="cursor:pointer;"><i data-lucide="file-up"></i> Chọn Word/PDF PPCT<input id="ppctSourceFileInput" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,application/pdf" hidden></label>
             <span id="ppctSourceFileName" class="text-muted" style="font-size:.85rem;">Chưa chọn file nguồn.</span>
@@ -924,13 +924,13 @@
   <script src="ai-usage-reporter.js"></script>
   <script src="mistral-ocr-client.js?v=20260826-khbd"></script>
   <script src="js/khbd-curriculum.js"></script>
-  <script src="js/khbd-prompts.js?v=20260916-textbook-exact-v13"></script>
+  <script src="js/khbd-prompts.js?v=20260916-textbook-exact-v14"></script>
   <script src="js/khbd-gemini.js"></script>
   <script src="js/khbd-docx.js?v=20260915-khbd-weighted-v7"></script>
   <script src="js/khbd-standards.js"></script>
   <script src="js/khbd-pedagogy-catalog.js"></script>
   <script src="js/khbd-yccd.js"></script>
-  <script src="js/khbd-app.js?v=20260916-textbook-exact-v13"></script>
+  <script src="js/khbd-app.js?v=20260916-textbook-exact-v14"></script>
   <script src="access-control.js"></script>
 </body>
 </html>

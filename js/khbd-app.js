@@ -255,7 +255,7 @@ const SUBJECT_CONTEXT_INTEGRATIONS = [
     marker: "[STEM]",
     promptHint: "mô hình hóa toán học/khoa học, quy trình thiết kế kỹ thuật STEM gắn thực tiễn; lồng đúng 1 hoạt động B/C/D khi bài có chỗ tự nhiên."
   },
-                                                                                                                                                                                  {
+                                                                                                                                                                                    {
     id: "virtualLab",
     label: "Thí nghiệm ảo & Mô phỏng số (PhET / GeoGebra)",
     legal: "Mô phỏng số & Thí nghiệm ảo trong dạy học",
@@ -5248,7 +5248,15 @@ function expectedActivityBBranchCount(options) {
   const profiles = (typeof appState !== "undefined" && Array.isArray(appState.textbookSubsectionProfiles))
     ? appState.textbookSubsectionProfiles
     : [];
-  return profiles.length || 0;
+  if (profiles.length) return profiles.length;
+  if (typeof extractTextbookSubsections === "function") {
+    try {
+      const text = typeof resolveTextbookContent === "function" ? resolveTextbookContent() : "";
+      const extracted = extractTextbookSubsections(String(text || ""));
+      if (extracted && extracted.length) return extracted.length;
+    } catch (error) { /* node tests may không có đủ DOM/textbook */ }
+  }
+  return 0;
 }
 
 function assertPhasePedagogyOutput(phase, output, options) {
@@ -6001,8 +6009,9 @@ function findPpctDocxTable(tables) {
   });
   return best&&best.score>=15?best:null;
 }
-/** Read a DOCX PPCT directly from OOXML. This deliberately never calls Gemini or
- * Mammoth: table cells, merged headings and MathType/OMML markers remain stable. */
+/** Read a DOCX PPCT directly from OOXML. Không gửi file lên AI.
+ * This deliberately never calls Gemini or Mammoth: table cells, merged headings
+ * and MathType/OMML markers remain stable. */
 async function readPpctDocx(file, meta={}) {
   if(!window.JSZip) throw new Error("Chưa tải được công cụ đọc Word (JSZip). Hãy kiểm tra mạng rồi thử lại.");
   const zip=await window.JSZip.loadAsync(await file.arrayBuffer());
@@ -7101,7 +7110,10 @@ function activityOutputProblem(actKey, output) {
   if (actKey === "F") {
     return null;
   }
-  try { assertPhasePedagogyOutput(actKey, output); }
+  try {
+    const extra = actKey === "B" ? { expectedBranches: expectedActivityBBranchCount() } : {};
+    assertPhasePedagogyOutput(actKey, output, extra);
+  }
   catch (error) { return error; }
   try { assertActivityIntegrations(actKey, output); }
   catch (error) { return error; }
@@ -7114,12 +7126,16 @@ async function applyActivityOutput(actKey, result, signal, options = {}) {
   let problem = activityOutputProblem(actKey, finalResult);
   if (problem && repairWithGemini) {
     try {
+      const expectedB = actKey === "B" ? expectedActivityBBranchCount() : 0;
+      const branchRepair = expectedB >= 2
+        ? `\n- Hoạt động B có ${expectedB} mục lớn SGK: BẮT BUỘC sinh đủ từ Hoạt động 2.1 đến 2.${expectedB}. TUYỆT ĐỐI CẤM dừng lại sau 2.1.`
+        : "";
       const repairPrompt = buildPedagogicalPrompt(`Sửa đúng một lần nội dung pha ${actKey} sau thành Kịch bản Sư phạm Thực chiến chuẩn CV 5512.
 Giữ nguyên định dạng Markdown KHBD và bảng 2 cột mục d).
 Yêu cầu sửa:
 - Cột TRÁI bảng d): Bắt buộc đủ 4 bước (ngăn bằng <br>), phân định rõ vai trò **GV:** (nói câu cụ thể trong ngoặc kép "...", hành động cụ thể, phát hiện lỗi sai điển hình, can thiệp phân hóa) và **HS:** (làm việc cá nhân -> thảo luận nhóm -> tạo sản phẩm trung gian, báo cáo và phản biện) theo đúng kỹ thuật dạy học đã chọn.
 - Cột PHẢI bảng d): Chỉ ghi nội dung bảng/vở chốt cho HS chép (công thức LaTeX, định nghĩa, ví dụ). CẤM mô tả việc GV/HS ở cột phải.
-- Nếu bật NLS/AI: lồng nhiệm vụ GV và HS với marker ***[NLS]*** / ***[AI]*** vào bài SGK đã có; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.
+- Nếu bật NLS/AI: lồng nhiệm vụ GV và HS với marker ***[NLS]*** / ***[AI]*** vào bài SGK đã có; CẤM bịa đề/số liệu mới; CẤM HTML/span/style/màu.${branchRepair}
 Lỗi cần sửa: ${problem.message}
 
 ${finalResult}${buildPhasePedagogyContext(actKey)}`);
@@ -7129,8 +7145,14 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
       problem = activityOutputProblem(actKey, finalResult);
     } catch (repairError) {
       console.warn(`Giữ nội dung pha ${actKey} dù kỹ thuật/tích hợp chưa khớp đủ:`, repairError);
+      if (actKey === "B" && /thiếu Hoạt động 2\.2|chỉ có \d+ nhánh/i.test(String(problem.message || ""))) {
+        throw problem;
+      }
       problem = repairError;
     }
+  }
+  if (problem && actKey === "B" && /thiếu Hoạt động 2\.2|chỉ có \d+ nhánh/i.test(String(problem.message || ""))) {
+    throw problem;
   }
   if (problem) {
     // Nội dung vẫn dùng được khi AI diễn đạt khác từ khóa bộ kiểm tra.
@@ -7698,7 +7720,7 @@ function importPortablePpctJson(rawJson) {
 
 async function copyTextToClipboard(text){if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(text);const area=document.createElement("textarea");area.value=text;area.style.position="fixed";area.style.opacity="0";document.body.appendChild(area);area.select();document.execCommand("copy");area.remove();}
 function downloadPpctJson(){const json=JSON.stringify(ppctCatalogToPortableJson(),null,2),blob=new Blob([json],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`PPCT-${appState.selectedSubject||"mon"}-lop-${appState.selectedGrade||""}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);}
-function setupPpctJsonWorkflow(){const promptBtn=document.getElementById("btnCopyPpctPrompt"),input=document.getElementById("ppctJsonInput"),importBtn=document.getElementById("btnImportPpctJson"),file=document.getElementById("ppctJsonFileInput"),copyBtn=document.getElementById("btnCopyPpctJson"),exportBtn=document.getElementById("btnExportPpctJson"),inlineBtn=document.getElementById("btnOpenPpctSettingsInline"),sourceFile=document.getElementById("ppctSourceFileInput"),sourceName=document.getElementById("ppctSourceFileName");inlineBtn?.addEventListener("click",openPpctCatalogSettings);sourceFile?.addEventListener("change",()=>{const f=sourceFile.files?.[0];if(sourceName)sourceName.textContent=f?`Đã chọn: ${f.name}`:"Chưa chọn file nguồn.";});promptBtn?.addEventListener("click",async()=>{try{await copyTextToClipboard(buildPpctJsonConversionPrompt());showToast("Đã copy Prompt PPCT → JSON. Hãy tải Word/PDF lên ChatGPT hoặc Gemini và dán Prompt này.","success",6000);}catch(e){showToast("Không copy được Prompt: "+e.message,"danger");}});importBtn?.addEventListener("click",()=>{try{const rows=importPortablePpctJson(String(input?.value||""));showToast(`Đã nhập ${rows.length} dòng PPCT từ JSON.`,"success");}catch(e){showToast(e.message,"danger",7000);}});file?.addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;try{const text=await f.text();if(input)input.value=text;const rows=importPortablePpctJson(text);showToast(`Đã nhập ${rows.length} dòng từ ${f.name}.`,"success");}catch(err){showToast(err.message,"danger",7000);}finally{e.target.value="";}});copyBtn?.addEventListener("click",async()=>{if(!(appState.ppctCatalog?.rows||[]).length){showToast("Chưa có PPCT để copy JSON.","warning");return;}await copyTextToClipboard(JSON.stringify(ppctCatalogToPortableJson(),null,2));showToast("Đã copy JSON PPCT.","success");});exportBtn?.addEventListener("click",()=>{if(!(appState.ppctCatalog?.rows||[]).length){showToast("Chưa có PPCT để xuất JSON.","warning");return;}downloadPpctJson();});}
+function setupPpctJsonWorkflow(){const promptBtn=document.getElementById("btnCopyPpctPrompt"),input=document.getElementById("ppctJsonInput"),importBtn=document.getElementById("btnImportPpctJson"),file=document.getElementById("ppctJsonFileInput"),copyBtn=document.getElementById("btnCopyPpctJson"),exportBtn=document.getElementById("btnExportPpctJson"),inlineBtn=document.getElementById("btnOpenPpctSettingsInline"),sourceFile=document.getElementById("ppctSourceFileInput"),sourceName=document.getElementById("ppctSourceFileName");inlineBtn?.addEventListener("click",openPpctCatalogSettings);sourceFile?.addEventListener("change",()=>{const f=sourceFile.files?.[0];if(sourceName)sourceName.textContent=f?`Đã chọn: ${f.name}`:"Chưa chọn file nguồn.";if(f&&/\.docx$/i.test(f.name||""))handlePpctFiles([f]);});promptBtn?.addEventListener("click",async()=>{try{await copyTextToClipboard(buildPpctJsonConversionPrompt());showToast("Đã copy Prompt PPCT → JSON. Hãy tải Word/PDF lên ChatGPT hoặc Gemini và dán Prompt này.","success",6000);}catch(e){showToast("Không copy được Prompt: "+e.message,"danger");}});importBtn?.addEventListener("click",()=>{try{const rows=importPortablePpctJson(String(input?.value||""));showToast(`Đã nhập ${rows.length} dòng PPCT từ JSON.`,"success");}catch(e){showToast(e.message,"danger",7000);}});file?.addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;try{const text=await f.text();if(input)input.value=text;const rows=importPortablePpctJson(text);showToast(`Đã nhập ${rows.length} dòng từ ${f.name}.`,"success");}catch(err){showToast(err.message,"danger",7000);}finally{e.target.value="";}});copyBtn?.addEventListener("click",async()=>{if(!(appState.ppctCatalog?.rows||[]).length){showToast("Chưa có PPCT để copy JSON.","warning");return;}await copyTextToClipboard(JSON.stringify(ppctCatalogToPortableJson(),null,2));showToast("Đã copy JSON PPCT.","success");});exportBtn?.addEventListener("click",()=>{if(!(appState.ppctCatalog?.rows||[]).length){showToast("Chưa có PPCT để xuất JSON.","warning");return;}downloadPpctJson();});}
 
 function setupPpctCatalogSettingsModal() {
   const openBtn=document.getElementById("btnManagePpctCatalog"), save=document.getElementById("btnSavePpctCatalogSettings");

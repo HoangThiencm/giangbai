@@ -131,9 +131,9 @@ console.log('\n[TEST 4] Cache-bust JS mới trên Canvas/soankhbd...');
 assert.match(appSrc, /finishReason=RECITATION/, 'Vẫn hướng dẫn khi RECITATION, không tự gửi lại');
 ['canvas_soankhbd.html', path.join('backupcode viettailieu', 'canvas_soankhbd.html')].forEach(rel => {
   const html = fs.readFileSync(path.join(root, rel), 'utf8');
-  assert.match(html, /textbook-exact-v13/, `${rel} phải cache-bust textbook-exact-v13`);
+  assert.match(html, /textbook-exact-v14/, `${rel} phải cache-bust textbook-exact-v14`);
 });
-console.log('✓ Cache-bust textbook-exact-v13; RECITATION vẫn được bắt.');
+console.log('✓ Cache-bust textbook-exact-v14; RECITATION vẫn được bắt.');
 
 console.log('\n[TEST 5] Giữ đúng chỉ số SGK, không tự đánh số, không lặp số...');
 const numbered = parseCanvasTextbookAnalysis(JSON.stringify({

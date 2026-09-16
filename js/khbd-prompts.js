@@ -736,7 +736,21 @@ ${LATEX_SPACING_BAN}
 #### d) Tổ chức thực hiện:
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao hoạt động khám phá trong SGK: "Các em có 3 phút làm việc cá nhân vào phiếu học tập và 4 phút thảo luận nhóm hoàn thành bảng phụ...". **HS:** Nhận phiếu học tập, phân công nhiệm vụ trong nhóm.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân (3 phút) ghi kết quả vào nháp -> Thảo luận nhóm (4 phút) thống nhất sản phẩm trung gian lên bảng nhóm. **GV:** Di chuyển bao quát, phát hiện lỗi sai điển hình của học sinh trong bài: (chỉ rõ lỗi sai cụ thể), can thiệp hỗ trợ phân hóa (gợi ý cho nhóm gặp khó khăn, đặt câu hỏi nâng cao cho nhóm khá giỏi).<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện một nhóm lên bảng trình bày sản phẩm; các nhóm khác đối chiếu, nhận xét và phản biện. **GV:** Điều hành báo cáo, đặt câu hỏi kiểm tra độ hiểu sâu: "Tại sao nhóm em lại suy ra được kết luận/công thức này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét quá trình làm việc của các nhóm, chuẩn hóa kiến thức, giảng giải bản chất quy tắc và hướng dẫn ghi bảng. **HS:** Sửa bài vào vở, ghi nhận kiến thức chuẩn mực. | **1. [Tên kiến thức tiểu mục 1]**<br>- Định nghĩa / Khái niệm chuẩn xác.<br>- Quy tắc / Công thức: $...$<br>+ Chú ý quan trọng.<br>. Ví dụ mẫu 1: Đề bài và Lời giải chi tiết từng bước. |`,
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao hoạt động khám phá trong SGK: "Các em có 3 phút làm việc cá nhân vào phiếu học tập và 4 phút thảo luận nhóm hoàn thành bảng phụ...". **HS:** Nhận phiếu học tập, phân công nhiệm vụ trong nhóm.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân (3 phút) ghi kết quả vào nháp -> Thảo luận nhóm (4 phút) thống nhất sản phẩm trung gian lên bảng nhóm. **GV:** Di chuyển bao quát, phát hiện lỗi sai điển hình của học sinh trong bài: (chỉ rõ lỗi sai cụ thể), can thiệp hỗ trợ phân hóa (gợi ý cho nhóm gặp khó khăn, đặt câu hỏi nâng cao cho nhóm khá giỏi).<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện một nhóm lên bảng trình bày sản phẩm; các nhóm khác đối chiếu, nhận xét và phản biện. **GV:** Điều hành báo cáo, đặt câu hỏi kiểm tra độ hiểu sâu: "Tại sao nhóm em lại suy ra được kết luận/công thức này?".<br>+ Bước 4: Kết luận, nhận định: **GV:** Nhận xét quá trình làm việc của các nhóm, chuẩn hóa kiến thức, giảng giải bản chất quy tắc và hướng dẫn ghi bảng. **HS:** Sửa bài vào vở, ghi nhận kiến thức chuẩn mực. | **1. [Tên kiến thức tiểu mục 1]**<br>- Định nghĩa / Khái niệm chuẩn xác.<br>- Quy tắc / Công thức: $...$<br>+ Chú ý quan trọng.<br>. Ví dụ mẫu 1: Đề bài và Lời giải chi tiết từng bước. |
+
+### Hoạt động 2.2: [Tên nguyên văn đề mục trong SGK] (15 phút)
+#### a) Mục tiêu:
+- Học sinh hình thành được kiến thức, hiểu rõ bản chất và vận dụng được quy tắc/định nghĩa của tiểu mục 2.
+#### b) Nội dung:
+- Học sinh thực hiện hoạt động khám phá trong SGK thuộc mục này, trả lời các câu hỏi phát vấn và làm ví dụ mẫu.
+#### c) Sản phẩm:
+- Kết quả câu trả lời, lời giải chi tiết cho hoạt động khám phá và ví dụ mẫu của mục này.
+#### d) Tổ chức thực hiện:
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| + Bước 1: Chuyển giao nhiệm vụ: (Áp dụng Kỹ thuật ...) **GV:** Giao hoạt động khám phá trong SGK thuộc mục này. **HS:** Nhận nhiệm vụ.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân rồi thảo luận nhóm. **GV:** Quan sát, phát hiện lỗi sai điển hình, hỗ trợ phân hóa.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện trình bày; lớp phản biện. **GV:** Điều hành, chốt bản chất kiến thức.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chuẩn hóa kiến thức mục này. **HS:** Ghi bài vào vở. | **2. [Tên kiến thức tiểu mục 2]**<br>- Định nghĩa / Quy tắc / Công thức: $...$ |
+
+(Nếu SGK có Mục 3, 4... tiếp tục sinh đủ Hoạt động 2.3, 2.4 cùng cấu trúc a/b/c/d. TUYỆT ĐỐI CẤM dừng sau 2.1 khi còn mục lớn.)`,
 
   // TAB 4.C: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG LUYỆN TẬP
   GENERATE_ACTIVITY_C: `Hãy biên soạn chi tiết **HOẠT ĐỘNG LUYỆN TẬP** trong mục III. Tiến trình dạy học môn {subject} chuẩn Công văn 5512 theo GDPT 2018.

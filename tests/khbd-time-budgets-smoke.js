@@ -83,8 +83,8 @@ assert(!promptB.includes("{time_budget_B}"), "Placeholder {time_budget_B} must b
 assert(!promptB.includes("{time_budget_A}"), "All time budget placeholders must be replaced");
 assert.match(promptB, /## B\. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI \(45 phút\)/, "Prompt Activity B must show its 45-minute budget");
 assert.match(promptB, /Tổng số phút của TẤT CẢ hoạt động nhánh[\s\S]*?đúng bằng 45 phút/, "Prompt Activity B must lock the total of its branches");
-assert(promptB.includes("Hoạt động 2.1: Số và tập hợp các số tự nhiên"), "Prompt Activity B must contain branch 1");
-assert(promptB.includes("Hoạt động 2.2: Biểu diễn số tự nhiên trên tia số"), "Prompt Activity B must contain branch 2");
+assert(/Hoạt động 2\.1: (?:I\.\s*)?Số và tập hợp các số tự nhiên/.test(promptB), "Prompt Activity B must contain branch 1");
+assert(/Hoạt động 2\.2: (?:II\.\s*)?Biểu diễn số tự nhiên trên tia số/.test(promptB), "Prompt Activity B must contain branch 2");
 
 const promptE = getPromptTemplate("GENERATE_ACTIVITY_E", context);
 assert(!promptE.includes("{time_budget_E}"), "Placeholder {time_budget_E} must be replaced");
