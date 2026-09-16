@@ -455,8 +455,9 @@
                 </div>
               </div>
 
-              <!-- Dropzone & Upload Area for PPCT -->
-              <div id="dropzoneContainerPpct" class="dropzone-container dropzone-ppct" tabindex="0">
+              <div class="panel-box"><div class="panel-header"><span>Dữ liệu PPCT</span></div><p class="text-muted">PPCT được quản lý bằng JSON chuẩn. Mở <b>Cài đặt PPCT</b> để tạo Prompt, nhập, copy hoặc xuất JSON.</p><button id="btnOpenPpctSettingsInline" type="button" class="btn btn-primary">⚙ Cài đặt PPCT</button></div>
+              <!-- Legacy controls hidden: JSON-first workflow lives in Cài đặt PPCT -->
+              <div id="dropzoneContainerPpct" class="dropzone-container dropzone-ppct" tabindex="0" style="display:none">
                 <div class="dropzone-icon">📑</div>
                 <div class="dropzone-text">
                   <h4>Click vùng PPCT, rồi nhấn Ctrl+V để dán ảnh — hoặc chọn file PDF/ảnh</h4>
@@ -468,20 +469,7 @@
                 </div>
                 <input type="file" id="fileInputPpct" multiple accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,application/pdf,.pdf" style="display: none;">
               </div>
-              <button id="btnAnalyzePpct" class="btn btn-primary khbd-read-source-btn" type="button">
-                <i data-lucide="copy"></i> 📋 Sao chép Prompt PPCT → JSON
-              </button>
-              <div class="panel-box" style="margin-top:.75rem;">
-                <div class="panel-header"><span>Nhập dữ liệu PPCT chuẩn từ ChatGPT / Gemini</span></div>
-                <p class="text-muted" style="font-size:.85rem;margin:.25rem 0 .65rem;">Tải Word/PDF PPCT lên ChatGPT hoặc Gemini, dán Prompt ở nút trên, rồi copy JSON trả về và dán vào đây. Hệ thống chỉ đọc JSON, không tự suy đoán PPCT.</p>
-                <textarea id="ppctJsonInput" rows="6" class="markdown-editor" placeholder="Dán JSON PPCT tại đây..."></textarea>
-                <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;">
-                  <button id="btnImportPpctJson" type="button" class="btn btn-primary">📥 Nhập JSON</button>
-                  <label class="btn btn-outline-dark" style="cursor:pointer;">📂 Chọn file JSON<input id="ppctJsonFileInput" type="file" accept=".json,application/json" hidden></label>
-                  <button id="btnCopyPpctJson" type="button" class="btn btn-outline-dark">📋 Copy JSON</button>
-                  <button id="btnExportPpctJson" type="button" class="btn btn-outline-dark">⬇ Xuất JSON</button>
-                </div>
-              </div>
+              <button id="btnAnalyzePpct" type="button" style="display:none"></button>
 
               <!-- PPCT Gallery Grid -->
               <div id="ppctGallery" class="image-gallery ppct-gallery"></div>
@@ -876,6 +864,26 @@
   <!-- =========================================================================
        MODALS
        ========================================================================= -->
+
+  <!-- Modal: Cài đặt PPCT JSON chuẩn -->
+  <div id="modalPpctCatalogSettings" class="modal-backdrop" tabindex="-1">
+    <div class="modal-dialog" style="max-width:900px;">
+      <div class="modal-header"><h3><i data-lucide="database"></i> Cài đặt PPCT</h3><button class="modal-close-btn" data-close-modal="modalPpctCatalogSettings">&times;</button></div>
+      <div class="modal-body">
+        <p class="text-muted" style="margin-top:0">Dùng ChatGPT/Gemini chuyển Word/PDF PPCT gốc sang JSON chuẩn, sau đó nhập JSON vào đây. Hệ thống không tự suy đoán nội dung PPCT.</p>
+        <div class="toolbar-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+          <div class="tool-group"><label for="ppctCatalogGrade">Khối lớp</label><select id="ppctCatalogGrade"><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8">Lớp 8</option><option value="9">Lớp 9</option></select></div>
+          <div class="tool-group"><label for="ppctCatalogSubject">Môn học</label><select id="ppctCatalogSubject"></select></div>
+          <div class="tool-group"><label for="ppctCatalogYear">Năm học</label><input id="ppctCatalogYear" maxlength="30" placeholder="VD: 2026-2027"></div>
+        </div>
+        <div class="panel-box" style="margin-top:1rem;"><div class="panel-header"><span>1. Chuyển Word/PDF thành JSON</span></div><p class="text-muted" style="font-size:.85rem">Tải Word/PDF lên ChatGPT hoặc Gemini rồi dán Prompt chuẩn.</p><button id="btnCopyPpctPrompt" type="button" class="btn btn-primary">📋 Sao chép Prompt PPCT → JSON</button></div>
+        <div class="panel-box" style="margin-top:.75rem;"><div class="panel-header"><span>2. Nhập JSON PPCT</span></div><textarea id="ppctJsonInput" rows="8" class="markdown-editor" placeholder="Dán JSON PPCT tại đây..."></textarea><div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;"><button id="btnImportPpctJson" type="button" class="btn btn-primary">📥 Nhập JSON</button><label class="btn btn-outline-dark" style="cursor:pointer;">📂 Chọn file JSON<input id="ppctJsonFileInput" type="file" accept=".json,application/json" hidden></label><button id="btnCopyPpctJson" type="button" class="btn btn-outline-dark">📋 Copy JSON</button><button id="btnExportPpctJson" type="button" class="btn btn-outline-dark">⬇ Xuất JSON</button></div></div>
+        <div id="ppctCatalogSettingsPreview" class="panel-box"><p class="text-muted">Chưa có danh mục để xem trước.</p></div>
+        <textarea id="ppctCatalogRawText" hidden></textarea><input id="ppctCatalogFileInput" type="file" hidden><button id="btnAnalyzePpctCatalog" type="button" hidden></button>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-dark" data-close-modal="modalPpctCatalogSettings">Đóng</button><button id="btnSavePpctCatalogSettings" class="btn btn-primary">Lưu PPCT</button></div>
+    </div>
+  </div>
 
   <!-- Modal 1: Quản lý API Key -->
   <div id="modalApiKeys" class="modal-backdrop">
