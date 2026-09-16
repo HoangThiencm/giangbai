@@ -7,7 +7,7 @@
  * Khung Năng lực Đặc thù, Khung Năng lực AI (QĐ 2422/QĐ-BGDĐT) và Khung Năng lực Số (TT 02/2025/TT-BGDĐT).
  */
 
-// Deploy version: 20260916-textbook-exact-v15
+// Deploy version: 20260916-textbook-exact-v16
 
 function isEnglishSubject(subjectId) {
   const sid = String(subjectId || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
@@ -1700,6 +1700,7 @@ Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budg
 }
 
 if (typeof window !== 'undefined') {
+  window.PROMPTS = PROMPTS;
   window.isEnglishSubject = isEnglishSubject;
   window.getSystemRole = getSystemRole;
   window.getPromptTemplate = getPromptTemplate;
@@ -1709,6 +1710,10 @@ if (typeof window !== 'undefined') {
   window.extractTextbookLessonMap = extractTextbookLessonMap;
   window.getGeneralCompetenciesForSubject = getGeneralCompetenciesForSubject;
   window.formatGeneralCompetenciesGuide = formatGeneralCompetenciesGuide;
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.PROMPTS = PROMPTS;
 }
 
 if (typeof module !== 'undefined' && module.exports) {

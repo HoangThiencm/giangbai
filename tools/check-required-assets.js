@@ -7,6 +7,8 @@ const required = [
   "js/khbd-curriculum.js",
   "js/khbd-standards.js",
   "js/khbd-yccd.js",
+  "js/khbd-prompts.js",
+  "js/khbd-app.js",
   "ai-design-config.js"
 ];
 

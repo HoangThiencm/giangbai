@@ -5043,11 +5043,21 @@ ${digitalOn ? `- TÍCH HỢP TỰ NHIÊN — KHÔNG GƯỢNG ÉP: Chỉ gắn NL
 ${buildContextIntegrationsPromptBlock()}`;
 }
 
+function getSafePrompts() {
+  if (typeof PROMPTS !== 'undefined' && PROMPTS) return PROMPTS;
+  if (typeof window !== 'undefined' && window.PROMPTS) return window.PROMPTS;
+  if (typeof globalThis !== 'undefined' && globalThis.PROMPTS) return globalThis.PROMPTS;
+  return null;
+}
+
 function buildPedagogicalPrompt(prompt) {
   // getPromptTemplate already appends context if provided, but some places might call this directly.
-  let out = `${prompt}\n\n${PROMPTS.OUTPUT_CONTRACT}`;
-  if (typeof isEnglishSubject === "function" && isEnglishSubject(appState.selectedSubject) && PROMPTS.ENGLISH_ELT_DIRECTIVE) {
-    out += `\n\n${PROMPTS.ENGLISH_ELT_DIRECTIVE}`;
+  const p = getSafePrompts();
+  const contract = (p && p.OUTPUT_CONTRACT) || (typeof window !== 'undefined' && window.__KHBD_DEFAULT_OUTPUT_CONTRACT) || '';
+  let out = contract ? `${prompt}\n\n${contract}` : prompt;
+  const isEng = typeof isEnglishSubject === 'function' ? isEnglishSubject(appState.selectedSubject) : false;
+  if (isEng && p && p.ENGLISH_ELT_DIRECTIVE) {
+    out += `\n\n${p.ENGLISH_ELT_DIRECTIVE}`;
   }
   return out;
 }

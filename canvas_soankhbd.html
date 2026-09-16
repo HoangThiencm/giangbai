@@ -1109,7 +1109,7 @@
   <script>
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v15"}"><\/script>`);
+        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v16"}"><\/script>`);
     })();
   </script>
   <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260916-canvas-module-v9"></script>
@@ -1201,6 +1201,12 @@
   <script>
     if (typeof window.getSystemRole === "undefined") {
       window.getSystemRole = function () { return ""; };
+    }
+    if (typeof window.PROMPTS === "undefined") {
+      window.PROMPTS = {
+        OUTPUT_CONTRACT: "HỢP ĐỒNG ĐẦU RA BẮT BUỘC:\n- BẮT ĐẦU NGAY LẬP TỨC bằng tiêu đề/mục chuyên môn phù hợp.\n- TUYỆT ĐỐI CẤM: lời chào hỏi, khen ngợi, giới thiệu, nhận xét ngoài lề, lời chúc ở cuối bài.\n- TUYỆT ĐỐI CẤM dùng code block fence (```markdown hoặc ```). Chỉ xuất Markdown thuần túy.\n- CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu.\n- BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (***...***).",
+        ENGLISH_ELT_DIRECTIVE: "ENGLISH-MEDIUM ELT LESSON PLAN OVERRIDE (subject = Tiếng Anh / English):\nWrite the ENTIRE lesson plan in natural classroom English (100% English)."
+      };
     }
     const memoryStorage = Object.create(null);
     function getCanvasStorage() {
@@ -1377,7 +1383,7 @@
       } else if (typeof document !== "undefined") {
         (window.__KHBD_CANVAS_CORE_READY__ || Promise.resolve()).then(function () {
           var app = document.createElement("script");
-          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-textbook-exact-v15";
+          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-textbook-exact-v16";
           app.onerror = function () { console.error("[KHBD Canvas] Không nạp được khbd-app.js từ host."); };
           document.head.appendChild(app);
         });
