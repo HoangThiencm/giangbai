@@ -1456,7 +1456,8 @@
         };
 
         const HybridExamCreator = ({ onBack, initialData }) => {
-            const [step, setStep] = useState(initialData ? 2 : 1);
+            const isEditMode = Boolean(initialData && (initialData.id || (Array.isArray(initialData.questions) && initialData.questions.length > 0)));
+            const [step, setStep] = useState(isEditMode ? 2 : 1);
             const [pages, setPages] = useState([]);
             const [pageProgress, setPageProgress] = useState({});
             const [pageQuestions, setPageQuestions] = useState({});

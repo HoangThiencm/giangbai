@@ -33,6 +33,10 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
+  <!-- Đọc bảng Word PPCT tại máy: giữ cột, công thức và ô gộp; không gửi tệp lên AI. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
   <!-- docx.js (Xuất file Word .docx chuyên nghiệp) -->
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
   
@@ -181,8 +185,8 @@
           <div class="tool-group"><label for="ppctCatalogYear">Năm học</label><input id="ppctCatalogYear" maxlength="30" placeholder="VD: 2026-2027"></div>
         </div>
         <label for="ppctCatalogRawText" style="display:block;font-weight:700;margin-top:1rem">Dán nội dung PPCT / Phụ lục 3</label>
-        <textarea id="ppctCatalogRawText" rows="7" class="markdown-editor" placeholder="Dán bảng PPCT đã có văn bản; hoặc chọn PDF/ảnh bên dưới để AI lập danh mục."></textarea>
-        <div style="display:flex;gap:.5rem;align-items:center;margin:.7rem 0;flex-wrap:wrap"><label class="btn btn-outline-dark" style="cursor:pointer"><i data-lucide="file-up"></i> Chọn PDF / ảnh PPCT<input id="ppctCatalogFileInput" type="file" accept="application/pdf,image/*" multiple hidden></label><button id="btnAnalyzePpctCatalog" type="button" class="btn btn-primary"><i data-lucide="list-checks"></i> Phân tích thành danh mục</button><span class="text-muted" style="font-size:.82rem">Có thể dán ảnh bằng Ctrl+V trong vùng PPCT ở Bước 2.</span></div>
+        <textarea id="ppctCatalogRawText" rows="7" class="markdown-editor" placeholder="Dán bảng PPCT; ưu tiên chọn file Word để giữ đúng bảng, mã NLS/AI và công thức."></textarea>
+        <div style="display:flex;gap:.5rem;align-items:center;margin:.7rem 0;flex-wrap:wrap"><label class="btn btn-outline-dark" style="cursor:pointer"><i data-lucide="file-up"></i> Chọn Word / PDF / ảnh PPCT<input id="ppctCatalogFileInput" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/*" multiple hidden></label><button id="btnAnalyzePpctCatalog" type="button" class="btn btn-primary"><i data-lucide="list-checks"></i> Phân tích thành danh mục</button><span class="text-muted" style="font-size:.82rem">Word được đọc trực tiếp trên máy; PDF/ảnh mới cần AI.</span></div>
         <div id="ppctCatalogSettingsPreview" class="panel-box"><p class="text-muted">Chưa có danh mục để xem trước.</p></div>
       </div>
       <div class="modal-footer"><button class="btn btn-outline-dark" data-close-modal="modalPpctCatalogSettings">Đóng</button><button id="btnSavePpctCatalogSettings" class="btn btn-primary">Lưu danh mục vào CSDL</button></div>
@@ -351,14 +355,14 @@
             <div id="dropzoneContainerPpct" class="dropzone-container dropzone-ppct" tabindex="0">
               <div class="dropzone-icon">📑</div>
               <div class="dropzone-text">
-                <h4>Click vùng PPCT, rồi nhấn Ctrl+V để dán ảnh — hoặc chọn file PDF/ảnh</h4>
+              <h4>Click vùng PPCT, rồi nhấn Ctrl+V để dán ảnh — hoặc chọn file Word/PDF/ảnh</h4>
                 <p>Vùng đang chọn có viền sáng cam. Không cần bấm nút kích hoạt trước. Sau đó bấm "Đọc PPCT" để bóc tách số tiết, tuần, phạm vi bài dạy.</p>
                 <p class="dropzone-active-hint">Đang chọn PPCT — Bấm Ctrl+V để dán</p>
                 <button id="btnPastePpct" class="btn btn-outline-primary dropzone-paste-button" type="button">
                   <i data-lucide="clipboard-paste"></i> Dán ảnh PPCT (Ctrl+V)
                 </button>
               </div>
-              <input type="file" id="fileInputPpct" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
+              <input type="file" id="fileInputPpct" multiple accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,application/pdf,.pdf" style="display: none;">
             </div>
             <button id="btnAnalyzePpct" class="btn btn-primary khbd-read-source-btn" type="button">
               <i data-lucide="book-open"></i> 📑 Đọc PPCT

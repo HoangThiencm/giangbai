@@ -88,6 +88,8 @@
     setupPdfJsForCanvas('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');
   </script>
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
   <!-- docx.js (Xuất file Word .docx chuyên nghiệp) -->
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
@@ -464,7 +466,7 @@
                     <i data-lucide="clipboard-paste"></i> Dán ảnh PPCT (Ctrl+V)
                   </button>
                 </div>
-                <input type="file" id="fileInputPpct" multiple accept="image/*,application/pdf,.pdf" style="display: none;">
+                <input type="file" id="fileInputPpct" multiple accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,application/pdf,.pdf" style="display: none;">
               </div>
               <button id="btnAnalyzePpct" class="btn btn-primary khbd-read-source-btn" type="button">
                 <i data-lucide="book-open"></i> 📑 Đọc PPCT
