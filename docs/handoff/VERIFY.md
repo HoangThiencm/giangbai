@@ -4,33 +4,34 @@
 FAIL
 
 ## Đối chiếu scope
-- Scope 1: Xóa bỏ hoàn toàn thời gian ở Hồ sơ dạy học (Mục IV / Phụ lục E): ĐÃ LÀM MỘT PHẦN (trong `js/khbd-app.js` đã sửa `normalizeActivityTimeHeadings` xóa `(X phút)` và truyền `fourActivities: true`, nhưng chưa làm sạch tiêu đề con lặp lại khi xuất Word trong `js/khbd-docx.js`).
-- Scope 2: Chuẩn hóa cấu trúc tiến trình cho tiết "Luyện tập chung", "Ôn tập": CHƯA LÀM (chưa có hàm `isPracticeOrReviewLesson`, chưa có prompt chuyên biệt cho tiết luyện tập chung/ôn tập, chưa cấu hình phân bổ thời lượng 75–80% cho Luyện tập).
-- Scope 3: Khắc phục triệt để lỗi rỉ thẻ `<br>- GV:` vào `Nhận xét của GV:` và in thẻ HTML thô ra Word: CHƯA LÀM (`formatKhbdRoleLineBreaks` vẫn biến `*(Nhận xét của GV: ...)*` thành `*(Nhận xét của <br>- **GV:** ...)*`).
-- Scope 4: Bắt buộc cập nhật `docs/handoff/IMPLEMENT.md`: CHƯA LÀM (`IMPLEMENT.md` chưa có nội dung cho đợt thay đổi này).
+- Scope 1: Xóa bỏ hoàn toàn thời gian ở Hồ sơ dạy học (Mục IV / Phụ lục E): ĐÃ ĐẠT (tiêu đề Phụ lục E không còn dính `(4 phút)`, bảo toàn thời lượng 45/90 phút).
+- Scope 2: Chuẩn hóa cấu trúc tiến trình cho tiết "Luyện tập chung", "Ôn tập": ĐÃ TRIỂN KHAI (đã tích hợp `isPracticeOrReviewLesson` vào `calculateActivityTimeBudgets` với $B=0$, $C=70$ phút cho 90p, và bổ sung định hướng trò chơi khởi động A).
+- Scope 3: Khắc phục lỗi rỉ thẻ `<br>- GV:` vào `Nhận xét của GV:`: ĐÃ SỬA NHƯNG GÂY BUG HỒI QUY (phá vỡ test tách lượt lời `sticky` trong `tests/khbd-pedagogy-rate-smoke.js`).
+- Scope 4: Kiểm tra tính toàn vẹn hệ thống Canvas: FAIL (test `tests/canvas-soankhbd-smoke.js` thất bại do model hệ thống chưa được đồng bộ).
 
 ## Test đã chạy
-1. Kiểm tra `isPracticeOrReviewLesson` trong `js/khbd-prompts.js` và `js/khbd-app.js`: FAIL (hàm chưa được định nghĩa).
-2. Kiểm tra `formatKhbdRoleLineBreaks` với chuỗi `*(Nhận xét của GV: ...)*`: FAIL (kết quả trả về vẫn bị chèn `<br>- **GV:**`).
-3. Kiểm tra hàm `clipKhbdActivityMarkdown('E', ...)`: PASS (tiêu đề Phụ lục E đã không còn dính `(4 phút)`).
-4. Chạy `tests/khbd-activity-e-smoke.js`: PASS.
-5. Chạy `tests/khbd-time-budgets-smoke.js`: PASS.
-6. Chạy `tests/khbd-pedagogy-rate-smoke.js`: PASS.
+1. `tests/khbd-activity-e-smoke.js`: PASS.
+2. `tests/khbd-time-budgets-smoke.js`: PASS.
+3. `tests/sodiem-smoke.js`: PASS.
+4. `tests/khbd-table-columns-smoke.js`: PASS.
+5. `tests/khbd-pedagogy-rate-smoke.js`: **FAIL** (`AssertionError: Phải chèn <br>- **GV:**` tại dòng 75 do regex phân vai mới làm mất khả năng ngắt dòng của các chuỗi `sticky`).
+6. `tests/canvas-soankhbd-smoke.js`: **FAIL** (`AssertionError: canvas_soankhbd.html phải sử dụng model hệ thống gemini-2.5-flash` tại dòng 41).
 
 ## Pass / Fail từng tiêu chí
-1. Tiêu chí 1: Mục Phụ lục / Hồ sơ dạy học khi xuất ra Word (.docx) hoặc Markdown toàn bài 100% không còn gắn thời gian `(X phút)` -> PASS một phần (cần hoàn thiện thêm ở khâu xuất Word trong `js/khbd-docx.js`).
-2. Tiêu chí 2: Toàn bộ thời lượng bài dạy (45 phút / 90 phút) được bảo toàn nguyên vẹn cho các hoạt động dạy học trên lớp -> PASS.
-3. Tiêu chí 3: Khi soạn tiết "Luyện tập chung" hoặc "Ôn tập" (Khởi động trò chơi -> Bỏ hình thành kiến thức mới -> Trọng tâm Luyện tập 75–80%) -> FAIL (chưa triển khai).
-4. Tiêu chí 4: Triệt tiêu hoàn toàn lỗi chèn `<br>- GV:` vào `Nhận xét của GV:`; file Word xuất ra không chứa thẻ `<br>` thô -> FAIL (chưa sửa regex trong `formatKhbdRoleLine`).
-5. Tiêu chí 5: Bắt buộc ghi `docs/handoff/IMPLEMENT.md` phản ánh đúng các thay đổi -> FAIL (`IMPLEMENT.md` chưa được ghi nhận cho task này).
+1. Tiêu chí 1: Mục Phụ lục / Hồ sơ dạy học không còn gắn thời gian `(X phút)` -> PASS.
+2. Tiêu chí 2: Toàn bộ thời lượng bài dạy được bảo toàn cho các hoạt động dạy học -> PASS.
+3. Tiêu chí 3: Cấu hình tiết "Luyện tập chung" / "Ôn tập" ($B=0$, $C=75-80\%$) -> PASS.
+4. Tiêu chí 4: Triệt tiêu lỗi rỉ `<br>- GV:` mà KHÔNG phá vỡ kịch bản phân vai hiện hữu -> **FAIL** (gây hồi quy test `khbd-pedagogy-rate-smoke.js`).
+5. Tiêu chí 5: Toàn bộ bài kiểm thử tự động đạt PASS 100% -> **FAIL** (2 smoke tests bị FAIL).
 
 ## Bug
-- Lỗi 1: `formatKhbdRoleLine` chèn `<br>- ` vào giữa cụm `Nhận xét của GV:`.
-  - Tái hiện: Chạy `formatKhbdRoleLineBreaks("*(Nhận xét của GV: ....................)*")`, kết quả trả về `*(Nhận xét của <br>- **GV:** ....................)*`.
-  - File liên quan: `js/khbd-app.js` (dòng 2301) và `canvas_soankhbd.html` (dòng 1421).
-- Lỗi 2: Chưa triển khai tính năng nhận diện và cấu hình cho tiết "Luyện tập chung" / "Ôn tập".
-  - Tái hiện: Thiếu hàm `isPracticeOrReviewLesson` và logic tính thời lượng/prompt luyện tập trong `js/khbd-prompts.js` và `js/khbd-app.js`.
-  - File liên quan: `js/khbd-prompts.js`, `js/khbd-app.js`.
-- Lỗi 3: Chưa cập nhật `docs/handoff/IMPLEMENT.md` cho đợt triển khai này.
-  - Tái hiện: `IMPLEMENT.md` hiện tại chỉ có nội dung của task Auto-Save Sổ Điểm từ trước.
-  - File liên quan: `docs/handoff/IMPLEMENT.md`.
+- Lỗi 1: Regex phân vai mới trong `formatKhbdRoleLine` phá vỡ trường hợp lượt lời đứng sau dấu ngoặc hoặc tiền tố khác dòng (`sticky`).
+  - Tái hiện: Chạy `node tests/khbd-pedagogy-rate-smoke.js` bị FAIL tại dòng 75: `+ Bước 1: Chuyển giao nhiệm vụ: (Kỹ thuật TPS) GV: "Mở SGK..."` không được chèn `<br>- **GV:**`.
+  - Nguyên nhân: Dùng `(^|<br>\s*|-\s*)` quá chặt nên không khớp được `GV:` khi đứng sau dấu ngoặc `) ` hoặc hai chấm `: `.
+  - Giải pháp: Dùng negative lookbehind để chỉ loại trừ cụm từ sở hữu:
+    `replace(/(?<!(?:nhận\s*xét|đánh\s*giá|ý\s*kiến|chữ\s*ký)?\s*của\s+)(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, ...)` trong `js/khbd-app.js`, `canvas_soankhbd.html` và file backup.
+  - File liên quan: `js/khbd-app.js`, `canvas_soankhbd.html`, `backupcode viettailieu/canvas_soankhbd.html`.
+- Lỗi 2: `canvas_soankhbd.html` chưa đồng bộ model `gemini-2.5-flash` làm rớt test smoke.
+  - Tái hiện: Chạy `node tests/canvas-soankhbd-smoke.js` bị FAIL tại dòng 41 vì dòng 33 `canvas_soankhbd.html` vẫn là `gemini-3-flash-preview`.
+  - Giải pháp: Đổi `model: "gemini-2.5-flash"` trong `window.__KHBD_CANVAS__` tại `canvas_soankhbd.html` để khớp với tiêu chuẩn ổn định.
+  - File liên quan: `canvas_soankhbd.html`.

@@ -2302,7 +2302,7 @@ function formatKhbdRoleLine(line) {
   if (!isTable) {
     content = content.replace(/\s*\|\s*(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, (_, role) => `§BR§§${role.toUpperCase()}§`);
   }
-  content = content.replace(/(^|<br>\s*|-\s*)(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, (_, prefix, role) => prefix + '§BR§§' + role.toUpperCase() + '§');
+  content = content.replace(/(?<!(?:nhận\s*xét|đánh\s*giá|ý\s*kiến|chữ\s*ký)?\s*của\s+)(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, (_, role) => `§BR§§${role.toUpperCase()}§`);
   content = content.replace(/§BR§/g, "<br>- ");
   content = content.replace(/§GV§/g, "**GV:**");
   content = content.replace(/§HS§/g, "**HS:**");

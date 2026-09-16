@@ -172,6 +172,12 @@ function calculateActivityTimeBudgets(durationStr, subsectionCount, grade, optio
       timeC = Math.max(3, remaining - Math.max(5, timeB));
       timeB = remaining - timeC;
     }
+    if (isPracticeOrReviewLesson(options && options.topic)) {
+      timeA = clamp(3, 12, Math.round(T * 0.12));
+      timeC = Math.max(8, Math.round(T * 0.78));
+      timeB = 0;
+      timeD = T - timeA - timeC;
+    }
     timeE = 0;
     const drift = T - (timeA + timeB + timeC + timeD);
     if (drift) timeB += drift;
@@ -1522,7 +1528,7 @@ function getPromptTemplate(templateKey, context) {
     ? extractedSubsections
     : subsectionProfiles.map(item => ({ index: item.index, title: item.title }));
   const fourActivities = templateKey !== 'GENERATE_ACTIVITIES_AE' && templateKey !== 'GENERATE_ACTIVITY_E';
-  const budgets = calculateActivityTimeBudgets(context.duration, subsections.length, context.grade, { fourActivities, subsectionWeights: subsectionProfiles.map(item => item.weight) });
+  const budgets = calculateActivityTimeBudgets(context.duration, subsections.length, context.grade, { fourActivities, topic: context.topic, subsectionWeights: subsectionProfiles.map(item => item.weight) });
   const aiHomeworkPromptNote = context.aiCompetencyEnabled
     ? `- Hướng dẫn Prompt AI an toàn (khi giáo viên chủ động bật AI): Mẫu Prompt AI an toàn mẫu mực hỗ trợ học sinh tự học tại nhà (nhắc AI đóng vai gia sư gợi mở tư duy khi gặp khó khăn, TUYỆT ĐỐI không giải bài hộ, không thay thế việc tự học):\n  + Mẫu Prompt: "Em là học sinh lớp ${context.grade || '6'}, em đang tự học bài ${context.topic || ''} và gặp khó khăn ở [nêu bài tập/khái niệm]. Bạn hãy đóng vai gia sư gợi mở, đặt cho em 2 câu hỏi định hướng để em tự tìm ra cách giải, đừng giải hộ em nhé!"`
     : '';

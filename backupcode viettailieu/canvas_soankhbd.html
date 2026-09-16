@@ -1367,7 +1367,7 @@
           if (!isTable) {
             c = c.replace(/\s*\|\s*(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, function (_, role) { return "§BR§§" + String(role).toUpperCase() + "§"; });
           }
-          c = c.replace(/(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, function (_, role) { return "§BR§§" + String(role).toUpperCase() + "§"; });
+          c = c.replace(/(?<!(?:nhận\s*xét|đánh\s*giá|ý\s*kiến|chữ\s*ký)?\s*của\s+)(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, function (_, role) { return "§BR§§" + String(role).toUpperCase() + "§"; });
           c = c.replace(/§BR§/g, "<br>- ");
           c = c.replace(/§GV§/g, "**GV:**");
           c = c.replace(/§HS§/g, "**HS:**");

@@ -94,6 +94,8 @@ assert.ok(tableLines.some(line => /\*\*HS:\*\*/.test(line) && !/\*\*GV:\*\*/.tes
 const implied = 'GV: "Tại sao số 7 lại dùng kí hiệu \\\\notin?". HS giải thích dựa trên vị trí của số 7.';
 const impliedFixed = app.formatKhbdRoleLineBreaks(implied);
 assert.ok(impliedFixed.includes('<br>- **HS:**'), 'Tách HS giải thích sau câu thoại GV');
+const comment = '*(Nhận xét của GV: ....................)*';
+assert.strictEqual(app.formatKhbdRoleLineBreaks(comment), comment, 'Không chèn <br>- vào cụm Nhận xét của GV:');
 console.log('✓ formatKhbdRoleLineBreaks đạt.');
 
 // --- 4. applyActivityOutput pipeline gọi formatKhbdRoleLineBreaks ---
