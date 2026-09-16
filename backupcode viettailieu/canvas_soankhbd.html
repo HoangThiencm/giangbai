@@ -31,7 +31,7 @@
       window.__KHBD_CANVAS__ = {
         host: "https://hoangthiencm.id.vn",
         model: "gemini-3-flash-preview",
-        version: "20260916-ppct-catalog-v9",
+        version: "20260916-ppct-settings-v10",
         systemGemini: true,
         geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php",
         connected: false
@@ -231,6 +231,9 @@
         </button>
         <button id="btnManageKeys" class="btn btn-outline" title="Canvas dùng Gemini key hệ thống do Admin cấu hình" style="pointer-events:none;opacity:.85">
           <i data-lucide="sparkles"></i> Canvas · <span id="keyCountBadge">gemini-3-flash-preview</span>
+        </button>
+        <button id="btnManagePpctCatalog" class="btn btn-outline" type="button" title="Danh mục PPCT của Canvas chỉ lưu trên trình duyệt này">
+          <i data-lucide="database"></i> PPCT cục bộ
         </button>
         <button id="compactModeBtn" class="btn btn-outline" type="button" onclick="toggleCompactMode()" title="Giao diện gọn" aria-pressed="false">
           🗜 Gọn
@@ -1280,7 +1283,7 @@
       } else if (typeof document !== "undefined") {
         (window.__KHBD_CANVAS_CORE_READY__ || Promise.resolve()).then(function () {
           var app = document.createElement("script");
-          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-ppct-catalog-v9";
+          app.src = "https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-ppct-settings-v10";
           app.onerror = function () { console.error("[KHBD Canvas] Không nạp được khbd-app.js từ host."); };
           document.head.appendChild(app);
         });

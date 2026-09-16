@@ -1,0 +1,21 @@
+const fs = require('fs');
+const assert = require('assert');
+const html = fs.readFileSync('soankhbd.html', 'utf8');
+const app = fs.readFileSync('js/khbd-app.js', 'utf8');
+const api = fs.readFileSync('api/khbd_ppct_catalog.php', 'utf8');
+
+assert.match(html, /modalPpctCatalogSettings/);
+assert.match(html, /ppctCatalogGrade/);
+assert.match(html, /ppctCatalogSubject/);
+assert.match(html, /ppctCatalogYear/);
+assert.match(html, /btnSavePpctCatalogSettings/);
+assert.match(app, /function analyzePpctImport/);
+assert.match(app, /academic_year/);
+assert.match(app, /cleanPpctCatalogSource/);
+assert.match(app, /Danh mục PPCT cho khối, môn và năm học này đã có/);
+assert.match(app, /data-kind="nls"/);
+assert.match(app, /data-kind="ai"/);
+assert.doesNotMatch(app.match(/function cleanPpctCatalogSource[^\n]+/)?.[0] || '', /dataUrl|rawText|OCR/i);
+assert.match(api, /\$_SESSION\['user_id'\]/);
+assert.match(api, /academic_year/);
+console.log('PASS ppct settings import smoke');

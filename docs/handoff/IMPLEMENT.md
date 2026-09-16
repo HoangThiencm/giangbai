@@ -74,6 +74,22 @@ Chưa commit, push hoặc deploy. Máy chủ cần chạy migration `database_sc
 
 Không commit, push hoặc deploy. `docs/handoff/PLAN.md` không bị sửa.
 
+## Cập nhật: Cài đặt PPCT / Nạp Phụ lục 3 theo môn, lớp, năm học
+
+- `soankhbd.html`: thêm nút và modal **Cài đặt PPCT** độc lập với Quản lý API Key. Modal chọn khối, môn, năm học; nhận nội dung dán hoặc PDF/ảnh; xem trước các bài và tick NLS/AI trước khi lưu.
+- `js/khbd-app.js`: dùng chuẩn hoá chung `analyzePpctImport`; lưu/tải catalog theo đúng `subject`, `grade`, `academic_year`; nguồn gửi API chỉ có metadata định dạng/thời điểm/phạm vi/chế độ nạp, không có ảnh, data URL, OCR hoặc văn bản gốc. Bước 2 chỉ tiêu thụ danh mục và mở Cài đặt PPCT thay vì lưu trùng. Có xác nhận trước khi thay danh mục đã tồn tại.
+- Canvas và bản backup chuyển cache-bust `ppct-settings-v10`; chỉ thông báo/lưu cục bộ, hướng người dùng mở website để lưu CSDL.
+
+### Kiểm thử
+
+- `node tests/ppct-settings-import-smoke.js`: PASS.
+- `node tests/soankhbd-ppct-standards-smoke.js`: PASS.
+- `node tests/canvas-soankhbd-smoke.js`: PASS.
+- `node --check js/khbd-app.js`: PASS.
+- `git diff --check`: PASS.
+
+Không commit, push hoặc deploy. `docs/handoff/PLAN.md` không bị sửa.
+
 # Báo cáo triển khai: Gemini Canvas hệ thống không cần key cá nhân
 
 ## Cập nhật: giới hạn thời gian Canvas v5
