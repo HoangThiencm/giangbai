@@ -15,7 +15,12 @@ assert.ok(start >= 0 && end > start, 'Phải trích được khối parse đề 
 const parserSrc = html.slice(start, end);
 assert.match(parserSrc, /classifyImportedAnswerValue/, 'Phải có classifyImportedAnswerValue');
 assert.match(parserSrc, /importedAnswerKeyTfList/, 'Phải gán đáp án tf từ answerKey');
+assert.match(parserSrc, /parseManualImportedAnswers/, 'Phải có parseManualImportedAnswers cho modal Nạp Đáp Án');
+assert.match(parserSrc, /applyImportedAnswerToQuestion/, 'Phải có applyImportedAnswerToQuestion cho handleBulkAnswer');
 assert.ok(!parserSrc.includes('pairRegex = /(\\d{1,3})\\s*[\\.\\)\\-:]?\\s*([A-D])/gi'), 'Không còn regex chỉ bắt A-D');
+assert.match(html, /const results = parseManualImportedAnswers\(textInput\)/, 'handleManualImport phải dùng parseManualImportedAnswers');
+assert.match(html, /return applyImportedAnswerToQuestion\(q, found\)/, 'handleBulkAnswer phải gán đáp án theo loại câu');
+assert.ok(!html.includes("textInput.toUpperCase().match(/(\\d+)[\\.\\-\\:\\s]*([A-D])/g)"), 'handleManualImport không còn regex chỉ bắt A-D');
 
 const sandbox = {};
 vm.createContext(sandbox);
@@ -25,6 +30,8 @@ this.normalizeImportedQuizText = normalizeImportedQuizText;
 this.getImportedAnswerKey = getImportedAnswerKey;
 this.stripImportedAnswerKey = stripImportedAnswerKey;
 this.parseLatexWordQuiz = parseLatexWordQuiz;
+this.parseManualImportedAnswers = parseManualImportedAnswers;
+this.applyImportedAnswerToQuestion = applyImportedAnswerToQuestion;
 `,
     sandbox
 );
@@ -33,12 +40,16 @@ const {
     normalizeImportedQuizText,
     getImportedAnswerKey,
     stripImportedAnswerKey,
-    parseLatexWordQuiz
+    parseLatexWordQuiz,
+    parseManualImportedAnswers,
+    applyImportedAnswerToQuestion
 } = sandbox;
 
 assert.strictEqual(typeof getImportedAnswerKey, 'function');
 assert.strictEqual(typeof stripImportedAnswerKey, 'function');
 assert.strictEqual(typeof parseLatexWordQuiz, 'function');
+assert.strictEqual(typeof parseManualImportedAnswers, 'function');
+assert.strictEqual(typeof applyImportedAnswerToQuestion, 'function');
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -210,6 +221,52 @@ assert.doesNotMatch(stripped, /13\.Đúng/);
 assert.doesNotMatch(stripped, /15\.27/);
 assert.match(stripped, /Câu 18/);
 console.log('✓ Bảng đáp án hỗn hợp đã được cắt, câu hỏi vẫn còn.');
+
+console.log('\n[TEST 7] Modal Nạp Đáp Án: handleManualImport + handleBulkAnswer nhận đủ 18 câu...');
+const manualText = [
+    '1.B   2.C   3.A   4.B   5.C   6.B   7.A   8.D   9.B   10.C   11.C   12.C   ',
+    '13.Đúng   14.Sai   ',
+    '15.27\t16.2000   17.100   18.30'
+].join('\n');
+const importedData = parseManualImportedAnswers(manualText);
+assert.strictEqual(importedData.length, 18, 'handleManualImport phải nhận 18 cặp, không chỉ 12 câu A-D');
+
+const draftQuestions = [
+    ...MC_LETTERS.map((letter, idx) => ({
+        id: `mc-${idx + 1}`,
+        type: 'mc',
+        options: ['A', 'B', 'C', 'D'],
+        correct_index: null
+    })),
+    { id: 'tf-13', type: 'tf', options: ['a', 'b', 'c', 'd'], correct_answers: [false, false, false, false] },
+    { id: 'tf-14', type: 'tf', options: ['a', 'b', 'c', 'd'], correct_answers: [false, false, false, false] },
+    { id: 'sa-15', type: 'short_answer', options: [], correct_answer: '' },
+    { id: 'sa-16', type: 'short_answer', options: [], correct_answer: '' },
+    { id: 'sa-17', type: 'short_answer', options: [], correct_answer: '' },
+    { id: 'sa-18', type: 'short_answer', options: [], correct_answer: '' }
+];
+const afterBulk = draftQuestions.map((q, idx) => {
+    const found = importedData.find((d) => d.index === idx + 1);
+    return applyImportedAnswerToQuestion(q, found);
+});
+afterBulk.slice(0, 12).forEach((q, idx) => {
+    assert.strictEqual(q.correct_index, MC_INDEXES[idx], `Modal MC câu ${idx + 1} phải là ${MC_LETTERS[idx]}`);
+});
+assert.ok(Array.isArray(afterBulk[12].correct_answers), 'Câu 13 tf phải có correct_answers');
+assert.strictEqual(afterBulk[12].correct_answers[0], true, 'Câu 13 Đúng');
+assert.ok(Array.isArray(afterBulk[13].correct_answers), 'Câu 14 tf phải có correct_answers');
+assert.strictEqual(afterBulk[13].correct_answers[0], false, 'Câu 14 Sai');
+assert.strictEqual(afterBulk[14].correct_answer, '27');
+assert.strictEqual(afterBulk[15].correct_answer, '2000');
+assert.strictEqual(afterBulk[16].correct_answer, '100');
+assert.strictEqual(afterBulk[17].correct_answer, '30');
+
+const aiCompat = applyImportedAnswerToQuestion(
+    { id: 'ai-1', type: 'mc', options: ['A', 'B', 'C', 'D'], correct_index: null },
+    { index: 1, answer: 'C' }
+);
+assert.strictEqual(aiCompat.correct_index, 2, 'Định dạng AI { index, answer } vẫn gán MC');
+console.log('✓ Modal nạp 18 câu: 12 MC, 2 TF, 4 TLN; AI {index,answer} vẫn tương thích.');
 
 console.log('\n================================================================================');
 console.log('TẤT CẢ KIỂM THỬ BẢNG ĐÁP ÁN CV 7991 ĐÃ PASS 100%!');

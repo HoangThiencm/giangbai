@@ -1010,12 +1010,8 @@
             };
 
             const handleManualImport = () => {
-                const parts = textInput.toUpperCase().match(/(\d+)[\.\-\:\s]*([A-D])/g);
-                if (!parts) return alert("Sai định dạng! VD: 1A 2B");
-                const results = parts.map(p => {
-                    const m = p.match(/(\d+)[\.\-\:\s]*([A-D])/);
-                    return { index: parseInt(m[1]), answer: m[2] };
-                });
+                const results = parseManualImportedAnswers(textInput);
+                if (!results.length) return alert("Sai định dạng! VD: 1.A 2.B 13.Đúng 15.27");
                 onImport(results); onClose();
             };
 
@@ -1411,6 +1407,67 @@
             if (!answerSectionMatch) return text;
             const pairCount = Object.keys(getImportedAnswerKey(text)).length;
             return pairCount >= 1 ? text.slice(0, answerSectionMatch.index).trim() : text;
+        };
+
+        const parseManualImportedAnswers = (textInput) => {
+            const parsedMap = getImportedAnswerKey("Đáp án:\n" + String(textInput || ""));
+            return Object.keys(parsedMap).map((num) => ({
+                index: parseInt(num, 10),
+                rawEntry: parsedMap[num],
+                answer: importedAnswerKeyLetter(parsedMap[num]) || importedAnswerKeyText(parsedMap[num]),
+                tfList: importedAnswerKeyTfList(parsedMap[num])
+            })).sort((a, b) => a.index - b.index);
+        };
+
+        const resolveImportedTfAnswers = (found) => {
+            if (!found) return null;
+            if (Array.isArray(found.tfList) && found.tfList.length >= 2) {
+                const arr = [false, false, false, false];
+                found.tfList.slice(0, 4).forEach((value, idx) => { arr[idx] = !!value; });
+                return arr;
+            }
+            const raw = found.rawEntry;
+            if (raw && raw.type === "tf") {
+                if (Array.isArray(raw.value) && raw.value.length >= 2) {
+                    const arr = [false, false, false, false];
+                    raw.value.slice(0, 4).forEach((value, idx) => { arr[idx] = !!value; });
+                    return arr;
+                }
+                if (typeof raw.value === "boolean") {
+                    return [raw.value, false, false, false];
+                }
+            }
+            const classified = classifyImportedAnswerValue(found.answer || "");
+            if (classified && classified.type === "tf") {
+                if (Array.isArray(classified.value) && classified.value.length >= 2) {
+                    const arr = [false, false, false, false];
+                    classified.value.slice(0, 4).forEach((value, idx) => { arr[idx] = !!value; });
+                    return arr;
+                }
+                if (typeof classified.value === "boolean") {
+                    return [classified.value, false, false, false];
+                }
+            }
+            return null;
+        };
+
+        const applyImportedAnswerToQuestion = (q, found) => {
+            if (!q || !found) return q;
+            const qType = q.type || (q.correct_answers ? "tf" : (q.correct_answer !== undefined && (!q.options || q.options.length === 0) ? "short_answer" : "mc"));
+            if (qType === "tf") {
+                const tfAnswers = resolveImportedTfAnswers(found);
+                if (tfAnswers) return { ...q, correct_answers: tfAnswers };
+                return q;
+            }
+            if (qType === "short_answer") {
+                return { ...q, correct_answer: String(found.answer || found.rawEntry?.value || "") };
+            }
+            const map = { A: 0, B: 1, C: 2, D: 3 };
+            const letter = String(found.answer || "").toUpperCase();
+            if (map[letter] !== undefined) {
+                return { ...q, correct_index: map[letter] };
+            }
+            return q;
         };
 
         const parseLatexWordQuiz = (rawText) => {
@@ -2004,7 +2061,6 @@
                 setPageQuestions(prev => ({ ...prev, [activePageId]: [...(prev[activePageId] || []), newQ] }));
             };
             const handleBulkAnswer = (importedData) => {
-                const map = { A: 0, B: 1, C: 2, D: 3 };
                 const stitchedFlat = allQuestions;
                 const indexById = {};
                 stitchedFlat.forEach((q, i) => { indexById[q.id] = i + 1; });
@@ -2015,10 +2071,7 @@
                         const globalIdx = indexById[q.id];
                         if (!globalIdx) return q;
                         const found = importedData.find((d) => d.index === globalIdx);
-                        if (found && map[found.answer] !== undefined) {
-                            return { ...q, correct_index: map[found.answer] };
-                        }
-                        return q;
+                        return applyImportedAnswerToQuestion(q, found);
                     });
                 });
                 setPageQuestions(newPageQs);
