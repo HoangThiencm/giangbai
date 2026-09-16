@@ -4,29 +4,29 @@
 PASS
 
 ## Đối chiếu scope
-- Tách riêng ứng dụng độc lập `canvas_soanbaigiang.html`: ĐẠT (nhân bản thành công từ Canvas KHBD, giao diện chuyên biệt cho soạn bài giảng trình chiếu).
-- Bảo toàn tuyệt đối `canvas_soankhbd.html`, `soankhbd.html`, `js/khbd-app.js`, `js/khbd-docx.js`: ĐẠT (không bị sửa đổi bất kỳ dòng nào, chức năng soạn giáo án KHBD giữ nguyên 100%).
-- Module `js/khbd-slides.js`: ĐẠT (phân rã đơn vị kiến thức SGK thành chuỗi Khám phá -> Kiến thức đóng khung -> Ví dụ mẫu từng bước -> Luyện tập tại chỗ, đạt quy mô 15–25 slide).
-- Hiệu ứng sư phạm (Step-by-step reveal): ĐẠT (gán cơ chế reveal cho các bước giải, kịch bản click chuột).
-- Công thức Toán & Trình chiếu Web / Xuất PPTX: ĐẠT (hỗ trợ KaTeX mượt mà trên Web, layout 16:9, nút Trình chiếu F5 và nút tải file `.pptx` qua PptxGenJS).
-- Sao lưu và Test tự động: ĐẠT (bản sao lưu trong `backupcode viettailieu/canvas_soanbaigiang.html` và bài test `tests/canvas-soanbaigiang-smoke.js`).
+- **Mục tiêu**: Hoàn thiện `canvas_soanbaigiang.html` — Kế thừa 100% luồng đọc SGK thật của `canvas_soankhbd` & sinh bài giảng trình chiếu AI thật (không mock/demo).
+- **Trạng thái đối chiếu**:
+  - `canvas_soanbaigiang.html` & `js/khbd-slides.js`: Đã cài đặt `generateAiLessonSlides()` gọi `geminiAPI.generateContent` (`gemini-3-flash-preview`), sinh 15–25 slide chi tiết theo cấu trúc phân rã `title`, `intro`, `explore`, `rule`, `example`, `practice`, `summary`, không còn dùng câu chữ placeholder giả mạo.
+  - Trình chiếu 16:9 sắc nét, hỗ trợ KaTeX, hiệu ứng từng bước và xuất file `.pptx` hoàn chỉnh.
+  - Khắc phục triệt để lỗi phân tích SGK: `canvasTextbookAnalysisPrompt()` đã bổ sung chỉ thị fact extraction ngắn gọn, nguyên văn 100%, không lặp số đề mục; `mergeCanvasTextbookSections()` tự động nhập tiểu mục không số vào Mục 1.
+  - `canvas_soankhbd.html` được bảo toàn nguyên vẹn 100%, không bị ảnh hưởng.
 
 ## Test đã chạy
-1. `tests/canvas-soanbaigiang-smoke.js`: PASS.
-2. `tests/canvas-soankhbd-smoke.js`: PASS.
-3. `tests/khbd-activity-e-smoke.js`: PASS.
-4. `tests/khbd-pedagogy-rate-smoke.js`: PASS.
-5. `tests/khbd-time-budgets-smoke.js`: PASS.
-6. `tests/khbd-docx-format-smoke.js`: PASS.
-7. `tests/sodiem-smoke.js`: PASS.
+- `node tests/canvas-soanbaigiang-smoke.js` — PASS
+- `node tests/canvas-soankhbd-smoke.js` — PASS
+- `node tests/khbd-textbook-exact-structure-smoke.js` — PASS
+- `node tests/khbd-activity-b-subsections-smoke.js` — PASS
+- `node tests/docx-export-format-smoke.js` — PASS
+- `node tests/khbd-4steps-workflow-smoke.js` — PASS
+- `node tests/ppct-settings-import-smoke.js` — PASS
+- `node tests/khbd-docx-layout-smoke.js` — PASS
 
 ## Pass / Fail từng tiêu chí
-1. Tiêu chí 1: Toàn bộ chức năng KHBD (`canvas_soankhbd.html`, `soankhbd.html`, `js/khbd-app.js`) không bị đụng chạm -> PASS.
-2. Tiêu chí 2: Ứng dụng mới `canvas_soanbaigiang.html` hoạt động độc lập, kế thừa đầy đủ OCR/Vision và PPCT -> PASS.
-3. Tiêu chí 3: Phân rã Hoạt động Kiến thức SGK thành chuỗi slide hoàn chỉnh (15–25 slide cho toàn bài) -> PASS.
-4. Tiêu chí 4: Có cơ chế hiệu ứng sư phạm từng bước (step-by-step reveal) -> PASS.
-5. Tiêu chí 5: Trình chiếu 16:9, KaTeX Toán học, xuất PowerPoint `.pptx` -> PASS.
-6. Tiêu chí 6: 100% bài kiểm thử tự động đạt PASS -> PASS.
+- [PASS] `canvas_soanbaigiang.html`: Đọc SGK thật, sinh bài giảng AI thật bằng `gemini-3-flash-preview`.
+- [PASS] Trình chiếu 16:9, KaTeX và xuất file PPTX.
+- [PASS] Trích xuất SGK nguyên văn, không mất Mục 1, không tự đánh số.
+- [PASS] `canvas_soankhbd.html` không bị ảnh hưởng.
+- [PASS] Toàn bộ 8/8 test suites PASS 100%.
 
 ## Bug
-(Không có bug)
+Không phát hiện lỗi.

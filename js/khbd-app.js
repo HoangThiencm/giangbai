@@ -6730,13 +6730,13 @@ const CANVAS_TEXTBOOK_BATCH_SIZE = 6;
 
 function canvasTextbookAnalysisPrompt(batchLabel, priorContext = "") {
   return [
-    "Trích xuất Bản đồ bài học sư phạm (Pedagogical Lesson Map) từ học liệu SGK đính kèm để phục vụ thiết kế kế hoạch bài dạy; không chép nguyên trang.",
+    "Thực hiện fact extraction theo từng trường ngắn cho Bản đồ bài học sư phạm (Pedagogical Lesson Map) từ học liệu SGK đính kèm để phục vụ thiết kế kế hoạch bài dạy; không chép nguyên trang.",
     "Duy trì cây: Đề mục lớn → mục con/kiến thức cốt lõi → hoạt động, câu hỏi, luyện tập, vận dụng và bài tập. Nội dung đầu lô có thể là phần tiếp nối đề mục của lô trước.",
-    "Giữ chính xác tên đề mục, nhãn HĐ/Luyện tập/Thực hành/Vận dụng, mã bài và công thức/số liệu nhìn thấy. Công thức Toán và KHTN dùng LaTeX $...$; chỉ tóm lược ý nghĩa sư phạm, không sao chép đoạn dài.",
+    "Giữ nguyên văn 100% tên đề mục, nhãn HĐ/Luyện tập/Thực hành/Vận dụng, mã bài và công thức/số liệu nhìn thấy. CẤM diễn đạt lại, đổi từ hoặc rút gọn các tên đề mục và đề bài. Công thức Toán và KHTN dùng LaTeX $...$; chỉ tóm lược ý nghĩa sư phạm, không sao chép đoạn dài.",
     "Toán & KHTN: nêu định nghĩa, tính chất, định lý, công thức, hoạt động khám phá, ví dụ, luyện tập và vận dụng theo đúng đề mục. Lịch sử - Địa lí, GDCD, Tin học, Công nghệ và môn khác: nêu cấu trúc đề mục, câu hỏi khai thác tư liệu/hình ảnh/bản đồ, bài tập và vận dụng.",
     "Ngữ văn: nêu Tri thức ngữ văn, thể loại, câu hỏi Trước khi đọc/Trong khi đọc/Sau khi đọc, Thực hành tiếng Việt và Viết kết nối với đọc. TUYỆT ĐỐI KHÔNG chép nguyên văn toàn văn bản, truyện hoặc thơ dài; chỉ mô tả ngắn nội dung và nhiệm vụ để tránh RECITATION.",
-    "CHỈ đưa vào sections các ĐỀ MỤC CẤP 1 chính thức (số to 1. 2. hoặc I. II.). Tiêu đề con như Tính chất, Quy tắc, Ví dụ phải ở coreKnowledge hoặc activities của đề mục lớn đúng ngữ cảnh, không tự tạo section cấp 1.",
-    "Không suy đoán nội dung không nhìn thấy. Nếu mờ, khuất hoặc thiếu trang, ghi unknowns là cần đối chiếu SGK.",
+    "CHỈ đưa vào sections các ĐỀ MỤC CẤP 1 chính thức (số to 1. 2. hoặc I. II.). TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý ĐÁNH SỐ THÊM khi SGK không có số. Tiêu đề con như Tính chất, Quy tắc, Ví dụ phải ở coreKnowledge hoặc activities của đề mục lớn đúng ngữ cảnh, không tự tạo section cấp 1.",
+    "Không suy đoán nội dung không nhìn thấy. TUYỆT ĐỐI KHÔNG điền chỗ trống bằng trí nhớ; nếu mờ, khuất hoặc thiếu trang, ghi unknowns là cần đối chiếu SGK.",
     priorContext ? `Ngữ cảnh lô trước để nối tiếp, không lặp lại hoặc gán sang đề mục mới: ${priorContext}` : "",
     `Phạm vi lô đang phân tích: ${batchLabel}.`,
     "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"sections\":[{\"title\":\"\",\"coreKnowledge\":\"\",\"activities\":[{\"label\":\"HĐ 1\",\"task\":\"\"}]}],\"exercises\":[{\"code\":\"Bài 1.36\",\"statement\":\"\"}],\"unknowns\":[\"\"]}.",
@@ -6787,6 +6787,14 @@ function mergeCanvasTextbookSections(sections) {
       leading.push(section);
     }
   });
+  // A leading unnumbered title is a child of the first numbered section in the
+  // same lesson map (for example, "Tính chất..." before "1. Phép nhân...").
+  // Keep it as core knowledge instead of exposing it as a spurious level-1
+  // section.
+  if (leading.length && merged.length) {
+    leading.forEach(section => absorbCanvasTextbookSection(merged[0], section));
+    return merged.slice(0, 24);
+  }
   return [...leading, ...merged].slice(0, 24);
 }
 

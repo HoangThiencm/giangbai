@@ -35,6 +35,7 @@ for (const [label, doc] of [['canvas_soanbaigiang.html', html], ['backup', backu
   assert.ok(doc.includes('https://hoangthiencm.id.vn/api/canvas_gemini.php'), `${label} giữ endpoint Canvas Gemini`);
   assert.ok(doc.includes('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js'), `${label} nạp PptxGenJS CDN`);
   assert.ok(doc.includes('js/khbd-slides.js'), `${label} nạp khbd-slides.js`);
+  assert.doesNotMatch(doc, /https:\/\/hoangthiencm\.id\.vn\/js\/khbd-slides\.js/, `${label} không phụ thuộc bundle slides từ host ngoài`);
   assert.ok(ids.has('slideStage'), `${label} phải có khung slide 16:9 #slideStage`);
   assert.ok(ids.has('btnSlidePrev'), `${label} phải có #btnSlidePrev`);
   assert.ok(ids.has('btnSlideNext'), `${label} phải có #btnSlideNext`);
@@ -54,6 +55,20 @@ assert.doesNotMatch(khbdHtml, /js\/khbd-slides\.js/, 'canvas_soankhbd.html khôn
 assert.match(khbdHtml, /5\. Toàn bộ Giáo án \(\.DOCX\)/, 'Tab giáo án Word của KHBD còn nguyên');
 
 assert.match(slidesSrc, /function buildSlideDeck/, 'khbd-slides.js định nghĩa buildSlideDeck');
+assert.match(slidesSrc, /async function generateAiLessonSlides/, 'khbd-slides.js gọi Gemini để tạo kịch bản slide thật');
+assert.match(slidesSrc, /gemini-3-flash-preview/, 'Kịch bản slides dùng Gemini 3 Flash');
+assert.match(slidesSrc, /NGỮ CẢNH SGK THẬT/, 'Prompt slide ràng buộc vào nội dung SGK thực');
+[
+  'Quan sát tình huống trong SGK và nêu nhận xét ban đầu.',
+  'Ví dụ mẫu trong SGK.',
+  'Đề bài ví dụ mẫu (SGK).',
+  'Bước 1: Đọc hiểu — xác định giả thiết và yêu cầu.',
+  'Học sinh làm nháp 1–2 phút.',
+  'Đáp án (click để mở): áp dụng đúng quy tắc vừa học, trình bày đủ bước.',
+  'Câu hỏi củng cố kiến thức vừa học.'
+].forEach((placeholder) => {
+  assert.ok(!slidesSrc.includes(placeholder), `Không giữ placeholder legacy: ${placeholder}`);
+});
 assert.match(slidesSrc, /async function exportToPptx|function exportToPptx/, 'khbd-slides.js định nghĩa exportToPptx');
 assert.match(slidesSrc, /Khám phá/, 'Deck có slide Khám phá');
 assert.match(slidesSrc, /Kiến thức trọng tâm/, 'Deck có slide kiến thức đóng khung');
@@ -63,6 +78,7 @@ assert.match(slidesSrc, /step:\s*[1-5]/, 'Có gán step cho hiệu ứng click')
 
 const KhbdSlides = require(slidesPath);
 assert.ok(typeof KhbdSlides.buildSlideDeck === 'function', 'export buildSlideDeck');
+assert.ok(typeof KhbdSlides.generateAiLessonSlides === 'function', 'export generateAiLessonSlides');
 assert.ok(typeof KhbdSlides.exportToPptx === 'function', 'export exportToPptx');
 
 const textbook = `
@@ -102,6 +118,27 @@ assert.ok(revealed2.length > revealed1.length, 'Click tiếp hiện thêm lời 
   let thrown = null;
   try { await KhbdSlides.exportToPptx([]); } catch (err) { thrown = err; }
   assert.ok(thrown, 'exportToPptx deck rỗng phải báo lỗi');
+
+  const aiTypes = ['title', 'intro', 'explore', 'rule', 'example', 'practice', 'summary'];
+  const aiResponse = {
+    slides: Array.from({ length: 15 }, (_, i) => ({
+      type: aiTypes[i % aiTypes.length],
+      title: `Slide SGK ${i + 1}`,
+      content: `Nội dung Bài 5 đã đọc ${i + 1}`,
+      steps: i === 4 ? ['Bước giải 1', 'Bước giải 2'] : [],
+      mathFormula: i === 3 ? 'a+b=c' : ''
+    }))
+  };
+  global.geminiAPI = { selectedModel: '', generateContent: async (prompt) => {
+    assert.match(prompt, /NGỮ CẢNH SGK THẬT/, 'Gửi ngữ cảnh SGK thực vào Gemini');
+    assert.match(prompt, /Bài 5/, 'Gửi đúng nội dung bài đã đọc vào Gemini');
+    return JSON.stringify(aiResponse);
+  }};
+  const aiDeck = await KhbdSlides.generateAiLessonSlides({ topic: 'Bài 5', subject: 'Toán', grade: '6', duration: '2 tiết', textbook: 'Bài 5: nội dung SGK thật.' });
+  assert.equal(global.geminiAPI.selectedModel, 'gemini-3-flash-preview', 'Ép đúng model Gemini Canvas');
+  assert.equal(aiDeck.length, 15, 'Dùng nguyên kịch bản AI 15 slide');
+  assert.ok(aiDeck.every(s => s.meta.aiGenerated), 'Deck đánh dấu là dữ liệu do AI tạo');
+  delete global.geminiAPI;
 
   const scriptBlocks = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
   for (let i = 0; i < scriptBlocks.length; i++) {

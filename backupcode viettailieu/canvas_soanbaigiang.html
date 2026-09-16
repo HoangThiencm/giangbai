@@ -1422,8 +1422,8 @@
   </script>
   <script>
     (function () {
-      const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-      document.write(`<script src="${isLocal ? "js/khbd-slides.js" : "https://hoangthiencm.id.vn/js/khbd-slides.js?v=20260916-slides-v1"}"><\/script>`);
+      // Bundle slide được nạp cùng ứng dụng, không phụ thuộc URL JS bên ngoài.
+      document.write('<script src="js/khbd-slides.js"><\/script>');
     })();
   </script>
 
@@ -1909,7 +1909,7 @@
           if (typeof updateWorkflowStepper === "function") updateWorkflowStepper();
           if (typeof renderFullLessonPreview === "function") renderFullLessonPreview();
           if (window.KhbdSlides && typeof window.KhbdSlides.buildFromApp === "function") {
-            window.KhbdSlides.buildFromApp();
+            await window.KhbdSlides.buildFromApp();
           }
 
           const tabBtnFull = document.querySelector('.main-nav button[data-tab="tabFullPreview"]');
