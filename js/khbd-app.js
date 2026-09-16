@@ -4396,10 +4396,10 @@ async function handleGeneratePpctAnalysis() {
       parsedDetails = parsePpctLessonDetails(ocrText, currentTopic);
     } else {
       updateProgress(60, "Đang trích xuất cấu trúc Phụ lục 3 CV 5512 bằng AI...");
-      const prompt = 'Đọc toàn bộ bảng PPCT/Phụ lục 3 đính kèm để lập danh mục cấu trúc, không chép nguyên văn đoạn SGK. Chỉ trả JSON hợp lệ: {"subject":"","grade":"","summary":"","rows":[{"chapter":"","title":"","periods":null,"tietCt":"","week":"","nls":{"enabled":false,"codes":[],"evidence":""},"ai":{"enabled":false,"codes":[],"evidence":""},"notes":""}]}. Trả TẤT CẢ dòng bài học nhìn thấy, giữ chính xác tick/mã NLS và AI nếu có.';
+      const prompt = 'Đọc bảng PPCT/Phụ lục 3 do người dùng đính kèm. Đây là dữ liệu nguồn phải giữ đúng, không tóm tắt, không diễn giải, không sửa tên bài, không đổi thứ tự, không tự suy ra số tiết, tiết CT, tuần hoặc mã tích hợp. Nếu ô nào không đọc chắc thì ghi [KHONG DOC RO], tuyệt đối không đoán. Chỉ trả JSON hợp lệ: {"subject":"","grade":"","rawText":"","rows":[{"chapter":"","title":"","periods":null,"tietCt":"","week":"","nls":{"enabled":false,"codes":[],"evidence":""},"ai":{"enabled":false,"codes":[],"evidence":""},"notes":"","uncertain":false}]}. rawText phải phản ánh các dòng và ô nhìn thấy theo đúng thứ tự nguồn. Trả tất cả dòng bài học nhìn thấy và giữ đúng tick/mã NLS, AI nếu có.';
       const raw = await geminiAPI.generateContent(prompt, await prepareGeminiPpctMedia(), getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1);
       const data = parseAiJsonSafely(raw, "Phân tích PPCT");
-      cleanedResult = String(data.summary || "").trim() || JSON.stringify(data, null, 2);
+      cleanedResult = String(data.rawText || "").trim() || JSON.stringify(data, null, 2);
       if (Array.isArray(data.rows) && data.rows.length) {
         const rows = data.rows.map((row, index) => {
           const source = `${row.chapter||""}|${row.title||""}|${row.tietCt||""}|${row.week||""}|${JSON.stringify(row.nls||{})}|${JSON.stringify(row.ai||{})}`;

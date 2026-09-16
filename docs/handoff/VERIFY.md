@@ -4,34 +4,26 @@
 PASS
 
 ## Đối chiếu scope
-- `js/khbd-app.js`:
-  + Đã bổ sung `getLessonPeriodsCount(duration, grade)` và nâng cấp `applyTimeBudgetGateToPedagogy()`:
-    * Bài 1 tiết (<= 45 phút): Ép PPDH tối đa đúng 1 phương pháp chủ đạo; KTDH tối đa 1–2 kỹ thuật nhẹ (Think-Pair-Share, Khăn trải bàn rút gọn, 5W1H); loại bỏ hoàn toàn các kỹ thuật cồng kềnh (Jigsaw, Station, Gallery walk, Mini-project, PBL, STEAM).
-    * Bài 2 tiết (90 phút): Giới hạn tối đa 2 PPDH; tối đa 2–3 KTDH.
-    * Bài từ 3 tiết trở lên: Giới hạn tối đa 2 PPDH; tối đa 3–4 KTDH.
-  + Đã bổ sung hàm `formatKhbdRoleLineBreaks(markdown)` tự động chèn `<br>- **GV:**` và `<br>- **HS:**` khi phát hiện vai trò bị viết dính liền không có ngắt dòng; tích hợp trực tiếp vào pipeline `applyActivityOutput()`.
-- `js/khbd-prompts.js`:
-  + Cập nhật quy tắc Cột TRÁI bảng d): Mỗi bước bắt buộc xuống dòng riêng cho Tiêu đề bước, dòng `- **GV:**` và dòng `- **HS:**` (nghiêm cấm viết dính liền GV và HS trên cùng 1 dòng).
-  + Bổ sung điều khoản TIME-BUDGET GATE theo số tiết vào hợp đồng sư phạm.
-- `js/khbd-docx.js`:
-  + Trong `parseTableCellParagraphs()`: Tự động phát hiện và tách các dòng vai trò `GV:` / `HS:` thành các đối tượng `Paragraph` riêng biệt với thụt đầu dòng chuẩn mực (`indent: { left: 360 }`), giúp file Word xuất ra luôn hiển thị phân vai rõ ràng.
-- `tests/khbd-pedagogy-rate-smoke.js`:
-  + Tạo mới và kiểm thử toàn diện cả 6 nội dung: Gate 1 tiết, Gate 2 tiết, hàm `formatKhbdRoleLineBreaks`, pipeline hoạt động, Word DOCX paragraph separation và prompt contract.
+- Khớp 100% yêu cầu trong `PLAN.md`:
+  + Cập nhật `getImportedAnswerKey`, `stripImportedAnswerKey` và `parseLatexWordQuiz` trong `thitructuyen.html` để nhận diện bảng đáp án hỗn hợp CV 7991 (Trắc nghiệm A-D, Đúng/Sai, Trả lời ngắn số/chuỗi).
+  + Giữ nguyên thuật toán chấm điểm và định dạng đề thi trắc nghiệm cũ.
+  + Thêm test tự động `tests/thitructuyen-cv7991-answerkey-smoke.js`.
 
 ## Test đã chạy
-- `node tests/khbd-pedagogy-rate-smoke.js`: PASS 100%
-- `node tests/canvas-soankhbd-smoke.js`: PASS 100%
-- `node tests/khbd-nls-ai-bold-italic-smoke.js`: PASS 100%
-- `node tests/khbd-docx-format-smoke.js`: PASS 100%
-- `node tests/khbd-integrations-smoke.js`: PASS 100%
-- `node tests/khbd-dynamic-integrations-smoke.js`: PASS 100%
+1. `node tests/thitructuyen-cv7991-answerkey-smoke.js` (PASS 100% 6/6 test cases):
+   - [TEST 1] `getImportedAnswerKey` nhận đủ 18 cặp đáp án mẫu (1..12 MC, 13 Đúng, 14 Sai, 15..18 Short Answer: 27, 2000, 100, 30).
+   - [TEST 2] `parseLatexWordQuiz` parse 18 câu đề mẫu đầy đủ đáp án 3 phần, bảng đáp án tự động cắt khỏi nội dung đề.
+   - [TEST 3] Câu Đúng/Sai nhiều ý phụ (`a.Đúng b.Sai...`, `Đ, S, Đ, S`) ánh xạ chính xác `correct_answers`.
+   - [TEST 4] Đề trắc nghiệm thuần và định dạng cũ `1C 2B` không bị xáo trộn.
+   - [TEST 5] Số thập phân `3.14` và phân số `-1/2` không bị nhầm thành số thứ tự câu.
+   - [TEST 6] `stripImportedAnswerKey` cắt bỏ bảng đáp án hỗn hợp ở cuối văn bản sạch sẽ.
+2. `node tests/exam-word-stitch-smoke.js` (PASS 100%).
 
 ## Pass / Fail từng tiêu chí
-- Tiêu chí 1 (Bài 1 tiết chỉ đề xuất 1 PPDH + tối đa 1–2 KTDH nhẹ, chặn kỹ thuật nặng): PASS
-- Tiêu chí 2 (Bài 2 tiết đề xuất tối đa 2 PPDH + 2–3 KTDH): PASS
-- Tiêu chí 3 (Tự động ngắt dòng phân vai GV và HS bằng `<br>- **GV:**` và `<br>- **HS:**`): PASS
-- Tiêu chí 4 (File Word .docx xuất ra tách thành các Paragraph riêng có thụt đầu dòng cho GV và HS): PASS
-- Tiêu chí 5 (Toàn bộ test suites liên quan đều đạt 100%): PASS
+- [PASS] Tự động nhận diện chính xác 100% các câu trắc nghiệm (1..12: B, C, A, B, C, B, A, D, B, C, C, C).
+- [PASS] Tự động nhận diện câu Đúng/Sai (13: Đúng, 14: Sai).
+- [PASS] Tự động nhận diện các câu Trả lời ngắn (15: 27, 16: 2000, 17: 100, 18: 30).
+- [PASS] Không làm xáo trộn các định dạng đề thi cũ (100% trắc nghiệm thuần).
 
 ## Bug
 Không có.
