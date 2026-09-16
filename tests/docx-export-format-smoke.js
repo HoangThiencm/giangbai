@@ -78,7 +78,55 @@ assert.match(src, /footers = \{ default: new Footer/);
 assert.match(src, /AlignmentType\?\.JUSTIFIED/);
 const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'khbd-app.js'), 'utf8');
 assert.match(app, /lessonScope:\s*appState\.teachingContext\.lessonScope/);
+assert.match(src, /parseInlineTextToRuns\(headingText, runColor, \{ size: this\.fontSizeH3/);
+assert.match(src, /parseInlineTextToRuns\(headingText, runColor, \{ size: this\.fontSizeH2/);
+assert.match(src, /parseInlineTextToRuns\(headingText, runColor \|\| "111111"/);
 console.log('✓ exportFullLessonPlan dùng header/footer Word và truyền tiết dạy.');
+
+function collectRuns(node, acc = []) {
+  if (!node) return acc;
+  if (Array.isArray(node)) {
+    node.forEach(item => collectRuns(item, acc));
+    return acc;
+  }
+  if (node.rootKey === 'w:r') acc.push(node);
+  if (node.root) collectRuns(node.root, acc);
+  return acc;
+}
+function runText(run) {
+  const parts = [];
+  (function walk(node) {
+    if (!node) return;
+    if (Array.isArray(node)) return node.forEach(walk);
+    if (node.rootKey === 'w:t' && Array.isArray(node.root)) {
+      node.root.forEach(item => { if (typeof item === 'string') parts.push(item); });
+    }
+    if (node.root) walk(node.root);
+  })(run);
+  return parts.join('');
+}
+function hasFormatting(run, tag) {
+  const dump = JSON.stringify(run);
+  return dump.includes(`"rootKey":"${tag}"`);
+}
+const nlsHeadingMd = '### c) Năng lực số: ***[5.3.TC2a]:*** Sử dụng máy tính cầm tay (phím CALC) để kiểm tra cặp số (x; y) có là nghiệm của hệ phương trình hay không.';
+const aiHeadingMd = '### d) Năng lực AI: ***[9.B2.1]:*** Sử dụng trợ lý AI tạo các ví dụ ngẫu nhiên về phương trình để luyện tập nhận biết khái niệm và chịu trách nhiệm kiểm chứng kết quả (Áp dụng: tiết 1, 2).';
+const headingElements = generator.parseMarkdownToDocxElements(`${nlsHeadingMd}\n${aiHeadingMd}`);
+const headingDump = JSON.stringify(headingElements);
+const headingRuns = collectRuns(headingElements);
+const headingPlain = headingRuns.map(runText).join('');
+assert.ok(!headingPlain.includes('***') && !headingDump.includes('***['), 'Tiêu đề Word không còn ký tự thô ***');
+assert.ok(headingPlain.includes('[5.3.TC2a]'), 'Word phải giữ mã NLS 5.3.TC2a');
+assert.ok(headingPlain.includes('[9.B2.1]'), 'Word phải giữ mã AI 9.B2.1');
+const nlsCodeRun = headingRuns.find(run => runText(run).includes('[5.3.TC2a]'));
+const aiCodeRun = headingRuns.find(run => runText(run).includes('[9.B2.1]'));
+assert.ok(nlsCodeRun, 'Phải có TextRun chứa [5.3.TC2a]');
+assert.ok(aiCodeRun, 'Phải có TextRun chứa [9.B2.1]');
+assert.ok(hasFormatting(nlsCodeRun, 'w:b') && hasFormatting(nlsCodeRun, 'w:i'), '[5.3.TC2a] phải in đậm và in nghiêng');
+assert.ok(hasFormatting(aiCodeRun, 'w:b') && hasFormatting(aiCodeRun, 'w:i'), '[9.B2.1] phải in đậm và in nghiêng');
+assert.match(JSON.stringify(nlsCodeRun), /0369A1/i, '[5.3.TC2a] phải màu xanh 0369A1');
+assert.match(JSON.stringify(aiCodeRun), /6D28D9/i, '[9.B2.1] phải màu tím 6D28D9');
+console.log('✓ Tiêu đề NLS/AI trong Word bóc *** và giữ in đậm/nghiêng đúng màu.');
 
 console.log('\n================================================================================');
 console.log('TẤT CẢ KIỂM THỬ XUẤT WORD KHBD ĐÃ PASS 100%!');

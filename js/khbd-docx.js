@@ -714,9 +714,7 @@ class DocxGenerator {
         elements.push(new Paragraph({
           pageBreakBefore: Boolean(isAppendix),
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: [
-            this.coloredTextRun(headingText, { size: this.fontSizeH1, bold: true, color: runColor })
-          ]
+          children: this.parseInlineTextToRuns(headingText, runColor, { size: this.fontSizeH1, bold: true })
         }));
         i++;
         continue;
@@ -727,9 +725,7 @@ class DocxGenerator {
         runColor = this.headingIntegrationColor(headingText);
         elements.push(new Paragraph({
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: [
-            this.coloredTextRun(headingText, { size: this.fontSizeH2, bold: true, color: runColor })
-          ]
+          children: this.parseInlineTextToRuns(headingText, runColor, { size: this.fontSizeH2, bold: true })
         }));
         i++;
         continue;
@@ -740,9 +736,7 @@ class DocxGenerator {
         runColor = this.headingIntegrationColor(headingText);
         elements.push(new Paragraph({
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: [
-            this.coloredTextRun(headingText, { size: this.fontSizeH3, bold: true, italics: Boolean(runColor), color: runColor })
-          ]
+          children: this.parseInlineTextToRuns(headingText, runColor, { size: this.fontSizeH3, bold: true, italics: Boolean(runColor) })
         }));
         i++;
         continue;
@@ -753,14 +747,11 @@ class DocxGenerator {
         runColor = this.headingIntegrationColor(headingText);
         elements.push(new Paragraph({
           spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: [
-            this.coloredTextRun(headingText, {
-              size: this.fontSizeBody,
-              bold: true,
-              italics: true,
-              color: runColor || "111111"
-            })
-          ]
+          children: this.parseInlineTextToRuns(headingText, runColor || "111111", {
+            size: this.fontSizeBody,
+            bold: true,
+            italics: true
+          })
         }));
         i++;
         continue;

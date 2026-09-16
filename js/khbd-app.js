@@ -5506,11 +5506,14 @@ function stripObjectivesStandardSection(markdown, matchRe) {
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+const OBJECTIVES_NLS_HEADING_RE = /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực số(?::|\s|$)/i;
+const OBJECTIVES_AI_HEADING_RE = /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực\s*AI(?::|\s|$)/i;
+
 function stripDisabledObjectivesStandardSections(markdown) {
   const integrations = normalizeTeachingContext(appState.teachingContext).integrations;
   let result = String(markdown || "");
-  if (!integrations.digital) result = stripObjectivesStandardSection(result, /^#{1,6}\s*(?:c\)\s*)?năng lực số\b/i);
-  if (!integrations.ai) result = stripObjectivesStandardSection(result, /^#{1,6}\s*(?:d\)\s*)?năng lực\s*AI\b/i);
+  if (!integrations.digital) result = stripObjectivesStandardSection(result, OBJECTIVES_NLS_HEADING_RE);
+  if (!integrations.ai) result = stripObjectivesStandardSection(result, OBJECTIVES_AI_HEADING_RE);
   return result;
 }
 
@@ -5556,7 +5559,7 @@ function insertObjectivesMissingStandards(text, missing) {
   const ai = missing.filter(row => row.kind === "ai");
   if (digital.length) {
     result = upsertObjectivesStandardSection(result, {
-      matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực số\b/i,
+      matchRe: OBJECTIVES_NLS_HEADING_RE,
       headingLine: "### c) Năng lực số",
       bulletLines: digital.map(row => (row.item.fromPpct || row.item.lockedFromPpct) && ppctStandardDescription(row.item)
         ? `- ***[${row.item.officialCode}]:*** ${ppctStandardDescription(row.item)}`
@@ -5565,7 +5568,7 @@ function insertObjectivesMissingStandards(text, missing) {
   }
   if (ai.length) {
     result = upsertObjectivesStandardSection(result, {
-      matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực\s*AI\b/i,
+      matchRe: OBJECTIVES_AI_HEADING_RE,
       headingLine: "### d) Năng lực AI",
       bulletLines: ai.map(row => (row.item.fromPpct || row.item.lockedFromPpct) && ppctStandardDescription(row.item)
         ? `- ***[${row.item.officialCode}]:*** ${ppctStandardDescription(row.item)}`
@@ -5580,25 +5583,25 @@ function applyPpctVerbatimObjectives(markdown) {
   const digital = standardsOfKind("digital").filter(item => (item.fromPpct || item.lockedFromPpct) && item.officialCode);
   const ai = standardsOfKind("ai").filter(item => (item.fromPpct || item.lockedFromPpct) && item.officialCode);
   if (digital.length) {
-    result = stripObjectivesStandardSection(result, /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực số\b/i);
+    result = stripObjectivesStandardSection(result, OBJECTIVES_NLS_HEADING_RE);
     const headingLine = digital.length === 1
       ? `### c) Năng lực số: ***[${digital[0].officialCode}]:*** ${ppctStandardDescription(digital[0])}`
       : "### c) Năng lực số";
     const bulletLines = digital.length === 1 ? [] : digital.map(item => `- ***[${item.officialCode}]:*** ${ppctStandardDescription(item)}`);
     result = upsertObjectivesStandardSection(result, {
-      matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực số\b/i,
+      matchRe: OBJECTIVES_NLS_HEADING_RE,
       headingLine,
       bulletLines
     });
   }
   if (ai.length) {
-    result = stripObjectivesStandardSection(result, /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực\s*AI\b/i);
+    result = stripObjectivesStandardSection(result, OBJECTIVES_AI_HEADING_RE);
     const headingLine = ai.length === 1
       ? `### d) Năng lực AI: ***[${ai[0].officialCode}]:*** ${ppctStandardDescription(ai[0])}`
       : "### d) Năng lực AI";
     const bulletLines = ai.length === 1 ? [] : ai.map(item => `- ***[${item.officialCode}]:*** ${ppctStandardDescription(item)}`);
     result = upsertObjectivesStandardSection(result, {
-      matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực\s*AI\b/i,
+      matchRe: OBJECTIVES_AI_HEADING_RE,
       headingLine,
       bulletLines
     });
@@ -5610,7 +5613,7 @@ function ensureObjectivesDigitalCodes(markdown) {
   const selected = standardsOfKind("digital").filter(item => item.officialCode && item.officialLabel);
   if (!selected.length) return markdown;
   const lines = String(markdown || "").split("\n");
-  const headingIndex = lines.findIndex(line => /^#{1,6}\s*(?:c\)\s*)?năng lực số\b/i.test(line.trim()));
+  const headingIndex = lines.findIndex(line => OBJECTIVES_NLS_HEADING_RE.test(line.trim()));
   if (headingIndex < 0) return markdown;
   const level = (lines[headingIndex].trim().match(/^#+/) || ["###"])[0].length;
   let end = headingIndex + 1;

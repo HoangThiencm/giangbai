@@ -121,6 +121,8 @@ assert.match(appCode, /fromPpct: true/, "Mã chọn từ PPCT phải gắn cờ 
 assert.match(appCode, /skipAutoSuggestStandards\("digital"\)/, "Bước 3 không tự tick thêm NLS khi bài đã khóa PPCT");
 assert.match(appCode, /skipAutoSuggestStandards\(kind\)/, "Đề xuất có cấu trúc phải nhường mã PPCT");
 assert.match(appCode, /function applyPpctVerbatimObjectives/, "Phần I phải chèn nguyên văn mô tả PPCT");
+assert.match(appCode, /năng lực số\(\?::\|\\s\|\$\)/, "Regex tiêu đề NLS phải khớp dấu hai chấm tiếng Việt, không dùng \\\\b ASCII");
+assert.match(appCode, /năng lực\\s\*AI\(\?::\|\\s\|\$\)/, "Regex tiêu đề AI phải khớp dấu hai chấm, không dùng \\\\b ASCII");
 assert.match(html, /mã NLS\/AI và mô tả PPCT được khóa đúng nguồn, không tự tick thêm/, "Giao diện phải nói rõ khóa mã PPCT");
 assert.match(appCode, /key === "ai"[\s\S]*requestStructuredIntegrationCandidates\("ai"/, "Bật Năng lực AI mới gọi Gemini AI");
 assert.match(appCode, /Hãy đọc SGK ở Bước 1\. Khi có nội dung, Gemini sẽ đề xuất đúng 2–3 mục AI/, "Khi bật AI chưa có OCR phải hướng dẫn đọc SGK");
@@ -281,6 +283,18 @@ assert.ok(app.appState.teachingContext.standards.every(item => item.fromPpct), "
 const verbatim = app.applyPpctVerbatimObjectives("# I. MỤC TIÊU\n## 2. Về năng lực\n## 3. Về phẩm chất\n- Trung thực");
 assert.ok(verbatim.includes(`### c) Năng lực số: ***[5.3.TC2a]:*** ${nlsDesc}`), "Phần I giữ nguyên văn mô tả NLS PPCT");
 assert.ok(verbatim.includes("### d) Năng lực AI: ***[9.B2.1]:***") && verbatim.includes("Sử dụng trợ lý AI tạo các ví dụ ngẫu nhiên"), "Phần I giữ nguyên văn mô tả AI PPCT");
+const alreadyHas = [
+  "# I. MỤC TIÊU",
+  "## 2. Về năng lực",
+  `### c) Năng lực số: ***[5.3.TC2a]:*** ${nlsDesc}`,
+  `### d) Năng lực AI: ***[9.B2.1]:*** ${aiDesc}`,
+  "## 3. Về phẩm chất",
+  "- Trung thực"
+].join("\n");
+const deduped = app.applyPpctVerbatimObjectives(alreadyHas);
+assert.strictEqual((deduped.match(/c\) Năng lực số/g) || []).length, 1, "Phần I chỉ được có đúng 1 dòng Năng lực số");
+assert.strictEqual((deduped.match(/d\) Năng lực AI/g) || []).length, 1, "Phần I chỉ được có đúng 1 dòng Năng lực AI");
+assert.ok(!/c\) Năng lực số[\s\S]*c\) Năng lực số/.test(deduped), "Không lặp lại tiêu đề Năng lực số");
 
 console.log("✓ Bộ lọc dạng bài, Time-Budget và Facility Gate đạt.");
 
