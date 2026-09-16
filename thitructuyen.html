@@ -1451,6 +1451,19 @@
             return null;
         };
 
+        const mcIndexFromImportedTrueFalse = (options, rawAns, rawEntry) => {
+            const text = String(rawAns || "").trim();
+            if (isImportedTfTrue(text) || (rawEntry && rawEntry.type === "tf" && rawEntry.value === true)) {
+                const optIdx = (options || []).findIndex((o) => /đúng|true/i.test(String(o || "")));
+                return optIdx >= 0 ? optIdx : 0;
+            }
+            if (isImportedTfToken(text) || (rawEntry && rawEntry.type === "tf" && rawEntry.value === false)) {
+                const optIdx = (options || []).findIndex((o) => /sai|false/i.test(String(o || "")));
+                return optIdx >= 0 ? optIdx : 1;
+            }
+            return -1;
+        };
+
         const applyImportedAnswerToQuestion = (q, found) => {
             if (!q || !found) return q;
             const qType = q.type || (q.correct_answers ? "tf" : (q.correct_answer !== undefined && (!q.options || q.options.length === 0) ? "short_answer" : "mc"));
@@ -1463,9 +1476,14 @@
                 return { ...q, correct_answer: String(found.answer || found.rawEntry?.value || "") };
             }
             const map = { A: 0, B: 1, C: 2, D: 3 };
-            const letter = String(found.answer || "").toUpperCase();
+            const rawAns = String(found.answer || found.rawEntry?.value || "").trim();
+            const letter = rawAns.toUpperCase();
             if (map[letter] !== undefined) {
                 return { ...q, correct_index: map[letter] };
+            }
+            const tfMcIdx = mcIndexFromImportedTrueFalse(q.options, rawAns, found.rawEntry);
+            if (tfMcIdx >= 0) {
+                return { ...q, correct_index: tfMcIdx };
             }
             return q;
         };
@@ -1612,6 +1630,11 @@
                     let correctIndex = answerLetter ? "ABCD".indexOf(answerLetter) : -1;
                     if (correctIndex < 0 && asteriskCorrectIndex >= 0) {
                         correctIndex = asteriskCorrectIndex;
+                    }
+                    if (correctIndex < 0) {
+                        const keyEntry = answerKey[item.number];
+                        const tfMcIdx = mcIndexFromImportedTrueFalse(options, importedAnswerKeyText(keyEntry), keyEntry);
+                        if (tfMcIdx >= 0) correctIndex = tfMcIdx;
                     }
 
                     return {

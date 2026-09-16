@@ -268,6 +268,41 @@ const aiCompat = applyImportedAnswerToQuestion(
 assert.strictEqual(aiCompat.correct_index, 2, 'Định dạng AI { index, answer } vẫn gán MC');
 console.log('✓ Modal nạp 18 câu: 12 MC, 2 TF, 4 TLN; AI {index,answer} vẫn tương thích.');
 
+console.log('\n[TEST 8] Câu trắc nghiệm 2 lựa chọn A. Đúng / B. Sai nhận 13.Đúng và 14.Sai...');
+const twoChoiceQuiz = [
+    'Câu 13. Mệnh đề P là mệnh đề đúng.',
+    'A. Đúng',
+    'B. Sai',
+    'Câu 14. Mệnh đề Q là mệnh đề sai.',
+    'A. Đúng',
+    'B. Sai',
+    'Đáp án:',
+    '13.Đúng   14.Sai'
+].join('\n');
+const parsedTwoChoice = parseLatexWordQuiz(twoChoiceQuiz);
+assert.strictEqual(parsedTwoChoice.length, 2);
+assert.strictEqual(parsedTwoChoice[0].type, 'mc', 'Câu 13 dạng A. Đúng B. Sai phải là mc');
+assert.strictEqual(parsedTwoChoice[0].correct_index, 0, '13.Đúng phải chọn A. Đúng');
+assert.strictEqual(parsedTwoChoice[1].type, 'mc');
+assert.strictEqual(parsedTwoChoice[1].correct_index, 1, '14.Sai phải chọn B. Sai');
+
+const bulkTrueFalseMc = [
+    { id: 'q13', type: 'mc', options: ['Đúng', 'Sai'], correct_index: null },
+    { id: 'q14', type: 'mc', options: ['Đúng', 'Sai'], correct_index: null }
+];
+const tfMcImport = parseManualImportedAnswers('13.Đúng   14.Sai');
+assert.strictEqual(tfMcImport.length, 2);
+const afterTfMc = bulkTrueFalseMc.map((q, idx) => applyImportedAnswerToQuestion(q, tfMcImport.find((d) => d.index === idx + 13)));
+assert.strictEqual(afterTfMc[0].correct_index, 0, 'Nạp 13.Đúng phải tick A. Đúng');
+assert.strictEqual(afterTfMc[1].correct_index, 1, 'Nạp 14.Sai phải tick B. Sai');
+
+const fourChoiceUnchanged = applyImportedAnswerToQuestion(
+    { id: 'q1', type: 'mc', options: ['A', 'B', 'C', 'D'], correct_index: null },
+    { index: 1, answer: 'C' }
+);
+assert.strictEqual(fourChoiceUnchanged.correct_index, 2, 'MC 4 lựa chọn A-D không bị ảnh hưởng');
+console.log('✓ 13.Đúng → A (index 0), 14.Sai → B (index 1); MC 4 lựa chọn vẫn theo A-D.');
+
 console.log('\n================================================================================');
 console.log('TẤT CẢ KIỂM THỬ BẢNG ĐÁP ÁN CV 7991 ĐÃ PASS 100%!');
 console.log('================================================================================');
