@@ -62,6 +62,9 @@ const appState = {
   // Danh sách ảnh SGK (Mảng phẳng trực quan)
   images: [],
   pdfAttachments: [],
+  // Phiên bản nguồn SGK giúp tuyệt đối không dùng lại OCR của PDF/ảnh cũ.
+  textbookSourceRevision: 0,
+  textbookOcrSourceRevision: null,
 
   // Danh sách file/ảnh PPCT (Tách biệt hoàn toàn với SGK)
   ppctImages: [],
@@ -1071,6 +1074,15 @@ function standardsOfKind(kind) {
     });
 }
 
+function standardsLockedFromPpct(kind) {
+  return standardsOfKind(kind).some(item => item && (item.fromPpct || item.lockedFromPpct));
+}
+
+function skipAutoSuggestStandards(kind) {
+  if (standardsLockedFromPpct(kind)) return true;
+  return Boolean(appState.ppctCatalog && appState.ppctCatalog.selectedRowId);
+}
+
 function renderDurationOptions() {
   const select = document.getElementById("inputDuration");
   if (!select || select.tagName !== "SELECT") return;
@@ -1127,6 +1139,7 @@ function ensureIntegrationStandards({ force = false, silent = false, skipRender 
       return;
     }
     if (kind === "digital") {
+      if (typeof skipAutoSuggestStandards === "function" && skipAutoSuggestStandards("digital")) return;
       const current = standardsOfKind("digital");
       if (force || !current.length) {
         const grade = Number(appState.selectedGrade) || 6;
@@ -1140,6 +1153,7 @@ function ensureIntegrationStandards({ force = false, silent = false, skipRender 
       }
     }
     if (kind === "ai") {
+      if (typeof skipAutoSuggestStandards === "function" && skipAutoSuggestStandards("ai")) return;
       const current = standardsOfKind("ai");
       if (current.length > 3) {
         appState.teachingContext.standards = appState.teachingContext.standards
@@ -1246,6 +1260,7 @@ function ensureIntegrationStandards({ force = false, silent = false, skipRender 
       return;
     }
     if (kind === "digital") {
+      if (typeof skipAutoSuggestStandards === "function" && skipAutoSuggestStandards("digital")) return;
       const current = standardsOfKind("digital");
       if (force || !current.length) {
         const grade = Number(appState.selectedGrade) || 6;
@@ -1259,6 +1274,7 @@ function ensureIntegrationStandards({ force = false, silent = false, skipRender 
       }
     }
     if (kind === "ai") {
+      if (typeof skipAutoSuggestStandards === "function" && skipAutoSuggestStandards("ai")) return;
       const current = standardsOfKind("ai");
       if (current.length > 3) {
         appState.teachingContext.standards = appState.teachingContext.standards
@@ -1389,10 +1405,13 @@ function catalogFallbackRecords(kind, grade, entries, maxSelect) {
 }
 
 function applySuggestedStandardRecords(kind, catalog, records, options = {}) {
+  if (!options.allowPpctOverride && typeof skipAutoSuggestStandards === "function" && skipAutoSuggestStandards(kind)) {
+    if (standardsLockedFromPpct(kind) || !options.preserveDetected) return;
+  }
   let next = Array.isArray(records) ? records.filter(Boolean) : [];
   if (kind === "digital") {
     if (next.length < 2) {
-      if (!options.preserveDetected) next = catalogFallbackRecords("digital", Number(appState.selectedGrade) || 6);
+      if (!options.preserveDetected && !next.some(item => item.fromPpct || item.lockedFromPpct)) next = catalogFallbackRecords("digital", Number(appState.selectedGrade) || 6);
     }
     next = next.slice(0, 3);
     if (!next.length) return;
@@ -1412,6 +1431,39 @@ function normalizePpctMatchText(value) {
     .replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function cleanPpctDescription(raw) {
+  let s = String(raw || "");
+  s = s.replace(/^[\s]*[\[\(\{]?\s*(?:NLS|AI|NLAI|DL)\s*[:.\-]?\s*/i, "");
+  s = s.replace(/^[\s:;\-–—|,]+/, "");
+  s = s.replace(/^\[[^\]]*\]\s*/, "");
+  s = s.replace(/[\s\];,]+$/g, "").trim();
+  s = s.replace(/^\[(?:NLS|AI)[:\s-]*/i, "");
+  s = s.replace(/\]\s*$/, "").trim();
+  s = s.replace(/\s*\|\s*$/, "").trim();
+  return s;
+}
+
+function extractPpctDetailedEntries(text) {
+  const source = String(text || "");
+  if (!source.trim()) return [];
+  const codeRe = /(\d+\.\d+\.TC[12][a-z]?|[6-9]\.[A-Z]\d+\.(?:MR)?\d+)/gi;
+  const matches = [];
+  let match;
+  while ((match = codeRe.exec(source))) {
+    matches.push({ code: match[1], index: match.index, end: match.index + match[0].length });
+  }
+  const seen = new Set();
+  const out = [];
+  matches.forEach((hit, i) => {
+    const key = String(hit.code).toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    const nextStart = i + 1 < matches.length ? matches[i + 1].index : source.length;
+    out.push({ code: hit.code, description: cleanPpctDescription(source.slice(hit.end, nextStart)) });
+  });
+  return out;
+}
+
 function extractStandardsFromPpctText(text, topic, grade) {
   const numericGrade = Number(grade) || 6;
   const target = normalizePpctMatchText(topic);
@@ -1420,11 +1472,17 @@ function extractStandardsFromPpctText(text, topic, grade) {
   const source = (matchedLines.length ? matchedLines : lines).join("\n");
   const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS : null;
   if (!catalog) return { digital: [], ai: [], matchedLines };
+  const descByCode = new Map(extractPpctDetailedEntries(source).map(entry => [String(entry.code).toLowerCase(), entry.description]));
   const takeEntries = (kind, regex, allowed) => {
     const codes = new Set(); let match;
     while ((match = regex.exec(source))) codes.add(match[1]);
     const entries = typeof entriesForGrade === "function" ? entriesForGrade(kind, numericGrade) : (catalog[kind]?.entries || []).filter(entry => (entry.grades || []).includes(numericGrade));
-    return Array.from(codes).filter(allowed).map(code => entries.find(entry => String(entry.code).toLowerCase() === String(code).toLowerCase())).filter(Boolean);
+    return Array.from(codes).filter(allowed).map(code => {
+      const entry = entries.find(item => String(item.code).toLowerCase() === String(code).toLowerCase());
+      if (!entry) return null;
+      const description = descByCode.get(String(code).toLowerCase()) || "";
+      return description ? { ...entry, ppctDescription: description } : entry;
+    }).filter(Boolean);
   };
   return {
     digital: takeEntries("digital", /\b(\d+\.\d+\.TC[12][a-z]?)\b/gi, code => numericGrade <= 7 ? /\.TC1/i.test(code) : /\.TC2/i.test(code)),
@@ -1467,7 +1525,17 @@ function applyPpctDetectedStandards(detected, { showModal = true } = {}) {
     }
     const toggle = document.getElementById(toggleId); if (toggle) toggle.checked = true;
     appState.teachingContext.integrations[kind] = true;
-    applySuggestedStandardRecords(kind, KHBD_STANDARDS[kind], entries.map(entry => standardToRecord(kind, entry, grade, true)), { skipRender: true, preserveDetected: true });
+    applySuggestedStandardRecords(kind, KHBD_STANDARDS[kind], entries.map(entry => {
+      const rec = standardToRecord(kind, entry, grade, false);
+      const desc = String(entry.ppctDescription || entry.proposedTask || entry.taskDescription || "").trim();
+      return {
+        ...rec,
+        fromPpct: true,
+        lockedFromPpct: true,
+        proposedTask: desc || rec.proposedTask,
+        taskDescription: desc || rec.taskDescription
+      };
+    }), { skipRender: true, preserveDetected: true, allowPpctOverride: true });
   });
   renderSubjectIntegrations(); renderStandardsCatalog(); saveStateToLocalStorage(); updateWorkflowStepper();
   if (showModal) showPpctStandardsNotificationModal(detected);
@@ -1483,6 +1551,8 @@ async function requestStructuredIntegrationCandidates(kind, { silent = false, sk
     ? entriesForGrade(kind, grade)
     : catalog.entries.filter(entry => entry.grades.includes(grade));
   const current = standardsOfKind(kind);
+  // Bài đã khóa mã theo PPCT: không tự tick thêm [ĐỀ XUẤT THEO BÀI], kể cả khi force.
+  if (typeof skipAutoSuggestStandards === "function" && skipAutoSuggestStandards(kind)) return false;
   // Giáo viên đã sửa/chọn tay: không ghi đè trừ khi bấm Đề xuất lại (force).
   if (current.length && !current.every(item => item.autoSuggested) && !force) return false;
   const maxSelect = catalog.maxSelect || 3;
@@ -1526,6 +1596,7 @@ async function requestStructuredIntegrationCandidatesForEnabled({ silent = false
   if (!hasOcrReadyLessonContent()) return false;
   const grade = Number(appState.selectedGrade);
   const eligible = enabledKinds.filter(kind => {
+    if (typeof skipAutoSuggestStandards === "function" && skipAutoSuggestStandards(kind)) return false;
     const current = standardsOfKind(kind);
     return !current.length || current.every(item => item.autoSuggested);
   });
@@ -2435,14 +2506,17 @@ async function triggerStep3PedagogyAndDigitalRecommendations() {
     appState.teachingContext.integrations.digital = isDigitalActive;
     ensurePedagogyFromLesson({ force: true, silent: true, skipRender: true });
     let digitalOk = false;
-    if (isDigitalActive && hasOcrReadyLessonContent()) {
+    const digitalLocked = typeof skipAutoSuggestStandards === "function" && skipAutoSuggestStandards("digital");
+    if (isDigitalActive && hasOcrReadyLessonContent() && !digitalLocked) {
       digitalOk = await requestStructuredIntegrationCandidates("digital", { silent: true, skipRender: true, force: true });
     }
-    if (isDigitalActive && (!digitalOk || standardsOfKind("digital").length < 2)) {
+    if (isDigitalActive && !digitalLocked && (!digitalOk || standardsOfKind("digital").length < 2)) {
       ensureIntegrationStandards({ force: true, silent: true, skipRender: true });
     }
     showToast(isDigitalActive
-      ? "✅ Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và Năng lực số (NLS) bám sát nội dung SGK."
+      ? (digitalLocked
+        ? "✅ Đã đề xuất PPDH, kỹ thuật dạy học 4 pha. Năng lực số giữ đúng mã PPCT đã chọn."
+        : "✅ Đã đề xuất PPDH, kỹ thuật dạy học 4 pha và Năng lực số (NLS) bám sát nội dung SGK.")
       : "✅ Đã đề xuất PPDH và kỹ thuật dạy học 4 pha. Năng lực số đang tắt cho bài này.",
       "success", 5000);
     return true;
@@ -2473,8 +2547,8 @@ function renderStandardsCatalog() {
       : catalog.entries.filter(entry => entry.grades.includes(grade));
     const selectedRecords = standardsOfKind(kind);
     const selectedIds = new Set(selectedRecords.map(item => item.catalogId));
-    const suggestedIds = new Set(selectedRecords.filter(item => item.autoSuggested).map(item => item.catalogId));
-    const proposedById = new Map(selectedRecords.filter(item => item.lessonAnchor).map(item => [item.catalogId, item]));
+    const suggestedIds = new Set(selectedRecords.filter(item => item.autoSuggested && !(item.fromPpct || item.lockedFromPpct)).map(item => item.catalogId));
+    const proposedById = new Map(selectedRecords.filter(item => item.lessonAnchor || item.proposedTask || item.taskDescription).map(item => [item.catalogId, item]));
     const maxSelect = catalog.maxSelect || 3;
     const selectable = enabled;
     const band = kind === "digital"
@@ -2489,7 +2563,12 @@ function renderStandardsCatalog() {
       const rec = suggestedIds.has(entry.id);
       const proposed = proposedById.get(entry.id);
       const selected = selectedIds.has(entry.id);
-      return `<label style="display:block" class="${selected ? "standard-choice-selected" : ""}"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selected ? "checked" : ""} ${selectable ? "" : "disabled"}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : ""}${proposed ? `<small class="text-muted" style="display:block;margin-left:1.5rem">Neo SGK: “${escapeHtml(proposed.lessonAnchor)}”<br>Lý do: ${escapeHtml(proposed.fitRationale)}<br>Nhiệm vụ: ${escapeHtml(proposed.proposedTask)}</small>` : ""}</label>`;
+      const locked = selectedRecords.some(item => item.catalogId === entry.id && (item.fromPpct || item.lockedFromPpct));
+      const ppctDesc = locked ? String(proposed?.proposedTask || proposed?.taskDescription || "").trim() : "";
+      const extra = ppctDesc
+        ? `<small class="text-muted" style="display:block;margin-left:1.5rem">Mô tả PPCT: ${escapeHtml(ppctDesc)}</small>`
+        : (proposed?.lessonAnchor ? `<small class="text-muted" style="display:block;margin-left:1.5rem">Neo SGK: “${escapeHtml(proposed.lessonAnchor)}”<br>Lý do: ${escapeHtml(proposed.fitRationale)}<br>Nhiệm vụ: ${escapeHtml(proposed.proposedTask)}</small>` : "");
+      return `<label style="display:block" class="${selected ? "standard-choice-selected" : ""}"><input type="checkbox" class="standard-choice" data-kind="${kind}" value="${entry.id}" ${selected ? "checked" : ""} ${selectable ? "" : "disabled"}> ${entry.code ? `${entry.code}: ` : "Miền: "}${entry.label}${locked ? ' <small class="pedagogy-fit">Theo PPCT</small>' : (rec ? ' <small class="pedagogy-fit">Đề xuất theo bài</small>' : "")}${extra}</label>`;
     };
     const choicesHtml = kind === "digital"
       ? Object.entries(entries.reduce((groups, entry) => { (groups[entry.domain] ||= []).push(entry); return groups; }, {})).map(([domain, items]) => `<details class="pedagogy-block"${items.some(entry => selectedIds.has(entry.id)) ? " open" : ""}><summary>${domain}</summary><small>${items[0].band}: ${items[0].descriptor}</small>${items.map(renderChoice).join("")}</details>`).join("")
@@ -2502,9 +2581,18 @@ function renderStandardsCatalog() {
         showToast(`Một bài chỉ chọn ${maxSelect} mục ${kind === "digital" ? "năng lực số (TT 02)" : "năng lực AI (QĐ 2422)"}.`, "warning");
         return;
       }
+      const existingById = new Map(selectedRecords.map(item => [item.catalogId, item]));
       const selected = checked.map(choice => {
         const entry = entries.find(item => item.id === choice.value);
-        return standardToRecord(kind, entry, grade, false);
+        const rec = standardToRecord(kind, entry, grade, false);
+        const prev = existingById.get(entry && entry.id);
+        if (prev) {
+          if (prev.fromPpct) rec.fromPpct = true;
+          if (prev.lockedFromPpct) rec.lockedFromPpct = true;
+          if (prev.proposedTask) rec.proposedTask = prev.proposedTask;
+          if (prev.taskDescription) rec.taskDescription = prev.taskDescription;
+        }
+        return rec;
       });
       appState.teachingContext.standards = appState.teachingContext.standards.filter(item => item.framework !== catalog.framework).concat(selected);
       saveStateToLocalStorage();
@@ -2794,10 +2882,7 @@ function setupEventListeners() {
       if (userConfirm(`Bạn có chắc muốn xóa tất cả ảnh/file SGK đã tải lên?`)) {
         appState.images = [];
         appState.pdfAttachments = [];
-        appState.content.vision = "";
-        const editor = document.getElementById("editorVision");
-        if (editor) editor.value = "";
-        renderMathPreview("", "previewVision");
+        markTextbookSourceChanged();
         updateImageCounts();
         renderImageGallery();
         saveStateToLocalStorage();
@@ -3025,6 +3110,7 @@ async function triggerAiCompetencyRecommendations({ force = false } = {}) {
     const current = standardsOfKind("ai");
     const hasManual = current.length && !current.every(item => item.autoSuggested);
     if (hasManual && !force) return true;
+    if (typeof skipAutoSuggestStandards === "function" && skipAutoSuggestStandards("ai")) return true;
     let aiOk = false;
     if (hasOcrReadyLessonContent()) {
       aiOk = await requestStructuredIntegrationCandidates("ai", { silent: true, skipRender: true, force });
@@ -3380,6 +3466,7 @@ function handleFiles(files) {
         sourceType: isPasted ? "paste" : "upload",
         dataUrl: base64Data
       });
+      markTextbookSourceChanged();
 
       updateImageCounts();
       renderImageGallery();
@@ -3548,6 +3635,7 @@ async function handleConfirmPdfPages() {
       pageCount: totalPages,
       selectedPages: pagesToRender.slice()
     });
+    markTextbookSourceChanged();
 
     for (let idx = 0; idx < pagesToRender.length; idx++) {
       const pageNum = pagesToRender[idx];
@@ -3682,6 +3770,7 @@ if (typeof window !== "undefined") {
         }
       }
     }
+    markTextbookSourceChanged();
     updateImageCounts();
     renderImageGallery();
     showToast("Đã xóa 1 ảnh.", "info");
@@ -5068,6 +5157,24 @@ function buildPedagogicalPrompt(prompt) {
   return out;
 }
 
+function ppctStandardDescription(item) {
+  return String(item && (item.proposedTask || item.taskDescription || item.officialLabel) || "").trim();
+}
+
+function buildPpctObjectivesSection(kind) {
+  const items = standardsOfKind(kind).filter(item => item && item.officialCode);
+  if (!items.length) return "";
+  const heading = kind === "digital" ? "### c) Năng lực số" : "### d) Năng lực AI";
+  const locked = items.filter(item => item.fromPpct || item.lockedFromPpct);
+  if (locked.length === 1 && ppctStandardDescription(locked[0])) {
+    return `${heading}: ***[${locked[0].officialCode}]:*** ${ppctStandardDescription(locked[0])}`;
+  }
+  if (locked.length) {
+    return `${heading}\n${locked.map(item => `- ***[${item.officialCode}]:*** ${ppctStandardDescription(item)}`).join("\n")}`;
+  }
+  return "";
+}
+
 function getGenerationPromptContext(params = {}) {
   if (hasAnalyzedLessonContent()) {
     ensurePedagogyFromLesson({ silent: true });
@@ -5097,6 +5204,9 @@ function getGenerationPromptContext(params = {}) {
     techniques: ["A", "B", "C", "D", "E"].flatMap(phase => (appState.teachingContext && appState.teachingContext.phasePedagogy?.[phase]?.techniques) || []),
     digitalCompetencyEnabled: Boolean(appState.teachingContext?.integrations?.digital),
     aiCompetencyEnabled: Boolean(appState.teachingContext?.integrations?.ai),
+    digital_objectives_section: buildPpctObjectivesSection("digital"),
+    ai_objectives_section: buildPpctObjectivesSection("ai"),
+    ppct_objectives_verbatim: standardsLockedFromPpct("digital") || standardsLockedFromPpct("ai"),
     contextIntegrationsEnabled: enabledContextIntegrations().map(item => item.id),
     locality_province: localityProvinceOf(),
     yccd_official: typeof getOfficialYccd === "function" ? getOfficialYccd({
@@ -5448,14 +5558,49 @@ function insertObjectivesMissingStandards(text, missing) {
     result = upsertObjectivesStandardSection(result, {
       matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực số\b/i,
       headingLine: "### c) Năng lực số",
-      bulletLines: digital.map(row => `- ***${row.item.officialCode}:*** *${row.item.officialLabel}*`)
+      bulletLines: digital.map(row => (row.item.fromPpct || row.item.lockedFromPpct) && ppctStandardDescription(row.item)
+        ? `- ***[${row.item.officialCode}]:*** ${ppctStandardDescription(row.item)}`
+        : `- ***${row.item.officialCode}:*** *${row.item.officialLabel}*`)
     });
   }
   if (ai.length) {
     result = upsertObjectivesStandardSection(result, {
       matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực\s*AI\b/i,
       headingLine: "### d) Năng lực AI",
-      bulletLines: ai.map(row => `- ***${row.item.officialCode}:*** *${row.item.officialLabel}*`)
+      bulletLines: ai.map(row => (row.item.fromPpct || row.item.lockedFromPpct) && ppctStandardDescription(row.item)
+        ? `- ***[${row.item.officialCode}]:*** ${ppctStandardDescription(row.item)}`
+        : `- ***${row.item.officialCode}:*** *${row.item.officialLabel}*`)
+    });
+  }
+  return result;
+}
+
+function applyPpctVerbatimObjectives(markdown) {
+  let result = String(markdown || "");
+  const digital = standardsOfKind("digital").filter(item => (item.fromPpct || item.lockedFromPpct) && item.officialCode);
+  const ai = standardsOfKind("ai").filter(item => (item.fromPpct || item.lockedFromPpct) && item.officialCode);
+  if (digital.length) {
+    result = stripObjectivesStandardSection(result, /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực số\b/i);
+    const headingLine = digital.length === 1
+      ? `### c) Năng lực số: ***[${digital[0].officialCode}]:*** ${ppctStandardDescription(digital[0])}`
+      : "### c) Năng lực số";
+    const bulletLines = digital.length === 1 ? [] : digital.map(item => `- ***[${item.officialCode}]:*** ${ppctStandardDescription(item)}`);
+    result = upsertObjectivesStandardSection(result, {
+      matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực số\b/i,
+      headingLine,
+      bulletLines
+    });
+  }
+  if (ai.length) {
+    result = stripObjectivesStandardSection(result, /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực\s*AI\b/i);
+    const headingLine = ai.length === 1
+      ? `### d) Năng lực AI: ***[${ai[0].officialCode}]:*** ${ppctStandardDescription(ai[0])}`
+      : "### d) Năng lực AI";
+    const bulletLines = ai.length === 1 ? [] : ai.map(item => `- ***[${item.officialCode}]:*** ${ppctStandardDescription(item)}`);
+    result = upsertObjectivesStandardSection(result, {
+      matchRe: /^#{1,6}\s*(?:[a-z]\)\s*)?năng lực\s*AI\b/i,
+      headingLine,
+      bulletLines
     });
   }
   return result;
@@ -6153,6 +6298,94 @@ function ppctRowCodes(row, kind) {
   const raw = (row?.ai?.codes || []).concat(fromField).map(value => String(value || "").trim()).filter(Boolean);
   return Array.from(new Set(raw));
 }
+function ppctRowDetailedEntries(row, kind) {
+  const items = kind === "nls" ? row?.digital_competency : row?.ai_competency;
+  const objectItems = Array.isArray(items)
+    ? items.map(item => {
+      if (item && typeof item === "object") {
+        return { code: String(item.code || "").trim(), description: String(item.description || "").trim() };
+      }
+      return { code: String(item || "").trim(), description: "" };
+    }).filter(item => item.code)
+    : [];
+  const codes = ppctRowCodes(row, kind);
+  const evidence = kind === "nls" ? String(row?.nls?.evidence || "") : String(row?.ai?.evidence || "");
+  const notes = String(row?.notes || "");
+  const extracted = extractPpctDetailedEntries([evidence, notes, objectItems.map(item => item.code && item.description ? `${item.code} : ${item.description}` : item.code).join("\n")].filter(Boolean).join("\n"));
+  const byCode = new Map();
+  extracted.forEach(entry => {
+    const key = String(entry.code).toLowerCase();
+    if (!byCode.has(key) || String(entry.description || "").length > String(byCode.get(key).description || "").length) {
+      byCode.set(key, entry);
+    }
+  });
+  objectItems.forEach(item => {
+    const key = String(item.code).toLowerCase();
+    if (item.description && (!byCode.has(key) || String(item.description).length >= String(byCode.get(key).description || "").length)) {
+      byCode.set(key, { code: item.code, description: item.description });
+    }
+  });
+  const list = (codes.length ? codes : objectItems.map(item => item.code));
+  const unique = Array.from(new Set(list.map(code => String(code).trim()).filter(Boolean)));
+  if (!unique.length) return [];
+  if (unique.length > 1 && unique.every(code => !String(byCode.get(code.toLowerCase())?.description || "").trim())) {
+    const parts = evidence.split(/\s*\|\s*/).map(part => part.trim()).filter(Boolean);
+    if (parts.length === unique.length && parts.every(part => !/(\d+\.\d+\.TC[12][a-z]?|[6-9]\.[A-Z]\d+\.(?:MR)?\d+)/i.test(part))) {
+      return unique.map((code, index) => ({ code, description: parts[index] }));
+    }
+  }
+  return unique.map(code => {
+    const hit = byCode.get(String(code).toLowerCase());
+    let description = String(hit?.description || "").trim();
+    if (!description && unique.length === 1) description = cleanPpctDescription(evidence);
+    return { code, description };
+  });
+}
+function findStandardEntryByCode(kind, code, grade) {
+  const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS[kind] : null;
+  if (!catalog) return null;
+  const needle = String(code || "").trim().toLowerCase();
+  if (!needle) return null;
+  const pool = typeof entriesForGrade === "function" ? entriesForGrade(kind, grade) : (catalog.entries || []);
+  return pool.find(entry => String(entry.code || "").toLowerCase() === needle)
+    || (catalog.entries || []).find(entry => String(entry.code || "").toLowerCase() === needle)
+    || null;
+}
+function applyPpctLockedStandards(nlsEntries, aiEntries) {
+  const grade = Number(appState.selectedGrade) || 6;
+  appState.teachingContext = normalizeTeachingContext(appState.teachingContext);
+  const applyKind = (kind, entries, toggleId) => {
+    const catalog = typeof KHBD_STANDARDS !== "undefined" ? KHBD_STANDARDS[kind] : null;
+    if (!catalog) return;
+    appState.teachingContext.standards = (appState.teachingContext.standards || []).filter(item => (
+      kind === "ai" ? !isAiStandardRecord(item) : item.framework !== catalog.framework
+    ));
+    if (!entries.length) {
+      appState.teachingContext.integrations[kind] = false;
+      const toggle = typeof document !== "undefined" ? document.getElementById(toggleId) : null;
+      if (toggle) toggle.checked = false;
+      return;
+    }
+    appState.teachingContext.integrations[kind] = true;
+    const toggle = typeof document !== "undefined" ? document.getElementById(toggleId) : null;
+    if (toggle) toggle.checked = true;
+    const records = entries.map(({ code, description }) => {
+      const entry = findStandardEntryByCode(kind, code, grade) || { id: `ppct-${kind}-${code}`, code, label: description || code };
+      const rec = standardToRecord(kind, entry, grade, false);
+      return {
+        ...rec,
+        fromPpct: true,
+        lockedFromPpct: true,
+        officialCode: rec.officialCode || code,
+        proposedTask: description || rec.proposedTask,
+        taskDescription: description || rec.taskDescription
+      };
+    });
+    applySuggestedStandardRecords(kind, catalog, records, { skipRender: true, preserveDetected: true, allowPpctOverride: true });
+  };
+  applyKind("digital", nlsEntries || [], "toggleDigitalCompetency");
+  applyKind("ai", aiEntries || [], "toggleAiCompetency");
+}
 function applyPpctCatalogRow(id) {
   const row = (appState.ppctCatalog.rows || []).find(r => r.id === id);
   if (!row) return;
@@ -6161,29 +6394,30 @@ function applyPpctCatalogRow(id) {
   appState.customTopic = row.title;
   if (row.periods) appState.duration = formatSmartDuration(`${row.periods} tiết`, appState.selectedGrade);
   appState.teachingContext.lessonScope = row.tietCt ? `Tiết ${row.tietCt}` : (row.week ? `Tuần ${row.week}` : "");
-  const nlsCodes = ppctRowCodes(row, "nls");
-  const aiCodes = ppctRowCodes(row, "ai");
-  appState.teachingContext.integrations.digital = !!(row.nls?.enabled || nlsCodes.length);
-  appState.teachingContext.integrations.ai = !!(row.ai?.enabled || aiCodes.length);
-  const digitalToggle = document.getElementById("toggleDigitalCompetency");
-  const aiToggle = document.getElementById("toggleAiCompetency");
+  const nlsEntries = ppctRowDetailedEntries(row, "nls");
+  const aiEntries = ppctRowDetailedEntries(row, "ai");
+  appState.teachingContext.integrations.digital = nlsEntries.length > 0;
+  appState.teachingContext.integrations.ai = aiEntries.length > 0;
+  const digitalToggle = typeof document !== "undefined" ? document.getElementById("toggleDigitalCompetency") : null;
+  const aiToggle = typeof document !== "undefined" ? document.getElementById("toggleAiCompetency") : null;
   if (digitalToggle) digitalToggle.checked = appState.teachingContext.integrations.digital;
   if (aiToggle) aiToggle.checked = appState.teachingContext.integrations.ai;
-  const topicEl = document.getElementById("inputTopicCustom");
+  const topicEl = typeof document !== "undefined" ? document.getElementById("inputTopicCustom") : null;
   if (topicEl) topicEl.value = row.title;
-  const scopeEl = document.getElementById("inputLessonScope");
+  const scopeEl = typeof document !== "undefined" ? document.getElementById("inputLessonScope") : null;
   if (scopeEl) scopeEl.value = appState.teachingContext.lessonScope || "";
-  const durationEl = document.getElementById("inputDuration");
+  const durationEl = typeof document !== "undefined" ? document.getElementById("inputDuration") : null;
   if (durationEl && appState.duration) durationEl.value = appState.duration;
-  if (nlsCodes.length || aiCodes.length) {
-    applyPpctDetectedStandards({
-      digital: nlsCodes.map(code => ({ code })),
-      ai: aiCodes.map(code => ({ code }))
-    }, { showModal: false });
+  applyPpctLockedStandards(nlsEntries, aiEntries);
+  if (typeof document !== "undefined") {
+    try {
+      populateLessonDropdown();
+      renderPpctCatalogReview();
+      renderStandardsCatalog();
+    } catch (error) {
+      // DOM chưa đủ nút PPCT (môi trường test): vẫn giữ mã đã khóa.
+    }
   }
-  populateLessonDropdown();
-  renderPpctCatalogReview();
-  renderStandardsCatalog();
   saveStateToLocalStorage();
 }
 function ppctRowsTable(rows, options = {}) { return `<div style="max-height:${options.maxHeight||'270px'};overflow:auto"><table class="data-table"><thead><tr><th>Bài</th><th>Tiết</th><th>NLS</th><th>AI</th></tr></thead><tbody>${rows.map(r=>`<tr data-ppct-row="${escapeHtml(r.id)}" style="cursor:pointer;${r.id===appState.ppctCatalog.selectedRowId?'background:#e0f2fe':''}"><td>${escapeHtml(r.title)}</td><td>${escapeHtml(r.tietCt||r.periods||"")}</td><td><input type="checkbox" data-kind="nls" ${r.nls?.enabled?"checked":""}></td><td><input type="checkbox" data-kind="ai" ${r.ai?.enabled?"checked":""}></td></tr>`).join("")}</tbody></table></div>`; }
@@ -6958,7 +7192,10 @@ function formatCanvasTextbookContext(data) {
   ].filter(Boolean).join("\n");
 }
 
-async function applyTextbookOcrResult(ocrText, { silent = false, subsectionProfiles = null } = {}) {
+async function applyTextbookOcrResult(ocrText, { silent = false, subsectionProfiles = null, sourceRevision = null } = {}) {
+  if (sourceRevision !== null && Number(sourceRevision) !== Number(appState.textbookSourceRevision || 0)) {
+    throw new Error("Nguồn SGK đã thay đổi trong lúc nhận diện; kết quả cũ đã bị hủy.");
+  }
   appState.content.vision = ocrText;
   // Canvas trả đề mục/đề bài nguyên văn theo trường ngắn. Với luồng OCR
   // cũ, suy hồ sơ từ chính nội dung vừa đọc để không giữ trọng số của SGK trước.
@@ -6968,6 +7205,7 @@ async function applyTextbookOcrResult(ocrText, { silent = false, subsectionProfi
       ? normalizeTextbookSubsectionProfiles(ocrText)
       : []);
   appState.teachingContext.ocrReady = true;
+  appState.textbookOcrSourceRevision = Number(appState.textbookSourceRevision || 0);
   saveStateToLocalStorage();
   const editor = document.getElementById("editorVision");
   if (editor) editor.value = ocrText;
@@ -6975,10 +7213,11 @@ async function applyTextbookOcrResult(ocrText, { silent = false, subsectionProfi
   updateWorkflowStepper();
 }
 
-async function readTextbookWithMistral() {
-  if (appState.isGenerating) {
+async function readTextbookWithMistral({ internal = false } = {}) {
+  const ownsGeneratingState = !internal;
+  if (appState.isGenerating && !internal) {
     showToast("Một tác vụ AI khác đang được xử lý, vui lòng chờ trong giây lát...", "warning");
-    return;
+    return false;
   }
   if (!hasTextbookMedia()) {
     showToast("Vui lòng dán hoặc chọn ít nhất 1 ảnh hoặc file PDF SGK!", "warning");
@@ -6986,7 +7225,8 @@ async function readTextbookWithMistral() {
   }
   const btn = document.getElementById("btnAnalyzeVision");
   try {
-    appState.isGenerating = true;
+    const sourceRevision = Number(appState.textbookSourceRevision || 0);
+    if (ownsGeneratingState) appState.isGenerating = true;
     if (btn) btn.disabled = true;
     const status = document.getElementById("statusFooterText");
     let ocrText = "";
@@ -7024,7 +7264,11 @@ async function readTextbookWithMistral() {
     if (!ocrText.replace(/\s+/g, " ").trim()) {
       throw new Error(`${ocrProvider} không đọc được chữ trên trang đã chọn.`);
     }
-    await applyTextbookOcrResult(ocrText, { silent: false, subsectionProfiles: canvasRoute ? canvasAnalysis?.subsections : null });
+    await applyTextbookOcrResult(ocrText, {
+      silent: false,
+      subsectionProfiles: canvasRoute ? canvasAnalysis?.subsections : null,
+      sourceRevision
+    });
 
     try {
       if (typeof autoDetectAndFillLessonMetadata === "function") {
@@ -7042,6 +7286,7 @@ async function readTextbookWithMistral() {
     setTimeout(() => hideProgress(), 1500);
     showToast(canvasRoute ? "Đã xong! Đã phân tích ngữ cảnh SGK cho Bước 3 và 4." : "Đã xong! Đã đọc và trích xuất nội dung SGK thành công.", "success", 5000);
     if (status) status.textContent = "Sẵn sàng.";
+    return true;
   } catch (error) {
     console.error("OCR SGK:", error);
     hideProgress();
@@ -7051,8 +7296,9 @@ async function readTextbookWithMistral() {
       : `Không thể ${isCanvasGeminiRoute() ? "phân tích" : "đọc"} SGK: ${error.message}`, "danger", 7000);
     const status = document.getElementById("statusFooterText");
     if (status) status.textContent = "Lỗi nhận diện SGK.";
+    return false;
   } finally {
-    appState.isGenerating = false;
+    if (ownsGeneratingState) appState.isGenerating = false;
     if (btn) btn.disabled = false;
   }
 }
@@ -7086,7 +7332,7 @@ async function handleGenerateVision() {
   finally { appState.isGenerating = false; if (btn) btn.disabled = false; }
 }
 
-async function handleAnalyzeSourceMaterials() {
+async function handleAnalyzeSourceMaterials({ internal = false } = {}) {
   const hasPpctMedia = (appState.ppctPdfAttachments && appState.ppctPdfAttachments.length > 0)
     || (appState.ppctImages && appState.ppctImages.length > 0);
   const hasSgkMedia = hasTextbookMedia();
@@ -7107,7 +7353,7 @@ async function handleAnalyzeSourceMaterials() {
       ppctDuration = appState.duration || "";
       ppctLessonScope = appState.teachingContext?.lessonScope || "";
     }
-    if (hasSgkMedia) await readTextbookWithMistral();
+    const sgkAnalyzed = hasSgkMedia ? await readTextbookWithMistral({ internal }) : false;
     if (ppctDuration) {
       appState.duration = ppctDuration;
       const durationInput = document.getElementById("inputDuration");
@@ -7119,6 +7365,7 @@ async function handleAnalyzeSourceMaterials() {
       if (scopeInput) scopeInput.value = ppctLessonScope;
     }
     if (hasPpctMedia && (ppctDuration || ppctLessonScope)) saveStateToLocalStorage();
+    return !hasSgkMedia || (sgkAnalyzed && hasCurrentTextbookOcrContext());
   } finally {
     if (btn) btn.disabled = false;
   }
@@ -7127,6 +7374,27 @@ async function handleAnalyzeSourceMaterials() {
 function hasTextbookMedia() {
   return (Array.isArray(appState.pdfAttachments) && appState.pdfAttachments.length > 0)
     || (Array.isArray(appState.images) && appState.images.length > 0);
+}
+
+function markTextbookSourceChanged() {
+  appState.textbookSourceRevision = Number(appState.textbookSourceRevision || 0) + 1;
+  appState.textbookOcrSourceRevision = null;
+  if (!appState.teachingContext) appState.teachingContext = normalizeTeachingContext({});
+  appState.teachingContext.ocrReady = false;
+  // Không cho dữ liệu OCR/metadata của bài trước trở thành nguồn của lần tạo tiếp theo.
+  appState.content.vision = "";
+  appState.textbookSubsectionProfiles = [];
+  const editor = document.getElementById("editorVision");
+  if (editor) editor.value = "";
+  renderMathPreview("", "previewVision");
+  updateWorkflowStepper();
+}
+
+function hasCurrentTextbookOcrContext() {
+  return hasTextbookMedia()
+    && Boolean(appState.teachingContext?.ocrReady)
+    && Number(appState.textbookOcrSourceRevision) === Number(appState.textbookSourceRevision || 0)
+    && Boolean(String(appState.content?.vision || "").trim());
 }
 
 function hasTextbookSource() {
@@ -7238,6 +7506,7 @@ async function applyObjectivesOutput(result, signal, options = {}) {
   if (missing.length) {
     finalResult = insertObjectivesMissingStandards(finalResult, missing);
   }
+  finalResult = applyPpctVerbatimObjectives(finalResult);
   finalResult = ensureObjectivesDigitalCodes(finalResult);
   finalResult = keepObjectivesOnly(stripDisabledObjectivesStandardSections(finalResult));
   appState.content.objectives = finalResult;
@@ -8076,6 +8345,15 @@ if (typeof module !== 'undefined' && module.exports) {
     ,isLevel1SectionTitle
     ,parsePpctCatalog
     ,applyPpctCatalogRow
+    ,extractPpctDetailedEntries
+    ,ppctRowDetailedEntries
+    ,ppctRowCodes
+    ,applyPpctLockedStandards
+    ,standardsLockedFromPpct
+    ,skipAutoSuggestStandards
+    ,applyPpctVerbatimObjectives
+    ,ppctStandardDescription
+    ,buildPpctObjectivesSection
     ,filterPpctCatalogRows
     ,savePpctCatalogToServer
     ,canvasPpctAccount

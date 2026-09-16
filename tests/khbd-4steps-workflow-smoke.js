@@ -116,6 +116,12 @@ assert.match(appCode, /requestStructuredIntegrationCandidates\("digital"/, "Bư�
 assert.match(appCode, /kind === "digital" && records\.length < 2/, "NLS không được để dưới 2 mục; phải fallback 2-3");
 assert.match(appCode, /items\.some\(entry => selectedIds\.has\(entry\.id\)\) \? " open"/, "Nhóm NLS có mục được tick phải tự mở");
 assert.match(appCode, /if \(kind === "digital"\) \{\s*if \(next\.length < 2\)/, "applySuggestedStandardRecords không được ghi NLS rỗng");
+assert.match(appCode, /function extractPpctDetailedEntries/, "Phải bóc tách mã + mô tả PPCT");
+assert.match(appCode, /fromPpct: true/, "Mã chọn từ PPCT phải gắn cờ fromPpct");
+assert.match(appCode, /skipAutoSuggestStandards\("digital"\)/, "Bước 3 không tự tick thêm NLS khi bài đã khóa PPCT");
+assert.match(appCode, /skipAutoSuggestStandards\(kind\)/, "Đề xuất có cấu trúc phải nhường mã PPCT");
+assert.match(appCode, /function applyPpctVerbatimObjectives/, "Phần I phải chèn nguyên văn mô tả PPCT");
+assert.match(html, /mã NLS\/AI và mô tả PPCT được khóa đúng nguồn, không tự tick thêm/, "Giao diện phải nói rõ khóa mã PPCT");
 assert.match(appCode, /key === "ai"[\s\S]*requestStructuredIntegrationCandidates\("ai"/, "Bật Năng lực AI mới gọi Gemini AI");
 assert.match(appCode, /Hãy đọc SGK ở Bước 1\. Khi có nội dung, Gemini sẽ đề xuất đúng 2–3 mục AI/, "Khi bật AI chưa có OCR phải hướng dẫn đọc SGK");
 assert.match(appCode, /digital:\s*(?:context\?\.integrations\?\.digital\s*!==\s*false|true)/, "normalizeTeachingContext phải giữ NLS mặc định bật");
@@ -239,6 +245,43 @@ assert.match(ped, /cấp độ B1/, "Bối cảnh sư phạm phải truyền c�
 assert.match(ped, /Khuyết tật nhìn \(Thị giác\)/, "Bối cảnh sư phạm phải truyền loại khuyết tật HSKT");
 assert.match(ped, /Học liệu trực quan\/chữ lớn/, "Bối cảnh sư phạm phải truyền giải pháp hỗ trợ");
 
+if (typeof global.localStorage === "undefined") {
+  const storage = {};
+  global.localStorage = { getItem: key => storage[key] || null, setItem: (key, value) => { storage[key] = String(value); }, removeItem: key => delete storage[key] };
+}
+if (typeof global.document === "undefined") {
+  global.document = { getElementById: () => null, querySelectorAll: () => [], querySelector: () => null, addEventListener() {}, createElement() { return {}; } };
+}
+const nlsDesc = "Sử dụng máy tính cầm tay (phím CALC) để kiểm tra cặp số (x; y) có là nghiệm của hệ phương trình hay không.";
+const aiDesc = "Sử dụng trợ lý AI tạo các ví dụ ngẫu nhiên về phương trình để luyện tập nhận biết khái niệm và chịu trách nhiệm kiểm chứng kết quả (Áp dụng: tiết 1, 2).";
+app.appState.selectedGrade = "9";
+app.appState.teachingContext = app.normalizeTeachingContext({ integrations: { digital: true, ai: false }, standards: [] });
+app.appState.ppctCatalog = {
+  rows: [{
+    id: "bai1",
+    title: "Bài 1. Khái niệm phương trình và hệ hai phương trình bậc nhất hai ẩn",
+    tietCt: "1, 2",
+    periods: 2,
+    nls: { enabled: true, codes: ["5.3.TC2a"], evidence: `5.3.TC2a : ${nlsDesc}` },
+    ai: { enabled: true, codes: ["9.B2.1"], evidence: `9.B2.1 : ${aiDesc}` },
+    digital_competency: [{ code: "5.3.TC2a", description: nlsDesc }],
+    ai_competency: [{ code: "9.B2.1", description: aiDesc }]
+  }],
+  selectedRowId: "",
+  source: {},
+  serverId: null
+};
+app.applyPpctCatalogRow("bai1");
+assert.deepStrictEqual(
+  app.appState.teachingContext.standards.map(item => item.officialCode).sort(),
+  ["5.3.TC2a", "9.B2.1"],
+  "Bài 1 PPCT chỉ tick 5.3.TC2a và 9.B2.1"
+);
+assert.ok(app.appState.teachingContext.standards.every(item => item.fromPpct), "Bài 1 PPCT phải khóa fromPpct");
+const verbatim = app.applyPpctVerbatimObjectives("# I. MỤC TIÊU\n## 2. Về năng lực\n## 3. Về phẩm chất\n- Trung thực");
+assert.ok(verbatim.includes(`### c) Năng lực số: ***[5.3.TC2a]:*** ${nlsDesc}`), "Phần I giữ nguyên văn mô tả NLS PPCT");
+assert.ok(verbatim.includes("### d) Năng lực AI: ***[9.B2.1]:***") && verbatim.includes("Sử dụng trợ lý AI tạo các ví dụ ngẫu nhiên"), "Phần I giữ nguyên văn mô tả AI PPCT");
+
 console.log("✓ Bộ lọc dạng bài, Time-Budget và Facility Gate đạt.");
 
 console.log("\n[TEST 4] Prompt engineering NLS & AI...");
@@ -252,6 +295,8 @@ assert.match(promptsCode, /CẤM TUYỆT ĐỐI mã Lập trình \(3\.4\)/, "Pro
 assert.match(promptsCode, /TIME-BUDGET GATE/, "Prompt phải có Time-Budget Gate");
 assert.match(promptsCode, /FACILITY GATE/, "Prompt phải có Facility Gate");
 assert.match(promptsCode, /GENERATE_OBJECTIVES[\s\S]*NATURAL_INTEGRATION_GATE|NATURAL_INTEGRATION_GATE[\s\S]*GENERATE_ACTIVITY_A/, "Cổng chống khiên cưỡng được gắn vào prompt soạn bài");
+assert.match(promptsCode, /Mô tả nguyên văn từ PPCT/, "Prompt mục tiêu phải yêu cầu chép nguyên văn mô tả PPCT");
+assert.match(promptsCode, /CẤM diễn đạt lại, CẤM bịa câu chữ mô tả khi PPCT đã có sẵn mô tả/, "Prompt mục tiêu phải cấm bịa lại mô tả PPCT");
 assert.match(promptsCode, /CLIL_INCLUSIVE_GATE/, "Phải có khối prompt CLIL và hòa nhập");
 assert.match(promptsCode, /A1 — Nhận biết/, "Prompt CLIL phải có A1");
 assert.match(promptsCode, /A2 — Đọc hiểu/, "Prompt CLIL phải có A2");

@@ -511,8 +511,8 @@ QUY TẮC NĂNG LỰC CHUNG (CĂN CỨ VÀO MÔN HỌC & BÀI HỌC):
 
 QUY TẮC NĂNG LỰC ĐẶC THÙ & PHẨM CHẤT:
 - Mục 2.b (Năng lực đặc thù môn học): CHỈ 2–3 năng lực đặc thù nổi trội của môn {subject} gắn với bài học. Viết mỗi mục 1 dòng.
-- Mục 2.c (Năng lực số): CHỈ khi được bật; liệt kê đủ từng miền đã chọn và đủ từng mã đã chọn, mỗi mã 1 dòng theo đúng dạng [1-5].x.TC... (ví dụ 1.1.TC1a). CẤM mã 6.x.TC... (Miền 6 đã chuyển sang Khung AI QĐ 2422). CẤM chỉ ghi tên miền hoặc mô tả mà không có mã.
-- Mục 2.d (Năng lực AI): CHỈ khi được bật; liệt kê đủ từng mã đã chọn, mỗi mã 1 dòng theo đúng dạng [6-9].[A-D]... (QĐ 2422).
+- Mục 2.c (Năng lực số): CHỈ khi được bật; liệt kê đủ từng miền đã chọn và đủ từng mã đã chọn, mỗi mã 1 dòng theo đúng dạng [1-5].x.TC... (ví dụ 1.1.TC1a). CẤM mã 6.x.TC... (Miền 6 đã chuyển sang Khung AI QĐ 2422). CẤM chỉ ghi tên miền hoặc mô tả mà không có mã. Nếu PPCT đã có mô tả: CHÉP NGUYÊN VĂN 100% vào dạng \`### c) Năng lực số: ***[Mã NLS]:*** [Mô tả nguyên văn từ PPCT]\`. CẤM diễn đạt lại, CẤM bịa câu chữ mô tả khi PPCT đã có sẵn mô tả.
+- Mục 2.d (Năng lực AI): CHỈ khi được bật; liệt kê đủ từng mã đã chọn, mỗi mã 1 dòng theo đúng dạng [6-9].[A-D]... (QĐ 2422). Nếu PPCT đã có mô tả: CHÉP NGUYÊN VĂN 100% vào dạng \`### d) Năng lực AI: ***[Mã AI]:*** [Mô tả nguyên văn từ PPCT]\`. CẤM diễn đạt lại, CẤM bịa câu chữ mô tả khi PPCT đã có sẵn mô tả.
 - Mục 3 (Phẩm chất): CHỈ 1–2 phẩm chất có hành vi quan sát rõ trong bài (ví dụ: Chăm chỉ, Trung thực, Trách nhiệm).
 
 # I. MỤC TIÊU
@@ -1513,10 +1513,10 @@ function getPromptTemplate(templateKey, context) {
   // Insert competencies
   const competencies = context.competencies ? context.competencies.join('; ') : '';
   const digitalObjectivesSection = context.digitalCompetencyEnabled
-    ? `### c) Năng lực số\n- ***[Mã NLS đã chọn, ví dụ 1.1.TC1a]:*** *[Mô tả nhiệm vụ số gắn với bài]*`
+    ? (context.digital_objectives_section || `### c) Năng lực số\n- ***[Mã NLS đã chọn, ví dụ 1.1.TC1a]:*** *[Mô tả nhiệm vụ số gắn với bài]*`)
     : '';
   const aiObjectivesSection = context.aiCompetencyEnabled
-    ? `### d) Năng lực AI\n- ***[Mã AI đã chọn]:*** *[Mô tả nhiệm vụ AI gắn với bài]*`
+    ? (context.ai_objectives_section || `### d) Năng lực AI\n- ***[Mã AI đã chọn]:*** *[Mô tả nhiệm vụ AI gắn với bài]*`)
     : '';
   
   const rawTextbook = context.textbook_content || '';
@@ -1615,6 +1615,9 @@ function getPromptTemplate(templateKey, context) {
 - CẤM nhãn Biểu hiện, Nhiệm vụ/Sản phẩm, Minh chứng. CẤM ý con bắt đầu bằng + .
 - Năng lực đặc thù: 2–3 năng lực nổi trội của môn ${subjectName}. Phẩm chất: 1–2 phẩm chất.
 - ${integrationRules || 'Không tạo mục NLS hoặc AI.'} Mỗi mục 1 dòng \`- Tên/Mã: mô tả ngắn gắn bài\`. CẤM tạo NLS/AI không được chọn hoặc gộp hai nhóm thành một hạn ngạch.`;
+    if (context.ppct_objectives_verbatim) {
+      result += `\n\nKHÓA MÔ TẢ NLS/AI THEO PPCT: Các dòng ### c) Năng lực số và ### d) Năng lực AI ở khung trên là nguyên văn 100% từ Phân phối chương trình. CHÉP ĐÚNG NGUYÊN VĂN mã và mô tả. CẤM diễn đạt lại, CẤM bịa câu chữ, CẤM thêm mã ngoài danh sách đã cho.`;
+    }
   }
 
   if (templateKey === 'GENERATE_ACTIVITY_B' || templateKey === 'GENERATE_ACTIVITIES_AD' || templateKey === 'GENERATE_ACTIVITIES_AE') {

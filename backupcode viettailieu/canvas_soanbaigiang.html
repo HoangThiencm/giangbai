@@ -1799,13 +1799,21 @@
             return finalResult;
           }
 
-          // Kiểm tra đọc học liệu ban đầu nếu có file và chưa phân tích
-          if (typeof hasAnalyzedLessonContent === "function" && !hasAnalyzedLessonContent()) {
-            if (typeof hasTextbookMedia === "function" && hasTextbookMedia()) {
-              if (typeof updateProgress === "function") updateProgress(5, "Đang đọc nội dung học liệu SGK...");
-              if (typeof handleAnalyzeSourceMaterials === "function") {
-                await handleAnalyzeSourceMaterials();
+          // 1-click sở hữu isGenerating, nên yêu cầu module OCR chạy nội bộ và
+          // chỉ được tiếp tục khi context vừa tạo khớp đúng PDF/ảnh đang nạp.
+          if (typeof hasTextbookMedia === "function" && hasTextbookMedia()) {
+            const hasFreshOcr = typeof hasCurrentTextbookOcrContext === "function"
+              && hasCurrentTextbookOcrContext();
+            if (!hasFreshOcr) {
+              if (typeof updateProgress === "function") updateProgress(5, "Đang nhận diện PDF/ảnh SGK bằng Gemini...");
+              if (typeof handleAnalyzeSourceMaterials !== "function") {
+                throw new Error("Không có mô-đun phân tích SGK; đã dừng để không dùng dữ liệu bài mẫu.");
               }
+              const analyzed = await handleAnalyzeSourceMaterials({ internal: true });
+              if (!analyzed || typeof hasCurrentTextbookOcrContext !== "function" || !hasCurrentTextbookOcrContext()) {
+                throw new Error("Không tạo được ngữ cảnh OCR mới từ PDF/ảnh SGK hiện tại. Đã dừng, không dùng metadata hoặc Bài 1 mẫu.");
+              }
+              if (typeof showToast === "function") showToast("Đã nhận diện xong học liệu SGK hiện tại; bắt đầu soạn bài.", "success", 3500);
             }
           }
 
