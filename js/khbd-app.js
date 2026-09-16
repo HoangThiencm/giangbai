@@ -9,7 +9,7 @@
 // Deploy version: 20260916-textbook-exact-v18
 
 function isPracticeOrReviewLesson(topic) {
-  return /\b(luyện\s*tập\s*chung|ôn\s*tập|củng\s*cố)\b/i.test(String(topic || ""));
+  return /luyện\s*tập\s*chung|ôn\s*tập|bài\s*tập\s*cuối\s*chương|luyện\s*tập\b/i.test(String(topic || ""));
 }
 
 if (typeof getPromptTemplate === "undefined" && typeof require !== "undefined") {

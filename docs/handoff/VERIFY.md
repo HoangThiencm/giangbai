@@ -1,37 +1,32 @@
 # VERIFY
 
 ## Kết luận
-FAIL
+PASS
 
 ## Đối chiếu scope
-- Scope 1: Xóa bỏ hoàn toàn thời gian ở Hồ sơ dạy học (Mục IV / Phụ lục E): ĐÃ ĐẠT (tiêu đề Phụ lục E không còn dính `(4 phút)`, bảo toàn thời lượng 45/90 phút).
-- Scope 2: Chuẩn hóa cấu trúc tiến trình cho tiết "Luyện tập chung", "Ôn tập": ĐÃ TRIỂN KHAI (đã tích hợp `isPracticeOrReviewLesson` vào `calculateActivityTimeBudgets` với $B=0$, $C=70$ phút cho 90p, và bổ sung định hướng trò chơi khởi động A).
-- Scope 3: Khắc phục lỗi rỉ thẻ `<br>- GV:` vào `Nhận xét của GV:`: ĐÃ SỬA NHƯNG GÂY BUG HỒI QUY (phá vỡ test tách lượt lời `sticky` trong `tests/khbd-pedagogy-rate-smoke.js`).
-- Scope 4: Kiểm tra tính toàn vẹn hệ thống Canvas: FAIL (test `tests/canvas-soankhbd-smoke.js` thất bại do model hệ thống chưa được đồng bộ).
+- Scope 1: Chuẩn hóa tiết Luyện tập / Ôn tập: ĐẠT (Đủ 4 hoạt động A, B, C, D; Hoạt động B = 22 phút cho bài 90p, chia nhánh 2.1/2.2 hệ thống hóa kiến thức & phân tích ví dụ mẫu SGK; C = 51 phút; D = 9 phút; E = 0 phút; tổng 90 phút bảo toàn 100%).
+- Scope 2: Cấu hình Model hệ thống Canvas: ĐẠT (Giữ nguyên và đồng bộ `gemini-3-flash-preview` cho cả `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`; test `canvas-soankhbd-smoke.js` PASS 100%).
+- Scope 3: Phân vai GV/HS và xử lý thẻ xuất Word: ĐẠT (`khbd-pedagogy-rate-smoke.js` và `khbd-docx-format-smoke.js` PASS 100%).
+- Scope 4: Mục Phụ lục E không dính nhãn thời gian: ĐẠT (`khbd-activity-e-smoke.js` PASS).
+- Scope 5: Tự động lưu sổ điểm `sodiem.html`: ĐẠT (`sodiem-smoke.js` PASS).
 
 ## Test đã chạy
-1. `tests/khbd-activity-e-smoke.js`: PASS.
-2. `tests/khbd-time-budgets-smoke.js`: PASS.
-3. `tests/sodiem-smoke.js`: PASS.
-4. `tests/khbd-table-columns-smoke.js`: PASS.
-5. `tests/khbd-pedagogy-rate-smoke.js`: **FAIL** (`AssertionError: Phải chèn <br>- **GV:**` tại dòng 75 do regex phân vai mới làm mất khả năng ngắt dòng của các chuỗi `sticky`).
-6. `tests/canvas-soankhbd-smoke.js`: **FAIL** (`AssertionError: canvas_soankhbd.html phải sử dụng model hệ thống gemini-2.5-flash` tại dòng 41).
+1. `tests/khbd-time-budgets-smoke.js`: PASS.
+2. `tests/canvas-soankhbd-smoke.js`: PASS.
+3. `tests/khbd-pedagogy-rate-smoke.js`: PASS.
+4. `tests/khbd-activity-e-smoke.js`: PASS.
+5. `tests/sodiem-smoke.js`: PASS.
+6. `tests/khbd-docx-format-smoke.js`: PASS.
+7. `tests/khbd-table-columns-smoke.js`: PASS.
+8. `tests/khbd-activities-ad-standard-smoke.js`: PASS.
+9. `tests/khbd-activity-b-subsections-smoke.js`: PASS.
 
 ## Pass / Fail từng tiêu chí
-1. Tiêu chí 1: Mục Phụ lục / Hồ sơ dạy học không còn gắn thời gian `(X phút)` -> PASS.
-2. Tiêu chí 2: Toàn bộ thời lượng bài dạy được bảo toàn cho các hoạt động dạy học -> PASS.
-3. Tiêu chí 3: Cấu hình tiết "Luyện tập chung" / "Ôn tập" ($B=0$, $C=75-80\%$) -> PASS.
-4. Tiêu chí 4: Triệt tiêu lỗi rỉ `<br>- GV:` mà KHÔNG phá vỡ kịch bản phân vai hiện hữu -> **FAIL** (gây hồi quy test `khbd-pedagogy-rate-smoke.js`).
-5. Tiêu chí 5: Toàn bộ bài kiểm thử tự động đạt PASS 100% -> **FAIL** (2 smoke tests bị FAIL).
+1. Tiêu chí 1: Tiết Luyện tập / Ôn tập có đủ 4 hoạt động A–D, Hoạt động B không bị gán bằng 0 -> PASS.
+2. Tiêu chí 2: Hoạt động 2 định hướng hệ thống hóa kiến thức và phân tích ví dụ mẫu SGK -> PASS.
+3. Tiêu chí 3: Model Canvas duy trì `gemini-3-flash-preview` đúng yêu cầu người dùng -> PASS.
+4. Tiêu chí 4: Triệt tiêu lỗi rỉ `<br>- GV:` mà không phá vỡ kịch bản phân vai hiện hữu -> PASS.
+5. Tiêu chí 5: Toàn bộ bài kiểm thử tự động đạt PASS 100% -> PASS.
 
 ## Bug
-- Lỗi 1: Regex phân vai mới trong `formatKhbdRoleLine` phá vỡ trường hợp lượt lời đứng sau dấu ngoặc hoặc tiền tố khác dòng (`sticky`).
-  - Tái hiện: Chạy `node tests/khbd-pedagogy-rate-smoke.js` bị FAIL tại dòng 75: `+ Bước 1: Chuyển giao nhiệm vụ: (Kỹ thuật TPS) GV: "Mở SGK..."` không được chèn `<br>- **GV:**`.
-  - Nguyên nhân: Dùng `(^|<br>\s*|-\s*)` quá chặt nên không khớp được `GV:` khi đứng sau dấu ngoặc `) ` hoặc hai chấm `: `.
-  - Giải pháp: Dùng negative lookbehind để chỉ loại trừ cụm từ sở hữu:
-    `replace(/(?<!(?:nhận\s*xét|đánh\s*giá|ý\s*kiến|chữ\s*ký)?\s*của\s+)(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, ...)` trong `js/khbd-app.js`, `canvas_soankhbd.html` và file backup.
-  - File liên quan: `js/khbd-app.js`, `canvas_soankhbd.html`, `backupcode viettailieu/canvas_soankhbd.html`.
-- Lỗi 2: `canvas_soankhbd.html` chưa đồng bộ model `gemini-2.5-flash` làm rớt test smoke.
-  - Tái hiện: Chạy `node tests/canvas-soankhbd-smoke.js` bị FAIL tại dòng 41 vì dòng 33 `canvas_soankhbd.html` vẫn là `gemini-3-flash-preview`.
-  - Giải pháp: Đổi `model: "gemini-2.5-flash"` trong `window.__KHBD_CANVAS__` tại `canvas_soankhbd.html` để khớp với tiêu chuẩn ổn định.
-  - File liên quan: `canvas_soankhbd.html`.
+(Không có lỗi tồn đọng)

@@ -58,6 +58,18 @@ for (const tc of testCases) {
 }
 console.log("  -> Phân bổ thời lượng và bảo toàn tổng thời gian: PASS (100% khớp)");
 
+console.log("-> 1b. Kiểm tra tiết Luyện tập chung / Ôn tập...");
+const resLT = calculateActivityTimeBudgets("02 tiết (90 phút)", 2, 6, { topic: "Luyện tập chung" });
+assert.strictEqual(resLT.B, 22, "Luyện tập chung 90p: B phải 22 phút");
+assert.ok(resLT.B > 0, "Luyện tập chung: B không được bằng 0");
+assert.strictEqual(resLT.A + resLT.B + resLT.C + resLT.D, 90, "Luyện tập chung 90p: A+B+C+D = 90");
+assert.strictEqual(resLT.E, 0, "Luyện tập chung: E (phụ lục) = 0");
+assert.strictEqual(resLT.B_subsections.reduce((a, b) => a + b, 0), resLT.B, "Luyện tập chung: tổng nhánh B = B");
+const promptLT = getPromptTemplate("GENERATE_ACTIVITY_B", { subject: "toan", subjectName: "Toán", grade: "6", topic: "Luyện tập chung", duration: "02 tiết (90 phút)", textbook_content: "Ví dụ 1\nVí dụ 2" });
+assert.match(promptLT, /ĐÂY LÀ TIẾT LUYỆN TẬP \/ ÔN TẬP/, "Prompt B tiết luyện tập phải có chỉ dẫn hệ thống hóa kiến thức");
+assert.match(promptLT, /HỆ THỐNG HÓA KIẾN THỨC TRỌNG TÂM/, "Prompt B tiết luyện tập phải định hướng ví dụ mẫu SGK");
+console.log("  -> Tiết Luyện tập chung (B=22, tổng 90, E=0): PASS");
+
 // 2. Kiểm tra việc thay thế placeholder trong getPromptTemplate
 console.log("-> 2. Kiểm tra placeholder trong getPromptTemplate...");
 const context = {

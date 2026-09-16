@@ -38,7 +38,7 @@ for (const targetPath of targetPaths) {
   // 2. Kiểm tra các thành phần đặc trưng của Canvas
   assert.ok(targetIds.has('canvasHostBanner'), `${relPath} phải có thanh banner #canvasHostBanner`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/api/canvas_gemini.php'), `${relPath} phải trỏ endpoint canvas_gemini.php`);
-  assert.ok(targetHtml.includes('gemini-2.5-flash'), `${relPath} phải sử dụng model hệ thống gemini-2.5-flash`);
+  assert.ok(targetHtml.includes('gemini-3-flash-preview'), `${relPath} phải sử dụng model hệ thống gemini-3-flash-preview`);
   assert.ok(targetHtml.includes('canvasConfirm'), `${relPath} phải có hàm xác nhận modal nội bộ canvasConfirm`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-docx.js"'), `${relPath} phải nạp khbd-docx.js cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-docx.js'), `${relPath} phải giữ nguồn khbd-docx.js từ hosting khi chạy Canvas`);

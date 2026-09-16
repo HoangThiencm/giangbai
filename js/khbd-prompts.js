@@ -173,10 +173,10 @@ function calculateActivityTimeBudgets(durationStr, subsectionCount, grade, optio
       timeB = remaining - timeC;
     }
     if (isPracticeOrReviewLesson(options && options.topic)) {
-      timeA = clamp(3, 12, Math.round(T * 0.12));
-      timeC = Math.max(8, Math.round(T * 0.78));
-      timeB = 0;
-      timeD = T - timeA - timeC;
+      timeA = clamp(5, 8, Math.round(T * 0.09));
+      timeB = clamp(10, 24, Math.floor(T * 0.25));
+      timeD = clamp(5, 12, Math.round(T * 0.11));
+      timeC = T - timeA - timeB - timeD;
     }
     timeE = 0;
     const drift = T - (timeA + timeB + timeC + timeD);
@@ -1632,6 +1632,9 @@ Bài học có ${subsections.length} mục lớn thì BẮT BUỘC phải sinh �
 Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có thời lượng cố định cụ thể ví dụ (${budgets.formatted.B_subsections[0] || '15 phút'}), đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng). Tuyệt đối không tách câu hỏi nhỏ/bài tập con thành hoạt động riêng.
 Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budgets.formatted.B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). ${fourActivities ? `Tổng A + B + C + D BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.` : `Tổng A + B + C + D + E BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.`} `;
     }
+    if (isPracticeOrReviewLesson(context.topic)) {
+      result += `\n\nĐÂY LÀ TIẾT LUYỆN TẬP / ÔN TẬP: Hoạt động 2 mang tên 'HỆ THỐNG HÓA KIẾN THỨC TRỌNG TÂM & HƯỚNG DẪN GIẢI VÍ DỤ MẪU SGK'. Chia thành các hoạt động nhánh (2.1, 2.2...) tương ứng với các mục kiến thức và các Ví dụ mẫu trong SGK (như Ví dụ 1, Ví dụ 2, Ví dụ 3). Mỗi nhánh phải có mục tiêu, nội dung, sản phẩm, và bảng tổ chức thực hiện 4 bước (Chuyển giao, Thực hiện - có Dự kiến lỗi sai của HS, Báo cáo thảo luận, Kết luận chuẩn hóa). Cột phải trình bày lời giải chi tiết, chuẩn mực của các Ví dụ mẫu. Tiêu đề vẫn dùng ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI nhưng nội dung không soạn lý thuyết mới tinh.`;
+    }
   }
 
   const lessonMap = extractTextbookLessonMap(rawTextbook);
@@ -1724,7 +1727,7 @@ if (typeof window !== 'undefined') {
 }
 
 function isPracticeOrReviewLesson(topic) {
-  return /\b(luyện\s*tập\s*chung|ôn\s*tập|củng\s*cố)\b/i.test(String(topic || ""));
+  return /luyện\s*tập\s*chung|ôn\s*tập|bài\s*tập\s*cuối\s*chương|luyện\s*tập\b/i.test(String(topic || ""));
 }
 
 if (typeof globalThis !== 'undefined') {
