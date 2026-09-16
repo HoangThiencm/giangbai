@@ -33,6 +33,7 @@ assert.match(prompt, /"activities"/, 'Schema phải có activities');
 assert.match(prompt, /"exercises"/, 'Schema phải có exercises');
 assert.match(prompt, /Bài 1\.36/, 'Schema mẫu phải có mã bài tập');
 assert.match(prompt, /CẤM diễn đạt lại/, 'Cấm diễn đạt lại đề mục/đề bài');
+assert.match(prompt, /TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý ĐÁNH SỐ THÊM/, 'Cấm tự đánh số đề mục khi SGK không có số');
 assert.match(prompt, /TUYỆT ĐỐI KHÔNG điền chỗ trống bằng trí nhớ/, 'Cấm điền SGK theo trí nhớ');
 assert.doesNotMatch(prompt, /Chỉ diễn đạt lại bằng lời của bạn/, 'Không còn lệnh diễn đạt lại toàn trang');
 console.log('✓ Prompt schema sections/exercises, nguyên văn, không chép nguyên trang.');
@@ -79,8 +80,11 @@ assert.ok(parsed.exercises[0].statement.includes('A = \\{0; 1; 2\\}'));
 assert.ok(parsed.subsections.some(item => item.title === 'Khái niệm tập hợp'), 'Phải suy tiểu mục từ sections');
 
 const formatted = formatCanvasTextbookContext(parsed);
-assert.match(formatted, /### 1\. Khái niệm tập hợp/);
-assert.match(formatted, /### 2\. Phần tử của tập hợp/);
+assert.match(formatted, /### Khái niệm tập hợp/);
+assert.match(formatted, /### Phần tử của tập hợp/);
+assert.match(formatted, /- Đề mục: Khái niệm tập hợp/);
+assert.doesNotMatch(formatted, /### 1\. Khái niệm tập hợp/, 'Không tự thêm số vào đề mục không có số');
+assert.doesNotMatch(formatted, /Mục 1:/, 'Không chèn nhãn Mục N');
 assert.match(formatted, /HĐ 1: Quan sát các hình và cho biết đâu là tập hợp\./);
 assert.match(formatted, /Luyện tập 1: Cho \$A =/);
 assert.match(formatted, /Bài 1\.36: Cho \$A =/);
@@ -123,11 +127,45 @@ console.log('✓ Prompt B/C/D khóa nguyên văn tên đề mục và đề bài
 
 console.log('\n[TEST 4] Cache-bust JS mới trên Canvas/soankhbd...');
 assert.match(appSrc, /finishReason=RECITATION/, 'Vẫn hướng dẫn khi RECITATION, không tự gửi lại');
-['canvas_soankhbd.html', path.join('backupcode viettailieu', 'canvas_soankhbd.html'), 'soankhbd.html'].forEach(rel => {
+['canvas_soankhbd.html', path.join('backupcode viettailieu', 'canvas_soankhbd.html')].forEach(rel => {
   const html = fs.readFileSync(path.join(root, rel), 'utf8');
-  assert.match(html, /textbook-exact-v11/, `${rel} phải cache-bust textbook-exact-v11`);
+  assert.match(html, /textbook-exact-v12/, `${rel} phải cache-bust textbook-exact-v12`);
 });
-console.log('✓ Cache-bust textbook-exact-v11; RECITATION vẫn được bắt.');
+console.log('✓ Cache-bust textbook-exact-v12; RECITATION vẫn được bắt.');
+
+console.log('\n[TEST 5] Giữ đúng chỉ số SGK, không tự đánh số, không lặp số...');
+const numbered = parseCanvasTextbookAnalysis(JSON.stringify({
+  sections: [
+    { title: '1. Lũy thừa với số mũ tự nhiên', coreKnowledge: '', activities: [] },
+    { title: 'I. Khái niệm', coreKnowledge: '', activities: [] },
+    { title: 'Khái niệm lũy thừa', coreKnowledge: '', activities: [] }
+  ],
+  exercises: []
+}));
+assert.strictEqual(numbered.sections[0].title, '1. Lũy thừa với số mũ tự nhiên');
+assert.strictEqual(numbered.sections[1].title, 'I. Khái niệm');
+assert.strictEqual(numbered.sections[2].title, 'Khái niệm lũy thừa');
+assert.ok(!('index' in numbered.sections[0]), 'Không ép index vào section');
+const numberedCtx = formatCanvasTextbookContext(numbered);
+assert.match(numberedCtx, /### 1\. Lũy thừa với số mũ tự nhiên/);
+assert.doesNotMatch(numberedCtx, /1\. 1\. Lũy thừa/, 'Không lặp số đúp 1. 1.');
+assert.match(numberedCtx, /### I\. Khái niệm/);
+assert.doesNotMatch(numberedCtx, /### 1\. I\. Khái niệm/, 'Không đổi I. thành 1. I.');
+assert.match(numberedCtx, /### Khái niệm lũy thừa/);
+assert.doesNotMatch(numberedCtx, /### \d+\.\s*Khái niệm lũy thừa/, 'Không tự đánh số đề mục không có số');
+
+const fromNumbered = extractTextbookSubsections(numberedCtx);
+assert.ok(fromNumbered.some(item => item.title === '1. Lũy thừa với số mũ tự nhiên'));
+assert.ok(fromNumbered.some(item => item.title === 'I. Khái niệm'));
+assert.ok(fromNumbered.some(item => item.title === 'Khái niệm lũy thừa'));
+
+const promptNumbered = getPromptTemplate('GENERATE_ACTIVITY_B', {
+  subjectName: 'Toán', grade: '6', duration: '02 tiết (90 phút)', topic: 'Lũy thừa',
+  textbook_content: numberedCtx
+});
+assert.match(promptNumbered, /### Hoạt động 2\.1: 1\. Lũy thừa với số mũ tự nhiên/);
+assert.doesNotMatch(promptNumbered, /Hoạt động 2\.1: 1\. 1\./);
+console.log('✓ 1. / I. giữ nguyên; đề mục không số không bị tự đánh số.');
 
 console.log('\n================================================================================');
 console.log('TẤT CẢ KIỂM THỬ TRÍCH XUẤT SGK NGUYÊN VĂN ĐÃ PASS 100%!');

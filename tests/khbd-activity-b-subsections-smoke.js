@@ -65,13 +65,13 @@ Hoạt động khám phá 3: Tính chất của phép cộng các số nguyên
   const res4 = extractTextbookSubsections(input4);
   assert.strictEqual(res4.length, 4, "Phải trích xuất được đúng 4 tiểu mục");
   assert.strictEqual(res4[0].index, 1);
-  assert.strictEqual(res4[0].title, "Khái niệm hình chữ nhật");
+  assert.strictEqual(res4[0].title, "1. Khái niệm hình chữ nhật");
   assert.strictEqual(res4[1].index, 2);
-  assert.strictEqual(res4[1].title, "Tính chất của hình chữ nhật");
+  assert.strictEqual(res4[1].title, "2. Tính chất của hình chữ nhật");
   assert.strictEqual(res4[2].index, 3);
-  assert.strictEqual(res4[2].title, "Dấu hiệu nhận biết hình chữ nhật");
+  assert.strictEqual(res4[2].title, "3. Dấu hiệu nhận biết hình chữ nhật");
   assert.strictEqual(res4[3].index, 4);
-  assert.strictEqual(res4[3].title, "Áp dụng vào tam giác vuông");
+  assert.strictEqual(res4[3].title, "4. Áp dụng vào tam giác vuông");
 
   // Test 5: Văn bản SGK phức tạp chứa nhiều câu hỏi phát vấn ("4. Bằng cách...", "Thực hành 1", "Bài 1.1") -> Chỉ bóc đúng 2 mục La Mã
   const input5 = `
@@ -90,9 +90,9 @@ II. Phép chia hết và phép chia có dư
   const res5 = extractTextbookSubsections(input5);
   assert.strictEqual(res5.length, 2, "Phải trích xuất được đúng 2 mục lớn La Mã từ văn bản phức tạp");
   assert.strictEqual(res5[0].index, 1);
-  assert.strictEqual(res5[0].title, "Phép nhân số tự nhiên");
+  assert.strictEqual(res5[0].title, "I. Phép nhân số tự nhiên");
   assert.strictEqual(res5[1].index, 2);
-  assert.strictEqual(res5[1].title, "Phép chia hết và phép chia có dư");
+  assert.strictEqual(res5[1].title, "II. Phép chia hết và phép chia có dư");
 
   // Test 6: Văn bản chứa đề mục số 1. 2. kết hợp câu hỏi phát vấn và bài tập con
   const input6 = `
@@ -110,8 +110,8 @@ II. Phép chia hết và phép chia có dư
 `;
   const res6 = extractTextbookSubsections(input6);
   assert.strictEqual(res6.length, 2, "Phải trích xuất được đúng 2 mục lớn 1. và 2.");
-  assert.strictEqual(res6[0].title, "Phép cộng và phép trừ phân số");
-  assert.strictEqual(res6[1].title, "Quy tắc dấu ngoặc trong biểu thức phân số");
+  assert.strictEqual(res6[0].title, "1. Phép cộng và phép trừ phân số");
+  assert.strictEqual(res6[1].title, "2. Quy tắc dấu ngoặc trong biểu thức phân số");
 
   // Test 7: Safety clamp: Nếu có nhiều hơn 4 mục lớn thì chỉ lấy tối đa 4
   const input7 = `
@@ -169,9 +169,9 @@ function testPromptTemplateActivityB() {
   assert.ok(promptB.includes("NGUYÊN TẮC ÁNH XẠ 1-1 BẮT BUỘC THEO MỤC LỚN SGK"), "Prompt B phải có nguyên tắc ánh xạ 1-1 theo mục lớn");
   assert.ok(promptB.includes("TUYỆT ĐỐI CẤM GỘP"), "Prompt B phải cấm gộp tiểu mục");
   assert.ok(promptB.includes("TUYỆT ĐỐI CẤM BỊA THÊM"), "Prompt B phải cấm bịa thêm hoạt động");
-  assert.ok(/### 1\. Hoạt động 2\.1: Khái niệm tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.1 có thời lượng cố định");
-  assert.ok(/### 2\. Hoạt động 2\.2: Phần tử của tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.2 có thời lượng cố định");
-  assert.ok(/### 3\. Hoạt động 2\.3: Cách viết tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.3 có thời lượng cố định");
+  assert.ok(/### Hoạt động 2\.1: Khái niệm tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.1 có thời lượng cố định");
+  assert.ok(/### Hoạt động 2\.2: Phần tử của tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.2 có thời lượng cố định");
+  assert.ok(/### Hoạt động 2\.3: Cách viết tập hợp \(\d+ phút\)/.test(promptB), "Prompt B phải có chỉ định cho Hoạt động 2.3 có thời lượng cố định");
 
   console.log("  -> getPromptTemplate Activity B: PASS");
 }

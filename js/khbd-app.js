@@ -6034,7 +6034,26 @@ function renderPpctCatalogReview() { const host=document.getElementById("ppctCat
 async function savePpctCatalogToServer() { if(isCanvasGeminiRoute()){localStorage.setItem("khbd_ppct_catalog_canvas",JSON.stringify(appState.ppctCatalog));showToast("Canvas chỉ lưu cục bộ trên trình duyệt; hãy mở Soạn KHBD trên website để lưu CSDL.","info");return;} const meta=ppctCatalogMeta(); const body={...meta,rows:appState.ppctCatalog.rows,source:cleanPpctCatalogSource(appState.ppctCatalog.source,meta)}; const res=await fetch("api/khbd_ppct_catalog.php",{method:"PUT",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(body)}); const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||"Không lưu được CSDL");appState.ppctCatalog.serverId=data.catalog.id;appState.ppctCatalog.source=body.source;saveStateToLocalStorage();showToast("Đã lưu danh mục PPCT vào CSDL.","success"); }
 
 function fillPpctCatalogSubjectOptions() { const select=document.getElementById("ppctCatalogSubject"); if(!select||select.options.length)return; const subjects=(CURRICULUM_DATA?.subjects||[]); select.innerHTML=subjects.map(s=>`<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join(""); }
-function renderPpctCatalogSettingsPreview() { const host=document.getElementById("ppctCatalogSettingsPreview"); if(!host)return; const rows=appState.ppctCatalog.rows||[]; host.innerHTML=rows.length?`<p style="margin:.1rem 0 .6rem;font-weight:700">Xem trước ${rows.length} bài — chỉnh tick NLS/AI trước khi lưu</p>${ppctRowsTable(rows,{maxHeight:"320px"})}`:`<p class="text-muted">Chưa có danh mục để xem trước.</p>`; host.querySelectorAll("input[data-kind]").forEach(input=>input.addEventListener("change",e=>{const row=rows.find(r=>r.id===e.target.closest("tr").dataset.ppctRow);if(row){row[e.target.dataset.kind].enabled=e.target.checked;row[e.target.dataset.kind].manual=true;renderPpctCatalogReview();saveStateToLocalStorage();}})); }
+function renderPpctCatalogSettingsPreview() {
+  const host=document.getElementById("ppctCatalogSettingsPreview");
+  if(!host)return;
+  const rows=appState.ppctCatalog.rows||[];
+  if(!rows.length){host.innerHTML='<p class="text-muted">Chưa có danh mục để xem trước.</p>';return;}
+  const competencyText=(items,fallback)=>{
+    if(Array.isArray(items)&&items.length)return items.map(item=>{const code=String(item?.code||"").trim(),desc=String(item?.description||"").trim(),periods=String(item?.applicable_periods||"").trim();return [code,desc,periods&&`(Áp dụng: ${periods})`].filter(Boolean).join(" - ");}).filter(Boolean).join("<br>");
+    if(fallback?.enabled){const codes=(fallback.codes||[]).map(String).filter(Boolean).join(", "),evidence=String(fallback.evidence||"").trim();return [codes,evidence].filter(Boolean).join(" - ");}
+    return "";
+  };
+  const body=rows.map(row=>{
+    const uncertain=Array.isArray(row.uncertain_fields)?row.uncertain_fields.filter(Boolean):[];
+    const nls=competencyText(row.digital_competency,row.nls),ai=competencyText(row.ai_competency,row.ai);
+    const notes=[String(row.notes||"").trim(),nls&&`<b>NLS:</b> ${escapeHtml(nls).replace(/&lt;br&gt;/g,"<br>")}`,ai&&`<b>AI:</b> ${escapeHtml(ai).replace(/&lt;br&gt;/g,"<br>")}`,uncertain.length&&`<div style="margin-top:.35rem;color:#b45309;font-weight:700">⚠ Cần kiểm tra: ${escapeHtml(uncertain.join(", "))}</div>`].filter(Boolean).join("<br>");
+    const warn=uncertain.length?'background:#fff7ed;':'';
+    return `<tr style="${warn}"><td>${escapeHtml(row.chapter||"")}</td><td>${escapeHtml(row.title||"")}</td><td>${escapeHtml(row.periods==null?"":String(row.periods))}</td><td>${escapeHtml(row.tietCt||row.curriculum_period||"")}</td><td>${escapeHtml(row.week||"")}</td><td>${escapeHtml(row.devices||row.equipment||"")}</td><td>${escapeHtml(row.location||"")}</td><td>${notes}</td></tr>`;
+  }).join("");
+  const uncertainCount=rows.reduce((sum,row)=>sum+(Array.isArray(row.uncertain_fields)&&row.uncertain_fields.length?1:0),0);
+  host.innerHTML=`<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem"><b>PPCT tái tạo từ JSON: ${rows.length} dòng</b>${uncertainCount?`<span style="color:#b45309;font-weight:700">⚠ ${uncertainCount} dòng cần đối chiếu nguồn</span>`:'<span style="color:#15803d;font-weight:700">✓ Không có trường chưa chắc chắn</span>'}</div><div style="max-height:420px;overflow:auto;border:1px solid var(--border);border-radius:.5rem"><table class="data-table" style="min-width:1180px"><thead><tr><th>Chương/Chủ đề</th><th>Bài học/Hoạt động</th><th>Số tiết</th><th>Tiết CT</th><th>Tuần</th><th>Thiết bị</th><th>Địa điểm</th><th>Ghi chú / NLS / AI</th></tr></thead><tbody>${body}</tbody></table></div><p class="text-muted" style="font-size:.82rem;margin:.6rem 0 0">Đối chiếu bảng này với PPCT gốc trước khi bấm Lưu. Các dòng nền cam có trường ChatGPT/Gemini đánh dấu chưa chắc chắn.</p>`;
+}
 function openPpctCatalogSettings() { fillPpctCatalogSubjectOptions(); const grade=document.getElementById("ppctCatalogGrade"), subject=document.getElementById("ppctCatalogSubject"), year=document.getElementById("ppctCatalogYear"), raw=document.getElementById("ppctCatalogRawText"); if(grade)grade.value=appState.selectedGrade;if(subject)subject.value=appState.selectedSubject;if(year)year.value=appState.ppctCatalogAcademicYear||"";if(raw)raw.value=appState.content.ppctAnalysis||""; renderPpctCatalogSettingsPreview(); if(isCanvasGeminiRoute()) showToast("Canvas chỉ lưu danh mục cục bộ; hãy dùng website Soạn KHBD để lưu CSDL.","info"); openModal("modalPpctCatalogSettings"); }
 /** Shared normalizer for Step 2 and Settings. Raw text never becomes CSDL source. */
 async function analyzePpctImport({ media, rawText, targetMeta, onRows } = {}) { const meta={subject:String(targetMeta?.subject||appState.selectedSubject),grade:String(targetMeta?.grade||appState.selectedGrade),academic_year:String(targetMeta?.academic_year||"")}; let rows=parsePpctCatalog(rawText||"",meta); let importMode=rawText?.trim()?"paste":"media"; if(!rows.length && Array.isArray(media) && media.length){ const prompt='Lập danh mục Phụ lục 3. Chỉ trả JSON hợp lệ: {"rows":[{"chapter":"","title":"","periods":null,"tietCt":"","week":"","nls":{"enabled":false,"codes":[]},"ai":{"enabled":false,"codes":[]},"notes":""}]}. Giữ đúng mã/tick NLS và AI nếu thấy.'; const data=parseAiJsonSafely(await geminiAPI.generateContent(prompt,media,getSystemRole(meta.subject,meta.grade),0.1),"Phân tích PPCT"); rows=(data.rows||[]).map((row,index)=>({id:ppctStableId(`${meta.subject}|${meta.grade}|${row.title||""}|${row.tietCt||""}|${index}`),chapter:String(row.chapter||""),header:"",title:String(row.title||"").trim(),periods:Number(row.periods)||null,tietCt:String(row.tietCt||""),week:String(row.week||""),devices:"",location:"",nls:{enabled:!!row.nls?.enabled,codes:Array.isArray(row.nls?.codes)?row.nls.codes:[],evidence:String(row.nls?.evidence||"")},ai:{enabled:!!row.ai?.enabled,codes:Array.isArray(row.ai?.codes)?row.ai.codes:[],evidence:String(row.ai?.evidence||"")},notes:String(row.notes||""),source:{kind:"appendix3"}})).filter(row=>row.title); }
@@ -6463,16 +6482,17 @@ function canvasTextbookAnalysisPrompt(batchLabel) {
     "Trích xuất học liệu SGK đính kèm thành JSON theo từng trường ngắn (fact extraction), không chép nguyên trang.",
     "Mỗi trường chỉ chứa đúng thực thể nhìn thấy trên trang/ảnh/PDF người dùng cung cấp.",
     "BẮT BUỘC giữ nguyên văn 100% tên đề mục, tên hoạt động (HĐ, Luyện tập, Thực hành, Vận dụng), mã bài (Bài 1.36) và đề bài/số liệu/công thức. Công thức dùng LaTeX $...$.",
+    "VỀ ĐỀ MỤC VÀ CHỈ SỐ: BẮT BUỘC sao chép chính xác 100% tên đề mục và chỉ số nhìn thấy trong SGK. Nếu SGK có ghi số/ký hiệu (ví dụ '1. Lũy thừa...', 'I. Khái niệm...', 'A. Định nghĩa...') thì giữ nguyên. Nếu SGK KHÔNG CÓ số thứ tự (chỉ ghi tiêu đề chữ) thì TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý ĐÁNH SỐ THÊM.",
     "CẤM diễn đạt lại, CẤM đổi từ, CẤM rút gọn tên đề mục hoặc đề bài, CẤM bịa thêm mục/bài không nhìn thấy.",
     "TUYỆT ĐỐI KHÔNG điền chỗ trống bằng trí nhớ về bất kỳ bộ SGK nào. Không suy đoán tên đề mục, số mục, số câu, số bài tập hoặc nội dung bài tập nếu chúng không nhìn thấy rõ trong chính trang/ảnh/PDF người dùng cung cấp.",
     "Chỉ coi tên đề mục/chỉ mục/bài tập là dữ kiện khi đọc được rõ ràng và chắc chắn từ nguồn đính kèm; nếu mờ, khuất, thiếu trang hoặc không chắc thì phải ghi vào unknowns là cần đối chiếu SGK, không được biến thành dữ kiện khẳng định.",
     `Phạm vi lô đang phân tích: ${batchLabel}.`,
-    "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"sections\":[{\"index\":\"1\",\"title\":\"\",\"coreKnowledge\":\"\",\"activities\":[{\"label\":\"HĐ 1\",\"task\":\"\"}]}],\"exercises\":[{\"code\":\"Bài 1.36\",\"statement\":\"\"}],\"unknowns\":[\"\"]}.",
-    "sections: 1-4 đề mục lớn, title đúng nguyên văn mục lục SGK; coreKnowledge là quy tắc/định nghĩa/công thức LaTeX; activities gồm HĐ, Luyện tập, Thực hành, Vận dụng với task nguyên văn. exercises: toàn bộ bài tập SGK nhìn thấy, statement nguyên văn đủ số liệu."
+    "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"sections\":[{\"title\":\"\",\"coreKnowledge\":\"\",\"activities\":[{\"label\":\"HĐ 1\",\"task\":\"\"}]}],\"exercises\":[{\"code\":\"Bài 1.36\",\"statement\":\"\"}],\"unknowns\":[\"\"]}.",
+    "sections: 1-4 đề mục lớn, title đúng nguyên văn mục lục SGK (kèm chỉ số nếu SGK có, không tự thêm số nếu SGK không có); coreKnowledge là quy tắc/định nghĩa/công thức LaTeX; activities gồm HĐ, Luyện tập, Thực hành, Vận dụng với task nguyên văn. exercises: toàn bộ bài tập SGK nhìn thấy, statement nguyên văn đủ số liệu."
   ].join("\\n");
 }
 
-function normalizeCanvasTextbookSection(raw, index) {
+function normalizeCanvasTextbookSection(raw) {
   const title = String(raw && raw.title || "").trim();
   if (!title) return null;
   const activities = (Array.isArray(raw && raw.activities) ? raw.activities : []).map(item => ({
@@ -6480,7 +6500,6 @@ function normalizeCanvasTextbookSection(raw, index) {
     task: String(item && item.task || "").trim()
   })).filter(item => item.label || item.task);
   return {
-    index: String(raw && raw.index || index + 1).trim() || String(index + 1),
     title,
     coreKnowledge: String(raw && raw.coreKnowledge || "").trim(),
     activities
@@ -6497,7 +6516,7 @@ function normalizeCanvasTextbookExercise(raw) {
 function parseCanvasTextbookAnalysis(raw) {
   const parsed = parseAiJsonSafely(raw, "Phân tích cấu trúc SGK");
   const sections = (Array.isArray(parsed.sections) ? parsed.sections : [])
-    .map((item, index) => normalizeCanvasTextbookSection(item, index))
+    .map(item => normalizeCanvasTextbookSection(item))
     .filter(Boolean)
     .slice(0, 8);
   const exercises = (Array.isArray(parsed.exercises) ? parsed.exercises : [])
@@ -6577,10 +6596,9 @@ function formatCanvasTextbookContext(data) {
   const sectionLines = [];
   if (sections.length) {
     sectionLines.push("## Đề mục SGK (nguyên văn)");
-    sections.forEach((section, index) => {
-      const idx = section.index || (index + 1);
-      sectionLines.push(`### ${idx}. ${section.title}`);
-      sectionLines.push(`- Mục ${idx}: ${section.title}`);
+    sections.forEach(section => {
+      sectionLines.push(`### ${section.title}`);
+      sectionLines.push(`- Đề mục: ${section.title}`);
       if (section.coreKnowledge) sectionLines.push(`- Kiến thức cốt lõi: ${section.coreKnowledge}`);
       (section.activities || []).forEach(act => {
         if (act.label || act.task) sectionLines.push(`- ${act.label || "Hoạt động"}: ${act.task || ""}`.replace(/\s+:\s*$/, "").trim());
@@ -6589,7 +6607,7 @@ function formatCanvasTextbookContext(data) {
   } else if (data && data.subsections && data.subsections.length) {
     sectionLines.push("## Cấu trúc kiến thức");
     data.subsections.forEach(item => {
-      sectionLines.push(`- ${item.index}. ${item.title} (khối lượng ${item.weight}/6; ${(item.signals || []).join(", ") || "một ý trọng tâm"})`);
+      sectionLines.push(`- Đề mục: ${item.title} (khối lượng ${item.weight}/6; ${(item.signals || []).join(", ") || "một ý trọng tâm"})`);
     });
   }
   const practiceActs = [];
