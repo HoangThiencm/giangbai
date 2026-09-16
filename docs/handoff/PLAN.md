@@ -1,32 +1,29 @@
 # PLAN
 
 ## Hiện trạng
-- Trong `soankhbd.html`, `canvas_soankhbd.html` và `js/khbd-app.js`:
-  1. Khi phân tích SGK, hệ thống đang dùng các câu lệnh cấm đoán ("không chép nguyên văn", "diễn đạt lại") khiến AI tự ý thay đổi từ ngữ, làm sai lệch:
-     - **Tên các đề mục chính trong bài** (1. ..., 2. ...).
-     - **Tên các hoạt động khám phá, luyện tập, thực hành** (HĐ 1, HĐ 2, Luyện tập 1, Thực hành 1...).
-     - **Đề bài, dữ liệu số học, công thức toán học và yêu cầu của các bài tập trong SGK** (Bài 1.1, Bài 1.36...).
-  2. Khi giáo viên soạn bài giảng, các Hoạt động 2 (Hình thành kiến thức), Hoạt động 3 (Luyện tập) và Hoạt động 4 (Vận dụng) bị lệch so với sách học sinh đang cầm, gây nguy hiểm trong thực tế giảng dạy.
+- Trong `js/khbd-app.js` và `js/khbd-prompts.js`:
+  1. Khi phân tích và định dạng đề mục SGK, hệ thống có cơ chế tự động gán số thứ tự tăng dần (`index + 1`, `${idx}. `).
+  2. Điều này dẫn đến các sai phạm nghiêm trọng đối với tính chính xác của SGK:
+     - Nếu SGK **KHÔNG ĐÁNH SỐ** (ví dụ đề mục chỉ ghi tên: *Khởi động*, *Định nghĩa lũy thừa*, *Tổng kết bài học*...), hệ thống lại tự ý đánh số `1.`, `2.`, `3.` vào trước tiêu đề.
+     - Nếu SGK **ĐÃ CÓ ĐÁNH SỐ** (ví dụ: *1. Lũy thừa với số mũ tự nhiên* hoặc *I. Khái niệm*), hệ thống lại chèn thêm số dẫn đến bị lặp số (*1. 1. ...*) hoặc bị ép sai định dạng số (*1. I. ...*).
 
 ## Phạm vi
-- Chuẩn hóa toàn diện quy trình trích xuất học liệu SGK:
-  1. `js/khbd-app.js`:
-     - Tái cấu trúc Prompt phân tích SGK (`canvasTextbookAnalysisPrompt` và các hàm phân tích): Yêu cầu trích xuất **chính xác nguyên văn 100%** các thực thể dữ liệu sư phạm:
-       + Tên Đề mục mục lớn (`sections.title`).
-       + Công thức toán học / Định nghĩa đóng khung (`coreKnowledge`).
-       + Tên và đề bài nguyên văn của từng Hoạt động con (`HĐ 1`, `Luyện tập 1`, `Thực hành 1`, `Vận dụng 1`...).
-       + Tên mã bài và đề bài nguyên văn của toàn bộ hệ thống bài tập SGK (`Bài 1.36: ...`, `Bài 1.37: ...`).
-     - Sử dụng Schema JSON có cấu trúc để Gemini không bị chặn bởi bộ lọc bản quyền `RECITATION`.
-     - Cập nhật `formatCanvasTextbookContext` để xuất văn bản ngữ cảnh rõ ràng, rành mạch từng phần đề mục và bài tập.
-  2. `js/khbd-prompts.js`:
-     - Trong `GENERATE_ACTIVITY_B`: Ràng buộc bắt buộc đặt tên Hoạt động 2.1, 2.2 trùng khớp 100% với tên đề mục SGK đã trích xuất.
-     - Trong `GENERATE_ACTIVITY_C` (Luyện tập): Ràng buộc bắt buộc lấy **nguyên văn 100% đề bài** từ các mục `Luyện tập`, `Thực hành` hoặc bài tập SGK đã trích xuất; tuyệt đối cấm đổi số liệu, cấm tự tạo đề bài lạ ngoài sách.
-     - Trong `GENERATE_ACTIVITY_D` (Vận dụng): Ràng buộc ưu tiên lấy nguyên văn đề bài mục `Vận dụng` trong SGK.
-  3. `canvas_soankhbd.html` & `soankhbd.html`: Đồng bộ cache-busting các tệp JS.
-  4. Test tự động: `tests/khbd-textbook-exact-structure-smoke.js`.
+- Chuẩn hóa quy tắc tuyệt đối về Đề mục và Chỉ mục SGK:
+  1. **Quy tắc bất di bất dịch**:
+     - **SGK có chỉ số/ký hiệu gì thì giữ đúng 100% chỉ số/ký hiệu đó** (ví dụ: `1.`, `2.`, `I.`, `II.`, `A.`, `B.`, `1.1`, `1.2`...).
+     - **SGK KHÔNG CÓ chỉ số thì TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ ĐÁNH SỐ** (giữ nguyên tên đề mục thuần túy, cấm tự chèn `1.`, `2.`, `Mục 1`, `Mục 2`).
+  2. `js/khbd-app.js`:
+     - Cập nhật `canvasTextbookAnalysisPrompt`: Ràng buộc AI ghi trường `title` nguyên văn 100% cả chỉ mục (nếu có) và tên đề mục. CẤM tự ý thêm số thứ tự nếu trang SGK không có.
+     - Cập nhật `normalizeCanvasTextbookSection` & `formatCanvasTextbookContext`:
+       + Bỏ hoàn toàn việc tự động gán `index = index + 1` và bỏ tiền tố `${idx}.`.
+       + Chỉ xuất đúng `### ${section.title}` và `- ${section.title}` (không chèn thêm `Mục ${idx}:` hay `${idx}.`).
+  3. `js/khbd-prompts.js`:
+     - `extractTextbookSubsections`: Giữ nguyên vẹn 100% chuỗi `title` đã trích xuất từ SGK, không tự động sinh số thứ tự đè lên.
+     - `GENERATE_ACTIVITY_B`: Tên các hoạt động con 2.1, 2.2... BẮT BUỘC hiển thị `### Hoạt động 2.k: [Tên nguyên văn đề mục trong SGK]` (nếu SGK có số `1. ...` thì là `### Hoạt động 2.1: 1. ...`, nếu SGK không có số thì là `### Hoạt động 2.1: ...`).
+  4. Cập nhật test tự động `tests/khbd-textbook-exact-structure-smoke.js`.
 
 ## Ngoài phạm vi
-- Không thay đổi các khung tiêu chuẩn sư phạm GDPT 2018 (CV 5512, Khung NLS, Khung AI).
+- Không thay đổi các cấu trúc sư phạm khác.
 
 ## File dự kiến tác động
 - `js/khbd-app.js`
@@ -36,48 +33,34 @@
 - `tests/khbd-textbook-exact-structure-smoke.js`
 
 ## Các bước thực hiện
-1. **Thiết kế lại Prompt trích xuất SGK có cấu trúc trong `js/khbd-app.js`**:
-   - Chuyển sang trích xuất JSON Schema với các trường rõ ràng:
-     ```json
-     {
-       "subject": "Toán",
-       "grade": "6",
-       "topic": "Tên bài học",
-       "periodCount": 2,
-       "sections": [
-         {
-           "index": "1",
-           "title": "Tên nguyên văn Đề mục 1 trong SGK",
-           "coreKnowledge": "Quy tắc, định nghĩa, công thức LaTeX chuẩn",
-           "activities": [
-             { "label": "HĐ 1", "task": "Đề bài / yêu cầu nguyên văn của HĐ 1" },
-             { "label": "Luyện tập 1", "task": "Đề bài nguyên văn của Luyện tập 1" },
-             { "label": "Vận dụng 1", "task": "Đề bài nguyên văn của Vận dụng 1" }
-           ]
-         }
-       ],
-       "exercises": [
-         { "code": "Bài 1.36", "statement": "Đề bài nguyên văn đầy đủ số liệu và biểu thức của Bài 1.36" }
-       ]
-     }
+1. **Sửa `canvasTextbookAnalysisPrompt` trong `js/khbd-app.js`**:
+   - Thêm quy định rõ ràng:
+     `"VỀ ĐỀ MỤC VÀ CHỈ SỐ: BẮT BUỘC sao chép chính xác 100% tên đề mục và chỉ số nhìn thấy trong SGK. Nếu SGK có ghi số/ký hiệu (ví dụ '1. Lũy thừa...', 'I. Khái niệm...', 'A. Định nghĩa...') thì giữ nguyên. Nếu SGK KHÔNG CÓ số thứ tự (chỉ ghi tiêu đề chữ) thì TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý ĐÁNH SỐ THÊM."`
+2. **Sửa `normalizeCanvasTextbookSection` & `formatCanvasTextbookContext` trong `js/khbd-app.js`**:
+   - `normalizeCanvasTextbookSection`: Trả về `{ title: sectionTitle, coreKnowledge, activities }`, không ép `index: index + 1`.
+   - `formatCanvasTextbookContext`:
+     ```javascript
+     sectionLines.push(`### ${section.title}`);
+     sectionLines.push(`- Đề mục: ${section.title}`);
      ```
-2. **Cập nhật `formatCanvasTextbookContext`**:
-   - Trình bày trực quan, đầy đủ từng đề mục và từng đề bài bài tập để nạp vào `{textbook_content}`.
-3. **Cập nhật `GENERATE_ACTIVITY_B`, `GENERATE_ACTIVITY_C`, `GENERATE_ACTIVITY_D` trong `js/khbd-prompts.js`**:
-   - Yêu cầu AI giữ nguyên văn 100% đề bài và số liệu từ dữ liệu SGK đã trích xuất khi đưa vào Hoạt động dạy học và lời giải ở bảng phụ/phiếu học tập.
+     (Tuyệt đối không có `${idx}.` hay `Mục ${idx}:`).
+3. **Sửa `extractTextbookSubsections` trong `js/khbd-prompts.js`**:
+   - Đảm bảo giữ nguyên văn trường `title` của đề mục, không tự động chèn thêm số.
 4. **Kiểm thử tự động**:
+   - Kiểm tra các trường hợp:
+     + SGK có số `1. Lũy thừa...` -> Giữ đúng `1. Lũy thừa...` (không thành `1. 1. ...`).
+     + SGK có số La Mã `I. Khái niệm...` -> Giữ đúng `I. Khái niệm...` (không bị đổi thành `1. Khái niệm...`).
+     + SGK không có số `Khái niệm lũy thừa` -> Giữ nguyên `Khái niệm lũy thừa` (không bị tự động đánh số `1.`).
    - Chạy `node tests/khbd-textbook-exact-structure-smoke.js` và `node tests/canvas-soankhbd-smoke.js`.
 
 ## Rủi ro
-- Lỗi bản quyền `RECITATION`: Đã phòng ngừa bằng việc trích xuất JSON theo từng trường dữ liệu ngắn (Fact extraction) thay vì xuất nguyên văn toàn trang văn bản.
-- Đề bài chứa công thức toán học phức tạp: Sử dụng ký hiệu LaTeX `$ ... $` chuẩn mực để giữ độ chính xác của biểu thức.
+- Phân bổ thời lượng (`subsections`): Dùng số lượng các mục thực tế có trong bài để tính toán thời gian cho Hoạt động B mà không cần phụ thuộc vào việc tiêu đề có đánh số hay không.
 
 ## Cách kiểm thử
 - `node tests/khbd-textbook-exact-structure-smoke.js`.
-- Kiểm tra dữ liệu trích xuất hiển thị trong ô "Nội dung SGK đã đọc" có đúng 100% đề mục và đề bài bài tập.
 
 ## Tiêu chí nghiệm thu
-- Tên các Đề mục (1. ..., 2. ...) trong giáo án trùng khớp 100% với mục lục và tiêu đề trong SGK.
-- Đề bài các bài Luyện tập, Vận dụng, Bài tập trong giáo án trùng khớp 100% về câu chữ, số liệu, công thức với SGK thật.
-- Không xảy ra lỗi từ chối bản quyền `RECITATION`.
-- Mọi bài kiểm thử smoke đều PASS 100%.
+- 100% đúng đề mục và chỉ số theo SGK.
+- SGK không có chỉ số -> Tuyệt đối không tự động đánh số.
+- SGK có chỉ số (1, 2, I, II, A, B) -> Giữ nguyên văn đúng chỉ số đó, không bị lặp số đúp (`1. 1. ...`).
+- Tất cả smoke test PASS 100%.

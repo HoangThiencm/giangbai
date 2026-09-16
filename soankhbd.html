@@ -186,8 +186,12 @@
         </div>
         <div class="panel-box" style="margin-top:1rem;">
           <div class="panel-header"><span>1. Tạo JSON từ Word/PDF bằng ChatGPT hoặc Gemini</span></div>
-          <p class="text-muted" style="font-size:.85rem;margin:.25rem 0 .65rem;">Tải file PPCT gốc lên ChatGPT/Gemini, sau đó dán Prompt chuẩn. AI chỉ được chuyển đổi nội dung PPCT sang JSON, không được tự sửa hoặc suy đoán.</p>
-          <button id="btnCopyPpctPrompt" type="button" class="btn btn-primary"><i data-lucide="copy"></i> Sao chép Prompt PPCT → JSON</button>
+          <p class="text-muted" style="font-size:.85rem;margin:.25rem 0 .65rem;">Chọn file PPCT gốc để ghi nhớ đúng tệp đang xử lý. Hệ thống không tự đọc file này; hãy tải chính file đó lên ChatGPT/Gemini rồi dán Prompt chuẩn.</p>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+            <label class="btn btn-outline-dark" style="cursor:pointer;"><i data-lucide="file-up"></i> Chọn Word/PDF PPCT<input id="ppctSourceFileInput" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,application/pdf" hidden></label>
+            <span id="ppctSourceFileName" class="text-muted" style="font-size:.85rem;">Chưa chọn file nguồn.</span>
+          </div>
+          <button id="btnCopyPpctPrompt" type="button" class="btn btn-primary" style="margin-top:.65rem;"><i data-lucide="copy"></i> Sao chép Prompt PPCT → JSON</button>
         </div>
         <div class="panel-box" style="margin-top:.75rem;">
           <div class="panel-header"><span>2. Nhập JSON PPCT vào hệ thống</span></div>
