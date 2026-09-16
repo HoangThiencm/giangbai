@@ -251,9 +251,11 @@
         <span class="khbd-step-arrow" aria-hidden="true">→</span>
         <div class="khbd-step" data-step="2">
           <span class="khbd-step-num">2</span>
-          <div>
-            <strong>Bước 2: Nạp &amp; Đọc PPCT</strong>
-            <span id="step2Badge" class="khbd-step-badge">Chưa nạp PPCT</span>
+          <div style="min-width:230px;">
+            <strong>Bước 2: PPCT đã lưu</strong>
+            <span id="step2Badge" class="khbd-step-badge">Đang kiểm tra CSDL...</span>
+            <select id="step2PpctLessonSelect" style="display:none;width:100%;margin-top:.35rem;padding:.28rem .4rem;font-size:.82rem;" aria-label="Chọn bài từ PPCT đã lưu"></select>
+            <button id="btnStep2PpctSettings" class="btn btn-outline-dark btn-sm" type="button" style="margin-top:.35rem;">⚙ Cài đặt PPCT</button>
           </div>
         </div>
         <span class="khbd-step-arrow" aria-hidden="true">→</span>
@@ -276,7 +278,7 @@
         </div>
       </nav>
       <div class="tab0-subtabs-nav" role="tablist" aria-label="Thiết lập bài dạy và học liệu nguồn">
-        <button type="button" class="tab0-subtab-btn active" data-tab0-sub="tab0-sub-materials">📁 1. Gửi file &amp; Đọc SGK/PPCT</button>
+        <button type="button" class="tab0-subtab-btn active" data-tab0-sub="tab0-sub-materials">📁 1. Gửi file &amp; Đọc SGK</button>
         <button type="button" class="tab0-subtab-btn" data-tab0-sub="tab0-sub-lesson-info">✍️ 2. Thông tin bài &amp; Lớp</button>
         <button type="button" class="tab0-subtab-btn" data-tab0-sub="tab0-sub-pedagogy-digital">⚡ 3. PPDH, Năng lực số &amp; Môn</button>
         <button type="button" class="tab0-subtab-btn" data-tab0-sub="tab0-sub-ai-competency">✨ 4. Năng lực AI (QĐ 2422)</button>
@@ -351,13 +353,13 @@
                   <div id="previewVision" class="preview-rendered"></div>
                 </div>
               </div>
-              <div id="ppctCatalogReview" class="panel-box" style="margin-top:1rem;"></div>
+              <div id="ppctCatalogReview" style="display:none"></div>
             </div>
           </details>
         </div>
 
         <!-- Cột 2: PHÂN PHỐI CHƯƠNG TRÌNH -->
-        <div id="lessonPpctAnalysis">
+        <div id="lessonPpctAnalysis" style="display:none">
           <div class="card">
             <div class="card-header">
               <h2 class="card-title"><i data-lucide="calendar-range"></i> 2. Phân phối chương trình (PPCT)</h2>
