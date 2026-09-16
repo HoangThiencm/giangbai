@@ -1109,7 +1109,7 @@
   <script>
     (function () {
       const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v14"}"><\/script>`);
+        document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v15"}"><\/script>`);
     })();
   </script>
   <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260916-canvas-module-v9"></script>
@@ -1199,6 +1199,9 @@
 
   <!-- Patch Gemini Runtime + Canvas Confirm TRƯỚC khbd-app.js -->
   <script>
+    if (typeof window.getSystemRole === "undefined") {
+      window.getSystemRole = function () { return ""; };
+    }
     const memoryStorage = Object.create(null);
     function getCanvasStorage() {
       var nativeStorage = null;

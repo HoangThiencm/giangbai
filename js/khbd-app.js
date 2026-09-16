@@ -6843,7 +6843,7 @@ async function analyzeCanvasTextbookSafely(onProgress) {
   for (let index = 0; index < batches.length; index++) {
     const batch = batches[index];
     if (typeof onProgress === "function") onProgress(`Đang phân tích SGK ${index + 1}/${batches.length}...`, Math.round(20 + ((index + 1) / batches.length) * 70));
-    const raw = await geminiAPI.generateContent(canvasTextbookAnalysisPrompt(batch.label), batch.media, getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.1, null, {
+    const raw = await geminiAPI.generateContent(canvasTextbookAnalysisPrompt(batch.label), batch.media, typeof getSystemRole === "function" ? getSystemRole(appState.selectedSubject, appState.selectedGrade) : (typeof window !== "undefined" && typeof window.getSystemRole === "function" ? window.getSystemRole(appState.selectedSubject, appState.selectedGrade) : ""), 0.1, null, {
       maxOutputTokens: 4096,
       timeoutMs: 105000
     });

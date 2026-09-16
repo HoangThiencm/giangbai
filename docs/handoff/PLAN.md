@@ -2,92 +2,101 @@
 
 ## Hiện trạng & Nguyên nhân gốc rễ (Root Cause)
 
-### 1. Lỗi banner "Không tải được danh mục chương trình từ host; đang dùng danh mục dự phòng để chọn môn và bài học."
-- **Hiện tượng**: Khi mở `canvas_soankhbd.html` trên Gemini Canvas, xuất hiện banner cảnh báo lỗi màu đỏ/vàng trên đầu trang.
+### 1. Lỗi runtime `ReferenceError: getSystemRole is not defined` khi bấm "Đọc sách giáo khoa"
+- **Hiện tượng**: Khi người dùng tải ảnh/PDF SGK và bấm "Đọc sách giáo khoa", console báo lỗi:
+  ```
+  [CONSOLE_ERROR] OCR SGK: Error: getSystemRole is not defined
+  Stack: ReferenceError: getSystemRole is not defined
+      at analyzeCanvasTextbookSafely (https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-textbook-exact-v15:1:443316)
+      at async HTMLButtonElement.readTextbookWithMistral (https://hoangthiencm.id.vn/js/khbd-app.js?v=20260916-textbook-exact-v15:1:449777)
+  ```
 - **Nguyên nhân gốc rễ**:
-  - Khi khởi động, hàm `bootstrapCanvasCoreModules()` tải file `https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260916-canvas-module-v8`.
-  - Kiểm tra thực tế bằng lệnh mạng (`curl -I`): Máy chủ `hoangthiencm.id.vn` trả về `HTTP 200 OK` nhưng `Content-Length: 0` (file trên máy chủ đang bị rỗng 0 bytes, do quá trình upload FTP trước đó bị ngắt hoặc lỗi).
-  - Do file rỗng 0 bytes, `window.CURRICULUM_DATA` không được định nghĩa, hàm kiểm tra `hasCurriculum()` trả về `false`.
-  - Trình duyệt kích hoạt hàm `installCurriculumFallback()`, gán cờ `cfg.moduleFallback.curriculum = true`.
-  - Hàm `initConnection()` phát hiện cờ này và hiển thị thông báo lỗi trên banner: *"Không tải được danh mục chương trình từ host; đang dùng danh mục dự phòng để chọn môn và bài học."*
+  1. `getSystemRole` được định nghĩa trong `js/khbd-prompts.js` (dòng 1213) và gán ra toàn cục `window.getSystemRole = getSystemRole` (dòng 1702).
+  2. Kiểm tra trực tiếp trên máy chủ bằng `curl -I https://hoangthiencm.id.vn/js/khbd-prompts.js` cho thấy phản hồi HTTP `200 OK` nhưng `Content-Length: 0` (tệp trên hosting đang bị rỗng 0 bytes). Do đó trình duyệt tải về tệp rỗng, hàm `getSystemRole` hoàn toàn không tồn tại trong môi trường Canvas.
+  3. Workflow GitHub Actions `.github/workflows/ftp-deploy.yml` chỉ upload các file có thay đổi trong commit diff (`SamKirkland/FTP-Deploy-Action`). Do `js/khbd-prompts.js` không có commit thay đổi gần đây nên action bỏ qua, khiến file 0 bytes bị kẹt trên máy chủ LiteSpeed.
+  4. Trong `js/khbd-app.js` (dòng 6846), hàm `analyzeCanvasTextbookSafely` gọi trực tiếp `getSystemRole(appState.selectedSubject, appState.selectedGrade)` mà không có kiểm tra phòng vệ `typeof getSystemRole === "function"`, dẫn đến ném lỗi `ReferenceError` làm dừng toàn bộ tiến trình OCR SGK.
 
-### 2. Stepper hiển thị số "1 3 4" thay vì "1 2 3"
-- **Hiện tượng**: Trên thanh quy trình Stepper đầu trang Tab 0, 3 bước hiển thị có số vòng tròn là 1, 3, 4 trong khi nhãn là Bước 1, Bước 2, Bước 3.
+### 2. Lỗi banner "Không tải được danh mục chương trình từ host; đang dùng danh mục dự phòng..."
+- **Hiện tượng**: Mở `canvas_soankhbd.html` xuất hiện banner cảnh báo màu đỏ/vàng trên đầu trang.
 - **Nguyên nhân gốc rễ**:
-  - Trong `canvas_soankhbd.html` (dòng 343–376):
-    - Bước 1 (`data-step="1"`): Số `<span class="khbd-step-num">1</span>`, tiêu đề `Bước 1: Nạp & Đọc SGK`.
-    - Bước 2 (`data-step="2"`): `Bước 2: PPCT đã lưu` bị ẩn (`hidden style="display:none"`).
-    - Bước 3 (`data-step="3"`): Nhãn text là `Bước 2: Kế hoạch PPDH & Tích hợp NLS/AI (Ưu tiên từ PPCT)`, nhưng số vòng tròn hiển thị vẫn còn là `<span class="khbd-step-num">3</span>`.
-    - Bước 4 (`data-step="4"`): Nhãn text là `Bước 3: Tích hợp AI & Soạn bài`, nhưng số vòng tròn hiển thị vẫn còn là `<span class="khbd-step-num">4</span>`.
-  - Do đó người dùng thấy 3 vòng tròn nối tiếp nhau mang số `1`, `3`, `4`.
+  - `https://hoangthiencm.id.vn/js/khbd-curriculum.js` trên hosting cũng đang có `Content-Length: 0` (0 bytes).
+  - Tệp rỗng khiến `window.CURRICULUM_DATA` không được khởi tạo, kích hoạt `installCurriculumFallback()`, gán `cfg.moduleFallback.curriculum = true` và làm banner hiển thị cảnh báo lỗi.
+
+### 3. Stepper hiển thị số "1 3 4" thay vì "1 2 3"
+- **Hiện tượng**: 3 bước hiển thị trên thanh quy trình Tab 0 có số vòng tròn là 1, 3, 4 trong khi nhãn là Bước 1, Bước 2, Bước 3.
+- **Nguyên nhân gốc rễ**:
+  - Bước 2 (`data-step="2"`) bị ẩn (`hidden`), khối Bước 3 (`data-step="3"`) mang nhãn `Bước 2` nhưng số hiển thị trong span là `3`, khối Bước 4 (`data-step="4"`) mang nhãn `Bước 3` nhưng số hiển thị trong span là `4`.
 
 ---
 
 ## Phạm vi thực hiện
 
-1. **Điều chỉnh số bước Stepper trong `canvas_soankhbd.html`**:
-   - Đổi số hiển thị của bước thứ 2 (khối `data-step="3"`) từ `<span class="khbd-step-num">3</span>` thành `<span class="khbd-step-num">2</span>`.
-   - Đổi số hiển thị của bước thứ 3 (khối `data-step="4"`) từ `<span class="khbd-step-num">4</span>` thành `<span class="khbd-step-num">3</span>`.
-   - Giữ nguyên các thuộc tính `data-step="3"` và `data-step="4"`, cùng toàn bộ ID phần tử (`step3Badge`, `step4Badge`, `btnStep3Recommend`, `btnStartComposeFromStep4`) để giữ nguyên vẹn logic cập nhật trạng thái `is-done`/`is-active` và điều hướng click của `js/khbd-app.js`.
-   - Cập nhật `aria-label` của `#khbdWorkflowStepper` thành `"Quy trình 3 bước soạn KHBD"`.
-   - Đồng bộ tương tự cho `backupcode viettailieu/canvas_soankhbd.html`.
+1. **Khắc phục lỗi `getSystemRole is not defined` và re-upload `js/khbd-prompts.js`**:
+   - Thêm/cập nhật dòng phiên bản deploy ở đầu tệp `js/khbd-prompts.js` (ví dụ `// Deploy version: 20260916-textbook-exact-v15`) để tạo git diff, kích hoạt FTP-Deploy-Action tải toàn bộ 138.942 bytes lên hosting `hoangthiencm.id.vn`.
+   - Trong `js/khbd-app.js` (dòng 6846): Bọc kiểm tra phòng vệ an toàn khi gọi `getSystemRole`:
+     ```javascript
+     typeof getSystemRole === "function" ? getSystemRole(appState.selectedSubject, appState.selectedGrade) : (typeof window !== "undefined" && typeof window.getSystemRole === "function" ? window.getSystemRole(appState.selectedSubject, appState.selectedGrade) : "")
+     ```
+   - Trong `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`:
+     - Tăng query cache-busting cho `khbd-prompts.js` từ `?v=20260916-textbook-exact-v14` lên `?v=20260916-textbook-exact-v15` để trình duyệt và proxy LiteSpeed không giữ file 0-byte trong bộ đệm.
+     - Bổ sung fallback stub an toàn trước khi nạp `khbd-app.js`:
+       ```javascript
+       if (typeof window.getSystemRole === "undefined") {
+         window.getSystemRole = function () { return ""; };
+       }
+       ```
 
 2. **Khắc phục lỗi nạp danh mục chương trình (Curriculum Module)**:
-   - Re-upload file `js/khbd-curriculum.js` đầy đủ (173.6 KB trong repo) lên hosting `https://hoangthiencm.id.vn/js/khbd-curriculum.js`.
-   - Tăng chuỗi phiên bản cache-busting trong `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html` từ `20260916-canvas-module-v8` lên `20260916-canvas-module-v9` (hoặc `v10`) để trình duyệt và proxy LiteSpeed không giữ bản 0-byte trong bộ nhớ cache.
+   - File `js/khbd-curriculum.js` (dòng 9) đã đổi `KHBD_CURRICULUM_DEPLOY_VERSION = "canvas-module-v9";` để tạo git diff cho FTP-Deploy-Action tải toàn bộ 173.676 bytes lên host.
+   - Cache-busting các module Canvas trong HTML đã được nâng lên `20260916-canvas-module-v9`.
+
+3. **Điều chỉnh số bước Stepper trong `canvas_soankhbd.html` & bản backup**:
+   - Xác nhận khối `data-step="3"` hiển thị `<span class="khbd-step-num">2</span>`.
+   - Xác nhận khối `data-step="4"` hiển thị `<span class="khbd-step-num">3</span>`.
+   - Giữ nguyên các thuộc tính `data-step="3"`, `data-step="4"` và các ID DOM để giữ nguyên vẹn logic của `khbd-app.js`.
 
 ---
 
 ## Ngoài phạm vi
-- Không can thiệp sửa đổi cấu trúc dữ liệu bên trong `js/khbd-curriculum.js` hoặc logic sinh bài của AI.
+- Không can thiệp sửa đổi cấu trúc dữ liệu bên trong `js/khbd-curriculum.js` hay logic sinh bài chính của AI.
 - Không thay đổi hành vi quy trình 4 bước của trang web chính `soankhbd.html`.
 
 ---
 
 ## File dự kiến tác động
-- `canvas_soankhbd.html`
-- `backupcode viettailieu/canvas_soankhbd.html`
-- `tests/canvas-module-fallback-smoke.js`
-- `tests/canvas-soankhbd-smoke.js`
-- Hosting: `https://hoangthiencm.id.vn/js/khbd-curriculum.js` (re-upload file 173 KB).
+- `js/khbd-prompts.js` (thêm comment version để kích hoạt FTP deploy)
+- `js/khbd-app.js` (thêm kiểm tra phòng vệ `typeof getSystemRole === "function"`)
+- `canvas_soankhbd.html` (bump version `khbd-prompts.js` lên v15, thêm fallback stub `getSystemRole`)
+- `backupcode viettailieu/canvas_soankhbd.html` (đồng bộ tương tự)
+- `js/khbd-curriculum.js` (đã sửa v9 để kích hoạt FTP deploy)
 
 ---
 
-## Các bước thực hiện
-1. Sửa file `canvas_soankhbd.html`:
-   - Đổi `<span class="khbd-step-num">3</span>` thành `<span class="khbd-step-num">2</span>` ở khối `data-step="3"`.
-   - Đổi `<span class="khbd-step-num">4</span>` thành `<span class="khbd-step-num">3</span>` ở khối `data-step="4"`.
-   - Cập nhật `aria-label="Quy trình 3 bước soạn KHBD"`.
-   - Tăng version query string của các module Canvas lên `20260916-canvas-module-v9`.
-2. Đồng bộ các thay đổi trên vào `backupcode viettailieu/canvas_soankhbd.html`.
-3. Re-upload `js/khbd-curriculum.js` lên hosting `hoangthiencm.id.vn`.
-4. Cập nhật test smoke tests và chạy kiểm thử tự động.
-
----
-
-## Rủi ro & Cách phòng tránh
-- **Rủi ro vỡ điều hướng JS**: Nếu đổi `data-step="3"` thành `data-step="2"`, hàm `revealTab0WorkflowStep()` sẽ chuyển nhầm subtab (vào vật liệu học thay vì bảng PPDH/NLS).
-  - *Phòng tránh*: Chỉ sửa nội dung text hiển thị trong `<span class="khbd-step-num">`, giữ nguyên giá trị thuộc tính `data-step`.
-- **Rủi ro cache 0-byte**: Trình duyệt có thể lưu cache phản hồi HTTP 200 (0 bytes) của file `khbd-curriculum.js`.
-  - *Phòng tránh*: Tăng query version `?v=20260916-canvas-module-v9`.
-
----
-
-## Cách kiểm thử
-1. **Kiểm tra giao diện Stepper**:
-   - Mở `canvas_soankhbd.html`: 3 vòng tròn bước hiển thị theo thứ tự `1` -> `2` -> `3`.
-   - Nhãn tương ứng: `Bước 1: Nạp & Đọc SGK`, `Bước 2: Kế hoạch PPDH & Tích hợp NLS/AI (Ưu tiên từ PPCT)`, `Bước 3: Tích hợp AI & Soạn bài`.
-2. **Kiểm tra tương tác Stepper**:
-   - Bấm vào vòng tròn 2 / Bước 2: Tự động cuộn đến card đề xuất PPDH & NLS (`lessonStep3RecommendCard`).
-   - Bấm vào nút `⚡ Đề xuất PPDH & NLS`: Hoạt động bình thường.
-   - Bấm vào vòng tròn 3 / Bước 3: Chuyển đến phần AI.
-3. **Kiểm tra kết nối host**:
-   - `curl -I "https://hoangthiencm.id.vn/js/khbd-curriculum.js?v=20260916-canvas-module-v9"` trả về `Content-Length > 150000`.
-   - Banner màu xanh hiện lên: `Đã kết nối host hoangthiencm.id.vn — dùng Gemini Canvas (gemini-3-flash-preview)...`.
+## Các bước thực hiện cho Coder
+1. **Sửa `js/khbd-prompts.js`**:
+   - Ở đầu file (dòng 1-8), thêm chú thích deploy:
+     `// Deploy version: 20260916-textbook-exact-v15`
+2. **Sửa `js/khbd-app.js`**:
+   - Tại dòng 6846, thay `getSystemRole(appState.selectedSubject, appState.selectedGrade)` thành:
+     `typeof getSystemRole === "function" ? getSystemRole(appState.selectedSubject, appState.selectedGrade) : (typeof window !== "undefined" && typeof window.getSystemRole === "function" ? window.getSystemRole(appState.selectedSubject, appState.selectedGrade) : "")`
+3. **Sửa `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`**:
+   - Cập nhật dòng nhúng `khbd-prompts.js` từ `?v=20260916-textbook-exact-v14` thành `?v=20260916-textbook-exact-v15`.
+   - Trong khối script fallback trước `khbd-app.js`, bổ sung:
+     ```javascript
+     if (typeof window.getSystemRole === "undefined") {
+       window.getSystemRole = function () { return ""; };
+     }
+     ```
+4. **Kiểm tra smoke test**:
+   - Chạy `python C:\Users\HoangThien\.gemini\antigravity\brain\7ddd6240-4311-4b35-b755-f9a3e9f49765\scratch\test_verify.py`.
+   - Chạy `node tests/canvas-soankhbd-smoke.js`.
+5. **Ghi nhận `docs/handoff/IMPLEMENT.md`**:
+   - Ghi lại các thay đổi đã thực hiện và bàn giao cho `/verify`.
 
 ---
 
 ## Tiêu chí nghiệm thu
-1. Các vòng tròn trên thanh Stepper hiển thị chính xác chuỗi số `1`, `2`, `3`.
-2. Không còn lệch số (1 - 3 - 4).
-3. Khi file `js/khbd-curriculum.js` được re-upload lên hosting, banner báo lỗi biến mất và hiển thị thông báo kết nối thành công.
+1. `analyzeCanvasTextbookSafely` không bao giờ ném lỗi `ReferenceError: getSystemRole is not defined` kể cả khi tệp `khbd-prompts.js` bị trễ mạng hoặc thiếu.
+2. `js/khbd-prompts.js` và `js/khbd-curriculum.js` có git diff để CI/CD FTP Deploy tự động tải đầy đủ kích thước (>100KB) lên hosting khi commit & push.
+3. Stepper hiển thị chính xác các số `1`, `2`, `3`.
+4. Không còn banner cảnh báo lỗi nạp danh mục chương trình.
