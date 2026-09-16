@@ -6146,10 +6146,12 @@ function filterPpctCatalogRows(rows, filter, search) {
 function ppctRowCodes(row, kind) {
   if (kind === "nls") {
     const fromField = Array.isArray(row?.digital_competency) ? row.digital_competency.map(item => item?.code || item).filter(Boolean) : [];
-    return (row?.nls?.codes || []).concat(fromField).map(String).filter(Boolean);
+    const raw = (row?.nls?.codes || []).concat(fromField).map(value => String(value || "").trim()).filter(Boolean);
+    return Array.from(new Set(raw));
   }
   const fromField = Array.isArray(row?.ai_competency) ? row.ai_competency.map(item => item?.code || item).filter(Boolean) : [];
-  return (row?.ai?.codes || []).concat(fromField).map(String).filter(Boolean);
+  const raw = (row?.ai?.codes || []).concat(fromField).map(value => String(value || "").trim()).filter(Boolean);
+  return Array.from(new Set(raw));
 }
 function applyPpctCatalogRow(id) {
   const row = (appState.ppctCatalog.rows || []).find(r => r.id === id);

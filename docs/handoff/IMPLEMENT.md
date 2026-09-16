@@ -1,10 +1,10 @@
-# IMPLEMENT: Tiết Luyện tập / Ôn tập đủ 4 hoạt động, B ≠ 0
+# IMPLEMENT: Khử trùng mã NLS và AI từ PPCT
 
-Đã triển khai đúng PLAN.md:
+Đã triển khai đúng `docs/handoff/PLAN.md`.
 
-- `calculateActivityTimeBudgets`: tiết Luyện tập/Ôn tập không còn `timeB = 0`. Phân bổ A 5–8 phút, B ~25% (22 phút/90p, 11 phút/45p), D ~10–12%, C phần còn lại ~55%, E = 0. Nhánh 2.1/2.2 chia đều B.
-- Prompt Hoạt động B và 1-Click: khi `isPracticeOrReviewLesson` thì định hướng “Hệ thống hóa kiến thức trọng tâm & hướng dẫn giải ví dụ mẫu SGK”, đủ 4 bước và cột phải lời giải ví dụ.
-- `canvas_soankhbd.html` giữ `gemini-3-flash-preview`; bản backup đồng bộ cùng model.
-- Test: `khbd-time-budgets-smoke.js` (B=22, A+B+C+D=90, E=0); `canvas-soankhbd-smoke.js` khớp `gemini-3-flash-preview`.
+- Cập nhật duy nhất hàm `ppctRowCodes` trong `js/khbd-app.js`.
+- Chuẩn hóa mã bằng `String(...).trim()` và dùng `Set` để chỉ giữ một lần mỗi mã khi dữ liệu đồng thời có trong `nls`/`digital_competency` hoặc `ai`/`ai_competency`.
+- Thêm `tests/ppct-dedupe-smoke.js` để kiểm tra mã NLS `1.2.TC1a` và AI `6.A1.1` không còn lặp.
+- Đã tạo lại `docs/handoff/.lock` với nội dung `LOCK` sau khi sửa mã nguồn.
 
-File: `js/khbd-prompts.js`, `js/khbd-app.js`, `canvas_soankhbd.html`, `backupcode viettailieu/canvas_soankhbd.html`, `tests/khbd-time-budgets-smoke.js`, `tests/canvas-soankhbd-smoke.js`.
+Kiểm thử Node chưa thể chạy trong môi trường hiện tại vì Windows chặn tiến trình `node.exe` là tệp có khả năng không mong muốn. Cần chạy `/verify` trên Antigravity IDE để xác nhận PASS toàn bộ suite.
