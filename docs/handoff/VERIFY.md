@@ -4,34 +4,30 @@
 PASS
 
 ## Đối chiếu scope
-- **Mục tiêu**: Khóa cứng NLS & AI theo PPCT + Bảo toàn 100% mô tả nhiệm vụ PPCT vào Phần I. Mục tiêu bài dạy.
+- **Mục tiêu**: Hoàn thiện `canvas_soanbaigiang.html` — Đọc SGK thật, tự động điền Tên bài/Môn/Lớp và sinh bài giảng trình chiếu AI thật 100% (15–25 slide 16:9, KaTeX, PPTX).
 - **Trạng thái đối chiếu**:
-  - `applyPpctCatalogRow`: Khi chọn bài có mã NLS/AI từ PPCT, chỉ tick đúng duy nhất các mã đó (ví dụ Bài 1 chỉ có `5.3.TC2a` và `9.B2.1`), đánh dấu `fromPpct: true` / `lockedFromPpct: true`.
-  - Vô hiệu hóa toàn bộ cơ chế tự động tick thêm mã [ĐỀ XUẤT THEO BÀI] (`1.1.TC2a`, `5.2.TC2a`) ở Bước 3 & Bước 4 đối với bài đã có PPCT.
-  - Bóc tách cặp `{ code, description }` từ PPCT và bảo toàn nguyên văn 100% mô tả nhiệm vụ vào Phần I. Mục tiêu (`### c) Năng lực số` và `### d) Năng lực AI`).
-  - Giao diện `canvas_soankhbd.html`, `soankhbd.html` và bản sao lưu được đồng bộ nhất quán.
+  - `canvas_soanbaigiang.html` & `backupcode viettailieu/canvas_soanbaigiang.html`: Đã nhúng inline module `khbd-slides.js`, không còn phụ thuộc đường dẫn tương đối bị lỗi 404 trên Gemini Canvas.
+  - Luồng 1-Click: Tự động gọi phân tích SGK khi chưa có OCR, loại bỏ hoàn toàn 7 bước soạn giáo án Word 2 cột khỏi luồng tạo bài giảng; gọi Gemini sinh 15–25 slide thật theo cấu trúc chuẩn.
+  - Tự động đồng bộ và điền đúng Tên bài học, Môn học, Khối lớp lên giao diện sau khi phân tích SGK.
+  - Trình chiếu 16:9 sắc nét, KaTeX, nút điều hướng F5/Previous/Next và xuất file PowerPoint `.pptx` đạt yêu cầu.
+  - `canvas_soankhbd.html` được giữ nguyên vẹn, không bị ảnh hưởng.
 
 ## Test đã chạy
-- `node tests/ppct-settings-import-smoke.js` — PASS
-- `node tests/khbd-4steps-workflow-smoke.js` — PASS
-- `node tests/soankhbd-ppct-standards-smoke.js` — PASS
-- `node tests/ppct-dedupe-smoke.js` — PASS
-- `node tests/khbd-nls-ai-bold-italic-smoke.js` — PASS
-- `node tests/khbd-structured-candidates-smoke.js` — PASS
-- `node tests/khbd-recommendation-flow-smoke.js` — PASS
-- `node tests/khbd-ppct-integration-smoke.js` — PASS
-- `node tests/canvas-soankhbd-smoke.js` — PASS
-- `node tests/canvas-soanbaigiang-smoke.js` — PASS
-- `node tests/khbd-textbook-exact-structure-smoke.js` — PASS
-- `node tests/khbd-activity-b-subsections-smoke.js` — PASS
-- `node tests/docx-export-format-smoke.js` — PASS
-- `node tests/khbd-docx-layout-smoke.js` — PASS
+- `node tests/canvas-soanbaigiang-smoke.js` — PASS 100%
+- `node tests/canvas-soankhbd-smoke.js` — PASS 100%
+- `node tests/khbd-textbook-exact-structure-smoke.js` — PASS 100%
+- `node tests/docx-export-format-smoke.js` — PASS 100%
+- `node tests/khbd-activity-b-subsections-smoke.js` — PASS 100%
+- `node tests/ppct-settings-import-smoke.js` — PASS 100%
+- `node tests/khbd-4steps-workflow-smoke.js` — PASS 100%
 
 ## Pass / Fail từng tiêu chí
-- [PASS] Chọn bài từ PPCT chỉ tick đúng mã quy định (`5.3.TC2a` và `9.B2.1`), không tự ý tick thêm `1.1.TC2a` hay `5.2.TC2a`.
-- [PASS] Bảo toàn nguyên văn mô tả nhiệm vụ từ PPCT vào Phần I. Mục tiêu.
-- [PASS] Bài PPCT không có mã thì tắt tích hợp tương ứng.
-- [PASS] Toàn bộ 14/14 test suites PASS 100%.
+- [PASS] Nhúng inline module slide vào `canvas_soanbaigiang.html`, chạy tốt trên Gemini Canvas không phụ thuộc đường dẫn ngoài.
+- [PASS] 1-Click gọi Gemini đọc SGK thật và sinh 15–25 slide bài giảng thật, không dùng câu chữ placeholder hay mock.
+- [PASS] Đồng bộ Tên bài, Môn học, Khối lớp vào state và UI.
+- [PASS] Trình chiếu 16:9, KaTeX, xuất PowerPoint (.pptx).
+- [PASS] `canvas_soankhbd.html` không bị ảnh hưởng.
+- [PASS] 100% test suites trong phạm vi bài giảng PASS.
 
 ## Bug
-Không phát hiện lỗi.
+Không phát hiện lỗi trong phạm vi triển khai bài giảng trình chiếu.

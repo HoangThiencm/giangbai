@@ -34,7 +34,8 @@ for (const [label, doc] of [['canvas_soanbaigiang.html', html], ['backup', backu
   assert.ok(doc.includes('gemini-3-flash-preview'), `${label} giữ model gemini-3-flash-preview`);
   assert.ok(doc.includes('https://hoangthiencm.id.vn/api/canvas_gemini.php'), `${label} giữ endpoint Canvas Gemini`);
   assert.ok(doc.includes('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js'), `${label} nạp PptxGenJS CDN`);
-  assert.ok(doc.includes('js/khbd-slides.js'), `${label} nạp khbd-slides.js`);
+  assert.ok(doc.includes(slidesSrc.trim()), label + ' nhúng nguyên module slide');
+  assert.doesNotMatch(doc, /src=["']js\/khbd-slides\.js/, label + ' không tải module tương đối');
   assert.doesNotMatch(doc, /https:\/\/hoangthiencm\.id\.vn\/js\/khbd-slides\.js/, `${label} không phụ thuộc bundle slides từ host ngoài`);
   assert.ok(ids.has('slideStage'), `${label} phải có khung slide 16:9 #slideStage`);
   assert.ok(ids.has('btnSlidePrev'), `${label} phải có #btnSlidePrev`);
@@ -139,6 +140,139 @@ assert.ok(revealed2.length > revealed1.length, 'Click tiếp hiện thêm lời 
   assert.equal(aiDeck.length, 15, 'Dùng nguyên kịch bản AI 15 slide');
   assert.ok(aiDeck.every(s => s.meta.aiGenerated), 'Deck đánh dấu là dữ liệu do AI tạo');
   delete global.geminiAPI;
+
+
+  // Execute the actual inline module and actual 1-click handler with browser-like
+  // globals. appState/geminiAPI are lexical globals, not window properties.
+  const handlerStart = html.indexOf('      async function handle1ClickGenerate()');
+  const handlerEnd = html.indexOf('      window.handle1ClickGenerate', handlerStart);
+  const handlerSource = html.slice(handlerStart, handlerEnd);
+  assert.ok(handlerStart > 0 && handlerEnd > handlerStart);
+  assert.doesNotMatch(handlerSource, /GENERATE_OBJECTIVES|GENERATE_MATERIALS|GENERATE_ACTIVITY_|GENERATE_PORTFOLIO|renderFullLessonPreview/);
+  assert.equal(html, backup, 'Bản backup đồng bộ chính xác');
+
+  const nodes = new Map();
+  function node(id) {
+    if (!nodes.has(id)) nodes.set(id, {
+      id, innerHTML: '', textContent: '', value: '', disabled: false,
+      hidden: id === 'slidePresentationOverlay', options: [], listeners: {},
+      classList: { add() {}, remove() {} },
+      addEventListener(type, cb) { this.listeners[type] = cb; },
+      requestFullscreen: async () => {},
+      click() { if (this.listeners.click) return this.listeners.click({ target: this }); }
+    });
+    return nodes.get(id);
+  }
+  node('selectGrade').options = [{ value: '8', textContent: 'Lớp 8' }];
+  node('selectSubject').options = [{ value: 'TOAN', textContent: 'Toán' }];
+  let ocrCalls = 0, aiCalls = 0, mode = 'success', tabOpened = false, mathCalls = 0;
+  const messages = [];
+  const context = vm.createContext({
+    console, AbortController, DOMException,
+    document: {
+      getElementById: node,
+      querySelector: () => ({ click() { tabOpened = true; } }),
+      addEventListener() {},
+      exitFullscreen: async () => {}
+    },
+    showToast: text => messages.push(text),
+    updateProgress() {}, hideProgress() {},
+    saveStateToLocalStorage() {}, updateWorkflowStepper() {},
+    renderMathInElement() { mathCalls++; },
+    setTimeout() {},
+    hasTextbookMedia: () => true,
+    getSubjectDisplayName: () => 'Toán',
+    applyTextbookOcrResult: async text => {
+      vm.runInContext('appState.content.vision = ' + JSON.stringify(text), context);
+    },
+    getTopicDisplayName: () => '',
+    hasCurrentTextbookOcrContext: () => vm.runInContext(
+      'Boolean(appState.content.vision) && appState.textbookOcrSourceRevision === appState.textbookSourceRevision', context),
+    handleAnalyzeSourceMaterials: async opts => {
+      assert.equal(opts.internal, true);
+      ocrCalls++;
+      if (mode === 'ocr-fail') return false;
+      if (mode === 'cancel-ocr') {
+        vm.runInContext('appState.generationController.abort()', context);
+        return false;
+      }
+      await context.applyTextbookOcrResult('- Chủ đề: Bài 5\n- Môn: Toán\n- Khối lớp: 8\nNội dung SGK thật.');
+      vm.runInContext('appState.textbookOcrSourceRevision = appState.textbookSourceRevision', context);
+      return true;
+    },
+    generate: async (prompt, media, role, temperature, signal) => {
+      aiCalls++;
+      assert.match(prompt, /Nội dung SGK thật/);
+      assert.match(prompt, /BÀI: Bài 5/);
+      assert.match(prompt, /LỚP: 8/);
+      assert.ok(signal);
+      if (mode === 'cancel-ai') signal.throwIfAborted();
+      if (mode === 'source-change') vm.runInContext('appState.textbookSourceRevision++', context);
+      if (mode === 'abort-response') vm.runInContext('appState.generationController.abort()', context);
+      if (mode === 'bad-json') return 'not json';
+      return JSON.stringify(aiResponse);
+    }
+  });
+  vm.runInContext('window = globalThis; const appState = {content:{vision:""}, selectedGrade:"6", customTopic:"", duration:"2 tiết", textbookSourceRevision:1, textbookOcrSourceRevision:null}; const geminiAPI = {generateContent: generate};', context);
+  const inlineModule = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
+    .map(match => match[1]).find(code => code.includes('function generateAiLessonSlides'));
+  assert.ok(inlineModule, 'Module nằm trong script inline độc lập');
+  vm.runInContext(inlineModule, context);
+  vm.runInContext(handlerSource + '\nwindow.handle1ClickGenerate = handle1ClickGenerate;', context);
+  context.KhbdSlides.mount();
+  assert.equal(node('btnExportPptx').disabled, true);
+  await context.handle1ClickGenerate();
+  assert.equal(ocrCalls, 1, 'Không có tên bài vẫn tự đọc SGK');
+  assert.equal(aiCalls, 1, 'Chỉ gọi sinh slide, không chạy 7 bước KHBD');
+  assert.equal(context.KhbdSlides.getDeck().length, 15);
+  assert.equal(node('slideLessonTitle').textContent, 'Bài 5');
+  assert.equal(node('selectGrade').value, '8');
+  assert.equal(node('selectSubject').value, 'TOAN');
+  assert.equal(node('btnExportPptx').disabled, false);
+  assert.equal(tabOpened, true);
+  assert.ok(mathCalls > 0);
+  assert.equal(vm.runInContext('geminiAPI.selectedModel', context), 'gemini-3-flash-preview');
+  assert.equal(vm.runInContext('appState.isGenerating', context), false);
+
+  await context.handle1ClickGenerate();
+  assert.equal(ocrCalls, 1, 'Tái sử dụng OCR đúng phiên bản');
+  context.KhbdSlides.goTo(4);
+  context.KhbdSlides.enterPresentation();
+  const beforeClick = node('slidePresentationHost').innerHTML;
+  node('slidePresentationOverlay').click();
+  assert.notEqual(node('slidePresentationHost').innerHTML, beforeClick, 'Click toàn màn hình hiện bước mới');
+  assert.equal(node('slidePresentationHost').innerHTML, node('slideStage').innerHTML);
+  context.KhbdSlides.exitPresentation();
+  assert.equal(node('slidePresentationOverlay').hidden, true);
+
+  const pages = [];
+  let writtenName = '';
+  context.PptxGenJS = class {
+    constructor() { this.ShapeType = { rect: 'rect' }; }
+    defineLayout(layout) { assert.equal(layout.width, 13.333); assert.equal(layout.height, 7.5); }
+    addSlide() { const texts = []; pages.push(texts); return { addShape() {}, addText(text) { texts.push(text); }, addNotes() {} }; }
+    async writeFile(options) { writtenName = options.fileName; }
+  };
+  await context.KhbdSlides.exportToPptx();
+  assert.equal(pages.length, 15, 'Xuất toàn bộ deck AI sang PptxGenJS');
+  assert.ok(pages[0].includes(aiResponse.slides[0].content), 'PPTX dùng nội dung AI đã sinh');
+  assert.match(writtenName, /\.pptx$/);
+
+  const previousDeck = JSON.stringify(context.KhbdSlides.getDeck());
+  for (const failure of ['bad-json', 'abort-response', 'source-change', 'ocr-fail', 'cancel-ocr']) {
+    mode = failure;
+    vm.runInContext('appState.textbookSourceRevision++; appState.content.vision = "";', context);
+    const beforeAi = aiCalls;
+    await context.handle1ClickGenerate();
+    if (failure === 'ocr-fail' || failure === 'cancel-ocr') assert.equal(aiCalls, beforeAi, 'OCR lỗi/hủy không gọi tạo slide');
+    assert.equal(JSON.stringify(context.KhbdSlides.getDeck()), previousDeck, failure + ': không ghi đè deck hợp lệ');
+    assert.equal(vm.runInContext('appState.isGenerating', context), false);
+    assert.equal(node('btn1ClickGenerate').disabled, false);
+    assert.equal(node('btnCancelGeneration').disabled, true);
+  }
+  assert.ok(messages.some(text => /Đã hủy/.test(text)));
+  assert.ok(messages.some(text => /Lỗi tạo bài giảng/.test(text)));
+  console.log('✓ Luồng 1-click: OCR, metadata, lexical globals, AI, render, PPTX, lỗi/hủy/đổi nguồn.');
 
   const scriptBlocks = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
   for (let i = 0; i < scriptBlocks.length; i++) {

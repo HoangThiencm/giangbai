@@ -225,6 +225,7 @@
     .khbd-slide-title { font-size: clamp(1.4rem, 2.6vw, 2.2rem); color:#0f4c81; margin:0 0 1rem; font-weight:800; }
     .khbd-slide-items { margin:0; padding-left: 1.2rem; font-size: clamp(1rem, 1.8vw, 1.35rem); line-height: 1.55; color:#1f2937; }
     .khbd-slide-items li { margin-bottom: .55rem; }
+    .khbd-slide-card[data-type="rule"] .khbd-slide-items { border: 2px solid #0f4c81; border-radius: 12px; background: #eff6ff; padding: 1rem 1rem 1rem 2.5rem; }
     .khbd-slide-empty { margin:auto; color:#64748b; font-style:italic; }
     .khbd-slide-controls { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-top:.75rem; }
     .khbd-slide-counter { font-weight:700; min-width:7rem; }
@@ -245,6 +246,7 @@
         <div class="brand-icon">✨</div>
         <div>
           <h1>HỆ THỐNG SOẠN BÀI GIẢNG TRÌNH CHIẾU AI (CANVAS SLIDES &amp; PPTX)</h1>
+          <p id="slideLessonTitle" aria-live="polite"></p>
           <p>Chạy trong Canvas với Gemini do hệ thống cấp • Trình chiếu web 16:9 &amp; xuất PowerPoint • Không yêu cầu API key người dùng</p>
         </div>
       </div>
@@ -253,7 +255,7 @@
           <i data-lucide="home"></i> Host
         </a>
         <button id="btn1ClickGenerate" class="btn btn-special" title="Tự động nạp SGK/PPCT rồi tạo bài giảng trình chiếu">
-          <i data-lucide="zap"></i> ⚡ TẠO BÀI GIẢNG (1-CLICK)
+          <i data-lucide="zap"></i> ⚡ TẠO BÀI GIẢNG TRÌNH CHIẾU AI (1-CLICK)
         </button>
         <button id="btnCancelGeneration" class="btn btn-danger" disabled title="Dừng tác vụ AI đang chạy" style="color:#ffffff;background:#b91c1c;border-color:#fecaca;opacity:.92">
           <i data-lucide="circle-stop"></i> Hủy tạo
@@ -871,7 +873,7 @@
             <button id="btnPresentFullscreen" class="btn btn-primary" type="button" title="Trình chiếu toàn màn hình (F5)">
               <i data-lucide="maximize"></i> Trình chiếu toàn màn hình (F5)
             </button>
-            <button id="btnExportPptx" class="btn btn-special" type="button">
+            <button disabled id="btnExportPptx" class="btn btn-special" type="button">
               <i data-lucide="download"></i> Tải file PowerPoint (.pptx)
             </button>
             <button id="btnExportFullDocx" class="btn btn-outline-dark" hidden>
@@ -1421,10 +1423,623 @@
     })();
   </script>
   <script>
-    (function () {
-      // Bundle slide được nạp cùng ứng dụng, không phụ thuộc URL JS bên ngoài.
-      document.write('<script src="js/khbd-slides.js"><\/script>');
-    })();
+/**
+ * js/khbd-slides.js
+ * Sinh bài giảng trình chiếu 16:9 từ SGK/PPCT: khám phá → kiến thức → ví dụ → luyện tập.
+ * Web: KaTeX + step-by-step reveal. Xuất PPTX bằng PptxGenJS.
+ */
+(function (root) {
+  "use strict";
+
+  const MIN_COMPLETE_SLIDES = 15;
+  const MAX_COMPLETE_SLIDES = 25;
+
+  function strip(text) {
+    return String(text || "").replace(/\s+/g, " ").trim();
+  }
+
+  function latexToPlain(text) {
+    return String(text || "")
+      .replace(/\$\$([\s\S]+?)\$\$/g, " $1 ")
+      .replace(/\$([^$]+)\$/g, " $1 ")
+      .replace(/\\cdot/g, "·")
+      .replace(/\\times/g, "×")
+      .replace(/\\div/g, "÷")
+      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "($1)/($2)")
+      .replace(/\\left|\\right/g, "")
+      .replace(/\\[,;!]/g, " ")
+      .replace(/[{}]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function splitLines(text) {
+    return String(text || "")
+      .split(/\r?\n/)
+      .map(line => line.replace(/^\s*[-*+]\s+/, "").trim())
+      .filter(Boolean);
+  }
+
+  function extractKnowledgeUnits(textbook) {
+    const source = String(textbook || "").trim();
+    const units = [];
+    if (!source) return units;
+
+    if (typeof root.extractTextbookSubsections === "function") {
+      const extracted = root.extractTextbookSubsections(source) || [];
+      extracted.forEach((item, idx) => {
+        units.push({
+          index: Number(item.index) || idx + 1,
+          title: strip(item.title) || `Mục ${idx + 1}`,
+          body: strip(item.body || item.content || "")
+        });
+      });
+    }
+
+    if (!units.length) {
+      const headingRe = /(?:^|\n)\s*(?:#{1,3}\s+|(?:Mục|Phần|I{1,3}|IV|V|VI)\s*[\.\):]\s*)([^\n]{3,80})/gi;
+      const hits = [];
+      let match;
+      while ((match = headingRe.exec(source))) {
+        hits.push({ title: strip(match[1]), at: match.index + (match[0].startsWith("\n") ? 1 : 0) });
+      }
+      hits.forEach((hit, i) => {
+        const end = i + 1 < hits.length ? hits[i + 1].at : source.length;
+        units.push({
+          index: i + 1,
+          title: hit.title.replace(/^#+\s*/, ""),
+          body: source.slice(hit.at, end).trim()
+        });
+      });
+    }
+
+    if (!units.length) {
+      const chunks = source.split(/\n{2,}/).map(strip).filter(chunk => chunk.length > 40);
+      chunks.slice(0, 4).forEach((chunk, i) => {
+        units.push({ index: i + 1, title: `Đơn vị kiến thức ${i + 1}`, body: chunk });
+      });
+    }
+
+    return units.slice(0, 4);
+  }
+
+  function pickExamples(body) {
+    const lines = splitLines(body);
+    const examples = lines.filter(line => /ví dụ|vd\s*\d|bài\s*\d/i.test(line));
+    const practice = lines.filter(line => /luyện tập|thực hành|bài tập/i.test(line));
+    const knowledge = lines.filter(line => /định nghĩa|quy tắc|công thức|chú ý|kết luận/i.test(line));
+    return {
+      explore: lines[0] || "",
+      knowledge: knowledge[0] || "",
+      example: examples[0] || lines.find(line => /=\s*|\$/.test(line)) || "",
+      practice: practice[0] || "",
+      evidence: lines
+    };
+  }
+
+  function slide(type, title, items, meta) {
+    return {
+      type,
+      title,
+      items: (items || []).map((item, idx) => {
+        if (typeof item === "string") return { text: item, step: idx + 1 };
+        return { text: item.text, step: item.step != null ? item.step : idx + 1, role: item.role || "" };
+      }),
+      meta: meta || {}
+    };
+  }
+
+  function buildUnitSlides(unit) {
+    const bits = pickExamples(unit.body);
+    const name = unit.title || `Mục ${unit.index}`;
+    const phases = [
+      ["explore", "Khám phá", bits.explore],
+      ["rule", "Kiến thức trọng tâm", bits.knowledge],
+      ["example", "Ví dụ mẫu", bits.example],
+      ["practice", "Luyện tập tại chỗ", bits.practice]
+    ];
+    return phases.filter(function (phase) { return Boolean(phase[2]); }).map(function (phase) {
+      const matchingEvidence = bits.evidence.filter(function (line) { return line !== phase[2]; }).slice(0, 4);
+      return slide(phase[0], `${phase[1]}: ${name}`, [{ text: phase[2], step: 1 }].concat(
+        matchingEvidence.map(function (text, index) { return { text, step: index + 2 }; })
+      ), { unit: unit.index, phase: phase[0] });
+    });
+  }
+
+  function defaultUnits(topic) {
+    return [];
+  }
+
+  function buildSlideDeck(source) {
+    const ctx = source && typeof source === "object" ? source : { textbook: String(source || "") };
+    const topic = strip(ctx.topic);
+    const subject = strip(ctx.subject);
+    const grade = strip(ctx.grade);
+    const duration = strip(ctx.duration);
+    const textbook = String(ctx.textbook || ctx.vision || ctx.textbook_content || "");
+    const units = extractKnowledgeUnits(textbook);
+    const usedUnits = units.length ? units : defaultUnits(topic);
+    if (!usedUnits.length) throw new Error("Chưa có ngữ cảnh SGK thực để dựng bài giảng.");
+
+    const deck = [];
+    if (!topic || !subject || !grade || !duration) throw new Error("Thiếu metadata bài học thực; hãy đọc SGK hoặc điền đủ tên bài, môn, lớp và thời lượng.");
+    deck.push(slide("title", topic, [
+      { text: `Môn ${subject} · Lớp ${grade}`, step: 1 },
+      { text: duration, step: 2 }
+    ]));
+    deck.push(slide("intro", "Các đề mục SGK", usedUnits.map(function (unit, index) {
+      return { text: unit.title, step: index + 1 };
+    })));
+
+    usedUnits.forEach(unit => {
+      buildUnitSlides(unit).forEach(item => deck.push(item));
+    });
+
+    const extraExercises = splitLines(textbook).filter(line => /bài\s*\d|luyện tập|bài tập/i.test(line)).slice(0, 4);
+    extraExercises.forEach((ex, idx) => {
+      deck.push(slide("exercise", `Bài tập ${idx + 1}`, [
+        { text: ex, step: 1 }
+      ], { phase: "bai-tap" }));
+    });
+
+    deck.push(slide("summary", "Tổng kết", [
+      ...usedUnits.map(function (unit, index) { return { text: unit.title, step: index + 1 }; })
+    ]));
+
+    const evidence = splitLines(textbook).filter(Boolean);
+    while (deck.length < MIN_COMPLETE_SLIDES) {
+      const text = evidence[deck.length % evidence.length];
+      if (!text) throw new Error("Ngữ cảnh SGK không đủ để dựng deck 15 slide.");
+      deck.splice(deck.length - 1, 0, slide("intro", `Trích đoạn SGK ${deck.length}`, [{ text, step: 1 }]));
+    }
+    return deck.slice(0, MAX_COMPLETE_SLIDES);
+  }
+
+  function extractJson(raw) {
+    const source = String(raw || "").replace(/^\s*```(?:json)?\s*|\s*```\s*$/gi, "").trim();
+    const start = source.indexOf("{");
+    if (start < 0) throw new Error("Gemini không trả về JSON kịch bản slide.");
+    let depth = 0, quoted = false, escaped = false;
+    for (let i = start; i < source.length; i += 1) {
+      const char = source[i];
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (char === "\\") escaped = true;
+        else if (char === '"') quoted = false;
+      } else if (char === '"') quoted = true;
+      else if (char === "{") depth += 1;
+      else if (char === "}" && --depth === 0) {
+        try { return JSON.parse(source.slice(start, i + 1)); }
+        catch (_) { throw new Error("Gemini trả JSON kịch bản slide không hợp lệ."); }
+      }
+    }
+    throw new Error("Gemini trả JSON kịch bản slide chưa hoàn chỉnh.");
+  }
+
+  function normalizeAiDeck(payload) {
+    const slides = payload && Array.isArray(payload.slides) ? payload.slides : [];
+    if (slides.length < MIN_COMPLETE_SLIDES || slides.length > MAX_COMPLETE_SLIDES) {
+      throw new Error(`Gemini phải tạo từ ${MIN_COMPLETE_SLIDES} đến ${MAX_COMPLETE_SLIDES} slide (nhận ${slides.length}).`);
+    }
+    const allowed = new Set(["title", "intro", "explore", "rule", "example", "practice", "summary"]);
+    const types = new Set();
+    const deck = slides.map(function (entry, index) {
+      const type = String(entry && entry.type || "").trim().toLowerCase();
+      const title = strip(entry && entry.title);
+      const content = strip(entry && entry.content);
+      const formula = strip(entry && entry.mathFormula);
+      const steps = Array.isArray(entry && entry.steps) ? entry.steps.map(strip).filter(Boolean) : [];
+      if (!allowed.has(type) || !title || (!content && !formula && !steps.length)) {
+        throw new Error(`Slide ${index + 1} thiếu type/title/content hợp lệ.`);
+      }
+      types.add(type);
+      const items = [];
+      if (content) items.push({ text: content, step: 1 });
+      if (formula) items.push({ text: `$${formula.replace(/^\$+|\$+$/g, "")}$`, step: 1, role: "formula" });
+      steps.forEach(function (text, stepIndex) { items.push({ text, step: stepIndex + 2, role: "step" }); });
+      return { type, title, items, meta: { aiGenerated: true, source: "gemini-3-flash-preview" } };
+    });
+    ["title", "intro", "explore", "rule", "example", "practice", "summary"].forEach(function (type) {
+      if (!types.has(type)) throw new Error(`Kịch bản Gemini thiếu slide loại ${type}.`);
+    });
+    return deck;
+  }
+
+  function lessonContextFromApp(source) {
+    const ctx = source && typeof source === "object" ? source : collectSourceFromApp();
+    const textbook = String(ctx.textbook || ctx.vision || ctx.textbook_content || "").trim();
+    if (!textbook) throw new Error("Chưa có ngữ cảnh SGK thực. Hãy đọc SGK trước khi tạo bài giảng.");
+    return {
+      topic: strip(ctx.topic), subject: strip(ctx.subject), grade: strip(ctx.grade), duration: strip(ctx.duration), textbook
+    };
+  }
+
+  async function generateAiLessonSlides(source, signal) {
+    const client = typeof geminiAPI !== "undefined" ? geminiAPI : root.geminiAPI;
+    if (!client || typeof client.generateContent !== "function") {
+      throw new Error("Gemini Canvas chưa sẵn sàng để tạo bài giảng.");
+    }
+    const ctx = lessonContextFromApp(source);
+    client.selectedModel = "gemini-3-flash-preview";
+    const prompt = `Bạn là chuyên gia thiết kế bài giảng trình chiếu. Chỉ dùng NGỮ CẢNH SGK THẬT bên dưới; không bịa đề mục, định nghĩa, ví dụ, bài tập hoặc đáp án.\n\nBÀI: ${ctx.topic}\nMÔN: ${ctx.subject}; LỚP: ${ctx.grade}; THỜI LƯỢNG: ${ctx.duration}\n\nNGỮ CẢNH SGK THẬT:\n${ctx.textbook}\n\nHãy tạo đúng 15–25 slide bằng tiếng Việt. Với từng đơn vị kiến thức có trong ngữ cảnh, bắt buộc theo chuỗi Khám phá → Quy tắc/định nghĩa → Ví dụ SGK giải từng bước → Luyện tập SGK. Có bìa, mục tiêu, khởi động, củng cố/vận dụng và tổng kết. Nếu ngữ cảnh không đủ dữ liệu cho một chi tiết, nêu rõ “Cần giáo viên bổ sung từ trang SGK đã tải”, tuyệt đối không bịa.\n\nChỉ trả JSON hợp lệ, không markdown: {"slides":[{"type":"title|intro|explore|rule|example|practice|summary","title":"...","content":"nội dung thật bám SGK","steps":["bước click 1", "bước click 2"],"mathFormula":"LaTex nếu có, không có thì chuỗi rỗng"}]}.`;
+    const role = typeof root.getSystemRole === "function" ? root.getSystemRole(ctx.subject, ctx.grade) : "";
+    const raw = await client.generateContent(prompt, [], role, 0.2, signal || null, { maxOutputTokens: 8192, timeoutMs: 120000 });
+    return normalizeAiDeck(extractJson(raw));
+  }
+
+  function maxStep(slideItem) {
+    return (slideItem.items || []).reduce((n, item) => Math.max(n, Number(item.step) || 1), 1);
+  }
+
+  function visibleItems(slideItem, revealed) {
+    const step = Math.max(1, Number(revealed) || 1);
+    return (slideItem.items || []).filter(item => (Number(item.step) || 1) <= step);
+  }
+
+  function escapeHtml(text) {
+    return String(text || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderMath(el) {
+    if (!el) return;
+    if (typeof root.renderMathInElement === "function") {
+      root.renderMathInElement(el, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ],
+        throwOnError: false
+      });
+    }
+  }
+
+  function renderSlideHtml(slideItem, revealed) {
+    const items = visibleItems(slideItem, revealed);
+    const body = items.map(item => `<li data-step="${item.step}">${escapeHtml(item.text)}</li>`).join("");
+    return `<article class="khbd-slide-card" data-type="${escapeHtml(slideItem.type)}">
+      <h2 class="khbd-slide-title">${escapeHtml(slideItem.title)}</h2>
+      <ul class="khbd-slide-items">${body}</ul>
+    </article>`;
+  }
+
+  const ui = {
+    deck: [],
+    index: 0,
+    revealed: 1,
+    stage: null,
+    counter: null
+  };
+
+  function currentSlide() {
+    return ui.deck[ui.index] || null;
+  }
+
+  function paint() {
+    const slideItem = currentSlide();
+    if (ui.stage) {
+      if (!slideItem) {
+        ui.stage.innerHTML = '<p class="khbd-slide-empty">Chưa có bài giảng. Hãy nạp SGK rồi bấm Tạo bài giảng slides.</p>';
+      } else {
+        ui.stage.innerHTML = renderSlideHtml(slideItem, ui.revealed);
+        renderMath(ui.stage);
+      }
+    }
+    if (typeof document !== "undefined") {
+      const overlay = document.getElementById("slidePresentationOverlay");
+      const host = document.getElementById("slidePresentationHost");
+      if (overlay && !overlay.hidden && host && ui.stage) {
+        host.innerHTML = ui.stage.innerHTML;
+        renderMath(host);
+      }
+      const exportBtn = document.getElementById("btnExportPptx");
+      if (exportBtn) exportBtn.disabled = !ui.deck.length;
+    }
+    if (ui.counter) {
+      ui.counter.textContent = ui.deck.length ? `Slide ${ui.index + 1} / ${ui.deck.length}` : "Slide 0 / 0";
+    }
+  }
+
+  function revealOrNext() {
+    const slideItem = currentSlide();
+    if (!slideItem) return;
+    if (ui.revealed < maxStep(slideItem)) {
+      ui.revealed += 1;
+      paint();
+      return;
+    }
+    if (ui.index < ui.deck.length - 1) {
+      ui.index += 1;
+      ui.revealed = 1;
+      paint();
+    }
+  }
+
+  function prevSlide() {
+    if (ui.index <= 0) {
+      ui.revealed = 1;
+      paint();
+      return;
+    }
+    ui.index -= 1;
+    ui.revealed = 1;
+    paint();
+  }
+
+  function nextSlide() {
+    revealOrNext();
+  }
+
+  function goTo(index) {
+    if (!ui.deck.length) return;
+    ui.index = Math.max(0, Math.min(ui.deck.length - 1, index));
+    ui.revealed = 1;
+    paint();
+  }
+
+  function getAppState() {
+    return typeof appState !== "undefined" ? appState : (root.appState || {});
+  }
+
+  function syncTextbookMetadata(text) {
+    if (typeof document === "undefined") return;
+    const state = getAppState();
+    const field = label => {
+      const match = String(text || "").match(new RegExp("^\\s*-\\s*" + label + ":\\s*(.+)$", "mi"));
+      return match ? match[1].trim() : "";
+    };
+    const topic = field("Chủ đề");
+    const grade = field("Khối lớp");
+    const subject = field("Môn");
+    if (topic) {
+      state.customTopic = topic;
+      const input = document.getElementById("inputTopicCustom");
+      if (input) input.value = topic;
+      const title = document.getElementById("slideLessonTitle");
+      if (title) title.textContent = topic;
+    }
+    for (const [id, value, key] of [["selectGrade", grade, "selectedGrade"], ["selectSubject", subject, "selectedSubject"]]) {
+      const select = document.getElementById(id);
+      const option = select && Array.from(select.options || []).find(item =>
+        strip(item.value).toLowerCase() === value.toLowerCase() ||
+        strip(item.textContent).toLowerCase() === value.toLowerCase() ||
+        (id === "selectGrade" && strip(item.textContent).toLowerCase() === "lớp " + value.toLowerCase()));
+      if (value && option) {
+        state[key] = option.value;
+        select.value = option.value;
+      }
+    }
+    if (subject) state.subject = subject;
+    if (typeof root.saveStateToLocalStorage === "function") root.saveStateToLocalStorage();
+  }
+
+  function installTextbookMetadataSync(attempt) {
+    if (typeof root.applyTextbookOcrResult === "function") {
+      const original = root.applyTextbookOcrResult;
+      if (original.slidesMetadataSync) return;
+      const wrapped = async function (text, options) {
+        const state = getAppState();
+        if (state.cancelRequested || (state.generationController && state.generationController.signal.aborted)) {
+          throw new DOMException("Aborted", "AbortError");
+        }
+        await original(text, options);
+        syncTextbookMetadata(text);
+      };
+      wrapped.slidesMetadataSync = true;
+      root.applyTextbookOcrResult = wrapped;
+    } else if (attempt < 100) {
+      root.setTimeout(() => installTextbookMetadataSync(attempt + 1), 200);
+    }
+  }
+
+  function collectSourceFromApp() {
+    const state = getAppState();
+    const topic = state.customTopic || (typeof document !== "undefined" && document.getElementById("inputTopicCustom") && document.getElementById("inputTopicCustom").value) || "";
+    const vision = (state.content && state.content.vision) || (typeof document !== "undefined" && document.getElementById("editorVision") && document.getElementById("editorVision").value) || "";
+    return {
+      topic: topic || state.selectedLesson || "",
+      subject: state.subject || "",
+      grade: state.selectedGrade || "",
+      duration: state.duration || "",
+      textbook: vision
+    };
+  }
+
+  async function buildFromApp(source, signal, validate) {
+    const state = getAppState();
+    const activeSignal = signal || (state.generationController && state.generationController.signal);
+    const deck = await generateAiLessonSlides(source || collectSourceFromApp(), activeSignal);
+    if (activeSignal && activeSignal.aborted) throw new DOMException("Aborted", "AbortError");
+    if (typeof validate === "function") validate();
+    ui.deck = deck;
+    ui.index = 0;
+    ui.revealed = 1;
+    paint();
+    return ui.deck;
+  }
+
+  async function exportToPptx(slideDeck) {
+    const deck = Array.isArray(slideDeck) && slideDeck.length ? slideDeck : ui.deck;
+    if (!deck.length) throw new Error("Chưa có slide để xuất PowerPoint.");
+    const PptxGenJS = root.PptxGenJS || root.pptxgen;
+    if (typeof PptxGenJS !== "function") throw new Error("Chưa nạp được thư viện PptxGenJS.");
+    const pptx = new PptxGenJS();
+    pptx.defineLayout({ name: "KHBD_16x9", width: 13.333, height: 7.5 });
+    pptx.layout = "KHBD_16x9";
+    pptx.author = "Soạn bài giảng trình chiếu AI";
+    pptx.title = (deck[0] && deck[0].title) || "Bai giang";
+
+    deck.forEach((item, idx) => {
+      const page = pptx.addSlide();
+      page.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 0.7, fill: { color: "0F4C81" } });
+      page.addText(latexToPlain(item.title || `Slide ${idx + 1}`), {
+        x: 0.4, y: 0.12, w: 12.5, h: 0.48, fontSize: 22, bold: true, color: "FFFFFF", fontFace: "Calibri"
+      });
+      const steps = {};
+      (item.items || []).forEach(entry => {
+        const step = Number(entry.step) || 1;
+        (steps[step] || (steps[step] = [])).push(latexToPlain(entry.text));
+      });
+      let y = 1.0;
+      Object.keys(steps).sort((a, b) => Number(a) - Number(b)).forEach((step, clickIndex) => {
+        steps[step].forEach(line => {
+          page.addText(line, {
+            x: 0.5,
+            y,
+            w: 12.3,
+            h: 0.55,
+            fontSize: 18,
+            fontFace: "Calibri",
+            color: "1F2937",
+            valign: "top"
+          });
+          y += 0.58;
+        });
+        if (clickIndex > 0) {
+          try {
+            page.addNotes(`Appear click ${clickIndex + 1}`);
+          } catch (_) {}
+        }
+      });
+    });
+
+    const safeName = latexToPlain((deck[0] && deck[0].title) || "bai-giang").replace(/[^\p{L}\p{N}]+/gu, "-").slice(0, 60) || "bai-giang";
+    await pptx.writeFile({ fileName: `${safeName}.pptx` });
+    return true;
+  }
+
+  function enterPresentation() {
+    if (typeof document === "undefined") return;
+    const overlay = document.getElementById("slidePresentationOverlay");
+    const host = document.getElementById("slidePresentationHost");
+    if (!overlay || !host) {
+      if (ui.stage && ui.stage.requestFullscreen) ui.stage.requestFullscreen().catch(() => {});
+      return;
+    }
+    overlay.hidden = false;
+    overlay.classList.add("is-on");
+    host.innerHTML = ui.stage ? ui.stage.innerHTML : "";
+    renderMath(host);
+    if (overlay.requestFullscreen) overlay.requestFullscreen().catch(() => {});
+  }
+
+  function exitPresentation() {
+    if (typeof document === "undefined") return;
+    const overlay = document.getElementById("slidePresentationOverlay");
+    if (overlay) {
+      overlay.hidden = true;
+      overlay.classList.remove("is-on");
+    }
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }
+
+  function bindPresentationKeys(ev) {
+    const overlay = typeof document !== "undefined" && document.getElementById("slidePresentationOverlay");
+    const presenting = overlay && !overlay.hidden;
+    if (ev.key === "F5") {
+      ev.preventDefault();
+      enterPresentation();
+      return;
+    }
+    if (ev.key === "Escape" && presenting) {
+      exitPresentation();
+      return;
+    }
+    if (!presenting && ev.target && /input|textarea|select/i.test(ev.target.tagName)) return;
+    if (ev.key === "ArrowRight" || ev.key === " " || ev.key === "PageDown") {
+      ev.preventDefault();
+      nextSlide();
+      if (presenting) {
+        const host = document.getElementById("slidePresentationHost");
+        if (host && ui.stage) host.innerHTML = ui.stage.innerHTML;
+      }
+    } else if (ev.key === "ArrowLeft" || ev.key === "PageUp") {
+      ev.preventDefault();
+      prevSlide();
+      if (presenting) {
+        const host = document.getElementById("slidePresentationHost");
+        if (host && ui.stage) host.innerHTML = ui.stage.innerHTML;
+      }
+    }
+  }
+
+  function mount(options) {
+    if (typeof document === "undefined") return;
+    const opts = options || {};
+    installTextbookMetadataSync(0);
+    ui.stage = document.getElementById(opts.stageId || "slideStage");
+    ui.counter = document.getElementById(opts.counterId || "slideCounter");
+    const prev = document.getElementById(opts.prevId || "btnSlidePrev");
+    const next = document.getElementById(opts.nextId || "btnSlideNext");
+    const present = document.getElementById(opts.presentId || "btnPresentFullscreen");
+    const exportBtn = document.getElementById(opts.exportId || "btnExportPptx");
+    const buildBtn = document.getElementById(opts.buildId || "btnBuildSlides");
+    if (prev) prev.addEventListener("click", prevSlide);
+    if (next) next.addEventListener("click", nextSlide);
+    if (ui.stage) ui.stage.addEventListener("click", nextSlide);
+    if (present) present.addEventListener("click", enterPresentation);
+    if (exportBtn) {
+      exportBtn.addEventListener("click", function () {
+        exportToPptx(ui.deck).catch(function (err) {
+          if (typeof root.showToast === "function") root.showToast(err.message, "danger", 5000);
+          else console.error(err);
+        });
+      });
+    }
+    if (buildBtn) {
+      buildBtn.addEventListener("click", async function () {
+        const previousLabel = buildBtn.innerHTML;
+        try {
+          buildBtn.disabled = true;
+          buildBtn.textContent = "Đang tạo slide AI...";
+          if (typeof root.handle1ClickGenerate === "function") await root.handle1ClickGenerate();
+          else await buildFromApp();
+          if (typeof root.showToast === "function") root.showToast("Đã tạo bài giảng slides từ ngữ cảnh SGK thật.", "success", 3500);
+        } catch (err) {
+          if (typeof root.showToast === "function") root.showToast(err.message || "Không thể tạo bài giảng slides.", "danger", 6000);
+          else console.error(err);
+        } finally {
+          buildBtn.disabled = false;
+          buildBtn.innerHTML = previousLabel;
+        }
+      });
+    }
+    document.addEventListener("keydown", bindPresentationKeys);
+    const overlay = document.getElementById("slidePresentationOverlay");
+    if (overlay) overlay.addEventListener("click", nextSlide);
+    paint();
+  }
+
+  const api = {
+    MIN_COMPLETE_SLIDES,
+    MAX_COMPLETE_SLIDES,
+    extractKnowledgeUnits,
+    buildSlideDeck,
+    generateAiLessonSlides,
+    exportToPptx,
+    renderSlideHtml,
+    visibleItems,
+    maxStep,
+    mount,
+    buildFromApp,
+    syncTextbookMetadata,
+    nextSlide,
+    prevSlide,
+    goTo,
+    enterPresentation,
+    exitPresentation,
+    getDeck: function () { return ui.deck.slice(); }
+  };
+
+  root.KhbdSlides = api;
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = api;
+  }
+})(typeof window !== "undefined" ? window : globalThis);
+
   </script>
 
   <!-- Patch Canvas: định mức 1 tiết + xuống dòng GV/HS (không phụ thuộc JS host cũ) -->
@@ -1704,245 +2319,72 @@
         }
       }
 
-      /* HÀM ĐIỀU PHỐI 1-CLICK SOẠN TOÀN BỘ GIÁO ÁN */
+      /* Tạo bài giảng trực tiếp từ SGK, không chạy chuỗi soạn KHBD. */
       async function handle1ClickGenerate() {
-        if (typeof appState === "undefined") {
+        if (typeof appState === "undefined" || !window.KhbdSlides) {
           if (typeof showToast === "function") showToast("Ứng dụng chưa sẵn sàng.", "warning");
           return;
         }
-
-        if (appState.isGenerating) {
-          if (typeof showToast === "function") showToast("Đang có tác vụ AI xử lý. Vui lòng chờ hoặc bấm 'Hủy tạo'.", "warning");
-          return;
+        if (appState.isGenerating) return;
+        const btn = document.getElementById("btn1ClickGenerate");
+        const cancel = document.getElementById("btnCancelGeneration");
+        const build = document.getElementById("btnBuildSlides");
+        const revision = Number(appState.textbookSourceRevision || 0);
+        const controller = new AbortController();
+        function checkCurrent() {
+          if (controller.signal.aborted || appState.cancelRequested) throw new DOMException("Aborted", "AbortError");
+          if (revision !== Number(appState.textbookSourceRevision || 0)) throw new Error("SGK đã thay đổi. Hãy tạo lại bài giảng từ nguồn mới.");
         }
-
-        const topic = (typeof getTopicDisplayName === "function" ? getTopicDisplayName() : "")
-          || (document.getElementById("inputTopicCustom") && document.getElementById("inputTopicCustom").value.trim())
-          || "";
-
-        if (!topic) {
-          if (typeof showToast === "function") showToast("Vui lòng chọn bài học từ danh mục SGK hoặc nhập tên bài học trước khi tạo giáo án.", "warning", 6000);
-          const selLesson = document.getElementById("selectLesson");
-          if (selLesson) selLesson.focus();
-          return;
-        }
-
-        const grade = appState.selectedGrade || (document.getElementById("selectGrade") && document.getElementById("selectGrade").value) || "6";
-        const subject = (typeof getSubjectDisplayName === "function" ? getSubjectDisplayName() : appState.subjectName) || "Môn học";
-
-        const confirmMsg = 'Bạn có muốn bắt đầu TỰ ĐỘNG TẠO TOÀN BỘ GIÁO ÁN cho bài:\n"' + topic + '" (Lớp ' + grade + ' - ' + subject + ')?\n\n'
-          + 'Tiến trình sẽ chạy tuần tự qua tất cả các bước:\n'
-          + '1. I. Mục tiêu bài học (CV 5512 & Khung NLS/AI)\n'
-          + '2. II. Thiết bị dạy học và học liệu\n'
-          + '3. III.A Hoạt động Khởi động\n'
-          + '4. III.B Hoạt động Hình thành kiến thức (4 bước)\n'
-          + '5. III.C Hoạt động Luyện tập\n'
-          + '6. III.D Hoạt động Vận dụng\n'
-          + '7. III.E Hồ sơ học tập & Đánh giá\n'
-          + '8. 🎨 F. Hình minh họa SGK (Vector SVG & Hình ảnh)\n'
-          + '-> Tự động tổng hợp và chuyển sang Tab Toàn bộ Giáo án (.DOCX)';
-
-        const confirmed = typeof canvasConfirm === "function" ? await canvasConfirm(confirmMsg) : true;
-        if (!confirmed) return;
-
-        const btn1Click = document.getElementById("btn1ClickGenerate");
-        const btnCancel = document.getElementById("btnCancelGeneration");
-
         try {
           appState.isGenerating = true;
           appState.cancelRequested = false;
-          appState.generationController = new AbortController();
-          const signal = appState.generationController.signal;
-
-          if (btn1Click) btn1Click.disabled = true;
-          if (btnCancel) btnCancel.disabled = false;
-
-          // Helper chạy từng bước với kiểm tra huỷ
-          async function executeStep(options) {
-            if (signal.aborted || appState.cancelRequested) throw new DOMException("Aborted", "AbortError");
-
-            if (typeof updateProgress === "function") updateProgress(options.percent, "Đang soạn: " + options.operationName + "...");
-            const footerEl = document.getElementById("statusFooterText");
-            if (footerEl) footerEl.textContent = "Đang soạn: " + options.operationName + "...";
-
-            const context = typeof getGenerationPromptContext === "function" ? getGenerationPromptContext() : {};
-            const basePrompt = typeof getPromptTemplate === "function" ? getPromptTemplate(options.templateKey, context) : "";
-            const prompt = basePrompt + (options.extraPrompt || "");
-
-            const useTextOnly = (typeof hasAnalyzedLessonContent === "function" && hasAnalyzedLessonContent());
-            const media = useTextOnly ? [] : (typeof prepareGeminiMedia === "function" ? await prepareGeminiMedia() : []);
-
-            const rawResult = await geminiAPI.generateContent(
-              typeof buildPedagogicalPrompt === "function" ? buildPedagogicalPrompt(prompt) : prompt,
-              media,
-              typeof getSystemRole === "function" ? getSystemRole(appState.selectedSubject, appState.selectedGrade) : null,
-              0.3,
-              signal,
-              { timeoutMs: 90000 }
-            );
-
-            if (signal.aborted || appState.cancelRequested) throw new DOMException("Aborted", "AbortError");
-
-            const guardedResult = typeof guardGeminiLessonOutput === "function" ? await guardGeminiLessonOutput(rawResult, signal) : rawResult;
-            let finalResult = guardedResult;
-            if (typeof options.applyOutput === "function") {
-              finalResult = (await options.applyOutput(guardedResult, signal)) || guardedResult;
-            }
-
-            const editor = document.getElementById(options.editorId);
-            if (editor) editor.value = finalResult;
-            if (options.previewId && typeof renderMathPreview === "function") {
-              renderMathPreview(finalResult, options.previewId);
-            }
-
-            if (typeof showToast === "function") showToast("✓ Đã hoàn tất: " + options.operationName, "success", 2000);
-            return finalResult;
-          }
-
-          // 1-click sở hữu isGenerating, nên yêu cầu module OCR chạy nội bộ và
-          // chỉ được tiếp tục khi context vừa tạo khớp đúng PDF/ảnh đang nạp.
+          appState.generationController = controller;
+          if (btn) btn.disabled = true;
+          if (build) build.disabled = true;
+          if (cancel) cancel.disabled = false;
           if (typeof hasTextbookMedia === "function" && hasTextbookMedia()) {
-            const hasFreshOcr = typeof hasCurrentTextbookOcrContext === "function"
-              && hasCurrentTextbookOcrContext();
-            if (!hasFreshOcr) {
-              if (typeof updateProgress === "function") updateProgress(5, "Đang nhận diện PDF/ảnh SGK bằng Gemini...");
-              if (typeof handleAnalyzeSourceMaterials !== "function") {
-                throw new Error("Không có mô-đun phân tích SGK; đã dừng để không dùng dữ liệu bài mẫu.");
-              }
+            const fresh = typeof hasCurrentTextbookOcrContext === "function" && hasCurrentTextbookOcrContext();
+            if (!fresh) {
+              if (typeof updateProgress === "function") updateProgress(5, "Đang phân tích ảnh/PDF SGK...");
+              if (typeof handleAnalyzeSourceMaterials !== "function") throw new Error("Chưa nạp được mô-đun phân tích SGK.");
               const analyzed = await handleAnalyzeSourceMaterials({ internal: true });
+              checkCurrent();
               if (!analyzed || typeof hasCurrentTextbookOcrContext !== "function" || !hasCurrentTextbookOcrContext()) {
-                throw new Error("Không tạo được ngữ cảnh OCR mới từ PDF/ảnh SGK hiện tại. Đã dừng, không dùng metadata hoặc Bài 1 mẫu.");
+                throw new Error("Không đọc được SGK hiện tại. Hãy kiểm tra ảnh/PDF và thử lại.");
               }
-              if (typeof showToast === "function") showToast("Đã nhận diện xong học liệu SGK hiện tại; bắt đầu soạn bài.", "success", 3500);
             }
           }
-
-          // Đảm bảo đồng bộ mã chuẩn nếu đang bật
-          const ctx = typeof normalizeTeachingContext === "function" ? normalizeTeachingContext(appState.teachingContext) : {};
-          if (ctx && ctx.integrations && (ctx.integrations.digital || ctx.integrations.ai)) {
-            if (typeof ensureIntegrationStandards === "function") ensureIntegrationStandards({ force: true });
-          }
-
-          // 1. I. Mục tiêu
-          await executeStep({
-            operationName: "I. Mục tiêu",
-            percent: 15,
-            templateKey: "GENERATE_OBJECTIVES",
-            editorId: "editorObjectives",
-            previewId: "previewObjectives",
-            applyOutput: typeof applyObjectivesOutput === "function" ? applyObjectivesOutput : null
-          });
-
-          // 2. II. Thiết bị & Học liệu
-          await executeStep({
-            operationName: "II. Thiết bị & Học liệu",
-            percent: 30,
-            templateKey: "GENERATE_MATERIALS",
-            editorId: "editorMaterials",
-            previewId: "previewMaterials",
-            applyOutput: typeof applyMaterialsOutput === "function" ? applyMaterialsOutput : null
-          });
-
-          // 3. III.A Hoạt động Khởi động
-          await executeStep({
-            operationName: "III.A Khởi động",
-            percent: 45,
-            templateKey: "GENERATE_ACTIVITY_A",
-            extraPrompt: typeof buildPhasePedagogyContext === "function" ? buildPhasePedagogyContext("A") : "",
-            editorId: "editorActivity",
-            previewId: "previewActivity",
-            applyOutput: typeof applyActivityOutput === "function" ? function (res, sig) { return applyActivityOutput("A", res, sig); } : null
-          });
-
-          // 4. III.B Hình thành kiến thức mới
-          await executeStep({
-            operationName: "III.B Hình thành kiến thức",
-            percent: 60,
-            templateKey: "GENERATE_ACTIVITY_B",
-            extraPrompt: typeof buildPhasePedagogyContext === "function" ? buildPhasePedagogyContext("B") : "",
-            editorId: "editorActivity",
-            previewId: "previewActivity",
-            applyOutput: typeof applyActivityOutput === "function" ? function (res, sig) { return applyActivityOutput("B", res, sig); } : null
-          });
-
-          // 5. III.C Luyện tập
-          await executeStep({
-            operationName: "III.C Luyện tập",
-            percent: 75,
-            templateKey: "GENERATE_ACTIVITY_C",
-            extraPrompt: typeof buildPhasePedagogyContext === "function" ? buildPhasePedagogyContext("C") : "",
-            editorId: "editorActivity",
-            previewId: "previewActivity",
-            applyOutput: typeof applyActivityOutput === "function" ? function (res, sig) { return applyActivityOutput("C", res, sig); } : null
-          });
-
-          // 6. III.D Vận dụng
-          await executeStep({
-            operationName: "III.D Vận dụng",
-            percent: 88,
-            templateKey: "GENERATE_ACTIVITY_D",
-            extraPrompt: typeof buildPhasePedagogyContext === "function" ? buildPhasePedagogyContext("D") : "",
-            editorId: "editorActivity",
-            previewId: "previewActivity",
-            applyOutput: typeof applyActivityOutput === "function" ? function (res, sig) { return applyActivityOutput("D", res, sig); } : null
-          });
-
-          // 7. III.E Hồ sơ học tập & Đánh giá
-          await executeStep({
-            operationName: "III.E Hồ sơ học tập & Đánh giá",
-            percent: 96,
-            templateKey: "GENERATE_PORTFOLIO_WORKSHEETS",
-            editorId: "editorActivity",
-            previewId: "previewActivity",
-            applyOutput: typeof applyActivityOutput === "function" ? function (res, sig) { return applyActivityOutput("E", res, sig); } : null
-          });
-
-          // 8. 🎨 F. Hình minh họa SGK
-          if (typeof generateLessonIllustrations === "function") {
-            if (signal.aborted || appState.cancelRequested) throw new DOMException("Aborted", "AbortError");
-            if (typeof updateProgress === "function") updateProgress(98, "Đang tạo: 🎨 F. Hình minh họa SGK...");
-            const footerEl = document.getElementById("statusFooterText");
-            if (footerEl) footerEl.textContent = "Đang tạo: 🎨 F. Hình minh họa SGK...";
-            try {
-              await generateLessonIllustrations({ silent: true });
-            } catch (illErr) {
-              console.warn("1-Click Illustrations warning:", illErr);
-            }
-            if (signal.aborted || appState.cancelRequested) throw new DOMException("Aborted", "AbortError");
-          }
-
-          // TỔNG HỢP & HOÀN TẤT
-          if (typeof updateProgress === "function") updateProgress(100, "Hoàn tất tạo toàn bộ Kế hoạch Bài dạy!");
+          checkCurrent();
+          const textbook = String(appState.content && appState.content.vision || "").trim();
+          if (!textbook) throw new Error("Vui lòng tải ảnh/PDF hoặc nhập nội dung SGK trước khi tạo bài giảng.");
+          const topic = appState.customTopic || (typeof getTopicDisplayName === "function" ? getTopicDisplayName() : "");
+          const subject = typeof getSubjectDisplayName === "function" ? getSubjectDisplayName() : appState.subject;
+          const source = { topic, subject, grade: appState.selectedGrade, duration: appState.duration, textbook };
+          if (typeof updateProgress === "function") updateProgress(40, "Đang tạo 15–25 slide từ SGK bằng Gemini...");
+          await window.KhbdSlides.buildFromApp(source, controller.signal, checkCurrent);
+          checkCurrent();
+          const header = document.getElementById("slideLessonTitle");
+          if (header) header.textContent = topic;
+          const topicInput = document.getElementById("inputTopicCustom");
+          if (topicInput) topicInput.value = topic;
+          const tab = document.querySelector('.main-nav button[data-tab="tabFullPreview"]');
+          if (tab) tab.click();
           if (typeof saveStateToLocalStorage === "function") saveStateToLocalStorage();
           if (typeof updateWorkflowStepper === "function") updateWorkflowStepper();
-          if (typeof renderFullLessonPreview === "function") renderFullLessonPreview();
-          if (window.KhbdSlides && typeof window.KhbdSlides.buildFromApp === "function") {
-            await window.KhbdSlides.buildFromApp();
-          }
-
-          const tabBtnFull = document.querySelector('.main-nav button[data-tab="tabFullPreview"]');
-          if (tabBtnFull) tabBtnFull.click();
-
-          if (typeof showToast === "function") showToast("Đã hoàn tất bài giảng trình chiếu. Có thể F5 để dạy hoặc tải file PowerPoint.", "success", 7000);
-          const footerEl = document.getElementById("statusFooterText");
-          if (footerEl) footerEl.textContent = "Hoàn tất 1-Click. Sẵn sàng trình chiếu / xuất PPTX.";
-
+          if (typeof updateProgress === "function") updateProgress(100, "Đã tạo bài giảng trình chiếu.");
+          const footer = document.getElementById("statusFooterText");
+          if (footer) footer.textContent = "Sẵn sàng trình chiếu / xuất PowerPoint.";
+          if (typeof showToast === "function") showToast("Đã tạo bài giảng. Nhấn F5 để trình chiếu hoặc tải PowerPoint.", "success", 6000);
         } catch (error) {
-          const cancelled = (error && error.name === "AbortError") || (appState && appState.cancelRequested);
-          if (cancelled) {
-            if (typeof showToast === "function") showToast("Đã dừng tiến trình tạo giáo án tự động. Các phần đã soạn trước đó vẫn được bảo lưu.", "info", 5000);
-          } else {
-            console.error("1-Click Generate Error:", error);
-            if (typeof showToast === "function") showToast("Lỗi khi tạo giáo án: " + (error && error.message ? error.message : error), "danger", 7000);
-          }
+          const cancelled = controller.signal.aborted || appState.cancelRequested || error.name === "AbortError";
+          if (typeof showToast === "function") showToast(cancelled ? "Đã hủy tạo bài giảng." : "Lỗi tạo bài giảng: " + error.message, cancelled ? "info" : "danger", 6000);
         } finally {
-          if (typeof appState !== "undefined") {
-            appState.isGenerating = false;
-            appState.cancelRequested = false;
-            appState.generationController = null;
-          }
-          if (btn1Click) btn1Click.disabled = false;
-          if (btnCancel) btnCancel.disabled = true;
+          appState.isGenerating = false;
+          appState.cancelRequested = false;
+          appState.generationController = null;
+          if (btn) btn.disabled = false;
+          if (build) build.disabled = false;
+          if (cancel) cancel.disabled = true;
           if (typeof hideProgress === "function") hideProgress();
         }
       }

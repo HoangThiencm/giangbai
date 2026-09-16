@@ -230,14 +230,15 @@
   }
 
   async function generateAiLessonSlides(source, signal) {
-    if (!root.geminiAPI || typeof root.geminiAPI.generateContent !== "function") {
+    const client = typeof geminiAPI !== "undefined" ? geminiAPI : root.geminiAPI;
+    if (!client || typeof client.generateContent !== "function") {
       throw new Error("Gemini Canvas chưa sẵn sàng để tạo bài giảng.");
     }
     const ctx = lessonContextFromApp(source);
-    root.geminiAPI.selectedModel = "gemini-3-flash-preview";
+    client.selectedModel = "gemini-3-flash-preview";
     const prompt = `Bạn là chuyên gia thiết kế bài giảng trình chiếu. Chỉ dùng NGỮ CẢNH SGK THẬT bên dưới; không bịa đề mục, định nghĩa, ví dụ, bài tập hoặc đáp án.\n\nBÀI: ${ctx.topic}\nMÔN: ${ctx.subject}; LỚP: ${ctx.grade}; THỜI LƯỢNG: ${ctx.duration}\n\nNGỮ CẢNH SGK THẬT:\n${ctx.textbook}\n\nHãy tạo đúng 15–25 slide bằng tiếng Việt. Với từng đơn vị kiến thức có trong ngữ cảnh, bắt buộc theo chuỗi Khám phá → Quy tắc/định nghĩa → Ví dụ SGK giải từng bước → Luyện tập SGK. Có bìa, mục tiêu, khởi động, củng cố/vận dụng và tổng kết. Nếu ngữ cảnh không đủ dữ liệu cho một chi tiết, nêu rõ “Cần giáo viên bổ sung từ trang SGK đã tải”, tuyệt đối không bịa.\n\nChỉ trả JSON hợp lệ, không markdown: {"slides":[{"type":"title|intro|explore|rule|example|practice|summary","title":"...","content":"nội dung thật bám SGK","steps":["bước click 1", "bước click 2"],"mathFormula":"LaTex nếu có, không có thì chuỗi rỗng"}]}.`;
     const role = typeof root.getSystemRole === "function" ? root.getSystemRole(ctx.subject, ctx.grade) : "";
-    const raw = await root.geminiAPI.generateContent(prompt, [], role, 0.2, signal || null, { maxOutputTokens: 8192, timeoutMs: 120000 });
+    const raw = await client.generateContent(prompt, [], role, 0.2, signal || null, { maxOutputTokens: 8192, timeoutMs: 120000 });
     return normalizeAiDeck(extractJson(raw));
   }
 
@@ -302,6 +303,16 @@
         renderMath(ui.stage);
       }
     }
+    if (typeof document !== "undefined") {
+      const overlay = document.getElementById("slidePresentationOverlay");
+      const host = document.getElementById("slidePresentationHost");
+      if (overlay && !overlay.hidden && host && ui.stage) {
+        host.innerHTML = ui.stage.innerHTML;
+        renderMath(host);
+      }
+      const exportBtn = document.getElementById("btnExportPptx");
+      if (exportBtn) exportBtn.disabled = !ui.deck.length;
+    }
     if (ui.counter) {
       ui.counter.textContent = ui.deck.length ? `Slide ${ui.index + 1} / ${ui.deck.length}` : "Slide 0 / 0";
     }
@@ -344,27 +355,81 @@
     paint();
   }
 
+  function getAppState() {
+    return typeof appState !== "undefined" ? appState : (root.appState || {});
+  }
+
+  function syncTextbookMetadata(text) {
+    if (typeof document === "undefined") return;
+    const state = getAppState();
+    const field = label => {
+      const match = String(text || "").match(new RegExp("^\\s*-\\s*" + label + ":\\s*(.+)$", "mi"));
+      return match ? match[1].trim() : "";
+    };
+    const topic = field("Chủ đề");
+    const grade = field("Khối lớp");
+    const subject = field("Môn");
+    if (topic) {
+      state.customTopic = topic;
+      const input = document.getElementById("inputTopicCustom");
+      if (input) input.value = topic;
+      const title = document.getElementById("slideLessonTitle");
+      if (title) title.textContent = topic;
+    }
+    for (const [id, value, key] of [["selectGrade", grade, "selectedGrade"], ["selectSubject", subject, "selectedSubject"]]) {
+      const select = document.getElementById(id);
+      const option = select && Array.from(select.options || []).find(item =>
+        strip(item.value).toLowerCase() === value.toLowerCase() ||
+        strip(item.textContent).toLowerCase() === value.toLowerCase() ||
+        (id === "selectGrade" && strip(item.textContent).toLowerCase() === "lớp " + value.toLowerCase()));
+      if (value && option) {
+        state[key] = option.value;
+        select.value = option.value;
+      }
+    }
+    if (subject) state.subject = subject;
+    if (typeof root.saveStateToLocalStorage === "function") root.saveStateToLocalStorage();
+  }
+
+  function installTextbookMetadataSync(attempt) {
+    if (typeof root.applyTextbookOcrResult === "function") {
+      const original = root.applyTextbookOcrResult;
+      if (original.slidesMetadataSync) return;
+      const wrapped = async function (text, options) {
+        const state = getAppState();
+        if (state.cancelRequested || (state.generationController && state.generationController.signal.aborted)) {
+          throw new DOMException("Aborted", "AbortError");
+        }
+        await original(text, options);
+        syncTextbookMetadata(text);
+      };
+      wrapped.slidesMetadataSync = true;
+      root.applyTextbookOcrResult = wrapped;
+    } else if (attempt < 100) {
+      root.setTimeout(() => installTextbookMetadataSync(attempt + 1), 200);
+    }
+  }
+
   function collectSourceFromApp() {
-    const state = root.appState || {};
+    const state = getAppState();
     const topic = state.customTopic || (typeof document !== "undefined" && document.getElementById("inputTopicCustom") && document.getElementById("inputTopicCustom").value) || "";
     const vision = (state.content && state.content.vision) || (typeof document !== "undefined" && document.getElementById("editorVision") && document.getElementById("editorVision").value) || "";
-    const activity = (state.content && (state.content.B || state.content.activity)) || (typeof document !== "undefined" && document.getElementById("editorActivity") && document.getElementById("editorActivity").value) || "";
     return {
-      topic: topic || state.selectedLesson || "Bài giảng",
-      subject: state.subject || "Toán",
-      grade: state.selectedGrade || "6",
-      duration: state.duration || "02 tiết (90 phút)",
-      textbook: [vision, activity].filter(Boolean).join("\n\n")
+      topic: topic || state.selectedLesson || "",
+      subject: state.subject || "",
+      grade: state.selectedGrade || "",
+      duration: state.duration || "",
+      textbook: vision
     };
   }
 
-  async function buildFromApp(source) {
-    if (!source && root.appState && typeof root.hasTextbookMedia === "function" && root.hasTextbookMedia()
-      && !String(root.appState.content && root.appState.content.vision || "").trim()) {
-      if (typeof root.handleAnalyzeSourceMaterials !== "function") throw new Error("Chức năng đọc SGK chưa sẵn sàng.");
-      await root.handleAnalyzeSourceMaterials();
-    }
-    ui.deck = await generateAiLessonSlides(source || collectSourceFromApp(), root.appState && root.appState.generationController && root.appState.generationController.signal);
+  async function buildFromApp(source, signal, validate) {
+    const state = getAppState();
+    const activeSignal = signal || (state.generationController && state.generationController.signal);
+    const deck = await generateAiLessonSlides(source || collectSourceFromApp(), activeSignal);
+    if (activeSignal && activeSignal.aborted) throw new DOMException("Aborted", "AbortError");
+    if (typeof validate === "function") validate();
+    ui.deck = deck;
     ui.index = 0;
     ui.revealed = 1;
     paint();
@@ -479,6 +544,7 @@
   function mount(options) {
     if (typeof document === "undefined") return;
     const opts = options || {};
+    installTextbookMetadataSync(0);
     ui.stage = document.getElementById(opts.stageId || "slideStage");
     ui.counter = document.getElementById(opts.counterId || "slideCounter");
     const prev = document.getElementById(opts.prevId || "btnSlidePrev");
@@ -504,7 +570,8 @@
         try {
           buildBtn.disabled = true;
           buildBtn.textContent = "Đang tạo slide AI...";
-          await buildFromApp();
+          if (typeof root.handle1ClickGenerate === "function") await root.handle1ClickGenerate();
+          else await buildFromApp();
           if (typeof root.showToast === "function") root.showToast("Đã tạo bài giảng slides từ ngữ cảnh SGK thật.", "success", 3500);
         } catch (err) {
           if (typeof root.showToast === "function") root.showToast(err.message || "Không thể tạo bài giảng slides.", "danger", 6000);
@@ -533,6 +600,7 @@
     maxStep,
     mount,
     buildFromApp,
+    syncTextbookMetadata,
     nextSlide,
     prevSlide,
     goTo,
