@@ -1,0 +1,1123 @@
+{
+  "sodiem:6/1:Ton:2025-20265\u0000_233": {
+    "columns": [
+      "KTTX 1",
+      "KTTX 2",
+      "KTTX 3",
+      "KTTX 4"
+    ],
+    "students": [
+      {
+        "id": "72",
+        "sbd": "c2tranphu_buingockhanhthy",
+        "name": "Bùi Ngọc Khánh Thy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "63",
+        "sbd": "c2tranphu_caodinhminhnhat",
+        "name": "Cao Đình Minh Nhật",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "68",
+        "sbd": "c2tranphu_duongchitai",
+        "name": "Dương Chí Tài",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "57",
+        "sbd": "c2tranphu_duongcongtuankiet",
+        "name": "Dương Công Tuấn Kiệt",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "67",
+        "sbd": "c2tranphu_dinhdanglinhsan",
+        "name": "Đinh Đặng Linh San",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "71",
+        "sbd": "c2tranphu_doanngocanhthu",
+        "name": "Đoàn Ngọc Anh Thư",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "61",
+        "sbd": "c2tranphu_hoangtuengoc",
+        "name": "Hoàng Tuệ Ngọc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "70",
+        "sbd": "c2tranphu_leanhthu",
+        "name": "Lê Anh Thư",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "53",
+        "sbd": "c2tranphu_lenguyenquochuy",
+        "name": "Lê Nguyễn Quốc Huy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "66",
+        "sbd": "c2tranphu_lethienphuc",
+        "name": "Lê Thiên Phúc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "42",
+        "sbd": "c2tranphu_luonghuynhanh",
+        "name": "Lương Huỳnh Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "62",
+        "sbd": "c2tranphu_maithaonguyen",
+        "name": "Mai Thảo Nguyên",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "49",
+        "sbd": "c2tranphu_ng.ngocminhhang",
+        "name": "Ng. Ngọc Minh Hằng",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "56",
+        "sbd": "c2tranphu_nguyenanhkhoi",
+        "name": "Nguyễn Anh Khôi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "59",
+        "sbd": "c2tranphu_nguyenduchoangnam",
+        "name": "Nguyễn Đức Hoàng Nam",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "50",
+        "sbd": "c2tranphu_nguyengiahao",
+        "name": "Nguyễn Gia Hào",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "41",
+        "sbd": "c2tranphu_nguyenhoainam",
+        "name": "Nguyễn Hoài Nam",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "54",
+        "sbd": "c2tranphu_nguyenminhkhang",
+        "name": "Nguyễn Minh Khang",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "44",
+        "sbd": "c2tranphu_nguyenngochoangchau",
+        "name": "Nguyễn Ngọc Hoàng Châu",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "52",
+        "sbd": "c2tranphu_nguyennhathuy",
+        "name": "Nguyễn Nhật Huy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "45",
+        "sbd": "c2tranphu_nguyenquocdanh",
+        "name": "Nguyễn Quốc Danh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "46",
+        "sbd": "c2tranphu_nguyenthuydung",
+        "name": "Nguyễn Thùy Dung",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "40",
+        "sbd": "c2tranphu_nguyentuananh",
+        "name": "Nguyễn Tuấn Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "60",
+        "sbd": "c2tranphu_nguyenvudongnghi",
+        "name": "Nguyễn Vũ Đông Nghi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "58",
+        "sbd": "c2tranphu_nguyenvumykieu",
+        "name": "Nguyễn Vũ Mỹ Kiều",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "47",
+        "sbd": "c2tranphu_phamkhanhha",
+        "name": "Phạm Khánh Hà",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "51",
+        "sbd": "c2tranphu_phamminhhoang",
+        "name": "Phạm Minh Hoàng",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "69",
+        "sbd": "c2tranphu_phanngocthanhtam",
+        "name": "Phan Ngọc Thanh Tâm",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "43",
+        "sbd": "c2tranphu_tonggiabao",
+        "name": "Tống Gia Bảo",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "55",
+        "sbd": "c2tranphu_trandangkhoa",
+        "name": "Trần Đăng Khoa",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "64",
+        "sbd": "c2tranphu_tranleuyennhi",
+        "name": "Trần Lê Uyên Nhi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "65",
+        "sbd": "c2tranphu_tranngocbaonhi",
+        "name": "Trần Ngọc Bảo Nhi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "74",
+        "sbd": "c2tranphu_tranquangminhtuan",
+        "name": "Trần Quang Minh Tuấn",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "73",
+        "sbd": "c2tranphu_tranthihuyentram",
+        "name": "Trần Thị Huyền Trâm",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "48",
+        "sbd": "c2tranphu_trinhnhahan",
+        "name": "Trịnh Nhã Hân",
+        "scores": {},
+        "comment": ""
+      }
+    ],
+    "history": []
+  },
+  "sodiem:9/1:Ton:2025-2026=\u0000_7158": {
+    "columns": [
+      "KTTX 1",
+      "KTTX 2",
+      "KTTX 3",
+      "KTTX 4"
+    ],
+    "students": [
+      {
+        "id": "126",
+        "sbd": "c2tranphu_caohoangmyduyen",
+        "name": "Cao Hoàng Mỹ Duyên",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "139",
+        "sbd": "c2tranphu_caonguyenquynhnhi",
+        "name": "Cao Nguyễn Quỳnh Nhi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "134",
+        "sbd": "c2tranphu_caothienmanh",
+        "name": "Cao Thiên Mạnh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "151",
+        "sbd": "c2tranphu_changngoctuyet",
+        "name": "Chắng Ngọc Tuyết",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "143",
+        "sbd": "c2tranphu_dangthiphuongthao",
+        "name": "Đặng Thị Phương Thảo",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "117",
+        "sbd": "c2tranphu_hoducanh",
+        "name": "Hồ Đức Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "125",
+        "sbd": "c2tranphu_hotrongcuong",
+        "name": "Hồ Trọng Cường",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "124",
+        "sbd": "c2tranphu_hoangxuanbao",
+        "name": "Hoàng Xuân Bảo",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "127",
+        "sbd": "c2tranphu_huynhgiahan",
+        "name": "Huỳnh Gia Hân",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "136",
+        "sbd": "c2tranphu_huynhthituyetnghi",
+        "name": "Huỳnh Thị Tuyết Nghi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "132",
+        "sbd": "c2tranphu_lammyhuyen",
+        "name": "Lầm Mỹ Huyền",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "148",
+        "sbd": "c2tranphu_lamthithanhtruc",
+        "name": "Lâm Thị Thanh Trúc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "129",
+        "sbd": "c2tranphu_lemanhhao",
+        "name": "Lê Mạnh Hào",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "118",
+        "sbd": "c2tranphu_letranchianh",
+        "name": "Lê Trần Chí Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "119",
+        "sbd": "c2tranphu_letuananh",
+        "name": "Lê Tuấn Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "137",
+        "sbd": "c2tranphu_nguyenbaongoc",
+        "name": "Nguyễn Bảo Ngọc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "135",
+        "sbd": "c2tranphu_nguyendinhnguyetmy",
+        "name": "Nguyễn Đinh Nguyệt My",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "128",
+        "sbd": "c2tranphu_nguyenhoanggiahan",
+        "name": "Nguyễn Hoàng Gia Hân",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "120",
+        "sbd": "c2tranphu_nguyenngocmaianh",
+        "name": "Nguyễn Ngọc Mai Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "131",
+        "sbd": "c2tranphu_nguyenquanghoang",
+        "name": "Nguyễn Quang Hoàng",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "133",
+        "sbd": "c2tranphu_nguyentankiet",
+        "name": "Nguyễn Tấn Kiệt",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "142",
+        "sbd": "c2tranphu_nguyentantai",
+        "name": "Nguyễn Tấn Tài",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "152",
+        "sbd": "c2tranphu_nguyenthanhtuyet",
+        "name": "Nguyễn Thanh Tuyết",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "130",
+        "sbd": "c2tranphu_nguyentronghoai",
+        "name": "Nguyễn Trọng Hoài",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "138",
+        "sbd": "c2tranphu_nguyenvannguyen",
+        "name": "Nguyễn Văn Nguyên",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "140",
+        "sbd": "c2tranphu_phamannhien",
+        "name": "Phạm An Nhiên",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "121",
+        "sbd": "c2tranphu_phamquynhanh",
+        "name": "Phạm Quỳnh Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "153",
+        "sbd": "c2tranphu_phamthituongvy",
+        "name": "Phạm Thị Tường Vy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "144",
+        "sbd": "c2tranphu_phanthithuthao",
+        "name": "Phan Thị Thu Thảo",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "145",
+        "sbd": "c2tranphu_takhanhthi",
+        "name": "Tạ Khánh Thi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "115",
+        "sbd": "c2tranphu_thannguyennhatan",
+        "name": "Thân Nguyễn Nhật An",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "141",
+        "sbd": "c2tranphu_trananhquan",
+        "name": "Trần Anh Quân",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "149",
+        "sbd": "c2tranphu_trannguyenthanhtruc",
+        "name": "Trần Nguyễn Thanh Trúc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "146",
+        "sbd": "c2tranphu_tranphucthinh",
+        "name": "Trần Phúc Thịnh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "147",
+        "sbd": "c2tranphu_tranthikieutrang",
+        "name": "Trần Thị Kiều Trang",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "154",
+        "sbd": "c2tranphu_trinhngoctuongvy",
+        "name": "Trịnh Ngọc Tường Vy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "122",
+        "sbd": "c2tranphu_truongthikieuanh",
+        "name": "Trương Thị Kiều Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "150",
+        "sbd": "c2tranphu_truongthikimtuyen1",
+        "name": "Trương Thị Kim Tuyền",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "116",
+        "sbd": "c2tranphu_truongtuanan",
+        "name": "Trương Tuấn An",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "123",
+        "sbd": "c2tranphu_vonguyentuananh",
+        "name": "Võ Nguyễn Tuấn Anh",
+        "scores": {},
+        "comment": ""
+      }
+    ],
+    "history": []
+  },
+  "sodiem:9/2:Ton:2025-2026;\u0000_15141": {
+    "columns": [
+      "KTTX 1",
+      "KTTX 2",
+      "KTTX 3",
+      "KTTX 4"
+    ],
+    "students": [
+      {
+        "id": "79",
+        "sbd": "c2tranphu_buithimydung",
+        "name": "Bùi Thị Mỹ Dung",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "80",
+        "sbd": "c2tranphu_buivietdung",
+        "name": "Bùi Viết Dũng",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "108",
+        "sbd": "c2tranphu_dangthanhtra",
+        "name": "Đặng Thanh Trà",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "81",
+        "sbd": "c2tranphu_dothuyduong",
+        "name": "Đỗ Thùy Dương",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "94",
+        "sbd": "c2tranphu_dovankiet",
+        "name": "Đỗ Văn Kiệt",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "89",
+        "sbd": "c2tranphu_doangiahuy",
+        "name": "Đoàn Gia Huy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "75",
+        "sbd": "c2tranphu_hongoclinhchi",
+        "name": "Hồ Ngọc Linh Chi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "90",
+        "sbd": "c2tranphu_hothanhhuy",
+        "name": "Hồ Thanh Huy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "98",
+        "sbd": "c2tranphu_hothikimngan",
+        "name": "Hồ Thị Kim Ngân",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "82",
+        "sbd": "c2tranphu_houyennganduyen",
+        "name": "Hồ Uyển Ngân Duyên",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "106",
+        "sbd": "c2tranphu_hoanggiato",
+        "name": "Hoàng Gia Tố",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "86",
+        "sbd": "c2tranphu_hoangminhhung",
+        "name": "Hoàng Minh Hùng",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "92",
+        "sbd": "c2tranphu_leminhkhang",
+        "name": "Lê Minh Khang",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "95",
+        "sbd": "c2tranphu_lenguyenthienkim",
+        "name": "Lê Nguyễn Thiên Kim",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "84",
+        "sbd": "c2tranphu_nguyenbaohan",
+        "name": "Nguyễn Bảo Hân",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "99",
+        "sbd": "c2tranphu_nguyenbaongoc1",
+        "name": "Nguyễn Bảo Ngọc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "109",
+        "sbd": "c2tranphu_nguyendinhtri",
+        "name": "Nguyễn Đình Trí",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "97",
+        "sbd": "c2tranphu_nguyenkynam",
+        "name": "Nguyễn Kỳ Nam",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "111",
+        "sbd": "c2tranphu_nguyenlengoctruc",
+        "name": "Nguyễn Lê Ngọc Trúc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "102",
+        "sbd": "c2tranphu_nguyenngockhanhnhi",
+        "name": "Nguyễn Ngọc Khánh Nhi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "76",
+        "sbd": "c2tranphu_nguyenngocminhdan",
+        "name": "Nguyễn Ngọc Minh Đan",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "87",
+        "sbd": "c2tranphu_nguyenngocquochung",
+        "name": "Nguyễn Ngọc Quốc Hưng",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "100",
+        "sbd": "c2tranphu_nguyenthihongngoc",
+        "name": "Nguyễn Thị Hồng Ngọc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "113",
+        "sbd": "c2tranphu_nguyenthingocvy",
+        "name": "Nguyễn Thị Ngọc Vy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "91",
+        "sbd": "c2tranphu_nguyenthithanhhuyen",
+        "name": "Nguyễn Thị Thanh Huyền",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "104",
+        "sbd": "c2tranphu_nguyenthithanhthuy",
+        "name": "Nguyễn Thị Thanh Thủy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "114",
+        "sbd": "c2tranphu_nguyentranngocvy",
+        "name": "Nguyễn Trần Ngọc Vy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "101",
+        "sbd": "c2tranphu_phambaongoc",
+        "name": "Phạm Bảo Ngọc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "85",
+        "sbd": "c2tranphu_phamngochan",
+        "name": "Phạm Ngọc Hân",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "107",
+        "sbd": "c2tranphu_phamvantoan",
+        "name": "Phạm Văn Toàn",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "77",
+        "sbd": "c2tranphu_phanhaidang",
+        "name": "Phan Hải Đăng",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "78",
+        "sbd": "c2tranphu_phanminhduc",
+        "name": "Phan Minh Đức",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "105",
+        "sbd": "c2tranphu_phungngocthuy",
+        "name": "Phùng Ngọc Thủy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "96",
+        "sbd": "c2tranphu_tranminhphilong",
+        "name": "Trần Minh Phi Long",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "93",
+        "sbd": "c2tranphu_trinhanhkhoa",
+        "name": "Trịnh Anh Khoa",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "103",
+        "sbd": "c2tranphu_trinhhoangthienphuc",
+        "name": "Trịnh Hoàng Thiên Phúc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "110",
+        "sbd": "c2tranphu_truongquangphutrong",
+        "name": "Trương Quang Phú Trọng",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "83",
+        "sbd": "c2tranphu_vuthiquynhgiao",
+        "name": "Vũ Thị Quỳnh Giao",
+        "scores": {},
+        "comment": ""
+      }
+    ],
+    "history": [
+      {
+        "studentId": "92",
+        "column": "KTTX 1",
+        "at": "2026-09-16T13:07:09.285Z"
+      }
+    ]
+  },
+  "sodiem:9/1:Ton:2025-2026=\u0000_22911": {
+    "columns": [
+      "KTTX 1",
+      "KTTX 2",
+      "KTTX 3",
+      "KTTX 4"
+    ],
+    "students": [
+      {
+        "id": "115",
+        "sbd": "c2tranphu_thannguyennhatan",
+        "name": "Thân Nguyễn Nhật An",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "116",
+        "sbd": "c2tranphu_truongtuanan",
+        "name": "Trương Tuấn An",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "117",
+        "sbd": "c2tranphu_hoducanh",
+        "name": "Hồ Đức Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "118",
+        "sbd": "c2tranphu_letranchianh",
+        "name": "Lê Trần Chí Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "119",
+        "sbd": "c2tranphu_letuananh",
+        "name": "Lê Tuấn Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "120",
+        "sbd": "c2tranphu_nguyenngocmaianh",
+        "name": "Nguyễn Ngọc Mai Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "121",
+        "sbd": "c2tranphu_phamquynhanh",
+        "name": "Phạm Quỳnh Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "122",
+        "sbd": "c2tranphu_truongthikieuanh",
+        "name": "Trương Thị Kiều Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "123",
+        "sbd": "c2tranphu_vonguyentuananh",
+        "name": "Võ Nguyễn Tuấn Anh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "124",
+        "sbd": "c2tranphu_hoangxuanbao",
+        "name": "Hoàng Xuân Bảo",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "125",
+        "sbd": "c2tranphu_hotrongcuong",
+        "name": "Hồ Trọng Cường",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "126",
+        "sbd": "c2tranphu_caohoangmyduyen",
+        "name": "Cao Hoàng Mỹ Duyên",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "129",
+        "sbd": "c2tranphu_lemanhhao",
+        "name": "Lê Mạnh Hào",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "127",
+        "sbd": "c2tranphu_huynhgiahan",
+        "name": "Huỳnh Gia Hân",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "128",
+        "sbd": "c2tranphu_nguyenhoanggiahan",
+        "name": "Nguyễn Hoàng Gia Hân",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "130",
+        "sbd": "c2tranphu_nguyentronghoai",
+        "name": "Nguyễn Trọng Hoài",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "131",
+        "sbd": "c2tranphu_nguyenquanghoang",
+        "name": "Nguyễn Quang Hoàng",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "132",
+        "sbd": "c2tranphu_lammyhuyen",
+        "name": "Lầm Mỹ Huyền",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "133",
+        "sbd": "c2tranphu_nguyentankiet",
+        "name": "Nguyễn Tấn Kiệt",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "134",
+        "sbd": "c2tranphu_caothienmanh",
+        "name": "Cao Thiên Mạnh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "135",
+        "sbd": "c2tranphu_nguyendinhnguyetmy",
+        "name": "Nguyễn Đinh Nguyệt My",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "136",
+        "sbd": "c2tranphu_huynhthituyetnghi",
+        "name": "Huỳnh Thị Tuyết Nghi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "137",
+        "sbd": "c2tranphu_nguyenbaongoc",
+        "name": "Nguyễn Bảo Ngọc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "138",
+        "sbd": "c2tranphu_nguyenvannguyen",
+        "name": "Nguyễn Văn Nguyên",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "139",
+        "sbd": "c2tranphu_caonguyenquynhnhi",
+        "name": "Cao Nguyễn Quỳnh Nhi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "140",
+        "sbd": "c2tranphu_phamannhien",
+        "name": "Phạm An Nhiên",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "141",
+        "sbd": "c2tranphu_trananhquan",
+        "name": "Trần Anh Quân",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "142",
+        "sbd": "c2tranphu_nguyentantai",
+        "name": "Nguyễn Tấn Tài",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "143",
+        "sbd": "c2tranphu_dangthiphuongthao",
+        "name": "Đặng Thị Phương Thảo",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "144",
+        "sbd": "c2tranphu_phanthithuthao",
+        "name": "Phan Thị Thu Thảo",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "145",
+        "sbd": "c2tranphu_takhanhthi",
+        "name": "Tạ Khánh Thi",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "146",
+        "sbd": "c2tranphu_tranphucthinh",
+        "name": "Trần Phúc Thịnh",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "147",
+        "sbd": "c2tranphu_tranthikieutrang",
+        "name": "Trần Thị Kiều Trang",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "148",
+        "sbd": "c2tranphu_lamthithanhtruc",
+        "name": "Lâm Thị Thanh Trúc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "149",
+        "sbd": "c2tranphu_trannguyenthanhtruc",
+        "name": "Trần Nguyễn Thanh Trúc",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "150",
+        "sbd": "c2tranphu_truongthikimtuyen1",
+        "name": "Trương Thị Kim Tuyền",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "151",
+        "sbd": "c2tranphu_changngoctuyet",
+        "name": "Chắng Ngọc Tuyết",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "152",
+        "sbd": "c2tranphu_nguyenthanhtuyet",
+        "name": "Nguyễn Thanh Tuyết",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "153",
+        "sbd": "c2tranphu_phamthituongvy",
+        "name": "Phạm Thị Tường Vy",
+        "scores": {},
+        "comment": ""
+      },
+      {
+        "id": "154",
+        "sbd": "c2tranphu_trinhngoctuongvy",
+        "name": "Trịnh Ngọc Tường Vy",
+        "scores": {},
+        "comment": ""
+      }
+    ],
+    "history": []
+  }
+}

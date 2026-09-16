@@ -8,6 +8,7 @@ const requireMatch = (text, pattern, message) => { if (!pattern.test(text)) thro
 const page = read('sodiem.html');
 const api = read('api/sodiem.php');
 ['security-guard.js', 'access-control.js', 'xlsx.full.min.js', 'canvas-confetti', 'wheelCanvas', 'spinWheel', 'api/exam.php/student-classes', 'class-students', 'localStorage', 'exportExcel', 'questionInput', 'timer', 'winnerModal'].forEach(token => requireMatch(page, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `Missing ${token} in sodiem.html.`));
+['saveStatus','triggerAutoSave','saveBookSilent','beforeunload','keepalive','hasPendingChanges'].forEach(token=>requireMatch(page,new RegExp(token),`Missing auto-save: ${token}.`));
 requireMatch(page, /Đã hoàn thành vòng kiểm tra/, 'Wheel must reset after a completed score column.');
 requireMatch(page, /scores\[col\]===undefined/, 'Wheel must identify students without a score.');
 requireMatch(page, /Array\(s\.scores\[col\]===undefined\?20:1\)\.fill\(s\)/, 'Weighted wheel mode must give scored students 5% of an unscored student weight.');

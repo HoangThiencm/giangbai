@@ -1,127 +1,159 @@
-# PLAN: Nâng cấp Kịch bản Sư phạm 4 bước, Khắc phục lỗi Failed to fetch Hoạt động C, và Chia tỉ lệ cột 2:1
+# PLAN: Xóa Thời gian ở Hồ sơ dạy học, Chuẩn hóa Tiết Luyện tập chung / Ôn tập, và Sửa lỗi rỉ thẻ `<br>- GV:` khi xuất Word
 
 ## Hiện trạng
 
-1. **Ý 1 - Kịch bản sư phạm 4 bước còn nặng tính "văn mẫu hành chính"**:
-   - Cột "Hoạt động của GV và HS" đang sinh theo khuôn mẫu chung chung: GV chỉ ra lệnh ngắn ("Các em hãy làm HĐ1, HĐ2..."), thiếu hẳn hành động thao tác cụ thể của học sinh, thiếu dự kiến câu trả lời/sản phẩm của học sinh (cả câu trả lời đúng và lỗi sai/ngộ nhận điển hình), thiếu diễn biến chất vấn - phản biện thực tế giữa GV-HS và HS-HS ở bước Báo cáo, thiếu nhận xét chốt kiến thức và quy tắc then chốt ở bước Kết luận.
-2. **Ý 2 - Lỗi `TypeError: Failed to fetch` khi tạo Hoạt động C (Luyện tập)**:
-   - Prompt C (`GENERATE_ACTIVITY_C`) rất dài (17.868 ký tự).
-   - Mô hình Canvas mặc định là `gemini-3-flash-preview` có cơ chế suy luận/thinking nội bộ, mất hơn 85 giây để xử lý.
-   - Xung đột timeout đa tầng: Client `js/khbd-app.js` khống chế 75s, Server PHP khống chế 55s, Web Server LiteSpeed ngắt kết nối ở ~60s làm rớt kết nối mạng đột ngột dẫn đến `Failed to fetch`.
-   - Thực nghiệm cho thấy mô hình `gemini-2.5-flash` xử lý cùng Prompt C chỉ mất **16,5 giây** (nhanh gấp 5 lần, HTTP 200 ổn định tuyệt đối).
-3. **Ý 3 - Bảng hoạt động dạy học đang chia đều 50% - 50%**:
-   - Hiện tại trong `js/khbd-docx.js` (dòng 909) và trên Web CSS, bảng 2 cột hoạt động đang chia đều `[4819, 4820]` dxa (50% - 50%).
-   - Cột GV - HS chứa toàn bộ 4 bước sư phạm, lời thoại và kịch bản phân vai nên bị ép hẹp, chữ xuống dòng vụn vặt làm kéo dài trang giáo án. Trong khi cột Nội dung chỉ ghi bảng tóm tắt lại bị thừa nhiều khoảng trống.
+1. **Ý 1 - Hồ sơ dạy học bị gắn nhãn thời gian `(4 phút)` trái quy chuẩn sư phạm**:
+   - Khi xuất giáo án ra Word hoặc xem toàn bài, ở mục phụ lục xuất hiện dòng:
+     `IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)`
+     `E. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC) (4 phút)`
+   - Nguyên nhân trong code:
+     + Trong `js/khbd-app.js` (dòng 6432), khi chuẩn hóa tab `E`, code truyền `fourActivities: actKey !== "E"` (`false`), khiến bộ tính toán ngân sách thời lượng `calculateActivityTimeBudgets` lầm tưởng mục E là *"Hoạt động 5: Hướng dẫn về nhà"* của hệ thống cũ và trích ra 4 phút từ tổng 90 phút (hoặc 2 phút từ 45 phút).
+     + Tiếp đó, hàm `normalizeActivityTimeHeadings` (dòng 6390) gắn thêm `(4 phút)` vào tiêu đề của E.
+     + Theo Công văn 5512/BGDĐT-GDTrH, Hồ sơ dạy học là **Phụ lục học liệu in ấn đính kèm**, hoàn toàn **không tính thời gian/thời lượng**; toàn bộ 45/90 phút phải được dành trọn vẹn 100% cho các hoạt động dạy học trên lớp.
+2. **Ý 2 - Chưa có cơ chế chuyên biệt cho tiết "Luyện tập chung", "Ôn tập"**:
+   - Hiện tại, khi gặp bài dạy là tiết "Luyện tập chung", "Ôn tập chương" hay "Bài tập cuối chương", hệ thống vẫn sinh theo mẫu bài dạy lý thuyết thông thường (có cả Hoạt động 2: Hình thành kiến thức mới).
+   - Điều này dẫn đến việc AI phải tự "bịa" ra kiến thức mới hoặc lặp lại các bài tập vào mục hình thành kiến thức một cách gượng ép, không đúng thực tế bài học SGK (vốn chỉ gồm các bài tập luyện tập).
+   - Giáo viên yêu cầu: Tiết Luyện tập chung / Ôn tập phải có cấu trúc chuẩn mực: **Có Khởi động (Trò chơi ngắn 3–5 phút nhắc lại công thức/quy tắc) → Bỏ Hình thành kiến thức mới → Trọng tâm Luyện tập (chiếm 75–80% thời lượng) → Vận dụng**.
+3. **Ý 3 - Xuất Word bị lỗi chèn thẻ thô: `*(Nhận xét của <br>- GV: ....................)*`**:
+   - Nguyên nhân kép:
+     + **Nguyên nhân 1 (Chèn sai chuỗi):** Hàm `formatKhbdRoleLine` trong `js/khbd-app.js` (dòng 2301) và `canvas_soankhbd.html` (dòng 1421) sử dụng regex `/(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi` quá tham lam, tự động bắt gặp chữ `GV:` ở bất kỳ đâu, kể cả trong cụm từ `Nhận xét của GV:` trên mẫu phiếu học tập, rồi chèn chuỗi `<br>- ` vào giữa biến thành `Nhận xét của <br>- **GV:**`. Hàm này lại được gọi bừa bãi lên toàn bộ bài dạy thay vì chỉ áp dụng cho kịch bản phân vai trong bảng 2 cột.
+     + **Nguyên nhân 2 (Xuất Word in thẻ HTML thô):** Trong `js/khbd-docx.js`, hàm `parseInlineTextToRuns` đối với các đoạn văn bản bình thường ngoài bảng không xử lý thẻ HTML `<br>`, khiến chuỗi `<br>` bị in nguyên văn thành chữ thô ra file Word `.docx`.
 
 ---
 
 ## Phạm vi
 
-1. **Nâng cấp Prompt Sư phạm trong `js/khbd-prompts.js` và `js/khbd-app.js`**:
-   - Bổ sung chỉ dẫn kịch bản thực chiến vào hợp đồng bảng 2 cột (`ACTIVITY_TABLE_CONTRACT` và các prompt nhánh B, C, D):
-     + **Bước 1 (Chuyển giao)**: GV nêu câu lệnh rõ ràng, phương tiện (phiếu học tập/bảng nhóm), thời gian và phân công vai trò.
-     + **Bước 2 (Thực hiện)**: Thao tác của HS; **bắt buộc có "Dự kiến câu trả lời của HS"** (kết quả và lỗi sai điển hình); GV quan sát, gợi mở xử lý phân hóa.
-     + **Bước 3 (Báo cáo)**: Diễn biến báo cáo (chiếu bài/dán bảng), lời thoại chất vấn - phản biện giữa các nhóm và câu hỏi gợi mở của GV.
-     + **Bước 4 (Kết luận)**: GV nhận xét tinh thần học tập, chốt kiến thức chuẩn mực và nhấn mạnh "quy tắc vàng" / chú ý quan trọng cần ghi nhớ.
-2. **Khắc phục lỗi mạng và tối ưu tốc độ sinh**:
-   - Cấu hình model mặc định của Canvas trong `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html` sang `gemini-2.5-flash` (nhanh, ổn định).
-   - Thêm cơ chế tự động Fallback trong `api/canvas_gemini.php`: nếu model chính gặp lỗi hoặc quá thời gian, tự động chuyển sang `gemini-2.5-flash` trước khi trả lỗi.
-   - Nâng client timeout trong `js/khbd-app.js` lên 95.000ms.
-3. **Chia tỉ lệ cột bảng hoạt động thành 2 : 1 (66.7% : 33.3%)**:
-   - Trong `js/khbd-docx.js`: Điều chỉnh độ rộng cột 2 cột `isActivityTwoCol` từ `[4819, 4820]` thành `[6426, 3213]` dxa (tổng 9.639 dxa: cột GV-HS chiếm 2 phần ~66.7%, cột Nội dung chiếm 1 phần ~33.3%).
-   - Trong `css/khbd-styles.css` (và style của Canvas): Định nghĩa CSS cho bảng 2 cột của `.preview-rendered table` để cột 1 chiếm `66.67%` và cột 2 chiếm `33.33%`.
-4. **Nâng version cache-busting**:
-   - Nâng lên `20260916-textbook-exact-v18` cho toàn bộ các file HTML, JS liên quan.
+1. **Xóa bỏ hoàn toàn thời gian ở Hồ sơ dạy học (Mục IV / Phụ lục E)**:
+   - Trong `js/khbd-app.js`, bỏ lệnh gán phút cho `headingRe.E` trong `normalizeActivityTimeHeadings`.
+   - Bổ sung bộ lọc regex xóa triệt để mọi hậu tố thời lượng như `(X phút)`, `(khoảng X phút)` nếu vô tình xuất hiện ở tiêu đề Phụ lục / Hồ sơ dạy học / Phiếu học tập.
+   - Sửa `clipKhbdActivityMarkdown` luôn truyền `fourActivities: true` để toàn bộ thời lượng bài dạy (45p / 90p) được bảo toàn 100% cho các hoạt động trên lớp (A, B, C, D), trả lại số phút bị mất cho các hoạt động học tập.
+   - Trong `js/khbd-docx.js` và `js/khbd-app.js`, chuẩn hóa việc xuất phụ lục IV: chỉ giữ tiêu đề chuẩn `IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)`, không lặp lại dòng tiêu đề thừa `E. HỒ SƠ DẠY HỌC...` có dính số phút.
+2. **Chuẩn hóa cấu trúc tiến trình cho tiết "Luyện tập chung", "Ôn tập"**:
+   - Viết hàm nhận diện loại bài `isPracticeOrReviewLesson(topic)` trong `js/khbd-prompts.js` và `js/khbd-app.js`:
+     + Nhận diện các từ khóa: `luyện tập chung`, `luyện tập`, `ôn tập`, `bài tập cuối chương`.
+   - Tinh chỉnh Prompt và tiến trình dạy học cho loại bài này:
+     + **Hoạt động 1 (Khởi động):** Thiết kế trò chơi ngắn (3–5 phút) như Trò chơi ô chữ, Vòng quay may mắn, Đố vui công thức, Khởi động nhanh để vừa tạo hứng thú, vừa tái hiện/nhắc lại các quy tắc, công thức toán học trọng tâm cần dùng trong tiết luyện tập.
+     + **Bỏ hoạt động "Hình thành kiến thức mới" (Pha B):** Không sinh hoạt động lý thuyết mới. Toàn bộ thời lượng của Pha B được dồn vào Pha C (Luyện tập). Nếu người dùng bấm tạo ở tab B hoặc tạo 1-click, hệ thống xuất bảng tóm tắt/sơ đồ hệ thống hóa kiến thức ngắn gọn hoặc chuyển tiếp mượt mà sang luyện tập bài tập.
+     + **Hoạt động 2 (Luyện tập - Trọng tâm):** Chiếm ~75–80% tổng thời lượng tiết học. Phân dạng bài tập cụ thể bám sát SGK (Dạng 1: Rèn luyện kỹ năng cơ bản; Dạng 2: Vận dụng giải toán / bài toán thực tế); kịch bản phân vai GV - HS đầy đủ 4 bước (Chuyển giao, Thực hiện - có dự kiến lời giải & lỗi sai của HS, Báo cáo đối thoại, Kết luận chốt phương pháp giải).
+     + **Hoạt động 3 (Vận dụng):** Bài tập thực tế mở rộng, củng cố và hướng dẫn học sinh tự học ở nhà.
+3. **Khắc phục triệt để lỗi rỉ thẻ `<br>- GV:` và in thẻ HTML thô ra Word**:
+   - Tinh chỉnh regex trong `formatKhbdRoleLine` (`js/khbd-app.js`, `canvas_soankhbd.html`): Chỉ định dạng khi là đầu lượt lời (đầu dòng, sau `- `, hoặc sau dấu kết thúc câu); **tuyệt đối loại trừ khi phía trước là `Nhận xét của `, `Đánh giá của `, `Ý kiến của `, `Chữ ký của ` hoặc từ `của `**.
+   - Không chạy `formatKhbdRoleLineBreaks` lên phần Phụ lục E (Phiếu học tập / Hồ sơ dạy học).
+   - Trong `js/khbd-docx.js`:
+     + Trước khi chuyển đổi sang Word elements, thay thế toàn bộ `<br\s*\/?>` thành ký tự xuống dòng `\n` hoặc xử lý tạo `TextRun({ break: 1 })`.
+     + Đảm bảo không bao giờ xuất hiện chuỗi `<br>` trần trụi trong file Word.
+4. **Cập nhật và bổ sung bài kiểm tra tự động**:
+   - Cập nhật bài kiểm tra trong `tests/` để xác nhận:
+     + Tiêu đề Hồ sơ dạy học không bao giờ chứa `(\d+ phút)`.
+     + Cụm từ `*(Nhận xét của GV: ...)*` giữ nguyên vẹn, không bị chèn `<br>- ` hay in thẻ `<br>`.
+     + Tiết Luyện tập chung được nhận diện chính xác và phân bổ thời lượng hợp lý.
 
 ---
 
 ## Ngoài phạm vi
 
-- Không thay đổi cấu trúc bảng 2 cột sang 3 cột hay nhiều hàng (vẫn giữ đúng chuẩn bảng 2 cột, 1 hàng của hệ thống).
-- Không sửa đổi logic bóc tách SGK Vision Bước 0.
+- Không thay đổi cấu trúc bảng 2 cột 1 hàng chuẩn của CV 5512.
+- Không can thiệp vào các bài dạy lý thuyết thông thường (vẫn giữ đủ 4 bước A, B, C, D).
 
 ---
 
 ## File dự kiến tác động
 
-1. `js/khbd-prompts.js`
+1. `js/khbd-app.js`
 2. `js/khbd-docx.js`
-3. `css/khbd-styles.css`
+3. `js/khbd-prompts.js`
 4. `canvas_soankhbd.html`
 5. `backupcode viettailieu/canvas_soankhbd.html`
-6. `api/canvas_gemini.php`
-7. `js/khbd-app.js`
-8. `tests/khbd-table-columns-smoke.js`
-9. `tests/canvas-prompts-integrity-smoke.js`
-10. `tests/canvas-activity-b-multi-branches-smoke.js`
+6. `tests/khbd-activity-e-smoke.js`
+7. `tests/khbd-time-budgets-smoke.js`
+8. `tests/khbd-pedagogy-rate-smoke.js`
 
 ---
 
-## Các bước thực hiện
+## Các bước thực hiện chi tiết cho Coder
 
-### Bước 1: Nâng cấp kịch bản sư phạm 4 bước trong `js/khbd-prompts.js`
-- Cập nhật mục `CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG`:
-  + Bước 1: Giao rõ nhiệm vụ, thời gian, công cụ.
-  + Bước 2: Bắt buộc mô tả thao tác và **Dự kiến câu trả lời của HS** (kết quả và lỗi sai điển hình môn học).
-  + Bước 3: Diễn biến thảo luận, đối thoại chất vấn - phản biện thực tế.
-  + Bước 4: GV nhận xét, chốt kiến thức và quy tắc cốt lõi ghi vở.
-
-### Bước 2: Đổi tỉ lệ cột 2:1 trong `js/khbd-docx.js` và `css/khbd-styles.css`
-- Trong `js/khbd-docx.js` dòng 908:
-  ```javascript
-  const columnWidths = isActivityTwoCol
-    ? [6426, 3213]
-    : Array.from({ length: columnCount }, (_, idx) => { ... });
-  ```
-- Trong `css/khbd-styles.css`:
-  ```css
-  .preview-rendered table th:first-child:nth-last-child(2),
-  .preview-rendered table td:first-child:nth-last-child(2) {
-    width: 66.67%;
-  }
-  .preview-rendered table th:last-child:nth-child(2),
-  .preview-rendered table td:last-child:nth-child(2) {
-    width: 33.33%;
-  }
-  ```
-
-### Bước 3: Cấu hình Model và Fallback chống lỗi `Failed to fetch`
-- Trong `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`:
-  + Sửa `model: "gemini-2.5-flash"` trong `window.__KHBD_CANVAS__`.
-  + Đồng bộ nhãn footer: `<span id="footerModelName">gemini-2.5-flash</span>`.
-- Trong `api/canvas_gemini.php`:
-  + Thêm cơ chế nếu model được yêu cầu gặp lỗi timeout/network, thử lại một lần với `gemini-2.5-flash`.
+### Bước 1: Xóa bỏ thời gian ở Hồ sơ dạy học trong `js/khbd-app.js` và `js/khbd-docx.js`
 - Trong `js/khbd-app.js`:
-  + Tăng `timeoutMs` lên `95000` ở dòng 7386.
+  + Tại dòng 6390 (`normalizeActivityTimeHeadings`): Xóa bỏ dòng `if (headingRe.E.test(trimmed)) return replaceHeadingMinutes(line, budgets.E);`. Thay vào đó, nếu dòng trùng khớp với `headingRe.E`, tự động loại bỏ mọi chuỗi dạng `\(\s*\d+\s*phút\s*\)` nếu có.
+  + Tại dòng 6432 (`clipKhbdActivityMarkdown`): Đổi `{ fourActivities: actKey !== "E", ... }` thành `{ fourActivities: true, ... }` để `budgets.E` luôn bằng `0` và thời gian được dồn trọn vẹn cho A, B, C, D.
+  + Tại hàm xuất toàn bài `getFullLessonPlanMarkdown`: Làm sạch phần đầu của `appendixE`, bỏ tiêu đề con `# E. HỒ SƠ DẠY HỌC...` lặp lại ngay dưới tiêu đề Phụ lục `# IV. PHỤ LỤC: HỒ SƠ DẠY HỌC...`.
+- Trong `js/khbd-docx.js`:
+  + Kiểm tra trước khi nối `appendixE` vào `markdown`: Loại bỏ dòng tiêu đề lặp lại và xóa triệt để `(\d+ phút)` khỏi phần phụ lục.
 
-### Bước 4: Đồng bộ Cache Busting `v18` và Cập nhật Tests
-- Nâng version lên `20260916-textbook-exact-v18` trong Canvas HTML, JS headers.
-- Cập nhật test `tests/khbd-table-columns-smoke.js` assert `[6426, 3213]`.
-- Cập nhật test `tests/canvas-prompts-integrity-smoke.js` và `tests/canvas-activity-b-multi-branches-smoke.js` lên version `v18`.
+### Bước 2: Sửa lỗi chèn `<br>- GV:` và xử lý thẻ `<br>` khi xuất Word
+- Trong `js/khbd-app.js` (dòng 2301) và `canvas_soankhbd.html` (dòng 1421):
+  + Sửa regex thay thế vai trò:
+    ```javascript
+    // Không thay thế nếu phía trước là "của", "Nhận xét của", "Ý kiến của", v.v.
+    content = content.replace(/(?<!(?:nhận\s*xét|đánh\s*giá|ý\s*kiến|chữ\s*ký)?\s*của\s+)(?:\*\*)?(GV|HS)\s*:(?:\*\*)?/gi, (_, role) => `§BR§§${role.toUpperCase()}§`);
+    ```
+  + Trong hàm `getFullLessonPlanMarkdown`: Không chạy `formatKhbdRoleLineBreaks` lên `appendixE`.
+- Trong `js/khbd-docx.js`:
+  + Trong `parseInlineTextToRuns`: Trước khi tách regex, nếu text chứa `<br>`, tách theo `<br\s*\/?>` và sinh `TextRun({ break: 1 })` thay vì để nguyên chuỗi `<br>`.
+  + Đảm bảo làm sạch mọi thẻ `<br>` trần trong các đoạn văn bản thường trước khi sinh file Word.
+
+### Bước 3: Bổ sung bộ nhận diện loại bài học trong `js/khbd-prompts.js`
+- Định nghĩa hàm nhận diện bài Luyện tập / Ôn tập:
+  ```javascript
+  function isPracticeOrReviewLesson(topic) {
+    return /luyện\s*tập\s*chung|ôn\s*tập|bài\s*tập\s*cuối\s*chương|luyện\s*tập\b/i.test(String(topic || ""));
+  }
+  ```
+- Trong `calculateActivityTimeBudgets`:
+  + Khi `isPracticeOrReviewLesson(durationStr, topic)` được bật:
+    - `timeA = clamp(3, 5, Math.round(T * 0.1));` (Khởi động trò chơi 3–5 phút).
+    - `timeB = 0;` (Không có hình thành kiến thức mới).
+    - `timeD = clamp(5, 10, Math.round(T * 0.12));` (Vận dụng 5–10 phút).
+    - `timeC = T - timeA - timeD;` (Toàn bộ phần còn lại ~75–80% dành cho Luyện tập).
+
+### Bước 4: Cấu hình Prompt chuyên biệt cho tiết Luyện tập chung / Ôn tập
+- Trong `js/khbd-prompts.js`:
+  + Bổ sung chỉ dẫn vào `GENERATE_ACTIVITY_A` khi là tiết Luyện tập / Ôn tập:
+    "ĐÂY LÀ TIẾT LUYỆN TẬP CHUNG / ÔN TẬP: Tổ chức Khởi động dưới hình thức TRÒ CHƠI HỌC TẬP NGẮN (3–5 phút) như Trò chơi ô chữ, Vòng quay may mắn, Đố vui công thức để kích hoạt không khí và tái hiện/nhắc lại nhanh các quy tắc, công thức then chốt đã học."
+  + Trong `GENERATE_ACTIVITY_B` khi là tiết Luyện tập / Ôn tập: Tự động chuyển thành "Hệ thống hóa kiến thức & Phương pháp giải toán" (sơ đồ tư duy / bảng tóm tắt công thức tinh gọn) hoặc hướng dẫn giáo viên chuyển trọng tâm sang Hoạt động Luyện tập C.
+  + Trong `GENERATE_ACTIVITY_C`: Mở rộng phạm vi chọn lọc 2–4 bài tập SGK/SBT chia theo các dạng toán rõ ràng để học sinh luyện tập tối đa.
+
+### Bước 5: Kiểm thử và cập nhật test suite
+- Cập nhật test `tests/khbd-activity-e-smoke.js`: Khẳng định `assert.doesNotMatch(outputE, /\(\s*\d+\s*phút\s*\)/)` và `assert.doesNotMatch(outputE, /<br>\s*-\s*GV:/)`.
+- Cập nhật test `tests/khbd-pedagogy-rate-smoke.js`: Đảm bảo `formatKhbdRoleLineBreaks` không làm hỏng chuỗi `Nhận xét của GV:`.
+- Chạy toàn bộ các test liên quan để đảm bảo PASS 100%.
 
 ---
 
-## Rủi ro
+## Rủi ro & Giải pháp
 
-- Khi thay đổi tỉ lệ cột, các bảng khác không phải 2 cột hoạt động không được bị ảnh hưởng. Giải pháp: Chỉ áp dụng `isActivityTwoCol` và bộ chọn CSS `th:first-child:nth-last-child(2)` cho đúng bảng 2 cột.
-- Kịch bản sư phạm chi tiết hơn có thể làm tăng dung lượng đầu ra của Gemini. Giải pháp: Yêu cầu hành văn cô đọng, trực diện, không dài dòng.
+- **Rủi ro ảnh hưởng đến kịch bản phân vai trong bảng**:
+  -> **Giải pháp**: Chỉ chặn thay thế khi phía trước có từ sở hữu `"của"`. Các mẫu `GV: "..."` và `HS: "..."` thông thường trong kịch bản vẫn ngắt dòng mượt mà.
+- **Rủi ro phụ lục E bị rỗng nếu cắt bỏ tiêu đề**:
+  -> **Giải pháp**: Chỉ loại bỏ phần tiêu đề trùng lặp `E. HỒ SƠ DẠY HỌC... (4 phút)`, giữ nguyên vẹn toàn bộ nội dung Phiếu học tập số 1, số 2, Rubric đánh giá bên dưới.
 
 ---
 
 ## Cách kiểm thử
 
-1. Chạy `node tests/khbd-table-columns-smoke.js` kiểm tra độ rộng cột xuất Word `[6426, 3213]`.
-2. Chạy `node tests/canvas-prompts-integrity-smoke.js` và `node tests/canvas-activity-b-multi-branches-smoke.js` đảm bảo tương thích cache-busting `v18`.
-3. Chạy `node tests/canvas-soankhbd-smoke.js`, `canvas-gemini-api-smoke.js`.
-4. Gọi thử nghiệm trực tiếp Prompt C với API `canvas_gemini.php` đo thời gian dưới 25s, không bị lỗi mạng.
+1. Chạy test tĩnh bằng Node.js:
+   `node tests/khbd-activity-e-smoke.js`
+   `node tests/khbd-time-budgets-smoke.js`
+   `node tests/khbd-pedagogy-rate-smoke.js`
+2. Kiểm tra xuất Word trên giao diện:
+   - Tạo bài dạy có phiếu học tập, xuất file Word (.docx).
+   - Kiểm tra dòng nhận xét của giáo viên: Hiển thị chuẩn `*(Nhận xét của GV: ....................)*`, hoàn toàn không có `<br>- ` hay thẻ HTML thô.
+   - Kiểm tra mục `IV. PHỤ LỤC`: Tuyệt đối không còn dòng chữ `(4 phút)` hay bất kỳ số phút nào.
+3. Kiểm tra bài "Luyện tập chung":
+   - Nhập tên bài: "Luyện tập chung (trang 25)", tạo hoạt động A và C: Hoạt động A sinh trò chơi nhắc lại công thức, Hoạt động C chiếm trọn thời lượng với các dạng bài tập chi tiết.
 
 ---
 
 ## Tiêu chí nghiệm thu
 
-1. Cột bảng hoạt động xuất Word (.docx) chia đúng tỉ lệ 2 : 1 (`6.426 dxa` cho GV-HS và `3.213 dxa` cho Nội dung).
-2. Tạo Hoạt động C trên Canvas phản hồi nhanh, mượt mà, triệt tiêu 100% lỗi `Failed to fetch`.
-3. Kịch bản dạy học có đủ chi tiết sư phạm: câu lệnh GV, thao tác HS, dự kiến câu trả lời/lỗi sai của HS, diễn biến chất vấn - phản biện và chốt kiến thức.
-4. Toàn bộ test liên quan đạt PASS 100%.
+1. Mục Phụ lục / Hồ sơ dạy học khi xuất ra Word (.docx) hoặc Markdown toàn bài **100% không còn gắn thời gian `(X phút)`**.
+2. Toàn bộ thời lượng bài dạy (45 phút / 90 phút) được bảo toàn nguyên vẹn cho các hoạt động dạy học trên lớp.
+3. Khi soạn tiết "Luyện tập chung" hoặc "Ôn tập":
+   - Hoạt động 1 là Trò chơi ngắn tái hiện công thức/kiến thức cũ.
+   - Không sinh gượng ép hoạt động "Hình thành kiến thức mới".
+   - Hoạt động Luyện tập chiếm đa số thời lượng (~75–80%).
+4. Triệt tiêu hoàn toàn lỗi chèn `<br>- GV:` vào `Nhận xét của GV:`; file Word xuất ra không chứa thẻ `<br>` thô.
+5. Toàn bộ bài kiểm thử tự động đạt PASS 100%.
+
 
 

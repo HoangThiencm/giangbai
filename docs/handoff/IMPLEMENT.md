@@ -1,3 +1,9 @@
+# IMPLEMENT: Auto-Save Sổ Điểm
+
+Đã thêm auto-save debounce 1.2 giây, badge trạng thái, lưu keepalive khi rời trang và smoke assertions cho sodiem.html.
+
+## Lịch sử
+
 # IMPLEMENT: Kịch bản 4 bước, Canvas Flash và cột 2:1
 
 Đã triển khai đúng PLAN.md:
