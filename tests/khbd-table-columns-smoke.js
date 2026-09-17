@@ -75,6 +75,15 @@ assert.doesNotMatch(rescuedLeft, /PHƯƠNG PHÁP CỘNG ĐẠI SỐ/, 'Kiến th
 assert.match(rescuedRight, /PHƯƠNG PHÁP CỘNG ĐẠI SỐ/, 'Cột 2 rỗng/--- được cứu bằng kiến thức từ cột 1');
 assert.match(rescuedRight, /Quy tắc giải/, 'Quy tắc chuyển sang cột 2');
 
+const numberedKnowledgeSplit = generator.semanticSplitActivityRow([
+  '+ Bước 1: Chuyển giao.<br>+ Bước 2: Thực hiện.<br>+ Bước 3: Báo cáo.<br>+ Bước 4: Kết luận.',
+  '1. Các bước giải bài toán bằng cách lập hệ phương trình<br>- Lập hệ phương trình.',
+  'Ví dụ: Vòi I chảy riêng trong 2 giờ, vòi II trong 4 giờ.'
+]);
+assert.doesNotMatch(numberedKnowledgeSplit[0], /Các bước giải bài toán/, 'Tiêu đề kiến thức đánh số không được lẫn vào cột trái');
+assert.match(numberedKnowledgeSplit[1], /Các bước giải bài toán/, 'Tiêu đề kiến thức đánh số phải ở cột phải');
+assert.match(numberedKnowledgeSplit[1], /Vòi I chảy riêng/, 'Nội dung kiến thức tiếp theo phải ở cột phải');
+
 const {
   ensureActivityFourPartStructure,
   repairActivityTablesRightColumn

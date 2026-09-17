@@ -1059,7 +1059,7 @@ class DocxGenerator {
   isKnowledgeContentCell(text) {
     const t = String(text || "").trim();
     if (!t || this.isActivityScriptCell(t)) return false;
-    if (/^(?:định nghĩa|công thức|ví dụ|luyện tập|bài tập|vận dụng|ghi nhớ|quy tắc|chú ý|hệ phương trình|tính chất|định lý)\b/i.test(t)) return true;
+    if (/^(?:\d+\.\s*)?(?:các bước(?: giải)?|định nghĩa|công thức|ví dụ|luyện tập|bài tập|vận dụng|ghi nhớ|quy tắc|chú ý|hệ phương trình|tính chất|định lý)\b/i.test(t)) return true;
     if (/^\$/.test(t) || /^\\begin/.test(t) || /^\*\*[^*]+\*\*/.test(t)) return true;
     return false;
   }

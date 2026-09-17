@@ -286,6 +286,7 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
 - Bảng Markdown CHỈ GỒM ĐÚNG 1 HÀNG DỮ LIỆU DUY NHẤT (CẤM tách thành 4 hàng riêng).
+- HÀNG DỮ LIỆU phải bắt đầu bằng đúng một dấu |, có đúng một dấu | phân cách hai ô và kết thúc bằng đúng một dấu |. Trước khi xuất, tự kiểm tra hàng có đúng 3 dấu |; nếu không, thay mọi dấu | nội dung bằng dấu phẩy hoặc \\vert.
 - TUYỆT ĐỐI chỉ tạo đúng 2 cột theo hai tiêu đề trên; CẤM thêm cột thứ 3 dưới mọi hình thức. Trong công thức hoặc văn bản có ký hiệu gạch đứng, dùng \\vert hoặc \\| thay cho dấu | thô để không làm vỡ cột Markdown.
 - QUY TẮC CỘT BẢNG TUYỆT ĐỐI: Mỗi hàng bảng Markdown chỉ có đúng 2 cột (| Hoạt động của GV và HS | Nội dung |). TUYỆT ĐỐI CẤM dùng ký tự gạch đứng | bên trong nội dung văn bản dưới mọi hình thức (kể cả trong bảng phân tích, ghi chú hay công thức). Khi liệt kê bắt buộc dùng dấu phẩy (,), dấu gạch chéo (/), hoặc ký hiệu \\vert / \\|. Vi phạm sẽ làm vỡ bảng.
 - CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG (ngăn các bước và vai trò bằng <br>):
