@@ -4,25 +4,27 @@
 PASS
 
 ## Đối chiếu scope
-- Modal Cấu hình PPCT & Lịch nghỉ: `#baogiang-config-modal` được tạo đầy đủ với 2 phần (Khai báo/nạp PPCT và Ngoại lệ nghỉ/dạy bù), chuyển toàn bộ cấu hình, textarea, kho thư viện PPCT ra khỏi giao diện chính. ĐÚNG SCOPE.
-- Nút mở modal trên thanh công cụ Tab 4: Đã thêm nút `[Cài đặt PPCT & Lịch nghỉ]` gọi `openBaoGiangConfigModal()`, dọn sạch mặt chính Tab 4 để tập trung vào Sổ báo giảng. ĐÚNG SCOPE.
-- Thu gọn cảnh báo lệch số tiết: Hàm `baoGiangWarningsHtml()` chuyển danh sách cảnh báo thành thẻ collapsible `<details class="bg-warning-box">` (mặc định đóng, chỉ chiếm 1 dòng ~36px, vùng nội dung cuộn max-height: 180px). ĐÚNG SCOPE.
-- Bảo toàn tương thích: Tất cả ID HTML (`bg-curriculum`, `bg-ppct-file`, `bg-scan-ppct`, `bg-ppct-status`, `bg-ppct-grade`, `bg-ppct-subject`, `bg-exceptions`, `bg-schedule`) được giữ nguyên vẹn. ĐÚNG SCOPE.
-- Không thêm chức năng ngoài kế hoạch, không can thiệp file ngoài plan.
+- Thêm nút `#btn1ClickGenerate` vào `.header-actions` trong `soankhbd.html`: Đã có, đúng vị trí trước nút hủy tạo. ĐÚNG SCOPE.
+- Thêm bộ chọn `#selectGenerationMode` vào `.toolbar-grid` trong `soankhbd.html`: Đã có, gồm 2 chế độ (Soạn chi tiết 8–10 trang và Soạn rút gọn 4–6 trang), mặc định detailed. ĐÚNG SCOPE.
+- Quản lý state `generationMode` và lưu `localStorage.khbd_generation_mode` trong `js/khbd-app.js`: Đã có helpers và event listeners đồng bộ hai chiều. ĐÚNG SCOPE.
+- Tích hợp `generationMode` vào ngữ cảnh prompt (`getGenerationPromptContext` / `resolveGenerationMode`): Đã truyền vào `js/khbd-prompts.js`. ĐÚNG SCOPE.
+- Luồng thực thi `handle1ClickGenerate` tuần tự: Đã hỗ trợ AbortController, progress bar, xác nhận theo chế độ, bỏ qua các bước không cần thiết ở compact mode và điều hướng sang tab DOCX. ĐÚNG SCOPE.
+- Tạo mới và chạy test smoke: `tests/soankhbd-generation-mode-smoke.js` đạt 100%. ĐÚNG SCOPE.
+- Không thêm chức năng ngoài kế hoạch, không sửa file ngoài scope.
 
 ## Test đã chạy
-- `node tests/baogiang-teacher-month-smoke.js` — PASS (kiểm tra modal chứa đủ ID, nút mở modal, cảnh báo PPCT bọc `<details>`).
-- `node tests/baogiang-weekday-segment-smoke.js` — PASS (PPCT đa tuần, cảnh báo hai GV, khóa mốc Tuần 1).
-- `node tests/baogiang-recognition-smoke.js` — PASS (scripts compile; PPCT success/retry, nạp JSON, parse PDF/legacy).
-- `node tests/timetable-render-smoke.js` — PASS (render TKB GV, compact layout, email).
-- `node tests/attendance-autosync-smoke.js` — PASS (đồng bộ Chấm công, bảo toàn dạy thay/bù, lưu CSDL).
+- `node tests/soankhbd-generation-mode-smoke.js` — PASS.
+- `node tests/canvas-soankhbd-smoke.js` — PASS.
+- `node tests/baogiang-teacher-month-smoke.js` — PASS.
+- `node tests/baogiang-weekday-segment-smoke.js` — PASS.
+- `node tests/attendance-autosync-smoke.js` — PASS.
 
 ## Pass / Fail từng tiêu chí
-- Modal `#baogiang-config-modal` mở/đóng chuẩn: PASS.
-- Giao diện chính Tab 4 gọn gàng, không bị tràn textarea/kho PPCT: PASS.
-- Cảnh báo PPCT thu gọn 1 dòng trong `<details>`: PASS.
-- Các chức năng tra cứu lịch theo tháng, giáo viên, in sổ, xuất Excel: PASS.
-- Bộ test hồi quy 5 tệp smoke tests: PASS 100%.
+- Nút 1-Click và dropdown chế độ soạn trên `soankhbd.html`: PASS.
+- Khởi tạo và lưu `khbd_generation_mode`: PASS.
+- Prompt nhận diện `generationMode: 'compact'`: PASS.
+- Quy trình 1-Click đầy đủ và rút gọn: PASS.
+- Tương thích hồi quy bộ test hệ thống: PASS 100%.
 
 ## Bug
 Không phát hiện bug còn tồn đọng.
