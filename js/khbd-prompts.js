@@ -347,6 +347,7 @@ const ACTIVITY_TABLE_CONTRACT_COMPACT = `YÊU CẦU BẮT BUỘC CHẾ ĐỘ SO�
 - Kịch bản giữ đủ 4 bước: 1. Giao việc ngắn gọn; 2. HS thực hiện cá nhân/nhóm; 3. Báo cáo ngắn; 4. GV chốt kiến thức cốt lõi. Không viết câu thoại dài dòng, không diễn giải ngộ nhận hoặc phân hóa dài.
 - Cột Nội dung BẮT BUỘC có dữ liệu (quy tắc/công thức LaTeX và tối đa một bài tập trọng tâm có lời giải mẫu ngắn). CẤM để trống, CẤM \`---\`. Không dùng HTML. Cột Trái Bước 4 không chép kiến thức ghi bảng.
 - Hoạt động D phải giao luôn đúng 4 nhiệm vụ tự học về nhà tại Bước 4.
+- KỸ THUẬT & PHƯƠNG PHÁP DẠY HỌC: Ở chế độ soạn rút gọn, nếu trong bối cảnh sư phạm không có kỹ thuật hoặc phương pháp được chọn (người dùng đã bỏ tick), TUYỆT ĐỐI KHÔNG đưa tên kỹ thuật như Think-Pair-Share, Khăn trải bàn, Mảnh ghép, Trạm hay tên PPDH vào tiến trình; chỉ triển khai 4 bước CV 5512 trực tiếp, tinh gọn.
 - Khi giáo viên bật NLS hoặc AI, TUYỆT ĐỐI KHÔNG được bỏ marker ***[NLS: ...]***, ***[AI: ...]***: giữ 1–2 vị trí then chốt, tự nhiên trong toàn bài.`;
 
 const PROMPTS = {
@@ -742,7 +743,7 @@ ${LATEX_SPACING_BAN}
   #### c) Sản phẩm: (Ghi rõ lời giải chi tiết, công thức, định nghĩa hoàn chỉnh, không để dấu "...")
   #### d) Tổ chức thực hiện: (ĐÚNG 1 BẢNG MARKDOWN 2 CỘT, 1 HÀNG DUY NHẤT)
     * CỘT TRÁI: Kịch bản phân vai rõ ràng:
-      + Nêu rõ tên Kỹ thuật dạy học (Think-Pair-Share, Khăn trải bàn, Mảnh ghép, Trạm học tập...).
+      + Kỹ thuật dạy học: Chỉ áp dụng và nêu tên kỹ thuật NẾU có kỹ thuật được chọn trong bối cảnh sư phạm; nếu KHÔNG có kỹ thuật được chọn (hoặc người dùng đã bỏ tick) thì tổ chức theo các bước trực tiếp/vấn đáp tự nhiên, TUYỆT ĐỐI KHÔNG tự bịa hoặc gán tên kỹ thuật.
       + **GV:** Nói câu lệnh trong ngoặc kép "...", chỉ rõ công cụ, thời gian, hành động cụ thể, **DỰ KIẾN CÂU TRẢ LỜI CỦA HS** (kết quả đúng và lỗi sai/ngộ nhận điển hình của tiểu mục) và can thiệp hỗ trợ phân hóa.
       + **HS:** Làm việc cá nhân X phút -> Thảo luận nhóm Y phút tạo sản phẩm trung gian trên bảng phụ/phiếu; khi báo cáo phải trình chiếu/dán bảng, trả lời câu hỏi gợi mở và phản biện trước lớp.
       + Khi có NLS/AI: Tích hợp thực chiến theo đúng 1 trong 3 dạng (Dạng 1: Kiểm chứng phản hồi AI có lỗi ngộ nhận; Dạng 2: Prompting gợi mở bước giải trong "..."; Dạng 3: Thao tác phần mềm chuyên ngành GeoGebra/bảng tính/mô phỏng). CẤM hỏi lý thuyết AI suông, CẤM rải tag bừa bãi. Gắn marker chuẩn ***[AI: {Mã} - Kiểm chứng phản hồi AI]***, ***[AI: {Mã} - Prompting gợi mở & Tự giải]***, ***[NLS: {Miền/Mã} - {Tên phần mềm}]*** (hoặc ***[NLS]***, ***[AI]***).
@@ -808,7 +809,7 @@ ${LATEX_SPACING_BAN}
 - KHÓA ĐỀ BÀI NGUYÊN VĂN 100%: Bắt buộc lấy nguyên văn 100% đề bài từ các mục Luyện tập, Thực hành hoặc bài tập SGK đã trích xuất (câu chữ, số liệu, công thức LaTeX). TUYỆT ĐỐI CẤM đổi số liệu, CẤM tự tạo đề bài lạ ngoài sách, CẤM diễn đạt lại đề bài.
 - HƯỚNG DẪN GIÁO VIÊN CHỌN LỌC BÀI TẬP: Chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi nhất của SGK để tổ chức cho học sinh làm và chữa chi tiết ngay trên lớp. Các bài tập luyện tập còn lại trong SGK sẽ được chuyển giao vào Hoạt động E (Hướng dẫn về nhà).
 - Cột TRÁI mục d): Kịch bản phân vai rõ ràng:
-  + Áp dụng Kỹ thuật dạy học (ví dụ: Bài tập phân hóa 3 mức, Đánh giá đồng đẳng, Sửa lỗi theo cặp...).
+  + Kỹ thuật dạy học: Chỉ áp dụng và nêu tên kỹ thuật NẾU có kỹ thuật được chọn trong bối cảnh sư phạm; nếu KHÔNG có kỹ thuật được chọn (hoặc người dùng đã bỏ tick) thì tổ chức luyện tập trực tiếp/vấn đáp tự nhiên, TUYỆT ĐỐI KHÔNG tự bịa hoặc gán tên kỹ thuật.
   + **GV:** Nói câu giao việc trong ngoặc kép "...", hướng dẫn HS làm 1–2 bài tập trọng tâm, di chuyển quan sát phát hiện lỗi sai tính toán/lập luận điển hình, trực tiếp hướng dẫn phân hóa.
   + **HS:** Giải bài cá nhân vào vở -> Đổi vở kiểm tra chéo hoặc thảo luận cặp -> Lên bảng trình bày, lớp phản biện.
   + Khi có NLS/AI: Tích hợp thực chiến theo 3 dạng (phần mềm chuyên ngành/máy tính kiểm chứng kết quả; hoặc GV chiếu lời giải AI có lỗi sai ngộ nhận để HS phát hiện phản biện; hoặc HS dùng prompt gợi mở bước giải). CẤM hỏi lý thuyết AI suông. Dùng marker ***[NLS: ...]*** hoặc ***[AI: ...]***.
@@ -862,7 +863,7 @@ ${LATEX_SPACING_BAN}
 - CHỈ dùng bài vận dụng / tình huống thực tế có trong SGK hoặc dữ liệu giáo viên cung cấp. CẤM invent số liệu bài toán ngoài nguồn.
 - ƯU TIÊN ĐỀ BÀI VẬN DỤNG NGUYÊN VĂN 100% từ mục Vận dụng trong SGK đã trích xuất (câu chữ, số liệu, công thức LaTeX). CẤM đổi số liệu, CẤM bịa tình huống ngoài sách, CẤM diễn đạt lại đề bài.
 - Cột TRÁI mục d): Kịch bản phân vai rõ ràng, đủ 4 bước CV 5512:
-  + Áp dụng Kỹ thuật dạy học (Dự án mini, Phân tích tình huống, Bài tập mở, Exit Ticket...).
+  + Kỹ thuật dạy học: Chỉ áp dụng và nêu tên kỹ thuật NẾU có kỹ thuật được chọn trong bối cảnh sư phạm; nếu KHÔNG có kỹ thuật được chọn (hoặc người dùng đã bỏ tick) thì tổ chức vận dụng trực tiếp/vấn đáp tự nhiên, TUYỆT ĐỐI KHÔNG tự bịa hoặc gán tên kỹ thuật.
   + **GV:** Nói câu định hướng trong ngoặc kép "...", gợi mở liên hệ thực tế, hướng dẫn phân hóa và thu hồi/đánh giá kết quả ngay tại lớp.
   + **HS:** Thảo luận cặp/nhóm giải quyết bài toán thực tế hoặc làm phiếu cá nhân -> Báo cáo giải pháp / nộp phiếu tại lớp, lớp phản biện tính khả thi.
   + **Bước 4: Kết luận, nhận định:** GV chuẩn hóa lời giải bài toán vận dụng và **Giao cụ thể 4 nhiệm vụ tự học ở nhà**:

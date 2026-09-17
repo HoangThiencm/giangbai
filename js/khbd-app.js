@@ -806,6 +806,7 @@ function normalizeTeachingContext(context) {
       : [],
     integrations: mergedIntegrations,
     methods: Array.isArray(source.methods) ? source.methods.filter(value => typeof value === "string").slice(0, 20) : [],
+    pedagogyConfigured: Boolean(source.pedagogyConfigured),
     techniques: Array.isArray(source.techniques) ? source.techniques.filter(value => typeof value === "string").slice(0, 20) : [],
     subjectActivities: Array.isArray(source.subjectActivities) ? source.subjectActivities.filter(value => typeof value === "string").slice(0, 20) : [],
     standards,
@@ -1021,6 +1022,7 @@ function renderPedagogyCatalogs() {
     methodsPanel.innerHTML = `<details class="pedagogy-block" open><summary>Phương pháp dạy học hiện đại</summary><div class="pedagogy-grid">${catalog.methods.map(item => renderPedagogyItem(item, "pedagogy-method", "", isChoiceSelected(methods, item), auto.methods)).join("")}</div></details>`;
     methodsPanel.querySelectorAll(".pedagogy-method").forEach(input => input.addEventListener("change", () => {
       appState.teachingContext.methods = Array.from(document.querySelectorAll(".pedagogy-method:checked")).map(el => el.value);
+      appState.teachingContext.pedagogyConfigured = true;
       appState.teachingContext.autoPedagogy = autoPedagogyState();
       appState.teachingContext.autoPedagogy.methods = [];
       saveStateToLocalStorage();
@@ -1044,6 +1046,7 @@ function renderPedagogyCatalogs() {
       const p = input.dataset.phase;
       appState.teachingContext.phasePedagogy[p] ||= {};
       appState.teachingContext.phasePedagogy[p].techniques = Array.from(document.querySelectorAll(`.pedagogy-technique[data-phase="${p}"]:checked`)).map(el => el.value);
+      appState.teachingContext.pedagogyConfigured = true;
       appState.teachingContext.autoPedagogy = autoPedagogyState();
       appState.teachingContext.autoPedagogy.techniques = appState.teachingContext.autoPedagogy.techniques || { A: [], B: [], C: [], D: [] };
       appState.teachingContext.autoPedagogy.techniques[p] = [];
@@ -1056,6 +1059,7 @@ function renderPedagogyCatalogs() {
     actPanel.innerHTML = `<details class="pedagogy-block" open><summary>Hoạt động đặc thù môn học</summary><div class="pedagogy-grid">${catalog.activities.map(item => renderPedagogyItem(item, "pedagogy-activity", "", isChoiceSelected(activities, item), auto.activities)).join("")}</div></details>`;
     actPanel.querySelectorAll(".pedagogy-activity").forEach(input => input.addEventListener("change", () => {
       appState.teachingContext.subjectActivities = Array.from(document.querySelectorAll(".pedagogy-activity:checked")).map(el => el.value);
+      appState.teachingContext.pedagogyConfigured = true;
       appState.teachingContext.autoPedagogy = autoPedagogyState();
       appState.teachingContext.autoPedagogy.activities = [];
       saveStateToLocalStorage();
@@ -2334,8 +2338,8 @@ function applyTimeBudgetGateToPedagogy(rec, periodsCount) {
   if (periods <= 1) {
     rec.methods = rec.methods.filter(id => !KHBD_HEAVY_METHOD_IDS.includes(id) && !isHeavyPedagogyId(id)).slice(0, 1);
     const currentB = (rec.techniques.B || []).filter(id => !isHeavyPedagogyId(id));
-    const chosenB = KHBD_LIGHT_B_TECHNIQUES.find(id => currentB.includes(id)) || currentB[0] || "tps-tech";
-    rec.techniques.B = chosenB && !isHeavyPedagogyId(chosenB) ? [chosenB] : ["tps-tech"];
+    const chosenB = KHBD_LIGHT_B_TECHNIQUES.find(id => currentB.includes(id)) || currentB[0] || null;
+    rec.techniques.B = chosenB && !isHeavyPedagogyId(chosenB) ? [chosenB] : [];
     rec.techniques.A = [];
     rec.techniques.C = [];
     rec.techniques.D = [];
@@ -2427,9 +2431,10 @@ function ensurePedagogyFromLesson({ force = false, silent = false, skipRender = 
   const rec = applyTimeBudgetGateToPedagogy(recommendPedagogyFromLesson(pedagogyRecommendFullCtx()));
   enforceTimeBudgetGateOnCurrentPedagogy();
   const auto = autoPedagogyState();
+  const userConfigured = Boolean(appState.teachingContext?.pedagogyConfigured);
   let changed = false;
   const notices = [];
-  if (force || !(appState.teachingContext.methods || []).length) {
+  if (force || (!userConfigured && !(appState.teachingContext.methods || []).length)) {
     appState.teachingContext.methods = rec.methods;
     auto.methods = rec.methods;
     changed = true;
@@ -2439,14 +2444,14 @@ function ensurePedagogyFromLesson({ force = false, silent = false, skipRender = 
   auto.techniques ||= { A: [], B: [], C: [], D: [] };
   ["A", "B", "C", "D"].forEach(phase => {
     const current = appState.teachingContext.phasePedagogy[phase]?.techniques || [];
-    if (force || !current.length) {
+    if (force || (!userConfigured && !current.length)) {
       appState.teachingContext.phasePedagogy[phase] ||= {};
       appState.teachingContext.phasePedagogy[phase].techniques = rec.techniques[phase] || [];
       auto.techniques[phase] = rec.techniques[phase] || [];
       changed = true;
     }
   });
-  if (force || !(appState.teachingContext.subjectActivities || []).length) {
+  if (force || (!userConfigured && !(appState.teachingContext.subjectActivities || []).length)) {
     appState.teachingContext.subjectActivities = rec.activities;
     auto.activities = rec.activities;
     changed = true;
@@ -5170,9 +5175,9 @@ function buildPedagogicalContext() {
 - Giáo dục hòa nhập/HSKT: ${context.integrations.inclusive ? `ĐÃ BẬT — loại khuyết tật: ${disabilityLine || "chưa chọn loại cụ thể, chỉ dùng giải pháp hỗ trợ chức năng đã tick"}. Giải pháp hỗ trợ: ${support || "chưa chọn"}. Gắn marker **[HOANHAP]** (hiển thị màu tím) đúng chỗ điều chỉnh nhiệm vụ/học liệu. CẤM chẩn đoán y khoa, CẤM nêu tên học sinh, CẤM bịa loại khuyết tật không được chọn.` : "KHÔNG bật. CẤM tự thêm giáo dục hòa nhập/HSKT hay marker [HOANHAP]."}
 - Hỗ trợ chức năng được chọn: ${support || "Không có yêu cầu riêng được chọn."}
 - Sĩ số: ${context.classSize}; mức sẵn sàng: ${context.readiness}; tổ chức: ${context.grouping}; điều kiện: ${Object.entries(context.facilities).filter(([, value]) => value).map(([key]) => key).join(", ") || "thiết bị cơ bản"}.
-- Phương pháp dạy học được chọn: ${methodLabels.length ? methodLabels.join("; ") : `Chưa chọn; khi soạn chỉ được lấy 1–2 phương pháp phù hợp môn ${subjectName} lớp ${appState.selectedGrade} từ catalog, đúng nguyên nhãn, không bịa tên PPDH ngoài catalog.`}
-- Kỹ thuật dạy học theo pha: ${techniqueByPhase.length ? techniqueByPhase.join(" | ") : "Chưa chọn; chỉ dùng kỹ thuật catalog đúng pha A–E phù hợp môn/lớp, đúng nhãn."}
-- Hoạt động đặc thù môn học được chọn: ${activityLabels.length ? activityLabels.join("; ") : `Chưa chọn; chỉ dùng 1–2 hoạt động catalog phù hợp môn ${subjectName}.`}
+- Phương pháp dạy học: ${methodLabels.length ? methodLabels.join("; ") : `KHÔNG áp dụng PPDH đặc thù riêng (người dùng không chọn hoặc đã bỏ tick). Sử dụng phương pháp dạy học thông thường, trực tiếp, vấn đáp gợi mở và luyện tập thực hành cơ bản. TUYỆT ĐỐI CẤM tự ý đưa tên PPDH ngoài danh mục hoặc gán PPDH phức tạp vào giáo án.`}
+- Kỹ thuật dạy học theo pha: ${techniqueByPhase.length ? techniqueByPhase.join(" | ") : `KHÔNG áp dụng kỹ thuật dạy học riêng nào (người dùng không chọn hoặc đã bỏ tick). Tiến trình dạy học diễn ra tự nhiên theo 4 bước chuẩn mực CV 5512 (giao nhiệm vụ, thực hiện, báo cáo, kết luận); TUYỆT ĐỐI KHÔNG tự ý đưa tên bất kỳ kỹ thuật dạy học nào (như Think-Pair-Share, Khăn trải bàn, Mảnh ghép, Trạm,...) vào bài dạy.`}
+- Hoạt động đặc thù môn học được chọn: ${activityLabels.length ? activityLabels.join("; ") : `Không chọn hoạt động đặc thù riêng.`}
 - Yêu cầu/hoạt động đặc thù: ${context.specialRequirements || "Không có."}
 - Chỉ được tích hợp các thành phần đã bật: ${enabledIntegrations.length ? enabledIntegrations.join("; ") : "không có thành phần tích hợp bổ sung"}.
 - Chuẩn NLS/AI đã chọn (mỗi mục một dòng; PHẢI xuất hiện đủ trong I.2.c và I.2.d; không được bỏ miền/mã đã chọn):
@@ -5429,7 +5434,7 @@ function buildPhasePedagogyContext(phase) {
   const parts = [];
 
   // Nhúng kịch bản sư phạm thực chiến chuẩn từ catalog
-  const pedagogyGuide = typeof buildDetailedPedagogyGuide === "function"
+  const pedagogyGuide = techItems.length && typeof buildDetailedPedagogyGuide === "function"
     ? buildDetailedPedagogyGuide(phase, appState.teachingContext)
     : "";
 
@@ -5451,7 +5456,8 @@ function buildPhasePedagogyContext(phase) {
   const base = parts.length
     ? `\nRÀNG BUỘC PHA ${phase}: ${parts.join(" ")} Không nêu kỹ thuật/hoạt động ngoài catalog như kỹ thuật chính thức.`
     : `\nRÀNG BUỘC PHA ${phase}: không có kỹ thuật pha được chọn; không tự gắn tên kỹ thuật chính thức ngoài catalog.`;
-  return base + (pedagogyGuide ? `\n${pedagogyGuide}` : "") + scriptRequirement + integration;
+  const noTechniqueConstraint = !techItems.length ? `\nRÀNG BUỘC PHA ${phase}: Người dùng KHÔNG chọn kỹ thuật dạy học cho pha này. Tiến trình thực hiện theo các bước sư phạm trực tiếp tự nhiên, TUYỆT ĐỐI CẤM ghi tên bất kỳ kỹ thuật dạy học nào.` : "";
+  return base + noTechniqueConstraint + (pedagogyGuide ? `\n${pedagogyGuide}` : "") + scriptRequirement + integration;
 }
 
 function pedagogyLabelInText(haystack, label) {

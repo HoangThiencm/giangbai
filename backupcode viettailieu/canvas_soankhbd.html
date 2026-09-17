@@ -1420,8 +1420,8 @@
         if (periods <= 1) {
           rec.methods = rec.methods.filter(function (id) { return !HEAVY.test(String(id)); }).slice(0, 1);
           var currentB = (rec.techniques.B || []).filter(function (id) { return !HEAVY.test(String(id)); });
-          var chosenB = LIGHT_B.filter(function (id) { return currentB.indexOf(id) !== -1; })[0] || currentB[0] || "tps-tech";
-          rec.techniques.B = [chosenB];
+          var chosenB = LIGHT_B.filter(function (id) { return currentB.indexOf(id) !== -1; })[0] || currentB[0] || "";
+          rec.techniques.B = chosenB ? [chosenB] : [];
           rec.techniques.A = [];
           rec.techniques.C = [];
           rec.techniques.D = [];

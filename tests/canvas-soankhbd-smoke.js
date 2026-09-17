@@ -53,6 +53,14 @@ const canvasPromptFn = khbdApp.slice(khbdApp.indexOf('function canvasTextbookAna
 assert.match(canvasPromptFn, /\.join\("\\n"\)/, 'prompt phân tích SGK phải nối bằng xuống dòng thật');
 assert.ok(!/\.join\("\\\\n"\)/.test(canvasPromptFn), 'prompt phân tích SGK không được join("\\\\n")');
 
+// Hồi quy bỏ tick PPDH/KTDH: prompt không được tự yêu cầu AI lấy lại từ catalog.
+assert.match(khbdApp, /pedagogyConfigured:\s*Boolean\(source\.pedagogyConfigured\)/, 'teaching context phải lưu cờ cấu hình thủ công');
+assert.match(khbdApp, /pedagogyConfigured\s*=\s*true/, 'thay đổi checkbox phải đánh dấu cấu hình thủ công');
+assert.ok(!khbdApp.includes('khi soạn chỉ được lấy 1–2 phương pháp phù hợp môn'), 'prompt không được ép AI tự lấy PPDH từ catalog');
+assert.ok(!khbdApp.includes('Chưa chọn; chỉ dùng kỹ thuật catalog đúng pha A–E'), 'prompt không được ép AI tự lấy KTDH từ catalog');
+assert.match(khbdApp, /KHÔNG áp dụng PPDH đặc thù riêng/, 'prompt phải cấm PPDH đặc thù khi bỏ tick');
+assert.match(khbdApp, /KHÔNG áp dụng kỹ thuật dạy học riêng nào/, 'prompt phải cấm KTDH khi bỏ tick');
+
 for (const targetPath of targetPaths) {
   const relPath = path.relative(root, targetPath);
   console.log(`\nKiểm tra tệp: ${relPath}`);
