@@ -1,110 +1,66 @@
-# PLAN: Xây Dựng Lịch Báo Giảng Theo Giáo Viên (1 Tháng, Thứ-Ngày-Tháng) & Tự Động Đồng Bộ, Lưu CSDL Phần Chấm Công
+# PLAN: Sửa Lỗi Danh Sách Giáo Viên Trống Trong Lịch Báo Giảng & Hỗ Trợ Tự Động Nhận Giáo Viên Từ PCCM / Các Đợt
 
 ## User Review Required
 > [!IMPORTANT]
-> - **Mục 1 (Lịch báo giảng 1 tháng theo GV bất kỳ)**: Bổ sung bộ lọc chọn giáo viên trong tổ, bộ chọn tháng (30 ngày), và giao diện trực quan chuẩn Sổ Báo Giảng THCS gom theo từng Thứ - Ngày - Buổi - Tiết.
-> - **Mục 2 (Tự động đồng bộ và tự lưu CSDL phần Chấm công)**:
->   1. Tự động đồng bộ số tiết Dạy thay & Dạy bù từ Sổ Dạy Thay sang bảng Chấm Công ngay khi mở tab Chấm Công hoặc khi đổi tháng.
->   2. Hàm "Điền chuẩn theo phân công" sẽ tự động lấy đúng số tiết dạy thay/dạy bù thực tế thay vì gán về 0.
->   3. Bổ sung nút "Lưu CSDL" và thanh trạng thái đồng bộ trực tiếp trên thanh công cụ Chấm Công.
->   4. Tự động kích hoạt lưu CSDL tức thì khi thay đổi chấm công, đổi tháng, hoặc khi chuyển tab (loại bỏ độ trễ mất dữ liệu).
-> - **Cấm sửa mã ngoài phạm vi**: Chỉ cập nhật giao diện và logic trong `phancongtochuyenmon.html` và viết test kiểm thử tự động.
+> - **Hiện tượng người dùng phản ánh**: Đã có Phân công chuyên môn (PCCM), nhưng khi mở Tab 4 "Lịch báo giảng", dropdown **Giáo viên** chỉ có duy nhất lựa chọn `"Tất cả giáo viên"`, không có tên bất kỳ giáo viên nào.
+> - **Nguyên nhân kỹ thuật**:
+>   1. **Nguồn dữ liệu giáo viên bị phụ thuộc cứng vào `state.teachers`**: Dropdown `#bg-filter-teacher` hiện tại chỉ map từ `state.teachers` ở root. Nếu giáo viên nằm trong đợt phân công hiện tại (`state.phase_assignments[curPhase].teachers`) mà chưa được đồng bộ ra root, hoặc đang mở đợt chưa nạp snapshot, thì `state.teachers` rỗng `[]`.
+>   2. **Chưa có cơ chế fallback thông minh**: Không tự động quét giáo viên từ các đợt phân công (`phase_assignments`), từ bảng phân công lớp (`assignments`), hay từ CSDL giáo viên hệ thống (`systemData.teachers`).
+>   3. **Nguyên lý sinh Lịch báo giảng**: Lịch báo giảng cần **Thời khóa biểu (TKB ở Tab 2)** + **PPCT** để tự ghép lịch dạy. Nếu người dùng chỉ mới phân công môn-lớp ở Tab 1 (PCCM) mà chưa nhập TKB ở Tab 2, hệ thống không có dữ liệu thứ/tiết để sinh dòng lịch. Tuy nhiên, dropdown Giáo viên **vẫn bắt buộc phải hiển thị đầy đủ danh sách giáo viên đã có trong PCCM** để người dùng lựa chọn và kiểm tra.
+>   4. **Thiếu thông báo điều hướng**: Khi chưa có giáo viên hoặc giáo viên chưa có TKB, giao diện chỉ hiện một dòng mờ nhạt "Chưa có tiết TKB trong tháng này", không chỉ dẫn người dùng cần làm gì tiếp theo.
 
 ---
 
-## I. Phân Tích Hiện Trạng & Nguyên Nhân
+## I. Kế Hoạch Triển Khai Chi Tiết
 
-### 1. Vấn đề Lịch báo giảng
-- Hiện tại Tab 4 (Lịch báo giảng) chỉ có ô chọn ngày bắt đầu và số ngày xem (mặc định 14 ngày).
-- Hiển thị bảng phẳng dồn tất cả giáo viên vào một bảng lớn, không có bộ lọc chọn giáo viên riêng lẻ và không có bố cục theo từng Thứ - Ngày - Tháng chuẩn Sổ Báo Giảng THCS.
+### Module 1: Xây Dựng Hàm Chuẩn Hóa Danh Sách Giáo Viên Cho Lịch Báo Giảng (`getBaoGiangTeacherList`)
+Trong `phancongtochuyenmon.html`:
+1. Viết hàm `getBaoGiangTeacherList()`:
+   - Ưu tiên 1: Lấy `state.teachers` nếu có phần tử.
+   - Ưu tiên 2: Nếu `state.teachers` rỗng, lấy từ đợt phân công hiện tại: `state.phase_assignments?.[state.info?.current_phase_id]?.teachers`.
+   - Ưu tiên 3: Gom tất cả giáo viên duy nhất (theo `id` / `name`) từ toàn bộ các đợt trong `state.phase_assignments`.
+   - Ưu tiên 4: Nếu vẫn rỗng, fallback về `systemData.teachers` (nếu đã nạp từ CSDL hệ thống).
+   - Đảm bảo luôn trả về danh sách giáo viên đầy đủ, loại bỏ trùng lặp.
+2. Đồng bộ ngược lại `state.teachers` nếu root bị rỗng nhưng đợt hiện tại có giáo viên, tránh tình trạng mất đồng bộ giữa các view.
 
-### 2. Vấn đề Chấm công không tự đồng bộ CSDL và tự lưu
-- **Nguyên nhân 1 (Thiếu tự động đồng bộ từ Sổ Dạy Thay)**: Khi giáo viên ghi nhận lượt dạy thay / dạy bù ở Tab 5, số tiết chỉ cập nhật vào `attendance.substitutes`. Khi người dùng mở Tab 6 (Chấm công) hoặc đổi tháng (`changeAttendanceMonth`), hệ thống KHÔNG tự động gọi `autoSyncSubstitutePeriods()`.
-- **Nguyên nhân 2 (Nút Điền chuẩn xóa mất tiết dạy thay/bù)**: Hàm `autoFillAttendance()` hiện tại gán cứng `teach_replace: 0, makeup_periods: 0`, vô tình xóa sạch số tiết dạy thay/bù đã ghi nhận trong tháng.
-- **Nguyên nhân 3 (Cơ chế lưu CSDL bị ngắt quãng)**:
-  + Các ô nhập điểm danh, số tiết, xếp loại, ghi chú chỉ kích hoạt `onchange` (phải click ra ngoài mới chạy) và chỉ gọi `saveToLocal()`.
-  + `saveToLocal()` dùng debounce 1500ms để gọi ngầm `performSaveToDB({ isAuto: true })`. Nếu người dùng đổi tháng, chuyển tab hoặc đóng trình duyệt trước 1.5 giây, lệnh lưu CSDL sẽ không được gửi đi.
-  + Hàm `changeAttendanceMonth(val)` hoàn toàn không gọi `saveToLocal()` hay lưu CSDL.
-- **Nguyên nhân 4 (Thiếu nút và chỉ báo lưu tại chỗ)**: Tab Chấm công không có nút "Lưu CSDL" riêng (như ở tab Báo giảng hay Dạy thay), và không có biểu tượng trạng thái lưu tại chỗ, khiến người dùng không biết dữ liệu đã lên CSDL MySQL hay chưa.
+### Module 2: Nâng Cấp Render Dropdown & Bảng Lịch Báo Giảng
+1. Trong `renderBaoGiangMonthView()`:
+   - Dùng `getBaoGiangTeacherList()` để render dropdown `#bg-filter-teacher`.
+   - Hiển thị rõ số lượng giáo viên: `Tất cả giáo viên (X GV)`.
+   - Từng option giáo viên hiển thị: `Họ tên GV (Chức vụ / Số lớp phân công)`.
+2. Hỗ trợ hiển thị lịch ngay cả khi chỉ có PCCM (chưa có TKB chi tiết từng tiết):
+   - Nếu giáo viên đã có phân công lớp/môn ở Tab 1 nhưng chưa có TKB chi tiết ở Tab 2:
+     Hiển thị thẻ cảnh báo hướng dẫn rõ ràng:
+     `⚠️ Thầy/cô [Tên GV] đã có phân công chuyên môn ([Môn] lớp [Lớp]), nhưng chưa được xếp Thời khóa biểu cụ thể theo thứ/tiết ở Tab "2. Thời khoá biểu GV". Vui lòng nhập TKB để hệ thống tự động ghép bài dạy theo ngày.`
+   - Có nút bấm nhanh: `👉 Sang Tab Thời khóa biểu GV để nhập TKB cho thầy/cô này`.
 
----
-
-## II. Kế Hoạch Triển Khai Chi Tiết
-
-### PHẦN A: LỊCH BÁO GIẢNG 1 THÁNG THEO GIÁO VIÊN (THỨ - NGÀY - THÁNG)
-
-#### Module 1: Thanh Công Cụ & Bộ Lọc Lịch Báo Giảng (`view-baogiang`)
-1. **Dropdown chọn Giáo viên (`#bg-filter-teacher`)**:
-   - Danh sách giáo viên trong tổ (`state.teachers`), mặc định chọn giáo viên đầu tiên hoặc giáo viên đang đăng nhập.
-   - Có tùy chọn `[Tất cả giáo viên]` để xem toàn tổ.
-2. **Bộ chọn Tháng & Điều hướng thời gian (`#bg-filter-month`)**:
-   - Input tháng `type="month"` (ví dụ: `2026-09`).
-   - Nút điều hướng nhanh: `◀ Tháng trước`, `Tháng này`, `Tháng sau ▶`.
-   - Tự động tính ngày đầu tháng (`YYYY-MM-01`) đến ngày cuối tháng (`YYYY-MM-LastDay`).
-3. **Giao diện chuẩn Sổ Báo Giảng THCS theo Thứ - Ngày - Tháng**:
-   - Gom nhóm từng ngày có tiết dạy trong tháng: `Thứ Hai, Ngày 07/09/2026 (Tuần 1)`.
-   - Chia 2 bảng rõ rệt: **Buổi sáng** (Tiết 1–5) và **Buổi chiều** (Tiết 1–4).
-   - Cột: Tiết | Lớp | Môn | Tiết PPCT | Tên bài dạy | Phân đoạn/Mạch kiến thức.
-   - Nút **In Sổ Báo Giảng (Print)** chuẩn A4 và **Xuất Excel** báo giảng tháng.
+### Module 3: Kiểm Thử Tự Động (`tests/baogiang-teacher-month-smoke.js`)
+1. Bổ sung kịch bản test:
+   - Test case 1: Khi `state.teachers` rỗng nhưng `state.phase_assignments` có giáo viên -> dropdown `#bg-filter-teacher` vẫn hiển thị đầy đủ danh sách giáo viên.
+   - Test case 2: Khi có giáo viên nhưng chưa có TKB -> hiển thị hướng dẫn thân thiện, không bị crash hoặc trắng bảng.
+   - Test case 3: Khi có giáo viên và có TKB -> hiển thị đầy đủ lịch báo giảng theo tháng và theo giáo viên đã chọn.
 
 ---
 
-### PHẦN B: TỰ ĐỘNG ĐỒNG BỘ VÀ TỰ LƯU CSDL PHẦN CHẤM CÔNG
-
-#### Module 2: Tự Động Đồng Bộ Số Tiết Dạy Thay / Dạy Bù Sang Chấm Công
-1. **Tự động kích hoạt đồng bộ khi xem Chấm công**:
-   - Trong hàm `renderAttendance()`: Tự động chạy `autoSyncSubstitutePeriods({ silent: true, mKey, autoSave: false })` trước khi hiển thị bảng, đảm bảo số tiết dạy thay/bù từ Sổ Dạy Thay luôn luôn khớp 100% với Chấm công mà không cần người dùng phải bấm nút thủ công.
-   - Khi chuyển tháng trong `changeAttendanceMonth(val)`: Đồng bộ ngay số liệu của tháng mới, lưu vào `state.attendance.current_month`, gọi `saveToLocal()` và tự động lưu CSDL.
-2. **Nâng cấp `autoFillAttendance()`**:
-   - Khi bấm "Điền chuẩn theo phân công": Điền `w1..w4: 'Đủ'`, `observe: 1`, `meeting: 2`, `rating: 'Tốt'`.
-   - Đồng thời **bảo lưu hoặc tự động tính toán lại ngay** số tiết `teach_replace` và `makeup_periods` từ `state.attendance.substitutes[mKey]`, KHÔNG bị gán về 0.
-   - Sau khi điền chuẩn: Gọi `saveToDB()` lưu thẳng vào CSDL và báo thông báo thành công.
-
-#### Module 3: Hoàn Thiện Cơ Chế Tự Động Lưu CSDL Cho Chấm Công
-1. **Bổ sung nút thao tác và chỉ báo trạng thái trên thanh công cụ Chấm công (`.attendance-toolbar`)**:
-   - Thêm nút: `<button class="btn-small btn-small-primary" onclick="saveAttendanceToDB()"><i class="fas fa-cloud-arrow-up"></i> Lưu Chấm Công vào CSDL</button>`.
-   - Thêm nút: `<button class="btn-small" onclick="autoSyncSubstitutePeriods()"><i class="fas fa-rotate"></i> Đồng bộ từ Sổ Dạy Thay</button>`.
-   - Thêm badge trạng thái tại chỗ: `<span id="att-db-status" style="font-size:0.8rem; font-weight:700;"></span>` hiển thị rõ: "Đã lưu CSDL", "Đang lưu...", hoặc "Chưa lưu".
-2. **Cải tiến hàm cập nhật ô chấm công `updateAttRecord`**:
-   - Hỗ trợ cả sự kiện `change` và `blur`.
-   - Cập nhật trạng thái `hasUnsavedChanges = true`.
-   - Tự động debounce lưu CSDL (`scheduleAutoSave()`).
-   - Cập nhật badge `#att-db-status` để người dùng an tâm dữ liệu đã được tự động lưu.
-3. **Bảo toàn dữ liệu khi chuyển View / chuyển Đợt**:
-   - Trong `switchAppView(viewId)`: Nếu có thay đổi chấm công chưa lưu, tự động gọi `performSaveToDB({ isAuto: true })` trước khi chuyển sang tab khác.
-   - Khi chọn tháng khác (`changeAttendanceMonth`): Tự động lưu tháng cũ và tải/lưu tháng mới.
-
----
-
-## III. Danh Sách File Cần Chỉnh Sửa
+## II. Danh Sách File Cần Chỉnh Sửa
 
 | Tệp tin | Vị trí | Mục đích thay đổi |
 | :--- | :--- | :--- |
-| `phancongtochuyenmon.html` | Tab `#view-baogiang` (Dòng ~2020–2035) | Bổ sung bộ lọc GV, bộ chọn Tháng, chuyển chế độ xem Thứ-Ngày-Tháng, nút In/Xuất |
-| `phancongtochuyenmon.html` | Hàm `renderBaoGiangView` (Dòng ~3847–3900) | Lọc theo giáo viên được chọn, tính phạm vi tháng, render thẻ theo Thứ-Ngày-Tháng |
-| `phancongtochuyenmon.html` | Tab `#view-chamcong` (Dòng ~2195–2225) | Thêm nút Lưu CSDL, nút Đồng bộ Sổ Dạy Thay, badge trạng thái lưu CSDL |
-| `phancongtochuyenmon.html` | Hàm `renderAttendance`, `updateAttRecord`, `autoFillAttendance`, `changeAttendanceMonth` (Dòng ~5256–5366) | Tự động đồng bộ số tiết từ Sổ Dạy Thay, không xóa mất tiết khi điền chuẩn, tự động lưu CSDL khi sửa ô hoặc đổi tháng |
-| `phancongtochuyenmon.html` | Hàm `switchAppView` (Dòng ~3901–3925) | Tự động lưu dữ liệu đang dở trước khi đổi tab |
-| `tests/baogiang-teacher-month-smoke.js` | Tạo mới | Kiểm thử tự động tính năng lọc giáo viên và lịch báo giảng 1 tháng |
-| `tests/attendance-autosync-smoke.js` | Tạo mới | Kiểm thử tự động đồng bộ Sổ Dạy Thay sang Chấm Công và tự lưu CSDL |
+| `phancongtochuyenmon.html` | Dòng ~3060 (`renderBaoGiangMonthView`) | Dùng `getBaoGiangTeacherList()` fallback thông minh từ `phase_assignments`, hiển thị danh sách GV đầy đủ |
+| `phancongtochuyenmon.html` | Dòng ~3920 (`renderBaoGiangView`) | Đồng bộ `state.teachers` từ đợt hiện tại nếu root bị rỗng, hiển thị banner hướng dẫn TKB |
+| `tests/baogiang-teacher-month-smoke.js` | Cuối file | Bổ sung test kiểm tra fallback giáo viên từ phase_assignments |
 
 ---
 
-## IV. Kế Hoạch Kiểm Thử (Verification Plan)
+## III. Kế Hoạch Kiểm Thử (Verification Plan)
 
-### 1. Kiểm thử tự động (Smoke Tests)
-- `node tests/attendance-autosync-smoke.js` — PASS 100% (Kiểm tra auto-sync từ Sổ Dạy Thay vào Chấm công, không mất tiết khi autoFill, tự động kích hoạt lưu).
-- `node tests/baogiang-teacher-month-smoke.js` — PASS 100% (Kiểm tra lọc giáo viên bất kỳ và tính toán ngày/buổi/tiết trong tháng).
+### 1. Kiểm thử tự động
+- `node tests/baogiang-teacher-month-smoke.js` — PASS 100%.
+- `node tests/attendance-autosync-smoke.js` — PASS 100%.
 - `node tests/baogiang-weekday-segment-smoke.js` — PASS 100%.
-- `node tests/baogiang-recognition-smoke.js` — PASS 100%.
-- `node tests/timetable-render-smoke.js` — PASS 100%.
 
-### 2. Kiểm thử thủ công trên giao diện
-1. **Lịch báo giảng**:
-   - Vào tab "4. Lịch báo giảng" -> Chọn GV bất kỳ -> Chọn Tháng -> Kiểm tra giao diện hiển thị đúng từng Thứ, Ngày, Buổi sáng/chiều và bài học PPCT.
-2. **Chấm công & Tự động đồng bộ**:
-   - Vào tab "5. Sổ Dạy Thay - Bù" -> Thêm 1 lượt dạy thay cho GV A (ví dụ 3 tiết).
-   - Sang tab "6. Chấm công GV" -> Kiểm tra cột "Dạy thay" của GV A đã tự động nhảy số 3 mà không cần bấm thủ công.
-   - Thử bấm "Điền chuẩn theo phân công" -> Xác nhận cột Dạy thay vẫn giữ nguyên số 3 (không bị về 0).
-   - Sửa ghi chú hoặc xếp loại của 1 GV -> Xác nhận badge "Đã lưu CSDL" báo xanh thành công.
-   - Tải lại trang (F5) -> Xác nhận toàn bộ dữ liệu chấm công và tháng đang chọn vẫn được bảo toàn nguyên vẹn từ CSDL.
+### 2. Kiểm thử thủ công
+1. Mở `phancongtochuyenmon.html` với kế hoạch có giáo viên trong đợt phân công.
+2. Chuyển sang Tab **4. Lịch báo giảng**.
+3. Mở dropdown **Giáo viên** -> Xác nhận hiển thị đầy đủ danh sách tất cả các giáo viên trong tổ.
+4. Chọn một giáo viên cụ thể -> Xem lịch báo giảng theo tháng của giáo viên đó.
