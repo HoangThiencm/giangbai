@@ -37,6 +37,26 @@ if (typeof KHBD_STANDARDS === "undefined" && typeof require !== "undefined") {
   } catch (e) {}
 }
 
+function safeGetGradeLevel(grade) {
+  if (typeof getGradeLevel === "function") return getGradeLevel(grade);
+  if (typeof window !== "undefined" && typeof window.getGradeLevel === "function") return window.getGradeLevel(grade);
+  const g = parseInt(grade, 10);
+  if (g >= 1 && g <= 5) return "tieu-hoc";
+  if (g >= 6 && g <= 9) return "thcs";
+  if (g >= 10 && g <= 12) return "thpt";
+  return "thcs";
+}
+
+function safeGetGradeLevelName(grade) {
+  if (typeof getGradeLevelName === "function") return getGradeLevelName(grade);
+  if (typeof window !== "undefined" && typeof window.getGradeLevelName === "function") return window.getGradeLevelName(grade);
+  const g = parseInt(grade, 10);
+  if (g >= 1 && g <= 5) return "Tiểu học";
+  if (g >= 6 && g <= 9) return "THCS";
+  if (g >= 10 && g <= 12) return "THPT";
+  return "THCS";
+}
+
 // STATE TOÀN CỤC CỦA ỨNG DỤNG
 const appState = {
   selectedGrade: "6",
@@ -5092,7 +5112,7 @@ function buildPedagogicalContext() {
   }).filter(Boolean);
 
   const subjectName = appState.subjectName || "Toán";
-  const gradeLevel = getGradeLevelName(appState.selectedGrade);
+  const gradeLevel = safeGetGradeLevelName(appState.selectedGrade);
   const curriculumNotice = typeof getCurrentCurriculumNotice === "function"
     ? getCurrentCurriculumNotice({ subjectId: currentSubjectId(), grade: appState.selectedGrade })
     : "Căn cứ CT GDPT 2018/Thông tư 32/2018/TT-BGDĐT và các sửa đổi còn hiệu lực.";
@@ -5190,8 +5210,8 @@ function getGenerationPromptContext(params = {}) {
     subject: appState.selectedSubject,
     subjectName: appState.subjectName || 'Môn học',
     grade: appState.selectedGrade,
-    gradeLevel: getGradeLevel(appState.selectedGrade),
-    gradeLevelName: getGradeLevelName(appState.selectedGrade),
+    gradeLevel: safeGetGradeLevel(appState.selectedGrade),
+    gradeLevelName: safeGetGradeLevelName(appState.selectedGrade),
     topic: params.topic || getTopicDisplayName(),
     duration: appState.duration,
     lesson_scope: (appState.teachingContext && appState.teachingContext.lessonScope) || '',

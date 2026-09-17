@@ -1093,6 +1093,8 @@
       window.getSubjectsForGrade = function (grade) { return window.CURRICULUM_DATA.subjects.filter(function (subject) { return subject.grades.indexOf(Number(grade)) >= 0; }); };
       window.getLessonsForBook = function (subject, _book, grade) { return ((window.CURRICULUM_DATA.lessonsBySubject[String(subject || "").toLowerCase()] || {})[String(grade)] || []); };
       window.getSubjectCompetencies = function (subject) { return window.SUBJECT_COMPETENCIES[subject] || []; };
+      window.getGradeLevel = function (grade) { var g = parseInt(grade, 10); if (g >= 1 && g <= 5) return "tieu-hoc"; if (g >= 6 && g <= 9) return "thcs"; if (g >= 10 && g <= 12) return "thpt"; return "thcs"; };
+      window.getGradeLevelName = function (grade) { var g = parseInt(grade, 10); if (g >= 1 && g <= 5) return "Tiểu học"; if (g >= 6 && g <= 9) return "THCS"; if (g >= 10 && g <= 12) return "THPT"; return "THCS"; };
       cfg.moduleFallback.curriculum = true;
     }
     function installConfigFallback() {
@@ -1688,6 +1690,7 @@
 
       /* HÀM ĐIỀU PHỐI 1-CLICK SOẠN TOÀN BỘ GIÁO ÁN */
       async function handle1ClickGenerate() {
+        await (window.__KHBD_CANVAS_CORE_READY__ || Promise.resolve());
         if (typeof appState === "undefined") {
           if (typeof showToast === "function") showToast("Ứng dụng chưa sẵn sàng.", "warning");
           return;

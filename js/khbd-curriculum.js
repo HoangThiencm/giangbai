@@ -3900,6 +3900,8 @@ function getGradeLevelName(grade) {
 if (typeof window !== 'undefined') {
   window.CURRICULUM_DATA = CURRICULUM_DATA;
   window.SUBJECT_COMPETENCIES = SUBJECT_COMPETENCIES;
+  window.getGradeLevel = getGradeLevel;
+  window.getGradeLevelName = getGradeLevelName;
 }
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -22,6 +22,11 @@ function extractIds(html) {
 }
 
 const sourceIds = extractIds(sourceHtml);
+const khbdApp = fs.readFileSync(path.join(root, 'js', 'khbd-app.js'), 'utf8');
+assert.match(khbdApp, /function safeGetGradeLevel\(grade\)/, 'khbd-app phải có helper cấp học an toàn');
+assert.match(khbdApp, /function safeGetGradeLevelName\(grade\)/, 'khbd-app phải có helper tên cấp học an toàn');
+assert.ok(!/gradeLevel:\s*getGradeLevel\(appState\.selectedGrade\)/.test(khbdApp), 'khbd-app không được gọi trực tiếp getGradeLevel khi tạo prompt');
+assert.ok(!/gradeLevelName:\s*getGradeLevelName\(appState\.selectedGrade\)/.test(khbdApp), 'khbd-app không được gọi trực tiếp getGradeLevelName khi tạo prompt');
 
 for (const targetPath of targetPaths) {
   const relPath = path.relative(root, targetPath);
@@ -99,6 +104,7 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes("isCompact"), `${relPath} phải điều phối riêng chế độ rút gọn`);
   assert.ok(targetHtml.includes('TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)'), `${relPath} phải có nhãn nút 1-Click`);
   assert.ok(targetHtml.includes('handle1ClickGenerate'), `${relPath} phải có hàm điều phối handle1ClickGenerate`);
+  assert.match(targetHtml, /async function handle1ClickGenerate\(\)\s*\{\s*await \(window\.__KHBD_CANVAS_CORE_READY__ \|\| Promise\.resolve\(\)\);/, `${relPath} 1-Click phải chờ core modules sẵn sàng`);
   if (relPath === 'canvas_soankhbd.html') {
     assert.ok(targetHtml.includes("!isCompact && typeof generateLessonIllustrations"), `${relPath} rút gọn không tạo hình minh họa SGK`);
     assert.ok(targetHtml.includes('8. 🎨 F. Hình minh họa SGK (Vector SVG & Hình ảnh)'), `${relPath} popup 1-Click phải hiển thị bước 8 hình minh họa SGK`);
