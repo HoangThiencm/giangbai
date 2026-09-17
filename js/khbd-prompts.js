@@ -559,6 +559,7 @@ QUY TẮC NĂNG LỰC ĐẶC THÙ & PHẨM CHẤT:
 """
 
 YÊU CẦU: CHỈ xuất duy nhất Mục II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU, đầu ra ngắn gọn. Tạo danh mục thiết bị và học liệu thiết yếu, cụ thể cho đúng bài dạy (tối đa 2 ý lớn cho mỗi đối tượng, mỗi ý lớn tối đa 3 ý con). TUYỆT ĐỐI KHÔNG để dấu ngoặc vuông [...] hay dấu ba chấm "..."; phải điền tên đồ dùng/học liệu thực tế.
+TƯƠNG THÍCH SƯ PHẠM BẮT BUỘC: Chỉ liệt kê thiết bị/học liệu phục vụ trực tiếp các PPDH và KTDH ĐÃ ĐƯỢC CHỌN trong bối cảnh sư phạm. TUYỆT ĐỐI CẤM tự đưa học liệu của kỹ thuật không chọn: cấm phiếu theo trạm nếu không chọn Dạy học theo trạm; cấm Exit Ticket/vé ra cửa nếu không chọn Exit Ticket hoặc ở chế độ rút gọn; cấm thẻ màu Xanh Vàng Đỏ nếu không chọn KTDH Thẻ màu; cấm bảng phụ khổ A0 nếu không chọn Khăn trải bàn hoặc Phòng tranh.
 TUYỆT ĐỐI CẤM sinh Mục I, Mục III, hoạt động A–E, bảng tổ chức dạy học hoặc bất kỳ khung/toàn bộ giáo án nào.
 
 # II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
@@ -1610,6 +1611,28 @@ function getPromptTemplate(templateKey, context) {
 
   if (templateKey === 'GENERATE_SVG_DRAWING' || templateKey === 'ANALYZE_PPCT') {
     return result;
+  }
+
+  if (templateKey === 'GENERATE_MATERIALS') {
+    const selectedMethods = Array.isArray(context.methods) ? context.methods.filter(Boolean) : [];
+    const rawTechniques = context.techniques;
+    const selectedTechniques = Array.isArray(rawTechniques)
+      ? rawTechniques.filter(Boolean)
+      : (rawTechniques && typeof rawTechniques === 'object'
+        ? Object.values(rawTechniques).flatMap(value => Array.isArray(value) ? value : []).filter(Boolean)
+        : []);
+    if (context.generationMode === 'compact') {
+      result += `\n\nRÀNG BUỘC CHẾ ĐỘ SOẠN RÚT GỌN (4–6 TRANG):
+- Đây là giáo án rút gọn, không có Pha E (Hồ sơ học tập & Đánh giá).
+- Thiết bị và học liệu phải tinh giản tối đa, phục vụ dạy học trực tiếp, vấn đáp và luyện tập cơ bản.
+- TUYỆT ĐỐI CẤM liệt kê: phiếu theo trạm, phiếu Exit Ticket, bộ thẻ màu đánh giá nhanh, bảng phụ A0, rubric đánh giá phức tạp.`;
+    }
+    if (!selectedMethods.length && !selectedTechniques.length) {
+      result += `\n\nRÀNG BUỘC KHÔNG CHỌN PPDH/KTDH RIÊNG:
+- Người dùng không áp dụng PPDH hoặc KTDH chuyên biệt nào (đã bỏ tick).
+- Học liệu chỉ gồm phương tiện trực quan thông thường: máy chiếu/bài giảng điện tử nếu có, SGK, vở ghi, thước, máy tính cầm tay, phiếu bài tập ngắn nếu cần.
+- TUYỆT ĐỐI CẤM tự ý đưa học liệu của bất kỳ kỹ thuật nâng cao nào vào bài.`;
+    }
   }
 
   if (context.lesson_scope || context.ppct_content) {

@@ -162,6 +162,19 @@ function testPrompts() {
   assert.ok(promptObj.includes("CẤM KHIÊN CƯỠNG"), "Prompt Mục tiêu phải có chống khiên cưỡng");
   assert.ok(promptMat.includes("Canva"), "Prompt Thiết bị phải cấm Canva khi không có thiết bị");
 
+  const compactMaterials = getPromptTemplate("GENERATE_MATERIALS", {
+    ...stubContext,
+    generationMode: "compact",
+    methods: [],
+    techniques: []
+  });
+  assert.match(compactMaterials, /RÀNG BUỘC CHẾ ĐỘ SOẠN RÚT GỌN/, "Mục II rút gọn phải có ràng buộc riêng");
+  assert.match(compactMaterials, /phiếu theo trạm/, "Mục II rút gọn phải cấm phiếu theo trạm");
+  assert.match(compactMaterials, /Exit Ticket/, "Mục II rút gọn phải cấm Exit Ticket");
+  assert.match(compactMaterials, /thẻ màu/, "Mục II rút gọn phải cấm thẻ màu");
+  assert.match(compactMaterials, /bảng phụ A0/, "Mục II rút gọn phải cấm bảng phụ A0");
+  assert.match(compactMaterials, /RÀNG BUỘC KHÔNG CHỌN PPDH\/KTDH RIÊNG/, "Bỏ tick phải có ràng buộc học liệu riêng");
+
   const promptF = getPromptTemplate("GENERATE_PORTFOLIO_WORKSHEETS", stubContext);
   assert.ok(promptF.includes("PHIẾU HỌC TẬP"), "Prompt F phải sinh Phiếu học tập");
   assert.ok(promptF.includes("Trạm 1") && promptF.includes("Trạm 2") && promptF.includes("Trạm 3"), "Prompt F phải có phiếu Trạm 1–3 khi dạy theo trạm");
