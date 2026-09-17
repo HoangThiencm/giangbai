@@ -1,35 +1,30 @@
-# IMPLEMENT: Thu gọn Tab 4 Lịch báo giảng — Modal PPCT & lịch nghỉ + cảnh báo collapsible
+# IMPLEMENT: Đồng bộ 2 phiên bản soạn + nút 1-Click sang `soankhbd.html`
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
-## Module 1 — Modal `#baogiang-config-modal`
-- Thêm modal chuẩn (`modal-overlay` / `modal-card`, `max-width: 900px`).
-- Header: `Cài đặt PPCT & Lịch nghỉ` + nút đóng `closeBaoGiangConfigModal()`.
-- Body phần 1: Khối/Môn, nạp tệp AI, JSON, `#bg-curriculum`, `#bg-ppct-library`.
-- Body phần 2: Form ngoại lệ nghỉ/dạy bù + `#bg-exceptions`.
-- Footer: Đóng / Lưu & Áp dụng (`closeBaoGiangConfigModal(); renderBaoGiangView(); showToast(...)`).
-- `openBaoGiangConfigModal()` / `closeBaoGiangConfigModal()` bật/tắt class `active`.
+## Module 1 — `soankhbd.html`
+- Thêm `#btn1ClickGenerate` vào `.header-actions` (trước `#btnCancelGeneration`).
+- Thêm `#selectGenerationMode` vào `.toolbar-grid` (giữa Môn học và Danh mục bài học).
+- Mặc định `detailed`; có tùy chọn `compact`.
 
-## Module 2 — Giao diện chính Tab 4
-- Toolbar: nút `Cài đặt PPCT & Lịch nghỉ` + `Lưu kế hoạch`.
-- Giữ hàng bộ lọc: Tuần 1, Giáo viên, Tháng, Chế độ xem.
-- Đã bỏ `<details>` PPCT, dropdown khối/môn lộ thiên và khối Ngày nghỉ khỏi mặt chính.
-- Mọi ID (`bg-curriculum`, `bg-ppct-grade`, `bg-ppct-subject`, `bg-ppct-file`, `bg-exceptions`, …) giữ nguyên, chuyển vào modal.
+## Module 2 — `js/khbd-app.js`
+- `appState.generationMode` khởi tạo từ `localStorage.khbd_generation_mode` (mặc định `detailed`).
+- Helpers: `getGenerationMode`, `setGenerationMode`, `resolveGenerationMode`.
+- Đồng bộ `#selectGenerationMode` lúc `setupEventListeners`; `change` → lưu localStorage + `appState`.
+- `getGenerationPromptContext` truyền `generationMode` qua `resolveGenerationMode` (ưu tiên params → appState → canvasStorage/localStorage).
+- `handle1ClickGenerate`:
+  - Chặn khi thiếu bài học / đang chạy / thiếu API key (trang chuẩn).
+  - Xác nhận theo chế độ compact (6 bước) hoặc detailed (8 bước).
+  - Disable `#btn1ClickGenerate`, enable `#btnCancelGeneration`, AbortController + progress bar.
+  - Tuần tự: I → II → A → B → C → D → (detailed: E + hình minh họa) → Tab `tabFullPreview`.
+- Export `handle1ClickGenerate`, `getGenerationMode`, `setGenerationMode`, `resolveGenerationMode`.
 
-## Module 3 — Cảnh báo PPCT thu gọn
-- Thêm `baoGiangWarningsHtml(warnings)` sinh `<details class="bg-warning-box">` (mặc định đóng).
-- Summary: `Cần kiểm tra PPCT trước khi gửi email (N cảnh báo — Bấm để xem/ẩn)`.
-- Nội dung cuộn `max-height: 180px; overflow-y: auto`.
-- Dùng trong `renderBaoGiangBaseView()` và `renderBaoGiangView()`.
-
-## Module 4 — Smoke
-- `tests/baogiang-teacher-month-smoke.js`: kiểm tra modal chứa đủ ID, nút mở modal, cảnh báo bọc `<details>`.
+## Module 3 — Smoke mới
+- `tests/soankhbd-generation-mode-smoke.js`: HTML IDs, mặc định detailed, wiring app, prompt compact.
 
 ## Test đã chạy
+- `node tests/soankhbd-generation-mode-smoke.js` — PASS
+- `node tests/canvas-soankhbd-smoke.js` — PASS
 - `node tests/baogiang-teacher-month-smoke.js` — PASS
-- `node tests/baogiang-weekday-segment-smoke.js` — PASS
-- `node tests/baogiang-recognition-smoke.js` — PASS
-- `node tests/timetable-render-smoke.js` — PASS
-- `node tests/attendance-autosync-smoke.js` — PASS
 
-Không thêm chức năng ngoài plan. Cần `/verify` trên Antigravity: mở Tab 4 → Cài đặt PPCT & Lịch nghỉ; kiểm tra cảnh báo PPCT thu gọn còn 1 dòng.
+Không thêm chức năng ngoài plan. Cần `/verify` trên Antigravity.

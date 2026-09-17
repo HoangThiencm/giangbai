@@ -117,6 +117,9 @@
         <a href="index.html" class="btn btn-outline" style="text-decoration: none;" title="Quay về Hub Trang chủ">
           <i data-lucide="home"></i> Trang chủ
         </a>
+        <button id="btn1ClickGenerate" class="btn btn-special" title="Tự động tạo lần lượt toàn bộ giáo án từ đầu đến cuối">
+          <i data-lucide="zap"></i> ⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)
+        </button>
         <button id="btnCancelGeneration" class="btn btn-danger" disabled title="Dừng tác vụ AI đang chạy" style="color:#ffffff;background:#b91c1c;border-color:#fecaca;opacity:.92">
           <i data-lucide="circle-stop"></i> Hủy tạo
         </button>
@@ -147,6 +150,14 @@
       <div class="tool-group">
         <label for="selectSubject">Môn học:</label>
         <select id="selectSubject"></select>
+      </div>
+
+      <div class="tool-group">
+        <label for="selectGenerationMode">Chế độ soạn:</label>
+        <select id="selectGenerationMode" aria-label="Chế độ soạn giáo án">
+          <option value="detailed" selected>📋 Soạn chi tiết (8–10 trang)</option>
+          <option value="compact">⚡ Soạn rút gọn (4–6 trang)</option>
+        </select>
       </div>
 
       <div class="tool-group" style="grid-column: span 2;">
