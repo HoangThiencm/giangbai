@@ -1,77 +1,78 @@
-# PLAN: Chuẩn Hóa Mục II (Thiết Bị Dạy Học & Học Liệu) Cho Chế Độ Rút Gọn & Khi Không Dùng PPDH/KTDH Riêng
+# PLAN: Xây Dựng Lịch Báo Giảng Theo Giáo Viên (1 Tháng, Thứ-Ngày-Tháng) & Tự Động Đồng Bộ, Lưu CSDL Phần Chấm Công
 
 ## User Review Required
 > [!IMPORTANT]
-> - Ở **Chế độ Soạn rút gọn (4–6 trang)** hoặc khi **người dùng không chọn PPDH / KTDH riêng**: Mục **II. Thiết bị dạy học và học liệu** phải được tinh giản tối đa, chỉ liệt kê đồ dùng dạy học trực quan và thiết bị cơ bản.
-> - **Tuyệt đối cấm** AI tự ý liệt kê học liệu của các phương pháp/kỹ thuật nâng cao không được sử dụng trong bài (như: Phiếu học tập phân hóa theo trạm, Phiếu Exit Ticket, Bộ thẻ màu đánh giá nhanh, Bảng phụ A0...).
+> - **Mục 1 (Lịch báo giảng 1 tháng theo GV bất kỳ)**: Bổ sung bộ lọc chọn giáo viên trong tổ, bộ chọn tháng (30 ngày), và giao diện trực quan chuẩn Sổ Báo Giảng THCS gom theo từng Thứ - Ngày - Buổi - Tiết.
+> - **Mục 2 (Tự động đồng bộ và tự lưu CSDL phần Chấm công)**:
+>   1. Tự động đồng bộ số tiết Dạy thay & Dạy bù từ Sổ Dạy Thay sang bảng Chấm Công ngay khi mở tab Chấm Công hoặc khi đổi tháng.
+>   2. Hàm "Điền chuẩn theo phân công" sẽ tự động lấy đúng số tiết dạy thay/dạy bù thực tế thay vì gán về 0.
+>   3. Bổ sung nút "Lưu CSDL" và thanh trạng thái đồng bộ trực tiếp trên thanh công cụ Chấm Công.
+>   4. Tự động kích hoạt lưu CSDL tức thì khi thay đổi chấm công, đổi tháng, hoặc khi chuyển tab (loại bỏ độ trễ mất dữ liệu).
+> - **Cấm sửa mã ngoài phạm vi**: Chỉ cập nhật giao diện và logic trong `phancongtochuyenmon.html` và viết test kiểm thử tự động.
 
 ---
 
-## I. Hiện Trạng & Phân Tích Nguyên Nhân
+## I. Phân Tích Hiện Trạng & Nguyên Nhân
 
-### 1. Hiện tượng
-- Khi soạn giáo án ở **Chế độ Soạn rút gọn** hoặc khi người dùng đã bỏ tick các PPDH/KTDH và không tạo Pha E (Hồ sơ đánh giá), AI vẫn sinh ra mục II với nội dung rườm rà, hình thức:
-  ```text
-  + Hệ thống phiếu học tập (Phiếu số 1: Bài toán mở đầu và Ví dụ 1; Phiếu số 2: Bài tập phân hóa theo trạm; Phiếu số 3: Exit Ticket).
-  + Bộ thẻ màu (Xanh, Vàng, Đỏ) phục vụ kỹ thuật đánh giá nhanh mức độ hiểu bài và bảng phụ khổ A0 cho hoạt động nhóm.
-  ```
-- Đây là lỗi mâu thuẫn sư phạm nghiêm trọng ("râu ông nọ cắm cằm bà kia"):
-  1. *Phiếu phân hóa theo trạm*: Chỉ dùng khi áp dụng PPDH Dạy học theo trạm.
-  2. *Exit Ticket*: Thuộc KTDH Exit Ticket hoặc Pha E (Hồ sơ đánh giá). Bản rút gọn không có Pha E.
-  3. *Bộ thẻ màu*: Thuộc KTDH Thẻ màu.
-  4. *Bảng phụ khổ A0*: Thuộc KTDH Khăn trải bàn hoặc thảo luận nhóm lớn.
+### 1. Vấn đề Lịch báo giảng
+- Hiện tại Tab 4 (Lịch báo giảng) chỉ có ô chọn ngày bắt đầu và số ngày xem (mặc định 14 ngày).
+- Hiển thị bảng phẳng dồn tất cả giáo viên vào một bảng lớn, không có bộ lọc chọn giáo viên riêng lẻ và không có bố cục theo từng Thứ - Ngày - Tháng chuẩn Sổ Báo Giảng THCS.
 
-### 2. Nguyên nhân kỹ thuật
-1. Trong `js/khbd-prompts.js` (`GENERATE_MATERIALS`):
-   - Mẫu chỉ dẫn và ví dụ chỉ có yêu cầu chung chung: *"Tạo danh mục thiết bị và học liệu thiết yếu, cụ thể cho đúng bài dạy..."*, *"Phiếu học tập, bảng phụ nhóm và các dụng cụ trực quan phục vụ bài dạy."*
-   - Thiếu hoàn toàn điều khoản ràng buộc: Học liệu phải bám sát các PPDH/KTDH đã chọn.
-2. Trong `getPromptTemplate('GENERATE_MATERIALS', context)` (`js/khbd-prompts.js`):
-   - Chưa xử lý trường hợp `context.generationMode === 'compact'`.
-   - Chưa kiểm tra trường hợp `context.methods` và `context.techniques` rỗng (người dùng không chọn hoặc đã bỏ tick).
-   - Dẫn đến LLM tự do suy diễn và lấy các học liệu nâng cao từ catalog đưa vào Mục II cho dài.
+### 2. Vấn đề Chấm công không tự đồng bộ CSDL và tự lưu
+- **Nguyên nhân 1 (Thiếu tự động đồng bộ từ Sổ Dạy Thay)**: Khi giáo viên ghi nhận lượt dạy thay / dạy bù ở Tab 5, số tiết chỉ cập nhật vào `attendance.substitutes`. Khi người dùng mở Tab 6 (Chấm công) hoặc đổi tháng (`changeAttendanceMonth`), hệ thống KHÔNG tự động gọi `autoSyncSubstitutePeriods()`.
+- **Nguyên nhân 2 (Nút Điền chuẩn xóa mất tiết dạy thay/bù)**: Hàm `autoFillAttendance()` hiện tại gán cứng `teach_replace: 0, makeup_periods: 0`, vô tình xóa sạch số tiết dạy thay/bù đã ghi nhận trong tháng.
+- **Nguyên nhân 3 (Cơ chế lưu CSDL bị ngắt quãng)**:
+  + Các ô nhập điểm danh, số tiết, xếp loại, ghi chú chỉ kích hoạt `onchange` (phải click ra ngoài mới chạy) và chỉ gọi `saveToLocal()`.
+  + `saveToLocal()` dùng debounce 1500ms để gọi ngầm `performSaveToDB({ isAuto: true })`. Nếu người dùng đổi tháng, chuyển tab hoặc đóng trình duyệt trước 1.5 giây, lệnh lưu CSDL sẽ không được gửi đi.
+  + Hàm `changeAttendanceMonth(val)` hoàn toàn không gọi `saveToLocal()` hay lưu CSDL.
+- **Nguyên nhân 4 (Thiếu nút và chỉ báo lưu tại chỗ)**: Tab Chấm công không có nút "Lưu CSDL" riêng (như ở tab Báo giảng hay Dạy thay), và không có biểu tượng trạng thái lưu tại chỗ, khiến người dùng không biết dữ liệu đã lên CSDL MySQL hay chưa.
 
 ---
 
 ## II. Kế Hoạch Triển Khai Chi Tiết
 
-### Module 1: Cập Nhật Prompt `GENERATE_MATERIALS` Trong `js/khbd-prompts.js`
-1. Sửa chỉ thị `GENERATE_MATERIALS` (dòng ~553–573):
-   - Bổ sung nguyên tắc tương thích 100% với PPDH/KTDH:
-     - Danh mục thiết bị và học liệu CHỈ được liệt kê các công cụ phục vụ trực tiếp cho các PPDH và KTDH đã được chọn trong Bối cảnh sư phạm.
-     - **TUYỆT ĐỐI CẤM** tự ý đưa tên hoặc học liệu của các phương pháp/kỹ thuật KHÔNG được chọn:
-       + CẤM "phiếu theo trạm" nếu không chọn PPDH Dạy học theo trạm.
-       + CẤM "Exit Ticket / vé ra cửa" nếu không chọn KTDH Exit Ticket hoặc ở chế độ rút gọn (đã bỏ Pha E).
-       + CẤM "thẻ màu (Xanh, Vàng, Đỏ)" nếu không chọn KTDH Thẻ màu.
-       + CẤM "bảng phụ khổ A0" nếu không chọn KTDH Khăn trải bàn / Phòng tranh.
-   - Định dạng chuẩn mực đầu ra khi tinh gọn:
-     - **1. Đối với Giáo viên**: SGK, SGV, Kế hoạch bài dạy; Thiết bị trình chiếu / bài giảng điện tử (trình chiếu hình ảnh, đề bài, bảng số liệu); Thước kẻ, dụng cụ trực quan bộ môn (nếu có); Phiếu học tập/bài tập ngắn (chỉ khi có bài tập cần phát tay).
-     - **2. Đối với Học sinh**: SGK, vở ghi, đồ dùng học tập thiết yếu của môn học (bút, thước kẻ, máy tính cầm tay,...).
+### PHẦN A: LỊCH BÁO GIẢNG 1 THÁNG THEO GIÁO VIÊN (THỨ - NGÀY - THÁNG)
 
-### Module 2: Bổ Sung Ràng Buộc Trong `getPromptTemplate` (`js/khbd-prompts.js`)
-1. Trong hàm `getPromptTemplate(templateKey, context)`:
-   - Khi `templateKey === 'GENERATE_MATERIALS'`:
-     - Nếu `context.generationMode === 'compact'`:
-       Chèn chỉ thị đặc thù chế độ rút gọn:
-       ```text
-       RÀNG BUỘC CHẾ ĐỘ SOẠN RÚT GỌN (4–6 TRANG):
-       - Đây là giáo án rút gọn, không có Pha E (Hồ sơ học tập & Đánh giá).
-       - Thiết bị và học liệu phải tinh giản tối đa, phục vụ dạy học trực tiếp, vấn đáp và luyện tập cơ bản.
-       - TUYỆT ĐỐI CẤM liệt kê: phiếu theo trạm, phiếu Exit Ticket, bộ thẻ màu đánh giá nhanh, bảng phụ A0, rubric đánh giá phức tạp.
-       ```
-     - Nếu `(!context.methods || context.methods.length === 0) && (!context.techniques || context.techniques.length === 0)`:
-       Chèn chỉ thị cấm học liệu kỹ thuật chuyên biệt:
-       ```text
-       RÀNG BUỘC KHÔNG CHỌN PPDH/KTDH RIÊNG:
-       - Người dùng không áp dụng PPDH hoặc KTDH chuyên biệt nào (đã bỏ tick).
-       - Học liệu chỉ gồm phương tiện trực quan thông thường (máy chiếu/bài giảng điện tử nếu có, SGK, vở ghi, thước, máy tính cầm tay, phiếu bài tập ngắn nếu cần).
-       - TUYỆT ĐỐI CẤM tự ý đưa học liệu của bất kỳ kỹ thuật nâng cao nào vào bài.
-       ```
+#### Module 1: Thanh Công Cụ & Bộ Lọc Lịch Báo Giảng (`view-baogiang`)
+1. **Dropdown chọn Giáo viên (`#bg-filter-teacher`)**:
+   - Danh sách giáo viên trong tổ (`state.teachers`), mặc định chọn giáo viên đầu tiên hoặc giáo viên đang đăng nhập.
+   - Có tùy chọn `[Tất cả giáo viên]` để xem toàn tổ.
+2. **Bộ chọn Tháng & Điều hướng thời gian (`#bg-filter-month`)**:
+   - Input tháng `type="month"` (ví dụ: `2026-09`).
+   - Nút điều hướng nhanh: `◀ Tháng trước`, `Tháng này`, `Tháng sau ▶`.
+   - Tự động tính ngày đầu tháng (`YYYY-MM-01`) đến ngày cuối tháng (`YYYY-MM-LastDay`).
+3. **Giao diện chuẩn Sổ Báo Giảng THCS theo Thứ - Ngày - Tháng**:
+   - Gom nhóm từng ngày có tiết dạy trong tháng: `Thứ Hai, Ngày 07/09/2026 (Tuần 1)`.
+   - Chia 2 bảng rõ rệt: **Buổi sáng** (Tiết 1–5) và **Buổi chiều** (Tiết 1–4).
+   - Cột: Tiết | Lớp | Môn | Tiết PPCT | Tên bài dạy | Phân đoạn/Mạch kiến thức.
+   - Nút **In Sổ Báo Giảng (Print)** chuẩn A4 và **Xuất Excel** báo giảng tháng.
 
-### Module 3: Kiểm Thử Tự Động (Smoke Tests)
-1. Cập nhật `tests/canvas-soankhbd-smoke.js` hoặc `tests/khbd-pedagogy-script-smoke.js`:
-   - Thêm test case kiểm tra `getPromptTemplate('GENERATE_MATERIALS', { generationMode: 'compact', methods: [], techniques: [] })`.
-   - Xác nhận prompt sinh ra chứa đầy đủ các chỉ thị cấm phiếu trạm, Exit Ticket, thẻ màu, bảng A0.
-   - Chạy toàn bộ test suites hiện có đảm bảo PASS 100%.
+---
+
+### PHẦN B: TỰ ĐỘNG ĐỒNG BỘ VÀ TỰ LƯU CSDL PHẦN CHẤM CÔNG
+
+#### Module 2: Tự Động Đồng Bộ Số Tiết Dạy Thay / Dạy Bù Sang Chấm Công
+1. **Tự động kích hoạt đồng bộ khi xem Chấm công**:
+   - Trong hàm `renderAttendance()`: Tự động chạy `autoSyncSubstitutePeriods({ silent: true, mKey, autoSave: false })` trước khi hiển thị bảng, đảm bảo số tiết dạy thay/bù từ Sổ Dạy Thay luôn luôn khớp 100% với Chấm công mà không cần người dùng phải bấm nút thủ công.
+   - Khi chuyển tháng trong `changeAttendanceMonth(val)`: Đồng bộ ngay số liệu của tháng mới, lưu vào `state.attendance.current_month`, gọi `saveToLocal()` và tự động lưu CSDL.
+2. **Nâng cấp `autoFillAttendance()`**:
+   - Khi bấm "Điền chuẩn theo phân công": Điền `w1..w4: 'Đủ'`, `observe: 1`, `meeting: 2`, `rating: 'Tốt'`.
+   - Đồng thời **bảo lưu hoặc tự động tính toán lại ngay** số tiết `teach_replace` và `makeup_periods` từ `state.attendance.substitutes[mKey]`, KHÔNG bị gán về 0.
+   - Sau khi điền chuẩn: Gọi `saveToDB()` lưu thẳng vào CSDL và báo thông báo thành công.
+
+#### Module 3: Hoàn Thiện Cơ Chế Tự Động Lưu CSDL Cho Chấm Công
+1. **Bổ sung nút thao tác và chỉ báo trạng thái trên thanh công cụ Chấm công (`.attendance-toolbar`)**:
+   - Thêm nút: `<button class="btn-small btn-small-primary" onclick="saveAttendanceToDB()"><i class="fas fa-cloud-arrow-up"></i> Lưu Chấm Công vào CSDL</button>`.
+   - Thêm nút: `<button class="btn-small" onclick="autoSyncSubstitutePeriods()"><i class="fas fa-rotate"></i> Đồng bộ từ Sổ Dạy Thay</button>`.
+   - Thêm badge trạng thái tại chỗ: `<span id="att-db-status" style="font-size:0.8rem; font-weight:700;"></span>` hiển thị rõ: "Đã lưu CSDL", "Đang lưu...", hoặc "Chưa lưu".
+2. **Cải tiến hàm cập nhật ô chấm công `updateAttRecord`**:
+   - Hỗ trợ cả sự kiện `change` và `blur`.
+   - Cập nhật trạng thái `hasUnsavedChanges = true`.
+   - Tự động debounce lưu CSDL (`scheduleAutoSave()`).
+   - Cập nhật badge `#att-db-status` để người dùng an tâm dữ liệu đã được tự động lưu.
+3. **Bảo toàn dữ liệu khi chuyển View / chuyển Đợt**:
+   - Trong `switchAppView(viewId)`: Nếu có thay đổi chấm công chưa lưu, tự động gọi `performSaveToDB({ isAuto: true })` trước khi chuyển sang tab khác.
+   - Khi chọn tháng khác (`changeAttendanceMonth`): Tự động lưu tháng cũ và tải/lưu tháng mới.
 
 ---
 
@@ -79,19 +80,31 @@
 
 | Tệp tin | Vị trí | Mục đích thay đổi |
 | :--- | :--- | :--- |
-| `js/khbd-prompts.js` | Dòng ~553–573 (`GENERATE_MATERIALS`) | Cập nhật prompt gốc Mục II: cấm học liệu kỹ thuật không chọn, chuẩn hóa khung tinh gọn |
-| `js/khbd-prompts.js` | Dòng ~1610–1650 (`getPromptTemplate`) | Bổ sung logic chèn ràng buộc rút gọn và không chọn PPDH/KTDH cho `GENERATE_MATERIALS` |
-| `tests/canvas-soankhbd-smoke.js` | Cuối file | Bổ sung test kiểm thử tự động cho prompt `GENERATE_MATERIALS` |
+| `phancongtochuyenmon.html` | Tab `#view-baogiang` (Dòng ~2020–2035) | Bổ sung bộ lọc GV, bộ chọn Tháng, chuyển chế độ xem Thứ-Ngày-Tháng, nút In/Xuất |
+| `phancongtochuyenmon.html` | Hàm `renderBaoGiangView` (Dòng ~3847–3900) | Lọc theo giáo viên được chọn, tính phạm vi tháng, render thẻ theo Thứ-Ngày-Tháng |
+| `phancongtochuyenmon.html` | Tab `#view-chamcong` (Dòng ~2195–2225) | Thêm nút Lưu CSDL, nút Đồng bộ Sổ Dạy Thay, badge trạng thái lưu CSDL |
+| `phancongtochuyenmon.html` | Hàm `renderAttendance`, `updateAttRecord`, `autoFillAttendance`, `changeAttendanceMonth` (Dòng ~5256–5366) | Tự động đồng bộ số tiết từ Sổ Dạy Thay, không xóa mất tiết khi điền chuẩn, tự động lưu CSDL khi sửa ô hoặc đổi tháng |
+| `phancongtochuyenmon.html` | Hàm `switchAppView` (Dòng ~3901–3925) | Tự động lưu dữ liệu đang dở trước khi đổi tab |
+| `tests/baogiang-teacher-month-smoke.js` | Tạo mới | Kiểm thử tự động tính năng lọc giáo viên và lịch báo giảng 1 tháng |
+| `tests/attendance-autosync-smoke.js` | Tạo mới | Kiểm thử tự động đồng bộ Sổ Dạy Thay sang Chấm Công và tự lưu CSDL |
 
 ---
 
 ## IV. Kế Hoạch Kiểm Thử (Verification Plan)
 
-### 1. Kiểm thử tự động
-- `node tests/canvas-soankhbd-smoke.js` — PASS 100%.
-- `node tests/khbd-pedagogy-rate-smoke.js` — PASS 100%.
-- `node tests/khbd-pedagogy-script-smoke.js` — PASS 100%.
+### 1. Kiểm thử tự động (Smoke Tests)
+- `node tests/attendance-autosync-smoke.js` — PASS 100% (Kiểm tra auto-sync từ Sổ Dạy Thay vào Chấm công, không mất tiết khi autoFill, tự động kích hoạt lưu).
+- `node tests/baogiang-teacher-month-smoke.js` — PASS 100% (Kiểm tra lọc giáo viên bất kỳ và tính toán ngày/buổi/tiết trong tháng).
+- `node tests/baogiang-weekday-segment-smoke.js` — PASS 100%.
+- `node tests/baogiang-recognition-smoke.js` — PASS 100%.
+- `node tests/timetable-render-smoke.js` — PASS 100%.
 
-### 2. Kiểm thử nội dung Prompt (Node VM)
-- Chạy thử nghiệm tạo prompt `GENERATE_MATERIALS` với ngữ cảnh rút gọn + mảng methods/techniques rỗng:
-  - Khẳng định prompt có chỉ thị cấm "phiếu trạm", "Exit Ticket", "thẻ màu", "bảng phụ A0".
+### 2. Kiểm thử thủ công trên giao diện
+1. **Lịch báo giảng**:
+   - Vào tab "4. Lịch báo giảng" -> Chọn GV bất kỳ -> Chọn Tháng -> Kiểm tra giao diện hiển thị đúng từng Thứ, Ngày, Buổi sáng/chiều và bài học PPCT.
+2. **Chấm công & Tự động đồng bộ**:
+   - Vào tab "5. Sổ Dạy Thay - Bù" -> Thêm 1 lượt dạy thay cho GV A (ví dụ 3 tiết).
+   - Sang tab "6. Chấm công GV" -> Kiểm tra cột "Dạy thay" của GV A đã tự động nhảy số 3 mà không cần bấm thủ công.
+   - Thử bấm "Điền chuẩn theo phân công" -> Xác nhận cột Dạy thay vẫn giữ nguyên số 3 (không bị về 0).
+   - Sửa ghi chú hoặc xếp loại của 1 GV -> Xác nhận badge "Đã lưu CSDL" báo xanh thành công.
+   - Tải lại trang (F5) -> Xác nhận toàn bộ dữ liệu chấm công và tháng đang chọn vẫn được bảo toàn nguyên vẹn từ CSDL.
