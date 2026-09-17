@@ -338,6 +338,14 @@ ${LATEX_SPACING_BAN}
 - CẤM để trống ô. Escape dấu | trong văn bản thành \\|.
 - Hoạt động B: Mỗi tiểu mục/nội dung kiến thức dùng một bảng 2 cột (1 hàng) độc lập như trên. Gộp toàn bộ ví dụ mẫu, câu hỏi khám phá con, thực hành của mục đó vào chung một hoạt động nhánh.`;
 
+const ACTIVITY_TABLE_CONTRACT_COMPACT = `YÊU CẦU BẮT BUỘC CHẾ ĐỘ SOẠN RÚT GỌN (Chuẩn CV 5512 & GDPT 2018):
+- Toàn bộ kế hoạch bài dạy dài khoảng 4–6 trang Word A4. Chỉ soạn bốn hoạt động cốt lõi A–D; không tạo phụ lục/phiếu học tập riêng.
+- Mỗi hoạt động ghi thời lượng cố định; tổng A + B + C + D đúng bằng {duration}. Dùng đúng một bảng Markdown 2 cột: | Hoạt động của GV và HS | Nội dung |.
+- Kịch bản giữ đủ 4 bước: 1. Giao việc ngắn gọn; 2. HS thực hiện cá nhân/nhóm; 3. Báo cáo ngắn; 4. GV chốt kiến thức cốt lõi. Không viết câu thoại dài dòng, không diễn giải ngộ nhận hoặc phân hóa dài.
+- Cột Nội dung chỉ ghi quy tắc/công thức LaTeX và tối đa một bài tập trọng tâm có lời giải mẫu ngắn. Không để trống ô, không dùng HTML.
+- Hoạt động D phải giao luôn đúng 4 nhiệm vụ tự học về nhà tại Bước 4.
+- Khi giáo viên bật NLS hoặc AI, TUYỆT ĐỐI KHÔNG được bỏ marker ***[NLS: ...]***, ***[AI: ...]***: giữ 1–2 vị trí then chốt, tự nhiên trong toàn bài.`;
+
 const PROMPTS = {
   // SYSTEM INSTRUCTION
   SYSTEM_ROLE: `Bạn là Chuyên gia Sư phạm Cao cấp, phụ trách môn {subject} Cấp {gradeLevelName}, nắm vững:
@@ -1503,6 +1511,9 @@ function expandActivityBSkeleton(result, subsections, budgets) {
 function getPromptTemplate(templateKey, context) {
   let baseTemplate = PROMPTS[templateKey];
   if (!baseTemplate) return '';
+  if (context.generationMode === 'compact') {
+    baseTemplate = baseTemplate.replace(ACTIVITY_TABLE_CONTRACT, ACTIVITY_TABLE_CONTRACT_COMPACT);
+  }
 
   const subjectId = context.subject || 'toan';
   const subjectName = context.subjectName || 'Toán';

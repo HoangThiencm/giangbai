@@ -5186,6 +5186,7 @@ function getGenerationPromptContext(params = {}) {
   });
   
   return {
+    generationMode: params.generationMode === 'compact' || (!params.generationMode && typeof window !== 'undefined' && window.canvasStorage && window.canvasStorage.getItem('khbd_generation_mode') === 'compact') ? 'compact' : 'detailed',
     subject: appState.selectedSubject,
     subjectName: appState.subjectName || 'Môn học',
     grade: appState.selectedGrade,

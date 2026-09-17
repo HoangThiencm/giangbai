@@ -277,6 +277,14 @@
         <select id="selectSubject"></select>
       </div>
 
+      <div class="tool-group">
+        <label for="selectGenerationMode">Chế độ soạn:</label>
+        <select id="selectGenerationMode" aria-label="Chế độ soạn giáo án">
+          <option value="detailed" selected>📋 Soạn chi tiết (8–10 trang)</option>
+          <option value="compact">⚡ Soạn rút gọn (4–6 trang)</option>
+        </select>
+      </div>
+
       <div class="tool-group" style="grid-column: span 2;">
         <label for="selectLesson">Danh mục bài học:</label>
         <select id="selectLesson">
@@ -1187,6 +1195,16 @@
       };
     }
     var canvasStorage = getCanvasStorage();
+    function getCanvasGenerationMode() {
+      return canvasStorage.getItem('khbd_generation_mode') === 'compact' ? 'compact' : 'detailed';
+    }
+    function setCanvasGenerationMode(mode) {
+      var normalized = mode === 'compact' ? 'compact' : 'detailed';
+      canvasStorage.setItem('khbd_generation_mode', normalized);
+      var select = document.getElementById('selectGenerationMode');
+      if (select) select.value = normalized;
+      return normalized;
+    }
     function canvasEscHtml(s) {
       return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -1642,16 +1660,19 @@
 
         const grade = appState.selectedGrade || (document.getElementById("selectGrade") && document.getElementById("selectGrade").value) || "6";
         const subject = (typeof getSubjectDisplayName === "function" ? getSubjectDisplayName() : appState.subjectName) || "Môn học";
+        const generationMode = typeof getCanvasGenerationMode === "function" ? getCanvasGenerationMode() : "detailed";
+        const isCompact = generationMode === "compact";
 
         const confirmMsg = 'Bạn có muốn bắt đầu TỰ ĐỘNG TẠO TOÀN BỘ GIÁO ÁN cho bài:\n"' + topic + '" (Lớp ' + grade + ' - ' + subject + ')?\n\n'
-          + 'Tiến trình sẽ chạy tuần tự qua tất cả các bước:\n'
+          + (isCompact ? 'Chế độ SOẠN RÚT GỌN (4–6 trang): chạy 6 bước cốt lõi, bỏ III.E.\n\n' : 'Chế độ SOẠN CHI TIẾT (8–10 trang): chạy đầy đủ các bước.\n\n')
+          + 'Tiến trình sẽ chạy tuần tự qua các bước:\n'
           + '1. I. Mục tiêu bài học (CV 5512 & Khung NLS/AI)\n'
           + '2. II. Thiết bị dạy học và học liệu\n'
           + '3. III.A Hoạt động Khởi động\n'
           + '4. III.B Hoạt động Hình thành kiến thức (4 bước)\n'
           + '5. III.C Hoạt động Luyện tập\n'
-          + '6. III.D Hoạt động Vận dụng\n'
-          + '7. III.E Hồ sơ học tập & Đánh giá\n'
+          + '6. III.D Hoạt động Vận dụng & Tự học\n'
+          + (isCompact ? '' : '7. III.E Hồ sơ học tập & Đánh giá\n')
           + '-> Tự động tổng hợp và chuyển sang Tab Toàn bộ Giáo án (.DOCX)';
 
         const confirmed = typeof canvasConfirm === "function" ? await canvasConfirm(confirmMsg) : true;
@@ -1677,7 +1698,7 @@
             const footerEl = document.getElementById("statusFooterText");
             if (footerEl) footerEl.textContent = "Đang soạn: " + options.operationName + "...";
 
-            const context = typeof getGenerationPromptContext === "function" ? getGenerationPromptContext() : {};
+            const context = typeof getGenerationPromptContext === "function" ? getGenerationPromptContext({ generationMode: generationMode }) : { generationMode: generationMode };
             const basePrompt = typeof getPromptTemplate === "function" ? getPromptTemplate(options.templateKey, context) : "";
             const prompt = basePrompt + (options.extraPrompt || "");
 
@@ -1791,8 +1812,8 @@
             applyOutput: typeof applyActivityOutput === "function" ? function (res, sig) { return applyActivityOutput("D", res, sig); } : null
           });
 
-          // 7. III.E Hồ sơ học tập & Đánh giá
-          await executeStep({
+          // Chế độ rút gọn kết thúc ở hoạt động D.
+          if (!isCompact) await executeStep({
             operationName: "III.E Hồ sơ học tập & Đánh giá",
             percent: 96,
             templateKey: "GENERATE_PORTFOLIO_WORKSHEETS",
@@ -1841,6 +1862,11 @@
         const btn1Click = document.getElementById("btn1ClickGenerate");
         if (btn1Click) {
           btn1Click.addEventListener("click", handle1ClickGenerate);
+        }
+        const generationModeSelect = document.getElementById("selectGenerationMode");
+        if (generationModeSelect) {
+          setCanvasGenerationMode(getCanvasGenerationMode());
+          generationModeSelect.addEventListener("change", function () { setCanvasGenerationMode(generationModeSelect.value); });
         }
 
         // Đảm bảo chuyển tab trong Canvas iframe hoạt động tốt

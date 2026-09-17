@@ -93,9 +93,14 @@ for (const targetPath of targetPaths) {
 
   // 3. Kiểm tra nút 1-Click
   assert.ok(targetIds.has('btn1ClickGenerate'), `${relPath} phải có nút #btn1ClickGenerate`);
+  assert.ok(targetIds.has('selectGenerationMode'), `${relPath} phải có bộ chọn chế độ soạn`);
+  assert.match(targetHtml, /id="selectGenerationMode"[\s\S]*?value="detailed" selected/, `${relPath} phải mặc định soạn chi tiết`);
+  assert.ok(targetHtml.includes("khbd_generation_mode"), `${relPath} phải lưu chế độ soạn`);
+  assert.ok(targetHtml.includes("isCompact"), `${relPath} phải điều phối riêng chế độ rút gọn`);
   assert.ok(targetHtml.includes('TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)'), `${relPath} phải có nhãn nút 1-Click`);
   assert.ok(targetHtml.includes('handle1ClickGenerate'), `${relPath} phải có hàm điều phối handle1ClickGenerate`);
   if (relPath === 'canvas_soankhbd.html') {
+    assert.ok(targetHtml.includes("!isCompact && typeof generateLessonIllustrations"), `${relPath} rút gọn không tạo hình minh họa SGK`);
     assert.ok(targetHtml.includes('8. 🎨 F. Hình minh họa SGK (Vector SVG & Hình ảnh)'), `${relPath} popup 1-Click phải hiển thị bước 8 hình minh họa SGK`);
     assert.ok(targetHtml.includes('await generateLessonIllustrations({ silent: true })'), `${relPath} 1-Click phải tự động gọi bước tạo hình minh họa SGK ở chế độ silent`);
   }

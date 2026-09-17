@@ -1,36 +1,16 @@
-# IMPLEMENT: Sửa lặp dòng Năng lực số & ký tự thô `***` trong Word
+# IMPLEMENT: Hai chế độ soạn Canvas KHBD
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
-## 1. Regex tiêu đề NLS/AI (tiếng Việt)
+- Thêm bộ chọn **Soạn chi tiết** (mặc định) và **Soạn rút gọn**; lựa chọn được lưu bằng `khbd_generation_mode`.
+- Chế độ rút gọn chạy sáu bước I, II, A–D và bỏ III.E cùng hình minh họa SGK; chế độ chi tiết giữ nguyên luồng đầy đủ.
+- Bổ sung hợp đồng prompt rút gọn 4–6 trang: kịch bản 4 bước ngắn gọn, bảng 2 cột, bài mẫu ngắn, bốn nhiệm vụ tự học ở D và giữ marker NLS/AI.
+- Tab tạo riêng nhận chế độ từ ngữ cảnh sinh nội dung. Đồng bộ giao diện và luồng 1-Click cho cả hai tệp Canvas.
+- Mở rộng smoke test kiểm tra bộ chọn, mặc định chi tiết, lưu trạng thái và nhánh không tạo minh họa khi rút gọn.
 
-- `js/khbd-app.js`: thêm `OBJECTIVES_NLS_HEADING_RE` / `OBJECTIVES_AI_HEADING_RE`.
-- Thay `\b` ASCII bằng `(?::|\s|$)` để khớp `### c) Năng lực số: ...` và `### d) Năng lực AI: ...`.
-- `stripObjectivesStandardSection`, `upsertObjectivesStandardSection`, `applyPpctVerbatimObjectives`, `ensureObjectivesDigitalCodes` dùng chung 2 regex này.
-- Hệ quả: xóa đúng section cũ rồi chèn đúng 1 dòng, không còn nhân bản `c) Năng lực số`.
+Kiểm thử:
 
-## 2. Parse markdown inline cho tiêu đề Word
+- `git diff --check` — PASS.
+- Không thể chạy các smoke test Node trong môi trường hiện tại vì Windows chặn `node.exe` của runtime với cảnh báo tệp có thể không an toàn.
 
-- `js/khbd-docx.js` `parseMarkdownToDocxElements`: tiêu đề `#` / `##` / `###` / `####` gọi `parseInlineTextToRuns` thay vì `coloredTextRun(headingText)` thô.
-- `***[5.3.TC2a]:***` và `***[9.B2.1]:***` được bóc dấu sao, in đậm + in nghiêng, màu `0369A1` (NLS) / `6D28D9` (AI).
-
-## 3. Giao diện & test
-
-- `soankhbd.html`: cache-bust `js/khbd-docx.js` lên `textbook-exact-v18` (cùng bộ với Canvas).
-- `canvas_soankhbd.html` và bản sao lưu nạp cùng `js/khbd-app.js` / `js/khbd-docx.js`.
-- `tests/docx-export-format-smoke.js`: xuất tiêu đề NLS/AI không còn `***`, mã đúng màu/đậm/nghiêng.
-- `tests/khbd-4steps-workflow-smoke.js`: regex tiếng Việt; `applyPpctVerbatimObjectives` chỉ giữ đúng 1 dòng Năng lực số / Năng lực AI.
-
-Kiểm thử đã chạy:
-
-- `node tests/docx-export-format-smoke.js` — PASS
-- `node tests/khbd-4steps-workflow-smoke.js` — PASS
-- `node tests/khbd-nls-ai-bold-italic-smoke.js` — PASS
-- `node tests/khbd-docx-format-smoke.js` — PASS
-- `node tests/canvas-soankhbd-smoke.js` — PASS
-- `node tests/ppct-settings-import-smoke.js` — PASS
-- `node tests/khbd-docx-layout-smoke.js` — PASS
-- `node tests/khbd-integrations-smoke.js` — PASS
-- `node tests/soankhbd-ppct-standards-smoke.js` — PASS
-
-Không thêm chức năng ngoài plan. Cần `/verify` trên Antigravity: xuất Word Bài 1, kiểm tra Phần I không lặp Năng lực số và không còn `***` thô.
+Không thêm chức năng ngoài plan. Cần `/verify` trên Antigravity để xác nhận hai chế độ và xuất Word thực tế.

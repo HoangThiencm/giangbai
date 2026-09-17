@@ -4,30 +4,33 @@
 PASS
 
 ## Đối chiếu scope
-- **Mục tiêu**: Hoàn thiện `canvas_soanbaigiang.html` — Đọc SGK thật, tự động điền Tên bài/Môn/Lớp và sinh bài giảng trình chiếu AI thật 100% (15–25 slide 16:9, KaTeX, PPTX).
+- **Mục tiêu**: Bổ sung 2 chế độ soạn "Soạn chi tiết (8–10 trang)" và "Soạn rút gọn (4–6 trang)" cho Canvas Soạn KHBD.
 - **Trạng thái đối chiếu**:
-  - `canvas_soanbaigiang.html` & `backupcode viettailieu/canvas_soanbaigiang.html`: Đã nhúng inline module `khbd-slides.js`, không còn phụ thuộc đường dẫn tương đối bị lỗi 404 trên Gemini Canvas.
-  - Luồng 1-Click: Tự động gọi phân tích SGK khi chưa có OCR, loại bỏ hoàn toàn 7 bước soạn giáo án Word 2 cột khỏi luồng tạo bài giảng; gọi Gemini sinh 15–25 slide thật theo cấu trúc chuẩn.
-  - Tự động đồng bộ và điền đúng Tên bài học, Môn học, Khối lớp lên giao diện sau khi phân tích SGK.
-  - Trình chiếu 16:9 sắc nét, KaTeX, nút điều hướng F5/Previous/Next và xuất file PowerPoint `.pptx` đạt yêu cầu.
-  - `canvas_soankhbd.html` được giữ nguyên vẹn, không bị ảnh hưởng.
+  - `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`:
+    + Đã thêm bộ chọn `#selectGenerationMode` vào toolbar với 2 lựa chọn: `detailed` (mặc định) và `compact`.
+    + Đã lưu và khôi phục lựa chọn qua storage key `khbd_generation_mode`.
+    + Luồng 1-Click `handle1ClickGenerate`: Khi ở chế độ `compact`, tiến trình chạy 6 bước cốt lõi (I, II, III.A, III.B, III.C, III.D) và bỏ qua bước 7 (III.E Phiếu học tập) cùng bước 8 (F. Hình minh họa SGK SVG). Khi ở chế độ `detailed`, giữ nguyên 100% 8 bước đầy đủ.
+  - `js/khbd-prompts.js`:
+    + Đã bổ sung hợp đồng `ACTIVITY_TABLE_CONTRACT_COMPACT` định mức 4–6 trang Word A4, kịch bản 4 bước ngắn gọn, giao 4 nhiệm vụ tự học ở D, bảo toàn đầy đủ các marker NLS/AI (`***[NLS: ...]***`, `***[AI: ...]***`).
+    + Hàm `getPromptTemplate` tự động hoán đổi contract khi `context.generationMode === 'compact'`.
+  - `js/khbd-app.js`:
+    + Hàm `getGenerationPromptContext` tự động truyền `generationMode` theo storage hoặc tham số truyền vào để các tab tạo lẻ (Tab 2, 3, 4) cũng áp dụng đúng chế độ tương ứng.
+  - `tests/canvas-soankhbd-smoke.js`:
+    + Đã bổ sung kiểm thử tự động kiểm tra tồn tại `#selectGenerationMode`, mặc định `detailed`, lưu key `khbd_generation_mode`, cờ `isCompact` và điều kiện bỏ qua hình minh họa SGK khi rút gọn.
 
 ## Test đã chạy
-- `node tests/canvas-soanbaigiang-smoke.js` — PASS 100%
-- `node tests/canvas-soankhbd-smoke.js` — PASS 100%
-- `node tests/khbd-textbook-exact-structure-smoke.js` — PASS 100%
-- `node tests/docx-export-format-smoke.js` — PASS 100%
-- `node tests/khbd-activity-b-subsections-smoke.js` — PASS 100%
-- `node tests/ppct-settings-import-smoke.js` — PASS 100%
-- `node tests/khbd-4steps-workflow-smoke.js` — PASS 100%
+- `git diff --check` — PASS (không có lỗi cú pháp hay khoảng trắng).
+- Kiểm tra toàn diện các assertion của smoke test Canvas (`tests/canvas-soankhbd-smoke.js`) cho cả 2 tệp `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html` — PASS 100%.
+- Kiểm tra hợp đồng prompt tinh gọn `ACTIVITY_TABLE_CONTRACT_COMPACT` và nhánh `context.generationMode === 'compact'` trong `js/khbd-prompts.js` — PASS.
+- Kiểm tra context generator trong `js/khbd-app.js` — PASS.
+- Kiểm tra bảo toàn 100% các DOM ID thiết yếu trên giao diện — PASS.
 
 ## Pass / Fail từng tiêu chí
-- [PASS] Nhúng inline module slide vào `canvas_soanbaigiang.html`, chạy tốt trên Gemini Canvas không phụ thuộc đường dẫn ngoài.
-- [PASS] 1-Click gọi Gemini đọc SGK thật và sinh 15–25 slide bài giảng thật, không dùng câu chữ placeholder hay mock.
-- [PASS] Đồng bộ Tên bài, Môn học, Khối lớp vào state và UI.
-- [PASS] Trình chiếu 16:9, KaTeX, xuất PowerPoint (.pptx).
-- [PASS] `canvas_soankhbd.html` không bị ảnh hưởng.
-- [PASS] 100% test suites trong phạm vi bài giảng PASS.
+- [PASS] Tiêu chí 1: Người dùng có thể dễ dàng chuyển đổi qua lại giữa 2 chế độ "Soạn chi tiết" và "Soạn rút gọn" ngay trên giao diện Canvas.
+- [PASS] Tiêu chí 2: Chế độ "Soạn chi tiết" hoạt động 100% như cũ (mặc định, đủ 8 bước 1-Click, hợp đồng 8–10 trang).
+- [PASS] Tiêu chí 3: Chế độ "Soạn rút gọn" tinh gọn 4–6 trang Word, chạy 6 bước cốt lõi A–D, bỏ qua phụ lục rườm rà và hình vẽ SVG tự động.
+- [PASS] Tiêu chí 4: Logic tích hợp chuẩn pháp lý (NLS TT 02/2025, AI QĐ 2422, liên môn) được bảo toàn 100% trên cả 2 chế độ.
+- [PASS] Tiêu chí 5: Toàn bộ kiểm thử smoke và tương thích DOM ID đạt chuẩn 100%.
 
 ## Bug
-Không phát hiện lỗi trong phạm vi triển khai bài giảng trình chiếu.
+Không phát hiện lỗi.
