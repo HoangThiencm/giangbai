@@ -1,40 +1,35 @@
-# VERIFY
+# VERIFY: Chuẩn Hóa Mục II (Thiết Bị Dạy Học & Học Liệu) Cho Chế Độ Rút Gọn & Khi Không Dùng PPDH/KTDH Riêng
 
 ## Kết luận
 PASS
 
 ## Đối chiếu scope theo `docs/handoff/PLAN.md`
-- [x] **Module 1**: Đã thêm cờ `pedagogyConfigured` vào `normalizeTeachingContext` và kích hoạt khi user đổi checkbox PPDH/KTDH/Hoạt động (`js/khbd-app.js` dòng 809, 1025, 1049, 1062, 2434) — **PASS**.
-- [x] **Module 1**: Sửa `ensurePedagogyFromLesson` tôn trọng `userConfigured`, không ghi đè khi mảng rỗng (`js/khbd-app.js` dòng 2437, 2447, 2454) — **PASS**.
-- [x] **Module 1**: Bỏ fallback `"tps-tech"` trong `applyTimeBudgetGateToPedagogy` (`js/khbd-app.js` dòng 2341–2342) — **PASS**.
-- [x] **Module 2**: Bỏ fallback `"tps-tech"` trong `applyGate` của `canvas_soankhbd.html` (dòng 1476–1477) và `backupcode viettailieu/canvas_soankhbd.html` (dòng 1423–1424) — **PASS**.
-- [x] **Module 3**: Cập nhật `ACTIVITY_TABLE_CONTRACT_COMPACT` cấm KTDH/PPDH khi không chọn ở chế độ rút gọn (`js/khbd-prompts.js` dòng 350) — **PASS**.
-- [x] **Module 3**: Cập nhật các prompt template `GENERATE_ACTIVITY_B/C/D` thành chỉ áp dụng có điều kiện (`js/khbd-prompts.js` dòng 746, 812, 866) — **PASS**.
-- [x] **Module 3**: Cập nhật `buildPhasePedagogyContext(phase)` thêm `noTechniqueConstraint` và chặn kịch bản khi pha không có KTDH (`js/khbd-app.js` dòng 5437, 5459) — **PASS**.
-- [x] **Module 3**: Cập nhật `buildPedagogicalContext()` trong `js/khbd-app.js` (dòng 5178–5180) khi `methodLabels`, `techniqueByPhase`, `activityLabels` rỗng: chỉ thị cấm AI tự ý lấy PPDH/KTDH từ catalog — **PASS**.
-- [x] **Module 4**: Bổ sung kiểm thử tự động xác nhận bỏ tick KTDH/PPDH không bị tự động chọn lại trong `tests/canvas-soankhbd-smoke.js` (dòng 56–60) — **PASS**.
+- [x] **Module 1**: Cập nhật prompt gốc `GENERATE_MATERIALS` trong `js/khbd-prompts.js` (dòng 562): Thêm ràng buộc `TƯƠNG THÍCH SƯ PHẠM BẮT BUỘC`, cấm AI đưa học liệu của các kỹ thuật không được chọn (cấm phiếu trạm, cấm Exit Ticket, cấm thẻ màu, cấm bảng phụ A0) — **PASS**.
+- [x] **Module 2**: Cập nhật `getPromptTemplate` trong `js/khbd-prompts.js` (dòng 1616–1636):
+  - Khi `generationMode === 'compact'`: Bổ sung khối `RÀNG BUỘC CHẾ ĐỘ SOẠN RÚT GỌN (4–6 TRANG)` cấm phiếu trạm, Exit Ticket, thẻ màu, bảng phụ A0, rubric phức tạp — **PASS**.
+  - Khi `!selectedMethods.length && !selectedTechniques.length`: Bổ sung khối `RÀNG BUỘC KHÔNG CHỌN PPDH/KTDH RIÊNG`, chỉ cho phép học liệu trực quan thông thường (máy chiếu/bài giảng điện tử nếu có, SGK, vở ghi, thước, máy tính cầm tay, phiếu bài tập ngắn nếu cần) — **PASS**.
+- [x] **Module 3**: Bổ sung test hồi quy trong `tests/khbd-pedagogy-script-smoke.js` (dòng 165–177) xác nhận các ràng buộc Mục II rút gọn và không chọn PPDH/KTDH hoạt động chính xác — **PASS**.
+- [x] **Không đụng file ngoài plan**: Chỉ sửa `js/khbd-prompts.js` và `tests/khbd-pedagogy-script-smoke.js`.
 
 ---
 
 ## Test đã chạy
 1. `node tests/canvas-soankhbd-smoke.js` — **PASS 100%**:
-   - Kiểm tra cú pháp JavaScript hợp lệ.
-   - Đồng bộ tương thích 1-1 giữa `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`.
-   - Kiểm tra cờ `pedagogyConfigured` và xác nhận prompt không chứa câu lệnh ép AI tự lấy KTDH/PPDH từ catalog khi mảng rỗng.
+   - Cú pháp JavaScript hợp lệ.
+   - Tương thích 1-1 giữa hai bản Canvas.
 2. `node tests/khbd-pedagogy-rate-smoke.js` — **PASS 100%**:
-   - Gate thời lượng 1 tiết, 2 tiết.
-   - Chuẩn hóa xuống dòng phân vai GV/HS trong bảng thực hiện.
+   - Định mức PPDH/KTDH theo số tiết và chuẩn hóa xuống dòng GV/HS.
 3. `node tests/khbd-pedagogy-script-smoke.js` — **PASS 100%**:
-   - Kịch bản sư phạm thực chiến & xuất Word DOCX.
+   - Bộ test Mục II rút gọn và không chọn PPDH/KTDH đạt 100%.
+   - Xuất Word DOCX và kịch bản thực chiến đạt chuẩn.
 4. `node tests/khbd-dynamic-time-budgets-smoke.js` — **PASS 100%**:
-   - Phân bổ thời lượng động 4 hoạt động A–D.
-5. Kiểm tra thực nghiệm Node VM:
-   - Khi `pedagogyConfigured = true` và `methods = []`, gọi `getGenerationPromptContext()`: `ctx.methods` giữ nguyên `[]`, không bị `ensurePedagogyFromLesson` ghi đè.
-   - Kiểm tra chuỗi `ctx.pedagogical_context`: sinh ra đúng chuẩn:
-     `- Phương pháp dạy học: KHÔNG áp dụng PPDH đặc thù riêng (người dùng không chọn hoặc đã bỏ tick)... TUYỆT ĐỐI CẤM tự ý đưa tên PPDH ngoài danh mục...`
-     `- Kỹ thuật dạy học theo pha: KHÔNG áp dụng kỹ thuật dạy học riêng nào (người dùng không chọn hoặc đã bỏ tick)... TUYỆT ĐỐI KHÔNG tự ý đưa tên bất kỳ kỹ thuật dạy học nào...`
+   - Phân bổ thời lượng động A–D nguyên vẹn.
+5. `node tests/canvas-prompts-integrity-smoke.js` — **PASS 100%**.
+6. `node tests/canvas-soanbaigiang-smoke.js` — **PASS 100%**.
+7. `node tests/khbd-subject-integrations-smoke.js` — **PASS 100%**.
 
 ---
 
 ## Bug
 Không có.
+
