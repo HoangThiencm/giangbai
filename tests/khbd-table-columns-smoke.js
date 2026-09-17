@@ -64,4 +64,33 @@ assert.match(cellText(1, 0), /Bước 3/, 'Word: Bước 3 cột trái');
 assert.match(cellText(1, 0), /Bước 4/, 'Word: Bước 4 cột trái');
 assert.doesNotMatch(cellText(1, 1), /Bước 3/, 'Word: cột phải không có Bước 3');
 assert.match(cellText(1, 1), /Hệ phương trình|Định nghĩa/, 'Word: cột phải là kiến thức');
+
+const dumpedLeft = [
+  '+ Bước 1: Chuyển giao. **GV:** Giao việc. **HS:** Nhận nhiệm vụ.<br>+ Bước 2: Thực hiện. **HS:** Làm việc nhóm. **GV:** Quan sát.<br>+ Bước 3: Báo cáo. **HS:** Trình bày. **GV:** Chốt.<br>+ Bước 4: Kết luận. **GV:** Nhận xét. **HS:** Ghi nội dung cốt lõi. / 2. PHƯƠNG PHÁP CỘNG ĐẠI SỐ<br>Quy tắc giải: Cộng từng vế.<br>Ví dụ 4: Giải hệ.<br>Lời giải: x = 1; y = 2.',
+  '---'
+];
+const [rescuedLeft, rescuedRight] = generator.semanticSplitActivityRow(dumpedLeft);
+assert.match(rescuedLeft, /Bước 4/, 'Cột trái giữ Bước 4');
+assert.doesNotMatch(rescuedLeft, /PHƯƠNG PHÁP CỘNG ĐẠI SỐ/, 'Kiến thức ghi bảng không còn ở cột trái');
+assert.match(rescuedRight, /PHƯƠNG PHÁP CỘNG ĐẠI SỐ/, 'Cột 2 rỗng/--- được cứu bằng kiến thức từ cột 1');
+assert.match(rescuedRight, /Quy tắc giải/, 'Quy tắc chuyển sang cột 2');
+
+const {
+  ensureActivityFourPartStructure,
+  repairActivityTablesRightColumn
+} = require('../js/khbd-app.js');
+const missingFour = `## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC (18 phút)
+- Mục tiêu: Vận dụng giải quyết bài toán thực tế.
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| + Bước 1: Chuyển giao nhiệm vụ: **GV:** "Các em giải bài vận dụng." **HS:** Nhận đề.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc nhóm. **GV:** Quan sát.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Trình bày nghiệm. **GV:** Nhận xét.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt. **HS:** Ghi bài. | --- |`;
+const restored = ensureActivityFourPartStructure(missingFour, 'D');
+assert.match(restored, /### a\) Mục tiêu/, 'Chuẩn hóa heading mục tiêu');
+assert.match(restored, /### b\) Nội dung/, 'Tự thêm b) Nội dung');
+assert.match(restored, /### c\) Sản phẩm/, 'Tự thêm c) Sản phẩm');
+assert.match(restored, /### d\) Tổ chức thực hiện/, 'Tự thêm d) Tổ chức thực hiện');
+const repairedTable = repairActivityTablesRightColumn(restored);
+const dataRow = repairedTable.split('\n').find(line => /Bước 1/.test(line));
+assert.ok(dataRow, 'Còn hàng dữ liệu bảng sau rescue');
+assert.ok(!/\|\s*---\s*\|$/.test(dataRow.trim()), 'Cột 2 của hàng dữ liệu không còn ---');
 console.log('khbd-table-columns-smoke: passed');

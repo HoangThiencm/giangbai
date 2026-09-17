@@ -5214,26 +5214,42 @@ function buildPedagogicalPrompt(prompt) {
   if (typeof getTopicDisplayName === "function") {
     out += `\n\n${buildSubjectDisciplineGuard()}`;
     const sid = typeof currentSubjectId === "function" ? currentSubjectId() : String(appState.selectedSubject || "").toLowerCase();
-    if (sid === "toan") out += `\n\n${buildMathPedagogicalGuard(appState.selectedGrade)}`;
+    if (sid === "toan") out += `\n\n${buildMathPedagogicalGuard(appState.selectedGrade, typeof getTopicDisplayName === "function" ? getTopicDisplayName() : "")}`;
   }
   return out;
 }
 
-function buildMathPedagogicalGuard(grade) {
+function buildMathPedagogicalGuard(grade, topic) {
   const g = parseInt(grade, 10);
   const isThcs = !(g >= 10 && g <= 12);
   const equivRule = isThcs
     ? `- CẤP THCS (LỚP 6, 7, 8, 9): TUYỆT ĐỐI CẤM DÙNG DẤU TƯƠNG ĐƯƠNG ($\\Leftrightarrow$). Khái niệm mệnh đề và ký hiệu tương đương thuộc chương trình lớp 10.`
     : `- Cấp THPT (lớp 10–12): được dùng $\\Leftrightarrow$ khi biến đổi tương đương.`;
+  const bracketRule = isThcs
+    ? `- CẤP THCS: TUYỆT ĐỐI CẤM DÙNG DẤU NGOẶC VUÔNG \`[\` khi giải phương trình tích. Dùng chữ "hoặc" hoặc chia Trường hợp 1 / Trường hợp 2. CẤM \\left[ của cấp 3.`
+    : `- Cấp THPT: được dùng $\\left[ ... \\right.$ khi giải phương trình tích / hệ điều kiện.`;
+  const hay = String(topic || (typeof getTopicDisplayName === "function" ? getTopicDisplayName() : "")).toLowerCase();
+  const isGeo = /tam giác|đồng dạng|tứ giác|đường tròn|góc|cung|hình học/.test(hay);
+  const geoBlock = isGeo
+    ? `
+- Nguyên tắc đỉnh tương ứng: $\\triangle ABC \\backsim \\triangle A'B'C'$ hoặc $\\triangle ABC = \\triangle A'B'C'$ BẮT BUỘC đúng thứ tự đỉnh (CẤM $\\triangle ABC \\backsim \\triangle B'A'C'$).
+- Từ đồng dạng suy ra: $\\widehat{A} = \\widehat{A'}, \\widehat{B} = \\widehat{B'}, \\widehat{C} = \\widehat{C'}$ (hoặc $\\angle A = \\angle A'$) và $\\frac{AB}{A'B'} = \\frac{BC}{B'C'} = \\frac{CA}{C'A'} = k$.
+- Lời dẫn hình học: "Suy ra:", "Do đó:", "Vì $\\triangle ABC \\backsim \\triangle A'B'C'$ nên ta có:".`
+    : "";
   return `RÀNG BUỘC SƯ PHẠM TOÁN HỌC CT GDPT 2018:
 ${equivRule}
+${bracketRule}
 - BẮT BUỘC dùng lời dẫn sư phạm: "Thu gọn hệ phương trình, ta được:", "Từ phương trình (1) ta có:", "Thay $x = ...$ vào phương trình (2), ta được:", "Cộng từng vế hai phương trình, ta được:", "Do đó ta có hệ phương trình:".
 - Đặt hệ phương trình trên dòng riêng $$\\begin{cases} ... \\end{cases}$$ và KHÔNG đặt $\\Leftrightarrow$ ở đầu hệ.
 - TUYỆT ĐỐI CẤM dùng $\\Rightarrow$ nối tắt từ hệ phương trình sang nghiệm (cấm: {hệ} => x = ..., y = ...).
 - Kết luận nghiệm chuẩn SGK: "Vậy nghiệm của hệ phương trình là (x; y) = (...; ...)" hoặc "Vậy hệ phương trình có nghiệm duy nhất (x; y) = (...; ...)".
 - Phương pháp thế: (1) rút 1 ẩn → (2) thế vào phương trình còn lại → (3) giải phương trình 1 ẩn → (4) thế ngược → (5) kết luận nghiệm.
 - Phương pháp cộng đại số: (1) nhân hệ số nếu cần → (2) cộng/trừ từng vế triệt tiêu 1 ẩn → (3) giải 1 ẩn → (4) thay tìm ẩn còn lại → (5) kết luận nghiệm.
-- CẤM nhảy cóc, CẤM chỉ viết hệ rồi phán đáp số. Kiểm tra chuyển vế đổi dấu và nhân đơn thức với đa thức.`;
+- CẤM nhảy cóc, CẤM chỉ viết hệ rồi phán đáp số. Kiểm tra chuyển vế đổi dấu và nhân đơn thức với đa thức.
+- KÝ HIỆU ĐỒNG DẠNG CHUẨN SGK VIỆT NAM: Khi viết hai tam giác/hình đồng dạng, dùng ký hiệu chữ S nằm ngang \\backsim hoặc ∽ (ví dụ: \\triangle ABC \\backsim \\triangle A'B'C'). TUYỆT ĐỐI KHÔNG dùng dấu ngã sóng ~ hoặc dấu trừ -. Các đỉnh tương ứng của hai tam giác BẮT BUỘC phải viết đúng thứ tự.
+- Số thập phân BẮT BUỘC dấu phẩy: $3,5$; $0,2$; $666,67$. CẤM dấu chấm kiểu $3.5$.
+- Tọa độ và cặp nghiệm BẮT BUỘC dấu chấm phẩy: $A(2; 3)$, $(x; y) = (1; -2)$. CẤM $(2, 3)$.
+- Lượng giác chuẩn GDPT 2018: $\\tan$, $\\cot$. CẤM $\\text{tg}$, $\\text{cotg}$.${geoBlock}`;
 }
 
 function ppctStandardDescription(item) {
@@ -5528,6 +5544,8 @@ function assertPhasePedagogyOutput(phase, output, options) {
         if (!hasGv || !hasHs) {
           throw new Error(`Nhánh "${branchName}" chưa phân định rõ ràng vai trò GV và HS trong bảng tổ chức thực hiện.`);
         }
+        assertActivityFourParts(branch, `Nhánh "${branchName}"`);
+        assertActivityTableRightColumn(dPart, `Nhánh "${branchName}"`);
       });
       return;
     }
@@ -5552,6 +5570,31 @@ function assertPhasePedagogyOutput(phase, output, options) {
   if (!hasGv || !hasHs) {
     throw new Error("Bảng tổ chức thực hiện chưa phân định rõ ràng vai trò GV (câu nói, hành động) và HS (cá nhân, nhóm, sản phẩm).");
   }
+
+  assertActivityFourParts(text, `Hoạt động ${phase}`);
+  assertActivityTableRightColumn(text, `Hoạt động ${phase}`);
+}
+
+function assertActivityFourParts(block, label) {
+  const hay = String(block || "");
+  if (!/#{0,4}\s*a\)\s*Mục tiêu/i.test(hay)) throw new Error(`${label} thiếu ### a) Mục tiêu.`);
+  if (!/#{0,4}\s*b\)\s*Nội dung/i.test(hay)) throw new Error(`${label} thiếu ### b) Nội dung.`);
+  if (!/#{0,4}\s*c\)\s*Sản phẩm/i.test(hay)) throw new Error(`${label} thiếu ### c) Sản phẩm.`);
+  if (!/#{0,4}\s*d\)\s*Tổ chức thực hiện/i.test(hay)) throw new Error(`${label} thiếu ### d) Tổ chức thực hiện.`);
+}
+
+function assertActivityTableRightColumn(block, label) {
+  const hay = String(block || "");
+  const header = hay.match(/\|\s*Hoạt động của GV và HS\s*\|\s*Nội dung\s*\|/i);
+  if (!header) return;
+  const after = hay.slice(header.index);
+  const dataLine = after.split("\n").find(line => {
+    const trimmed = line.trim();
+    return trimmed.startsWith("|") && !/Hoạt động của GV và HS/i.test(trimmed) && !/^\|[\s:-]+\|/.test(trimmed);
+  });
+  if (!dataLine) return;
+  const [, right] = semanticSplitActivityRow(splitKhbdMarkdownTableRow(dataLine));
+  if (isEmptyRightColumn(right)) throw new Error(`${label} cột Nội dung (Cột 2) đang rỗng hoặc chỉ có ---.`);
 }
 
 function assertObjectivesStandards(text) {
@@ -5768,22 +5811,64 @@ function isKnowledgeContentCell(text) {
   return false;
 }
 
-function semanticSplitActivityRow(cells) {
+function isEmptyRightColumn(text) {
+  const t = String(text || "").replace(/<br\s*\/?>/gi, " ").replace(/\s+/g, " ").trim();
+  return !t || /^(?:-{2,}|\.{2,}|none|n\/a|null|rỗng)$/i.test(t);
+}
+
+function extractBoardKnowledgeFromScript(left) {
+  const source = String(left || "");
+  if (!source) return { left: "", right: "" };
+  const step4 = source.search(/bước\s*4/i);
+  const searchFrom = step4 >= 0 ? step4 : 0;
+  const tail = source.slice(searchFrom);
+  const match = tail.match(/(?:<br\s*\/?>|\n|\/)\s*((?:\d+\.\s*)?(?:[A-ZÀ-Ỵ][A-ZÀ-Ỵ\s]{3,}|Quy tắc(?: giải)?|Định nghĩa|Định lý|Tính chất|Ví dụ\s*\d+|Lời giải(?:\s+Ví dụ)?)\b[\s\S]*)/i);
+  if (!match) return { left: source, right: "" };
+  const abs = searchFrom + match.index;
+  const knowledgeStart = abs + (match[0].length - match[1].length);
+  const knowledge = source.slice(knowledgeStart).replace(/^(?:<br\s*\/?>|\s|\/)+/i, "").trim();
+  if (knowledge.length < 8) return { left: source, right: "" };
+  const kept = source.slice(0, knowledgeStart).replace(/(?:<br\s*\/?>|\s|\/)+$/g, "").trim();
+  return { left: kept || source, right: knowledge };
+}
+
+function semanticSplitActivityRow(cells, productHint) {
   const list = (Array.isArray(cells) ? cells : []).map(cell => String(cell || "").trim());
+  let left = "";
+  let right = "";
   if (!list.length) return ["", ""];
-  if (list.length === 1) return [list[0], ""];
-  if (list.length === 2) return [list[0], list[1]];
-  let splitAt = list.findIndex((cell, index) => index > 0 && isKnowledgeContentCell(cell));
-  if (splitAt < 0) {
-    for (let i = list.length - 1; i >= 1; i--) {
-      if (!isActivityScriptCell(list[i])) {
-        splitAt = i;
-        break;
+  if (list.length === 1) {
+    left = list[0];
+  } else if (list.length === 2) {
+    left = list[0];
+    right = list[1];
+  } else {
+    let splitAt = list.findIndex((cell, index) => index > 0 && isKnowledgeContentCell(cell));
+    if (splitAt < 0) {
+      for (let i = list.length - 1; i >= 1; i--) {
+        if (!isActivityScriptCell(list[i])) {
+          splitAt = i;
+          break;
+        }
       }
     }
+    if (splitAt < 0) {
+      left = list.join(" / ");
+    } else {
+      left = list.slice(0, splitAt).join(" / ");
+      right = list.slice(splitAt).join(" / ");
+    }
   }
-  if (splitAt < 0) return [list.join(" / "), ""];
-  return [list.slice(0, splitAt).join(" / "), list.slice(splitAt).join(" / ")];
+  if (isEmptyRightColumn(right) && left) {
+    const extracted = extractBoardKnowledgeFromScript(left);
+    if (extracted.right) {
+      left = extracted.left;
+      right = extracted.right;
+    } else if (productHint && !isEmptyRightColumn(productHint)) {
+      right = String(productHint).trim();
+    }
+  }
+  return [left, right];
 }
 
 function splitKhbdMarkdownTableRow(line) {
@@ -6752,6 +6837,117 @@ function normalizeActivityTimeHeadings(text, options = {}) {
   }).join("\n");
 }
 
+function nearestProductHint(beforeText) {
+  const source = String(beforeText || "");
+  const match = source.match(/#{0,4}\s*c\)\s*Sản phẩm:?\s*([\s\S]*?)(?=#{0,4}\s*[a-d]\)|$)/i);
+  if (!match) return "";
+  return match[1].replace(/\|[\s\S]*/g, "").replace(/\s+/g, " ").trim().slice(0, 500);
+}
+
+function repairActivityBlockFourParts(block) {
+  let b = String(block || "");
+  if (!b.trim()) return b;
+  b = b.replace(/^(\s*)(?:#{1,4}\s*)?(?:[-*+]\s*)?Mục tiêu\s*:/im, "$1### a) Mục tiêu:");
+  const hasB = /#{0,4}\s*b\)\s*Nội dung/i.test(b);
+  const hasC = /#{0,4}\s*c\)\s*Sản phẩm/i.test(b);
+  const hasD = /#{0,4}\s*d\)\s*Tổ chức thực hiện/i.test(b);
+  const tableRe = /\|\s*Hoạt động của GV và HS\s*\|\s*Nội dung\s*\|/i;
+  if (tableRe.test(b) && !hasD) {
+    b = b.replace(tableRe, "### d) Tổ chức thực hiện:\n$&");
+  }
+  let noiDung = "Học sinh thực hiện nhiệm vụ học tập gắn với nội dung bài học trong SGK.";
+  let sanPham = "Sản phẩm học tập: câu trả lời, lời giải hoặc ghi chép kiến thức cốt lõi.";
+  const tableAt = b.search(tableRe);
+  if (tableAt >= 0) {
+    const after = b.slice(tableAt);
+    const dataLine = after.split("\n").find(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith("|") && !/Hoạt động của GV và HS/i.test(trimmed) && !/^\|[\s:-]+\|/.test(trimmed);
+    });
+    if (dataLine) {
+      const [left, right] = semanticSplitActivityRow(splitKhbdMarkdownTableRow(dataLine));
+      const step1 = String(left).match(/bước\s*1[:\s]([\s\S]*?)(?=bước\s*2|$)/i);
+      if (step1) noiDung = step1[1].replace(/<br\s*\/?>/gi, " ").replace(/\*\*/g, "").trim().slice(0, 400) || noiDung;
+      const step3 = String(left).match(/bước\s*3[:\s]([\s\S]*?)(?=bước\s*4|$)/i);
+      if (step3) sanPham = step3[1].replace(/<br\s*\/?>/gi, " ").replace(/\*\*/g, "").trim().slice(0, 400) || sanPham;
+      if (right && !isEmptyRightColumn(right) && !hasC) {
+        sanPham = right.replace(/<br\s*\/?>/gi, " ").replace(/\*\*/g, "").trim().slice(0, 400) || sanPham;
+      }
+    }
+  }
+  if (!hasB) {
+    const insert = `### b) Nội dung:\n- ${noiDung}\n\n`;
+    if (/#{0,4}\s*c\)\s*Sản phẩm/i.test(b)) b = b.replace(/(#{0,4}\s*c\)\s*Sản phẩm)/i, insert + "$1");
+    else if (/#{0,4}\s*d\)\s*Tổ chức thực hiện/i.test(b)) b = b.replace(/(#{0,4}\s*d\)\s*Tổ chức thực hiện)/i, insert + "$1");
+    else if (tableRe.test(b)) b = b.replace(tableRe, insert + "$&");
+    else b += `\n\n${insert}`;
+  }
+  if (!hasC) {
+    const insert = `### c) Sản phẩm:\n- ${sanPham}\n\n`;
+    if (/#{0,4}\s*d\)\s*Tổ chức thực hiện/i.test(b)) b = b.replace(/(#{0,4}\s*d\)\s*Tổ chức thực hiện)/i, insert + "$1");
+    else if (tableRe.test(b)) b = b.replace(tableRe, insert + "$&");
+    else b += `\n\n${insert}`;
+  }
+  return b;
+}
+
+function ensureActivityFourPartStructure(activityText, actKey) {
+  const text = String(activityText || "").trim();
+  if (!text || actKey === "E" || actKey === "F") return text;
+  if (actKey === "B") {
+    const parts = text.split(/(?=^###\s*(?:\d+\.\s*)?Hoạt động\s)/m);
+    if (parts.length > 1) {
+      return parts.map((part, index) => (index === 0 ? part : repairActivityBlockFourParts(part))).join("");
+    }
+  }
+  return repairActivityBlockFourParts(text);
+}
+
+function repairActivityTablesRightColumn(activityText) {
+  const source = String(activityText || "");
+  if (!source) return source;
+  const headerPat = /\|[\s]*Hoạt động của GV và HS[\s]*\|[\s]*Nội dung[\s]*\|\s*\n\|[\s]*:?---:?[\s]*\|[\s]*:?---:?[\s]*\|/i;
+  const chunks = [];
+  let rest = source;
+  while (true) {
+    const match = rest.match(headerPat);
+    if (!match) {
+      chunks.push(rest);
+      break;
+    }
+    const before = rest.slice(0, match.index);
+    chunks.push(before);
+    const productHint = nearestProductHint(before);
+    const afterHeader = rest.slice(match.index + match[0].length).replace(/^\n/, "");
+    const lines = afterHeader.split("\n");
+    const rowLines = [];
+    let consumed = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (/^\|[\s]*Hoạt động của GV và HS[\s]*\|/i.test(trimmed) || /^#{1,4}\s/.test(trimmed)) break;
+      if (trimmed.startsWith("|")) {
+        rowLines.push(trimmed);
+        consumed = i + 1;
+        continue;
+      }
+      if (rowLines.length) {
+        rowLines[rowLines.length - 1] += `<br>${trimmed}`;
+        consumed = i + 1;
+        continue;
+      }
+      break;
+    }
+    const repaired = rowLines.map(row => {
+      const cells = splitKhbdMarkdownTableRow(row.endsWith("|") ? row : `${row} |`);
+      const [left, right] = semanticSplitActivityRow(cells, productHint);
+      return `| ${left} | ${right || productHint || "Nội dung chốt bảng theo mục c) Sản phẩm."} |`;
+    });
+    chunks.push(`${match[0]}\n${repaired.join("\n")}${repaired.length ? "\n" : ""}`);
+    rest = lines.slice(consumed).join("\n");
+  }
+  return chunks.join("");
+}
+
 function clipKhbdActivityMarkdown(actKey, text, options = {}) {
   const source = String(text || "").replace(/^\uFEFF/, "").trim();
   if (!source) return source;
@@ -6780,6 +6976,8 @@ function clipKhbdActivityMarkdown(actKey, text, options = {}) {
   }
   clipped = stripDisabledActivityIntegrations(clipped);
   clipped = formatKhbdRoleLineBreaks(clipped);
+  clipped = ensureActivityFourPartStructure(clipped, actKey);
+  clipped = repairActivityTablesRightColumn(clipped);
   const subsectionCount = Math.max(
     1,
     Number(options.subsectionCount) || resolveSharedBSubsectionCount(clipped, options)
@@ -7590,6 +7788,8 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
   }
   finalResult = stripDisabledActivityIntegrations(finalResult);
   finalResult = formatKhbdRoleLineBreaks(finalResult);
+  finalResult = ensureActivityFourPartStructure(finalResult, actKey);
+  finalResult = repairActivityTablesRightColumn(finalResult);
   appState.content.activities[actKey] = clipKhbdActivityMarkdown(actKey, finalResult, {
     // Khi vừa nhận lại B, dùng chính nội dung này như B đã lưu để không giữ
     // số nhánh của một bản B cũ trong lúc chuẩn hóa bản thay thế.
@@ -8493,6 +8693,10 @@ if (typeof module !== 'undefined' && module.exports) {
     semanticSplitActivityRow,
     isActivityScriptCell,
     isKnowledgeContentCell,
+    isEmptyRightColumn,
+    extractBoardKnowledgeFromScript,
+    ensureActivityFourPartStructure,
+    repairActivityTablesRightColumn,
     buildMathPedagogicalGuard,
     VN_PROVINCES_34,
     localityProvinceOf,

@@ -73,6 +73,16 @@ async function main() {
   const aligned = String.raw`$\begin{aligned}x &= 2 \\ y &= 3\end{aligned}$`;
   const leftBrace = String.raw`$\left\{x+y=5 \\ x-y=1\right.$`;
   const prefixedCases = String.raw`$\Leftrightarrow \begin{cases} -3x+8y=-30 \\ 2x-4y=40 \end{cases}$`;
+  const similarBacksim = String.raw`$\triangle ABC \backsim \triangle A'B'C'$`;
+  const similarSim = String.raw`$\triangle ABC \sim \triangle A'B'C'$`;
+  const angleHat = String.raw`$\widehat{ABC}$`;
+  const arcParen = String.raw`$\wideparen{AB}$`;
+  const leftBracketArray = String.raw`$\left[ \begin{array}{l} x = 1 \\ x = 2 \end{array} \right.$`;
+  assert.ok(generator.latexToUnicodeMath("\\backsim").includes("\u223D"), "\\backsim phải là ∽ (U+223D)");
+  assert.ok(generator.latexToUnicodeMath("\\sim").includes("\u223D"), "\\sim phải là ∽ chuẩn Việt Nam");
+  assert.ok(!generator.latexToUnicodeMath("\\sim").includes("\u223C"), "\\sim không được thành dấu ngã ∼");
+  assert.match(generator.latexToUnicodeMath(String.raw`\wideparen{AB}`), /⌒AB/, "\\wideparen{AB} thành ⌒AB");
+  assert.match(generator.latexToUnicodeMath(String.raw`\widehat{ABC}`), /∠ABC/, "Fallback góc không được mất mũ");
   assert.ok(!/begin(?:cases|aligned)|end(?:cases|aligned)/i.test(generator.latexToUnicodeMath(cases)), "Fallback Unicode phải bỏ begin/end");
   const prefixedLatex = String.raw`\Leftrightarrow \begin{cases} -3x+8y=-30 \\ 2x-4y=40 \end{cases}`;
   const prefixedUnicode = generator.latexToUnicodeMath(prefixedLatex);
@@ -91,6 +101,11 @@ async function main() {
         new docx.Paragraph({ children: generator.parseInlineTextToRuns(aligned) }),
         new docx.Paragraph({ children: generator.parseInlineTextToRuns(leftBrace) }),
         new docx.Paragraph({ children: generator.parseInlineTextToRuns(prefixedCases) }),
+        new docx.Paragraph({ children: generator.parseInlineTextToRuns(similarBacksim) }),
+        new docx.Paragraph({ children: generator.parseInlineTextToRuns(similarSim) }),
+        new docx.Paragraph({ children: generator.parseInlineTextToRuns(angleHat) }),
+        new docx.Paragraph({ children: generator.parseInlineTextToRuns(arcParen) }),
+        new docx.Paragraph({ children: generator.parseInlineTextToRuns(leftBracketArray) }),
         table
       ]
     }]
@@ -112,6 +127,12 @@ async function main() {
   assert.match(xml, /-3x\s*\+\s*8y\s*=\s*-30/, "Hệ có tiền tố phải giữ phương trình thứ nhất");
   assert.match(xml, /2x\s*-\s*4y\s*=\s*40/, "Hệ có tiền tố phải giữ phương trình thứ hai");
   assert.ok((xml.match(/<m:dPr><m:begChr m:val="\{"\/><m:endChr m:val=""\/><\/m:dPr>/g) || []).length >= 2, "Hệ có tiền tố \\Leftrightarrow vẫn tạo delimiter {");
+  assert.ok((xml.match(/<m:t>\u223D<\/m:t>/g) || []).length >= 2, "Đồng dạng \\backsim và \\sim phải ra ∽ (U+223D)");
+  assert.ok(!xml.includes("\u223C"), "XML không được chứa dấu ngã ∼ (U+223C)");
+  assert.match(xml, /<m:acc>/, "\\widehat{ABC} phải tạo OMML accent <m:acc>");
+  assert.match(xml, /<m:chr m:val="/, "Accent góc phải có m:chr");
+  assert.match(xml, /⌒/, "\\wideparen{AB} phải có ký hiệu cung ⌒");
+  assert.match(xml, /<m:begChr m:val="\["\/>/, "\\left[ array phải tạo delimiter begChr=[");
 
   const { getPromptTemplate } = require("../js/khbd-prompts.js");
   const thcsPrompt = getPromptTemplate("GENERATE_ACTIVITY_C", {
@@ -127,6 +148,21 @@ async function main() {
   assert.match(thcsPrompt, /TUYỆT ĐỐI CẤM DÙNG DẤU TƯƠNG ĐƯƠNG/, "Prompt Toán 9 cấm \\Leftrightarrow");
   assert.match(thcsPrompt, /Phương pháp thế/, "Prompt Toán bắt buộc phương pháp thế");
   assert.match(thcsPrompt, /QUY TẮC CỘT BẢNG TUYỆT ĐỐI/, "Prompt cấm dấu | trong ô bảng");
+  assert.match(thcsPrompt, /KÝ HIỆU ĐỒNG DẠNG CHUẨN SGK VIỆT NAM/, "Prompt đồng dạng chữ S nằm ngang");
+  assert.match(thcsPrompt, /TUYỆT ĐỐI CẤM DÙNG DẤU NGOẶC VUÔNG/, "Prompt Toán 9 cấm ngoặc vuông phương trình tích");
+  assert.match(thcsPrompt, /dấu phẩy/, "Prompt số thập phân dấu phẩy");
+  assert.match(thcsPrompt, /\\tan/, "Prompt lượng giác tan");
+  const geoPrompt = getPromptTemplate("GENERATE_ACTIVITY_B", {
+    subject: "toan",
+    subjectName: "Toán",
+    grade: "8",
+    topic: "Tam giác đồng dạng",
+    duration: "02 tiết (90 phút)",
+    textbook_content: "Bài",
+    digitalCompetencyEnabled: false,
+    aiCompetencyEnabled: false
+  });
+  assert.match(geoPrompt, /đỉnh tương ứng/, "Prompt hình học khóa thứ tự đỉnh");
   console.log("khbd-docx math smoke: passed");
 }
 

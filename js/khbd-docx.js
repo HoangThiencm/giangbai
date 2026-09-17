@@ -123,6 +123,18 @@ class DocxGenerator {
     s = s.replace(/\\sqrt\[(\d+)\]\{([^{}]+)\}/g, "$1√($2)");
     s = s.replace(/\\sqrt\{([^{}]+)\}/g, "√($1)");
 
+    // Góc, cung, vectơ — trước khi gỡ ngoặc nhóm
+    s = s.replace(/\\widehat\s*\{([^{}]+)\}/g, "∠$1");
+    s = s.replace(/\\hat\s*\{([^{}]+)\}/g, "∠$1");
+    s = s.replace(/\\wideparen\s*\{([^{}]+)\}/g, "⌒$1");
+    s = s.replace(/\\overarc\s*\{([^{}]+)\}/g, "⌒$1");
+    s = s.replace(/\\overrightarrow\s*\{([^{}]+)\}/g, "$1→");
+    s = s.replace(/\\vec\s*\{([^{}]+)\}/g, "$1→");
+    s = s.replace(/\\overline\s*\{([^{}]+)\}/g, "$1");
+    s = s.replace(/\\left\s*\[/g, "[");
+    s = s.replace(/\\begin\s*\{array\}\s*\{[^}]*\}/gi, "");
+    s = s.replace(/\\end\s*\{array\}/gi, "");
+
     // Chỉ số trên / số mũ
     s = s.replace(/\^0/g, "⁰").replace(/\^1/g, "¹").replace(/\^2/g, "²").replace(/\^3/g, "³")
          .replace(/\^4/g, "⁴").replace(/\^5/g, "⁵").replace(/\^6/g, "⁶").replace(/\^7/g, "⁷")
@@ -146,6 +158,8 @@ class DocxGenerator {
       "\\perp": "⊥", "\\parallel": "∥", "\\angle": "∠", "\\triangle": "△",
       "\\degree": "°", "^{\\circ}": "°", "\\rightarrow": "→", "\\Rightarrow": "⇒",
       "\\mid": "∣", "\\vert": "|", "\\Vert": "‖", "\\colon": ":", "\\setminus": "∖",
+      "\\backsimeq": "⋍", "\\backsim": "∽", "\\sim": "∽",
+      "\\wideparen": "⌒", "\\overarc": "⌒",
       "\\Leftrightarrow": "⇔", "\\cdots": "...", "\\ldots": "...", "\\text": "",
       "\\mathbf": "", "\\mathrm": "", "\\left": "", "\\right": "", "\\,": " ", "\\;": " ",
       "\\quad": "  ", "\\qquad": "    "
@@ -171,6 +185,7 @@ class DocxGenerator {
     const supportedCommands = [
       "Leftrightarrow", "Rightarrow", "leftarrow", "rightarrow", "overrightarrow", "subseteq", "supseteq",
       "emptyset", "parallel", "triangle", "varepsilon", "displaystyle", "overline", "widehat",
+      "backsimeq", "backsim", "wideparen", "overarc",
       "mathbb", "mathcal", "mathfrak", "mathrm", "mathbf", "textrm", "textit", "textbf",
       "nolimits", "limits", "dfrac", "tfrac", "cfrac", "notin", "subset", "supset", "forall",
       "exists", "approx", "equiv", "cdots", "ldots", "times", "cdot", "lbrack", "rbrack",
@@ -202,9 +217,29 @@ class DocxGenerator {
     return source;
   }
 
-  buildCasesDelimiter(body, mathApi) {
+  buildAccentMath(children, charValue, mathApi) {
+    if (typeof mathApi.XmlComponent !== "function" || typeof mathApi.XmlAttributeComponent !== "function") {
+      return children;
+    }
+    const element = name => new mathApi.XmlComponent(name);
+    const attribute = value => new mathApi.XmlAttributeComponent({ "m:val": value });
+    const acc = element("m:acc");
+    const accPr = element("m:accPr");
+    const chr = element("m:chr");
+    chr.root.push(attribute(charValue));
+    accPr.root.push(chr);
+    const base = element("m:e");
+    (children || []).forEach(child => base.root.push(child));
+    acc.root.push(accPr, base);
+    return [acc];
+  }
+
+  buildCasesDelimiter(body, mathApi, begChr = "{") {
     if (body == null || typeof mathApi.XmlComponent !== "function" || typeof mathApi.XmlAttributeComponent !== "function") return null;
-    const rows = String(body)
+    const cleaned = String(body)
+      .replace(/\\begin\s*\{array\}\s*\{[^}]*\}/gi, "")
+      .replace(/\\end\s*\{array\}/gi, "");
+    const rows = cleaned
       .split(/\\\\(?:\[[^\]]*\])?\s*/)
       .map(row => row.replace(/\s*&\s*/g, " ").trim())
       .filter(Boolean);
@@ -214,7 +249,7 @@ class DocxGenerator {
     const attribute = value => new mathApi.XmlAttributeComponent({ "m:val": value });
     const delimiterProperties = element("m:dPr");
     const beginning = element("m:begChr");
-    beginning.root.push(attribute("{"));
+    beginning.root.push(attribute(begChr));
     const ending = element("m:endChr");
     ending.root.push(attribute(""));
     delimiterProperties.root.push(beginning, ending);
@@ -236,11 +271,25 @@ class DocxGenerator {
   createCasesMath(source, mathApi) {
     const casesMatch = source.match(/^([\s\S]*?)\\begin\s*\{(cases|aligned)\}([\s\S]*?)\\end\s*\{\2\}\s*$/i);
     const leftBraceMatch = source.match(/^([\s\S]*?)\\left\s*\\\{([\s\S]*?)\\right\s*\.\s*$/);
-    const body = casesMatch ? casesMatch[3] : (leftBraceMatch ? leftBraceMatch[2] : null);
-    const prefix = ((casesMatch ? casesMatch[1] : (leftBraceMatch ? leftBraceMatch[1] : "")) || "").trim();
-    const delimiter = this.buildCasesDelimiter(body, mathApi);
+    const leftBracketMatch = source.match(/^([\s\S]*?)\\left\s*\[([\s\S]*?)\\right\s*\.\s*$/);
+    let body = null;
+    let prefix = "";
+    let begChr = "{";
+    if (casesMatch) {
+      prefix = casesMatch[1] || "";
+      body = casesMatch[3];
+    } else if (leftBraceMatch) {
+      prefix = leftBraceMatch[1] || "";
+      body = leftBraceMatch[2];
+    } else if (leftBracketMatch) {
+      prefix = leftBracketMatch[1] || "";
+      body = leftBracketMatch[2];
+      begChr = "[";
+    }
+    const delimiter = this.buildCasesDelimiter(body, mathApi, begChr);
     if (!delimiter) return null;
     const children = [];
+    prefix = prefix.trim();
     if (prefix) children.push(new mathApi.MathRun(this.latexToUnicodeMath(prefix) + " "));
     children.push(delimiter);
     return new mathApi.Math({ children });
@@ -276,7 +325,8 @@ class DocxGenerator {
       to: "→", rightarrow: "→", leftarrow: "←", Rightarrow: "⇒", Leftrightarrow: "⇔",
       triangle: "△", angle: "∠", parallel: "∥", perp: "⊥", cup: "∪", cap: "∩",
       emptyset: "∅", infty: "∞", forall: "∀", exists: "∃", partial: "∂", nabla: "∇",
-      subset: "⊂", subseteq: "⊆", supset: "⊃", sim: "∼", approx: "≈", equiv: "≡",
+      subset: "⊂", subseteq: "⊆", supset: "⊃", sim: "∽", backsim: "∽", backsimeq: "⋍", approx: "≈", equiv: "≡",
+      wideparen: "⌒", overarc: "⌒",
       mid: "∣", vert: "|", Vert: "‖", colon: ":", setminus: "∖",
       cdots: "⋯", ldots: "…", dots: "…", degree: "°", ell: "ℓ", hbar: "ℏ",
       lbrack: "[", rbrack: "]", lbrace: "{", rbrace: "}", lparen: "(", rparen: ")"
@@ -365,15 +415,15 @@ class DocxGenerator {
             if (peek() === "}") index++;
           }
           env = env.trim().toLowerCase();
-          if (env === "cases" || env === "aligned") {
+          if (env === "cases" || env === "aligned" || env === "array") {
             const rest = source.slice(index);
             const endMatch = rest.match(new RegExp("\\\\end\\s*\\{" + env + "\\}", "i"));
             if (endMatch) {
-              const delim = this.buildCasesDelimiter(rest.slice(0, endMatch.index), mathApi);
+              const delim = this.buildCasesDelimiter(rest.slice(0, endMatch.index), mathApi, env === "array" ? "[" : "{");
               index += endMatch.index + endMatch[0].length;
-              nodes = delim ? [delim] : [run("{")];
+              nodes = delim ? [delim] : [run(env === "array" ? "[" : "{")];
             } else {
-              nodes = [run("{")];
+              nodes = [run(env === "array" ? "[" : "{")];
             }
           } else {
             nodes = [run(env || "begin")];
@@ -446,8 +496,16 @@ class DocxGenerator {
           nodes = [run(command)];
         } else if (command === "," || command === ";" || command === "!" || command === " " || command === "quad" || command === "qquad") {
           nodes = [run(" ")];
-        } else if (command === "overline" || command === "hat" || command === "widehat" || command === "vec" || command === "overrightarrow" || command === "underline") {
+        } else if (command === "widehat" || command === "hat") {
+          nodes = this.buildAccentMath(readGroup(), "\u0302", mathApi);
+        } else if (command === "vec" || command === "overrightarrow") {
+          nodes = this.buildAccentMath(readGroup(), "\u2192", mathApi);
+        } else if (command === "overline") {
+          nodes = this.buildAccentMath(readGroup(), "\u0304", mathApi);
+        } else if (command === "underline") {
           nodes = readGroup();
+        } else if (command === "wideparen" || command === "overarc") {
+          nodes = [run("⌒"), ...readGroup()];
         } else if (commandMap[command]) {
           nodes = [run(commandMap[command])];
         } else if (functions.has(command)) {
@@ -1006,22 +1064,61 @@ class DocxGenerator {
     return false;
   }
 
+  isEmptyRightColumn(text) {
+    const t = String(text || "").replace(/<br\s*\/?>/gi, " ").replace(/\s+/g, " ").trim();
+    return !t || /^(?:-{2,}|\.{2,}|none|n\/a|null|rỗng)$/i.test(t);
+  }
+
+  extractBoardKnowledgeFromScript(left) {
+    const source = String(left || "");
+    if (!source) return { left: "", right: "" };
+    const step4 = source.search(/bước\s*4/i);
+    const searchFrom = step4 >= 0 ? step4 : 0;
+    const tail = source.slice(searchFrom);
+    const match = tail.match(/(?:<br\s*\/?>|\n|\/)\s*((?:\d+\.\s*)?(?:[A-ZÀ-Ỵ][A-ZÀ-Ỵ\s]{3,}|Quy tắc(?: giải)?|Định nghĩa|Định lý|Tính chất|Ví dụ\s*\d+|Lời giải(?:\s+Ví dụ)?)\b[\s\S]*)/i);
+    if (!match) return { left: source, right: "" };
+    const abs = searchFrom + match.index;
+    const knowledgeStart = abs + (match[0].length - match[1].length);
+    const knowledge = source.slice(knowledgeStart).replace(/^(?:<br\s*\/?>|\s|\/)+/i, "").trim();
+    if (knowledge.length < 8) return { left: source, right: "" };
+    const kept = source.slice(0, knowledgeStart).replace(/(?:<br\s*\/?>|\s|\/)+$/g, "").trim();
+    return { left: kept || source, right: knowledge };
+  }
+
   semanticSplitActivityRow(cells) {
     const list = (Array.isArray(cells) ? cells : []).map(cell => String(cell || "").trim());
+    let left = "";
+    let right = "";
     if (!list.length) return ["", ""];
-    if (list.length === 1) return [list[0], ""];
-    if (list.length === 2) return [list[0], list[1]];
-    let splitAt = list.findIndex((cell, index) => index > 0 && this.isKnowledgeContentCell(cell));
-    if (splitAt < 0) {
-      for (let i = list.length - 1; i >= 1; i--) {
-        if (!this.isActivityScriptCell(list[i])) {
-          splitAt = i;
-          break;
+    if (list.length === 1) {
+      left = list[0];
+    } else if (list.length === 2) {
+      left = list[0];
+      right = list[1];
+    } else {
+      let splitAt = list.findIndex((cell, index) => index > 0 && this.isKnowledgeContentCell(cell));
+      if (splitAt < 0) {
+        for (let i = list.length - 1; i >= 1; i--) {
+          if (!this.isActivityScriptCell(list[i])) {
+            splitAt = i;
+            break;
+          }
         }
       }
+      if (splitAt < 0) left = list.join(" / ");
+      else {
+        left = list.slice(0, splitAt).join(" / ");
+        right = list.slice(splitAt).join(" / ");
+      }
     }
-    if (splitAt < 0) return [list.join(" / "), ""];
-    return [list.slice(0, splitAt).join(" / "), list.slice(splitAt).join(" / ")];
+    if (this.isEmptyRightColumn(right) && left) {
+      const extracted = this.extractBoardKnowledgeFromScript(left);
+      if (extracted.right) {
+        left = extracted.left;
+        right = extracted.right;
+      }
+    }
+    return [left, right];
   }
 
   splitMarkdownTableRow(line) {

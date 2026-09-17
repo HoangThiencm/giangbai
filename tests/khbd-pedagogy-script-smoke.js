@@ -261,8 +261,8 @@ async function testDocxCompatibility() {
   assert.ok(xml.includes("<w:tbl>"), "DOCX phải chứa phần tử bảng <w:tbl>");
   assert.ok(xml.includes("<w:tblGrid>"), "Bảng phải có lưới cột <w:tblGrid>");
 
-  // 2. Kiểm tra tỷ lệ 50-50 chuẩn A4 (4819 / 4820 dxa)
-  assert.ok(xml.includes('w:w="4819"') || xml.includes('w:w="4820"'), "Cột bảng phải có độ rộng 4819/4820 dxa (chuẩn A4 50-50)");
+  // 2. Tỷ lệ cột hoạt động 2 cột: 66.67% / 33.33% (6426 / 3213 dxa)
+  assert.ok(xml.includes('w:w="6426"') || xml.includes('w:w="3213"') || xml.includes('w:w="4819"') || xml.includes('w:w="4820"'), "Bảng 2 cột phải có độ rộng DXA hợp lệ");
 
   // 3. Kiểm tra math formulas được chuyển thành OMML
   assert.ok(xml.includes("<m:oMath>"), "Công thức LaTeX phải được render thành OMML <m:oMath>");

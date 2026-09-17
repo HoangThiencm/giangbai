@@ -333,8 +333,10 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
       - Thí nghiệm ảo & Mô phỏng số: Thao tác thí nghiệm ảo PhET, mô phỏng GeoGebra trực quan; gắn marker **[TN-AO]** hoặc **[TN-AO: ...]**.
       - Môi trường & Năng lượng xanh: Liên hệ giảm rác thải nhựa, sử dụng năng lượng tái tạo, bảo vệ tài nguyên; gắn marker **[MT-NLX]** hoặc **[MT-NLX: ...]**.
 - CỘT PHẢI — NỘI DUNG GHI BẢNG (Kiến thức chuẩn mực chốt cho HS chép vào vở):
-  + Trình bày đề cương kiến thức súc tích, cô đọng, đúng trọng tâm: Tên mục kiến thức, định nghĩa, định lý, quy tắc, công thức LaTeX ($...$, $$...$$), chú ý quan trọng, tối đa 1 ví dụ mẫu kèm đề bài và lời giải chuẩn. Dùng \`-\`, \`+\`, \`.\`; ngăn các dòng bằng \`<br>\`.
-  + CỘT PHẢI CẤM: mô tả hành vi GV/HS, CẤM viết "GV yêu cầu", "HS thảo luận", CẤM để trống, CẤM để dấu "..." hay "[...]".
+  + BẮT BUỘC PHẢI CÓ DỮ LIỆU: Tên mục kiến thức, định nghĩa, định lý, quy tắc giải, công thức LaTeX ($...$, $$...$$), ví dụ mẫu kèm đề bài và lời giải chi tiết (hoặc quy trình thao tác máy tính / kết quả thực hành).
+  + TUYỆT ĐỐI CẤM để trống Cột 2, CẤM ghi \`---\`, \`--\`, \`...\`.
+  + TUYỆT ĐỐI CẤM chép kiến thức ghi bảng (Quy tắc, Ví dụ, Lời giải) vào Cột Trái dưới Bước 4 \`- HS: Ghi bài...\`. Cột Trái Bước 4 chỉ ghi hướng dẫn sư phạm: \`- GV: Nhận xét, chốt kiến thức... - HS: Ghi nhớ quy tắc và ghi chép nội dung chuẩn vào vở.\` Toàn bộ nội dung cụ thể phải đưa sang Cột Phải.
+  + CỘT PHẢI CẤM: mô tả hành vi GV/HS, CẤM viết "GV yêu cầu", "HS thảo luận".
 ${LATEX_SPACING_BAN}
 - CẤM để trống ô. Escape dấu | trong văn bản thành \\|.
 - Hoạt động B: Mỗi tiểu mục/nội dung kiến thức dùng một bảng 2 cột (1 hàng) độc lập như trên. Gộp toàn bộ ví dụ mẫu, câu hỏi khám phá con, thực hành của mục đó vào chung một hoạt động nhánh.`;
@@ -343,7 +345,7 @@ const ACTIVITY_TABLE_CONTRACT_COMPACT = `YÊU CẦU BẮT BUỘC CHẾ ĐỘ SO�
 - Toàn bộ kế hoạch bài dạy dài khoảng 4–6 trang Word A4. Chỉ soạn bốn hoạt động cốt lõi A–D; không tạo phụ lục/phiếu học tập riêng.
 - Mỗi hoạt động ghi thời lượng cố định; tổng A + B + C + D đúng bằng {duration}. Dùng đúng một bảng Markdown 2 cột: | Hoạt động của GV và HS | Nội dung |. TUYỆT ĐỐI CẤM dấu | bên trong ô; liệt kê dùng dấu phẩy hoặc /.
 - Kịch bản giữ đủ 4 bước: 1. Giao việc ngắn gọn; 2. HS thực hiện cá nhân/nhóm; 3. Báo cáo ngắn; 4. GV chốt kiến thức cốt lõi. Không viết câu thoại dài dòng, không diễn giải ngộ nhận hoặc phân hóa dài.
-- Cột Nội dung chỉ ghi quy tắc/công thức LaTeX và tối đa một bài tập trọng tâm có lời giải mẫu ngắn. Không để trống ô, không dùng HTML.
+- Cột Nội dung BẮT BUỘC có dữ liệu (quy tắc/công thức LaTeX và tối đa một bài tập trọng tâm có lời giải mẫu ngắn). CẤM để trống, CẤM \`---\`. Không dùng HTML. Cột Trái Bước 4 không chép kiến thức ghi bảng.
 - Hoạt động D phải giao luôn đúng 4 nhiệm vụ tự học về nhà tại Bước 4.
 - Khi giáo viên bật NLS hoặc AI, TUYỆT ĐỐI KHÔNG được bỏ marker ***[NLS: ...]***, ***[AI: ...]***: giữ 1–2 vị trí then chốt, tự nhiên trong toàn bài.`;
 
@@ -794,6 +796,12 @@ ${LATEX_SPACING_BAN}
 """
 
 YÊU CẦU BIÊN SOẠN:
+BẮT BUỘC ĐỦ 4 MỤC THEO ĐÚNG CÔNG VĂN 5512 (TUYỆT ĐỐI CẤM NHẢY CÓC TỪ MỤC TIÊU VÀO BẢNG TIẾN TRÌNH):
+### a) Mục tiêu:
+### b) Nội dung:
+### c) Sản phẩm:
+### d) Tổ chức thực hiện:
+| Hoạt động của GV và HS | Nội dung |
 ${ACTIVITY_TABLE_CONTRACT}
 ${LATEX_SPACING_BAN}
 - CHỈ dùng bài luyện tập / câu hỏi có trong SGK hoặc dữ liệu giáo viên cung cấp (khóa theo phạm vi tiết dạy PPCT nếu có). CẤM invent bài tập trắc nghiệm ngoài sách nếu nguồn không có.
@@ -842,6 +850,12 @@ ${LATEX_SPACING_BAN}
 """
 
 YÊU CẦU BIÊN SOẠN (Chuẩn 4 hoạt động CV 5512 — nhiệm vụ về nhà nằm trong Hoạt động D):
+BẮT BUỘC ĐỦ 4 MỤC THEO ĐÚNG CÔNG VĂN 5512 (TUYỆT ĐỐI CẤM NHẢY CÓC TỪ MỤC TIÊU VÀO BẢNG TIẾN TRÌNH):
+### a) Mục tiêu:
+### b) Nội dung:
+### c) Sản phẩm:
+### d) Tổ chức thực hiện:
+| Hoạt động của GV và HS | Nội dung |
 ${ACTIVITY_TABLE_CONTRACT}
 ${LATEX_SPACING_BAN}
 - KHÓA NHIỆM VỤ VẬN DỤNG TẠI LỚP + GIAO TỰ HỌC: Bài toán vận dụng / Exit Ticket hoàn thành và chốt NGAY TẠI LỚP; ngay Bước 4, GV giao đủ 4 nhiệm vụ tự học ở nhà (không tách thành pha E).
@@ -1040,11 +1054,13 @@ PHA B — HÌNH THÀNH KIẾN THỨC:
 
 PHA C — LUYỆN TẬP:
 - Tiêu đề: \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C})\`.
+- BẮT BUỘC ĐỦ 4 MỤC THEO ĐÚNG CÔNG VĂN 5512 (TUYỆT ĐỐI CẤM NHẢY CÓC TỪ MỤC TIÊU VÀO BẢNG TIẾN TRÌNH): ### a) Mục tiêu: ### b) Nội dung: ### c) Sản phẩm: ### d) Tổ chức thực hiện: rồi mới đến bảng 2 cột. Cột 2 CẤM rỗng / \`---\`.
 - Giáo viên chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi trong SGK để chữa chi tiết tại lớp (các bài tập còn lại dành cho Hoạt động E). Chép rõ đề và giải chi tiết vào Cột Phải. Cột Trái phân vai rõ ràng.
 - Khi có NLS/AI: Ứng dụng phần mềm chuyên dụng (GeoGebra, bảng tính) hoặc AI để gợi mở / kiểm tra đối chiếu lời giải, phản biện lỗi sai. CẤM hỏi lý thuyết AI suông.
 
 PHA D — VẬN DỤNG:
 - Tiêu đề: \`## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D})\`.
+- BẮT BUỘC ĐỦ 4 MỤC THEO ĐÚNG CÔNG VĂN 5512 (TUYỆT ĐỐI CẤM NHẢY CÓC TỪ MỤC TIÊU VÀO BẢNG TIẾN TRÌNH): ### a) Mục tiêu: ### b) Nội dung: ### c) Sản phẩm: ### d) Tổ chức thực hiện: rồi mới đến bảng 2 cột. Cột 2 CẤM rỗng / \`---\`.
 - Khóa nhiệm vụ vận dụng thực tế hoặc phiếu Exit Ticket thực hiện, thu hồi và chốt ngay tại lớp. Trình bày mô hình hóa và lời giải chuẩn. Cột Trái 4 bước.
 - Khi có NLS/AI: Vận dụng công cụ số/AI chuyên ngành giải quyết bài toán thực tế, đánh giá và kiểm chứng tính khả thi. CẤM hỏi lý thuyết AI suông.
 
@@ -1120,11 +1136,17 @@ PHA B — HÌNH THÀNH KIẾN THỨC:
 
 PHA C — LUYỆN TẬP:
 - Tiêu đề: \`## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C})\`.
-- Giáo viên chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi trong SGK để chữa chi tiết tại lớp (các bài tập còn lại giao trong Bước 4 Hoạt động D — nhiệm vụ tự học). Chép rõ đề và giải chi tiết vào Cột Phải. Cột Trái phân vai rõ ràng.
+- BẮT BUỘC ĐỦ 4 MỤC THEO ĐÚNG CÔNG VĂN 5512 (TUYỆT ĐỐI CẤM NHẢY CÓC TỪ MỤC TIÊU VÀO BẢNG TIẾN TRÌNH): ### a) Mục tiêu: ### b) Nội dung: ### c) Sản phẩm: ### d) Tổ chức thực hiện: rồi mới đến bảng | Hoạt động của GV và HS | Nội dung |.
+- Giáo viên chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi trong SGK để chữa chi tiết tại lớp (các bài tập còn lại giao trong Bước 4 Hoạt động D — nhiệm vụ tự học). Chép rõ đề và giải chi tiết vào Cột Phải. Cột Trái phân vai rõ ràng. Cột 2 CẤM rỗng / \`---\`.
 - Khi có NLS/AI: Ứng dụng phần mềm chuyên dụng (GeoGebra, bảng tính) hoặc AI để gợi mở / kiểm tra đối chiếu lời giải, phản biện lỗi sai. CẤM hỏi lý thuyết AI suông.
 
 PHA D — VẬN DỤNG & HƯỚNG DẪN TỰ HỌC:
 - Tiêu đề: \`## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC ({time_budget_D})\`.
+- BẮT BUỘC ĐỦ 4 MỤC THEO ĐÚNG CÔNG VĂN 5512 (TUYỆT ĐỐI CẤM NHẢY CÓC TỪ MỤC TIÊU VÀO BẢNG TIẾN TRÌNH):
+  + \`### a) Mục tiêu:\` Nêu rõ mục tiêu giải quyết vấn đề thực tiễn và phát triển năng lực tự học.
+  + \`### b) Nội dung:\` Nêu rõ đề bài tình huống vận dụng thực tế trong SGK và 4 nhiệm vụ tự học ở nhà.
+  + \`### c) Sản phẩm:\` Lời giải mô hình hóa thực tế và kế hoạch tự học ghi vào vở.
+  + \`### d) Tổ chức thực hiện:\` Bảng 2 cột 4 bước. Cột 2 CẤM rỗng / \`---\`.
 - Khóa nhiệm vụ vận dụng thực tế hoặc phiếu Exit Ticket thực hiện, thu hồi và chốt ngay tại lớp. Trình bày mô hình hóa và lời giải chuẩn. Cột Trái đủ 4 bước.
 - **Bước 4: Kết luận, nhận định:** GV chuẩn hóa lời giải và giao đủ 4 nhiệm vụ tự học ở nhà: (1) Ôn tập quy tắc/định nghĩa/công thức; (2) Làm bài tập còn lại SGK và SBT (nêu số bài, gợi ý); (3) Chuẩn bị bài mới; (4) Vận dụng, tìm tòi mở rộng / công cụ số-AI nếu được bật.
 - Cột Phải: Đề bài vận dụng + Lời giải chi tiết + Khung 4 nhiệm vụ tự học cho HS ghi vở.
@@ -1639,7 +1661,21 @@ ${isThcs
 - Kết luận nghiệm chuẩn SGK: "Vậy nghiệm của hệ phương trình là (x; y) = (...; ...)" hoặc "Vậy hệ phương trình có nghiệm duy nhất (x; y) = (...; ...)".
 - Phương pháp thế: (1) rút 1 ẩn → (2) thế vào phương trình còn lại → (3) giải phương trình 1 ẩn → (4) thế ngược → (5) kết luận nghiệm.
 - Phương pháp cộng đại số: (1) nhân hệ số nếu cần → (2) cộng/trừ từng vế triệt tiêu 1 ẩn → (3) giải 1 ẩn → (4) thay tìm ẩn còn lại → (5) kết luận nghiệm.
-- CẤM nhảy cóc, CẤM chỉ viết hệ rồi phán đáp số. Kiểm tra chuyển vế đổi dấu và nhân đơn thức với đa thức.`;
+- CẤM nhảy cóc, CẤM chỉ viết hệ rồi phán đáp số. Kiểm tra chuyển vế đổi dấu và nhân đơn thức với đa thức.
+${isThcs
+  ? '- CẤP THCS: TUYỆT ĐỐI CẤM DÙNG DẤU NGOẶC VUÔNG `[` khi giải phương trình tích. Dùng chữ "hoặc" hoặc chia Trường hợp 1 / Trường hợp 2. CẤM \\left[ của cấp 3.'
+  : '- Cấp THPT: được dùng $\\left[ ... \\right.$ khi giải phương trình tích / hệ điều kiện.'}
+- KÝ HIỆU ĐỒNG DẠNG CHUẨN SGK VIỆT NAM: Khi viết hai tam giác/hình đồng dạng, dùng ký hiệu chữ S nằm ngang \\backsim hoặc ∽ (ví dụ: \\triangle ABC \\backsim \\triangle A'B'C'). TUYỆT ĐỐI KHÔNG dùng dấu ngã sóng ~ hoặc dấu trừ -. Các đỉnh tương ứng của hai tam giác BẮT BUỘC phải viết đúng thứ tự.
+- Số thập phân BẮT BUỘC dấu phẩy: $3,5$; $0,2$; $666,67$. CẤM dấu chấm kiểu $3.5$.
+- Tọa độ và cặp nghiệm BẮT BUỘC dấu chấm phẩy: $A(2; 3)$, $(x; y) = (1; -2)$. CẤM $(2, 3)$.
+- Lượng giác chuẩn GDPT 2018: $\\tan$, $\\cot$. CẤM $\\text{tg}$, $\\text{cotg}$.`;
+    const topicHay = String(context.topic || "").toLowerCase();
+    if (/tam giác|đồng dạng|tứ giác|đường tròn|góc|cung|hình học/.test(topicHay)) {
+      result += `
+- Nguyên tắc đỉnh tương ứng: $\\triangle ABC \\backsim \\triangle A'B'C'$ hoặc $\\triangle ABC = \\triangle A'B'C'$ BẮT BUỘC đúng thứ tự đỉnh (CẤM $\\triangle ABC \\backsim \\triangle B'A'C'$).
+- Từ đồng dạng suy ra: $\\widehat{A} = \\widehat{A'}, \\widehat{B} = \\widehat{B'}, \\widehat{C} = \\widehat{C'}$ (hoặc $\\angle A = \\angle A'$) và $\\frac{AB}{A'B'} = \\frac{BC}{B'C'} = \\frac{CA}{C'A'} = k$.
+- Lời dẫn hình học: "Suy ra:", "Do đó:", "Vì $\\triangle ABC \\backsim \\triangle A'B'C'$ nên ta có:".`;
+    }
   }
 
   if (templateKey === 'GENERATE_OBJECTIVES' || templateKey === 'GENERATE_CORE_LESSON') {
