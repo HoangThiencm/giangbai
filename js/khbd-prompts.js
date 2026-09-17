@@ -14,6 +14,16 @@ function isEnglishSubject(subjectId) {
   return sid === 'tienganh' || sid === 'english' || sid === 'tienganhthcs' || sid.includes('english');
 }
 
+/** Nhận diện bài Luyện tập / Ôn tập / Bài tập cuối chương (không có kiến thức mới). */
+function isReviewOrPracticeLesson(topic) {
+  return /(?:luyện\s*tập\s*chung|luyện\s*tập|bài\s*tập\s*cuối\s*chương|ôn\s*tập\s*chương|ôn\s*tập|thực\s*hành\s*tổng\s*hợp)/i.test(String(topic || ""));
+}
+
+/** Alias tương thích ngược cho phân bổ thời lượng / prompt cũ. */
+function isPracticeOrReviewLesson(topic) {
+  return isReviewOrPracticeLesson(topic);
+}
+
 /**
  * Lấy danh sách Năng lực chung phù hợp nhất theo đặc thù môn học (CT GDPT 2018).
  * @param {string} subjectId - Mã môn học (toan, nguvan, khtn, vatly, hoahoc, sinhhoc, lichsudialy, gdcd, tinhoc, congnghe, tienganh, amnhac, mithuat, gdtc, hdtn-hn...)
@@ -532,7 +542,6 @@ QUY TẮC NĂNG LỰC ĐẶC THÙ & PHẨM CHẤT:
 # I. MỤC TIÊU
 
 ## 1. Về kiến thức
-(Các YCCĐ của bài học theo CT GDPT 2018; mỗi ý một gạch đầu dòng, giữ động từ hành vi.)
 
 ## 2. Về năng lực
 ### a) Năng lực chung
@@ -1717,6 +1726,21 @@ ${isThcs
     if (context.ppct_objectives_verbatim) {
       result += `\n\nKHÓA MÔ TẢ NLS/AI THEO PPCT: Các dòng ### c) Năng lực số và ### d) Năng lực AI ở khung trên là nguyên văn 100% từ Phân phối chương trình. CHÉP ĐÚNG NGUYÊN VĂN mã và mô tả. CẤM diễn đạt lại, CẤM bịa câu chữ, CẤM thêm mã ngoài danh sách đã cho.`;
     }
+    if (templateKey === 'GENERATE_OBJECTIVES' && isReviewOrPracticeLesson(context.topic)) {
+      result += `\n\nĐÂY LÀ BÀI LUYỆN TẬP / ÔN TẬP / BÀI TẬP CUỐI CHƯƠNG (KHÔNG CÓ KIẾN THỨC MỚI). Mục ## 1. Về kiến thức phải tập trung:
+- Hệ thống hoá, củng cố vững chắc các kiến thức, định lý, công thức trọng tâm trong chương/chủ đề.
+- Vận dụng thành thạo các phương pháp và quy tắc để giải quyết các bài tập trong SGK.
+- Rèn luyện kỹ năng giải toán, nhận diện và khắc phục các sai lầm, ngộ nhận thường gặp.
+CẤM chép các câu nhận biết khái niệm ban đầu của bài học mới. CẤM ép YCCĐ kiểu bài lý thuyết mới.`;
+    }
+  }
+
+  if (templateKey === 'GENERATE_ACTIVITY_C' && isReviewOrPracticeLesson(context.topic)) {
+    result = result.replace(
+      /## C\. HOẠT ĐỘNG 3: LUYỆN TẬP \(([^)]+)\)/g,
+      "## C. HOẠT ĐỘNG 3: LUYỆN TẬP NÂNG CAO VÀ VẬN DỤNG CÁC BÀI TẬP CÒN LẠI TRONG SGK ($1)"
+    );
+    result += `\n\nĐÂY LÀ TIẾT LUYỆN TẬP / ÔN TẬP: Mục C chuyển thành chữa tiếp các bài tập tự luận nâng cao, bài toán thực tiễn còn lại trong SGK (không trùng các bài đã chữa ở Mục B). BẮT BUỘC dùng tiêu đề ## C. HOẠT ĐỘNG 3: LUYỆN TẬP NÂNG CAO VÀ VẬN DỤNG CÁC BÀI TẬP CÒN LẠI TRONG SGK (${budgets.formatted.C}).`;
   }
 
   if (templateKey === 'GENERATE_ACTIVITY_B' || templateKey === 'GENERATE_ACTIVITIES_AD' || templateKey === 'GENERATE_ACTIVITIES_AE') {
@@ -1734,8 +1758,9 @@ Bài học có ${subsections.length} mục lớn thì BẮT BUỘC phải sinh �
 Mỗi hoạt động 2.k (hoặc Hoạt động k) trên BẮT BUỘC phải có thời lượng cố định cụ thể ví dụ (${budgets.formatted.B_subsections[0] || '15 phút'}), đầy đủ 4 phần: #### a) Mục tiêu:, #### b) Nội dung:, #### c) Sản phẩm:, #### d) Tổ chức thực hiện: (với đúng 1 bảng Markdown 2 cột, 4 bước phân vai GV-HS và nội dung ghi bảng). Tuyệt đối không tách câu hỏi nhỏ/bài tập con thành hoạt động riêng.
 Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budgets.formatted.B} (ví dụ 45 phút chia 2 nhánh thì 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút). ${fourActivities ? `Tổng A + B + C + D BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.` : `Tổng A + B + C + D + E BẮT BUỘC đúng bằng ${budgets.totalMinutes} phút.`} `;
     }
-    if (isPracticeOrReviewLesson(context.topic)) {
-      result += `\n\nĐÂY LÀ TIẾT LUYỆN TẬP / ÔN TẬP: Hoạt động 2 mang tên 'HỆ THỐNG HÓA KIẾN THỨC TRỌNG TÂM & HƯỚNG DẪN GIẢI VÍ DỤ MẪU SGK'. Chia thành các hoạt động nhánh (2.1, 2.2...) tương ứng với các mục kiến thức và các Ví dụ mẫu trong SGK (như Ví dụ 1, Ví dụ 2, Ví dụ 3). Mỗi nhánh phải có mục tiêu, nội dung, sản phẩm, và bảng tổ chức thực hiện 4 bước (Chuyển giao, Thực hiện - có Dự kiến lỗi sai của HS, Báo cáo thảo luận, Kết luận chuẩn hóa). Cột phải trình bày lời giải chi tiết, chuẩn mực của các Ví dụ mẫu. Tiêu đề vẫn dùng ## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI nhưng nội dung không soạn lý thuyết mới tinh.`;
+    if (templateKey === 'GENERATE_ACTIVITY_B' && isReviewOrPracticeLesson(context.topic)) {
+      result = result.replace(/HÌNH THÀNH KIẾN THỨC MỚI/g, "LUYỆN TẬP (HỆ THỐNG HÓA KIẾN THỨC VÀ CHỮA CÁC BÀI TẬP TRỌNG TÂM TRONG SGK)");
+      result += `\n\nĐÂY LÀ TIẾT LUYỆN TẬP / ÔN TẬP / BÀI TẬP CUỐI CHƯƠNG, KHÔNG CÓ HÌNH THÀNH KIẾN THỨC MỚI. Mục B chuyển trọng tâm thành HỆ THỐNG HÓA KIẾN THỨC TRỌNG TÂM và chữa các bài tập cơ bản trong dữ liệu SGK đã nạp. BẮT BUỘC dùng tiêu đề ## B. HOẠT ĐỘNG 2: LUYỆN TẬP (HỆ THỐNG HÓA KIẾN THỨC VÀ CHỮA CÁC BÀI TẬP TRỌNG TÂM TRONG SGK) (${budgets.formatted.B}). BẮT BUỘC chia các nhánh 2.1, 2.2... theo từng bài tập hoặc cụm bài tập trong SGK (Ví dụ: ### Hoạt động 2.1: Chữa Bài tập 1 trong SGK; ### Hoạt động 2.2: Chữa Bài tập 2 trong SGK). Bắt buộc trích dẫn nguyên văn đề bài từ SGK vào cột Nội dung và giải chi tiết từng bước. CẤM bịa lý thuyết mới tinh.`;
     }
   }
 
@@ -1818,6 +1843,8 @@ Tổng số phút ${subsections.length} nhánh BẮT BUỘC ĐÚNG BẰNG ${budg
 if (typeof window !== 'undefined') {
   window.PROMPTS = PROMPTS;
   window.isEnglishSubject = isEnglishSubject;
+  window.isReviewOrPracticeLesson = isReviewOrPracticeLesson;
+  window.isPracticeOrReviewLesson = isPracticeOrReviewLesson;
   window.getSystemRole = getSystemRole;
   window.getPromptTemplate = getPromptTemplate;
   window.calculateActivityTimeBudgets = calculateActivityTimeBudgets;
@@ -1828,14 +1855,12 @@ if (typeof window !== 'undefined') {
   window.formatGeneralCompetenciesGuide = formatGeneralCompetenciesGuide;
 }
 
-function isPracticeOrReviewLesson(topic) {
-  return /luyện\s*tập\s*chung|ôn\s*tập|bài\s*tập\s*cuối\s*chương|luyện\s*tập\b/i.test(String(topic || ""));
-}
-
 if (typeof globalThis !== 'undefined') {
   globalThis.PROMPTS = PROMPTS;
+  globalThis.isReviewOrPracticeLesson = isReviewOrPracticeLesson;
+  globalThis.isPracticeOrReviewLesson = isPracticeOrReviewLesson;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { PROMPTS, calculateActivityTimeBudgets, isEnglishSubject, getSystemRole, getPromptTemplate, extractTextbookSubsections, normalizeTextbookSubsectionProfiles, extractTextbookLessonMap, getGeneralCompetenciesForSubject, formatGeneralCompetenciesGuide };
+  module.exports = { PROMPTS, calculateActivityTimeBudgets, isEnglishSubject, isReviewOrPracticeLesson, isPracticeOrReviewLesson, getSystemRole, getPromptTemplate, extractTextbookSubsections, normalizeTextbookSubsectionProfiles, extractTextbookLessonMap, getGeneralCompetenciesForSubject, formatGeneralCompetenciesGuide };
 }

@@ -4,27 +4,30 @@
 PASS
 
 ## Đối chiếu scope
-- Thêm nút `#btn1ClickGenerate` vào `.header-actions` trong `soankhbd.html`: Đã có, đúng vị trí trước nút hủy tạo. ĐÚNG SCOPE.
-- Thêm bộ chọn `#selectGenerationMode` vào `.toolbar-grid` trong `soankhbd.html`: Đã có, gồm 2 chế độ (Soạn chi tiết 8–10 trang và Soạn rút gọn 4–6 trang), mặc định detailed. ĐÚNG SCOPE.
-- Quản lý state `generationMode` và lưu `localStorage.khbd_generation_mode` trong `js/khbd-app.js`: Đã có helpers và event listeners đồng bộ hai chiều. ĐÚNG SCOPE.
-- Tích hợp `generationMode` vào ngữ cảnh prompt (`getGenerationPromptContext` / `resolveGenerationMode`): Đã truyền vào `js/khbd-prompts.js`. ĐÚNG SCOPE.
-- Luồng thực thi `handle1ClickGenerate` tuần tự: Đã hỗ trợ AbortController, progress bar, xác nhận theo chế độ, bỏ qua các bước không cần thiết ở compact mode và điều hướng sang tab DOCX. ĐÚNG SCOPE.
-- Tạo mới và chạy test smoke: `tests/soankhbd-generation-mode-smoke.js` đạt 100%. ĐÚNG SCOPE.
+- Nhận diện bài Luyện tập chung / Ôn tập / Bài tập cuối chương: Đã thêm `isReviewOrPracticeLesson(topic)` trong `js/khbd-prompts.js` và đồng bộ sang `js/khbd-app.js`. ĐÚNG SCOPE.
+- Xóa bỏ prompt leak `(Các YCCĐ của bài học...; mỗi ý một gạch đầu dòng...)`: Đã xóa khỏi template `GENERATE_OBJECTIVES` và thêm regex làm sạch triệt để trong `sanitizeLessonMarkdown`. ĐÚNG SCOPE.
+- Chuyển đổi Mục B cho bài ôn tập: Đổi tiêu đề thành `## B. HOẠT ĐỘNG 2: LUYỆN TẬP (HỆ THỐNG HÓA KIẾN THỨC VÀ CHỮA CÁC BÀI TẬP TRỌNG TÂM TRONG SGK)` và chỉ dẫn chia nhánh theo bài tập SGK. ĐÚNG SCOPE.
+- Chuyển đổi Mục C cho bài ôn tập: Đổi tiêu đề thành `## C. HOẠT ĐỘNG 3: LUYỆN TẬP NÂNG CAO VÀ VẬN DỤNG CÁC BÀI TẬP CÒN LẠI TRONG SGK`. ĐÚNG SCOPE.
+- Chuẩn hóa Mục I (Mục tiêu) cho bài ôn tập: Tập trung củng cố kiến thức, giải bài tập SGK, khắc phục lỗi sai; cấm chép YCCĐ bài mới. ĐÚNG SCOPE.
+- Nhãn tab động: Đã đồng bộ nhãn tab B thành `B. Luyện tập & Chữa bài tập SGK` khi gặp bài ôn/luyện tập. ĐÚNG SCOPE.
+- Kiểm thử tự động mới: `tests/khbd-review-practice-lesson-smoke.js` đạt 100%. ĐÚNG SCOPE.
 - Không thêm chức năng ngoài kế hoạch, không sửa file ngoài scope.
 
 ## Test đã chạy
-- `node tests/soankhbd-generation-mode-smoke.js` — PASS.
-- `node tests/canvas-soankhbd-smoke.js` — PASS.
+- `node tests/khbd-review-practice-lesson-smoke.js` — PASS (nhận diện bài ôn tập, tiêu đề B/C, xóa leak template & sanitize).
+- `node tests/soankhbd-generation-mode-smoke.js` — PASS (HTML IDs, chế độ soạn, 1-Click).
+- `node tests/canvas-soankhbd-smoke.js` — PASS (tương thích Canvas 1-1).
 - `node tests/baogiang-teacher-month-smoke.js` — PASS.
 - `node tests/baogiang-weekday-segment-smoke.js` — PASS.
 - `node tests/attendance-autosync-smoke.js` — PASS.
 
 ## Pass / Fail từng tiêu chí
-- Nút 1-Click và dropdown chế độ soạn trên `soankhbd.html`: PASS.
-- Khởi tạo và lưu `khbd_generation_mode`: PASS.
-- Prompt nhận diện `generationMode: 'compact'`: PASS.
-- Quy trình 1-Click đầy đủ và rút gọn: PASS.
-- Tương thích hồi quy bộ test hệ thống: PASS 100%.
+- Nhận diện `isReviewOrPracticeLesson`: PASS.
+- Đổi tiêu đề & chỉ dẫn Mục B, C: PASS.
+- Mục tiêu kiến thức bài ôn tập: PASS.
+- Xóa bỏ prompt leak template & sanitize: PASS.
+- Nhãn tab động trên giao diện: PASS.
+- Bộ test hồi quy hệ thống: PASS 100%.
 
 ## Bug
 Không phát hiện bug còn tồn đọng.

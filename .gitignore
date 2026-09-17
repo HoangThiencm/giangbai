@@ -11,3 +11,4 @@ node_modules/
 package-lock.json
 js/*.bundle.js
 js/*.bundle-*.js
+docs/handoff/.lock

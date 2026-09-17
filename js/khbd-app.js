@@ -8,8 +8,12 @@
 
 // Deploy version: 20260916-textbook-exact-v18
 
+function isReviewOrPracticeLesson(topic) {
+  return /(?:luyện\s*tập\s*chung|luyện\s*tập|bài\s*tập\s*cuối\s*chương|ôn\s*tập\s*chương|ôn\s*tập|thực\s*hành\s*tổng\s*hợp)/i.test(String(topic || ""));
+}
+
 function isPracticeOrReviewLesson(topic) {
-  return /luyện\s*tập\s*chung|ôn\s*tập|bài\s*tập\s*cuối\s*chương|luyện\s*tập\b/i.test(String(topic || ""));
+  return isReviewOrPracticeLesson(topic);
 }
 
 if (typeof getPromptTemplate === "undefined" && typeof require !== "undefined") {
@@ -189,6 +193,31 @@ const ACTIVITY_TITLES = {
   E: { short: "E. Hồ sơ học tập", full: "E. Hồ sơ học tập (Phiếu học tập & Công cụ đánh giá)" },
   F: { short: "F. Hình minh họa SGK", full: "F. Hình minh họa SGK (Vector SVG)" }
 };
+
+function getActivityTitleInfo(actKey, topic) {
+  const base = ACTIVITY_TITLES[actKey] || { short: `HĐ ${actKey}`, full: `Hoạt động ${actKey}` };
+  const topicName = topic != null ? topic : (typeof getTopicDisplayName === "function" ? getTopicDisplayName() : "");
+  if (actKey === "B" && isReviewOrPracticeLesson(topicName)) {
+    return {
+      short: "B. Luyện tập & Chữa bài tập SGK",
+      full: "B. Hoạt động Luyện tập & Chữa bài tập SGK"
+    };
+  }
+  return base;
+}
+
+function syncActivityBTabLabels() {
+  const info = getActivityTitleInfo("B");
+  document.querySelectorAll('.act-tab-btn[data-act="B"]').forEach((btn) => {
+    btn.textContent = info.short;
+  });
+  if (appState.activeActSubtab === "B") {
+    const currentTitleEl = document.getElementById("currentActTitle");
+    if (currentTitleEl) currentTitleEl.textContent = info.full;
+    const editorActLabelEl = document.getElementById("editorActLabel");
+    if (editorActLabelEl) editorActLabelEl.textContent = `Nội dung ${info.short}`;
+  }
+}
 
 const TAB0_SUBTAB_KEYS = [
   "tab0-sub-materials",
@@ -508,6 +537,7 @@ function syncDraftDom() {
   renderIllustrationGallery();
   renderPpctGallery();
   updateWorkflowStepper();
+  syncActivityBTabLabels();
 }
 
 // =============================================================================
@@ -715,6 +745,7 @@ function commitCustomTopicName(topic) {
 
   renderDraftControls();
   updateWorkflowStepper();
+  syncActivityBTabLabels();
   showToast(`Đã lưu tên bài học: "${topic}"`, "success", 3000);
 }
 function loadStateFromLocalStorage() {
@@ -3107,7 +3138,7 @@ function setupEventListeners() {
     exportTabDocx("II. Thiết bị & Học liệu", appState.content.materials, `KHBD_ThietBi_${getSafeTopicName()}`);
   });
   document.getElementById("btnExportCurrentActDocx").addEventListener("click", () => {
-    const act = ACTIVITY_TITLES[appState.activeActSubtab];
+    const act = getActivityTitleInfo(appState.activeActSubtab);
     exportTabDocx(act.full, appState.content.activities[appState.activeActSubtab], `KHBD_${act.short.replace(/[^a-zA-Z0-9]/g, "_")}_${getSafeTopicName()}`);
   });
   document.getElementById("btnExportFullDocx").addEventListener("click", handleExportFullDocx);
@@ -3383,8 +3414,9 @@ function switchActivitySubtab(actKey) {
       btn.classList.remove("active");
     }
   });
-  // 2. Cập nhật tiêu đề
-  const actInfo = ACTIVITY_TITLES[actKey] || { short: `HĐ ${actKey}`, full: `Hoạt động ${actKey}` };
+  // 2. Cập nhật tiêu đề (B đổi nhãn khi bài Luyện tập / Ôn tập)
+  syncActivityBTabLabels();
+  const actInfo = getActivityTitleInfo(actKey);
   const currentTitleEl = document.getElementById("currentActTitle");
   if (currentTitleEl) currentTitleEl.textContent = actInfo.full;
   const editorActLabelEl = document.getElementById("editorActLabel");
@@ -6173,6 +6205,8 @@ function sanitizeLessonMarkdown(rawOutput) {
 
   text = text.replace(/(?:^|\n)\s*\*(?:Lưu ý của AI|Ghi chú của AI|Nhận xét của AI)[^*]*\*(?:\s*\n|\s*$)/gi, "\n\n");
   text = text.replace(/(?:^|\n)\s*\((?:Lưu ý của AI|Ghi chú của AI|Nhận xét của AI)[^)]*\)(?:\s*\n|\s*$)/gi, "\n\n");
+  text = text.replace(/(?:^|\n)\s*\((?:Các YCCĐ|mỗi ý một gạch đầu dòng|Yêu cầu cần đạt của bài học|giữ động từ hành vi)[^)]*\)(?:\s*\n|\s*$)/gi, "\n");
+  text = text.replace(/\((?:Các YCCĐ của bài học[^)]*)\)/gi, "");
 
   text = stripClosingChitchat(text);
   text = mergeSplitActivityTables(text);
@@ -6666,6 +6700,7 @@ function applyPpctCatalogRow(id) {
       populateLessonDropdown();
       renderPpctCatalogReview();
       renderStandardsCatalog();
+      syncActivityBTabLabels();
     } catch (error) {
       // DOM chưa đủ nút PPCT (môi trường test): vẫn giữ mã đã khóa.
     }
@@ -7987,9 +8022,9 @@ async function handleGenerateMaterials() {
 async function handleGenerateCurrentActivity() {
   try {
     const actKey = appState.activeActSubtab;
-    const actInfo = ACTIVITY_TITLES[actKey];
+    const actInfo = getActivityTitleInfo(actKey);
     
-    if (!actInfo) return;
+    if (!actInfo || !ACTIVITY_TITLES[actKey]) return;
 
     if (actKey === "F") {
       try {
@@ -8825,6 +8860,10 @@ function closeModal(modalId) {
 }
 
 if (typeof window !== 'undefined') {
+  window.isReviewOrPracticeLesson = isReviewOrPracticeLesson;
+  window.isPracticeOrReviewLesson = isPracticeOrReviewLesson;
+  window.getActivityTitleInfo = getActivityTitleInfo;
+  window.syncActivityBTabLabels = syncActivityBTabLabels;
   window.assertPhasePedagogyOutput = assertPhasePedagogyOutput;
   window.sanitizeLessonMarkdown = sanitizeLessonMarkdown;
   window.collapseDottedLines = collapseDottedLines;
@@ -8889,6 +8928,10 @@ if (typeof module !== 'undefined' && module.exports) {
     activityKeysForFullPlan,
     migrateLegacyActivitiesPortfolio,
     ACTIVITY_TITLES,
+    isReviewOrPracticeLesson,
+    isPracticeOrReviewLesson,
+    getActivityTitleInfo,
+    syncActivityBTabLabels,
     collapseDottedLines,
     stripExcessiveDottedLines,
     normalizeActivityTimeHeadings,

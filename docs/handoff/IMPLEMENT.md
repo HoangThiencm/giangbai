@@ -1,30 +1,32 @@
-# IMPLEMENT: Đồng bộ 2 phiên bản soạn + nút 1-Click sang `soankhbd.html`
+# IMPLEMENT: Nhận diện bài Luyện tập / Ôn tập — đổi Mục B/C, xóa prompt leak YCCĐ
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
-## Module 1 — `soankhbd.html`
-- Thêm `#btn1ClickGenerate` vào `.header-actions` (trước `#btnCancelGeneration`).
-- Thêm `#selectGenerationMode` vào `.toolbar-grid` (giữa Môn học và Danh mục bài học).
-- Mặc định `detailed`; có tùy chọn `compact`.
+## Module 1 — `js/khbd-prompts.js`
+- Thêm `isReviewOrPracticeLesson(topic)` (regex: luyện tập chung / luyện tập / bài tập cuối chương / ôn tập chương / ôn tập / thực hành tổng hợp).
+- Giữ alias `isPracticeOrReviewLesson` → gọi hàm mới (tương thích phân bổ thời lượng).
+- `GENERATE_OBJECTIVES`: xóa dòng prompt leak `(Các YCCĐ của bài học theo CT GDPT 2018; mỗi ý một gạch đầu dòng, giữ động từ hành vi.)`.
+- Khi bài ôn/luyện tập: bổ sung ràng buộc Mục I tập trung củng cố / hệ thống hóa / chữa bài tập SGK; CẤM chép YCCĐ kiểu bài mới.
+- `GENERATE_ACTIVITY_B` (ôn tập): thay tiêu đề `HÌNH THÀNH KIẾN THỨC MỚI` → `LUYỆN TẬP (HỆ THỐNG HÓA KIẾN THỨC VÀ CHỮA CÁC BÀI TẬP TRỌNG TÂM TRONG SGK)`; chỉ dẫn chia 2.1, 2.2… theo bài tập SGK.
+- `GENERATE_ACTIVITY_C` (ôn tập): tiêu đề → `LUYỆN TẬP NÂNG CAO VÀ VẬN DỤNG CÁC BÀI TẬP CÒN LẠI TRONG SGK`.
+- Export `isReviewOrPracticeLesson` / alias trên `window`, `globalThis`, `module.exports`.
 
 ## Module 2 — `js/khbd-app.js`
-- `appState.generationMode` khởi tạo từ `localStorage.khbd_generation_mode` (mặc định `detailed`).
-- Helpers: `getGenerationMode`, `setGenerationMode`, `resolveGenerationMode`.
-- Đồng bộ `#selectGenerationMode` lúc `setupEventListeners`; `change` → lưu localStorage + `appState`.
-- `getGenerationPromptContext` truyền `generationMode` qua `resolveGenerationMode` (ưu tiên params → appState → canvasStorage/localStorage).
-- `handle1ClickGenerate`:
-  - Chặn khi thiếu bài học / đang chạy / thiếu API key (trang chuẩn).
-  - Xác nhận theo chế độ compact (6 bước) hoặc detailed (8 bước).
-  - Disable `#btn1ClickGenerate`, enable `#btnCancelGeneration`, AbortController + progress bar.
-  - Tuần tự: I → II → A → B → C → D → (detailed: E + hình minh họa) → Tab `tabFullPreview`.
-- Export `handle1ClickGenerate`, `getGenerationMode`, `setGenerationMode`, `resolveGenerationMode`.
+- Đồng bộ `isReviewOrPracticeLesson` (+ alias).
+- `sanitizeLessonMarkdown`: thêm regex gọt dòng/cụm `(Các YCCĐ...)` / `(mỗi ý một gạch đầu dòng...)`.
+- `handle1ClickGenerate`: đã có sẵn bước tự đọc SGK khi `hasTextbookMedia() && !hasAnalyzedLessonContent()` với `{ internal: true }` — giữ nguyên.
+- Nhãn động tab B: `getActivityTitleInfo` / `syncActivityBTabLabels`
+  - Ôn/luyện tập: `B. Luyện tập & Chữa bài tập SGK` / `B. Hoạt động Luyện tập & Chữa bài tập SGK`
+  - Ngược lại: giữ `B. Hình thành Kiến thức`
+- Gọi sync từ `syncDraftDom` và `switchActivitySubtab`; export Word / tạo mục hiện tại dùng nhãn động.
 
 ## Module 3 — Smoke mới
-- `tests/soankhbd-generation-mode-smoke.js`: HTML IDs, mặc định detailed, wiring app, prompt compact.
+- `tests/khbd-review-practice-lesson-smoke.js`: nhận diện topic, tiêu đề B/C, xóa leak template, sanitize, wiring 1-Click OCR nội bộ.
 
 ## Test đã chạy
+- `node tests/khbd-review-practice-lesson-smoke.js` — PASS
 - `node tests/soankhbd-generation-mode-smoke.js` — PASS
 - `node tests/canvas-soankhbd-smoke.js` — PASS
-- `node tests/baogiang-teacher-month-smoke.js` — PASS
+- Thêm regression: `khbd-time-budgets-smoke.js`, `khbd-sanitize-smoke.js`, `khbd-tabs-reorganized-smoke.js` — PASS
 
 Không thêm chức năng ngoài plan. Cần `/verify` trên Antigravity.
