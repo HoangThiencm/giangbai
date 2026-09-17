@@ -1272,10 +1272,23 @@
                 .replace(/\u00a0/g, " ")
                 .replace(/[“”]/g, '"')
                 .replace(/[‘’]/g, "'")
+                .replace(/\t([A-Da-d][\.\):：-])/g, "\n$1")
+                .replace(/(?<=\S)[ \t]{2,}([A-Da-d][\.\):：-])/g, "\n$1")
                 .replace(/\t/g, " ")
                 .replace(/[ ]+\n/g, "\n")
                 .replace(/\n{3,}/g, "\n\n")
                 .trim();
+        };
+
+        const normalizeImportedShortAnswer = (raw) => {
+            let text = String(raw == null ? "" : raw).trim();
+            if (!text) return "";
+            if (/^(đúng|sai|đ|s|true|false|t|f)$/i.test(text)) return text;
+            let stripped = text.replace(/^(?:[a-zA-Z]\s*=\s*|khoảng\s+)/i, "").trim();
+            stripped = stripped.replace(/\s*(?:cm|mm|km|kg|g|m|đồng|vnđ|độ|%)\s*$/i, "").trim();
+            if (/^-?\d+,\d+$/.test(stripped)) stripped = stripped.replace(",", ".");
+            if (/^-?\d+(?:\.\d+)?(?:\/\d+)?$/.test(stripped) || /^-?\d+\/\d+$/.test(stripped)) return stripped;
+            return text;
         };
 
         const isImportedTfTrue = (token) => /^(đúng|đ|true|t)$/i.test(String(token || "").trim());
@@ -1323,7 +1336,10 @@
         };
 
         const matchImportedAnswerSection = (text) => {
-            return String(text || "").match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：][^\n]*(?:\n(?!\s*(?:Câu|Cau|Question|Q)\s*\d+\s*[\.\):：-])[^\n]*)*/i);
+            const src = String(text || "");
+            const tableHeading = src.match(/(?:^|\n)\s*bảng\s+đáp\s*án[^\n]*(?:\n(?!\s*(?:Câu|Cau|Question|Q)\s*\d+\s*[\.\):：-])[^\n]*)*/i);
+            if (tableHeading) return tableHeading;
+            return src.match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：][^\n]*(?:\n(?!\s*(?:Câu|Cau|Question|Q)\s*\d+\s*[\.\):：-])[^\n]*)*/i);
         };
 
         const importedAnswerKeyLetter = (entry) => {
@@ -1506,7 +1522,7 @@
 
             if (!questionMatches.length) return [];
 
-            return questionMatches.map((item, index) => {
+            const parsedQuestions = questionMatches.map((item, index) => {
                 const next = questionMatches[index + 1];
                 let block = text.slice(item.bodyStart, next ? next.markerStart : text.length).trim();
 
@@ -1652,10 +1668,18 @@
                     type: "short_answer",
                     question: block || `Câu ${item.number}`,
                     options: [],
-                    correct_answer: inlineAnswer || importedAnswerKeyText(answerKey[item.number]),
+                    correct_answer: normalizeImportedShortAnswer(inlineAnswer || importedAnswerKeyText(answerKey[item.number])),
                     question_image: null
                 };
             }).filter(Boolean);
+
+            const mcCount = parsedQuestions.filter((q) => q.type === "mc").length;
+            const tfCount = parsedQuestions.filter((q) => q.type === "tf").length;
+            const saCount = parsedQuestions.filter((q) => q.type === "short_answer").length;
+            if (parsedQuestions.length === 17 && mcCount === 12 && tfCount === 1 && saCount === 4) {
+                parsedQuestions.exam_format = "cv7991";
+            }
+            return parsedQuestions;
         };
 
         const HybridExamCreator = ({ onBack, initialData }) => {
@@ -1885,7 +1909,12 @@
                         throw new Error("Không tìm thấy câu hỏi. File nên có dạng: Câu 1..., A..., B..., C..., D..., Đáp án: A.");
                     }
 
-                    const hasCv7991Questions = importedQuestions.some(q => q.type === 'tf' || q.type === 'short_answer');
+                    const mcCount = importedQuestions.filter(q => q.type === 'mc').length;
+                    const tfCount = importedQuestions.filter(q => q.type === 'tf').length;
+                    const saCount = importedQuestions.filter(q => q.type === 'short_answer').length;
+                    const hasCv7991Questions = importedQuestions.exam_format === "cv7991"
+                        || (importedQuestions.length === 17 && mcCount === 12 && tfCount === 1 && saCount === 4)
+                        || importedQuestions.some(q => q.type === 'tf' || q.type === 'short_answer');
                     if (hasCv7991Questions) {
                         setExamInfo(prev => ({ ...prev, exam_format: "cv7991" }));
                     }

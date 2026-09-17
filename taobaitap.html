@@ -13549,6 +13549,65 @@ module.exports = {
                 .trim();
         };
 
+        const toTfBool = (value) => {
+            if (value === true || value === 1) return true;
+            if (value === false || value === 0) return false;
+            return /^(true|đúng|đ|t|1)$/i.test(String(value || "").trim());
+        };
+
+        const isSimpleTrueFalseOptions = (options) => {
+            const opts = Array.isArray(options) ? options : [];
+            return opts.length === 2 && opts.every((opt) => /^(đúng|sai)$/i.test(String(opt || "").trim()));
+        };
+
+        const isCv7991TrueFalseItem = (q) => {
+            if (!q || (q.type !== "true-false" && q.type !== "tf")) return false;
+            if (Array.isArray(q.subItems) && q.subItems.length >= 2) return true;
+            if (Array.isArray(q.correct_answers) && q.correct_answers.length >= 2 && !isSimpleTrueFalseOptions(q.options)) return true;
+            const opts = Array.isArray(q.options) ? q.options : [];
+            return opts.length >= 3;
+        };
+
+        const getCv7991TrueFalseItems = (q) => {
+            const padFour = (items) => {
+                const next = items.slice(0, 4).map((item) => ({
+                    text: String(item && item.text != null ? item.text : "").trim(),
+                    isCorrect: !!item && !!item.isCorrect
+                }));
+                while (next.length < 4) next.push({ text: "", isCorrect: false });
+                return next;
+            };
+
+            if (Array.isArray(q && q.subItems) && q.subItems.length >= 2) {
+                const items = padFour(q.subItems.map((item) => ({
+                    text: item && typeof item === "object" ? (item.text || "") : String(item || ""),
+                    isCorrect: item && typeof item === "object" ? toTfBool(item.isCorrect) : false
+                })));
+                if (Array.isArray(q.correct_answers) && q.correct_answers.length >= 2) {
+                    q.correct_answers.slice(0, 4).forEach((value, idx) => {
+                        items[idx].isCorrect = toTfBool(value);
+                    });
+                }
+                return items;
+            }
+
+            const opts = Array.isArray(q && q.options) ? q.options : [];
+            const answers = Array.isArray(q && q.correct_answers) ? q.correct_answers : [];
+            return padFour([0, 1, 2, 3].map((idx) => ({
+                text: opts[idx] != null ? opts[idx] : "",
+                isCorrect: answers.length ? toTfBool(answers[idx]) : false
+            })));
+        };
+
+        const normalizeShortAnswerValue = (raw) => {
+            let text = String(raw == null ? "" : raw).trim();
+            if (!text) return "";
+            text = text.replace(/^(?:[a-zA-Z]\s*=\s*|đáp\s*án\s*[:：=]\s*|kết\s*quả\s*[:：=]\s*|khoảng\s+)/i, "").trim();
+            text = text.replace(/\s*(?:cm|mm|km|kg|g|m|đồng|vnđ|độ|%)\s*$/i, "").trim();
+            if (/^-?\d+,\d+$/.test(text)) text = text.replace(",", ".");
+            return text;
+        };
+
         const normalizeQuizItems = (items) => {
             if (!Array.isArray(items)) return [];
 
@@ -13573,10 +13632,28 @@ module.exports = {
                 }
 
                 if (normalized.type === 'true-false') {
-                    normalized.options = ['Đúng', 'Sai'];
-                    if (!Number.isInteger(normalized.correctAnswerIndex) || normalized.correctAnswerIndex < 0 || normalized.correctAnswerIndex > 1) {
-                        throw new Error(`Câu ${index + 1} đúng/sai chưa có đáp án hợp lệ.`);
+                    const cleanedOptions = (normalized.options || []).map((opt) => cleanOptionText(String(opt || "")));
+                    if (isCv7991TrueFalseItem({ ...normalized, options: cleanedOptions.length ? cleanedOptions : normalized.options })) {
+                        const tfItems = getCv7991TrueFalseItems({
+                            ...normalized,
+                            options: cleanedOptions.length ? cleanedOptions : normalized.options
+                        }).map((sub) => ({
+                            text: cleanOptionText(sub.text),
+                            isCorrect: !!sub.isCorrect
+                        }));
+                        normalized.options = tfItems.map((sub) => sub.text);
+                        normalized.correct_answers = tfItems.map((sub) => sub.isCorrect);
+                        normalized.subItems = tfItems;
+                    } else {
+                        normalized.options = ['Đúng', 'Sai'];
+                        if (!Number.isInteger(normalized.correctAnswerIndex) || normalized.correctAnswerIndex < 0 || normalized.correctAnswerIndex > 1) {
+                            throw new Error(`Câu ${index + 1} đúng/sai chưa có đáp án hợp lệ.`);
+                        }
                     }
+                }
+
+                if (normalized.type === 'short-answer') {
+                    normalized.correctAnswer = normalizeShortAnswerValue(normalized.correctAnswer);
                 }
 
                 return normalized;
@@ -13585,7 +13662,14 @@ module.exports = {
 
         const formatQuizAnswer = (q) => {
             if (q.type === "multiple-choice") return String.fromCharCode(65 + q.correctAnswerIndex);
-            if (q.type === "true-false") return q.correctAnswerIndex === 0 ? "Đúng" : "Sai";
+            if (q.type === "true-false") {
+                if (isCv7991TrueFalseItem(q)) {
+                    return getCv7991TrueFalseItems(q)
+                        .map((item, idx) => `${String.fromCharCode(97 + idx)}.${item.isCorrect ? "Đúng" : "Sai"}`)
+                        .join(" ");
+                }
+                return q.correctAnswerIndex === 0 ? "Đúng" : "Sai";
+            }
             if (q.type === "fill-blank" || q.type === "short-answer") return q.correctAnswer || "";
             if (q.type === "matching") {
                 return (q.correctMatches || [])
@@ -13593,6 +13677,212 @@ module.exports = {
                     .join(', ');
             }
             return "";
+        };
+
+        const collectCv7991ExportParts = (quizItems) => {
+            const list = Array.isArray(quizItems) ? quizItems : [];
+            return {
+                part1: list.filter((q) => q.type === "multiple-choice"),
+                part2: list.filter((q) => q.type === "true-false"),
+                part3: list.filter((q) => q.type === "short-answer" || q.type === "fill-blank" || q.type === "matching")
+            };
+        };
+
+        const buildCv7991AnswerKey = (numberedItems) => {
+            const mcParts = [];
+            const tfLines = [];
+            const saParts = [];
+            (numberedItems || []).forEach(({ num, q }) => {
+                if (q.type === "multiple-choice") {
+                    const letter = String.fromCharCode(65 + (Number.isInteger(q.correctAnswerIndex) ? q.correctAnswerIndex : 0));
+                    mcParts.push(`${num}.${letter}`);
+                } else if (q.type === "true-false") {
+                    if (isCv7991TrueFalseItem(q)) {
+                        const body = getCv7991TrueFalseItems(q)
+                            .map((item, idx) => `${String.fromCharCode(97 + idx)}.${item.isCorrect ? "Đúng" : "Sai"}`)
+                            .join(" ");
+                        tfLines.push(`${num}. ${body}`);
+                    } else {
+                        tfLines.push(`${num}.${q.correctAnswerIndex === 0 ? "Đúng" : "Sai"}`);
+                    }
+                } else {
+                    saParts.push(`${num}. ${q.correctAnswer || formatQuizAnswer(q)}`);
+                }
+            });
+            return { mcLine: mcParts.join("   "), tfLines, saLine: saParts.join("   ") };
+        };
+
+        const buildCv7991ExportHtml = (dataToExport, mode) => {
+            let bodyContent = `<h1>ĐỀ MINH HỌA KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT</h1>`;
+            bodyContent += `<div class="sub-title">Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút - Thang điểm: 10 điểm</div>`;
+
+            if (mode !== "quiz") {
+                (dataToExport || []).forEach((essay, i) => {
+                    bodyContent += `<div class="essay-block"><b>Bài ${i + 1}:</b> ${essay.question}<div class="solution"><b>Lời giải:</b> ${essay.solution}</div></div>`;
+                });
+                return bodyContent;
+            }
+
+            const { part1, part2, part3 } = collectCv7991ExportParts(dataToExport);
+            const numberedItems = [];
+            let currentQNum = 1;
+
+            if (part1.length > 0 || (part2.length === 0 && part3.length === 0)) {
+                const list1 = part1.length > 0 ? part1 : (dataToExport || []);
+                const start1 = currentQNum;
+                const end1 = currentQNum + list1.length - 1;
+                bodyContent += `<div class="section-title">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN (6.0 điểm)</div>`;
+                bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start1} đến câu ${end1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án. Mỗi câu đúng được 0.5 điểm.</div>`;
+
+                list1.forEach((q) => {
+                    const optA = cleanOptionText(q.options?.[0] || '');
+                    const optB = cleanOptionText(q.options?.[1] || '');
+                    const optC = cleanOptionText(q.options?.[2] || '');
+                    const optD = cleanOptionText(q.options?.[3] || '');
+                    const isA = q.correctAnswerIndex === 0 ? '*' : '';
+                    const isB = q.correctAnswerIndex === 1 ? '*' : '';
+                    const isC = q.correctAnswerIndex === 2 ? '*' : '';
+                    const isD = q.correctAnswerIndex === 3 ? '*' : '';
+                    bodyContent += `
+                            <div class="question-block">
+                                <b>Câu ${currentQNum}:</b> ${q.question}<br>
+                                <p class="option">A. ${optA}${isA}</p>
+                                <p class="option">B. ${optB}${isB}</p>
+                                <p class="option">C. ${optC}${isC}</p>
+                                <p class="option">D. ${optD}${isD}</p>
+                            </div>`;
+                    numberedItems.push({ num: currentQNum, q });
+                    currentQNum++;
+                });
+            }
+
+            if (part2.length > 0) {
+                const start2 = currentQNum;
+                const end2 = currentQNum + part2.length - 1;
+                const guide2 = part2.length === 1
+                    ? `Thí sinh trả lời câu ${start2}. Trong mỗi ý a), b), c), d), thí sinh chọn Đúng hoặc Sai. Điểm tối đa là 2.0 điểm (Đúng 1 ý: 0.2đ; 2 ý: 0.5đ; 3 ý: 1.0đ; 4 ý: 2.0đ).`
+                    : `Thí sinh trả lời từ câu ${start2} đến câu ${end2}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai. Điểm tối đa mỗi câu là 1.0 điểm (Đúng 1 ý: 0.1đ; 2 ý: 0.25đ; 3 ý: 0.5đ; 4 ý: 1.0đ).`;
+                bodyContent += `<div class="section-title">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI (2.0 điểm)</div>`;
+                bodyContent += `<div class="section-guide">${guide2}</div>`;
+
+                part2.forEach((q) => {
+                    if (isCv7991TrueFalseItem(q)) {
+                        bodyContent += `<div class="question-block"><b>Câu ${currentQNum}:</b> ${q.question}<br>`;
+                        getCv7991TrueFalseItems(q).forEach((item, sIdx) => {
+                            const label = String.fromCharCode(97 + sIdx);
+                            const tag = item.isCorrect ? '[Đúng]' : '[Sai]';
+                            bodyContent += `<div class="tf-item">${label}) ${item.text} ${tag}</div>`;
+                        });
+                        bodyContent += `</div>`;
+                    } else {
+                        const tag = q.correctAnswerIndex === 0 ? '[Đúng]' : '[Sai]';
+                        bodyContent += `
+                                <div class="question-block">
+                                    <b>Câu ${currentQNum}:</b> ${q.question}<br>
+                                    <div class="tf-item">a) Mệnh đề trên là ${tag}</div>
+                                </div>`;
+                    }
+                    numberedItems.push({ num: currentQNum, q });
+                    currentQNum++;
+                });
+            }
+
+            if (part3.length > 0) {
+                const start3 = currentQNum;
+                const end3 = currentQNum + part3.length - 1;
+                bodyContent += `<div class="section-title">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN (2.0 điểm)</div>`;
+                bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start3} đến câu ${end3}. Thí sinh chỉ điền số kết quả vào ô trả lời. Mỗi câu đúng được 0.5 điểm.</div>`;
+
+                part3.forEach((q) => {
+                    const ans = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");
+                    bodyContent += `
+                            <div class="question-block">
+                                <b>Câu ${currentQNum}:</b> ${q.question}<br>
+                                <div class="answer-line">Đáp án: ${ans}</div>
+                            </div>`;
+                    numberedItems.push({ num: currentQNum, q });
+                    currentQNum++;
+                });
+            }
+
+            const key = buildCv7991AnswerKey(numberedItems);
+            bodyContent += `
+                    <div class="answer-key">
+                        <h2>BẢNG ĐÁP ÁN</h2>
+                        <p>Đáp án:</p>
+                        ${key.mcLine ? `<p>${key.mcLine}</p>` : ""}
+                        ${key.tfLines.map((line) => `<p>${line}</p>`).join("")}
+                        ${key.saLine ? `<p>${key.saLine}</p>` : ""}
+                    </div>`;
+            return bodyContent;
+        };
+
+        const buildCv7991ExportText = (dataToExport, mode) => {
+            let text = "ĐỀ KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT\nMôn thi: TOÁN HỌC - Thời gian làm bài: 45 phút\n\n";
+            if (mode !== "quiz") {
+                (dataToExport || []).forEach((essay, i) => {
+                    text += `Bài ${i + 1}: ${essay.question}\nLời giải: ${essay.solution}\n\n`;
+                });
+                return text;
+            }
+
+            const { part1, part2, part3 } = collectCv7991ExportParts(dataToExport);
+            const numberedItems = [];
+            let cur = 1;
+
+            if (part1.length > 0 || (part2.length === 0 && part3.length === 0)) {
+                const l1 = part1.length > 0 ? part1 : (dataToExport || []);
+                text += `PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN (6.0 điểm)\nThí sinh trả lời từ câu ${cur} đến câu ${cur + l1.length - 1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án. Mỗi câu đúng được 0.5 điểm.\n\n`;
+                l1.forEach((q) => {
+                    text += `Câu ${cur}: ${q.question}\n`;
+                    text += `A. ${cleanOptionText(q.options?.[0] || '')}${q.correctAnswerIndex === 0 ? '*' : ''}\n`;
+                    text += `B. ${cleanOptionText(q.options?.[1] || '')}${q.correctAnswerIndex === 1 ? '*' : ''}\n`;
+                    text += `C. ${cleanOptionText(q.options?.[2] || '')}${q.correctAnswerIndex === 2 ? '*' : ''}\n`;
+                    text += `D. ${cleanOptionText(q.options?.[3] || '')}${q.correctAnswerIndex === 3 ? '*' : ''}\n\n`;
+                    numberedItems.push({ num: cur, q });
+                    cur++;
+                });
+            }
+
+            if (part2.length > 0) {
+                const guide2 = part2.length === 1
+                    ? `Thí sinh trả lời câu ${cur}. Trong mỗi ý a), b), c), d), thí sinh chọn Đúng hoặc Sai. Điểm tối đa là 2.0 điểm (Đúng 1 ý: 0.2đ; 2 ý: 0.5đ; 3 ý: 1.0đ; 4 ý: 2.0đ).`
+                    : `Thí sinh trả lời từ câu ${cur} đến câu ${cur + part2.length - 1}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai.`;
+                text += `PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI (2.0 điểm)\n${guide2}\n\n`;
+                part2.forEach((q) => {
+                    text += `Câu ${cur}: ${q.question}\n`;
+                    if (isCv7991TrueFalseItem(q)) {
+                        getCv7991TrueFalseItems(q).forEach((item, sIdx) => {
+                            const label = String.fromCharCode(97 + sIdx);
+                            const tag = item.isCorrect ? '[Đúng]' : '[Sai]';
+                            text += `${label}) ${item.text} ${tag}\n`;
+                        });
+                        text += `\n`;
+                    } else {
+                        const tag = q.correctAnswerIndex === 0 ? '[Đúng]' : '[Sai]';
+                        text += `a) Mệnh đề trên là ${tag}\n\n`;
+                    }
+                    numberedItems.push({ num: cur, q });
+                    cur++;
+                });
+            }
+
+            if (part3.length > 0) {
+                text += `PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN (2.0 điểm)\nThí sinh trả lời từ câu ${cur} đến câu ${cur + part3.length - 1}. Thí sinh chỉ điền số kết quả vào ô trả lời. Mỗi câu đúng được 0.5 điểm.\n\n`;
+                part3.forEach((q) => {
+                    const ans = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");
+                    text += `Câu ${cur}: ${q.question}\nĐáp án: ${ans}\n\n`;
+                    numberedItems.push({ num: cur, q });
+                    cur++;
+                });
+            }
+
+            const key = buildCv7991AnswerKey(numberedItems);
+            text += `BẢNG ĐÁP ÁN\nĐáp án:\n`;
+            if (key.mcLine) text += `${key.mcLine}\n`;
+            key.tfLines.forEach((line) => { text += `${line}\n`; });
+            if (key.saLine) text += `${key.saLine}\n`;
+            return text;
         };
 
         const buildSimpleAnswerKeyHtml = (quizItems) => {
@@ -14127,7 +14417,21 @@ module.exports = {
                                 </div>
                             )}
 
-                            {q.type === "true-false" && (
+                            {q.type === "true-false" && isCv7991TrueFalseItem(q) && (
+                                <div className="space-y-3 z-10">
+                                    {getCv7991TrueFalseItems(q).map((item, sIdx) => (
+                                        <div key={sIdx} className={`p-4 border-2 rounded-2xl flex items-start gap-3 ${showAns ? (item.isCorrect ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-300') : 'border-gray-200 bg-white'}`}>
+                                            <span className={`w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${showAns && item.isCorrect ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}>{String.fromCharCode(97 + sIdx)}</span>
+                                            <div className="flex-1 text-xl"><MathText text={item.text} /></div>
+                                            {showAns && (
+                                                <span className={`px-3 py-1 rounded-lg text-sm font-black ${item.isCorrect ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{item.isCorrect ? '[ĐÚNG]' : '[SAI]'}</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {q.type === "true-false" && !isCv7991TrueFalseItem(q) && (
                                 <div className="flex gap-8 justify-center z-10">
                                     {q.options.map((opt, i) => {
                                         let containerClass = "p-8 rounded-2xl text-2xl border-2 transition-all duration-300 cursor-pointer flex flex-col items-center gap-3 relative overflow-hidden presentation-option ";
@@ -14156,13 +14460,12 @@ module.exports = {
                                         </div>
                                         <div className="flex gap-4 items-center">
                                             <input
-                                                type={q.type === "short-answer" ? "number" : "text"}
-                                                step="any"
+                                                type="text"
                                                 value={fillBlankAnswer}
                                                 onChange={(e) => setFillBlankAnswer(e.target.value)}
                                                 disabled={showAns}
                                                 className="flex-1 p-4 border-2 border-gray-300 rounded-xl text-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
-                                                placeholder="Nhập đáp án của bạn..."
+                                                placeholder={q.type === "short-answer" ? "Nhập đáp án số..." : "Nhập đáp án của bạn..."}
                                             />
                                             {!showAns && (
                                                 <button
@@ -14396,7 +14699,10 @@ module.exports = {
                 question: item.question,
                 options: item.options ? [...item.options] : undefined,
                 correctAnswerIndex: item.correctAnswerIndex !== undefined ? item.correctAnswerIndex : -1,
-                solution: item.solution
+                solution: item.solution,
+                subItems: Array.isArray(item.subItems) ? item.subItems.map((sub) => ({ ...sub })) : undefined,
+                correct_answers: Array.isArray(item.correct_answers) ? [...item.correct_answers] : undefined,
+                correctAnswer: item.correctAnswer
             })));
 
             const handleUpdate = (index, field, value) => {
@@ -14419,6 +14725,24 @@ module.exports = {
                 }));
             };
 
+            const handleUpdateTfSubItem = (qIndex, sIdx, field, value) => {
+                setEditedData(prev => prev.map((item, i) => {
+                    if (i !== qIndex) return item;
+                    const items = getCv7991TrueFalseItems(item).map((sub, j) => {
+                        if (j !== sIdx) return { ...sub };
+                        if (field === 'text') return { ...sub, text: value };
+                        if (field === 'isCorrect') return { ...sub, isCorrect: !!value };
+                        return { ...sub };
+                    });
+                    return {
+                        ...item,
+                        options: items.map((sub) => sub.text),
+                        subItems: items,
+                        correct_answers: items.map((sub) => !!sub.isCorrect)
+                    };
+                }));
+            };
+
             const handleAddQuestion = () => {
                 if (mode === 'quiz') {
                     // Lấy loại trắc nghiệm từ câu hỏi đầu tiên hoặc mặc định multiple-choice
@@ -14430,10 +14754,24 @@ module.exports = {
                             { question: "Câu hỏi mới...", options: ["A", "B", "C", "D"], correctAnswerIndex: 0, type: quizType }
                         ]);
                     } else if (quizType === 'true-false') {
-                        setEditedData(prev => [
-                            ...prev,
-                            { question: "Câu hỏi đúng-sai mới...", options: ["Đúng", "Sai"], correctAnswerIndex: 0, type: quizType }
-                        ]);
+                        const useFour = editedData.some(isCv7991TrueFalseItem);
+                        if (useFour) {
+                            const tfItems = [
+                                { text: "Mệnh đề a", isCorrect: true },
+                                { text: "Mệnh đề b", isCorrect: false },
+                                { text: "Mệnh đề c", isCorrect: true },
+                                { text: "Mệnh đề d", isCorrect: false }
+                            ];
+                            setEditedData(prev => [
+                                ...prev,
+                                { question: "Ngữ cảnh bài toán chung...", options: tfItems.map((s) => s.text), correct_answers: tfItems.map((s) => s.isCorrect), subItems: tfItems, type: quizType }
+                            ]);
+                        } else {
+                            setEditedData(prev => [
+                                ...prev,
+                                { question: "Câu hỏi đúng-sai mới...", options: ["Đúng", "Sai"], correctAnswerIndex: 0, type: quizType }
+                            ]);
+                        }
                     } else if (quizType === 'fill-blank') {
                         setEditedData(prev => [
                             ...prev,
@@ -14468,7 +14806,13 @@ module.exports = {
                 // Validation for quiz mode
                 if (mode === 'quiz') {
                     for (const q of editedData) {
-                        if (q.type === 'multiple-choice' || q.type === 'true-false') {
+                        if (q.type === 'true-false' && isCv7991TrueFalseItem(q)) {
+                            const items = getCv7991TrueFalseItems(q);
+                            if (items.some((item) => !String(item.text || "").trim())) {
+                                alert(`Vui lòng nhập đủ 4 mệnh đề a, b, c, d cho câu đúng/sai!`);
+                                return;
+                            }
+                        } else if (q.type === 'multiple-choice' || q.type === 'true-false') {
                             if (q.correctAnswerIndex === -1 || q.correctAnswerIndex === undefined) {
                                 alert(`Vui lòng chọn đáp án đúng cho câu hỏi!`);
                                 return;
@@ -14546,6 +14890,30 @@ module.exports = {
                                                 </div>
                                             ))}
                                         </div>
+                                    ) : item.type === 'true-false' && isCv7991TrueFalseItem(item) ? (
+                                        <div className="space-y-3">
+                                            <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">4 mệnh đề a, b, c, d — bấm [ĐÚNG]/[SAI] để đổi đáp án</p>
+                                            {getCv7991TrueFalseItems(item).map((sub, sIdx) => (
+                                                <div key={sIdx} className={`flex items-start gap-3 p-3 border rounded-xl ${sub.isCorrect ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-200'}`}>
+                                                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${sub.isCorrect ? 'bg-green-600 text-white' : 'bg-red-500 text-white'}`}>
+                                                        {String.fromCharCode(97 + sIdx)}
+                                                    </span>
+                                                    <input
+                                                        className="flex-1 bg-white border border-gray-200 rounded-lg p-2 outline-none text-base"
+                                                        value={sub.text}
+                                                        onChange={(e) => handleUpdateTfSubItem(i, sIdx, 'text', e.target.value)}
+                                                        placeholder={`Nội dung mệnh đề ${String.fromCharCode(97 + sIdx)}`}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleUpdateTfSubItem(i, sIdx, 'isCorrect', !sub.isCorrect)}
+                                                        className={`px-3 py-2 rounded-lg text-xs font-black whitespace-nowrap shadow-sm ${sub.isCorrect ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                                                    >
+                                                        {sub.isCorrect ? '[ĐÚNG]' : '[SAI]'}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
                                     ) : item.type === 'true-false' ? (
                                         /* TRUE FALSE OPTIONS */
                                         <div className="flex gap-6 justify-center">
@@ -14568,14 +14936,13 @@ module.exports = {
                                     ) : (item.type === 'fill-blank' || item.type === 'short-answer') ? (
                                         /* FILL BLANK OR SHORT ANSWER */
                                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                                            <label className="block text-sm font-bold text-blue-700 mb-2">Đáp án đúng {item.type === 'short-answer' ? '(kết quả số)' : ''}:</label>
+                                            <label className="block text-sm font-bold text-blue-700 mb-2">Đáp án đúng {item.type === 'short-answer' ? '(chỉ số: 25, 3.5, -4, 1/2)' : ''}:</label>
                                             <input
-                                                type={item.type === 'short-answer' ? "number" : "text"}
-                                                step="any"
+                                                type="text"
                                                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-200 outline-none text-base"
                                                 value={item.correctAnswer || ""}
-                                                onChange={(e) => handleUpdate(i, 'correctAnswer', e.target.value)}
-                                                placeholder="Nhập đáp án đúng..."
+                                                onChange={(e) => handleUpdate(i, 'correctAnswer', item.type === 'short-answer' ? normalizeShortAnswerValue(e.target.value) : e.target.value)}
+                                                placeholder={item.type === 'short-answer' ? "Nhập đáp án số..." : "Nhập đáp án đúng..."}
                                             />
                                         </div>
                                     ) : item.type === 'matching' ? (
@@ -14698,7 +15065,7 @@ module.exports = {
                 elapsedSeconds: 0
             });
             const [sourceOnly, setSourceOnly] = useState(true);
-            const [synthCount, setSynthCount] = useState(20);
+            const [synthCount, setSynthCount] = useState(17);
             const [synthForm, setSynthForm] = useState('cv7991');
             const [synthLevel, setSynthLevel] = useState('Hỗn hợp');
             const [retryCount, setRetryCount] = useState(0);
@@ -15113,7 +15480,7 @@ module.exports = {
 
                     Định dạng JSON Output bắt buộc:
                     - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice"}
-                    - true-false: {"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0,"type":"true-false"}
+                    - true-false: {"question":"[Ngữ cảnh/chủ đề bài toán dẫn chung]...","options":["Nội dung mệnh đề a","Nội dung mệnh đề b","Nội dung mệnh đề c","Nội dung mệnh đề d"],"correct_answers":[true,false,true,false],"type":"true-false"}
                     - fill-blank: {"question":"... có chỗ trống ______","correctAnswer":"đáp án đúng","type":"fill-blank"}
                     - short-answer: {"question":"... (kết quả là số)","correctAnswer": "12.5","type":"short-answer"}
                     - matching: {"question":"...","columnA":["A1","A2"],"columnB":["B1","B2"],"correctMatches":[0,1],"type":"matching"}
@@ -15198,13 +15565,13 @@ module.exports = {
                         if (t.quizType === "multiple-choice") {
                             return `${basePrompt} - Loại: Trắc nghiệm nhiều lựa chọn (4 phương án A,B,C,D)`;
                         } else if (t.quizType === "true-false") {
-                            return `${basePrompt} - Loại: Trắc nghiệm đúng-sai (2 phương án Đúng/Sai)`;
+                            return `${basePrompt} - Loại: Trắc nghiệm đúng-sai 4 ý a, b, c, d trên 1 ngữ cảnh/bài toán chung (type: true-false, options 4 mệnh đề + correct_answers [bool,bool,bool,bool])`;
                         } else if (t.quizType === "fill-blank") {
                             return `${basePrompt} - Loại: Điền khuyết (có chỗ trống ______)`;
                         } else if (t.quizType === "matching") {
                             return `${basePrompt} - Loại: Nối ô (2 cột A và B)`;
                         } else if (t.quizType === "short-answer") {
-                            return `${basePrompt} - Loại: Trả lời ngắn (Trả về 1 con số duy nhất. Câu hỏi phải định hướng rõ để người dùng chỉ điền số kết quả)`;
+                            return `${basePrompt} - Loại: Trả lời ngắn (correctAnswer CHỈ CHỨA SỐ: nguyên, thập phân hoặc phân số ngắn gọn, ví dụ "25", "3.5", "-4", "1/2". Không kèm chữ/đơn vị)`;
                         }
                         return basePrompt;
                     }).join('\n');
@@ -15223,7 +15590,7 @@ module.exports = {
 
                     Chi tiết từng loại:
                     - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice"}
-                    - true-false: {"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0,"type":"true-false"}
+                    - true-false: {"question":"[Ngữ cảnh/chủ đề bài toán dẫn chung]...","options":["Nội dung mệnh đề a","Nội dung mệnh đề b","Nội dung mệnh đề c","Nội dung mệnh đề d"],"correct_answers":[true,false,true,false],"type":"true-false"}
                     - fill-blank: {"question":"Câu hỏi có chỗ trống ______","correctAnswer":"đáp án đúng","type":"fill-blank"}
                     - short-answer: {"question":"Câu hỏi định hướng kết quả số","correctAnswer":"12.5","type":"short-answer"}
                     - matching: {"question":"Chủ đề nối","columnA":["A1","A2","A3"],"columnB":["B1","B2","B3"],"correctMatches":[0,1,2],"type":"matching"}
@@ -15292,7 +15659,7 @@ module.exports = {
                     showSourceNotice(validationMessage);
                     return;
                 }
-                const count = Math.max(1, Math.min(50, Number(synthCount) || 10));
+                const count = synthForm === 'cv7991' ? 17 : Math.max(1, Math.min(50, Number(synthCount) || 10));
                 const isEssay = synthForm === 'essay';
                 const levelText = synthLevel === 'Hỗn hợp'
                     ? 'Hỗn hợp phân hóa 4 mức độ: Nhận biết, Thông hiểu, Vận dụng, Vận dụng thực tế (chia đều nếu được).'
@@ -15302,7 +15669,12 @@ module.exports = {
                 if (isEssay) {
                     typeInstruction = 'Hình thức: Tự luận có lời giải chi tiết.';
                 } else if (synthForm === 'cv7991') {
-                    typeInstruction = 'Hình thức: ĐỀ THI CHUẨN CÔNG VĂN 7991 / BGDĐT (18 câu - 10.0 điểm) gồm 03 phần: Phần I: 12 câu trắc nghiệm 4 lựa chọn (type: multiple-choice, mỗi câu 0.5đ = 6.0đ); Phần II: 2 câu Đúng/Sai 4 ý (type: true-false, mỗi câu 1.0đ = 2.0đ); Phần III: 4 câu Trả lời ngắn kết quả số ngắn gọn (type: short-answer, mỗi câu 0.5đ = 2.0đ). Tổng cộng 18 câu = 10.0 điểm.';
+                    typeInstruction = `Hình thức: ĐỀ THI CHUẨN CÔNG VĂN 7991 / BGDĐT (17 câu - 10.0 điểm) gồm ĐÚNG 03 phần:
+- Phần I (Câu 1 đến Câu 12): 12 câu trắc nghiệm 4 lựa chọn A, B, C, D (type: "multiple-choice", mỗi câu 0.5đ = 6.0đ). Chỉ 1 đáp án đúng.
+- Phần II (Câu 13): ĐÚNG 1 câu trắc nghiệm Đúng/Sai (type: "true-false", tổng 2.0đ) dựa trên 1 chủ đề/ngữ cảnh/bài toán thực tế chung sâu sắc. Gồm 4 mệnh đề a, b, c, d. Cấu trúc JSON bắt buộc:
+  {"question": "[Ngữ cảnh/chủ đề bài toán dẫn chung]...", "options": ["Nội dung mệnh đề a", "Nội dung mệnh đề b", "Nội dung mệnh đề c", "Nội dung mệnh đề d"], "correct_answers": [true, false, true, false], "type": "true-false"}
+- Phần III (Câu 14 đến Câu 17): ĐÚNG 4 câu trắc nghiệm trả lời ngắn (type: "short-answer", mỗi câu 0.5đ = 2.0đ). Câu hỏi yêu cầu tính toán ra kết quả số cụ thể. Trường "correctAnswer" CHỈ CHỨA SỐ (số nguyên, số thập phân hoặc phân số ngắn gọn, ví dụ "25", "3.5", "-4", "1/2"), TUYỆT ĐỐI KHÔNG chứa chữ cái hay đơn vị đo.
+Tổng cộng toàn đề đúng 17 câu = 10.0 điểm.`;
                 } else if (synthForm === 'mixed-quiz') {
                     typeInstruction = 'Hình thức TỔNG HỢP: trộn Nhiều lựa chọn, Đúng/Sai, Điền khuyết, Trả lời ngắn, Nối ô (mỗi loại ít nhất 1 câu nếu số câu >= 5).';
                 } else if (synthForm === 'multiple-choice') {
@@ -15338,9 +15710,11 @@ QUY TẮC CHẤT LƯỢNG:
 
 Chi tiết từng loại:
 - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice"}
-- true-false: {"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0,"type":"true-false"}
+- true-false: ${synthForm === 'cv7991'
+    ? '{"question":"[Ngữ cảnh/chủ đề bài toán dẫn chung]...","options":["Nội dung mệnh đề a","Nội dung mệnh đề b","Nội dung mệnh đề c","Nội dung mệnh đề d"],"correct_answers":[true,false,true,false],"type":"true-false"}'
+    : '{"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0,"type":"true-false"}'}
 - fill-blank: {"question":"Câu hỏi có chỗ trống ______","correctAnswer":"đáp án đúng","type":"fill-blank"}
-- short-answer: {"question":"Câu hỏi định hướng kết quả số","correctAnswer":"12.5","type":"short-answer"}
+- short-answer: {"question":"Câu hỏi định hướng kết quả số","correctAnswer":"${synthForm === 'cv7991' ? '25' : '12.5'}","type":"short-answer"}
 - matching: {"question":"Chủ đề nối","columnA":["A1","A2","A3"],"columnB":["B1","B2","B3"],"correctMatches":[0,1,2],"type":"matching"}
 
 NGUỒN KIẾN THỨC:
@@ -15404,7 +15778,11 @@ ${sourceContext}`;
                         .options-table { width: 100%; border-collapse: collapse; margin-top: 4pt; }
                         .options-table td { padding: 2pt 0; vertical-align: top; }
                         .tf-item { margin-left: 20pt; margin-top: 2pt; margin-bottom: 2pt; }
+                        .option { margin: 2pt 0; }
                         .answer-line { margin-top: 4pt; font-weight: bold; }
+                        .answer-key { margin-top: 24px; border-top: 1px solid #000; padding-top: 10px; }
+                        .answer-key h2 { font-size: 12pt; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase; }
+                        .answer-key p { margin: 0; line-height: 1.8; font-weight: bold; }
                         .essay-block { margin-bottom: 20pt; }
                         .solution { margin-top: 10pt; padding: 10pt; background: #f5f5f5; border-left: 4px solid #4CAF50; }
                     </style>
@@ -15416,96 +15794,7 @@ ${sourceContext}`;
                     return;
                 }
 
-                let bodyContent = `<h1>ĐỀ MINH HỌA KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT</h1>`;
-                bodyContent += `<div class="sub-title">Môn thi: TOÁN HỌC - Thời gian làm bài: 45 phút - Thang điểm: 10 điểm</div>`;
-
-                if (mode === "quiz") {
-                    const part1 = dataToExport.filter(q => q.type === "multiple-choice");
-                    const part2 = dataToExport.filter(q => q.type === "true-false");
-                    const part3 = dataToExport.filter(q => q.type === "short-answer" || q.type === "fill-blank" || q.type === "matching");
-
-                    let currentQNum = 1;
-
-                    // PHẦN I
-                    if (part1.length > 0 || (part2.length === 0 && part3.length === 0)) {
-                        const list1 = part1.length > 0 ? part1 : dataToExport;
-                        const start1 = currentQNum;
-                        const end1 = currentQNum + list1.length - 1;
-                        bodyContent += `<div class="section-title">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN (6.0 điểm)</div>`;
-                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start1} đến câu ${end1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án. Mỗi câu đúng được 0.5 điểm.</div>`;
-                        
-                        list1.forEach((q) => {
-                            const optA = cleanOptionText(q.options?.[0] || '');
-                            const optB = cleanOptionText(q.options?.[1] || '');
-                            const optC = cleanOptionText(q.options?.[2] || '');
-                            const optD = cleanOptionText(q.options?.[3] || '');
-                            const isA = q.correctAnswerIndex === 0 ? '*' : '';
-                            const isB = q.correctAnswerIndex === 1 ? '*' : '';
-                            const isC = q.correctAnswerIndex === 2 ? '*' : '';
-                            const isD = q.correctAnswerIndex === 3 ? '*' : '';
-
-                            bodyContent += `
-                            <div class="question-block">
-                                <b>Câu ${currentQNum}:</b> ${q.question}<br>
-                                <table class="options-table">
-                                    <tr><td width="50%">A. ${optA}${isA}</td><td width="50%">B. ${optB}${isB}</td></tr>
-                                    <tr><td width="50%">C. ${optC}${isC}</td><td width="50%">D. ${optD}${isD}</td></tr>
-                                </table>
-                            </div>`;
-                            currentQNum++;
-                        });
-                    }
-
-                    // PHẦN II
-                    if (part2.length > 0) {
-                        const start2 = currentQNum;
-                        const end2 = currentQNum + part2.length - 1;
-                        bodyContent += `<div class="section-title">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI (2.0 điểm)</div>`;
-                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start2} đến câu ${end2}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai. Điểm tối đa mỗi câu là 1.0 điểm (Đúng 1 ý: 0.1đ; 2 ý: 0.25đ; 3 ý: 0.5đ; 4 ý: 1.0đ).</div>`;
-
-                        part2.forEach((q) => {
-                            if (Array.isArray(q.subItems) && q.subItems.length > 0) {
-                                bodyContent += `<div class="question-block"><b>Câu ${currentQNum}:</b> ${q.question}<br>`;
-                                q.subItems.forEach((item, sIdx) => {
-                                    const label = String.fromCharCode(97 + sIdx);
-                                    const tag = item.isCorrect ? '[Đúng]' : '[Sai]';
-                                    bodyContent += `<div class="tf-item">${label}) ${item.text} ${tag}</div>`;
-                                });
-                                bodyContent += `</div>`;
-                            } else {
-                                const tag = q.correctAnswerIndex === 0 ? '[Đúng]' : '[Sai]';
-                                bodyContent += `
-                                <div class="question-block">
-                                    <b>Câu ${currentQNum}:</b> ${q.question}<br>
-                                    <div class="tf-item">a) Mệnh đề trên là ${tag}</div>
-                                </div>`;
-                            }
-                            currentQNum++;
-                        });
-                    }
-
-                    // PHẦN III
-                    if (part3.length > 0) {
-                        const start3 = currentQNum;
-                        const end3 = currentQNum + part3.length - 1;
-                        bodyContent += `<div class="section-title">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN (2.0 điểm)</div>`;
-                        bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start3} đến câu ${end3}. Thí sinh ghi đáp án vào ô trả lời. Mỗi câu đúng được 0.5 điểm.</div>`;
-
-                        part3.forEach((q) => {
-                            const ans = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");
-                            bodyContent += `
-                            <div class="question-block">
-                                <b>Câu ${currentQNum}:</b> ${q.question}<br>
-                                <div class="answer-line">Đáp án: ${ans}</div>
-                            </div>`;
-                            currentQNum++;
-                        });
-                    }
-                } else {
-                    dataToExport.forEach((essay, i) => {
-                        bodyContent += `<div class="essay-block"><b>Bài ${i + 1}:</b> ${essay.question}<div class="solution"><b>Lời giải:</b> ${essay.solution}</div></div>`;
-                    });
-                }
+                const bodyContent = buildCv7991ExportHtml(dataToExport, mode);
 
                 try {
                     saveDocxFromHtml(header + bodyContent + "</body></html>", `De_Thi_CV7991.docx`);
@@ -15592,46 +15881,7 @@ ${sourceContext}`;
                     showSourceNotice("Chưa có câu hỏi để xuất!");
                     return;
                 }
-                let text = "ĐỀ KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT\nMôn thi: TOÁN HỌC - Thời gian làm bài: 45 phút\n\n";
-                if (mode === "quiz") {
-                    const part1 = dataToExport.filter(q => q.type === "multiple-choice");
-                    const part2 = dataToExport.filter(q => q.type === "true-false");
-                    const part3 = dataToExport.filter(q => q.type === "short-answer" || q.type === "fill-blank" || q.type === "matching");
-                    let cur = 1;
-                    if (part1.length > 0 || (part2.length === 0 && part3.length === 0)) {
-                        const l1 = part1.length > 0 ? part1 : dataToExport;
-                        text += `PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN\nThí sinh trả lời từ câu ${cur} đến câu ${cur + l1.length - 1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án.\n\n`;
-                        l1.forEach(q => {
-                            text += `Câu ${cur}: ${q.question}\n`;
-                            text += `A. ${cleanOptionText(q.options?.[0] || '')}${q.correctAnswerIndex === 0 ? '*' : ''}\n`;
-                            text += `B. ${cleanOptionText(q.options?.[1] || '')}${q.correctAnswerIndex === 1 ? '*' : ''}\n`;
-                            text += `C. ${cleanOptionText(q.options?.[2] || '')}${q.correctAnswerIndex === 2 ? '*' : ''}\n`;
-                            text += `D. ${cleanOptionText(q.options?.[3] || '')}${q.correctAnswerIndex === 3 ? '*' : ''}\n\n`;
-                            cur++;
-                        });
-                    }
-                    if (part2.length > 0) {
-                        text += `PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI\nThí sinh trả lời từ câu ${cur} đến câu ${cur + part2.length - 1}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai.\n\n`;
-                        part2.forEach(q => {
-                            text += `Câu ${cur}: ${q.question}\n`;
-                            const tag = q.correctAnswerIndex === 0 ? '[Đúng]' : '[Sai]';
-                            text += `a) Mệnh đề trên là ${tag}\n\n`;
-                            cur++;
-                        });
-                    }
-                    if (part3.length > 0) {
-                        text += `PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN\nThí sinh trả lời từ câu ${cur} đến câu ${cur + part3.length - 1}. Thí sinh ghi đáp án vào ô trả lời.\n\n`;
-                        part3.forEach(q => {
-                            const ans = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");
-                            text += `Câu ${cur}: ${q.question}\nĐáp án: ${ans}\n\n`;
-                            cur++;
-                        });
-                    }
-                } else {
-                    dataToExport.forEach((essay, i) => {
-                        text += `Bài ${i + 1}: ${essay.question}\nLời giải: ${essay.solution}\n\n`;
-                    });
-                }
+                const text = buildCv7991ExportText(dataToExport, mode);
                 const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
                 saveAs(blob, "De_Thi_CV7991.txt");
             };
@@ -16113,16 +16363,17 @@ ${sourceContext}`;
                                             <select
                                                 value={synthCount}
                                                 onChange={(e) => setSynthCount(parseInt(e.target.value, 10) || 20)}
-                                                className="w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
+                                                disabled={synthForm === 'cv7991'}
+                                                className="w-full border border-violet-200 rounded-lg p-2 bg-white text-sm disabled:bg-slate-100 disabled:text-slate-500"
                                             >
                                                 <option value={20}>20 câu (Chuẩn 100% TN - 10đ)</option>
-                                                <option value={18}>18 câu (Chuẩn CV 7991 - 10đ)</option>
+                                                <option value={17}>17 câu (Chuẩn CV 7991 - 10đ)</option>
                                                 <option value={5}>5 câu</option>
                                                 <option value={10}>10 câu</option>
                                                 <option value={15}>15 câu</option>
                                                 <option value={25}>25 câu</option>
                                                 <option value={30}>30 câu</option>
-                                                {![5, 10, 15, 18, 20, 25, 30].includes(synthCount) && (
+                                                {![5, 10, 15, 17, 20, 25, 30].includes(synthCount) && (
                                                     <option value={synthCount}>{synthCount} câu (tùy chỉnh)</option>
                                                 )}
                                             </select>
@@ -16132,7 +16383,8 @@ ${sourceContext}`;
                                                 max="50"
                                                 value={synthCount}
                                                 onChange={(e) => setSynthCount(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))}
-                                                className="w-20 border border-violet-200 rounded-lg p-2 bg-white text-sm"
+                                                disabled={synthForm === 'cv7991'}
+                                                className="w-20 border border-violet-200 rounded-lg p-2 bg-white text-sm disabled:bg-slate-100 disabled:text-slate-500"
                                                 title="Tùy chỉnh số câu"
                                             />
                                         </div>
@@ -16144,12 +16396,12 @@ ${sourceContext}`;
                                             onChange={(e) => {
                                                 const val = e.target.value;
                                                 setSynthForm(val);
-                                                if (val === 'cv7991') setSynthCount(18);
+                                                if (val === 'cv7991') setSynthCount(17);
                                                 else if (val === 'multiple-choice') setSynthCount(20);
                                             }}
                                             className="mt-1 w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
                                         >
-                                            <option value="cv7991">⭐ Chuẩn Công văn 7991 (18 câu - 10đ: 12 TN + 2 Đ/S + 4 TL ngắn)</option>
+                                            <option value="cv7991">⭐ Chuẩn Công văn 7991 (17 câu - 10đ: 12 TN + 1 Đ/S 4 ý + 4 TL ngắn)</option>
                                             <option value="multiple-choice">⭐ 100% Trắc nghiệm 4 lựa chọn (20 câu - 10đ: mỗi câu 0.5đ)</option>
                                             <option value="mixed-quiz">Trắc nghiệm tổng hợp</option>
                                             <option value="true-false">Đúng/Sai</option>
@@ -16310,7 +16562,8 @@ ${sourceContext}`;
                                                     const typeName = type === 'multiple-choice' ? 'Nhiều lựa chọn' :
                                                         type === 'true-false' ? 'Đúng/Sai' :
                                                             type === 'fill-blank' ? 'Điền khuyết' :
-                                                                type === 'short-answer' ? 'Trả lời ngắn' : 'Nối ô';
+                                                                type === 'short-answer' ? 'Trả lời ngắn' :
+                                                                    type === 'matching' ? 'Nối ô' : type;
                                                     return `${typeName}: ${count}`;
                                                 }).join(', ')}
                                             </span>
@@ -16353,11 +16606,13 @@ ${sourceContext}`;
                                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${q.type === 'multiple-choice' ? 'bg-blue-100 text-blue-700' :
                                                             q.type === 'true-false' ? 'bg-green-100 text-green-700' :
                                                                 q.type === 'fill-blank' ? 'bg-yellow-100 text-yellow-700' :
+                                                                    q.type === 'short-answer' ? 'bg-amber-100 text-amber-800' :
                                                                     'bg-purple-100 text-purple-700'
                                                             }`}>
                                                             {q.type === 'multiple-choice' ? '🔤 Nhiều lựa chọn' :
                                                                 q.type === 'true-false' ? '✅ Đúng/Sai' :
                                                                     q.type === 'fill-blank' ? '📝 Điền khuyết' :
+                                                                        q.type === 'short-answer' ? '🔢 Trả lời ngắn' :
                                                                         '🔗 Nối ô'}
                                                         </span>
                                                     </div>
@@ -16376,7 +16631,19 @@ ${sourceContext}`;
                                                 </div>
                                             )}
 
-                                            {q.type === "true-false" && (
+                                            {q.type === "true-false" && isCv7991TrueFalseItem(q) && (
+                                                <div className="space-y-2 pl-0 md:pl-12">
+                                                    {getCv7991TrueFalseItems(q).map((item, sIdx) => (
+                                                        <div key={sIdx} className={`p-3 border rounded-xl flex items-start gap-3 ${item.isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${item.isCorrect ? 'bg-green-600 text-white' : 'bg-red-500 text-white'}`}>{String.fromCharCode(97 + sIdx)}</span>
+                                                            <span className="flex-1 text-slate-700"><MathText text={item.text} /></span>
+                                                            <span className={`px-2 py-0.5 rounded text-xs font-black ${item.isCorrect ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{item.isCorrect ? '[ĐÚNG]' : '[SAI]'}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {q.type === "true-false" && !isCv7991TrueFalseItem(q) && (
                                                 <div className="flex gap-4 pl-0 md:pl-12">
                                                     {q.options.map((o, idx) => (
                                                         <div key={idx} className={`p-3 border rounded-xl flex items-center gap-3 transition ${idx === q.correctAnswerIndex ? 'bg-green-50 border-green-200 ring-1 ring-green-400' : 'bg-slate-50 border-slate-200 group-hover:bg-white'}`}>
@@ -16384,6 +16651,15 @@ ${sourceContext}`;
                                                             <span className="text-slate-700 font-medium">{o}</span>
                                                         </div>
                                                     ))}
+                                                </div>
+                                            )}
+
+                                            {q.type === "short-answer" && (
+                                                <div className="pl-0 md:pl-12">
+                                                    <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 inline-flex items-center gap-3">
+                                                        <span className="font-bold text-amber-800">Đáp án số:</span>
+                                                        <span className="text-2xl font-black text-amber-700 tracking-wide">{q.correctAnswer}</span>
+                                                    </div>
                                                 </div>
                                             )}
 
