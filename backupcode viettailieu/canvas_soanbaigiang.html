@@ -221,11 +221,26 @@
     .compact-ui input, .compact-ui select, .compact-ui textarea { padding: 0.3rem 0.5rem !important; font-size: 0.85rem !important; }
     .khbd-slide-stage-wrap { background:#0f172a; border-radius:12px; padding:12px; }
     .khbd-slide-stage { aspect-ratio: 16 / 9; width: 100%; background: linear-gradient(180deg,#f8fafc,#e2e8f0); border-radius: 8px; overflow: hidden; display:flex; align-items:stretch; cursor:pointer; }
-    .khbd-slide-card { flex:1; padding: 4% 5%; display:flex; flex-direction:column; justify-content:center; }
-    .khbd-slide-title { font-size: clamp(1.4rem, 2.6vw, 2.2rem); color:#0f4c81; margin:0 0 1rem; font-weight:800; }
+    .khbd-slide-card { flex:1; min-height:0; padding: 3.2% 4%; display:flex; flex-direction:column; justify-content:flex-start; overflow:hidden; }
+    .khbd-slide-titlecard { justify-content:center; align-items:center; text-align:center; }
+    .khbd-slide-kicker { font-size: clamp(.95rem, 1.6vw, 1.2rem); color:#0f4c81; font-weight:700; letter-spacing:.04em; text-transform:uppercase; margin:0 0 .6rem; }
+    .khbd-slide-title { font-size: clamp(1.4rem, 2.6vw, 2.2rem); color:#0f4c81; margin:0 0 .85rem; font-weight:800; }
     .khbd-slide-items { margin:0; padding-left: 1.2rem; font-size: clamp(1rem, 1.8vw, 1.35rem); line-height: 1.55; color:#1f2937; }
     .khbd-slide-items li { margin-bottom: .55rem; }
-    .khbd-slide-card[data-type="rule"] .khbd-slide-items { border: 2px solid #0f4c81; border-radius: 12px; background: #eff6ff; padding: 1rem 1rem 1rem 2.5rem; }
+    .khbd-slide-split { display:flex; gap: 1.1rem; flex:1; min-height:0; }
+    .khbd-slide-col-left { flex: 0 0 38%; max-width:38%; min-width:0; }
+    .khbd-slide-col-right { flex: 1 1 58%; min-width:0; }
+    .khbd-slide-problem, .khbd-slide-solution, .khbd-slide-rulebox { height:100%; border-radius:14px; padding:.9rem 1rem; overflow:auto; }
+    .khbd-slide-problem { background:#F1F5F9; border:1px solid #CBD5E1; }
+    .khbd-slide-solution { background:#FFFFFF; border:1px solid #E2E8F0; }
+    .khbd-slide-rulebox { background:#EFF6FF; border:2px solid #0F4C81; }
+    .khbd-slide-rule-label, .khbd-slide-col-label { display:inline-block; font-size:.78rem; font-weight:800; letter-spacing:.04em; color:#0F4C81; margin-bottom:.5rem; }
+    .khbd-step-badge { display:inline-flex; align-items:center; justify-content:center; min-width:4.4rem; padding:.12rem .45rem; margin-right:.4rem; border-radius:999px; background:#0F4C81; color:#fff; font-size:.78rem; font-weight:700; }
+    .khbd-slide-steps { list-style:none; margin:0; padding:0; font-size: clamp(1rem, 1.7vw, 1.28rem); line-height:1.45; color:#1f2937; }
+    .khbd-slide-steps li { margin-bottom:.55rem; }
+    .khbd-slide-hint { margin:.4rem 0 0; color:#64748b; font-style:italic; }
+    .khbd-slide-hintlist { margin-top:.6rem; padding-left:1rem; font-size:.95em; }
+    .khbd-slide-card[data-type="rule"] .khbd-slide-items { margin:0; padding-left: 1.2rem; }
     .khbd-slide-empty { margin:auto; color:#64748b; font-style:italic; }
     .khbd-slide-controls { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-top:.75rem; }
     .khbd-slide-counter { font-weight:700; min-width:7rem; }
@@ -1433,24 +1448,113 @@
 
   const MIN_COMPLETE_SLIDES = 15;
   const MAX_COMPLETE_SLIDES = 25;
+  const ALLOWED_TYPES = ["title", "intro", "explore", "rule", "example", "practice", "summary"];
+  const SPLIT_TYPES = { explore: 1, example: 1, practice: 1 };
+  const SLIDE_W = 13.333;
+  const SLIDE_H = 7.5;
 
   function strip(text) {
     return String(text || "").replace(/\s+/g, " ").trim();
   }
 
+  function isMetaInstruction(text) {
+    const t = strip(text);
+    if (!t) return true;
+    if (/^(hiển thị|liệt kê|xuất hiện)(?:\s|$)/i.test(t)) return true;
+    if (/^thực hiện phép(?: thế| cộng| trừ)?\.?$/i.test(t)) return true;
+    if (/^(click để|bấm để|hiện thị)(?:\s|$)/i.test(t)) return true;
+    return false;
+  }
+
+  function mapSuperscript(ch) {
+    const map = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "+": "⁺", "-": "⁻", "n": "ⁿ", "i": "ⁱ" };
+    return map[ch] || null;
+  }
+
+  function mapSubscript(ch) {
+    const map = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉", "+": "₊", "-": "₋", "a": "ₐ", "e": "ₑ", "i": "ᵢ", "o": "ₒ", "x": "ₓ", "n": "ₙ", "k": "ₖ", "m": "ₘ" };
+    return map[ch] || null;
+  }
+
+  function scriptRun(body, mapper, fallbackPrefix) {
+    const chars = String(body || "").split("");
+    if (chars.every(function (ch) { return mapper(ch) || ch === " "; })) {
+      return chars.map(function (ch) { return ch === " " ? " " : mapper(ch); }).join("");
+    }
+    return fallbackPrefix + body;
+  }
+
+  function envBodyToLines(body) {
+    return String(body || "")
+      .split(/\\\\/)
+      .map(function (line) { return line.replace(/&/g, " ").replace(/\s+/g, " ").trim(); })
+      .filter(Boolean);
+  }
+
   function latexToPlain(text) {
-    return String(text || "")
-      .replace(/\$\$([\s\S]+?)\$\$/g, " $1 ")
-      .replace(/\$([^$]+)\$/g, " $1 ")
-      .replace(/\\cdot/g, "·")
-      .replace(/\\times/g, "×")
-      .replace(/\\div/g, "÷")
-      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "($1)/($2)")
-      .replace(/\\left|\\right/g, "")
-      .replace(/\\[,;!]/g, " ")
-      .replace(/[{}]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
+    let s = String(text || "");
+    s = s.replace(/\$\$([\s\S]+?)\$\$/g, "\n$1\n");
+    s = s.replace(/\$([^$]+)\$/g, "$1");
+    s = s.replace(/\\begin\{cases\}([\s\S]*?)\\end\{cases\}/gi, function (_, body) {
+      const lines = envBodyToLines(body);
+      if (!lines.length) return "";
+      return lines.map(function (line, i) { return (i === 0 ? "{ " : "  ") + line; }).join("\n");
+    });
+    s = s.replace(/\\begin\{(?:aligned|align\*?|array|gathered|eqnarray\*?|split)\}([\s\S]*?)\\end\{(?:aligned|align\*?|array|gathered|eqnarray\*?|split)\}/gi, function (_, body) {
+      return envBodyToLines(body).join("\n");
+    });
+    s = s.replace(/\\begin\{[a-zA-Z*]+\}|\\end\{[a-zA-Z*]+\}/g, "");
+    let guard = 0;
+    while (guard < 8) {
+      const next = s
+        .replace(/\\(?:text|mathrm|mathbf|mathit|textrm|textbf|textit|operatorname)\{([^{}]*)\}/g, "$1")
+        .replace(/\\(?:dfrac|tfrac|frac)\{([^{}]*)\}\{([^{}]*)\}/g, "($1)/($2)")
+        .replace(/\\sqrt\[([^\]]+)\]\{([^{}]*)\}/g, "√[$1]($2)")
+        .replace(/\\sqrt\{([^{}]*)\}/g, "√($1)")
+        .replace(/\\overline\{([^{}]*)\}/g, "$1")
+        .replace(/\\overrightarrow\{([^{}]*)\}/g, "$1→")
+        .replace(/\\vec\{([^{}]*)\}/g, "$1");
+      if (next === s) break;
+      s = next;
+      guard += 1;
+    }
+    s = s.replace(/\^\{([^{}]+)\}/g, function (_, body) { return scriptRun(body, mapSuperscript, "^"); });
+    s = s.replace(/\^([0-9A-Za-z+\-])/g, function (_, ch) { return mapSuperscript(ch) || "^" + ch; });
+    s = s.replace(/_\{([^{}]+)\}/g, function (_, body) { return scriptRun(body, mapSubscript, "_"); });
+    s = s.replace(/_([0-9A-Za-z+\-])/g, function (_, ch) { return mapSubscript(ch) || "_" + ch; });
+    const symbols = [
+      [/\\cdot\b/g, "·"], [/\\times\b/g, "×"], [/\\div\b/g, "÷"], [/\\pm\b/g, "±"], [/\\mp\b/g, "∓"],
+      [/\\leq\b|\\le\b/g, "≤"], [/\\geq\b|\\ge\b/g, "≥"], [/\\neq\b|\\ne\b/g, "≠"], [/\\approx\b/g, "≈"],
+      [/\\equiv\b/g, "≡"], [/\\infty\b/g, "∞"], [/\\in\b/g, "∈"], [/\\notin\b/g, "∉"],
+      [/\\subset\b/g, "⊂"], [/\\cup\b/g, "∪"], [/\\cap\b/g, "∩"], [/\\emptyset\b/g, "∅"],
+      [/\\rightarrow\b|\\to\b/g, "→"], [/\\leftarrow\b/g, "←"], [/\\Rightarrow\b/g, "⇒"],
+      [/\\Leftrightarrow\b|\\iff\b/g, "⇔"], [/\\angle\b/g, "∠"], [/\\triangle\b/g, "△"],
+      [/\\perp\b/g, "⊥"], [/\\parallel\b/g, "∥"], [/\\circ\b/g, "°"], [/\\pi\b/g, "π"],
+      [/\\alpha\b/g, "α"], [/\\beta\b/g, "β"], [/\\gamma\b/g, "γ"], [/\\theta\b/g, "θ"],
+      [/\\lambda\b/g, "λ"], [/\\mu\b/g, "μ"], [/\\sigma\b/g, "σ"], [/\\omega\b/g, "ω"],
+      [/\\Delta\b/g, "Δ"], [/\\sum\b/g, "Σ"], [/\\prod\b/g, "Π"], [/\\int\b/g, "∫"],
+      [/\\sin\b/g, "sin"], [/\\cos\b/g, "cos"], [/\\tan\b/g, "tan"], [/\\log\b/g, "log"], [/\\ln\b/g, "ln"],
+      [/\\left\b|\\right\b/g, ""], [/\\displaystyle\b|\\textstyle\b|\\limits\b/g, ""],
+      [/\\,|\\;|\\!|\\:|\\quad\b|\\qquad\b/g, " "], [/\\\\/g, "\n"], [/\\ /g, " "]
+    ];
+    symbols.forEach(function (pair) { s = s.replace(pair[0], pair[1]); });
+    s = s.replace(/\\[a-zA-Z]+\*?/g, "");
+    s = s.replace(/[{}]/g, "");
+    s = s.replace(/&/g, " ");
+    s = s.replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    return s;
+  }
+
+  function estimateTextHeight(text, widthInches, fontSizePt, lineHeight) {
+    const lh = lineHeight || 1.28;
+    const size = Math.max(10, Number(fontSizePt) || 16);
+    const width = Math.max(1, Number(widthInches) || 6);
+    const avgChar = (size * 0.52) / 72;
+    const charsPerLine = Math.max(8, Math.floor(width / avgChar));
+    const lines = String(text == null ? "" : text).split(/\n/).reduce(function (sum, line) {
+      return sum + Math.max(1, Math.ceil((line.length || 1) / charsPerLine));
+    }, 0);
+    return Math.max(0.28, lines * (size / 72) * lh);
   }
 
   function splitLines(text) {
@@ -1522,8 +1626,13 @@
       type,
       title,
       items: (items || []).map((item, idx) => {
-        if (typeof item === "string") return { text: item, step: idx + 1 };
-        return { text: item.text, step: item.step != null ? item.step : idx + 1, role: item.role || "" };
+        if (typeof item === "string") return { text: item, step: idx + 1, role: "", label: "" };
+        return {
+          text: item.text,
+          step: item.step != null ? item.step : idx + 1,
+          role: item.role || "",
+          label: item.label || ""
+        };
       }),
       meta: meta || {}
     };
@@ -1540,9 +1649,12 @@
     ];
     return phases.filter(function (phase) { return Boolean(phase[2]); }).map(function (phase) {
       const matchingEvidence = bits.evidence.filter(function (line) { return line !== phase[2]; }).slice(0, 4);
-      return slide(phase[0], `${phase[1]}: ${name}`, [{ text: phase[2], step: 1 }].concat(
-        matchingEvidence.map(function (text, index) { return { text, step: index + 2 }; })
-      ), { unit: unit.index, phase: phase[0] });
+      const firstRole = phase[0] === "rule" ? "rule" : "problem";
+      return slide(phase[0], `${phase[1]}: ${name}`, [{ text: phase[2], step: 1, role: firstRole }].concat(
+        matchingEvidence.map(function (text, index) {
+          return { text, step: index + 2, role: "step", label: "Bước " + (index + 1) };
+        })
+      ), { unit: unit.index, phase: phase[0], problem: firstRole === "problem" ? phase[2] : "", ruleBox: firstRole === "rule" ? phase[2] : "" });
     });
   }
 
@@ -1566,7 +1678,7 @@
     deck.push(slide("title", topic, [
       { text: `Môn ${subject} · Lớp ${grade}`, step: 1 },
       { text: duration, step: 2 }
-    ]));
+    ], { subtitle: `Môn ${subject} · Lớp ${grade}` }));
     deck.push(slide("intro", "Các đề mục SGK", usedUnits.map(function (unit, index) {
       return { text: unit.title, step: index + 1 };
     })));
@@ -1578,8 +1690,8 @@
     const extraExercises = splitLines(textbook).filter(line => /bài\s*\d|luyện tập|bài tập/i.test(line)).slice(0, 4);
     extraExercises.forEach((ex, idx) => {
       deck.push(slide("exercise", `Bài tập ${idx + 1}`, [
-        { text: ex, step: 1 }
-      ], { phase: "bai-tap" }));
+        { text: ex, step: 1, role: "problem" }
+      ], { phase: "bai-tap", problem: ex }));
     });
 
     deck.push(slide("summary", "Tổng kết", [
@@ -1616,30 +1728,129 @@
     throw new Error("Gemini trả JSON kịch bản slide chưa hoàn chỉnh.");
   }
 
+  function normalizeType(raw) {
+    const type = String(raw || "").trim().toLowerCase();
+    if (type === "concept") return "rule";
+    if (type === "objective") return "intro";
+    return type;
+  }
+
+  function normalizeStepEntry(raw, index) {
+    if (raw && typeof raw === "object") {
+      const label = strip(raw.label || raw.title || "");
+      const text = strip(raw.text || raw.content || raw.body || "");
+      const combined = label && text && text.indexOf(label) !== 0 ? (label + ": " + text) : (text || label);
+      return { label: label || ("Bước " + (index + 1)), text: combined };
+    }
+    const text = strip(raw);
+    const match = text.match(/^(bước\s*\d+)\s*[:.\-–]\s*(.+)$/i);
+    if (match) return { label: match[1], text: text };
+    return { label: "Bước " + (index + 1), text: text };
+  }
+
+  function fallbackSplitContent(content) {
+    const lines = splitLines(content);
+    let problem = "";
+    let explanation = "";
+    const steps = [];
+    let mode = "body";
+    lines.forEach(function (line) {
+      if (/^(đề bài|ví dụ|bài toán|tình huống)\b/i.test(line)) {
+        mode = "problem";
+        problem = line.replace(/^(đề bài|ví dụ[^:]*|bài toán|tình huống)\s*[:.\-–]\s*/i, "");
+        return;
+      }
+      if (/^(phân tích|gợi ý|nhận xét|giải thích)\b/i.test(line)) {
+        mode = "explain";
+        explanation = line.replace(/^(phân tích|gợi ý|nhận xét|giải thích)\s*[:.\-–]\s*/i, "");
+        return;
+      }
+      if (/^bước\s*\d+/i.test(line) || /^\d+[\.\)]\s+\S/.test(line)) {
+        mode = "steps";
+        steps.push(line);
+        return;
+      }
+      if (mode === "problem") problem = problem ? problem + " " + line : line;
+      else if (mode === "explain") explanation = explanation ? explanation + " " + line : line;
+      else if (mode === "steps") steps.push(line);
+    });
+    return { problem: strip(problem), explanation: strip(explanation), steps: steps };
+  }
+
+  function wrapFormula(formula) {
+    const inner = String(formula || "").replace(/^\$+|\$+$/g, "").trim();
+    if (!inner) return "";
+    const display = /\\begin\{|\\frac|\\dfrac|\\\\/.test(inner);
+    return display ? "$$" + inner + "$$" : "$" + inner + "$";
+  }
+
   function normalizeAiDeck(payload) {
     const slides = payload && Array.isArray(payload.slides) ? payload.slides : [];
     if (slides.length < MIN_COMPLETE_SLIDES || slides.length > MAX_COMPLETE_SLIDES) {
       throw new Error(`Gemini phải tạo từ ${MIN_COMPLETE_SLIDES} đến ${MAX_COMPLETE_SLIDES} slide (nhận ${slides.length}).`);
     }
-    const allowed = new Set(["title", "intro", "explore", "rule", "example", "practice", "summary"]);
+    const allowed = new Set(ALLOWED_TYPES);
     const types = new Set();
     const deck = slides.map(function (entry, index) {
-      const type = String(entry && entry.type || "").trim().toLowerCase();
+      const type = normalizeType(entry && entry.type);
       const title = strip(entry && entry.title);
-      const content = strip(entry && entry.content);
+      let content = strip(entry && entry.content);
+      let problem = strip(entry && entry.problem);
+      let explanation = strip(entry && entry.explanation);
+      let ruleBox = strip(entry && (entry.ruleBox || entry.rule_box));
+      let note = strip(entry && entry.note);
+      const subtitle = strip(entry && entry.subtitle);
       const formula = strip(entry && entry.mathFormula);
-      const steps = Array.isArray(entry && entry.steps) ? entry.steps.map(strip).filter(Boolean) : [];
-      if (!allowed.has(type) || !title || (!content && !formula && !steps.length)) {
+      const rawSteps = Array.isArray(entry && entry.steps) ? entry.steps : [];
+      if (isMetaInstruction(content)) content = "";
+      if (isMetaInstruction(problem)) problem = "";
+      if (isMetaInstruction(explanation)) explanation = "";
+      if (isMetaInstruction(ruleBox)) ruleBox = "";
+      if (isMetaInstruction(note)) note = "";
+      let steps = rawSteps.map(function (item, stepIndex) { return normalizeStepEntry(item, stepIndex); })
+        .filter(function (item) { return item.text && !isMetaInstruction(item.text); });
+      if (SPLIT_TYPES[type] && (!problem || !steps.length) && content) {
+        const split = fallbackSplitContent(content);
+        if (!problem && split.problem) problem = split.problem;
+        if (!explanation && split.explanation) explanation = split.explanation;
+        if (!steps.length && split.steps.length) {
+          steps = split.steps.map(function (item, stepIndex) { return normalizeStepEntry(item, stepIndex); })
+            .filter(function (item) { return item.text && !isMetaInstruction(item.text); });
+        }
+      }
+      if (!allowed.has(type) || !title || (!content && !formula && !steps.length && !problem && !ruleBox && !explanation && !note && !subtitle)) {
         throw new Error(`Slide ${index + 1} thiếu type/title/content hợp lệ.`);
       }
       types.add(type);
       const items = [];
-      if (content) items.push({ text: content, step: 1 });
-      if (formula) items.push({ text: `$${formula.replace(/^\$+|\$+$/g, "")}$`, step: 1, role: "formula" });
-      steps.forEach(function (text, stepIndex) { items.push({ text, step: stepIndex + 2, role: "step" }); });
-      return { type, title, items, meta: { aiGenerated: true, source: "gemini-3-flash-preview" } };
+      if (problem) items.push({ text: problem, step: 1, role: "problem" });
+      if (content && content !== problem && content !== ruleBox) {
+        items.push({ text: content, step: 1, role: SPLIT_TYPES[type] && !problem ? "problem" : (type === "rule" ? "rule" : "content") });
+      }
+      if (explanation) items.push({ text: explanation, step: 1, role: "explanation" });
+      if (ruleBox && ruleBox !== content) items.push({ text: ruleBox, step: 1, role: "rule" });
+      if (formula) items.push({ text: wrapFormula(formula), step: 1, role: "formula" });
+      steps.forEach(function (item, stepIndex) {
+        items.push({ text: item.text, step: stepIndex + 2, role: "step", label: item.label });
+      });
+      if (note) items.push({ text: note, step: Math.max(2, steps.length + 2), role: "note" });
+      return {
+        type,
+        title,
+        items,
+        meta: {
+          aiGenerated: true,
+          source: "gemini-3-flash-preview",
+          subtitle: subtitle,
+          problem: problem,
+          explanation: explanation,
+          ruleBox: ruleBox,
+          note: note,
+          mathFormula: formula
+        }
+      };
     });
-    ["title", "intro", "explore", "rule", "example", "practice", "summary"].forEach(function (type) {
+    ALLOWED_TYPES.forEach(function (type) {
       if (!types.has(type)) throw new Error(`Kịch bản Gemini thiếu slide loại ${type}.`);
     });
     return deck;
@@ -1654,6 +1865,34 @@
     };
   }
 
+  function buildSlidePrompt(ctx) {
+    return [
+      "Bạn là chuyên gia thiết kế bài giảng trình chiếu 16:9, bám sát SGK. Chỉ dùng NGỮ CẢNH SGK THẬT bên dưới; không bịa đề mục, định nghĩa, ví dụ, bài tập hoặc đáp án.",
+      "",
+      "BÀI: " + ctx.topic,
+      "MÔN: " + ctx.subject + "; LỚP: " + ctx.grade + "; THỜI LƯỢNG: " + ctx.duration,
+      "",
+      "NGỮ CẢNH SGK THẬT:",
+      ctx.textbook,
+      "",
+      "Hãy tạo đúng 15–25 slide bằng tiếng Việt. Với từng đơn vị kiến thức có trong ngữ cảnh, bắt buộc theo chuỗi Khám phá → Quy tắc/định nghĩa → Ví dụ SGK giải từng bước → Luyện tập SGK. Có bìa, mục tiêu, khởi động, củng cố/vận dụng và tổng kết. Nếu ngữ cảnh không đủ dữ liệu cho một chi tiết, nêu rõ “Cần giáo viên bổ sung từ trang SGK đã tải”, tuyệt đối không bịa.",
+      "",
+      "HỢP ĐỒNG SƯ PHẠM — mỗi slide phải có nội dung thật, câu giải thật, kết quả thật bám SGK:",
+      "- title: title = tên bài; subtitle = môn, khối, thời lượng; content = thông điệp mở đầu.",
+      "- intro (mục tiêu): chia rõ 3 nhóm trong steps: Kiến thức cốt lõi; Năng lực bộ môn/công cụ (MTCT/vẽ hình); Phẩm chất/Vận dụng.",
+      "- explore: problem = tình huống/câu hỏi mở đầu; steps = nhận xét hoặc kết quả quan sát thật.",
+      "- rule: ruleBox = tên quy tắc + nội dung công thức; note = lưu ý cần nhớ; mathFormula = LaTeX nếu có.",
+      "- example: problem = đề bài; explanation = phân tích ngắn; steps = lời giải từng bước (Bước 1, Bước 2, Bước 3...) + kết luận nghiệm.",
+      "- practice: problem = đề bài luyện tập; explanation = gợi ý phương pháp; steps = lời giải chi tiết (hiện khi click).",
+      "- summary: content/steps = sơ đồ tóm tắt kiến thức cốt lõi + hướng dẫn tự học ở nhà.",
+      "",
+      "CẤM TUYỆT ĐỐI placeholder / chỉ dẫn thao tác giả tạo, ví dụ: \"Hiển thị...\", \"Liệt kê...\", \"Thực hiện...\", \"Xuất hiện...\". Không viết meta-prompt. Mỗi phần tử steps là nội dung toán/văn thật.",
+      "Công thức toán để trong mathFormula bằng LaTeX (được phép dùng \\begin{cases}, \\frac, \\text).",
+      "",
+      "Chỉ trả JSON hợp lệ, không markdown: {\"slides\":[{\"type\":\"title|intro|explore|rule|example|practice|summary\",\"title\":\"...\",\"subtitle\":\"...\",\"content\":\"nội dung thật bám SGK\",\"problem\":\"đề bài thật nếu có\",\"explanation\":\"phân tích hoặc gợi ý\",\"steps\":[{\"label\":\"Bước 1\",\"text\":\"câu giải thật\"}],\"ruleBox\":\"quy tắc đóng khung\",\"note\":\"lưu ý cần nhớ\",\"mathFormula\":\"LaTeX nếu có, không có thì chuỗi rỗng\"}]}."
+    ].join("\n");
+  }
+
   async function generateAiLessonSlides(source, signal) {
     const client = typeof geminiAPI !== "undefined" ? geminiAPI : root.geminiAPI;
     if (!client || typeof client.generateContent !== "function") {
@@ -1661,7 +1900,7 @@
     }
     const ctx = lessonContextFromApp(source);
     client.selectedModel = "gemini-3-flash-preview";
-    const prompt = `Bạn là chuyên gia thiết kế bài giảng trình chiếu. Chỉ dùng NGỮ CẢNH SGK THẬT bên dưới; không bịa đề mục, định nghĩa, ví dụ, bài tập hoặc đáp án.\n\nBÀI: ${ctx.topic}\nMÔN: ${ctx.subject}; LỚP: ${ctx.grade}; THỜI LƯỢNG: ${ctx.duration}\n\nNGỮ CẢNH SGK THẬT:\n${ctx.textbook}\n\nHãy tạo đúng 15–25 slide bằng tiếng Việt. Với từng đơn vị kiến thức có trong ngữ cảnh, bắt buộc theo chuỗi Khám phá → Quy tắc/định nghĩa → Ví dụ SGK giải từng bước → Luyện tập SGK. Có bìa, mục tiêu, khởi động, củng cố/vận dụng và tổng kết. Nếu ngữ cảnh không đủ dữ liệu cho một chi tiết, nêu rõ “Cần giáo viên bổ sung từ trang SGK đã tải”, tuyệt đối không bịa.\n\nChỉ trả JSON hợp lệ, không markdown: {"slides":[{"type":"title|intro|explore|rule|example|practice|summary","title":"...","content":"nội dung thật bám SGK","steps":["bước click 1", "bước click 2"],"mathFormula":"LaTex nếu có, không có thì chuỗi rỗng"}]}.`;
+    const prompt = buildSlidePrompt(ctx);
     const role = typeof root.getSystemRole === "function" ? root.getSystemRole(ctx.subject, ctx.grade) : "";
     const raw = await client.generateContent(prompt, [], role, 0.2, signal || null, { maxOutputTokens: 8192, timeoutMs: 120000 });
     return normalizeAiDeck(extractJson(raw));
@@ -1697,12 +1936,77 @@
     }
   }
 
+  function itemsByRole(items, role) {
+    return (items || []).filter(function (item) { return item.role === role; });
+  }
+
+  function renderItemHtml(item) {
+    const badge = item.role === "step"
+      ? `<span class="khbd-step-badge">${escapeHtml(item.label || ("Bước " + item.step))}</span>`
+      : "";
+    return `<li data-step="${item.step}" data-role="${escapeHtml(item.role || "")}">${badge}${escapeHtml(item.text)}</li>`;
+  }
+
+  function renderList(items, className) {
+    if (!items || !items.length) return "";
+    return `<ul class="${className || "khbd-slide-items"}">${items.map(renderItemHtml).join("")}</ul>`;
+  }
+
   function renderSlideHtml(slideItem, revealed) {
+    const type = slideItem && slideItem.type || "";
     const items = visibleItems(slideItem, revealed);
-    const body = items.map(item => `<li data-step="${item.step}">${escapeHtml(item.text)}</li>`).join("");
-    return `<article class="khbd-slide-card" data-type="${escapeHtml(slideItem.type)}">
-      <h2 class="khbd-slide-title">${escapeHtml(slideItem.title)}</h2>
-      <ul class="khbd-slide-items">${body}</ul>
+    const meta = (slideItem && slideItem.meta) || {};
+    const title = escapeHtml(slideItem && slideItem.title || "");
+    if (type === "title") {
+      const kicker = escapeHtml(meta.subtitle || (items[0] && items[0].text) || "");
+      return `<article class="khbd-slide-card khbd-slide-titlecard" data-type="title">
+      <p class="khbd-slide-kicker">${kicker}</p>
+      <h2 class="khbd-slide-title">${title}</h2>
+      ${renderList(items)}
+    </article>`;
+    }
+    if (type === "rule") {
+      const boxItems = items.filter(function (item) { return item.role === "rule" || item.role === "formula" || item.role === "content" || !item.role; });
+      const extra = items.filter(function (item) { return item.role === "note" || item.role === "step"; });
+      return `<article class="khbd-slide-card" data-type="rule">
+      <h2 class="khbd-slide-title">${title}</h2>
+      <div class="khbd-slide-rulebox">
+        <span class="khbd-slide-rule-label">GHI NHỚ / TRỌNG TÂM</span>
+        ${renderList(boxItems)}
+      </div>
+      ${extra.length ? renderList(extra) : ""}
+    </article>`;
+    }
+    if (SPLIT_TYPES[type]) {
+      const left = itemsByRole(items, "problem");
+      const hints = itemsByRole(items, "explanation").concat(itemsByRole(items, "formula")).concat(itemsByRole(items, "content"));
+      const right = itemsByRole(items, "step").concat(itemsByRole(items, "note"));
+      const leftItems = left.length ? left.concat(hints.filter(function (item) { return item.role === "formula"; })) : items.slice(0, 1);
+      const rightItems = right.length ? right : items.slice(leftItems.length);
+      const leftLabel = type === "explore" ? "Tình huống / Đề bài" : "Đề bài";
+      const rightLabel = type === "practice" ? "Gợi ý & lời giải" : "Lời giải";
+      return `<article class="khbd-slide-card" data-type="${escapeHtml(type)}">
+      <h2 class="khbd-slide-title">${title}</h2>
+      <div class="khbd-slide-split">
+        <div class="khbd-slide-col-left">
+          <div class="khbd-slide-problem">
+            <span class="khbd-slide-col-label">${leftLabel}</span>
+            ${renderList(leftItems)}
+          </div>
+        </div>
+        <div class="khbd-slide-col-right">
+          <div class="khbd-slide-solution">
+            <span class="khbd-slide-col-label">${rightLabel}</span>
+            ${rightItems.length ? `<ol class="khbd-slide-steps">${rightItems.map(renderItemHtml).join("")}</ol>` : `<p class="khbd-slide-hint">Click để hiện từng bước giải.</p>`}
+            ${renderList(hints.filter(function (item) { return item.role === "explanation"; }), "khbd-slide-items khbd-slide-hintlist")}
+          </div>
+        </div>
+      </div>
+    </article>`;
+    }
+    return `<article class="khbd-slide-card" data-type="${escapeHtml(type)}">
+      <h2 class="khbd-slide-title">${title}</h2>
+      ${renderList(items)}
     </article>`;
   }
 
@@ -1861,49 +2165,203 @@
     return ui.deck;
   }
 
+  function roundShape(pptx) {
+    return (pptx.ShapeType && (pptx.ShapeType.roundRect || pptx.ShapeType.roundedRect)) || "roundRect";
+  }
+
+  function toParagraphs(text, options) {
+    const opts = options || {};
+    const lines = String(text == null ? "" : text).split(/\n/);
+    return lines.map(function (line) {
+      return {
+        text: line || " ",
+        options: Object.assign({ fontFace: "Calibri" }, opts, { breakLine: true })
+      };
+    });
+  }
+
+  function addHeaderBar(page, pptx, title) {
+    page.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SLIDE_W, h: 0.72, fill: { color: "0F4C81" } });
+    page.addText(latexToPlain(title || ""), {
+      x: 0.4, y: 0.14, w: 12.5, h: 0.46, fontSize: 22, bold: true, color: "FFFFFF", fontFace: "Calibri"
+    });
+  }
+
+  function addLabeledCard(page, pptx, spec) {
+    page.addShape(roundShape(pptx), {
+      x: spec.x,
+      y: spec.y,
+      w: spec.w,
+      h: spec.h,
+      fill: { color: spec.fill || "F8FAFC" },
+      line: { color: spec.line || "94A3B8", width: 1.15 },
+      rectRadius: 0.1
+    });
+    if (spec.label) {
+      page.addText(spec.label, {
+        x: spec.x + 0.16,
+        y: spec.y + 0.1,
+        w: spec.w - 0.32,
+        h: 0.28,
+        fontSize: 11,
+        bold: true,
+        color: spec.labelColor || "0F4C81",
+        fontFace: "Calibri"
+      });
+    }
+    const paras = spec.paragraphs || [];
+    if (!paras.length) return;
+    const labelH = spec.label ? 0.4 : 0.12;
+    page.addText(paras, {
+      x: spec.x + 0.16,
+      y: spec.y + labelH,
+      w: spec.w - 0.32,
+      h: Math.max(0.4, spec.h - labelH - 0.14),
+      valign: "top",
+      fontFace: "Calibri",
+      fontSize: spec.fontSize || 16,
+      color: "1F2937",
+      margin: 0
+    });
+  }
+
+  function itemPlain(item) {
+    return latexToPlain(item && item.text || "");
+  }
+
+  function buildStepParagraphs(items) {
+    const paras = [];
+    (items || []).forEach(function (item, idx) {
+      const label = item.label || (item.role === "step" ? ("Bước " + (idx + 1)) : "");
+      const body = itemPlain(item);
+      const lines = body.split(/\n/);
+      if (label) {
+        paras.push({ text: label + "  ", options: { bold: true, color: "0F4C81", breakLine: false, fontFace: "Calibri", fontSize: 15 } });
+        paras.push({ text: lines[0] || " ", options: { breakLine: true, fontFace: "Calibri", fontSize: 15, color: "1F2937" } });
+        lines.slice(1).forEach(function (line) {
+          paras.push({ text: line || " ", options: { breakLine: true, fontFace: "Calibri", fontSize: 15, color: "1F2937" } });
+        });
+      } else {
+        toParagraphs(body, { fontSize: 15, color: "1F2937", breakLine: true }).forEach(function (p) { paras.push(p); });
+      }
+    });
+    if (paras.length) paras[paras.length - 1].options.breakLine = false;
+    return paras;
+  }
+
+  function renderTitlePptx(page, pptx, item) {
+    page.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SLIDE_W, h: SLIDE_H, fill: { color: "F8FAFC" } });
+    page.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SLIDE_W, h: 0.18, fill: { color: "0F4C81" } });
+    page.addShape(pptx.ShapeType.rect, { x: 0, y: 7.32, w: SLIDE_W, h: 0.18, fill: { color: "0F4C81" } });
+    const subtitle = latexToPlain((item.meta && item.meta.subtitle) || "") || itemPlain((item.items || [])[0]);
+    const duration = itemPlain((item.items || []).find(function (entry) { return /tiết|phút/i.test(entry.text || ""); }) || {});
+    const message = (item.items || []).filter(function (entry) {
+      const plain = itemPlain(entry);
+      return plain && plain !== subtitle && plain !== duration;
+    }).map(itemPlain).join("\n");
+    if (subtitle) {
+      page.addText(subtitle, {
+        x: 1.2, y: 1.85, w: 10.9, h: 0.4, fontSize: 16, bold: true, color: "0F4C81", align: "center", fontFace: "Calibri"
+      });
+    }
+    page.addText(latexToPlain(item.title || ""), {
+      x: 1, y: 2.35, w: 11.3, h: 1.35, fontSize: 34, bold: true, color: "0F4C81", align: "center", valign: "middle", fontFace: "Calibri"
+    });
+    if (duration) {
+      page.addShape(roundShape(pptx), {
+        x: 4.55, y: 3.9, w: 4.2, h: 0.48, fill: { color: "EFF6FF" }, line: { color: "0F4C81", width: 1 }, rectRadius: 0.2
+      });
+      page.addText(duration, {
+        x: 4.55, y: 3.94, w: 4.2, h: 0.4, fontSize: 14, align: "center", color: "0F4C81", fontFace: "Calibri", bold: true
+      });
+    }
+    if (message) {
+      page.addText(message, {
+        x: 1.8, y: 4.6, w: 9.7, h: 1.4, fontSize: 16, align: "center", color: "334155", fontFace: "Calibri", valign: "top"
+      });
+    }
+  }
+
+  function renderSplitPptx(page, pptx, item, idx) {
+    addHeaderBar(page, pptx, item.title || ("Slide " + (idx + 1)));
+    const items = item.items || [];
+    const leftItems = items.filter(function (entry) { return entry.role === "problem" || entry.role === "formula"; });
+    const rightItems = items.filter(function (entry) { return entry.role === "step" || entry.role === "note" || entry.role === "explanation"; });
+    const fallbackLeft = leftItems.length ? leftItems : items.slice(0, 1);
+    const fallbackRight = rightItems.length ? rightItems : items.slice(fallbackLeft.length);
+    const top = 0.96;
+    const height = 6.22;
+    const leftX = 0.35;
+    const leftW = 4.85;
+    const gap = 0.22;
+    const rightX = leftX + leftW + gap;
+    const rightW = SLIDE_W - rightX - 0.35;
+    const leftParas = [];
+    fallbackLeft.forEach(function (entry) {
+      toParagraphs(itemPlain(entry), { fontSize: 16, color: "1F2937" }).forEach(function (p) { leftParas.push(p); });
+    });
+    addLabeledCard(page, pptx, {
+      x: leftX, y: top, w: leftW, h: height,
+      fill: "F1F5F9", line: "CBD5E1",
+      label: item.type === "explore" ? "TÌNH HUỐNG / ĐỀ BÀI" : "ĐỀ BÀI",
+      paragraphs: leftParas, fontSize: 16
+    });
+    addLabeledCard(page, pptx, {
+      x: rightX, y: top, w: rightW, h: height,
+      fill: "FFFFFF", line: "E2E8F0",
+      label: item.type === "practice" ? "GỢI Ý & LỜI GIẢI" : "LỜI GIẢI TỪNG BƯỚC",
+      paragraphs: buildStepParagraphs(fallbackRight), fontSize: 15
+    });
+  }
+
+  function renderRulePptx(page, pptx, item, idx) {
+    addHeaderBar(page, pptx, item.title || ("Slide " + (idx + 1)));
+    const items = item.items || [];
+    const paras = [];
+    items.forEach(function (entry) {
+      toParagraphs(itemPlain(entry), { fontSize: 18, color: "1F2937" }).forEach(function (p) { paras.push(p); });
+    });
+    addLabeledCard(page, pptx, {
+      x: 0.55, y: 1.05, w: 12.23, h: 5.95,
+      fill: "EFF6FF", line: "0F4C81",
+      label: "GHI NHỚ / TRỌNG TÂM",
+      labelColor: "0F4C81",
+      paragraphs: paras,
+      fontSize: 18
+    });
+  }
+
+  function renderDefaultPptx(page, pptx, item, idx) {
+    addHeaderBar(page, pptx, item.title || ("Slide " + (idx + 1)));
+    const paras = [];
+    (item.items || []).forEach(function (entry) {
+      toParagraphs(itemPlain(entry), { fontSize: 18, color: "1F2937" }).forEach(function (p) { paras.push(p); });
+    });
+    addLabeledCard(page, pptx, {
+      x: 0.45, y: 1.05, w: 12.43, h: 5.95,
+      fill: "FFFFFF", line: "E2E8F0",
+      paragraphs: paras,
+      fontSize: 18
+    });
+  }
+
   async function exportToPptx(slideDeck) {
     const deck = Array.isArray(slideDeck) && slideDeck.length ? slideDeck : ui.deck;
     if (!deck.length) throw new Error("Chưa có slide để xuất PowerPoint.");
     const PptxGenJS = root.PptxGenJS || root.pptxgen;
     if (typeof PptxGenJS !== "function") throw new Error("Chưa nạp được thư viện PptxGenJS.");
     const pptx = new PptxGenJS();
-    pptx.defineLayout({ name: "KHBD_16x9", width: 13.333, height: 7.5 });
+    pptx.defineLayout({ name: "KHBD_16x9", width: SLIDE_W, height: SLIDE_H });
     pptx.layout = "KHBD_16x9";
     pptx.author = "Soạn bài giảng trình chiếu AI";
     pptx.title = (deck[0] && deck[0].title) || "Bai giang";
 
     deck.forEach((item, idx) => {
       const page = pptx.addSlide();
-      page.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 0.7, fill: { color: "0F4C81" } });
-      page.addText(latexToPlain(item.title || `Slide ${idx + 1}`), {
-        x: 0.4, y: 0.12, w: 12.5, h: 0.48, fontSize: 22, bold: true, color: "FFFFFF", fontFace: "Calibri"
-      });
-      const steps = {};
-      (item.items || []).forEach(entry => {
-        const step = Number(entry.step) || 1;
-        (steps[step] || (steps[step] = [])).push(latexToPlain(entry.text));
-      });
-      let y = 1.0;
-      Object.keys(steps).sort((a, b) => Number(a) - Number(b)).forEach((step, clickIndex) => {
-        steps[step].forEach(line => {
-          page.addText(line, {
-            x: 0.5,
-            y,
-            w: 12.3,
-            h: 0.55,
-            fontSize: 18,
-            fontFace: "Calibri",
-            color: "1F2937",
-            valign: "top"
-          });
-          y += 0.58;
-        });
-        if (clickIndex > 0) {
-          try {
-            page.addNotes(`Appear click ${clickIndex + 1}`);
-          } catch (_) {}
-        }
-      });
+      if (item.type === "title") renderTitlePptx(page, pptx, item);
+      else if (SPLIT_TYPES[item.type]) renderSplitPptx(page, pptx, item, idx);
+      else if (item.type === "rule") renderRulePptx(page, pptx, item, idx);
+      else renderDefaultPptx(page, pptx, item, idx);
     });
 
     const safeName = latexToPlain((deck[0] && deck[0].title) || "bai-giang").replace(/[^\p{L}\p{N}]+/gu, "-").slice(0, 60) || "bai-giang";
@@ -2019,8 +2477,12 @@
     extractKnowledgeUnits,
     buildSlideDeck,
     generateAiLessonSlides,
+    normalizeAiDeck,
     exportToPptx,
     renderSlideHtml,
+    latexToPlain,
+    estimateTextHeight,
+    isMetaInstruction,
     visibleItems,
     maxStep,
     mount,

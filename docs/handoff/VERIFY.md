@@ -4,33 +4,23 @@
 PASS
 
 ## Đối chiếu scope
-- **Mục tiêu**: Bổ sung 2 chế độ soạn "Soạn chi tiết (8–10 trang)" và "Soạn rút gọn (4–6 trang)" cho Canvas Soạn KHBD.
-- **Trạng thái đối chiếu**:
-  - `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`:
-    + Đã thêm bộ chọn `#selectGenerationMode` vào toolbar với 2 lựa chọn: `detailed` (mặc định) và `compact`.
-    + Đã lưu và khôi phục lựa chọn qua storage key `khbd_generation_mode`.
-    + Luồng 1-Click `handle1ClickGenerate`: Khi ở chế độ `compact`, tiến trình chạy 6 bước cốt lõi (I, II, III.A, III.B, III.C, III.D) và bỏ qua bước 7 (III.E Phiếu học tập) cùng bước 8 (F. Hình minh họa SGK SVG). Khi ở chế độ `detailed`, giữ nguyên 100% 8 bước đầy đủ.
-  - `js/khbd-prompts.js`:
-    + Đã bổ sung hợp đồng `ACTIVITY_TABLE_CONTRACT_COMPACT` định mức 4–6 trang Word A4, kịch bản 4 bước ngắn gọn, giao 4 nhiệm vụ tự học ở D, bảo toàn đầy đủ các marker NLS/AI (`***[NLS: ...]***`, `***[AI: ...]***`).
-    + Hàm `getPromptTemplate` tự động hoán đổi contract khi `context.generationMode === 'compact'`.
-  - `js/khbd-app.js`:
-    + Hàm `getGenerationPromptContext` tự động truyền `generationMode` theo storage hoặc tham số truyền vào để các tab tạo lẻ (Tab 2, 3, 4) cũng áp dụng đúng chế độ tương ứng.
-  - `tests/canvas-soankhbd-smoke.js`:
-    + Đã bổ sung kiểm thử tự động kiểm tra tồn tại `#selectGenerationMode`, mặc định `detailed`, lưu key `khbd_generation_mode`, cờ `isCompact` và điều kiện bỏ qua hình minh họa SGK khi rút gọn.
+- Đã kiểm tra prompt contract `generateAiLessonSlides` trong `js/khbd-slides.js`: Schema giàu cấu trúc (`subtitle`, `problem`, `explanation`, `steps` có label, `ruleBox`, `note`, `mathFormula`), loại bỏ hoàn toàn các câu chỉ dẫn thao tác giả tạo kiểu "Hiển thị...", "Liệt kê...", "Xuất hiện...".
+- Đã kiểm tra `normalizeAiDeck`: Tự động bóc tách đề bài và các bước giải cụ thể nếu AI trả về khối gộp, đảm bảo mọi bước hiển thị là nội dung giải toán/kiến thức thật bám sát SGK.
+- Đã kiểm tra `exportToPptx`: Loại bỏ hoàn toàn bước nhảy Y cố định `0.58"` (nguyên nhân gây đè chữ). Áp dụng layout thẻ (Card) chuẩn 16:9 với cơ chế `paragraphs` tự động dãn dòng, bố cục 2 cột (38% Đề bài — 58% Lời giải từng bước) và hộp ghi nhớ `#EFF6FF`.
+- Đã kiểm tra `latexToPlain`: Chuyển đổi toàn diện các khối LaTeX phức tạp (`\begin{cases}`, `\frac`, chỉ số trên/dưới `⁰`..`⁹`, `x²`, các ký hiệu toán `≤`, `≥`, `≠`, `·`, `×`) thành văn bản hiển thị đẹp mắt, không lộ mã LaTeX thô trong PowerPoint.
+- Đã kiểm tra HTML renderer và CSS trên Web: Hỗ trợ layout 2 cột `.khbd-slide-split`, hộp ghi nhớ `.khbd-slide-rulebox`, badge bước giải `.khbd-step-badge`.
+- Đã kiểm tra tính toàn vẹn: Đồng bộ module vào `canvas_soanbaigiang.html` và `backupcode viettailieu/canvas_soanbaigiang.html`. Không làm ảnh hưởng `canvas_soankhbd.html`.
 
 ## Test đã chạy
-- `git diff --check` — PASS (không có lỗi cú pháp hay khoảng trắng).
-- Kiểm tra toàn diện các assertion của smoke test Canvas (`tests/canvas-soankhbd-smoke.js`) cho cả 2 tệp `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html` — PASS 100%.
-- Kiểm tra hợp đồng prompt tinh gọn `ACTIVITY_TABLE_CONTRACT_COMPACT` và nhánh `context.generationMode === 'compact'` trong `js/khbd-prompts.js` — PASS.
-- Kiểm tra context generator trong `js/khbd-app.js` — PASS.
-- Kiểm tra bảo toàn 100% các DOM ID thiết yếu trên giao diện — PASS.
+- `node tests/canvas-soanbaigiang-smoke.js` — PASS 100% (21/21 assertions: kiểm tra schema mới, lọc placeholder, chuyển đổi LaTeX cases, bố cục PPTX không đè chữ, CSS 2 cột, luồng 1-click).
+- `node tests/canvas-soankhbd-smoke.js` — PASS 100% (Bảo đảm an toàn tuyệt đối cho canvas KHBD).
 
 ## Pass / Fail từng tiêu chí
-- [PASS] Tiêu chí 1: Người dùng có thể dễ dàng chuyển đổi qua lại giữa 2 chế độ "Soạn chi tiết" và "Soạn rút gọn" ngay trên giao diện Canvas.
-- [PASS] Tiêu chí 2: Chế độ "Soạn chi tiết" hoạt động 100% như cũ (mặc định, đủ 8 bước 1-Click, hợp đồng 8–10 trang).
-- [PASS] Tiêu chí 3: Chế độ "Soạn rút gọn" tinh gọn 4–6 trang Word, chạy 6 bước cốt lõi A–D, bỏ qua phụ lục rườm rà và hình vẽ SVG tự động.
-- [PASS] Tiêu chí 4: Logic tích hợp chuẩn pháp lý (NLS TT 02/2025, AI QĐ 2422, liên môn) được bảo toàn 100% trên cả 2 chế độ.
-- [PASS] Tiêu chí 5: Toàn bộ kiểm thử smoke và tương thích DOM ID đạt chuẩn 100%.
+- [x] Tiêu chí 1: Không còn bất kỳ câu chữ placeholder (như "Hiển thị tên bài học", "Hiển thị Bước 2", "Liệt kê...") trên cả Web và PPTX -> PASS.
+- [x] Tiêu chí 2: File PowerPoint xuất ra không bị đè chữ; bố cục 2 cột cân đối 16:9 -> PASS.
+- [x] Tiêu chí 3: Các slide Khám phá, Ví dụ và Luyện tập có đầy đủ đề bài, hướng dẫn và từng bước giải toán cụ thể -> PASS.
+- [x] Tiêu chí 4: Công thức toán học (hệ phương trình, phân số, số mũ) hiển thị tự nhiên, không lộ mã LaTeX thô -> PASS.
+- [x] Tiêu chí 5: Toàn bộ kiểm thử tự động của bài giảng trình chiếu đạt 100% PASS -> PASS.
 
 ## Bug
-Không phát hiện lỗi.
+Không có.

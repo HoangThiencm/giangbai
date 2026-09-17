@@ -76,11 +76,57 @@ assert.match(slidesSrc, /Kiến thức trọng tâm/, 'Deck có slide kiến th�
 assert.match(slidesSrc, /Ví dụ mẫu/, 'Deck có slide ví dụ mẫu');
 assert.match(slidesSrc, /Luyện tập tại chỗ/, 'Deck có slide luyện tập');
 assert.match(slidesSrc, /step:\s*[1-5]/, 'Có gán step cho hiệu ứng click');
+assert.match(slidesSrc, /subtitle/, 'Prompt/schema có subtitle');
+assert.match(slidesSrc, /ruleBox/, 'Prompt/schema có ruleBox');
+assert.match(slidesSrc, /problem/, 'Prompt/schema có problem');
+assert.match(slidesSrc, /CẤM TUYỆT ĐỐI/, 'Prompt cấm placeholder thao tác');
+assert.match(slidesSrc, /\\begin\{cases\}/, 'Chuyển đổi LaTeX cases cho PPTX');
+assert.doesNotMatch(slidesSrc, /y \+= 0\.58/, 'Không còn bước Y cố định 0.58 inch gây đè chữ');
+assert.match(html, /\.khbd-slide-split/, 'CSS layout 2 cột');
+assert.match(html, /\.khbd-slide-col-left/, 'CSS cột trái đề bài');
+assert.match(html, /\.khbd-slide-col-right/, 'CSS cột phải lời giải');
+assert.match(html, /\.khbd-slide-rulebox/, 'CSS hộp ghi nhớ');
+assert.match(html, /\.khbd-step-badge/, 'CSS huy hiệu bước giải');
+assert.match(html, /#EFF6FF|#eff6ff/i, 'Màu nền hộp trọng tâm');
 
 const KhbdSlides = require(slidesPath);
 assert.ok(typeof KhbdSlides.buildSlideDeck === 'function', 'export buildSlideDeck');
 assert.ok(typeof KhbdSlides.generateAiLessonSlides === 'function', 'export generateAiLessonSlides');
 assert.ok(typeof KhbdSlides.exportToPptx === 'function', 'export exportToPptx');
+assert.ok(typeof KhbdSlides.latexToPlain === 'function', 'export latexToPlain');
+assert.ok(typeof KhbdSlides.normalizeAiDeck === 'function', 'export normalizeAiDeck');
+
+const casesPlain = KhbdSlides.latexToPlain('\\begin{cases} x + y = 3 \\\\ 2x - 3y = 1 \\end{cases}');
+assert.doesNotMatch(casesPlain, /\\begin/, 'PPTX không lộ \\begin{cases}');
+assert.doesNotMatch(casesPlain, /\\end/, 'PPTX không lộ \\end{cases}');
+assert.match(casesPlain, /x \+ y = 3/, 'Giữ phương trình 1 của hệ');
+assert.match(casesPlain, /2x - 3y = 1/, 'Giữ phương trình 2 của hệ');
+assert.ok(casesPlain.includes('\n') || /x \+ y = 3[\s\S]*2x - 3y = 1/.test(casesPlain), 'Hệ phương trình tách dòng');
+assert.doesNotMatch(KhbdSlides.latexToPlain('\\text{a)} x=1'), /\\text/, 'Bỏ \\text{}');
+assert.match(KhbdSlides.latexToPlain('\\text{a)} x=1'), /a\)/, 'Giữ nhãn a)');
+assert.match(KhbdSlides.latexToPlain('\\frac{1}{2}'), /\(1\)\/\(2\)/, 'Đổi \\frac thành dạng văn bản');
+assert.ok(KhbdSlides.isMetaInstruction('Hiển thị tên bài học'));
+assert.ok(KhbdSlides.isMetaInstruction('Liệt kê mục tiêu kiến thức (KNTT)'));
+assert.ok(KhbdSlides.isMetaInstruction('Hiển thị Bước 2'));
+assert.ok(KhbdSlides.isMetaInstruction('Xuất hiện phương trình 0y = 12'));
+assert.ok(!KhbdSlides.isMetaInstruction('Từ (1) suy ra x = 3 - y'));
+
+const exampleHtml = KhbdSlides.renderSlideHtml({
+  type: 'example',
+  title: 'Ví dụ mẫu',
+  items: [
+    { text: 'Giải hệ x+y=3', step: 1, role: 'problem' },
+    { text: 'x = 3-y', step: 2, role: 'step', label: 'Bước 1' }
+  ],
+  meta: {}
+}, 2);
+assert.match(exampleHtml, /khbd-slide-split/, 'Web ví dụ dùng layout 2 cột');
+assert.match(exampleHtml, /khbd-slide-col-left/, 'Web có cột đề bài');
+assert.match(exampleHtml, /khbd-slide-col-right/, 'Web có cột lời giải');
+assert.match(exampleHtml, /khbd-step-badge/, 'Web có huy hiệu bước');
+assert.match(KhbdSlides.renderSlideHtml({
+  type: 'rule', title: 'Quy tắc', items: [{ text: 'Quy tắc thế', step: 1, role: 'rule' }], meta: {}
+}, 1), /khbd-slide-rulebox/, 'Web rule dùng hộp ghi nhớ');
 
 const textbook = `
 # Tập hợp các số tự nhiên
@@ -126,8 +172,15 @@ assert.ok(revealed2.length > revealed1.length, 'Click tiếp hiện thêm lời 
       type: aiTypes[i % aiTypes.length],
       title: `Slide SGK ${i + 1}`,
       content: `Nội dung Bài 5 đã đọc ${i + 1}`,
-      steps: i === 4 ? ['Bước giải 1', 'Bước giải 2'] : [],
-      mathFormula: i === 3 ? 'a+b=c' : ''
+      problem: i === 4 ? 'Giải hệ phương trình x + y = 3 và 2x - 3y = 1' : '',
+      explanation: i === 4 ? 'Dùng phương pháp thế, biểu diễn x theo y.' : '',
+      ruleBox: i === 3 ? 'Quy tắc thế: biểu diễn một ẩn rồi thế vào phương trình kia.' : '',
+      steps: i === 4 ? [
+        { label: 'Bước 1', text: 'Từ (1) suy ra x = 3 - y' },
+        'Hiển thị Bước 2',
+        { label: 'Bước 2', text: 'Thế vào (2) được y = 1, x = 2' }
+      ] : [],
+      mathFormula: i === 3 ? '\\begin{cases} x + y = 3 \\\\ 2x - 3y = 1 \\end{cases}' : ''
     }))
   };
   global.geminiAPI = { selectedModel: '', generateContent: async (prompt) => {
@@ -139,6 +192,14 @@ assert.ok(revealed2.length > revealed1.length, 'Click tiếp hiện thêm lời 
   assert.equal(global.geminiAPI.selectedModel, 'gemini-3-flash-preview', 'Ép đúng model Gemini Canvas');
   assert.equal(aiDeck.length, 15, 'Dùng nguyên kịch bản AI 15 slide');
   assert.ok(aiDeck.every(s => s.meta.aiGenerated), 'Deck đánh dấu là dữ liệu do AI tạo');
+  const exampleAi = aiDeck.find(s => s.type === 'example');
+  assert.ok(exampleAi && exampleAi.meta.problem, 'Ví dụ có đề bài tách riêng');
+  assert.ok(exampleAi.items.every(it => !KhbdSlides.isMetaInstruction(it.text)), 'Lọc placeholder khỏi bước giải');
+  assert.ok(!exampleAi.items.some(it => /Hiển thị/.test(it.text)), 'Không còn câu Hiển thị...');
+  assert.ok(exampleAi.items.some(it => /x = 3 - y/.test(it.text)), 'Giữ bước giải thật');
+  const ruleAi = aiDeck.find(s => s.type === 'rule');
+  assert.ok(ruleAi && ruleAi.meta.ruleBox, 'Rule có hộp ghi nhớ');
+  assert.doesNotMatch(KhbdSlides.latexToPlain(ruleAi.meta.mathFormula), /\\begin|\\end/, 'Công thức hệ không còn lệnh LaTeX thô');
   delete global.geminiAPI;
 
 
@@ -246,17 +307,45 @@ assert.ok(revealed2.length > revealed1.length, 'Click tiếp hiện thêm lời 
   assert.equal(node('slidePresentationOverlay').hidden, true);
 
   const pages = [];
+  const boxes = [];
   let writtenName = '';
   context.PptxGenJS = class {
-    constructor() { this.ShapeType = { rect: 'rect' }; }
+    constructor() { this.ShapeType = { rect: 'rect', roundRect: 'roundRect' }; }
     defineLayout(layout) { assert.equal(layout.width, 13.333); assert.equal(layout.height, 7.5); }
-    addSlide() { const texts = []; pages.push(texts); return { addShape() {}, addText(text) { texts.push(text); }, addNotes() {} }; }
+    addSlide() {
+      const texts = [];
+      pages.push(texts);
+      const pageIndex = pages.length - 1;
+      return {
+        addShape() {},
+        addText(text, opts) {
+          const flat = Array.isArray(text) ? text.map(part => (part && part.text) || part).join('\n') : String(text);
+          texts.push(flat);
+          if (opts && typeof opts.y === 'number' && typeof opts.h === 'number') {
+            boxes.push({ text: flat, x: Number(opts.x) || 0, y: opts.y, w: Number(opts.w) || 0, h: opts.h, page: pageIndex });
+          }
+        },
+        addNotes() {}
+      };
+    }
     async writeFile(options) { writtenName = options.fileName; }
   };
   await context.KhbdSlides.exportToPptx();
   assert.equal(pages.length, 15, 'Xuất toàn bộ deck AI sang PptxGenJS');
-  assert.ok(pages[0].includes(aiResponse.slides[0].content), 'PPTX dùng nội dung AI đã sinh');
+  assert.ok(pages[0].some(text => String(text).includes(aiResponse.slides[0].content)), 'PPTX dùng nội dung AI đã sinh');
   assert.match(writtenName, /\.pptx$/);
+  assert.ok(pages.some(page => page.some(text => /x \+ y = 3/.test(text) && /2x - 3y = 1/.test(text) && !/\\begin/.test(text))), 'PPTX đổi hệ phương trình thành văn bản nhiều dòng');
+  function boxesOverlap(a, b) {
+    return a.page === b.page &&
+      a.x < b.x + b.w - 0.02 && b.x < a.x + a.w - 0.02 &&
+      a.y < b.y + b.h - 0.02 && b.y < a.y + a.h - 0.02;
+  }
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      if (boxes[i].y < 0.75 && boxes[j].y < 0.75) continue;
+      assert.ok(!boxesOverlap(boxes[i], boxes[j]), `Không đè chữ PPTX (slide ${boxes[i].page + 1})`);
+    }
+  }
 
   const previousDeck = JSON.stringify(context.KhbdSlides.getDeck());
   for (const failure of ['bad-json', 'abort-response', 'source-change', 'ocr-fail', 'cancel-ocr']) {

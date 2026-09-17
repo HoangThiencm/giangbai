@@ -1,16 +1,17 @@
-# IMPLEMENT: Hai chế độ soạn Canvas KHBD
+# IMPLEMENT: Nâng cấp chất lượng sư phạm & dàn trang slide/PPTX
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
-- Thêm bộ chọn **Soạn chi tiết** (mặc định) và **Soạn rút gọn**; lựa chọn được lưu bằng `khbd_generation_mode`.
-- Chế độ rút gọn chạy sáu bước I, II, A–D và bỏ III.E cùng hình minh họa SGK; chế độ chi tiết giữ nguyên luồng đầy đủ.
-- Bổ sung hợp đồng prompt rút gọn 4–6 trang: kịch bản 4 bước ngắn gọn, bảng 2 cột, bài mẫu ngắn, bốn nhiệm vụ tự học ở D và giữ marker NLS/AI.
-- Tab tạo riêng nhận chế độ từ ngữ cảnh sinh nội dung. Đồng bộ giao diện và luồng 1-Click cho cả hai tệp Canvas.
-- Mở rộng smoke test kiểm tra bộ chọn, mặc định chi tiết, lưu trạng thái và nhánh không tạo minh họa khi rút gọn.
+- Thiết kế lại hợp đồng prompt `generateAiLessonSlides`: schema giàu cấu trúc (`subtitle`, `problem`, `explanation`, `steps` có label, `ruleBox`, `note`, `mathFormula`). Cấm placeholder kiểu "Hiển thị...", "Liệt kê...", "Xuất hiện...".
+- `normalizeAiDeck` lọc câu chỉ dẫn thao tác, bóc tách đề bài / bước giải từ `content` khi AI trả về một khối, map `concept`→`rule` và `objective`→`intro`.
+- `exportToPptx` bỏ bước Y cố định `0.58"` (nguyên nhân đè chữ). Mỗi vùng là một card + một text box `paragraphs`. Slide bìa căn giữa; ví dụ/luyện tập/khám phá bố cục 2 cột (38% đề bài — 58% lời giải); slide quy tắc dùng hộp "GHI NHỚ / TRỌNG TÂM" nền `#EFF6FF`.
+- `latexToPlain` chuyển `\begin{cases}`, `\frac`, `\text{...}` và ký hiệu phổ biến thành văn bản nhiều dòng, không lộ mã LaTeX trên PowerPoint. Web vẫn bọc công thức bằng `$`/`$$` để KaTeX render.
+- HTML renderer + CSS: `.khbd-slide-split`, `.khbd-slide-col-left`, `.khbd-slide-col-right`, `.khbd-slide-rulebox`, `.khbd-step-badge`.
+- Đồng bộ nguyên module vào `canvas_soanbaigiang.html` và `backupcode viettailieu/canvas_soanbaigiang.html`. Không đụng Canvas KHBD.
 
 Kiểm thử:
 
-- `git diff --check` — PASS.
-- Không thể chạy các smoke test Node trong môi trường hiện tại vì Windows chặn `node.exe` của runtime với cảnh báo tệp có thể không an toàn.
+- `node tests/canvas-soanbaigiang-smoke.js` — PASS 100% (schema mới, chống placeholder, LaTeX cases, không đè chữ PPTX, CSS 2 cột, luồng 1-click).
+- `git diff --check` — PASS (chỉ cảnh báo LF/CRLF sẵn có).
 
-Không thêm chức năng ngoài plan. Cần `/verify` trên Antigravity để xác nhận hai chế độ và xuất Word thực tế.
+Không thêm chức năng ngoài plan. Cần `/verify` trên Antigravity để xem slide web và file PPTX với bài Toán 9 — Giải hệ phương trình bằng phương pháp thế.
