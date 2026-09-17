@@ -1,66 +1,94 @@
-# PLAN: Sửa Lỗi Danh Sách Giáo Viên Trống Trong Lịch Báo Giảng & Hỗ Trợ Tự Động Nhận Giáo Viên Từ PCCM / Các Đợt
+﻿# PLAN: Tối Ưu Giao Diện Lịch Báo Giảng — Đưa Cấu Hình PPCT & Lịch Nghỉ Vào Modal Setting, Thu Gọn Cảnh Báo
 
 ## User Review Required
 > [!IMPORTANT]
-> - **Hiện tượng người dùng phản ánh**: Đã có Phân công chuyên môn (PCCM), nhưng khi mở Tab 4 "Lịch báo giảng", dropdown **Giáo viên** chỉ có duy nhất lựa chọn `"Tất cả giáo viên"`, không có tên bất kỳ giáo viên nào.
-> - **Nguyên nhân kỹ thuật**:
->   1. **Nguồn dữ liệu giáo viên bị phụ thuộc cứng vào `state.teachers`**: Dropdown `#bg-filter-teacher` hiện tại chỉ map từ `state.teachers` ở root. Nếu giáo viên nằm trong đợt phân công hiện tại (`state.phase_assignments[curPhase].teachers`) mà chưa được đồng bộ ra root, hoặc đang mở đợt chưa nạp snapshot, thì `state.teachers` rỗng `[]`.
->   2. **Chưa có cơ chế fallback thông minh**: Không tự động quét giáo viên từ các đợt phân công (`phase_assignments`), từ bảng phân công lớp (`assignments`), hay từ CSDL giáo viên hệ thống (`systemData.teachers`).
->   3. **Nguyên lý sinh Lịch báo giảng**: Lịch báo giảng cần **Thời khóa biểu (TKB ở Tab 2)** + **PPCT** để tự ghép lịch dạy. Nếu người dùng chỉ mới phân công môn-lớp ở Tab 1 (PCCM) mà chưa nhập TKB ở Tab 2, hệ thống không có dữ liệu thứ/tiết để sinh dòng lịch. Tuy nhiên, dropdown Giáo viên **vẫn bắt buộc phải hiển thị đầy đủ danh sách giáo viên đã có trong PCCM** để người dùng lựa chọn và kiểm tra.
->   4. **Thiếu thông báo điều hướng**: Khi chưa có giáo viên hoặc giáo viên chưa có TKB, giao diện chỉ hiện một dòng mờ nhạt "Chưa có tiết TKB trong tháng này", không chỉ dẫn người dùng cần làm gì tiếp theo.
+> - **Yêu cầu từ người dùng**:
+>   1. Đưa toàn bộ khu vực cấu hình PPCT (Khối, Môn, tệp PPCT, AI nhận diện, JSON, textarea nhập PPCT, Thư viện kho PPCT đã nạp) và Ngày nghỉ & dạy bù vào **Modal Setting** riêng (hoặc ẩn bớt), giúp giao diện chính của Tab 4 "Lịch báo giảng" thoáng đãng, chuyên nghiệp và tập trung vào việc tra cứu/in sổ báo giảng.
+>   2. **Thu gọn khối cảnh báo lệch số tiết** ("Cần kiểm tra PPCT trước khi gửi email"): Hiện tại đang in hàng chục dòng cảnh báo màu vàng trải dài nhiều trang màn hình. Cần ẩn bớt/thu gọn thành một thẻ thông báo có thể đóng/mở (collapsible `<details>`) và giới hạn chiều cao cuộn, mặc định thu gọn gọn gàng.
 
 ---
 
-## I. Kế Hoạch Triển Khai Chi Tiết
+## I. Thiết Kế Kỹ Thuật Chi Tiết
 
-### Module 1: Xây Dựng Hàm Chuẩn Hóa Danh Sách Giáo Viên Cho Lịch Báo Giảng (`getBaoGiangTeacherList`)
-Trong `phancongtochuyenmon.html`:
-1. Viết hàm `getBaoGiangTeacherList()`:
-   - Ưu tiên 1: Lấy `state.teachers` nếu có phần tử.
-   - Ưu tiên 2: Nếu `state.teachers` rỗng, lấy từ đợt phân công hiện tại: `state.phase_assignments?.[state.info?.current_phase_id]?.teachers`.
-   - Ưu tiên 3: Gom tất cả giáo viên duy nhất (theo `id` / `name`) từ toàn bộ các đợt trong `state.phase_assignments`.
-   - Ưu tiên 4: Nếu vẫn rỗng, fallback về `systemData.teachers` (nếu đã nạp từ CSDL hệ thống).
-   - Đảm bảo luôn trả về danh sách giáo viên đầy đủ, loại bỏ trùng lặp.
-2. Đồng bộ ngược lại `state.teachers` nếu root bị rỗng nhưng đợt hiện tại có giáo viên, tránh tình trạng mất đồng bộ giữa các view.
+### Module 1: Tạo Modal Setting "Cấu hình PPCT & Lịch nghỉ" (`#baogiang-config-modal`)
+1. **Cấu trúc Modal**:
+   - Sử dụng chuẩn modal hiện có của hệ thống (`class="modal-overlay"`, `class="modal-card"` với `max-width: 900px`).
+   - `id="baogiang-config-modal"`.
+   - **Header**:
+     - Tiêu đề: `<h2><i class="fas fa-sliders"></i> Cài đặt PPCT & Lịch nghỉ</h2>`.
+     - Nút đóng: `<button class="modal-close" onclick="closeBaoGiangConfigModal()">&times;</button>`.
+   - **Body** (bên trong chia 2 tab con hoặc 2 block rõ ràng):
+     - **Phần 1: Khai báo & Nạp PPCT**:
+       - Chọn Khối (`#bg-ppct-grade`) và Môn (`#bg-ppct-subject`).
+       - Nạp tệp qua AI: `#bg-ppct-file`, nút `#bg-scan-ppct`, nút Xóa PPCT, status `#bg-ppct-status`.
+       - Nạp qua JSON: Tải mẫu JSON, copy AI prompt, `#bg-ppct-json-file`, nút nạp JSON.
+       - Textarea nhập trực tiếp: `#bg-curriculum` kèm dòng gợi ý định dạng mới.
+       - Thư viện kho PPCT đã nạp: `#bg-ppct-library` (các thẻ card thống kê bài/tiết từng khối-môn).
+     - **Phần 2: Ngày nghỉ và dạy bù**:
+       - Form thêm ngoại lệ: `#bg-ex-date`, `#bg-ex-type`, `#bg-ex-scope`, `#bg-ex-target`, `#bg-ex-lesson`, nút Thêm.
+       - Danh sách ngoại lệ: `#bg-exceptions`.
+   - **Footer**:
+     - Nút "Đóng" (`closeBaoGiangConfigModal()`).
+     - Nút "Lưu & Áp dụng" (`closeBaoGiangConfigModal(); renderBaoGiangView(); showToast(...)`).
+2. **Hàm JavaScript điều khiển modal**:
+   - `openBaoGiangConfigModal()`: thêm class `active` vào modal `#baogiang-config-modal`.
+   - `closeBaoGiangConfigModal()`: bỏ class `active` khỏi modal `#baogiang-config-modal`.
 
-### Module 2: Nâng Cấp Render Dropdown & Bảng Lịch Báo Giảng
-1. Trong `renderBaoGiangMonthView()`:
-   - Dùng `getBaoGiangTeacherList()` để render dropdown `#bg-filter-teacher`.
-   - Hiển thị rõ số lượng giáo viên: `Tất cả giáo viên (X GV)`.
-   - Từng option giáo viên hiển thị: `Họ tên GV (Chức vụ / Số lớp phân công)`.
-2. Hỗ trợ hiển thị lịch ngay cả khi chỉ có PCCM (chưa có TKB chi tiết từng tiết):
-   - Nếu giáo viên đã có phân công lớp/môn ở Tab 1 nhưng chưa có TKB chi tiết ở Tab 2:
-     Hiển thị thẻ cảnh báo hướng dẫn rõ ràng:
-     `⚠️ Thầy/cô [Tên GV] đã có phân công chuyên môn ([Môn] lớp [Lớp]), nhưng chưa được xếp Thời khóa biểu cụ thể theo thứ/tiết ở Tab "2. Thời khoá biểu GV". Vui lòng nhập TKB để hệ thống tự động ghép bài dạy theo ngày.`
-   - Có nút bấm nhanh: `👉 Sang Tab Thời khóa biểu GV để nhập TKB cho thầy/cô này`.
+### Module 2: Tinh Gọn Thanh Công Cụ & Giao Diện Chính Tab 4 (`view-baogiang`)
+1. Trên thanh tiêu đề / toolbar của Tab 4:
+   - Thêm nút nổi bật:
+     `<button type="button" class="btn-small" onclick="openBaoGiangConfigModal()"><i class="fas fa-sliders"></i> Cài đặt PPCT & Lịch nghỉ</button>`
+   - Giữ nút "Lưu kế hoạch" (`saveToDB()`).
+2. Bỏ khối `<details open>` cồng kềnh, bỏ dropdown khối/môn nằm lộ thiên và bỏ `<details>` ngày nghỉ dạy bù ở giao diện chính (vì toàn bộ đã được chuyển vào Modal Setting).
+3. Giao diện chính Tab 4 giờ đây chỉ còn:
+   - Thanh tiêu đề & nút mở Cài đặt.
+   - Hàng bộ lọc nghiệp vụ: Ngày bắt đầu Tuần 1, Chọn Giáo viên, Chọn Tháng, Chế độ xem (Sổ ngày / Lưới tuần / Bảng tổng hợp).
+   - Khối cảnh báo thu gọn (Module 3).
+   - Bảng/sổ lịch báo giảng chi tiết (`#bg-schedule`).
 
-### Module 3: Kiểm Thử Tự Động (`tests/baogiang-teacher-month-smoke.js`)
-1. Bổ sung kịch bản test:
-   - Test case 1: Khi `state.teachers` rỗng nhưng `state.phase_assignments` có giáo viên -> dropdown `#bg-filter-teacher` vẫn hiển thị đầy đủ danh sách giáo viên.
-   - Test case 2: Khi có giáo viên nhưng chưa có TKB -> hiển thị hướng dẫn thân thiện, không bị crash hoặc trắng bảng.
-   - Test case 3: Khi có giáo viên và có TKB -> hiển thị đầy đủ lịch báo giảng theo tháng và theo giáo viên đã chọn.
+### Module 3: Thu Gọn Cảnh Báo "Cần kiểm tra PPCT trước khi gửi email"
+1. Trong `renderBaoGiangBaseView()` (dòng ~4030) và `renderBaoGiangView()` (dòng ~4043):
+   - Thay thế việc chèn trực tiếp thẻ `<div>` cảnh báo trải dài bằng thẻ `<details>`:
+     ```html
+     <details class="bg-warning-box" style="margin:0 0 12px;padding:10px 14px;border:1px solid #fbbf24;border-radius:8px;background:#fffbeb;color:#92400e;font-size:.88rem;">
+         <summary style="font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;">
+             <i class="fas fa-triangle-exclamation"></i>
+             <span>Cần kiểm tra PPCT trước khi gửi email (${warnings.length} cảnh báo — Bấm để xem/ẩn)</span>
+         </summary>
+         <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #fcd34d;max-height:180px;overflow-y:auto;line-height:1.6;">
+             ${warnings.map(message => escapeHtml(message)).join('<br>')}
+         </div>
+     </details>
+     ```
+   - Mặc định thẻ `<details>` này **KHÔNG có thuộc tính `open`** (tự đóng), chỉ chiếm đúng 1 dòng thông báo trang nhã (chiều cao ~36px).
+   - Khi người dùng muốn xem danh sách cảnh báo, click để mở ra; vùng nội dung có `max-height: 180px; overflow-y: auto;` giúp cuộn mượt mà mà không đẩy lệch giao diện.
+
+### Module 4: Bảo Toàn Tương Thích & Kiểm Thử
+1. Tất cả ID phần tử HTML (`bg-curriculum`, `bg-ppct-file`, `bg-scan-ppct`, `bg-ppct-status`, `bg-ppct-grade`, `bg-ppct-subject`, `bg-exceptions`, `bg-schedule`, v.v.) được giữ nguyên vẹn 100% để các hàm JavaScript hiện hành và các bộ smoke test không bị ảnh hưởng.
+2. Bổ sung kiểm thử tự động trong `tests/baogiang-teacher-month-smoke.js`:
+   - Xác nhận `#baogiang-config-modal` tồn tại và chứa đầy đủ `#bg-curriculum`, `#bg-ppct-grade`, `#bg-ppct-subject`.
+   - Xác nhận có nút mở modal `openBaoGiangConfigModal()`.
+   - Xác nhận cảnh báo lệch PPCT được bọc trong thẻ `<details>` thu gọn.
 
 ---
 
-## II. Danh Sách File Cần Chỉnh Sửa
+## II. Danh Sách Tệp Cần Chỉnh Sửa
 
-| Tệp tin | Vị trí | Mục đích thay đổi |
+| Tệp tin | Vị trí | Mục tiêu thay đổi |
 | :--- | :--- | :--- |
-| `phancongtochuyenmon.html` | Dòng ~3060 (`renderBaoGiangMonthView`) | Dùng `getBaoGiangTeacherList()` fallback thông minh từ `phase_assignments`, hiển thị danh sách GV đầy đủ |
-| `phancongtochuyenmon.html` | Dòng ~3920 (`renderBaoGiangView`) | Đồng bộ `state.teachers` từ đợt hiện tại nếu root bị rỗng, hiển thị banner hướng dẫn TKB |
-| `tests/baogiang-teacher-month-smoke.js` | Cuối file | Bổ sung test kiểm tra fallback giáo viên từ phase_assignments |
+| `phancongtochuyenmon.html` | Dòng ~2020 - 2038 | Dọn dẹp giao diện chính Tab 4, thêm nút `openBaoGiangConfigModal()` |
+| `phancongtochuyenmon.html` | Dòng ~2710 (Khu vực modal) | Thêm `#baogiang-config-modal` chứa cấu hình PPCT và Ngày nghỉ / dạy bù |
+| `phancongtochuyenmon.html` | Dòng ~4030 & ~4043 | Thu gọn cảnh báo lệch tiết thành `<details>` cuộn tối đa 180px |
+| `phancongtochuyenmon.html` | Dòng ~4050 | Thêm 2 hàm `openBaoGiangConfigModal()` và `closeBaoGiangConfigModal()` |
+| `tests/baogiang-teacher-month-smoke.js` | Cuối file | Thêm assertions kiểm tra modal và cấu trúc collapsible cảnh báo |
 
 ---
 
 ## III. Kế Hoạch Kiểm Thử (Verification Plan)
 
-### 1. Kiểm thử tự động
-- `node tests/baogiang-teacher-month-smoke.js` — PASS 100%.
-- `node tests/attendance-autosync-smoke.js` — PASS 100%.
-- `node tests/baogiang-weekday-segment-smoke.js` — PASS 100%.
-
-### 2. Kiểm thử thủ công
-1. Mở `phancongtochuyenmon.html` với kế hoạch có giáo viên trong đợt phân công.
-2. Chuyển sang Tab **4. Lịch báo giảng**.
-3. Mở dropdown **Giáo viên** -> Xác nhận hiển thị đầy đủ danh sách tất cả các giáo viên trong tổ.
-4. Chọn một giáo viên cụ thể -> Xem lịch báo giảng theo tháng của giáo viên đó.
+### Kiểm thử tự động
+- `node tests/baogiang-teacher-month-smoke.js` — PASS.
+- `node tests/baogiang-weekday-segment-smoke.js` — PASS.
+- `node tests/baogiang-recognition-smoke.js` — PASS.
+- `node tests/timetable-render-smoke.js` — PASS.
+- `node tests/attendance-autosync-smoke.js` — PASS.

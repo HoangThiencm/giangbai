@@ -1,28 +1,35 @@
-# IMPLEMENT: Dropdown giáo viên Lịch báo giảng — fallback PCCM / đợt / CSDL
+# IMPLEMENT: Thu gọn Tab 4 Lịch báo giảng — Modal PPCT & lịch nghỉ + cảnh báo collapsible
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
-## Module 1 — `getBaoGiangTeacherList()`
-Trong `phancongtochuyenmon.html`:
-- Ưu tiên 1: `state.teachers` nếu còn phần tử.
-- Ưu tiên 2: `state.phase_assignments[state.info.current_phase_id].teachers`.
-- Ưu tiên 3: gom giáo viên duy nhất (theo `id` / `name`) từ mọi đợt trong `phase_assignments`.
-- Ưu tiên 4: `systemData.teachers`.
-- Nếu root rỗng mà tìm được giáo viên từ đợt/CSDL thì đồng bộ ngược vào `state.teachers`.
+## Module 1 — Modal `#baogiang-config-modal`
+- Thêm modal chuẩn (`modal-overlay` / `modal-card`, `max-width: 900px`).
+- Header: `Cài đặt PPCT & Lịch nghỉ` + nút đóng `closeBaoGiangConfigModal()`.
+- Body phần 1: Khối/Môn, nạp tệp AI, JSON, `#bg-curriculum`, `#bg-ppct-library`.
+- Body phần 2: Form ngoại lệ nghỉ/dạy bù + `#bg-exceptions`.
+- Footer: Đóng / Lưu & Áp dụng (`closeBaoGiangConfigModal(); renderBaoGiangView(); showToast(...)`).
+- `openBaoGiangConfigModal()` / `closeBaoGiangConfigModal()` bật/tắt class `active`.
 
-## Module 2 — Dropdown & hướng dẫn TKB
-- `renderBaoGiangMonthView()` render `#bg-filter-teacher` từ `getBaoGiangTeacherList()`.
-- Option tổng: `Tất cả giáo viên (X GV)`.
-- Từng GV: `Họ tên (Chức vụ / Số lớp phân công)`.
-- Có phân công lớp/môn nhưng chưa có TKB: banner `⚠️ Thầy/cô … đã có phân công chuyên môn …` kèm nút `👉 Sang Tab Thời khóa biểu GV để nhập TKB cho thầy/cô này` (`openBaoGiangTeacherTimetable` → Tab 2).
-- `renderBaoGiangView()` gọi `getBaoGiangTeacherList()` trước khi vẽ; danh sách người nhận email cũng dùng cùng nguồn.
+## Module 2 — Giao diện chính Tab 4
+- Toolbar: nút `Cài đặt PPCT & Lịch nghỉ` + `Lưu kế hoạch`.
+- Giữ hàng bộ lọc: Tuần 1, Giáo viên, Tháng, Chế độ xem.
+- Đã bỏ `<details>` PPCT, dropdown khối/môn lộ thiên và khối Ngày nghỉ khỏi mặt chính.
+- Mọi ID (`bg-curriculum`, `bg-ppct-grade`, `bg-ppct-subject`, `bg-ppct-file`, `bg-exceptions`, …) giữ nguyên, chuyển vào modal.
 
-## Module 3 — Kiểm thử
-- `tests/baogiang-teacher-month-smoke.js`: fallback đợt khi `state.teachers` rỗng; PCCM chưa TKB hiện hướng dẫn; có TKB hiện lịch tháng.
+## Module 3 — Cảnh báo PPCT thu gọn
+- Thêm `baoGiangWarningsHtml(warnings)` sinh `<details class="bg-warning-box">` (mặc định đóng).
+- Summary: `Cần kiểm tra PPCT trước khi gửi email (N cảnh báo — Bấm để xem/ẩn)`.
+- Nội dung cuộn `max-height: 180px; overflow-y: auto`.
+- Dùng trong `renderBaoGiangBaseView()` và `renderBaoGiangView()`.
+
+## Module 4 — Smoke
+- `tests/baogiang-teacher-month-smoke.js`: kiểm tra modal chứa đủ ID, nút mở modal, cảnh báo bọc `<details>`.
 
 ## Test đã chạy
 - `node tests/baogiang-teacher-month-smoke.js` — PASS
-- `node tests/attendance-autosync-smoke.js` — PASS
 - `node tests/baogiang-weekday-segment-smoke.js` — PASS
+- `node tests/baogiang-recognition-smoke.js` — PASS
+- `node tests/timetable-render-smoke.js` — PASS
+- `node tests/attendance-autosync-smoke.js` — PASS
 
-Không thêm chức năng ngoài plan. Cần `/verify` trên Antigravity: mở Tab 4 với giáo viên nằm trong đợt PCCM, xác nhận dropdown đủ tên GV.
+Không thêm chức năng ngoài plan. Cần `/verify` trên Antigravity: mở Tab 4 → Cài đặt PPCT & Lịch nghỉ; kiểm tra cảnh báo PPCT thu gọn còn 1 dòng.
