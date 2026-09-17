@@ -155,8 +155,9 @@ class DocxGenerator {
       s = s.split(tex).join(uni);
     }
 
-    // Làm sạch các dấu ngoặc nhọn thừa còn sót lại
-    s = s.replace(/[{}]/g, "");
+    // Chỉ gỡ cặp {} rỗng hoặc ngoặc nhóm token ngắn; giữ `{` của hệ phương trình.
+    s = s.replace(/\{\s*\}/g, "");
+    s = s.replace(/\{([^{}\s]{1,12})\}/g, "$1");
     return s.trim();
   }
 
@@ -201,14 +202,9 @@ class DocxGenerator {
     return source;
   }
 
-  /** Tạo OMML delimiter + equation array cho cases/aligned và \\left\\{. */
-  createCasesMath(source, mathApi) {
-    const casesMatch = source.match(/^\\begin\s*\{(cases|aligned)\}([\s\S]*?)\\end\s*\{\1\}\s*$/i);
-    const leftBraceMatch = source.match(/^\\left\s*\\\{([\s\S]*?)\\right\s*\.\s*$/);
-    const body = casesMatch ? casesMatch[2] : (leftBraceMatch ? leftBraceMatch[1] : null);
-    if (body === null || typeof mathApi.XmlComponent !== "function" || typeof mathApi.XmlAttributeComponent !== "function") return null;
-
-    const rows = body
+  buildCasesDelimiter(body, mathApi) {
+    if (body == null || typeof mathApi.XmlComponent !== "function" || typeof mathApi.XmlAttributeComponent !== "function") return null;
+    const rows = String(body)
       .split(/\\\\(?:\[[^\]]*\])?\s*/)
       .map(row => row.replace(/\s*&\s*/g, " ").trim())
       .filter(Boolean);
@@ -233,7 +229,21 @@ class DocxGenerator {
     base.root.push(equationArray);
     const delimiter = element("m:d");
     delimiter.root.push(delimiterProperties, base);
-    return new mathApi.Math({ children: [delimiter] });
+    return delimiter;
+  }
+
+  /** Tạo OMML delimiter + equation array cho cases/aligned và \\left\\{, kể cả khi có tiền tố \\Leftrightarrow / \\Rightarrow. */
+  createCasesMath(source, mathApi) {
+    const casesMatch = source.match(/^([\s\S]*?)\\begin\s*\{(cases|aligned)\}([\s\S]*?)\\end\s*\{\2\}\s*$/i);
+    const leftBraceMatch = source.match(/^([\s\S]*?)\\left\s*\\\{([\s\S]*?)\\right\s*\.\s*$/);
+    const body = casesMatch ? casesMatch[3] : (leftBraceMatch ? leftBraceMatch[2] : null);
+    const prefix = ((casesMatch ? casesMatch[1] : (leftBraceMatch ? leftBraceMatch[1] : "")) || "").trim();
+    const delimiter = this.buildCasesDelimiter(body, mathApi);
+    if (!delimiter) return null;
+    const children = [];
+    if (prefix) children.push(new mathApi.MathRun(this.latexToUnicodeMath(prefix) + " "));
+    children.push(delimiter);
+    return new mathApi.Math({ children });
   }
 
   /** Chuyển LaTeX ($...$, $$...$$, \\(...\\)) thành Equation Word (OMML). Thất bại thì trả null để fallback Unicode. */
@@ -346,7 +356,37 @@ class DocxGenerator {
       } else if (peek() === "\\") {
         index++;
         const command = readCommandName();
-        if (command === "frac") {
+        if (command === "begin") {
+          skipSpace();
+          let env = "";
+          if (peek() === "{") {
+            index++;
+            while (index < source.length && peek() !== "}") env += source[index++];
+            if (peek() === "}") index++;
+          }
+          env = env.trim().toLowerCase();
+          if (env === "cases" || env === "aligned") {
+            const rest = source.slice(index);
+            const endMatch = rest.match(new RegExp("\\\\end\\s*\\{" + env + "\\}", "i"));
+            if (endMatch) {
+              const delim = this.buildCasesDelimiter(rest.slice(0, endMatch.index), mathApi);
+              index += endMatch.index + endMatch[0].length;
+              nodes = delim ? [delim] : [run("{")];
+            } else {
+              nodes = [run("{")];
+            }
+          } else {
+            nodes = [run(env || "begin")];
+          }
+        } else if (command === "end") {
+          skipSpace();
+          if (peek() === "{") {
+            index++;
+            while (index < source.length && peek() !== "}") index++;
+            if (peek() === "}") index++;
+          }
+          nodes = [];
+        } else if (command === "frac") {
           nodes = [new mathApi.MathFraction({ numerator: readGroup(), denominator: readGroup() })];
         } else if (command === "sqrt") {
           const degree = readOptionalBracket("[", "]");
@@ -908,9 +948,10 @@ class DocxGenerator {
 
     validLines.forEach((line, rowIndex) => {
       const parsedCells = this.splitMarkdownTableRow(line);
-      const rawCells = isActivityTwoCol && parsedCells.length > 2
-        ? [parsedCells[0], parsedCells.slice(1).join(" | ")]
-        : parsedCells;
+      const splitter = typeof semanticSplitActivityRow === "function"
+        ? semanticSplitActivityRow
+        : (cells => this.semanticSplitActivityRow(cells));
+      const rawCells = isActivityTwoCol ? splitter(parsedCells) : parsedCells;
       const isHeader = (rowIndex === 0);
 
       const tableCells = Array.from({ length: columnCount }, (_, columnIndex) => {
@@ -951,6 +992,36 @@ class DocxGenerator {
         insideVertical: borderStyle
       }
     });
+  }
+
+  isActivityScriptCell(text) {
+    return /bước\s*[1-4]\b|\*{0,3}GV\s*:|\*{0,3}HS\s*:|\[Kỹ thuật|\[Phương pháp/i.test(String(text || ""));
+  }
+
+  isKnowledgeContentCell(text) {
+    const t = String(text || "").trim();
+    if (!t || this.isActivityScriptCell(t)) return false;
+    if (/^(?:định nghĩa|công thức|ví dụ|luyện tập|bài tập|vận dụng|ghi nhớ|quy tắc|chú ý|hệ phương trình|tính chất|định lý)\b/i.test(t)) return true;
+    if (/^\$/.test(t) || /^\\begin/.test(t) || /^\*\*[^*]+\*\*/.test(t)) return true;
+    return false;
+  }
+
+  semanticSplitActivityRow(cells) {
+    const list = (Array.isArray(cells) ? cells : []).map(cell => String(cell || "").trim());
+    if (!list.length) return ["", ""];
+    if (list.length === 1) return [list[0], ""];
+    if (list.length === 2) return [list[0], list[1]];
+    let splitAt = list.findIndex((cell, index) => index > 0 && this.isKnowledgeContentCell(cell));
+    if (splitAt < 0) {
+      for (let i = list.length - 1; i >= 1; i--) {
+        if (!this.isActivityScriptCell(list[i])) {
+          splitAt = i;
+          break;
+        }
+      }
+    }
+    if (splitAt < 0) return [list.join(" / "), ""];
+    return [list.slice(0, splitAt).join(" / "), list.slice(splitAt).join(" / ")];
   }
 
   splitMarkdownTableRow(line) {
@@ -1352,7 +1423,7 @@ class DocxGenerator {
       throw new Error("Thư viện docx hoặc FileSaver chưa sẵn sàng. Vui lòng kiểm tra kết nối mạng CDN.");
     }
 
-    const { Document, Packer, Header, Footer, AlignmentType } = window.docx;
+    const { Document, Packer, Footer, AlignmentType } = window.docx;
 
     const headerElements = this.createDocumentHeader(lessonInfo);
     const footerElements = this.createDocumentFooter(lessonInfo);
@@ -1373,13 +1444,8 @@ class DocxGenerator {
           margin: this.pageMargins
         }
       },
-      children: bodyElements
+      children: [...headerElements, ...bodyElements]
     };
-    if (typeof Header === "function") {
-      section.headers = { default: new Header({ children: headerElements }) };
-    } else {
-      section.children = [...headerElements, ...bodyElements];
-    }
     if (typeof Footer === "function") {
       section.footers = { default: new Footer({ children: footerElements }) };
     }

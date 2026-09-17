@@ -72,7 +72,12 @@ async function main() {
   const cases = String.raw`$\begin{cases}x + y = 17\;(1) \\ 10x + 3y = 100\;(2)\end{cases}$`;
   const aligned = String.raw`$\begin{aligned}x &= 2 \\ y &= 3\end{aligned}$`;
   const leftBrace = String.raw`$\left\{x+y=5 \\ x-y=1\right.$`;
+  const prefixedCases = String.raw`$\Leftrightarrow \begin{cases} -3x+8y=-30 \\ 2x-4y=40 \end{cases}$`;
   assert.ok(!/begin(?:cases|aligned)|end(?:cases|aligned)/i.test(generator.latexToUnicodeMath(cases)), "Fallback Unicode phải bỏ begin/end");
+  const prefixedLatex = String.raw`\Leftrightarrow \begin{cases} -3x+8y=-30 \\ 2x-4y=40 \end{cases}`;
+  const prefixedUnicode = generator.latexToUnicodeMath(prefixedLatex);
+  assert.match(prefixedUnicode, /\{/, "Fallback Unicode phải giữ ngoặc nhọn hệ phương trình");
+  assert.ok(!/begincases|endcases/i.test(prefixedUnicode), "Fallback Unicode không được lộ begincases");
   const table = generator.createDocxTableFromMarkdown([
     "| Hoạt động | Nội dung |",
     "| --- | --- |",
@@ -85,6 +90,7 @@ async function main() {
         new docx.Paragraph({ children: generator.parseInlineTextToRuns(cases) }),
         new docx.Paragraph({ children: generator.parseInlineTextToRuns(aligned) }),
         new docx.Paragraph({ children: generator.parseInlineTextToRuns(leftBrace) }),
+        new docx.Paragraph({ children: generator.parseInlineTextToRuns(prefixedCases) }),
         table
       ]
     }]
@@ -103,6 +109,24 @@ async function main() {
   assert.match(xml, /x \+ y = 17.*\(1\)/, "Giữ dòng và số thứ tự phương trình thứ nhất");
   assert.match(xml, /10x \+ 3y = 100.*\(2\)/, "Giữ dòng và số thứ tự phương trình thứ hai");
   assert.ok(!/begincases|endcases|beginaligned|endaligned/i.test(xml), "XML DOCX không được chứa token LaTeX rác");
+  assert.match(xml, /-3x\s*\+\s*8y\s*=\s*-30/, "Hệ có tiền tố phải giữ phương trình thứ nhất");
+  assert.match(xml, /2x\s*-\s*4y\s*=\s*40/, "Hệ có tiền tố phải giữ phương trình thứ hai");
+  assert.ok((xml.match(/<m:dPr><m:begChr m:val="\{"\/><m:endChr m:val=""\/><\/m:dPr>/g) || []).length >= 2, "Hệ có tiền tố \\Leftrightarrow vẫn tạo delimiter {");
+
+  const { getPromptTemplate } = require("../js/khbd-prompts.js");
+  const thcsPrompt = getPromptTemplate("GENERATE_ACTIVITY_C", {
+    subject: "toan",
+    subjectName: "Toán",
+    grade: "9",
+    topic: "Giải hệ hai phương trình bậc nhất hai ẩn",
+    duration: "02 tiết (90 phút)",
+    textbook_content: "Bài 2",
+    digitalCompetencyEnabled: false,
+    aiCompetencyEnabled: false
+  });
+  assert.match(thcsPrompt, /TUYỆT ĐỐI CẤM DÙNG DẤU TƯƠNG ĐƯƠNG/, "Prompt Toán 9 cấm \\Leftrightarrow");
+  assert.match(thcsPrompt, /Phương pháp thế/, "Prompt Toán bắt buộc phương pháp thế");
+  assert.match(thcsPrompt, /QUY TẮC CỘT BẢNG TUYỆT ĐỐI/, "Prompt cấm dấu | trong ô bảng");
   console.log("khbd-docx math smoke: passed");
 }
 

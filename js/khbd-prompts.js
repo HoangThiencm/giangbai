@@ -287,6 +287,7 @@ const ACTIVITY_TABLE_CONTRACT = `YÊU CẦU BẮT BUỘC: KỊCH BẢN SƯ PHẠ
 | :--- | :--- |
 - Bảng Markdown CHỈ GỒM ĐÚNG 1 HÀNG DỮ LIỆU DUY NHẤT (CẤM tách thành 4 hàng riêng).
 - TUYỆT ĐỐI chỉ tạo đúng 2 cột theo hai tiêu đề trên; CẤM thêm cột thứ 3 dưới mọi hình thức. Trong công thức hoặc văn bản có ký hiệu gạch đứng, dùng \\vert hoặc \\| thay cho dấu | thô để không làm vỡ cột Markdown.
+- QUY TẮC CỘT BẢNG TUYỆT ĐỐI: Mỗi hàng bảng Markdown chỉ có đúng 2 cột (| Hoạt động của GV và HS | Nội dung |). TUYỆT ĐỐI CẤM dùng ký tự gạch đứng | bên trong nội dung văn bản dưới mọi hình thức (kể cả trong bảng phân tích, ghi chú hay công thức). Khi liệt kê bắt buộc dùng dấu phẩy (,), dấu gạch chéo (/), hoặc ký hiệu \\vert / \\|. Vi phạm sẽ làm vỡ bảng.
 - CỘT TRÁI — KỊCH BẢN THỰC CHIẾN PHÂN VAI RÕ RÀNG (ngăn các bước và vai trò bằng <br>):
   BẮT BUỘC từng bước phải xuống dòng riêng cho GV và HS theo mẫu sau (TUYỆT ĐỐI CẤM viết dính liền GV và HS trên cùng một dòng):
   + Bước 1: Chuyển giao nhiệm vụ (Kỹ thuật...):
@@ -340,7 +341,7 @@ ${LATEX_SPACING_BAN}
 
 const ACTIVITY_TABLE_CONTRACT_COMPACT = `YÊU CẦU BẮT BUỘC CHẾ ĐỘ SOẠN RÚT GỌN (Chuẩn CV 5512 & GDPT 2018):
 - Toàn bộ kế hoạch bài dạy dài khoảng 4–6 trang Word A4. Chỉ soạn bốn hoạt động cốt lõi A–D; không tạo phụ lục/phiếu học tập riêng.
-- Mỗi hoạt động ghi thời lượng cố định; tổng A + B + C + D đúng bằng {duration}. Dùng đúng một bảng Markdown 2 cột: | Hoạt động của GV và HS | Nội dung |.
+- Mỗi hoạt động ghi thời lượng cố định; tổng A + B + C + D đúng bằng {duration}. Dùng đúng một bảng Markdown 2 cột: | Hoạt động của GV và HS | Nội dung |. TUYỆT ĐỐI CẤM dấu | bên trong ô; liệt kê dùng dấu phẩy hoặc /.
 - Kịch bản giữ đủ 4 bước: 1. Giao việc ngắn gọn; 2. HS thực hiện cá nhân/nhóm; 3. Báo cáo ngắn; 4. GV chốt kiến thức cốt lõi. Không viết câu thoại dài dòng, không diễn giải ngộ nhận hoặc phân hóa dài.
 - Cột Nội dung chỉ ghi quy tắc/công thức LaTeX và tối đa một bài tập trọng tâm có lời giải mẫu ngắn. Không để trống ô, không dùng HTML.
 - Hoạt động D phải giao luôn đúng 4 nhiệm vụ tự học về nhà tại Bước 4.
@@ -1623,6 +1624,22 @@ function getPromptTemplate(templateKey, context) {
   // Append pedagogical context if provided
   if (context.pedagogical_context) {
     result += `\n\nBỐI CẢNH SƯ PHẠM VÀ RÀNG BUỘC BẮT BUỘC:\n${context.pedagogical_context}`;
+  }
+
+  if (subjectId === 'toan') {
+    const g = parseInt(context.grade, 10);
+    const isThcs = !(g >= 10 && g <= 12);
+    result += `\n\nRÀNG BUỘC SƯ PHẠM TOÁN HỌC CT GDPT 2018:
+${isThcs
+  ? '- CẤP THCS (LỚP 6, 7, 8, 9): TUYỆT ĐỐI CẤM DÙNG DẤU TƯƠNG ĐƯƠNG ($\\Leftrightarrow$). Khái niệm mệnh đề và ký hiệu tương đương thuộc chương trình lớp 10.'
+  : '- Cấp THPT (lớp 10–12): được dùng $\\Leftrightarrow$ khi biến đổi tương đương.'}
+- BẮT BUỘC dùng lời dẫn sư phạm: "Thu gọn hệ phương trình, ta được:", "Từ phương trình (1) ta có:", "Thay $x = ...$ vào phương trình (2), ta được:", "Cộng từng vế hai phương trình, ta được:", "Do đó ta có hệ phương trình:".
+- Đặt hệ phương trình trên dòng riêng $$\\begin{cases} ... \\end{cases}$$ và KHÔNG đặt $\\Leftrightarrow$ ở đầu hệ.
+- TUYỆT ĐỐI CẤM dùng $\\Rightarrow$ nối tắt từ hệ phương trình sang nghiệm (cấm: {hệ} => x = ..., y = ...).
+- Kết luận nghiệm chuẩn SGK: "Vậy nghiệm của hệ phương trình là (x; y) = (...; ...)" hoặc "Vậy hệ phương trình có nghiệm duy nhất (x; y) = (...; ...)".
+- Phương pháp thế: (1) rút 1 ẩn → (2) thế vào phương trình còn lại → (3) giải phương trình 1 ẩn → (4) thế ngược → (5) kết luận nghiệm.
+- Phương pháp cộng đại số: (1) nhân hệ số nếu cần → (2) cộng/trừ từng vế triệt tiêu 1 ẩn → (3) giải 1 ẩn → (4) thay tìm ẩn còn lại → (5) kết luận nghiệm.
+- CẤM nhảy cóc, CẤM chỉ viết hệ rồi phán đáp số. Kiểm tra chuyển vế đổi dấu và nhân đơn thức với đa thức.`;
   }
 
   if (templateKey === 'GENERATE_OBJECTIVES' || templateKey === 'GENERATE_CORE_LESSON') {

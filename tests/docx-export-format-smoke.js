@@ -73,7 +73,8 @@ assert.match(footerDump, /Trang/);
 console.log('✓ Footer Môn / Trang / Năm học.');
 
 const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'khbd-docx.js'), 'utf8');
-assert.match(src, /headers = \{ default: new Header/);
+assert.doesNotMatch(src, /section\.headers = \{ default: new Header/);
+assert.match(src, /children: \[\.\.\.headerElements, \.\.\.bodyElements\]/);
 assert.match(src, /footers = \{ default: new Footer/);
 assert.match(src, /AlignmentType\?\.JUSTIFIED/);
 const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'khbd-app.js'), 'utf8');

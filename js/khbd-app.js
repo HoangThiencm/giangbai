@@ -5213,8 +5213,27 @@ function buildPedagogicalPrompt(prompt) {
   }
   if (typeof getTopicDisplayName === "function") {
     out += `\n\n${buildSubjectDisciplineGuard()}`;
+    const sid = typeof currentSubjectId === "function" ? currentSubjectId() : String(appState.selectedSubject || "").toLowerCase();
+    if (sid === "toan") out += `\n\n${buildMathPedagogicalGuard(appState.selectedGrade)}`;
   }
   return out;
+}
+
+function buildMathPedagogicalGuard(grade) {
+  const g = parseInt(grade, 10);
+  const isThcs = !(g >= 10 && g <= 12);
+  const equivRule = isThcs
+    ? `- CẤP THCS (LỚP 6, 7, 8, 9): TUYỆT ĐỐI CẤM DÙNG DẤU TƯƠNG ĐƯƠNG ($\\Leftrightarrow$). Khái niệm mệnh đề và ký hiệu tương đương thuộc chương trình lớp 10.`
+    : `- Cấp THPT (lớp 10–12): được dùng $\\Leftrightarrow$ khi biến đổi tương đương.`;
+  return `RÀNG BUỘC SƯ PHẠM TOÁN HỌC CT GDPT 2018:
+${equivRule}
+- BẮT BUỘC dùng lời dẫn sư phạm: "Thu gọn hệ phương trình, ta được:", "Từ phương trình (1) ta có:", "Thay $x = ...$ vào phương trình (2), ta được:", "Cộng từng vế hai phương trình, ta được:", "Do đó ta có hệ phương trình:".
+- Đặt hệ phương trình trên dòng riêng $$\\begin{cases} ... \\end{cases}$$ và KHÔNG đặt $\\Leftrightarrow$ ở đầu hệ.
+- TUYỆT ĐỐI CẤM dùng $\\Rightarrow$ nối tắt từ hệ phương trình sang nghiệm (cấm: {hệ} => x = ..., y = ...).
+- Kết luận nghiệm chuẩn SGK: "Vậy nghiệm của hệ phương trình là (x; y) = (...; ...)" hoặc "Vậy hệ phương trình có nghiệm duy nhất (x; y) = (...; ...)".
+- Phương pháp thế: (1) rút 1 ẩn → (2) thế vào phương trình còn lại → (3) giải phương trình 1 ẩn → (4) thế ngược → (5) kết luận nghiệm.
+- Phương pháp cộng đại số: (1) nhân hệ số nếu cần → (2) cộng/trừ từng vế triệt tiêu 1 ẩn → (3) giải 1 ẩn → (4) thay tìm ẩn còn lại → (5) kết luận nghiệm.
+- CẤM nhảy cóc, CẤM chỉ viết hệ rồi phán đáp số. Kiểm tra chuyển vế đổi dấu và nhân đơn thức với đa thức.`;
 }
 
 function ppctStandardDescription(item) {
@@ -5737,6 +5756,36 @@ function assertActivityIntegrations(phase, text) {
   }
 }
 
+function isActivityScriptCell(text) {
+  return /bước\s*[1-4]\b|\*{0,3}GV\s*:|\*{0,3}HS\s*:|\[Kỹ thuật|\[Phương pháp/i.test(String(text || ""));
+}
+
+function isKnowledgeContentCell(text) {
+  const t = String(text || "").trim();
+  if (!t || isActivityScriptCell(t)) return false;
+  if (/^(?:định nghĩa|công thức|ví dụ|luyện tập|bài tập|vận dụng|ghi nhớ|quy tắc|chú ý|hệ phương trình|tính chất|định lý)\b/i.test(t)) return true;
+  if (/^\$/.test(t) || /^\\begin/.test(t) || /^\*\*[^*]+\*\*/.test(t)) return true;
+  return false;
+}
+
+function semanticSplitActivityRow(cells) {
+  const list = (Array.isArray(cells) ? cells : []).map(cell => String(cell || "").trim());
+  if (!list.length) return ["", ""];
+  if (list.length === 1) return [list[0], ""];
+  if (list.length === 2) return [list[0], list[1]];
+  let splitAt = list.findIndex((cell, index) => index > 0 && isKnowledgeContentCell(cell));
+  if (splitAt < 0) {
+    for (let i = list.length - 1; i >= 1; i--) {
+      if (!isActivityScriptCell(list[i])) {
+        splitAt = i;
+        break;
+      }
+    }
+  }
+  if (splitAt < 0) return [list.join(" / "), ""];
+  return [list.slice(0, splitAt).join(" / "), list.slice(splitAt).join(" / ")];
+}
+
 function splitKhbdMarkdownTableRow(line) {
   const cells = [];
   let cell = "";
@@ -5867,7 +5916,8 @@ function mergeSplitActivityTables(text) {
     const normalizedRows = rowLines.map(row => {
       const cells = splitKhbdMarkdownTableRow(row);
       if (cells.length < 2) return row;
-      return `| ${cells[0]} | ${cells.slice(1).join(" | ")} |`;
+      const [left, right] = semanticSplitActivityRow(cells);
+      return `| ${left} | ${right} |`;
     });
     if (normalizedRows.length <= 1) {
       chunks.push(header + (normalizedRows[0] ? `${normalizedRows[0]}\n` : ""));
@@ -5877,8 +5927,9 @@ function mergeSplitActivityTables(text) {
       normalizedRows.forEach(row => {
         const cells = splitKhbdMarkdownTableRow(row);
         if (cells.length >= 2) {
-          if (cells[0]) leftParts.push(cells[0]);
-          if (cells.slice(1).join(" | ")) rightParts.push(cells.slice(1).join(" | "));
+          const [left, right] = semanticSplitActivityRow(cells);
+          if (left) leftParts.push(left);
+          if (right) rightParts.push(right);
         }
       });
       chunks.push(`${header}| ${leftParts.join("<br>")} | ${rightParts.join("<br>")} |\n`);
@@ -8439,6 +8490,10 @@ if (typeof module !== 'undefined' && module.exports) {
     safeGetGradeLevelName,
     isOffTopicObjectivesHallucination,
     normalizeLessonTitleMatch,
+    semanticSplitActivityRow,
+    isActivityScriptCell,
+    isKnowledgeContentCell,
+    buildMathPedagogicalGuard,
     VN_PROVINCES_34,
     localityProvinceOf,
     getIntegrationBadgeClass,
