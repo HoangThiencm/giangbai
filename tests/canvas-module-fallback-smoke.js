@@ -59,6 +59,10 @@ async function runBootstrap(source, normal) {
     assert.ok(absent.getLessonsForBook("toan", "standard", 6).some((chapter) => chapter.items.some((x) => /Bài 5/.test(x))), `${rel} fallback makes Grade 6 lesson selectable`);
     assert.strictEqual(absent.getGradeLevel(6), "thcs", `${rel} fallback supplies the lower-secondary grade code`);
     assert.strictEqual(absent.getGradeLevelName(10), "THPT", `${rel} fallback supplies the upper-secondary grade label`);
+    assert.strictEqual(absent.getGradeLevel(3), "tieu-hoc", `${rel} fallback supplies the primary grade code`);
+    assert.strictEqual(absent.getGradeLevelName(4), "Tiểu học", `${rel} fallback supplies the primary grade label`);
+    absent.SUBJECT_COMPETENCIES.toan = ["Tư duy và lập luận toán học"];
+    assert.deepStrictEqual(absent.getSubjectCompetencies("TOAN"), ["Tư duy và lập luận toán học"], `${rel} fallback getSubjectCompetencies is case-insensitive`);
 
     const normal = await runBootstrap(bootstrapSource(html), true);
     assert.ok(!normal.__KHBD_CANVAS__.moduleFallback.curriculum, `${rel} preserves normal curriculum module`);

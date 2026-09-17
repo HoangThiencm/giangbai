@@ -25,8 +25,33 @@ const sourceIds = extractIds(sourceHtml);
 const khbdApp = fs.readFileSync(path.join(root, 'js', 'khbd-app.js'), 'utf8');
 assert.match(khbdApp, /function safeGetGradeLevel\(grade\)/, 'khbd-app phải có helper cấp học an toàn');
 assert.match(khbdApp, /function safeGetGradeLevelName\(grade\)/, 'khbd-app phải có helper tên cấp học an toàn');
+assert.match(khbdApp, /function getSubjectDisplayName\(subjectId\)/, 'khbd-app phải có getSubjectDisplayName');
+assert.match(khbdApp, /function isOffTopicObjectivesHallucination\(text\)/, 'khbd-app phải lọc I. Mục tiêu lạc đề trước khi repair');
+assert.match(khbdApp, /doanh nghiệp\|quy trình doanh nghiệp\|khách hàng\|phân tích sắc thái/, 'bộ lọc lạc đề phải nhận diện từ khóa doanh nghiệp');
+assert.match(khbdApp, /function normalizeLessonTitleMatch\(str\)/, 'khbd-app phải chuẩn hóa dấu chấm/hai chấm khi so khớp bài');
+assert.match(khbdApp, /normalizeLessonTitleMatch\(item\) === normalizeLessonTitleMatch\(appState\.selectedLesson\)/, 'dropdown bài học so khớp PPCT với SGK');
+assert.match(khbdApp, /getPromptTemplate\("GENERATE_OBJECTIVES"/, 'mục tiêu lạc đề phải tái tạo bằng prompt cứng môn học');
+assert.match(khbdApp, /async function handleGenerateCurrentActivity\(\)\s*\{\s*try \{/, 'Tạo nội dung mục này phải bọc try/catch');
+assert.match(khbdApp, /async function handleGenerateObjectives\(\)\s*\{\s*try \{/, 'Tạo I. Mục tiêu phải bọc try/catch');
+assert.match(khbdApp, /async function handleGenerateMaterials\(\)\s*\{\s*try \{/, 'Tạo II. Học liệu phải bọc try/catch');
+assert.match(khbdApp, /showToast\("Lỗi khởi tạo: " \+ err\.message, "danger", 6000\)/, 'nút tạo mục phải báo lỗi khởi tạo, không đơ im lặng');
+{
+  const start = khbdApp.indexOf('function normalizeLessonTitleMatch');
+  const end = khbdApp.indexOf('function populateLessonDropdown');
+  const sandbox = {};
+  vm.createContext(sandbox);
+  vm.runInContext(khbdApp.slice(start, end), sandbox);
+  assert.strictEqual(
+    sandbox.normalizeLessonTitleMatch('Bài 2. Giải hệ hai phương trình bậc nhất hai ẩn'),
+    sandbox.normalizeLessonTitleMatch('Bài 2: Giải hệ hai phương trình bậc nhất hai ẩn'),
+    'Bài 2. phải khớp Bài 2:'
+  );
+}
 assert.ok(!/gradeLevel:\s*getGradeLevel\(appState\.selectedGrade\)/.test(khbdApp), 'khbd-app không được gọi trực tiếp getGradeLevel khi tạo prompt');
 assert.ok(!/gradeLevelName:\s*getGradeLevelName\(appState\.selectedGrade\)/.test(khbdApp), 'khbd-app không được gọi trực tiếp getGradeLevelName khi tạo prompt');
+const canvasPromptFn = khbdApp.slice(khbdApp.indexOf('function canvasTextbookAnalysisPrompt'), khbdApp.indexOf('function isLevel1SectionTitle'));
+assert.match(canvasPromptFn, /\.join\("\\n"\)/, 'prompt phân tích SGK phải nối bằng xuống dòng thật');
+assert.ok(!/\.join\("\\\\n"\)/.test(canvasPromptFn), 'prompt phân tích SGK không được join("\\\\n")');
 
 for (const targetPath of targetPaths) {
   const relPath = path.relative(root, targetPath);
@@ -105,6 +130,11 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)'), `${relPath} phải có nhãn nút 1-Click`);
   assert.ok(targetHtml.includes('handle1ClickGenerate'), `${relPath} phải có hàm điều phối handle1ClickGenerate`);
   assert.match(targetHtml, /async function handle1ClickGenerate\(\)\s*\{\s*await \(window\.__KHBD_CANVAS_CORE_READY__ \|\| Promise\.resolve\(\)\);/, `${relPath} 1-Click phải chờ core modules sẵn sàng`);
+  assert.match(targetHtml, /topic === "Bài học chưa đặt tên"/, `${relPath} 1-Click phải chặn bài chưa đặt tên`);
+  assert.match(targetHtml, /danh mục SGK\/PPCT hoặc nhập tên bài/, `${relPath} 1-Click phải cảnh báo chọn bài từ SGK/PPCT`);
+  assert.match(targetHtml, /function getSubjectDisplayName/, `${relPath} phải có getSubjectDisplayName`);
+  assert.match(targetHtml, /Năng lực số \(NLS theo CV 3456\/BGDĐT - máy tính cầm tay, GeoGebra, tra cứu bảng số\)/, `${relPath} OUTPUT_CONTRACT phải giải nghĩa NLS kèm công cụ môn học`);
+  assert.match(targetHtml, /Natural Language System/, `${relPath} OUTPUT_CONTRACT phải cấm giải nghĩa NLS thành Natural Language System`);
   if (relPath === 'canvas_soankhbd.html') {
     assert.ok(targetHtml.includes("!isCompact && typeof generateLessonIllustrations"), `${relPath} rút gọn không tạo hình minh họa SGK`);
     assert.ok(targetHtml.includes('8. 🎨 F. Hình minh họa SGK (Vector SVG & Hình ảnh)'), `${relPath} popup 1-Click phải hiển thị bước 8 hình minh họa SGK`);

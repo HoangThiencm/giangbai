@@ -60,7 +60,7 @@ function safeGetGradeLevelName(grade) {
 // STATE TOÀN CỤC CỦA ỨNG DỤNG
 const appState = {
   selectedGrade: "6",
-  selectedSubject: "TOAN",
+  selectedSubject: "toan",
   selectedLesson: "",
   customTopic: "",
   school: "TRƯỜNG THCS TRẦN PHÚ",
@@ -522,7 +522,7 @@ function getDraftScope() {
   return token ? `user-${String(localStorage.getItem("userId") || localStorage.getItem("userEmail") || "authenticated").replace(/[^a-zA-Z0-9_-]/g, "_")}` : "anonymous";
 }
 function normalizeDraftPart(value) { return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
-function buildDraftId(grade, lesson, topic) { return ["kntt", appState.selectedSubject || "TOAN", appState.ppctCatalog?.selectedRowId || "none", grade, normalizeDraftPart(lesson), normalizeDraftPart(topic)].join(":"); }
+function buildDraftId(grade, lesson, topic) { return ["kntt", String(appState.selectedSubject || "toan").toLowerCase(), appState.ppctCatalog?.selectedRowId || "none", grade, normalizeDraftPart(lesson), normalizeDraftPart(topic)].join(":"); }
 function getDraftId() { return buildDraftId(appState.selectedGrade, appState.selectedLesson, appState.customTopic); }
 function getDraftIndexKey() { return `khbd_drafts_v2:${getDraftScope()}:index`; }
 function getDraftKey(id = getDraftId()) { return `khbd_drafts_v2:${getDraftScope()}:${id}`; }
@@ -586,7 +586,7 @@ function applyDraftData(data, { preserveSource = true } = {}) {
   if (!data) return;
   Object.assign(appState, {
     selectedGrade: clampKhbdGrade(data.selectedGrade || "6"),
-    selectedSubject: data.selectedSubject || "TOAN",
+    selectedSubject: String(data.selectedSubject || "toan").toLowerCase(),
     ppctCatalogAcademicYear: String(data.ppctCatalogAcademicYear || ""),
     selectedLesson: data.selectedLesson || "",
     ppctCatalog: data.ppctCatalog && Array.isArray(data.ppctCatalog.rows) ? data.ppctCatalog : { rows: [], source: {}, selectedRowId: "", serverId: null },
@@ -824,7 +824,24 @@ function setCheckboxGroupValues(selector, values) {
 }
 
 function currentSubjectId() {
-  return String(appState.selectedSubject || "").toLowerCase();
+  return String(appState.selectedSubject || "toan").toLowerCase();
+}
+
+function getSubjectDisplayName(subjectId) {
+  const sid = String(subjectId == null || subjectId === "" ? currentSubjectId() : subjectId).toLowerCase();
+  const data = (typeof CURRICULUM_DATA !== "undefined" && CURRICULUM_DATA)
+    || (typeof window !== "undefined" && window.CURRICULUM_DATA)
+    || null;
+  if (data && Array.isArray(data.subjects)) {
+    const found = data.subjects.find(item => String(item.id || "").toLowerCase() === sid || String(item.code || "").toLowerCase() === sid);
+    if (found && found.name) return found.name;
+  }
+  if (sid === "toan") return "Toán";
+  if (typeof appState !== "undefined") {
+    const fromState = String(appState.subjectName || appState.subject || "").trim();
+    if (fromState && fromState !== "Môn học") return fromState;
+  }
+  return "Toán";
 }
 
 function contextIntegrationsCatalog() {
@@ -2671,8 +2688,8 @@ function setupEventListeners() {
   
   document.getElementById("selectSubject").addEventListener("change", e => { 
     saveStateToLocalStorage(); 
-    appState.selectedSubject = e.target.value; 
-    appState.subjectName = CURRICULUM_DATA.subjects.find(item => item.id === e.target.value)?.name || "Môn học"; 
+    appState.selectedSubject = String(e.target.value || "toan").toLowerCase();
+    appState.subjectName = getSubjectDisplayName(appState.selectedSubject);
     appState.subject = appState.subjectName; 
     appState.selectedLesson = ""; 
     appState.customTopic = ""; 
@@ -3157,6 +3174,14 @@ async function triggerAiCompetencyRecommendations({ force = false } = {}) {
   }
 }
 
+function normalizeLessonTitleMatch(str) {
+  return String(str || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/(bài|chủ đề)\s*(\d+)\s*[.:：\-–—]/gi, "$1 $2 ")
+    .trim();
+}
+
 // =============================================================================
 // CẬP NHẬT DANH SÁCH BÀI HỌC TỪ CURRICULUM DATA
 // =============================================================================
@@ -3167,9 +3192,13 @@ function populateLessonDropdown() {
   if (subjectSelect) {
     const validSubjects = getSubjectsForGrade(grade);
     subjectSelect.innerHTML = validSubjects.map(item => `<option value="${item.id}">${item.name}</option>`).join("");
-    if (!validSubjects.some(s => s.id === appState.selectedSubject)) {
+    appState.selectedSubject = String(appState.selectedSubject || "toan").toLowerCase();
+    if (!validSubjects.some(s => String(s.id || "").toLowerCase() === appState.selectedSubject)) {
       appState.selectedSubject = validSubjects[0]?.id || "toan";
       appState.subjectName = validSubjects[0]?.name || "Toán";
+      appState.subject = appState.subjectName;
+    } else {
+      appState.subjectName = getSubjectDisplayName(appState.selectedSubject);
       appState.subject = appState.subjectName;
     }
     subjectSelect.value = appState.selectedSubject;
@@ -3187,7 +3216,7 @@ function populateLessonDropdown() {
       const opt = document.createElement("option");
       opt.value = item;
       opt.textContent = item;
-      if (item === appState.selectedLesson) opt.selected = true;
+      if (normalizeLessonTitleMatch(item) === normalizeLessonTitleMatch(appState.selectedLesson)) opt.selected = true;
       optgroup.appendChild(opt);
     });
     select.appendChild(optgroup);
@@ -5111,7 +5140,7 @@ function buildPedagogicalContext() {
     return labels.length ? `${phase}: ${labels.join(", ")}` : "";
   }).filter(Boolean);
 
-  const subjectName = appState.subjectName || "Toán";
+  const subjectName = getSubjectDisplayName();
   const gradeLevel = safeGetGradeLevelName(appState.selectedGrade);
   const curriculumNotice = typeof getCurrentCurriculumNotice === "function"
     ? getCurrentCurriculumNotice({ subjectId: currentSubjectId(), grade: appState.selectedGrade })
@@ -5165,6 +5194,14 @@ function getSafePrompts() {
   return null;
 }
 
+function buildSubjectDisciplineGuard() {
+  const subjectName = typeof getSubjectDisplayName === "function" ? getSubjectDisplayName() : (appState.subjectName || appState.subject || "Toán");
+  const grade = (typeof appState !== "undefined" && appState.selectedGrade) || "";
+  const gradeLevelName = typeof safeGetGradeLevelName === "function" ? safeGetGradeLevelName(grade) : "THCS";
+  const topic = typeof getTopicDisplayName === "function" ? getTopicDisplayName() : "";
+  return `RÀNG BUỘC MÔN HỌC BẮT BUỘC: Kế hoạch bài dạy môn ${subjectName}, lớp ${grade}, cấp ${gradeLevelName}. BÀI DẠY: "${topic}". TUYỆT ĐỐI CẤM soạn văn bản về quản trị doanh nghiệp, quy trình kinh doanh, chăm sóc khách hàng hay công nghệ thông tin thương mại. ĐÂY LÀ GIÁO ÁN PHỔ THÔNG DÀNH CHO HỌC SINH VÀ GIÁO VIÊN.`;
+}
+
 function buildPedagogicalPrompt(prompt) {
   // getPromptTemplate already appends context if provided, but some places might call this directly.
   const p = getSafePrompts();
@@ -5173,6 +5210,9 @@ function buildPedagogicalPrompt(prompt) {
   const isEng = typeof isEnglishSubject === 'function' ? isEnglishSubject(appState.selectedSubject) : false;
   if (isEng && p && p.ENGLISH_ELT_DIRECTIVE) {
     out += `\n\n${p.ENGLISH_ELT_DIRECTIVE}`;
+  }
+  if (typeof getTopicDisplayName === "function") {
+    out += `\n\n${buildSubjectDisciplineGuard()}`;
   }
   return out;
 }
@@ -5207,8 +5247,8 @@ function getGenerationPromptContext(params = {}) {
   
   return {
     generationMode: params.generationMode === 'compact' || (!params.generationMode && typeof window !== 'undefined' && window.canvasStorage && window.canvasStorage.getItem('khbd_generation_mode') === 'compact') ? 'compact' : 'detailed',
-    subject: appState.selectedSubject,
-    subjectName: appState.subjectName || 'Môn học',
+    subject: currentSubjectId(),
+    subjectName: getSubjectDisplayName(),
     grade: appState.selectedGrade,
     gradeLevel: safeGetGradeLevel(appState.selectedGrade),
     gradeLevelName: safeGetGradeLevelName(appState.selectedGrade),
@@ -5217,7 +5257,7 @@ function getGenerationPromptContext(params = {}) {
     lesson_scope: (appState.teachingContext && appState.teachingContext.lessonScope) || '',
     ppct_content: appState.content.ppctAnalysis || '',
     subsectionProfiles: Array.isArray(appState.textbookSubsectionProfiles) ? appState.textbookSubsectionProfiles : [],
-    competencies: getSubjectCompetencies(appState.selectedSubject),
+    competencies: getSubjectCompetencies(currentSubjectId()),
     textbook_content: resolveTextbookContent(),
     objectives_content: appState.content.objectives || "",
     activities_content: params.activitiesContent || prevActs.join("\n\n---\n\n"),
@@ -6999,7 +7039,7 @@ function canvasTextbookAnalysisPrompt(batchLabel, priorContext = "") {
     `Phạm vi lô đang phân tích: ${batchLabel}.`,
     "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"sections\":[{\"title\":\"\",\"coreKnowledge\":\"\",\"activities\":[{\"label\":\"HĐ 1\",\"task\":\"\"}]}],\"exercises\":[{\"code\":\"Bài 1.36\",\"statement\":\"\"}],\"unknowns\":[\"\"]}.",
     "sections chỉ gồm đề mục lớn; coreKnowledge, activities và exercises phải ở đúng thứ tự sư phạm, thuộc đúng đề mục."
-  ].filter(Boolean).join("\\n");
+  ].filter(Boolean).join("\n");
 }
 
 function isLevel1SectionTitle(title) {
@@ -7510,11 +7550,44 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
   return appState.content.activities[actKey];
 }
 
+function isOffTopicObjectivesHallucination(text) {
+  const raw = String(text || "").trim();
+  if (!raw) return false;
+  const hay = raw.toLowerCase();
+  if (/doanh nghiệp|quy trình doanh nghiệp|khách hàng|phân tích sắc thái|natural language|xử lý ngôn ngữ tự nhiên|chiến lược tối ưu hóa quy trình/.test(hay)) {
+    return true;
+  }
+  return !/mục tiêu|về kiến thức|năng lực chung|năng lực đặc thù|phẩm chất/i.test(raw);
+}
+
 async function applyObjectivesOutput(result, signal, options = {}) {
   const repairWithGemini = options.repairWithGemini !== false;
   let finalResult = keepObjectivesOnly(stripDisabledObjectivesStandardSections(result));
+  const offTopic = isOffTopicObjectivesHallucination(finalResult);
+  if (offTopic) {
+    console.warn("Đã loại bỏ I. Mục tiêu lạc đề, không đưa vào repair để giữ nguyên dòng doanh nghiệp.");
+    finalResult = "";
+    if (repairWithGemini) {
+      try {
+        const context = getGenerationPromptContext();
+        const hardPrompt = typeof getPromptTemplate === "function" ? getPromptTemplate("GENERATE_OBJECTIVES", context) : "";
+        const regen = await geminiAPI.generateContent(
+          buildPedagogicalPrompt(hardPrompt),
+          [],
+          getSystemRole(appState.selectedSubject, appState.selectedGrade),
+          0.2,
+          signal
+        );
+        finalResult = keepObjectivesOnly(stripDisabledObjectivesStandardSections(await guardGeminiLessonOutput(regen, signal)));
+        if (isOffTopicObjectivesHallucination(finalResult)) finalResult = "";
+      } catch (error) {
+        console.warn("Tái tạo I. Mục tiêu bằng prompt môn học thất bại:", error);
+        finalResult = "";
+      }
+    }
+  }
   let missing = assertObjectivesStandards(finalResult);
-  if (missing.length && repairWithGemini) {
+  if (missing.length && repairWithGemini && !offTopic) {
     try {
       const missingDesc = missing.map(row => row.kind === "ai"
         ? `${row.item.officialCode}: ${row.item.officialLabel}`
@@ -7549,18 +7622,23 @@ function keepObjectivesOnly(markdown) {
 }
 
 async function handleGenerateObjectives() {
-  const context = getGenerationPromptContext();
-  const prompt = getPromptTemplate('GENERATE_OBJECTIVES', context);
+  try {
+    const context = getGenerationPromptContext();
+    const prompt = getPromptTemplate('GENERATE_OBJECTIVES', context);
 
-  await executeAIGeneration({
-    buttonId: "btnGenerateObjectives",
-    requireSource: true,
-    targetEditorId: "editorObjectives",
-    targetPreviewId: "previewObjectives",
-    operationName: "Tạo I. Mục tiêu",
-    prompt,
-    onSuccess: (result) => applyObjectivesOutput(result)
-  });
+    await executeAIGeneration({
+      buttonId: "btnGenerateObjectives",
+      requireSource: true,
+      targetEditorId: "editorObjectives",
+      targetPreviewId: "previewObjectives",
+      operationName: "Tạo I. Mục tiêu",
+      prompt,
+      onSuccess: (result) => applyObjectivesOutput(result)
+    });
+  } catch (err) {
+    hideProgress();
+    showToast("Lỗi khởi tạo: " + err.message, "danger", 6000);
+  }
 }
 
 function keepMaterialsOnly(markdown) {
@@ -7585,55 +7663,65 @@ function applyMaterialsOutput(result) {
 }
 
 async function handleGenerateMaterials() {
-  const context = getGenerationPromptContext();
-  const prompt = getPromptTemplate('GENERATE_MATERIALS', context);
+  try {
+    const context = getGenerationPromptContext();
+    const prompt = getPromptTemplate('GENERATE_MATERIALS', context);
 
-  await executeAIGeneration({
-    buttonId: "btnGenerateMaterials",
-    targetEditorId: "editorMaterials",
-    targetPreviewId: "previewMaterials",
-    operationName: "Tạo II. Thiết bị & Học liệu",
-    prompt,
-    onSuccess: (result) => applyMaterialsOutput(result)
-  });
+    await executeAIGeneration({
+      buttonId: "btnGenerateMaterials",
+      targetEditorId: "editorMaterials",
+      targetPreviewId: "previewMaterials",
+      operationName: "Tạo II. Thiết bị & Học liệu",
+      prompt,
+      onSuccess: (result) => applyMaterialsOutput(result)
+    });
+  } catch (err) {
+    hideProgress();
+    showToast("Lỗi khởi tạo: " + err.message, "danger", 6000);
+  }
 }
 
 async function handleGenerateCurrentActivity() {
-  const actKey = appState.activeActSubtab;
-  const actInfo = ACTIVITY_TITLES[actKey];
-  
-  if (!actInfo) return;
+  try {
+    const actKey = appState.activeActSubtab;
+    const actInfo = ACTIVITY_TITLES[actKey];
+    
+    if (!actInfo) return;
 
-  if (actKey === "F") {
-    try {
-      await generateLessonIllustrations({ silent: false });
-    } finally {
-      hideProgress();
-    }
-    return;
-  }
-
-  if (actKey === "E") {
-    const hasActs = ["A", "B", "C", "D"].some(k => String(appState.content.activities[k] || "").trim());
-    if (!hasActs && !hasTextbookSource()) {
-      showToast("Hãy soạn các hoạt động A–D (hoặc đọc SGK) trước khi tạo phiếu học tập.", "warning");
+    if (actKey === "F") {
+      try {
+        await generateLessonIllustrations({ silent: false });
+      } finally {
+        hideProgress();
+      }
       return;
     }
+
+    if (actKey === "E") {
+      const hasActs = ["A", "B", "C", "D"].some(k => String(appState.content.activities[k] || "").trim());
+      if (!hasActs && !hasTextbookSource()) {
+        showToast("Hãy soạn các hoạt động A–D (hoặc đọc SGK) trước khi tạo phiếu học tập.", "warning");
+        return;
+      }
+    }
+
+    const context = getGenerationPromptContext();
+    const templateKey = actKey === "E" ? "GENERATE_PORTFOLIO_WORKSHEETS" : `GENERATE_ACTIVITY_${actKey}`;
+    const prompt = getPromptTemplate(templateKey, context) + (actKey === "E" ? "" : buildPhasePedagogyContext(actKey));
+
+    await executeAIGeneration({
+      buttonId: "btnGenerateCurrentAct",
+      targetEditorId: "editorActivity",
+      targetPreviewId: "previewActivity",
+      operationName: `Tạo ${actInfo.short}`,
+      prompt,
+      requireTextbook: actKey !== "E",
+      onSuccess: async (result) => applyActivityOutput(actKey, result)
+    });
+  } catch (err) {
+    hideProgress();
+    showToast("Lỗi khởi tạo: " + err.message, "danger", 6000);
   }
-
-  const context = getGenerationPromptContext();
-  const templateKey = actKey === "E" ? "GENERATE_PORTFOLIO_WORKSHEETS" : `GENERATE_ACTIVITY_${actKey}`;
-  const prompt = getPromptTemplate(templateKey, context) + (actKey === "E" ? "" : buildPhasePedagogyContext(actKey));
-
-  await executeAIGeneration({
-    buttonId: "btnGenerateCurrentAct",
-    targetEditorId: "editorActivity",
-    targetPreviewId: "previewActivity",
-    operationName: `Tạo ${actInfo.short}`,
-    prompt,
-    requireTextbook: actKey !== "E",
-    onSuccess: async (result) => applyActivityOutput(actKey, result)
-  });
 }
 
 /**
@@ -8054,7 +8142,7 @@ function importPortablePpctJson(rawJson) {
   const meta={subject:String(data.subject||appState.selectedSubject||""),grade:String(data.grade||appState.selectedGrade||""),academic_year:String(data.academic_year||"")};
   const rows=data.rows.map((row,index)=>{const uncertain=Array.isArray(row.uncertain_fields)?row.uncertain_fields.map(String):[],digital=Array.isArray(row.digital_competency)?row.digital_competency:[],aiList=Array.isArray(row.ai_competency)?row.ai_competency:[],title=String(row.title||"").trim();return{id:ppctStableId(`${meta.subject}|${meta.grade}|${title}|${String(row.curriculum_period||row.tietCt||"")}|${index}`),chapter:String(row.chapter||""),header:"",title,periods:String(row.periods??""),tietCt:String(row.curriculum_period??row.tietCt??""),week:String(row.week??""),devices:String(row.equipment??row.devices??""),location:String(row.location||""),notes:String(row.notes||""),nls:{enabled:digital.length>0,codes:digital.map(x=>String(x?.code||"")).filter(Boolean),evidence:digital.map(x=>String(x?.description||"")).filter(Boolean).join(" | ")},ai:{enabled:aiList.length>0,codes:aiList.map(x=>String(x?.code||"")).filter(Boolean),evidence:aiList.map(x=>String(x?.description||"")).filter(Boolean).join(" | ")},digital_competency:digital,ai_competency:aiList,uncertain_fields:uncertain,source:{kind:"ppct-json",excerpt:title}};}).filter(row=>row.title);
   if(!rows.length)throw new Error("JSON PPCT không có dòng bài học/hoạt động nào.");
-  appState.selectedSubject=meta.subject||appState.selectedSubject;appState.selectedGrade=meta.grade||appState.selectedGrade;appState.ppctCatalogAcademicYear=meta.academic_year;appState.ppctCatalog={rows,source:{format:"ppct-v1-json",analyzedAt:new Date().toISOString(),importMode:"json",subject:meta.subject,grade:meta.grade,academicYear:meta.academic_year},selectedRowId:"",serverId:null};appState.content.ppctAnalysis=JSON.stringify(data,null,2);saveStateToLocalStorage();renderPpctCatalogReview();renderPpctCatalogSettingsPreview();updateWorkflowStepper();return rows;
+  appState.selectedSubject=String(meta.subject||appState.selectedSubject||"toan").toLowerCase();appState.selectedGrade=meta.grade||appState.selectedGrade;appState.ppctCatalogAcademicYear=meta.academic_year;appState.ppctCatalog={rows,source:{format:"ppct-v1-json",analyzedAt:new Date().toISOString(),importMode:"json",subject:meta.subject,grade:meta.grade,academicYear:meta.academic_year},selectedRowId:"",serverId:null};appState.content.ppctAnalysis=JSON.stringify(data,null,2);saveStateToLocalStorage();renderPpctCatalogReview();renderPpctCatalogSettingsPreview();updateWorkflowStepper();return rows;
 }
 
 async function copyTextToClipboard(text){if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(text);const area=document.createElement("textarea");area.value=text;area.style.position="fixed";area.style.opacity="0";document.body.appendChild(area);area.select();document.execCommand("copy");area.remove();}
@@ -8064,7 +8152,7 @@ function setupPpctJsonWorkflow(){const promptBtn=document.getElementById("btnCop
 function setupPpctCatalogSettingsModal() {
   const openBtn=document.getElementById("btnManagePpctCatalog"), save=document.getElementById("btnSavePpctCatalogSettings");
   openBtn?.addEventListener("click",openPpctCatalogSettings);
-  save?.addEventListener("click",async()=>{ if(!(appState.ppctCatalog.rows||[]).length){showToast("Hãy nhập JSON PPCT trước khi lưu.","warning");return;} const meta={subject:document.getElementById("ppctCatalogSubject")?.value,grade:document.getElementById("ppctCatalogGrade")?.value,academic_year:document.getElementById("ppctCatalogYear")?.value?.trim()}; const changing=meta.subject!==appState.selectedSubject||meta.grade!==appState.selectedGrade||meta.academic_year!==appState.ppctCatalogAcademicYear; if(changing){appState.selectedSubject=meta.subject;appState.selectedGrade=meta.grade;appState.ppctCatalogAcademicYear=meta.academic_year;} try { const existing=await ppctCatalogFetch(meta).then(r=>r.ok?r.json():null); if(existing?.catalog&&!userConfirm("Danh mục PPCT cho khối, môn và năm học này đã có. Thay thế bằng danh mục mới?")) return; await savePpctCatalogToServer(); closeModal("modalPpctCatalogSettings"); } catch(error){showToast(error.message||"Không lưu được PPCT.","danger");} });
+  save?.addEventListener("click",async()=>{ if(!(appState.ppctCatalog.rows||[]).length){showToast("Hãy nhập JSON PPCT trước khi lưu.","warning");return;} const meta={subject:document.getElementById("ppctCatalogSubject")?.value,grade:document.getElementById("ppctCatalogGrade")?.value,academic_year:document.getElementById("ppctCatalogYear")?.value?.trim()}; const changing=meta.subject!==appState.selectedSubject||meta.grade!==appState.selectedGrade||meta.academic_year!==appState.ppctCatalogAcademicYear; if(changing){appState.selectedSubject=String(meta.subject||"toan").toLowerCase();appState.selectedGrade=meta.grade;appState.ppctCatalogAcademicYear=meta.academic_year;} try { const existing=await ppctCatalogFetch(meta).then(r=>r.ok?r.json():null); if(existing?.catalog&&!userConfirm("Danh mục PPCT cho khối, môn và năm học này đã có. Thay thế bằng danh mục mới?")) return; await savePpctCatalogToServer(); closeModal("modalPpctCatalogSettings"); } catch(error){showToast(error.message||"Không lưu được PPCT.","danger");} });
 }
 
 function setupApiKeyModal() {
@@ -8242,6 +8330,10 @@ if (typeof window !== 'undefined') {
   window.revealTab0WorkflowStep = revealTab0WorkflowStep;
   window.closePpctStandardsModal = closePpctStandardsModal;
   window.goToStep3Pedagogy = goToStep3Pedagogy;
+  window.getSubjectDisplayName = getSubjectDisplayName;
+  window.currentSubjectId = currentSubjectId;
+  window.safeGetGradeLevel = safeGetGradeLevel;
+  window.safeGetGradeLevelName = safeGetGradeLevelName;
   window.applyTimeBudgetGateToPedagogy = applyTimeBudgetGateToPedagogy;
   window.formatKhbdRoleLineBreaks = formatKhbdRoleLineBreaks;
   window.getLessonPeriodsCount = getLessonPeriodsCount;
@@ -8342,6 +8434,11 @@ if (typeof module !== 'undefined' && module.exports) {
     renderSubjectIntegrations,
     pruneContextIntegrationsForSubject,
     currentSubjectId,
+    getSubjectDisplayName,
+    safeGetGradeLevel,
+    safeGetGradeLevelName,
+    isOffTopicObjectivesHallucination,
+    normalizeLessonTitleMatch,
     VN_PROVINCES_34,
     localityProvinceOf,
     getIntegrationBadgeClass,

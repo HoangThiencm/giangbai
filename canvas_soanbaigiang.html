@@ -1131,7 +1131,7 @@
       window.getAllLessonsFlat = function (grade) { return window.getCurriculumLessons(grade).reduce(function (all, chapter) { return all.concat(chapter.items.map(function (lesson) { return { chapter: chapter.chapter, lesson: lesson, fullTitle: lesson + " (" + chapter.chapter + ")" }; })); }, []); };
       window.getSubjectsForGrade = function (grade) { return window.CURRICULUM_DATA.subjects.filter(function (subject) { return subject.grades.indexOf(Number(grade)) >= 0; }); };
       window.getLessonsForBook = function (subject, _book, grade) { return ((window.CURRICULUM_DATA.lessonsBySubject[String(subject || "").toLowerCase()] || {})[String(grade)] || []); };
-      window.getSubjectCompetencies = function (subject) { return window.SUBJECT_COMPETENCIES[subject] || []; };
+      window.getSubjectCompetencies = function (subject) { return window.SUBJECT_COMPETENCIES[String(subject || "").toLowerCase()] || []; };
       window.getGradeLevel = function (grade) { var g = parseInt(grade, 10); if (g >= 1 && g <= 5) return "tieu-hoc"; if (g >= 6 && g <= 9) return "thcs"; if (g >= 10 && g <= 12) return "thpt"; return "thcs"; };
       window.getGradeLevelName = function (grade) { var g = parseInt(grade, 10); if (g >= 1 && g <= 5) return "Tiểu học"; if (g >= 6 && g <= 9) return "THCS"; if (g >= 10 && g <= 12) return "THPT"; return "THCS"; };
       cfg.moduleFallback.curriculum = true;
@@ -1253,7 +1253,7 @@
     }
     if (typeof window.PROMPTS === "undefined") {
       window.PROMPTS = {
-        OUTPUT_CONTRACT: "HỢP ĐỒNG ĐẦU RA BẮT BUỘC:\n- BẮT ĐẦU NGAY LẬP TỨC bằng tiêu đề/mục chuyên môn phù hợp.\n- TUYỆT ĐỐI CẤM: lời chào hỏi, khen ngợi, giới thiệu, nhận xét ngoài lề, lời chúc ở cuối bài.\n- TUYỆT ĐỐI CẤM dùng code block fence (```markdown hoặc ```). Chỉ xuất Markdown thuần túy.\n- CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu.\n- BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (***...***).",
+        OUTPUT_CONTRACT: "HỢP ĐỒNG ĐẦU RA BẮT BUỘC:\n- BẮT ĐẦU NGAY LẬP TỨC bằng tiêu đề/mục chuyên môn phù hợp.\n- TUYỆT ĐỐI CẤM: lời chào hỏi, khen ngợi, giới thiệu, nhận xét ngoài lề, lời chúc ở cuối bài.\n- TUYỆT ĐỐI CẤM dùng code block fence (```markdown hoặc ```). Chỉ xuất Markdown thuần túy.\n- CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu.\n- NLS là Năng lực số (NLS theo CV 3456/BGDĐT - máy tính cầm tay, GeoGebra, tra cứu bảng số); AI là Năng lực AI (theo QĐ 2422/BGDĐT). TUYỆT ĐỐI CẤM giải nghĩa NLS thành Natural Language System, xử lý ngôn ngữ tự nhiên, hay soạn văn bản doanh nghiệp, quy trình kinh doanh.\n- BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (***...***).",
         ENGLISH_ELT_DIRECTIVE: "ENGLISH-MEDIUM ELT LESSON PLAN OVERRIDE (subject = Tiếng Anh / English):\nWrite the ENTIRE lesson plan in natural classroom English (100% English)."
       };
     }

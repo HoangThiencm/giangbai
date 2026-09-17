@@ -4,23 +4,37 @@
 PASS
 
 ## Đối chiếu scope
-- Đã kiểm tra prompt contract `generateAiLessonSlides` trong `js/khbd-slides.js`: Schema giàu cấu trúc (`subtitle`, `problem`, `explanation`, `steps` có label, `ruleBox`, `note`, `mathFormula`), loại bỏ hoàn toàn các câu chỉ dẫn thao tác giả tạo kiểu "Hiển thị...", "Liệt kê...", "Xuất hiện...".
-- Đã kiểm tra `normalizeAiDeck`: Tự động bóc tách đề bài và các bước giải cụ thể nếu AI trả về khối gộp, đảm bảo mọi bước hiển thị là nội dung giải toán/kiến thức thật bám sát SGK.
-- Đã kiểm tra `exportToPptx`: Loại bỏ hoàn toàn bước nhảy Y cố định `0.58"` (nguyên nhân gây đè chữ). Áp dụng layout thẻ (Card) chuẩn 16:9 với cơ chế `paragraphs` tự động dãn dòng, bố cục 2 cột (38% Đề bài — 58% Lời giải từng bước) và hộp ghi nhớ `#EFF6FF`.
-- Đã kiểm tra `latexToPlain`: Chuyển đổi toàn diện các khối LaTeX phức tạp (`\begin{cases}`, `\frac`, chỉ số trên/dưới `⁰`..`⁹`, `x²`, các ký hiệu toán `≤`, `≥`, `≠`, `·`, `×`) thành văn bản hiển thị đẹp mắt, không lộ mã LaTeX thô trong PowerPoint.
-- Đã kiểm tra HTML renderer và CSS trên Web: Hỗ trợ layout 2 cột `.khbd-slide-split`, hộp ghi nhớ `.khbd-slide-rulebox`, badge bước giải `.khbd-step-badge`.
-- Đã kiểm tra tính toàn vẹn: Đồng bộ module vào `canvas_soanbaigiang.html` và `backupcode viettailieu/canvas_soanbaigiang.html`. Không làm ảnh hưởng `canvas_soankhbd.html`.
+- Đã kiểm tra `js/khbd-app.js`:
+  + Khai báo các hàm phòng vệ `safeGetGradeLevel` và `safeGetGradeLevelName`, thay thế toàn bộ các vị trí gọi `getGradeLevel(...)` và `getGradeLevelName(...)` trực tiếp trên global scope.
+  + Thêm hàm `normalizeLessonTitleMatch(str)` chuẩn hóa dấu câu (`Bài 2.` tương đương `Bài 2:`), giúp `populateLessonDropdown()` nhận diện chính xác bài học chọn từ danh mục PPCT và không bị nhảy về `-- Chọn bài học từ SGK --`.
+  + Bọc khối `try/catch` tại `handleGenerateCurrentActivity`, `handleGenerateObjectives`, `handleGenerateMaterials` để đảm bảo luôn gọi `hideProgress()` và hiển thị `showToast("Lỗi khởi tạo: " + err.message, "danger", 6000)` khi có lỗi ngoại lệ phát sinh, triệt tiêu tình trạng click vào nút bấm bị "đơ" im lặng.
+  + Sửa lỗi nối chuỗi prompt phân tích SGK tại dòng 7002 từ `.join("\\n")` thành `.join("\n")`.
+  + Cập nhật `applyObjectivesOutput`: tự động phát hiện và hủy bỏ toàn bộ nội dung rác doanh nghiệp (`doanh nghiệp`, `quy trình doanh nghiệp`, `khách hàng`, `phân tích sắc thái`) trước khi xử lý, loại bỏ lệnh ép Gemini giữ nguyên dòng rác, tái tạo mục tiêu bài dạy đúng chuẩn môn học THCS/THPT.
+- Đã kiểm tra `js/khbd-prompts.js`, `canvas_soankhbd.html`, `canvas_soanbaigiang.html` và các file backup:
+  + `OUTPUT_CONTRACT`: Quy định rõ ràng NLS là Năng lực số (CV 3456/BGDĐT — máy tính cầm tay, GeoGebra, bảng số), AI là Năng lực AI (QĐ 2422/BGDĐT); nghiêm cấm tuyệt đối suy diễn thành "Natural Language System" hoặc sinh nội dung quản trị kinh doanh/doanh nghiệp.
+  + Khối `RÀNG BUỘC MÔN HỌC BẮT BUỘC` (Subject & Pedagogical Discipline Guard) trong `GENERATE_OBJECTIVES` và `buildPedagogicalPrompt` khóa chặt môn học phổ thông theo CT GDPT 2018.
+  + Chuẩn hóa `currentSubjectId` / `appState.selectedSubject` lowercase và hàm `getSubjectDisplayName` trả về đúng tên môn học, không bị rơi về `"Môn học"`.
+- Đã kiểm tra `js/khbd-curriculum.js` & `installCurriculumFallback`:
+  + Export đầy đủ `window.getGradeLevel`, `window.getGradeLevelName`, `window.getSubjectCompetencies`.
+  + Khai báo dự phòng đầy đủ trong `installCurriculumFallback` ở các file HTML canvas.
 
 ## Test đã chạy
-- `node tests/canvas-soanbaigiang-smoke.js` — PASS 100% (21/21 assertions: kiểm tra schema mới, lọc placeholder, chuyển đổi LaTeX cases, bố cục PPTX không đè chữ, CSS 2 cột, luồng 1-click).
-- `node tests/canvas-soankhbd-smoke.js` — PASS 100% (Bảo đảm an toàn tuyệt đối cho canvas KHBD).
+- `node tests/canvas-soankhbd-smoke.js` — PASS 100%
+- `node tests/canvas-module-fallback-smoke.js` — PASS 100%
+- `node tests/khbd-nls-ai-bold-italic-smoke.js` — PASS 100%
+- `node tests/canvas-prompts-integrity-smoke.js` — PASS 100%
+- `node tests/khbd-1click-chain-smoke.js` — PASS 100%
+- `node tests/khbd-autofill-metadata-smoke.js` — PASS 100%
+- `node tests/khbd-4steps-workflow-smoke.js` — PASS 100%
+- `node tests/canvas-soanbaigiang-smoke.js` — PASS 100%
+- `node tests/ppct-settings-import-smoke.js` — PASS 100%
 
 ## Pass / Fail từng tiêu chí
-- [x] Tiêu chí 1: Không còn bất kỳ câu chữ placeholder (như "Hiển thị tên bài học", "Hiển thị Bước 2", "Liệt kê...") trên cả Web và PPTX -> PASS.
-- [x] Tiêu chí 2: File PowerPoint xuất ra không bị đè chữ; bố cục 2 cột cân đối 16:9 -> PASS.
-- [x] Tiêu chí 3: Các slide Khám phá, Ví dụ và Luyện tập có đầy đủ đề bài, hướng dẫn và từng bước giải toán cụ thể -> PASS.
-- [x] Tiêu chí 4: Công thức toán học (hệ phương trình, phân số, số mũ) hiển thị tự nhiên, không lộ mã LaTeX thô -> PASS.
-- [x] Tiêu chí 5: Toàn bộ kiểm thử tự động của bài giảng trình chiếu đạt 100% PASS -> PASS.
+- [x] Tiêu chí 1: Chọn bài học từ PPCT thì Dropdown DANH MỤC BÀI HỌC ở thanh trên cùng tự động đồng bộ và giữ nguyên tên bài, không bị nhảy về `-- Chọn bài học từ SGK --` -> PASS.
+- [x] Tiêu chí 2: Khóa chặt môn học, triệt tiêu hoàn toàn ảo giác NLS thành Natural Language System / tối ưu hóa quy trình doanh nghiệp -> PASS.
+- [x] Tiêu chí 3: Nút "Tạo nội dung mục này" ở từng hoạt động được bảo vệ bằng try/catch + toast thông báo, không còn hiện tượng click bị đơ im lặng -> PASS.
+- [x] Tiêu chí 4: `safeGetGradeLevel` và fallback hoạt động chuẩn xác, loại bỏ hoàn toàn `ReferenceError: getGradeLevel is not defined` -> PASS.
+- [x] Tiêu chí 5: Toàn bộ test suites kiểm thử tự động đạt 100% PASS -> PASS.
 
 ## Bug
 Không có.

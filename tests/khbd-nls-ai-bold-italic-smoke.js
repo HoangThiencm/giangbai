@@ -15,7 +15,10 @@ function loadDocx() {
 const docx = loadDocx();
 global.window = { docx };
 const { DocxGenerator } = require('../js/khbd-docx.js');
-const { getPromptTemplate } = require('../js/khbd-prompts.js');
+const { getPromptTemplate, getSystemRole, PROMPTS } = require('../js/khbd-prompts.js');
+const { getSubjectCompetencies, SUBJECT_COMPETENCIES, CURRICULUM_DATA } = require('../js/khbd-curriculum.js');
+global.SUBJECT_COMPETENCIES = SUBJECT_COMPETENCIES;
+global.CURRICULUM_DATA = CURRICULUM_DATA;
 
 function runText(run) {
   return run.root.map(item => item.rootKey === 'w:t' ? item.root.filter(text => typeof text === 'string').join('') : '').join('');
@@ -100,6 +103,16 @@ assert.ok(
   promptObj.includes('***[Mã AI đã chọn]:*** *[Mô tả nhiệm vụ AI gắn với bài]*'),
   'Objectives AI dùng ***[Mã]:*** *mô tả*'
 );
+assert.match(PROMPTS.OUTPUT_CONTRACT, /Năng lực số \(NLS theo CV 3456\/BGDĐT - máy tính cầm tay, GeoGebra, tra cứu bảng số\)/, 'OUTPUT_CONTRACT giải nghĩa NLS là Năng lực số kèm ví dụ công cụ');
+assert.match(PROMPTS.OUTPUT_CONTRACT, /TUYỆT ĐỐI CẤM giải nghĩa NLS thành Natural Language System/, 'OUTPUT_CONTRACT cấm giải nghĩa NLS thành NLP');
+assert.match(PROMPTS.OUTPUT_CONTRACT, /quy trình kinh doanh/, 'OUTPUT_CONTRACT cấm quy trình kinh doanh');
+assert.match(promptObj, /RÀNG BUỘC MÔN HỌC BẮT BUỘC: Kế hoạch bài dạy môn Toán, lớp 6, cấp THCS/, 'GENERATE_OBJECTIVES khóa môn học');
+assert.match(promptObj, /TUYỆT ĐỐI CẤM soạn văn bản về quản trị doanh nghiệp/, 'GENERATE_OBJECTIVES cấm văn bản doanh nghiệp');
+assert.ok(getSubjectCompetencies('TOAN').length > 0, 'getSubjectCompetencies("TOAN") phải khớp toan');
+const roleToan = getSystemRole('TOAN', 9);
+assert.match(roleToan, /Chuyên gia Sư phạm Môn Toán/, 'getSystemRole TOAN vẫn ra môn Toán');
+assert.match(roleToan, /LaTeX/, 'getSystemRole TOAN phải bật chỉ thị LaTeX');
+assert.match(roleToan, /Tư duy và lập luận toán học/, 'getSystemRole TOAN phải có năng lực đặc thù Toán');
 
 const appSrc = fs.readFileSync(path.join(__dirname, '../js/khbd-app.js'), 'utf8');
 assert.ok(
@@ -108,5 +121,19 @@ assert.ok(
 );
 assert.ok(appSrc.includes('\\*{1,3}\\[?NLS'), 'stripDisabledActivityIntegrations bắt 1-3 sao NLS');
 assert.ok(appSrc.includes('\\*{1,3}\\[?AI'), 'stripDisabledActivityIntegrations bắt 1-3 sao AI');
+assert.match(appSrc, /repairWithGemini && !offTopic/, 'applyObjectivesOutput không repair văn bản lạc đề');
+
+const htmlPages = [
+  path.join(__dirname, '../canvas_soankhbd.html'),
+  path.join(__dirname, '../canvas_soanbaigiang.html'),
+  path.join(__dirname, '../backupcode viettailieu/canvas_soankhbd.html'),
+  path.join(__dirname, '../backupcode viettailieu/canvas_soanbaigiang.html')
+];
+htmlPages.forEach(file => {
+  const html = fs.readFileSync(file, 'utf8');
+  assert.match(html, /Năng lực số \(NLS theo CV 3456\/BGDĐT - máy tính cầm tay, GeoGebra, tra cứu bảng số\)/, path.basename(file) + ' giải nghĩa NLS kèm công cụ');
+  assert.match(html, /Natural Language System/, path.basename(file) + ' cấm Natural Language System');
+  assert.match(html, /quy trình kinh doanh/, path.basename(file) + ' cấm quy trình kinh doanh');
+});
 
 console.log('khbd-nls-ai-bold-italic-smoke: PASS 100%');

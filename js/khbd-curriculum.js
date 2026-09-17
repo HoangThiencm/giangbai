@@ -3878,7 +3878,8 @@ function getLessonsForBook(subjectId, bookId, grade) {
 }
 
 function getSubjectCompetencies(subjectId) {
-  return SUBJECT_COMPETENCIES[subjectId] || [];
+  const sid = String(subjectId || '').toLowerCase();
+  return SUBJECT_COMPETENCIES[sid] || [];
 }
 
 function getGradeLevel(grade) {
@@ -3902,6 +3903,7 @@ if (typeof window !== 'undefined') {
   window.SUBJECT_COMPETENCIES = SUBJECT_COMPETENCIES;
   window.getGradeLevel = getGradeLevel;
   window.getGradeLevelName = getGradeLevelName;
+  window.getSubjectCompetencies = getSubjectCompetencies;
 }
 
 if (typeof module !== 'undefined' && module.exports) {

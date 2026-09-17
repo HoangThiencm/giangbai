@@ -377,6 +377,7 @@ QUY TẮC BẮT BUỘC KHI XUẤT NỘI DUNG:
 - TUYỆT ĐỐI CẤM để lại dấu ba chấm "..." hoặc ngoặc vuông "[...]" chưa điền. Mọi đề bài, câu hỏi, công thức, ví dụ mẫu và lời giải PHẢI ĐƯỢC VIẾT ĐẦY ĐỦ CHI TIẾT.
 - Danh sách nội dung có đúng 3 cấp: ý lớn bắt đầu bằng "- ", ý con "+ ", ý chi tiết ". ". Không dùng "1.", "2." làm danh sách nội dung trừ khi là số thứ tự bài tập hoặc bước CV 5512.
 - CẤM xuất HTML, thẻ span, thuộc tính style hay mã màu. Màu sắc và font chữ do ứng dụng xử lý.
+- NLS là Năng lực số (NLS theo CV 3456/BGDĐT - máy tính cầm tay, GeoGebra, tra cứu bảng số); AI là Năng lực AI (theo QĐ 2422/BGDĐT). TUYỆT ĐỐI CẤM giải nghĩa NLS thành Natural Language System, xử lý ngôn ngữ tự nhiên, hay soạn văn bản doanh nghiệp, quy trình kinh doanh, chăm sóc khách hàng.
 - BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (dùng cú pháp Markdown ***...***). Marker chuẩn: ***[NLS: ...]***, ***[AI: ...]***.
 - ĐỘ DÀI & VĂN PHONG CHUẨN: Toàn bộ Kế hoạch bài dạy đạt dung lượng chuẩn 8–10 trang Word A4. Hành văn sư phạm cô đọng, súc tích, trọng tâm; TUYỆT ĐỐI KHÔNG viết văn biền ngẫu, không lặp lại câu hỏi dài dòng.
 - KHÓA TỔNG THỜI LƯỢNG: Tổng A + B + C + D BẮT BUỘC KHỚP 100% với thời lượng tiết dạy {duration}; ví dụ 01 tiết = 45 phút, 02 tiết = đúng 90 phút, 03 tiết = 135 phút. Hoạt động B BẮT BUỘC đúng {time_budget_B}. Nếu chia N nhánh con (2.1, 2.2, ...), tổng số phút của N nhánh cộng lại BẮT BUỘC ĐÚNG BẰNG {time_budget_B} (ví dụ 45 phút chia 2 nhánh thì bắt buộc là 23 phút và 22 phút; TUYỆT ĐỐI CẤM gán 45 phút + 30 phút = 75 phút).
@@ -1232,31 +1233,39 @@ YÊU CẦU: Tạo 2 đến 3 Phiếu Học Tập (PHT) hoàn chỉnh với bản
 };
 
 function getSystemRole(subjectId, grade) {
+  const sid = String(subjectId || '').toLowerCase();
   let subjectName = 'Toán';
   if (typeof CURRICULUM_DATA !== 'undefined' && Array.isArray(CURRICULUM_DATA.subjects)) {
-    const found = CURRICULUM_DATA.subjects.find(s => s.id === subjectId || s.code === subjectId || String(s.name || '').toLowerCase() === String(subjectId || '').toLowerCase());
+    const found = CURRICULUM_DATA.subjects.find(s => String(s.id || '').toLowerCase() === sid || String(s.code || '').toLowerCase() === sid || String(s.name || '').toLowerCase() === String(subjectId || '').toLowerCase());
     if (found && found.name) subjectName = found.name;
   }
-  if (!subjectName && typeof getSubjectDisplayName === 'function') {
-    subjectName = getSubjectDisplayName(subjectId);
+  if ((!subjectName || subjectName === 'Môn học') && typeof getSubjectDisplayName === 'function') {
+    subjectName = getSubjectDisplayName(sid);
   }
-  if (!subjectName) subjectName = 'Toán';
+  if (!subjectName || subjectName === 'Môn học') subjectName = sid === 'toan' ? 'Toán' : (subjectName || 'Toán');
   
   let gradeLevelName = 'THCS';
   let isPrimary = false;
-  if (typeof getGradeLevelName !== 'undefined') {
+  if (typeof safeGetGradeLevelName === 'function') {
+    gradeLevelName = safeGetGradeLevelName(grade);
+    isPrimary = typeof safeGetGradeLevel === 'function' && safeGetGradeLevel(grade) === 'tieu-hoc';
+  } else if (typeof getGradeLevelName === 'function') {
     gradeLevelName = getGradeLevelName(grade);
-    isPrimary = getGradeLevel(grade) === 'tieu-hoc';
+    isPrimary = typeof getGradeLevel === 'function' && getGradeLevel(grade) === 'tieu-hoc';
+  } else {
+    const g = parseInt(grade, 10);
+    if (g >= 1 && g <= 5) { gradeLevelName = 'Tiểu học'; isPrimary = true; }
+    else if (g >= 10 && g <= 12) gradeLevelName = 'THPT';
   }
   const cvDoc = isPrimary ? 'CV 2345' : 'Công văn 5512/BGDĐT';
   
   let compList = '';
-  if (typeof SUBJECT_COMPETENCIES !== 'undefined' && SUBJECT_COMPETENCIES[subjectId]) {
-    compList = SUBJECT_COMPETENCIES[subjectId].join('; ');
+  if (typeof SUBJECT_COMPETENCIES !== 'undefined' && SUBJECT_COMPETENCIES[sid]) {
+    compList = SUBJECT_COMPETENCIES[sid].join('; ');
   }
   
   const latexSubjects = ['toan', 'vatly', 'hoahoc', 'tinhoc'];
-  const needsLatex = latexSubjects.includes(subjectId);
+  const needsLatex = latexSubjects.includes(sid);
   const latexRule = needsLatex 
     ? "- Công thức, phương trình PHẢI được viết bằng mã LaTeX chuẩn: công thức trong dòng dùng $công_thức$, công thức khối dùng $$công_thức$$. Ví dụ: $x^2 + 2x + 1 = 0$, $\\frac{a}{b}$, $\\sqrt{x}$."
     : "- Trình bày văn bản thuần túy, rõ ràng. Không dùng LaTeX trừ khi thật sự cần thiết.";
@@ -1515,8 +1524,8 @@ function getPromptTemplate(templateKey, context) {
     baseTemplate = baseTemplate.replace(ACTIVITY_TABLE_CONTRACT, ACTIVITY_TABLE_CONTRACT_COMPACT);
   }
 
-  const subjectId = context.subject || 'toan';
-  const subjectName = context.subjectName || 'Toán';
+  const subjectId = String(context.subject || 'toan').toLowerCase();
+  const subjectName = (context.subjectName && context.subjectName !== 'Môn học') ? context.subjectName : (typeof getSubjectDisplayName === 'function' ? getSubjectDisplayName(subjectId) : 'Toán');
   const gradeLevelName = context.gradeLevelName || 'THCS';
 
   const genCompsGuide = formatGeneralCompetenciesGuide(subjectId, context);
@@ -1617,6 +1626,7 @@ function getPromptTemplate(templateKey, context) {
   }
 
   if (templateKey === 'GENERATE_OBJECTIVES' || templateKey === 'GENERATE_CORE_LESSON') {
+    result += `\n\nRÀNG BUỘC MÔN HỌC BẮT BUỘC: Kế hoạch bài dạy môn ${subjectName}, lớp ${context.grade || ''}, cấp ${gradeLevelName}. BÀI DẠY: "${context.topic || ''}". TUYỆT ĐỐI CẤM soạn văn bản về quản trị doanh nghiệp, quy trình kinh doanh, chăm sóc khách hàng hay công nghệ thông tin thương mại. ĐÂY LÀ GIÁO ÁN PHỔ THÔNG DÀNH CHO HỌC SINH VÀ GIÁO VIÊN.`;
     const integrationRules = [
       context.digitalCompetencyEnabled && 'NLS: chỉ tạo ### c) và liệt kê đủ từng miền đã chọn.',
       context.aiCompetencyEnabled && 'AI: chỉ tạo ### d) và liệt kê đủ từng mã đã chọn.'
