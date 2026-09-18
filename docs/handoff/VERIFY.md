@@ -1,33 +1,41 @@
-﻿# VERIFY
+# VERIFY
 
 ## Kết luận
 PASS
 
 ## Đối chiếu scope
-- Nhận diện bài Luyện tập chung / Ôn tập / Bài tập cuối chương: Đã thêm `isReviewOrPracticeLesson(topic)` trong `js/khbd-prompts.js` và đồng bộ sang `js/khbd-app.js`. ĐÚNG SCOPE.
-- Xóa bỏ prompt leak `(Các YCCĐ của bài học...; mỗi ý một gạch đầu dòng...)`: Đã xóa khỏi template `GENERATE_OBJECTIVES` và thêm regex làm sạch triệt để trong `sanitizeLessonMarkdown`. ĐÚNG SCOPE.
-- Chuyển đổi Mục B cho bài ôn tập: Đổi tiêu đề thành `## B. HOẠT ĐỘNG 2: LUYỆN TẬP (HỆ THỐNG HÓA KIẾN THỨC VÀ CHỮA CÁC BÀI TẬP TRỌNG TÂM TRONG SGK)` và chỉ dẫn chia nhánh theo bài tập SGK. ĐÚNG SCOPE.
-- Chuyển đổi Mục C cho bài ôn tập: Đổi tiêu đề thành `## C. HOẠT ĐỘNG 3: LUYỆN TẬP NÂNG CAO VÀ VẬN DỤNG CÁC BÀI TẬP CÒN LẠI TRONG SGK`. ĐÚNG SCOPE.
-- Chuẩn hóa Mục I (Mục tiêu) cho bài ôn tập: Tập trung củng cố kiến thức, giải bài tập SGK, khắc phục lỗi sai; cấm chép YCCĐ bài mới. ĐÚNG SCOPE.
-- Nhãn tab động: Đã đồng bộ nhãn tab B thành `B. Luyện tập & Chữa bài tập SGK` khi gặp bài ôn/luyện tập. ĐÚNG SCOPE.
-- Kiểm thử tự động mới: `tests/khbd-review-practice-lesson-smoke.js` đạt 100%. ĐÚNG SCOPE.
-- Không thêm chức năng ngoài kế hoạch, không sửa file ngoài scope.
+- [x] Chuyển giao diện hero / theo dõi giáo viên (như trong ảnh) vào bên trong modal setting (`UserAiSettings.openModal()`):
+  - Modal được mở rộng kích thước `max-w-5xl`.
+  - Bổ sung thanh tab chuyển đổi: Tab 1 "Tổng quan & Theo dõi" chứa container `#teacherLotrinhPanel`; Tab 2 "Cài đặt AI & API Key" chứa form cấu hình model và API keys.
+  - Thêm phương thức `UserAiSettings.switchTab()` và hỗ trợ `openModal(tabName)`. Nút `#heroKeyStatus` chuyển thẳng sang tab `keys`.
+  - Trên trang chủ `index.html`, `#teacherLotrinhHub` giữ ẩn (`hidden`) để bộ công cụ bento hiển thị trực tiếp ở đầu trang.
+- [x] Thêm 3 tab Canvas mới với link mở tab mới (`target="_blank"`):
+  - `CANVAS_SOANKHBD`: `https://gemini.google.com/app/74fb6bf46c11076a?hl=vi` (key `canvas_soankhbd`)
+  - `CANVAS_SOẠN LỘ TRÌNH`: `https://gemini.google.com/app/0fdb1756f609d61f?hl=vi` (key `canvas_soanlotrinh`)
+  - `CANVAS_SÁNG KIẾN`: `https://gemini.google.com/app/e6bf41201af60de3?hl=vi` (key `canvas_sangkien`)
+- [x] Tích hợp phân quyền Admin đầy đủ:
+  - Khai báo trang trong `page_catalog()`, `teacher_workspace_page_ids()`, `teacher_feature_keys_for_pages()` tại `api/helpers.php`.
+  - Bật cấu hình mặc định trong `global_config.json` (`features`).
+  - Quản trị bật/tắt toàn cục và cấp quyền theo tài khoản giáo viên trong `admin.html` (`CLIENT_FEATURE_CHECKS`, `FEATURE_NAMES`, `USER_FEATURE_GROUPS`, `hostingPages`, `teacherFeatureGroups`, `cfg_canvas_*`).
+  - Lọc quyền chặt chẽ trên `index.html` qua `TOOL_PAGE_LINKS` và `applyTeacherAllowedPagesVisibility()`.
+  - Dọn sạch thẻ cũ `vietsangkien` không quản trị quyền.
 
 ## Test đã chạy
-- `node tests/khbd-review-practice-lesson-smoke.js` — PASS (nhận diện bài ôn tập, tiêu đề B/C, xóa leak template & sanitize).
-- `node tests/soankhbd-generation-mode-smoke.js` — PASS (HTML IDs, chế độ soạn, 1-Click).
-- `node tests/canvas-soankhbd-smoke.js` — PASS (tương thích Canvas 1-1).
-- `node tests/baogiang-teacher-month-smoke.js` — PASS.
-- `node tests/baogiang-weekday-segment-smoke.js` — PASS.
-- `node tests/attendance-autosync-smoke.js` — PASS.
+- `node tests/canvas-tabs-permissions-smoke.js` — PASS 100%
+- `node tests/teacher-permissions-smoke.js` — PASS 100%
+- `node tests/user-ai-settings-smoke.js` — PASS 100%
+- `node tests/duyetgiaoan-integration-smoke.js` — PASS 100%
+- `node tests/nghiencuubaihoc-smoke.js` — PASS 100%
 
 ## Pass / Fail từng tiêu chí
-- Nhận diện `isReviewOrPracticeLesson`: PASS.
-- Đổi tiêu đề & chỉ dẫn Mục B, C: PASS.
-- Mục tiêu kiến thức bài ôn tập: PASS.
-- Xóa bỏ prompt leak template & sanitize: PASS.
-- Nhãn tab động trên giao diện: PASS.
-- Bộ test hồi quy hệ thống: PASS 100%.
+1. Modal Setting 2 tab (Tổng quan & Theo dõi / Cài đặt AI & Key): PASS
+2. Tích hợp giao diện hero/stats vào `#teacherLotrinhPanel` trong modal: PASS
+3. Giữ `#teacherLotrinhHub` ẩn trên homepage: PASS
+4. Đăng ký `canvas_soankhbd` link Gemini Canvas + quyền Admin: PASS
+5. Đăng ký `canvas_soanlotrinh` link Gemini Canvas + quyền Admin: PASS
+6. Đăng ký `canvas_sangkien` link Gemini Canvas + quyền Admin: PASS
+7. Mở liên kết `target="_blank"` và styling bento card: PASS
+8. Không có regression trên các smoke test phân quyền và cài đặt AI: PASS
 
 ## Bug
-Không phát hiện bug còn tồn đọng.
+- Không phát hiện lỗi.

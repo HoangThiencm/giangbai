@@ -1,77 +1,155 @@
-﻿# PLAN: Nhận Diện Bài Luyện Tập Chung / Ôn Tập — Chuyển Mục B Thành "Luyện Tập & Chữa Bài Tập SGK", Xóa Bỏ Prompt Leak
+# PLAN: Đưa Giao Diện Theo Dõi / Hero Vào Modal Setting & Thêm 3 Tab Canvas (Phân Quyền Admin)
 
 ## User Review Required
 > [!IMPORTANT]
-> - **Hiện tượng**:
->   1. Đối với các bài **Luyện tập chung / Ôn tập chương / Bài tập cuối chương / Ôn tập học kỳ**, bài học hoàn toàn KHÔNG CÓ kiến thức mới, nhưng hệ thống (cả `soankhbd.html` lẫn `canvas_soankhbd.html`) vẫn ép cứng Mục B là "## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI" và bắt tìm "Mục 1, Mục 2 lớn", khiến AI bị xung đột logic, tự bịa lý thuyết và bỏ quên bài tập trong SGK.
->   2. Prompt leak dòng `(Các YCCĐ của bài học theo CT GDPT 2018; mỗi ý một gạch đầu dòng, giữ động từ hành vi.)` bị in thẳng vào Mục I.
->   3. Nút 1-Click trên `soankhbd.html` chưa tự động kích hoạt đọc SGK nếu người dùng chưa nhấn nút phân tích trước đó.
-> - **Giải pháp**:
->   1. Bổ sung bộ nhận diện `isReviewOrPracticeLesson(topic)` trong `js/khbd-prompts.js` và `js/khbd-app.js`.
->   2. Khi là bài Luyện tập / Ôn tập / Bài tập cuối chương:
->      - Mục B tự động chuyển thành: `## B. HOẠT ĐỘNG 2: LUYỆN TẬP (HỆ THỐNG HÓA KIẾN THỨC VÀ CHỮA CÁC BÀI TẬP TRỌNG TÂM TRONG SGK)`. Các nhánh 2.1, 2.2... ánh xạ trực tiếp theo từng Bài tập trong SGK (Bài 1, Bài 2...).
->      - Mục C tự động chuyển thành: `## C. HOẠT ĐỘNG 3: LUYỆN TẬP NÂNG CAO VÀ VẬN DỤNG CÁC BÀI TẬP CÒN LẠI TRONG SGK`.
->      - Mục I (Mục tiêu): Tự động chuyển thành củng cố, hệ thống hóa kiến thức và rèn kỹ năng giải bài tập SGK (không ép chép YCCĐ bài mới).
->   3. Xóa dòng prompt leak khỏi template và bổ sung bộ lọc regex trong `sanitizeLessonMarkdown`.
->   4. Bổ sung bước tự động đọc SGK trước khi chạy 1-Click nếu có ảnh mà chưa OCR.
+> 1. **Giao diện Hero / Theo dõi giáo viên** (Xin chào, Lớp phụ trách, Tiến độ nộp bài, Theo dõi AI, Thống kê AI hôm nay - như trong ảnh) sẽ được chuyển vào bên trong **Modal Setting** (`UserAiSettings.openModal()`):
+>    - Trang chủ `index.html` sẽ gọn gàng, bộ thẻ công cụ bento hiển thị ngay phía trên, không bị đẩy xuống dưới bởi panel lớn.
+>    - Trong modal Setting, bổ sung tab navigation:
+>      - **Tab 1: Tổng quan & Theo dõi**: Hiển thị trọn vẹn toàn bộ giao diện như ảnh chụp (panel gradient xanh teal, thông tin lớp phụ trách, nút trạng thái API Key, 2 thẻ hành động Lộ trình/Tiến độ và khối nhúng thống kê AI hôm nay).
+>      - **Tab 2: Cài đặt AI & API Key**: Hiển thị cấu hình model Gemini mặc định/dự phòng, nhập key Gemini & Mistral, upload file .txt, kiểm tra/lưu/xóa key.
+>      - Nút `#heroKeyStatus` ("API Key sẵn sàng...") ở Tab 1 khi bấm sẽ tự động chuyển sang Tab 2 để tiện chỉnh sửa.
+> 2. **Bổ sung 3 tab Canvas với phân quyền Admin**:
+>    - **Tab 1: `CANVAS_SOANKHBD`** → `https://gemini.google.com/app/74fb6bf46c11076a?hl=vi` (key: `canvas_soankhbd`)
+>    - **Tab 2: `CANVAS_SOẠN LỘ TRÌNH`** → `https://gemini.google.com/app/0fdb1756f609d61f?hl=vi` (key: `canvas_soanlotrinh`)
+>    - **Tab 3: `CANVAS_SÁNG KIẾN`** (`CANVAS_SANGS KIẾN`) → `https://gemini.google.com/app/e6bf41201af60de3?hl=vi` (key: `canvas_sangkien`)
+>    - Cả 3 tab này được tích hợp đầy đủ vào hệ thống phân quyền: Admin có thể bật/tắt toàn cục (global features) hoặc cấp quyền riêng cho từng giáo viên (allowed_pages). Nếu giáo viên chưa được cấp quyền, thẻ sẽ bị ẩn hoàn toàn trên trang chủ.
 
 ---
 
 ## I. Thiết Kế Kỹ Thuật Chi Tiết
 
-### Module 1: Xây Dựng Hàm Nhận Diện & Chuẩn Hóa Prompt Trong `js/khbd-prompts.js`
-1. **Thêm hàm nhận diện thể loại bài dạy**:
-   ```javascript
-   function isReviewOrPracticeLesson(topic) {
-     return /(?:luyện\s*tập\s*chung|luyện\s*tập|bài\s*tập\s*cuối\s*chương|ôn\s*tập\s*chương|ôn\s*tập|thực\s*hành\s*tổng\s*hợp)/i.test(String(topic || ""));
-   }
-   ```
-2. **Cập nhật `GENERATE_OBJECTIVES`**:
-   - Xóa bỏ dòng chữ nhắc `(Các YCCĐ của bài học theo CT GDPT 2018; mỗi ý một gạch đầu dòng, giữ động từ hành vi.)` tại dòng ~535.
-   - Nếu `isReviewOrPracticeLesson(context.topic)`:
-     - Mục tiêu kiến thức tập trung:
-       - Hệ thống hoá, củng cố vững chắc các kiến thức, định lý, công thức trọng tâm trong chương/chủ đề.
-       - Vận dụng thành thạo các phương pháp và quy tắc để giải quyết các bài tập trong SGK.
-       - Rèn luyện kỹ năng giải toán, nhận diện và khắc phục các sai lầm, ngộ nhận thường gặp.
-       *(CẤM chép các câu nhận biết khái niệm ban đầu của bài học mới).*
-3. **Cập nhật `GENERATE_ACTIVITY_B`**:
-   - Kiểm tra `isReviewOrPracticeLesson(context.topic)`:
-     - **Nếu là bài Luyện tập / Ôn tập**:
-       - Tiêu đề bắt buộc:
-         `## B. HOẠT ĐỘNG 2: LUYỆN TẬP (HỆ THỐNG HÓA KIẾN THỨC VÀ CHỮA CÁC BÀI TẬP TRỌNG TÂM TRONG SGK) ({time_budget_B})`
-       - Chỉ dẫn AI: *"Đây là tiết Luyện tập / Ôn tập / Bài tập cuối chương, KHÔNG CÓ HÌNH THÀNH KIẾN THỨC MỚI. Mục B chuyển trọng tâm thành: Ôn nhanh kiến thức trọng tâm và chữa các bài tập cơ bản trong dữ liệu SGK đã nạp. BẮT BUỘC chia các nhánh 2.1, 2.2... theo từng bài tập hoặc cụm bài tập trong SGK (Ví dụ: ### Hoạt động 2.1: Chữa Bài tập 1 trong SGK; ### Hoạt động 2.2: Chữa Bài tập 2 trong SGK). Bắt buộc trích dẫn nguyên văn đề bài từ SGK vào cột Nội dung và giải chi tiết từng bước."*
-     - **Nếu là bài lý thuyết thông thường**: Giữ nguyên tiêu đề `## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI ({time_budget_B})`.
-4. **Cập nhật `GENERATE_ACTIVITY_C`**:
-   - Nếu là bài Luyện tập / Ôn tập:
-     - Tiêu đề: `## C. HOẠT ĐỘNG 3: LUYỆN TẬP NÂNG CAO VÀ VẬN DỤNG CÁC BÀI TẬP CÒN LẠI TRONG SGK ({time_budget_C})`.
-     - Chữa tiếp các bài tập tự luận nâng cao, bài toán thực tiễn tiếp theo trong SGK.
+### Module 1: Đưa Hero Panel vào Modal Setting (`js/user-ai-settings.js` & `index.html`)
 
-### Module 2: Cập Nhật `js/khbd-app.js`
-1. **Lọc sạch Prompt Leak trong `sanitizeLessonMarkdown`** (dòng ~6175):
-   ```javascript
-   text = text.replace(/(?:^|\n)\s*\((?:Các YCCĐ|mỗi ý một gạch đầu dòng|Yêu cầu cần đạt của bài học|giữ động từ hành vi)[^)]*\)(?:\s*\n|\s*$)/gi, "\n");
-   text = text.replace(/\((?:Các YCCĐ của bài học[^)]*)\)/gi, "");
-   ```
-2. **Tự động đọc SGK trong `handle1ClickGenerate`** (dòng ~8190):
-   ```javascript
-   if (hasTextbookMedia() && !hasAnalyzedLessonContent()) {
-     updateProgress(5, "Đang đọc nội dung học liệu SGK...");
-     if (typeof handleAnalyzeSourceMaterials === "function") {
-       await handleAnalyzeSourceMaterials({ internal: true });
-     }
-   }
-   ```
-3. **Cập nhật nhãn động cho Subtab B trên giao diện**:
-   - Trong `syncDraftDom` hoặc hàm đổi bài học:
-     - Nếu `isReviewOrPracticeLesson(topic)`: Đổi nhãn nút `[data-act="B"]` thành `B. Luyện tập & Chữa bài tập SGK` (và tiêu đề card khi click vào tab B thành `B. Hoạt động Luyện tập & Chữa bài tập SGK`).
-     - Ngược lại: Trả về `B. Hình thành Kiến thức`.
+1. **Cấu trúc lại Modal Setting trong `js/user-ai-settings.js`**:
+   - Mở rộng kích thước modal từ `max-w-2xl` thành `max-w-5xl` (responsive, tối ưu hiển thị 2 cột và bảng thống kê AI).
+   - Thiết kế thanh chuyển Tab (Tab bar) phía trên nội dung modal:
+     - Nút Tab 1: `<button type="button" id="tabBtnOverview" class="tab-btn active"><i class="fas fa-chart-pie mr-2"></i>Tổng quan &amp; Theo dõi</button>`
+     - Nút Tab 2: `<button type="button" id="tabBtnKeys" class="tab-btn"><i class="fas fa-key mr-2"></i>Cài đặt AI &amp; API Key</button>`
+   - Khung chứa Tab 1 (`#userAiTabOverview`):
+     - Chứa container `<div id="teacherLotrinhPanel" class="teacher-lotrinh-panel"></div>` (di chuyển từ body `index.html` vào trong modal, hoặc mount vào đây).
+   - Khung chứa Tab 2 (`#userAiTabKeys`):
+     - Chứa toàn bộ form cài đặt model Gemini, fallback model, textarea Gemini keys, Mistral keys, test results, và các nút Lưu/Kiểm tra/Xóa.
+   - Thêm phương thức `UserAiSettings.switchTab(tabName)`:
+     - Chuyển đổi giữa `'overview'` và `'keys'`.
+     - Cho phép gọi `UserAiSettings.openModal('overview')` hoặc `UserAiSettings.openModal('keys')`.
+     - Nếu mở từ `#heroKeyStatus`, chuyển trực tiếp sang tab `'keys'`.
 
-### Module 3: Kiểm Thử Tự Động (`tests/khbd-review-practice-lesson-smoke.js`)
-- Kiểm tra:
-  1. `isReviewOrPracticeLesson` nhận diện chính xác "Bài tập cuối chương I", "Luyện tập chung trang 21", "Ôn tập chương 2", và trả `false` cho "Bài 1. Phương trình bậc nhất".
-  2. Template `GENERATE_ACTIVITY_B` sinh tiêu đề `LUYỆN TẬP` khi topic là bài ôn tập/bài tập.
-  3. Prompt leak `(Các YCCĐ...)` không còn xuất hiện trong prompt và được hàm `sanitizeLessonMarkdown` gọt sạch.
-  4. Bộ test cũ `tests/soankhbd-generation-mode-smoke.js` và `tests/canvas-soankhbd-smoke.js` tiếp tục PASS 100%.
+2. **Cập nhật `index.html`**:
+   - Khối `#teacherLotrinhHub` trên trang chủ không còn chiếm diện tích trên trang chính:
+     - Giữ thẻ `<section id="teacherLotrinhHub" class="hidden"></section>` hoặc tích hợp trực tiếp vào modal.
+     - Khi `setupTeacherLotrinhHub()` chạy:
+       - Gọi `UserAiSettings.ensureModal()` trước để DOM `#teacherLotrinhPanel` sẵn sàng trong modal.
+       - Render template hero (Xin chào, Lớp phụ trách, Lộ trình actions, Theo dõi AI hôm nay) vào `#teacherLotrinhPanel` bên trong modal.
+       - Kích hoạt nạp thống kê AI `window.loadAiStats?.(true, ...)` gắn vào `#teacherAiStatsMount` bên trong panel trong modal.
+     - Trên trang chủ:
+       - Thanh công cụ `#toolsDeck` và header công cụ giảng dạy sẽ hiển thị nổi bật ngay trên màn hình.
+       - Nút navbar `#btnOpenUserAiSettings` ("Cài đặt AI & Key") mở modal setting với đầy đủ giao diện theo dõi và cấu hình.
+       - Giữ nguyên `id="heroKeyStatus"` và `id="btnOpenUserAiSettings"` để vượt qua 100% các assertion trong `tests/user-ai-settings-smoke.js`.
+
+---
+
+### Module 2: Tích Hợp 3 Tab Canvas Mới & Phân Quyền Admin
+
+1. **Khai báo trong Backend PHP (`api/helpers.php`)**:
+   - Bổ sung vào `page_catalog()`:
+     ```php
+     'canvas_soankhbd' => ['title' => 'CANVAS_SOANKHBD', 'url' => 'https://gemini.google.com/app/74fb6bf46c11076a?hl=vi'],
+     'canvas_soanlotrinh' => ['title' => 'CANVAS_SOẠN LỘ TRÌNH', 'url' => 'https://gemini.google.com/app/0fdb1756f609d61f?hl=vi'],
+     'canvas_sangkien' => ['title' => 'CANVAS_SÁNG KIẾN', 'url' => 'https://gemini.google.com/app/e6bf41201af60de3?hl=vi'],
+     ```
+   - Bổ sung vào `teacher_workspace_page_ids()`:
+     - Thêm `'canvas_soankhbd'`, `'canvas_soanlotrinh'`, `'canvas_sangkien'`.
+   - Bổ sung vào `teacher_feature_keys_for_pages()`:
+     ```php
+     'canvas_soankhbd' => 'canvas_soankhbd',
+     'canvas_soanlotrinh' => 'canvas_soanlotrinh',
+     'canvas_sangkien' => 'canvas_sangkien',
+     ```
+
+2. **Cập nhật Cấu hình Toàn Cục (`global_config.json`)**:
+   - Thêm vào object `"features"`:
+     ```json
+     "canvas_soankhbd": true,
+     "canvas_soanlotrinh": true,
+     "canvas_sangkien": true
+     ```
+
+3. **Cập nhật Quản Trị Phân Quyền (`admin.html`)**:
+   - Bổ sung vào `CLIENT_FEATURE_CHECKS`:
+     - Thêm `'canvas_soankhbd'`, `'canvas_soanlotrinh'`, `'canvas_sangkien'`.
+   - Bổ sung vào `FEATURE_NAMES`:
+     ```javascript
+     canvas_soankhbd: "CANVAS_SOANKHBD",
+     canvas_soanlotrinh: "CANVAS_SOẠN LỘ TRÌNH",
+     canvas_sangkien: "CANVAS_SÁNG KIẾN",
+     ```
+   - Bổ sung vào `USER_FEATURE_GROUPS`:
+     - Thêm 3 key vào danh sách ids của `'Công cụ AI trên hub giáo viên'`.
+   - Bổ sung vào `hostingPages`:
+     ```javascript
+     canvas_soankhbd: { title: 'CANVAS_SOANKHBD', url: 'https://gemini.google.com/app/74fb6bf46c11076a?hl=vi' },
+     canvas_soanlotrinh: { title: 'CANVAS_SOẠN LỘ TRÌNH', url: 'https://gemini.google.com/app/0fdb1756f609d61f?hl=vi' },
+     canvas_sangkien: { title: 'CANVAS_SÁNG KIẾN', url: 'https://gemini.google.com/app/e6bf41201af60de3?hl=vi' },
+     ```
+   - Bổ sung vào `teacherFeatureGroups`:
+     - Thêm 3 key vào mảng `pages` của `'Công cụ giảng dạy'`.
+   - Thêm các thẻ bật/tắt toàn cục trong phần HTML config features của `admin.html`:
+     - `<input type="checkbox" id="cfg_canvas_soankhbd" ...>`
+     - `<input type="checkbox" id="cfg_canvas_soanlotrinh" ...>`
+     - `<input type="checkbox" id="cfg_canvas_sangkien" ...>`
+
+4. **Hiển Thị Trên Trang Chủ (`index.html`)**:
+   - Bổ sung vào `TOOL_PAGE_LINKS`:
+     ```javascript
+     canvas_soankhbd: 'https://gemini.google.com/app/74fb6bf46c11076a?hl=vi',
+     canvas_soanlotrinh: 'https://gemini.google.com/app/0fdb1756f609d61f?hl=vi',
+     canvas_sangkien: 'https://gemini.google.com/app/e6bf41201af60de3?hl=vi',
+     ```
+   - Bổ sung 3 thẻ bento tile vào `#mainToolsGrid`:
+     - **Thẻ 1**:
+       ```html
+       <a href="https://gemini.google.com/app/74fb6bf46c11076a?hl=vi" target="_blank" rel="noopener noreferrer" data-tool="canvas_soankhbd" class="tool-tile tool-tile--colored tool-tile--canvas-soankhbd">
+           <span class="tool-tile-glow"></span>
+           <span class="tool-tile-watermark"><i class="fas fa-book-bookmark"></i></span>
+           <div class="tool-tile-content">
+               <span class="tool-tile-eyebrow">Gemini Canvas</span>
+               <h3 class="tool-tile-title">CANVAS_SOANKHBD</h3>
+               <p class="tool-tile-desc">Soạn kế hoạch bài dạy AI môn Toán chuẩn CV 5512 trên môi trường Canvas.</p>
+           </div>
+           <span class="tool-tile-go"><i class="fas fa-arrow-up-right-from-square"></i></span>
+       </a>
+       ```
+     - **Thẻ 2**:
+       ```html
+       <a href="https://gemini.google.com/app/0fdb1756f609d61f?hl=vi" target="_blank" rel="noopener noreferrer" data-tool="canvas_soanlotrinh" class="tool-tile tool-tile--colored tool-tile--canvas-lotrinh">
+           <span class="tool-tile-glow"></span>
+           <span class="tool-tile-watermark"><i class="fas fa-route"></i></span>
+           <div class="tool-tile-content">
+               <span class="tool-tile-eyebrow">Gemini Canvas</span>
+               <h3 class="tool-tile-title">CANVAS_SOẠN LỘ TRÌNH</h3>
+               <p class="tool-tile-desc">Soạn lộ trình bài giảng và học tập theo chuẩn SGK trên môi trường Canvas.</p>
+           </div>
+           <span class="tool-tile-go"><i class="fas fa-arrow-up-right-from-square"></i></span>
+       </a>
+       ```
+     - **Thẻ 3**:
+       ```html
+       <a href="https://gemini.google.com/app/e6bf41201af60de3?hl=vi" target="_blank" rel="noopener noreferrer" data-tool="canvas_sangkien" class="tool-tile tool-tile--colored tool-tile--canvas-sangkien">
+           <span class="tool-tile-glow"></span>
+           <span class="tool-tile-watermark"><i class="fas fa-lightbulb"></i></span>
+           <div class="tool-tile-content">
+               <span class="tool-tile-eyebrow">Gemini Canvas</span>
+               <h3 class="tool-tile-title">CANVAS_SÁNG KIẾN</h3>
+               <p class="tool-tile-desc">Sử dụng AI để viết sáng kiến kinh nghiệm giáo dục trên môi trường Canvas.</p>
+           </div>
+           <span class="tool-tile-go"><i class="fas fa-arrow-up-right-from-square"></i></span>
+       </a>
+       ```
+     - Thay thế/loại bỏ thẻ cũ `vietsangkien` không được quản trị quyền trước đó.
+   - Thêm CSS classes định dạng gradient sắc nét, bóng bẩy cho 3 thẻ Canvas mới:
+     - `.tool-tile--canvas-soankhbd`: Indigo / Violet gradient
+     - `.tool-tile--canvas-lotrinh`: Teal / Emerald gradient
+     - `.tool-tile--canvas-sangkien`: Pink / Rose gradient
 
 ---
 
@@ -79,15 +157,31 @@
 
 | Tệp tin | Vị trí | Mục đích thay đổi |
 | :--- | :--- | :--- |
-| `js/khbd-prompts.js` | Dòng ~516, ~535, ~710, ~754, ~795 | Thêm `isReviewOrPracticeLesson`, đổi tiêu đề/chỉ dẫn Mục B & C cho bài ôn tập, xóa prompt leak |
-| `js/khbd-app.js` | Dòng ~6175, ~8190, ~8850 | Thêm regex sanitize prompt leak, tự động đọc SGK trước 1-Click, cập nhật nhãn tab B động |
-| `tests/khbd-review-practice-lesson-smoke.js` | Tệp mới | Smoke test kiểm thử nhận diện bài ôn tập và loại bỏ prompt leak |
+| `js/user-ai-settings.js` | Toàn bộ file | Thiết kế lại modal thành giao diện 2 tab (Tổng quan & Theo dõi chứa hero panel; Cài đặt AI & Key), mở rộng `max-w-5xl`, hỗ trợ chuyển tab |
+| `index.html` | Header, main, script | Chuyển `#teacherLotrinhPanel` vào modal setting, thêm 3 thẻ Canvas mới vào `#mainToolsGrid` và `TOOL_PAGE_LINKS`, bổ sung CSS class |
+| `admin.html` | Cấu hình & phân quyền | Thêm 3 quyền `canvas_soankhbd`, `canvas_soanlotrinh`, `canvas_sangkien` vào `CLIENT_FEATURE_CHECKS`, `FEATURE_NAMES`, `hostingPages`, `teacherFeatureGroups`, UI toggles |
+| `api/helpers.php` | Page catalog | Khai báo 3 trang Canvas mới trong `page_catalog()`, `teacher_workspace_page_ids()`, `teacher_feature_keys_for_pages()` |
+| `global_config.json` | `features` | Bật mặc định `canvas_soankhbd: true`, `canvas_soanlotrinh: true`, `canvas_sangkien: true` |
+| `tests/canvas-tabs-permissions-smoke.js` | Tệp mới | Smoke test kiểm tra đăng ký đầy đủ 3 tab trên admin/index/api/config, và kiểm tra cơ chế modal setting |
 
 ---
 
 ## III. Kế Hoạch Kiểm Thử (Verification Plan)
 
-### Kiểm thử tự động
-- `node tests/khbd-review-practice-lesson-smoke.js` — PASS 100%.
-- `node tests/soankhbd-generation-mode-smoke.js` — PASS 100%.
-- `node tests/canvas-soankhbd-smoke.js` — PASS 100%.
+### 1. Kiểm thử tự động
+- Chạy smoke test mới:
+  ```powershell
+  node tests/canvas-tabs-permissions-smoke.js
+  ```
+- Chạy lại các smoke test hiện hành để bảo đảm không có regression:
+  ```powershell
+  node tests/teacher-permissions-smoke.js
+  node tests/user-ai-settings-smoke.js
+  node tests/duyetgiaoan-integration-smoke.js
+  ```
+
+### 2. Kiểm thử hợp đồng phân quyền
+- Giáo viên KHÔNG có quyền `canvas_soankhbd`: Thẻ `[data-tool="canvas_soankhbd"]` có class `.hidden` trên `index.html`.
+- Giáo viên ĐƯỢC cấp quyền `canvas_soankhbd`: Thẻ hiển thị bình thường và link đúng tới `https://gemini.google.com/app/74fb6bf46c11076a?hl=vi` (`target="_blank"`).
+- Tương tự cho `canvas_soanlotrinh` và `canvas_sangkien`.
+- Nút "Cài đặt AI & Key" mở modal setting với 2 tab; tab Tổng quan hiển thị đầy đủ thông tin giáo viên, lớp phụ trách và nhúng thống kê AI hôm nay.

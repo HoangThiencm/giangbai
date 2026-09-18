@@ -290,6 +290,33 @@
                             <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
                         </label>
                     </div>
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">CANVAS_SOANKHBD</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_canvas_soankhbd"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">CANVAS_SOẠN LỘ TRÌNH</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_canvas_soanlotrinh"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h4 class="font-bold text-slate-700 text-sm mb-3">CANVAS_SÁNG KIẾN</h4>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-600">
+                            <input type="checkbox" id="cfg_canvas_sangkien"
+                                class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500"
+                                checked>
+                            <i class="fas fa-eye text-slate-400"></i> Hiển thị trang
+                        </label>
+                    </div>
                     <!-- 12. Thống kê thành tích -->
                     <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
                         <h4 class="font-bold text-slate-700 text-sm mb-3">Thống Kê Thành Tích</h4>
@@ -865,7 +892,8 @@
 
         const CLIENT_FEATURE_CHECKS = [
             'gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'sodiem',
-            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'soankhbd', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc'
+            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'soankhbd', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc',
+            'canvas_soankhbd', 'canvas_soanlotrinh', 'canvas_sangkien'
         ];
 
         const FEATURE_NAMES = {
@@ -880,6 +908,9 @@
             padlet: "Bảng Chia Sẻ Padlet",
             vietbaocao: "Viết Báo Cáo AI",
             taobaitap: "Tạo Bài Tập AI (Canvas)",
+            canvas_soankhbd: "CANVAS_SOANKHBD",
+            canvas_soanlotrinh: "CANVAS_SOẠN LỘ TRÌNH",
+            canvas_sangkien: "CANVAS_SÁNG KIẾN",
             thanhtich: "Thống Kê Thành Tích",
             thoikhoabieu: "Xếp Thời Khóa Biểu",
             phancongtochuyenmon: "Phân Công Chuyên Môn",
@@ -894,7 +925,7 @@
         const USER_FEATURE_GROUPS = [
             {
                 title: 'Công cụ AI trên hub giáo viên',
-                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc']
+                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc', 'canvas_soankhbd', 'canvas_soanlotrinh', 'canvas_sangkien']
             },
             {
                 title: 'Không gian lộ trình Toán',
@@ -1990,7 +2021,10 @@
             rutgon: { title: 'Link rút gọn & QR', url: 'rutgon.html' },
             thongketientrinh: { title: 'Thống kê tiến trình lớp', url: 'thongketientrinh.html' },
             quanlyvanban: { title: 'Quản lý văn bản', url: 'quanlyvanban.html' },
-            theodoiai: { title: 'Theo dõi AI lộ trình', url: 'theodoi-ai.html' }
+            theodoiai: { title: 'Theo dõi AI lộ trình', url: 'theodoi-ai.html' },
+            canvas_soankhbd: { title: 'CANVAS_SOANKHBD', url: 'https://gemini.google.com/app/74fb6bf46c11076a?hl=vi' },
+            canvas_soanlotrinh: { title: 'CANVAS_SOẠN LỘ TRÌNH', url: 'https://gemini.google.com/app/0fdb1756f609d61f?hl=vi' },
+            canvas_sangkien: { title: 'CANVAS_SÁNG KIẾN', url: 'https://gemini.google.com/app/e6bf41201af60de3?hl=vi' }
         };
         const teacherOnlyPages = {
             sodiem: hostingPages.sodiem,
@@ -2017,7 +2051,7 @@
             {
                 title: 'Công cụ giảng dạy',
                 hint: 'Hiện trên trang chính của giáo viên.',
-                pages: ['thitructuyen', 'matrande', 'soankhbd', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc']
+                pages: ['thitructuyen', 'matrande', 'soankhbd', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc', 'canvas_soankhbd', 'canvas_soanlotrinh', 'canvas_sangkien']
             }
         ];
         let editingStudent = null;

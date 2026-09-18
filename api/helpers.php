@@ -56,6 +56,9 @@ function page_catalog(): array
         'thoikhoabieu' => ['title' => 'Xếp thời khóa biểu', 'url' => 'thoikhoabieu.html'],
         'phancongtochuyenmon' => ['title' => 'Quản lý tổ chuyên môn', 'url' => 'phancongtochuyenmon.html'],
         'xaydungphuluc' => ['title' => 'Xây dựng Phụ lục 1, 2, 3 (CV 5512 - THCS)', 'url' => 'xaydungphuluc.html'], 'duyetgiaoan' => ['title' => 'Duyệt Giáo Án AI', 'url' => 'duyetgiaoan.html'], 'duyetde' => ['title' => 'Rà soát & Hiệu chỉnh Đề Kiểm Tra (Duyệt đề AI)', 'url' => 'duyetde.html'], 'nghiencuubaihoc' => ['title' => 'Nghiên cứu bài học AI', 'url' => 'nghiencuubaihoc.html'],
+        'canvas_soankhbd' => ['title' => 'CANVAS_SOANKHBD', 'url' => 'https://gemini.google.com/app/74fb6bf46c11076a?hl=vi'],
+        'canvas_soanlotrinh' => ['title' => 'CANVAS_SOẠN LỘ TRÌNH', 'url' => 'https://gemini.google.com/app/0fdb1756f609d61f?hl=vi'],
+        'canvas_sangkien' => ['title' => 'CANVAS_SÁNG KIẾN', 'url' => 'https://gemini.google.com/app/e6bf41201af60de3?hl=vi'],
     ];
 }
 
@@ -84,6 +87,7 @@ function teacher_workspace_page_ids(): array
         'phancongtochuyenmon',
         'rutgon',
         'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc',
+        'canvas_soankhbd', 'canvas_soanlotrinh', 'canvas_sangkien',
     ];
 }
 
@@ -122,6 +126,9 @@ function teacher_feature_keys_for_pages(): array
         'rutgon' => 'rutgon',
         'thanhtich' => 'thanhtich',
         'xaydungphuluc' => 'xaydungphuluc', 'duyetgiaoan' => 'duyetgiaoan', 'duyetde' => 'duyetde', 'nghiencuubaihoc' => 'nghiencuubaihoc',
+        'canvas_soankhbd' => 'canvas_soankhbd',
+        'canvas_soanlotrinh' => 'canvas_soanlotrinh',
+        'canvas_sangkien' => 'canvas_sangkien',
     ];
 }
 

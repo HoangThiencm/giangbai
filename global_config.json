@@ -46,7 +46,10 @@
     "teacher_design": true,
     "teacher_progress_stats": true,
     "teacher_ai_stats": true,
-    "taobaitap": true
+    "taobaitap": true,
+    "canvas_soankhbd": true,
+    "canvas_soanlotrinh": true,
+    "canvas_sangkien": true
   },
   "user_features": {
     "hoang3205@gmail.com": {

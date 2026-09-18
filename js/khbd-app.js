@@ -189,7 +189,7 @@ const ACTIVITY_TITLES = {
   A: { short: "A. Mở đầu", full: "A. HOẠT ĐỘNG MỞ ĐẦU (TIẾP CẬN VẤN ĐỀ)" },
   B: { short: "B. Hình thành Kiến thức", full: "B. HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC MỚI" },
   C: { short: "C. Luyện tập", full: "C. HOẠT ĐỘNG LUYỆN TẬP" },
-  D: { short: "D. Vận dụng & Hướng dẫn tự học", full: "D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC" },
+  D: { short: "D. Vận dụng", full: "D. HOẠT ĐỘNG 4: VẬN DỤNG" },
   E: { short: "E. Hồ sơ học tập", full: "E. Hồ sơ học tập (Phiếu học tập & Công cụ đánh giá)" },
   F: { short: "F. Hình minh họa SGK", full: "F. Hình minh họa SGK (Vector SVG)" }
 };

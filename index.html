@@ -559,12 +559,38 @@
             background: rgba(45, 212, 191, 0.38);
         }
 
-        .tool-tile--vietsangkien {
+        .tool-tile--canvas-soankhbd {
+            background: linear-gradient(145deg, #312e81 0%, #4f46e5 48%, #7c3aed 100%);
+            box-shadow: 0 14px 36px rgba(99, 102, 241, 0.25);
+        }
+
+        .tool-tile--canvas-soankhbd .tool-tile-glow {
+            width: 150px;
+            height: 150px;
+            right: -24px;
+            bottom: -48px;
+            background: rgba(167, 139, 250, 0.42);
+        }
+
+        .tool-tile--canvas-lotrinh {
+            background: linear-gradient(145deg, #064e3b 0%, #0f766e 50%, #10b981 100%);
+            box-shadow: 0 14px 36px rgba(16, 185, 129, 0.22);
+        }
+
+        .tool-tile--canvas-lotrinh .tool-tile-glow {
+            width: 150px;
+            height: 150px;
+            left: -24px;
+            bottom: -48px;
+            background: rgba(52, 211, 153, 0.4);
+        }
+
+        .tool-tile--canvas-sangkien {
             background: linear-gradient(145deg, #831843 0%, #be185d 50%, #f43f5e 100%);
             box-shadow: 0 14px 36px rgba(244, 63, 94, 0.22);
         }
 
-        .tool-tile--vietsangkien .tool-tile-glow {
+        .tool-tile--canvas-sangkien .tool-tile-glow {
             width: 140px;
             height: 140px;
             right: -20px;
@@ -949,7 +975,10 @@
             soankhbd: 'soankhbd.html',
             taovideo: 'taovideo/index.html',
             xaydungphuluc: 'xaydungphuluc.html', duyetgiaoan: 'duyetgiaoan.html', duyetde: 'duyetde.html',
-            nghiencuubaihoc: 'nghiencuubaihoc.html'
+            nghiencuubaihoc: 'nghiencuubaihoc.html',
+            canvas_soankhbd: 'https://gemini.google.com/app/74fb6bf46c11076a?hl=vi',
+            canvas_soanlotrinh: 'https://gemini.google.com/app/0fdb1756f609d61f?hl=vi',
+            canvas_sangkien: 'https://gemini.google.com/app/e6bf41201af60de3?hl=vi'
         };
         const LOTRINH_PAGE_KEYS = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
 
@@ -1260,9 +1289,7 @@
                 </div>
             </div>
 
-            <section id="teacherLotrinhHub" class="mb-8 hidden">
-                <div id="teacherLotrinhPanel" class="teacher-lotrinh-panel"></div>
-            </section>
+            <section id="teacherLotrinhHub" class="hidden" aria-hidden="true"></section>
 
             <div id="toolsDeck" class="tools-deck mb-10">
 
@@ -1418,15 +1445,37 @@
                         <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                     </a>
 
-                    <a href="https://gemini.google.com/app/e6bf41201af60de3?hl=vi" data-tool="vietsangkien" class="tool-tile tool-tile--colored tool-tile--vietsangkien">
+                    <a href="https://gemini.google.com/app/74fb6bf46c11076a?hl=vi" target="_blank" rel="noopener noreferrer" data-tool="canvas_soankhbd" class="tool-tile tool-tile--colored tool-tile--canvas-soankhbd">
                         <span class="tool-tile-glow"></span>
-                        <span class="tool-tile-watermark"><i class="fas fa-trophy"></i></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-book-bookmark"></i></span>
                         <div class="tool-tile-content">
-                            <span class="tool-tile-eyebrow">Cá nhân</span>
-                            <h3 class="tool-tile-title">Viết sáng kiến</h3>
-                            <p class="tool-tile-desc">Sử dụng AI để viết sáng kiến theo yêu cầu các môn_Môi trường Canvasp>
+                            <span class="tool-tile-eyebrow">Gemini Canvas</span>
+                            <h3 class="tool-tile-title">CANVAS_SOANKHBD</h3>
+                            <p class="tool-tile-desc">Soạn kế hoạch bài dạy AI môn Toán chuẩn CV 5512 trên môi trường Canvas.</p>
                         </div>
-                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-up-right-from-square"></i></span>
+                    </a>
+
+                    <a href="https://gemini.google.com/app/0fdb1756f609d61f?hl=vi" target="_blank" rel="noopener noreferrer" data-tool="canvas_soanlotrinh" class="tool-tile tool-tile--colored tool-tile--canvas-lotrinh">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-route"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Gemini Canvas</span>
+                            <h3 class="tool-tile-title">CANVAS_SOẠN LỘ TRÌNH</h3>
+                            <p class="tool-tile-desc">Soạn lộ trình bài giảng và học tập theo chuẩn SGK trên môi trường Canvas.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-up-right-from-square"></i></span>
+                    </a>
+
+                    <a href="https://gemini.google.com/app/e6bf41201af60de3?hl=vi" target="_blank" rel="noopener noreferrer" data-tool="canvas_sangkien" class="tool-tile tool-tile--colored tool-tile--canvas-sangkien">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-lightbulb"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Gemini Canvas</span>
+                            <h3 class="tool-tile-title">CANVAS_SÁNG KIẾN</h3>
+                            <p class="tool-tile-desc">Sử dụng AI để viết sáng kiến kinh nghiệm giáo dục trên môi trường Canvas.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-up-right-from-square"></i></span>
                     </a>
 
                     <a href="https://gemini.google.com/app/621f8c0862062159?hl=vi" data-tool="Chuyển pdf" class="tool-tile tool-tile--colored tool-tile--chuyenpdf">
@@ -1922,13 +1971,16 @@
                 return;
             }
 
+            if (window.UserAiSettings && typeof UserAiSettings.ensureModal === 'function') {
+                UserAiSettings.ensureModal();
+            }
             const hub = document.getElementById('teacherLotrinhHub');
             const panel = document.getElementById('teacherLotrinhPanel');
             const divider = document.getElementById('teacherToolsDivider');
             const defaultToolsHeader = document.getElementById('defaultToolsHeader');
-            if (!hub || !panel) return;
+            if (!panel) return;
 
-            hub.classList.remove('hidden');
+            hub?.classList.add('hidden');
             divider?.classList.remove('hidden');
             defaultToolsHeader?.classList.add('hidden');
             document.getElementById('toolsDeck')?.classList.add('tools-deck--teacher');
@@ -2023,7 +2075,7 @@
                             <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-white md:text-3xl">Xin chào, ${teacherName}</h2>
                             <p class="mt-2 text-sm leading-6 text-teal-50/90">${introText}</p>
                             <p class="mt-2 text-xs text-teal-100/80">${classHint}</p>
-                            <button type="button" id="heroKeyStatus" onclick="UserAiSettings.openModal()" class="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-teal-50 transition hover:bg-white/20">
+                            <button type="button" id="heroKeyStatus" onclick="UserAiSettings.openModal('keys')" class="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-teal-50 transition hover:bg-white/20">
                                 <i class="fas fa-key text-amber-300"></i> Đang kiểm tra API Key...
                             </button>
                         </div>

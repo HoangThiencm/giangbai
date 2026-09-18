@@ -1,32 +1,32 @@
-# IMPLEMENT: Nhận diện bài Luyện tập / Ôn tập — đổi Mục B/C, xóa prompt leak YCCĐ
+# IMPLEMENT: Hero/Theo dõi vào Modal Setting + 3 tab Canvas phân quyền Admin
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
-## Module 1 — `js/khbd-prompts.js`
-- Thêm `isReviewOrPracticeLesson(topic)` (regex: luyện tập chung / luyện tập / bài tập cuối chương / ôn tập chương / ôn tập / thực hành tổng hợp).
-- Giữ alias `isPracticeOrReviewLesson` → gọi hàm mới (tương thích phân bổ thời lượng).
-- `GENERATE_OBJECTIVES`: xóa dòng prompt leak `(Các YCCĐ của bài học theo CT GDPT 2018; mỗi ý một gạch đầu dòng, giữ động từ hành vi.)`.
-- Khi bài ôn/luyện tập: bổ sung ràng buộc Mục I tập trung củng cố / hệ thống hóa / chữa bài tập SGK; CẤM chép YCCĐ kiểu bài mới.
-- `GENERATE_ACTIVITY_B` (ôn tập): thay tiêu đề `HÌNH THÀNH KIẾN THỨC MỚI` → `LUYỆN TẬP (HỆ THỐNG HÓA KIẾN THỨC VÀ CHỮA CÁC BÀI TẬP TRỌNG TÂM TRONG SGK)`; chỉ dẫn chia 2.1, 2.2… theo bài tập SGK.
-- `GENERATE_ACTIVITY_C` (ôn tập): tiêu đề → `LUYỆN TẬP NÂNG CAO VÀ VẬN DỤNG CÁC BÀI TẬP CÒN LẠI TRONG SGK`.
-- Export `isReviewOrPracticeLesson` / alias trên `window`, `globalThis`, `module.exports`.
+## Module 1 — Modal Setting 2 tab (`js/user-ai-settings.js` + `index.html`)
 
-## Module 2 — `js/khbd-app.js`
-- Đồng bộ `isReviewOrPracticeLesson` (+ alias).
-- `sanitizeLessonMarkdown`: thêm regex gọt dòng/cụm `(Các YCCĐ...)` / `(mỗi ý một gạch đầu dòng...)`.
-- `handle1ClickGenerate`: đã có sẵn bước tự đọc SGK khi `hasTextbookMedia() && !hasAnalyzedLessonContent()` với `{ internal: true }` — giữ nguyên.
-- Nhãn động tab B: `getActivityTitleInfo` / `syncActivityBTabLabels`
-  - Ôn/luyện tập: `B. Luyện tập & Chữa bài tập SGK` / `B. Hoạt động Luyện tập & Chữa bài tập SGK`
-  - Ngược lại: giữ `B. Hình thành Kiến thức`
-- Gọi sync từ `syncDraftDom` và `switchActivitySubtab`; export Word / tạo mục hiện tại dùng nhãn động.
+- Modal mở rộng `max-w-5xl`; thanh tab:
+  - Tab 1 `#tabBtnOverview` / `#userAiTabOverview`: mount `#teacherLotrinhPanel` (hero Xin chào, lớp phụ trách, hành động theo dõi, AI stats).
+  - Tab 2 `#tabBtnKeys` / `#userAiTabKeys`: form model Gemini/fallback, key Gemini & Mistral, nạp file, test/lưu/xóa.
+- Thêm `UserAiSettings.switchTab('overview'|'keys')`; `openModal(tabName)` chọn tab.
+- `#heroKeyStatus` gọi `openModal('keys')`; navbar `#btnOpenUserAiSettings` vẫn `openModal()`.
+- `setupTeacherLotrinhHub()` gọi `UserAiSettings.ensureModal()` rồi render hero vào panel trong modal; `#teacherLotrinhHub` trên trang chủ giữ `hidden` (tools deck nổi bật).
 
-## Module 3 — Smoke mới
-- `tests/khbd-review-practice-lesson-smoke.js`: nhận diện topic, tiêu đề B/C, xóa leak template, sanitize, wiring 1-Click OCR nội bộ.
+## Module 2 — 3 Canvas + phân quyền
+
+- `api/helpers.php`: `page_catalog`, `teacher_workspace_page_ids`, `teacher_feature_keys_for_pages` thêm `canvas_soankhbd`, `canvas_soanlotrinh`, `canvas_sangkien`.
+- `global_config.json` `features`: 3 key = `true`.
+- `admin.html`: `CLIENT_FEATURE_CHECKS`, `FEATURE_NAMES`, `USER_FEATURE_GROUPS`, `hostingPages`, `teacherFeatureGroups`, checkbox `cfg_canvas_*`.
+- `index.html`: `TOOL_PAGE_LINKS` + 3 thẻ bento (Indigo/Teal/Pink); gỡ thẻ cũ `vietsangkien`.
+
+## Smoke mới
+
+- `tests/canvas-tabs-permissions-smoke.js`: đăng ký 3 tab (helpers/admin/index/config), bỏ `vietsangkien`, modal 2 tab + `ensureModal` + `heroKeyStatus` → keys.
 
 ## Test đã chạy
-- `node tests/khbd-review-practice-lesson-smoke.js` — PASS
-- `node tests/soankhbd-generation-mode-smoke.js` — PASS
-- `node tests/canvas-soankhbd-smoke.js` — PASS
-- Thêm regression: `khbd-time-budgets-smoke.js`, `khbd-sanitize-smoke.js`, `khbd-tabs-reorganized-smoke.js` — PASS
 
-Không thêm chức năng ngoài plan. Cần `/verify` trên Antigravity.
+- `node tests/canvas-tabs-permissions-smoke.js` — PASS
+- `node tests/teacher-permissions-smoke.js` — PASS
+- `node tests/user-ai-settings-smoke.js` — PASS
+- `node tests/duyetgiaoan-integration-smoke.js` — PASS
+
+Không thêm chức năng ngoài plan. Browser MCP không có trong session — chưa verify click UI trực tiếp; hợp đồng static đã PASS. Cần `/verify` trên Antigravity.

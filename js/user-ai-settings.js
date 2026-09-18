@@ -170,69 +170,110 @@
 
     function ensureModal() {
         if (document.getElementById('userAiSettingsModal')) return;
+        if (!document.getElementById('userAiSettingsTabStyles')) {
+            const style = document.createElement('style');
+            style.id = 'userAiSettingsTabStyles';
+            style.textContent = `
+                #userAiSettingsModal .tab-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    border-bottom: 2px solid transparent;
+                    padding: 0.65rem 0.85rem;
+                    font-size: 0.8125rem;
+                    font-weight: 700;
+                    color: #64748b;
+                    transition: color .15s ease, border-color .15s ease, background .15s ease;
+                }
+                #userAiSettingsModal .tab-btn:hover { color: #334155; background: #f8fafc; }
+                #userAiSettingsModal .tab-btn.active {
+                    color: #4338ca;
+                    border-bottom-color: #6366f1;
+                    background: #eef2ff;
+                }
+                #userAiSettingsModal #teacherLotrinhPanel {
+                    border-radius: 0;
+                    border: 0;
+                    box-shadow: none;
+                }
+            `;
+            document.head.appendChild(style);
+        }
         const wrap = document.createElement('div');
         wrap.id = 'userAiSettingsModal';
         wrap.className = 'hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4';
         wrap.innerHTML = `
-            <div class="flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div class="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
                 <div class="flex items-center justify-between bg-slate-800 px-5 py-4 text-white">
                     <div>
                         <h3 class="flex items-center gap-2 text-base font-bold sm:text-lg">
-                            <i class="fas fa-sliders-h text-indigo-300"></i> Cài đặt AI &amp; Key
+                            <i class="fas fa-sliders-h text-indigo-300"></i> Cài đặt AI &amp; Theo dõi
                         </h3>
-                        <p class="mt-1 text-xs font-medium text-slate-300">Key lưu theo tài khoản trên CSDL, đồng bộ mọi công cụ.</p>
+                        <p class="mt-1 text-xs font-medium text-slate-300">Theo dõi lớp &amp; AI · Key lưu theo tài khoản trên CSDL.</p>
                     </div>
                     <button type="button" id="userAiSettingsClose" class="text-xl transition hover:text-red-400" title="Đóng">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="space-y-5 overflow-y-auto px-5 py-5">
-                    <div id="userAiLoginHint" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
-                        Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để lưu key lên CSDL.
-                    </div>
-                    <div>
-                        <label for="userAiGeminiModel" class="mb-1.5 block text-sm font-bold text-slate-700">Module Gemini mặc định</label>
-                        <select id="userAiGeminiModel" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                            ${modelOptionsHtml(currentModel(), currentModel())}
-                        </select>
-                        <input id="userAiGeminiModelCustom" class="mt-2 hidden w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ví dụ: gemini-experimental" />
-                        <p class="mt-1 text-xs text-slate-500">Lưu vào <code>default_gemini_module</code> và <code>khbd_gemini_model</code>.</p>
-                    </div>
-                    <div>
-                        <label for="userAiGeminiFallbackModel" class="mb-1.5 block text-sm font-bold text-slate-700">Module Gemini dự phòng</label>
-                        <select id="userAiGeminiFallbackModel" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                            ${modelOptionsHtml(currentFallbackModel(), currentFallbackModel())}
-                        </select>
-                        <input id="userAiGeminiFallbackModelCustom" class="mt-2 hidden w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ví dụ: gemini-2.0-flash" />
-                        <p class="mt-1 text-xs text-slate-500">Dùng tạm khi model mặc định lỗi hoặc quá tải; lưu vào <code>default_gemini_fallback</code> và <code>khbd_gemini_fallback_model</code>.</p>
-                    </div>
-                    <div>
-                        <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                            <label for="userAiGeminiKeys" class="text-sm font-bold text-slate-700">Gemini API Keys</label>
-                            <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-indigo-300 hover:bg-indigo-50">
-                                <i class="fas fa-file-upload text-indigo-500"></i> Nạp file .txt
-                                <input type="file" id="userAiGeminiFile" class="hidden" accept=".txt,text/plain" />
-                            </label>
-                        </div>
-                        <textarea id="userAiGeminiKeys" rows="5" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Mỗi dòng một API key Gemini"></textarea>
-                    </div>
-                    <div>
-                        <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                            <label for="userAiMistralKeys" class="text-sm font-bold text-slate-700">Mistral API Keys (OCR / đọc SGK)</label>
-                            <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-violet-300 hover:bg-violet-50">
-                                <i class="fas fa-file-upload text-violet-500"></i> Nạp file .txt
-                                <input type="file" id="userAiMistralFile" class="hidden" accept=".txt,text/plain" />
-                            </label>
-                        </div>
-                        <textarea id="userAiMistralKeys" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-violet-500" placeholder="Mỗi dòng một API key Mistral"></textarea>
-                    </div>
-                    <div id="userAiMeta" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                        Chưa có dữ liệu key.
-                    </div>
-                    <div id="userAiTestResults" class="hidden space-y-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"></div>
-                    <p id="userAiSettingsStatus" class="min-h-[1.25rem] text-sm font-semibold text-slate-500"></p>
+                <div class="flex flex-wrap gap-1 border-b border-slate-200 bg-slate-50 px-3 pt-1">
+                    <button type="button" id="tabBtnOverview" class="tab-btn active"><i class="fas fa-chart-pie mr-2"></i>Tổng quan &amp; Theo dõi</button>
+                    <button type="button" id="tabBtnKeys" class="tab-btn"><i class="fas fa-key mr-2"></i>Cài đặt AI &amp; API Key</button>
                 </div>
-                <div class="flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="min-h-0 flex-1 overflow-y-auto">
+                    <div id="userAiTabOverview" class="p-0">
+                        <div id="teacherLotrinhPanel" class="teacher-lotrinh-panel">
+                            <div class="teacher-lotrinh-panel-inner px-5 py-6 text-sm text-teal-50/90">
+                                Đang tải thông tin theo dõi giáo viên...
+                            </div>
+                        </div>
+                    </div>
+                    <div id="userAiTabKeys" class="hidden space-y-5 px-5 py-5">
+                        <div id="userAiLoginHint" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+                            Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để lưu key lên CSDL.
+                        </div>
+                        <div>
+                            <label for="userAiGeminiModel" class="mb-1.5 block text-sm font-bold text-slate-700">Module Gemini mặc định</label>
+                            <select id="userAiGeminiModel" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                                ${modelOptionsHtml(currentModel(), currentModel())}
+                            </select>
+                            <input id="userAiGeminiModelCustom" class="mt-2 hidden w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ví dụ: gemini-experimental" />
+                            <p class="mt-1 text-xs text-slate-500">Lưu vào <code>default_gemini_module</code> và <code>khbd_gemini_model</code>.</p>
+                        </div>
+                        <div>
+                            <label for="userAiGeminiFallbackModel" class="mb-1.5 block text-sm font-bold text-slate-700">Module Gemini dự phòng</label>
+                            <select id="userAiGeminiFallbackModel" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                                ${modelOptionsHtml(currentFallbackModel(), currentFallbackModel())}
+                            </select>
+                            <input id="userAiGeminiFallbackModelCustom" class="mt-2 hidden w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ví dụ: gemini-2.0-flash" />
+                            <p class="mt-1 text-xs text-slate-500">Dùng tạm khi model mặc định lỗi hoặc quá tải; lưu vào <code>default_gemini_fallback</code> và <code>khbd_gemini_fallback_model</code>.</p>
+                        </div>
+                        <div>
+                            <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                                <label for="userAiGeminiKeys" class="text-sm font-bold text-slate-700">Gemini API Keys</label>
+                                <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-indigo-300 hover:bg-indigo-50">
+                                    <i class="fas fa-file-upload text-indigo-500"></i> Nạp file .txt
+                                    <input type="file" id="userAiGeminiFile" class="hidden" accept=".txt,text/plain" />
+                                </label>
+                            </div>
+                            <textarea id="userAiGeminiKeys" rows="5" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Mỗi dòng một API key Gemini"></textarea>
+                        </div>
+                        <div>
+                            <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                                <label for="userAiMistralKeys" class="text-sm font-bold text-slate-700">Mistral API Keys (OCR / đọc SGK)</label>
+                                <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-violet-300 hover:bg-violet-50">
+                                    <i class="fas fa-file-upload text-violet-500"></i> Nạp file .txt
+                                    <input type="file" id="userAiMistralFile" class="hidden" accept=".txt,text/plain" />
+                                </label>
+                            </div>
+                            <textarea id="userAiMistralKeys" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-violet-500" placeholder="Mỗi dòng một API key Mistral"></textarea>
+                        </div>
+                        <div id="userAiMeta" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                            Chưa có dữ liệu key.
+                        </div>
+                        <div id="userAiTestResults" class="hidden space-y-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"></div>
+                        <p id="userAiSettingsStatus" class="min-h-[1.25rem] text-sm font-semibold text-slate-500"></p>
+                    </div>
+                </div>
+                <div id="userAiKeysFooter" class="hidden flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <button type="button" id="userAiDeleteBtn" class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-bold text-rose-600 hover:bg-rose-50">Xóa key</button>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" id="userAiTestBtn" class="rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50">Kiểm tra Key</button>
@@ -245,6 +286,8 @@
             if (e.target === wrap) UserAiSettings.closeModal();
         });
         document.getElementById('userAiSettingsClose').addEventListener('click', () => UserAiSettings.closeModal());
+        document.getElementById('tabBtnOverview').addEventListener('click', () => UserAiSettings.switchTab('overview'));
+        document.getElementById('tabBtnKeys').addEventListener('click', () => UserAiSettings.switchTab('keys'));
         [['userAiGeminiModel', 'userAiGeminiModelCustom'], ['userAiGeminiFallbackModel', 'userAiGeminiFallbackModelCustom']].forEach(([selectId, inputId]) => {
             document.getElementById(selectId).addEventListener('change', () => {
                 const select = document.getElementById(selectId);
@@ -266,6 +309,7 @@
         document.getElementById('userAiTestBtn').addEventListener('click', () => UserAiSettings.testGeminiKeys());
         document.getElementById('userAiSaveBtn').addEventListener('click', () => UserAiSettings.saveSettings());
         document.getElementById('userAiDeleteBtn').addEventListener('click', () => UserAiSettings.deleteKeys());
+        UserAiSettings.switchTab('overview');
     }
 
     function fillForm(payload) {
@@ -300,9 +344,26 @@
     const UserAiSettings = {
         ensureModal,
 
-        async openModal() {
+        switchTab(tabName) {
+            ensureModal();
+            const tab = tabName === 'keys' ? 'keys' : 'overview';
+            const overview = document.getElementById('userAiTabOverview');
+            const keys = document.getElementById('userAiTabKeys');
+            const footer = document.getElementById('userAiKeysFooter');
+            const btnOverview = document.getElementById('tabBtnOverview');
+            const btnKeys = document.getElementById('tabBtnKeys');
+            const showKeys = tab === 'keys';
+            if (overview) overview.classList.toggle('hidden', showKeys);
+            if (keys) keys.classList.toggle('hidden', !showKeys);
+            if (footer) footer.classList.toggle('hidden', !showKeys);
+            if (btnOverview) btnOverview.classList.toggle('active', !showKeys);
+            if (btnKeys) btnKeys.classList.toggle('active', showKeys);
+        },
+
+        async openModal(tabName) {
             if (isStudent()) return;
             ensureModal();
+            UserAiSettings.switchTab(tabName === 'keys' ? 'keys' : 'overview');
             setLoginHint(false);
             setStatus('Đang tải cài đặt...', '');
             const modal = document.getElementById('userAiSettingsModal');
