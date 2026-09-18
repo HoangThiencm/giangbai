@@ -1,26 +1,23 @@
-# IMPLEMENT: Liên thông 1-Click + cuốn chiếu chống AI + CDN fallback PPDH
+# IMPLEMENT: Liên thông 1-Click + cuốn chiếu + CDN PPDH + chống trang trắng
 
-Đã triển khai đúng `docs/handoff/PLAN.md` (bản mở rộng: đề cũ + CDN catalog).
+Đã triển khai đúng `docs/handoff/PLAN.md` (kèm mục **Khắc phục trang trắng**).
 
-## Thay đổi
+## Thay đổi mới (White Screen Fix)
 
-### Đã có từ vòng trước (giữ nguyên, vẫn đúng PLAN)
-- `taobaitap.html` / backup: `mapToThiTrucTuyenPayload`, `startOnlineExam`, nút **🚀 THI TRỰC TUYẾN**.
-- `thitructuyen.html`: nạp `thitructuyen_pending_import`, preset 15/20/30/45p, checkbox cuốn chiếu + watermark, UI 1 câu/lần + watermark + localStorage tiến trình.
-- Cờ anti-AI lưu qua `matrixConfig` (không sửa `api/exam.php`).
+### `access-control.js`
+- Miễn kiểm tra token khi `thitructuyen` mở với `from=taobaitap` (cùng với link học sinh `mode=student&examId`).
 
-### Bổ sung theo PLAN mới
-#### `thitructuyen.html` — Sửa đề cũ
-- `handleEdit`: khôi phục `anti_ai_one_by_one` / `anti_ai_watermark` từ `info.matrixConfig` khi mở đề cũ, để giáo viên chỉnh 15 phút / bật cờ rồi **Lưu Đề**.
+### `thitructuyen.html`
+- `userEmail` fallback `giaovien@giangbai.local` khi `from=taobaitap` hoặc còn `thitructuyen_pending_import` — tránh màn "Phiên đăng nhập hết hạn"/trắng.
+- Guard `typeof Sortable !== "undefined"` trước `new Sortable` — CDN lỗi không sập React.
+- `HybridExamCreator`: đồng bộ `examInfo` (title, duration 15, anti-AI) từ `initialData.info` khi App truyền đề 1-Click.
+- Pending import trong creator chỉ chạy fallback nếu `initialData` chưa có questions (tránh race xóa localStorage 2 lần).
 
-#### `canvas_soankhbd.html` — CDN fallback PPDH
-- `ensureKhbdPedagogyCatalogFallback`: nếu `KHBD_PEDAGOGY_CATALOG` vẫn undefined:
-  - local/`localhost` → `js/khbd-pedagogy-catalog.js`
-  - hosting → `https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js`
-
-### Tests
-- `tests/taobaitap-thitructuyen-bridge-smoke.js`: thêm assert Sửa đề cũ khôi phục cờ.
-- `tests/canvas-soankhbd-smoke.js`: assert CDN jsDelivr fallback.
+## Đã có từ vòng trước (vẫn đúng PLAN)
+- Nút **🚀 THI TRỰC TUYẾN**, `mapToThiTrucTuyenPayload`, pending import, preset 15/20/30/45p.
+- Cuốn chiếu 1 câu/lần + watermark + localStorage tiến trình.
+- Sửa đề cũ khôi phục cờ anti-AI từ `matrixConfig`.
+- CDN jsDelivr fallback catalog PPDH trên `canvas_soankhbd.html`.
 
 ## Test đã chạy
 
@@ -29,4 +26,4 @@
 - `node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js` — PASS
 - `node tests/taobaitap-plan-smoke.js` — PASS
 
-Không mở rộng sang `api/exam.php` / prompt AI. Cần `/verify` trên Antigravity.
+Không sửa `api/exam.php` / prompt AI. Cần `/verify` trên Antigravity.

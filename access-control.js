@@ -90,8 +90,8 @@ async function accessControlMain() {
         : pageKeys[fileName];
     const params = new URLSearchParams(window.location.search);
     const isOpenExamLink = pageKey === 'thitructuyen'
-        && params.get('mode') === 'student'
-        && !!getQueryParamInsensitive(params, 'examId');
+        && ((params.get('mode') === 'student' && !!getQueryParamInsensitive(params, 'examId'))
+            || params.get('from') === 'taobaitap');
     const token = localStorage.getItem('authToken');
 
     if (isOpenExamLink) {

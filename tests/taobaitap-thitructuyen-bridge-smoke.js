@@ -93,7 +93,13 @@ assert.match(thiHtml, /matrixConfig/, 'lưu cờ qua matrixConfig khi save');
 assert.match(thiHtml, /handleEdit = async \(id\)/, 'phải có Sửa đề (handleEdit)');
 assert.match(thiHtml, /anti_ai_one_by_one: !!\(info\.anti_ai_one_by_one \?\? matrix\.anti_ai_one_by_one\)/, 'Sửa đề cũ phải khôi phục cờ cuốn chiếu từ matrixConfig');
 assert.match(thiHtml, /anti_ai_watermark: !!\(info\.anti_ai_watermark \?\? matrix\.anti_ai_watermark\)/, 'Sửa đề cũ phải khôi phục cờ watermark từ matrixConfig');
-console.log('✓ Tiếp nhận đề + cấu hình giáo viên đủ (kể cả đề cũ).');
+assert.match(thiHtml, /giaovien@giangbai\.local/, 'from=taobaitap phải có fallback userEmail tránh trang trắng');
+assert.match(thiHtml, /typeof Sortable !== ["']undefined["']/, 'Sortable phải được guard trước khi new Sortable');
+assert.match(thiHtml, /from'\) === 'taobaitap'|from"\) === "taobaitap"/, 'phải nhận diện query from=taobaitap');
+
+const accessJs = fs.readFileSync(path.join(root, 'access-control.js'), 'utf8');
+assert.match(accessJs, /params\.get\(['"]from['"]\) === ['"]taobaitap['"]/, 'access-control phải miễn check token khi from=taobaitap');
+console.log('✓ Tiếp nhận đề + cấu hình giáo viên đủ (kể cả đề cũ) + chống trang trắng.');
 
 console.log('\n[TEST 4] UI thi cuốn chiếu + no-backtrack + watermark...');
 assert.match(thiHtml, /currentQuestionIdx/, 'state câu hiện tại');

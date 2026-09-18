@@ -1783,7 +1783,8 @@
             const isMobile = useMobileViewport();
             const [mobilePanel, setMobilePanel] = useState("pages");
 
-            const userEmail = localStorage.getItem('userEmail');
+            const isFromTaobaitap = new URLSearchParams(window.location.search).get('from') === 'taobaitap';
+            const userEmail = localStorage.getItem('userEmail') || (isFromTaobaitap ? 'giaovien@giangbai.local' : null);
 
             useEffect(() => {
                 if (isMobile && activePageId) setMobilePanel("detail");
@@ -1844,7 +1845,7 @@
             useEffect(() => {
                 if (!activePageId) return;
                 const el = document.getElementById("question-sortable");
-                if (el) {
+                if (el && typeof Sortable !== "undefined") {
                     const sortable = new Sortable(el, {
                         animation: 150,
                         handle: ".drag-handle",
@@ -1863,17 +1864,37 @@
                 }
             }, [activePageId, pageQuestions[activePageId]?.length]); // Re-init only when page or length changes
 
+            // Nạp từ App (1-Click / Sửa đề): đồng bộ questions + examInfo
             useEffect(() => {
-                if (initialData && initialData.questions) {
-                    const fakeId = "imported";
-                    setPages([{ id: fakeId, page_index: 1, image_data: null, status: "done", q_count: initialData.questions.length }]);
-                    setPageQuestions({ [fakeId]: initialData.questions.map((q, i) => ({ ...q, id: Date.now() + i })) });
-                    setActivePageId(fakeId);
-                    setStep(2);
+                if (!initialData || !Array.isArray(initialData.questions) || !initialData.questions.length) return;
+                const fakeId = "imported";
+                setPages([{ id: fakeId, page_index: 1, image_data: null, status: "done", q_count: initialData.questions.length }]);
+                setPageQuestions({ [fakeId]: initialData.questions.map((q, i) => ({ ...q, id: Date.now() + i })) });
+                setActivePageId(fakeId);
+                if (initialData.info) {
+                    const info = initialData.info;
+                    const matrix = info.matrixConfig || {};
+                    setExamInfo(prev => ({
+                        ...prev,
+                        title: info.title || prev.title || "Đề thi từ Tạo bài tập",
+                        duration: Number(info.duration_mins ?? info.duration) > 0
+                            ? Number(info.duration_mins ?? info.duration)
+                            : (prev.duration || 15),
+                        exam_format: info.exam_format || prev.exam_format || "standard_mc",
+                        anti_ai_one_by_one: !!(info.anti_ai_one_by_one ?? matrix.anti_ai_one_by_one),
+                        anti_ai_watermark: !!(info.anti_ai_watermark ?? matrix.anti_ai_watermark),
+                        matrixConfig: matrix,
+                        school: info.school || prev.school || "",
+                        subject: info.subject || prev.subject || "",
+                        grade: info.grade || prev.grade || ""
+                    }));
                 }
+                setStep(2);
             }, [initialData]);
 
+            // Fallback: nếu App chưa tiêu thụ pending (mở create trực tiếp)
             useEffect(() => {
+                if (initialData && Array.isArray(initialData.questions) && initialData.questions.length) return;
                 let raw = null;
                 try { raw = localStorage.getItem("thitructuyen_pending_import"); } catch { return; }
                 if (!raw) return;
@@ -1891,14 +1912,18 @@
                         duration: Number(pending.duration) > 0 ? Number(pending.duration) : 15,
                         exam_format: pending.exam_format || prev.exam_format || "standard_mc",
                         anti_ai_one_by_one: pending.anti_ai_one_by_one !== false,
-                        anti_ai_watermark: pending.anti_ai_watermark !== false
+                        anti_ai_watermark: pending.anti_ai_watermark !== false,
+                        matrixConfig: {
+                            anti_ai_one_by_one: pending.anti_ai_one_by_one !== false,
+                            anti_ai_watermark: pending.anti_ai_watermark !== false
+                        }
                     }));
                     setStep(2);
                 } catch (err) {
                     console.warn("Không nạp được thitructuyen_pending_import:", err);
                     try { localStorage.removeItem("thitructuyen_pending_import"); } catch { }
                 }
-            }, []);
+            }, [initialData]);
 
             const sortedPages = useMemo(
                 () => [...pages].sort((a, b) => a.page_index - b.page_index),
@@ -4666,7 +4691,11 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
             const [view, setView] = useState("dashboard");
             const [selectedId, setSelectedId] = useState(studentExamId);
             const [editingData, setEditingData] = useState(null);
-            const userEmail = localStorage.getItem('userEmail');
+            const isFromTaobaitap = new URLSearchParams(window.location.search).get('from') === 'taobaitap';
+            let hasPendingImport = false;
+            try { hasPendingImport = !!localStorage.getItem('thitructuyen_pending_import'); } catch { hasPendingImport = false; }
+            const userEmail = localStorage.getItem('userEmail')
+                || ((isFromTaobaitap || hasPendingImport) ? 'giaovien@giangbai.local' : null);
 
             useEffect(() => {
                 if (studentExamId) return;
