@@ -1526,8 +1526,8 @@
                 const next = questionMatches[index + 1];
                 let block = text.slice(item.bodyStart, next ? next.markerStart : text.length).trim();
 
-                // Loại bỏ tiêu đề phần nếu nằm ở cuối block (trước câu tiếp theo)
-                block = block.replace(/\n\s*PHẦN\s+(?:I|II|III)\b[^\n]*/gi, '').trim();
+                // Loại bỏ tiêu đề phần và hướng dẫn phần nếu nằm ở cuối block (trước câu tiếp theo)
+                block = block.replace(/\n\s*(?:PHẦN\s+(?:I|II|III)\b|Thí sinh trả lời\b)[\s\S]*$/i, '').trim();
 
                 const inlineAnswerMatch = block.match(/(?:^|\n)\s*(?:đáp\s*án|dap\s*an|đáp\s*số|kết\s*quả|đs|answer|ans)\s*[:：=]\s*([^\n]+)/i);
                 let inlineAnswer = "";
@@ -1558,18 +1558,37 @@
                     });
                 }
 
-                const isTF = (tfMatches.length >= 2 && mcMatches.length < 2) || /đúng\s*[-/]?\s*sai/i.test(inlineAnswer);
-                if (isTF && tfMatches.length >= 2) {
-                    const question = block.slice(0, tfMatches[0].markerStart).trim();
+                const tfFromKeyEarly = importedAnswerKeyTfList(answerKey[item.number]);
+                const leadForTfHint = block.slice(0, (tfMatches[0] || mcMatches[0] || { markerStart: block.length }).markerStart);
+                const looksLikeTfPrompt = /xét\s+tính\s+đúng\s*[-/]?\s*sai/i.test(leadForTfHint)
+                    || /đúng\s*[-/]?\s*sai/i.test(inlineAnswer);
+                let effectiveTfMatches = tfMatches.slice();
+                // File Word lỗi nhãn A-D nhưng thực chất là Đúng/Sai: ánh xạ A-D → a-d
+                if (tfMatches.length < 2 && mcMatches.length >= 2 && (tfFromKeyEarly || looksLikeTfPrompt)) {
+                    effectiveTfMatches = mcMatches.map((m) => ({
+                        letter: m.letter.toLowerCase(),
+                        markerStart: m.markerStart,
+                        bodyStart: m.bodyStart
+                    }));
+                }
+                const isTF = effectiveTfMatches.length >= 2 && (
+                    (tfMatches.length >= 2 && mcMatches.length < 2)
+                    || !!tfFromKeyEarly
+                    || looksLikeTfPrompt
+                );
+                if (isTF && effectiveTfMatches.length >= 2) {
+                    const question = block.slice(0, effectiveTfMatches[0].markerStart).trim();
                     const correctAnswers = [true, false, false, false];
                     let assignedTfFromInline = false;
 
                     const options = ["a", "b", "c", "d"].map((letter, optIdx) => {
-                        const cur = tfMatches.find(m => m.letter === letter);
+                        const cur = effectiveTfMatches.find(m => m.letter === letter);
                         if (!cur) return "";
-                        const curIdx = tfMatches.indexOf(cur);
-                        const nextMarker = tfMatches[curIdx + 1]?.markerStart ?? block.length;
+                        const curIdx = effectiveTfMatches.indexOf(cur);
+                        const nextMarker = effectiveTfMatches[curIdx + 1]?.markerStart ?? block.length;
                         let optText = block.slice(cur.bodyStart, nextMarker).trim();
+                        // Ý cuối đôi khi còn sót tiêu đề/hướng dẫn phần kế tiếp
+                        optText = optText.replace(/\n\s*(?:PHẦN\s+(?:I|II|III)\b|Thí sinh trả lời\b)[\s\S]*$/i, '').trim();
 
                         // Kiểm tra đánh dấu [Đúng] / [Sai] ngay trong từng ý
                         if (/\[(đúng|đ|true|t)\]|\((đúng|đ|true|t)\)/i.test(optText)) {

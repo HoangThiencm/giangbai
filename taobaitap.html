@@ -15887,6 +15887,43 @@ ${sourceContext}`;
             };
 
             const exportWord = () => {
+                const dataToExport = mode === "quiz" ? questions : essays;
+                if (!dataToExport || dataToExport.length === 0) {
+                    showSourceNotice("Chưa có câu hỏi để xuất!");
+                    return;
+                }
+
+                // CV 7991 / câu Đúng-Sai 4 ý: xuất đủ a) b) c) d) theo chuẩn
+                if (mode === "quiz" && (synthForm === "cv7991" || dataToExport.some(isCv7991TrueFalseItem))) {
+                    const header = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'><title>Đề thi theo Công văn 7991</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #000; }
+                        h1 { text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
+                        .sub-title { text-align: center; font-style: italic; font-size: 11pt; margin-bottom: 20px; }
+                        .section-title { font-weight: bold; font-size: 12pt; text-transform: uppercase; margin-top: 18px; margin-bottom: 4px; }
+                        .section-guide { font-style: italic; font-size: 11pt; margin-bottom: 12px; }
+                        .question-block { margin-bottom: 14pt; text-align: justify; }
+                        .tf-item { margin-left: 20pt; margin-top: 2pt; margin-bottom: 2pt; }
+                        .option { margin: 2pt 0; }
+                        .answer-line { margin-top: 4pt; font-weight: bold; }
+                        .answer-key { margin-top: 24px; border-top: 1px solid #000; padding-top: 10px; }
+                        .answer-key h2 { font-size: 12pt; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase; }
+                        .answer-key p { margin: 0; line-height: 1.8; font-weight: bold; }
+                        .essay-block { margin-bottom: 20pt; }
+                        .solution { margin-top: 10pt; padding: 10pt; background: #f5f5f5; border-left: 4px solid #4CAF50; }
+                    </style>
+                </head><body>`;
+                    try {
+                        saveDocxFromHtml(header + buildCv7991ExportHtml(dataToExport, mode) + "</body></html>", `De_Thi_Tong_Hop.docx`);
+                    } catch (error) {
+                        showSourceNotice(`Lỗi khi xuất DOCX: ${error.message}`);
+                    }
+                    return;
+                }
+
                 const header = `
                 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
                 <head>
@@ -15897,6 +15934,7 @@ ${sourceContext}`;
                         .question-block { margin-bottom: 15pt; text-align: justify; }
                         .options-table { width: 100%; border-collapse: collapse; margin-top: 5pt; }
                         .options-table td { padding: 3pt 0; vertical-align: top; }
+                        .tf-item { margin-left: 20pt; margin-top: 2pt; margin-bottom: 2pt; }
                         .answer-key { margin-top: 24px; border-top: 1px solid #000; padding-top: 10px; }
                         .answer-key h2 { font-size: 13pt; margin: 0 0 8px 0; text-align: left; }
                         .answer-key p { margin: 0; line-height: 1.8; font-weight: bold; }
@@ -15905,7 +15943,6 @@ ${sourceContext}`;
                     </style>
                 </head><body>`;
 
-                const dataToExport = mode === "quiz" ? questions : essays;
                 const totalQ = dataToExport.length;
                 let bodyContent = `<h1>${mode === "quiz" ? "ĐỀ THI TRẮC NGHIỆM" : "BÀI TẬP TỰ LUẬN"} TỔNG HỢP</h1>`;
                 bodyContent += `<p style="text-align:center; margin-bottom: 30px;"><i>Tổng số câu: ${totalQ}</i></p>`;
@@ -15929,16 +15966,25 @@ ${sourceContext}`;
                                 </table>
                             </div>`;
                         } else if (q.type === "true-false") {
-                            const optA = convertToMathML(cleanOptionText(q.options[0]));
-                            const optB = convertToMathML(cleanOptionText(q.options[1]));
+                            if (isCv7991TrueFalseItem(q)) {
+                                bodyContent += `<div class="question-block"><b>Câu ${i + 1}:</b> ${qText}`;
+                                getCv7991TrueFalseItems(q).forEach((item, sIdx) => {
+                                    const label = String.fromCharCode(97 + sIdx);
+                                    bodyContent += `<div class="tf-item">${label}) ${convertToMathML(cleanOptionText(item.text))}</div>`;
+                                });
+                                bodyContent += `</div>`;
+                            } else {
+                                const optA = convertToMathML(cleanOptionText(q.options[0]));
+                                const optB = convertToMathML(cleanOptionText(q.options[1]));
 
-                            bodyContent += `
+                                bodyContent += `
                             <div class="question-block">
                                 <b>Câu ${i + 1}:</b> ${qText}
                                 <table class="options-table">
                                     <tr><td width="50%"><b>A.</b> ${optA}</td><td width="50%"><b>B.</b> ${optB}</td></tr>
                                 </table>
                             </div>`;
+                            }
                         } else if (q.type === "fill-blank" || q.type === "short-answer") {
                             bodyContent += `
                             <div class="question-block">
@@ -15984,6 +16030,43 @@ ${sourceContext}`;
             };
 
             const exportWordLatex = () => {
+                const dataToExport = mode === "quiz" ? questions : essays;
+                if (!dataToExport || dataToExport.length === 0) {
+                    showSourceNotice("Chưa có câu hỏi để xuất!");
+                    return;
+                }
+
+                // CV 7991 / câu Đúng-Sai 4 ý: giữ LaTeX, xuất đủ a) b) c) d)
+                if (mode === "quiz" && (synthForm === "cv7991" || dataToExport.some(isCv7991TrueFalseItem))) {
+                    const header = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'><title>Export LaTeX CV 7991</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #000; }
+                        h1 { text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
+                        .sub-title { text-align: center; font-style: italic; font-size: 11pt; margin-bottom: 20px; }
+                        .section-title { font-weight: bold; font-size: 12pt; text-transform: uppercase; margin-top: 18px; margin-bottom: 4px; }
+                        .section-guide { font-style: italic; font-size: 11pt; margin-bottom: 12px; }
+                        .question-block { margin-bottom: 14pt; text-align: justify; }
+                        .tf-item { margin-left: 20pt; margin-top: 2pt; margin-bottom: 2pt; }
+                        .option { margin: 2pt 0; }
+                        .answer-line { margin-top: 4pt; font-weight: bold; }
+                        .answer-key { margin-top: 24px; border-top: 1px solid #000; padding-top: 10px; }
+                        .answer-key h2 { font-size: 12pt; font-weight: bold; margin: 0 0 6px 0; text-transform: uppercase; }
+                        .answer-key p { margin: 0; line-height: 1.8; font-weight: bold; }
+                        .essay-block { margin-bottom: 20pt; }
+                        .solution { margin-top: 10pt; padding: 10pt; background: #f5f5f5; border-left: 4px solid #4CAF50; }
+                    </style>
+                </head><body>`;
+                    try {
+                        saveDocxFromHtml(header + buildCv7991ExportHtml(dataToExport, mode) + "</body></html>", `De_Thi_Tong_Hop_LaTeX.docx`);
+                    } catch (error) {
+                        showSourceNotice(`Lỗi khi xuất DOCX: ${error.message}`);
+                    }
+                    return;
+                }
+
                 const header = `
                 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
                 <head>
@@ -15994,6 +16077,7 @@ ${sourceContext}`;
                         .question-block { margin-bottom: 15pt; text-align: justify; }
                         .options-table { width: 100%; border-collapse: collapse; margin-top: 5pt; }
                         .options-table td { padding: 3pt 0; vertical-align: top; }
+                        .tf-item { margin-left: 20pt; margin-top: 2pt; margin-bottom: 2pt; }
                         .answer-key { margin-top: 24px; border-top: 1px solid #000; padding-top: 10px; }
                         .answer-key h2 { font-size: 13pt; margin: 0 0 8px 0; text-align: left; }
                         .answer-key p { margin: 0; line-height: 1.8; font-weight: bold; }
@@ -16002,7 +16086,6 @@ ${sourceContext}`;
                     </style>
                 </head><body>`;
 
-                const dataToExport = mode === "quiz" ? questions : essays;
                 const totalQ = dataToExport.length;
                 let bodyContent = `<h1>${mode === "quiz" ? "ĐỀ THI TRẮC NGHIỆM" : "BÀI TẬP TỰ LUẬN"} TỔNG HỢP</h1>`;
                 bodyContent += `<p style="text-align:center; margin-bottom: 30px;"><i>Tổng số câu: ${totalQ}</i></p>`;
@@ -16021,13 +16104,22 @@ ${sourceContext}`;
                                 </table>
                             </div>`;
                         } else if (q.type === "true-false") {
-                            bodyContent += `
+                            if (isCv7991TrueFalseItem(q)) {
+                                bodyContent += `<div class="question-block"><b>Câu ${i + 1}:</b> ${qText}`;
+                                getCv7991TrueFalseItems(q).forEach((item, sIdx) => {
+                                    const label = String.fromCharCode(97 + sIdx);
+                                    bodyContent += `<div class="tf-item">${label}) ${cleanOptionText(item.text)}</div>`;
+                                });
+                                bodyContent += `</div>`;
+                            } else {
+                                bodyContent += `
                             <div class="question-block">
                                 <b>Câu ${i + 1}:</b> ${qText}
                                 <table class="options-table">
                                     <tr><td width="50%"><b>A.</b> ${cleanOptionText(q.options[0])}</td><td width="50%"><b>B.</b> ${cleanOptionText(q.options[1])}</td></tr>
                                 </table>
                             </div>`;
+                            }
                         } else if (q.type === "fill-blank" || q.type === "short-answer") {
                             bodyContent += `
                             <div class="question-block">

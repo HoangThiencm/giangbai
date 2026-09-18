@@ -265,6 +265,68 @@ assert.strictEqual(answerKey[16].value, '100');
 assert.strictEqual(answerKey[17].value, '-4');
 console.log('✓ getImportedAnswerKey nhận đủ 17 cặp theo chuẩn mới.');
 
+console.log('\n[TEST 6] Ý d câu 13 không dính hướng dẫn Phần III...');
+const leakedPart3Quiz = [
+    'PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI (2.0 điểm)',
+    'Thí sinh trả lời câu 13. Trong mỗi ý a), b), c), d), thí sinh chọn Đúng hoặc Sai.',
+    'Câu 13. Cho đường thẳng d: y = 2x + 1. Xét tính đúng/sai của các mệnh đề sau:',
+    'a) Hệ số góc của d bằng 2.',
+    'b) Đồ thị cắt trục tung tại (0; 1).',
+    'c) Hàm số đồng biến trên R.',
+    'd) Đường thẳng này đi qua gốc tọa độ O(0; 0).',
+    'PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN (2.0 điểm)',
+    'Thí sinh trả lời từ câu 14 đến câu 17. Thí sinh chỉ điền số kết quả vào ô trả lời. Mỗi câu đúng được 0.5 điểm.',
+    'Câu 14. Tính giá trị biểu thức.',
+    'Đáp án:',
+    '13. a.Đúng b.Đúng c.Đúng d.Sai',
+    '14. 25'
+].join('\n');
+const parsedLeak = parseLatexWordQuiz(leakedPart3Quiz);
+assert.strictEqual(parsedLeak.length, 2);
+assert.strictEqual(parsedLeak[0].type, 'tf', 'Câu 13 phải là tf');
+assert.strictEqual((parsedLeak[0].options || []).filter(Boolean).length, 4, 'Câu 13 đủ 4 ý');
+assert.strictEqual(
+    String(parsedLeak[0].options[3]).trim(),
+    'Đường thẳng này đi qua gốc tọa độ O(0; 0).',
+    'Ý d phải sạch, không dính hướng dẫn Phần III'
+);
+assert.doesNotMatch(String(parsedLeak[0].options[3]), /Thí sinh trả lời|PHẦN\s+III|Mỗi câu đúng/i);
+assert.deepStrictEqual(clone(parsedLeak[0].correct_answers), [true, true, true, false]);
+assert.strictEqual(parsedLeak[1].type, 'short_answer');
+assert.strictEqual(String(parsedLeak[1].correct_answer), '25');
+console.log('✓ Ý d dừng đúng ở nội dung mệnh đề; hướng dẫn Phần III đã bị cắt.');
+
+console.log('\n[TEST 7] Nhãn A-D lỗi định dạng + cụm "Xét tính đúng/sai" → nhận tf a-d...');
+const mislabeledTf = [
+    'Câu 1. Cho hàm số y = 2x. Xét tính đúng/sai của các mệnh đề sau:',
+    'A. Hàm số đồng biến trên R',
+    'B. Đồ thị đi qua gốc tọa độ',
+    'C. Hệ số góc bằng 2',
+    'D. Hàm số nghịch biến trên R',
+    'Đáp án:',
+    '1. a.Đúng b.Đúng c.Đúng d.Sai'
+].join('\n');
+const parsedMislabeled = parseLatexWordQuiz(mislabeledTf);
+assert.strictEqual(parsedMislabeled.length, 1);
+assert.strictEqual(parsedMislabeled[0].type, 'tf');
+assert.strictEqual((parsedMislabeled[0].options || []).filter(Boolean).length, 4);
+assert.match(String(parsedMislabeled[0].options[0]), /đồng biến/i);
+assert.match(String(parsedMislabeled[0].options[3]), /nghịch biến/i);
+assert.deepStrictEqual(clone(parsedMislabeled[0].correct_answers), [true, true, true, false]);
+console.log('✓ A-D được ánh xạ thành a-d khi nhận diện Đúng/Sai.');
+
+console.log('\n[TEST 8] Nút LaTeX/Xuất Word đồng bộ CV 7991 (đủ 4 ý, không bảng A/B)...');
+assert.match(taoHtml, /synthForm === ["']cv7991["'] \|\| dataToExport\.some\(isCv7991TrueFalseItem\)/);
+assert.match(taoHtml, /buildCv7991ExportHtml\(dataToExport, mode\)/);
+assert.match(taoHtml, /getCv7991TrueFalseItems\(q\)\.forEach/);
+assert.ok(thiHtml.includes('Thí sinh trả lời'), 'Parser phải cắt luôn hướng dẫn "Thí sinh trả lời..."');
+assert.ok(thiHtml.includes('xét\\s+tính\\s+đúng') || thiHtml.includes('xét tính đúng'), 'Parser phải nhận cụm Xét tính đúng/sai');
+assert.ok(thiHtml.includes('toLowerCase()'), 'Parser phải ánh xạ nhãn A-D sang a-d khi là TF');
+const backupTao = fs.readFileSync(path.join(root, 'backupcode viettailieu', 'taobaitap.html'), 'utf8');
+assert.match(backupTao, /useFourTf/);
+assert.match(backupTao, /String\.fromCharCode\(97 \+ sIdx\)/);
+console.log('✓ exportWord/exportWordLatex (và backup) xuất đủ a) b) c) d) cho TF CV 7991.');
+
 console.log('\n================================================================================');
 console.log('TẤT CẢ KIỂM THỬ ĐỒNG BỘ CV 7991 17 CÂU ĐÃ PASS 100%!');
 console.log('================================================================================');

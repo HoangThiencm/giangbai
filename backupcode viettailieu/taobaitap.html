@@ -15626,16 +15626,35 @@ ${sourceContext}`;
                                 </table>
                             </div>`;
                         } else if (q.type === "true-false") {
-                            const optA = convertToMathML(cleanOptionText(q.options[0]));
-                            const optB = convertToMathML(cleanOptionText(q.options[1]));
+                            const opts = Array.isArray(q.options) ? q.options : [];
+                            const subItems = Array.isArray(q.subItems) ? q.subItems : [];
+                            const useFourTf = opts.length >= 3
+                                || subItems.length >= 2
+                                || (Array.isArray(q.correct_answers) && q.correct_answers.length >= 2);
+                            if (useFourTf) {
+                                const items = (subItems.length >= 2
+                                    ? subItems.map((s) => (s && typeof s === "object" ? (s.text || "") : String(s || "")))
+                                    : opts.slice(0, 4).map((t) => String(t || ""))
+                                );
+                                while (items.length < 4) items.push("");
+                                bodyContent += `<div class="question-block"><b>Câu ${i + 1}:</b> ${qText}`;
+                                items.slice(0, 4).forEach((text, sIdx) => {
+                                    const label = String.fromCharCode(97 + sIdx);
+                                    bodyContent += `<div>${label}) ${convertToMathML(cleanOptionText(text))}</div>`;
+                                });
+                                bodyContent += `</div>`;
+                            } else {
+                                const optA = convertToMathML(cleanOptionText(q.options[0]));
+                                const optB = convertToMathML(cleanOptionText(q.options[1]));
 
-                            bodyContent += `
+                                bodyContent += `
                             <div class="question-block">
                                 <b>Câu ${i + 1}:</b> ${qText}
                                 <table class="options-table">
                                     <tr><td width="50%"><b>A.</b> ${optA}</td><td width="50%"><b>B.</b> ${optB}</td></tr>
                                 </table>
                             </div>`;
+                            }
                         } else if (q.type === "fill-blank" || q.type === "short-answer") {
                             bodyContent += `
                             <div class="question-block">
@@ -15718,13 +15737,32 @@ ${sourceContext}`;
                                 </table>
                             </div>`;
                         } else if (q.type === "true-false") {
-                            bodyContent += `
+                            const opts = Array.isArray(q.options) ? q.options : [];
+                            const subItems = Array.isArray(q.subItems) ? q.subItems : [];
+                            const useFourTf = opts.length >= 3
+                                || subItems.length >= 2
+                                || (Array.isArray(q.correct_answers) && q.correct_answers.length >= 2);
+                            if (useFourTf) {
+                                const items = (subItems.length >= 2
+                                    ? subItems.map((s) => (s && typeof s === "object" ? (s.text || "") : String(s || "")))
+                                    : opts.slice(0, 4).map((t) => String(t || ""))
+                                );
+                                while (items.length < 4) items.push("");
+                                bodyContent += `<div class="question-block"><b>Câu ${i + 1}:</b> ${qText}`;
+                                items.slice(0, 4).forEach((text, sIdx) => {
+                                    const label = String.fromCharCode(97 + sIdx);
+                                    bodyContent += `<div>${label}) ${cleanOptionText(text)}</div>`;
+                                });
+                                bodyContent += `</div>`;
+                            } else {
+                                bodyContent += `
                             <div class="question-block">
                                 <b>Câu ${i + 1}:</b> ${qText}
                                 <table class="options-table">
                                     <tr><td width="50%"><b>A.</b> ${cleanOptionText(q.options[0])}</td><td width="50%"><b>B.</b> ${cleanOptionText(q.options[1])}</td></tr>
                                 </table>
                             </div>`;
+                            }
                         } else if (q.type === "fill-blank" || q.type === "short-answer") {
                             bodyContent += `
                             <div class="question-block">
