@@ -4671,7 +4671,19 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
             const handleEdit = async (id) => {
                 try {
                     const res = await axios.get(examUrl(`get/${id}`), { withCredentials: true });
-                    setEditingData(res.data);
+                    const data = res.data || {};
+                    const info = data.info || {};
+                    const matrix = info.matrixConfig || {};
+                    // Đề cũ: khôi phục cờ anti-AI từ matrixConfig để giáo viên chỉnh 15p / cuốn chiếu / watermark rồi Lưu Đề
+                    setEditingData({
+                        ...data,
+                        info: {
+                            ...info,
+                            anti_ai_one_by_one: !!(info.anti_ai_one_by_one ?? matrix.anti_ai_one_by_one),
+                            anti_ai_watermark: !!(info.anti_ai_watermark ?? matrix.anti_ai_watermark),
+                            matrixConfig: matrix
+                        }
+                    });
                     setView("create");
                 } catch (e) {
                     alert("Lỗi tải đề: " + e.message);

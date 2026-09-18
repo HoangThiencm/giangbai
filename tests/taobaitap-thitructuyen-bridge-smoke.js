@@ -90,7 +90,10 @@ assert.match(thiHtml, /\[15,\s*20,\s*30,\s*45\]/, 'phải có nút chọn nhanh 
 assert.match(thiHtml, /Chế độ thi cuốn chiếu từng câu/, 'checkbox cuốn chiếu');
 assert.match(thiHtml, /Watermark bảo mật/, 'checkbox watermark');
 assert.match(thiHtml, /matrixConfig/, 'lưu cờ qua matrixConfig khi save');
-console.log('✓ Tiếp nhận đề + cấu hình giáo viên đủ.');
+assert.match(thiHtml, /handleEdit = async \(id\)/, 'phải có Sửa đề (handleEdit)');
+assert.match(thiHtml, /anti_ai_one_by_one: !!\(info\.anti_ai_one_by_one \?\? matrix\.anti_ai_one_by_one\)/, 'Sửa đề cũ phải khôi phục cờ cuốn chiếu từ matrixConfig');
+assert.match(thiHtml, /anti_ai_watermark: !!\(info\.anti_ai_watermark \?\? matrix\.anti_ai_watermark\)/, 'Sửa đề cũ phải khôi phục cờ watermark từ matrixConfig');
+console.log('✓ Tiếp nhận đề + cấu hình giáo viên đủ (kể cả đề cũ).');
 
 console.log('\n[TEST 4] UI thi cuốn chiếu + no-backtrack + watermark...');
 assert.match(thiHtml, /currentQuestionIdx/, 'state câu hiện tại');

@@ -1138,7 +1138,9 @@
   <script>
     (function ensureKhbdPedagogyCatalogFallback() {
       if (typeof window.KHBD_PEDAGOGY_CATALOG !== "undefined") return;
-      document.write('<script src="js/khbd-pedagogy-catalog.js"><\/script>');
+      var isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
+      var cdnCatalog = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js";
+      document.write('<script src="' + (isLocal ? "js/khbd-pedagogy-catalog.js" : cdnCatalog) + '"><\/script>');
     })();
   </script>
 
