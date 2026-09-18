@@ -16174,6 +16174,94 @@ ${sourceContext}`;
                 setStep(4);
             };
 
+            const mapToThiTrucTuyenPayload = (quizItems, topicList, form) => {
+                const list = Array.isArray(quizItems) ? quizItems : [];
+                const mapped = list.map((q, idx) => {
+                    const baseId = Date.now() + idx + Math.random();
+                    if (q.type === "multiple-choice") {
+                        return {
+                            id: baseId,
+                            type: "mc",
+                            question: String(q.question || ""),
+                            options: (q.options || []).slice(0, 4).map((opt) => cleanOptionText(String(opt || ""))),
+                            correct_index: Number.isInteger(q.correctAnswerIndex) ? q.correctAnswerIndex : 0,
+                            explanation: q.explanation || ""
+                        };
+                    }
+                    if (q.type === "true-false") {
+                        if (isCv7991TrueFalseItem(q)) {
+                            const items = getCv7991TrueFalseItems(q);
+                            return {
+                                id: baseId,
+                                type: "tf",
+                                question: String(q.question || ""),
+                                options: items.map((item) => String(item.text || "")),
+                                correct_answers: items.map((item) => !!item.isCorrect),
+                                explanation: q.explanation || ""
+                            };
+                        }
+                        return {
+                            id: baseId,
+                            type: "mc",
+                            question: String(q.question || ""),
+                            options: ["Đúng", "Sai", "", ""],
+                            correct_index: Number.isInteger(q.correctAnswerIndex) ? q.correctAnswerIndex : 0,
+                            explanation: q.explanation || ""
+                        };
+                    }
+                    if (q.type === "short-answer" || q.type === "fill-blank") {
+                        return {
+                            id: baseId,
+                            type: "short_answer",
+                            question: String(q.question || ""),
+                            options: [],
+                            correct_answer: normalizeShortAnswerValue(q.correctAnswer || q.correct_answer || ""),
+                            explanation: q.explanation || ""
+                        };
+                    }
+                    return {
+                        id: baseId,
+                        type: "mc",
+                        question: String(q.question || ""),
+                        options: (q.options || ["A", "B", "C", "D"]).slice(0, 4),
+                        correct_index: 0,
+                        explanation: q.explanation || ""
+                    };
+                });
+                const title = (Array.isArray(topicList) && topicList[0] && topicList[0].name)
+                    ? String(topicList[0].name).trim()
+                    : "Đề thi từ Tạo bài tập";
+                return {
+                    title: title || "Đề thi từ Tạo bài tập",
+                    duration: 15,
+                    exam_format: form === "cv7991" ? "cv7991" : "standard_mc",
+                    anti_ai_one_by_one: true,
+                    anti_ai_watermark: true,
+                    questions: mapped,
+                    source: "taobaitap",
+                    created_at: new Date().toISOString()
+                };
+            };
+
+            const startOnlineExam = () => {
+                if (mode !== "quiz" || !questions.length) {
+                    showSourceNotice("Chưa có câu hỏi trắc nghiệm để chuyển sang thi trực tuyến!");
+                    return;
+                }
+                try {
+                    const payload = mapToThiTrucTuyenPayload(questions, topics, synthForm);
+                    localStorage.setItem("thitructuyen_pending_import", JSON.stringify(payload));
+                    const opened = window.open("thitructuyen.html?from=taobaitap", "_blank");
+                    if (!opened) {
+                        showSourceNotice("Trình duyệt chặn cửa sổ mới. Hãy cho phép popup rồi thử lại.");
+                        return;
+                    }
+                    showSourceNotice("Đã đóng gói đề và mở Thi trực tuyến.");
+                } catch (err) {
+                    showSourceNotice(`Không chuyển được sang thi trực tuyến: ${err.message || err}`);
+                }
+            };
+
             const startEditing = () => {
                 setIsEditing(true);
                 setStep(3);
@@ -16683,6 +16771,11 @@ ${sourceContext}`;
                                     <button onClick={exportTextCV7991} className="px-3 py-2 bg-white text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-50 font-bold text-sm transition" title="Tải file Text .txt để copy nhanh"><i className="fas fa-file-alt"></i> .txt</button>
                                     <button onClick={exportWordLatex} className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 font-bold text-sm transition" title="Xuất Word định dạng công thức LaTeX"><i className="fas fa-file-word"></i> LaTeX</button>
                                     <button onClick={startPresentation} className="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold hover:shadow-lg hover:-translate-y-0.5 transition flex items-center gap-2 text-sm shadow-green-200"><i className="fas fa-chalkboard-teacher"></i> DẠY NGAY</button>
+                                    {mode === "quiz" && (
+                                        <button onClick={startOnlineExam} className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-lg font-bold hover:shadow-lg hover:-translate-y-0.5 transition flex items-center gap-2 text-sm shadow-indigo-200" title="Đóng gói đề và mở Thi trực tuyến 1-Click">
+                                            🚀 THI TRỰC TUYẾN
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 

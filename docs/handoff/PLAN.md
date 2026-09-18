@@ -1,120 +1,156 @@
-# PLAN: Nâng Cấp Giao Diện Padlet — Tùy Chọn Màu Chữ Tiêu Đề Và Cho Phép Tác Giả Chỉnh Sửa Bài Đăng, Hiển Thị Nhiều Ảnh
+# PLAN: Liên Thông Tạo Bài Tập Sang Thi Trực Tuyến 1-Click & Bổ Sung Chế Độ Thi Cuốn Chiếu Chống Chụp Gửi AI
 
 ## Hiện trạng
-1. **Tiêu đề bảng bị điệp màu trên nền tối / màu nền tùy biến**:
-   - Hiện tại, class `body.board-light .board-title-input` ([padlet_ht.html:161](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/padlet_ht.html#L161)) mặc định gán màu chữ `#0f172a` (xanh đen tối).
-   - Khi bảng sử dụng nền có tông màu sẫm (như đỏ rượu `board-bg-rose`, tím đậm `board-bg-violet`, xanh đậm `board-bg-blue`...), chữ tiêu đề `TOÁN LỚP 9/1` màu đen/xanh đen bị chìm hoàn toàn vào màu nền (bị điệp màu, không nhìn rõ như ảnh minh họa của người dùng).
-   - Trong giao diện bảng và modal cài đặt ([padlet_ht.html:512](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/padlet_ht.html#L512)), tác giả chỉ có thể chọn `color_mode` là "Sáng" hoặc "Tối", chưa có bảng màu/bộ chọn màu sắc (color picker / palette) để chủ động chọn màu chữ tiêu đề theo ý muốn (trắng, vàng, xanh sáng, hồng, đỏ...).
-
-2. **Bài đăng thiếu nút "Sửa" và chỉ hiển thị tối đa 1 hình ảnh**:
-   - Khung nút hành động của bài đăng ([padlet_ht.html:1727-1741](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/padlet_ht.html#L1727-L1741)) hiện chỉ có các nút: `Duyệt`/`Từ chối` (nếu chờ duyệt), `Ghim`/`Bỏ ghim` (giáo viên), và `Xóa` (`moderate(p.id, 'delete')`).
-   - Hoàn toàn **chưa có nút "Sửa"** cho tác giả bài viết hoặc giáo viên quản lý chỉnh sửa lại nội dung bài đăng sau khi đã tạo.
-   - Hàm `attachmentHero` ([padlet_ht.html:1702-1708](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/padlet_ht.html#L1702-L1708)) hiện dùng `(p.files || []).find(isImageFile)`: chỉ lấy đúng **1 hình ảnh đầu tiên** để hiển thị dạng ảnh bìa/ảnh lớn. Nếu tác giả đính kèm thêm 2, 3, 4 ảnh thì các ảnh sau bị đẩy xuống mục tệp đính kèm phụ dưới dạng nút text có tên file (`otherFiles`), không hiển thị được trực quan hình ảnh trên bài đăng.
-   - Phía backend ([api/padlet.php](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/api/padlet.php)) chưa có API cho thao tác chỉnh sửa bài viết (`action === 'edit-post'`).
+1. **Tạo bài tập chưa có liên thông trực tiếp sang Thi trực tuyến**:
+   - Trong `taobaitap.html` (và bản sao `backupcode viettailieu/taobaitap.html`), sau khi AI sinh đề (CV 7991 17 câu hoặc trắc nghiệm 20 câu), giáo viên chỉ có các nút: `Xuất Mẫu CV 7991`, `Xuất 100% TN`, `.txt`, `LaTeX` và `DẠY NGAY` (trình chiếu).
+   - Chưa có nút chuyển trực tiếp sang `thitructuyen.html`. Giáo viên muốn tổ chức thi phải: Tải file Word/Text về máy $\rightarrow$ Mở trang `thitructuyen.html` $\rightarrow$ Tải file lên $\rightarrow$ Kiểm tra lại bảng đáp án $\rightarrow$ Mới có thể lưu đề. Quy trình này mất nhiều bước và dễ phát sinh lỗi định dạng.
+2. **Thi trực tuyến chưa có chế độ khắc chế chụp ảnh gửi AI**:
+   - Trong `thitructuyen.html`, giao diện làm bài của học sinh hiện cuộn dọc hiển thị toàn bộ danh sách câu hỏi một lúc.
+   - Học sinh ở nhà có thể dễ dàng dùng điện thoại thứ hai chụp ảnh màn hình từng câu gửi ChatGPT/Gemini/Photomath mà không gặp áp lực về thời gian vận hành.
+   - Thời gian làm bài đang mặc định là 45 phút, chưa có tùy chọn mặc định nhanh 15 phút (hoặc các nút chọn nhanh 15p, 20p, 30p, 45p) cho các bài kiểm tra 17–20 câu nhanh.
+   - Chưa có chế độ "Thi cuốn chiếu từng câu" (One-by-one mode) với giới hạn thời gian từng câu (45–50 giây/câu) và khóa quay lại câu cũ.
+   - Chưa có Watermark bảo mật in mờ thông tin học sinh chống chụp ảnh chia sẻ ra ngoài và gây nhiễu AI Vision OCR.
 
 ---
 
 ## Phạm vi
-1. **Tùy biến màu chữ tiêu đề bảng**:
-   - Thêm cột `title_color` (VARCHAR(30) DEFAULT NULL) vào bảng `padlet_boards` thông qua `padlet_migrate` trong [api/padlet.php](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/api/padlet.php).
-   - Cho phép chọn màu chữ tiêu đề trực tiếp từ giao diện:
-     + Trong modal cài đặt bảng (Tab Giao diện / Bảng màu): Thêm bảng màu chọn nhanh (Trắng, Đen, Vàng, Xanh dương, Xanh lá, Hồng, Cam...) kèm ô chọn màu tùy ý (`<input type="color">`).
-     + Nút chọn màu nhanh dạng icon bảng màu (palette) cạnh ô nhập tiêu đề trên thanh header khi tác giả/giáo viên đang xem bảng.
-   - Hiển thị màu chữ tiêu đề bảng theo giá trị `title_color` được lưu (áp dụng inline style hoặc class, ưu tiên cao hơn màu mặc định để không bị điệp màu trên bất kỳ nền nào).
+1. **Liên thông 1-Click từ `taobaitap.html` sang `thitructuyen.html`**:
+   - Bổ sung nút **"🚀 THI TRỰC TUYẾN"** trên thanh nút hành động ở Bước 2 của `taobaitap.html` và `backupcode viettailieu/taobaitap.html` (nằm cạnh nút "DẠY NGAY").
+   - Hàm `startOnlineExam()`:
+     + Chuyển đổi toàn bộ câu hỏi trong state (`questions`) sang cấu trúc dữ liệu chuẩn của `thitructuyen.html` (hỗ trợ cả 3 phần CV 7991: `mc`, `tf` 4 ý $a-d$, `short_answer` điền số).
+     + Thiết lập tiêu đề theo chủ đề (`topics[0].name`), thời gian làm bài mặc định **15 phút**.
+     + Đóng gói vào `localStorage.setItem('thitructuyen_pending_import', ...)` và mở `thitructuyen.html?from=taobaitap` trong tab mới.
+2. **Tự động tiếp nhận và nạp đề tại `thitructuyen.html` (Đề mới & Đề cũ)**:
+   - Khi khởi chạy, `thitructuyen.html` kiểm tra gói dữ liệu `thitructuyen_pending_import` trong `localStorage`.
+   - Tự động nạp:
+     + Tên đề thi, định dạng đề (`cv7991` hoặc `standard_mc`), thời gian **15 phút** (kèm các nút chọn nhanh 15p, 20p, 30p, 45p).
+     + Toàn bộ danh sách câu hỏi và đáp án vào `allQuestions`.
+     + Tự động kích hoạt sẵn cờ `anti_ai_one_by_one: true` (chế độ thi cuốn chiếu).
+     + Bỏ qua Bước 1 (tải file) và chuyển thẳng vào Bước 2 (Xem lại & Cấu hình phòng thi).
+   - **Áp dụng cho cả đề cũ**: Trong danh sách đề thi của giáo viên (`TeacherDashboard`), khi bấm nút **"Sửa đề"** (icon bút chì), giáo viên có thể chỉnh sửa thời gian thành 15 phút, bật/tắt cờ `anti_ai_one_by_one` và `anti_ai_watermark`, rồi bấm "Lưu Đề" để cập nhật ngay cho học sinh.
+3. **Chế độ thi cuốn chiếu chống chụp gửi AI (One-by-one Mode)**:
+   - Thêm checkbox cấu hình trong modal cài đặt thi của giáo viên: `[x] Chế độ thi cuốn chiếu (Chống chụp gửi AI)`.
 
-2. **Chức năng Chỉnh sửa bài đăng (Edit Post)**:
-   - Thêm nút **`Sửa`** (`<button onclick="openEditPostModal(...)">`) trên mỗi thẻ bài đăng cho người có quyền (`state.canManage || p.can_delete`).
-   - Modal chỉnh sửa bài viết: Cho phép sửa nội dung chữ (`body`), liên kết (`link_url`), màu thẻ (`card_color`), quản lý danh sách ảnh/tệp hiện có (có nút xóa tệp cũ), và tải thêm hình ảnh/tệp mới.
-   - Thêm endpoint `action === 'edit-post'` trong [api/padlet.php](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/api/padlet.php): Xác thực quyền tác giả (`$isAuthor`) hoặc chủ bảng (`$isOwner`), cập nhật dữ liệu và lưu tệp bổ sung vào `padlet_post_files`.
-
-3. **Hiển thị thư viện ảnh (Image Gallery / Grid) trên bài đăng**:
-   - Nâng cấp hàm render ảnh trong [padlet_ht.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/padlet_ht.html):
-     + Lọc toàn bộ các tệp là ảnh (`(p.files || []).filter(isImageFile)`).
-     + Nếu có 1 ảnh: hiển thị 1 ảnh full width.
-     + Nếu có từ 2 ảnh trở lên: hiển thị dạng lưới ảnh (grid 2 cột hoặc 3 cột với tỉ lệ khung hình đồng đều, bo góc đẹp mắt), bấm vào bất kỳ ảnh nào đều mở xem kích thước lớn (preview modal).
-
-4. **Kiểm thử**:
-   - Cập nhật và bổ sung test cases trong `tests/padlet-ownership-smoke.js` và `tests/padlet-ui-smoke.js`.
+   - Giao diện làm bài của học sinh khi bật chế độ này:
+     + Chỉ hiển thị **duy nhất 1 câu hỏi tại một thời điểm**.
+     + Có thanh tiến trình hoặc đồng hồ mini đếm ngược riêng cho câu hiện tại: ví dụ bài 15 phút gồm 17 câu $\rightarrow$ mỗi câu có khoảng **50 giây** (hoặc 45 giây cho trắc nghiệm, 90 giây cho Đúng/Sai).
+     + Hết giờ câu đó hoặc bấm "Câu tiếp theo" $\rightarrow$ tự động chuyển sang câu tiếp theo và **khóa vĩnh viễn không cho quay lại câu cũ (No Backtrack)**.
+     + Đến câu cuối cùng, nút chuyển thành "Nộp bài".
+     + Lưu tạm tiến trình `currentQuestionIndex` và `answers` vào `localStorage` để chống mất dữ liệu khi học sinh vô tình tải lại trang.
+4. **Watermark bảo mật chống chụp màn hình (Anti-OCR)**:
+   - Khi học sinh làm bài, hiển thị một lớp watermark chìm mờ chạy chéo màn hình với thông tin: `[Họ tên học sinh] - [SBD / Lớp] - [Thời gian thi]`.
+   - Vừa răn đe học sinh không chụp ảnh gửi ra ngoài, vừa tạo nhiễu quang học làm AI Vision OCR đọc sai công thức toán học khi chụp qua màn hình máy tính.
+5. **Cứu hộ triệt để catalog PPDH/KTDH trên `canvas_soankhbd.html`**:
+   - Nâng cấp hàm fallback `ensureKhbdPedagogyCatalogFallback()` trong `canvas_soankhbd.html`: Nếu file `js/khbd-pedagogy-catalog.js` trên hosting bị rỗng (0 bytes) hoặc lỗi mạng, tự động nạp dự phòng ngay từ CDN GitHub jsDelivr (`https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js`).
+   - Giúp bảng PPDH, KTDH 4 pha và Hoạt động môn học luôn hiển thị đầy đủ 100% trên web `hoangthiencm.id.vn` mà không bao giờ bị trắng trơn.
+6. **Kiểm thử tự động**:
+   - Tạo file test `tests/taobaitap-thitructuyen-bridge-smoke.js` kiểm tra toàn bộ luồng đóng gói, chuyển đổi dữ liệu, tiếp nhận tại `thitructuyen`, và các cờ cấu hình thi cuốn chiếu.
+   - Cập nhật `tests/canvas-soankhbd-smoke.js` kiểm tra fallback CDN của catalog PPDH.
 
 ---
 
 ## Ngoài phạm vi
-- Không thay đổi các quyền phân quyền cơ bản (học sinh chỉ sửa/xóa bài của chính mình, giáo viên quản lý toàn bộ).
-- Không sửa đổi các template cấu trúc bảng khác (Mindmap, KWL, Venn...) ngoài việc đồng bộ hiển thị ảnh và nút sửa.
+- Không thay đổi các prompt sinh câu hỏi AI cốt lõi trong `taobaitap.html`.
+- Không can thiệp hay thay đổi API backend MySQL / Google Drive trong `api/exam.php`.
+- Không thay đổi cách chấm điểm chuẩn CV 7991 đã hoàn thiện.
 
 ---
 
 ## File dự kiến tác động
-1. `padlet_ht.html`
-2. `api/padlet.php`
-3. `tests/padlet-ui-smoke.js`
-4. `tests/padlet-ownership-smoke.js`
+1. `taobaitap.html`
+2. `backupcode viettailieu/taobaitap.html`
+3. `thitructuyen.html`
+4. `canvas_soankhbd.html`
+5. `tests/taobaitap-thitructuyen-bridge-smoke.js` (Test mới)
+6. `tests/canvas-soankhbd-smoke.js`
+
 
 ---
 
 ## Các bước thực hiện
 
-### Bước 1: Backend [api/padlet.php](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/api/padlet.php)
-1. Thêm migration trong `padlet_migrate`:
-   ```php
-   if (!padlet_column_exists($pdo, 'padlet_boards', 'title_color')) {
-       $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN title_color VARCHAR(30) DEFAULT NULL AFTER color_mode");
-   }
-   ```
-2. Cập nhật `action === 'save-board'`: Lưu và validate trường `title_color` (chuỗi mã màu hex hoặc tên màu hợp lệ, tối đa 30 ký tự).
-3. Thêm `action === 'edit-post'`:
-   - Nhận `post_id`, `body`, `link_url`, `card_color`, `deleted_file_ids` (mảng id tệp muốn xóa), và các tệp upload mới `padlet_file_input()`.
-   - Kiểm tra quyền: `$isOwner || $isAuthor`.
-   - Cập nhật thông tin bài đăng, xóa tệp cũ theo `deleted_file_ids`, lưu tệp tải lên mới vào Google Drive/DB.
+### Bước 1: Nâng cấp `taobaitap.html` và `backupcode viettailieu/taobaitap.html`
+1. Viết hàm chuyển đổi `mapToThiTrucTuyenPayload(questions, topics, synthForm)`:
+   - Duyệt qua `questions` và chuẩn hóa:
+     + `multiple-choice` $\rightarrow$ `{ id, type: 'mc', question, options, correct_index, explanation }`.
+     + `true-false` (CV 7991) $\rightarrow$ `{ id, type: 'tf', question, options: 4 ý a-d, correct_answers: [4 boolean], explanation }`.
+     + `short-answer` $\rightarrow$ `{ id, type: 'short_answer', question, correct_answer: String(clean), explanation }`.
+   - Thiết lập `duration: 15` (mặc định 15 phút), `exam_format: (synthForm === 'cv7991' ? 'cv7991' : 'standard_mc')`.
+   - Bật cờ `anti_ai_one_by_one: true` và `anti_ai_watermark: true`.
+2. Viết hàm `startOnlineExam()`:
+   - Kiểm tra có câu hỏi hay chưa.
+   - Lưu payload vào `localStorage.setItem('thitructuyen_pending_import', JSON.stringify(payload))`.
+   - Mở cửa sổ mới: `window.open('thitructuyen.html?from=taobaitap', '_blank')`.
+3. Thêm nút bấm **"🚀 THI TRỰC TUYẾN"** bên cạnh nút "DẠY NGAY" ở Bước 2.
+4. Đồng bộ 100% sang `backupcode viettailieu/taobaitap.html`.
 
-### Bước 2: Frontend [padlet_ht.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/padlet_ht.html) — Màu chữ tiêu đề
-1. Thêm `title_color` vào state, render tiêu đề bảng:
-   ```html
-   style="${b.title_color ? `color: ${esc(b.title_color)} !important; caret-color: ${esc(b.title_color)};` : ''}"
-   ```
-2. Thêm bộ chọn màu tiêu đề trong `settingsAppearance`: Bảng màu các màu tương phản cao (Trắng `#ffffff`, Đen `#0f172a`, Vàng `#facc15`, Xanh cyan `#38bdf8`, Xanh lá `#4ade80`, Hồng `#f472b6`, Cam `#fb923c`...) + ô `input type="color"`.
-3. Bổ sung nút đổi màu nhanh dạng icon bảng màu (palette) cạnh ô tiêu đề trên header khi có quyền quản trị để thao tác 1 chạm.
+### Bước 2: Nâng cấp `thitructuyen.html` — Tiếp nhận đề 1-Click
+1. Trong component tạo đề (`CreateExamModal` hoặc màn hình tạo đề):
+   - Thêm `useEffect` kiểm tra `localStorage.getItem('thitructuyen_pending_import')`.
+   - Nếu có: parse JSON, cập nhật `examInfo` (`title`, `duration: 15`, `exam_format`, `anti_ai_one_by_one: true`, `anti_ai_watermark: true`), nạp `allQuestions`, xóa key trong `localStorage` và đặt `setStep(2)` (nhảy thẳng vào xem lại / cấu hình).
+2. Thêm các nút chọn nhanh thời gian tại ô nhập `duration`: `[15p]`, `[20p]`, `[30p]`, `[45p]`.
+3. Thêm checkbox cấu hình: `Chế độ thi cuốn chiếu từng câu (Chống chụp gửi AI)` và `Watermark bảo mật`.
 
-### Bước 3: Frontend [padlet_ht.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/padlet_ht.html) — Sửa bài và hiển thị nhiều ảnh
-1. Cải tiến `attachmentHero` / hiển thị ảnh trên bài đăng:
-   - Gom tất cả `const imageFiles = (p.files || []).filter(isImageFile);`.
-   - Nếu `imageFiles.length === 1`: hiển thị 1 ảnh như cũ.
-   - Nếu `imageFiles.length > 1`: hiển thị lưới ảnh `grid grid-cols-2 gap-1.5 rounded-t-2xl overflow-hidden mb-3`, mỗi ảnh click mở preview.
-2. Thêm nút **`Sửa`** vào `postCard`:
-   - Nút nằm cạnh nút `Xóa` khi `state.canManage || p.can_delete`.
-3. Thêm modal `editPostModal` và hàm `openEditPostModal(postId)`:
-   - Điền sẵn nội dung, màu thẻ, danh sách tệp đính kèm (cho phép bấm xóa từng tệp).
-   - Thêm input đính kèm file/ảnh mới (hỗ trợ chọn nhiều ảnh hoặc paste từ clipboard).
-   - Gửi yêu cầu tới `API` với `action=edit-post`.
+### Bước 3: Nâng cấp `thitructuyen.html` — Giao diện làm bài thi cuốn chiếu & Watermark
+1. Khi `exam.info.anti_ai_one_by_one` bật:
+   - Thêm state `currentQuestionIdx` (mặc định 0).
+   - Chỉ render thẻ câu hỏi tại `shuffledQuestions[currentQuestionIdx]`.
+   - Thanh header hiển thị: `Câu [currentQuestionIdx + 1] / [shuffledQuestions.length]`.
+   - Đồng hồ đếm ngược từng câu: Phân bổ `Math.floor((examInfo.duration * 60) / shuffledQuestions.length)` giây cho mỗi câu (ví dụ 15 phút cho 17 câu $\approx$ 52 giây/câu).
+   - Khi hết thời gian câu hoặc học sinh bấm "Câu tiếp theo" $\rightarrow$ tự động chuyển `currentQuestionIdx + 1`, **không có nút quay lại**.
+   - Tại câu cuối cùng $\rightarrow$ nút "Nộp bài".
+2. Watermark bảo mật:
+   - Nếu `anti_ai_watermark` bật: Render container cố định `pointer-events-none fixed inset-0 z-40` với chữ chìm mờ in tên học sinh, SBD và ngày giờ thi xoay góc -25 độ lặp lại trên nền màn hình.
 
-### Bước 4: Kiểm thử và xác nhận
-1. Chạy các bài test:
+### Bước 4: Nâng cấp Fallback tự cứu hộ trong `canvas_soankhbd.html`
+1. Tại hàm `ensureKhbdPedagogyCatalogFallback()` ([canvas_soankhbd.html:1139](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/canvas_soankhbd.html#L1139)):
+   - Nếu sau khi nạp từ hosting mà `typeof window.KHBD_PEDAGOGY_CATALOG === "undefined"`:
+     Tự động nạp dự phòng từ CDN GitHub jsDelivr:
+     ```javascript
+     var cdnCatalog = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js";
+     document.write('<script src="' + (isLocal ? "js/khbd-pedagogy-catalog.js" : cdnCatalog) + '"><\/script>');
+     ```
+   - Nhờ vậy, ngay cả khi file `js/khbd-pedagogy-catalog.js` trên hosting bị rỗng 0 bytes, trình duyệt vẫn kéo đủ 66 KB catalog từ CDN về và render đầy đủ 100% PPDH/KTDH.
+
+### Bước 5: Kiểm thử tự động
+1. Tạo file kiểm thử `tests/taobaitap-thitructuyen-bridge-smoke.js`:
+   - Kiểm tra sự hiện diện và chức năng của nút "THI TRỰC TUYẾN" và hàm đóng gói trong `taobaitap.html` (cả 2 bản).
+   - Kiểm tra hàm tiếp nhận đề `thitructuyen_pending_import`, thời gian mặc định 15 phút, và cờ `anti_ai_one_by_one` trong `thitructuyen.html`.
+   - Kiểm tra UI thi cuốn chiếu, logic khóa không cho quay lại câu trước, và watermark.
+2. Cập nhật `tests/canvas-soankhbd-smoke.js` kiểm tra assert CDN fallback của catalog.
+3. Chạy toàn bộ các test suite liên quan:
    ```powershell
-   node tests/padlet-ui-smoke.js
-   node tests/padlet-ownership-smoke.js
+   node tests/taobaitap-thitructuyen-bridge-smoke.js
+   node tests/canvas-soankhbd-smoke.js
+   node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js
+   node tests/taobaitap-plan-smoke.js
    ```
-2. Đảm bảo toàn bộ tiêu chí kiểm thử pass 100%.
+
 
 ---
 
 ## Rủi ro
-1. **Bảo mật quyền sửa bài**: Phải kiểm tra chặt chẽ `isOwner || isAuthor` trên server PHP theo user ID, không tin tưởng dữ liệu client gửi lên.
-2. **Xóa tệp Google Drive**: Khi tác giả xóa ảnh cũ trong lúc sửa bài, cần xóa an toàn trong `padlet_post_files` và dọn dẹp Drive tương tự như xóa bài.
+1. **Học sinh tải lại trang khi đang thi cuốn chiếu**:
+   - Khắc phục: Lưu `currentQuestionIdx` và thời gian câu hỏi vào `localStorage` theo từng `examId` để khi F5 trang web vẫn phục hồi đúng câu đang làm, không cho làm lại các câu đã qua.
+2. **Khác biệt cấu trúc dữ liệu Đúng/Sai và Điền số**:
+   - Cần đảm bảo hàm `mapToThiTrucTuyenPayload` xuất đúng `options` 4 ý và `correct_answers` dạng boolean cho `tf`, và `correct_answer` dạng chuỗi sạch cho `short_answer`.
 
 ---
 
 ## Cách kiểm thử
 Chạy các lệnh terminal:
 ```powershell
-node tests/padlet-ui-smoke.js
-node tests/padlet-ownership-smoke.js
+node tests/taobaitap-thitructuyen-bridge-smoke.js
+node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js
+node tests/taobaitap-plan-smoke.js
 ```
 
 ---
 
 ## Tiêu chí nghiệm thu
-1. Tác giả có thể chọn bất kỳ màu sắc nào cho tiêu đề `TOÁN LỚP 9/1` (bằng bảng màu hoặc color picker), tiêu đề hiển thị rõ ràng, không bị điệp màu trên nền đỏ hay bất kỳ nền nào.
-2. Trên thẻ bài đăng có nút **`Sửa`** cho tác giả/giáo viên.
-3. Khi sửa bài, tác giả cập nhật được nội dung và chèn thêm được hình ảnh/tệp mới.
-4. Khi bài đăng có nhiều hình ảnh, tất cả các hình ảnh đều được hiển thị trực quan dạng lưới ảnh trên thẻ bài thay vì chỉ hiện 1 ảnh.
-5. Kiểm thử `padlet-ui-smoke.js` và `padlet-ownership-smoke.js` pass 100%.
+1. Trên `taobaitap.html` (và bản backup): Xuất hiện nút **"🚀 THI TRỰC TUYẾN"**; khi bấm sẽ đóng gói đầy đủ 17 câu CV 7991 hoặc 20 câu TN kèm đáp án chính xác sang `localStorage` và mở `thitructuyen.html`.
+2. Trên `thitructuyen.html`: Tự động đón nhận đề thi, điền sẵn thời gian mặc định là **15 phút** (có các nút chọn nhanh 15p, 20p, 30p, 45p), nạp toàn bộ câu hỏi và đáp án vào Bước 2 mà không cần bấm tải file.
+3. Khi bật "Chế độ thi cuốn chiếu": Màn hình thi hiển thị từng câu, có đồng hồ đếm ngược từng câu (~45–52s/câu), hết giờ hoặc bấm câu tiếp sẽ khóa vĩnh viễn không cho quay lại câu cũ.
+4. Lớp Watermark bảo mật hiển thị mờ thông tin học sinh trên màn hình làm bài.
+5. Toàn bộ smoke test kiểm thử liên thông và CV 7991 pass 100%.
+

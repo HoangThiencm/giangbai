@@ -1,29 +1,33 @@
-# IMPLEMENT: Nâng cấp Padlet — màu chữ tiêu đề, sửa bài đăng, gallery nhiều ảnh
+# IMPLEMENT: Liên thông Tạo bài tập → Thi trực tuyến 1-Click & chế độ cuốn chiếu chống AI
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
 ## Thay đổi
 
-### `api/padlet.php`
-- Migration: thêm cột `padlet_boards.title_color VARCHAR(30) DEFAULT NULL AFTER color_mode`.
-- `padlet_title_color()`: validate hex / tên màu (tối đa 30 ký tự).
-- `save-board`: lưu `title_color`; nếu client không gửi field thì giữ giá trị cũ khi update.
-- `edit-post`: quyền `$isOwner || $isAuthor`; cập nhật `body` / `link_url` / `card_color`; xóa tệp theo `deleted_file_ids` qua `padlet_delete_drive_files_by_ids`; nhận upload `files[]` mới (tối đa 5 tệp còn lại).
+### `taobaitap.html` & `backupcode viettailieu/taobaitap.html`
+- `mapToThiTrucTuyenPayload(questions, topics, synthForm)`: map `multiple-choice`→`mc`, TF CV7991→`tf` 4 ý + `correct_answers`, `short-answer`→`short_answer` (đáp án sạch).
+- Payload mặc định: `duration: 15`, `exam_format` theo form, `anti_ai_one_by_one: true`, `anti_ai_watermark: true`.
+- `startOnlineExam()`: ghi `localStorage.thitructuyen_pending_import`, mở `thitructuyen.html?from=taobaitap`.
+- Nút **🚀 THI TRỰC TUYẾN** cạnh **DẠY NGAY** (Bước 2, mode quiz).
 
-### `padlet_ht.html`
-- Settings → Bảng màu: swatch màu tiêu đề + `input type="color"` + đặt lại mặc định.
-- Header bảng (quản trị): nút palette cạnh tiêu đề, áp dụng `title_color` inline (`color` / `caret-color !important`).
-- `postMediaHtml`: 1 ảnh full; ≥2 ảnh → lưới `grid-cols-2/3`, click mở preview.
-- Thẻ bài: nút **Sửa** khi `state.canManage || p.can_delete`.
-- Modal `#editPostModal` + `openEditPostModal` / `submitEditPost` (sửa nội dung, link, màu thẻ, xóa tệp cũ, thêm tệp mới; hỗ trợ paste ảnh khi modal mở).
+### `thitructuyen.html` — tiếp nhận & cấu hình
+- `App` + `HybridExamCreator`: đọc pending import → nạp câu hỏi, title, duration 15, cờ anti-AI → `setStep(2)`.
+- Nút chọn nhanh thời gian: 15p / 20p / 30p / 45p.
+- Checkbox: chế độ cuốn chiếu + watermark bảo mật.
+- Khi lưu đề: đưa cờ vào `matrixConfig` (không sửa `api/exam.php`).
+
+### `thitructuyen.html` — làm bài học sinh
+- `anti_ai_one_by_one`: chỉ 1 câu/lúc, đồng hồ từng câu `floor(duration*60/n)`, nút **Câu tiếp theo** / **Nộp bài**, không quay lại.
+- Tiến trình `currentQuestionIdx` + answers lưu `localStorage` theo `examId` (F5 vẫn đúng câu).
+- `anti_ai_watermark`: lớp chữ chìm xoay -25° (họ tên / SBD / lớp / thời gian).
 
 ### Tests
-- `tests/padlet-ui-smoke.js`: title color UI, edit modal, gallery grid, `edit-post`.
-- `tests/padlet-ownership-smoke.js`: migrate/`padlet_title_color`/`save-board`, quyền `edit-post`, xóa tệp an toàn.
+- Mới: `tests/taobaitap-thitructuyen-bridge-smoke.js`.
 
 ## Test đã chạy
 
-- `node tests/padlet-ui-smoke.js` — PASS
-- `node tests/padlet-ownership-smoke.js` — PASS
+- `node tests/taobaitap-thitructuyen-bridge-smoke.js` — PASS
+- `node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js` — PASS
+- `node tests/taobaitap-plan-smoke.js` — PASS
 
-Không mở rộng quyền phân quyền cơ bản ngoài PLAN. Chưa verify click UI trong browser (không có browser tool trong session); hợp đồng nguồn đã được smoke khóa. Cần `/verify` trên Antigravity.
+Không đổi prompt AI / `api/exam.php` / logic chấm CV 7991. Cần `/verify` trên Antigravity.
