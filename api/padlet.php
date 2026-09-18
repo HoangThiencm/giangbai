@@ -150,6 +150,9 @@ function padlet_migrate(PDO $pdo): void
     if (!padlet_column_exists($pdo, 'padlet_boards', 'color_mode')) {
         $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN color_mode ENUM('light','dark') NOT NULL DEFAULT 'light' AFTER bg_theme");
     }
+    if (!padlet_column_exists($pdo, 'padlet_boards', 'title_color')) {
+        $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN title_color VARCHAR(30) DEFAULT NULL AFTER color_mode");
+    }
     if (!padlet_column_exists($pdo, 'padlet_boards', 'font_family')) {
         $pdo->exec("ALTER TABLE padlet_boards ADD COLUMN font_family VARCHAR(30) NOT NULL DEFAULT 'inter' AFTER color_mode");
     }
@@ -189,6 +192,20 @@ function padlet_bg_theme(string $value): string
 function padlet_color_mode(string $value): string
 {
     return $value === 'dark' ? 'dark' : 'light';
+}
+
+function padlet_title_color($value): ?string
+{
+    $value = trim((string)($value ?? ''));
+    if ($value === '') return null;
+    if (mb_strlen($value) > 30) $value = mb_substr($value, 0, 30);
+    if (preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $value)) {
+        return strtolower($value);
+    }
+    if (preg_match('/^[a-zA-Z][a-zA-Z0-9_-]{0,28}$/', $value)) {
+        return $value;
+    }
+    return null;
 }
 
 function padlet_font_family(string $value): string
@@ -391,6 +408,32 @@ function padlet_delete_drive_files_for_post(PDO $pdo, int $postId): array
     return $failed;
 }
 
+function padlet_delete_drive_files_by_ids(PDO $pdo, int $postId, array $fileIds): array
+{
+    $fileIds = array_values(array_unique(array_filter(array_map('intval', $fileIds), fn($id) => $id > 0)));
+    if (!$fileIds) return [];
+    $marks = implode(',', array_fill(0, count($fileIds), '?'));
+    $stmt = $pdo->prepare("SELECT id, drive_file_id FROM padlet_post_files WHERE post_id = ? AND id IN ($marks)");
+    $stmt->execute(array_merge([$postId], $fileIds));
+    $failed = [];
+    $toDelete = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $toDelete[] = (int)$row['id'];
+        $fileId = trim((string)($row['drive_file_id'] ?? ''));
+        if ($fileId === '') continue;
+        try {
+            drive_delete_file($fileId);
+        } catch (Throwable $e) {
+            $failed[] = $fileId;
+        }
+    }
+    if ($toDelete) {
+        $marksDel = implode(',', array_fill(0, count($toDelete), '?'));
+        $pdo->prepare("DELETE FROM padlet_post_files WHERE id IN ($marksDel)")->execute($toDelete);
+    }
+    return $failed;
+}
+
 function padlet_payload(PDO $pdo, array $board, bool $includeAll = false, ?array $currentUser = null): array
 {
     $columns = padlet_columns($pdo, (int)$board['id']);
@@ -478,6 +521,10 @@ if ($method === 'POST' && $action === 'save-board') {
     $promptText = trim((string)($data['prompt_text'] ?? ''));
     $description = trim((string)($data['description'] ?? ''));
     $colorMode = padlet_color_mode((string)($data['color_mode'] ?? 'light'));
+    $titleColor = array_key_exists('title_color', $data) ? padlet_title_color($data['title_color']) : null;
+    if (array_key_exists('title_color', $data) && $data['title_color'] !== null && trim((string)$data['title_color']) !== '' && $titleColor === null) {
+        respond(['error' => 'Màu chữ tiêu đề không hợp lệ.'], 422);
+    }
     $fontFamily = padlet_font_family((string)($data['font_family'] ?? 'inter'));
     $postSize = padlet_post_size((string)($data['post_size'] ?? 'standard'));
     $postPosition = padlet_post_position((string)($data['post_position'] ?? 'first'));
@@ -489,12 +536,15 @@ if ($method === 'POST' && $action === 'save-board') {
     try {
         if ($id) {
             $board = padlet_require_owner($pdo, $teacher, $id);
-            $stmt = $pdo->prepare('UPDATE padlet_boards SET title=?, description=?, prompt_text=?, layout_type=?, bg_theme=?, color_mode=?, font_family=?, post_size=?, post_position=?, show_author=?, default_column_id=?, access_mode=?, target_class=?, status=?, academic_year=?, moderation_enabled=?, comments_enabled=?, reactions_enabled=? WHERE id=?');
-            $stmt->execute([$title, $description, $promptText ?: null, $layout, $bgTheme, $colorMode, $fontFamily, $postSize, $postPosition, $showAuthor, $defaultColumnId, $access, $targetClass ?: null, $status, $academic ?: null, !empty($data['moderation_enabled']) ? 1 : 0, !empty($data['comments_enabled']) ? 1 : 0, !empty($data['reactions_enabled']) ? 1 : 0, $id]);
+            if (!array_key_exists('title_color', $data)) {
+                $titleColor = $board['title_color'] ?? null;
+            }
+            $stmt = $pdo->prepare('UPDATE padlet_boards SET title=?, description=?, prompt_text=?, layout_type=?, bg_theme=?, color_mode=?, title_color=?, font_family=?, post_size=?, post_position=?, show_author=?, default_column_id=?, access_mode=?, target_class=?, status=?, academic_year=?, moderation_enabled=?, comments_enabled=?, reactions_enabled=? WHERE id=?');
+            $stmt->execute([$title, $description, $promptText ?: null, $layout, $bgTheme, $colorMode, $titleColor, $fontFamily, $postSize, $postPosition, $showAuthor, $defaultColumnId, $access, $targetClass ?: null, $status, $academic ?: null, !empty($data['moderation_enabled']) ? 1 : 0, !empty($data['comments_enabled']) ? 1 : 0, !empty($data['reactions_enabled']) ? 1 : 0, $id]);
         } else {
             $code = padlet_code($pdo);
-            $stmt = $pdo->prepare('INSERT INTO padlet_boards (public_code, owner_id, title, description, prompt_text, layout_type, bg_theme, color_mode, font_family, post_size, post_position, show_author, default_column_id, access_mode, target_class, status, academic_year, moderation_enabled, comments_enabled, reactions_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$code, (int)$teacher['id'], $title, $description, $promptText ?: null, $layout, $bgTheme, $colorMode, $fontFamily, $postSize, $postPosition, $showAuthor, $defaultColumnId, $access, $targetClass ?: null, $status, $academic ?: null, !empty($data['moderation_enabled']) ? 1 : 0, !empty($data['comments_enabled']) ? 1 : 0, !empty($data['reactions_enabled']) ? 1 : 0]);
+            $stmt = $pdo->prepare('INSERT INTO padlet_boards (public_code, owner_id, title, description, prompt_text, layout_type, bg_theme, color_mode, title_color, font_family, post_size, post_position, show_author, default_column_id, access_mode, target_class, status, academic_year, moderation_enabled, comments_enabled, reactions_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$code, (int)$teacher['id'], $title, $description, $promptText ?: null, $layout, $bgTheme, $colorMode, $titleColor, $fontFamily, $postSize, $postPosition, $showAuthor, $defaultColumnId, $access, $targetClass ?: null, $status, $academic ?: null, !empty($data['moderation_enabled']) ? 1 : 0, !empty($data['comments_enabled']) ? 1 : 0, !empty($data['reactions_enabled']) ? 1 : 0]);
             $id = (int)$pdo->lastInsertId();
         }
         // Keep IDs of existing columns because posts reference them. If a column is
@@ -627,6 +677,109 @@ if ($method === 'POST' && $action === 'post') {
         }
     }
     respond(['ok' => true, 'message' => $status === 'pending' ? 'Bài đăng đã gửi và đang chờ giáo viên duyệt.' : 'Bài đăng đã xuất hiện trên bảng.']);
+}
+
+if ($method === 'POST' && $action === 'edit-post') {
+    $board = padlet_board($pdo, 0, (string)($_POST['code'] ?? ''));
+    if (!$board) {
+        $board = padlet_board($pdo, (int)($_POST['board_id'] ?? 0));
+    }
+    if (!$board) respond(['error' => 'Không tìm thấy bảng chia sẻ.'], 404);
+    $user = padlet_current_user($pdo);
+    padlet_access($pdo, $board, $user);
+    $isOwner = $user && ($user['role'] ?? '') === 'teacher' && (int)$board['owner_id'] === (int)$user['id'];
+    $postId = (int)($_POST['post_id'] ?? 0);
+    $check = $pdo->prepare('SELECT * FROM padlet_posts WHERE id = ? AND board_id = ? LIMIT 1');
+    $check->execute([$postId, (int)$board['id']]);
+    $post = $check->fetch();
+    if (!$post) respond(['error' => 'Không tìm thấy bài đăng.'], 404);
+    $isAuthor = $user && !empty($post['author_user_id']) && (int)$user['id'] === (int)$post['author_user_id'];
+    if (!($isOwner || $isAuthor)) respond(['error' => 'Bạn chỉ có thể sửa bài do chính tài khoản của mình đăng.'], 403);
+
+    $body = trim((string)($_POST['body'] ?? ''));
+    $link = trim((string)($_POST['link_url'] ?? ''));
+    if ($link !== '' && !filter_var($link, FILTER_VALIDATE_URL)) respond(['error' => 'Liên kết không hợp lệ.'], 422);
+    $colors = ['white', 'sky', 'amber', 'violet', 'rose', 'emerald'];
+    $cardColor = in_array(($_POST['card_color'] ?? ''), $colors, true) ? $_POST['card_color'] : ($post['card_color'] ?: 'white');
+    $linkTitle = trim((string)($_POST['link_title'] ?? ''));
+    $linkImage = trim((string)($_POST['link_image'] ?? ''));
+    if ($link !== '' && ($linkTitle === '' || $linkImage === '')) {
+        $preview = padlet_link_preview($link);
+        if ($linkTitle === '') $linkTitle = $preview['title'] ?: '';
+        if ($linkImage === '') $linkImage = $preview['image'] ?: '';
+    }
+    if ($link === '') {
+        $linkTitle = '';
+        $linkImage = '';
+    }
+
+    $deletedRaw = $_POST['deleted_file_ids'] ?? '[]';
+    if (is_string($deletedRaw)) {
+        $decoded = json_decode($deletedRaw, true);
+        $deletedIds = is_array($decoded) ? $decoded : [];
+    } elseif (is_array($deletedRaw)) {
+        $deletedIds = $deletedRaw;
+    } else {
+        $deletedIds = [];
+    }
+    $deletedIds = array_values(array_unique(array_filter(array_map('intval', $deletedIds), fn($id) => $id > 0)));
+
+    $files = array_values(array_filter(padlet_file_input(), fn($file) => (int)$file['error'] !== UPLOAD_ERR_NO_FILE));
+    if (count($files) > 5) respond(['error' => 'Mỗi bài đăng tối đa 5 tệp.'], 422);
+
+    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM padlet_post_files WHERE post_id = ?');
+    $countStmt->execute([$postId]);
+    $existingCount = (int)$countStmt->fetchColumn();
+    $deleteCountStmt = $pdo->prepare('SELECT COUNT(*) FROM padlet_post_files WHERE post_id = ? AND id IN (' . ($deletedIds ? implode(',', array_fill(0, count($deletedIds), '?')) : 'NULL') . ')');
+    if ($deletedIds) {
+        $deleteCountStmt->execute(array_merge([$postId], $deletedIds));
+        $willDelete = (int)$deleteCountStmt->fetchColumn();
+    } else {
+        $willDelete = 0;
+    }
+    if (($existingCount - $willDelete + count($files)) > 5) {
+        respond(['error' => 'Mỗi bài đăng tối đa 5 tệp (ảnh/tệp hiện có + tệp mới).'], 422);
+    }
+    if ($body === '' && $link === '' && ($existingCount - $willDelete + count($files)) <= 0) {
+        respond(['error' => 'Hãy nhập nội dung, liên kết hoặc giữ ít nhất một tệp đính kèm.'], 422);
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE padlet_posts SET body = ?, link_url = ?, link_title = ?, link_image = ?, card_color = ? WHERE id = ? AND board_id = ?')
+            ->execute([$body ?: null, $link ?: null, $linkTitle ?: null, $linkImage ?: null, $cardColor, $postId, (int)$board['id']]);
+        $driveFailed = padlet_delete_drive_files_by_ids($pdo, $postId, $deletedIds);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+
+    if ($files) {
+        $folderId = trim((string)($board['drive_folder_id'] ?? ''));
+        if ($folderId === '') {
+            $folderId = drive_board_folder($board['public_code'], $board['title'], $board['academic_year'] ?? null);
+            $pdo->prepare("UPDATE padlet_boards SET drive_folder_id = ? WHERE id = ? AND (drive_folder_id IS NULL OR drive_folder_id = '')")->execute([$folderId, (int)$board['id']]);
+        }
+        $allColumns = padlet_columns($pdo, (int)$board['id']);
+        $columnFolder = padlet_column_drive_folder($folderId, $allColumns, (int)$post['column_id']);
+        $personFolder = drive_participant_folder($columnFolder, '', (string)($post['author_name'] ?: 'Bai-dang'), date('Ymd-His'));
+        $insertFile = $pdo->prepare('INSERT INTO padlet_post_files (post_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        foreach ($files as $index => $file) {
+            if ((int)$file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) continue;
+            if ((int)$file['size'] > 25 * 1024 * 1024) respond(['error' => 'Mỗi tệp bảng chia sẻ tối đa 25 MB.'], 422);
+            $original = (string)$file['name'];
+            $invalid = drive_validate_upload($file['tmp_name'], $original);
+            if ($invalid) respond(['error' => $invalid], 422);
+            $mime = drive_detect_mime($file['tmp_name'], $original, (string)($file['type'] ?? ''));
+            $drive = drive_upload_file($personFolder, date('Ymd-His') . '-' . ($index + 1) . '-' . drive_safe_name($original), $mime, $file['tmp_name']);
+            $insertFile->execute([$postId, $drive['file_id'], $original, $drive['stored_name'], $drive['mime_type'] ?? $mime, (int)$file['size'], $drive['view_url'], $drive['download_url']]);
+        }
+    }
+
+    $payload = ['ok' => true, 'message' => 'Đã cập nhật bài đăng.'];
+    if (!empty($driveFailed)) $payload['drive_failed'] = count($driveFailed);
+    respond($payload);
 }
 
 if ($method === 'POST' && $action === 'comment') {

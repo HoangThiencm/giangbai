@@ -289,6 +289,48 @@
         </form>
     </div>
 
+    <!-- Modal chỉnh sửa bài đăng -->
+    <div id="editPostModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-6">
+        <div class="modal-panel mx-auto my-6 max-w-lg rounded-[26px] bg-white text-slate-900 soft-shadow">
+            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <div>
+                    <p class="text-[11px] font-extrabold uppercase tracking-[.14em] text-teal-700">Chỉnh sửa</p>
+                    <h2 class="text-xl font-black">Sửa bài đăng</h2>
+                </div>
+                <button type="button" onclick="closeModal('editPostModal')" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <form id="editPostForm" class="space-y-3 p-5" onsubmit="submitEditPost(event)">
+                <input id="editPostId" type="hidden">
+                <textarea id="editPostBody" class="field min-h-[120px] resize-y" rows="4" placeholder="Nội dung bài đăng..."></textarea>
+                <label>
+                    <span class="label">Liên kết</span>
+                    <input id="editPostLink" class="field text-sm" type="url" placeholder="https://...">
+                </label>
+                <div>
+                    <span class="label">Màu thẻ</span>
+                    <div id="editColorChoices" class="mt-1 flex flex-wrap gap-2"></div>
+                </div>
+                <div>
+                    <span class="label">Tệp / ảnh hiện có</span>
+                    <div id="editExistingFiles" class="mt-2 space-y-2"></div>
+                </div>
+                <label>
+                    <span class="label">Thêm ảnh / tệp mới</span>
+                    <input id="editPostFiles" type="file" multiple class="mt-1 block w-full text-sm text-slate-700">
+                </label>
+                <div id="editPostError" class="hidden rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700"></div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeModal('editPostModal')" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold">Hủy</button>
+                    <button type="submit" id="editPostSubmit" class="rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-extrabold text-white">
+                        <i class="fas fa-save mr-1"></i>Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal đổi tên bảng (chỉ khi cần) -->
     <div id="quickModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-6">
         <div class="modal-panel mx-auto my-8 max-w-md rounded-[26px] bg-white text-slate-900 soft-shadow">
@@ -516,6 +558,15 @@
                     </div>
                 </div>
                 <div class="settings-card">
+                    <span class="mb-2 block text-xs font-bold text-slate-400">Màu chữ tiêu đề</span>
+                    <div id="setTitleColorSwatches" class="mb-3 flex flex-wrap gap-2"></div>
+                    <label class="flex items-center gap-2 text-sm font-bold text-slate-300">
+                        <span>Tùy chọn</span>
+                        <input id="setTitleColorPicker" type="color" value="#ffffff" class="h-9 w-12 cursor-pointer rounded border border-white/20 bg-transparent p-0.5" oninput="pickTitleColor(this.value)">
+                    </label>
+                    <button type="button" onclick="pickTitleColor('')" class="mt-2 text-xs font-bold text-slate-400 hover:text-white">Đặt lại mặc định</button>
+                </div>
+                <div class="settings-card">
                     <span class="mb-2 block text-xs font-bold text-slate-400">Phông chữ</span>
                     <div class="grid grid-cols-2 gap-2" id="setFontPicker"></div>
                 </div>
@@ -674,6 +725,16 @@
             rounded: { label: 'ABba', class: 'font-rounded' }
         };
 
+        const TITLE_COLOR_PRESETS = [
+            { label: 'Trắng', value: '#ffffff' },
+            { label: 'Đen', value: '#0f172a' },
+            { label: 'Vàng', value: '#facc15' },
+            { label: 'Xanh cyan', value: '#38bdf8' },
+            { label: 'Xanh lá', value: '#4ade80' },
+            { label: 'Hồng', value: '#f472b6' },
+            { label: 'Cam', value: '#fb923c' }
+        ];
+
         const LAYOUT_LABELS = {
             wall: 'Tường', stream: 'Dòng', grid: 'Bảng', columns: 'Cột',
             timeline: 'Dòng thời gian', map: 'Bản đồ', whiteboard: 'Bảng trắng',
@@ -701,9 +762,11 @@
         let state = {
             boards: [], board: null, columns: [], posts: [], user: null,
             canManage: false, classes: [], editColumns: [],
-            activeCommentPost: null, postColor: 'white', linkPreviewTimer: null,
+            activeCommentPost: null, postColor: 'white', editPostColor: 'white',
+            editDeletedFileIds: [], linkPreviewTimer: null,
             pendingTemplate: null, mapInstance: null,
-            settingsDraft: null, activeColumnMenu: null, postTargetColumn: null
+            settingsDraft: null, activeColumnMenu: null, postTargetColumn: null,
+            titleColorMenuOpen: false
         };
 
         const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
@@ -970,6 +1033,7 @@
                 layout_type: b.layout_type,
                 bg_theme: b.bg_theme || 'peach',
                 color_mode: b.color_mode || 'light',
+                title_color: b.title_color || null,
                 font_family: b.font_family || 'inter',
                 post_size: b.post_size || 'standard',
                 post_position: b.post_position || 'first',
@@ -1049,6 +1113,7 @@
                 layout_type: b.layout_type,
                 bg_theme: b.bg_theme || 'peach',
                 color_mode: b.color_mode || 'light',
+                title_color: b.title_color || '',
                 font_family: b.font_family || 'inter',
                 post_size: b.post_size || 'standard',
                 post_position: b.post_position || 'first',
@@ -1081,6 +1146,7 @@
             renderSettingsBgSwatches(state.settingsDraft.bg_theme);
             renderSettingsFontPicker(state.settingsDraft.font_family);
             setColorMode(state.settingsDraft.color_mode);
+            renderTitleColorSwatches(state.settingsDraft.title_color || '');
             setPostSize(state.settingsDraft.post_size);
             setPostPosition(state.settingsDraft.post_position);
             renderSettingsColumns();
@@ -1131,6 +1197,59 @@
             if (state.settingsDraft) state.settingsDraft.color_mode = mode;
             document.getElementById('setColorDark').classList.toggle('active', mode === 'dark');
             document.getElementById('setColorLight').classList.toggle('active', mode === 'light');
+        }
+
+        function normalizeTitleColor(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw)) return raw.toLowerCase();
+            if (/^[a-zA-Z][a-zA-Z0-9_-]{0,28}$/.test(raw)) return raw;
+            return '';
+        }
+
+        function renderTitleColorSwatches(selected) {
+            const current = normalizeTitleColor(selected);
+            const box = document.getElementById('setTitleColorSwatches');
+            if (!box) return;
+            box.innerHTML = TITLE_COLOR_PRESETS.map((item) => {
+                const active = current.toLowerCase() === item.value.toLowerCase();
+                return `<button type="button" onclick="pickTitleColor('${item.value}')" title="${item.label}"
+                    class="h-8 w-8 rounded-full border-2 ${active ? 'border-yellow-400 ring-2 ring-yellow-300' : 'border-white/40'}"
+                    style="background:${item.value}"></button>`;
+            }).join('');
+            const picker = document.getElementById('setTitleColorPicker');
+            if (picker) picker.value = /^#[0-9a-fA-F]{6}$/.test(current) ? current : (current || '#ffffff');
+        }
+
+        function pickTitleColor(value) {
+            const next = normalizeTitleColor(value);
+            if (state.settingsDraft) state.settingsDraft.title_color = next;
+            renderTitleColorSwatches(next);
+        }
+
+        async function saveTitleColorNow(value) {
+            if (!state.canManage || !state.board) return;
+            const next = normalizeTitleColor(value);
+            try {
+                await api(`${API}?action=save-board`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(boardPayloadFromState({ title_color: next || null }))
+                });
+                state.board.title_color = next || null;
+                state.titleColorMenuOpen = false;
+                toast(next ? 'Đã đổi màu tiêu đề' : 'Đã đặt lại màu tiêu đề mặc định');
+                renderBoard();
+            } catch (err) {
+                toast(err.message);
+            }
+        }
+
+        function toggleTitleColorMenu(event) {
+            event?.stopPropagation?.();
+            state.titleColorMenuOpen = !state.titleColorMenuOpen;
+            const menu = document.getElementById('titleColorMenu');
+            if (menu) menu.classList.toggle('hidden', !state.titleColorMenuOpen);
         }
 
         function setPostSize(size) {
@@ -1191,6 +1310,7 @@
                         layout_type: document.getElementById('setLayout').value,
                         bg_theme: d.bg_theme,
                         color_mode: d.color_mode,
+                        title_color: d.title_color || null,
                         font_family: d.font_family,
                         post_size: d.post_size,
                         post_position: d.post_position,
@@ -1699,12 +1819,23 @@
                         <iframe class="h-full w-full" src="https://www.youtube.com/embed/${esc(yt)}" title="YouTube" loading="lazy" allowfullscreen></iframe>
                     </div></div>`;
             }
-            const imageFile = (p.files || []).find(isImageFile);
-            if (imageFile) {
+            const imageFiles = (p.files || []).filter(isImageFile);
+            if (imageFiles.length === 1) {
+                const imageFile = imageFiles[0];
                 return `<button type="button" onclick="previewFile('${esc(imageFile.drive_file_id)}','${esc(imageFile.original_name)}','${esc(imageFile.view_url || '')}')"
                     class="-mx-5 -mt-5 mb-3 block w-[calc(100%+2.5rem)] overflow-hidden rounded-t-2xl">
                     <img src="https://drive.google.com/thumbnail?id=${encodeURIComponent(imageFile.drive_file_id)}&sz=w800" alt="" class="max-h-52 w-full object-cover" loading="lazy">
                 </button>`;
+            }
+            if (imageFiles.length > 1) {
+                const cols = imageFiles.length >= 3 ? 'grid-cols-3' : 'grid-cols-2';
+                return `<div class="-mx-5 -mt-5 mb-3 grid ${cols} gap-1.5 overflow-hidden rounded-t-2xl">
+                    ${imageFiles.map((imageFile) => `
+                        <button type="button" onclick="previewFile('${esc(imageFile.drive_file_id)}','${esc(imageFile.original_name)}','${esc(imageFile.view_url || '')}')"
+                            class="block aspect-square overflow-hidden bg-slate-100">
+                            <img src="https://drive.google.com/thumbnail?id=${encodeURIComponent(imageFile.drive_file_id)}&sz=w600" alt="" class="h-full w-full object-cover" loading="lazy">
+                        </button>`).join('')}
+                </div>`;
             }
             const docFile = (p.files || []).find((f) => isDocumentFile(f) && !isImageFile(f));
             if (docFile) return documentEmbedHtml(docFile);
@@ -1735,14 +1866,15 @@
                     ${state.canManage ? `<button type="button" onclick="moderate(${p.id},'pin')" class="rounded-lg bg-white/70 px-3 py-2 font-bold text-slate-700">
                         <i class="fas fa-thumbtack mr-1"></i>${p.pinned ? 'Bỏ ghim' : 'Ghim'}
                     </button>` : ''}
+                    <button type="button" onclick="openEditPostModal(${p.id})" class="rounded-lg bg-sky-50 px-3 py-2 font-bold text-sky-800">
+                        <i class="fas fa-pen mr-1"></i>Sửa
+                    </button>
                     <button type="button" onclick="moderate(${p.id},'delete')" class="rounded-lg bg-red-50 px-3 py-2 font-bold text-red-700">
                         <i class="fas fa-trash-can mr-1"></i>Xóa
                     </button>
                 </div>` : '';
 
-            const featured = primaryAttachment(p.files || []);
-            const featuredId = featured?.drive_file_id;
-            const otherFiles = (p.files || []).filter((f) => f.drive_file_id !== featuredId).map((f) => `
+            const otherFiles = (p.files || []).filter((f) => !isImageFile(f)).map((f) => `
                 <button type="button" onclick="openDriveFile('${esc(f.drive_file_id)}','${esc(f.original_name)}','${esc(f.view_url || '')}')"
                     class="post-meta rounded-lg bg-white/75 px-2.5 py-1.5 text-left font-bold text-slate-700">
                     <i class="fas ${fileIconClass(f.original_name)} mr-1"></i>${esc(f.original_name)}
@@ -2066,10 +2198,35 @@
 
             const promptText = b.prompt_text || b.description || '';
             const headerTone = b.layout_type === 'whiteboard' ? 'text-slate-900' : 'text-white';
+            const titleColor = normalizeTitleColor(b.title_color || '');
+            const titleStyle = titleColor
+                ? `color: ${esc(titleColor)} !important; caret-color: ${esc(titleColor)};`
+                : '';
             const titleField = state.canManage
-                ? `<input type="text" class="board-title-input w-full max-w-3xl border-0 bg-transparent px-0 text-3xl font-black tracking-tight sm:text-5xl focus:outline-none focus:ring-0"
-                    value="${esc(b.title)}" maxlength="220" onblur="saveInlineTitle(this.value)" onkeydown="if(event.key==='Enter'){this.blur();event.preventDefault();}">`
-                : `<h1 class="max-w-3xl text-3xl font-black tracking-tight sm:text-5xl">${esc(b.title)}</h1>`;
+                ? `<div class="flex max-w-3xl items-start gap-2">
+                    <input type="text" class="board-title-input min-w-0 flex-1 border-0 bg-transparent px-0 text-3xl font-black tracking-tight sm:text-5xl focus:outline-none focus:ring-0"
+                    value="${esc(b.title)}" maxlength="220" style="${titleStyle}"
+                    onblur="saveInlineTitle(this.value)" onkeydown="if(event.key==='Enter'){this.blur();event.preventDefault();}">
+                    <div class="relative shrink-0 pt-2">
+                        <button type="button" onclick="toggleTitleColorMenu(event)" class="grid h-9 w-9 place-items-center rounded-full bg-white/20 text-inherit backdrop-blur hover:bg-white/30" title="Màu chữ tiêu đề">
+                            <i class="fas fa-palette"></i>
+                        </button>
+                        <div id="titleColorMenu" class="${state.titleColorMenuOpen ? '' : 'hidden'} absolute right-0 z-20 mt-2 w-52 rounded-2xl border border-slate-200 bg-white p-3 text-slate-800 shadow-xl">
+                            <div class="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-slate-400">Màu tiêu đề</div>
+                            <div class="flex flex-wrap gap-2">
+                                ${TITLE_COLOR_PRESETS.map((item) => `
+                                    <button type="button" onclick="saveTitleColorNow('${item.value}')" title="${item.label}"
+                                        class="h-7 w-7 rounded-full border border-slate-200" style="background:${item.value}"></button>`).join('')}
+                            </div>
+                            <label class="mt-3 flex items-center gap-2 text-xs font-bold text-slate-600">
+                                <span>Tùy chọn</span>
+                                <input type="color" value="${/^#[0-9a-fA-F]{6}$/.test(titleColor) ? titleColor : '#ffffff'}" class="h-8 w-10 cursor-pointer rounded border border-slate-200 p-0.5" onchange="saveTitleColorNow(this.value)">
+                            </label>
+                            <button type="button" onclick="saveTitleColorNow('')" class="mt-2 text-xs font-bold text-slate-500 hover:text-slate-800">Đặt lại mặc định</button>
+                        </div>
+                    </div>
+                </div>`
+                : `<h1 class="max-w-3xl text-3xl font-black tracking-tight sm:text-5xl" style="${titleStyle}">${esc(b.title)}</h1>`;
             const promptField = state.canManage
                 ? `<input type="text" class="board-prompt-input mt-2 w-full max-w-2xl border-0 bg-transparent px-0 focus:outline-none"
                     value="${esc(promptText)}" maxlength="500" placeholder="Thêm lời nhắn hoặc câu hỏi cho lớp..."
@@ -2231,9 +2388,22 @@
             window.padletPasteReady = true;
             document.addEventListener('paste', (e) => {
                 if (!state.board || state.board.status !== 'open') return;
-                if (!document.getElementById('postComposer').classList.contains('hidden')) return;
+                const editOpen = !document.getElementById('editPostModal')?.classList.contains('hidden');
+                const composerOpen = !document.getElementById('postComposer').classList.contains('hidden');
                 const text = e.clipboardData?.getData('text')?.trim() || '';
                 const file = [...(e.clipboardData?.files || [])][0];
+                if (editOpen) {
+                    if (file) {
+                        e.preventDefault();
+                        const input = document.getElementById('editPostFiles');
+                        const dt = new DataTransfer();
+                        [...(input.files || [])].forEach((f) => dt.items.add(f));
+                        dt.items.add(file);
+                        input.files = dt.files;
+                    }
+                    return;
+                }
+                if (composerOpen) return;
                 if (file) {
                     e.preventDefault();
                     openPostModal();
@@ -2249,6 +2419,12 @@
                     document.getElementById('postLink').value = text;
                     fetchLinkPreview();
                 }
+            });
+            document.addEventListener('click', (e) => {
+                if (!state.titleColorMenuOpen) return;
+                if (e.target.closest('#titleColorMenu') || e.target.closest('button[title="Màu chữ tiêu đề"]')) return;
+                state.titleColorMenuOpen = false;
+                document.getElementById('titleColorMenu')?.classList.add('hidden');
             });
         }
 
@@ -2426,6 +2602,100 @@
                 loadBoard();
             } catch (err) {
                 toast(err.message);
+            }
+        }
+
+        function pickEditPostColor(color) {
+            state.editPostColor = color;
+            document.querySelectorAll('#editColorChoices [data-edit-color]').forEach((el) => {
+                el.classList.toggle('ring-2', el.dataset.editColor === color);
+                el.classList.toggle('ring-slate-700', el.dataset.editColor === color);
+            });
+        }
+
+        function toggleEditDeletedFile(fileId) {
+            const id = Number(fileId);
+            if (!id) return;
+            if (state.editDeletedFileIds.includes(id)) {
+                state.editDeletedFileIds = state.editDeletedFileIds.filter((x) => x !== id);
+            } else {
+                state.editDeletedFileIds = [...state.editDeletedFileIds, id];
+            }
+            renderEditExistingFiles();
+        }
+
+        function renderEditExistingFiles() {
+            const post = state.posts.find((p) => Number(p.id) === Number(document.getElementById('editPostId').value));
+            const box = document.getElementById('editExistingFiles');
+            if (!box) return;
+            const files = post?.files || [];
+            if (!files.length) {
+                box.innerHTML = '<p class="text-sm text-slate-500">Chưa có tệp đính kèm.</p>';
+                return;
+            }
+            box.innerHTML = files.map((f) => {
+                const marked = state.editDeletedFileIds.includes(Number(f.id));
+                return `<div class="flex items-center justify-between gap-2 rounded-xl border ${marked ? 'border-red-200 bg-red-50 opacity-60' : 'border-slate-200 bg-slate-50'} px-3 py-2">
+                    <span class="min-w-0 truncate text-sm font-bold text-slate-700">
+                        <i class="fas ${isImageFile(f) ? 'fa-image text-sky-600' : fileIconClass(f.original_name)} mr-1"></i>${esc(f.original_name)}
+                    </span>
+                    <button type="button" onclick="toggleEditDeletedFile(${Number(f.id)})" class="shrink-0 rounded-lg px-2 py-1 text-xs font-bold ${marked ? 'bg-slate-200 text-slate-700' : 'bg-red-100 text-red-700'}">
+                        ${marked ? 'Hoàn tác' : 'Xóa'}
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        function openEditPostModal(postId) {
+            const post = state.posts.find((p) => Number(p.id) === Number(postId));
+            if (!post || !(state.canManage || post.can_delete)) {
+                toast('Bạn không có quyền sửa bài này.');
+                return;
+            }
+            state.editDeletedFileIds = [];
+            state.editPostColor = post.card_color || 'white';
+            document.getElementById('editPostId').value = String(post.id);
+            document.getElementById('editPostBody').value = post.body || '';
+            document.getElementById('editPostLink').value = post.link_url || '';
+            document.getElementById('editPostFiles').value = '';
+            document.getElementById('editPostError').classList.add('hidden');
+            document.getElementById('editColorChoices').innerHTML = ['white', 'sky', 'amber', 'violet', 'rose', 'emerald']
+                .map((c) => `<button type="button" data-edit-color="${c}" onclick="pickEditPostColor('${c}')"
+                    class="h-8 w-8 rounded-full post-${c} border border-slate-300 ${c === state.editPostColor ? 'ring-2 ring-slate-700' : ''}"></button>`)
+                .join('');
+            renderEditExistingFiles();
+            document.getElementById('editPostModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('editPostBody').focus(), 80);
+        }
+
+        async function submitEditPost(e) {
+            e.preventDefault();
+            const postId = Number(document.getElementById('editPostId').value);
+            const fd = new FormData();
+            fd.append('code', state.board.public_code);
+            fd.append('board_id', String(state.board.id));
+            fd.append('post_id', String(postId));
+            fd.append('body', document.getElementById('editPostBody').value);
+            fd.append('link_url', document.getElementById('editPostLink').value);
+            fd.append('card_color', state.editPostColor);
+            fd.append('deleted_file_ids', JSON.stringify(state.editDeletedFileIds || []));
+            [...document.getElementById('editPostFiles').files].forEach((f) => fd.append('files[]', f));
+
+            const btn = document.getElementById('editPostSubmit');
+            btn.disabled = true;
+            btn.textContent = 'Đang lưu...';
+            try {
+                const r = await api(`${API}?action=edit-post`, { method: 'POST', body: fd });
+                closeModal('editPostModal');
+                toast(r.drive_failed ? `${r.message} ${r.drive_failed} tệp Drive không xóa được.` : (r.message || 'Đã cập nhật bài đăng.'));
+                await loadBoard();
+            } catch (err) {
+                const errEl = document.getElementById('editPostError');
+                errEl.textContent = err.message;
+                errEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save mr-1"></i>Lưu';
             }
         }
 

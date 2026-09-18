@@ -26,4 +26,17 @@ assert.match(moderate, /\['publish','reject','pin'\][\s\S]*!\$isOwner/, 'publish
 assert.match(moderate, /Bạn chỉ có thể xóa bài do chính tài khoản của mình đăng/, 'exact unauthorized deletion message');
 assert.ok(!postAction.includes("$_POST['author_group']"), 'new posts must not accept class/group metadata');
 
+assert.match(api, /title_color VARCHAR\(30\) DEFAULT NULL AFTER color_mode/, 'migrate must add title_color column');
+assert.match(api, /function padlet_title_color/, 'title_color must be validated server-side');
+assert.match(api, /title_color=\?/, 'save-board must persist title_color');
+assert.match(api, /\$action === 'edit-post'/, 'API must expose edit-post action');
+
+const editPost = api.slice(api.indexOf("if ($method === 'POST' && $action === 'edit-post')"), api.indexOf("if ($method === 'POST' && $action === 'comment')"));
+assert.match(editPost, /\$isOwner \|\| \$isAuthor/, 'edit-post must require owner or author');
+assert.match(editPost, /Bạn chỉ có thể sửa bài do chính tài khoản của mình đăng/, 'edit-post must reject unauthorized editors');
+assert.match(editPost, /padlet_delete_drive_files_by_ids/, 'edit-post must delete selected old files safely');
+assert.match(editPost, /padlet_file_input/, 'edit-post must accept newly uploaded files');
+assert.match(html, /state\.canManage \|\| p\.can_delete/, 'edit button must reuse per-post permission');
+assert.match(html, /openEditPostModal/, 'UI must call openEditPostModal for editable posts');
+
 console.log('padlet ownership smoke: passed');

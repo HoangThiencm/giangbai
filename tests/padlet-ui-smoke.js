@@ -19,4 +19,16 @@ assert.match(html, /bg-teal-50 text-teal-700/, 'creative icons must use soft pas
 assert.match(library, /border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md/, 'library cards must use the light card design');
 assert.match(library, /fmt\(b\.updated_at \|\| b\.created_at\)/, 'library cards must show a creation or update time');
 
+assert.match(html, /TITLE_COLOR_PRESETS/, 'title color presets must exist');
+assert.match(html, /setTitleColorSwatches/, 'settings must include title color swatches');
+assert.match(html, /setTitleColorPicker/, 'settings must include title color picker');
+assert.match(html, /fa-palette/, 'board header must offer a title color palette control');
+assert.match(html, /title_color \? `color: \$\{esc\(b\.title_color\)\} !important; caret-color: \$\{esc\(b\.title_color\)\};`|style="\$\{titleStyle\}"/, 'board title must apply title_color inline');
+assert.match(html, /function openEditPostModal\(/, 'edit post modal opener must exist');
+assert.match(html, /id="editPostModal"/, 'edit post modal markup must exist');
+assert.match(html, /openEditPostModal\(\$\{p\.id\}\)/, 'post cards must expose an Edit button');
+assert.match(html, /imageFiles\.length > 1/, 'posts must render a multi-image gallery');
+assert.match(html, /grid grid-cols-2 gap-1\.5|grid \$\{cols\} gap-1\.5/, 'multi-image gallery must use a grid layout');
+assert.match(html, /action=edit-post/, 'edit flow must post to edit-post');
+
 console.log('padlet UI smoke: passed');
