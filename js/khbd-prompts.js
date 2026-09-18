@@ -886,7 +886,7 @@ ${LATEX_SPACING_BAN}
 - Cột PHẢI mục d): Đề bài vận dụng thực tế + Lời giải chi tiết + Khung nhiệm vụ tự học cho học sinh ghi vở.
 - CẤM viết mục E / Hướng dẫn về nhà thành khối riêng; nhiệm vụ tự học được giao ngay trong Bước 4 của Hoạt động D.
 
-## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC ({time_budget_D})
+## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D})
 
 ### a) Mục tiêu:
 - Vận dụng kiến thức, kĩ năng đã học vào giải quyết bài toán/tình huống thực tế đời sống hoặc hoàn thành phiếu Exit Ticket đánh giá mức độ đạt chuẩn ngay tại lớp.
@@ -1119,7 +1119,7 @@ BẮT BUỘC xuất đúng 4 khối, mỗi khối bắt đầu bằng marker:
 <<<KHBD_C>>>
 (toàn bộ ## C. HOẠT ĐỘNG 3: LUYỆN TẬP ({time_budget_C}))
 <<<KHBD_D>>>
-(toàn bộ ## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC ({time_budget_D}))
+(toàn bộ ## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D}))
 
 KHÓA ĐÚNG 4 MARKER DUY NHẤT: Xuất đúng một lần mỗi marker <<<KHBD_A>>> … <<<KHBD_D>>> theo thứ tự trên. CẤM lặp lại marker. CẤM xuất <<<KHBD_E>>> hoặc tiêu đề ## E. HOẠT ĐỘNG 5. CẤM xuất thêm tiêu đề hoặc khối ## D. HOẠT ĐỘNG 4 sau khi đã viết xong pha D.
 
@@ -1152,8 +1152,8 @@ PHA C — LUYỆN TẬP:
 - Giáo viên chọn lọc 1–2 bài tập luyện tập trọng tâm, cốt lõi trong SGK để chữa chi tiết tại lớp (các bài tập còn lại giao trong Bước 4 Hoạt động D — nhiệm vụ tự học). Chép rõ đề và giải chi tiết vào Cột Phải. Cột Trái phân vai rõ ràng. Cột 2 CẤM rỗng / \`---\`.
 - Khi có NLS/AI: Ứng dụng phần mềm chuyên dụng (GeoGebra, bảng tính) hoặc AI để gợi mở / kiểm tra đối chiếu lời giải, phản biện lỗi sai. CẤM hỏi lý thuyết AI suông.
 
-PHA D — VẬN DỤNG & HƯỚNG DẪN TỰ HỌC:
-- Tiêu đề: \`## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC ({time_budget_D})\`.
+PHA D — VẬN DỤNG:
+- Tiêu đề: \`## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D})\`.
 - BẮT BUỘC ĐỦ 4 MỤC THEO ĐÚNG CÔNG VĂN 5512 (TUYỆT ĐỐI CẤM NHẢY CÓC TỪ MỤC TIÊU VÀO BẢNG TIẾN TRÌNH):
   + \`### a) Mục tiêu:\` Nêu rõ mục tiêu giải quyết vấn đề thực tiễn và phát triển năng lực tự học.
   + \`### b) Nội dung:\` Nêu rõ đề bài tình huống vận dụng thực tế trong SGK và 4 nhiệm vụ tự học ở nhà.

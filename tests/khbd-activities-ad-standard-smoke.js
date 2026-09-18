@@ -54,7 +54,7 @@ assert.match(promptAd, /<<<KHBD_C>>>/);
 assert.match(promptAd, /<<<KHBD_D>>>/);
 assert.doesNotMatch(promptAd, /^<<<KHBD_E>>>/m);
 assert.match(promptAd, /CẤM xuất <<<KHBD_E>>>/);
-assert.match(promptAd, /## D\. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC \(12 phút\)/);
+assert.match(promptAd, /## D\. HOẠT ĐỘNG 4: VẬN DỤNG \(12 phút\)/);
 assert.match(promptAd, /Tổng A \+ B \+ C \+ D BẮT BUỘC đúng bằng toàn bộ thời lượng bài dạy 02 tiết \(90 phút\)/);
 assert.match(promptAd, /Ôn tập/);
 assert.match(promptAd, /Làm bài tập/);
@@ -64,7 +64,7 @@ assert.match(promptAd, /CẤM viết mục E/);
 assert.notStrictEqual(PROMPTS.GENERATE_ACTIVITIES_AD, PROMPTS.GENERATE_ACTIVITIES_AE);
 
 const promptD = getPromptTemplate('GENERATE_ACTIVITY_D', context);
-assert.match(promptD, /## D\. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC \(12 phút\)/);
+assert.match(promptD, /## D\. HOẠT ĐỘNG 4: VẬN DỤNG \(12 phút\)/);
 assert.match(promptD, /CẤM viết mục E/);
 assert.match(promptD, /4 nhiệm vụ tự học/);
 assert.match(promptD, /Nhiệm vụ tự học/);
@@ -74,7 +74,7 @@ console.log('-> 3. getFullLessonPlanMarkdown ưu tiên A–D khi D đã có tự
 appState.content.activities.A = '## A. HOẠT ĐỘNG 1: MỞ ĐẦU (8 phút)\nMở đầu';
 appState.content.activities.B = '## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI (45 phút)\nHình thành';
 appState.content.activities.C = '## C. HOẠT ĐỘNG 3: LUYỆN TẬP (25 phút)\nLuyện tập';
-appState.content.activities.D = `## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC (12 phút)
+appState.content.activities.D = `## D. HOẠT ĐỘNG 4: VẬN DỤNG (12 phút)
 ### a) Mục tiêu:
 - Vận dụng và tự học.
 ### d) Tổ chức thực hiện:
@@ -86,7 +86,7 @@ appState.content.activities.E = `## E. HOẠT ĐỘNG 5: HƯỚNG DẪN VỀ NH�
 
 assert.deepStrictEqual(activityKeysForFullPlan(appState.content), ['A', 'B', 'C', 'D']);
 const full = getFullLessonPlanMarkdown({ includeHeader: false });
-assert.match(full, /VẬN DỤNG & HƯỚNG DẪN TỰ HỌC/);
+assert.match(full, /## D\. HOẠT ĐỘNG 4: VẬN DỤNG \(12 phút\)/);
 assert.match(full, /Ôn tập kiến thức/);
 assert.doesNotMatch(full, /HOẠT ĐỘNG 5/);
 assert.match(full, /III\.A - D|TIẾN TRÌNH DẠY HỌC/);

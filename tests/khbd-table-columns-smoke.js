@@ -88,7 +88,7 @@ const {
   ensureActivityFourPartStructure,
   repairActivityTablesRightColumn
 } = require('../js/khbd-app.js');
-const missingFour = `## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC (18 phút)
+const missingFour = `## D. HOẠT ĐỘNG 4: VẬN DỤNG (18 phút)
 - Mục tiêu: Vận dụng giải quyết bài toán thực tế.
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |

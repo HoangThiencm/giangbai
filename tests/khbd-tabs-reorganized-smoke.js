@@ -40,7 +40,7 @@ console.log('-> 1. HTML Tab 4...');
 assert.match(html, /data-act="A">A\. Mở đầu/);
 assert.match(html, /data-act="B">B\. Hình thành Kiến thức/);
 assert.match(html, /data-act="C">C\. Luyện tập/);
-assert.match(html, /data-act="D">D\. Vận dụng &amp; Hướng dẫn tự học/);
+assert.match(html, /data-act="D">D\. Vận dụng<\/button>/);
 assert.match(html, /data-act="E">E\. Hồ sơ học tập/);
 assert.match(html, /data-act="F">🎨 F\. Hình minh họa SGK/);
 assert.doesNotMatch(html, /data-act="E">E\. Hướng dẫn về nhà/);
@@ -59,7 +59,7 @@ const {
   switchActivitySubtab
 } = require('../js/khbd-app.js');
 
-assert.strictEqual(ACTIVITY_TITLES.D.short, 'D. Vận dụng & Hướng dẫn tự học');
+assert.strictEqual(ACTIVITY_TITLES.D.short, 'D. Vận dụng');
 assert.match(ACTIVITY_TITLES.E.full, /Hồ sơ học tập/);
 assert.match(ACTIVITY_TITLES.F.full, /Hình minh họa SGK/);
 assert.doesNotMatch(ACTIVITY_TITLES.E.full, /HƯỚNG DẪN VỀ NHÀ/);
@@ -84,11 +84,11 @@ assert.deepStrictEqual(activityKeysForFullPlan(appState.content), ['A', 'B', 'C'
 appState.content.activities.A = '## A. HOẠT ĐỘNG 1: MỞ ĐẦU (8 phút)\nMở đầu';
 appState.content.activities.B = '## B. HOẠT ĐỘNG 2 (45 phút)\nB';
 appState.content.activities.C = '## C. HOẠT ĐỘNG 3 (25 phút)\nC';
-appState.content.activities.D = '## D. HOẠT ĐỘNG 4: VẬN DỤNG & HƯỚNG DẪN TỰ HỌC (12 phút)\nD';
+appState.content.activities.D = '## D. HOẠT ĐỘNG 4: VẬN DỤNG (12 phút)\nD';
 appState.content.activities.E = '# E. HỒ SƠ DẠY HỌC & PHIẾU HỌC TẬP (PHỤ LỤC)\nPhiếu 1';
 const full = getFullLessonPlanMarkdown({ includeHeader: false });
 assert.match(full, /III\. TIẾN TRÌNH DẠY HỌC/);
-assert.match(full, /VẬN DỤNG & HƯỚNG DẪN TỰ HỌC/);
+assert.match(full, /## D\. HOẠT ĐỘNG 4: VẬN DỤNG \(12 phút\)/);
 assert.match(full, /IV\. PHỤ LỤC/);
 assert.match(full, /Phiếu 1/);
 assert.doesNotMatch(full, /HOẠT ĐỘNG 5/);

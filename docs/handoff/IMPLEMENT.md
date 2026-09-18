@@ -1,32 +1,29 @@
-# IMPLEMENT: Hero/Theo dõi vào Modal Setting + 3 tab Canvas phân quyền Admin
+# IMPLEMENT: Chuẩn hóa tiêu đề Hoạt động 4 → "HOẠT ĐỘNG 4: VẬN DỤNG"
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
-## Module 1 — Modal Setting 2 tab (`js/user-ai-settings.js` + `index.html`)
+## Thay đổi
 
-- Modal mở rộng `max-w-5xl`; thanh tab:
-  - Tab 1 `#tabBtnOverview` / `#userAiTabOverview`: mount `#teacherLotrinhPanel` (hero Xin chào, lớp phụ trách, hành động theo dõi, AI stats).
-  - Tab 2 `#tabBtnKeys` / `#userAiTabKeys`: form model Gemini/fallback, key Gemini & Mistral, nạp file, test/lưu/xóa.
-- Thêm `UserAiSettings.switchTab('overview'|'keys')`; `openModal(tabName)` chọn tab.
-- `#heroKeyStatus` gọi `openModal('keys')`; navbar `#btnOpenUserAiSettings` vẫn `openModal()`.
-- `setupTeacherLotrinhHub()` gọi `UserAiSettings.ensureModal()` rồi render hero vào panel trong modal; `#teacherLotrinhHub` trên trang chủ giữ `hidden` (tools deck nổi bật).
+### `js/khbd-prompts.js`
+- `GENERATE_ACTIVITY_D` / `GENERATE_ACTIVITIES_AD`: tiêu đề `## D. HOẠT ĐỘNG 4: VẬN DỤNG ({time_budget_D})`.
+- Nhãn pha: `PHA D — VẬN DỤNG:` (bỏ `& HƯỚNG DẪN TỰ HỌC`).
 
-## Module 2 — 3 Canvas + phân quyền
+### HTML tab D
+- `soankhbd.html`, `canvas_soanbaigiang.html`: nút `D. Vận dụng`.
 
-- `api/helpers.php`: `page_catalog`, `teacher_workspace_page_ids`, `teacher_feature_keys_for_pages` thêm `canvas_soankhbd`, `canvas_soanlotrinh`, `canvas_sangkien`.
-- `global_config.json` `features`: 3 key = `true`.
-- `admin.html`: `CLIENT_FEATURE_CHECKS`, `FEATURE_NAMES`, `USER_FEATURE_GROUPS`, `hostingPages`, `teacherFeatureGroups`, checkbox `cfg_canvas_*`.
-- `index.html`: `TOOL_PAGE_LINKS` + 3 thẻ bento (Indigo/Teal/Pink); gỡ thẻ cũ `vietsangkien`.
+### `js/khbd-app.js`
+- `ACTIVITY_TITLES.D` đã sẵn `short: "D. Vận dụng"`, `full: "D. HOẠT ĐỘNG 4: VẬN DỤNG"` — không cần sửa thêm.
 
-## Smoke mới
-
-- `tests/canvas-tabs-permissions-smoke.js`: đăng ký 3 tab (helpers/admin/index/config), bỏ `vietsangkien`, modal 2 tab + `ensureModal` + `heroKeyStatus` → keys.
+### Tests
+- `tests/khbd-tabs-reorganized-smoke.js`: match tab HTML, `ACTIVITY_TITLES.D.short`, fixture/assert markdown D mới.
+- `tests/khbd-activities-ad-standard-smoke.js`: match prompt AD/D + fixture/assert full plan.
+- `tests/khbd-table-columns-smoke.js`: fixture tiêu đề D mới.
 
 ## Test đã chạy
 
+- `node tests/khbd-tabs-reorganized-smoke.js` — PASS
+- `node tests/khbd-activities-ad-standard-smoke.js` — PASS
+- `node tests/khbd-table-columns-smoke.js` — PASS
 - `node tests/canvas-tabs-permissions-smoke.js` — PASS
-- `node tests/teacher-permissions-smoke.js` — PASS
-- `node tests/user-ai-settings-smoke.js` — PASS
-- `node tests/duyetgiaoan-integration-smoke.js` — PASS
 
-Không thêm chức năng ngoài plan. Browser MCP không có trong session — chưa verify click UI trực tiếp; hợp đồng static đã PASS. Cần `/verify` trên Antigravity.
+Không mở rộng scope (không đụng backupcode ngoài PLAN). Cần `/verify` trên Antigravity.
