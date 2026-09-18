@@ -152,6 +152,36 @@
             font-size: 1.1em;
         }
 
+        /* Màn hình làm bài học sinh: chữ đề to hơn để đọc dễ */
+        .student-exam-view {
+            font-size: 1.125rem;
+        }
+        .student-exam-view .student-q-text {
+            font-size: 1.25rem;
+            line-height: 1.75;
+        }
+        .student-exam-view .student-q-text .math-render {
+            font-size: 1.28em;
+            line-height: 1.7;
+        }
+        .student-exam-view .student-q-text .math-render .katex {
+            font-size: 1.18em;
+        }
+        .student-exam-view .student-opt-text {
+            font-size: 1.125rem;
+            line-height: 1.6;
+        }
+        .student-exam-view .student-opt-text .math-render {
+            font-size: 1.2em;
+        }
+        .student-exam-view .student-opt-text .math-render .katex {
+            font-size: 1.12em;
+        }
+        @media (min-width: 768px) {
+            .student-exam-view .student-q-text { font-size: 1.4rem; }
+            .student-exam-view .student-opt-text { font-size: 1.2rem; }
+        }
+
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #4f46e5;
@@ -4043,16 +4073,16 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
                                 </div>
                             </div>
                         )}
-                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative group hover:shadow-md transition">
+                        <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 relative group hover:shadow-md transition">
                             <div className="flex gap-4 mb-4">
                                 <div className="flex flex-col items-center gap-1">
-                                    <span className="bg-indigo-100 text-indigo-700 w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm shadow-sm">{i + 1}</span>
-                                    {isAnswered && <i className="fas fa-check-circle text-green-500 text-xs"></i>}
+                                    <span className="bg-indigo-100 text-indigo-700 w-10 h-10 flex items-center justify-center rounded-full font-bold text-base shadow-sm">{i + 1}</span>
+                                    {isAnswered && <i className="fas fa-check-circle text-green-500 text-sm"></i>}
                                 </div>
                                 <div className="flex-1">
                                     {isCv7991 && (
                                         <div className="mb-2">
-                                            <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                                            <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full border ${
                                                 q.type === 'tf' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                                                 q.type === 'short_answer' ? 'bg-purple-50 text-purple-700 border-purple-200' :
                                                 'bg-blue-50 text-blue-700 border-blue-200'
@@ -4062,7 +4092,7 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
                                         </div>
                                     )}
                                     {q.question_image && <img src={q.question_image} className="max-h-60 rounded-lg border mb-3 block object-contain bg-gray-50" />}
-                                    <div className="text-gray-800 text-base leading-relaxed font-medium"><MathText text={q.question} cleanPrefix={true} /></div>
+                                    <div className="student-q-text text-gray-800 font-medium"><MathText text={q.question} cleanPrefix={true} /></div>
                                 </div>
                             </div>
                             {q.type === 'tf' ? (
@@ -4072,16 +4102,16 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
                                         const qAnswers = (typeof answers[q.originalIdx] === 'object' && answers[q.originalIdx] !== null) ? answers[q.originalIdx] : {};
                                         const currentVal = qAnswers[subIdx];
                                         return (
-                                            <div key={subIdx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-gray-50 gap-2 transition">
+                                            <div key={subIdx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-gray-50 gap-2 transition">
                                                 <div className="flex items-start gap-2 flex-1">
-                                                    <span className="font-bold text-indigo-700 text-sm mt-0.5">{charLabel})</span>
-                                                    <div className="text-sm text-gray-700 leading-relaxed"><MathText text={cleanOptionText(subOpt)} /></div>
+                                                    <span className="font-bold text-indigo-700 text-base mt-0.5">{charLabel})</span>
+                                                    <div className="student-opt-text text-gray-700"><MathText text={cleanOptionText(subOpt)} /></div>
                                                 </div>
                                                 <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                                                    <button type="button" onClick={() => handleSelectTfAnswer(q.originalIdx, subIdx, true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border flex items-center gap-1.5 ${currentVal === true ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-gray-600 border-gray-300 hover:bg-emerald-50 hover:text-emerald-700'}`}>
+                                                    <button type="button" onClick={() => handleSelectTfAnswer(q.originalIdx, subIdx, true)} className={`px-3.5 py-2 rounded-lg text-sm font-bold transition border flex items-center gap-1.5 ${currentVal === true ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-gray-600 border-gray-300 hover:bg-emerald-50 hover:text-emerald-700'}`}>
                                                         <i className={`fas ${currentVal === true ? 'fa-check-circle' : 'fa-circle text-[10px]'}`}></i> Đúng
                                                     </button>
-                                                    <button type="button" onClick={() => handleSelectTfAnswer(q.originalIdx, subIdx, false)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border flex items-center gap-1.5 ${currentVal === false ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-gray-600 border-gray-300 hover:bg-rose-50 hover:text-rose-700'}`}>
+                                                    <button type="button" onClick={() => handleSelectTfAnswer(q.originalIdx, subIdx, false)} className={`px-3.5 py-2 rounded-lg text-sm font-bold transition border flex items-center gap-1.5 ${currentVal === false ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-gray-600 border-gray-300 hover:bg-rose-50 hover:text-rose-700'}`}>
                                                         <i className={`fas ${currentVal === false ? 'fa-times-circle' : 'fa-circle text-[10px]'}`}></i> Sai
                                                     </button>
                                                 </div>
@@ -4091,9 +4121,9 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
                                 </div>
                             ) : q.type === 'short_answer' ? (
                                 <div className="pl-0 md:pl-12">
-                                    <div className="max-w-md bg-gray-50/70 p-4 rounded-xl border border-gray-200">
-                                        <label className="block text-xs font-bold text-gray-700 mb-1.5"><i className="fas fa-pen-fancy text-indigo-600 mr-1.5"></i> Câu trả lời của thí sinh:</label>
-                                        <input type="text" className="w-full border-2 border-gray-300 focus:border-indigo-500 rounded-lg px-3.5 py-2 text-base font-semibold text-gray-800 outline-none transition bg-white allow-select" placeholder="Gõ đáp án (ví dụ: 12, 3.5, hoặc 1/2)..." value={answers[q.originalIdx] !== undefined && answers[q.originalIdx] !== null ? answers[q.originalIdx] : ""} onChange={(e) => handleShortAnswer(q.originalIdx, e.target.value)} />
+                                    <div className="max-w-lg bg-gray-50/70 p-4 rounded-xl border border-gray-200">
+                                        <label className="block text-sm font-bold text-gray-700 mb-1.5"><i className="fas fa-pen-fancy text-indigo-600 mr-1.5"></i> Câu trả lời của thí sinh:</label>
+                                        <input type="text" className="w-full border-2 border-gray-300 focus:border-indigo-500 rounded-lg px-3.5 py-2.5 text-lg font-semibold text-gray-800 outline-none transition bg-white allow-select" placeholder="Gõ đáp án (ví dụ: 12, 3.5, hoặc 1/2)..." value={answers[q.originalIdx] !== undefined && answers[q.originalIdx] !== null ? answers[q.originalIdx] : ""} onChange={(e) => handleShortAnswer(q.originalIdx, e.target.value)} />
                                     </div>
                                 </div>
                             ) : (
@@ -4101,9 +4131,9 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
                                     {(q.shuffledOptions || []).map((opt, visualIdx) => {
                                         const isSelected = answers[q.originalIdx] === opt.originalOptIdx;
                                         return (
-                                            <div key={visualIdx} onClick={() => handleSelectAnswer(q.originalIdx, opt.originalOptIdx)} className={`p-3 rounded-xl border-2 cursor-pointer flex gap-3 items-center transition-all duration-200 active:scale-[0.98] ${isSelected ? 'border-indigo-500 bg-indigo-50 shadow-inner' : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'}`}>
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500'}`}>{String.fromCharCode(65 + visualIdx)}</div>
-                                                <div className={`text-sm ${isSelected ? 'text-indigo-900 font-medium' : 'text-gray-600'}`}><MathText text={cleanOptionText(opt.text)} /></div>
+                                            <div key={visualIdx} onClick={() => handleSelectAnswer(q.originalIdx, opt.originalOptIdx)} className={`p-3.5 rounded-xl border-2 cursor-pointer flex gap-3 items-center transition-all duration-200 active:scale-[0.98] ${isSelected ? 'border-indigo-500 bg-indigo-50 shadow-inner' : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'}`}>
+                                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base font-bold transition-colors shrink-0 ${isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500'}`}>{String.fromCharCode(65 + visualIdx)}</div>
+                                                <div className={`student-opt-text ${isSelected ? 'text-indigo-900 font-medium' : 'text-gray-700'}`}><MathText text={cleanOptionText(opt.text)} /></div>
                                             </div>
                                         );
                                     })}
@@ -4115,7 +4145,7 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
             };
 
             return withStudentToast(
-                <div className="fixed top-0 left-0 w-full h-full bg-white z-50 overflow-y-auto noselect">
+                <div className="student-exam-view fixed top-0 left-0 w-full h-full bg-white z-50 overflow-y-auto noselect">
                     {showSubmitConfirm && (
                         <div className="modal-overlay" onClick={() => !submitting && !antiAiOneByOne && setShowSubmitConfirm(false)}>
                             <div className="modal-box text-center" onClick={e => e.stopPropagation()}>

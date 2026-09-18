@@ -60,12 +60,44 @@
 1. `taobaitap.html`
 2. `backupcode viettailieu/taobaitap.html`
 3. `thitructuyen.html`
-4. `canvas_soankhbd.html`
-5. `tests/taobaitap-thitructuyen-bridge-smoke.js` (Test mới)
-6. `tests/canvas-soankhbd-smoke.js`
-
+4. `access-control.js`
+5. `canvas_soankhbd.html`
+6. `tests/taobaitap-thitructuyen-bridge-smoke.js`
+7. `tests/canvas-soankhbd-smoke.js`
 
 ---
+
+## Khắc phục triệt để lỗi Mở ra trang trắng (White Screen Fix)
+
+### Nguyên nhân gây trang trắng khi mở từ `taobaitap.html`:
+1. **Chặn bởi `access-control.js`**:
+   `access-control.js` hiện chỉ miễn kiểm tra token khi `mode === 'student' && examId`. Khi mở `thitructuyen.html?from=taobaitap`, nếu giáo viên chưa đăng nhập hoặc đang dùng offline, script sẽ ép redirect về `login.html`.
+2. **Chặn bởi kiểm tra `userEmail` trong `thitructuyen.html`**:
+   Tại dòng 4695, nếu `!userEmail`, component `App` trả về màn hình "Phiên đăng nhập hết hạn". Nếu bị lỗi unhandled trong React hoặc mất phiên, trang hiển thị trắng xóa. Cần fallback `userEmail = userEmail || 'giaovien@giangbai.local'` khi có cờ `from=taobaitap` hoặc `thitructuyen_pending_import`.
+3. **Race Condition & Sập State `HybridExamCreator`**:
+   Cả `App` và `HybridExamCreator` đều đọc và xóa `thitructuyen_pending_import`. Khi `App` xóa trước, `HybridExamCreator` không nạp được `examInfo` (mất title, duration 15p, cờ cuốn chiếu). Ngoài ra ở render đầu tiên của Bước 2, `activePageId` là `null` và `pages` là `[]`, gây lỗi tham chiếu nếu không được khởi tạo đồng bộ.
+4. **Lỗi `Sortable is not defined`**:
+   Tại dòng 1818, `new Sortable(el)` không kiểm tra `typeof Sortable !== 'undefined'`. Khi mạng chập chờn CDN không tải được SortableJS, React ném ngoại lệ và unmount toàn bộ giao diện thành trang trắng.
+
+### Giải pháp kỹ thuật:
+1. **Trong `access-control.js`**:
+   Thêm điều kiện miễn trừ:
+   ```javascript
+   const isOpenExamLink = pageKey === 'thitructuyen'
+       && ((params.get('mode') === 'student' && !!getQueryParamInsensitive(params, 'examId'))
+           || params.get('from') === 'taobaitap');
+   ```
+2. **Trong `thitructuyen.html`**:
+   - Khởi tạo an toàn cho `userEmail`:
+     ```javascript
+     const isFromTaobaitap = new URLSearchParams(window.location.search).get('from') === 'taobaitap';
+     const userEmail = localStorage.getItem('userEmail') || (isFromTaobaitap ? 'giaovien@giangbai.local' : null);
+     ```
+   - Trong `HybridExamCreator`:
+     + Thêm guard `if (el && typeof Sortable !== 'undefined')` trước khi khởi tạo `new Sortable`.
+     + Đồng bộ cập nhật `examInfo` từ `initialData.info` khi `initialData` thay đổi.
+     + Đồng bộ nạp danh sách câu hỏi `initialData.questions` vào `pageQuestions` và `pages` với `activePageId = "imported"`.
+
 
 ## Các bước thực hiện
 

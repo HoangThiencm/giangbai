@@ -4,30 +4,24 @@
 PASS
 
 ## Đối chiếu scope
-- [x] `taobaitap.html` & `backupcode viettailieu/taobaitap.html`: Bổ sung nút **🚀 THI TRỰC TUYẾN** cạnh "DẠY NGAY"; hàm `startOnlineExam()` và `mapToThiTrucTuyenPayload` đóng gói chuẩn xác 3 dạng câu CV 7991 (`mc`, `tf` 4 ý, `short_answer`) sang `localStorage`.
-- [x] `thitructuyen.html`: Tiếp nhận đề thi 1-Click, điền sẵn thời gian mặc định 15 phút kèm các nút chọn nhanh 15p, 20p, 30p, 45p, chuyển thẳng Bước 2 sẵn sàng tổ chức thi.
-- [x] `thitructuyen.html`: Áp dụng tùy chọn thi cuốn chiếu và watermark bảo mật cho cả đề mới và các đề cũ khi giáo viên bấm "Sửa đề".
-- [x] `thitructuyen.html`: Chế độ thi cuốn chiếu chống chụp gửi AI (One-by-one mode) hiển thị 1 câu/lúc, có timer riêng từng câu, khóa vĩnh viễn không cho quay lại câu cũ (No Backtrack), lưu tiến trình câu hỏi chống mất dữ liệu khi F5.
-- [x] `thitructuyen.html`: Watermark bảo mật in mờ thông tin học sinh (Họ tên, SBD, lớp, ngày giờ) xoay góc -25 độ chống chụp ảnh chia sẻ và gây nhiễu AI Vision OCR.
-- [x] `canvas_soankhbd.html`: Bổ sung fallback cứu hộ nạp catalog PPDH từ CDN GitHub jsDelivr khi file trên host bị 0 byte.
+- [x] `canvas_soankhbd.html`: Sửa cơ chế nạp `khbd-pedagogy-catalog.js` sang kiểm tra môi trường cục bộ `isLocal ? "js/khbd-pedagogy-catalog.js" : "https://hoangthiencm.id.vn/..."`.
+- [x] `canvas_soankhbd.html`: Nâng cấp hàm tự cứu hộ `ensureKhbdPedagogyCatalogFallback()` tự động nạp dự phòng từ CDN GitHub jsDelivr (`https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js`) khi file trên hosting bị rỗng 0 bytes hoặc lỗi mạng.
+- [x] `js/khbd-app.js`: Đảm bảo `renderPedagogyCatalogs()` nhận diện catalog đầy đủ, render chuẩn xác các panel PPDH (`methodsCatalogPanel`), KTDH (`techniquesCatalogPanel`), và hoạt động đặc thù (`activitiesCatalogPanel`).
 
 ## Test đã chạy
-- `node tests/taobaitap-thitructuyen-bridge-smoke.js` — PASS
 - `node tests/canvas-soankhbd-smoke.js` — PASS
-- `node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js` — PASS
-- `node tests/taobaitap-plan-smoke.js` — PASS
+- `node tests/khbd-pedagogy-script-smoke.js` — PASS
+- `node tests/khbd-recommendation-flow-smoke.js` — PASS
 
 ## Pass / Fail từng tiêu chí
-- Nút liên thông 1-Click & đóng gói payload CV 7991: PASS
-- Tiếp nhận đề, mặc định 15 phút và preset thời gian: PASS
-- Chế độ thi cuốn chiếu (One-by-one & No Backtrack): PASS
-- Watermark bảo mật chống chụp màn hình & Anti-OCR: PASS
-- Hỗ trợ cập nhật cấu hình cho cả đề cũ: PASS
-- Fallback CDN catalog PPDH trên Canvas: PASS
-- Toàn bộ test suite kiểm thử: PASS
+- Nạp catalog linh hoạt & Fallback CDN jsDelivr khi host rỗng: PASS
+- Hiển thị đầy đủ PPDH & KTDH: PASS
+- Đề xuất PPDH & NLS atomic: PASS
+- Toàn bộ test suite KHBD: PASS
 
 ## Bug
 - Lỗi: Không có
 - Tái hiện: Không
 - File liên quan: Không
+
 
