@@ -96,9 +96,34 @@ assert.match(thiHtml, /anti_ai_watermark: !!\(info\.anti_ai_watermark \?\? matri
 assert.match(thiHtml, /giaovien@giangbai\.local/, 'from=taobaitap phải có fallback userEmail tránh trang trắng');
 assert.match(thiHtml, /typeof Sortable !== ["']undefined["']/, 'Sortable phải được guard trước khi new Sortable');
 assert.match(thiHtml, /from'\) === 'taobaitap'|from"\) === "taobaitap"/, 'phải nhận diện query from=taobaitap');
+assert.match(thiHtml, /access-control\.js\?v=20260919-taobaitap-bridge/, 'cache-buster access-control phải là 20260919-taobaitap-bridge');
+assert.match(thiHtml, /class ErrorBoundary extends React\.Component/, 'phải có ErrorBoundary chống trắng màn hình');
+assert.match(thiHtml, /root\.render\(<ErrorBoundary><App \/><\/ErrorBoundary>\)/, 'App phải được bọc ErrorBoundary');
+assert.match(thiHtml, /const str = String\(text \?\? ""\)\.trim\(\);\s*\n\s*if \(!str\) return "";\s*\n\s*return str\.replace\(\/\^\(\[A-Da-d0-9\]\+\)/, 'cleanOptionText phải ép String trước replace');
+assert.match(thiHtml, /const raw = String\(text \?\? ''\);/, 'MathText phải ép String(text) trước khi render');
+assert.match(thiHtml, /String\(processedText\)\.split/, 'MathText phải ép String trước split');
+assert.match(thiHtml, /const \[editingData, setEditingData\] = useState\(\(\) => \{/, 'App phải khởi tạo editingData đồng bộ từ pending_import');
+assert.match(thiHtml, /const \[view, setView\] = useState\(\(\) => \(editingData \|\| isFromTaobaitap\) \? "create" : "dashboard"\)/, 'App phải khởi tạo view=create đồng bộ khi from=taobaitap');
+assert.match(thiHtml, /return \[\{ id: "imported"/, 'HybridExamCreator phải khởi tạo pages đồng bộ khi có initialData.questions');
 
 const accessJs = fs.readFileSync(path.join(root, 'access-control.js'), 'utf8');
 assert.match(accessJs, /params\.get\(['"]from['"]\) === ['"]taobaitap['"]/, 'access-control phải miễn check token khi from=taobaitap');
+
+// Runtime: số trong options không được làm sập cleanOptionText / cleanQuestionPrefix
+const helperSrc = extractFn(
+    thiHtml,
+    '        const cleanOptionText = (text) => {',
+    '        const MathText = ({ text, cleanPrefix = false }) => {'
+);
+const helperSandbox = {};
+vm.createContext(helperSandbox);
+vm.runInContext(helperSrc + '\nthis.cleanOptionText = cleanOptionText;\nthis.cleanQuestionPrefix = cleanQuestionPrefix;', helperSandbox);
+assert.strictEqual(helperSandbox.cleanOptionText(1), '1');
+assert.strictEqual(helperSandbox.cleanOptionText(0), '0');
+assert.strictEqual(helperSandbox.cleanOptionText(null), '');
+assert.strictEqual(helperSandbox.cleanQuestionPrefix(1), '1');
+assert.doesNotThrow(() => helperSandbox.cleanOptionText(10));
+assert.doesNotThrow(() => helperSandbox.cleanQuestionPrefix(10));
 console.log('✓ Tiếp nhận đề + cấu hình giáo viên đủ (kể cả đề cũ) + chống trang trắng.');
 
 console.log('\n[TEST 4] UI thi cuốn chiếu + no-backtrack + watermark...');

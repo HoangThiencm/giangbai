@@ -70,33 +70,155 @@
 ## Khắc phục triệt để lỗi Mở ra trang trắng (White Screen Fix)
 
 ### Nguyên nhân gây trang trắng khi mở từ `taobaitap.html`:
-1. **Chặn bởi `access-control.js`**:
-   `access-control.js` hiện chỉ miễn kiểm tra token khi `mode === 'student' && examId`. Khi mở `thitructuyen.html?from=taobaitap`, nếu giáo viên chưa đăng nhập hoặc đang dùng offline, script sẽ ép redirect về `login.html`.
-2. **Chặn bởi kiểm tra `userEmail` trong `thitructuyen.html`**:
-   Tại dòng 4695, nếu `!userEmail`, component `App` trả về màn hình "Phiên đăng nhập hết hạn". Nếu bị lỗi unhandled trong React hoặc mất phiên, trang hiển thị trắng xóa. Cần fallback `userEmail = userEmail || 'giaovien@giangbai.local'` khi có cờ `from=taobaitap` hoặc `thitructuyen_pending_import`.
-3. **Race Condition & Sập State `HybridExamCreator`**:
-   Cả `App` và `HybridExamCreator` đều đọc và xóa `thitructuyen_pending_import`. Khi `App` xóa trước, `HybridExamCreator` không nạp được `examInfo` (mất title, duration 15p, cờ cuốn chiếu). Ngoài ra ở render đầu tiên của Bước 2, `activePageId` là `null` và `pages` là `[]`, gây lỗi tham chiếu nếu không được khởi tạo đồng bộ.
-4. **Lỗi `Sortable is not defined`**:
-   Tại dòng 1818, `new Sortable(el)` không kiểm tra `typeof Sortable !== 'undefined'`. Khi mạng chập chờn CDN không tải được SortableJS, React ném ngoại lệ và unmount toàn bộ giao diện thành trang trắng.
+1. **Lỗi `TypeError: text.replace is not a function` trong `cleanOptionText` & `cleanQuestionPrefix`**:
+   Tại dòng 715 và 721 của `thitructuyen.html`, hai hàm này gọi trực tiếp `text.replace(...)` mà không ép chuỗi an toàn.
+   Khi câu hỏi hoặc các phương án trắc nghiệm là dạng số (ví dụ câu hỏi toán học có các phương án là số nguyên `1, 2, 3, 10` hoặc số thực do AI sinh ra), biểu thức `if (!text)` trả về `false` đối với các số khác 0 (ví dụ `!1 === false`), dẫn đến gọi `(1).replace(...)` và lập tức quăng ngoại lệ `TypeError: text.replace is not a function`.
+   Lỗi này xảy ra trực tiếp bên trong `QuestionEditor` (dòng 1216) và cột tổng hợp tóm tắt `<MathText text={cleanOptionText(o)} />` (dòng 2595).
+2. **Lỗi `TypeError: processedText.split is not a function` trong `MathText`**:
+   Tại dòng 746 của `thitructuyen.html`, gọi `processedText.split(...)` mà không ép kiểu chuỗi. Nếu nội dung câu hỏi hoặc đáp án là kiểu số hoặc chưa ép chuỗi, hàm sẽ ném ngoại lệ tương tự.
+3. **Thiếu React ErrorBoundary khiến React 18 unmount toàn bộ DOM thành trang trắng**:
+   Trong React 18, khi xảy ra lỗi `TypeError` unhandled trong quá trình render mà không có thẻ `<ErrorBoundary>` bọc bên ngoài, React sẽ unmount toàn bộ cây component và xóa trắng thẻ `<div id="root"></div>`, gây hiện tượng màn hình trắng tinh 100% không để lại thông báo gì cho người dùng.
+4. **Trình duyệt lưu cache bản cũ `access-control.js?v=20260627-examid-case`**:
+   Tại dòng 44 của `thitructuyen.html`, thẻ nạp script vẫn để query version cũ `access-control.js?v=20260627-examid-case`. Trình duyệt đã từng mở web sẽ dùng lại file cache cũ (chưa có miễn trừ `from=taobaitap`), dẫn đến việc kiểm tra token và chuyển hướng/chặn truy cập. Cần tăng cache-buster thành `access-control.js?v=20260919-taobaitap-bridge`.
+5. **Khởi tạo bất đồng bộ gây nhấp nháy `TeacherDashboard`**:
+   Trong component `App`, state `view` khởi tạo mặc định là `"dashboard"`. Phải đến khi `useEffect` kích hoạt thì mới chuyển sang `"create"`. Cần khởi tạo ngay trong `useState` bằng lazy initializer để `editingData` và `view = "create"` có hiệu lực ngay trong tick render đầu tiên.
+6. **Khởi tạo `pages` và `activePageId` trong `HybridExamCreator`**:
+   Trong `HybridExamCreator`, các state `pages`, `pageQuestions`, `activePageId` cần được khởi tạo ngay trong `useState` nếu có `initialData.questions`, giúp Step 2 hiển thị đầy đủ 17 câu ngay lập tức mà không phải chờ `useEffect`.
 
 ### Giải pháp kỹ thuật:
-1. **Trong `access-control.js`**:
-   Thêm điều kiện miễn trừ:
+1. **Trong `thitructuyen.html` — Sửa `cleanOptionText`, `cleanQuestionPrefix` và `MathText`**:
    ```javascript
-   const isOpenExamLink = pageKey === 'thitructuyen'
-       && ((params.get('mode') === 'student' && !!getQueryParamInsensitive(params, 'examId'))
-           || params.get('from') === 'taobaitap');
+   const cleanOptionText = (text) => {
+       const str = String(text ?? "").trim();
+       if (!str) return "";
+       return str.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').replace(/\n/g, ' ').trim();
+   };
+
+   const cleanQuestionPrefix = (text) => {
+       const str = String(text ?? "").trim();
+       if (!str) return "";
+       return str.replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '');
+   };
    ```
-2. **Trong `thitructuyen.html`**:
-   - Khởi tạo an toàn cho `userEmail`:
-     ```javascript
-     const isFromTaobaitap = new URLSearchParams(window.location.search).get('from') === 'taobaitap';
-     const userEmail = localStorage.getItem('userEmail') || (isFromTaobaitap ? 'giaovien@giangbai.local' : null);
-     ```
-   - Trong `HybridExamCreator`:
-     + Thêm guard `if (el && typeof Sortable !== 'undefined')` trước khi khởi tạo `new Sortable`.
-     + Đồng bộ cập nhật `examInfo` từ `initialData.info` khi `initialData` thay đổi.
-     + Đồng bộ nạp danh sách câu hỏi `initialData.questions` vào `pageQuestions` và `pages` với `activePageId = "imported"`.
+   Trong `MathText`:
+   ```javascript
+   const formatTextMode = (str) => {
+       const s = String(str ?? '');
+       if (!s) return '';
+       let formatted = s.replace(/\\textbf\{([^\}]+)\}/g, '<span class="tex-bold">$1</span>');
+       formatted = formatted.replace(/\\textit\{([^\}]+)\}/g, '<span class="tex-italic">$1</span>');
+       formatted = formatted.replace(/\n/g, '<br/>');
+       return formatted;
+   };
+
+   const processedText = useMemo(() => {
+       const raw = String(text ?? '');
+       return cleanPrefix ? cleanQuestionPrefix(raw) : raw;
+   }, [text, cleanPrefix]);
+
+   useEffect(() => {
+       if (!processedText || !ref.current) return;
+       const el = ref.current;
+       el.innerHTML = '';
+       const parts = String(processedText).split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+       ...
+   ```
+2. **Trong `thitructuyen.html` — Bổ sung component `ErrorBoundary`**:
+   Tạo component ErrorBoundary bọc ngoài `<App />`:
+   ```javascript
+   class ErrorBoundary extends React.Component {
+       constructor(props) {
+           super(props);
+           this.state = { hasError: false, error: null };
+       }
+       static getDerivedStateFromError(error) {
+           return { hasError: true, error };
+       }
+       componentDidCatch(error, errorInfo) {
+           console.error("[thitructuyen] ErrorBoundary caught error:", error, errorInfo);
+       }
+       render() {
+           if (this.state.hasError) {
+               return (
+                   <div className="flex h-screen items-center justify-center bg-gray-50 flex-col p-6 text-center">
+                       <div className="max-w-md bg-white p-6 rounded-xl shadow-lg border border-red-200">
+                           <div className="text-red-600 text-3xl mb-3"><i className="fas fa-exclamation-triangle"></i></div>
+                           <h2 className="text-lg font-bold text-gray-800 mb-2">Đã xảy ra lỗi hiển thị</h2>
+                           <p className="text-sm text-gray-600 mb-4">{this.state.error?.message || "Không thể tải giao diện"}</p>
+                           <div className="flex gap-2 justify-center">
+                               <button type="button" onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700">Tải lại trang</button>
+                               <button type="button" onClick={() => { try { localStorage.removeItem("thitructuyen_pending_import"); } catch {} window.location.href = "taobaitap.html"; }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">Về Tạo bài tập</button>
+                           </div>
+                       </div>
+                   </div>
+               );
+           }
+           return this.props.children;
+       }
+   }
+   ```
+   Render: `root.render(<ErrorBoundary><App /></ErrorBoundary>);`
+3. **Trong `thitructuyen.html` — Khởi tạo đồng bộ state trong `App`**:
+   ```javascript
+   const App = () => {
+       const studentExamId = useMemo(() => readStudentExamId(), []);
+       const isFromTaobaitap = new URLSearchParams(window.location.search).get('from') === 'taobaitap';
+       const [editingData, setEditingData] = useState(() => {
+           if (studentExamId) return null;
+           try {
+               const raw = localStorage.getItem("thitructuyen_pending_import");
+               if (!raw) return null;
+               const pending = JSON.parse(raw);
+               if (!pending || !Array.isArray(pending.questions) || !pending.questions.length) return null;
+               localStorage.removeItem("thitructuyen_pending_import");
+               return {
+                   questions: pending.questions,
+                   info: {
+                       title: pending.title || "Đề thi từ Tạo bài tập",
+                       duration: Number(pending.duration) > 0 ? Number(pending.duration) : 15,
+                       duration_mins: Number(pending.duration) > 0 ? Number(pending.duration) : 15,
+                       exam_format: pending.exam_format || "standard_mc",
+                       anti_ai_one_by_one: pending.anti_ai_one_by_one !== false,
+                       anti_ai_watermark: pending.anti_ai_watermark !== false,
+                       matrixConfig: {
+                           anti_ai_one_by_one: pending.anti_ai_one_by_one !== false,
+                           anti_ai_watermark: pending.anti_ai_watermark !== false
+                       }
+                   }
+               };
+           } catch {
+               try { localStorage.removeItem("thitructuyen_pending_import"); } catch {}
+               return null;
+           }
+       });
+       const [view, setView] = useState(() => (editingData || isFromTaobaitap) ? "create" : "dashboard");
+       const [selectedId, setSelectedId] = useState(studentExamId);
+       const userEmail = localStorage.getItem('userEmail')
+           || ((isFromTaobaitap || editingData) ? 'giaovien@giangbai.local' : null);
+   ```
+4. **Trong `thitructuyen.html` — Khởi tạo đồng bộ state trong `HybridExamCreator`**:
+   ```javascript
+   const [pages, setPages] = useState(() => {
+       if (initialData && Array.isArray(initialData.questions) && initialData.questions.length) {
+           return [{ id: "imported", page_index: 1, image_data: null, status: "done", q_count: initialData.questions.length }];
+       }
+       return [];
+   });
+   const [pageQuestions, setPageQuestions] = useState(() => {
+       if (initialData && Array.isArray(initialData.questions) && initialData.questions.length) {
+           return { ["imported"]: initialData.questions.map((q, i) => ({ ...q, id: Date.now() + i })) };
+       }
+       return {};
+   });
+   const [activePageId, setActivePageId] = useState(() => {
+       if (initialData && Array.isArray(initialData.questions) && initialData.questions.length) {
+           return "imported";
+       }
+       return null;
+   });
+   ```
+5. **Cập nhật cache-buster tag tại dòng 44**:
+   Đổi từ `access-control.js?v=20260627-examid-case` sang `access-control.js?v=20260919-taobaitap-bridge`.
 
 
 ## Các bước thực hiện

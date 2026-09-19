@@ -41,7 +41,7 @@
         })();
     </script>
 
-    <script src="access-control.js?v=20260627-examid-case"></script>
+    <script src="access-control.js?v=20260919-taobaitap-bridge"></script>
 
     <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -713,37 +713,41 @@
         // --- HELPER COMPONENTS ---
 
         const cleanOptionText = (text) => {
-            if (!text) return "";
-            return text.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').replace(/\n/g, ' ').trim();
+            const str = String(text ?? "").trim();
+            if (!str) return "";
+            return str.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').replace(/\n/g, ' ').trim();
         };
 
         // NEW: Clean question prefix like "Câu 1:", "Bài 2."
         const cleanQuestionPrefix = (text) => {
-            if (!text) return "";
+            const str = String(text ?? "").trim();
+            if (!str) return "";
             // Regex to remove "Câu/Bài/Question" followed by number and separator at the start
-            return text.replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '');
+            return str.replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '');
         };
 
         const MathText = ({ text, cleanPrefix = false }) => {
             const ref = useRef();
 
             const formatTextMode = (str) => {
-                if (!str) return '';
-                let formatted = str.replace(/\\textbf\{([^\}]+)\}/g, '<span class="tex-bold">$1</span>');
+                const s = String(str ?? '');
+                if (!s) return '';
+                let formatted = s.replace(/\\textbf\{([^\}]+)\}/g, '<span class="tex-bold">$1</span>');
                 formatted = formatted.replace(/\\textit\{([^\}]+)\}/g, '<span class="tex-italic">$1</span>');
                 formatted = formatted.replace(/\n/g, '<br/>');
                 return formatted;
             };
 
             const processedText = useMemo(() => {
-                return cleanPrefix ? cleanQuestionPrefix(text) : text;
+                const raw = String(text ?? '');
+                return cleanPrefix ? cleanQuestionPrefix(raw) : raw;
             }, [text, cleanPrefix]);
 
             useEffect(() => {
                 if (!processedText || !ref.current) return;
                 const el = ref.current;
                 el.innerHTML = '';
-                const parts = processedText.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+                const parts = String(processedText).split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
                 parts.forEach(part => {
                     if (part.startsWith('$$') && part.endsWith('$$')) {
                         const span = document.createElement('span');
@@ -1734,10 +1738,25 @@
         const HybridExamCreator = ({ onBack, initialData }) => {
             const isEditMode = Boolean(initialData && (initialData.id || (Array.isArray(initialData.questions) && initialData.questions.length > 0)));
             const [step, setStep] = useState(isEditMode ? 2 : 1);
-            const [pages, setPages] = useState([]);
+            const [pages, setPages] = useState(() => {
+                if (initialData && Array.isArray(initialData.questions) && initialData.questions.length) {
+                    return [{ id: "imported", page_index: 1, image_data: null, status: "done", q_count: initialData.questions.length }];
+                }
+                return [];
+            });
             const [pageProgress, setPageProgress] = useState({});
-            const [pageQuestions, setPageQuestions] = useState({});
-            const [activePageId, setActivePageId] = useState(null);
+            const [pageQuestions, setPageQuestions] = useState(() => {
+                if (initialData && Array.isArray(initialData.questions) && initialData.questions.length) {
+                    return { ["imported"]: initialData.questions.map((q, i) => ({ ...q, id: Date.now() + i })) };
+                }
+                return {};
+            });
+            const [activePageId, setActivePageId] = useState(() => {
+                if (initialData && Array.isArray(initialData.questions) && initialData.questions.length) {
+                    return "imported";
+                }
+                return null;
+            });
             const [loadingMsg, setLoadingMsg] = useState("");
             const defaultExamInfo = {
                 title: "",
@@ -4686,27 +4705,49 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
             return examId || null;
         };
 
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+            static getDerivedStateFromError(error) {
+                return { hasError: true, error };
+            }
+            componentDidCatch(error, errorInfo) {
+                console.error("[thitructuyen] ErrorBoundary caught error:", error, errorInfo);
+            }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="flex h-screen items-center justify-center bg-gray-50 flex-col p-6 text-center">
+                            <div className="max-w-md bg-white p-6 rounded-xl shadow-lg border border-red-200">
+                                <div className="text-red-600 text-3xl mb-3"><i className="fas fa-exclamation-triangle"></i></div>
+                                <h2 className="text-lg font-bold text-gray-800 mb-2">Đã xảy ra lỗi hiển thị</h2>
+                                <p className="text-sm text-gray-600 mb-4">{this.state.error?.message || "Không thể tải giao diện"}</p>
+                                <div className="flex gap-2 justify-center">
+                                    <button type="button" onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700">Tải lại trang</button>
+                                    <button type="button" onClick={() => { try { localStorage.removeItem("thitructuyen_pending_import"); } catch {} window.location.href = "taobaitap.html"; }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">Về Tạo bài tập</button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
         const App = () => {
             const studentExamId = useMemo(() => readStudentExamId(), []);
-            const [view, setView] = useState("dashboard");
-            const [selectedId, setSelectedId] = useState(studentExamId);
-            const [editingData, setEditingData] = useState(null);
             const isFromTaobaitap = new URLSearchParams(window.location.search).get('from') === 'taobaitap';
-            let hasPendingImport = false;
-            try { hasPendingImport = !!localStorage.getItem('thitructuyen_pending_import'); } catch { hasPendingImport = false; }
-            const userEmail = localStorage.getItem('userEmail')
-                || ((isFromTaobaitap || hasPendingImport) ? 'giaovien@giangbai.local' : null);
-
-            useEffect(() => {
-                if (studentExamId) return;
-                let raw = null;
-                try { raw = localStorage.getItem("thitructuyen_pending_import"); } catch { return; }
-                if (!raw) return;
+            const [editingData, setEditingData] = useState(() => {
+                if (studentExamId) return null;
                 try {
+                    const raw = localStorage.getItem("thitructuyen_pending_import");
+                    if (!raw) return null;
                     const pending = JSON.parse(raw);
-                    if (!pending || !Array.isArray(pending.questions) || !pending.questions.length) return;
+                    if (!pending || !Array.isArray(pending.questions) || !pending.questions.length) return null;
                     localStorage.removeItem("thitructuyen_pending_import");
-                    setEditingData({
+                    return {
                         questions: pending.questions,
                         info: {
                             title: pending.title || "Đề thi từ Tạo bài tập",
@@ -4720,12 +4761,16 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
                                 anti_ai_watermark: pending.anti_ai_watermark !== false
                             }
                         }
-                    });
-                    setView("create");
+                    };
                 } catch {
-                    try { localStorage.removeItem("thitructuyen_pending_import"); } catch { }
+                    try { localStorage.removeItem("thitructuyen_pending_import"); } catch {}
+                    return null;
                 }
-            }, [studentExamId]);
+            });
+            const [view, setView] = useState(() => (editingData || isFromTaobaitap) ? "create" : "dashboard");
+            const [selectedId, setSelectedId] = useState(studentExamId);
+            const userEmail = localStorage.getItem('userEmail')
+                || ((isFromTaobaitap || editingData) ? 'giaovien@giangbai.local' : null);
 
             const handleEdit = async (id) => {
                 try {
@@ -4774,7 +4819,7 @@ BẢNG ĐÁP ÁN THAM KHẢO (NẾU KHÔNG ĐÁNH DẤU * TRONG ĐỀ):
 
         try {
             const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(<App />);
+            root.render(<ErrorBoundary><App /></ErrorBoundary>);
         } catch (bootErr) {
             console.error("[thitructuyen] React boot failed:", bootErr);
             const el = document.getElementById('react-error');
