@@ -35,6 +35,24 @@ assert.match(khbdApp, /async function handleGenerateCurrentActivity\(\)\s*\{\s*t
 assert.match(khbdApp, /async function handleGenerateObjectives\(\)\s*\{\s*try \{/, 'Tạo I. Mục tiêu phải bọc try/catch');
 assert.match(khbdApp, /async function handleGenerateMaterials\(\)\s*\{\s*try \{/, 'Tạo II. Học liệu phải bọc try/catch');
 assert.match(khbdApp, /showToast\("Lỗi khởi tạo: " \+ err\.message, "danger", 6000\)/, 'nút tạo mục phải báo lỗi khởi tạo, không đơ im lặng');
+
+// Idempotent guards: script tải 2 lần không SyntaxError redeclare const/class
+const promptsSrc = fs.readFileSync(path.join(root, 'js', 'khbd-prompts.js'), 'utf8');
+const docxSrc = fs.readFileSync(path.join(root, 'js', 'khbd-docx.js'), 'utf8');
+const pedagogySrc = fs.readFileSync(path.join(root, 'js', 'khbd-pedagogy-catalog.js'), 'utf8');
+assert.match(promptsSrc, /window\.__KHBD_PROMPTS_LOADED__/, 'khbd-prompts.js phải có chốt idempotent __KHBD_PROMPTS_LOADED__');
+assert.match(docxSrc, /window\.__KHBD_DOCX_LOADED__|window\.docxGenerator \|\| window\.DocxGenerator/, 'khbd-docx.js phải có chốt idempotent DocxGenerator');
+assert.match(docxSrc, /window\.DocxGenerator\s*=\s*DocxGenerator/, 'khbd-docx.js phải gán window.DocxGenerator');
+assert.match(pedagogySrc, /window\.KHBD_PEDAGOGY_CATALOG\)\s*\{/, 'khbd-pedagogy-catalog.js phải có chốt idempotent KHBD_PEDAGOGY_CATALOG');
+{
+  // Smoke: require 2 lần trong Node vẫn an toàn (module cache); đồng thời vm 2 lần trên window giả lập.
+  const sandbox = { window: {}, module: { exports: {} }, exports: {} };
+  vm.createContext(sandbox);
+  vm.runInContext(promptsSrc + '\n;this.__once = !!window.PROMPTS;', sandbox);
+  assert.ok(sandbox.window.PROMPTS && sandbox.window.PROMPTS.GENERATE_OBJECTIVES, 'prompts load lần 1 phải gắn PROMPTS');
+  vm.runInContext(promptsSrc + '\n;this.__twice = !!window.__KHBD_PROMPTS_LOADED__;', sandbox);
+  assert.ok(sandbox.window.__KHBD_PROMPTS_LOADED__, 'prompts load lần 2 phải bỏ qua nhờ __KHBD_PROMPTS_LOADED__');
+}
 {
   const start = khbdApp.indexOf('function normalizeLessonTitleMatch');
   const end = khbdApp.indexOf('function populateLessonDropdown');
@@ -81,7 +99,7 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-docx.js"'), `${relPath} phải nạp khbd-docx.js cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-docx.js'), `${relPath} phải giữ nguồn khbd-docx.js từ hosting khi chạy Canvas`);
   assert.ok(!targetHtml.includes('<\\\\/script>'), `${relPath} không được escape kép thẻ đóng của bộ nạp khbd-docx.js`);
-  assert.ok(targetHtml.includes('"><\\/script>`);'), `${relPath} phải tạo thẻ đóng </script> hợp lệ cho bộ nạp khbd-docx.js`);
+  assert.ok(targetHtml.includes('"><\\/script>') || targetHtml.includes('"><\\/script>`'), `${relPath} phải tạo thẻ đóng </script> hợp lệ cho bộ nạp script`);
   assert.ok(targetHtml.includes('isLocal ? "css/khbd-styles.css"'), `${relPath} phải nạp khbd-styles.css cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/css/khbd-styles.css'), `${relPath} phải giữ nguồn khbd-styles.css từ hosting khi chạy Canvas`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-prompts.js"'), `${relPath} phải nạp khbd-prompts.js cục bộ khi chạy file/localhost`);
@@ -89,17 +107,26 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('ensureKhbdPromptsFallback'), `${relPath} phải có fallback ensureKhbdPromptsFallback`);
   assert.ok(targetHtml.includes('cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js'), `${relPath} fallback prompts phải nạp từ CDN jsDelivr khi host rỗng`);
   assert.ok(targetHtml.includes('window.PROMPTS.GENERATE_OBJECTIVES'), `${relPath} prompts fallback phải guard GENERATE_OBJECTIVES`);
+  assert.ok(targetHtml.includes('onload="window.ensureKhbdPromptsFallback'), `${relPath} prompts fallback phải gắn onload (không race document.write tức thì)`);
+  assert.ok(targetHtml.includes('onerror="window.ensureKhbdPromptsFallback'), `${relPath} prompts fallback phải gắn onerror`);
+  assert.ok(targetHtml.includes('crossorigin="anonymous"'), `${relPath} CDN fallback phải dùng crossorigin=anonymous để lộ chi tiết lỗi`);
   assert.ok(targetHtml.includes('ensureKhbdDocxFallback'), `${relPath} phải có fallback ensureKhbdDocxFallback`);
   assert.ok(targetHtml.includes('cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-docx.js'), `${relPath} fallback docx phải nạp từ CDN jsDelivr khi host rỗng`);
   assert.ok(targetHtml.includes('typeof window.docxGenerator !== "undefined"') || targetHtml.includes("typeof window.docxGenerator !== 'undefined'"), `${relPath} docx fallback phải guard window.docxGenerator`);
   assert.ok(targetHtml.includes('typeof window.DocxGenerator !== "undefined"') || targetHtml.includes("typeof window.DocxGenerator !== 'undefined'"), `${relPath} docx fallback phải guard window.DocxGenerator`);
+  assert.ok(targetHtml.includes('onload="window.ensureKhbdDocxFallback'), `${relPath} docx fallback phải gắn onload (không race)`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-pedagogy-catalog.js"'), `${relPath} phải nạp khbd-pedagogy-catalog.js cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js'), `${relPath} phải giữ nguồn khbd-pedagogy-catalog.js từ hosting khi chạy Canvas`);
   assert.ok(targetHtml.includes('ensureKhbdPedagogyCatalogFallback'), `${relPath} phải có fallback ensureKhbdPedagogyCatalogFallback`);
   assert.ok(targetHtml.includes('typeof window.KHBD_PEDAGOGY_CATALOG !== "undefined"'), `${relPath} phải guard KHBD_PEDAGOGY_CATALOG trước khi fallback`);
   assert.ok(targetHtml.includes('cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js'), `${relPath} fallback phải nạp catalog từ CDN jsDelivr khi host rỗng`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-pedagogy-catalog.js" : cdnCatalog') || /isLocal \? "js\/khbd-pedagogy-catalog\.js" : cdnCatalog/.test(targetHtml), `${relPath} fallback phải chọn local vs CDN theo isLocal`);
+  assert.ok(targetHtml.includes('onload="window.ensureKhbdPedagogyCatalogFallback'), `${relPath} pedagogy fallback phải gắn onload (không race)`);
   assert.ok(!/<script\s+src=["']https:\/\/hoangthiencm\.id\.vn\/js\/khbd-pedagogy-catalog\.js[^"']*["']\s*>\s*<\/script>/.test(targetHtml), `${relPath} không được hardcode thẻ script pedagogy-catalog (phải dùng isLocal)`);
+  // Không còn IIFE fallback chạy ngay sau document.write primary (race tải kép).
+  assert.ok(!/\(function ensureKhbdPromptsFallback\(\)\s*\{[\s\S]*?document\.write\([\s\S]*?cdnPrompts[\s\S]*?\}\)\(\);/.test(targetHtml), `${relPath} không được IIFE ensureKhbdPromptsFallback() chạy tức thì gây race`);
+  assert.ok(!/\(function ensureKhbdDocxFallback\(\)\s*\{[\s\S]*?document\.write\([\s\S]*?cdnDocx[\s\S]*?\}\)\(\);/.test(targetHtml), `${relPath} không được IIFE ensureKhbdDocxFallback() chạy tức thì gây race`);
+  assert.ok(!/\(function ensureKhbdPedagogyCatalogFallback\(\)\s*\{[\s\S]*?document\.write\([\s\S]*?cdnCatalog[\s\S]*?\}\)\(\);/.test(targetHtml), `${relPath} không được IIFE ensureKhbdPedagogyCatalogFallback() chạy tức thì gây race`);
   assert.ok(targetHtml.includes('20260916-canvas-module-v9'), `${relPath} phải cache-bust bản Canvas module v9`);
   assert.ok(!targetHtml.includes('canvas-system-v3'), `${relPath} không được nạp Canvas cache v3 cũ`);
   assert.ok(targetHtml.includes('systemGemini: true'), `${relPath} phải bật rõ tuyến Gemini hệ thống Canvas`);

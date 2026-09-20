@@ -1,3 +1,7 @@
+if (typeof window !== "undefined" && window.KHBD_PEDAGOGY_CATALOG) {
+  // Already loaded — skip to avoid redeclaring KHBD_PEDAGOGY_CATALOG.
+} else {
+if (typeof window !== "undefined") window.__KHBD_PEDAGOGY_CATALOG_GUARD__ = true;
 const KHBD_PEDAGOGY_CATALOG = {
   methods: [
     {
@@ -964,3 +968,4 @@ if (typeof window !== "undefined") {
   window.getPedagogyExecutionScript = getPedagogyExecutionScript;
   window.buildDetailedPedagogyGuide = buildDetailedPedagogyGuide;
 }
+} // end KHBD_PEDAGOGY_CATALOG guard

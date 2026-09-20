@@ -8,6 +8,11 @@
 
 // Deploy version: 20260916-textbook-exact-v18
 
+if (typeof window !== "undefined" && (window.docxGenerator || window.DocxGenerator || window.__KHBD_DOCX_LOADED__)) {
+  // Already loaded — skip to avoid redeclaring DocxGenerator.
+} else {
+if (typeof window !== "undefined") window.__KHBD_DOCX_LOADED__ = true;
+
 class DocxGenerator {
   constructor() {
     this.fontFamily = "Times New Roman";
@@ -1573,6 +1578,12 @@ class DocxGenerator {
 // Khởi tạo instance toàn cục
 const docxGenerator = new DocxGenerator();
 
+if (typeof window !== "undefined") {
+  window.DocxGenerator = DocxGenerator;
+  window.docxGenerator = docxGenerator;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { DocxGenerator, docxGenerator };
 }
+} // end __KHBD_DOCX_LOADED__ guard

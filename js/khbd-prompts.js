@@ -9,6 +9,11 @@
 
 // Deploy version: 20260916-textbook-exact-v18
 
+if (typeof window !== "undefined" && window.__KHBD_PROMPTS_LOADED__) {
+  // Already loaded — skip to avoid redeclaring top-level const.
+} else {
+if (typeof window !== "undefined") window.__KHBD_PROMPTS_LOADED__ = true;
+
 function isEnglishSubject(subjectId) {
   const sid = String(subjectId || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
   return sid === 'tienganh' || sid === 'english' || sid === 'tienganhthcs' || sid.includes('english');
@@ -1874,3 +1879,4 @@ if (typeof globalThis !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { PROMPTS, calculateActivityTimeBudgets, isEnglishSubject, isReviewOrPracticeLesson, isPracticeOrReviewLesson, getSystemRole, getPromptTemplate, extractTextbookSubsections, normalizeTextbookSubsectionProfiles, extractTextbookLessonMap, getGeneralCompetenciesForSubject, formatGeneralCompetenciesGuide };
 }
+} // end __KHBD_PROMPTS_LOADED__ guard
