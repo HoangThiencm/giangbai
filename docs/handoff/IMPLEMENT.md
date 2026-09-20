@@ -1,37 +1,47 @@
-# IMPLEMENT: Liên thông 1-Click + cuốn chiếu + CDN PPDH + chống trang trắng
+# IMPLEMENT: Cứu hộ khung prompt Mục tiêu & Năng lực chuẩn CV 5512 trên canvas_soankhbd.html
 
-Đã triển khai đúng `docs/handoff/PLAN.md` (kèm mục **Khắc phục triệt để lỗi Mở ra trang trắng**).
+Đã triển khai đúng `docs/handoff/PLAN.md`.
 
-## Thay đổi vòng này (White Screen Fix — theo VERIFY FAIL)
+## Thay đổi
 
-### `thitructuyen.html`
-1. **`cleanOptionText` / `cleanQuestionPrefix`**: Ép `String(text ?? "")` trước `replace` — không còn `TypeError` khi options/câu hỏi là số (`1`, `0`, `10`).
-2. **`MathText`**: Ép chuỗi trong `formatTextMode`, `processedText` (`String(text ?? '')`) và `String(processedText).split(...)`.
-3. **`ErrorBoundary`**: Class component bọc `<App />`; lỗi render hiện UI “Đã xảy ra lỗi hiển thị” + nút Tải lại / Về Tạo bài tập thay vì trắng `#root`.
-4. **`App` khởi tạo đồng bộ**:
-   - `editingData` lazy-init từ `thitructuyen_pending_import` (xóa key ngay khi nạp).
-   - `view` lazy-init `"create"` khi có `editingData` hoặc `from=taobaitap`.
-   - `userEmail` fallback `giaovien@giangbai.local` khi `from=taobaitap` hoặc có `editingData`.
-5. **`HybridExamCreator`**: `pages` / `pageQuestions` / `activePageId` lazy-init `"imported"` khi `initialData.questions` có sẵn — Step 2 hiện câu ngay tick đầu.
-6. **Cache-buster**: `access-control.js?v=20260919-taobaitap-bridge`.
+### 1. CDN fallback `khbd-prompts.js` (cả hai HTML)
+- `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`
+- Thêm `ensureKhbdPromptsFallback()` ngay sau script nạp `khbd-prompts.js`
+- Guard: `getPromptTemplate` + `window.PROMPTS.GENERATE_OBJECTIVES`
+- Host rỗng/0 bytes → nạp `https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js`
+- Local/`file:` → nạp lại `js/khbd-prompts.js`
 
-## Đã có từ vòng trước (vẫn đúng PLAN)
-- Nút **🚀 THI TRỰC TUYẾN**, `mapToThiTrucTuyenPayload`, pending import trên `taobaitap.html` + backup.
-- Preset 15/20/30/45p, checkbox cuốn chiếu + watermark; lưu cờ qua `matrixConfig`; Sửa đề cũ khôi phục cờ.
-- Student one-by-one: 1 câu/lần, countdown từng câu, no-backtrack, watermark, tiến trình localStorage.
-- `access-control.js`: miễn token khi `from=taobaitap`.
-- CDN jsDelivr fallback catalog PPDH trong `canvas_soankhbd.html`.
+### 2. CDN fallback `khbd-docx.js` (cả hai HTML)
+- Thêm `ensureKhbdDocxFallback()` ngay sau script nạp `khbd-docx.js`
+- Guard: `createKhbdDocxDocument` hoặc `window.KHBD_DOCX`
+- CDN: `.../js/khbd-docx.js`
 
-## Test đã chạy
+### 3. Backup đồng bộ pedagogy-catalog fallback
+- Bản backup dùng `isLocal` + `ensureKhbdPedagogyCatalogFallback` giống bản chính (smoke yêu cầu cả hai HTML có đủ 3 fallback CDN)
 
-- `node tests/taobaitap-thitructuyen-bridge-smoke.js` — PASS (đã bổ sung assert String coerce, ErrorBoundary, cache-buster, sync init; runtime `cleanOptionText(1)` / `cleanQuestionPrefix(1)` không throw)
-- `node tests/canvas-soankhbd-smoke.js` — PASS
-- `node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js` — PASS
-- `node tests/taobaitap-plan-smoke.js` — PASS
+### 4. `js/khbd-app.js` — cấu trúc Năng lực + preview
+- `isOffTopicObjectivesHallucination`: nếu thiếu cả `năng lực chung` và `năng lực đặc thù` → đánh dấu lạc chuẩn → `applyObjectivesOutput` tái tạo bằng `GENERATE_OBJECTIVES`
+- `isIntegrationBadgeListItem` + `applyLiteralListMarkers`: không chèn `- ` trơ trước mục chỉ là badge NLS/AI
+- `applyIntegrationPreviewColors`: `li` NLS/AI → `listStyleType: none` và bỏ gạch đầu dòng text thừa
 
-Không sửa `api/exam.php` / prompt AI. Không có browser MCP trong phiên này — UI E2E để Antigravity `/verify`.
+### 5. Smoke tests
+- `tests/canvas-prompts-integrity-smoke.js`: assert `ensureKhbdPromptsFallback`, sections `### a) Năng lực chung`, `### b) Năng lực đặc thù môn học`, `{digital_objectives_section}`, `{ai_objectives_section}`, và guard hallucination/preview
+- `tests/canvas-soankhbd-smoke.js`: cả hai HTML phải có CDN fallback cho `khbd-prompts.js`, `khbd-pedagogy-catalog.js`, `khbd-docx.js`
+
+## Test đã chạy (100% PASS)
+
+- `node tests/canvas-prompts-integrity-smoke.js`
+- `node tests/canvas-soankhbd-smoke.js`
+- `node tests/khbd-competencies-smoke.js`
+- `node tests/khbd-nls-ai-bold-italic-smoke.js`
 
 ## File đã đụng
-1. `thitructuyen.html`
-2. `tests/taobaitap-thitructuyen-bridge-smoke.js`
-3. `docs/handoff/IMPLEMENT.md`
+
+1. `canvas_soankhbd.html`
+2. `backupcode viettailieu/canvas_soankhbd.html`
+3. `js/khbd-app.js`
+4. `tests/canvas-prompts-integrity-smoke.js`
+5. `tests/canvas-soankhbd-smoke.js`
+6. `docs/handoff/IMPLEMENT.md`
+
+Không mở rộng ngoài PLAN. UI E2E / hosting 0-bytes → Antigravity `/verify`.

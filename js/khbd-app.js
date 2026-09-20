@@ -4856,9 +4856,19 @@ function prepareLiteralListMarkers(markdownText) {
   }).join("\n");
 }
 
+function isIntegrationBadgeListItem(listItem) {
+  const text = String(listItem && listItem.textContent || "").trim();
+  if (!text) return false;
+  if (listItem.classList && (listItem.classList.contains("khbd-nls") || listItem.classList.contains("khbd-ai"))) {
+    return true;
+  }
+  return /^(?:\*{0,3})?(?:NLS|AI)\b/i.test(text) || /^(?:\*{0,3})?\[(?:NLS|AI)(?::[^\]]*)?\]/i.test(text);
+}
+
 function applyLiteralListMarkers(documentFragment) {
   if (!documentFragment || typeof documentFragment.querySelectorAll !== "function") return;
   documentFragment.querySelectorAll("li").forEach(listItem => {
+    const skipDashPrefix = isIntegrationBadgeListItem(listItem);
     const walker = document.createTreeWalker(listItem, NodeFilter.SHOW_TEXT);
     let textNode;
     while ((textNode = walker.nextNode())) {
@@ -4879,8 +4889,18 @@ function applyLiteralListMarkers(documentFragment) {
       textNode.nodeValue = textNode.nodeValue.replace(marker, "");
       listItem.classList.add(className);
       listItem.style.listStyleType = "none";
-      listItem.insertBefore(document.createTextNode(`${symbol} `), listItem.firstChild);
+      // Badge NLS/AI dạng box: không chèn "- " để tránh gạch đầu dòng trơ trọi.
+      if (!(skipDashPrefix && symbol === "-")) {
+        listItem.insertBefore(document.createTextNode(`${symbol} `), listItem.firstChild);
+      }
       break;
+    }
+    if (skipDashPrefix) {
+      listItem.style.listStyleType = "none";
+      const first = listItem.firstChild;
+      if (first && first.nodeType === Node.TEXT_NODE) {
+        first.nodeValue = String(first.nodeValue || "").replace(/^\s*[-+•]\s+/, "");
+      }
     }
   });
 }
@@ -5099,6 +5119,18 @@ function applyIntegrationPreviewColors(fragment) {
         const host = el.closest("li, p");
         if (host) host.classList.add("khbd-inclusive");
       }
+    }
+  });
+
+  // li chứa badge NLS/AI: bỏ bullet/gạch đầu dòng trơ trước khung màu.
+  fragment.querySelectorAll("li").forEach(li => {
+    if (!isIntegrationBadgeListItem(li) && !li.classList.contains("khbd-nls") && !li.classList.contains("khbd-ai")) {
+      return;
+    }
+    li.style.listStyleType = "none";
+    const first = li.firstChild;
+    if (first && first.nodeType === Node.TEXT_NODE) {
+      first.nodeValue = String(first.nodeValue || "").replace(/^\s*[-+•]\s+/, "");
     }
   });
   return fragment;
@@ -7893,6 +7925,12 @@ function isOffTopicObjectivesHallucination(text) {
   if (!raw) return false;
   const hay = raw.toLowerCase();
   if (/doanh nghiệp|quy trình doanh nghiệp|khách hàng|phân tích sắc thái|natural language|xử lý ngôn ngữ tự nhiên|chiến lược tối ưu hóa quy trình/.test(hay)) {
+    return true;
+  }
+  // Thiếu cả khung CV 5512 (Năng lực chung + Năng lực đặc thù) → tái tạo bằng prompt cứng.
+  const hasCommonCompetency = /năng lực chung/i.test(raw);
+  const hasSubjectCompetency = /năng lực đặc thù/i.test(raw);
+  if (!hasCommonCompetency && !hasSubjectCompetency) {
     return true;
   }
   return !/mục tiêu|về kiến thức|năng lực chung|năng lực đặc thù|phẩm chất/i.test(raw);

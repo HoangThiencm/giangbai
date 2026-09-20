@@ -86,15 +86,19 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/css/khbd-styles.css'), `${relPath} phải giữ nguồn khbd-styles.css từ hosting khi chạy Canvas`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-prompts.js"'), `${relPath} phải nạp khbd-prompts.js cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-prompts.js'), `${relPath} phải giữ nguồn khbd-prompts.js từ hosting khi chạy Canvas`);
-  if (!relPath.includes('backupcode')) {
-    assert.ok(targetHtml.includes('isLocal ? "js/khbd-pedagogy-catalog.js"'), `${relPath} phải nạp khbd-pedagogy-catalog.js cục bộ khi chạy file/localhost`);
-    assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js'), `${relPath} phải giữ nguồn khbd-pedagogy-catalog.js từ hosting khi chạy Canvas`);
-    assert.ok(targetHtml.includes('ensureKhbdPedagogyCatalogFallback'), `${relPath} phải có fallback ensureKhbdPedagogyCatalogFallback`);
-    assert.ok(targetHtml.includes('typeof window.KHBD_PEDAGOGY_CATALOG !== "undefined"'), `${relPath} phải guard KHBD_PEDAGOGY_CATALOG trước khi fallback`);
-    assert.ok(targetHtml.includes('cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js'), `${relPath} fallback phải nạp catalog từ CDN jsDelivr khi host rỗng`);
-    assert.ok(targetHtml.includes('isLocal ? "js/khbd-pedagogy-catalog.js" : cdnCatalog') || /isLocal \? "js\/khbd-pedagogy-catalog\.js" : cdnCatalog/.test(targetHtml), `${relPath} fallback phải chọn local vs CDN theo isLocal`);
-    assert.ok(!/<script\s+src=["']https:\/\/hoangthiencm\.id\.vn\/js\/khbd-pedagogy-catalog\.js[^"']*["']\s*>\s*<\/script>/.test(targetHtml), `${relPath} không được hardcode thẻ script pedagogy-catalog (phải dùng isLocal)`);
-  }
+  assert.ok(targetHtml.includes('ensureKhbdPromptsFallback'), `${relPath} phải có fallback ensureKhbdPromptsFallback`);
+  assert.ok(targetHtml.includes('cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js'), `${relPath} fallback prompts phải nạp từ CDN jsDelivr khi host rỗng`);
+  assert.ok(targetHtml.includes('window.PROMPTS.GENERATE_OBJECTIVES'), `${relPath} prompts fallback phải guard GENERATE_OBJECTIVES`);
+  assert.ok(targetHtml.includes('ensureKhbdDocxFallback'), `${relPath} phải có fallback ensureKhbdDocxFallback`);
+  assert.ok(targetHtml.includes('cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-docx.js'), `${relPath} fallback docx phải nạp từ CDN jsDelivr khi host rỗng`);
+  assert.ok(targetHtml.includes('createKhbdDocxDocument'), `${relPath} docx fallback phải guard createKhbdDocxDocument`);
+  assert.ok(targetHtml.includes('isLocal ? "js/khbd-pedagogy-catalog.js"'), `${relPath} phải nạp khbd-pedagogy-catalog.js cục bộ khi chạy file/localhost`);
+  assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js'), `${relPath} phải giữ nguồn khbd-pedagogy-catalog.js từ hosting khi chạy Canvas`);
+  assert.ok(targetHtml.includes('ensureKhbdPedagogyCatalogFallback'), `${relPath} phải có fallback ensureKhbdPedagogyCatalogFallback`);
+  assert.ok(targetHtml.includes('typeof window.KHBD_PEDAGOGY_CATALOG !== "undefined"'), `${relPath} phải guard KHBD_PEDAGOGY_CATALOG trước khi fallback`);
+  assert.ok(targetHtml.includes('cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js'), `${relPath} fallback phải nạp catalog từ CDN jsDelivr khi host rỗng`);
+  assert.ok(targetHtml.includes('isLocal ? "js/khbd-pedagogy-catalog.js" : cdnCatalog') || /isLocal \? "js\/khbd-pedagogy-catalog\.js" : cdnCatalog/.test(targetHtml), `${relPath} fallback phải chọn local vs CDN theo isLocal`);
+  assert.ok(!/<script\s+src=["']https:\/\/hoangthiencm\.id\.vn\/js\/khbd-pedagogy-catalog\.js[^"']*["']\s*>\s*<\/script>/.test(targetHtml), `${relPath} không được hardcode thẻ script pedagogy-catalog (phải dùng isLocal)`);
   assert.ok(targetHtml.includes('20260916-canvas-module-v9'), `${relPath} phải cache-bust bản Canvas module v9`);
   assert.ok(!targetHtml.includes('canvas-system-v3'), `${relPath} không được nạp Canvas cache v3 cũ`);
   assert.ok(targetHtml.includes('systemGemini: true'), `${relPath} phải bật rõ tuyến Gemini hệ thống Canvas`);

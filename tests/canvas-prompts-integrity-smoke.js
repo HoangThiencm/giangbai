@@ -68,6 +68,19 @@ for (const rel of pages) {
   assert.match(html, /typeof window\.PROMPTS === "undefined"/, rel + " has PROMPTS fallback guard");
   assert.match(html, /OUTPUT_CONTRACT:/, rel + " supplies OUTPUT_CONTRACT fallback");
   assert.match(html, /ENGLISH_ELT_DIRECTIVE:/, rel + " supplies English directive fallback");
+  assert.match(html, /ensureKhbdPromptsFallback/, rel + " has ensureKhbdPromptsFallback CDN rescue");
+  assert.match(html, /cdn\.jsdelivr\.net\/gh\/HoangThiencm\/giangbai@main\/js\/khbd-prompts\.js/, rel + " prompts fallback uses jsDelivr CDN");
+  assert.match(html, /window\.PROMPTS\.GENERATE_OBJECTIVES/, rel + " prompts fallback guards GENERATE_OBJECTIVES");
 }
+
+assert.match(promptsSource, /GENERATE_OBJECTIVES:\s*`/, "PROMPTS defines GENERATE_OBJECTIVES template");
+assert.match(promptsSource, /### a\) Năng lực chung/, "GENERATE_OBJECTIVES has ### a) Năng lực chung");
+assert.match(promptsSource, /### b\) Năng lực đặc thù môn học/, "GENERATE_OBJECTIVES has ### b) Năng lực đặc thù môn học");
+assert.match(promptsSource, /\{digital_objectives_section\}/, "GENERATE_OBJECTIVES has {digital_objectives_section}");
+assert.match(promptsSource, /\{ai_objectives_section\}/, "GENERATE_OBJECTIVES has {ai_objectives_section}");
+
+assert.match(appSource, /hasCommonCompetency/, "isOffTopicObjectivesHallucination checks Năng lực chung");
+assert.match(appSource, /hasSubjectCompetency/, "isOffTopicObjectivesHallucination checks Năng lực đặc thù");
+assert.match(appSource, /isIntegrationBadgeListItem/, "preview strips orphan dash before NLS/AI badge li");
 
 console.log("canvas-prompts-integrity-smoke: OK");

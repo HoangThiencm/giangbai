@@ -1069,6 +1069,14 @@
         document.write(`<script src="${isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v18"}"><\/script>`);
     })();
   </script>
+  <script>
+    (function ensureKhbdPromptsFallback() {
+      if (typeof window.getPromptTemplate === "function" && window.PROMPTS && window.PROMPTS.GENERATE_OBJECTIVES) return;
+      var isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
+      var cdnPrompts = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js";
+      document.write('<script src="' + (isLocal ? "js/khbd-prompts.js" : cdnPrompts) + '"><\/script>');
+    })();
+  </script>
   <script src="https://hoangthiencm.id.vn/js/khbd-gemini.js?v=20260916-canvas-module-v9"></script>
   <script>
     (function () {
@@ -1076,7 +1084,28 @@
         document.write(`<script src="${isLocal ? "js/khbd-docx.js" : "https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260916-textbook-exact-v18"}"><\/script>`);
     })();
   </script>
-  <script src="https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260916-canvas-module-v9"></script>
+  <script>
+    (function ensureKhbdDocxFallback() {
+      if (typeof window.createKhbdDocxDocument === "function" || typeof window.KHBD_DOCX !== "undefined") return;
+      var isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
+      var cdnDocx = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-docx.js";
+      document.write('<script src="' + (isLocal ? "js/khbd-docx.js" : cdnDocx) + '"><\/script>');
+    })();
+  </script>
+  <script>
+    (function () {
+      const isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
+      document.write(`<script src="${isLocal ? "js/khbd-pedagogy-catalog.js" : "https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260916-canvas-module-v9"}"><\/script>`);
+    })();
+  </script>
+  <script>
+    (function ensureKhbdPedagogyCatalogFallback() {
+      if (typeof window.KHBD_PEDAGOGY_CATALOG !== "undefined") return;
+      var isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
+      var cdnCatalog = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js";
+      document.write('<script src="' + (isLocal ? "js/khbd-pedagogy-catalog.js" : cdnCatalog) + '"><\/script>');
+    })();
+  </script>
 
   <!-- Fallback nhúng: khi host trả về file rỗng (0 bytes) hoặc lỗi mạng -->
   <script>

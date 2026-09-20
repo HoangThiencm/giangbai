@@ -1,310 +1,114 @@
-# PLAN: Liên Thông Tạo Bài Tập Sang Thi Trực Tuyến 1-Click & Bổ Sung Chế Độ Thi Cuốn Chiếu Chống Chụp Gửi AI
+# PLAN: Cứu Hộ Khung Prompt Mục Tiêu & Năng Lực Chuẩn CV 5512 Trên canvas_soankhbd.html
 
-## Hiện trạng
-1. **Tạo bài tập chưa có liên thông trực tiếp sang Thi trực tuyến**:
-   - Trong `taobaitap.html` (và bản sao `backupcode viettailieu/taobaitap.html`), sau khi AI sinh đề (CV 7991 17 câu hoặc trắc nghiệm 20 câu), giáo viên chỉ có các nút: `Xuất Mẫu CV 7991`, `Xuất 100% TN`, `.txt`, `LaTeX` và `DẠY NGAY` (trình chiếu).
-   - Chưa có nút chuyển trực tiếp sang `thitructuyen.html`. Giáo viên muốn tổ chức thi phải: Tải file Word/Text về máy $\rightarrow$ Mở trang `thitructuyen.html` $\rightarrow$ Tải file lên $\rightarrow$ Kiểm tra lại bảng đáp án $\rightarrow$ Mới có thể lưu đề. Quy trình này mất nhiều bước và dễ phát sinh lỗi định dạng.
-2. **Thi trực tuyến chưa có chế độ khắc chế chụp ảnh gửi AI**:
-   - Trong `thitructuyen.html`, giao diện làm bài của học sinh hiện cuộn dọc hiển thị toàn bộ danh sách câu hỏi một lúc.
-   - Học sinh ở nhà có thể dễ dàng dùng điện thoại thứ hai chụp ảnh màn hình từng câu gửi ChatGPT/Gemini/Photomath mà không gặp áp lực về thời gian vận hành.
-   - Thời gian làm bài đang mặc định là 45 phút, chưa có tùy chọn mặc định nhanh 15 phút (hoặc các nút chọn nhanh 15p, 20p, 30p, 45p) cho các bài kiểm tra 17–20 câu nhanh.
-   - Chưa có chế độ "Thi cuốn chiếu từng câu" (One-by-one mode) với giới hạn thời gian từng câu (45–50 giây/câu) và khóa quay lại câu cũ.
-   - Chưa có Watermark bảo mật in mờ thông tin học sinh chống chụp ảnh chia sẻ ra ngoài và gây nhiễu AI Vision OCR.
+## Hiện trạng & Nguyên nhân gốc rễ (Root Cause)
 
----
+1. **File `js/khbd-prompts.js` trên hosting `hoangthiencm.id.vn` bị rỗng (0 bytes)**:
+   - Khi chạy `canvas_soankhbd.html` trên môi trường Canvas (trỏ host `https://hoangthiencm.id.vn`), trang nạp file qua thẻ:
+     `<script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v18"></script>`
+   - Do sự cố truyền file FTP trước đó, file `js/khbd-prompts.js` trên hosting trả về HTTP 200 nhưng dung lượng đúng **0 bytes** (đã kiểm chứng qua HTTP request).
+   - Tương tự như file `js/khbd-pedagogy-catalog.js` từng bị 0 bytes trước đây, trình duyệt nạp xong file 0 bytes mà không báo lỗi, nhưng toàn bộ mã trong file không được thực thi.
 
-## Phạm vi
-1. **Liên thông 1-Click từ `taobaitap.html` sang `thitructuyen.html`**:
-   - Bổ sung nút **"🚀 THI TRỰC TUYẾN"** trên thanh nút hành động ở Bước 2 của `taobaitap.html` và `backupcode viettailieu/taobaitap.html` (nằm cạnh nút "DẠY NGAY").
-   - Hàm `startOnlineExam()`:
-     + Chuyển đổi toàn bộ câu hỏi trong state (`questions`) sang cấu trúc dữ liệu chuẩn của `thitructuyen.html` (hỗ trợ cả 3 phần CV 7991: `mc`, `tf` 4 ý $a-d$, `short_answer` điền số).
-     + Thiết lập tiêu đề theo chủ đề (`topics[0].name`), thời gian làm bài mặc định **15 phút**.
-     + Đóng gói vào `localStorage.setItem('thitructuyen_pending_import', ...)` và mở `thitructuyen.html?from=taobaitap` trong tab mới.
-2. **Tự động tiếp nhận và nạp đề tại `thitructuyen.html` (Đề mới & Đề cũ)**:
-   - Khi khởi chạy, `thitructuyen.html` kiểm tra gói dữ liệu `thitructuyen_pending_import` trong `localStorage`.
-   - Tự động nạp:
-     + Tên đề thi, định dạng đề (`cv7991` hoặc `standard_mc`), thời gian **15 phút** (kèm các nút chọn nhanh 15p, 20p, 30p, 45p).
-     + Toàn bộ danh sách câu hỏi và đáp án vào `allQuestions`.
-     + Tự động kích hoạt sẵn cờ `anti_ai_one_by_one: true` (chế độ thi cuốn chiếu).
-     + Bỏ qua Bước 1 (tải file) và chuyển thẳng vào Bước 2 (Xem lại & Cấu hình phòng thi).
-   - **Áp dụng cho cả đề cũ**: Trong danh sách đề thi của giáo viên (`TeacherDashboard`), khi bấm nút **"Sửa đề"** (icon bút chì), giáo viên có thể chỉnh sửa thời gian thành 15 phút, bật/tắt cờ `anti_ai_one_by_one` và `anti_ai_watermark`, rồi bấm "Lưu Đề" để cập nhật ngay cho học sinh.
-3. **Chế độ thi cuốn chiếu chống chụp gửi AI (One-by-one Mode)**:
-   - Thêm checkbox cấu hình trong modal cài đặt thi của giáo viên: `[x] Chế độ thi cuốn chiếu (Chống chụp gửi AI)`.
+2. **Hậu quả khiến phần Năng lực bị nhảy tào lao / mất cấu trúc**:
+   - `window.PROMPTS.GENERATE_OBJECTIVES` và hàm `window.getPromptTemplate` không hề tồn tại.
+   - Khi bấm tạo I. Mục tiêu (hoặc bấm nút "⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)"), hàm `executeStep` gọi `getPromptTemplate('GENERATE_OBJECTIVES', context)` trả về chuỗi rỗng `""`.
+   - Hàm `buildPedagogicalPrompt("")` chỉ còn lại hợp đồng đầu ra chung chung: *"NLS là Năng lực số... AI là Năng lực AI... BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (***...***)"*.
+   - **Gemini hoàn toàn không nhận được template yêu cầu**:
+     + Mất sạch yêu cầu mục `## 1. Về kiến thức` (YCCĐ chuẩn CT GDPT 2018).
+     + Mất sạch mục `### a) Năng lực chung` (Tự chủ và tự học, Giao tiếp và hợp tác, Giải quyết vấn đề và sáng tạo).
+     + Mất sạch mục `### b) Năng lực đặc thù môn học` (môn Toán: Tư duy và lập luận toán học, Mô hình hoá toán học...).
+     + Mất sạch các tiểu mục `### c) Năng lực số`, `### d) Năng lực AI` kèm mã chuẩn `[1-5].x.TC...` hay `[6-9].[A-D]...`.
+   - Kết quả là AI tự "bịa" cấu trúc tự do:
+     ```markdown
+     2. Năng lực:
+     - Năng lực tư duy và lập luận toán học: Phân biệt được các đối tượng...
+     - ***NLS: Sử dụng máy tính cầm tay...***
+     - ***AI: Sử dụng các phần mềm...***
+     ```
+   - Ngoài ra, ở khung xem trước KaTeX (cột phải), vì AI sinh gạch đầu dòng `- ***NLS:...***` nên Marked.js tạo thẻ `<li>`, logic tô màu đóng khung NLS/AI biến nội dung thành thẻ box nhưng để lại dấu gạch đầu dòng `- ` trơ trọi phía trước.
+   - Các hoạt động tiếp theo (Thiết bị, Khởi động, Hình thành kiến thức, Luyện tập, Vận dụng) cũng bị ảnh hưởng nặng vì toàn bộ prompt nghiệp vụ trong `khbd-prompts.js` bị mất.
 
-   - Giao diện làm bài của học sinh khi bật chế độ này:
-     + Chỉ hiển thị **duy nhất 1 câu hỏi tại một thời điểm**.
-     + Có thanh tiến trình hoặc đồng hồ mini đếm ngược riêng cho câu hiện tại: ví dụ bài 15 phút gồm 17 câu $\rightarrow$ mỗi câu có khoảng **50 giây** (hoặc 45 giây cho trắc nghiệm, 90 giây cho Đúng/Sai).
-     + Hết giờ câu đó hoặc bấm "Câu tiếp theo" $\rightarrow$ tự động chuyển sang câu tiếp theo và **khóa vĩnh viễn không cho quay lại câu cũ (No Backtrack)**.
-     + Đến câu cuối cùng, nút chuyển thành "Nộp bài".
-     + Lưu tạm tiến trình `currentQuestionIndex` và `answers` vào `localStorage` để chống mất dữ liệu khi học sinh vô tình tải lại trang.
-4. **Watermark bảo mật chống chụp màn hình (Anti-OCR)**:
-   - Khi học sinh làm bài, hiển thị một lớp watermark chìm mờ chạy chéo màn hình với thông tin: `[Họ tên học sinh] - [SBD / Lớp] - [Thời gian thi]`.
-   - Vừa răn đe học sinh không chụp ảnh gửi ra ngoài, vừa tạo nhiễu quang học làm AI Vision OCR đọc sai công thức toán học khi chụp qua màn hình máy tính.
-5. **Cứu hộ triệt để catalog PPDH/KTDH trên `canvas_soankhbd.html`**:
-   - Nâng cấp hàm fallback `ensureKhbdPedagogyCatalogFallback()` trong `canvas_soankhbd.html`: Nếu file `js/khbd-pedagogy-catalog.js` trên hosting bị rỗng (0 bytes) hoặc lỗi mạng, tự động nạp dự phòng ngay từ CDN GitHub jsDelivr (`https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js`).
-   - Giúp bảng PPDH, KTDH 4 pha và Hoạt động môn học luôn hiển thị đầy đủ 100% trên web `hoangthiencm.id.vn` mà không bao giờ bị trắng trơn.
-6. **Kiểm thử tự động**:
-   - Tạo file test `tests/taobaitap-thitructuyen-bridge-smoke.js` kiểm tra toàn bộ luồng đóng gói, chuyển đổi dữ liệu, tiếp nhận tại `thitructuyen`, và các cờ cấu hình thi cuốn chiếu.
-   - Cập nhật `tests/canvas-soankhbd-smoke.js` kiểm tra fallback CDN của catalog PPDH.
+3. **Thiếu cơ chế CDN Fallback cho `khbd-prompts.js`**:
+   - Trước đây trong `canvas_soankhbd.html` chỉ mới bổ sung `ensureKhbdPedagogyCatalogFallback()` cho `khbd-pedagogy-catalog.js` (nạp từ CDN jsDelivr `https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js`).
+   - Chưa hề có `ensureKhbdPromptsFallback()` để tự động nạp `khbd-prompts.js` từ CDN GitHub jsDelivr (`https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js` - file trên GitHub hiện đang có đầy đủ 156KB).
+   - Đoạn guard `if (typeof window.PROMPTS === "undefined")` ở dòng 1242 chỉ gán một object cụt gồm `OUTPUT_CONTRACT` và `ENGLISH_ELT_DIRECTIVE`, vô tình làm che giấu sự thiếu hụt của toàn bộ kho prompt mà không kích hoạt tải lại.
 
 ---
 
-## Ngoài phạm vi
-- Không thay đổi các prompt sinh câu hỏi AI cốt lõi trong `taobaitap.html`.
-- Không can thiệp hay thay đổi API backend MySQL / Google Drive trong `api/exam.php`.
-- Không thay đổi cách chấm điểm chuẩn CV 7991 đã hoàn thiện.
+## Phạm vi thực hiện
+
+1. **Thêm cơ chế tự cứu hộ CDN jsDelivr cho `khbd-prompts.js` trên `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`**:
+   - Ngay sau khối nạp `js/khbd-prompts.js`, thêm hàm `ensureKhbdPromptsFallback()`:
+     Kiểm tra nếu `typeof window.getPromptTemplate !== "function" || !window.PROMPTS || !window.PROMPTS.GENERATE_OBJECTIVES`, lập tức dùng `document.write` nạp dự phòng từ CDN GitHub jsDelivr:
+     `https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js`
+   - Đảm bảo khi file trên hosting bị rỗng (0 bytes) hoặc lỗi mạng, trình duyệt sẽ tự động tải file đầy đủ 156KB từ CDN GitHub jsDelivr, phục hồi 100% kho siêu prompt sư phạm.
+
+2. **Thêm cơ chế tự cứu hộ CDN jsDelivr cho `khbd-docx.js` (phòng ngừa rủi ro tương tự)**:
+   - Thêm `ensureKhbdDocxFallback()` kiểm tra `typeof window.createKhbdDocxDocument !== "function"` để nạp từ CDN jsDelivr nếu hosting bị lỗi 0 bytes.
+
+3. **Cải tiến `guardGeminiLessonOutput` / `applyObjectivesOutput` & Preview Rendering**:
+   - Trong `js/khbd-app.js`, tại `applyObjectivesOutput`, nếu phát hiện AI trả về cấu trúc thiếu Năng lực chung (`### a) Năng lực chung`) hoặc thiếu tiêu đề Năng lực đặc thù (`### b) Năng lực đặc thù`), tự động chuẩn hóa hoặc kích hoạt tái tạo lại bằng prompt cứng chuẩn.
+   - Tại `applyLiteralListMarkers` / `applyIntegrationPreviewColors` trong `js/khbd-app.js`: Xử lý trường hợp `li` chứa badge NLS/AI dạng inline để loại bỏ dấu gạch ngang đầu dòng bị trơ trọi `- `.
+
+4. **Kiểm thử tự động**:
+   - Bổ sung test case trong `tests/canvas-prompts-integrity-smoke.js` kiểm tra sự hiện diện của `ensureKhbdPromptsFallback`, kiểm tra template `GENERATE_OBJECTIVES` có đủ các section:
+     + `### a) Năng lực chung`
+     + `### b) Năng lực đặc thù môn học`
+     + `{digital_objectives_section}`
+     + `{ai_objectives_section}`
+   - Bổ sung test trong `tests/canvas-soankhbd-smoke.js` xác nhận cả hai file HTML (`canvas_soankhbd.html` và bản backup) đều có fallback CDN jsDelivr cho cả `khbd-prompts.js`, `khbd-pedagogy-catalog.js` và `khbd-docx.js`.
+   - Chạy toàn bộ test suite để đảm bảo không gãy bất kỳ bài kiểm thử nào.
 
 ---
 
 ## File dự kiến tác động
-1. `taobaitap.html`
-2. `backupcode viettailieu/taobaitap.html`
-3. `thitructuyen.html`
-4. `access-control.js`
-5. `canvas_soankhbd.html`
-6. `tests/taobaitap-thitructuyen-bridge-smoke.js`
-7. `tests/canvas-soankhbd-smoke.js`
+1. `canvas_soankhbd.html`
+2. `backupcode viettailieu/canvas_soankhbd.html`
+3. `js/khbd-app.js`
+4. `tests/canvas-prompts-integrity-smoke.js`
+5. `tests/canvas-soankhbd-smoke.js`
 
 ---
 
-## Khắc phục triệt để lỗi Mở ra trang trắng (White Screen Fix)
+## Các bước Coder triển khai chi tiết
 
-### Nguyên nhân gây trang trắng khi mở từ `taobaitap.html`:
-1. **Lỗi `TypeError: text.replace is not a function` trong `cleanOptionText` & `cleanQuestionPrefix`**:
-   Tại dòng 715 và 721 của `thitructuyen.html`, hai hàm này gọi trực tiếp `text.replace(...)` mà không ép chuỗi an toàn.
-   Khi câu hỏi hoặc các phương án trắc nghiệm là dạng số (ví dụ câu hỏi toán học có các phương án là số nguyên `1, 2, 3, 10` hoặc số thực do AI sinh ra), biểu thức `if (!text)` trả về `false` đối với các số khác 0 (ví dụ `!1 === false`), dẫn đến gọi `(1).replace(...)` và lập tức quăng ngoại lệ `TypeError: text.replace is not a function`.
-   Lỗi này xảy ra trực tiếp bên trong `QuestionEditor` (dòng 1216) và cột tổng hợp tóm tắt `<MathText text={cleanOptionText(o)} />` (dòng 2595).
-2. **Lỗi `TypeError: processedText.split is not a function` trong `MathText`**:
-   Tại dòng 746 của `thitructuyen.html`, gọi `processedText.split(...)` mà không ép kiểu chuỗi. Nếu nội dung câu hỏi hoặc đáp án là kiểu số hoặc chưa ép chuỗi, hàm sẽ ném ngoại lệ tương tự.
-3. **Thiếu React ErrorBoundary khiến React 18 unmount toàn bộ DOM thành trang trắng**:
-   Trong React 18, khi xảy ra lỗi `TypeError` unhandled trong quá trình render mà không có thẻ `<ErrorBoundary>` bọc bên ngoài, React sẽ unmount toàn bộ cây component và xóa trắng thẻ `<div id="root"></div>`, gây hiện tượng màn hình trắng tinh 100% không để lại thông báo gì cho người dùng.
-4. **Trình duyệt lưu cache bản cũ `access-control.js?v=20260627-examid-case`**:
-   Tại dòng 44 của `thitructuyen.html`, thẻ nạp script vẫn để query version cũ `access-control.js?v=20260627-examid-case`. Trình duyệt đã từng mở web sẽ dùng lại file cache cũ (chưa có miễn trừ `from=taobaitap`), dẫn đến việc kiểm tra token và chuyển hướng/chặn truy cập. Cần tăng cache-buster thành `access-control.js?v=20260919-taobaitap-bridge`.
-5. **Khởi tạo bất đồng bộ gây nhấp nháy `TeacherDashboard`**:
-   Trong component `App`, state `view` khởi tạo mặc định là `"dashboard"`. Phải đến khi `useEffect` kích hoạt thì mới chuyển sang `"create"`. Cần khởi tạo ngay trong `useState` bằng lazy initializer để `editingData` và `view = "create"` có hiệu lực ngay trong tick render đầu tiên.
-6. **Khởi tạo `pages` và `activePageId` trong `HybridExamCreator`**:
-   Trong `HybridExamCreator`, các state `pages`, `pageQuestions`, `activePageId` cần được khởi tạo ngay trong `useState` nếu có `initialData.questions`, giúp Step 2 hiển thị đầy đủ 17 câu ngay lập tức mà không phải chờ `useEffect`.
-
-### Giải pháp kỹ thuật:
-1. **Trong `thitructuyen.html` — Sửa `cleanOptionText`, `cleanQuestionPrefix` và `MathText`**:
-   ```javascript
-   const cleanOptionText = (text) => {
-       const str = String(text ?? "").trim();
-       if (!str) return "";
-       return str.replace(/^([A-Da-d0-9]+)([\.\)\:\-])\s*/, '').replace(/\n/g, ' ').trim();
-   };
-
-   const cleanQuestionPrefix = (text) => {
-       const str = String(text ?? "").trim();
-       if (!str) return "";
-       return str.replace(/^(Câu|Bài|Question)\s*\d+[\.\:\)]\s*/i, '');
-   };
-   ```
-   Trong `MathText`:
-   ```javascript
-   const formatTextMode = (str) => {
-       const s = String(str ?? '');
-       if (!s) return '';
-       let formatted = s.replace(/\\textbf\{([^\}]+)\}/g, '<span class="tex-bold">$1</span>');
-       formatted = formatted.replace(/\\textit\{([^\}]+)\}/g, '<span class="tex-italic">$1</span>');
-       formatted = formatted.replace(/\n/g, '<br/>');
-       return formatted;
-   };
-
-   const processedText = useMemo(() => {
-       const raw = String(text ?? '');
-       return cleanPrefix ? cleanQuestionPrefix(raw) : raw;
-   }, [text, cleanPrefix]);
-
-   useEffect(() => {
-       if (!processedText || !ref.current) return;
-       const el = ref.current;
-       el.innerHTML = '';
-       const parts = String(processedText).split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
-       ...
-   ```
-2. **Trong `thitructuyen.html` — Bổ sung component `ErrorBoundary`**:
-   Tạo component ErrorBoundary bọc ngoài `<App />`:
-   ```javascript
-   class ErrorBoundary extends React.Component {
-       constructor(props) {
-           super(props);
-           this.state = { hasError: false, error: null };
-       }
-       static getDerivedStateFromError(error) {
-           return { hasError: true, error };
-       }
-       componentDidCatch(error, errorInfo) {
-           console.error("[thitructuyen] ErrorBoundary caught error:", error, errorInfo);
-       }
-       render() {
-           if (this.state.hasError) {
-               return (
-                   <div className="flex h-screen items-center justify-center bg-gray-50 flex-col p-6 text-center">
-                       <div className="max-w-md bg-white p-6 rounded-xl shadow-lg border border-red-200">
-                           <div className="text-red-600 text-3xl mb-3"><i className="fas fa-exclamation-triangle"></i></div>
-                           <h2 className="text-lg font-bold text-gray-800 mb-2">Đã xảy ra lỗi hiển thị</h2>
-                           <p className="text-sm text-gray-600 mb-4">{this.state.error?.message || "Không thể tải giao diện"}</p>
-                           <div className="flex gap-2 justify-center">
-                               <button type="button" onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700">Tải lại trang</button>
-                               <button type="button" onClick={() => { try { localStorage.removeItem("thitructuyen_pending_import"); } catch {} window.location.href = "taobaitap.html"; }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">Về Tạo bài tập</button>
-                           </div>
-                       </div>
-                   </div>
-               );
-           }
-           return this.props.children;
-       }
-   }
-   ```
-   Render: `root.render(<ErrorBoundary><App /></ErrorBoundary>);`
-3. **Trong `thitructuyen.html` — Khởi tạo đồng bộ state trong `App`**:
-   ```javascript
-   const App = () => {
-       const studentExamId = useMemo(() => readStudentExamId(), []);
-       const isFromTaobaitap = new URLSearchParams(window.location.search).get('from') === 'taobaitap';
-       const [editingData, setEditingData] = useState(() => {
-           if (studentExamId) return null;
-           try {
-               const raw = localStorage.getItem("thitructuyen_pending_import");
-               if (!raw) return null;
-               const pending = JSON.parse(raw);
-               if (!pending || !Array.isArray(pending.questions) || !pending.questions.length) return null;
-               localStorage.removeItem("thitructuyen_pending_import");
-               return {
-                   questions: pending.questions,
-                   info: {
-                       title: pending.title || "Đề thi từ Tạo bài tập",
-                       duration: Number(pending.duration) > 0 ? Number(pending.duration) : 15,
-                       duration_mins: Number(pending.duration) > 0 ? Number(pending.duration) : 15,
-                       exam_format: pending.exam_format || "standard_mc",
-                       anti_ai_one_by_one: pending.anti_ai_one_by_one !== false,
-                       anti_ai_watermark: pending.anti_ai_watermark !== false,
-                       matrixConfig: {
-                           anti_ai_one_by_one: pending.anti_ai_one_by_one !== false,
-                           anti_ai_watermark: pending.anti_ai_watermark !== false
-                       }
-                   }
-               };
-           } catch {
-               try { localStorage.removeItem("thitructuyen_pending_import"); } catch {}
-               return null;
-           }
-       });
-       const [view, setView] = useState(() => (editingData || isFromTaobaitap) ? "create" : "dashboard");
-       const [selectedId, setSelectedId] = useState(studentExamId);
-       const userEmail = localStorage.getItem('userEmail')
-           || ((isFromTaobaitap || editingData) ? 'giaovien@giangbai.local' : null);
-   ```
-4. **Trong `thitructuyen.html` — Khởi tạo đồng bộ state trong `HybridExamCreator`**:
-   ```javascript
-   const [pages, setPages] = useState(() => {
-       if (initialData && Array.isArray(initialData.questions) && initialData.questions.length) {
-           return [{ id: "imported", page_index: 1, image_data: null, status: "done", q_count: initialData.questions.length }];
-       }
-       return [];
-   });
-   const [pageQuestions, setPageQuestions] = useState(() => {
-       if (initialData && Array.isArray(initialData.questions) && initialData.questions.length) {
-           return { ["imported"]: initialData.questions.map((q, i) => ({ ...q, id: Date.now() + i })) };
-       }
-       return {};
-   });
-   const [activePageId, setActivePageId] = useState(() => {
-       if (initialData && Array.isArray(initialData.questions) && initialData.questions.length) {
-           return "imported";
-       }
-       return null;
-   });
-   ```
-5. **Cập nhật cache-buster tag tại dòng 44**:
-   Đổi từ `access-control.js?v=20260627-examid-case` sang `access-control.js?v=20260919-taobaitap-bridge`.
-
-
-## Các bước thực hiện
-
-### Bước 1: Nâng cấp `taobaitap.html` và `backupcode viettailieu/taobaitap.html`
-1. Viết hàm chuyển đổi `mapToThiTrucTuyenPayload(questions, topics, synthForm)`:
-   - Duyệt qua `questions` và chuẩn hóa:
-     + `multiple-choice` $\rightarrow$ `{ id, type: 'mc', question, options, correct_index, explanation }`.
-     + `true-false` (CV 7991) $\rightarrow$ `{ id, type: 'tf', question, options: 4 ý a-d, correct_answers: [4 boolean], explanation }`.
-     + `short-answer` $\rightarrow$ `{ id, type: 'short_answer', question, correct_answer: String(clean), explanation }`.
-   - Thiết lập `duration: 15` (mặc định 15 phút), `exam_format: (synthForm === 'cv7991' ? 'cv7991' : 'standard_mc')`.
-   - Bật cờ `anti_ai_one_by_one: true` và `anti_ai_watermark: true`.
-2. Viết hàm `startOnlineExam()`:
-   - Kiểm tra có câu hỏi hay chưa.
-   - Lưu payload vào `localStorage.setItem('thitructuyen_pending_import', JSON.stringify(payload))`.
-   - Mở cửa sổ mới: `window.open('thitructuyen.html?from=taobaitap', '_blank')`.
-3. Thêm nút bấm **"🚀 THI TRỰC TUYẾN"** bên cạnh nút "DẠY NGAY" ở Bước 2.
-4. Đồng bộ 100% sang `backupcode viettailieu/taobaitap.html`.
-
-### Bước 2: Nâng cấp `thitructuyen.html` — Tiếp nhận đề 1-Click
-1. Trong component tạo đề (`CreateExamModal` hoặc màn hình tạo đề):
-   - Thêm `useEffect` kiểm tra `localStorage.getItem('thitructuyen_pending_import')`.
-   - Nếu có: parse JSON, cập nhật `examInfo` (`title`, `duration: 15`, `exam_format`, `anti_ai_one_by_one: true`, `anti_ai_watermark: true`), nạp `allQuestions`, xóa key trong `localStorage` và đặt `setStep(2)` (nhảy thẳng vào xem lại / cấu hình).
-2. Thêm các nút chọn nhanh thời gian tại ô nhập `duration`: `[15p]`, `[20p]`, `[30p]`, `[45p]`.
-3. Thêm checkbox cấu hình: `Chế độ thi cuốn chiếu từng câu (Chống chụp gửi AI)` và `Watermark bảo mật`.
-
-### Bước 3: Nâng cấp `thitructuyen.html` — Giao diện làm bài thi cuốn chiếu & Watermark
-1. Khi `exam.info.anti_ai_one_by_one` bật:
-   - Thêm state `currentQuestionIdx` (mặc định 0).
-   - Chỉ render thẻ câu hỏi tại `shuffledQuestions[currentQuestionIdx]`.
-   - Thanh header hiển thị: `Câu [currentQuestionIdx + 1] / [shuffledQuestions.length]`.
-   - Đồng hồ đếm ngược từng câu: Phân bổ `Math.floor((examInfo.duration * 60) / shuffledQuestions.length)` giây cho mỗi câu (ví dụ 15 phút cho 17 câu $\approx$ 52 giây/câu).
-   - Khi hết thời gian câu hoặc học sinh bấm "Câu tiếp theo" $\rightarrow$ tự động chuyển `currentQuestionIdx + 1`, **không có nút quay lại**.
-   - Tại câu cuối cùng $\rightarrow$ nút "Nộp bài".
-2. Watermark bảo mật:
-   - Nếu `anti_ai_watermark` bật: Render container cố định `pointer-events-none fixed inset-0 z-40` với chữ chìm mờ in tên học sinh, SBD và ngày giờ thi xoay góc -25 độ lặp lại trên nền màn hình.
-
-### Bước 4: Nâng cấp Fallback tự cứu hộ trong `canvas_soankhbd.html`
-1. Tại hàm `ensureKhbdPedagogyCatalogFallback()` ([canvas_soankhbd.html:1139](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/canvas_soankhbd.html#L1139)):
-   - Nếu sau khi nạp từ hosting mà `typeof window.KHBD_PEDAGOGY_CATALOG === "undefined"`:
-     Tự động nạp dự phòng từ CDN GitHub jsDelivr:
-     ```javascript
-     var cdnCatalog = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js";
-     document.write('<script src="' + (isLocal ? "js/khbd-pedagogy-catalog.js" : cdnCatalog) + '"><\/script>');
-     ```
-   - Nhờ vậy, ngay cả khi file `js/khbd-pedagogy-catalog.js` trên hosting bị rỗng 0 bytes, trình duyệt vẫn kéo đủ 66 KB catalog từ CDN về và render đầy đủ 100% PPDH/KTDH.
-
-### Bước 5: Kiểm thử tự động
-1. Tạo file kiểm thử `tests/taobaitap-thitructuyen-bridge-smoke.js`:
-   - Kiểm tra sự hiện diện và chức năng của nút "THI TRỰC TUYẾN" và hàm đóng gói trong `taobaitap.html` (cả 2 bản).
-   - Kiểm tra hàm tiếp nhận đề `thitructuyen_pending_import`, thời gian mặc định 15 phút, và cờ `anti_ai_one_by_one` trong `thitructuyen.html`.
-   - Kiểm tra UI thi cuốn chiếu, logic khóa không cho quay lại câu trước, và watermark.
-2. Cập nhật `tests/canvas-soankhbd-smoke.js` kiểm tra assert CDN fallback của catalog.
-3. Chạy toàn bộ các test suite liên quan:
-   ```powershell
-   node tests/taobaitap-thitructuyen-bridge-smoke.js
-   node tests/canvas-soankhbd-smoke.js
-   node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js
-   node tests/taobaitap-plan-smoke.js
-   ```
-
-
----
-
-## Rủi ro
-1. **Học sinh tải lại trang khi đang thi cuốn chiếu**:
-   - Khắc phục: Lưu `currentQuestionIdx` và thời gian câu hỏi vào `localStorage` theo từng `examId` để khi F5 trang web vẫn phục hồi đúng câu đang làm, không cho làm lại các câu đã qua.
-2. **Khác biệt cấu trúc dữ liệu Đúng/Sai và Điền số**:
-   - Cần đảm bảo hàm `mapToThiTrucTuyenPayload` xuất đúng `options` 4 ý và `correct_answers` dạng boolean cho `tf`, và `correct_answer` dạng chuỗi sạch cho `short_answer`.
-
----
-
-## Cách kiểm thử
-Chạy các lệnh terminal:
-```powershell
-node tests/taobaitap-thitructuyen-bridge-smoke.js
-node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js
-node tests/taobaitap-plan-smoke.js
+### Bước 1: Thêm `ensureKhbdPromptsFallback` vào `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`
+- Vị trí: Ngay sau script nạp `khbd-prompts.js` (khoảng dòng 1124).
+- Nội dung:
+```html
+  <script>
+    (function ensureKhbdPromptsFallback() {
+      if (typeof window.getPromptTemplate === "function" && window.PROMPTS && window.PROMPTS.GENERATE_OBJECTIVES) return;
+      var isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
+      var cdnPrompts = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js";
+      document.write('<script src="' + (isLocal ? "js/khbd-prompts.js" : cdnPrompts) + '"><\/script>');
+    })();
+  </script>
 ```
 
----
+### Bước 2: Thêm `ensureKhbdDocxFallback` vào `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`
+- Vị trí: Ngay sau script nạp `khbd-docx.js`.
+- Nội dung:
+```html
+  <script>
+    (function ensureKhbdDocxFallback() {
+      if (typeof window.createKhbdDocxDocument === "function" || typeof window.KHBD_DOCX !== "undefined") return;
+      var isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
+      var cdnDocx = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-docx.js";
+      document.write('<script src="' + (isLocal ? "js/khbd-docx.js" : cdnDocx) + '"><\/script>');
+    })();
+  </script>
+```
 
-## Tiêu chí nghiệm thu
-1. Trên `taobaitap.html` (và bản backup): Xuất hiện nút **"🚀 THI TRỰC TUYẾN"**; khi bấm sẽ đóng gói đầy đủ 17 câu CV 7991 hoặc 20 câu TN kèm đáp án chính xác sang `localStorage` và mở `thitructuyen.html`.
-2. Trên `thitructuyen.html`: Tự động đón nhận đề thi, điền sẵn thời gian mặc định là **15 phút** (có các nút chọn nhanh 15p, 20p, 30p, 45p), nạp toàn bộ câu hỏi và đáp án vào Bước 2 mà không cần bấm tải file.
-3. Khi bật "Chế độ thi cuốn chiếu": Màn hình thi hiển thị từng câu, có đồng hồ đếm ngược từng câu (~45–52s/câu), hết giờ hoặc bấm câu tiếp sẽ khóa vĩnh viễn không cho quay lại câu cũ.
-4. Lớp Watermark bảo mật hiển thị mờ thông tin học sinh trên màn hình làm bài.
-5. Toàn bộ smoke test kiểm thử liên thông và CV 7991 pass 100%.
+### Bước 3: Cải thiện nhận diện cấu trúc Năng lực trong `js/khbd-app.js`
+- Tại `isOffTopicObjectivesHallucination(text)`:
+  Nếu text thiếu cả `năng lực chung` lẫn `năng lực đặc thù`, đánh dấu là thiếu chuẩn để kích hoạt tái tạo với prompt cứng đầy đủ.
+- Tại bộ render preview `applyLiteralListMarkers`:
+  Xử lý khi nội dung item chỉ là badge NLS/AI để không render bullet `- ` trơ trọi.
 
+### Bước 4: Viết và chạy kiểm thử tự động
+- Chạy:
+  `node tests/canvas-prompts-integrity-smoke.js`
+  `node tests/canvas-soankhbd-smoke.js`
+  `node tests/khbd-competencies-smoke.js`
+  `node tests/khbd-nls-ai-bold-italic-smoke.js`
+- Xác nhận 100% tests PASS.
