@@ -70,7 +70,9 @@ for (const rel of pages) {
   assert.match(html, /ENGLISH_ELT_DIRECTIVE:/, rel + " supplies English directive fallback");
   assert.match(html, /ensureKhbdPromptsFallback/, rel + " has ensureKhbdPromptsFallback CDN rescue");
   assert.match(html, /cdn\.jsdelivr\.net\/gh\/HoangThiencm\/giangbai@main\/js\/khbd-prompts\.js/, rel + " prompts fallback uses jsDelivr CDN");
-  assert.match(html, /window\.PROMPTS\.GENERATE_OBJECTIVES/, rel + " prompts fallback guards GENERATE_OBJECTIVES");
+  assert.match(html, /typeof getPromptTemplate === "function"/, rel + " prompts fallback guards lexical getPromptTemplate");
+  assert.match(html, /typeof window\.getPromptTemplate === "function"/, rel + " prompts fallback guards window.getPromptTemplate");
+  assert.match(promptsSource, /\(function\s*\(\s*global\s*\)\s*\{/, "khbd-prompts.js wraps in IIFE (function (global))");
 }
 
 assert.match(promptsSource, /GENERATE_OBJECTIVES:\s*`/, "PROMPTS defines GENERATE_OBJECTIVES template");

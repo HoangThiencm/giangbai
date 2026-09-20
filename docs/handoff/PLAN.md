@@ -1,83 +1,107 @@
-# PLAN: Khắc Phục Triệt Để [GLOBAL] Script error Do Tải Trùng Lặp Thư Viện & Race Condition Fallback
+# PLAN: Khắc Phục Triệt Để SyntaxError: Identifier 'DocxGenerator' has already been declared
 
 ## Hiện trạng & Phân tích nguyên nhân gốc rễ (Root Cause)
 
-1. **Lỗi `[GLOBAL] Script error.` xuất hiện khi tải `canvas_soankhbd.html`:**
-   - Trong `canvas_soankhbd.html` (và `backupcode viettailieu/canvas_soankhbd.html`), đoạn mã nạp `khbd-prompts.js`, `khbd-docx.js`, `khbd-pedagogy-catalog.js` đang dùng 2 thẻ script liên tiếp:
-     ```html
-     <script>
-       document.write(`<script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?..."><\/script>`);
-     </script>
-     <script>
-       (function ensureKhbdPromptsFallback() {
-         if (typeof window.getPromptTemplate === "function" && window.PROMPTS) return;
-         var cdnPrompts = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js";
-         document.write('<script src="' + cdnPrompts + '"><\/script>');
-       })();
-     </script>
+1. **Lỗi `SyntaxError: Identifier 'DocxGenerator' has already been declared` tại runtime:**
+   - Trình duyệt báo lỗi chính xác: `DocxGenerator` đã được khai báo trước đó nhưng lại bị khai báo lại trong cùng môi trường Script.
+
+2. **Tại sao chốt kiểm tra trước đó bị lọt?**
+   - File `https://hoangthiencm.id.vn/js/khbd-docx.js` trên hosting là file đã qua đóng gói/obfuscate, trong đó khai báo:
+     ```javascript
+     class DocxGenerator { ... }
+     const docxGenerator = new DocxGenerator();
      ```
-   - **Cơ chế gây lỗi (Race Condition)**:
-     - Khi gọi `document.write` nạp file từ host `hoangthiencm.id.vn`, trình duyệt bắt đầu gửi yêu cầu tải mạng (bất đồng bộ).
-     - Thẻ `<script>` thứ hai chứa hàm `ensureKhbdPromptsFallback()` được trình duyệt thực thi **NGAY LẬP TỨC** khi file từ host chưa kịp tải xong!
-     - Tại thời điểm đó, `window.getPromptTemplate` vẫn là `undefined`!
-     - Do đó, `ensureKhbdPromptsFallback()` tưởng host bị lỗi và gọi tiếp `document.write` lần 2 để tải file dự phòng từ CDN jsDelivr!
-     - Hệ quả: **Cả 2 file cùng tải về và cùng chạy trên window**:
-       * File 1 chạy khai báo: `const LATEX_SPACING_BAN = ...;`, `const ACTIVITY_TABLE_CONTRACT = ...;`, `const PROMPTS = ...;`.
-       * File 2 chạy sau đè lên phạm vi toàn cục:
-         $\rightarrow$ `Uncaught SyntaxError: Identifier 'LATEX_SPACING_BAN' has already been declared`.
-       * Hiện tượng tương tự xảy ra ở `khbd-docx.js` (`class DocxGenerator` khai báo lần 2 $\rightarrow$ SyntaxError) và `khbd-pedagogy-catalog.js` (`const KHBD_PEDAGOGY_CATALOG` $\rightarrow$ SyntaxError).
-     - Vì file nạp từ CDN jsDelivr khác domain (cross-origin) và không có thuộc tính `crossorigin="anonymous"`, trình duyệt bảo mật che giấu chi tiết lỗi và bắn sự kiện ra `window.onerror` thành:
-       **`[GLOBAL] Script error.`**!
+   - Trong chuẩn JavaScript ES6 (ECMAScript 2015+):
+     + Khai báo `class` và `const` ở top-level của một script nằm trong **Script Lexical Scope**, **KHÔNG tự động gán vào thuộc tính của `window`**!
+     + Tức là: `typeof DocxGenerator !== "undefined"` và `typeof docxGenerator !== "undefined"` là TRUE, nhưng `typeof window.DocxGenerator` và `typeof window.docxGenerator` lại là `"undefined"`!
+   - Trong `canvas_soankhbd.html`:
+     + Script primary tải `khbd-docx.js` từ host.
+     + Sau khi tải xong, `onload` gọi `ensureKhbdDocxFallback()`.
+     + Hàm này kiểm tra:
+       `if (typeof window.docxGenerator !== "undefined" || typeof window.DocxGenerator !== "undefined") return;`
+     + Vì `window.docxGenerator` là `"undefined"`, điều kiện `if` bị **FAIL (không return)**!
+     + Hàm tiếp tục gọi `document.write` nạp file `khbd-docx.js` lần thứ 2 từ CDN jsDelivr!
+   - Khi file thứ hai tải về:
+     + Dù trong file có `if (typeof window !== "undefined" && window.DocxGenerator)`, điều kiện này vẫn sai (vì không có trên `window`).
+     + Quan trọng hơn: Trong JS, khai báo top-level `class DocxGenerator` được parser phân tích trước khi code chạy. Parser thấy `DocxGenerator` đã tồn tại trong Script Lexical Scope từ file thứ nhất $\rightarrow$ Ném ngay lập tức:
+       **`SyntaxError: Identifier 'DocxGenerator' has already been declared`**!
 
 ---
 
-## Giải pháp Triển khai Toàn diện
+## Giải pháp Triển khai Toàn diện cho Coder
 
-### 1. Bảo vệ Idempotent (Chống Tải Lặp) trong các File Thư Viện JS
-Thêm chốt bảo vệ ở đầu mỗi file để nếu script có bị gọi 2 lần thì lần thứ 2 tự động return an toàn, không bao giờ ném lỗi SyntaxError:
-- **`js/khbd-prompts.js`**:
-  Thêm vào đầu file:
-  ```javascript
-  if (typeof window !== "undefined" && window.__KHBD_PROMPTS_LOADED__) {
-    // Đã nạp thành công trước đó, bỏ qua để không khai báo lại const toàn cục
-  } else {
-    if (typeof window !== "undefined") window.__KHBD_PROMPTS_LOADED__ = true;
-    // Toàn bộ mã nguồn khbd-prompts.js
+### 1. Đóng gói IIFE cho `js/khbd-docx.js` (Bảo vệ tuyệt đối khỏi va chạm Lexical Scope)
+Bọc toàn bộ nội dung `js/khbd-docx.js` vào IIFE để `class DocxGenerator` nằm trong function scope, không bao giờ bị parser đụng độ với global lexical scope:
+```javascript
+(function (global) {
+  if (typeof global.DocxGenerator !== "undefined" || typeof global.docxGenerator !== "undefined" || (typeof DocxGenerator !== "undefined" && typeof docxGenerator !== "undefined")) {
+    return;
   }
-  ```
-  (Đồng thời các hằng số dùng `var` hoặc gán vào `window`/`globalThis` để an toàn tuyệt đối).
 
-- **`js/khbd-docx.js`**:
-  Thêm chốt ở đầu file:
-  ```javascript
-  if (typeof window !== "undefined" && (window.docxGenerator || window.DocxGenerator)) {
-    // Đã có DocxGenerator, không khai báo lại
+  class DocxGenerator {
+    // ... toàn bộ nội dung DocxGenerator ...
   }
-  ```
 
-- **`js/khbd-pedagogy-catalog.js`**:
-  Thêm chốt ở đầu file:
-  ```javascript
-  if (typeof window !== "undefined" && window.KHBD_PEDAGOGY_CATALOG) {
-    // Đã có KHBD_PEDAGOGY_CATALOG, không khai báo lại
+  const docxGenerator = new DocxGenerator();
+
+  global.DocxGenerator = DocxGenerator;
+  global.docxGenerator = docxGenerator;
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { DocxGenerator, docxGenerator };
   }
+})(typeof window !== "undefined" ? window : globalThis);
+```
+
+### 2. Đóng gói IIFE tương tự cho `js/khbd-prompts.js` và `js/khbd-pedagogy-catalog.js`
+- **`js/khbd-prompts.js`**: Bọc toàn bộ vào IIFE `(function (global) { ... })(typeof window !== "undefined" ? window : globalThis);`.
+  Kiểm tra đầu file:
+  `if (typeof global.getPromptTemplate === "function" && global.PROMPTS && global.PROMPTS.GENERATE_OBJECTIVES) return;`
+  Các biến `const LATEX_SPACING_BAN`, `const ACTIVITY_TABLE_CONTRACT` nằm trong IIFE sẽ không bao giờ bị lỗi `already been declared` dù file có nạp lại.
+  Xuất ra `global.PROMPTS = PROMPTS;`, `global.getPromptTemplate = getPromptTemplate;`...
+- **`js/khbd-pedagogy-catalog.js`**: Bọc toàn bộ vào IIFE `(function (global) { ... })(typeof window !== "undefined" ? window : globalThis);`.
+  Kiểm tra đầu file:
+  `if (typeof global.KHBD_PEDAGOGY_CATALOG !== "undefined") return;`
+  Xuất ra `global.KHBD_PEDAGOGY_CATALOG = KHBD_PEDAGOGY_CATALOG;`.
+
+### 3. Sửa Guard trong `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`
+Trong cả 2 file HTML, sửa guard trong các hàm fallback để kiểm tra cả phạm vi biến tự do (lexical) lẫn `window`:
+- `ensureKhbdPromptsFallback`:
+  ```javascript
+  window.ensureKhbdPromptsFallback = function ensureKhbdPromptsFallback() {
+    if ((typeof window.getPromptTemplate === "function" && window.PROMPTS) || (typeof getPromptTemplate === "function")) return;
+    document.write('<script src="' + (isLocal ? "js/khbd-prompts.js" : cdnPrompts) + '" crossorigin="anonymous"><\/script>');
+  };
+  ```
+- `ensureKhbdDocxFallback`:
+  ```javascript
+  window.ensureKhbdDocxFallback = function ensureKhbdDocxFallback() {
+    if (typeof docxGenerator !== "undefined" || typeof DocxGenerator !== "undefined" || typeof window.docxGenerator !== "undefined" || typeof window.DocxGenerator !== "undefined") return;
+    document.write('<script src="' + (isLocal ? "js/khbd-docx.js" : cdnDocx) + '" crossorigin="anonymous"><\/script>');
+  };
+  ```
+- `ensureKhbdPedagogyCatalogFallback`:
+  ```javascript
+  window.ensureKhbdPedagogyCatalogFallback = function ensureKhbdPedagogyCatalogFallback() {
+    if (typeof KHBD_PEDAGOGY_CATALOG !== "undefined" || typeof window.KHBD_PEDAGOGY_CATALOG !== "undefined") return;
+    document.write('<script src="' + (isLocal ? "js/khbd-pedagogy-catalog.js" : cdnCatalog) + '" crossorigin="anonymous"><\/script>');
+  };
   ```
 
-### 2. Chuẩn hóa Cơ Chế Tải Script trong `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`
-- Xóa bỏ việc kiểm tra tức thời bằng `document.write` gây race condition.
-- Dùng cơ chế nạp qua `onerror` hoặc nạp tuần tự:
-  Khi thẻ `<script>` chính nạp từ host bị lỗi (error event) hoặc sau khi load kiểm tra 0 bytes, mới kích hoạt nạp CDN fallback với `crossorigin="anonymous"`.
-  Hoặc tải qua loader có Promise giống `bootstrapCanvasCoreModules()` (đã có sẵn cơ chế `load()` có timeout và fallback chuẩn mực).
-
-### 3. File Kiểm thử `tests/canvas-soankhbd-smoke.js`
-- Cập nhật test kiểm tra bảo đảm không có race condition tải kép.
-- Chạy toàn bộ test suite.
+### 4. Cập nhật và chạy Smoke Tests
+- Cập nhật `tests/canvas-soankhbd-smoke.js` kiểm tra IIFE wrapper và guard mới.
+- Chạy toàn bộ test suite đảm bảo 100% PASS:
+  `node tests/canvas-soankhbd-smoke.js`
+  `node tests/canvas-prompts-integrity-smoke.js`
+  `node tests/khbd-table-columns-smoke.js`
+  `node tests/khbd-pedagogy-rate-smoke.js`
+  `node tests/khbd-nls-ai-bold-italic-smoke.js`
 
 ---
 
 ## File dự kiến tác động
-1. `js/khbd-prompts.js`
-2. `js/khbd-docx.js`
+1. `js/khbd-docx.js`
+2. `js/khbd-prompts.js`
 3. `js/khbd-pedagogy-catalog.js`
 4. `canvas_soankhbd.html`
 5. `backupcode viettailieu/canvas_soankhbd.html`

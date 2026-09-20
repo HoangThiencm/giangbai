@@ -8,1582 +8,1584 @@
 
 // Deploy version: 20260916-textbook-exact-v18
 
-if (typeof window !== "undefined" && (window.docxGenerator || window.DocxGenerator || window.__KHBD_DOCX_LOADED__)) {
-  // Already loaded — skip to avoid redeclaring DocxGenerator.
-} else {
-if (typeof window !== "undefined") window.__KHBD_DOCX_LOADED__ = true;
-
-class DocxGenerator {
-  constructor() {
-    this.fontFamily = "Times New Roman";
-    this.fontSizeBody = 26; // 13pt (26 half-points)
-    this.fontSizeH1 = 26;
-    this.fontSizeH2 = 26;
-    this.fontSizeH3 = 26;
-    this.lineSpacing = 240; // Single
-    this.lineRule = "auto";
-    this.spaceAfter = 60;   // 3pt (60 dxa)
-    this.spaceBefore = 0;
-
-    // A4: Top 1.5cm (850), Bottom 1.5cm (850), Left 2.0cm (1134), Right 1.5cm (850)
-    this.pageMargins = {
-      top: 850,
-      bottom: 850,
-      left: 1134,
-      right: 850
-    };
-    this.pageSize = { width: 11906, height: 16838, orientation: "portrait" };
-    // Vùng in: 11906 - 1134 - 850 = 9922 dxa
-    this.tableWidth = 9922;
-    this.columnWidths = [4961, 4961];
+(function (global) {
+  if (typeof global.DocxGenerator !== "undefined" || typeof global.docxGenerator !== "undefined" || (typeof DocxGenerator !== "undefined" && typeof docxGenerator !== "undefined")) {
+    if (typeof global.DocxGenerator === "undefined" && typeof DocxGenerator !== "undefined") global.DocxGenerator = DocxGenerator;
+    if (typeof global.docxGenerator === "undefined" && typeof docxGenerator !== "undefined") global.docxGenerator = docxGenerator;
+    return;
   }
 
-  isGarbageLatexMathInner(inner) {
-    const trimmed = String(inner || "").trim();
-    if (!trimmed) return true;
-    const leftover = trimmed
-      .replace(/\\(?:quad|qquad|hspace\s*\{[^}]*\}|phantom\s*\{[^}]*\}|(?:long)?(?:left|right|leftright)arrow|(?:Left|Right|Leftright)arrow|mapsto|to|gets)/g, "")
-      .replace(/[-–—−→←↔]/g, "")
-      .replace(/\s+/g, "");
-    return leftover === "";
-  }
-
-  stripRepeatedLatexSpacing(text) {
-    if (!text) return "";
-    let s = String(text).replace(/\frac(?=\{)/g, '\\frac');
-    s = s.replace(/\$\$([\s\S]*?)\$\$/g, (full, inner) => (this.isGarbageLatexMathInner(inner) ? "" : full));
-    s = s.replace(/\$([^$\n]+?)\$/g, (full, inner) => (this.isGarbageLatexMathInner(inner) ? "" : full));
-    s = s.replace(/(?:\\(?:quad|qquad)\s*){3,}/g, " ");
-    s = s.replace(/[ \t]+\n/g, "\n");
-    s = s.replace(/\n{3,}/g, "\n\n");
-    return s;
-  }
-
-  collapseDottedLines(text, maxKeep) {
-    const source = String(text || "");
-    if (!source) return source;
-    const dottedRe = /^\s*[.\-_…\s]{10,}\s*$/;
-    const keep = Math.max(1, Number(maxKeep) || 1);
-    const isTableLine = line => {
-      const trimmed = String(line || "").trim();
-      return trimmed.startsWith("|") && trimmed.endsWith("|");
-    };
-    const lines = source.split(/\r?\n/);
-    const out = [];
-    let i = 0;
-    while (i < lines.length) {
-      const line = lines[i];
-      if (!isTableLine(line) && dottedRe.test(line)) {
-        let run = 1;
-        while (
-          i + run < lines.length
-          && !isTableLine(lines[i + run])
-          && dottedRe.test(lines[i + run])
-        ) {
-          run++;
-        }
-        if (run >= 3) {
-          for (let k = 0; k < Math.min(keep, run); k++) out.push(lines[i + k]);
-          i += run;
-          continue;
-        }
+  (function () {
+    class DocxGenerator {
+      constructor() {
+        this.fontFamily = "Times New Roman";
+        this.fontSizeBody = 26; // 13pt (26 half-points)
+        this.fontSizeH1 = 26;
+        this.fontSizeH2 = 26;
+        this.fontSizeH3 = 26;
+        this.lineSpacing = 240; // Single
+        this.lineRule = "auto";
+        this.spaceAfter = 60;   // 3pt (60 dxa)
+        this.spaceBefore = 0;
+    
+        // A4: Top 1.5cm (850), Bottom 1.5cm (850), Left 2.0cm (1134), Right 1.5cm (850)
+        this.pageMargins = {
+          top: 850,
+          bottom: 850,
+          left: 1134,
+          right: 850
+        };
+        this.pageSize = { width: 11906, height: 16838, orientation: "portrait" };
+        // Vùng in: 11906 - 1134 - 850 = 9922 dxa
+        this.tableWidth = 9922;
+        this.columnWidths = [4961, 4961];
       }
-      out.push(line);
-      i++;
-    }
-    return out.join("\n");
-  }
-
-  stripExcessiveDottedLines(text) {
-    return this.collapseDottedLines(text, 1);
-  }
-
-  /**
-   * Chuyển đổi mã LaTeX thành chuỗi ký tự toán học Unicode chuẩn
-   */
-  latexToUnicodeMath(latex) {
-    if (!latex) return "";
-    let s = this.stripRepeatedLatexSpacing(String(latex).replace(/\frac(?=\{)/g, '\\frac')).trim();
-    if (!s) return "";
-
-    // Loại bỏ dấu bao bọc $ hoặc $$
-    s = s.replace(/^\$\$|\$\$$/g, "").replace(/^\$|\$$/g, "").trim();
-    if (this.isGarbageLatexMathInner(s)) return "";
-    s = s.replace(/(?:\\(?:quad|qquad)\s*){3,}/g, " ");
-
-    // Fallback Unicode cho hệ phương trình không được để token begin/end lọt ra Word.
-    s = s
-      .replace(/\\begin\s*\{(?:cases|aligned)\}/gi, "{ ")
-      .replace(/\\end\s*\{(?:cases|aligned)\}/gi, "")
-      .replace(/\\left\s*\\?\{/g, "{ ")
-      .replace(/\\right\s*\./g, "")
-      .replace(/\\\\(?:\[[^\]]*\])?/g, "; ")
-      .replace(/\s*&\s*/g, " ");
-
-    // Thay thế các phân số \frac{a}{b} -> (a)/(b) hoặc a/b
-    s = s.replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, "($1)/($2)");
-    s = s.replace(/\\dfrac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, "($1)/($2)");
-
-    // Căn bậc hai \sqrt{x} -> √(x), \sqrt[n]{x} -> ⁿ√(x)
-    s = s.replace(/\\sqrt\[(\d+)\]\{([^{}]+)\}/g, "$1√($2)");
-    s = s.replace(/\\sqrt\{([^{}]+)\}/g, "√($1)");
-
-    // Góc, cung, vectơ — trước khi gỡ ngoặc nhóm
-    s = s.replace(/\\widehat\s*\{([^{}]+)\}/g, "∠$1");
-    s = s.replace(/\\hat\s*\{([^{}]+)\}/g, "∠$1");
-    s = s.replace(/\\wideparen\s*\{([^{}]+)\}/g, "⌒$1");
-    s = s.replace(/\\overarc\s*\{([^{}]+)\}/g, "⌒$1");
-    s = s.replace(/\\overrightarrow\s*\{([^{}]+)\}/g, "$1→");
-    s = s.replace(/\\vec\s*\{([^{}]+)\}/g, "$1→");
-    s = s.replace(/\\overline\s*\{([^{}]+)\}/g, "$1");
-    s = s.replace(/\\left\s*\[/g, "[");
-    s = s.replace(/\\begin\s*\{array\}\s*\{[^}]*\}/gi, "");
-    s = s.replace(/\\end\s*\{array\}/gi, "");
-
-    // Chỉ số trên / số mũ
-    s = s.replace(/\^0/g, "⁰").replace(/\^1/g, "¹").replace(/\^2/g, "²").replace(/\^3/g, "³")
-         .replace(/\^4/g, "⁴").replace(/\^5/g, "⁵").replace(/\^6/g, "⁶").replace(/\^7/g, "⁷")
-         .replace(/\^8/g, "⁸").replace(/\^9/g, "⁹").replace(/\^n/g, "ⁿ").replace(/\^x/g, "ˣ")
-         .replace(/\^\{([0-9a-zA-Z+-]+)\}/g, "^($1)");
-
-    // Chỉ số dưới
-    s = s.replace(/_0/g, "₀").replace(/_1/g, "₁").replace(/_2/g, "₂").replace(/_3/g, "₃")
-         .replace(/_4/g, "₄").replace(/_5/g, "₅").replace(/_6/g, "₆").replace(/_7/g, "₇")
-         .replace(/_8/g, "₈").replace(/_9/g, "₉").replace(/_\{([0-9a-zA-Z+-]+)\}/g, "_($1)");
-
-    // Các ký hiệu toán học phổ biến
-    const mathDict = {
-      "\\alpha": "α", "\\beta": "β", "\\gamma": "γ", "\\delta": "δ", "\\Delta": "Δ",
-      "\\epsilon": "ε", "\\theta": "θ", "\\lambda": "λ", "\\pi": "π", "\\sigma": "σ",
-      "\\omega": "ω", "\\Omega": "Ω", "\\le": "≤", "\\leq": "≤", "\\ge": "≥", "\\geq": "≥",
-      "\\ne": "≠", "\\neq": "≠", "\\approx": "≈", "\\pm": "±", "\\mp": "∓",
-      "\\times": "×", "\\cdot": "·", "\\div": "÷", "\\in": "∈", "\\notin": "∉",
-      "\\subset": "⊂", "\\subseteq": "⊆", "\\supset": "⊃", "\\cup": "∪", "\\cap": "∩",
-      "\\emptyset": "∅", "\\infty": "∞", "\\forall": "∀", "\\exists": "∃",
-      "\\perp": "⊥", "\\parallel": "∥", "\\angle": "∠", "\\triangle": "△",
-      "\\degree": "°", "^{\\circ}": "°", "\\rightarrow": "→", "\\Rightarrow": "⇒",
-      "\\mid": "∣", "\\vert": "|", "\\Vert": "‖", "\\colon": ":", "\\setminus": "∖",
-      "\\backsimeq": "⋍", "\\backsim": "∽", "\\sim": "∽",
-      "\\wideparen": "⌒", "\\overarc": "⌒",
-      "\\Leftrightarrow": "⇔", "\\cdots": "...", "\\ldots": "...", "\\text": "",
-      "\\mathbf": "", "\\mathrm": "", "\\left": "", "\\right": "", "\\,": " ", "\\;": " ",
-      "\\quad": "  ", "\\qquad": "    "
-    };
-
-    for (const [tex, uni] of Object.entries(mathDict)) {
-      s = s.split(tex).join(uni);
-    }
-
-    // Chỉ gỡ cặp {} rỗng hoặc ngoặc nhóm token ngắn; giữ `{` của hệ phương trình.
-    s = s.replace(/\{\s*\}/g, "");
-    s = s.replace(/\{([^{}\s]{1,12})\}/g, "$1");
-    return s.trim();
-  }
-
-  /**
-   * Chuẩn hoá các lệnh toán thường gặp trước khi bộ đọc Equation xử lý.
-   * Chỉ rút gọn dấu gạch chéo kép khi ngay sau đó là một lệnh toán đã biết;
-   * vì vậy lệnh xuống dòng LaTex `\\` vẫn được giữ nguyên.
-   */
-  normalizeLatexForMath(latex) {
-    let source = String(latex || "");
-    const supportedCommands = [
-      "Leftrightarrow", "Rightarrow", "leftarrow", "rightarrow", "overrightarrow", "subseteq", "supseteq",
-      "emptyset", "parallel", "triangle", "varepsilon", "displaystyle", "overline", "widehat",
-      "backsimeq", "backsim", "wideparen", "overarc",
-      "mathbb", "mathcal", "mathfrak", "mathrm", "mathbf", "textrm", "textit", "textbf",
-      "nolimits", "limits", "dfrac", "tfrac", "cfrac", "notin", "subset", "supset", "forall",
-      "exists", "approx", "equiv", "cdots", "ldots", "times", "cdot", "lbrack", "rbrack",
-      "lparen", "rparen", "lbrace", "rbrace", "alpha", "gamma", "delta", "Delta", "theta",
-      "Theta", "lambda", "sigma", "Sigma", "omega", "Omega", "nabla", "partial", "infty",
-      "angle", "perp", "bullet", "degree", "right", "left", "frac", "sqrt", "beta", "epsilon",
-      "varepsilon", "pi", "Pi", "phi", "Phi", "psi", "rho", "mu", "nu", "neq", "leq", "geq",
-      "mid", "vert", "Vert", "colon", "setminus",
-      "dots", "circ", "hbar", "not", "in", "ni", "ne", "le", "ge", "pm", "mp", "ast", "div",
-      "cup", "cap", "sim", "to", "ell", "sin", "cos", "tan", "cot", "sec", "csc", "log", "ln",
-      "lg", "lim", "max", "min", "gcd", "lcm", "det", "dim", "ker", "hom", "arg", "exp", "sinh",
-      "cosh", "tanh", "vec", "hat", "underline", "quad", "qquad", "text"
-    ].sort((a, b) => b.length - a.length);
-    const isKnownCommand = value => supportedCommands.some(command => value.startsWith(command));
-
-    // Dữ liệu Markdown có thể giữ nguyên escape kép (\\\\notin). Không đụng tới \\ độc lập.
-    source = source.replace(/\\{2,}([A-Za-z]+)/g, (match, commandText) => (
-      isKnownCommand(commandText) ? `\\${commandText}` : match
-    ));
-
-    // Tách theo lệnh dài nhất: \\notinA -> \\notin A, thay vì coi "notinA" là một lệnh lạ.
-    source = source.replace(/\\([A-Za-z]+)/g, (match, commandText) => {
-      const command = supportedCommands.find(candidate => commandText.startsWith(candidate));
-      if (!command) return match;
-      const suffix = commandText.slice(command.length);
-      return suffix ? `\\${command} ${suffix}` : match;
-    });
-
-    return source;
-  }
-
-  buildAccentMath(children, charValue, mathApi) {
-    if (typeof mathApi.XmlComponent !== "function" || typeof mathApi.XmlAttributeComponent !== "function") {
-      return children;
-    }
-    const element = name => new mathApi.XmlComponent(name);
-    const attribute = value => new mathApi.XmlAttributeComponent({ "m:val": value });
-    const acc = element("m:acc");
-    const accPr = element("m:accPr");
-    const chr = element("m:chr");
-    chr.root.push(attribute(charValue));
-    accPr.root.push(chr);
-    const base = element("m:e");
-    (children || []).forEach(child => base.root.push(child));
-    acc.root.push(accPr, base);
-    return [acc];
-  }
-
-  buildCasesDelimiter(body, mathApi, begChr = "{") {
-    if (body == null || typeof mathApi.XmlComponent !== "function" || typeof mathApi.XmlAttributeComponent !== "function") return null;
-    const cleaned = String(body)
-      .replace(/\\begin\s*\{array\}\s*\{[^}]*\}/gi, "")
-      .replace(/\\end\s*\{array\}/gi, "");
-    const rows = cleaned
-      .split(/\\\\(?:\[[^\]]*\])?\s*/)
-      .map(row => row.replace(/\s*&\s*/g, " ").trim())
-      .filter(Boolean);
-    if (!rows.length) return null;
-
-    const element = name => new mathApi.XmlComponent(name);
-    const attribute = value => new mathApi.XmlAttributeComponent({ "m:val": value });
-    const delimiterProperties = element("m:dPr");
-    const beginning = element("m:begChr");
-    beginning.root.push(attribute(begChr));
-    const ending = element("m:endChr");
-    ending.root.push(attribute(""));
-    delimiterProperties.root.push(beginning, ending);
-
-    const equationArray = element("m:eqArr");
-    for (const row of rows) {
-      const equation = element("m:e");
-      equation.root.push(new mathApi.MathRun(this.latexToUnicodeMath(row)));
-      equationArray.root.push(equation);
-    }
-    const base = element("m:e");
-    base.root.push(equationArray);
-    const delimiter = element("m:d");
-    delimiter.root.push(delimiterProperties, base);
-    return delimiter;
-  }
-
-  /** Tạo OMML delimiter + equation array cho cases/aligned và \\left\\{, kể cả khi có tiền tố \\Leftrightarrow / \\Rightarrow. */
-  createCasesMath(source, mathApi) {
-    const casesMatch = source.match(/^([\s\S]*?)\\begin\s*\{(cases|aligned)\}([\s\S]*?)\\end\s*\{\2\}\s*$/i);
-    const leftBraceMatch = source.match(/^([\s\S]*?)\\left\s*\\\{([\s\S]*?)\\right\s*\.\s*$/);
-    const leftBracketMatch = source.match(/^([\s\S]*?)\\left\s*\[([\s\S]*?)\\right\s*\.\s*$/);
-    let body = null;
-    let prefix = "";
-    let begChr = "{";
-    if (casesMatch) {
-      prefix = casesMatch[1] || "";
-      body = casesMatch[3];
-    } else if (leftBraceMatch) {
-      prefix = leftBraceMatch[1] || "";
-      body = leftBraceMatch[2];
-    } else if (leftBracketMatch) {
-      prefix = leftBracketMatch[1] || "";
-      body = leftBracketMatch[2];
-      begChr = "[";
-    }
-    const delimiter = this.buildCasesDelimiter(body, mathApi, begChr);
-    if (!delimiter) return null;
-    const children = [];
-    prefix = prefix.trim();
-    if (prefix) children.push(new mathApi.MathRun(this.latexToUnicodeMath(prefix) + " "));
-    children.push(delimiter);
-    return new mathApi.Math({ children });
-  }
-
-  /** Chuyển LaTeX ($...$, $$...$$, \\(...\\)) thành Equation Word (OMML). Thất bại thì trả null để fallback Unicode. */
-  createNativeMath(latex) {
-    const mathApi = window.docx;
-    const required = ["Math", "MathRun", "MathFraction", "MathSuperScript", "MathSubScript", "MathSubSuperScript", "MathRadical"];
-    if (!required.every(name => typeof mathApi[name] === "function")) return null;
-
-    let source = this.normalizeLatexForMath(latex).trim();
-    source = source.replace(/^\$\$([\s\S]*)\$\$$/, "$1").replace(/^\$([\s\S]*)\$$/, "$1");
-    source = source.replace(/^\\\(([\s\S]*)\\\)$/, "$1").replace(/^\\\[([\s\S]*)\\\]$/, "$1").trim();
-    if (!source) return null;
-    source = source
-      .replace(/\\dfrac\b/g, "\\frac")
-      .replace(/\\tfrac\b/g, "\\frac")
-      .replace(/\\cfrac\b/g, "\\frac")
-      .replace(/\\displaystyle\b/g, "")
-      .replace(/\\nolimits\b/g, "")
-      .replace(/\\limits\b/g, "");
-
-    const casesMath = this.createCasesMath(source, mathApi);
-    if (casesMath) return casesMath;
-
-    const commandMap = {
-      alpha: "α", beta: "β", gamma: "γ", delta: "δ", Delta: "Δ", epsilon: "ε", varepsilon: "ε",
-      theta: "θ", Theta: "Θ", lambda: "λ", pi: "π", Pi: "Π", sigma: "σ", Sigma: "Σ",
-      omega: "ω", Omega: "Ω", phi: "φ", Phi: "Φ", psi: "ψ", rho: "ρ", mu: "μ", nu: "ν",
-      in: "∈", notin: "∉", ni: "∋", neq: "≠", ne: "≠", le: "≤", leq: "≤", ge: "≥", geq: "≥",
-      times: "×", cdot: "·", div: "÷", pm: "±", mp: "∓", ast: "∗", circ: "∘", bullet: "•",
-      to: "→", rightarrow: "→", leftarrow: "←", Rightarrow: "⇒", Leftrightarrow: "⇔",
-      triangle: "△", angle: "∠", parallel: "∥", perp: "⊥", cup: "∪", cap: "∩",
-      emptyset: "∅", infty: "∞", forall: "∀", exists: "∃", partial: "∂", nabla: "∇",
-      subset: "⊂", subseteq: "⊆", supset: "⊃", sim: "∽", backsim: "∽", backsimeq: "⋍", approx: "≈", equiv: "≡",
-      wideparen: "⌒", overarc: "⌒",
-      mid: "∣", vert: "|", Vert: "‖", colon: ":", setminus: "∖",
-      cdots: "⋯", ldots: "…", dots: "…", degree: "°", ell: "ℓ", hbar: "ℏ",
-      lbrack: "[", rbrack: "]", lbrace: "{", rbrace: "}", lparen: "(", rparen: ")"
-    };
-    const functions = new Set(["sin", "cos", "tan", "cot", "sec", "csc", "log", "ln", "lg", "lim", "max", "min", "gcd", "lcm", "det", "dim", "ker", "hom", "arg", "exp", "sinh", "cosh", "tanh"]);
-    const blackboard = { N: "ℕ", Z: "ℤ", Q: "ℚ", R: "ℝ", C: "ℂ", P: "ℙ" };
-    let index = 0;
-    const run = value => new mathApi.MathRun(String(value ?? ""));
-    const skipSpace = () => { while (index < source.length && /\s/.test(source[index])) index++; };
-    const peek = () => source[index];
-
-    const wrapBrackets = (open, inner) => {
-      if (open === "(" && typeof mathApi.MathRoundBrackets === "function") return [new mathApi.MathRoundBrackets({ children: inner })];
-      if (open === "[" && typeof mathApi.MathSquareBrackets === "function") return [new mathApi.MathSquareBrackets({ children: inner })];
-      if ((open === "{" || open === "\\{") && typeof mathApi.MathCurlyBrackets === "function") return [new mathApi.MathCurlyBrackets({ children: inner })];
-      const close = { "(": ")", "[": "]", "{": "}" }[open] || "";
-      return [run(open === "\\{" ? "{" : open), ...inner, run(close)];
-    };
-
-    const readGroup = () => {
-      skipSpace();
-      if (peek() !== "{") return readAtom(true);
-      index++;
-      const group = readSequence("}");
-      if (peek() === "}") index++;
-      return group.length ? group : [run("")];
-    };
-
-    const readOptionalBracket = (open, close) => {
-      skipSpace();
-      if (peek() !== open) return null;
-      index++;
-      const group = readSequence(close);
-      if (peek() === close) index++;
-      return group;
-    };
-
-    const readScriptAtom = () => {
-      skipSpace();
-      if (peek() === "{") return readGroup();
-      if (peek() === "\\") return readAtom(true);
-      if (index < source.length) return [run(source[index++])];
-      return [run("")];
-    };
-
-    const applyScripts = nodes => {
-      skipSpace();
-      let subScript = null;
-      let superScript = null;
-      while (peek() === "^" || peek() === "_") {
-        const kind = source[index++];
-        const script = readScriptAtom();
-        if (kind === "^") superScript = script; else subScript = script;
-        skipSpace();
+    
+      isGarbageLatexMathInner(inner) {
+        const trimmed = String(inner || "").trim();
+        if (!trimmed) return true;
+        const leftover = trimmed
+          .replace(/\\(?:quad|qquad|hspace\s*\{[^}]*\}|phantom\s*\{[^}]*\}|(?:long)?(?:left|right|leftright)arrow|(?:Left|Right|Leftright)arrow|mapsto|to|gets)/g, "")
+          .replace(/[-–—−→←↔]/g, "")
+          .replace(/\s+/g, "");
+        return leftover === "";
       }
-      if (subScript && superScript) return [new mathApi.MathSubSuperScript({ children: nodes, subScript, superScript })];
-      if (superScript) return [new mathApi.MathSuperScript({ children: nodes, superScript })];
-      if (subScript) return [new mathApi.MathSubScript({ children: nodes, subScript })];
-      return nodes;
-    };
-
-    const readCommandName = () => {
-      const match = source.slice(index).match(/^[A-Za-z]+/);
-      if (match) {
-        index += match[0].length;
-        return match[0];
+    
+      stripRepeatedLatexSpacing(text) {
+        if (!text) return "";
+        let s = String(text).replace(/\frac(?=\{)/g, '\\frac');
+        s = s.replace(/\$\$([\s\S]*?)\$\$/g, (full, inner) => (this.isGarbageLatexMathInner(inner) ? "" : full));
+        s = s.replace(/\$([^$\n]+?)\$/g, (full, inner) => (this.isGarbageLatexMathInner(inner) ? "" : full));
+        s = s.replace(/(?:\\(?:quad|qquad)\s*){3,}/g, " ");
+        s = s.replace(/[ \t]+\n/g, "\n");
+        s = s.replace(/\n{3,}/g, "\n\n");
+        return s;
       }
-      return source[index++] || "";
-    };
-
-    const readAtom = (bare = false) => {
-      skipSpace();
-      if (index >= source.length) return [];
-      let nodes;
-      if (peek() === "{") {
-        nodes = readGroup();
-      } else if (peek() === "\\") {
-        index++;
-        const command = readCommandName();
-        if (command === "begin") {
-          skipSpace();
-          let env = "";
-          if (peek() === "{") {
-            index++;
-            while (index < source.length && peek() !== "}") env += source[index++];
-            if (peek() === "}") index++;
-          }
-          env = env.trim().toLowerCase();
-          if (env === "cases" || env === "aligned" || env === "array") {
-            const rest = source.slice(index);
-            const endMatch = rest.match(new RegExp("\\\\end\\s*\\{" + env + "\\}", "i"));
-            if (endMatch) {
-              const delim = this.buildCasesDelimiter(rest.slice(0, endMatch.index), mathApi, env === "array" ? "[" : "{");
-              index += endMatch.index + endMatch[0].length;
-              nodes = delim ? [delim] : [run(env === "array" ? "[" : "{")];
-            } else {
-              nodes = [run(env === "array" ? "[" : "{")];
+    
+      collapseDottedLines(text, maxKeep) {
+        const source = String(text || "");
+        if (!source) return source;
+        const dottedRe = /^\s*[.\-_…\s]{10,}\s*$/;
+        const keep = Math.max(1, Number(maxKeep) || 1);
+        const isTableLine = line => {
+          const trimmed = String(line || "").trim();
+          return trimmed.startsWith("|") && trimmed.endsWith("|");
+        };
+        const lines = source.split(/\r?\n/);
+        const out = [];
+        let i = 0;
+        while (i < lines.length) {
+          const line = lines[i];
+          if (!isTableLine(line) && dottedRe.test(line)) {
+            let run = 1;
+            while (
+              i + run < lines.length
+              && !isTableLine(lines[i + run])
+              && dottedRe.test(lines[i + run])
+            ) {
+              run++;
             }
-          } else {
-            nodes = [run(env || "begin")];
-          }
-        } else if (command === "end") {
-          skipSpace();
-          if (peek() === "{") {
-            index++;
-            while (index < source.length && peek() !== "}") index++;
-            if (peek() === "}") index++;
-          }
-          nodes = [];
-        } else if (command === "frac") {
-          nodes = [new mathApi.MathFraction({ numerator: readGroup(), denominator: readGroup() })];
-        } else if (command === "sqrt") {
-          const degree = readOptionalBracket("[", "]");
-          nodes = [new mathApi.MathRadical(degree ? { children: readGroup(), degree } : { children: readGroup() })];
-        } else if (command === "mathbb" || command === "mathcal" || command === "mathfrak") {
-          skipSpace();
-          let letter = "";
-          if (peek() === "{") {
-            index++;
-            while (index < source.length && peek() !== "}") letter += source[index++];
-            if (peek() === "}") index++;
-            letter = letter.trim();
-          } else if (index < source.length) {
-            letter = source[index++];
-          }
-          nodes = [run(command === "mathbb" ? (blackboard[letter] || letter || "ℕ") : letter || command)];
-        } else if (command === "text" || command === "mathrm" || command === "mathbf" || command === "textrm" || command === "textit" || command === "textbf") {
-          skipSpace();
-          if (peek() === "{") {
-            index++;
-            let text = "";
-            let depth = 1;
-            while (index < source.length && depth > 0) {
-              const ch = source[index++];
-              if (ch === "{") depth++;
-              else if (ch === "}") depth--;
-              if (depth > 0) text += ch;
+            if (run >= 3) {
+              for (let k = 0; k < Math.min(keep, run); k++) out.push(lines[i + k]);
+              i += run;
+              continue;
             }
-            nodes = [run(text.replace(/\\,/g, " ").replace(/\\/g, ""))];
-          } else {
-            nodes = [run("")];
           }
-        } else if (command === "left") {
-          skipSpace();
-          let open = peek() || "(";
-          if (open === "\\") {
-            index++;
-            open = "\\" + readCommandName();
-            if (open === "\\{") open = "{";
-            if (open === "\\}") open = "}";
-          } else {
-            index++;
-            if (open === ".") open = "";
-          }
-          const inner = readSequence(null, true);
-          nodes = open ? wrapBrackets(open, inner) : inner;
-        } else if (command === "right") {
-          skipSpace();
-          if (peek() === "\\") {
-            index++;
-            readCommandName();
-          } else if (index < source.length) {
-            index++;
-          }
-          nodes = [];
-        } else if (command === "{" || command === "}") {
-          nodes = [run(command)];
-        } else if (command === "," || command === ";" || command === "!" || command === " " || command === "quad" || command === "qquad") {
-          nodes = [run(" ")];
-        } else if (command === "widehat" || command === "hat") {
-          nodes = this.buildAccentMath(readGroup(), "\u0302", mathApi);
-        } else if (command === "vec" || command === "overrightarrow") {
-          nodes = this.buildAccentMath(readGroup(), "\u2192", mathApi);
-        } else if (command === "overline") {
-          nodes = this.buildAccentMath(readGroup(), "\u0304", mathApi);
-        } else if (command === "underline") {
-          nodes = readGroup();
-        } else if (command === "wideparen" || command === "overarc") {
-          nodes = [run("⌒"), ...readGroup()];
-        } else if (commandMap[command]) {
-          nodes = [run(commandMap[command])];
-        } else if (functions.has(command)) {
-          nodes = [run(command)];
-        } else {
-          const uni = this.latexToUnicodeMath("\\" + command);
-          nodes = [run(uni && uni !== "\\" + command ? uni : command)];
-        }
-      } else if (peek() === "}" || peek() === "]" || peek() === ")") {
-        return [];
-      } else if (/\d/.test(peek())) {
-        let num = "";
-        while (index < source.length && /[0-9.]/.test(peek())) num += source[index++];
-        nodes = [run(num)];
-      } else if (/[A-Za-z]/.test(peek())) {
-        nodes = [run(source[index++])];
-      } else {
-        const ch = source[index++];
-        if (ch === "(" || ch === "[") {
-          const close = ch === "(" ? ")" : "]";
-          const inner = readSequence(close);
-          if (peek() === close) index++;
-          nodes = wrapBrackets(ch, inner);
-        } else {
-          nodes = [run(ch)];
-        }
-      }
-
-      return bare ? nodes : applyScripts(nodes);
-    };
-
-    const readSequence = (stop, stopAtRight = false) => {
-      const nodes = [];
-      while (index < source.length) {
-        skipSpace();
-        if (stop && peek() === stop) break;
-        if (stopAtRight && source.slice(index, index + 6) === "\\right") break;
-        if (peek() === "}" && stop !== "}") break;
-        const next = readAtom();
-        if (!next.length) break;
-        nodes.push(...next);
-      }
-      return nodes;
-    };
-
-    try {
-      const children = readSequence(null).filter(Boolean);
-      if (!children.length) return null;
-      return new mathApi.Math({ children });
-    } catch (error) {
-      console.warn("Không thể chuyển LaTeX sang Equation Word:", source, error);
-      return null;
-    }
-  }
-
-  headingIntegrationColor(title) {
-    const text = String(title || "");
-    if (/năng lực số/i.test(text)) return "0369A1";
-    if (/năng lực\s*AI/i.test(text)) return "6D28D9";
-    return null;
-  }
-
-  markerRunColor(text) {
-    const t = String(text || "").trim();
-    if (/^\[?NLS(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0369A1", shading: "E0F2FE", bold: true, italics: true };
-    if (/^\[?AI(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "6D28D9", shading: "F3E8FF", bold: true, italics: true };
-    if (/^\[?GDQPAN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B91C1C", shading: "FEE2E2", bold: true };
-    if (/^\[?HCM(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B45309", shading: "FEF3C7", bold: true };
-    if (/^\[?QCN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "047857", shading: "D1FAE5", bold: true };
-    if (/^\[?CLIL(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "4338CA", shading: "E0E7FF", bold: true };
-    if (/^\[?(?:GDTC|TAICHINH)(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "15803D", shading: "DCFCE7", bold: true };
-    if (/^\[?STEM(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0E7490", shading: "CFFAFE", bold: true };
-    if (/^\[?(?:TN-AO|TNAO)(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0284C7", shading: "E0F2FE", bold: true };
-    if (/^\[?MT-NLX(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "4D7C0F", shading: "ECFCCB", bold: true };
-    if (/^\[?GD(?:Đ|D)P-MT(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "047857", shading: "D1FAE5", bold: true };
-    if (/^\[?B(?:Đ|D)KH-SDG(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0284C7", shading: "E0F2FE", bold: true };
-    if (/^\[?Di\s*s[aả]n\s*(?:Đ|D)P(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B45309", shading: "FEF3C7", bold: true };
-    if (/^\[?Speech\s*AI(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "4338CA", shading: "E0E7FF", bold: true };
-    if (/^\[?B[aả]n\s*s[aắ]c\s*VN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B91C1C", shading: "FEE2E2", bold: true };
-    if (/^\[?CDTG(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0E7490", shading: "CFFAFE", bold: true };
-    return null;
-  }
-
-  lineIntegrationColor(text, inherited) {
-    const raw = String(text || "");
-    const nls = /\*{1,3}\[?NLS(?::[^\]\n]+)?\]?\*{1,3}|\[NLS(?::[^\]\n]+)?\]|\bNLS\b/.test(raw);
-    const aiMarker = /\*{1,3}\[?AI(?::[^\]\n]+)?\]?\*{1,3}|\[AI(?::[^\]\n]+)?\]/.test(raw);
-    const aiCode = /\d+\.[A-Z]\d+\.\d+/.test(raw) && (/\bAI\b|năng lực\s*AI/i.test(raw) || inherited === "6D28D9");
-    const ai = aiMarker || aiCode;
-    if (nls && !ai) return "0369A1";
-    if (ai && !nls) return "6D28D9";
-    return inherited || undefined;
-  }
-
-  coloredTextRun(text, extras = {}) {
-    const docxApi = (typeof window !== "undefined" && window.docx) || (typeof require !== "undefined" ? require("docx") : {});
-    const { TextRun, ShadingType } = docxApi || {};
-    if (typeof TextRun !== "function") return { text };
-    const props = {
-      text,
-      font: extras.font || this.fontFamily,
-      size: extras.size || this.fontSizeBody
-    };
-    if (extras.bold) props.bold = true;
-    if (extras.italics) props.italics = true;
-    if (extras.color) props.color = extras.color;
-    if (extras.shading) {
-      const clearType = (ShadingType && ShadingType.CLEAR) || "clear";
-      props.shading = {
-        type: clearType,
-        fill: extras.shading
-      };
-    }
-    return new TextRun(props);
-  }
-
-  /**
-   * Tách một dòng văn bản chứa các công thức $...$ thành danh sách các docx TextRun
-   */
-  parseInlineTextToRuns(text, color, styles = {}) {
-    if (!window.docx) return [];
-    const { TextRun } = window.docx;
-
-    text = String(text || "").replace(/<br\s*\/?>/gi, "\n");
-    const runs = [];
-    // Công thức đứng trước định dạng Markdown để x_1, a_{ij} trong $...$ không bị hiểu là italic.
-    const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*\*[\s\S]+?\*\*\*|\*\*[\s\S]+?\*\*|(?<![\w\\])___(?!\s|_)[^_\n]+?(?<!\s)___(?!\w)|(?<![\w\\])__(?!\s|_)[^_\n]+?(?<!\s)__(?!\w)|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|(?<![\w\\])_(?!\s|_)[^_\n]+?(?<!\s)_(?![\w_])|`[^`]+?`|\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
-    let lastIndex = 0;
-    let match;
-
-    const pushMath = (token, display) => {
-      const cleaned = this.stripRepeatedLatexSpacing(token).trim();
-      if (!cleaned) return;
-      const math = this.createNativeMath(cleaned);
-      if (math) {
-        runs.push(math);
-        return;
-      }
-      const uni = this.latexToUnicodeMath(cleaned);
-      if (!uni) return;
-      runs.push(new TextRun({
-        text: uni,
-        font: "Cambria Math",
-        italics: true,
-        bold: Boolean(display || styles.bold),
-        size: this.fontSizeBody
-      }));
-    };
-
-    const mathSplitRegex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$))/g;
-
-    const pushMarkerWithMath = (token, markerInfo, baseStyles) => {
-      if (!mathSplitRegex.test(token)) {
-        runs.push(this.coloredTextRun(token, {
-          bold: markerInfo ? markerInfo.bold : baseStyles.bold,
-          italics: markerInfo ? (markerInfo.italics ?? baseStyles.italics) : baseStyles.italics,
-          color: markerInfo ? markerInfo.color : color,
-          shading: markerInfo ? markerInfo.shading : undefined
-        }));
-        return;
-      }
-      const parts = token.split(mathSplitRegex);
-      for (const part of parts) {
-        if (!part) continue;
-        const isMath = /^(?:\$\$|\$|\\\(|\\\[)/.test(part) && /(?:\$\$|\$|\\\)|\\\])$/.test(part);
-        if (isMath) {
-          pushMath(part, part.startsWith("$$") || part.startsWith("\\["));
-        } else {
-          runs.push(this.coloredTextRun(part, {
-            bold: markerInfo ? markerInfo.bold : baseStyles.bold,
-            italics: markerInfo ? (markerInfo.italics ?? baseStyles.italics) : baseStyles.italics,
-            color: markerInfo ? markerInfo.color : color,
-            shading: markerInfo ? markerInfo.shading : undefined
-          }));
-        }
-      }
-    };
-
-    while ((match = regex.exec(text)) !== null) {
-      if (match.index > lastIndex) {
-        const plain = text.substring(lastIndex, match.index);
-        runs.push(this.coloredTextRun(plain, { color, ...styles }));
-      }
-
-      const token = match[0];
-
-      if ((token.startsWith("$$") && token.endsWith("$$")) || (token.startsWith("\\[") && token.endsWith("\\]"))) {
-        pushMath(token, true);
-      } else if ((token.startsWith("$") && token.endsWith("$")) || (token.startsWith("\\(") && token.endsWith("\\)"))) {
-        pushMath(token, false);
-      } else if ((token.startsWith("***") && token.endsWith("***")) || (token.startsWith("___") && token.endsWith("___"))) {
-        const biText = token.substring(3, token.length - 3);
-        const markerInfo = this.markerRunColor(biText);
-        if (markerInfo) {
-          pushMarkerWithMath(biText, markerInfo, { ...styles, bold: true, italics: true });
-        } else {
-          runs.push(...this.parseInlineTextToRuns(biText, color, { ...styles, bold: true, italics: true }));
-        }
-      } else if ((token.startsWith("**") && token.endsWith("**")) || (token.startsWith("__") && token.endsWith("__"))) {
-        const boldText = token.substring(2, token.length - 2);
-        const markerInfo = this.markerRunColor(boldText);
-        if (markerInfo) {
-          pushMarkerWithMath(boldText, markerInfo, { ...styles, bold: markerInfo.bold, italics: markerInfo.italics ?? true });
-        } else {
-          runs.push(...this.parseInlineTextToRuns(boldText, color, { ...styles, bold: true }));
-        }
-      } else if (token.startsWith("[")) {
-        const markerInfo = this.markerRunColor(token);
-        pushMarkerWithMath(token, markerInfo, styles);
-      } else if ((token.startsWith("*") && token.endsWith("*")) || (token.startsWith("_") && token.endsWith("_"))) {
-        const italicText = token.substring(1, token.length - 1);
-        runs.push(...this.parseInlineTextToRuns(italicText, color, { ...styles, italics: true }));
-      } else if (token.startsWith("`") && token.endsWith("`")) {
-        const codeText = token.substring(1, token.length - 1);
-        runs.push(new TextRun({
-          text: codeText,
-          font: this.fontFamily,
-          size: this.fontSizeBody,
-          color: "A020F0"
-        }));
-      }
-
-      lastIndex = regex.lastIndex;
-    }
-
-    if (lastIndex < text.length) {
-      const remaining = text.substring(lastIndex);
-      runs.push(this.coloredTextRun(remaining, { color, ...styles }));
-    }
-
-    if (runs.length === 0) {
-      runs.push(this.coloredTextRun("", { color, ...styles }));
-    }
-
-    return runs;
-  }
-
-  /**
-   * Phân tích nội dung Markdown thành các phần tử docx (Paragraphs, Tables, Headings)
-   */
-  parseMarkdownToDocxElements(markdown) {
-    if (!window.docx) {
-      throw new Error("Thư viện docx.js chưa được tải!");
-    }
-
-    const {
-      Paragraph, TextRun, Table, TableRow, TableCell, WidthType,
-      AlignmentType, BorderStyle, ShadingType
-    } = window.docx;
-
-    const sanitized = typeof sanitizeLessonMarkdown === "function" ? sanitizeLessonMarkdown(markdown) : String(markdown || "");
-    const cleanMarkdown = this.stripRepeatedLatexSpacing(this.collapseDottedLines(sanitized, 1));
-    const elements = [];
-    const lines = cleanMarkdown.split(/\r?\n/);
-    let i = 0;
-    let runColor = null;
-
-    while (i < lines.length) {
-      const line = lines[i];
-      const trimmed = line.trim();
-
-      // Dòng trống
-      if (!trimmed) {
-        i++;
-        continue;
-      }
-
-      // Bỏ riêng các mảnh bảng bị rò rỉ; bảng Markdown hợp lệ vẫn được giữ nguyên.
-      const previous = i > 0 ? lines[i - 1].trim() : "";
-      const next = i + 1 < lines.length ? lines[i + 1].trim() : "";
-      const isPipeOnly = /^\|+$/.test(trimmed);
-      const isPipeSeparator = /^\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?$/.test(trimmed);
-      const isLooseDashAfterPipe = trimmed === "---" && (/\|\s*$/.test(previous) || /^\|+$/.test(next));
-      if (isPipeOnly || (isPipeSeparator && !(previous.startsWith("|") && previous.endsWith("|") && next.startsWith("|") && next.endsWith("|"))) || isLooseDashAfterPipe) {
-        // Để i được tăng đúng một lần ở cuối vòng lặp, không dùng continue tại đây.
-      } else {
-
-      // 1. Phân tích BẢNG MARKDOWN (| Cột 1 | Cột 2 | ...)
-      if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
-        const tableLines = [];
-        while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
-          tableLines.push(lines[i].trim());
+          out.push(line);
           i++;
         }
-
-        if (tableLines.length >= 2) {
-          const docxTable = this.createDocxTableFromMarkdown(tableLines);
-          if (docxTable) {
-            elements.push(docxTable);
-            // Thêm khoảng cách sau bảng
-            elements.push(new Paragraph({
-              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule }
-            }));
-          }
-          continue;
+        return out.join("\n");
+      }
+    
+      stripExcessiveDottedLines(text) {
+        return this.collapseDottedLines(text, 1);
+      }
+    
+      /**
+       * Chuyển đổi mã LaTeX thành chuỗi ký tự toán học Unicode chuẩn
+       */
+      latexToUnicodeMath(latex) {
+        if (!latex) return "";
+        let s = this.stripRepeatedLatexSpacing(String(latex).replace(/\frac(?=\{)/g, '\\frac')).trim();
+        if (!s) return "";
+    
+        // Loại bỏ dấu bao bọc $ hoặc $$
+        s = s.replace(/^\$\$|\$\$$/g, "").replace(/^\$|\$$/g, "").trim();
+        if (this.isGarbageLatexMathInner(s)) return "";
+        s = s.replace(/(?:\\(?:quad|qquad)\s*){3,}/g, " ");
+    
+        // Fallback Unicode cho hệ phương trình không được để token begin/end lọt ra Word.
+        s = s
+          .replace(/\\begin\s*\{(?:cases|aligned)\}/gi, "{ ")
+          .replace(/\\end\s*\{(?:cases|aligned)\}/gi, "")
+          .replace(/\\left\s*\\?\{/g, "{ ")
+          .replace(/\\right\s*\./g, "")
+          .replace(/\\\\(?:\[[^\]]*\])?/g, "; ")
+          .replace(/\s*&\s*/g, " ");
+    
+        // Thay thế các phân số \frac{a}{b} -> (a)/(b) hoặc a/b
+        s = s.replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, "($1)/($2)");
+        s = s.replace(/\\dfrac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, "($1)/($2)");
+    
+        // Căn bậc hai \sqrt{x} -> √(x), \sqrt[n]{x} -> ⁿ√(x)
+        s = s.replace(/\\sqrt\[(\d+)\]\{([^{}]+)\}/g, "$1√($2)");
+        s = s.replace(/\\sqrt\{([^{}]+)\}/g, "√($1)");
+    
+        // Góc, cung, vectơ — trước khi gỡ ngoặc nhóm
+        s = s.replace(/\\widehat\s*\{([^{}]+)\}/g, "∠$1");
+        s = s.replace(/\\hat\s*\{([^{}]+)\}/g, "∠$1");
+        s = s.replace(/\\wideparen\s*\{([^{}]+)\}/g, "⌒$1");
+        s = s.replace(/\\overarc\s*\{([^{}]+)\}/g, "⌒$1");
+        s = s.replace(/\\overrightarrow\s*\{([^{}]+)\}/g, "$1→");
+        s = s.replace(/\\vec\s*\{([^{}]+)\}/g, "$1→");
+        s = s.replace(/\\overline\s*\{([^{}]+)\}/g, "$1");
+        s = s.replace(/\\left\s*\[/g, "[");
+        s = s.replace(/\\begin\s*\{array\}\s*\{[^}]*\}/gi, "");
+        s = s.replace(/\\end\s*\{array\}/gi, "");
+    
+        // Chỉ số trên / số mũ
+        s = s.replace(/\^0/g, "⁰").replace(/\^1/g, "¹").replace(/\^2/g, "²").replace(/\^3/g, "³")
+             .replace(/\^4/g, "⁴").replace(/\^5/g, "⁵").replace(/\^6/g, "⁶").replace(/\^7/g, "⁷")
+             .replace(/\^8/g, "⁸").replace(/\^9/g, "⁹").replace(/\^n/g, "ⁿ").replace(/\^x/g, "ˣ")
+             .replace(/\^\{([0-9a-zA-Z+-]+)\}/g, "^($1)");
+    
+        // Chỉ số dưới
+        s = s.replace(/_0/g, "₀").replace(/_1/g, "₁").replace(/_2/g, "₂").replace(/_3/g, "₃")
+             .replace(/_4/g, "₄").replace(/_5/g, "₅").replace(/_6/g, "₆").replace(/_7/g, "₇")
+             .replace(/_8/g, "₈").replace(/_9/g, "₉").replace(/_\{([0-9a-zA-Z+-]+)\}/g, "_($1)");
+    
+        // Các ký hiệu toán học phổ biến
+        const mathDict = {
+          "\\alpha": "α", "\\beta": "β", "\\gamma": "γ", "\\delta": "δ", "\\Delta": "Δ",
+          "\\epsilon": "ε", "\\theta": "θ", "\\lambda": "λ", "\\pi": "π", "\\sigma": "σ",
+          "\\omega": "ω", "\\Omega": "Ω", "\\le": "≤", "\\leq": "≤", "\\ge": "≥", "\\geq": "≥",
+          "\\ne": "≠", "\\neq": "≠", "\\approx": "≈", "\\pm": "±", "\\mp": "∓",
+          "\\times": "×", "\\cdot": "·", "\\div": "÷", "\\in": "∈", "\\notin": "∉",
+          "\\subset": "⊂", "\\subseteq": "⊆", "\\supset": "⊃", "\\cup": "∪", "\\cap": "∩",
+          "\\emptyset": "∅", "\\infty": "∞", "\\forall": "∀", "\\exists": "∃",
+          "\\perp": "⊥", "\\parallel": "∥", "\\angle": "∠", "\\triangle": "△",
+          "\\degree": "°", "^{\\circ}": "°", "\\rightarrow": "→", "\\Rightarrow": "⇒",
+          "\\mid": "∣", "\\vert": "|", "\\Vert": "‖", "\\colon": ":", "\\setminus": "∖",
+          "\\backsimeq": "⋍", "\\backsim": "∽", "\\sim": "∽",
+          "\\wideparen": "⌒", "\\overarc": "⌒",
+          "\\Leftrightarrow": "⇔", "\\cdots": "...", "\\ldots": "...", "\\text": "",
+          "\\mathbf": "", "\\mathrm": "", "\\left": "", "\\right": "", "\\,": " ", "\\;": " ",
+          "\\quad": "  ", "\\qquad": "    "
+        };
+    
+        for (const [tex, uni] of Object.entries(mathDict)) {
+          s = s.split(tex).join(uni);
         }
+    
+        // Chỉ gỡ cặp {} rỗng hoặc ngoặc nhóm token ngắn; giữ `{` của hệ phương trình.
+        s = s.replace(/\{\s*\}/g, "");
+        s = s.replace(/\{([^{}\s]{1,12})\}/g, "$1");
+        return s.trim();
       }
-
-      // 2. Phân tích TIÊU ĐỀ (# H1, ## H2, ### H3, #### H4)
-      if (trimmed.startsWith("# ")) {
-        const headingText = trimmed.substring(2).trim();
-        runColor = this.headingIntegrationColor(headingText);
-        const isAppendix = /^IV[\.\s:]/i.test(headingText) && /PHỤ\s*LỤC|HỒ\s*SƠ/i.test(headingText);
-        elements.push(new Paragraph({
-          pageBreakBefore: Boolean(isAppendix),
-          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: this.parseInlineTextToRuns(headingText, runColor, { size: this.fontSizeH1, bold: true })
-        }));
-        i++;
-        continue;
+    
+      /**
+       * Chuẩn hoá các lệnh toán thường gặp trước khi bộ đọc Equation xử lý.
+       * Chỉ rút gọn dấu gạch chéo kép khi ngay sau đó là một lệnh toán đã biết;
+       * vì vậy lệnh xuống dòng LaTex `\\` vẫn được giữ nguyên.
+       */
+      normalizeLatexForMath(latex) {
+        let source = String(latex || "");
+        const supportedCommands = [
+          "Leftrightarrow", "Rightarrow", "leftarrow", "rightarrow", "overrightarrow", "subseteq", "supseteq",
+          "emptyset", "parallel", "triangle", "varepsilon", "displaystyle", "overline", "widehat",
+          "backsimeq", "backsim", "wideparen", "overarc",
+          "mathbb", "mathcal", "mathfrak", "mathrm", "mathbf", "textrm", "textit", "textbf",
+          "nolimits", "limits", "dfrac", "tfrac", "cfrac", "notin", "subset", "supset", "forall",
+          "exists", "approx", "equiv", "cdots", "ldots", "times", "cdot", "lbrack", "rbrack",
+          "lparen", "rparen", "lbrace", "rbrace", "alpha", "gamma", "delta", "Delta", "theta",
+          "Theta", "lambda", "sigma", "Sigma", "omega", "Omega", "nabla", "partial", "infty",
+          "angle", "perp", "bullet", "degree", "right", "left", "frac", "sqrt", "beta", "epsilon",
+          "varepsilon", "pi", "Pi", "phi", "Phi", "psi", "rho", "mu", "nu", "neq", "leq", "geq",
+          "mid", "vert", "Vert", "colon", "setminus",
+          "dots", "circ", "hbar", "not", "in", "ni", "ne", "le", "ge", "pm", "mp", "ast", "div",
+          "cup", "cap", "sim", "to", "ell", "sin", "cos", "tan", "cot", "sec", "csc", "log", "ln",
+          "lg", "lim", "max", "min", "gcd", "lcm", "det", "dim", "ker", "hom", "arg", "exp", "sinh",
+          "cosh", "tanh", "vec", "hat", "underline", "quad", "qquad", "text"
+        ].sort((a, b) => b.length - a.length);
+        const isKnownCommand = value => supportedCommands.some(command => value.startsWith(command));
+    
+        // Dữ liệu Markdown có thể giữ nguyên escape kép (\\\\notin). Không đụng tới \\ độc lập.
+        source = source.replace(/\\{2,}([A-Za-z]+)/g, (match, commandText) => (
+          isKnownCommand(commandText) ? `\\${commandText}` : match
+        ));
+    
+        // Tách theo lệnh dài nhất: \\notinA -> \\notin A, thay vì coi "notinA" là một lệnh lạ.
+        source = source.replace(/\\([A-Za-z]+)/g, (match, commandText) => {
+          const command = supportedCommands.find(candidate => commandText.startsWith(candidate));
+          if (!command) return match;
+          const suffix = commandText.slice(command.length);
+          return suffix ? `\\${command} ${suffix}` : match;
+        });
+    
+        return source;
       }
-
-      if (trimmed.startsWith("## ")) {
-        const headingText = trimmed.substring(3).trim();
-        runColor = this.headingIntegrationColor(headingText);
-        elements.push(new Paragraph({
-          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: this.parseInlineTextToRuns(headingText, runColor, { size: this.fontSizeH2, bold: true })
-        }));
-        i++;
-        continue;
+    
+      buildAccentMath(children, charValue, mathApi) {
+        if (typeof mathApi.XmlComponent !== "function" || typeof mathApi.XmlAttributeComponent !== "function") {
+          return children;
+        }
+        const element = name => new mathApi.XmlComponent(name);
+        const attribute = value => new mathApi.XmlAttributeComponent({ "m:val": value });
+        const acc = element("m:acc");
+        const accPr = element("m:accPr");
+        const chr = element("m:chr");
+        chr.root.push(attribute(charValue));
+        accPr.root.push(chr);
+        const base = element("m:e");
+        (children || []).forEach(child => base.root.push(child));
+        acc.root.push(accPr, base);
+        return [acc];
       }
-
-      if (trimmed.startsWith("### ")) {
-        const headingText = trimmed.substring(4).trim();
-        runColor = this.headingIntegrationColor(headingText);
-        elements.push(new Paragraph({
-          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: this.parseInlineTextToRuns(headingText, runColor, { size: this.fontSizeH3, bold: true, italics: Boolean(runColor) })
-        }));
-        i++;
-        continue;
+    
+      buildCasesDelimiter(body, mathApi, begChr = "{") {
+        if (body == null || typeof mathApi.XmlComponent !== "function" || typeof mathApi.XmlAttributeComponent !== "function") return null;
+        const cleaned = String(body)
+          .replace(/\\begin\s*\{array\}\s*\{[^}]*\}/gi, "")
+          .replace(/\\end\s*\{array\}/gi, "");
+        const rows = cleaned
+          .split(/\\\\(?:\[[^\]]*\])?\s*/)
+          .map(row => row.replace(/\s*&\s*/g, " ").trim())
+          .filter(Boolean);
+        if (!rows.length) return null;
+    
+        const element = name => new mathApi.XmlComponent(name);
+        const attribute = value => new mathApi.XmlAttributeComponent({ "m:val": value });
+        const delimiterProperties = element("m:dPr");
+        const beginning = element("m:begChr");
+        beginning.root.push(attribute(begChr));
+        const ending = element("m:endChr");
+        ending.root.push(attribute(""));
+        delimiterProperties.root.push(beginning, ending);
+    
+        const equationArray = element("m:eqArr");
+        for (const row of rows) {
+          const equation = element("m:e");
+          equation.root.push(new mathApi.MathRun(this.latexToUnicodeMath(row)));
+          equationArray.root.push(equation);
+        }
+        const base = element("m:e");
+        base.root.push(equationArray);
+        const delimiter = element("m:d");
+        delimiter.root.push(delimiterProperties, base);
+        return delimiter;
       }
-
-      if (trimmed.startsWith("#### ")) {
-        const headingText = trimmed.substring(5).trim();
-        runColor = this.headingIntegrationColor(headingText);
-        elements.push(new Paragraph({
-          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: this.parseInlineTextToRuns(headingText, runColor || "111111", {
-            size: this.fontSizeBody,
-            bold: true,
-            italics: true
-          })
-        }));
-        i++;
-        continue;
+    
+      /** Tạo OMML delimiter + equation array cho cases/aligned và \\left\\{, kể cả khi có tiền tố \\Leftrightarrow / \\Rightarrow. */
+      createCasesMath(source, mathApi) {
+        const casesMatch = source.match(/^([\s\S]*?)\\begin\s*\{(cases|aligned)\}([\s\S]*?)\\end\s*\{\2\}\s*$/i);
+        const leftBraceMatch = source.match(/^([\s\S]*?)\\left\s*\\\{([\s\S]*?)\\right\s*\.\s*$/);
+        const leftBracketMatch = source.match(/^([\s\S]*?)\\left\s*\[([\s\S]*?)\\right\s*\.\s*$/);
+        let body = null;
+        let prefix = "";
+        let begChr = "{";
+        if (casesMatch) {
+          prefix = casesMatch[1] || "";
+          body = casesMatch[3];
+        } else if (leftBraceMatch) {
+          prefix = leftBraceMatch[1] || "";
+          body = leftBraceMatch[2];
+        } else if (leftBracketMatch) {
+          prefix = leftBracketMatch[1] || "";
+          body = leftBracketMatch[2];
+          begChr = "[";
+        }
+        const delimiter = this.buildCasesDelimiter(body, mathApi, begChr);
+        if (!delimiter) return null;
+        const children = [];
+        prefix = prefix.trim();
+        if (prefix) children.push(new mathApi.MathRun(this.latexToUnicodeMath(prefix) + " "));
+        children.push(delimiter);
+        return new mathApi.Math({ children });
       }
-
-      const illustrationMatch = trimmed.match(/^!\[([^\]]*)\]\(khbd-ill:([^)]+)\)$/);
-      if (illustrationMatch) {
-        const imageBlock = this.createIllustrationParagraphs(illustrationMatch[1], illustrationMatch[2]);
-        elements.push(...(imageBlock.length ? imageBlock : [this.illustrationFallbackParagraph(illustrationMatch[1])]));
-        i++;
-        continue;
-      }
-
-      // 3. Phân tích ĐƯỜNG KẺ NGANG (--- hoặc ***)
-      if (trimmed === "---" || trimmed === "***" || trimmed === "___") {
-        elements.push(new Paragraph({
-          spacing: { before: 60, after: 60 },
-          border: {
-            bottom: {
-              color: "CCCCCC",
-              space: 1,
-              style: BorderStyle.SINGLE,
-              size: 6
+    
+      /** Chuyển LaTeX ($...$, $$...$$, \\(...\\)) thành Equation Word (OMML). Thất bại thì trả null để fallback Unicode. */
+      createNativeMath(latex) {
+        const mathApi = window.docx;
+        const required = ["Math", "MathRun", "MathFraction", "MathSuperScript", "MathSubScript", "MathSubSuperScript", "MathRadical"];
+        if (!required.every(name => typeof mathApi[name] === "function")) return null;
+    
+        let source = this.normalizeLatexForMath(latex).trim();
+        source = source.replace(/^\$\$([\s\S]*)\$\$$/, "$1").replace(/^\$([\s\S]*)\$$/, "$1");
+        source = source.replace(/^\\\(([\s\S]*)\\\)$/, "$1").replace(/^\\\[([\s\S]*)\\\]$/, "$1").trim();
+        if (!source) return null;
+        source = source
+          .replace(/\\dfrac\b/g, "\\frac")
+          .replace(/\\tfrac\b/g, "\\frac")
+          .replace(/\\cfrac\b/g, "\\frac")
+          .replace(/\\displaystyle\b/g, "")
+          .replace(/\\nolimits\b/g, "")
+          .replace(/\\limits\b/g, "");
+    
+        const casesMath = this.createCasesMath(source, mathApi);
+        if (casesMath) return casesMath;
+    
+        const commandMap = {
+          alpha: "α", beta: "β", gamma: "γ", delta: "δ", Delta: "Δ", epsilon: "ε", varepsilon: "ε",
+          theta: "θ", Theta: "Θ", lambda: "λ", pi: "π", Pi: "Π", sigma: "σ", Sigma: "Σ",
+          omega: "ω", Omega: "Ω", phi: "φ", Phi: "Φ", psi: "ψ", rho: "ρ", mu: "μ", nu: "ν",
+          in: "∈", notin: "∉", ni: "∋", neq: "≠", ne: "≠", le: "≤", leq: "≤", ge: "≥", geq: "≥",
+          times: "×", cdot: "·", div: "÷", pm: "±", mp: "∓", ast: "∗", circ: "∘", bullet: "•",
+          to: "→", rightarrow: "→", leftarrow: "←", Rightarrow: "⇒", Leftrightarrow: "⇔",
+          triangle: "△", angle: "∠", parallel: "∥", perp: "⊥", cup: "∪", cap: "∩",
+          emptyset: "∅", infty: "∞", forall: "∀", exists: "∃", partial: "∂", nabla: "∇",
+          subset: "⊂", subseteq: "⊆", supset: "⊃", sim: "∽", backsim: "∽", backsimeq: "⋍", approx: "≈", equiv: "≡",
+          wideparen: "⌒", overarc: "⌒",
+          mid: "∣", vert: "|", Vert: "‖", colon: ":", setminus: "∖",
+          cdots: "⋯", ldots: "…", dots: "…", degree: "°", ell: "ℓ", hbar: "ℏ",
+          lbrack: "[", rbrack: "]", lbrace: "{", rbrace: "}", lparen: "(", rparen: ")"
+        };
+        const functions = new Set(["sin", "cos", "tan", "cot", "sec", "csc", "log", "ln", "lg", "lim", "max", "min", "gcd", "lcm", "det", "dim", "ker", "hom", "arg", "exp", "sinh", "cosh", "tanh"]);
+        const blackboard = { N: "ℕ", Z: "ℤ", Q: "ℚ", R: "ℝ", C: "ℂ", P: "ℙ" };
+        let index = 0;
+        const run = value => new mathApi.MathRun(String(value ?? ""));
+        const skipSpace = () => { while (index < source.length && /\s/.test(source[index])) index++; };
+        const peek = () => source[index];
+    
+        const wrapBrackets = (open, inner) => {
+          if (open === "(" && typeof mathApi.MathRoundBrackets === "function") return [new mathApi.MathRoundBrackets({ children: inner })];
+          if (open === "[" && typeof mathApi.MathSquareBrackets === "function") return [new mathApi.MathSquareBrackets({ children: inner })];
+          if ((open === "{" || open === "\\{") && typeof mathApi.MathCurlyBrackets === "function") return [new mathApi.MathCurlyBrackets({ children: inner })];
+          const close = { "(": ")", "[": "]", "{": "}" }[open] || "";
+          return [run(open === "\\{" ? "{" : open), ...inner, run(close)];
+        };
+    
+        const readGroup = () => {
+          skipSpace();
+          if (peek() !== "{") return readAtom(true);
+          index++;
+          const group = readSequence("}");
+          if (peek() === "}") index++;
+          return group.length ? group : [run("")];
+        };
+    
+        const readOptionalBracket = (open, close) => {
+          skipSpace();
+          if (peek() !== open) return null;
+          index++;
+          const group = readSequence(close);
+          if (peek() === close) index++;
+          return group;
+        };
+    
+        const readScriptAtom = () => {
+          skipSpace();
+          if (peek() === "{") return readGroup();
+          if (peek() === "\\") return readAtom(true);
+          if (index < source.length) return [run(source[index++])];
+          return [run("")];
+        };
+    
+        const applyScripts = nodes => {
+          skipSpace();
+          let subScript = null;
+          let superScript = null;
+          while (peek() === "^" || peek() === "_") {
+            const kind = source[index++];
+            const script = readScriptAtom();
+            if (kind === "^") superScript = script; else subScript = script;
+            skipSpace();
+          }
+          if (subScript && superScript) return [new mathApi.MathSubSuperScript({ children: nodes, subScript, superScript })];
+          if (superScript) return [new mathApi.MathSuperScript({ children: nodes, superScript })];
+          if (subScript) return [new mathApi.MathSubScript({ children: nodes, subScript })];
+          return nodes;
+        };
+    
+        const readCommandName = () => {
+          const match = source.slice(index).match(/^[A-Za-z]+/);
+          if (match) {
+            index += match[0].length;
+            return match[0];
+          }
+          return source[index++] || "";
+        };
+    
+        const readAtom = (bare = false) => {
+          skipSpace();
+          if (index >= source.length) return [];
+          let nodes;
+          if (peek() === "{") {
+            nodes = readGroup();
+          } else if (peek() === "\\") {
+            index++;
+            const command = readCommandName();
+            if (command === "begin") {
+              skipSpace();
+              let env = "";
+              if (peek() === "{") {
+                index++;
+                while (index < source.length && peek() !== "}") env += source[index++];
+                if (peek() === "}") index++;
+              }
+              env = env.trim().toLowerCase();
+              if (env === "cases" || env === "aligned" || env === "array") {
+                const rest = source.slice(index);
+                const endMatch = rest.match(new RegExp("\\\\end\\s*\\{" + env + "\\}", "i"));
+                if (endMatch) {
+                  const delim = this.buildCasesDelimiter(rest.slice(0, endMatch.index), mathApi, env === "array" ? "[" : "{");
+                  index += endMatch.index + endMatch[0].length;
+                  nodes = delim ? [delim] : [run(env === "array" ? "[" : "{")];
+                } else {
+                  nodes = [run(env === "array" ? "[" : "{")];
+                }
+              } else {
+                nodes = [run(env || "begin")];
+              }
+            } else if (command === "end") {
+              skipSpace();
+              if (peek() === "{") {
+                index++;
+                while (index < source.length && peek() !== "}") index++;
+                if (peek() === "}") index++;
+              }
+              nodes = [];
+            } else if (command === "frac") {
+              nodes = [new mathApi.MathFraction({ numerator: readGroup(), denominator: readGroup() })];
+            } else if (command === "sqrt") {
+              const degree = readOptionalBracket("[", "]");
+              nodes = [new mathApi.MathRadical(degree ? { children: readGroup(), degree } : { children: readGroup() })];
+            } else if (command === "mathbb" || command === "mathcal" || command === "mathfrak") {
+              skipSpace();
+              let letter = "";
+              if (peek() === "{") {
+                index++;
+                while (index < source.length && peek() !== "}") letter += source[index++];
+                if (peek() === "}") index++;
+                letter = letter.trim();
+              } else if (index < source.length) {
+                letter = source[index++];
+              }
+              nodes = [run(command === "mathbb" ? (blackboard[letter] || letter || "ℕ") : letter || command)];
+            } else if (command === "text" || command === "mathrm" || command === "mathbf" || command === "textrm" || command === "textit" || command === "textbf") {
+              skipSpace();
+              if (peek() === "{") {
+                index++;
+                let text = "";
+                let depth = 1;
+                while (index < source.length && depth > 0) {
+                  const ch = source[index++];
+                  if (ch === "{") depth++;
+                  else if (ch === "}") depth--;
+                  if (depth > 0) text += ch;
+                }
+                nodes = [run(text.replace(/\\,/g, " ").replace(/\\/g, ""))];
+              } else {
+                nodes = [run("")];
+              }
+            } else if (command === "left") {
+              skipSpace();
+              let open = peek() || "(";
+              if (open === "\\") {
+                index++;
+                open = "\\" + readCommandName();
+                if (open === "\\{") open = "{";
+                if (open === "\\}") open = "}";
+              } else {
+                index++;
+                if (open === ".") open = "";
+              }
+              const inner = readSequence(null, true);
+              nodes = open ? wrapBrackets(open, inner) : inner;
+            } else if (command === "right") {
+              skipSpace();
+              if (peek() === "\\") {
+                index++;
+                readCommandName();
+              } else if (index < source.length) {
+                index++;
+              }
+              nodes = [];
+            } else if (command === "{" || command === "}") {
+              nodes = [run(command)];
+            } else if (command === "," || command === ";" || command === "!" || command === " " || command === "quad" || command === "qquad") {
+              nodes = [run(" ")];
+            } else if (command === "widehat" || command === "hat") {
+              nodes = this.buildAccentMath(readGroup(), "\u0302", mathApi);
+            } else if (command === "vec" || command === "overrightarrow") {
+              nodes = this.buildAccentMath(readGroup(), "\u2192", mathApi);
+            } else if (command === "overline") {
+              nodes = this.buildAccentMath(readGroup(), "\u0304", mathApi);
+            } else if (command === "underline") {
+              nodes = readGroup();
+            } else if (command === "wideparen" || command === "overarc") {
+              nodes = [run("⌒"), ...readGroup()];
+            } else if (commandMap[command]) {
+              nodes = [run(commandMap[command])];
+            } else if (functions.has(command)) {
+              nodes = [run(command)];
+            } else {
+              const uni = this.latexToUnicodeMath("\\" + command);
+              nodes = [run(uni && uni !== "\\" + command ? uni : command)];
+            }
+          } else if (peek() === "}" || peek() === "]" || peek() === ")") {
+            return [];
+          } else if (/\d/.test(peek())) {
+            let num = "";
+            while (index < source.length && /[0-9.]/.test(peek())) num += source[index++];
+            nodes = [run(num)];
+          } else if (/[A-Za-z]/.test(peek())) {
+            nodes = [run(source[index++])];
+          } else {
+            const ch = source[index++];
+            if (ch === "(" || ch === "[") {
+              const close = ch === "(" ? ")" : "]";
+              const inner = readSequence(close);
+              if (peek() === close) index++;
+              nodes = wrapBrackets(ch, inner);
+            } else {
+              nodes = [run(ch)];
             }
           }
-        }));
-        i++;
-        continue;
+    
+          return bare ? nodes : applyScripts(nodes);
+        };
+    
+        const readSequence = (stop, stopAtRight = false) => {
+          const nodes = [];
+          while (index < source.length) {
+            skipSpace();
+            if (stop && peek() === stop) break;
+            if (stopAtRight && source.slice(index, index + 6) === "\\right") break;
+            if (peek() === "}" && stop !== "}") break;
+            const next = readAtom();
+            if (!next.length) break;
+            nodes.push(...next);
+          }
+          return nodes;
+        };
+    
+        try {
+          const children = readSequence(null).filter(Boolean);
+          if (!children.length) return null;
+          return new mathApi.Math({ children });
+        } catch (error) {
+          console.warn("Không thể chuyển LaTeX sang Equation Word:", source, error);
+          return null;
+        }
       }
-
-      // 4. Danh sách KHBD ba cấp: - (ý lớn), + (ý con), . (ý chi tiết); vẫn đọc • cũ.
-      const literalListMatch = line.match(/^(\s*)([-+.•])\s+(.+)$/);
-      if (literalListMatch) {
-        const [, indent, marker, contentText] = literalListMatch;
-        const level = marker === "-" ? 0 : marker === "+" ? 1 : 2;
-        const lineColor = this.lineIntegrationColor(contentText, runColor);
-        const runs = this.parseInlineTextToRuns(`${marker} ${contentText}`, lineColor);
-        elements.push(new Paragraph({
-          indent: level ? { left: Math.max(level * 360, indent.length * 180) } : undefined,
-          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: runs
-        }));
-        i++;
-        continue;
+    
+      headingIntegrationColor(title) {
+        const text = String(title || "");
+        if (/năng lực số/i.test(text)) return "0369A1";
+        if (/năng lực\s*AI/i.test(text)) return "6D28D9";
+        return null;
       }
-
-      // 4b. Danh sách legacy dùng dấu * vẫn giữ Word bullet.
-      if (/^\*\s+/.test(trimmed)) {
-        const bulletText = trimmed.replace(/^\*\s+/, "");
-        const lineColor = this.lineIntegrationColor(bulletText, runColor);
-        const runs = this.parseInlineTextToRuns(bulletText, lineColor);
-        elements.push(new Paragraph({
-          bullet: { level: 0 },
-          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: runs
-        }));
-        i++;
-        continue;
+    
+      markerRunColor(text) {
+        const t = String(text || "").trim();
+        if (/^\[?NLS(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0369A1", shading: "E0F2FE", bold: true, italics: true };
+        if (/^\[?AI(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "6D28D9", shading: "F3E8FF", bold: true, italics: true };
+        if (/^\[?GDQPAN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B91C1C", shading: "FEE2E2", bold: true };
+        if (/^\[?HCM(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B45309", shading: "FEF3C7", bold: true };
+        if (/^\[?QCN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "047857", shading: "D1FAE5", bold: true };
+        if (/^\[?CLIL(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "4338CA", shading: "E0E7FF", bold: true };
+        if (/^\[?(?:GDTC|TAICHINH)(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "15803D", shading: "DCFCE7", bold: true };
+        if (/^\[?STEM(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0E7490", shading: "CFFAFE", bold: true };
+        if (/^\[?(?:TN-AO|TNAO)(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0284C7", shading: "E0F2FE", bold: true };
+        if (/^\[?MT-NLX(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "4D7C0F", shading: "ECFCCB", bold: true };
+        if (/^\[?GD(?:Đ|D)P-MT(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "047857", shading: "D1FAE5", bold: true };
+        if (/^\[?B(?:Đ|D)KH-SDG(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0284C7", shading: "E0F2FE", bold: true };
+        if (/^\[?Di\s*s[aả]n\s*(?:Đ|D)P(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B45309", shading: "FEF3C7", bold: true };
+        if (/^\[?Speech\s*AI(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "4338CA", shading: "E0E7FF", bold: true };
+        if (/^\[?B[aả]n\s*s[aắ]c\s*VN(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "B91C1C", shading: "FEE2E2", bold: true };
+        if (/^\[?CDTG(?::[^\]\n]+)?\]?$/i.test(t)) return { color: "0E7490", shading: "CFFAFE", bold: true };
+        return null;
       }
-
-      // 5. Phân tích DANH SÁCH ĐÁNH SỐ (1. 2. a) b)...)
-      if (/^(\d+\.|\b[a-z]\))\s+/.test(trimmed)) {
-        const matchNum = trimmed.match(/^(\d+\.|\b[a-z]\))\s+/);
-        const prefix = matchNum[0].trimEnd() + " ";
-        const contentText = trimmed.substring(matchNum[0].length);
-        const headingColor = this.headingIntegrationColor(contentText);
-        if (headingColor) runColor = headingColor;
-        else if (/^\d+\./.test(trimmed)) runColor = null;
-        const lineColor = this.lineIntegrationColor(contentText, runColor);
-        const runs = this.parseInlineTextToRuns(contentText, lineColor);
-
-        elements.push(new Paragraph({
-          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: [
-            this.coloredTextRun(prefix, { bold: true, color: lineColor }),
-            ...runs
-          ]
-        }));
-        i++;
-        continue;
+    
+      lineIntegrationColor(text, inherited) {
+        const raw = String(text || "");
+        const nls = /\*{1,3}\[?NLS(?::[^\]\n]+)?\]?\*{1,3}|\[NLS(?::[^\]\n]+)?\]|\bNLS\b/.test(raw);
+        const aiMarker = /\*{1,3}\[?AI(?::[^\]\n]+)?\]?\*{1,3}|\[AI(?::[^\]\n]+)?\]/.test(raw);
+        const aiCode = /\d+\.[A-Z]\d+\.\d+/.test(raw) && (/\bAI\b|năng lực\s*AI/i.test(raw) || inherited === "6D28D9");
+        const ai = aiMarker || aiCode;
+        if (nls && !ai) return "0369A1";
+        if (ai && !nls) return "6D28D9";
+        return inherited || undefined;
       }
-
-      // 6. Phân tích BLOCKQUOTE (> ...)
-      if (trimmed.startsWith("> ")) {
-        const quoteText = trimmed.substring(2).trim();
-        const lineColor = this.lineIntegrationColor(quoteText, runColor);
-        const runs = this.parseInlineTextToRuns(quoteText, lineColor);
-        elements.push(new Paragraph({
-          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          indent: { left: 567 }, // lùi 1cm
-          children: runs
-        }));
-        i++;
-        continue;
+    
+      coloredTextRun(text, extras = {}) {
+        const docxApi = (typeof window !== "undefined" && window.docx) || (typeof require !== "undefined" ? require("docx") : {});
+        const { TextRun, ShadingType } = docxApi || {};
+        if (typeof TextRun !== "function") return { text };
+        const props = {
+          text,
+          font: extras.font || this.fontFamily,
+          size: extras.size || this.fontSizeBody
+        };
+        if (extras.bold) props.bold = true;
+        if (extras.italics) props.italics = true;
+        if (extras.color) props.color = extras.color;
+        if (extras.shading) {
+          const clearType = (ShadingType && ShadingType.CLEAR) || "clear";
+          props.shading = {
+            type: clearType,
+            fill: extras.shading
+          };
+        }
+        return new TextRun(props);
       }
-
-      // 7. ĐOẠN VĂN BẢN BÌNH THƯỜNG (kể cả dòng lẫn marker khbd-ill)
-      const mixedIll = this.splitIllustrationSegments(trimmed);
-      if (mixedIll.some(part => part.type === "illustration")) {
-        mixedIll.forEach(part => {
-          if (part.type === "illustration") {
-            const block = this.createIllustrationParagraphs(part.caption, part.id);
-            elements.push(...(block.length ? block : [this.illustrationFallbackParagraph(part.caption)]));
+    
+      /**
+       * Tách một dòng văn bản chứa các công thức $...$ thành danh sách các docx TextRun
+       */
+      parseInlineTextToRuns(text, color, styles = {}) {
+        if (!window.docx) return [];
+        const { TextRun } = window.docx;
+    
+        text = String(text || "").replace(/<br\s*\/?>/gi, "\n");
+        const runs = [];
+        // Công thức đứng trước định dạng Markdown để x_1, a_{ij} trong $...$ không bị hiểu là italic.
+        const regex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$)|\*\*\*[\s\S]+?\*\*\*|\*\*[\s\S]+?\*\*|(?<![\w\\])___(?!\s|_)[^_\n]+?(?<!\s)___(?!\w)|(?<![\w\\])__(?!\s|_)[^_\n]+?(?<!\s)__(?!\w)|(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)|(?<![\w\\])_(?!\s|_)[^_\n]+?(?<!\s)_(?![\w_])|`[^`]+?`|\[(?:NLS|AI|GDQPAN|HCM|QCN|CLIL|GDTC|TAICHINH|STEM|TN-AO|TNAO|MT-NLX|GDĐP-MT|GDDP-MT|BĐKH-SDG|BDKH-SDG|Di sản ĐP|Di san DP|Speech AI|Bản sắc VN|Ban sac VN|CDTG)(?::\s*[^\]\r\n]+)?\])/gi;
+        let lastIndex = 0;
+        let match;
+    
+        const pushMath = (token, display) => {
+          const cleaned = this.stripRepeatedLatexSpacing(token).trim();
+          if (!cleaned) return;
+          const math = this.createNativeMath(cleaned);
+          if (math) {
+            runs.push(math);
             return;
           }
-          const leftover = String(part.text || "").trim();
-          if (!leftover) return;
-          const leftoverColor = this.lineIntegrationColor(leftover, runColor);
-          const leftoverRuns = this.parseInlineTextToRuns(leftover, leftoverColor);
+          const uni = this.latexToUnicodeMath(cleaned);
+          if (!uni) return;
+          runs.push(new TextRun({
+            text: uni,
+            font: "Cambria Math",
+            italics: true,
+            bold: Boolean(display || styles.bold),
+            size: this.fontSizeBody
+          }));
+        };
+    
+        const mathSplitRegex = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<!\$)\$(?!\$)(?:\\.|[^$\n])+?\$(?!\$))/g;
+    
+        const pushMarkerWithMath = (token, markerInfo, baseStyles) => {
+          if (!mathSplitRegex.test(token)) {
+            runs.push(this.coloredTextRun(token, {
+              bold: markerInfo ? markerInfo.bold : baseStyles.bold,
+              italics: markerInfo ? (markerInfo.italics ?? baseStyles.italics) : baseStyles.italics,
+              color: markerInfo ? markerInfo.color : color,
+              shading: markerInfo ? markerInfo.shading : undefined
+            }));
+            return;
+          }
+          const parts = token.split(mathSplitRegex);
+          for (const part of parts) {
+            if (!part) continue;
+            const isMath = /^(?:\$\$|\$|\\\(|\\\[)/.test(part) && /(?:\$\$|\$|\\\)|\\\])$/.test(part);
+            if (isMath) {
+              pushMath(part, part.startsWith("$$") || part.startsWith("\\["));
+            } else {
+              runs.push(this.coloredTextRun(part, {
+                bold: markerInfo ? markerInfo.bold : baseStyles.bold,
+                italics: markerInfo ? (markerInfo.italics ?? baseStyles.italics) : baseStyles.italics,
+                color: markerInfo ? markerInfo.color : color,
+                shading: markerInfo ? markerInfo.shading : undefined
+              }));
+            }
+          }
+        };
+    
+        while ((match = regex.exec(text)) !== null) {
+          if (match.index > lastIndex) {
+            const plain = text.substring(lastIndex, match.index);
+            runs.push(this.coloredTextRun(plain, { color, ...styles }));
+          }
+    
+          const token = match[0];
+    
+          if ((token.startsWith("$$") && token.endsWith("$$")) || (token.startsWith("\\[") && token.endsWith("\\]"))) {
+            pushMath(token, true);
+          } else if ((token.startsWith("$") && token.endsWith("$")) || (token.startsWith("\\(") && token.endsWith("\\)"))) {
+            pushMath(token, false);
+          } else if ((token.startsWith("***") && token.endsWith("***")) || (token.startsWith("___") && token.endsWith("___"))) {
+            const biText = token.substring(3, token.length - 3);
+            const markerInfo = this.markerRunColor(biText);
+            if (markerInfo) {
+              pushMarkerWithMath(biText, markerInfo, { ...styles, bold: true, italics: true });
+            } else {
+              runs.push(...this.parseInlineTextToRuns(biText, color, { ...styles, bold: true, italics: true }));
+            }
+          } else if ((token.startsWith("**") && token.endsWith("**")) || (token.startsWith("__") && token.endsWith("__"))) {
+            const boldText = token.substring(2, token.length - 2);
+            const markerInfo = this.markerRunColor(boldText);
+            if (markerInfo) {
+              pushMarkerWithMath(boldText, markerInfo, { ...styles, bold: markerInfo.bold, italics: markerInfo.italics ?? true });
+            } else {
+              runs.push(...this.parseInlineTextToRuns(boldText, color, { ...styles, bold: true }));
+            }
+          } else if (token.startsWith("[")) {
+            const markerInfo = this.markerRunColor(token);
+            pushMarkerWithMath(token, markerInfo, styles);
+          } else if ((token.startsWith("*") && token.endsWith("*")) || (token.startsWith("_") && token.endsWith("_"))) {
+            const italicText = token.substring(1, token.length - 1);
+            runs.push(...this.parseInlineTextToRuns(italicText, color, { ...styles, italics: true }));
+          } else if (token.startsWith("`") && token.endsWith("`")) {
+            const codeText = token.substring(1, token.length - 1);
+            runs.push(new TextRun({
+              text: codeText,
+              font: this.fontFamily,
+              size: this.fontSizeBody,
+              color: "A020F0"
+            }));
+          }
+    
+          lastIndex = regex.lastIndex;
+        }
+    
+        if (lastIndex < text.length) {
+          const remaining = text.substring(lastIndex);
+          runs.push(this.coloredTextRun(remaining, { color, ...styles }));
+        }
+    
+        if (runs.length === 0) {
+          runs.push(this.coloredTextRun("", { color, ...styles }));
+        }
+    
+        return runs;
+      }
+    
+      /**
+       * Phân tích nội dung Markdown thành các phần tử docx (Paragraphs, Tables, Headings)
+       */
+      parseMarkdownToDocxElements(markdown) {
+        if (!window.docx) {
+          throw new Error("Thư viện docx.js chưa được tải!");
+        }
+    
+        const {
+          Paragraph, TextRun, Table, TableRow, TableCell, WidthType,
+          AlignmentType, BorderStyle, ShadingType
+        } = window.docx;
+    
+        const sanitized = typeof sanitizeLessonMarkdown === "function" ? sanitizeLessonMarkdown(markdown) : String(markdown || "");
+        const cleanMarkdown = this.stripRepeatedLatexSpacing(this.collapseDottedLines(sanitized, 1));
+        const elements = [];
+        const lines = cleanMarkdown.split(/\r?\n/);
+        let i = 0;
+        let runColor = null;
+    
+        while (i < lines.length) {
+          const line = lines[i];
+          const trimmed = line.trim();
+    
+          // Dòng trống
+          if (!trimmed) {
+            i++;
+            continue;
+          }
+    
+          // Bỏ riêng các mảnh bảng bị rò rỉ; bảng Markdown hợp lệ vẫn được giữ nguyên.
+          const previous = i > 0 ? lines[i - 1].trim() : "";
+          const next = i + 1 < lines.length ? lines[i + 1].trim() : "";
+          const isPipeOnly = /^\|+$/.test(trimmed);
+          const isPipeSeparator = /^\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?$/.test(trimmed);
+          const isLooseDashAfterPipe = trimmed === "---" && (/\|\s*$/.test(previous) || /^\|+$/.test(next));
+          if (isPipeOnly || (isPipeSeparator && !(previous.startsWith("|") && previous.endsWith("|") && next.startsWith("|") && next.endsWith("|"))) || isLooseDashAfterPipe) {
+            // Để i được tăng đúng một lần ở cuối vòng lặp, không dùng continue tại đây.
+          } else {
+    
+          // 1. Phân tích BẢNG MARKDOWN (| Cột 1 | Cột 2 | ...)
+          if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+            const tableLines = [];
+            while (i < lines.length && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+              tableLines.push(lines[i].trim());
+              i++;
+            }
+    
+            if (tableLines.length >= 2) {
+              const docxTable = this.createDocxTableFromMarkdown(tableLines);
+              if (docxTable) {
+                elements.push(docxTable);
+                // Thêm khoảng cách sau bảng
+                elements.push(new Paragraph({
+                  spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule }
+                }));
+              }
+              continue;
+            }
+          }
+    
+          // 2. Phân tích TIÊU ĐỀ (# H1, ## H2, ### H3, #### H4)
+          if (trimmed.startsWith("# ")) {
+            const headingText = trimmed.substring(2).trim();
+            runColor = this.headingIntegrationColor(headingText);
+            const isAppendix = /^IV[\.\s:]/i.test(headingText) && /PHỤ\s*LỤC|HỒ\s*SƠ/i.test(headingText);
+            elements.push(new Paragraph({
+              pageBreakBefore: Boolean(isAppendix),
+              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+              children: this.parseInlineTextToRuns(headingText, runColor, { size: this.fontSizeH1, bold: true })
+            }));
+            i++;
+            continue;
+          }
+    
+          if (trimmed.startsWith("## ")) {
+            const headingText = trimmed.substring(3).trim();
+            runColor = this.headingIntegrationColor(headingText);
+            elements.push(new Paragraph({
+              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+              children: this.parseInlineTextToRuns(headingText, runColor, { size: this.fontSizeH2, bold: true })
+            }));
+            i++;
+            continue;
+          }
+    
+          if (trimmed.startsWith("### ")) {
+            const headingText = trimmed.substring(4).trim();
+            runColor = this.headingIntegrationColor(headingText);
+            elements.push(new Paragraph({
+              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+              children: this.parseInlineTextToRuns(headingText, runColor, { size: this.fontSizeH3, bold: true, italics: Boolean(runColor) })
+            }));
+            i++;
+            continue;
+          }
+    
+          if (trimmed.startsWith("#### ")) {
+            const headingText = trimmed.substring(5).trim();
+            runColor = this.headingIntegrationColor(headingText);
+            elements.push(new Paragraph({
+              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+              children: this.parseInlineTextToRuns(headingText, runColor || "111111", {
+                size: this.fontSizeBody,
+                bold: true,
+                italics: true
+              })
+            }));
+            i++;
+            continue;
+          }
+    
+          const illustrationMatch = trimmed.match(/^!\[([^\]]*)\]\(khbd-ill:([^)]+)\)$/);
+          if (illustrationMatch) {
+            const imageBlock = this.createIllustrationParagraphs(illustrationMatch[1], illustrationMatch[2]);
+            elements.push(...(imageBlock.length ? imageBlock : [this.illustrationFallbackParagraph(illustrationMatch[1])]));
+            i++;
+            continue;
+          }
+    
+          // 3. Phân tích ĐƯỜNG KẺ NGANG (--- hoặc ***)
+          if (trimmed === "---" || trimmed === "***" || trimmed === "___") {
+            elements.push(new Paragraph({
+              spacing: { before: 60, after: 60 },
+              border: {
+                bottom: {
+                  color: "CCCCCC",
+                  space: 1,
+                  style: BorderStyle.SINGLE,
+                  size: 6
+                }
+              }
+            }));
+            i++;
+            continue;
+          }
+    
+          // 4. Danh sách KHBD ba cấp: - (ý lớn), + (ý con), . (ý chi tiết); vẫn đọc • cũ.
+          const literalListMatch = line.match(/^(\s*)([-+.•])\s+(.+)$/);
+          if (literalListMatch) {
+            const [, indent, marker, contentText] = literalListMatch;
+            const level = marker === "-" ? 0 : marker === "+" ? 1 : 2;
+            const lineColor = this.lineIntegrationColor(contentText, runColor);
+            const runs = this.parseInlineTextToRuns(`${marker} ${contentText}`, lineColor);
+            elements.push(new Paragraph({
+              indent: level ? { left: Math.max(level * 360, indent.length * 180) } : undefined,
+              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+              children: runs
+            }));
+            i++;
+            continue;
+          }
+    
+          // 4b. Danh sách legacy dùng dấu * vẫn giữ Word bullet.
+          if (/^\*\s+/.test(trimmed)) {
+            const bulletText = trimmed.replace(/^\*\s+/, "");
+            const lineColor = this.lineIntegrationColor(bulletText, runColor);
+            const runs = this.parseInlineTextToRuns(bulletText, lineColor);
+            elements.push(new Paragraph({
+              bullet: { level: 0 },
+              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+              children: runs
+            }));
+            i++;
+            continue;
+          }
+    
+          // 5. Phân tích DANH SÁCH ĐÁNH SỐ (1. 2. a) b)...)
+          if (/^(\d+\.|\b[a-z]\))\s+/.test(trimmed)) {
+            const matchNum = trimmed.match(/^(\d+\.|\b[a-z]\))\s+/);
+            const prefix = matchNum[0].trimEnd() + " ";
+            const contentText = trimmed.substring(matchNum[0].length);
+            const headingColor = this.headingIntegrationColor(contentText);
+            if (headingColor) runColor = headingColor;
+            else if (/^\d+\./.test(trimmed)) runColor = null;
+            const lineColor = this.lineIntegrationColor(contentText, runColor);
+            const runs = this.parseInlineTextToRuns(contentText, lineColor);
+    
+            elements.push(new Paragraph({
+              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+              children: [
+                this.coloredTextRun(prefix, { bold: true, color: lineColor }),
+                ...runs
+              ]
+            }));
+            i++;
+            continue;
+          }
+    
+          // 6. Phân tích BLOCKQUOTE (> ...)
+          if (trimmed.startsWith("> ")) {
+            const quoteText = trimmed.substring(2).trim();
+            const lineColor = this.lineIntegrationColor(quoteText, runColor);
+            const runs = this.parseInlineTextToRuns(quoteText, lineColor);
+            elements.push(new Paragraph({
+              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+              indent: { left: 567 }, // lùi 1cm
+              children: runs
+            }));
+            i++;
+            continue;
+          }
+    
+          // 7. ĐOẠN VĂN BẢN BÌNH THƯỜNG (kể cả dòng lẫn marker khbd-ill)
+          const mixedIll = this.splitIllustrationSegments(trimmed);
+          if (mixedIll.some(part => part.type === "illustration")) {
+            mixedIll.forEach(part => {
+              if (part.type === "illustration") {
+                const block = this.createIllustrationParagraphs(part.caption, part.id);
+                elements.push(...(block.length ? block : [this.illustrationFallbackParagraph(part.caption)]));
+                return;
+              }
+              const leftover = String(part.text || "").trim();
+              if (!leftover) return;
+              const leftoverColor = this.lineIntegrationColor(leftover, runColor);
+              const leftoverRuns = this.parseInlineTextToRuns(leftover, leftoverColor);
+              elements.push(new Paragraph({
+                spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+                children: leftoverRuns
+              }));
+            });
+          } else {
+          const lineColor = this.lineIntegrationColor(trimmed, runColor);
+          const runs = this.parseInlineTextToRuns(trimmed, lineColor);
           elements.push(new Paragraph({
             spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-            children: leftoverRuns
+            children: runs
+          }));
+          }
+          }
+    
+          i++;
+        }
+    
+        return elements;
+      }
+    
+      /**
+       * Tạo bảng docx từ các dòng markdown (| a | b |)
+       */
+      createDocxTableFromMarkdown(tableLines) {
+        if (!window.docx || tableLines.length < 2) return null;
+        const { Table, TableRow, TableCell, Paragraph, TextRun, WidthType, BorderStyle, VerticalAlign, TableLayoutType } = window.docx;
+    
+        // Lọc bỏ dòng phân cách (|:---|:---:|)
+        const validLines = tableLines.filter(line => !/^[|\s-:]+$/.test(line));
+        if (validLines.length === 0) return null;
+    
+        const rows = [];
+        const tableWidth = this.tableWidth || 9639;
+        const headerCells = this.splitMarkdownTableRow(validLines[0]).map(cell => cell.toLowerCase());
+        const isActivityTwoCol = headerCells.some(cell => cell.includes("hoạt động của gv"))
+          && headerCells.some(cell => cell.includes("nội dung"));
+        const columnCount = isActivityTwoCol ? 2 : Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
+        const columnWidths = isActivityTwoCol
+          ? [6426, 3213]
+          : Array.from({ length: columnCount }, (_, idx) => {
+              const base = Math.floor(tableWidth / columnCount);
+              return idx === columnCount - 1 ? (tableWidth - base * (columnCount - 1)) : base;
+            });
+    
+        validLines.forEach((line, rowIndex) => {
+          const parsedCells = this.splitMarkdownTableRow(line);
+          const splitter = typeof semanticSplitActivityRow === "function"
+            ? semanticSplitActivityRow
+            : (cells => this.semanticSplitActivityRow(cells));
+          const rawCells = isActivityTwoCol ? splitter(parsedCells) : parsedCells;
+          const isHeader = (rowIndex === 0);
+    
+          const tableCells = Array.from({ length: columnCount }, (_, columnIndex) => {
+            const cellText = rawCells[columnIndex] || "";
+            const paragraphs = this.parseTableCellParagraphs(cellText, isHeader);
+            return new TableCell({
+              children: paragraphs.length ? paragraphs : [new Paragraph({ children: [new TextRun({ text: "", font: this.fontFamily, size: this.fontSizeBody })] })],
+              margins: { top: 50, bottom: 50, left: 50, right: 50 },
+              verticalAlign: VerticalAlign?.TOP,
+              width: { size: columnWidths[columnIndex], type: WidthType.DXA }
+            });
+          });
+    
+          rows.push(new TableRow({
+            children: tableCells,
+            tableHeader: isHeader,
+            cantSplit: isHeader
           }));
         });
-      } else {
-      const lineColor = this.lineIntegrationColor(trimmed, runColor);
-      const runs = this.parseInlineTextToRuns(trimmed, lineColor);
-      elements.push(new Paragraph({
-        spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-        children: runs
-      }));
-      }
-      }
-
-      i++;
-    }
-
-    return elements;
-  }
-
-  /**
-   * Tạo bảng docx từ các dòng markdown (| a | b |)
-   */
-  createDocxTableFromMarkdown(tableLines) {
-    if (!window.docx || tableLines.length < 2) return null;
-    const { Table, TableRow, TableCell, Paragraph, TextRun, WidthType, BorderStyle, VerticalAlign, TableLayoutType } = window.docx;
-
-    // Lọc bỏ dòng phân cách (|:---|:---:|)
-    const validLines = tableLines.filter(line => !/^[|\s-:]+$/.test(line));
-    if (validLines.length === 0) return null;
-
-    const rows = [];
-    const tableWidth = this.tableWidth || 9639;
-    const headerCells = this.splitMarkdownTableRow(validLines[0]).map(cell => cell.toLowerCase());
-    const isActivityTwoCol = headerCells.some(cell => cell.includes("hoạt động của gv"))
-      && headerCells.some(cell => cell.includes("nội dung"));
-    const columnCount = isActivityTwoCol ? 2 : Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
-    const columnWidths = isActivityTwoCol
-      ? [6426, 3213]
-      : Array.from({ length: columnCount }, (_, idx) => {
-          const base = Math.floor(tableWidth / columnCount);
-          return idx === columnCount - 1 ? (tableWidth - base * (columnCount - 1)) : base;
-        });
-
-    validLines.forEach((line, rowIndex) => {
-      const parsedCells = this.splitMarkdownTableRow(line);
-      const splitter = typeof semanticSplitActivityRow === "function"
-        ? semanticSplitActivityRow
-        : (cells => this.semanticSplitActivityRow(cells));
-      const rawCells = isActivityTwoCol ? splitter(parsedCells) : parsedCells;
-      const isHeader = (rowIndex === 0);
-
-      const tableCells = Array.from({ length: columnCount }, (_, columnIndex) => {
-        const cellText = rawCells[columnIndex] || "";
-        const paragraphs = this.parseTableCellParagraphs(cellText, isHeader);
-        return new TableCell({
-          children: paragraphs.length ? paragraphs : [new Paragraph({ children: [new TextRun({ text: "", font: this.fontFamily, size: this.fontSizeBody })] })],
-          margins: { top: 50, bottom: 50, left: 50, right: 50 },
-          verticalAlign: VerticalAlign?.TOP,
-          width: { size: columnWidths[columnIndex], type: WidthType.DXA }
-        });
-      });
-
-      rows.push(new TableRow({
-        children: tableCells,
-        tableHeader: isHeader,
-        cantSplit: isHeader
-      }));
-    });
-
-    const borderStyle = {
-      style: BorderStyle.SINGLE,
-      size: 6,
-      color: "000000"
-    };
-
-    return new Table({
-      rows: rows,
-      width: { size: tableWidth, type: WidthType.DXA },
-      columnWidths,
-      layout: TableLayoutType?.FIXED,
-      borders: {
-        top: borderStyle,
-        bottom: borderStyle,
-        left: borderStyle,
-        right: borderStyle,
-        insideHorizontal: borderStyle,
-        insideVertical: borderStyle
-      }
-    });
-  }
-
-  isActivityScriptCell(text) {
-    return /bước\s*[1-4]\b|\*{0,3}GV\s*:|\*{0,3}HS\s*:|\[Kỹ thuật|\[Phương pháp/i.test(String(text || ""));
-  }
-
-  isKnowledgeContentCell(text) {
-    const t = String(text || "").trim();
-    if (!t || this.isActivityScriptCell(t)) return false;
-    if (/^(?:\d+\.\s*)?(?:các bước(?: giải)?|định nghĩa|công thức|ví dụ|luyện tập|bài tập|vận dụng|ghi nhớ|quy tắc|chú ý|hệ phương trình|tính chất|định lý)\b/i.test(t)) return true;
-    if (/^\$/.test(t) || /^\\begin/.test(t) || /^\*\*[^*]+\*\*/.test(t)) return true;
-    return false;
-  }
-
-  isEmptyRightColumn(text) {
-    const t = String(text || "").replace(/<br\s*\/?>/gi, " ").replace(/\s+/g, " ").trim();
-    return !t || /^(?:-{2,}|\.{2,}|none|n\/a|null|rỗng)$/i.test(t);
-  }
-
-  extractBoardKnowledgeFromScript(left) {
-    const source = String(left || "");
-    if (!source) return { left: "", right: "" };
-    const step4 = source.search(/bước\s*4/i);
-    const searchFrom = step4 >= 0 ? step4 : 0;
-    const tail = source.slice(searchFrom);
-    const match = tail.match(/(?:<br\s*\/?>|\n|\/)\s*((?:\d+\.\s*)?(?:[A-ZÀ-Ỵ][A-ZÀ-Ỵ\s]{3,}|Quy tắc(?: giải)?|Định nghĩa|Định lý|Tính chất|Ví dụ\s*\d+|Lời giải(?:\s+Ví dụ)?)\b[\s\S]*)/i);
-    if (!match) return { left: source, right: "" };
-    const abs = searchFrom + match.index;
-    const knowledgeStart = abs + (match[0].length - match[1].length);
-    const knowledge = source.slice(knowledgeStart).replace(/^(?:<br\s*\/?>|\s|\/)+/i, "").trim();
-    if (knowledge.length < 8) return { left: source, right: "" };
-    const kept = source.slice(0, knowledgeStart).replace(/(?:<br\s*\/?>|\s|\/)+$/g, "").trim();
-    return { left: kept || source, right: knowledge };
-  }
-
-  semanticSplitActivityRow(cells) {
-    const list = (Array.isArray(cells) ? cells : []).map(cell => String(cell || "").trim());
-    let left = "";
-    let right = "";
-    if (!list.length) return ["", ""];
-    if (list.length === 1) {
-      left = list[0];
-    } else if (list.length === 2) {
-      left = list[0];
-      right = list[1];
-    } else {
-      let splitAt = list.findIndex((cell, index) => index > 0 && this.isKnowledgeContentCell(cell));
-      if (splitAt < 0) {
-        for (let i = list.length - 1; i >= 1; i--) {
-          if (!this.isActivityScriptCell(list[i])) {
-            splitAt = i;
-            break;
+    
+        const borderStyle = {
+          style: BorderStyle.SINGLE,
+          size: 6,
+          color: "000000"
+        };
+    
+        return new Table({
+          rows: rows,
+          width: { size: tableWidth, type: WidthType.DXA },
+          columnWidths,
+          layout: TableLayoutType?.FIXED,
+          borders: {
+            top: borderStyle,
+            bottom: borderStyle,
+            left: borderStyle,
+            right: borderStyle,
+            insideHorizontal: borderStyle,
+            insideVertical: borderStyle
           }
-        }
+        });
       }
-      if (splitAt < 0) left = list.join(" / ");
-      else {
-        left = list.slice(0, splitAt).join(" / ");
-        right = list.slice(splitAt).join(" / ");
+    
+      isActivityScriptCell(text) {
+        return /bước\s*[1-4]\b|\*{0,3}GV\s*:|\*{0,3}HS\s*:|\[Kỹ thuật|\[Phương pháp/i.test(String(text || ""));
       }
-    }
-    if (this.isEmptyRightColumn(right) && left) {
-      const extracted = this.extractBoardKnowledgeFromScript(left);
-      if (extracted.right) {
-        left = extracted.left;
-        right = extracted.right;
+    
+      isKnowledgeContentCell(text) {
+        const t = String(text || "").trim();
+        if (!t || this.isActivityScriptCell(t)) return false;
+        if (/^(?:\d+\.\s*)?(?:các bước(?: giải)?|định nghĩa|công thức|ví dụ|luyện tập|bài tập|vận dụng|ghi nhớ|quy tắc|chú ý|hệ phương trình|tính chất|định lý)\b/i.test(t)) return true;
+        if (/^\$/.test(t) || /^\\begin/.test(t) || /^\*\*[^*]+\*\*/.test(t)) return true;
+        return false;
       }
-    }
-    return [left, right];
-  }
-
-  splitMarkdownTableRow(line) {
-    if (typeof splitKhbdMarkdownTableRow === "function") return splitKhbdMarkdownTableRow(line);
-    const cells = [];
-    let cell = "";
-    let escaped = false;
-    let math = 0;
-    const content = String(line || "").trim().replace(/^\||\|$/g, "");
-    for (let index = 0; index < content.length; index++) {
-      const character = content[index];
-      const next = content[index + 1];
-      if (escaped) {
-        cell += character;
-        escaped = false;
-      } else if (character === "\\" && next === "|") {
-        escaped = true;
-      } else if (character === "$") {
-        if (next === "$") {
-          cell += "$$";
-          index++;
-          math = math === 2 ? 0 : 2;
+    
+      isEmptyRightColumn(text) {
+        const t = String(text || "").replace(/<br\s*\/?>/gi, " ").replace(/\s+/g, " ").trim();
+        return !t || /^(?:-{2,}|\.{2,}|none|n\/a|null|rỗng)$/i.test(t);
+      }
+    
+      extractBoardKnowledgeFromScript(left) {
+        const source = String(left || "");
+        if (!source) return { left: "", right: "" };
+        const step4 = source.search(/bước\s*4/i);
+        const searchFrom = step4 >= 0 ? step4 : 0;
+        const tail = source.slice(searchFrom);
+        const match = tail.match(/(?:<br\s*\/?>|\n|\/)\s*((?:\d+\.\s*)?(?:[A-ZÀ-Ỵ][A-ZÀ-Ỵ\s]{3,}|Quy tắc(?: giải)?|Định nghĩa|Định lý|Tính chất|Ví dụ\s*\d+|Lời giải(?:\s+Ví dụ)?)\b[\s\S]*)/i);
+        if (!match) return { left: source, right: "" };
+        const abs = searchFrom + match.index;
+        const knowledgeStart = abs + (match[0].length - match[1].length);
+        const knowledge = source.slice(knowledgeStart).replace(/^(?:<br\s*\/?>|\s|\/)+/i, "").trim();
+        if (knowledge.length < 8) return { left: source, right: "" };
+        const kept = source.slice(0, knowledgeStart).replace(/(?:<br\s*\/?>|\s|\/)+$/g, "").trim();
+        return { left: kept || source, right: knowledge };
+      }
+    
+      semanticSplitActivityRow(cells) {
+        const list = (Array.isArray(cells) ? cells : []).map(cell => String(cell || "").trim());
+        let left = "";
+        let right = "";
+        if (!list.length) return ["", ""];
+        if (list.length === 1) {
+          left = list[0];
+        } else if (list.length === 2) {
+          left = list[0];
+          right = list[1];
         } else {
-          cell += "$";
-          math = math === 1 ? 0 : 1;
-        }
-      } else if (character === "|" && math === 0) {
-        cells.push(cell.trim());
-        cell = "";
-      } else {
-        cell += character;
-      }
-    }
-    cells.push(cell.trim());
-    return cells;
-  }
-
-  parseTableCellRuns(text) {
-    const { TextRun } = window.docx;
-    const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n");
-    return lines.flatMap((line, index) => {
-      const lineColor = this.lineIntegrationColor(line, null);
-      const runs = this.parseInlineTextToRuns(line, lineColor);
-      if (index < lines.length - 1) runs.push(new TextRun({ break: 1 }));
-      return runs;
-    });
-  }
-
-  parseTableCellParagraphs(text, isHeader = false) {
-    const { Paragraph } = window.docx;
-    // Tách GV:/HS: dính liền trên cùng dòng thành các dòng riêng trước khi parse
-    let normalized = String(text || "");
-    if (!isHeader) {
-      const formatter = (typeof window !== "undefined" && typeof window.formatKhbdRoleLineBreaks === "function")
-        ? window.formatKhbdRoleLineBreaks
-        : null;
-      normalized = formatter
-        ? formatter(normalized)
-        : normalized
-          .replace(/([^\n>])\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1<br>- **GV:**")
-          .replace(/([^\n>])\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1<br>- **HS:**")
-          .replace(/<br>\s*-\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "<br>- **GV:**")
-          .replace(/<br>\s*-\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "<br>- **HS:**");
-    }
-    const lines = normalized.replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
-    const usable = lines.length ? lines : [""];
-    return usable.flatMap(line => {
-      const illParts = this.splitIllustrationSegments(line);
-      if (illParts.some(part => part.type === "illustration")) {
-        return illParts.flatMap(part => {
-          if (part.type === "illustration") {
-            const block = this.createIllustrationParagraphs(part.caption, part.id);
-            return block.length ? block : [this.illustrationFallbackParagraph(part.caption)];
+          let splitAt = list.findIndex((cell, index) => index > 0 && this.isKnowledgeContentCell(cell));
+          if (splitAt < 0) {
+            for (let i = list.length - 1; i >= 1; i--) {
+              if (!this.isActivityScriptCell(list[i])) {
+                splitAt = i;
+                break;
+              }
+            }
           }
-          const content = String(part.text || "").trim();
-          if (!content) return [];
+          if (splitAt < 0) left = list.join(" / ");
+          else {
+            left = list.slice(0, splitAt).join(" / ");
+            right = list.slice(splitAt).join(" / ");
+          }
+        }
+        if (this.isEmptyRightColumn(right) && left) {
+          const extracted = this.extractBoardKnowledgeFromScript(left);
+          if (extracted.right) {
+            left = extracted.left;
+            right = extracted.right;
+          }
+        }
+        return [left, right];
+      }
+    
+      splitMarkdownTableRow(line) {
+        if (typeof splitKhbdMarkdownTableRow === "function") return splitKhbdMarkdownTableRow(line);
+        const cells = [];
+        let cell = "";
+        let escaped = false;
+        let math = 0;
+        const content = String(line || "").trim().replace(/^\||\|$/g, "");
+        for (let index = 0; index < content.length; index++) {
+          const character = content[index];
+          const next = content[index + 1];
+          if (escaped) {
+            cell += character;
+            escaped = false;
+          } else if (character === "\\" && next === "|") {
+            escaped = true;
+          } else if (character === "$") {
+            if (next === "$") {
+              cell += "$$";
+              index++;
+              math = math === 2 ? 0 : 2;
+            } else {
+              cell += "$";
+              math = math === 1 ? 0 : 1;
+            }
+          } else if (character === "|" && math === 0) {
+            cells.push(cell.trim());
+            cell = "";
+          } else {
+            cell += character;
+          }
+        }
+        cells.push(cell.trim());
+        return cells;
+      }
+    
+      parseTableCellRuns(text) {
+        const { TextRun } = window.docx;
+        const lines = String(text || "").replace(/<br\s*\/?>/gi, "\n").split("\n");
+        return lines.flatMap((line, index) => {
+          const lineColor = this.lineIntegrationColor(line, null);
+          const runs = this.parseInlineTextToRuns(line, lineColor);
+          if (index < lines.length - 1) runs.push(new TextRun({ break: 1 }));
+          return runs;
+        });
+      }
+    
+      parseTableCellParagraphs(text, isHeader = false) {
+        const { Paragraph } = window.docx;
+        // Tách GV:/HS: dính liền trên cùng dòng thành các dòng riêng trước khi parse
+        let normalized = String(text || "");
+        if (!isHeader) {
+          const formatter = (typeof window !== "undefined" && typeof window.formatKhbdRoleLineBreaks === "function")
+            ? window.formatKhbdRoleLineBreaks
+            : null;
+          normalized = formatter
+            ? formatter(normalized)
+            : normalized
+              .replace(/([^\n>])\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "$1<br>- **GV:**")
+              .replace(/([^\n>])\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "$1<br>- **HS:**")
+              .replace(/<br>\s*-\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "<br>- **GV:**")
+              .replace(/<br>\s*-\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "<br>- **HS:**");
+        }
+        const lines = normalized.replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
+        const usable = lines.length ? lines : [""];
+        return usable.flatMap(line => {
+          const illParts = this.splitIllustrationSegments(line);
+          if (illParts.some(part => part.type === "illustration")) {
+            return illParts.flatMap(part => {
+              if (part.type === "illustration") {
+                const block = this.createIllustrationParagraphs(part.caption, part.id);
+                return block.length ? block : [this.illustrationFallbackParagraph(part.caption)];
+              }
+              const content = String(part.text || "").trim();
+              if (!content) return [];
+              const runs = isHeader
+                ? [this.coloredTextRun(content, { bold: true })]
+                : this.parseInlineTextToRuns(content, this.lineIntegrationColor(content, null));
+              return [new Paragraph({
+                spacing: { before: 0, after: 30, line: this.lineSpacing, lineRule: this.lineRule },
+                children: runs.length ? runs : [this.coloredTextRun(content, { bold: isHeader })]
+              })];
+            });
+          }
+          const roleMatch = !isHeader ? line.match(/^(-\s*)?(?:\*\*)?(GV|HS)\s*:(?:\*\*)?\s*(.*)$/i) : null;
+          const listMatch = !isHeader && !roleMatch ? line.match(/^([-+.•])\s+(.+)$/) : null;
+          const marker = listMatch ? listMatch[1] : (roleMatch ? "-" : "");
+          const contentText = roleMatch
+            ? `**${roleMatch[2].toUpperCase()}:** ${roleMatch[3] || ""}`.trim()
+            : (listMatch ? listMatch[2] : line);
+          const displayLine = roleMatch
+            ? `- ${contentText}`
+            : (listMatch ? `${marker} ${contentText}` : (line || " "));
+          const isRoleLine = !!roleMatch || /^-\s*\*\*(?:GV|HS):\*\*/i.test(line);
+          const indentLeft = isRoleLine ? 360 : (marker === "+" ? 360 : (marker === "." || marker === "•") ? 720 : 0);
+          const lineColor = isHeader ? undefined : this.lineIntegrationColor(displayLine, null);
           const runs = isHeader
-            ? [this.coloredTextRun(content, { bold: true })]
-            : this.parseInlineTextToRuns(content, this.lineIntegrationColor(content, null));
+            ? [this.coloredTextRun(line || " ", { bold: true })]
+            : this.parseInlineTextToRuns(displayLine, lineColor);
           return [new Paragraph({
+            indent: indentLeft ? { left: indentLeft } : undefined,
             spacing: { before: 0, after: 30, line: this.lineSpacing, lineRule: this.lineRule },
-            children: runs.length ? runs : [this.coloredTextRun(content, { bold: isHeader })]
+            children: runs.length ? runs : [this.coloredTextRun(displayLine || "", { bold: isHeader, color: lineColor })]
           })];
         });
       }
-      const roleMatch = !isHeader ? line.match(/^(-\s*)?(?:\*\*)?(GV|HS)\s*:(?:\*\*)?\s*(.*)$/i) : null;
-      const listMatch = !isHeader && !roleMatch ? line.match(/^([-+.•])\s+(.+)$/) : null;
-      const marker = listMatch ? listMatch[1] : (roleMatch ? "-" : "");
-      const contentText = roleMatch
-        ? `**${roleMatch[2].toUpperCase()}:** ${roleMatch[3] || ""}`.trim()
-        : (listMatch ? listMatch[2] : line);
-      const displayLine = roleMatch
-        ? `- ${contentText}`
-        : (listMatch ? `${marker} ${contentText}` : (line || " "));
-      const isRoleLine = !!roleMatch || /^-\s*\*\*(?:GV|HS):\*\*/i.test(line);
-      const indentLeft = isRoleLine ? 360 : (marker === "+" ? 360 : (marker === "." || marker === "•") ? 720 : 0);
-      const lineColor = isHeader ? undefined : this.lineIntegrationColor(displayLine, null);
-      const runs = isHeader
-        ? [this.coloredTextRun(line || " ", { bold: true })]
-        : this.parseInlineTextToRuns(displayLine, lineColor);
-      return [new Paragraph({
-        indent: indentLeft ? { left: indentLeft } : undefined,
-        spacing: { before: 0, after: 30, line: this.lineSpacing, lineRule: this.lineRule },
-        children: runs.length ? runs : [this.coloredTextRun(displayLine || "", { bold: isHeader, color: lineColor })]
-      })];
-    });
-  }
-
-  noCellBorders() {
-    const { BorderStyle } = window.docx || {};
-    const none = { style: BorderStyle?.NONE || "none", size: 0, color: "FFFFFF" };
-    return { top: none, bottom: none, left: none, right: none };
-  }
-
-  formatTietBaiHeading(lessonInfo = {}) {
-    const topic = String(lessonInfo.topic || "").trim();
-    const scope = String(lessonInfo.lessonScope || lessonInfo.lesson_scope || "").trim();
-    const tiet = scope.replace(/^tiết\s*/i, "").replace(/-/g, ", ").trim();
-    const baiMatch = topic.match(/bài\s*(\d+[a-z]?)/i);
-    const bai = baiMatch ? baiMatch[1] : "";
-    const name = (topic.replace(/^bài\s*\d+[a-z]?\s*[:.\-]?\s*/i, "").trim() || topic || "KẾ HOẠCH BÀI DẠY").toUpperCase();
-    const parts = [];
-    if (tiet) parts.push(`TIẾT ${tiet.toUpperCase()}`);
-    if (bai) parts.push(`BÀI ${bai}`);
-    if (parts.length) return `${parts.join(" - ")}: ${name}`;
-    return name ? `BÀI: ${name}` : "KẾ HOẠCH BÀI DẠY";
-  }
-
-  formatDurationLine(duration) {
-    const raw = String(duration || "").trim() || "02 tiết";
-    if (/thời lượng thực hiện/i.test(raw)) return raw;
-    return `Thời lượng thực hiện: ${raw}`;
-  }
-
-  /**
-   * Header trang trọng: Trường / Giáo viên, Chương, TIẾT X - BÀI Y, thời lượng.
-   */
-  createDocumentHeader(lessonInfo = {}) {
-    if (!window.docx) return [];
-    const { Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType } = window.docx;
-    const schoolName = String(lessonInfo.school || "").trim() || "THCS Trần Phú";
-    const teacherName = String(lessonInfo.teacher || "").trim() || "Hoàng Tấn Thiên";
-    const chapter = String(lessonInfo.chapter || "").trim();
-    const spacing = { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule };
-    const headers = [];
-
-    if (Table && TableRow && TableCell) {
-      headers.push(new Table({
-        width: { size: this.tableWidth, type: WidthType?.DXA || "dxa" },
-        columnWidths: this.columnWidths,
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                width: { size: this.columnWidths[0], type: WidthType?.DXA || "dxa" },
-                borders: this.noCellBorders(),
-                children: [new Paragraph({
-                  spacing,
-                  children: [new TextRun({ text: `Trường ${schoolName.replace(/^trường\s+/i, "")}`, font: this.fontFamily, size: this.fontSizeBody })]
-                })]
-              }),
-              new TableCell({
-                width: { size: this.columnWidths[1], type: WidthType?.DXA || "dxa" },
-                borders: this.noCellBorders(),
-                children: [new Paragraph({
-                  alignment: AlignmentType.RIGHT,
-                  spacing,
-                  children: [new TextRun({ text: `Giáo viên: ${teacherName}`, font: this.fontFamily, size: this.fontSizeBody })]
-                })]
+    
+      noCellBorders() {
+        const { BorderStyle } = window.docx || {};
+        const none = { style: BorderStyle?.NONE || "none", size: 0, color: "FFFFFF" };
+        return { top: none, bottom: none, left: none, right: none };
+      }
+    
+      formatTietBaiHeading(lessonInfo = {}) {
+        const topic = String(lessonInfo.topic || "").trim();
+        const scope = String(lessonInfo.lessonScope || lessonInfo.lesson_scope || "").trim();
+        const tiet = scope.replace(/^tiết\s*/i, "").replace(/-/g, ", ").trim();
+        const baiMatch = topic.match(/bài\s*(\d+[a-z]?)/i);
+        const bai = baiMatch ? baiMatch[1] : "";
+        const name = (topic.replace(/^bài\s*\d+[a-z]?\s*[:.\-]?\s*/i, "").trim() || topic || "KẾ HOẠCH BÀI DẠY").toUpperCase();
+        const parts = [];
+        if (tiet) parts.push(`TIẾT ${tiet.toUpperCase()}`);
+        if (bai) parts.push(`BÀI ${bai}`);
+        if (parts.length) return `${parts.join(" - ")}: ${name}`;
+        return name ? `BÀI: ${name}` : "KẾ HOẠCH BÀI DẠY";
+      }
+    
+      formatDurationLine(duration) {
+        const raw = String(duration || "").trim() || "02 tiết";
+        if (/thời lượng thực hiện/i.test(raw)) return raw;
+        return `Thời lượng thực hiện: ${raw}`;
+      }
+    
+      /**
+       * Header trang trọng: Trường / Giáo viên, Chương, TIẾT X - BÀI Y, thời lượng.
+       */
+      createDocumentHeader(lessonInfo = {}) {
+        if (!window.docx) return [];
+        const { Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType } = window.docx;
+        const schoolName = String(lessonInfo.school || "").trim() || "THCS Trần Phú";
+        const teacherName = String(lessonInfo.teacher || "").trim() || "Hoàng Tấn Thiên";
+        const chapter = String(lessonInfo.chapter || "").trim();
+        const spacing = { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule };
+        const headers = [];
+    
+        if (Table && TableRow && TableCell) {
+          headers.push(new Table({
+            width: { size: this.tableWidth, type: WidthType?.DXA || "dxa" },
+            columnWidths: this.columnWidths,
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({
+                    width: { size: this.columnWidths[0], type: WidthType?.DXA || "dxa" },
+                    borders: this.noCellBorders(),
+                    children: [new Paragraph({
+                      spacing,
+                      children: [new TextRun({ text: `Trường ${schoolName.replace(/^trường\s+/i, "")}`, font: this.fontFamily, size: this.fontSizeBody })]
+                    })]
+                  }),
+                  new TableCell({
+                    width: { size: this.columnWidths[1], type: WidthType?.DXA || "dxa" },
+                    borders: this.noCellBorders(),
+                    children: [new Paragraph({
+                      alignment: AlignmentType.RIGHT,
+                      spacing,
+                      children: [new TextRun({ text: `Giáo viên: ${teacherName}`, font: this.fontFamily, size: this.fontSizeBody })]
+                    })]
+                  })
+                ]
               })
             ]
-          })
-        ]
-      }));
-    } else {
-      headers.push(new Paragraph({ spacing, children: [new TextRun({ text: `Trường ${schoolName}`, font: this.fontFamily, size: this.fontSizeBody })] }));
-      headers.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing, children: [new TextRun({ text: `Giáo viên: ${teacherName}`, font: this.fontFamily, size: this.fontSizeBody })] }));
-    }
-
-    if (chapter) {
-      headers.push(new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing,
-        children: [new TextRun({ text: chapter.toUpperCase(), font: this.fontFamily, size: this.fontSizeBody, bold: true })]
-      }));
-    }
-
-    headers.push(new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing,
-      children: [new TextRun({ text: this.formatTietBaiHeading(lessonInfo), font: this.fontFamily, size: 28, bold: true })]
-    }));
-    headers.push(new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing,
-      children: [new TextRun({ text: this.formatDurationLine(lessonInfo.duration), font: this.fontFamily, size: this.fontSizeBody, italics: true })]
-    }));
-
-    return headers;
-  }
-
-  createDocumentFooter(lessonInfo = {}) {
-    if (!window.docx) return [];
-    const { Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType, PageNumber } = window.docx;
-    const subject = String(lessonInfo.subject || "Toán").trim() || "Toán";
-    const year = String(lessonInfo.academicYear || "").trim() || "";
-    const spacing = { before: 0, after: 0, line: this.lineSpacing, lineRule: this.lineRule };
-    const col = Math.round(this.tableWidth / 3);
-    const pageRuns = [
-      new TextRun({ text: "- Trang ", font: this.fontFamily, size: 22 }),
-      new TextRun({ children: PageNumber?.CURRENT != null ? [PageNumber.CURRENT] : ["X"], font: this.fontFamily, size: 22 }),
-      new TextRun({ text: " -", font: this.fontFamily, size: 22 })
-    ];
-    if (Table && TableRow && TableCell) {
-      return [new Table({
-        width: { size: this.tableWidth, type: WidthType?.DXA || "dxa" },
-        columnWidths: [col, col, this.tableWidth - col * 2],
-        rows: [new TableRow({
-          children: [
-            new TableCell({
-              borders: this.noCellBorders(),
-              children: [new Paragraph({ spacing, children: [new TextRun({ text: `Môn: ${subject}`, font: this.fontFamily, size: 22 })] })]
-            }),
-            new TableCell({
-              borders: this.noCellBorders(),
-              children: [new Paragraph({ alignment: AlignmentType.CENTER, spacing, children: pageRuns })]
-            }),
-            new TableCell({
-              borders: this.noCellBorders(),
-              children: [new Paragraph({ alignment: AlignmentType.RIGHT, spacing, children: [new TextRun({ text: year ? `Năm học: ${year}` : "", font: this.fontFamily, size: 22 })] })]
-            })
-          ]
-        })]
-      })];
-    }
-    return [new Paragraph({ alignment: AlignmentType.CENTER, spacing, children: [new TextRun({ text: `Môn: ${subject}  - Trang X -  ${year ? `Năm học: ${year}` : ""}`, font: this.fontFamily, size: 22 })] })];
-  }
-
-  safeIllustrationCaption(caption) {
-    const cleaned = String(caption || "")
-      .replace(/khbd-ill:[^\s)]+/gi, "")
-      .replace(/[\[\]]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    return cleaned || "Hình minh họa";
-  }
-
-  safeIllustrationId(illustrationId) {
-    return String(illustrationId || "").replace(/[^\w.\-]/g, "").slice(0, 80);
-  }
-
-  illustrationFallbackParagraph(caption) {
-    const { Paragraph, AlignmentType } = window.docx || {};
-    const label = `(Hình vẽ minh họa: ${this.safeIllustrationCaption(caption)})`;
-    return new Paragraph({
-      alignment: AlignmentType?.CENTER,
-      spacing: { before: 80, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-      children: [
-        this.coloredTextRun(label, { italics: true, size: 22, color: "475569" })
-      ]
-    });
-  }
-
-  splitIllustrationSegments(text) {
-    const source = String(text || "");
-    const re = /!\[([^\]]*)\]\(khbd-ill:([^)]+)\)/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-    while ((match = re.exec(source)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push({ type: "text", text: source.slice(lastIndex, match.index) });
-      }
-      parts.push({
-        type: "illustration",
-        caption: this.safeIllustrationCaption(match[1]),
-        id: this.safeIllustrationId(match[2])
-      });
-      lastIndex = match.index + match[0].length;
-    }
-    if (!parts.length) return [{ type: "text", text: source }];
-    if (lastIndex < source.length) parts.push({ type: "text", text: source.slice(lastIndex) });
-    return parts;
-  }
-
-  illustrationCatalog() {
-    if (typeof appState !== "undefined" && Array.isArray(appState.content?.illustrations)) {
-      return appState.content.illustrations;
-    }
-    if (typeof window !== "undefined" && Array.isArray(window.appState?.content?.illustrations)) {
-      return window.appState.content.illustrations;
-    }
-    if (typeof global !== "undefined" && Array.isArray(global.appState?.content?.illustrations)) {
-      return global.appState.content.illustrations;
-    }
-    return [];
-  }
-
-  createIllustrationParagraphs(altText, illustrationId) {
-    const caption = this.safeIllustrationCaption(altText);
-    const safeId = this.safeIllustrationId(illustrationId);
-    const fallback = [this.illustrationFallbackParagraph(caption)];
-    const docxApi = window.docx || (typeof require !== "undefined" ? require("docx") : {});
-    const { Paragraph, ImageRun, AlignmentType } = docxApi || {};
-    const ill = this.illustrationCatalog().find(item => item && item.id === safeId);
-    if (!ill || (!ill.dataUrl && !ill.svgContent) || typeof ImageRun !== "function") return fallback;
-    try {
-      let dataUrl = ill.dataUrl;
-      // Nếu chưa có dataUrl nhưng có svgContent dạng base64 trong môi trường Node.js
-      if (!dataUrl && ill.svgContent && typeof Buffer !== "undefined") {
-        const b64Svg = Buffer.from(ill.svgContent).toString("base64");
-        dataUrl = `data:image/svg+xml;base64,${b64Svg}`;
-      }
-      if (!dataUrl) return fallback;
-
-      const comma = String(dataUrl).indexOf(",");
-      const header = comma >= 0 ? dataUrl.slice(0, comma) : "";
-      const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : "";
-      
-      let bytes;
-      if (typeof atob === "function") {
-        const binary = atob(b64);
-        bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      } else if (typeof Buffer !== "undefined") {
-        bytes = Buffer.from(b64, "base64");
-      } else {
-        return fallback;
-      }
-
-      const type = /jpe?g/i.test(header) ? "jpg" : (/svg/i.test(header) ? "svg" : "png");
-      const imageCaption = caption || ill.caption || ill.title || safeId;
-
-      return [
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          spacing: { before: 140, after: 80 },
-          children: [
-            new ImageRun({
-              data: bytes,
-              transformation: { width: 320, height: 240 },
-              type: type === "jpg" ? "jpg" : (type === "svg" ? "svg" : "png")
-            })
-          ]
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-          children: [
-            this.coloredTextRun(imageCaption, {
-              italics: true,
-              size: 22,
-              color: "475569"
-            })
-          ]
-        })
-      ];
-    } catch (error) {
-      console.warn("Không nhúng được hình minh họa vào Word:", error);
-      return fallback;
-    }
-  }
-
-  /**
-   * Xuất file Word (.docx) cho 1 Tab riêng lẻ
-   */
-  async exportSingleTab(tabTitle, markdownContent, fileName = "Noi_Dung_Giao_An.docx") {
-    if (!window.docx || !window.saveAs) {
-      throw new Error("Thư viện docx hoặc FileSaver chưa sẵn sàng. Vui lòng kiểm tra kết nối mạng CDN.");
-    }
-
-    const { Document, Packer } = window.docx;
-    const bodyElements = this.parseMarkdownToDocxElements(markdownContent);
-
-    const doc = new Document({
-      creator: "Trợ lý Soạn Kế hoạch Bài dạy AI",
-      title: tabTitle,
-      description: `Xuất phần ${tabTitle} chuẩn Công văn 5512`,
-      sections: [{
-        properties: {
-          page: {
-            size: this.pageSize,
-            margin: this.pageMargins
-          }
-        },
-        children: bodyElements
-      }]
-    });
-
-    const blob = await Packer.toBlob(doc);
-    window.saveAs(blob, fileName.endsWith(".docx") ? fileName : `${fileName}.docx`);
-  }
-
-  /**
-   * Xuất toàn bộ Giáo án hoàn chỉnh thành 1 file Word .docx duy nhất
-   */
-  async exportFullLessonPlan(lessonInfo, fullMarkdownContent, fileName = "Giao_An.docx") {
-    if (!window.docx || !window.saveAs) {
-      throw new Error("Thư viện docx hoặc FileSaver chưa sẵn sàng. Vui lòng kiểm tra kết nối mạng CDN.");
-    }
-
-    const { Document, Packer, Footer, AlignmentType } = window.docx;
-
-    const headerElements = this.createDocumentHeader(lessonInfo);
-    const footerElements = this.createDocumentFooter(lessonInfo);
-
-    // Tạo phần thân từ Markdown. Phụ lục phiếu học tập lấy từ activities.E nếu markdown chưa có mục IV.
-    let markdown = String(fullMarkdownContent || "");
-    const appendixE = (typeof appState !== "undefined" && appState.content?.activities?.E)
-      || (typeof window !== "undefined" && window.appState?.content?.activities?.E)
-      || "";
-    if (String(appendixE).trim() && !/PHỤ\s*LỤC/i.test(markdown)) {
-      markdown += `\n\n# IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)\n\n${appendixE}`;
-    }
-    const bodyElements = this.parseMarkdownToDocxElements(markdown);
-    const section = {
-      properties: {
-        page: {
-          size: this.pageSize,
-          margin: this.pageMargins
+          }));
+        } else {
+          headers.push(new Paragraph({ spacing, children: [new TextRun({ text: `Trường ${schoolName}`, font: this.fontFamily, size: this.fontSizeBody })] }));
+          headers.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing, children: [new TextRun({ text: `Giáo viên: ${teacherName}`, font: this.fontFamily, size: this.fontSizeBody })] }));
         }
-      },
-      children: [...headerElements, ...bodyElements]
-    };
-    if (typeof Footer === "function") {
-      section.footers = { default: new Footer({ children: footerElements }) };
-    }
-
-    const doc = new Document({
-      creator: "Trợ lý Soạn Kế hoạch Bài dạy AI",
-      title: `KHBD_${lessonInfo.topic || "Bai_Day"}`,
-      description: "Kế hoạch bài dạy chuẩn Công văn 5512",
-      styles: {
-        default: {
-          document: {
-            run: { font: this.fontFamily, size: this.fontSizeBody },
-            paragraph: {
-              spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
-              alignment: AlignmentType?.JUSTIFIED
+    
+        if (chapter) {
+          headers.push(new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing,
+            children: [new TextRun({ text: chapter.toUpperCase(), font: this.fontFamily, size: this.fontSizeBody, bold: true })]
+          }));
+        }
+    
+        headers.push(new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing,
+          children: [new TextRun({ text: this.formatTietBaiHeading(lessonInfo), font: this.fontFamily, size: 28, bold: true })]
+        }));
+        headers.push(new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing,
+          children: [new TextRun({ text: this.formatDurationLine(lessonInfo.duration), font: this.fontFamily, size: this.fontSizeBody, italics: true })]
+        }));
+    
+        return headers;
+      }
+    
+      createDocumentFooter(lessonInfo = {}) {
+        if (!window.docx) return [];
+        const { Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType, PageNumber } = window.docx;
+        const subject = String(lessonInfo.subject || "Toán").trim() || "Toán";
+        const year = String(lessonInfo.academicYear || "").trim() || "";
+        const spacing = { before: 0, after: 0, line: this.lineSpacing, lineRule: this.lineRule };
+        const col = Math.round(this.tableWidth / 3);
+        const pageRuns = [
+          new TextRun({ text: "- Trang ", font: this.fontFamily, size: 22 }),
+          new TextRun({ children: PageNumber?.CURRENT != null ? [PageNumber.CURRENT] : ["X"], font: this.fontFamily, size: 22 }),
+          new TextRun({ text: " -", font: this.fontFamily, size: 22 })
+        ];
+        if (Table && TableRow && TableCell) {
+          return [new Table({
+            width: { size: this.tableWidth, type: WidthType?.DXA || "dxa" },
+            columnWidths: [col, col, this.tableWidth - col * 2],
+            rows: [new TableRow({
+              children: [
+                new TableCell({
+                  borders: this.noCellBorders(),
+                  children: [new Paragraph({ spacing, children: [new TextRun({ text: `Môn: ${subject}`, font: this.fontFamily, size: 22 })] })]
+                }),
+                new TableCell({
+                  borders: this.noCellBorders(),
+                  children: [new Paragraph({ alignment: AlignmentType.CENTER, spacing, children: pageRuns })]
+                }),
+                new TableCell({
+                  borders: this.noCellBorders(),
+                  children: [new Paragraph({ alignment: AlignmentType.RIGHT, spacing, children: [new TextRun({ text: year ? `Năm học: ${year}` : "", font: this.fontFamily, size: 22 })] })]
+                })
+              ]
+            })]
+          })];
+        }
+        return [new Paragraph({ alignment: AlignmentType.CENTER, spacing, children: [new TextRun({ text: `Môn: ${subject}  - Trang X -  ${year ? `Năm học: ${year}` : ""}`, font: this.fontFamily, size: 22 })] })];
+      }
+    
+      safeIllustrationCaption(caption) {
+        const cleaned = String(caption || "")
+          .replace(/khbd-ill:[^\s)]+/gi, "")
+          .replace(/[\[\]]/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        return cleaned || "Hình minh họa";
+      }
+    
+      safeIllustrationId(illustrationId) {
+        return String(illustrationId || "").replace(/[^\w.\-]/g, "").slice(0, 80);
+      }
+    
+      illustrationFallbackParagraph(caption) {
+        const { Paragraph, AlignmentType } = window.docx || {};
+        const label = `(Hình vẽ minh họa: ${this.safeIllustrationCaption(caption)})`;
+        return new Paragraph({
+          alignment: AlignmentType?.CENTER,
+          spacing: { before: 80, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+          children: [
+            this.coloredTextRun(label, { italics: true, size: 22, color: "475569" })
+          ]
+        });
+      }
+    
+      splitIllustrationSegments(text) {
+        const source = String(text || "");
+        const re = /!\[([^\]]*)\]\(khbd-ill:([^)]+)\)/g;
+        const parts = [];
+        let lastIndex = 0;
+        let match;
+        while ((match = re.exec(source)) !== null) {
+          if (match.index > lastIndex) {
+            parts.push({ type: "text", text: source.slice(lastIndex, match.index) });
+          }
+          parts.push({
+            type: "illustration",
+            caption: this.safeIllustrationCaption(match[1]),
+            id: this.safeIllustrationId(match[2])
+          });
+          lastIndex = match.index + match[0].length;
+        }
+        if (!parts.length) return [{ type: "text", text: source }];
+        if (lastIndex < source.length) parts.push({ type: "text", text: source.slice(lastIndex) });
+        return parts;
+      }
+    
+      illustrationCatalog() {
+        if (typeof appState !== "undefined" && Array.isArray(appState.content?.illustrations)) {
+          return appState.content.illustrations;
+        }
+        if (typeof window !== "undefined" && Array.isArray(window.appState?.content?.illustrations)) {
+          return window.appState.content.illustrations;
+        }
+        if (typeof global !== "undefined" && Array.isArray(global.appState?.content?.illustrations)) {
+          return global.appState.content.illustrations;
+        }
+        return [];
+      }
+    
+      createIllustrationParagraphs(altText, illustrationId) {
+        const caption = this.safeIllustrationCaption(altText);
+        const safeId = this.safeIllustrationId(illustrationId);
+        const fallback = [this.illustrationFallbackParagraph(caption)];
+        const docxApi = window.docx || (typeof require !== "undefined" ? require("docx") : {});
+        const { Paragraph, ImageRun, AlignmentType } = docxApi || {};
+        const ill = this.illustrationCatalog().find(item => item && item.id === safeId);
+        if (!ill || (!ill.dataUrl && !ill.svgContent) || typeof ImageRun !== "function") return fallback;
+        try {
+          let dataUrl = ill.dataUrl;
+          // Nếu chưa có dataUrl nhưng có svgContent dạng base64 trong môi trường Node.js
+          if (!dataUrl && ill.svgContent && typeof Buffer !== "undefined") {
+            const b64Svg = Buffer.from(ill.svgContent).toString("base64");
+            dataUrl = `data:image/svg+xml;base64,${b64Svg}`;
+          }
+          if (!dataUrl) return fallback;
+    
+          const comma = String(dataUrl).indexOf(",");
+          const header = comma >= 0 ? dataUrl.slice(0, comma) : "";
+          const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : "";
+          
+          let bytes;
+          if (typeof atob === "function") {
+            const binary = atob(b64);
+            bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          } else if (typeof Buffer !== "undefined") {
+            bytes = Buffer.from(b64, "base64");
+          } else {
+            return fallback;
+          }
+    
+          const type = /jpe?g/i.test(header) ? "jpg" : (/svg/i.test(header) ? "svg" : "png");
+          const imageCaption = caption || ill.caption || ill.title || safeId;
+    
+          return [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 140, after: 80 },
+              children: [
+                new ImageRun({
+                  data: bytes,
+                  transformation: { width: 320, height: 240 },
+                  type: type === "jpg" ? "jpg" : (type === "svg" ? "svg" : "png")
+                })
+              ]
+            }),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 0, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+              children: [
+                this.coloredTextRun(imageCaption, {
+                  italics: true,
+                  size: 22,
+                  color: "475569"
+                })
+              ]
+            })
+          ];
+        } catch (error) {
+          console.warn("Không nhúng được hình minh họa vào Word:", error);
+          return fallback;
+        }
+      }
+    
+      /**
+       * Xuất file Word (.docx) cho 1 Tab riêng lẻ
+       */
+      async exportSingleTab(tabTitle, markdownContent, fileName = "Noi_Dung_Giao_An.docx") {
+        if (!window.docx || !window.saveAs) {
+          throw new Error("Thư viện docx hoặc FileSaver chưa sẵn sàng. Vui lòng kiểm tra kết nối mạng CDN.");
+        }
+    
+        const { Document, Packer } = window.docx;
+        const bodyElements = this.parseMarkdownToDocxElements(markdownContent);
+    
+        const doc = new Document({
+          creator: "Trợ lý Soạn Kế hoạch Bài dạy AI",
+          title: tabTitle,
+          description: `Xuất phần ${tabTitle} chuẩn Công văn 5512`,
+          sections: [{
+            properties: {
+              page: {
+                size: this.pageSize,
+                margin: this.pageMargins
+              }
+            },
+            children: bodyElements
+          }]
+        });
+    
+        const blob = await Packer.toBlob(doc);
+        window.saveAs(blob, fileName.endsWith(".docx") ? fileName : `${fileName}.docx`);
+      }
+    
+      /**
+       * Xuất toàn bộ Giáo án hoàn chỉnh thành 1 file Word .docx duy nhất
+       */
+      async exportFullLessonPlan(lessonInfo, fullMarkdownContent, fileName = "Giao_An.docx") {
+        if (!window.docx || !window.saveAs) {
+          throw new Error("Thư viện docx hoặc FileSaver chưa sẵn sàng. Vui lòng kiểm tra kết nối mạng CDN.");
+        }
+    
+        const { Document, Packer, Footer, AlignmentType } = window.docx;
+    
+        const headerElements = this.createDocumentHeader(lessonInfo);
+        const footerElements = this.createDocumentFooter(lessonInfo);
+    
+        // Tạo phần thân từ Markdown. Phụ lục phiếu học tập lấy từ activities.E nếu markdown chưa có mục IV.
+        let markdown = String(fullMarkdownContent || "");
+        const appendixE = (typeof appState !== "undefined" && appState.content?.activities?.E)
+          || (typeof window !== "undefined" && window.appState?.content?.activities?.E)
+          || "";
+        if (String(appendixE).trim() && !/PHỤ\s*LỤC/i.test(markdown)) {
+          markdown += `\n\n# IV. PHỤ LỤC: HỒ SƠ DẠY HỌC (CÁC PHIẾU HỌC TẬP & CÔNG CỤ ĐÁNH GIÁ)\n\n${appendixE}`;
+        }
+        const bodyElements = this.parseMarkdownToDocxElements(markdown);
+        const section = {
+          properties: {
+            page: {
+              size: this.pageSize,
+              margin: this.pageMargins
             }
-          }
+          },
+          children: [...headerElements, ...bodyElements]
+        };
+        if (typeof Footer === "function") {
+          section.footers = { default: new Footer({ children: footerElements }) };
         }
-      },
-      sections: [section]
-    });
+    
+        const doc = new Document({
+          creator: "Trợ lý Soạn Kế hoạch Bài dạy AI",
+          title: `KHBD_${lessonInfo.topic || "Bai_Day"}`,
+          description: "Kế hoạch bài dạy chuẩn Công văn 5512",
+          styles: {
+            default: {
+              document: {
+                run: { font: this.fontFamily, size: this.fontSizeBody },
+                paragraph: {
+                  spacing: { before: this.spaceBefore, after: this.spaceAfter, line: this.lineSpacing, lineRule: this.lineRule },
+                  alignment: AlignmentType?.JUSTIFIED
+                }
+              }
+            }
+          },
+          sections: [section]
+        });
+    
+        const blob = await Packer.toBlob(doc);
+        window.saveAs(blob, fileName.endsWith(".docx") ? fileName : `${fileName}.docx`);
+      }
+    }
+    
+    // Khởi tạo instance toàn cục
+    const docxGenerator = new DocxGenerator();
+    
+    global.DocxGenerator = DocxGenerator;
+    global.docxGenerator = docxGenerator;
 
-    const blob = await Packer.toBlob(doc);
-    window.saveAs(blob, fileName.endsWith(".docx") ? fileName : `${fileName}.docx`);
-  }
-}
-
-// Khởi tạo instance toàn cục
-const docxGenerator = new DocxGenerator();
-
-if (typeof window !== "undefined") {
-  window.DocxGenerator = DocxGenerator;
-  window.docxGenerator = docxGenerator;
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { DocxGenerator, docxGenerator };
-}
-} // end __KHBD_DOCX_LOADED__ guard
+    if (typeof module !== "undefined" && module.exports) {
+      module.exports = { DocxGenerator, docxGenerator };
+    }
+  })();
+})(typeof window !== "undefined" ? window : globalThis);

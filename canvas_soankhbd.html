@@ -1122,7 +1122,7 @@
       var primary = isLocal ? "js/khbd-prompts.js" : "https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v18";
       var cdnPrompts = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js";
       window.ensureKhbdPromptsFallback = function ensureKhbdPromptsFallback() {
-        if (typeof window.getPromptTemplate === "function" && window.PROMPTS && window.PROMPTS.GENERATE_OBJECTIVES) return;
+        if ((typeof window.getPromptTemplate === "function" && window.PROMPTS) || (typeof getPromptTemplate === "function")) return;
         document.write('<script src="' + (isLocal ? "js/khbd-prompts.js" : cdnPrompts) + '" crossorigin="anonymous"><\/script>');
       };
       // Fallback chỉ chạy sau onload/onerror của primary — tránh race tải kép.
@@ -1136,7 +1136,7 @@
       var primary = isLocal ? "js/khbd-docx.js" : "https://hoangthiencm.id.vn/js/khbd-docx.js?v=20260916-textbook-exact-v18";
       var cdnDocx = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-docx.js";
       window.ensureKhbdDocxFallback = function ensureKhbdDocxFallback() {
-        if (typeof window.docxGenerator !== "undefined" || typeof window.DocxGenerator !== "undefined") return;
+        if (typeof docxGenerator !== "undefined" || typeof DocxGenerator !== "undefined" || typeof window.docxGenerator !== "undefined" || typeof window.DocxGenerator !== "undefined") return;
         document.write('<script src="' + (isLocal ? "js/khbd-docx.js" : cdnDocx) + '" crossorigin="anonymous"><\/script>');
       };
       document.write('<script src="' + primary + '" onload="window.ensureKhbdDocxFallback&&window.ensureKhbdDocxFallback()" onerror="window.ensureKhbdDocxFallback&&window.ensureKhbdDocxFallback()"><\/script>');
@@ -1148,7 +1148,7 @@
       var primary = isLocal ? "js/khbd-pedagogy-catalog.js" : "https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js?v=20260916-canvas-module-v9";
       var cdnCatalog = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js";
       window.ensureKhbdPedagogyCatalogFallback = function ensureKhbdPedagogyCatalogFallback() {
-        if (typeof window.KHBD_PEDAGOGY_CATALOG !== "undefined") return;
+        if (typeof KHBD_PEDAGOGY_CATALOG !== "undefined" || typeof window.KHBD_PEDAGOGY_CATALOG !== "undefined") return;
         document.write('<script src="' + (isLocal ? "js/khbd-pedagogy-catalog.js" : cdnCatalog) + '" crossorigin="anonymous"><\/script>');
       };
       document.write('<script src="' + primary + '" onload="window.ensureKhbdPedagogyCatalogFallback&&window.ensureKhbdPedagogyCatalogFallback()" onerror="window.ensureKhbdPedagogyCatalogFallback&&window.ensureKhbdPedagogyCatalogFallback()"><\/script>');
