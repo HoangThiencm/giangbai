@@ -91,7 +91,8 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('window.PROMPTS.GENERATE_OBJECTIVES'), `${relPath} prompts fallback phải guard GENERATE_OBJECTIVES`);
   assert.ok(targetHtml.includes('ensureKhbdDocxFallback'), `${relPath} phải có fallback ensureKhbdDocxFallback`);
   assert.ok(targetHtml.includes('cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-docx.js'), `${relPath} fallback docx phải nạp từ CDN jsDelivr khi host rỗng`);
-  assert.ok(targetHtml.includes('createKhbdDocxDocument'), `${relPath} docx fallback phải guard createKhbdDocxDocument`);
+  assert.ok(targetHtml.includes('typeof window.docxGenerator !== "undefined"') || targetHtml.includes("typeof window.docxGenerator !== 'undefined'"), `${relPath} docx fallback phải guard window.docxGenerator`);
+  assert.ok(targetHtml.includes('typeof window.DocxGenerator !== "undefined"') || targetHtml.includes("typeof window.DocxGenerator !== 'undefined'"), `${relPath} docx fallback phải guard window.DocxGenerator`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-pedagogy-catalog.js"'), `${relPath} phải nạp khbd-pedagogy-catalog.js cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-pedagogy-catalog.js'), `${relPath} phải giữ nguồn khbd-pedagogy-catalog.js từ hosting khi chạy Canvas`);
   assert.ok(targetHtml.includes('ensureKhbdPedagogyCatalogFallback'), `${relPath} phải có fallback ensureKhbdPedagogyCatalogFallback`);

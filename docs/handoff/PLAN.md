@@ -1,114 +1,150 @@
-# PLAN: Cứu Hộ Khung Prompt Mục Tiêu & Năng Lực Chuẩn CV 5512 Trên canvas_soankhbd.html
+# PLAN: Rà Soát Toàn Diện & Khôi Phục Hoàn Toàn Chất Lượng Soạn Giáo Án (Mục B & Toàn Bài) Chuẩn CV 5512
 
-## Hiện trạng & Nguyên nhân gốc rễ (Root Cause)
+## Bối cảnh & Kết quả Rà soát So sánh với "Hôm trước"
 
-1. **File `js/khbd-prompts.js` trên hosting `hoangthiencm.id.vn` bị rỗng (0 bytes)**:
-   - Khi chạy `canvas_soankhbd.html` trên môi trường Canvas (trỏ host `https://hoangthiencm.id.vn`), trang nạp file qua thẻ:
-     `<script src="https://hoangthiencm.id.vn/js/khbd-prompts.js?v=20260916-textbook-exact-v18"></script>`
-   - Do sự cố truyền file FTP trước đó, file `js/khbd-prompts.js` trên hosting trả về HTTP 200 nhưng dung lượng đúng **0 bytes** (đã kiểm chứng qua HTTP request).
-   - Tương tự như file `js/khbd-pedagogy-catalog.js` từng bị 0 bytes trước đây, trình duyệt nạp xong file 0 bytes mà không báo lỗi, nhưng toàn bộ mã trong file không được thực thi.
+### 1. Tại sao "Hôm trước soạn rất tốt, ok lắm luôn"?
+- Trước commit `deecc0d` (tại commit `7bc94fc`):
+  + Hàm `clipKhbdActivityMarkdown` và `applyActivityOutput` **hoàn toàn KHÔNG CÓ** các hàm can thiệp thô bạo như `ensureActivityFourPartStructure` và `repairActivityTablesRightColumn`.
+  + Trí tuệ nhân tạo (Gemini) được điều phối trực tiếp bởi `PROMPTS.GENERATE_ACTIVITY_B` và `expandActivityBSkeleton`.
+  + Từng nhánh con `Hoạt động 2.1`, `Hoạt động 2.2`... sinh ra nguyên bản cực kỳ chuẩn mực:
+    * `### Hoạt động 2.1: [Tên đề mục SGK] (... phút)`
+    * `#### a) Mục tiêu:` (mục tiêu kiến thức cụ thể của tiểu mục)
+    * `#### b) Nội dung:` (nhiệm vụ học sinh nghiên cứu SGK, làm hoạt động khám phá)
+    * `#### c) Sản phẩm:` (kết quả câu trả lời, lời giải bài tập ví dụ mẫu)
+    * `#### d) Tổ chức thực hiện:`
+    * Bảng 2 cột liền mạch: Cột 1 gồm trọn vẹn kịch bản 4 bước (`+ Bước 1: Chuyển giao nhiệm vụ`, `+ Bước 2: Thực hiện nhiệm vụ`, `+ Bước 3: Báo cáo, thảo luận`, `+ Bước 4: Kết luận, nhận định`); Cột 2 là toàn bộ kiến thức ghi bảng chuẩn mực (định nghĩa, công thức LaTeX `$x^2 - 1$`, ví dụ mẫu có đề và lời giải).
+  + Khi xuất file Word hoặc xem trước HTML: Các công thức toán học sắc nét, không bị gãy LaTeX, không bị trùng lặp nhãn `- - GV:`, không bị đứt câu hay dồn cục.
 
-2. **Hậu quả khiến phần Năng lực bị nhảy tào lao / mất cấu trúc**:
-   - `window.PROMPTS.GENERATE_OBJECTIVES` và hàm `window.getPromptTemplate` không hề tồn tại.
-   - Khi bấm tạo I. Mục tiêu (hoặc bấm nút "⚡ TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)"), hàm `executeStep` gọi `getPromptTemplate('GENERATE_OBJECTIVES', context)` trả về chuỗi rỗng `""`.
-   - Hàm `buildPedagogicalPrompt("")` chỉ còn lại hợp đồng đầu ra chung chung: *"NLS là Năng lực số... AI là Năng lực AI... BẮT BUỘC: Các vị trí tích hợp NLS và AI phải được in đậm và in nghiêng (***...***)"*.
-   - **Gemini hoàn toàn không nhận được template yêu cầu**:
-     + Mất sạch yêu cầu mục `## 1. Về kiến thức` (YCCĐ chuẩn CT GDPT 2018).
-     + Mất sạch mục `### a) Năng lực chung` (Tự chủ và tự học, Giao tiếp và hợp tác, Giải quyết vấn đề và sáng tạo).
-     + Mất sạch mục `### b) Năng lực đặc thù môn học` (môn Toán: Tư duy và lập luận toán học, Mô hình hoá toán học...).
-     + Mất sạch các tiểu mục `### c) Năng lực số`, `### d) Năng lực AI` kèm mã chuẩn `[1-5].x.TC...` hay `[6-9].[A-D]...`.
-   - Kết quả là AI tự "bịa" cấu trúc tự do:
-     ```markdown
-     2. Năng lực:
-     - Năng lực tư duy và lập luận toán học: Phân biệt được các đối tượng...
-     - ***NLS: Sử dụng máy tính cầm tay...***
-     - ***AI: Sử dụng các phần mềm...***
-     ```
-   - Ngoài ra, ở khung xem trước KaTeX (cột phải), vì AI sinh gạch đầu dòng `- ***NLS:...***` nên Marked.js tạo thẻ `<li>`, logic tô màu đóng khung NLS/AI biến nội dung thành thẻ box nhưng để lại dấu gạch đầu dòng `- ` trơ trọi phía trước.
-   - Các hoạt động tiếp theo (Thiết bị, Khởi động, Hình thành kiến thức, Luyện tập, Vận dụng) cũng bị ảnh hưởng nặng vì toàn bộ prompt nghiệp vụ trong `khbd-prompts.js` bị mất.
+### 2. Nguyên nhân phát sinh lỗi khiến "Nó chạy sai tè le, mất mục tiêu, thiếu 4 bước"
+Commit `deecc0d` nhằm sửa lỗi nhảy cóc ở Hoạt động 4 (Vận dụng), nhưng đã đưa vào 2 cơ chế gây lỗi nghiêm trọng:
 
-3. **Thiếu cơ chế CDN Fallback cho `khbd-prompts.js`**:
-   - Trước đây trong `canvas_soankhbd.html` chỉ mới bổ sung `ensureKhbdPedagogyCatalogFallback()` cho `khbd-pedagogy-catalog.js` (nạp từ CDN jsDelivr `https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-pedagogy-catalog.js`).
-   - Chưa hề có `ensureKhbdPromptsFallback()` để tự động nạp `khbd-prompts.js` từ CDN GitHub jsDelivr (`https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js` - file trên GitHub hiện đang có đầy đủ 156KB).
-   - Đoạn guard `if (typeof window.PROMPTS === "undefined")` ở dòng 1242 chỉ gán một object cụt gồm `OUTPUT_CONTRACT` và `ENGLISH_ELT_DIRECTIVE`, vô tình làm che giấu sự thiếu hụt của toàn bộ kho prompt mà không kích hoạt tải lại.
+1. **`repairActivityBlockFourParts` trong `js/khbd-app.js`**:
+   - Hàm này áp dụng tràn sang cả Mục B (chia tách từng nhánh 2.1, 2.2 rồi chạy repair).
+   - **Mất `a) Mục tiêu:`**: Hàm chỉ tìm regex `Mục tiêu:` để đổi thành `#### a) Mục tiêu:`. Nếu AI không sinh sẵn từ khóa này, hàm **hoàn toàn KHÔNG tạo mục `a)`**, dẫn đến Hoạt động 2.1 nhảy cóc thẳng vào `b) Nội dung:`.
+   - **Vỡ LaTeX và đứt cụt chữ ở `b)` và `c)`**:
+     * Khi thấy thiếu `hasB`, hàm lấy `step1` của bảng, xóa `<br>`, cắt `.slice(0, 400)` nhét vào `b) Nội dung:`. Lời thoại GV/HS của Bước 1 bị lôi lên trên, qua bộ định dạng `formatKhbdRoleLineBreaks` bị chèn thêm gạch đầu dòng biến thành `- - GV: ... - - HS: ...`, công thức LaTeX bị cắt ngang lưng thành `$-5x^2y; $x^3 - \frac{1` gây lỗi cú pháp nghiêm trọng!
+     * Khi thấy thiếu `hasC`, hàm lấy Cột 2 (ghi bảng), xóa `<br>`, cắt `.slice(0, 400)` nhét vào `c) Sản phẩm:`. Toàn bộ đề mục, định nghĩa bị dồn thành 1 dòng đơn điệu và đứt cụt chữ ở cuối (`- Bậc của đơn thức (c`).
+   - **Phá nát bảng và làm "thiếu 4 bước"**: Bước 1 bị bóc trích đẩy lên trên, bảng `d)` phía dưới lại lặp lại Bước 1; các bước 2, 3, 4 bị che khuất hoặc bị hiểu lầm là khuyết thiếu.
+   - **Chạy lặp 2 lần**: Trong `applyActivityOutput` chạy `ensureActivityFourPartStructure` 1 lần, rồi truyền vào `clipKhbdActivityMarkdown` lại chạy thêm 1 lần nữa!
+
+2. **Lỗ hổng trong `ACTIVITY_TABLE_CONTRACT_COMPACT` (`js/khbd-prompts.js`)**:
+   - Khi người dùng chọn chế độ Soạn rút gọn (4–6 trang), `ACTIVITY_TABLE_CONTRACT` bị thay thế bằng `ACTIVITY_TABLE_CONTRACT_COMPACT`.
+   - Khung compact này **hoàn toàn không nhắc AI** sinh 4 mục `a), b), c), d)`, và cũng không đưa ra tên chuẩn của 4 bước (`+ Bước 1: Chuyển giao nhiệm vụ`, `+ Bước 2: Thực hiện nhiệm vụ`, `+ Bước 3: Báo cáo, thảo luận`, `+ Bước 4: Kết luận, nhận định`). Do đó Gemini xuất bảng ngắn gọn không có tiêu đề mục con, kích hoạt toàn bộ chuỗi lỗi của `repairActivityBlockFourParts` phá nát giáo án.
 
 ---
 
-## Phạm vi thực hiện
+## Giải pháp Triệt để để Đưa Hệ Thống Về Trạng Thái Hoàn Hảo ("Như Hôm Trước")
 
-1. **Thêm cơ chế tự cứu hộ CDN jsDelivr cho `khbd-prompts.js` trên `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`**:
-   - Ngay sau khối nạp `js/khbd-prompts.js`, thêm hàm `ensureKhbdPromptsFallback()`:
-     Kiểm tra nếu `typeof window.getPromptTemplate !== "function" || !window.PROMPTS || !window.PROMPTS.GENERATE_OBJECTIVES`, lập tức dùng `document.write` nạp dự phòng từ CDN GitHub jsDelivr:
-     `https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js`
-   - Đảm bảo khi file trên hosting bị rỗng (0 bytes) hoặc lỗi mạng, trình duyệt sẽ tự động tải file đầy đủ 156KB từ CDN GitHub jsDelivr, phục hồi 100% kho siêu prompt sư phạm.
+### Nguyên tắc bất di bất dịch:
+1. **Bảo vệ toàn vẹn cú pháp LaTeX & Text**: Tuyệt đối không dùng `slice(0, 400)`, không bóc tách lời thoại Bước 1 nhét vào nội dung, không bóc cột bảng nhét vào sản phẩm.
+2. **Cấu trúc chuẩn CV 5512**: Mọi hoạt động (kể cả từng nhánh con 2.1, 2.2... của Hoạt động B) BẮT BUỘC có đủ:
+   - `#### a) Mục tiêu:`
+   - `#### b) Nội dung:`
+   - `#### c) Sản phẩm:`
+   - `#### d) Tổ chức thực hiện:` (Bảng 2 cột đủ 4 bước: Bước 1, Bước 2, Bước 3, Bước 4).
+3. **Cả 2 chế độ Soạn (Chi tiết & Rút gọn) đều phải giữ khung 4 mục và 4 bước**: Chế độ rút gọn chỉ tinh giản câu từ, không phá vỡ khung pháp lý của Bộ Giáo dục.
 
-2. **Thêm cơ chế tự cứu hộ CDN jsDelivr cho `khbd-docx.js` (phòng ngừa rủi ro tương tự)**:
-   - Thêm `ensureKhbdDocxFallback()` kiểm tra `typeof window.createKhbdDocxDocument !== "function"` để nạp từ CDN jsDelivr nếu hosting bị lỗi 0 bytes.
+---
 
-3. **Cải tiến `guardGeminiLessonOutput` / `applyObjectivesOutput` & Preview Rendering**:
-   - Trong `js/khbd-app.js`, tại `applyObjectivesOutput`, nếu phát hiện AI trả về cấu trúc thiếu Năng lực chung (`### a) Năng lực chung`) hoặc thiếu tiêu đề Năng lực đặc thù (`### b) Năng lực đặc thù`), tự động chuẩn hóa hoặc kích hoạt tái tạo lại bằng prompt cứng chuẩn.
-   - Tại `applyLiteralListMarkers` / `applyIntegrationPreviewColors` trong `js/khbd-app.js`: Xử lý trường hợp `li` chứa badge NLS/AI dạng inline để loại bỏ dấu gạch ngang đầu dòng bị trơ trọi `- `.
+## Chi tiết Triển khai cho Coder
 
-4. **Kiểm thử tự động**:
-   - Bổ sung test case trong `tests/canvas-prompts-integrity-smoke.js` kiểm tra sự hiện diện của `ensureKhbdPromptsFallback`, kiểm tra template `GENERATE_OBJECTIVES` có đủ các section:
-     + `### a) Năng lực chung`
-     + `### b) Năng lực đặc thù môn học`
-     + `{digital_objectives_section}`
-     + `{ai_objectives_section}`
-   - Bổ sung test trong `tests/canvas-soankhbd-smoke.js` xác nhận cả hai file HTML (`canvas_soankhbd.html` và bản backup) đều có fallback CDN jsDelivr cho cả `khbd-prompts.js`, `khbd-pedagogy-catalog.js` và `khbd-docx.js`.
-   - Chạy toàn bộ test suite để đảm bảo không gãy bất kỳ bài kiểm thử nào.
+### 1. File `js/khbd-prompts.js`
+- **Sửa `ACTIVITY_TABLE_CONTRACT_COMPACT`**:
+  Yêu cầu rõ ràng:
+  + Dù là chế độ rút gọn, mỗi hoạt động (hoặc nhánh con 2.1, 2.2... của Mục B) BẮT BUỘC phải có đủ 4 đề mục:
+    `#### a) Mục tiêu:`
+    `#### b) Nội dung:`
+    `#### c) Sản phẩm:`
+    `#### d) Tổ chức thực hiện:`
+  + Bảng Markdown `d) Tổ chức thực hiện:` BẮT BUỘC có 2 cột (`| Hoạt động của GV và HS | Nội dung |`) với Cột 1 đủ 4 bước chuẩn mực:
+    `+ Bước 1: Chuyển giao nhiệm vụ:`
+    `+ Bước 2: Thực hiện nhiệm vụ:`
+    `+ Bước 3: Báo cáo, thảo luận:`
+    `+ Bước 4: Kết luận, nhận định:`
+  + Cột 2 BẮT BUỘC có kiến thức chốt bảng (quy tắc, công thức LaTeX, ví dụ mẫu ngắn).
+- **Rà soát `GENERATE_ACTIVITY_B` và `expandActivityBSkeleton`**:
+  Đảm bảo prompt mẫu luôn có đủ 4 mục `#### a) Mục tiêu:`, `#### b) Nội dung:`, `#### c) Sản phẩm:`, `#### d) Tổ chức thực hiện:` kèm bảng 2 cột đủ 4 bước cho tất cả các nhánh `Hoạt động 2.k`.
+
+### 2. File `js/khbd-app.js`
+- **Viết lại hoàn toàn `repairActivityBlockFourParts`**:
+  1. Kiểm tra 4 cờ:
+     - `hasA`: `/#{0,4}\s*a\)\s*Mục tiêu/i.test(b)`
+     - `hasB`: `/#{0,4}\s*b\)\s*Nội dung/i.test(b)`
+     - `hasC`: `/#{0,4}\s*c\)\s*Sản phẩm/i.test(b)`
+     - `hasD`: `/#{0,4}\s*d\)\s*Tổ chức thực hiện/i.test(b)`
+  2. Chuẩn hóa tiêu đề mục tiêu nếu có:
+     `b = b.replace(/^(\s*)(?:#{1,4}\s*)?(?:[-*+]\s*)?Mục tiêu\s*:/im, "$1#### a) Mục tiêu:");`
+  3. **Khôi phục `a) Mục tiêu:` nếu thiếu**:
+     Nếu `!hasA`, tự động chèn vào trước `b)` (hoặc trước `c)`, `d)`, hoặc trước bảng):
+     ```markdown
+     #### a) Mục tiêu:
+     - Học sinh hình thành và nắm vững kiến thức cốt lõi, hiểu rõ bản chất và vận dụng được quy tắc, định nghĩa của bài học/tiểu mục.
+
+     ```
+  4. **Khôi phục `b) Nội dung:` nếu thiếu**:
+     **XÓA BỎ TRIỆT ĐỂ** việc bóc `step1` và cắt `slice(0, 400)`.
+     Nếu `!hasB`, chèn câu sư phạm tĩnh chuẩn mực:
+     ```markdown
+     #### b) Nội dung:
+     - Học sinh nghiên cứu SGK, làm việc cá nhân và thảo luận nhóm thực hiện các nhiệm vụ học tập khám phá kiến thức.
+
+     ```
+  5. **Khôi phục `c) Sản phẩm:` nếu thiếu**:
+     **XÓA BỎ TRIỆT ĐỂ** việc bóc Cột 2 và cắt `slice(0, 400)`.
+     Nếu `!hasC`, chèn câu sư phạm tĩnh chuẩn mực:
+     ```markdown
+     #### c) Sản phẩm:
+     - Kết quả câu trả lời, lời giải chi tiết cho các nhiệm vụ khám phá và kiến thức cốt lõi ghi chép vào vở.
+
+     ```
+  6. **Khôi phục `d) Tổ chức thực hiện:` nếu thiếu**:
+     Nếu có bảng mà chưa có tiêu đề `d)`, chèn `#### d) Tổ chức thực hiện:\n` ngay trước bảng.
+  7. **Bảo tồn nguyên vẹn bảng 2 cột**:
+     - Cột 1 giữ nguyên vẹn toàn bộ 4 bước kịch bản (`Bước 1..4`), không bị gọt xén hay gián đoạn.
+     - Cột 2 giữ nguyên toàn bộ kiến thức, công thức LaTeX, đề bài và lời giải ví dụ.
+- **Xóa bỏ việc gọi trùng lặp**:
+  Trong `applyActivityOutput`, chỉ cần gọi `clipKhbdActivityMarkdown` (vốn đã gọi `ensureActivityFourPartStructure`), không gọi thừa bên ngoài.
+
+### 3. File `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`
+- Giữ nguyên cơ chế CDN fallback cho `khbd-prompts.js`, `khbd-pedagogy-catalog.js`, `khbd-docx.js` đã chứng minh hiệu quả chống 0-bytes hosting.
+- Đồng bộ guard `typeof window.docxGenerator !== "undefined" || typeof window.DocxGenerator !== "undefined"`.
+
+### 4. File kiểm thử `tests/khbd-table-columns-smoke.js`
+- Thêm test case khẳng định:
+  + Đầu vào Hoạt động B thiếu `a) Mục tiêu:` $\rightarrow$ Kết quả phải tự động khôi phục đủ `#### a) Mục tiêu:`.
+  + Đầu vào Hoạt động B thiếu `b)` hoặc `c)` $\rightarrow$ Khôi phục bằng câu văn chuẩn sư phạm, TUYỆT ĐỐI KHÔNG làm gãy LaTeX (`$x^2 - \frac{1`) và không sinh nhãn đúp `- - GV:`.
+  + Bảng Cột 1 giữ nguyên đủ cả 4 bước (`Bước 1..4`).
+- Chạy toàn bộ test suite để đạt 100% PASS.
 
 ---
 
 ## File dự kiến tác động
-1. `canvas_soankhbd.html`
-2. `backupcode viettailieu/canvas_soankhbd.html`
-3. `js/khbd-app.js`
-4. `tests/canvas-prompts-integrity-smoke.js`
-5. `tests/canvas-soankhbd-smoke.js`
+1. `js/khbd-prompts.js`
+2. `js/khbd-app.js`
+3. `canvas_soankhbd.html`
+4. `backupcode viettailieu/canvas_soankhbd.html`
+5. `tests/khbd-table-columns-smoke.js`
 
 ---
 
 ## Các bước Coder triển khai chi tiết
 
-### Bước 1: Thêm `ensureKhbdPromptsFallback` vào `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`
-- Vị trí: Ngay sau script nạp `khbd-prompts.js` (khoảng dòng 1124).
-- Nội dung:
-```html
-  <script>
-    (function ensureKhbdPromptsFallback() {
-      if (typeof window.getPromptTemplate === "function" && window.PROMPTS && window.PROMPTS.GENERATE_OBJECTIVES) return;
-      var isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-      var cdnPrompts = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js";
-      document.write('<script src="' + (isLocal ? "js/khbd-prompts.js" : cdnPrompts) + '"><\/script>');
-    })();
-  </script>
-```
+### Bước 1: Cập nhật `ACTIVITY_TABLE_CONTRACT_COMPACT` trong `js/khbd-prompts.js`
+- Bổ sung yêu cầu bắt buộc: Xuất đủ 4 mục `#### a) Mục tiêu:`, `#### b) Nội dung:`, `#### c) Sản phẩm:`, `#### d) Tổ chức thực hiện:` và bảng kịch bản 4 bước (`+ Bước 1:`, `+ Bước 2:`, `+ Bước 3:`, `+ Bước 4:`).
 
-### Bước 2: Thêm `ensureKhbdDocxFallback` vào `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`
-- Vị trí: Ngay sau script nạp `khbd-docx.js`.
-- Nội dung:
-```html
-  <script>
-    (function ensureKhbdDocxFallback() {
-      if (typeof window.createKhbdDocxDocument === "function" || typeof window.KHBD_DOCX !== "undefined") return;
-      var isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
-      var cdnDocx = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-docx.js";
-      document.write('<script src="' + (isLocal ? "js/khbd-docx.js" : cdnDocx) + '"><\/script>');
-    })();
-  </script>
-```
+### Bước 2: Viết lại `repairActivityBlockFourParts` trong `js/khbd-app.js`
+- Bổ sung kiểm tra `hasA` và tự động chèn `#### a) Mục tiêu:`.
+- Xóa bỏ việc bóc `step1` và Cột 2 bằng `.slice(0, 400)`.
+- Chèn câu sư phạm tĩnh chuẩn mực cho `b)` và `c)` khi thiếu.
+- Giữ nguyên vẹn bảng 2 cột 4 bước.
 
-### Bước 3: Cải thiện nhận diện cấu trúc Năng lực trong `js/khbd-app.js`
-- Tại `isOffTopicObjectivesHallucination(text)`:
-  Nếu text thiếu cả `năng lực chung` lẫn `năng lực đặc thù`, đánh dấu là thiếu chuẩn để kích hoạt tái tạo với prompt cứng đầy đủ.
-- Tại bộ render preview `applyLiteralListMarkers`:
-  Xử lý khi nội dung item chỉ là badge NLS/AI để không render bullet `- ` trơ trọi.
+### Bước 3: Đồng bộ 2 file HTML
+- Đồng bộ guard nạp `khbd-docx.js` fallback.
 
-### Bước 4: Viết và chạy kiểm thử tự động
-- Chạy:
-  `node tests/canvas-prompts-integrity-smoke.js`
-  `node tests/canvas-soankhbd-smoke.js`
-  `node tests/khbd-competencies-smoke.js`
-  `node tests/khbd-nls-ai-bold-italic-smoke.js`
+### Bước 4: Chạy kiểm thử tự động
+- `node tests/canvas-prompts-integrity-smoke.js`
+- `node tests/canvas-soankhbd-smoke.js`
+- `node tests/khbd-table-columns-smoke.js`
+- `node tests/khbd-pedagogy-rate-smoke.js`
+- `node tests/khbd-nls-ai-bold-italic-smoke.js`
 - Xác nhận 100% tests PASS.

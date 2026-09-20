@@ -1,47 +1,47 @@
-# IMPLEMENT: Cứu hộ khung prompt Mục tiêu & Năng lực chuẩn CV 5512 trên canvas_soankhbd.html
+# IMPLEMENT: Khôi phục đủ 4 mục (a/b/c/d) và đủ 4 bước cho Hoạt động Mục B
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
 ## Thay đổi
 
-### 1. CDN fallback `khbd-prompts.js` (cả hai HTML)
-- `canvas_soankhbd.html` và `backupcode viettailieu/canvas_soankhbd.html`
-- Thêm `ensureKhbdPromptsFallback()` ngay sau script nạp `khbd-prompts.js`
-- Guard: `getPromptTemplate` + `window.PROMPTS.GENERATE_OBJECTIVES`
-- Host rỗng/0 bytes → nạp `https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-prompts.js`
-- Local/`file:` → nạp lại `js/khbd-prompts.js`
+### 1. `js/khbd-prompts.js` — `ACTIVITY_TABLE_CONTRACT_COMPACT`
+- Chế độ Soạn rút gọn vẫn BẮT BUỘC đủ 4 mục CV 5512: `#### a) Mục tiêu:`, `#### b) Nội dung:`, `#### c) Sản phẩm:`, `#### d) Tổ chức thực hiện:` (kể cả nhánh 2.1, 2.2...).
+- Bảng Cột 1 BẮT BUỘC đủ 4 bước quy chuẩn: `+ Bước 1: Chuyển giao nhiệm vụ:` … `+ Bước 4: Kết luận, nhận định:`.
+- Khác biệt Rút gọn chỉ còn ở độ dài câu thoại / 1 ví dụ trọng tâm — không bỏ khung cấu trúc.
+- `GENERATE_ACTIVITY_B` / `expandActivityBSkeleton` vốn đã nhắc đủ 4 mục + bảng 4 bước; giữ nguyên.
 
-### 2. CDN fallback `khbd-docx.js` (cả hai HTML)
-- Thêm `ensureKhbdDocxFallback()` ngay sau script nạp `khbd-docx.js`
-- Guard: `createKhbdDocxDocument` hoặc `window.KHBD_DOCX`
-- CDN: `.../js/khbd-docx.js`
+### 2. `js/khbd-app.js` — viết lại `repairActivityBlockFourParts`
+- Nhận diện đủ 4 cờ: `hasA`, `hasB`, `hasC`, `hasD`.
+- Chuẩn hóa / chèn `#### a) Mục tiêu:` khi thiếu (câu sư phạm tĩnh).
+- Chèn `#### b) Nội dung:` / `#### c) Sản phẩm:` / `#### d) Tổ chức thực hiện:` bằng câu sư phạm tĩnh khi thiếu.
+- **Đã xóa** logic bóc `step1` / Cột 2 rồi `.slice(0, 400)` — không còn cắt LaTeX hay đứt câu, không phá kịch bản 4 bước.
 
-### 3. Backup đồng bộ pedagogy-catalog fallback
-- Bản backup dùng `isLocal` + `ensureKhbdPedagogyCatalogFallback` giống bản chính (smoke yêu cầu cả hai HTML có đủ 3 fallback CDN)
+### 3. Guard `ensureKhbdDocxFallback` (2 HTML)
+- Đồng bộ đúng PLAN: `typeof window.docxGenerator !== "undefined" || typeof window.DocxGenerator !== "undefined"`.
+- Cập nhật assert tương ứng trong `tests/canvas-soankhbd-smoke.js` để suite PLAN PASS.
 
-### 4. `js/khbd-app.js` — cấu trúc Năng lực + preview
-- `isOffTopicObjectivesHallucination`: nếu thiếu cả `năng lực chung` và `năng lực đặc thù` → đánh dấu lạc chuẩn → `applyObjectivesOutput` tái tạo bằng `GENERATE_OBJECTIVES`
-- `isIntegrationBadgeListItem` + `applyLiteralListMarkers`: không chèn `- ` trơ trước mục chỉ là badge NLS/AI
-- `applyIntegrationPreviewColors`: `li` NLS/AI → `listStyleType: none` và bỏ gạch đầu dòng text thừa
-
-### 5. Smoke tests
-- `tests/canvas-prompts-integrity-smoke.js`: assert `ensureKhbdPromptsFallback`, sections `### a) Năng lực chung`, `### b) Năng lực đặc thù môn học`, `{digital_objectives_section}`, `{ai_objectives_section}`, và guard hallucination/preview
-- `tests/canvas-soankhbd-smoke.js`: cả hai HTML phải có CDN fallback cho `khbd-prompts.js`, `khbd-pedagogy-catalog.js`, `khbd-docx.js`
+### 4. `tests/khbd-table-columns-smoke.js`
+- Thêm case Hoạt động B thiếu `a) Mục tiêu` → phải tự bổ sung `#### a) Mục tiêu:`.
+- Assert giữ đủ Bước 1..4 và không cắt LaTeX/câu dài cột phải.
+- Assert `repairActivityBlockFourParts` không còn `.slice(0, 400)`.
+- Assert COMPACT contract có khung a/b/c/d và 4 bước quy chuẩn.
 
 ## Test đã chạy (100% PASS)
 
+- `node tests/khbd-table-columns-smoke.js`
 - `node tests/canvas-prompts-integrity-smoke.js`
 - `node tests/canvas-soankhbd-smoke.js`
-- `node tests/khbd-competencies-smoke.js`
+- `node tests/khbd-pedagogy-rate-smoke.js`
 - `node tests/khbd-nls-ai-bold-italic-smoke.js`
 
 ## File đã đụng
 
-1. `canvas_soankhbd.html`
-2. `backupcode viettailieu/canvas_soankhbd.html`
-3. `js/khbd-app.js`
-4. `tests/canvas-prompts-integrity-smoke.js`
-5. `tests/canvas-soankhbd-smoke.js`
-6. `docs/handoff/IMPLEMENT.md`
+1. `js/khbd-prompts.js`
+2. `js/khbd-app.js`
+3. `canvas_soankhbd.html`
+4. `backupcode viettailieu/canvas_soankhbd.html`
+5. `tests/khbd-table-columns-smoke.js`
+6. `tests/canvas-soankhbd-smoke.js` (assert guard docx theo PLAN)
+7. `docs/handoff/IMPLEMENT.md`
 
-Không mở rộng ngoài PLAN. UI E2E / hosting 0-bytes → Antigravity `/verify`.
+UI E2E / Canvas generation → Antigravity `/verify`.

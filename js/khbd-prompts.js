@@ -354,8 +354,18 @@ ${LATEX_SPACING_BAN}
 
 const ACTIVITY_TABLE_CONTRACT_COMPACT = `YÊU CẦU BẮT BUỘC CHẾ ĐỘ SOẠN RÚT GỌN (Chuẩn CV 5512 & GDPT 2018):
 - Toàn bộ kế hoạch bài dạy dài khoảng 4–6 trang Word A4. Chỉ soạn bốn hoạt động cốt lõi A–D; không tạo phụ lục/phiếu học tập riêng.
+- Mỗi hoạt động (kể cả nhánh con 2.1, 2.2... của Mục B) BẮT BUỘC đủ 4 mục chuẩn CV 5512:
+  #### a) Mục tiêu:
+  #### b) Nội dung:
+  #### c) Sản phẩm:
+  #### d) Tổ chức thực hiện:
 - Mỗi hoạt động ghi thời lượng cố định; tổng A + B + C + D đúng bằng {duration}. Dùng đúng một bảng Markdown 2 cột: | Hoạt động của GV và HS | Nội dung |. TUYỆT ĐỐI CẤM dấu | bên trong ô; liệt kê dùng dấu phẩy hoặc /.
-- Kịch bản giữ đủ 4 bước: 1. Giao việc ngắn gọn; 2. HS thực hiện cá nhân/nhóm; 3. Báo cáo ngắn; 4. GV chốt kiến thức cốt lõi. Không viết câu thoại dài dòng, không diễn giải ngộ nhận hoặc phân hóa dài.
+- Bảng Markdown Cột 1 BẮT BUỘC giữ đủ 4 bước quy chuẩn (ngăn bằng <br>):
+  + Bước 1: Chuyển giao nhiệm vụ:
+  + Bước 2: Thực hiện nhiệm vụ:
+  + Bước 3: Báo cáo, thảo luận:
+  + Bước 4: Kết luận, nhận định:
+- Khác biệt chế độ Rút gọn: câu thoại ngắn gọn, súc tích, giải 1 ví dụ trọng tâm; TUYỆT ĐỐI KHÔNG bỏ khung a/b/c/d và KHÔNG bỏ 4 bước.
 - Cột Nội dung BẮT BUỘC có dữ liệu (quy tắc/công thức LaTeX và tối đa một bài tập trọng tâm có lời giải mẫu ngắn). CẤM để trống, CẤM \`---\`. Không dùng HTML. Cột Trái Bước 4 không chép kiến thức ghi bảng.
 - Hoạt động D phải giao luôn đúng 4 nhiệm vụ tự học về nhà tại Bước 4.
 - KỸ THUẬT & PHƯƠNG PHÁP DẠY HỌC: Ở chế độ soạn rút gọn, nếu trong bối cảnh sư phạm không có kỹ thuật hoặc phương pháp được chọn (người dùng đã bỏ tick), TUYỆT ĐỐI KHÔNG đưa tên kỹ thuật như Think-Pair-Share, Khăn trải bàn, Mảnh ghép, Trạm hay tên PPDH vào tiến trình; chỉ triển khai 4 bước CV 5512 trực tiếp, tinh gọn.

@@ -6966,47 +6966,56 @@ function nearestProductHint(beforeText) {
 function repairActivityBlockFourParts(block) {
   let b = String(block || "");
   if (!b.trim()) return b;
-  b = b.replace(/^(\s*)(?:#{1,4}\s*)?(?:[-*+]\s*)?Mục tiêu\s*:/im, "$1### a) Mục tiêu:");
-  const hasB = /#{0,4}\s*b\)\s*Nội dung/i.test(b);
-  const hasC = /#{0,4}\s*c\)\s*Sản phẩm/i.test(b);
-  const hasD = /#{0,4}\s*d\)\s*Tổ chức thực hiện/i.test(b);
+  // Chuẩn hóa nhãn Mục tiêu → #### a) Mục tiêu (không bóc bảng, không cắt chuỗi).
+  b = b.replace(/^(\s*)(?:#{1,4}\s*)?(?:[-*+]\s*)?Mục tiêu\s*:/im, "$1#### a) Mục tiêu:");
   const tableRe = /\|\s*Hoạt động của GV và HS\s*\|\s*Nội dung\s*\|/i;
+  let hasA = /#{0,4}\s*a\)\s*Mục tiêu/i.test(b);
+  let hasB = /#{0,4}\s*b\)\s*Nội dung/i.test(b);
+  let hasC = /#{0,4}\s*c\)\s*Sản phẩm/i.test(b);
+  let hasD = /#{0,4}\s*d\)\s*Tổ chức thực hiện/i.test(b);
+
   if (tableRe.test(b) && !hasD) {
-    b = b.replace(tableRe, "### d) Tổ chức thực hiện:\n$&");
+    b = b.replace(tableRe, "#### d) Tổ chức thực hiện:\n$&");
+    hasD = true;
   }
-  let noiDung = "Học sinh thực hiện nhiệm vụ học tập gắn với nội dung bài học trong SGK.";
-  let sanPham = "Sản phẩm học tập: câu trả lời, lời giải hoặc ghi chép kiến thức cốt lõi.";
-  const tableAt = b.search(tableRe);
-  if (tableAt >= 0) {
-    const after = b.slice(tableAt);
-    const dataLine = after.split("\n").find(line => {
-      const trimmed = line.trim();
-      return trimmed.startsWith("|") && !/Hoạt động của GV và HS/i.test(trimmed) && !/^\|[\s:-]+\|/.test(trimmed);
-    });
-    if (dataLine) {
-      const [left, right] = semanticSplitActivityRow(splitKhbdMarkdownTableRow(dataLine));
-      const step1 = String(left).match(/bước\s*1[:\s]([\s\S]*?)(?=bước\s*2|$)/i);
-      if (step1) noiDung = step1[1].replace(/<br\s*\/?>/gi, " ").replace(/\*\*/g, "").trim().slice(0, 400) || noiDung;
-      const step3 = String(left).match(/bước\s*3[:\s]([\s\S]*?)(?=bước\s*4|$)/i);
-      if (step3) sanPham = step3[1].replace(/<br\s*\/?>/gi, " ").replace(/\*\*/g, "").trim().slice(0, 400) || sanPham;
-      if (right && !isEmptyRightColumn(right) && !hasC) {
-        sanPham = right.replace(/<br\s*\/?>/gi, " ").replace(/\*\*/g, "").trim().slice(0, 400) || sanPham;
-      }
+
+  const insertBeforePart = (markdown, insert) => {
+    if (/#{0,4}\s*b\)\s*Nội dung/i.test(markdown)) {
+      return markdown.replace(/(#{0,4}\s*b\)\s*Nội dung)/i, insert + "$1");
     }
+    if (/#{0,4}\s*c\)\s*Sản phẩm/i.test(markdown)) {
+      return markdown.replace(/(#{0,4}\s*c\)\s*Sản phẩm)/i, insert + "$1");
+    }
+    if (/#{0,4}\s*d\)\s*Tổ chức thực hiện/i.test(markdown)) {
+      return markdown.replace(/(#{0,4}\s*d\)\s*Tổ chức thực hiện)/i, insert + "$1");
+    }
+    if (tableRe.test(markdown)) {
+      return markdown.replace(tableRe, insert + "$&");
+    }
+    return `${markdown}\n\n${insert}`;
+  };
+
+  if (!hasA) {
+    const insert = `#### a) Mục tiêu:\n- Học sinh hình thành và nắm vững kiến thức cốt lõi, hiểu rõ bản chất và vận dụng được quy tắc, định nghĩa của bài học/tiểu mục.\n\n`;
+    b = insertBeforePart(b, insert);
+    hasA = true;
   }
   if (!hasB) {
-    const insert = `### b) Nội dung:\n- ${noiDung}\n\n`;
+    const insert = `#### b) Nội dung:\n- Học sinh nghiên cứu SGK, làm việc cá nhân và thảo luận nhóm thực hiện các nhiệm vụ học tập khám phá kiến thức.\n\n`;
     if (/#{0,4}\s*c\)\s*Sản phẩm/i.test(b)) b = b.replace(/(#{0,4}\s*c\)\s*Sản phẩm)/i, insert + "$1");
     else if (/#{0,4}\s*d\)\s*Tổ chức thực hiện/i.test(b)) b = b.replace(/(#{0,4}\s*d\)\s*Tổ chức thực hiện)/i, insert + "$1");
     else if (tableRe.test(b)) b = b.replace(tableRe, insert + "$&");
     else b += `\n\n${insert}`;
+    hasB = true;
   }
   if (!hasC) {
-    const insert = `### c) Sản phẩm:\n- ${sanPham}\n\n`;
+    const insert = `#### c) Sản phẩm:\n- Kết quả câu trả lời, lời giải chi tiết cho các nhiệm vụ khám phá và kiến thức cốt lõi ghi chép vào vở.\n\n`;
     if (/#{0,4}\s*d\)\s*Tổ chức thực hiện/i.test(b)) b = b.replace(/(#{0,4}\s*d\)\s*Tổ chức thực hiện)/i, insert + "$1");
     else if (tableRe.test(b)) b = b.replace(tableRe, insert + "$&");
     else b += `\n\n${insert}`;
+    hasC = true;
   }
+  // Giữ nguyên vẹn bảng Cột 1 (4 bước) và Cột 2 (LaTeX); không bóc step1/right, không cắt độ dài ô.
   return b;
 }
 

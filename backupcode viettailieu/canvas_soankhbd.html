@@ -1086,7 +1086,7 @@
   </script>
   <script>
     (function ensureKhbdDocxFallback() {
-      if (typeof window.createKhbdDocxDocument === "function" || typeof window.KHBD_DOCX !== "undefined") return;
+      if (typeof window.docxGenerator !== "undefined" || typeof window.DocxGenerator !== "undefined") return;
       var isLocal = typeof window !== "undefined" && (window.location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname));
       var cdnDocx = "https://cdn.jsdelivr.net/gh/HoangThiencm/giangbai@main/js/khbd-docx.js";
       document.write('<script src="' + (isLocal ? "js/khbd-docx.js" : cdnDocx) + '"><\/script>');

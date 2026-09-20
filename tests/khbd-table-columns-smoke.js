@@ -94,12 +94,43 @@ const missingFour = `## D. HOẠT ĐỘNG 4: VẬN DỤNG (18 phút)
 | :--- | :--- |
 | + Bước 1: Chuyển giao nhiệm vụ: **GV:** "Các em giải bài vận dụng." **HS:** Nhận đề.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc nhóm. **GV:** Quan sát.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Trình bày nghiệm. **GV:** Nhận xét.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt. **HS:** Ghi bài. | --- |`;
 const restored = ensureActivityFourPartStructure(missingFour, 'D');
-assert.match(restored, /### a\) Mục tiêu/, 'Chuẩn hóa heading mục tiêu');
-assert.match(restored, /### b\) Nội dung/, 'Tự thêm b) Nội dung');
-assert.match(restored, /### c\) Sản phẩm/, 'Tự thêm c) Sản phẩm');
-assert.match(restored, /### d\) Tổ chức thực hiện/, 'Tự thêm d) Tổ chức thực hiện');
+assert.match(restored, /#{3,4}\s*a\) Mục tiêu/, 'Chuẩn hóa heading mục tiêu');
+assert.match(restored, /#{3,4}\s*b\) Nội dung/, 'Tự thêm b) Nội dung');
+assert.match(restored, /#{3,4}\s*c\) Sản phẩm/, 'Tự thêm c) Sản phẩm');
+assert.match(restored, /#{3,4}\s*d\) Tổ chức thực hiện/, 'Tự thêm d) Tổ chức thực hiện');
 const repairedTable = repairActivityTablesRightColumn(restored);
 const dataRow = repairedTable.split('\n').find(line => /Bước 1/.test(line));
 assert.ok(dataRow, 'Còn hàng dữ liệu bảng sau rescue');
 assert.ok(!/\|\s*---\s*\|$/.test(dataRow.trim()), 'Cột 2 của hàng dữ liệu không còn ---');
+
+// Hoạt động B thiếu a) Mục tiêu: phải tự bổ sung; không slice(0,400); giữ đủ 4 bước.
+const latexRight = '$-5x^2y$; $x^3 - \\frac{1}{2}$ — Bậc của đơn thức (cấp số nhân đầy đủ không bị cắt)';
+const missingAOnB = `## B. HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI (45 phút)
+### Hoạt động 2.1: Đơn thức (20 phút)
+#### b) Nội dung:
+- Học sinh khám phá khái niệm đơn thức trong SGK.
+#### c) Sản phẩm:
+- Định nghĩa và ví dụ đơn thức.
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| + Bước 1: Chuyển giao nhiệm vụ: **GV:** "Các em đọc mục Đơn thức." **HS:** Nhận nhiệm vụ.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân rồi thảo luận nhóm. **GV:** Quan sát.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Trình bày. **GV:** Nhận xét.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt. **HS:** Ghi bài. | ${latexRight} |`;
+const restoredB = ensureActivityFourPartStructure(missingAOnB, 'B');
+assert.match(restoredB, /#### a\) Mục tiêu:/, 'Hoạt động B thiếu a) phải tự bổ sung #### a) Mục tiêu');
+assert.match(restoredB, /#### b\) Nội dung:/, 'Hoạt động B giữ b) Nội dung');
+assert.match(restoredB, /#### c\) Sản phẩm:/, 'Hoạt động B giữ c) Sản phẩm');
+assert.match(restoredB, /#### d\) Tổ chức thực hiện:/, 'Hoạt động B có d) Tổ chức thực hiện trước bảng');
+assert.match(restoredB, /Bước 1:[\s\S]*Bước 2:[\s\S]*Bước 3:[\s\S]*Bước 4:/, 'Bảng Cột 1 giữ nguyên đủ 4 bước');
+assert.match(restoredB, /\$-5x\^2y\$/, 'Không cắt xén LaTeX cột phải bằng slice(0, 400)');
+assert.match(restoredB, /Bậc của đơn thức \(cấp số nhân đầy đủ không bị cắt\)/, 'Không đứt cụt câu chữ cột phải');
+assert.doesNotMatch(
+  fs.readFileSync(path.join(__dirname, '..', 'js', 'khbd-app.js'), 'utf8').match(/function repairActivityBlockFourParts[\s\S]*?\nfunction ensureActivityFourPartStructure/)[0],
+  /\.slice\(0,\s*400\)/,
+  'repairActivityBlockFourParts không còn .slice(0, 400)'
+);
+
+const promptsSrc = fs.readFileSync(path.join(__dirname, '..', 'js', 'khbd-prompts.js'), 'utf8');
+assert.match(promptsSrc, /ACTIVITY_TABLE_CONTRACT_COMPACT[\s\S]*?#### a\) Mục tiêu:/, 'COMPACT bắt buộc #### a) Mục tiêu');
+assert.match(promptsSrc, /ACTIVITY_TABLE_CONTRACT_COMPACT[\s\S]*?\+ Bước 1: Chuyển giao nhiệm vụ:/, 'COMPACT bắt buộc Bước 1 quy chuẩn');
+assert.match(promptsSrc, /ACTIVITY_TABLE_CONTRACT_COMPACT[\s\S]*?\+ Bước 4: Kết luận, nhận định:/, 'COMPACT bắt buộc Bước 4 quy chuẩn');
+
 console.log('khbd-table-columns-smoke: passed');
