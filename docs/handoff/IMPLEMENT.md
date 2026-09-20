@@ -1,48 +1,41 @@
-# IMPLEMENT: Khắc phục SyntaxError DocxGenerator already been declared
+# IMPLEMENT: Bỏ dấu ngoặc vuông [ ] ở tên năng lực / phẩm chất (canvas_soankhbd)
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
 ## Root cause đã xử lý
-- Host `khbd-docx.js` khai báo `class DocxGenerator` / `const docxGenerator` ở **script lexical scope**, không gắn `window`.
-- Guard cũ chỉ xem `window.DocxGenerator` → luôn fail → CDN nạp lần 2 → `SyntaxError: Identifier 'DocxGenerator' has already been declared`.
+- Prompt `GENERATE_OBJECTIVES` / `getPromptTemplate` / `GENERATE_CORE_LESSON` dùng mẫu `- [Tên năng lực]: [mô tả...]` → Gemini xuất nguyên văn ngoặc vuông quanh tên năng lực chung, đặc thù và phẩm chất.
+- `applyObjectivesOutput` chưa có bước hậu xử lý loại `[ ]` ở các mục đó (trong khi mã NLS/AI dạng `***[5.3.TC2a]:***` vẫn phải giữ).
 
 ## Thay đổi
 
-### 1. IIFE wrappers (function scope, không đụng global lexical)
-- `js/khbd-docx.js`: `(function (global) { ... nested define ... })(window|globalThis)`
-  - Guard: `global.DocxGenerator` / `global.docxGenerator` **hoặc** lexical `DocxGenerator`+`docxGenerator`
-  - Luôn gán `global.DocxGenerator` / `global.docxGenerator`
-  - `class` nằm trong nested IIFE để tránh TDZ khi check lexical ở outer
-- `js/khbd-prompts.js`: IIFE tương tự; early-return nếu `global.getPromptTemplate` + `global.PROMPTS.GENERATE_OBJECTIVES`
-- `js/khbd-pedagogy-catalog.js`: IIFE; early-return nếu `global.KHBD_PEDAGOGY_CATALOG`
+### 1. `js/khbd-prompts.js`
+- `GENERATE_OBJECTIVES`: mẫu dòng năng lực/phẩm chất bỏ `[ ]`; thêm chỉ thị `TUYỆT ĐỐI CẤM dùng dấu ngoặc vuông [ ]`.
+- `getPromptTemplate` (runtime injection cho `GENERATE_OBJECTIVES` / `GENERATE_CORE_LESSON`): cùng quy tắc cấm `[ ]` cho NL chung, NL đặc thù, phẩm chất.
+- `GENERATE_CORE_LESSON`: bổ sung chỉ thị cấm ngoặc vuông ở mục 2.a / 2.b / 3.
+- **Không đụng** định dạng mã NLS/AI `***[Mã]:***`.
 
-### 2. Guard HTML (lexical + window)
-- `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`
-- `ensureKhbdPromptsFallback`: `window.getPromptTemplate` **hoặc** lexical `getPromptTemplate`
-- `ensureKhbdDocxFallback`: lexical `docxGenerator`/`DocxGenerator` **hoặc** `window.*`
-- `ensureKhbdPedagogyCatalogFallback`: lexical `KHBD_PEDAGOGY_CATALOG` **hoặc** `window.KHBD_PEDAGOGY_CATALOG`
+### 2. `js/khbd-app.js`
+- Thêm `stripSquareBracketsFromCompetencies(markdown)`: chỉ strip trong section a) NL chung, b) NL đặc thù, phẩm chất; bỏ qua c) NLS / d) AI.
+- Gọi sau `ensureObjectivesDigitalCodes` trong `applyObjectivesOutput`.
+- Export `window.stripSquareBracketsFromCompetencies` và `module.exports`.
 
-### 3. Smoke
-- Assert IIFE `(function (global)`, global assigns, lexical+window guards
-- Vm nạp prompts/docx 2 lần → early-return, cùng instance
+### 3. `tests/khbd-competency-brackets-smoke.js` (mới)
+- Assert prompt không còn mẫu `- [Tên năng lực...`.
+- Assert chỉ thị cấm ngoặc vuông có trong template + runtime prompt.
+- Assert sanitizer bỏ `[ ]` ở NL/phẩm chất và giữ `***[5.3.TC2a]:***` / `***[9.B2.1]:***`.
+- Assert pipeline `applyObjectivesOutput` có gọi sanitizer.
 
 ## Test đã chạy (100% PASS)
 
+- `node tests/khbd-competency-brackets-smoke.js`
 - `node tests/canvas-soankhbd-smoke.js`
 - `node tests/canvas-prompts-integrity-smoke.js`
-- `node tests/khbd-table-columns-smoke.js`
-- `node tests/khbd-pedagogy-rate-smoke.js`
+- `node tests/khbd-competencies-smoke.js`
 - `node tests/khbd-nls-ai-bold-italic-smoke.js`
+- `node tests/ppct-settings-import-smoke.js`
 
 ## File đã đụng
 
-1. `js/khbd-docx.js`
-2. `js/khbd-prompts.js`
-3. `js/khbd-pedagogy-catalog.js`
-4. `canvas_soankhbd.html`
-5. `backupcode viettailieu/canvas_soankhbd.html`
-6. `tests/canvas-soankhbd-smoke.js`
-7. `tests/canvas-prompts-integrity-smoke.js` (đồng bộ assert guard mới)
-8. `docs/handoff/IMPLEMENT.md`
-
-Console runtime → Antigravity `/verify`.
+1. `js/khbd-prompts.js`
+2. `js/khbd-app.js`
+3. `tests/khbd-competency-brackets-smoke.js`

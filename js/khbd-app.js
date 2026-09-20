@@ -5872,6 +5872,62 @@ function ensureObjectivesDigitalCodes(markdown) {
   return lines.join("\n");
 }
 
+/**
+ * Loại bỏ dấu ngoặc vuông [ ] bao quanh tên năng lực (chung, đặc thù) và phẩm chất.
+ * BẢO LƯU nguyên vẹn dấu ngoặc vuông ở mã NLS / AI (như [5.3.TC2a], [9.B2.1]).
+ */
+function stripSquareBracketsFromCompetencies(markdown) {
+  if (!markdown) return "";
+  const lines = String(markdown).split("\n");
+  let currentSection = "";
+
+  const updatedLines = lines.map(line => {
+    const trimmed = line.trim();
+    if (/^#{2,3}\s*a\)\s*Năng lực chung/i.test(trimmed)) {
+      currentSection = "common";
+      return line;
+    }
+    if (/^#{2,3}\s*b\)\s*Năng lực đặc thù/i.test(trimmed)) {
+      currentSection = "subject";
+      return line;
+    }
+    if (/^#{2,3}\s*c\)\s*Năng lực số/i.test(trimmed)) {
+      currentSection = "digital";
+      return line;
+    }
+    if (/^#{2,3}\s*d\)\s*Năng lực AI/i.test(trimmed)) {
+      currentSection = "ai";
+      return line;
+    }
+    if (/^#{2,3}\s*(?:3\.?\s*)?Về phẩm chất/i.test(trimmed)) {
+      currentSection = "quality";
+      return line;
+    }
+    if (/^#{1,3}\s+/i.test(trimmed)) {
+      currentSection = "other";
+      return line;
+    }
+
+    // Chỉ xử lý trong các phần: năng lực chung, năng lực đặc thù, phẩm chất
+    if (currentSection === "common" || currentSection === "subject" || currentSection === "quality") {
+      // Bắt các dạng:
+      // - [Tự chủ và tự học]: mô tả
+      // - [Tự chủ và tự học]: [mô tả]
+      // * [Tự chủ và tự học]: mô tả
+      const match = line.match(/^(\s*[-*]\s*)\[([^\]]+)\]\s*(:?)\s*(.*)$/);
+      if (match) {
+        const prefix = match[1];
+        const compName = match[2].trim();
+        const rest = match[4].replace(/^\[([\s\S]*?)\]$/, '$1').trim();
+        return `${prefix}${compName}: ${rest}`;
+      }
+    }
+    return line;
+  });
+
+  return updatedLines.join("\n");
+}
+
 function normalizeSavedObjectivesDigitalCodes() {
   const current = String(appState.content?.objectives || "");
   if (!current) return;
@@ -7990,6 +8046,7 @@ async function applyObjectivesOutput(result, signal, options = {}) {
   }
   finalResult = applyPpctVerbatimObjectives(finalResult);
   finalResult = ensureObjectivesDigitalCodes(finalResult);
+  finalResult = stripSquareBracketsFromCompetencies(finalResult);
   finalResult = keepObjectivesOnly(stripDisabledObjectivesStandardSections(finalResult));
   appState.content.objectives = finalResult;
   saveStateToLocalStorage();
@@ -8915,6 +8972,7 @@ if (typeof window !== 'undefined') {
   window.sanitizeLessonMarkdown = sanitizeLessonMarkdown;
   window.collapseDottedLines = collapseDottedLines;
   window.stripExcessiveDottedLines = stripExcessiveDottedLines;
+  window.stripSquareBracketsFromCompetencies = stripSquareBracketsFromCompetencies;
   window.normalizeActivityTimeHeadings = normalizeActivityTimeHeadings;
   window.splitKhbdMarkdownTableRow = splitKhbdMarkdownTableRow;
   window.unwrapVietnameseMathForKatex = unwrapVietnameseMathForKatex;
@@ -8981,6 +9039,7 @@ if (typeof module !== 'undefined' && module.exports) {
     syncActivityBTabLabels,
     collapseDottedLines,
     stripExcessiveDottedLines,
+    stripSquareBracketsFromCompetencies,
     normalizeActivityTimeHeadings,
     buildTextbookSourceHint,
     assertPhasePedagogyOutput,

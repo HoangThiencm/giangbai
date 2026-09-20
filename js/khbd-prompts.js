@@ -547,10 +547,10 @@
     
     QUY TẮC NĂNG LỰC CHUNG (CĂN CỨ VÀO MÔN HỌC & BÀI HỌC):
     - Mục 2.a (Năng lực chung): CHỈ CHỌN 1–2 năng lực chung phù hợp nhất với bản chất môn {subject} và bài dạy này (ví dụ môn Toán/KHTN ưu tiên "Giải quyết vấn đề và sáng tạo" + "Tự chủ và tự học"; môn Ngữ văn/Ngoại ngữ/GDCD ưu tiên "Giao tiếp và hợp tác" + "Tự chủ và tự học"). CẤM rập khuôn máy móc, CẤM liệt kê cả 3.
-    - Mỗi năng lực chung viết đúng 1 dòng: \`- [Tên năng lực]: [mô tả hành vi cụ thể học sinh thực hiện trong bài học này]\`. CẤM nhãn Biểu hiện / Minh chứng.
+    - Mỗi năng lực chung viết đúng 1 dòng: \`- Tên năng lực: mô tả hành vi cụ thể học sinh thực hiện trong bài học này\`. TUYỆT ĐỐI CẤM dùng dấu ngoặc vuông [ ] bao quanh tên năng lực, CẤM nhãn Biểu hiện / Minh chứng.
     
     QUY TẮC NĂNG LỰC ĐẶC THÙ & PHẨM CHẤT:
-    - Mục 2.b (Năng lực đặc thù môn học): CHỈ 2–3 năng lực đặc thù nổi trội của môn {subject} gắn với bài học. Viết mỗi mục 1 dòng.
+    - Mục 2.b (Năng lực đặc thù môn học): CHỈ 2–3 năng lực đặc thù nổi trội của môn {subject} gắn với bài học. Viết mỗi mục 1 dòng: \`- Tên năng lực: mô tả hành vi gắn với bài\`. TUYỆT ĐỐI CẤM dùng dấu ngoặc vuông [ ].
     - Mục 2.c (Năng lực số): CHỈ khi được bật; liệt kê đủ từng miền đã chọn và đủ từng mã đã chọn, mỗi mã 1 dòng theo đúng dạng [1-5].x.TC... (ví dụ 1.1.TC1a). CẤM mã 6.x.TC... (Miền 6 đã chuyển sang Khung AI QĐ 2422). CẤM chỉ ghi tên miền hoặc mô tả mà không có mã. Nếu PPCT đã có mô tả: CHÉP NGUYÊN VĂN 100% vào dạng \`### c) Năng lực số: ***[Mã NLS]:*** [Mô tả nguyên văn từ PPCT]\`. CẤM diễn đạt lại, CẤM bịa câu chữ mô tả khi PPCT đã có sẵn mô tả.
     - Mục 2.d (Năng lực AI): CHỈ khi được bật; liệt kê đủ từng mã đã chọn, mỗi mã 1 dòng theo đúng dạng [6-9].[A-D]... (QĐ 2422). Nếu PPCT đã có mô tả: CHÉP NGUYÊN VĂN 100% vào dạng \`### d) Năng lực AI: ***[Mã AI]:*** [Mô tả nguyên văn từ PPCT]\`. CẤM diễn đạt lại, CẤM bịa câu chữ mô tả khi PPCT đã có sẵn mô tả.
     - Mục 3 (Phẩm chất): CHỈ 1–2 phẩm chất có hành vi quan sát rõ trong bài (ví dụ: Chăm chỉ, Trung thực, Trách nhiệm).
@@ -561,18 +561,18 @@
     
     ## 2. Về năng lực
     ### a) Năng lực chung
-    - [Tên năng lực chung 1 phù hợp môn {subject}]: [Mô tả hành vi cụ thể của học sinh trong bài học này]
-    - [Tên năng lực chung 2 nếu có]: [Mô tả hành vi cụ thể của học sinh trong bài học này]
+    - Tên năng lực chung 1 phù hợp môn {subject}: Mô tả hành vi cụ thể của học sinh trong bài học này
+    - Tên năng lực chung 2 nếu có: Mô tả hành vi cụ thể của học sinh trong bài học này
     
     ### b) Năng lực đặc thù môn học
-    - [Tên năng lực đặc thù 1]: [Mô tả hành vi gắn với bài]
-    - [Tên năng lực đặc thù 2]: [Mô tả hành vi gắn với bài]
+    - Tên năng lực đặc thù 1: Mô tả hành vi gắn với bài
+    - Tên năng lực đặc thù 2: Mô tả hành vi gắn với bài
     
     {digital_objectives_section}
     {ai_objectives_section}
     
     ## 3. Về phẩm chất & Giáo dục hòa nhập (hòa nhập chỉ khi được bật)
-    - [Tên phẩm chất]: [Mô tả hành vi quan sát được của học sinh trong bài]`,
+    - Tên phẩm chất: Mô tả hành vi quan sát được của học sinh trong bài`,
     
       // TAB 3: THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
       GENERATE_MATERIALS: `Hãy xây dựng phần **II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU** cho Kế hoạch bài dạy môn {subject} Cấp {gradeLevelName} chuẩn Công văn 5512 theo GDPT 2018.
@@ -685,10 +685,10 @@
     
     QUY TẮC MỤC TIÊU:
     - Mục 1. Về kiến thức: YCCĐ chuẩn CT GDPT 2018 cho bài học (khóa theo phạm vi tiết dạy PPCT nếu có).
-    - Mục 2.a (Năng lực chung): CHỈ 1–2 năng lực chung phù hợp đặc thù môn {subject} và bài dạy này; mỗi mục đúng 1 dòng mô tả hành vi.
-    - Mục 2.b (Năng lực đặc thù): 2–3 năng lực đặc thù của môn {subject}.
+    - Mục 2.a (Năng lực chung): CHỈ 1–2 năng lực chung phù hợp đặc thù môn {subject} và bài dạy này; mỗi mục đúng 1 dòng mô tả hành vi. TUYỆT ĐỐI CẤM dùng ngoặc vuông [ ] bao quanh tên năng lực.
+    - Mục 2.b (Năng lực đặc thù): 2–3 năng lực đặc thù của môn {subject}. TUYỆT ĐỐI CẤM dùng ngoặc vuông [ ].
     - Mục 2.c / 2.d (NLS / AI): Chỉ tạo mục đang bật và chỉ theo đúng miền/mã đã chọn (mỗi mục 1 dòng).
-    - Mục 3 (Phẩm chất): 1–2 phẩm chất gắn liền bài học.
+    - Mục 3 (Phẩm chất): 1–2 phẩm chất gắn liền bài học (dạng \`- Tên phẩm chất: mô tả...\`, TUYỆT ĐỐI CẤM dùng ngoặc vuông [ ]).
     - Mục II: Cụ thể hóa đồ dùng dạy học thực tế cho GV và HS, không để lại dấu [...] hay "...".`,
     
       // TAB 4.A: TIẾN TRÌNH DẠY HỌC - HOẠT ĐỘNG MỞ ĐẦU
@@ -1735,9 +1735,9 @@
           context.aiCompetencyEnabled && 'AI: chỉ tạo ### d) và liệt kê đủ từng mã đã chọn.'
         ].filter(Boolean).join(' ');
         result += `\n\nQUY TẮC VIẾT NĂNG LỰC / PHẨM CHẤT:
-    - Năng lực chung: CHỌN 1–2 năng lực phù hợp nhất với môn ${subjectName} từ danh sách gợi ý trên. Mỗi năng lực đúng 1 dòng: \`- [Tên năng lực]: [mô tả hành vi cụ thể trong bài]\`.
+    - Năng lực chung: CHỌN 1–2 năng lực phù hợp nhất với môn ${subjectName} từ danh sách gợi ý trên. Mỗi năng lực đúng 1 dòng: \`- Tên năng lực: mô tả hành vi cụ thể trong bài\`. TUYỆT ĐỐI CẤM dùng dấu ngoặc vuông [ ] bao quanh tên năng lực.
     - CẤM nhãn Biểu hiện, Nhiệm vụ/Sản phẩm, Minh chứng. CẤM ý con bắt đầu bằng + .
-    - Năng lực đặc thù: 2–3 năng lực nổi trội của môn ${subjectName}. Phẩm chất: 1–2 phẩm chất.
+    - Năng lực đặc thù: 2–3 năng lực nổi trội của môn ${subjectName} (dạng \`- Tên năng lực: mô tả...\`, TUYỆT ĐỐI CẤM dùng ngoặc vuông [ ]). Phẩm chất: 1–2 phẩm chất (dạng \`- Tên phẩm chất: mô tả...\`, TUYỆT ĐỐI CẤM dùng ngoặc vuông [ ]).
     - ${integrationRules || 'Không tạo mục NLS hoặc AI.'} Mỗi mục 1 dòng \`- Tên/Mã: mô tả ngắn gắn bài\`. CẤM tạo NLS/AI không được chọn hoặc gộp hai nhóm thành một hạn ngạch.`;
         if (context.ppct_objectives_verbatim) {
           result += `\n\nKHÓA MÔ TẢ NLS/AI THEO PPCT: Các dòng ### c) Năng lực số và ### d) Năng lực AI ở khung trên là nguyên văn 100% từ Phân phối chương trình. CHÉP ĐÚNG NGUYÊN VĂN mã và mô tả. CẤM diễn đạt lại, CẤM bịa câu chữ, CẤM thêm mã ngoài danh sách đã cho.`;
