@@ -222,6 +222,7 @@ const extractSrc = [
     extractNamed(appJs, 'getSystemDrawingModel'),
     extractNamed(appJs, 'getSystemDrawingFallbackModel'),
     extractNamed(appJs, 'sanitizeAiDrawingCode'),
+    extractNamed(appJs, 'isGeoGebraCoordinateRequested'),
     extractNamed(appJs, 'formatGeoGebraExecuteCommand'),
 ].join('\n');
 const store = {};
@@ -259,7 +260,7 @@ assert.ok(!commentedGgb.commands.includes('#'), 'GeoGebra commands must strip # 
 assert.ok(commentedGgb.commandsArray.includes('R=3'), 'assignment after comment strip must remain');
 assert.ok(commentedGgb.commandsArray.some((cmd) => cmd.startsWith('Tangent(')), 'command after trailing comment must remain');
 const executeLine = sandbox.formatGeoGebraExecuteCommand(['O=(0,0)', 'R=3', 'Segment(A, B)']);
-assert.strictEqual(executeLine, 'Execute({"O=(0,0)", "R=3", "Segment(A, B)"})', 'must wrap commands as one-line Execute({...})');
+assert.strictEqual(executeLine, 'Execute({"ShowAxes(false)", "ShowGrid(false)", "O=(0,0)", "R=3", "Segment(A, B)"})', 'must hide axes and grid for non-coordinate geometry');
 assert.ok(!executeLine.includes('\n'), 'Execute payload must be a single line');
 
 store.khbd_gemini_model = 'gemini-3.7-flash';

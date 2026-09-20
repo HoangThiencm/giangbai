@@ -1,41 +1,16 @@
-# IMPLEMENT: Bỏ dấu ngoặc vuông [ ] ở tên năng lực / phẩm chất (canvas_soankhbd)
+# IMPLEMENT: Khắc phục khởi động và AI vẽ hình
 
-Đã triển khai đúng `docs/handoff/PLAN.md`.
+## Phạm vi đã thực hiện
 
-## Root cause đã xử lý
-- Prompt `GENERATE_OBJECTIVES` / `getPromptTemplate` / `GENERATE_CORE_LESSON` dùng mẫu `- [Tên năng lực]: [mô tả...]` → Gemini xuất nguyên văn ngoặc vuông quanh tên năng lực chung, đặc thù và phẩm chất.
-- `applyObjectivesOutput` chưa có bước hậu xử lý loại `[ ]` ở các mục đó (trong khi mã NLS/AI dạng `***[5.3.TC2a]:***` vẫn phải giữ).
+- `app.js`: Đưa khởi tạo vào `bootVehinhApp()` có cờ chống khởi động lặp, chạy ngay khi DOM đã sẵn sàng hoặc chờ `DOMContentLoaded` khi cần. `createPatterns()` nay chịu được Fabric.js chưa tải; formatter GeoGebra cũng chạy an toàn trong sandbox cô lập.
+- `vehinh.html`: Thêm CDN dự phòng cho Fabric.js và danh sách model/tóm tắt AI mặc định để giao diện không còn kẹt ở placeholder khi mạng hoặc API chậm.
+- `api/vehinh_ai.php`: GET cấu hình model không yêu cầu phiên đăng nhập; POST chấp nhận API key hợp lệ từ client khi chưa đăng nhập.
+- `tests/game-quiz-importer-smoke.js`: Nạp helper GeoGebra còn thiếu và cập nhật kỳ vọng ẩn trục/lưới cho hình không dùng tọa độ.
+- `tests/vehinh-boot-smoke.js`: Thêm smoke test cho lifecycle, Fabric fallback, model HTML tĩnh và thứ tự xác thực endpoint.
 
-## Thay đổi
+## Kiểm thử
 
-### 1. `js/khbd-prompts.js`
-- `GENERATE_OBJECTIVES`: mẫu dòng năng lực/phẩm chất bỏ `[ ]`; thêm chỉ thị `TUYỆT ĐỐI CẤM dùng dấu ngoặc vuông [ ]`.
-- `getPromptTemplate` (runtime injection cho `GENERATE_OBJECTIVES` / `GENERATE_CORE_LESSON`): cùng quy tắc cấm `[ ]` cho NL chung, NL đặc thù, phẩm chất.
-- `GENERATE_CORE_LESSON`: bổ sung chỉ thị cấm ngoặc vuông ở mục 2.a / 2.b / 3.
-- **Không đụng** định dạng mã NLS/AI `***[Mã]:***`.
-
-### 2. `js/khbd-app.js`
-- Thêm `stripSquareBracketsFromCompetencies(markdown)`: chỉ strip trong section a) NL chung, b) NL đặc thù, phẩm chất; bỏ qua c) NLS / d) AI.
-- Gọi sau `ensureObjectivesDigitalCodes` trong `applyObjectivesOutput`.
-- Export `window.stripSquareBracketsFromCompetencies` và `module.exports`.
-
-### 3. `tests/khbd-competency-brackets-smoke.js` (mới)
-- Assert prompt không còn mẫu `- [Tên năng lực...`.
-- Assert chỉ thị cấm ngoặc vuông có trong template + runtime prompt.
-- Assert sanitizer bỏ `[ ]` ở NL/phẩm chất và giữ `***[5.3.TC2a]:***` / `***[9.B2.1]:***`.
-- Assert pipeline `applyObjectivesOutput` có gọi sanitizer.
-
-## Test đã chạy (100% PASS)
-
-- `node tests/khbd-competency-brackets-smoke.js`
-- `node tests/canvas-soankhbd-smoke.js`
-- `node tests/canvas-prompts-integrity-smoke.js`
-- `node tests/khbd-competencies-smoke.js`
-- `node tests/khbd-nls-ai-bold-italic-smoke.js`
-- `node tests/ppct-settings-import-smoke.js`
-
-## File đã đụng
-
-1. `js/khbd-prompts.js`
-2. `js/khbd-app.js`
-3. `tests/khbd-competency-brackets-smoke.js`
+- PASS: `node --check app.js`
+- PASS: `node tests/vehinh-boot-smoke.js`
+- PASS: `node tests/game-quiz-importer-smoke.js`
+- Không chạy được PHP lint vì môi trường hiện tại không có executable `php` trong PATH hoặc các vị trí cài đặt thông dụng.

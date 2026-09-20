@@ -4,31 +4,28 @@
 PASS
 
 ## Đối chiếu scope
-- `js/khbd-prompts.js`: Đã có chốt idempotent `__KHBD_PROMPTS_LOADED__`, không redeclare top-level const khi nạp lặp.
-- `js/khbd-docx.js`: Đã có chốt idempotent `DocxGenerator` và `__KHBD_DOCX_LOADED__`, gán `window.DocxGenerator` và `window.docxGenerator`.
-- `js/khbd-pedagogy-catalog.js`: Đã có chốt idempotent `KHBD_PEDAGOGY_CATALOG`, ngăn redeclare const.
-- `canvas_soankhbd.html` & `backupcode viettailieu/canvas_soankhbd.html`:
-  + Xóa bỏ IIFE fallback chạy tức thì gây race condition tải kép host + CDN.
-  + Gắn `onload` / `onerror` vào script primary để fallback chỉ kích hoạt sau khi primary kết thúc.
-  + Thêm `crossorigin="anonymous"` cho script CDN fallback để không bị trình duyệt che giấu thành `[GLOBAL] Script error.`
-- `tests/canvas-soankhbd-smoke.js`: Assert đầy đủ không còn IIFE race, có onload/onerror, có crossorigin="anonymous" và chốt idempotent hoạt động chính xác khi nạp 2 lần trong cùng context.
+- `js/khbd-prompts.js`: Đã loại bỏ hoàn toàn mẫu `- [Tên năng lực]:` và `[Tên năng lực chung 1...]`, thêm chỉ thị cấm ngoặc vuông `[ ]` trong `GENERATE_OBJECTIVES`, `GENERATE_CORE_LESSON` và `getPromptTemplate`. Giữ nguyên vẹn định dạng mã NLS/AI (`***[Mã]:***`). Đúng scope.
+- `js/khbd-app.js`: Thêm hàm `stripSquareBracketsFromCompetencies(markdown)` loại bỏ dấu ngoặc vuông ở tên năng lực chung, năng lực đặc thù và phẩm chất; tích hợp vào `applyObjectivesOutput` và export. Đúng scope.
+- `tests/khbd-competency-brackets-smoke.js`: File test mới kiểm tra tính toàn vẹn của prompt, hàm hậu xử lý và pipeline. Đúng scope.
+- Không sửa source ngoài scope, không xóa `docs/handoff/.lock`.
 
 ## Test đã chạy
-- `node tests/canvas-soankhbd-smoke.js` (PASS)
-- `node tests/canvas-prompts-integrity-smoke.js` (PASS)
-- `node tests/khbd-table-columns-smoke.js` (PASS)
-- `node tests/khbd-nls-ai-bold-italic-smoke.js` (PASS)
-- `node tests/khbd-pedagogy-rate-smoke.js` (PASS)
-- `node tests/khbd-competencies-smoke.js` (PASS)
-- `node tests/khbd-docx-math-smoke.js` (PASS)
-- `node tests/khbd-pedagogy-script-smoke.js` (PASS)
-- `node tests/khbd-review-practice-lesson-smoke.js` (PASS)
+1. `node tests/khbd-competency-brackets-smoke.js` -> PASS
+2. `node tests/canvas-soankhbd-smoke.js` -> PASS
+3. `node tests/canvas-prompts-integrity-smoke.js` -> PASS
+4. `node tests/khbd-competencies-smoke.js` -> PASS
+5. `node tests/khbd-nls-ai-bold-italic-smoke.js` -> PASS
+6. `node tests/ppct-settings-import-smoke.js` -> PASS
+7. `node tests/khbd-4steps-workflow-smoke.js` -> PASS
+8. `node tests/khbd-docx-math-smoke.js` -> PASS
+9. `node tests/khbd-sanitize-smoke.js` -> PASS
 
 ## Pass / Fail từng tiêu chí
-- [PASS] Triệt tiêu race condition gây tải trùng lặp giữa host chính và CDN fallback.
-- [PASS] Chốt idempotent bảo vệ toàn diện 3 file JS (`khbd-prompts.js`, `khbd-docx.js`, `khbd-pedagogy-catalog.js`).
-- [PASS] Không còn hiện tượng redeclare const/class ném `SyntaxError` và bắn `[GLOBAL] Script error.`
-- [PASS] 100% test suite đạt chuẩn.
+- [PASS] Bỏ dấu ngoặc vuông `[ ]` quanh tên năng lực chung, năng lực đặc thù và phẩm chất.
+- [PASS] Bảo lưu nguyên vẹn dấu ngoặc vuông ở mã NLS/AI (ví dụ: `***[5.3.TC2a]:***`, `***[9.B2.1]:***`).
+- [PASS] Prompt hướng dẫn mô hình không sinh ngoặc vuông.
+- [PASS] Hậu xử lý loại bỏ triệt để ngoặc vuông nếu mô hình vẫn sinh ra.
+- [PASS] Không gây hồi quy các tính năng khác của `canvas_soankhbd`.
 
 ## Bug
-Không có.
+Không có

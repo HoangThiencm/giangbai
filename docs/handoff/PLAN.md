@@ -1,240 +1,193 @@
-# PLAN: Bỏ Dấu Ngoặc Vuông [ ] Ở Tên Các Năng Lực (Chung, Đặc Thù, Phẩm Chất) trong canvas_soankhbd
+# PLAN: Khắc phục sự cố Vehinh.html bị treo "Đang tải danh sách model..." và không vẽ được
 
-## 1. Hiện trạng & Nguyên nhân Gốc rễ (Root Cause)
+## 1. Hiện trạng & Phân tích nguyên nhân gốc rễ (Root Cause)
 
 ### Hiện trạng
-Khi tạo **I. Mục tiêu** trong `canvas_soankhbd.html`, kết quả AI sinh ra có dạng:
-```markdown
-## 2. Về năng lực
-
-### a) Năng lực chung
-- [Tự chủ và tự học]: Học sinh tự lực thực hiện các nhiệm vụ...
-- [Giải quyết vấn đề và sáng tạo]: Học sinh phát hiện được quy luật...
-
-### b) Năng lực đặc thù môn học
-- [Tư duy và lập luận toán học]: Học sinh thực hiện được các thao tác...
-- [Mô hình hóa toán học]: Học sinh sử dụng được đơn thức...
-```
-Người dùng yêu cầu bỏ các dấu ngoặc vuông `[ ]` bao quanh tên năng lực này, trả về dạng chuẩn công văn:
-```markdown
-## 2. Về năng lực
-
-### a) Năng lực chung
-- Tự chủ và tự học: Học sinh tự lực thực hiện các nhiệm vụ...
-- Giải quyết vấn đề và sáng tạo: Học sinh phát hiện được quy luật...
-
-### b) Năng lực đặc thù môn học
-- Tư duy và lập luận toán học: Học sinh thực hiện được các thao tác...
-- Mô hình hóa toán học: Học sinh sử dụng được đơn thức...
-```
+Khi người dùng mở trang `vehinh.html`:
+- Mục **Chọn model** bị kẹt cứng ở `<option>Đang tải danh sách model...</option>`.
+- Khung tóm tắt cấu hình bị kẹt ở `Đang kiểm tra cấu hình AI...`.
+- Người dùng nhấn nút **Vẽ Hình (Ctrl+Q)** nhưng không có bất kỳ phản hồi nào ("ko vẽ được").
 
 ### Phân tích Root Cause
-1. Trong file `js/khbd-prompts.js`:
-   - Dòng 550 (`GENERATE_OBJECTIVES`):
-     `- Mỗi năng lực chung viết đúng 1 dòng: \`- [Tên năng lực]: [mô tả hành vi cụ thể học sinh thực hiện trong bài học này]\`. CẤM nhãn Biểu hiện / Minh chứng.`
-   - Dòng 563–570 (`GENERATE_OBJECTIVES` skeleton template):
-     ```markdown
-     ### a) Năng lực chung
-     - [Tên năng lực chung 1 phù hợp môn {subject}]: [Mô tả hành vi cụ thể của học sinh trong bài học này]
-     - [Tên năng lực chung 2 nếu có]: [Mô tả hành vi cụ thể của học sinh trong bài học này]
-     
-     ### b) Năng lực đặc thù môn học
-     - [Tên năng lực đặc thù 1]: [Mô tả hành vi gắn với bài]
-     - [Tên năng lực đặc thù 2]: [Mô tả hành vi gắn với bài]
-     ```
-   - Dòng 575 (Phẩm chất):
-     `- [Tên phẩm chất]: [Mô tả hành vi quan sát được của học sinh trong bài]`
-   - Dòng 1738 (`getPromptTemplate` runtime injection):
-     `- Năng lực chung: CHỌN 1–2 năng lực phù hợp nhất với môn ${subjectName} từ danh sách gợi ý trên. Mỗi năng lực đúng 1 dòng: \`- [Tên năng lực]: [mô tả hành vi cụ thể trong bài]\`.`
-   - Dòng 688–689 (`GENERATE_CORE_LESSON`):
-     Chưa có chỉ thị rõ ràng về việc cấm dấu ngoặc vuông ở tên năng lực.
-   
-   $\rightarrow$ Mô hình LLM (Gemini) hiểu rằng `[Tên năng lực]:` là cú pháp bắt buộc phải xuất ra nguyên văn, dẫn tới việc bọc tên năng lực trong `[ ]`.
 
-2. Trong `js/khbd-app.js`:
-   - Hàm `applyObjectivesOutput` (dòng 7948) đã có các bộ chuẩn hoá mã NLS/AI nhưng chưa có bộ lọc làm sạch dấu ngoặc vuông `[ ]` thừa ở tên năng lực chung, năng lực đặc thù và phẩm chất.
+1. **Vấn đề vòng đời khởi động (Lifecycle Startup Lockup) trong `app.js`:**
+   - Tại dòng 337 của `app.js`:
+     ```javascript
+     document.addEventListener('DOMContentLoaded', function () {
+         // Toàn bộ khởi tạo canvas, DOM elements, syncDrawingModelSelect, loadDrawingAiConfig, addEventListener cho nút Vẽ hình...
+     });
+     ```
+   - Trong `vehinh.html`, thẻ `<script src="app.js?..."></script>` đặt ở cuối `<body>` (dòng 525).
+   - Khi trình duyệt tải tài nguyên (đặc biệt khi có cache, duyệt qua iframe/webview, hoặc kết nối mạng nạp chậm các CDN trong `<head>`), đến thời điểm `app.js` được thực thi thì `document.readyState` có thể đã chuyển sang `'interactive'` hoặc `'complete'`.
+   - Chuẩn HTML DOM quy định: Nếu sự kiện `DOMContentLoaded` đã xảy ra trước khi hàm `addEventListener('DOMContentLoaded', ...)` được đăng ký, **sự kiện sẽ KHÔNG BAO GIỜ được kích hoạt lại**!
+   - Kết quả: Toàn bộ hàm bên trong không bao giờ chạy:
+     + `#geometry-canvas` không được khởi tạo.
+     + `syncDrawingModelSelect()` không chạy $\rightarrow$ dropdown giữ nguyên option HTML tĩnh: `Đang tải danh sách model...`.
+     + `updateDrawingAiSummary()` không chạy $\rightarrow$ giữ nguyên text: `Đang kiểm tra cấu hình AI...`.
+     + Nút `#generate-btn` ("Vẽ hình") không được gắn sự kiện `click` $\rightarrow$ bấm vào hoàn toàn vô tác dụng.
+
+2. **Gọi `createPatterns()` ở top-level trước khi Fabric.js sẵn sàng:**
+   - Tại dòng 23 của `app.js`:
+     ```javascript
+     function createPatterns() {
+         const patternSize = 10;
+         const patternCanvas = new fabric.StaticCanvas(null, { width: patternSize, height: patternSize });
+         ...
+     }
+     createPatterns();
+     ```
+   - Lệnh này chạy ngay khi file `app.js` được nạp, hoàn toàn không có guard kiểm tra `typeof fabric !== 'undefined'`.
+   - Nếu CDN `cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js` gặp sự cố (mạng học đường chặn cdnjs, mạng lag, chế độ offline), `fabric` sẽ là `undefined` $\rightarrow$ Ném ngay lỗi: `Uncaught ReferenceError: fabric is not defined` tại dòng 10.
+   - Khi đó script `app.js` lập tức dừng thực thi trước khi đến được dòng 337. `vehinh.html` cũng chưa có CDN dự phòng (fallback) cho `fabric.js`.
+
+3. **HTML tĩnh chứa placeholder rỗng thay vì giá trị mặc định:**
+   - Trong `vehinh.html` (dòng 371 & 374):
+     `<option value="">Đang tải danh sách model...</option>`
+     `Đang kiểm tra cấu hình AI...`
+   - Điều này khiến giao diện trông như bị lỗi nếu JS tải trễ. Đáng lẽ cần điền sẵn các model mặc định của hệ thống (`✨ Theo Cài đặt chung...`, `Gemini 3.6 Flash...`).
+
+4. **Chặn 401 không cần thiết ở endpoint GET trong `api/vehinh_ai.php`:**
+   - Tại dòng 159 của `api/vehinh_ai.php`, lệnh `vehinh_require_login()` được gọi trước cả khối xử lý request GET:
+     ```php
+     vehinh_require_login();
+     if ($_SERVER['REQUEST_METHOD'] === 'GET') { ... }
+     ```
+   - Khi người dùng chưa có session PHP (hoặc session cookie bị mất/hết hạn), việc gọi `GET api/vehinh_ai.php` để lấy danh sách model và kiểm tra trạng thái bị chặn đứng với mã lỗi HTTP 401.
+   - Endpoint GET chỉ trả về danh sách model công khai của hệ thống và cờ trạng thái, không tiết lộ dữ liệu nhạy cảm, nên không được chặn 401.
+   - Đồng thời, ở request POST, nếu client có gửi kèm `api_keys` (người dùng tự nhập key hoặc lấy từ `localStorage`), hệ thống nên cho phép gọi AI mà không ép buộc phải có session trên máy chủ.
+
+5. **Lỗi hồi quy trong test `tests/game-quiz-importer-smoke.js`:**
+   - Commit `9be42aa` thêm hàm `isGeoGebraCoordinateRequested` vào `formatGeoGebraExecuteCommand` nhưng trong test `tests/game-quiz-importer-smoke.js` chưa trích xuất hàm này, dẫn đến `ReferenceError: isGeoGebraCoordinateRequested is not defined`.
 
 ---
 
 ## 2. Giải pháp Triển khai Chi tiết cho Coder
 
-### Bước 1: Sửa Prompt trong `js/khbd-prompts.js`
+### Bước 1: Tối ưu và bảo vệ vòng đời khởi động trong `app.js`
 
-1. Tại template `GENERATE_OBJECTIVES` (khoảng dòng 550–576):
-   - Thay dòng 550 thành:
+1. **Bảo vệ `createPatterns()`:**
+   - Thêm guard an toàn để không bao giờ ném Exception nếu `fabric` chưa sẵn sàng:
      ```javascript
-     - Mỗi năng lực chung viết đúng 1 dòng: \`- Tên năng lực: mô tả hành vi cụ thể học sinh thực hiện trong bài học này\`. TUYỆT ĐỐI CẤM dùng dấu ngoặc vuông [ ] bao quanh tên năng lực, CẤM nhãn Biểu hiện / Minh chứng.
+     function createPatterns() {
+         if (typeof fabric === 'undefined' || !fabric.StaticCanvas) return;
+         try {
+             const patternSize = 10;
+             const patternCanvas = new fabric.StaticCanvas(null, { width: patternSize, height: patternSize });
+             // ... các mẫu pattern ...
+         } catch (e) {
+             console.warn('Không thể tạo chart patterns:', e);
+         }
+     }
      ```
-   - Thay dòng 553 thành:
+   - Xóa lời gọi top-level `createPatterns();` ở dòng 23, chuyển lời gọi này vào bên trong hàm khởi động `bootVehinhApp()`.
+
+2. **Đóng gói toàn bộ logic khởi tạo trong `bootVehinhApp()` và hỗ trợ khởi động kép:**
+   - Bọc toàn bộ nội dung trong `document.addEventListener('DOMContentLoaded', ...)` vào hàm:
      ```javascript
-     - Mục 2.b (Năng lực đặc thù môn học): CHỈ 2–3 năng lực đặc thù nổi trội của môn {subject} gắn với bài học. Viết mỗi mục 1 dòng: \`- Tên năng lực: mô tả hành vi gắn với bài\`. TUYỆT ĐỐI CẤM dùng dấu ngoặc vuông [ ].
-     ```
-   - Cập nhật khung mẫu đầu ra (dòng 563–575):
-     ```markdown
-     ### a) Năng lực chung
-     - Tên năng lực chung 1 phù hợp môn {subject}: Mô tả hành vi cụ thể của học sinh trong bài học này
-     - Tên năng lực chung 2 nếu có: Mô tả hành vi cụ thể của học sinh trong bài học này
+     function bootVehinhApp() {
+         if (window.__vehinhAppBooted) return;
+         window.__vehinhAppBooted = true;
+         createPatterns();
+         // ... toàn bộ nội dung khởi tạo canvas, DOM elements, sự kiện ...
+     }
      
-     ### b) Năng lực đặc thù môn học
-     - Tên năng lực đặc thù 1: Mô tả hành vi gắn với bài
-     - Tên năng lực đặc thù 2: Mô tả hành vi gắn với bài
-     
-     {digital_objectives_section}
-     {ai_objectives_section}
-     
-     ## 3. Về phẩm chất & Giáo dục hòa nhập (hòa nhập chỉ khi được bật)
-     - Tên phẩm chất: Mô tả hành vi quan sát được của học sinh trong bài
+     if (document.readyState === 'loading') {
+         document.addEventListener('DOMContentLoaded', bootVehinhApp, { once: true });
+     } else {
+         bootVehinhApp();
+     }
      ```
+   - Đảm bảo dù trang đã `loading`, `interactive` hay `complete`, `bootVehinhApp()` luôn được kích hoạt lập tức mà không bao giờ bị bỏ sót.
 
-2. Tại `getPromptTemplate` (khoảng dòng 1737–1741):
-   - Thay dòng 1738 thành:
-     ```javascript
-     - Năng lực chung: CHỌN 1–2 năng lực phù hợp nhất với môn ${subjectName} từ danh sách gợi ý trên. Mỗi năng lực đúng 1 dòng: \`- Tên năng lực: mô tả hành vi cụ thể trong bài\`. TUYỆT ĐỐI CẤM dùng dấu ngoặc vuông [ ] bao quanh tên năng lực.
-     ```
-   - Thay dòng 1740 thành:
-     ```javascript
-     - Năng lực đặc thù: 2–3 năng lực nổi trội của môn ${subjectName} (dạng \`- Tên năng lực: mô tả...\`, TUYỆT ĐỐI CẤM dùng ngoặc vuông [ ]). Phẩm chất: 1–2 phẩm chất (dạng \`- Tên phẩm chất: mô tả...\`, TUYỆT ĐỐI CẤM dùng ngoặc vuông [ ]).
-     ```
+3. **Đồng bộ Dropdown Model và Tóm tắt AI ngay lập tức:**
+   - Trong `loadDrawingAiConfig()`:
+     Đảm bảo `syncDrawingModelSelect()` và `updateDrawingAiSummary()` chạy đồng bộ ngay ở dòng đầu tiên của hàm trước khi gửi request mạng `fetch('api/vehinh_ai.php')`.
+     Khi đó, ngay khi script vừa chạy, dropdown lập tức có đầy đủ danh sách model và tóm tắt, tuyệt đối không bao giờ kẹt ở "Đang tải...".
 
-3. Tại template `GENERATE_CORE_LESSON` (khoảng dòng 688–691):
-   - Thêm chỉ thị rõ ràng:
-     ```javascript
-     - Mục 2.a (Năng lực chung): CHỈ 1–2 năng lực chung phù hợp đặc thù môn {subject} và bài dạy này; mỗi mục đúng 1 dòng mô tả hành vi. TUYỆT ĐỐI CẤM dùng ngoặc vuông [ ] bao quanh tên năng lực.
-     - Mục 2.b (Năng lực đặc thù): 2–3 năng lực đặc thù của môn {subject}. TUYỆT ĐỐI CẤM dùng ngoặc vuông [ ].
-     - Mục 3 (Phẩm chất): 1–2 phẩm chất gắn liền bài học (dạng \`- Tên phẩm chất: mô tả...\`, TUYỆT ĐỐI CẤM dùng ngoặc vuông [ ]).
-     ```
-
-> **LƯU Ý CỰC KỲ QUAN TRỌNG VỀ NLS VÀ AI:**
-> KHÔNG ĐƯỢC chạm vào định dạng mã NLS và AI:
-> `### c) Năng lực số: ***[Mã NLS]:*** ...`
-> `### d) Năng lực AI: ***[Mã AI]:*** ...`
-> Dấu ngoặc vuông ở mã NLS/AI (ví dụ `[5.3.TC2a]`, `[9.B2.1]`) là chuẩn Bộ GD&ĐT (TT 02/2025/TT-BGDĐT và QĐ 2422/QĐ-BGDĐT) và được khóa bởi các bài test hiện có.
+4. **Đảm bảo an toàn cho `formatGeoGebraExecuteCommand`:**
+   - Trong `formatGeoGebraExecuteCommand(commandsArray)`:
+     Kiểm tra an toàn `typeof isGeoGebraCoordinateRequested === 'function'` để không bị crash nếu chạy trong môi trường sandbox cô lập.
 
 ---
 
-### Bước 2: Hậu xử lý (Sanitization) Trong `js/khbd-app.js`
+### Bước 2: Cập nhật `vehinh.html`
 
-Để đảm bảo dù mô hình AI có sinh sót dấu ngoặc vuông thì người dùng vẫn luôn nhận được văn bản sạch, bổ sung hàm:
+1. **Cung cấp danh sách option mặc định trực tiếp trong HTML:**
+   Thay thế các dòng 368–375 trong `vehinh.html`:
+   ```html
+   <label for="ai-model-select" class="mb-2 mt-3 block text-sm font-semibold text-gray-200">Chọn model</label>
+   <select id="ai-model-select"
+       class="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-indigo-500"
+       onchange="window.__vehinhOnModelChange && window.__vehinhOnModelChange()">
+       <option value="__system__">✨ Theo Cài đặt chung (Gemini 3.7 Flash · DP: Gemini 2.5 Flash)</option>
+       <option value="gemini-3.6-flash">Gemini 3.6 Flash (khuyên dùng)</option>
+       <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+       <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+       <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+       <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+       <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+       <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
+   </select>
+   <div id="ai-model-summary" class="mt-2 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-xs leading-5 text-gray-300">
+       <div><strong>Google Gemini</strong>: <code>gemini-3.7-flash</code></div>
+       <div>Gemini 3.7 Flash · theo Cài đặt chung · có hỗ trợ ảnh</div>
+   </div>
+   ```
 
-```javascript
-/**
- * Loại bỏ dấu ngoặc vuông [ ] bao quanh tên năng lực (chung, đặc thù) và phẩm chất.
- * BẢO LƯU nguyên vẹn dấu ngoặc vuông ở mã NLS / AI (như [5.3.TC2a], [9.B2.1]).
- */
-function stripSquareBracketsFromCompetencies(markdown) {
-  if (!markdown) return "";
-  const lines = String(markdown).split("\n");
-  let currentSection = "";
-
-  const updatedLines = lines.map(line => {
-    const trimmed = line.trim();
-    if (/^#{2,3}\s*a\)\s*Năng lực chung/i.test(trimmed)) {
-      currentSection = "common";
-      return line;
-    }
-    if (/^#{2,3}\s*b\)\s*Năng lực đặc thù/i.test(trimmed)) {
-      currentSection = "subject";
-      return line;
-    }
-    if (/^#{2,3}\s*c\)\s*Năng lực số/i.test(trimmed)) {
-      currentSection = "digital";
-      return line;
-    }
-    if (/^#{2,3}\s*d\)\s*Năng lực AI/i.test(trimmed)) {
-      currentSection = "ai";
-      return line;
-    }
-    if (/^#{2,3}\s*(?:3\.?\s*)?Về phẩm chất/i.test(trimmed)) {
-      currentSection = "quality";
-      return line;
-    }
-    if (/^#{1,3}\s+/i.test(trimmed)) {
-      currentSection = "other";
-      return line;
-    }
-
-    // Chỉ xử lý trong các phần: năng lực chung, năng lực đặc thù, phẩm chất
-    if (currentSection === "common" || currentSection === "subject" || currentSection === "quality") {
-      // Bắt các dạng:
-      // - [Tự chủ và tự học]: mô tả
-      // - [Tự chủ và tự học]: [mô tả]
-      // * [Tự chủ và tự học]: mô tả
-      const match = line.match(/^(\s*[-*]\s*)\[([^\]]+)\]\s*(:?)\s*(.*)$/);
-      if (match) {
-        const prefix = match[1];
-        const compName = match[2].trim();
-        const rest = match[4].replace(/^\[([\s\S]*?)\]$/, '$1').trim();
-        return `${prefix}${compName}: ${rest}`;
-      }
-    }
-    return line;
-  });
-
-  return updatedLines.join("\n");
-}
-```
-
-Tích hợp vào pipeline của `applyObjectivesOutput(result, signal, options)` trong `js/khbd-app.js`:
-```javascript
-async function applyObjectivesOutput(result, signal, options = {}) {
-  // ... các xử lý trước ...
-  finalResult = applyPpctVerbatimObjectives(finalResult);
-  finalResult = ensureObjectivesDigitalCodes(finalResult);
-  finalResult = stripSquareBracketsFromCompetencies(finalResult); // <<-- Thêm ở đây
-  finalResult = keepObjectivesOnly(stripDisabledObjectivesStandardSections(finalResult));
-  appState.content.objectives = finalResult;
-  saveStateToLocalStorage();
-  return finalResult;
-}
-```
-Và xuất hàm ra `window.stripSquareBracketsFromCompetencies = stripSquareBracketsFromCompetencies;` trong khối exports cuối file `js/khbd-app.js`.
+2. **Thêm CDN Fallback cho `fabric.js`:**
+   Tại dòng 19 trong `vehinh.html`:
+   ```html
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+   <script>
+       if (typeof fabric === 'undefined') {
+           document.write('<script src="https://cdn.jsdelivr.net/npm/fabric@5.3.1/dist/fabric.min.js"><\/script>');
+       }
+   </script>
+   ```
 
 ---
 
-### Bước 3: Tạo Test Suite Mới & Chạy Kiểm Thử
+### Bước 3: Cập nhật `api/vehinh_ai.php`
 
-1. Tạo file kiểm thử mới `tests/khbd-competency-brackets-smoke.js`:
-   - Kiểm tra `js/khbd-prompts.js`:
-     + `GENERATE_OBJECTIVES` không chứa `- [Tên năng lực chung 1` hay `- [Tên năng lực]:`.
-     + `GENERATE_OBJECTIVES` có chứa chỉ thị cấm ngoặc vuông: `TUYỆT ĐỐI CẤM dùng dấu ngoặc vuông [ ]`.
-     + `getPromptTemplate('GENERATE_OBJECTIVES', ...)` sinh prompt không chứa `- [Tên năng lực]:`.
-   - Kiểm tra hàm `stripSquareBracketsFromCompetencies`:
-     + Đưa vào chuỗi Markdown chứa:
-       ```markdown
-       ## 2. Về năng lực
-       ### a) Năng lực chung
-       - [Tự chủ và tự học]: Học sinh tự lực thực hiện các nhiệm vụ cá nhân.
-       - [Giải quyết vấn đề và sáng tạo]: Học sinh phát hiện quy luật.
-       ### b) Năng lực đặc thù môn học
-       - [Tư duy và lập luận toán học]: Học sinh thực hiện thao tác so sánh.
-       - [Mô hình hóa toán học]: Học sinh sử dụng đơn thức.
-       ### c) Năng lực số
-       - ***[5.3.TC2a]:*** Mô tả nhiệm vụ số
-       ### d) Năng lực AI
-       - ***[9.B2.1]:*** Mô tả nhiệm vụ AI
-       ## 3. Về phẩm chất
-       - [Chăm chỉ]: Tích cực phát biểu xây dựng bài.
-       ```
-     + Kết quả sau khi chạy qua hàm:
-       - Có `- Tự chủ và tự học: Học sinh tự lực...`
-       - Có `- Giải quyết vấn đề và sáng tạo: Học sinh phát hiện...`
-       - Có `- Tư duy và lập luận toán học: Học sinh thực hiện...`
-       - Có `- Mô hình hóa toán học: Học sinh sử dụng...`
-       - Có `- Chăm chỉ: Tích cực phát biểu...`
-       - Không còn bất kỳ `[Tự chủ` hay `[Tư duy` nào.
-       - VẪN BẢO LƯU NGUYÊN VẸN `***[5.3.TC2a]:***` và `***[9.B2.1]:***`.
+1. **Cho phép GET request đọc cấu hình model mà không bị chặn 401:**
+   - Chuyển `vehinh_require_login()` xuống dưới khối xử lý `$_SERVER['REQUEST_METHOD'] === 'GET'`.
+   - Khối GET trả về `ok: true`, danh sách models và cờ trạng thái `configured`.
+2. **Nới lỏng đăng nhập cho POST nếu client gửi kèm `api_keys`:**
+   - Cập nhật hàm `vehinh_require_login(?array $clientKeys = null)`:
+     ```php
+     function vehinh_require_login(?array $clientKeys = null): void
+     {
+         if (!empty($_SESSION['user_id'])) {
+             return;
+         }
+         if (is_array($clientKeys) && !empty($clientKeys)) {
+             return; // Cho phép người dùng sử dụng key cá nhân hợp lệ
+         }
+         respond(['error' => 'Cần đăng nhập hoặc cung cấp Gemini API Key để dùng AI vẽ hình.'], 401);
+     }
+     ```
+   - Khi nhận body POST, trích xuất `$clientKeys = normalize_api_keys($data['api_keys'] ?? ($data['keys'] ?? []));` rồi mới gọi `vehinh_require_login($clientKeys);`.
 
-2. Chạy toàn bộ test suite để đảm bảo không bị hồi quy:
-   - `node tests/khbd-competency-brackets-smoke.js`
-   - `node tests/canvas-soankhbd-smoke.js`
-   - `node tests/canvas-prompts-integrity-smoke.js`
-   - `node tests/khbd-competencies-smoke.js`
-   - `node tests/khbd-nls-ai-bold-italic-smoke.js`
-   - `node tests/ppct-settings-import-smoke.js`
+---
+
+### Bước 4: Sửa `tests/game-quiz-importer-smoke.js` & Viết Test Mới `tests/vehinh-boot-smoke.js`
+
+1. **Trong `tests/game-quiz-importer-smoke.js`:**
+   - Thêm `extractNamed(appJs, 'isGeoGebraCoordinateRequested')` vào mảng `extractSrc`.
+   - Cập nhật kiểm tra `formatGeoGebraExecuteCommand` để khớp với logic tiền tố `ShowAxes`/`ShowGrid`.
+
+2. **Tạo mới `tests/vehinh-boot-smoke.js`:**
+   - Kiểm tra `app.js` có mẫu khởi động an toàn kép (`document.readyState === 'loading' ? addEventListener : bootVehinhApp()`).
+   - Kiểm tra `createPatterns` có guard `typeof fabric === 'undefined'`.
+   - Kiểm tra `vehinh.html` có các option model mặc định trong HTML tĩnh và có CDN fallback cho `fabric.js`.
+   - Kiểm tra `api/vehinh_ai.php` xử lý GET không bị chặn 401 khi chưa có session.
+   - Chạy test đảm bảo 100% PASS.
 
 ---
 
 ## 3. Danh sách File Cần Chỉnh Sửa
-1. `js/khbd-prompts.js` (Chỉnh sửa prompt và template `GENERATE_OBJECTIVES`, `GENERATE_CORE_LESSON`, `getPromptTemplate`)
-2. `js/khbd-app.js` (Thêm hàm `stripSquareBracketsFromCompetencies`, gắn vào `applyObjectivesOutput` và export)
-3. `tests/khbd-competency-brackets-smoke.js` (Tạo mới để kiểm thử tự động)
+1. `app.js` (Sửa guard `createPatterns`, đóng gói `bootVehinhApp`, khởi động kép `readyState`, an toàn cho GeoGebra helper)
+2. `vehinh.html` (Thêm model mặc định, thêm fallback CDN `fabric.js`)
+3. `api/vehinh_ai.php` (Mở GET không chặn 401, cho phép POST với client API keys)
+4. `tests/game-quiz-importer-smoke.js` (Cập nhật `isGeoGebraCoordinateRequested` vào sandbox)
+5. `tests/vehinh-boot-smoke.js` (Tạo mới để kiểm thử tự động toàn diện)

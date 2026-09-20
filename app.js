@@ -6,21 +6,25 @@ const defaultProps = {
 
 const chartPatterns = [];
 function createPatterns() {
-    const patternSize = 10;
-    const patternCanvas = new fabric.StaticCanvas(null, { width: patternSize, height: patternSize });
-    const patterns = [
-        (ctx) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, patternSize / 2); ctx.lineTo(patternSize, patternSize / 2); ctx.stroke(); },
-        (ctx) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(patternSize / 2, 0); ctx.lineTo(patternSize / 2, patternSize); ctx.stroke(); },
-        (ctx) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(patternSize, patternSize); ctx.moveTo(-patternSize, 0); ctx.lineTo(0, patternSize); ctx.moveTo(patternSize, 0); ctx.lineTo(0, -patternSize); ctx.stroke(); },
-        (ctx) => { ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, patternSize / 2); ctx.lineTo(patternSize, patternSize / 2); ctx.moveTo(patternSize / 2, 0); ctx.lineTo(patternSize / 2, patternSize); ctx.stroke(); },
-        (ctx) => { ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(patternSize / 2, patternSize / 2, 2, 0, Math.PI * 2); ctx.fill(); }
-    ];
-    patterns.forEach(pFunc => {
-        patternCanvas.clear(); pFunc(patternCanvas.getContext('2d'));
-        chartPatterns.push(new fabric.Pattern({ source: patternCanvas.getElement(), repeat: 'repeat' }));
-    });
+    if (typeof fabric === 'undefined' || !fabric.StaticCanvas) return;
+    try {
+        const patternSize = 10;
+        const patternCanvas = new fabric.StaticCanvas(null, { width: patternSize, height: patternSize });
+        const patterns = [
+            (ctx) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, patternSize / 2); ctx.lineTo(patternSize, patternSize / 2); ctx.stroke(); },
+            (ctx) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(patternSize / 2, 0); ctx.lineTo(patternSize / 2, patternSize); ctx.stroke(); },
+            (ctx) => { ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(patternSize, patternSize); ctx.moveTo(-patternSize, 0); ctx.lineTo(0, patternSize); ctx.moveTo(patternSize, 0); ctx.lineTo(0, -patternSize); ctx.stroke(); },
+            (ctx) => { ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, patternSize / 2); ctx.lineTo(patternSize, patternSize / 2); ctx.moveTo(patternSize / 2, 0); ctx.lineTo(patternSize / 2, patternSize); ctx.stroke(); },
+            (ctx) => { ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(patternSize / 2, patternSize / 2, 2, 0, Math.PI * 2); ctx.fill(); }
+        ];
+        patterns.forEach(pFunc => {
+            patternCanvas.clear(); pFunc(patternCanvas.getContext('2d'));
+            chartPatterns.push(new fabric.Pattern({ source: patternCanvas.getElement(), repeat: 'repeat' }));
+        });
+    } catch (error) {
+        console.warn('Không thể tạo chart patterns:', error);
+    }
 }
-createPatterns();
 const chartColors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#8b5cf6'];
 
 let pointLabelCounter = 0;
@@ -334,7 +338,10 @@ function activateCircleTool(canvas, colorPicker) {
     return () => { canvas.off('mouse:down', handleMouseDown); canvas.off('mouse:move', handleMouseMove); canvas.off('mouse:up', handleMouseUp); };
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+function bootVehinhApp() {
+    if (window.__vehinhAppBooted) return;
+    window.__vehinhAppBooted = true;
+    createPatterns();
     const canvasContainer = document.querySelector('#geometry-canvas').parentElement;
     const canvas = new fabric.Canvas('geometry-canvas', { width: canvasContainer.clientWidth, height: canvasContainer.clientHeight, backgroundColor: '#fff', selection: true, renderOnAddRemove: true });
 
@@ -1002,7 +1009,7 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
     function isGeoGebraCoordinateRequested(commandsArray = [], promptText = '') {
         const text = [
             promptText,
-            allDOMElements.promptInput ? allDOMElements.promptInput.value : '',
+            typeof allDOMElements !== 'undefined' && allDOMElements.promptInput ? allDOMElements.promptInput.value : '',
             ...(Array.isArray(commandsArray) ? commandsArray : [])
         ].join(' ');
         return /(đồ\s*thị|hàm\s*số|parabol|hệ\s*trục|trục\s*tọa\s*độ|tọa\s*độ\s*oxy|bảng\s*biến\s*thiên|function\s*\(|polynomial\s*\()/i.test(text);
@@ -1011,7 +1018,7 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
     function formatGeoGebraExecuteCommand(commandsArray) {
         if (!commandsArray || !commandsArray.length) return '';
         let list = [...commandsArray];
-        if (!isGeoGebraCoordinateRequested(list)) {
+        if (!(typeof isGeoGebraCoordinateRequested === 'function' && isGeoGebraCoordinateRequested(list))) {
             const hasShowAxes = list.some(cmd => /ShowAxes\s*[\(\[]/i.test(cmd));
             const hasShowGrid = list.some(cmd => /ShowGrid\s*[\(\[]/i.test(cmd));
             const prefixes = [];
@@ -1432,4 +1439,10 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
     function applyDarkMode(isDark) { const html = document.documentElement; const moonIcon = allDOMElements.darkModeToggle.querySelector('[data-lucide="moon"]'); const sunIcon = allDOMElements.darkModeToggle.querySelector('[data-lucide="sun"]'); if (isDark) { html.classList.add('dark'); moonIcon.classList.add('hidden'); sunIcon.classList.remove('hidden'); canvas.backgroundColor = '#374151'; } else { html.classList.remove('dark'); moonIcon.classList.remove('hidden'); sunIcon.classList.add('hidden'); canvas.backgroundColor = '#fff'; } canvas.renderAll(); }
     allDOMElements.darkModeToggle.addEventListener('click', () => { const isDark = !document.documentElement.classList.contains('dark'); localStorage.setItem('darkMode', isDark); applyDarkMode(isDark); });
     if (localStorage.getItem('darkMode') === 'true' || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches && localStorage.getItem('darkMode') === null)) { applyDarkMode(true); }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootVehinhApp, { once: true });
+} else {
+    bootVehinhApp();
+}

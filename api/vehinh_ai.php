@@ -8,12 +8,15 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-function vehinh_require_login(): void
+function vehinh_require_login(?array $clientKeys = null): void
 {
     if (!empty($_SESSION['user_id'])) {
         return;
     }
-    respond(['error' => 'Cần đăng nhập để dùng AI vẽ hình.'], 401);
+    if (is_array($clientKeys) && !empty($clientKeys)) {
+        return;
+    }
+    respond(['error' => 'Cần đăng nhập hoặc cung cấp Gemini API Key để dùng AI vẽ hình.'], 401);
 }
 
 function vehinh_extract_gemini_text(array $response): string
@@ -156,7 +159,6 @@ function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userIn
     return ['error' => $lastError, 'provider' => 'gemini', 'model' => $initialModel];
 }
 
-vehinh_require_login();
 $runtime = load_ai_runtime_config();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -189,6 +191,7 @@ $requestedFallback = trim((string)($data['fallback_model'] ?? ''));
 
 // Nếu server chưa nạp được key từ session/DB, hỗ trợ dùng key gửi từ client (Cài đặt cá nhân / hệ thống)
 $clientKeys = normalize_api_keys($data['api_keys'] ?? ($data['keys'] ?? []));
+vehinh_require_login($clientKeys);
 if (empty($runtime['gemini_keys']) && !empty($clientKeys)) {
     $runtime['gemini_keys'] = $clientKeys;
     $runtime['gemini_enabled'] = true;
