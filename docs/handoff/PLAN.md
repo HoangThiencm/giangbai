@@ -1,102 +1,210 @@
-# PLAN: Nâng Cấp Toàn Diện Game "Đua Xe F1 Mario Kart - Đại Chiến 4 Tổ" (game-racing.html)
+# PLAN: Sửa Lỗi Render Toán Trong "Đua Vịt" & Lỗi Đứng Yên Câu 1 Trong "Hứng Trứng Vàng"
 
-## 1. Phân Tích Yêu Cầu & Định Hướng Nâng Cấp
+## 1. Phân Tích Nguyên Nhân Gốc Rễ (Root Cause)
 
-### Vấn đề hiện tại:
-- `game-racing.html` hiện tại chỉ có 4 biểu tượng emoji trượt ngang trên nền xám đơn điệu.
-- Lối chơi lần lượt từng tổ khiến 3 tổ còn lại phải ngồi chờ, làm mất tính gắn kết và thi đua đồng đội sôi nổi trong lớp học.
-- Thiếu cảm giác tốc độ, không có âm thanh gầm rú của động cơ, không có vạch xuất phát/vạch đích thực thụ hay các yếu tố vật phẩm kịch tính.
+### Vấn đề 1: Đua Vịt (`game-treasure.html`) chưa render công thức toán
+- **Nguyên nhân:**
+  1. Trong thẻ `<head>` của `game-treasure.html` **chưa nạp thư viện KaTeX** (`vendor/katex.min.css` và `vendor/katex.min.js`).
+  2. File chưa định nghĩa component `<MathText>`.
+  3. Trong modal hiển thị câu hỏi kiểm tra (dòng 15), prompt và choices đang xuất thô dạng `{q.prompt || q.question}` và `{x}` thay vì bọc trong `<MathText>`. Vì vậy, các công thức như `$A = 2x^2y \cdot (-3)xy^3$` và `$-6x^3y^4$` hiển thị nguyên văn chuỗi thô.
 
-### Định hướng mới:
-Biến `game-racing.html` thành trò chơi **"ĐUA XE F1 MARIO KART - ĐẠI CHIẾN 4 TỔ"** bùng nổ không khí lớp học:
-1. **Đồ họa tốc độ cao (Arcade F1 Canvas/CSS Engine):** Đường đua nhựa đường 4 làn xe với vạch sơn kẻ đường cuộn chuyển động liên tục, 4 siêu xe F1 đồ họa sắc nét, hiệu ứng lửa phụt đuôi ống xả Nitro Turbo 🔥, khói lốp xe drift 💨, đèn xuất phát 5 đèn đỏ F1 chuẩn quốc tế.
-2. **Cơ chế thi đấu Cả 4 Tổ Cùng Tham Gia (Simultaneous Team Battle):** Mỗi câu hỏi hiện ra với đồng hồ đếm ngược (30 giây), cả 4 tổ cùng thảo luận. Giáo viên tích chọn các tổ có đáp án đúng $\rightarrow$ Tất cả các xe trả lời đúng CÙNG BỐC ĐẦU PHÓNG VỌT LÊN TRƯỚC trong tiếng động cơ gầm rú!
-3. **Hộp vật phẩm ngẫu nhiên Mario Kart (Mystery Boxes 🎁):** Xuất hiện ngẫu nhiên giúp lật ngược thế cờ (Tên lửa Nitro 🚀, Khiên bảo vệ 🛡️, Vỏ chuối trượt bánh 🍌, Tia sét tăng tốc ⚡).
-4. **Hệ thống âm thanh sống động (Web Audio API):** Tiếng rồ ga *Vroom Vroom!*, rít lốp ôm cua *Screeech!*, còi xuất phát 5 đèn F1, kèn chiến thắng Fanfare và bục vinh quang Podium 3 bậc (Hạng 1 🥇, Hạng 2 🥈, Hạng 3 🥉).
+### Vấn đề 2: Hứng Trứng Vàng (`game-escape.html`) chạy câu đầu xong đứng yên
+- **Nguyên nhân (Lỗi Race Condition giữa React Re-render và Timer):**
+  - Trong `game-escape.html`, chỉ sử dụng duy nhất một ref `const timeoutRef = useRef(null)`.
+  - Khi người chơi bắt trứng (hoặc để trứng rơi), `handleCatch` thiết lập:
+    ```javascript
+    timeoutRef.current = setTimeout(() => goNext(...), 1200);
+    ```
+  - Tuy nhiên, trong `handleCatch` cũng đồng thời gọi `setPhase('result')` và `setLives(...)`, khiến component re-render.
+  - Do `phase` chuyển từ `'falling'` sang `'result'`, React lập tức kích hoạt hàm dọn dẹp (cleanup) của `useEffect` rơi trứng:
+    ```javascript
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+    ```
+  - **Hàm cleanup này đã vô tình xóa sạch timer `goNext`** mà `handleCatch` vừa mới đặt trước đó vài mili-giây!
+  - Kết quả: Timer `goNext` bị hủy, hàm `goNext` không bao giờ được gọi $\rightarrow$ Game bị kẹt vĩnh viễn ở trạng thái `'result'` của câu 1, không chuyển sang câu 2!
 
 ---
 
 ## 2. Nhiệm Vụ Chi Tiết Của Coder
 
-Coder sẽ nâng cấp trực tiếp tệp: **`game-racing.html`**.
+Coder sẽ sửa đổi 2 tệp: **`game-treasure.html`** và **`game-escape.html`**.
 
 ---
 
-### Bước 1: Nâng cấp Giao diện Đường Đua & Hiệu Ứng F1
-Thay thế khối đường đua đơn điệu cũ bằng hệ thống đường đua F1 hiện đại:
-- **Nền đường đua:** Nhựa đường xám đen (`#0f172a`), các vạch sơn trắng phân làn có animation lướt nhanh liên tục (`trackMove 0.4s linear infinite`), hàng rào bảo hộ đỏ-trắng và khán đài cờ hoa 2 bên.
-- **Đèn xuất phát F1 (Starting Lights):** Khi bắt đầu cuộc đua, hiển thị dàn 5 đèn đỏ lần lượt bật sáng (`🔴 🔴 🔴 🔴 🔴`) kèm tiếng đếm ngược, sau đó đồng loạt chuyển xanh (`🟢 🟢 🟢 🟢 🟢 GO!`) kích hoạt cuộc đua.
-- **4 Siêu xe F1 sắc nét:**
-  - 🔴 **Tổ 1 - Scuderia Red:** Đỏ rực lửa
-  - 🔵 **Tổ 2 - Cyan Lightning:** Xanh tia chớp
-  - 🟡 **Tổ 3 - Golden Thunder:** Vàng sấm sét
-  - 🟣 **Tổ 4 - Neon Phantom:** Tím bóng ma
-  *(Mỗi xe được thiết kế dạng SVG/CSS sắc nét với cánh gió trước sau, buồng lái, lốp xe thể thao).*
-- **Hiệu ứng tốc độ cao:**
-  - Lửa phụt đuôi ống xả Nitro Turbo xanh/cam khi bứt tốc (`nitro-flame`).
-  - Vệt khói lốp xe trắng cuộn phía sau (`smoke-trail`).
-  - Camera bám theo khoảng cách dẫn đầu về vạch đích ca-rô trắng đen (`finish-line`).
+### PHẦN 1: Sửa `game-treasure.html` (Đua Vịt)
+
+#### Bước 1.1: Bổ sung KaTeX vào `<head>`
+Tại dòng 4 của `game-treasure.html`, thêm link CSS và script KaTeX:
+```html
+<link rel="stylesheet" href="vendor/katex.min.css">
+<script src="vendor/katex.min.js"></script>
+```
+
+#### Bước 1.2: Bổ sung component `MathText` trong React
+Thêm component `MathText` chuẩn hóa công thức toán:
+```javascript
+const MathText = ({ text }) => {
+    const ref = useRef(null);
+    useEffect(() => {
+        if (!text || !ref.current) return;
+        ref.current.innerHTML = '';
+        let processed = String(text).trim();
+        processed = processed.replace(/`([^`]+)`/g, (m, g) => `$${g}$`);
+        processed = processed.replace(/\\\[([\s\S]+?)\\\]/g, (m, g) => `$$${g}$$`);
+        processed = processed.replace(/\\\(([\s\S]+?)\\\)/g, (m, g) => `$${g}$`);
+        if (!processed.includes('$')) {
+            if (/\\(frac|sqrt|vec|cdot|times|pm|mp|le|ge|ne|neq|alpha|beta|gamma|pi|theta|Delta|[a-zA-Z]+)/.test(processed)) {
+                processed = `$${processed}$`;
+            } else if (/^[a-zA-Z0-9\s\+\-\*\/\=\^\_\(\)\{\}\.,<>\\]+$/.test(processed) && /[\^_\\]/.test(processed)) {
+                processed = `$${processed}$`;
+            }
+        }
+        const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
+        parts.forEach(part => {
+            if (!part) return;
+            if (part.startsWith('$$') && part.endsWith('$$')) {
+                const span = document.createElement('span');
+                try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); }
+                catch { span.textContent = part; }
+                ref.current.appendChild(span);
+            } else if (part.startsWith('$') && part.endsWith('$')) {
+                const span = document.createElement('span');
+                try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); }
+                catch { span.textContent = part; }
+                ref.current.appendChild(span);
+            } else {
+                ref.current.appendChild(document.createTextNode(part));
+            }
+        });
+    }, [text]);
+    return <span ref={ref} />;
+};
+```
+
+#### Bước 1.3: Render `<MathText>` trong Modal Câu Hỏi Kiểm Tra
+Thay thế đoạn JSX modal câu hỏi ở cuối component `App`:
+```jsx
+{q && (
+    <div className="fixed inset-0 z-[60] shade flex items-center justify-center p-4">
+        <div className="pop bg-white rounded-3xl p-7 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+                <b className="text-xl text-violet-700"><i className="fas fa-edit mr-2"></i>Câu hỏi kiểm tra</b>
+                <b className="text-2xl text-rose-600">⏱ {secs}s</b>
+            </div>
+            <div className="text-lg font-bold text-gray-800 my-4 leading-relaxed">
+                <MathText text={q.prompt || q.question} />
+            </div>
+            <div className="space-y-2 mb-4">
+                {(q.choices || []).map((x, i) => (
+                    <button key={i} className="block w-full text-left p-3 border-2 border-gray-200 rounded-xl hover:border-violet-400 hover:bg-violet-50 transition">
+                        <span className="font-bold text-violet-700 mr-2">{String.fromCharCode(65 + i)}.</span>
+                        <MathText text={x} />
+                    </button>
+                ))}
+            </div>
+            <button className="btn w-full mt-2 bg-slate-700 text-white" onClick={() => setQ(null)}>
+                Đóng câu hỏi
+            </button>
+        </div>
+    </div>
+)}
+```
 
 ---
 
-### Bước 2: Cơ Chế Cả 4 Tổ Cùng Tham Gia (Simultaneous Battle)
-Tái cấu trúc luồng câu hỏi:
-1. **Hiển thị câu hỏi & Đếm ngược:**
-   - Câu hỏi trắc nghiệm (với đầy đủ KaTeX qua `<MathText>`).
-   - Đồng hồ đếm ngược 30 giây (có thể điều chỉnh 15s/30s/45s) kèm thanh tiến trình co dần.
-   - Âm thanh tích tắc nhẹ nhàng kích thích sự tập trung thảo luận của cả 4 tổ.
-2. **Bảng chấm điểm đa tổ (Multi-Team Scoring):**
-   - Dưới câu hỏi, hiển thị 4 nút bấm to nổi bật tương ứng 4 tổ:
-     * `[ 1. Tổ 1 Đỏ ]`
-     * `[ 2. Tổ 2 Xanh ]`
-     * `[ 3. Tổ 3 Vàng ]`
-     * `[ 4. Tổ 4 Tím ]`
-   - Giáo viên chỉ cần click vào các tổ có đáp án đúng (hoặc ấn phím tắt `1`, `2`, `3`, `4` trên bàn phím), nút sẽ sáng lên màu xanh lá kèm tick `✓`.
-   - Bấm nút **"XÁC NHẬN BỨT TỐC 🏎️💨"**:
-     * Tất cả các xe được tick chọn ĐỒNG LOẠT VỌT TIẾN LÊN PHÍA TRƯỚC!
-     * Tổ nào có chuỗi đúng liên tiếp $\ge 2$ sẽ kích hoạt **SUPER NITRO** (vọt xa gấp đôi kèm lửa phụt rực rỡ).
-     * Tổ nào trả lời sai thì xe rung lắc nhẹ, xịt khói xám.
+### PHẦN 2: Sửa `game-escape.html` (Hứng Trứng Vàng)
 
----
+#### Bước 2.1: Tách riêng 2 Timer Ref (Tránh xung đột hủy nhầm timer)
+Thay thế `const timeoutRef = useRef(null);` (dòng 154) bằng 2 ref độc lập:
+```javascript
+const fallTimerRef = useRef(null);
+const nextTimerRef = useRef(null);
+```
 
-### Bước 3: Hộp Vật Phẩm May Mắn (Mario Kart Mystery Boxes 🎁)
-Cứ sau mỗi 2–3 câu hỏi, trên đường đua xuất hiện ngẫu nhiên các hộp quà `?` xoay tròn:
-- Khi xe chạm hộp quà:
-  - 🚀 **Tên lửa Nitro:** Xe tự động vọt thêm 1 đoạn lớn, vượt qua các xe khác.
-  - 🛡️ **Khiên bảo vệ:** Nhận lá chắn phát sáng, câu sau nếu sai không bị tụt lại.
-  - 🍌 **Vỏ chuối trơn:** Đặt bẫy khiến xe của 1 tổ đối thủ bị xoay trượt 360 độ và chậm lại 1 nhịp.
-  - ⚡ **Tia sét tăng tốc:** Nhân đôi điểm số cho tổ trong lượt tiếp theo.
-*(Có thể bật/tắt tính năng Hộp vật phẩm trong phần Cài đặt của giáo viên).*
+#### Bước 2.2: Sửa `useEffect` rơi trứng (Chỉ dọn dẹp `fallTimerRef`)
+Thay thế `useEffect` từ dòng 240–252 bằng:
+```javascript
+useEffect(() => {
+    if (phase !== 'falling' || !currentQ || showInstructions || gameOver) return;
+    fallTimerRef.current = setTimeout(() => {
+        const nextLives = lives - 1;
+        setLives(nextLives);
+        setStreak(0);
+        setPhase('result');
+        setCaught(-1);
+        setLastMsg('Trứng rơi mất! Mất 1 mạng.');
+        nextTimerRef.current = setTimeout(() => goNext(nextLives), 1400);
+    }, (fallDuration + 0.5) * 1000);
+    return () => {
+        if (fallTimerRef.current) clearTimeout(fallTimerRef.current);
+    };
+}, [fallKey, phase, currentQ, showInstructions, gameOver, fallDuration, lives, goNext]);
+```
 
----
+#### Bước 2.3: Sửa `handleCatch` (Sử dụng `nextTimerRef`)
+Thay thế `handleCatch` (dòng 216–238) bằng:
+```javascript
+const handleCatch = (choiceIdx) => {
+    if (phase !== 'falling' || !currentQ) return;
+    if (fallTimerRef.current) clearTimeout(fallTimerRef.current);
+    if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
+    setPhase('result');
+    setCaught(choiceIdx);
+    const isCorrect = choiceIdx === currentQ.answer;
 
-### Bước 4: Hệ Thống Âm Thanh Web Audio API (100% Offline)
-Tích hợp bộ âm thanh thuần Web Audio:
-- `soundEngine.f1Lights()`: Tiếng bíp bíp theo nhịp 5 đèn F1 và tiếng còi bính boong khi đèn xanh bật.
-- `soundEngine.engineRev()`: Tiếng động cơ rồ ga *Vroom Vroom!* (dao động sóng sawtooth 90Hz $\rightarrow$ 350Hz kèm bộ lọc lowpass).
-- `soundEngine.tireScreech()`: Tiếng rít lốp bốc khói *Screeech!*.
-- `soundEngine.nitroBoost()`: Tiếng xả khí nén và phụt lửa Nitro *Whoooosh!*.
-- `soundEngine.podiumFanfare()`: Giai điệu kèn mừng chiến thắng rộn rã khi xe cán vạch đích.
-- Nút Bật/Tắt âm thanh ở góc trên màn hình.
+    if (isCorrect) {
+        const bonus = Math.min(streak, 5) * 4;
+        setScore(prev => prev + 20 + bonus);
+        setStreak(prev => prev + 1);
+        setCorrectTotal(prev => prev + 1);
+        setLastMsg(currentQ.explanation || 'Trứng vàng! Đáp án chính xác!');
+        nextTimerRef.current = setTimeout(() => goNext(lives), 1200);
+    } else {
+        const nextLives = lives - 1;
+        setLives(nextLives);
+        setStreak(0);
+        setLastMsg(`Trứng thối! Đáp án đúng là ${String.fromCharCode(65 + currentQ.answer)}.`);
+        nextTimerRef.current = setTimeout(() => goNext(nextLives), 1400);
+    }
+};
+```
 
----
+#### Bước 2.4: Nâng cấp `goNext` (Tránh stale state closure)
+Thay thế `goNext` (dòng 206–214) bằng:
+```javascript
+const goNext = useCallback((nextLives) => {
+    if (nextLives <= 0) {
+        setGameOver(true);
+        return;
+    }
+    setQIndex(prevIndex => {
+        if (prevIndex >= questions.length - 1) {
+            setGameOver(true);
+            return prevIndex;
+        }
+        const nextIndex = prevIndex + 1;
+        resetRound(nextIndex, questions.length);
+        return nextIndex;
+    });
+}, [questions.length, resetRound]);
+```
 
-### Bước 5: Bục Vinh Quang Podium 3 Bậc (Victory Podium)
-Khi có xe đầu tiên chạm vạch đích:
-- Pháo hoa và pháo giấy confetti nổ rực rỡ (`canvas-confetti`).
-- Kèn Fanfare chiến thắng vang lên.
-- Hiển thị bục vinh quang 3 bậc chuẩn thể thao:
-  * 🥇 **Bậc 1 (Vàng - Cao nhất):** Tổ vô địch cuộc đua, cúp vàng lấp lánh.
-  * 🥈 **Bậc 2 (Bạc):** Tổ về nhì.
-  * 🥉 **Bậc 3 (Đồng):** Tổ về ba.
-  * 🏅 **Tổ 4:** Bảng danh dự "Tinh thần thi đua".
-- Bảng tổng kết chi tiết: Số câu đúng từng tổ, thời gian phản xạ, danh hiệu "Vua tốc độ", "Chiến thần Drift".
-- Nút "Đua lại" và "Về menu".
+#### Bước 2.5: Dọn dẹp cả 2 timer khi component unmount
+Thay thế `useEffect` ở dòng 198–202 bằng:
+```javascript
+useEffect(() => {
+    return () => {
+        if (fallTimerRef.current) clearTimeout(fallTimerRef.current);
+        if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
+    };
+}, []);
+```
 
 ---
 
 ## 3. Kế Hoạch Xác Minh (Verification Plan)
-1. **Khởi chạy `game-racing.html`:** Xác nhận đèn 5 đèn đỏ F1 bật tắt mượt mà, đường đua nhựa đường cuộn chuyển động sống động.
-2. **Kiểm tra cơ chế thi đua cả 4 tổ:** Xác nhận cả 4 tổ cùng tham gia trả lời câu hỏi, giáo viên tích chọn nhiều tổ cùng lúc và các xe đều bứt tốc đồng thời.
-3. **Kiểm tra âm thanh:** Xác nhận tiếng động cơ, còi xuất phát, tiếng rít lốp và kèn chiến thắng hoạt động tốt không bị rè hay lỗi.
-4. **Kiểm tra vạch đích và Podium:** Xác nhận xe về nhất kích hoạt pháo giấy confetti, bục vinh quang 3 bậc hiển thị chính xác thứ hạng 4 tổ.
+1. **Xác minh `game-treasure.html` (Đua Vịt):**
+   - Mở modal "Câu hỏi kiểm tra", kiểm tra câu hỏi: `$A = 2x^2y \cdot (-3)xy^3$` và các đáp án `$-6x^3y^4$` $\rightarrow$ Hiển thị công thức toán học KaTeX sắc nét, không còn ký tự `$`.
+2. **Xác minh `game-escape.html` (Hứng Trứng Vàng):**
+   - Hứng đúng trứng câu 1 $\rightarrow$ Trứng nổ vàng, hiện thông báo chính xác $\rightarrow$ Sau 1.2s tự động chuyển sang câu 2, câu 3, câu 4 liên tục mượt mà.
+   - Để trứng rơi mất mạng ở câu 1 $\rightarrow$ Sau 1.4s tự động chuyển tiếp sang câu 2 bình thường, không còn bị đứng yên.

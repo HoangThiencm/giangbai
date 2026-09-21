@@ -4,7 +4,7 @@
     <script src="js/security-guard.js"></script>
     <script src="access-control.js"></script>
     <meta charset="UTF-8">
-    <title>Game: Đua Xe 4 Tổ</title>
+    <title>Đua Xe F1 Mario Kart - Đại Chiến 4 Tổ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="vendor/react.production.min.js"></script>
     <script src="vendor/react-dom.production.min.js"></script>
@@ -14,36 +14,192 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .katex { font-size: 1.05em; }
-        .fade-in { animation: fadeIn 0.45s ease-out; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .nitro { animation: nitro 0.65s ease-out; }
-        @keyframes nitro {
-            0% { transform: translateX(0) scale(1); filter: brightness(1); }
-            35% { transform: translateX(12px) scale(1.15); filter: brightness(1.4) drop-shadow(0 0 8px #38bdf8); }
-            100% { transform: translateX(0) scale(1); filter: brightness(1); }
+        .track-wrap {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 40%, #020617 100%);
+            border: 4px solid #64748b;
+            position: relative;
+            overflow: hidden;
         }
-        .track-bg {
-            background:
-                repeating-linear-gradient(90deg, rgba(255,255,255,.15) 0 2px, transparent 2px 40px),
-                linear-gradient(180deg, #1e293b, #0f172a);
+        .track-wrap::before, .track-wrap::after {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0; width: 28px;
+            background: repeating-linear-gradient(180deg, #ef4444 0 14px, #f8fafc 14px 28px);
+            z-index: 2;
         }
-        .lane-active { box-shadow: 0 0 0 3px rgba(251,146,60,.7); }
-        .finish-flag { background: repeating-linear-gradient(45deg, #111 0 6px, #fff 6px 12px); }
+        .track-wrap::before { left: 0; }
+        .track-wrap::after { right: 0; }
+        .crowd-bar {
+            height: 18px;
+            background: repeating-linear-gradient(90deg, #f43f5e 0 8px, #22d3ee 8px 16px, #fbbf24 16px 24px, #a78bfa 24px 32px);
+            opacity: 0.85;
+        }
+        .lane {
+            position: relative;
+            height: 64px;
+            margin: 6px 36px;
+            background: #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+        .lane-dashes {
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(90deg, transparent 0 28px, rgba(255,255,255,.35) 28px 40px);
+            animation: trackMove 0.4s linear infinite;
+            opacity: 0.55;
+        }
+        @keyframes trackMove { from { background-position: 0 0; } to { background-position: -68px 0; } }
+        .finish-line {
+            position: absolute; right: 8px; top: 4px; bottom: 4px; width: 18px; z-index: 3;
+            background: repeating-linear-gradient(45deg, #111 0 6px, #fff 6px 12px);
+            border-radius: 3px;
+        }
+        .f1-car {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 56px; height: 28px; z-index: 5;
+            transition: left 0.85s cubic-bezier(.2,.8,.2,1);
+        }
+        .f1-body { width: 100%; height: 100%; border-radius: 8px 14px 10px 6px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+        .f1-wing-f { position: absolute; left: -4px; top: 6px; width: 10px; height: 16px; border-radius: 2px; background: inherit; filter: brightness(.85); }
+        .f1-wing-r { position: absolute; right: -2px; top: 4px; width: 8px; height: 20px; border-radius: 2px; background: inherit; filter: brightness(.75); }
+        .f1-cockpit { position: absolute; left: 18px; top: 6px; width: 16px; height: 14px; background: #0f172a; border-radius: 4px; }
+        .f1-wheel { position: absolute; width: 10px; height: 10px; background: #111; border-radius: 50%; border: 2px solid #94a3b8; }
+        .f1-wheel.fl { left: 6px; top: -3px; } .f1-wheel.fr { right: 10px; top: -3px; }
+        .f1-wheel.rl { left: 6px; bottom: -3px; } .f1-wheel.rr { right: 10px; bottom: -3px; }
+        .nitro-flame {
+            position: absolute; left: -22px; top: 50%; transform: translateY(-50%);
+            width: 22px; height: 14px; border-radius: 50% 0 0 50%;
+            background: linear-gradient(90deg, transparent, #38bdf8, #f97316, #fef08a);
+            animation: flamePulse 0.2s ease-in-out infinite alternate;
+            filter: blur(0.4px);
+        }
+        @keyframes flamePulse { from { opacity: .7; width: 16px; } to { opacity: 1; width: 26px; } }
+        .smoke-trail {
+            position: absolute; left: -36px; top: 50%; transform: translateY(-50%);
+            font-size: 14px; opacity: .8; animation: smokeDrift 0.7s ease-out forwards;
+        }
+        @keyframes smokeDrift { from { opacity: .9; transform: translate(-4px,-50%); } to { opacity: 0; transform: translate(-28px,-50%) scale(1.4); } }
+        .shake-car { animation: carShake 0.45s ease-in-out; }
+        @keyframes carShake { 0%,100%{ transform: translateY(-50%) rotate(0); } 25%{ transform: translateY(-50%) rotate(-8deg); } 75%{ transform: translateY(-50%) rotate(8deg); } }
+        .spin360 { animation: spinCar 0.7s ease-in-out; }
+        @keyframes spinCar { from { transform: translateY(-50%) rotate(0); } to { transform: translateY(-50%) rotate(360deg); } }
+        .mystery-box {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 28px; height: 28px; border-radius: 6px; z-index: 4;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border: 2px solid #fff; color: #7c2d12; font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
+            animation: boxSpin 1.2s linear infinite;
+            box-shadow: 0 0 12px rgba(251,191,36,.8);
+        }
+        @keyframes boxSpin { from { transform: translateY(-50%) rotateY(0); } to { transform: translateY(-50%) rotateY(360deg); } }
+        .team-pick { transition: all .15s; }
+        .team-pick.selected { ring: 4px; transform: scale(1.03); box-shadow: 0 0 0 3px #22c55e inset, 0 8px 20px rgba(34,197,94,.35); }
+        .timer-bar { transition: width 0.2s linear; }
+        .podium-1 { height: 140px; background: linear-gradient(180deg,#fde68a,#f59e0b); }
+        .podium-2 { height: 100px; background: linear-gradient(180deg,#e2e8f0,#94a3b8); }
+        .podium-3 { height: 70px; background: linear-gradient(180deg,#fdba74,#c2410c); }
+        .confetti-piece { position: fixed; width: 8px; height: 12px; z-index: 80; animation: confettiFall 2.8s ease-in forwards; pointer-events: none; }
+        @keyframes confettiFall { 0%{ transform: translateY(-20px) rotate(0); opacity:1;} 100%{ transform: translateY(100vh) rotate(720deg); opacity:0;} }
+        .light-on { box-shadow: 0 0 18px currentColor; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-orange-50 via-red-50 to-amber-100 min-h-screen">
+<body class="bg-slate-950 min-h-screen text-white">
     <div id="root">
-        <div style="max-width:720px;margin:48px auto;padding:24px;background:#fff;border-radius:16px;color:#334155;text-align:center;">Đang tải đường đua...</div>
+        <div style="max-width:720px;margin:48px auto;padding:24px;background:#1e293b;border-radius:16px;text-align:center;">Đang tải đường đua F1...</div>
     </div>
     <script type="text/babel" data-presets="env,react">
-        const { useState, useEffect, useRef, useMemo } = React;
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
-        const DEFAULT_TEAMS = [
-            { id: 't1', name: 'Tổ 1 Đỏ', color: 'red', emoji: '🏎️', border: 'border-red-500', bg: 'bg-red-50', text: 'text-red-700', bar: 'bg-red-500' },
-            { id: 't2', name: 'Tổ 2 Xanh', color: 'blue', emoji: '🚙', border: 'border-sky-500', bg: 'bg-sky-50', text: 'text-sky-700', bar: 'bg-sky-500' },
-            { id: 't3', name: 'Tổ 3 Vàng', color: 'yellow', emoji: '🚗', border: 'border-amber-400', bg: 'bg-amber-50', text: 'text-amber-700', bar: 'bg-amber-400' },
-            { id: 't4', name: 'Tổ 4 Tím', color: 'purple', emoji: '🚕', border: 'border-violet-500', bg: 'bg-violet-50', text: 'text-violet-700', bar: 'bg-violet-500' },
+        const TEAMS = [
+            { id: 't1', name: 'Tổ 1 - Scuderia Red', short: 'Tổ 1 Đỏ', color: '#ef4444', glow: 'shadow-red-500/50' },
+            { id: 't2', name: 'Tổ 2 - Cyan Lightning', short: 'Tổ 2 Xanh', color: '#06b6d4', glow: 'shadow-cyan-500/50' },
+            { id: 't3', name: 'Tổ 3 - Golden Thunder', short: 'Tổ 3 Vàng', color: '#eab308', glow: 'shadow-yellow-500/50' },
+            { id: 't4', name: 'Tổ 4 - Neon Phantom', short: 'Tổ 4 Tím', color: '#a855f7', glow: 'shadow-purple-500/50' },
         ];
+        const POWERUPS = [
+            { id: 'nitro', icon: '🚀', name: 'Tên lửa Nitro', desc: 'Vọt thêm 1 đoạn lớn!' },
+            { id: 'shield', icon: '🛡️', name: 'Khiên bảo vệ', desc: 'Lượt sai sau không bị phạt.' },
+            { id: 'banana', icon: '🍌', name: 'Vỏ chuối', desc: 'Đối thủ chậm lại 1 nhịp!' },
+            { id: 'lightning', icon: '⚡', name: 'Tia sét', desc: 'Nhân đôi bước lượt sau!' },
+        ];
+
+        const soundEngine = (() => {
+            let ctx = null, muted = false;
+            const ensure = () => {
+                if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (ctx.state === 'suspended') ctx.resume();
+                return ctx;
+            };
+            const beep = (freq, dur, type = 'square', vol = 0.08, when = 0) => {
+                if (muted) return;
+                const c = ensure();
+                const o = c.createOscillator();
+                const g = c.createGain();
+                o.type = type;
+                o.frequency.value = freq;
+                g.gain.value = vol;
+                o.connect(g); g.connect(c.destination);
+                const t0 = c.currentTime + when;
+                o.start(t0);
+                g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+                o.stop(t0 + dur + 0.02);
+            };
+            return {
+                setMuted: (v) => { muted = !!v; },
+                isMuted: () => muted,
+                f1Lights: () => {
+                    for (let i = 0; i < 5; i++) beep(660, 0.12, 'square', 0.07, i * 0.55);
+                    beep(880, 0.35, 'sawtooth', 0.1, 5 * 0.55);
+                    beep(1320, 0.25, 'square', 0.08, 5 * 0.55 + 0.05);
+                },
+                engineRev: () => {
+                    if (muted) return;
+                    const c = ensure();
+                    const o = c.createOscillator();
+                    const f = c.createBiquadFilter();
+                    const g = c.createGain();
+                    o.type = 'sawtooth';
+                    o.frequency.setValueAtTime(90, c.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(350, c.currentTime + 0.45);
+                    f.type = 'lowpass';
+                    f.frequency.value = 900;
+                    g.gain.value = 0.06;
+                    o.connect(f); f.connect(g); g.connect(c.destination);
+                    o.start();
+                    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.55);
+                    o.stop(c.currentTime + 0.58);
+                },
+                tireScreech: () => {
+                    if (muted) return;
+                    const c = ensure();
+                    const o = c.createOscillator();
+                    const g = c.createGain();
+                    o.type = 'sawtooth';
+                    o.frequency.setValueAtTime(1800, c.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(600, c.currentTime + 0.35);
+                    g.gain.value = 0.04;
+                    o.connect(g); g.connect(c.destination);
+                    o.start();
+                    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.4);
+                    o.stop(c.currentTime + 0.42);
+                },
+                nitroBoost: () => {
+                    beep(120, 0.08, 'sawtooth', 0.05);
+                    beep(400, 0.2, 'sawtooth', 0.07, 0.05);
+                    beep(900, 0.15, 'square', 0.05, 0.12);
+                },
+                tick: () => beep(880, 0.04, 'square', 0.03),
+                podiumFanfare: () => {
+                    const notes = [523, 659, 784, 1046, 784, 1046];
+                    notes.forEach((n, i) => beep(n, 0.22, 'square', 0.07, i * 0.18));
+                },
+                boxPing: () => { beep(988, 0.08, 'sine', 0.06); beep(1319, 0.12, 'sine', 0.05, 0.08); }
+            };
+        })();
 
         const MathText = ({ text }) => {
             const ref = useRef(null);
@@ -57,7 +213,8 @@
                     if ((part.startsWith('$$') && part.endsWith('$$')) || (part.startsWith('$') && part.endsWith('$'))) {
                         const span = document.createElement('span');
                         const display = part.startsWith('$$');
-                        try { katex.render(part.slice(display ? 2 : 1, display ? -2 : -1), span, { throwOnError: false, displayMode: display }); } catch { span.textContent = part; }
+                        try { katex.render(part.slice(display ? 2 : 1, display ? -2 : -1), span, { throwOnError: false, displayMode: display }); }
+                        catch { span.textContent = part; }
                         ref.current.appendChild(span);
                     } else if (part) ref.current.appendChild(document.createTextNode(part));
                 });
@@ -65,21 +222,44 @@
             return <span ref={ref} />;
         };
 
+        const F1Car = ({ color, nitro, smoke, shake, spin }) => (
+            <div className={`f1-car ${shake ? 'shake-car' : ''} ${spin ? 'spin360' : ''}`}>
+                {nitro && <div className="nitro-flame" />}
+                {smoke && <div className="smoke-trail">💨</div>}
+                <div className="f1-body" style={{ background: `linear-gradient(180deg, ${color}, ${color}cc)` }}>
+                    <div className="f1-wing-f" style={{ background: color }} />
+                    <div className="f1-wing-r" style={{ background: color }} />
+                    <div className="f1-cockpit" />
+                    <div className="f1-wheel fl" /><div className="f1-wheel fr" />
+                    <div className="f1-wheel rl" /><div className="f1-wheel rr" />
+                </div>
+            </div>
+        );
+
         const RacingGame = () => {
             const [gameData, setGameData] = useState(null);
             const [questions, setQuestions] = useState([]);
-            const [teams, setTeams] = useState(DEFAULT_TEAMS);
+            const [teams, setTeams] = useState(TEAMS);
             const [positions, setPositions] = useState({});
-            const [activeTeam, setActiveTeam] = useState('t1');
+            const [stats, setStats] = useState({});
+            const [streaks, setStreaks] = useState({});
+            const [buffs, setBuffs] = useState({});
+            const [effects, setEffects] = useState({});
             const [qIndex, setQIndex] = useState(0);
-            const [selected, setSelected] = useState(null);
-            const [showResult, setShowResult] = useState(false);
-            const [nitroId, setNitroId] = useState(null);
-            const [winner, setWinner] = useState(null);
-            const [gameOver, setGameOver] = useState(false);
-            const [showInstructions, setShowInstructions] = useState(true);
-            const [score, setScore] = useState(0);
+            const [correctTeams, setCorrectTeams] = useState({});
+            const [phase, setPhase] = useState('boot'); // boot | lights | play | boost | podium
+            const [lightStep, setLightStep] = useState(0);
+            const [timeLeft, setTimeLeft] = useState(30);
+            const [timerSec, setTimerSec] = useState(30);
+            const [timerActive, setTimerActive] = useState(false);
+            const [boxesEnabled, setBoxesEnabled] = useState(true);
+            const [mystery, setMystery] = useState(null);
+            const [toast, setToast] = useState('');
+            const [soundOn, setSoundOn] = useState(true);
+            const [confetti, setConfetti] = useState([]);
+            const [showSettings, setShowSettings] = useState(false);
             const finishedRef = useRef(false);
+            const positionsRef = useRef({});
 
             useEffect(() => {
                 const raw = localStorage.getItem('gameData');
@@ -94,20 +274,17 @@
                     answer: typeof q.answer === 'number' ? q.answer : 0, explanation: q.explanation || ''
                 })).filter(q => q.prompt && q.choices.length >= 2);
                 if (!loaded.length) { alert('Không có câu hỏi hợp lệ.'); window.location.href = 'trochoi.html'; return; }
-
-                let teamList = DEFAULT_TEAMS;
+                let teamList = TEAMS;
                 if (Array.isArray(parsed.content?.teams) && parsed.content.teams.length >= 4) {
-                    teamList = parsed.content.teams.slice(0, 4).map((t, i) => ({
-                        ...DEFAULT_TEAMS[i],
-                        id: t.id || DEFAULT_TEAMS[i].id,
-                        name: t.name || DEFAULT_TEAMS[i].name
-                    }));
+                    teamList = parsed.content.teams.slice(0, 4).map((t, i) => ({ ...TEAMS[i], id: t.id || TEAMS[i].id, name: t.name || TEAMS[i].name, short: t.name || TEAMS[i].short }));
                 }
-                setGameData(parsed);
-                setQuestions(loaded);
-                setTeams(teamList);
-                setPositions(teamList.reduce((a, t) => ({ ...a, [t.id]: 0 }), {}));
-                setActiveTeam(teamList[0].id);
+                const pos = teamList.reduce((a, t) => ({ ...a, [t.id]: 0 }), {});
+                const st = teamList.reduce((a, t) => ({ ...a, [t.id]: { correct: 0, reaction: 0 } }), {});
+                setGameData(parsed); setQuestions(loaded); setTeams(teamList);
+                setPositions(pos); positionsRef.current = pos;
+                setStats(st); setStreaks(teamList.reduce((a, t) => ({ ...a, [t.id]: 0 }), {}));
+                setBuffs(teamList.reduce((a, t) => ({ ...a, [t.id]: {} }), {}));
+                setPhase('boot');
             }, []);
 
             const finishSteps = useMemo(() => {
@@ -115,185 +292,391 @@
                 return Math.min(Math.max(6, Math.ceil(questions.length * 0.55)), 10);
             }, [questions.length]);
 
-            const topicTitle = gameData?.formData?.topic || 'Đua xe 4 tổ';
+            const topicTitle = gameData?.formData?.topic || gameData?.content?.topicTitle || 'Đại chiến 4 tổ F1';
             const currentQ = questions[qIndex];
-            const active = teams.find(t => t.id === activeTeam);
 
-            const advance = (teamId) => {
+            useEffect(() => { soundEngine.setMuted(!soundOn); }, [soundOn]);
+
+            useEffect(() => {
+                if (!timerActive || phase !== 'play') return;
+                if (timeLeft <= 0) { setTimerActive(false); return; }
+                const id = setTimeout(() => {
+                    setTimeLeft(t => t - 1);
+                    if (timeLeft <= 6) soundEngine.tick();
+                }, 1000);
+                return () => clearTimeout(id);
+            }, [timerActive, timeLeft, phase]);
+
+            useEffect(() => {
+                if (phase !== 'play') return;
+                const onKey = (e) => {
+                    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+                    const map = { '1': 0, '2': 1, '3': 2, '4': 3 };
+                    if (map[e.key] != null && teams[map[e.key]]) {
+                        const id = teams[map[e.key]].id;
+                        setCorrectTeams(prev => ({ ...prev, [id]: !prev[id] }));
+                    }
+                    if (e.key === 'Enter') confirmBoost();
+                };
+                window.addEventListener('keydown', onKey);
+                return () => window.removeEventListener('keydown', onKey);
+            });
+
+            const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2200); };
+
+            const startLights = () => {
+                setPhase('lights');
+                setLightStep(0);
+                soundEngine.f1Lights();
+                let step = 0;
+                const iv = setInterval(() => {
+                    step += 1;
+                    setLightStep(step);
+                    if (step >= 5) {
+                        clearInterval(iv);
+                        setTimeout(() => {
+                            setPhase('play');
+                            setTimeLeft(timerSec);
+                            setTimerActive(true);
+                            setCorrectTeams({});
+                            maybeSpawnBox();
+                        }, 700);
+                    }
+                }, 550);
+            };
+
+            const maybeSpawnBox = () => {
+                if (!boxesEnabled) { setMystery(null); return; }
+                if ((qIndex + 1) % 2 === 0 || Math.random() < 0.35) {
+                    const lane = teams[Math.floor(Math.random() * teams.length)].id;
+                    const at = 25 + Math.floor(Math.random() * 50);
+                    setMystery({ lane, at, claimed: false });
+                } else setMystery(null);
+            };
+
+            const applyPowerup = (teamId, powerId, nextPos) => {
+                const others = teams.map(t => t.id).filter(id => id !== teamId);
+                if (powerId === 'nitro') {
+                    nextPos[teamId] = Math.min((nextPos[teamId] || 0) + 1, finishSteps);
+                    soundEngine.nitroBoost();
+                    showToast(`${TEAMS.find(t=>t.id===teamId)?.short || 'Tổ'} nhận 🚀 Nitro!`);
+                } else if (powerId === 'shield') {
+                    setBuffs(b => ({ ...b, [teamId]: { ...b[teamId], shield: true } }));
+                    showToast('🛡️ Khiên bảo vệ đã kích hoạt!');
+                } else if (powerId === 'banana' && others.length) {
+                    const victim = others[Math.floor(Math.random() * others.length)];
+                    nextPos[victim] = Math.max(0, (nextPos[victim] || 0) - 1);
+                    setEffects(e => ({ ...e, [victim]: { spin: true } }));
+                    soundEngine.tireScreech();
+                    setTimeout(() => setEffects(e => ({ ...e, [victim]: {} })), 800);
+                    showToast(`🍌 Vỏ chuối làm chậm đối thủ!`);
+                } else if (powerId === 'lightning') {
+                    setBuffs(b => ({ ...b, [teamId]: { ...b[teamId], double: true } }));
+                    showToast('⚡ Tia sét: lượt sau nhân đôi!');
+                }
+            };
+
+            const confirmBoost = useCallback(() => {
+                if (phase !== 'play' || finishedRef.current) return;
+                const picked = Object.keys(correctTeams).filter(id => correctTeams[id]);
+                setTimerActive(false);
+                setPhase('boost');
+
                 setPositions(prev => {
-                    const nextPos = Math.min((prev[teamId] || 0) + 1, finishSteps);
-                    const next = { ...prev, [teamId]: nextPos };
-                    if (nextPos >= finishSteps && !finishedRef.current) {
+                    const next = { ...prev };
+                    const nextStreaks = { ...streaks };
+                    const nextStats = { ...stats };
+                    const nextBuffs = { ...buffs };
+                    const nextEffects = {};
+
+                    teams.forEach(t => {
+                        const ok = !!correctTeams[t.id];
+                        if (ok) {
+                            let step = 1;
+                            if (nextBuffs[t.id]?.double) { step = 2; nextBuffs[t.id] = { ...nextBuffs[t.id], double: false }; }
+                            nextStreaks[t.id] = (nextStreaks[t.id] || 0) + 1;
+                            if (nextStreaks[t.id] >= 2) step += 1; // SUPER NITRO
+                            next[t.id] = Math.min((next[t.id] || 0) + step, finishSteps);
+                            nextStats[t.id] = {
+                                correct: (nextStats[t.id]?.correct || 0) + 1,
+                                reaction: (nextStats[t.id]?.reaction || 0) + (timerSec - timeLeft)
+                            };
+                            nextEffects[t.id] = { nitro: true, smoke: true };
+                            soundEngine.engineRev();
+                            if (nextStreaks[t.id] >= 2) soundEngine.nitroBoost();
+
+                            if (mystery && !mystery.claimed && mystery.lane === t.id) {
+                                const power = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+                                soundEngine.boxPing();
+                                applyPowerup(t.id, power.id, next);
+                                setMystery(m => m ? { ...m, claimed: true } : null);
+                            }
+                        } else {
+                            nextStreaks[t.id] = 0;
+                            if (nextBuffs[t.id]?.shield) {
+                                nextBuffs[t.id] = { ...nextBuffs[t.id], shield: false };
+                                showToast(`${t.short}: 🛡️ Khiên hấp thụ lỗi!`);
+                            } else {
+                                nextEffects[t.id] = { shake: true, smoke: true };
+                                soundEngine.tireScreech();
+                            }
+                        }
+                    });
+
+                    setStreaks(nextStreaks);
+                    setStats(nextStats);
+                    setBuffs(nextBuffs);
+                    setEffects(nextEffects);
+                    positionsRef.current = next;
+                    setTimeout(() => setEffects({}), 900);
+
+                    const winnerId = Object.entries(next).find(([, p]) => p >= finishSteps)?.[0];
+                    if (winnerId && !finishedRef.current) {
                         finishedRef.current = true;
-                        setWinner(teamId);
-                        setTimeout(() => setGameOver(true), 900);
+                        setTimeout(() => finishRace(next), 1000);
+                    } else {
+                        setTimeout(() => {
+                            if (finishedRef.current) return;
+                            if (qIndex < questions.length - 1) {
+                                setQIndex(i => i + 1);
+                                setCorrectTeams({});
+                                setPhase('play');
+                                setTimeLeft(timerSec);
+                                setTimerActive(true);
+                                maybeSpawnBox();
+                            } else {
+                                finishRace(next);
+                            }
+                        }, 1400);
                     }
                     return next;
                 });
-                setNitroId(teamId);
-                setTimeout(() => setNitroId(null), 700);
+            }, [phase, correctTeams, streaks, stats, buffs, teams, finishSteps, mystery, qIndex, questions.length, timerSec, timeLeft, boxesEnabled]);
+
+            const finishRace = (finalPos) => {
+                finishedRef.current = true;
+                setTimerActive(false);
+                setPositions(finalPos);
+                positionsRef.current = finalPos;
+                soundEngine.podiumFanfare();
+                const pieces = Array.from({ length: 48 }, (_, i) => ({
+                    id: i,
+                    left: Math.random() * 100,
+                    color: ['#ef4444','#06b6d4','#eab308','#a855f7','#22c55e','#f97316'][i % 6],
+                    delay: Math.random() * 0.6
+                }));
+                setConfetti(pieces);
+                setPhase('podium');
             };
 
-            const submit = () => {
-                if (selected === null || showResult || !currentQ || !activeTeam) return;
-                setShowResult(true);
-                const ok = selected === currentQ.answer;
-                if (ok) {
-                    setScore(s => s + 12);
-                    setTimeout(() => advance(activeTeam), 180);
-                }
-                setTimeout(() => {
-                    if (finishedRef.current) return;
-                    if (qIndex < questions.length - 1) {
-                        setQIndex(i => i + 1);
-                        setSelected(null);
-                        setShowResult(false);
-                    } else {
-                        const leader = Object.entries(positions).concat([[activeTeam, (positions[activeTeam] || 0) + (ok ? 1 : 0)]])
-                            .reduce((best, cur) => (!best || cur[1] > best[1] ? cur : best), null);
-                        // recompute from latest via ref-less fallback
-                        setPositions(prev => {
-                            const ranking = Object.entries(prev).sort((a, b) => b[1] - a[1]);
-                            setWinner(ranking[0]?.[0] || activeTeam);
-                            setGameOver(true);
-                            return prev;
-                        });
-                    }
-                }, 1400);
+            const ranking = useMemo(() => {
+                return [...teams].sort((a, b) => (positions[b.id] || 0) - (positions[a.id] || 0) || (stats[b.id]?.correct || 0) - (stats[a.id]?.correct || 0));
+            }, [teams, positions, stats]);
+
+            const toggleTeam = (id) => {
+                if (phase !== 'play') return;
+                setCorrectTeams(prev => ({ ...prev, [id]: !prev[id] }));
             };
 
             if (!gameData || !questions.length) {
-                return <div className="flex items-center justify-center min-h-screen"><div className="text-xl text-orange-800 font-semibold"><i className="fas fa-spinner fa-spin mr-2"></i>Đang chuẩn bị đường đua...</div></div>;
+                return <div className="flex items-center justify-center min-h-screen"><div className="text-xl text-cyan-300 font-semibold"><i className="fas fa-spinner fa-spin mr-2"></i>Đang chuẩn bị đường đua F1...</div></div>;
             }
 
-            if (showInstructions) {
+            if (phase === 'boot') {
                 return (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full fade-in">
-                            <h2 className="text-3xl font-bold text-orange-700 mb-4"><i className="fas fa-car-side mr-2"></i>Đua Xe 4 Tổ</h2>
-                            <p className="text-gray-600 mb-4">Chủ đề: <strong>{topicTitle}</strong></p>
-                            <ul className="space-y-2 text-gray-700 mb-4">
-                                <li><strong>1.</strong> Chọn tổ đang trả lời (4 làn: Đỏ / Xanh / Vàng / Tím)</li>
-                                <li><strong>2.</strong> Trả lời đúng → xe tăng tốc nitro 1 bước</li>
-                                <li><strong>3.</strong> Tổ về đích trước ({finishSteps} bước) thắng!</li>
+                    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                        <div className="bg-slate-900 border border-slate-600 rounded-3xl shadow-2xl p-8 max-w-2xl w-full fade-in">
+                            <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-yellow-300 to-cyan-400 mb-2">
+                                🏎️ ĐUA XE F1 MARIO KART
+                            </h2>
+                            <p className="text-slate-300 mb-4">Chủ đề: <strong className="text-white">{topicTitle}</strong></p>
+                            <ul className="space-y-2 text-slate-200 mb-5 text-sm">
+                                <li>🚦 Đèn xuất phát 5 đèn F1 chuẩn quốc tế</li>
+                                <li>⏱️ Cả 4 tổ cùng thảo luận — GV tick tổ đúng (phím 1–4) rồi bứt tốc đồng loạt</li>
+                                <li>🎁 Hộp vật phẩm Mario Kart: Nitro / Khiên / Chuối / Tia sét</li>
+                                <li>🔥 Chuỗi đúng ≥ 2 = SUPER NITRO (vọt gấp đôi)</li>
+                                <li>🏆 Về đích trước nhận bục vinh quang 3 bậc + fanfare</li>
                             </ul>
-                            <button onClick={() => setShowInstructions(false)} className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold text-lg">
-                                <i className="fas fa-flag-checkered mr-2"></i>Xuất phát ({questions.length} câu)
+                            <div className="flex flex-wrap gap-3 mb-5 items-center">
+                                <label className="text-sm text-slate-300">Đồng hồ:
+                                    <select value={timerSec} onChange={e => setTimerSec(+e.target.value)} className="ml-2 bg-slate-800 border border-slate-600 rounded-lg px-2 py-1">
+                                        <option value={15}>15s</option>
+                                        <option value={30}>30s</option>
+                                        <option value={45}>45s</option>
+                                    </select>
+                                </label>
+                                <label className="text-sm text-slate-300 flex items-center gap-2">
+                                    <input type="checkbox" checked={boxesEnabled} onChange={e => setBoxesEnabled(e.target.checked)} /> Hộp vật phẩm 🎁
+                                </label>
+                            </div>
+                            <button onClick={startLights} className="w-full py-4 bg-gradient-to-r from-red-600 via-orange-500 to-yellow-400 text-slate-900 rounded-xl font-black text-lg hover:brightness-110">
+                                🚦 XUẤT PHÁT ({questions.length} câu · {finishSteps} bước)
                             </button>
                         </div>
                     </div>
                 );
             }
 
-            if (gameOver) {
-                const winTeam = teams.find(t => t.id === winner) || teams[0];
-                const ranking = [...teams].sort((a, b) => (positions[b.id] || 0) - (positions[a.id] || 0));
+            if (phase === 'lights') {
                 return (
-                    <div className="max-w-3xl mx-auto p-6 fade-in">
-                        <div className="bg-white rounded-3xl shadow-2xl p-10 text-center">
-                            <div className="text-6xl mb-4">🏁</div>
-                            <h2 className="text-4xl font-bold text-gray-800 mb-2">{winTeam.emoji} {winTeam.name} về nhất!</h2>
-                            <p className="text-gray-600 mb-6">{topicTitle}</p>
-                            <div className="text-left max-w-md mx-auto mb-8 space-y-2">
+                    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-50">
+                        <div className="text-2xl font-bold text-slate-300 mb-8 tracking-widest">STARTING LIGHTS</div>
+                        <div className="flex gap-4 mb-8">
+                            {[0,1,2,3,4].map(i => (
+                                <div key={i} className={`w-14 h-14 rounded-full border-4 border-slate-700 ${i < lightStep ? 'bg-red-500 light-on text-red-500' : 'bg-slate-800'}`} />
+                            ))}
+                        </div>
+                        {lightStep >= 5 && <div className="text-5xl font-black text-green-400 animate-pulse">🟢🟢🟢🟢🟢 GO!</div>}
+                    </div>
+                );
+            }
+
+            if (phase === 'podium') {
+                const titles = ['🥇 Vua tốc độ', '🥈 Chiến thần Drift', '🥉 Bậc thầy Nitro', '🏅 Tinh thần thi đua'];
+                return (
+                    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-900 p-6 fade-in relative overflow-hidden">
+                        {confetti.map(c => (
+                            <div key={c.id} className="confetti-piece" style={{ left: `${c.left}%`, background: c.color, animationDelay: `${c.delay}s` }} />
+                        ))}
+                        <div className="max-w-4xl mx-auto text-center">
+                            <h2 className="text-4xl font-black text-amber-300 mb-2">🏁 BỤC VINH QUANG</h2>
+                            <p className="text-slate-300 mb-8">{topicTitle}</p>
+                            <div className="flex items-end justify-center gap-3 mb-10">
+                                {[1,0,2].map((rankIdx) => {
+                                    const t = ranking[rankIdx];
+                                    if (!t) return null;
+                                    const cls = rankIdx === 0 ? 'podium-1' : rankIdx === 1 ? 'podium-2' : 'podium-3';
+                                    const medal = rankIdx === 0 ? '🥇' : rankIdx === 1 ? '🥈' : '🥉';
+                                    return (
+                                        <div key={t.id} className="w-36 md:w-44">
+                                            <div className="text-4xl mb-2">{medal}</div>
+                                            <div className="font-bold text-sm mb-2" style={{ color: t.color }}>{t.short}</div>
+                                            <div className={`${cls} rounded-t-xl flex items-end justify-center pb-3 font-black text-slate-900 text-2xl shadow-xl`}>
+                                                {rankIdx + 1}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            {ranking[3] && (
+                                <div className="mb-6 text-slate-300">🏅 {ranking[3].short} — Tinh thần thi đua</div>
+                            )}
+                            <div className="bg-slate-900/80 border border-slate-700 rounded-2xl p-5 text-left mb-8 max-w-xl mx-auto">
+                                <h3 className="font-bold text-cyan-300 mb-3">Bảng tổng kết</h3>
                                 {ranking.map((t, i) => (
-                                    <div key={t.id} className={`flex justify-between px-4 py-2 rounded-lg ${i === 0 ? 'bg-amber-50 border border-amber-200 font-bold' : 'bg-gray-50'}`}>
-                                        <span>{i + 1}. {t.name}</span>
-                                        <span>{positions[t.id] || 0}/{finishSteps}</span>
+                                    <div key={t.id} className="flex justify-between py-2 border-b border-slate-800 text-sm">
+                                        <span style={{ color: t.color }}>{titles[i]} · {t.name}</span>
+                                        <span className="text-slate-300">{positions[t.id] || 0}/{finishSteps} · đúng {stats[t.id]?.correct || 0}</span>
                                     </div>
                                 ))}
                             </div>
                             <div className="flex gap-3 justify-center flex-wrap">
-                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-orange-600 text-white rounded-xl font-bold"><i className="fas fa-redo mr-2"></i>Đua lại</button>
-                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold"><i className="fas fa-home mr-2"></i>Về menu</button>
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-orange-500 text-white rounded-xl font-bold"><i className="fas fa-redo mr-2"></i>Đua lại</button>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-slate-600 rounded-xl font-bold"><i className="fas fa-home mr-2"></i>Về menu</button>
                             </div>
                         </div>
                     </div>
                 );
             }
 
+            const timerPct = Math.max(0, (timeLeft / timerSec) * 100);
+
             return (
-                <div className="max-w-5xl mx-auto p-4 md:p-6 fade-in">
-                    <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+                <div className="min-h-screen p-3 md:p-5 fade-in">
+                    {toast && <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-amber-400 text-slate-900 font-bold rounded-full shadow-xl">{toast}</div>}
+                    <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
                         <div className="flex gap-2">
-                            <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg"><i className="fas fa-arrow-left mr-1"></i>Thoát</button>
-                            <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg"><i className="fas fa-question-circle"></i></button>
+                            <button onClick={() => window.location.href = 'trochoi.html'} className="px-3 py-2 bg-slate-700 rounded-lg text-sm"><i className="fas fa-arrow-left mr-1"></i>Thoát</button>
+                            <button onClick={() => setShowSettings(s => !s)} className="px-3 py-2 bg-slate-700 rounded-lg text-sm"><i className="fas fa-cog"></i></button>
                         </div>
                         <div className="text-center">
-                            <h1 className="text-2xl font-bold text-orange-700"><i className="fas fa-car-side mr-2"></i>Đua Xe 4 Tổ</h1>
-                            <p className="text-sm text-gray-600">{topicTitle}</p>
+                            <h1 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-amber-300 to-cyan-400">F1 MARIO KART · 4 TỔ</h1>
+                            <p className="text-xs text-slate-400">{topicTitle}</p>
                         </div>
-                        <div className="px-4 py-2 bg-white border-2 border-orange-200 rounded-lg font-bold text-orange-700">{score}đ</div>
+                        <button onClick={() => setSoundOn(s => !s)} className={`px-3 py-2 rounded-lg text-sm ${soundOn ? 'bg-emerald-600' : 'bg-slate-700'}`}>
+                            <i className={`fas ${soundOn ? 'fa-volume-up' : 'fa-volume-mute'}`}></i>
+                        </button>
                     </div>
 
-                    {active && (
-                        <div className={`mb-4 p-3 rounded-xl border-2 text-center ${active.bg} ${active.border}`}>
-                            <span className="text-sm">Tổ đang đua: </span>
-                            <span className={`font-bold text-lg ${active.text}`}>{active.emoji} {active.name}</span>
+                    {showSettings && (
+                        <div className="mb-3 p-3 bg-slate-900 border border-slate-700 rounded-xl flex flex-wrap gap-4 text-sm">
+                            <label>Đồng hồ
+                                <select value={timerSec} onChange={e => setTimerSec(+e.target.value)} className="ml-2 bg-slate-800 border border-slate-600 rounded px-2 py-1">
+                                    <option value={15}>15s</option><option value={30}>30s</option><option value={45}>45s</option>
+                                </select>
+                            </label>
+                            <label className="flex items-center gap-2"><input type="checkbox" checked={boxesEnabled} onChange={e => setBoxesEnabled(e.target.checked)} /> Hộp vật phẩm 🎁</label>
                         </div>
                     )}
 
-                    <div className="rounded-2xl shadow-xl p-4 mb-5 track-bg border-2 border-slate-700">
-                        <div className="flex justify-between text-xs text-slate-200 font-semibold mb-3 px-1">
-                            <span>Xuất phát</span><span>🏁 Đích ({finishSteps})</span>
-                        </div>
-                        <div className="space-y-3">
+                    <div className="track-wrap rounded-2xl mb-4 shadow-2xl">
+                        <div className="crowd-bar" />
+                        <div className="px-2 py-3">
+                            <div className="flex justify-between text-[10px] text-slate-400 px-10 mb-1 font-semibold">
+                                <span>XUẤT PHÁT</span><span>🏁 VẠCH ĐÍCH</span>
+                            </div>
                             {teams.map(team => {
                                 const pos = positions[team.id] || 0;
-                                const pct = Math.round((pos / finishSteps) * 100);
-                                const isActive = activeTeam === team.id;
+                                const pct = Math.min(92, Math.round((pos / finishSteps) * 88));
+                                const fx = effects[team.id] || {};
+                                const st = streaks[team.id] || 0;
                                 return (
-                                    <button key={team.id} type="button" disabled={showResult}
-                                        onClick={() => !showResult && setActiveTeam(team.id)}
-                                        className={`w-full relative rounded-xl border-2 ${team.border} ${team.bg} p-3 text-left ${isActive ? 'lane-active' : ''}`}>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-sm font-bold ${team.text}`}>{team.name}</span>
-                                            {isActive && <span className="text-[10px] bg-orange-600 text-white px-2 py-0.5 rounded-full font-bold">ĐANG TRẢ LỜI</span>}
-                                            <span className="text-xs text-gray-500 ml-auto">{pos}/{finishSteps}</span>
+                                    <div key={team.id} className="lane">
+                                        <div className="lane-dashes" />
+                                        <div className="finish-line" />
+                                        <div className="absolute left-2 top-1 text-[10px] font-bold z-10" style={{ color: team.color }}>{team.short} {st >= 2 ? '🔥' : ''} {buffs[team.id]?.shield ? '🛡️' : ''} {buffs[team.id]?.double ? '⚡' : ''}</div>
+                                        <div className="absolute right-8 top-1 text-[10px] text-slate-300 z-10">{pos}/{finishSteps}</div>
+                                        {mystery && mystery.lane === team.id && !mystery.claimed && (
+                                            <div className="mystery-box" style={{ left: `${mystery.at}%` }}>?</div>
+                                        )}
+                                        <div style={{ left: `calc(${pct}% + 8px)` }} className="absolute top-0 bottom-0">
+                                            <F1Car color={team.color} nitro={fx.nitro} smoke={fx.smoke} shake={fx.shake} spin={fx.spin} />
                                         </div>
-                                        <div className="relative h-12 bg-slate-800/30 rounded-lg overflow-hidden">
-                                            <div className="absolute right-0 top-0 bottom-0 w-3 finish-flag rounded-r-lg opacity-90" />
-                                            <div className={`absolute top-1/2 -translate-y-1/2 text-3xl transition-all duration-700 ${nitroId === team.id ? 'nitro' : ''}`}
-                                                style={{ left: `calc(${pct}% - ${pct > 0 ? 18 : 4}px)` }}>
-                                                {team.emoji}
-                                            </div>
-                                            {nitroId === team.id && <span className="absolute text-sky-300 text-sm" style={{ left: `calc(${pct}% - 36px)`, top: '20%' }}>💨</span>}
-                                        </div>
-                                    </button>
+                                    </div>
                                 );
                             })}
                         </div>
+                        <div className="crowd-bar" />
                     </div>
 
-                    <div className="bg-white rounded-3xl shadow-2xl p-5 md:p-8">
-                        <div className="flex justify-between text-sm text-gray-500 mb-4">
-                            <span>Câu {qIndex + 1}/{questions.length}</span>
-                            <span>Bấm làn xe để đổi tổ</span>
+                    <div className="bg-slate-900 border border-slate-700 rounded-3xl p-4 md:p-6 shadow-xl">
+                        <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
+                            <span className="text-sm text-slate-400">Câu {qIndex + 1}/{questions.length}</span>
+                            <div className={`px-3 py-1 rounded-full font-black ${timeLeft <= 5 ? 'bg-red-600 animate-pulse' : 'bg-cyan-700'}`}>
+                                ⏱️ {timeLeft}s
+                            </div>
                         </div>
-                        <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-6"><MathText text={currentQ.prompt} /></h3>
-                        <div className="grid md:grid-cols-2 gap-3 mb-4">
-                            {currentQ.choices.map((choice, idx) => {
-                                let cls = 'p-4 rounded-xl border-2 text-left font-medium ';
-                                if (showResult) {
-                                    if (idx === currentQ.answer) cls += 'bg-emerald-100 border-emerald-500';
-                                    else if (idx === selected) cls += 'bg-red-100 border-red-500';
-                                    else cls += 'opacity-50 border-gray-200';
-                                } else cls += selected === idx ? 'bg-orange-100 border-orange-500' : 'border-gray-200 hover:border-orange-400';
-                                return (
-                                    <button key={idx} disabled={showResult} onClick={() => setSelected(idx)} className={cls}>
-                                        <span className="font-bold mr-2">{String.fromCharCode(65 + idx)}.</span>
-                                        <MathText text={choice} />
-                                    </button>
-                                );
-                            })}
+                        <div className="h-2 bg-slate-800 rounded-full mb-4 overflow-hidden">
+                            <div className={`h-full timer-bar ${timeLeft <= 5 ? 'bg-red-500' : 'bg-cyan-400'}`} style={{ width: `${timerPct}%` }} />
                         </div>
-                        {showResult && currentQ.explanation && (
-                            <div className="mb-4 p-3 rounded-xl bg-orange-50 border border-orange-200 text-sm"><MathText text={currentQ.explanation} /></div>
+
+                        <h3 className="text-xl md:text-2xl font-bold text-white mb-3"><MathText text={currentQ.prompt} /></h3>
+                        <div className="grid md:grid-cols-2 gap-2 mb-4">
+                            {currentQ.choices.map((choice, idx) => (
+                                <div key={idx} className={`p-3 rounded-xl border text-left ${idx === currentQ.answer && phase === 'boost' ? 'border-emerald-400 bg-emerald-900/40' : 'border-slate-600 bg-slate-800/60'}`}>
+                                    <span className="font-bold mr-2 text-amber-300">{String.fromCharCode(65 + idx)}.</span>
+                                    <MathText text={choice} />
+                                </div>
+                            ))}
+                        </div>
+                        {phase === 'boost' && currentQ.explanation && (
+                            <div className="mb-4 p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm text-slate-200"><MathText text={currentQ.explanation} /></div>
                         )}
-                        {!showResult && selected !== null && (
-                            <button onClick={submit} className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold text-lg">
-                                <i className="fas fa-bolt mr-2"></i>Xác nhận — {active?.name} nitro!
-                            </button>
-                        )}
+
+                        <p className="text-xs text-slate-400 mb-2">GV tick các tổ trả lời ĐÚNG (phím 1–4) → Xác nhận bứt tốc</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                            {teams.map((t, i) => (
+                                <button key={t.id} type="button" disabled={phase !== 'play'} onClick={() => toggleTeam(t.id)}
+                                    className={`team-pick px-3 py-4 rounded-xl font-bold border-2 ${correctTeams[t.id] ? 'selected bg-emerald-600 border-emerald-300' : 'bg-slate-800 border-slate-600'}`}
+                                    style={{ borderColor: correctTeams[t.id] ? undefined : t.color }}>
+                                    {correctTeams[t.id] ? '✓ ' : `${i + 1}. `}{t.short}
+                                </button>
+                            ))}
+                        </div>
+                        <button disabled={phase !== 'play'} onClick={confirmBoost}
+                            className="w-full py-4 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 disabled:opacity-40 text-white rounded-xl font-black text-lg shadow-lg">
+                            🏎️💨 XÁC NHẬN BỨT TỐC {Object.values(correctTeams).filter(Boolean).length ? `(${Object.values(correctTeams).filter(Boolean).length} tổ)` : ''}
+                        </button>
                     </div>
                 </div>
             );
