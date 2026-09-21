@@ -14,6 +14,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/html-docx-js@0.3.1/dist/html-docx.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -1812,6 +1813,44 @@
                 saveAs(blob, `De_Thi_Tong_Hop.doc`);
             };
 
+            const exportWordForGame = () => {
+                const dataToExport = Array.isArray(questions) ? questions : [];
+                if (mode !== "quiz" || !dataToExport.length) { alert("Chưa có câu hỏi trắc nghiệm để xuất cho Game Giáo Dục!"); return; }
+                const escapeHtml = (value) => String(value == null ? "" : value).replace(/[&<>]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char]));
+                const plain = (value) => escapeHtml(cleanOptionText(String(value == null ? "" : value)));
+                const rows = [], answerKeys = []; let questionNumber = 0;
+                const addQuestion = (prompt, options, answerIndex, explanation = "") => {
+                    questionNumber += 1; const choices = Array.isArray(options) ? options : [];
+                    rows.push(`<p><b>Câu ${questionNumber}:</b> ${plain(prompt)}</p>`);
+                    choices.forEach((choice, index) => rows.push(`<p>${String.fromCharCode(65 + index)}. ${plain(choice)}</p>`));
+                    const answer = String.fromCharCode(65 + Math.max(0, Math.min(answerIndex, choices.length - 1)));
+                    rows.push(`<p><b>Đáp án:</b> ${answer}</p>`);
+                    if (explanation) rows.push(`<p><b>Lời giải:</b> ${plain(explanation)}</p>`);
+                    rows.push('<p></p>'); answerKeys.push(`${questionNumber}.${answer}`);
+                };
+                dataToExport.forEach((q) => {
+                    if (!q) return;
+                    if (q.type === "multiple-choice") { const choices = (Array.isArray(q.options) ? q.options : []).slice(0, 4); while (choices.length < 4) choices.push(""); addQuestion(q.question, choices, Number.isInteger(q.correctAnswerIndex) ? q.correctAnswerIndex : 0, q.explanation || q.solution); }
+                    else if (q.type === "true-false") {
+                        const subItems = Array.isArray(q.subItems) ? q.subItems : [], answers = Array.isArray(q.correct_answers) ? q.correct_answers : [];
+                        if (subItems.length >= 2 || answers.length >= 2) {
+                            (subItems.length ? subItems : (Array.isArray(q.options) ? q.options : [])).slice(0, 4).forEach((item, index) => {
+                                const text = item && typeof item === "object" ? item.text : item;
+                                const correct = item && typeof item === "object" && item.isCorrect != null ? item.isCorrect : answers[index];
+                                addQuestion(`${q.question || ""} - Mệnh đề ${String.fromCharCode(97 + index)}: ${text || ""}`, ["Đúng", "Sai"], correct === true || String(correct).toLowerCase() === "true" ? 0 : 1);
+                            });
+                        } else addQuestion(q.question, ["Đúng", "Sai"], q.correctAnswerIndex === 0 ? 0 : 1, q.explanation || q.solution);
+                    } else if (q.type === "matching") {
+                        const columnA = Array.isArray(q.columnA) ? q.columnA : [], columnB = Array.isArray(q.columnB) ? q.columnB : [], matches = Array.isArray(q.correctMatches) ? q.correctMatches : [];
+                        columnA.forEach((itemA, index) => { const itemB = columnB[matches[index]] || ""; rows.push(`<p>${plain(itemA)} - ${plain(itemB)}</p>`); addQuestion(`Nối: ${itemA}`, [itemB, "Không có đáp án phù hợp"], 0); });
+                    } else if (q.type === "short-answer" || q.type === "fill-blank") addQuestion(q.question, [q.correctAnswer || "", "Đáp án khác"], 0, q.explanation || q.solution);
+                });
+                if (!questionNumber) { alert("Không có dạng câu hỏi phù hợp để xuất cho Game Giáo Dục!"); return; }
+                if (!window.htmlDocx || typeof window.htmlDocx.asBlob !== "function") { alert("Chưa tải được thư viện xuất DOCX. Hãy kiểm tra kết nối mạng rồi thử lại."); return; }
+                const html = `<html><head><meta charset="utf-8"><style>body{font-family:'Times New Roman',serif;font-size:12pt;line-height:1.45}.answer-key{margin-top:20pt;border-top:1px solid #000;padding-top:8pt}p{margin:0 0 5pt}</style></head><body><h1>ĐỀ THI GAME GIÁO DỤC</h1>${rows.join('')}<div class="answer-key"><p><b>BẢNG ĐÁP ÁN:</b></p><p>${answerKeys.join('   ')}</p></div></body></html>`;
+                saveAs(window.htmlDocx.asBlob(html), "De_Thi_Game_Giao_Duc.docx");
+            };
+
             const startPresentation = () => {
                 if (mode === "quiz" && questions.length === 0) return alert("Chưa có câu hỏi nào!");
                 if (mode === "essay" && essays.length === 0) return alert("Chưa có bài tập nào!");
@@ -2168,6 +2207,7 @@
                                         <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-purple-50 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-100 font-bold text-sm transition"><i className="fas fa-cog"></i> Cài đặt</button>
                                     )}
                                     <button onClick={exportWord} className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 font-bold text-sm transition"><i className="fas fa-file-word"></i> Word</button>
+                                    <button onClick={exportWordForGame} className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg hover:shadow-md font-bold text-sm transition flex items-center gap-1.5 shadow-sm" title="Xuất file Word (.docx) cấu trúc chuẩn để upload vào Game Giáo Dục"><i className="fas fa-gamepad"></i> Xuất Word cho Game</button>
                                     <button onClick={startPresentation} className="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold hover:shadow-lg hover:-translate-y-0.5 transition flex items-center gap-2 text-sm shadow-green-200"><i className="fas fa-chalkboard-teacher"></i> DẠY NGAY</button>
                                 </div>
                             </div>
