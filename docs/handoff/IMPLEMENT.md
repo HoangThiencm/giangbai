@@ -27,3 +27,22 @@
 - Không sửa mã nguồn/logic/UI.
 
 Bước tiếp: Antigravity `/verify`.
+
+---
+
+# IMPLEMENT: Random Duck Race Picker
+
+## Đã triển khai
+
+- Xây dựng lại `game-treasure.html` thành Đua Vịt Ngẫu Nhiên: canvas dòng sông, đếm ngược, đua tự động với xung tốc ngẫu nhiên, âm thanh Web Audio, vinh danh/confetti, lịch sử gọi tên và câu hỏi kiểm tra 30 giây.
+- Hỗ trợ danh sách học sinh được chuyển từ trò chơi, nhập tay, Excel và CSDL lớp học.
+- Cập nhật metadata game `treasure` trong `trochoi.compiled.js` theo PLAN.md.
+
+## Kiểm tra
+
+- Babel JSX transform cho `game-treasure.html`: PASS.
+- `git diff --check` cho ba file triển khai: PASS.
+
+## Giới hạn
+
+- Chưa kiểm thử thao tác trực tiếp trong trình duyệt và API CSDL; cần thực hiện theo VERIFY.md.
