@@ -12,3 +12,4 @@ package-lock.json
 js/*.bundle.js
 js/*.bundle-*.js
 docs/handoff/.lock
+GIAO AN/**/*.pdf

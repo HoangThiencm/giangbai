@@ -1077,12 +1077,12 @@ const App = () => {
     suitable: 'Củng cố khái niệm'
   }, {
     id: 'treasure',
-    name: 'Đua Vịt Kiến Thức',
-    icon: 'fa-flag-checkered',
+    name: 'Đua Vịt Ngẫu Nhiên',
+    icon: 'fa-feather-pointed',
     color: 'from-cyan-400 to-blue-500',
-    purpose: 'Thi đua nhóm',
-    description: 'Mỗi học sinh một vịt — trả lời đúng để tiến về đích. Nhập danh sách tay hoặc Excel',
-    suitable: 'Khởi động, thi đua giữa các nhóm'
+    purpose: 'Gọi học sinh ngẫu nhiên',
+    description: 'Mỗi học sinh một chú vịt bơi đua trên dòng sông — chú vịt về đích đầu tiên sẽ được gọi phát biểu hoặc nhận nhiệm vụ!',
+    suitable: 'Khởi động, kiểm tra bài cũ, gọi học sinh ngẫu nhiên hào hứng'
   }, {
     id: 'escape',
     name: 'Hứng Trứng Vàng',
