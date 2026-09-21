@@ -1,193 +1,177 @@
-# PLAN: Khắc phục sự cố Vehinh.html bị treo "Đang tải danh sách model..." và không vẽ được
+# PLAN: Khắc phục lỗi TypeError: undefined is not iterable trong QuizPresentationMode (taobaitap.html)
 
 ## 1. Hiện trạng & Phân tích nguyên nhân gốc rễ (Root Cause)
 
 ### Hiện trạng
-Khi người dùng mở trang `vehinh.html`:
-- Mục **Chọn model** bị kẹt cứng ở `<option>Đang tải danh sách model...</option>`.
-- Khung tóm tắt cấu hình bị kẹt ở `Đang kiểm tra cấu hình AI...`.
-- Người dùng nhấn nút **Vẽ Hình (Ctrl+Q)** nhưng không có bất kỳ phản hồi nào ("ko vẽ được").
+Khi người dùng bấm **Trình chiếu** (hoặc Dạy ngay) trong `taobaitap.html`:
+Trình duyệt báo lỗi màn hình đỏ / console:
+```text
+[06:25:39 PM] [GLOBAL] TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+at _iterableToArray (<anonymous>:5:77)
+    at _toConsumableArray (<anonymous>:3:66)
+    at <anonymous>:1385:21
+    at Array.map (<anonymous>)
+    at <anonymous>:1383:30
+    at commitHookEffectListMount (https://unpkg.com/react-dom@18/umd/react-dom.development.js:23199:28)
+...
+The above error occurred in the <QuizPresentationMode> component:
+    at QuizPresentationMode (<anonymous>:1321:25)
+    at App (<anonymous>:2443:21)
+```
 
 ### Phân tích Root Cause
 
-1. **Vấn đề vòng đời khởi động (Lifecycle Startup Lockup) trong `app.js`:**
-   - Tại dòng 337 của `app.js`:
+1. **Truy cập spread `[...q.options]` khi `q.options` là `undefined`:**
+   - Tại dòng 14216–14229 của `taobaitap.html`:
      ```javascript
-     document.addEventListener('DOMContentLoaded', function () {
-         // Toàn bộ khởi tạo canvas, DOM elements, syncDrawingModelSelect, loadDrawingAiConfig, addEventListener cho nút Vẽ hình...
-     });
+     useEffect(() => {
+         document.body.style.overflow = 'hidden';
+         const shuffled = questions.map(q => {
+             if (!settings.shuffleOptions) return q;
+             const options = [...q.options];
+             const correctAnswer = options[q.correctAnswerIndex];
+             const shuffledIndices = options.map((_, i) => i).sort(() => Math.random() - 0.5);
+             const newOptions = shuffledIndices.map(i => options[i]);
+             const newCorrectIndex = newOptions.indexOf(correctAnswer);
+             return { ...q, options: newOptions, correctAnswerIndex: newCorrectIndex };
+         });
+         setShuffledQuestions(shuffled);
+         return () => { document.body.style.overflow = 'auto'; };
+     }, [questions, settings.shuffleOptions]);
      ```
-   - Trong `vehinh.html`, thẻ `<script src="app.js?..."></script>` đặt ở cuối `<body>` (dòng 525).
-   - Khi trình duyệt tải tài nguyên (đặc biệt khi có cache, duyệt qua iframe/webview, hoặc kết nối mạng nạp chậm các CDN trong `<head>`), đến thời điểm `app.js` được thực thi thì `document.readyState` có thể đã chuyển sang `'interactive'` hoặc `'complete'`.
-   - Chuẩn HTML DOM quy định: Nếu sự kiện `DOMContentLoaded` đã xảy ra trước khi hàm `addEventListener('DOMContentLoaded', ...)` được đăng ký, **sự kiện sẽ KHÔNG BAO GIỜ được kích hoạt lại**!
-   - Kết quả: Toàn bộ hàm bên trong không bao giờ chạy:
-     + `#geometry-canvas` không được khởi tạo.
-     + `syncDrawingModelSelect()` không chạy $\rightarrow$ dropdown giữ nguyên option HTML tĩnh: `Đang tải danh sách model...`.
-     + `updateDrawingAiSummary()` không chạy $\rightarrow$ giữ nguyên text: `Đang kiểm tra cấu hình AI...`.
-     + Nút `#generate-btn` ("Vẽ hình") không được gắn sự kiện `click` $\rightarrow$ bấm vào hoàn toàn vô tác dụng.
+   - Khi tùy chọn **Tráo đáp án** (`settings.shuffleOptions`) được bật:
+     Khi người dùng tạo đề tổng hợp hoặc bài tập có nhiều dạng câu hỏi:
+     + Dạng **Trả lời ngắn** (`short-answer`) hoặc **Điền khuyết** (`fill-blank`): câu hỏi chỉ có `question` và `correctAnswer`, **hoàn toàn không có thuộc tính `options`** (`q.options === undefined`).
+     + Dạng **Nối cột** (`matching`): câu hỏi chỉ có `columnA`, `columnB`, `correctMatches`, **không có thuộc tính `options`**.
+     + Dạng câu tự luận hoặc câu hỏi từ AI/import chưa có mảng `options`.
+   - Trình biên dịch Babel biến đổi cú pháp spread `[...q.options]` thành `_toConsumableArray(q.options)` $\rightarrow$ gọi `_iterableToArray(q.options)`.
+   - Khi `q.options` là `undefined`, trình duyệt quăng ngay ngoại lệ:
+     `TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))`.
+   - Do hàm này nằm trong `useEffect` đầu tiên của `QuizPresentationMode`, ngoại lệ xảy ra trong giai đoạn `commitHookEffectListMount` làm toàn bộ component bị sụp đổ (crash).
 
-2. **Gọi `createPatterns()` ở top-level trước khi Fabric.js sẵn sàng:**
-   - Tại dòng 23 của `app.js`:
-     ```javascript
-     function createPatterns() {
-         const patternSize = 10;
-         const patternCanvas = new fabric.StaticCanvas(null, { width: patternSize, height: patternSize });
-         ...
-     }
-     createPatterns();
-     ```
-   - Lệnh này chạy ngay khi file `app.js` được nạp, hoàn toàn không có guard kiểm tra `typeof fabric !== 'undefined'`.
-   - Nếu CDN `cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js` gặp sự cố (mạng học đường chặn cdnjs, mạng lag, chế độ offline), `fabric` sẽ là `undefined` $\rightarrow$ Ném ngay lỗi: `Uncaught ReferenceError: fabric is not defined` tại dòng 10.
-   - Khi đó script `app.js` lập tức dừng thực thi trước khi đến được dòng 337. `vehinh.html` cũng chưa có CDN dự phòng (fallback) cho `fabric.js`.
+2. **Lỗi logic nghiêm trọng khi tráo đáp án các dạng câu hỏi đặc thù:**
+   - **Câu Đúng/Sai đơn (`true-false` thường):** Có `options = ['Đúng', 'Sai']`. Nếu bị tráo ngẫu nhiên, vị trí `0` và `1` bị đảo lộn. Nhưng các phím tắt `D` (`handleOptionSelect(0)`), `S` (`handleOptionSelect(1)`) và giao diện hiển thị (`opt === 'Đúng' ? check : times`) mặc định cố định `0` là Đúng, `1` là Sai. Việc tráo sẽ làm sai lệch hoàn toàn kết quả chấm điểm.
+   - **Câu Đúng/Sai Công văn 7991 (`isCv7991TrueFalseItem(q)`):** Có 4 ý con a, b, c, d với mảng đáp án `correct_answers` và `subItems`. Nếu tráo `q.options` đơn thuần mà không tráo tương ứng `correct_answers`, đề thi sẽ bị sai lệch toàn bộ đáp án.
+   - **Do đó: Chỉ duy nhất câu trắc nghiệm 4 lựa chọn (`multiple-choice`) mới được phép tráo đáp án!**
 
-3. **HTML tĩnh chứa placeholder rỗng thay vì giá trị mặc định:**
-   - Trong `vehinh.html` (dòng 371 & 374):
-     `<option value="">Đang tải danh sách model...</option>`
-     `Đang kiểm tra cấu hình AI...`
-   - Điều này khiến giao diện trông như bị lỗi nếu JS tải trễ. Đáng lẽ cần điền sẵn các model mặc định của hệ thống (`✨ Theo Cài đặt chung...`, `Gemini 3.6 Flash...`).
+3. **Thiếu guard phòng vệ (Defensive Guards) trong `QuizPresentationMode`:**
+   - `settings` có thể bị `undefined` nếu không truyền đúng, dẫn đến crash khi truy cập `settings.countdownTime` hay `settings.pointsPerQuestion`.
+   - `questions` rỗng hoặc phần tử hiện tại `q` bị undefined chưa có fallback UI an toàn.
+   - Các lệnh `.map()` hiển thị options `q.options.map` chưa có fallback `(q.options || [])`.
 
-4. **Chặn 401 không cần thiết ở endpoint GET trong `api/vehinh_ai.php`:**
-   - Tại dòng 159 của `api/vehinh_ai.php`, lệnh `vehinh_require_login()` được gọi trước cả khối xử lý request GET:
-     ```php
-     vehinh_require_login();
-     if ($_SERVER['REQUEST_METHOD'] === 'GET') { ... }
-     ```
-   - Khi người dùng chưa có session PHP (hoặc session cookie bị mất/hết hạn), việc gọi `GET api/vehinh_ai.php` để lấy danh sách model và kiểm tra trạng thái bị chặn đứng với mã lỗi HTTP 401.
-   - Endpoint GET chỉ trả về danh sách model công khai của hệ thống và cờ trạng thái, không tiết lộ dữ liệu nhạy cảm, nên không được chặn 401.
-   - Đồng thời, ở request POST, nếu client có gửi kèm `api_keys` (người dùng tự nhập key hoặc lấy từ `localStorage`), hệ thống nên cho phép gọi AI mà không ép buộc phải có session trên máy chủ.
-
-5. **Lỗi hồi quy trong test `tests/game-quiz-importer-smoke.js`:**
-   - Commit `9be42aa` thêm hàm `isGeoGebraCoordinateRequested` vào `formatGeoGebraExecuteCommand` nhưng trong test `tests/game-quiz-importer-smoke.js` chưa trích xuất hàm này, dẫn đến `ReferenceError: isGeoGebraCoordinateRequested is not defined`.
+4. **Các file cùng chứa mã nguồn này:**
+   - `taobaitap.html` (dòng 14202–14643)
+   - `backupcode viettailieu/taobaitap.html` (dòng 13912–14350)
+   - `smartquiz.html` (dòng 471–910)
 
 ---
 
-## 2. Giải pháp Triển khai Chi tiết cho Coder
+## 2. Kế hoạch Triển khai Chi tiết cho Coder
 
-### Bước 1: Tối ưu và bảo vệ vòng đời khởi động trong `app.js`
+### Bước 1: Sửa chữa và bọc guard an toàn cho `QuizPresentationMode` trong `taobaitap.html`
 
-1. **Bảo vệ `createPatterns()`:**
-   - Thêm guard an toàn để không bao giờ ném Exception nếu `fabric` chưa sẵn sàng:
-     ```javascript
-     function createPatterns() {
-         if (typeof fabric === 'undefined' || !fabric.StaticCanvas) return;
-         try {
-             const patternSize = 10;
-             const patternCanvas = new fabric.StaticCanvas(null, { width: patternSize, height: patternSize });
-             // ... các mẫu pattern ...
-         } catch (e) {
-             console.warn('Không thể tạo chart patterns:', e);
-         }
-     }
-     ```
-   - Xóa lời gọi top-level `createPatterns();` ở dòng 23, chuyển lời gọi này vào bên trong hàm khởi động `bootVehinhApp()`.
+Vị trí: Dòng ~14202 đến ~14643 trong `taobaitap.html`.
 
-2. **Đóng gói toàn bộ logic khởi tạo trong `bootVehinhApp()` và hỗ trợ khởi động kép:**
-   - Bọc toàn bộ nội dung trong `document.addEventListener('DOMContentLoaded', ...)` vào hàm:
-     ```javascript
-     function bootVehinhApp() {
-         if (window.__vehinhAppBooted) return;
-         window.__vehinhAppBooted = true;
-         createPatterns();
-         // ... toàn bộ nội dung khởi tạo canvas, DOM elements, sự kiện ...
-     }
-     
-     if (document.readyState === 'loading') {
-         document.addEventListener('DOMContentLoaded', bootVehinhApp, { once: true });
-     } else {
-         bootVehinhApp();
-     }
-     ```
-   - Đảm bảo dù trang đã `loading`, `interactive` hay `complete`, `bootVehinhApp()` luôn được kích hoạt lập tức mà không bao giờ bị bỏ sót.
-
-3. **Đồng bộ Dropdown Model và Tóm tắt AI ngay lập tức:**
-   - Trong `loadDrawingAiConfig()`:
-     Đảm bảo `syncDrawingModelSelect()` và `updateDrawingAiSummary()` chạy đồng bộ ngay ở dòng đầu tiên của hàm trước khi gửi request mạng `fetch('api/vehinh_ai.php')`.
-     Khi đó, ngay khi script vừa chạy, dropdown lập tức có đầy đủ danh sách model và tóm tắt, tuyệt đối không bao giờ kẹt ở "Đang tải...".
-
-4. **Đảm bảo an toàn cho `formatGeoGebraExecuteCommand`:**
-   - Trong `formatGeoGebraExecuteCommand(commandsArray)`:
-     Kiểm tra an toàn `typeof isGeoGebraCoordinateRequested === 'function'` để không bị crash nếu chạy trong môi trường sandbox cô lập.
-
----
-
-### Bước 2: Cập nhật `vehinh.html`
-
-1. **Cung cấp danh sách option mặc định trực tiếp trong HTML:**
-   Thay thế các dòng 368–375 trong `vehinh.html`:
-   ```html
-   <label for="ai-model-select" class="mb-2 mt-3 block text-sm font-semibold text-gray-200">Chọn model</label>
-   <select id="ai-model-select"
-       class="w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-indigo-500"
-       onchange="window.__vehinhOnModelChange && window.__vehinhOnModelChange()">
-       <option value="__system__">✨ Theo Cài đặt chung (Gemini 3.7 Flash · DP: Gemini 2.5 Flash)</option>
-       <option value="gemini-3.6-flash">Gemini 3.6 Flash (khuyên dùng)</option>
-       <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
-       <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
-       <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-       <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-       <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-       <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
-   </select>
-   <div id="ai-model-summary" class="mt-2 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-xs leading-5 text-gray-300">
-       <div><strong>Google Gemini</strong>: <code>gemini-3.7-flash</code></div>
-       <div>Gemini 3.7 Flash · theo Cài đặt chung · có hỗ trợ ảnh</div>
-   </div>
+1. **Khởi tạo và bọc fallback cho `settings`:**
+   ```javascript
+   const safeSettings = settings || {};
+   const countdownTime = Number(safeSettings.countdownTime) || 0;
+   const pointsPerQuestion = Number(safeSettings.pointsPerQuestion) > 0 ? Number(safeSettings.pointsPerQuestion) : 1;
+   const autoNext = !!safeSettings.autoNext;
+   const shuffleOptions = !!safeSettings.shuffleOptions;
+   const safeQuestions = Array.isArray(questions) ? questions : [];
    ```
 
-2. **Thêm CDN Fallback cho `fabric.js`:**
-   Tại dòng 19 trong `vehinh.html`:
-   ```html
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-   <script>
-       if (typeof fabric === 'undefined') {
-           document.write('<script src="https://cdn.jsdelivr.net/npm/fabric@5.3.1/dist/fabric.min.js"><\/script>');
-       }
-   </script>
+2. **Sửa `useEffect` tráo đáp án — CHỈ tráo cho `multiple-choice` hợp lệ:**
+   ```javascript
+   useEffect(() => {
+       document.body.style.overflow = 'hidden';
+       const shuffled = safeQuestions.map(q => {
+           if (!q) return q;
+           // CHỈ tráo đáp án cho câu hỏi multiple-choice có mảng options hợp lệ
+           if (!shuffleOptions || q.type !== 'multiple-choice' || !Array.isArray(q.options) || q.options.length < 2) {
+               return q;
+           }
+           const options = [...q.options];
+           const validIdx = (Number.isInteger(q.correctAnswerIndex) && q.correctAnswerIndex >= 0 && q.correctAnswerIndex < options.length)
+               ? q.correctAnswerIndex
+               : 0;
+           const correctAnswer = options[validIdx];
+           const shuffledIndices = options.map((_, i) => i).sort(() => Math.random() - 0.5);
+           const newOptions = shuffledIndices.map(i => options[i]);
+           const newCorrectIndex = newOptions.indexOf(correctAnswer);
+           return { ...q, options: newOptions, correctAnswerIndex: newCorrectIndex >= 0 ? newCorrectIndex : validIdx };
+       });
+       setShuffledQuestions(shuffled);
+       return () => { document.body.style.overflow = 'auto'; };
+   }, [questions, shuffleOptions]);
    ```
 
+3. **Bọc guard an toàn cho các `useEffect` khác và bộ đếm giờ:**
+   - Dùng `countdownTime`, `autoNext`, `pointsPerQuestion` thay cho truy cập trực tiếp `settings.*`.
+   - Trong `handleFillBlankSubmit`: kiểm tra `const target = String(q.correctAnswer || "").trim().toLowerCase();`.
+   - Trong `handleOptionSelect`: kiểm tra `if (!q) return;`.
+
+4. **Bọc guard UI khi `q` không tồn tại:**
+   Trước khi render giao diện câu hỏi:
+   ```javascript
+   const q = shuffledQuestions[idx] || safeQuestions[idx];
+   if (!q) {
+       return (
+           <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col items-center justify-center p-6">
+               <div className="bg-slate-800 p-8 rounded-2xl max-w-md w-full text-center">
+                   <i className="fas fa-exclamation-triangle text-4xl text-yellow-400 mb-4"></i>
+                   <h3 className="text-xl font-bold mb-2">Không tìm thấy câu hỏi</h3>
+                   <p className="text-gray-400 mb-6">Danh sách câu hỏi trống hoặc câu hỏi hiện tại không hợp lệ.</p>
+                   <button onClick={onExit} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition">Quay lại</button>
+               </div>
+           </div>
+       );
+   }
+   ```
+
+5. **Bọc guard mảng khi render:**
+   - Multiple choice: `{(Array.isArray(q.options) ? q.options : []).map((opt, i) => { ... })}`
+   - True-false đơn: `{((Array.isArray(q.options) && q.options.length) ? q.options : ['Đúng', 'Sai']).map((opt, i) => { ... })}`
+   - Matching Cột A: `{(Array.isArray(q.columnA) ? q.columnA : []).map((item, i) => { ... })}`
+   - Matching Cột B: `{(Array.isArray(q.columnB) ? q.columnB : []).map((item, j) => { ... })}`
+   - Matching Kết quả: `{(Array.isArray(q.correctMatches) ? q.correctMatches : []).map((matchIdx, i) => ( ... ))}`
+
 ---
 
-### Bước 3: Cập nhật `api/vehinh_ai.php`
+### Bước 2: Đồng bộ sửa chữa cho `backupcode viettailieu/taobaitap.html` và `smartquiz.html`
 
-1. **Cho phép GET request đọc cấu hình model mà không bị chặn 401:**
-   - Chuyển `vehinh_require_login()` xuống dưới khối xử lý `$_SERVER['REQUEST_METHOD'] === 'GET'`.
-   - Khối GET trả về `ok: true`, danh sách models và cờ trạng thái `configured`.
-2. **Nới lỏng đăng nhập cho POST nếu client gửi kèm `api_keys`:**
-   - Cập nhật hàm `vehinh_require_login(?array $clientKeys = null)`:
-     ```php
-     function vehinh_require_login(?array $clientKeys = null): void
-     {
-         if (!empty($_SESSION['user_id'])) {
-             return;
-         }
-         if (is_array($clientKeys) && !empty($clientKeys)) {
-             return; // Cho phép người dùng sử dụng key cá nhân hợp lệ
-         }
-         respond(['error' => 'Cần đăng nhập hoặc cung cấp Gemini API Key để dùng AI vẽ hình.'], 401);
-     }
-     ```
-   - Khi nhận body POST, trích xuất `$clientKeys = normalize_api_keys($data['api_keys'] ?? ($data['keys'] ?? []));` rồi mới gọi `vehinh_require_login($clientKeys);`.
+- Áp dụng cùng logic an toàn cho `QuizPresentationMode` trong:
+  + `backupcode viettailieu/taobaitap.html` (dòng ~13912)
+  + `smartquiz.html` (dòng ~471)
 
 ---
 
-### Bước 4: Sửa `tests/game-quiz-importer-smoke.js` & Viết Test Mới `tests/vehinh-boot-smoke.js`
+### Bước 3: Viết bài kiểm thử tự động `tests/taobaitap-presentation-smoke.js`
 
-1. **Trong `tests/game-quiz-importer-smoke.js`:**
-   - Thêm `extractNamed(appJs, 'isGeoGebraCoordinateRequested')` vào mảng `extractSrc`.
-   - Cập nhật kiểm tra `formatGeoGebraExecuteCommand` để khớp với logic tiền tố `ShowAxes`/`ShowGrid`.
-
-2. **Tạo mới `tests/vehinh-boot-smoke.js`:**
-   - Kiểm tra `app.js` có mẫu khởi động an toàn kép (`document.readyState === 'loading' ? addEventListener : bootVehinhApp()`).
-   - Kiểm tra `createPatterns` có guard `typeof fabric === 'undefined'`.
-   - Kiểm tra `vehinh.html` có các option model mặc định trong HTML tĩnh và có CDN fallback cho `fabric.js`.
-   - Kiểm tra `api/vehinh_ai.php` xử lý GET không bị chặn 401 khi chưa có session.
-   - Chạy test đảm bảo 100% PASS.
+Viết file test chạy bằng Node:
+1. Trích xuất logic `shuffle` và render helper của `QuizPresentationMode` từ cả 3 file:
+   `taobaitap.html`, `backupcode viettailieu/taobaitap.html`, `smartquiz.html`.
+2. Chạy test với các bộ dữ liệu:
+   - Dữ liệu câu hỏi hỗn hợp gồm: Multiple choice, True/False đơn, True/False CV7991 (4 ý con), Short answer (không có `options`), Fill blank (không có `options`), Matching (`columnA`/`columnB`, không có `options`), câu bị null/undefined.
+   - Chạy với `shuffleOptions = true` và `shuffleOptions = false`.
+   - Chạy với `settings = undefined`, `settings = {}`.
+3. Kiểm tra khẳng định (`assert`):
+   - Tuyệt đối không ném lỗi `TypeError: undefined is not iterable` hoặc `Cannot read property of undefined`.
+   - Đáp án của câu `multiple-choice` tráo đúng nhưng đáp án đúng (`correctAnswerIndex`) vẫn tương ứng nội dung đáp án ban đầu.
+   - Các câu `short-answer`, `fill-blank`, `matching`, `true-false` không bị lỗi hoặc xáo trộn sai cấu trúc.
+4. Chạy lại toàn bộ test suite:
+   - `tests/taobaitap-presentation-smoke.js`
+   - `tests/taobaitap-plan-smoke.js`
+   - `tests/taobaitap-thitructuyen-bridge-smoke.js`
+   - `tests/cv7991-taobaitap-thitructuyen-sync-smoke.js`
+   Đảm bảo 100% PASS.
 
 ---
 
 ## 3. Danh sách File Cần Chỉnh Sửa
-1. `app.js` (Sửa guard `createPatterns`, đóng gói `bootVehinhApp`, khởi động kép `readyState`, an toàn cho GeoGebra helper)
-2. `vehinh.html` (Thêm model mặc định, thêm fallback CDN `fabric.js`)
-3. `api/vehinh_ai.php` (Mở GET không chặn 401, cho phép POST với client API keys)
-4. `tests/game-quiz-importer-smoke.js` (Cập nhật `isGeoGebraCoordinateRequested` vào sandbox)
-5. `tests/vehinh-boot-smoke.js` (Tạo mới để kiểm thử tự động toàn diện)
+
+1. `taobaitap.html` (Sửa guard `QuizPresentationMode`, bảo vệ `q.options`, bọc fallback `safeSettings` và render safe arrays)
+2. `backupcode viettailieu/taobaitap.html` (Đồng bộ sửa `QuizPresentationMode`)
+3. `smartquiz.html` (Đồng bộ sửa `QuizPresentationMode`)
+4. `tests/taobaitap-presentation-smoke.js` (File test mới kiểm thử tự động toàn diện chế độ trình chiếu)

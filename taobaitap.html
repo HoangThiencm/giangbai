@@ -14200,13 +14200,19 @@ module.exports = {
 
         // --- TRÌNH CHIẾU TRẮC NGHIỆM ---
         const QuizPresentationMode = ({ questions, onExit, settings }) => { /* Giữ nguyên QuizPresentationMode */
+            const safeSettings = settings || {};
+            const countdownTime = Number(safeSettings.countdownTime) || 0;
+            const pointsPerQuestion = Number(safeSettings.pointsPerQuestion) > 0 ? Number(safeSettings.pointsPerQuestion) : 1;
+            const autoNext = !!safeSettings.autoNext;
+            const shuffleOptions = !!safeSettings.shuffleOptions;
+            const safeQuestions = Array.isArray(questions) ? questions : [];
             const [idx, setIdx] = useState(0);
             const [showAns, setShowAns] = useState(false);
             const [selectedOpt, setSelectedOpt] = useState(null);
             const [fillBlankAnswer, setFillBlankAnswer] = useState("");
             const [matchingAnswers, setMatchingAnswers] = useState([]);
             const [selectedAIndex, setSelectedAIndex] = useState(null);
-            const [timeLeft, setTimeLeft] = useState(settings.countdownTime);
+            const [timeLeft, setTimeLeft] = useState(countdownTime);
             const [score, setScore] = useState(0);
             const [shuffledQuestions, setShuffledQuestions] = useState([]);
             const [showResults, setShowResults] = useState(false);
@@ -14215,71 +14221,75 @@ module.exports = {
 
             useEffect(() => {
                 document.body.style.overflow = 'hidden';
-                const shuffled = questions.map(q => {
-                    if (!settings.shuffleOptions) return q;
+                const shuffled = safeQuestions.map(q => {
+                    if (!q || !shuffleOptions || q.type !== 'multiple-choice' || !Array.isArray(q.options) || q.options.length < 2) return q;
                     const options = [...q.options];
-                    const correctAnswer = options[q.correctAnswerIndex];
+                    const validIdx = (Number.isInteger(q.correctAnswerIndex) && q.correctAnswerIndex >= 0 && q.correctAnswerIndex < options.length) ? q.correctAnswerIndex : 0;
+                    const correctAnswer = options[validIdx];
                     const shuffledIndices = options.map((_, i) => i).sort(() => Math.random() - 0.5);
                     const newOptions = shuffledIndices.map(i => options[i]);
                     const newCorrectIndex = newOptions.indexOf(correctAnswer);
-                    return { ...q, options: newOptions, correctAnswerIndex: newCorrectIndex };
+                    return { ...q, options: newOptions, correctAnswerIndex: newCorrectIndex >= 0 ? newCorrectIndex : validIdx };
                 });
                 setShuffledQuestions(shuffled);
                 return () => { document.body.style.overflow = 'auto'; };
-            }, [questions, settings.shuffleOptions]);
+            }, [questions, shuffleOptions]);
 
             useEffect(() => {
-                if (settings.countdownTime <= 0 || showAns || showResults) return;
+                if (countdownTime <= 0 || showAns || showResults) return;
                 const timer = setInterval(() => {
                     setTimeLeft(prev => {
                         if (prev <= 1) {
                             clearInterval(timer);
-                            if (settings.autoNext) setTimeout(() => handleNext(), 100);
+                            if (autoNext) setTimeout(() => handleNext(), 100);
                             return 0;
                         }
                         return prev - 1;
                     });
                 }, 1000);
                 return () => clearInterval(timer);
-            }, [idx, showAns, settings.countdownTime, settings.autoNext, showResults, handleNext]);
+            }, [idx, showAns, countdownTime, autoNext, showResults, handleNext]);
 
             // Tính điểm cho matching khi hiện đáp án
             useEffect(() => {
                 if (!showAns) return;
-                const q = shuffledQuestions[idx] || questions[idx];
-                if (q.type === "matching" && matchingAnswers.length > 0) {
+                const q = shuffledQuestions[idx] || safeQuestions[idx];
+                if (q && q.type === "matching" && matchingAnswers.length > 0 && Array.isArray(q.correctMatches) && q.correctMatches.length > 0) {
                     const correctMatches = q.correctMatches.filter((matchIdx, i) => matchingAnswers[i] === matchIdx).length;
                     const totalMatches = q.correctMatches.length;
                     const scoreRatio = correctMatches / totalMatches;
-                    setScore(prev => prev + (settings.pointsPerQuestion * scoreRatio));
+                    setScore(prev => prev + (pointsPerQuestion * scoreRatio));
                 }
-            }, [showAns, idx, matchingAnswers, shuffledQuestions, questions, settings.pointsPerQuestion]);
+            }, [showAns, idx, matchingAnswers, shuffledQuestions, safeQuestions, pointsPerQuestion]);
 
             useEffect(() => {
-                setTimeLeft(settings.countdownTime);
+                setTimeLeft(countdownTime);
                 setShowAns(false);
                 setSelectedOpt(null);
                 setFillBlankAnswer("");
                 setMatchingAnswers([]);
                 setSelectedAIndex(null);
-            }, [idx, settings.countdownTime]);
+            }, [idx, countdownTime]);
 
             const handleOptionSelect = (optionIndex) => {
                 if (showAns) return;
                 setSelectedOpt(optionIndex);
-                const q = shuffledQuestions[idx] || questions[idx];
+                const q = shuffledQuestions[idx] || safeQuestions[idx];
+                if (!q) return;
                 if (optionIndex === q.correctAnswerIndex) {
-                    setScore(prev => prev + settings.pointsPerQuestion);
+                    setScore(prev => prev + pointsPerQuestion);
                 }
             };
 
             const handleFillBlankSubmit = () => {
                 if (showAns) return;
-                const q = shuffledQuestions[idx] || questions[idx];
-                const isCorrect = fillBlankAnswer.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase();
+                const q = shuffledQuestions[idx] || safeQuestions[idx];
+                if (!q) return;
+                const target = String(q.correctAnswer || "").trim().toLowerCase();
+                const isCorrect = fillBlankAnswer.trim().toLowerCase() === target;
                 setSelectedOpt(isCorrect ? 0 : 1); // 0 for correct, 1 for incorrect
                 if (isCorrect) {
-                    setScore(prev => prev + settings.pointsPerQuestion);
+                    setScore(prev => prev + pointsPerQuestion);
                 }
             };
 
@@ -14306,32 +14316,32 @@ module.exports = {
                     case "Escape": onExit(); break;
                     case "1": case "2": case "3": case "4":
                         if (!showAns) {
-                            const q = shuffledQuestions[idx] || questions[idx];
-                            if (q.type === "multiple-choice") {
+                            const q = shuffledQuestions[idx] || safeQuestions[idx];
+                            if (q && q.type === "multiple-choice") {
                                 handleOptionSelect(parseInt(e.key) - 1);
                             }
                         }
                         break;
                     case "d": case "D":
                         if (!showAns) {
-                            const q = shuffledQuestions[idx] || questions[idx];
-                            if (q.type === "true-false") {
+                            const q = shuffledQuestions[idx] || safeQuestions[idx];
+                            if (q && q.type === "true-false") {
                                 handleOptionSelect(0); // Đúng
                             }
                         }
                         break;
                     case "s": case "S":
                         if (!showAns) {
-                            const q = shuffledQuestions[idx] || questions[idx];
-                            if (q.type === "true-false") {
+                            const q = shuffledQuestions[idx] || safeQuestions[idx];
+                            if (q && q.type === "true-false") {
                                 handleOptionSelect(1); // Sai
                             }
                         }
                         break;
                     case "Enter":
                         if (!showAns) {
-                            const q = shuffledQuestions[idx] || questions[idx];
-                            if ((q.type === "fill-blank" || q.type === "short-answer") && fillBlankAnswer.toString().trim()) {
+                            const q = shuffledQuestions[idx] || safeQuestions[idx];
+                            if (q && (q.type === "fill-blank" || q.type === "short-answer") && fillBlankAnswer.toString().trim()) {
                                 handleFillBlankSubmit();
                             }
                         }
@@ -14346,7 +14356,7 @@ module.exports = {
 
             if (showResults) {
                 const totalScore = (score).toFixed(1);
-                const percentage = ((score / (questions.length * settings.pointsPerQuestion)) * 100).toFixed(1);
+                const percentage = safeQuestions.length ? ((score / (safeQuestions.length * pointsPerQuestion)) * 100).toFixed(1) : '0.0';
 
                 return (
                     <div className="fixed inset-0 bg-gradient-to-br from-blue-900 to-purple-900 text-white z-50 flex flex-col items-center justify-center p-6">
@@ -14365,7 +14375,7 @@ module.exports = {
                                     <div className="text-sm text-green-500">Tỷ lệ</div>
                                 </div>
                                 <div className="bg-purple-50 p-4 rounded-xl">
-                                    <div className="text-2xl font-bold text-purple-600">{questions.length}</div>
+                                    <div className="text-2xl font-bold text-purple-600">{safeQuestions.length}</div>
                                     <div className="text-sm text-purple-500">Tổng câu</div>
                                 </div>
                             </div>
@@ -14378,15 +14388,29 @@ module.exports = {
                 );
             }
 
-            const q = shuffledQuestions[idx] || questions[idx];
+            const q = shuffledQuestions[idx] || safeQuestions[idx];
+
+            if (!q) {
+                return (
+                    <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col items-center justify-center p-6">
+                        <div className="bg-slate-800 p-8 rounded-2xl max-w-md w-full text-center">
+                            <i className="fas fa-exclamation-triangle text-4xl text-yellow-400 mb-4"></i>
+                            <h3 className="text-xl font-bold mb-2">Không tìm thấy câu hỏi</h3>
+                            <p className="text-gray-400 mb-6">Danh sách câu hỏi trống hoặc câu hỏi hiện tại không hợp lệ.</p>
+                            <button onClick={onExit} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition">Quay lại</button>
+                        </div>
+                    </div>
+                );
+            }
+            const safeCorrectMatches = Array.isArray(q.correctMatches) ? q.correctMatches : [];
 
             return (
                 <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col p-2 md:p-4 transition-colors duration-500">
                     <div className="flex justify-between items-center mb-2">
                         <button onClick={onExit} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm"><i className="fas fa-times"></i> <span className="hidden md:inline">Thoát</span></button>
-                        <div className="text-lg font-bold text-gray-300">Câu {idx + 1} <span className="text-sm font-normal text-gray-500">/ {questions.length}</span></div>
+                        <div className="text-lg font-bold text-gray-300">Câu {idx + 1} <span className="text-sm font-normal text-gray-500">/ {safeQuestions.length}</span></div>
                         <div className="flex items-center gap-4">
-                            {settings.countdownTime > 0 && (
+                            {countdownTime > 0 && (
                                 <div className={`px-3 py-1 rounded-full font-bold ${timeLeft <= 10 ? 'bg-red-600 animate-pulse' : 'bg-blue-600'}`}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
                             )}
                             <div className="bg-green-600 px-3 py-1 rounded-full font-bold">Điểm: {(score).toFixed(1)}</div>
@@ -14400,7 +14424,7 @@ module.exports = {
                             {/* Hiển thị theo loại trắc nghiệm */}
                             {q.type === "multiple-choice" && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 z-10">
-                                    {q.options.map((opt, i) => {
+                                    {(Array.isArray(q.options) ? q.options : []).map((opt, i) => {
                                         let containerClass = "p-6 rounded-2xl text-xl border-2 transition-all duration-300 cursor-pointer flex items-center gap-4 relative overflow-hidden presentation-option ";
                                         if (showAns && i === q.correctAnswerIndex) containerClass += "bg-green-50 border-green-500 text-green-900 font-bold shadow-lg transform scale-105 ring-4 ring-green-100";
                                         else if (selectedOpt === i) containerClass += "bg-blue-50 border-blue-500 text-blue-900 shadow-md";
@@ -14433,7 +14457,7 @@ module.exports = {
 
                             {q.type === "true-false" && !isCv7991TrueFalseItem(q) && (
                                 <div className="flex gap-8 justify-center z-10">
-                                    {q.options.map((opt, i) => {
+                                    {((Array.isArray(q.options) && q.options.length) ? q.options : ['Đúng', 'Sai']).map((opt, i) => {
                                         let containerClass = "p-8 rounded-2xl text-2xl border-2 transition-all duration-300 cursor-pointer flex flex-col items-center gap-3 relative overflow-hidden presentation-option ";
                                         if (showAns && i === q.correctAnswerIndex) containerClass += "bg-green-50 border-green-500 text-green-900 font-bold shadow-lg transform scale-105 ring-4 ring-green-100";
                                         else if (selectedOpt === i) containerClass += "bg-blue-50 border-blue-500 text-blue-900 shadow-md";
@@ -14487,7 +14511,7 @@ module.exports = {
                                                 <span className="font-medium">Đáp án đúng: </span>
                                                 <MathText text={q.correctAnswer} />
                                             </div>
-                                            {selectedOpt === 0 && <div className="text-lg mt-2 text-green-700 font-medium">+{settings.pointsPerQuestion} điểm</div>}
+                                            {selectedOpt === 0 && <div className="text-lg mt-2 text-green-700 font-medium">+{pointsPerQuestion} điểm</div>}
                                         </div>
                                     )}
                                 </div>
@@ -14507,11 +14531,11 @@ module.exports = {
                                         <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
                                             <h3 className="text-xl font-bold text-blue-800 mb-4 text-center">Cột A</h3>
                                             <div className="space-y-3">
-                                                {q.columnA.map((item, i) => {
+                                                {(Array.isArray(q.columnA) ? q.columnA : []).map((item, i) => {
                                                     const isSelected = selectedAIndex === i;
                                                     const hasAnswer = matchingAnswers[i] !== undefined;
-                                                    const isCorrect = showAns && matchingAnswers[i] === q.correctMatches[i];
-                                                    const isWrong = showAns && matchingAnswers[i] !== q.correctMatches[i];
+                                                    const isCorrect = showAns && matchingAnswers[i] === safeCorrectMatches[i];
+                                                    const isWrong = showAns && matchingAnswers[i] !== safeCorrectMatches[i];
 
                                                     let itemClass = "flex items-center gap-3 p-3 bg-white rounded-lg border cursor-pointer transition ";
                                                     if (showAns) {
@@ -14546,11 +14570,11 @@ module.exports = {
                                         <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-6">
                                             <h3 className="text-xl font-bold text-purple-800 mb-4 text-center">Cột B</h3>
                                             <div className="space-y-3">
-                                                {q.columnB.map((item, j) => {
+                                                {(Array.isArray(q.columnB) ? q.columnB : []).map((item, j) => {
                                                     const isMatched = matchingAnswers.includes(j);
                                                     const matchingAIndex = matchingAnswers.indexOf(j);
-                                                    const isCorrectMatch = showAns && q.correctMatches.includes(j);
-                                                    const isWrongMatch = showAns && matchingAnswers.some((answer, idx) => answer === j && q.correctMatches[idx] !== j);
+                                                    const isCorrectMatch = showAns && safeCorrectMatches.includes(j);
+                                                    const isWrongMatch = showAns && matchingAnswers.some((answer, idx) => answer === j && safeCorrectMatches[idx] !== j);
                                                     const isSelectable = selectedAIndex !== null && !showAns;
 
                                                     let itemClass = "flex items-center gap-3 p-3 bg-white rounded-lg border transition ";
@@ -14617,7 +14641,7 @@ module.exports = {
                                         <div className="mt-6 p-6 bg-green-50 border-2 border-green-200 rounded-2xl">
                                             <h4 className="font-bold text-green-800 mb-3">Kết quả nối:</h4>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                                {q.correctMatches.map((matchIdx, i) => (
+                                                {(Array.isArray(q.correctMatches) ? q.correctMatches : []).map((matchIdx, i) => (
                                                     <div key={i} className="flex items-center gap-2">
                                                         <span className="font-bold">{i + 1} → {String.fromCharCode(65 + matchIdx)}</span>
                                                         {matchingAnswers[i] === matchIdx ?
@@ -14636,7 +14660,7 @@ module.exports = {
                     <div className="mt-4 flex justify-center items-center gap-4">
                         <button disabled={idx === 0} onClick={handlePrev} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-left text-xl"></i></button>
                         <button onClick={() => setShowAns(!showAns)} className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-extrabold rounded-xl text-lg shadow-xl transition transform active:scale-95 flex items-center gap-3 min-w-[200px] justify-center">{showAns ? <><i className="fas fa-eye-slash"></i> Ẩn Đáp Án</> : <><i className="fas fa-eye"></i> Hiện Đáp Án</>}</button>
-                        <button disabled={idx === questions.length - 1} onClick={handleNext} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-right text-xl"></i></button>
+                        <button disabled={idx === safeQuestions.length - 1} onClick={handleNext} className="w-12 h-12 bg-slate-700 rounded-full hover:bg-blue-600 disabled:opacity-30 disabled:hover:bg-slate-700 transition flex items-center justify-center text-white shadow-lg"><i className="fas fa-arrow-right text-xl"></i></button>
                     </div>
                 </div>
             );
