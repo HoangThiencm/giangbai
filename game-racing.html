@@ -112,7 +112,7 @@
         <div style="max-width:720px;margin:48px auto;padding:24px;background:#1e293b;border-radius:16px;text-align:center;">Đang tải đường đua F1...</div>
     </div>
     <script type="text/babel" data-presets="env,react">
-        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
 
         const TEAMS = [
             { id: 't1', name: 'Tổ 1 - Scuderia Red', short: 'Tổ 1 Đỏ', color: '#ef4444', glow: 'shadow-red-500/50' },
@@ -307,21 +307,6 @@
                 return () => clearTimeout(id);
             }, [timerActive, timeLeft, phase]);
 
-            useEffect(() => {
-                if (phase !== 'play') return;
-                const onKey = (e) => {
-                    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-                    const map = { '1': 0, '2': 1, '3': 2, '4': 3 };
-                    if (map[e.key] != null && teams[map[e.key]]) {
-                        const id = teams[map[e.key]].id;
-                        setCorrectTeams(prev => ({ ...prev, [id]: !prev[id] }));
-                    }
-                    if (e.key === 'Enter') confirmBoost();
-                };
-                window.addEventListener('keydown', onKey);
-                return () => window.removeEventListener('keydown', onKey);
-            });
-
             const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2200); };
 
             const startLights = () => {
@@ -354,105 +339,6 @@
                 } else setMystery(null);
             };
 
-            const applyPowerup = (teamId, powerId, nextPos) => {
-                const others = teams.map(t => t.id).filter(id => id !== teamId);
-                if (powerId === 'nitro') {
-                    nextPos[teamId] = Math.min((nextPos[teamId] || 0) + 1, finishSteps);
-                    soundEngine.nitroBoost();
-                    showToast(`${TEAMS.find(t=>t.id===teamId)?.short || 'Tổ'} nhận 🚀 Nitro!`);
-                } else if (powerId === 'shield') {
-                    setBuffs(b => ({ ...b, [teamId]: { ...b[teamId], shield: true } }));
-                    showToast('🛡️ Khiên bảo vệ đã kích hoạt!');
-                } else if (powerId === 'banana' && others.length) {
-                    const victim = others[Math.floor(Math.random() * others.length)];
-                    nextPos[victim] = Math.max(0, (nextPos[victim] || 0) - 1);
-                    setEffects(e => ({ ...e, [victim]: { spin: true } }));
-                    soundEngine.tireScreech();
-                    setTimeout(() => setEffects(e => ({ ...e, [victim]: {} })), 800);
-                    showToast(`🍌 Vỏ chuối làm chậm đối thủ!`);
-                } else if (powerId === 'lightning') {
-                    setBuffs(b => ({ ...b, [teamId]: { ...b[teamId], double: true } }));
-                    showToast('⚡ Tia sét: lượt sau nhân đôi!');
-                }
-            };
-
-            const confirmBoost = useCallback(() => {
-                if (phase !== 'play' || finishedRef.current) return;
-                const picked = Object.keys(correctTeams).filter(id => correctTeams[id]);
-                setTimerActive(false);
-                setPhase('boost');
-
-                setPositions(prev => {
-                    const next = { ...prev };
-                    const nextStreaks = { ...streaks };
-                    const nextStats = { ...stats };
-                    const nextBuffs = { ...buffs };
-                    const nextEffects = {};
-
-                    teams.forEach(t => {
-                        const ok = !!correctTeams[t.id];
-                        if (ok) {
-                            let step = 1;
-                            if (nextBuffs[t.id]?.double) { step = 2; nextBuffs[t.id] = { ...nextBuffs[t.id], double: false }; }
-                            nextStreaks[t.id] = (nextStreaks[t.id] || 0) + 1;
-                            if (nextStreaks[t.id] >= 2) step += 1; // SUPER NITRO
-                            next[t.id] = Math.min((next[t.id] || 0) + step, finishSteps);
-                            nextStats[t.id] = {
-                                correct: (nextStats[t.id]?.correct || 0) + 1,
-                                reaction: (nextStats[t.id]?.reaction || 0) + (timerSec - timeLeft)
-                            };
-                            nextEffects[t.id] = { nitro: true, smoke: true };
-                            soundEngine.engineRev();
-                            if (nextStreaks[t.id] >= 2) soundEngine.nitroBoost();
-
-                            if (mystery && !mystery.claimed && mystery.lane === t.id) {
-                                const power = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
-                                soundEngine.boxPing();
-                                applyPowerup(t.id, power.id, next);
-                                setMystery(m => m ? { ...m, claimed: true } : null);
-                            }
-                        } else {
-                            nextStreaks[t.id] = 0;
-                            if (nextBuffs[t.id]?.shield) {
-                                nextBuffs[t.id] = { ...nextBuffs[t.id], shield: false };
-                                showToast(`${t.short}: 🛡️ Khiên hấp thụ lỗi!`);
-                            } else {
-                                nextEffects[t.id] = { shake: true, smoke: true };
-                                soundEngine.tireScreech();
-                            }
-                        }
-                    });
-
-                    setStreaks(nextStreaks);
-                    setStats(nextStats);
-                    setBuffs(nextBuffs);
-                    setEffects(nextEffects);
-                    positionsRef.current = next;
-                    setTimeout(() => setEffects({}), 900);
-
-                    const winnerId = Object.entries(next).find(([, p]) => p >= finishSteps)?.[0];
-                    if (winnerId && !finishedRef.current) {
-                        finishedRef.current = true;
-                        setTimeout(() => finishRace(next), 1000);
-                    } else {
-                        setTimeout(() => {
-                            if (finishedRef.current) return;
-                            if (qIndex < questions.length - 1) {
-                                setQIndex(i => i + 1);
-                                setCorrectTeams({});
-                                setPhase('play');
-                                setTimeLeft(timerSec);
-                                setTimerActive(true);
-                                maybeSpawnBox();
-                            } else {
-                                finishRace(next);
-                            }
-                        }, 1400);
-                    }
-                    return next;
-                });
-            }, [phase, correctTeams, streaks, stats, buffs, teams, finishSteps, mystery, qIndex, questions.length, timerSec, timeLeft, boxesEnabled]);
-
             const finishRace = (finalPos) => {
                 finishedRef.current = true;
                 setTimerActive(false);
@@ -468,6 +354,113 @@
                 setConfetti(pieces);
                 setPhase('podium');
             };
+
+            const confirmBoost = () => {
+                if (phase !== 'play' || finishedRef.current) return;
+                setTimerActive(false);
+                setPhase('boost');
+
+                const next = { ...positionsRef.current };
+                const nextStreaks = { ...streaks };
+                const nextStats = { ...stats };
+                const nextBuffs = { ...buffs };
+                const nextEffects = {};
+                let toastMsg = '';
+
+                teams.forEach(t => {
+                    const ok = !!correctTeams[t.id];
+                    if (ok) {
+                        let step = 1;
+                        if (nextBuffs[t.id]?.double) { step = 2; nextBuffs[t.id] = { ...nextBuffs[t.id], double: false }; }
+                        nextStreaks[t.id] = (nextStreaks[t.id] || 0) + 1;
+                        if (nextStreaks[t.id] >= 2) step += 1; // SUPER NITRO
+                        next[t.id] = Math.min((next[t.id] || 0) + step, finishSteps);
+                        nextStats[t.id] = {
+                            correct: (nextStats[t.id]?.correct || 0) + 1,
+                            reaction: (nextStats[t.id]?.reaction || 0) + (timerSec - timeLeft)
+                        };
+                        nextEffects[t.id] = { nitro: true, smoke: true };
+                        soundEngine.engineRev();
+                        if (nextStreaks[t.id] >= 2) soundEngine.nitroBoost();
+
+                        if (mystery && !mystery.claimed && mystery.lane === t.id) {
+                            const power = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+                            soundEngine.boxPing();
+                            const others = teams.map(x => x.id).filter(id => id !== t.id);
+                            if (power.id === 'nitro') {
+                                next[t.id] = Math.min((next[t.id] || 0) + 1, finishSteps);
+                                toastMsg = `${t.short} nhận 🚀 Nitro!`;
+                            } else if (power.id === 'shield') {
+                                nextBuffs[t.id] = { ...nextBuffs[t.id], shield: true };
+                                toastMsg = '🛡️ Khiên bảo vệ đã kích hoạt!';
+                            } else if (power.id === 'banana' && others.length) {
+                                const victim = others[Math.floor(Math.random() * others.length)];
+                                next[victim] = Math.max(0, (next[victim] || 0) - 1);
+                                nextEffects[victim] = { ...(nextEffects[victim] || {}), spin: true };
+                                soundEngine.tireScreech();
+                                toastMsg = '🍌 Vỏ chuối làm chậm đối thủ!';
+                            } else if (power.id === 'lightning') {
+                                nextBuffs[t.id] = { ...nextBuffs[t.id], double: true };
+                                toastMsg = '⚡ Tia sét: lượt sau nhân đôi!';
+                            }
+                            setMystery(m => m ? { ...m, claimed: true } : null);
+                        }
+                    } else {
+                        nextStreaks[t.id] = 0;
+                        if (nextBuffs[t.id]?.shield) {
+                            nextBuffs[t.id] = { ...nextBuffs[t.id], shield: false };
+                            toastMsg = toastMsg || `${t.short}: 🛡️ Khiên hấp thụ lỗi!`;
+                        } else {
+                            nextEffects[t.id] = { shake: true, smoke: true };
+                            soundEngine.tireScreech();
+                        }
+                    }
+                });
+
+                setPositions(next);
+                positionsRef.current = next;
+                setStreaks(nextStreaks);
+                setStats(nextStats);
+                setBuffs(nextBuffs);
+                setEffects(nextEffects);
+                if (toastMsg) showToast(toastMsg);
+                setTimeout(() => setEffects({}), 900);
+
+                const winnerId = Object.entries(next).find(([, p]) => p >= finishSteps)?.[0];
+                if (winnerId) {
+                    finishedRef.current = true;
+                    setTimeout(() => finishRace(next), 1000);
+                } else {
+                    setTimeout(() => {
+                        if (finishedRef.current) return;
+                        if (qIndex < questions.length - 1) {
+                            setQIndex(i => i + 1);
+                            setCorrectTeams({});
+                            setPhase('play');
+                            setTimeLeft(timerSec);
+                            setTimerActive(true);
+                            maybeSpawnBox();
+                        } else {
+                            finishRace(next);
+                        }
+                    }, 1400);
+                }
+            };
+
+            useEffect(() => {
+                if (phase !== 'play') return;
+                const onKey = (e) => {
+                    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+                    const map = { '1': 0, '2': 1, '3': 2, '4': 3 };
+                    if (map[e.key] != null && teams[map[e.key]]) {
+                        const id = teams[map[e.key]].id;
+                        setCorrectTeams(prev => ({ ...prev, [id]: !prev[id] }));
+                    }
+                    if (e.key === 'Enter') confirmBoost();
+                };
+                window.addEventListener('keydown', onKey);
+                return () => window.removeEventListener('keydown', onKey);
+            }, [phase, teams, correctTeams, streaks, stats, buffs, mystery, qIndex, questions.length, timerSec, timeLeft, finishSteps, boxesEnabled]);
 
             const ranking = useMemo(() => {
                 return [...teams].sort((a, b) => (positions[b.id] || 0) - (positions[a.id] || 0) || (stats[b.id]?.correct || 0) - (stats[a.id]?.correct || 0));

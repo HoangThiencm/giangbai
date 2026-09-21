@@ -1,128 +1,84 @@
-# PLAN: Sửa Lỗi Render Toán Trong "Đua Vịt" & Lỗi Đứng Yên Câu 1 Trong "Hứng Trứng Vàng"
+# PLAN: Nâng Cấp Game Đua Vịt Hài Hước Đỉnh Cao & Sửa Lỗi Toán/Kẹt Câu
 
-## 1. Phân Tích Nguyên Nhân Gốc Rễ (Root Cause)
+## 1. Tổng Quan Nhiệm Vụ
 
-### Vấn đề 1: Đua Vịt (`game-treasure.html`) chưa render công thức toán
-- **Nguyên nhân:**
-  1. Trong thẻ `<head>` của `game-treasure.html` **chưa nạp thư viện KaTeX** (`vendor/katex.min.css` và `vendor/katex.min.js`).
-  2. File chưa định nghĩa component `<MathText>`.
-  3. Trong modal hiển thị câu hỏi kiểm tra (dòng 15), prompt và choices đang xuất thô dạng `{q.prompt || q.question}` và `{x}` thay vì bọc trong `<MathText>`. Vì vậy, các công thức như `$A = 2x^2y \cdot (-3)xy^3$` và `$-6x^3y^4$` hiển thị nguyên văn chuỗi thô.
-
-### Vấn đề 2: Hứng Trứng Vàng (`game-escape.html`) chạy câu đầu xong đứng yên
-- **Nguyên nhân (Lỗi Race Condition giữa React Re-render và Timer):**
-  - Trong `game-escape.html`, chỉ sử dụng duy nhất một ref `const timeoutRef = useRef(null)`.
-  - Khi người chơi bắt trứng (hoặc để trứng rơi), `handleCatch` thiết lập:
-    ```javascript
-    timeoutRef.current = setTimeout(() => goNext(...), 1200);
-    ```
-  - Tuy nhiên, trong `handleCatch` cũng đồng thời gọi `setPhase('result')` và `setLives(...)`, khiến component re-render.
-  - Do `phase` chuyển từ `'falling'` sang `'result'`, React lập tức kích hoạt hàm dọn dẹp (cleanup) của `useEffect` rơi trứng:
-    ```javascript
-    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
-    ```
-  - **Hàm cleanup này đã vô tình xóa sạch timer `goNext`** mà `handleCatch` vừa mới đặt trước đó vài mili-giây!
-  - Kết quả: Timer `goNext` bị hủy, hàm `goNext` không bao giờ được gọi $\rightarrow$ Game bị kẹt vĩnh viễn ở trạng thái `'result'` của câu 1, không chuyển sang câu 2!
+Bản kế hoạch này giải quyết trọn vẹn 3 yêu cầu cốt lõi:
+1. **Sửa lỗi render công thức toán KaTeX** trong modal câu hỏi của `game-treasure.html`.
+2. **Sửa lỗi kẹt vĩnh viễn câu 1** trong game Hứng Trứng Vàng (`game-escape.html`).
+3. **Nâng cấp đột phá Game Đua Vịt** (`game-treasure.html`) từ bảng tính 2D khô khan thành **"ĐUA VỊT HÀI HƯỚC BÙNG NỔ LỚP HỌC"**: bầy vịt bơi tự do va chạm (`bumping physics`), sự kiện bất ngờ (đớp bánh mì, xoáy nước, cụ rùa đẩy), bình luận viên trực tiếp và pha quay chậm Photo Finish nghẹt thở.
 
 ---
 
-## 2. Nhiệm Vụ Chi Tiết Của Coder
+## 2. Chi Tiết Thực Hiện Cho Coder
 
-Coder sẽ sửa đổi 2 tệp: **`game-treasure.html`** và **`game-escape.html`**.
+### PHẦN 1: Nâng Cấp Đột Phá Game Đua Vịt (`game-treasure.html`)
 
----
-
-### PHẦN 1: Sửa `game-treasure.html` (Đua Vịt)
-
-#### Bước 1.1: Bổ sung KaTeX vào `<head>`
-Tại dòng 4 của `game-treasure.html`, thêm link CSS và script KaTeX:
+#### 1. Thư viện & KaTeX (`<head>`):
+Bổ sung đầy đủ trong `<head>`:
 ```html
 <link rel="stylesheet" href="vendor/katex.min.css">
 <script src="vendor/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 ```
 
-#### Bước 1.2: Bổ sung component `MathText` trong React
-Thêm component `MathText` chuẩn hóa công thức toán:
-```javascript
-const MathText = ({ text }) => {
-    const ref = useRef(null);
-    useEffect(() => {
-        if (!text || !ref.current) return;
-        ref.current.innerHTML = '';
-        let processed = String(text).trim();
-        processed = processed.replace(/`([^`]+)`/g, (m, g) => `$${g}$`);
-        processed = processed.replace(/\\\[([\s\S]+?)\\\]/g, (m, g) => `$$${g}$$`);
-        processed = processed.replace(/\\\(([\s\S]+?)\\\)/g, (m, g) => `$${g}$`);
-        if (!processed.includes('$')) {
-            if (/\\(frac|sqrt|vec|cdot|times|pm|mp|le|ge|ne|neq|alpha|beta|gamma|pi|theta|Delta|[a-zA-Z]+)/.test(processed)) {
-                processed = `$${processed}$`;
-            } else if (/^[a-zA-Z0-9\s\+\-\*\/\=\^\_\(\)\{\}\.,<>\\]+$/.test(processed) && /[\^_\\]/.test(processed)) {
-                processed = `$${processed}$`;
-            }
-        }
-        const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
-        parts.forEach(part => {
-            if (!part) return;
-            if (part.startsWith('$$') && part.endsWith('$$')) {
-                const span = document.createElement('span');
-                try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); }
-                catch { span.textContent = part; }
-                ref.current.appendChild(span);
-            } else if (part.startsWith('$') && part.endsWith('$')) {
-                const span = document.createElement('span');
-                try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); }
-                catch { span.textContent = part; }
-                ref.current.appendChild(span);
-            } else {
-                ref.current.appendChild(document.createTextNode(part));
-            }
-        });
-    }, [text]);
-    return <span ref={ref} />;
-};
-```
+#### 2. Component `<MathText>`:
+Định nghĩa component `MathText` chuẩn hóa công thức toán để render KaTeX sắc nét cho prompt và choices trong modal câu hỏi kiểm tra.
 
-#### Bước 1.3: Render `<MathText>` trong Modal Câu Hỏi Kiểm Tra
-Thay thế đoạn JSX modal câu hỏi ở cuối component `App`:
-```jsx
-{q && (
-    <div className="fixed inset-0 z-[60] shade flex items-center justify-center p-4">
-        <div className="pop bg-white rounded-3xl p-7 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-                <b className="text-xl text-violet-700"><i className="fas fa-edit mr-2"></i>Câu hỏi kiểm tra</b>
-                <b className="text-2xl text-rose-600">⏱ {secs}s</b>
-            </div>
-            <div className="text-lg font-bold text-gray-800 my-4 leading-relaxed">
-                <MathText text={q.prompt || q.question} />
-            </div>
-            <div className="space-y-2 mb-4">
-                {(q.choices || []).map((x, i) => (
-                    <button key={i} className="block w-full text-left p-3 border-2 border-gray-200 rounded-xl hover:border-violet-400 hover:bg-violet-50 transition">
-                        <span className="font-bold text-violet-700 mr-2">{String.fromCharCode(65 + i)}.</span>
-                        <MathText text={x} />
-                    </button>
-                ))}
-            </div>
-            <button className="btn w-full mt-2 bg-slate-700 text-white" onClick={() => setQ(null)}>
-                Đóng câu hỏi
-            </button>
-        </div>
-    </div>
-)}
-```
+#### 3. Động Cơ Đua Vịt Hài Hước (Chaos River Engine trên HTML5 Canvas 60 FPS):
+Xây dựng lại hàm vẽ và cập nhật vật lý cho bầy vịt trong component `River`:
+- **Bầy vịt bơi đàn tự do (Flocking & Bumping Physics):**
+  - Vịt không xếp hàng thẳng tắp ở làn cố định. Cả đàn 30–45 chú vịt cùng bơi trong lòng sông rộng.
+  - Khi 2 chú vịt bơi sát nhau, chúng va chạm đẩy nhau nảy tưng tưng (`elastic bump`) kèm âm thanh `Boing!`, con lách trái, con vọt phải.
+  - Vịt đạp chân tạo bọt nước (`wake bubbles`) nhấp nhô sống động.
+- **Phụ kiện & Biểu cảm ngẫu nhiên (Duck Personalities):**
+  Mỗi chú vịt được vẽ với phụ kiện ngẫu nhiên:
+  - 🕶️ Kính râm cực ngầu
+  - 🎓 Mũ cử nhân bác học
+  - 🦩 Phao bơi hồng hạc
+  - 🚀 Tên lửa gắn lưng
+  - 🎀 Nơ đỏ dễ thương
+  - Bảng tên học sinh bo tròn nổi bật, chữ đậm dễ đọc từ xa trên máy chiếu phòng học.
+- **Sự kiện ngẫu nhiên hài hước (Random Chaos Events):**
+  Trong suốt 10–14 giây đua, xuất hiện các biến số bất ngờ:
+  - 🍞 **Mẩu bánh mì trôi:** Chú vịt đang dẫn đầu bỗng dừng lại 0.8 giây để đớp bánh mì, bị cả đàn ùa lên vượt qua!
+  - 🌪️ **Xoáy nước mini:** Hút 1–2 chú vịt xoay tròn 360 độ rồi bắn vọt về trước!
+  - 🐢 **Cụ Rùa cứu trợ:** Đội đáy sông đẩy 1 chú vịt từ bét bảng vọt thẳng vào Top 5!
+  - 🚀 **Tên lửa Nitro:** Vịt bốc khói đuôi, lao vèo qua mặt cả đàn trong tiếng xả khói!
+- **Thanh Bình Luận Viên Trực Tiếp (Live Ticker Commentary):**
+  Dưới chân khung đua chạy chữ bình luận vui nhộn theo thời gian thực:
+  - *"Vịt của bạn [Tên] đang bứt tốc như một mũi tên!"*
+  - *"Ôi không! [Tên] vừa mải đớp bánh mì trôi!"*
+  - *"Cụ rùa vừa giải cứu bạn [Tên] từ cuối đàn vọt lên Top 3!"*
+  - *"Cuộc rượt đuổi nghẹt thở ở những mét nước cuối cùng!"*
+- **Camera Động & Pha Quay Chậm Photo Finish:**
+  - Camera cuộn theo tốp dẫn đầu.
+  - Khi cách vạch đích 5%, tốc độ chậm lại (slow-motion) để cả lớp cùng nín thở theo dõi mỏ chú vịt nào chạm vạch ca-rô trước!
+
+#### 4. Âm Thanh Web Audio API:
+- Tiếng còi đếm ngược 3-2-1 và còi xuất phát.
+- Tiếng đàn vịt kêu `quack quack` vui nhộn khi xuất phát và va chạm.
+- Tiếng `Boing!` khi vịt húc vào nhau.
+- Tiếng rẽ sóng nước tăng dần nhịp độ.
+- Tiếng kèn chiến thắng Fanfare rộn rã khi chạm vạch đích.
+
+#### 5. Modal Câu Hỏi Kiểm Tra Chuẩn KaTeX:
+Khi giáo viên bấm "Hiện câu hỏi kiểm tra", hiển thị modal với:
+- Prompt và Choices được render bằng `<MathText>` chuẩn đẹp.
+- Đồng hồ đếm ngược 30s.
 
 ---
 
-### PHẦN 2: Sửa `game-escape.html` (Hứng Trứng Vàng)
+### PHẦN 2: Sửa Lỗi Kẹt Câu 1 Trong Hứng Trứng Vàng (`game-escape.html`)
 
-#### Bước 2.1: Tách riêng 2 Timer Ref (Tránh xung đột hủy nhầm timer)
-Thay thế `const timeoutRef = useRef(null);` (dòng 154) bằng 2 ref độc lập:
+#### 1. Tách riêng 2 Timer Ref:
+Thay thế `const timeoutRef = useRef(null);` bằng:
 ```javascript
 const fallTimerRef = useRef(null);
 const nextTimerRef = useRef(null);
 ```
 
-#### Bước 2.2: Sửa `useEffect` rơi trứng (Chỉ dọn dẹp `fallTimerRef`)
-Thay thế `useEffect` từ dòng 240–252 bằng:
+#### 2. Sửa `useEffect` rơi trứng:
+Chỉ dọn dẹp `fallTimerRef`, tuyệt đối không xóa `nextTimerRef`:
 ```javascript
 useEffect(() => {
     if (phase !== 'falling' || !currentQ || showInstructions || gameOver) return;
@@ -141,8 +97,8 @@ useEffect(() => {
 }, [fallKey, phase, currentQ, showInstructions, gameOver, fallDuration, lives, goNext]);
 ```
 
-#### Bước 2.3: Sửa `handleCatch` (Sử dụng `nextTimerRef`)
-Thay thế `handleCatch` (dòng 216–238) bằng:
+#### 3. Sửa `handleCatch`:
+Dùng `nextTimerRef` để đặt lịch chuyển câu, không bị cleanup của `falling` xóa mất:
 ```javascript
 const handleCatch = (choiceIdx) => {
     if (phase !== 'falling' || !currentQ) return;
@@ -169,42 +125,15 @@ const handleCatch = (choiceIdx) => {
 };
 ```
 
-#### Bước 2.4: Nâng cấp `goNext` (Tránh stale state closure)
-Thay thế `goNext` (dòng 206–214) bằng:
-```javascript
-const goNext = useCallback((nextLives) => {
-    if (nextLives <= 0) {
-        setGameOver(true);
-        return;
-    }
-    setQIndex(prevIndex => {
-        if (prevIndex >= questions.length - 1) {
-            setGameOver(true);
-            return prevIndex;
-        }
-        const nextIndex = prevIndex + 1;
-        resetRound(nextIndex, questions.length);
-        return nextIndex;
-    });
-}, [questions.length, resetRound]);
-```
-
-#### Bước 2.5: Dọn dẹp cả 2 timer khi component unmount
-Thay thế `useEffect` ở dòng 198–202 bằng:
-```javascript
-useEffect(() => {
-    return () => {
-        if (fallTimerRef.current) clearTimeout(fallTimerRef.current);
-        if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
-    };
-}, []);
-```
+#### 4. Nâng cấp `goNext`:
+Dùng updater function `setQIndex(prevIndex => ...)` để loại bỏ stale state closure.
 
 ---
 
 ## 3. Kế Hoạch Xác Minh (Verification Plan)
-1. **Xác minh `game-treasure.html` (Đua Vịt):**
-   - Mở modal "Câu hỏi kiểm tra", kiểm tra câu hỏi: `$A = 2x^2y \cdot (-3)xy^3$` và các đáp án `$-6x^3y^4$` $\rightarrow$ Hiển thị công thức toán học KaTeX sắc nét, không còn ký tự `$`.
-2. **Xác minh `game-escape.html` (Hứng Trứng Vàng):**
-   - Hứng đúng trứng câu 1 $\rightarrow$ Trứng nổ vàng, hiện thông báo chính xác $\rightarrow$ Sau 1.2s tự động chuyển sang câu 2, câu 3, câu 4 liên tục mượt mà.
-   - Để trứng rơi mất mạng ở câu 1 $\rightarrow$ Sau 1.4s tự động chuyển tiếp sang câu 2 bình thường, không còn bị đứng yên.
+1. **Kiểm tra Đua Vịt (`game-treasure.html`):**
+   - Đàn vịt bơi tự do, va chạm nảy tưng tưng, có các sự kiện đớp bánh mì, xoáy nước, cụ rùa đẩy, bình luận viên trực tiếp.
+   - Vịt về đích có slow-motion Photo Finish, pháo hoa và âm thanh chiến thắng.
+   - Mở modal câu hỏi kiểm tra: công thức `$A = 2x^2y \cdot (-3)xy^3$` và `$-6x^3y^4$` render KaTeX chuẩn đẹp mắt.
+2. **Kiểm tra Hứng Trứng Vàng (`game-escape.html`):**
+   - Chơi câu 1: dù đúng hay sai đều tự động chuyển mượt mà sang câu 2, câu 3, câu 4 cho đến khi hết bài hoặc hết mạng.
