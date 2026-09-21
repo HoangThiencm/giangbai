@@ -555,12 +555,31 @@
                 if (showAns) return;
                 const q = shuffledQuestions[idx] || safeQuestions[idx];
                 if (!q) return;
-                const target = String(q.correctAnswer || "").trim().toLowerCase();
-                const isCorrect = fillBlankAnswer.trim().toLowerCase() === target;
-                setSelectedOpt(isCorrect ? 0 : 1); // 0 for correct, 1 for incorrect
+
+                const rawUser = String(fillBlankAnswer || "").trim();
+                if (!rawUser) return;
+
+                const rawTarget = String(q.correctAnswer || "").trim();
+
+                const clean = (s) => s.replace(/^\$+|\$+$/g, "").replace(/^\\\(|\\\)$/g, "").trim();
+                const cleanUser = clean(rawUser).replace(",", ".");
+                const cleanTarget = clean(rawTarget).replace(",", ".");
+
+                const numUser = parseFloat(cleanUser);
+                const numTarget = parseFloat(cleanTarget);
+
+                let isCorrect = false;
+                if (!isNaN(numUser) && !isNaN(numTarget)) {
+                    isCorrect = Math.abs(numUser - numTarget) < 1e-6;
+                } else {
+                    isCorrect = cleanUser.toLowerCase() === cleanTarget.toLowerCase();
+                }
+
+                setSelectedOpt(isCorrect ? 0 : 1);
                 if (isCorrect) {
                     setScore(prev => prev + pointsPerQuestion);
                 }
+                setShowAns(true);
             };
 
             const handleColumnASelect = (columnAIndex) => {
@@ -578,6 +597,13 @@
 
             const handleKeyDown = (e) => {
                 if (showResults) return;
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleFillBlankSubmit();
+                    }
+                    return;
+                }
                 switch (e.key) {
                     case "ArrowRight": handleNext(); break;
                     case "ArrowLeft": handlePrev(); break;
@@ -608,21 +634,13 @@
                             }
                         }
                         break;
-                    case "Enter":
-                        if (!showAns) {
-                            const q = shuffledQuestions[idx] || safeQuestions[idx];
-                            if (q && (q.type === "fill-blank" || q.type === "short-answer") && fillBlankAnswer.toString().trim()) {
-                                handleFillBlankSubmit();
-                            }
-                        }
-                        break;
                 }
             };
 
             useEffect(() => {
                 window.addEventListener("keydown", handleKeyDown);
                 return () => window.removeEventListener("keydown", handleKeyDown);
-            }, [idx, showAns, showResults, handleNext, handlePrev]);
+            }, [idx, showAns, showResults, handleNext, handlePrev, fillBlankAnswer]);
 
             if (showResults) {
                 const totalScore = (score).toFixed(1);
@@ -740,10 +758,16 @@
                                         </div>
                                         <div className="flex gap-4 items-center">
                                             <input
-                                                type={q.type === "short-answer" ? "number" : "text"}
-                                                step="any"
+                                                type="text"
                                                 value={fillBlankAnswer}
                                                 onChange={(e) => setFillBlankAnswer(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleFillBlankSubmit();
+                                                    }
+                                                }}
                                                 disabled={showAns}
                                                 className="flex-1 p-4 border-2 border-gray-300 rounded-xl text-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                                                 placeholder="Nhập đáp án của bạn..."

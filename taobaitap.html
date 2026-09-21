@@ -14212,6 +14212,7 @@ module.exports = {
             const [fillBlankAnswer, setFillBlankAnswer] = useState("");
             const [matchingAnswers, setMatchingAnswers] = useState([]);
             const [selectedAIndex, setSelectedAIndex] = useState(null);
+            const [cv7991Answers, setCv7991Answers] = useState({});
             const [timeLeft, setTimeLeft] = useState(countdownTime);
             const [score, setScore] = useState(0);
             const [shuffledQuestions, setShuffledQuestions] = useState([]);
@@ -14250,7 +14251,7 @@ module.exports = {
                 return () => clearInterval(timer);
             }, [idx, showAns, countdownTime, autoNext, showResults, handleNext]);
 
-            // Tính điểm cho matching khi hiện đáp án
+            // Tính điểm cho matching / CV7991 khi hiện đáp án
             useEffect(() => {
                 if (!showAns) return;
                 const q = shuffledQuestions[idx] || safeQuestions[idx];
@@ -14260,7 +14261,19 @@ module.exports = {
                     const scoreRatio = correctMatches / totalMatches;
                     setScore(prev => prev + (pointsPerQuestion * scoreRatio));
                 }
-            }, [showAns, idx, matchingAnswers, shuffledQuestions, safeQuestions, pointsPerQuestion]);
+                if (q && q.type === "true-false" && isCv7991TrueFalseItem(q)) {
+                    const items = getCv7991TrueFalseItems(q).filter(it => it.text);
+                    if (items.length > 0 && Object.keys(cv7991Answers).length > 0) {
+                        const correctCount = items.filter((it, sIdx) => cv7991Answers[sIdx] === it.isCorrect).length;
+                        let scale = 0;
+                        if (correctCount === 1) scale = 0.1;
+                        else if (correctCount === 2) scale = 0.25;
+                        else if (correctCount === 3) scale = 0.5;
+                        else if (correctCount === 4) scale = 1.0;
+                        setScore(prev => prev + (pointsPerQuestion * scale));
+                    }
+                }
+            }, [showAns, idx, matchingAnswers, cv7991Answers, shuffledQuestions, safeQuestions, pointsPerQuestion]);
 
             useEffect(() => {
                 setTimeLeft(countdownTime);
@@ -14269,6 +14282,7 @@ module.exports = {
                 setFillBlankAnswer("");
                 setMatchingAnswers([]);
                 setSelectedAIndex(null);
+                setCv7991Answers({});
             }, [idx, countdownTime]);
 
             const handleOptionSelect = (optionIndex) => {
@@ -14281,16 +14295,40 @@ module.exports = {
                 }
             };
 
+            const handleCv7991Select = (subIdx, isTrue) => {
+                if (showAns) return;
+                setCv7991Answers(prev => ({ ...prev, [subIdx]: isTrue }));
+            };
+
             const handleFillBlankSubmit = () => {
                 if (showAns) return;
                 const q = shuffledQuestions[idx] || safeQuestions[idx];
                 if (!q) return;
-                const target = String(q.correctAnswer || "").trim().toLowerCase();
-                const isCorrect = fillBlankAnswer.trim().toLowerCase() === target;
-                setSelectedOpt(isCorrect ? 0 : 1); // 0 for correct, 1 for incorrect
+
+                const rawUser = String(fillBlankAnswer || "").trim();
+                if (!rawUser) return;
+
+                const rawTarget = String(q.correctAnswer || "").trim();
+
+                const clean = (s) => s.replace(/^\$+|\$+$/g, "").replace(/^\\\(|\\\)$/g, "").trim();
+                const cleanUser = clean(rawUser).replace(",", ".");
+                const cleanTarget = clean(rawTarget).replace(",", ".");
+
+                const numUser = parseFloat(cleanUser);
+                const numTarget = parseFloat(cleanTarget);
+
+                let isCorrect = false;
+                if (!isNaN(numUser) && !isNaN(numTarget)) {
+                    isCorrect = Math.abs(numUser - numTarget) < 1e-6;
+                } else {
+                    isCorrect = cleanUser.toLowerCase() === cleanTarget.toLowerCase();
+                }
+
+                setSelectedOpt(isCorrect ? 0 : 1);
                 if (isCorrect) {
                     setScore(prev => prev + pointsPerQuestion);
                 }
+                setShowAns(true);
             };
 
             const handleColumnASelect = (columnAIndex) => {
@@ -14308,6 +14346,13 @@ module.exports = {
 
             const handleKeyDown = (e) => {
                 if (showResults) return;
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleFillBlankSubmit();
+                    }
+                    return;
+                }
                 switch (e.key) {
                     case "ArrowRight": handleNext(); break;
                     case "ArrowLeft": handlePrev(); break;
@@ -14325,7 +14370,7 @@ module.exports = {
                     case "d": case "D":
                         if (!showAns) {
                             const q = shuffledQuestions[idx] || safeQuestions[idx];
-                            if (q && q.type === "true-false") {
+                            if (q && q.type === "true-false" && !isCv7991TrueFalseItem(q)) {
                                 handleOptionSelect(0); // Đúng
                             }
                         }
@@ -14333,16 +14378,8 @@ module.exports = {
                     case "s": case "S":
                         if (!showAns) {
                             const q = shuffledQuestions[idx] || safeQuestions[idx];
-                            if (q && q.type === "true-false") {
+                            if (q && q.type === "true-false" && !isCv7991TrueFalseItem(q)) {
                                 handleOptionSelect(1); // Sai
-                            }
-                        }
-                        break;
-                    case "Enter":
-                        if (!showAns) {
-                            const q = shuffledQuestions[idx] || safeQuestions[idx];
-                            if (q && (q.type === "fill-blank" || q.type === "short-answer") && fillBlankAnswer.toString().trim()) {
-                                handleFillBlankSubmit();
                             }
                         }
                         break;
@@ -14352,7 +14389,7 @@ module.exports = {
             useEffect(() => {
                 window.addEventListener("keydown", handleKeyDown);
                 return () => window.removeEventListener("keydown", handleKeyDown);
-            }, [idx, showAns, showResults, handleNext, handlePrev]);
+            }, [idx, showAns, showResults, handleNext, handlePrev, fillBlankAnswer]);
 
             if (showResults) {
                 const totalScore = (score).toFixed(1);
@@ -14443,15 +14480,38 @@ module.exports = {
 
                             {q.type === "true-false" && isCv7991TrueFalseItem(q) && (
                                 <div className="space-y-3 z-10">
-                                    {getCv7991TrueFalseItems(q).map((item, sIdx) => (
-                                        <div key={sIdx} className={`p-4 border-2 rounded-2xl flex items-start gap-3 ${showAns ? (item.isCorrect ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-300') : 'border-gray-200 bg-white'}`}>
-                                            <span className={`w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${showAns && item.isCorrect ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}>{String.fromCharCode(97 + sIdx)}</span>
-                                            <div className="flex-1 text-xl"><MathText text={item.text} /></div>
-                                            {showAns && (
-                                                <span className={`px-3 py-1 rounded-lg text-sm font-black ${item.isCorrect ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{item.isCorrect ? '[ĐÚNG]' : '[SAI]'}</span>
-                                            )}
-                                        </div>
-                                    ))}
+                                    {getCv7991TrueFalseItems(q).filter(it => it.text).map((item, sIdx) => {
+                                        const userPick = cv7991Answers[sIdx];
+                                        const hasPick = userPick === true || userPick === false;
+                                        const pickCorrect = hasPick && userPick === item.isCorrect;
+                                        return (
+                                            <div key={sIdx} className={`p-4 border-2 rounded-2xl flex flex-wrap items-center gap-3 ${showAns ? (item.isCorrect ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-300') : 'border-gray-200 bg-white'}`}>
+                                                <span className={`w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${showAns && item.isCorrect ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}>{String.fromCharCode(97 + sIdx)}</span>
+                                                <div className="flex-1 text-xl min-w-[12rem]"><MathText text={item.text} /></div>
+                                                {!showAns ? (
+                                                    <div className="flex gap-2 flex-shrink-0">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleCv7991Select(sIdx, true)}
+                                                            className={`px-4 py-2 rounded-xl text-sm transition ${userPick === true ? 'bg-emerald-600 text-white font-bold shadow' : 'bg-gray-100 text-gray-700 hover:bg-emerald-50'}`}
+                                                        >Đúng</button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleCv7991Select(sIdx, false)}
+                                                            className={`px-4 py-2 rounded-xl text-sm transition ${userPick === false ? 'bg-rose-600 text-white font-bold shadow' : 'bg-gray-100 text-gray-700 hover:bg-rose-50'}`}
+                                                        >Sai</button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <span className={`px-3 py-1 rounded-lg text-sm font-black border-2 ${item.isCorrect ? 'bg-green-600 text-white border-green-700' : 'bg-red-600 text-white border-red-700'}`}>{item.isCorrect ? '[ĐÚNG]' : '[SAI]'}</span>
+                                                        {hasPick && (
+                                                            <span className={`text-xl font-black ${pickCorrect ? 'text-green-700' : 'text-red-700'}`}>{pickCorrect ? '✓' : '✗'}</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
 
@@ -14487,6 +14547,13 @@ module.exports = {
                                                 type="text"
                                                 value={fillBlankAnswer}
                                                 onChange={(e) => setFillBlankAnswer(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleFillBlankSubmit();
+                                                    }
+                                                }}
                                                 disabled={showAns}
                                                 className="flex-1 p-4 border-2 border-gray-300 rounded-xl text-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                                                 placeholder={q.type === "short-answer" ? "Nhập đáp án số..." : "Nhập đáp án của bạn..."}

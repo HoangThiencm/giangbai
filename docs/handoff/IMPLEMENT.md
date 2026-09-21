@@ -1,14 +1,19 @@
-# IMPLEMENT: Xuất Word cho Game Giáo dục
+# IMPLEMENT: Tối Ưu Hóa Giao Diện Thi Trực Tuyến
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
 ## Thay đổi
 
-- Bổ sung `exportWordForGame()` và nút **Xuất Word cho Game** trong `taobaitap.html`, bản sao lưu và `smartquiz.html`.
-- File `De_Thi_Game_Giao_Duc.docx` xuất bằng đoạn văn riêng từng dòng, giữ nguyên LaTeX và có bảng đáp án cuối file.
-- Chuyển đổi trắc nghiệm, Đúng/Sai, ý Đúng/Sai CV7991, nối cột, trả lời ngắn và điền khuyết sang cấu trúc Game đọc được.
-- Thêm `tests/taobaitap-game-word-export-smoke.js` kiểm tra cấu trúc, đáp án, LaTex và `GameQuizImporter`.
+- Thêm `ExamSettingsModal` trong `thitructuyen.html`: thời lượng/khung giờ, chống gian lận, thí sinh, số lần thi và định dạng đề.
+- Thêm nút **Cài đặt** cùng badge thời lượng/lớp; modal cập nhật trực tiếp `examInfo`.
+- Tinh gọn thanh công cụ, giữ **Lưu Đề** xanh nổi bật và hỗ trợ cuộn ngang khi thiếu không gian.
+- Không thay đổi `handleSave` hay payload lưu đề.
 
 ## Kiểm tra
 
-Đã kiểm tra tĩnh các yêu cầu xuất file. Không thể chạy Node smoke test trong môi trường hiện tại vì Windows chặn `node.exe` do nhận diện nhầm là phần mềm không an toàn (`ResourceUnavailable`).
+- Kiểm tra cấu trúc Babel script: PASS.
+- Biên dịch toàn bộ JSX trong `thitructuyen.html` bằng Babel Standalone 7.26.4: PASS.
+
+## Còn lại
+
+- Cần kiểm thử trực quan trình duyệt theo `docs/handoff/VERIFY.md`.
