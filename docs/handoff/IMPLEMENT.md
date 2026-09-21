@@ -1,26 +1,22 @@
-# IMPLEMENT: Nâng Cấp Game Đua Vịt Hài Hước Đỉnh Cao & Sửa Lỗi Toán/Kẹt Câu
+# IMPLEMENT: Đổi Mật Khẩu Cho Người Dùng
 
-Đã triển khai đúng `docs/handoff/PLAN.md` trong phạm vi `game-treasure.html` và `game-escape.html`.
+Đã triển khai đúng `docs/handoff/PLAN.md` trong phạm vi đã duyệt.
 
 ## Thay đổi
 
-### Game Đua Vịt (`game-treasure.html`)
-
-- Bổ sung KaTeX cục bộ và Canvas Confetti; `MathText` chuẩn hóa công thức có `$...$`, `\\(...\\)`, `\\[...\\]` và backtick để render prompt/lựa chọn trong modal câu hỏi.
-- Thay động cơ Canvas bằng đàn vịt bơi tự do với vị trí dọc ngẫu nhiên, gia tốc, bọt nước, va chạm đàn hồi và âm thanh Boing.
-- Thêm phụ kiện ngẫu nhiên (kính, mũ cử nhân, phao, tên lửa, nơ), bảng tên học sinh nổi bật và âm thanh đếm ngược, quack, va chạm, chiến thắng.
-- Thêm sự kiện bánh mì, xoáy nước, cụ rùa cứu trợ và Nitro; thanh bình luận viên trực tiếp mô tả diễn biến.
-- Thêm slow-motion ở đoạn cuối cùng và thông báo Photo Finish trước khi pháo hoa/fanfare khi có vịt thắng.
-
-### Hứng Trứng Vàng (`game-escape.html`)
-
-- Dùng hai ref timer độc lập: `fallTimerRef` và `nextTimerRef`.
-- Cleanup hiệu ứng rơi chỉ hủy timer rơi; timer chuyển câu được giữ để không kẹt ở câu đầu.
-- `handleCatch` lên lịch qua `nextTimerRef`; `goNext` dùng updater của `setQIndex` để tránh stale closure.
+- Thêm `api/change_password.php`: chỉ nhận POST, yêu cầu session `user_id`, xác thực mật khẩu hiện tại bằng `password_verify`, kiểm tra mật khẩu mới và cập nhật hash mới bằng `password_hash`.
+- Thêm `js/change-password.js`: modal tự tạo DOM, đóng bằng nút/overlay/Escape, ẩn-hiện mật khẩu, kiểm tra dữ liệu phía trình duyệt và gọi endpoint với cookie phiên.
+- Cập nhật `index.html`: thêm nút **Đổi mật khẩu** trước Đăng xuất và nạp module mới. `setupStudentPortal` chỉ tiếp tục ẩn nút cài đặt AI; không ẩn chức năng đổi mật khẩu với học sinh.
+- Thêm `tests/change-password-smoke.js` để kiểm tra cấu trúc giao diện, module và endpoint.
 
 ## Kiểm tra
 
-- Babel JSX: `game-treasure.html` PASS; `game-escape.html` PASS.
-- Static check: xác nhận KaTeX, confetti, các sự kiện đua, commentary/Photo Finish, hai timer ref và `setQIndex(prevIndex => ...)` đều có mặt.
-- `git diff --check`: PASS (chỉ có cảnh báo line-ending của Git, không có lỗi whitespace).
-- Chưa kiểm thử tương tác trực tiếp trong trình duyệt. Bước tiếp theo: chạy `/verify` theo quy trình dự án.
+- `node tests/change-password-smoke.js`: PASS.
+- `node tests/user-ai-settings-smoke.js`: PASS.
+- `node tests/canvas-tabs-permissions-smoke.js`: PASS.
+- `git diff --check`: PASS; Git chỉ cảnh báo quy đổi LF/CRLF.
+- `php -l api/change_password.php`: không chạy được vì môi trường hiện tại không có lệnh `php` trong PATH.
+
+## Vấn đề còn lại
+
+- Chưa kiểm thử thủ công qua trình duyệt hoặc với cơ sở dữ liệu thật; cần chạy bước `/verify` theo quy trình dự án.
