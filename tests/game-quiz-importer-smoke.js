@@ -81,6 +81,29 @@ assert.ok(tableQuestions[0].prompt.includes('x^2 - 4x + 3 = 0'), 'Question 1 sho
 
 console.log('-> 2. Parse MCQ with bottom answer key table: PASS');
 
+// 2b. Asterisk (*) marks correct option (LaTeX / 100% TN Word exports)
+const sampleAsterisk = `
+Câu 3: Bậc của đơn thức là:
+A. 1
+B. 3
+C. 0*
+D. Không có bậc
+`;
+const asteriskQuestions = GameQuizImporter.parseQuizQuestions(sampleAsterisk);
+assert.strictEqual(asteriskQuestions.length, 1, 'Should parse asterisk sample question');
+assert.strictEqual(asteriskQuestions[0].answer, 2, 'Asterisk on C. 0* must map to answer index 2');
+assert.strictEqual(asteriskQuestions[0].choices[2], '0', 'Choice C text must strip trailing *');
+assert.ok(!asteriskQuestions[0].choices.some((c) => /\*$/.test(c)), 'No choice should keep trailing *');
+console.log('-> 2b. Parse MCQ with asterisk answer marker: PASS');
+
+// 2c. trochoi.compiled.js must embed GameQuizImporter fallback + skip obfuscate
+const trochoiCompiled = fs.readFileSync(path.join(__dirname, '..', 'trochoi.compiled.js'), 'utf8');
+assert.ok(trochoiCompiled.includes('Inline GameQuizImporter fallback'), 'trochoi.compiled.js must embed GameQuizImporter fallback');
+assert.ok(trochoiCompiled.includes('asteriskAnswer'), 'trochoi.compiled.js fallback must recognize asterisk answers');
+const buildObfuscate = fs.readFileSync(path.join(__dirname, '..', 'tools', 'build-obfuscate.js'), 'utf8');
+assert.ok(buildObfuscate.includes("'game-quiz-importer.js'") || buildObfuscate.includes('"game-quiz-importer.js"'), 'build-obfuscate must skip game-quiz-importer.js');
+console.log('-> 2c. trochoi fallback + obfuscate skip: PASS');
+
 // 4. Test Matching pairs parsing
 const sampleMatching = `
 f'(x) > 0, \\forall x \\in (a, b) - Hàm số đồng biến trên (a, b)
