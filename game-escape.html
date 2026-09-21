@@ -151,7 +151,8 @@
             const [showInstructions, setShowInstructions] = useState(true);
             const [gameOver, setGameOver] = useState(false);
             const [correctTotal, setCorrectTotal] = useState(0);
-            const timeoutRef = useRef(null);
+            const fallTimerRef = useRef(null);
+            const nextTimerRef = useRef(null);
 
             const currentQ = questions[qIndex];
 
@@ -197,25 +198,33 @@
 
             useEffect(() => {
                 return () => {
-                    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                    if (fallTimerRef.current) clearTimeout(fallTimerRef.current);
+                    if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
                 };
             }, []);
 
             const topicTitle = gameData?.formData?.topic || 'Hứng trứng kiến thức';
 
             const goNext = useCallback((nextLives) => {
-                if (qIndex >= questions.length - 1 || nextLives <= 0) {
+                if (nextLives <= 0) {
                     setGameOver(true);
                     return;
                 }
-                const ni = qIndex + 1;
-                setQIndex(ni);
-                resetRound(ni, questions.length);
-            }, [qIndex, questions.length, resetRound]);
+                setQIndex(prevIndex => {
+                    if (prevIndex >= questions.length - 1) {
+                        setGameOver(true);
+                        return prevIndex;
+                    }
+                    const nextIndex = prevIndex + 1;
+                    resetRound(nextIndex, questions.length);
+                    return nextIndex;
+                });
+            }, [questions.length, resetRound]);
 
             const handleCatch = (choiceIdx) => {
                 if (phase !== 'falling' || !currentQ) return;
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                if (fallTimerRef.current) clearTimeout(fallTimerRef.current);
+                if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
                 setPhase('result');
                 setCaught(choiceIdx);
                 const isCorrect = choiceIdx === currentQ.answer;
@@ -231,24 +240,24 @@
                     setLives(nextLives);
                     setStreak(0);
                     setLastMsg(`Trứng thối! Đáp án đúng là ${String.fromCharCode(65 + currentQ.answer)}.`);
-                    timeoutRef.current = setTimeout(() => goNext(nextLives), 1400);
+                    nextTimerRef.current = setTimeout(() => goNext(nextLives), 1400);
                     return;
                 }
-                timeoutRef.current = setTimeout(() => goNext(lives), 1200);
+                nextTimerRef.current = setTimeout(() => goNext(lives), 1200);
             };
 
             useEffect(() => {
                 if (phase !== 'falling' || !currentQ || showInstructions || gameOver) return;
-                timeoutRef.current = setTimeout(() => {
+                fallTimerRef.current = setTimeout(() => {
                     const nextLives = lives - 1;
                     setLives(nextLives);
                     setStreak(0);
                     setPhase('result');
                     setCaught(-1);
                     setLastMsg('Trứng rơi mất! Mất 1 mạng.');
-                    timeoutRef.current = setTimeout(() => goNext(nextLives), 1400);
+                    nextTimerRef.current = setTimeout(() => goNext(nextLives), 1400);
                 }, (fallDuration + 0.5) * 1000);
-                return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+                return () => { if (fallTimerRef.current) clearTimeout(fallTimerRef.current); };
             }, [fallKey, phase, currentQ, showInstructions, gameOver, fallDuration, lives, goNext]);
 
             if (!gameData || !questions.length) {
