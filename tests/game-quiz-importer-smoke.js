@@ -120,17 +120,18 @@ assert.ok(pairs[0].right.includes('đồng biến'), 'Pair 1 right should match'
 
 console.log('-> 3. Parse Matching pairs with LaTeX: PASS');
 
-// 5. Test formatForGame schemas for all 8 educational games
-const gameTypes = ['elimination', 'speedscore', 'tower', 'unlock', 'teambattle', 'matching', 'treasure', 'escape'];
+// 5. Test formatForGame schemas for all 13 educational games
+const gameTypes = ['elimination', 'speedscore', 'tower', 'unlock', 'teambattle', 'matching', 'treasure', 'escape', 'picture', 'wheel', 'millionaire', 'crossword', 'racing'];
 for (const gt of gameTypes) {
     const formatted = GameQuizImporter.formatForGame(questions, gt, {
         topic: 'Ôn tập Toán 12',
         rawPairs: pairs
     });
     assert.ok(formatted, `Formatted result for game ${gt} must not be null`);
-    if (gt === 'matching') {
-        assert.ok(Array.isArray(formatted.pairs), 'Matching format must have pairs array');
-        assert.ok(formatted.pairs.length >= 3, 'Matching format must contain pairs');
+    if (gt === 'matching' || gt === 'crossword') {
+        assert.ok(Array.isArray(formatted.pairs), `${gt} format must have pairs array`);
+        assert.ok(formatted.pairs.length >= 3, `${gt} format must contain pairs`);
+        if (gt === 'crossword') assert.ok(formatted.keyword, 'Crossword must have keyword');
     } else if (gt === 'unlock') {
         assert.ok(Array.isArray(formatted.questions), 'Unlock format must have questions array');
         assert.ok(formatted.codeWord, 'Unlock format must have codeWord');
@@ -141,13 +142,35 @@ for (const gt of gameTypes) {
     } else if (gt === 'teambattle') {
         assert.ok(Array.isArray(formatted.questions), 'TeamBattle format must have questions array');
         assert.strictEqual(typeof formatted.questions[0].individual, 'boolean', 'TeamBattle questions must have individual flag');
+    } else if (gt === 'millionaire') {
+        assert.ok(Array.isArray(formatted.questions), 'Millionaire must have questions');
+        assert.ok(formatted.questions[0].difficulty, 'Millionaire questions must have difficulty');
+    } else if (gt === 'racing') {
+        assert.ok(Array.isArray(formatted.questions), 'Racing must have questions');
+        assert.ok(Array.isArray(formatted.teams) && formatted.teams.length === 4, 'Racing must have 4 teams');
+    } else if (gt === 'picture') {
+        assert.ok(Array.isArray(formatted.questions), 'Picture must have questions');
+        assert.ok('themeImage' in formatted, 'Picture must expose themeImage field');
     } else {
         assert.ok(Array.isArray(formatted.questions), `${gt} format must have questions array`);
         assert.strictEqual(formatted.questions.length, 3, `${gt} questions array length should match input`);
     }
 }
 
-console.log('-> 4. Format schema for all 8 educational games: PASS');
+console.log('-> 4. Format schema for all 13 educational games: PASS');
+
+// 5b. Hub lists 5 new games + access-control maps pages
+const trochoiHub = fs.readFileSync(path.join(__dirname, '..', 'trochoi.compiled.js'), 'utf8');
+for (const id of ['picture', 'wheel', 'millionaire', 'crossword', 'racing']) {
+    assert.ok(trochoiHub.includes(`id: '${id}'`), `trochoi.compiled.js must list game ${id}`);
+    const page = path.join(__dirname, '..', `game-${id}.html`);
+    assert.ok(fs.existsSync(page), `game-${id}.html must exist`);
+}
+const accessControl = fs.readFileSync(path.join(__dirname, '..', 'access-control.js'), 'utf8');
+for (const id of ['picture', 'wheel', 'millionaire', 'crossword', 'racing']) {
+    assert.ok(accessControl.includes(`game-${id}.html`), `access-control must map game-${id}.html`);
+}
+console.log('-> 4b. Hub + pages + access-control for 5 new games: PASS');
 
 // 6. Test AI Drawing model updates & resolution
 const vehinhAiPhp = fs.readFileSync(path.join(__dirname, '..', 'api', 'vehinh_ai.php'), 'utf8');
