@@ -820,6 +820,10 @@ const App = () => {
   const [manualParticipantText, setManualParticipantText] = useState('');
   const [participants, setParticipants] = useState([]);
   const [participantExcelHint, setParticipantExcelHint] = useState('');
+  const [dbClasses, setDbClasses] = useState([]);
+  const [selectedDbClass, setSelectedDbClass] = useState('');
+  const [loadingDbClasses, setLoadingDbClasses] = useState(false);
+  const [participantClassHint, setParticipantClassHint] = useState('');
   const [inputMethod, setInputMethod] = useState('ai'); // 'ai' | 'word_latex'
   const [wordLatexText, setWordLatexText] = useState('');
   const [importingFile, setImportingFile] = useState(false);
@@ -960,6 +964,56 @@ const App = () => {
     event.target.value = '';
   };
 
+  const loadDbClasses = async () => {
+    setLoadingDbClasses(true);
+    try {
+      const res = await fetch('api/exam.php?route=student-classes', {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Không thể tải danh sách lớp');
+      const data = await res.json();
+      setDbClasses(Array.isArray(data.classes) ? data.classes : []);
+    } catch (err) {
+      console.warn('Lỗi tải lớp từ CSDL:', err);
+      setParticipantClassHint('Không thể tải danh sách lớp. Vui lòng thử lại.');
+    } finally {
+      setLoadingDbClasses(false);
+    }
+  };
+
+  const handleSelectClass = async className => {
+    setSelectedDbClass(className);
+    if (!className) {
+      setParticipantClassHint('');
+      return;
+    }
+    setLoadingDbClasses(true);
+    try {
+      const res = await fetch(`api/exam.php?route=class-students&class_name=${encodeURIComponent(className)}`, {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Không thể tải danh sách học sinh của lớp');
+      const data = await res.json();
+      const roster = Array.isArray(data.roster) ? data.roster : [];
+      if (!roster.length) {
+        setParticipantClassHint(`Lớp ${className} chưa có học sinh trong CSDL.`);
+        return;
+      }
+      const duckList = roster.map((st, idx) => ({
+        id: `p${idx + 1}`,
+        name: st.full_name || st.name,
+        className
+      })).filter(st => st.name);
+      setParticipants(duckList);
+      setManualParticipantText(duckList.map(p => p.name).join('\n'));
+      setParticipantClassHint(`Đã nạp ${duckList.length} học sinh từ ${className}.`);
+    } catch (err) {
+      alert('Lỗi nạp học sinh: ' + (err.message || err));
+    } finally {
+      setLoadingDbClasses(false);
+    }
+  };
+
   const renderDuckSection = () => /*#__PURE__*/React.createElement("div", {
     className: "border-2 border-cyan-200 bg-cyan-50 rounded-2xl p-5 space-y-4 my-4"
   }, /*#__PURE__*/React.createElement("div", {
@@ -977,7 +1031,7 @@ const App = () => {
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-download mr-1"
   }), "Tải mẫu Excel")), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2"
+    className: "flex flex-wrap gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setParticipantMode('manual'),
@@ -990,7 +1044,16 @@ const App = () => {
     className: `px-4 py-2 rounded-lg text-sm font-bold transition ${participantMode === 'excel' ? 'bg-cyan-600 text-white' : 'bg-white text-cyan-800 border border-cyan-200'}`
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-file-excel mr-1"
-  }), "Import Excel")), participantMode === 'manual' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }), "Import Excel"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setParticipantMode('database');
+      if (!dbClasses.length) loadDbClasses();
+    },
+    className: `px-4 py-2 rounded-lg text-sm font-bold transition ${participantMode === 'database' ? 'bg-cyan-600 text-white' : 'bg-white text-cyan-800 border border-cyan-200'}`
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "fas fa-database mr-1"
+  }), "Từ lớp dạy (CSDL)")), participantMode === 'manual' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block font-bold mb-2 text-gray-700"
   }, "Mỗi dòng một học sinh"), /*#__PURE__*/React.createElement("textarea", {
     value: manualParticipantText,
@@ -999,7 +1062,35 @@ const App = () => {
     placeholder: "Nguyễn Văn An\nTrần Thị Bình\nLê Văn Cường\n..."
   }), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-gray-500 mt-2"
-  }, "Gợi ý: dán danh sách từ Word/Excel hoặc gõ trực tiếp, mỗi tên một dòng.")) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, "Gợi ý: dán danh sách từ Word/Excel hoặc gõ trực tiếp, mỗi tên một dòng.")) : participantMode === 'database' ? /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "block font-bold text-gray-700"
+  }, "Chọn lớp học từ cơ sở dữ liệu"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 items-center"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: selectedDbClass,
+    onChange: e => handleSelectClass(e.target.value),
+    disabled: loadingDbClasses,
+    className: "flex-1 p-2.5 border-2 border-gray-200 rounded-xl focus:border-cyan-500 outline-none bg-white text-sm font-medium"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "-- Chọn lớp học (", dbClasses.length, " lớp) --"), dbClasses.map(cls => /*#__PURE__*/React.createElement("option", {
+    key: cls,
+    value: cls
+  }, cls))), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: loadDbClasses,
+    disabled: loadingDbClasses,
+    className: "px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-bold transition",
+    title: "Tải lại danh sách lớp"
+  }, /*#__PURE__*/React.createElement("i", {
+    className: `fas fa-sync-alt ${loadingDbClasses ? 'fa-spin' : ''}`
+  }))), participantClassHint && /*#__PURE__*/React.createElement("p", {
+    className: "text-sm font-semibold text-cyan-800"
+  }, participantClassHint), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500"
+  }, "Dữ liệu học sinh được đồng bộ từ danh sách lớp đã tạo ở phần Thi trực tuyến và Admin.")) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block font-bold mb-2 text-gray-700"
   }, "Chọn file Excel (.xlsx, .xls, .csv)"), /*#__PURE__*/React.createElement("input", {
     type: "file",

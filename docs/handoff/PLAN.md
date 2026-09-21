@@ -1,178 +1,117 @@
-# PLAN: Tích Hợp Lấy Danh Sách Học Sinh Từ Lớp Học CSDL Cho Game Đua Vịt (trochoi.html)
+# PLAN: Tích Hợp 5 Game Giáo Dục Mới Vào Hệ Thống trochoi.html
 
-## 1. Hiện Trạng & Phân Tích Khả Thi
+## 1. Phân Tích Kiến Trúc & Tính Khả Thi
 
-### Yêu cầu người dùng:
-> *"Game đua vịt này có thể lấy danh sách từ lớp học của thitructuyen.html không? bổ sung thêm nút nạp từ lớp dạy CSDL"* (Kèm ảnh giao diện Đua Vịt `media_1790003283887.png`)
+### Kiến trúc hiện tại của `trochoi.html`:
+- `trochoi.html` đóng vai trò là **Game Hub / Launcher**:
+  1. Giáo viên chọn trò chơi trong danh mục `GAME_LIST`.
+  2. Nạp nội dung bằng AI (`generateWithAI`) hoặc nạp từ file Word/LaTeX (`GameQuizImporter`).
+  3. Xem trước và chỉnh sửa câu hỏi (`step === 'EDIT'`).
+  4. Bấm "Chơi ngay" $\rightarrow$ Hệ thống lưu dữ liệu câu hỏi vào `localStorage.setItem('gameData', ...)` và điều hướng sang trang trò chơi độc lập:
+     ```javascript
+     window.location.href = `game-${selectedGame.id}.html`;
+     ```
+  5. Các game con hiện tại (`game-elimination.html`, `game-speedscore.html`, `game-unlock.html`, `game-teambattle.html`, `game-tower.html`, `game-matching.html`, `game-treasure.html`, `game-escape.html`) tự đọc `gameData` từ `localStorage` để khởi chạy.
 
-### Đánh giá tính khả thi:
-- **Khả thi 100% và rất thuận tiện:**
-  Hệ thống backend `api/exam.php` đã có sẵn 2 API chuẩn được chia sẻ dùng chung giữa `thitructuyen.html` và `sodiem.html`:
-  1. `GET api/exam.php?route=student-classes`: Lấy danh sách tên các lớp học có học sinh hoạt động trong cơ sở dữ liệu (`users.class_name`).
-  2. `GET api/exam.php?route=class-students&class_name={TÊN_LỚP}`: Lấy danh sách học sinh thuộc lớp đó (`student_id`, `full_name`, `username`, `sbd`, `class_name`).
-- Hiện tại ở màn hình cấu hình Game Đua Vịt (`renderDuckSection` trong `trochoi.compiled.js`), hệ thống chỉ mới có 2 nút:
-  * `[ ⌨️ Nhập tay ]`: Người dùng tự gõ/dán danh sách học sinh.
-  * `[ 📊 Import Excel ]`: Người dùng tải file Excel danh sách lớp lên.
-- Chưa có nút liên thông trực tiếp với CSDL lớp học như của `thitructuyen.html`.
-
----
-
-## 2. Thiết Kế Giao Diện & Tính Năng
-
-### 1. Bổ sung nút chuyển chế độ thứ 3: `[ 👥 Từ lớp học (CSDL) ]`
-Tại khối chuyển đổi chế độ (`participantMode`), bổ sung nút thứ 3 bên cạnh "Nhập tay" và "Import Excel":
-- Nút 1: `[ ⌨️ Nhập tay ]` (`participantMode === 'manual'`)
-- Nút 2: `[ 📊 Import Excel ]` (`participantMode === 'excel'`)
-- Nút 3: `[ 👥 Từ lớp dạy (CSDL) ]` (`participantMode === 'database'`)
-
-### 2. Giao diện khi chọn `Từ lớp dạy (CSDL)` (`participantMode === 'database'`)
-Hiển thị:
-1. **Dropdown chọn lớp học:**
-   - Khi chuyển sang chế độ này, tự động gọi API `api/exam.php?route=student-classes` (hoặc `api/sodiem.php?action=classes`).
-   - Dropdown: `<select>` chứa danh sách các lớp đã tạo trong CSDL (ví dụ: `-- Chọn lớp dạy --`, `Lớp 6A`, `Lớp 6B`, `Lớp 9A`...).
-   - Nút `🔄 Tải lại` kế bên để làm mới danh sách lớp nếu vừa thêm mới ở trang Admin/Sổ điểm.
-2. **Trạng thái nạp học sinh:**
-   - Khi giáo viên chọn 1 lớp (ví dụ `Lớp 6A`):
-     - Gọi `api/exam.php?route=class-students&class_name=Lớp 6A` với `{ credentials: 'include' }`.
-     - Nhận về danh sách `roster` gồm các học sinh của lớp.
-     - Tự động đóng gói danh sách vịt:
-       ```javascript
-       const duckList = roster.map((st, idx) => ({
-           id: `p${idx + 1}`,
-           name: st.full_name || st.name,
-           className: className
-       }));
-       setParticipants(duckList);
-       setManualParticipantText(duckList.map(p => p.name).join('\n'));
-       setParticipantClassHint(`Đã nạp ${duckList.length} học sinh từ ${className}.`);
-       ```
-     - Hiển thị thông báo màu xanh nhạt: *✅ Đã nạp thành công 35 học sinh từ Lớp 6A.*
-3. **Tính linh hoạt:**
-   - Sau khi nạp từ CSDL, tên học sinh tự động được đồng bộ vào `manualParticipantText`.
-   - Nếu buổi học hôm đó có học sinh vắng hoặc thêm học sinh mới, giáo viên có thể bấm lại tab "Nhập tay" để sửa nhanh mà không làm mất danh sách đã nạp.
+### Kết luận khả thi:
+**Hoàn toàn tích hợp được cả 5 game mới 100%** vào hệ thống mà không làm xáo trộn hay ảnh hưởng đến bất kỳ game nào đang chạy!
 
 ---
 
-## 3. Các Bước Triển Khai Cho Coder
+## 2. Danh Mục 5 Game Mới Cần Tích Hợp
 
-### Bước 1: Khai báo State và Hàm tải dữ liệu lớp học trong `trochoi.compiled.js`
-- Thêm state:
-  ```javascript
-  const [dbClasses, setDbClasses] = useState([]);
-  const [selectedDbClass, setSelectedDbClass] = useState('');
-  const [loadingDbClasses, setLoadingDbClasses] = useState(false);
-  const [participantClassHint, setParticipantClassHint] = useState('');
-  ```
-- Hàm nạp danh sách lớp:
-  ```javascript
-  const loadDbClasses = async () => {
-      setLoadingDbClasses(true);
-      try {
-          const res = await fetch('api/exam.php?route=student-classes', { credentials: 'include' });
-          if (!res.ok) throw new Error('Không thể tải danh sách lớp');
-          const data = await res.json();
-          const classes = Array.isArray(data.classes) ? data.classes : [];
-          setDbClasses(classes);
-          if (classes.length && !selectedDbClass) {
-              // Có thể giữ trống để giáo viên chọn
-          }
-      } catch (err) {
-          console.warn('Lỗi tải lớp từ CSDL:', err);
-      } finally {
-          setLoadingDbClasses(false);
-      }
-  };
-  ```
-- Hàm nạp học sinh theo lớp:
-  ```javascript
-  const handleSelectClass = async (className) => {
-      setSelectedDbClass(className);
-      if (!className) {
-          setParticipantClassHint('');
-          return;
-      }
-      setLoadingDbClasses(true);
-      try {
-          const res = await fetch(`api/exam.php?route=class-students&class_name=${encodeURIComponent(className)}`, { credentials: 'include' });
-          if (!res.ok) throw new Error('Không thể tải danh sách học sinh của lớp');
-          const data = await res.json();
-          const roster = Array.isArray(data.roster) ? data.roster : [];
-          if (!roster.length) {
-              setParticipantClassHint(`Lớp ${className} chưa có học sinh trong CSDL.`);
-              return;
-          }
-          const duckList = roster.map((st, idx) => ({
-              id: `p${idx + 1}`,
-              name: st.full_name || st.name,
-              className: className
-          }));
-          setParticipants(duckList);
-          setManualParticipantText(duckList.map(p => p.name).join('\n'));
-          setParticipantClassHint(`Đã nạp ${duckList.length} học sinh từ ${className}.`);
-      } catch (err) {
-          alert('Lỗi nạp học sinh: ' + (err.message || err));
-      } finally {
-          setLoadingDbClasses(false);
-      }
-  };
-  ```
+| STT | Mã Game (`id`) | Tên Trò Chơi | Mục Tiêu Sư Phạm | Tệp Triển Khai | Dữ Liệu Đầu Vào |
+|:---:|:---:|:---|:---|:---:|:---|
+| **1** | `picture` | **Bức Tranh Bí Ẩn** | Khởi động, dẫn dắt vào bài mới | `game-picture.html` | 4–9 câu trắc nghiệm + 1 ảnh chủ đề bài học |
+| **2** | `wheel` | **Vòng Quay May Mắn** | Kiểm tra bài cũ, gọi học sinh ngẫu nhiên | `game-wheel.html` | Danh sách học sinh CSDL + Câu hỏi trắc nghiệm |
+| **3** | `millionaire` | **Ai Là Triệu Phú** | Ôn tập chuyên sâu, đại diện cá nhân/tổ | `game-millionaire.html` | 10–15 câu trắc nghiệm độ khó tăng dần + 3 quyền trợ giúp |
+| **4** | `crossword` | **Ô Chữ Kỳ Diệu** | Củng cố, tổng kết chương/thuật ngữ | `game-crossword.html` | Các câu gợi ý hàng ngang + 1 từ khóa hàng dọc |
+| **5** | `racing` | **Đua Xe 4 Tổ (F1)** | Thi đua đội nhóm 4 tổ trong lớp học | `game-racing.html` | Câu hỏi trắc nghiệm + Phân chia 4 tổ thi đấu |
 
-### Bước 2: Cập nhật hàm `renderDuckSection` trong `trochoi.compiled.js`
-- Thêm nút thứ 3:
-  ```jsx
-  <button
-      type="button"
-      onClick={() => { setParticipantMode('database'); if (!dbClasses.length) loadDbClasses(); }}
-      className={`px-4 py-2 rounded-lg text-sm font-bold transition ${participantMode === 'database' ? 'bg-cyan-600 text-white' : 'bg-white text-cyan-800 border border-cyan-200'}`}
-  >
-      <i className="fas fa-database mr-1"></i>Từ lớp dạy (CSDL)
-  </button>
-  ```
-- Render khối chọn lớp khi `participantMode === 'database'`:
-  ```jsx
-  participantMode === 'database' ? (
-      <div className="space-y-3">
-          <label className="block font-bold text-gray-700">Chọn lớp học từ cơ sở dữ liệu</label>
-          <div className="flex gap-2 items-center">
-              <select
-                  value={selectedDbClass}
-                  onChange={(e) => handleSelectClass(e.target.value)}
-                  disabled={loadingDbClasses}
-                  className="flex-1 p-2.5 border-2 border-gray-200 rounded-xl focus:border-cyan-500 outline-none bg-white text-sm font-medium"
-              >
-                  <option value="">-- Chọn lớp học ({dbClasses.length} lớp) --</option>
-                  {dbClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
-              </select>
-              <button
-                  type="button"
-                  onClick={loadDbClasses}
-                  disabled={loadingDbClasses}
-                  className="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-bold transition"
-                  title="Tải lại danh sách lớp"
-              >
-                  <i className={`fas fa-sync-alt ${loadingDbClasses ? 'fa-spin' : ''}`}></i>
-              </button>
-          </div>
-          {participantClassHint && (
-              <p className="text-sm font-semibold text-cyan-800">{participantClassHint}</p>
-          )}
-          <p className="text-xs text-gray-500">
-              Dữ liệu học sinh được đồng bộ từ danh sách lớp đã tạo ở phần Thi trực tuyến và Admin.
-          </p>
-      </div>
-  ) : ...
-  ```
+---
+
+## 3. Lộ Trình Kỹ Thuật Chi Tiết Cho Coder
+
+### Bước 1: Khai báo 5 Game mới trong `trochoi.compiled.js`
+Mở rộng danh mảng `GAME_LIST`:
+```javascript
+{
+  id: 'picture',
+  name: 'Bức Tranh Bí Ẩn',
+  icon: 'fa-image',
+  color: 'from-pink-500 to-rose-500',
+  purpose: 'Khởi động / Vào bài',
+  description: 'Mỗi câu đúng mở 1 mảnh ghép hé lộ bức tranh bí ẩn của bài học!',
+  suitable: 'Dẫn dắt bài mới, kích thích tò mò'
+},
+{
+  id: 'wheel',
+  name: 'Vòng Quay May Mắn',
+  icon: 'fa-dharmachakra',
+  color: 'from-teal-400 to-emerald-600',
+  purpose: 'Kiểm tra ngẫu nhiên',
+  description: 'Quay chọn học sinh từ CSDL và quay điểm thưởng may mắn!',
+  suitable: 'Kiểm tra bài cũ, gọi phát biểu'
+},
+{
+  id: 'millionaire',
+  name: 'Ai Là Triệu Phú',
+  icon: 'fa-lightbulb',
+  color: 'from-blue-600 to-indigo-900',
+  purpose: 'Thang điểm tri thức',
+  description: '15 câu hỏi kịch tính với 3 quyền trợ giúp (50:50, Hỏi cả lớp, Đổi câu)',
+  suitable: 'Ôn tập cá nhân hoặc đại diện tổ'
+},
+{
+  id: 'crossword',
+  name: 'Ô Chữ Kỳ Diệu',
+  icon: 'fa-border-all',
+  color: 'from-violet-500 to-purple-600',
+  purpose: 'Giải mã từ khóa',
+  description: 'Giải các hàng ngang để tìm ra từ khóa chủ đề bài học!',
+  suitable: 'Củng cố thuật ngữ, tổng kết chương'
+},
+{
+  id: 'racing',
+  name: 'Đua Xe 4 Tổ',
+  icon: 'fa-car-side',
+  color: 'from-orange-500 to-red-600',
+  purpose: 'Thi đua 4 tổ',
+  description: '4 xe đại diện 4 tổ trong lớp đua về đích theo kết quả trả lời!',
+  suitable: 'Thi đua sôi nổi giữa các tổ'
+}
+```
+
+### Bước 2: Tùy biến nạp dữ liệu đặc thù cho từng game trong `trochoi.compiled.js`
+- **Game `picture` (Bức tranh bí ẩn):** Thêm ô chọn ảnh bài học tải lên (hoặc chọn sẵn từ kho ảnh mẫu AI).
+- **Game `wheel` (Vòng quay may mắn):** Tái sử dụng khối chọn lớp học CSDL (`renderDuckSection` / `participantMode === 'database'`).
+- **Game `millionaire` (Ai là triệu phú):** Tự động nhận diện độ khó tăng dần từ câu 1 đến câu 15.
+- **Game `crossword` (Ô chữ kỳ diệu):** Bóc tách các cặp `[Gợi ý] - [Từ khóa]` tương tự bộ `parseMatchingPairs` của game Ghép đôi.
+- **Game `racing` (Đua xe 4 tổ):** Tự động gán 4 tổ: Tổ 1 (Đỏ), Tổ 2 (Xanh), Tổ 3 (Vàng), Tổ 4 (Tím).
+
+### Bước 3: Xây dựng 5 trang Game độc lập
+1. **`game-picture.html`**:
+   - Canvas/SVG chia lưới 2x2, 2x3, hoặc 3x3 phủ lên ảnh nền.
+   - Khi chọn mảnh ghép $\rightarrow$ Modal hiện câu hỏi. Trả lời đúng $\rightarrow$ Hiệu ứng vỡ mảnh ghép hé lộ bức tranh kèm âm thanh chúc mừng.
+2. **`game-wheel.html`**:
+   - Vòng quay may mắn bằng HTML5 Canvas:
+     * Vòng tròn học sinh: Quay chọn học sinh từ CSDL lớp.
+     * Vòng tròn điểm số / quà tặng: 10đ, 20đ, 50đ, Hộp quà bí mật, Mất lượt, Nhân đôi.
+3. **`game-millionaire.html`**:
+   - Giao diện phỏng theo gameshow Ai Là Triệu Phú (khung câu hỏi xanh đậm viền vàng, cây thang tiền thưởng 15 mốc).
+   - 3 nút quyền trợ giúp tương tác:
+     * `50:50`: Ẩn ngay 2 phương án sai.
+     * `Hỏi ý kiến cả lớp`: Hiển thị biểu đồ cột biểu quyết.
+     * `Đổi câu hỏi`: Lấy câu hỏi dự phòng từ ngân hàng câu hỏi.
+4. **`game-crossword.html`**:
+   - Ma trận ô chữ ngang, căn chỉnh các chữ cái chứa Từ Khóa Hàng Dọc (cột highlight màu vàng).
+   - Click vào từng hàng ngang $\rightarrow$ Hiện gợi ý câu hỏi. Gõ đúng $\rightarrow$ Lật từng ô chữ cái.
+5. **`game-racing.html`**:
+   - Đường đua 4 làn (Lane 1..4). Mỗi lần tổ trả lời đúng, xe tương ứng phóng nhanh về trước với khói nitro và âm thanh động cơ.
 
 ---
 
 ## 4. Kế Hoạch Kiểm Thử (Verification Plan)
-1. **Kiểm tra tải danh sách lớp:**
-   - Mở `trochoi.html` $\rightarrow$ Chọn game "Đua Vịt Kiến Thức" $\rightarrow$ Xuất hiện khối "Danh sách học sinh đua vịt".
-   - Bấm vào nút **"Từ lớp dạy (CSDL)"**.
-   - Kiểm tra dropdown tự động nạp danh sách các lớp trong hệ thống (vd: 6A, 6B...).
-2. **Kiểm tra nạp học sinh:**
-   - Chọn 1 lớp bất kỳ trong dropdown.
-   - Kiểm tra danh sách học sinh hiển thị ngay bên dưới (số lượng học sinh, tên học sinh `1. Nguyễn Văn An...`).
-   - Bấm nút "Nhập tay" $\rightarrow$ Kiểm tra danh sách tên vẫn được lưu giữ trọn vẹn trong ô textarea.
-3. **Kiểm tra bắt đầu game:**
-   - Bấm "Tạo trò chơi ngay" hoặc chuyển sang xem trước $\rightarrow$ Game đua vịt khởi tạo thành công với đúng số lượng vịt tương ứng danh sách học sinh của lớp đã chọn.
+1. Kiểm tra hiển thị đủ 13 trò chơi trên màn hình chính `trochoi.html` (8 game cũ + 5 game mới).
+2. Kiểm tra nạp câu hỏi trắc nghiệm từ `taobaitap.html` và Word/LaTeX vào cả 5 game mới không bị lỗi.
+3. Khởi chạy từng game con và xác nhận logic chơi game, âm thanh, hiệu ứng mượt mà trên máy chiếu / màn hình TV lớp học.
