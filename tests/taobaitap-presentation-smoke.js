@@ -62,7 +62,9 @@ for (const file of files) {
         ['true-false fixed fallback', html.includes("q.options : ['Đúng', 'Sai']")],
         ['matching safe arrays', html.includes('(Array.isArray(q.columnA) ? q.columnA : []).map') && html.includes('(Array.isArray(q.columnB) ? q.columnB : []).map') && html.includes('(Array.isArray(q.correctMatches) ? q.correctMatches : []).map')],
         ['matching comparisons use safe array', html.includes('const safeCorrectMatches = Array.isArray(q.correctMatches) ? q.correctMatches : [];')],
-        ['safe fill blank answer', html.includes('const target = String(q.correctAnswer || "").trim().toLowerCase();')]
+        ['fill blank handler present', html.includes('handleFillBlankSubmit')],
+        ['fill blank compare logic', html.includes('Math.abs(numUser - numTarget) < 1e-6') || html.includes('const target = String(q.correctAnswer || "").trim().toLowerCase();')],
+        ['fill blank shows answer or legacy', (html.includes('setShowAns(true);') && html.includes('Math.abs(numUser - numTarget)')) || html.includes('const target = String(q.correctAnswer || "").trim().toLowerCase();')]
     ];
     for (const [name, ok] of checks) {
         console[ok ? 'log' : 'error'](`${ok ? 'OK' : 'FAIL'}: ${label}: ${name}`);
