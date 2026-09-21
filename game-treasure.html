@@ -1,16 +1,794 @@
 <!doctype html>
-<html lang="vi"><head>
-<script src="js/security-guard.js"></script><script src="access-control.js"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Đua Vịt Ngẫu Nhiên</title>
-<script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="vendor/katex.min.css"><script src="vendor/katex.min.js"></script><script src="vendor/react.production.min.js"></script><script src="vendor/react-dom.production.min.js"></script><script src="vendor/babel.min.js"></script><script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script><script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-<style>body{font-family:system-ui;background:linear-gradient(135deg,#e0f2fe,#f0fdfa)}canvas{width:100%;height:min(62vh,610px);min-height:410px;display:block;border-radius:22px}.btn{padding:.7rem 1rem;border-radius:.8rem;font-weight:800;transition:.2s}.btn:hover{transform:translateY(-1px)}.shade{background:#02061799;backdrop-filter:blur(5px)}@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}.pop{animation:pop .25s}</style>
-</head><body><div id="root"></div>
-<script type="text/babel" data-presets="env,react">
-const {useState,useEffect,useRef,useMemo,useCallback}=React, COLORS=['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
-const MathText=({text})=>{const ref=useRef(null);useEffect(()=>{if(!text||!ref.current)return;ref.current.innerHTML='';let processed=String(text).trim();processed=processed.replace(/\`([^\`]+)\`/g,(m,g)=>'$'+g+'$');processed=processed.replace(/\\\[([\s\S]+?)\\\]/g,(m,g)=>'$$'+g+'$$');processed=processed.replace(/\\\(([\s\S]+?)\\\)/g,(m,g)=>'$'+g+'$');if(!processed.includes('$')&&(/\\(frac|sqrt|vec|cdot|times|pm|mp|le|ge|ne|neq|alpha|beta|gamma|pi|theta|Delta|[a-zA-Z]+)/.test(processed)||(/^[a-zA-Z0-9\s\+\-\*\/\=\^\_\(\)\{\}\.,<>\\]+$/.test(processed)&&/[\^_\\]/.test(processed))))processed='$'+processed+'$';processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g).forEach(part=>{if(!part)return;if(part.startsWith('$$')&&part.endsWith('$$')){const span=document.createElement('span');try{katex.render(part.slice(2,-2),span,{throwOnError:false,displayMode:true})}catch{span.textContent=part}ref.current.appendChild(span)}else if(part.startsWith('$')&&part.endsWith('$')){const span=document.createElement('span');try{katex.render(part.slice(1,-1),span,{throwOnError:false,displayMode:false})}catch{span.textContent=part}ref.current.appendChild(span)}else ref.current.appendChild(document.createTextNode(part))})},[text]);return <span ref={ref}/>};const read=()=>{try{return JSON.parse(localStorage.getItem('gameData')||'{}')}catch{return {}}};
-const names=t=>{let s=new Set();return t.split(/\r?\n/).map(x=>x.trim().replace(/^\d+[.)-]\s*/, '')).filter(x=>x&&!s.has(x.toLowerCase())&&s.add(x.toLowerCase())).map((name,i)=>({id:'p'+Date.now()+i,name}))};
-function Sound({on}){let c=window._duckAudio||(window._duckAudio=new(window.AudioContext||window.webkitAudioContext)());const b=(f,d=.12,type='square')=>{if(!on)return;if(c.state==='suspended')c.resume();let o=c.createOscillator(),g=c.createGain();o.frequency.value=f;o.type=type;g.gain.setValueAtTime(.055,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d);o.connect(g).connect(c.destination);o.start();o.stop(c.currentTime+d)};return {count:go=>go?(b(523),setTimeout(()=>b(784,.3),100)):b(660),quack:()=>{b(180,.1,'sawtooth');setTimeout(()=>b(145,.1,'sawtooth'),100)},boing:()=>b(260,.16,'sine'),splash:()=>b(95,.09,'triangle'),win:()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>b(f,.24),i*120))}}
-function duck(ctx,x,y,color,name,boost,n,accessory,spin){ctx.save();ctx.translate(x,y);ctx.rotate(spin||0);let z=Math.min(1,Math.max(.52,10/n));ctx.scale(z,z);let w=Math.max(82,ctx.measureText(name).width+18);ctx.fillStyle='#fff';ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(-w/2,-50,w,25,13);ctx.fill();ctx.stroke();ctx.fillStyle='#0f172a';ctx.textAlign='center';ctx.font='bold 13px system-ui';ctx.fillText(name,0,-33);ctx.fillStyle='#facc15';ctx.beginPath();ctx.ellipse(0,0,25,18,0,0,7);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(-5,-13,17,10,0,0,7);ctx.fill();ctx.fillStyle='#f97316';ctx.beginPath();ctx.ellipse(25,2,12,7,0,0,7);ctx.fill();ctx.fillStyle='white';ctx.beginPath();ctx.arc(10,-14,8,0,7);ctx.fill();ctx.fillStyle='#111';ctx.beginPath();ctx.arc(12,-14,3,0,7);ctx.fill();ctx.font='20px serif';ctx.fillText(accessory||(boost?'🚀':'🎀'),-28,-15);ctx.restore()}
-function River({racers,racing,duration,finish,sound,onComment}){let cv=useRef(),raf=useRef(),st=useRef({}),won=useRef(false),eventAt=useRef(0);useEffect(()=>{st.current={};racers.forEach((r,i)=>st.current[r.id]={p:0.02+Math.random()*.05,y:.12+Math.random()*.76,v:.035+Math.random()*.024,vy:(Math.random()-.5)*.02,boost:0,spin:0,accessory:['🕶️','🎓','🦩','🚀','🎀'][i%5]});won.current=false;eventAt.current=0},[racers]);useEffect(()=>{let last=performance.now(),elapsed=0;const tell=(m)=>onComment&&onComment(m);function chaos(){let a=racers.map(r=>st.current[r.id]),tail=a.slice().sort((m,n)=>m.p-n.p)[0],lead=a.slice().sort((m,n)=>n.p-m.p)[0],pick=a[Math.floor(Math.random()*a.length)],label=q=>racers.find(r=>st.current[r.id]===q)?.name||'một chú vịt',type=Math.floor(Math.random()*4);if(!pick)return;if(type===0){lead.boost=-.8;tell('Ôi không! '+label(lead)+' vừa mải đớp bánh mì trôi! 🍞')}else if(type===1){pick.boost=.8;pick.spin=Math.PI*2;tell(label(pick)+' bị xoáy nước cuốn một vòng rồi bắn vọt lên! 🌪️')}else if(type===2){tail.boost=1.4;tell('Cụ rùa vừa giải cứu '+label(tail)+' từ cuối đàn vọt lên Top 3! 🐢')}else{pick.boost=1.25;pick.accessory='🚀';tell(label(pick)+' bật Nitro, lao vèo qua mặt cả đàn! 🚀')}sound.quack()}function f(now){let c=cv.current;if(!c)return;let box=c.getBoundingClientRect(),d=devicePixelRatio||1;if(c.width!==box.width*d||c.height!==box.height*d){c.width=box.width*d;c.height=box.height*d}let x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);let w=box.width,h=box.height,dt=Math.min(now-last,35)/1000;last=now;let g=x.createLinearGradient(0,0,w,h);g.addColorStop(0,'#7dd3fc');g.addColorStop(1,'#0369a1');x.fillStyle=g;x.fillRect(0,0,w,h);x.fillStyle='#65a30d';x.fillRect(0,0,45,h);x.fillRect(w-45,0,45,h);for(let i=0;i<18;i++){x.strokeStyle='#ffffff30';x.beginPath();let yy=i*48+now/25%48;x.moveTo(45,yy);x.quadraticCurveTo(w/2,yy-12,w-45,yy);x.stroke()}x.fillStyle='#92400e';x.fillRect(62,0,12,h);for(let yy=0;yy<h;yy+=20)for(let xx=w-57;xx<w-41;xx+=8){x.fillStyle=((yy/20+xx/8)%2?'#111':'#fff');x.fillRect(xx,yy,8,10)}x.fillStyle='#fff';x.font='bold 13px system-ui';x.fillText('XUẤT PHÁT',80,22);x.fillText('ĐÍCH 🏁',w-110,22);if(racing&&racers.length){elapsed+=dt;let slow=elapsed>duration*.84?0.35:1;if(elapsed>duration*.84&&Math.floor(elapsed*2)!==Math.floor((elapsed-dt)*2))tell('Photo Finish! Cả lớp nín thở nhìn mỏ vịt nào chạm đích trước! 📸');if(elapsed-eventAt.current>2.25){eventAt.current=elapsed;chaos()}racers.forEach(r=>{let q=st.current[r.id];q.boost+=(0-q.boost)*dt*1.4;q.v+=(.045+Math.random()*.035+q.boost*.035-q.v)*.08;q.vy+=(Math.random()-.5)*.013;q.y+=q.vy*dt*3;q.y=Math.max(.08,Math.min(.92,q.y));q.p=Math.min(1.02,q.p+q.v*dt*slow);q.spin*=.88});for(let i=0;i<racers.length;i++)for(let j=i+1;j<racers.length;j++){let a=st.current[racers[i].id],b=st.current[racers[j].id],dx=(a.p-b.p)*w,dy=(a.y-b.y)*h;if(dx*dx+dy*dy<42*42){let t=a.vy;a.vy=-b.vy+(Math.random()-.5)*.18;b.vy=-t+(Math.random()-.5)*.18;a.v-=.008;b.v+=.008;if(Math.random()<.08){sound.boing();tell('Boing! '+racers[i].name+' và '+racers[j].name+' vừa va nhau nảy tưng tưng!')}}}let lead=racers.map(r=>({r,p:st.current[r.id].p})).sort((a,b)=>b.p-a.p)[0];if(!won.current&&(lead.p>=1||elapsed>duration*1000)){won.current=true;sound.win();finish(lead.r)}}racers.forEach((r,i)=>{let q=st.current[r.id]||{p:0,y:.5};let px=82+q.p*(w-155),py=35+q.y*(h-70);x.fillStyle='#dff7ff99';x.beginPath();x.ellipse(px-32,py+16,17,5,0,0,7);x.fill();duck(x,px,py,COLORS[i%COLORS.length],r.name,q.boost>0,racers.length,q.accessory,q.spin)});raf.current=requestAnimationFrame(f)}raf.current=requestAnimationFrame(f);return()=>cancelAnimationFrame(raf.current)},[racers,racing,duration,finish,sound,onComment]);return <canvas ref={cv}/>} 
-function Roster({list,save,close}){let [tab,setTab]=useState('manual'),[text,setText]=useState(list.map(x=>x.name).join('\n')),[cls,setCls]=useState([]),[note,setNote]=useState('');useEffect(()=>{if(tab==='db'&&!cls.length)fetch('api/exam.php?route=student-classes',{credentials:'include'}).then(r=>r.json()).then(d=>setCls(d.classes||[])).catch(()=>setNote('Không tải được danh sách lớp.'))},[tab]);let select=async e=>{let cn=e.target.value;if(!cn)return;try{let d=await fetch('api/exam.php?route=class-students&class_name='+encodeURIComponent(cn),{credentials:'include'}).then(r=>r.json()),a=(d.roster||[]).map(s=>s.full_name||s.name).filter(Boolean);setText(a.join('\n'));setTab('manual');setNote('Đã nạp '+a.length+' học sinh lớp '+cn)}catch{setNote('Không tải được học sinh.')}};let excel=async e=>{try{let f=e.target.files[0],b=await f.arrayBuffer(),w=XLSX.read(b),rows=XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{header:1,defval:''}),a=rows.slice(1).map(r=>String(r[1]||r[0]||'').trim()).filter(v=>v&&!/^\d+$/.test(v));setText(a.join('\n'));setTab('manual');setNote('Đã đọc '+a.length+' học sinh.')}catch{setNote('Không đọc được Excel.')}};return <div className="fixed inset-0 z-50 shade flex items-center justify-center p-4"><div className="pop bg-white rounded-3xl p-6 max-w-2xl w-full"><button className="float-right text-2xl" onClick={close}>×</button><h2 className="text-2xl font-black text-sky-800">👥 Danh sách học sinh</h2><div className="flex flex-wrap gap-2 my-4"><button className="btn bg-sky-600 text-white" onClick={()=>setTab('manual')}>Nhập danh sách mới</button><button className="btn bg-slate-100" onClick={()=>setTab('excel')}>Import Excel</button><button className="btn bg-slate-100" onClick={()=>setTab('db')}>Đổi lớp học (CSDL)</button></div>{tab==='manual'&&<textarea className="w-full h-52 p-3 border-2 rounded-xl" value={text} onChange={e=>setText(e.target.value)} placeholder="Mỗi dòng một học sinh"/>}{tab==='excel'&&<input className="w-full p-4 border-2 rounded-xl" type="file" accept=".xlsx,.xls,.csv" onChange={excel}/>} {tab==='db'&&<select className="w-full p-3 border-2 rounded-xl" onChange={select}><option>-- Chọn lớp --</option>{cls.map(c=><option key={c}>{c}</option>)}</select>}<p className="mt-3 text-sky-700 font-bold">{note} {tab==='manual'&&names(text).length+' học sinh sẵn sàng.'}</p><button className="btn w-full mt-4 bg-emerald-600 text-white" onClick={()=>save(names(text))}>Lưu danh sách</button></div></div>}
-function App(){let data=useMemo(read,[]),init=(data.participants||[]).filter(x=>x.name).map((x,i)=>({id:x.id||'p'+i,name:x.name})),[racers,setRacers]=useState(init),[racing,setRacing]=useState(false),[count,setCount]=useState(''),[winner,setWinner]=useState(null),[roster,setRoster]=useState(!init.length),[on,setOn]=useState(true),[dur,setDur]=useState(12),[history,setHistory]=useState([]),[showHistory,setShowHistory]=useState(false),[q,setQ]=useState(null),[secs,setSecs]=useState(30),sound=Sound({on}),questions=data.content?.questions||[];useEffect(()=>{if(!q)return;setSecs(30);let t=setInterval(()=>setSecs(s=>s>0?s-1:0),1000);return()=>clearInterval(t)},[q]);let start=()=>{if(!racers.length)return setRoster(true);let n=3;setCount(n);sound.count();let t=setInterval(()=>{n--;if(n){setCount(n);sound.count()}else{clearInterval(t);setCount('BẮT ĐẦU!');sound.count(true);setTimeout(()=>{setCount('');setRacing(true)},500)}},850)},finish=useCallback(r=>{setRacing(false);setWinner(r);setHistory(h=>[...h,{...r,at:new Date().toLocaleTimeString('vi-VN')}]);window.confetti&&confetti({particleCount:190,spread:110,origin:{y:.55}})},[]),next=remove=>{if(remove)setRacers(a=>a.filter(x=>x.id!==winner.id));setWinner(null)};return <main className="max-w-7xl mx-auto p-4"><header className="bg-white rounded-3xl shadow-xl p-4 mb-4 flex flex-wrap justify-between gap-3"><div><h1 className="text-3xl font-black text-sky-800">🦆 ĐUA VỊT NGẪU NHIÊN</h1><p>{racers.length} học sinh đang tham gia</p></div><div className="flex gap-2"><button className="btn border-2" onClick={()=>setRoster(true)}>👥 Danh sách</button><button className="btn border-2" onClick={()=>setShowHistory(true)}>📜 Lịch sử</button><button className="btn bg-slate-100" onClick={()=>setOn(!on)}>{on?'🔊':'🔇'}</button><button className="btn bg-slate-600 text-white" onClick={()=>location.href='trochoi.html'}>Thoát</button></div></header><section className="relative bg-white rounded-3xl shadow-xl p-3"><River racers={racers} racing={racing} duration={dur} finish={finish} sound={sound}/>{count&&<b className="absolute inset-0 flex items-center justify-center text-7xl text-white" style={{textShadow:'0 4px 15px #075985'}}>{count}</b>}<div className="absolute top-6 left-6 bg-white/90 p-3 rounded-xl"><b>🏆 Top 3</b>{racers.slice(0,3).map((r,i)=><div key={r.id}>{i+1}. 🦆 {r.name}</div>)}</div></section><div className="flex flex-wrap justify-center gap-3 mt-4"><select className="btn border-2" value={dur} onChange={e=>setDur(+e.target.value)} disabled={racing}><option value="8">8 giây · Nhanh</option><option value="12">12 giây · Tiêu chuẩn</option><option value="16">16 giây · Kịch tính</option></select><button disabled={racing} onClick={start} className="btn px-8 py-4 text-lg text-white bg-gradient-to-r from-orange-500 to-rose-600">🏁 BẮT ĐẦU ĐUA</button></div>{roster&&<Roster list={racers} close={()=>setRoster(false)} save={a=>{setRacers(a);setRoster(false)}}/>}{winner&&<div className="fixed inset-0 z-40 shade flex items-center justify-center p-4"><div className="pop bg-white rounded-3xl p-8 text-center max-w-lg w-full"><div className="text-6xl">🏆🦆🎉</div><h2 className="text-3xl font-black text-amber-600 mt-3">CHÚC MỪNG: {winner.name}!</h2><p className="text-lg mt-2">Học sinh may mắn được gọi trong lượt này!</p><div className="grid gap-2 mt-6"><button className="btn bg-violet-600 text-white" disabled={!questions.length} onClick={()=>setQ(questions[Math.floor(Math.random()*questions.length)])}>📝 Hiện câu hỏi kiểm tra</button><button className="btn bg-sky-600 text-white" onClick={()=>next(false)}>Đua tiếp (Giữ nguyên danh sách)</button><button className="btn bg-emerald-600 text-white" onClick={()=>next(true)}>Đua tiếp (Loại bạn này khỏi lượt sau)</button></div></div></div>}{showHistory&&<div className="fixed inset-0 z-50 shade flex items-center justify-center p-4"><div className="pop bg-white rounded-3xl p-6 max-w-md w-full"><button className="float-right text-2xl" onClick={()=>setShowHistory(false)}>×</button><h2 className="text-xl font-black">📜 Lịch sử gọi tên</h2><ol className="mt-4 space-y-2">{history.length?history.map((h,i)=><li key={i} className="p-2 rounded bg-sky-50">{i+1}. <b>{h.name}</b> <small>{h.at}</small></li>):<li>Chưa gọi học sinh nào.</li>}</ol></div></div>}{q&&<div className="fixed inset-0 z-[60] shade flex items-center justify-center p-4"><div className="pop bg-white rounded-3xl p-7 max-w-2xl w-full"><div className="flex justify-between"><b className="text-xl text-violet-700">📝 Câu hỏi kiểm tra</b><b className="text-2xl text-rose-600">⏱ {secs}s</b></div><div className="text-xl font-bold my-5 leading-relaxed"><MathText text={q.prompt||q.question}/></div>{(q.choices||[]).map((x,i)=><button key={i} className="block w-full text-left p-3 border-2 rounded-xl mb-2"><span className="font-bold text-violet-700 mr-2">{String.fromCharCode(65+i)}.</span><MathText text={x}/></button>)}<button className="btn w-full mt-3 bg-slate-700 text-white" onClick={()=>setQ(null)}>Đóng câu hỏi</button></div></div>}</main>}ReactDOM.render(<App/>,document.getElementById('root'));
-</script></body></html>
+<html lang="vi">
+  <head>
+    <script src="js/security-guard.js"></script>
+    <script src="access-control.js"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Đua Vịt Ngẫu Nhiên</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="vendor/katex.min.css" />
+    <script src="vendor/katex.min.js"></script>
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <script src="vendor/babel.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+      body {
+        font-family: system-ui;
+        background: linear-gradient(135deg, #e0f2fe, #f0fdfa);
+      }
+      canvas {
+        width: 100%;
+        height: min(62vh, 610px);
+        min-height: 410px;
+        display: block;
+        border-radius: 22px;
+      }
+      .btn {
+        padding: 0.7rem 1rem;
+        border-radius: 0.8rem;
+        font-weight: 800;
+        transition: 0.2s;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+      .shade {
+        background: #02061799;
+        backdrop-filter: blur(5px);
+      }
+      @keyframes pop {
+        from {
+          transform: scale(0.85);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .pop {
+        animation: pop 0.25s;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel" data-presets="env,react">
+      const { useState, useEffect, useRef, useMemo, useCallback } = React,
+        COLORS = [
+          "#ef4444",
+          "#f97316",
+          "#eab308",
+          "#22c55e",
+          "#06b6d4",
+          "#3b82f6",
+          "#8b5cf6",
+          "#ec4899",
+        ];
+      const MathText = ({ text }) => {
+        const ref = useRef(null);
+        useEffect(() => {
+          if (!text || !ref.current) return;
+          ref.current.innerHTML = "";
+          let processed = String(text).trim();
+          processed = processed.replace(
+            /\`([^\`]+)\`/g,
+            (m, g) => "$" + g + "$",
+          );
+          processed = processed.replace(
+            /\\\[([\s\S]+?)\\\]/g,
+            (m, g) => "$$" + g + "$$",
+          );
+          processed = processed.replace(
+            /\\\(([\s\S]+?)\\\)/g,
+            (m, g) => "$" + g + "$",
+          );
+          if (
+            !processed.includes("$") &&
+            (/\\(frac|sqrt|vec|cdot|times|pm|mp|le|ge|ne|neq|alpha|beta|gamma|pi|theta|Delta|[a-zA-Z]+)/.test(
+              processed,
+            ) ||
+              (/^[a-zA-Z0-9\s\+\-\*\/\=\^\_\(\)\{\}\.,<>\\]+$/.test(
+                processed,
+              ) &&
+                /[\^_\\]/.test(processed)))
+          )
+            processed = "$" + processed + "$";
+          processed
+            .split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g)
+            .forEach((part) => {
+              if (!part) return;
+              if (part.startsWith("$$") && part.endsWith("$$")) {
+                const span = document.createElement("span");
+                try {
+                  katex.render(part.slice(2, -2), span, {
+                    throwOnError: false,
+                    displayMode: true,
+                  });
+                } catch {
+                  span.textContent = part;
+                }
+                ref.current.appendChild(span);
+              } else if (part.startsWith("$") && part.endsWith("$")) {
+                const span = document.createElement("span");
+                try {
+                  katex.render(part.slice(1, -1), span, {
+                    throwOnError: false,
+                    displayMode: false,
+                  });
+                } catch {
+                  span.textContent = part;
+                }
+                ref.current.appendChild(span);
+              } else ref.current.appendChild(document.createTextNode(part));
+            });
+        }, [text]);
+        return <span ref={ref} />;
+      };
+      const read = () => {
+        try {
+          return JSON.parse(localStorage.getItem("gameData") || "{}");
+        } catch {
+          return {};
+        }
+      };
+      const names = (t) => {
+        let s = new Set();
+        return t
+          .split(/\r?\n/)
+          .map((x) => x.trim().replace(/^\d+[.)-]\s*/, ""))
+          .filter((x) => x && !s.has(x.toLowerCase()) && s.add(x.toLowerCase()))
+          .map((name, i) => ({ id: "p" + Date.now() + i, name }));
+      };
+      function Sound({ on }) {
+        let c =
+          window._duckAudio ||
+          (window._duckAudio = new (
+            window.AudioContext || window.webkitAudioContext
+          )());
+        const b = (f, d = 0.12, type = "square") => {
+          if (!on) return;
+          if (c.state === "suspended") c.resume();
+          let o = c.createOscillator(),
+            g = c.createGain();
+          o.frequency.value = f;
+          o.type = type;
+          g.gain.setValueAtTime(0.055, c.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + d);
+          o.connect(g).connect(c.destination);
+          o.start();
+          o.stop(c.currentTime + d);
+        };
+        return {
+          count: (go) =>
+            go ? (b(523), setTimeout(() => b(784, 0.3), 100)) : b(660),
+          quack: () => {
+            b(180, 0.1, "sawtooth");
+            setTimeout(() => b(145, 0.1, "sawtooth"), 100);
+          },
+          boing: () => b(260, 0.16, "sine"),
+          splash: () => b(95, 0.09, "triangle"),
+          win: () =>
+            [523, 659, 784, 1047].forEach((f, i) =>
+              setTimeout(() => b(f, 0.24), i * 120),
+            ),
+        };
+      }
+      function duck(ctx, x, y, color, name, boost, n, accessory, spin) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(spin || 0);
+        let z = Math.min(1, Math.max(0.52, 10 / n));
+        ctx.scale(z, z);
+        let w = Math.max(82, ctx.measureText(name).width + 18);
+        ctx.fillStyle = "#fff";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-w / 2, -50, w, 25, 13);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#0f172a";
+        ctx.textAlign = "center";
+        ctx.font = "bold 13px system-ui";
+        ctx.fillText(name, 0, -33);
+        ctx.fillStyle = "#facc15";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 25, 18, 0, 0, 7);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.ellipse(-5, -13, 17, 10, 0, 0, 7);
+        ctx.fill();
+        ctx.fillStyle = "#f97316";
+        ctx.beginPath();
+        ctx.ellipse(25, 2, 12, 7, 0, 0, 7);
+        ctx.fill();
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(10, -14, 8, 0, 7);
+        ctx.fill();
+        ctx.fillStyle = "#111";
+        ctx.beginPath();
+        ctx.arc(12, -14, 3, 0, 7);
+        ctx.fill();
+        ctx.font = "20px serif";
+        ctx.fillText(accessory || (boost ? "🚀" : "🎀"), -28, -15);
+        ctx.restore();
+      }
+      function River({ racers, racing, duration, finish, sound, onComment }) {
+        let cv = useRef(),
+          raf = useRef(),
+          st = useRef({}),
+          won = useRef(false),
+          eventAt = useRef(0);
+        useEffect(() => {
+          st.current = {};
+          racers.forEach(
+            (r, i) =>
+              (st.current[r.id] = {
+                p: 0.02 + Math.random() * 0.05,
+                y: 0.12 + Math.random() * 0.76,
+                v: 0.035 + Math.random() * 0.024,
+                vy: (Math.random() - 0.5) * 0.02,
+                boost: 0,
+                spin: 0,
+                accessory: ["🕶️", "🎓", "🦩", "🚀", "🎀"][i % 5],
+              }),
+          );
+          won.current = false;
+          eventAt.current = 0;
+        }, [racers]);
+        useEffect(() => {
+          let last = performance.now(),
+            elapsed = 0;
+          const tell = (m) => onComment && onComment(m);
+          function chaos() {
+            let a = racers.map((r) => st.current[r.id]),
+              tail = a.slice().sort((m, n) => m.p - n.p)[0],
+              lead = a.slice().sort((m, n) => n.p - m.p)[0],
+              pick = a[Math.floor(Math.random() * a.length)],
+              label = (q) =>
+                racers.find((r) => st.current[r.id] === q)?.name ||
+                "một chú vịt",
+              type = Math.floor(Math.random() * 4);
+            if (!pick) return;
+            if (type === 0) {
+              lead.boost = -0.8;
+              tell(
+                "Ôi không! " + label(lead) + " vừa mải đớp bánh mì trôi! 🍞",
+              );
+            } else if (type === 1) {
+              pick.boost = 0.8;
+              pick.spin = Math.PI * 2;
+              tell(
+                label(pick) + " bị xoáy nước cuốn một vòng rồi bắn vọt lên! 🌪️",
+              );
+            } else if (type === 2) {
+              tail.boost = 1.4;
+              tell(
+                "Cụ rùa vừa giải cứu " +
+                  label(tail) +
+                  " từ cuối đàn vọt lên Top 3! 🐢",
+              );
+            } else {
+              pick.boost = 1.25;
+              pick.accessory = "🚀";
+              tell(label(pick) + " bật Nitro, lao vèo qua mặt cả đàn! 🚀");
+            }
+            sound.quack();
+          }
+          function f(now) {
+            let c = cv.current;
+            if (!c) return;
+            let box = c.getBoundingClientRect(),
+              d = devicePixelRatio || 1;
+            if (c.width !== box.width * d || c.height !== box.height * d) {
+              c.width = box.width * d;
+              c.height = box.height * d;
+            }
+            let x = c.getContext("2d");
+            x.setTransform(d, 0, 0, d, 0, 0);
+            let w = box.width,
+              h = box.height,
+              dt = Math.min(now - last, 35) / 1000;
+            last = now;
+            let g = x.createLinearGradient(0, 0, w, h);
+            g.addColorStop(0, "#7dd3fc");
+            g.addColorStop(1, "#0369a1");
+            x.fillStyle = g;
+            x.fillRect(0, 0, w, h);
+            x.fillStyle = "#65a30d";
+            x.fillRect(0, 0, 45, h);
+            x.fillRect(w - 45, 0, 45, h);
+            for (let i = 0; i < 18; i++) {
+              x.strokeStyle = "#ffffff30";
+              x.beginPath();
+              let yy = i * 48 + ((now / 25) % 48);
+              x.moveTo(45, yy);
+              x.quadraticCurveTo(w / 2, yy - 12, w - 45, yy);
+              x.stroke();
+            }
+            x.fillStyle = "#92400e";
+            x.fillRect(62, 0, 12, h);
+            for (let yy = 0; yy < h; yy += 20)
+              for (let xx = w - 57; xx < w - 41; xx += 8) {
+                x.fillStyle = (yy / 20 + xx / 8) % 2 ? "#111" : "#fff";
+                x.fillRect(xx, yy, 8, 10);
+              }
+            x.fillStyle = "#fff";
+            x.font = "bold 13px system-ui";
+            x.fillText("XUẤT PHÁT", 80, 22);
+            x.fillText("ĐÍCH 🏁", w - 110, 22);
+            if (racing && racers.length) {
+              elapsed += dt;
+              let slow = elapsed > duration * 0.84 ? 0.35 : 1;
+              if (
+                elapsed > duration * 0.84 &&
+                Math.floor(elapsed * 2) !== Math.floor((elapsed - dt) * 2)
+              )
+                tell(
+                  "Photo Finish! Cả lớp nín thở nhìn mỏ vịt nào chạm đích trước! 📸",
+                );
+              if (elapsed - eventAt.current > 2.25) {
+                eventAt.current = elapsed;
+                chaos();
+              }
+              racers.forEach((r) => {
+                let q = st.current[r.id];
+                q.boost += (0 - q.boost) * dt * 1.4;
+                q.v +=
+                  (0.045 + Math.random() * 0.035 + q.boost * 0.035 - q.v) *
+                  0.08;
+                q.vy += (Math.random() - 0.5) * 0.013;
+                q.y += q.vy * dt * 3;
+                q.y = Math.max(0.08, Math.min(0.92, q.y));
+                q.p = Math.min(1.02, q.p + q.v * dt * slow);
+                q.spin *= 0.88;
+              });
+              for (let i = 0; i < racers.length; i++)
+                for (let j = i + 1; j < racers.length; j++) {
+                  let a = st.current[racers[i].id],
+                    b = st.current[racers[j].id],
+                    dx = (a.p - b.p) * w,
+                    dy = (a.y - b.y) * h;
+                  if (dx * dx + dy * dy < 42 * 42) {
+                    let t = a.vy;
+                    a.vy = -b.vy + (Math.random() - 0.5) * 0.18;
+                    b.vy = -t + (Math.random() - 0.5) * 0.18;
+                    a.v -= 0.008;
+                    b.v += 0.008;
+                    if (Math.random() < 0.08) {
+                      sound.boing();
+                      tell(
+                        "Boing! " +
+                          racers[i].name +
+                          " và " +
+                          racers[j].name +
+                          " vừa va nhau nảy tưng tưng!",
+                      );
+                    }
+                  }
+                }
+              let lead = racers
+                .map((r) => ({ r, p: st.current[r.id].p }))
+                .sort((a, b) => b.p - a.p)[0];
+              if (!won.current && (lead.p >= 1 || elapsed > duration)) {
+                won.current = true;
+                sound.win();
+                finish(lead.r);
+              }
+            }
+            racers.forEach((r, i) => {
+              let q = st.current[r.id] || { p: 0, y: 0.5 };
+              let px = 82 + q.p * (w - 155),
+                py = 35 + q.y * (h - 70);
+              x.fillStyle = "#dff7ff99";
+              x.beginPath();
+              x.ellipse(px - 32, py + 16, 17, 5, 0, 0, 7);
+              x.fill();
+              duck(
+                x,
+                px,
+                py,
+                COLORS[i % COLORS.length],
+                r.name,
+                q.boost > 0,
+                racers.length,
+                q.accessory,
+                q.spin,
+              );
+            });
+            raf.current = requestAnimationFrame(f);
+          }
+          raf.current = requestAnimationFrame(f);
+          return () => cancelAnimationFrame(raf.current);
+        }, [racers, racing, duration, finish, sound, onComment]);
+        return <canvas ref={cv} />;
+      }
+      function Roster({ list, save, close }) {
+        let [tab, setTab] = useState("manual"),
+          [text, setText] = useState(list.map((x) => x.name).join("\n")),
+          [cls, setCls] = useState([]),
+          [note, setNote] = useState("");
+        useEffect(() => {
+          if (tab === "db" && !cls.length)
+            fetch("api/exam.php?route=student-classes", {
+              credentials: "include",
+            })
+              .then((r) => r.json())
+              .then((d) => setCls(d.classes || []))
+              .catch(() => setNote("Không tải được danh sách lớp."));
+        }, [tab]);
+        let select = async (e) => {
+          let cn = e.target.value;
+          if (!cn) return;
+          try {
+            let d = await fetch(
+                "api/exam.php?route=class-students&class_name=" +
+                  encodeURIComponent(cn),
+                { credentials: "include" },
+              ).then((r) => r.json()),
+              a = (d.roster || [])
+                .map((s) => s.full_name || s.name)
+                .filter(Boolean);
+            setText(a.join("\n"));
+            setTab("manual");
+            setNote("Đã nạp " + a.length + " học sinh lớp " + cn);
+          } catch {
+            setNote("Không tải được học sinh.");
+          }
+        };
+        let excel = async (e) => {
+          try {
+            let f = e.target.files[0],
+              b = await f.arrayBuffer(),
+              w = XLSX.read(b),
+              rows = XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]], {
+                header: 1,
+                defval: "",
+              }),
+              a = rows
+                .slice(1)
+                .map((r) => String(r[1] || r[0] || "").trim())
+                .filter((v) => v && !/^\d+$/.test(v));
+            setText(a.join("\n"));
+            setTab("manual");
+            setNote("Đã đọc " + a.length + " học sinh.");
+          } catch {
+            setNote("Không đọc được Excel.");
+          }
+        };
+        return (
+          <div className="fixed inset-0 z-50 shade flex items-center justify-center p-4">
+            <div className="pop bg-white rounded-3xl p-6 max-w-2xl w-full">
+              <button className="float-right text-2xl" onClick={close}>
+                ×
+              </button>
+              <h2 className="text-2xl font-black text-sky-800">
+                👥 Danh sách học sinh
+              </h2>
+              <div className="flex flex-wrap gap-2 my-4">
+                <button
+                  className="btn bg-sky-600 text-white"
+                  onClick={() => setTab("manual")}
+                >
+                  Nhập danh sách mới
+                </button>
+                <button
+                  className="btn bg-slate-100"
+                  onClick={() => setTab("excel")}
+                >
+                  Import Excel
+                </button>
+                <button
+                  className="btn bg-slate-100"
+                  onClick={() => setTab("db")}
+                >
+                  Đổi lớp học (CSDL)
+                </button>
+              </div>
+              {tab === "manual" && (
+                <textarea
+                  className="w-full h-52 p-3 border-2 rounded-xl"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Mỗi dòng một học sinh"
+                />
+              )}
+              {tab === "excel" && (
+                <input
+                  className="w-full p-4 border-2 rounded-xl"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={excel}
+                />
+              )}{" "}
+              {tab === "db" && (
+                <select
+                  className="w-full p-3 border-2 rounded-xl"
+                  onChange={select}
+                >
+                  <option>-- Chọn lớp --</option>
+                  {cls.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              )}
+              <p className="mt-3 text-sky-700 font-bold">
+                {note}{" "}
+                {tab === "manual" && names(text).length + " học sinh sẵn sàng."}
+              </p>
+              <button
+                className="btn w-full mt-4 bg-emerald-600 text-white"
+                onClick={() => save(names(text))}
+              >
+                Lưu danh sách
+              </button>
+            </div>
+          </div>
+        );
+      }
+      function App() {
+        let data = useMemo(read, []),
+          init = (data.participants || [])
+            .filter((x) => x.name)
+            .map((x, i) => ({ id: x.id || "p" + i, name: x.name })),
+          [racers, setRacers] = useState(init),
+          [racing, setRacing] = useState(false),
+          [count, setCount] = useState(""),
+          [winner, setWinner] = useState(null),
+          [roster, setRoster] = useState(!init.length),
+          [on, setOn] = useState(true),
+          [dur, setDur] = useState(12),
+          [history, setHistory] = useState([]),
+          [showHistory, setShowHistory] = useState(false),
+          [q, setQ] = useState(null),
+          [secs, setSecs] = useState(30),
+          [comment, setComment] = useState(
+            "Bình luận viên đã sẵn sàng: bầy vịt chuẩn bị bùng nổ!",
+          ),
+          sound = useMemo(() => Sound({ on }), [on]),
+          questions = data.content?.questions || [];
+        useEffect(() => {
+          if (!q) return;
+          setSecs(30);
+          let t = setInterval(() => setSecs((s) => (s > 0 ? s - 1 : 0)), 1000);
+          return () => clearInterval(t);
+        }, [q]);
+        let start = () => {
+            if (!racers.length) return setRoster(true);
+            let n = 3;
+            setCount(n);
+            sound.count();
+            let t = setInterval(() => {
+              n--;
+              if (n) {
+                setCount(n);
+                sound.count();
+              } else {
+                clearInterval(t);
+                setCount("BẮT ĐẦU!");
+                sound.count(true);
+                setTimeout(() => {
+                  setCount("");
+                  setRacing(true);
+                }, 500);
+              }
+            }, 850);
+          },
+          finish = useCallback((r) => {
+            setRacing(false);
+            setWinner(r);
+            setHistory((h) => [
+              ...h,
+              { ...r, at: new Date().toLocaleTimeString("vi-VN") },
+            ]);
+            window.confetti &&
+              confetti({
+                particleCount: 190,
+                spread: 110,
+                origin: { y: 0.55 },
+              });
+          }, []),
+          next = (remove) => {
+            if (remove) setRacers((a) => a.filter((x) => x.id !== winner.id));
+            setWinner(null);
+          };
+        return (
+          <main className="max-w-7xl mx-auto p-4">
+            <header className="bg-white rounded-3xl shadow-xl p-4 mb-4 flex flex-wrap justify-between gap-3">
+              <div>
+                <h1 className="text-3xl font-black text-sky-800">
+                  🦆 ĐUA VỊT NGẪU NHIÊN
+                </h1>
+                <p>{racers.length} học sinh đang tham gia</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  className="btn border-2"
+                  onClick={() => setRoster(true)}
+                >
+                  👥 Danh sách
+                </button>
+                <button
+                  className="btn border-2"
+                  onClick={() => setShowHistory(true)}
+                >
+                  📜 Lịch sử
+                </button>
+                <button className="btn bg-slate-100" onClick={() => setOn(!on)}>
+                  {on ? "🔊" : "🔇"}
+                </button>
+                <button
+                  className="btn bg-slate-600 text-white"
+                  onClick={() => (location.href = "trochoi.html")}
+                >
+                  Thoát
+                </button>
+              </div>
+            </header>
+            <section className="relative bg-white rounded-3xl shadow-xl p-3">
+              <River
+                racers={racers}
+                racing={racing}
+                duration={dur}
+                finish={finish}
+                sound={sound}
+                onComment={setComment}
+              />
+              {count && (
+                <b
+                  className="absolute inset-0 flex items-center justify-center text-7xl text-white"
+                  style={{ textShadow: "0 4px 15px #075985" }}
+                >
+                  {count}
+                </b>
+              )}
+              <div className="absolute top-6 left-6 bg-white/90 p-3 rounded-xl">
+                <b>🏆 Top 3</b>
+                {racers.slice(0, 3).map((r, i) => (
+                  <div key={r.id}>
+                    {i + 1}. 🦆 {r.name}
+                  </div>
+                ))}
+              </div>
+            </section>
+            <div className="mt-3 rounded-2xl bg-slate-900 px-5 py-3 text-center font-bold text-white shadow-lg">
+              🎙️ {comment}
+            </div>
+            <div className="flex flex-wrap justify-center gap-3 mt-4">
+              <select
+                className="btn border-2"
+                value={dur}
+                onChange={(e) => setDur(+e.target.value)}
+                disabled={racing}
+              >
+                <option value="10">10 giây · Nhanh</option>
+                <option value="12">12 giây · Tiêu chuẩn</option>
+                <option value="14">14 giây · Kịch tính</option>
+              </select>
+              <button
+                disabled={racing}
+                onClick={start}
+                className="btn px-8 py-4 text-lg text-white bg-gradient-to-r from-orange-500 to-rose-600"
+              >
+                🏁 BẮT ĐẦU ĐUA
+              </button>
+            </div>
+            {roster && (
+              <Roster
+                list={racers}
+                close={() => setRoster(false)}
+                save={(a) => {
+                  setRacers(a);
+                  setRoster(false);
+                }}
+              />
+            )}
+            {winner && (
+              <div className="fixed inset-0 z-40 shade flex items-center justify-center p-4">
+                <div className="pop bg-white rounded-3xl p-8 text-center max-w-lg w-full">
+                  <div className="text-6xl">🏆🦆🎉</div>
+                  <h2 className="text-3xl font-black text-amber-600 mt-3">
+                    CHÚC MỪNG: {winner.name}!
+                  </h2>
+                  <p className="text-lg mt-2">
+                    Học sinh may mắn được gọi trong lượt này!
+                  </p>
+                  <div className="grid gap-2 mt-6">
+                    <button
+                      className="btn bg-violet-600 text-white"
+                      disabled={!questions.length}
+                      onClick={() =>
+                        setQ(
+                          questions[
+                            Math.floor(Math.random() * questions.length)
+                          ],
+                        )
+                      }
+                    >
+                      📝 Hiện câu hỏi kiểm tra
+                    </button>
+                    <button
+                      className="btn bg-sky-600 text-white"
+                      onClick={() => next(false)}
+                    >
+                      Đua tiếp (Giữ nguyên danh sách)
+                    </button>
+                    <button
+                      className="btn bg-emerald-600 text-white"
+                      onClick={() => next(true)}
+                    >
+                      Đua tiếp (Loại bạn này khỏi lượt sau)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {showHistory && (
+              <div className="fixed inset-0 z-50 shade flex items-center justify-center p-4">
+                <div className="pop bg-white rounded-3xl p-6 max-w-md w-full">
+                  <button
+                    className="float-right text-2xl"
+                    onClick={() => setShowHistory(false)}
+                  >
+                    ×
+                  </button>
+                  <h2 className="text-xl font-black">📜 Lịch sử gọi tên</h2>
+                  <ol className="mt-4 space-y-2">
+                    {history.length ? (
+                      history.map((h, i) => (
+                        <li key={i} className="p-2 rounded bg-sky-50">
+                          {i + 1}. <b>{h.name}</b> <small>{h.at}</small>
+                        </li>
+                      ))
+                    ) : (
+                      <li>Chưa gọi học sinh nào.</li>
+                    )}
+                  </ol>
+                </div>
+              </div>
+            )}
+            {q && (
+              <div className="fixed inset-0 z-[60] shade flex items-center justify-center p-4">
+                <div className="pop bg-white rounded-3xl p-7 max-w-2xl w-full">
+                  <div className="flex justify-between">
+                    <b className="text-xl text-violet-700">
+                      📝 Câu hỏi kiểm tra
+                    </b>
+                    <b className="text-2xl text-rose-600">⏱ {secs}s</b>
+                  </div>
+                  <div className="text-xl font-bold my-5 leading-relaxed">
+                    <MathText text={q.prompt || q.question} />
+                  </div>
+                  {(q.choices || []).map((x, i) => (
+                    <button
+                      key={i}
+                      className="block w-full text-left p-3 border-2 rounded-xl mb-2"
+                    >
+                      <span className="font-bold text-violet-700 mr-2">
+                        {String.fromCharCode(65 + i)}.
+                      </span>
+                      <MathText text={x} />
+                    </button>
+                  ))}
+                  <button
+                    className="btn w-full mt-3 bg-slate-700 text-white"
+                    onClick={() => setQ(null)}
+                  >
+                    Đóng câu hỏi
+                  </button>
+                </div>
+              </div>
+            )}
+          </main>
+        );
+      }
+      ReactDOM.render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

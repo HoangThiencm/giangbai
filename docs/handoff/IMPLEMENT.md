@@ -1,29 +1,26 @@
-# IMPLEMENT: Nâng cấp game-racing.html → Đua Xe F1 Mario Kart
+# IMPLEMENT: Nâng Cấp Game Đua Vịt Hài Hước Đỉnh Cao & Sửa Lỗi Toán/Kẹt Câu
 
-Đã triển khai đúng `docs/handoff/PLAN.md` trên `game-racing.html`.
+Đã triển khai đúng `docs/handoff/PLAN.md` trong phạm vi `game-treasure.html` và `game-escape.html`.
 
 ## Thay đổi
 
-### Đường đua & đồ họa F1
-- Nền nhựa đường `#0f172a`, vạch sơn animation `trackMove`, hàng rào đỏ-trắng, khán đài cờ hoa.
-- Đèn xuất phát 5 đèn đỏ → GO xanh (`soundEngine.f1Lights`).
-- 4 siêu xe SVG/CSS: Scuderia Red / Cyan Lightning / Golden Thunder / Neon Phantom.
-- Hiệu ứng `nitro-flame`, `smoke-trail`, rung khi sai, spin 360 khi dính chuối; vạch đích ca-rô.
+### Game Đua Vịt (`game-treasure.html`)
 
-### Cơ chế cả 4 tổ cùng chơi
-- Câu hỏi + KaTeX `MathText`, đồng hồ 15/30/45s + thanh co dần.
-- GV tick nhiều tổ đúng (nút hoặc phím `1–4`), Enter / nút **XÁC NHẬN BỨT TỐC** → các xe đúng vọt đồng loạt.
-- Chuỗi đúng ≥ 2 → SUPER NITRO (+thêm bước + lửa).
+- Bổ sung KaTeX cục bộ và Canvas Confetti; `MathText` chuẩn hóa công thức có `$...$`, `\\(...\\)`, `\\[...\\]` và backtick để render prompt/lựa chọn trong modal câu hỏi.
+- Thay động cơ Canvas bằng đàn vịt bơi tự do với vị trí dọc ngẫu nhiên, gia tốc, bọt nước, va chạm đàn hồi và âm thanh Boing.
+- Thêm phụ kiện ngẫu nhiên (kính, mũ cử nhân, phao, tên lửa, nơ), bảng tên học sinh nổi bật và âm thanh đếm ngược, quack, va chạm, chiến thắng.
+- Thêm sự kiện bánh mì, xoáy nước, cụ rùa cứu trợ và Nitro; thanh bình luận viên trực tiếp mô tả diễn biến.
+- Thêm slow-motion ở đoạn cuối cùng và thông báo Photo Finish trước khi pháo hoa/fanfare khi có vịt thắng.
 
-### Hộp vật phẩm Mario Kart (bật/tắt trong cài đặt)
-- 🚀 Nitro, 🛡️ Khiên, 🍌 Vỏ chuối, ⚡ Tia sét.
+### Hứng Trứng Vàng (`game-escape.html`)
 
-### Âm thanh Web Audio (offline)
-- `f1Lights`, `engineRev`, `tireScreech`, `nitroBoost`, `podiumFanfare`, tick đồng hồ; nút mute góc trên.
-
-### Bục vinh quang
-- Confetti + fanfare; podium 🥇🥈🥉 + danh hiệu; bảng đúng/bước; Đua lại / Về menu.
+- Dùng hai ref timer độc lập: `fallTimerRef` và `nextTimerRef`.
+- Cleanup hiệu ứng rơi chỉ hủy timer rơi; timer chuyển câu được giữ để không kẹt ở câu đầu.
+- `handleCatch` lên lịch qua `nextTimerRef`; `goNext` dùng updater của `setQIndex` để tránh stale closure.
 
 ## Kiểm tra
-- Static marker check PLAN features trên `game-racing.html` — PASS.
-- Chưa verify tương tác trình duyệt (không có browser tool). Bước tiếp: Antigravity `/verify`.
+
+- Babel JSX: `game-treasure.html` PASS; `game-escape.html` PASS.
+- Static check: xác nhận KaTeX, confetti, các sự kiện đua, commentary/Photo Finish, hai timer ref và `setQIndex(prevIndex => ...)` đều có mặt.
+- `git diff --check`: PASS (chỉ có cảnh báo line-ending của Git, không có lỗi whitespace).
+- Chưa kiểm thử tương tác trực tiếp trong trình duyệt. Bước tiếp theo: chạy `/verify` theo quy trình dự án.
