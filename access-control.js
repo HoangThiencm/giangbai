@@ -49,7 +49,12 @@ async function accessControlMain() {
         'game-teambattle.html': 'smartquiz',
         'game-tower.html': 'smartquiz',
         'game-treasure.html': 'smartquiz',
-        'game-unlock.html': 'smartquiz'
+        'game-unlock.html': 'smartquiz',
+        'game-picture.html': 'smartquiz',
+        'game-wheel.html': 'smartquiz',
+        'game-millionaire.html': 'smartquiz',
+        'game-crossword.html': 'smartquiz',
+        'game-racing.html': 'smartquiz'
     };
     const pageUrls = {
         lotrinh: 'lotrinhtoan6.html',

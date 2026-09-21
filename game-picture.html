@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <script src="js/security-guard.js"></script>
+    <script src="access-control.js"></script>
+    <meta charset="UTF-8">
+    <title>Game: Bức Tranh Bí Ẩn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <script src="vendor/babel.min.js"></script>
+    <link rel="stylesheet" href="vendor/katex.min.css">
+    <script src="vendor/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .katex { font-size: 1.05em; }
+        .fade-in { animation: fadeIn 0.45s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .celebrate { animation: celebrate 0.7s ease-out; }
+        @keyframes celebrate {
+            0% { transform: scale(1); filter: brightness(1); }
+            40% { transform: scale(1.08); filter: brightness(1.35); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        .tile-cover { background: linear-gradient(145deg, #f472b6, #e11d48); }
+        .shake { animation: shake 0.4s ease-in-out; }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 min-h-screen">
+    <div id="root">
+        <div style="max-width:720px;margin:48px auto;padding:24px;background:#fff;border-radius:16px;color:#334155;text-align:center;">Đang tải bức tranh...</div>
+    </div>
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const DEFAULT_IMG = "data:image/svg+xml," + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f472b6"/><stop offset=".5" stop-color="#fb923c"/><stop offset="1" stop-color="#fbbf24"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><text x="400" y="300" text-anchor="middle" fill="#fff" font-size="42" font-family="sans-serif" font-weight="bold">Bức Tranh Bí Ẩn</text></svg>'
+        );
+
+        const MathText = ({ text }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (!text || !ref.current) return;
+                let processed = String(text).replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = '';
+                parts.forEach(part => {
+                    if (part.startsWith('$$') && part.endsWith('$$')) {
+                        const span = document.createElement('span');
+                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); } catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else if (part.startsWith('$') && part.endsWith('$')) {
+                        const span = document.createElement('span');
+                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); } catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else if (part) ref.current.appendChild(document.createTextNode(part));
+                });
+            }, [text]);
+            return <span ref={ref} />;
+        };
+
+        const gridForCount = (n) => {
+            if (n <= 4) return { cols: 2, rows: 2 };
+            if (n <= 6) return { cols: 3, rows: 2 };
+            return { cols: 3, rows: 3 };
+        };
+
+        const PictureGame = () => {
+            const [gameData, setGameData] = useState(null);
+            const [questions, setQuestions] = useState([]);
+            const [revealed, setRevealed] = useState({});
+            const [activeTile, setActiveTile] = useState(null);
+            const [selected, setSelected] = useState(null);
+            const [showResult, setShowResult] = useState(false);
+            const [celebrateTile, setCelebrateTile] = useState(null);
+            const [wrongShake, setWrongShake] = useState(false);
+            const [gameOver, setGameOver] = useState(false);
+            const [showInstructions, setShowInstructions] = useState(true);
+            const [score, setScore] = useState(0);
+
+            useEffect(() => {
+                const raw = localStorage.getItem('gameData');
+                if (!raw) { alert('Không có dữ liệu game! Hãy tạo nội dung từ trang Game Giáo Dục trước.'); window.location.href = 'trochoi.html'; return; }
+                const parsed = JSON.parse(raw);
+                if (parsed.gameType && parsed.gameType !== 'picture') {
+                    alert('Dữ liệu không thuộc game Bức Tranh Bí Ẩn. Vui lòng tạo lại từ menu game.');
+                    window.location.href = 'trochoi.html'; return;
+                }
+                const loaded = (parsed.content?.questions || []).map((q, idx) => ({
+                    id: q.id || `q${idx + 1}`,
+                    prompt: q.prompt || '',
+                    choices: q.choices || [],
+                    answer: typeof q.answer === 'number' ? q.answer : 0,
+                    explanation: q.explanation || ''
+                })).filter(q => q.prompt && q.choices.length >= 2);
+                if (!loaded.length) { alert('Không có câu hỏi hợp lệ trong dữ liệu game.'); window.location.href = 'trochoi.html'; return; }
+                setGameData(parsed);
+                setQuestions(loaded.slice(0, 9));
+            }, []);
+
+            const themeImage = gameData?.content?.themeImage || DEFAULT_IMG;
+            const topicTitle = gameData?.formData?.topic || gameData?.content?.title || 'Bức tranh bí ẩn';
+            const grid = useMemo(() => gridForCount(questions.length), [questions.length]);
+            const tileCount = grid.cols * grid.rows;
+            const tiles = useMemo(() => Array.from({ length: tileCount }, (_, i) => i), [tileCount]);
+            const revealedCount = Object.keys(revealed).length;
+
+            const openTile = (idx) => {
+                if (revealed[idx] || activeTile !== null || gameOver) return;
+                if (!questions[idx]) return;
+                setActiveTile(idx);
+                setSelected(null);
+                setShowResult(false);
+                setWrongShake(false);
+            };
+
+            const submitAnswer = () => {
+                if (selected === null || showResult || activeTile === null) return;
+                const q = questions[activeTile];
+                setShowResult(true);
+                if (selected === q.answer) {
+                    setScore(s => s + 10);
+                    setCelebrateTile(activeTile);
+                    setRevealed(prev => {
+                        const next = { ...prev, [activeTile]: true };
+                        if (Object.keys(next).length >= Math.min(tileCount, questions.length)) {
+                            setTimeout(() => setGameOver(true), 900);
+                        }
+                        return next;
+                    });
+                    setTimeout(() => { setActiveTile(null); setCelebrateTile(null); setShowResult(false); setSelected(null); }, 900);
+                } else {
+                    setWrongShake(true);
+                    setTimeout(() => { setWrongShake(false); setActiveTile(null); setShowResult(false); setSelected(null); }, 1200);
+                }
+            };
+
+            if (!gameData || !questions.length) {
+                return <div className="flex items-center justify-center min-h-screen"><div className="text-xl text-rose-700 font-semibold"><i className="fas fa-spinner fa-spin mr-2"></i>Đang chuẩn bị bức tranh...</div></div>;
+            }
+
+            if (showInstructions) {
+                return (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full fade-in">
+                            <h2 className="text-3xl font-bold text-rose-700 mb-4"><i className="fas fa-image mr-2"></i>Bức Tranh Bí Ẩn</h2>
+                            <p className="text-gray-600 mb-4">Chủ đề: <strong>{topicTitle}</strong></p>
+                            <ul className="space-y-2 text-gray-700 mb-4">
+                                <li><strong>1.</strong> Bức tranh bị che bởi lưới {grid.rows}×{grid.cols} mảnh</li>
+                                <li><strong>2.</strong> Bấm mảnh phủ → trả lời trắc nghiệm</li>
+                                <li><strong>3.</strong> Đúng → hé lộ mảnh; Sai → vẫn che</li>
+                                <li><strong>4.</strong> Hé lộ hết mảnh để chiến thắng!</li>
+                            </ul>
+                            <button onClick={() => setShowInstructions(false)} className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl font-bold text-lg hover:shadow-xl">
+                                <i className="fas fa-play mr-2"></i>Bắt đầu ({Math.min(tileCount, questions.length)} mảnh)
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameOver) {
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-10 text-center">
+                            <div className="text-6xl mb-4">🖼️</div>
+                            <h2 className="text-4xl font-bold text-gray-800 mb-2">Đã hé lộ bức tranh!</h2>
+                            <p className="text-gray-600 mb-4">{topicTitle}</p>
+                            <img src={themeImage} alt="theme" className="mx-auto max-h-64 rounded-xl shadow mb-6 object-cover" />
+                            <div className="text-4xl font-black text-rose-600 mb-8">{score} điểm</div>
+                            <div className="flex gap-3 justify-center flex-wrap">
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-rose-500 text-white rounded-xl font-bold"><i className="fas fa-redo mr-2"></i>Chơi lại</button>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold"><i className="fas fa-home mr-2"></i>Về menu</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            const activeQ = activeTile !== null ? questions[activeTile] : null;
+
+            return (
+                <div className="max-w-5xl mx-auto p-4 md:p-6 fade-in">
+                    <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+                        <div className="flex gap-2">
+                            <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg"><i className="fas fa-arrow-left mr-1"></i>Thoát</button>
+                            <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg"><i className="fas fa-question-circle"></i></button>
+                        </div>
+                        <div className="text-center">
+                            <h1 className="text-2xl md:text-3xl font-bold text-rose-700"><i className="fas fa-image mr-2"></i>Bức Tranh Bí Ẩn</h1>
+                            <p className="text-sm text-gray-600">{topicTitle}</p>
+                        </div>
+                        <div className="px-4 py-2 bg-white border-2 border-rose-200 rounded-lg font-bold text-rose-700">
+                            <i className="fas fa-puzzle-piece mr-1"></i>{revealedCount}/{Math.min(tileCount, questions.length)} · {score}đ
+                        </div>
+                    </div>
+
+                    <div className="relative mx-auto max-w-3xl aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border-4 border-rose-200">
+                        <img src={themeImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${grid.cols}, 1fr)`, gridTemplateRows: `repeat(${grid.rows}, 1fr)` }}>
+                            {tiles.map(idx => {
+                                if (idx >= questions.length) return <div key={idx} className="bg-transparent" />;
+                                const isOpen = revealed[idx];
+                                return (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        disabled={isOpen}
+                                        onClick={() => openTile(idx)}
+                                        className={`relative border border-white/40 transition ${isOpen ? (celebrateTile === idx ? 'celebrate' : '') : 'tile-cover hover:brightness-110 cursor-pointer'} ${!isOpen ? 'opacity-95' : 'opacity-0 pointer-events-none'}`}
+                                    >
+                                        {!isOpen && (
+                                            <span className="absolute inset-0 flex items-center justify-center text-white font-black text-2xl drop-shadow">
+                                                {idx + 1}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {activeQ && (
+                        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                            <div className={`bg-white rounded-3xl shadow-2xl p-6 md:p-8 max-w-2xl w-full ${wrongShake ? 'shake' : ''}`}>
+                                <div className="text-sm text-rose-600 font-bold mb-2">Mảnh {activeTile + 1}</div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-5"><MathText text={activeQ.prompt} /></h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                                    {activeQ.choices.map((choice, idx) => {
+                                        let cls = 'p-4 rounded-xl border-2 text-left font-medium ';
+                                        if (showResult) {
+                                            if (idx === activeQ.answer) cls += 'bg-emerald-100 border-emerald-500';
+                                            else if (idx === selected) cls += 'bg-red-100 border-red-500';
+                                            else cls += 'opacity-50 border-gray-200';
+                                        } else cls += selected === idx ? 'bg-rose-100 border-rose-500' : 'border-gray-200 hover:border-rose-400';
+                                        return (
+                                            <button key={idx} disabled={showResult} onClick={() => setSelected(idx)} className={cls}>
+                                                <span className="font-bold mr-2">{String.fromCharCode(65 + idx)}.</span>
+                                                <MathText text={choice} />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {!showResult && selected !== null && (
+                                    <button onClick={submitAnswer} className="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl font-bold">
+                                        <i className="fas fa-check mr-2"></i>Xác nhận
+                                    </button>
+                                )}
+                                {showResult && selected !== activeQ.answer && (
+                                    <p className="text-center text-red-600 font-semibold">Sai rồi — mảnh vẫn được che!</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<PictureGame />, document.getElementById('root'));
+    </script>
+</body>
+</html>

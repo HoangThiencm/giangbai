@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <script src="js/security-guard.js"></script>
+    <script src="access-control.js"></script>
+    <meta charset="UTF-8">
+    <title>Game: Đua Xe 4 Tổ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <script src="vendor/babel.min.js"></script>
+    <link rel="stylesheet" href="vendor/katex.min.css">
+    <script src="vendor/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .katex { font-size: 1.05em; }
+        .fade-in { animation: fadeIn 0.45s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .nitro { animation: nitro 0.65s ease-out; }
+        @keyframes nitro {
+            0% { transform: translateX(0) scale(1); filter: brightness(1); }
+            35% { transform: translateX(12px) scale(1.15); filter: brightness(1.4) drop-shadow(0 0 8px #38bdf8); }
+            100% { transform: translateX(0) scale(1); filter: brightness(1); }
+        }
+        .track-bg {
+            background:
+                repeating-linear-gradient(90deg, rgba(255,255,255,.15) 0 2px, transparent 2px 40px),
+                linear-gradient(180deg, #1e293b, #0f172a);
+        }
+        .lane-active { box-shadow: 0 0 0 3px rgba(251,146,60,.7); }
+        .finish-flag { background: repeating-linear-gradient(45deg, #111 0 6px, #fff 6px 12px); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-orange-50 via-red-50 to-amber-100 min-h-screen">
+    <div id="root">
+        <div style="max-width:720px;margin:48px auto;padding:24px;background:#fff;border-radius:16px;color:#334155;text-align:center;">Đang tải đường đua...</div>
+    </div>
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const DEFAULT_TEAMS = [
+            { id: 't1', name: 'Tổ 1 Đỏ', color: 'red', emoji: '🏎️', border: 'border-red-500', bg: 'bg-red-50', text: 'text-red-700', bar: 'bg-red-500' },
+            { id: 't2', name: 'Tổ 2 Xanh', color: 'blue', emoji: '🚙', border: 'border-sky-500', bg: 'bg-sky-50', text: 'text-sky-700', bar: 'bg-sky-500' },
+            { id: 't3', name: 'Tổ 3 Vàng', color: 'yellow', emoji: '🚗', border: 'border-amber-400', bg: 'bg-amber-50', text: 'text-amber-700', bar: 'bg-amber-400' },
+            { id: 't4', name: 'Tổ 4 Tím', color: 'purple', emoji: '🚕', border: 'border-violet-500', bg: 'bg-violet-50', text: 'text-violet-700', bar: 'bg-violet-500' },
+        ];
+
+        const MathText = ({ text }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (!text || !ref.current) return;
+                let processed = String(text).replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = '';
+                parts.forEach(part => {
+                    if ((part.startsWith('$$') && part.endsWith('$$')) || (part.startsWith('$') && part.endsWith('$'))) {
+                        const span = document.createElement('span');
+                        const display = part.startsWith('$$');
+                        try { katex.render(part.slice(display ? 2 : 1, display ? -2 : -1), span, { throwOnError: false, displayMode: display }); } catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else if (part) ref.current.appendChild(document.createTextNode(part));
+                });
+            }, [text]);
+            return <span ref={ref} />;
+        };
+
+        const RacingGame = () => {
+            const [gameData, setGameData] = useState(null);
+            const [questions, setQuestions] = useState([]);
+            const [teams, setTeams] = useState(DEFAULT_TEAMS);
+            const [positions, setPositions] = useState({});
+            const [activeTeam, setActiveTeam] = useState('t1');
+            const [qIndex, setQIndex] = useState(0);
+            const [selected, setSelected] = useState(null);
+            const [showResult, setShowResult] = useState(false);
+            const [nitroId, setNitroId] = useState(null);
+            const [winner, setWinner] = useState(null);
+            const [gameOver, setGameOver] = useState(false);
+            const [showInstructions, setShowInstructions] = useState(true);
+            const [score, setScore] = useState(0);
+            const finishedRef = useRef(false);
+
+            useEffect(() => {
+                const raw = localStorage.getItem('gameData');
+                if (!raw) { alert('Không có dữ liệu game! Hãy tạo nội dung từ trang Game Giáo Dục trước.'); window.location.href = 'trochoi.html'; return; }
+                const parsed = JSON.parse(raw);
+                if (parsed.gameType && parsed.gameType !== 'racing') {
+                    alert('Dữ liệu không thuộc game Đua Xe 4 Tổ. Vui lòng tạo lại từ menu game.');
+                    window.location.href = 'trochoi.html'; return;
+                }
+                const loaded = (parsed.content?.questions || []).map((q, idx) => ({
+                    id: q.id || `q${idx + 1}`, prompt: q.prompt || '', choices: q.choices || [],
+                    answer: typeof q.answer === 'number' ? q.answer : 0, explanation: q.explanation || ''
+                })).filter(q => q.prompt && q.choices.length >= 2);
+                if (!loaded.length) { alert('Không có câu hỏi hợp lệ.'); window.location.href = 'trochoi.html'; return; }
+
+                let teamList = DEFAULT_TEAMS;
+                if (Array.isArray(parsed.content?.teams) && parsed.content.teams.length >= 4) {
+                    teamList = parsed.content.teams.slice(0, 4).map((t, i) => ({
+                        ...DEFAULT_TEAMS[i],
+                        id: t.id || DEFAULT_TEAMS[i].id,
+                        name: t.name || DEFAULT_TEAMS[i].name
+                    }));
+                }
+                setGameData(parsed);
+                setQuestions(loaded);
+                setTeams(teamList);
+                setPositions(teamList.reduce((a, t) => ({ ...a, [t.id]: 0 }), {}));
+                setActiveTeam(teamList[0].id);
+            }, []);
+
+            const finishSteps = useMemo(() => {
+                if (!questions.length) return 8;
+                return Math.min(Math.max(6, Math.ceil(questions.length * 0.55)), 10);
+            }, [questions.length]);
+
+            const topicTitle = gameData?.formData?.topic || 'Đua xe 4 tổ';
+            const currentQ = questions[qIndex];
+            const active = teams.find(t => t.id === activeTeam);
+
+            const advance = (teamId) => {
+                setPositions(prev => {
+                    const nextPos = Math.min((prev[teamId] || 0) + 1, finishSteps);
+                    const next = { ...prev, [teamId]: nextPos };
+                    if (nextPos >= finishSteps && !finishedRef.current) {
+                        finishedRef.current = true;
+                        setWinner(teamId);
+                        setTimeout(() => setGameOver(true), 900);
+                    }
+                    return next;
+                });
+                setNitroId(teamId);
+                setTimeout(() => setNitroId(null), 700);
+            };
+
+            const submit = () => {
+                if (selected === null || showResult || !currentQ || !activeTeam) return;
+                setShowResult(true);
+                const ok = selected === currentQ.answer;
+                if (ok) {
+                    setScore(s => s + 12);
+                    setTimeout(() => advance(activeTeam), 180);
+                }
+                setTimeout(() => {
+                    if (finishedRef.current) return;
+                    if (qIndex < questions.length - 1) {
+                        setQIndex(i => i + 1);
+                        setSelected(null);
+                        setShowResult(false);
+                    } else {
+                        const leader = Object.entries(positions).concat([[activeTeam, (positions[activeTeam] || 0) + (ok ? 1 : 0)]])
+                            .reduce((best, cur) => (!best || cur[1] > best[1] ? cur : best), null);
+                        // recompute from latest via ref-less fallback
+                        setPositions(prev => {
+                            const ranking = Object.entries(prev).sort((a, b) => b[1] - a[1]);
+                            setWinner(ranking[0]?.[0] || activeTeam);
+                            setGameOver(true);
+                            return prev;
+                        });
+                    }
+                }, 1400);
+            };
+
+            if (!gameData || !questions.length) {
+                return <div className="flex items-center justify-center min-h-screen"><div className="text-xl text-orange-800 font-semibold"><i className="fas fa-spinner fa-spin mr-2"></i>Đang chuẩn bị đường đua...</div></div>;
+            }
+
+            if (showInstructions) {
+                return (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full fade-in">
+                            <h2 className="text-3xl font-bold text-orange-700 mb-4"><i className="fas fa-car-side mr-2"></i>Đua Xe 4 Tổ</h2>
+                            <p className="text-gray-600 mb-4">Chủ đề: <strong>{topicTitle}</strong></p>
+                            <ul className="space-y-2 text-gray-700 mb-4">
+                                <li><strong>1.</strong> Chọn tổ đang trả lời (4 làn: Đỏ / Xanh / Vàng / Tím)</li>
+                                <li><strong>2.</strong> Trả lời đúng → xe tăng tốc nitro 1 bước</li>
+                                <li><strong>3.</strong> Tổ về đích trước ({finishSteps} bước) thắng!</li>
+                            </ul>
+                            <button onClick={() => setShowInstructions(false)} className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold text-lg">
+                                <i className="fas fa-flag-checkered mr-2"></i>Xuất phát ({questions.length} câu)
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameOver) {
+                const winTeam = teams.find(t => t.id === winner) || teams[0];
+                const ranking = [...teams].sort((a, b) => (positions[b.id] || 0) - (positions[a.id] || 0));
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-10 text-center">
+                            <div className="text-6xl mb-4">🏁</div>
+                            <h2 className="text-4xl font-bold text-gray-800 mb-2">{winTeam.emoji} {winTeam.name} về nhất!</h2>
+                            <p className="text-gray-600 mb-6">{topicTitle}</p>
+                            <div className="text-left max-w-md mx-auto mb-8 space-y-2">
+                                {ranking.map((t, i) => (
+                                    <div key={t.id} className={`flex justify-between px-4 py-2 rounded-lg ${i === 0 ? 'bg-amber-50 border border-amber-200 font-bold' : 'bg-gray-50'}`}>
+                                        <span>{i + 1}. {t.name}</span>
+                                        <span>{positions[t.id] || 0}/{finishSteps}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex gap-3 justify-center flex-wrap">
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-orange-600 text-white rounded-xl font-bold"><i className="fas fa-redo mr-2"></i>Đua lại</button>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold"><i className="fas fa-home mr-2"></i>Về menu</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-5xl mx-auto p-4 md:p-6 fade-in">
+                    <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+                        <div className="flex gap-2">
+                            <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg"><i className="fas fa-arrow-left mr-1"></i>Thoát</button>
+                            <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg"><i className="fas fa-question-circle"></i></button>
+                        </div>
+                        <div className="text-center">
+                            <h1 className="text-2xl font-bold text-orange-700"><i className="fas fa-car-side mr-2"></i>Đua Xe 4 Tổ</h1>
+                            <p className="text-sm text-gray-600">{topicTitle}</p>
+                        </div>
+                        <div className="px-4 py-2 bg-white border-2 border-orange-200 rounded-lg font-bold text-orange-700">{score}đ</div>
+                    </div>
+
+                    {active && (
+                        <div className={`mb-4 p-3 rounded-xl border-2 text-center ${active.bg} ${active.border}`}>
+                            <span className="text-sm">Tổ đang đua: </span>
+                            <span className={`font-bold text-lg ${active.text}`}>{active.emoji} {active.name}</span>
+                        </div>
+                    )}
+
+                    <div className="rounded-2xl shadow-xl p-4 mb-5 track-bg border-2 border-slate-700">
+                        <div className="flex justify-between text-xs text-slate-200 font-semibold mb-3 px-1">
+                            <span>Xuất phát</span><span>🏁 Đích ({finishSteps})</span>
+                        </div>
+                        <div className="space-y-3">
+                            {teams.map(team => {
+                                const pos = positions[team.id] || 0;
+                                const pct = Math.round((pos / finishSteps) * 100);
+                                const isActive = activeTeam === team.id;
+                                return (
+                                    <button key={team.id} type="button" disabled={showResult}
+                                        onClick={() => !showResult && setActiveTeam(team.id)}
+                                        className={`w-full relative rounded-xl border-2 ${team.border} ${team.bg} p-3 text-left ${isActive ? 'lane-active' : ''}`}>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className={`text-sm font-bold ${team.text}`}>{team.name}</span>
+                                            {isActive && <span className="text-[10px] bg-orange-600 text-white px-2 py-0.5 rounded-full font-bold">ĐANG TRẢ LỜI</span>}
+                                            <span className="text-xs text-gray-500 ml-auto">{pos}/{finishSteps}</span>
+                                        </div>
+                                        <div className="relative h-12 bg-slate-800/30 rounded-lg overflow-hidden">
+                                            <div className="absolute right-0 top-0 bottom-0 w-3 finish-flag rounded-r-lg opacity-90" />
+                                            <div className={`absolute top-1/2 -translate-y-1/2 text-3xl transition-all duration-700 ${nitroId === team.id ? 'nitro' : ''}`}
+                                                style={{ left: `calc(${pct}% - ${pct > 0 ? 18 : 4}px)` }}>
+                                                {team.emoji}
+                                            </div>
+                                            {nitroId === team.id && <span className="absolute text-sky-300 text-sm" style={{ left: `calc(${pct}% - 36px)`, top: '20%' }}>💨</span>}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl shadow-2xl p-5 md:p-8">
+                        <div className="flex justify-between text-sm text-gray-500 mb-4">
+                            <span>Câu {qIndex + 1}/{questions.length}</span>
+                            <span>Bấm làn xe để đổi tổ</span>
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-6"><MathText text={currentQ.prompt} /></h3>
+                        <div className="grid md:grid-cols-2 gap-3 mb-4">
+                            {currentQ.choices.map((choice, idx) => {
+                                let cls = 'p-4 rounded-xl border-2 text-left font-medium ';
+                                if (showResult) {
+                                    if (idx === currentQ.answer) cls += 'bg-emerald-100 border-emerald-500';
+                                    else if (idx === selected) cls += 'bg-red-100 border-red-500';
+                                    else cls += 'opacity-50 border-gray-200';
+                                } else cls += selected === idx ? 'bg-orange-100 border-orange-500' : 'border-gray-200 hover:border-orange-400';
+                                return (
+                                    <button key={idx} disabled={showResult} onClick={() => setSelected(idx)} className={cls}>
+                                        <span className="font-bold mr-2">{String.fromCharCode(65 + idx)}.</span>
+                                        <MathText text={choice} />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {showResult && currentQ.explanation && (
+                            <div className="mb-4 p-3 rounded-xl bg-orange-50 border border-orange-200 text-sm"><MathText text={currentQ.explanation} /></div>
+                        )}
+                        {!showResult && selected !== null && (
+                            <button onClick={submit} className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold text-lg">
+                                <i className="fas fa-bolt mr-2"></i>Xác nhận — {active?.name} nitro!
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<RacingGame />, document.getElementById('root'));
+    </script>
+</body>
+</html>

@@ -350,6 +350,98 @@
                 };
             }
 
+            case 'picture': {
+                return {
+                    topicTitle: topic,
+                    themeImage: options.themeImage || '',
+                    questions: parsedQuestions.map((q, idx) => ({
+                        id: `q${idx + 1}`,
+                        type: 'mcq',
+                        prompt: q.prompt,
+                        choices: q.choices,
+                        answer: q.answer,
+                        explanation: q.explanation || '',
+                    })),
+                };
+            }
+
+            case 'wheel': {
+                return {
+                    topicTitle: topic,
+                    questions: parsedQuestions.map((q, idx) => ({
+                        id: `q${idx + 1}`,
+                        type: 'mcq',
+                        prompt: q.prompt,
+                        choices: q.choices,
+                        answer: q.answer,
+                        explanation: q.explanation || '',
+                    })),
+                };
+            }
+
+            case 'millionaire': {
+                const total = Math.max(1, parsedQuestions.length);
+                return {
+                    topicTitle: topic,
+                    questions: parsedQuestions.map((q, idx) => {
+                        const ratio = (idx + 1) / total;
+                        const difficulty = ratio <= 0.34 ? 'easy' : ratio <= 0.67 ? 'medium' : 'hard';
+                        return {
+                            id: `q${idx + 1}`,
+                            type: 'mcq',
+                            prompt: q.prompt,
+                            choices: q.choices,
+                            answer: q.answer,
+                            difficulty,
+                            explanation: q.explanation || '',
+                        };
+                    }),
+                };
+            }
+
+            case 'crossword': {
+                const pairs = Array.isArray(options.rawPairs) && options.rawPairs.length
+                    ? options.rawPairs.map((p, idx) => ({
+                        id: p.id || idx + 1,
+                        left: p.left || p.clue || '',
+                        right: String(p.right || p.answer || '').trim(),
+                        explanation: p.explanation || '',
+                    }))
+                    : parsedQuestions.map((q, idx) => ({
+                        id: idx + 1,
+                        left: q.prompt,
+                        right: String(q.choices[q.answer] || q.choices[0] || '').replace(/\s+/g, '').toUpperCase(),
+                        explanation: q.explanation || '',
+                    }));
+                const keyword = options.keyword || pairs.map((p) => (p.right || '').charAt(0)).join('').toUpperCase();
+                return {
+                    topicTitle: topic,
+                    keyword,
+                    pairs,
+                    clues: pairs,
+                };
+            }
+
+            case 'racing': {
+                return {
+                    topicTitle: topic,
+                    teams: options.teams || [
+                        { id: 1, name: 'Tổ 1', color: '#ef4444' },
+                        { id: 2, name: 'Tổ 2', color: '#3b82f6' },
+                        { id: 3, name: 'Tổ 3', color: '#eab308' },
+                        { id: 4, name: 'Tổ 4', color: '#a855f7' },
+                    ],
+                    questions: parsedQuestions.map((q, idx) => ({
+                        id: `q${idx + 1}`,
+                        type: 'mcq',
+                        prompt: q.prompt,
+                        choices: q.choices,
+                        answer: q.answer,
+                        explanation: q.explanation || '',
+                    })),
+                };
+            }
+
             case 'escape':
             case 'elimination':
             case 'speedscore':

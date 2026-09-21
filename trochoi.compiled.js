@@ -9,384 +9,475 @@ const {
 (function () {
   if (typeof window === 'undefined' || window.GameQuizImporter) return;
   const global = window;
-
-    'use strict';
-
-    function normalizeQuizText(text) {
-        return String(text || '')
-            .replace(/\r\n/g, '\n')
-            .replace(/\r/g, '\n')
-            .replace(/\u00a0/g, ' ')
-            .replace(/[\u201C\u201D]/g, '"')
-            .replace(/[\u2018\u2019]/g, "'")
-            .replace(/\t/g, ' ')
-            .replace(/[ ]+\n/g, '\n')
-            .replace(/\n{3,}/g, '\n\n')
-            .trim();
-    }
-
-    function extractAnswerTable(text) {
-        const answerMap = {};
-        // Tìm phần bảng đáp án ở cuối văn bản
-        const answerSectionMatch = text.match(/(?:^|\n)\s*(?:bảng\s*đáp\s*án|đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：]?\s*([\s\S]*)$/i);
-        if (!answerSectionMatch) return answerMap;
-
-        const answerSection = answerSectionMatch[1];
-        // Nhận diện các cặp: 1.A, 1-A, 1:A, 1A, Câu 1: A...
-        const pairRegex = /(?:câu\s*)?(\d{1,3})\s*[\.\)\-:]?\s*([A-D])\b/gi;
-        let match;
-        while ((match = pairRegex.exec(answerSection)) !== null) {
-            const num = parseInt(match[1], 10);
-            if (!answerMap[num]) {
-                answerMap[num] = match[2].toUpperCase();
-            }
-        }
-        return answerMap;
-    }
-
-    function stripAnswerTable(text) {
-        const answerSectionMatch = text.match(/(?:^|\n)\s*(?:bảng\s*đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：]?\s*([\s\S]*)$/i);
-        if (!answerSectionMatch) return text;
-
-        const section = answerSectionMatch[1];
-        const count = (section.match(/(?:câu\s*)?\d{1,3}\s*[\.\)\-:]?\s*[A-D]\b/gi) || []).length;
-        // Nếu phần sau có từ 2 cặp đáp án trở lên thì xem như đây là bảng đáp án cuối bài
-        if (count >= 2) {
-            return text.slice(0, answerSectionMatch.index).trim();
-        }
-        return text;
-    }
-
-    function parseQuizQuestions(rawText) {
-        const normalized = normalizeQuizText(rawText);
-        const answerTable = extractAnswerTable(normalized);
-        const text = stripAnswerTable(normalized);
-
-        // Regex nhận diện bắt đầu câu hỏi: Câu 1, Câu 1., Câu 1:, Bài 1, Question 1, 1., 1/, [Câu 1]
-        const questionRegex = /(?:^|\n)\s*(?:\[?\s*(?:Câu|Cau|Question|Q|Bài|Bai)\s*(\d{1,3})\s*\]?|(\d{1,3}))\s*[\.\):：\/-]\s*/gi;
-        const questionMatches = [];
-        let match;
-
-        while ((match = questionRegex.exec(text)) !== null) {
-            const num = parseInt(match[1] || match[2], 10);
-            questionMatches.push({
-                number: num,
-                bodyStart: questionRegex.lastIndex,
-                markerStart: match.index,
-            });
-        }
-
-        if (!questionMatches.length) {
-            // Thử phân tách theo từng khối nếu không có số thứ tự câu
-            return fallbackParseBlocks(text);
-        }
-
-        const questions = [];
-
-        for (let i = 0; i < questionMatches.length; i++) {
-            const cur = questionMatches[i];
-            const next = questionMatches[i + 1];
-            let block = text.slice(cur.bodyStart, next ? next.markerStart : text.length).trim();
-
-            // Tìm giải thích/lời giải nếu có
-            let explanation = '';
-            const expMatch = block.match(/(?:^|\n)\s*(?:hướng\s*dẫn\s*giải|lời\s*giải|giải\s*thích|explanation|loi\s*giai)\s*[:：]\s*([\s\S]*)$/i);
-            if (expMatch) {
-                explanation = expMatch[1].trim();
-                block = block.slice(0, expMatch.index).trim();
-            }
-
-            // Tìm đáp án inline nếu có
-            let inlineAnswer = '';
-            const inlineMatch = block.match(/(?:^|\n|\s{2,})\s*(?:đáp\s*án|dap\s*an|answer|key|đ\/a)\s*[:：]\s*([A-D])\b/i);
-            if (inlineMatch) {
-                inlineAnswer = inlineMatch[1].toUpperCase();
-                block = block.replace(/(?:^|\n|\s{2,})\s*(?:đáp\s*án|dap\s*an|answer|key|đ\/a)\s*[:：]\s*[A-D]\b/i, '').trim();
-            }
-
-            // Tìm các lựa chọn A, B, C, D (hỗ trợ cả xuống dòng và inline trên 1 dòng)
-            const optionRegex = /(?:^|\n|\s{2,}|\t)\s*([A-D])\s*[\.\):：-]\s*/gi;
-            const optionMatches = [];
-            let optMatch;
-
-            while ((optMatch = optionRegex.exec(block)) !== null) {
-                optionMatches.push({
-                    letter: optMatch[1].toUpperCase(),
-                    markerStart: optMatch.index,
-                    bodyStart: optionRegex.lastIndex,
-                });
-            }
-
-            if (optionMatches.length < 2) {
-                // Không tìm thấy đủ phương án trắc nghiệm A-D
-                continue;
-            }
-
-            // Lấy nội dung câu hỏi (phần trước lựa chọn đầu tiên)
-            const prompt = block.slice(0, optionMatches[0].markerStart).trim() || `Câu hỏi ${cur.number}`;
-
-            // Bóc tách nội dung từng lựa chọn A, B, C, D
-            // Nhận diện phương án có dấu sao (*) đánh dấu đáp án đúng: vd "0*", "Phương án C*"
-            const optionsByLetter = {};
-            let asteriskAnswer = '';
-            for (let j = 0; j < optionMatches.length; j++) {
-                const optCur = optionMatches[j];
-                const optNext = optionMatches[j + 1];
-                const optEnd = optNext ? optNext.markerStart : block.length;
-                let optText = block.slice(optCur.bodyStart, optEnd).trim();
-                if (/\*$/.test(optText) || /\(\*\)$/.test(optText)) {
-                    asteriskAnswer = optCur.letter;
-                    optText = optText.replace(/\s*\(\*\)$|\s*\*$/, '').trim();
-                }
-                optionsByLetter[optCur.letter] = optText;
-            }
-
-            const choices = ['A', 'B', 'C', 'D'].map((letter) => optionsByLetter[letter] || '');
-            // Ưu tiên: Dấu sao (*) trong phương án -> Đáp án inline -> Bảng đáp án cuối bài -> Phương án A
-            const finalAnswerLetter = asteriskAnswer || inlineAnswer || answerTable[cur.number] || (optionMatches[0]?.letter || 'A');
-            const answerIndex = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(finalAnswerLetter));
-
-            questions.push({
-                id: `q${questions.length + 1}`,
-                number: cur.number,
-                type: 'mcq',
-                prompt: prompt,
-                choices: choices,
-                answer: answerIndex >= 0 ? answerIndex : 0,
-                explanation: explanation,
-            });
-        }
-
-        return questions;
-    }
-
-    function fallbackParseBlocks(text) {
-        // Dự phòng: cố gắng tìm các đoạn có A. B. C. D.
-        const lines = text.split(/\n{2,}/);
-        const questions = [];
-        lines.forEach((block, idx) => {
-            const optionRegex = /(?:^|\n|\s{2,}|\t)\s*([A-D])\s*[\.\):：-]\s*/gi;
-            const optionMatches = [];
-            let optMatch;
-            while ((optMatch = optionRegex.exec(block)) !== null) {
-                optionMatches.push({
-                    letter: optMatch[1].toUpperCase(),
-                    markerStart: optMatch.index,
-                    bodyStart: optionRegex.lastIndex,
-                });
-            }
-            if (optionMatches.length >= 2) {
-                const prompt = block.slice(0, optionMatches[0].markerStart).trim() || `Câu hỏi ${idx + 1}`;
-                const optionsByLetter = {};
-                let asteriskAnswer = '';
-                for (let j = 0; j < optionMatches.length; j++) {
-                    const optCur = optionMatches[j];
-                    const optNext = optionMatches[j + 1];
-                    const optEnd = optNext ? optNext.markerStart : block.length;
-                    let optText = block.slice(optCur.bodyStart, optEnd).trim();
-                    if (/\*$/.test(optText) || /\(\*\)$/.test(optText)) {
-                        asteriskAnswer = optCur.letter;
-                        optText = optText.replace(/\s*\(\*\)$|\s*\*$/, '').trim();
-                    }
-                    optionsByLetter[optCur.letter] = optText;
-                }
-                const choices = ['A', 'B', 'C', 'D'].map((letter) => optionsByLetter[letter] || '');
-                const answerLetter = asteriskAnswer || (optionMatches[0] && optionMatches[0].letter) || 'A';
-                const answerIndex = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(answerLetter));
-                questions.push({
-                    id: `q${questions.length + 1}`,
-                    number: idx + 1,
-                    type: 'mcq',
-                    prompt: prompt,
-                    choices: choices,
-                    answer: answerIndex,
-                    explanation: '',
-                });
-            }
-        });
-        return questions;
-    }
-
-    function parseMatchingPairs(rawText) {
-        const text = normalizeQuizText(rawText);
-        const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-        const pairs = [];
-        const chips = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].replace(/^(?:Cặp|Cap|\d+)\s*[\.\):：-]\s*/i, '');
-            // Dấu phân tách giữa vế trái và vế phải: " - ", " : ", " | ", " -> ", " => "
-            const parts = line.split(/\s*(?:[-–—|]|->|=>|:)\s*/);
-            if (parts.length >= 2) {
-                pairs.push({
-                    id: pairs.length + 1,
-                    left: parts[0].trim(),
-                    right: parts.slice(1).join(' - ').trim(),
-                    chip: chips[pairs.length % chips.length],
-                    explanation: '',
-                });
-            }
-        }
-
-        // Nếu người dùng dán đề trắc nghiệm thông thường thì chuyển câu hỏi thành left, đáp án đúng thành right
-        if (pairs.length === 0) {
-            const mcq = parseQuizQuestions(rawText);
-            mcq.forEach((q, idx) => {
-                const correctChoice = q.choices[q.answer] || q.choices[0] || '';
-                pairs.push({
-                    id: idx + 1,
-                    left: q.prompt,
-                    right: correctChoice,
-                    chip: chips[idx % chips.length],
-                    explanation: q.explanation || '',
-                });
-            });
-        }
-
-        return pairs;
-    }
-
-    async function extractTextFromDocx(file) {
-        if (!file) throw new Error('Chưa chọn file.');
-        if (typeof window !== 'undefined' && !window.mammoth) {
-            throw new Error('Chưa tải được thư viện Mammoth để đọc file Word (.docx). Hãy kiểm tra kết nối mạng.');
-        }
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await window.mammoth.extractRawText({ arrayBuffer });
-        return (result?.value || '').trim();
-    }
-
-    async function extractTextFromFile(file) {
-        const name = (file?.name || '').toLowerCase();
-        if (name.endsWith('.docx')) {
-            return extractTextFromDocx(file);
-        }
-        if (name.endsWith('.txt')) {
-            return (await file.text()).trim();
-        }
-        throw new Error('Vui lòng chọn file Word (.docx) hoặc file văn bản (.txt).');
-    }
-
-    function formatForGame(parsedQuestions, gameType, options = {}) {
-        const topic = options.topic || 'Câu hỏi từ Word/LaTeX';
-        const numQ = parsedQuestions.length;
-
-        switch (gameType) {
-            case 'matching': {
-                const pairs = Array.isArray(options.rawPairs) && options.rawPairs.length
-                    ? options.rawPairs
-                    : parsedQuestions.map((q, idx) => ({
-                        id: idx + 1,
-                        left: q.prompt,
-                        right: q.choices[q.answer] || q.choices[0] || '',
-                        chip: String.fromCharCode(65 + (idx % 26)),
-                        explanation: q.explanation || '',
-                    }));
-                return {
-                    topicTitle: topic,
-                    codewordHint: options.codewordHint || 'Ghép đúng các cặp khái niệm và công thức',
-                    pairs: pairs,
-                };
-            }
-
-            case 'unlock': {
-                const questions = parsedQuestions.map((q, idx) => ({
-                    id: `lock${idx + 1}`,
-                    type: 'mcq',
-                    prompt: q.prompt,
-                    choices: q.choices,
-                    answer: q.answer,
-                    hint1: q.explanation ? `Gợi ý: ${q.explanation}` : 'Hãy chú ý công thức và định nghĩa cốt lõi.',
-                    hint2: 'Quan sát kỹ các đáp án.',
-                    explanation: q.explanation || '',
-                }));
-                return {
-                    codeWord: options.codeWord || 'KIENTHUC',
-                    knowledgeCard: {
-                        title: topic || 'Mở Khóa Kiến Thức',
-                        summary: 'Bạn đã mở khóa thành công toàn bộ từ khóa bí mật!',
-                    },
-                    questions,
-                };
-            }
-
-            case 'tower': {
-                const questions = parsedQuestions.map((q, idx) => {
-                    const level = Math.min(10, Math.max(1, Math.round(((idx + 1) / Math.max(1, numQ)) * 10)));
-                    const diff = level <= 3 ? 'easy' : level <= 7 ? 'medium' : 'hard';
-                    return {
-                        id: `level${idx + 1}`,
-                        level: level,
-                        difficulty: diff,
-                        type: 'mcq',
-                        prompt: q.prompt,
-                        choices: q.choices,
-                        answer: q.answer,
-                        explanation: q.explanation || '',
-                    };
-                });
-                return { questions };
-            }
-
-            case 'teambattle': {
-                const questions = parsedQuestions.map((q, idx) => ({
-                    id: `q${idx + 1}`,
-                    type: 'mcq',
-                    prompt: q.prompt,
-                    choices: q.choices,
-                    answer: q.answer,
-                    individual: idx % 2 === 0,
-                    value: (idx % 3 + 1) * 10,
-                    isSpecial: idx % 4 === 3,
-                    explanation: q.explanation || '',
-                }));
-                return { questions };
-            }
-
-            case 'treasure': {
-                return {
-                    raceTitle: topic,
-                    questions: parsedQuestions.map((q, idx) => ({
-                        id: `q${idx + 1}`,
-                        type: 'mcq',
-                        prompt: q.prompt,
-                        choices: q.choices,
-                        answer: q.answer,
-                        explanation: q.explanation || '',
-                    })),
-                };
-            }
-
-            case 'escape':
-            case 'elimination':
-            case 'speedscore':
-            default: {
-                return {
-                    questions: parsedQuestions.map((q, idx) => ({
-                        id: `q${idx + 1}`,
-                        type: 'mcq',
-                        prompt: q.prompt,
-                        choices: q.choices,
-                        answer: q.answer,
-                        explanation: q.explanation || '',
-                    })),
-                };
-            }
-        }
-    }
-
-    const GameQuizImporter = {
-        normalizeQuizText,
-        extractAnswerTable,
-        stripAnswerTable,
-        parseQuizQuestions,
-        parseMatchingPairs,
-        extractTextFromDocx,
-        extractTextFromFile,
-        formatForGame,
-    };
-
-    
+
+    'use strict';
+
+    function normalizeQuizText(text) {
+        return String(text || '')
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .replace(/\u00a0/g, ' ')
+            .replace(/[\u201C\u201D]/g, '"')
+            .replace(/[\u2018\u2019]/g, "'")
+            .replace(/\t/g, ' ')
+            .replace(/[ ]+\n/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
+    function extractAnswerTable(text) {
+        const answerMap = {};
+        // Tìm phần bảng đáp án ở cuối văn bản
+        const answerSectionMatch = text.match(/(?:^|\n)\s*(?:bảng\s*đáp\s*án|đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：]?\s*([\s\S]*)$/i);
+        if (!answerSectionMatch) return answerMap;
+
+        const answerSection = answerSectionMatch[1];
+        // Nhận diện các cặp: 1.A, 1-A, 1:A, 1A, Câu 1: A...
+        const pairRegex = /(?:câu\s*)?(\d{1,3})\s*[\.\)\-:]?\s*([A-D])\b/gi;
+        let match;
+        while ((match = pairRegex.exec(answerSection)) !== null) {
+            const num = parseInt(match[1], 10);
+            if (!answerMap[num]) {
+                answerMap[num] = match[2].toUpperCase();
+            }
+        }
+        return answerMap;
+    }
+
+    function stripAnswerTable(text) {
+        const answerSectionMatch = text.match(/(?:^|\n)\s*(?:bảng\s*đáp\s*án|dap\s*an|answer\s*key|answers?)\s*[:：]?\s*([\s\S]*)$/i);
+        if (!answerSectionMatch) return text;
+
+        const section = answerSectionMatch[1];
+        const count = (section.match(/(?:câu\s*)?\d{1,3}\s*[\.\)\-:]?\s*[A-D]\b/gi) || []).length;
+        // Nếu phần sau có từ 2 cặp đáp án trở lên thì xem như đây là bảng đáp án cuối bài
+        if (count >= 2) {
+            return text.slice(0, answerSectionMatch.index).trim();
+        }
+        return text;
+    }
+
+    function parseQuizQuestions(rawText) {
+        const normalized = normalizeQuizText(rawText);
+        const answerTable = extractAnswerTable(normalized);
+        const text = stripAnswerTable(normalized);
+
+        // Regex nhận diện bắt đầu câu hỏi: Câu 1, Câu 1., Câu 1:, Bài 1, Question 1, 1., 1/, [Câu 1]
+        const questionRegex = /(?:^|\n)\s*(?:\[?\s*(?:Câu|Cau|Question|Q|Bài|Bai)\s*(\d{1,3})\s*\]?|(\d{1,3}))\s*[\.\):：\/-]\s*/gi;
+        const questionMatches = [];
+        let match;
+
+        while ((match = questionRegex.exec(text)) !== null) {
+            const num = parseInt(match[1] || match[2], 10);
+            questionMatches.push({
+                number: num,
+                bodyStart: questionRegex.lastIndex,
+                markerStart: match.index,
+            });
+        }
+
+        if (!questionMatches.length) {
+            // Thử phân tách theo từng khối nếu không có số thứ tự câu
+            return fallbackParseBlocks(text);
+        }
+
+        const questions = [];
+
+        for (let i = 0; i < questionMatches.length; i++) {
+            const cur = questionMatches[i];
+            const next = questionMatches[i + 1];
+            let block = text.slice(cur.bodyStart, next ? next.markerStart : text.length).trim();
+
+            // Tìm giải thích/lời giải nếu có
+            let explanation = '';
+            const expMatch = block.match(/(?:^|\n)\s*(?:hướng\s*dẫn\s*giải|lời\s*giải|giải\s*thích|explanation|loi\s*giai)\s*[:：]\s*([\s\S]*)$/i);
+            if (expMatch) {
+                explanation = expMatch[1].trim();
+                block = block.slice(0, expMatch.index).trim();
+            }
+
+            // Tìm đáp án inline nếu có
+            let inlineAnswer = '';
+            const inlineMatch = block.match(/(?:^|\n|\s{2,})\s*(?:đáp\s*án|dap\s*an|answer|key|đ\/a)\s*[:：]\s*([A-D])\b/i);
+            if (inlineMatch) {
+                inlineAnswer = inlineMatch[1].toUpperCase();
+                block = block.replace(/(?:^|\n|\s{2,})\s*(?:đáp\s*án|dap\s*an|answer|key|đ\/a)\s*[:：]\s*[A-D]\b/i, '').trim();
+            }
+
+            // Tìm các lựa chọn A, B, C, D (hỗ trợ cả xuống dòng và inline trên 1 dòng)
+            const optionRegex = /(?:^|\n|\s{2,}|\t)\s*([A-D])\s*[\.\):：-]\s*/gi;
+            const optionMatches = [];
+            let optMatch;
+
+            while ((optMatch = optionRegex.exec(block)) !== null) {
+                optionMatches.push({
+                    letter: optMatch[1].toUpperCase(),
+                    markerStart: optMatch.index,
+                    bodyStart: optionRegex.lastIndex,
+                });
+            }
+
+            if (optionMatches.length < 2) {
+                // Không tìm thấy đủ phương án trắc nghiệm A-D
+                continue;
+            }
+
+            // Lấy nội dung câu hỏi (phần trước lựa chọn đầu tiên)
+            const prompt = block.slice(0, optionMatches[0].markerStart).trim() || `Câu hỏi ${cur.number}`;
+
+            // Bóc tách nội dung từng lựa chọn A, B, C, D
+            // Nhận diện phương án có dấu sao (*) đánh dấu đáp án đúng: vd "0*", "Phương án C*"
+            const optionsByLetter = {};
+            let asteriskAnswer = '';
+            for (let j = 0; j < optionMatches.length; j++) {
+                const optCur = optionMatches[j];
+                const optNext = optionMatches[j + 1];
+                const optEnd = optNext ? optNext.markerStart : block.length;
+                let optText = block.slice(optCur.bodyStart, optEnd).trim();
+                if (/\*$/.test(optText) || /\(\*\)$/.test(optText)) {
+                    asteriskAnswer = optCur.letter;
+                    optText = optText.replace(/\s*\(\*\)$|\s*\*$/, '').trim();
+                }
+                optionsByLetter[optCur.letter] = optText;
+            }
+
+            const choices = ['A', 'B', 'C', 'D'].map((letter) => optionsByLetter[letter] || '');
+            // Ưu tiên: Dấu sao (*) trong phương án -> Đáp án inline -> Bảng đáp án cuối bài -> Phương án A
+            const finalAnswerLetter = asteriskAnswer || inlineAnswer || answerTable[cur.number] || (optionMatches[0]?.letter || 'A');
+            const answerIndex = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(finalAnswerLetter));
+
+            questions.push({
+                id: `q${questions.length + 1}`,
+                number: cur.number,
+                type: 'mcq',
+                prompt: prompt,
+                choices: choices,
+                answer: answerIndex >= 0 ? answerIndex : 0,
+                explanation: explanation,
+            });
+        }
+
+        return questions;
+    }
+
+    function fallbackParseBlocks(text) {
+        // Dự phòng: cố gắng tìm các đoạn có A. B. C. D.
+        const lines = text.split(/\n{2,}/);
+        const questions = [];
+        lines.forEach((block, idx) => {
+            const optionRegex = /(?:^|\n|\s{2,}|\t)\s*([A-D])\s*[\.\):：-]\s*/gi;
+            const optionMatches = [];
+            let optMatch;
+            while ((optMatch = optionRegex.exec(block)) !== null) {
+                optionMatches.push({
+                    letter: optMatch[1].toUpperCase(),
+                    markerStart: optMatch.index,
+                    bodyStart: optionRegex.lastIndex,
+                });
+            }
+            if (optionMatches.length >= 2) {
+                const prompt = block.slice(0, optionMatches[0].markerStart).trim() || `Câu hỏi ${idx + 1}`;
+                const optionsByLetter = {};
+                let asteriskAnswer = '';
+                for (let j = 0; j < optionMatches.length; j++) {
+                    const optCur = optionMatches[j];
+                    const optNext = optionMatches[j + 1];
+                    const optEnd = optNext ? optNext.markerStart : block.length;
+                    let optText = block.slice(optCur.bodyStart, optEnd).trim();
+                    if (/\*$/.test(optText) || /\(\*\)$/.test(optText)) {
+                        asteriskAnswer = optCur.letter;
+                        optText = optText.replace(/\s*\(\*\)$|\s*\*$/, '').trim();
+                    }
+                    optionsByLetter[optCur.letter] = optText;
+                }
+                const choices = ['A', 'B', 'C', 'D'].map((letter) => optionsByLetter[letter] || '');
+                const answerLetter = asteriskAnswer || (optionMatches[0] && optionMatches[0].letter) || 'A';
+                const answerIndex = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(answerLetter));
+                questions.push({
+                    id: `q${questions.length + 1}`,
+                    number: idx + 1,
+                    type: 'mcq',
+                    prompt: prompt,
+                    choices: choices,
+                    answer: answerIndex,
+                    explanation: '',
+                });
+            }
+        });
+        return questions;
+    }
+
+    function parseMatchingPairs(rawText) {
+        const text = normalizeQuizText(rawText);
+        const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+        const pairs = [];
+        const chips = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].replace(/^(?:Cặp|Cap|\d+)\s*[\.\):：-]\s*/i, '');
+            // Dấu phân tách giữa vế trái và vế phải: " - ", " : ", " | ", " -> ", " => "
+            const parts = line.split(/\s*(?:[-–—|]|->|=>|:)\s*/);
+            if (parts.length >= 2) {
+                pairs.push({
+                    id: pairs.length + 1,
+                    left: parts[0].trim(),
+                    right: parts.slice(1).join(' - ').trim(),
+                    chip: chips[pairs.length % chips.length],
+                    explanation: '',
+                });
+            }
+        }
+
+        // Nếu người dùng dán đề trắc nghiệm thông thường thì chuyển câu hỏi thành left, đáp án đúng thành right
+        if (pairs.length === 0) {
+            const mcq = parseQuizQuestions(rawText);
+            mcq.forEach((q, idx) => {
+                const correctChoice = q.choices[q.answer] || q.choices[0] || '';
+                pairs.push({
+                    id: idx + 1,
+                    left: q.prompt,
+                    right: correctChoice,
+                    chip: chips[idx % chips.length],
+                    explanation: q.explanation || '',
+                });
+            });
+        }
+
+        return pairs;
+    }
+
+    async function extractTextFromDocx(file) {
+        if (!file) throw new Error('Chưa chọn file.');
+        if (typeof window !== 'undefined' && !window.mammoth) {
+            throw new Error('Chưa tải được thư viện Mammoth để đọc file Word (.docx). Hãy kiểm tra kết nối mạng.');
+        }
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await window.mammoth.extractRawText({ arrayBuffer });
+        return (result?.value || '').trim();
+    }
+
+    async function extractTextFromFile(file) {
+        const name = (file?.name || '').toLowerCase();
+        if (name.endsWith('.docx')) {
+            return extractTextFromDocx(file);
+        }
+        if (name.endsWith('.txt')) {
+            return (await file.text()).trim();
+        }
+        throw new Error('Vui lòng chọn file Word (.docx) hoặc file văn bản (.txt).');
+    }
+
+    function formatForGame(parsedQuestions, gameType, options = {}) {
+        const topic = options.topic || 'Câu hỏi từ Word/LaTeX';
+        const numQ = parsedQuestions.length;
+
+        switch (gameType) {
+            case 'matching': {
+                const pairs = Array.isArray(options.rawPairs) && options.rawPairs.length
+                    ? options.rawPairs
+                    : parsedQuestions.map((q, idx) => ({
+                        id: idx + 1,
+                        left: q.prompt,
+                        right: q.choices[q.answer] || q.choices[0] || '',
+                        chip: String.fromCharCode(65 + (idx % 26)),
+                        explanation: q.explanation || '',
+                    }));
+                return {
+                    topicTitle: topic,
+                    codewordHint: options.codewordHint || 'Ghép đúng các cặp khái niệm và công thức',
+                    pairs: pairs,
+                };
+            }
+
+            case 'unlock': {
+                const questions = parsedQuestions.map((q, idx) => ({
+                    id: `lock${idx + 1}`,
+                    type: 'mcq',
+                    prompt: q.prompt,
+                    choices: q.choices,
+                    answer: q.answer,
+                    hint1: q.explanation ? `Gợi ý: ${q.explanation}` : 'Hãy chú ý công thức và định nghĩa cốt lõi.',
+                    hint2: 'Quan sát kỹ các đáp án.',
+                    explanation: q.explanation || '',
+                }));
+                return {
+                    codeWord: options.codeWord || 'KIENTHUC',
+                    knowledgeCard: {
+                        title: topic || 'Mở Khóa Kiến Thức',
+                        summary: 'Bạn đã mở khóa thành công toàn bộ từ khóa bí mật!',
+                    },
+                    questions,
+                };
+            }
+
+            case 'tower': {
+                const questions = parsedQuestions.map((q, idx) => {
+                    const level = Math.min(10, Math.max(1, Math.round(((idx + 1) / Math.max(1, numQ)) * 10)));
+                    const diff = level <= 3 ? 'easy' : level <= 7 ? 'medium' : 'hard';
+                    return {
+                        id: `level${idx + 1}`,
+                        level: level,
+                        difficulty: diff,
+                        type: 'mcq',
+                        prompt: q.prompt,
+                        choices: q.choices,
+                        answer: q.answer,
+                        explanation: q.explanation || '',
+                    };
+                });
+                return { questions };
+            }
+
+            case 'teambattle': {
+                const questions = parsedQuestions.map((q, idx) => ({
+                    id: `q${idx + 1}`,
+                    type: 'mcq',
+                    prompt: q.prompt,
+                    choices: q.choices,
+                    answer: q.answer,
+                    individual: idx % 2 === 0,
+                    value: (idx % 3 + 1) * 10,
+                    isSpecial: idx % 4 === 3,
+                    explanation: q.explanation || '',
+                }));
+                return { questions };
+            }
+
+            case 'treasure': {
+                return {
+                    raceTitle: topic,
+                    questions: parsedQuestions.map((q, idx) => ({
+                        id: `q${idx + 1}`,
+                        type: 'mcq',
+                        prompt: q.prompt,
+                        choices: q.choices,
+                        answer: q.answer,
+                        explanation: q.explanation || '',
+                    })),
+                };
+            }
+
+            case 'picture': {
+                return {
+                    topicTitle: topic,
+                    themeImage: options.themeImage || '',
+                    questions: parsedQuestions.map((q, idx) => ({
+                        id: `q${idx + 1}`,
+                        type: 'mcq',
+                        prompt: q.prompt,
+                        choices: q.choices,
+                        answer: q.answer,
+                        explanation: q.explanation || '',
+                    })),
+                };
+            }
+
+            case 'wheel': {
+                return {
+                    topicTitle: topic,
+                    questions: parsedQuestions.map((q, idx) => ({
+                        id: `q${idx + 1}`,
+                        type: 'mcq',
+                        prompt: q.prompt,
+                        choices: q.choices,
+                        answer: q.answer,
+                        explanation: q.explanation || '',
+                    })),
+                };
+            }
+
+            case 'millionaire': {
+                const total = Math.max(1, parsedQuestions.length);
+                return {
+                    topicTitle: topic,
+                    questions: parsedQuestions.map((q, idx) => {
+                        const ratio = (idx + 1) / total;
+                        const difficulty = ratio <= 0.34 ? 'easy' : ratio <= 0.67 ? 'medium' : 'hard';
+                        return {
+                            id: `q${idx + 1}`,
+                            type: 'mcq',
+                            prompt: q.prompt,
+                            choices: q.choices,
+                            answer: q.answer,
+                            difficulty,
+                            explanation: q.explanation || '',
+                        };
+                    }),
+                };
+            }
+
+            case 'crossword': {
+                const pairs = Array.isArray(options.rawPairs) && options.rawPairs.length
+                    ? options.rawPairs.map((p, idx) => ({
+                        id: p.id || idx + 1,
+                        left: p.left || p.clue || '',
+                        right: String(p.right || p.answer || '').trim(),
+                        explanation: p.explanation || '',
+                    }))
+                    : parsedQuestions.map((q, idx) => ({
+                        id: idx + 1,
+                        left: q.prompt,
+                        right: String(q.choices[q.answer] || q.choices[0] || '').replace(/\s+/g, '').toUpperCase(),
+                        explanation: q.explanation || '',
+                    }));
+                const keyword = options.keyword || pairs.map((p) => (p.right || '').charAt(0)).join('').toUpperCase();
+                return {
+                    topicTitle: topic,
+                    keyword,
+                    pairs,
+                    clues: pairs,
+                };
+            }
+
+            case 'racing': {
+                return {
+                    topicTitle: topic,
+                    teams: options.teams || [
+                        { id: 1, name: 'Tổ 1', color: '#ef4444' },
+                        { id: 2, name: 'Tổ 2', color: '#3b82f6' },
+                        { id: 3, name: 'Tổ 3', color: '#eab308' },
+                        { id: 4, name: 'Tổ 4', color: '#a855f7' },
+                    ],
+                    questions: parsedQuestions.map((q, idx) => ({
+                        id: `q${idx + 1}`,
+                        type: 'mcq',
+                        prompt: q.prompt,
+                        choices: q.choices,
+                        answer: q.answer,
+                        explanation: q.explanation || '',
+                    })),
+                };
+            }
+
+            case 'escape':
+            case 'elimination':
+            case 'speedscore':
+            default: {
+                return {
+                    questions: parsedQuestions.map((q, idx) => ({
+                        id: `q${idx + 1}`,
+                        type: 'mcq',
+                        prompt: q.prompt,
+                        choices: q.choices,
+                        answer: q.answer,
+                        explanation: q.explanation || '',
+                    })),
+                };
+            }
+        }
+    }
+
+    const GameQuizImporter = {
+        normalizeQuizText,
+        extractAnswerTable,
+        stripAnswerTable,
+        parseQuizQuestions,
+        parseMatchingPairs,
+        extractTextFromDocx,
+        extractTextFromFile,
+        formatForGame,
+    };
+
   window.GameQuizImporter = GameQuizImporter;
 })();
 
@@ -1022,9 +1113,9 @@ const App = () => {
     className: "font-bold text-cyan-900 text-lg"
   }, /*#__PURE__*/React.createElement("i", {
     className: "fas fa-users mr-2"
-  }), "Danh sách học sinh đua vịt"), /*#__PURE__*/React.createElement("p", {
+  }), selectedGame && selectedGame.id === 'wheel' ? 'Danh sách học sinh quay may mắn' : 'Danh sách học sinh đua vịt'), /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-cyan-800 mt-1"
-  }, "Nhập tay hoặc import Excel — mỗi học sinh là một vịt trên đường đua")), /*#__PURE__*/React.createElement("button", {
+  }, selectedGame && selectedGame.id === 'wheel' ? 'Nhập tay, Excel hoặc CSDL lớp — dùng để quay chọn học sinh' : 'Nhập tay hoặc import Excel — mỗi học sinh là một vịt trên đường đua')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: downloadDuckRaceTemplate,
     className: "px-4 py-2 bg-white border border-cyan-300 text-cyan-800 rounded-lg text-sm font-bold hover:bg-cyan-100"
@@ -1119,14 +1210,17 @@ const App = () => {
       alert('Vui lòng nhập chủ đề!');
       return;
     }
-    if (selectedGame.id === 'treasure' && participants.length < 1) {
-      alert('Vui lòng nhập ít nhất 1 học sinh tham gia đua vịt!');
+    if (needsParticipants && participants.length < 1) {
+      alert(selectedGame.id === 'wheel' ? 'Vui lòng nhập ít nhất 1 học sinh để quay vòng may mắn!' : 'Vui lòng nhập ít nhất 1 học sinh tham gia đua vịt!');
       return;
     }
     setLoading(true);
     setStep('GENERATING');
     try {
       const content = await ContentService.generate(selectedGame.id, formData);
+      if (selectedGame.id === 'picture') {
+        content.themeImage = themeImage || DEFAULT_THEME_IMAGE;
+      }
       setGeneratedContent(content);
       setStep('REVIEW');
     } catch (error) {
@@ -1170,8 +1264,8 @@ const App = () => {
       alert('Vui lòng chọn file Word (.docx) hoặc dán nội dung câu hỏi có công thức LaTeX vào ô bên dưới!');
       return;
     }
-    if (selectedGame.id === 'treasure' && participants.length < 1) {
-      alert('Vui lòng nhập ít nhất 1 học sinh tham gia đua vịt!');
+    if (needsParticipants && participants.length < 1) {
+      alert(selectedGame.id === 'wheel' ? 'Vui lòng nhập ít nhất 1 học sinh để quay vòng may mắn!' : 'Vui lòng nhập ít nhất 1 học sinh tham gia đua vịt!');
       return;
     }
     try {
@@ -1179,15 +1273,18 @@ const App = () => {
       if (!importer) throw new Error('Chưa nạp thư viện GameQuizImporter.');
 
       let content;
-      if (selectedGame.id === 'matching') {
+      if (selectedGame.id === 'matching' || selectedGame.id === 'crossword') {
         const pairs = importer.parseMatchingPairs(wordLatexText);
         if (!pairs || !pairs.length) {
-          throw new Error('Không tìm thấy cặp ghép nào. Mỗi dòng nên có dạng: [Khái niệm] - [Định nghĩa] hoặc câu hỏi trắc nghiệm A-D.');
+          throw new Error(selectedGame.id === 'crossword'
+            ? 'Không tìm thấy cặp ô chữ. Mỗi dòng: [Gợi ý] - [Từ khóa] hoặc câu hỏi trắc nghiệm A-D.'
+            : 'Không tìm thấy cặp ghép nào. Mỗi dòng nên có dạng: [Khái niệm] - [Định nghĩa] hoặc câu hỏi trắc nghiệm A-D.');
         }
-        content = importer.formatForGame([], 'matching', {
+        content = importer.formatForGame([], selectedGame.id, {
           rawPairs: pairs,
-          topic: formData.topic || 'Ghép đôi kiến thức',
-          codewordHint: 'Ghép đúng các cặp'
+          topic: formData.topic || (selectedGame.id === 'crossword' ? 'Ô chữ kỳ diệu' : 'Ghép đôi kiến thức'),
+          codewordHint: 'Ghép đúng các cặp',
+          keyword: formData.topic ? String(formData.topic).replace(/\s+/g, '').toUpperCase().slice(0, 12) : undefined
         });
       } else {
         const parsedQs = importer.parseQuizQuestions(wordLatexText);
@@ -1195,8 +1292,12 @@ const App = () => {
           throw new Error('Không tìm thấy câu hỏi trắc nghiệm hợp lệ.\\nĐịnh dạng chuẩn:\\nCâu 1: Cho biểu thức \\(x + 1\\)...\\nA. 1\\nB. 2\\nC. 3\\nD. 4\\nĐáp án: A');
         }
         content = importer.formatForGame(parsedQs, selectedGame.id, {
-          topic: formData.topic || 'Câu hỏi từ Word/LaTeX'
+          topic: formData.topic || 'Câu hỏi từ Word/LaTeX',
+          themeImage: selectedGame.id === 'picture' ? (themeImage || DEFAULT_THEME_IMAGE) : undefined
         });
+      }
+      if (selectedGame.id === 'picture') {
+        content.themeImage = themeImage || content.themeImage || DEFAULT_THEME_IMAGE;
       }
 
       setGeneratedContent(content);
@@ -1212,12 +1313,16 @@ const App = () => {
   };
 
   const handleStartGame = () => {
+    const payloadContent = generatedContent ? { ...generatedContent } : null;
+    if (selectedGame.id === 'picture' && payloadContent) {
+      payloadContent.themeImage = themeImage || payloadContent.themeImage || DEFAULT_THEME_IMAGE;
+    }
     // Lưu vào localStorage để các trang game con lấy
     localStorage.setItem('gameData', JSON.stringify({
       gameType: selectedGame.id,
-      content: generatedContent,
+      content: payloadContent,
       formData: formData,
-      participants: selectedGame.id === 'treasure' ? participants : undefined
+      participants: (selectedGame.id === 'treasure' || selectedGame.id === 'wheel') ? participants : undefined
     }));
 
     // Chuyển sang trang game tương ứng
@@ -1367,7 +1472,30 @@ const App = () => {
         numQuestions: parseInt(e.target.value)
       }),
       className: "w-full p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
-    }))), selectedGame.id === 'treasure' && renderDuckSection(), /*#__PURE__*/React.createElement("button", {
+    }))), needsPictureImage && /*#__PURE__*/React.createElement("div", {
+      className: "mt-4 p-4 bg-pink-50 border border-pink-200 rounded-2xl"
+    }, /*#__PURE__*/React.createElement("label", {
+      className: "block font-bold mb-2 text-pink-800"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-image mr-2"
+    }), "Ảnh chủ đề bức tranh bí ẩn"), /*#__PURE__*/React.createElement("input", {
+      type: "file",
+      accept: "image/*",
+      onChange: e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => setThemeImage(ev.target.result);
+        reader.readAsDataURL(file);
+      },
+      className: "w-full text-sm"
+    }), themeImage ? /*#__PURE__*/React.createElement("img", {
+      src: themeImage,
+      alt: "Ảnh chủ đề",
+      className: "mt-3 max-h-40 rounded-xl border border-pink-200"
+    }) : /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-pink-700 mt-2"
+    }, "Nếu không chọn ảnh, game sẽ dùng ảnh mẫu gradient.")), needsParticipants && renderDuckSection(), /*#__PURE__*/React.createElement("button", {
       onClick: handleGenerateContent,
       className: "w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition mt-6"
     }, /*#__PURE__*/React.createElement("i", {
@@ -1393,7 +1521,30 @@ const App = () => {
       }),
       className: "w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none",
       placeholder: "VD: Ôn tập chương 1, Khảo sát hàm số,..."
-    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    })), needsPictureImage && /*#__PURE__*/React.createElement("div", {
+      className: "p-4 bg-pink-50 border border-pink-200 rounded-2xl"
+    }, /*#__PURE__*/React.createElement("label", {
+      className: "block font-bold mb-2 text-pink-800"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "fas fa-image mr-2"
+    }), "Ảnh chủ đề bức tranh bí ẩn"), /*#__PURE__*/React.createElement("input", {
+      type: "file",
+      accept: "image/*",
+      onChange: e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => setThemeImage(ev.target.result);
+        reader.readAsDataURL(file);
+      },
+      className: "w-full text-sm"
+    }), themeImage ? /*#__PURE__*/React.createElement("img", {
+      src: themeImage,
+      alt: "Ảnh chủ đề",
+      className: "mt-3 max-h-40 rounded-xl border border-pink-200"
+    }) : /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-pink-700 mt-2"
+    }, "Nếu không chọn ảnh, game sẽ dùng ảnh mẫu gradient.")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
       className: "block font-bold mb-2 text-gray-700"
     }, "1. Chọn file Word (.docx) hoặc Text (.txt)"), /*#__PURE__*/React.createElement("div", {
       className: "relative border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50/50 rounded-2xl p-6 text-center cursor-pointer transition group"
@@ -1418,7 +1569,7 @@ const App = () => {
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => {
-        if (selectedGame.id === 'matching') {
+        if (selectedGame.id === 'matching' || selectedGame.id === 'crossword') {
           setWordLatexText("f'(x) > 0, \\forall x \\in (a, b) - Hàm số đồng biến trên (a, b)\nf'(x) < 0, \\forall x \\in (a, b) - Hàm số nghịch biến trên (a, b)\n\\int x^\\alpha dx - \\frac{x^{\\alpha+1}}{\\alpha+1} + C (\\alpha \\ne -1)\n\\lim_{x \\to 0} \\frac{\\sin x}{x} - 1\n\\vec{a} \\cdot \\vec{b} = 0 - Hai vectơ vuông góc");
         } else {
           setWordLatexText("Câu 1: Cho hàm số \\(y = f(x)\\) có bảng biến thiên. Giá trị cực tiểu của hàm số là:\nA. \\(y_{ct} = -2\\)\nB. \\(y_{ct} = 0\\)\nC. \\(y_{ct} = 3\\)\nD. \\(y_{ct} = 5\\)\nĐáp án: A\nLời giải: Dựa vào bảng biến thiên, điểm cực tiểu là \\(x = 1, y = -2\\).\n\nCâu 2: Nghiệm của phương trình \\(\\log_2(x - 1) = 3\\) là:\nA. \\(x = 7\\)\nB. \\(x = 8\\)\nC. \\(x = 9\\)\nD. \\(x = 10\\)\nĐáp án: C\n\nCâu 3: Nguyên hàm của hàm số \\(f(x) = 2x + \\sin x\\) là:\nA. \\(F(x) = x^2 - \\cos x + C\\)\nB. \\(F(x) = x^2 + \\cos x + C\\)\nC. \\(F(x) = 2 - \\cos x + C\\)\nD. \\(F(x) = x^2 + \\sin x + C\\)\nĐáp án: A");
@@ -1437,12 +1588,12 @@ const App = () => {
       className: "p-4 mb-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 space-y-1.5"
     }, /*#__PURE__*/React.createElement("p", {
       className: "font-bold"
-    }, "Cấu trúc định dạng hỗ trợ:"), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Câu hỏi:"), " Bắt đầu bằng ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "Câu 1:"), ", ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "Câu 1."), ", ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "1."), ",..."), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Lựa chọn:"), " ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "A. ... B. ... C. ... D. ..."), " (xuống dòng hoặc trên cùng một dòng đều được)."), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Đáp án đúng:"), " Có thể để ngay dưới câu ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "Đáp án: A"), " hoặc để bảng đáp án cuối bài (VD: ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "1.A 2.B 3.C"), ")."), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Công thức toán:"), " Đặt trong ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "\\(...\\)"), " hoặc ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "$...$"), "."), selectedGame.id === 'matching' && /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Ghép đôi:"), " Mỗi dòng một cặp: ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "[Vế trái] - [Vế phải]"))), /*#__PURE__*/React.createElement("textarea", {
+    }, "Cấu trúc định dạng hỗ trợ:"), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Câu hỏi:"), " Bắt đầu bằng ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "Câu 1:"), ", ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "Câu 1."), ", ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "1."), ",..."), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Lựa chọn:"), " ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "A. ... B. ... C. ... D. ..."), " (xuống dòng hoặc trên cùng một dòng đều được)."), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Đáp án đúng:"), " Có thể để ngay dưới câu ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "Đáp án: A"), " hoặc để bảng đáp án cuối bài (VD: ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "1.A 2.B 3.C"), ")."), /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, "Công thức toán:"), " Đặt trong ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "\\(...\\)"), " hoặc ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "$...$"), "."), (selectedGame.id === 'matching' || selectedGame.id === 'crossword') && /*#__PURE__*/React.createElement("p", null, "• ", /*#__PURE__*/React.createElement("strong", null, selectedGame.id === 'crossword' ? 'Ô chữ:' : 'Ghép đôi:'), " Mỗi dòng một cặp: ", /*#__PURE__*/React.createElement("code", { className: "bg-blue-100 px-1 rounded font-mono" }, "[Vế trái] - [Vế phải]"))), /*#__PURE__*/React.createElement("textarea", {
       value: wordLatexText,
       onChange: e => setWordLatexText(e.target.value),
-      placeholder: selectedGame.id === 'matching' ? "Dán nội dung các cặp ghép đôi vào đây (hoặc câu hỏi trắc nghiệm A-D):\nVD:\nKhái niệm 1 - Định nghĩa 1\nKhái niệm 2 - Định nghĩa 2" : "Dán nội dung câu hỏi vào đây...\nVD:\nCâu 1: Cho biểu thức \\(P = x^2 + 1\\)...\nA. 1\nB. 2\nC. 3\nD. 4\nĐáp án: A",
+      placeholder: (selectedGame.id === 'matching' || selectedGame.id === 'crossword') ? "Dán nội dung các cặp vào đây:\nVD:\nGợi ý 1 - DAPAN1\nGợi ý 2 - DAPAN2" : "Dán nội dung câu hỏi vào đây...\nVD:\nCâu 1: Cho biểu thức \\(P = x^2 + 1\\)...\nA. 1\nB. 2\nC. 3\nD. 4\nĐáp án: A",
       className: "w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none min-h-[220px] font-mono text-sm leading-relaxed"
-    })), selectedGame.id === 'treasure' && renderDuckSection(), /*#__PURE__*/React.createElement("button", {
+    })), needsParticipants && renderDuckSection(), /*#__PURE__*/React.createElement("button", {
       onClick: handleParseAndReview,
       disabled: importingFile,
       className: "w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition mt-4 disabled:opacity-50 flex items-center justify-center gap-2"

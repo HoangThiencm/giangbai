@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <script src="js/security-guard.js"></script>
+    <script src="access-control.js"></script>
+    <meta charset="UTF-8">
+    <title>Game: Ai Là Triệu Phú</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <script src="vendor/babel.min.js"></script>
+    <link rel="stylesheet" href="vendor/katex.min.css">
+    <script src="vendor/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .katex { font-size: 1.05em; }
+        .fade-in { animation: fadeIn 0.45s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        body { background: radial-gradient(ellipse at center, #1e3a8a 0%, #0f172a 70%); }
+        .gold-border { border: 2px solid #fbbf24; box-shadow: 0 0 20px rgba(251,191,36,.25); }
+        .ladder-active { background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #1e3a8a; }
+    </style>
+</head>
+<body class="min-h-screen text-white">
+    <div id="root">
+        <div style="max-width:720px;margin:48px auto;padding:24px;background:#1e3a8a;border-radius:16px;text-align:center;">Đang tải Ai Là Triệu Phú...</div>
+    </div>
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const MONEY = [100000,200000,300000,500000,1000000,2000000,3000000,6000000,10000000,14000000,22000000,30000000,40000000,60000000,150000000];
+        const fmt = (n) => n.toLocaleString('vi-VN') + 'đ';
+
+        const MathText = ({ text }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (!text || !ref.current) return;
+                let processed = String(text).replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = '';
+                parts.forEach(part => {
+                    if ((part.startsWith('$$') && part.endsWith('$$')) || (part.startsWith('$') && part.endsWith('$'))) {
+                        const span = document.createElement('span');
+                        const display = part.startsWith('$$');
+                        try { katex.render(part.slice(display ? 2 : 1, display ? -2 : -1), span, { throwOnError: false, displayMode: display }); } catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else if (part) ref.current.appendChild(document.createTextNode(part));
+                });
+            }, [text]);
+            return <span ref={ref} />;
+        };
+
+        const MillionaireGame = () => {
+            const [gameData, setGameData] = useState(null);
+            const [ladderQs, setLadderQs] = useState([]);
+            const [spare, setSpare] = useState([]);
+            const [level, setLevel] = useState(0);
+            const [selected, setSelected] = useState(null);
+            const [showResult, setShowResult] = useState(false);
+            const [hidden, setHidden] = useState([]);
+            const [poll, setPoll] = useState(null);
+            const [lifelines, setLifelines] = useState({ fifty: true, ask: true, switchQ: true });
+            const [gameOver, setGameOver] = useState(false);
+            const [wonAll, setWonAll] = useState(false);
+            const [finalMoney, setFinalMoney] = useState(0);
+            const [showInstructions, setShowInstructions] = useState(true);
+
+            useEffect(() => {
+                const raw = localStorage.getItem('gameData');
+                if (!raw) { alert('Không có dữ liệu game! Hãy tạo nội dung từ trang Game Giáo Dục trước.'); window.location.href = 'trochoi.html'; return; }
+                const parsed = JSON.parse(raw);
+                if (parsed.gameType && parsed.gameType !== 'millionaire') {
+                    alert('Dữ liệu không thuộc game Ai Là Triệu Phú. Vui lòng tạo lại từ menu game.');
+                    window.location.href = 'trochoi.html'; return;
+                }
+                let loaded = (parsed.content?.questions || []).map((q, idx) => ({
+                    id: q.id || `q${idx + 1}`, prompt: q.prompt || '', choices: [...(q.choices || [])],
+                    answer: typeof q.answer === 'number' ? q.answer : 0, explanation: q.explanation || '',
+                    difficulty: q.difficulty || idx
+                })).filter(q => q.prompt && q.choices.length >= 2);
+                if (!loaded.length) { alert('Không có câu hỏi hợp lệ.'); window.location.href = 'trochoi.html'; return; }
+                loaded = [...loaded].sort((a, b) => (a.difficulty || 0) - (b.difficulty || 0));
+                const main = [];
+                const bank = [...loaded];
+                while (main.length < 15 && bank.length) main.push(bank.shift());
+                while (main.length < 15) {
+                    const src = loaded[main.length % loaded.length];
+                    main.push({ ...src, id: src.id + '_pad' + main.length, prompt: src.prompt + ` (mốc ${main.length + 1})` });
+                }
+                setGameData(parsed);
+                setLadderQs(main);
+                setSpare(bank);
+            }, []);
+
+            const topicTitle = gameData?.formData?.topic || 'Ai Là Triệu Phú';
+            const currentQ = ladderQs[level];
+
+            const useFifty = () => {
+                if (!lifelines.fifty || !currentQ || showResult) return;
+                const wrong = currentQ.choices.map((_, i) => i).filter(i => i !== currentQ.answer);
+                const hide = wrong.sort(() => Math.random() - 0.5).slice(0, 2);
+                setHidden(hide);
+                setLifelines(l => ({ ...l, fifty: false }));
+                if (selected !== null && hide.includes(selected)) setSelected(null);
+            };
+
+            const useAsk = () => {
+                if (!lifelines.ask || !currentQ || showResult) return;
+                const weights = currentQ.choices.map((_, i) => i === currentQ.answer ? 40 + Math.random() * 35 : Math.random() * 25);
+                const sum = weights.reduce((a, b) => a + b, 0);
+                setPoll(weights.map(w => Math.round((w / sum) * 100)));
+                setLifelines(l => ({ ...l, ask: false }));
+            };
+
+            const useSwitch = () => {
+                if (!lifelines.switchQ || showResult) return;
+                if (!spare.length) { alert('Không còn câu dự phòng!'); return; }
+                const next = spare[0];
+                setSpare(s => s.slice(1));
+                setLadderQs(qs => { const copy = [...qs]; copy[level] = next; return copy; });
+                setHidden([]);
+                setPoll(null);
+                setSelected(null);
+                setLifelines(l => ({ ...l, switchQ: false }));
+            };
+
+            const submit = () => {
+                if (selected === null || showResult || !currentQ) return;
+                setShowResult(true);
+                if (selected === currentQ.answer) {
+                    const money = MONEY[level];
+                    if (level >= 14) {
+                        setWonAll(true);
+                        setFinalMoney(money);
+                        setTimeout(() => setGameOver(true), 1000);
+                    } else {
+                        setTimeout(() => {
+                            setLevel(l => l + 1);
+                            setSelected(null);
+                            setShowResult(false);
+                            setHidden([]);
+                            setPoll(null);
+                        }, 1100);
+                    }
+                } else {
+                    const safe = level >= 10 ? MONEY[9] : level >= 5 ? MONEY[4] : 0;
+                    setFinalMoney(safe);
+                    setWonAll(false);
+                    setTimeout(() => setGameOver(true), 1200);
+                }
+            };
+
+            if (!gameData || !ladderQs.length) {
+                return <div className="flex items-center justify-center min-h-screen"><div className="text-xl font-semibold text-amber-300"><i className="fas fa-spinner fa-spin mr-2"></i>Đang chuẩn bị...</div></div>;
+            }
+
+            if (showInstructions) {
+                return (
+                    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                        <div className="bg-slate-900 gold-border rounded-3xl p-8 max-w-2xl w-full fade-in">
+                            <h2 className="text-3xl font-bold text-amber-400 mb-4"><i className="fas fa-lightbulb mr-2"></i>Ai Là Triệu Phú</h2>
+                            <p className="text-blue-100 mb-4">Chủ đề: <strong>{topicTitle}</strong></p>
+                            <ul className="space-y-2 text-blue-100 mb-4">
+                                <li>15 câu tăng dần · Sai → kết thúc (mốc an toàn 1tr / 14tr)</li>
+                                <li><strong>50:50</strong> · <strong>Hỏi cả lớp</strong> · <strong>Đổi câu</strong> — mỗi quyền 1 lần</li>
+                            </ul>
+                            <button onClick={() => setShowInstructions(false)} className="w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 rounded-xl font-bold text-lg">
+                                <i className="fas fa-play mr-2"></i>Bắt đầu chinh phục
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameOver) {
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-slate-900 gold-border rounded-3xl p-10 text-center">
+                            <div className="text-6xl mb-4">{wonAll ? '🏆' : '💡'}</div>
+                            <h2 className="text-3xl font-bold text-amber-400 mb-2">{wonAll ? 'Bạn là TRIỆU PHÚ!' : 'Hành trình kết thúc'}</h2>
+                            <p className="text-blue-200 mb-4">{topicTitle}</p>
+                            <div className="text-5xl font-black text-amber-300 mb-8">{fmt(finalMoney)}</div>
+                            <div className="flex gap-3 justify-center flex-wrap">
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-amber-500 text-slate-900 rounded-xl font-bold"><i className="fas fa-redo mr-2"></i>Chơi lại</button>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-slate-600 rounded-xl font-bold"><i className="fas fa-home mr-2"></i>Về menu</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-6xl mx-auto p-4 md:p-6 fade-in">
+                    <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+                        <div className="flex gap-2">
+                            <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-slate-700 rounded-lg"><i className="fas fa-arrow-left mr-1"></i>Thoát</button>
+                            <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-700 rounded-lg"><i className="fas fa-question-circle"></i></button>
+                        </div>
+                        <h1 className="text-2xl font-bold text-amber-400"><i className="fas fa-lightbulb mr-2"></i>Ai Là Triệu Phú</h1>
+                        <div className="text-amber-300 font-bold">{level > 0 ? fmt(MONEY[level - 1]) : '0đ'}</div>
+                    </div>
+
+                    <div className="grid lg:grid-cols-4 gap-4">
+                        <div className="order-2 lg:order-1 lg:col-span-3 space-y-4">
+                            <div className="flex flex-wrap gap-2 justify-center">
+                                <button disabled={!lifelines.fifty || showResult} onClick={useFifty} className="px-4 py-2 rounded-full gold-border bg-slate-800 font-bold disabled:opacity-30">50:50</button>
+                                <button disabled={!lifelines.ask || showResult} onClick={useAsk} className="px-4 py-2 rounded-full gold-border bg-slate-800 font-bold disabled:opacity-30"><i className="fas fa-users mr-1"></i>Hỏi cả lớp</button>
+                                <button disabled={!lifelines.switchQ || showResult} onClick={useSwitch} className="px-4 py-2 rounded-full gold-border bg-slate-800 font-bold disabled:opacity-30"><i className="fas fa-exchange-alt mr-1"></i>Đổi câu</button>
+                            </div>
+
+                            <div className="bg-slate-900/80 gold-border rounded-3xl p-6">
+                                <div className="text-amber-400/80 text-sm mb-2">Câu {level + 1}/15 · {fmt(MONEY[level])}</div>
+                                <h3 className="text-xl md:text-2xl font-bold mb-6 text-center"><MathText text={currentQ.prompt} /></h3>
+                                <div className="grid md:grid-cols-2 gap-3">
+                                    {currentQ.choices.map((c, idx) => {
+                                        if (hidden.includes(idx)) return <div key={idx} className="p-4 rounded-xl border border-slate-700 opacity-20">—</div>;
+                                        let cls = 'p-4 rounded-xl border-2 text-left font-medium transition ';
+                                        if (showResult) {
+                                            if (idx === currentQ.answer) cls += 'bg-emerald-600/40 border-emerald-400';
+                                            else if (idx === selected) cls += 'bg-red-600/40 border-red-400';
+                                            else cls += 'border-slate-600 opacity-40';
+                                        } else cls += selected === idx ? 'bg-amber-500/30 border-amber-400' : 'border-blue-400/40 hover:border-amber-300 bg-blue-950/40';
+                                        return (
+                                            <button key={idx} disabled={showResult} onClick={() => setSelected(idx)} className={cls}>
+                                                <span className="text-amber-400 font-bold mr-2">{String.fromCharCode(65 + idx)}:</span>
+                                                <MathText text={c} />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {poll && (
+                                    <div className="mt-4 grid grid-cols-4 gap-2">
+                                        {poll.map((pct, i) => (
+                                            <div key={i} className="text-center">
+                                                <div className="h-24 bg-slate-800 rounded relative overflow-hidden flex items-end">
+                                                    <div className="w-full bg-amber-400" style={{ height: `${pct}%` }} />
+                                                </div>
+                                                <div className="text-xs mt-1">{String.fromCharCode(65 + i)} {pct}%</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {!showResult && selected !== null && (
+                                    <button onClick={submit} className="w-full mt-5 py-3 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-900 rounded-xl font-bold text-lg">Chốt đáp án</button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="order-1 lg:order-2 bg-slate-900/80 gold-border rounded-2xl p-3 h-fit">
+                            <div className="text-xs text-amber-400 font-bold mb-2 text-center">THANG ĐIỂM</div>
+                            <div className="space-y-1">
+                                {[...MONEY].map((m, i) => {
+                                    const idx = 14 - i;
+                                    const val = MONEY[idx];
+                                    const active = idx === level;
+                                    const done = idx < level;
+                                    return (
+                                        <div key={idx} className={`text-xs px-2 py-1 rounded flex justify-between ${active ? 'ladder-active font-black' : done ? 'text-amber-200/70' : 'text-blue-200/50'}`}>
+                                            <span>{idx + 1}</span>
+                                            <span>{fmt(val)}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<MillionaireGame />, document.getElementById('root'));
+    </script>
+</body>
+</html>

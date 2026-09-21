@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <script src="js/security-guard.js"></script>
+    <script src="access-control.js"></script>
+    <meta charset="UTF-8">
+    <title>Game: Ô Chữ Kỳ Diệu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <script src="vendor/babel.min.js"></script>
+    <link rel="stylesheet" href="vendor/katex.min.css">
+    <script src="vendor/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .katex { font-size: 1.05em; }
+        .fade-in { animation: fadeIn 0.45s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .cell-reveal { animation: cellPop 0.45s ease-out; }
+        @keyframes cellPop { 0% { transform: scale(0.7); background: #fde68a; } 100% { transform: scale(1); } }
+        .kw-col { background: #fef08a !important; box-shadow: inset 0 0 0 2px #eab308; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-100 min-h-screen">
+    <div id="root">
+        <div style="max-width:720px;margin:48px auto;padding:24px;background:#fff;border-radius:16px;color:#334155;text-align:center;">Đang tải ô chữ...</div>
+    </div>
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const normalize = (s) => String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, '');
+
+        const MathText = ({ text }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (!text || !ref.current) return;
+                let processed = String(text).replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = '';
+                parts.forEach(part => {
+                    if ((part.startsWith('$$') && part.endsWith('$$')) || (part.startsWith('$') && part.endsWith('$'))) {
+                        const span = document.createElement('span');
+                        const display = part.startsWith('$$');
+                        try { katex.render(part.slice(display ? 2 : 1, display ? -2 : -1), span, { throwOnError: false, displayMode: display }); } catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else if (part) ref.current.appendChild(document.createTextNode(part));
+                });
+            }, [text]);
+            return <span ref={ref} />;
+        };
+
+        const CrosswordGame = () => {
+            const [gameData, setGameData] = useState(null);
+            const [rows, setRows] = useState([]);
+            const [keyword, setKeyword] = useState('');
+            const [kwCol, setKwCol] = useState(0);
+            const [solved, setSolved] = useState({});
+            const [activeRow, setActiveRow] = useState(null);
+            const [input, setInput] = useState('');
+            const [feedback, setFeedback] = useState('');
+            const [gameOver, setGameOver] = useState(false);
+            const [showInstructions, setShowInstructions] = useState(true);
+            const [score, setScore] = useState(0);
+
+            useEffect(() => {
+                const raw = localStorage.getItem('gameData');
+                if (!raw) { alert('Không có dữ liệu game! Hãy tạo nội dung từ trang Game Giáo Dục trước.'); window.location.href = 'trochoi.html'; return; }
+                const parsed = JSON.parse(raw);
+                if (parsed.gameType && parsed.gameType !== 'crossword') {
+                    alert('Dữ liệu không thuộc game Ô Chữ Kỳ Diệu. Vui lòng tạo lại từ menu game.');
+                    window.location.href = 'trochoi.html'; return;
+                }
+                const src = parsed.content?.pairs || parsed.content?.clues || [];
+                let entries = src.map((p, idx) => ({
+                    id: p.id ?? idx,
+                    clue: p.left || p.clue || p.prompt || '',
+                    answer: normalize(p.right || p.answer || '')
+                })).filter(e => e.clue && e.answer);
+
+                if (!entries.length && parsed.content?.questions?.length) {
+                    entries = parsed.content.questions.slice(0, 8).map((q, idx) => ({
+                        id: idx,
+                        clue: q.prompt || `Câu ${idx + 1}`,
+                        answer: normalize((q.choices && q.choices[q.answer]) || q.answerText || `DAPAN${idx + 1}`)
+                    })).filter(e => e.answer);
+                }
+
+                if (!entries.length) { alert('Không có cặp gợi ý / đáp án hợp lệ.'); window.location.href = 'trochoi.html'; return; }
+
+                let kw = normalize(parsed.content?.keyword || '');
+                if (!kw) kw = entries.map(e => e.answer[0] || '').join('');
+                if (!kw) kw = 'TUKHOA';
+
+                // Align each answer so keyword letter sits on same column when possible
+                const col = Math.max(...entries.map(e => e.answer.length), kw.length) > 0 ? Math.min(2, Math.floor(Math.max(...entries.map(e => e.answer.length)) / 3)) : 0;
+                const built = entries.slice(0, Math.max(kw.length, entries.length)).map((e, i) => {
+                    const letter = kw[i] || e.answer[0];
+                    let offset = e.answer.indexOf(letter);
+                    if (offset < 0) offset = 0;
+                    return { ...e, offset, letters: e.answer.split('') };
+                });
+                // Prefer keyword column = max offset alignment: pad left so keyword chars share column
+                const maxOff = Math.max(...built.map(b => b.offset), 0);
+                const aligned = built.map((b, i) => {
+                    const want = kw[i];
+                    let off = want ? b.answer.indexOf(want) : b.offset;
+                    if (off < 0) off = 0;
+                    const pad = maxOff - off;
+                    return { ...b, pad: Math.max(0, pad), kwIndex: off };
+                });
+
+                setGameData(parsed);
+                setRows(aligned);
+                setKeyword(kw.slice(0, aligned.length));
+                setKwCol(maxOff);
+            }, []);
+
+            const topicTitle = gameData?.formData?.topic || 'Ô chữ kỳ diệu';
+            const maxLen = useMemo(() => rows.reduce((m, r) => Math.max(m, (r.pad || 0) + r.letters.length), 0), [rows]);
+            const solvedCount = Object.keys(solved).length;
+
+            const openRow = (idx) => {
+                if (solved[idx]) return;
+                setActiveRow(idx);
+                setInput('');
+                setFeedback('');
+            };
+
+            const checkAnswer = () => {
+                if (activeRow === null) return;
+                const row = rows[activeRow];
+                if (normalize(input) === row.answer) {
+                    setSolved(prev => {
+                        const next = { ...prev, [activeRow]: true };
+                        if (Object.keys(next).length >= rows.length) setTimeout(() => setGameOver(true), 700);
+                        return next;
+                    });
+                    setScore(s => s + 15);
+                    setFeedback('Chính xác!');
+                    setTimeout(() => { setActiveRow(null); setFeedback(''); }, 700);
+                } else setFeedback('Chưa đúng — thử lại!');
+            };
+
+            const verticalWord = useMemo(() => {
+                return rows.map((r, i) => {
+                    if (!solved[i]) return '·';
+                    const idx = r.kwIndex;
+                    return r.letters[idx] || '·';
+                }).join('');
+            }, [rows, solved]);
+
+            if (!gameData || !rows.length) {
+                return <div className="flex items-center justify-center min-h-screen"><div className="text-xl text-violet-800 font-semibold"><i className="fas fa-spinner fa-spin mr-2"></i>Đang dựng ô chữ...</div></div>;
+            }
+
+            if (showInstructions) {
+                return (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full fade-in">
+                            <h2 className="text-3xl font-bold text-violet-700 mb-4"><i className="fas fa-border-all mr-2"></i>Ô Chữ Kỳ Diệu</h2>
+                            <p className="text-gray-600 mb-4">Chủ đề: <strong>{topicTitle}</strong></p>
+                            <ul className="space-y-2 text-gray-700 mb-4">
+                                <li><strong>1.</strong> Bấm hàng ngang → đọc gợi ý, gõ đáp án</li>
+                                <li><strong>2.</strong> Đúng → hé lộ chữ cái hàng đó</li>
+                                <li><strong>3.</strong> Cột vàng tạo thành từ khóa dọc</li>
+                            </ul>
+                            <p className="text-sm text-violet-600 mb-4">Từ khóa dọc có {keyword.length} chữ · {rows.length} hàng ngang</p>
+                            <button onClick={() => setShowInstructions(false)} className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-bold text-lg">
+                                <i className="fas fa-play mr-2"></i>Bắt đầu giải mã
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameOver) {
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-10 text-center">
+                            <div className="text-6xl mb-4">✨</div>
+                            <h2 className="text-4xl font-bold text-violet-800 mb-2">Giải mã thành công!</h2>
+                            <p className="text-gray-600 mb-2">{topicTitle}</p>
+                            <div className="text-3xl font-black tracking-widest text-amber-600 mb-2">{keyword}</div>
+                            <div className="text-2xl font-bold text-violet-600 mb-8">{score} điểm</div>
+                            <div className="flex gap-3 justify-center flex-wrap">
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-violet-600 text-white rounded-xl font-bold"><i className="fas fa-redo mr-2"></i>Chơi lại</button>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold"><i className="fas fa-home mr-2"></i>Về menu</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-5xl mx-auto p-4 md:p-6 fade-in">
+                    <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+                        <div className="flex gap-2">
+                            <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg"><i className="fas fa-arrow-left mr-1"></i>Thoát</button>
+                            <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg"><i className="fas fa-question-circle"></i></button>
+                        </div>
+                        <div className="text-center">
+                            <h1 className="text-2xl font-bold text-violet-700"><i className="fas fa-border-all mr-2"></i>Ô Chữ Kỳ Diệu</h1>
+                            <p className="text-sm text-gray-600">{solvedCount}/{rows.length} hàng · Từ khóa: <span className="font-mono tracking-wider">{verticalWord}</span></p>
+                        </div>
+                        <div className="px-4 py-2 bg-white border-2 border-violet-200 rounded-lg font-bold text-violet-700">{score}đ</div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-xl p-4 overflow-x-auto mb-4">
+                        <div className="inline-block min-w-full">
+                            {rows.map((row, rIdx) => (
+                                <button key={row.id} type="button" onClick={() => openRow(rIdx)}
+                                    className={`flex items-center gap-1 mb-1 w-full text-left rounded-lg px-1 py-0.5 ${activeRow === rIdx ? 'ring-2 ring-violet-400 bg-violet-50' : 'hover:bg-purple-50'}`}>
+                                    <span className="w-7 text-xs font-bold text-violet-600 shrink-0">{rIdx + 1}</span>
+                                    <div className="flex gap-0.5">
+                                        {Array.from({ length: row.pad }).map((_, i) => <div key={'p'+i} className="w-8 h-8" />)}
+                                        {row.letters.map((ch, cIdx) => {
+                                            const isKw = cIdx === row.kwIndex;
+                                            const show = solved[rIdx];
+                                            return (
+                                                <div key={cIdx} className={`w-8 h-8 md:w-9 md:h-9 border-2 border-violet-300 rounded flex items-center justify-center font-bold text-sm ${isKw ? 'kw-col' : 'bg-white'} ${show ? 'cell-reveal text-violet-900' : 'text-transparent'}`}>
+                                                    {show ? ch : '?'}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-xs text-amber-700 mt-3"><i className="fas fa-highlighter mr-1"></i>Cột vàng = từ khóa hàng dọc</p>
+                    </div>
+
+                    <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 mb-4">
+                        <div className="text-sm font-bold text-violet-800 mb-1">Gợi ý nhanh:</div>
+                        <ul className="text-sm text-gray-700 space-y-1 max-h-32 overflow-y-auto">
+                            {rows.map((r, i) => (
+                                <li key={i} className={solved[i] ? 'line-through opacity-50' : ''}>
+                                    <button type="button" className="text-left hover:text-violet-700" onClick={() => openRow(i)}>
+                                        <strong>{i + 1}.</strong> {r.clue.length > 80 ? r.clue.slice(0, 80) + '…' : r.clue}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {activeRow !== null && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-lg w-full">
+                                <div className="text-sm text-violet-600 font-bold mb-2">Hàng ngang {activeRow + 1}</div>
+                                <h3 className="text-lg font-bold text-gray-800 mb-4"><MathText text={rows[activeRow].clue} /></h3>
+                                <p className="text-xs text-gray-500 mb-2">{rows[activeRow].letters.length} chữ cái (không dấu)</p>
+                                <input
+                                    autoFocus
+                                    value={input}
+                                    onChange={e => setInput(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && checkAnswer()}
+                                    className="w-full border-2 border-violet-300 rounded-xl px-4 py-3 font-mono tracking-widest uppercase text-lg mb-3"
+                                    placeholder="Nhập đáp án..."
+                                />
+                                {feedback && <p className={`mb-3 font-semibold ${feedback.includes('Chính') ? 'text-emerald-600' : 'text-red-600'}`}>{feedback}</p>}
+                                <div className="flex gap-2">
+                                    <button onClick={checkAnswer} className="flex-1 py-3 bg-violet-600 text-white rounded-xl font-bold">Kiểm tra</button>
+                                    <button onClick={() => setActiveRow(null)} className="px-4 py-3 bg-gray-200 rounded-xl font-bold">Đóng</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<CrosswordGame />, document.getElementById('root'));
+    </script>
+</body>
+</html>

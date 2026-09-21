@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <script src="js/security-guard.js"></script>
+    <script src="access-control.js"></script>
+    <meta charset="UTF-8">
+    <title>Game: Vòng Quay May Mắn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <script src="vendor/babel.min.js"></script>
+    <link rel="stylesheet" href="vendor/katex.min.css">
+    <script src="vendor/katex.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .katex { font-size: 1.05em; }
+        .fade-in { animation: fadeIn 0.45s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .wheel-pointer { filter: drop-shadow(0 2px 4px rgba(0,0,0,.35)); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-100 min-h-screen">
+    <div id="root">
+        <div style="max-width:720px;margin:48px auto;padding:24px;background:#fff;border-radius:16px;color:#334155;text-align:center;">Đang tải vòng quay...</div>
+    </div>
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        const DEMO_NAMES = ['An', 'Bình', 'Chi', 'Dũng', 'Em', 'Phong', 'Hà', 'Lan'];
+        const PRIZES = [
+            { label: '10', type: 'points', value: 10, color: '#14b8a6' },
+            { label: '20', type: 'points', value: 20, color: '#10b981' },
+            { label: '50', type: 'points', value: 50, color: '#059669' },
+            { label: 'Hộp quà', type: 'box', value: 30, color: '#f59e0b' },
+            { label: 'Mất lượt', type: 'miss', value: 0, color: '#ef4444' },
+            { label: 'Nhân đôi', type: 'double', value: 2, color: '#8b5cf6' },
+        ];
+        const COLORS = ['#14b8a6','#0ea5e9','#6366f1','#a855f7','#ec4899','#f97316','#eab308','#22c55e','#06b6d4','#f43f5e'];
+
+        const MathText = ({ text }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (!text || !ref.current) return;
+                let processed = String(text).replace(/`([^`]+)`/g, '$$$1$$').replace(/\\\[(.+?)\\\]/g, '$$$$1$$').replace(/\\\((.+?)\\\)/g, '$$$1$$');
+                if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
+                const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
+                ref.current.innerHTML = '';
+                parts.forEach(part => {
+                    if ((part.startsWith('$$') && part.endsWith('$$')) || (part.startsWith('$') && part.endsWith('$'))) {
+                        const span = document.createElement('span');
+                        const display = part.startsWith('$$');
+                        try { katex.render(part.slice(display ? 2 : 1, display ? -2 : -1), span, { throwOnError: false, displayMode: display }); } catch { span.textContent = part; }
+                        ref.current.appendChild(span);
+                    } else if (part) ref.current.appendChild(document.createTextNode(part));
+                });
+            }, [text]);
+            return <span ref={ref} />;
+        };
+
+        const drawWheel = (ctx, items, labels, rotation) => {
+            const cx = ctx.canvas.width / 2, cy = ctx.canvas.height / 2, r = Math.min(cx, cy) - 8;
+            const n = items.length;
+            const arc = (Math.PI * 2) / n;
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            for (let i = 0; i < n; i++) {
+                const start = rotation + i * arc;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, r, start, start + arc);
+                ctx.closePath();
+                ctx.fillStyle = items[i].color || COLORS[i % COLORS.length];
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(start + arc / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 13px sans-serif';
+                const label = labels[i];
+                const short = label.length > 10 ? label.slice(0, 9) + '…' : label;
+                ctx.fillText(short, r - 14, 4);
+                ctx.restore();
+            }
+            ctx.beginPath();
+            ctx.arc(cx, cy, 28, 0, Math.PI * 2);
+            ctx.fillStyle = '#0f766e';
+            ctx.fill();
+        };
+
+        const WheelGame = () => {
+            const [gameData, setGameData] = useState(null);
+            const [questions, setQuestions] = useState([]);
+            const [participants, setParticipants] = useState([]);
+            const [scores, setScores] = useState({});
+            const [phase, setPhase] = useState('spinStudent'); // spinStudent | spinPrize | ask | doneQ
+            const [spinning, setSpinning] = useState(false);
+            const [pickedStudent, setPickedStudent] = useState(null);
+            const [pickedPrize, setPickedPrize] = useState(null);
+            const [qIndex, setQIndex] = useState(0);
+            const [selected, setSelected] = useState(null);
+            const [showResult, setShowResult] = useState(false);
+            const [lastAward, setLastAward] = useState('');
+            const [gameOver, setGameOver] = useState(false);
+            const [showInstructions, setShowInstructions] = useState(true);
+            const [pendingDouble, setPendingDouble] = useState(false);
+            const studentCanvas = useRef(null);
+            const prizeCanvas = useRef(null);
+            const studentRot = useRef(0);
+            const prizeRot = useRef(0);
+
+            useEffect(() => {
+                const raw = localStorage.getItem('gameData');
+                if (!raw) { alert('Không có dữ liệu game! Hãy tạo nội dung từ trang Game Giáo Dục trước.'); window.location.href = 'trochoi.html'; return; }
+                const parsed = JSON.parse(raw);
+                if (parsed.gameType && parsed.gameType !== 'wheel') {
+                    alert('Dữ liệu không thuộc game Vòng Quay May Mắn. Vui lòng tạo lại từ menu game.');
+                    window.location.href = 'trochoi.html'; return;
+                }
+                const loaded = (parsed.content?.questions || []).map((q, idx) => ({
+                    id: q.id || `q${idx + 1}`, prompt: q.prompt || '', choices: q.choices || [],
+                    answer: typeof q.answer === 'number' ? q.answer : 0, explanation: q.explanation || ''
+                })).filter(q => q.prompt && q.choices.length >= 2);
+                if (!loaded.length) { alert('Không có câu hỏi hợp lệ.'); window.location.href = 'trochoi.html'; return; }
+                const roster = (parsed.participants || []).map((p, i) => ({
+                    id: p.id || `p${i}`, name: p.name || `HS ${i + 1}`, color: COLORS[i % COLORS.length]
+                }));
+                const list = roster.length ? roster : DEMO_NAMES.map((name, i) => ({ id: `d${i}`, name, color: COLORS[i % COLORS.length] }));
+                setGameData(parsed);
+                setQuestions(loaded);
+                setParticipants(list);
+                setScores(list.reduce((a, p) => ({ ...a, [p.id]: 0 }), {}));
+            }, []);
+
+            const paint = useCallback(() => {
+                if (studentCanvas.current && participants.length) {
+                    const ctx = studentCanvas.current.getContext('2d');
+                    drawWheel(ctx, participants, participants.map(p => p.name), studentRot.current);
+                }
+                if (prizeCanvas.current) {
+                    const ctx = prizeCanvas.current.getContext('2d');
+                    drawWheel(ctx, PRIZES, PRIZES.map(p => p.label), prizeRot.current);
+                }
+            }, [participants]);
+
+            useEffect(() => { paint(); }, [paint, phase]);
+
+            const topicTitle = gameData?.formData?.topic || 'Vòng quay may mắn';
+            const currentQ = questions[qIndex];
+
+            const animateSpin = (rotRef, canvasRef, items, onDone) => {
+                setSpinning(true);
+                const extra = Math.PI * 2 * (4 + Math.random() * 3);
+                const start = rotRef.current;
+                const target = start + extra;
+                const duration = 3200;
+                const t0 = performance.now();
+                const tick = (now) => {
+                    const t = Math.min(1, (now - t0) / duration);
+                    const ease = 1 - Math.pow(1 - t, 3);
+                    rotRef.current = start + (target - start) * ease;
+                    paint();
+                    if (t < 1) requestAnimationFrame(tick);
+                    else {
+                        setSpinning(false);
+                        const n = items.length;
+                        const arc = (Math.PI * 2) / n;
+                        const normalized = ((Math.PI * 1.5 - (rotRef.current % (Math.PI * 2))) + Math.PI * 2) % (Math.PI * 2);
+                        const idx = Math.floor(normalized / arc) % n;
+                        onDone(idx, items[idx]);
+                    }
+                };
+                requestAnimationFrame(tick);
+            };
+
+            const spinStudent = () => {
+                if (spinning || phase !== 'spinStudent') return;
+                animateSpin(studentRot, studentCanvas, participants, (idx, item) => {
+                    setPickedStudent(item);
+                    setPhase('spinPrize');
+                });
+            };
+
+            const spinPrize = () => {
+                if (spinning || phase !== 'spinPrize') return;
+                animateSpin(prizeRot, prizeCanvas, PRIZES, (idx, item) => {
+                    setPickedPrize(item);
+                    if (item.type === 'miss') {
+                        setLastAward(`${item.label} — bỏ qua câu hỏi`);
+                        setTimeout(() => nextRound(), 1200);
+                    } else setPhase('ask');
+                });
+            };
+
+            const awardPoints = (base) => {
+                let pts = base;
+                if (pendingDouble) { pts *= 2; setPendingDouble(false); }
+                if (pickedPrize?.type === 'double') {
+                    setPendingDouble(true);
+                    setLastAward(`Nhân đôi cho lượt đúng tiếp theo! (+0 lần này)`);
+                    return 0;
+                }
+                if (pickedPrize?.type === 'box') pts = 20 + Math.floor(Math.random() * 31);
+                setScores(prev => ({ ...prev, [pickedStudent.id]: (prev[pickedStudent.id] || 0) + pts }));
+                setLastAward(`+${pts} điểm cho ${pickedStudent.name}`);
+                return pts;
+            };
+
+            const submitAnswer = () => {
+                if (selected === null || showResult || !currentQ) return;
+                setShowResult(true);
+                const ok = selected === currentQ.answer;
+                if (ok) awardPoints(pickedPrize?.type === 'points' ? pickedPrize.value : (pickedPrize?.value || 10));
+                else {
+                    setLastAward('Sai — không nhận thưởng');
+                    if (pickedPrize?.type === 'double') { /* no double consume on wrong if we set after award - already handled */ }
+                }
+                setPhase('doneQ');
+            };
+
+            const nextRound = () => {
+                if (qIndex >= questions.length - 1) { setGameOver(true); return; }
+                setQIndex(i => i + 1);
+                setSelected(null);
+                setShowResult(false);
+                setPickedStudent(null);
+                setPickedPrize(null);
+                setLastAward('');
+                setPhase('spinStudent');
+            };
+
+            if (!gameData || !questions.length) {
+                return <div className="flex items-center justify-center min-h-screen"><div className="text-xl text-teal-800 font-semibold"><i className="fas fa-spinner fa-spin mr-2"></i>Đang chuẩn bị vòng quay...</div></div>;
+            }
+
+            if (showInstructions) {
+                return (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full fade-in">
+                            <h2 className="text-3xl font-bold text-teal-700 mb-4"><i className="fas fa-dharmachakra mr-2"></i>Vòng Quay May Mắn</h2>
+                            <p className="text-gray-600 mb-4">Chủ đề: <strong>{topicTitle}</strong> · {participants.length} học sinh</p>
+                            <ul className="space-y-2 text-gray-700 mb-4">
+                                <li><strong>1.</strong> Quay chọn học sinh trả lời</li>
+                                <li><strong>2.</strong> Quay phần thưởng: 10 / 20 / 50 / Hộp quà / Mất lượt / Nhân đôi</li>
+                                <li><strong>3.</strong> Trả lời đúng → nhận điểm thưởng</li>
+                            </ul>
+                            <button onClick={() => setShowInstructions(false)} className="w-full py-4 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl font-bold text-lg">
+                                <i className="fas fa-play mr-2"></i>Bắt đầu ({questions.length} câu)
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameOver) {
+                const ranking = [...participants].sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0));
+                return (
+                    <div className="max-w-3xl mx-auto p-6 fade-in">
+                        <div className="bg-white rounded-3xl shadow-2xl p-10 text-center">
+                            <div className="text-6xl mb-4">🎡</div>
+                            <h2 className="text-4xl font-bold mb-2">Kết thúc vòng quay!</h2>
+                            <p className="text-gray-600 mb-6">{topicTitle}</p>
+                            <div className="text-left max-w-md mx-auto mb-8 space-y-2">
+                                {ranking.map((p, i) => (
+                                    <div key={p.id} className={`flex justify-between px-4 py-2 rounded-lg ${i === 0 ? 'bg-amber-50 border border-amber-200 font-bold' : 'bg-gray-50'}`}>
+                                        <span>{i + 1}. {p.name}</span><span>{scores[p.id] || 0}đ</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex gap-3 justify-center flex-wrap">
+                                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-teal-600 text-white rounded-xl font-bold"><i className="fas fa-redo mr-2"></i>Chơi lại</button>
+                                <button onClick={() => window.location.href = 'trochoi.html'} className="px-8 py-3 bg-gray-600 text-white rounded-xl font-bold"><i className="fas fa-home mr-2"></i>Về menu</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            const board = [...participants].sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0)).slice(0, 8);
+
+            return (
+                <div className="max-w-6xl mx-auto p-4 md:p-6 fade-in">
+                    <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+                        <div className="flex gap-2">
+                            <button onClick={() => window.location.href = 'trochoi.html'} className="px-4 py-2 bg-gray-600 text-white rounded-lg"><i className="fas fa-arrow-left mr-1"></i>Thoát</button>
+                            <button onClick={() => setShowInstructions(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg"><i className="fas fa-question-circle"></i></button>
+                        </div>
+                        <div className="text-center">
+                            <h1 className="text-2xl font-bold text-teal-700"><i className="fas fa-dharmachakra mr-2"></i>Vòng Quay May Mắn</h1>
+                            <p className="text-sm text-gray-600">Câu {qIndex + 1}/{questions.length}{pendingDouble ? ' · ✨ Nhân đôi đang chờ' : ''}</p>
+                        </div>
+                        <div className="text-sm font-bold text-teal-800">Bảng điểm top</div>
+                    </div>
+
+                    <div className="grid lg:grid-cols-3 gap-4">
+                        <div className="lg:col-span-2 space-y-4">
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div className="bg-white rounded-2xl p-4 shadow relative text-center">
+                                    <h3 className="font-bold text-teal-700 mb-2">1. Quay học sinh</h3>
+                                    <div className="relative inline-block">
+                                        <div className="absolute left-1/2 -top-1 -translate-x-1/2 z-10 text-rose-600 text-2xl wheel-pointer">▼</div>
+                                        <canvas ref={studentCanvas} width={260} height={260} className="mx-auto" />
+                                    </div>
+                                    <button disabled={spinning || phase !== 'spinStudent'} onClick={spinStudent}
+                                        className="mt-2 px-6 py-2 bg-teal-600 text-white rounded-xl font-bold disabled:opacity-40">
+                                        <i className="fas fa-play mr-2"></i>Quay HS
+                                    </button>
+                                    {pickedStudent && <p className="mt-2 font-bold text-teal-800">👉 {pickedStudent.name}</p>}
+                                </div>
+                                <div className="bg-white rounded-2xl p-4 shadow relative text-center">
+                                    <h3 className="font-bold text-emerald-700 mb-2">2. Quay phần thưởng</h3>
+                                    <div className="relative inline-block">
+                                        <div className="absolute left-1/2 -top-1 -translate-x-1/2 z-10 text-rose-600 text-2xl wheel-pointer">▼</div>
+                                        <canvas ref={prizeCanvas} width={260} height={260} className="mx-auto" />
+                                    </div>
+                                    <button disabled={spinning || phase !== 'spinPrize'} onClick={spinPrize}
+                                        className="mt-2 px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold disabled:opacity-40">
+                                        <i className="fas fa-gift mr-2"></i>Quay thưởng
+                                    </button>
+                                    {pickedPrize && <p className="mt-2 font-bold text-emerald-800">🎁 {pickedPrize.label}</p>}
+                                </div>
+                            </div>
+
+                            {(phase === 'ask' || phase === 'doneQ') && currentQ && (
+                                <div className="bg-white rounded-2xl shadow-xl p-5">
+                                    <div className="text-sm text-gray-500 mb-2">{pickedStudent?.name} · Thưởng: {pickedPrize?.label}</div>
+                                    <h3 className="text-xl font-bold mb-4"><MathText text={currentQ.prompt} /></h3>
+                                    <div className="grid md:grid-cols-2 gap-3 mb-3">
+                                        {currentQ.choices.map((c, idx) => {
+                                            let cls = 'p-3 rounded-xl border-2 text-left ';
+                                            if (showResult) {
+                                                if (idx === currentQ.answer) cls += 'bg-emerald-100 border-emerald-500';
+                                                else if (idx === selected) cls += 'bg-red-100 border-red-500';
+                                                else cls += 'opacity-50 border-gray-200';
+                                            } else cls += selected === idx ? 'bg-teal-100 border-teal-500' : 'border-gray-200 hover:border-teal-400';
+                                            return <button key={idx} disabled={showResult} onClick={() => setSelected(idx)} className={cls}><strong>{String.fromCharCode(65 + idx)}.</strong> <MathText text={c} /></button>;
+                                        })}
+                                    </div>
+                                    {phase === 'ask' && selected !== null && !showResult && (
+                                        <button onClick={submitAnswer} className="w-full py-3 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl font-bold">Xác nhận</button>
+                                    )}
+                                    {phase === 'doneQ' && (
+                                        <div className="mt-2">
+                                            <p className="font-semibold text-teal-800 mb-2">{lastAward}</p>
+                                            <button onClick={nextRound} className="w-full py-3 bg-gray-800 text-white rounded-xl font-bold">Câu tiếp theo</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <div className="bg-white rounded-2xl shadow p-4 h-fit">
+                            <h3 className="font-bold text-gray-800 mb-3"><i className="fas fa-trophy mr-2 text-amber-500"></i>Bảng điểm</h3>
+                            <div className="space-y-2">
+                                {board.map((p, i) => (
+                                    <div key={p.id} className="flex justify-between text-sm px-3 py-2 rounded-lg bg-teal-50">
+                                        <span>{i + 1}. {p.name}</span>
+                                        <span className="font-bold">{scores[p.id] || 0}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<WheelGame />, document.getElementById('root'));
+    </script>
+</body>
+</html>
