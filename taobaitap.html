@@ -16414,13 +16414,18 @@ ${sourceContext}`;
 
                             <div className="mb-6">
                                 <label className="block font-bold mb-2 text-slate-700 text-sm uppercase tracking-wide">Chế độ</label>
-                                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-2 rounded-xl border border-gray-200">
-                                    <button onClick={() => setMode("quiz")} className={`py-3 px-4 rounded-lg font-bold transition ${mode === "quiz" ? 'bg-white shadow text-indigo-600 ring-1 ring-indigo-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
+                                <div className="grid grid-cols-3 gap-2 md:gap-4 bg-slate-50 p-2 rounded-xl border border-gray-200">
+                                    <button type="button" onClick={() => setMode("quiz")} className={`py-3 px-2 md:px-4 rounded-lg font-bold transition flex items-center justify-center ${mode === "quiz" ? 'bg-white shadow text-indigo-600 ring-1 ring-indigo-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
                                         <i className="fas fa-list-ol mr-2"></i>Trắc nghiệm
                                     </button>
-                                    <button onClick={() => setMode("essay")} className={`py-3 px-4 rounded-lg font-bold transition ${mode === "essay" ? 'bg-white shadow text-green-600 ring-1 ring-green-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
+                                    <button type="button" onClick={() => setMode("essay")} className={`py-3 px-2 md:px-4 rounded-lg font-bold transition flex items-center justify-center ${mode === "essay" ? 'bg-white shadow text-green-600 ring-1 ring-green-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}>
                                         <i className="fas fa-edit mr-2"></i>Tự luận
                                     </button>
+                                    <a href="https://www.hoangthiencm.id.vn/trochoi.html" target="_blank" rel="noopener noreferrer" className="py-3 px-2 md:px-4 rounded-lg font-bold transition text-amber-600 hover:text-amber-700 hover:bg-amber-50 flex items-center justify-center text-center group" title="Mở Game Giáo dục (trochoi.html)">
+                                        <i className="fas fa-gamepad mr-2 text-base text-amber-500 group-hover:scale-110 transition-transform"></i>
+                                        <span className="truncate">Game Giáo dục</span>
+                                        <i className="fas fa-external-link-alt ml-1.5 text-xs opacity-60"></i>
+                                    </a>
                                 </div>
                             </div>
 
