@@ -2,6 +2,24 @@
 
 Đã triển khai đúng `docs/handoff/PLAN.md` trong phạm vi đã duyệt.
 
+## Bổ sung: Phản hồi đáp án tức thì
+
+- Cập nhật `game-racing.html`: lưu lựa chọn A/B/C/D của từng tổ bằng `teamAnswers`; bảng ghi nhận cho phép chọn trực tiếp theo tổ, thẻ đáp án hiển thị ngay các huy hiệu tổ đã chọn, và `confirmBoost` tự chấm đáp án để chỉ các tổ đúng nhận Nitro.
+- Cập nhật `game-bell.html`: các đáp án là nút chọn có state `selectedChoice`, hiệu ứng vàng cùng nhãn **ĐÃ CHỌN**, âm thanh xác nhận, phản hồi xanh/đỏ khi công bố đáp án và banner kết quả đúng/sai. Lựa chọn được xóa khi bắt đầu câu mới hoặc đếm giờ lại.
+- Cập nhật `tests/game-suite-smoke.js`: kiểm tra sự hiện diện của cơ chế chọn và phản hồi tức thì ở cả hai game.
+
+### Kiểm tra bổ sung
+
+- `node tests/game-suite-smoke.js`: PASS.
+- `node tests/change-password-smoke.js`: PASS.
+- `node tests/canvas-tabs-permissions-smoke.js`: PASS.
+- `git diff --check -- game-racing.html game-bell.html tests/game-suite-smoke.js docs/handoff/IMPLEMENT.md`: PASS.
+
+### Giới hạn
+
+- `git diff --check` trên toàn bộ working tree còn báo whitespace sẵn có ở `docs/handoff/PLAN.md`; file kế hoạch này không được sửa theo phạm vi được duyệt.
+- Chưa kiểm thử thủ công trong trình duyệt.
+
 ## Thay đổi
 
 - Cập nhật `game-crossword.html`: giới hạn 10 hàng ngang với đáp án 2–14 ký tự, chuẩn hóa bỏ dấu/ký tự dư thừa, căn cột từ khóa theo ký tự thực tế, hiển thị MathText, số chữ cái, gợi ý một chữ cái, hiện từ khóa và ô responsive.

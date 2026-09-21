@@ -14,10 +14,14 @@ assert.match(crosswordHtml, /entries\.slice\(0,\s*10\)|slice\(0,\s*Math\.min\(10
 assert.match(crosswordHtml, /kw-col/, 'game-crossword.html có highlight cột từ khóa');
 assert.match(racingHtml, /numTeams|setNumTeams|teams/, 'game-racing.html có cấu hình số tổ đua');
 assert.match(racingHtml, /Tổ 5|t5|DEFAULT_TEAMS/, 'game-racing.html hỗ trợ linh hoạt các tổ (ít nhất đến tổ 5/6)');
+assert.match(racingHtml, /teamAnswers|selectTeamChoice/, 'game-racing.html phải có cơ chế ghi nhận đáp án cho từng tổ');
+assert.match(racingHtml, /choosingTeams|Tổ đã chọn/, 'game-racing.html phải hiển thị huy hiệu tổ đã chọn đáp án ngay lập tức');
 assert.match(bellHtml, /Rung Chuông Vàng/i, 'game-bell.html có tiêu đề Rung Chuông Vàng');
 assert.match(bellHtml, /MathText/, 'game-bell.html hỗ trợ MathText KaTeX');
 assert.match(bellHtml, /cứu trợ|cuuTro|revive/i, 'game-bell.html có cơ chế cứu trợ thí sinh');
 assert.match(bellHtml, /confetti|canvas-confetti/i, 'game-bell.html có pháo hoa chúc mừng rung chuông');
+assert.match(bellHtml, /selectedChoice|pickChoice/, 'game-bell.html phải có state selectedChoice để ghi nhận đáp án lập tức');
+assert.match(bellHtml, /ĐÃ CHỌN|isSelected/, 'game-bell.html phải hiển thị nhãn/hiệu ứng ĐÃ CHỌN khi thí sinh bấm');
 assert.match(trochoiJs, /id:\s*'bell'/, 'trochoi.compiled.js đã đăng ký game bell');
 assert.ok(!trochoiJs.includes('Quay lại SmartQuiz'), 'trochoi.compiled.js đã xóa hoàn toàn Quay lại SmartQuiz');
 assert.match(accessJs, /'game-bell\.html':\s*'smartquiz'/, 'access-control.js bảo vệ route game-bell.html');

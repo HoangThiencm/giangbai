@@ -1,203 +1,264 @@
-# PLAN: Nâng Cấp Ô Chữ Kỳ Diệu, Đua Xe Tùy Chỉnh Số Tổ, Thiết Kế Rung Chuông Vàng & Xóa "Quay lại SmartQuiz"
+# PLAN: Khắc Phục Hiển Thị Đáp Án Tức Thì Trong Game Đua Xe & Rung Chuông Vàng
 
 ## 1. Tổng Quan Nhiệm Vụ
 
-Bản kế hoạch giải quyết trọn vẹn 4 yêu cầu từ người dùng:
-1. **Sửa triệt để Game Ô Chữ Kỳ Diệu (`game-crossword.html` & `trochoi.compiled.js`)**: Khắc phục lỗi nạp đề thi dài sinh ra 48 hàng với đáp án dài 45 chữ cái làm vỡ khung hình (như ảnh phản ánh). Giới hạn số hàng hợp lý (tối đa 8–10 hàng), làm sạch và chuẩn hóa đáp án ngắn gọn (3–14 ký tự), sửa thuật toán căn cột từ khóa dọc và bổ sung trợ giúp cho giáo viên.
-2. **Game Đua Xe (`game-racing.html`)**: Cho phép người tổ chức tự chọn số tổ tham gia (từ 2 đến 6 tổ) và đặt tên tổ tùy ý thay vì cố định cứng 4 tổ. Tự động sinh làn đua, màu xe, cờ hiệu và bục trao giải Podium tương ứng.
-3. **Thiết kế Game mới "Rung Chuông Vàng" (`game-bell.html`)**: Xây dựng đấu trường Rung Chuông Vàng kịch tính cho lớp học với sàn đấu thí sinh, đồng hồ đếm ngược, cơ chế loại trực tiếp, quyền Cứu trợ của thầy cô và hiệu ứng Rung chuông vàng đỉnh cao kèm pháo hoa confetti.
-4. **Xóa "Quay lại SmartQuiz" trong `trochoi.compiled.js`**: Loại bỏ nút và dấu ngăn cách ở thanh điều hướng trên cùng của trang Game Giáo Dục, chỉ giữ lại nút "Về trang chủ".
+Người dùng phản ánh:
+> *"sao các trò chơi như đua xe, rung chuông vàng khi thí sinh chọn đáp án ko thấy nó hiển thị lên mà phải xong rồi mới hiển thị"*
+
+### Nguyên nhân kỹ thuật:
+1. **Trong `game-racing.html`**:
+   - Các thẻ lựa chọn đáp án A, B, C, D hiện đang là các thẻ `<div>` tĩnh không có sự kiện `onClick`.
+   - Cơ chế cũ chỉ cho phép giáo viên bấm tick tổ đúng (phím 1–6) mà không hề có giao diện cho từng tổ chọn đáp án A, B, C, D; khi học sinh hô hoặc chọn đáp án thì màn hình hoàn toàn không có phản hồi trực quan nào, chỉ khi bấm "Xác nhận bứt tốc" xong mới hiện đáp án đúng màu xanh.
+2. **Trong `game-bell.html`**:
+   - Các lựa chọn A, B, C, D cũng là các thẻ `<div>` tĩnh, không lưu state `selectedChoice`.
+   - Khi thí sinh/người chơi bấm chọn A, B, C, D lúc đang đếm ngược, giao diện không có bất kỳ hiệu ứng chọn nào (không sáng viền, không đổi màu), phải đợi đến khi hết giờ (`answer === true`) mới đổi sang màu xanh.
+
+### Mục tiêu cần đạt:
+1. **`game-racing.html`**:
+   - Thêm cơ chế chọn đáp án trực tiếp cho từng tổ: Mỗi tổ có hàng nút chọn đáp án nhanh `[ A ] [ B ] [ C ] [ D ]`. Khi bấm chọn, nút của tổ đó lập tức sáng rực theo màu sắc của tổ, hiển thị rõ ràng trên màn hình máy chiếu: *Tổ 1 chọn A*, *Tổ 2 chọn C*...
+   - Click trực tiếp vào thẻ đáp án A, B, C, D để gán cho tổ đang chọn hoặc hiển thị danh sách các tổ đã chọn đáp án đó.
+   - Khi hết giờ / Xác nhận bứt tốc: Tự động so khớp đáp án các tổ đã chọn với đáp án đúng (`currentQ.answer`), tổ đúng tự động bứt tốc Nitro, thẻ đúng hiện Xanh lục, thẻ sai đã chọn hiện Đỏ.
+2. **`game-bell.html`**:
+   - Biến các thẻ A, B, C, D thành nút tương tác bấm được (`<button>` hoặc `onClick`).
+   - Thêm state `selectedChoice`: Khi bấm vào lựa chọn A, B, C, D, thẻ đó lập tức **sáng viền vàng hổ phách nổi bật** (`border-amber-400 bg-amber-500/30 scale-[1.02] shadow-xl`), có icon tích chọn và phát âm thanh click xác nhận.
+   - Khi hết giờ / Hiện đáp án: Nếu đáp án đã chọn đúng $\rightarrow$ Đổi sang Xanh lục chiến thắng (`bg-emerald-600`); nếu sai $\rightarrow$ Đổi sang Đỏ (`bg-rose-600`) đồng thời thẻ đúng vẫn hiện Xanh lục để cả lớp cùng đối chiếu.
+3. **`tests/game-suite-smoke.js`**: Bổ sung kiểm tra đảm bảo cả 2 game đều có cơ chế chọn và phản hồi đáp án tức thời.
 
 ---
 
 ## 2. Chi Tiết Thực Hiện Cho Coder
 
-### PHẦN 1: Sửa Triệt Để Game Ô Chữ Kỳ Diệu (`game-crossword.html` & `trochoi.compiled.js`)
-
-#### 1. Xử lý dữ liệu nạp ô chữ trong `trochoi.compiled.js`:
-Tại hàm xử lý `crossword` (khoảng dòng 409-425) và phần nạp câu hỏi:
-- Khi người dùng nạp từ bộ câu hỏi trắc nghiệm hoặc dán văn bản:
-  - Giới hạn tối đa **8 - 10 cặp** (hàng ngang), không để vượt quá 10 hàng.
-  - Lọc đáp án: Với mỗi câu hỏi, chỉ lấy đáp án ngắn gọn (từ khóa chính), loại bỏ các đáp án dài quá 14 ký tự hoặc cắt lấy cụm từ khóa đầu tiên:
-  ```javascript
-  const cleanAnswer = (ans) => {
-      let s = String(ans || '').trim();
-      // Bỏ tiền tố A., B., C., D. nếu có
-      s = s.replace(/^[A-D]\s*[\.\):]\s*/i, '');
-      // Chuẩn hóa bỏ dấu và ký tự đặc biệt
-      let norm = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-      if (norm.length > 14) norm = norm.slice(0, 14); // Cắt tối đa 14 ký tự
-      return norm;
-  };
-  ```
-  - Từ khóa dọc (`keyword`): Giới hạn độ dài bằng số lượng hàng ngang hợp lệ.
-
-#### 2. Nâng cấp toàn diện `game-crossword.html`:
-Chỉnh sửa `game-crossword.html`:
-- **Giới hạn & Chuẩn hóa hàng ngang:**
-  ```javascript
-  // Lấy tối đa 10 hàng có đáp án hợp lệ từ 2 đến 14 ký tự
-  let entries = src.map((p, idx) => ({
-      id: p.id ?? idx,
-      clue: p.left || p.clue || p.prompt || `Câu ${idx + 1}`,
-      answer: normalize(p.right || p.answer || '')
-  })).filter(e => e.clue && e.answer && e.answer.length >= 2 && e.answer.length <= 15).slice(0, 10);
-  ```
-- **Thuật toán căn cột từ khóa dọc thông minh:**
-  - Nếu có từ khóa dọc `keyword`, mỗi hàng tìm vị trí chữ cái tương ứng `kw[i]`.
-  - Nếu trong đáp án có chữ cái đó, căn vị trí để cột vàng thẳng hàng.
-  - Nếu đáp án không chứa chữ cái đó, lấy ký tự đầu tiên và cập nhật lại chữ cái cột vàng để không bị sai lệch chữ hiển thị.
-- **Giao diện Modal trả lời & Trợ giúp:**
-  - Render gợi ý bằng `<MathText text={row.clue} />` để hiển thị công thức toán sắc nét.
-  - Hiển thị rõ số lượng chữ cái (ví dụ: `(7 chữ cái)`).
-  - Tự động chuẩn hóa input khi gõ (bỏ dấu tiếng Việt, viết hoa, loại bỏ khoảng trắng).
-  - Bổ sung nút **"Gợi ý 1 chữ cái"** (mở ngẫu nhiên 1 ký tự chưa mở trong hàng) và nút **"Hiện từ khóa"** khi lớp học gặp khó khăn.
-  - Thiết kế bảng ô chữ responsive, tự động co giãn kích thước ô (cell) từ `w-7 h-7` đến `w-9 h-9` để vừa vặn trên mọi màn hình máy chiếu phòng học.
-
----
-
-### PHẦN 2: Game Đua Xe Tùy Chỉnh Số Tổ (`game-racing.html`)
+### PHẦN 1: Nâng Cấp Tương Tác Chọn Đáp Án Trong Game Đua Xe (`game-racing.html`)
 
 Chỉnh sửa `game-racing.html`:
 
-#### 1. Định nghĩa bảng màu và tên mặc định cho 6 tổ:
+#### 1. Quản lý state đáp án của từng tổ:
+Thêm state `teamAnswers` (lưu đáp án từng tổ đã chọn, ví dụ `{ t1: 0, t2: 2, t3: 0 }`):
 ```javascript
-const DEFAULT_TEAMS = [
-    { id: 't1', name: 'Tổ 1 - Scuderia Red', short: 'Tổ 1', color: '#ef4444', glow: 'shadow-red-500/50' },
-    { id: 't2', name: 'Tổ 2 - Cyan Lightning', short: 'Tổ 2', color: '#06b6d4', glow: 'shadow-cyan-500/50' },
-    { id: 't3', name: 'Tổ 3 - Golden Thunder', short: 'Tổ 3', color: '#eab308', glow: 'shadow-yellow-500/50' },
-    { id: 't4', name: 'Tổ 4 - Neon Phantom', short: 'Tổ 4', color: '#a855f7', glow: 'shadow-purple-500/50' },
-    { id: 't5', name: 'Tổ 5 - Emerald Rush', short: 'Tổ 5', color: '#10b981', glow: 'shadow-emerald-500/50' },
-    { id: 't6', name: 'Tổ 6 - Orange Flame', short: 'Tổ 6', color: '#f97316', glow: 'shadow-orange-500/50' },
-];
+const [teamAnswers, setTeamAnswers] = useState({});
+```
+Khi chuyển câu hỏi mới (trong `startLights` hoặc chuyển `qIndex`):
+```javascript
+setTeamAnswers({});
 ```
 
-#### 2. Thêm Modal Cấu Hình Số Tổ Trước Khi Bắt Đầu:
-- Trong trạng thái ban đầu (`showInstructions` hoặc màn hình Setup):
-  - Cho phép người tổ chức chọn số lượng tổ: **2 tổ, 3 tổ, 4 tổ, 5 tổ hoặc 6 tổ** (các nút bấm chọn nhanh).
-  - Các ô input cho phép giáo viên chỉnh sửa tên tổ trực tiếp (ví dụ: "Tổ 1", "Tổ 2", hoặc "Nhóm Sư Tử", "Nhóm Đại Bàng"...).
-  - State `teams`: Lưu danh sách các tổ đã được chọn (`DEFAULT_TEAMS.slice(0, numTeams)` kèm tên do người dùng sửa).
+#### 2. Hàm chọn đáp án cho tổ:
+```javascript
+const selectTeamChoice = (teamId, choiceIdx) => {
+    if (phase !== 'play') return;
+    soundEngine.tick();
+    setTeamAnswers(prev => {
+        const next = { ...prev };
+        // Nếu bấm lại chính đáp án đó thì giữ nguyên hoặc đổi
+        next[teamId] = choiceIdx;
+        return next;
+    });
+};
+```
 
-#### 3. Đường đua và động học thích ứng động:
-- Các làn đua (`lanes`), vị trí xe (`f1-car`), hộp quà bí ẩn (`mystery-box`) và bảng chọn đội trả lời (`team-pick`) được `map` động hoàn toàn từ mảng `teams`.
-- Bảng xếp hạng trực tiếp và Bục vinh danh (Podium) tự động điều chỉnh hiển thị Top 1, Top 2, Top 3 theo đúng số tổ tham gia.
+#### 3. Cập nhật giao diện câu hỏi & các lựa chọn:
+- Các thẻ đáp án A, B, C, D hiển thị huy hiệu các tổ đã chọn:
+```javascript
+<div className="grid md:grid-cols-2 gap-3 mb-4">
+    {currentQ.choices.map((choice, idx) => {
+        const choosingTeams = teams.filter(t => teamAnswers[t.id] === idx);
+        const isCorrect = idx === currentQ.answer;
+        let cardStyle = 'border-slate-600 bg-slate-800/60 hover:border-slate-500';
+        
+        if (phase === 'boost') {
+            if (isCorrect) cardStyle = 'border-emerald-400 bg-emerald-900/50 shadow-emerald-500/30 shadow-lg';
+            else if (choosingTeams.length > 0) cardStyle = 'border-rose-500 bg-rose-950/40 opacity-75';
+        } else if (choosingTeams.length > 0) {
+            cardStyle = 'border-amber-400 bg-slate-800 shadow-md ring-2 ring-amber-400/50';
+        }
+
+        return (
+            <div key={idx} className={`p-3.5 rounded-2xl border-2 text-left transition-all relative ${cardStyle}`}>
+                <div className="flex items-start justify-between gap-2">
+                    <div>
+                        <span className="font-black mr-2 text-amber-300 text-lg">{String.fromCharCode(65 + idx)}.</span>
+                        <span className="font-semibold text-white"><MathText text={choice} /></span>
+                    </div>
+                    {phase === 'boost' && isCorrect && (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-xs font-black shrink-0">ĐÚNG ✓</span>
+                    )}
+                </div>
+
+                {/* Huy hiệu các tổ đã chọn đáp án này */}
+                {choosingTeams.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/60 flex flex-wrap gap-1.5 items-center">
+                        <span className="text-[11px] text-slate-400 font-medium">Tổ đã chọn:</span>
+                        {choosingTeams.map(t => (
+                            <span key={t.id} className="px-2 py-0.5 rounded-full text-xs font-bold text-white shadow-sm flex items-center gap-1 animate-pulse"
+                                style={{ backgroundColor: t.color }}>
+                                🏎️ {t.short}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    })}
+</div>
+```
+
+#### 4. Bảng điều khiển chọn đáp án nhanh cho từng tổ:
+Thay thế khối tick tổ cũ bằng bảng chọn đáp án trực quan của từng tổ:
+```javascript
+<div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 mb-4">
+    <div className="flex justify-between items-center mb-2.5">
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+            🚦 Bảng ghi nhận đáp án các tổ (Bấm A, B, C, D khi tổ giơ bảng):
+        </span>
+        <span className="text-xs text-amber-300 font-semibold">
+            Đã chọn: {Object.keys(teamAnswers).length}/{teams.length} tổ
+        </span>
+    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+        {teams.map((t) => {
+            const picked = teamAnswers[t.id];
+            return (
+                <div key={t.id} className="bg-slate-900 border rounded-xl p-2.5 flex items-center justify-between gap-2"
+                    style={{ borderColor: picked !== undefined ? t.color : '#334155' }}>
+                    <span className="text-xs font-bold truncate max-w-[90px]" style={{ color: t.color }}>
+                        {t.short}:
+                    </span>
+                    <div className="flex gap-1">
+                        {[0, 1, 2, 3].map(cIdx => {
+                            if (cIdx >= currentQ.choices.length) return null;
+                            const isPicked = picked === cIdx;
+                            return (
+                                <button key={cIdx} type="button" disabled={phase !== 'play'}
+                                    onClick={() => selectTeamChoice(t.id, cIdx)}
+                                    className={`w-7 h-7 rounded-lg text-xs font-black transition-all ${
+                                        isPicked
+                                            ? 'text-white shadow-md scale-110'
+                                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                                    }`}
+                                    style={{ backgroundColor: isPicked ? t.color : undefined }}>
+                                    {String.fromCharCode(65 + cIdx)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        })}
+    </div>
+</div>
+```
+
+#### 5. Cập nhật `confirmBoost`:
+Trong hàm `confirmBoost`:
+Tự động xác định tổ đúng dựa trên `teamAnswers`:
+```javascript
+// Thay vì đọc correctTeams cũ, xác định theo đáp án đã chọn:
+teams.forEach(t => {
+    const chosenChoice = teamAnswers[t.id];
+    const ok = (chosenChoice !== undefined && chosenChoice === currentQ.answer);
+    // ... xử lý bứt tốc xe như logic hiện có ...
+});
+```
 
 ---
 
-### PHẦN 3: Thiết Kế Game Mới "Rung Chuông Vàng" (`game-bell.html`)
+### PHẦN 2: Nâng Cấp Tương Tác Chọn Đáp Án Trong Game Rung Chuông Vàng (`game-bell.html`)
 
-Tạo mới file `game-bell.html`:
+Chỉnh sửa `game-bell.html`:
 
-#### 1. Cấu trúc trang HTML & Thư viện:
-- Chuẩn giao diện Tailwind CSS, KaTeX (toán học), FontAwesome 6, Canvas Confetti (`canvas-confetti.browser.min.js`), Web Audio API.
-- Guard scripts: `js/security-guard.js`, `access-control.js`.
+#### 1. Thêm state `selectedChoice`:
+```javascript
+const [selectedChoice, setSelectedChoice] = useState(null);
+```
+Khi chuyển câu mới (`next` hoặc reset):
+```javascript
+setSelectedChoice(null);
+```
 
-#### 2. Đấu trường Rung Chuông Vàng:
-- **Thí sinh tham gia:**
-  - Đọc từ `localStorage.getItem('gameData').participants` nếu có (học sinh CSDL/Excel), hoặc tự sinh danh sách 30 - 40 thí sinh theo lớp (SBD 01 đến SBD 40).
-  - Sàn đấu hiển thị danh sách thí sinh:
-    - Thí sinh đang thi đấu: Thẻ bo tròn màu xanh ngọc / vàng nổi bật, có tên/SBD.
-    - Thí sinh bị loại: Màu xám mờ, gạch ngang, nằm ở khu vực "Chờ cứu trợ".
-- **Tiến trình câu hỏi:**
-  - Hiển thị Câu hỏi số hiện tại (ví dụ: Câu 5 / 15).
-  - Nội dung câu hỏi và 4 lựa chọn A, B, C, D render chuẩn KaTeX với component `<MathText>`.
-  - Đồng hồ đếm ngược 15 giây (hoặc tùy chỉnh 20s/30s) có thanh thời gian chạy mượt mà và âm thanh tích tắc hồi hộp.
-  - Khi hết giờ: Phát tiếng chuông vang "Boong!", khóa nhận đáp án, hiển thị đáp án đúng màu xanh kèm lời giải thích.
-- **Cơ chế Loại & Cứu trợ:**
-  - Sau khi hiện đáp án đúng, Giáo viên bấm chọn thí sinh trả lời sai trên màn hình để loại (hoặc bấm nút "Loại nhanh theo tỉ lệ").
-  - **Quyền Cứu Trợ của Thầy Cô:**
-    - Nút bấm "Thầy cô cứu trợ": Cho phép "Cứu 50% thí sinh" hoặc "Cứu tất cả thí sinh" quay lại sàn đấu một cách hào hứng!
-- **Màn Vinh Danh Rung Chuông Vàng:**
-  - Thí sinh cuối cùng vượt qua câu hỏi xuất sắc rung chiếc chuông vàng lớn ở giữa màn hình.
-  - Hiệu ứng chuông lắc lư ngân vang, pháo hoa nổ ngập tràn màn hình (`confetti`), vinh danh Quán Quân Rung Chuông Vàng của lớp học!
+#### 2. Hàm chọn đáp án:
+```javascript
+const pickChoice = (index) => {
+    if (answer) return; // Đã hết giờ/công bố thì không đổi nữa
+    setSelectedChoice(index);
+    bellSound(); // Âm thanh click nhẹ
+};
+```
 
-#### 3. Tích hợp vào hệ thống:
-- Trong `trochoi.compiled.js`:
-  Thêm game `bell` vào mảng `games` (khoảng dòng 1134):
-  ```javascript
-  {
-    id: 'bell',
-    name: 'Rung Chuông Vàng',
-    icon: 'fa-bell',
-    color: 'from-amber-400 to-yellow-600',
-    purpose: 'Đấu trường kiến thức',
-    description: 'Đấu trường sinh tử cả lớp — trả lời đúng để trụ lại, cứu trợ thầy cô và rung chuông vàng đỉnh cao!',
-    suitable: 'Hoạt động ngoại khóa, ôn tập tổng kết, rung chuông vàng lớp học'
-  }
-  ```
-- Trong `access-control.js`:
-  Thêm vào bảng `pageKeys`:
-  ```javascript
-  'game-bell.html': 'smartquiz',
-  ```
+#### 3. Render các thẻ A, B, C, D với phản hồi tức thì:
+Thay thế khối `q.choices.map`:
+```javascript
+<div className="grid sm:grid-cols-2 gap-3 mb-5">
+    {q.choices.map((choice, i) => {
+        const isSelected = selectedChoice === i;
+        const isCorrect = i === q.answer;
+        let cardStyle = 'bg-slate-800/80 border-slate-700 hover:border-amber-400/60 hover:bg-slate-800';
+
+        if (answer) {
+            // Khi đã hiện đáp án:
+            if (isCorrect) {
+                cardStyle = 'bg-emerald-600 border-emerald-300 text-white font-black shadow-lg shadow-emerald-600/40 ring-2 ring-emerald-400';
+            } else if (isSelected) {
+                cardStyle = 'bg-rose-900/60 border-rose-500 text-rose-200 opacity-80';
+            } else {
+                cardStyle = 'bg-slate-900 border-slate-800 opacity-50';
+            }
+        } else if (isSelected) {
+            // ĐANG ĐẾM GIỜ & THÍ SINH VỪA BẤM CHỌN: Hiển thị ngay lập tức!
+            cardStyle = 'bg-amber-500/30 border-amber-400 text-white font-bold ring-2 ring-amber-400 shadow-xl scale-[1.02]';
+        }
+
+        return (
+            <button key={i} type="button" onClick={() => pickChoice(i)}
+                className={`rounded-2xl p-4 md:p-5 border-2 text-left transition-all flex items-start justify-between gap-3 ${cardStyle}`}>
+                <div className="flex items-start gap-3">
+                    <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${
+                        answer && isCorrect
+                            ? 'bg-white text-emerald-800'
+                            : isSelected
+                            ? 'bg-amber-400 text-slate-950 shadow'
+                            : 'bg-slate-700 text-amber-300'
+                    }`}>
+                        {String.fromCharCode(65 + i)}
+                    </span>
+                    <span className="text-base md:text-lg leading-snug pt-0.5">
+                        <MathText text={choice} />
+                    </span>
+                </div>
+                {isSelected && !answer && (
+                    <span className="px-2.5 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs shrink-0 flex items-center gap-1 animate-pulse">
+                        <i className="fa-solid fa-check"></i> ĐÃ CHỌN
+                    </span>
+                )}
+                {answer && isCorrect && (
+                    <span className="px-2.5 py-1 rounded-full bg-white text-emerald-700 font-black text-xs shrink-0 flex items-center gap-1">
+                        <i className="fa-solid fa-crown"></i> ĐÁP ÁN ĐÚNG
+                    </span>
+                )}
+            </button>
+        );
+    })}
+</div>
+```
+
+#### 4. Phản hồi kết quả sau khi hiện đáp án:
+Khi `answer === true`:
+Hiển thị banner trạng thái ngay dưới câu hỏi:
+- Nếu `selectedChoice === q.answer`: Banner màu xanh `"🎉 CHÚC MỪNG: Thí sinh đã trả lời CHÍNH XÁC!"`.
+- Nếu `selectedChoice !== null && selectedChoice !== q.answer`: Banner màu đỏ `"❌ RẤT TIẾC: Thí sinh đã chọn sai đáp án!"`.
 
 ---
 
-### PHẦN 4: Xóa "Quay lại SmartQuiz" trong `trochoi.compiled.js`
+### PHẦN 3: Kiểm Thử Tự Động (`tests/game-suite-smoke.js`)
 
-Tại file `trochoi.compiled.js` (khoảng dòng 1442-1449):
-Xóa hoàn toàn khối `span` ngăn cách và `button` "Quay lại SmartQuiz":
+Bổ sung các kiểm tra trong `tests/game-suite-smoke.js`:
 ```javascript
-// XÓA ĐOẠN NÀY:
-/*#__PURE__*/React.createElement("span", {
-  className: "text-gray-300"
-}, "|"), /*#__PURE__*/React.createElement("button", {
-  onClick: () => window.location.href = 'smartquiz.html',
-  className: "text-gray-500 hover:text-purple-600 font-bold transition"
-}, /*#__PURE__*/React.createElement("i", {
-  className: "fas fa-arrow-left mr-2"
-}), "Quay lại SmartQuiz")
-```
-Thanh điều hướng trên cùng chỉ còn lại duy nhất nút:
-```javascript
-/*#__PURE__*/React.createElement("button", {
-  onClick: () => window.location.href = 'index.html',
-  className: "text-gray-500 hover:text-purple-600 font-bold transition"
-}, /*#__PURE__*/React.createElement("i", {
-  className: "fas fa-home mr-2"
-}), "Về trang chủ")
-```
+// Kiểm tra Game Đua xe có cơ chế chọn đáp án từng tổ và highlight tức thì:
+assert.match(racingHtml, /teamAnswers|selectTeamChoice/, 'game-racing.html phải có cơ chế ghi nhận đáp án cho từng tổ');
+assert.match(racingHtml, /choosingTeams|Tổ đã chọn/, 'game-racing.html phải hiển thị huy hiệu tổ đã chọn đáp án ngay lập tức');
 
----
-
-### PHẦN 5: Bài Test Tự Động (`tests/game-suite-smoke.js`)
-
-Tạo mới file `tests/game-suite-smoke.js`:
-```javascript
-const assert = require("assert");
-const fs = require("fs");
-const path = require("path");
-
-const root = path.join(__dirname, "..");
-const crosswordHtml = fs.readFileSync(path.join(root, "game-crossword.html"), "utf8");
-const racingHtml = fs.readFileSync(path.join(root, "game-racing.html"), "utf8");
-const bellHtml = fs.readFileSync(path.join(root, "game-bell.html"), "utf8");
-const trochoiJs = fs.readFileSync(path.join(root, "trochoi.compiled.js"), "utf8");
-const accessJs = fs.readFileSync(path.join(root, "access-control.js"), "utf8");
-
-// 1. Kiểm tra Ô chữ kỳ diệu
-assert.match(crosswordHtml, /MathText/, "game-crossword.html phải có component MathText để render công thức");
-assert.match(crosswordHtml, /entries\.slice\(0,\s*10\)|slice\(0,\s*Math\.min\(10/, "game-crossword.html phải giới hạn số hàng ngang tối đa 10");
-assert.match(crosswordHtml, /kw-col/, "game-crossword.html có highlight cột từ khóa");
-
-// 2. Kiểm tra Game Đua xe tùy chỉnh số tổ
-assert.match(racingHtml, /numTeams|setNumTeams|teams/, "game-racing.html có cấu hình số tổ đua");
-assert.match(racingHtml, /Tổ 5|t5|DEFAULT_TEAMS/, "game-racing.html hỗ trợ linh hoạt các tổ (ít nhất đến tổ 5/6)");
-
-// 3. Kiểm tra Game Rung chuông vàng
-assert.match(bellHtml, /Rung Chuông Vàng/i, "game-bell.html có tiêu đề Rung Chuông Vàng");
-assert.match(bellHtml, /MathText/, "game-bell.html hỗ trợ MathText KaTeX");
-assert.match(bellHtml, /cứu trợ|cuuTro|revive/i, "game-bell.html có cơ chế cứu trợ thí sinh");
-assert.match(bellHtml, /confetti|canvas-confetti/i, "game-bell.html có pháo hoa chúc mừng rung chuông");
-
-// 4. Kiểm tra trochoi.compiled.js
-assert.match(trochoiJs, /id:\s*'bell'/, "trochoi.compiled.js đã đăng ký game bell");
-assert.ok(!trochoiJs.includes("Quay lại SmartQuiz"), "trochoi.compiled.js đã xóa hoàn toàn 'Quay lại SmartQuiz'");
-
-// 5. Kiểm tra access-control.js
-assert.match(accessJs, /'game-bell\.html':\s*'smartquiz'/, "access-control.js bảo vệ route game-bell.html");
-
-console.log("game-suite smoke: PASS");
+// Kiểm tra Game Rung chuông vàng có state lựa chọn và phản hồi tức thì:
+assert.match(bellHtml, /selectedChoice|pickChoice/, 'game-bell.html phải có state selectedChoice để ghi nhận đáp án lập tức');
+assert.match(bellHtml, /ĐÃ CHỌN|isSelected/, 'game-bell.html phải hiển thị nhãn/hiệu ứng ĐÃ CHỌN khi thí sinh bấm');
 ```
 
 ---
@@ -210,8 +271,13 @@ console.log("game-suite smoke: PASS");
    node tests/change-password-smoke.js
    node tests/canvas-tabs-permissions-smoke.js
    ```
-2. **Kiểm tra giao diện & tính năng thủ công:**
-   - Mở `trochoi.html`: Thanh header không còn chữ "Quay lại SmartQuiz", danh sách xuất hiện game **Rung Chuông Vàng**.
-   - Thử mở `game-crossword.html` với bộ câu hỏi: Ô chữ hiển thị gọn gàng (tối đa 8-10 hàng), không bị vỡ hàng 45 chữ cái, modal trả lời render toán KaTeX chuẩn đẹp.
-   - Thử mở `game-racing.html`: Có màn hình chọn 2, 3, 4, 5, 6 tổ đua, cho phép đặt tên tổ và đua xe mượt mà.
-   - Thử mở `game-bell.html`: Sàn đấu hiển thị danh sách thí sinh, đồng hồ đếm ngược, bấm loại thí sinh sai, thử chức năng cứu trợ và vinh danh rung chuông vàng.
+2. **Kiểm tra trực quan trong `game-racing.html`:**
+   - Mở `game-racing.html`:
+   - Bấm bắt đầu đua $\rightarrow$ Trong lúc đồng hồ đang chạy, bấm nút `A`, `B`, `C` hoặc `D` của Tổ 1, Tổ 2:
+   - **Kỳ vọng**: Nút lập tức sáng đèn màu của tổ, thẻ đáp án tương ứng hiển thị ngay huy hiệu `🏎️ Tổ 1`, `🏎️ Tổ 2`.
+   - Bấm "Xác nhận bứt tốc" $\rightarrow$ Tổ chọn đúng bứt tốc Nitro, thẻ đúng hiện xanh, thẻ sai hiện đỏ.
+3. **Kiểm tra trực quan trong `game-bell.html`:**
+   - Mở `game-bell.html`:
+   - Bấm "Bắt đầu đếm giờ" $\rightarrow$ Click vào lựa chọn `A` hoặc `B`:
+   - **Kỳ vọng**: Lựa chọn lập tức sáng viền vàng rực rỡ, hiện huy hiệu `✓ ĐÃ CHỌN`, phát âm thanh click xác nhận.
+   - Khi bấm "Hết giờ · hiện đáp án" $\rightarrow$ Hiện xanh đáp án đúng, kiểm tra đối chiếu chuẩn xác.
