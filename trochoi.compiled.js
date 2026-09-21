@@ -683,6 +683,59 @@ Level 1-3: dễ, 4-7: vừa, 8-10: khó`;
 }
 value: 10/20/30, isSpecial: true cho câu đặc biệt`;
         break;
+      case 'picture':
+      case 'wheel':
+      case 'racing':
+        schema = `SCHEMA:
+{
+  "topicTitle": "Tên chủ đề ngắn",
+  "questions": [
+    {
+      "id": "q1",
+      "type": "mcq",
+      "prompt": "Câu hỏi",
+      "choices": ["A", "B", "C", "D"],
+      "answer": 0,
+      "explanation": "Giải thích ngắn"
+    }
+  ]
+}
+- Tạo đúng ${numQuestions} câu trắc nghiệm 4 đáp án`;
+        break;
+      case 'millionaire':
+        schema = `SCHEMA (Ai Là Triệu Phú — độ khó tăng dần từ câu 1 đến câu cuối):
+{
+  "questions": [
+    {
+      "id": "q1",
+      "type": "mcq",
+      "prompt": "Câu hỏi",
+      "choices": ["A", "B", "C", "D"],
+      "answer": 0,
+      "difficulty": "easy",
+      "explanation": "Giải thích ngắn"
+    }
+  ]
+}
+- Tạo ${Math.min(15, Math.max(10, numQuestions))} câu, difficulty: easy → medium → hard theo thứ tự`;
+        break;
+      case 'crossword':
+        schema = `SCHEMA (Ô chữ — mỗi cặp là gợi ý hàng ngang và đáp án từ khóa):
+{
+  "topicTitle": "Tên chủ đề",
+  "keyword": "TUKHOA",
+  "pairs": [
+    {
+      "id": 1,
+      "left": "Gợi ý hàng ngang ngắn",
+      "right": "DAPAN",
+      "explanation": "Giải thích ngắn"
+    }
+  ]
+}
+- right viết HOA không dấu, không khoảng trắng nếu có thể
+- keyword là từ khóa hàng dọc (chữ cái lấy từ các đáp án)`;
+        break;
     }
     return basePrompt + schema;
   },
@@ -919,6 +972,10 @@ const App = () => {
   const [wordLatexText, setWordLatexText] = useState('');
   const [importingFile, setImportingFile] = useState(false);
   const [showSampleGuide, setShowSampleGuide] = useState(false);
+  const [themeImage, setThemeImage] = useState('');
+  const needsParticipants = selectedGame && (selectedGame.id === 'treasure' || selectedGame.id === 'wheel');
+  const needsPictureImage = selectedGame && selectedGame.id === 'picture';
+  const DEFAULT_THEME_IMAGE = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f472b6"/><stop offset="1" stop-color="#fb7185"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><text x="400" y="300" text-anchor="middle" fill="white" font-size="42" font-family="Arial">Bức tranh bí ẩn</text></svg>');
 
   // EDIT screen states - MUST be at top level, not inside conditional!
   const [editingContent, setEditingContent] = useState(null);
@@ -969,7 +1026,7 @@ const App = () => {
     return () => document.removeEventListener('paste', handlePaste);
   }, [step, focusedQuestion, editingContent]);
 
-  // Danh sách 8 games
+  // Danh sách 13 games (8 cũ + 5 mới)
   const games = [{
     id: 'elimination',
     name: 'Loại Trực Tiếp',
@@ -1034,6 +1091,46 @@ const App = () => {
     purpose: 'Phản xạ nhanh',
     description: 'Trứng rơi mang đáp án — hứng đúng trứng vàng, sai là trứng thối!',
     suitable: 'Ôn tập vui, luyện phản xạ'
+  }, {
+    id: 'picture',
+    name: 'Bức Tranh Bí Ẩn',
+    icon: 'fa-image',
+    color: 'from-pink-500 to-rose-500',
+    purpose: 'Khởi động / Vào bài',
+    description: 'Mỗi câu đúng mở 1 mảnh ghép hé lộ bức tranh bí ẩn của bài học!',
+    suitable: 'Dẫn dắt bài mới, kích thích tò mò'
+  }, {
+    id: 'wheel',
+    name: 'Vòng Quay May Mắn',
+    icon: 'fa-dharmachakra',
+    color: 'from-teal-400 to-emerald-600',
+    purpose: 'Kiểm tra ngẫu nhiên',
+    description: 'Quay chọn học sinh từ CSDL và quay điểm thưởng may mắn!',
+    suitable: 'Kiểm tra bài cũ, gọi phát biểu'
+  }, {
+    id: 'millionaire',
+    name: 'Ai Là Triệu Phú',
+    icon: 'fa-lightbulb',
+    color: 'from-blue-600 to-indigo-900',
+    purpose: 'Thang điểm tri thức',
+    description: '15 câu hỏi kịch tính với 3 quyền trợ giúp (50:50, Hỏi cả lớp, Đổi câu)',
+    suitable: 'Ôn tập cá nhân hoặc đại diện tổ'
+  }, {
+    id: 'crossword',
+    name: 'Ô Chữ Kỳ Diệu',
+    icon: 'fa-border-all',
+    color: 'from-violet-500 to-purple-600',
+    purpose: 'Giải mã từ khóa',
+    description: 'Giải các hàng ngang để tìm ra từ khóa chủ đề bài học!',
+    suitable: 'Củng cố thuật ngữ, tổng kết chương'
+  }, {
+    id: 'racing',
+    name: 'Đua Xe 4 Tổ',
+    icon: 'fa-car-side',
+    color: 'from-orange-500 to-red-600',
+    purpose: 'Thi đua 4 tổ',
+    description: '4 xe đại diện 4 tổ trong lớp đua về đích theo kết quả trả lời!',
+    suitable: 'Thi đua sôi nổi giữa các tổ'
   }];
   const syncManualParticipants = text => {
     setManualParticipantText(text);

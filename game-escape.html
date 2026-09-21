@@ -21,6 +21,10 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .egg-fall { animation: eggFall linear forwards; }
+        .egg-fall .katex {
+            font-size: 0.95em;
+            line-height: 1.1;
+        }
         @keyframes eggFall {
             from { transform: translateY(-20px); opacity: 0.9; }
             to { transform: translateY(320px); opacity: 1; }
@@ -82,25 +86,48 @@
             const ref = useRef(null);
             useEffect(() => {
                 if (!text || !ref.current) return;
-                let processed = String(text)
-                    .replace(/`([^`]+)`/g, '$$$1$$')
-                    .replace(/\\\[(.+?)\\\]/g, '$$$$1$$')
-                    .replace(/\\\((.+?)\\\)/g, '$$$1$$');
-                if (processed.includes('\\') && !processed.includes('$')) processed = `$${processed}$`;
-                const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
                 ref.current.innerHTML = '';
+
+                let processed = String(text).trim();
+                // 1. Chuẩn hóa backtick: `x^2` -> $x^2$
+                processed = processed.replace(/`([^`]+)`/g, (m, g) => `$${g}$`);
+                // 2. Chuẩn hóa block math: \[...\] -> $$...$$
+                processed = processed.replace(/\\\[([\s\S]+?)\\\]/g, (m, g) => `$$${g}$$`);
+                // 3. Chuẩn hóa inline math: \(...\) -> $...$
+                processed = processed.replace(/\\\(([\s\S]+?)\\\)/g, (m, g) => `$${g}$`);
+
+                // 4. Tự động bọc $ cho công thức nếu chưa có $
+                if (!processed.includes('$')) {
+                    // Chứa lệnh LaTeX phổ biến
+                    if (/\\(frac|sqrt|vec|mathbf|boldsymbol|sum|int|lim|to|infty|approx|times|div|pm|mp|le|ge|ne|neq|alpha|beta|gamma|pi|theta|Delta|subset|in|notin|cap|cup|[a-zA-Z]+)/.test(processed)) {
+                        processed = `$${processed}$`;
+                    } else if (/^[a-zA-Z0-9\s\+\-\*\/\=\^\_\(\)\{\}\.,<>\\]+$/.test(processed) && /[\^_\\]/.test(processed)) {
+                        // Biểu thức thuần toán có số mũ/chỉ số (ví dụ: 3x^2y, x_1)
+                        processed = `$${processed}$`;
+                    }
+                }
+
+                // 5. Tách và render bằng KaTeX
+                const parts = processed.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
                 parts.forEach(part => {
+                    if (!part) return;
                     if (part.startsWith('$$') && part.endsWith('$$')) {
                         const span = document.createElement('span');
-                        try { katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: true }); }
-                        catch { span.textContent = part; }
+                        try {
+                            katex.render(part.slice(2, -2), span, { throwOnError: false, displayMode: false });
+                        } catch {
+                            span.textContent = part;
+                        }
                         ref.current.appendChild(span);
                     } else if (part.startsWith('$') && part.endsWith('$')) {
                         const span = document.createElement('span');
-                        try { katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false }); }
-                        catch { span.textContent = part; }
+                        try {
+                            katex.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false });
+                        } catch {
+                            span.textContent = part;
+                        }
                         ref.current.appendChild(span);
-                    } else if (part) {
+                    } else {
                         ref.current.appendChild(document.createTextNode(part));
                     }
                 });
@@ -360,8 +387,11 @@
                                         }}
                                     >
                                         <span className={`text-4xl md:text-5xl ${isGolden ? 'golden-glow rounded-full' : ''}`}>{eggEmoji}</span>
-                                        <span className="mt-1 px-2 py-1 bg-white/90 rounded-lg text-xs font-bold text-amber-900 border border-amber-200 shadow-sm max-w-full text-center leading-tight">
-                                            <span className="text-amber-600">{String.fromCharCode(65 + choiceIdx)}.</span> {truncate(currentQ.choices[choiceIdx])}
+                                        <span className="mt-1 px-2 py-1 bg-white/95 rounded-lg text-xs font-bold text-amber-900 border border-amber-200 shadow-sm max-w-[130px] md:max-w-[160px] text-center leading-tight break-words inline-flex items-center justify-center gap-1">
+                                            <span className="text-amber-600 shrink-0">{String.fromCharCode(65 + choiceIdx)}.</span>
+                                            <span className="inline-block max-w-full overflow-hidden text-ellipsis">
+                                                <MathText text={currentQ.choices[choiceIdx]} />
+                                            </span>
                                         </span>
                                     </button>
                                 );
