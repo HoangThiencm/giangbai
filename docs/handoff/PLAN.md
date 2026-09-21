@@ -1,25 +1,91 @@
-# PLAN: Thêm Chức Năng Đổi Mật Khẩu Cho Người Dùng
+# PLAN: Thêm Chức Năng Đổi Mật Khẩu & Đổi SmartQuiz Thành Game Giáo Dục
 
 ## 1. Tổng Quan Nhiệm Vụ
 
-Hệ thống hiện tại quản lý đăng nhập người dùng (Giáo viên và Học sinh) thông qua CSDL MySQL (`users` table) và PHP Session (`api/login.php`, `api/me.php`). Tuy nhiên, người dùng chưa có cơ chế tự đổi mật khẩu của mình:
-- Mật khẩu chỉ có thể được thiết lập khi đăng ký hoặc do Admin cập nhật trong trang quản trị `admin.html` (`api/admin_students.php`).
-- Cần bổ sung tính năng **Đổi mật khẩu** trực tiếp cho mọi tài khoản đã đăng nhập (cả Giáo viên lẫn Học sinh) để tăng tính bảo mật và chủ động cho người dùng.
-
-### Mục tiêu cần đạt:
-1. Tạo endpoint backend `api/change_password.php` bảo mật, kiểm tra session, xác thực mật khẩu hiện tại bằng `password_verify`, mã hóa mật khẩu mới bằng `password_hash` và cập nhật vào bảng `users`.
-2. Tạo module giao diện `js/change-password.js` hiển thị modal đổi mật khẩu thân thiện, thẩm mỹ, có tính năng ẩn/hiện mật khẩu (eye toggle), kiểm tra dữ liệu đầu vào và thông báo trạng thái rõ ràng.
-3. Tích hợp nút mở modal **"Đổi mật khẩu"** trên thanh điều hướng (`nav`) trong `index.html` cho cả Giáo viên và Học sinh.
-4. Viết bài test tự động `tests/change-password-smoke.js` đảm bảo toàn bộ cấu trúc file, API và giao diện hoạt động chính xác, không gây lỗi hồi quy.
+Bản kế hoạch này bao gồm 2 yêu cầu:
+1. **Thêm chức năng Đổi mật khẩu**: Cho phép người dùng (cả Giáo viên và Học sinh) tự đổi mật khẩu cá nhân khi đã đăng nhập hệ thống, gồm backend `api/change_password.php`, frontend modal `js/change-password.js`, nút điều hướng trên Navbar của `index.html` và test tự động `tests/change-password-smoke.js`.
+2. **Cập nhật trang chủ (`index.html`)**: Thay thế mục `SmartQuiz` thành **`Game giáo dục`** và cập nhật đường link chuyển hướng sang `https://www.hoangthiencm.id.vn/trochoi.html`.
 
 ---
 
 ## 2. Chi Tiết Thực Hiện Cho Coder
 
-### PHẦN 1: Backend Endpoint (`api/change_password.php`)
+### PHẦN 1: Cập Nhật Trang Chủ (`index.html`) — Đổi SmartQuiz thành Game Giáo Dục
 
-Tạo mới file `api/change_password.php` với nội dung hoàn chỉnh:
+Tại file `index.html`, thực hiện 3 điểm chỉnh sửa:
 
+#### 1. Cập nhật bảng liên kết `TOOL_PAGE_LINKS` (khoảng dòng 963):
+Thay:
+```javascript
+smartquiz: 'smartquiz.html',
+```
+Bằng:
+```javascript
+smartquiz: 'https://www.hoangthiencm.id.vn/trochoi.html',
+```
+
+#### 2. Cập nhật thẻ công cụ giáo viên trên Grid (`#mainToolsGrid`, khoảng dòng 1364):
+Thay khối thẻ:
+```html
+<a href="smartquiz.html" data-tool="smartquiz" class="tool-tile tool-tile--colored tool-tile--smartquiz">
+    <span class="tool-tile-glow"></span>
+    <span class="tool-tile-watermark"><i class="fas fa-wand-magic-sparkles"></i></span>
+    <div class="tool-tile-content">
+        <span class="tool-tile-eyebrow">Giảng dạy</span>
+        <h3 class="tool-tile-title">Soạn câu hỏi game</h3>
+        <p class="tool-tile-desc">Nhập chủ đề — AI soạn câu hỏi và slide dạy học tức thì.</p>
+    </div>
+    <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+</a>
+```
+Bằng:
+```html
+<a href="https://www.hoangthiencm.id.vn/trochoi.html" data-tool="smartquiz" class="tool-tile tool-tile--colored tool-tile--smartquiz">
+    <span class="tool-tile-glow"></span>
+    <span class="tool-tile-watermark"><i class="fas fa-gamepad"></i></span>
+    <div class="tool-tile-content">
+        <span class="tool-tile-eyebrow">Giảng dạy</span>
+        <h3 class="tool-tile-title">Game giáo dục</h3>
+        <p class="tool-tile-desc">Trò chơi giáo dục tương tác, ôn tập kiến thức sinh động.</p>
+    </div>
+    <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+</a>
+```
+
+#### 3. Cập nhật mục hoạt động cho Học sinh trong `setupStudentPortal` (khoảng dòng 1746):
+Thay mục:
+```javascript
+{
+    key: 'smartquiz',
+    title: 'Trò chơi ôn luyện SmartQuiz',
+    badge: 'Mini-game',
+    desc: 'Tham gia các câu hỏi tương tác, trò chơi ôn tập kiến thức sinh động.',
+    url: 'smartquiz.html',
+    icon: 'fa-gamepad',
+    color: 'from-pink-500 to-rose-600',
+    actionText: 'Vào chơi ôn tập'
+},
+```
+Bằng:
+```javascript
+{
+    key: 'smartquiz',
+    title: 'Game giáo dục',
+    badge: 'Trò chơi',
+    desc: 'Tham gia các trò chơi giáo dục tương tác, ôn tập kiến thức sinh động.',
+    url: 'https://www.hoangthiencm.id.vn/trochoi.html',
+    icon: 'fa-gamepad',
+    color: 'from-pink-500 to-rose-600',
+    actionText: 'Vào chơi'
+},
+```
+
+---
+
+### PHẦN 2: Thêm Chức Năng Đổi Mật Khẩu Cho Người Dùng
+
+#### 1. Backend Endpoint (`api/change_password.php` - Tạo mới):
+Tạo file `api/change_password.php`:
 ```php
 <?php
 require_once __DIR__ . '/helpers.php';
@@ -78,12 +144,8 @@ respond([
 ]);
 ```
 
----
-
-### PHẦN 2: Frontend Module Modal (`js/change-password.js`)
-
-Tạo mới file `js/change-password.js` với thiết kế tự động tạo DOM (`ensureModal`), quản lý trạng thái, ẩn/hiện mật khẩu và xử lý gọi API:
-
+#### 2. Frontend Module Modal (`js/change-password.js` - Tạo mới):
+Tạo file `js/change-password.js`:
 ```javascript
 (function (global) {
     'use strict';
@@ -355,14 +417,9 @@ Tạo mới file `js/change-password.js` với thiết kế tự động tạo D
 })(typeof window !== 'undefined' ? window : this);
 ```
 
----
-
-### PHẦN 3: Giao Diện Navbar Trong `index.html`
-
-#### 1. Thêm nút "Đổi mật khẩu" trên Navbar:
-Trong file `index.html`, tại khối `<nav>` (khoảng dòng 1174):
-Đặt nút `<button ... id="btnOpenChangePassword">` ngay trước nút Đăng xuất:
-
+#### 3. Nút "Đổi mật khẩu" trên Navbar `index.html`:
+Trong `<nav>` (khoảng dòng 1174, ngay trước nút Đăng xuất):
+Thêm:
 ```html
 <button type="button" onclick="ChangePasswordModal.open()" id="btnOpenChangePassword"
     class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300">
@@ -370,23 +427,16 @@ Trong file `index.html`, tại khối `<nav>` (khoảng dòng 1174):
 </button>
 ```
 
-#### 2. Nhúng Script `js/change-password.js`:
-Tại phần nhúng script ở cuối file `index.html` (khoảng dòng 1615, ngay sau `js/user-ai-settings.js`):
-Thêm:
+Và nhúng script `js/change-password.js` tại cuối file `index.html` (ngay sau `js/user-ai-settings.js`):
 ```html
 <script src="js/change-password.js"></script>
 ```
 
-#### 3. Đảm bảo quyền truy cập cho Học sinh (`setupStudentPortal`):
-Kiểm tra hàm `setupStudentPortal` trong `index.html`:
-Chỉ ẩn `btnOpenUserAiSettings` (Cài đặt AI & Key), tuyệt đối **KHÔNG** thêm `btnOpenChangePassword` vào danh sách ẩn. Cả Giáo viên và Học sinh đều được phép đổi mật khẩu.
-
 ---
 
-### PHẦN 4: Viết Test Tự Động (`tests/change-password-smoke.js`)
+### PHẦN 3: Bài Test Tự Động (`tests/change-password-smoke.js`)
 
-Tạo mới file `tests/change-password-smoke.js` với các kiểm tra toàn diện:
-
+Tạo mới file `tests/change-password-smoke.js`:
 ```javascript
 const assert = require("assert");
 const fs = require("fs");
@@ -397,10 +447,12 @@ const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const jsScript = fs.readFileSync(path.join(root, "js", "change-password.js"), "utf8");
 const phpScript = fs.readFileSync(path.join(root, "api", "change_password.php"), "utf8");
 
-// 1. Kiểm tra index.html
+// 1. Kiểm tra index.html có nút Đổi mật khẩu & link Game giáo dục
 assert.match(indexHtml, /id="btnOpenChangePassword"/, "index.html phải có nút Đổi mật khẩu");
 assert.match(indexHtml, /ChangePasswordModal\.open\(\)/, "nút Đổi mật khẩu phải gọi ChangePasswordModal.open()");
 assert.match(indexHtml, /js\/change-password\.js/, "index.html phải nhúng js/change-password.js");
+assert.match(indexHtml, /https:\/\/www\.hoangthiencm\.id\.vn\/trochoi\.html/, "index.html phải có đường link trochoi.html");
+assert.match(indexHtml, /Game giáo dục/, "index.html phải hiển thị Game giáo dục thay cho SmartQuiz");
 
 // 2. Kiểm tra js/change-password.js
 assert.match(jsScript, /ChangePasswordModal/, "module định nghĩa ChangePasswordModal");
@@ -429,25 +481,12 @@ console.log("change-password smoke: PASS");
    ```powershell
    php -l api/change_password.php
    ```
-   Kết quả kỳ vọng: `No syntax errors detected in api/change_password.php`.
-
-2. **Chạy test tự động Smoke Test:**
+2. **Chạy test tự động:**
    ```powershell
    node tests/change-password-smoke.js
-   ```
-   Kết quả kỳ vọng: `change-password smoke: PASS`.
-
-3. **Chạy kiểm tra hồi quy:**
-   ```powershell
    node tests/user-ai-settings-smoke.js
    node tests/canvas-tabs-permissions-smoke.js
    ```
-   Kết quả kỳ vọng: Tất cả bài test liên quan đến `index.html` và phân quyền đều `PASS`.
-
-4. **Kiểm tra luồng thực tế (Manual/Browser):**
-   - Đăng nhập tài khoản Giáo viên hoặc Học sinh -> Bấm nút "Đổi mật khẩu" trên navbar -> Modal mở lên.
-   - Bấm icon mắt -> Chuyển đổi giữa ẩn và hiện ký tự mật khẩu.
-   - Nhập mật khẩu hiện tại sai -> Thông báo lỗi màu đỏ "Mật khẩu hiện tại không chính xác".
-   - Nhập mật khẩu mới < 6 ký tự hoặc không khớp xác nhận -> Báo lỗi phù hợp.
-   - Nhập đúng toàn bộ thông tin -> Báo thành công màu xanh, tự động đóng modal.
-   - Đăng xuất và đăng nhập lại bằng mật khẩu mới -> Đăng nhập thành công.
+3. **Kiểm tra giao diện:**
+   - Mở `index.html`: mục SmartQuiz đã đổi thành **Game giáo dục**, khi bấm chuyển hướng sang `https://www.hoangthiencm.id.vn/trochoi.html`.
+   - Nút **Đổi mật khẩu** hiển thị rõ ràng trên Navbar cho cả Giáo viên và Học sinh, mở modal đổi mật khẩu hoạt động trơn tru.

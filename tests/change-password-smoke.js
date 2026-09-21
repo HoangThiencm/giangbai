@@ -10,6 +10,8 @@ const phpScript = fs.readFileSync(path.join(root, "api", "change_password.php"),
 assert.match(indexHtml, /id="btnOpenChangePassword"/, "index.html phải có nút Đổi mật khẩu");
 assert.match(indexHtml, /ChangePasswordModal\.open\(\)/, "nút Đổi mật khẩu phải gọi ChangePasswordModal.open()");
 assert.match(indexHtml, /js\/change-password\.js/, "index.html phải nhúng js/change-password.js");
+assert.match(indexHtml, /https:\/\/www\.hoangthiencm\.id\.vn\/trochoi\.html/, "index.html phải có đường link trochoi.html");
+assert.match(indexHtml, /Game giáo dục/, "index.html phải hiển thị Game giáo dục thay cho SmartQuiz");
 
 assert.match(jsScript, /ChangePasswordModal/, "module định nghĩa ChangePasswordModal");
 assert.match(jsScript, /ensureModal/, "có hàm ensureModal");
