@@ -43,7 +43,8 @@ const SKIP_FILE_NAMES = new Set([
     'obfuscate.js',
     'build-obfuscate.js',
     'trochoi.compiled.js',
-    'thoikhoabieu-worker.js'
+    'thoikhoabieu-worker.js',
+    'game-quiz-importer.js'
 ]);
 
 function parseArgs(argv) {

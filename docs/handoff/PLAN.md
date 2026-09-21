@@ -1,177 +1,104 @@
-# PLAN: Sửa Lỗi Chế Độ "Dạy Ngay" Trong taobaitap.html (Câu Đúng/Sai & Nhập Số)
+# PLAN: Sửa Lỗi Nạp File Word Cho Game Giáo Dục (trochoi.html) & Lỗi Chưa Nạp Thư Viện GameQuizImporter
 
-## 1. Hiện Trạng & Phân Tích Nguyên Nhân Lỗi
+## 1. Hiện Trạng & Phân Tích Nguyên Nhân
 
-Người dùng phản ánh 2 lỗi trong chế độ Trình chiếu ("DẠY NGAY" - `QuizPresentationMode`) của `taobaitap.html` (và tương ứng `smartquiz.html`):
-1. **Đối với câu Đúng/Sai không có chức năng chọn**:
-   - Khi vào câu hỏi Đúng/Sai chuẩn Công văn 7991 (gồm các ý a, b, c, d): giao diện chỉ hiển thị danh sách các thẻ `<div>` tĩnh ghi nội dung mệnh đề.
-   - Hoàn toàn **không có nút bấm** để giáo viên hoặc học sinh chọn "Đúng" hoặc "Sai" cho từng ý.
-   - Khi bấm hiện đáp án (hoặc phím cách/Enter), hệ thống ngay lập tức gắn nhãn cứng `[ĐÚNG]` hoặc `[SAI]` (như trong ảnh `media_1790002376960.png`), không ghi nhận được câu trả lời của người học và không chấm điểm.
-2. **Nhập số (câu trả lời ngắn) thì không gửi được / báo Sai dù đáp án đúng (Ảnh `media_1790002459243.png`)**:
-   - **Nguyên nhân 1 (Nút "Gửi" không phản hồi)**: Trong hàm `handleFillBlankSubmit()` (dòng ~14284 trong `taobaitap.html`):
-     ```javascript
-     const handleFillBlankSubmit = () => {
-         if (showAns) return;
-         const q = shuffledQuestions[idx] || safeQuestions[idx];
-         if (!q) return;
-         const target = String(q.correctAnswer || "").trim().toLowerCase();
-         const isCorrect = fillBlankAnswer.trim().toLowerCase() === target;
-         setSelectedOpt(isCorrect ? 0 : 1);
-         if (isCorrect) {
-             setScore(prev => prev + pointsPerQuestion);
-         }
-         // THIẾU: setShowAns(true);
-     };
-     ```
-     Hàm `handleFillBlankSubmit()` tính điểm và gán `selectedOpt`, nhưng **quên không gọi `setShowAns(true)`**. Do đó khi người dùng click vào nút "Gửi", màn hình không hiển thị kết quả kiểm tra, người dùng thấy như nút "Gửi" bị liệt.
-   - **Nguyên nhân 2 (Bấm Enter bị chấm "Sai! Đáp án đúng: -12")**:
-     Trong `handleKeyDown()` (dòng ~14315 và 14341):
-     ```javascript
-     case "Enter": setShowAns(prev => !prev); break; // Dòng 14315: Bị bắt ngay tại đây!
-     ...
-     case "Enter": // Dòng 14341: Code chết, không bao giờ chạy tới!
-         if (!showAns) {
-             if (q && (q.type === "fill-blank" || q.type === "short-answer") && fillBlankAnswer.toString().trim()) {
-                 handleFillBlankSubmit();
-             }
-         }
-         break;
-     ```
-     Khi người dùng gõ `-12` vào input rồi nhấn phím `Enter`, nhánh `case "Enter"` đầu tiên kích hoạt `setShowAns(true)` ngay lập tức mà **không hề gọi `handleFillBlankSubmit()`**. Lúc này `selectedOpt` vẫn là `null`. Đoạn render kiểm tra `selectedOpt === 0 ? 'Đúng!' : 'Sai!'` $\rightarrow$ Vì `null === 0` là `false` nên giao diện hiển thị: `❌ Sai! Đáp án đúng: -12`.
-   - **Nguyên nhân 3 (Xung đột phím tắt toàn cục với ô nhập liệu)**:
-     Sự kiện `window.addEventListener("keydown", handleKeyDown)` không kiểm tra `e.target.tagName === 'INPUT'`. Khi người dùng gõ phím cách (Space), các số 1, 2, 3, 4 hoặc chữ d, s trong ô nhập liệu, các phím tắt toàn cục bị kích hoạt sai ngữ cảnh.
+Người dùng phản ánh 2 vấn đề khi liên thông từ `taobaitap.html` sang `trochoi.html`:
+1. **Báo lỗi popup khi bấm xem trước:**
+   > *"Lỗi nạp câu hỏi: Chưa nạp thư viện GameQuizImporter."* (Ảnh `media_1790002788886.png`)
+2. **Xuất từ taobaitap không nhận, phải mở Word chọn toàn bộ sang Times New Roman rồi lưu mới nhận.**
 
 ---
 
-## 2. Giải Pháp Kỹ Thuật Chi Tiết Cho Coder
+### Phân tích kỹ thuật chi tiết:
 
-Áp dụng trên `taobaitap.html` (và đồng bộ sang `smartquiz.html`):
+#### Nguyên nhân 1: Tệp `js/game-quiz-importer.js` trên hosting đang bị rỗng (0 bytes)
+- Kiểm tra trực tiếp trên máy chủ live `https://www.hoangthiencm.id.vn/js/game-quiz-importer.js`: phản hồi `Status: 200`, nhưng **kích thước file là 0 bytes**!
+- Trong file `trochoi.html`, thẻ `<script src="js/game-quiz-importer.js?v=20260910"></script>` tải file 0 bytes $\rightarrow$ không thực thi bất kỳ mã nào $\rightarrow$ `window.GameQuizImporter` là `undefined`.
+- Trong `trochoi.compiled.js` (dòng 703):
+  ```javascript
+  const importer = window.GameQuizImporter;
+  if (!importer) throw new Error('Chưa nạp thư viện GameQuizImporter.');
+  ```
+  Khi người dùng click nút **"Xử lý câu hỏi & Chuyển sang xem trước"**, code kiểm tra `!importer` và văng ra đúng lỗi trong ảnh.
+- **Nguyên nhân sâu xa:** Script build deploy CI `.github/workflows/ftp-deploy.yml` chạy `node tools/build-obfuscate.js --in-place`. Trong `tools/build-obfuscate.js`, file `trochoi.compiled.js` nằm trong `SKIP_FILE_NAMES`, nhưng `js/game-quiz-importer.js` KHÔNG nằm trong danh sách bỏ qua, dẫn đến quá trình obfuscate hoặc FTP sync gặp lỗi làm file bị ghi đè thành 0 bytes.
 
-### Vấn đề 1: Thêm chức năng chọn Đúng / Sai cho từng ý CV7991
-1. **Bổ sung state lưu câu trả lời Đúng/Sai**:
-   - Thêm `const [cv7991Answers, setCv7991Answers] = useState({});` trong `QuizPresentationMode`.
-   - Trong `useEffect` reset theo câu hỏi (`[idx, countdownTime]`): thêm `setCv7991Answers({});`.
-2. **Hàm xử lý chọn**:
-   ```javascript
-   const handleCv7991Select = (subIdx, isTrue) => {
-       if (showAns) return;
-       setCv7991Answers(prev => ({ ...prev, [subIdx]: isTrue }));
-   };
-   ```
-3. **Cập nhật giao diện hiển thị mệnh đề CV7991**:
-   Thay thế khối render tại `q.type === "true-false" && isCv7991TrueFalseItem(q)`:
-   - Với mỗi ý `item` (`sIdx`):
-     - Bên trái: Ký tự (a, b, c, d) + Nội dung mệnh đề `<MathText text={item.text} />`.
-     - Bên phải: Cặp nút chọn `[ Đúng ]` và `[ Sai ]`:
-       - **Trước khi hiện đáp án (`!showAns`)**:
-         - Nút "Đúng": nếu `cv7991Answers[sIdx] === true` thì nổi bật (nền xanh lá đậm `bg-emerald-600 text-white font-bold shadow`), ngược lại nền xám nhạt (`bg-gray-100 text-gray-700 hover:bg-emerald-50`).
-         - Nút "Sai": nếu `cv7991Answers[sIdx] === false` thì nổi bật (nền đỏ `bg-rose-600 text-white font-bold shadow`), ngược lại nền xám nhạt (`bg-gray-100 text-gray-700 hover:bg-rose-50`).
-       - **Sau khi hiện đáp án (`showAns`)**:
-         - Đánh dấu rõ đáp án đúng của từng ý: Ý đúng có badge `[ĐÚNG]` viền xanh lá, ý sai có badge `[SAI]` viền đỏ.
-         - Nếu người dùng đã chọn: hiển thị biểu tượng `✓` (nếu chọn đúng) hoặc `✗` (nếu chọn sai).
-4. **Tính điểm chuẩn CV7991 khi hiện đáp án**:
-   - Trong `useEffect` khi `showAns === true`:
-     ```javascript
-     if (q && q.type === "true-false" && isCv7991TrueFalseItem(q)) {
-         const items = getCv7991TrueFalseItems(q).filter(it => it.text);
-         if (items.length > 0 && Object.keys(cv7991Answers).length > 0) {
-             const correctCount = items.filter((it, sIdx) => cv7991Answers[sIdx] === it.isCorrect).length;
-             let scale = 0;
-             if (correctCount === 1) scale = 0.1;
-             else if (correctCount === 2) scale = 0.25;
-             else if (correctCount === 3) scale = 0.5;
-             else if (correctCount === 4) scale = 1.0;
-             setScore(prev => prev + (pointsPerQuestion * scale));
-         }
-     }
-     ```
+#### Nguyên nhân 2: File Word xuất từ nút "LaTeX" / "100% TN" dùng bảng `options-table` và dấu sao `*` đánh dấu đáp án
+- Trong ảnh, tên chủ đề là `De_Thi_Tong_Hop_LaTeX` $\rightarrow$ Người dùng đã bấm nút **LaTeX** (`exportWordLatex`) thay vì nút **Xuất Word cho Game**.
+- File `De_Thi_Tong_Hop_LaTeX.docx` và `De_Thi_100_Trac_Nghiem.docx` dùng bảng HTML 2 cột `<table class="options-table">` và đánh dấu đáp án đúng bằng dấu sao `*` sau phương án (như trong ảnh: `C. 0*`).
+- Khi thư viện `mammoth.js` đọc bảng từ file docx do thư viện `html-docx-js` tạo ra, cấu trúc bảng HTML bị dính cột. Khi người dùng mở file trong Word rồi chọn font Times New Roman và Ctrl+S lưu lại, Word chuyển đổi tài liệu sang chuẩn OpenXML của Microsoft nên Mammoth mới trích xuất được từng dòng vào ô textarea.
+- Tuy nhiên, bộ parser `GameQuizImporter.parseQuizQuestions` hiện tại **chưa nhận diện dấu `*` ở cuối phương án** để xác định đáp án đúng (nó chỉ tìm `Đáp án: A` hoặc bảng đáp án ở cuối).
 
 ---
 
-### Vấn đề 2: Sửa chức năng nộp và so sánh câu trả lời ngắn (nhập số)
-1. **Sửa hàm `handleFillBlankSubmit`**:
-   - Thêm `setShowAns(true);` ngay khi chấm bài.
-   - Nâng cấp so sánh đáp án số thông minh:
-     ```javascript
-     const handleFillBlankSubmit = () => {
-         if (showAns) return;
-         const q = shuffledQuestions[idx] || safeQuestions[idx];
-         if (!q) return;
-         
-         const rawUser = String(fillBlankAnswer || "").trim();
-         if (!rawUser) return;
+## 2. Giải Pháp Toàn Diện Cho Coder
 
-         const rawTarget = String(q.correctAnswer || "").trim();
-         
-         // Làm sạch LaTeX $ và khoảng trắng
-         const clean = (s) => s.replace(/^\$+|\$+$/g, "").replace(/^\\\(|\\\)$/g, "").trim();
-         const cleanUser = clean(rawUser).replace(",", ".");
-         const cleanTarget = clean(rawTarget).replace(",", ".");
-         
-         const numUser = parseFloat(cleanUser);
-         const numTarget = parseFloat(cleanTarget);
-         
-         let isCorrect = false;
-         if (!isNaN(numUser) && !isNaN(numTarget)) {
-             isCorrect = Math.abs(numUser - numTarget) < 1e-6;
-         } else {
-             isCorrect = cleanUser.toLowerCase() === cleanTarget.toLowerCase();
-         }
-
-         setSelectedOpt(isCorrect ? 0 : 1);
-         if (isCorrect) {
-             setScore(prev => prev + pointsPerQuestion);
-         }
-         setShowAns(true);
-     };
-     ```
-2. **Xử lý sự kiện bàn phím trên ô `<input>`**:
-   - Bổ sung `onKeyDown` trên thẻ input:
-     ```jsx
-     <input
-         type="text"
-         value={fillBlankAnswer}
-         onChange={(e) => setFillBlankAnswer(e.target.value)}
-         onKeyDown={(e) => {
-             if (e.key === "Enter") {
-                 e.preventDefault();
-                 e.stopPropagation();
-                 handleFillBlankSubmit();
-             }
-         }}
-         disabled={showAns}
-         ...
-     />
-     ```
-3. **Sửa `handleKeyDown` toàn cục**:
-   - Ở đầu hàm `handleKeyDown`, chặn xử lý phím tắt nếu target là ô nhập liệu:
+### Bước 1: Nhúng dự phòng (Fallback / Inline) `GameQuizImporter` vào `trochoi.compiled.js` hoặc `trochoi.html`
+- Để đảm bảo `trochoi.html` hoạt động bền bỉ 100%, không bao giờ bị lỗi `Chưa nạp thư viện GameQuizImporter` kể cả khi file ngoài hosting gặp sự cố mạng/sync:
+  1. Trong `trochoi.compiled.js`: Nếu `!window.GameQuizImporter`, tự động sử dụng bộ parser dự phòng tích hợp sẵn (hoặc nhúng trực tiếp object `GameQuizImporter` vào đầu file `trochoi.compiled.js`).
+  2. Cập nhật `tools/build-obfuscate.js`: Thêm `game-quiz-importer.js` vào `SKIP_FILE_NAMES` để tránh bị CI làm rỗng file khi deploy.
+  3. Đảm bảo `js/game-quiz-importer.js` được gán vào `window.GameQuizImporter` một cách an toàn:
      ```javascript
-     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
-         if (e.key === 'Enter') {
-             e.preventDefault();
-             handleFillBlankSubmit();
-         }
-         return;
+     if (typeof window !== 'undefined') {
+         window.GameQuizImporter = GameQuizImporter;
      }
      ```
-   - Xóa bỏ `case "Enter"` trùng lặp ở cuối hàm `handleKeyDown`.
+
+### Bước 2: Nâng cấp `GameQuizImporter.parseQuizQuestions` nhận diện đáp án có dấu sao `*`
+- Trong `js/game-quiz-importer.js` (và bản nhúng dự phòng):
+  Khi phân tích các lựa chọn A, B, C, D:
+  ```javascript
+  let asteriskAnswer = '';
+  for (let j = 0; j < optionMatches.length; j++) {
+      const optCur = optionMatches[j];
+      const optNext = optionMatches[j + 1];
+      const optEnd = optNext ? optNext.markerStart : block.length;
+      let optText = block.slice(optCur.bodyStart, optEnd).trim();
+
+      // Nhận diện phương án có dấu sao (*) đánh dấu đáp án đúng: vd "0*", "Phương án C*"
+      if (/\*$/.test(optText) || /\(\*\)$/.test(optText)) {
+          asteriskAnswer = optCur.letter;
+          optText = optText.replace(/\s*\(\*\)$|\s*\*$/, '').trim();
+      }
+      optionsByLetter[optCur.letter] = optText;
+  }
+
+  // Ưu tiên: Dấu sao (*) trong phương án -> Bảng đáp án cuối bài -> Dòng "Đáp án: X" -> Phương án A
+  const finalAnswerLetter = asteriskAnswer || inlineAnswer || answerTable[cur.number] || (optionMatches[0]?.letter || 'A');
+  ```
+  Nhờ đó, bất kể file Word xuất từ **Xuất Word cho Game**, **LaTeX**, hay **Xuất 100% TN** thì `trochoi.html` đều bóc tách đúng 100% câu hỏi và đáp án đúng!
+
+### Bước 3: Tối ưu cấu trúc Word xuất từ `taobaitap.html`
+- Đảm bảo nút **"🎮 Xuất Word cho Game"** (`De_Thi_Game_Giao_Duc.docx`) xuất theo từng đoạn `<p>` rõ ràng, không dùng bảng `<table>`, giữ nguyên công thức LaTeX `\(...\)` hoặc `$...$`.
+- Thêm gợi ý/chú thích nhỏ cạnh các nút xuất trong `taobaitap.html`:
+  * Nút "🎮 Xuất Word cho Game": Ghi rõ *"Dùng riêng để nạp vào Game Giáo Dục (trochoi.html) mà không cần chỉnh sửa"*.
 
 ---
 
 ## 3. Các Tệp Cần Chỉnh Sửa
-- [taobaitap.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/taobaitap.html) (trong component `QuizPresentationMode`, dòng 14202 - 14520).
-- [smartquiz.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/smartquiz.html) (trong component `QuizPresentationMode`, dòng 472 - 750).
+1. `js/game-quiz-importer.js`: Bổ sung nhận diện đáp án có dấu `*`, gán `window.GameQuizImporter` rõ ràng.
+2. `trochoi.compiled.js`: Tích hợp dự phòng `GameQuizImporter` (để nếu file ngoài bị thiếu thì vẫn chạy mượt mà, không bao giờ văng lỗi "Chưa nạp thư viện").
+3. `tools/build-obfuscate.js`: Thêm `game-quiz-importer.js` vào `SKIP_FILE_NAMES`.
+4. `taobaitap.html`: Đảm bảo các định dạng xuất Word đều tương thích tốt với bộ đọc của Game.
 
 ---
 
 ## 4. Kế Hoạch Kiểm Thử (Verification Plan)
-1. **Kiểm tra câu hỏi Đúng/Sai CV7991 trong "Dạy ngay"**:
-   - Mở bài tập có câu hỏi Đúng/Sai CV7991 $\rightarrow$ Bấm "DẠY NGAY".
-   - Kiểm tra mỗi ý con (a, b, c, d) có 2 nút "Đúng" và "Sai".
-   - Click chọn các nút $\rightarrow$ Nút được chọn đổi màu rõ ràng.
-   - Bấm "Hiện đáp án" $\rightarrow$ Hiển thị đáp án đúng/sai của từng ý, đánh dấu ý nào làm đúng (✓), ý nào làm sai (✗) và cộng điểm chính xác.
-2. **Kiểm tra câu hỏi Trả lời ngắn / Điền khuyết (Nhập số)**:
-   - Mở câu hỏi tính giá trị đơn thức (ví dụ đáp án `-12`).
-   - Nhập `-12` rồi bấm nút **"Gửi"** $\rightarrow$ Hệ thống lập tức hiển thị kết quả "Đúng!" màu xanh lá, cộng điểm.
-   - Thử nghiệm gõ `-12` rồi nhấn phím **Enter** ngay trong ô nhập liệu $\rightarrow$ Không bị lỗi sai, tự động nộp bài và chấm đúng.
-   - Thử nghiệm nhập số thập phân dạng dấu phẩy (vd: `2,5` so với `2.5`) $\rightarrow$ Vẫn nhận diện đúng.
+1. **Kiểm tra nạp thư viện `GameQuizImporter`**:
+   - Mở `trochoi.html` trên trình duyệt $\rightarrow$ Kiểm tra `window.GameQuizImporter` luôn tồn tại và có đầy đủ các hàm (`parseQuizQuestions`, `parseMatchingPairs`, `extractTextFromFile`).
+2. **Kiểm tra bóc tách file Word có dấu sao `*`**:
+   - Dán hoặc upload nội dung như trong ảnh:
+     ```text
+     Câu 3: Bậc của đơn thức là:
+     A. 1
+     B. 3
+     C. 0*
+     D. Không có bậc
+     ```
+   - Bấm "Xử lý câu hỏi & Chuyển sang xem trước":
+     - Không còn báo lỗi "Chưa nạp thư viện".
+     - Chuyển sang màn hình xem trước thành công.
+     - Nhận diện đúng đáp án là **C**, nội dung phương án C là `0` (đã bỏ dấu `*`).
+3. **Kiểm tra xuất file từ `taobaitap.html` nạp thẳng vào `trochoi.html`**:
+   - Tạo bài tập trắc nghiệm Toán có công thức LaTeX.
+   - Bấm "Xuất Word cho Game" $\rightarrow$ Tải file `De_Thi_Game_Giao_Duc.docx`.
+   - Kéo thả trực tiếp file này vào `trochoi.html` $\rightarrow$ Nhận diện đủ 100% câu hỏi và công thức toán học mà KHÔNG cần mở Word đổi font Times New Roman.

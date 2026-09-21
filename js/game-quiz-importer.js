@@ -119,16 +119,24 @@
             const prompt = block.slice(0, optionMatches[0].markerStart).trim() || `Câu hỏi ${cur.number}`;
 
             // Bóc tách nội dung từng lựa chọn A, B, C, D
+            // Nhận diện phương án có dấu sao (*) đánh dấu đáp án đúng: vd "0*", "Phương án C*"
             const optionsByLetter = {};
+            let asteriskAnswer = '';
             for (let j = 0; j < optionMatches.length; j++) {
                 const optCur = optionMatches[j];
                 const optNext = optionMatches[j + 1];
                 const optEnd = optNext ? optNext.markerStart : block.length;
-                optionsByLetter[optCur.letter] = block.slice(optCur.bodyStart, optEnd).trim();
+                let optText = block.slice(optCur.bodyStart, optEnd).trim();
+                if (/\*$/.test(optText) || /\(\*\)$/.test(optText)) {
+                    asteriskAnswer = optCur.letter;
+                    optText = optText.replace(/\s*\(\*\)$|\s*\*$/, '').trim();
+                }
+                optionsByLetter[optCur.letter] = optText;
             }
 
             const choices = ['A', 'B', 'C', 'D'].map((letter) => optionsByLetter[letter] || '');
-            const finalAnswerLetter = inlineAnswer || answerTable[cur.number] || (optionMatches[0]?.letter || 'A');
+            // Ưu tiên: Dấu sao (*) trong phương án -> Đáp án inline -> Bảng đáp án cuối bài -> Phương án A
+            const finalAnswerLetter = asteriskAnswer || inlineAnswer || answerTable[cur.number] || (optionMatches[0]?.letter || 'A');
             const answerIndex = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(finalAnswerLetter));
 
             questions.push({
@@ -163,20 +171,28 @@
             if (optionMatches.length >= 2) {
                 const prompt = block.slice(0, optionMatches[0].markerStart).trim() || `Câu hỏi ${idx + 1}`;
                 const optionsByLetter = {};
+                let asteriskAnswer = '';
                 for (let j = 0; j < optionMatches.length; j++) {
                     const optCur = optionMatches[j];
                     const optNext = optionMatches[j + 1];
                     const optEnd = optNext ? optNext.markerStart : block.length;
-                    optionsByLetter[optCur.letter] = block.slice(optCur.bodyStart, optEnd).trim();
+                    let optText = block.slice(optCur.bodyStart, optEnd).trim();
+                    if (/\*$/.test(optText) || /\(\*\)$/.test(optText)) {
+                        asteriskAnswer = optCur.letter;
+                        optText = optText.replace(/\s*\(\*\)$|\s*\*$/, '').trim();
+                    }
+                    optionsByLetter[optCur.letter] = optText;
                 }
                 const choices = ['A', 'B', 'C', 'D'].map((letter) => optionsByLetter[letter] || '');
+                const answerLetter = asteriskAnswer || (optionMatches[0] && optionMatches[0].letter) || 'A';
+                const answerIndex = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(answerLetter));
                 questions.push({
                     id: `q${questions.length + 1}`,
                     number: idx + 1,
                     type: 'mcq',
                     prompt: prompt,
                     choices: choices,
-                    answer: 0,
+                    answer: answerIndex,
                     explanation: '',
                 });
             }
@@ -368,5 +384,8 @@
     }
     if (typeof global !== 'undefined') {
         global.GameQuizImporter = GameQuizImporter;
+    }
+    if (typeof window !== 'undefined') {
+        window.GameQuizImporter = GameQuizImporter;
     }
 })(typeof window !== 'undefined' ? window : globalThis);
