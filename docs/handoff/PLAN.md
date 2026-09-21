@@ -1,492 +1,217 @@
-# PLAN: Thêm Chức Năng Đổi Mật Khẩu & Đổi SmartQuiz Thành Game Giáo Dục
+# PLAN: Nâng Cấp Ô Chữ Kỳ Diệu, Đua Xe Tùy Chỉnh Số Tổ, Thiết Kế Rung Chuông Vàng & Xóa "Quay lại SmartQuiz"
 
 ## 1. Tổng Quan Nhiệm Vụ
 
-Bản kế hoạch này bao gồm 2 yêu cầu:
-1. **Thêm chức năng Đổi mật khẩu**: Cho phép người dùng (cả Giáo viên và Học sinh) tự đổi mật khẩu cá nhân khi đã đăng nhập hệ thống, gồm backend `api/change_password.php`, frontend modal `js/change-password.js`, nút điều hướng trên Navbar của `index.html` và test tự động `tests/change-password-smoke.js`.
-2. **Cập nhật trang chủ (`index.html`)**: Thay thế mục `SmartQuiz` thành **`Game giáo dục`** và cập nhật đường link chuyển hướng sang `https://www.hoangthiencm.id.vn/trochoi.html`.
+Bản kế hoạch giải quyết trọn vẹn 4 yêu cầu từ người dùng:
+1. **Sửa triệt để Game Ô Chữ Kỳ Diệu (`game-crossword.html` & `trochoi.compiled.js`)**: Khắc phục lỗi nạp đề thi dài sinh ra 48 hàng với đáp án dài 45 chữ cái làm vỡ khung hình (như ảnh phản ánh). Giới hạn số hàng hợp lý (tối đa 8–10 hàng), làm sạch và chuẩn hóa đáp án ngắn gọn (3–14 ký tự), sửa thuật toán căn cột từ khóa dọc và bổ sung trợ giúp cho giáo viên.
+2. **Game Đua Xe (`game-racing.html`)**: Cho phép người tổ chức tự chọn số tổ tham gia (từ 2 đến 6 tổ) và đặt tên tổ tùy ý thay vì cố định cứng 4 tổ. Tự động sinh làn đua, màu xe, cờ hiệu và bục trao giải Podium tương ứng.
+3. **Thiết kế Game mới "Rung Chuông Vàng" (`game-bell.html`)**: Xây dựng đấu trường Rung Chuông Vàng kịch tính cho lớp học với sàn đấu thí sinh, đồng hồ đếm ngược, cơ chế loại trực tiếp, quyền Cứu trợ của thầy cô và hiệu ứng Rung chuông vàng đỉnh cao kèm pháo hoa confetti.
+4. **Xóa "Quay lại SmartQuiz" trong `trochoi.compiled.js`**: Loại bỏ nút và dấu ngăn cách ở thanh điều hướng trên cùng của trang Game Giáo Dục, chỉ giữ lại nút "Về trang chủ".
 
 ---
 
 ## 2. Chi Tiết Thực Hiện Cho Coder
 
-### PHẦN 1: Cập Nhật Trang Chủ (`index.html`) — Đổi SmartQuiz thành Game Giáo Dục
+### PHẦN 1: Sửa Triệt Để Game Ô Chữ Kỳ Diệu (`game-crossword.html` & `trochoi.compiled.js`)
 
-Tại file `index.html`, thực hiện 3 điểm chỉnh sửa:
+#### 1. Xử lý dữ liệu nạp ô chữ trong `trochoi.compiled.js`:
+Tại hàm xử lý `crossword` (khoảng dòng 409-425) và phần nạp câu hỏi:
+- Khi người dùng nạp từ bộ câu hỏi trắc nghiệm hoặc dán văn bản:
+  - Giới hạn tối đa **8 - 10 cặp** (hàng ngang), không để vượt quá 10 hàng.
+  - Lọc đáp án: Với mỗi câu hỏi, chỉ lấy đáp án ngắn gọn (từ khóa chính), loại bỏ các đáp án dài quá 14 ký tự hoặc cắt lấy cụm từ khóa đầu tiên:
+  ```javascript
+  const cleanAnswer = (ans) => {
+      let s = String(ans || '').trim();
+      // Bỏ tiền tố A., B., C., D. nếu có
+      s = s.replace(/^[A-D]\s*[\.\):]\s*/i, '');
+      // Chuẩn hóa bỏ dấu và ký tự đặc biệt
+      let norm = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      if (norm.length > 14) norm = norm.slice(0, 14); // Cắt tối đa 14 ký tự
+      return norm;
+  };
+  ```
+  - Từ khóa dọc (`keyword`): Giới hạn độ dài bằng số lượng hàng ngang hợp lệ.
 
-#### 1. Cập nhật bảng liên kết `TOOL_PAGE_LINKS` (khoảng dòng 963):
-Thay:
+#### 2. Nâng cấp toàn diện `game-crossword.html`:
+Chỉnh sửa `game-crossword.html`:
+- **Giới hạn & Chuẩn hóa hàng ngang:**
+  ```javascript
+  // Lấy tối đa 10 hàng có đáp án hợp lệ từ 2 đến 14 ký tự
+  let entries = src.map((p, idx) => ({
+      id: p.id ?? idx,
+      clue: p.left || p.clue || p.prompt || `Câu ${idx + 1}`,
+      answer: normalize(p.right || p.answer || '')
+  })).filter(e => e.clue && e.answer && e.answer.length >= 2 && e.answer.length <= 15).slice(0, 10);
+  ```
+- **Thuật toán căn cột từ khóa dọc thông minh:**
+  - Nếu có từ khóa dọc `keyword`, mỗi hàng tìm vị trí chữ cái tương ứng `kw[i]`.
+  - Nếu trong đáp án có chữ cái đó, căn vị trí để cột vàng thẳng hàng.
+  - Nếu đáp án không chứa chữ cái đó, lấy ký tự đầu tiên và cập nhật lại chữ cái cột vàng để không bị sai lệch chữ hiển thị.
+- **Giao diện Modal trả lời & Trợ giúp:**
+  - Render gợi ý bằng `<MathText text={row.clue} />` để hiển thị công thức toán sắc nét.
+  - Hiển thị rõ số lượng chữ cái (ví dụ: `(7 chữ cái)`).
+  - Tự động chuẩn hóa input khi gõ (bỏ dấu tiếng Việt, viết hoa, loại bỏ khoảng trắng).
+  - Bổ sung nút **"Gợi ý 1 chữ cái"** (mở ngẫu nhiên 1 ký tự chưa mở trong hàng) và nút **"Hiện từ khóa"** khi lớp học gặp khó khăn.
+  - Thiết kế bảng ô chữ responsive, tự động co giãn kích thước ô (cell) từ `w-7 h-7` đến `w-9 h-9` để vừa vặn trên mọi màn hình máy chiếu phòng học.
+
+---
+
+### PHẦN 2: Game Đua Xe Tùy Chỉnh Số Tổ (`game-racing.html`)
+
+Chỉnh sửa `game-racing.html`:
+
+#### 1. Định nghĩa bảng màu và tên mặc định cho 6 tổ:
 ```javascript
-smartquiz: 'smartquiz.html',
-```
-Bằng:
-```javascript
-smartquiz: 'https://www.hoangthiencm.id.vn/trochoi.html',
+const DEFAULT_TEAMS = [
+    { id: 't1', name: 'Tổ 1 - Scuderia Red', short: 'Tổ 1', color: '#ef4444', glow: 'shadow-red-500/50' },
+    { id: 't2', name: 'Tổ 2 - Cyan Lightning', short: 'Tổ 2', color: '#06b6d4', glow: 'shadow-cyan-500/50' },
+    { id: 't3', name: 'Tổ 3 - Golden Thunder', short: 'Tổ 3', color: '#eab308', glow: 'shadow-yellow-500/50' },
+    { id: 't4', name: 'Tổ 4 - Neon Phantom', short: 'Tổ 4', color: '#a855f7', glow: 'shadow-purple-500/50' },
+    { id: 't5', name: 'Tổ 5 - Emerald Rush', short: 'Tổ 5', color: '#10b981', glow: 'shadow-emerald-500/50' },
+    { id: 't6', name: 'Tổ 6 - Orange Flame', short: 'Tổ 6', color: '#f97316', glow: 'shadow-orange-500/50' },
+];
 ```
 
-#### 2. Cập nhật thẻ công cụ giáo viên trên Grid (`#mainToolsGrid`, khoảng dòng 1364):
-Thay khối thẻ:
-```html
-<a href="smartquiz.html" data-tool="smartquiz" class="tool-tile tool-tile--colored tool-tile--smartquiz">
-    <span class="tool-tile-glow"></span>
-    <span class="tool-tile-watermark"><i class="fas fa-wand-magic-sparkles"></i></span>
-    <div class="tool-tile-content">
-        <span class="tool-tile-eyebrow">Giảng dạy</span>
-        <h3 class="tool-tile-title">Soạn câu hỏi game</h3>
-        <p class="tool-tile-desc">Nhập chủ đề — AI soạn câu hỏi và slide dạy học tức thì.</p>
-    </div>
-    <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
-</a>
-```
-Bằng:
-```html
-<a href="https://www.hoangthiencm.id.vn/trochoi.html" data-tool="smartquiz" class="tool-tile tool-tile--colored tool-tile--smartquiz">
-    <span class="tool-tile-glow"></span>
-    <span class="tool-tile-watermark"><i class="fas fa-gamepad"></i></span>
-    <div class="tool-tile-content">
-        <span class="tool-tile-eyebrow">Giảng dạy</span>
-        <h3 class="tool-tile-title">Game giáo dục</h3>
-        <p class="tool-tile-desc">Trò chơi giáo dục tương tác, ôn tập kiến thức sinh động.</p>
-    </div>
-    <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
-</a>
-```
+#### 2. Thêm Modal Cấu Hình Số Tổ Trước Khi Bắt Đầu:
+- Trong trạng thái ban đầu (`showInstructions` hoặc màn hình Setup):
+  - Cho phép người tổ chức chọn số lượng tổ: **2 tổ, 3 tổ, 4 tổ, 5 tổ hoặc 6 tổ** (các nút bấm chọn nhanh).
+  - Các ô input cho phép giáo viên chỉnh sửa tên tổ trực tiếp (ví dụ: "Tổ 1", "Tổ 2", hoặc "Nhóm Sư Tử", "Nhóm Đại Bàng"...).
+  - State `teams`: Lưu danh sách các tổ đã được chọn (`DEFAULT_TEAMS.slice(0, numTeams)` kèm tên do người dùng sửa).
 
-#### 3. Cập nhật mục hoạt động cho Học sinh trong `setupStudentPortal` (khoảng dòng 1746):
-Thay mục:
+#### 3. Đường đua và động học thích ứng động:
+- Các làn đua (`lanes`), vị trí xe (`f1-car`), hộp quà bí ẩn (`mystery-box`) và bảng chọn đội trả lời (`team-pick`) được `map` động hoàn toàn từ mảng `teams`.
+- Bảng xếp hạng trực tiếp và Bục vinh danh (Podium) tự động điều chỉnh hiển thị Top 1, Top 2, Top 3 theo đúng số tổ tham gia.
+
+---
+
+### PHẦN 3: Thiết Kế Game Mới "Rung Chuông Vàng" (`game-bell.html`)
+
+Tạo mới file `game-bell.html`:
+
+#### 1. Cấu trúc trang HTML & Thư viện:
+- Chuẩn giao diện Tailwind CSS, KaTeX (toán học), FontAwesome 6, Canvas Confetti (`canvas-confetti.browser.min.js`), Web Audio API.
+- Guard scripts: `js/security-guard.js`, `access-control.js`.
+
+#### 2. Đấu trường Rung Chuông Vàng:
+- **Thí sinh tham gia:**
+  - Đọc từ `localStorage.getItem('gameData').participants` nếu có (học sinh CSDL/Excel), hoặc tự sinh danh sách 30 - 40 thí sinh theo lớp (SBD 01 đến SBD 40).
+  - Sàn đấu hiển thị danh sách thí sinh:
+    - Thí sinh đang thi đấu: Thẻ bo tròn màu xanh ngọc / vàng nổi bật, có tên/SBD.
+    - Thí sinh bị loại: Màu xám mờ, gạch ngang, nằm ở khu vực "Chờ cứu trợ".
+- **Tiến trình câu hỏi:**
+  - Hiển thị Câu hỏi số hiện tại (ví dụ: Câu 5 / 15).
+  - Nội dung câu hỏi và 4 lựa chọn A, B, C, D render chuẩn KaTeX với component `<MathText>`.
+  - Đồng hồ đếm ngược 15 giây (hoặc tùy chỉnh 20s/30s) có thanh thời gian chạy mượt mà và âm thanh tích tắc hồi hộp.
+  - Khi hết giờ: Phát tiếng chuông vang "Boong!", khóa nhận đáp án, hiển thị đáp án đúng màu xanh kèm lời giải thích.
+- **Cơ chế Loại & Cứu trợ:**
+  - Sau khi hiện đáp án đúng, Giáo viên bấm chọn thí sinh trả lời sai trên màn hình để loại (hoặc bấm nút "Loại nhanh theo tỉ lệ").
+  - **Quyền Cứu Trợ của Thầy Cô:**
+    - Nút bấm "Thầy cô cứu trợ": Cho phép "Cứu 50% thí sinh" hoặc "Cứu tất cả thí sinh" quay lại sàn đấu một cách hào hứng!
+- **Màn Vinh Danh Rung Chuông Vàng:**
+  - Thí sinh cuối cùng vượt qua câu hỏi xuất sắc rung chiếc chuông vàng lớn ở giữa màn hình.
+  - Hiệu ứng chuông lắc lư ngân vang, pháo hoa nổ ngập tràn màn hình (`confetti`), vinh danh Quán Quân Rung Chuông Vàng của lớp học!
+
+#### 3. Tích hợp vào hệ thống:
+- Trong `trochoi.compiled.js`:
+  Thêm game `bell` vào mảng `games` (khoảng dòng 1134):
+  ```javascript
+  {
+    id: 'bell',
+    name: 'Rung Chuông Vàng',
+    icon: 'fa-bell',
+    color: 'from-amber-400 to-yellow-600',
+    purpose: 'Đấu trường kiến thức',
+    description: 'Đấu trường sinh tử cả lớp — trả lời đúng để trụ lại, cứu trợ thầy cô và rung chuông vàng đỉnh cao!',
+    suitable: 'Hoạt động ngoại khóa, ôn tập tổng kết, rung chuông vàng lớp học'
+  }
+  ```
+- Trong `access-control.js`:
+  Thêm vào bảng `pageKeys`:
+  ```javascript
+  'game-bell.html': 'smartquiz',
+  ```
+
+---
+
+### PHẦN 4: Xóa "Quay lại SmartQuiz" trong `trochoi.compiled.js`
+
+Tại file `trochoi.compiled.js` (khoảng dòng 1442-1449):
+Xóa hoàn toàn khối `span` ngăn cách và `button` "Quay lại SmartQuiz":
 ```javascript
-{
-    key: 'smartquiz',
-    title: 'Trò chơi ôn luyện SmartQuiz',
-    badge: 'Mini-game',
-    desc: 'Tham gia các câu hỏi tương tác, trò chơi ôn tập kiến thức sinh động.',
-    url: 'smartquiz.html',
-    icon: 'fa-gamepad',
-    color: 'from-pink-500 to-rose-600',
-    actionText: 'Vào chơi ôn tập'
-},
+// XÓA ĐOẠN NÀY:
+/*#__PURE__*/React.createElement("span", {
+  className: "text-gray-300"
+}, "|"), /*#__PURE__*/React.createElement("button", {
+  onClick: () => window.location.href = 'smartquiz.html',
+  className: "text-gray-500 hover:text-purple-600 font-bold transition"
+}, /*#__PURE__*/React.createElement("i", {
+  className: "fas fa-arrow-left mr-2"
+}), "Quay lại SmartQuiz")
 ```
-Bằng:
+Thanh điều hướng trên cùng chỉ còn lại duy nhất nút:
 ```javascript
-{
-    key: 'smartquiz',
-    title: 'Game giáo dục',
-    badge: 'Trò chơi',
-    desc: 'Tham gia các trò chơi giáo dục tương tác, ôn tập kiến thức sinh động.',
-    url: 'https://www.hoangthiencm.id.vn/trochoi.html',
-    icon: 'fa-gamepad',
-    color: 'from-pink-500 to-rose-600',
-    actionText: 'Vào chơi'
-},
+/*#__PURE__*/React.createElement("button", {
+  onClick: () => window.location.href = 'index.html',
+  className: "text-gray-500 hover:text-purple-600 font-bold transition"
+}, /*#__PURE__*/React.createElement("i", {
+  className: "fas fa-home mr-2"
+}), "Về trang chủ")
 ```
 
 ---
 
-### PHẦN 2: Thêm Chức Năng Đổi Mật Khẩu Cho Người Dùng
+### PHẦN 5: Bài Test Tự Động (`tests/game-suite-smoke.js`)
 
-#### 1. Backend Endpoint (`api/change_password.php` - Tạo mới):
-Tạo file `api/change_password.php`:
-```php
-<?php
-require_once __DIR__ . '/helpers.php';
-session_start();
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    respond(['error' => 'Method not allowed.'], 405);
-}
-
-if (empty($_SESSION['user_id'])) {
-    respond(['error' => 'Chưa đăng nhập. Vui lòng đăng nhập lại.'], 401);
-}
-
-$userId = (int)$_SESSION['user_id'];
-$data = json_body();
-
-$currentPassword = (string)($data['current_password'] ?? '');
-$newPassword = (string)($data['new_password'] ?? '');
-$confirmPassword = (string)($data['confirm_password'] ?? '');
-
-if ($currentPassword === '' || $newPassword === '') {
-    respond(['error' => 'Vui lòng nhập mật khẩu hiện tại và mật khẩu mới.'], 422);
-}
-
-if (strlen($newPassword) < 6) {
-    respond(['error' => 'Mật khẩu mới cần có ít nhất 6 ký tự.'], 422);
-}
-
-if ($confirmPassword !== '' && $newPassword !== $confirmPassword) {
-    respond(['error' => 'Xác nhận mật khẩu mới không khớp.'], 422);
-}
-
-if ($currentPassword === $newPassword) {
-    respond(['error' => 'Mật khẩu mới không được trùng với mật khẩu hiện tại.'], 422);
-}
-
-$stmt = $pdo->prepare('SELECT id, password_hash, is_active FROM users WHERE id = ? LIMIT 1');
-$stmt->execute([$userId]);
-$user = $stmt->fetch();
-
-if (!$user || !(bool)$user['is_active']) {
-    respond(['error' => 'Tài khoản không tồn tại hoặc đã bị khóa.'], 403);
-}
-
-if (!password_verify($currentPassword, $user['password_hash'])) {
-    respond(['error' => 'Mật khẩu hiện tại không chính xác.'], 400);
-}
-
-$newHash = password_hash($newPassword, PASSWORD_DEFAULT);
-$updateStmt = $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
-$updateStmt->execute([$newHash, $userId]);
-
-respond([
-    'ok' => true,
-    'message' => 'Đổi mật khẩu thành công!'
-]);
-```
-
-#### 2. Frontend Module Modal (`js/change-password.js` - Tạo mới):
-Tạo file `js/change-password.js`:
-```javascript
-(function (global) {
-    'use strict';
-
-    function escapeHtml(str) {
-        return String(str ?? '').replace(/[&<>"']/g, function (m) {
-            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
-        });
-    }
-
-    function createModalDom() {
-        if (document.getElementById('changePasswordModal')) return;
-
-        const modalHtml = `
-        <div id="changePasswordModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-200">
-            <div class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 transform transition-all">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
-                            <i class="fas fa-key text-lg"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-bold text-slate-900">Đổi Mật Khẩu</h3>
-                            <p id="changePasswordUserSub" class="text-xs text-slate-500">Cập nhật mật khẩu tài khoản</p>
-                        </div>
-                    </div>
-                    <button type="button" id="btnCpClose" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition">
-                        <i class="fas fa-times text-lg"></i>
-                    </button>
-                </div>
-
-                <div id="changePasswordAlert" class="hidden mb-4 rounded-xl p-3 text-sm font-medium border"></div>
-
-                <form id="changePasswordForm" class="space-y-4" onsubmit="ChangePasswordModal.submit(event)">
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1" for="cpCurrentPassword">
-                            Mật khẩu hiện tại
-                        </label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                <i class="fas fa-lock text-sm"></i>
-                            </span>
-                            <input type="password" id="cpCurrentPassword" required autocomplete="current-password"
-                                class="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-10 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
-                                placeholder="Nhập mật khẩu hiện tại">
-                            <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
-                                onclick="ChangePasswordModal.toggleVisibility('cpCurrentPassword', this)">
-                                <i class="fas fa-eye text-sm"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1" for="cpNewPassword">
-                            Mật khẩu mới
-                        </label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                <i class="fas fa-shield-alt text-sm"></i>
-                            </span>
-                            <input type="password" id="cpNewPassword" required minlength="6" autocomplete="new-password"
-                                class="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-10 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
-                                placeholder="Tối thiểu 6 ký tự">
-                            <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
-                                onclick="ChangePasswordModal.toggleVisibility('cpNewPassword', this)">
-                                <i class="fas fa-eye text-sm"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1" for="cpConfirmPassword">
-                            Xác nhận mật khẩu mới
-                        </label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                <i class="fas fa-check-circle text-sm"></i>
-                            </span>
-                            <input type="password" id="cpConfirmPassword" required minlength="6" autocomplete="new-password"
-                                class="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-10 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
-                                placeholder="Nhập lại mật khẩu mới">
-                            <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
-                                onclick="ChangePasswordModal.toggleVisibility('cpConfirmPassword', this)">
-                                <i class="fas fa-eye text-sm"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                        <button type="button" id="btnCpCancel"
-                            class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
-                            Hủy
-                        </button>
-                        <button type="submit" id="btnCpSubmit"
-                            class="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 text-sm font-bold shadow-md shadow-amber-200 transition">
-                            <span>Lưu thay đổi</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        document.getElementById('btnCpClose')?.addEventListener('click', () => ChangePasswordModal.close());
-        document.getElementById('btnCpCancel')?.addEventListener('click', () => ChangePasswordModal.close());
-
-        const modalOverlay = document.getElementById('changePasswordModal');
-        modalOverlay?.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) ChangePasswordModal.close();
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !modalOverlay?.classList.contains('hidden')) {
-                ChangePasswordModal.close();
-            }
-        });
-    }
-
-    const ChangePasswordModal = {
-        ensureModal: function () {
-            createModalDom();
-        },
-
-        open: function () {
-            this.ensureModal();
-            const modal = document.getElementById('changePasswordModal');
-            if (!modal) return;
-
-            const form = document.getElementById('changePasswordForm');
-            if (form) form.reset();
-
-            const alertBox = document.getElementById('changePasswordAlert');
-            if (alertBox) {
-                alertBox.className = 'hidden mb-4 rounded-xl p-3 text-sm font-medium border';
-                alertBox.textContent = '';
-            }
-
-            const username = localStorage.getItem('userEmail') || localStorage.getItem('userName') || '';
-            const sub = document.getElementById('changePasswordUserSub');
-            if (sub && username) {
-                sub.textContent = 'Tài khoản: ' + username;
-            }
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-
-            setTimeout(() => {
-                document.getElementById('cpCurrentPassword')?.focus();
-            }, 100);
-        },
-
-        close: function () {
-            const modal = document.getElementById('changePasswordModal');
-            if (!modal) return;
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            const form = document.getElementById('changePasswordForm');
-            if (form) form.reset();
-        },
-
-        toggleVisibility: function (inputId, btn) {
-            const input = document.getElementById(inputId);
-            if (!input) return;
-            const icon = btn?.querySelector('i');
-            if (input.type === 'password') {
-                input.type = 'text';
-                if (icon) {
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
-                }
-            } else {
-                input.type = 'password';
-                if (icon) {
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                }
-            }
-        },
-
-        showAlert: function (message, type) {
-            const box = document.getElementById('changePasswordAlert');
-            if (!box) return;
-            box.classList.remove('hidden', 'bg-rose-50', 'text-rose-700', 'border-rose-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
-            if (type === 'success') {
-                box.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
-                box.innerHTML = '<i class="fas fa-check-circle mr-2"></i>' + escapeHtml(message);
-            } else {
-                box.classList.add('bg-rose-50', 'text-rose-700', 'border-rose-200');
-                box.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>' + escapeHtml(message);
-            }
-        },
-
-        submit: async function (e) {
-            if (e) e.preventDefault();
-            const currentPassword = document.getElementById('cpCurrentPassword')?.value || '';
-            const newPassword = document.getElementById('cpNewPassword')?.value || '';
-            const confirmPassword = document.getElementById('cpConfirmPassword')?.value || '';
-            const submitBtn = document.getElementById('btnCpSubmit');
-
-            if (!currentPassword || !newPassword) {
-                this.showAlert('Vui lòng điền đầy đủ các thông tin.', 'error');
-                return;
-            }
-
-            if (newPassword.length < 6) {
-                this.showAlert('Mật khẩu mới cần ít nhất 6 ký tự.', 'error');
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                this.showAlert('Xác nhận mật khẩu mới không trùng khớp.', 'error');
-                return;
-            }
-
-            if (currentPassword === newPassword) {
-                this.showAlert('Mật khẩu mới không được trùng mật khẩu cũ.', 'error');
-                return;
-            }
-
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Đang xử lý...';
-            }
-
-            try {
-                const response = await fetch('api/change_password.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        current_password: currentPassword,
-                        new_password: newPassword,
-                        confirm_password: confirmPassword
-                    })
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || 'Có lỗi xảy ra khi đổi mật khẩu.');
-                }
-
-                this.showAlert(data.message || 'Đổi mật khẩu thành công!', 'success');
-                const form = document.getElementById('changePasswordForm');
-                if (form) form.reset();
-
-                setTimeout(() => {
-                    ChangePasswordModal.close();
-                }, 1600);
-            } catch (err) {
-                this.showAlert(err.message || 'Không thể đổi mật khẩu.', 'error');
-            } finally {
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<span>Lưu thay đổi</span>';
-                }
-            }
-        }
-    };
-
-    global.ChangePasswordModal = ChangePasswordModal;
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => ChangePasswordModal.ensureModal());
-    } else {
-        ChangePasswordModal.ensureModal();
-    }
-})(typeof window !== 'undefined' ? window : this);
-```
-
-#### 3. Nút "Đổi mật khẩu" trên Navbar `index.html`:
-Trong `<nav>` (khoảng dòng 1174, ngay trước nút Đăng xuất):
-Thêm:
-```html
-<button type="button" onclick="ChangePasswordModal.open()" id="btnOpenChangePassword"
-    class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300">
-    <i class="fas fa-key text-amber-500"></i> Đổi mật khẩu
-</button>
-```
-
-Và nhúng script `js/change-password.js` tại cuối file `index.html` (ngay sau `js/user-ai-settings.js`):
-```html
-<script src="js/change-password.js"></script>
-```
-
----
-
-### PHẦN 3: Bài Test Tự Động (`tests/change-password-smoke.js`)
-
-Tạo mới file `tests/change-password-smoke.js`:
+Tạo mới file `tests/game-suite-smoke.js`:
 ```javascript
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
 const root = path.join(__dirname, "..");
-const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const jsScript = fs.readFileSync(path.join(root, "js", "change-password.js"), "utf8");
-const phpScript = fs.readFileSync(path.join(root, "api", "change_password.php"), "utf8");
+const crosswordHtml = fs.readFileSync(path.join(root, "game-crossword.html"), "utf8");
+const racingHtml = fs.readFileSync(path.join(root, "game-racing.html"), "utf8");
+const bellHtml = fs.readFileSync(path.join(root, "game-bell.html"), "utf8");
+const trochoiJs = fs.readFileSync(path.join(root, "trochoi.compiled.js"), "utf8");
+const accessJs = fs.readFileSync(path.join(root, "access-control.js"), "utf8");
 
-// 1. Kiểm tra index.html có nút Đổi mật khẩu & link Game giáo dục
-assert.match(indexHtml, /id="btnOpenChangePassword"/, "index.html phải có nút Đổi mật khẩu");
-assert.match(indexHtml, /ChangePasswordModal\.open\(\)/, "nút Đổi mật khẩu phải gọi ChangePasswordModal.open()");
-assert.match(indexHtml, /js\/change-password\.js/, "index.html phải nhúng js/change-password.js");
-assert.match(indexHtml, /https:\/\/www\.hoangthiencm\.id\.vn\/trochoi\.html/, "index.html phải có đường link trochoi.html");
-assert.match(indexHtml, /Game giáo dục/, "index.html phải hiển thị Game giáo dục thay cho SmartQuiz");
+// 1. Kiểm tra Ô chữ kỳ diệu
+assert.match(crosswordHtml, /MathText/, "game-crossword.html phải có component MathText để render công thức");
+assert.match(crosswordHtml, /entries\.slice\(0,\s*10\)|slice\(0,\s*Math\.min\(10/, "game-crossword.html phải giới hạn số hàng ngang tối đa 10");
+assert.match(crosswordHtml, /kw-col/, "game-crossword.html có highlight cột từ khóa");
 
-// 2. Kiểm tra js/change-password.js
-assert.match(jsScript, /ChangePasswordModal/, "module định nghĩa ChangePasswordModal");
-assert.match(jsScript, /ensureModal/, "có hàm ensureModal");
-assert.match(jsScript, /open\s*:/, "có hàm open");
-assert.match(jsScript, /close\s*:/, "có hàm close");
-assert.match(jsScript, /toggleVisibility/, "có hàm toggleVisibility để ẩn hiện mật khẩu");
-assert.match(jsScript, /submit\s*:/, "có hàm submit");
-assert.match(jsScript, /api\/change_password\.php/, "gọi endpoint api/change_password.php");
+// 2. Kiểm tra Game Đua xe tùy chỉnh số tổ
+assert.match(racingHtml, /numTeams|setNumTeams|teams/, "game-racing.html có cấu hình số tổ đua");
+assert.match(racingHtml, /Tổ 5|t5|DEFAULT_TEAMS/, "game-racing.html hỗ trợ linh hoạt các tổ (ít nhất đến tổ 5/6)");
 
-// 3. Kiểm tra api/change_password.php
-assert.match(phpScript, /require_once\s+__DIR__\s*\.\s*'\/helpers\.php'/, "PHP nhúng helpers.php");
-assert.match(phpScript, /\$_SESSION\['user_id'\]/, "PHP kiểm tra session user_id");
-assert.match(phpScript, /password_verify/, "PHP xác thực mật khẩu cũ bằng password_verify");
-assert.match(phpScript, /password_hash/, "PHP mã hóa mật khẩu mới bằng password_hash");
-assert.match(phpScript, /UPDATE\s+users\s+SET\s+password_hash/, "PHP cập nhật CSDL bảng users");
+// 3. Kiểm tra Game Rung chuông vàng
+assert.match(bellHtml, /Rung Chuông Vàng/i, "game-bell.html có tiêu đề Rung Chuông Vàng");
+assert.match(bellHtml, /MathText/, "game-bell.html hỗ trợ MathText KaTeX");
+assert.match(bellHtml, /cứu trợ|cuuTro|revive/i, "game-bell.html có cơ chế cứu trợ thí sinh");
+assert.match(bellHtml, /confetti|canvas-confetti/i, "game-bell.html có pháo hoa chúc mừng rung chuông");
 
-console.log("change-password smoke: PASS");
+// 4. Kiểm tra trochoi.compiled.js
+assert.match(trochoiJs, /id:\s*'bell'/, "trochoi.compiled.js đã đăng ký game bell");
+assert.ok(!trochoiJs.includes("Quay lại SmartQuiz"), "trochoi.compiled.js đã xóa hoàn toàn 'Quay lại SmartQuiz'");
+
+// 5. Kiểm tra access-control.js
+assert.match(accessJs, /'game-bell\.html':\s*'smartquiz'/, "access-control.js bảo vệ route game-bell.html");
+
+console.log("game-suite smoke: PASS");
 ```
 
 ---
 
 ## 3. Kế Hoạch Kiểm Thử & Nghiệm Thu (Verification Plan)
 
-1. **Kiểm tra cú pháp PHP:**
+1. **Chạy test tự động:**
    ```powershell
-   php -l api/change_password.php
-   ```
-2. **Chạy test tự động:**
-   ```powershell
+   node tests/game-suite-smoke.js
    node tests/change-password-smoke.js
-   node tests/user-ai-settings-smoke.js
    node tests/canvas-tabs-permissions-smoke.js
    ```
-3. **Kiểm tra giao diện:**
-   - Mở `index.html`: mục SmartQuiz đã đổi thành **Game giáo dục**, khi bấm chuyển hướng sang `https://www.hoangthiencm.id.vn/trochoi.html`.
-   - Nút **Đổi mật khẩu** hiển thị rõ ràng trên Navbar cho cả Giáo viên và Học sinh, mở modal đổi mật khẩu hoạt động trơn tru.
+2. **Kiểm tra giao diện & tính năng thủ công:**
+   - Mở `trochoi.html`: Thanh header không còn chữ "Quay lại SmartQuiz", danh sách xuất hiện game **Rung Chuông Vàng**.
+   - Thử mở `game-crossword.html` với bộ câu hỏi: Ô chữ hiển thị gọn gàng (tối đa 8-10 hàng), không bị vỡ hàng 45 chữ cái, modal trả lời render toán KaTeX chuẩn đẹp.
+   - Thử mở `game-racing.html`: Có màn hình chọn 2, 3, 4, 5, 6 tổ đua, cho phép đặt tên tổ và đua xe mượt mà.
+   - Thử mở `game-bell.html`: Sàn đấu hiển thị danh sách thí sinh, đồng hồ đếm ngược, bấm loại thí sinh sai, thử chức năng cứu trợ và vinh danh rung chuông vàng.
