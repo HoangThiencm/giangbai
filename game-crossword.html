@@ -28,7 +28,7 @@
     <script type="text/babel" data-presets="env,react">
         const { useState, useEffect, useRef, useMemo } = React;
 
-        const normalize = (s) => String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, '');
+        const normalize = (s) => String(s || '').trim().replace(/^[A-D]\s*[\.\):]\s*/i, '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, '');
 
         const MathText = ({ text }) => {
             const ref = useRef(null);
@@ -56,6 +56,7 @@
             const [keyword, setKeyword] = useState('');
             const [kwCol, setKwCol] = useState(0);
             const [solved, setSolved] = useState({});
+            const [revealed, setRevealed] = useState({});
             const [activeRow, setActiveRow] = useState(null);
             const [input, setInput] = useState('');
             const [feedback, setFeedback] = useState('');
@@ -74,17 +75,19 @@
                 const src = parsed.content?.pairs || parsed.content?.clues || [];
                 let entries = src.map((p, idx) => ({
                     id: p.id ?? idx,
-                    clue: p.left || p.clue || p.prompt || '',
+                    clue: p.left || p.clue || p.prompt || `Câu ${idx + 1}`,
                     answer: normalize(p.right || p.answer || '')
-                })).filter(e => e.clue && e.answer);
+                })).filter(e => e.clue && e.answer && e.answer.length >= 2 && e.answer.length <= 14).slice(0, 10);
 
                 if (!entries.length && parsed.content?.questions?.length) {
                     entries = parsed.content.questions.slice(0, 8).map((q, idx) => ({
                         id: idx,
                         clue: q.prompt || `Câu ${idx + 1}`,
                         answer: normalize((q.choices && q.choices[q.answer]) || q.answerText || `DAPAN${idx + 1}`)
-                    })).filter(e => e.answer);
+                    })).filter(e => e.clue && e.answer && e.answer.length >= 2 && e.answer.length <= 14).slice(0, 10);
                 }
+
+                entries = entries.slice(0, 10);
 
                 if (!entries.length) { alert('Không có cặp gợi ý / đáp án hợp lệ.'); window.location.href = 'trochoi.html'; return; }
 
@@ -94,7 +97,7 @@
 
                 // Align each answer so keyword letter sits on same column when possible
                 const col = Math.max(...entries.map(e => e.answer.length), kw.length) > 0 ? Math.min(2, Math.floor(Math.max(...entries.map(e => e.answer.length)) / 3)) : 0;
-                const built = entries.slice(0, Math.max(kw.length, entries.length)).map((e, i) => {
+                const built = entries.slice(0, 10).map((e, i) => {
                     const letter = kw[i] || e.answer[0];
                     let offset = e.answer.indexOf(letter);
                     if (offset < 0) offset = 0;
@@ -107,12 +110,12 @@
                     let off = want ? b.answer.indexOf(want) : b.offset;
                     if (off < 0) off = 0;
                     const pad = maxOff - off;
-                    return { ...b, pad: Math.max(0, pad), kwIndex: off };
+                    return { ...b, pad: Math.max(0, pad), kwIndex: off, keywordLetter: b.answer[off] };
                 });
 
                 setGameData(parsed);
                 setRows(aligned);
-                setKeyword(kw.slice(0, aligned.length));
+                setKeyword(aligned.map(row => row.keywordLetter).join(''));
                 setKwCol(maxOff);
             }, []);
 
@@ -142,9 +145,23 @@
                 } else setFeedback('Chưa đúng — thử lại!');
             };
 
+            const revealOneLetter = () => {
+                if (activeRow === null) return;
+                const row = rows[activeRow];
+                const hidden = row.letters.map((_, i) => i).filter(i => !revealed[activeRow]?.includes(i));
+                if (!hidden.length) return;
+                const index = hidden[Math.floor(Math.random() * hidden.length)];
+                setRevealed(prev => ({ ...prev, [activeRow]: [...(prev[activeRow] || []), index] }));
+            };
+
+            const revealKeyword = () => {
+                const all = rows.reduce((result, row, rowIndex) => ({ ...result, [rowIndex]: [row.kwIndex] }), {});
+                setRevealed(prev => ({ ...prev, ...all }));
+            };
+
             const verticalWord = useMemo(() => {
                 return rows.map((r, i) => {
-                    if (!solved[i]) return '·';
+                    if (!solved[i] && !revealed[i]?.includes(r.kwIndex)) return '·';
                     const idx = r.kwIndex;
                     return r.letters[idx] || '·';
                 }).join('');
@@ -203,7 +220,7 @@
                             <h1 className="text-2xl font-bold text-violet-700"><i className="fas fa-border-all mr-2"></i>Ô Chữ Kỳ Diệu</h1>
                             <p className="text-sm text-gray-600">{solvedCount}/{rows.length} hàng · Từ khóa: <span className="font-mono tracking-wider">{verticalWord}</span></p>
                         </div>
-                        <div className="px-4 py-2 bg-white border-2 border-violet-200 rounded-lg font-bold text-violet-700">{score}đ</div>
+                        <div className="flex gap-2"><button onClick={revealKeyword} className="px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-bold">Hiện từ khóa</button><div className="px-4 py-2 bg-white border-2 border-violet-200 rounded-lg font-bold text-violet-700">{score}đ</div></div>
                     </div>
 
                     <div className="bg-white rounded-2xl shadow-xl p-4 overflow-x-auto mb-4">
@@ -216,7 +233,7 @@
                                         {Array.from({ length: row.pad }).map((_, i) => <div key={'p'+i} className="w-8 h-8" />)}
                                         {row.letters.map((ch, cIdx) => {
                                             const isKw = cIdx === row.kwIndex;
-                                            const show = solved[rIdx];
+                                            const show = solved[rIdx] || revealed[rIdx]?.includes(cIdx);
                                             return (
                                                 <div key={cIdx} className={`w-8 h-8 md:w-9 md:h-9 border-2 border-violet-300 rounded flex items-center justify-center font-bold text-sm ${isKw ? 'kw-col' : 'bg-white'} ${show ? 'cell-reveal text-violet-900' : 'text-transparent'}`}>
                                                     {show ? ch : '?'}
@@ -252,14 +269,15 @@
                                 <input
                                     autoFocus
                                     value={input}
-                                    onChange={e => setInput(e.target.value)}
+                                    onChange={e => setInput(normalize(e.target.value))}
                                     onKeyDown={e => e.key === 'Enter' && checkAnswer()}
                                     className="w-full border-2 border-violet-300 rounded-xl px-4 py-3 font-mono tracking-widest uppercase text-lg mb-3"
                                     placeholder="Nhập đáp án..."
                                 />
                                 {feedback && <p className={`mb-3 font-semibold ${feedback.includes('Chính') ? 'text-emerald-600' : 'text-red-600'}`}>{feedback}</p>}
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 flex-wrap">
                                     <button onClick={checkAnswer} className="flex-1 py-3 bg-violet-600 text-white rounded-xl font-bold">Kiểm tra</button>
+                                    <button onClick={revealOneLetter} className="px-4 py-3 bg-amber-400 text-amber-950 rounded-xl font-bold">Gợi ý 1 chữ cái</button>
                                     <button onClick={() => setActiveRow(null)} className="px-4 py-3 bg-gray-200 rounded-xl font-bold">Đóng</button>
                                 </div>
                             </div>

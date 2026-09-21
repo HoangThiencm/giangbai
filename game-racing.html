@@ -4,7 +4,7 @@
     <script src="js/security-guard.js"></script>
     <script src="access-control.js"></script>
     <meta charset="UTF-8">
-    <title>Đua Xe F1 Mario Kart - Đại Chiến 4 Tổ</title>
+    <title>Đua Xe F1 Mario Kart - Đại Chiến Các Tổ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="vendor/react.production.min.js"></script>
     <script src="vendor/react-dom.production.min.js"></script>
@@ -114,11 +114,13 @@
     <script type="text/babel" data-presets="env,react">
         const { useState, useEffect, useRef, useMemo } = React;
 
-        const TEAMS = [
-            { id: 't1', name: 'Tổ 1 - Scuderia Red', short: 'Tổ 1 Đỏ', color: '#ef4444', glow: 'shadow-red-500/50' },
-            { id: 't2', name: 'Tổ 2 - Cyan Lightning', short: 'Tổ 2 Xanh', color: '#06b6d4', glow: 'shadow-cyan-500/50' },
-            { id: 't3', name: 'Tổ 3 - Golden Thunder', short: 'Tổ 3 Vàng', color: '#eab308', glow: 'shadow-yellow-500/50' },
-            { id: 't4', name: 'Tổ 4 - Neon Phantom', short: 'Tổ 4 Tím', color: '#a855f7', glow: 'shadow-purple-500/50' },
+        const DEFAULT_TEAMS = [
+            { id: 't1', name: 'Tổ 1 - Scuderia Red', short: 'Tổ 1', color: '#ef4444', glow: 'shadow-red-500/50' },
+            { id: 't2', name: 'Tổ 2 - Cyan Lightning', short: 'Tổ 2', color: '#06b6d4', glow: 'shadow-cyan-500/50' },
+            { id: 't3', name: 'Tổ 3 - Golden Thunder', short: 'Tổ 3', color: '#eab308', glow: 'shadow-yellow-500/50' },
+            { id: 't4', name: 'Tổ 4 - Neon Phantom', short: 'Tổ 4', color: '#a855f7', glow: 'shadow-purple-500/50' },
+            { id: 't5', name: 'Tổ 5 - Emerald Rush', short: 'Tổ 5', color: '#10b981', glow: 'shadow-emerald-500/50' },
+            { id: 't6', name: 'Tổ 6 - Orange Flame', short: 'Tổ 6', color: '#f97316', glow: 'shadow-orange-500/50' },
         ];
         const POWERUPS = [
             { id: 'nitro', icon: '🚀', name: 'Tên lửa Nitro', desc: 'Vọt thêm 1 đoạn lớn!' },
@@ -239,7 +241,8 @@
         const RacingGame = () => {
             const [gameData, setGameData] = useState(null);
             const [questions, setQuestions] = useState([]);
-            const [teams, setTeams] = useState(TEAMS);
+            const [teams, setTeams] = useState(DEFAULT_TEAMS.slice(0, 4));
+            const [numTeams, setNumTeams] = useState(4);
             const [positions, setPositions] = useState({});
             const [stats, setStats] = useState({});
             const [streaks, setStreaks] = useState({});
@@ -274,13 +277,13 @@
                     answer: typeof q.answer === 'number' ? q.answer : 0, explanation: q.explanation || ''
                 })).filter(q => q.prompt && q.choices.length >= 2);
                 if (!loaded.length) { alert('Không có câu hỏi hợp lệ.'); window.location.href = 'trochoi.html'; return; }
-                let teamList = TEAMS;
-                if (Array.isArray(parsed.content?.teams) && parsed.content.teams.length >= 4) {
-                    teamList = parsed.content.teams.slice(0, 4).map((t, i) => ({ ...TEAMS[i], id: t.id || TEAMS[i].id, name: t.name || TEAMS[i].name, short: t.name || TEAMS[i].short }));
+                let teamList = DEFAULT_TEAMS.slice(0, 4);
+                if (Array.isArray(parsed.content?.teams) && parsed.content.teams.length >= 2) {
+                    teamList = parsed.content.teams.slice(0, 6).map((t, i) => ({ ...DEFAULT_TEAMS[i], id: t.id || DEFAULT_TEAMS[i].id, name: t.name || DEFAULT_TEAMS[i].name, short: t.name || DEFAULT_TEAMS[i].short }));
                 }
                 const pos = teamList.reduce((a, t) => ({ ...a, [t.id]: 0 }), {});
                 const st = teamList.reduce((a, t) => ({ ...a, [t.id]: { correct: 0, reaction: 0 } }), {});
-                setGameData(parsed); setQuestions(loaded); setTeams(teamList);
+                setGameData(parsed); setQuestions(loaded); setTeams(teamList); setNumTeams(teamList.length);
                 setPositions(pos); positionsRef.current = pos;
                 setStats(st); setStreaks(teamList.reduce((a, t) => ({ ...a, [t.id]: 0 }), {}));
                 setBuffs(teamList.reduce((a, t) => ({ ...a, [t.id]: {} }), {}));
@@ -292,7 +295,7 @@
                 return Math.min(Math.max(6, Math.ceil(questions.length * 0.55)), 10);
             }, [questions.length]);
 
-            const topicTitle = gameData?.formData?.topic || gameData?.content?.topicTitle || 'Đại chiến 4 tổ F1';
+            const topicTitle = gameData?.formData?.topic || gameData?.content?.topicTitle || 'Đại chiến các tổ F1';
             const currentQ = questions[qIndex];
 
             useEffect(() => { soundEngine.setMuted(!soundOn); }, [soundOn]);
@@ -451,9 +454,9 @@
                 if (phase !== 'play') return;
                 const onKey = (e) => {
                     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-                    const map = { '1': 0, '2': 1, '3': 2, '4': 3 };
-                    if (map[e.key] != null && teams[map[e.key]]) {
-                        const id = teams[map[e.key]].id;
+                    const teamIndex = Number(e.key) - 1;
+                    if (teamIndex >= 0 && teamIndex < teams.length) {
+                        const id = teams[teamIndex].id;
                         setCorrectTeams(prev => ({ ...prev, [id]: !prev[id] }));
                     }
                     if (e.key === 'Enter') confirmBoost();
@@ -471,6 +474,18 @@
                 setCorrectTeams(prev => ({ ...prev, [id]: !prev[id] }));
             };
 
+            const chooseTeamCount = (count) => {
+                setNumTeams(count);
+                setTeams(previous => DEFAULT_TEAMS.slice(0, count).map((team, i) => {
+                    const existing = previous[i];
+                    return existing ? { ...team, name: existing.name, short: existing.short || existing.name } : team;
+                }));
+            };
+
+            const renameTeam = (index, name) => {
+                setTeams(previous => previous.map((team, i) => i === index ? { ...team, name, short: name.trim() || `Tổ ${i + 1}` } : team));
+            };
+
             if (!gameData || !questions.length) {
                 return <div className="flex items-center justify-center min-h-screen"><div className="text-xl text-cyan-300 font-semibold"><i className="fas fa-spinner fa-spin mr-2"></i>Đang chuẩn bị đường đua F1...</div></div>;
             }
@@ -485,11 +500,16 @@
                             <p className="text-slate-300 mb-4">Chủ đề: <strong className="text-white">{topicTitle}</strong></p>
                             <ul className="space-y-2 text-slate-200 mb-5 text-sm">
                                 <li>🚦 Đèn xuất phát 5 đèn F1 chuẩn quốc tế</li>
-                                <li>⏱️ Cả 4 tổ cùng thảo luận — GV tick tổ đúng (phím 1–4) rồi bứt tốc đồng loạt</li>
+                                <li>⏱️ Các tổ cùng thảo luận — GV tick tổ đúng (phím 1–6) rồi bứt tốc đồng loạt</li>
                                 <li>🎁 Hộp vật phẩm Mario Kart: Nitro / Khiên / Chuối / Tia sét</li>
                                 <li>🔥 Chuỗi đúng ≥ 2 = SUPER NITRO (vọt gấp đôi)</li>
                                 <li>🏆 Về đích trước nhận bục vinh quang 3 bậc + fanfare</li>
                             </ul>
+                            <div className="mb-5">
+                                <div className="text-sm font-bold text-amber-300 mb-2">Chọn số tổ đua</div>
+                                <div className="flex flex-wrap gap-2 mb-3">{[2,3,4,5,6].map(count => <button key={count} type="button" onClick={() => chooseTeamCount(count)} className={`px-4 py-2 rounded-lg font-bold ${numTeams === count ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-200 border border-slate-600'}`}>{count} tổ</button>)}</div>
+                                <div className="grid sm:grid-cols-2 gap-2">{teams.map((team, index) => <label key={team.id} className="text-sm text-slate-300">Tên tổ {index + 1}<input value={team.name} onChange={e => renameTeam(index, e.target.value)} className="mt-1 w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white" /></label>)}</div>
+                            </div>
                             <div className="flex flex-wrap gap-3 mb-5 items-center">
                                 <label className="text-sm text-slate-300">Đồng hồ:
                                     <select value={timerSec} onChange={e => setTimerSec(+e.target.value)} className="ml-2 bg-slate-800 border border-slate-600 rounded-lg px-2 py-1">
@@ -583,7 +603,7 @@
                             <button onClick={() => setShowSettings(s => !s)} className="px-3 py-2 bg-slate-700 rounded-lg text-sm"><i className="fas fa-cog"></i></button>
                         </div>
                         <div className="text-center">
-                            <h1 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-amber-300 to-cyan-400">F1 MARIO KART · 4 TỔ</h1>
+                            <h1 className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-amber-300 to-cyan-400">F1 MARIO KART · {teams.length} TỔ</h1>
                             <p className="text-xs text-slate-400">{topicTitle}</p>
                         </div>
                         <button onClick={() => setSoundOn(s => !s)} className={`px-3 py-2 rounded-lg text-sm ${soundOn ? 'bg-emerald-600' : 'bg-slate-700'}`}>
@@ -656,8 +676,8 @@
                             <div className="mb-4 p-3 rounded-xl bg-slate-800 border border-slate-600 text-sm text-slate-200"><MathText text={currentQ.explanation} /></div>
                         )}
 
-                        <p className="text-xs text-slate-400 mb-2">GV tick các tổ trả lời ĐÚNG (phím 1–4) → Xác nhận bứt tốc</p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                        <p className="text-xs text-slate-400 mb-2">GV tick các tổ trả lời ĐÚNG (phím 1–6) → Xác nhận bứt tốc</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
                             {teams.map((t, i) => (
                                 <button key={t.id} type="button" disabled={phase !== 'play'} onClick={() => toggleTeam(t.id)}
                                     className={`team-pick px-3 py-4 rounded-xl font-bold border-2 ${correctTeams[t.id] ? 'selected bg-emerald-600 border-emerald-300' : 'bg-slate-800 border-slate-600'}`}

@@ -54,7 +54,8 @@ async function accessControlMain() {
         'game-wheel.html': 'smartquiz',
         'game-millionaire.html': 'smartquiz',
         'game-crossword.html': 'smartquiz',
-        'game-racing.html': 'smartquiz'
+        'game-racing.html': 'smartquiz',
+        'game-bell.html': 'smartquiz'
     };
     const pageUrls = {
         lotrinh: 'lotrinhtoan6.html',

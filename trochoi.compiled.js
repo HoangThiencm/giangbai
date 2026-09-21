@@ -407,19 +407,24 @@ const {
             }
 
             case 'crossword': {
-                const pairs = Array.isArray(options.rawPairs) && options.rawPairs.length
+                const cleanAnswer = (answer) => {
+                    let value = String(answer || '').trim().replace(/^[A-D]\s*[\.\):]\s*/i, '');
+                    value = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                    return value.slice(0, 14);
+                };
+                const pairs = (Array.isArray(options.rawPairs) && options.rawPairs.length
                     ? options.rawPairs.map((p, idx) => ({
                         id: p.id || idx + 1,
                         left: p.left || p.clue || '',
-                        right: String(p.right || p.answer || '').trim(),
+                        right: cleanAnswer(p.right || p.answer || ''),
                         explanation: p.explanation || '',
                     }))
                     : parsedQuestions.map((q, idx) => ({
                         id: idx + 1,
                         left: q.prompt,
-                        right: String(q.choices[q.answer] || q.choices[0] || '').replace(/\s+/g, '').toUpperCase(),
+                        right: cleanAnswer(q.choices[q.answer] || q.choices[0] || ''),
                         explanation: q.explanation || '',
-                    }));
+                    }))).filter((pair) => pair.left && pair.right.length >= 2 && pair.right.length <= 14).slice(0, 10);
                 const keyword = options.keyword || pairs.map((p) => (p.right || '').charAt(0)).join('').toUpperCase();
                 return {
                     topicTitle: topic,
@@ -429,6 +434,7 @@ const {
                 };
             }
 
+            case 'bell':
             case 'racing': {
                 return {
                     topicTitle: topic,
@@ -1125,12 +1131,20 @@ const App = () => {
     suitable: 'Củng cố thuật ngữ, tổng kết chương'
   }, {
     id: 'racing',
-    name: 'Đua Xe 4 Tổ',
+    name: 'Đua Xe Các Tổ',
     icon: 'fa-car-side',
     color: 'from-orange-500 to-red-600',
-    purpose: 'Thi đua 4 tổ',
-    description: '4 xe đại diện 4 tổ trong lớp đua về đích theo kết quả trả lời!',
+    purpose: 'Thi đua các tổ',
+    description: '2 đến 6 xe đại diện các tổ trong lớp đua về đích theo kết quả trả lời!',
     suitable: 'Thi đua sôi nổi giữa các tổ'
+  }, {
+    id: 'bell',
+    name: 'Rung Chuông Vàng',
+    icon: 'fa-bell',
+    color: 'from-amber-400 to-yellow-600',
+    purpose: 'Đấu trường kiến thức',
+    description: 'Đấu trường sinh tử cả lớp — trả lời đúng để trụ lại, cứu trợ thầy cô và rung chuông vàng đỉnh cao!',
+    suitable: 'Hoạt động ngoại khóa, ôn tập tổng kết, rung chuông vàng lớp học'
   }];
   const syncManualParticipants = text => {
     setManualParticipantText(text);
@@ -1439,14 +1453,7 @@ const App = () => {
       className: "text-gray-500 hover:text-purple-600 font-bold transition"
     }, /*#__PURE__*/React.createElement("i", {
       className: "fas fa-home mr-2"
-    }), "Về trang chủ"), /*#__PURE__*/React.createElement("span", {
-      className: "text-gray-300"
-    }, "|"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => window.location.href = 'smartquiz.html',
-      className: "text-gray-500 hover:text-purple-600 font-bold transition"
-    }, /*#__PURE__*/React.createElement("i", {
-      className: "fas fa-arrow-left mr-2"
-    }), "Quay lại SmartQuiz")), /*#__PURE__*/React.createElement("h1", {
+    }), "Về trang chủ")), /*#__PURE__*/React.createElement("h1", {
       className: "text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 mb-3"
     }, "GAME GIÁO DỤC - TRỢ LÝ DẠY HỌC"), /*#__PURE__*/React.createElement("p", {
       className: "text-xl text-gray-600"

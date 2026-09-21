@@ -1,8 +1,17 @@
-# IMPLEMENT: Đổi Mật Khẩu & Game Giáo Dục
+# IMPLEMENT: Nâng Cấp Bộ Game Giáo Dục
 
 Đã triển khai đúng `docs/handoff/PLAN.md` trong phạm vi đã duyệt.
 
 ## Thay đổi
+
+- Cập nhật `game-crossword.html`: giới hạn 10 hàng ngang với đáp án 2–14 ký tự, chuẩn hóa bỏ dấu/ký tự dư thừa, căn cột từ khóa theo ký tự thực tế, hiển thị MathText, số chữ cái, gợi ý một chữ cái, hiện từ khóa và ô responsive.
+- Cập nhật `trochoi.compiled.js`: làm sạch dữ liệu tạo ô chữ, giới hạn đáp án/hàng; đăng ký `bell` (Rung Chuông Vàng), đổi mô tả Đua Xe thành 2–6 tổ và xóa toàn bộ liên kết “Quay lại SmartQuiz”.
+- Cập nhật `game-racing.html`: màn hình chuẩn bị cho phép chọn 2–6 tổ và tự đặt tên; đường đua, chọn tổ, phím tắt, xếp hạng và bục vinh danh sử dụng danh sách tổ động.
+- Thêm `game-bell.html`: đấu trường Rung Chuông Vàng với thí sinh từ `gameData` hoặc SBD 01–40, MathText/KaTeX, đồng hồ 15/20/30 giây, loại trực tiếp, cứu 50%/tất cả, chuông Web Audio và confetti vinh danh.
+- Thêm bảo vệ route `game-bell.html` trong `access-control.js`.
+- Thêm `tests/game-suite-smoke.js`.
+
+## Thay đổi trước đó trong kế hoạch khác
 
 - Thêm `api/change_password.php`: chỉ nhận POST, yêu cầu session `user_id`, xác thực mật khẩu hiện tại bằng `password_verify`, kiểm tra mật khẩu mới và cập nhật hash mới bằng `password_hash`.
 - Thêm `js/change-password.js`: modal tự tạo DOM, đóng bằng nút/overlay/Escape, ẩn-hiện mật khẩu, kiểm tra dữ liệu phía trình duyệt và gọi endpoint với cookie phiên.
