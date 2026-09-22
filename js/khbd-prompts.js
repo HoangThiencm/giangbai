@@ -608,7 +608,7 @@
     - CẤM thuc_te nếu bài không có bài toán thực tế. CẤM cảnh lớp học, CẤM "học sinh đang học", CẤM minh họa generic.
     - locus + subsection phải ánh xạ đúng chỗ dùng hình: hình khái niệm/định lý → B và tên tiểu mục kiến thức SGK; hình bài luyện tập → C; hình bài vận dụng/thực tế → D.
     - subsection phải copy đúng tên mục trong SGK (ví dụ "Đường trung trực của đoạn thẳng"), không ghi chung "Hoạt động B".
-    - Hình học/đồ thị/trục số: 1–3 hình sgk. Không bịa số đo trái SGK. Bài chỉ chữ/số đại số không cần hình: {"illustrations":[]}.
+    - Hình học/đồ thị/trục số hoặc khi NỘI DUNG BÀI có mục "Hình vẽ trong SGK": BẮT BUỘC trả 1–3 hình sgk, TUYỆT ĐỐI KHÔNG trả {"illustrations":[]}. Dùng đúng hình/mô tả trong SGK, không bịa số đo trái SGK. Chỉ bài thuần chữ/số đại số, không có hình vẽ hay tín hiệu hình học mới được trả {"illustrations":[]}.
     - Không markdown, không lời dẫn.
     
     NỘI DUNG BÀI (OCR SGK + hoạt động đã soạn):

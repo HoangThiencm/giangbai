@@ -1,5 +1,20 @@
 # IMPLEMENT: Duyệt giáo án theo tổ chuyên môn
 
+## Bổ sung Canvas: hình vẽ SGK và hình học
+
+- `js/khbd-app.js`: Canvas nay trích xuất `figures` (`id`, `description`, `subsection`) ở từng lô SGK, chuẩn hóa và khử trùng lặp giữa các lô; ngữ cảnh SGK có mục `## Hình vẽ trong SGK`.
+- Khi AI liệt kê ảnh trả rỗng nhưng nguồn có hình SGK hoặc có tín hiệu hình học mạnh, Canvas dựng tối đa ba đặc tả SVG SGK từ nguồn. Detector fallback riêng chỉ nhận các tín hiệu trực quan như tam giác, đường tròn, đồ thị, trục số, hình không gian hoặc tọa độ; không coi `tập hợp` hay đại số thuần là hình học. Fallback cấm tự thêm nhãn, ký hiệu hoặc số đo không nhìn thấy; bài thuần chữ/số vẫn giữ thông báo không cần hình.
+- `js/khbd-prompts.js`: prompt minh họa bắt buộc trả 1–3 hình SGK cho hình học/đồ thị/trục số hoặc khi SGK có figures.
+- `tests/canvas-geometry-figures-smoke.js`: kiểm tra schema, merge, ngữ cảnh figures và nhánh fallback.
+
+## Kiểm thử Canvas hình vẽ
+
+- PASS: `node tests/canvas-geometry-figures-smoke.js`
+- PASS: `node tests/canvas-textbook-analysis-smoke.js`
+- PASS: `node tests/canvas-prompts-integrity-smoke.js`
+- PASS: `node tests/canvas-soankhbd-smoke.js`
+- PASS: `git diff --check`
+
 ## Phạm vi đã thực hiện
 
 - `api/duyetgiaoan.php`: thêm `get_department_teachers`, dùng `state.teachers` của kế hoạch phân công mới nhất (hoặc `plan_id` được chọn), chuẩn hóa phân công môn/lớp; `get_ppct_catalog` kiểm tra giáo viên có trong kế hoạch trước khi đọc PPCT của chính giáo viên đó.

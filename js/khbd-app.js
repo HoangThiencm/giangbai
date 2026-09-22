@@ -1925,6 +1925,49 @@ function filterIllustrationSpecs(specs, context) {
   return out;
 }
 
+function sourceTextbookFigures(text) {
+  const source = String(text || "");
+  const match = source.match(/##\s*Hình vẽ trong SGK\s*([\s\S]*?)(?=\n##\s|$)/i);
+  if (!match) return [];
+  return match[1].split(/\r?\n/).map(line => line.trim())
+    .filter(line => /^[-*]\s+/.test(line))
+    .map(line => line.replace(/^[-*]\s+/, "").trim())
+    .filter(Boolean).slice(0, 3);
+}
+
+function hasStrongGeometrySignal(text) {
+  // Keep this narrower than looksLikeMathDiagram(): that helper also accepts
+  // "tập hợp" for filtering illustration kinds, but a set/algebra lesson does
+  // not by itself justify creating a diagram when the AI returned none.
+  return /tam giác|tứ giác|đa giác|đường tròn|góc|trung trực|vuông góc|song song|đoạn thẳng|đường thẳng|hình bình hành|hình thang|hình chữ nhật|hình vuông|hình chóp|lăng trụ|hình hộp|hình nón|hình trụ|đồ thị|trục số|hệ trục|mặt phẳng tọa độ|tọa độ/i.test(String(text || ""));
+}
+
+function buildSourceFigureFallbackSpecs(context) {
+  const source = String(context?.textbook_content || "");
+  const figures = sourceTextbookFigures(source);
+  const evidence = [context?.topic, source, context?.activities_content].filter(Boolean).join("\n");
+  const strongGeometry = hasStrongGeometrySignal(evidence);
+  if (!figures.length && !strongGeometry) return [];
+  const rows = figures.length ? figures : [String(context?.topic || "Hình minh họa hình học SGK")];
+  return rows.slice(0, 3).map((figure, index) => {
+    const parts = figure.match(/^([^(:]+?)(?:\s*\(([^)]+)\))?\s*:\s*([\s\S]+)$/);
+    const title = (parts?.[1] || figure).trim();
+    const subsection = (parts?.[2] || "").trim();
+    const description = (parts?.[3] || figure).trim();
+    return {
+      id: `ill_sgk_fallback_${index + 1}`,
+      kind: "sgk",
+      title,
+      caption: title,
+      locus: "B",
+      subsection,
+      // This is intentionally an evidence-bound instruction: fallback may
+      // recover a missed AI list, but must not manufacture labels or measures.
+      prompt: `Vẽ lại đúng hình SGK theo nguồn sau: ${description}. Chỉ thể hiện đối tượng, nhãn và quan hệ nhìn thấy trong nguồn; không tự thêm số đo, tên đỉnh, ký hiệu hay chi tiết thực tế. Nền trắng, nét đen phong cách SGK.`
+    };
+  });
+}
+
 function buildIllustrationImagePrompt(spec) {
   const detail = String(spec.prompt || spec.title || "").trim();
   if (spec.kind === "thuc_te") {
@@ -2262,7 +2305,8 @@ async function generateLessonIllustrations({ silent = false } = {}) {
   try {
     updateProgress(88, "Đang phân tích hình vẽ toán học & minh họa theo SGK...");
     const raw = await geminiAPI.generateContent(prompt, [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, appState.generationController?.signal, { maxOutputTokens: 2048 });
-    const specs = filterIllustrationSpecs(parseIllustrationSpecs(raw), context);
+    let specs = filterIllustrationSpecs(parseIllustrationSpecs(raw), context);
+    if (!specs.length) specs = buildSourceFigureFallbackSpecs(context);
     if (!specs.length) {
       appState.content.illustrations = [];
       renderIllustrationGallery();
@@ -7551,7 +7595,8 @@ function canvasTextbookAnalysisPrompt(batchLabel, priorContext = "") {
     "Không suy đoán nội dung không nhìn thấy. TUYỆT ĐỐI KHÔNG điền chỗ trống bằng trí nhớ; nếu mờ, khuất hoặc thiếu trang, ghi unknowns là cần đối chiếu SGK.",
     priorContext ? `Ngữ cảnh lô trước để nối tiếp, không lặp lại hoặc gán sang đề mục mới: ${priorContext}` : "",
     `Phạm vi lô đang phân tích: ${batchLabel}.`,
-    "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"sections\":[{\"title\":\"\",\"coreKnowledge\":\"\",\"activities\":[{\"label\":\"HĐ 1\",\"task\":\"\"}]}],\"exercises\":[{\"code\":\"Bài 1.36\",\"statement\":\"\"}],\"unknowns\":[\"\"]}.",
+    "Quét toàn bộ trang trong lô và liệt kê mỗi hình vẽ, sơ đồ hình học, đồ thị, trục số hoặc hình không gian nhìn thấy; không suy đoán phần bị mờ. Mỗi figures gồm mã/nhãn hình, mô tả những gì thực sự nhìn thấy và đề mục chứa hình.",
+    "Chỉ trả JSON hợp lệ, không markdown: {\"subject\":\"\",\"grade\":\"\",\"topic\":\"\",\"periodCount\":null,\"sections\":[{\"title\":\"\",\"coreKnowledge\":\"\",\"activities\":[{\"label\":\"HĐ 1\",\"task\":\"\"}]}],\"exercises\":[{\"code\":\"Bài 1.36\",\"statement\":\"\"}],\"figures\":[{\"id\":\"Hình 1\",\"description\":\"mô tả chi tiết hình vẽ trong SGK\",\"subsection\":\"mục chứa hình\"}],\"unknowns\":[\"\"]}.",
     "sections chỉ gồm đề mục lớn; coreKnowledge, activities và exercises phải ở đúng thứ tự sư phạm, thuộc đúng đề mục."
   ].filter(Boolean).join("\n");
 }
@@ -7631,6 +7676,31 @@ function normalizeCanvasTextbookExercise(raw) {
   return { code, statement };
 }
 
+function normalizeCanvasTextbookFigure(raw) {
+  const id = String(raw && raw.id || "").trim();
+  const description = String(raw && raw.description || raw && raw.prompt || "").trim();
+  const subsection = String(raw && raw.subsection || raw && raw.section || "").trim();
+  if (!id && !description) return null;
+  return { id: id || "Hình vẽ SGK", description, subsection };
+}
+
+function normalizeCanvasTextbookFigureKey(value) {
+  return String(value || "").toLocaleLowerCase("vi-VN")
+    .replace(/[\W_]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function mergeCanvasTextbookFigures(figures) {
+  const used = new Set();
+  return (figures || []).map(normalizeCanvasTextbookFigure).filter(Boolean).filter(figure => {
+    // The same diagram can be on the final page of one batch and the first
+    // page of the next. Deduplicate only its visible identity, not its facts.
+    const key = [figure.id, figure.description || figure.subsection].map(normalizeCanvasTextbookFigureKey).join("|");
+    if (used.has(key)) return false;
+    used.add(key);
+    return true;
+  }).slice(0, 40);
+}
+
 function parseCanvasTextbookAnalysis(raw) {
   const parsed = parseAiJsonSafely(raw, "Phân tích cấu trúc SGK");
   const sections = mergeCanvasTextbookSections(
@@ -7642,6 +7712,7 @@ function parseCanvasTextbookAnalysis(raw) {
     .map(normalizeCanvasTextbookExercise)
     .filter(Boolean)
     .slice(0, 40);
+  const figures = mergeCanvasTextbookFigures(parsed.figures);
   const points = (Array.isArray(parsed.majorPoints) ? parsed.majorPoints : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 3);
   const unknowns = (Array.isArray(parsed.unknowns) ? parsed.unknowns : []).map(v => String(v || "").trim()).filter(Boolean).slice(0, 6);
   const fromSections = sections.map((section, index) => ({
@@ -7655,7 +7726,7 @@ function parseCanvasTextbookAnalysis(raw) {
   return {
     subject: String(parsed.subject || "").trim(), grade: String(parsed.grade || "").trim(), topic: String(parsed.topic || "").trim(),
     periodCount: Number(parsed.periodCount) || null, lessonScope: String(parsed.lessonScope || "").trim(),
-    majorPoints: points, subsections, sections, exercises,
+    majorPoints: points, subsections, sections, exercises, figures,
     summary: String(parsed.summary || "").trim().slice(0, 800), unknowns
   };
 }
@@ -7713,15 +7784,17 @@ async function analyzeCanvasTextbookSafely(onProgress) {
   // later batch then belongs to the last heading in the preceding batch.
   const sections = mergeCanvasTextbookSections(analyses.flatMap(item => item.sections || [])).slice(0, 24);
   const exercises = analyses.flatMap(item => item.exercises || []).slice(0, 40);
+  const figures = mergeCanvasTextbookFigures(analyses.flatMap(item => item.figures || []));
   const subsections = (typeof normalizeTextbookSubsectionProfiles === "function"
     ? normalizeTextbookSubsectionProfiles(sections.length ? sections.map((section, index) => ({ index: index + 1, title: section.title, signals: (section.activities || []).map(item => item.label).filter(Boolean) })) : analyses.flatMap(item => item.subsections || []))
     : []).slice(0, 4);
-  return { ...first, majorPoints, subsections, sections, exercises, unknowns, summary, batches: analyses.length };
+  return { ...first, majorPoints, subsections, sections, exercises, figures, unknowns, summary, batches: analyses.length };
 }
 
 function formatCanvasTextbookContext(data) {
   const sections = Array.isArray(data && data.sections) ? data.sections : [];
   const exercises = Array.isArray(data && data.exercises) ? data.exercises : [];
+  const figures = mergeCanvasTextbookFigures(data && data.figures);
   const sectionLines = [];
   if (sections.length) {
     sectionLines.push("## Đề mục SGK (nguyên văn)");
@@ -7761,11 +7834,20 @@ function formatCanvasTextbookContext(data) {
     exerciseLines.push("## Vận dụng");
     applyActs.forEach(act => exerciseLines.push(`- ${act.label}: ${act.task}`));
   }
+  const figureLines = [];
+  if (figures.length) {
+    figureLines.push("## Hình vẽ trong SGK");
+    figures.forEach(figure => {
+      const place = figure.subsection ? ` (${figure.subsection})` : "";
+      const detail = figure.description ? `: ${figure.description}` : "";
+      figureLines.push(`- ${figure.id}${place}${detail}`);
+    });
+  }
   return [
     "## Ngữ cảnh SGK đã phân tích", data.topic && `- Chủ đề: ${data.topic}`, data.subject && `- Môn: ${data.subject}`,
     data.grade && `- Khối lớp: ${data.grade}`, data.periodCount && `- Số tiết tham khảo: ${data.periodCount}`,
     data.lessonScope && `- Phạm vi bài: ${data.lessonScope}`, data.majorPoints?.length && `- Ý chính: ${data.majorPoints.join("; ")}`,
-    ...sectionLines, ...exerciseLines,
+    ...sectionLines, ...exerciseLines, ...figureLines,
     data.summary && `- Tóm lược: ${data.summary}`, data.unknowns?.length && `- Cần xác minh: ${data.unknowns.join("; ")}`
   ].filter(Boolean).join("\n");
 }

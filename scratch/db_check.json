@@ -1,0 +1,61 @@
+{
+  "6": {
+    "ok": true,
+    "profiles": [
+      {
+        "id": "11",
+        "subject": "toan",
+        "grade": "6",
+        "academic_year": "2026-2027",
+        "school_name": "THCS Trần Phú",
+        "updated_at": "2026-09-22 22:14:14"
+      },
+      {
+        "id": "10",
+        "subject": "toan",
+        "grade": "6",
+        "academic_year": "",
+        "school_name": "THCS Trần Phú",
+        "updated_at": "2026-09-22 22:12:53"
+      },
+      {
+        "id": "1",
+        "subject": "toan",
+        "grade": "6",
+        "academic_year": "",
+        "school_name": "",
+        "updated_at": "2026-09-17 06:02:36"
+      }
+    ]
+  },
+  "7": {
+    "ok": true,
+    "profiles": []
+  },
+  "8": {
+    "ok": true,
+    "profiles": [
+      {
+        "id": "8",
+        "subject": "toan",
+        "grade": "8",
+        "academic_year": "2026-2027",
+        "school_name": "",
+        "updated_at": "2026-09-20 12:52:04"
+      }
+    ]
+  },
+  "9": {
+    "ok": true,
+    "profiles": [
+      {
+        "id": "2",
+        "subject": "toan",
+        "grade": "9",
+        "academic_year": "",
+        "school_name": "",
+        "updated_at": "2026-09-16 23:05:03"
+      }
+    ]
+  }
+}
