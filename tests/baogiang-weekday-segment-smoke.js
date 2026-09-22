@@ -36,6 +36,28 @@ const threeWeekPlan = vm.runInContext(`parseBaoGiangCurriculum([
     '9 | Toán | 6 | 8 | Hình học | Bài 11. Tỉ số lượng giác của góc nhọn (tiếp theo) | 1'
 ].join('\\n')).get(baoGiangKey('9', 'Toán')).all`, context);
 assert.deepEqual(JSON.parse(JSON.stringify(threeWeekPlan.map(item => [item.week, item.ppct, item.segment]))), [[4, '6', '1/3'], [5, '7', '2/3'], [6, '8', '3/3']]);
+const userBugCurriculum = [
+    '6 | Toán | 2 | 6 | Số học | Luyện tập chung | 1',
+    '6 | Toán | 3 | 7 | Số học | Luyện tập chung | 1',
+    '6 | Toán | 4 | 11 | Số học | Luyện tập chung | 1'
+].join('\n');
+const userPlan = vm.runInContext(`parseBaoGiangCurriculum(${JSON.stringify(userBugCurriculum)}).get(baoGiangKey("6", "Toán")).all`, context);
+assert.deepEqual(JSON.parse(JSON.stringify(userPlan.map(item => [item.week, item.ppct, item.segment]))), [[2, '6', '1/1'], [3, '7', '1/1'], [4, '11', '1/1']]);
+const genericWithContinuation = [
+    '6 | Toán | 2 | 6 | Số học | Luyện tập chung | 1',
+    '6 | Toán | 3 | 7 | Số học | Luyện tập chung (tiếp theo) | 1'
+].join('\n');
+const contPlan = vm.runInContext(`parseBaoGiangCurriculum(${JSON.stringify(genericWithContinuation)}).get(baoGiangKey("6", "Toán")).all`, context);
+assert.deepEqual(JSON.parse(JSON.stringify(contPlan.map(item => [item.ppct, item.segment]))), [['6', '1/2'], ['7', '2/2']]);
+const diffStrands = [
+    '6 | Toán | 3 | 7 | Số học | Luyện tập chung | 1',
+    '6 | Toán | 3 | 10 | Hình học | Luyện tập chung | 1'
+].join('\n');
+const strandPlan = vm.runInContext(`parseBaoGiangCurriculum(${JSON.stringify(diffStrands)}).get(baoGiangKey("6", "Toán")).all`, context);
+assert.deepEqual(JSON.parse(JSON.stringify(strandPlan.map(item => [item.ppct, item.strand, item.segment]))), [['7', 'Số học', '1/1'], ['10', 'Hình học', '1/1']]);
+const mismatchCurriculum = '6 | Toán | 3 | 7 | Số học | Luyện tập chung | 2';
+const mismatchPlan = vm.runInContext(`parseBaoGiangCurriculum(${JSON.stringify(mismatchCurriculum)}).get(baoGiangKey("6", "Toán")).all`, context);
+assert.deepEqual(JSON.parse(JSON.stringify(mismatchPlan.map(item => [item.ppct, item.segment]))), [['7', '1/1']]);
 assert.equal(vm.runInContext("formatBaoGiangLessonDisplay({ teaching_week: 4, lesson: { lesson: 'Bài 11. Tỉ số lượng giác của góc nhọn', ppct: '6', segment: '1/3' } })", context), 'Tuần 4  Bài 11. Tỉ số lượng giác của góc nhọn (tiết ppct: 6) 1/3');
 
 const warningSource = ['baoGiangTeachingWeek', 'baoGiangGrade', 'baoGiangPlanFor', 'decorateBaoGiangRows'].map(declaration).join('\n');

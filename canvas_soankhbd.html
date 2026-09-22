@@ -32,9 +32,7 @@
         host: "https://hoangthiencm.id.vn",
         model: "gemini-3-flash-preview",
         version: "20260916-ppct-settings-v10",
-        systemGemini: true,
-        geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php",
-        account: "hoangthiencm@gmail.com",
+        directGemini: true,
         connected: false
       };
     })();
@@ -232,7 +230,7 @@
         <div class="brand-icon">✨</div>
         <div>
           <h1>Soạn Kế hoạch Bài dạy AI — Gemini Canvas</h1>
-          <p>Chạy trong Canvas với Gemini do hệ thống cấp • Không yêu cầu API key người dùng • Chuẩn CV 5512 &amp; NLS, AI</p>
+          <p>Chạy trong Canvas với Gemini gọi trực tiếp • Không gửi API key người dùng • Chuẩn CV 5512 &amp; NLS, AI</p>
         </div>
       </div>
       <div class="header-actions">
@@ -245,7 +243,7 @@
         <button id="btnCancelGeneration" class="btn btn-danger" disabled title="Dừng tác vụ AI đang chạy" style="color:#ffffff;background:#b91c1c;border-color:#fecaca;opacity:.92">
           <i data-lucide="circle-stop"></i> Hủy tạo
         </button>
-        <button id="btnManageKeys" class="btn btn-outline" title="Canvas dùng Gemini key hệ thống do Admin cấu hình" style="pointer-events:none;opacity:.85">
+        <button id="btnManageKeys" class="btn btn-outline" title="Canvas gọi Gemini trực tiếp, không dùng API key hệ thống" style="pointer-events:none;opacity:.85">
           <i data-lucide="sparkles"></i> Canvas · <span id="keyCountBadge">gemini-3-flash-preview</span>
         </button>
         <button id="btnManagePpctCatalog" class="btn btn-outline" type="button" title="Đồng bộ danh mục PPCT với CSDL hosting (hoangthiencm@gmail.com)">
@@ -294,8 +292,8 @@
 
       <div class="tool-group">
         <label for="selectModel">Model AI:</label>
-        <select id="selectModel" disabled title="Canvas khóa model hệ thống gemini-3-flash-preview">
-          <option value="gemini-3-flash-preview" selected>Gemini 3 Flash Preview (Hệ thống Canvas)</option>
+        <select id="selectModel" disabled title="Canvas khóa model Gemini trực tiếp gemini-3-flash-preview">
+          <option value="gemini-3-flash-preview" selected>Gemini 3 Flash Preview (Canvas trực tiếp)</option>
         </select>
       </div>
     </div>
@@ -929,10 +927,10 @@
       </div>
       <div class="modal-body">
         <div style="padding: 0.6rem 0.85rem; border-radius: 6px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.82rem; margin-bottom: 0.75rem;">
-          ✓ <b>Chế độ Gemini Canvas:</b> Mặc định kết nối an toàn Gateway máy chủ hoangthiencm.id.vn (model <code>gemini-3-flash-preview</code>). Bạn có thể để trống hoặc nạp key cá nhân nếu muốn.
+          ✓ <b>Chế độ Gemini Canvas trực tiếp:</b> Gọi Gemini với model <code>gemini-3-flash-preview</code>, không đi qua Gateway hay gửi API key.
         </div>
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-          Canvas dùng Gemini do hệ thống cấp. <b>Đọc nội dung SGK</b> và <b>soạn KHBD</b> đều đi qua tuyến Gemini Canvas; không cần API key cá nhân.
+          <b>Đọc nội dung SGK</b> và <b>soạn KHBD</b> gọi Gemini trực tiếp từ Canvas; không dùng API key cá nhân hoặc key hệ thống.
         </p>
 
         <label for="textareaApiKeys" style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem;">Gemini — soạn kế hoạch bài dạy</label>
@@ -950,7 +948,7 @@
           </div>
         </div>
 
-        <label for="textareaMistralKeys" style="display:block; font-size:0.82rem; font-weight:700; margin:1rem 0 0.35rem;">Gemini Canvas OCR — do hệ thống cấp</label>
+        <label for="textareaMistralKeys" style="display:block; font-size:0.82rem; font-weight:700; margin:1rem 0 0.35rem;">Gemini Canvas OCR — gọi trực tiếp</label>
         <textarea id="textareaMistralKeys" rows="4" disabled style="width: 100%; padding: 0.6rem; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px;" placeholder="Canvas không dùng Mistral hoặc API key cá nhân để OCR."></textarea>
         <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <span id="mistralKeyValidationStatus" style="font-size: 0.82rem; font-weight: 600;"></span>
@@ -1356,7 +1354,7 @@
       const cfg = window.__KHBD_CANVAS__ || {};
       const MODEL = cfg.model || "gemini-3-flash-preview";
       const HOST = cfg.host || "https://hoangthiencm.id.vn";
-      const CANVAS_ENDPOINT = "https://hoangthiencm.id.vn/api/canvas_gemini.php";
+      const GEMINI_DIRECT_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
 
       function setBanner(text, state) {
         const el = document.getElementById("canvasHostBanner");
@@ -1397,35 +1395,23 @@
       };
       geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
         const useModel = /image/i.test(String(model || "")) ? model : MODEL;
-        const response = await this.fetchWithTimeout(CANVAS_ENDPOINT, {
+        const response = await this.fetchWithTimeout(GEMINI_DIRECT_ENDPOINT + useModel + ":generateContent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "omit",
-          body: JSON.stringify({ preferred_model: useModel, payload: payload, timeout: Math.max(10, Math.round((timeoutMs || 95000) / 1000)) }),
+          body: JSON.stringify(payload),
           signal: signal
         }, timeoutMs || 95000);
-        const envelope = await response.json().catch(function () { return {}; });
-        const metadata = envelope.meta || { tier: envelope.tier, model: envelope.model, fallback_used: envelope.fallback_used };
+        const metadata = { route: "canvas_direct", model: useModel };
         geminiAPI.lastCanvasMeta = metadata;
-        if (metadata.route) {
-          const routeLabel = metadata.fallback_used ? "dự phòng hệ thống" : "hệ thống";
-          setBanner("Gemini Canvas đang dùng tuyến " + routeLabel + " (" + (metadata.model || MODEL) + ").", /^(system|system_fallback)$/.test(metadata.route) ? "ok" : "err");
-          geminiAPI.emitGeminiStatus({ type: "canvas_route", message: "Gemini Canvas: tuyến " + routeLabel + " · " + (metadata.model || MODEL), route: metadata.route, model: metadata.model || MODEL, fallback: Boolean(metadata.fallback_used) });
+        geminiAPI.emitGeminiStatus({ type: "canvas_direct", message: "Gemini Canvas: gọi trực tiếp · " + useModel, route: metadata.route, model: useModel });
+        if (response.status === 401 || response.status === 403) {
+          setBanner("Gemini Canvas không cấp quyền gọi API trực tiếp (HTTP " + response.status + "). Không dùng tuyến hệ thống.", "err");
+        } else if (response.ok) {
+          setBanner("Gemini Canvas đang gọi trực tiếp (" + useModel + "), không dùng proxy hoặc API key hệ thống.", "ok");
         }
-        if (!response.ok || !envelope.ok || !envelope.body) {
-          const message = envelope.error || "Không thể gọi Gemini Canvas qua host.";
-          return new Response(JSON.stringify({ error: { message: message } }), {
-            status: response.status || 502,
-            statusText: response.statusText || "Canvas host error",
-            headers: { "Content-Type": "application/json" }
-          });
-        }
-        const geminiResponse = new Response(JSON.stringify(envelope.body), {
-          status: 200,
-          headers: { "Content-Type": "application/json" }
-        });
-        geminiResponse.canvasMeta = metadata;
-        return geminiResponse;
+        response.canvasMeta = metadata;
+        return response;
       };
       window.__KHBD_CANVAS_PATCHED__ = true;
       cfg.connected = true;
@@ -1717,7 +1703,7 @@
           if (footer) footer.textContent = "Đang dùng danh mục bài học dự phòng.";
         } else if (hostOk) {
           cfg.connected = true;
-          setBanner("Đã kết nối host " + HOST.replace(/^https:\/\//, "") + " — dùng Gemini Canvas (" + MODEL + ") do hệ thống cấp, không cần API key.", "ok");
+          setBanner("Đã kết nối host " + HOST.replace(/^https:\/\//, "") + " — Gemini Canvas gọi trực tiếp (" + MODEL + "), không dùng proxy hoặc API key hệ thống.", "ok");
           if (footer) footer.textContent = "Đã kết nối host. Sẵn sàng.";
         } else {
           cfg.connected = false;

@@ -12,7 +12,6 @@ console.log('================================================================');
 const root = path.join(__dirname, '..');
 const sourceHtml = fs.readFileSync(path.join(root, 'soankhbd.html'), 'utf8');
 const targetPaths = [
-  path.join(root, 'backupcode viettailieu', 'canvas_soankhbd.html'),
   path.join(root, 'canvas_soankhbd.html')
 ];
 
@@ -107,8 +106,14 @@ for (const targetPath of targetPaths) {
 
   // 2. Kiểm tra các thành phần đặc trưng của Canvas
   assert.ok(targetIds.has('canvasHostBanner'), `${relPath} phải có thanh banner #canvasHostBanner`);
-  assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/api/canvas_gemini.php'), `${relPath} phải trỏ endpoint canvas_gemini.php`);
-  assert.ok(targetHtml.includes('gemini-3-flash-preview'), `${relPath} phải sử dụng model hệ thống gemini-3-flash-preview`);
+  assert.ok(targetHtml.includes('https://generativelanguage.googleapis.com/v1beta/models/'), `${relPath} phải gọi Gemini trực tiếp`);
+  assert.ok(!targetHtml.includes('canvas_gemini.php'), `${relPath} không được chứa endpoint proxy Gemini hệ thống`);
+  assert.ok(!targetHtml.includes('systemGemini: true'), `${relPath} không được bật tuyến Gemini hệ thống`);
+  assert.ok(!targetHtml.includes('geminiEndpoint:'), `${relPath} không được cấu hình endpoint proxy Gemini`);
+  assert.ok(!targetHtml.includes('?key='), `${relPath} không được đính API key vào URL Gemini`);
+  assert.ok(!/Authorization\s*:/.test(targetHtml), `${relPath} request Gemini Canvas không được gửi Authorization`);
+  assert.ok(targetHtml.includes('credentials: "omit"'), `${relPath} request Gemini Canvas không gửi cookie`);
+  assert.ok(targetHtml.includes('gemini-3-flash-preview'), `${relPath} phải sử dụng model Gemini Canvas gemini-3-flash-preview`);
   assert.ok(targetHtml.includes('canvasConfirm'), `${relPath} phải có hàm xác nhận modal nội bộ canvasConfirm`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-docx.js"'), `${relPath} phải nạp khbd-docx.js cục bộ khi chạy file/localhost`);
   assert.ok(targetHtml.includes('https://hoangthiencm.id.vn/js/khbd-docx.js'), `${relPath} phải giữ nguồn khbd-docx.js từ hosting khi chạy Canvas`);
@@ -147,8 +152,6 @@ for (const targetPath of targetPaths) {
   assert.ok(!/\(function ensureKhbdPedagogyCatalogFallback\(\)\s*\{[\s\S]*?document\.write\([\s\S]*?cdnCatalog[\s\S]*?\}\)\(\);/.test(targetHtml), `${relPath} không được IIFE ensureKhbdPedagogyCatalogFallback() chạy tức thì gây race`);
   assert.ok(targetHtml.includes('20260916-canvas-module-v9'), `${relPath} phải cache-bust bản Canvas module v9`);
   assert.ok(!targetHtml.includes('canvas-system-v3'), `${relPath} không được nạp Canvas cache v3 cũ`);
-  assert.ok(targetHtml.includes('systemGemini: true'), `${relPath} phải bật rõ tuyến Gemini hệ thống Canvas`);
-  assert.ok(targetHtml.includes('geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php"'), `${relPath} phải khai báo endpoint Gemini Canvas tin cậy`);
   assert.ok(targetHtml.includes('canvasTimeBudgetAndRoleBreaks'), `${relPath} phải nhúng patch định mức 1 tiết + GV/HS`);
   assert.ok(targetHtml.includes('pedagogy-activity'), `${relPath} patch phải lọc hoạt động đặc thù`);
   assert.ok(/HEAVY\s*=\s*\/[^\n]*station/.test(targetHtml), `${relPath} patch phải chặn Station/Trạm`);
@@ -177,15 +180,16 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('setTimeout(function () { pollConnection(retriesLeft - 1); }, 300)'), `${relPath} phải retry mỗi 300ms`);
   assert.ok(!/setTimeout\(function \(\) \{\s*initConnection\(\);\s*bindCanvasEvents\(\);\s*\}, 350\)/.test(targetHtml), `${relPath} không còn setTimeout(initConnection, 350) đơn lẻ`);
 
-  // Canvas OCR uses exactly the server Gemini route: no fake Mistral key/client
-  // that makes khbd-app attempt OCR twice before falling back.
+  // Canvas OCR uses the direct Gemini adapter: no fake Mistral key/client.
   assert.ok(!targetHtml.includes('canvas-session'), `${relPath} không dùng pseudo key canvas-session`);
   assert.ok(!targetHtml.includes('mistral-ocr-client.js'), `${relPath} không nạp Mistral OCR client trong Canvas`);
   assert.ok(!targetHtml.includes('window.MistralOcr ='), `${relPath} không giả MistralOcr bằng Gemini`);
-  assert.ok(targetHtml.includes('preferred_model: useModel'), `${relPath} gửi preferred_model tới Canvas API`);
-  assert.ok(targetHtml.includes('allowEmptyKey: true'), `${relPath} cho phép tuyến Gemini hệ thống không cần key trình duyệt`);
+  assert.ok(targetHtml.includes('body: JSON.stringify(payload)'), `${relPath} gửi nguyên payload Gemini đa phương thức trực tiếp`);
+  assert.ok(targetHtml.includes('allowEmptyKey: true'), `${relPath} cho phép Gemini Canvas không cần key trình duyệt`);
   assert.ok(targetHtml.includes('lastCanvasMeta = metadata'), `${relPath} lưu metadata tuyến/model Canvas an toàn`);
-  assert.ok(targetHtml.includes('type: "canvas_route"'), `${relPath} báo tuyến Gemini Canvas thực tế`);
+  assert.ok(targetHtml.includes('type: "canvas_direct"'), `${relPath} báo tuyến Gemini Canvas trực tiếp`);
+  assert.ok(targetHtml.includes('response.status === 401 || response.status === 403'), `${relPath} phải chẩn đoán Canvas không cấp quyền direct API`);
+  assert.ok(targetHtml.includes('Không dùng tuyến hệ thống.'), `${relPath} lỗi quyền không được fallback về hệ thống`);
   assert.ok(!targetHtml.includes('user_account:'), `${relPath} không gửi danh tính người dùng từ Canvas`);
 
   // 3. Kiểm tra nút 1-Click

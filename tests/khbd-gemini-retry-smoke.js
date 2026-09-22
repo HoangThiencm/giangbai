@@ -1,6 +1,9 @@
 /** Node 18+ smoke tests for Gemini 503/429 retry, backoff, and model fallback. */
 "use strict";
 
+const fs = require("fs");
+const path = require("path");
+
 function createLocalStorage() {
   const store = {};
   return {
@@ -216,32 +219,17 @@ async function case8_nonCanvasWithoutKeyKeepsGuard() {
   assert(calls === 0, `case8: guard makes no request (got ${calls})`);
 }
 
-async function case9_canvasWithoutKeyUsesSystemEndpointOnce() {
-  const api = makeApi();
-  api.apiKeys = [];
-  api.loadKeysFromLocalStorage = function () { this.apiKeys = []; };
-  global.window = { __KHBD_CANVAS__: {
-    systemGemini: true,
-    geminiEndpoint: "https://hoangthiencm.id.vn/api/canvas_gemini.php",
-    model: "gemini-3-flash-preview"
-  } };
-  const calls = [];
-  global.fetch = async (url, init) => {
-    calls.push({ url, init });
-    return {
-      ok: true, status: 200, statusText: "OK", headers: { get: () => null },
-      json: async () => ({ ok: true, meta: { route: "system", model: "gemini-3-flash-preview" }, body: { candidates: [{ content: { parts: [{ text: "OCR Canvas hợp lệ" }] } }] } })
-    };
-  };
-  const text = await api.generateContent("OCR SGK", [{ mimeType: "image/jpeg", base64: "aGVsbG8=" }], null, 0.3, null, { _testFastRetry: true });
-  const sent = JSON.parse(calls[0].init.body);
-  assert(text === "OCR Canvas hợp lệ", "case9: Canvas gets text from the system envelope");
-  assert(calls.length === 1, `case9: Canvas OCR calls proxy exactly once (got ${calls.length})`);
-  assert(calls[0].url === "https://hoangthiencm.id.vn/api/canvas_gemini.php", "case9: Canvas uses only the configured proxy endpoint");
-  assert(JSON.stringify(Object.keys(sent).sort()) === JSON.stringify(["payload", "preferred_model", "timeout"]), "case9: endpoint payload contains no key or client identity");
-  assert(sent.preferred_model === "gemini-3-flash-preview", "case9: Canvas sends its configured model");
-  assert(sent.timeout === 85, "case9: Canvas requests the 85-second server deadline while retaining a client margin");
-  delete global.window;
+async function case9_canvasUsesDirectAdapterWithoutSystemRoute() {
+  const canvasHtml = fs.readFileSync(path.join(__dirname, "..", "canvas_soankhbd.html"), "utf8");
+  assert(canvasHtml.includes('const GEMINI_DIRECT_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/"'), "case9: Canvas defines the direct Gemini API endpoint");
+  assert(canvasHtml.includes('GEMINI_DIRECT_ENDPOINT + useModel + ":generateContent"'), "case9: Canvas generates the direct model URL");
+  assert(canvasHtml.includes('body: JSON.stringify(payload)'), "case9: Canvas sends the Gemini payload unchanged");
+  assert(canvasHtml.includes('credentials: "omit"'), "case9: Canvas direct request omits cookies");
+  assert(!canvasHtml.includes('canvas_gemini.php'), "case9: Canvas creates no server-system route");
+  assert(!canvasHtml.includes('systemGemini: true'), "case9: Canvas does not opt into the system key route");
+  assert(!canvasHtml.includes('?key='), "case9: Canvas direct request does not include an API key");
+  assert(!/Authorization\s*:/.test(canvasHtml), "case9: Canvas direct request does not include Authorization");
+  assert(canvasHtml.includes('response.status === 401 || response.status === 403'), "case9: Canvas diagnoses missing direct API permission");
 }
 
 (async () => {
@@ -254,7 +242,7 @@ async function case9_canvasWithoutKeyUsesSystemEndpointOnce() {
     await case6_textAcrossCandidatesAndParts();
     await case7_empty200DoesNotRetry();
     await case8_nonCanvasWithoutKeyKeepsGuard();
-    await case9_canvasWithoutKeyUsesSystemEndpointOnce();
+    await case9_canvasUsesDirectAdapterWithoutSystemRoute();
   } catch (err) {
     failed += 1;
     console.error("FAIL: uncaught", err);
