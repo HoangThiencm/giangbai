@@ -1403,7 +1403,10 @@
         // OCR hiện đúng Flash 2.5, thay vì chỉ đổi ở tầng fetch bên dưới.
         const hasMedia = (Array.isArray(images) && images.length > 0)
           || Boolean(options && (options.hasMedia || options.purpose === "textbook_analysis"));
-        const targetModel = hasMedia ? "gemini-2.5-flash" : (MODEL || "gemini-3-flash-preview");
+        // SVG is deterministic code generation: route it to the fast Flash
+        // model instead of the slower preview/thinking model used for KHBD.
+        const isSvgDrawing = Boolean(options && options.purpose === "svg_drawing");
+        const targetModel = (hasMedia || isSvgDrawing) ? "gemini-2.5-flash" : (MODEL || "gemini-3-flash-preview");
         const previousModel = this.selectedModel;
         this.selectedModel = targetModel;
         try {

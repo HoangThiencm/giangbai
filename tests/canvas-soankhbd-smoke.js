@@ -189,7 +189,8 @@ for (const targetPath of targetPaths) {
   assert.ok(targetHtml.includes('geminiAPI.generateContent = function (prompt, images, systemRole, temperature, signal, options)'), `${relPath} phải phân tuyến model ngay tại generateContent`);
   assert.ok(targetHtml.includes('const hasMedia = (Array.isArray(images) && images.length > 0)'), `${relPath} phải nhận diện ảnh ngay tại generateContent`);
   assert.ok(targetHtml.includes('options.purpose === "textbook_analysis"'), `${relPath} phải nhận diện luồng trích xuất SGK ngay tại generateContent`);
-  assert.ok(targetHtml.includes('const targetModel = hasMedia ? "gemini-2.5-flash" : (MODEL || "gemini-3-flash-preview")'), `${relPath} generateContent phải chọn Flash 2.5 cho OCR và preview cho soạn KHBD`);
+  assert.ok(targetHtml.includes('const isSvgDrawing = Boolean(options && options.purpose === "svg_drawing")'), `${relPath} phải nhận diện yêu cầu vẽ SVG`);
+  assert.ok(targetHtml.includes('const targetModel = (hasMedia || isSvgDrawing) ? "gemini-2.5-flash" : (MODEL || "gemini-3-flash-preview")'), `${relPath} generateContent phải chọn Flash 2.5 cho OCR/SVG và preview cho soạn KHBD`);
   assert.ok(targetHtml.includes('this.selectedModel = targetModel'), `${relPath} phải đặt model trước khi generateContent gốc ghi log`);
   assert.ok(targetHtml.includes('this.selectedModel = previousModel'), `${relPath} phải khôi phục model Canvas sau khi khởi tạo request`);
   assert.ok(targetHtml.includes('body: JSON.stringify(cleanPayloadForCanvas(payload))'), `${relPath} gửi payload Gemini Canvas đã làm sạch`);

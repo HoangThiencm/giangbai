@@ -1,3 +1,19 @@
+# IMPLEMENT: Ổn định tạo SVG Canvas
+
+## Định tuyến và phục hồi SVG
+
+- `js/khbd-app.js`: `generateSvgDrawing` gửi đúng tùy chọn `{ maxOutputTokens: 8192, purpose: 'svg_drawing', timeoutMs: 90000 }`. `extractSvgCode` bỏ fence Markdown `xml`/`svg`, trả lại SVG sạch, và chỉ tự thêm `</svg>` khi phản hồi thực sự đã mở thẻ `<svg>` nhưng bị cắt; văn bản không có SVG vẫn trả chuỗi rỗng.
+- `canvas_soankhbd.html`: adapter Canvas nhận diện `options.purpose === 'svg_drawing'` và định tuyến sang `gemini-2.5-flash`, thay vì model preview/thinking mặc định.
+- `tests/khbd-illustrations-smoke.js`: kiểm tra phản hồi SVG bị cắt trong fence được khép đúng và kiểm tra cấu hình token/purpose/timeout.
+- `tests/canvas-soankhbd-smoke.js`: kiểm tra tuyến Canvas dành riêng cho `svg_drawing` dùng Flash 2.5.
+
+## Kiểm thử SVG Canvas
+
+- PASS: `node tests/khbd-illustrations-smoke.js`
+- PASS: `node tests/canvas-geometry-figures-smoke.js`
+- PASS: `node tests/canvas-soankhbd-smoke.js`
+- PASS: `git diff --check`
+
 # IMPLEMENT: Mở khóa tạo ảnh Gemini Canvas trực tiếp
 
 ## Tạo ảnh Canvas không dùng browser API key

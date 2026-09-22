@@ -1723,11 +1723,26 @@ function illustrationMarker(ill) {
 function extractSvgCode(rawAiText) {
   if (!rawAiText || typeof rawAiText !== "string") return "";
   let text = rawAiText.trim();
-  const match = text.match(/<svg[\s\S]*?<\/svg>/i);
-  if (match) {
-    return match[0].trim();
+  // Gemini occasionally wraps the response in an xml/svg Markdown fence. It
+  // is presentation syntax, not part of the SVG, so remove it before
+  // extracting the source code.
+  text = text
+    .replace(/^\s*```(?:xml|svg)\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
+
+  const svgStart = text.search(/<svg\b/i);
+  if (svgStart < 0) return "";
+
+  const svgText = text.slice(svgStart);
+  const svgEnd = svgText.search(/<\/svg\s*>/i);
+  if (svgEnd >= 0) {
+    return svgText.slice(0, svgEnd + svgText.match(/<\/svg\s*>/i)[0].length).trim();
   }
-  return "";
+
+  // A timeout can cut a valid SVG mid-response. Only complete a response
+  // which demonstrably started an SVG; never invent SVG for prose/non-SVG.
+  return `${svgText.replace(/\s*```\s*$/i, "").trim()}</svg>`;
 }
 
 /**
@@ -1848,7 +1863,7 @@ async function generateSvgDrawing(drawingPrompt, drawingTitle) {
     getSystemRole(appState.selectedSubject, appState.selectedGrade),
     0.1,
     appState.generationController?.signal,
-    { maxOutputTokens: 8192, timeoutMs: 60000 }
+    { maxOutputTokens: 8192, purpose: "svg_drawing", timeoutMs: 90000 }
   );
 
   const svgCode = extractSvgCode(raw);

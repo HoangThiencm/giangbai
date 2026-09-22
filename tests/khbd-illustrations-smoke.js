@@ -142,7 +142,15 @@ assert.doesNotMatch(placed.markdown, /Tính chất đường trung trực[\s\S]*
 const rawWithMarkdown = "Dưới đây là mã SVG:\n```xml\n<svg viewBox=\"0 0 500 400\"><polygon points=\"100,300 400,300 100,100\" fill=\"none\" stroke=\"#000\"/></svg>\n```\nChúc bạn thành công!";
 const extracted = extractSvgCode(rawWithMarkdown);
 assert.strictEqual(extracted, '<svg viewBox="0 0 500 400"><polygon points="100,300 400,300 100,100" fill="none" stroke="#000"/></svg>');
+assert.strictEqual(
+  extractSvgCode('```svg\n<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/>\n```'),
+  '<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>',
+  "Phải bỏ fence SVG và khép thẻ khi phản hồi bị cắt"
+);
 assert.strictEqual(extractSvgCode("Không có svg nào ở đây"), "");
+
+// SVG calls are deliberately given enough output/time budget for coordinate-heavy drawings.
+assert.match(app, /maxOutputTokens:\s*8192,\s*purpose:\s*["']svg_drawing["'],\s*timeoutMs:\s*90000/);
 
 // 5. Kiểm tra sanitizeSvg
 const maliciousSvg = '<svg viewBox="0 0 500 400" onload="alert(1)"><script>evil()</script><foreignObject><div>bad</div></foreignObject><a href="javascript:attack()"><polygon points="0,0 10,10" onclick="hack()"/></a></svg>';
