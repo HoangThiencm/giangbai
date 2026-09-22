@@ -16313,6 +16313,224 @@ ${sourceContext}`;
                 }
             };
 
+            const getOlmLevelTag = (q) => {
+                const raw = String(q?.level || q?.cognitive_level || "").toLowerCase();
+                if (raw.includes("nhận biết") || raw.includes("dễ")) return "[NB] ";
+                if (raw.includes("thông hiểu") || raw.includes("trung bình")) return "[TH] ";
+                if (raw.includes("vận dụng cao") || raw.includes("rất khó")) return "[VDC] ";
+                if (raw.includes("vận dụng") || raw.includes("khó")) return "[VD] ";
+                return "";
+            };
+
+            const exportWordOLM = () => {
+                const dataToExport = mode === "quiz" ? questions : essays;
+                if (!dataToExport || dataToExport.length === 0) {
+                    showSourceNotice("Chưa có câu hỏi để xuất!");
+                    return;
+                }
+
+                const header = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'><title>Đề thi chuẩn OLM.vn</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; color: #000; }
+                        p { margin: 3pt 0; text-align: justify; }
+                        .section-lv1 { font-weight: bold; font-size: 13pt; margin-top: 14pt; margin-bottom: 6pt; }
+                    </style>
+                </head><body>`;
+                let bodyContent = "";
+
+                const appendExplanation = (q) => {
+                    if (q.explanation) bodyContent += `<p><b>[HDG]</b></p><p>${q.explanation}</p>`;
+                };
+                const appendMultipleChoice = (q, num) => {
+                    bodyContent += `<p><b>Câu ${num}:</b> ${getOlmLevelTag(q)}${q.question}</p>`;
+                    (q.options || []).slice(0, 4).forEach((opt, optionIndex) => {
+                        const letter = String.fromCharCode(65 + optionIndex);
+                        const text = cleanOptionText(opt);
+                        bodyContent += q.correctAnswerIndex === optionIndex
+                            ? `<p><u>${letter}. ${text}</u></p>`
+                            : `<p>${letter}. ${text}</p>`;
+                    });
+                    appendExplanation(q);
+                    bodyContent += `<p></p>`;
+                };
+                const appendTrueFalse = (q, num) => {
+                    bodyContent += `<p><b>Câu ${num}:</b> [TF] ${getOlmLevelTag(q)}${q.question}</p>`;
+                    if (isCv7991TrueFalseItem(q)) {
+                        getCv7991TrueFalseItems(q).forEach((item, statementIndex) => {
+                            const label = String.fromCharCode(97 + statementIndex);
+                            bodyContent += item.isCorrect
+                                ? `<p><u>${label}) ${item.text}</u></p>`
+                                : `<p>${label}) ${item.text}</p>`;
+                        });
+                    } else if (q.correctAnswerIndex === 0) {
+                        bodyContent += `<p><u>a) Đúng</u></p><p>b) Sai</p>`;
+                    } else {
+                        bodyContent += `<p>a) Đúng</p><p><u>b) Sai</u></p>`;
+                    }
+                    appendExplanation(q);
+                    bodyContent += `<p></p>`;
+                };
+                const appendShortAnswer = (q, num) => {
+                    const answer = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");
+                    bodyContent += `<p><b>Câu ${num}:</b> ${getOlmLevelTag(q)}${q.question} [[${answer}]]</p>`;
+                    appendExplanation(q);
+                    bodyContent += `<p></p>`;
+                };
+
+                if (mode !== "quiz") {
+                    dataToExport.forEach((essay, index) => {
+                        bodyContent += `<p><b>Bài ${index + 1}:</b> ${essay.question}</p>`;
+                        if (essay.solution) bodyContent += `<p><b>[HDG]</b></p><p>${essay.solution}</p>`;
+                        bodyContent += `<p></p>`;
+                    });
+                } else {
+                    const { part1, part2, part3 } = collectCv7991ExportParts(dataToExport);
+                    const useCv7991Sections = synthForm === "cv7991" || part2.length > 0 || part3.length > 0;
+                    let currentQuestion = 1;
+
+                    if (useCv7991Sections) {
+                        if (part1.length > 0) {
+                            bodyContent += `<p class="section-lv1"><b>[LV1] PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</b></p>`;
+                            part1.forEach((q) => appendMultipleChoice(q, currentQuestion++));
+                        }
+                        if (part2.length > 0) {
+                            bodyContent += `<p class="section-lv1"><b>[LV1] PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI</b></p>`;
+                            part2.forEach((q) => appendTrueFalse(q, currentQuestion++));
+                        }
+                        if (part3.length > 0) {
+                            bodyContent += `<p class="section-lv1"><b>[LV1] PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN</b></p>`;
+                            part3.forEach((q) => appendShortAnswer(q, currentQuestion++));
+                        }
+                    } else {
+                        dataToExport.forEach((q, index) => {
+                            const num = index + 1;
+                            if (q.type === "true-false") appendTrueFalse(q, num);
+                            else if (q.type === "short-answer" || q.type === "fill-blank") appendShortAnswer(q, num);
+                            else appendMultipleChoice(q, num);
+                        });
+                    }
+                }
+
+                try {
+                    saveDocxFromHtml(header + bodyContent + "</body></html>", "De_Thi_OLM.docx");
+                    showSourceNotice("Đã xuất file Word chuẩn OLM.vn thành công!");
+                } catch (error) {
+                    showSourceNotice(`Lỗi khi xuất Word OLM: ${error.message}`);
+                }
+            };
+
+            // Dùng cho luồng "Đề thi PDF" của OLM: đề bài và hướng dẫn giải
+            // phải là hai tài liệu riêng để không lộ đáp án trong file đề.
+            const exportOlmPdfPair = () => {
+                const dataToExport = mode === "quiz" ? questions : essays;
+                if (!dataToExport || dataToExport.length === 0) {
+                    showSourceNotice("Chưa có câu hỏi để xuất!");
+                    return;
+                }
+
+                const docHeader = (title) => `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>${title}</title><style>
+                    body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; color: #000; }
+                    h1 { text-align: center; font-size: 15pt; margin-bottom: 4px; }
+                    h2 { font-size: 13pt; }
+                    .sub-title { text-align: center; font-style: italic; font-size: 11pt; margin-bottom: 18px; }
+                    .section-title { font-weight: bold; font-size: 12.5pt; margin-top: 14pt; margin-bottom: 4pt; }
+                    .question-block { margin-bottom: 12pt; text-align: justify; }
+                    .option { margin: 2pt 0 2pt 18pt; }
+                    .tf-item { margin: 2pt 0 2pt 20pt; }
+                    .ans-key { margin-top: 20px; border-top: 1px solid #000; padding-top: 10px; }
+                    .solution-box { margin: 6pt 0 14pt; padding: 8pt; background: #f9f9f9; border-left: 3px solid #0284c7; }
+                </style></head><body>`;
+
+                let examBody = `<h1>PHIẾU ĐỀ BÀI ÔN TẬP / KIỂM TRA</h1><div class="sub-title">Thời gian làm bài: 45 phút</div>`;
+                let solutionBody = `<h1>HƯỚNG DẪN GIẢI CHI TIẾT & ĐÁP ÁN</h1><div class="sub-title">Tài liệu hướng dẫn giải cho đề ôn tập OLM</div>`;
+
+                const appendExamQuestion = (q, number) => {
+                    examBody += `<div class="question-block"><b>Câu ${number}:</b> ${q.question}<br/>`;
+                    if (q.type === "true-false") {
+                        if (isCv7991TrueFalseItem(q)) {
+                            getCv7991TrueFalseItems(q).forEach((item, index) => {
+                                examBody += `<div class="tf-item">${String.fromCharCode(97 + index)}) ${item.text}</div>`;
+                            });
+                        } else {
+                            examBody += `<div class="tf-item">a) Đúng</div><div class="tf-item">b) Sai</div>`;
+                        }
+                    } else if (q.type === "short-answer" || q.type === "fill-blank") {
+                        examBody += `<i>(Ghi kết quả vào ô trả lời)</i>`;
+                    } else {
+                        (q.options || []).slice(0, 4).forEach((option, index) => {
+                            examBody += `<div class="option">${String.fromCharCode(65 + index)}. ${cleanOptionText(option)}</div>`;
+                        });
+                    }
+                    examBody += `</div>`;
+                };
+
+                const appendSolutionQuestion = (q, number) => {
+                    solutionBody += `<div class="question-block"><b>Câu ${number}:</b> ${q.question}</div>`;
+                    let answer = "";
+                    if (q.type === "true-false") {
+                        answer = isCv7991TrueFalseItem(q)
+                            ? getCv7991TrueFalseItems(q).map((item, index) => `${String.fromCharCode(97 + index)}) ${item.isCorrect ? "Đúng" : "Sai"}`).join(", ")
+                            : (q.correctAnswerIndex === 0 ? "Đúng" : "Sai");
+                    } else if (q.type === "short-answer" || q.type === "fill-blank") {
+                        answer = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");
+                    } else {
+                        const answerIndex = q.correctAnswerIndex >= 0 ? q.correctAnswerIndex : 0;
+                        answer = `${String.fromCharCode(65 + answerIndex)}. ${cleanOptionText((q.options || [])[answerIndex] || "")}`;
+                    }
+                    solutionBody += `<div style="margin-left:10pt;font-weight:bold;color:#0284c7"><b>Đáp án:</b> ${answer}</div>`;
+                    if (q.explanation) solutionBody += `<div class="solution-box"><b>Lời giải chi tiết:</b><br/>${q.explanation}</div>`;
+                };
+
+                if (mode !== "quiz") {
+                    dataToExport.forEach((essay, index) => {
+                        examBody += `<div class="question-block"><b>Bài ${index + 1}:</b> ${essay.question}</div>`;
+                        solutionBody += `<div class="question-block"><b>Bài ${index + 1}:</b> ${essay.question}</div><div class="solution-box"><b>Lời giải chi tiết:</b><br/>${essay.solution || "Đang cập nhật..."}</div>`;
+                    });
+                } else {
+                    const { part1, part2, part3 } = collectCv7991ExportParts(dataToExport);
+                    const useSections = synthForm === "cv7991" || part2.length > 0 || part3.length > 0;
+                    const groups = useSections
+                        ? [
+                            ["PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN", part1],
+                            ["PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI", part2],
+                            ["PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN", part3]
+                        ]
+                        : [["", dataToExport]];
+                    const numberedItems = [];
+                    let questionNumber = 1;
+                    groups.forEach(([title, items]) => {
+                        if (!items.length) return;
+                        if (title) examBody += `<div class="section-title">${title}</div>`;
+                        items.forEach((q) => {
+                            appendExamQuestion(q, questionNumber);
+                            appendSolutionQuestion(q, questionNumber);
+                            numberedItems.push({ num: questionNumber++, q });
+                        });
+                    });
+                    const key = buildCv7991AnswerKey(numberedItems);
+                    solutionBody += `<div class="ans-key"><h2>BẢNG TỔNG HỢP ĐÁP ÁN NHANH</h2>${key.mcLine ? `<p><b>Phần I:</b> ${key.mcLine}</p>` : ""}${key.tfLines.map((line) => `<p>${line}</p>`).join("")}${key.saLine ? `<p><b>Phần III:</b> ${key.saLine}</p>` : ""}</div>`;
+                }
+
+                try {
+                    saveDocxFromHtml(docHeader("Phiếu đề bài") + examBody + "</body></html>", "De_Bai_OLM_PDF.docx");
+                    setTimeout(() => {
+                        try {
+                            saveDocxFromHtml(docHeader("Hướng dẫn giải chi tiết") + solutionBody + "</body></html>", "Huong_Dan_Giai_OLM_PDF.docx");
+                            showSourceNotice("Đã xuất bộ đôi File Đề bài và File Hướng dẫn giải OLM!");
+                        } catch (error) {
+                            showSourceNotice(`Lỗi khi xuất hướng dẫn giải OLM: ${error.message}`);
+                        }
+                    }, 400);
+                } catch (error) {
+                    showSourceNotice(`Lỗi khi xuất đề bài OLM: ${error.message}`);
+                }
+            };
+
             const startPresentation = () => {
                 if (mode === "quiz" && questions.length === 0) {
                     showSourceNotice("Chưa có câu hỏi nào!");
@@ -16926,6 +17144,12 @@ ${sourceContext}`;
                                     </button>
                                     <button onClick={exportWordForGame} className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg hover:shadow-md font-bold text-sm transition flex items-center gap-1.5 shadow-sm" title="Dùng riêng để nạp vào Game Giáo Dục (trochoi.html) mà không cần chỉnh sửa">
                                         <i className="fas fa-gamepad"></i> Xuất Word cho Game
+                                    </button>
+                                    <button onClick={exportWordOLM} className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Xuất file Word chuẩn định dạng import trực tiếp lên OLM.vn">
+                                        <i className="fas fa-file-import text-amber-200"></i> Xuất Word (OLM)
+                                    </button>
+                                    <button onClick={exportOlmPdfPair} className="px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-bold text-sm transition flex items-center gap-1.5 shadow-sm" title="Xuất cùng lúc 2 file riêng: 1 file Đề bài và 1 file Lời giải để upload vào dạng Đề thi PDF trên OLM">
+                                        <i className="fas fa-copy text-sky-200"></i> Bộ đôi OLM (Đề & Giải PDF)
                                     </button>
                                     <span className="hidden md:inline text-[11px] text-amber-700 max-w-[11rem] leading-tight">Dùng riêng để nạp vào Game Giáo Dục (trochoi.html) mà không cần chỉnh sửa</span>
                                     <button onClick={exportTextCV7991} className="px-3 py-2 bg-white text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-50 font-bold text-sm transition" title="Tải file Text .txt để copy nhanh"><i className="fas fa-file-alt"></i> .txt</button>

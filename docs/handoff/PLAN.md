@@ -1,121 +1,204 @@
-# PLAN: Chuyển Dứt Điểm gemini-2.5-flash Cho Khâu Trích Xuất Ảnh / SGK Trong canvas_soankhbd.html
+# PLAN: Tích Hợp Trọn Vẹn Cả 2 Hướng Upload Lên OLM.vn Trong taobaitap.html
 
-## 1. Nguyên Nhân Hiện Tại Vẫn Thấy Gọi gemini-3-flash-preview Khi Đọc Ảnh
+## 1. Mục Tiêu & Hai Hướng Đáp Ứng
 
-Trong console của trình duyệt hiện tại vẫn ghi nhận:
-```text
-khbd-gemini.js?v=20260916-canvas-module-v9:1 [Gemini] Đang gọi Gemini (gemini-3-flash-preview)...
-```
+Giáo viên trên OLM.vn sử dụng 2 kịch bản tạo bài tập khác nhau:
 
-**Nguyên nhân gốc rễ**:
-1. Trong file `canvas_soankhbd.html`, `geminiAPI.selectedModel` đang được gán cố định bằng `MODEL` (`"gemini-3-flash-preview"`).
-2. Khi khâu phân tích SGK / OCR gọi hàm `geminiAPI.generateContent(prompt, images, ...)`:
-   File `js/khbd-gemini.js` đọc `const selectedModel = this.selectedModel;` và ngay lập tức ghi log ra console:
-   `[Gemini] Đang gọi Gemini (${activeModel})...` (vẫn là `gemini-3-flash-preview`) **trước khi** hàm `fetchGeminiGenerate` được kích hoạt!
-3. Do đó, việc can thiệp chỉ ở tầng `fetchGeminiGenerate` là chưa đủ: `generateContent` vẫn khởi tạo với `gemini-3-flash-preview`, gây hiểu nhầm và có thể gửi model 3-flash vào các luồng xử lý trước đó.
+* **Hướng 1: Đề thi thông minh (1 file duy nhất)**:
+  - Nút: **`Xuất Word (OLM)`** (Đã tạo xong và pass test).
+  - Tải về: `De_Thi_OLM.docx` chứa câu hỏi + đáp án gạch chân `<u>` + `[TF]` + `[[...]]` + `[HDG]`.
+  - Tự động trộn câu hỏi, xáo đáp án và lưu ngân hàng câu hỏi.
 
----
-
-## 2. Giải Pháp Toàn Diện (2 Tầng Đồng Bộ)
-
-Trong `canvas_soankhbd.html` (khối `<script id="canvasCoreBootstrap">`):
-
-### Tầng 1: Can thiệp ngay tại `geminiAPI.generateContent`
-Khi nhận vào tham số `images` (hoặc cờ trích xuất SGK):
-- Tự động gán `this.selectedModel = "gemini-2.5-flash"` trước khi gọi logic nạp nội dung.
-- Khi không có ảnh (soạn thảo giáo án văn bản 5512, 1-Click): giữ nguyên `this.selectedModel = MODEL || "gemini-3-flash-preview"`.
-- Nhờ vậy, `khbd-gemini.js` sẽ in đúng log:
-  `[Gemini] Đang gọi Gemini (gemini-2.5-flash)...`
-  và toàn bộ thanh tiến trình, footer trạng thái đều hiển thị chính xác `gemini-2.5-flash`.
-
-### Tầng 2: Đồng bộ tại `geminiAPI.fetchGeminiGenerate`
-Đảm bảo khi phát hiện `hasMedia` (ảnh, inlineData, fileData, hoặc model có chứa 2.5/image):
-- Luôn gửi request tới `gemini-2.5-flash`.
-- Text drafting gửi tới `gemini-3-flash-preview`, tự động fallback về `gemini-2.5-flash` nếu gặp lỗi 401/403/404/429/503.
-- Bảo toàn nguyên vẹn 100% `systemInstruction` và prompt sư phạm.
+* **Hướng 2: Bộ đôi file Đề thi PDF (2 file riêng biệt như ảnh chụp thực tế)**:
+  - Nút: **`Bộ đôi OLM (Đề & Giải PDF)`**.
+  - Tải tự động 2 file riêng rẽ:
+    1. **`De_Bai_OLM_PDF.docx`**: Chỉ gồm câu hỏi và phương án A, B, C, D (tuyệt đối không gạch chân, không lộ đáp án hay lời giải) để giáo viên upload vào tab **"Đề bài"**.
+    2. **`Huong_Dan_Giai_OLM_PDF.docx`**: Gồm bảng đáp án tổng hợp và lời giải chi tiết từng câu để giáo viên upload vào tab **"Hướng dẫn giải"** (xóa bỏ thông báo *"Giáo viên chưa up hướng dẫn giải..."* trên OLM).
 
 ---
 
-## 3. Chi Tiết Thay Đổi Trong `canvas_soankhbd.html`
+## 2. Chi Tiết Thực Hiện Trong `taobaitap.html`
 
-Vị trí: thẻ `<script id="canvasCoreBootstrap">` (khoảng dòng 1392-1437):
-
+### Bước 1: Thêm hàm xuất bộ đôi `exportOlmPdfPair`
+Vị trí: sau hàm `exportWordOLM` (khoảng dòng 16430):
 ```javascript
-      // --- TẦNG 1: TỰ ĐỘNG CHUYỂN MODEL KHI CÓ ẢNH / MEDIA ---
-      const canvasGenerateContent = geminiAPI.generateContent.bind(geminiAPI);
-      geminiAPI.generateContent = function (prompt, images, systemRole, temperature, signal, options) {
-        const hasMedia = (Array.isArray(images) && images.length > 0) || Boolean(options && (options.hasMedia || options.purpose === "textbook_analysis"));
-        const targetModel = hasMedia ? "gemini-2.5-flash" : (MODEL || "gemini-3-flash-preview");
-        const prevModel = this.selectedModel;
-        this.selectedModel = targetModel;
-        try {
-          return canvasGenerateContent(prompt, images, systemRole, temperature, signal, Object.assign({}, options || {}, { allowEmptyKey: true }));
-        } finally {
-          this.selectedModel = prevModel;
-        }
-      };
+            const exportOlmPdfPair = () => {
+                const dataToExport = mode === "quiz" ? questions : essays;
+                if (!dataToExport || dataToExport.length === 0) {
+                    showSourceNotice("Chưa có câu hỏi để xuất!");
+                    return;
+                }
 
-      // --- TẦNG 2: ĐIỀU PHỐI NETWORK VÀ GỌI DIRECT API ---
-      geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
-        const hasMedia = Boolean(
-          /2\.5/i.test(String(model || "")) ||
-          /image/i.test(String(model || "")) ||
-          (payload && Array.isArray(payload.contents) && payload.contents.some(c => Array.isArray(c.parts) && c.parts.some(p => p && (p.inlineData || p.fileData))))
-        );
-        const fallbackModel = "gemini-2.5-flash";
-        const primaryModel = hasMedia ? fallbackModel : (MODEL || "gemini-3-flash-preview");
+                const docHeader = (title) => `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'><title>${title}</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; color: #000; }
+                        h1 { text-align: center; font-size: 15pt; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
+                        .sub-title { text-align: center; font-style: italic; font-size: 11pt; margin-bottom: 18px; }
+                        .section-title { font-weight: bold; font-size: 12.5pt; text-transform: uppercase; margin-top: 14pt; margin-bottom: 4pt; }
+                        .question-block { margin-bottom: 12pt; text-align: justify; }
+                        .option { margin: 2pt 0 2pt 18pt; }
+                        .tf-item { margin-left: 20pt; margin-top: 2pt; margin-bottom: 2pt; }
+                        .ans-key { margin-top: 20px; border-top: 1px solid #000; padding-top: 10px; }
+                        .solution-box { margin-top: 6pt; margin-bottom: 14pt; padding: 8pt; background: #f9f9f9; border-left: 3px solid #0284c7; }
+                    </style>
+                </head><body>`;
 
-        function cleanPayloadForCanvas(sourcePayload) {
-          const copy = JSON.parse(JSON.stringify(sourcePayload || {}));
-          if (copy.generationConfig && copy.generationConfig.thinkingConfig) {
-            delete copy.generationConfig.thinkingConfig;
-          }
-          return copy;
-        }
+                // 1. FILE ĐỀ BÀI (KHÔNG LỘ ĐÁP ÁN / LỜI GIẢI)
+                let examBody = `<h1>PHIẾU ĐỀ BÀI ÔN TẬP / KIỂM TRA</h1>`;
+                examBody += `<div class="sub-title">Thời gian làm bài: 45 phút - Thí sinh chọn đáp án vào phiếu trả lời</div>`;
 
-        const executeCall = async (targetModel) => this.fetchWithTimeout(GEMINI_DIRECT_ENDPOINT + targetModel + ":generateContent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(cleanPayloadForCanvas(payload)),
-          signal: signal
-        }, timeoutMs || 95000);
+                if (mode !== "quiz") {
+                    dataToExport.forEach((essay, idx) => {
+                        examBody += `<div class="question-block"><b>Bài ${idx + 1}:</b> ${essay.question}</div>`;
+                    });
+                } else {
+                    const { part1, part2, part3 } = collectCv7991ExportParts(dataToExport);
+                    let qNum = 1;
+                    if (synthForm === "cv7991" || (part2.length > 0 || part3.length > 0)) {
+                        if (part1.length > 0) {
+                            examBody += `<div class="section-title">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN</div>`;
+                            part1.forEach((q) => {
+                                examBody += `<div class="question-block"><b>Câu ${qNum++}:</b> ${q.question}<br/>`;
+                                (q.options || []).slice(0, 4).forEach((opt, oIdx) => {
+                                    const letter = String.fromCharCode(65 + oIdx);
+                                    examBody += `<div class="option">${letter}. ${cleanOptionText(opt)}</div>`;
+                                });
+                                examBody += `</div>`;
+                            });
+                        }
+                        if (part2.length > 0) {
+                            examBody += `<div class="section-title">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI</div>`;
+                            part2.forEach((q) => {
+                                examBody += `<div class="question-block"><b>Câu ${qNum++}:</b> ${q.question}<br/>`;
+                                if (isCv7991TrueFalseItem(q)) {
+                                    getCv7991TrueFalseItems(q).forEach((item, sIdx) => {
+                                        const label = String.fromCharCode(97 + sIdx);
+                                        examBody += `<div class="tf-item">${label}) ${item.text}</div>`;
+                                    });
+                                } else {
+                                    examBody += `<div class="tf-item">a) Mệnh đề trên là Đúng</div><div class="tf-item">b) Mệnh đề trên là Sai</div>`;
+                                }
+                                examBody += `</div>`;
+                            });
+                        }
+                        if (part3.length > 0) {
+                            examBody += `<div class="section-title">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN</div>`;
+                            part3.forEach((q) => {
+                                examBody += `<div class="question-block"><b>Câu ${qNum++}:</b> ${q.question}<br/><i>(Ghi kết quả vào phiếu trả lời)</i></div>`;
+                            });
+                        }
+                    } else {
+                        dataToExport.forEach((q, idx) => {
+                            examBody += `<div class="question-block"><b>Câu ${idx + 1}:</b> ${q.question}<br/>`;
+                            if (q.type === "true-false") {
+                                if (isCv7991TrueFalseItem(q)) {
+                                    getCv7991TrueFalseItems(q).forEach((item, sIdx) => {
+                                        examBody += `<div class="tf-item">${String.fromCharCode(97 + sIdx)}) ${item.text}</div>`;
+                                    });
+                                } else {
+                                    examBody += `<div class="tf-item">a) Đúng</div><div class="tf-item">b) Sai</div>`;
+                                }
+                            } else if (q.type === "short-answer" || q.type === "fill-blank") {
+                                examBody += `<i>(Ghi kết quả vào ô trả lời)</i>`;
+                            } else {
+                                (q.options || []).slice(0, 4).forEach((opt, oIdx) => {
+                                    examBody += `<div class="option">${String.fromCharCode(65 + oIdx)}. ${cleanOptionText(opt)}</div>`;
+                                });
+                            }
+                            examBody += `</div>`;
+                        });
+                    }
+                }
 
-        let response = await executeCall(primaryModel);
-        let activeUsedModel = primaryModel;
-        if (!response.ok && (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429 || response.status === 503) && primaryModel !== fallbackModel) {
-          console.warn("[Gemini Canvas] Model " + primaryModel + " trả về HTTP " + response.status + ". Tự động fallback sang " + fallbackModel + "...");
-          response = await executeCall(fallbackModel);
-          activeUsedModel = fallbackModel;
-        }
+                // 2. FILE HƯỚNG DẪN GIẢI CHI TIẾT
+                let solBody = `<h1>HƯỚNG DẪN GIẢI CHI TIẾT & ĐÁP ÁN</h1>`;
+                solBody += `<div class="sub-title">Tài liệu hướng dẫn giải chi tiết cho đề ôn tập OLM</div>`;
 
-        const metadata = { route: "canvas_direct", model: activeUsedModel, hasMedia: hasMedia };
-        geminiAPI.lastCanvasMeta = metadata;
-        geminiAPI.emitGeminiStatus({
-          type: "canvas_direct",
-          message: "Gemini Canvas: gọi trực tiếp · " + activeUsedModel + (hasMedia ? " (nhận diện SGK)" : " (soạn KHBD)"),
-          route: metadata.route,
-          model: activeUsedModel
-        });
+                if (mode !== "quiz") {
+                    dataToExport.forEach((essay, idx) => {
+                        solBody += `<div class="question-block"><b>Bài ${idx + 1}:</b> ${essay.question}</div>`;
+                        solBody += `<div class="solution-box"><b>Lời giải chi tiết:</b><br/>${essay.solution || "Đang cập nhật..."}</div>`;
+                    });
+                } else {
+                    const { part1, part2, part3 } = collectCv7991ExportParts(dataToExport);
+                    let qNum = 1;
+                    const allNumbered = [];
 
-        if (response.ok) {
-          setBanner("Gemini Canvas đang gọi trực tiếp (" + activeUsedModel + "), không dùng proxy hoặc API key hệ thống.", "ok");
-        } else {
-          setBanner("Gemini Canvas báo lỗi (HTTP " + response.status + "). Không dùng tuyến hệ thống.", "err");
-        }
+                    const renderSolItem = (q, num) => {
+                        solBody += `<div class="question-block"><b>Câu ${num}:</b> ${q.question}</div>`;
+                        let ansText = "";
+                        if (q.type === "true-false") {
+                            if (isCv7991TrueFalseItem(q)) {
+                                const details = getCv7991TrueFalseItems(q).map((it, i) => `${String.fromCharCode(97 + i)}) ${it.isCorrect ? "Đúng" : "Sai"}`).join(", ");
+                                ansText = `<b>Đáp án:</b> ${details}`;
+                            } else {
+                                ansText = `<b>Đáp án:</b> ${q.correctAnswerIndex === 0 ? "Đúng" : "Sai"}`;
+                            }
+                        } else if (q.type === "short-answer" || q.type === "fill-blank") {
+                            ansText = `<b>Đáp án:</b> ${q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "")}`;
+                        } else {
+                            const letter = String.fromCharCode(65 + (q.correctAnswerIndex >= 0 ? q.correctAnswerIndex : 0));
+                            const text = cleanOptionText(q.options?.[q.correctAnswerIndex] || "");
+                            ansText = `<b>Đáp án đúng:</b> ${letter}. ${text}`;
+                        }
+                        solBody += `<div style="margin-left: 10pt; font-weight: bold; color: #0284c7;">${ansText}</div>`;
+                        if (q.explanation) {
+                            solBody += `<div class="solution-box"><b>Lời giải chi tiết:</b><br/>${q.explanation}</div>`;
+                        }
+                        solBody += `<div style="height: 8pt;"></div>`;
+                    };
 
-        response.canvasMeta = metadata;
-        return response;
-      };
+                    if (synthForm === "cv7991" || (part2.length > 0 || part3.length > 0)) {
+                        part1.forEach((q) => { allNumbered.push({ num: qNum, q }); renderSolItem(q, qNum++); });
+                        part2.forEach((q) => { allNumbered.push({ num: qNum, q }); renderSolItem(q, qNum++); });
+                        part3.forEach((q) => { allNumbered.push({ num: qNum, q }); renderSolItem(q, qNum++); });
+                    } else {
+                        dataToExport.forEach((q, idx) => {
+                            allNumbered.push({ num: idx + 1, q });
+                            renderSolItem(q, idx + 1);
+                        });
+                    }
+
+                    // Thêm bảng tóm tắt đáp án ở đầu hoặc cuối
+                    const key = buildCv7991AnswerKey(allNumbered);
+                    solBody += `
+                    <div class="ans-key">
+                        <h2 style="font-size: 13pt; text-transform: uppercase;">BẢNG TỔNG HỢP ĐÁP ÁN NHANH</h2>
+                        ${key.mcLine ? `<p><b>Phần I:</b> ${key.mcLine}</p>` : ""}
+                        ${key.tfLines.map(l => `<p>${l}</p>`).join("")}
+                        ${key.saLine ? `<p><b>Phần III:</b> ${key.saLine}</p>` : ""}
+                    </div>`;
+                }
+
+                // Xuất file 1: Đề bài
+                saveDocxFromHtml(docHeader("Phiếu đề bài") + examBody + "</body></html>", "De_Bai_OLM_PDF.docx");
+
+                // Xuất file 2: Hướng dẫn giải (delay nhẹ 400ms để trình duyệt tải liên tục 2 file)
+                setTimeout(() => {
+                    saveDocxFromHtml(docHeader("Hướng dẫn giải chi tiết") + solBody + "</body></html>", "Huong_Dan_Giai_OLM_PDF.docx");
+                    showSourceNotice("Đã xuất trọn bộ đôi: 1 File Đề bài + 1 File Hướng dẫn giải OLM!");
+                }, 400);
+            };
+```
+
+### Bước 2: Thêm nút giao diện trên thanh công cụ
+Tại dòng 17042 (cạnh nút `Xuất Word (OLM)`):
+```jsx
+<button onClick={exportOlmPdfPair} className="px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-bold text-sm transition flex items-center gap-1.5 shadow-sm" title="Xuất cùng lúc 2 file riêng: 1 file Đề bài và 1 file Lời giải để upload vào dạng Đề thi PDF trên OLM">
+    <i className="fas fa-copy text-sky-200"></i> Bộ đôi OLM (Đề & Giải PDF)
+</button>
 ```
 
 ---
 
-## 4. Kiểm Thử & Nghiệm Thu
-
-1. Chạy test tự động:
+## 3. Kiểm Thử (Verification)
+1. Cập nhật `tests/taobaitap-olm-export-smoke.js`:
+   - Kiểm tra có cả `exportWordOLM` (Hướng 1: Đề thông minh) và `exportOlmPdfPair` (Hướng 2: Bộ đôi PDF).
+   - Kiểm tra tên file xuất: `De_Thi_OLM.docx`, `De_Bai_OLM_PDF.docx`, `Huong_Dan_Giai_OLM_PDF.docx`.
+2. Chạy test:
    ```powershell
-   node tests/canvas-soankhbd-smoke.js
+   node tests/taobaitap-olm-export-smoke.js
    ```
-2. Copy `canvas_soankhbd.html` dán vào Gemini Canvas:
-   - Tải ảnh SGK và bấm nhận diện: Console bắt buộc hiện `[Gemini] Đang gọi Gemini (gemini-2.5-flash)...` và hoàn thành nhận diện SGK trong 5–10s, không đứng ở 90%.
-   - Bấm tạo giáo án: Console hiện `[Gemini] Đang gọi Gemini (gemini-3-flash-preview)...` để tạo nội dung sâu.
