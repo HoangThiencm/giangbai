@@ -185,6 +185,13 @@ for (const targetPath of targetPaths) {
   assert.ok(!targetHtml.includes('mistral-ocr-client.js'), `${relPath} không nạp Mistral OCR client trong Canvas`);
   assert.ok(!targetHtml.includes('window.MistralOcr ='), `${relPath} không giả MistralOcr bằng Gemini`);
   assert.ok(targetHtml.includes('cleanPayloadForCanvas'), `${relPath} phải làm sạch payload tương thích Gemini Canvas`);
+  assert.ok(targetHtml.includes('const canvasGenerateContent = geminiAPI.generateContent.bind(geminiAPI)'), `${relPath} phải vá generateContent trước khi khbd-gemini.js ghi log model`);
+  assert.ok(targetHtml.includes('geminiAPI.generateContent = function (prompt, images, systemRole, temperature, signal, options)'), `${relPath} phải phân tuyến model ngay tại generateContent`);
+  assert.ok(targetHtml.includes('const hasMedia = (Array.isArray(images) && images.length > 0)'), `${relPath} phải nhận diện ảnh ngay tại generateContent`);
+  assert.ok(targetHtml.includes('options.purpose === "textbook_analysis"'), `${relPath} phải nhận diện luồng trích xuất SGK ngay tại generateContent`);
+  assert.ok(targetHtml.includes('const targetModel = hasMedia ? "gemini-2.5-flash" : (MODEL || "gemini-3-flash-preview")'), `${relPath} generateContent phải chọn Flash 2.5 cho OCR và preview cho soạn KHBD`);
+  assert.ok(targetHtml.includes('this.selectedModel = targetModel'), `${relPath} phải đặt model trước khi generateContent gốc ghi log`);
+  assert.ok(targetHtml.includes('this.selectedModel = previousModel'), `${relPath} phải khôi phục model Canvas sau khi khởi tạo request`);
   assert.ok(targetHtml.includes('body: JSON.stringify(cleanPayloadForCanvas(payload))'), `${relPath} gửi payload Gemini Canvas đã làm sạch`);
   assert.ok(targetHtml.includes('JSON.parse(JSON.stringify(sourcePayload || {}))'), `${relPath} phải sao chép nguyên vẹn payload trước khi làm sạch`);
   assert.ok(targetHtml.includes('delete copy.generationConfig.thinkingConfig'), `${relPath} chỉ loại thinkingConfig không tương thích`);
@@ -192,6 +199,7 @@ for (const targetPath of targetPaths) {
   assert.ok(!targetHtml.includes('[CHỈ DẪN HỆ THỐNG]'), `${relPath} không được gộp systemInstruction vào prompt`);
   assert.ok(targetHtml.includes('fallbackModel = "gemini-2.5-flash"'), `${relPath} phải có fallback model Gemini Canvas`);
   assert.ok(targetHtml.includes('const hasMedia = Boolean('), `${relPath} phải tự nhận diện tác vụ có media`);
+  assert.ok(targetHtml.includes('/2\\.5/i.test(String(model || ""))'), `${relPath} fetch phải giữ phân tuyến Flash 2.5 khi model đã được chọn từ generateContent`);
   assert.ok(targetHtml.includes('p.inlineData || p.fileData'), `${relPath} phải nhận diện cả inlineData và fileData của SGK`);
   assert.ok(targetHtml.includes('hasMedia ? fallbackModel : (MODEL || "gemini-3-flash-preview")'), `${relPath} media SGK phải luôn chạy gemini-2.5-flash`);
   assert.ok(targetHtml.includes('response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429 || response.status === 503'), `${relPath} fallback khi Canvas chặn hoặc quá tải model preview`);

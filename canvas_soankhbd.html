@@ -1391,13 +1391,26 @@
       };
       const canvasGenerateContent = geminiAPI.generateContent.bind(geminiAPI);
       geminiAPI.generateContent = function (prompt, images, systemRole, temperature, signal, options) {
-        return canvasGenerateContent(prompt, images, systemRole, temperature, signal, Object.assign({}, options || {}, { allowEmptyKey: true }));
+        // khbd-gemini.js đọc selectedModel và cập nhật trạng thái ngay khi bắt
+        // đầu generateContent. Chuyển model tại đây để log/progress của luồng
+        // OCR hiện đúng Flash 2.5, thay vì chỉ đổi ở tầng fetch bên dưới.
+        const hasMedia = (Array.isArray(images) && images.length > 0)
+          || Boolean(options && (options.hasMedia || options.purpose === "textbook_analysis"));
+        const targetModel = hasMedia ? "gemini-2.5-flash" : (MODEL || "gemini-3-flash-preview");
+        const previousModel = this.selectedModel;
+        this.selectedModel = targetModel;
+        try {
+          return canvasGenerateContent(prompt, images, systemRole, temperature, signal, Object.assign({}, options || {}, { allowEmptyKey: true }));
+        } finally {
+          this.selectedModel = previousModel;
+        }
       };
       geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
         // Nhận diện SGK/OCR luôn đi qua Flash 2.5 để tránh nghẽn vision của
         // model preview trong iframe Canvas. Các lượt soạn văn bản dùng model
         // preview đã cấu hình để giữ chất lượng nội dung giáo án.
         const hasMedia = Boolean(
+          /2\.5/i.test(String(model || "")) ||
           /image/i.test(String(model || "")) ||
           (payload && Array.isArray(payload.contents) && payload.contents.some(c => Array.isArray(c.parts) && c.parts.some(p => p && (p.inlineData || p.fileData))))
         );
