@@ -13612,8 +13612,20 @@ module.exports = {
             if (!Array.isArray(items)) return [];
 
             return items.map((item, index) => {
+                const rawLevel = String(item.level || item.cognitive_level || '').toLowerCase().trim();
+                let level = 'Nhận biết';
+                if (rawLevel.includes('thông hiểu') || rawLevel === 'th') {
+                    level = 'Thông hiểu';
+                } else if (rawLevel.includes('vận dụng cao') || rawLevel.includes('rất khó') || rawLevel === 'vdc') {
+                    level = 'Vận dụng cao';
+                } else if (rawLevel.includes('vận dụng') || rawLevel.includes('nâng cao') || rawLevel.includes('khó') || rawLevel === 'vd') {
+                    level = 'Vận dụng';
+                } else if (rawLevel.includes('nhận biết') || rawLevel.includes('cơ bản') || rawLevel.includes('dễ') || rawLevel === 'nb') {
+                    level = 'Nhận biết';
+                }
                 const normalized = {
                     ...item,
+                    level,
                     question: cleanGeneratedQuestionText(item.question)
                 };
 
@@ -15566,12 +15578,13 @@ module.exports = {
                     NHIỆM VỤ:
                     - Xác định loại câu hỏi: multiple-choice (4 đáp án A,B,C,D), true-false (Đúng/Sai), fill-blank (Điền khuyết), matching (Nối ô), short-answer (Trả lời ngắn bằng 1 con số).
                     - Nhận diện đáp án đúng đi kèm câu hỏi nếu có.
+                    - Phân tích bản chất và độ sâu sư phạm của từng câu, rồi BẮT BUỘC gán trường "level" là một trong: "Nhận biết", "Thông hiểu", "Vận dụng", "Vận dụng cao".
                     - QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức toán học.
                     - Trường "question" chỉ chứa nội dung câu hỏi, không tự thêm "Câu 1", "(Trắc nghiệm)", "(Đúng/Sai)".
                     - Với multiple-choice, 4 phương án phải khác nhau hoàn toàn, không rỗng; không tạo phương án giả/trùng kiểu "000đ".
 
                     Định dạng JSON Output bắt buộc:
-                    - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice"}
+                    - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice","level":"Nhận biết"}
                     - true-false: {"question":"[Ngữ cảnh/chủ đề bài toán dẫn chung]...","options":["Nội dung mệnh đề a","Nội dung mệnh đề b","Nội dung mệnh đề c","Nội dung mệnh đề d"],"correct_answers":[true,false,true,false],"type":"true-false"}
                     - fill-blank: {"question":"... có chỗ trống ______","correctAnswer":"đáp án đúng","type":"fill-blank"}
                     - short-answer: {"question":"... (kết quả là số)","correctAnswer": "12.5","type":"short-answer"}
@@ -15674,6 +15687,7 @@ module.exports = {
                     QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
                     QUY TẮC JSON: Chuỗi JSON phải escape đúng. Không dùng dấu \ đơn lẻ; nếu cần ký hiệu toán học, viết bằng chữ/ký hiệu Unicode hoặc dùng dấu $...$.
                     QUY TẮC OUTPUT: Trả về một mảng phẳng chứa tất cả câu hỏi. Mỗi câu hỏi phải có field "type" để chỉ loại trắc nghiệm.
+                    Dựa vào bản chất và độ sâu sư phạm của từng câu hỏi, BẮT BUỘC tự đánh giá và gán field "level" là một trong: "Nhận biết", "Thông hiểu", "Vận dụng", "Vận dụng cao".
                     QUY TẮC CHẤT LƯỢNG:
                     - Trường "question" chỉ chứa nội dung câu hỏi, không tự thêm "Câu 1", "(Trắc nghiệm)", "(Đúng/Sai)".
                     - Với multiple-choice, 4 phương án phải khác nhau hoàn toàn, không rỗng, không dùng đáp án giả kiểu "000đ" lặp lại.
@@ -15681,7 +15695,7 @@ module.exports = {
                     - Với bài toán tiền/tính toán, hãy tự tính kết quả trước, đưa đáp án đúng vào một phương án và tạo 3 kết quả sai khác nhau.
 
                     Chi tiết từng loại:
-                    - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice"}
+                    - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice","level":"Nhận biết"}
                     - true-false: {"question":"[Ngữ cảnh/chủ đề bài toán dẫn chung]...","options":["Nội dung mệnh đề a","Nội dung mệnh đề b","Nội dung mệnh đề c","Nội dung mệnh đề d"],"correct_answers":[true,false,true,false],"type":"true-false"}
                     - fill-blank: {"question":"Câu hỏi có chỗ trống ______","correctAnswer":"đáp án đúng","type":"fill-blank"}
                     - short-answer: {"question":"Câu hỏi định hướng kết quả số","correctAnswer":"12.5","type":"short-answer"}
@@ -15795,13 +15809,14 @@ ${typeInstruction}
 QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
 QUY TẮC JSON: Chuỗi JSON phải escape đúng. Không dùng dấu \\ đơn lẻ.
 QUY TẮC OUTPUT: Trả về một mảng phẳng. Mỗi câu có field "type".
+Dựa vào bản chất và độ sâu sư phạm của từng câu, BẮT BUỘC tự đánh giá và gán field "level" là một trong: "Nhận biết", "Thông hiểu", "Vận dụng", "Vận dụng cao".
 QUY TẮC CHẤT LƯỢNG:
 - Trường "question" chỉ chứa nội dung câu hỏi, không tự thêm "Câu 1".
 - Với multiple-choice, 4 phương án khác nhau hoàn toàn, không rỗng, không đáp án giả "000đ".
 - Chỉ một phương án đúng.
 
 Chi tiết từng loại:
-- multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice"}
+- multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice","level":"Nhận biết"}
 - true-false: ${synthForm === 'cv7991'
     ? '{"question":"[Ngữ cảnh/chủ đề bài toán dẫn chung]...","options":["Nội dung mệnh đề a","Nội dung mệnh đề b","Nội dung mệnh đề c","Nội dung mệnh đề d"],"correct_answers":[true,false,true,false],"type":"true-false"}'
     : '{"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0,"type":"true-false"}'}
@@ -16315,12 +16330,11 @@ ${sourceContext}`;
             };
 
             const getOlmLevelTag = (q) => {
-                const raw = String(q?.level || q?.cognitive_level || "").toLowerCase();
-                if (raw.includes("nhận biết") || raw.includes("dễ")) return "[NB] ";
-                if (raw.includes("thông hiểu") || raw.includes("trung bình")) return "[TH] ";
-                if (raw.includes("vận dụng cao") || raw.includes("rất khó")) return "[VDC] ";
-                if (raw.includes("vận dụng") || raw.includes("khó")) return "[VD] ";
-                return "";
+                const raw = String(q?.level || q?.cognitive_level || "").toLowerCase().trim();
+                if (raw.includes("thông hiểu") || raw === "th") return "[TH] ";
+                if (raw.includes("vận dụng cao") || raw === "vdc") return "[VDC] ";
+                if (raw.includes("vận dụng") || raw === "vd") return "[VD] ";
+                return "[NB] ";
             };
 
             const exportWordOLM = () => {
@@ -17183,6 +17197,20 @@ ${sourceContext}`;
                                                                         q.type === 'short-answer' ? '🔢 Trả lời ngắn' :
                                                                         '🔗 Nối ô'}
                                                         </span>
+                                                        <select
+                                                            value={q.level || "Nhận biết"}
+                                                            onChange={(e) => {
+                                                                const newLvl = e.target.value;
+                                                                setQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, level: newLvl } : item));
+                                                            }}
+                                                            className="px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-indigo-400 cursor-pointer shadow-sm focus:outline-none"
+                                                            title="Mức độ nhận thức do AI đánh giá (xuất chuẩn OLM.vn)"
+                                                        >
+                                                            <option value="Nhận biết">🟢 [NB] Nhận biết</option>
+                                                            <option value="Thông hiểu">🔵 [TH] Thông hiểu</option>
+                                                            <option value="Vận dụng">🟠 [VD] Vận dụng</option>
+                                                            <option value="Vận dụng cao">🔴 [VDC] Vận dụng cao</option>
+                                                        </select>
                                                     </div>
                                                 </div>
                                             </div>
