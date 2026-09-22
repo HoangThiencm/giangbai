@@ -2737,7 +2737,7 @@ function setupEventListeners() {
   });
 
   // 2. Thay đổi Khối lớp / Bài học
-  document.getElementById("selectGrade").addEventListener("change", (e) => {
+  document.getElementById("selectGrade").addEventListener("change", async (e) => {
     const nextGrade = e.target.value;
     const before = appState.teachingContext.standards.length;
     
@@ -2748,7 +2748,7 @@ function setupEventListeners() {
     renderStandardsCatalog();
     renderPedagogyCatalogs();
     if (before !== after) showToast("Đã bỏ lựa chọn tiêu chuẩn không áp dụng cho khối lớp mới.", "info");
-    loadPpctCatalogForCurrentMeta().then(renderPpctCatalogReview).catch(() => {});
+    await refreshPpctForChangedGrade();
   });
 
   document.getElementById("selectMyDraft").addEventListener("change", e => {
@@ -6709,6 +6709,25 @@ function canvasPpctAccount() {
   const fromConfig = typeof window !== "undefined" && window.__KHBD_CANVAS__ && window.__KHBD_CANVAS__.account;
   return String(fromConfig || (typeof localStorage !== "undefined" && localStorage.getItem("userEmail")) || "hoangthiencm@gmail.com").trim();
 }
+async function refreshPpctForChangedGrade() {
+  // Hồ sơ PPCT có thể khác trường giữa các khối. Lấy toàn bộ hồ sơ của khối
+  // mới trước, rồi chỉ đổi khi trường hiện tại thật sự không còn phù hợp.
+  try {
+    const profiles = await refreshPpctSchoolControls({ autoSelect: false });
+    const currentSchool = ppctSchoolName();
+    const unnamedCache = currentSchool === "" && ((appState.ppctCatalog?.rows || []).length || (appState.ppctCatalogsBySchool?.[""]?.rows || []).length);
+    const currentExists = profiles.some(profile => ppctSchoolName(profile.school_name) === currentSchool);
+    const first = profiles[0];
+    if (!unnamedCache && !currentExists && first) {
+      await switchPpctSchool(first.school_name);
+    } else {
+      await loadPpctCatalogForCurrentMeta();
+      renderPpctCatalogReview();
+    }
+  } catch (_) {
+    loadPpctCatalogForCurrentMeta().then(renderPpctCatalogReview).catch(() => {});
+  }
+}
 function ppctCatalogEndpoint() {
   if (isCanvasGeminiRoute()) {
     const host = (typeof window !== "undefined" && window.__KHBD_CANVAS__ && window.__KHBD_CANVAS__.host) || "https://hoangthiencm.id.vn";
@@ -6753,19 +6772,20 @@ async function loadPpctCatalogForCurrentMeta() {
   }
   return null;
 }
-async function loadPpctSchoolProfiles(meta = ppctCatalogMeta()) { const listMeta={subject:meta.subject,grade:meta.grade,academic_year:meta.academic_year};const response=await ppctCatalogFetch(listMeta),data=await response.json();return response.ok&&Array.isArray(data.profiles)?data.profiles:[]; }
-function renderPpctSchoolControls(profiles = []) { const select=document.getElementById("ppctSchoolSelect"),list=document.getElementById("ppctSchoolProfiles"),names=Array.from(new Set([ppctSchoolName(),...profiles.map(item=>ppctSchoolName(item.school_name))]));if(select){select.innerHTML=names.map(name=>`<option value="${escapeHtml(name)}">${escapeHtml(name||"Hồ sơ chưa đặt tên")}</option>`).join("");select.value=ppctSchoolName();}if(list)list.innerHTML=profiles.length?profiles.map(item=>`<div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;margin:.35rem 0"><button type="button" class="btn btn-outline-dark btn-sm" data-ppct-school-pick="${escapeHtml(ppctSchoolName(item.school_name))}">🏫 ${escapeHtml(ppctSchoolName(item.school_name)||"Hồ sơ chưa đặt tên")} · ${escapeHtml(item.academic_year||"Chưa đặt năm")}</button><button type="button" class="btn btn-danger btn-sm" data-ppct-school-delete="${escapeHtml(ppctSchoolName(item.school_name))}">Xóa</button></div>`).join(""):'<p class="text-muted">Chưa có hồ sơ PPCT đã lưu cho môn/lớp/năm học này.</p>';list?.querySelectorAll("[data-ppct-school-pick]").forEach(btn=>btn.addEventListener("click",()=>switchPpctSchool(btn.dataset.ppctSchoolPick)));list?.querySelectorAll("[data-ppct-school-delete]").forEach(btn=>btn.addEventListener("click",()=>deletePpctSchool(btn.dataset.ppctSchoolDelete))); }
-async function refreshPpctSchoolControls() {
+async function loadPpctSchoolProfiles(meta = ppctCatalogMeta()) { const listMeta={subject:meta.subject,grade:meta.grade};const response=await ppctCatalogFetch(listMeta),data=await response.json();return response.ok&&Array.isArray(data.profiles)?data.profiles:[]; }
+function renderPpctSchoolControls(profiles = []) { const select=document.getElementById("ppctSchoolSelect"),list=document.getElementById("ppctSchoolProfiles"),names=Array.from(new Set([ppctSchoolName(),...profiles.map(item=>ppctSchoolName(item.school_name))]));if(select){select.innerHTML=names.map(name=>`<option value="${escapeHtml(name)}">${escapeHtml(name||"Hồ sơ chưa đặt tên")}</option>`).join("");select.value=ppctSchoolName();}if(list)list.innerHTML=profiles.length?profiles.map(item=>`<div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;margin:.35rem 0"><button type="button" class="btn btn-outline-dark btn-sm" data-ppct-school-pick="${escapeHtml(ppctSchoolName(item.school_name))}">🏫 ${escapeHtml(ppctSchoolName(item.school_name)||"Hồ sơ chưa đặt tên")} · ${escapeHtml(item.academic_year||"Chưa đặt năm")}</button><button type="button" class="btn btn-danger btn-sm" data-ppct-school-delete="${escapeHtml(ppctSchoolName(item.school_name))}">Xóa</button></div>`).join(""):'<p class="text-muted">Chưa có hồ sơ PPCT đã lưu cho môn/lớp này.</p>';list?.querySelectorAll("[data-ppct-school-pick]").forEach(btn=>btn.addEventListener("click",()=>switchPpctSchool(btn.dataset.ppctSchoolPick)));list?.querySelectorAll("[data-ppct-school-delete]").forEach(btn=>btn.addEventListener("click",()=>deletePpctSchool(btn.dataset.ppctSchoolDelete))); }
+async function refreshPpctSchoolControls({ autoSelect = true } = {}) {
   try {
     const profiles = await loadPpctSchoolProfiles();
     const unnamedCache = ppctSchoolName() === "" && ((appState.ppctCatalog?.rows || []).length || (appState.ppctCatalogsBySchool?.[""]?.rows || []).length);
     const first = profiles[0];
-    if (!ppctSchoolName() && !unnamedCache && first && ppctSchoolName(first.school_name) !== "") {
+    if (autoSelect && !ppctSchoolName() && !unnamedCache && first && ppctSchoolName(first.school_name) !== "") {
       await switchPpctSchool(first.school_name);
-      return;
+      return profiles;
     }
     renderPpctSchoolControls(profiles);
-  } catch (_) { renderPpctSchoolControls(); }
+    return profiles;
+  } catch (_) { renderPpctSchoolControls(); return []; }
 }
 async function switchPpctSchool(schoolName) { ppctStoreActiveCatalog();appState.ppctSchool=ppctSchoolName(schoolName);appState.ppctCatalog=appState.ppctCatalogsBySchool[appState.ppctSchool]||{rows:[],source:{},selectedRowId:"",serverId:null};await loadPpctCatalogForCurrentMeta();saveStateToLocalStorage();renderPpctCatalogReview();renderPpctCatalogSettingsPreview();populateLessonDropdown();await refreshPpctSchoolControls(); }
 async function deletePpctSchool(schoolName) { const meta={...ppctCatalogMeta(),school_name:ppctSchoolName(schoolName)};if(!meta.academic_year){showToast("Hãy chọn năm học trước khi xóa hồ sơ PPCT.","warning");return;}if(!userConfirm(`Xóa PPCT của trường “${meta.school_name||"Hồ sơ chưa đặt tên"}”?`))return;const res=await ppctCatalogFetch(meta,{method:"DELETE"}),data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||"Không xóa được PPCT");delete appState.ppctCatalogsBySchool[meta.school_name];if(ppctSchoolName()===meta.school_name)await switchPpctSchool("");await refreshPpctSchoolControls();showToast("Đã xóa hồ sơ PPCT.","success"); }
@@ -9005,7 +9025,7 @@ function setupPpctCatalogSettingsModal() {
   const openBtn=document.getElementById("btnManagePpctCatalog"), save=document.getElementById("btnSavePpctCatalogSettings");
   openBtn?.addEventListener("click",openPpctCatalogSettings);
   document.getElementById("ppctSchoolSelect")?.addEventListener("change",e=>switchPpctSchool(e.target.value).catch(error=>showToast(error.message||"Không chuyển được trường.","danger")));
-  save?.addEventListener("click",async()=>{ if(!(appState.ppctCatalog.rows||[]).length){showToast("Hãy nhập JSON PPCT trước khi lưu.","warning");return;} const meta={subject:document.getElementById("ppctCatalogSubject")?.value,grade:document.getElementById("ppctCatalogGrade")?.value,academic_year:document.getElementById("ppctCatalogYear")?.value?.trim(),school_name:ppctSchoolName(document.getElementById("ppctCatalogSchool")?.value)}; const changing=meta.subject!==appState.selectedSubject||meta.grade!==appState.selectedGrade||meta.academic_year!==appState.ppctCatalogAcademicYear||meta.school_name!==ppctSchoolName(); if(changing){ppctStoreActiveCatalog();appState.selectedSubject=String(meta.subject||"toan").toLowerCase();appState.selectedGrade=meta.grade;appState.ppctCatalogAcademicYear=meta.academic_year;appState.ppctSchool=meta.school_name;appState.ppctCatalog=appState.ppctCatalogsBySchool[meta.school_name]||appState.ppctCatalog;} try { const existing=await ppctCatalogFetch(meta).then(r=>r.ok?r.json():null); if(existing?.catalog&&!userConfirm("Danh mục PPCT cho trường, khối, môn và năm học này đã có. Thay thế bằng danh mục mới?")) return; await savePpctCatalogToServer(); await refreshPpctSchoolControls(); closeModal("modalPpctCatalogSettings"); } catch(error){showToast(error.message||"Không lưu được PPCT.","danger");} });
+  save?.addEventListener("click",async()=>{ if(!(appState.ppctCatalog.rows||[]).length){showToast("Hãy nhập JSON PPCT trước khi lưu.","warning");return;} const meta={subject:document.getElementById("ppctCatalogSubject")?.value,grade:document.getElementById("ppctCatalogGrade")?.value,academic_year:document.getElementById("ppctCatalogYear")?.value?.trim(),school_name:ppctSchoolName(document.getElementById("ppctCatalogSchool")?.value)}; const changing=meta.subject!==appState.selectedSubject||meta.grade!==appState.selectedGrade||meta.academic_year!==appState.ppctCatalogAcademicYear||meta.school_name!==ppctSchoolName(); if(changing){ppctStoreActiveCatalog();appState.selectedSubject=String(meta.subject||"toan").toLowerCase();appState.selectedGrade=meta.grade;appState.ppctCatalogAcademicYear=meta.academic_year;appState.ppctSchool=meta.school_name;appState.ppctCatalog=appState.ppctCatalogsBySchool[meta.school_name]||appState.ppctCatalog;} try { const existing=await ppctCatalogFetch(meta).then(r=>r.ok?r.json():null); if(existing?.catalog&&!userConfirm("Danh mục PPCT cho trường, khối và môn này đã có. Thay thế bằng danh mục mới?")) return; await savePpctCatalogToServer(); await refreshPpctSchoolControls(); closeModal("modalPpctCatalogSettings"); } catch(error){showToast(error.message||"Không lưu được PPCT.","danger");} });
 }
 
 function setupApiKeyModal() {
@@ -9364,5 +9384,6 @@ if (typeof module !== 'undefined' && module.exports) {
     ,deletePpctSchool
     ,loadPpctSchoolProfiles
     ,refreshPpctSchoolControls
+    ,refreshPpctForChangedGrade
   };
 }

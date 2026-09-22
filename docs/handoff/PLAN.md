@@ -105,7 +105,30 @@ flowchart TD
 
 ---
 
-## 6. Kế Hoạch Kiểm Thử (Verification Plan)
+## 6. Khắc Phục Lỗi PPCT & Tự Động Nhảy Tên Trường Khi Đổi Lớp (`soankhbd`)
+
+### Vấn đề:
+1. **Lệch năm học làm ẩn PPCT cũ:** Các hồ sơ PPCT cũ (như Lớp 9 ID 2, Lớp 8 ID 8) được nạp từ trước khi có năm học, trong CSDL `academic_year = ''`. Khi người dùng đổi sang Lớp 9, ô Năm học mặc định điền `2026-2027` làm API lọc cứng không thấy, PPCT cũ bị ẩn đi.
+2. **Không tự động nhảy tên trường khi đổi khối lớp:** Giáo viên dạy Lớp 8 ở Trường A (THCS Trần Phú), dạy Lớp 6 ở Trường B (THCS Nguyễn Hiền). Khi bấm từ Lớp 8 sang Lớp 6 (hoặc ngược lại), ô Trường vẫn bị giữ nguyên trường cũ, không tự động nhận diện và nhảy sang trường của khối lớp mới. Do đó hệ thống tìm sai trường và báo không có PPCT.
+
+### Giải pháp kỹ thuật:
+1. **Tự động chuyển trường khi đổi khối lớp (`selectGrade.change`)**:
+   - Khi người dùng đổi `selectGrade`:
+     - Tự động gọi `refreshPpctSchoolControls()` để lấy danh sách trường `profiles` của khối lớp mới.
+     - Kiểm tra nếu trường hiện tại (`appState.ppctSchool`) không nằm trong danh sách trường của khối lớp mới:
+       + Tự động chuyển sang trường đầu tiên có PPCT của khối lớp đó: `await switchPpctSchool(profiles[0].school_name)`.
+       + Cập nhật dropdown `ppctSchoolSelect` sang đúng tên trường mới.
+       + Tải toàn bộ PPCT tương ứng của trường đó cho khối lớp mới.
+     - Kết quả: Chọn Lớp 8 ➡️ tự động nhảy ra Trường A (Trần Phú); Chọn Lớp 6 ➡️ tự động nhảy ra Trường B (Nguyễn Hiền).
+2. **Backend (`api/khbd_ppct_catalog.php` & `api/canvas_ppct_catalog.php`)**:
+   - Khi truy vấn `profiles`: Bỏ lọc `academic_year`, trả về toàn bộ hồ sơ trường đã có của `owner_user_id`, `subject`, `grade` để không bị ẩn hồ sơ cũ.
+   - Khi truy vấn `catalog`: Nếu tìm theo `$year` cụ thể mà không có, tự động fallback tìm bản ghi cũ có `academic_year = ''` (hoặc `AND (academic_year = ? OR academic_year = '')`).
+3. **Frontend (`js/khbd-app.js`)**:
+   - `loadPpctSchoolProfiles`: Không giới hạn `academic_year` khi lấy danh sách hồ sơ trường, đảm bảo hiển thị cả các hồ sơ cũ `(Chưa đặt năm / Chưa đặt tên)`.
+
+---
+
+## 7. Kế Hoạch Kiểm Thử (Verification Plan)
 
 1. **Duyệt giáo án theo Tổ (`tests/duyetgiaoan-department-smoke.js`)**:
    - Tách bài `splitLessonsFromText` với văn bản mẫu 50 trang Word.
@@ -116,7 +139,11 @@ flowchart TD
    - Kiểm tra `canvasTextbookAnalysisPrompt` có trường `figures`.
    - Kiểm tra `formatCanvasTextbookContext` có xuất mục hình vẽ SGK.
    - Kiểm tra bài hình học không bị rơi vào nhánh "không cần tạo hình".
-3. **Regression Test**:
+3. **Tự Động Nhảy Trường & Hiển Thị PPCT Khi Đổi Lớp (`tests/ppct-legacy-fallback-smoke.js`)**:
+   - Lớp 8 gắn Trường A, Lớp 6 gắn Trường B: Chuyển sang Lớp 8 xác nhận ô Trường tự động nhảy sang A và nạp PPCT của A; chuyển sang Lớp 6 xác nhận ô Trường tự động nhảy sang B và nạp PPCT của B.
+   - Gọi API lấy profiles Lớp 9 với `academic_year=2026-2027`: xác nhận hồ sơ ID 2 (năm học rỗng) vẫn được trả về đầy đủ.
+4. **Regression Test**:
    - `node tests/duyetgiaoan-smoke.js`
    - `node tests/duyetgiaoan-integration-smoke.js`
+   - `node tests/khbd-ppct-multi-school-smoke.js`
    - `git diff --check`

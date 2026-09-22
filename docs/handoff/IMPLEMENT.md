@@ -1,5 +1,19 @@
 # IMPLEMENT: Duyệt giáo án theo tổ chuyên môn
 
+## PPCT cũ và tự chọn trường theo khối
+
+- `api/khbd_ppct_catalog.php` và `api/canvas_ppct_catalog.php`: GET danh sách hồ sơ PPCT không còn lọc theo năm học; GET catalog ưu tiên đúng năm học đang chọn, sau đó mới tìm bản cũ có `academic_year = ''` với cùng giáo viên, môn, khối và trường. PUT/DELETE vẫn dùng khóa năm học chính xác.
+- `js/khbd-app.js`: danh sách trường PPCT luôn tải đủ hồ sơ theo môn/khối; khi đổi khối, ứng dụng kiểm tra hồ sơ của khối mới và tự chuyển sang trường đầu tiên phù hợp nếu trường hiện tại không có. Cache PPCT chưa đặt tên có dữ liệu vẫn được bảo toàn. Luồng chuyển trường không tự gọi lặp vô hạn.
+- `tests/ppct-legacy-fallback-smoke.js`: mock lớp 8/Trường A sang lớp 6/Trường B, kiểm tra tự chuyển đúng trường và PPCT; đồng thời kiểm tra hồ sơ/catalog PPCT cũ chưa đặt năm vẫn tìm thấy khi năm học hiện hành đã được chọn.
+
+## Kiểm thử PPCT cũ
+
+- PASS: `node tests/ppct-legacy-fallback-smoke.js`
+- PASS: `node tests/khbd-ppct-multi-school-smoke.js`
+- PASS: `node tests/duyetgiaoan-smoke.js`
+- PASS: `node tests/duyetgiaoan-integration-smoke.js`
+- PASS: `git diff --check`
+
 ## Bổ sung Canvas: hình vẽ SGK và hình học
 
 - `js/khbd-app.js`: Canvas nay trích xuất `figures` (`id`, `description`, `subsection`) ở từng lô SGK, chuẩn hóa và khử trùng lặp giữa các lô; ngữ cảnh SGK có mục `## Hình vẽ trong SGK`.
