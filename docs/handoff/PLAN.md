@@ -1,117 +1,65 @@
-# PLAN: AI Tự Động Thẩm Định Mức Độ Nhận Thức ([NB], [TH], [VD], [VDC]) Cho Từng Câu Hỏi
+# PLAN: Sửa Lỗi 1-Click Generate Bị Dừng Do Thiếu Hoạt Động 2.2 Trong canvas_soankhbd.html
 
-## 1. Yêu Cầu Đúng Bản Chất Của Người Dùng
+## 1. Nguyên Nhân Gây Lỗi
 
-- **Không chia tỉ lệ máy móc (index / total)**: Khi tạo đề (dù chọn "Hỗn hợp" hay bất kỳ mức độ nào), **chính AI là người hiểu sâu sắc bản chất câu hỏi** (nội dung, mức độ tư duy, độ phức tạp của bài toán) để tự thẩm định và gắn nhãn mức độ nhận thức phù hợp nhất cho từng câu:
-  + **Nhận biết (`[NB]`)**: Câu hỏi kiểm tra định nghĩa, công thức, nhận diện kiến thức trực tiếp.
-  + **Thông hiểu (`[TH]`)**: Câu hỏi yêu cầu hiểu bản chất, giải thích hiện tượng, biến đổi công thức 1 bước.
-  + **Vận dụng (`[VD]`)**: Bài toán qua nhiều bước biến đổi, áp dụng kiến thức vào bài toán thực tế.
-  + **Vận dụng cao (`[VDC]`)**: Bài toán phân hóa mạnh, tư duy tổng hợp, cực trị, tối ưu hóa.
-
-- **Vì sao trước đây bị mất nhãn**:
-  + Trong prompt yêu cầu AI sinh JSON (`generateContent`, `generateSynthesizedFromSource`, `handleFileUpload`), chúng ta **chưa đưa trường `"level"` vào cấu trúc JSON bắt buộc**.
-  + Vì vậy, dù AI hiểu câu hỏi ở mức độ nào, AI cũng không có chỗ để điền, dẫn đến dữ liệu trả về bị thiếu trường `level`.
-  + Khi xuất Word OLM, `getOlmLevelTag(q)` đọc `q.level` thấy rỗng nên không in thẻ, khiến OLM phải hỏi lại từng câu.
+- **Hiện tượng**:
+  Khi người dùng bấm **1-Click Generate** trong `canvas_soankhbd.html`, tiến trình chạy đến 60% (Pha B - Hình thành kiến thức mới) thì bị văng lỗi:
+  `Error: Hoạt động B có 2 mục lớn nhưng thiếu Hoạt động 2.2. Phải sinh đủ từ 2.1 đến 2.2.`
+- **Nguyên nhân kỹ thuật**:
+  1. Trong `js/khbd-app.js`, khi bài dạy có từ 2 mục lớn SGK trở lên, `expectedActivityBBranchCount()` trả về `>= 2`.
+  2. Hàm `assertPhasePedagogyOutput` (dòng ~5624) kiểm tra bắt buộc phải có chuỗi `Hoạt động 2.2`:
+     ```javascript
+     if (expectedBranches >= 2 && !/Hoạt động\s*2\.2\b/i.test(text)) {
+       throw new Error(`Hoạt động B có ${expectedBranches} mục lớn nhưng thiếu Hoạt động 2.2. Phải sinh đủ từ 2.1 đến 2.${expectedBranches}.`);
+     }
+     ```
+  3. Khi Gemini sinh Hoạt động B: Do nội dung mỗi nhánh quá dài (đủ 4 phần a, b, c, d; kịch bản chi tiết GV - HS và bảng 2 cột), Gemini thường dừng lại sau khi sinh xong Hoạt động 2.1, hoặc đặt tiêu đề nhánh 2 khác định dạng (ví dụ `### 2. ...` hoặc `### Hoạt động 2:`).
+  4. Trong `applyActivityOutput` (dòng ~7934), khi phát hiện thiếu 2.2, hàm gửi lại `repairPrompt`. Nhưng `repairPrompt` gửi lại toàn bộ nội dung cũ (vốn chỉ có 2.1) và bảo sửa, khiến AI chỉ chỉnh sửa lại 2.1 mà không sinh thêm 2.2.
+  5. Sau khi sửa vẫn thiếu 2.2, dòng ~7965 thực hiện `throw problem;`, làm crash toàn bộ tiến trình 1-Click Generate!
 
 ---
 
-## 2. Giải Pháp Chi Tiết
+## 2. Giải Pháp Khắc Phục Triệt Để Cho Coder
 
-### 1. Cập nhật tất cả các Prompt AI yêu cầu AI tự thẩm định `level`
-Trong cả 3 luồng tạo/đọc câu hỏi:
-- **`generateContent`** (Tạo câu hỏi từ danh sách chủ đề):
-  + Yêu cầu AI: *"Dựa vào bản chất và độ sâu sư phạm của từng câu hỏi, bạn hãy tự đánh giá và gán chính xác mức độ nhận thức vào trường 'level': 'Nhận biết', 'Thông hiểu', 'Vận dụng', hoặc 'Vận dụng cao'."*
-  + Schema mẫu:
-    ```json
-    {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice","level":"Nhận biết"}
-    ```
-- **`generateSynthesizedFromSource`** (Tạo đề tổng hợp từ file tài liệu):
-  + Yêu cầu AI quét học liệu và khi sinh câu hỏi nào thì tự gán `level` tương ứng cho câu đó.
-- **`handleFileUpload`** (Trích xuất đề có sẵn từ file PDF/Word):
-  + Yêu cầu AI phân tích nội dung từng câu hỏi trong đề gốc để tự động nhận diện mức độ nhận thức và ghi vào `level`.
+### Bước 1: Chuẩn hóa tiêu đề nhánh trước khi kiểm tra (Heading Normalization)
+Trong `js/khbd-app.js`, trước khi chạy kiểm tra `assertPhasePedagogyOutput`, tự động chuẩn hóa các biến thể tiêu đề mà AI thường dùng cho mục 2:
+- Nếu bài có 2 mục lớn mà văn bản có `### 2.` hoặc `### Hoạt động 2:` (không có .2) hoặc `### Mục 2:` ➔ Tự động chuẩn hóa về `### Hoạt động 2.2: [Tên mục]`.
 
-### 2. Chuẩn hóa trong `normalizeQuizItems`
-Đảm bảo thuộc tính `level` do AI trả về được lưu trữ và chuẩn hóa chính xác:
-```javascript
-const normalizeQuizItems = (items) => {
-    if (!Array.isArray(items)) return [];
-
-    return items.map((item, index) => {
-        const rawLevel = String(item.level || '').toLowerCase().trim();
-        let level = 'Nhận biết';
-        if (rawLevel.includes('thông hiểu') || rawLevel === 'th') {
-            level = 'Thông hiểu';
-        } else if (rawLevel.includes('vận dụng cao') || rawLevel.includes('rất khó') || rawLevel === 'vdc') {
-            level = 'Vận dụng cao';
-        } else if (rawLevel.includes('vận dụng') || rawLevel.includes('nâng cao') || rawLevel.includes('khó') || rawLevel === 'vd') {
-            level = 'Vận dụng';
-        } else if (rawLevel.includes('nhận biết') || rawLevel.includes('cơ bản') || rawLevel.includes('dễ') || rawLevel === 'nb') {
-            level = 'Nhận biết';
-        } else {
-            // Mặc định an toàn nếu AI quên trả về
-            level = 'Nhận biết';
-        }
-
-        const normalized = {
-            ...item,
-            level,
-            question: cleanGeneratedQuestionText(item.question)
-        };
-        // Các xử lý options, true-false, short-answer hiện tại giữ nguyên...
-        return normalized;
-    });
-};
-```
-
-### 3. Hiển thị mức độ AI đã đánh giá trên giao diện Bước 2 (Step 2)
-Trên từng thẻ câu hỏi ở Bước 2 (`questions.map((q, i) => ...)`):
-- Hiển thị badge mức độ mà AI đã xác định (ví dụ: `🟢 [NB] Nhận biết`, `🔵 [TH] Thông hiểu`, `🟠 [VD] Vận dụng`, `🔴 [VDC] Vận dụng cao`).
-- Dưới dạng thẻ chọn (dropdown) cho phép giáo viên nhìn thấy ngay kết quả phân loại của AI, đồng thời có thể bấm đổi mức độ nếu muốn trước khi xuất file:
-  ```jsx
-  <select
-      value={q.level || "Nhận biết"}
-      onChange={(e) => {
-          const newLvl = e.target.value;
-          setQuestions(prev => prev.map((item, idx) => idx === i ? { ...item, level: newLvl } : item));
-      }}
-      className="px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-indigo-400 cursor-pointer shadow-sm focus:outline-none"
-      title="Mức độ nhận thức do AI đánh giá (xuất chuẩn OLM.vn)"
-  >
-      <option value="Nhận biết">🟢 [NB] Nhận biết</option>
-      <option value="Thông hiểu">🔵 [TH] Thông hiểu</option>
-      <option value="Vận dụng">🟠 [VD] Vận dụng</option>
-      <option value="Vận dụng cao">🔴 [VDC] Vận dụng cao</option>
-  </select>
+### Bước 2: Cơ chế sinh tiếp nhánh còn thiếu (Append Missing Branch) thay vì sửa lại từ đầu
+Trong `applyActivityOutput` tại `js/khbd-app.js`:
+- Khi phát hiện thiếu Hoạt động 2.2 (hoặc 2.k):
+  Thay vì gửi toàn bộ bài cũ bắt AI sửa lại, gửi prompt chuyên biệt yêu cầu sinh riêng nhánh bị thiếu:
+  ```javascript
+  const missingBranchPrompt = buildPedagogicalPrompt(`Bạn đang soạn giáo án CV 5512 môn ${currentSubjectId()} bài "${getTopicDisplayName()}".
+Hoạt động 2.1 đã hoàn thành. Bây giờ bạn BẮT BUỘC chỉ soạn tiếp nhánh Hoạt động 2.${k}:
+### Hoạt động 2.${k}: ${subsectionTitle}
+Bắt buộc có đủ 4 phần:
+#### a) Mục tiêu:
+#### b) Nội dung:
+#### c) Sản phẩm:
+#### d) Tổ chức thực hiện: (Bảng 2 cột, 4 bước phân vai GV và HS chi tiết).
+TUYỆT ĐỐI KHÔNG lặp lại Hoạt động 2.1.`);
   ```
+- Lấy kết quả nhánh 2.k vừa sinh nối tiếp vào cuối Hoạt động B (`finalResult += "\n\n" + branchOutput;`).
 
-### 4. Xuất Word OLM (`exportWordOLM`)
-Hàm `getOlmLevelTag(q)` đọc trực tiếp mức độ của câu hỏi:
-```javascript
-const getOlmLevelTag = (q) => {
-    const raw = String(q?.level || "").toLowerCase().trim();
-    if (raw.includes("thông hiểu") || raw === "th") return "[TH] ";
-    if (raw.includes("vận dụng cao") || raw === "vdc") return "[VDC] ";
-    if (raw.includes("vận dụng") || raw === "vd") return "[VD] ";
-    return "[NB] ";
-};
-```
-Khi xuất ra Word:
-- Câu 1: `Câu 1. [NB] Để giải hệ phương trình bằng phương pháp thế, bước đầu tiên ta thường làm gì?`
-- Câu 2: `Câu 2. [TH] Trong phương pháp cộng đại số, nếu hệ số của cùng một ẩn...`
-- Câu 6: `Câu 6. [VD] Trong bài toán thực tế về số cây cải bắp...`
-- Tất cả các câu hỏi đều có nhãn mức độ do AI đánh giá, khi import vào OLM sẽ được phân loại tự động 100%, không còn popup hỏi từng câu.
+### Bước 3: Fallback an toàn không làm crash 1-Click Generate
+Tại dòng ~7965 `js/khbd-app.js`:
+- Nếu sau khi thử sinh bổ sung mà vẫn thiếu hoặc AI bị nghẽn, **tự động chèn khung chuẩn của Hoạt động 2.2** (gồm tên mục 2 lấy từ hồ sơ SGK và cấu trúc bảng 4 bước chuẩn) để hoàn thiện Hoạt động B.
+- **TUYỆT ĐỐI KHÔNG `throw problem;`** làm dừng ngang tiến trình 1-Click Generate. Ghi log cảnh báo `console.warn` và cho phép tiến trình tiếp tục chạy các bước sau (Pha C, D, E).
 
 ---
 
 ## 3. Kế Hoạch Kiểm Thử (Verification Plan)
 
-1. **Test kiểm tra `taobaitap.html`**:
-   - Xác nhận các prompt sinh câu hỏi và trích xuất đều có hướng dẫn AI thẩm định `"level"` và schema JSON chứa `"level"`.
-   - Xác nhận `normalizeQuizItems` chuẩn hóa và giữ trường `level`.
-   - Xác nhận `getOlmLevelTag` xuất đúng `[NB] `, `[TH] `, `[VD] `, `[VDC] ` cho từng câu hỏi.
-   - Xác nhận giao diện Bước 2 hiển thị dropdown chọn mức độ nhận thức cho từng câu.
-2. **Chạy test tự động**:
-   - `node tests/taobaitap-olm-export-smoke.js`
-   - `node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js`
-   - `node tests/taobaitap-game-word-export-smoke.js`
-   - `git diff --check`
+1. Chạy test kiểm thử nhánh Hoạt động B:
+   ```bash
+   node tests/khbd-activity-b-subsections-smoke.js
+   ```
+2. Chạy test tích hợp sư phạm và 1-Click Generate:
+   ```bash
+   node tests/soankhbd-generation-mode-smoke.js
+   ```
+3. Kiểm tra cú pháp và định dạng:
+   ```bash
+   git diff --check
+   ```

@@ -1,16 +1,14 @@
-# IMPLEMENT: AI thẩm định mức độ nhận thức cho OLM
+# IMPLEMENT: Hoàn thiện nhánh Hoạt động B khi 1-Click Generate
 
 ## Phạm vi đã thực hiện
 
-- `taobaitap.html`: Cả ba luồng AI (tạo đề, tạo từ học liệu, trích xuất Word/PDF) nay yêu cầu mô hình tự đánh giá bản chất từng câu và trả về `level`: Nhận biết, Thông hiểu, Vận dụng hoặc Vận dụng cao.
-- `taobaitap.html`: `normalizeQuizItems` chuẩn hóa nhãn AI trả về, giữ nhãn đó trong dữ liệu và dùng Nhận biết làm mặc định an toàn cho đề cũ/dữ liệu thiếu.
-- `taobaitap.html`: Bước 2 hiển thị bộ chọn mức độ trên từng câu để giáo viên xem và điều chỉnh trước khi xuất OLM.
-- `taobaitap.html`: `getOlmLevelTag` luôn trả về một trong `[NB]`, `[TH]`, `[VD]`, `[VDC]`; không còn xuất nhãn rỗng.
-- `tests/taobaitap-olm-export-smoke.js`: Thêm kiểm thử trực tiếp bốn nhãn xuất, kiểm tra prompt/normalizer và bộ chọn trên giao diện.
+- `js/khbd-app.js`: Chuẩn hóa các tiêu đề nhánh SGK như `### 2. ...`, `### Hoạt động 2:` và `### Mục 2:` về dạng `### Hoạt động 2.2: ...` trước khi kiểm tra.
+- `js/khbd-app.js`: Khi thiếu nhánh 2.k, chỉ yêu cầu AI sinh riêng nhánh đó rồi nối vào nội dung hiện có; không gửi lại toàn bộ Hoạt động B để sửa.
+- `js/khbd-app.js`: Nếu AI vẫn thiếu nhánh hoặc lỗi khi sinh bổ sung, chèn khung CV 5512 có đủ bốn phần, bảng hai cột và bốn bước để 1-Click Generate tiếp tục các pha sau.
+- `tests/khbd-activity-b-subsections-smoke.js`: Bổ sung kiểm thử chuẩn hóa tiêu đề, phát hiện mọi nhánh thiếu và khung dự phòng.
 
 ## Kiểm thử
 
-- PASS: `node tests/taobaitap-olm-export-smoke.js`
-- PASS: `node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js`
-- PASS: `node tests/taobaitap-game-word-export-smoke.js`
+- PASS: `node tests/khbd-activity-b-subsections-smoke.js`
+- PASS: `node tests/soankhbd-generation-mode-smoke.js`
 - PASS: `git diff --check`

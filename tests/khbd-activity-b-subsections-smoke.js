@@ -1,6 +1,6 @@
 const assert = require("assert");
 const { extractTextbookSubsections, extractTextbookLessonMap, getPromptTemplate } = require("../js/khbd-prompts.js");
-const { assertPhasePedagogyOutput } = require("../js/khbd-app.js");
+const { assertPhasePedagogyOutput, normalizeActivityBBranchHeadings, missingActivityBBranches, buildMissingActivityBBranchFallback } = require("../js/khbd-app.js");
 
 function testExtractSubsections() {
   console.log("-> 1. Kiểm tra extractTextbookSubsections với các dạng nội dung SGK...");
@@ -222,6 +222,17 @@ function testAssertPhasePedagogyOutput() {
     /thiếu Hoạt động 2\.2/i,
     "Thiếu 2.2 khi có 2 mục lớn phải throw"
   );
+
+  // Gemini có thể dùng đề mục SGK thay cho mã 2.k; phải được chuẩn hóa trước khi kiểm tra.
+  const alternateHeadings = validOutputB
+    .replace("### 1. Hoạt động 2.1: Khái niệm tập hợp (15 phút)", "### 1. Khái niệm tập hợp (15 phút)")
+    .replace("### 2. Hoạt động 2.2: Phần tử thuộc và không thuộc tập hợp (15 phút)", "### Mục 2: Phần tử thuộc và không thuộc tập hợp (15 phút)");
+  const normalizedHeadings = normalizeActivityBBranchHeadings(alternateHeadings, { expectedBranches: 2 });
+  assert.match(normalizedHeadings, /### Hoạt động 2\.2: Phần tử thuộc/i, "Tiêu đề Mục 2 phải chuẩn hóa thành Hoạt động 2.2");
+  assert.doesNotThrow(() => assertPhasePedagogyOutput("B", alternateHeadings, { expectedBranches: 2 }), "Biến thể tiêu đề SGK đầy đủ phải pass");
+  assert.deepStrictEqual(missingActivityBBranches(only21, { expectedBranches: 3 }), [2, 3], "Phải nhận diện toàn bộ nhánh còn thiếu");
+  const fallback = buildMissingActivityBBranchFallback(2, { expectedBranches: 2 });
+  assert.doesNotThrow(() => assertPhasePedagogyOutput("B", `${only21}\n\n${fallback}`, { expectedBranches: 2 }), "Khung dự phòng phải hợp lệ theo CV 5512");
 
   // Định dạng 2: ### 1. Hoạt động 1: ... (15 phút)
   const validOutputBFormat2 = `

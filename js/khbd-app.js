@@ -5597,8 +5597,61 @@ function expectedActivityBBranchCount(options) {
   return 0;
 }
 
+function activityBSubsectionTitle(index, options = {}) {
+  const profiles = Array.isArray(options.subsections) && options.subsections.length
+    ? options.subsections
+    : ((typeof appState !== "undefined" && Array.isArray(appState.textbookSubsectionProfiles)) ? appState.textbookSubsectionProfiles : []);
+  const profile = profiles.find(item => Number(item && item.index) === Number(index)) || profiles[index - 1];
+  return String(profile && profile.title || `Mục kiến thức ${index}`).replace(/^\s*\d+[.)]\s*/, "").trim();
+}
+
+// Gemini đôi khi đánh số nhánh theo đề mục SGK ("### 2. ...", "### Mục 2:")
+// thay vì mã nội bộ 2.2. Chuẩn hóa trước khi kiểm tra để không loại một nhánh đầy đủ
+// chỉ vì cách đặt tiêu đề khác nhau.
+function normalizeActivityBBranchHeadings(output, options = {}) {
+  const expectedBranches = expectedActivityBBranchCount(options);
+  if (expectedBranches < 2) return String(output || "");
+  return String(output || "").split(/\r?\n/).map(line => {
+    if (!/^\s*###\s+/i.test(line) || /Hoạt động\s*2\.\d+\b/i.test(line)) return line;
+    let match = line.match(/^(\s*###\s*)(\d+)\.\s*(?:Hoạt động|Mục)\s*\d+\s*:\s*(.+)$/i);
+    if (!match) match = line.match(/^(\s*###\s*)(?:Hoạt động|Mục)\s*(\d+)\s*:\s*(.+)$/i);
+    if (!match) match = line.match(/^(\s*###\s*)(\d+)\.\s*(.+)$/i);
+    if (!match) return line;
+    const index = Number(match[2]);
+    if (!Number.isInteger(index) || index < 1 || index > expectedBranches) return line;
+    const title = String(match[3] || activityBSubsectionTitle(index, options)).trim();
+    return `${match[1]}Hoạt động 2.${index}: ${title}`;
+  }).join("\n");
+}
+
+function missingActivityBBranches(output, options = {}) {
+  const expectedBranches = expectedActivityBBranchCount(options);
+  if (expectedBranches < 2) return [];
+  const text = normalizeActivityBBranchHeadings(output, options);
+  const found = new Set();
+  const headingRe = /^\s*###\s*(?:\d+\.\s*)?Hoạt động\s*2\.(\d+)\b/gim;
+  let match;
+  while ((match = headingRe.exec(text))) found.add(Number(match[1]));
+  return Array.from({ length: expectedBranches }, (_, index) => index + 1).filter(index => !found.has(index));
+}
+
+function buildMissingActivityBBranchFallback(index, options = {}) {
+  const title = activityBSubsectionTitle(index, options);
+  return `### Hoạt động 2.${index}: ${title}
+#### a) Mục tiêu:
+- Học sinh nhận biết và trình bày được nội dung trọng tâm của ${title}.
+#### b) Nội dung:
+- Khai thác đúng đề mục ${title} trong SGK.
+#### c) Sản phẩm:
+- Phiếu học tập hoặc phần ghi chép nêu được nội dung trọng tâm của ${title}.
+#### d) Tổ chức thực hiện:
+| Hoạt động của GV và HS | Nội dung |
+| :--- | :--- |
+| + Bước 1: Chuyển giao nhiệm vụ: **GV:** Nêu yêu cầu học tập cho mục "${title}" và giao nhiệm vụ rõ ràng. **HS:** Tiếp nhận nhiệm vụ.<br>+ Bước 2: Thực hiện nhiệm vụ: **HS:** Làm việc cá nhân, sau đó thảo luận nhóm để hoàn thành sản phẩm. **GV:** Quan sát, hỗ trợ học sinh còn lúng túng.<br>+ Bước 3: Báo cáo, thảo luận: **HS:** Đại diện nhóm trình bày và phản biện. **GV:** Điều hành, gợi mở các ý kiến.<br>+ Bước 4: Kết luận, nhận định: **GV:** Chốt kiến thức trọng tâm. **HS:** Hoàn thiện và ghi bài. | **${index}. ${title}**<br>- Nội dung chốt theo SGK. |`;
+}
+
 function assertPhasePedagogyOutput(phase, output, options) {
-  const text = String(output || "");
+  const text = phase === "B" ? normalizeActivityBBranchHeadings(output, options || {}) : String(output || "");
   if (phase === "E") {
     const hasOnTap = /ôn\s*tập/i.test(text);
     const hasBaiTap = /làm\s*bài\s*tập|bài\s*tập/i.test(text);
@@ -5621,8 +5674,9 @@ function assertPhasePedagogyOutput(phase, output, options) {
   // 2. Với Pha B: Kiểm tra từng hoạt động con (2.1, 2.2, ... hoặc Hoạt động 1, Hoạt động 2, ...)
   if (phase === "B") {
     const expectedBranches = expectedActivityBBranchCount(options || {});
-    if (expectedBranches >= 2 && !/Hoạt động\s*2\.2\b/i.test(text)) {
-      throw new Error(`Hoạt động B có ${expectedBranches} mục lớn nhưng thiếu Hoạt động 2.2. Phải sinh đủ từ 2.1 đến 2.${expectedBranches}.`);
+    const missingBranches = missingActivityBBranches(text, options || {});
+    if (missingBranches.length) {
+      throw new Error(`Hoạt động B có ${expectedBranches} mục lớn nhưng thiếu Hoạt động 2.${missingBranches[0]}. Phải sinh đủ từ 2.1 đến 2.${expectedBranches}.`);
     }
     const branchRegex = /(?:^|\n)###\s*(?:\d+\.\s*)?Hoạt động\s*(?:2\.\d+|\d+)[\s\S]*?(?=(?:\n###\s*(?:\d+\.\s*)?Hoạt động\s*(?:2\.\d+|\d+)|\n##\s+[A-Z]|\n#\s+[IVXLCDM]+|$))/gi;
     const branches = text.match(branchRegex);
@@ -7933,10 +7987,30 @@ function activityOutputProblem(actKey, output) {
 
 async function applyActivityOutput(actKey, result, signal, options = {}) {
   const repairWithGemini = options.repairWithGemini !== false;
-  let finalResult = result;
+  const branchOptions = { expectedBranches: actKey === "B" ? expectedActivityBBranchCount() : 0 };
+  let finalResult = actKey === "B" ? normalizeActivityBBranchHeadings(result, branchOptions) : result;
   let problem = activityOutputProblem(actKey, finalResult);
   if (problem && repairWithGemini) {
     try {
+      const missingBranches = actKey === "B" ? missingActivityBBranches(finalResult, branchOptions) : [];
+      if (missingBranches.length) {
+        for (const index of missingBranches) {
+          const title = activityBSubsectionTitle(index, branchOptions);
+          const missingBranchPrompt = buildPedagogicalPrompt(`Bạn đang soạn giáo án CV 5512 môn ${currentSubjectId()} bài "${getTopicDisplayName()}".
+Hoạt động 2.1 đã hoàn thành. Bây giờ BẮT BUỘC chỉ soạn tiếp nhánh Hoạt động 2.${index}:
+### Hoạt động 2.${index}: ${title}
+Bắt buộc có đủ 4 phần:
+#### a) Mục tiêu:
+#### b) Nội dung:
+#### c) Sản phẩm:
+#### d) Tổ chức thực hiện: (Bảng 2 cột, 4 bước phân vai GV và HS chi tiết).
+TUYỆT ĐỐI KHÔNG lặp lại các Hoạt động 2.1 đến 2.${index - 1}.`);
+          const branchOutput = await geminiAPI.generateContent(missingBranchPrompt, [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
+          finalResult += `\n\n${await guardGeminiLessonOutput(branchOutput, signal)}`;
+          finalResult = normalizeActivityBBranchHeadings(finalResult, branchOptions);
+        }
+        problem = activityOutputProblem(actKey, finalResult);
+      } else {
       const expectedB = actKey === "B" ? expectedActivityBBranchCount() : 0;
       const branchRepair = expectedB >= 2
         ? `\n- Hoạt động B có ${expectedB} mục lớn SGK: BẮT BUỘC sinh đủ từ Hoạt động 2.1 đến 2.${expectedB}. TUYỆT ĐỐI CẤM dừng lại sau 2.1.`
@@ -7954,16 +8028,20 @@ ${finalResult}${buildPhasePedagogyContext(actKey)}`);
       const repair = await geminiAPI.generateContent(repairPrompt, [], getSystemRole(appState.selectedSubject, appState.selectedGrade), 0.2, signal);
       finalResult = await guardGeminiLessonOutput(repair, signal);
       problem = activityOutputProblem(actKey, finalResult);
+      }
     } catch (repairError) {
       console.warn(`Giữ nội dung pha ${actKey} dù kỹ thuật/tích hợp chưa khớp đủ:`, repairError);
-      if (actKey === "B" && /thiếu Hoạt động 2\.2|chỉ có \d+ nhánh/i.test(String(problem.message || ""))) {
-        throw problem;
-      }
       problem = repairError;
     }
   }
-  if (problem && actKey === "B" && /thiếu Hoạt động 2\.2|chỉ có \d+ nhánh/i.test(String(problem.message || ""))) {
-    throw problem;
+  if (actKey === "B") {
+    const missingBranches = missingActivityBBranches(finalResult, branchOptions);
+    if (missingBranches.length) {
+      console.warn(`Hoạt động B còn thiếu nhánh ${missingBranches.map(index => `2.${index}`).join(", ")}; chèn khung dự phòng để tiếp tục 1-Click Generate.`);
+      finalResult += `\n\n${missingBranches.map(index => buildMissingActivityBBranchFallback(index, branchOptions)).join("\n\n")}`;
+      finalResult = normalizeActivityBBranchHeadings(finalResult, branchOptions);
+      problem = activityOutputProblem(actKey, finalResult);
+    }
   }
   if (problem) {
     // Nội dung vẫn dùng được khi AI diễn đạt khác từ khóa bộ kiểm tra.
@@ -9043,6 +9121,9 @@ if (typeof module !== 'undefined' && module.exports) {
     normalizeActivityTimeHeadings,
     buildTextbookSourceHint,
     assertPhasePedagogyOutput,
+    normalizeActivityBBranchHeadings,
+    missingActivityBBranches,
+    buildMissingActivityBBranchFallback,
     assertActivityIntegrations,
     assertObjectivesStandards,
     sanitizeLessonMarkdown,
