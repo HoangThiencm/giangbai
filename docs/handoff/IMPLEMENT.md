@@ -1,18 +1,16 @@
-# IMPLEMENT: Hai hướng xuất Word để tải lên OLM.vn
+# IMPLEMENT: Tab chuyên biệt Học liệu OLM.vn
 
-Đã triển khai đúng `docs/handoff/PLAN.md`.
+## Phạm vi đã thực hiện
 
-## File đã thay đổi
+- `taobaitap.html`: Chuẩn hóa `exportWordOLM` theo cú pháp mẫu OLM: tiêu đề ba phần màu xanh, `Câu n.`, đáp án đúng gạch chân ở nhãn, mệnh đề đúng/sai dùng `#`, câu trả lời ngắn dùng `[[...]]`, và lời giải `[HDG]`.
+- `taobaitap.html`: Thêm state và modal **Học liệu OLM.vn (Luyện tập & Đề thi)**, thay hai nút xuất rời bằng một nút toolbar mở modal. Modal có hai hướng xuất: Word thông minh OLM và bộ đôi Đề bài/Hướng dẫn giải; đồng thời hiển thị xem trước cấu trúc OLM trước khi tải.
+- `tests/taobaitap-olm-export-smoke.js`: Bổ sung kiểm tra cú pháp `#${item.text}`, nhãn mệnh đề gạch chân, dấu chấm sau số câu, hai hành động trong modal và preview.
 
-- `taobaitap.html`
-  - Giữ `exportWordOLM` cho luồng Đề thi thông minh, xuất `De_Thi_OLM.docx`.
-  - Bổ sung `exportOlmPdfPair` cho luồng Đề thi PDF: xuất riêng `De_Bai_OLM_PDF.docx` (không có đáp án/lời giải) và `Huong_Dan_Giai_OLM_PDF.docx` (đáp án tổng hợp cùng lời giải chi tiết).
-  - Bộ đôi hỗ trợ câu nhiều lựa chọn, đúng/sai, trả lời ngắn/điền khuyết, cấu trúc CV 7991 và bài tự luận.
-  - Thêm nút `Bộ đôi OLM (Đề & Giải PDF)` cạnh `Xuất Word (OLM)`.
-- `tests/taobaitap-olm-export-smoke.js`
-  - Kiểm tra hồi quy cả hai hàm xuất, ba tên tệp DOCX và hai nút giao diện OLM.
+## Kiểm thử
 
-## Kiểm tra
-
-- `node tests/taobaitap-olm-export-smoke.js`: PASS.
-- `git diff --check -- taobaitap.html tests/taobaitap-olm-export-smoke.js docs/handoff/IMPLEMENT.md`: PASS.
+- PASS: `node tests/taobaitap-olm-export-smoke.js`
+- PASS: `node tests/taobaitap-game-word-export-smoke.js`
+- PASS: `node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js`
+- PASS: `node tests/taobaitap-plan-smoke.js`
+- PASS: `node tests/taobaitap-presentation-smoke.js`
+- PASS: `git diff --check -- taobaitap.html tests/taobaitap-olm-export-smoke.js docs/handoff/IMPLEMENT.md`
