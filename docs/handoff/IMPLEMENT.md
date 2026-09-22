@@ -1,24 +1,22 @@
-# IMPLEMENT: Khắc phục phân đoạn PPCT cho bài lặp định kỳ
+# IMPLEMENT: Đồng bộ gọi Gemini Canvas trực tiếp không cần API key
 
 Đã triển khai đúng `docs/handoff/PLAN.md`.
 
 ## File đã thay đổi
 
-- `phancongtochuyenmon.html`
-  - Chuẩn hóa `periods` về 1 khi `period_no` chỉ là một tiết đơn lẻ.
-  - Phân biệt block PPCT theo mạch kiến thức (`strand`).
-  - Không gộp các bài lặp định kỳ như “Luyện tập chung”, “Ôn tập”, “Kiểm tra” giữa các tuần, trừ khi dòng tiếp theo có chỉ dẫn tiếp diễn rõ ràng.
-  - Chuẩn hóa dòng PPCT do AI trả về và bổ sung chỉ dẫn prompt để số tiết khớp với tiết PPCT.
-- `tests/baogiang-weekday-segment-smoke.js`
-  - Bổ sung kiểm thử lỗi “Luyện tập chung” 1 tiết ở các tuần khác nhau, trường hợp có “(tiếp theo)”, khác mạch cùng tuần, và dữ liệu `period_no` đơn lẻ nhưng `periods` sai.
+- `canvas_soankhbd.html`
+  - Sao chép nguyên vẹn payload gọi Gemini Canvas, giữ riêng `systemInstruction`, `contents` và `generationConfig`; chỉ loại `thinkingConfig` không tương thích.
+  - Bỏ `credentials: "omit"` để môi trường Gemini Canvas có thể dùng xác thực phiên sẵn có.
+  - Thử model đã chọn trước, sau đó tự động thử `gemini-2.5-flash` khi nhận HTTP 401, 403 hoặc 404.
+  - Không có fallback tới proxy hoặc API key hệ thống.
+- `tests/canvas-soankhbd-smoke.js`
+  - Bổ sung hồi quy cho payload Canvas giữ nguyên `systemInstruction`, không tước credentials, và fallback model.
 
 ## Kiểm tra
 
-- `node tests/baogiang-weekday-segment-smoke.js`: PASS.
-- `node tests/baogiang-recognition-smoke.js`: PASS.
-- `node tests/baogiang-teacher-month-smoke.js`: PASS.
-- `git diff --check -- phancongtochuyenmon.html tests/baogiang-weekday-segment-smoke.js docs/handoff/IMPLEMENT.md`: PASS.
+- `node tests/canvas-soankhbd-smoke.js`: PASS.
+- `git diff --check -- canvas_soankhbd.html tests/canvas-soankhbd-smoke.js docs/handoff/IMPLEMENT.md`: PASS.
 
 ## Giới hạn
 
-Chưa thực hiện kiểm tra trực quan trên trình duyệt; các đường đi và tình huống hồi quy trong kế hoạch đã được kiểm tra tự động.
+Việc Canvas cấp quyền cho request trực tiếp phụ thuộc phiên Gemini đang đăng nhập; chưa thể tự động kiểm tra UI Canvas từ môi trường dự án.

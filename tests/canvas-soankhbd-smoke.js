@@ -112,7 +112,7 @@ for (const targetPath of targetPaths) {
   assert.ok(!targetHtml.includes('geminiEndpoint:'), `${relPath} không được cấu hình endpoint proxy Gemini`);
   assert.ok(!targetHtml.includes('?key='), `${relPath} không được đính API key vào URL Gemini`);
   assert.ok(!/Authorization\s*:/.test(targetHtml), `${relPath} request Gemini Canvas không được gửi Authorization`);
-  assert.ok(targetHtml.includes('credentials: "omit"'), `${relPath} request Gemini Canvas không gửi cookie`);
+  assert.ok(!targetHtml.includes('credentials: "omit"'), `${relPath} request Gemini Canvas không được tước thông tin xác thực phiên`);
   assert.ok(targetHtml.includes('gemini-3-flash-preview'), `${relPath} phải sử dụng model Gemini Canvas gemini-3-flash-preview`);
   assert.ok(targetHtml.includes('canvasConfirm'), `${relPath} phải có hàm xác nhận modal nội bộ canvasConfirm`);
   assert.ok(targetHtml.includes('isLocal ? "js/khbd-docx.js"'), `${relPath} phải nạp khbd-docx.js cục bộ khi chạy file/localhost`);
@@ -184,7 +184,14 @@ for (const targetPath of targetPaths) {
   assert.ok(!targetHtml.includes('canvas-session'), `${relPath} không dùng pseudo key canvas-session`);
   assert.ok(!targetHtml.includes('mistral-ocr-client.js'), `${relPath} không nạp Mistral OCR client trong Canvas`);
   assert.ok(!targetHtml.includes('window.MistralOcr ='), `${relPath} không giả MistralOcr bằng Gemini`);
-  assert.ok(targetHtml.includes('body: JSON.stringify(payload)'), `${relPath} gửi nguyên payload Gemini đa phương thức trực tiếp`);
+  assert.ok(targetHtml.includes('cleanPayloadForCanvas'), `${relPath} phải làm sạch payload tương thích Gemini Canvas`);
+  assert.ok(targetHtml.includes('body: JSON.stringify(cleanPayloadForCanvas(payload))'), `${relPath} gửi payload Gemini Canvas đã làm sạch`);
+  assert.ok(targetHtml.includes('JSON.parse(JSON.stringify(sourcePayload || {}))'), `${relPath} phải sao chép nguyên vẹn payload trước khi làm sạch`);
+  assert.ok(targetHtml.includes('delete copy.generationConfig.thinkingConfig'), `${relPath} chỉ loại thinkingConfig không tương thích`);
+  assert.ok(!targetHtml.includes('thinkingConfig: {'), `${relPath} không được tự thêm thinkingConfig vào payload Canvas`);
+  assert.ok(!targetHtml.includes('[CHỈ DẪN HỆ THỐNG]'), `${relPath} không được gộp systemInstruction vào prompt`);
+  assert.ok(targetHtml.includes('fallbackModel = "gemini-2.5-flash"'), `${relPath} phải có fallback model Gemini Canvas`);
+  assert.ok(targetHtml.includes('response.status === 401 || response.status === 403 || response.status === 404'), `${relPath} fallback khi Canvas chặn model preview`);
   assert.ok(targetHtml.includes('allowEmptyKey: true'), `${relPath} cho phép Gemini Canvas không cần key trình duyệt`);
   assert.ok(targetHtml.includes('lastCanvasMeta = metadata'), `${relPath} lưu metadata tuyến/model Canvas an toàn`);
   assert.ok(targetHtml.includes('type: "canvas_direct"'), `${relPath} báo tuyến Gemini Canvas trực tiếp`);

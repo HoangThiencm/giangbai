@@ -1394,21 +1394,40 @@
         return canvasGenerateContent(prompt, images, systemRole, temperature, signal, Object.assign({}, options || {}, { allowEmptyKey: true }));
       };
       geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
-        const useModel = /image/i.test(String(model || "")) ? model : MODEL;
-        const response = await this.fetchWithTimeout(GEMINI_DIRECT_ENDPOINT + useModel + ":generateContent", {
+        const primaryModel = /image/i.test(String(model || "")) ? model : (MODEL || "gemini-3-flash-preview");
+        const fallbackModel = "gemini-2.5-flash";
+
+        // Giữ nguyên payload sư phạm, đặc biệt systemInstruction tách biệt với
+        // contents. Chỉ bỏ tùy chọn thinking chưa tương thích với một số model Canvas.
+        function cleanPayloadForCanvas(sourcePayload) {
+          const copy = JSON.parse(JSON.stringify(sourcePayload || {}));
+          if (copy.generationConfig && copy.generationConfig.thinkingConfig) {
+            delete copy.generationConfig.thinkingConfig;
+          }
+          return copy;
+        }
+
+        const executeCall = async (targetModel) => this.fetchWithTimeout(GEMINI_DIRECT_ENDPOINT + targetModel + ":generateContent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "omit",
-          body: JSON.stringify(payload),
+          body: JSON.stringify(cleanPayloadForCanvas(payload)),
           signal: signal
         }, timeoutMs || 95000);
-        const metadata = { route: "canvas_direct", model: useModel };
+
+        let response = await executeCall(primaryModel);
+        let activeUsedModel = primaryModel;
+        if (!response.ok && (response.status === 401 || response.status === 403 || response.status === 404) && primaryModel !== fallbackModel) {
+          console.warn("[Gemini Canvas] Model " + primaryModel + " trả về HTTP " + response.status + ". Tự động fallback sang " + fallbackModel + "...");
+          response = await executeCall(fallbackModel);
+          activeUsedModel = fallbackModel;
+        }
+        const metadata = { route: "canvas_direct", model: activeUsedModel };
         geminiAPI.lastCanvasMeta = metadata;
-        geminiAPI.emitGeminiStatus({ type: "canvas_direct", message: "Gemini Canvas: gọi trực tiếp · " + useModel, route: metadata.route, model: useModel });
-        if (response.status === 401 || response.status === 403) {
-          setBanner("Gemini Canvas không cấp quyền gọi API trực tiếp (HTTP " + response.status + "). Không dùng tuyến hệ thống.", "err");
-        } else if (response.ok) {
-          setBanner("Gemini Canvas đang gọi trực tiếp (" + useModel + "), không dùng proxy hoặc API key hệ thống.", "ok");
+        geminiAPI.emitGeminiStatus({ type: "canvas_direct", message: "Gemini Canvas: gọi trực tiếp · " + activeUsedModel, route: metadata.route, model: activeUsedModel });
+        if (response.ok) {
+          setBanner("Gemini Canvas đang gọi trực tiếp (" + activeUsedModel + "), không dùng proxy hoặc API key hệ thống.", "ok");
+        } else {
+          setBanner("Gemini Canvas báo lỗi (HTTP " + response.status + "). Không dùng tuyến hệ thống.", "err");
         }
         response.canvasMeta = metadata;
         return response;
