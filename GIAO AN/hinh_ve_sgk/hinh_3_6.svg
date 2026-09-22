@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 250" width="320" height="250">
+  <rect width="320" height="250" fill="#ffffff"/>
+  <polygon points="60,130 150,45 270,60 190,210" fill="#f8fafc" stroke="#000000" stroke-width="2" stroke-linejoin="round"/>
+  
+  <text x="75" y="125" font-family="'Times New Roman', serif" font-size="13" fill="#0284c7">110°</text>
+  <text x="155" y="75" font-family="'Times New Roman', serif" font-size="13" fill="#0284c7">120°</text>
+  <text x="240" y="85" font-family="'Times New Roman', serif" font-size="13" fill="#0284c7">80°</text>
+  <text x="180" y="195" font-family="'Times New Roman', serif" font-size="15" font-weight="bold" fill="#dc2626">?</text>
+  
+  <text x="42" y="135" font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold">A</text>
+  <text x="150" y="32" font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold">B</text>
+  <text x="282" y="65" font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold">C</text>
+  <text x="195" y="228" font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold">D</text>
+  
+  <text x="160" y="244" text-anchor="middle" font-family="'Times New Roman', serif" font-style="italic" font-size="14">Hình 3.6: Tính góc D của tứ giác ABCD</text>
+</svg>
