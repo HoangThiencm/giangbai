@@ -1,3 +1,19 @@
+# IMPLEMENT: Mở khóa tạo ảnh Gemini Canvas trực tiếp
+
+## Tạo ảnh Canvas không dùng browser API key
+
+- `js/khbd-gemini.js`: `generateImage` chỉ bỏ chặn API key khi `window.__KHBD_CANVAS__.directGemini === true`; trang không phải Canvas vẫn bị chặn trước khi gửi yêu cầu.
+- `canvas_soankhbd.html`: Canvas bọc `generateImage` để dùng adapter Gemini trực tiếp không có key/proxy/xác thực; adapter giữ `gemini-2.5-flash-image` cho yêu cầu tạo ảnh và không hạ model này về `gemini-2.5-flash`.
+- `tests/khbd-gemini-retry-smoke.js`: kiểm tra Canvas không key nhận được inline image với payload IMAGE/model ảnh đúng; kiểm tra trang thường không key vẫn báo lỗi.
+- `tests/canvas-soankhbd-smoke.js`: kiểm tra tĩnh wrapper tạo ảnh, không remap model ảnh, và direct request không gửi credentials.
+
+## Kiểm thử tạo ảnh Canvas
+
+- PASS: `node tests/khbd-gemini-retry-smoke.js`
+- PASS: `node tests/canvas-soankhbd-smoke.js`
+- PASS: `node tests/canvas-geometry-figures-smoke.js`
+- PASS: `git diff --check`
+
 # IMPLEMENT: Duyệt giáo án theo tổ chuyên môn
 
 ## PPCT cũ và tự chọn trường theo khối

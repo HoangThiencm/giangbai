@@ -102,6 +102,15 @@ flowchart TD
 4. **Fallback & Toast trong `generateLessonIllustrations`**:
    - Nếu là bài hình học mà AI trả về rỗng, tự động lấy các `figures` trích xuất từ SGK để tạo hình SVG thay vì dừng lại.
    - Không hiển thị toast "không cần tạo hình" cho bài Hình học.
+5. **Mở khóa `gemini-2.5-flash-image` trong môi trường Canvas (0đ / Không cần API key)**:
+   - Trong `js/khbd-gemini.js` và `canvas_soankhbd.html`: Cho phép `generateImage` hoạt động ở chế độ Canvas trực tiếp (`allowEmptyKey: true` hoặc `isCanvasGeminiRoute()`), không ném lỗi yêu cầu API key cá nhân.
+   - Tuyến Canvas gọi thẳng `gemini-2.5-flash-image` qua session trực tiếp của Canvas, tạo ảnh màu thực tế 0 đồng không cần API key.
+6. **Khắc phục lỗi vẽ Vector SVG bị chạy một hồi rồi thoát (Timeout / Model treo)**:
+   - **Nguyên nhân:** Hàm `generateSvgDrawing` hiện chưa gán mục đích (purpose), khiến Canvas định tuyến lệnh vẽ vào mô hình `gemini-3-flash-preview`. Đây là mô hình suy luận văn bản sâu (thinking model), khi phải tính toán hàng trăm tọa độ XML thì tốn nhiều thời gian và chạm mốc `timeoutMs: 60000` (60 giây), dẫn đến việc bị ngắt giữa chừng và tắt thanh tiến trình.
+   - **Giải pháp:**
+     + Trong `generateSvgDrawing`: Truyền `{ purpose: 'svg_drawing', timeoutMs: 90000 }`.
+     + Trong `canvas_soankhbd.html`: Khi `options.purpose === 'svg_drawing'`, định tuyến thẳng sang **`gemini-2.5-flash`** (mô hình này sinh mã SVG cực nhanh trong 2–3 giây, chính xác và không bị nghẽn suy luận).
+     + Cải tiến `extractSvgCode`: Loại bỏ markdown block (\`\`\`xml, \`\`\`svg) và tự động đóng thẻ `</svg>` nếu dữ liệu bị ngắt để tránh lỗi parse.
 
 ---
 

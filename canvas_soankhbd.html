@@ -1412,6 +1412,12 @@
           this.selectedModel = previousModel;
         }
       };
+      const canvasGenerateImage = geminiAPI.generateImage.bind(geminiAPI);
+      geminiAPI.generateImage = function (prompt, options) {
+        // Canvas has no browser API key. Its explicitly trusted direct adapter
+        // is the only route permitted to invoke the image model without one.
+        return canvasGenerateImage(prompt, Object.assign({}, options || {}, { allowEmptyKey: true }));
+      };
       geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
         // Nhận diện SGK/OCR luôn đi qua Flash 2.5 để tránh nghẽn vision của
         // model preview trong iframe Canvas. Các lượt soạn văn bản dùng model
@@ -1422,7 +1428,10 @@
           (payload && Array.isArray(payload.contents) && payload.contents.some(c => Array.isArray(c.parts) && c.parts.some(p => p && (p.inlineData || p.fileData))))
         );
         const fallbackModel = "gemini-2.5-flash";
-        const primaryModel = hasMedia ? fallbackModel : (MODEL || "gemini-3-flash-preview");
+        const isImageGenerationModel = /gemini-2\.5-flash-image/i.test(String(model || ""));
+        // The image model is an explicit request from generateImage; it must
+        // never be silently remapped to the text/vision Flash model.
+        const primaryModel = isImageGenerationModel ? model : (hasMedia ? fallbackModel : (MODEL || "gemini-3-flash-preview"));
 
         // Giữ nguyên payload sư phạm, đặc biệt systemInstruction tách biệt với
         // contents. Chỉ bỏ tùy chọn thinking chưa tương thích với một số model Canvas.
@@ -1437,13 +1446,14 @@
         const executeCall = async (targetModel) => this.fetchWithTimeout(GEMINI_DIRECT_ENDPOINT + targetModel + ":generateContent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "omit",
           body: JSON.stringify(cleanPayloadForCanvas(payload)),
           signal: signal
         }, timeoutMs || 95000);
 
         let response = await executeCall(primaryModel);
         let activeUsedModel = primaryModel;
-        if (!response.ok && (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429 || response.status === 503) && primaryModel !== fallbackModel) {
+        if (!response.ok && !isImageGenerationModel && (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429 || response.status === 503) && primaryModel !== fallbackModel) {
           console.warn("[Gemini Canvas] Model " + primaryModel + " trả về HTTP " + response.status + ". Tự động fallback sang " + fallbackModel + "...");
           response = await executeCall(fallbackModel);
           activeUsedModel = fallbackModel;

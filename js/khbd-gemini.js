@@ -506,6 +506,14 @@ class GeminiAPIManager {
     return { endpoint, model: String(cfg.model || "").trim() || null };
   }
 
+  // Image generation may run without a browser key only inside the Canvas
+  // document that explicitly enables its direct Gemini adapter.  Do not trust
+  // an options flag here: ordinary pages must retain the personal-key guard.
+  isTrustedCanvasDirectRoute() {
+    const root = typeof window !== "undefined" ? window : null;
+    return Boolean(root && root.__KHBD_CANVAS__ && root.__KHBD_CANVAS__.directGemini === true);
+  }
+
   async fetchCanvasSystemGenerate(config, model, payload, signal, timeoutMs) {
     // The proxy has an 85-second shared server deadline. Leave the browser a
     // margin to receive its diagnostic instead of aborting the request first.
@@ -819,7 +827,7 @@ class GeminiAPIManager {
 
   async _generateImageInternal(prompt, options = {}) {
     if (!this.apiKeys || this.apiKeys.length === 0) this.loadKeysFromLocalStorage();
-    if (!this.apiKeys || this.apiKeys.length === 0) {
+    if ((!this.apiKeys || this.apiKeys.length === 0) && !this.isTrustedCanvasDirectRoute()) {
       throw new Error("Bạn chưa cấu hình Gemini API Key cá nhân. Vui lòng bấm 'Quản lý API Key'.");
     }
     const payload = {

@@ -222,14 +222,45 @@ async function case8_nonCanvasWithoutKeyKeepsGuard() {
 async function case9_canvasUsesDirectAdapterWithoutSystemRoute() {
   const canvasHtml = fs.readFileSync(path.join(__dirname, "..", "canvas_soankhbd.html"), "utf8");
   assert(canvasHtml.includes('const GEMINI_DIRECT_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/"'), "case9: Canvas defines the direct Gemini API endpoint");
-  assert(canvasHtml.includes('GEMINI_DIRECT_ENDPOINT + useModel + ":generateContent"'), "case9: Canvas generates the direct model URL");
-  assert(canvasHtml.includes('body: JSON.stringify(payload)'), "case9: Canvas sends the Gemini payload unchanged");
+  assert(canvasHtml.includes('GEMINI_DIRECT_ENDPOINT + targetModel + ":generateContent"'), "case9: Canvas generates the direct model URL");
+  assert(canvasHtml.includes('body: JSON.stringify(cleanPayloadForCanvas(payload))'), "case9: Canvas sends the compatible Gemini payload");
   assert(canvasHtml.includes('credentials: "omit"'), "case9: Canvas direct request omits cookies");
   assert(!canvasHtml.includes('canvas_gemini.php'), "case9: Canvas creates no server-system route");
   assert(!canvasHtml.includes('systemGemini: true'), "case9: Canvas does not opt into the system key route");
   assert(!canvasHtml.includes('?key='), "case9: Canvas direct request does not include an API key");
   assert(!/Authorization\s*:/.test(canvasHtml), "case9: Canvas direct request does not include Authorization");
   assert(canvasHtml.includes('response.status === 401 || response.status === 403'), "case9: Canvas diagnoses missing direct API permission");
+}
+
+async function case10_canvasImageWithoutKeyUsesImageModel() {
+  const api = makeApi();
+  api.apiKeys = [];
+  api.loadKeysFromLocalStorage = function () { this.apiKeys = []; };
+  global.window = { __KHBD_CANVAS__: { directGemini: true } };
+  const calls = [];
+  api.fetchGeminiGenerate = async (model, key, payload) => {
+    calls.push({ model, key, payload });
+    return emptyOkResponse({ candidates: [{ content: { parts: [{ inlineData: { mimeType: "image/png", data: "aW1hZ2U=" } }] } }] });
+  };
+  const image = await api.generateImage("Vẽ tam giác");
+  assert(image === "data:image/png;base64,aW1hZ2U=", "case10: trusted Canvas without key receives inline image");
+  assert(calls.length === 1, `case10: one image request (got ${calls.length})`);
+  assert(calls[0]?.model === "gemini-2.5-flash-image", `case10: keeps image model (got ${calls[0]?.model})`);
+  assert(!calls[0]?.key, "case10: Canvas image request uses no browser key");
+  assert(calls[0]?.payload?.generationConfig?.responseModalities?.includes("IMAGE"), "case10: image payload requests IMAGE modality");
+}
+
+async function case11_nonCanvasImageWithoutKeyKeepsGuard() {
+  const api = makeApi();
+  api.apiKeys = [];
+  api.loadKeysFromLocalStorage = function () { this.apiKeys = []; };
+  delete global.window;
+  let calls = 0;
+  api.fetchGeminiGenerate = async () => { calls += 1; return okResponse(); };
+  let thrown = null;
+  try { await api.generateImage("Vẽ tam giác"); } catch (err) { thrown = err; }
+  assert(/chưa cấu hình Gemini API Key cá nhân/.test(String(thrown && thrown.message)), "case11: non-Canvas image without key keeps the personal-key guard");
+  assert(calls === 0, `case11: image guard makes no request (got ${calls})`);
 }
 
 (async () => {
@@ -243,6 +274,8 @@ async function case9_canvasUsesDirectAdapterWithoutSystemRoute() {
     await case7_empty200DoesNotRetry();
     await case8_nonCanvasWithoutKeyKeepsGuard();
     await case9_canvasUsesDirectAdapterWithoutSystemRoute();
+    await case10_canvasImageWithoutKeyUsesImageModel();
+    await case11_nonCanvasImageWithoutKeyKeepsGuard();
   } catch (err) {
     failed += 1;
     console.error("FAIL: uncaught", err);
