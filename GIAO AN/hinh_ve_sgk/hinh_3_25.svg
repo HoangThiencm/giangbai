@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 220" width="440" height="220">
+  <rect width="440" height="220" fill="#ffffff"/>
+  <defs>
+    <style>
+      .geom-line { stroke: #111827; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .point-dot { fill: #111827; }
+      .label-vertex { font-family: 'Times New Roman', serif; font-style: italic; font-size: 18px; font-weight: bold; fill: #0055aa; }
+      .label-deg { font-family: 'Times New Roman', serif; font-size: 15px; font-weight: bold; fill: #0055aa; }
+      .angle-arc { stroke: #0055aa; stroke-width: 1.5; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Cạnh đáy CD: D=(70, 175), C=(370, 175) -->
+  <!-- Cạnh đáy AB: A=(135, 65), B=(320, 65) -->
+  <!-- Góc D = 60 độ, Góc A = 120 độ => AD nghiêng 60 độ so với đáy -->
+  <line x1="70" y1="175" x2="370" y2="175" class="geom-line"/>
+  <line x1="135" y1="65" x2="320" y2="65" class="geom-line"/>
+  <line x1="70" y1="175" x2="135" y2="65" class="geom-line"/>
+  <line x1="370" y1="175" x2="320" y2="65" class="geom-line"/>
+
+  <!-- Cung góc D (60 độ) tại (70, 175) -->
+  <!-- Cung từ (100, 175) tới hướng AD (70 + 30*cos60, 175 - 30*sin60) = (85, 149) -->
+  <path d="M 98 175 A 28 28 0 0 0 84 150" class="angle-arc"/>
+  <text x="75" y="165" class="label-deg">60°</text>
+
+  <!-- Cung góc A (120 độ) tại (135, 65) -->
+  <!-- Cung từ AD (135 - 28*cos60, 65 + 28*sin60) = (121, 89) tới AB (163, 65) -->
+  <path d="M 121 89 A 28 28 0 0 0 163 65" class="angle-arc"/>
+  <text x="135" y="90" class="label-deg">120°</text>
+
+  <!-- Điểm đỉnh -->
+  <circle cx="135" cy="65" r="2.5" class="point-dot"/>
+  <circle cx="320" cy="65" r="2.5" class="point-dot"/>
+  <circle cx="370" cy="175" r="2.5" class="point-dot"/>
+  <circle cx="70" cy="175" r="2.5" class="point-dot"/>
+
+  <!-- Nhãn đỉnh -->
+  <text x="126" y="50" class="label-vertex">A</text>
+  <text x="325" y="50" class="label-vertex">B</text>
+  <text x="375" y="188" class="label-vertex">C</text>
+  <text x="52" y="188" class="label-vertex">D</text>
+</svg>

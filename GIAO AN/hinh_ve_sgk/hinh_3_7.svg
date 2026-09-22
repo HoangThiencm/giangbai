@@ -1,17 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 250" width="320" height="250">
-  <rect width="320" height="250" fill="#ffffff"/>
-  <polygon points="60,200 150,45 250,95 250,200" fill="#f8fafc" stroke="#000000" stroke-width="2" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 230" width="320" height="230">
+  <rect width="320" height="230" fill="#ffffff"/>
+  <polygon points="60,195 150,45 250,95 250,195" fill="#f8fafc" stroke="#000000" stroke-width="2" stroke-linejoin="round"/>
   
   <polyline points="142,59 155,67 163,53" fill="none" stroke="#000000" stroke-width="1.5"/>
-  <polyline points="236,200 236,186 250,186" fill="none" stroke="#000000" stroke-width="1.5"/>
+  <polyline points="236,195 236,181 250,181" fill="none" stroke="#000000" stroke-width="1.5"/>
   
-  <text x="85" y="195" font-family="'Times New Roman', serif" font-size="13" fill="#0284c7">55°</text>
+  <text x="85" y="190" font-family="'Times New Roman', serif" font-size="13" fill="#0284c7">55°</text>
   <text x="230" y="115" font-family="'Times New Roman', serif" font-size="15" font-weight="bold" fill="#dc2626">?</text>
   
-  <text x="42" y="210" font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold">H</text>
+  <text x="42" y="205" font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold">H</text>
   <text x="150" y="32" font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold">E</text>
   <text x="262" y="100" font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold">F</text>
-  <text x="262" y="210" font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold">G</text>
-  
-  <text x="160" y="244" text-anchor="middle" font-family="'Times New Roman', serif" font-style="italic" font-size="14">Hình 3.7: Tứ giác EFGH (Luyện tập 2)</text>
+  <text x="262" y="205" font-family="'Times New Roman', serif" font-style="italic" font-size="16" font-weight="bold">G</text>
 </svg>

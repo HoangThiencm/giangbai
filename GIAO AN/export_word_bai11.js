@@ -18,55 +18,85 @@ function getImgDataUrl(imgPath) {
   return 'data:image/png;base64,' + buf.toString('base64');
 }
 
-// 8 hình vẽ toán học được VẼ LẠI CHUẨN VECTOR SVG / PNG (thuần hình học, không có chữ chú thích thừa)
+// 13 hình vẽ toán học được VẼ LẠI CHUẨN VECTOR SVG / PNG (thuần hình học, sạch sẽ, không thừa caption)
 const illustrations = [
   {
-    id: 'hinh-3.1',
-    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_1.png')),
-    width: 380,
-    height: 162
+    id: 'hinh-3.11',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_11.png')),
+    width: 420,
+    height: 192
   },
   {
-    id: 'hinh-3.2',
-    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_2.png')),
-    width: 450,
-    height: 132
+    id: 'hinh-3.12',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_12.png')),
+    width: 360,
+    height: 190
   },
   {
-    id: 'hinh-3.4',
-    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_4.png')),
-    width: 280,
-    height: 175
-  },
-  {
-    id: 'hinh-3.5',
-    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_5.png')),
-    width: 310,
-    height: 175
-  },
-  {
-    id: 'hinh-3.6',
-    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_6.png')),
-    width: 250,
+    id: 'hinh-3.13',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_13.png')),
+    width: 340,
     height: 180
   },
   {
-    id: 'hinh-3.7',
-    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_7.png')),
-    width: 250,
+    id: 'hinh-3.14',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_14.png')),
+    width: 340,
+    height: 198
+  },
+  {
+    id: 'hinh-3.15',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_15.png')),
+    width: 340,
     height: 180
   },
   {
-    id: 'hinh-3.8',
-    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_8.png')),
-    width: 410,
-    height: 173
+    id: 'hinh-3.16',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_16.png')),
+    width: 360,
+    height: 190
   },
   {
-    id: 'hinh-3.10',
-    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_10.png')),
-    width: 260,
-    height: 177
+    id: 'hinh-3.17',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_17.png')),
+    width: 340,
+    height: 180
+  },
+  {
+    id: 'hinh-3.18',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_18.png')),
+    width: 340,
+    height: 189
+  },
+  {
+    id: 'hinh-3.19',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_19.png')),
+    width: 340,
+    height: 180
+  },
+  {
+    id: 'hinh-3.20',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_20.png')),
+    width: 360,
+    height: 199
+  },
+  {
+    id: 'hinh-3.21',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_21.png')),
+    width: 340,
+    height: 180
+  },
+  {
+    id: 'hinh-3.22',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_22.png')),
+    width: 360,
+    height: 190
+  },
+  {
+    id: 'hinh-3.23',
+    dataUrl: getImgDataUrl(path.join(__dirname, 'hinh_ve_sgk/hinh_3_23.png')),
+    width: 320,
+    height: 179
   }
 ];
 
@@ -76,7 +106,7 @@ global.appState = {
     illustrations: illustrations
   },
   teachingContext: {
-    lessonScope: 'Tiết 1'
+    lessonScope: 'Tiết 2, Tiết 3'
   }
 };
 global.window = {
@@ -96,9 +126,8 @@ generator.createIllustrationParagraphs = function (altText, illustrationId) {
 
   const b64 = ill.dataUrl.split(',')[1];
   const bytes = Buffer.from(b64, 'base64');
-  const w = ill.width || 320;
-  const h = ill.height || 240;
-  const caption = altText || ill.caption || safeId;
+  const w = ill.width || 360;
+  const h = ill.height || 200;
 
   return [
     new Paragraph({
@@ -196,16 +225,16 @@ generator.parseTableCellParagraphs = function (text, isHeader = false) {
   });
 };
 
-const mdPath = path.join(__dirname, 'KHBD_Toan8_Bai10_TuGiac_RutGon.md');
+const mdPath = path.join(__dirname, 'KHBD_Toan8_Bai11_HinhThangCan.md');
 const markdownContent = fs.readFileSync(mdPath, 'utf8');
 
 const lessonInfo = {
   school: 'TRƯỜNG THCS .....................................................',
   teacher: '.....................................................',
   chapter: 'Chương III: Tứ giác',
-  topic: 'Bài 10: Tứ giác',
-  lessonScope: 'Tiết 1 (Tuần 1)',
-  duration: '01 tiết (45 phút)',
+  topic: 'Bài 11: Hình thang cân',
+  lessonScope: 'Tiết 2, Tiết 3 (Tuần 2)',
+  duration: '02 tiết (90 phút)',
   subject: 'Toán',
   academicYear: '2026-2027'
 };
@@ -230,8 +259,8 @@ if (typeof Footer === 'function') {
 
 const doc = new Document({
   creator: 'Trợ lý Soạn Kế hoạch Bài dạy AI',
-  title: 'KHBD_Toan8_Bai10_TuGiac_RutGon',
-  description: 'Kế hoạch bài dạy chuẩn Công văn 5512 - Phiên bản rút gọn kèm hình vẽ vector chuẩn SGK',
+  title: 'KHBD_Toan8_Bai11_HinhThangCan',
+  description: 'Kế hoạch bài dạy chuẩn Công văn 5512 tích hợp Năng lực số và AI - Bài 11: Hình thang cân kèm hình vẽ vector chuẩn SGK',
   styles: {
     default: {
       document: {
@@ -247,23 +276,19 @@ const doc = new Document({
 });
 
 Packer.toBuffer(doc).then(buffer => {
-  const outputPath = path.join(__dirname, 'KHBD_Toan8_Bai10_TuGiac_RutGon.docx');
-  const vectorPath = path.join(__dirname, 'KHBD_Toan8_Bai10_TuGiac_Vector.docx');
+  const outputPath = path.join(__dirname, 'KHBD_Toan8_Bai11_HinhThangCan.docx');
+  const fallbackPath = path.join(__dirname, 'KHBD_Toan8_Bai11_HinhThangCan_capnhat.docx');
   try {
     fs.writeFileSync(outputPath, buffer);
     console.log('SUCCESS: Written to', outputPath, buffer.length, 'bytes');
   } catch (err) {
     if (err.code === 'EBUSY') {
-      console.log('NOTICE: Original file was locked by Word.');
+      console.log('NOTICE: Original file was locked by Word. Writing to fallback:', fallbackPath);
+      fs.writeFileSync(fallbackPath, buffer);
+      console.log('SUCCESS: Written to fallback', fallbackPath, buffer.length, 'bytes');
     } else {
       throw err;
     }
-  }
-  try {
-    fs.writeFileSync(vectorPath, buffer);
-    console.log('SUCCESS: Written to', vectorPath, buffer.length, 'bytes');
-  } catch (err) {
-    if (err.code !== 'EBUSY') throw err;
   }
 }).catch(err => {
   console.error('ERROR in export_word:', err);

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 210" width="460" height="210">
+  <rect width="460" height="210" fill="#ffffff"/>
+  <g transform="translate(10, 10)">
+    <!-- Toàn bộ hình thang mới tạo thành: D(50,150) -> M'(310,150) -> N'(260,40) -> A(100,40) -->
+    <polygon points="50,150 310,150 260,40 100,40" fill="#f0f9ff" stroke="#111827" stroke-width="1.8" stroke-linejoin="round"/>
+    
+    <!-- Nhát cắt MN (nét liền màu đỏ hoặc xám đậm) -->
+    <line x1="150" y1="40" x2="150" y2="150" stroke="#ef4444" stroke-width="1.8" stroke-dasharray="4,2"/>
+    
+    <!-- Mép ghép dọc theo cạnh bên BC: B(200,40) -> C(250,150) -->
+    <line x1="200" y1="40" x2="250" y2="150" stroke="#111827" stroke-width="1.5" stroke-dasharray="3,3"/>
+
+    <!-- Vòng cung nét đứt biểu thị lật mảnh giấy từ bên trái sang mép phải -->
+    <path d="M 100,40 C 130,10 230,10 260,40" fill="none" stroke="#0ea5e9" stroke-width="1.4" stroke-dasharray="3,3"/>
+    <path d="M 50,150 C 90,195 270,195 310,150" fill="none" stroke="#0ea5e9" stroke-width="1.4" stroke-dasharray="3,3"/>
+
+    <!-- Điểm đỉnh tròn -->
+    <circle cx="100" cy="40" r="2.5" fill="#111827"/>
+    <circle cx="150" cy="40" r="2.5" fill="#111827"/>
+    <circle cx="200" cy="40" r="2.5" fill="#111827"/>
+    <circle cx="260" cy="40" r="2.5" fill="#111827"/>
+    <circle cx="50" cy="150" r="2.5" fill="#111827"/>
+    <circle cx="150" cy="150" r="2.5" fill="#111827"/>
+    <circle cx="250" cy="150" r="2.5" fill="#111827"/>
+    <circle cx="310" cy="150" r="2.5" fill="#111827"/>
+
+    <!-- Nhãn chữ đỉnh chuẩn Times New Roman in nghiêng -->
+    <text x="94" y="30" font-family="'Times New Roman', serif" font-style="italic" font-size="16" fill="#111827">A</text>
+    <text x="144" y="30" font-family="'Times New Roman', serif" font-style="italic" font-size="16" fill="#111827">M</text>
+    <text x="195" y="30" font-family="'Times New Roman', serif" font-style="italic" font-size="16" fill="#111827">B</text>
+    <text x="255" y="30" font-family="'Times New Roman', serif" font-style="italic" font-size="16" fill="#111827">N'</text>
+    
+    <text x="32" y="155" font-family="'Times New Roman', serif" font-style="italic" font-size="16" fill="#111827">D</text>
+    <text x="144" y="170" font-family="'Times New Roman', serif" font-style="italic" font-size="16" fill="#111827">N</text>
+    <text x="245" y="170" font-family="'Times New Roman', serif" font-style="italic" font-size="16" fill="#111827">C</text>
+    <text x="318" y="155" font-family="'Times New Roman', serif" font-style="italic" font-size="16" fill="#111827">M'</text>
+  </g>
+</svg>

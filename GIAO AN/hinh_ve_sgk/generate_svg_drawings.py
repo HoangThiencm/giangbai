@@ -283,4 +283,5 @@ for name, svg in all_svgs:
         f.write(svg)
     svg_to_png(svg, png_path)
 
-print("ĐÃ CẬP NHẬT VÀ RENDER XONG TOÀN BỘ 8 HÌNH VẼ VECTOR THUẦN HÌNH HỌC (KHÔNG CÒN CHÚ THÍCH)!")
+print("DONE: Rendered all 8 SVG and PNG files without captions!")
+

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 250" width="600" height="250">
+  <rect width="600" height="250" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <defs>
+    <style>
+      .geom-line { stroke: #1e293b; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .diag-line-1 { stroke: #2563eb; stroke-width: 2; stroke-dasharray: 4,4; fill: none; }
+      .diag-line-2 { stroke: #dc2626; stroke-width: 2; stroke-dasharray: 4,4; fill: none; }
+      .label-vertex { font-family: 'Times New Roman', serif; font-style: italic; font-size: 17px; font-weight: bold; fill: #0f172a; }
+      .ui-text { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: bold; fill: #1e293b; }
+      .ui-val { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: bold; }
+    </style>
+  </defs>
+
+  <!-- Thanh công cụ GeoGebra giả lập phía trên -->
+  <rect x="0" y="0" width="600" height="32" fill="#e2e8f0" rx="6 6 0 0"/>
+  <text x="15" y="21" class="ui-text" fill="#475569">GeoGebra Geometry — [NLS: 5.2.TC2b] Khám phá tính chất 2 đường chéo</text>
+
+  <!-- Bảng số liệu đo đạc bên trái -->
+  <rect x="18" y="45" width="165" height="100" fill="#ffffff" stroke="#94a3b8" rx="4"/>
+  <text x="28" y="72" class="ui-text" fill="#2563eb">AC = 6.42 cm</text>
+  <text x="28" y="98" class="ui-text" fill="#dc2626">BD = 6.42 cm</text>
+  <line x1="28" y1="108" x2="173" y2="108" stroke="#cbd5e1"/>
+  <text x="28" y="130" class="ui-val" fill="#16a34a">AC = BD (Đúng)</text>
+
+  <!-- Hình thang cân ABCD trong khu vực làm việc GeoGebra -->
+  <!-- A=(290, 75), B=(460, 75), C=(515, 205), D=(235, 205) -->
+  <polygon points="290,75 460,75 515,205 235,205" fill="#ffffff" stroke="#1e293b" stroke-width="2"/>
+  <!-- Hai đường chéo AC và BD -->
+  <line x1="290" y1="75" x2="515" y2="205" class="diag-line-1"/>
+  <line x1="460" y1="75" x2="235" y2="205" class="diag-line-2"/>
+
+  <!-- Các điểm kéo thả của GeoGebra -->
+  <circle cx="290" cy="75" r="4.5" fill="#2563eb"/>
+  <circle cx="460" cy="75" r="4.5" fill="#2563eb"/>
+  <circle cx="515" cy="205" r="4.5" fill="#2563eb"/>
+  <circle cx="235" cy="205" r="4.5" fill="#2563eb"/>
+
+  <!-- Nhãn điểm -->
+  <text x="282" y="62" class="label-vertex">A</text>
+  <text x="464" y="62" class="label-vertex">B</text>
+  <text x="524" y="215" class="label-vertex">C</text>
+  <text x="220" y="215" class="label-vertex">D</text>
+
+  <!-- Ghi chú thao tác kéo thả động -->
+  <text x="210" y="238" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-style="italic" fill="#64748b">* Kéo thả các đỉnh A, B, C, D: độ dài AC và BD luôn bằng nhau.</text>
+</svg>
