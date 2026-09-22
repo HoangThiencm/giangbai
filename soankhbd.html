@@ -153,6 +153,11 @@
       </div>
 
       <div class="tool-group">
+        <label for="ppctSchoolSelect">🏫 Trường:</label>
+        <select id="ppctSchoolSelect" aria-label="Chuyển hồ sơ PPCT theo trường"><option value="">Hồ sơ chưa đặt tên</option></select>
+      </div>
+
+      <div class="tool-group">
         <label for="selectGenerationMode">Chế độ soạn:</label>
         <select id="selectGenerationMode" aria-label="Chế độ soạn giáo án">
           <option value="detailed" selected>📋 Soạn chi tiết (8–10 trang)</option>
@@ -207,7 +212,9 @@
           <div class="tool-group"><label for="ppctCatalogGrade">Khối lớp</label><select id="ppctCatalogGrade"><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8">Lớp 8</option><option value="9">Lớp 9</option></select></div>
           <div class="tool-group"><label for="ppctCatalogSubject">Môn học</label><select id="ppctCatalogSubject"></select></div>
           <div class="tool-group"><label for="ppctCatalogYear">Năm học</label><input id="ppctCatalogYear" maxlength="30" placeholder="VD: 2026-2027"></div>
+          <div class="tool-group"><label for="ppctCatalogSchool">Trường / Đơn vị giảng dạy</label><input id="ppctCatalogSchool" maxlength="150" placeholder="VD: THCS Chu Văn An"></div>
         </div>
+        <div class="panel-box" style="margin-top:.75rem;"><div class="panel-header"><span>Hồ sơ PPCT đã lưu theo trường</span></div><div id="ppctSchoolProfiles"></div></div>
         <div class="panel-box" style="margin-top:1rem;">
           <div class="panel-header"><span>1. Tạo JSON từ Word/PDF bằng ChatGPT hoặc Gemini</span></div>
           <p class="text-muted" style="font-size:.85rem;margin:.25rem 0 .65rem;">Word được đọc trực tiếp trên máy (không gửi file lên AI). PDF thì chọn file, sao chép Prompt, tải lên ChatGPT/Gemini rồi dán JSON trả về.</p>

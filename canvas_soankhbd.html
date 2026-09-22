@@ -276,6 +276,11 @@
       </div>
 
       <div class="tool-group">
+        <label for="ppctSchoolSelect">🏫 Trường:</label>
+        <select id="ppctSchoolSelect" aria-label="Chuyển hồ sơ PPCT theo trường"><option value="">Hồ sơ chưa đặt tên</option></select>
+      </div>
+
+      <div class="tool-group">
         <label for="selectGenerationMode">Chế độ soạn:</label>
         <select id="selectGenerationMode" aria-label="Chế độ soạn giáo án">
           <option value="detailed" selected>📋 Soạn chi tiết (8–10 trang)</option>
@@ -908,7 +913,9 @@
           <div class="tool-group"><label for="ppctCatalogGrade">Khối lớp</label><select id="ppctCatalogGrade"><option value="6">Lớp 6</option><option value="7">Lớp 7</option><option value="8">Lớp 8</option><option value="9">Lớp 9</option></select></div>
           <div class="tool-group"><label for="ppctCatalogSubject">Môn học</label><select id="ppctCatalogSubject"></select></div>
           <div class="tool-group"><label for="ppctCatalogYear">Năm học</label><input id="ppctCatalogYear" maxlength="30" placeholder="VD: 2026-2027"></div>
+          <div class="tool-group"><label for="ppctCatalogSchool">Trường / Đơn vị giảng dạy</label><input id="ppctCatalogSchool" maxlength="150" placeholder="VD: THCS Chu Văn An"></div>
         </div>
+        <div class="panel-box" style="margin-top:.75rem;"><div class="panel-header"><span>Hồ sơ PPCT đã lưu theo trường</span></div><div id="ppctSchoolProfiles"></div></div>
         <div class="panel-box" style="margin-top:1rem;"><div class="panel-header"><span>1. Chuyển Word/PDF thành JSON</span></div><p class="text-muted" style="font-size:.85rem">Word được đọc trực tiếp trên máy (không gửi file lên AI). PDF thì chọn file, sao chép Prompt, tải lên ChatGPT/Gemini rồi dán JSON trả về.</p><div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap"><label class="btn btn-outline-dark" style="cursor:pointer">📂 Chọn Word/PDF PPCT<input id="ppctSourceFileInput" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,application/pdf" hidden></label><span id="ppctSourceFileName" class="text-muted" style="font-size:.85rem">Chưa chọn file nguồn.</span></div><button id="btnCopyPpctPrompt" type="button" class="btn btn-primary" style="margin-top:.65rem">📋 Sao chép Prompt PPCT → JSON</button></div>
         <div class="panel-box" style="margin-top:.75rem;"><div class="panel-header"><span>2. Nhập JSON PPCT</span></div><textarea id="ppctJsonInput" rows="8" class="markdown-editor" placeholder="Dán JSON PPCT tại đây..."></textarea><div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;"><button id="btnImportPpctJson" type="button" class="btn btn-primary">📥 Nhập JSON</button><label class="btn btn-outline-dark" style="cursor:pointer;">📂 Chọn file JSON<input id="ppctJsonFileInput" type="file" accept=".json,application/json" hidden></label><button id="btnCopyPpctJson" type="button" class="btn btn-outline-dark">📋 Copy JSON</button><button id="btnExportPpctJson" type="button" class="btn btn-outline-dark">⬇ Xuất JSON</button></div></div>
         <div id="ppctCatalogSettingsPreview" class="panel-box"><p class="text-muted">Chưa có danh mục để xem trước.</p></div>

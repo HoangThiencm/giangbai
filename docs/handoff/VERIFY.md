@@ -4,29 +4,24 @@
 PASS
 
 ## Đối chiếu scope
-- `taobaitap.html`:
-  - Đã bổ sung chỉ dẫn yêu cầu AI tự đánh giá bản chất sư phạm của từng câu hỏi và trả về trường `"level"` trong JSON output tại cả 3 luồng: tạo theo chủ đề (`generateContent`), tạo tổng hợp từ file (`generateSynthesizedFromSource`), và trích xuất file có sẵn (`handleFileUpload`).
-  - Hàm `normalizeQuizItems` đã chuẩn hóa và bảo toàn trường `level` của câu hỏi (Nhận biết, Thông hiểu, Vận dụng, Vận dụng cao), fallback an toàn về `Nhận biết` nếu thiếu.
-  - Hàm `getOlmLevelTag` chuyển đổi chính xác mức độ nhận thức sang nhãn chuẩn OLM: `[NB] `, `[TH] `, `[VD] `, `[VDC] `, đảm bảo 100% câu hỏi đều có nhãn mức độ, không bao giờ để rỗng.
-  - Giao diện Bước 2 (Step 2) đã tích hợp bộ chọn mức độ nhận thức trên từng thẻ câu hỏi, cho phép giáo viên kiểm tra đánh giá của AI và tùy chỉnh trước khi xuất file.
-  - Giữ nguyên tính toàn vẹn của các luồng xuất đề thông minh và bộ đôi đề/giải PDF cho OLM.
-- `tests/taobaitap-olm-export-smoke.js`:
-  - Kiểm thử tự động xác nhận cả 4 nhãn OLM `[NB]`, `[TH]`, `[VD]`, `[VDC]`, kiểm tra prompt AI và bộ chọn mức độ trên giao diện.
+- `js/khbd-app.js`:
+  - Đã bổ sung hàm `normalizeActivityBBranchHeadings` tự động chuẩn hóa các biến thể tiêu đề mà AI sinh ra (như `### 2. ...`, `### Hoạt động 2:`, `### Mục 2:`) về dạng chuẩn `### Hoạt động 2.2: ...` trước khi kiểm tra cấu trúc.
+  - Đã bổ sung hàm `missingActivityBBranches` và cơ chế sinh nối tiếp (append) riêng các nhánh 2.k bị thiếu trong `applyActivityOutput` thay vì bắt AI viết lại từ đầu toàn bộ Hoạt động B.
+  - Đã tích hợp hàm `buildMissingActivityBBranchFallback` tự động bổ sung khung chuẩn CV 5512 cho nhánh còn thiếu nếu AI gặp lỗi hoặc không trả về, ngăn chặn hoàn toàn việc ném ngoại lệ làm crash tiến trình 1-Click Generate.
+  - Không sửa đổi ngoài phạm vi quy định trong `docs/handoff/PLAN.md`.
+- `tests/khbd-activity-b-subsections-smoke.js`:
+  - Bổ sung các bài test kiểm tra chuẩn hóa tiêu đề nhánh, nhận diện nhánh thiếu và tính hợp lệ của khung dự phòng.
 
 ## Test đã chạy
-- `node tests/taobaitap-olm-export-smoke.js`: PASS.
-- `node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js`: PASS.
-- `node tests/taobaitap-game-word-export-smoke.js`: PASS.
-- `node tests/taobaitap-plan-smoke.js`: PASS.
-- `node tests/taobaitap-presentation-smoke.js`: PASS.
+- `node tests/khbd-activity-b-subsections-smoke.js`: PASS.
+- `node tests/soankhbd-generation-mode-smoke.js`: PASS.
 - `git diff --check`: PASS (không có lỗi định dạng hay khoảng trắng).
 
 ## Pass / Fail từng tiêu chí
-- [PASS] AI tự thẩm định và gán trường `level` trong JSON output cho từng câu hỏi.
-- [PASS] `normalizeQuizItems` chuẩn hóa dữ liệu `level` an toàn và nhất quán.
-- [PASS] `getOlmLevelTag` xuất đủ các nhãn `[NB]`, `[TH]`, `[VD]`, `[VDC]`, không bao giờ trả về chuỗi rỗng.
-- [PASS] Giao diện Step 2 có dropdown xem và đổi mức độ nhận thức cho từng câu hỏi.
-- [PASS] Toàn bộ test suite hồi quy vượt qua 100%.
+- [PASS] Chuẩn hóa tiêu đề nhánh mục 2 (`### 2. ...`, `### Mục 2:`) về `### Hoạt động 2.2:`.
+- [PASS] Sinh bổ sung riêng từng nhánh 2.k bị thiếu thay vì gửi lại toàn bộ Hoạt động B.
+- [PASS] Tự động chèn khung dự phòng chuẩn CV 5512 nếu AI không sinh đủ nhánh 2.k, không ném lỗi dừng 1-Click Generate.
+- [PASS] Giữ nguyên tính toàn vẹn của các pha kiểm tra khác.
 
 ## Bug
 (Không có bug)

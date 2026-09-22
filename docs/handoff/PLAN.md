@@ -1,65 +1,122 @@
-# PLAN: Sửa Lỗi 1-Click Generate Bị Dừng Do Thiếu Hoạt Động 2.2 Trong canvas_soankhbd.html
+# PLAN: Nâng Cấp Hệ Thống Thẩm Định & Duyệt Giáo Án Theo Tổ Chuyên Môn (CV 5512)
 
-## 1. Nguyên Nhân Gây Lỗi
+## 1. Vấn Đề Thực Tế & Yêu Cầu Người Dùng
 
-- **Hiện tượng**:
-  Khi người dùng bấm **1-Click Generate** trong `canvas_soankhbd.html`, tiến trình chạy đến 60% (Pha B - Hình thành kiến thức mới) thì bị văng lỗi:
-  `Error: Hoạt động B có 2 mục lớn nhưng thiếu Hoạt động 2.2. Phải sinh đủ từ 2.1 đến 2.2.`
-- **Nguyên nhân kỹ thuật**:
-  1. Trong `js/khbd-app.js`, khi bài dạy có từ 2 mục lớn SGK trở lên, `expectedActivityBBranchCount()` trả về `>= 2`.
-  2. Hàm `assertPhasePedagogyOutput` (dòng ~5624) kiểm tra bắt buộc phải có chuỗi `Hoạt động 2.2`:
-     ```javascript
-     if (expectedBranches >= 2 && !/Hoạt động\s*2\.2\b/i.test(text)) {
-       throw new Error(`Hoạt động B có ${expectedBranches} mục lớn nhưng thiếu Hoạt động 2.2. Phải sinh đủ từ 2.1 đến 2.${expectedBranches}.`);
-     }
-     ```
-  3. Khi Gemini sinh Hoạt động B: Do nội dung mỗi nhánh quá dài (đủ 4 phần a, b, c, d; kịch bản chi tiết GV - HS và bảng 2 cột), Gemini thường dừng lại sau khi sinh xong Hoạt động 2.1, hoặc đặt tiêu đề nhánh 2 khác định dạng (ví dụ `### 2. ...` hoặc `### Hoạt động 2:`).
-  4. Trong `applyActivityOutput` (dòng ~7934), khi phát hiện thiếu 2.2, hàm gửi lại `repairPrompt`. Nhưng `repairPrompt` gửi lại toàn bộ nội dung cũ (vốn chỉ có 2.1) và bảo sửa, khiến AI chỉ chỉnh sửa lại 2.1 mà không sinh thêm 2.2.
-  5. Sau khi sửa vẫn thiếu 2.2, dòng ~7965 thực hiện `throw problem;`, làm crash toàn bộ tiến trình 1-Click Generate!
+1. **Giáo án 1 tháng (50+ trang) bị quá tải / nghẽn API:**
+   - Code cũ dùng `String(teacher.lessonText||'').slice(0, 18000)`, chỉ lấy ~5-6 trang đầu, bỏ sót >85% nội dung còn lại.
+   - Gửi nguyên khối 50 trang một lúc khiến AI timeout, vượt hạn mức token trả về và làm hỏng JSON (`JSON.parse` fail) dẫn đến fallback về kết quả heuristic sơ sài.
+2. **PPCT đã có sẵn trong CSDL:**
+   - Hệ thống đã có bảng CSDL `teacher_ppct_catalogs` (lưu trữ theo môn, khối lớp, năm học, trường).
+   - Không bắt Tổ trưởng / BGH phải tìm và tải tệp PPCT lên thủ công mỗi lần duyệt; hệ thống cần **tự động liên kết và nạp PPCT từ CSDL**.
+3. **Giáo viên có sẵn theo Tổ chuyên môn:**
+   - Hệ thống đã có dữ liệu phân công giảng dạy (`phancong_chuyenmon` và `users`).
+   - Cần tính năng **tự động nạp danh sách giáo viên của tổ chuyên môn** (kèm môn, khối lớp được phân công), không bắt gõ tay từng người.
+4. **Biên bản duyệt tổng hợp chung cho cả tổ:**
+   - Thay vì chỉ xuất phiếu nhận xét rời rạc từng cá nhân, hệ thống cần xuất **Biên bản kiểm tra hồ sơ giáo án của Tổ chuyên môn** (.docx) chuẩn thể thức văn bản quản lý giáo dục: có bảng tổng hợp xếp loại toàn tổ, đánh giá ưu/nhược điểm chung, kiến nghị tháng tới và nơi ký duyệt của Tổ trưởng + Ban Giám hiệu.
 
 ---
 
-## 2. Giải Pháp Khắc Phục Triệt Để Cho Coder
+## 2. Thiết Kế Kiến Trúc & Luồng Xử Lý (Workflow)
 
-### Bước 1: Chuẩn hóa tiêu đề nhánh trước khi kiểm tra (Heading Normalization)
-Trong `js/khbd-app.js`, trước khi chạy kiểm tra `assertPhasePedagogyOutput`, tự động chuẩn hóa các biến thể tiêu đề mà AI thường dùng cho mục 2:
-- Nếu bài có 2 mục lớn mà văn bản có `### 2.` hoặc `### Hoạt động 2:` (không có .2) hoặc `### Mục 2:` ➔ Tự động chuẩn hóa về `### Hoạt động 2.2: [Tên mục]`.
-
-### Bước 2: Cơ chế sinh tiếp nhánh còn thiếu (Append Missing Branch) thay vì sửa lại từ đầu
-Trong `applyActivityOutput` tại `js/khbd-app.js`:
-- Khi phát hiện thiếu Hoạt động 2.2 (hoặc 2.k):
-  Thay vì gửi toàn bộ bài cũ bắt AI sửa lại, gửi prompt chuyên biệt yêu cầu sinh riêng nhánh bị thiếu:
-  ```javascript
-  const missingBranchPrompt = buildPedagogicalPrompt(`Bạn đang soạn giáo án CV 5512 môn ${currentSubjectId()} bài "${getTopicDisplayName()}".
-Hoạt động 2.1 đã hoàn thành. Bây giờ bạn BẮT BUỘC chỉ soạn tiếp nhánh Hoạt động 2.${k}:
-### Hoạt động 2.${k}: ${subsectionTitle}
-Bắt buộc có đủ 4 phần:
-#### a) Mục tiêu:
-#### b) Nội dung:
-#### c) Sản phẩm:
-#### d) Tổ chức thực hiện: (Bảng 2 cột, 4 bước phân vai GV và HS chi tiết).
-TUYỆT ĐỐI KHÔNG lặp lại Hoạt động 2.1.`);
-  ```
-- Lấy kết quả nhánh 2.k vừa sinh nối tiếp vào cuối Hoạt động B (`finalResult += "\n\n" + branchOutput;`).
-
-### Bước 3: Fallback an toàn không làm crash 1-Click Generate
-Tại dòng ~7965 `js/khbd-app.js`:
-- Nếu sau khi thử sinh bổ sung mà vẫn thiếu hoặc AI bị nghẽn, **tự động chèn khung chuẩn của Hoạt động 2.2** (gồm tên mục 2 lấy từ hồ sơ SGK và cấu trúc bảng 4 bước chuẩn) để hoàn thiện Hoạt động B.
-- **TUYỆT ĐỐI KHÔNG `throw problem;`** làm dừng ngang tiến trình 1-Click Generate. Ghi log cảnh báo `console.warn` và cho phép tiến trình tiếp tục chạy các bước sau (Pha C, D, E).
+```mermaid
+flowchart TD
+    A["Chọn Tổ chuyên môn & Tháng duyệt"] --> B["1. Tự động kéo danh sách GV từ Tổ chuyên môn (api/phancong / users)"]
+    A --> C["2. Tự động nạp PPCT chuẩn từ CSDL (teacher_ppct_catalogs)"]
+    
+    B --> D["Nạp tệp giáo án tháng của từng GV (50 trang Word/PDF)"]
+    
+    D --> E["Bộ bóc tách bài tự động (Lesson Chunking Splitter)"]
+    E --> F1["Bài 1 (Tiết 1-2)"]
+    E --> F2["Bài 2 (Tiết 3-4)"]
+    E --> F3["Bài n..."]
+    
+    F1 & F2 & F3 --> G1["Tầng 1: Kiểm tra cấu trúc CV 5512 (Regex client-side, 0s, 0 token)"]
+    F1 & F2 & F3 --> G2["Tầng 2: AI thẩm định cuốn chiếu từng bài (Gemini 2-3s/bài, có Progress Bar)"]
+    
+    G1 & G2 --> H["Tổng hợp kết quả từng giáo viên"]
+    H --> I["Tổng hợp chung toàn Tổ chuyên môn"]
+    I --> J["Xuất BIÊN BẢN KIỂM TRA HỒ SƠ GIÁO ÁN CỦA TỔ (.docx chuẩn BGDĐT)"]
+```
 
 ---
 
-## 3. Kế Hoạch Kiểm Thử (Verification Plan)
+## 3. Chi Tiết Kỹ Thuật Cho Coder
 
-1. Chạy test kiểm thử nhánh Hoạt động B:
-   ```bash
-   node tests/khbd-activity-b-subsections-smoke.js
-   ```
-2. Chạy test tích hợp sư phạm và 1-Click Generate:
-   ```bash
-   node tests/soankhbd-generation-mode-smoke.js
-   ```
-3. Kiểm tra cú pháp và định dạng:
-   ```bash
-   git diff --check
-   ```
+### A. Backend (`api/duyetgiaoan.php`)
+1. **Bổ sung API lấy danh sách giáo viên theo tổ chuyên môn (`action=get_department_teachers`)**:
+   - Đọc từ `phancong_chuyenmon` (kế hoạch phân công mới nhất) hoặc từ bảng `users` (`role = 'teacher'`).
+   - Trả về danh sách GV kèm môn phụ trách, các khối lớp phân công.
+2. **Bổ sung API tự động lấy PPCT từ CSDL (`action=get_ppct_catalog`)**:
+   - Query bảng `teacher_ppct_catalogs` theo `subject`, `grade`, `academic_year`, `school_name`.
+   - Trả về danh sách bài, số tiết và thứ tự PPCT chuẩn để đối chiếu mà không cần tải file ngoài.
+3. **Cập nhật lưu trữ đợt duyệt (`duyet_giao_an_sessions`)**:
+   - Lưu trữ `session_data` gồm: danh sách bài đã duyệt của từng giáo viên, điểm số từng bài, xếp loại chung của tổ.
+
+### B. Frontend (`duyetgiaoan.html`)
+1. **Bộ tách bài tự động (Lesson Chunking Splitter)**:
+   - Viết hàm `splitLessonsFromText(fullText)`:
+     - Nhận diện phân cách các bài qua regex: `/(?:KẾ HOẠCH BÀI DẠY|BÀI\s+\d+|TIẾT\s+\d+|I\.\s*MỤC TIÊU)/i`.
+     - Chia 50 trang thành danh sách mảng các bài học `{ title, period, text, startIndex }`.
+2. **Thẩm định 2 tầng cuốn chiếu (Sequential Batch Processing)**:
+   - **Tầng 1 (Heuristic kiểm tra khung)**: Kiểm tra 4 hoạt động CV 5512 (Khởi động, Hình thành kiến thức, Luyện tập, Vận dụng), bảng 2 cột 4 bước (Chuyển giao, Thực hiện, Báo cáo, Kết luận).
+   - **Tầng 2 (Gemini Review từng bài)**: Gọi AI phân tích từng bài học nhỏ (~3.000 - 5.000 ký tự). Cập nhật thanh tiến trình:
+     `Đang thẩm định GV Nguyễn Văn A - Bài 2: Phép cộng (Tiết 3-4)... [45%]`.
+3. **Tự động nạp PPCT và Tổ chuyên môn**:
+   - Dropdown chọn Tổ chuyên môn -> Nút **"Đồng bộ GV từ Tổ chuyên môn"** tự động điền danh sách GV.
+   - Khi chọn Môn/Khối -> Tự động nạp PPCT tương ứng từ server, báo trạng thái `Đã kết nối PPCT chuẩn (35 tuần, 105 tiết)`.
+4. **Biên bản duyệt tổng hợp chung cho cả tổ (`exportDepartmentDocx`)**:
+   - Tạo mẫu biên bản hành chính trường học chuẩn bằng thư viện `docx`:
+     - **Cơ quan chủ quản & Tên trường** (Góc trái trên).
+     - **Quốc hiệu, Tiêu ngữ** (Góc phải trên).
+     - Tiêu đề: **BIÊN BẢN KIỂM TRA HỒ SƠ GIÁO ÁN TỔ CHUYÊN MÔN**
+     - Đợt kiểm tra: Tháng ... Năm học ...
+     - **I. THÀNH PHẦN KIỂM TRA**: Tổ trưởng, Tổ phó, các thành viên.
+     - **II. NỘI DUNG & TIÊU CHÍ ĐÁNH GIÁ**:
+       1. Thực hiện tiến độ PPCT.
+       2. Cấu trúc KHBD theo Công văn 5512/BGDĐT-GDTrH.
+       3. Tích hợp Năng lực số (TT 02/2025/TT-BGDĐT) và AI (QĐ 2422/QĐ-BGDĐT).
+     - **III. BẢNG TỔNG HỢP KẾT QUẢ ĐÁNH GIÁ TỪNG GIÁO VIÊN**:
+       - Bảng cột: STT | Họ và tên GV | Môn - Lớp | Số bài/tiết duyệt | Tiến độ PPCT | CV 5512 | NLS/AI | Xếp loại (Tốt/Khá/Đạt/Chưa đạt).
+     - **IV. ĐÁNH GIÁ CHUNG CỦA TỔ CHUYÊN MÔN**:
+       - Ưu điểm nổi bật.
+       - Tồn tại, hạn chế cần khắc phục.
+       - Kiến nghị và kế hoạch điều chỉnh trong tháng kế tiếp.
+     - **V. KÝ DUYỆT**: Người lập biên bản (Tổ trưởng CM) & Phê duyệt của Ban Giám hiệu.
+
+---
+
+## 5. Khắc Phục Trích Xuất Hình Vẽ SGK & Tạo Hình Học (`canvas_soankhbd`)
+
+### Vấn đề:
+- Khi nạp PDF SGK ở Bước 0, câu lệnh `canvasTextbookAnalysisPrompt` chỉ yêu cầu trích xuất `sections`, `coreKnowledge`, `activities`, `exercises`; **không trích xuất các hình vẽ (figures)**.
+- Khi sang bước Tạo ảnh minh họa (`GENERATE_ILLUSTRATIONS`), AI đọc tóm tắt thấy toàn chữ nên trả về `illustrations: []` và hiện toast: *"Bài này không cần hình minh họa (chủ yếu chữ/số)"*, điều này phi lý với bài Hình học.
+
+### Giải pháp kỹ thuật:
+1. **Cập nhật `canvasTextbookAnalysisPrompt` trong `js/khbd-app.js`**:
+   - Thêm vào schema JSON: `"figures": [{"id": "Hình 1", "description": "mô tả chi tiết hình vẽ trong SGK", "subsection": "mục chứa hình"}]`.
+   - Yêu cầu AI quét và liệt kê đầy đủ các hình vẽ, sơ đồ hình học, đồ thị có trong các trang PDF.
+2. **Cập nhật `analyzeCanvasTextbookSafely` & `formatCanvasTextbookContext`**:
+   - Thu thập `figures` qua các batch và ghi vào ngữ cảnh SGK: `## Hình vẽ trong SGK`.
+3. **Cập nhật `GENERATE_ILLUSTRATIONS` trong `js/khbd-prompts.js`**:
+   - Đối với môn Toán phân môn Hình học hoặc bài có từ khóa hình học: BẮT BUỘC liệt kê tối thiểu 1–3 hình SGK, cấm trả về rỗng.
+4. **Fallback & Toast trong `generateLessonIllustrations`**:
+   - Nếu là bài hình học mà AI trả về rỗng, tự động lấy các `figures` trích xuất từ SGK để tạo hình SVG thay vì dừng lại.
+   - Không hiển thị toast "không cần tạo hình" cho bài Hình học.
+
+---
+
+## 6. Kế Hoạch Kiểm Thử (Verification Plan)
+
+1. **Duyệt giáo án theo Tổ (`tests/duyetgiaoan-department-smoke.js`)**:
+   - Tách bài `splitLessonsFromText` với văn bản mẫu 50 trang Word.
+   - Nạp tự động PPCT từ CSDL mà không cần file.
+   - Nạp danh sách GV từ tổ chuyên môn.
+   - Xuất biên bản DOCX tổng hợp cả tổ có đủ bảng biểu và các mục I, II, III, IV, V.
+2. **Tạo hình SGK Canvas (`tests/canvas-geometry-figures-smoke.js`)**:
+   - Kiểm tra `canvasTextbookAnalysisPrompt` có trường `figures`.
+   - Kiểm tra `formatCanvasTextbookContext` có xuất mục hình vẽ SGK.
+   - Kiểm tra bài hình học không bị rơi vào nhánh "không cần tạo hình".
+3. **Regression Test**:
+   - `node tests/duyetgiaoan-smoke.js`
+   - `node tests/duyetgiaoan-integration-smoke.js`
+   - `git diff --check`
