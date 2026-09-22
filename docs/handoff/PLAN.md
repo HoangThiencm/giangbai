@@ -1,114 +1,116 @@
-# PLAN: Mở Khóa Quyền Gọi Gemini Canvas Trực Tiếp (Không Cần Key) & Giữ Nguyên 100% Kỷ Luật Soạn Giảng
+# PLAN: Tự Động Phân Tuyến Mô Hình (Gemini 2.5 Flash cho Nhận Diện SGK/Ảnh + Gemini 3 Flash Preview cho Soạn Giảng)
 
 ## 1. Tổng Quan & Yêu Cầu Cốt Lõi
 
 ### Bối cảnh:
-Người dùng copy mã nguồn `canvas_soankhbd.html` dán vào cửa sổ **Gemini Canvas (trên `gemini.google.com`)** để chạy.
-- Trước đó gặp lỗi:
-  ```text
-  [CONSOLE_ERROR] 1-Click Generate Error: Error: Lỗi Gemini API (401): HTTP 401: Something went wrong
-  ```
-- **Yêu cầu quan trọng từ người dùng**:
-  Tuyệt đối **KHÔNG gộp hay làm xáo trộn `systemInstruction`** vào nội dung prompt thông thường, vì việc này làm thay đổi độ chú ý của mô hình AI và gây sai lệch, giảm tính kỷ luật chuẩn mực của giáo án (chuẩn 5512, bảng phân vai GV-HS, NLS, AI).
-  Chỉ can thiệp kỹ thuật ở **tầng mạng (Network)** để khắc phục lỗi 401.
+Khi chạy `canvas_soankhbd.html` trên **Gemini Canvas (`gemini.google.com`)**:
+1. Bước nhận diện/phân tích SGK bị đứng ở mức **90%** do gửi trực tiếp batch ảnh/media SGK tới mô hình `gemini-3-flash-preview`. Trong môi trường iframe Canvas, model 3-flash preview xử lý multimodal vision nặng thường bị stall, nghẽn hàng đợi hoặc timeout.
+2. Mô hình `gemini-2.5-flash` (như đang dùng rất nhanh và ổn định ở `taobaocao.html`) có khả năng OCR/Vision đọc ảnh và văn bản SGK vượt trội, xử lý xong chỉ trong vài giây.
+3. **Chỉ đạo dứt khoát của người dùng**:
+   > *"vậy chuyển tự động đi. Gemini-2.5-flash nó nhận diện văn bản, còn lại là 3-lash-preview. Nãy giờ tôi nói với bạn mà vẫn đứng 90%. chắc lỗi rồi"*
+4. **Kỷ luật sư phạm**:
+   - Tuyệt đối **KHÔNG gộp hay làm xáo trộn `systemInstruction`** vào prompt. Giữ nguyên trường `systemInstruction` độc lập để bảo toàn tính chuẩn mực sư phạm (chuẩn 5512, bảng phân vai GV-HS, NLS, AI).
+   - Tuyệt đối **KHÔNG đặt `credentials: "omit"`** để tránh lỗi 401 trên Canvas.
 
 ---
 
-## 2. Nguyên Nhân Kỹ Thuật
+## 2. Giải Pháp Kỹ Thuật
 
-1. **Lỗi 401 do cờ `credentials: "omit"`**:
-   Trong `canvas_soankhbd.html` (dòng 1400):
+Tại hàm điều phối mạng trung tâm `geminiAPI.fetchGeminiGenerate` trong `canvas_soankhbd.html`:
+
+1. **Phát hiện tự động tác vụ Vision / Phân tích SGK**:
+   Kiểm tra nếu payload chứa dữ liệu ảnh (`inlineData`, `fileData`), hoặc tham số model yêu cầu `image`:
    ```javascript
-   const response = await this.fetchWithTimeout(GEMINI_DIRECT_ENDPOINT + useModel + ":generateContent", {
-     method: "POST",
-     headers: { "Content-Type": "application/json" },
-     credentials: "omit", // <--- NGUYÊN NHÂN DUY NHẤT GÂY LỖI 401
-     body: JSON.stringify(payload),
-     signal: signal
-   }, timeoutMs || 95000);
+   const hasMedia = Boolean(
+     /image/i.test(String(model || "")) ||
+     (payload && Array.isArray(payload.contents) && payload.contents.some(c => Array.isArray(c.parts) && c.parts.some(p => p && (p.inlineData || p.fileData))))
+   );
    ```
-   Trong iframe của Gemini Canvas (`gemini.google.com`), Google dựa vào thông tin xác thực phiên (ambient credentials/session) của tài khoản Google để cho phép gọi API trực tiếp. Khi có cờ `credentials: "omit"`, trình duyệt bị bắt buộc tước bỏ toàn bộ cookies/phiên này, dẫn đến việc Google từ chối kết nối với mã lỗi 401.
-2. **`systemInstruction` hoàn toàn hợp lệ**:
-   Endpoint `https://generativelanguage.googleapis.com/v1beta/models/...:generateContent` hỗ trợ trường `systemInstruction: { parts: [...] }` là tính năng tiêu chuẩn cốt lõi. Không cần và không được gộp vào prompt.
+
+2. **Tự động gán mô hình tối ưu theo loại tác vụ**:
+   - **Nhận diện SGK / Hình ảnh / OCR (`hasMedia === true`)**: Tự động dùng `gemini-2.5-flash` (nhanh, chính xác, không bị đứng ở 90%).
+   - **Soạn thảo giáo án / Nội dung văn bản (`hasMedia === false`)**: Dùng `gemini-3-flash-preview` (tư duy sâu, chất lượng nội dung cao).
+
+3. **Cơ chế dự phòng (Fallback)**:
+   - Nếu gọi `gemini-3-flash-preview` mà Canvas trả về HTTP 401, 403, 404, 429 hoặc 503, tự động chuyển hướng gọi lại bằng `gemini-2.5-flash`.
+
+4. **Làm sạch Payload an toàn**:
+   - Sao chép nguyên vẹn `systemInstruction` và `contents`.
+   - Chỉ loại bỏ `thinkingConfig` (nếu có) để tránh lỗi không tương thích trên các bản Canvas.
 
 ---
 
 ## 3. Chi Tiết Thực Hiện Cho Coder
 
-Chỉnh sửa trong `canvas_soankhbd.html`:
+### Bước 1: Cập nhật `geminiAPI.fetchGeminiGenerate` trong `canvas_soankhbd.html`
+Vị trí: khoảng dòng 1396 trong thẻ `<script id="canvasCoreBootstrap">`:
 
-### Bước 1: Điều chỉnh lệnh gọi `fetch` trong `canvas_soankhbd.html`
-Tại khối `geminiAPI.fetchGeminiGenerate`:
-1. **Xóa bỏ thuộc tính `credentials: "omit"`**.
-2. **Giữ nguyên 100% cấu trúc `payload`** (bao gồm cả `systemInstruction`, `contents`, `generationConfig`).
-   - *Lưu ý nhỏ*: Chỉ lọc bỏ trường `thinkingConfig: { thinkingBudget: 0 }` trong `payload.generationConfig` nếu có (để tránh lỗi 400 trên một số phiên bản model của Canvas). Toàn bộ `systemInstruction` và prompt giữ nguyên vẹn.
-3. **Thêm cơ chế tự động Fallback Model**:
-   - Mặc định gọi model ưu tiên (`gemini-3-flash-preview` hoặc model được cấu hình).
-   - Nếu phản hồi trả về mã lỗi 401, 403 hoặc 404 (do phiên Canvas hiện tại chưa mở preview model đó), tự động gọi lại với model ổn định `gemini-2.5-flash`.
-
-Đoạn mã mẫu hoàn chỉnh cho `canvas_soankhbd.html`:
 ```javascript
-geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
-  const primaryModel = /image/i.test(String(model || "")) ? model : (MODEL || "gemini-3-flash-preview");
-  const fallbackModel = "gemini-2.5-flash";
+      geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
+        // 1. Kiểm tra tự động xem payload có chứa dữ liệu ảnh/media SGK không
+        const hasMedia = Boolean(
+          /image/i.test(String(model || "")) ||
+          (payload && Array.isArray(payload.contents) && payload.contents.some(c => Array.isArray(c.parts) && c.parts.some(p => p && (p.inlineData || p.fileData))))
+        );
 
-  // Giữ nguyên 100% payload sư phạm (systemInstruction, contents, v.v.), chỉ dọn sạch trường không tương thích
-  function cleanPayloadForCanvas(srcPayload) {
-    const copy = JSON.parse(JSON.stringify(srcPayload || {}));
-    if (copy.generationConfig && copy.generationConfig.thinkingConfig) {
-      delete copy.generationConfig.thinkingConfig;
-    }
-    return copy;
-  }
+        // 2. Phân tuyến tự động:
+        // - Nhận diện ảnh/văn bản SGK: dùng gemini-2.5-flash (tốc độ cao, không nghẽn 90%)
+        // - Soạn thảo bài giảng/giáo án: dùng gemini-3-flash-preview
+        const fallbackModel = "gemini-2.5-flash";
+        const primaryModel = hasMedia ? fallbackModel : (MODEL || "gemini-3-flash-preview");
 
-  async function executeCall(targetModel) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent`;
-    const cleanBody = cleanPayloadForCanvas(payload);
+        // Giữ nguyên 100% payload sư phạm (systemInstruction, contents, v.v.)
+        // Chỉ dọn sạch trường thinkingConfig nếu có để tránh lỗi 400
+        function cleanPayloadForCanvas(sourcePayload) {
+          const copy = JSON.parse(JSON.stringify(sourcePayload || {}));
+          if (copy.generationConfig && copy.generationConfig.thinkingConfig) {
+            delete copy.generationConfig.thinkingConfig;
+          }
+          return copy;
+        }
 
-    // GỌI NGUYÊN BẢN TRỰC TIẾP: Không có credentials: "omit"
-    return await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(cleanBody),
-      signal: signal
-    });
-  }
+        const executeCall = async (targetModel) => this.fetchWithTimeout(GEMINI_DIRECT_ENDPOINT + targetModel + ":generateContent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(cleanPayloadForCanvas(payload)),
+          signal: signal
+        }, timeoutMs || 95000);
 
-  let response = await executeCall(primaryModel);
-  let activeUsedModel = primaryModel;
+        let response = await executeCall(primaryModel);
+        let activeUsedModel = primaryModel;
 
-  // Nếu preview model bị lỗi quyền 401/403/404, tự động fallback sang gemini-2.5-flash
-  if (!response.ok && (response.status === 401 || response.status === 403 || response.status === 404) && primaryModel !== fallbackModel) {
-    console.warn(`[Gemini Canvas] Model ${primaryModel} trả về HTTP ${response.status}. Tự động fallback sang ${fallbackModel}...`);
-    response = await executeCall(fallbackModel);
-    activeUsedModel = fallbackModel;
-  }
+        // Nếu model preview gặp lỗi HTTP 401/403/404/429/503, tự động fallback sang gemini-2.5-flash
+        if (!response.ok && (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429 || response.status === 503) && primaryModel !== fallbackModel) {
+          console.warn("[Gemini Canvas] Model " + primaryModel + " trả về HTTP " + response.status + ". Tự động fallback sang " + fallbackModel + "...");
+          response = await executeCall(fallbackModel);
+          activeUsedModel = fallbackModel;
+        }
 
-  const metadata = { route: "canvas_direct", model: activeUsedModel };
-  geminiAPI.lastCanvasMeta = metadata;
-  geminiAPI.emitGeminiStatus({
-    type: "canvas_direct",
-    message: "Gemini Canvas: gọi trực tiếp · " + activeUsedModel,
-    route: metadata.route,
-    model: activeUsedModel
-  });
+        const metadata = { route: "canvas_direct", model: activeUsedModel, hasMedia: hasMedia };
+        geminiAPI.lastCanvasMeta = metadata;
+        geminiAPI.emitGeminiStatus({
+          type: "canvas_direct",
+          message: "Gemini Canvas: gọi trực tiếp · " + activeUsedModel + (hasMedia ? " (nhận diện SGK)" : " (soạn KHBD)"),
+          route: metadata.route,
+          model: activeUsedModel
+        });
 
-  if (response.ok) {
-    setBanner("Gemini Canvas đang gọi trực tiếp (" + activeUsedModel + ") không cần API key.", "ok");
-  } else {
-    setBanner("Gemini Canvas báo lỗi (HTTP " + response.status + ").", "err");
-  }
+        if (response.ok) {
+          setBanner("Gemini Canvas đang gọi trực tiếp (" + activeUsedModel + "), không dùng proxy hoặc API key hệ thống.", "ok");
+        } else {
+          setBanner("Gemini Canvas báo lỗi (HTTP " + response.status + "). Không dùng tuyến hệ thống.", "err");
+        }
 
-  response.canvasMeta = metadata;
-  return response;
-};
+        response.canvasMeta = metadata;
+        return response;
+      };
 ```
 
-### Bước 2: Cập nhật file kiểm thử `tests/canvas-soankhbd-smoke.js`
-Đảm bảo kiểm tra:
-1. `canvas_soankhbd.html` **KHÔNG** chứa `credentials: "omit"`.
-2. Có hàm làm sạch payload bảo toàn `systemInstruction` (`cleanPayloadForCanvas` hoặc tương đương).
-3. Có cơ chế fallback model sang `gemini-2.5-flash`.
+### Bước 2: Cập nhật kiểm thử tự động `tests/canvas-soankhbd-smoke.js`
+Thêm các assertion xác thực:
+1. `hasMedia` tự động kiểm tra `inlineData` / `fileData`.
+2. Khẳng định `hasMedia ? fallbackModel : ...` để SGK luôn chạy `gemini-2.5-flash`.
+3. Kiểm tra không chứa `credentials: "omit"`.
 4. Chạy kiểm thử:
    ```powershell
    node tests/canvas-soankhbd-smoke.js
@@ -121,7 +123,7 @@ geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, tim
 1. Chạy pass toàn bộ test tự động:
    `node tests/canvas-soankhbd-smoke.js`
 2. Mở file `canvas_soankhbd.html`, copy toàn bộ mã nguồn dán vào cửa sổ **Gemini Canvas trên `gemini.google.com`**.
-3. Bấm **TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)**.
-4. **Kỳ vọng:**
-   - Kết nối thành công, không còn lỗi 401.
-   - Giáo án tạo ra giữ nguyên 100% chuẩn mực sư phạm, đúng cấu trúc 5512, phân vai GV-HS và NLS/AI chặt chẽ như mong muốn.
+3. Tải lên trang SGK và bấm **Phân tích SGK** hoặc **TẠO TOÀN BỘ GIÁO ÁN (1-CLICK)**:
+   - Giai đoạn nhận diện SGK (20% -> 90% -> 100%): gọi `gemini-2.5-flash`, xử lý trơn tru chỉ trong 5-10 giây, không còn hiện tượng treo ở 90%.
+   - Giai đoạn soạn các mục giáo án: gọi `gemini-3-flash-preview` để cho chất lượng sư phạm cao nhất.
+   - Toàn bộ chuẩn 5512, bảng phân vai GV-HS, NLS, AI giữ nguyên vẹn 100%.

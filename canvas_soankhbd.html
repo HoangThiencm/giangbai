@@ -1394,8 +1394,15 @@
         return canvasGenerateContent(prompt, images, systemRole, temperature, signal, Object.assign({}, options || {}, { allowEmptyKey: true }));
       };
       geminiAPI.fetchGeminiGenerate = async function (model, key, payload, signal, timeoutMs) {
-        const primaryModel = /image/i.test(String(model || "")) ? model : (MODEL || "gemini-3-flash-preview");
+        // Nhận diện SGK/OCR luôn đi qua Flash 2.5 để tránh nghẽn vision của
+        // model preview trong iframe Canvas. Các lượt soạn văn bản dùng model
+        // preview đã cấu hình để giữ chất lượng nội dung giáo án.
+        const hasMedia = Boolean(
+          /image/i.test(String(model || "")) ||
+          (payload && Array.isArray(payload.contents) && payload.contents.some(c => Array.isArray(c.parts) && c.parts.some(p => p && (p.inlineData || p.fileData))))
+        );
         const fallbackModel = "gemini-2.5-flash";
+        const primaryModel = hasMedia ? fallbackModel : (MODEL || "gemini-3-flash-preview");
 
         // Giữ nguyên payload sư phạm, đặc biệt systemInstruction tách biệt với
         // contents. Chỉ bỏ tùy chọn thinking chưa tương thích với một số model Canvas.
@@ -1416,14 +1423,19 @@
 
         let response = await executeCall(primaryModel);
         let activeUsedModel = primaryModel;
-        if (!response.ok && (response.status === 401 || response.status === 403 || response.status === 404) && primaryModel !== fallbackModel) {
+        if (!response.ok && (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429 || response.status === 503) && primaryModel !== fallbackModel) {
           console.warn("[Gemini Canvas] Model " + primaryModel + " trả về HTTP " + response.status + ". Tự động fallback sang " + fallbackModel + "...");
           response = await executeCall(fallbackModel);
           activeUsedModel = fallbackModel;
         }
-        const metadata = { route: "canvas_direct", model: activeUsedModel };
+        const metadata = { route: "canvas_direct", model: activeUsedModel, hasMedia: hasMedia };
         geminiAPI.lastCanvasMeta = metadata;
-        geminiAPI.emitGeminiStatus({ type: "canvas_direct", message: "Gemini Canvas: gọi trực tiếp · " + activeUsedModel, route: metadata.route, model: activeUsedModel });
+        geminiAPI.emitGeminiStatus({
+          type: "canvas_direct",
+          message: "Gemini Canvas: gọi trực tiếp · " + activeUsedModel + (hasMedia ? " (nhận diện SGK)" : " (soạn KHBD)"),
+          route: metadata.route,
+          model: activeUsedModel
+        });
         if (response.ok) {
           setBanner("Gemini Canvas đang gọi trực tiếp (" + activeUsedModel + "), không dùng proxy hoặc API key hệ thống.", "ok");
         } else {

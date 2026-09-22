@@ -191,7 +191,11 @@ for (const targetPath of targetPaths) {
   assert.ok(!targetHtml.includes('thinkingConfig: {'), `${relPath} không được tự thêm thinkingConfig vào payload Canvas`);
   assert.ok(!targetHtml.includes('[CHỈ DẪN HỆ THỐNG]'), `${relPath} không được gộp systemInstruction vào prompt`);
   assert.ok(targetHtml.includes('fallbackModel = "gemini-2.5-flash"'), `${relPath} phải có fallback model Gemini Canvas`);
-  assert.ok(targetHtml.includes('response.status === 401 || response.status === 403 || response.status === 404'), `${relPath} fallback khi Canvas chặn model preview`);
+  assert.ok(targetHtml.includes('const hasMedia = Boolean('), `${relPath} phải tự nhận diện tác vụ có media`);
+  assert.ok(targetHtml.includes('p.inlineData || p.fileData'), `${relPath} phải nhận diện cả inlineData và fileData của SGK`);
+  assert.ok(targetHtml.includes('hasMedia ? fallbackModel : (MODEL || "gemini-3-flash-preview")'), `${relPath} media SGK phải luôn chạy gemini-2.5-flash`);
+  assert.ok(targetHtml.includes('response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429 || response.status === 503'), `${relPath} fallback khi Canvas chặn hoặc quá tải model preview`);
+  assert.ok(targetHtml.includes('hasMedia: hasMedia'), `${relPath} metadata Canvas phải lưu loại tác vụ`);
   assert.ok(targetHtml.includes('allowEmptyKey: true'), `${relPath} cho phép Gemini Canvas không cần key trình duyệt`);
   assert.ok(targetHtml.includes('lastCanvasMeta = metadata'), `${relPath} lưu metadata tuyến/model Canvas an toàn`);
   assert.ok(targetHtml.includes('type: "canvas_direct"'), `${relPath} báo tuyến Gemini Canvas trực tiếp`);
