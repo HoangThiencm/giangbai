@@ -6,6 +6,8 @@
 - `duyetgiaoan.html`: đồng bộ giáo viên từ tổ, tự nạp PPCT theo giáo viên/môn/khối, tách giáo án thành bài, duyệt tuần tự từng bài (mỗi lời gọi AI tối đa 5.000 ký tự), có heuristic CV 5512 và fallback khi AI lỗi.
 - Kết quả lưu theo từng bài trong `session_data` v2, vẫn tải được dữ liệu đợt cũ; xuất biên bản tổ có mục I–V và bảng tám cột, chỗ ký TTCM/BGH.
 - `tests/duyetgiaoan-department-smoke.js`: kiểm tra các điểm tích hợp mới.
+- Đã nghiệm thu bổ sung: heading `I. MỤC TIÊU`/`TIẾT` nội bộ không tạo bài giả khi đã có `KẾ HOẠCH BÀI DẠY` hoặc `BÀI`; xếp loại trong biên bản được chuẩn hóa theo điểm bình quân: `Tốt`, `Khá`, `Đạt`, `Chưa đạt`.
+- PPCT dùng riêng trường `schoolName` (Trường/Đơn vị PPCT), không dùng tên tổ/kế hoạch làm khóa; giá trị này được lưu và khôi phục cùng đợt duyệt. Để trống sẽ truy vấn hồ sơ PPCT cũ chưa đặt tên và hiện trạng thái giải thích rõ.
 
 ## Kiểm thử đợt này
 

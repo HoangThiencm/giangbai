@@ -1,5 +1,13 @@
 const fs=require('fs'),assert=require('assert'),path=require('path');
 const html=fs.readFileSync(path.join(__dirname,'..','duyetgiaoan.html'),'utf8'),api=fs.readFileSync(path.join(__dirname,'..','api','duyetgiaoan.php'),'utf8');
 ['splitLessonsFromText','cv5512Heuristic','syncDepartmentTeachers','loadPpctCatalog','exportDepartmentDocx','Đồng bộ GV từ Tổ chuyên môn','3.11.174','5000','BIÊN BẢN KIỂM TRA HỒ SƠ GIÁO ÁN TỔ CHUYÊN MÔN','I. THÀNH PHẦN KIỂM TRA','V. KÝ DUYỆT'].forEach(x=>assert(html.includes(x),x));
+assert(html.includes('id="schoolName"'),'school input');
+const ppctLoader=html.match(/async function loadPpctCatalog\([^\n]+/)[0];assert(ppctLoader.includes('school_name:schoolName'),'PPCT URL uses school input');assert(!ppctLoader.includes("school_name:document.querySelector('#department')"),'PPCT URL must not use department');
+assert(html.includes('schoolName:document.querySelector(\'#schoolName\')?.value.trim()||\'\''),'school is saved in session');
 ['get_department_teachers','get_ppct_catalog','phancong_chuyenmon','teacher_ppct_catalogs','plan_has_teacher','rows_json','session_data','version'].forEach(x=>assert(api.includes(x),x));
+const splitSource=html.match(/function splitLessonsFromText\([^\n]+/)[0],classifySource=html.match(/function departmentClassification\([^\n]+/)[0];
+eval(`${splitSource}\n${classifySource}`);
+const fixture='KẾ HOẠCH BÀI DẠY: Bài 1\nTIẾT 1\nI. MỤC TIÊU\nNội dung\nII. THIẾT BỊ';
+assert.strictEqual(splitLessonsFromText(fixture).length,1,'I. MỤC TIÊU is an internal heading, not a lesson');
+assert.deepStrictEqual([95,80,60,40].map(departmentClassification),['Tốt','Khá','Đạt','Chưa đạt']);
 console.log('duyetgiaoan department smoke: passed');
