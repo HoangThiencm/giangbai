@@ -3,10 +3,10 @@
 Quy tắc này áp dụng vĩnh viễn cho mọi yêu cầu "soạn khbd" trong Antigravity. Tuyệt đối không được vi phạm ở bất kỳ bài nào tiếp theo.
 
 ## 1. Nguồn dữ liệu đầu vào
-- Tự động đọc dữ liệu trong thư mục `KHBD/FILE BAI HOC/`:
+- Tự động đọc dữ liệu trong thư mục `TROLYTHIEN/1_SOAN_KHBD/Dau_vao/`:
   + Tệp PDF nội dung bài học SGK.
   + Tệp Phân phối chương trình (PPCT) dưới dạng Word, Excel, PDF hoặc ảnh.
-  + Tệp chỉ dẫn chuẩn: `KHBD/FILE BAI HOC/PROMPT_SOAN_GIAO_AN.md`.
+  + Tệp chỉ dẫn chuẩn: `TROLYTHIEN/1_SOAN_KHBD/Dau_vao/PROMPT_SOAN_GIAO_AN.md`.
 
 ## 2. Tiêu đề Mục III và Thời lượng hoạt động
 - **Tiêu đề Mục III chỉ ghi duy nhất:** `# III. TIẾN TRÌNH DẠY HỌC`
@@ -37,4 +37,4 @@ Quy tắc này áp dụng vĩnh viễn cho mọi yêu cầu "soạn khbd" trong 
 ## 6. Dung lượng và Cấu trúc bài dạy
 - **Tiết luyện tập chung / Ôn tập (1 tiết = 45 phút):** 3 - 4 trang Word; chỉ 3 hoạt động (A. Khởi động -> B. Luyện tập: HĐ 2.1 Hệ thống hóa bằng Sơ đồ tư duy Mindmap + HĐ 2.2 Giải quyết bài tập trọng tâm -> C. Vận dụng).
 - **Tiết hình thành kiến thức mới (2 tiết = 90 phút):** 6 - 7 trang Word; đủ 4 hoạt động A, B (chia theo đề mục SGK), C, D.
-- Tự động lưu file thành phẩm `.docx` tại `KHBD/` và bản sao lưu tại `KHBD/FILE BAI HOC/`.
+- Tự động lưu file thành phẩm `.docx` tại `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/`.

@@ -37,7 +37,8 @@ const SKIP_DIR_NAMES = new Set([
 const SKIP_DIR_PREFIXES = [
     'backupcode',
     'GIAO AN',
-    'KHBD'
+    'KHBD',
+    'TROLYTHIEN'
 ];
 
 const SKIP_FILE_NAMES = new Set([

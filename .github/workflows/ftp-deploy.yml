@@ -61,6 +61,7 @@ jobs:
             **/node_modules/**
             GIAO AN/**
             KHBD/**
+            TROLYTHIEN/**
             taovideo/assets/vtts/models/**
             **/*.pdf
             **/*.onnx
