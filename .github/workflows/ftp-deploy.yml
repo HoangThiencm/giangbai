@@ -60,6 +60,7 @@ jobs:
             **/.git*/**
             **/node_modules/**
             GIAO AN/**
+            KHBD/**
             taovideo/assets/vtts/models/**
             **/*.pdf
             **/*.onnx

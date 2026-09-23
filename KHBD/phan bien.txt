@@ -1,0 +1,26 @@
+Tôi vẫn thấy nó nhiều trang quá. 1 tiết 45 phút như bài này mà dài 11 trang, quá trời bài tập.
+Chuẩn lại giáo án như thế này thực hiện trong Antigravity, đừng đụng đến web nhé.
+I. Mục tiêu: 
+1. Kiến thức: Nêu đơn giản ngắn gọn mục tiêu theo thông tư 32.
+2. Năng lực
+a. Năng lực chung: Nêu ngắn gọn 1, 2 năng lực nổi trội
+b. Năng lực đặc thù: Cũng nếu ngắn gọn 1,2 năng lực nổi trội
+c. Năng lực số (theo PPCT-nếu có)
+d. Năng lực AI (theo PPCT-Nếu có).
+3. Phẩm chất: Nêu ngắn gọn 1, 2 năng lực nổi trội
+Nếu là tiết lý thuyết hình thành kiến thức mới thì đủ 
+A. KHỞI ĐỘNG
+B. HÌNH THÀNH KIẾN THỨC MỚI
+C. LUYỆN TẬP
+D. VẬN DỤNG
+không bàn cãi nhưng số lượng hình vẽ có thể ít lại hơn, dàn trang cho đẹp (có thể 02 hình trên 1 inline). Hoạt động D. Vận dụng chứ không phải là vận dụng và hướng dẫn về nhà, mặc dù chúng ta hiểu là có giao bài tập về nhà trong đó. Cần rút gọn còn 6-7 trang thôi.
+Còn tiết luyện tập chung/Ôn tập thì chỉ có 3 hoạt động
+A. KHỞI ĐỘNG
+B. LUYỆN TẬP
+Hoạt động 1: Hệ thống hoá kiến thức
+Trình bày ngắn gọn các kiến thức cũ, dùng hình ảnh sơ đồ tư duy.
+Hoạt động 2: Giải quyết bài tập.
+C. VẬN DỤNG
+Được chứ,
+Sau khi xong thì đặt file giáo án nằm trong thư mục cùng với FILE BÀI HỌC hoặc tốt nhất đổi tên thành KHBD (vì tôi còn nhiều ý tưởng cho các thư mục khác nữa), xoá các file không cần thiết tạo ra như .md, các hình ảnh trích xuất,...
+Phản biện đã
