@@ -1,17 +1,15 @@
-# IMPLEMENT: Ngừng theo dõi TROLYTHIEN
+# IMPLEMENT: Đua vịt — Sprint & Quiz in Sync
 
 ## Đã làm
-1. `.gitignore`: thêm `TROLYTHIEN/` (dòng 17–18). `git check-ignore -v TROLYTHIEN/HH.pdf` trả về `.gitignore:18:TROLYTHIEN/`.
-2. `git rm -r --cached TROLYTHIEN/`: gỡ 64 đường dẫn khỏi index. File trên đĩa còn nguyên (`Get-ChildItem -Recurse -File` = 64; `HH.pdf`, `pages/page_1.png`, `engine/export_khbd_engine.js` đều `Test-Path` = True).
-3. `.github/workflows/ftp-deploy.yml` `exclude` có cả `TROLYTHIEN/**` và `**/TROLYTHIEN/**`.
+File `game-treasure.html` chỉ.
 
-## Git status (chưa commit)
-- Staged deletion (`D`): 64 file dưới `TROLYTHIEN/`.
-- `git ls-files TROLYTHIEN`: 0 (không còn tracked).
-- Modified: `.gitignore`, `.github/workflows/ftp-deploy.yml`, `docs/handoff/PLAN.md` (PLAN do survey ghi, coder không sửa nội dung plan).
-- Chưa commit, chưa push. Commit khi user yêu cầu và `VERIFY.md` là PASS.
+- Bảng câu hỏi nằm phía trên sông, hiện ngay khi bấm Bắt đầu (KaTeX qua `MathText`). Lựa chọn A–D khóa trong lúc đua, mở khi vịt cán đích kèm đồng hồ 15s hoặc 30s.
+- Bỏ đếm ngược 3-2-1. Còi `GO!` 0,5 giây (`Sound.whistle`). Thời gian đua: 3 giây (Siêu tốc) hoặc 5 giây (Tiêu chuẩn, mặc định).
+- Vịt được gán vai lúc xuất phát: đàn thường dừng ở `p` khoảng 0,42–0,62; Top (tối đa 4 chú ngoài vịt thắng) không quá 0,84; đúng một `winnerId` đạt `p >= 1`.
+- Canvas vẽ bánh mì, xoáy nước, nitro, rùa. Chậm/xoay không áp lên vịt thắng.
+- Hết đua: tên học sinh hiện trên sông (“Xin mời … trả lời”), pháo hoa, không còn modal chúc mừng rồi mới bấm Hiện câu hỏi.
+- Nút Đúng (+Điểm), Tiếp tục, Mở đáp án (Enter). Ô “Loại bạn vừa gọi” quyết định có xóa khỏi danh sách khi qua lượt. Lịch sử ghi giờ và +1 điểm.
+- Phím Cách: bắt đầu khi đang chờ; khi đã mở đáp án thì qua lượt. Phím 1–4 hoặc A–D chọn phương án. Phím H gọi Vịt cứu trợ (một bạn khác trong danh sách).
 
-## Kiểm tra coder
-- Index không còn track `TROLYTHIEN/`.
-- Ignore áp dụng cho PDF/ảnh/docx trong thư mục đó.
-- Không xóa file vật lý.
+## Chưa chạy ở lượt này
+Kiểm tra trình duyệt thuộc `/verify`: mở `game-treasure.html`, bấm Bắt đầu, xem chỉ một vịt cán đích, câu hỏi sẵn để trả lời, KaTeX, loại học sinh và lịch sử.

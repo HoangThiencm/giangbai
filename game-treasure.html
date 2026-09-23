@@ -21,8 +21,8 @@
       }
       canvas {
         width: 100%;
-        height: min(62vh, 610px);
-        min-height: 410px;
+        height: min(48vh, 460px);
+        min-height: 300px;
         display: block;
         border-radius: 22px;
       }
@@ -175,6 +175,10 @@
             [523, 659, 784, 1047].forEach((f, i) =>
               setTimeout(() => b(f, 0.24), i * 120),
             ),
+          whistle: () => {
+            b(880, 0.08, "square");
+            setTimeout(() => b(1320, 0.18, "square"), 90);
+          },
         };
       }
       function duck(ctx, x, y, color, name, boost, n, accessory, spin) {
@@ -219,68 +223,62 @@
         ctx.fillText(accessory || (boost ? "🚀" : "🎀"), -28, -15);
         ctx.restore();
       }
-      function River({ racers, racing, duration, finish, sound, onComment }) {
+      const OBSTACLES = [
+        { id: "bread", kind: "bread", p: 0.34, y: 0.28, icon: "🍞" },
+        { id: "whirl", kind: "whirl", p: 0.48, y: 0.62, icon: "🌀" },
+        { id: "nitro", kind: "nitro", p: 0.58, y: 0.4, icon: "🚀" },
+        { id: "turtle", kind: "turtle", p: 0.3, y: 0.78, icon: "🐢" },
+      ];
+      function roleOf(id, roles) {
+        if (!roles) return "pack";
+        if (id === roles.winnerId) return "win";
+        if (roles.topIds && roles.topIds.indexOf(id) >= 0) return "top";
+        return "pack";
+      }
+      function River({ racers, racing, duration, roles, finish, sound, onComment }) {
         let cv = useRef(),
           raf = useRef(),
           st = useRef({}),
           won = useRef(false),
-          eventAt = useRef(0);
+          told = useRef("");
         useEffect(() => {
           st.current = {};
-          racers.forEach(
-            (r, i) =>
-              (st.current[r.id] = {
-                p: 0.02 + Math.random() * 0.05,
-                y: 0.12 + Math.random() * 0.76,
-                v: 0.035 + Math.random() * 0.024,
-                vy: (Math.random() - 0.5) * 0.02,
-                boost: 0,
-                spin: 0,
-                accessory: ["🕶️", "🎓", "🦩", "🚀", "🎀"][i % 5],
-              }),
-          );
+          racers.forEach((r, i) => {
+            st.current[r.id] = {
+              p: 0.02 + (i % 7) * 0.008,
+              y: 0.1 + ((i * 0.17) % 0.78),
+              seed: (i * 37) % 100 / 100,
+              cap: 0.42 + ((i * 13) % 20) / 100,
+              topCap: 0.72 + ((i * 5) % 8) / 100,
+              spin: 0,
+              accessory: ["🕶️", "🎓", "🦩", "🎀", "⭐"][i % 5],
+              hit: {},
+            };
+          });
           won.current = false;
-          eventAt.current = 0;
+          told.current = "";
         }, [racers]);
+        useEffect(() => {
+          if (!racing) return;
+          won.current = false;
+          told.current = "";
+          racers.forEach((r, i) => {
+            let q = st.current[r.id];
+            if (!q) return;
+            q.p = 0.03 + (i % 5) * 0.01;
+            q.spin = 0;
+            q.hit = {};
+            q.accessory = ["🕶️", "🎓", "🦩", "🎀", "⭐"][i % 5];
+          });
+        }, [racing, racers]);
         useEffect(() => {
           let last = performance.now(),
             elapsed = 0;
-          const tell = (m) => onComment && onComment(m);
-          function chaos() {
-            let a = racers.map((r) => st.current[r.id]),
-              tail = a.slice().sort((m, n) => m.p - n.p)[0],
-              lead = a.slice().sort((m, n) => n.p - m.p)[0],
-              pick = a[Math.floor(Math.random() * a.length)],
-              label = (q) =>
-                racers.find((r) => st.current[r.id] === q)?.name ||
-                "một chú vịt",
-              type = Math.floor(Math.random() * 4);
-            if (!pick) return;
-            if (type === 0) {
-              lead.boost = -0.8;
-              tell(
-                "Ôi không! " + label(lead) + " vừa mải đớp bánh mì trôi! 🍞",
-              );
-            } else if (type === 1) {
-              pick.boost = 0.8;
-              pick.spin = Math.PI * 2;
-              tell(
-                label(pick) + " bị xoáy nước cuốn một vòng rồi bắn vọt lên! 🌪️",
-              );
-            } else if (type === 2) {
-              tail.boost = 1.4;
-              tell(
-                "Cụ rùa vừa giải cứu " +
-                  label(tail) +
-                  " từ cuối đàn vọt lên Top 3! 🐢",
-              );
-            } else {
-              pick.boost = 1.25;
-              pick.accessory = "🚀";
-              tell(label(pick) + " bật Nitro, lao vèo qua mặt cả đàn! 🚀");
-            }
-            sound.quack();
-          }
+          const tell = (key, m) => {
+            if (told.current === key) return;
+            told.current = key;
+            onComment && onComment(m);
+          };
           function f(now) {
             let c = cv.current;
             if (!c) return;
@@ -294,7 +292,7 @@
             x.setTransform(d, 0, 0, d, 0, 0);
             let w = box.width,
               h = box.height,
-              dt = Math.min(now - last, 35) / 1000;
+              dt = Math.min(now - last, 40) / 1000;
             last = now;
             let g = x.createLinearGradient(0, 0, w, h);
             g.addColorStop(0, "#7dd3fc");
@@ -304,7 +302,7 @@
             x.fillStyle = "#65a30d";
             x.fillRect(0, 0, 45, h);
             x.fillRect(w - 45, 0, 45, h);
-            for (let i = 0; i < 18; i++) {
+            for (let i = 0; i < 14; i++) {
               x.strokeStyle = "#ffffff30";
               x.beginPath();
               let yy = i * 48 + ((now / 25) % 48);
@@ -319,84 +317,116 @@
                 x.fillStyle = (yy / 20 + xx / 8) % 2 ? "#111" : "#fff";
                 x.fillRect(xx, yy, 8, 10);
               }
+            x.font = "26px serif";
+            OBSTACLES.forEach((ob) => {
+              let ox = 82 + ob.p * (w - 155),
+                oy = 40 + ob.y * (h - 80);
+              x.fillText(ob.icon, ox - 12, oy);
+            });
             x.fillStyle = "#fff";
             x.font = "bold 13px system-ui";
             x.fillText("XUẤT PHÁT", 80, 22);
             x.fillText("ĐÍCH 🏁", w - 110, 22);
-            if (racing && racers.length) {
+            if (racing && racers.length && roles && roles.winnerId) {
               elapsed += dt;
-              let slow = elapsed > duration * 0.84 ? 0.35 : 1;
-              if (
-                elapsed > duration * 0.84 &&
-                Math.floor(elapsed * 2) !== Math.floor((elapsed - dt) * 2)
-              )
+              let t = Math.min(1.05, elapsed / Math.max(1, duration));
+              if (t >= 0.3)
                 tell(
-                  "Photo Finish! Cả lớp nín thở nhìn mỏ vịt nào chạm đích trước! 📸",
+                  "split",
+                  "Xoáy nước giữ 80% đàn ở giữa sông — chỉ vài chú bứt tốc! 🌀",
                 );
-              if (elapsed - eventAt.current > 2.25) {
-                eventAt.current = elapsed;
-                chaos();
-              }
+              if (t >= 0.72)
+                tell("ribbon", "Một chú vịt xé dải băng khánh thành! 🏁");
               racers.forEach((r) => {
                 let q = st.current[r.id];
-                q.boost += (0 - q.boost) * dt * 1.4;
-                q.v +=
-                  (0.045 + Math.random() * 0.035 + q.boost * 0.035 - q.v) *
-                  0.08;
-                q.vy += (Math.random() - 0.5) * 0.013;
-                q.y += q.vy * dt * 3;
-                q.y = Math.max(0.08, Math.min(0.92, q.y));
-                q.p = Math.min(1.02, q.p + q.v * dt * slow);
-                q.spin *= 0.88;
-              });
-              for (let i = 0; i < racers.length; i++)
-                for (let j = i + 1; j < racers.length; j++) {
-                  let a = st.current[racers[i].id],
-                    b = st.current[racers[j].id],
-                    dx = (a.p - b.p) * w,
-                    dy = (a.y - b.y) * h;
-                  if (dx * dx + dy * dy < 42 * 42) {
-                    let t = a.vy;
-                    a.vy = -b.vy + (Math.random() - 0.5) * 0.18;
-                    b.vy = -t + (Math.random() - 0.5) * 0.18;
-                    a.v -= 0.008;
-                    b.v += 0.008;
-                    if (Math.random() < 0.08) {
-                      sound.boing();
-                      tell(
-                        "Boing! " +
-                          racers[i].name +
-                          " và " +
-                          racers[j].name +
-                          " vừa va nhau nảy tưng tưng!",
-                      );
-                    }
-                  }
+                if (!q) return;
+                let role = roleOf(r.id, roles),
+                  target = q.p;
+                if (t < 0.3) {
+                  target = (0.16 + q.seed * 0.08) * (t / 0.3);
+                } else if (role === "pack") {
+                  target = q.cap * Math.min(1, (t - 0.22) / 0.55);
+                } else if (role === "top") {
+                  let u = (t - 0.3) / 0.7;
+                  target = 0.24 + u * (q.topCap - 0.24);
+                } else {
+                  let u = Math.max(0, (t - 0.3) / 0.7);
+                  target = 0.3 + Math.pow(u, 0.65) * 0.78;
                 }
-              let lead = racers
-                .map((r) => ({ r, p: st.current[r.id].p }))
-                .sort((a, b) => b.p - a.p)[0];
-              if (!won.current && (lead.p >= 1 || elapsed > duration)) {
+                OBSTACLES.forEach((ob) => {
+                  if (q.hit[ob.id] || q.p > ob.p || target < ob.p) return;
+                  q.hit[ob.id] = true;
+                  if (ob.kind === "bread" && role !== "win") {
+                    target = Math.min(target, q.p + 0.015);
+                    q.accessory = "🍞";
+                    tell("bread", "Một chú vịt mải đớp bánh mì nên chậm lại! 🍞");
+                  } else if (ob.kind === "whirl" && role !== "win") {
+                    q.spin = Math.PI * 2;
+                    tell("whirl", "Xoáy nước cuốn một chú vịt quay một vòng! 🌀");
+                  } else if (ob.kind === "nitro" && role !== "pack") {
+                    q.accessory = "🚀";
+                    target += 0.03;
+                    tell("nitro", "Nitro phụt lửa — vịt dẫn đầu vọt lên! 🚀");
+                  } else if (ob.kind === "turtle" && role === "pack") {
+                    target = Math.min(q.cap, target + 0.04);
+                    q.accessory = "🐢";
+                    tell("turtle", "Rùa thần cõng một chú vịt nước rút giữa sông! 🐢");
+                  }
+                });
+                if (role === "pack") target = Math.min(target, q.cap);
+                if (role === "top") target = Math.min(target, 0.84);
+                q.p += (target - q.p) * Math.min(1, dt * 3);
+                q.y += Math.sin(now / 280 + q.seed * 8) * dt * 0.05;
+                q.y = Math.max(0.08, Math.min(0.92, q.y));
+                q.spin *= 0.9;
+              });
+              let win = racers.find((r) => r.id === roles.winnerId),
+                wp = (st.current[roles.winnerId] || {}).p || 0;
+              if (!won.current && win && (wp >= 1 || elapsed >= duration)) {
                 won.current = true;
+                if (st.current[roles.winnerId])
+                  st.current[roles.winnerId].p = Math.max(wp, 1.02);
                 sound.win();
-                finish(lead.r);
+                finish(win);
               }
             }
+            let winP = roles && st.current[roles.winnerId]
+              ? st.current[roles.winnerId].p
+              : 0;
+            if (winP > 0.9) {
+              x.save();
+              x.strokeStyle = "#fde68a";
+              x.lineWidth = 4;
+              x.beginPath();
+              x.moveTo(w - 58, h * 0.15);
+              x.lineTo(w - 78, h * 0.5);
+              x.lineTo(w - 58, h * 0.85);
+              x.stroke();
+              x.restore();
+            }
             racers.forEach((r, i) => {
-              let q = st.current[r.id] || { p: 0, y: 0.5 };
-              let px = 82 + q.p * (w - 155),
+              let q = st.current[r.id] || { p: 0, y: 0.5, accessory: "🎀" };
+              let px = 82 + Math.min(q.p, 1.02) * (w - 155),
                 py = 35 + q.y * (h - 70);
               x.fillStyle = "#dff7ff99";
               x.beginPath();
               x.ellipse(px - 32, py + 16, 17, 5, 0, 0, 7);
               x.fill();
+              if (q.accessory === "🚀") {
+                x.fillStyle = "#fb923c";
+                x.beginPath();
+                x.moveTo(px - 36, py);
+                x.lineTo(px - 54, py + 6);
+                x.lineTo(px - 36, py + 12);
+                x.fill();
+              }
               duck(
                 x,
                 px,
                 py,
                 COLORS[i % COLORS.length],
                 r.name,
-                q.boost > 0,
+                roleOf(r.id, roles) === "win" && q.p > 0.55,
                 racers.length,
                 q.accessory,
                 q.spin,
@@ -406,7 +436,7 @@
           }
           raf.current = requestAnimationFrame(f);
           return () => cancelAnimationFrame(raf.current);
-        }, [racers, racing, duration, finish, sound, onComment]);
+        }, [racers, racing, duration, roles, finish, sound, onComment]);
         return <canvas ref={cv} />;
       }
       function Roster({ list, save, close }) {
@@ -532,6 +562,19 @@
           </div>
         );
       }
+      function answerIndex(question) {
+        if (!question || question.answer == null || question.answer === "")
+          return -1;
+        let a = question.answer;
+        if (typeof a === "number" && isFinite(a)) {
+          if (a >= 0 && a <= 3) return a;
+          if (a >= 1 && a <= 4) return a - 1;
+        }
+        let s = String(a).trim().toUpperCase();
+        if (/^[A-D]$/.test(s)) return s.charCodeAt(0) - 65;
+        if (/^[1-4]$/.test(s)) return parseInt(s, 10) - 1;
+        return -1;
+      }
       function App() {
         let data = useMemo(read, []),
           init = (data.participants || [])
@@ -539,65 +582,151 @@
             .map((x, i) => ({ id: x.id || "p" + i, name: x.name })),
           [racers, setRacers] = useState(init),
           [racing, setRacing] = useState(false),
-          [count, setCount] = useState(""),
+          [phase, setPhase] = useState("idle"),
+          [goText, setGoText] = useState(""),
           [winner, setWinner] = useState(null),
+          [helper, setHelper] = useState(null),
+          [roles, setRoles] = useState(null),
           [roster, setRoster] = useState(!init.length),
           [on, setOn] = useState(true),
-          [dur, setDur] = useState(12),
+          [dur, setDur] = useState(5),
+          [limit, setLimit] = useState(15),
+          [dropCalled, setDropCalled] = useState(false),
           [history, setHistory] = useState([]),
+          [scores, setScores] = useState({}),
           [showHistory, setShowHistory] = useState(false),
+          [qIndex, setQIndex] = useState(0),
           [q, setQ] = useState(null),
-          [secs, setSecs] = useState(30),
+          [pick, setPick] = useState(null),
+          [shown, setShown] = useState(false),
+          [secs, setSecs] = useState(15),
           [comment, setComment] = useState(
-            "Bình luận viên đã sẵn sàng: bầy vịt chuẩn bị bùng nổ!",
+            "Bấm Bắt đầu: câu hỏi hiện ngay, vịt bứt tốc trong vài giây.",
           ),
           sound = useMemo(() => Sound({ on }), [on]),
-          questions = data.content?.questions || [];
+          questions = data.content?.questions || [],
+          goTimer = useRef(null);
         useEffect(() => {
-          if (!q) return;
-          setSecs(30);
+          if (phase !== "answer" || shown) return;
           let t = setInterval(() => setSecs((s) => (s > 0 ? s - 1 : 0)), 1000);
           return () => clearInterval(t);
-        }, [q]);
-        let start = () => {
+        }, [phase, shown, winner]);
+        useEffect(() => () => goTimer.current && clearTimeout(goTimer.current), []);
+        let start = useCallback(() => {
             if (!racers.length) return setRoster(true);
-            let n = 3;
-            setCount(n);
-            sound.count();
-            let t = setInterval(() => {
-              n--;
-              if (n) {
-                setCount(n);
-                sound.count();
-              } else {
-                clearInterval(t);
-                setCount("BẮT ĐẦU!");
-                sound.count(true);
-                setTimeout(() => {
-                  setCount("");
-                  setRacing(true);
-                }, 500);
-              }
-            }, 850);
-          },
+            if (phase === "go" || phase === "racing") return;
+            let qq = questions.length ? questions[qIndex % questions.length] : null;
+            setQ(qq);
+            setPick(null);
+            setShown(false);
+            setHelper(null);
+            setWinner(null);
+            setSecs(limit);
+            let ids = racers.map((r) => r.id),
+              win = ids[Math.floor(Math.random() * ids.length)],
+              rest = ids.filter((id) => id !== win);
+            for (let i = rest.length - 1; i > 0; i--) {
+              let j = Math.floor(Math.random() * (i + 1));
+              let tmp = rest[i];
+              rest[i] = rest[j];
+              rest[j] = tmp;
+            }
+            let extra = Math.min(4, Math.max(2, Math.round(racers.length * 0.1)));
+            if (racers.length < 4) extra = Math.max(0, racers.length - 1);
+            setRoles({ winnerId: win, topIds: rest.slice(0, extra) });
+            setPhase("go");
+            setGoText("GO!");
+            setComment("Còi nổi — cả lớp đọc câu hỏi trong lúc vịt lao đi!");
+            sound.whistle();
+            goTimer.current = setTimeout(() => {
+              setGoText("");
+              setPhase("racing");
+              setRacing(true);
+            }, 500);
+          }, [racers, phase, questions, qIndex, limit, sound]),
           finish = useCallback((r) => {
             setRacing(false);
+            setPhase("answer");
             setWinner(r);
+            setSecs(limit);
+            setComment("Xin mời " + r.name + " trả lời!");
             setHistory((h) => [
               ...h,
               { ...r, at: new Date().toLocaleTimeString("vi-VN") },
             ]);
             window.confetti &&
               confetti({
-                particleCount: 190,
-                spread: 110,
-                origin: { y: 0.55 },
+                particleCount: 160,
+                spread: 100,
+                origin: { y: 0.45 },
               });
-          }, []),
-          next = (remove) => {
-            if (remove) setRacers((a) => a.filter((x) => x.id !== winner.id));
-            setWinner(null);
+          }, [limit]),
+          givePoint = (who) => {
+            if (!who) return;
+            setScores((s) => ({ ...s, [who.id]: (s[who.id] || 0) + 1 }));
+            setHistory((h) =>
+              h.map((row, i) =>
+                i === h.length - 1 ? { ...row, point: true, helper: who.name } : row,
+              ),
+            );
+          },
+          reveal = useCallback(() => {
+            if (phase !== "answer" || shown) return;
+            setShown(true);
+            let ci = answerIndex(q);
+            if (pick != null && ci >= 0 && pick === ci) givePoint(helper || winner);
+          }, [phase, shown, q, pick, helper, winner]),
+          advance = useCallback(
+            (remove) => {
+              if (phase !== "answer" && phase !== "idle") return;
+              if (remove && winner)
+                setRacers((a) => a.filter((x) => x.id !== winner.id));
+              setWinner(null);
+              setHelper(null);
+              setPick(null);
+              setShown(false);
+              setQ(null);
+              setRoles(null);
+              setPhase("idle");
+              setRacing(false);
+              setQIndex((i) => i + 1);
+              setComment("Sẵn sàng lượt mới. Bấm Cách hoặc Bắt đầu.");
+            },
+            [phase, winner],
+          ),
+          rescue = useCallback(() => {
+            if (phase !== "answer" || !winner) return;
+            let pool = racers.filter(
+              (r) => r.id !== winner.id && (!helper || r.id !== helper.id),
+            );
+            if (!pool.length) return;
+            let h = pool[Math.floor(Math.random() * pool.length)];
+            setHelper(h);
+            setComment("Xin mời " + h.name + " hỗ trợ — vịt cứu trợ! 🦆");
+            sound.quack();
+          }, [phase, winner, racers, helper, sound]);
+        useEffect(() => {
+          let onKey = (e) => {
+            let tag = (e.target && e.target.tagName) || "";
+            if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+            if (e.code === "Space") {
+              e.preventDefault();
+              if (phase === "idle") start();
+              else if (phase === "answer" && shown) advance(dropCalled);
+            } else if (phase === "answer" && !shown && /^[1-4]$/.test(e.key)) {
+              setPick(parseInt(e.key, 10) - 1);
+            } else if (phase === "answer" && !shown && /^[a-dA-D]$/.test(e.key)) {
+              setPick(e.key.toUpperCase().charCodeAt(0) - 65);
+            } else if (e.key === "Enter" && phase === "answer") {
+              e.preventDefault();
+              reveal();
+            } else if ((e.key === "h" || e.key === "H") && phase === "answer") {
+              rescue();
+            }
           };
+          window.addEventListener("keydown", onKey);
+          return () => window.removeEventListener("keydown", onKey);
+        }, [phase, shown, start, advance, reveal, rescue, dropCalled]);
         return (
           <main className="max-w-7xl mx-auto p-4">
             <header className="bg-white rounded-3xl shadow-xl p-4 mb-4 flex flex-wrap justify-between gap-3">
@@ -631,31 +760,90 @@
                 </button>
               </div>
             </header>
+            <section className="bg-white rounded-3xl shadow-xl p-4 mb-3">
+              <div className="flex justify-between gap-3 items-start">
+                <b className="text-violet-700 text-lg">📝 Câu hỏi</b>
+                <b className={"text-2xl " + (phase === "answer" && secs <= 5 ? "text-rose-600" : "text-slate-500")}>
+                  {phase === "answer" ? "⏱ " + secs + "s" : "⏱ chờ về đích"}
+                </b>
+              </div>
+              <div className="text-2xl font-bold my-3 leading-relaxed min-h-[3rem]">
+                {q ? (
+                  <MathText text={q.prompt || q.question} />
+                ) : (
+                  <span className="text-slate-400 text-lg font-semibold">
+                    Câu hỏi hiện ngay khi bấm Bắt đầu
+                    {questions.length ? " (" + questions.length + " câu)" : ""}.
+                  </span>
+                )}
+              </div>
+              {q && (q.choices || []).length > 0 && (
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {(q.choices || []).map((choice, i) => {
+                    let ci = answerIndex(q),
+                      on = pick === i,
+                      ok = shown && ci === i,
+                      bad = shown && on && ci !== i;
+                    return (
+                      <button
+                        key={i}
+                        disabled={phase !== "answer" || shown}
+                        onClick={() => setPick(i)}
+                        className={
+                          "text-left p-3 border-2 rounded-xl " +
+                          (ok
+                            ? "border-emerald-500 bg-emerald-50"
+                            : bad
+                              ? "border-rose-400 bg-rose-50"
+                              : on
+                                ? "border-violet-500 bg-violet-50"
+                                : "border-slate-200")
+                        }
+                      >
+                        <span className="font-black text-violet-700 mr-2">
+                          {String.fromCharCode(65 + i)}.
+                        </span>
+                        <MathText text={choice} />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {shown && q && q.explanation && (
+                <p className="mt-3 text-slate-600">
+                  <MathText text={q.explanation} />
+                </p>
+              )}
+            </section>
             <section className="relative bg-white rounded-3xl shadow-xl p-3">
               <River
                 racers={racers}
                 racing={racing}
                 duration={dur}
+                roles={roles}
                 finish={finish}
                 sound={sound}
                 onComment={setComment}
               />
-              {count && (
+              {goText && (
                 <b
-                  className="absolute inset-0 flex items-center justify-center text-7xl text-white"
+                  className="absolute inset-0 flex items-center justify-center text-7xl text-white pointer-events-none"
                   style={{ textShadow: "0 4px 15px #075985" }}
                 >
-                  {count}
+                  {goText}
                 </b>
               )}
-              <div className="absolute top-6 left-6 bg-white/90 p-3 rounded-xl">
-                <b>🏆 Top 3</b>
-                {racers.slice(0, 3).map((r, i) => (
-                  <div key={r.id}>
-                    {i + 1}. 🦆 {r.name}
+              {winner && phase === "answer" && (
+                <div className="absolute left-1/2 top-4 -translate-x-1/2 bg-amber-50 border-2 border-amber-300 rounded-2xl px-5 py-2 text-center shadow-lg max-w-[90%]">
+                  <div className="text-xs font-bold text-amber-700">XIN MỜI TRẢ LỜI</div>
+                  <div className="text-2xl font-black text-amber-800">
+                    🦆 {helper ? helper.name : winner.name}
                   </div>
-                ))}
-              </div>
+                  {helper && (
+                    <div className="text-xs text-slate-500">hỗ trợ {winner.name}</div>
+                  )}
+                </div>
+              )}
             </section>
             <div className="mt-3 rounded-2xl bg-slate-900 px-5 py-3 text-center font-bold text-white shadow-lg">
               🎙️ {comment}
@@ -665,19 +853,66 @@
                 className="btn border-2"
                 value={dur}
                 onChange={(e) => setDur(+e.target.value)}
-                disabled={racing}
+                disabled={phase === "go" || phase === "racing"}
               >
-                <option value="10">10 giây · Nhanh</option>
-                <option value="12">12 giây · Tiêu chuẩn</option>
-                <option value="14">14 giây · Kịch tính</option>
+                <option value="3">3 giây · Siêu tốc</option>
+                <option value="5">5 giây · Tiêu chuẩn</option>
               </select>
-              <button
-                disabled={racing}
-                onClick={start}
-                className="btn px-8 py-4 text-lg text-white bg-gradient-to-r from-orange-500 to-rose-600"
+              <select
+                className="btn border-2"
+                value={limit}
+                onChange={(e) => setLimit(+e.target.value)}
+                disabled={phase !== "idle"}
               >
-                🏁 BẮT ĐẦU ĐUA
-              </button>
+                <option value="15">15 giây trả lời</option>
+                <option value="30">30 giây trả lời</option>
+              </select>
+              <label className="btn border-2 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={dropCalled}
+                  onChange={(e) => setDropCalled(e.target.checked)}
+                />
+                Loại bạn vừa gọi
+              </label>
+              {phase !== "answer" ? (
+                <button
+                  disabled={phase === "go" || phase === "racing"}
+                  onClick={start}
+                  className="btn px-8 py-4 text-lg text-white bg-gradient-to-r from-orange-500 to-rose-600"
+                >
+                  🏁 BẮT ĐẦU ĐUA
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="btn bg-slate-800 text-white"
+                    onClick={reveal}
+                    disabled={shown}
+                  >
+                    Enter · Mở đáp án
+                  </button>
+                  <button
+                    className="btn bg-emerald-600 text-white"
+                    onClick={() => {
+                      givePoint(helper || winner);
+                      setShown(true);
+                      advance(dropCalled);
+                    }}
+                  >
+                    Đúng (+Điểm)
+                  </button>
+                  <button
+                    className="btn bg-sky-600 text-white"
+                    onClick={() => advance(dropCalled)}
+                  >
+                    Tiếp tục
+                  </button>
+                  <button className="btn bg-amber-500 text-white" onClick={rescue}>
+                    🦆 Vịt cứu trợ (H)
+                  </button>
+                </>
+              )}
             </div>
             {roster && (
               <Roster
@@ -688,46 +923,6 @@
                   setRoster(false);
                 }}
               />
-            )}
-            {winner && (
-              <div className="fixed inset-0 z-40 shade flex items-center justify-center p-4">
-                <div className="pop bg-white rounded-3xl p-8 text-center max-w-lg w-full">
-                  <div className="text-6xl">🏆🦆🎉</div>
-                  <h2 className="text-3xl font-black text-amber-600 mt-3">
-                    CHÚC MỪNG: {winner.name}!
-                  </h2>
-                  <p className="text-lg mt-2">
-                    Học sinh may mắn được gọi trong lượt này!
-                  </p>
-                  <div className="grid gap-2 mt-6">
-                    <button
-                      className="btn bg-violet-600 text-white"
-                      disabled={!questions.length}
-                      onClick={() =>
-                        setQ(
-                          questions[
-                            Math.floor(Math.random() * questions.length)
-                          ],
-                        )
-                      }
-                    >
-                      📝 Hiện câu hỏi kiểm tra
-                    </button>
-                    <button
-                      className="btn bg-sky-600 text-white"
-                      onClick={() => next(false)}
-                    >
-                      Đua tiếp (Giữ nguyên danh sách)
-                    </button>
-                    <button
-                      className="btn bg-emerald-600 text-white"
-                      onClick={() => next(true)}
-                    >
-                      Đua tiếp (Loại bạn này khỏi lượt sau)
-                    </button>
-                  </div>
-                </div>
-              </div>
             )}
             {showHistory && (
               <div className="fixed inset-0 z-50 shade flex items-center justify-center p-4">
@@ -744,44 +939,14 @@
                       history.map((h, i) => (
                         <li key={i} className="p-2 rounded bg-sky-50">
                           {i + 1}. <b>{h.name}</b> <small>{h.at}</small>
+                          {h.point ? " · +1 điểm" : ""}
+                          {h.helper && h.helper !== h.name ? " · cứu trợ " + h.helper : ""}
                         </li>
                       ))
                     ) : (
                       <li>Chưa gọi học sinh nào.</li>
                     )}
                   </ol>
-                </div>
-              </div>
-            )}
-            {q && (
-              <div className="fixed inset-0 z-[60] shade flex items-center justify-center p-4">
-                <div className="pop bg-white rounded-3xl p-7 max-w-2xl w-full">
-                  <div className="flex justify-between">
-                    <b className="text-xl text-violet-700">
-                      📝 Câu hỏi kiểm tra
-                    </b>
-                    <b className="text-2xl text-rose-600">⏱ {secs}s</b>
-                  </div>
-                  <div className="text-xl font-bold my-5 leading-relaxed">
-                    <MathText text={q.prompt || q.question} />
-                  </div>
-                  {(q.choices || []).map((x, i) => (
-                    <button
-                      key={i}
-                      className="block w-full text-left p-3 border-2 rounded-xl mb-2"
-                    >
-                      <span className="font-bold text-violet-700 mr-2">
-                        {String.fromCharCode(65 + i)}.
-                      </span>
-                      <MathText text={x} />
-                    </button>
-                  ))}
-                  <button
-                    className="btn w-full mt-3 bg-slate-700 text-white"
-                    onClick={() => setQ(null)}
-                  >
-                    Đóng câu hỏi
-                  </button>
                 </div>
               </div>
             )}
