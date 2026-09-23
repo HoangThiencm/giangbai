@@ -4,24 +4,23 @@
 PASS
 
 ## Đối chiếu scope
-- `js/khbd-app.js`:
-  - Đã bổ sung hàm `normalizeActivityBBranchHeadings` tự động chuẩn hóa các biến thể tiêu đề mà AI sinh ra (như `### 2. ...`, `### Hoạt động 2:`, `### Mục 2:`) về dạng chuẩn `### Hoạt động 2.2: ...` trước khi kiểm tra cấu trúc.
-  - Đã bổ sung hàm `missingActivityBBranches` và cơ chế sinh nối tiếp (append) riêng các nhánh 2.k bị thiếu trong `applyActivityOutput` thay vì bắt AI viết lại từ đầu toàn bộ Hoạt động B.
-  - Đã tích hợp hàm `buildMissingActivityBBranchFallback` tự động bổ sung khung chuẩn CV 5512 cho nhánh còn thiếu nếu AI gặp lỗi hoặc không trả về, ngăn chặn hoàn toàn việc ném ngoại lệ làm crash tiến trình 1-Click Generate.
-  - Không sửa đổi ngoài phạm vi quy định trong `docs/handoff/PLAN.md`.
-- `tests/khbd-activity-b-subsections-smoke.js`:
-  - Bổ sung các bài test kiểm tra chuẩn hóa tiêu đề nhánh, nhận diện nhánh thiếu và tính hợp lệ của khung dự phòng.
+- Khai báo `.gitignore` cho `TROLYTHIEN/`: Đúng phạm vi.
+- Gỡ theo dõi (git rm --cached) 64 file trong `TROLYTHIEN/` khỏi Git index mà vẫn giữ nguyên file trên ổ đĩa: Đúng phạm vi, bảo toàn 100% dữ liệu vật lý (64 files).
+- Củng cố quy tắc exclude trong `.github/workflows/ftp-deploy.yml` (`TROLYTHIEN/**`, `**/TROLYTHIEN/**`): Đúng phạm vi.
+- Không sửa đổi mã nguồn hay file ngoài scope: Đạt.
 
 ## Test đã chạy
-- `node tests/khbd-activity-b-subsections-smoke.js`: PASS.
-- `node tests/soankhbd-generation-mode-smoke.js`: PASS.
-- `git diff --check`: PASS (không có lỗi định dạng hay khoảng trắng).
+1. `git status`: Xác nhận 64 file trong `TROLYTHIEN/` đã được staged deletion khỏi Git tracking.
+2. `git ls-files TROLYTHIEN`: Trả về rỗng (0 file), chỉ số Git không còn theo dõi bất kỳ file nào trong thư mục.
+3. `git check-ignore -v TROLYTHIEN/1_SOAN_KHBD/Dau_vao/yeucau.docx TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/HH.pdf TROLYTHIEN/engine/export_khbd_engine.js`: Toàn bộ đều khớp quy tắc `.gitignore:18:TROLYTHIEN/`.
+4. `(Get-ChildItem -Path 'TROLYTHIEN' -Recurse -File).Count`: Xác nhận đủ 64 file vật lý vẫn tồn tại nguyên vẹn trên máy cục bộ.
+5. `git diff .gitignore .github/workflows/ftp-deploy.yml`: Cấu hình đúng chuẩn.
 
 ## Pass / Fail từng tiêu chí
-- [PASS] Chuẩn hóa tiêu đề nhánh mục 2 (`### 2. ...`, `### Mục 2:`) về `### Hoạt động 2.2:`.
-- [PASS] Sinh bổ sung riêng từng nhánh 2.k bị thiếu thay vì gửi lại toàn bộ Hoạt động B.
-- [PASS] Tự động chèn khung dự phòng chuẩn CV 5512 nếu AI không sinh đủ nhánh 2.k, không ném lỗi dừng 1-Click Generate.
-- [PASS] Giữ nguyên tính toàn vẹn của các pha kiểm tra khác.
+- Tiêu chí 1: Không track file rác TROLYTHIEN trên Git index: PASS
+- Tiêu chí 2: Quy tắc .gitignore hoạt động chính xác: PASS
+- Tiêu chí 3: Bảo toàn file vật lý trên máy: PASS
+- Tiêu chí 4: Workflow deploy có đầy đủ rule loại trừ: PASS
 
 ## Bug
 (Không có bug)
