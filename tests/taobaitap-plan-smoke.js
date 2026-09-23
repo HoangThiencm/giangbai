@@ -61,6 +61,17 @@ for (const [label, filePath] of Object.entries(files)) {
     failed += failCount(checksFor(label, html));
 }
 
+const rootHtml = fs.readFileSync(files.root, 'utf8');
+const cv7991Checks = [
+    ['root: state mẫu đề CV 7991', /const \[cv7991Config, setCv7991Config\] = useState\(\{ part1: 12, part2: 1, part3: 4, preset: 'standard-17' \}\)/.test(rootHtml)],
+    ['root: preset 15 phút / 45 phút / mở rộng / tùy chỉnh', rootHtml.includes('Đề kiểm tra 15 phút (10 câu - 10đ)') && rootHtml.includes('Đề chuẩn 45 phút (17 câu - 10đ)') && rootHtml.includes('Đề mở rộng 60–90 phút (22 câu - 10đ)') && rootHtml.includes('Tùy chỉnh linh hoạt')],
+    ['root: prompt dùng countPart1/2/3', /const countPart1 = synthForm === 'cv7991'/.test(rootHtml) && rootHtml.includes('ĐÚNG ${countPart1} câu') && rootHtml.includes('ĐÚNG ${countPart2} câu') && rootHtml.includes('ĐÚNG ${countPart3} câu')],
+    ['root: cắt đúng số câu sau normalizeQuizItems', /mcItems\.length < countPart1 \|\| tfItems\.length < countPart2 \|\| saItems\.length < countPart3/.test(rootHtml)],
+    ['root: điểm phần tính bằng allocateCv7991PartScores', /const allocateCv7991PartScores = \(part1Count, part2Count, part3Count\) =>/.test(rootHtml) && /allocateCv7991PartScores\(list1Preview\.length, part2\.length, part3\.length\)/.test(rootHtml) && /allocateCv7991PartScores\(l1\.length, part2\.length, part3\.length\)/.test(rootHtml)],
+    ['root: ẩn phần khi không có câu', /if \(part2\.length > 0\)/.test(rootHtml) && /if \(part3\.length > 0\)/.test(rootHtml) && /if \(list1Preview\.length > 0\)/.test(rootHtml) && /if \(l1\.length > 0\)/.test(rootHtml)]
+];
+failed += failCount(cv7991Checks);
+
 const logicChecks = [
     ['ngưỡng OCR: PDF rỗng cần OCR', compactPdfNeedsOcr('') === true],
     ['ngưỡng OCR: PDF scan 20 ký tự cần OCR', compactPdfNeedsOcr('   abcd efgh   ') === true],

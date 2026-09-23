@@ -13700,6 +13700,41 @@ module.exports = {
             };
         };
 
+        const formatDiem = (n) => {
+            const v = Math.round(Number(n) * 100) / 100;
+            if (!Number.isFinite(v)) return "0.0";
+            if (Math.abs(v * 10 - Math.round(v * 10)) < 0.001) return (Math.round(v * 10) / 10).toFixed(1);
+            return v.toFixed(2);
+        };
+
+        // Trọng số: 1 câu TN = 1, 1 câu Đ/S 4 ý = 4, 1 câu TL ngắn = 1 (đề 12+1+4 ra đúng 6.0 / 2.0 / 2.0).
+        // Phần cuối nhận phần lẻ để tổng luôn là 10.0.
+        const allocateCv7991PartScores = (part1Count, part2Count, part3Count) => {
+            const parts = [];
+            if (part1Count > 0) parts.push({ key: "part1", perKey: "per1", count: part1Count, weight: part1Count });
+            if (part2Count > 0) parts.push({ key: "part2", perKey: "per2", count: part2Count, weight: part2Count * 4 });
+            if (part3Count > 0) parts.push({ key: "part3", perKey: "per3", count: part3Count, weight: part3Count });
+            const scores = { part1: 0, part2: 0, part3: 0, per1: 0, per2: 0, per3: 0 };
+            const totalW = parts.reduce((sum, part) => sum + part.weight, 0);
+            if (!totalW) return scores;
+            let used = 0;
+            parts.forEach((part, idx) => {
+                const tenths = idx === parts.length - 1 ? (100 - used) : Math.round((part.weight / totalW) * 100);
+                used += tenths;
+                const total = tenths / 10;
+                scores[part.key] = total;
+                scores[part.perKey] = total / part.count;
+            });
+            return scores;
+        };
+
+        const cv7991DurationLabel = (part1Count, part2Count, part3Count) => {
+            if (part1Count === 12 && part2Count === 1 && part3Count === 4) return "45 phút";
+            if (part1Count === 6 && part2Count === 1 && part3Count === 3) return "15 phút";
+            if (part1Count === 16 && part2Count === 2 && part3Count === 4) return "90 phút";
+            return "theo ma trận đề";
+        };
+
         const buildCv7991AnswerKey = (numberedItems) => {
             const mcParts = [];
             const tfLines = [];
@@ -13738,13 +13773,19 @@ module.exports = {
             const { part1, part2, part3 } = collectCv7991ExportParts(dataToExport);
             const numberedItems = [];
             let currentQNum = 1;
+            const usePart1Fallback = part1.length === 0 && part2.length === 0 && part3.length === 0;
+            const list1Preview = part1.length > 0 ? part1 : (usePart1Fallback ? (dataToExport || []) : []);
+            const exportScores = allocateCv7991PartScores(list1Preview.length, part2.length, part3.length);
+            bodyContent = `<h1>ĐỀ MINH HỌA KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT</h1>`;
+            bodyContent += `<div class="sub-title">Môn thi: TOÁN HỌC - Thời gian làm bài: ${cv7991DurationLabel(list1Preview.length, part2.length, part3.length)} - Thang điểm: 10 điểm</div>`;
 
-            if (part1.length > 0 || (part2.length === 0 && part3.length === 0)) {
-                const list1 = part1.length > 0 ? part1 : (dataToExport || []);
+            if (list1Preview.length > 0) {
+                const list1 = list1Preview;
                 const start1 = currentQNum;
                 const end1 = currentQNum + list1.length - 1;
-                bodyContent += `<div class="section-title">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN (6.0 điểm)</div>`;
-                bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start1} đến câu ${end1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án. Mỗi câu đúng được 0.5 điểm.</div>`;
+                const per1Text = Math.abs(exportScores.per1 - 0.5) < 0.001 ? "0.5" : formatDiem(exportScores.per1);
+                bodyContent += `<div class="section-title">PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN (${formatDiem(exportScores.part1)} điểm)</div>`;
+                bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start1} đến câu ${end1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án. Mỗi câu đúng được ${per1Text} điểm.</div>`;
 
                 list1.forEach((q) => {
                     const optA = cleanOptionText(q.options?.[0] || '');
@@ -13771,10 +13812,14 @@ module.exports = {
             if (part2.length > 0) {
                 const start2 = currentQNum;
                 const end2 = currentQNum + part2.length - 1;
-                const guide2 = part2.length === 1
+                const officialSingle = part2.length === 1 && Math.abs(exportScores.part2 - 2) < 0.05;
+                const officialEach = part2.length > 1 && Math.abs(exportScores.per2 - 1) < 0.05;
+                const guide2 = officialSingle
                     ? `Thí sinh trả lời câu ${start2}. Trong mỗi ý a), b), c), d), thí sinh chọn Đúng hoặc Sai. Điểm tối đa là 2.0 điểm (Đúng 1 ý: 0.2đ; 2 ý: 0.5đ; 3 ý: 1.0đ; 4 ý: 2.0đ).`
-                    : `Thí sinh trả lời từ câu ${start2} đến câu ${end2}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai. Điểm tối đa mỗi câu là 1.0 điểm (Đúng 1 ý: 0.1đ; 2 ý: 0.25đ; 3 ý: 0.5đ; 4 ý: 1.0đ).`;
-                bodyContent += `<div class="section-title">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI (2.0 điểm)</div>`;
+                    : officialEach
+                        ? `Thí sinh trả lời từ câu ${start2} đến câu ${end2}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai. Điểm tối đa mỗi câu là 1.0 điểm (Đúng 1 ý: 0.1đ; 2 ý: 0.25đ; 3 ý: 0.5đ; 4 ý: 1.0đ).`
+                        : `Thí sinh trả lời từ câu ${start2} đến câu ${end2}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai. Tổng điểm Phần II là ${formatDiem(exportScores.part2)} điểm (mỗi câu tối đa ${formatDiem(exportScores.per2)} điểm).`;
+                bodyContent += `<div class="section-title">PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI (${formatDiem(exportScores.part2)} điểm)</div>`;
                 bodyContent += `<div class="section-guide">${guide2}</div>`;
 
                 part2.forEach((q) => {
@@ -13802,8 +13847,9 @@ module.exports = {
             if (part3.length > 0) {
                 const start3 = currentQNum;
                 const end3 = currentQNum + part3.length - 1;
-                bodyContent += `<div class="section-title">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN (2.0 điểm)</div>`;
-                bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start3} đến câu ${end3}. Thí sinh chỉ điền số kết quả vào ô trả lời. Mỗi câu đúng được 0.5 điểm.</div>`;
+                const per3Text = Math.abs(exportScores.per3 - 0.5) < 0.001 ? "0.5" : formatDiem(exportScores.per3);
+                bodyContent += `<div class="section-title">PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN (${formatDiem(exportScores.part3)} điểm)</div>`;
+                bodyContent += `<div class="section-guide">Thí sinh trả lời từ câu ${start3} đến câu ${end3}. Thí sinh chỉ điền số kết quả vào ô trả lời. Mỗi câu đúng được ${per3Text} điểm.</div>`;
 
                 part3.forEach((q) => {
                     const ans = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");
@@ -13830,21 +13876,25 @@ module.exports = {
         };
 
         const buildCv7991ExportText = (dataToExport, mode) => {
-            let text = "ĐỀ KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT\nMôn thi: TOÁN HỌC - Thời gian làm bài: 45 phút\n\n";
             if (mode !== "quiz") {
+                let essayText = "ĐỀ KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT\nMôn thi: TOÁN HỌC - Thời gian làm bài: 45 phút\n\n";
                 (dataToExport || []).forEach((essay, i) => {
-                    text += `Bài ${i + 1}: ${essay.question}\nLời giải: ${essay.solution}\n\n`;
+                    essayText += `Bài ${i + 1}: ${essay.question}\nLời giải: ${essay.solution}\n\n`;
                 });
-                return text;
+                return essayText;
             }
 
             const { part1, part2, part3 } = collectCv7991ExportParts(dataToExport);
             const numberedItems = [];
             let cur = 1;
+            const usePart1Fallback = part1.length === 0 && part2.length === 0 && part3.length === 0;
+            const l1 = part1.length > 0 ? part1 : (usePart1Fallback ? (dataToExport || []) : []);
+            const exportScores = allocateCv7991PartScores(l1.length, part2.length, part3.length);
+            let text = `ĐỀ KIỂM TRA THEO CÔNG VĂN 7991 / BỘ GD&ĐT\nMôn thi: TOÁN HỌC - Thời gian làm bài: ${cv7991DurationLabel(l1.length, part2.length, part3.length)}\n\n`;
 
-            if (part1.length > 0 || (part2.length === 0 && part3.length === 0)) {
-                const l1 = part1.length > 0 ? part1 : (dataToExport || []);
-                text += `PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN (6.0 điểm)\nThí sinh trả lời từ câu ${cur} đến câu ${cur + l1.length - 1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án. Mỗi câu đúng được 0.5 điểm.\n\n`;
+            if (l1.length > 0) {
+                const per1Text = Math.abs(exportScores.per1 - 0.5) < 0.001 ? "0.5" : formatDiem(exportScores.per1);
+                text += `PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN (${formatDiem(exportScores.part1)} điểm)\nThí sinh trả lời từ câu ${cur} đến câu ${cur + l1.length - 1}. Mỗi câu hỏi thí sinh chỉ chọn một phương án. Mỗi câu đúng được ${per1Text} điểm.\n\n`;
                 l1.forEach((q) => {
                     text += `Câu ${cur}: ${q.question}\n`;
                     text += `A. ${cleanOptionText(q.options?.[0] || '')}${q.correctAnswerIndex === 0 ? '*' : ''}\n`;
@@ -13857,10 +13907,11 @@ module.exports = {
             }
 
             if (part2.length > 0) {
-                const guide2 = part2.length === 1
+                const officialSingle = part2.length === 1 && Math.abs(exportScores.part2 - 2) < 0.05;
+                const guide2 = officialSingle
                     ? `Thí sinh trả lời câu ${cur}. Trong mỗi ý a), b), c), d), thí sinh chọn Đúng hoặc Sai. Điểm tối đa là 2.0 điểm (Đúng 1 ý: 0.2đ; 2 ý: 0.5đ; 3 ý: 1.0đ; 4 ý: 2.0đ).`
                     : `Thí sinh trả lời từ câu ${cur} đến câu ${cur + part2.length - 1}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai.`;
-                text += `PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI (2.0 điểm)\n${guide2}\n\n`;
+                text += `PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI (${formatDiem(exportScores.part2)} điểm)\n${guide2}\n\n`;
                 part2.forEach((q) => {
                     text += `Câu ${cur}: ${q.question}\n`;
                     if (isCv7991TrueFalseItem(q)) {
@@ -13880,7 +13931,8 @@ module.exports = {
             }
 
             if (part3.length > 0) {
-                text += `PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN (2.0 điểm)\nThí sinh trả lời từ câu ${cur} đến câu ${cur + part3.length - 1}. Thí sinh chỉ điền số kết quả vào ô trả lời. Mỗi câu đúng được 0.5 điểm.\n\n`;
+                const per3Text = Math.abs(exportScores.per3 - 0.5) < 0.001 ? "0.5" : formatDiem(exportScores.per3);
+                text += `PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN (${formatDiem(exportScores.part3)} điểm)\nThí sinh trả lời từ câu ${cur} đến câu ${cur + part3.length - 1}. Thí sinh chỉ điền số kết quả vào ô trả lời. Mỗi câu đúng được ${per3Text} điểm.\n\n`;
                 part3.forEach((q) => {
                     const ans = q.correctAnswer || (q.correctMatches ? formatQuizAnswer(q) : "");
                     text += `Câu ${cur}: ${q.question}\nĐáp án: ${ans}\n\n`;
@@ -15170,6 +15222,26 @@ module.exports = {
             const [sourceOnly, setSourceOnly] = useState(true);
             const [synthCount, setSynthCount] = useState(17);
             const [synthForm, setSynthForm] = useState('cv7991');
+            const [cv7991Config, setCv7991Config] = useState({ part1: 12, part2: 1, part3: 4, preset: 'standard-17' });
+            const applyCv7991Preset = (preset) => {
+                const presets = {
+                    'mini-10': { part1: 6, part2: 1, part3: 3, preset: 'mini-10' },
+                    'standard-17': { part1: 12, part2: 1, part3: 4, preset: 'standard-17' },
+                    'extended-22': { part1: 16, part2: 2, part3: 4, preset: 'extended-22' }
+                };
+                if (presets[preset]) {
+                    setCv7991Config(presets[preset]);
+                    setSynthCount(presets[preset].part1 + presets[preset].part2 + presets[preset].part3);
+                    return;
+                }
+                setCv7991Config((prev) => ({ ...prev, preset: 'custom' }));
+            };
+            const updateCv7991Part = (key, raw) => {
+                const nextValue = Math.max(0, Math.min(40, parseInt(raw, 10) || 0));
+                const next = { ...cv7991Config, [key]: nextValue, preset: 'custom' };
+                setCv7991Config(next);
+                setSynthCount((parseInt(next.part1, 10) || 0) + (parseInt(next.part2, 10) || 0) + (parseInt(next.part3, 10) || 0));
+            };
             const [synthLevel, setSynthLevel] = useState('Hỗn hợp');
             const [retryCount, setRetryCount] = useState(0);
             const [showSettings, setShowSettings] = useState(false);
@@ -15765,7 +15837,21 @@ module.exports = {
                     showSourceNotice(validationMessage);
                     return;
                 }
-                const count = synthForm === 'cv7991' ? 17 : Math.max(1, Math.min(50, Number(synthCount) || 10));
+                const clampCvPart = (value) => Math.max(0, Math.min(40, parseInt(value, 10) || 0));
+                const countPart1 = synthForm === 'cv7991' ? clampCvPart(cv7991Config.part1) : 0;
+                const countPart2 = synthForm === 'cv7991' ? clampCvPart(cv7991Config.part2) : 0;
+                const countPart3 = synthForm === 'cv7991' ? clampCvPart(cv7991Config.part3) : 0;
+                const cv7991Total = countPart1 + countPart2 + countPart3;
+                if (synthForm === 'cv7991' && cv7991Total < 1) {
+                    const validationMessage = "Hãy nhập ít nhất 1 câu ở Phần I, Phần II hoặc Phần III của đề Công văn 7991.";
+                    finishGenerationProgress("error", validationMessage);
+                    showSourceNotice(validationMessage);
+                    return;
+                }
+                const cv7991Count = cv7991Config.preset === 'standard-17'
+                    ? (synthForm === 'cv7991' ? 17 : cv7991Total)
+                    : cv7991Total;
+                const count = synthForm === 'cv7991' ? cv7991Count : Math.max(1, Math.min(50, Number(synthCount) || 10));
                 const isEssay = synthForm === 'essay';
                 const levelText = synthLevel === 'Hỗn hợp'
                     ? 'Hỗn hợp phân hóa 4 mức độ: Nhận biết, Thông hiểu, Vận dụng, Vận dụng thực tế (chia đều nếu được).'
@@ -15775,12 +15861,36 @@ module.exports = {
                 if (isEssay) {
                     typeInstruction = 'Hình thức: Tự luận có lời giải chi tiết.';
                 } else if (synthForm === 'cv7991') {
-                    typeInstruction = `Hình thức: ĐỀ THI CHUẨN CÔNG VĂN 7991 / BGDĐT (17 câu - 10.0 điểm) gồm ĐÚNG 03 phần:
-- Phần I (Câu 1 đến Câu 12): 12 câu trắc nghiệm 4 lựa chọn A, B, C, D (type: "multiple-choice", mỗi câu 0.5đ = 6.0đ). Chỉ 1 đáp án đúng.
-- Phần II (Câu 13): ĐÚNG 1 câu trắc nghiệm Đúng/Sai (type: "true-false", tổng 2.0đ) dựa trên 1 chủ đề/ngữ cảnh/bài toán thực tế chung sâu sắc. Gồm 4 mệnh đề a, b, c, d. Cấu trúc JSON bắt buộc:
-  {"question": "[Ngữ cảnh/chủ đề bài toán dẫn chung]...", "options": ["Nội dung mệnh đề a", "Nội dung mệnh đề b", "Nội dung mệnh đề c", "Nội dung mệnh đề d"], "correct_answers": [true, false, true, false], "type": "true-false"}
-- Phần III (Câu 14 đến Câu 17): ĐÚNG 4 câu trắc nghiệm trả lời ngắn (type: "short-answer", mỗi câu 0.5đ = 2.0đ). Câu hỏi yêu cầu tính toán ra kết quả số cụ thể. Trường "correctAnswer" CHỈ CHỨA SỐ (số nguyên, số thập phân hoặc phân số ngắn gọn, ví dụ "25", "3.5", "-4", "1/2"), TUYỆT ĐỐI KHÔNG chứa chữ cái hay đơn vị đo.
-Tổng cộng toàn đề đúng 17 câu = 10.0 điểm.`;
+                    const cvScores = allocateCv7991PartScores(countPart1, countPart2, countPart3);
+                    let cursor = 1;
+                    const partLines = [];
+                    if (countPart1 > 0) {
+                        const end = cursor + countPart1 - 1;
+                        const range = countPart1 === 1 ? `Câu ${cursor}` : `Câu ${cursor} đến Câu ${end}`;
+                        partLines.push(`- Phần I (${range}): ĐÚNG ${countPart1} câu trắc nghiệm 4 lựa chọn A, B, C, D (type: "multiple-choice", mỗi câu ${formatDiem(cvScores.per1)}đ, tổng Phần I ${formatDiem(cvScores.part1)}đ). Chỉ 1 đáp án đúng.`);
+                        cursor = end + 1;
+                    } else {
+                        partLines.push('- KHÔNG sinh Phần I. Không có câu multiple-choice.');
+                    }
+                    if (countPart2 > 0) {
+                        const end = cursor + countPart2 - 1;
+                        const range = countPart2 === 1 ? `Câu ${cursor}` : `Câu ${cursor} đến Câu ${end}`;
+                        partLines.push(`- Phần II (${range}): ĐÚNG ${countPart2} câu trắc nghiệm Đúng/Sai (type: "true-false", tổng Phần II ${formatDiem(cvScores.part2)}đ, mỗi câu tối đa ${formatDiem(cvScores.per2)}đ). Mỗi câu dựa trên 1 chủ đề/ngữ cảnh/bài toán chung và gồm đúng 4 mệnh đề a, b, c, d. Cấu trúc JSON bắt buộc cho MỖI câu Phần II:
+  {"question": "[Ngữ cảnh/chủ đề bài toán dẫn chung]...", "options": ["Nội dung mệnh đề a", "Nội dung mệnh đề b", "Nội dung mệnh đề c", "Nội dung mệnh đề d"], "correct_answers": [true, false, true, false], "type": "true-false"}`);
+                        cursor = end + 1;
+                    } else {
+                        partLines.push('- KHÔNG sinh Phần II. Không có câu true-false.');
+                    }
+                    if (countPart3 > 0) {
+                        const end = cursor + countPart3 - 1;
+                        const range = countPart3 === 1 ? `Câu ${cursor}` : `Câu ${cursor} đến Câu ${end}`;
+                        partLines.push(`- Phần III (${range}): ĐÚNG ${countPart3} câu trắc nghiệm trả lời ngắn (type: "short-answer", mỗi câu ${formatDiem(cvScores.per3)}đ, tổng Phần III ${formatDiem(cvScores.part3)}đ). Câu hỏi yêu cầu tính toán ra kết quả số cụ thể. Trường "correctAnswer" CHỈ CHỨA SỐ (số nguyên, số thập phân hoặc phân số ngắn gọn, ví dụ "25", "3.5", "-4", "1/2"), TUYỆT ĐỐI KHÔNG chứa chữ cái hay đơn vị đo.`);
+                    } else {
+                        partLines.push('- KHÔNG sinh Phần III. Không có câu short-answer.');
+                    }
+                    typeInstruction = `Hình thức: ĐỀ THI CHUẨN CÔNG VĂN 7991 / BGDĐT (${cv7991Total} câu - 10.0 điểm).
+${partLines.join('\n')}
+Tổng cộng toàn đề đúng ${cv7991Total} câu = 10.0 điểm. Đúng thứ tự: hết Phần I, rồi Phần II, rồi Phần III. Không sinh thêm loại câu khác.`;
                 } else if (synthForm === 'mixed-quiz') {
                     typeInstruction = 'Hình thức TỔNG HỢP: trộn Nhiều lựa chọn, Đúng/Sai, Điền khuyết, Trả lời ngắn, Nối ô (mỗi loại ít nhất 1 câu nếu số câu >= 5).';
                 } else if (synthForm === 'multiple-choice') {
@@ -15851,6 +15961,19 @@ ${sourceContext}`;
                     updateGenerationProgress(90, "Đang kiểm tra và chuẩn hóa kết quả...");
                     if (!isEssay) parsedData = normalizeQuizItems(parsedData);
                     if (!parsedData || parsedData.length === 0) throw new Error("AI không sinh được bài tập từ file đã nạp.");
+                    if (synthForm === 'cv7991') {
+                        const mcItems = parsedData.filter((q) => q.type === 'multiple-choice');
+                        const tfItems = parsedData.filter((q) => q.type === 'true-false');
+                        const saItems = parsedData.filter((q) => q.type === 'short-answer');
+                        if (mcItems.length < countPart1 || tfItems.length < countPart2 || saItems.length < countPart3) {
+                            throw new Error(`AI sinh chưa đủ cấu trúc CV 7991 (cần ${countPart1} trắc nghiệm, ${countPart2} Đúng/Sai, ${countPart3} trả lời ngắn; nhận được ${mcItems.length}/${tfItems.length}/${saItems.length}). Hãy tạo lại.`);
+                        }
+                        parsedData = [
+                            ...mcItems.slice(0, countPart1),
+                            ...tfItems.slice(0, countPart2),
+                            ...saItems.slice(0, countPart3)
+                        ];
+                    }
 
                     if (isEssay) {
                         setMode("essay");
@@ -16932,8 +17055,24 @@ ${sourceContext}`;
                                         <div className="mt-1 flex gap-2">
                                             <select
                                                 value={synthCount}
-                                                onChange={(e) => setSynthCount(parseInt(e.target.value, 10) || 20)}
-                                                disabled={synthForm === 'cv7991'}
+                                                onChange={(e) => {
+                                                    const n = parseInt(e.target.value, 10) || 20;
+                                                    if (synthForm !== 'cv7991') {
+                                                        setSynthCount(n);
+                                                        return;
+                                                    }
+                                                    if (n === 10) applyCv7991Preset('mini-10');
+                                                    else if (n === 17) applyCv7991Preset('standard-17');
+                                                    else {
+                                                        setCv7991Config((prev) => ({
+                                                            part1: Math.max(0, n - (parseInt(prev.part2, 10) || 0) - (parseInt(prev.part3, 10) || 0)),
+                                                            part2: parseInt(prev.part2, 10) || 0,
+                                                            part3: parseInt(prev.part3, 10) || 0,
+                                                            preset: 'custom'
+                                                        }));
+                                                        setSynthCount(n);
+                                                    }
+                                                }}
                                                 className="w-full border border-violet-200 rounded-lg p-2 bg-white text-sm disabled:bg-slate-100 disabled:text-slate-500"
                                             >
                                                 <option value={20}>20 câu (Chuẩn 100% TN - 10đ)</option>
@@ -16952,8 +17091,20 @@ ${sourceContext}`;
                                                 min="1"
                                                 max="50"
                                                 value={synthCount}
-                                                onChange={(e) => setSynthCount(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))}
-                                                disabled={synthForm === 'cv7991'}
+                                                onChange={(e) => {
+                                                    const n = Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1));
+                                                    if (synthForm !== 'cv7991') {
+                                                        setSynthCount(n);
+                                                        return;
+                                                    }
+                                                    setCv7991Config((prev) => ({
+                                                        part1: Math.max(0, n - (parseInt(prev.part2, 10) || 0) - (parseInt(prev.part3, 10) || 0)),
+                                                        part2: parseInt(prev.part2, 10) || 0,
+                                                        part3: parseInt(prev.part3, 10) || 0,
+                                                        preset: 'custom'
+                                                    }));
+                                                    setSynthCount(n);
+                                                }}
                                                 className="w-20 border border-violet-200 rounded-lg p-2 bg-white text-sm disabled:bg-slate-100 disabled:text-slate-500"
                                                 title="Tùy chỉnh số câu"
                                             />
@@ -16966,8 +17117,11 @@ ${sourceContext}`;
                                             onChange={(e) => {
                                                 const val = e.target.value;
                                                 setSynthForm(val);
-                                                if (val === 'cv7991') setSynthCount(17);
-                                                else if (val === 'multiple-choice') setSynthCount(20);
+                                                if (val === 'cv7991') {
+                                                    const total = (parseInt(cv7991Config.part1, 10) || 0) + (parseInt(cv7991Config.part2, 10) || 0) + (parseInt(cv7991Config.part3, 10) || 0);
+                                                    if (cv7991Config.preset === 'standard-17') setSynthCount(17);
+                                                    else setSynthCount(total || 17);
+                                                } else if (val === 'multiple-choice') setSynthCount(20);
                                             }}
                                             className="mt-1 w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
                                         >
@@ -16992,6 +17146,72 @@ ${sourceContext}`;
                                         </select>
                                     </label>
                                 </div>
+                                {synthForm === 'cv7991' && (
+                                    <div className="mt-3 rounded-xl border border-violet-200 bg-white/80 p-3">
+                                        <label className="text-xs font-bold text-slate-700">
+                                            Mẫu đề Công văn 7991
+                                            <select
+                                                value={cv7991Config.preset}
+                                                onChange={(e) => applyCv7991Preset(e.target.value)}
+                                                className="mt-1 w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
+                                            >
+                                                <option value="mini-10">Đề kiểm tra 15 phút (10 câu - 10đ): 6 TN + 1 Đ/S (4 ý) + 3 TL ngắn</option>
+                                                <option value="standard-17">Đề chuẩn 45 phút (17 câu - 10đ): 12 TN + ĐÚNG 1 câu trắc nghiệm Đúng/Sai (4 ý) + 4 TL ngắn</option>
+                                                <option value="extended-22">Đề mở rộng 60–90 phút (22 câu - 10đ): 16 TN + 2 Đ/S (8 ý) + 4 TL ngắn</option>
+                                                <option value="custom">Tùy chỉnh linh hoạt</option>
+                                            </select>
+                                        </label>
+                                        {cv7991Config.preset !== 'custom' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => applyCv7991Preset('custom')}
+                                                className="mt-2 text-xs font-bold text-violet-700 underline"
+                                            >
+                                                Chỉnh sửa số câu từng phần
+                                            </button>
+                                        )}
+                                        {cv7991Config.preset === 'custom' && (
+                                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                <label className="text-xs font-bold text-slate-700">
+                                                    Số câu Phần I (TN)
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="40"
+                                                        value={cv7991Config.part1}
+                                                        onChange={(e) => updateCv7991Part('part1', e.target.value)}
+                                                        className="mt-1 w-full border border-violet-200 rounded-lg p-2 text-sm"
+                                                    />
+                                                </label>
+                                                <label className="text-xs font-bold text-slate-700">
+                                                    Số câu Phần II (Đ/S 4 ý)
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="40"
+                                                        value={cv7991Config.part2}
+                                                        onChange={(e) => updateCv7991Part('part2', e.target.value)}
+                                                        className="mt-1 w-full border border-violet-200 rounded-lg p-2 text-sm"
+                                                    />
+                                                </label>
+                                                <label className="text-xs font-bold text-slate-700">
+                                                    Số câu Phần III (TL ngắn)
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="40"
+                                                        value={cv7991Config.part3}
+                                                        onChange={(e) => updateCv7991Part('part3', e.target.value)}
+                                                        className="mt-1 w-full border border-violet-200 rounded-lg p-2 text-sm"
+                                                    />
+                                                </label>
+                                            </div>
+                                        )}
+                                        <p className="mt-2 text-xs text-slate-600">
+                                            Tổng { (parseInt(cv7991Config.part1, 10) || 0) + (parseInt(cv7991Config.part2, 10) || 0) + (parseInt(cv7991Config.part3, 10) || 0) } câu, thang điểm 10.0. Phần không có câu sẽ không xuất hiện trong đề.
+                                        </p>
+                                    </div>
+                                )}
                                 <button
                                     type="button"
                                     onClick={generateSynthesizedFromSource}
