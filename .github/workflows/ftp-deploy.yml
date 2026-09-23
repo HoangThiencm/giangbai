@@ -62,6 +62,7 @@ jobs:
             GIAO AN/**
             KHBD/**
             TROLYTHIEN/**
+            **/TROLYTHIEN/**
             taovideo/assets/vtts/models/**
             **/*.pdf
             **/*.onnx

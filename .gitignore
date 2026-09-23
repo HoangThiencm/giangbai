@@ -13,3 +13,6 @@ js/*.bundle.js
 js/*.bundle-*.js
 docs/handoff/.lock
 GIAO AN/**/*.pdf
+
+# Trợ lý Thiên (Dữ liệu tạm & kết quả trích xuất đề/giáo án)
+TROLYTHIEN/
