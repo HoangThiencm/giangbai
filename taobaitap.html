@@ -14192,6 +14192,24 @@ module.exports = {
             });
         };
 
+        const formatEssayContent = (text) => {
+            const source = String(text == null ? '' : text);
+            const withBreaks = source
+                .replace(/([^\n])\s+([a-d]\))/g, '$1\n$2')
+                .replace(/([^\n])\s+([A-D]\))/g, '$1\n$2')
+                .replace(/([^\n])\s+(Ý\s*[a-dA-D]\s*:)/g, '$1\n$2');
+            return withBreaks.replace(/(^|\n)[ \t]*([a-dA-D]\)|Ý\s*[a-dA-D]\s*:)/g, '$1\u00A0\u00A0\u00A0\u00A0$2');
+        };
+
+        const essayLevelBadge = (level) => {
+            const raw = String(level || '').trim();
+            if (!raw || raw === 'Hỗn hợp') return null;
+            if (/dễ|cơ bản|nhận biết/i.test(raw)) return { label: 'Dễ', tone: 'bg-emerald-100 text-emerald-800' };
+            if (/trung bình|thông hiểu/i.test(raw)) return { label: 'Trung bình', tone: 'bg-amber-100 text-amber-800' };
+            if (/khó|nâng cao|vận dụng/i.test(raw)) return { label: 'Khó', tone: 'bg-rose-100 text-rose-800' };
+            return { label: raw, tone: 'bg-slate-100 text-slate-700' };
+        };
+
         // --- COMPONENT HIỂN THỊ TOÁN TRÊN WEB ---
         const MathText = ({ text }) => {
             const ref = useRef(null);
@@ -14224,7 +14242,7 @@ module.exports = {
                     }
                 });
             }, [text]);
-            return <span ref={ref} />;
+            return <span ref={ref} className="whitespace-pre-line inline-block w-full" style={{ whiteSpace: 'pre-line' }} />;
         };
 
         // --- CÀI ĐẶT TRÌNH CHIẾU ---
@@ -15248,14 +15266,14 @@ module.exports = {
                         </div>
                     </div>
                     <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full gap-6">
-                        <div className="bg-white text-slate-900 p-6 md:p-8 rounded-2xl shadow-2xl flex-1">
+                        <div className="bg-white text-slate-900 p-6 md:p-10 rounded-2xl shadow-2xl flex-1">
                             <h3 className="text-xl font-bold text-blue-600 mb-4">Đề bài:</h3>
-                            <div className="text-lg leading-relaxed"><MathText text={essay.question} /></div>
+                            <div className="text-[17px] md:text-2xl leading-[1.7] whitespace-pre-line"><MathText text={formatEssayContent(essay.question)} /></div>
                         </div>
                         {showSolution && (
-                            <div className="bg-green-50 border border-green-200 text-slate-800 p-6 md:p-8 rounded-2xl shadow-lg">
-                                <h3 className="text-xl font-bold text-green-600 mb-4">Lời giải:</h3>
-                                <div className="text-lg leading-relaxed"><MathText text={essay.solution} /></div>
+                            <div className="bg-emerald-50/60 border border-emerald-200 text-slate-800 p-6 md:p-10 rounded-2xl shadow-lg">
+                                <h3 className="text-xl font-bold text-emerald-700 mb-4 flex items-center gap-2"><i className="fas fa-lightbulb text-amber-500"></i>Hướng dẫn giải chi tiết</h3>
+                                <div className="text-[17px] md:text-2xl leading-[1.7] whitespace-pre-line"><MathText text={formatEssayContent(essay.solution)} /></div>
                             </div>
                         )}
                     </div>
@@ -15612,6 +15630,7 @@ module.exports = {
                     return [];
                 }
             });
+            const [visibleSolutions, setVisibleSolutions] = useState({});
             const [essays, setEssays] = useState(() => {
                 try {
                     const saved = localStorage.getItem('smartquiz_essays');
@@ -16199,11 +16218,16 @@ module.exports = {
                     prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} bài tập TỰ LUẬN dựa trên cấu trúc sau:\n${structurePrompt}\n
                     ${sourceInstruction}
 
-                    Mỗi bài tập bao gồm:
-                    - "question": Đề bài (có thể chứa công thức toán học trong $...$)
-                    - "solution": Lời giải chi tiết (có thể chứa công thức toán học trong $...$)
-                    QUY TẮC JSON: Chuỗi JSON phải escape đúng. Không dùng dấu \ đơn lẻ; nếu cần ký hiệu toán học, viết bằng chữ/ký hiệu Unicode hoặc dùng dấu $...$.
-                    Output JSON Strict: Một mảng phẳng chứa tất cả bài tập: [{"question":"Đề bài...", "solution":"Lời giải chi tiết..."}, ...]`;
+                    Mỗi bài tập TỰ LUẬN gồm:
+                    - "question": Đề bài chuẩn mực. Nếu có các câu con (a, b, c...), BẮT BUỘC xuống dòng riêng biệt cho từng ý (dùng \\n) kèm chữ cái in nghiêng/in đậm như "a) ... \\nb) ... \\nc) ...".
+                    - "solution": Lời giải chi tiết sư phạm, KHÔNG viết dồn một dòng. BẮT BUỘC xuống dòng (dùng \\n\\n) theo từng phần:
+                      + Nêu quy tắc/công thức áp dụng
+                      + Lời giải từng ý a), b), c) trên từng đoạn riêng
+                      + Kết luận/đáp số cuối cùng
+                    - "level": một trong "Dễ", "Trung bình", "Khó", bám mức độ đã yêu cầu.
+                    Công thức toán đặt trong $...$.
+                    QUY TẮC JSON: Chuỗi JSON phải escape đúng. Không dùng dấu \ đơn lẻ; nếu cần ký hiệu toán học, viết bằng chữ/ký hiệu Unicode hoặc dùng dấu $...$. Xuống dòng trong chuỗi phải là \\n, không phải xuống dòng thật làm vỡ JSON.
+                    Output JSON Strict: Một mảng phẳng chứa tất cả bài tập: [{"question":"Đề bài...\\na) ...\\nb) ...", "solution":"Công thức áp dụng...\\n\\na) ...\\n\\nĐáp số: ...", "level":"Trung bình"}, ...]`;
                 }
 
                 try {
@@ -16362,8 +16386,15 @@ ${sourceContext}`;
                         prompt = `Đóng vai giáo viên giỏi. Tạo ĐÚNG ${count} bài tập TỰ LUẬN có lời giải, trực tiếp từ NGUỒN KIẾN THỨC.
 KHÔNG cần danh sách chủ đề. Quét TOÀN DIỆN tài liệu đã nạp, bám sát 100% học liệu, không bịa kiến thức ngoài nguồn.
 Mức độ: ${levelText}
-Mỗi bài: {"question":"Đề bài...","solution":"Lời giải chi tiết..."}
+Mỗi bài tập TỰ LUẬN gồm:
+- "question": Đề bài chuẩn mực. Nếu có các câu con (a, b, c...), BẮT BUỘC xuống dòng riêng biệt cho từng ý (dùng \\n) kèm chữ cái in nghiêng/in đậm như "a) ... \\nb) ... \\nc) ...".
+- "solution": Lời giải chi tiết sư phạm, KHÔNG viết dồn một dòng. BẮT BUỘC xuống dòng (dùng \\n\\n) theo từng phần:
+  + Nêu quy tắc/công thức áp dụng
+  + Lời giải từng ý a), b), c) trên từng đoạn riêng
+  + Kết luận/đáp số cuối cùng
+- "level": một trong "Dễ", "Trung bình", "Khó".
 QUY TẮC TOÁN: Dùng $...$ cho công thức.
+QUY TẮC JSON: Xuống dòng trong chuỗi phải viết \\n hoặc \\n\\n. Không chèn xuống dòng thật bên trong chuỗi JSON.
 Output JSON: mảng phẳng các bài tập.
 
 NGUỒN KIẾN THỨC:
@@ -17976,19 +18007,53 @@ ${sourceContext}`;
                                     ))}
                                 </div>
                             ) : (
-                                <div className="space-y-6 pb-20">
-                                    {essays.map((essay, i) => (
-                                        <div key={i} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition">
-                                            <div className="flex gap-3 mb-4">
-                                                <span className="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-lg text-sm h-fit whitespace-nowrap">Bài {i + 1}</span>
-                                                <h3 className="text-lg font-medium text-slate-800 leading-relaxed"><MathText text={essay.question} /></h3>
-                                            </div>
-                                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                                <h4 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><i className="fas fa-lightbulb text-yellow-500"></i>Lời giải:</h4>
-                                                <div className="text-slate-600 leading-relaxed"><MathText text={essay.solution} /></div>
-                                            </div>
+                                <div className="space-y-4 pb-20">
+                                    {essays.length > 0 && (
+                                        <div className="flex justify-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const everyOpen = essays.every((_, index) => visibleSolutions[index]);
+                                                    if (everyOpen) {
+                                                        setVisibleSolutions({});
+                                                        return;
+                                                    }
+                                                    const next = {};
+                                                    essays.forEach((_, index) => { next[index] = true; });
+                                                    setVisibleSolutions(next);
+                                                }}
+                                                className="px-4 py-2 rounded-xl border border-emerald-200 bg-white text-emerald-800 font-bold text-sm hover:bg-emerald-50"
+                                            >
+                                                {essays.every((_, index) => visibleSolutions[index]) ? 'Ẩn tất cả lời giải' : 'Hiện tất cả lời giải'}
+                                            </button>
                                         </div>
-                                    ))}
+                                    )}
+                                    {essays.map((essay, i) => {
+                                        const levelBadge = essayLevelBadge(essay.level);
+                                        const solutionOpen = !!visibleSolutions[i];
+                                        return (
+                                        <div key={i} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                                            <div className="flex flex-wrap items-start gap-3 mb-4">
+                                                <span className="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-lg text-sm h-fit whitespace-nowrap">Bài {i + 1}</span>
+                                                {levelBadge && <span className={`px-3 py-1 rounded-lg text-sm font-bold h-fit ${levelBadge.tone}`}>{levelBadge.label}</span>}
+                                                <h3 className="flex-1 min-w-[12rem] text-[17px] font-medium text-slate-800 leading-[1.7] whitespace-pre-line"><MathText text={formatEssayContent(essay.question)} /></h3>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setVisibleSolutions((prev) => ({ ...prev, [i]: !prev[i] }))}
+                                                className="mb-3 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm"
+                                            >
+                                                {solutionOpen ? 'Ẩn lời giải' : '👁️ Xem lời giải'}
+                                            </button>
+                                            {solutionOpen && (
+                                                <div className="bg-emerald-50/60 p-5 rounded-xl border border-emerald-200">
+                                                    <h4 className="font-bold text-emerald-800 mb-3 flex items-center gap-2"><i className="fas fa-lightbulb text-amber-500"></i>💡 Hướng dẫn giải chi tiết</h4>
+                                                    <div className="text-[17px] text-slate-700 leading-[1.7] whitespace-pre-line"><MathText text={formatEssayContent(essay.solution)} /></div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

@@ -1,17 +1,18 @@
-# IMPLEMENT: CV 7991 tùy chỉnh số câu và gọi học sinh khi trình chiếu
+# IMPLEMENT: Trình bày đề và lời giải tự luận
 
 ## Đã làm
-1. `taobaitap.html`: thêm hình thức `cv7991-custom` — "⭐ Dạng Công văn 7991 (Tùy chỉnh số câu trắc nghiệm / các phần)". Chọn hình thức này bật `preset: 'custom'` và hiện ô số câu Phần I / II / III, kèm gợi ý 6, 8, 12, 16 câu trắc nghiệm và dòng điểm `allocateCv7991PartScores`.
-2. `generateSynthesizedFromSource` nhận cả `cv7991` và `cv7991-custom`: prompt, cắt đủ số câu sau khi chuẩn hóa, và `exam_format` thi trực tuyến đều dùng số câu giáo viên chỉnh.
-3. Xuất Word, LaTeX, Text (builder sẵn có), OLM và PDF OLM nhận `cv7991-custom` cùng schema CV 7991. Điều kiện `synthForm === "cv7991" || dataToExport.some(isCv7991TrueFalseItem)` được giữ nguyên rồi nối thêm mode tùy chỉnh.
-4. Trình chiếu trắc nghiệm và tự luận có nút "🎲 Gọi học sinh" và `StudentPickerModal`: nạp lớp từ `api/sodiem.php?action=classes` hoặc cache `sodiem:*`, quay số ~2,6 giây kèm beep/confetti, chấm 0–10, chọn cột (KTTX / Điểm miệng), lưu `api/sodiem.php?action=save` và `localStorage` key `sodiem:${lớp}:${môn}:2025-2026`. Offline hoặc chưa đăng nhập vẫn ghi máy; có ô dán danh sách thủ công.
+1. Prompt tự luận trong `generateContent` (tạo theo chủ đề) và `generateSynthesizedFromSource` (tạo từ file): mỗi ý a), b), c) phải xuống dòng bằng `\n`; lời giải tách quy tắc, từng ý và đáp số bằng `\n\n`. Có thêm field `level` (Dễ / Trung bình / Khó).
+2. `formatEssayContent`: chèn xuống dòng trước `a)`–`d)`, `A)`–`D)` và `Ý a:` nếu còn dính một dòng, rồi thụt đầu dòng. `MathText` giữ ngắt dòng bằng `whitespace-pre-line`.
+3. Danh sách bài tự luận: lời giải thu gọn mặc định; từng bài có "👁️ Xem lời giải" / "Ẩn lời giải"; phía trên có "Hiện tất cả lời giải" / "Ẩn tất cả lời giải". Đề chữ khoảng 17px, dãn dòng 1.7. Hộp lời giải nền `bg-emerald-50/60`, viền `border-emerald-200`, tiêu đề "💡 Hướng dẫn giải chi tiết". Badge mức độ hiện khi bài có `level`.
+4. `EssayPresentationMode`: đề và lời giải dùng cùng `formatEssayContent` và ngắt dòng, cỡ chữ lớn hơn khi chiếu.
 
 ## Kiểm tra coder
-- `node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js`: PASS 100%.
+- `formatEssayContent('Cho ham so y=x^2. a) ... b) ... c) ...')` tách ba ý, gọi lần hai không đổi chuỗi.
+- Parse khối `text/babel` bằng `@babel/parser`: không lỗi cú pháp.
 - `node tests/taobaitap-presentation-smoke.js`: PASS.
 - `node tests/taobaitap-plan-smoke.js`: PASS.
-- Parse khối `text/babel` của `taobaitap.html` bằng `@babel/parser` (JSX): không lỗi cú pháp.
-- Máy không có `node` trên PATH; đã chạy bằng Node 20 portable. Không mở trình duyệt nên chưa bấm sinh đề AI hay lưu sổ điểm thật.
+- Máy không có `node` trên PATH; chạy bằng Node 20 portable. Không có trình duyệt nên chưa bấm sinh đề AI trên giao diện.
 
 ## Ngoài phạm vi
-- Không sửa API `api/sodiem.php`, không sửa `sodiem.html`, không commit.
+- Không đổi định dạng trắc nghiệm, CV 7991, hay cơ chế xuất Word/PDF.
+- Không commit.

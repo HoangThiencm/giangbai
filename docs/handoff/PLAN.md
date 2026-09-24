@@ -1,116 +1,110 @@
-# PLAN: Thêm tùy chỉnh số câu trắc nghiệm CV 7991 và chức năng quay số gọi tên từ danh sách lớp vào taobaitap.html
+# PLAN: Tái cấu trúc giao diện và định dạng đề bài & lời giải bài tập tự luận trong taobaitap.html
 
 ## Hiện trạng
-1. **Về cấu trúc Công văn 7991 trong `taobaitap.html`:**
-   - Dropdown `synthForm` hiện tại gồm tùy chọn `cv7991` (mặc định 17 câu: 12 TN + 1 Đ/S + 4 TL ngắn).
-   - Phần cấu hình CV 7991 (`cv7991Config`) có preset `custom` nhưng bị giấu sau nút click phụ "Chỉnh sửa số câu từng phần", chưa có tùy chọn độc lập rõ ràng trên menu hình thức để người dùng chủ động chọn "Dạng Công văn 7991 (Tùy chỉnh số câu/mức độ)" bám sát Menu tạo bài tập của trợ lý.
-   - Khi người dùng muốn đổi số lượng câu trắc nghiệm (Phần I) tự do (ví dụ: 6, 8, 10, 14, 18 câu...), giao diện cần hiển thị trực quan, tính toán lại tổng điểm và phân bổ điểm số tương ứng.
+1. **Trình bày đề bài tự luận dính chùm trên 1 dòng:**
+   - Trong `taobaitap.html`, prompt yêu cầu AI sinh bài tập tự luận (`synthForm === 'essay'`) ở các hàm `generateSynthesizedFromSource` (dòng 16362) và `generateExercises` (dòng 16199) chỉ mô tả đơn giản: `{"question":"Đề bài...","solution":"Lời giải chi tiết..."}`.
+   - AI thường trả về các câu hỏi con a), b), c) và lời giải dồn thành một chuỗi văn bản liên tục không ngắt dòng: `a) ... b) ... c) ...`.
+   - Component hiển thị `MathText` (dòng 14196) dùng `document.createTextNode(part)` và các thẻ chứa (`h3`, `div` ở dòng 17984, 17988, 15253, 15258) không có CSS xử lý ngắt dòng (`whitespace-pre-line`), khiến toàn bộ văn bản bị trình duyệt gom lại trên cùng một hàng ngang duy nhất.
 
-2. **Về chức năng gọi học sinh kiểm tra:**
-   - Trong `sodiem.html` đã có module sổ điểm hoàn chỉnh: danh sách lớp lấy từ API `api/sodiem.php?action=classes`, danh sách học sinh theo lớp, chức năng vòng quay / bốc ngẫu nhiên học sinh, hiển thị câu hỏi, chấm điểm (0–10) và lưu trực tiếp vào CSDL/localStorage của sổ điểm.
-   - Trong `taobaitap.html`, chế độ trình chiếu câu hỏi (`QuizPresentationMode` và `EssayPresentationMode`) hiện chỉ phục vụ hiển thị câu hỏi và bấm làm bài, chưa có nút gọi ngẫu nhiên học sinh từ danh sách lớp để kiểm tra miệng/đánh giá thường xuyên trực tiếp trên màn hình chiếu.
+2. **Lời giải (`solution`) thiếu cấu trúc sư phạm và thiếu tính tương tác:**
+   - Lời giải các ý a), b), c) bị dồn cục, không ngắt dòng, không tách bước giải toán, thiếu tính mạch lạc.
+   - Trong danh sách bài tập tự luận (dòng 17980), lời giải luôn mở toang ra ngay bên dưới đề bài, không có nút bấm Ẩn/Hiện lời giải riêng cho từng bài (khác với chế độ Trình chiếu có nút ẩn hiện), làm học sinh hoặc giáo viên không thể dùng để kiểm tra hay cho học sinh tự giải trước.
+   - Typography chưa tối ưu: tiêu đề bài tập và đề bài to thô hoặc mất cân đối so với khung lời giải.
 
 ---
 
 ## Phạm vi thực hiện
-1. **Cấu trúc Công văn 7991 tùy chỉnh số câu trắc nghiệm trong `taobaitap.html`:**
-   - Bổ sung tùy chọn hình thức rõ ràng: `cv7991-custom`: "⭐ Dạng Công văn 7991 (Tùy chỉnh số câu trắc nghiệm / mức độ)" trong dropdown `synthForm`.
-   - Hiển thị trực quan cụm điều khiển số câu cho từng phần:
-     + Số câu Phần I (Trắc nghiệm nhiều lựa chọn): cho phép tăng giảm linh hoạt (mặc định gợi ý: 6, 8, 12, 16...).
-     + Số câu Phần II (Trắc nghiệm Đúng/Sai 4 ý).
-     + Số câu Phần III (Trắc nghiệm Trả lời ngắn).
-   - Đảm bảo logic tính toán điểm tự động `allocateCv7991PartScores` và prompt gửi AI `generateSynthesizedFromSource` nhận chính xác số câu trắc nghiệm tùy chỉnh.
-   - Bảo toàn tương thích xuất file Word/Text CV 7991 và các bộ test tự động (`tests/cv7991-taobaitap-thitructuyen-sync-smoke.js`).
+1. **Nâng cấp prompt sinh đề bài và lời giải tự luận:**
+   - Cập nhật cả 2 vị trí sinh tự luận (từ file tài liệu và từ chủ đề cấu trúc):
+     + Quy định chặt chẽ: nếu đề bài có nhiều ý con (a, b, c...), mỗi ý **bắt buộc** ngắt dòng mới bằng `\n` và thụt đầu dòng rõ ràng.
+     + Lời giải (`solution`) phải có cấu trúc sư phạm chuẩn mực:
+       * Nêu công thức / quy tắc áp dụng (nếu có).
+       * Tách riêng lời giải từng ý `a)`, `b)`, `c)`... trên các dòng riêng biệt bằng `\n\n`.
+       * Có kết luận / đáp số rõ ràng cho từng ý.
 
-2. **Chức năng quay số / gọi tên học sinh kiểm tra từ danh sách lớp trong `taobaitap.html`:**
-   - Thêm nút "🎲 Gọi học sinh" / "Quay số kiểm tra" trên thanh tiêu đề của `QuizPresentationMode` và `EssayPresentationMode`.
-   - Xây dựng component modal gọi học sinh (`CallStudentModal`):
-     + Nạp danh sách lớp từ API `api/sodiem.php?action=classes` (kèm fallback đọc cache `localStorage` của `sodiem.html` và cho phép dán danh sách thủ công nếu offline).
-     + Chọn lớp cần gọi kiểm tra.
-     + Nút "QUAY SỐ" / "BỐC TÊN" với hiệu ứng chạy chữ ngẫu nhiên kèm âm thanh / confetti khi dừng lại.
-     + Hiển thị nổi bật tên học sinh được gọi và nội dung câu hỏi hiện tại đang chiếu.
-     + Nhập điểm đánh giá (thang điểm 0–10) và chọn cột điểm (KTTX 1, KTTX 2, Điểm miệng...).
-     + Nút "Lưu điểm vào sổ điểm": gửi dữ liệu đến `api/sodiem.php?action=save` và đồng bộ `localStorage` của Sổ Điểm để giáo viên mở lại `sodiem.html` là thấy điểm ngay.
+2. **Cải tiến Component hiển thị `MathText` & format tự luận trên Web:**
+   - Bổ sung xử lý ngắt dòng thông minh trong `MathText`: chuyển đổi ký tự `\n` thành ngắt dòng `<br/>` hoặc giữ nguyên ngắt dòng tự nhiên bằng lớp `whitespace-pre-line`.
+   - Thêm hàm tiền xử lý chuẩn hóa (smart formatter) cho văn bản tự luận: nếu AI trả về chuỗi có chứa các ý `a)`, `b)`, `c)`, `d)` hoặc `Ý a:`, `Ý b:` bị dính chùm trên cùng 1 dòng mà chưa có `\n`, tự động chèn ngắt dòng và thụt lề để luôn hiển thị đẹp mắt, ngăn nắp.
+
+3. **Thiết kế lại giao diện xem bài tập tự luận (`mode === 'essay'`):**
+   - Đặt lại bố cục khối bài tập:
+     + Thẻ bài tập chia rõ: Badge "Bài X", phân loại mức độ (Dễ, Trung bình, Khó nếu có).
+     + Khung đề bài hiển thị thoáng, font chữ chuẩn 16–17px, line-height 1.7, các ý a), b), c) tách dòng rõ ràng.
+     + Bổ sung nút bấm **"👁️ Xem lời giải" / "Ẩn lời giải"** linh hoạt cho từng bài (mặc định thu gọn hoặc cho phép "Hiện tất cả lời giải").
+     + Khung Lời giải (`solution`) thiết kế theo dạng hộp sư phạm cao cấp (nền xanh nhẹ dịu mắt `bg-emerald-50/60`, viền `border-emerald-200`, có icon đèn sáng / cây bút), từng bước giải tách biệt rõ ràng.
+
+4. **Đồng bộ vào Trình chiếu tự luận (`EssayPresentationMode`):**
+   - Áp dụng cùng cơ chế ngắt dòng `whitespace-pre-line` và định dạng từng ý a), b), c) để khi trình chiếu lên máy chiếu/màn hình lớn, các ý phân tách rõ rệt, dễ đọc từ khoảng cách xa.
 
 ---
 
 ## Ngoài phạm vi
-- Không sửa đổi cấu trúc dữ liệu backend trong CSDL MySQL hay thay đổi định dạng API `api/sodiem.php`.
-- Không thay đổi giao diện cốt lõi của các game giáo dục khác hoặc các trang không liên quan.
+- Không can thiệp vào định dạng trắc nghiệm 4 lựa chọn, đúng/sai hay CV 7991 đã hoàn thiện.
+- Không thay đổi cơ chế xuất file Word / PDF ngoài việc giữ cấu trúc ngắt dòng sạch đẹp.
 
 ---
 
 ## File dự kiến tác động
-- `taobaitap.html` (Mã nguồn giao diện Tạo bài tập & Trình chiếu)
-- `docs/handoff/IMPLEMENT.md` (Ghi nhận nhật ký triển khai)
+- `taobaitap.html` (Mã nguồn chính)
+- `docs/handoff/IMPLEMENT.md` (Nhật ký thực hiện của Coder)
 
 ---
 
 ## Các bước thực hiện chi tiết cho Coder
 1. **Bước 1: Mở khóa file handoff:**
-   - Xóa `docs/handoff/.lock` trước khi sửa source.
+   - Xóa `docs/handoff/.lock` trước khi sửa file.
 
-2. **Bước 2: Cập nhật cấu hình CV 7991 tùy chỉnh số câu trong `taobaitap.html`:**
-   - Tìm khối select `synthForm` (khoảng dòng 17115–17137):
-     + Bổ sung option:
-       `<option value="cv7991-custom">⭐ Dạng Công văn 7991 (Tùy chỉnh số câu trắc nghiệm / các phần)</option>`
-     + Khi chọn `cv7991-custom`, kích hoạt ngay chế độ `preset: 'custom'` và hiển thị các ô input nhập số câu Phần I, Phần II, Phần III.
-   - Cập nhật hàm xử lý prompt `generateSynthesizedFromSource`:
-     + Nhận diện cả `synthForm === 'cv7991'` lẫn `synthForm === 'cv7991-custom'`.
-     + Đọc đúng `countPart1` (số câu trắc nghiệm do giáo viên tùy chỉnh) để đưa vào chỉ dẫn prompt sinh đề và bộ chia điểm.
-   - Cập nhật các bộ lọc và hàm xuất file (Word, Text, LaTeX, OLM) để nhận diện định dạng CV 7991 khi ở mode `cv7991-custom`.
+2. **Bước 2: Nâng cấp Prompt sinh bài tập tự luận trong `taobaitap.html`:**
+   - Tại dòng ~16200 (`generateExercises`) và dòng ~16362 (`generateSynthesizedFromSource`):
+     Thêm chỉ dẫn cấu trúc chi tiết:
+     ```javascript
+     `Mỗi bài tập TỰ LUẬN gồm:
+     - "question": Đề bài chuẩn mực. Nếu có các câu con (a, b, c...), BẮT BUỘC xuống dòng riêng biệt cho từng ý (dùng \\n) kèm chữ cái in nghiêng/in đậm như "a) ... \\nb) ... \\nc) ...".
+     - "solution": Lời giải chi tiết sư phạm, KHÔNG viết dồn một dòng. BẮT BUỘC xuống dòng (dùng \\n\\n) theo từng phần:
+       + Nêu quy tắc/công thức áp dụng
+       + Lời giải từng ý a), b), c) trên từng đoạn riêng
+       + Kết luận/đáp số cuối cùng`
+     ```
 
-3. **Bước 3: Tích hợp dữ liệu Sổ Điểm và chức năng gọi học sinh trong Trình chiếu:**
-   - Bổ sung helper functions nạp danh sách lớp và học sinh từ Sổ Điểm:
-     + `fetchSodiemClasses()`: gọi `api/sodiem.php?action=classes` hoặc duyệt keys `sodiem:*:*:*` trong `localStorage`.
-     + `fetchSodiemStudents(className, subject)`: gọi `api/sodiem.php?action=load` hoặc parse từ `localStorage.getItem("sodiem:" + className + ":" + subject + ":2025-2026")`.
-     + `saveSodiemStudentScore(className, subject, studentId, column, score)`: gửi `POST` đến `api/sodiem.php?action=save` và cập nhật `localStorage`.
-   - Trong component `QuizPresentationMode` (dòng ~14510) và `EssayPresentationMode` (dòng ~14810):
-     + Thêm nút bấm icon gọi loa/xúc xắc: `<button onClick={() => setShowStudentPicker(true)} className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm shadow">🎲 Gọi học sinh</button>`.
-   - Xây dựng component giao diện `StudentPickerModal`:
-     + Giao diện nổi (modal overlay) với phong cách sư phạm chuyên nghiệp.
-     + Bộ chọn lớp học (Select box) và hiển thị sĩ số.
-     + Vùng hiển thị tên học sinh với hiệu ứng quay số chạy ngẫu nhiên (animation shuffle ~2-3 giây) kèm âm thanh click/beep.
-     + Khi dừng: hiển thị rõ Họ tên, Mã/SBD, câu hỏi đang chiếu.
-     + Form chấm điểm: input điểm số (0 - 10), select cột điểm (tự động lấy danh sách cột từ sổ điểm), nút "Lưu vào sổ điểm" và nút "Để sau / Bỏ qua".
-     + Thông báo lưu thành công và cập nhật ngay vào dữ liệu sổ điểm.
+3. **Bước 3: Nâng cấp `MathText` và hàm định dạng tự luận:**
+   - Tại component `MathText` (dòng ~14196):
+     + Đảm bảo phần render `document.createTextNode(part)` hoặc thẻ chứa có thuộc tính CSS `style={{ whiteSpace: 'pre-line' }}` (hoặc className `whitespace-pre-line inline-block w-full`).
+     + Tạo helper `formatEssayContent(text)` để tự động chèn `\n` trước các nhãn `a)`, `b)`, `c)`, `d)` nếu chúng chưa được xuống dòng:
+       `text.replace(/([^\n])\s+([a-d]\))/g, '$1\n$2')`.
 
-4. **Bước 4: Chạy kiểm thử tự động:**
-   - Chạy `node tests/cv7991-taobaitap-thitructuyen-sync-smoke.js` để đảm bảo logic trích xuất CV 7991 không bị ảnh hưởng.
-   - Chạy `node tests/taobaitap-presentation-smoke.js` nếu có.
+4. **Bước 4: Thiết kế lại khối hiển thị bài tập tự luận (dòng ~17980):**
+   - Thêm state quản lý ẩn/hiện lời giải cho từng bài: `const [visibleSolutions, setVisibleSolutions] = useState({});`
+   - Bổ sung thanh công cụ phụ phía trên danh sách bài tập: nút "Hiện tất cả lời giải" / "Ẩn tất cả lời giải".
+   - Tinh chỉnh giao diện từng card bài tập:
+     + Đề bài: padding rộng rãi, ngắt dòng các ý a, b, c rõ ràng.
+     + Hộp lời giải: có tiêu đề "💡 Hướng dẫn giải chi tiết", từng ý tách biệt, có màu sắc hài hòa.
 
-5. **Bước 5: Hoàn tất tài liệu handoff:**
-   - Ghi nhật ký vào `docs/handoff/IMPLEMENT.md`.
-   - Tạo lại file `docs/handoff/.lock` nội dung `LOCK`.
+5. **Bước 5: Cập nhật `EssayPresentationMode` (dòng ~15214):**
+   - Bổ sung `whitespace-pre-line` và `formatEssayContent` vào cả khung đề bài lẫn khung lời giải để khi trình chiếu luôn hiển thị từng ý xuống dòng rõ ràng.
+
+6. **Bước 6: Ghi nhận nhật ký vào `docs/handoff/IMPLEMENT.md` và tạo lại `docs/handoff/.lock`.**
 
 ---
 
 ## Rủi ro và biện pháp xử lý
-- **Rủi ro 1: Phá vỡ logic đồng bộ với `thitructuyen.html` hoặc xuất file CV 7991:**
-  - *Giải pháp:* Tùy chọn `cv7991-custom` sử dụng cùng schema câu hỏi và bộ parser `buildCv7991ExportHtml`, `buildCv7991ExportText`, chỉ thay đổi linh hoạt số lượng phần tử của `part1`, `part2`, `part3`.
-- **Rủi ro 2: Mất kết nối API Sổ điểm hoặc chưa đăng nhập CSDL:**
-  - *Giải pháp:* Luôn ưu tiên đọc/ghi song song vào `localStorage` của trình duyệt theo đúng format key `sodiem:${class}:${subject}:2025-2026`, đảm bảo hoạt động mượt mà cả offline lẫn online.
+- **Rủi ro:** Khi thêm ngắt dòng `\n` vào chuỗi JSON từ AI, nếu không cẩn thận có thể gây lỗi parse JSON.
+  - *Giải pháp:* AI sinh ký tự thoát `\n` trong JSON string (`\\n`), bộ parser `GeminiModule.parseJSONResponse` và `repairJSONResponse` đã hỗ trợ tốt; đồng thời hàm `formatEssayContent` trên frontend sẽ đóng vai trò bọc lót nếu AI quên xuống dòng.
 
 ---
 
 ## Cách kiểm thử
-1. **Kiểm tra chức năng CV 7991 tùy chỉnh:**
-   - Mở `taobaitap.html`.
-   - Chọn hình thức "⭐ Dạng Công văn 7991 (Tùy chỉnh số câu trắc nghiệm / các phần)".
-   - Điều chỉnh số câu Phần I (ví dụ: 6 hoặc 8 câu trắc nghiệm), 1 câu Đúng/Sai, 2 câu Trả lời ngắn.
-   - Bấm sinh đề và kiểm tra: đề ra đúng số lượng từng phần, điểm số tính toán tự động chuẩn xác, xuất file Word và Text đầy đủ.
-2. **Kiểm tra chức năng Gọi học sinh:**
-   - Vào mục Trình chiếu bài tập (Presentation).
-   - Bấm nút "🎲 Gọi học sinh".
-   - Chọn lớp học đã có trong sổ điểm.
-   - Bấm "Quay số" -> Tên học sinh quay ngẫu nhiên và dừng lại.
-   - Nhập điểm (ví dụ: 9.0), chọn cột "KTTX 1", bấm "Lưu vào sổ điểm".
-   - Mở trang `sodiem.html` kiểm tra xem điểm của học sinh đó đã được cập nhật chính xác hay chưa.
+1. Mở `taobaitap.html`, chọn hình thức "Tự luận có lời giải" và bấm tạo bài tập từ file hoặc từ chủ đề.
+2. Kiểm tra danh sách bài tập hiển thị:
+   - Các ý con a), b), c) phải nằm trên các dòng riêng biệt, thụt lề ngay ngắn.
+   - Lời giải chi tiết phải chia thành các đoạn giải riêng cho từng ý, không còn dồn cục trên 1 dòng.
+   - Nút Ẩn/Hiện lời giải hoạt động mượt mà cho từng bài tập.
+3. Chuyển sang chế độ "Trình chiếu" tự luận:
+   - Đề bài và Lời giải trên màn hình lớn hiển thị rõ từng ý, thoáng đãng, dễ theo dõi.
 
 ---
 
 ## Tiêu chí nghiệm thu
-- Có tùy chọn Công văn 7991 tùy chỉnh số câu trắc nghiệm một cách rõ ràng, trực quan.
-- Chế độ trình chiếu có tính năng quay số gọi tên ngẫu nhiên học sinh từ danh sách lớp của Sổ Điểm.
-- Điểm chấm trực tiếp trong lúc gọi học sinh được đồng bộ vào Sổ Điểm (`sodiem.html`).
-- Không có lỗi console JavaScript, các bài test hiện có chạy qua PASS 100%.
+- Đề bài và Lời giải tự luận phân tách từng ý a, b, c... rõ ràng trên các dòng riêng biệt, không còn hiện tượng dính chùm trên 1 dòng.
+- Có tính năng Ẩn/Hiện lời giải linh hoạt cho từng bài tập tự luận.
+- Trình chiếu tự luận hiển thị khoa học, chuẩn sư phạm.
+- Không phát sinh lỗi console, không ảnh hưởng đến các định dạng trắc nghiệm khác.
