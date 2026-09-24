@@ -11,6 +11,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <script>
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.htmlDocx=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 /*!
@@ -14262,6 +14263,403 @@ module.exports = {
             );
         };
 
+        const SODIEM_YEAR = '2025-2026';
+        const SODIEM_DEFAULT_COLUMNS = ['KTTX 1', 'KTTX 2', 'KTTX 3', 'KTTX 4'];
+
+        const sodiemStorageKey = (className, subject) => `sodiem:${className}:${subject || 'Toán'}:${SODIEM_YEAR}`;
+
+        const parseSodiemStorageKey = (storageKey) => {
+            if (!storageKey || !storageKey.startsWith('sodiem:')) return null;
+            if (storageKey === 'sodiem:last_class' || storageKey === 'sodiem:questions') return null;
+            const body = storageKey.slice('sodiem:'.length);
+            const yearAt = body.lastIndexOf(':');
+            if (yearAt <= 0) return null;
+            const year = body.slice(yearAt + 1);
+            const rest = body.slice(0, yearAt);
+            const subjectAt = rest.lastIndexOf(':');
+            if (subjectAt <= 0) return null;
+            return {
+                className: rest.slice(0, subjectAt),
+                subject: rest.slice(subjectAt + 1),
+                year
+            };
+        };
+
+        const readSodiemLocalBooks = () => {
+            const books = [];
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const storageKey = localStorage.key(i);
+                    const parsedKey = parseSodiemStorageKey(storageKey);
+                    if (!parsedKey || !parsedKey.className) continue;
+                    let book = null;
+                    try { book = JSON.parse(localStorage.getItem(storageKey) || 'null'); } catch (e) { book = null; }
+                    if (!book || typeof book !== 'object') continue;
+                    books.push({ key: storageKey, ...parsedKey, book });
+                }
+            } catch (e) {}
+            return books;
+        };
+
+        const normalizeSodiemStudent = (row, index) => ({
+            id: (row && (row.id || row.student_id)) || `local-${index}-${(row && (row.sbd || row.username || row.name)) || index}`,
+            sbd: (row && (row.sbd || row.username)) || '',
+            name: (row && (row.name || row.full_name)) || `Học sinh ${index + 1}`,
+            scores: (row && row.scores && typeof row.scores === 'object') ? { ...row.scores } : {},
+            comment: (row && row.comment) || ''
+        });
+
+        const parseManualSodiemRoster = (text) => String(text || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line, index) => {
+            const parts = line.split(/[\t,;]/).map((part) => part.trim()).filter(Boolean);
+            if (parts.length >= 2) return normalizeSodiemStudent({ sbd: parts[0], name: parts.slice(1).join(' ') }, index);
+            return normalizeSodiemStudent({ name: parts[0] || line }, index);
+        });
+
+        const writeSodiemLocalBook = ({ className, subject, columns, students, history }) => {
+            const key = sodiemStorageKey(className, subject);
+            localStorage.setItem(key, JSON.stringify({
+                columns: columns || [],
+                students: students || [],
+                history: history || []
+            }));
+            localStorage.setItem('sodiem:last_class', className);
+            return key;
+        };
+
+        const mergeSodiemStudents = (roster, bookStudents, cachedStudents) => {
+            const records = [];
+            const aliases = new Map();
+            const keysOf = (student) => [...new Set([student.sbd, student.name].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean))];
+            const add = (row, index, preferBase) => {
+                const normalized = normalizeSodiemStudent(row, index);
+                const keys = keysOf(normalized);
+                const previous = keys.map((key) => aliases.get(key)).find(Boolean);
+                if (!previous) {
+                    records.push(normalized);
+                    keys.forEach((key) => aliases.set(key, normalized));
+                    return;
+                }
+                const base = preferBase ? normalized : previous;
+                const other = preferBase ? previous : normalized;
+                base.scores = { ...(other.scores || {}), ...(base.scores || {}) };
+                base.comment = base.comment || other.comment || '';
+                base.sbd = base.sbd || other.sbd || '';
+                base.name = base.name || other.name || '';
+                base.id = base.id || other.id;
+                if (preferBase) {
+                    const position = records.indexOf(previous);
+                    if (position >= 0) records[position] = base;
+                    aliases.forEach((value, key) => { if (value === previous) aliases.set(key, base); });
+                }
+                keysOf(base).forEach((key) => aliases.set(key, base));
+            };
+            (bookStudents || []).forEach((student, index) => add(student, index, false));
+            (cachedStudents || []).forEach((student, index) => add(student, index, false));
+            (roster || []).forEach((student, index) => add(student, index, true));
+            return records;
+        };
+
+        const fetchSodiemClasses = async () => {
+            const classes = [];
+            try {
+                const response = await fetch('api/sodiem.php?action=classes', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    (data.classes || []).forEach((item) => {
+                        const name = typeof item === 'string' ? item : (item.class_name || item.name || '');
+                        if (String(name).trim()) classes.push(String(name).trim());
+                    });
+                }
+            } catch (e) {}
+            readSodiemLocalBooks().forEach((entry) => { if (entry.className) classes.push(entry.className); });
+            const lastClass = localStorage.getItem('sodiem:last_class');
+            if (lastClass) classes.push(lastClass);
+            return [...new Set(classes.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+        };
+
+        const fetchSodiemStudents = async (className, subject) => {
+            const classLabel = String(className || '').trim();
+            const subjectLabel = String(subject || 'Toán').trim() || 'Toán';
+            const key = sodiemStorageKey(classLabel, subjectLabel);
+            let cached = null;
+            try { cached = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { cached = null; }
+            let columns = Array.isArray(cached?.columns) && cached.columns.length ? cached.columns.slice() : SODIEM_DEFAULT_COLUMNS.slice();
+            let history = Array.isArray(cached?.history) ? cached.history.slice() : [];
+            let students = (cached?.students || []).map(normalizeSodiemStudent);
+            let remoteOk = false;
+            try {
+                const response = await fetch(`api/sodiem.php?action=load&class_name=${encodeURIComponent(classLabel)}&subject=${encodeURIComponent(subjectLabel)}&academic_year=${encodeURIComponent(SODIEM_YEAR)}`, { credentials: 'include' });
+                if (response.ok) {
+                    remoteOk = true;
+                    const remote = await response.json();
+                    const book = remote.gradebook || null;
+                    let bookStudents = [];
+                    let configuredColumns = [];
+                    try { bookStudents = JSON.parse(book?.students_data_json || '[]') || []; } catch (e) { bookStudents = []; }
+                    try { configuredColumns = JSON.parse(book?.columns_config_json || '[]') || []; } catch (e) { configuredColumns = []; }
+                    if (configuredColumns.length) columns = configuredColumns;
+                    if (book) {
+                        try { history = JSON.parse(book.history_log_json || '[]') || []; } catch (e) { history = []; }
+                    }
+                    const merged = mergeSodiemStudents(remote.roster || [], bookStudents, cached?.students || []);
+                    if (merged.length) students = merged;
+                }
+            } catch (e) {}
+            return { className: classLabel, subject: subjectLabel, columns, students, history, remoteOk, key };
+        };
+
+        const saveSodiemStudentScore = async (className, subject, studentId, column, score) => {
+            const loaded = await fetchSodiemStudents(className, subject);
+            const students = (loaded.students || []).map((student) => ({ ...student, scores: { ...(student.scores || {}) } }));
+            let cachedHit = null;
+            try {
+                const cachedBook = JSON.parse(localStorage.getItem(loaded.key) || 'null');
+                cachedHit = (cachedBook?.students || []).find((student) => String(student.id) === String(studentId)) || null;
+            } catch (e) { cachedHit = null; }
+            const target = students.find((student) => String(student.id) === String(studentId))
+                || (cachedHit ? students.find((student) => (cachedHit.sbd && String(student.sbd) === String(cachedHit.sbd)) || (cachedHit.name && student.name === cachedHit.name)) : null);
+            if (!target) throw new Error('Không tìm thấy học sinh trong sổ điểm.');
+            const numericScore = Number(score);
+            if (!Number.isFinite(numericScore) || numericScore < 0 || numericScore > 10) throw new Error('Điểm phải từ 0 đến 10.');
+            const columns = (loaded.columns || SODIEM_DEFAULT_COLUMNS.slice()).slice();
+            if (column && !columns.includes(column)) columns.push(column);
+            target.scores[column] = numericScore;
+            const history = [...(loaded.history || []), { studentId: target.id, column, score: numericScore, at: new Date().toISOString(), source: 'taobaitap-presentation' }];
+            writeSodiemLocalBook({ className: loaded.className, subject: loaded.subject, columns, students, history });
+            let savedRemote = false;
+            try {
+                const response = await fetch('api/sodiem.php?action=save', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        class_name: loaded.className,
+                        subject: loaded.subject,
+                        academic_year: SODIEM_YEAR,
+                        columns,
+                        students,
+                        history
+                    })
+                });
+                savedRemote = response.ok;
+            } catch (e) { savedRemote = false; }
+            return { savedRemote, student: target, column, score: numericScore, students, columns, history };
+        };
+
+        const StudentPickerModal = ({ questionText, onClose }) => {
+            const [classes, setClasses] = useState([]);
+            const [className, setClassName] = useState('');
+            const [subject, setSubject] = useState('Toán');
+            const [book, setBook] = useState({ columns: SODIEM_DEFAULT_COLUMNS.slice(), students: [], history: [] });
+            const [column, setColumn] = useState('KTTX 1');
+            const [loadingRoster, setLoadingRoster] = useState(false);
+            const [pasteText, setPasteText] = useState('');
+            const [showPaste, setShowPaste] = useState(false);
+            const [spinning, setSpinning] = useState(false);
+            const [displayName, setDisplayName] = useState('Sẵn sàng quay số');
+            const [picked, setPicked] = useState(null);
+            const [score, setScore] = useState('');
+            const [saveNote, setSaveNote] = useState('');
+            const [saving, setSaving] = useState(false);
+            const spinRef = useRef(0);
+
+            useEffect(() => {
+                let cancelled = false;
+                fetchSodiemClasses().then((list) => {
+                    if (cancelled) return;
+                    setClasses(list);
+                    const lastClass = localStorage.getItem('sodiem:last_class') || '';
+                    setClassName((current) => current || (lastClass && (list.includes(lastClass) || lastClass) ? lastClass : (list[0] || '')));
+                });
+                return () => {
+                    cancelled = true;
+                    cancelAnimationFrame(spinRef.current);
+                };
+            }, []);
+
+            useEffect(() => {
+                const label = String(className || '').trim();
+                if (!label) return undefined;
+                let cancelled = false;
+                setLoadingRoster(true);
+                fetchSodiemStudents(label, subject).then((loaded) => {
+                    if (cancelled) return;
+                    setBook(loaded);
+                    const nextColumns = loaded.columns && loaded.columns.length ? loaded.columns : SODIEM_DEFAULT_COLUMNS.slice();
+                    setColumn((current) => (nextColumns.includes(current) ? current : nextColumns[0]));
+                    setLoadingRoster(false);
+                });
+                return () => { cancelled = true; };
+            }, [className, subject]);
+
+            const students = Array.isArray(book.students) ? book.students : [];
+            const columnOptions = book.columns && book.columns.length ? book.columns.slice() : SODIEM_DEFAULT_COLUMNS.slice();
+            if (!columnOptions.includes('Điểm miệng')) columnOptions.push('Điểm miệng');
+
+            const playSpinBeep = (audio) => {
+                if (!audio) return;
+                try {
+                    const oscillator = audio.createOscillator();
+                    const gain = audio.createGain();
+                    oscillator.frequency.value = 540;
+                    gain.gain.value = 0.03;
+                    oscillator.connect(gain).connect(audio.destination);
+                    oscillator.start();
+                    oscillator.stop(audio.currentTime + 0.03);
+                } catch (e) {}
+            };
+
+            const spinStudents = () => {
+                if (spinning || !students.length) {
+                    if (!students.length) setSaveNote('Chưa có học sinh. Hãy chọn lớp đã có sổ điểm hoặc dán danh sách.');
+                    return;
+                }
+                cancelAnimationFrame(spinRef.current);
+                setSpinning(true);
+                setPicked(null);
+                setScore('');
+                setSaveNote('');
+                const duration = 2600;
+                const started = performance.now();
+                let audio = null;
+                try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
+                let lastTick = -1;
+                const tick = (now) => {
+                    const progress = Math.min(1, (now - started) / duration);
+                    const preview = students[Math.floor(Math.random() * students.length)];
+                    setDisplayName(preview ? preview.name : '...');
+                    const tickIndex = Math.floor(progress * 22);
+                    if (tickIndex !== lastTick) {
+                        lastTick = tickIndex;
+                        playSpinBeep(audio);
+                    }
+                    if (progress < 1) {
+                        spinRef.current = requestAnimationFrame(tick);
+                        return;
+                    }
+                    const winner = students[Math.floor(Math.random() * students.length)];
+                    setPicked(winner);
+                    setDisplayName(winner ? winner.name : '');
+                    setSpinning(false);
+                    try { if (audio) audio.close(); } catch (e) {}
+                    if (window.confetti) window.confetti({ particleCount: 140, spread: 75, origin: { y: 0.62 } });
+                };
+                spinRef.current = requestAnimationFrame(tick);
+            };
+
+            const applyPastedRoster = () => {
+                const label = String(className || '').trim();
+                if (!label) {
+                    setSaveNote('Nhập hoặc chọn tên lớp trước khi dán danh sách.');
+                    return;
+                }
+                const rows = parseManualSodiemRoster(pasteText);
+                if (!rows.length) {
+                    setSaveNote('Danh sách dán vào đang trống.');
+                    return;
+                }
+                const subjectLabel = String(subject || 'Toán').trim() || 'Toán';
+                const columns = columnOptions.filter((name) => name !== 'Điểm miệng' || (book.columns || []).includes('Điểm miệng'));
+                const nextColumns = columns.length ? columns : SODIEM_DEFAULT_COLUMNS.slice();
+                writeSodiemLocalBook({ className: label, subject: subjectLabel, columns: nextColumns, students: rows, history: book.history || [] });
+                setBook({ className: label, subject: subjectLabel, columns: nextColumns, students: rows, history: book.history || [], remoteOk: false, key: sodiemStorageKey(label, subjectLabel) });
+                setClasses((prev) => prev.includes(label) ? prev : [...prev, label].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true })));
+                setPicked(null);
+                setDisplayName('Sẵn sàng quay số');
+                setSaveNote(`Đã nạp ${rows.length} học sinh của lớp ${label} trên máy này.`);
+                setShowPaste(false);
+            };
+
+            const saveScore = async () => {
+                if (!picked) return;
+                const label = String(className || '').trim();
+                const subjectLabel = String(subject || 'Toán').trim() || 'Toán';
+                if (!label) {
+                    setSaveNote('Chọn lớp trước khi lưu điểm.');
+                    return;
+                }
+                setSaving(true);
+                try {
+                    const result = await saveSodiemStudentScore(label, subjectLabel, picked.id, column || 'KTTX 1', score);
+                    setBook((prev) => ({ ...prev, students: result.students, columns: result.columns, history: result.history }));
+                    setSaveNote(result.savedRemote
+                        ? `Đã lưu ${result.score} điểm vào cột ${result.column} của ${result.student.name} (sổ điểm và máy này).`
+                        : `Đã lưu ${result.score} điểm của ${result.student.name} trên máy này. CSDL chưa nhận được (chưa đăng nhập hoặc mất mạng); mở Sổ Điểm trên cùng trình duyệt vẫn thấy điểm.`);
+                } catch (error) {
+                    setSaveNote(error.message || 'Không lưu được điểm.');
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 z-[80] bg-slate-950/75 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="student-picker-title">
+                    <div className="bg-white text-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-auto">
+                        <div className="px-6 py-4 bg-amber-500 text-slate-900 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 id="student-picker-title" className="text-xl font-black">🎲 Quay số gọi học sinh</h2>
+                                <p className="text-sm font-medium">Gọi ngẫu nhiên từ danh sách lớp của Sổ Điểm</p>
+                            </div>
+                            <button type="button" onClick={onClose} className="w-10 h-10 rounded-full bg-white/30 hover:bg-white/50 font-black">×</button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label className="text-sm font-bold text-slate-700">
+                                    Lớp
+                                    <select value={classes.includes(className) ? className : ''} onChange={(e) => setClassName(e.target.value)} className="mt-1 w-full border border-slate-300 rounded-xl p-2 font-medium">
+                                        <option value="">Chọn lớp</option>
+                                        {classes.map((name) => <option key={name} value={name}>{name}</option>)}
+                                    </select>
+                                    <input value={className} onChange={(e) => setClassName(e.target.value)} placeholder="Hoặc gõ tên lớp" className="mt-2 w-full border border-slate-200 rounded-xl p-2 font-medium" />
+                                </label>
+                                <label className="text-sm font-bold text-slate-700">
+                                    Môn
+                                    <input value={subject} onChange={(e) => setSubject(e.target.value)} className="mt-1 w-full border border-slate-300 rounded-xl p-2 font-medium" />
+                                    <p className="mt-2 text-xs font-semibold text-slate-500">Sĩ số: {loadingRoster ? 'đang nạp...' : `${students.length} học sinh`}</p>
+                                </label>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <button type="button" onClick={spinStudents} disabled={spinning || loadingRoster} className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black">QUAY SỐ / BỐC TÊN</button>
+                                <button type="button" onClick={() => setShowPaste((prev) => !prev)} className="px-4 py-2 rounded-xl border border-slate-300 font-bold">Dán danh sách thủ công</button>
+                            </div>
+                            {showPaste && (
+                                <div className="rounded-2xl border border-slate-200 p-3 bg-slate-50">
+                                    <textarea value={pasteText} onChange={(e) => setPasteText(e.target.value)} rows={4} placeholder={'Mỗi dòng: Mã/SBD, Họ và tên\nHoặc chỉ họ tên'} className="w-full border border-slate-200 rounded-xl p-2 text-sm"></textarea>
+                                    <button type="button" onClick={applyPastedRoster} className="mt-2 px-3 py-2 rounded-lg bg-slate-800 text-white text-sm font-bold">Dùng danh sách này</button>
+                                </div>
+                            )}
+                            <div className={`rounded-3xl border-4 px-4 py-8 text-center ${picked && !spinning ? 'border-amber-400 bg-amber-50' : 'border-slate-200 bg-slate-50'}`}>
+                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{spinning ? 'Đang quay...' : 'Học sinh được gọi'}</p>
+                                <p className="mt-2 text-3xl md:text-4xl font-black text-slate-900">{displayName}</p>
+                                {picked && !spinning && <p className="mt-2 text-sm text-slate-600">Mã/SBD: {picked.sbd || '—'}</p>}
+                            </div>
+                            <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-4">
+                                <p className="text-xs font-black uppercase text-indigo-700">Câu hỏi đang chiếu</p>
+                                <div className="mt-2 text-lg font-semibold text-slate-800"><MathText text={questionText || 'Chưa có câu hỏi trên màn hình chiếu.'} /></div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label className="text-sm font-bold text-slate-700">
+                                    Điểm (0–10)
+                                    <input type="number" min="0" max="10" step="0.1" value={score} onChange={(e) => setScore(e.target.value)} className="mt-1 w-full border border-slate-300 rounded-xl p-2 text-lg font-black text-center" />
+                                </label>
+                                <label className="text-sm font-bold text-slate-700">
+                                    Cột điểm
+                                    <select value={column} onChange={(e) => setColumn(e.target.value)} className="mt-1 w-full border border-slate-300 rounded-xl p-2 font-medium">
+                                        {columnOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+                                    </select>
+                                </label>
+                            </div>
+                            {saveNote && <p className="text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl p-3">{saveNote}</p>}
+                            <div className="flex flex-wrap justify-end gap-2">
+                                <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl border border-slate-300 font-bold">Để sau / Bỏ qua</button>
+                                <button type="button" onClick={saveScore} disabled={!picked || spinning || saving} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black">Lưu vào sổ điểm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         // --- TRÌNH CHIẾU TRẮC NGHIỆM ---
         const QuizPresentationMode = ({ questions, onExit, settings }) => { /* Giữ nguyên QuizPresentationMode */
             const safeSettings = settings || {};
@@ -14281,6 +14679,7 @@ module.exports = {
             const [score, setScore] = useState(0);
             const [shuffledQuestions, setShuffledQuestions] = useState([]);
             const [showResults, setShowResults] = useState(false);
+            const [showStudentPicker, setShowStudentPicker] = useState(false);
             const handleNext = useCallback(() => { if (idx < shuffledQuestions.length - 1) { setIdx(prev => prev + 1); } else { setShowResults(true); } }, [idx, shuffledQuestions.length]);
             const handlePrev = useCallback(() => { if (idx > 0) { setIdx(prev => prev - 1); } }, [idx]);
 
@@ -14409,8 +14808,8 @@ module.exports = {
             };
 
             const handleKeyDown = (e) => {
-                if (showResults) return;
-                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                if (showStudentPicker || showResults) return;
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         handleFillBlankSubmit();
@@ -14453,7 +14852,13 @@ module.exports = {
             useEffect(() => {
                 window.addEventListener("keydown", handleKeyDown);
                 return () => window.removeEventListener("keydown", handleKeyDown);
-            }, [idx, showAns, showResults, handleNext, handlePrev, fillBlankAnswer]);
+            }, [idx, showAns, showResults, showStudentPicker, handleNext, handlePrev, fillBlankAnswer]);
+
+            const currentQuestionText = String((shuffledQuestions[idx] || safeQuestions[idx] || {}).question || '');
+            const studentPicker = showStudentPicker ? <StudentPickerModal questionText={currentQuestionText} onClose={() => setShowStudentPicker(false)} /> : null;
+            const callStudentButton = (
+                <button type="button" onClick={() => setShowStudentPicker(true)} className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm shadow">🎲 Gọi học sinh</button>
+            );
 
             if (showResults) {
                 const totalScore = (score).toFixed(1);
@@ -14461,6 +14866,7 @@ module.exports = {
 
                 return (
                     <div className="fixed inset-0 bg-gradient-to-br from-blue-900 to-purple-900 text-white z-50 flex flex-col items-center justify-center p-6">
+                        {studentPicker}
                         <div className="bg-white text-gray-800 rounded-3xl p-8 max-w-2xl w-full text-center shadow-2xl">
                             <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <i className="fas fa-trophy text-4xl text-green-600"></i>
@@ -14480,7 +14886,8 @@ module.exports = {
                                     <div className="text-sm text-purple-500">Tổng câu</div>
                                 </div>
                             </div>
-                            <div className="flex gap-4 justify-center">
+                            <div className="flex gap-4 justify-center flex-wrap">
+                                {callStudentButton}
                                 <button onClick={() => setShowResults(false)} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition"><i className="fas fa-redo mr-2"></i>Xem lại</button>
                                 <button onClick={onExit} className="px-6 py-3 bg-gray-600 text-white rounded-xl font-bold hover:bg-gray-700 transition"><i className="fas fa-times mr-2"></i>Kết thúc</button>
                             </div>
@@ -14494,11 +14901,15 @@ module.exports = {
             if (!q) {
                 return (
                     <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col items-center justify-center p-6">
+                        {studentPicker}
                         <div className="bg-slate-800 p-8 rounded-2xl max-w-md w-full text-center">
                             <i className="fas fa-exclamation-triangle text-4xl text-yellow-400 mb-4"></i>
                             <h3 className="text-xl font-bold mb-2">Không tìm thấy câu hỏi</h3>
                             <p className="text-gray-400 mb-6">Danh sách câu hỏi trống hoặc câu hỏi hiện tại không hợp lệ.</p>
-                            <button onClick={onExit} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition">Quay lại</button>
+                            <div className="flex justify-center gap-3 flex-wrap">
+                                {callStudentButton}
+                                <button onClick={onExit} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition">Quay lại</button>
+                            </div>
                         </div>
                     </div>
                 );
@@ -14507,10 +14918,12 @@ module.exports = {
 
             return (
                 <div className="fixed inset-0 bg-slate-900 text-white z-50 flex flex-col p-2 md:p-4 transition-colors duration-500">
-                    <div className="flex justify-between items-center mb-2">
+                    {studentPicker}
+                    <div className="flex justify-between items-center mb-2 gap-2">
                         <button onClick={onExit} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm"><i className="fas fa-times"></i> <span className="hidden md:inline">Thoát</span></button>
                         <div className="text-lg font-bold text-gray-300">Câu {idx + 1} <span className="text-sm font-normal text-gray-500">/ {safeQuestions.length}</span></div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 md:gap-4">
+                            {callStudentButton}
                             {countdownTime > 0 && (
                                 <div className={`px-3 py-1 rounded-full font-bold ${timeLeft <= 10 ? 'bg-red-600 animate-pulse' : 'bg-blue-600'}`}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</div>
                             )}
@@ -14801,7 +15214,10 @@ module.exports = {
         const EssayPresentationMode = ({ essays, onExit }) => { /* Giữ nguyên EssayPresentationMode */
             const [idx, setIdx] = useState(0);
             const [showSolution, setShowSolution] = useState(false);
+            const [showStudentPicker, setShowStudentPicker] = useState(false);
             const handleKeyDown = (e) => {
+                if (showStudentPicker) return;
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
                 switch (e.key) {
                     case "ArrowRight": if (idx < essays.length - 1) setIdx(prev => prev + 1); break;
                     case "ArrowLeft": if (idx > 0) setIdx(prev => prev - 1); break;
@@ -14815,16 +15231,21 @@ module.exports = {
                 document.body.style.overflow = 'hidden';
                 window.addEventListener("keydown", handleKeyDown);
                 return () => { document.body.style.overflow = 'auto'; window.removeEventListener("keydown", handleKeyDown); };
-            }, [idx]);
+            }, [idx, showStudentPicker]);
 
-            const essay = essays[idx];
+            const essay = essays[idx] || { question: '', solution: '' };
+            const studentPicker = showStudentPicker ? <StudentPickerModal questionText={String(essay.question || '')} onClose={() => setShowStudentPicker(false)} /> : null;
 
             return (
                 <div className="fixed inset-0 bg-gradient-to-br from-blue-900 to-purple-900 text-white z-50 flex flex-col p-4 md:p-6">
-                    <div className="flex justify-between items-center mb-4">
+                    {studentPicker}
+                    <div className="flex justify-between items-center mb-4 gap-2">
                         <button onClick={onExit} className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition flex items-center gap-2"><i className="fas fa-times"></i> <span className="hidden md:inline">Thoát</span></button>
                         <div className="text-xl font-bold text-white">Bài {idx + 1} <span className="text-sm font-normal text-gray-300">/ {essays.length}</span></div>
-                        <button onClick={() => setShowSolution(!showSolution)} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold rounded-lg transition">{showSolution ? <><i className="fas fa-eye-slash"></i> Ẩn Lời giải</> : <><i className="fas fa-eye"></i> Hiện Lời giải</>}</button>
+                        <div className="flex items-center gap-2">
+                            <button type="button" onClick={() => setShowStudentPicker(true)} className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm shadow">🎲 Gọi học sinh</button>
+                            <button onClick={() => setShowSolution(!showSolution)} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold rounded-lg transition">{showSolution ? <><i className="fas fa-eye-slash"></i> Ẩn Lời giải</> : <><i className="fas fa-eye"></i> Hiện Lời giải</>}</button>
+                        </div>
                     </div>
                     <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full gap-6">
                         <div className="bg-white text-slate-900 p-6 md:p-8 rounded-2xl shadow-2xl flex-1">
@@ -15838,11 +16259,12 @@ module.exports = {
                     return;
                 }
                 const clampCvPart = (value) => Math.max(0, Math.min(40, parseInt(value, 10) || 0));
-                const countPart1 = synthForm === 'cv7991' ? clampCvPart(cv7991Config.part1) : 0;
-                const countPart2 = synthForm === 'cv7991' ? clampCvPart(cv7991Config.part2) : 0;
-                const countPart3 = synthForm === 'cv7991' ? clampCvPart(cv7991Config.part3) : 0;
+                const isCv7991Synth = synthForm === 'cv7991' || synthForm === 'cv7991-custom';
+                const countPart1 = synthForm === 'cv7991' || synthForm === 'cv7991-custom' ? clampCvPart(cv7991Config.part1) : 0;
+                const countPart2 = synthForm === 'cv7991' || synthForm === 'cv7991-custom' ? clampCvPart(cv7991Config.part2) : 0;
+                const countPart3 = synthForm === 'cv7991' || synthForm === 'cv7991-custom' ? clampCvPart(cv7991Config.part3) : 0;
                 const cv7991Total = countPart1 + countPart2 + countPart3;
-                if (synthForm === 'cv7991' && cv7991Total < 1) {
+                if (isCv7991Synth && cv7991Total < 1) {
                     const validationMessage = "Hãy nhập ít nhất 1 câu ở Phần I, Phần II hoặc Phần III của đề Công văn 7991.";
                     finishGenerationProgress("error", validationMessage);
                     showSourceNotice(validationMessage);
@@ -15851,7 +16273,7 @@ module.exports = {
                 const cv7991Count = cv7991Config.preset === 'standard-17'
                     ? (synthForm === 'cv7991' ? 17 : cv7991Total)
                     : cv7991Total;
-                const count = synthForm === 'cv7991' ? cv7991Count : Math.max(1, Math.min(50, Number(synthCount) || 10));
+                const count = isCv7991Synth ? cv7991Count : Math.max(1, Math.min(50, Number(synthCount) || 10));
                 const isEssay = synthForm === 'essay';
                 const levelText = synthLevel === 'Hỗn hợp'
                     ? 'Hỗn hợp phân hóa 4 mức độ: Nhận biết, Thông hiểu, Vận dụng, Vận dụng thực tế (chia đều nếu được).'
@@ -15860,7 +16282,7 @@ module.exports = {
                 let typeInstruction = '';
                 if (isEssay) {
                     typeInstruction = 'Hình thức: Tự luận có lời giải chi tiết.';
-                } else if (synthForm === 'cv7991') {
+                } else if (synthForm === 'cv7991' || synthForm === 'cv7991-custom') {
                     const cvScores = allocateCv7991PartScores(countPart1, countPart2, countPart3);
                     let cursor = 1;
                     const partLines = [];
@@ -15927,11 +16349,11 @@ QUY TẮC CHẤT LƯỢNG:
 
 Chi tiết từng loại:
 - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice","level":"Nhận biết"}
-- true-false: ${synthForm === 'cv7991'
+- true-false: ${(synthForm === 'cv7991' || synthForm === 'cv7991-custom')
     ? '{"question":"[Ngữ cảnh/chủ đề bài toán dẫn chung]...","options":["Nội dung mệnh đề a","Nội dung mệnh đề b","Nội dung mệnh đề c","Nội dung mệnh đề d"],"correct_answers":[true,false,true,false],"type":"true-false"}'
     : '{"question":"...","options":["Đúng","Sai"],"correctAnswerIndex":0,"type":"true-false"}'}
 - fill-blank: {"question":"Câu hỏi có chỗ trống ______","correctAnswer":"đáp án đúng","type":"fill-blank"}
-- short-answer: {"question":"Câu hỏi định hướng kết quả số","correctAnswer":"${synthForm === 'cv7991' ? '25' : '12.5'}","type":"short-answer"}
+- short-answer: {"question":"Câu hỏi định hướng kết quả số","correctAnswer":"${(synthForm === 'cv7991' || synthForm === 'cv7991-custom') ? '25' : '12.5'}","type":"short-answer"}
 - matching: {"question":"Chủ đề nối","columnA":["A1","A2","A3"],"columnB":["B1","B2","B3"],"correctMatches":[0,1,2],"type":"matching"}
 
 NGUỒN KIẾN THỨC:
@@ -15961,7 +16383,7 @@ ${sourceContext}`;
                     updateGenerationProgress(90, "Đang kiểm tra và chuẩn hóa kết quả...");
                     if (!isEssay) parsedData = normalizeQuizItems(parsedData);
                     if (!parsedData || parsedData.length === 0) throw new Error("AI không sinh được bài tập từ file đã nạp.");
-                    if (synthForm === 'cv7991') {
+                    if (synthForm === 'cv7991' || synthForm === 'cv7991-custom') {
                         const mcItems = parsedData.filter((q) => q.type === 'multiple-choice');
                         const tfItems = parsedData.filter((q) => q.type === 'true-false');
                         const saItems = parsedData.filter((q) => q.type === 'short-answer');
@@ -16124,7 +16546,7 @@ ${sourceContext}`;
                 }
 
                 // CV 7991 / câu Đúng-Sai 4 ý: xuất đủ a) b) c) d) theo chuẩn
-                if (mode === "quiz" && (synthForm === "cv7991" || dataToExport.some(isCv7991TrueFalseItem))) {
+                if (mode === "quiz" && (synthForm === "cv7991" || dataToExport.some(isCv7991TrueFalseItem) || synthForm === "cv7991-custom")) {
                     const header = `
                 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
                 <head>
@@ -16327,7 +16749,7 @@ ${sourceContext}`;
                 }
 
                 // CV 7991 / câu Đúng-Sai 4 ý: giữ LaTeX, xuất đủ a) b) c) d)
-                if (mode === "quiz" && (synthForm === "cv7991" || dataToExport.some(isCv7991TrueFalseItem))) {
+                if (mode === "quiz" && (synthForm === "cv7991" || dataToExport.some(isCv7991TrueFalseItem) || synthForm === "cv7991-custom")) {
                     const header = `
                 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
                 <head>
@@ -16527,7 +16949,7 @@ ${sourceContext}`;
                     });
                 } else {
                     const { part1, part2, part3 } = collectCv7991ExportParts(dataToExport);
-                    const useCv7991Sections = synthForm === "cv7991" || part2.length > 0 || part3.length > 0;
+                    const useCv7991Sections = synthForm === "cv7991" || part2.length > 0 || part3.length > 0 || synthForm === "cv7991-custom";
                     let currentQuestion = 1;
 
                     if (useCv7991Sections) {
@@ -16632,7 +17054,7 @@ ${sourceContext}`;
                     });
                 } else {
                     const { part1, part2, part3 } = collectCv7991ExportParts(dataToExport);
-                    const useSections = synthForm === "cv7991" || part2.length > 0 || part3.length > 0;
+                    const useSections = synthForm === "cv7991" || part2.length > 0 || part3.length > 0 || synthForm === "cv7991-custom";
                     const groups = useSections
                         ? [
                             ["PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN", part1],
@@ -16742,7 +17164,7 @@ ${sourceContext}`;
                 return {
                     title: title || "Đề thi từ Tạo bài tập",
                     duration: 15,
-                    exam_format: form === "cv7991" ? "cv7991" : "standard_mc",
+                    exam_format: (form === "cv7991" || form === "cv7991-custom") ? "cv7991" : "standard_mc",
                     anti_ai_one_by_one: true,
                     anti_ai_watermark: true,
                     questions: mapped,
@@ -17057,12 +17479,13 @@ ${sourceContext}`;
                                                 value={synthCount}
                                                 onChange={(e) => {
                                                     const n = parseInt(e.target.value, 10) || 20;
-                                                    if (synthForm !== 'cv7991') {
+                                                    const cvActive = synthForm === 'cv7991' || synthForm === 'cv7991-custom';
+                                                    if (!cvActive) {
                                                         setSynthCount(n);
                                                         return;
                                                     }
-                                                    if (n === 10) applyCv7991Preset('mini-10');
-                                                    else if (n === 17) applyCv7991Preset('standard-17');
+                                                    if (synthForm !== 'cv7991-custom' && n === 10) applyCv7991Preset('mini-10');
+                                                    else if (synthForm !== 'cv7991-custom' && n === 17) applyCv7991Preset('standard-17');
                                                     else {
                                                         setCv7991Config((prev) => ({
                                                             part1: Math.max(0, n - (parseInt(prev.part2, 10) || 0) - (parseInt(prev.part3, 10) || 0)),
@@ -17093,7 +17516,7 @@ ${sourceContext}`;
                                                 value={synthCount}
                                                 onChange={(e) => {
                                                     const n = Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1));
-                                                    if (synthForm !== 'cv7991') {
+                                                    if (synthForm !== 'cv7991' && synthForm !== 'cv7991-custom') {
                                                         setSynthCount(n);
                                                         return;
                                                     }
@@ -17121,11 +17544,16 @@ ${sourceContext}`;
                                                     const total = (parseInt(cv7991Config.part1, 10) || 0) + (parseInt(cv7991Config.part2, 10) || 0) + (parseInt(cv7991Config.part3, 10) || 0);
                                                     if (cv7991Config.preset === 'standard-17') setSynthCount(17);
                                                     else setSynthCount(total || 17);
+                                                } else if (val === 'cv7991-custom') {
+                                                    setCv7991Config((prev) => ({ ...prev, preset: 'custom' }));
+                                                    const total = (parseInt(cv7991Config.part1, 10) || 0) + (parseInt(cv7991Config.part2, 10) || 0) + (parseInt(cv7991Config.part3, 10) || 0);
+                                                    setSynthCount(total || 17);
                                                 } else if (val === 'multiple-choice') setSynthCount(20);
                                             }}
                                             className="mt-1 w-full border border-violet-200 rounded-lg p-2 bg-white text-sm"
                                         >
                                             <option value="cv7991">⭐ Chuẩn Công văn 7991 (17 câu - 10đ: 12 TN + 1 Đ/S 4 ý + 4 TL ngắn)</option>
+                                            <option value="cv7991-custom">⭐ Dạng Công văn 7991 (Tùy chỉnh số câu trắc nghiệm / các phần)</option>
                                             <option value="multiple-choice">⭐ 100% Trắc nghiệm 4 lựa chọn (20 câu - 10đ: mỗi câu 0.5đ)</option>
                                             <option value="mixed-quiz">Trắc nghiệm tổng hợp</option>
                                             <option value="true-false">Đúng/Sai</option>
@@ -17146,7 +17574,7 @@ ${sourceContext}`;
                                         </select>
                                     </label>
                                 </div>
-                                {synthForm === 'cv7991' && (
+                                {(synthForm === 'cv7991' || synthForm === 'cv7991-custom') && (
                                     <div className="mt-3 rounded-xl border border-violet-200 bg-white/80 p-3">
                                         <label className="text-xs font-bold text-slate-700">
                                             Mẫu đề Công văn 7991
@@ -17161,7 +17589,7 @@ ${sourceContext}`;
                                                 <option value="custom">Tùy chỉnh linh hoạt</option>
                                             </select>
                                         </label>
-                                        {cv7991Config.preset !== 'custom' && (
+                                        {synthForm === 'cv7991' && cv7991Config.preset !== 'custom' && (
                                             <button
                                                 type="button"
                                                 onClick={() => applyCv7991Preset('custom')}
@@ -17170,8 +17598,21 @@ ${sourceContext}`;
                                                 Chỉnh sửa số câu từng phần
                                             </button>
                                         )}
-                                        {cv7991Config.preset === 'custom' && (
-                                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        {(cv7991Config.preset === 'custom' || synthForm === 'cv7991-custom') && (
+                                            <div className="mt-3">
+                                            <div className="flex flex-wrap gap-2 mb-2">
+                                                {[6, 8, 12, 16].map((count) => (
+                                                    <button
+                                                        key={count}
+                                                        type="button"
+                                                        onClick={() => updateCv7991Part('part1', count)}
+                                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${Number(cv7991Config.part1) === count ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-violet-700 border-violet-200'}`}
+                                                    >
+                                                        {count} câu TN
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                                 <label className="text-xs font-bold text-slate-700">
                                                     Số câu Phần I (TN)
                                                     <input
@@ -17206,10 +17647,19 @@ ${sourceContext}`;
                                                     />
                                                 </label>
                                             </div>
+                                            </div>
                                         )}
-                                        <p className="mt-2 text-xs text-slate-600">
-                                            Tổng { (parseInt(cv7991Config.part1, 10) || 0) + (parseInt(cv7991Config.part2, 10) || 0) + (parseInt(cv7991Config.part3, 10) || 0) } câu, thang điểm 10.0. Phần không có câu sẽ không xuất hiện trong đề.
-                                        </p>
+                                        {(() => {
+                                            const part1 = parseInt(cv7991Config.part1, 10) || 0;
+                                            const part2 = parseInt(cv7991Config.part2, 10) || 0;
+                                            const part3 = parseInt(cv7991Config.part3, 10) || 0;
+                                            const scores = allocateCv7991PartScores(part1, part2, part3);
+                                            return (
+                                                <p className="mt-2 text-xs text-slate-600">
+                                                    Tổng {part1 + part2 + part3} câu, thang điểm 10.0. Phần I: {formatDiem(scores.part1)} điểm ({formatDiem(scores.per1)}/câu). Phần II: {formatDiem(scores.part2)} điểm ({formatDiem(scores.per2)}/câu). Phần III: {formatDiem(scores.part3)} điểm ({formatDiem(scores.per3)}/câu). Phần không có câu sẽ không xuất hiện trong đề.
+                                                </p>
+                                            );
+                                        })()}
                                     </div>
                                 )}
                                 <button

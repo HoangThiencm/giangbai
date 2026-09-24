@@ -1,11 +1,11 @@
 ---
-description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 7 tác vụ chính
+description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 9 tác vụ chính
 ---
 
 Khi người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
 ### BƯỚC 1: Hiển thị bảng chọn Menu chính (Menu cấp 1)
-Gọi tool `ask_question` với danh sách 7 lựa chọn:
+Gọi tool `ask_question` với danh sách 9 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -15,6 +15,8 @@ Gọi tool `ask_question` với danh sách 7 lựa chọn:
   5. "5/ Game giáo dục"
   6. "6/ Sổ điểm"
   7. "7/ Quản lý tổ chuyên môn"
+  8. "8/ Tạo báo cáo"
+  9. "9/ Viết sáng kiến"
 
 ---
 
@@ -61,3 +63,20 @@ Mở và cung cấp đường dẫn truy cập trực tiếp:
 - **Link Website:** [https://www.hoangthiencm.id.vn/phancongtochuyenmon.html](https://www.hoangthiencm.id.vn/phancongtochuyenmon.html)
 - **File cục bộ:** [phancongtochuyenmon.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/phancongtochuyenmon.html)
 - Hướng dẫn phân công chuyên môn, quản lý thời khóa biểu, lịch báo giảng và hồ sơ tổ chuyên môn.
+
+#### Nhánh 8: Khi chọn "8/ Tạo báo cáo"
+Tự động kích hoạt quy trình soạn Báo cáo và Văn bản hành chính chuẩn Nghị định 30/2020/NĐ-CP:
+- File đầu vào (văn bản căn cứ, số liệu, văn bản mẫu): đọc từ `TROLYTHIEN/8_TAO_BAO_CAO/Dau_vao/`
+- File kết quả: tự động xuất Word ra `TROLYTHIEN/8_TAO_BAO_CAO/Ket_qua/`
+- **Link Gemini Canvas:** [https://gemini.google.com/app/7bc03567b9f738fb?hl=vi](https://gemini.google.com/app/7bc03567b9f738fb?hl=vi)
+- **File cục bộ tham chiếu:** [backupcode viettailieu/taobaocao.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/backupcode%20viettailieu/taobaocao.html)
+- Tuân thủ quy chuẩn tại `.agents/rules/taobaocao.md`.
+
+#### Nhánh 9: Khi chọn "9/ Viết sáng kiến"
+Tự động kích hoạt quy trình viết Sáng kiến kinh nghiệm chuẩn 4 phần của Sở GD&ĐT:
+- File đầu vào (thực trạng, số liệu lớp, giáo án minh chứng): đọc từ `TROLYTHIEN/9_VIET_SANG_KIEN/Dau_vao/`
+- File kết quả: tự động xuất Word ra `TROLYTHIEN/9_VIET_SANG_KIEN/Ket_qua/`
+- **Link Gemini Canvas:** [https://gemini.google.com/app/e6bf41201af60de3?hl=vi](https://gemini.google.com/app/e6bf41201af60de3?hl=vi)
+- **File cục bộ tham chiếu:** [backupcode viettailieu/sangkien.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/backupcode%20viettailieu/sangkien.html)
+- Tuân thủ quy chuẩn tại `.agents/rules/vietsangkien.md`.
+
