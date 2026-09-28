@@ -56,9 +56,12 @@ $transport = null;
 
 function khbd_gemini_should_rotate(int $status, string $error): bool
 {
-    if (in_array($status, [403, 429], true)) return true;
+    if (in_array($status, [403, 429, 503], true)) return true;
     $message = strtolower($error);
     return str_contains($message, 'quota')
+        || str_contains($message, 'high demand')
+        || str_contains($message, 'overloaded')
+        || str_contains($message, 'unavailable')
         || str_contains($message, 'resource exhausted')
         || str_contains($message, 'rate limit')
         || str_contains($message, 'too many requests')

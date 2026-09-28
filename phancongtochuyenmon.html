@@ -1785,6 +1785,9 @@
                 <button class="btn-toolbar btn-config" onclick="openConfigModal('tab-info')" title="Cài đặt tổ, đợt phân công, môn học, lớp học và giáo viên">
                     <i class="fas fa-gear"></i> Khai báo tổ
                 </button>
+                <button class="btn-toolbar btn-config" type="button" onclick="openGeminiModelModal()" title="Cài đặt Module Gemini AI">
+                    <i class="fas fa-robot text-indigo-400"></i> AI: <span id="top-nav-ai-model-label">2.5 Flash</span>
+                </button>
                 <input type="file" id="file-input" style="display:none" accept=".json" onchange="loadFromFile(event)">
                 <div class="tools-menu" id="tools-menu">
                     <button class="btn-toolbar btn-config" type="button" onclick="toggleToolsMenu(event)" title="Nạp CSDL, mở/xuất JSON, xuất Excel">
@@ -1987,6 +1990,9 @@
                 <button type="button" class="btn-toolbar btn-db-save" onclick="saveToDB()"><i class="fas fa-cloud-arrow-up"></i> Lưu tất cả lên CSDL</button>
                 <button type="button" class="btn-small btn-small-primary" onclick="syncAllAssignmentsFromTimetables()"><i class="fas fa-bolt"></i> Dịch TKB toàn tổ sang Phân công</button>
                 <button type="button" class="btn-small" onclick="applyCurrentTimetableToAssignments()"><i class="fas fa-bolt"></i> Dịch GV này sang Phân công</button>
+                <button type="button" class="btn-small" onclick="openGeminiModelModal()" title="Cài đặt Model Gemini AI">
+                    <i class="fas fa-robot text-indigo-600"></i> Model: <span id="tt-toolbar-model-label">2.5 Flash</span>
+                </button>
                 <button type="button" class="btn-small" onclick="goToNextTimetableTeacher(true)">GV tiếp theo ➔</button>
                 <button type="button" class="btn-small" onclick="clearCurrentTeacherTimetable()"><i class="fas fa-trash"></i> Xóa TKB GV này</button>
             </div>
@@ -2496,9 +2502,7 @@
                 <div class="form-group" style="margin-bottom: 12px;">
                     <label style="font-weight: 700; font-size: 0.82rem; display: block; margin-bottom: 6px;">Chọn phiên bản AI:</label>
                     <select id="cfg-gemini-model-select" class="form-control" onchange="onGeminiModelSelectChange(this.value)">
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng: Nhanh, nhẹ, tiết kiệm quota)</option>
-                        <option value="gemini-2.5-pro">Gemini 2.5 Pro (Suy luận sâu, thông minh cao, ảnh mờ/khó)</option>
-                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Bản ổn định dự phòng)</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng cho Free: Nhanh, nhẹ, ổn định)</option>
                         <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
                         <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
                         <option value="custom">-- Model tùy chỉnh khác --</option>
@@ -2509,7 +2513,7 @@
                     <input type="text" class="form-control" id="cfg-gemini-model-custom" placeholder="VD: gemini-2.5-flash-lite">
                 </div>
                 <div style="font-size: 0.78rem; color: #475569; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.4;">
-                    <i class="fas fa-lightbulb text-amber-500"></i> <b>Mẹo:</b> Nếu <code>2.5-flash</code> báo lỗi hết Quota (429), bạn có thể tạm chuyển sang <code>1.5-flash</code> hoặc <code>2.5-pro</code>, hoặc bổ sung thêm 2-3 API key trong phần Cài đặt tài khoản.
+                    <i class="fas fa-lightbulb text-amber-500"></i> <b>Mẹo:</b> Tài khoản Free nên dùng bản Flash. Nếu gặp hết Quota (429) hoặc quá tải (503), hệ thống tự chuyển sang API key Free kế tiếp và giữ nguyên model đang chọn. Có thể bổ sung thêm 2-3 API key trong phần Cài đặt tài khoản.
                 </div>
             </div>
             <div class="modal-footer">
@@ -6759,8 +6763,6 @@
         function formatGeminiModelShortLabel(model) {
             const known = {
                 'gemini-2.5-flash': '2.5 Flash',
-                'gemini-2.5-pro': '2.5 Pro',
-                'gemini-1.5-flash': '1.5 Flash',
                 'gemini-3.7-flash': '3.7 Flash',
                 'gemini-3-flash-preview': '3 Flash Preview'
             };
@@ -6768,9 +6770,16 @@
             return known[value] || value.replace(/^gemini-/i, '') || '2.5 Flash';
         }
 
+        function updateAiModelLabels(model) {
+            const label = formatGeminiModelShortLabel(model || getTimetableGeminiModel());
+            ['top-nav-ai-model-label', 'tt-toolbar-model-label', 'tt-active-model-label'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) element.textContent = label;
+            });
+        }
+
         function refreshTimetableGeminiModelLabel() {
-            const label = document.getElementById('tt-active-model-label');
-            if (label) label.textContent = formatGeminiModelShortLabel(getTimetableGeminiModel());
+            updateAiModelLabels(getTimetableGeminiModel());
         }
 
         function onGeminiModelSelectChange(val) {
@@ -6782,7 +6791,7 @@
             const model = getTimetableGeminiModel();
             const select = document.getElementById('cfg-gemini-model-select');
             const custom = document.getElementById('cfg-gemini-model-custom');
-            const known = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-3.7-flash', 'gemini-3-flash-preview'];
+            const known = ['gemini-2.5-flash', 'gemini-3.7-flash', 'gemini-3-flash-preview'];
             if (select) {
                 if (known.includes(model)) {
                     select.value = model;
@@ -6814,7 +6823,7 @@
                 if (!state.info) state.info = {};
                 state.info.gemini_model = model;
             }
-            refreshTimetableGeminiModelLabel();
+            updateAiModelLabels(model);
             closeGeminiModelModal();
             showToast('Đã lưu model AI: ' + model, 'success');
         }

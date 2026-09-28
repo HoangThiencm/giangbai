@@ -199,9 +199,18 @@ assert.match(html, /function getTimetableGeminiModel\(/, 'the timetable scan rea
     });
     vm.runInContext([declaration('getTimetableGeminiModel'), declaration('formatGeminiModelShortLabel')].join('\n'), context);
     assert.equal(vm.runInContext('getTimetableGeminiModel()', context), 'gemini-2.5-flash', 'timetable AI defaults to gemini-2.5-flash');
-    context.localStorage.setItem('phancong_gemini_model', 'gemini-2.5-pro');
-    assert.equal(vm.runInContext('getTimetableGeminiModel()', context), 'gemini-2.5-pro', 'saved phancong_gemini_model overrides the default');
-    assert.equal(vm.runInContext("formatGeminiModelShortLabel('gemini-1.5-flash')", context), '1.5 Flash', 'known Gemini models use a short button label');
+    context.localStorage.setItem('phancong_gemini_model', 'gemini-3.7-flash');
+    assert.equal(vm.runInContext('getTimetableGeminiModel()', context), 'gemini-3.7-flash', 'saved phancong_gemini_model overrides the default');
+    assert.equal(vm.runInContext("formatGeminiModelShortLabel('gemini-3.7-flash')", context), '3.7 Flash', 'Flash models use a short button label');
+}
+assert.doesNotMatch(html, /gemini-2\.5-pro|gemini-1\.5-flash/, 'the timetable model picker no longer offers Pro or 1.5 Flash');
+assert.match(html, /id="top-nav-ai-model-label"/, 'the top navbar shows the active Gemini model');
+assert.match(html, /id="tt-toolbar-model-label"/, 'the timetable toolbar shows the active Gemini model');
+assert.match(html, /function updateAiModelLabels\(/, 'saving a model updates every visible label');
+{
+    const api = fs.readFileSync(path.join(__dirname, '../api/khbd_gemini.php'), 'utf8');
+    assert.match(api, /in_array\(\$status, \[403, 429, 503\], true\)/, 'HTTP 503 rotates to the next free Gemini key');
+    assert.match(api, /high demand/, 'a high-demand message rotates to the next free Gemini key');
 }
 assert.doesNotMatch(html, /Key tiết trong "morning" BẮT BUỘC chỉ là một trong/, 'the scan prompt no longer drops periods outside the default frame');
 assert.match(html, /tuyệt đối không bỏ sót bất kỳ tiết nào có phân công dạy/, 'the scan prompt requires every printed period, including period 7');
