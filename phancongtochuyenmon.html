@@ -2021,7 +2021,7 @@
             </section>
             <section class="email-tab-pane" data-email-pane="baogiang" hidden style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
                 <h3 style="margin:0 0 8px;color:#1e3a8a;">Lịch báo giảng cá nhân từng giáo viên</h3><p style="margin:0 0 12px;color:#475569;">Chọn tuần, tích giáo viên và kiểm tra email trước khi gửi. Mỗi người chỉ nhận lịch của chính mình.</p>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;"><label class="form-group" style="margin:0;min-width:180px;"><span>Tuần cần gửi</span><input id="email-bg-send-week" class="form-control" type="week" onchange="syncBaoGiangEmailWeek(this.value)"></label><span id="email-bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span><button id="email-bg-send-teachers" type="button" class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers('email-bg-send-week')"><i class="fas fa-paper-plane"></i> Gửi lịch cho GV đã chọn</button><label class="form-group" style="margin:0;min-width:240px;"><span>Định dạng Lịch</span><select id="email-bg-ics-format" class="form-control" onchange="syncBaoGiangIcsFormat(this.value)"><option value="allday" selected>Tiết 1, 2, 3... không gán giờ</option><option value="timed">Kèm khung giờ</option></select></label><button type="button" class="btn-small" onclick="exportCurrentBaoGiangIcs()" title="Tải file lịch để nhập vào Google Calendar hoặc ứng dụng Lịch"><i class="fas fa-calendar-plus text-indigo-600"></i> Xuất Google Calendar (.ics)</button><button type="button" class="btn-small" onclick="openBaoGiangCalendarFeedModal()" title="Đăng ký lịch một lần, iPhone và Google Calendar tự cập nhật cả năm"><i class="fas fa-link text-indigo-600"></i> Lấy link đồng bộ Lịch (iPhone / Google Calendar)</button></div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;"><label class="form-group" style="margin:0;min-width:180px;"><span>Tuần cần gửi</span><input id="email-bg-send-week" class="form-control" type="week" onchange="syncBaoGiangEmailWeek(this.value)"></label><span id="email-bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span><button id="email-bg-send-teachers" type="button" class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers('email-bg-send-week')"><i class="fas fa-paper-plane"></i> Gửi lịch cho GV đã chọn</button><label class="form-group" style="margin:0;min-width:240px;"><span>Định dạng Lịch</span><select id="email-bg-ics-format" class="form-control" onchange="syncBaoGiangIcsFormat(this.value)"><option value="allday" selected>Tiết 1, 2, 3... không gán giờ</option><option value="timed">Kèm khung giờ</option></select></label><button type="button" class="btn-small" onclick="exportCurrentBaoGiangIcs()" title="Tải file lịch để nhập vào Google Calendar hoặc ứng dụng Lịch"><i class="fas fa-calendar-plus text-indigo-600"></i> Xuất Google Calendar (.ics)</button><button type="button" class="btn-small" onclick="openBaoGiangCalendarFeedModal()" title="Đăng ký lịch một lần, iPhone và Google Calendar tự cập nhật cả năm"><i class="fas fa-link text-indigo-600"></i> Đồng bộ Lịch (iPhone / Google Calendar)</button></div>
                 <p style="margin:10px 0 0;"><span style="font-size:0.8rem; color:#059669; font-weight:600;"><i class="fas fa-check-circle"></i> Tự động đính kèm sự kiện Google Calendar (.ics) trong email</span></p>
                 <div id="email-bg-recipient-list" style="margin-top:14px;"></div>
             </section>
@@ -2040,7 +2040,7 @@
                     <button type="button" class="btn-small" onclick="openBaoGiangConfigModal()"><i class="fas fa-sliders"></i> Cài đặt PPCT &amp; Lịch nghỉ</button>
                     <label class="form-group" style="margin:0;min-width:240px;"><span>Định dạng Lịch</span><select id="bg-ics-format" class="form-control" onchange="syncBaoGiangIcsFormat(this.value)"><option value="allday" selected>Tiết 1, 2, 3... không gán giờ</option><option value="timed">Kèm khung giờ</option></select></label>
                     <button type="button" class="btn-small" onclick="exportCurrentBaoGiangIcs()" title="Tải file lịch để nhập vào Google Calendar hoặc ứng dụng Lịch"><i class="fas fa-calendar-plus text-indigo-600"></i> Xuất Google Calendar (.ics)</button>
-                    <button type="button" class="btn-small" onclick="openBaoGiangCalendarFeedModal()" title="Đăng ký lịch một lần, iPhone và Google Calendar tự cập nhật cả năm"><i class="fas fa-link text-indigo-600"></i> Lấy link đồng bộ Lịch (iPhone / Google Calendar)</button>
+                    <button type="button" class="btn-small" onclick="openBaoGiangCalendarFeedModal()" title="Đăng ký lịch một lần, iPhone và Google Calendar tự cập nhật cả năm"><i class="fas fa-link text-indigo-600"></i> Đồng bộ Lịch (iPhone / Google Calendar)</button>
                     <button class="btn-small btn-small-primary" onclick="saveToDB()"><i class="fas fa-save"></i> Lưu kế hoạch</button>
                 </div>
             </div>
@@ -2761,29 +2761,20 @@
                 <button class="modal-close" type="button" onclick="closeBaoGiangCalendarFeedModal()">&times;</button>
             </div>
             <div class="modal-body" style="padding: 20px;">
-                <p id="bg-calendar-feed-status" style="margin:0 0 12px;color:#475569;">Link cá nhân dùng chuẩn Webcal. Dán một lần, lịch tiết dạy tự cập nhật cả năm.</p>
+                <p id="bg-calendar-feed-status" style="margin:0 0 12px;color:#475569;">Trên iPhone, bấm Thêm ngay để iOS hiện hộp thoại Đăng ký. Lịch tiết dạy tự cập nhật cả năm.</p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+                    <a id="bg-calendar-feed-iphone" class="btn-small btn-small-primary" href="#" style="text-decoration:none;">Thêm ngay vào Lịch iPhone</a>
+                    <a id="bg-calendar-feed-google" class="btn-small btn-small-primary" href="#" target="_blank" rel="noopener" style="text-decoration:none;">Thêm ngay vào Google Calendar</a>
+                </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     <input id="bg-calendar-feed-url" class="form-control" readonly style="flex:1;min-width:240px;" value="">
-                    <button type="button" class="btn-small btn-small-primary" onclick="copyBaoGiangCalendarFeedLink()"><i class="fas fa-copy"></i> Sao chép link</button>
+                    <button type="button" class="btn-small" onclick="copyBaoGiangCalendarFeedLink()"><i class="fas fa-copy"></i> Sao chép link</button>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:16px;">
-                    <section style="padding:12px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
-                        <h3 style="margin:0 0 8px;color:#1e3a8a;font-size:1rem;">iPhone</h3>
-                        <ol style="margin:0;padding-left:18px;color:#334155;line-height:1.55;">
-                            <li>Sao chép link.</li>
-                            <li>Cài đặt → Lịch → Tài khoản → Thêm tài khoản → Khác → Thêm lịch đã đăng ký.</li>
-                            <li>Dán link và bấm Tiếp. Các tiết hiện thành thẻ cả ngày, số tiết ở đầu tiêu đề.</li>
-                        </ol>
-                    </section>
-                    <section style="padding:12px;border:1px solid #bbf7d0;border-radius:10px;background:#f0fdf4;">
-                        <h3 style="margin:0 0 8px;color:#166534;font-size:1rem;">Google Calendar</h3>
-                        <ol style="margin:0;padding-left:18px;color:#334155;line-height:1.55;">
-                            <li>Sao chép link. Nếu link bắt đầu bằng webcal://, đổi thành https:// khi Google yêu cầu.</li>
-                            <li>Google Calendar → Lịch khác → Từ URL → dán link.</li>
-                            <li>Bấm Thêm lịch. Google quét lại link theo chu kỳ của Google.</li>
-                        </ol>
-                    </section>
-                </div>
+                <section style="margin-top:16px;padding:12px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
+                    <h3 style="margin:0 0 8px;color:#1e3a8a;font-size:1rem;">iPhone 16 Pro (iOS 18)</h3>
+                    <p style="margin:0 0 8px;color:#334155;"><b>Cách A — trong app Lịch:</b> Mở app Lịch → bấm chữ Lịch dưới cùng → Thêm lịch góc trái dưới → Thêm lịch đăng ký...</p>
+                    <p style="margin:0;color:#334155;"><b>Cách B — trong Cài đặt:</b> Cài đặt → Ứng dụng → Lịch → Tài khoản Lịch → Thêm tài khoản → Khác → Thêm lịch đã đăng ký. Dán link ở ô trên.</p>
+                </section>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-small" onclick="closeBaoGiangCalendarFeedModal()">Đóng</button>
@@ -3607,17 +3598,24 @@
             if (modal) modal.classList.add('active');
             const status = document.getElementById('bg-calendar-feed-status');
             const input = document.getElementById('bg-calendar-feed-url');
+            const iphone = document.getElementById('bg-calendar-feed-iphone');
+            const google = document.getElementById('bg-calendar-feed-google');
             if (input) input.value = '';
+            if (iphone) iphone.setAttribute('href', '#');
+            if (google) google.setAttribute('href', '#');
             try {
                 const { teacher } = baoGiangExportTeacherAndRange();
                 if (!teacher) throw new Error('Chưa có giáo viên để tạo link đồng bộ.');
                 if (status) status.textContent = `Đang tạo link cho ${teacher.name}…`;
-                const response = await fetch(`api/calendar_feed.php?action=link&teacher_id=${encodeURIComponent(teacher.id)}`, { credentials: 'include' });
+                const allDay = baoGiangIcsAllDay() ? '1' : '0';
+                const response = await fetch(`api/calendar_feed.php?action=link&teacher_id=${encodeURIComponent(teacher.id)}&all_day=${allDay}`, { credentials: 'include' });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.ok) throw new Error(data.error || 'Không tạo được link đồng bộ lịch.');
                 const link = data.webcal_url || data.https_url || '';
                 if (input) input.value = link;
-                if (status) status.textContent = `Link của ${teacher.name}. Dán một lần vào iPhone hoặc Google Calendar; lịch tiết dạy tự cập nhật cả năm.`;
+                if (iphone && link) iphone.setAttribute('href', link);
+                if (google && link) google.setAttribute('href', 'https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(link));
+                if (status) status.textContent = `Link của ${teacher.name}. Trên iPhone bấm Thêm ngay để iOS hiện hộp thoại Đăng ký.`;
             } catch (error) {
                 if (status) status.textContent = error.message || 'Không tạo được link đồng bộ lịch.';
             }

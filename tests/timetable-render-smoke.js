@@ -283,7 +283,14 @@ assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail
     assert.match(feed, /hash_equals\(\$expected, \$token\)/, 'calendar feed từ chối token sai');
     assert.match(feed, /DTSTART;VALUE=DATE:/, 'calendar feed mặc định là sự kiện cả ngày');
     assert.match(feed, /\[Tiết /, 'calendar feed đưa số tiết lên đầu tiêu đề');
-    assert.match(html, /Lấy link đồng bộ Lịch \(iPhone \/ Google Calendar\)/, 'tab lịch có nút lấy link Webcal');
+    assert.match(html, /Đồng bộ Lịch \(iPhone \/ Google Calendar\)/, 'tab lịch có nút đồng bộ Webcal');
+    assert.match(html, /id="bg-calendar-feed-iphone"/, 'modal có nút 1 chạm vào Lịch iPhone');
+    assert.match(html, /Thêm ngay vào Lịch iPhone/, 'nút iPhone dùng webcal một chạm');
+    assert.match(html, /Thêm ngay vào Google Calendar/, 'nút Google Calendar một chạm');
+    assert.match(html, /calendar\.google\.com\/calendar\/r\?cid=/, 'link Google dùng cid webcal');
+    assert.match(html, /iPhone 16 Pro \(iOS 18\)/, 'hướng dẫn nêu iOS 18');
+    assert.match(html, /Thêm lịch đăng ký/, 'hướng dẫn cách A trong app Lịch');
+    assert.match(html, /Cài đặt → Ứng dụng → Lịch/, 'hướng dẫn cách B trong Cài đặt iOS 18');
     assert.match(html, /id="bg-ics-format"/, 'tab lịch có hộp chọn định dạng');
     assert.match(html, /Tiết 1, 2, 3\.\.\. không gán giờ/, 'mặc định không gán khung giờ giả định');
     assert.match(html, /api\/calendar_feed\.php\?action=link/, 'nút link gọi endpoint Webcal');
