@@ -2021,7 +2021,7 @@
             </section>
             <section class="email-tab-pane" data-email-pane="baogiang" hidden style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
                 <h3 style="margin:0 0 8px;color:#1e3a8a;">Lịch báo giảng cá nhân từng giáo viên</h3><p style="margin:0 0 12px;color:#475569;">Chọn tuần, tích giáo viên và kiểm tra email trước khi gửi. Mỗi người chỉ nhận lịch của chính mình.</p>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;"><label class="form-group" style="margin:0;min-width:180px;"><span>Tuần cần gửi</span><input id="email-bg-send-week" class="form-control" type="week" onchange="syncBaoGiangEmailWeek(this.value)"></label><span id="email-bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span><button id="email-bg-send-teachers" type="button" class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers('email-bg-send-week')"><i class="fas fa-paper-plane"></i> Gửi lịch cho GV đã chọn</button><button type="button" class="btn-small" onclick="exportCurrentBaoGiangIcs()" title="Tải file lịch để nhập vào Google Calendar hoặc ứng dụng Lịch"><i class="fas fa-calendar-plus text-indigo-600"></i> Xuất Google Calendar (.ics)</button></div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;"><label class="form-group" style="margin:0;min-width:180px;"><span>Tuần cần gửi</span><input id="email-bg-send-week" class="form-control" type="week" onchange="syncBaoGiangEmailWeek(this.value)"></label><span id="email-bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span><button id="email-bg-send-teachers" type="button" class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers('email-bg-send-week')"><i class="fas fa-paper-plane"></i> Gửi lịch cho GV đã chọn</button><label class="form-group" style="margin:0;min-width:240px;"><span>Định dạng Lịch</span><select id="email-bg-ics-format" class="form-control" onchange="syncBaoGiangIcsFormat(this.value)"><option value="allday" selected>Tiết 1, 2, 3... không gán giờ</option><option value="timed">Kèm khung giờ</option></select></label><button type="button" class="btn-small" onclick="exportCurrentBaoGiangIcs()" title="Tải file lịch để nhập vào Google Calendar hoặc ứng dụng Lịch"><i class="fas fa-calendar-plus text-indigo-600"></i> Xuất Google Calendar (.ics)</button><button type="button" class="btn-small" onclick="openBaoGiangCalendarFeedModal()" title="Đăng ký lịch một lần, iPhone và Google Calendar tự cập nhật cả năm"><i class="fas fa-link text-indigo-600"></i> Lấy link đồng bộ Lịch (iPhone / Google Calendar)</button></div>
                 <p style="margin:10px 0 0;"><span style="font-size:0.8rem; color:#059669; font-weight:600;"><i class="fas fa-check-circle"></i> Tự động đính kèm sự kiện Google Calendar (.ics) trong email</span></p>
                 <div id="email-bg-recipient-list" style="margin-top:14px;"></div>
             </section>
@@ -2038,7 +2038,9 @@
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <button type="button" class="btn-small" onclick="openBaoGiangConfigModal()"><i class="fas fa-sliders"></i> Cài đặt PPCT &amp; Lịch nghỉ</button>
+                    <label class="form-group" style="margin:0;min-width:240px;"><span>Định dạng Lịch</span><select id="bg-ics-format" class="form-control" onchange="syncBaoGiangIcsFormat(this.value)"><option value="allday" selected>Tiết 1, 2, 3... không gán giờ</option><option value="timed">Kèm khung giờ</option></select></label>
                     <button type="button" class="btn-small" onclick="exportCurrentBaoGiangIcs()" title="Tải file lịch để nhập vào Google Calendar hoặc ứng dụng Lịch"><i class="fas fa-calendar-plus text-indigo-600"></i> Xuất Google Calendar (.ics)</button>
+                    <button type="button" class="btn-small" onclick="openBaoGiangCalendarFeedModal()" title="Đăng ký lịch một lần, iPhone và Google Calendar tự cập nhật cả năm"><i class="fas fa-link text-indigo-600"></i> Lấy link đồng bộ Lịch (iPhone / Google Calendar)</button>
                     <button class="btn-small btn-small-primary" onclick="saveToDB()"><i class="fas fa-save"></i> Lưu kế hoạch</button>
                 </div>
             </div>
@@ -2752,6 +2754,43 @@
     </div>
 
     <!-- MODAL CÀI ĐẶT PPCT & LỊCH NGHỈ (LỊCH BÁO GIẢNG) -->
+    <div class="modal-overlay" id="baogiang-calendar-feed-modal">
+        <div class="modal-card" style="max-width: 720px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-calendar-plus"></i> Đồng bộ Lịch iPhone / Google Calendar</h2>
+                <button class="modal-close" type="button" onclick="closeBaoGiangCalendarFeedModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p id="bg-calendar-feed-status" style="margin:0 0 12px;color:#475569;">Link cá nhân dùng chuẩn Webcal. Dán một lần, lịch tiết dạy tự cập nhật cả năm.</p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <input id="bg-calendar-feed-url" class="form-control" readonly style="flex:1;min-width:240px;" value="">
+                    <button type="button" class="btn-small btn-small-primary" onclick="copyBaoGiangCalendarFeedLink()"><i class="fas fa-copy"></i> Sao chép link</button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:16px;">
+                    <section style="padding:12px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
+                        <h3 style="margin:0 0 8px;color:#1e3a8a;font-size:1rem;">iPhone</h3>
+                        <ol style="margin:0;padding-left:18px;color:#334155;line-height:1.55;">
+                            <li>Sao chép link.</li>
+                            <li>Cài đặt → Lịch → Tài khoản → Thêm tài khoản → Khác → Thêm lịch đã đăng ký.</li>
+                            <li>Dán link và bấm Tiếp. Các tiết hiện thành thẻ cả ngày, số tiết ở đầu tiêu đề.</li>
+                        </ol>
+                    </section>
+                    <section style="padding:12px;border:1px solid #bbf7d0;border-radius:10px;background:#f0fdf4;">
+                        <h3 style="margin:0 0 8px;color:#166534;font-size:1rem;">Google Calendar</h3>
+                        <ol style="margin:0;padding-left:18px;color:#334155;line-height:1.55;">
+                            <li>Sao chép link. Nếu link bắt đầu bằng webcal://, đổi thành https:// khi Google yêu cầu.</li>
+                            <li>Google Calendar → Lịch khác → Từ URL → dán link.</li>
+                            <li>Bấm Thêm lịch. Google quét lại link theo chu kỳ của Google.</li>
+                        </ol>
+                    </section>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-small" onclick="closeBaoGiangCalendarFeedModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="baogiang-config-modal">
         <div class="modal-card" style="max-width: 900px;">
             <div class="modal-header">
@@ -3436,7 +3475,7 @@
             }
         };
 
-        function buildTeacherBaoGiangIcs(teacher, range, ordered) {
+        function buildTeacherBaoGiangIcs(teacher, range, ordered, allDay) {
             const sessionOrder = { morning: 0, afternoon: 1, makeup: 2 };
             const rows = Array.isArray(ordered) ? ordered : (() => {
                 const endDate = baoGiangDate(range.end);
@@ -3461,17 +3500,25 @@
             const pad = number => String(number).padStart(2, '0');
             const dtStamp = `${stampDate.getUTCFullYear()}${pad(stampDate.getUTCMonth() + 1)}${pad(stampDate.getUTCDate())}T${pad(stampDate.getUTCHours())}${pad(stampDate.getUTCMinutes())}${pad(stampDate.getUTCSeconds())}Z`;
             const localStamp = (isoDate, clock) => `${String(isoDate).replace(/-/g, '')}T${String(clock).replace(':', '')}00`;
+            const useAllDay = arguments.length < 4 || allDay !== false;
+            const dateStamp = iso => String(iso).replace(/-/g, '');
+            const nextDateStamp = iso => {
+                const parts = String(iso).split('-').map(Number);
+                const dt = new Date(Date.UTC(parts[0], (parts[1] || 1) - 1, parts[2] || 1));
+                dt.setUTCDate(dt.getUTCDate() + 1);
+                return `${dt.getUTCFullYear()}${pad(dt.getUTCMonth() + 1)}${pad(dt.getUTCDate())}`;
+            };
             const usedUids = new Set();
             const events = rows.map(row => {
                 const period = Number(row.period);
                 const sessionTable = row.session === 'morning' ? BAOGIANG_PERIOD_TIMES.morning : BAOGIANG_PERIOD_TIMES.afternoon;
                 const slot = sessionTable[period] || BAOGIANG_PERIOD_TIMES.afternoon[period] || BAOGIANG_PERIOD_TIMES.morning[period];
-                if (!slot || !row.date) return '';
+                if (!row.date || (!useAllDay && !slot)) return '';
                 const lessonTitle = row.lesson ? (row.lesson.name || row.lesson.lesson || '') : '';
                 let uid = `baogiang-${teacher.id}-${row.date}-${row.period}-${row.session}@giangbai`;
                 if (usedUids.has(uid)) uid = `baogiang-${teacher.id}-${row.date}-${row.period}-${row.session}-${row.class_name}@giangbai`;
                 usedUids.add(uid);
-                const summary = `${row.subject || ''} ${row.class_name || ''} (Tiết ${row.period})${lessonTitle ? ' - ' + lessonTitle : ''}`;
+                const summary = `[Tiết ${row.period}] ${row.subject || ''} ${row.class_name || ''}${lessonTitle ? ' - ' + lessonTitle : ''}`;
                 const description = [
                     `Môn: ${row.subject || ''}`,
                     `Lớp: ${row.class_name || ''}`,
@@ -3484,8 +3531,9 @@
                     'BEGIN:VEVENT',
                     `UID:${icsEscape(uid)}`,
                     `DTSTAMP:${dtStamp}`,
-                    `DTSTART;TZID=Asia/Ho_Chi_Minh:${localStamp(row.date, slot[0])}`,
-                    `DTEND;TZID=Asia/Ho_Chi_Minh:${localStamp(row.date, slot[1])}`,
+                    ...(useAllDay
+                        ? [`DTSTART;VALUE=DATE:${dateStamp(row.date)}`, `DTEND;VALUE=DATE:${nextDateStamp(row.date)}`]
+                        : [`DTSTART;TZID=Asia/Ho_Chi_Minh:${localStamp(row.date, slot[0])}`, `DTEND;TZID=Asia/Ho_Chi_Minh:${localStamp(row.date, slot[1])}`]),
                     `SUMMARY:${icsEscape(summary)}`,
                     `LOCATION:${icsEscape(`Lớp ${row.class_name || ''}`)}`,
                     `DESCRIPTION:${icsEscape(description)}`,
@@ -3497,7 +3545,7 @@
                     'END:VEVENT'
                 ].map(foldIcsLine).join('\r\n');
             }).filter(Boolean);
-            if (!events.length) throw new Error(`Không có tiết dạy có giờ của ${teacher?.name || 'giáo viên'} trong tuần đã chọn.`);
+            if (!events.length) throw new Error(`Không có tiết dạy của ${teacher?.name || 'giáo viên'} trong tuần đã chọn.`);
             return [
                 'BEGIN:VCALENDAR',
                 'VERSION:2.0',
@@ -3519,6 +3567,75 @@
             ].join('\r\n');
         }
 
+        function syncBaoGiangIcsFormat(value) {
+            ['bg-ics-format', 'email-bg-ics-format'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.value !== value) el.value = value;
+            });
+        }
+
+        function baoGiangIcsAllDay() {
+            const selected = document.getElementById('bg-ics-format')?.value || document.getElementById('email-bg-ics-format')?.value || 'allday';
+            return selected !== 'timed';
+        }
+
+        function baoGiangExportTeacherAndRange() {
+            const teachers = typeof getBaoGiangTeacherList === 'function' ? getBaoGiangTeacherList() : (state.teachers || []);
+            const emailActive = document.getElementById('view-email')?.classList.contains('active');
+            let teacher = null;
+            let range = null;
+            if (emailActive) {
+                range = baoGiangWeekRange(document.getElementById('email-bg-send-week')?.value);
+                const ids = new Set((state.bao_giang?.recipient_ids || []).map(String));
+                teacher = (state.teachers || []).find(item => ids.has(String(item.id))) || teachers[0];
+            } else {
+                const selectedId = document.getElementById('bg-filter-teacher')?.value || '';
+                teacher = teachers.find(item => String(item.id) === String(selectedId)) || teachers[0];
+                const month = document.getElementById('bg-filter-month')?.value || '';
+                const anchor = document.getElementById('bg-view-date')?.value || (month ? `${month}-01` : baoGiangIso(new Date()));
+                range = baoGiangWeekRange(baoGiangWeekValueFromDate(anchor));
+            }
+            return { teacher, range };
+        }
+
+        function closeBaoGiangCalendarFeedModal() {
+            document.getElementById('baogiang-calendar-feed-modal')?.classList.remove('active');
+        }
+
+        async function openBaoGiangCalendarFeedModal() {
+            const modal = document.getElementById('baogiang-calendar-feed-modal');
+            if (modal) modal.classList.add('active');
+            const status = document.getElementById('bg-calendar-feed-status');
+            const input = document.getElementById('bg-calendar-feed-url');
+            if (input) input.value = '';
+            try {
+                const { teacher } = baoGiangExportTeacherAndRange();
+                if (!teacher) throw new Error('Chưa có giáo viên để tạo link đồng bộ.');
+                if (status) status.textContent = `Đang tạo link cho ${teacher.name}…`;
+                const response = await fetch(`api/calendar_feed.php?action=link&teacher_id=${encodeURIComponent(teacher.id)}`, { credentials: 'include' });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.ok) throw new Error(data.error || 'Không tạo được link đồng bộ lịch.');
+                const link = data.webcal_url || data.https_url || '';
+                if (input) input.value = link;
+                if (status) status.textContent = `Link của ${teacher.name}. Dán một lần vào iPhone hoặc Google Calendar; lịch tiết dạy tự cập nhật cả năm.`;
+            } catch (error) {
+                if (status) status.textContent = error.message || 'Không tạo được link đồng bộ lịch.';
+            }
+        }
+
+        async function copyBaoGiangCalendarFeedLink() {
+            const value = document.getElementById('bg-calendar-feed-url')?.value || '';
+            if (!value) return showToast('Chưa có link để sao chép.', 'error');
+            try {
+                await navigator.clipboard.writeText(value);
+                showToast('Đã sao chép link đồng bộ lịch.', 'success');
+            } catch (error) {
+                const input = document.getElementById('bg-calendar-feed-url');
+                if (input) { input.focus(); input.select(); }
+                showToast('Hãy sao chép link trong ô.', 'warning');
+            }
+        }
+
         function downloadIcsFile(filename, icsContent) {
             const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
             const url = URL.createObjectURL(blob);
@@ -3533,24 +3650,12 @@
 
         function exportCurrentBaoGiangIcs() {
             try {
-                const teachers = typeof getBaoGiangTeacherList === 'function' ? getBaoGiangTeacherList() : (state.teachers || []);
-                const emailActive = document.getElementById('view-email')?.classList.contains('active');
-                let teacher = null;
-                let range = null;
-                if (emailActive) {
-                    range = baoGiangWeekRange(document.getElementById('email-bg-send-week')?.value);
-                    const ids = new Set((state.bao_giang?.recipient_ids || []).map(String));
-                    teacher = (state.teachers || []).find(item => ids.has(String(item.id))) || teachers[0];
-                } else {
-                    const selectedId = document.getElementById('bg-filter-teacher')?.value || '';
-                    teacher = teachers.find(item => String(item.id) === String(selectedId)) || teachers[0];
-                    const month = document.getElementById('bg-filter-month')?.value || '';
-                    const anchor = document.getElementById('bg-view-date')?.value || (month ? `${month}-01` : baoGiangIso(new Date()));
-                    range = baoGiangWeekRange(baoGiangWeekValueFromDate(anchor));
-                }
+                const picked = baoGiangExportTeacherAndRange();
+                const teacher = picked.teacher;
+                const range = picked.range;
                 if (!teacher) throw new Error('Chưa có giáo viên để xuất lịch.');
                 if (!range) throw new Error('Không xác định được tuần cần xuất.');
-                const ics = buildTeacherBaoGiangIcs(teacher, range);
+                const ics = buildTeacherBaoGiangIcs(teacher, range, undefined, baoGiangIcsAllDay());
                 const safeName = String(teacher.name || 'giao-vien').replace(/[\\/:*?"<>|]+/g, ' ').trim();
                 downloadIcsFile(`LichBaoGiang_${safeName}_${range.start}.ics`, ics);
                 showToast(`Đã tải lịch Google Calendar của ${teacher.name}.`, 'success');
@@ -3567,7 +3672,7 @@
             const sessionOrder = { morning: 0, afternoon: 1, makeup: 2 };
             const ordered = rows.slice().sort((a, b) => a.date.localeCompare(b.date) || (sessionOrder[a.session] ?? 9) - (sessionOrder[b.session] ?? 9) || Number(a.period) - Number(b.period));
             const bodyRows = ordered.map(row => `${baoGiangWeekdayLabel(row.date)}, ${formatVnDate(row.date)} | ${row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period}`} | Lớp ${row.class_name} | ${row.subject} | ${row.lesson ? formatBaoGiangLessonDisplay(row) : 'Chưa khai báo PPCT'} | PPCT ${row.lesson?.ppct || '—'}`).join('\n');
-            return { to: teacher.email.trim(), subject: `Lịch báo giảng - ${teacher.name} (${range.start} đến ${range.end})`, body: `Kính gửi thầy/cô ${teacher.name},\n\nLỊCH BÁO GIẢNG TUẦN ${range.start} – ${range.end}\n\n${bodyRows}\n\nTrân trọng.`, html: buildTeacherBaoGiangWeekHtml(teacher, range, ordered), ics: buildTeacherBaoGiangIcs(teacher, range, ordered) };
+            return { to: teacher.email.trim(), subject: `Lịch báo giảng - ${teacher.name} (${range.start} đến ${range.end})`, body: `Kính gửi thầy/cô ${teacher.name},\n\nLỊCH BÁO GIẢNG TUẦN ${range.start} – ${range.end}\n\n${bodyRows}\n\nTrân trọng.`, html: buildTeacherBaoGiangWeekHtml(teacher, range, ordered), ics: buildTeacherBaoGiangIcs(teacher, range, ordered, baoGiangIcsAllDay()) };
         }
 
         async function sendBaoGiangSelectedWeekToTeachers(weekInputId = 'bg-send-week') {

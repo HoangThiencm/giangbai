@@ -276,4 +276,34 @@ assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\
 
 assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail\(\)"/, 'individual timetable sending is not duplicated outside the centralized email flow');
 
+{
+    const feed = fs.readFileSync(path.join(__dirname, '../api/calendar_feed.php'), 'utf8');
+    assert.match(feed, /text\/calendar; charset=utf-8/, 'calendar feed trả chuẩn iCalendar');
+    assert.match(feed, /function calendar_feed_token/, 'calendar feed ký token theo giáo viên');
+    assert.match(feed, /hash_equals\(\$expected, \$token\)/, 'calendar feed từ chối token sai');
+    assert.match(feed, /DTSTART;VALUE=DATE:/, 'calendar feed mặc định là sự kiện cả ngày');
+    assert.match(feed, /\[Tiết /, 'calendar feed đưa số tiết lên đầu tiêu đề');
+    assert.match(html, /Lấy link đồng bộ Lịch \(iPhone \/ Google Calendar\)/, 'tab lịch có nút lấy link Webcal');
+    assert.match(html, /id="bg-ics-format"/, 'tab lịch có hộp chọn định dạng');
+    assert.match(html, /Tiết 1, 2, 3\.\.\. không gán giờ/, 'mặc định không gán khung giờ giả định');
+    assert.match(html, /api\/calendar_feed\.php\?action=link/, 'nút link gọi endpoint Webcal');
+    const start = html.indexOf('const BAOGIANG_PERIOD_TIMES');
+    const end = html.indexOf('function syncBaoGiangIcsFormat');
+    assert(start >= 0 && end > start, 'khối tạo .ics phải tách được');
+    const context = vm.createContext({ formatBaoGiangLessonDisplay: row => row.lesson?.lesson || '' });
+    vm.runInContext(html.slice(start, end), context);
+    const allDay = vm.runInContext(`buildTeacherBaoGiangIcs({ id: 'gv1', name: 'Cô An' }, { start: '2026-09-28', end: '2026-10-04' }, [
+        { date: '2026-09-28', session: 'morning', period: 1, subject: 'Toán', class_name: '63', lesson: { name: 'Số tự nhiên' } }
+    ])`, context);
+    assert.match(allDay, /SUMMARY:\[Tiết 1\] Toán 63 - Số tự nhiên/);
+    assert.match(allDay, /DTSTART;VALUE=DATE:20260928/);
+    assert.match(allDay, /DTEND;VALUE=DATE:20260929/);
+    assert.doesNotMatch(allDay, /T071500/);
+    const timed = vm.runInContext(`buildTeacherBaoGiangIcs({ id: 'gv1', name: 'Cô An' }, { start: '2026-09-28', end: '2026-10-04' }, [
+        { date: '2026-09-28', session: 'morning', period: 1, subject: 'Toán', class_name: '63', lesson: { name: 'Số tự nhiên' } }
+    ], false)`, context);
+    assert.match(timed, /DTSTART;TZID=Asia\/Ho_Chi_Minh:20260928T071500/);
+    assert.match(timed, /SUMMARY:\[Tiết 1\] Toán 63 - Số tự nhiên/);
+}
+
 console.log('PASS: timetable view loads numeric IDs and JSON data, uses a compact responsive layout, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');

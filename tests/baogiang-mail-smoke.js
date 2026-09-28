@@ -34,7 +34,7 @@ assert.match(html, /TZID:Asia\/Ho_Chi_Minh/, 'lịch phải dùng múi giờ Asi
 assert.match(html, /TRIGGER:-PT15M/, 'mỗi tiết phải nhắc trước 15 phút');
 assert.match(html, /Xuất Google Calendar \(\.ics\)/, 'giao diện phải có nút xuất Google Calendar');
 assert.match(html, /Tự động đính kèm sự kiện Google Calendar \(\.ics\) trong email/, 'tab gửi email phải nói rõ lịch được đính kèm');
-assert.match(html, /ics: buildTeacherBaoGiangIcs\(teacher, range, ordered\)/, 'email lịch báo giảng phải kèm chuỗi ics');
+assert.match(html, /ics: buildTeacherBaoGiangIcs\(teacher, range, ordered, baoGiangIcsAllDay\(\)\)/, 'email lịch báo giảng phải kèm chuỗi ics theo định dạng đang chọn');
 
 {
     const vm = require('node:vm');
@@ -47,7 +47,7 @@ assert.match(html, /ics: buildTeacherBaoGiangIcs\(teacher, range, ordered\)/, 'e
         { date: '2026-09-28', session: 'morning', period: 1, subject: 'Toán', class_name: '6A1', lesson: { name: 'Số tự nhiên', ppct: '12' } },
         { date: '2026-09-29', session: 'afternoon', period: 8, subject: 'Toán', class_name: '7A1', lesson: { lesson: 'Phân số', ppct: '20' } },
         { date: '2026-09-30', session: 'afternoon', period: 10, subject: 'Toán', class_name: '8A1', lesson: { ppct: '30' } }
-    ])`, context);
+    ], false)`, context);
     assert.match(ics, /BEGIN:VCALENDAR/);
     assert.match(ics, /METHOD:REQUEST/);
     assert.match(ics, /TZID:Asia\/Ho_Chi_Minh/);
@@ -57,8 +57,8 @@ assert.match(html, /ics: buildTeacherBaoGiangIcs\(teacher, range, ordered\)/, 'e
     assert.match(ics, /DTEND;TZID=Asia\/Ho_Chi_Minh:20260929T160500/);
     assert.match(ics, /DTSTART;TZID=Asia\/Ho_Chi_Minh:20260930T170000/);
     assert.match(ics, /DTEND;TZID=Asia\/Ho_Chi_Minh:20260930T174500/);
-    assert.match(ics, /SUMMARY:Toán 6A1 \(Tiết 1\) - Số tự nhiên/);
-    assert.match(ics, /SUMMARY:Toán 7A1 \(Tiết 8\) - Phân số/);
+    assert.match(ics, /SUMMARY:\[Tiết 1\] Toán 6A1 - Số tự nhiên/);
+    assert.match(ics, /SUMMARY:\[Tiết 8\] Toán 7A1 - Phân số/);
     assert.match(ics, /UID:baogiang-gv1-2026-09-28-1-morning@giangbai/);
     assert.match(ics, /LOCATION:Lớp 6A1/);
     assert.match(ics, /TRIGGER:-PT15M/);
