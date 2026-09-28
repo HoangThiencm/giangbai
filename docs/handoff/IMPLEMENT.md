@@ -1,14 +1,19 @@
-# IMPLEMENT: Sửa trang Quản lý văn bản trống và chặn admin
+# IMPLEMENT: Trang Quản lý văn bản không hiện dữ liệu
 
 ## Đã làm
-- `api/vanban.php`: `vbd_current_user` vẫn từ chối khi chưa đăng nhập hoặc tài khoản không hoạt động. Vai trò được phép là `teacher`, `admin`, `superadmin`. Thông báo 403: «Chức năng quản lý văn bản chỉ dành cho giáo viên hoặc quản trị viên.»
-- `vanban-hub.js`: `boot()` gọi `renderSummary()` rồi `renderSectors()` trước `load()`, nên 4 thẻ thống kê (số 0) và hai thẻ Hành chính / Đảng hiện ngay khi DOM sẵn sàng, kể cả khi `fetch` chưa xong.
-- `quanlyvanban.html` tải `vanban-hub.js?v=20260928-fix-hub-render`. File hub local dài 9664 bytes (không rỗng).
+- `api/vanban.php`: `vbd_current_user` cho phép `teacher`, `admin`, `superadmin`. Tài khoản chưa đăng nhập hoặc không hoạt động vẫn bị từ chối. Thông báo 403: «Chức năng quản lý văn bản chỉ dành cho giáo viên hoặc quản trị viên.»
+- `quanlyvanban.html` tải `vanban-hub.js?v=20260928-hub-fix`.
+- `quanlyvanban-hanhchinh.html` và `quanlyvanban-dang.html` tải `vanban-app.js?v=20260928-app-fix`.
+- `vanban-hub.js`: `boot()` vẫn gọi `renderSummary()` rồi `renderSectors()` trước `load()`. Cuối file có `/* deploy-touch: 20260928-hub-fix */`. File local 9702 bytes.
+- `vanban-app.js`: khi đang tải và chưa có dữ liệu, `#documentList` hiện dòng chờ. `fetch` lỗi mạng thành câu «Mất kết nối mạng. Không tải được danh sách văn bản, tệp đính kèm và nội dung báo cáo.» (toast và khung đỏ trong danh sách). Bấm trích yếu vẫn mở tóm tắt, hạn/ghi chú báo cáo và tệp đính kèm. Cuối file có `/* deploy-touch: 20260928-app-fix */`. File local 83500 bytes.
 
 ## Kiểm thử
-- Script Node tạm: DOM giả, `fetch` không bao giờ trả về. Sau khi chạy IIFE: `#summary` có 4 thẻ, `#sectorCards` có «Hành chính» và «Đảng» cùng link `quanlyvanban-hanhchinh.html` / `quanlyvanban-dang.html`. PASS.
-- Máy này không có `php` trên PATH nên chưa chạy `php -l`.
-- Không có trình duyệt trong phiên này. Chưa mở `hoangthiencm.id.vn/quanlyvanban.html` và chưa gọi API bằng tài khoản admin/giáo viên. File trên hosting chỉ đầy đủ sau khi FTP Deploy chạy từ commit đã push.
+- `node --check vanban-hub.js` và `node --check vanban-app.js`: PASS.
+- Script Node tạm: `fetch` từ chối thì danh sách hiện câu mất kết nối. `fetch` trả một văn bản mẫu thì bảng có «Công văn kiểm tra»; mở chi tiết có «Nộp báo cáo trước hạn», «Đã nộp bản giấy» và `congvan.pdf`. PASS.
+- Máy này không có `php` trên PATH. Không có trình duyệt, chưa mở ba trang trên `hoangthiencm.id.vn`.
+
+## Chưa đẩy hosting
+Chưa commit và chưa push. `docs/handoff/VERIFY.md` đang PASS của kế hoạch Gemini cũ, chưa nghiệm thu module văn bản. File 0 byte trên hosting chỉ được FTP Deploy thay sau khi push lên `main`.
 
 ## Ngoài phạm vi
-Không đổi schema, Google Drive, hay trang ngoài module quản lý văn bản.
+Không đổi bảng MySQL và không đụng tệp Google Drive.

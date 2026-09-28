@@ -140,13 +140,22 @@
         window.vbdToast = setTimeout(() => box.classList.add('hidden'), 4200);
     }
 
+    const NETWORK_ERROR = 'Mất kết nối mạng. Không tải được danh sách văn bản, tệp đính kèm và nội dung báo cáo.';
+
     async function api(action, options = {}) {
         const driveQuery = action === 'list' ? '&with_drive=1' : '';
-        const response = await fetch(`${API}?action=${encodeURIComponent(action)}&sector=${encodeURIComponent(SECTOR)}${driveQuery}`, {
-            credentials: 'include',
-            cache: 'no-store',
-            ...options,
-        });
+        let response;
+        try {
+            response = await fetch(`${API}?action=${encodeURIComponent(action)}&sector=${encodeURIComponent(SECTOR)}${driveQuery}`, {
+                credentials: 'include',
+                cache: 'no-store',
+                ...options,
+            });
+        } catch (error) {
+            const raw = String(error && error.message || '');
+            const lost = !error || error.name === 'TypeError' || /failed to fetch|network|load failed|offline/i.test(raw);
+            throw new Error(lost ? NETWORK_ERROR : (raw || NETWORK_ERROR));
+        }
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || 'Không thể xử lý yêu cầu.');
         return data;
@@ -802,7 +811,15 @@
         }
     }
 
+    function showListMessage(html) {
+        const host = $('documentList');
+        if (host) host.innerHTML = html;
+    }
+
     async function load() {
+        if (!state.documents.length) {
+            showListMessage('<div class="p-10 text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin mb-3 text-3xl"></i><p>Đang tải danh sách văn bản, tệp đính kèm và nội dung báo cáo...</p></div>');
+        }
         try {
             const data = await api('list');
             state.documents = data.documents || [];
@@ -813,7 +830,11 @@
             render();
             checkDriveRemote();
         } catch (error) {
-            toast(error.message, 'rose');
+            const message = error && error.message ? error.message : NETWORK_ERROR;
+            toast(message, 'rose');
+            if (!state.documents.length) {
+                showListMessage(`<div class="m-4 rounded-lg border border-rose-200 bg-rose-50 p-6 text-center text-rose-800"><i class="fa-solid fa-wifi mb-3 text-3xl"></i><p class="font-bold">${esc(message)}</p></div>`);
+            }
         }
     }
 
@@ -1578,3 +1599,4 @@
         init();
     }
 })();
+/* deploy-touch: 20260928-app-fix */

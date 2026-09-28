@@ -1,43 +1,46 @@
-# PLAN: Sửa lỗi trang Quản lý văn bản (quanlyvanban.html) không hiển thị nội dung
+# PLAN: Sửa lỗi trang Quản lý văn bản (quanlyvanban.html, quanlyvanban-hanhchinh.html, quanlyvanban-dang.html) không hiển thị dữ liệu
 
-## Hiện trạng & Nguyên nhân gốc rễ
-1. **File `vanban-hub.js` trên hosting bị rỗng (0 bytes)**:
-   - Qua kiểm tra trực tiếp trên server production (`https://hoangthiencm.id.vn/vanban-hub.js`), file trả về mã 200 nhưng dung lượng đúng 0 bytes (`Content-Length: 0`).
-   - Do đó, trình duyệt tải `quanlyvanban.html` nhưng file script điều khiển chính `vanban-hub.js` không chạy, khiến khu vực thống kê `#summary` và thẻ lĩnh vực `#sectorCards` ("Chọn lĩnh vực") hoàn toàn trống trơn.
-2. **Kiểm tra quyền người dùng trong `api/vanban.php` bị chặn đối với Admin**:
-   - Trong `api/vanban.php` (dòng 13), hàm `vbd_current_user` đang kiểm tra cứng:
-     ```php
-     if (!$user || !(bool)$user['is_active'] || ($user['role'] ?? '') !== 'teacher') {
-         respond(['error' => 'Chức năng quản lý văn bản chỉ dành cho giáo viên.'], 403);
-     }
-     ```
-   - Khi tài khoản `admin` hoặc `superadmin` truy cập sẽ bị trả về lỗi 403 Forbidden. Trong khi đó ở các module khác (`thoikhoabieu.php`, `phancong.php`), `admin` và `superadmin` đều được phân quyền hợp lệ.
-3. **Cơ chế cache và triển khai FTP**:
-   - `quanlyvanban.html` đang gọi `vanban-hub.js?v=20260624-drive-banner-fix`. Vì hash/version chưa đổi nên FTP Deploy Action bỏ qua không tải lại file đã bị rỗng trên hosting.
+## Hiện trạng & Khẳng định an toàn dữ liệu
+1. **Dữ liệu KHÔNG bị mất**:
+   - Cơ sở dữ liệu MySQL (`office_documents`, `office_document_files`) và các tệp lưu trên Google Drive vẫn nguyên vẹn, API `api/vanban.php` vẫn hoạt động tốt.
+2. **Nguyên nhân gốc rễ**:
+   - Kiểm tra trực tiếp trên server hosting (`hoangthiencm.id.vn`): **toàn bộ các file JavaScript của module Quản lý văn bản đều bị 0 bytes**:
+     * `vanban-hub.js`: 0 bytes (khiến `quanlyvanban.html` trống trơn mục "Chọn lĩnh vực").
+     * `vanban-app.js`: 0 bytes (khiến `quanlyvanban-hanhchinh.html` và `quanlyvanban-dang.html` không chạy được script -> không hiển thị danh sách văn bản, không thấy tệp đính kèm, không thấy nội dung báo cáo trước đó).
+     * `js/quanlyvanban-hanhchinh.bundle.js`: 0 bytes.
+   - Do file script trên hosting bị rỗng, trình duyệt tải trang HTML về nhưng không có mã JavaScript để gọi API `api/vanban.php?action=list` và không có hàm để vẽ bảng danh sách, tệp đính kèm hay tóm tắt/nội dung báo cáo.
+3. **Phân quyền trong `api/vanban.php`**:
+   - Cần đảm bảo tài khoản `admin` / `superadmin` cũng xem và quản lý được văn bản giống như giáo viên (tránh lỗi 403 khi admin đăng nhập).
 
 ---
 
 ## Phạm vi thực hiện
-1. **Sửa `api/vanban.php`**:
-   - Bổ sung phân quyền cho `admin` và `superadmin` trong `vbd_current_user`.
-2. **Cập nhật `quanlyvanban.html` & `vanban-hub.js`**:
-   - Tăng version query param trong `quanlyvanban.html` (ví dụ: `vanban-hub.js?v=20260928-fix-hub-render`).
-   - Đảm bảo `vanban-hub.js` có xử lý dự phòng: gọi render dữ liệu mặc định (loading skeleton hoặc thẻ lĩnh vực cơ bản) ngay cả trước/trong khi fetch API hoàn tất.
-3. **Trigger FTP deploy**:
-   - Chạm (touch/thay đổi) `vanban-hub.js` và `quanlyvanban.html` để GitHub Actions FTP Deploy bắt buộc đồng bộ lại file đầy đủ lên hosting.
+1. **Cập nhật `api/vanban.php`**:
+   - Cho phép vai trò `admin`, `superadmin` truy cập đầy đủ trong `vbd_current_user`.
+2. **Cập nhật các trang HTML và file JS module Quản lý văn bản**:
+   - `quanlyvanban.html`: tăng version query param `vanban-hub.js?v=20260928-hub-fix`.
+   - `quanlyvanban-hanhchinh.html`: tăng version query param `vanban-app.js?v=20260928-app-fix`.
+   - `quanlyvanban-dang.html`: tăng version query param `vanban-app.js?v=20260928-app-fix`.
+   - `vanban-hub.js`: đảm bảo render giao diện skeleton/thẻ lĩnh vực ngay cả khi đang chờ dữ liệu.
+   - `vanban-app.js`: đảm bảo các hàm render tệp đính kèm và nội dung báo cáo hoạt động mượt mà, bắt lỗi hiển thị rõ ràng nếu mất kết nối mạng.
+3. **Đồng bộ FTP lên hosting**:
+   - Trigger commit & push để GitHub Actions FTP Deploy tải lại đầy đủ toàn bộ file `vanban-hub.js`, `vanban-app.js` lên hosting (thay thế các file 0 bytes hiện tại).
 
 ---
 
 ## Ngoài phạm vi
-- Không thay đổi cấu trúc database hoặc logic Google Drive upload/delete.
-- Không sửa đổi các trang khác ngoài phạm vi module quản lý văn bản.
+- Không xóa hoặc thay đổi cấu trúc bảng database MySQL.
+- Không can thiệp vào các tệp đã lưu trên Google Drive.
 
 ---
 
 ## File dự kiến tác động
 - `api/vanban.php`
 - `quanlyvanban.html`
+- `quanlyvanban-hanhchinh.html`
+- `quanlyvanban-dang.html`
 - `vanban-hub.js`
+- `vanban-app.js`
 - `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/.lock`
 
@@ -46,23 +49,26 @@
 ## Các bước thực hiện chi tiết cho Coder
 1. **Bước 1: Mở khóa handoff**:
    - Xóa `docs/handoff/.lock` nếu có.
-2. **Bước 2: Cập nhật quyền trong `api/vanban.php`**:
-   - Cho phép vai trò `admin`, `superadmin`, `teacher`:
+2. **Bước 2: Cập nhật `api/vanban.php`**:
+   - Cập nhật hàm `vbd_current_user`:
      ```php
      $role = (string)($user['role'] ?? '');
      if (!in_array($role, ['teacher', 'admin', 'superadmin'], true)) {
          respond(['error' => 'Chức năng quản lý văn bản chỉ dành cho giáo viên hoặc quản trị viên.'], 403);
      }
      ```
-3. **Bước 3: Tối ưu `vanban-hub.js`**:
-   - Thêm gọi `renderSectors();` ngay lúc khởi tạo (trước khi `fetch` dữ liệu hoàn tất) để giao diện 2 thẻ lĩnh vực ("Hành chính", "Đảng") luôn hiển thị ngay lập tức, không để màn hình trống trơn.
-   - Thêm version bump trong `quanlyvanban.html`: `vanban-hub.js?v=20260928-fix-hub-render`.
-4. **Bước 4: Cập nhật nhật ký**:
+3. **Bước 3: Cập nhật version query params để ép hosting và trình duyệt nạp file mới**:
+   - Trong `quanlyvanban.html`: `<script src="vanban-hub.js?v=20260928-hub-fix"></script>`
+   - Trong `quanlyvanban-hanhchinh.html`: `<script src="vanban-app.js?v=20260928-app-fix"></script>`
+   - Trong `quanlyvanban-dang.html`: `<script src="vanban-app.js?v=20260928-app-fix"></script>`
+4. **Bước 4: Cập nhật `vanban-hub.js` và `vanban-app.js`**:
+   - Thêm comment timestamp vào cuối file `vanban-hub.js` và `vanban-app.js` để đảm bảo file hash thay đổi, ép FTP Deploy Action bắt buộc phải upload lại toàn bộ nội dung file (loại bỏ hoàn toàn trạng thái 0 bytes).
+5. **Bước 5: Ghi nhật ký & Khóa**:
    - Ghi nội dung vào `docs/handoff/IMPLEMENT.md`.
-   - Tạo file `docs/handoff/.lock` nội dung `LOCK`.
+   - Tạo lại file `docs/handoff/.lock` nội dung `LOCK`.
 
 ---
 
 ## Tiêu chí nghiệm thu
-- Truy cập `hoangthiencm.id.vn/quanlyvanban.html`: hiển thị đầy đủ thẻ "Hành chính", "Đảng" cùng 4 thẻ thống kê số lượng văn bản.
-- Admin và giáo viên đều tải dữ liệu bình thường, không bị lỗi 403.
+- Truy cập `quanlyvanban.html`: Thẻ "Hành chính", "Đảng" và thống kê số liệu hiển thị đầy đủ.
+- Truy cập `quanlyvanban-hanhchinh.html` & `quanlyvanban-dang.html`: Danh sách văn bản, tệp đính kèm và nội dung báo cáo trước đó hiển thị đầy đủ, nguyên vẹn, không bị mất bất kỳ dữ liệu nào.
