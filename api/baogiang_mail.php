@@ -34,7 +34,7 @@ function baogiang_smtp_expect($socket, string $command, array $codes): void
     }
 }
 
-function baogiang_send_gmail(string $recipient, string $subject, string $body, string $html = ''): void
+function baogiang_send_gmail(string $recipient, string $subject, string $body, string $html = '', string $ics = ''): void
 {
     $from = trim((string) BAOGIANG_GMAIL_FROM);
     $appPassword = preg_replace('/\s+/', '', (string) BAOGIANG_GMAIL_APP_PASSWORD);
@@ -53,7 +53,19 @@ function baogiang_send_gmail(string $recipient, string $subject, string $body, s
         $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
         $headers = "From: <$from>\r\nTo: <$recipient>\r\nSubject: $encodedSubject\r\nMIME-Version: 1.0";
         $encodedBody = rtrim(chunk_split(base64_encode($body), 76, "\r\n"));
-        if ($html !== '') {
+        if ($ics !== '') {
+            $boundaryMixed = '=_BaoGiang_Mix_' . bin2hex(random_bytes(12));
+            $boundaryAlt = '=_BaoGiang_Alt_' . bin2hex(random_bytes(12));
+            $encodedHtml = rtrim(chunk_split(base64_encode($html), 76, "\r\n"));
+            $encodedIcs = rtrim(chunk_split(base64_encode($ics), 76, "\r\n"));
+            $message = $headers . "\r\nContent-Type: multipart/mixed; boundary=\"$boundaryMixed\"\r\n\r\n"
+                . "--$boundaryMixed\r\nContent-Type: multipart/alternative; boundary=\"$boundaryAlt\"\r\n\r\n"
+                . "--$boundaryAlt\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n$encodedBody\r\n"
+                . "--$boundaryAlt\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n$encodedHtml\r\n"
+                . "--$boundaryAlt--\r\n"
+                . "--$boundaryMixed\r\nContent-Type: text/calendar; charset=UTF-8; method=REQUEST; name=\"lich_bao_giang.ics\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"lich_bao_giang.ics\"\r\n\r\n$encodedIcs\r\n"
+                . "--$boundaryMixed--";
+        } elseif ($html !== '') {
             $boundary = '=_BaoGiang_' . bin2hex(random_bytes(12));
             $encodedHtml = rtrim(chunk_split(base64_encode($html), 76, "\r\n"));
             $message = $headers . "\r\nContent-Type: multipart/alternative; boundary=\"$boundary\"\r\n\r\n"
@@ -107,12 +119,13 @@ if (is_array($payload['deliveries'] ?? null)) {
             'subject' => trim((string) ($item['subject'] ?? $subject)),
             'body' => trim((string) ($item['body'] ?? $body)),
             'html' => trim((string) ($item['html'] ?? $html)),
+            'ics' => trim((string) ($item['ics'] ?? '')),
         ];
     }
 } else {
     $recipients = is_array($payload['recipients'] ?? null) ? $payload['recipients'] : [$payload['recipient'] ?? BAOGIANG_GMAIL_FROM];
     foreach ($recipients as $recipient) {
-        $deliveries[] = ['to' => trim((string) $recipient), 'subject' => $subject, 'body' => $body, 'html' => $html];
+        $deliveries[] = ['to' => trim((string) $recipient), 'subject' => $subject, 'body' => $body, 'html' => $html, 'ics' => ''];
     }
 }
 
@@ -130,12 +143,12 @@ foreach ($deliveries as $delivery) {
         $errors[] = 'Nội dung email chưa đầy đủ cho ' . $to;
         continue;
     }
-    if (mb_strlen($delivery['subject']) > 200 || mb_strlen($delivery['body']) > 30000 || mb_strlen($delivery['html']) > 200000) {
+    if (mb_strlen($delivery['subject']) > 200 || mb_strlen($delivery['body']) > 30000 || mb_strlen($delivery['html']) > 200000 || mb_strlen($delivery['ics'] ?? '') > 200000) {
         $errors[] = 'Nội dung email quá dài cho ' . $to;
         continue;
     }
     try {
-        baogiang_send_gmail($to, $delivery['subject'], $delivery['body'], $delivery['html']);
+        baogiang_send_gmail($to, $delivery['subject'], $delivery['body'], $delivery['html'], $delivery['ics'] ?? '');
         $sentCount++;
         if ($sentCount < count($deliveries)) usleep(150000);
     } catch (Throwable $e) {

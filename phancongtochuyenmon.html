@@ -1956,7 +1956,7 @@
                         </div>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-                        <p style="margin:0; color:#64748b; font-size:0.78rem; line-height:1.4; max-width:460px;">Khung tiết của trường: sáng thường 1–5; chiều có thể 1–4, 6–9 hoặc 7–9. Bấm Khung tiết để xem và sửa trước khi nhận diện ảnh.</p>
+                        <p style="margin:0; color:#64748b; font-size:0.78rem; line-height:1.4; max-width:460px;">Khung tiết của trường: Sáng thường 1–5; Chiều thường 6–10 (hoặc 1–4, 6–9, 7–9). Bấm Khung tiết để xem và sửa trước khi nhận diện ảnh.</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <button type="button" class="btn-small" onclick="openQuickPeriodsConfig()"><i class="fas fa-gear"></i> Khung tiết</button>
                             <button type="button" class="btn-small btn-small-primary" id="btn-ai-scan-tt" onclick="scanTimetableWithAI()">
@@ -2012,7 +2012,8 @@
             </section>
             <section class="email-tab-pane" data-email-pane="baogiang" hidden style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
                 <h3 style="margin:0 0 8px;color:#1e3a8a;">Lịch báo giảng cá nhân từng giáo viên</h3><p style="margin:0 0 12px;color:#475569;">Chọn tuần, tích giáo viên và kiểm tra email trước khi gửi. Mỗi người chỉ nhận lịch của chính mình.</p>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;"><label class="form-group" style="margin:0;min-width:180px;"><span>Tuần cần gửi</span><input id="email-bg-send-week" class="form-control" type="week" onchange="syncBaoGiangEmailWeek(this.value)"></label><span id="email-bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span><button id="email-bg-send-teachers" type="button" class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers('email-bg-send-week')"><i class="fas fa-paper-plane"></i> Gửi lịch cho GV đã chọn</button></div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;"><label class="form-group" style="margin:0;min-width:180px;"><span>Tuần cần gửi</span><input id="email-bg-send-week" class="form-control" type="week" onchange="syncBaoGiangEmailWeek(this.value)"></label><span id="email-bg-send-week-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span><button id="email-bg-send-teachers" type="button" class="btn-small btn-small-primary" onclick="sendBaoGiangSelectedWeekToTeachers('email-bg-send-week')"><i class="fas fa-paper-plane"></i> Gửi lịch cho GV đã chọn</button><button type="button" class="btn-small" onclick="exportCurrentBaoGiangIcs()" title="Tải file lịch để nhập vào Google Calendar hoặc ứng dụng Lịch"><i class="fas fa-calendar-plus text-indigo-600"></i> Xuất Google Calendar (.ics)</button></div>
+                <p style="margin:10px 0 0;"><span style="font-size:0.8rem; color:#059669; font-weight:600;"><i class="fas fa-check-circle"></i> Tự động đính kèm sự kiện Google Calendar (.ics) trong email</span></p>
                 <div id="email-bg-recipient-list" style="margin-top:14px;"></div>
             </section>
         </div>
@@ -2028,6 +2029,7 @@
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <button type="button" class="btn-small" onclick="openBaoGiangConfigModal()"><i class="fas fa-sliders"></i> Cài đặt PPCT &amp; Lịch nghỉ</button>
+                    <button type="button" class="btn-small" onclick="exportCurrentBaoGiangIcs()" title="Tải file lịch để nhập vào Google Calendar hoặc ứng dụng Lịch"><i class="fas fa-calendar-plus text-indigo-600"></i> Xuất Google Calendar (.ics)</button>
                     <button class="btn-small btn-small-primary" onclick="saveToDB()"><i class="fas fa-save"></i> Lưu kế hoạch</button>
                 </div>
             </div>
@@ -2467,6 +2469,8 @@
                     <button type="button" class="period-preset-chip" onclick="applyPeriodPreset('1-5','1-4')">Sáng 1-5, Chiều 1-4</button>
                     <button type="button" class="period-preset-chip" onclick="applyPeriodPreset('1-4','7-9')">Sáng 1-4, Chiều 7-9</button>
                     <button type="button" class="period-preset-chip" onclick="applyPeriodPreset('1-5','6-9')">Sáng 1-5, Chiều 6-9</button>
+                    <button type="button" class="period-preset-chip" onclick="applyPeriodPreset('1-5','6-10')">Sáng 1-5, Chiều 6-10</button>
+                    <button type="button" class="period-preset-chip" onclick="applyPeriodPreset('1-5','1-5')">Sáng 1-5, Chiều 1-5</button>
                 </div>
             </div>
             <div class="modal-footer">
@@ -3378,6 +3382,140 @@
             return `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:980px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,.12);"><div style="padding:24px 28px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;">Lịch báo giảng cá nhân</div><div style="font-size:25px;font-weight:700;margin-top:6px;">${escapeHtml(teacher.name)}</div><div style="font-size:14px;margin-top:8px;opacity:.9;">Tuần ${escapeHtml(range.start)} – ${escapeHtml(range.end)} · ${ordered.length} tiết dạy đã được ghép theo TKB và PPCT</div></div><div style="padding:22px 28px 8px;"><p style="margin:0 0 16px;color:#475569;font-size:14px;">Lịch được gom theo ngày; buổi sáng và buổi chiều được ngăn cách rõ ràng.</p>${days}</div><div style="padding:16px 28px 22px;color:#64748b;font-size:12px;border-top:1px solid #e2e8f0;">Lịch được tạo tự động từ thời khóa biểu, PPCT và các ngày nghỉ/dạy bù đã khai báo.</div></div></div>`;
         }
 
+        const BAOGIANG_PERIOD_TIMES = {
+            morning: {
+                1: ['07:15', '08:00'], 2: ['08:05', '08:50'], 3: ['09:05', '09:50'],
+                4: ['09:55', '10:40'], 5: ['10:45', '11:30']
+            },
+            afternoon: {
+                1: ['13:30', '14:15'], 2: ['14:20', '15:05'], 3: ['15:20', '16:05'], 4: ['16:10', '16:55'], 5: ['17:00', '17:45'],
+                6: ['13:30', '14:15'], 7: ['14:20', '15:05'], 8: ['15:20', '16:05'], 9: ['16:10', '16:55'], 10: ['17:00', '17:45']
+            }
+        };
+
+        function buildTeacherBaoGiangIcs(teacher, range, ordered) {
+            const sessionOrder = { morning: 0, afternoon: 1, makeup: 2 };
+            const rows = Array.isArray(ordered) ? ordered : (() => {
+                const endDate = baoGiangDate(range.end);
+                const scheduleData = decorateBaoGiangRows(baoGiangIso(endDate), range.start);
+                return scheduleData.rows
+                    .filter(row => row.date >= range.start && row.date <= range.end && String(row.teacher_id) === String(teacher.id))
+                    .sort((a, b) => a.date.localeCompare(b.date) || (sessionOrder[a.session] ?? 9) - (sessionOrder[b.session] ?? 9) || Number(a.period) - Number(b.period));
+            })();
+            const icsEscape = value => String(value ?? '')
+                .replace(/\\/g, '\\\\')
+                .replace(/\r\n|\n|\r/g, '\\n')
+                .replace(/,/g, '\\,')
+                .replace(/;/g, '\\;');
+            const foldIcsLine = line => {
+                const text = String(line);
+                if (text.length <= 73) return text;
+                const parts = [text.slice(0, 73)];
+                for (let index = 73; index < text.length; index += 72) parts.push(' ' + text.slice(index, index + 72));
+                return parts.join('\r\n');
+            };
+            const stampDate = new Date();
+            const pad = number => String(number).padStart(2, '0');
+            const dtStamp = `${stampDate.getUTCFullYear()}${pad(stampDate.getUTCMonth() + 1)}${pad(stampDate.getUTCDate())}T${pad(stampDate.getUTCHours())}${pad(stampDate.getUTCMinutes())}${pad(stampDate.getUTCSeconds())}Z`;
+            const localStamp = (isoDate, clock) => `${String(isoDate).replace(/-/g, '')}T${String(clock).replace(':', '')}00`;
+            const usedUids = new Set();
+            const events = rows.map(row => {
+                const period = Number(row.period);
+                const sessionTable = row.session === 'morning' ? BAOGIANG_PERIOD_TIMES.morning : BAOGIANG_PERIOD_TIMES.afternoon;
+                const slot = sessionTable[period] || BAOGIANG_PERIOD_TIMES.afternoon[period] || BAOGIANG_PERIOD_TIMES.morning[period];
+                if (!slot || !row.date) return '';
+                const lessonTitle = row.lesson ? (row.lesson.name || row.lesson.lesson || '') : '';
+                let uid = `baogiang-${teacher.id}-${row.date}-${row.period}-${row.session}@giangbai`;
+                if (usedUids.has(uid)) uid = `baogiang-${teacher.id}-${row.date}-${row.period}-${row.session}-${row.class_name}@giangbai`;
+                usedUids.add(uid);
+                const summary = `${row.subject || ''} ${row.class_name || ''} (Tiết ${row.period})${lessonTitle ? ' - ' + lessonTitle : ''}`;
+                const description = [
+                    `Môn: ${row.subject || ''}`,
+                    `Lớp: ${row.class_name || ''}`,
+                    `Tiết: ${row.period || ''}`,
+                    `Bài dạy: ${lessonTitle || (row.lesson ? formatBaoGiangLessonDisplay(row) : '')}`,
+                    `PPCT: ${row.lesson?.ppct || ''}`,
+                    `Giáo viên: ${teacher.name || ''}`
+                ].join('\n');
+                return [
+                    'BEGIN:VEVENT',
+                    `UID:${icsEscape(uid)}`,
+                    `DTSTAMP:${dtStamp}`,
+                    `DTSTART;TZID=Asia/Ho_Chi_Minh:${localStamp(row.date, slot[0])}`,
+                    `DTEND;TZID=Asia/Ho_Chi_Minh:${localStamp(row.date, slot[1])}`,
+                    `SUMMARY:${icsEscape(summary)}`,
+                    `LOCATION:${icsEscape(`Lớp ${row.class_name || ''}`)}`,
+                    `DESCRIPTION:${icsEscape(description)}`,
+                    'BEGIN:VALARM',
+                    'ACTION:DISPLAY',
+                    'DESCRIPTION:Nhac tiet hoc',
+                    'TRIGGER:-PT15M',
+                    'END:VALARM',
+                    'END:VEVENT'
+                ].map(foldIcsLine).join('\r\n');
+            }).filter(Boolean);
+            if (!events.length) throw new Error(`Không có tiết dạy có giờ của ${teacher?.name || 'giáo viên'} trong tuần đã chọn.`);
+            return [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//GiangBai//Lich bao giang//VI',
+                'CALSCALE:GREGORIAN',
+                'METHOD:REQUEST',
+                'BEGIN:VTIMEZONE',
+                'TZID:Asia/Ho_Chi_Minh',
+                'BEGIN:STANDARD',
+                'DTSTART:19700101T000000',
+                'TZOFFSETFROM:+0700',
+                'TZOFFSETTO:+0700',
+                'TZNAME:ICT',
+                'END:STANDARD',
+                'END:VTIMEZONE',
+                events.join('\r\n'),
+                'END:VCALENDAR',
+                ''
+            ].join('\r\n');
+        }
+
+        function downloadIcsFile(filename, icsContent) {
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+
+        function exportCurrentBaoGiangIcs() {
+            try {
+                const teachers = typeof getBaoGiangTeacherList === 'function' ? getBaoGiangTeacherList() : (state.teachers || []);
+                const emailActive = document.getElementById('view-email')?.classList.contains('active');
+                let teacher = null;
+                let range = null;
+                if (emailActive) {
+                    range = baoGiangWeekRange(document.getElementById('email-bg-send-week')?.value);
+                    const ids = new Set((state.bao_giang?.recipient_ids || []).map(String));
+                    teacher = (state.teachers || []).find(item => ids.has(String(item.id))) || teachers[0];
+                } else {
+                    const selectedId = document.getElementById('bg-filter-teacher')?.value || '';
+                    teacher = teachers.find(item => String(item.id) === String(selectedId)) || teachers[0];
+                    const month = document.getElementById('bg-filter-month')?.value || '';
+                    const anchor = document.getElementById('bg-view-date')?.value || (month ? `${month}-01` : baoGiangIso(new Date()));
+                    range = baoGiangWeekRange(baoGiangWeekValueFromDate(anchor));
+                }
+                if (!teacher) throw new Error('Chưa có giáo viên để xuất lịch.');
+                if (!range) throw new Error('Không xác định được tuần cần xuất.');
+                const ics = buildTeacherBaoGiangIcs(teacher, range);
+                const safeName = String(teacher.name || 'giao-vien').replace(/[\\/:*?"<>|]+/g, ' ').trim();
+                downloadIcsFile(`LichBaoGiang_${safeName}_${range.start}.ics`, ics);
+                showToast(`Đã tải lịch Google Calendar của ${teacher.name}.`, 'success');
+            } catch (error) {
+                showToast(error.message || 'Không xuất được file lịch.', 'error', 8000);
+            }
+        }
+
         function buildTeacherBaoGiangWeekEmail(teacher, range) {
             const endDate = baoGiangDate(range.end);
             const scheduleData = decorateBaoGiangRows(baoGiangIso(endDate), range.start);
@@ -3386,7 +3524,7 @@
             const sessionOrder = { morning: 0, afternoon: 1, makeup: 2 };
             const ordered = rows.slice().sort((a, b) => a.date.localeCompare(b.date) || (sessionOrder[a.session] ?? 9) - (sessionOrder[b.session] ?? 9) || Number(a.period) - Number(b.period));
             const bodyRows = ordered.map(row => `${baoGiangWeekdayLabel(row.date)}, ${formatVnDate(row.date)} | ${row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period}`} | Lớp ${row.class_name} | ${row.subject} | ${row.lesson ? formatBaoGiangLessonDisplay(row) : 'Chưa khai báo PPCT'} | PPCT ${row.lesson?.ppct || '—'}`).join('\n');
-            return { to: teacher.email.trim(), subject: `Lịch báo giảng - ${teacher.name} (${range.start} đến ${range.end})`, body: `Kính gửi thầy/cô ${teacher.name},\n\nLỊCH BÁO GIẢNG TUẦN ${range.start} – ${range.end}\n\n${bodyRows}\n\nTrân trọng.`, html: buildTeacherBaoGiangWeekHtml(teacher, range, ordered) };
+            return { to: teacher.email.trim(), subject: `Lịch báo giảng - ${teacher.name} (${range.start} đến ${range.end})`, body: `Kính gửi thầy/cô ${teacher.name},\n\nLỊCH BÁO GIẢNG TUẦN ${range.start} – ${range.end}\n\n${bodyRows}\n\nTrân trọng.`, html: buildTeacherBaoGiangWeekHtml(teacher, range, ordered), ics: buildTeacherBaoGiangIcs(teacher, range, ordered) };
         }
 
         async function sendBaoGiangSelectedWeekToTeachers(weekInputId = 'bg-send-week') {
@@ -3401,7 +3539,10 @@
                 if (!teachers.length) throw new Error('Hãy tích chọn ít nhất một giáo viên nhận lịch.');
                 const missing = teachers.filter(t => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(t.email || '')));
                 if (missing.length) throw new Error(`Hãy bổ sung email hợp lệ cho: ${missing.map(t => t.name).join(', ')}.`);
-                const deliveries = teachers.map(teacher => buildTeacherBaoGiangWeekEmail(teacher, range));
+                const deliveries = teachers.map(teacher => {
+                    const email = buildTeacherBaoGiangWeekEmail(teacher, range);
+                    return { to: email.to, subject: email.subject, body: email.body, html: email.html, ics: email.ics };
+                });
                 const response = await fetch('api/baogiang_mail.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ deliveries }) });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể gửi lịch báo giảng.');
@@ -6609,12 +6750,29 @@ Cấu trúc JSON yêu cầu:
 }
 Quy tắc:
 - Key của các ngày: "2" (Thứ 2), "3" (Thứ 3), "4" (Thứ 4), "5" (Thứ 5), "6" (Thứ 6), "7" (Thứ 7).
-- Khung tiết đang cấu hình trên phần mềm (chỉ để tham khảo, không được dùng để bỏ tiết): Buổi sáng gồm ${mPeriods.join(', ')}; Buổi chiều gồm ${aPeriods.join(', ')}.
+- Khung tiết thực tế của trường: Buổi sáng gồm các tiết: ${mPeriods.join(', ')}; Buổi chiều gồm các tiết: ${aPeriods.join(', ')}.
 - Đọc và trích xuất TOÀN BỘ các tiết học có trong ảnh (kể cả tiết 6, tiết 7, tiết 8, tiết 9, tiết 10...), tuyệt đối không bỏ sót bất kỳ tiết nào có phân công dạy.
-- Nếu ảnh có phân chia Sáng / Chiều rõ rệt: đưa các tiết sáng vào "morning", các tiết chiều vào "afternoon" theo đúng số tiết ghi trên ảnh.
-- Nếu ảnh đánh số tiết liên tục cả ngày từ 1 đến 7 (hoặc 1 đến 10): đưa các tiết 1–5 (hoặc các tiết buổi sáng) vào "morning"; các tiết từ tiết 6 trở đi (hoặc từ tiết 5 nếu chiều bắt đầu từ tiết 5, ví dụ tiết 6, tiết 7, tiết 8...) vào "afternoon".
-- Giữ nguyên số thứ tự tiết thực tế ghi trên ảnh làm key (ví dụ: "1", "2", "3", "4", "5", "6", "7", "8"...).
-- Nếu ảnh không in số tiết hoặc chỉ có các hàng: ghép các hàng từ trên xuống trong đúng buổi đang đọc. Hàng đầu của buổi sáng là tiết đầu buổi sáng, hàng đầu của buổi chiều là tiết đầu buổi chiều theo số in trên ảnh hoặc theo khung tham khảo ${aPeriods[0] ? '(chiều đang cấu hình bắt đầu từ tiết ' + aPeriods[0] + ')' : ''}. Vẫn giữ mọi hàng có môn học, kể cả tiết 6, 7, 8, 9, 10.
+- QUY TẮC BẮT BUỘC KHI ẢNH KHÔNG IN CỘT SỐ TIẾT (chỉ gồm các hàng ngang và cột các Thứ):
+  + Bạn phải đếm chính xác thứ tự các hàng (rows) từ trên xuống dưới của từng buổi: Hàng 1, Hàng 2, Hàng 3, Hàng 4, Hàng 5...
+  + Ánh xạ 1-đối-1 từng hàng sang số tiết theo đúng danh sách khung tiết đã cho ở trên:
+    * Buổi sáng:
+      Hàng 1 -> Tiết ${mPeriods[0] || 1}
+      Hàng 2 -> Tiết ${mPeriods[1] || 2}
+      Hàng 3 -> Tiết ${mPeriods[2] || 3}
+      Hàng 4 -> Tiết ${mPeriods[3] || 4}
+      Hàng 5 -> Tiết ${mPeriods[4] || 5}
+    * Buổi chiều:
+      Hàng 1 -> Tiết ${aPeriods[0] || 6}
+      Hàng 2 -> Tiết ${aPeriods[1] || 7}
+      Hàng 3 -> Tiết ${aPeriods[2] || 8}
+      Hàng 4 -> Tiết ${aPeriods[3] || 9}
+      Hàng 5 -> Tiết ${aPeriods[4] || 10}
+  + ĐẶC BIỆT CHÚ Ý: Nếu buổi chiều có cấu hình bắt đầu từ tiết 6 (ví dụ: 6, 7, 8, 9, 10):
+    Hàng 1 là Tiết 6, Hàng 2 là Tiết 7, Hàng 3 là Tiết 8, Hàng 4 là Tiết 9, Hàng 5 là Tiết 10.
+    TUYỆT ĐỐI KHÔNG được tự ý gán buổi chiều bắt đầu từ tiết 7 (làm cho hàng 3 và hàng 4 bị sai thành tiết 9 và tiết 10). Nếu Thứ 3 có môn ở Hàng 3 và Hàng 4 thì BẮT BUỘC là Tiết 8 và Tiết 9!
+  + Nếu ảnh CÓ cột in rõ số tiết (như "Tiết 1", "Tiết 2" hay "1", "2"): lấy đúng số tiết in trên cột đó.
+- Nếu ảnh có phân chia Sáng / Chiều rõ rệt: đưa các tiết sáng vào "morning", các tiết chiều vào "afternoon".
+- Nếu ảnh đánh số tiết liên tục cả ngày từ 1 đến 7 (hoặc 1 đến 10): đưa các tiết 1–5 (hoặc các tiết buổi sáng) vào "morning"; các tiết từ tiết 6 trở đi vào "afternoon".
 - Giá trị mỗi tiết là chuỗi định dạng "TênMôn - TênLớp" (ví dụ: "Toán - 63", "HĐTN - 64"), nếu tiết trống thì bỏ qua hoặc để rỗng "".
 - Chỉ trả về duy nhất khối JSON hợp lệ, không bọc thêm văn bản giải thích.`;
                 const payload = {
@@ -6655,6 +6813,21 @@ Quy tắc:
             if (!configured.length || !srcSessionObj || typeof srcSessionObj !== 'object') return srcSessionObj || {};
             const sourcePeriods = [...new Set(Object.values(srcSessionObj).flatMap(day => Object.keys(day || {}).map(period => parseInt(period, 10)).filter(period => period > 0)))].sort((a, b) => a - b);
             if (!sourcePeriods.length) return srcSessionObj;
+            const contiguous = sourcePeriods.every((period, index) => index === 0 || period === sourcePeriods[index - 1] + 1);
+            const vnEduPlusOne = configured[0] === 6
+                && sourcePeriods.every(period => period >= 7)
+                && contiguous
+                && (sourcePeriods[0] === 7 || (sourcePeriods.length === 2 && sourcePeriods[0] === 9 && sourcePeriods[1] === 10));
+            if (vnEduPlusOne) {
+                return Object.fromEntries(Object.entries(srcSessionObj).map(([day, cells]) => [day, Object.entries(cells || {}).reduce((aligned, [period, value]) => {
+                    const numeric = parseInt(period, 10);
+                    const target = numeric >= 7 ? String(numeric - 1) : String(period);
+                    if (Object.prototype.hasOwnProperty.call(aligned, target)) aligned[String(period)] = value;
+                    else aligned[target] = value;
+                    return aligned;
+                }, {})]));
+            }
+
             const configuredSet = new Set(configured);
             if (sourcePeriods.every(period => configuredSet.has(period))) return srcSessionObj;
 

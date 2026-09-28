@@ -165,7 +165,16 @@ function emptyTimetable() {
     assert.deepEqual(afternoonSpan, { '5': { '6': 'A', '7': 'B', '8': 'C', '9': 'D' } }, 'afternoon span 6–9 is preserved when the frame is still 1–4');
     const sevenToNine = JSON.parse(JSON.stringify(vm.runInContext(`alignSessionPeriods({ '6': { '7': 'A', '8': 'B', '9': 'C' } }, [1, 2, 3, 4])`, context)));
     assert.deepEqual(sevenToNine, { '6': { '7': 'A', '8': 'B', '9': 'C' } }, 'afternoon span 7–9 is preserved when the frame is still 1–4');
+    const vnEduRows = JSON.parse(JSON.stringify(vm.runInContext(`alignSessionPeriods({ '3': { '9': 'Toán - 61', '10': 'Toán - 61' } }, [6, 7, 8, 9, 10])`, context)));
+    assert.deepEqual(vnEduRows, { '3': { '8': 'Toán - 61', '9': 'Toán - 61' } }, 'afternoon rows read as periods 9 and 10 shift to 8 and 9 when the frame is 6–10');
+    const vnEduFromSeven = JSON.parse(JSON.stringify(vm.runInContext(`alignSessionPeriods({ '3': { '7': 'A', '8': 'B', '9': 'C', '10': 'D' } }, [6, 7, 8, 9, 10])`, context)));
+    assert.deepEqual(vnEduFromSeven, { '3': { '6': 'A', '7': 'B', '8': 'C', '9': 'D' } }, 'a continuous afternoon span starting at 7 shifts back by one when the frame starts at 6');
+    const alreadyEightNine = JSON.parse(JSON.stringify(vm.runInContext(`alignSessionPeriods({ '3': { '8': 'Toán - 61', '9': 'Toán - 61' } }, [6, 7, 8, 9, 10])`, context)));
+    assert.deepEqual(alreadyEightNine, { '3': { '8': 'Toán - 61', '9': 'Toán - 61' } }, 'periods 8 and 9 stay put on a 6–10 frame');
 }
+
+assert.match(html, /applyPeriodPreset\('1-5','6-10'\)/, 'period modal includes the morning 1-5, afternoon 6-10 preset');
+assert.match(html, /applyPeriodPreset\('1-5','1-5'\)/, 'period modal includes the morning 1-5, afternoon 1-5 preset');
 
 assert.match(html, /id="tt-import-details"[\s\S]*openQuickPeriodsConfig\(\)[\s\S]*Khung tiết[\s\S]*btn-ai-scan-tt/, 'the timetable tab exposes the period-frame button beside AI scan');
 assert.doesNotMatch(html, /Key tiết trong "morning" BẮT BUỘC chỉ là một trong/, 'the scan prompt no longer drops periods outside the default frame');
