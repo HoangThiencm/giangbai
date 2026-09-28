@@ -286,7 +286,7 @@ assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail
     assert.match(feed, /function calendar_feed_token/, 'calendar feed ký token theo giáo viên');
     assert.match(feed, /hash_equals\(\$expected, \$token\)/, 'calendar feed từ chối token sai');
     assert.match(feed, /DTSTART;VALUE=DATE:/, 'calendar feed mặc định là sự kiện cả ngày');
-    assert.match(feed, /\[Tiết /, 'calendar feed đưa số tiết lên đầu tiêu đề');
+    assert.match(feed, /- Tiết /, 'calendar feed liệt kê từng tiết trong mô tả buổi');
     assert.match(html, /Đồng bộ Lịch \(iPhone \/ Google Calendar\)/, 'tab lịch có nút đồng bộ Webcal');
     assert.match(html, /id="bg-calendar-feed-iphone"/, 'modal có nút 1 chạm vào Lịch iPhone');
     assert.match(html, /Thêm ngay vào Lịch iPhone/, 'nút iPhone dùng webcal một chạm');
@@ -295,7 +295,13 @@ assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail
     assert.match(html, /iPhone 16 Pro \(iOS 18\)/, 'hướng dẫn nêu iOS 18');
     assert.match(html, /Thêm lịch đăng ký/, 'hướng dẫn cách A trong app Lịch');
     assert.match(html, /Cài đặt → Ứng dụng → Lịch/, 'hướng dẫn cách B trong Cài đặt iOS 18');
-    assert.match(html, /calendarSubscribeButtonsHtml\(webcalUrl\)/, 'email lịch báo giảng chèn nút webcal dưới bảng');
+    assert.match(html, /baoGiangEmailActionsHtml\(pageUrl, webcalUrl\)/, 'email lịch báo giảng có nút mở sổ và đồng bộ lịch');
+    assert.match(html, /Mở xem Sổ Báo Giảng trên iPhone/, 'email có nút mở sổ trên iPhone');
+    assert.match(html, /Đồng bộ vào Lịch iPhone \/ Google Calendar/, 'email có nút đồng bộ lịch');
+    assert.match(html, /apple-mobile-web-app-title" content="Báo Giảng"/, 'trang hỗ trợ thêm vào màn hình chính iPhone');
+    assert.match(html, /id="bg-mobile-so"/, 'tab lịch vẽ sổ báo giảng đúng mẫu thẻ ngày');
+    assert.match(feed, /format=html|format' => 'html'/, 'feed có trang sổ báo giảng');
+    assert.match(feed, /BUỔI SÁNG/, 'feed gom mô tả theo buổi');
     assert.match(html, /await baoGiangCalendarFeedWebcal\(teacher\.id\)/, 'gửi email lấy link webcal trước khi đính nội dung');
     assert.match(html, /id="bg-ics-format"/, 'tab lịch có hộp chọn định dạng');
     assert.match(html, /Tiết 1, 2, 3\.\.\. không gán giờ/, 'mặc định không gán khung giờ giả định');
@@ -308,7 +314,9 @@ assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail
     const allDay = vm.runInContext(`buildTeacherBaoGiangIcs({ id: 'gv1', name: 'Cô An' }, { start: '2026-09-28', end: '2026-10-04' }, [
         { date: '2026-09-28', session: 'morning', period: 1, subject: 'Toán', class_name: '63', lesson: { name: 'Số tự nhiên' } }
     ])`, context);
-    assert.match(allDay, /SUMMARY:\[Tiết 1\] Toán 63 - Số tự nhiên/);
+    assert.match(allDay, /SUMMARY:Buổi sáng/);
+    assert.match(allDay, /BUỔI SÁNG:/);
+    assert.match(allDay, /- Tiết 1: Toán 63 \| Số tự nhiên/);
     assert.match(allDay, /DTSTART;VALUE=DATE:20260928/);
     assert.match(allDay, /DTEND;VALUE=DATE:20260929/);
     assert.doesNotMatch(allDay, /T071500/);
@@ -316,7 +324,8 @@ assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail
         { date: '2026-09-28', session: 'morning', period: 1, subject: 'Toán', class_name: '63', lesson: { name: 'Số tự nhiên' } }
     ], false)`, context);
     assert.match(timed, /DTSTART;TZID=Asia\/Ho_Chi_Minh:20260928T071500/);
-    assert.match(timed, /SUMMARY:\[Tiết 1\] Toán 63 - Số tự nhiên/);
+    assert.match(timed, /SUMMARY:Buổi sáng/);
+    assert.match(timed, /- Tiết 1: Toán 63 \| Số tự nhiên/);
 }
 
 console.log('PASS: timetable view loads numeric IDs and JSON data, uses a compact responsive layout, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');

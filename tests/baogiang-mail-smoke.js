@@ -57,12 +57,13 @@ assert.match(html, /ics: buildTeacherBaoGiangIcs\(teacher, range, ordered, baoGi
     assert.match(ics, /DTEND;TZID=Asia\/Ho_Chi_Minh:20260929T160500/);
     assert.match(ics, /DTSTART;TZID=Asia\/Ho_Chi_Minh:20260930T170000/);
     assert.match(ics, /DTEND;TZID=Asia\/Ho_Chi_Minh:20260930T174500/);
-    assert.match(ics, /SUMMARY:\[Tiết 1\] Toán 6A1 - Số tự nhiên/);
-    assert.match(ics, /SUMMARY:\[Tiết 8\] Toán 7A1 - Phân số/);
-    assert.match(ics, /UID:baogiang-gv1-2026-09-28-1-morning@giangbai/);
+    assert.match(ics, /SUMMARY:Buổi sáng/);
+    assert.match(ics, /SUMMARY:Buổi chiều/);
+    assert.match(ics, /BUỔI SÁNG:/);
+    assert.match(ics, /- Tiết 1: Toán 6A1 \| Số tự nhiên \(12\)/);
+    assert.match(ics, /UID:baogiang-gv1-2026-09-28-morning@giangbai/);
     assert.match(ics, /LOCATION:Lớp 6A1/);
     assert.match(ics, /TRIGGER:-PT15M/);
-    assert.match(ics, /PPCT: 12/);
     assert.match(ics, /Giáo viên: Cô An/);
     assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, 3);
 }

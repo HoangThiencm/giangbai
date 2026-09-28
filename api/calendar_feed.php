@@ -154,20 +154,26 @@ function calendar_feed_ics(array $teacher, array $rows, bool $allDay): string
 {
     $stamp = gmdate('Ymd\THis\Z');
     $events = [];
-    $seen = [];
+    $groups = [];
     foreach ($rows as $row) {
-        $period = (int)$row['period'];
-        $slot = calendar_feed_period_slot((string)$row['session'], $period);
+        $groups[$row['date'] . '|' . $row['session']][] = $row;
+    }
+    foreach ($groups as $group) {
+        $row = $group[0];
+        $last = $group[count($group) - 1];
+        $slot = calendar_feed_period_slot((string)$row['session'], (int)$row['period']);
+        $endSlot = calendar_feed_period_slot((string)$last['session'], (int)$last['period']) ?? $slot;
         if (!$allDay && !$slot) {
             continue;
         }
-        $uid = 'baogiang-' . ($teacher['id'] ?? '') . '-' . $row['date'] . '-' . $row['period'] . '-' . $row['session'] . '@giangbai';
-        if (isset($seen[$uid])) {
-            $uid = 'baogiang-' . ($teacher['id'] ?? '') . '-' . $row['date'] . '-' . $row['period'] . '-' . $row['session'] . '-' . $row['class_name'] . '@giangbai';
+        $uid = 'baogiang-' . ($teacher['id'] ?? '') . '-' . $row['date'] . '-' . $row['session'] . '@giangbai';
+        $heading = $row['session'] === 'afternoon' ? 'BUỔI CHIỀU' : 'BUỔI SÁNG';
+        $summary = $row['session'] === 'afternoon' ? 'Buổi chiều' : 'Buổi sáng';
+        $linesText = [];
+        foreach ($group as $item) {
+            $linesText[] = '- Tiết ' . $item['period'] . ': ' . $item['subject'] . ' ' . $item['class_name'];
         }
-        $seen[$uid] = true;
-        $summary = '[Tiết ' . $row['period'] . '] ' . $row['subject'] . ' ' . $row['class_name'];
-        $description = "Môn: {$row['subject']}\nLớp: {$row['class_name']}\nTiết: {$row['period']}\nGiáo viên: " . (string)($teacher['name'] ?? '');
+        $description = $heading . ":\n" . implode("\n", $linesText) . "\nGiáo viên: " . (string)($teacher['name'] ?? '');
         $when = $allDay
             ? [
                 'DTSTART;VALUE=DATE:' . str_replace('-', '', $row['date']),
@@ -175,7 +181,7 @@ function calendar_feed_ics(array $teacher, array $rows, bool $allDay): string
             ]
             : [
                 'DTSTART;TZID=Asia/Ho_Chi_Minh:' . str_replace('-', '', $row['date']) . 'T' . str_replace(':', '', $slot[0]) . '00',
-                'DTEND;TZID=Asia/Ho_Chi_Minh:' . str_replace('-', '', $row['date']) . 'T' . str_replace(':', '', $slot[1]) . '00',
+                'DTEND;TZID=Asia/Ho_Chi_Minh:' . str_replace('-', '', $row['date']) . 'T' . str_replace(':', '', $endSlot[1]) . '00',
             ];
         $lines = array_merge([
             'BEGIN:VEVENT',
@@ -211,6 +217,38 @@ function calendar_feed_ics(array $teacher, array $rows, bool $allDay): string
         '',
     ];
     return implode("\r\n", $body);
+}
+
+function calendar_feed_page(array $teacher, array $rows): string
+{
+    $byDate = [];
+    foreach ($rows as $row) {
+        $byDate[$row['date']][] = $row;
+    }
+    $days = '';
+    $names = [1 => 'Thứ Hai', 2 => 'Thứ Ba', 3 => 'Thứ Tư', 4 => 'Thứ Năm', 5 => 'Thứ Sáu', 6 => 'Thứ Bảy', 7 => 'Chủ Nhật'];
+    foreach ($byDate as $date => $dayRows) {
+        $stamp = DateTimeImmutable::createFromFormat('Y-m-d', $date);
+        $label = $stamp ? ($names[(int)$stamp->format('N')] . ', ngày ' . $stamp->format('d/m/Y')) : $date;
+        $body = '';
+        foreach (['morning' => ['Buổi sáng', '#fff7ed', '#9a3412'], 'afternoon' => ['Buổi chiều', '#eff6ff', '#1d4ed8']] as $session => $meta) {
+            $items = array_values(array_filter($dayRows, static fn(array $row): bool => $row['session'] === $session));
+            if (!$items) {
+                continue;
+            }
+            $body .= '<tr><td colspan="5" style="padding:9px 10px;background:' . $meta[1] . ';color:' . $meta[2] . ';font-weight:700;border-top:2px solid #cbd5e1;">' . $meta[0] . '</td></tr>';
+            foreach ($items as $index => $row) {
+                $bg = $index % 2 ? '#f8fafc' : '#ffffff';
+                $body .= '<tr style="background:' . $bg . '"><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Tiết ' . htmlspecialchars((string)$row['period']) . '</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;color:#1e3a8a;">' . htmlspecialchars((string)$row['class_name']) . '</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;"><span style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:3px 7px;border-radius:999px;font-weight:700;font-size:12px;">' . htmlspecialchars((string)$row['subject']) . '</span></td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;">Chưa khai báo PPCT</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;color:#047857;font-weight:700;">—</td></tr>';
+            }
+        }
+        $days .= '<div style="margin:0 0 18px;border:1px solid #dbeafe;border-radius:10px;overflow:hidden;"><div style="padding:11px 12px;background:#dbeafe;color:#1e3a8a;font-weight:700;font-size:15px;">' . htmlspecialchars($label) . '</div><div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;min-width:640px;font-size:13px;"><thead><tr style="background:#f8fafc;color:#475569;"><th align="left" style="padding:9px 8px;">Tiết</th><th style="padding:9px 8px;">Lớp</th><th align="left" style="padding:9px 8px;">Môn</th><th align="left" style="padding:9px 8px;">Bài dạy</th><th style="padding:9px 8px;">PPCT</th></tr></thead><tbody>' . $body . '</tbody></table></div></div>';
+    }
+    if ($days === '') {
+        $days = '<p style="color:#64748b;">Chưa có tiết trong 14 ngày tới.</p>';
+    }
+    $name = htmlspecialchars((string)($teacher['name'] ?? 'Giáo viên'));
+    return '<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Báo Giảng"><title>Sổ báo giảng</title></head><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:980px;margin:0 auto;padding:16px;"><div style="padding:20px;background:#1e3a8a;color:#fff;border-radius:14px;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;">Sổ báo giảng</div><div style="font-size:24px;font-weight:700;margin-top:6px;">' . $name . '</div></div><p style="color:#475569;">Trên iPhone: bấm nút Chia sẻ của Safari, chọn Thêm vào Màn hình chính. Lần sau chạm biểu tượng Báo Giảng để mở sổ toàn màn hình.</p>' . $days . '</div></body></html>';
 }
 
 function calendar_feed_base_url(): string
@@ -267,12 +305,19 @@ if ($action === 'link') {
         'all_day' => $allDay ? '1' : '0',
     ]);
     $https = calendar_feed_base_url() . '?' . $query;
+    $page = calendar_feed_base_url() . '?' . http_build_query([
+        'format' => 'html',
+        'teacher_id' => $teacherId,
+        'owner_id' => $ownerId,
+        'token' => $token,
+    ]);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'ok' => true,
         'teacher_id' => $teacherId,
         'https_url' => $https,
         'webcal_url' => preg_replace('/^https?:/', 'webcal:', $https),
+        'page_url' => $page,
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -290,6 +335,14 @@ if ($expected === '' || !hash_equals($expected, $token)) {
 $data = calendar_feed_plan($pdo, $ownerId);
 $built = calendar_feed_rows(is_array($data) ? $data : [], $teacherId);
 $teacher = $built['teacher'] ?: ['id' => $teacherId, 'name' => ''];
+if ((string)($_GET['format'] ?? '') === 'html') {
+    $today = date('Y-m-d');
+    $until = date('Y-m-d', strtotime('+14 days'));
+    $visible = array_values(array_filter($built['rows'], static fn(array $row): bool => $row['date'] >= $today && $row['date'] <= $until));
+    header('Content-Type: text/html; charset=utf-8');
+    echo calendar_feed_page($teacher, $visible);
+    exit;
+}
 header('Content-Type: text/calendar; charset=utf-8');
 header('Content-Disposition: inline; filename="lich_bao_giang.ics"');
 header('Cache-Control: public, max-age=900');
