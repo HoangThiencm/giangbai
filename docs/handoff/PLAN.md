@@ -1,4 +1,4 @@
-# PLAN: Tối ưu hóa xuất Google Calendar / Lịch iPhone (Đưa số tiết lên đầu, loại bỏ mốc giờ giả định và hỗ trợ Webcal 1-chạm cho iPhone iOS 18 & Google Calendar)
+# PLAN: Tối ưu hóa xuất Google Calendar / Lịch iPhone (Đưa số tiết lên đầu, loại bỏ mốc giờ giả định và gắn nút 1-chạm Webcal trực tiếp trong Email)
 
 ## Hiện trạng
 1. **Lược bỏ Mistral AI**:
@@ -10,12 +10,17 @@
    - Khi xem trên iPhone hoặc Google Calendar Mobile: Màn hình hẹp làm chữ `(Tiết 1)` ở cuối bị che khuất (truncate), trong khi ứng dụng lại làm nổi bật mốc giờ `07:15` sai lệch. Giáo viên không biết được mình dạy tiết mấy.
    - Người dùng phản hồi: "Tôi đâu cần thời gian, nhìn vô không biết dạy tiết mấy".
 
-3. **Vấn đề đẩy thẳng lịch vào iPhone (iOS 18 / iPhone 16 Pro) & Google Calendar**:
-   - Hiện tại hệ thống gửi email đính kèm tệp `.ics`. Trên iPhone, ứng dụng Mail chỉ mở bản xem trước của tệp đính kèm để bấm "Thêm vào Lịch", không tự động đẩy ngầm vào Google Calendar được do giới hạn bảo mật (không có Google OAuth 2.0).
-   - Trên các dòng máy mới như **iPhone 16 Pro (chạy iOS 18)**: Apple đã thay đổi giao diện Cài đặt (mục Lịch nằm trong mục *Ứng dụng (Apps)* ở cuối Settings), khiến giáo viên khó tìm thấy chỗ thêm lịch thủ công.
-   - **Giải pháp tối ưu chuẩn quốc tế: Nút 1-chạm Webcal (`webcal://`)**:
-     + Trên iPhone (Safari/Chrome): Khi bấm vào đường link dạng `webcal://ten-mien/api/calendar_feed.php?token=...`, hệ thống iOS tự động hiển thị hộp thoại pop-up: *"Bạn có muốn đăng ký lịch này không?"*. Thầy/cô chỉ cần bấm **Đăng ký (Subscribe)** là xong ngay 1 chạm, không cần vào Cài đặt hay dán link thủ công.
-     + Toàn bộ TKB và Lịch báo giảng sẽ **tự động đẩy và đồng bộ xuyên suốt cả năm** vào iPhone và Google Calendar, không cần gửi email hay tải mở từng tệp `.ics` mỗi tuần.
+3. **Vấn đề khi mở Email trên iPhone ("rõ ràng trong email thì nó có ứng dụng chứ đâu có mở trên Safari")**:
+   - Khi giáo viên mở email bằng ứng dụng **Gmail** hoặc **Mail** trên iPhone:
+     + Ở cuối thư có tệp đính kèm `lich_bao_giang.ics`.
+     + Khi bấm vào tệp này: Ứng dụng Gmail trên iPhone **chỉ mở trình xem tệp (file viewer) nội bộ** của nó, hiển thị văn bản thô hoặc bản xem trước, chứ KHÔNG có nút đẩy vào Google Calendar hay tự động lưu lịch.
+     + Giáo viên bị "mắc kẹt" tại màn hình xem tệp của ứng dụng email mà không biết làm sao để lịch vào ứng dụng Calendar.
+   - **Giải pháp dứt điểm ngay trong nội dung Email**:
+     + Không bắt giáo viên phải bấm vào tệp đính kèm phức tạp nữa.
+     + Trong chính nội dung email (ngay bên dưới bảng TKB/Lịch báo giảng), hệ thống chèn **2 Nút bấm hành động trực tiếp**:
+       1. Nút 📅 **"Thêm tự động vào Lịch iPhone (1 chạm)"** (liên kết dạng `webcal://...`).
+       2. Nút 📆 **"Thêm vào Google Calendar"** (liên kết dạng `https://calendar.google.com/calendar/r?cid=webcal://...`).
+     + Khi giáo viên đọc email trên iPhone và bấm vào nút này: Ứng dụng email sẽ tự động chuyển hướng gọi hệ điều hành iOS / Google Calendar bật bảng xác nhận: *"Bạn có muốn đăng ký lịch này không?"* $\rightarrow$ Bấm **Đăng ký** là toàn bộ lịch vào thẳng ứng dụng Calendar, không bao giờ bị rơi vào màn hình xem tệp nữa!
 
 ---
 
@@ -24,14 +29,15 @@
    - Sửa `buildTeacherBaoGiangIcs`:
      + Đưa số Tiết lên đầu tiêu đề: `SUMMARY:[Tiết ${row.period}] ${row.subject} - Lớp ${row.class_name}${lessonTitle ? ' (' + lessonTitle + ')' : ''}`.
      + Bổ sung chế độ sự kiện Cả ngày (All-day) / Không gán giờ (`allDayMode`): Sử dụng `DTSTART;VALUE=DATE:YYYYMMDD` để các tiết học hiển thị thành các thẻ rõ ràng trên đầu ngày theo đúng thứ tự Tiết 1, Tiết 2, Tiết 3..., loại bỏ hoàn toàn mốc giờ giả định 07:15.
-2. **Xây dựng luồng đồng bộ trực tiếp qua Webcal (`api/calendar_feed.php`)**:
-   - Tạo endpoint `api/calendar_feed.php?token=...&teacher_id=...` cung cấp chuẩn iCalendar Feed (Webcal) với đầy đủ dữ liệu TKB / Lịch báo giảng mới nhất.
-   - Cung cấp nút **"Đồng bộ vào iPhone (1 chạm)"** bằng link `webcal://...` để iOS tự bật hộp thoại đăng ký.
-   - Cung cấp nút **"Đồng bộ vào Google Calendar"** bằng link `https://calendar.google.com/calendar/r?cid=webcal://...`.
-   - Hướng dẫn rõ ràng vị trí trên iOS 18 (iPhone 16 Pro) cả 2 cách:
-     * Cách A (Trong app Lịch): Mở app Lịch -> Bấm chữ "Lịch" dưới cùng -> Bấm "Thêm lịch" góc trái dưới -> Chọn "Thêm lịch đăng ký...".
-     * Cách B (Trong Cài đặt iOS 18): Cài đặt -> Ứng dụng -> Lịch -> Tài khoản Lịch -> Thêm tài khoản -> Khác -> Thêm lịch đã đăng ký.
-3. **Cập nhật giao diện tùy chọn xuất lịch**:
+2. **Gắn nút kích hoạt trực tiếp trong Email**:
+   - Cập nhật mẫu email trong `buildTeacherIndividualTimetableEmail` và `buildTeacherBaoGiangWeekEmail`:
+     Thêm thanh nút bấm nổi bật ngay dưới bảng lịch:
+     + Nút: **[📱 Thêm vào Lịch iPhone]**
+     + Nút: **[🌐 Thêm vào Google Calendar]**
+3. **Xây dựng endpoint Webcal Feed (`api/calendar_feed.php`)**:
+   - Cung cấp endpoint nhận `teacher_id` và `token`, trả về dữ liệu lịch chuẩn iCalendar `text/calendar`.
+   - Giúp lịch tự động cập nhật cả năm trên iPhone và Google Calendar.
+4. **Cập nhật giao diện tùy chọn xuất lịch trên Web**:
    - Thêm nút/hộp chọn: "Định dạng Lịch: [Tiết 1, 2, 3... không gán giờ] hoặc [Kèm khung giờ]" khi bấm xuất hoặc gửi lịch.
 
 ---
@@ -45,8 +51,8 @@
 
 ## File dự kiến tác động
 - `api/calendar_feed.php` (Tạo mới: Cung cấp endpoint Webcal feed cho iPhone / Google Calendar).
-- `phancongtochuyenmon.html` (Cập nhật định dạng `SUMMARY` trong .ics, bổ sung tùy chọn All-day không gán giờ, thêm nút đồng bộ 1-chạm Webcal và hướng dẫn chi tiết cho iOS 18 / iPhone 16 Pro).
-- `tests/timetable-render-smoke.js` (Bổ sung kiểm thử tự động định dạng .ics mới và endpoint calendar feed).
+- `phancongtochuyenmon.html` (Cập nhật định dạng `SUMMARY` trong .ics, chèn nút 1-chạm vào mẫu HTML của email, bổ sung tùy chọn All-day không gán giờ).
+- `tests/timetable-render-smoke.js` (Bổ sung kiểm thử tự động định dạng .ics mới, nút trong email và endpoint calendar feed).
 - `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/.lock`
 
@@ -75,12 +81,15 @@
    - Đọc dữ liệu TKB / Lịch báo giảng từ CSDL, xuất ra định dạng `text/calendar; charset=utf-8`.
    - Hỗ trợ giao thức `webcal://` khi người dùng bấm trực tiếp từ iPhone.
 
-4. **Bước 4: Bổ sung giao diện và hướng dẫn trên `phancongtochuyenmon.html`**:
-   - Thêm nút "Đồng bộ Lịch (iPhone / Google Calendar)" cạnh nút "Xuất Google Calendar (.ics)".
-   - Khi bấm, mở modal popup có:
-     * Nút bấm 1-chạm: **"Thêm ngay vào Lịch iPhone"** (`href="webcal://..."`).
-     * Nút bấm 1-chạm: **"Thêm ngay vào Google Calendar"** (`href="https://calendar.google.com/calendar/r?cid=webcal://..."`).
-     * Hướng dẫn trực quan riêng cho iPhone chạy iOS 18 (iPhone 16 Pro).
+4. **Bước 4: Chèn nút 1-chạm vào thẳng nội dung Email và giao diện Web**:
+   - Trong hàm tạo HTML email (`buildTeacherBaoGiangWeekEmail` và `buildTeacherIndividualTimetableEmail`):
+     Bổ sung đoạn HTML chứa 2 nút bấm với kiểu dáng đẹp mắt (màu sắc rõ nét, dễ bấm trên điện thoại):
+     ```html
+     <div style="margin: 20px 0; text-align: center;">
+         <a href="webcal://..." style="display:inline-block; padding:12px 20px; background:#0284c7; color:#fff; text-decoration:none; border-radius:8px; font-weight:bold; margin-right:10px;">📱 Thêm vào Lịch iPhone</a>
+         <a href="https://calendar.google.com/calendar/r?cid=webcal://..." target="_blank" style="display:inline-block; padding:12px 20px; background:#4f46e5; color:#fff; text-decoration:none; border-radius:8px; font-weight:bold;">🌐 Thêm vào Google Calendar</a>
+     </div>
+     ```
 
 5. **Bước 5: Kiểm thử và cập nhật nhật ký**:
    - Chạy `node tests/timetable-render-smoke.js` -> 100% PASS.
@@ -93,7 +102,7 @@
 1. **Chu kỳ làm mới của Google Calendar**:
    - Google Calendar quét link Webcal định kỳ (khoảng vài tiếng/lần theo cơ chế Google). Khi đổi TKB trên web, lịch trên Google Calendar có thể mất một khoảng thời gian ngắn để đồng bộ.
 2. **Khả năng tương thích trên iPhone**:
-   - Chuẩn `webcal://` được Apple hỗ trợ trực tiếp trên toàn bộ các đời iOS, đặc biệt là iOS 18 trên iPhone 16 Pro.
+   - Chuẩn `webcal://` được Apple hỗ trợ trực tiếp từ trong ứng dụng email và Safari trên mọi dòng iPhone.
 
 ---
 
@@ -101,8 +110,8 @@
 1. **Kiểm thử tự động**:
    - Chạy `node tests/timetable-render-smoke.js`.
 2. **Kiểm thử thủ công**:
-   - Mở file `.ics` trên iPhone: Xác nhận dòng tiêu đề hiển thị rõ ràng `[Tiết 1] Toán 63` ngay đầu dòng.
-   - Bấm nút link 1-chạm `webcal://` trên iPhone 16 Pro: Xác nhận iOS 18 bật pop-up đăng ký lịch tự động.
+   - Mở email trên ứng dụng Gmail/Mail của iPhone: Bấm nút "Thêm vào Lịch iPhone", xác nhận iOS tự động bật hộp thoại đăng ký.
+   - Xác nhận tiêu đề sự kiện hiển thị rõ `[Tiết 1]...` ngay đầu dòng.
    - Kiểm tra chế độ sự kiện cả ngày: Không còn thấy các mốc giờ 07:15 giả định.
 
 ---
@@ -110,4 +119,4 @@
 ## Tiêu chí nghiệm thu
 - Tiêu đề sự kiện lịch đưa số tiết lên đầu (`[Tiết 1]...`), không bị che khuất trên màn hình iPhone / Google Calendar.
 - Hỗ trợ chế độ không gán mốc giờ sai lệch, đúng nhu cầu "không cần thời gian, chỉ cần biết tiết mấy" của giáo viên.
-- Có nút 1-chạm `webcal://` tự động kích hoạt hộp thoại đăng ký trên iPhone 16 Pro (iOS 18) và Google Calendar.
+- Trong chính nội dung email có nút bấm 1-chạm để tự động lưu vào Lịch iPhone / Google Calendar, không bắt giáo viên phải bấm mở tệp đính kèm xem trước.

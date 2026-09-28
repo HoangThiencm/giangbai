@@ -221,7 +221,7 @@ assert.match(html, /\.tt-sessions-container\s*\{\s*display:\s*grid;\s*grid-templ
 assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\s*\{\s*grid-template-columns:\s*1fr;/, 'small screens collapse timetable sessions to one column');
 
 {
-    const source = ['emptyDayMap', 'emptyTimetable', 'splitSubjectAndClass', 'parseTimetableCell', 'normalizeTeacherTimetable', 'timetableHasLessons', 'countTimetableLessons', 'periodsForTimetableSession', 'timetableEmailSessionTable', 'buildSelectedTeachersTimetableEmail', 'buildTeacherIndividualTimetableEmail'].map(declaration).join('\n');
+    const source = ['emptyDayMap', 'emptyTimetable', 'splitSubjectAndClass', 'parseTimetableCell', 'normalizeTeacherTimetable', 'timetableHasLessons', 'countTimetableLessons', 'periodsForTimetableSession', 'timetableEmailSessionTable', 'calendarSubscribeButtonsHtml', 'buildSelectedTeachersTimetableEmail', 'buildTeacherIndividualTimetableEmail'].map(declaration).join('\n');
     const timetable = {
         morning: { 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} },
         afternoon: { 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} }
@@ -237,7 +237,7 @@ assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\
         TT_DAY_LABELS: { 2: 'Thứ 2', 3: 'Thứ 3', 4: 'Thứ 4', 5: 'Thứ 5', 6: 'Thứ 6', 7: 'Thứ 7' },
         getSessionPeriods: session => session === 'morning' ? [1, 2, 3, 4, 5] : [1, 2, 3, 4],
         escapeHtml: value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;'),
-        JSON, String, Object, Set, Number, parseInt
+        JSON, String, Object, Set, Number, parseInt, encodeURIComponent
     });
     vm.runInContext(source, context);
     const email = vm.runInContext('buildSelectedTeachersTimetableEmail([1, 2])', context);
@@ -250,7 +250,11 @@ assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\
     assert.match(email.html, /Toán/, 'email retains subject data');
     assert.match(email.html, /71/, 'email retains class data');
     assert.doesNotMatch(email.html, /báo giảng|PPCT/i, 'timetable email contains no lesson-plan content');
-    const individual = vm.runInContext('buildTeacherIndividualTimetableEmail(state.teachers[0])', context);
+    const individual = vm.runInContext(`buildTeacherIndividualTimetableEmail(state.teachers[0], undefined, true, 'webcal://example.test/api/calendar_feed.php?token=abc&teacher_id=1')`, context);
+    assert.match(individual.html, /📱 Thêm vào Lịch iPhone/, 'email TKB có nút thêm vào Lịch iPhone');
+    assert.match(individual.html, /webcal:\/\/example\.test\/api\/calendar_feed\.php/, 'nút iPhone dùng link webcal');
+    assert.match(individual.html, /🌐 Thêm vào Google Calendar/, 'email TKB có nút Google Calendar');
+    assert.match(individual.html, /calendar\.google\.com\/calendar\/r\?cid=/, 'nút Google Calendar dùng cid webcal');
     assert.equal(individual.to, 'an@example.edu.vn', 'individual timetable email targets the selected teacher');
     assert.match(individual.subject, /Cô An/, 'individual timetable subject identifies its teacher');
     assert.doesNotMatch(individual.html, /Thầy Bình/, 'individual timetable email must not include another teacher');
@@ -291,6 +295,8 @@ assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail
     assert.match(html, /iPhone 16 Pro \(iOS 18\)/, 'hướng dẫn nêu iOS 18');
     assert.match(html, /Thêm lịch đăng ký/, 'hướng dẫn cách A trong app Lịch');
     assert.match(html, /Cài đặt → Ứng dụng → Lịch/, 'hướng dẫn cách B trong Cài đặt iOS 18');
+    assert.match(html, /calendarSubscribeButtonsHtml\(webcalUrl\)/, 'email lịch báo giảng chèn nút webcal dưới bảng');
+    assert.match(html, /await baoGiangCalendarFeedWebcal\(teacher\.id\)/, 'gửi email lấy link webcal trước khi đính nội dung');
     assert.match(html, /id="bg-ics-format"/, 'tab lịch có hộp chọn định dạng');
     assert.match(html, /Tiết 1, 2, 3\.\.\. không gán giờ/, 'mặc định không gán khung giờ giả định');
     assert.match(html, /api\/calendar_feed\.php\?action=link/, 'nút link gọi endpoint Webcal');
