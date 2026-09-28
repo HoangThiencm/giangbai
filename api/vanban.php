@@ -10,8 +10,12 @@ function vbd_current_user(PDO $pdo): array
     $stmt = $pdo->prepare('SELECT id, username, full_name, role, is_active FROM users WHERE id = ? LIMIT 1');
     $stmt->execute([$userId]);
     $user = $stmt->fetch();
-    if (!$user || !(bool)$user['is_active'] || ($user['role'] ?? '') !== 'teacher') {
-        respond(['error' => 'Chức năng quản lý văn bản chỉ dành cho giáo viên.'], 403);
+    if (!$user || !(bool)$user['is_active']) {
+        respond(['error' => 'Chức năng quản lý văn bản chỉ dành cho giáo viên hoặc quản trị viên.'], 403);
+    }
+    $role = (string)($user['role'] ?? '');
+    if (!in_array($role, ['teacher', 'admin', 'superadmin'], true)) {
+        respond(['error' => 'Chức năng quản lý văn bản chỉ dành cho giáo viên hoặc quản trị viên.'], 403);
     }
     return $user;
 }

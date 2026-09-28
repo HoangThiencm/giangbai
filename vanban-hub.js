@@ -162,9 +162,16 @@
         }
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', load);
-    } else {
+    function boot() {
+        renderSummary();
+        renderSectors();
         load();
     }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
 })();
+/* deploy-touch: 20260928-hub-fix */
