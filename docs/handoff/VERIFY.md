@@ -4,28 +4,32 @@
 PASS
 
 ## Đối chiếu scope
-- Sửa đúng file mục tiêu `game-treasure.html`, không chạm vào file ngoài scope.
-- Triển khai đầy đủ các hạng mục theo `docs/handoff/PLAN.md` và `docs/handoff/IMPLEMENT.md`:
-  + Bảng câu hỏi chuyển lên phía trên dòng sông, hiển thị ngay khi bắt đầu.
-  + Bỏ đếm ngược 3-2-1, thay bằng còi GO 0.5s; thời gian đua rút xuống 3s (Siêu tốc) hoặc 5s (Tiêu chuẩn).
-  + Thuật toán vật lý đàn vịt: phân chia vai (winnerId cán đích `p >= 1`, topIds dừng ở `<= 0.84`, đàn thường bị giữ lại ở giữa sông `0.42 - 0.62`), không còn dồn ứ ở mép phải.
-  + Đồ họa canvas vẽ trực tiếp chướng ngại vật (bánh mì, xoáy nước, nitro, rùa thần).
-  + Luồng Zero-click: kết thúc đua vinh danh học sinh ngay trên giao diện và mở câu hỏi trả lời, không qua modal trung gian.
-  + Phím tắt (Space, 1-4, A-D, Enter, H) và tính năng Vịt cứu trợ hoạt động đầy đủ.
+- Sửa prompt trong `scanTimetableWithAI` (`phancongtochuyenmon.html`): Bỏ cấm đoán schema cứng nhắc, yêu cầu AI trích xuất đầy đủ mọi tiết (kể cả 6–10, tiết 7), phân bổ sáng/chiều linh hoạt: ĐÃ ĐỐI CHIẾU, ĐÚNG PHẠM VI.
+- Sửa logic hàm `alignSessionPeriods` (`phancongtochuyenmon.html`): Bỏ điều kiện nén dồn sai `sourcePeriods.length === configured.length`, giữ nguyên các tiết đơn lẻ (tiết 7), tiết ngắt quãng (1, 3, 5), dải buổi chiều (6–9, 7–9), chỉ shift khi có độ lệch đồng nhất: ĐÃ ĐỐI CHIẾU, ĐÚNG PHẠM VI.
+- Thêm nút "Khung tiết" cạnh nút "AI nhận diện TKB" trong Tab Thời khóa biểu GV: ĐÃ ĐỐI CHIẾU, ĐÚNG PHẠM VI.
+- Bổ sung ca kiểm thử trong `tests/timetable-render-smoke.js`: ĐÃ ĐỐI CHIẾU, ĐÚNG PHẠM VI.
+- Không sửa ngoài phạm vi, không tác động file khác.
 
 ## Test đã chạy
-1. `node tests/duck-race-smoke.js`: PASS toàn bộ 8 nhóm kiểm thử (MathText/KaTeX, layout câu hỏi trên sông, còi GO/thời gian đua, vật lý vai vịt/chướng ngại vật, luồng zero-click, phím tắt/vịt cứu trợ, và biên dịch Babel JSX 50220 ký tự thành công không lỗi cú pháp).
-2. `node tests/game-suite-smoke.js`: PASS, không gây hồi quy lên các game khác trong hệ thống.
-3. `git status --short`: Xác nhận chỉ thay đổi `game-treasure.html` và các tài liệu handoff.
+1. `node tests/timetable-render-smoke.js` → PASS
+   - Tiết 7 đơn lẻ giữ nguyên Tiết 7.
+   - Tiết 6 và Tiết 7 buổi chiều giữ nguyên, không bị đè thành Tiết 1, 2.
+   - Tiết ngắt quãng 1, 3, 5 không bị dồn thành 1, 2, 3.
+   - Dải 6–9 và 7–9 không bị đổi thành 1–4.
+   - Dải 6–8 khi khung cấu hình 7–9 vẫn shift đúng sang 7–9.
+   - Hàng Tiết 7 tự động thêm vào lưới buổi chiều (`periodsForTimetableSession`).
+   - Prompt quét ảnh không còn câu lệnh cấm đoán bỏ tiết.
+   - Nút `Khung tiết` hiện diện đúng vị trí trên Tab TKB.
+2. `node tests/baogiang-mail-smoke.js` → PASS
+3. `node tests/baogiang-recognition-smoke.js` → PASS
+4. `node tests/baogiang-teacher-month-smoke.js` → PASS
+5. `node tests/baogiang-weekday-segment-smoke.js` → PASS
 
 ## Pass / Fail từng tiêu chí
-- Tiêu chí 1 (Bảng câu hỏi song song, KaTeX, bố cục trên sông): PASS
-- Tiêu chí 2 (Xuất phát nhanh 0.5s còi GO, thời gian 3s/5s): PASS
-- Tiêu chí 3 (Vật lý tách đàn, chỉ 1 vịt vô địch cán đích): PASS
-- Tiêu chí 4 (Vẽ chướng ngại vật trực tiếp trên sông): PASS
-- Tiêu chí 5 (Chuyển quyền trả lời Zero-click, không modal chặn): PASS
-- Tiêu chí 6 (Phím tắt Space/1-4/A-D/Enter/H & Vịt cứu trợ): PASS
-- Tiêu chí 7 (Loại trừ học sinh đã gọi & lịch sử tích điểm): PASS
+- Nhận diện và bảo toàn đầy đủ các tiết (bao gồm Tiết 7) khi quét ảnh: PASS
+- Tiết 7 không bị hàm căn chỉnh tự ý đổi thành Tiết 1 hoặc Tiết 2: PASS
+- Có nút Khung tiết trên Tab Thời khóa biểu GV: PASS
+- Không hồi quy các tính năng khác của TKB và Báo giảng: PASS
 
 ## Bug
-(Không có bug)
+(Không có)

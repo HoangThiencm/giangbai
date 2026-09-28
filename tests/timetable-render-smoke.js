@@ -72,6 +72,7 @@ function emptyTimetable() {
     vm.runInContext(declaration('periodsForTimetableSession'), context);
     assert.deepEqual([...vm.runInContext("periodsForTimetableSession('morning', {})", context)], [1, 2, 3, 4, 5]);
     assert.deepEqual([...vm.runInContext("periodsForTimetableSession('afternoon', {})", context)], [1, 2, 3, 4]);
+    assert.deepEqual([...vm.runInContext("periodsForTimetableSession('afternoon', { afternoon: { '2': { '7': { subject: 'Toán' } } } })", context)], [1, 2, 3, 4, 7], 'an imported period 7 adds its own afternoon row');
 }
 
 {
@@ -147,6 +148,28 @@ function emptyTimetable() {
     } }, [7, 8, 9])`, context)));
     assert.deepEqual(alreadyAligned, { '2': { '7': 'Toán - 71', '8': 'Toán - 72', '9': 'Toán - 73' } }, 'already configured AI periods remain unchanged');
 }
+
+{
+    const days = ['2', '3', '4', '5', '6', '7'];
+    const context = vm.createContext({
+        Object, Set, Map, String, Number, parseInt
+    });
+    vm.runInContext(declaration('alignSessionPeriods'), context);
+    const onlySeven = JSON.parse(JSON.stringify(vm.runInContext(`alignSessionPeriods({ '2': { '7': 'Toán - 71' } }, [1, 2, 3, 4])`, context)));
+    assert.deepEqual(onlySeven, { '2': { '7': 'Toán - 71' } }, 'a lone period 7 stays period 7 against the default afternoon frame');
+    const sixAndSeven = JSON.parse(JSON.stringify(vm.runInContext(`alignSessionPeriods({ '3': { '6': 'Toán - 61', '7': 'Toán - 62' } }, [1, 2, 3, 4])`, context)));
+    assert.deepEqual(sixAndSeven, { '3': { '6': 'Toán - 61', '7': 'Toán - 62' } }, 'afternoon periods 6 and 7 are not compressed onto periods 1 and 2');
+    const gaps = JSON.parse(JSON.stringify(vm.runInContext(`alignSessionPeriods({ '4': { '1': 'Toán - 41', '3': 'Toán - 43', '5': 'Toán - 45' } }, [1, 2, 3, 4, 5])`, context)));
+    assert.deepEqual(gaps, { '4': { '1': 'Toán - 41', '3': 'Toán - 43', '5': 'Toán - 45' } }, 'gapped periods 1, 3 and 5 stay on their printed numbers');
+    const afternoonSpan = JSON.parse(JSON.stringify(vm.runInContext(`alignSessionPeriods({ '5': { '6': 'A', '7': 'B', '8': 'C', '9': 'D' } }, [1, 2, 3, 4])`, context)));
+    assert.deepEqual(afternoonSpan, { '5': { '6': 'A', '7': 'B', '8': 'C', '9': 'D' } }, 'afternoon span 6–9 is preserved when the frame is still 1–4');
+    const sevenToNine = JSON.parse(JSON.stringify(vm.runInContext(`alignSessionPeriods({ '6': { '7': 'A', '8': 'B', '9': 'C' } }, [1, 2, 3, 4])`, context)));
+    assert.deepEqual(sevenToNine, { '6': { '7': 'A', '8': 'B', '9': 'C' } }, 'afternoon span 7–9 is preserved when the frame is still 1–4');
+}
+
+assert.match(html, /id="tt-import-details"[\s\S]*openQuickPeriodsConfig\(\)[\s\S]*Khung tiết[\s\S]*btn-ai-scan-tt/, 'the timetable tab exposes the period-frame button beside AI scan');
+assert.doesNotMatch(html, /Key tiết trong "morning" BẮT BUỘC chỉ là một trong/, 'the scan prompt no longer drops periods outside the default frame');
+assert.match(html, /tuyệt đối không bỏ sót bất kỳ tiết nào có phân công dạy/, 'the scan prompt requires every printed period, including period 7');
 
 assert.match(html, /<details class="tt-import-card" id="tt-import-details">/, 'timetable import controls are collapsible');
 assert.match(html, /<div class="tt-sessions-container">[\s\S]*id="tt-morning-wrap"[\s\S]*id="tt-afternoon-wrap"/, 'morning and afternoon grids share the sessions container');

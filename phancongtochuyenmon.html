@@ -1955,10 +1955,14 @@
                             <button type="button" class="btn-small" id="tt-clear-preview" style="display:none;" onclick="event.stopPropagation(); clearTimetablePreview()">Xóa ảnh</button>
                         </div>
                     </div>
-                    <div style="display:flex; justify-content:flex-end;">
-                        <button type="button" class="btn-small btn-small-primary" id="btn-ai-scan-tt" onclick="scanTimetableWithAI()">
-                            <i class="fas fa-wand-magic-sparkles"></i> AI nhận diện TKB
-                        </button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <p style="margin:0; color:#64748b; font-size:0.78rem; line-height:1.4; max-width:460px;">Khung tiết của trường: sáng thường 1–5; chiều có thể 1–4, 6–9 hoặc 7–9. Bấm Khung tiết để xem và sửa trước khi nhận diện ảnh.</p>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button type="button" class="btn-small" onclick="openQuickPeriodsConfig()"><i class="fas fa-gear"></i> Khung tiết</button>
+                            <button type="button" class="btn-small btn-small-primary" id="btn-ai-scan-tt" onclick="scanTimetableWithAI()">
+                                <i class="fas fa-wand-magic-sparkles"></i> AI nhận diện TKB
+                            </button>
+                        </div>
                     </div>
                 </div>
             </details>
@@ -6605,9 +6609,12 @@ Cấu trúc JSON yêu cầu:
 }
 Quy tắc:
 - Key của các ngày: "2" (Thứ 2), "3" (Thứ 3), "4" (Thứ 4), "5" (Thứ 5), "6" (Thứ 6), "7" (Thứ 7).
-- Khung tiết thực tế của trường: Buổi sáng gồm ${mPeriods.join(', ')}; Buổi chiều gồm ${aPeriods.join(', ')}.
-- Key tiết trong "morning" BẮT BUỘC chỉ là một trong: ${mPeriods.join(', ')}. Key tiết trong "afternoon" BẮT BUỘC chỉ là một trong: ${aPeriods.join(', ')}.
-- Nếu ảnh không in số tiết hoặc chỉ có các hàng, BẮT BUỘC ghép các hàng từ trên xuống theo đúng thứ tự khung tiết: hàng đầu là tiết đầu tiên của buổi, hàng kế là tiết tiếp theo. Tuyệt đối không tự suy đoán tiết 6 khi buổi chiều của trường bắt đầu từ tiết ${aPeriods[0] || ''}.
+- Khung tiết đang cấu hình trên phần mềm (chỉ để tham khảo, không được dùng để bỏ tiết): Buổi sáng gồm ${mPeriods.join(', ')}; Buổi chiều gồm ${aPeriods.join(', ')}.
+- Đọc và trích xuất TOÀN BỘ các tiết học có trong ảnh (kể cả tiết 6, tiết 7, tiết 8, tiết 9, tiết 10...), tuyệt đối không bỏ sót bất kỳ tiết nào có phân công dạy.
+- Nếu ảnh có phân chia Sáng / Chiều rõ rệt: đưa các tiết sáng vào "morning", các tiết chiều vào "afternoon" theo đúng số tiết ghi trên ảnh.
+- Nếu ảnh đánh số tiết liên tục cả ngày từ 1 đến 7 (hoặc 1 đến 10): đưa các tiết 1–5 (hoặc các tiết buổi sáng) vào "morning"; các tiết từ tiết 6 trở đi (hoặc từ tiết 5 nếu chiều bắt đầu từ tiết 5, ví dụ tiết 6, tiết 7, tiết 8...) vào "afternoon".
+- Giữ nguyên số thứ tự tiết thực tế ghi trên ảnh làm key (ví dụ: "1", "2", "3", "4", "5", "6", "7", "8"...).
+- Nếu ảnh không in số tiết hoặc chỉ có các hàng: ghép các hàng từ trên xuống trong đúng buổi đang đọc. Hàng đầu của buổi sáng là tiết đầu buổi sáng, hàng đầu của buổi chiều là tiết đầu buổi chiều theo số in trên ảnh hoặc theo khung tham khảo ${aPeriods[0] ? '(chiều đang cấu hình bắt đầu từ tiết ' + aPeriods[0] + ')' : ''}. Vẫn giữ mọi hàng có môn học, kể cả tiết 6, 7, 8, 9, 10.
 - Giá trị mỗi tiết là chuỗi định dạng "TênMôn - TênLớp" (ví dụ: "Toán - 63", "HĐTN - 64"), nếu tiết trống thì bỏ qua hoặc để rỗng "".
 - Chỉ trả về duy nhất khối JSON hợp lệ, không bọc thêm văn bản giải thích.`;
                 const payload = {
@@ -6644,12 +6651,18 @@ Quy tắc:
         }
 
         function alignSessionPeriods(srcSessionObj, configuredPeriods) {
-            const configured = [...new Set((configuredPeriods || []).map(period => parseInt(period, 10)).filter(period => period > 0))];
+            const configured = [...new Set((configuredPeriods || []).map(period => parseInt(period, 10)).filter(period => period > 0))].sort((a, b) => a - b);
             if (!configured.length || !srcSessionObj || typeof srcSessionObj !== 'object') return srcSessionObj || {};
             const sourcePeriods = [...new Set(Object.values(srcSessionObj).flatMap(day => Object.keys(day || {}).map(period => parseInt(period, 10)).filter(period => period > 0)))].sort((a, b) => a - b);
+            if (!sourcePeriods.length) return srcSessionObj;
             const configuredSet = new Set(configured);
-            const matchesConfigured = sourcePeriods.length === configured.length && sourcePeriods.every(period => configuredSet.has(period));
-            if (matchesConfigured || sourcePeriods.length > configured.length) return srcSessionObj;
+            if (sourcePeriods.every(period => configuredSet.has(period))) return srcSessionObj;
+
+            const delta = configured[0] - sourcePeriods[0];
+            const uniformShift = delta > 0
+                && sourcePeriods.length === configured.length
+                && sourcePeriods.every((period, index) => period + delta === configured[index]);
+            if (!uniformShift) return srcSessionObj;
 
             const periodMap = new Map(sourcePeriods.map((period, index) => [String(period), String(configured[index])]));
             return Object.fromEntries(Object.entries(srcSessionObj).map(([day, cells]) => [day, Object.entries(cells || {}).reduce((aligned, [period, value]) => {
