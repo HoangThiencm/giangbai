@@ -27,6 +27,7 @@ function emptyTimetable() {
         state: { teachers: [{ id: 123 }] },
         selectedTimetableTeacherId: null,
         bindTimetableInputEvents() {},
+        refreshTimetableGeminiModelLabel() {},
         selectTimetableTeacher: id => { selected = id; },
         renderTimetableTeacherList() { throw new Error('should use select'); },
         renderTimetableWorkspace() { throw new Error('should use select'); }
@@ -177,6 +178,31 @@ assert.match(html, /applyPeriodPreset\('1-5','6-10'\)/, 'period modal includes t
 assert.match(html, /applyPeriodPreset\('1-5','1-5'\)/, 'period modal includes the morning 1-5, afternoon 1-5 preset');
 
 assert.match(html, /id="tt-import-details"[\s\S]*openQuickPeriodsConfig\(\)[\s\S]*Khung tiết[\s\S]*btn-ai-scan-tt/, 'the timetable tab exposes the period-frame button beside AI scan');
+assert.match(html, /id="gemini-model-modal"/, 'the page includes the Gemini model modal');
+assert.match(html, /function openGeminiModelModal\(/, 'the timetable tab can open the Gemini model modal');
+assert.match(html, /function getTimetableGeminiModel\(/, 'the timetable scan reads the saved Gemini model');
+{
+    const scanStart = html.indexOf('async function scanTimetableWithAI');
+    const scanEnd = html.indexOf('function alignSessionPeriods', scanStart);
+    const scanBody = html.slice(scanStart, scanEnd);
+    assert.match(scanBody, /getTimetableGeminiModel\(\)/, 'AI timetable scan uses the selected Gemini model');
+    assert.doesNotMatch(scanBody, /model:\s*'gemini-2\.5-flash'/, 'AI timetable scan no longer hardcodes gemini-2.5-flash');
+}
+{
+    const store = new Map();
+    const context = vm.createContext({
+        state: { info: {} },
+        localStorage: {
+            getItem: key => store.has(key) ? store.get(key) : null,
+            setItem: (key, value) => store.set(key, String(value))
+        }
+    });
+    vm.runInContext([declaration('getTimetableGeminiModel'), declaration('formatGeminiModelShortLabel')].join('\n'), context);
+    assert.equal(vm.runInContext('getTimetableGeminiModel()', context), 'gemini-2.5-flash', 'timetable AI defaults to gemini-2.5-flash');
+    context.localStorage.setItem('phancong_gemini_model', 'gemini-2.5-pro');
+    assert.equal(vm.runInContext('getTimetableGeminiModel()', context), 'gemini-2.5-pro', 'saved phancong_gemini_model overrides the default');
+    assert.equal(vm.runInContext("formatGeminiModelShortLabel('gemini-1.5-flash')", context), '1.5 Flash', 'known Gemini models use a short button label');
+}
 assert.doesNotMatch(html, /Key tiết trong "morning" BẮT BUỘC chỉ là một trong/, 'the scan prompt no longer drops periods outside the default frame');
 assert.match(html, /tuyệt đối không bỏ sót bất kỳ tiết nào có phân công dạy/, 'the scan prompt requires every printed period, including period 7');
 

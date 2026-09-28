@@ -4,32 +4,29 @@
 PASS
 
 ## Đối chiếu scope
-- Sửa prompt trong `scanTimetableWithAI` (`phancongtochuyenmon.html`): Bỏ cấm đoán schema cứng nhắc, yêu cầu AI trích xuất đầy đủ mọi tiết (kể cả 6–10, tiết 7), phân bổ sáng/chiều linh hoạt: ĐÃ ĐỐI CHIẾU, ĐÚNG PHẠM VI.
-- Sửa logic hàm `alignSessionPeriods` (`phancongtochuyenmon.html`): Bỏ điều kiện nén dồn sai `sourcePeriods.length === configured.length`, giữ nguyên các tiết đơn lẻ (tiết 7), tiết ngắt quãng (1, 3, 5), dải buổi chiều (6–9, 7–9), chỉ shift khi có độ lệch đồng nhất: ĐÃ ĐỐI CHIẾU, ĐÚNG PHẠM VI.
-- Thêm nút "Khung tiết" cạnh nút "AI nhận diện TKB" trong Tab Thời khóa biểu GV: ĐÃ ĐỐI CHIẾU, ĐÚNG PHẠM VI.
-- Bổ sung ca kiểm thử trong `tests/timetable-render-smoke.js`: ĐÃ ĐỐI CHIẾU, ĐÚNG PHẠM VI.
-- Không sửa ngoài phạm vi, không tác động file khác.
+- `api/baogiang_mail.php`: Hàm `baogiang_send_gmail` đã nhận tham số `$ics`. Khi có tệp lịch, tạo thư dạng `multipart/mixed` với phần đính kèm `text/calendar; method=REQUEST; charset=UTF-8; name="lich_bao_giang.ics"` kèm `Content-Disposition: attachment; filename="lich_bao_giang.ics"`. Khi không có `$ics`, bảo toàn định dạng MIME cũ. Vòng lặp `$deliveries` đọc và chuyển tiếp trường `ics`. -> ĐẠT
+- `phancongtochuyenmon.html`:
+  + Đã khai báo bảng thời gian chuẩn `BAOGIANG_PERIOD_TIMES` (sáng tiết 1–5 từ 07:15; chiều tiết 1/6 đến 5/10 từ 13:30 đến 17:45). -> ĐẠT
+  + Hàm `buildTeacherBaoGiangIcs`: tạo chuẩn VCALENDAR `METHOD:REQUEST`, `VTIMEZONE Asia/Ho_Chi_Minh`, mỗi tiết một VEVENT (đầy đủ môn, lớp, bài dạy, PPCT, giáo viên) và `VALARM` nhắc trước 15 phút (`-PT15M`). -> ĐẠT
+  + Hàm `downloadIcsFile` và `exportCurrentBaoGiangIcs`: hỗ trợ tải file `LichBaoGiang_<tên>_<ngày đầu tuần>.ics` trực tiếp trên trình duyệt. -> ĐẠT
+  + Giao diện đã bổ sung nút **Xuất Google Calendar (.ics)** tại tab Lịch báo giảng và tab Gửi email; tab Gửi email có ghi chú tự động đính kèm sự kiện lịch. -> ĐẠT
+  + `buildTeacherBaoGiangWeekEmail` đã đính kèm `ics`, `sendBaoGiangSelectedWeekToTeachers` gửi trường `ics` trong payload sang backend. -> ĐẠT
+- Đồng thời đã kiểm tra bản vá nhận diện TKB tiết chiều (quy tắc ánh xạ hàng 1-đối-1 và bảo vệ `vnEduPlusOne` trong `alignSessionPeriods`). -> ĐẠT
 
 ## Test đã chạy
-1. `node tests/timetable-render-smoke.js` → PASS
-   - Tiết 7 đơn lẻ giữ nguyên Tiết 7.
-   - Tiết 6 và Tiết 7 buổi chiều giữ nguyên, không bị đè thành Tiết 1, 2.
-   - Tiết ngắt quãng 1, 3, 5 không bị dồn thành 1, 2, 3.
-   - Dải 6–9 và 7–9 không bị đổi thành 1–4.
-   - Dải 6–8 khi khung cấu hình 7–9 vẫn shift đúng sang 7–9.
-   - Hàng Tiết 7 tự động thêm vào lưới buổi chiều (`periodsForTimetableSession`).
-   - Prompt quét ảnh không còn câu lệnh cấm đoán bỏ tiết.
-   - Nút `Khung tiết` hiện diện đúng vị trí trên Tab TKB.
-2. `node tests/baogiang-mail-smoke.js` → PASS
-3. `node tests/baogiang-recognition-smoke.js` → PASS
-4. `node tests/baogiang-teacher-month-smoke.js` → PASS
-5. `node tests/baogiang-weekday-segment-smoke.js` → PASS
+- `node tests/baogiang-mail-smoke.js`: PASS
+  + Khớp MIME `multipart/mixed` và header `text/calendar; method=REQUEST`.
+  + Khớp `buildTeacherBaoGiangIcs`, `exportCurrentBaoGiangIcs`, `downloadIcsFile`.
+  + Khớp VCALENDAR, VTIMEZONE, DTSTART/DTEND, VALARM nhắc trước 15 phút.
+- `node tests/timetable-render-smoke.js`: PASS
+- `node tests/baogiang-teacher-month-smoke.js`: PASS
 
 ## Pass / Fail từng tiêu chí
-- Nhận diện và bảo toàn đầy đủ các tiết (bao gồm Tiết 7) khi quét ảnh: PASS
-- Tiết 7 không bị hàm căn chỉnh tự ý đổi thành Tiết 1 hoặc Tiết 2: PASS
-- Có nút Khung tiết trên Tab Thời khóa biểu GV: PASS
-- Không hồi quy các tính năng khác của TKB và Báo giảng: PASS
+1. Tạo tệp lịch chuẩn `.ics` theo tuần cho từng giáo viên: PASS
+2. Đính kèm `.ics` vào email gửi trực tiếp để kích hoạt nút Add to Calendar trên Gmail: PASS
+3. Tải tệp `.ics` trực tiếp từ giao diện web Lịch báo giảng: PASS
+4. Không ảnh hưởng đến các luồng gửi email cũ (giữ nguyên khi không có `ics`): PASS
+5. Cú pháp và kiểm thử tự động toàn bộ test suite liên quan: PASS
 
 ## Bug
-(Không có)
+Không phát hiện bug mới.

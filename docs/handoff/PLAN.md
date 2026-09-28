@@ -1,54 +1,47 @@
-# PLAN: Khắc phục lỗi tạo bài tập từ file PDF bị lặp lại / quá giống nhau khi tạo lần 2 trong `taobaitap.html`
+# PLAN: Bổ sung Modal Cài đặt / Chọn Module Gemini cho nhận diện Thời khóa biểu và AI trong Quản lý tổ chuyên môn
 
 ## Hiện trạng
-1. **Triệu chứng**:
-   - Khi người dùng nạp một file tài liệu (PDF, Word hoặc ảnh) vào mục **Nguồn tài liệu** trong `taobaitap.html`, sau đó cấu hình chủ đề và bấm **Tạo câu hỏi / bài tập** (lần 1): AI sinh ra một bộ câu hỏi.
-   - Khi người dùng bấm **Quay lại** (Step 1) để tạo tiếp lần 2 từ cùng nguồn PDF đó: bộ câu hỏi sinh ra lần 2 gần như giống hệt lần 1 (cùng dạng bài, cùng ngữ cảnh, thậm chí cùng số liệu).
+1. **Triệu chứng & Thực tế**:
+   - Hiện tại trong `phancongtochuyenmon.html`, hàm `scanTimetableWithAI` (dòng ~6633) đang cố định (hardcode) model AI:
+     `body: JSON.stringify({ model: 'gemini-2.5-flash', payload, timeout: 90 })`
+   - Người dùng không có cách nào lựa chọn chuyển đổi sang các model khác (như `gemini-2.5-pro` khi ảnh TKB mờ hoặc phức tạp, `gemini-1.5-flash` khi model 2.5 bị nghẽn quota, hoặc `gemini-3.7-flash`, `gemini-3-flash-preview`...).
+   - Người dùng cũng không thể quan sát được hiện tại hệ thống đang sử dụng model nào để xử lý.
 
-2. **Nguyên nhân gốc rễ**:
-   - **Nguyên nhân 1 - Hoàn toàn không truyền `generationConfig` (temperature, topP) lên Gemini API**:
-     Trong hàm `GeminiModule.callGeminiParts` (`taobaitap.html` dòng 13428–13432):
-     ```javascript
-     const res = await fetch(url, {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ contents: [{ parts }] })
-     });
-     ```
-     `body` chỉ chứa duy nhất `contents`, không hề có `generationConfig`. Khi không có `generationConfig`, Gemini (đặc biệt các model Flash) sử dụng chế độ lấy mẫu tham lam (greedy decoding) với `temperature` rất thấp (~0.0 - 0.2). Do đó, với cùng một nội dung prompt, mô hình LLM sẽ trả về kết quả gần như tất định (deterministic), dẫn tới các câu hỏi sinh ra ở các lần chạy hoàn toàn giống nhau.
-   - **Nguyên nhân 2 - Prompt giống nhau 100% giữa các lần tạo, thiếu thành phần sinh ngẫu nhiên (entropy/seed)**:
-     Trong hàm `generateContent` (dòng 16145–16235), prompt gửi lên AI được ghép tĩnh từ tên chủ đề và nội dung trích xuất từ PDF. Không có mã phiên, không có biến thể ngẫu nhiên (`variant seed`), không có timestamp.
-   - **Nguyên nhân 3 - Không tận dụng danh sách câu hỏi đã tạo ở lần trước để yêu cầu tránh trùng lặp**:
-     Khi người dùng bấm "Quay lại", state `questions` (hoặc `smartquiz_questions` trong `localStorage`) vẫn đang lưu các câu hỏi của lần 1. Tuy nhiên, `generateContent` không hề đọc lại danh sách này để nhắc AI "Hãy tránh trùng với các câu sau...".
-   - **Nguyên nhân 4 - Prompt thiếu chỉ dẫn đổi mới góc độ khai thác tài liệu**:
-     Prompt hiện tại nhấn mạnh câu: `Chỉ dùng kiến thức có trong NGUỒN KIẾN THỨC ở trên...`, khiến AI có xu hướng bám chặt vào các đoạn văn / ví dụ đầu tiên và tiêu biểu nhất của file PDF thay vì chủ động khai thác các phần khác, bài toán ngược, bài toán thực tế hoặc thay đổi số liệu.
+2. **Nhu cầu**:
+   - Bổ sung Modal Cài đặt / Chọn Module Gemini (hoặc dropdown chọn nhanh model) trực tiếp tại giao diện tab Thời khóa biểu GV (`#view-timetable`) và trong cài đặt chung của hệ thống.
+   - Cho phép người dùng linh hoạt đổi model ngay trước khi quét ảnh TKB để tránh lỗi Quota hoặc tăng độ chính xác theo nhu cầu.
 
 ---
 
 ## Phạm vi
-- File `taobaitap.html`:
-  + Cập nhật `GeminiModule.callGeminiParts`: Nhận thêm `options.generationConfig` và đưa vào payload JSON khi gọi Gemini API.
-  + Cập nhật hàm `generateContent`:
-    * Cung cấp `generationConfig: { temperature: 0.85, topP: 0.95 }` để tăng tính sáng tạo và đa dạng hóa câu hỏi.
-    * Đưa thêm mã biến thể ngẫu nhiên (`variantSeed`, timestamp) vào prompt.
-    * Bổ sung quy tắc bắt buộc: **ĐA DẠNG HÓA & ĐỔI MỚI ĐỀ** (yêu cầu thay đổi số liệu, góc tiếp cận, bài toán xuôi/ngược, thực tế, chống rập khuôn).
-    * Đọc danh sách câu hỏi hiện có (`questions`) trước khi tạo mới; nếu có, tóm tắt và đưa vào prompt chỉ thị: "BỘ CÂU HỎI ĐÃ CÓ - HÃY TẠO BỘ MỚI HOÀN TOÀN KHÁC BIỆT".
-  + Thêm tùy chọn / chỉ báo trực quan trên giao diện: huy hiệu "Tự động đổi mới đề & tránh trùng lặp".
-- File `tests/taobaitap-plan-smoke.js` (hoặc tạo test smoke mới `tests/taobaitap-diversity-smoke.js`):
-  + Kiểm thử sự hiện diện của `generationConfig` trong `callGeminiParts`.
-  + Kiểm thử prompt trong `generateContent` có chỉ thị chống trùng lặp và đa dạng hóa.
+- File `phancongtochuyenmon.html`:
+  + Bổ sung Modal Cài đặt Model Gemini (`#gemini-model-modal`) với danh sách các model phổ biến:
+    * `gemini-2.5-flash` (Khuyên dùng: Nhanh, nhẹ, OCR thị giác tốt, ít tốn quota).
+    * `gemini-2.5-pro` (Thông minh cao, suy luận sâu với bảng mờ/phức tạp).
+    * `gemini-1.5-flash` (Bản ổn định dự phòng khi 2.5 quá tải).
+    * `gemini-3.7-flash` (Model mới nhất).
+    * `gemini-3-flash-preview` (Bản thử nghiệm).
+    * Ô nhập model tùy chỉnh (Custom Model Name).
+  + Bổ sung nút mở Modal / Dropdown chọn nhanh Model cạnh nút "Khung tiết" và "AI nhận diện TKB" tại thẻ nhập TKB (`#tt-import-details`):
+    `<button type="button" class="btn-small" onclick="openGeminiModelModal()"><i class="fas fa-robot"></i> <span id="tt-active-model-label">Gemini 2.5 Flash</span></button>`
+  + Quản lý lưu trữ model:
+    * Hàm `getTimetableGeminiModel()`: ưu tiên đọc từ `localStorage.getItem('phancong_gemini_model')` hoặc `localStorage.getItem('gemini_model')` hoặc `state.info.gemini_model`, fallback về `'gemini-2.5-flash'`.
+    * Hàm `saveTimetableGeminiModel(model)`: lưu vào `localStorage` và cập nhật nhãn hiển thị trên giao diện.
+  + Cập nhật hàm `scanTimetableWithAI()`: sử dụng `getTimetableGeminiModel()` khi gửi payload tới `api/khbd_gemini.php`.
+- File `tests/timetable-render-smoke.js`:
+  + Thêm assertion kiểm tra sự hiện diện của modal/dropdown chọn model Gemini, hàm `getTimetableGeminiModel` và việc dùng model động trong `scanTimetableWithAI`.
 
 ---
 
 ## Ngoài phạm vi
-- Không thay đổi thuật toán đọc/trích xuất PDF/OCR của thư viện PDF.js.
-- Không thay đổi cấu trúc dữ liệu câu hỏi trong hệ thống Quiz / Word Export / Presentation.
+- Không can thiệp sang backend `api/khbd_gemini.php` (backend này đã hỗ trợ regex chấp nhận mọi model Gemini hợp lệ dạng `gemini-[a-z0-9._-]+`).
+- Không làm thay đổi cấu trúc dữ liệu lưu trữ TKB trong cơ sở dữ liệu.
 
 ---
 
 ## File dự kiến tác động
-- `taobaitap.html`
-- `tests/taobaitap-diversity-smoke.js`
+- `phancongtochuyenmon.html`
+- `tests/timetable-render-smoke.js`
 - `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/.lock`
 
@@ -58,85 +51,96 @@
 1. **Bước 1: Mở khóa handoff**:
    - Xóa `docs/handoff/.lock` trước khi sửa source code.
 
-2. **Bước 2: Hỗ trợ `generationConfig` trong `GeminiModule.callGeminiParts` (`taobaitap.html`)**:
-   - Tại hàm `callGeminiParts` (khoảng dòng 13331–13435):
-     ```javascript
-     const generationConfig = options.generationConfig || { temperature: 0.85, topP: 0.95 };
+2. **Bước 2: Xây dựng HTML Modal Cài đặt Model Gemini trong `phancongtochuyenmon.html`**:
+   - Bổ sung cấu trúc modal `#gemini-model-modal`:
+     ```html
+     <div class="modal-overlay" id="gemini-model-modal">
+         <div class="modal-card" style="max-width: 480px;">
+             <div class="modal-header">
+                 <h2><i class="fas fa-robot text-indigo-600"></i> Cài đặt Model Gemini AI</h2>
+                 <button class="modal-close" onclick="closeGeminiModelModal()">&times;</button>
+             </div>
+             <div class="modal-body">
+                 <p style="margin: 0 0 12px 0; font-size: 0.82rem; color: #64748b;">
+                     Chọn module AI dùng để nhận diện Thời khóa biểu và hỗ trợ phân công:
+                 </p>
+                 <div class="form-group" style="margin-bottom: 12px;">
+                     <label style="font-weight: 700; font-size: 0.82rem; display: block; margin-bottom: 6px;">Chọn phiên bản AI:</label>
+                     <select id="cfg-gemini-model-select" class="form-control" onchange="onGeminiModelSelectChange(this.value)">
+                         <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng: Nhanh, nhẹ, tiết kiệm quota)</option>
+                         <option value="gemini-2.5-pro">Gemini 2.5 Pro (Suy luận sâu, thông minh cao, ảnh mờ/khó)</option>
+                         <option value="gemini-1.5-flash">Gemini 1.5 Flash (Bản ổn định dự phòng)</option>
+                         <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+                         <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                         <option value="custom">-- Model tùy chỉnh khác --</option>
+                     </select>
+                 </div>
+                 <div class="form-group" id="cfg-gemini-model-custom-wrap" style="display: none; margin-bottom: 12px;">
+                     <label style="font-weight: 700; font-size: 0.82rem; display: block; margin-bottom: 6px;">Tên model tùy chỉnh:</label>
+                     <input type="text" class="form-control" id="cfg-gemini-model-custom" placeholder="VD: gemini-2.5-flash-lite">
+                 </div>
+                 <div style="font-size: 0.78rem; color: #475569; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.4;">
+                     <i class="fas fa-lightbulb text-amber-500"></i> <b>Mẹo:</b> Nếu <code>2.5-flash</code> báo lỗi hết Quota (429), bạn có thể tạm chuyển sang <code>1.5-flash</code> hoặc <code>2.5-pro</code>, hoặc bổ sung thêm 2-3 API key trong phần Cài đặt tài khoản.
+                 </div>
+             </div>
+             <div class="modal-footer">
+                 <button class="btn-small" onclick="closeGeminiModelModal()">Đóng</button>
+                 <button class="btn-small btn-small-primary" onclick="saveGeminiModelConfig()"><i class="fas fa-check"></i> Lưu cài đặt</button>
+             </div>
+         </div>
+     </div>
      ```
-   - Cập nhật dòng gửi payload (dòng ~13431):
-     ```javascript
-     const bodyPayload = { contents: [{ parts }] };
-     if (generationConfig) {
-         bodyPayload.generationConfig = generationConfig;
-     }
-     const res = await fetch(url, {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify(bodyPayload)
-     });
+
+3. **Bước 3: Bổ sung nút bấm mở modal tại thẻ Nhập ảnh TKB (`#tt-import-details`)**:
+   - Tại dòng ~1961 trong `phancongtochuyenmon.html`, đặt cạnh nút "Khung tiết":
+     ```html
+     <button type="button" class="btn-small" onclick="openGeminiModelModal()" title="Cài đặt module Gemini AI">
+         <i class="fas fa-robot text-indigo-600"></i> <span id="tt-active-model-label">2.5 Flash</span>
+     </button>
      ```
 
-3. **Bước 3: Tối ưu Prompt và Cơ chế chống trùng lặp trong `generateContent` (`taobaitap.html`)**:
-   - Tại `generateContent` (khoảng dòng 16160–16235):
-     + Tạo mã phiên ngẫu nhiên:
-       ```javascript
-       const variantNonce = Math.random().toString(36).substring(2, 7).toUpperCase();
-       ```
-     + Thu thập tóm tắt các câu hỏi đã tạo ở lần trước (nếu có):
-       ```javascript
-       const prevQuestions = Array.isArray(questions) && questions.length > 0 ? questions : [];
-       let antiDuplicationPrompt = '';
-       if (prevQuestions.length > 0) {
-           const prevList = prevQuestions.slice(0, 15).map((q, i) => `${i + 1}. ${(q.question || '').replace(/\s+/g, ' ').substring(0, 80)}`).join('\n');
-           antiDuplicationPrompt = `\nCÁC CÂU HỎI ĐÃ TẠO Ở LẦN TRƯỚC (CẦN TRÁNH TRÙNG LẶP):
-${prevList}
-BẮT BUỘC: Bạn PHẢI tạo ra bộ câu hỏi MỚI HOÀN TOÀN, không lặp lại ý tưởng, không sao chép lại ngữ cảnh hay số liệu của các câu trên!\n`;
-       }
-       ```
-     + Bổ sung chỉ dẫn chất lượng và đa dạng hóa vào `prompt`:
-       ```text
-       QUY TẮC ĐA DẠNG HÓA & ĐỔI MỚI BÀI TẬP (Mã đề #${variantNonce}):
-       - Đa dạng hóa tối đa góc tiếp cận kiến thức từ tài liệu: không chỉ hỏi khái niệm cơ bản mà hãy khai thác các tính chất, hệ quả, trường hợp đặc biệt, bài toán ngược, bài toán liên hệ thực tế đời sống.
-       - Thay đổi linh hoạt các số liệu, dữ kiện, tên biến và ngữ cảnh bài toán.
-       - Mỗi lần tạo đề phải là một trải nghiệm học tập mới mẻ, phong phú, không rập khuôn đơn điệu.
-       ```
-     + Đưa `${antiDuplicationPrompt}` vào nội dung prompt trước khi gọi `callGeminiAPI`.
-     + Khi gọi `GeminiModule.callGeminiAPI`, truyền kèm `options`:
-       ```javascript
-       const response = await GeminiModule.callGeminiAPI(prompt, setRetryCount, {
-           generationConfig: { temperature: 0.9, topP: 0.95 }
-       });
-       ```
+4. **Bước 4: Viết các hàm điều khiển JS trong `phancongtochuyenmon.html`**:
+   - `getTimetableGeminiModel()`:
+     Lấy từ `localStorage.getItem('phancong_gemini_model')` || `localStorage.getItem('gemini_model')` || `'gemini-2.5-flash'`.
+   - `formatGeminiModelShortLabel(model)`:
+     Trả về nhãn ngắn gọn, VD: `'2.5 Flash'`, `'2.5 Pro'`, `'1.5 Flash'`...
+   - `openGeminiModelModal()`:
+     Đọc model hiện tại, gán giá trị vào select và input custom, mở modal `#gemini-model-modal`.
+   - `closeGeminiModelModal()`:
+     Đóng modal `#gemini-model-modal`.
+   - `onGeminiModelSelectChange(val)`:
+     Ẩn/hiện trường input `cfg-gemini-model-custom-wrap`.
+   - `saveGeminiModelConfig()`:
+     Lấy giá trị từ select (hoặc custom input nếu chọn custom), lưu vào `localStorage.setItem('phancong_gemini_model', model)` và `localStorage.setItem('gemini_model', model)`, cập nhật `tt-active-model-label`, đóng modal và thông báo `showToast('Đã lưu model AI: ' + model, 'success')`.
+   - Cập nhật `scanTimetableWithAI()`:
+     Thay vì `model: 'gemini-2.5-flash'`, sử dụng:
+     ```javascript
+     const activeModel = getTimetableGeminiModel();
+     // body: JSON.stringify({ model: activeModel, payload, timeout: 90 })
+     ```
+   - Khởi tạo nhãn ban đầu khi trang load trong `renderTimetableView()` hoặc `initTimetableWorkspace()`.
 
-4. **Bước 4: Cập nhật chỉ dẫn giao diện**:
-   - Tại giao diện Step 1 gần nút Tạo câu hỏi / bài tập:
-     Thêm dòng hiển thị trạng thái nhỏ:
-     `<div style="font-size:0.75rem; color:#4f46e5; margin-top:6px;"><i class="fas fa-sparkles"></i> Đã bật chế độ tự động làm mới đề & chống trùng lặp câu hỏi giữa các lần tạo.</div>`
-
-5. **Bước 5: Tạo bài test `tests/taobaitap-diversity-smoke.js`**:
-   - Viết test kiểm tra:
-     + `callGeminiParts` có hỗ trợ `generationConfig`.
-     + `generateContent` có xây dựng `antiDuplicationPrompt` và `variantNonce`.
-     + Kiểm tra mã nguồn không có lỗi cú pháp.
+5. **Bước 5: Cập nhật kiểm thử tự động trong `tests/timetable-render-smoke.js`**:
+   - Kiểm tra `phancongtochuyenmon.html` có chứa `gemini-model-modal`, `openGeminiModelModal`, `getTimetableGeminiModel`.
+   - Kiểm tra `scanTimetableWithAI` không còn hardcode chuỗi `model: 'gemini-2.5-flash'` mà sử dụng hàm/biến động `getTimetableGeminiModel()`.
+   - Chạy `node tests/timetable-render-smoke.js` -> 100% PASS.
 
 6. **Bước 6: Ghi nhật ký vào `docs/handoff/IMPLEMENT.md` và tạo lại `docs/handoff/.lock` nội dung `LOCK`**.
 
 ---
 
 ## Rủi ro và Biện pháp dự phòng
-- *Rủi ro*: Nhiệt độ (`temperature`) quá cao có thể khiến định dạng JSON bị lỗi cú pháp.
-  *Biện pháp*: Đặt `temperature` ở mức an toàn 0.85–0.90; hệ thống đã có sẵn `GeminiModule.repairJSONResponse` để tự động sửa chữa nếu JSON bị lỗi nhẹ.
-- *Rủi ro*: Tài liệu PDF quá ngắn (ví dụ chỉ có 1 đoạn văn ngắn) nên AI khó đổi mới.
-  *Biện pháp*: Prompt cho phép đổi mới bằng cách biến đổi dạng bài (hỏi xuôi thành hỏi ngược, thay đổi số liệu, đổi mới ngữ cảnh thực tế) ngay cả khi kiến thức cốt lõi giữ nguyên.
+- *Rủi ro*: Người dùng nhập sai tên model tùy chỉnh khiến Gemini báo lỗi HTTP 404 / 422.
+  *Biện pháp*: Backend `api/khbd_gemini.php` đã có regex kiểm tra hợp lệ; trên frontend có danh sách dropdown các model chuẩn sẵn để người dùng chọn nhanh không sợ gõ nhầm.
 
 ---
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động**:
-   - Chạy lệnh test `node tests/taobaitap-diversity-smoke.js` -> 100% PASS.
+   - Chạy `node tests/timetable-render-smoke.js` -> 100% PASS.
 2. **Kiểm thử thủ công trên trình duyệt**:
-   - Mở `taobaitap.html`.
-   - Nạp một file PDF vào phần Nguồn tài liệu.
-   - Nhập một chủ đề, bấm **Tạo câu hỏi / bài tập** (Lần 1). Quan sát nội dung và các câu hỏi sinh ra.
-   - Bấm nút **Quay lại** (Step 1), giữ nguyên chủ đề hoặc điều chỉnh số lượng, bấm **Tạo câu hỏi / bài tập** (Lần 2).
-   - Kiểm tra kết quả Lần 2: Các câu hỏi mới có số liệu khác biệt, tình huống và ngữ cảnh mới mẻ, không còn bị lặp lại các câu hỏi của Lần 1.
+   - Mở `phancongtochuyenmon.html`, chuyển sang tab **2. Thời khoá biểu GV**.
+   - Mở thẻ **Nhập ảnh Thời khóa biểu**, xác nhận có nút hiển thị model AI (mặc định "2.5 Flash").
+   - Bấm vào nút model -> Modal **Cài đặt Model Gemini AI** xuất hiện.
+   - Thử đổi sang `gemini-2.5-pro` hoặc `gemini-1.5-flash` và bấm Lưu. Xác nhận nhãn nút trên giao diện đổi sang model tương ứng.
+   - Bấm **AI nhận diện TKB**, mở DevTools tab Network kiểm tra payload gửi lên `api/khbd_gemini.php` có trường `model` đúng với model vừa chọn.

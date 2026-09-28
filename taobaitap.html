@@ -13334,6 +13334,7 @@ module.exports = {
                 const requestedModels = options.models || [defaultModule];
                 const modelList = requestedModels.filter((model, index) => model && requestedModels.indexOf(model) === index);
                 const transientRetries = Number.isFinite(options.transientRetries) ? options.transientRetries : 2;
+                const generationConfig = options.generationConfig || { temperature: 0.85, topP: 0.95 };
 
                 const effectiveKeys = apiKeys.length > 0 ? apiKeys : ['']; // Cho phép chạy 1 lần không cần key nếu trong môi trường canvas
 
@@ -13425,10 +13426,14 @@ module.exports = {
                                     ? `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentKey}`
                                     : `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent`;
 
+                                const bodyPayload = { contents: [{ parts }] };
+                                if (generationConfig) {
+                                    bodyPayload.generationConfig = generationConfig;
+                                }
                                 const res = await fetch(url, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ contents: [{ parts }] })
+                                    body: JSON.stringify(bodyPayload)
                                 });
 
                                 const data = await res.json().catch(() => ({}));
@@ -16160,6 +16165,22 @@ module.exports = {
                 beginGenerationProgress();
 
                 const totalQuestions = topicsToGenerate.reduce((sum, t) => sum + t.count, 0);
+                const variantNonce = Math.random().toString(36).substring(2, 7).toUpperCase();
+                const storedQuestions = Array.isArray(questions) && questions.length > 0 ? questions : [];
+                const storedEssays = mode === 'essay' && Array.isArray(essays) && essays.length > 0 ? essays : [];
+                const prevQuestions = storedQuestions.length > 0 ? storedQuestions : storedEssays;
+                let antiDuplicationPrompt = '';
+                if (prevQuestions.length > 0) {
+                    const prevList = prevQuestions.slice(0, 15).map((q, i) => `${i + 1}. ${(q.question || '').replace(/\s+/g, ' ').substring(0, 80)}`).join('\n');
+                    antiDuplicationPrompt = `\nCÁC CÂU HỎI ĐÃ TẠO Ở LẦN TRƯỚC (CẦN TRÁNH TRÙNG LẶP):
+${prevList}
+BẮT BUỘC: Bạn PHẢI tạo ra bộ câu hỏi MỚI HOÀN TOÀN, không lặp lại ý tưởng, không sao chép lại ngữ cảnh hay số liệu của các câu trên!\n`;
+                }
+                const diversityPrompt = `QUY TẮC ĐA DẠNG HÓA & ĐỔI MỚI BÀI TẬP (Mã đề #${variantNonce}):
+                - Đa dạng hóa tối đa góc tiếp cận kiến thức từ tài liệu: không chỉ hỏi khái niệm cơ bản mà hãy khai thác các tính chất, hệ quả, trường hợp đặc biệt, bài toán ngược, bài toán liên hệ thực tế đời sống.
+                - Thay đổi linh hoạt các số liệu, dữ kiện, tên biến và ngữ cảnh bài toán.
+                - Mỗi lần tạo đề phải là một trải nghiệm học tập mới mẻ, phong phú, không rập khuôn đơn điệu.
+                ${antiDuplicationPrompt}`;
                 const structurePrompt = topicsToGenerate.map((t, idx) => {
                     return `- Phần ${idx + 1}: Chủ đề "${t.name}", ${t.count} câu/bài, Mức độ: ${t.level === "Hỗn hợp" ? "Hỗn hợp (30% Dễ, 40% TB, 30% Khó)" : t.level}`;
                 }).join('\n');
@@ -16206,6 +16227,8 @@ module.exports = {
                     - Chỉ có một phương án đúng. Ba phương án sai phải là nhiễu hợp lý, gần đáp án đúng nhưng sai do lỗi thường gặp.
                     - Với bài toán tiền/tính toán, hãy tự tính kết quả trước, đưa đáp án đúng vào một phương án và tạo 3 kết quả sai khác nhau.
 
+                    ${diversityPrompt}
+
                     Chi tiết từng loại:
                     - multiple-choice: {"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"type":"multiple-choice","level":"Nhận biết"}
                     - true-false: {"question":"[Ngữ cảnh/chủ đề bài toán dẫn chung]...","options":["Nội dung mệnh đề a","Nội dung mệnh đề b","Nội dung mệnh đề c","Nội dung mệnh đề d"],"correct_answers":[true,false,true,false],"type":"true-false"}
@@ -16227,12 +16250,15 @@ module.exports = {
                     - "level": một trong "Dễ", "Trung bình", "Khó", bám mức độ đã yêu cầu.
                     Công thức toán đặt trong $...$.
                     QUY TẮC JSON: Chuỗi JSON phải escape đúng. Không dùng dấu \ đơn lẻ; nếu cần ký hiệu toán học, viết bằng chữ/ký hiệu Unicode hoặc dùng dấu $...$. Xuống dòng trong chuỗi phải là \\n, không phải xuống dòng thật làm vỡ JSON.
+                    ${diversityPrompt}
                     Output JSON Strict: Một mảng phẳng chứa tất cả bài tập: [{"question":"Đề bài...\\na) ...\\nb) ...", "solution":"Công thức áp dụng...\\n\\na) ...\\n\\nĐáp số: ...", "level":"Trung bình"}, ...]`;
                 }
 
                 try {
                     updateGenerationProgress(18, "Đã gửi yêu cầu. AI đang tạo nội dung...");
-                    const response = await GeminiModule.callGeminiAPI(prompt, setRetryCount);
+                    const response = await GeminiModule.callGeminiAPI(prompt, setRetryCount, {
+                        generationConfig: { temperature: 0.9, topP: 0.95 }
+                    });
                     updateGenerationProgress(72, "Đã nhận phản hồi từ AI. Đang đọc dữ liệu...");
                     let parsedData;
                     try {
@@ -17802,6 +17828,7 @@ ${sourceContext}`;
                                 </div>
                             </div>
 
+                            <div style={{ fontSize: '0.75rem', color: '#4f46e5', marginTop: '6px', marginBottom: '8px' }}><i className="fas fa-sparkles"></i> Đã bật chế độ tự động làm mới đề & chống trùng lặp câu hỏi giữa các lần tạo.</div>
                             <button
                                 onClick={() => generateContent(null)}
                                 disabled={loading || sourceLoading || pendingSourceImages.length > 0}
