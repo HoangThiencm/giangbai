@@ -1,14 +1,14 @@
-# IMPLEMENT: Sổ báo giảng trên iPhone và mô tả lịch theo buổi
+# IMPLEMENT: Sửa trang Quản lý văn bản trống và chặn admin
 
 ## Đã làm
-- Tab Lịch báo giảng, khi đã chọn một giáo viên, vẽ `#bg-mobile-so` bằng đúng thẻ ngày của email: header `#dbeafe` / `#1e3a8a`, dải Buổi sáng `#fff7ed` / `#9a3412`, Buổi chiều `#eff6ff` / `#1d4ed8`, năm cột Tiết, Lớp (`#1e3a8a`), Môn (badge `#e0f2fe`), Bài dạy, PPCT (`#047857`).
-- `phancongtochuyenmon.html` có meta `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title` = Báo Giảng.
-- Email lịch báo giảng có nút **📱 Mở xem Sổ Báo Giảng trên iPhone** (trang `api/calendar_feed.php?format=html&token=...`) và **📅 Đồng bộ vào Lịch iPhone / Google Calendar** (`webcal://`). Trang sổ nhắc Thêm vào Màn hình chính. Trang này đọc TKB đã lưu, 14 ngày tới, không chạy lại bộ ghép PPCT trên trình duyệt nên cột Bài dạy/PPCT hiện “Chưa khai báo PPCT”. Sổ trong tab Lịch báo giảng vẫn ghép PPCT đầy đủ.
-- Sự kiện `.ics` và Webcal gom theo buổi. Mô tả dạng `BUỔI SÁNG:` rồi từng dòng `- Tiết N: Môn Lớp | bài (PPCT)`.
+- `api/vanban.php`: `vbd_current_user` vẫn từ chối khi chưa đăng nhập hoặc tài khoản không hoạt động. Vai trò được phép là `teacher`, `admin`, `superadmin`. Thông báo 403: «Chức năng quản lý văn bản chỉ dành cho giáo viên hoặc quản trị viên.»
+- `vanban-hub.js`: `boot()` gọi `renderSummary()` rồi `renderSectors()` trước `load()`, nên 4 thẻ thống kê (số 0) và hai thẻ Hành chính / Đảng hiện ngay khi DOM sẵn sàng, kể cả khi `fetch` chưa xong.
+- `quanlyvanban.html` tải `vanban-hub.js?v=20260928-fix-hub-render`. File hub local dài 9664 bytes (không rỗng).
 
 ## Kiểm thử
-- `node tests/timetable-render-smoke.js` — PASS.
-- `node tests/baogiang-mail-smoke.js` — PASS.
+- Script Node tạm: DOM giả, `fetch` không bao giờ trả về. Sau khi chạy IIFE: `#summary` có 4 thẻ, `#sectorCards` có «Hành chính» và «Đảng» cùng link `quanlyvanban-hanhchinh.html` / `quanlyvanban-dang.html`. PASS.
+- Máy này không có `php` trên PATH nên chưa chạy `php -l`.
+- Không có trình duyệt trong phiên này. Chưa mở `hoangthiencm.id.vn/quanlyvanban.html` và chưa gọi API bằng tài khoản admin/giáo viên. File trên hosting chỉ đầy đủ sau khi FTP Deploy chạy từ commit đã push.
 
 ## Ngoài phạm vi
-Không đổi Gemini nhận diện TKB. Chưa thêm icon PNG riêng và chưa bấm “Thêm vào Màn hình chính” trên iPhone; bước đó thuộc `/verify`.
+Không đổi schema, Google Drive, hay trang ngoài module quản lý văn bản.
