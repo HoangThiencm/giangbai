@@ -2,8 +2,8 @@
 
 Bất cứ khi nào người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
-## 1. Menu Cấp 1 (Tác vụ chính - 7 lựa chọn)
-Gọi tool `ask_question` với 7 lựa chọn:
+## 1. Menu Cấp 1 (Tác vụ chính - 9 lựa chọn)
+Gọi tool `ask_question` với 9 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -13,11 +13,15 @@ Gọi tool `ask_question` với 7 lựa chọn:
   5. "5/ Game giáo dục"
   6. "6/ Sổ điểm"
   7. "7/ Quản lý tổ chuyên môn"
+  8. "8/ Tạo báo cáo"
+  9. "9/ Viết sáng kiến"
 
 ## 2. Xử lý đường dẫn web trực tiếp:
 - **5/ Game giáo dục:** Cung cấp link website https://www.hoangthiencm.id.vn/trochoi.html và file [trochoi.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/trochoi.html).
 - **6/ Sổ điểm:** Cung cấp link website https://www.hoangthiencm.id.vn/sodiem.html và file [sodiem.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/sodiem.html).
 - **7/ Quản lý tổ chuyên môn:** Cung cấp link website https://www.hoangthiencm.id.vn/phancongtochuyenmon.html và file [phancongtochuyenmon.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/phancongtochuyenmon.html).
+- **8/ Tạo báo cáo:** Cung cấp link Gemini Canvas https://gemini.google.com/app/7bc03567b9f738fb?hl=vi và file [backupcode viettailieu/taobaocao.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/backupcode%20viettailieu/taobaocao.html).
+- **9/ Viết sáng kiến:** Cung cấp link Gemini Canvas https://gemini.google.com/app/e6bf41201af60de3?hl=vi và file [backupcode viettailieu/sangkien.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/backupcode%20viettailieu/sangkien.html).
 
 ## 3. Menu Cấp 2 khi chọn "3/ Tạo bài tập" (8 định dạng đánh số)
 Gọi tiếp tool `ask_question` với ĐÚNG 8 lựa chọn bám sát `taobaitap.html`:
@@ -46,4 +50,13 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
 - **4/ Duyệt đề:**
   + File đầu vào (File Word/PDF đề & ma trận cần kiểm tra): đặt tại `TROLYTHIEN/4_DUYET_DE/Dau_vao/`
   + File kết quả (Biên bản thẩm định đề thi .docx): tự động lưu tại `TROLYTHIEN/4_DUYET_DE/Ket_qua/`
+- **8/ Tạo báo cáo:**
+  + File đầu vào (Văn bản căn cứ, số liệu, văn bản mẫu): đặt tại `TROLYTHIEN/8_TAO_BAO_CAO/Dau_vao/`
+  + File kết quả (File Word .docx chuẩn NĐ 30/2020): tự động lưu tại `TROLYTHIEN/8_TAO_BAO_CAO/Ket_qua/`
+  + Tuân thủ quy chuẩn riêng tại `.agents/rules/taobaocao.md`
+- **9/ Viết sáng kiến:**
+  + File đầu vào (Số liệu thực trạng, giáo án minh chứng): đặt tại `TROLYTHIEN/9_VIET_SANG_KIEN/Dau_vao/`
+  + File kết quả (File Word .docx SKKN 4 phần): tự động lưu tại `TROLYTHIEN/9_VIET_SANG_KIEN/Ket_qua/`
+  + Tuân thủ quy chuẩn riêng tại `.agents/rules/vietsangkien.md`
+
 

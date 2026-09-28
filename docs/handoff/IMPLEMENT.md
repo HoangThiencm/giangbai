@@ -1,15 +1,15 @@
-# IMPLEMENT: Đua vịt — Sprint & Quiz in Sync
+# IMPLEMENT: Nhận đủ tiết khi dán ảnh Thời khóa biểu
 
 ## Đã làm
-File `game-treasure.html` chỉ.
+- `scanTimetableWithAI` trong `phancongtochuyenmon.html`: bỏ lệnh buộc key tiết chỉ nằm trong khung sáng/chiều đang cấu hình. Prompt yêu cầu lấy mọi tiết có phân công (kể cả 6–10), chia buổi theo nhãn Sáng/Chiều hoặc theo dải liên tục (1–5 sang morning, từ tiết 6 hoặc từ tiết bắt đầu chiều sang afternoon), và giữ đúng số tiết in trên ảnh.
+- `alignSessionPeriods`: tiết đã thuộc khung cấu hình được giữ nguyên, kể cả khi giáo viên không dạy đủ mọi tiết trong buổi. Tiết ngoài khung (Tiết 7 khi chiều đang là 1–4, dải 6–9, tiết ngắt 1/3/5) không còn bị nén theo index. Chỉ dịch cả dải khi cùng số tiết và lệch đều lên khung người dùng đã cấu hình muộn hơn (ví dụ AI 6–8, khung chiều 7–9).
+- Tab Thời khóa biểu GV: nút `Khung tiết` gọi `openQuickPeriodsConfig()` cạnh nút AI nhận diện, kèm dòng gợi ý sáng 1–5 và chiều 1–4 hoặc 6–9 / 7–9.
+- `periodsForTimetableSession` giữ nguyên: tiết thực tế ngoài khung vẫn thêm hàng trên lưới.
 
-- Bảng câu hỏi nằm phía trên sông, hiện ngay khi bấm Bắt đầu (KaTeX qua `MathText`). Lựa chọn A–D khóa trong lúc đua, mở khi vịt cán đích kèm đồng hồ 15s hoặc 30s.
-- Bỏ đếm ngược 3-2-1. Còi `GO!` 0,5 giây (`Sound.whistle`). Thời gian đua: 3 giây (Siêu tốc) hoặc 5 giây (Tiêu chuẩn, mặc định).
-- Vịt được gán vai lúc xuất phát: đàn thường dừng ở `p` khoảng 0,42–0,62; Top (tối đa 4 chú ngoài vịt thắng) không quá 0,84; đúng một `winnerId` đạt `p >= 1`.
-- Canvas vẽ bánh mì, xoáy nước, nitro, rùa. Chậm/xoay không áp lên vịt thắng.
-- Hết đua: tên học sinh hiện trên sông (“Xin mời … trả lời”), pháo hoa, không còn modal chúc mừng rồi mới bấm Hiện câu hỏi.
-- Nút Đúng (+Điểm), Tiếp tục, Mở đáp án (Enter). Ô “Loại bạn vừa gọi” quyết định có xóa khỏi danh sách khi qua lượt. Lịch sử ghi giờ và +1 điểm.
-- Phím Cách: bắt đầu khi đang chờ; khi đã mở đáp án thì qua lượt. Phím 1–4 hoặc A–D chọn phương án. Phím H gọi Vịt cứu trợ (một bạn khác trong danh sách).
+## Kiểm thử
+- `node tests/timetable-render-smoke.js` → PASS.
+- Ca mới: chỉ Tiết 7; Tiết 6 và 7; Tiết 1, 3, 5; dải 6–9 và 7–9 khi khung chiều là 1–4; hàng Tiết 7 được thêm vào lưới chiều; prompt không còn câu cấm key ngoài khung; tab TKB có nút Khung tiết.
+- Ca cũ vẫn đúng: AI 6–8 căn sang khung chiều 7–9; tiết đã khớp khung không đổi.
 
-## Chưa chạy ở lượt này
-Kiểm tra trình duyệt thuộc `/verify`: mở `game-treasure.html`, bấm Bắt đầu, xem chỉ một vịt cán đích, câu hỏi sẵn để trả lời, KaTeX, loại học sinh và lịch sử.
+## Chưa kiểm trên trình duyệt
+- Dán ảnh TKB thật và bấm AI nhận diện / mở modal Khung tiết trên tab Thời khóa biểu GV để `/verify` kiểm tra.
