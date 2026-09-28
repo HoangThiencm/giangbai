@@ -1,14 +1,17 @@
-# IMPLEMENT: Sổ báo giảng trên iPhone và mô tả lịch theo buổi
+# IMPLEMENT: Kéo thả tiết TKB và Tab 9 Đánh giá xếp loại
 
 ## Đã làm
-- Tab Lịch báo giảng, khi đã chọn một giáo viên, vẽ `#bg-mobile-so` bằng đúng thẻ ngày của email: header `#dbeafe` / `#1e3a8a`, dải Buổi sáng `#fff7ed` / `#9a3412`, Buổi chiều `#eff6ff` / `#1d4ed8`, năm cột Tiết, Lớp (`#1e3a8a`), Môn (badge `#e0f2fe`), Bài dạy, PPCT (`#047857`).
-- `phancongtochuyenmon.html` có meta `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title` = Báo Giảng.
-- Email lịch báo giảng có nút **📱 Mở xem Sổ Báo Giảng trên iPhone** (trang `api/calendar_feed.php?format=html&token=...`) và **📅 Đồng bộ vào Lịch iPhone / Google Calendar** (`webcal://`). Trang sổ nhắc Thêm vào Màn hình chính. Trang này đọc TKB đã lưu, 14 ngày tới, không chạy lại bộ ghép PPCT trên trình duyệt nên cột Bài dạy/PPCT hiện “Chưa khai báo PPCT”. Sổ trong tab Lịch báo giảng vẫn ghép PPCT đầy đủ.
-- Sự kiện `.ics` và Webcal gom theo buổi. Mô tả dạng `BUỔI SÁNG:` rồi từng dòng `- Tiết N: Môn Lớp | bài (PPCT)`.
+- `phancongtochuyenmon.html`: ô tiết có nội dung `draggable="true"`. Kéo vào ô trống thì chuyển tiết; ô đích đã có tiết thì hộp thoại `1` hoán đổi / `2` ghi đè / Hủy. Sau thao tác cập nhật `editingTimetable`, vẽ lại lưới, `persistAndSaveTimetableLocal()`, và `applyTimetableToAssignments` khi checkbox tự động phân công đang bật. Class `.tt-cell.drag-target` tô viền khi kéo qua ô.
+- Tab `tab-nav-danhgia` và view `view-danhgia`: lọc tháng, bảng STT / họ tên / chức vụ / số tiết TKB / số liệu chấm công / xếp loại A–D / ghi chú. Nút xếp tất cả là A, gợi ý theo chấm công (KP hoặc nghỉ nhiều → D, có phép → C, có dự giờ hoặc SHCM → A, còn lại B), xuất Excel, Lưu CSDL (`saveToDB`).
+- `state.evaluations.records[YYYY-MM][teacherId] = { rating, note }`, `normalizeState` bổ sung object này, mỗi lần sửa gọi `saveToLocal()` và `hasUnsavedChanges`.
+- `tests/timetable-render-smoke.js`: di chuyển sang ô trống khác buổi, hoán đổi hai ô, HTML tab/view, lưu rating C và ghi chú.
 
 ## Kiểm thử
-- `node tests/timetable-render-smoke.js` — PASS.
-- `node tests/baogiang-mail-smoke.js` — PASS.
+- `node tests/timetable-render-smoke.js` → PASS (exit 0).
+- Chưa mở trình duyệt. Bước sau: Antigravity IDE, chat mới, `/verify`.
 
-## Ngoài phạm vi
-Không đổi Gemini nhận diện TKB. Chưa thêm icon PNG riêng và chưa bấm “Thêm vào Màn hình chính” trên iPhone; bước đó thuộc `/verify`.
+## File
+- `phancongtochuyenmon.html`
+- `tests/timetable-render-smoke.js`
+- `docs/handoff/IMPLEMENT.md`
+- `docs/handoff/.lock`

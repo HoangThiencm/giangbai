@@ -4,35 +4,36 @@
 PASS
 
 ## Đối chiếu scope
-1. **Modal Cài đặt Model Gemini trong `phancongtochuyenmon.html`**:
-   - Thêm modal `#gemini-model-modal` với danh sách lựa chọn: `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-1.5-flash`, `gemini-3.7-flash`, `gemini-3-flash-preview` và hỗ trợ ô nhập model tùy chỉnh (`cfg-gemini-model-custom`). -> ĐẠT
-   - Thêm nút mở modal kèm nhãn `#tt-active-model-label` ngay trên thẻ Nhập ảnh Thời khóa biểu (cạnh nút Khung tiết). -> ĐẠT
-   - Hàm `getTimetableGeminiModel()` đọc theo thứ tự ưu tiên: `phancong_gemini_model` -> `gemini_model` -> `state.info.gemini_model` -> mặc định `gemini-2.5-flash`. -> ĐẠT
-   - Hàm `saveGeminiModelConfig()` lưu vào cả hai khóa `localStorage`, cập nhật nhãn giao diện và hiển thị thông báo toast. -> ĐẠT
-   - Hàm `scanTimetableWithAI()` lấy model động từ `getTimetableGeminiModel()`, không còn bị hardcode. -> ĐẠT
-   - Hàm `renderTimetableView()` tự động cập nhật nhãn model đang kích hoạt khi chuyển sang tab TKB. -> ĐẠT
-
-2. **Chống trùng lặp & Đa dạng hóa câu hỏi trong `taobaitap.html`**:
-   - `GeminiModule.callGeminiParts` đã tiếp nhận `options.generationConfig` và gửi kèm trong payload gọi Gemini API. -> ĐẠT
-   - `generateContent` sinh mã biến thể ngẫu nhiên (`variantNonce`), thu thập danh sách câu hỏi cũ của lần tạo trước để chỉ thị AI bắt buộc không lặp lại nội dung/ngữ cảnh cũ, đồng thời truyền `generationConfig: { temperature: 0.9, topP: 0.95 }`. -> ĐẠT
+- Tính năng 1: Kéo thả tiết học (Drag & Drop) trên lưới TKB Sáng và Chiều (`phancongtochuyenmon.html`):
+  + Đã thêm thuộc tính `draggable="true"` cho các ô có dữ liệu.
+  + Đã bắt sự kiện `ondragstart`, `ondragover`, `ondragleave`, `ondrop`.
+  + Đã xử lý di chuyển sang ô trống và hộp thoại lựa chọn Hoán đổi (Swap) / Ghi đè (Overwrite) khi ô đích đã có tiết.
+  + Tự động lưu local, vẽ lại lưới và đồng bộ phân công giảng dạy khi bật tự động: ĐÚNG PHẠM VI.
+- Tính năng 2: Thêm Tab "9. Đánh giá xếp loại" với xếp loại A, B, C, D và Ghi chú (`phancongtochuyenmon.html`):
+  + Đã thêm nút tab `tab-nav-danhgia` và container `view-danhgia`.
+  + Bảng đầy đủ các cột: STT, Họ và tên, Chức vụ, Số tiết/tuần, Số liệu chấm công tham khảo, Dropdown xếp loại A, B, C, D (kèm mã màu trực quan), Input Ghi chú.
+  + Các nút tiện ích: Xếp nhanh tất cả là A, Gợi ý theo chấm công, Xuất file Excel, Lưu CSDL: ĐÚNG PHẠM VI.
+  + Cấu trúc dữ liệu lưu trong `state.evaluations.records[monthKey][teacherId] = { rating, note }`, đồng bộ LocalStorage và CSDL: ĐÚNG PHẠM VI.
+- Test tự động trong `tests/timetable-render-smoke.js`: ĐÚNG PHẠM VI.
+- Không sửa ngoài phạm vi, không tác động file khác.
 
 ## Test đã chạy
-- `node tests/timetable-render-smoke.js`: PASS
-  + Xác nhận modal `#gemini-model-modal`, hàm `openGeminiModelModal`, `getTimetableGeminiModel`, `saveGeminiModelConfig`.
-  + Xác nhận `scanTimetableWithAI` không còn hardcode `gemini-2.5-flash`.
-  + Xác nhận đọc và ghi nhớ model đã lưu trong `localStorage`.
-- `node tests/taobaitap-diversity-smoke.js`: PASS
-  + Xác nhận `generationConfig` trong `callGeminiParts`.
-  + Xác nhận prompt chống trùng và cú pháp Babel hợp lệ.
-- `node tests/baogiang-mail-smoke.js`: PASS
-- `node tests/baogiang-teacher-month-smoke.js`: PASS
+1. `node tests/timetable-render-smoke.js` → PASS (exit 0)
+   - Kiểm thử sự hiện diện của nút tab `tab-nav-danhgia` và container `view-danhgia`.
+   - Kiểm thử thuộc tính `draggable="true"` trên ô tiết có dữ liệu.
+   - Kiểm thử logic di chuyển tiết sang ô trống (`action = 'move'`) xóa ô nguồn và điền ô đích, kể cả khác buổi (`morning` sang `afternoon`).
+   - Kiểm thử logic hoán đổi vị trí 2 tiết (`action = 'swap'`) đổi chỗ chính xác giữa ô nguồn và ô đích.
+   - Kiểm thử lưu trữ xếp loại A–D và ghi chú theo từng giáo viên và từng tháng.
+   - Kiểm thử tự động lưu local và đánh dấu chưa lưu CSDL (`hasUnsavedChanges = true`).
+   - Toàn bộ các ca kiểm thử TKB trước đó (nhận diện Tiết 7, dải tiết 6–9/7–9, modal khung tiết...) tiếp tục PASS 100%.
 
 ## Pass / Fail từng tiêu chí
-1. Thêm modal cài đặt module Gemini trong Quản lý tổ chuyên môn: PASS
-2. Giao diện trực quan cho phép chuyển đổi model trước khi quét TKB: PASS
-3. Động hóa model trong lệnh gọi API: PASS
-4. Đa dạng hóa đề và chống trùng lặp câu hỏi từ PDF trong Tạo bài tập: PASS
-5. Toàn bộ test suite liên quan: PASS
+- Kéo thả di chuyển ô tiết sang ô trống: PASS
+- Kéo thả hoán đổi hoặc ghi đè khi ô đích đã có tiết: PASS
+- Tab 9 Đánh giá xếp loại hiển thị 4 mức chuẩn A, B, C, D: PASS
+- Có cột Ghi chú cho từng giáo viên: PASS
+- Lưu trữ trạng thái đánh giá và đồng bộ CSDL: PASS
+- Smoke test `tests/timetable-render-smoke.js`: PASS
 
 ## Bug
-Không phát hiện bug mới.
+(Không có)

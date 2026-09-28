@@ -934,6 +934,7 @@
         }
         .tt-cell.empty { background: #fafafa; color: #94a3b8; font-weight: 500; font-size: 0.62rem; min-height: 22px; }
         .tt-cell:hover { outline: 2px solid #818cf8; }
+        .tt-cell.drag-target { outline: 2px solid #6366f1; background: #e0e7ff; box-shadow: inset 0 0 0 2px #a5b4fc; }
         .period-slot .slot-fields {
             display: flex;
             flex-direction: column;
@@ -1732,7 +1733,7 @@
             .tt-toolbar { justify-content: flex-start; }
             .tt-toolbar .btn-small,
             .tt-toolbar .btn-toolbar { min-height: 40px; }
-            #view-daythay, #view-chamcong, #view-baocao, #view-tanggio {
+            #view-daythay, #view-chamcong, #view-baocao, #view-tanggio, #view-danhgia {
                 padding-left: 12px;
                 padding-right: 12px;
             }
@@ -1836,6 +1837,9 @@
                 </button>
                 <button class="view-tab-btn" id="tab-nav-baocao" onclick="switchAppView('view-baocao')">
                     <i class="fas fa-chart-pie"></i> 8. Báo cáo &amp; Thống kê
+                </button>
+                <button class="view-tab-btn" id="tab-nav-danhgia" onclick="switchAppView('view-danhgia')">
+                    <i class="fas fa-award"></i> 9. Đánh giá xếp loại
                 </button>
             </div>
 
@@ -2370,6 +2374,56 @@
                     <!-- Render từ JS -->
                 </table>
             </div>
+        </div>
+    </div>
+
+    <div class="app-view" id="view-danhgia" style="flex-direction: column; gap: 12px; padding: 16px; overflow: auto;">
+        <div style="background:#ffffff;border:1px solid var(--border-color);border-radius:14px;padding:16px 18px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+                <div>
+                    <h3 style="margin:0 0 4px;font-size:1.05rem;font-weight:800;color:#0f172a;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-award" style="color:#7c3aed;"></i> Đánh giá xếp loại tháng
+                    </h3>
+                    <p style="margin:0;font-size:0.78rem;color:#64748b;">Thang A (hoàn thành xuất sắc), B (hoàn thành tốt), C (hoàn thành), D (chưa hoàn thành). Ghi chú nêu lý do, thành tích hoặc việc cần khắc phục.</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <label style="font-size:0.82rem;font-weight:800;color:#1e293b;">Tháng:</label>
+                    <select class="form-control" id="eval-month-select" style="padding:6px 12px;width:140px;font-weight:700;" onchange="changeEvaluationMonth(this.value)">
+                        <option value="9">Tháng 9</option>
+                        <option value="10">Tháng 10</option>
+                        <option value="11">Tháng 11</option>
+                        <option value="12">Tháng 12</option>
+                        <option value="1">Tháng 1</option>
+                        <option value="2">Tháng 2</option>
+                        <option value="3">Tháng 3</option>
+                        <option value="4">Tháng 4</option>
+                        <option value="5">Tháng 5</option>
+                        <option value="6">Tháng 6</option>
+                        <option value="7">Tháng 7</option>
+                        <option value="8">Tháng 8</option>
+                    </select>
+                    <button type="button" class="btn-small" onclick="quickSetAllEvaluation('A')"><i class="fas fa-check-double"></i> Xếp loại tất cả là A</button>
+                    <button type="button" class="btn-small" onclick="autoSuggestEvaluationFromAttendance()"><i class="fas fa-wand-magic-sparkles"></i> Tự động đánh giá theo chấm công</button>
+                    <button type="button" class="btn-small btn-export-excel" onclick="exportEvaluationToExcel()"><i class="fas fa-file-excel"></i> Xuất Excel Đánh giá</button>
+                    <button type="button" class="btn-small btn-small-primary" onclick="saveToDB()"><i class="fas fa-cloud-arrow-up"></i> Lưu CSDL</button>
+                </div>
+            </div>
+        </div>
+        <div style="flex:1;overflow:auto;border:1px solid var(--border-color);border-radius:12px;background:#fff;">
+            <table class="attendance-table" id="evaluation-table">
+                <thead>
+                    <tr>
+                        <th style="width:48px;">STT</th>
+                        <th class="text-left" style="width:180px;">Họ và tên giáo viên</th>
+                        <th style="width:140px;">Chức vụ / Nhiệm vụ</th>
+                        <th style="width:90px;">Số tiết/tuần</th>
+                        <th>Chấm công tham khảo</th>
+                        <th style="width:220px;">Xếp loại tháng</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody id="evaluation-table-body"></tbody>
+            </table>
         </div>
     </div>
 
@@ -2996,7 +3050,11 @@
                 records: {},
                 substitutes: {}
             },
-            bao_giang: { start_date: '', start_date_locked: false, curriculum_text: '', ppct_default_grade: '', ppct_default_subject: '', exceptions: [], recipient_ids: [] }
+            bao_giang: { start_date: '', start_date_locked: false, curriculum_text: '', ppct_default_grade: '', ppct_default_subject: '', exceptions: [], recipient_ids: [] },
+            evaluations: {
+                current_month: '',
+                records: {}
+            }
         };
 
         // State hiện tại
@@ -3070,6 +3128,9 @@
             if (!s.attendance) s.attendance = { current_month: '9', records: {}, substitutes: {} };
             if (!s.attendance.records) s.attendance.records = {};
             if (!s.attendance.substitutes) s.attendance.substitutes = {};
+            if (!s.evaluations || typeof s.evaluations !== 'object') s.evaluations = { current_month: '', records: {} };
+            if (!s.evaluations.records || typeof s.evaluations.records !== 'object') s.evaluations.records = {};
+            if (typeof s.evaluations.current_month !== 'string') s.evaluations.current_month = '';
             if (!s.bao_giang || typeof s.bao_giang !== 'object') s.bao_giang = { start_date: '', curriculum_text: '', exceptions: [], recipient_ids: [] };
             if (!isBaoGiangStartDateValid(s.bao_giang.start_date)) {
                 s.bao_giang.start_date = '';
@@ -4484,6 +4545,8 @@
                 renderOvertimeSummary();
             } else if (viewId === 'view-baocao') {
                 renderReports();
+            } else if (viewId === 'view-danhgia') {
+                renderEvaluation();
             }
         }
 
@@ -5936,6 +5999,151 @@
             setTimeout(() => setAttendanceDbStatus('Đã lưu CSDL', '#15803d'), 1600);
         }
 
+        function evaluationYearForMonth(month) {
+            const sy = String(state.info?.school_year || '');
+            const match = sy.match(/(20\d{2})\s*[-–]\s*(20\d{2})/);
+            const n = parseInt(month, 10);
+            if (match) return n >= 8 ? match[1] : match[2];
+            return String(new Date().getFullYear());
+        }
+
+        function getEvaluationMonthKey() {
+            if (!state.evaluations) state.evaluations = { current_month: '', records: {} };
+            const stored = String(state.evaluations.current_month || '');
+            if (/^20\d{2}-\d{2}$/.test(stored)) return stored;
+            const month = String(document.getElementById('eval-month-select')?.value || (new Date().getMonth() + 1));
+            const mm = String(parseInt(month, 10) || 9).padStart(2, '0');
+            return `${evaluationYearForMonth(month)}-${mm}`;
+        }
+
+        function changeEvaluationMonth(monthVal) {
+            const month = String(parseInt(monthVal, 10) || 9);
+            const mm = month.padStart(2, '0');
+            if (!state.evaluations) state.evaluations = { current_month: '', records: {} };
+            state.evaluations.current_month = `${evaluationYearForMonth(month)}-${mm}`;
+            renderEvaluation();
+        }
+
+        function evaluationRatingStyle(rating) {
+            if (rating === 'B') return 'background:#dbeafe;color:#1d4ed8;';
+            if (rating === 'C') return 'background:#ffedd5;color:#c2410c;';
+            if (rating === 'D') return 'background:#fee2e2;color:#b91c1c;';
+            return 'background:#dcfce7;color:#15803d;';
+        }
+
+        function attendanceSnapshotForTeacher(teacherId, monthKey) {
+            const month = String(parseInt(String(monthKey).split('-')[1], 10) || '');
+            const rec = state.attendance?.records?.[getMonthKey(month)]?.[teacherId] || {};
+            return {
+                teach_replace: Number(rec.teach_replace) || 0,
+                makeup_periods: Number(rec.makeup_periods) || 0,
+                observe: Number(rec.observe) || 0,
+                meeting: Number(rec.meeting) || 0,
+                leave_p: Number(rec.leave_p) || 0,
+                weeks: [rec.w1, rec.w2, rec.w3, rec.w4]
+            };
+        }
+
+        function suggestEvaluationRating(snapshot) {
+            const weeks = (snapshot?.weeks || []).map(v => String(v || ''));
+            const unpaid = weeks.some(v => v === 'KP' || /không phép/i.test(v));
+            const leave = Number(snapshot?.leave_p) || 0;
+            if (unpaid || leave >= 4) return 'D';
+            if (leave > 0 || weeks.some(v => v === 'P')) return 'C';
+            if ((Number(snapshot?.observe) || 0) >= 1 || (Number(snapshot?.meeting) || 0) >= 1) return 'A';
+            return 'B';
+        }
+
+        function renderEvaluation() {
+            const tbody = document.getElementById('evaluation-table-body');
+            if (!tbody) return;
+            if (!state.evaluations) state.evaluations = { current_month: '', records: {} };
+            if (!state.evaluations.records) state.evaluations.records = {};
+            const mKey = getEvaluationMonthKey();
+            state.evaluations.current_month = mKey;
+            if (!state.evaluations.records[mKey]) state.evaluations.records[mKey] = {};
+            const monthNum = String(parseInt(mKey.split('-')[1], 10));
+            const select = document.getElementById('eval-month-select');
+            if (select && select.value !== monthNum) select.value = monthNum;
+            const records = state.evaluations.records[mKey];
+            if (!state.teachers.length) {
+                tbody.innerHTML = `<tr><td colspan="7" style="padding:24px;color:#94a3b8;">Chưa có giáo viên nào trong tổ.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = state.teachers.map((t, index) => {
+                const rec = records[t.id] || { rating: 'A', note: '' };
+                const rating = ['A', 'B', 'C', 'D'].includes(rec.rating) ? rec.rating : 'A';
+                const snap = attendanceSnapshotForTeacher(t.id, mKey);
+                const periods = countTimetableLessons(t.timetable);
+                const ref = `Dạy thay ${snap.teach_replace} · Dạy bù ${snap.makeup_periods} · Dự giờ ${snap.observe} · SHCM ${snap.meeting} · Nghỉ ${snap.leave_p}`;
+                const options = ['A', 'B', 'C', 'D'].map(level => {
+                    const labels = { A: 'A — Hoàn thành xuất sắc', B: 'B — Hoàn thành tốt', C: 'C — Hoàn thành', D: 'D — Chưa hoàn thành' };
+                    return `<option value="${level}" ${rating === level ? 'selected' : ''}>${labels[level]}</option>`;
+                }).join('');
+                return `<tr>
+                    <td>${index + 1}</td>
+                    <td class="text-left"><b>${escapeHtml(t.name || '')}</b></td>
+                    <td>${escapeHtml(t.role || 'GV')}</td>
+                    <td><b>${periods}</b></td>
+                    <td style="font-size:0.75rem;color:#475569;">${escapeHtml(ref)}</td>
+                    <td><select class="att-select" style="font-weight:800;${evaluationRatingStyle(rating)}" onchange="updateEvaluationRecord('${t.id}','rating',this.value); this.style.cssText='font-weight:800;'+evaluationRatingStyle(this.value);">${options}</select></td>
+                    <td><input type="text" class="att-input text-left" placeholder="Lý do, thành tích, nhắc nhở..." value="${escapeHtml(rec.note || '')}" onchange="updateEvaluationRecord('${t.id}','note',this.value)"></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function updateEvaluationRecord(teacherId, field, value) {
+            if (!state.evaluations) state.evaluations = { current_month: '', records: {} };
+            if (!state.evaluations.records) state.evaluations.records = {};
+            const mKey = getEvaluationMonthKey();
+            state.evaluations.current_month = mKey;
+            if (!state.evaluations.records[mKey]) state.evaluations.records[mKey] = {};
+            const prev = state.evaluations.records[mKey][teacherId] || { rating: 'A', note: '' };
+            state.evaluations.records[mKey][teacherId] = {
+                rating: field === 'rating' ? value : (prev.rating || 'A'),
+                note: field === 'note' ? value : (prev.note || '')
+            };
+            hasUnsavedChanges = true;
+            saveToLocal();
+        }
+
+        function quickSetAllEvaluation(rating) {
+            const level = ['A', 'B', 'C', 'D'].includes(rating) ? rating : 'A';
+            (state.teachers || []).forEach(t => updateEvaluationRecord(t.id, 'rating', level));
+            renderEvaluation();
+            showToast(`Đã xếp loại ${level} cho tất cả giáo viên trong tháng.`, 'success');
+        }
+
+        function autoSuggestEvaluationFromAttendance() {
+            const mKey = getEvaluationMonthKey();
+            (state.teachers || []).forEach(t => {
+                const snap = attendanceSnapshotForTeacher(t.id, mKey);
+                const rating = suggestEvaluationRating(snap);
+                updateEvaluationRecord(t.id, 'rating', rating);
+                const reason = rating === 'D'
+                    ? 'Có nghỉ không phép hoặc nghỉ nhiều'
+                    : (rating === 'C' ? 'Có nghỉ phép trong tháng' : (rating === 'A' ? 'Chuyên cần tốt, có dự giờ hoặc sinh hoạt chuyên môn' : 'Hoàn thành nhiệm vụ'));
+                updateEvaluationRecord(t.id, 'note', reason);
+            });
+            renderEvaluation();
+            showToast('Đã gợi ý xếp loại theo số liệu chấm công.', 'success');
+        }
+
+        function exportEvaluationToExcel() {
+            const mKey = getEvaluationMonthKey();
+            const records = state.evaluations?.records?.[mKey] || {};
+            let table = `<table border="1"><thead><tr><th colspan="7">ĐÁNH GIÁ XẾP LOẠI THÁNG ${mKey}</th></tr>
+                <tr><th>STT</th><th>Họ và tên</th><th>Chức vụ</th><th>Số tiết/tuần</th><th>Chấm công</th><th>Xếp loại</th><th>Ghi chú</th></tr></thead><tbody>`;
+            (state.teachers || []).forEach((t, index) => {
+                const rec = records[t.id] || { rating: 'A', note: '' };
+                const snap = attendanceSnapshotForTeacher(t.id, mKey);
+                const ref = `DT ${snap.teach_replace}; DB ${snap.makeup_periods}; DG ${snap.observe}; SHCM ${snap.meeting}; Nghi ${snap.leave_p}`;
+                table += `<tr><td>${index + 1}</td><td>${escapeHtml(t.name || '')}</td><td>${escapeHtml(t.role || 'GV')}</td><td>${countTimetableLessons(t.timetable)}</td><td>${escapeHtml(ref)}</td><td>${escapeHtml(rec.rating || 'A')}</td><td>${escapeHtml(rec.note || '')}</td></tr>`;
+            });
+            table += '</tbody></table>';
+            downloadExcelFile(table, `Danh_Gia_Xep_Loai_${mKey}`);
+        }
+
         function autoFillAttendance() {
             const mKey = getMonthKey();
             if (!state.attendance.records[mKey]) state.attendance.records[mKey] = {};
@@ -6312,6 +6520,7 @@
         }
 
         let editingTimetable = null;
+        let draggedTimetableCell = null;
         let ttImageDataUrl = '';
         let ttPasteBound = false;
         let selectedTimetableTeacherId = '';
@@ -6774,7 +6983,8 @@
                     const label = formatTimetableCell(cell);
                     const cls = label ? 'tt-cell' : 'tt-cell empty';
                     const text = label ? escapeHtml(label).replace(' - ', '<br>') : 'Trống';
-                    return `<td><button type="button" class="${cls}" onclick="editTimetableCell('${session}','${day}',${period})">${text}</button></td>`;
+                    const dragStart = label ? ` draggable="true" ondragstart="onTimetableCellDragStart(event,'${session}','${day}',${period})"` : '';
+                    return `<td><button type="button" class="${cls}"${dragStart} ondragover="onTimetableCellDragOver(event)" ondragleave="onTimetableCellDragLeave(event)" ondrop="onTimetableCellDrop(event,'${session}','${day}',${period})" onclick="editTimetableCell('${session}','${day}',${period})">${text}</button></td>`;
                 }).join('');
                 return `<tr><th>Tiết ${period}</th>${cells}</tr>`;
             }).join('');
@@ -6793,6 +7003,90 @@
             renderTimetableGrid();
             clearTimeout(ttCellSaveTimer);
             ttCellSaveTimer = setTimeout(() => persistAndSaveTimetableLocal(), 500);
+        }
+
+        function onTimetableCellDragStart(event, session, day, period) {
+            draggedTimetableCell = { session, day, period: String(period) };
+            if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', `${session}|${day}|${period}`);
+            }
+            event.currentTarget?.classList.add('drag-target');
+        }
+
+        function onTimetableCellDragOver(event) {
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+            event.currentTarget?.classList.add('drag-target');
+        }
+
+        function onTimetableCellDragLeave(event) {
+            event.currentTarget?.classList.remove('drag-target');
+        }
+
+        function timetableCellAt(session, day, period) {
+            return editingTimetable?.[session]?.[day]?.[String(period)] || null;
+        }
+
+        function commitTimetableCellDrop(src, tgt, action) {
+            if (!editingTimetable) editingTimetable = emptyTimetable();
+            if (!editingTimetable[src.session]) editingTimetable[src.session] = {};
+            if (!editingTimetable[src.session][src.day]) editingTimetable[src.session][src.day] = {};
+            if (!editingTimetable[tgt.session]) editingTimetable[tgt.session] = {};
+            if (!editingTimetable[tgt.session][tgt.day]) editingTimetable[tgt.session][tgt.day] = {};
+            const srcMap = editingTimetable[src.session][src.day];
+            const tgtMap = editingTimetable[tgt.session][tgt.day];
+            const srcKey = String(src.period);
+            const tgtKey = String(tgt.period);
+            const srcCell = srcMap[srcKey] ? JSON.parse(JSON.stringify(srcMap[srcKey])) : null;
+            const tgtCell = tgtMap[tgtKey] ? JSON.parse(JSON.stringify(tgtMap[tgtKey])) : null;
+            if (!srcCell) return false;
+            if (action === 'swap' && tgtCell) {
+                srcMap[srcKey] = tgtCell;
+                tgtMap[tgtKey] = srcCell;
+            } else {
+                tgtMap[tgtKey] = srcCell;
+                delete srcMap[srcKey];
+            }
+            return true;
+        }
+
+        function finishTimetableDragSave() {
+            renderTimetableGrid();
+            persistAndSaveTimetableLocal();
+            const autoApply = document.getElementById('tt-auto-apply-assign')?.checked;
+            if (autoApply && selectedTimetableTeacherId) {
+                try {
+                    applyTimetableToAssignments(selectedTimetableTeacherId, { silent: true, skipRender: true });
+                } catch (err) {
+                    console.error('Không thể đồng bộ phân công sau khi kéo tiết:', err);
+                }
+            }
+        }
+
+        function onTimetableCellDrop(event, tgtSession, tgtDay, tgtPeriod) {
+            event.preventDefault();
+            event.currentTarget?.classList.remove('drag-target');
+            const src = draggedTimetableCell;
+            draggedTimetableCell = null;
+            if (!src) return;
+            const tgt = { session: tgtSession, day: tgtDay, period: String(tgtPeriod) };
+            if (src.session === tgt.session && src.day === tgt.day && String(src.period) === String(tgt.period)) return;
+            const srcCell = timetableCellAt(src.session, src.day, src.period);
+            if (!srcCell) return;
+            const tgtCell = timetableCellAt(tgt.session, tgt.day, tgt.period);
+            let action = 'move';
+            if (tgtCell) {
+                const label = formatTimetableCell(tgtCell) || 'đã có nội dung';
+                const choice = prompt(`Ô đích đã có tiết ${label}. Bạn muốn: 1. Hoán đổi 2 tiết (OK) | 2. Ghi đè tiết tại ô đích (hoặc bấm Hủy để không đổi)`, '1');
+                if (choice == null) return;
+                const picked = String(choice).trim();
+                if (picked === '2') action = 'overwrite';
+                else if (picked === '1' || picked === '') action = 'swap';
+                else return;
+            }
+            if (!commitTimetableCellDrop(src, tgt, action)) return;
+            finishTimetableDragSave();
         }
 
         function bindTimetableInputEvents() {

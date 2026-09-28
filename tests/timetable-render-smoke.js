@@ -176,6 +176,61 @@ function emptyTimetable() {
 
 assert.match(html, /applyPeriodPreset\('1-5','6-10'\)/, 'period modal includes the morning 1-5, afternoon 6-10 preset');
 assert.match(html, /applyPeriodPreset\('1-5','1-5'\)/, 'period modal includes the morning 1-5, afternoon 1-5 preset');
+assert.match(html, /id="tab-nav-danhgia"/, 'evaluation tab button is present');
+assert.match(html, /id="view-danhgia"/, 'evaluation view container is present');
+assert.match(html, /draggable="true"/, 'filled timetable cells are draggable');
+
+{
+    const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const timetable = {
+        morning: Object.fromEntries(days.map(day => [day, {}])),
+        afternoon: Object.fromEntries(days.map(day => [day, {}]))
+    };
+    timetable.morning.mon['1'] = { subject: 'Toán', class_name: '6A' };
+    timetable.afternoon.tue['2'] = { subject: 'Văn', class_name: '7B' };
+    const context = vm.createContext({
+        editingTimetable: timetable,
+        emptyTimetable: () => ({
+            morning: Object.fromEntries(days.map(day => [day, {}])),
+            afternoon: Object.fromEntries(days.map(day => [day, {}]))
+        }),
+        JSON
+    });
+    vm.runInContext(declaration('commitTimetableCellDrop'), context);
+    vm.runInContext(`commitTimetableCellDrop({ session: 'morning', day: 'mon', period: '1' }, { session: 'afternoon', day: 'fri', period: '3' }, 'move')`, context);
+    assert.equal(context.editingTimetable.morning.mon['1'], undefined, 'moving a lesson clears the source cell');
+    assert.deepEqual(context.editingTimetable.afternoon.fri['3'], { subject: 'Toán', class_name: '6A' }, 'moving a lesson fills an empty target, including across sessions');
+    vm.runInContext(`commitTimetableCellDrop({ session: 'afternoon', day: 'fri', period: '3' }, { session: 'afternoon', day: 'tue', period: '2' }, 'swap')`, context);
+    assert.deepEqual(context.editingTimetable.afternoon.fri['3'], { subject: 'Văn', class_name: '7B' }, 'swap places the target lesson into the source cell');
+    assert.deepEqual(context.editingTimetable.afternoon.tue['2'], { subject: 'Toán', class_name: '6A' }, 'swap places the source lesson into the target cell');
+}
+
+{
+    const saved = [];
+    const context = vm.createContext({
+        state: {
+            info: { school_year: '2025-2026' },
+            evaluations: { current_month: '2026-09', records: {} },
+            teachers: [{ id: 'gv1', name: 'Cô An' }]
+        },
+        document: { getElementById: () => null },
+        hasUnsavedChanges: false,
+        saveToLocal() { saved.push(JSON.parse(JSON.stringify(thisState()))); },
+        Date, String, parseInt
+    });
+    function thisState() { return context.state; }
+    context.thisState = thisState;
+    vm.runInContext([
+        declaration('evaluationYearForMonth'),
+        declaration('getEvaluationMonthKey'),
+        declaration('updateEvaluationRecord')
+    ].join('\n'), context);
+    vm.runInContext(`updateEvaluationRecord('gv1', 'rating', 'C'); updateEvaluationRecord('gv1', 'note', 'Nhắc nhở sổ đầu bài');`, context);
+    assert.equal(context.state.evaluations.records['2026-09'].gv1.rating, 'C', 'monthly rating A-D is stored on the teacher');
+    assert.equal(context.state.evaluations.records['2026-09'].gv1.note, 'Nhắc nhở sổ đầu bài', 'evaluation note is stored with the rating');
+    assert.equal(saved.length, 2, 'each evaluation edit saves locally');
+    assert.equal(context.hasUnsavedChanges, true, 'evaluation edits mark the database copy as unsaved');
+}
 
 assert.match(html, /id="tt-import-details"[\s\S]*openQuickPeriodsConfig\(\)[\s\S]*Khung tiết[\s\S]*btn-ai-scan-tt/, 'the timetable tab exposes the period-frame button beside AI scan');
 assert.match(html, /id="gemini-model-modal"/, 'the page includes the Gemini model modal');
