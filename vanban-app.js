@@ -1,3 +1,188 @@
+/* vbd-parse-export:start */
+(function (root) {
+    function validYmd(year, month, day) {
+        const date = new Date(Date.UTC(year, month - 1, day));
+        if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return '';
+        const pad = value => String(value).padStart(2, '0');
+        return `${String(year).padStart(4, '0')}-${pad(month)}-${pad(day)}`;
+    }
+
+    function parsePdfSignatureDate(raw) {
+        const match = String(raw || '').match(/D:\s*(\d{4})(\d{2})(\d{2})/);
+        if (!match) return '';
+        return validYmd(Number(match[1]), Number(match[2]), Number(match[3]));
+    }
+
+    function bytesToLatin1(bytes) {
+        const buffer = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
+        if (typeof TextDecoder !== 'undefined') return new TextDecoder('latin1').decode(buffer);
+        let raw = '';
+        for (let i = 0; i < buffer.length; i += 1) raw += String.fromCharCode(buffer[i]);
+        return raw;
+    }
+
+    function decodePdfHexString(hex) {
+        const clean = String(hex || '').replace(/\s+/g, '');
+        if (clean.length < 2 || clean.length % 2) return '';
+        const bytes = [];
+        for (let i = 0; i < clean.length; i += 2) bytes.push(parseInt(clean.slice(i, i + 2), 16));
+        if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+            let out = '';
+            for (let i = 2; i + 1 < bytes.length; i += 2) out += String.fromCharCode((bytes[i] << 8) | bytes[i + 1]);
+            return out.replace(/\u0000/g, '').trim();
+        }
+        return String.fromCharCode(...bytes).replace(/\u0000/g, '').trim();
+    }
+
+    function pdfStringValue(dict, key) {
+        const literal = dict.match(new RegExp(`\\/${key}\\s*\\(\\s*([^)]*)\\)`));
+        if (literal) return literal[1].replace(/\\([()\\])/g, '$1').trim();
+        const hex = dict.match(new RegExp(`\\/${key}\\s*<\\s*([0-9A-Fa-f\\s]+)\\s*>`));
+        return hex ? decodePdfHexString(hex[1]) : '';
+    }
+
+    function extractPdfSignaturesFromBytes(bytes) {
+        const raw = bytesToLatin1(bytes);
+        const signatures = [];
+        const re = /\/Type\s*\/Sig\b/g;
+        let match;
+        while ((match = re.exec(raw))) {
+            const before = raw.slice(Math.max(0, match.index - 400), match.index);
+            const ownBefore = before.slice(Math.max(0, before.lastIndexOf('<<')));
+            const after = raw.slice(match.index, match.index + 1200);
+            const end = after.indexOf('>>');
+            const ownAfter = end >= 0 ? after.slice(0, end) : after.slice(0, 700);
+            const dict = ownBefore + ownAfter;
+            const dateRaw = (dict.match(/\/M\s*\(\s*(D:\d{8,14}[^)]*)\)/) || [])[1] || '';
+            const name = pdfStringValue(dict, 'Name');
+            const date = parsePdfSignatureDate(dateRaw);
+            if (date || name) signatures.push({ date, name, rawDate: dateRaw });
+            if (re.lastIndex === match.index) re.lastIndex += 1;
+        }
+        return signatures;
+    }
+
+    function pickPrimarySignature(list) {
+        const items = Array.isArray(list) ? list.filter(item => item && (item.date || item.name)) : [];
+        if (!items.length) return null;
+        const dated = items.filter(item => item.date);
+        if (!dated.length) return items[items.length - 1];
+        return dated.slice().sort((a, b) => a.date.localeCompare(b.date) || items.indexOf(a) - items.indexOf(b)).pop();
+    }
+
+    function formatSignatureBlock(list) {
+        const primary = pickPrimarySignature(list);
+        if (!primary) return '';
+        const lines = [];
+        if (primary.date) {
+            const [year, month, day] = primary.date.split('-');
+            lines.push(`Ngày ký: ${day}/${month}/${year}`);
+        }
+        if (primary.name) lines.push(`Ký số: ${primary.name}`);
+        return lines.join('\n');
+    }
+
+    function normalizeDocumentNumber(raw) {
+        return String(raw || '').trim().replace(/\s*\/\s*/g, '/').replace(/\s*-\s*/g, '-').replace(/\s+/g, '');
+    }
+
+    function isReferenceContext(before) {
+        return /(Căn cứ|Trên cơ sở|theo\s*Công văn|Công văn\s*số)\s*[^0-9]{0,40}$/i.test(before || '');
+    }
+
+    function findDocumentNumber(head) {
+        const patterns = [
+            /(?:Số|So)\s*[:.]?\s*([0-9]{1,6}[ \t]*\/[ \t]*(?:Q[ \t]*Đ|QĐ|QD|KH|CV|TB|NQ|CT|NĐ|ND|HĐ|HD|BC|QC|TT)(?:[ \t]*-[ \t]*[A-Za-zÀ-ỹ0-9.]+)+)/iu,
+            /(?:Số|So)\s*[:.]?\s*([0-9]{1,6}[ \t]*\/[ \t]*[A-Za-zÀ-ỹ0-9.]+(?:[ \t]*-[ \t]*[A-Za-zÀ-ỹ0-9.]+)*)/iu,
+            /(?:^|[\s])([0-9]{1,6}[ \t]*\/[ \t]*(?:Q[ \t]*Đ|QĐ|QD|KH|CV|TB|NQ|CT|NĐ|ND|HĐ|HD|BC|QC|TT)(?:[ \t]*-[ \t]*[A-Za-zÀ-ỹ0-9.]+)+)/iu,
+        ];
+        for (const pattern of patterns) {
+            const match = pattern.exec(head);
+            if (!match) continue;
+            const pos = head.indexOf(match[0]);
+            const before = pos >= 0 ? head.slice(Math.max(0, pos - 100), pos) : '';
+            if (isReferenceContext(before)) continue;
+            const number = normalizeDocumentNumber(match[1]);
+            if (number) return number;
+        }
+        return '';
+    }
+
+    function findTitle(text) {
+        const match = String(text || '').match(/(?:V\/v|Về việc|Trích yếu|VE VIEC)\s*[:.]?\s*([^\n]{8,300})/iu);
+        return match ? match[1].trim() : '';
+    }
+
+    function isSignatureLine(line) {
+        return /(ngày\s*ký|ngay\s*ky|thời\s*gian\s*ký|thoi\s*gian\s*ky|ký\s*số|ky\s*so|signing\s*time|\/M\s*\(\s*D:)/i.test(line);
+    }
+
+    function latestSignatureDate(text) {
+        const found = [];
+        const patterns = [
+            { re: /(?:Ngày\s*ký|Ngay\s*ky|Thời\s*gian\s*ký|Thoi\s*gian\s*ky|Signing\s*time)\s*[:.]?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/giu, order: 'dmy' },
+            { re: /(?:Ngày\s*ký|Ngay\s*ky|Thời\s*gian\s*ký|Thoi\s*gian\s*ky|Signing\s*time)\s*[:.]?\s*(\d{4})-(\d{2})-(\d{2})/giu, order: 'ymd' },
+            { re: /\/M\s*\(\s*D:(\d{4})(\d{2})(\d{2})/gi, order: 'ymd' },
+        ];
+        patterns.forEach(pattern => {
+            pattern.re.lastIndex = 0;
+            let match;
+            while ((match = pattern.re.exec(text))) {
+                const ymd = pattern.order === 'dmy'
+                    ? validYmd(Number(match[3]), Number(match[2]), Number(match[1]))
+                    : validYmd(Number(match[1]), Number(match[2]), Number(match[3]));
+                if (ymd) found.push(ymd);
+            }
+        });
+        found.sort();
+        return found.length ? found[found.length - 1] : '';
+    }
+
+    function headerDate(text) {
+        const header = String(text || '').split('\n').filter(line => !isSignatureLine(line)).join('\n').slice(0, 900);
+        let match = header.match(/[A-Za-zÀ-ỹ.\s]+\s*,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu);
+        if (match) return validYmd(Number(match[3]), Number(match[2]), Number(match[1]));
+        match = header.match(/ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu);
+        if (match) {
+            const pos = header.indexOf(match[0]);
+            const before = pos >= 0 ? header.slice(0, pos) : '';
+            if (!/(Căn cứ|Trên cơ sở|theo|Công văn số)/i.test(before)) {
+                return validYmd(Number(match[3]), Number(match[2]), Number(match[1]));
+            }
+        }
+        match = header.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})\b/);
+        if (match) return validYmd(Number(match[3]), Number(match[2]), Number(match[1]));
+        return '';
+    }
+
+    function extractDocumentFields(source) {
+        const raw = String(source || '').replace(/\r/g, '');
+        const signatureDate = latestSignatureDate(raw);
+        const lines = raw.slice(0, 2500).split('\n').filter(line => {
+            const lower = line.toLowerCase();
+            const hasDate = /\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}|\d{4}-\d{2}-\d{2}|ngày\s+\d{1,2}\s+tháng/i.test(line);
+            if (hasDate) return true;
+            return !['ký bởi', 'ky boi', 'digitally signed', 'certificate', 'mã xác thực', 'ma xac thuc', 'signature valid', 'signed by', 'xác thực bởi', 'xac thuc boi', 'valid from', 'timestamp', 'ocsp', 'certificate authority'].some(keyword => lower.includes(keyword));
+        });
+        const clean = lines.join('\n').replace(/[ \t]+/g, ' ').trim();
+        const title = findTitle(clean.slice(0, 2200));
+        return {
+            document_number: findDocumentNumber(clean.slice(0, 1400)),
+            title,
+            summary_text: title,
+            document_date: headerDate(clean) || signatureDate || '',
+        };
+    }
+
+    root.VanbanParse = {
+        parsePdfSignatureDate,
+        extractPdfSignaturesFromBytes,
+        pickPrimarySignature,
+        formatSignatureBlock,
+        extractDocumentFields,
+    };
+})(typeof window !== 'undefined' ? window : globalThis);
+/* vbd-parse-export:end */
 (() => {
     const API = 'api/vanban.php';
     const SECTOR = ['hanhchinh', 'chuyenmon', 'dang'].includes(window.VANBAN_SECTOR) ? window.VANBAN_SECTOR : 'hanhchinh';
@@ -36,6 +221,7 @@
         copySources: [],
         pendingUploadFiles: [],
         primaryParseFileIndex: 0,
+        selectedIds: new Set(),
         uploadMaxBytes: null,
         postMaxBytes: null,
         appMaxFileMb: 25,
@@ -126,6 +312,7 @@
             teal: active ? 'bg-teal-700 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
             indigo: active ? 'bg-indigo-700 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
             rose: active ? 'bg-rose-700 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+            indigo: active ? 'bg-indigo-700 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
         };
         return map[meta.accent] || map.teal;
     }
@@ -136,7 +323,7 @@
         return 'bg-teal-700 hover:bg-teal-800';
     }
 
-    function accentIconClass() {
+    function accentText() {
         if (meta.accent === 'rose') return 'text-rose-700';
         if (meta.accent === 'indigo') return 'text-indigo-700';
         return 'text-teal-700';
@@ -179,8 +366,13 @@
         const status = $('statusFilter')?.value || '';
         const docType = $('typeFilter')?.value || state.typeFilter || '';
         return state.documents.filter(doc => {
-            if (year && doc.academic_year !== year) return false;
-            if (state.activeDirection && doc.direction !== state.activeDirection) return false;
+            if (year === '__empty__') {
+                if (doc.academic_year) return false;
+            } else if (year && doc.academic_year !== year) {
+                return false;
+            }
+            const docDir = doc.direction || 'incoming';
+            if (state.activeDirection && docDir !== state.activeDirection) return false;
             if (state.summaryDrilldown && !matchesSummaryDrilldown(doc, state.summaryDrilldown)) return false;
             if (status && docEffectiveStatus(doc) !== status) return false;
             if (docType && doc.document_type !== docType) return false;
@@ -196,7 +388,9 @@
 
     function yearScopedDocs() {
         const year = $('academicYearFilter')?.value || '';
-        return state.documents.filter(doc => !year || doc.academic_year === year);
+        if (!year) return state.documents;
+        if (year === '__empty__') return state.documents.filter(doc => !doc.academic_year);
+        return state.documents.filter(doc => doc.academic_year === year);
     }
 
     function docEffectiveStatus(doc) {
@@ -222,7 +416,7 @@
     }
 
     function summaryContextDocs() {
-        return yearScopedDocs().filter(doc => !state.activeDirection || doc.direction === state.activeDirection);
+        return yearScopedDocs().filter(doc => !state.activeDirection || (doc.direction || 'incoming') === state.activeDirection);
     }
 
     function matchesSummaryDrilldown(doc, kind) {
@@ -256,7 +450,7 @@
                             <i class="fa-solid fa-arrow-left"></i> Quản lý văn bản
                         </a>
                         <h1 class="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
-                            <i class="fa-solid ${meta.icon} mr-2 ${accentIconClass()}"></i>${meta.label}
+                            <i class="fa-solid ${meta.icon} mr-2 ${accentText()}"></i>${meta.label}
                         </h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
@@ -367,7 +561,7 @@
     function renderSummary() {
         const docs = summaryContextDocs();
         const yearDocs = yearScopedDocs();
-        const incoming = yearDocs.filter(d => d.direction === 'incoming').length;
+        const incoming = yearDocs.filter(d => (d.direction || 'incoming') === 'incoming').length;
         const outgoing = yearDocs.filter(d => d.direction === 'outgoing').length;
         const needAction = docs.filter(needsActionDoc).length;
         const overdue = docs.filter(isOverdueDoc).length;
@@ -405,7 +599,7 @@
 
     function renderDirectionTabs() {
         const docs = yearScopedDocs();
-        const incoming = docs.filter(d => d.direction === 'incoming').length;
+        const incoming = docs.filter(d => (d.direction || 'incoming') === 'incoming').length;
         const outgoing = docs.filter(d => d.direction === 'outgoing').length;
         const host = $('directionTabs');
         if (!host) return;
@@ -567,15 +761,20 @@
         }
         const host = $('documentList');
         if (!host) return;
+        renderBulkBar();
         if (!docs.length) {
             host.innerHTML = '<div class="p-10 text-center text-slate-500"><i class="fa-regular fa-folder-open mb-3 text-3xl"></i><p>Chưa có văn bản trong mục này.</p></div>';
             return;
         }
+        const canMove = SECTOR === 'hanhchinh' && !state.isGuest;
+        const visibleIds = docs.map(doc => Number(doc.id));
+        const allVisibleSelected = canMove && visibleIds.length > 0 && visibleIds.every(id => state.selectedIds.has(id));
         host.innerHTML = `
             <div class="overflow-x-auto">
                 <table class="min-w-full text-left text-sm">
                     <thead class="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-600">
                         <tr>
+                            ${canMove ? `<th class="w-10 px-3 py-3 text-center"><input id="selectAllDocs" type="checkbox" class="h-4 w-4 accent-indigo-700" ${allVisibleSelected ? 'checked' : ''} title="Chọn tất cả văn bản đang hiện"></th>` : ''}
                             <th class="w-12 px-3 py-3 text-center">STT</th>
                             <th class="min-w-[120px] px-3 py-3">Số/KH</th>
                             <th class="min-w-[100px] px-3 py-3">Loại VB</th>
@@ -592,6 +791,7 @@
                                 ? `<span class="inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${documentTypeTone(doc.document_type)}">${esc(doc.document_type)}</span>`
                                 : '<span class="text-xs text-slate-400">—</span>';
                             return `<tr class="border-b border-slate-100 hover:bg-slate-50/80">
+                                ${canMove ? `<td class="px-3 py-3 text-center align-top"><input type="checkbox" data-select-id="${doc.id}" class="h-4 w-4 accent-indigo-700" ${state.selectedIds.has(Number(doc.id)) ? 'checked' : ''} title="Chọn văn bản"></td>` : ''}
                                 <td class="px-3 py-3 text-center font-bold text-slate-500">${index + 1}</td>
                                 <td class="px-3 py-3 align-top">
                                     <div class="font-bold text-slate-800">${doc.document_number ? esc(doc.document_number) : '—'}</div>
@@ -612,6 +812,7 @@
                                         ${state.isGuest
                                             ? `<button data-action="view" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100" title="Xem chi tiết"><i class="fa-solid fa-eye"></i></button>`
                                             : `<button data-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                        ${canMove ? `<button data-action="transfer" data-id="${doc.id}" class="rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] font-bold text-indigo-800 hover:bg-indigo-100" title="Chuyển sang Chuyên môn">Chuyển sang Chuyên môn</button>` : ''}
                                         ${doc.report_required && !isResolvedReportStatus(doc.effective_status) ? `<button data-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-bold text-sky-800" title="Đang xử lý"><i class="fa-solid fa-spinner"></i></button><button data-action="aware" data-id="${doc.id}" class="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-700" title="Chỉ biết"><i class="fa-solid fa-eye"></i></button><button data-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-2 py-1 text-[11px] font-bold text-white" title="Đã báo cáo"><i class="fa-solid fa-check"></i></button>` : ''}
                                         <button data-action="delete" data-id="${doc.id}" class="rounded border border-rose-200 bg-white px-2 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-50" title="Xóa"><i class="fa-solid fa-trash"></i></button>`}
                                     </div>
@@ -628,7 +829,58 @@
         host.querySelectorAll('[data-view-id]').forEach(button => {
             button.onclick = () => openDetailModal(state.documents.find(doc => Number(doc.id) === Number(button.dataset.viewId)));
         });
+        host.querySelectorAll('[data-select-id]').forEach(box => {
+            box.onchange = () => {
+                const id = Number(box.dataset.selectId);
+                if (box.checked) state.selectedIds.add(id);
+                else state.selectedIds.delete(id);
+                renderBulkBar();
+                const selectAll = $('selectAllDocs');
+                if (selectAll) selectAll.checked = visibleIds.every(item => state.selectedIds.has(item));
+            };
+        });
+        $('selectAllDocs')?.addEventListener('change', event => {
+            visibleIds.forEach(id => {
+                if (event.target.checked) state.selectedIds.add(id);
+                else state.selectedIds.delete(id);
+            });
+            renderList();
+        });
         bindFileActions(host);
+    }
+
+    function renderBulkBar() {
+        const bar = $('sectorBulkBar');
+        if (!bar) return;
+        const count = SECTOR === 'hanhchinh' ? state.selectedIds.size : 0;
+        bar.classList.toggle('hidden', count < 1);
+        if ($('sectorBulkCount')) $('sectorBulkCount').textContent = `Đã chọn ${count} văn bản`;
+    }
+
+    async function moveToChuyenMon(ids, mode) {
+        const unique = [...new Set(ids.map(id => Number(id)).filter(id => id > 0))];
+        if (!unique.length) return;
+        const copying = mode === 'copy';
+        const verb = copying ? 'Sao chép' : 'Chuyển';
+        const question = copying
+            ? `${verb} ${unique.length} văn bản sang Chuyên môn?`
+            : `Chuyển ${unique.length} văn bản sang Chuyên môn (bản gốc tại Hành chính vẫn được lưu trữ)?`;
+        if (!confirm(question)) return;
+        try {
+            const data = await api(copying ? 'copy_sector' : 'transfer_sector', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ document_ids: unique, target_sector: 'chuyenmon' }),
+            });
+            unique.forEach(id => state.selectedIds.delete(id));
+            closeDetailModal();
+            toast(data.message || (copying
+                ? `${verb} sang Chuyên môn thành công.`
+                : 'Chuyển tích hợp sang Chuyên môn thành công (bản gốc tại Hành chính vẫn được lưu trữ nguyên vẹn).'));
+            await load();
+        } catch (error) {
+            toast(error.message, 'rose');
+        }
     }
 
     function openDetailModal(doc) {
@@ -675,14 +927,20 @@
             ? `<button type="button" id="closeDetailFooterBtn" class="ml-auto rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Đóng</button>`
             : `
             <button type="button" data-detail-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100"><i class="fa-solid fa-pen mr-1"></i>Sửa</button>
+            ${SECTOR === 'hanhchinh' ? `<button type="button" data-detail-action="transfer" data-id="${doc.id}" class="rounded border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800 hover:bg-indigo-100">Chuyển sang Chuyên môn</button><button type="button" data-detail-action="copy" data-id="${doc.id}" class="rounded border border-indigo-300 bg-white px-4 py-2 text-sm font-bold text-indigo-800 hover:bg-indigo-50">Sao chép sang Chuyên môn</button>` : ''}
             ${doc.report_required && !isResolvedReportStatus(doc.effective_status) ? `<button type="button" data-detail-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800">Đang xử lý</button><button type="button" data-detail-action="aware" data-id="${doc.id}" class="rounded border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700">Chỉ biết</button><button type="button" data-detail-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-4 py-2 text-sm font-bold text-white">Đã báo cáo</button>` : ''}
             <button type="button" id="closeDetailFooterBtn" class="ml-auto rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Đóng</button>`;
 
         actions.querySelectorAll('[data-detail-action]').forEach(button => {
             button.onclick = async () => {
                 const id = Number(button.dataset.id);
+                const actionName = button.dataset.detailAction;
+                if (actionName === 'transfer' || actionName === 'copy') {
+                    await moveToChuyenMon([id], actionName);
+                    return;
+                }
                 closeDetailModal();
-                await handleAction(button.dataset.detailAction, id);
+                await handleAction(actionName, id);
             };
         });
         $('closeDetailFooterBtn')?.addEventListener('click', closeDetailModal, { once: true });
@@ -756,12 +1014,15 @@
 
     function renderYears() {
         const years = state.schoolYears || [];
-        if (!state.yearInitialized) {
-            state.selectedYear = years.includes(state.selectedYear) ? state.selectedYear : (years[0] || '');
-            state.yearInitialized = true;
+        if (state.selectedYear !== '' && state.selectedYear !== '__empty__' && !years.includes(state.selectedYear)) {
+            state.selectedYear = '';
         }
-        if (state.selectedYear && !years.includes(state.selectedYear)) state.selectedYear = years[0] || '';
-        const options = ['<option value="">Tất cả năm học</option>', ...years.map(year => `<option value="${esc(year)}">${esc(year)}</option>`)].join('');
+        state.yearInitialized = true;
+        const options = [
+            '<option value="">Tất cả năm học</option>',
+            '<option value="__empty__">Chưa gán năm học</option>',
+            ...years.map(year => `<option value="${esc(year)}">${esc(year)}</option>`),
+        ].join('');
         if ($('academicYearFilter')) {
             $('academicYearFilter').innerHTML = options;
             $('academicYearFilter').value = state.selectedYear;
@@ -770,6 +1031,9 @@
             $('academicYear').innerHTML = years.length
                 ? years.map(year => `<option value="${esc(year)}">${esc(year)}</option>`).join('')
                 : '<option value="">Chưa có năm học — hãy tạo mới</option>';
+            if (!$('academicYear').value && years.length > 0) {
+                $('academicYear').value = years[0];
+            }
         }
     }
 
@@ -1040,7 +1304,8 @@
         if (attachmentButtonLabel) {
             attachmentButtonLabel.textContent = doc ? 'Thêm tệp đính kèm' : 'Chọn tệp đính kèm';
         }
-        if ($('academicYear')) $('academicYear').value = doc?.academic_year || state.selectedYear || '';
+        const chosenYear = state.selectedYear && state.selectedYear !== '__empty__' ? state.selectedYear : '';
+        if ($('academicYear')) $('academicYear').value = doc?.academic_year || chosenYear || ((state.schoolYears || [])[0] || '');
         if ($('direction')) $('direction').value = doc?.direction || state.activeDirection || 'incoming';
         if ($('documentNumber')) $('documentNumber').value = doc?.document_number || '';
         if ($('title')) $('title').value = doc?.title || '';
@@ -1070,6 +1335,7 @@
         if (action === 'view') return openDetailModal(doc);
         if (state.isGuest) return;
         if (action === 'edit') return openModal(doc);
+        if (action === 'transfer' || action === 'copy') return moveToChuyenMon([id], action);
         if (action === 'delete') {
             const count = (doc.files || []).length;
             if (!confirm(`XÓA VĨNH VIỄN văn bản “${doc.title}”?\n\nThao tác này sẽ xóa danh mục và ${count} tệp đính kèm trên Google Drive.`)) return;
@@ -1096,65 +1362,74 @@
         return String(text || '').replace(/\s+/g, '').length;
     }
 
-    async function extractPdfTextLayer(file) {
+    function linesFromTextContent(content, limit) {
+        const items = (content.items || [])
+            .filter(it => it.str && it.str.trim())
+            .map(it => {
+                const t = it.transform || [1, 0, 0, 1, 0, 0];
+                return { str: it.str, x: t[4] || 0, y: t[5] || 0 };
+            });
+        items.sort((a, b) => {
+            if (Math.abs(a.y - b.y) > 5) return b.y - a.y;
+            return a.x - b.x;
+        });
+        const lines = [];
+        let currentLine = [];
+        let lastY = null;
+        for (const item of items) {
+            if (lastY === null || Math.abs(item.y - lastY) <= 8) {
+                currentLine.push(item);
+            } else {
+                if (currentLine.length) {
+                    currentLine.sort((a, b) => a.x - b.x);
+                    lines.push(currentLine.map(it => it.str).join(' '));
+                }
+                currentLine = [item];
+            }
+            lastY = item.y;
+        }
+        if (currentLine.length) {
+            currentLine.sort((a, b) => a.x - b.x);
+            lines.push(currentLine.map(it => it.str).join(' '));
+        }
+        return typeof limit === 'number' ? lines.slice(0, limit) : lines;
+    }
+
+    async function annotationLines(page) {
+        try {
+            const annots = await page.getAnnotations();
+            const lines = [];
+            (annots || []).forEach(annot => {
+                [annot.contents, annot.title, annot.alternativeText, annot.overlaidText].forEach(value => {
+                    const text = String(value || '').trim();
+                    if (text) lines.push(text);
+                });
+            });
+            return lines;
+        } catch (error) {
+            return [];
+        }
+    }
+
+    async function extractPdfTextLayer(file, bytes) {
         if (!window.pdfjsLib) throw new Error('Chưa tải được công cụ đọc PDF.');
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+        const data = bytes ? bytes.slice() : await file.arrayBuffer();
+        const pdf = await window.pdfjsLib.getDocument({ data }).promise;
+        const pageNumbers = [];
+        const headCount = Math.min(pdf.numPages, 3);
+        for (let i = 1; i <= headCount; i += 1) pageNumbers.push(i);
+        if (pdf.numPages > headCount) pageNumbers.push(pdf.numPages);
         const pages = [];
-
-        for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {  // chỉ cần 3 trang đầu cho header
-            const page = await pdf.getPage(i);
+        for (const pageNumber of pageNumbers) {
+            const page = await pdf.getPage(pageNumber);
             const content = await page.getTextContent();
-
-            // Cải thiện: nhóm text theo vị trí y để tái tạo layout header tốt hơn (hai cột, dòng trên)
-            const items = content.items
-                .filter(it => it.str && it.str.trim())
-                .map(it => {
-                    const t = it.transform || [1,0,0,1,0,0];
-                    return {
-                        str: it.str,
-                        x: t[4] || 0,
-                        y: t[5] || 0,
-                        height: Math.abs(t[3] || 10)
-                    };
-                });
-
-            // Sắp xếp từ trên xuống (y cao trước), rồi trái sang phải
-            items.sort((a, b) => {
-                if (Math.abs(a.y - b.y) > 5) return b.y - a.y; // y cao hơn (trên) trước
-                return a.x - b.x;
-            });
-
-            // Gom thành dòng: các item có y gần nhau coi là cùng dòng
-            const lines = [];
-            let currentLine = [];
-            let lastY = null;
-
-            for (const item of items) {
-                if (lastY === null || Math.abs(item.y - lastY) <= 8) {
-                    currentLine.push(item);
-                } else {
-                    if (currentLine.length) {
-                        currentLine.sort((a,b) => a.x - b.x);
-                        lines.push(currentLine.map(it => it.str).join(' '));
-                    }
-                    currentLine = [item];
-                }
-                lastY = item.y;
-            }
-            if (currentLine.length) {
-                currentLine.sort((a,b) => a.x - b.x);
-                lines.push(currentLine.map(it => it.str).join(' '));
-            }
-
-            // Chỉ lấy các dòng đầu của trang (header thường ở 15 dòng đầu)
-            const headerLines = lines.slice(0, 20);
-            pages.push(headerLines.join('\n'));
+            const isLastOnly = pageNumber === pdf.numPages && pageNumber > headCount;
+            const lines = linesFromTextContent(content, isLastOnly ? 40 : 20);
+            const notes = await annotationLines(page);
+            pages.push([...lines, ...notes].join('\n'));
         }
-
-        let text = pages.join('\n\n');
-        text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-        return text;
+        return pages.join('\n\n').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
     }
 
     function hasMistralOcr() {
@@ -1222,14 +1497,26 @@
             throw new Error('Chỉ hỗ trợ file PDF hoặc ảnh.');
         }
 
-        // PDF: ưu tiên thử text layer, nếu header kém (rất phổ biến với PDF ký số trên Android) thì ngay lập tức thử render trang đầu + OCR
+        // PDF: đọc lớp chữ (trang đầu + trang cuối + annotation) và chữ ký số nhị phân /Type /Sig.
         let text = '';
         let mode = 'text-layer';
+        let bytes = null;
         try {
-            text = await extractPdfTextLayer(file);
+            bytes = new Uint8Array(await file.arrayBuffer());
+        } catch (e) {
+            bytes = null;
+        }
+        let signatures = [];
+        if (bytes && window.VanbanParse) {
+            try { signatures = window.VanbanParse.extractPdfSignaturesFromBytes(bytes); } catch (e) { signatures = []; }
+        }
+        try {
+            text = await extractPdfTextLayer(file, bytes);
         } catch (e) {
             text = '';
         }
+        const block = window.VanbanParse?.formatSignatureBlock(signatures) || '';
+        if (block && !text.includes(block)) text = `${block}\n${text}`.trim();
 
         const headerCheck = text.substring(0, 700);
         const headerLooksBad = meaningfulTextLength(text) < 80 ||
@@ -1324,6 +1611,11 @@
                 body: JSON.stringify({ source_text: forParse }),
             });
             const item = data.suggestion || {};
+            const local = window.VanbanParse?.extractDocumentFields(source) || {};
+            if (!item.document_number && local.document_number) item.document_number = local.document_number;
+            if (!item.document_date && local.document_date) item.document_date = local.document_date;
+            if (!item.title && local.title) item.title = local.title;
+            if (!item.summary_text && local.summary_text) item.summary_text = local.summary_text;
             const filled = applyParsedFields(item);
             showParseNote(item, filled);
             if (!filled && !options.silent) {
@@ -1526,6 +1818,11 @@
         });
 
         $('sourceText')?.addEventListener('input', scheduleAutoParse);
+        ensurePasteClipboardButton();
+        $('pasteClipboardBtn')?.addEventListener('click', () => { readClipboardIntoSource(); });
+        $('sourceText')?.addEventListener('paste', event => { handleSourcePaste(event); });
+        $('transferSelectedBtn')?.addEventListener('click', () => moveToChuyenMon([...state.selectedIds], 'transfer'));
+        $('copySelectedBtn')?.addEventListener('click', () => moveToChuyenMon([...state.selectedIds], 'copy'));
 
         $('addAttachmentBtn')?.addEventListener('click', () => $('files')?.click());
 
@@ -1787,6 +2084,70 @@
         }
     }
 
+    function ensurePasteClipboardButton() {
+        if ($('pasteClipboardBtn') || !$('sourceText')) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.id = 'pasteClipboardBtn';
+        button.className = 'mb-2 inline-flex items-center gap-2 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-xs font-bold text-indigo-800 hover:bg-indigo-50';
+        button.innerHTML = '<i class="fa-solid fa-paste"></i> Dán nhanh từ Clipboard';
+        $('sourceText').insertAdjacentElement('beforebegin', button);
+    }
+
+    function appendSourceAndParse(text) {
+        const next = String(text || '').trim();
+        if (!next || !$('sourceText')) return;
+        const current = $('sourceText').value.trim();
+        $('sourceText').value = current ? `${current}\n${next}` : next;
+        runAutoParse({ silent: true });
+    }
+
+    async function ingestClipboardImage(blob) {
+        if (!blob) return;
+        if (!hasMistralOcr()) {
+            toast('Ảnh vùng chữ ký cần Mistral OCR. Hãy dán chữ hoặc dùng PDF có chữ ký số.', 'rose');
+            return;
+        }
+        const dataUrl = await fileToDataUrl(new File([blob], 'vung-chu-ky.png', { type: blob.type || 'image/png' }));
+        const result = await window.MistralOcr.ocrImageDataUrl(dataUrl);
+        const text = result.text || result.markdown || '';
+        if (meaningfulTextLength(text) < 5) {
+            toast('Không đọc được chữ từ ảnh vừa dán.', 'rose');
+            return;
+        }
+        appendSourceAndParse(text);
+    }
+
+    async function readClipboardIntoSource() {
+        try {
+            if (navigator.clipboard?.read) {
+                const items = await navigator.clipboard.read();
+                for (const item of items) {
+                    const imageType = item.types.find(type => type.startsWith('image/'));
+                    if (imageType) {
+                        await ingestClipboardImage(await item.getType(imageType));
+                        return;
+                    }
+                    if (item.types.includes('text/plain')) {
+                        appendSourceAndParse(await (await item.getType('text/plain')).text());
+                        return;
+                    }
+                }
+            }
+            appendSourceAndParse(await navigator.clipboard.readText());
+        } catch (error) {
+            toast('Không đọc được clipboard. Hãy cho phép quyền dán hoặc dán bằng Ctrl+V vào ô nội dung.', 'rose');
+        }
+    }
+
+    async function handleSourcePaste(event) {
+        const items = [...(event.clipboardData?.items || [])];
+        const image = items.find(item => item.type && item.type.startsWith('image/'));
+        if (!image) return;
+        event.preventDefault();
+        await ingestClipboardImage(image.getAsFile());
+    }
+
     function init() {
         renderNav();
         bindEvents();
@@ -1800,4 +2161,4 @@
         init();
     }
 })();
-/* deploy-touch: 20260928-app-fix */
+/* deploy-touch: 20260929-chuyenmon */

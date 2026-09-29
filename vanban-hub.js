@@ -26,7 +26,7 @@
     }
 
     function statsFor(docs) {
-        const incoming = docs.filter(d => d.direction === 'incoming').length;
+        const incoming = docs.filter(d => (d.direction || 'incoming') === 'incoming').length;
         const outgoing = docs.filter(d => d.direction === 'outgoing').length;
         const needAction = docs.filter(d => ['pending', 'in_progress', 'overdue'].includes(d.effective_status)).length;
         const overdue = docs.filter(d => d.effective_status === 'overdue').length;
@@ -191,4 +191,4 @@
         boot();
     }
 })();
-/* deploy-touch: 20260928-hub-fix */
+/* deploy-touch: 20260929-chuyenmon */

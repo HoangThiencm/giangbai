@@ -10,17 +10,20 @@
   + Tệp hướng dẫn chuẩn: `TROLYTHIEN/8_TAO_BAO_CAO/Dau_vao/HUONG_DAN_TAO_BAO_CAO.md`.
 - **Kết quả:** Tự động xuất file Word `.docx` hoàn chỉnh lưu tại `TROLYTHIEN/8_TAO_BAO_CAO/Ket_qua/`.
 
-## 2. Thể thức văn bản chuẩn Nghị định 30/2020/NĐ-CP
-- Phải đầy đủ 9 thành phần thể thức chính:
-  1. Quốc hiệu và Tiêu ngữ (đúng font chữ, cỡ chữ, căn giữa).
-  2. Tên cơ quan, tổ chức ban hành văn bản.
-  3. Số, ký hiệu của văn bản (đúng quy chuẩn mã loại và cơ quan).
-  4. Địa danh và thời gian ban hành văn bản.
-  5. Tên loại và trích yếu nội dung văn bản.
-  6. Nội dung văn bản (bố cục rõ ràng, văn phong hành chính nhà nước trang trọng, súc tích).
-  7. Chức vụ, họ tên và chữ ký của người có thẩm quyền.
-  8. Dấu, chữ ký số của cơ quan, tổ chức.
-  9. Nơi nhận (liệt kê các đơn vị nhận để thực hiện, theo dõi, lưu trữ).
+## 2. Thể thức văn bản chuẩn Nghị định 30/2020/NĐ-CP & Hướng dẫn 05-HD/VPTW (Văn bản Đảng)
+- **Phông chữ & Cỡ chữ:** Bắt buộc `Times New Roman`. Toàn bộ phần nội dung văn bản, căn cứ, điều, khoản, điểm dùng **đồng nhất cỡ chữ 13pt** (không dùng lẫn lộn 11.5pt hay 12.5pt).
+- **Thụt đầu dòng đoạn văn:** Bắt buộc **lùi đầu dòng 1,27 cm (0.5 inch)** cho tất cả các đoạn văn, điều, khoản, điểm và từng dòng Căn cứ ban hành.
+- **Căn lề & Dãn dòng:** Căn đều hai bên (`JUSTIFY`), dãn dòng cố định **1.2 dòng** (`line_spacing = 1.2`), dãn đoạn `space_before = 2pt`, `space_after = 3pt`.
+- **Định lề trang A4:** Trên 20mm, Dưới 20mm, Trái 30mm, Phải 15mm.
+- **Đóng khung bảng biểu:** Toàn bộ bảng dữ liệu phải **đóng khung kín 4 cạnh viền ngoài và các đường kẻ bên trong** (`top`, `bottom`, `left`, `right`, `insideH`, `insideV` đều là đường đơn `single`, màu đen, độ dày 0.5pt). Bỏ hẳn kiểu bảng hở viền trái/phải. Kèm thuộc tính chống xé dòng (`cantSplit`) và lặp lại dòng tiêu đề khi sang trang (`tblHeader`).
+- **Căn cứ ban hành:** Chữ in thường, kiểu chữ nghiêng, cỡ 13pt, thụt đầu dòng 1.27cm; dòng cuối kết thúc bằng dấu phẩy (,), các dòng trước kết thúc bằng dấu chấm phẩy (;).
+- **Văn bản của Đảng (Hướng dẫn số 05-HD/VPTW năm 2026):**
+  + Tiêu đề góc phải: `ĐẢNG CỘNG SẢN VIỆT NAM` (in hoa, đậm, cỡ 13-14), dòng dưới là Địa danh, ngày tháng (nghiêng).
+  + Góc trái: Cấp ủy cấp trên / Cơ quan ban hành (in hoa, đậm, có gạch ngang dưới).
+  + Chuẩn hóa văn bản điện tử: Chữ ký số cá nhân (màu xanh, .png nền trong suốt), Chữ ký số cơ quan / con dấu Đảng (màu đỏ, .png nền trong suốt, trùm 1/3 chữ ký bên trái).
+  + Quy trình sao sang văn bản điện tử: Quét (scan) văn bản giấy sang PDF và áp dụng ký số tổ chức.
+- Chi tiết xem tại quy tắc: `.agents/rules/chuan_hoa_van_ban_nd30_vptw.md`.
+
 
 ## 3. Quy tắc bắt buộc về cơ quan hành chính (Mô hình chính quyền 2 cấp)
 - 🔴 **TUYỆT ĐỐI CẤM:** Không nhắc đến hoặc tạo nội dung liên quan đến các cơ quan cấp huyện đã bãi bỏ:
