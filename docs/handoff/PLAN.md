@@ -1,138 +1,93 @@
-# PLAN: Khảo sát nguyên nhân không push được và Phương án xử lý xung đột Git (Merge Conflicts)
+# PLAN: Tối ưu hóa Git Tracking cho TROLYTHIEN và Master Rule Nhánh 10
 
-## Hiện trạng
-1. **Lý do không push được**:
-   - Nhánh cục bộ (`main`) và nhánh từ xa (`origin/main`) bị **phân nhánh (diverged)**:
-     + Nhánh local có **1 commit mới** (`8b98de5` lúc 21:44:23) được commit tại máy.
-     + Nhánh remote (`origin/main`) có **6 commit khác** (`9b5b0ce` đến `2a5aad8`) đã được đẩy lên GitHub trước đó cùng ngày.
-   - Do có sự phân nhánh, GitHub Desktop đã thực hiện lệnh `Pull origin` để đồng bộ. Khi Git thực hiện thao tác kéo hợp nhất (`git merge origin/main`), cả hai bên đều sửa đổi sâu trên cùng một nhóm file lõi về Quản lý văn bản.
-   - Hậu quả: Git rơi vào trạng thái xung đột tại **10 file (unmerged paths)**:
-     1. `api/vanban.php` (7 conflicts)
-     2. `docs/handoff/IMPLEMENT.md` (1 conflict)
-     3. `docs/handoff/PLAN.md` (1 conflict)
-     4. `docs/handoff/VERIFY.md` (1 conflict)
-     5. `quanlyvanban-chuyenmon.html` (11 conflicts)
-     6. `quanlyvanban-dang.html`
-     7. `quanlyvanban-hanhchinh.html`
-     8. `quanlyvanban.html`
-     9. `vanban-app.js`
-     10. `vanban-hub.js`
-   - **Vì Git đang ở trạng thái `MERGING` dở dang với các file unmerged**, Git tuyệt đối **chặn mọi thao tác `git push`** (và cả `git pull`). Trên GitHub Desktop, nút Push bị vô hiệu hóa và hiển thị modal bắt buộc *"Resolve conflicts before Merge"*.
-
-2. **Nội dung công việc giữa 2 bên bị đụng độ**:
-   - **Nhánh Local (`8b98de5`)**:
-     + Bổ sung chế độ xem công khai không cần đăng nhập cho cấp trên / khách kiểm tra (`access-control.js`, `api/vanban.php` với `vbd_optional_user`, giao diện ẩn nút thêm/sửa/xóa).
-     + Nút "Lấy từ Hành chính" ở trang Chuyên môn (`quanlyvanban-chuyenmon.html`).
-   - **Nhánh Remote (`origin/main`)**:
-     + Đã hoàn thành các commit pipeline tự động giữ nguyên văn bản gốc tại Hành chính khi chuyển sang Chuyên môn.
-     + Nhận diện chữ ký số PDF, trích xuất OCR.
-     + Bổ sung các bài test tự động (`tests/vanban-chuyenmon-root-smoke.py`, `tests/vanban-chuyenmon-signature-smoke.js`, `tests/vanban-display-saved-smoke.js`, `tests/sodiem-smoke.js`).
-     + Bổ sung skills và rules chuẩn hóa văn bản NĐ 30 / VPTW.
+## 1. Hiện trạng & Vấn đề cần xử lý
+- Nhánh `10/ Tạo bài giảng HTML (từ PDF)` đã được tích hợp vào `.agents/workflows/thien.md` và `.agents/rules/tro-ly-thien.md`.
+- Tuy nhiên, file `.gitignore` dòng 18 hiện đang chặn toàn bộ thư mục `TROLYTHIEN/` (`TROLYTHIEN/`).
+- Hậu quả:
+  + File `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md` và hai file `.gitkeep` không xuất hiện trong Git (`git status` không thấy, `git ls-files` rỗng).
+  + Khi người dùng commit/push lên GitHub rồi sang máy khác clone về, thư mục `TROLYTHIEN/` sẽ hoàn toàn biến mất, khiến quy trình tự động trên máy mới không tìm thấy prompt và thư mục.
 
 ---
 
-## Phạm vi
-1. Xử lý triệt để toàn bộ xung đột trên 10 file đang bị unmerged.
-2. Hợp nhất (merge) đầy đủ các cải tiến của cả 2 phía:
-   - Giữ chế độ xem công khai (khách không cần đăng nhập vẫn xem và tải được văn bản/tệp) từ nhánh Local.
-   - Giữ nguyên toàn bộ logic chuẩn hóa giữ bản gốc Hành chính, nhận diện ký số và bộ kiểm thử tự động từ nhánh Remote.
-3. Hoàn tất commit merge để đưa Git về trạng thái sạch sẽ (`clean working directory`).
-4. Đẩy thành công (`git push origin main`) toàn bộ lịch sử commit lên GitHub.
+## 2. Giải pháp tối ưu kết hợp (Optimal Combined Solution)
+1. **Tinh chỉnh `.gitignore`**:
+   - Không ignore thô bạo cả thư mục `TROLYTHIEN/`.
+   - Chỉ ignore các file tài liệu dữ liệu nặng do người dùng ném vào (`Dau_vao/*`) hoặc kết quả sinh ra (`Ket_qua/*`), nhưng giữ lại các file `.gitkeep`, file `.md` (prompt/hướng dẫn), và file `.js` (engine).
+2. **Tạo Master Rule `.agents/rules/tao-bai-giang-html.md`**:
+   - Lưu trữ bản quy chuẩn Master Prompt chính thống vào thư mục `.agents/rules/` (chuẩn kiến trúc như `.agents/rules/taobaocao.md` của nhánh 8 và `.agents/rules/vietsangkien.md` của nhánh 9).
+   - Thư mục `.agents/rules/` luôn được Git theo dõi 100%, đảm bảo bất kỳ máy nào clone repo về cũng có sẵn bộ quy chuẩn này vĩnh viễn.
+3. **Cập nhật liên kết tham chiếu và Smoke Test**:
+   - Trong `.agents/workflows/thien.md` và `.agents/rules/tro-ly-thien.md`, bổ sung tham chiếu đến `.agents/rules/tao-bai-giang-html.md`.
+   - Cập nhật `tests/trolythien-bai-giang-html-smoke.js` để kiểm tra cả file rule mới và kiểm tra trạng thái ignore của Git.
 
 ---
 
-## Ngoài phạm vi
-- Không mở rộng tính năng mới ngoài việc hòa giải xung đột của 2 nhánh.
-- Tuyệt đối không dùng `git push --force` vì sẽ làm mất 6 commit quan trọng trên GitHub.
-- Không sửa mã nguồn trong phiên khảo sát Antigravity IDE (tuân thủ quy tắc Planner trong `AGENTS.md`).
+## 3. Phạm vi & File tác động
+| STT | File | Hành động | Chi tiết |
+| :--- | :--- | :--- | :--- |
+| 1 | `.gitignore` | Sửa đổi | Thay `TROLYTHIEN/` bằng luật chi tiết giữ lại `.gitkeep`, `*.md`, `*.js` |
+| 2 | `.agents/rules/tao-bai-giang-html.md` | Tạo mới | Chứa Master Prompt và 7 điểm vá thực chiến chuẩn kiến trúc |
+| 3 | `.agents/rules/tro-ly-thien.md` | Sửa đổi | Thêm liên kết tham chiếu tới `.agents/rules/tao-bai-giang-html.md` |
+| 4 | `.agents/workflows/thien.md` | Sửa đổi | Thêm liên kết tham chiếu tới `.agents/rules/tao-bai-giang-html.md` |
+| 5 | `tests/trolythien-bai-giang-html-smoke.js` | Sửa đổi | Kiểm tra `.agents/rules/tao-bai-giang-html.md` và kiểm tra rule gitignore |
 
 ---
 
-## File dự kiến tác động
-1. `api/vanban.php`: Hòa giải hàm `vbd_optional_user` (cho phép xem văn bản không cần login) với các hàm xử lý chuyển/sao chép văn bản mới (`vbd_copy_local_storage`, `transfer_sector`, `copy_sector`).
-2. `vanban-app.js`: Giữ chế độ Guest Mode (khách xem công khai) đồng thời tích hợp các hàm chuyển/sao chép và nhãn thông báo giữ bản gốc.
-3. `quanlyvanban-chuyenmon.html`: Giữ cấu trúc hoàn chỉnh của trang Chuyên môn (bao gồm các modal, nút xem công khai và nút quản lý khi đăng nhập).
-4. `quanlyvanban-hanhchinh.html`, `quanlyvanban-dang.html`, `quanlyvanban.html`: Giữ liên kết 3 phân hệ và nút đăng nhập cho khách.
-5. `vanban-hub.js`: Giữ cấu hình 3 sector và thống kê chuẩn.
-6. `docs/handoff/PLAN.md`, `docs/handoff/IMPLEMENT.md`, `docs/handoff/VERIFY.md`: Giải quyết conflict tài liệu handoff.
+## 4. Các bước thực hiện chi tiết cho Coder
+*(Dành cho Coder: Grok / ChatGPT / `agy` CLI)*
+
+### Bước 1: Chuẩn bị
+- Đọc kỹ `docs/handoff/PLAN.md`.
+- Xóa file `docs/handoff/.lock` nếu có.
+
+### Bước 2: Tinh chỉnh `.gitignore`
+Tại dòng 17-18 của `.gitignore`, thay thế:
+```gitignore
+# Trợ lý Thiên (Dữ liệu tạm & kết quả trích xuất đề/giáo án)
+TROLYTHIEN/
+```
+Bằng:
+```gitignore
+# Trợ lý Thiên: Bỏ qua dữ liệu nạp vào và kết quả sinh ra, giữ lại hướng dẫn và cấu trúc thư mục
+TROLYTHIEN/**/Dau_vao/*
+!TROLYTHIEN/**/Dau_vao/.gitkeep
+!TROLYTHIEN/**/Dau_vao/*.md
+TROLYTHIEN/**/Ket_qua/*
+!TROLYTHIEN/**/Ket_qua/.gitkeep
+!TROLYTHIEN/**/*.md
+!TROLYTHIEN/**/*.js
+```
+
+### Bước 3: Tạo file `.agents/rules/tao-bai-giang-html.md`
+Sao chép toàn bộ nội dung Master Prompt từ `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md` sang `.agents/rules/tao-bai-giang-html.md` với tiêu đề chuẩn:
+`# QUY CHUẨN SOẠN BÀI GIẢNG HTML TRÌNH CHIẾU TƯƠNG TÁC (NHÁNH 10)`
+
+### Bước 4: Cập nhật tham chiếu trong `tro-ly-thien.md` và `thien.md`
+- Trong `.agents/workflows/thien.md` (Nhánh 10):
+  Thêm dòng tham chiếu:
+  `- Tuân thủ quy chuẩn riêng tại: .agents/rules/tao-bai-giang-html.md`
+- Trong `.agents/rules/tro-ly-thien.md` (Mục 4 & 5):
+  Bổ sung tham chiếu: `.agents/rules/tao-bai-giang-html.md`.
+
+### Bước 5: Cập nhật và chạy Smoke test
+- Sửa `tests/trolythien-bai-giang-html-smoke.js`:
+  + Kiểm tra file `.agents/rules/tao-bai-giang-html.md` tồn tại và đầy đủ từ khóa.
+  + Kiểm tra `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md` tồn tại.
+- Chạy kiểm thử:
+  ```powershell
+  node tests/trolythien-bai-giang-html-smoke.js
+  ```
+- Kiểm tra `git status`: Các file `PROMPT_TAO_BAI_GIANG_HTML.md` và `.gitkeep` phải xuất hiện trong trạng thái của Git.
+
+### Bước 6: Hoàn tất bàn giao
+- Ghi nhận vào `docs/handoff/IMPLEMENT.md`.
+- Khởi tạo `docs/handoff/VERIFY.md`.
 
 ---
 
-## Các bước thực hiện
-*Dành cho Coder (Grok / ChatGPT / `agy` CLI):*
-
-1. **Bước 1: Tiếp nhận và chuẩn bị**:
-   - Xóa file `docs/handoff/.lock`.
-   - Xem danh sách các file conflict bằng `git status`.
-
-2. **Bước 2: Xử lý xung đột mã nguồn**:
-   - **`api/vanban.php`**:
-     + Giữ lại hàm `vbd_optional_user($pdo)` để cho phép `action=list`, `action=file`, `action=reminder_count` hoạt động khi khách chưa đăng nhập.
-     + Giữ lại các hàm xử lý mới nhất từ remote: `vbd_copy_local_storage`, `vbd_copy_document_files`, logic không xóa file Google Drive dùng chung trong `vbd_delete_document_file_storage`.
-     + Hỗ trợ cả 2 chiều: Action `copy_from_hanhchinh` (lấy từ Hành chính) và `transfer_sector` / `copy_sector` (đẩy sang Chuyên môn giữ bản gốc).
-   - **`vanban-app.js`**:
-     + Kết hợp logic kiểm tra đăng nhập / chế độ khách: Khi `is_guest === true`, ẩn các nút sửa/xóa/thêm văn bản.
-     + Giữ lại các hàm xử lý nút sao chép và chuyển giao diện từ remote.
-   - **`quanlyvanban-chuyenmon.html`**:
-     + Loại bỏ hoàn toàn các thẻ đánh dấu conflict (`<<<<<<<`, `=======`, `>>>>>>>`).
-     + Giữ giao diện hoàn chỉnh có cả thanh điều hướng 3 tab, bộ lọc và các modal.
-   - **`quanlyvanban-hanhchinh.html`, `quanlyvanban-dang.html`, `quanlyvanban.html`, `vanban-hub.js`**:
-     + Chọn phiên bản hợp nhất, loại bỏ conflict markers.
-   - **Các file tài liệu `docs/handoff/*`**:
-     + Chấp nhận nội dung kế hoạch và xác minh mới nhất, không để lại conflict markers.
-
-3. **Bước 3: Kiểm tra chất lượng và chạy test suite**:
-   - Kiểm tra cú pháp JavaScript:
-     ```powershell
-     node --check vanban-app.js vanban-hub.js access-control.js
-     ```
-   - Chạy các kịch bản smoke test:
-     ```powershell
-     py tests/vanban-chuyenmon-root-smoke.py
-     node tests/vanban-chuyenmon-signature-smoke.js
-     node tests/sodiem-smoke.js
-     ```
-   - Xác nhận tất cả test đạt trạng thái PASS (exit code 0).
-
-4. **Bước 4: Hoàn thành merge và commit**:
-   - Đánh dấu đã giải quyết conflict:
-     ```powershell
-     git add .
-     ```
-   - Kiểm tra `git status` đảm bảo không còn dòng `both modified` hay `unmerged`.
-   - Hoàn tất merge commit:
-     ```powershell
-     git commit -m "Merge origin/main into main: Resolve conflicts between public guest access and root preservation"
-     ```
-
-5. **Bước 5: Ghi nhận và bàn giao**:
-   - Ghi nội dung đã làm vào `docs/handoff/IMPLEMENT.md`.
-   - Tạo lại file `docs/handoff/.lock` với nội dung `LOCK`.
-
-6. **Bước 6: Xác minh và Push**:
-   - Báo User mở Antigravity IDE gõ `/verify`.
-   - Sau khi IDE xác nhận PASS: Coder thực hiện `git push origin main` và xóa file `docs/handoff/.lock`.
-
----
-
-## Rủi ro
-- Bỏ sót conflict markers (`<<<<<<< HEAD`, `=======`, `>>>>>>>`) dẫn đến lỗi cú pháp PHP hoặc JavaScript khi chạy trên trình duyệt / server.
-- Ghi đè nhầm hàm xử lý file đính kèm làm mất tệp khi sao chép văn bản giữa Hành chính và Chuyên môn.
-- *Biện pháp giảm thiểu*: Bắt buộc chạy `node --check` và script kiểm thử `tests/vanban-chuyenmon-root-smoke.py` trước khi commit merge.
-
----
-
-## Cách kiểm thử
-1. `git status`: Phải hiển thị nhánh sạch (clean working tree), không còn `Unmerged paths`.
-2. Kiểm tra cú pháp: Không có lỗi SyntaxError trên các file JS.
-3. Chạy `py tests/vanban-chuyenmon-root-smoke.py` → Kết quả 27/27 PASS.
-4. Chạy `node tests/vanban-chuyenmon-signature-smoke.js` → PASS.
-5. Thao tác `git push origin main` thành công, remote cập nhật commit mới nhất.
-
----
-
-## Tiêu chí nghiệm thu
-1. 10 file bị xung đột được giải quyết dứt điểm, không còn conflict marker nào trong mã nguồn.
-2. Trạng thái `MERGING` kết thúc bằng một merge commit hợp lệ.
-3. Tính năng xem công khai (khách) và tính năng bảo toàn bản gốc Hành chính đều hoạt động tốt.
-4. `git push origin main` hoàn tất thành công lên GitHub không báo lỗi.
+## 5. Tiêu chí nghiệm thu (Verify Checklist)
+- [ ] File `.gitignore` cho phép Git theo dõi các file `.md`, `.js`, `.gitkeep` trong `TROLYTHIEN/`.
+- [ ] `git status` nhìn thấy `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md` và các file `.gitkeep`.
+- [ ] File `.agents/rules/tao-bai-giang-html.md` tồn tại và đồng bộ nội dung Master Prompt.
+- [ ] Thử nghiệm: File giả lập `.pdf` trong `Dau_vao/` vẫn bị `.gitignore` chặn (không lọt vào Git).
+- [ ] `node tests/trolythien-bai-giang-html-smoke.js` đạt PASS (exit code 0).

@@ -14,6 +14,12 @@ js/*.bundle-*.js
 docs/handoff/.lock
 GIAO AN/**/*.pdf
 
-# Trợ lý Thiên (Dữ liệu tạm & kết quả trích xuất đề/giáo án)
-TROLYTHIEN/
+# Trợ lý Thiên: Bỏ qua dữ liệu nạp vào và kết quả sinh ra, giữ lại hướng dẫn và cấu trúc thư mục
+TROLYTHIEN/**/Dau_vao/*
+!TROLYTHIEN/**/Dau_vao/.gitkeep
+!TROLYTHIEN/**/Dau_vao/*.md
+TROLYTHIEN/**/Ket_qua/*
+!TROLYTHIEN/**/Ket_qua/.gitkeep
+!TROLYTHIEN/**/*.md
+!TROLYTHIEN/**/*.js
 scratch/

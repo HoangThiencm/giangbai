@@ -1,11 +1,11 @@
 ---
-description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 9 tác vụ chính
+description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 10 tác vụ chính
 ---
 
 Khi người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
 ### BƯỚC 1: Hiển thị bảng chọn Menu chính (Menu cấp 1)
-Gọi tool `ask_question` với danh sách 9 lựa chọn:
+Gọi tool `ask_question` với danh sách 10 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -17,6 +17,7 @@ Gọi tool `ask_question` với danh sách 9 lựa chọn:
   7. "7/ Quản lý tổ chuyên môn"
   8. "8/ Tạo báo cáo"
   9. "9/ Viết sáng kiến"
+  10. "10/ Tạo bài giảng HTML (từ PDF)"
 
 ---
 
@@ -79,4 +80,22 @@ Tự động kích hoạt quy trình viết Sáng kiến kinh nghiệm chuẩn 4
 - **Link Gemini Canvas:** [https://gemini.google.com/app/e6bf41201af60de3?hl=vi](https://gemini.google.com/app/e6bf41201af60de3?hl=vi)
 - **File cục bộ tham chiếu:** [backupcode viettailieu/sangkien.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/backupcode%20viettailieu/sangkien.html)
 - Tuân thủ quy chuẩn tại `.agents/rules/vietsangkien.md`.
+
+#### Nhánh 10: Khi chọn "10/ Tạo bài giảng HTML (từ PDF)"
+Tự động kích hoạt quy trình tạo bài giảng HTML trình chiếu tương tác từ file PDF SGK/bài học:
+- **Bước 1 (Thu thập thông tin):** Bắt buộc hỏi đúng 3 thông tin trước khi thực hiện:
+  1. Môn gì? (Toán, KHTN, Ngữ văn, Lịch sử - Địa lý, Tin học,...)
+  2. Lớp mấy? (Lớp 6, 7, 8, 9,...)
+  3. Mấy tiết (thời lượng)? (1 tiết = 45 phút, 2 tiết = 90 phút,...)
+- **Bước 2 (File đầu vào):** Đọc file PDF bài học, SGK từ `TROLYTHIEN/10_BAI_GIANG_HTML/Dau_vao/`.
+- **Bước 3 (Thực thi & Quy chuẩn):** Tuân thủ Master Prompt và 7 điểm vá thực chiến tại `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md`:
+- Tuân thủ quy chuẩn riêng tại: .agents/rules/tao-bai-giang-html.md
+  + Single-file HTML standalone (chạy trực tiếp trên trình duyệt, không cần web server).
+  + Bố cục 2 chế độ: Chế độ Thiết kế (Soạn bài/Cuộn tài liệu) & Chế độ Trình chiếu tương tác 16:9 (Toàn màn hình F5, điều hướng phím mũi tên).
+  + Kịch bản bảng 2 cột sư phạm chuẩn CV 5512 & GDPT 2018 (Hoạt động của GV - Hoạt động của HS, 4 bước tổ chức).
+  + MathJax 3 rendering chuẩn công thức Toán học bằng `$..$` inline và `$$..$$` block, vá lỗi Tailwind SVG inline.
+  + Tương tác 2 chiều: Toggle mở/đóng đáp án, trắc nghiệm phản hồi tức thì, đồng hồ đếm ngược thảo luận.
+  + Bảo toàn 100% dữ liệu gốc từ PDF, không bịa số liệu.
+  + Phân bổ thời lượng chuẩn xác theo số tiết.
+- **Bước 4 (File kết quả):** Xuất file HTML thành phẩm vào `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/[Tên_Bài].html`.
 

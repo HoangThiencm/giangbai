@@ -2,8 +2,8 @@
 
 Bất cứ khi nào người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
-## 1. Menu Cấp 1 (Tác vụ chính - 9 lựa chọn)
-Gọi tool `ask_question` với 9 lựa chọn:
+## 1. Menu Cấp 1 (Tác vụ chính - 10 lựa chọn)
+Gọi tool `ask_question` với 10 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -15,6 +15,7 @@ Gọi tool `ask_question` với 9 lựa chọn:
   7. "7/ Quản lý tổ chuyên môn"
   8. "8/ Tạo báo cáo"
   9. "9/ Viết sáng kiến"
+  10. "10/ Tạo bài giảng HTML (từ PDF)"
 
 ## 2. Xử lý đường dẫn web trực tiếp:
 - **5/ Game giáo dục:** Cung cấp link website https://www.hoangthiencm.id.vn/trochoi.html và file [trochoi.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/trochoi.html).
@@ -58,5 +59,24 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
   + File đầu vào (Số liệu thực trạng, giáo án minh chứng): đặt tại `TROLYTHIEN/9_VIET_SANG_KIEN/Dau_vao/`
   + File kết quả (File Word .docx SKKN 4 phần): tự động lưu tại `TROLYTHIEN/9_VIET_SANG_KIEN/Ket_qua/`
   + Tuân thủ quy chuẩn riêng tại `.agents/rules/vietsangkien.md`
+- **10/ Tạo bài giảng HTML (từ PDF):**
+  + Bắt buộc hỏi đúng 3 thông tin: Môn gì? Lớp mấy? Mấy tiết (thời lượng)?
+  + File đầu vào (PDF bài học, SGK): đặt tại `TROLYTHIEN/10_BAI_GIANG_HTML/Dau_vao/`
+  + File kết quả (File HTML bài giảng trình chiếu tương tác đơn tệp): tự động lưu tại `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/[Tên_Bài].html`
+  + Tuân thủ Master Prompt và 7 điểm vá thực chiến tại `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md`
+  + Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-giang-html.md`
+
+## 5. Quy tắc bổ sung cho Nhánh 10
+Khi chọn "10/ Tạo bài giảng HTML (từ PDF)", bắt buộc hỏi đủ 3 thông tin trước khi đọc PDF và trước khi xuất file: Môn gì? Lớp mấy? Mấy tiết (thời lượng)? Thiếu một trong ba thông tin thì dừng và hỏi tiếp, không được suy diễn.
+
+Quy chuẩn thiết kế bài giảng HTML (bám Master Prompt `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md` và `.agents/rules/tao-bai-giang-html.md`):
+- Single-file standalone: một file `.html` tự chứa, mở trực tiếp bằng `file:///` trên trình duyệt, không cần web server, localhost hay Node.js.
+- Hai chế độ: Chế độ Thiết kế (cuộn dọc toàn bộ giáo án) và Chế độ Trình chiếu 16:9 (toàn màn hình F5, phím mũi tên, Space, vuốt chạm).
+- Bảng 2 cột sư phạm chuẩn CV 5512 và GDPT 2018: cột Hoạt động của Giáo viên và cột Hoạt động của Học sinh; đủ 4 bước (Chuyển giao nhiệm vụ; Thực hiện nhiệm vụ; Báo cáo, thảo luận; Kết luận, nhận định). Không để trống cột.
+- MathJax 3: công thức `$..$` (inline) và `$$..$$` (block); vá CSS `mjx-container svg { display: inline !important; }`; gọi `MathJax.typesetPromise()` sau khi đổi DOM hoặc chuyển slide.
+- Tương tác 2 chiều: nút ẩn/hiện đáp án, trắc nghiệm phản hồi xanh/đỏ, đồng hồ đếm ngược hoạt động nhóm, hộp ghi nhớ kiến thức chốt.
+- Bảo toàn 100% dữ liệu gốc từ PDF trong `TROLYTHIEN/10_BAI_GIANG_HTML/Dau_vao/`. Không bịa số liệu, định nghĩa, ví dụ hay bài tập.
+- Phân bổ đúng số tiết: 1 tiết (45 phút, 8–12 slides); 2 tiết (90 phút, 16–22 slides, tách Tiết 1 / Tiết 2).
+- File kết quả chỉ ghi tại `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/[Tên_Bài].html`.
 
 
