@@ -1,75 +1,43 @@
-# PLAN: Mở tab Chuyên môn, hỗ trợ chuyển văn bản từ Hành chính sang Chuyên môn và tối ưu nhận diện Số văn bản & Ký số điện tử
+# PLAN: Thêm tính năng xóa học sinh và tự động lưu khi chỉnh sửa thông tin trong Sổ Điểm & KTTX
 
 ## Hiện trạng
-1. **Lĩnh vực trong Quản lý văn bản**:
-   - Hiện tại hệ thống Quản lý văn bản (`quanlyvanban.html`, `vanban-hub.js`) chỉ hỗ trợ 2 lĩnh vực: **Hành chính** (`quanlyvanban-hanhchinh.html`) và **Đảng** (`quanlyvanban-dang.html`).
-   - Chưa có trang `quanlyvanban-chuyenmon.html` và chưa có lĩnh vực `chuyenmon`.
-   - `api/vanban.php` hàm `vbd_sector()` chỉ chấp nhận `['hanhchinh', 'dang']`, tự động quy về `hanhchinh` nếu gặp giá trị khác.
-   - `access-control.js` chưa khai báo đường dẫn `quanlyvanban-chuyenmon.html`.
-   - Trong tab Hành chính (`quanlyvanban-hanhchinh.html` và `vanban-app.js`), chưa có cơ chế tick chọn (checkbox) hay nút thao tác để chuyển văn bản sang lĩnh vực Chuyên môn (chuyển từng văn bản hoặc chọn nhiều văn bản cùng lúc).
-
-2. **Nhận diện Số văn bản và Ngày ký số / Quyết định ký số điện tử**:
-   - `vanban-app.js` dùng `extractPdfTextLayer(file)` chỉ lấy text layer thô (`page.getTextContent()`) và chỉ đọc 20 dòng đầu của 3 trang đầu.
-   - Chữ ký số (con dấu đỏ điện tử, chữ ký số của thủ trưởng/Hiệu trưởng) thường nằm ở **trang cuối cùng** hoặc nằm trong **PDF Annotations / Signature Fields (`/Type /Sig`) / Form XObject / Ảnh**, khiến `getTextContent()` không thu thập được chữ ký số và ngày ký.
-   - Cấu hình `global_config.json` có mảng `mistral_keys: []` rỗng nên cơ chế OCR ảnh dự phòng không kích hoạt được khi gặp PDF dạng scan/ảnh con dấu.
-   - Backend `api/vanban.php` trong hàm `vbd_preprocess_source()` có danh sách từ khóa `$skipKeywords` đang chủ động xóa bỏ toàn bộ các dòng chứa `'ký bởi'`, `'ngày ký'`, `'chữ ký số'`, `'ký số'`, `'thời gian ký'`... Dẫn đến việc dù văn bản điện tử có ngày ký thì backend cũng tự động lọc bỏ, làm mất ngày ban hành của văn bản.
-   - Regex nhận diện số văn bản ở backend chưa bao quát hết các trường hợp số quyết định, công văn có ký hiệu đặc thù hoặc bị phân tách khoảng trắng khi trích xuất từ PDF ký số.
+1. **Thiếu nút và hàm Xóa học sinh (`sodiem.html`)**:
+   - Trong bảng sổ điểm ([`sodiem.html#L39`](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/sodiem.html#L39)), ở cột thao tác cuối mỗi dòng hiện chỉ có duy nhất nút "Gọi kiểm tra" (biểu tượng `<i class="fa fa-bullhorn"></i>`, hàm `quickCall(index)`).
+   - Hoàn toàn chưa có nút hay chức năng Xóa học sinh (`deleteStudent`). Khi giáo viên bấm nút "Thêm học sinh", dán danh sách hoặc nhập Excel bị thừa, trùng hoặc sai tên, không thể xóa bỏ học sinh đó khỏi sổ điểm.
+2. **Chỉnh sửa thông tin học sinh chưa kích hoạt tự động lưu CSDL**:
+   - Khi sửa Mã/SBD, Họ và tên hoặc Nhận xét trên các ô input ([`sodiem.html#L39`](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/sodiem.html#L39)), sự kiện `onchange` mới chỉ gọi `persist()` (lưu tạm localStorage) mà không gọi `triggerAutoSave()`.
+   - Nếu giáo viên sửa lại tên bị nhập sai mà không bấm nút "Lưu" thủ công (hoặc không nhập điểm), dữ liệu không được đồng bộ lên CSDL MySQL và có thể bị hoàn tác khi mở lại hoặc nạp lại lớp.
+3. **Cơ chế nạp lớp (`mergeStudents`)**:
+   - Hàm `mergeStudents()` ([`sodiem.html#L34`](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/sodiem.html#L34)) tự động hợp nhất học sinh từ CSDL, cache localStorage và roster từ hệ thống. Nếu không lưu danh sách các học sinh đã xóa (`deletedKeys`), học sinh từ roster có thể bị tự động nạp lại khi giáo viên chọn lại lớp.
 
 ---
 
 ## Phạm vi
-1. **Mở lĩnh vực Chuyên môn (`chuyenmon`) trong Quản lý văn bản**:
-   - Cập nhật `vanban-hub.js`: Thêm sector `chuyenmon` (`{ label: 'Chuyên môn', icon: 'fa-graduation-cap', accent: 'indigo', page: 'quanlyvanban-chuyenmon.html' }`), cập nhật hàm `sectorOf(doc)` và thẻ thống kê trên `quanlyvanban.html`.
-   - Tạo trang `quanlyvanban-chuyenmon.html` (kế thừa đầy đủ giao diện, màu sắc chủ đạo indigo/xanh dương chuyên môn, liên kết với `vanban-app.js` qua `window.VANBAN_SECTOR = 'chuyenmon'`).
-   - Cập nhật `access-control.js`: Khai báo `'quanlyvanban-chuyenmon.html': 'quanlyvanban'`.
-   - Cập nhật `api/vanban.php`:
-     + Mở rộng `vbd_sector()` chấp nhận `'chuyenmon'`.
-     + Cập nhật `vbd_sector_label()` hiển thị "Chuyên môn".
-     + Cập nhật đường dẫn thư mục lưu trữ Google Drive (`CHUYEN_MON`) và thư mục cục bộ cho sector `chuyenmon`.
-
-2. **Tính năng Tick chọn chuyển / sao chép văn bản từ Hành chính sang Chuyên môn**:
-   - Trên tab Hành chính (`quanlyvanban-hanhchinh.html`):
-     + Mỗi dòng/thẻ văn bản bổ sung checkbox chọn văn bản và nút thao tác nhanh "Chuyển sang Chuyên môn".
-     + Thêm thanh công cụ hàng loạt (Bulk action bar): Khi tick chọn 1 hoặc nhiều văn bản, hiển thị nút "Chuyển đã chọn sang Chuyên môn" và "Sao chép đã chọn sang Chuyên môn".
-     + Trong Modal chi tiết văn bản (`documentDetailModal`), bổ sung nút hành động "Chuyển sang Chuyên môn" / "Sao chép sang Chuyên môn".
-   - Backend `api/vanban.php`:
-     + Bổ sung action `transfer_sector` (chuyển sector của danh sách văn bản sang `chuyenmon`) và `copy_sector` (nhân bản bản ghi và liên kết file đính kèm sang sector `chuyenmon`).
-     + Kiểm tra quyền sở hữu (`owner_id`) an toàn trước khi chuyển/sao chép.
-
-3. **Tối ưu nhận diện Số văn bản & Ngày ký số / Quyết định ký số trong ứng dụng**:
-   - **Đọc trực tiếp chữ ký số chuẩn PDF (Binary & Annotations)** trong `vanban-app.js`:
-     + Đọc cấu trúc nhị phân của PDF (`/Type /Sig`), bóc tách trường `/M (D:YYYYMMDD...)` để lấy ngày ký số chuẩn xác trong 0.05s mà không cần OCR.
-     + Bóc tách trường `/Name` hoặc trường chủ thể ký để nhận diện cơ quan/người ký số.
-     + Gọi `page.getAnnotations()` để lấy nội dung text trong các Annotation/Stamp được phần mềm văn thư chèn vào.
-   - **Quét trang cuối (Last Page)**:
-     + Khi đọc PDF, ngoài trang đầu (chứa Số/Ký hiệu, Tiêu đề), tự động quét thêm trang cuối cùng (nơi có con dấu ký số điện tử của Quyết định/Công văn) để gom thông tin ký số vào nội dung nhận diện.
-   - **Cải tiến Backend `api/vanban.php`**:
-     + Sửa `vbd_preprocess_source()`: Không xóa các dòng chứa `'ngày ký'`, `'ký số'`, `'thời gian ký'`.
-     + Trích xuất ngày từ dòng chữ ký số (ví dụ: `Ngày ký: 26/09/2026 09:30:15`) làm ngày dự phòng (`document_date`) khi văn bản không có ngày ở phần tiêu đề.
-     + Nâng cấp regex `vbd_regex_extract()` nhận diện tốt các mẫu số quyết định, công văn như `123/QĐ-UBND`, `45/QĐ-SGDĐT`, `12/KH-THCS...` kể cả khi có khoảng trắng hay định dạng đặc thù.
-   - **Công cụ hỗ trợ quét nhanh vùng chữ ký**:
-     + Bổ sung nút "Dán nhanh từ Clipboard" và cho phép dán trực tiếp ảnh chụp vùng con dấu/số văn bản (từ Snipping Tool / Firefox Copy Text) để bóc tách ngay vào các trường.
-
-4. **Smoke test**:
-   - Tạo file test tự động `tests/vanban-chuyenmon-signature-smoke.js` kiểm tra toàn bộ luồng chuyển sector, nhận diện ký số và bóc tách dữ liệu.
+1. **Bổ sung tính năng Xóa học sinh trong `sodiem.html`**:
+   - Thêm nút Xóa (icon thùng rác `<i class="fa fa-trash"></i>`, màu đỏ `text-rose-600 hover:text-rose-800`) vào cột thao tác bên cạnh nút Gọi kiểm tra trên từng dòng của bảng sổ điểm.
+   - Thêm hàm `deleteStudent(index)`:
+     + Hiển thị hộp thoại xác nhận rõ ràng: "Bạn có chắc chắn muốn xóa học sinh [Tên HS] (Mã: [SBD]) khỏi sổ điểm? Điểm số của học sinh này sẽ bị xóa."
+     + Khi người dùng bấm OK: Xóa học sinh khỏi mảng `students` (`students.splice(index, 1)`).
+     + Lưu khóa nhận diện của học sinh đã xóa vào danh sách loại trừ (`deletedStudentKeys` lưu trong localStorage và đồng bộ theo sổ điểm) để hàm `mergeStudents()` không tự động nạp lại từ roster khi tải lại lớp.
+     + Gọi `persist()`, `triggerAutoSave()` để cập nhật tức thì lên localStorage và máy chủ/CSDL MySQL.
+     + Cập nhật lại giao diện qua `renderAll()`.
+2. **Kích hoạt tự động lưu CSDL khi thêm hoặc sửa thông tin học sinh**:
+   - Cập nhật hàm `addStudent()`: Gọi thêm `triggerAutoSave()` sau khi push học sinh mới để lưu ngay bản ghi lên CSDL.
+   - Cập nhật sự kiện `onchange` của các ô input: Mã/SBD (`sbd`), Họ và tên (`name`), và Nhận xét (`comment`): Gọi thêm `triggerAutoSave()` để đồng bộ ngay thay đổi lên CSDL MySQL.
+3. **Cập nhật bài test tự động `tests/sodiem-smoke.js`**:
+   - Bổ sung assertion kiểm tra sự tồn tại của hàm `deleteStudent`, nút xóa với icon thùng rác, xác nhận confirm, loại bỏ phần tử khỏi `students`, và cơ chế `triggerAutoSave` khi chỉnh sửa thông tin học sinh.
 
 ---
 
 ## Ngoài phạm vi
-- Không can thiệp vào các trang ngoài Quản lý văn bản (như phân công chuyên môn, sổ điểm, soạn bài...).
-- Không ép buộc người dùng phải cài thêm phần mềm ngoài; các cải tiến chạy trực tiếp trong mã nguồn ứng dụng hiện có.
+- Không thay đổi cấu trúc bảng cơ sở dữ liệu `gradebooks` trong MySQL (trường `students_data_json` dạng `LONGTEXT` đã hỗ trợ đầy đủ mảng học sinh cập nhật).
+- Không ảnh hưởng tới logic tính điểm trung bình thường xuyên (ĐTBtx), vòng quay kiểm tra hay ngân hàng câu hỏi.
 
 ---
 
 ## File dự kiến tác động
-- `quanlyvanban-chuyenmon.html` (tạo mới)
-- `quanlyvanban.html`
-- `vanban-hub.js`
-- `quanlyvanban-hanhchinh.html`
-- `vanban-app.js`
-- `api/vanban.php`
-- `access-control.js`
-- `tests/vanban-chuyenmon-signature-smoke.js` (tạo mới)
+- `sodiem.html`
+- `tests/sodiem-smoke.js`
 - `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/.lock`
 
@@ -77,67 +45,53 @@
 
 ## Các bước thực hiện
 1. **Bước 1: Mở khóa handoff**:
-   - Coder xóa `docs/handoff/.lock` trước khi sửa source.
-
-2. **Bước 2: Cập nhật Hub, Access Control và tạo `quanlyvanban-chuyenmon.html`**:
-   - Cập nhật `access-control.js`: Thêm route `'quanlyvanban-chuyenmon.html': 'quanlyvanban'`.
-   - Cập nhật `vanban-hub.js`: Thêm lĩnh vực `chuyenmon` vào `SECTORS`, cập nhật `sectorOf(doc)`.
-   - Cập nhật `quanlyvanban.html`: Điều chỉnh lưới sector để hiển thị 3 cột/thẻ đẹp mắt (Hành chính, Chuyên môn, Đảng).
-   - Tạo `quanlyvanban-chuyenmon.html`: Thiết lập `window.VANBAN_SECTOR = 'chuyenmon'`, đồng bộ theme màu xanh Indigo chuyên nghiệp, liên kết `vanban-app.js`.
-
-3. **Bước 3: Mở rộng Backend `api/vanban.php`**:
-   - Mở rộng `vbd_sector()` hỗ trợ `'chuyenmon'`, `vbd_sector_label()` trả về "Chuyên môn".
-   - Điều chỉnh thư mục Drive: Sector `chuyenmon` lưu vào folder `CHUYEN_MON`.
-   - Thêm endpoint action `transfer_sector` và `copy_sector`:
-     + Nhận mảng `document_ids` và `target_sector`.
-     + Cập nhật hoặc sao chép văn bản sang sector đích, giữ nguyên hoặc sao chép liên kết tệp.
-   - Sửa hàm `vbd_preprocess_source()`: Bảo lưu thông tin ngày ký số.
-   - Sửa hàm `vbd_regex_extract()`: Thêm logic bóc tách `document_date` từ ngày ký số nếu phần header chưa có ngày; tối ưu regex bắt số quyết định / công văn.
-
-4. **Bước 4: Nâng cấp `vanban-app.js` & Giao diện Hành chính**:
-   - **Xử lý chuyển sang Chuyên môn trong tab Hành chính**:
-     + Render checkbox chọn văn bản trên từng card/row.
-     + Thêm thanh chọn nhiều văn bản với nút "Chuyển sang Chuyên môn" và "Sao chép sang Chuyên môn".
-     + Thêm nút "Chuyển sang Chuyên môn" trong popup chi tiết văn bản.
-     + Gọi API `transfer_sector` / `copy_sector`, hiển thị thông báo thành công và reload danh sách.
-   - **Tối ưu nhận diện PDF ký số**:
-     + Viết hàm đọc nhị phân PDF để trích xuất chữ ký số `/Type /Sig`, ngày ký `/M`, người ký `/Name`.
-     + Cập nhật `extractPdfTextLayer`: Đọc thêm `page.getAnnotations()` và đọc thêm trang cuối cùng của PDF.
-     + Kết hợp text trang đầu, text trang cuối và dữ liệu ký số trước khi gửi vào `runAutoParse()`.
-
-5. **Bước 5: Viết bài test tự động `tests/vanban-chuyenmon-signature-smoke.js`**:
-   - Kiểm tra cấu hình sector `chuyenmon` trong hub và backend.
-   - Kiểm tra định dạng trích xuất ngày ký số từ chuỗi định dạng PDF `/M (D:20260925...)` -> `2026-09-25`.
-   - Kiểm tra regex bóc tách số quyết định `.../QĐ-...`, ngày ký số và trích yếu.
-   - Kiểm tra file `quanlyvanban-chuyenmon.html` có đủ các thành phần giao diện bắt buộc.
-   - Chạy `node tests/vanban-chuyenmon-signature-smoke.js` đạt PASS 100%.
-
-6. **Bước 6: Ghi nhật ký vào `docs/handoff/IMPLEMENT.md` và tạo lại `docs/handoff/.lock` nội dung `LOCK`**.
+   - Coder xóa `docs/handoff/.lock` trước khi sửa source code.
+2. **Bước 2: Nâng cấp `sodiem.html`**:
+   - Bổ sung mảng theo dõi học sinh bị xóa `deletedStudentKeys` theo từng lớp/môn.
+   - Cập nhật hàm `mergeStudents`: Bỏ qua các học sinh có khóa nằm trong `deletedStudentKeys`.
+   - Cập nhật hàm `renderGrades()`:
+     + Trong cột thao tác `td.no-print`, thêm nút `<button onclick="deleteStudent(${index})" class="text-rose-600 hover:text-rose-800 p-1 ml-1" title="Xóa học sinh"><i class="fa fa-trash"></i></button>`.
+     + Cập nhật các input `sbd`, `name`, `comment`: Thêm `triggerAutoSave()` vào `onchange`.
+   - Viết hàm `deleteStudent(index)`:
+     + Xác nhận `confirm(...)`.
+     + Lưu key vào `deletedStudentKeys`.
+     + `students.splice(index, 1)`.
+     + Gọi `persist()`, `triggerAutoSave()`, `renderAll()`.
+   - Cập nhật `addStudent()` và `pasteStudents()`: Kích hoạt `triggerAutoSave()`.
+3. **Bước 3: Cập nhật bài test `tests/sodiem-smoke.js`**:
+   - Kiểm tra các mẫu regex cho `deleteStudent`, nút xóa `fa-trash`, xác nhận confirm, và auto-save khi sửa tên/sbd.
+   - Chạy `agy-node tests/sodiem-smoke.js` đạt PASS 100%.
+4. **Bước 4: Ghi nhật ký vào `docs/handoff/IMPLEMENT.md` và tạo lại `docs/handoff/.lock` nội dung `LOCK`**.
 
 ---
 
 ## Rủi ro
-- **Xung đột tệp đính kèm khi chuyển sector**: Khi chuyển sector từ Hành chính sang Chuyên môn, nếu file đã lưu trên Google Drive dưới folder `HANH_CHINH`, liên kết xem/tải tệp vẫn giữ nguyên `drive_file_id` nên không bị mất file. Khi sao chép (copy), cần nhân bản bản ghi trong `office_document_files` để cả 2 văn bản đều truy cập được tệp đính kèm.
-- **Văn bản ký số có nhiều chữ ký**: Một số văn bản có cả chữ ký nháy của chuyên viên và chữ ký số chính thức của thủ trưởng. Cần ưu tiên chữ ký số của cơ quan/thủ trưởng (thường ở trang cuối hoặc có thời gian ký mới nhất).
+- **Xóa nhầm học sinh đang có nhiều cột điểm**: Có thể mất dữ liệu điểm nếu bấm nhầm.
+  -> Biện pháp: Đặt hộp thoại `confirm()` hiển thị rõ họ tên, mã học sinh và cảnh báo điểm sẽ bị xóa trước khi thực hiện.
+- **Học sinh bị xóa xuất hiện lại khi chuyển lớp rồi quay lại**: Do `roster` trả về từ server.
+  -> Biện pháp: Lưu danh sách `deletedStudentKeys` trong cấu hình lưu trữ của sổ điểm và lọc bỏ ngay trong `mergeStudents()`.
 
 ---
 
 ## Cách kiểm thử
 1. **Kiểm thử tự động**:
-   - Chạy `node tests/vanban-chuyenmon-signature-smoke.js` -> PASS 100%.
+   - Chạy lệnh: `agy-node tests/sodiem-smoke.js` -> PASS 100%.
 2. **Kiểm thử thủ công trên trình duyệt**:
-   - Mở `quanlyvanban.html`: Hiển thị đầy đủ 3 lĩnh vực (Hành chính, Chuyên môn, Đảng). Bấm vào Chuyên môn mở đúng trang `quanlyvanban-chuyenmon.html`.
-   - Mở `quanlyvanban-hanhchinh.html`:
-     + Tick chọn 1 hoặc nhiều văn bản -> Hiện thanh tác vụ -> Bấm "Chuyển sang Chuyên môn".
-     + Mở `quanlyvanban-chuyenmon.html` -> Thấy các văn bản vừa chuyển xuất hiện đầy đủ thông tin và tệp đính kèm.
-   - Kiểm tra nhận diện văn bản ký số:
-     + Chọn file PDF có chữ ký số điện tử (dấu đỏ điện tử / quyết định ký số).
-     + Hệ thống tự động trích xuất đúng Số văn bản (dạng `.../QĐ-...`) và Ngày ký số điện tử điền tự động vào ô Ngày văn bản.
+   - Mở trang `sodiem.html`, chọn lớp và môn học.
+   - Bấm "Thêm học sinh" -> Xuất hiện dòng học sinh mới.
+   - Sửa Họ và tên, Mã/SBD -> Trạng thái lưu trên thanh tiêu đề đổi sang "Đang lưu CSDL..." rồi "Đã lưu CSDL".
+   - Bấm nút Xóa (thùng rác màu đỏ) tại một học sinh nhập sai:
+     + Xuất hiện hộp thoại hỏi xác nhận.
+     + Bấm Hủy -> Học sinh vẫn còn nguyên.
+     + Bấm OK -> Học sinh biến mất khỏi bảng, danh sách cập nhật ngay, ĐTB và báo cáo được tính lại.
+   - Bấm nút "Nạp lớp" hoặc tải lại trang F5 -> Học sinh đã xóa không bị xuất hiện lại.
 
 ---
 
 ## Tiêu chí nghiệm thu
-- Có tab Chuyên môn hoạt động độc lập, quản lý văn bản chuyên môn riêng biệt.
-- Tab Hành chính có checkbox tick chọn và nút chuyển/sao chép văn bản sang Chuyên môn nhanh chóng, tiện lợi.
-- Hệ thống tự động nhận diện được Số văn bản và Ngày ký số của các văn bản/quyết định ký số điện tử trực tiếp trong ứng dụng.
-- Tất cả các bài test kiểm thử tự động đều PASS.
+- Có nút thùng rác màu đỏ để xóa từng học sinh nhập sai trên mỗi dòng của bảng sổ điểm.
+- Có thông báo xác nhận an toàn trước khi xóa.
+- Khi xóa, học sinh và điểm số liên quan được xóa bỏ sạch sẽ khỏi mảng dữ liệu, giao diện và CSDL.
+- Khi sửa Họ tên, Mã/SBD, Nhận xét thì hệ thống tự động lưu lên CSDL MySQL.
+- Học sinh đã xóa không bị tự động xuất hiện lại khi nạp lại lớp.
+- Smoke test chạy thành công 100%.
