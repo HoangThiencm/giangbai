@@ -18,6 +18,7 @@ async function accessControlMain() {
         'thongketientrinh.html': 'thongketientrinh',
         'quanlyvanban.html': 'quanlyvanban',
         'quanlyvanban-hanhchinh.html': 'quanlyvanban',
+        'quanlyvanban-chuyenmon.html': 'quanlyvanban',
         'quanlyvanban-dang.html': 'quanlyvanban',
         'theodoi-ai.html': 'theodoiai',
         'gslides.html': 'gslides',

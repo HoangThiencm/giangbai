@@ -104,12 +104,99 @@ function vbd_direction(string $value): string
 
 function vbd_sector(string $value): string
 {
-    return in_array($value, ['hanhchinh', 'dang'], true) ? $value : 'hanhchinh';
+    return in_array($value, ['hanhchinh', 'dang', 'chuyenmon'], true) ? $value : 'hanhchinh';
 }
 
 function vbd_sector_label(string $sector): string
 {
-    return $sector === 'dang' ? 'Đảng' : 'Hành chính';
+    if ($sector === 'dang') return 'Đảng';
+    if ($sector === 'chuyenmon') return 'Chuyên môn';
+    return 'Hành chính';
+}
+
+function vbd_sector_drive_name(string $sector): string
+{
+    if ($sector === 'dang') return 'DANG';
+    if ($sector === 'chuyenmon') return 'CHUYEN_MON';
+    return 'HANH_CHINH';
+}
+
+function vbd_request_document_ids(array $input): array
+{
+    $raw = $input['document_ids'] ?? $input['ids'] ?? [];
+    if (is_string($raw)) {
+        $decoded = json_decode($raw, true);
+        $raw = is_array($decoded) ? $decoded : preg_split('/\s*,\s*/', $raw);
+    }
+    if (!is_array($raw)) $raw = [$raw];
+    $ids = [];
+    foreach ($raw as $id) {
+        $n = (int)$id;
+        if ($n > 0) $ids[$n] = $n;
+    }
+    return array_values($ids);
+}
+
+function vbd_target_sector(array $input): string
+{
+    $target = trim((string)($input['target_sector'] ?? 'chuyenmon'));
+    if (!in_array($target, ['hanhchinh', 'dang', 'chuyenmon'], true)) {
+        throw new RuntimeException('Lĩnh vực đích không hợp lệ.');
+    }
+    return $target;
+}
+
+function vbd_owned_documents(PDO $pdo, int $ownerId, array $ids): array
+{
+    if (!$ids) throw new RuntimeException('Chưa chọn văn bản.');
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $pdo->prepare("SELECT * FROM office_documents WHERE owner_id = ? AND id IN ($placeholders)");
+    $stmt->execute(array_merge([$ownerId], $ids));
+    $rows = $stmt->fetchAll();
+    if (count($rows) !== count($ids)) {
+        throw new RuntimeException('Không tìm thấy văn bản hoặc bạn không có quyền xử lý.');
+    }
+    return $rows;
+}
+
+function vbd_move_local_storage(array $document, string $targetSector): void
+{
+    $id = (int)($document['id'] ?? 0);
+    if ($id < 1) return;
+    $from = vbd_local_file_dir($id, $document);
+    $next = $document;
+    $next['sector'] = $targetSector;
+    $to = vbd_local_file_dir($id, $next);
+    if ($from === $to || !is_dir($from)) return;
+    $parent = dirname($to);
+    if (!is_dir($parent) && !@mkdir($parent, 0755, true) && !is_dir($parent)) {
+        throw new RuntimeException('Không tạo được thư mục lưu trữ của lĩnh vực đích.');
+    }
+    if (is_dir($to)) {
+        throw new RuntimeException('Thư mục đích đã tồn tại, không chuyển được tệp cục bộ.');
+    }
+    if (!@rename($from, $to)) {
+        throw new RuntimeException('Không chuyển được thư mục tệp cục bộ sang lĩnh vực mới.');
+    }
+}
+
+function vbd_copy_document_files(PDO $pdo, int $fromId, int $toId): void
+{
+    $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE document_id = ? ORDER BY id ASC');
+    $stmt->execute([$fromId]);
+    $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
+    foreach ($stmt->fetchAll() as $file) {
+        $insert->execute([
+            $toId,
+            $file['drive_file_id'],
+            $file['original_name'],
+            $file['stored_name'],
+            $file['mime_type'],
+            (int)($file['size_bytes'] ?? 0),
+            $file['view_url'],
+            $file['download_url'],
+        ]);
+    }
 }
 
 function vbd_status(string $value, bool $required): string
@@ -172,20 +259,22 @@ function vbd_preprocess_source(string $source): string
 
     $lines = preg_split('/\R/u', $source) ?: [];
     $skipKeywords = [
-        'ký bởi', 'ngày ký', 'ky boi', 'ngay ky', 'digitally signed', 'certificate',
-        'mã xác thực', 'ma xac thuc', 'signature valid', 'signed by', 'chữ ký số',
-        'chu ky so', 'xác thực bởi', 'xac thuc boi', 'valid from', 'signing time',
-        'timestamp', 'ocsp', 'certificate authority', 'ký số', 'ky so',
-        'ngày ký số', 'ngay ky so', 'thời gian ký', 'thoi gian ky',
+        'ký bởi', 'ky boi', 'digitally signed', 'certificate',
+        'mã xác thực', 'ma xac thuc', 'signature valid', 'signed by',
+        'xác thực bởi', 'xac thuc boi', 'valid from',
+        'timestamp', 'ocsp', 'certificate authority',
     ];
     $filtered = [];
     foreach ($lines as $line) {
         $lower = function_exists('mb_strtolower') ? mb_strtolower($line) : strtolower($line);
+        $hasDate = (bool)preg_match('/\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}|\d{4}-\d{2}-\d{2}|ngày\s+\d{1,2}\s+tháng/iu', $line);
         $skip = false;
-        foreach ($skipKeywords as $keyword) {
-            if (str_contains($lower, $keyword)) {
-                $skip = true;
-                break;
+        if (!$hasDate) {
+            foreach ($skipKeywords as $keyword) {
+                if (str_contains($lower, $keyword)) {
+                    $skip = true;
+                    break;
+                }
             }
         }
         if (!$skip) {
@@ -209,8 +298,88 @@ function vbd_parse_vn_date(string $text): ?string
     return null;
 }
 
+function vbd_normalize_doc_number(string $raw): string
+{
+    $raw = trim($raw);
+    $raw = preg_replace('/\s*\/\s*/u', '/', $raw) ?? $raw;
+    $raw = preg_replace('/\s*-\s*/u', '-', $raw) ?? $raw;
+    $raw = preg_replace('/\s+/u', '', $raw) ?? $raw;
+    return $raw;
+}
+
+function vbd_is_reference_context(string $before): bool
+{
+    return (bool)preg_match('/(Căn cứ|Trên cơ sở|theo\s*Công văn|Công văn\s*số)\s*[^0-9]{0,40}$/iu', $before);
+}
+
+function vbd_find_document_number(string $head): string
+{
+    $patterns = [
+        '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}[ \t]*\/[ \t]*(?:Q[ \t]*Đ|QĐ|QD|KH|CV|TB|NQ|CT|NĐ|ND|HĐ|HD|BC|QC|TT)(?:[ \t]*-[ \t]*[A-Za-zÀ-ỹ0-9.]+)+)/iu',
+        '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}[ \t]*\/[ \t]*[A-Za-zÀ-ỹ0-9.]+(?:[ \t]*-[ \t]*[A-Za-zÀ-ỹ0-9.]+)*)/iu',
+        '/\b([0-9]{1,6}[ \t]*\/[ \t]*(?:Q[ \t]*Đ|QĐ|QD|KH|CV|TB|NQ|CT|NĐ|ND|HĐ|HD|BC|QC|TT)(?:[ \t]*-[ \t]*[A-Za-zÀ-ỹ0-9.]+)+)/iu',
+    ];
+    foreach ($patterns as $pattern) {
+        if (!preg_match($pattern, $head, $match)) continue;
+        $pos = function_exists('mb_strpos') ? mb_strpos($head, $match[0]) : strpos($head, $match[0]);
+        $before = $pos !== false
+            ? (function_exists('mb_substr') ? mb_substr($head, max(0, $pos - 100), 100) : substr($head, max(0, $pos - 100), 100))
+            : '';
+        if (vbd_is_reference_context($before)) continue;
+        $number = vbd_normalize_doc_number($match[1]);
+        if ($number !== '') return $number;
+    }
+    return '';
+}
+
+function vbd_valid_ymd(int $year, int $month, int $day): ?string
+{
+    if (!checkdate($month, $day, $year)) return null;
+    return sprintf('%04d-%02d-%02d', $year, $month, $day);
+}
+
+function vbd_without_signature_lines(string $text): string
+{
+    $lines = preg_split('/\R/u', $text) ?: [];
+    $kept = [];
+    foreach ($lines as $line) {
+        if (preg_match('/(ngày\s*ký|ngay\s*ky|thời\s*gian\s*ký|thoi\s*gian\s*ky|ký\s*số|ky\s*so|signing\s*time|\/M\s*\(\s*D:)/iu', $line)) {
+            continue;
+        }
+        $kept[] = $line;
+    }
+    return implode("\n", $kept);
+}
+
+function vbd_latest_signature_date(string $text): ?string
+{
+    $found = [];
+    if (preg_match_all('/(?:Ngày\s*ký|Ngay\s*ky|Thời\s*gian\s*ký|Thoi\s*gian\s*ky|Signing\s*time)\s*[:\.]?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/iu', $text, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $ymd = vbd_valid_ymd((int)$match[3], (int)$match[2], (int)$match[1]);
+            if ($ymd) $found[] = $ymd;
+        }
+    }
+    if (preg_match_all('/(?:Ngày\s*ký|Ngay\s*ky|Thời\s*gian\s*ký|Thoi\s*gian\s*ky|Signing\s*time)\s*[:\.]?\s*(\d{4})-(\d{2})-(\d{2})/iu', $text, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $ymd = vbd_valid_ymd((int)$match[1], (int)$match[2], (int)$match[3]);
+            if ($ymd) $found[] = $ymd;
+        }
+    }
+    if (preg_match_all('/\/M\s*\(\s*D:(\d{4})(\d{2})(\d{2})/i', $text, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $ymd = vbd_valid_ymd((int)$match[1], (int)$match[2], (int)$match[3]);
+            if ($ymd) $found[] = $ymd;
+        }
+    }
+    if (!$found) return null;
+    sort($found);
+    return $found[count($found) - 1];
+}
+
 function vbd_regex_extract(string $source): array
 {
+    $signatureDate = vbd_latest_signature_date($source);
     $text = vbd_preprocess_source($source);
 
     // Chỉ tìm ở phần đầu văn bản (header) để tránh nhầm với nội dung bên trong hoặc chữ ký số
@@ -231,12 +400,15 @@ function vbd_regex_extract(string $source): array
     // Tìm số văn bản CHÍNH ở phần rất đầu.
     // Hỗ trợ trường hợp text bị tách (Số: rồi sau đó số), hoặc "Số:1176/..." không khoảng trắng.
     // Bỏ qua nếu số nằm sau từ chỉ dẫn chiếu (Căn cứ, Trên cơ sở, Công văn số...)
+    $result['document_number'] = vbd_find_document_number($head);
+
     $numberPatterns = [
         '/(?:^|[\n\r])\s*(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
         '/(?:ỦY BAN|PHÒNG|TRƯỜNG|BAN)[^\n]{0,60}?\s*(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
         '/(?:Số|So)\s*(?:văn bản|van ban)?\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
     ];
     foreach ($numberPatterns as $pattern) {
+        if ($result['document_number'] !== '') break;
         if (preg_match($pattern, $head, $match)) {
             $num = trim(preg_replace('/\s+/u', '', $match[1]) ?? $match[1]);
             // Kiểm tra context: nếu trước số không có từ dẫn chiếu thì lấy
@@ -252,7 +424,7 @@ function vbd_regex_extract(string $source): array
     // Fallback mạnh: tìm bất kỳ số dạng NNNN/XXXX-XXXX nào trong 900 ký tự đầu
     // (hữu ích khi text layer tách "Số:" và số ra riêng, hoặc OCR lỗi nhẹ)
     if (empty($result['document_number'])) {
-        if (preg_match('/\b([0-9]{3,6}\/[A-ZĐA-Z0-9.\-]{3,})\b/u', $head, $match)) {
+        if (preg_match('/\b([0-9]{1,6}\/[A-ZĐA-ZÀ-Ỹ0-9.\-]{2,})\b/u', $head, $match)) {
             $num = $match[1];
             // Kiểm tra không nằm sau tham chiếu
             $pos = mb_strpos($head, $num);
@@ -269,7 +441,7 @@ function vbd_regex_extract(string $source): array
         // Tìm số ngay sau "Số:" bất kể có khoảng trắng hay ký tự lạ
         if (preg_match('/Số\s*[:\.]?\s*([0-9]{3,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu', $head, $match)) {
             $result['document_number'] = trim(preg_replace('/\s+/u', '', $match[1]));
-        } elseif (preg_match('/\b([0-9]{3,6}\/[A-ZĐA-Z0-9.\-]{3,})\b/u', mb_substr($head, 0, 700), $match)) {
+        } elseif (preg_match('/\b([0-9]{1,6}\/[A-ZĐA-ZÀ-Ỹ0-9.\-]{2,})\b/u', mb_substr($head, 0, 700), $match)) {
             // Lấy số đầu tiên kiểu NNNN/XXXX nếu có "Số" hoặc org name gần đầu
             $earlyContext = mb_substr($head, 0, 400);
             if (preg_match('/(Số|ỦY BAN|PHƯỜNG|PHÒNG)/iu', $earlyContext)) {
@@ -280,7 +452,7 @@ function vbd_regex_extract(string $source): array
 
     // Siêu cứu hộ cuối cùng: quét 500 ký tự đầu cho bất kỳ số văn bản nào nếu có "Số:" nhưng chưa có số
     if (empty($result['document_number']) && preg_match('/Số\s*[:\.]?/iu', $head)) {
-        if (preg_match('/\b(\d{3,6}\/[A-ZĐA-Z0-9.\-]{2,})\b/u', mb_substr($head, 0, 500), $match)) {
+        if (preg_match('/\b(\d{1,6}\/[A-ZĐA-ZÀ-Ỹ0-9.\-]{2,})\b/u', mb_substr($head, 0, 500), $match)) {
             $result['document_number'] = $match[1];
         }
     }
@@ -310,8 +482,9 @@ function vbd_regex_extract(string $source): array
         }
     }
 
-    // Tìm NGÀY BAN HÀNH sớm nhất ở header (bỏ ngày trong tham chiếu bên dưới)
-    $dateHead = mb_substr($head, 0, 900);
+    // Tìm NGÀY BAN HÀNH ở header. Dòng chữ ký số chỉ dùng làm ngày dự phòng.
+    $headerForDate = vbd_without_signature_lines($text);
+    $dateHead = mb_substr($headerForDate, 0, 900);
 
     // Ưu tiên pattern có "Hồ Nai, ngày" hoặc tương tự ngay đầu
     if (preg_match('/[A-Za-zÀ-ỹ\.\s]+\s*,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $m)) {
@@ -327,6 +500,9 @@ function vbd_regex_extract(string $source): array
 
     if (empty($result['document_date'])) {
         $result['document_date'] = vbd_parse_vn_date($dateHead);
+    }
+    if (empty($result['document_date']) && $signatureDate) {
+        $result['document_date'] = $signatureDate;
     }
 
     if (preg_match('/(?:V\/v|Về việc|Trích yếu|VE VIEC)\s*[:\.]?\s*([^\n]{8,300})/iu', $fullForTitle, $match)) {
@@ -788,7 +964,7 @@ function vbd_drive_folder(array $document): string
     $rootFolder = drive_get_or_create_folder($root, '04_QUAN_LY_VAN_BAN');
     $year = vbd_academic_year($document['academic_year'] ?? '');
     if ($year === '') throw new RuntimeException('Cần chọn năm học trước khi tải tệp lên Google Drive.');
-    $sectorFolder = drive_get_or_create_folder($rootFolder, vbd_sector((string)($document['sector'] ?? 'hanhchinh')) === 'dang' ? 'DANG' : 'HANH_CHINH');
+    $sectorFolder = drive_get_or_create_folder($rootFolder, vbd_sector_drive_name(vbd_sector((string)($document['sector'] ?? 'hanhchinh'))));
     $yearFolder = drive_get_or_create_folder($sectorFolder, 'NAM_HOC_' . drive_safe_name($year, 'NAM_HOC'));
     $kindFolder = drive_get_or_create_folder($yearFolder, $document['direction'] === 'outgoing' ? 'VAN_BAN_DI' : 'VAN_BAN_DEN');
     $label = trim((string)($document['document_number'] ?? '')) ?: ('VB-' . (int)$document['id']);
@@ -1251,6 +1427,90 @@ if ($action === 'save_upload') {
         vbd_process_document_upload($pdo, (int)$document['id'], $document, $files, (defined('SUBMISSION_MAX_FILE_MB') ? max(1, (int)SUBMISSION_MAX_FILE_MB) : 25) * 1024 * 1024);
     } catch (RuntimeException $e) {
         respond(['error' => $e->getMessage(), 'upload_backend' => 'vanban-local-fallback-v3'], 422);
+    }
+}
+
+if ($action === 'transfer_sector' || $action === 'copy_sector') {
+    $input = json_body();
+    try {
+        $target = vbd_target_sector($input);
+        $ids = vbd_request_document_ids($input);
+        $documents = vbd_owned_documents($pdo, (int)$user['id'], $ids);
+        $label = vbd_sector_label($target);
+        if ($action === 'transfer_sector') {
+            $moved = [];
+            $pdo->beginTransaction();
+            try {
+                foreach ($documents as $document) {
+                    vbd_move_local_storage($document, $target);
+                    $moved[] = $document;
+                    $pdo->prepare('UPDATE office_documents SET sector = ?, drive_folder_id = NULL WHERE id = ? AND owner_id = ?')
+                        ->execute([$target, (int)$document['id'], (int)$user['id']]);
+                }
+                $pdo->commit();
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                foreach ($moved as $document) {
+                    $rollback = $document;
+                    $rollback['sector'] = $target;
+                    try {
+                        vbd_move_local_storage($rollback, (string)$document['sector']);
+                    } catch (Throwable $ignored) {
+                    }
+                }
+                throw $e;
+            }
+            respond([
+                'ok' => true,
+                'count' => count($documents),
+                'target_sector' => $target,
+                'message' => 'Đã chuyển ' . count($documents) . ' văn bản sang ' . $label . '.',
+            ]);
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $insert = $pdo->prepare('INSERT INTO office_documents (owner_id, academic_year, sector, direction, document_number, title, document_date, organization, document_type, summary_text, source_text, report_required, report_due_at, report_status, report_note, reported_at, drive_folder_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL)');
+            $created = [];
+            foreach ($documents as $document) {
+                $insert->execute([
+                    (int)$user['id'],
+                    $document['academic_year'],
+                    $target,
+                    $document['direction'],
+                    $document['document_number'],
+                    $document['title'],
+                    $document['document_date'],
+                    $document['organization'],
+                    $document['document_type'],
+                    $document['summary_text'],
+                    $document['source_text'],
+                    (int)($document['report_required'] ?? 0),
+                    $document['report_due_at'],
+                    $document['report_status'] ?: 'not_required',
+                    $document['report_note'],
+                    $document['reported_at'],
+                ]);
+                $newId = (int)$pdo->lastInsertId();
+                vbd_copy_document_files($pdo, (int)$document['id'], $newId);
+                $created[] = $newId;
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+        respond([
+            'ok' => true,
+            'count' => count($created),
+            'document_ids' => $created,
+            'target_sector' => $target,
+            'message' => 'Đã sao chép ' . count($created) . ' văn bản sang ' . $label . '.',
+        ]);
+    } catch (RuntimeException $e) {
+        respond(['error' => $e->getMessage()], 422);
+    } catch (Throwable $e) {
+        respond(['error' => 'Không chuyển được văn bản: ' . $e->getMessage()], 500);
     }
 }
 

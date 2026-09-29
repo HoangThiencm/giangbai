@@ -1,17 +1,25 @@
-# IMPLEMENT: Kéo thả tiết TKB và Tab 9 Đánh giá xếp loại
+# IMPLEMENT: Lĩnh vực Chuyên môn, chuyển văn bản và nhận diện ký số
 
 ## Đã làm
-- `phancongtochuyenmon.html`: ô tiết có nội dung `draggable="true"`. Kéo vào ô trống thì chuyển tiết; ô đích đã có tiết thì hộp thoại `1` hoán đổi / `2` ghi đè / Hủy. Sau thao tác cập nhật `editingTimetable`, vẽ lại lưới, `persistAndSaveTimetableLocal()`, và `applyTimetableToAssignments` khi checkbox tự động phân công đang bật. Class `.tt-cell.drag-target` tô viền khi kéo qua ô.
-- Tab `tab-nav-danhgia` và view `view-danhgia`: lọc tháng, bảng STT / họ tên / chức vụ / số tiết TKB / số liệu chấm công / xếp loại A–D / ghi chú. Nút xếp tất cả là A, gợi ý theo chấm công (KP hoặc nghỉ nhiều → D, có phép → C, có dự giờ hoặc SHCM → A, còn lại B), xuất Excel, Lưu CSDL (`saveToDB`).
-- `state.evaluations.records[YYYY-MM][teacherId] = { rating, note }`, `normalizeState` bổ sung object này, mỗi lần sửa gọi `saveToLocal()` và `hasUnsavedChanges`.
-- `tests/timetable-render-smoke.js`: di chuyển sang ô trống khác buổi, hoán đổi hai ô, HTML tab/view, lưu rating C và ghi chú.
+- Hub `quanlyvanban.html` có 3 thẻ lĩnh vực. `vanban-hub.js` thêm sector `chuyenmon` (Chuyên môn, indigo, `quanlyvanban-chuyenmon.html`). `access-control.js` gắn trang này với quyền `quanlyvanban`.
+- Trang mới `quanlyvanban-chuyenmon.html` đặt `window.VANBAN_SECTOR = 'chuyenmon'` và dùng `vanban-app.js`.
+- `api/vanban.php`: `vbd_sector()` nhận `chuyenmon`, nhãn "Chuyên môn", thư mục Drive `CHUYEN_MON`. Action `transfer_sector` đổi sector của các văn bản thuộc `owner_id` hiện tại và chuyển thư mục tệp cục bộ. Action `copy_sector` nhân bản bản ghi và các dòng `office_document_files` (giữ `drive_file_id`).
+- Tab Hành chính: checkbox từng dòng, nút "Chuyển sang Chuyên môn", thanh "Chuyển đã chọn sang Chuyên môn" / "Sao chép đã chọn sang Chuyên môn", và hai nút tương ứng trong modal chi tiết.
+- Nhận diện PDF: đọc `/Type /Sig`, ngày `/M (D:YYYYMMDD...)`, người ký `/Name`; đọc annotation; đọc thêm trang cuối. Dòng `Ngày ký`, `ký số`, `thời gian ký` không còn bị `vbd_preprocess_source()` xóa. Ngày ký số chỉ điền khi header không có ngày ban hành. Regex nhận `123/QĐ-UBND`, `45 / QĐ - SGDĐT`, `12/KH-THCS`.
+- Nút "Dán nhanh từ Clipboard" và dán ảnh vùng chữ ký vào ô nội dung. Ảnh cần Mistral OCR; PDF ký số đọc trực tiếp từ file.
 
 ## Kiểm thử
-- `node tests/timetable-render-smoke.js` → PASS (exit 0).
-- Chưa mở trình duyệt. Bước sau: Antigravity IDE, chat mới, `/verify`.
+- `node tests/vanban-chuyenmon-signature-smoke.js` → PASS (exit 0).
+- Chưa mở trình duyệt (không có công cụ trình duyệt trong phiên này). Bước sau: Antigravity IDE, chat mới, `/verify`.
 
 ## File
-- `phancongtochuyenmon.html`
-- `tests/timetable-render-smoke.js`
+- `quanlyvanban-chuyenmon.html`
+- `quanlyvanban.html`
+- `quanlyvanban-hanhchinh.html`
+- `vanban-hub.js`
+- `vanban-app.js`
+- `api/vanban.php`
+- `access-control.js`
+- `tests/vanban-chuyenmon-signature-smoke.js`
 - `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/.lock`
