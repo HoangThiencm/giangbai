@@ -2,6 +2,7 @@
     const API = 'api/vanban.php';
     const SECTORS = {
         hanhchinh: { label: 'Hành chính', icon: 'fa-building', accent: 'teal', page: 'quanlyvanban-hanhchinh.html' },
+        chuyenmon: { label: 'Chuyên môn', icon: 'fa-graduation-cap', accent: 'indigo', page: 'quanlyvanban-chuyenmon.html' },
         dang: { label: 'Đảng', icon: 'fa-flag', accent: 'rose', page: 'quanlyvanban-dang.html' },
     };
 
@@ -20,7 +21,8 @@
     }[ch]));
 
     function sectorOf(doc) {
-        return doc.sector === 'dang' ? 'dang' : 'hanhchinh';
+        if (doc.sector === 'dang' || doc.sector === 'chuyenmon') return doc.sector;
+        return 'hanhchinh';
     }
 
     function statsFor(docs) {
@@ -66,9 +68,12 @@
 
     function sectorCard(key, meta, docs) {
         const s = statsFor(docs);
-        const accent = meta.accent === 'rose'
-            ? { border: 'border-rose-200', bg: 'bg-rose-50', text: 'text-rose-800', icon: 'text-rose-700', btn: 'bg-rose-700 hover:bg-rose-800' }
-            : { border: 'border-teal-200', bg: 'bg-teal-50', text: 'text-teal-800', icon: 'text-teal-700', btn: 'bg-teal-700 hover:bg-teal-800' };
+        const accents = {
+            rose: { border: 'border-rose-200', bg: 'bg-rose-50', text: 'text-rose-800', icon: 'text-rose-700', btn: 'bg-rose-700 hover:bg-rose-800' },
+            indigo: { border: 'border-indigo-200', bg: 'bg-indigo-50', text: 'text-indigo-800', icon: 'text-indigo-700', btn: 'bg-indigo-700 hover:bg-indigo-800' },
+            teal: { border: 'border-teal-200', bg: 'bg-teal-50', text: 'text-teal-800', icon: 'text-teal-700', btn: 'bg-teal-700 hover:bg-teal-800' },
+        };
+        const accent = accents[meta.accent] || accents.teal;
         const urgent = docs.filter(d => reminderInfo(d)).length;
         return `
             <a href="${meta.page}" class="group block rounded-2xl border ${accent.border} bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -162,7 +167,19 @@
         }
     }
 
+    function renderGuestLogin() {
+        const host = document.querySelector('header .mx-auto');
+        if (!host || document.getElementById('guestLoginLink') || localStorage.getItem('authToken')) return;
+        const link = document.createElement('a');
+        link.id = 'guestLoginLink';
+        link.href = 'login.html';
+        link.className = 'inline-flex items-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50';
+        link.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Đăng nhập giáo viên';
+        host.appendChild(link);
+    }
+
     function boot() {
+        renderGuestLogin();
         renderSummary();
         renderSectors();
         load();

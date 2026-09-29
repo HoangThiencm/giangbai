@@ -18,6 +18,7 @@ async function accessControlMain() {
         'thongketientrinh.html': 'thongketientrinh',
         'quanlyvanban.html': 'quanlyvanban',
         'quanlyvanban-hanhchinh.html': 'quanlyvanban',
+        'quanlyvanban-chuyenmon.html': 'quanlyvanban',
         'quanlyvanban-dang.html': 'quanlyvanban',
         'theodoi-ai.html': 'theodoiai',
         'gslides.html': 'gslides',
@@ -99,8 +100,14 @@ async function accessControlMain() {
         && ((params.get('mode') === 'student' && !!getQueryParamInsensitive(params, 'examId'))
             || params.get('from') === 'taobaitap');
     const token = localStorage.getItem('authToken');
+    const isPublicVanbanPage = [
+        'quanlyvanban.html',
+        'quanlyvanban-hanhchinh.html',
+        'quanlyvanban-chuyenmon.html',
+        'quanlyvanban-dang.html'
+    ].includes(fileName);
 
-    if (isOpenExamLink) {
+    if (isOpenExamLink || (isPublicVanbanPage && !token)) {
         return;
     }
 

@@ -3,10 +3,10 @@ require_once __DIR__ . '/helpers.php';
 
 session_start();
 
-function vbd_current_user(PDO $pdo): array
+function vbd_optional_user(PDO $pdo): ?array
 {
     $userId = (int)($_SESSION['user_id'] ?? 0);
-    if ($userId <= 0) respond(['error' => 'Vui lòng đăng nhập lại.'], 401);
+    if ($userId <= 0) return null;
     $stmt = $pdo->prepare('SELECT id, username, full_name, role, is_active FROM users WHERE id = ? LIMIT 1');
     $stmt->execute([$userId]);
     $user = $stmt->fetch();
@@ -17,6 +17,13 @@ function vbd_current_user(PDO $pdo): array
     if (!in_array($role, ['teacher', 'admin', 'superadmin'], true)) {
         respond(['error' => 'Chức năng quản lý văn bản chỉ dành cho giáo viên hoặc quản trị viên.'], 403);
     }
+    return $user;
+}
+
+function vbd_current_user(PDO $pdo): array
+{
+    $user = vbd_optional_user($pdo);
+    if ($user === null) respond(['error' => 'Vui lòng đăng nhập lại.'], 401);
     return $user;
 }
 
@@ -104,12 +111,21 @@ function vbd_direction(string $value): string
 
 function vbd_sector(string $value): string
 {
-    return in_array($value, ['hanhchinh', 'dang'], true) ? $value : 'hanhchinh';
+    return in_array($value, ['hanhchinh', 'dang', 'chuyenmon'], true) ? $value : 'hanhchinh';
 }
 
 function vbd_sector_label(string $sector): string
 {
-    return $sector === 'dang' ? 'Đảng' : 'Hành chính';
+    if ($sector === 'dang') return 'Đảng';
+    if ($sector === 'chuyenmon') return 'Chuyên môn';
+    return 'Hành chính';
+}
+
+function vbd_sector_drive_folder(string $sector): string
+{
+    if ($sector === 'dang') return 'DANG';
+    if ($sector === 'chuyenmon') return 'CHUYEN_MON';
+    return 'HANH_CHINH';
 }
 
 function vbd_status(string $value, bool $required): string
@@ -788,7 +804,7 @@ function vbd_drive_folder(array $document): string
     $rootFolder = drive_get_or_create_folder($root, '04_QUAN_LY_VAN_BAN');
     $year = vbd_academic_year($document['academic_year'] ?? '');
     if ($year === '') throw new RuntimeException('Cần chọn năm học trước khi tải tệp lên Google Drive.');
-    $sectorFolder = drive_get_or_create_folder($rootFolder, vbd_sector((string)($document['sector'] ?? 'hanhchinh')) === 'dang' ? 'DANG' : 'HANH_CHINH');
+    $sectorFolder = drive_get_or_create_folder($rootFolder, vbd_sector_drive_folder(vbd_sector((string)($document['sector'] ?? 'hanhchinh'))));
     $yearFolder = drive_get_or_create_folder($sectorFolder, 'NAM_HOC_' . drive_safe_name($year, 'NAM_HOC'));
     $kindFolder = drive_get_or_create_folder($yearFolder, $document['direction'] === 'outgoing' ? 'VAN_BAN_DI' : 'VAN_BAN_DEN');
     $label = trim((string)($document['document_number'] ?? '')) ?: ('VB-' . (int)$document['id']);
@@ -826,7 +842,21 @@ function vbd_collect_uploaded_files(): array
     return [];
 }
 
-function vbd_delete_document_file_storage(int $documentId, array $document, array $file): ?string
+function vbd_drive_file_shared(PDO $pdo, array $file, string $resolvedId): bool
+{
+    $rowId = (int)($file['id'] ?? 0);
+    $candidates = array_values(array_unique(array_filter([
+        trim((string)($file['drive_file_id'] ?? '')),
+        trim($resolvedId),
+    ], static fn(string $value): bool => $value !== '' && !vbd_is_local_file_id($value))));
+    if (!$candidates) return false;
+    $placeholders = implode(',', array_fill(0, count($candidates), '?'));
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM office_document_files WHERE id <> ? AND drive_file_id IN ($placeholders)");
+    $stmt->execute(array_merge([$rowId], $candidates));
+    return (int)$stmt->fetchColumn() > 0;
+}
+
+function vbd_delete_document_file_storage(int $documentId, array $document, array $file, ?PDO $pdo = null): ?string
 {
     $label = trim((string)($file['original_name'] ?? 'Tệp đính kèm'));
     $rawId = (string)($file['drive_file_id'] ?? '');
@@ -849,6 +879,9 @@ function vbd_delete_document_file_storage(int $documentId, array $document, arra
     );
     if ($fileId === '') {
         return $label . ': không xác định được mã tệp trên Drive';
+    }
+    if ($pdo && vbd_drive_file_shared($pdo, $file, $fileId)) {
+        return null;
     }
     try {
         drive_delete_file($fileId);
@@ -969,10 +1002,16 @@ function vbd_process_document_upload(PDO $pdo, int $id, array $document, array $
 vbd_maybe_ensure_schema($pdo);
 $action = (string)($_GET['action'] ?? $_POST['action'] ?? 'list');
 
+$readActions = ['list', 'file', 'reminder_count', 'drive_check'];
+$user = in_array($action, $readActions, true) ? vbd_optional_user($pdo) : vbd_current_user($pdo);
+
 if ($action === 'reminder_count') {
-    $user = vbd_current_user($pdo);
-    $stmt = $pdo->prepare('SELECT report_required, report_due_at, report_status FROM office_documents WHERE owner_id = ?');
-    $stmt->execute([(int)$user['id']]);
+    if ($user === null) {
+        $stmt = $pdo->query('SELECT report_required, report_due_at, report_status FROM office_documents');
+    } else {
+        $stmt = $pdo->prepare('SELECT report_required, report_due_at, report_status FROM office_documents WHERE owner_id = ?');
+        $stmt->execute([(int)$user['id']]);
+    }
     $today = new DateTime('today');
     $count = 0;
     foreach ($stmt->fetchAll() as $document) {
@@ -988,19 +1027,26 @@ if ($action === 'reminder_count') {
         $days = (int)$today->diff($due)->format('%r%a');
         if ($days <= 7) $count++;
     }
-    respond(['ok' => true, 'count' => $count]);
+    respond(['ok' => true, 'count' => $count, 'is_guest' => $user === null]);
 }
-
-$user = vbd_current_user($pdo);
 
 if ($action === 'list') {
     $sectorFilter = trim((string)($_GET['sector'] ?? ''));
-    if ($sectorFilter !== '') {
+    $order = 'ORDER BY COALESCE(report_due_at, document_date, DATE(created_at)) ASC, id DESC';
+    if ($user === null) {
+        if ($sectorFilter !== '') {
+            $sectorFilter = vbd_sector($sectorFilter);
+            $stmt = $pdo->prepare("SELECT * FROM office_documents WHERE sector = ? $order");
+            $stmt->execute([$sectorFilter]);
+        } else {
+            $stmt = $pdo->query("SELECT * FROM office_documents $order");
+        }
+    } elseif ($sectorFilter !== '') {
         $sectorFilter = vbd_sector($sectorFilter);
-        $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE owner_id = ? AND sector = ? ORDER BY COALESCE(report_due_at, document_date, DATE(created_at)) ASC, id DESC');
+        $stmt = $pdo->prepare("SELECT * FROM office_documents WHERE owner_id = ? AND sector = ? $order");
         $stmt->execute([(int)$user['id'], $sectorFilter]);
     } else {
-        $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE owner_id = ? ORDER BY COALESCE(report_due_at, document_date, DATE(created_at)) ASC, id DESC');
+        $stmt = $pdo->prepare("SELECT * FROM office_documents WHERE owner_id = ? $order");
         $stmt->execute([(int)$user['id']]);
     }
     $documents = $stmt->fetchAll();
@@ -1033,7 +1079,8 @@ if ($action === 'list') {
         'drive_root_folder_name' => (string)($driveStatus['drive_root_folder_name'] ?? ''),
         'drive_in_shared_drive' => $driveStatus['drive_in_shared_drive'] ?? null,
         'drive_can_upload' => $driveStatus['drive_can_upload'] ?? null,
-        'user' => ['name' => $user['full_name'], 'username' => $user['username']],
+        'is_guest' => $user === null,
+        'user' => $user ? ['name' => $user['full_name'], 'username' => $user['username']] : null,
     ]);
 }
 
@@ -1284,7 +1331,13 @@ if ($action === 'drive_check') {
 if ($action === 'file') {
     $id = (int)($_GET['document_id'] ?? 0);
     $storedName = basename(str_replace(['\\', '/'], '', trim((string)($_GET['name'] ?? ''))));
-    $document = vbd_document($pdo, $id, (int)$user['id']);
+    if ($user === null) {
+        $docStmt = $pdo->prepare('SELECT * FROM office_documents WHERE id = ? LIMIT 1');
+        $docStmt->execute([$id]);
+        $document = $docStmt->fetch() ?: null;
+    } else {
+        $document = vbd_document($pdo, $id, (int)$user['id']);
+    }
     if (!$document || $storedName === '') respond(['error' => 'Không tìm thấy tệp.'], 404);
     $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE document_id=? AND stored_name=? LIMIT 1');
     $stmt->execute([$id, $storedName]);
@@ -1337,7 +1390,7 @@ if ($action === 'delete_file') {
     $file = $stmt->fetch();
     if (!$file) respond(['error' => 'Không tìm thấy tệp đính kèm.'], 404);
     try {
-        $storageError = vbd_delete_document_file_storage($documentId, $document, $file);
+        $storageError = vbd_delete_document_file_storage($documentId, $document, $file, $pdo);
         if ($storageError) {
             respond(['error' => 'Không xóa được tệp trên Drive/hosting: ' . $storageError], 502);
         }
@@ -1365,7 +1418,7 @@ if ($action === 'delete') {
             $driveErrors = [];
             $document = vbd_document($pdo, $id, (int)$user['id']) ?: [];
             foreach ($files as $file) {
-                $storageError = vbd_delete_document_file_storage($id, $document, $file);
+                $storageError = vbd_delete_document_file_storage($id, $document, $file, $pdo);
                 if ($storageError) $driveErrors[] = $storageError;
             }
             if ($driveErrors) {
@@ -1384,6 +1437,69 @@ if ($action === 'delete') {
         if ($pdo->inTransaction()) $pdo->rollBack();
         respond(['error' => 'Không thể xóa trọn vẹn văn bản: ' . $e->getMessage()], 502);
     }
+}
+
+if ($action === 'copy_from_hanhchinh') {
+    $input = json_body();
+    $rawIds = $input['source_ids'] ?? $input['document_ids'] ?? [];
+    if (!is_array($rawIds)) respond(['error' => 'Danh sách văn bản không hợp lệ.'], 422);
+    $ids = array_values(array_unique(array_filter(array_map('intval', $rawIds), static fn(int $id): bool => $id > 0)));
+    if (!$ids) respond(['error' => 'Chọn ít nhất một văn bản Hành chính.'], 422);
+    $sourceStmt = $pdo->prepare("SELECT * FROM office_documents WHERE id = ? AND sector = 'hanhchinh' LIMIT 1");
+    $fileStmt = $pdo->prepare('SELECT * FROM office_document_files WHERE document_id = ? ORDER BY id ASC');
+    $insertDoc = $pdo->prepare('INSERT INTO office_documents (owner_id, academic_year, sector, direction, document_number, title, document_date, organization, document_type, summary_text, source_text, report_required, report_due_at, report_status, report_note, reported_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    $insertFile = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
+    $copied = 0;
+    $pdo->beginTransaction();
+    try {
+        foreach ($ids as $sourceId) {
+            $sourceStmt->execute([$sourceId]);
+            $source = $sourceStmt->fetch();
+            if (!$source) continue;
+            $insertDoc->execute([
+                (int)$user['id'],
+                (string)($source['academic_year'] ?? ''),
+                'chuyenmon',
+                vbd_direction((string)($source['direction'] ?? 'incoming')),
+                $source['document_number'] ?? null,
+                (string)($source['title'] ?? ''),
+                $source['document_date'] ?? null,
+                $source['organization'] ?? null,
+                $source['document_type'] ?? null,
+                $source['summary_text'] ?? null,
+                $source['source_text'] ?? null,
+                (int)($source['report_required'] ?? 0),
+                $source['report_due_at'] ?? null,
+                (string)($source['report_status'] ?? 'not_required'),
+                $source['report_note'] ?? null,
+                $source['reported_at'] ?? null,
+            ]);
+            $newId = (int)$pdo->lastInsertId();
+            $fileStmt->execute([$sourceId]);
+            foreach ($fileStmt->fetchAll() as $file) {
+                $insertFile->execute([
+                    $newId,
+                    (string)($file['drive_file_id'] ?? ''),
+                    (string)($file['original_name'] ?? ''),
+                    (string)($file['stored_name'] ?? ''),
+                    $file['mime_type'] ?? null,
+                    (int)($file['size_bytes'] ?? 0),
+                    (string)($file['view_url'] ?? ''),
+                    $file['download_url'] ?? null,
+                ]);
+            }
+            $copied++;
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        respond(['error' => 'Không lấy được văn bản sang Chuyên môn: ' . $e->getMessage()], 502);
+    }
+    respond([
+        'ok' => true,
+        'copied_count' => $copied,
+        'message' => 'Đã lấy thành công ' . $copied . ' văn bản sang Chuyên môn.',
+    ]);
 }
 
 respond(['error' => 'Thao tác không hợp lệ.'], 400);

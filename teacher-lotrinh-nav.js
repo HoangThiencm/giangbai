@@ -87,6 +87,7 @@
         const file = currentFile();
         return file === 'quanlyvanban.html'
             || file === 'quanlyvanban-hanhchinh.html'
+            || file === 'quanlyvanban-chuyenmon.html'
             || file === 'quanlyvanban-dang.html';
     }
 

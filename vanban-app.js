@@ -1,8 +1,9 @@
 (() => {
     const API = 'api/vanban.php';
-    const SECTOR = window.VANBAN_SECTOR === 'dang' ? 'dang' : 'hanhchinh';
+    const SECTOR = ['hanhchinh', 'chuyenmon', 'dang'].includes(window.VANBAN_SECTOR) ? window.VANBAN_SECTOR : 'hanhchinh';
     const SECTOR_META = {
         hanhchinh: { label: 'Hành chính', icon: 'fa-building', accent: 'teal', page: 'quanlyvanban-hanhchinh.html' },
+        chuyenmon: { label: 'Chuyên môn', icon: 'fa-graduation-cap', accent: 'indigo', page: 'quanlyvanban-chuyenmon.html' },
         dang: { label: 'Đảng', icon: 'fa-flag', accent: 'rose', page: 'quanlyvanban-dang.html' },
     };
     const meta = SECTOR_META[SECTOR];
@@ -31,6 +32,8 @@
         driveProven: false,
         driveHint: '',
         driveDiag: {},
+        isGuest: !localStorage.getItem('authToken'),
+        copySources: [],
         pendingUploadFiles: [],
         primaryParseFileIndex: 0,
         uploadMaxBytes: null,
@@ -121,13 +124,22 @@
     function accentBtn(active = false) {
         const map = {
             teal: active ? 'bg-teal-700 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+            indigo: active ? 'bg-indigo-700 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
             rose: active ? 'bg-rose-700 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
         };
         return map[meta.accent] || map.teal;
     }
 
     function accentPrimary() {
-        return meta.accent === 'rose' ? 'bg-rose-700 hover:bg-rose-800' : 'bg-teal-700 hover:bg-teal-800';
+        if (meta.accent === 'rose') return 'bg-rose-700 hover:bg-rose-800';
+        if (meta.accent === 'indigo') return 'bg-indigo-700 hover:bg-indigo-800';
+        return 'bg-teal-700 hover:bg-teal-800';
+    }
+
+    function accentIconClass() {
+        if (meta.accent === 'rose') return 'text-rose-700';
+        if (meta.accent === 'indigo') return 'text-indigo-700';
+        return 'text-teal-700';
     }
 
     function toast(message, tone = 'teal') {
@@ -222,7 +234,20 @@
     function renderNav() {
         const host = $('vanbanNav');
         if (!host) return;
-        const other = SECTOR === 'dang' ? SECTOR_META.hanhchinh : SECTOR_META.dang;
+        const sectorLinks = ['hanhchinh', 'chuyenmon', 'dang'].map(key => {
+            const item = SECTOR_META[key];
+            const active = key === SECTOR;
+            return `<a href="${item.page}" class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold sm:text-sm ${active ? accentBtn(true) : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}"><i class="fa-solid ${item.icon}"></i> ${item.label}</a>`;
+        }).join('');
+        const guestLogin = state.isGuest
+            ? `<a href="login.html" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:text-sm"><i class="fa-solid fa-right-to-bracket"></i> Đăng nhập giáo viên</a>`
+            : '';
+        const importBtn = SECTOR === 'chuyenmon' && !state.isGuest
+            ? `<button id="importHanhchinhBtn" type="button" class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-800 hover:bg-indigo-100 sm:text-sm"><i class="fa-solid fa-file-import"></i> Lấy từ Hành chính</button>`
+            : '';
+        const addBtn = state.isGuest
+            ? ''
+            : `<button id="newDocumentBtn" type="button" class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-white sm:text-sm ${accentPrimary()}"><i class="fa-solid fa-plus"></i> Thêm văn bản</button>`;
         host.innerHTML = `
             <div class="border-b border-slate-200 bg-white">
                 <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
@@ -231,27 +256,27 @@
                             <i class="fa-solid fa-arrow-left"></i> Quản lý văn bản
                         </a>
                         <h1 class="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
-                            <i class="fa-solid ${meta.icon} mr-2 ${meta.accent === 'rose' ? 'text-rose-700' : 'text-teal-700'}"></i>${meta.label}
+                            <i class="fa-solid ${meta.icon} mr-2 ${accentIconClass()}"></i>${meta.label}
                         </h1>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <a href="index.html" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:text-sm">
                             <i class="fa-solid fa-home"></i> Trang chính
                         </a>
-                        <a href="${other.page}" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:text-sm">
-                            <i class="fa-solid ${other.icon}"></i> ${other.label}
-                        </a>
+                        ${sectorLinks}
+                        ${guestLogin}
                         <button id="exportExcelBtn" type="button" class="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 sm:text-sm">
                             <i class="fa-solid fa-file-excel"></i> Xuất Excel
                         </button>
-                        <button id="newDocumentBtn" type="button" class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-white sm:text-sm ${accentPrimary()}">
-                            <i class="fa-solid fa-plus"></i> Thêm văn bản
-                        </button>
+                        ${importBtn}
+                        ${addBtn}
                     </div>
                 </div>
             </div>`;
         $('newDocumentBtn')?.addEventListener('click', () => openModal());
         $('exportExcelBtn')?.addEventListener('click', exportExcel);
+        $('importHanhchinhBtn')?.addEventListener('click', openCopyModal);
+        $('newSchoolYearBtn')?.classList.toggle('hidden', !!state.isGuest);
     }
 
     function getSummaryDrilldownDocs(kind) {
@@ -427,7 +452,7 @@
             <i class="fa-solid fa-paperclip shrink-0"></i>
             <span class="truncate">${esc(file.original_name)}</span>
             ${canPreview ? `<button type="button" data-preview-id="${esc(fileId)}" data-preview-url="${esc(previewUrl)}" data-preview-title="${esc(file.original_name)}" class="shrink-0 rounded ${accentPrimary()} px-2 py-0.5 text-[11px] font-bold text-white"><i class="fa-solid fa-eye mr-0.5"></i>Xem</button>` : ''}
-            ${dbFileId ? `<button type="button" data-delete-file-id="${dbFileId}" data-doc-id="${doc.id}" data-file-name="${esc(file.original_name)}" class="shrink-0 rounded border border-rose-200 bg-white px-2 py-0.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50" title="Xóa tệp này"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+            ${!state.isGuest && dbFileId ? `<button type="button" data-delete-file-id="${dbFileId}" data-doc-id="${doc.id}" data-file-name="${esc(file.original_name)}" class="shrink-0 rounded border border-rose-200 bg-white px-2 py-0.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50" title="Xóa tệp này"><i class="fa-solid fa-trash-can"></i></button>` : ''}
         </span>`;
     }
 
@@ -574,7 +599,7 @@
                                 </td>
                                 <td class="px-3 py-3 align-top">${typeBadge}</td>
                                 <td class="px-3 py-3 align-top">
-                                    <button type="button" data-view-id="${doc.id}" class="text-left font-bold text-slate-900 ${meta.accent === 'rose' ? 'hover:text-rose-700' : 'hover:text-teal-700'} hover:underline">${esc(doc.title)}</button>
+                                    <button type="button" data-view-id="${doc.id}" class="text-left font-bold text-slate-900 ${meta.accent === 'rose' ? 'hover:text-rose-700' : meta.accent === 'indigo' ? 'hover:text-indigo-700' : 'hover:text-teal-700'} hover:underline">${esc(doc.title)}</button>
                                     <p class="mt-1 line-clamp-2 text-xs text-slate-500">${esc(doc.organization || 'Chưa ghi nơi gửi/nhận')}</p>
                                 </td>
                                 <td class="px-3 py-3 align-top text-slate-700">${doc.document_date ? dateText(doc.document_date) : '—'}</td>
@@ -584,9 +609,11 @@
                                 </td>
                                 <td class="px-3 py-3 align-top">
                                     <div class="flex flex-wrap justify-end gap-1">
-                                        <button data-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                        ${state.isGuest
+                                            ? `<button data-action="view" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100" title="Xem chi tiết"><i class="fa-solid fa-eye"></i></button>`
+                                            : `<button data-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100" title="Sửa"><i class="fa-solid fa-pen"></i></button>
                                         ${doc.report_required && !isResolvedReportStatus(doc.effective_status) ? `<button data-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-bold text-sky-800" title="Đang xử lý"><i class="fa-solid fa-spinner"></i></button><button data-action="aware" data-id="${doc.id}" class="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-700" title="Chỉ biết"><i class="fa-solid fa-eye"></i></button><button data-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-2 py-1 text-[11px] font-bold text-white" title="Đã báo cáo"><i class="fa-solid fa-check"></i></button>` : ''}
-                                        <button data-action="delete" data-id="${doc.id}" class="rounded border border-rose-200 bg-white px-2 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-50" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                                        <button data-action="delete" data-id="${doc.id}" class="rounded border border-rose-200 bg-white px-2 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-50" title="Xóa"><i class="fa-solid fa-trash"></i></button>`}
                                     </div>
                                 </td>
                             </tr>`;
@@ -644,7 +671,9 @@
             ${Number(doc.report_required) ? `<section class="rounded-xl border border-amber-200 bg-amber-50 p-4"><h3 class="text-sm font-bold text-amber-950">Theo dõi báo cáo</h3><p class="mt-2 text-sm text-amber-900">Hạn: <strong>${dateText(doc.report_due_at)}</strong>${doc.report_note ? ` · ${esc(doc.report_note)}` : ''}</p></section>` : ''}
             <section><h3 class="text-sm font-bold text-slate-800">Tệp đính kèm</h3><div class="mt-2 flex flex-wrap gap-2">${files}</div></section>`;
 
-        actions.innerHTML = `
+        actions.innerHTML = state.isGuest
+            ? `<button type="button" id="closeDetailFooterBtn" class="ml-auto rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Đóng</button>`
+            : `
             <button type="button" data-detail-action="edit" data-id="${doc.id}" class="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100"><i class="fa-solid fa-pen mr-1"></i>Sửa</button>
             ${doc.report_required && !isResolvedReportStatus(doc.effective_status) ? `<button type="button" data-detail-action="progress" data-id="${doc.id}" class="rounded border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800">Đang xử lý</button><button type="button" data-detail-action="aware" data-id="${doc.id}" class="rounded border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700">Chỉ biết</button><button type="button" data-detail-action="complete" data-id="${doc.id}" class="rounded ${accentPrimary()} px-4 py-2 text-sm font-bold text-white">Đã báo cáo</button>` : ''}
             <button type="button" id="closeDetailFooterBtn" class="ml-auto rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Đóng</button>`;
@@ -824,6 +853,8 @@
             const data = await api('list');
             state.documents = data.documents || [];
             state.schoolYears = data.school_years || [];
+            state.isGuest = data.is_guest === true || !localStorage.getItem('authToken');
+            renderNav();
             applyDriveStatus(data);
             state.driveDiag = data;
             renderYears();
@@ -1036,6 +1067,8 @@
     async function handleAction(action, id) {
         const doc = state.documents.find(item => Number(item.id) === id);
         if (!doc) return;
+        if (action === 'view') return openDetailModal(doc);
+        if (state.isGuest) return;
         if (action === 'edit') return openModal(doc);
         if (action === 'delete') {
             const count = (doc.files || []).length;
@@ -1584,6 +1617,174 @@
             renderSummary();
             renderList();
         });
+    }
+
+    function docCopiedKey(doc) {
+        return [doc.document_number || '', doc.title || '', doc.document_date || ''].join('|').trim().toLowerCase();
+    }
+
+    function ensureCopyModal() {
+        let modal = $('copyHanhchinhModal');
+        if (modal) return modal;
+        modal = document.createElement('div');
+        modal.id = 'copyHanhchinhModal';
+        modal.className = 'modal-backdrop fixed inset-0 z-[65] hidden overflow-y-auto p-3 sm:p-6';
+        modal.innerHTML = `
+            <div class="mx-auto my-4 max-w-5xl rounded-2xl bg-white shadow-2xl">
+                <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                    <div>
+                        <p class="text-xs font-extrabold uppercase tracking-[.13em] text-indigo-700">Chuyên môn</p>
+                        <h2 class="mt-1 text-xl font-black">Lấy văn bản từ Hành chính sang Chuyên môn</h2>
+                    </div>
+                    <button id="closeCopyModalBtn" type="button" class="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="space-y-3 p-5">
+                    <div class="grid gap-3 md:grid-cols-2">
+                        <label class="text-sm font-bold text-slate-700">Năm học
+                            <select id="copyYearFilter" class="mt-1 w-full rounded border border-slate-300 p-2.5"></select>
+                        </label>
+                        <label class="text-sm font-bold text-slate-700">Tìm nhanh
+                            <input id="copySearchInput" class="mt-1 w-full rounded border border-slate-300 p-2.5" placeholder="Số/ký hiệu, trích yếu...">
+                        </label>
+                    </div>
+                    <div id="copySourceList" class="max-h-[55vh] overflow-auto rounded-xl border border-slate-200"></div>
+                    <p id="copyModalError" class="hidden rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"></p>
+                </div>
+                <div class="flex flex-wrap justify-end gap-2 border-t border-slate-200 px-5 py-4">
+                    <button id="cancelCopyModalBtn" type="button" class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">Hủy</button>
+                    <button id="confirmCopyBtn" type="button" class="rounded-lg bg-indigo-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-800"><i class="fa-solid fa-file-import mr-1"></i> Lấy văn bản đã chọn sang Chuyên môn</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        $('closeCopyModalBtn')?.addEventListener('click', closeCopyModal);
+        $('cancelCopyModalBtn')?.addEventListener('click', closeCopyModal);
+        modal.addEventListener('click', event => { if (event.target === modal) closeCopyModal(); });
+        $('copyYearFilter')?.addEventListener('change', renderCopyList);
+        $('copySearchInput')?.addEventListener('input', renderCopyList);
+        $('confirmCopyBtn')?.addEventListener('click', confirmCopyFromHanhchinh);
+        return modal;
+    }
+
+    function filteredCopySources() {
+        const year = $('copyYearFilter')?.value || '';
+        const q = ($('copySearchInput')?.value || '').trim().toLowerCase();
+        return state.copySources.filter(doc => {
+            if (year && doc.academic_year !== year) return false;
+            if (q && !`${doc.document_number || ''} ${doc.title || ''} ${doc.organization || ''}`.toLowerCase().includes(q)) return false;
+            return true;
+        });
+    }
+
+    function renderCopyList() {
+        const host = $('copySourceList');
+        if (!host) return;
+        const copied = new Set(state.documents.map(docCopiedKey));
+        const docs = filteredCopySources();
+        if (!docs.length) {
+            host.innerHTML = '<div class="p-8 text-center text-sm text-slate-500">Không có văn bản Hành chính phù hợp bộ lọc.</div>';
+            return;
+        }
+        host.innerHTML = `
+            <table class="min-w-full text-left text-sm">
+                <thead class="sticky top-0 border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase text-slate-600">
+                    <tr>
+                        <th class="px-3 py-2"><input id="copySelectAll" type="checkbox" class="h-4 w-4" title="Chọn tất cả"></th>
+                        <th class="px-3 py-2">Số/Ký hiệu</th>
+                        <th class="px-3 py-2">Loại VB</th>
+                        <th class="px-3 py-2">Ngày VB</th>
+                        <th class="px-3 py-2">Trích yếu</th>
+                        <th class="px-3 py-2">Tệp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${docs.map(doc => {
+                        const taken = copied.has(docCopiedKey(doc));
+                        return `<tr class="border-b border-slate-100">
+                            <td class="px-3 py-2"><input type="checkbox" class="copy-source-check h-4 w-4" value="${doc.id}"></td>
+                            <td class="px-3 py-2 font-bold">${esc(doc.document_number || '—')}</td>
+                            <td class="px-3 py-2">${esc(doc.document_type || '—')}</td>
+                            <td class="px-3 py-2">${doc.document_date ? dateText(doc.document_date) : '—'}</td>
+                            <td class="px-3 py-2">${esc(doc.title || '')}${taken ? ' <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">(Đã lấy)</span>' : ''}</td>
+                            <td class="px-3 py-2">${(doc.files || []).length}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>`;
+        const all = $('copySelectAll');
+        const boxes = [...host.querySelectorAll('.copy-source-check')];
+        all?.addEventListener('change', () => boxes.forEach(box => { box.checked = all.checked; }));
+        boxes.forEach(box => box.addEventListener('change', () => {
+            if (all) all.checked = boxes.length > 0 && boxes.every(item => item.checked);
+        }));
+    }
+
+    async function openCopyModal() {
+        if (state.isGuest || SECTOR !== 'chuyenmon') return;
+        const modal = ensureCopyModal();
+        const error = $('copyModalError');
+        if (error) {
+            error.textContent = '';
+            error.classList.add('hidden');
+        }
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        const host = $('copySourceList');
+        if (host) host.innerHTML = '<div class="p-8 text-center text-sm text-slate-500">Đang tải văn bản Hành chính...</div>';
+        try {
+            const response = await fetch(`${API}?action=list&sector=hanhchinh&with_drive=1`, { credentials: 'include', cache: 'no-store' });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'Không tải được văn bản Hành chính.');
+            state.copySources = data.documents || [];
+            const years = [...new Set(state.copySources.map(doc => doc.academic_year).filter(Boolean))];
+            const yearSelect = $('copyYearFilter');
+            if (yearSelect) {
+                yearSelect.innerHTML = ['<option value="">Tất cả năm học</option>', ...years.map(year => `<option value="${esc(year)}">${esc(year)}</option>`)].join('');
+            }
+            renderCopyList();
+        } catch (err) {
+            if (host) host.innerHTML = '';
+            if (error) {
+                error.textContent = err.message;
+                error.classList.remove('hidden');
+            }
+        }
+    }
+
+    function closeCopyModal() {
+        $('copyHanhchinhModal')?.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    async function confirmCopyFromHanhchinh() {
+        const ids = [...document.querySelectorAll('.copy-source-check:checked')].map(box => Number(box.value)).filter(id => id > 0);
+        const error = $('copyModalError');
+        if (!ids.length) {
+            if (error) {
+                error.textContent = 'Chọn ít nhất một văn bản.';
+                error.classList.remove('hidden');
+            }
+            return;
+        }
+        const button = $('confirmCopyBtn');
+        if (button) button.disabled = true;
+        try {
+            const data = await api('copy_from_hanhchinh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_ids: ids }),
+            });
+            closeCopyModal();
+            toast(data.message || 'Đã lấy văn bản sang Chuyên môn.');
+            await load();
+        } catch (err) {
+            if (error) {
+                error.textContent = err.message;
+                error.classList.remove('hidden');
+            }
+            toast(err.message, 'rose');
+        } finally {
+            if (button) button.disabled = false;
+        }
     }
 
     function init() {
