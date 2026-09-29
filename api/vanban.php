@@ -20,13 +20,19 @@ function vbd_current_user(PDO $pdo): array
     return $user;
 }
 
+function vbd_is_admin(array $user): bool
+{
+    $userRole = (string)($user['role'] ?? '');
+    return in_array($userRole, ['admin', 'superadmin'], true);
+}
+
 function vbd_maybe_ensure_schema(PDO $pdo): void
 {
-    if (schema_is_ready('vanban', '20260624-v1')) {
+    if (schema_is_ready('vanban', '20260929-v2')) {
         return;
     }
     vbd_ensure_schema($pdo);
-    schema_mark_ready('vanban', '20260624-v1');
+    schema_mark_ready('vanban', '20260929-v2');
 }
 
 function vbd_ensure_schema(PDO $pdo): void
@@ -78,6 +84,14 @@ function vbd_ensure_schema(PDO $pdo): void
             $pdo->exec("ALTER TABLE office_documents ADD COLUMN sector VARCHAR(20) NOT NULL DEFAULT 'hanhchinh' AFTER academic_year");
             $pdo->exec("UPDATE office_documents SET sector = 'hanhchinh' WHERE sector IS NULL OR TRIM(sector) = ''");
         }
+    } catch (Throwable $e) {
+        // Existing installations may need the column added manually if ALTER TABLE is restricted.
+    }
+
+    try {
+        $pdo->exec("UPDATE office_documents SET sector = 'hanhchinh' WHERE sector IS NULL OR TRIM(sector) = ''");
+        $pdo->exec("UPDATE office_documents SET direction = 'incoming' WHERE direction IS NULL OR TRIM(direction) = ''");
+        $pdo->exec("UPDATE office_documents SET academic_year = '' WHERE academic_year IS NULL");
     } catch (Throwable $e) {
         // Existing installations may need the column added manually if ALTER TABLE is restricted.
     }
@@ -146,12 +160,17 @@ function vbd_target_sector(array $input): string
     return $target;
 }
 
-function vbd_owned_documents(PDO $pdo, int $ownerId, array $ids): array
+function vbd_owned_documents(PDO $pdo, int $ownerId, array $ids, bool $isAdmin = false): array
 {
     if (!$ids) throw new RuntimeException('Chưa chọn văn bản.');
     $placeholders = implode(',', array_fill(0, count($ids), '?'));
-    $stmt = $pdo->prepare("SELECT * FROM office_documents WHERE owner_id = ? AND id IN ($placeholders)");
-    $stmt->execute(array_merge([$ownerId], $ids));
+    if ($isAdmin) {
+        $stmt = $pdo->prepare("SELECT * FROM office_documents WHERE id IN ($placeholders)");
+        $stmt->execute(array_values($ids));
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM office_documents WHERE (owner_id = ? AND id IN ($placeholders)) OR ((owner_id = 0 OR owner_id IS NULL) AND id IN ($placeholders))");
+        $stmt->execute(array_merge([$ownerId], $ids, $ids));
+    }
     $rows = $stmt->fetchAll();
     if (count($rows) !== count($ids)) {
         throw new RuntimeException('Không tìm thấy văn bản hoặc bạn không có quyền xử lý.');
@@ -233,10 +252,15 @@ function vbd_effective_status(array $document): string
     return ($document['report_status'] ?? '') === 'in_progress' ? 'in_progress' : 'pending';
 }
 
-function vbd_document(PDO $pdo, int $id, int $ownerId): ?array
+function vbd_document(PDO $pdo, int $id, int $ownerId, bool $isAdmin = false): ?array
 {
-    $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE id = ? AND owner_id = ? LIMIT 1');
-    $stmt->execute([$id, $ownerId]);
+    if ($isAdmin) {
+        $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+    } else {
+        $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE id = ? AND (owner_id = ? OR owner_id = 0 OR owner_id IS NULL) LIMIT 1');
+        $stmt->execute([$id, $ownerId]);
+    }
     $document = $stmt->fetch();
     return $document ?: null;
 }
@@ -1065,7 +1089,7 @@ function vbd_save_document(PDO $pdo, array $user, array $input): array
         trim((string)($input['report_note'] ?? '')) ?: null,
     ];
     if ($id > 0) {
-        if (!vbd_document($pdo, $id, (int)$user['id'])) throw new RuntimeException('Không tìm thấy văn bản cần sửa.');
+        if (!vbd_document($pdo, $id, (int)$user['id'], vbd_is_admin($user))) throw new RuntimeException('Không tìm thấy văn bản cần sửa.');
         $reportedAt = $status === 'completed' ? date('Y-m-d H:i:s') : null;
         $stmt = $pdo->prepare('UPDATE office_documents SET academic_year=?, sector=?, direction=?, document_number=?, title=?, document_date=?, organization=?, document_type=?, summary_text=?, source_text=?, report_required=?, report_due_at=?, report_status=?, report_note=?, reported_at=? WHERE id=? AND owner_id=?');
         $stmt->execute(array_merge($values, [$reportedAt, $id, (int)$user['id']]));
@@ -1075,7 +1099,7 @@ function vbd_save_document(PDO $pdo, array $user, array $input): array
         $stmt->execute(array_merge([(int)$user['id']], $values, [$reportedAt]));
         $id = (int)$pdo->lastInsertId();
     }
-    $document = vbd_document($pdo, $id, (int)$user['id']);
+    $document = vbd_document($pdo, $id, (int)$user['id'], vbd_is_admin($user));
     if (!$document) throw new RuntimeException('Không đọc lại được văn bản sau khi lưu.');
     return $document;
 }
@@ -1171,14 +1195,28 @@ $user = vbd_current_user($pdo);
 
 if ($action === 'list') {
     $sectorFilter = trim((string)($_GET['sector'] ?? ''));
+    $userRole = (string)($user['role'] ?? '');
+    $isAdmin = in_array($userRole, ['admin', 'superadmin'], true);
+    $where = [];
+    $params = [];
+    if (!$isAdmin) {
+        $where[] = '(owner_id = ? OR owner_id = 0 OR owner_id IS NULL)';
+        $params[] = (int)$user['id'];
+    }
     if ($sectorFilter !== '') {
         $sectorFilter = vbd_sector($sectorFilter);
-        $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE owner_id = ? AND sector = ? ORDER BY COALESCE(report_due_at, document_date, DATE(created_at)) ASC, id DESC');
-        $stmt->execute([(int)$user['id'], $sectorFilter]);
-    } else {
-        $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE owner_id = ? ORDER BY COALESCE(report_due_at, document_date, DATE(created_at)) ASC, id DESC');
-        $stmt->execute([(int)$user['id']]);
+        if ($sectorFilter === 'hanhchinh') {
+            $where[] = "(sector = 'hanhchinh' OR sector IS NULL OR sector = '')";
+        } else {
+            $where[] = 'sector = ?';
+            $params[] = $sectorFilter;
+        }
     }
+    $sql = 'SELECT * FROM office_documents';
+    if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
+    $sql .= ' ORDER BY COALESCE(report_due_at, document_date, DATE(created_at)) ASC, id DESC';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $documents = $stmt->fetchAll();
     $files = vbd_files($pdo, array_map(static fn(array $row): int => (int)$row['id'], $documents));
     foreach ($documents as &$document) {
@@ -1251,7 +1289,7 @@ if ($action === 'save') {
 if ($action === 'upload_init') {
     $input = json_body();
     $id = (int)($input['document_id'] ?? 0);
-    $document = vbd_document($pdo, $id, (int)$user['id']);
+    $document = vbd_document($pdo, $id, (int)$user['id'], vbd_is_admin($user));
     if (!$document) respond(['error' => 'Hãy lưu văn bản trước khi tải tệp.'], 404);
     $filename = trim((string)($input['filename'] ?? ''));
     $size = (int)($input['size'] ?? 0);
@@ -1311,7 +1349,7 @@ if ($action === 'upload_chunk') {
     if (!$session) {
         respond(['error' => 'Phiên tải lên không hợp lệ hoặc đã hết hạn.', 'upload_backend' => 'vanban-chunk-drive-v5'], 404);
     }
-    $document = vbd_document($pdo, (int)($session['document_id'] ?? 0), (int)$user['id']);
+    $document = vbd_document($pdo, (int)($session['document_id'] ?? 0), (int)$user['id'], vbd_is_admin($user));
     if (!$document) {
         respond(['error' => 'Không tìm thấy văn bản cho phiên tải lên.', 'upload_backend' => 'vanban-chunk-drive-v5'], 404);
     }
@@ -1378,7 +1416,7 @@ if ($action === 'upload_chunk') {
 if ($action === 'upload_finalize') {
     $input = json_body();
     $id = (int)($input['document_id'] ?? 0);
-    $document = vbd_document($pdo, $id, (int)$user['id']);
+    $document = vbd_document($pdo, $id, (int)$user['id'], vbd_is_admin($user));
     if (!$document) respond(['error' => 'Không tìm thấy văn bản.'], 404);
     $fileId = trim((string)($input['drive_file_id'] ?? ''));
     $originalName = trim((string)($input['original_name'] ?? ''));
@@ -1435,7 +1473,7 @@ if ($action === 'transfer_sector' || $action === 'copy_sector') {
     try {
         $target = vbd_target_sector($input);
         $ids = vbd_request_document_ids($input);
-        $documents = vbd_owned_documents($pdo, (int)$user['id'], $ids);
+        $documents = vbd_owned_documents($pdo, (int)$user['id'], $ids, vbd_is_admin($user));
         $label = vbd_sector_label($target);
         if ($action === 'transfer_sector') {
             $moved = [];
@@ -1517,7 +1555,7 @@ if ($action === 'transfer_sector' || $action === 'copy_sector') {
 if ($action === 'update_status') {
     $input = json_body();
     $id = (int)($input['id'] ?? 0);
-    $document = vbd_document($pdo, $id, (int)$user['id']);
+    $document = vbd_document($pdo, $id, (int)$user['id'], vbd_is_admin($user));
     if (!$document) respond(['error' => 'Không tìm thấy văn bản.'], 404);
     $status = vbd_status((string)($input['report_status'] ?? ''), true);
     $stmt = $pdo->prepare('UPDATE office_documents SET report_required=1, report_status=?, report_note=?, reported_at=? WHERE id=? AND owner_id=?');
@@ -1544,7 +1582,7 @@ if ($action === 'drive_check') {
 if ($action === 'file') {
     $id = (int)($_GET['document_id'] ?? 0);
     $storedName = basename(str_replace(['\\', '/'], '', trim((string)($_GET['name'] ?? ''))));
-    $document = vbd_document($pdo, $id, (int)$user['id']);
+    $document = vbd_document($pdo, $id, (int)$user['id'], vbd_is_admin($user));
     if (!$document || $storedName === '') respond(['error' => 'Không tìm thấy tệp.'], 404);
     $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE document_id=? AND stored_name=? LIMIT 1');
     $stmt->execute([$id, $storedName]);
@@ -1572,7 +1610,7 @@ if ($action === 'upload') {
     @ini_set('memory_limit', '256M');
     @set_time_limit(300);
     $id = (int)($_POST['document_id'] ?? 0);
-    $document = vbd_document($pdo, $id, (int)$user['id']);
+    $document = vbd_document($pdo, $id, (int)$user['id'], vbd_is_admin($user));
     if (!$document) respond(['error' => 'Hãy lưu văn bản trước khi tải tệp.'], 404);
     $files = vbd_collect_uploaded_files();
     if (!$files) {
@@ -1590,7 +1628,7 @@ if ($action === 'delete_file') {
     $documentId = (int)($input['document_id'] ?? $input['id'] ?? 0);
     $fileId = (int)($input['file_id'] ?? 0);
     if ($documentId < 1 || $fileId < 1) respond(['error' => 'Thiếu mã văn bản hoặc tệp đính kèm.'], 422);
-    $document = vbd_document($pdo, $documentId, (int)$user['id']);
+    $document = vbd_document($pdo, $documentId, (int)$user['id'], vbd_is_admin($user));
     if (!$document) respond(['error' => 'Không tìm thấy văn bản.'], 404);
     $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE id = ? AND document_id = ? LIMIT 1');
     $stmt->execute([$fileId, $documentId]);
@@ -1616,14 +1654,14 @@ if ($action === 'delete_file') {
 if ($action === 'delete') {
     $input = json_body();
     $id = (int)($input['id'] ?? 0);
-    if (!vbd_document($pdo, $id, (int)$user['id'])) respond(['error' => 'Không tìm thấy văn bản.'], 404);
+    if (!vbd_document($pdo, $id, (int)$user['id'], vbd_is_admin($user))) respond(['error' => 'Không tìm thấy văn bản.'], 404);
     $fileStmt = $pdo->prepare('SELECT * FROM office_document_files WHERE document_id=?');
     $fileStmt->execute([$id]);
     $files = $fileStmt->fetchAll();
     try {
         if ($files) {
             $driveErrors = [];
-            $document = vbd_document($pdo, $id, (int)$user['id']) ?: [];
+            $document = vbd_document($pdo, $id, (int)$user['id'], vbd_is_admin($user)) ?: [];
             foreach ($files as $file) {
                 $storageError = vbd_delete_document_file_storage($id, $document, $file);
                 if ($storageError) $driveErrors[] = $storageError;

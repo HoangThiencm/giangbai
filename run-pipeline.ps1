@@ -4,6 +4,15 @@
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Tim git executable (neu chua co trong PATH, tim qua GitHub Desktop)
+$gitCmd = "git"
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    $ghGit = Get-ChildItem -Path "$env:LOCALAPPDATA\GitHubDesktop\app-*\resources\app\git\cmd\git.exe" -ErrorAction SilentlyContinue | Select-Object -Last 1
+    if ($ghGit) {
+        $gitCmd = $ghGit.FullName
+    }
+}
+
 $HandoffDir = "docs\handoff"
 if (-not (Test-Path $HandoffDir)) {
     New-Item -ItemType Directory -Force -Path $HandoffDir | Out-Null
@@ -11,81 +20,120 @@ if (-not (Test-Path $HandoffDir)) {
 
 $TaskFile = "$HandoffDir\TASK.md"
 if (-not (Test-Path $TaskFile)) {
-    @"
-# Task
-Mô tả tính năng hoặc bug cần làm ở đây...
-"@ | Set-Content -Encoding utf8 $TaskFile
-    Write-Host "[!] Đã tạo $TaskFile. Vui lòng ghi yêu cầu vào file này rồi chạy lại." -ForegroundColor Yellow
+    $defaultTask = @"
+# TASK
+Mo ta tinh nang hoac bug can lam o day...
+"@
+    Set-Content -Path $TaskFile -Value $defaultTask -Encoding utf8
+    Write-Host "[!] Da tao $TaskFile. Vui long ghi yeu cau vao file nay roi chay lai." -ForegroundColor Yellow
     exit 1
 }
 
-Write-Host "`n>>> [BƯỚC 1/3] ANTIGRAVITY SURVEY..." -ForegroundColor Cyan
-
-# 1. Survey: Chỉ đọc codebase và lập kế hoạch vào PLAN.md
-agy -p @"
-Chỉ survey, KHÔNG implement, KHÔNG sửa source code dự án.
-
-1. Đọc kĩ $TaskFile và codebase liên quan.
-2. Ghi đè file $HandoffDir\PLAN.md:
-   - Mục tiêu
-   - Danh sách file dự kiến tác động
-   - Các bước thực hiện chi tiết cho Coder
-   - Rủi ro & giải pháp
-   - Lệnh máy kiểm thử cụ thể (test/lint/build/syntax check)
-3. Ghi đè file $HandoffDir\IMPLEMENT.md là prompt khép kín gửi Coder:
-   - Yêu cầu implement đúng $HandoffDir\PLAN.md
-   - Không tự mở rộng scope, không sửa file ngoài danh sách
-   - Xong việc thì tóm tắt diff ngắn gọn
-4. Tạo file $HandoffDir\.lock với nội dung LOCK.
-"@ --print-timeout 20m
-
-if (-not (Test-Path "$HandoffDir\PLAN.md")) {
-    throw "Survey thất bại: Không sinh ra được $HandoffDir\PLAN.md"
+# Kiem tra noi dung TASK.md co bi bo trong hoac con giu template khong
+$taskContent = Get-Content -Raw -Encoding utf8 $TaskFile
+if ([string]::IsNullOrWhiteSpace($taskContent) -or $taskContent -match "<\!-- Ghi r") {
+    Write-Host "[!] $TaskFile chua co noi dung yeu cau thuc te. Vui long ghi ro yeu cau truoc khi chay." -ForegroundColor Yellow
+    exit 1
 }
 
-# Vòng lặp Code & Verify (tối đa 3 lượt nếu có lỗi)
+# Xoa sach cac file cu tu lan chay truoc de tranh dung lai plan/prompt cu
+Remove-Item "$HandoffDir\PLAN.md" -Force -ErrorAction SilentlyContinue
+Remove-Item "$HandoffDir\IMPLEMENT.md" -Force -ErrorAction SilentlyContinue
+Remove-Item "$HandoffDir\VERIFY.md" -Force -ErrorAction SilentlyContinue
+Remove-Item "$HandoffDir\.lock" -Force -ErrorAction SilentlyContinue
+
+Write-Host "`n>>> [BUOC 1/3] ANTIGRAVITY SURVEY..." -ForegroundColor Cyan
+
+# 1. Survey: Chi doc codebase va lap ke hoach vao PLAN.md
+$surveyPrompt = @"
+Chi survey, KHONG implement, KHONG sua source code du an.
+
+1. Doc ki $TaskFile va codebase lien quan.
+2. Ghi de file $HandoffDir\PLAN.md:
+   - Muc tieu
+   - Danh sach file du kien tac dong
+   - Cac buoc thuc hien chi tiet cho Coder
+   - Rui ro va giai phap
+   - Lenh may kiem thu cu the (test/lint/build/syntax check)
+3. Ghi de file $HandoffDir\IMPLEMENT.md la prompt khep kin gui Coder:
+   - Yeu cau implement dung $HandoffDir\PLAN.md
+   - Khong tu mo rong scope, khong sua file ngoai danh sach
+   - Xong viec thi tom tat diff ngan gon
+4. Tao file $HandoffDir\.lock voi noi dung LOCK.
+"@
+
+agy -p $surveyPrompt --dangerously-skip-permissions --print-timeout 20m
+
+if (-not (Test-Path "$HandoffDir\PLAN.md")) {
+    throw "Survey that bai: Khong sinh ra duoc $HandoffDir\PLAN.md"
+}
+
+# Vong lap Code & Verify (toi da 3 luot neu co loi)
 $maxAttempts = 3
 $attempt = 1
 $passed = $false
 
 while ($attempt -le $maxAttempts -and -not $passed) {
-    Write-Host "`n>>> [BƯỚC 2/3] GROK CODING (Lần $attempt/$maxAttempts)..." -ForegroundColor Green
+    Write-Host "`n>>> [BUOC 2/3] GROK CODING (Lan $attempt/$maxAttempts)..." -ForegroundColor Green
     
-    # 2. Coder: Grok CLI thực thi
+    # 2. Coder: Grok CLI thuc thi
     $implPrompt = Get-Content -Raw -Encoding utf8 "$HandoffDir\IMPLEMENT.md"
-    grok -p $implPrompt
+    grok -p $implPrompt --always-approve
 
-    Write-Host "`n>>> [BƯỚC 3/3] ANTIGRAVITY VERIFY (Lần $attempt/$maxAttempts)..." -ForegroundColor Magenta
+    Write-Host "`n>>> [BUOC 3/3] ANTIGRAVITY VERIFY (Lan $attempt/$maxAttempts)..." -ForegroundColor Magenta
 
-    # 3. Verify: Antigravity chạy test máy, KHÔNG sửa code
-    agy -p @"
-Chỉ kiểm thử theo $HandoffDir\PLAN.md, TUYỆT ĐỐI KHÔNG sửa source code dự án.
+    # 3. Verify: Antigravity chay test may, KHONG sua code
+    $verifyPrompt = @"
+Chi kiem thu theo $HandoffDir\PLAN.md, TUYET DOI KHONG sua source code du an.
 
-1. Chạy các lệnh kiểm thử/build/lint đã ghi trong PLAN.md.
-2. Ghi kết quả vào $HandoffDir\VERIFY.md:
-   - Dòng đầu tiên ghi rõ: 'STATUS: PASS' hoặc 'STATUS: FAIL'
-   - Danh sách lệnh đã chạy và kết quả
-   - Nếu FAIL: Trích xuất log lỗi chi tiết, file bị lỗi, nguyên nhân
-3. Nếu FAIL: Cập nhật lại $HandoffDir\IMPLEMENT.md chỉ rõ bug cần Grok sửa.
-"@ --print-timeout 20m
+1. Chay cac lenh kiem thu/build/lint da ghi trong PLAN.md.
+2. Ghi ket qua vao $HandoffDir\VERIFY.md:
+   - Dong dau tien ghi ro: 'STATUS: PASS' hoac 'STATUS: FAIL'
+   - Danh sach lenh da chay va ket qua
+   - Neu FAIL: Trich xuat log loi chi tiet, file bi loi, nguyen nhan
+3. Neu FAIL: Cap nhat lai $HandoffDir\IMPLEMENT.md chi ro bug can Grok sua.
+"@
 
-    # Đọc kết quả verify
+    agy -p $verifyPrompt --dangerously-skip-permissions --print-timeout 20m
+
+    # Doc ket qua verify
     if (Test-Path "$HandoffDir\VERIFY.md") {
         $verifyContent = Get-Content -Raw -Encoding utf8 "$HandoffDir\VERIFY.md"
         if ($verifyContent -match "STATUS:\s*PASS") {
             $passed = $true
-            Write-Host "`n=== KẾT QUẢ: PASS THÀNH CÔNG! ===" -ForegroundColor Green
+            Write-Host "`n=== KET QUA: PASS THANH CONG! ===" -ForegroundColor Green
             if (Test-Path "$HandoffDir\.lock") { Remove-Item "$HandoffDir\.lock" -Force }
             break
         } else {
-            Write-Host "`n[!] Verify FAIL ở lần $attempt. Xem log trong $HandoffDir\VERIFY.md" -ForegroundColor Red
+            Write-Host "`n[!] Verify FAIL o lan $attempt. Xem log trong $HandoffDir\VERIFY.md" -ForegroundColor Red
             $attempt++
         }
     } else {
-        throw "Không tìm thấy file $HandoffDir\VERIFY.md sau khi test."
+        throw "Khong tim thay file $HandoffDir\VERIFY.md sau khi test."
     }
 }
 
-if (-not $passed) {
-    Write-Host "`n[X] Đã thử $maxAttempts lần nhưng vẫn chưa PASS hoàn toàn. Hãy kiểm tra $HandoffDir\VERIFY.md để xử lý thêm." -ForegroundColor Red
+# Am thanh thong bao hoan tat
+try {
+    [Console]::Beep(1000, 200)
+    [Console]::Beep(1200, 200)
+    [Console]::Beep(1500, 400)
+} catch {}
+
+if ($passed) {
+    Write-Host "`n[V] Toan bo quy trinh da PASS thanh cong!" -ForegroundColor Green
+    
+    # Hoi xac nhan Commit & Push
+    $ans = Read-Host "[?] Ban co muon Commit va Push len GitHub khong? (Y/n) [Mac dinh: Y]"
+    if ($ans -eq "" -or $ans -match "^[yY]") {
+        Write-Host "`nDang tien hanh Commit & Push..." -ForegroundColor Cyan
+        & $gitCmd add -A
+        & $gitCmd commit -m "Auto-pipeline: Hoan thanh task tu TASK.md"
+        & $gitCmd push
+        Write-Host "Da Push len GitHub thanh cong!" -ForegroundColor Green
+    } else {
+        Write-Host "Da bo qua buoc Push. Code van duoc luu tren may ban." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "`n[X] Da thu $maxAttempts lan nhung van chua PASS hoan toan. Hay kiem tra $HandoffDir\VERIFY.md de xu ly them." -ForegroundColor Red
 }

@@ -363,8 +363,13 @@
         const status = $('statusFilter')?.value || '';
         const docType = $('typeFilter')?.value || state.typeFilter || '';
         return state.documents.filter(doc => {
-            if (year && doc.academic_year !== year) return false;
-            if (state.activeDirection && doc.direction !== state.activeDirection) return false;
+            if (year === '__empty__') {
+                if (doc.academic_year) return false;
+            } else if (year && doc.academic_year !== year) {
+                return false;
+            }
+            const docDir = doc.direction || 'incoming';
+            if (state.activeDirection && docDir !== state.activeDirection) return false;
             if (state.summaryDrilldown && !matchesSummaryDrilldown(doc, state.summaryDrilldown)) return false;
             if (status && docEffectiveStatus(doc) !== status) return false;
             if (docType && doc.document_type !== docType) return false;
@@ -380,7 +385,9 @@
 
     function yearScopedDocs() {
         const year = $('academicYearFilter')?.value || '';
-        return state.documents.filter(doc => !year || doc.academic_year === year);
+        if (!year) return state.documents;
+        if (year === '__empty__') return state.documents.filter(doc => !doc.academic_year);
+        return state.documents.filter(doc => doc.academic_year === year);
     }
 
     function docEffectiveStatus(doc) {
@@ -406,7 +413,7 @@
     }
 
     function summaryContextDocs() {
-        return yearScopedDocs().filter(doc => !state.activeDirection || doc.direction === state.activeDirection);
+        return yearScopedDocs().filter(doc => !state.activeDirection || (doc.direction || 'incoming') === state.activeDirection);
     }
 
     function matchesSummaryDrilldown(doc, kind) {
@@ -536,7 +543,7 @@
     function renderSummary() {
         const docs = summaryContextDocs();
         const yearDocs = yearScopedDocs();
-        const incoming = yearDocs.filter(d => d.direction === 'incoming').length;
+        const incoming = yearDocs.filter(d => (d.direction || 'incoming') === 'incoming').length;
         const outgoing = yearDocs.filter(d => d.direction === 'outgoing').length;
         const needAction = docs.filter(needsActionDoc).length;
         const overdue = docs.filter(isOverdueDoc).length;
@@ -574,7 +581,7 @@
 
     function renderDirectionTabs() {
         const docs = yearScopedDocs();
-        const incoming = docs.filter(d => d.direction === 'incoming').length;
+        const incoming = docs.filter(d => (d.direction || 'incoming') === 'incoming').length;
         const outgoing = docs.filter(d => d.direction === 'outgoing').length;
         const host = $('directionTabs');
         if (!host) return;
@@ -980,12 +987,15 @@
 
     function renderYears() {
         const years = state.schoolYears || [];
-        if (!state.yearInitialized) {
-            state.selectedYear = years.includes(state.selectedYear) ? state.selectedYear : (years[0] || '');
-            state.yearInitialized = true;
+        if (state.selectedYear !== '' && state.selectedYear !== '__empty__' && !years.includes(state.selectedYear)) {
+            state.selectedYear = '';
         }
-        if (state.selectedYear && !years.includes(state.selectedYear)) state.selectedYear = years[0] || '';
-        const options = ['<option value="">Tất cả năm học</option>', ...years.map(year => `<option value="${esc(year)}">${esc(year)}</option>`)].join('');
+        state.yearInitialized = true;
+        const options = [
+            '<option value="">Tất cả năm học</option>',
+            '<option value="__empty__">Chưa gán năm học</option>',
+            ...years.map(year => `<option value="${esc(year)}">${esc(year)}</option>`),
+        ].join('');
         if ($('academicYearFilter')) {
             $('academicYearFilter').innerHTML = options;
             $('academicYearFilter').value = state.selectedYear;
@@ -994,6 +1004,9 @@
             $('academicYear').innerHTML = years.length
                 ? years.map(year => `<option value="${esc(year)}">${esc(year)}</option>`).join('')
                 : '<option value="">Chưa có năm học — hãy tạo mới</option>';
+            if (!$('academicYear').value && years.length > 0) {
+                $('academicYear').value = years[0];
+            }
         }
     }
 
@@ -1262,7 +1275,8 @@
         if (attachmentButtonLabel) {
             attachmentButtonLabel.textContent = doc ? 'Thêm tệp đính kèm' : 'Chọn tệp đính kèm';
         }
-        if ($('academicYear')) $('academicYear').value = doc?.academic_year || state.selectedYear || '';
+        const chosenYear = state.selectedYear && state.selectedYear !== '__empty__' ? state.selectedYear : '';
+        if ($('academicYear')) $('academicYear').value = doc?.academic_year || chosenYear || ((state.schoolYears || [])[0] || '');
         if ($('direction')) $('direction').value = doc?.direction || state.activeDirection || 'incoming';
         if ($('documentNumber')) $('documentNumber').value = doc?.document_number || '';
         if ($('title')) $('title').value = doc?.title || '';
