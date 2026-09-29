@@ -1,7 +1,7 @@
 # TASK
 
 ## Mô tả yêu cầu
-Hệ thống quản lý văn bản hiện tại không thể hiện các văn bản đã được lưu trước đó. Cần kiểm tra và sửa để hiển thị đầy đủ danh sách văn bản đã lưu.
+Hệ thống quản lý văn bản hiện tại ở hành chính mà nhấn nút chuyển sang chuyên môn mà nó mất file là không đúng. Vì thư mục hành chính là gốc, còn bên chuyên môn là tích hợp qua thôi.
 
 ## File hoặc phạm vi liên quan (nếu biết)
 - quanlyvanban.html

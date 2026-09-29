@@ -1,16 +1,21 @@
-# IMPLEMENT — Hiển thị văn bản đã lưu
+# IMPLEMENT — Giữ bản gốc Hành chính khi chuyển sang Chuyên môn
 
-Trạng thái: đã sửa theo `docs/handoff/PLAN.md`. Sẵn sàng cho `/verify`.
+Trạng thái: ĐÃ SỬA lỗi VERIFY (UTF-8 stdout/stderr trong smoke test). Chưa commit.
 
-## Đã làm
-- `api/vanban.php`: schema marker `20260929-v2`; chuẩn hóa `sector`, `direction`, `academic_year` cũ; `action=list` cho admin xem toàn trường, giáo viên xem văn bản của mình và legacy (`owner_id = 0 OR owner_id IS NULL`); lĩnh vực hành chính gồm `sector` NULL/rỗng; `vbd_document` / `vbd_owned_documents` cùng quy tắc, vẫn giữ chuỗi `owner_id = ? AND id IN`.
-- `vanban-app.js`: bộ lọc năm mặc định "Tất cả năm học", thêm "Chưa gán năm học" (`__empty__`); không ép `years[0]`; `direction` trống tính là văn bản đến trong danh sách, tab và thống kê.
-- `vanban-hub.js`: thống kê hub dùng cùng fallback `direction`.
-- `quanlyvanban.html`, `quanlyvanban-chuyenmon.html`, `quanlyvanban-hanhchinh.html`, `quanlyvanban-dang.html`: query `?v=20260929-showdocs` (trang Đảng gồm cả `access-control.js`).
-- `tests/vanban-display-saved-smoke.js`: kiểm tra lọc năm, direction trống và các marker PHP.
+## Đã sửa
 
-## Kiểm thử
-- `tests/vanban-chuyenmon-signature-smoke.js`: PASS
-- `tests/vanban-display-saved-smoke.js`: PASS
+- `api/vanban.php`
+  - `transfer_sector` và `copy_sector` cùng tạo bản ghi mới ở sector đích. Không còn `UPDATE office_documents SET sector` và không gọi `vbd_move_local_storage`.
+  - Thông điệp chuyển: bản gốc tại Hành chính được giữ nguyên.
+  - Thêm `vbd_copy_local_storage`. `vbd_copy_document_files` nhận `$fromDoc`, `$toDoc`, tạo lại `view_url`/`download_url` cho tệp cục bộ theo ID mới, rồi sao chép thư mục tệp.
+  - `vbd_delete_document_file_storage` đếm `drive_file_id` còn được văn bản khác dùng. Còn tham chiếu thì không gọi `drive_delete_file`.
+- `vanban-app.js`
+  - `moveToChuyenMon`: câu xác nhận nói rõ bản gốc Hành chính vẫn được lưu trữ; toast dùng `data.message`; sau đó `await load()`.
+  - Giữ `transfer_sector`, `copy_sector`, `data-action="transfer"`, `data-detail-action="transfer|copy"`, nhãn nút.
+- `quanlyvanban-hanhchinh.html`: không sửa. `transferSelectedBtn` và `copySelectedBtn` giữ nguyên.
+- `tests/vanban-chuyenmon-root-smoke.py`: tạo mới. Sau các import, gọi `sys.stdout.reconfigure(encoding="utf-8")` và `sys.stderr.reconfigure(encoding="utf-8")` khi stream hỗ trợ `reconfigure`, để `print()` tiếng Việt không lỗi trên console Windows mã cp1252.
 
-Không commit.
+## Kiểm tra
+
+- `py tests/vanban-chuyenmon-root-smoke.py`: exit 0. 27/27 PASS và dòng tổng `PASS: giữ bản gốc Hành chính khi chuyển sang Chuyên môn.`
+- Chạy lại cùng script khi stdout/stderr bắt đầu ở `cp1252`: exit 0, cùng 27/27 PASS, không `UnicodeEncodeError`.

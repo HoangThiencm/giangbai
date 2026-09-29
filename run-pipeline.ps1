@@ -1,6 +1,15 @@
 # ==============================================================================
 # Pipeline: Survey (Antigravity) -> Code (Grok CLI) -> Verify (Antigravity)
 # ==============================================================================
+param(
+    # Cau hinh model cho Grok (mac dinh dung 4.7-build-fast va effort medium de tiet kiem quota)
+    [string]$GrokModel = "grok-4.7-build-fast",
+    [string]$GrokEffort = "medium", # low | medium | high
+    
+    # Model cho Antigravity (Gemini 3.8 Flash sieu nhanh, phan hoi 20-40s)
+    [string]$AgyModel = "gemini-3.8-flash-high"
+)
+
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -43,12 +52,13 @@ Remove-Item "$HandoffDir\VERIFY.md" -Force -ErrorAction SilentlyContinue
 Remove-Item "$HandoffDir\.lock" -Force -ErrorAction SilentlyContinue
 
 Write-Host "`n>>> [BUOC 1/3] ANTIGRAVITY SURVEY..." -ForegroundColor Cyan
+Write-Host "[*] Dang khao sat codebase bang model $AgyModel (uoc tinh 20-40s)..." -ForegroundColor DarkCyan
 
-# 1. Survey: Chi doc codebase va lap ke hoach vao PLAN.md
+# 1. Survey: Chi doc codebase va lap ke hoach vao PLAN.md (gioi han dung pham vi trong TASK.md)
 $surveyPrompt = @"
 Chi survey, KHONG implement, KHONG sua source code du an.
 
-1. Doc ki $TaskFile va codebase lien quan.
+1. Doc ki $TaskFile. Chi tap trung khao sat cac file duoc neu trong TASK.md hoac lien quan truc tiep den yeu cau do. Khong quet toan bo cac file khac trong repo de tiet kiem thoi gian.
 2. Ghi de file $HandoffDir\PLAN.md:
    - Muc tieu
    - Danh sach file du kien tac dong
@@ -62,7 +72,7 @@ Chi survey, KHONG implement, KHONG sua source code du an.
 4. Tao file $HandoffDir\.lock voi noi dung LOCK.
 "@
 
-agy -p $surveyPrompt --dangerously-skip-permissions --print-timeout 20m
+agy -p $surveyPrompt --model $AgyModel --dangerously-skip-permissions --print-timeout 20m
 
 if (-not (Test-Path "$HandoffDir\PLAN.md")) {
     throw "Survey that bai: Khong sinh ra duoc $HandoffDir\PLAN.md"
@@ -75,12 +85,14 @@ $passed = $false
 
 while ($attempt -le $maxAttempts -and -not $passed) {
     Write-Host "`n>>> [BUOC 2/3] GROK CODING (Lan $attempt/$maxAttempts)..." -ForegroundColor Green
+    Write-Host "[*] Grok dang code bang model $GrokModel (effort: $GrokEffort)..." -ForegroundColor DarkGreen
     
-    # 2. Coder: Grok CLI thuc thi
+    # 2. Coder: Grok CLI thuc thi voi model va effort da chon
     $implPrompt = Get-Content -Raw -Encoding utf8 "$HandoffDir\IMPLEMENT.md"
-    grok -p $implPrompt --always-approve
+    grok -p $implPrompt --model $GrokModel --effort $GrokEffort --always-approve
 
     Write-Host "`n>>> [BUOC 3/3] ANTIGRAVITY VERIFY (Lan $attempt/$maxAttempts)..." -ForegroundColor Magenta
+    Write-Host "[*] Dang kiem thu bang model $AgyModel..." -ForegroundColor DarkCyan
 
     # 3. Verify: Antigravity chay test may, KHONG sua code
     $verifyPrompt = @"
@@ -94,7 +106,7 @@ Chi kiem thu theo $HandoffDir\PLAN.md, TUYET DOI KHONG sua source code du an.
 3. Neu FAIL: Cap nhat lai $HandoffDir\IMPLEMENT.md chi ro bug can Grok sua.
 "@
 
-    agy -p $verifyPrompt --dangerously-skip-permissions --print-timeout 20m
+    agy -p $verifyPrompt --model $AgyModel --dangerously-skip-permissions --print-timeout 20m
 
     # Doc ket qua verify
     if (Test-Path "$HandoffDir\VERIFY.md") {

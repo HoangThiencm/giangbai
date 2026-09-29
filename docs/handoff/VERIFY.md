@@ -2,27 +2,46 @@ STATUS: PASS
 
 ## Danh sách lệnh đã chạy và kết quả
 
-1. `& "C:\Users\HoangThien\AppData\Local\Temp\node-portable\node-v20.19.0-win-x64\node.exe" tests/vanban-chuyenmon-signature-smoke.js`
-   - **Kết quả**: Thành công (Exit code 0)
-   - **Output**:
-     ```text
-     PASS: lĩnh vực Chuyên môn, chuyển/sao chép văn bản, số quyết định và ngày ký số.
-     ```
+### 1. `py tests/vanban-chuyenmon-root-smoke.py`
+- **Kết quả:** PASS (Exit code: 0, 27/27 assertions đạt)
+- **Log đầu ra:**
+```
+PASS  khối transfer_sector/copy_sector còn tồn tại
+PASS  transfer_sector không UPDATE sector của bản ghi gốc
+PASS  transfer_sector tạo bản ghi tích hợp
+PASS  thông điệp chuyển giữ bản gốc Hành chính
+PASS  copy_sector vẫn còn thông điệp sao chép
+PASS  action name transfer_sector và copy_sector giữ nguyên
+PASS  có hàm vbd_copy_local_storage
+PASS  sao chép tệp vật lý bằng copy()
+PASS  không di chuyển thư mục gốc khi sao chép
+PASS  vbd_copy_document_files nhận fromDoc và toDoc
+PASS  tệp cục bộ được tạo lại view_url và download_url theo document_id mới
+PASS  sau khi sao chép bản ghi thì sao chép thư mục tệp cục bộ
+PASS  có câu truy vấn đếm tệp Drive dùng chung
+PASS  không xóa tệp Drive dùng chung trước khi đếm tham chiếu
+PASS  xác nhận chuyển nói rõ bản gốc Hành chính vẫn được lưu trữ
+PASS  sau khi chuyển hiển thị data.message
+PASS  sau khi chuyển tải lại danh sách Hành chính
+PASS  UI vẫn gọi transfer_sector và copy_sector
+PASS  nút dòng vẫn là data-action="transfer"
+PASS  modal vẫn có data-detail-action transfer và copy
+PASS  nhãn nút Chuyển sang Chuyên môn còn nguyên
+PASS  nhãn nút Sao chép sang Chuyên môn còn nguyên
+PASS  giữ id transferSelectedBtn
+PASS  giữ id copySelectedBtn
+PASS  nhãn chuyển hàng loạt còn nguyên
+PASS  nhãn sao chép hàng loạt còn nguyên
+PASS  cú pháp api/vanban.php
 
-2. `& "C:\Users\HoangThien\AppData\Local\Temp\node-portable\node-v20.19.0-win-x64\node.exe" tests/vanban-display-saved-smoke.js`
-   - **Kết quả**: Thành công (Exit code 0)
-   - **Output**:
-     ```text
-     PASS: hiển thị văn bản đã lưu, bộ lọc năm học và truy vấn legacy.
-     ```
+PASS: giữ bản gốc Hành chính khi chuyển sang Chuyên môn.
+```
 
-## Đánh giá chi tiết
-- **Frontend (`vanban-app.js`, `vanban-hub.js`)**:
-  - `renderYears`: Mặc định giữ `state.selectedYear = ''` ("Tất cả năm học"), bổ sung tùy chọn "Chưa gán năm học" (`__empty__`), không tự ý ép chọn năm đầu tiên.
-  - `scopedDocs` & tab thống kê: Giữ lại toàn bộ văn bản khi chọn "Tất cả năm học"; fallback an toàn `direction` rỗng/null về `incoming`.
-- **Backend (`api/vanban.php`)**:
-  - Schema marker được nâng lên `20260929-v2`.
-  - Chuẩn hóa dữ liệu văn bản cũ tự động khi gọi schema.
-  - Hỗ trợ admin xem toàn trường và giáo viên xem văn bản của mình cùng văn bản legacy (`owner_id = 0 OR owner_id IS NULL`).
-  - Lĩnh vực hành chính hỗ trợ truy vấn các văn bản cũ có `sector` là NULL hoặc rỗng.
-- **Cache-busting**: Đã đồng bộ `?v=20260929-showdocs` trên cả 4 file HTML (`quanlyvanban.html`, `quanlyvanban-chuyenmon.html`, `quanlyvanban-hanhchinh.html`, `quanlyvanban-dang.html`).
+### 2. `Select-String -Path "vanban-app.js", "quanlyvanban-hanhchinh.html", "api/vanban.php" -Pattern "transfer_sector|copy_sector"`
+- **Kết quả:** PASS (Exit code: 0)
+- **Log đầu ra:**
+```
+vanban-app.js:850:            const data = await api(copying ? 'copy_sector' : 'transfer_sector', {
+api\vanban.php:1506:if ($action === 'transfer_sector' || $action === 'copy_sector') {
+api\vanban.php:1549:        $message = $action === 'transfer_sector'
+```

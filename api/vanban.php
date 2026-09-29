@@ -199,12 +199,38 @@ function vbd_move_local_storage(array $document, string $targetSector): void
     }
 }
 
-function vbd_copy_document_files(PDO $pdo, int $fromId, int $toId): void
+function vbd_copy_local_storage(int $fromId, array $fromDoc, int $toId, array $toDoc): void
+{
+    $fromDir = vbd_local_file_dir($fromId, $fromDoc);
+    $toDir = vbd_local_file_dir($toId, $toDoc);
+    if (!is_dir($fromDir) || $fromDir === $toDir) return;
+    if (!is_dir($toDir) && !@mkdir($toDir, 0755, true) && !is_dir($toDir)) {
+        return;
+    }
+    $items = @scandir($fromDir) ?: [];
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') continue;
+        $src = $fromDir . '/' . $item;
+        $dst = $toDir . '/' . $item;
+        if (is_file($src)) {
+            @copy($src, $dst);
+        }
+    }
+}
+
+function vbd_copy_document_files(PDO $pdo, int $fromId, int $toId, array $fromDoc, array $toDoc): void
 {
     $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE document_id = ? ORDER BY id ASC');
     $stmt->execute([$fromId]);
     $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
     foreach ($stmt->fetchAll() as $file) {
+        $viewUrl = (string)($file['view_url'] ?? '');
+        $downloadUrl = (string)($file['download_url'] ?? '');
+        if (vbd_is_local_file_id((string)($file['drive_file_id'] ?? ''))) {
+            $storedName = (string)($file['stored_name'] ?? '');
+            $viewUrl = vbd_local_file_url($toId, $storedName, false);
+            $downloadUrl = vbd_local_file_url($toId, $storedName, true);
+        }
         $insert->execute([
             $toId,
             $file['drive_file_id'],
@@ -212,10 +238,11 @@ function vbd_copy_document_files(PDO $pdo, int $fromId, int $toId): void
             $file['stored_name'],
             $file['mime_type'],
             (int)($file['size_bytes'] ?? 0),
-            $file['view_url'],
-            $file['download_url'],
+            $viewUrl,
+            $downloadUrl,
         ]);
     }
+    vbd_copy_local_storage($fromId, $fromDoc, $toId, $toDoc);
 }
 
 function vbd_status(string $value, bool $required): string
@@ -1050,6 +1077,14 @@ function vbd_delete_document_file_storage(int $documentId, array $document, arra
     if ($fileId === '') {
         return $label . ': không xác định được mã tệp trên Drive';
     }
+    global $pdo;
+    if ($pdo instanceof PDO && $rawId !== '') {
+        $checkStmt = $pdo->prepare('SELECT COUNT(*) FROM office_document_files WHERE drive_file_id = ? AND document_id != ?');
+        $checkStmt->execute([$rawId, $documentId]);
+        if ((int)$checkStmt->fetchColumn() > 0) {
+            return null;
+        }
+    }
     try {
         drive_delete_file($fileId);
     } catch (Throwable $fileError) {
@@ -1475,37 +1510,6 @@ if ($action === 'transfer_sector' || $action === 'copy_sector') {
         $ids = vbd_request_document_ids($input);
         $documents = vbd_owned_documents($pdo, (int)$user['id'], $ids, vbd_is_admin($user));
         $label = vbd_sector_label($target);
-        if ($action === 'transfer_sector') {
-            $moved = [];
-            $pdo->beginTransaction();
-            try {
-                foreach ($documents as $document) {
-                    vbd_move_local_storage($document, $target);
-                    $moved[] = $document;
-                    $pdo->prepare('UPDATE office_documents SET sector = ?, drive_folder_id = NULL WHERE id = ? AND owner_id = ?')
-                        ->execute([$target, (int)$document['id'], (int)$user['id']]);
-                }
-                $pdo->commit();
-            } catch (Throwable $e) {
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                foreach ($moved as $document) {
-                    $rollback = $document;
-                    $rollback['sector'] = $target;
-                    try {
-                        vbd_move_local_storage($rollback, (string)$document['sector']);
-                    } catch (Throwable $ignored) {
-                    }
-                }
-                throw $e;
-            }
-            respond([
-                'ok' => true,
-                'count' => count($documents),
-                'target_sector' => $target,
-                'message' => 'Đã chuyển ' . count($documents) . ' văn bản sang ' . $label . '.',
-            ]);
-        }
-
         $pdo->beginTransaction();
         try {
             $insert = $pdo->prepare('INSERT INTO office_documents (owner_id, academic_year, sector, direction, document_number, title, document_date, organization, document_type, summary_text, source_text, report_required, report_due_at, report_status, report_note, reported_at, drive_folder_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL)');
@@ -1530,7 +1534,11 @@ if ($action === 'transfer_sector' || $action === 'copy_sector') {
                     $document['reported_at'],
                 ]);
                 $newId = (int)$pdo->lastInsertId();
-                vbd_copy_document_files($pdo, (int)$document['id'], $newId);
+                $toDoc = $document;
+                $toDoc['id'] = $newId;
+                $toDoc['sector'] = $target;
+                $toDoc['drive_folder_id'] = null;
+                vbd_copy_document_files($pdo, (int)$document['id'], $newId, $document, $toDoc);
                 $created[] = $newId;
             }
             $pdo->commit();
@@ -1538,12 +1546,15 @@ if ($action === 'transfer_sector' || $action === 'copy_sector') {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
+        $message = $action === 'transfer_sector'
+            ? 'Đã chuyển ' . count($created) . ' văn bản sang ' . $label . ' (bản gốc tại Hành chính được giữ nguyên).'
+            : 'Đã sao chép ' . count($created) . ' văn bản sang ' . $label . '.';
         respond([
             'ok' => true,
             'count' => count($created),
             'document_ids' => $created,
             'target_sector' => $target,
-            'message' => 'Đã sao chép ' . count($created) . ' văn bản sang ' . $label . '.',
+            'message' => $message,
         ]);
     } catch (RuntimeException $e) {
         respond(['error' => $e->getMessage()], 422);

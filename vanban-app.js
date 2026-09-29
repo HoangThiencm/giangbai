@@ -842,7 +842,10 @@
         if (!unique.length) return;
         const copying = mode === 'copy';
         const verb = copying ? 'Sao chép' : 'Chuyển';
-        if (!confirm(`${verb} ${unique.length} văn bản sang Chuyên môn?`)) return;
+        const question = copying
+            ? `${verb} ${unique.length} văn bản sang Chuyên môn?`
+            : `Chuyển ${unique.length} văn bản sang Chuyên môn (bản gốc tại Hành chính vẫn được lưu trữ)?`;
+        if (!confirm(question)) return;
         try {
             const data = await api(copying ? 'copy_sector' : 'transfer_sector', {
                 method: 'POST',
@@ -851,7 +854,9 @@
             });
             unique.forEach(id => state.selectedIds.delete(id));
             closeDetailModal();
-            toast(data.message || `${verb} sang Chuyên môn thành công.`);
+            toast(data.message || (copying
+                ? `${verb} sang Chuyên môn thành công.`
+                : 'Chuyển tích hợp sang Chuyên môn thành công (bản gốc tại Hành chính vẫn được lưu trữ nguyên vẹn).'));
             await load();
         } catch (error) {
             toast(error.message, 'rose');
