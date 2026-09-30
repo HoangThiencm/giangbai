@@ -162,6 +162,148 @@ mjx-container svg { display: inline !important; }
 - **Tự động dịch thông minh bảo tồn dấu câu (Punctuation-Agnostic Translation):** Việc dịch thuật sang tiếng Anh khi bật Song ngữ là nhiệm vụ tự động của hệ thống. Bộ dịch của hệ thống tự động bóc tách dấu câu ở đuôi (`:`, `.`, `?`, `!`, `,`), nếu giáo viên xóa dấu 2 chấm ở bản tiếng Việt thì bản dịch tiếng Anh cũng tự động không có dấu 2 chấm. Giáo viên hoàn toàn tự do sửa văn bản mà không sợ làm mất khả năng dịch song ngữ.
 - **Thêm hiệu ứng trực tiếp khi bôi đen (Inline Step Animation):** Giáo viên dùng chuột bôi đen bất kỳ đoạn chữ hay công thức nào $\rightarrow$ thanh công cụ nổi xuất hiện: `[👁️ Xuất hiện (+1 bước)]`, `[💨 Biến mất]`, `[⭐ Nổi bật]`. Đoạn được chọn được gắn hiệu ứng xuất hiện ngay trong đoạn văn bản hiện tại (hiển thị huy hiệu `⚡[Bước N]` trong Chế độ Thiết kế), không bị cắt khối, không sinh ra tiêu đề "HƯỚNG DẪN GIẢI / BƯỚC TIẾP THEO" làm vỡ bố cục slide.
 
+### Vá 14 — Trình chiếu 16:9 Fit-to-Screen hoàn hảo (Không thanh cuộn trong slide) & Loại bỏ hoàn toàn chất giáo án hành chính (Presentation Slides vs. Lesson Plans)
+
+- **Phân biệt rạch ròi giữa Bài giảng Trình chiếu (Presentation Slide) và Giáo án (Lesson Plan / KHBD):**
+  - **Bài giảng trình chiếu:** Sản phẩm chiếu lên màn hình máy chiếu hoặc TV cho TOÀN BỘ HỌC SINH quan sát và tương tác trong tiết học.
+  - **Tuyệt đối cấm đưa vào slide các câu khẩu lệnh sư phạm giáo án:**
+    + Cấm ghi các câu hướng dẫn tổ chức lớp của giáo viên: *"Hai học sinh lên bảng làm 2 câu"*, *"Cả lớp làm vào vở nháp"*, *"Quan sát nhận xét bài làm của bạn"*, *"Thảo luận nhóm đôi trong 3 phút"*, *"Đang thực hiện hoạt động..."*.
+    + Cấm ghi mục tiêu hành chính giáo án: *"Mục tiêu bài học: Giúp học sinh nắm vững..."*.
+    + Cấm đặt tên tiêu đề mang tính sư phạm nội bộ: *"Chốt kiến thức sư phạm"*, *"Nhiệm vụ học sinh tại lớp"*, *"Đánh giá kết quả vận dụng"*. Thay bằng tiêu đề chuẩn học thuật: *"ĐỀ BÀI & YÊU CẦU"*, *"CHÚ Ý QUAN TRỌNG"*, *"KẾT LUẬN THỰC TIỄN"*.
+  - **Cấu trúc 2 cột thuần túy học thuật cho học sinh:**
+    + Cột trái (`📌 PHẦN GHI BẢNG`): Chứa định nghĩa, công thức toán, dạng tổng quát, phương pháp giải, hệ thống bài tập và kết luận cốt lõi mà học sinh cần ghi nhớ hoặc chép vào vở.
+    + Cột phải (`✍️ HOẠT ĐỘNG HỌC TẬP`): Chứa đề bài toán học to rõ, hình vẽ minh họa SVG chuẩn xác, câu hỏi trắc nghiệm tương tác, gợi ý và lời giải mẫu ẩn/hiện theo từng bước bấm chuột.
+- **Trình chiếu 16:9 Fit-to-Screen hoàn hảo & Khóa thanh cuộn (Zero Internal Scrollbar):**
+  - Trong Chế độ Trình chiếu (`mode-present`): Khung slide khóa tỷ lệ chuẩn 16:9 (`width: min(100vw, calc(100vh * 16 / 9))`, `height: min(100vh, calc(100vw * 9 / 16))`, `aspect-ratio: 16 / 9`).
+  - Toàn bộ nội dung mỗi slide phải nằm gọn hoàn toàn trong khung nhìn 16:9, tuyệt đối không xuất hiện thanh cuộn dọc bên trong các cột (`overflow: hidden !important` trên `.col-board` và `.col-task`).
+  - Cỡ chữ, khoảng cách đệm (padding, margin) và kích thước hình vẽ SVG được tính toán tối ưu để trình chiếu từ xa rõ nét mà không làm tràn khung.
+  - Hỗ trợ nút toàn màn hình `[⛶ Toàn màn hình]` (F11) và phím bấm điều hướng mượt mà.
+
+### Vá 15 — Chuẩn hóa Song ngữ 100% (Bilingual 100% Dual-Data Attribute Architecture)
+
+- **Kiến trúc Song ngữ Dual-Data Attribute (100% Bilingual Presentation):**
+  - Mọi khối `.content-block` đều được gán sẵn các thuộc tính:
+    + `data-raw-vi="..."`: nội dung tiếng Việt gốc.
+    + `data-raw-en="..."`: nội dung tiếng Anh học thuật đã biên dịch chuẩn xác 100%.
+    + `data-title-vi="..."`: tiêu đề khối tiếng Việt.
+    + `data-title-en="..."`: tiêu đề khối tiếng Anh.
+  - Khi bấm chuyển ngữ `[🌐 Song ngữ (VI/EN)]`:
+    + Chuyển sang EN: cập nhật ngay `strong.textContent = data-title-en`, `body.innerHTML = data-raw-en`.
+    + Chuyển về VI: cập nhật ngay `strong.textContent = data-title-vi`, `body.innerHTML = data-raw-vi`.
+    + Đảm bảo 100% tiêu đề, nhãn cột, heading slide, và nội dung toàn bộ khối đều chuyển đổi tức thì, không sót bất kỳ đoạn nào.
+    + Gọi ngay `window.MathJax.typesetPromise()` sau khi hoán đổi ngôn ngữ để render lại toàn bộ công thức toán học.
+- **Tự động cập nhật bản dịch khi giáo viên chỉnh sửa:**
+  - Khi giáo viên sửa nội dung trực tiếp (WYSIWYG) hoặc qua modal chỉnh sửa: hàm lưu tự động cập nhật cả `data-raw-vi` và `data-raw-en` thông qua bộ dịch `smartTranslateText()` tự động bóc tách dấu câu.
+  - Bảng từ điển `contentPhraseMap` và `termMap` phải được khai báo ở phạm vi toàn cục (global scope) ngay đầu thẻ `<script>` để `smartTranslateText()` luôn truy cập được, tránh lỗi `ReferenceError`.
+  - Sử dụng biểu thức chính quy Unicode boundary `(?<![\p{L}\p{N}])` và `(?![\p{L}\p{N}])` với flag `gui` để nhận diện chính xác các từ vựng tiếng Việt có dấu.
+
+### Vá 16 — Trợ giảng AI Đọc bài giảng Tiếng Anh (English Text-to-Speech / Pedagogical Read-Aloud)
+
+- **Công nghệ Web Speech API thuần trình duyệt (100% Offline & Native):**
+  - Sử dụng `window.speechSynthesis` và `SpeechSynthesisUtterance`, tích hợp sẵn trong mọi trình duyệt hiện đại (Chrome, Edge, Safari, Firefox), chạy offline trực tiếp qua giao thức `file:///` mà không cần server hay API key.
+  - Tự động ưu tiên chọn các giọng đọc tiếng Anh tự nhiên chất lượng cao (`Google US English`, `Microsoft Natural`, `Samantha`,...).
+- **Tốc độ đọc linh hoạt & chuẩn ngữ điệu sư phạm (Pedagogical Rates with Switcher):**
+  - Mặc định đọc ở mức sư phạm `rate: 0.85` (chậm rãi, phát âm từng âm tiết tròn vành rõ chữ, có ngữ điệu ngắt nghỉ tự nhiên giúp học sinh dễ dàng nghe hiểu môn Toán bằng tiếng Anh).
+  - Tích hợp nút điều chỉnh tốc độ đọc trực tiếp trên thanh điều khiển: **`[⚡ 0.85x]`** cho phép luân chuyển 4 nấc:
+    + `⚡ 0.85x` (Chậm vừa - Mặc định sư phạm).
+    + `⚡ 0.75x` (Rất chậm - Dành cho lớp mới bắt đầu nghe Toán tiếng Anh).
+    + `⚡ 0.5x` (Siêu chậm - Phát âm cực chậm, hỗ trợ học sinh nghe kỹ từng âm vị toán học).
+    + `⚡ 1.0x` (Tự nhiên - Tốc độ bản ngữ chuẩn).
+    + Tự động lưu thiết lập vào `localStorage ('lecture_speech_rate_idx')`.
+  - **Nút hướng dẫn tắt phụ đề tự động `[💬 Tắt phụ đề]`:** Cung cấp thông tin nhanh để giáo viên tắt tính năng Live Caption (phụ đề màu đen) của Windows (`Win + Ctrl + L`) hoặc Google Chrome.
+- **Bộ chuyển đổi ký hiệu Toán học sang lời nói tiếng Anh tự nhiên (`mathToSpokenEnglish`):**
+  - Tuyệt đối không để AI đọc các ký hiệu LaTeX thô (như gạch chéo `\`, ngoặc nhọn `{}`).
+  - Tự động chuyển đổi các công thức, hàm số, phân số, phương trình sang tiếng Anh sư phạm:
+    + `(ax+b)(cx+d) = 0` $\rightarrow$ *"open parenthesis a x plus b close parenthesis open parenthesis c x plus d close parenthesis equals 0"*
+    + `P(x) = 0` $\rightarrow$ *"P of x equals 0"*
+    + `x \ne 1` $\rightarrow$ *"x is not equal to 1"*
+    + `\frac{a}{b}` $\rightarrow$ *"a over b"*
+    + `x^2` $\rightarrow$ *"x squared"*, `x^3` $\rightarrow$ *"x cubed"*
+    + `169\text{ m}^2` $\rightarrow$ *"169 square meters"*, `15\text{ m}` $\rightarrow$ *"15 meters"*
+    + `\Leftrightarrow` $\rightarrow$ *"is equivalent to"*, `\Rightarrow` $\rightarrow$ *"implies that"*
+- **Hai chế độ nghe đọc linh hoạt và phản hồi trực quan:**
+  - **Nút trên thanh điều khiển `[🔊 Đọc Slide (EN)]`:** Tự động đọc lần lượt từ tiêu đề slide đến từng khối nội dung hiển thị; khối đang đọc sẽ phát sáng viền xanh tím nhẹ (`is-speaking`) giúp học sinh dõi mắt theo bài; nút chuyển thành `[⏹ Dừng đọc]` và tự động hủy đọc nếu giáo viên bấm chuyển slide.
+  - **Nút loa `🔊` trên từng khối (`.btn-block-speak`):** Bố trí gọn gàng ở góc trên mỗi khối (`top: 6px; right: 8px;`); giáo viên hoặc học sinh bấm vào để nghe riêng khối đó; bấm lại để dừng ngay lập tức.
+
+### Vá 17 — Cỡ chữ Chuẩn Trình chiếu TV Phòng học (28px - 30px) & Đồng bộ Trực quan Mắt Thấy - Tai Nghe (Screen-Audio Sync)
+
+- **Chuẩn Cỡ chữ Trình chiếu TV Lớp học (28px - 30px):**
+  - Màn hình lớp học thường là TV 55" - 65" - 75" hoặc máy chiếu, học sinh ngồi xa 6 - 8 mét. Cỡ chữ 15px - 16px (laptop) là quá nhỏ.
+  - Trong Chế độ Trình chiếu (`mode-present`), cỡ chữ bài học được cố định chuẩn TV:
+    + Thân khối bài học (`.content-block`): **28px** (khoảng cách dòng `line-height: 1.55` thoáng đãng, dễ đọc từ xa).
+    + Tiêu đề khối (`strong`): **30px – 32px**.
+    + Tiêu đề slide (`slide-heading-text`): **32px – 34px**.
+    + Nhãn cột (`col-board-tag`, `col-task-tag`): **22px – 24px**.
+    + Công thức toán học MathJax tự động phóng to đồng bộ, sắc nét, tương phản cao.
+  - Bố trí nút chọn cỡ chữ trực tiếp trên thanh điều khiển: **`[🔤 TV 28px]`** cho phép chuyển đổi linh hoạt:
+    + `TV 28px` (Chuẩn TV lớp học 55"-65" - Mặc định).
+    + `TV Lớn 30px` (Dành cho TV 75"-85" hoặc phòng học rộng).
+    + `Laptop 22px` (Khi soạn bài hoặc xem trên laptop nhỏ).
+    + Tự động lưu cấu hình vào `localStorage`.
+- **Đồng bộ Tuyệt đối Mắt Thấy - Tai Nghe (Visual & Audio Synchronization):**
+  - Khi bấm đọc tiếng Anh (`[🔊 Đọc Slide (EN)]` hoặc nút loa `🔊` trên khối), nếu màn hình đang hiển thị Tiếng Việt:
+    + Hệ thống **tự động chuyển giao diện slide sang Tiếng Anh** để học sinh nhìn thấy chữ tiếng Anh trên màn hình khớp 100% từng từ với giọng đọc AI, tránh tình trạng màn hình hiển thị tiếng Việt mà tai lại nghe tiếng Anh.
+    + Khối đang đọc tự động phát sáng viền (`is-speaking`) để học sinh dễ dàng định vị điểm nhìn.
+- **Phân biệt tính năng Phụ đề hệ điều hành (Windows Live Captions):**
+  - Hộp đen phụ đề `Live Caption / More knowledge focus` ở góc dưới màn hình là tính năng có sẵn của hệ điều hành Windows 11 / Chrome (phím tắt `Win + Ctrl + L`), không phải do file HTML sinh ra. Giáo viên có thể tắt bằng cách bấm `Win + Ctrl + L` hoặc bấm nút `✕`.
+
+### Vá 18 — Khắc phục triệt để lỗi che khuất đáy cuộn (Full Bottom Scroll Clearance & No Truncation)
+
+- **Tự động kích hoạt con trỏ trượt khi nội dung vượt khung màn hình (`overflow-y: auto !important`):**
+  - Khi trình chiếu ở cỡ chữ TV lớn (28px - 30px) hoặc các slide có nội dung dài/nhiều bước, nếu chiều cao cột vượt quá khung nhìn, hệ thống **tự động bật thanh cuộn trượt để kéo/lăn chuột xem toàn bộ nội dung** (`overflow-y: auto !important; overflow-x: hidden !important;`), tuyệt đối không bị che khuất, cắt cụt chữ hay mất thông tin bài học.
+  - Thanh cuộn được thiết kế tinh tế, thanh mảnh (rộng 8px, màu xanh chàm dịu `#818cf8` bo tròn góc, hòa hợp với giao diện).
+- **Ràng buộc chuẩn Flexbox cho lưới nội dung (`flex: 1 1 0; min-height: 0; height: 100%;`):**
+  - Loại bỏ hoàn toàn công thức cứng `calc(100% - 44px)` vốn gây tràn khung 21px–30px ra ngoài `.slide-item`. Lưới bài giảng `.slide-content-grid` tự động co giãn vừa khít 100% diện tích khả dụng bên dưới tiêu đề slide.
+- **Khoảng đệm an toàn đáy màn hình (Bottom Safety Padding 80px):**
+  - Khung slide `.slide-item` được thiết lập khoảng đệm đáy an toàn `padding-bottom: 80px;` để mép dưới nội dung luôn dừng cao hơn thanh điều khiển nổi (nằm ở `bottom: 8px`), đảm bảo không bao giờ bị thanh công cụ che khuất dòng chữ cuối cùng.
+- **Loại bỏ giới hạn chiều cao khối hiển thị (`max-height: none !important; overflow: visible !important;`):**
+  - Các khối khi hiển thị (`.content-block.is-revealed`) không bị giới hạn 500px, tự động mở rộng theo đúng kích thước thực của nội dung, hình vẽ SVG và công thức toán.
+- **Phần tử đệm ảo đáy cột (`::after` min-height: 85px):**
+  - Bổ sung `body.mode-present .col-board::after, body.mode-present .col-task::after { content: ""; display: block; min-height: 85px; height: 85px; flex-shrink: 0; }`. Đảm bảo khi kéo lăn chuột đến tận cùng của bất kỳ cột nào, khối nội dung cuối cùng luôn cách đáy 85px, hiển thị 100% đầy đủ, không bao giờ bị che khuất.
+- **Bảo toàn tuyệt đối hiển thị công thức MathJax (`inline-block` & `inline`):**
+  - MathJax 3 sử dụng thẻ `<svg>` nội dòng để biểu diễn ký hiệu toán học. Cấm tuyệt đối việc dùng CSS dạng `.content-block svg` áp đặt `display: block` làm nhảy dòng công thức toán trong câu. Bắt buộc giữ `mjx-container { display: inline-block !important; }` và `mjx-container svg { display: inline !important; margin: 0 !important; }`.
+
+### Vá 19 — Chuẩn Sư phạm Tách biệt Đề bài & Hướng dẫn giải (Problem & Guided Solution Split with Step Animation)
+
+- **Nguyên tắc Sư phạm Bắt buộc: Đề bài riêng — Hướng dẫn giải riêng từng bước:**
+  - Trong mọi hoạt động (Khám phá, Ví dụ, Luyện tập, Vận dụng, Bài tập):
+    + **Khối ĐỀ BÀI (Problem Block):** Hiển thị riêng biệt (thường ở Bước 1 hoặc luôn hiển thị), chỉ chứa đề bài, số liệu, hình vẽ hoặc câu hỏi để học sinh có thời gian quan sát, ghi chép và tự tư duy giải quyết vấn đề.
+    + **Khối HƯỚNG DẪN GIẢI / LỜI GIẢI (Solution Step Block):** Bắt buộc tách thành khối độc lập, gắn hiệu ứng bước (`data-step="2"`, `data-step="3"`,...). Khi giáo viên bấm chuyển bước thì lời giải mới xuất hiện, tuyệt đối không gộp chung đề bài và lời giải trong cùng 1 khối hiển thị đồng thời làm mất tính tương tác sư phạm.
+- **Công cụ Hỗ trợ Thiết kế Trực quan (Design Mode Split Tool):**
+  - Trong Chế độ Thiết kế: Tooltip nổi khi bôi đen văn bản tích hợp nút `[✂️ Tách Lời giải (+1 bước)]` giúp giáo viên chỉ cần quét chọn đoạn lời giải là hệ thống tự động tách thành khối Hướng dẫn giải riêng biệt mang hiệu ứng bước tiếp theo (`data-step="N+1"`).
+  - Khối nội dung trong Chế độ Thiết kế hiển thị huy hiệu vai trò rõ ràng: `[📝 Đề bài]` màu vàng cam và `[💡 Lời giải]` màu xanh lá.
+
+### Vá 20 — Tuân thủ Tuyệt đối Chuẩn Ký hiệu GDPT 2018 theo Cấp lớp & Nâng cao Chiều sâu Sư phạm (Curriculum Compliance & Pedagogical Depth)
+
+- **Quy tắc Ký hiệu GDPT 2018 theo cấp học (Nghiêm cấm lấy kiến thức cấp trên đưa xuống cấp dưới):**
+  - Căn cứ chính xác vào khối lớp đang dạy (Lớp 6, 7, 8, 9 THCS hay 10, 11, 12 THPT).
+  - Với cấp THCS (Toán 6, 7, 8, 9 - SGK mới GDPT 2018 Kết nối tri thức, Cánh diều, Chân trời sáng tạo):
+    + **TUYỆT ĐỐI CẤM dùng dấu tương đương `\Leftrightarrow` ($\Leftrightarrow$)** khi giải phương trình hoặc biến đổi biểu thức. Dấu tương đương thuộc kiến thức mệnh đề logic của THPT (Lớp 10).
+    + **TUYỆT ĐỐI CẤM dùng dấu ngoặc vuông `[` (ký hiệu "hoặc" của hệ phương trình / tuyển mệnh đề cấp 3)** khi giải phương trình tích.
+    + **TUYỆT ĐỐI CẤM kết luận tập nghiệm $S = \{...\}$:** Trong Toán THCS, không dùng thuật ngữ "tập nghiệm" hay ký hiệu $S = \{...\}$; bắt buộc kết luận bằng câu văn tự nhiên chỉ rõ từng nghiệm cụ thể (*"Vậy phương trình có nghiệm là..."*, *"Vậy phương trình có hai nghiệm là $x = ...$ và $x = ...$"*, *"Vậy phương trình vô nghiệm"*).
+    + **BẮT BUỘC trình bày thuần túy bằng ngôn ngữ sư phạm tự nhiên**:
+      * Dùng từ liên kết: *"Ta có: ..."*, *"suy ra"* (hoặc $\Rightarrow$), *"hay..."*, *"hoặc..."*.
+      * Khi giải phương trình tích $(ax+b)(cx+d)=0$: Tách thành 2 phương trình riêng biệt:
+        *"Ta có $ax+b=0$ hoặc $cx+d=0$."*
+        *"1) Với $ax+b=0$, suy ra $x = -b/a$."*
+        *"2) Với $cx+d=0$, suy ra $x = -d/c$."*
+        *"Vậy phương trình có hai nghiệm là $x = -b/a$ và $x = -d/c$."*
+- **Cấu trúc Chiều sâu Sư phạm theo Tính chất Tiết học:**
+  - **Bài học mới (New Concept Lesson):**
+    + Sau mỗi đơn vị kiến thức (mỗi mục/khái niệm vừa hình thành): Bắt buộc xây dựng **Bài tập kiểm tra đánh giá nhanh (Formative Assessment / Quiz Game tương tác)** với hệ thống nút bấm chọn phương án A, B, C, D đổi màu xanh (Đúng) / đỏ (Sai) tức thì và phân tích bẫy sai lầm của học sinh.
+    + Kết thúc bài học: Bắt buộc có **Sơ đồ tư duy trực quan (SVG Mindmap / Concept Map)** hệ thống hóa toàn bộ mạng lưới kiến thức bài học và ứng dụng thực tiễn.
+  - **Tiết Luyện tập chung / Ôn tập (Review / Practice Lesson):**
+    + Bắt buộc có phần **Hệ thống hóa kiến thức trọng tâm** ở đầu tiết trước khi giải bài tập.
+    + Chuyển linh hoạt từ các bài tập khô khan thành **Chuỗi thử thách trò chơi học tập tương tác** (Chặng 1: Vượt chướng ngại vật; Chặng 2: Giải mã mật mã; Chặng 3: Chinh phục thực tế,...).
+
+### Vá 21 — Giữ nguyên vị trí Slide khi chuyển đổi Chế độ Thiết kế & Trình chiếu (Slide Preservation Across Modes)
+
+- **Tự động cuộn đến đúng slide đang xem khi bật Thiết kế:**
+  - Khi giáo viên đang xem Slide $N$ ở Chế độ Trình chiếu (`mode-present`) và bấm nút `[⚙️ Thiết kế]`: Hệ thống lập tức kích hoạt Chế độ Thiết kế và tự động cuộn màn hình (`scrollIntoView`) đến đúng vị trí Slide $N$, viền sáng màu chàm 1.5 giây để giáo viên nhận biết. Tuyệt đối không để màn hình nhảy về Slide 1 khiến giáo viên phải cuộn tìm kiếm.
+- **Nhận diện slide hiển thị khi quay lại Trình chiếu:**
+  - Khi giáo viên đang ở Chế độ Thiết kế, nếu đã cuộn đến hoặc click vào bất kỳ slide/khối nào, khi bấm nút `[🎬 Trình chiếu]`: Hệ thống tự động tính toán slide đang nằm gần đỉnh màn hình nhất (`getBoundingClientRect`) để mở trực tiếp đúng slide đó trong Chế độ Trình chiếu.
+  - Khi click hoặc chỉnh sửa bất kỳ khối nào trong Chế độ Thiết kế, biến `currentSlideIndex` tự động cập nhật ngay lập tức theo slide tương ứng.
+
 ## 5. Bộ khung mã HTML mẫu
 
 Skeleton dưới đây chạy được ngay khi lưu thành file `.html`. Khi soạn bài thật, thay mọi chỗ `[TRÍCH TỪ PDF]` bằng nội dung đã trích, rồi nhân slide cho đủ 8–12 hoặc 16–22 slides theo số tiết. Không giữ nguyên câu placeholder trong bài thành phẩm.
