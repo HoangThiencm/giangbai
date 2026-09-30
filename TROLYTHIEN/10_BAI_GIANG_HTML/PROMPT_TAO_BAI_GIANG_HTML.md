@@ -304,6 +304,19 @@ mjx-container svg { display: inline !important; }
   - Khi giáo viên đang ở Chế độ Thiết kế, nếu đã cuộn đến hoặc click vào bất kỳ slide/khối nào, khi bấm nút `[🎬 Trình chiếu]`: Hệ thống tự động tính toán slide đang nằm gần đỉnh màn hình nhất (`getBoundingClientRect`) để mở trực tiếp đúng slide đó trong Chế độ Trình chiếu.
   - Khi click hoặc chỉnh sửa bất kỳ khối nào trong Chế độ Thiết kế, biến `currentSlideIndex` tự động cập nhật ngay lập tức theo slide tương ứng.
 
+### Vá 22 — Phóng to Hình học & Ảnh minh họa (Interactive Lightbox Zoom)
+
+- **Tôn chỉ sư phạm trực quan:** Trên màn hình máy chiếu hoặc TV lớp học, học sinh ngồi xa có thể khó nhìn rõ các chi tiết số liệu, góc, tên đỉnh trên hình học hoặc sơ đồ tư duy. Do đó, mọi hình vẽ SVG và ảnh minh họa đều được trang bị tính năng bấm vào để phóng to toàn màn hình.
+- **Quy chuẩn kỹ thuật của Lightbox Zoom:**
+  1. **Hiệu ứng trực quan khi di chuột:** Con trỏ chuột tự động đổi thành kính lúp `cursor: zoom-in`, hình vẽ nổi bật nhẹ (`filter: drop-shadow`) và hiển thị gợi ý `"🔍 Nhấn vào hình để phóng to"`.
+  2. **Hộp thoại phóng to (Lightbox Dialog):**
+     - Nền tối mờ sang trọng (`backdrop-filter: blur(8px)`).
+     - Hình vẽ SVG vector được clone và co giãn tự động không vỡ nét lên tới 92vw / 80vh.
+     - Thanh công cụ điều khiển: Nút `[➕ Phóng to]`, `[➖ Thu nhỏ]`, `[🔄 Kích thước chuẩn 100%]`, hiển thị tỷ lệ zoom hiện tại.
+     - Cho phép lăn chuột (mouse wheel) để phóng to / thu nhỏ mượt mà.
+     - Hỗ trợ giữ chuột kéo rê (pan/drag) để quan sát từng chi tiết khi đang zoom lớn.
+     - Đóng nhanh bằng phím `Escape`, nút `✕` hoặc click ra ngoài vùng nền mờ.
+
 ## 5. Bộ khung mã HTML mẫu
 
 Skeleton dưới đây chạy được ngay khi lưu thành file `.html`. Khi soạn bài thật, thay mọi chỗ `[TRÍCH TỪ PDF]` bằng nội dung đã trích, rồi nhân slide cho đủ 8–12 hoặc 16–22 slides theo số tiết. Không giữ nguyên câu placeholder trong bài thành phẩm.

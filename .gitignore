@@ -23,3 +23,13 @@ TROLYTHIEN/**/Ket_qua/*
 !TROLYTHIEN/**/*.md
 !TROLYTHIEN/**/*.js
 scratch/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*.class
+*.pyc
+
+# Scripts nháp và file tạm phát sinh trong TROLYTHIEN
+TROLYTHIEN/**/*.py
+TROLYTHIEN/**/pdf_pages/
