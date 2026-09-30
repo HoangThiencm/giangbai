@@ -77,6 +77,12 @@ Quy chuẩn thiết kế bài giảng HTML (bám Master Prompt `TROLYTHIEN/10_BA
 - Tương tác 2 chiều: nút ẩn/hiện đáp án, trắc nghiệm phản hồi xanh/đỏ, đồng hồ đếm ngược hoạt động nhóm, hộp ghi nhớ kiến thức chốt.
 - Bảo toàn 100% dữ liệu gốc từ PDF trong `TROLYTHIEN/10_BAI_GIANG_HTML/Dau_vao/`. Không bịa số liệu, định nghĩa, ví dụ hay bài tập.
 - Phân bổ đúng số tiết: 1 tiết (45 phút, 8–12 slides); 2 tiết (90 phút, 16–22 slides, tách Tiết 1 / Tiết 2).
+- Vẽ hình học SVG tuyệt đối chính xác: tính toán tọa độ theo đúng tỷ lệ toán học và tính chất hình học (hình vuông width=height góc 90°, hình thang cân hai đáy song song và hai cạnh bên đối xứng, hình thoi 4 cạnh bằng nhau, tam giác vuông/đều chuẩn xác; viewBox 1:1, cấm vẽ ước chừng làm sai lệch kiến thức).
+- Hỗ trợ chế độ Dạy học Song ngữ (Bilingual VI/EN): hỗ trợ nút chuyển đổi tức thì `[🌐 VI / EN]` trên thanh điều khiển, đổi toàn bộ tiêu đề, đề mục, bảng ghi, hoạt động sang tiếng Anh chuẩn thuật ngữ quốc tế.
+- Tách bước sư phạm giữa Đề bài và Lời giải (Step-by-step Split): không để đề bài và lời giải cùng 1 bước; hỗ trợ quét chọn bôi đen văn bản trong Chế độ Thiết kế để tách ngay thành bước mới (`[✂️ Tách thành bước mới (+1 step)]`) hoặc bấm nút `[✂️ Tách]` trên khối.
+- Di chuyển khối và Kéo thả trực quan (Drag & Drop): Hỗ trợ nút `▲ ▼` hoán đổi vị trí hiển thị trong DOM và tay cầm kéo thả `⠿` di chuyển khối giữa các hàng hoặc giữa 2 cột (Ghi Bảng $\leftrightarrow$ Hoạt Động) mà không cản trở quét chọn (bôi đen) văn bản.
+- Sửa trực quan trực tiếp trên Slide & Tự động dịch linh hoạt (WYSIWYG & Auto-translation): Ở Chế độ Thiết kế, giáo viên click trực tiếp vào văn bản trên slide để sửa (như xóa dấu 2 chấm, sửa chữ như Word); công thức MathJax được khóa an toàn; hệ thống tự động dịch tiếng Anh bảo tồn chính xác dấu câu hiện thời.
+- Thêm hiệu ứng trực tiếp khi bôi đen (Inline Step Animation): Giáo viên bôi đen đoạn chữ $\rightarrow$ chọn `[👁️ Xuất hiện (+1 bước)]` để gắn hiệu ứng tại chỗ (hiển thị huy hiệu `⚡[Bước N]` trong Thiết kế), không chia cắt khối hay sinh card thừa.
 - File kết quả chỉ ghi tại `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/[Tên_Bài].html`.
 
 

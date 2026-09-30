@@ -95,6 +95,73 @@ mjx-container svg { display: inline !important; }
 - Phông sans-serif, cỡ chữ lớn, tương phản cao, đọc được từ cuối phòng học.
 - Mỗi slide một ý chính. Không nhồi nhiều hoạt động vào một slide.
 
+### Vá 8 — Vẽ hình học SVG tuyệt đối chính xác (Mathematical Exactness in SVG)
+
+- **Tôn chỉ sư phạm cốt tử:** Trong môn Toán và các môn KHTN, hình vẽ sai lệch tính chất hình học là sai lầm sư phạm nghiêm trọng (hình vuông vẽ thành hình chữ nhật, hình thang cân vẽ thành hình thoi, tam giác đều vẽ lệch, góc vuông không đúng 90°). Tuyệt đối không vẽ ước chừng bằng mắt thường.
+- **Quy tắc toán học & tọa độ bắt buộc khi sinh SVG:**
+  1. **Tỷ lệ 1:1 và viewBox:** Luôn thiết lập `viewBox="0 0 W H"` với tỷ lệ tọa độ thực và đặt `preserveAspectRatio="xMidYMid meet"`, không kéo dãn `width`/`height` CSS làm méo tỷ lệ hình học.
+  2. **Hình vuông:** $width = height$ tuyệt đối. Góc 4 đỉnh phải đúng 90°. Nếu có dải viền/lối đi $x$ đều xung quanh thì khoảng cách 4 phía phải bằng nhau tuyệt đối.
+  3. **Hình chữ nhật:** Chiều dài $a$ và chiều rộng $b$ phải khác nhau rõ rệt theo đúng tỷ lệ số liệu bài toán ($a \neq b$).
+  4. **Hình thoi:** 4 cạnh bằng nhau ($AB=BC=CD=DA$), hai đường chéo cắt nhau tại trung điểm và vuông góc tại gốc tọa độ đối xứng.
+  5. **Hình thang cân:** Hai đáy nằm trên hai đường thẳng song song ($y_1 = \text{const}, y_2 = \text{const}$), trục đối xứng thẳng đứng $x = x_{\text{center}}$, hai cạnh bên bằng nhau ($AD = BC$), hai góc kề đáy bằng nhau.
+  6. **Tam giác đều / cân:** Tam giác đều cạnh $a$ thì chiều cao tính đúng $h = \frac{a\sqrt{3}}{2}$, đỉnh nằm chính giữa trung điểm đáy. Tam giác vuông có góc $90^\circ$ và ký hiệu góc vuông chuẩn (`<path>` hoặc `<polyline>` kích thước $8\times 8\text{ px}$ hoặc $10\times 10\text{ px}$).
+  7. **Đường gióng kích thước (Dimension lines):** Vẽ song song với cạnh tương ứng, có vạch chặn/mũi tên hai đầu rõ ràng, con số ghi kích thước đặt ở vị trí trung tâm, dễ đọc.
+
+### Vá 9 — Chế độ Dạy học Song ngữ (Bilingual Teaching Mode: VI / EN)
+
+- **Mục tiêu:** Phục vụ các trường chuẩn quốc tế, lớp song ngữ Cambridge / IB, dự án STEM giảng dạy bằng tiếng Anh.
+- **Cơ chế chuyển đổi (Instant Switch 0ms):**
+  1. Thanh điều khiển có nút chuyển: `[🌐 VI / EN]` (hoặc `[🇻🇳 Tiếng Việt] / [🇬🇧 English]`).
+  2. Cấu trúc lưu trữ dữ liệu song ngữ: Mỗi khối nội dung hoặc slide hỗ trợ cấu trúc song ngữ (thông qua thuộc tính `data-lang-vi` / `data-lang-en` hoặc các lớp con `.lang-vi` và `.lang-en`).
+  3. Khi bấm chuyển đổi: Tự động đổi tức thì toàn bộ tiêu đề, đề mục ghi bảng, câu hỏi hoạt động, chú thích hình vẽ sang tiếng Anh mà không cần tải lại trang hay gián đoạn bài giảng.
+  4. **Chuẩn thuật ngữ Toán học quốc tế (Bilingual Math Glossary):**
+     - Phương trình tích: *Product Equation*
+     - Phương trình chứa ẩn ở mẫu: *Equation with Rational Expressions / Algebraic Fractions*
+     - Điều kiện xác định (ĐKXĐ): *Domain Restrictions / Constraints*
+     - Tập nghiệm: *Solution Set*
+     - Nghiệm của phương trình: *Solution / Root*
+     - Biến đổi tương đương: *Equivalent Transformation*
+     - Khử mẫu: *Clearing Denominators / Multiply by LCD*
+     - Hằng đẳng thức: *Algebraic Identity*
+     - Hoạt động khám phá: *Exploration Activity*
+     - Luyện tập: *Practice / Exercise*
+     - Vận dụng: *Application*
+     - Đố vui / Thử thách: *Challenge / Quiz*
+  5. Giữ nguyên công thức Toán MathJax ($x, y, =, \ge$), chuyển ngữ chuẩn xác các câu dẫn giải và kết luận.
+
+### Vá 10 — Tách bước sư phạm giữa Đề bài và Lời giải (Step-by-step Pedagogical Split)
+
+- **Tôn chỉ sư phạm tương tác:** Tuyệt đối không để Đề bài và Lời giải chi tiết xuất hiện cùng một lúc trong 1 bước trình chiếu. Phải cho học sinh cơ hội đọc đề, tư duy, thực hiện nhiệm vụ rồi giáo viên mới bấm chuyển bước hiện lời giải/đáp án đối chiếu.
+- **Quy tắc khi tạo bài giảng ban đầu:** Mọi hoạt động khám phá, ví dụ mẫu, luyện tập, bài tập thực tế phải tách riêng: Đề bài/Yêu cầu (bước $n$) và Hướng dẫn giải/Lời giải chi tiết (bước $n+1$).
+- **Công cụ tương tác tùy biến trong Chế độ Thiết kế:**
+  1. **Quét chọn tách bước (Highlight & Split):** Giáo viên dùng chuột bôi đen đoạn văn bản cần tách (như đoạn "Bước giải:..."), nút nổi `[✂️ Tách thành bước mới (+1 step)]` lập tức xuất hiện ngay trên vùng chọn. Click vào là đoạn đó được tự động cắt ra thành một khối độc lập nằm liền kề với bước kế tiếp ($n+1$).
+  2. **Nút `[✂️ Tách]` trên thanh công cụ của khối:** Tự động phát hiện điểm chia tách lời giải ("Bước giải:", "Lời giải:", "Hướng dẫn giải:", "Đáp án:") hoặc tách ngay đoạn đang bôi đen.
+  3. Tất cả các khối sau khi tách đều có thể dịch chuyển thứ tự bước (`▲ ▼`), cài đặt hiệu ứng biến mất (`💨 Biến mất`) và lưu vĩnh viễn vào file khi bấm `[💾 Lưu bài giảng]`.
+
+### Vá 11 — Di chuyển vị trí hiển thị của khối và Kéo thả trực quan (Drag & Drop Block Reordering)
+
+- **Hoán đổi vị trí hiển thị thực tế trong DOM:** Nút `▲` và `▼` trên thanh công cụ của khối thực sự hoán đổi vị trí hiển thị của khối trong DOM (sử dụng `prev.before(el)` và `next.after(el)`), đảm bảo trật tự trình chiếu và bố cục bảng thay đổi theo ý giáo viên.
+- **Kéo thả HTML5 Drag & Drop mượt mà:** Khối có tay cầm kéo thả `⠿` (`.drag-handle`), giáo viên có thể giữ chuột và kéo thả khối lên/xuống trong cùng một cột hoặc hoán đổi giữa 2 cột (Cột Ghi Bảng $\leftrightarrow$ Cột Hoạt Động).
+- **Tuyệt đối không chặn bôi đen văn bản:** Khối nội dung chỉ được gán `draggable="true"` khi giáo viên nhấn chuột vào tay cầm `⠿`. Ở các vị trí khác trong khối, giáo viên tự do quét chọn (bôi đen) văn bản để sao chép hoặc click nút `[✂️ Tách]` mà không bị kéo giật phần tử ngoài ý muốn.
+- **Bảo lưu thứ tự:** Thứ tự hiển thị sau khi kéo thả hoặc bấm nút `▲ ▼` được lưu tự động vào LocalStorage và lưu đè vĩnh viễn vào tệp HTML khi bấm `[💾 Lưu bài giảng]`.
+
+### Vá 12 — Tinh gọn Tiêu đề, Nhãn cột và Loại bỏ nội dung trùng lặp / rườm rà (Header Minimalism & Clean Blackboard Content)
+
+- **Tiêu đề Slide (Header Bar):** Chỉ hiển thị tên bài học chính (`BÀI 4: PHƯƠNG TRÌNH QUY VỀ PHƯƠNG TRÌNH BẬC NHẤT MỘT ẨN`), loại bỏ huy hiệu tiết (`Tiết 1: ...`, `Tiết 2: ...`) gây xuống dòng, chật chội và vỡ bố cục trên thanh điều hướng.
+- **Nhãn cột ngắn gọn, trực diện:**
+  - Cột trái: `📌 PHẦN GHI BẢNG` (tuyệt đối không ghi dài dòng `(BẢNG PHẤN GIÁO VIÊN)`).
+  - Cột phải: `✍️ HOẠT ĐỘNG HỌC TẬP` (tinh gọn, tránh rườm rà).
+- **Loại bỏ triệt để dòng "Đề mục" và ghi chú giáo án trong bảng:**
+  - Khi khối ghi bảng đã có tiêu đề mục (ví dụ `<strong>1. PHƯƠNG TRÌNH TÍCH</strong>`, `<strong>2. PHƯƠNG TRÌNH CHỨA ẨN Ở MẪU</strong>`), tuyệt đối không lặp lại dòng `• Đề mục: 1. Phương trình tích.` hay `• Đề mục: 2. Phương trình chứa ẩn ở mẫu.`.
+  - Tuyệt đối không đưa các câu ghi chú tiến trình giáo án của giáo viên (như `• Đang thực hiện các hoạt động hình thành kiến thức...`, `• Đang thực hiện hoạt động khám phá nhu cầu đặt điều kiện...`) vào phần ghi bảng của học sinh. Phần ghi bảng chỉ chứa công thức, dạng tổng quát, định nghĩa, chú ý hoặc quy tắc toán học cốt lõi.
+
+### Vá 13 — Sửa trực quan trực tiếp trên Slide (WYSIWYG In-Place Editing) & Tự động dịch linh hoạt dấu câu (Punctuation-Agnostic Auto-Translation)
+
+- **Sửa trực tiếp, trực quan trên slide (WYSIWYG):** Trong Chế độ Thiết kế (`⚙ Thiết kế`), giáo viên click chuột trực tiếp vào bất kỳ đoạn văn bản hay tiêu đề nào trên slide để sửa (như Word hay PowerPoint). Muốn xóa dấu 2 chấm, sửa chính tả hay thêm từ chỉ cần click và nhấn Backspace/gõ trực tiếp. Tuyệt đối không bắt giáo viên phải mở modal code textarea hay nhìn thấy mã SVG của MathJax.
+- **Bảo vệ an toàn công thức Toán học MathJax:** Các thẻ công thức `<mjx-container>` được đặt `contenteditable="false"`, hoạt động như khối nguyên tử an toàn (không bị vỡ mã SVG). Click chuột vào công thức sẽ mở hộp thoại sửa nhanh mã LaTeX (`prompt`), MathJax tự động render lại ngay lập tức.
+- **Tự động dịch thông minh bảo tồn dấu câu (Punctuation-Agnostic Translation):** Việc dịch thuật sang tiếng Anh khi bật Song ngữ là nhiệm vụ tự động của hệ thống. Bộ dịch của hệ thống tự động bóc tách dấu câu ở đuôi (`:`, `.`, `?`, `!`, `,`), nếu giáo viên xóa dấu 2 chấm ở bản tiếng Việt thì bản dịch tiếng Anh cũng tự động không có dấu 2 chấm. Giáo viên hoàn toàn tự do sửa văn bản mà không sợ làm mất khả năng dịch song ngữ.
+- **Thêm hiệu ứng trực tiếp khi bôi đen (Inline Step Animation):** Giáo viên dùng chuột bôi đen bất kỳ đoạn chữ hay công thức nào $\rightarrow$ thanh công cụ nổi xuất hiện: `[👁️ Xuất hiện (+1 bước)]`, `[💨 Biến mất]`, `[⭐ Nổi bật]`. Đoạn được chọn được gắn hiệu ứng xuất hiện ngay trong đoạn văn bản hiện tại (hiển thị huy hiệu `⚡[Bước N]` trong Chế độ Thiết kế), không bị cắt khối, không sinh ra tiêu đề "HƯỚNG DẪN GIẢI / BƯỚC TIẾP THEO" làm vỡ bố cục slide.
+
 ## 5. Bộ khung mã HTML mẫu
 
 Skeleton dưới đây chạy được ngay khi lưu thành file `.html`. Khi soạn bài thật, thay mọi chỗ `[TRÍCH TỪ PDF]` bằng nội dung đã trích, rồi nhân slide cho đủ 8–12 hoặc 16–22 slides theo số tiết. Không giữ nguyên câu placeholder trong bài thành phẩm.
@@ -285,3 +352,44 @@ Skeleton dưới đây chạy được ngay khi lưu thành file `.html`. Khi so
 </body>
 </html>
 ```
+
+## 6. Bảng kiểm tra toàn diện trước khi xuất xưởng (Pre-flight Checklist)
+
+Trước khi xuất file HTML thành phẩm, bắt buộc đối chiếu đủ 7 tiêu chí kiểm tra thực chiến sau:
+
+1. **Cho phép bôi đen quét chọn chuột (`user-select: text`):**
+   - Tuyệt đối không để `user-select: none;` trên toàn trang `body` khiến người dùng không thể quét chọn văn bản.
+   - Luôn thiết lập `user-select: text !important;` cho `.content-block`, `.block-body`, `.slide-item`, `.slide-deck` và `body.mode-design`.
+   - Nút nổi tím `[✂️ Tách thành bước mới (+1 step)]` phải kích hoạt mượt mà khi người dùng bôi đen đoạn văn bản trong chế độ Thiết kế.
+
+2. **Bộ Soạn thảo Đa phương tiện Toàn diện (Rich Editor Suite):**
+   - Trên mỗi khối phải có nút trực quan: `▲ ▼`, `[✏️ Sửa]`, `[💨 Biến mất]`, `[✂️ Tách]`, `[👁️/⏱]`, `[✕]`.
+   - Ở cuối mỗi cột phải có nút `[➕ Thêm khối ghi bảng]` và `[➕ Thêm hoạt động học sinh]`.
+   - Modal soạn thảo phải có:
+     + Ô sửa tiêu đề khối (`editTitleInput`) và ô nội dung (`editTextarea`).
+     + Nút định dạng chữ (`<b>`, `<i>`, `<u>`, `<mark>`, `<br>`, `• `).
+     + Nút công thức Toán LaTeX (`$..$`, `$$..$$`, `\frac{a}{b}`, `\sqrt{x}`, `x^2`, `\cdot`, `\Leftrightarrow`, `\neq`, `{Hệ}`).
+     + Nút chèn ảnh mạng (URL) và tải ảnh từ máy tính (tự encode Base64 lưu trực tiếp vào file HTML để mang sang máy khác không bị mất ảnh).
+     + Nút chèn video (YouTube nhúng responsive 16:9 hoặc video MP4).
+     + Khung xem trước trực tiếp (Live Preview) với MathJax typeset thời gian thực.
+
+3. **Hình học SVG chính xác tuyệt đối (Mathematical Exactness):**
+   - Tọa độ đỉnh phải tính toán giải tích chính xác theo số liệu toán học; cấm vẽ ước chừng làm biến dạng hình học (hình vuông thành chữ nhật, hình thang cân thành hình thoi, tam giác đều lệch góc).
+   - Thiết lập `viewBox` chuẩn và `preserveAspectRatio="xMidYMid meet"` để không bao giờ bị méo hình.
+
+4. **Tách bước sư phạm Đề bài và Lời giải (Step-by-step Separation):**
+   - Đề bài / Câu hỏi ở bước $n$.
+   - Lời giải / Hướng dẫn giải ở bước $n+1$. Tuyệt đối không hiện cùng lúc.
+
+5. **Hiệu ứng Trình chiếu và Biến mất:**
+   - Mỗi khối có `data-step` để xuất hiện tuần tự khi bấm phím `Space`, `→` hoặc chạm vùng trống.
+   - Hỗ trợ `data-exit-step` (bước biến mất / Fade Out) và tự động hiện lại khi lùi bước (`↩ Lùi 1 bước`).
+
+6. **Chế độ Song ngữ (Bilingual Mode: VI / EN):**
+   - Có nút `[🌐 Song ngữ (VI/EN)]` trên thanh điều khiển.
+   - Chuyển đổi tức thì (0ms) tiêu đề bài học, tiêu đề tiết, nhãn cột, đề mục và các nút điều khiển sang Tiếng Anh học thuật chuẩn quốc tế.
+
+7. **Lưu trực tiếp đè vào file (Save Lecture):**
+   - Nút `[💾 Lưu bài giảng]` sử dụng File System Access API (`window.showSaveFilePicker()`) để ghi đè trực tiếp lên file đang mở.
+   - Tự động làm sạch clone DOM (gỡ bỏ trạng thái tạm thời, modal, tooltip, đưa về Slide 1) trước khi lưu.
+
