@@ -1,17 +1,31 @@
-# IMPLEMENT: Đồng bộ API Key và OCR ảnh trên Quản lý văn bản
+# IMPLEMENT — OCR clipboard & đồng bộ API key Quản lý văn bản
 
-## Đã làm
-- `vanban-app.js`: `syncUserKeysFromServer()` gọi `api/user_gemini_keys.php` (`credentials: 'include'`, `cache: 'no-store'`) và ghi `global_gemini_keys` / `global_mistral_keys`. `init()` gọi hàm này và `AiDesignConfig.loadHostingFallbackConfig().catch(() => {})` khi hàm tồn tại.
-- Thanh `renderNav` có nút `#vanbanAiConfigBtn` “Cấu hình AI”; click gọi `AiDesignConfig.openModal()`.
-- OCR ảnh: `hasGeminiVision()`, `extractTextViaGeminiVision()` (model `AiDesignConfig.getModule()` hoặc `gemini-2.5-flash`, `inline_data`). `ocrImageData` ưu tiên `MistralOcr.ocrImageDataUrl`, không có Mistral thì Gemini Vision (`mode: 'gemini-vision'`). Không có key thì toast “Ảnh chụp cần API Key (Mistral hoặc Gemini)...” và mở modal. `ingestClipboardImage` gọi `ocrImageData`; không còn thông báo “Ảnh vùng chữ ký cần Mistral OCR”.
-- Ba trang `quanlyvanban-chuyenmon.html`, `quanlyvanban-hanhchinh.html`, `quanlyvanban-dang.html` đã nạp `ai-design-config.js` và `mistral-ocr-client.js` trong `<head>`. Không đổi layout.
-- `tests/vanban-ocr-clipboard-smoke.js` kiểm tra các token trên.
+Đã implement đúng `docs/handoff/PLAN.md`.
 
-## Kiểm thử (Coder)
-- `node tests/vanban-ocr-clipboard-smoke.js` — PASS
-- `node tests/vanban-chuyenmon-signature-smoke.js` — PASS
-- `node tests/vanban-display-saved-smoke.js` — PASS
-- `python tests/vanban-chuyenmon-root-smoke.py` — PASS
+## Đã sửa
+
+1. `vanban-app.js`
+   - Thêm `getAvailableGeminiKeys()` và `getAvailableMistralKeys()`: ưu tiên `global_*`, rồi `khbd_user_*_<email>`, `khbd_user_*_default`, các khóa legacy (`khbd_gemini_api_keys`, `gemini_api_keys`, `xdpl_gemini_api_keys`, `geometryAiApiKeys`, `xdpl_mistral_api_keys`). Hết key local mới gọi `AiDesignConfig.getApiKeys()` / `getMistralKeys()`.
+   - `hasMistralOcr()` / `hasGeminiVision()` dùng hai hàm trên.
+   - `ensureKeysLoaded()` await một lần `syncUserKeysFromServer()`; `ocrImageData()` gọi ở đầu hàm.
+   - `extractTextViaGeminiVision()` lấy key từ `getAvailableGeminiKeys()`. Model vẫn `AiDesignConfig.getModule()` khi có, mặc định `gemini-2.5-flash`.
+   - `openSystemAiConfig()` ưu tiên `UserAiSettings.openModal('keys')`, fallback `AiDesignConfig.openModal()`. Dùng khi thiếu cả hai loại key và khi bấm `#vanbanAiConfigBtn`.
+
+2. `quanlyvanban-chuyenmon.html`, `quanlyvanban-hanhchinh.html`, `quanlyvanban-dang.html`
+   - Trong `<head>`: `<script src="js/user-ai-settings.js?v=20261001"></script>`.
+
+3. `tests/vanban-ocr-clipboard-smoke.js`
+   - Khẳng định tên hàm đọc key, khóa `khbd_user_*`, `ensureKeysLoaded` trong `ocrImageData`, và `UserAiSettings.openModal('keys')`.
+
+## Smoke
+
+Exit code 0:
+
+- `node tests/vanban-ocr-clipboard-smoke.js`
+- `node tests/vanban-chuyenmon-signature-smoke.js`
+- `node tests/vanban-display-saved-smoke.js`
+- `python tests/vanban-chuyenmon-root-smoke.py`
 
 ## Ngoài phạm vi
-Không sửa API PHP, không commit/push. `docs/handoff/.lock` giữ nội dung `LOCK`.
+
+Chưa commit, chưa push. Bàn giao Antigravity IDE, chat mới: `/verify`.

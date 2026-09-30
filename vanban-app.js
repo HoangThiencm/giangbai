@@ -474,7 +474,7 @@
         $('exportExcelBtn')?.addEventListener('click', exportExcel);
         $('importHanhchinhBtn')?.addEventListener('click', openCopyModal);
         $('vanbanAiConfigBtn')?.addEventListener('click', () => {
-            if (window.AiDesignConfig?.openModal) AiDesignConfig.openModal();
+            openSystemAiConfig();
         });
         $('newSchoolYearBtn')?.classList.toggle('hidden', !!state.isGuest);
     }
@@ -1438,15 +1438,87 @@
         return pages.join('\n\n').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
     }
 
+    function getAvailableGeminiKeys() {
+        const email = String(localStorage.getItem('userEmail') || '').trim().toLowerCase();
+        const candidates = [
+            'global_gemini_keys',
+            email ? `khbd_user_gemini_keys_${email}` : null,
+            'khbd_user_gemini_keys_default',
+            'khbd_gemini_api_keys',
+            'gemini_api_keys',
+            'xdpl_gemini_api_keys',
+            'geometryAiApiKeys'
+        ].filter(Boolean);
+        const found = [];
+        for (const key of candidates) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                const parsed = JSON.parse(raw);
+                const list = Array.isArray(parsed) ? parsed : [parsed];
+                for (const item of list) {
+                    const s = String(item || '').trim();
+                    if (s.length > 10 && !found.includes(s)) found.push(s);
+                }
+            } catch (_) {}
+        }
+        if (!found.length && window.AiDesignConfig?.getApiKeys) {
+            return window.AiDesignConfig.getApiKeys();
+        }
+        return found;
+    }
+
+    function getAvailableMistralKeys() {
+        const email = String(localStorage.getItem('userEmail') || '').trim().toLowerCase();
+        const candidates = [
+            'global_mistral_keys',
+            email ? `khbd_user_mistral_keys_${email}` : null,
+            'khbd_user_mistral_keys_default',
+            'xdpl_mistral_api_keys'
+        ].filter(Boolean);
+        const found = [];
+        for (const key of candidates) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                const parsed = JSON.parse(raw);
+                const list = Array.isArray(parsed) ? parsed : [parsed];
+                for (const item of list) {
+                    const s = String(item || '').trim();
+                    if (s.length > 10 && !found.includes(s)) found.push(s);
+                }
+            } catch (_) {}
+        }
+        if (!found.length && window.AiDesignConfig?.getMistralKeys) {
+            return window.AiDesignConfig.getMistralKeys();
+        }
+        return found;
+    }
+
+    let syncKeysPromise = null;
+    async function ensureKeysLoaded() {
+        if (!syncKeysPromise) {
+            syncKeysPromise = syncUserKeysFromServer().catch(() => {});
+        }
+        return syncKeysPromise;
+    }
+
+    function openSystemAiConfig() {
+        if (window.UserAiSettings?.openModal) {
+            window.UserAiSettings.openModal('keys');
+            return;
+        }
+        if (window.AiDesignConfig?.openModal) {
+            window.AiDesignConfig.openModal();
+        }
+    }
+
     function hasMistralOcr() {
-        return window.MistralOcr
-            && window.AiDesignConfig
-            && AiDesignConfig.isMistralEnabled()
-            && AiDesignConfig.getMistralKeys().length > 0;
+        return window.MistralOcr && getAvailableMistralKeys().length > 0;
     }
 
     function hasGeminiVision() {
-        return window.AiDesignConfig && AiDesignConfig.getApiKeys().length > 0;
+        return getAvailableGeminiKeys().length > 0;
     }
 
     async function syncUserKeysFromServer() {
@@ -1462,12 +1534,12 @@
     }
 
     async function extractTextViaGeminiVision(dataUrl) {
-        const keys = AiDesignConfig.getApiKeys();
+        const keys = getAvailableGeminiKeys();
         if (!keys.length) throw new Error('Chưa có Gemini API Key.');
         const raw = String(dataUrl || '');
         const base64 = raw.includes('base64,') ? raw.split('base64,')[1] : raw;
         const mime = raw.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
-        const model = AiDesignConfig.getModule() || 'gemini-2.5-flash';
+        const model = window.AiDesignConfig?.getModule?.() || 'gemini-2.5-flash';
         const key = keys[Math.floor(Math.random() * keys.length)];
         const prompt = 'Hãy đọc và trích xuất toàn bộ chữ trong ảnh văn bản hành chính này. Giữ nguyên vẹn số hiệu văn bản, ngày tháng năm ban hành, tên cơ quan, trích yếu nội dung hoặc thông tin chữ ký. Chỉ trả về văn bản tiếng Việt đã trích xuất, không thêm lời dẫn giải.';
         const res = await fetch(
@@ -1495,6 +1567,7 @@
     }
 
     async function ocrImageData(dataUrl) {
+        await ensureKeysLoaded();
         if (hasMistralOcr()) {
             const res = await window.MistralOcr.ocrImageDataUrl(dataUrl);
             return { text: res.text || res.markdown || '', mode: 'mistral-ocr' };
@@ -1504,7 +1577,7 @@
             return { text, mode: 'gemini-vision' };
         }
         toast('Ảnh chụp cần API Key (Mistral hoặc Gemini). Đang mở hộp thoại Cấu hình AI...', 'amber');
-        if (window.AiDesignConfig?.openModal) AiDesignConfig.openModal();
+        openSystemAiConfig();
         throw new Error('Chưa có API Key OCR.');
     }
 
