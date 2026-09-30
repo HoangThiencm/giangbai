@@ -317,7 +317,16 @@ mjx-container svg { display: inline !important; }
      - Hỗ trợ giữ chuột kéo rê (pan/drag) để quan sát từng chi tiết khi đang zoom lớn.
      - Đóng nhanh bằng phím `Escape`, nút `✕` hoặc click ra ngoài vùng nền mờ.
 
-## 5. Bộ khung mã HTML mẫu
+## 5. Bộ khung mã HTML mẫu & Nguồn sự thật Master Template
+
+> [!IMPORTANT]
+> **QUY TẮC BẢO TOÀN KHUNG SƯỜN 100% (NGUỒN SỰ THẬT DUY NHẤT):**
+> Mọi bài giảng HTML tạo ra (dù trên máy bàn, laptop, hay bất kỳ môi trường nào) **BẮT BUỘC PHẢI DÙNG FILE MẪU CHUẨN:**
+> `TROLYTHIEN/10_BAI_GIANG_HTML/templates/master_lecture_template.html`
+> (hoặc đọc trực tiếp từ `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_12_Mot_so_he_thuc_giua_canh_va_goc_trong_tam_giac_vuong_va_ung_dung.html`).
+>
+> **CẤM TUYỆT ĐỐI:** Tự ý viết lại CSS/JS từ đầu hoặc sinh file HTML giản lược. Bắt buộc giữ nguyên 100% toàn bộ thẻ `<head>`, cấu hình MathJax 3, toàn bộ 1.176 dòng CSS hiện đại, thanh điều khiển nổi `#controlBar`, Modal soạn thảo `#editModal`, Modal phóng to ảnh vector Lightbox `#imageLightboxBackdrop` và toàn bộ 2.094 dòng JS tương tác / Text-to-Speech phát âm tiếng Anh.
+> Trợ lý chỉ việc nhân bản từ `master_lecture_template.html`, thay thông tin tiêu đề bài học và đưa nội dung các slide trích xuất từ PDF vào đúng vùng `#slideDeck` (`<section class="slide-item ...">`).
 
 Skeleton dưới đây chạy được ngay khi lưu thành file `.html`. Khi soạn bài thật, thay mọi chỗ `[TRÍCH TỪ PDF]` bằng nội dung đã trích, rồi nhân slide cho đủ 8–12 hoặc 16–22 slides theo số tiết. Không giữ nguyên câu placeholder trong bài thành phẩm.
 
