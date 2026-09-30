@@ -1,19 +1,18 @@
 # TASK
 
 ## Mô tả yêu cầu
-Tối ưu cơ chế Git tracking cho Nhánh 10 và thư mục `TROLYTHIEN/`:
-1. Sửa `.gitignore` để không ignore toàn bộ `TROLYTHIEN/`, mà chỉ bỏ qua các file dữ liệu bài học/kết quả nặng trong `Dau_vao/*` và `Ket_qua/*`, giữ lại các file `.gitkeep` và file hướng dẫn `.md`.
-2. Tạo file `.agents/rules/tao-bai-giang-html.md` chứa Master Prompt chuẩn của Nhánh 10 (đồng bộ kiến trúc như `.agents/rules/taobaocao.md` và `.agents/rules/vietsangkien.md`) để Git theo dõi vĩnh viễn, máy nào clone về cũng có sẵn.
-3. Đảm bảo `TROLYTHIEN/10_BAI_GIANG_HTML/` và các file prompt hiển thị trong `git status` và được push lên GitHub bình thường.
+Khắc phục lỗi khi chụp dán ảnh nhận diện văn bản (số, ngày tháng, vùng chữ ký) trong Quản lý văn bản (`quanlyvanban-*.html` / `vanban-app.js`):
+1. **Hiện trạng lỗi**: Khi người dùng chụp màn hình tiêu đề/số/ngày hoặc vùng chữ ký của văn bản rồi dán (Ctrl+V) vào ô nhập liệu, hệ thống báo lỗi đỏ: `Ảnh vùng chữ ký cần Mistral OCR. Hãy dán chữ hoặc dùng PDF có chữ ký số.` do hệ thống chưa có API Key Mistral OCR.
+2. **Vấn đề giao diện**: Trang Quản lý văn bản có nạp `ai-design-config.js` nhưng không có nút bấm "Cấu hình AI" để người dùng mở bảng nạp key (Mistral / Gemini), và chưa tự động gọi `loadHostingFallbackConfig()` để đồng bộ key.
+3. **Mở rộng nhận diện**: Cho phép fallback qua Gemini Vision nếu người dùng đã có Gemini API Key (loại key phổ biến nhất trong hệ thống), đồng thời hướng dẫn trực tiếp mở bảng Cấu hình AI khi chưa có key nào.
 
 ## File hoặc phạm vi liên quan
-- `.gitignore`
-- `.agents/rules/tao-bai-giang-html.md`
-- `.agents/rules/tro-ly-thien.md`
-- `.agents/workflows/thien.md`
-- `TROLYTHIEN/10_BAI_GIANG_HTML/`
-- `tests/trolythien-bai-giang-html-smoke.js`
+- `vanban-app.js`
+- `quanlyvanban-chuyenmon.html`
+- `quanlyvanban-hanhchinh.html`
+- `quanlyvanban-dang.html`
+- `tests/vanban-ocr-clipboard-smoke.js`
 
 ## Yêu cầu đặc biệt / Giới hạn
-- Không làm ảnh hưởng 9 nhánh cũ.
-- Khi người dùng thả file PDF vào `Dau_vao/` hoặc tạo file HTML trong `Ket_qua/`, các file dữ liệu đó vẫn phải được `.gitignore` tự động chặn, không làm nặng repo.
+- Không làm vỡ các luồng nhận diện cũ: PDF có lớp chữ (`text-layer`), chữ ký số nhị phân (`/Type /Sig`), hay Mistral OCR khi đã có key.
+- Đảm bảo tuân thủ rule AGENTS.md: IDE đóng vai trò Planner/Tester, Coder thực hiện đúng `docs/handoff/PLAN.md`.

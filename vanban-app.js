@@ -462,6 +462,9 @@
                         <button id="exportExcelBtn" type="button" class="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 sm:text-sm">
                             <i class="fa-solid fa-file-excel"></i> Xuất Excel
                         </button>
+                        <button id="vanbanAiConfigBtn" type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:text-sm">
+                            <i class="fa-solid fa-sliders text-indigo-500"></i> Cấu hình AI
+                        </button>
                         ${importBtn}
                         ${addBtn}
                     </div>
@@ -470,6 +473,9 @@
         $('newDocumentBtn')?.addEventListener('click', () => openModal());
         $('exportExcelBtn')?.addEventListener('click', exportExcel);
         $('importHanhchinhBtn')?.addEventListener('click', openCopyModal);
+        $('vanbanAiConfigBtn')?.addEventListener('click', () => {
+            if (window.AiDesignConfig?.openModal) AiDesignConfig.openModal();
+        });
         $('newSchoolYearBtn')?.classList.toggle('hidden', !!state.isGuest);
     }
 
@@ -1439,6 +1445,69 @@
             && AiDesignConfig.getMistralKeys().length > 0;
     }
 
+    function hasGeminiVision() {
+        return window.AiDesignConfig && AiDesignConfig.getApiKeys().length > 0;
+    }
+
+    async function syncUserKeysFromServer() {
+        try {
+            const res = await fetch('api/user_gemini_keys.php', { credentials: 'include', cache: 'no-store' });
+            if (!res.ok) return;
+            const d = await res.json();
+            const gemini = Array.isArray(d.keys) ? d.keys.filter(Boolean) : [];
+            const mistral = Array.isArray(d.mistral_keys) ? d.mistral_keys.filter(Boolean) : [];
+            if (gemini.length) localStorage.setItem('global_gemini_keys', JSON.stringify(gemini));
+            if (mistral.length) localStorage.setItem('global_mistral_keys', JSON.stringify(mistral));
+        } catch (_) { /* giữ key local nếu có */ }
+    }
+
+    async function extractTextViaGeminiVision(dataUrl) {
+        const keys = AiDesignConfig.getApiKeys();
+        if (!keys.length) throw new Error('Chưa có Gemini API Key.');
+        const raw = String(dataUrl || '');
+        const base64 = raw.includes('base64,') ? raw.split('base64,')[1] : raw;
+        const mime = raw.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+        const model = AiDesignConfig.getModule() || 'gemini-2.5-flash';
+        const key = keys[Math.floor(Math.random() * keys.length)];
+        const prompt = 'Hãy đọc và trích xuất toàn bộ chữ trong ảnh văn bản hành chính này. Giữ nguyên vẹn số hiệu văn bản, ngày tháng năm ban hành, tên cơ quan, trích yếu nội dung hoặc thông tin chữ ký. Chỉ trả về văn bản tiếng Việt đã trích xuất, không thêm lời dẫn giải.';
+        const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            { inline_data: { mime_type: mime, data: base64 } }
+                        ]
+                    }],
+                    generationConfig: { temperature: 0.1, maxOutputTokens: 2048 }
+                })
+            }
+        );
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error?.message || `Lỗi Gemini API (${res.status})`);
+        const parts = json.candidates?.[0]?.content?.parts || [];
+        let out = '';
+        parts.forEach(p => { if (p.text) out += p.text; });
+        return out.trim();
+    }
+
+    async function ocrImageData(dataUrl) {
+        if (hasMistralOcr()) {
+            const res = await window.MistralOcr.ocrImageDataUrl(dataUrl);
+            return { text: res.text || res.markdown || '', mode: 'mistral-ocr' };
+        }
+        if (hasGeminiVision()) {
+            const text = await extractTextViaGeminiVision(dataUrl);
+            return { text, mode: 'gemini-vision' };
+        }
+        toast('Ảnh chụp cần API Key (Mistral hoặc Gemini). Đang mở hộp thoại Cấu hình AI...', 'amber');
+        if (window.AiDesignConfig?.openModal) AiDesignConfig.openModal();
+        throw new Error('Chưa có API Key OCR.');
+    }
+
     async function extractPdfOcr(file) {
         if (!hasMistralOcr()) {
             throw new Error('PDF scan/ảnh cần Mistral OCR. Admin bật và nạp key trong global_config.json.');
@@ -1483,14 +1552,11 @@
         const isImageFile = file.type.startsWith('image/') || fileName.match(/\.(jpg|jpeg|png|webp|gif)$/);
 
         if (isImageFile) {
-            if (!hasMistralOcr()) {
-                throw new Error('Cần bật Mistral OCR để đọc ảnh.');
-            }
             const dataUrl = await fileToDataUrl(file);
-            const res = await window.MistralOcr.ocrImageDataUrl(dataUrl);
+            const res = await ocrImageData(dataUrl);
             const txt = res.text || '';
             if (meaningfulTextLength(txt) < 10) throw new Error('Không đọc được chữ từ ảnh.');
-            return { text: txt, mode: 'mistral-ocr' };
+            return { text: txt, mode: res.mode || 'mistral-ocr' };
         }
 
         if (!isPdfFile) {
@@ -1523,29 +1589,31 @@
                                /Số\s*[:\.]?\s*[^0-9\w]/i.test(headerCheck) ||
                                /Số\s*:\s*\//i.test(headerCheck);
 
-        if (headerLooksBad && hasMistralOcr()) {
+        if (headerLooksBad && (hasMistralOcr() || hasGeminiVision())) {
             try {
                 const imgDataUrl = await extractPdfFirstPageImage(file);
-                const ocrRes = await window.MistralOcr.ocrImageDataUrl(imgDataUrl);
+                const ocrRes = await ocrImageData(imgDataUrl);
                 const ocrText = ocrRes.text || '';
                 if (meaningfulTextLength(ocrText) > 15) {
                     text = ocrText;
-                    mode = 'mistral-ocr';
+                    mode = ocrRes.mode || 'mistral-ocr';
                 }
             } catch (e) {
                 // sẽ thử extractPdfOcr ở dưới
             }
         }
 
-        if (meaningfulTextLength(text) < 60 && hasMistralOcr()) {
+        if (meaningfulTextLength(text) < 60 && (hasMistralOcr() || hasGeminiVision())) {
             try {
                 const img = await extractPdfFirstPageImage(file);
-                const res = await window.MistralOcr.ocrImageDataUrl(img);
+                const res = await ocrImageData(img);
                 text = res.text || text;
-                mode = 'mistral-ocr';
-            } catch {
-                text = await extractPdfOcr(file);
-                mode = 'mistral-ocr';
+                mode = res.mode || 'mistral-ocr';
+            } catch (e) {
+                if (hasMistralOcr()) {
+                    text = await extractPdfOcr(file);
+                    mode = 'mistral-ocr';
+                }
             }
         }
 
@@ -2104,13 +2172,15 @@
 
     async function ingestClipboardImage(blob) {
         if (!blob) return;
-        if (!hasMistralOcr()) {
-            toast('Ảnh vùng chữ ký cần Mistral OCR. Hãy dán chữ hoặc dùng PDF có chữ ký số.', 'rose');
+        const dataUrl = await fileToDataUrl(new File([blob], 'vung-chu-ky.png', { type: blob.type || 'image/png' }));
+        let result;
+        try {
+            result = await ocrImageData(dataUrl);
+        } catch (error) {
+            if (error && error.message && error.message !== 'Chưa có API Key OCR.') toast(error.message, 'rose');
             return;
         }
-        const dataUrl = await fileToDataUrl(new File([blob], 'vung-chu-ky.png', { type: blob.type || 'image/png' }));
-        const result = await window.MistralOcr.ocrImageDataUrl(dataUrl);
-        const text = result.text || result.markdown || '';
+        const text = result.text || '';
         if (meaningfulTextLength(text) < 5) {
             toast('Không đọc được chữ từ ảnh vừa dán.', 'rose');
             return;
@@ -2152,6 +2222,10 @@
         renderNav();
         bindEvents();
         if ($('direction')) $('direction').value = state.activeDirection;
+        syncUserKeysFromServer();
+        if (window.AiDesignConfig?.loadHostingFallbackConfig) {
+            AiDesignConfig.loadHostingFallbackConfig().catch(() => {});
+        }
         load();
     }
 
