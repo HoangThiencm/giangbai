@@ -1,28 +1,74 @@
-# VERIFY
+STATUS: PASS
 
-## Kết luận
-PASS
+## 1. Kết quả kiểm thử tự động theo docs/handoff/PLAN.md
 
-## Đối chiếu scope
-- Đã bổ sung hàm `syncUserKeysFromServer()` trong `vanban-app.js` tự động kéo API Key (`global_gemini_keys`, `global_mistral_keys`) từ CSDL máy chủ (`api/user_gemini_keys.php`) khi khởi tạo trang.
-- Đã bổ sung nút "Cấu hình AI" (`#vanbanAiConfigBtn`) trên thanh điều hướng `renderNav` mở hộp thoại `AiDesignConfig.openModal()`.
-- Đã cài đặt cơ chế OCR đa kênh qua hàm `ocrImageData(dataUrl)`: ưu tiên Mistral OCR, tự động fallback sang Gemini Vision (`extractTextViaGeminiVision`) khi có Gemini Key; hướng dẫn thân thiện và tự động mở bảng Cấu hình AI khi chưa có key.
-- Đã cập nhật cả luồng dán clipboard (`ingestClipboardImage`) và trích xuất file ảnh/PDF scan (`extractPdf`).
-- Không chạm ngoài scope, không sửa API PHP, giữ nguyên các logic chữ ký số và phân quyền.
+Đã thực thi toàn bộ các lệnh kiểm thử và xác minh:
 
-## Test đã chạy
-1. `node --check vanban-app.js`: Cú pháp JavaScript hợp lệ.
-2. `node tests/vanban-ocr-clipboard-smoke.js`: PASS — xác thực đủ tokens, hàm sync, nút Cấu hình AI, fallback Gemini Vision và loại bỏ hoàn toàn thông báo cứng ép Mistral.
-3. `node tests/vanban-chuyenmon-signature-smoke.js`: PASS — nhận diện lĩnh vực Chuyên môn, chuyển/sao chép văn bản, số quyết định và ngày ký số nhị phân nguyên vẹn.
-4. `python tests/vanban-chuyenmon-root-smoke.py`: PASS — 27/27 asserts luồng Hành chính / Chuyên môn.
-5. `node tests/vanban-display-saved-smoke.js`: PASS — hiển thị văn bản đã lưu, bộ lọc năm học và truy vấn legacy.
+| STT | Lệnh kiểm thử | Kết quả | Ghi chú |
+| :-- | :--- | :--- | :--- |
+| 1 | `node tests/vanban-ocr-clipboard-smoke.js` | PASS | Xác minh đồng bộ key, Cấu hình AI, Gemini Vision fallback, ingest clipboard image |
+| 2 | `node tests/vanban-chuyenmon-signature-smoke.js` | PASS | Xác minh lĩnh vực Chuyên môn, chuyển/sao chép văn bản, số quyết định và ngày ký số |
+| 3 | `node tests/vanban-display-saved-smoke.js` | PASS | Xác minh hiển thị văn bản đã lưu, bộ lọc năm học và truy vấn legacy |
+| 4 | `python tests/vanban-chuyenmon-root-smoke.py` | PASS | Xác minh luồng bảo toàn bản gốc Hành chính khi chuyển/sao chép sang Chuyên môn và cú pháp backend PHP |
 
-## Pass / Fail từng tiêu chí
-- [x] Khi tải trang Quản lý văn bản, hệ thống tự động đồng bộ key từ `api/user_gemini_keys.php` vào `localStorage`: PASS
-- [x] Người dùng đã nạp Mistral 1 key và Gemini 10 key trên trang chủ sẽ tự động có key hoạt động ngay trên Quản lý văn bản mà không bị báo lỗi thiếu key: PASS
-- [x] Khi chụp dán ảnh số/ngày văn bản: OCR thành công bằng Mistral (hoặc fallback Gemini Vision), điền tự động vào trường số, ngày, trích yếu: PASS
-- [x] Trang Quản lý văn bản có nút "Cấu hình AI" để kiểm tra và nạp thêm key: PASS
-- [x] Tất cả các smoke test chạy thành công (PASS): PASS
+## 2. Chi tiết kết quả thực thi từng lệnh
 
-## Bug
-- Không phát hiện lỗi tồn đọng.
+### Lệnh 1: `node tests/vanban-ocr-clipboard-smoke.js`
+- **Mã thoát (Exit Code)**: 0
+- **Chi tiết đầu ra**:
+  ```text
+  vanban-ocr-clipboard-smoke: PASS
+  ```
+
+### Lệnh 2: `node tests/vanban-chuyenmon-signature-smoke.js`
+- **Mã thoát (Exit Code)**: 0
+- **Chi tiết đầu ra**:
+  ```text
+  PASS: lĩnh vực Chuyên môn, chuyển/sao chép văn bản, số quyết định và ngày ký số.
+  ```
+
+### Lệnh 3: `node tests/vanban-display-saved-smoke.js`
+- **Mã thoát (Exit Code)**: 0
+- **Chi tiết đầu ra**:
+  ```text
+  PASS: hiển thị văn bản đã lưu, bộ lọc năm học và truy vấn legacy.
+  ```
+
+### Lệnh 4: `python tests/vanban-chuyenmon-root-smoke.py`
+- **Mã thoát (Exit Code)**: 0
+- **Chi tiết đầu ra**:
+  ```text
+  PASS  khối transfer_sector/copy_sector còn tồn tại
+  PASS  transfer_sector không UPDATE sector của bản ghi gốc
+  PASS  transfer_sector tạo bản ghi tích hợp
+  PASS  thông điệp chuyển giữ bản gốc Hành chính
+  PASS  copy_sector vẫn còn thông điệp sao chép
+  PASS  action name transfer_sector và copy_sector giữ nguyên
+  PASS  có hàm vbd_copy_local_storage
+  PASS  sao chép tệp vật lý bằng copy()
+  PASS  không di chuyển thư mục gốc khi sao chép
+  PASS  vbd_copy_document_files nhận fromDoc và toDoc
+  PASS  tệp cục bộ được tạo lại view_url và download_url theo document_id mới
+  PASS  sau khi sao chép bản ghi thì sao chép thư mục tệp cục bộ
+  PASS  có câu truy vấn đếm tệp Drive dùng chung
+  PASS  không xóa tệp Drive dùng chung trước khi đếm tham chiếu
+  PASS  xác nhận chuyển nói rõ bản gốc Hành chính vẫn được lưu trữ
+  PASS  sau khi chuyển hiển thị data.message
+  PASS  sau khi chuyển tải lại danh sách Hành chính
+  PASS  UI vẫn gọi transfer_sector và copy_sector
+  PASS  nút dòng vẫn là data-action="transfer"
+  PASS  modal vẫn có data-detail-action transfer và copy
+  PASS  nhãn nút Chuyển sang Chuyên môn còn nguyên
+  PASS  nhãn nút Sao chép sang Chuyên môn còn nguyên
+  PASS  giữ id transferSelectedBtn
+  PASS  giữ id copySelectedBtn
+  PASS  nhãn chuyển hàng loạt còn nguyên
+  PASS  nhãn sao chép hàng loạt còn nguyên
+  PASS  cú pháp api/vanban.php
+
+  PASS: giữ bản gốc Hành chính khi chuyển sang Chuyên môn.
+  ```
+
+## 3. Kết luận
+- Toàn bộ 4/4 kịch bản kiểm thử đều đạt tiêu chuẩn (PASS).
+- Không phát sinh lỗi hồi quy và không có thay đổi mã nguồn ngoài kế hoạch.

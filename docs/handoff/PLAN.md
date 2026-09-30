@@ -1,56 +1,34 @@
-# PLAN: Đồng bộ API Key tài khoản (Mistral/Gemini) và xử lý lỗi nhận diện ảnh chụp trong Quản lý văn bản
+# Kế hoạch thực hiện (PLAN) - Khắc phục lỗi OCR dán ảnh clipboard & Đồng bộ Cấu hình AI trong Quản lý văn bản
 
-## 1. Hiện trạng & Nguyên nhân gốc rễ (Root Cause)
-- **Hiện tượng**:
-  + Người dùng đã cấu hình đầy đủ API Key trên trang chủ (bảng điều khiển hiển thị rõ: `🔑 API Key sẵn sàng · Gemini 10 · Mistral 1`).
-  + Tuy nhiên, khi sang Quản lý văn bản (`quanlyvanban-*.html`), chụp dán (Ctrl+V) ảnh phần đầu văn bản (số, ngày) hoặc vùng chữ ký vào ô nhập liệu thì hệ thống vẫn báo lỗi đỏ:
-    `"Ảnh vùng chữ ký cần Mistral OCR. Hãy dán chữ hoặc dùng PDF có chữ ký số."`
-- **Nguyên nhân kỹ thuật đã xác định chính xác**:
-  1. **Thiếu cơ chế đồng bộ Key từ CSDL tài khoản**:
-     - Trên trang chủ `index.html`, API Key (10 Gemini, 1 Mistral) được lưu trên CSDL máy chủ thông qua API `api/user_gemini_keys.php`.
-     - Các trang công cụ khác như `nghiencuubaihoc.html`, `xaydungphuluc.html`, `duyetgiaoan.html` đều có hàm `syncUserKeysFromServer()` gọi `api/user_gemini_keys.php` khi tải trang để kéo key về `localStorage` (`global_mistral_keys`, `global_gemini_keys`).
-     - **Ngược lại, trang Quản lý văn bản (`vanban-app.js`) KHÔNG HỀ gọi `api/user_gemini_keys.php`** khi khởi tạo. Do đó, nếu người dùng mở trực tiếp trang Quản lý văn bản hoặc mở tab mới, `localStorage` của trang này không có key Mistral, khiến `hasMistralOcr()` trả về `false`.
-  2. **Giao diện thiếu nút Cấu hình AI**:
-     - Trang Quản lý văn bản không hiển thị badge trạng thái hay nút "Cấu hình AI" (`AiDesignConfig.openModal()`), khiến người dùng không biết key đã được nạp hay chưa.
-  3. **Chưa tận dụng 10 Key Gemini đã có sẵn để làm OCR fallback**:
-     - `vanban-app.js` đang ràng buộc cứng chỉ cho phép Mistral OCR, không có fallback sang Gemini Vision khi người dùng đã có sẵn 10 key Gemini hoạt động tốt.
+## 1. Mục tiêu
+- Khắc phục lỗi khi người dùng chụp màn hình số, ngày tháng, trích yếu hoặc vùng chữ ký văn bản rồi dán (Ctrl+V hoặc nút "Dán nhanh từ Clipboard") vào ô nhập liệu: không còn bị chặn cứng bởi thông báo lỗi chỉ hỗ trợ Mistral OCR.
+- Tự động đồng bộ API Key từ server (`api/user_gemini_keys.php`) và cấu hình hosting (`loadHostingFallbackConfig()`) khi khởi tạo trang Quản lý văn bản (`quanlyvanban-*.html`).
+- Cung cấp nút "Cấu hình AI" trên thanh điều hướng để người dùng có thể chủ động kiểm tra, nạp key Gemini / Mistral OCR bất kỳ lúc nào.
+- Mở rộng cơ chế nhận diện OCR ảnh đa kênh: Ưu tiên Mistral OCR (nếu có key), tự động fallback sang Gemini Vision (sử dụng API Key Gemini có sẵn), và nếu chưa có key nào thì hiện hướng dẫn trực quan đồng thời mở bảng Cấu hình AI.
+- Bảo đảm giữ nguyên toàn bộ các luồng nhận diện cũ: PDF lớp chữ (`text-layer`), chữ ký số nhị phân (`/Type /Sig`), nhận diện regex ngày/số VB, cũng như Mistral OCR khi đã có key.
 
 ---
 
-## 2. Giải pháp kỹ thuật tổng thể (Architecture & Solution)
-1. **Tự động đồng bộ Key từ CSDL tài khoản khi mở trang Quản lý văn bản**:
-   - Thêm hàm `syncUserKeysFromServer()` trong `vanban-app.js`: gọi `fetch('api/user_gemini_keys.php', { credentials: 'include', cache: 'no-store' })`.
-   - Lưu key tài khoản vào `localStorage`:
-     + `localStorage.setItem('global_gemini_keys', JSON.stringify(d.keys))`
-     + `localStorage.setItem('global_mistral_keys', JSON.stringify(d.mistral_keys))`
-   - Đồng thời gọi `AiDesignConfig.loadHostingFallbackConfig()` để nạp thêm cấu hình fallback từ hosting.
-2. **Bổ sung nút "Cấu hình AI" trên thanh điều hướng**:
-   - Trên thanh header `renderNav` của `vanban-app.js`, hiển thị nút "Cấu hình AI" kèm số lượng key (ví dụ: `🔑 Gemini 10 · Mistral 1` hoặc nút bấm mở `AiDesignConfig.openModal()`).
-3. **Bộ nhận diện OCR đa kênh (Mistral OCR + Gemini Vision Fallback)**:
-   - Khi người dùng chụp dán ảnh:
-     + **Ưu tiên 1 (Mistral OCR)**: Dùng `window.MistralOcr.ocrImageDataUrl(dataUrl)` nếu có Mistral Key.
-     + **Ưu tiên 2 (Gemini Vision Fallback)**: Dùng Gemini API với model `gemini-2.5-flash` / `gemini-3.6-flash` và 10 key Gemini có sẵn để trích xuất số văn bản, ngày tháng, cơ quan ban hành, trích yếu hoặc thông tin chữ ký.
-     + **Nếu cả 2 đều chưa có key**: Báo toast hướng dẫn rõ ràng kèm tự động mở bảng Cấu hình AI.
+## 2. Danh sách file dự kiến tác động
+| STT | Đường dẫn file | Thao tác | Mục đích / Nội dung tác động |
+| :-- | :--- | :--- | :--- |
+| 1 | `vanban-app.js` | Kiểm tra / Cập nhật | Bổ sung/chuẩn hóa hàm `syncUserKeysFromServer()`, gọi `loadHostingFallbackConfig()`, nút `#vanbanAiConfigBtn`, hàm `hasGeminiVision()`, `extractTextViaGeminiVision()`, `ocrImageData()`, và luồng `ingestClipboardImage()`. |
+| 2 | `quanlyvanban-chuyenmon.html` | Kiểm tra / Cập nhật | Đảm bảo nạp đầy đủ script `ai-design-config.js` và `mistral-ocr-client.js`. |
+| 3 | `quanlyvanban-hanhchinh.html` | Kiểm tra / Cập nhật | Đảm bảo nạp đầy đủ script `ai-design-config.js` và `mistral-ocr-client.js`. |
+| 4 | `quanlyvanban-dang.html` | Kiểm tra / Cập nhật | Đảm bảo nạp đầy đủ script `ai-design-config.js` và `mistral-ocr-client.js`. |
+| 5 | `tests/vanban-ocr-clipboard-smoke.js` | Tạo mới / Cập nhật | Test tự động kiểm tra cú pháp, sự tồn tại của các hàm đồng bộ key, nút cấu hình AI, fallback Gemini Vision và không còn lỗi chặn Mistral cứng. |
 
 ---
 
-## 3. Phạm vi & File tác động
-| STT | File | Hành động | Chi tiết |
-| :--- | :--- | :--- | :--- |
-| 1 | `vanban-app.js` | Sửa đổi | Thêm `syncUserKeysFromServer()`, nút Cấu hình AI, hàm `ocrImageFromDataUrl` (Mistral + Gemini Vision fallback), cập nhật `ingestClipboardImage` & `extractPdf` |
-| 2 | `tests/vanban-ocr-clipboard-smoke.js` | Tạo mới | Kiểm thử cơ chế sync key từ `user_gemini_keys.php`, nút Cấu hình AI, fallback Gemini Vision và trích xuất chữ |
+## 3. Các bước thực hiện chi tiết cho Coder
 
----
+### Bước 1: Tiếp nhận và chuẩn bị
+- Đọc kỹ yêu cầu trong `docs/handoff/PLAN.md`.
+- Xóa file `docs/handoff/.lock` trước khi sửa source code. Sau khi sửa code xong, tạo lại file `docs/handoff/.lock` với nội dung `LOCK`.
+- Tuyệt đối không sửa file ngoài danh sách đã nêu.
 
-## 4. Các bước thực hiện chi tiết cho Coder
-*(Dành cho Coder: Grok / ChatGPT / `agy` CLI)*
-
-### Bước 1: Chuẩn bị
-- Đọc kỹ `docs/handoff/PLAN.md`.
-- Đảm bảo không có file `docs/handoff/.lock`.
-
-### Bước 2: Thêm hàm đồng bộ Key tài khoản `syncUserKeysFromServer()` trong `vanban-app.js`
-1. Định nghĩa hàm:
+### Bước 2: Chuẩn hóa cơ chế đồng bộ Key và Cấu hình AI trong `vanban-app.js`
+1. Đảm bảo có hàm đồng bộ key người dùng từ server:
    ```javascript
    async function syncUserKeysFromServer() {
        try {
@@ -65,32 +43,32 @@
    }
    ```
 2. Trong hàm `init()`:
-   Gọi đồng bộ khi mở trang:
-   ```javascript
-   syncUserKeysFromServer();
-   if (window.AiDesignConfig?.loadHostingFallbackConfig) {
-       AiDesignConfig.loadHostingFallbackConfig().catch(() => {});
-   }
-   ```
+   - Gọi `syncUserKeysFromServer()`.
+   - Gọi `AiDesignConfig.loadHostingFallbackConfig().catch(() => {})` nếu hàm này tồn tại.
 
-### Bước 3: Thêm nút Cấu hình AI trên thanh điều hướng `renderNav()`
-1. Trong `renderNav()`:
-   Thêm nút:
-   ```html
-   <button id="vanbanAiConfigBtn" type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:text-sm">
-       <i class="fa-solid fa-sliders text-indigo-500"></i> Cấu hình AI
-   </button>
-   ```
-   Gắn sự kiện click gọi `AiDesignConfig.openModal()`.
+### Bước 3: Nút "Cấu hình AI" trong thanh điều hướng (`renderNav`)
+1. Trong hàm `renderNav()` của `vanban-app.js`:
+   - Bổ sung nút:
+     ```html
+     <button id="vanbanAiConfigBtn" type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:text-sm">
+         <i class="fa-solid fa-sliders text-indigo-500"></i> Cấu hình AI
+     </button>
+     ```
+   - Gắn sự kiện click cho `$('vanbanAiConfigBtn')`:
+     ```javascript
+     $('vanbanAiConfigBtn')?.addEventListener('click', () => {
+         if (window.AiDesignConfig?.openModal) AiDesignConfig.openModal();
+     });
+     ```
 
-### Bước 4: Cài đặt OCR đa kênh (Mistral + Gemini Vision Fallback)
-1. Thêm helper kiểm tra Gemini:
+### Bước 4: Triển khai nhận diện OCR đa kênh (Mistral OCR + Gemini Vision Fallback)
+1. Thêm hàm kiểm tra Gemini Vision:
    ```javascript
    function hasGeminiVision() {
        return window.AiDesignConfig && AiDesignConfig.getApiKeys().length > 0;
    }
    ```
-2. Thêm hàm gọi Gemini Vision trực tiếp:
+2. Triển khai hàm trích xuất text từ ảnh bằng Gemini Vision:
    ```javascript
    async function extractTextViaGeminiVision(dataUrl) {
        const keys = AiDesignConfig.getApiKeys();
@@ -101,7 +79,6 @@
        const model = AiDesignConfig.getModule() || 'gemini-2.5-flash';
        const key = keys[Math.floor(Math.random() * keys.length)];
        const prompt = 'Hãy đọc và trích xuất toàn bộ chữ trong ảnh văn bản hành chính này. Giữ nguyên vẹn số hiệu văn bản, ngày tháng năm ban hành, tên cơ quan, trích yếu nội dung hoặc thông tin chữ ký. Chỉ trả về văn bản tiếng Việt đã trích xuất, không thêm lời dẫn giải.';
-       
        const res = await fetch(
            `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
            {
@@ -126,38 +103,56 @@
        return out.trim();
    }
    ```
-3. Cập nhật hàm OCR ảnh `ocrImageData(dataUrl)`:
-   - Nếu `hasMistralOcr()`: gọi `window.MistralOcr.ocrImageDataUrl(dataUrl)`.
-   - Nếu không có Mistral nhưng `hasGeminiVision()`: gọi `extractTextViaGeminiVision(dataUrl)` trả về `{ text, mode: 'gemini-vision' }`.
-   - Nếu chưa có key nào: hiển thị toast và mở modal cấu hình:
-     ```javascript
-     toast('Ảnh chụp cần API Key (Mistral hoặc Gemini). Đang mở hộp thoại Cấu hình AI...', 'amber');
-     if (window.AiDesignConfig?.openModal) AiDesignConfig.openModal();
-     ```
-4. Cập nhật `ingestClipboardImage(blob)` và `extractPdf` (cho ảnh/PDF scan) dùng hàm `ocrImageData(dataUrl)`.
+3. Chuẩn hóa hàm `ocrImageData(dataUrl)`:
+   ```javascript
+   async function ocrImageData(dataUrl) {
+       if (hasMistralOcr()) {
+           const res = await window.MistralOcr.ocrImageDataUrl(dataUrl);
+           return { text: res.text || res.markdown || '', mode: 'mistral-ocr' };
+       }
+       if (hasGeminiVision()) {
+           const text = await extractTextViaGeminiVision(dataUrl);
+           return { text, mode: 'gemini-vision' };
+       }
+       toast('Ảnh chụp cần API Key (Mistral hoặc Gemini). Đang mở hộp thoại Cấu hình AI...', 'amber');
+       if (window.AiDesignConfig?.openModal) AiDesignConfig.openModal();
+       throw new Error('Chưa có API Key OCR.');
+   }
+   ```
+4. Kiểm tra `ingestClipboardImage(blob)`: Sử dụng `ocrImageData(dataUrl)` thay vì kiểm tra cứng chỉ riêng Mistral OCR.
 
-### Bước 5: Viết và chạy bộ kiểm thử Smoke Test
-Tạo file `tests/vanban-ocr-clipboard-smoke.js`:
-- Kiểm tra `vanban-app.js` có chứa lời gọi `syncUserKeysFromServer` và API `api/user_gemini_keys.php`.
-- Kiểm tra nút Cấu hình AI và sự kiện `AiDesignConfig.openModal()`.
-- Kiểm tra cơ chế Gemini Vision fallback.
-- Chạy toàn bộ các test hiện có:
+### Bước 5: Kiểm tra các tệp HTML giao diện
+- Kiểm tra `quanlyvanban-chuyenmon.html`, `quanlyvanban-hanhchinh.html`, `quanlyvanban-dang.html`:
+  - Đảm bảo thẻ `<script src="ai-design-config.js..."></script>` và `<script src="mistral-ocr-client.js..."></script>` đã được nạp ở phần `<head>`.
+  - Giữ nguyên cấu trúc giao diện và layout hiện có.
+
+### Bước 6: Kiểm thử tự động (Smoke Test)
+- Cập nhật hoặc chạy kiểm thử `tests/vanban-ocr-clipboard-smoke.js`.
+- Chạy toàn bộ các bộ test liên quan đến văn bản để đảm bảo không có bất kỳ hồi quy nào:
   ```powershell
   node tests/vanban-ocr-clipboard-smoke.js
   node tests/vanban-chuyenmon-signature-smoke.js
-  python tests/vanban-chuyenmon-root-smoke.py
   node tests/vanban-display-saved-smoke.js
+  python tests/vanban-chuyenmon-root-smoke.py
   ```
-
-### Bước 6: Hoàn tất bàn giao
-- Ghi nhận chi tiết vào `docs/handoff/IMPLEMENT.md`.
-- Cập nhật kết quả kiểm thử vào `docs/handoff/VERIFY.md`.
 
 ---
 
-## 5. Tiêu chí nghiệm thu (Verify Checklist)
-- [ ] Khi tải trang Quản lý văn bản, hệ thống tự động đồng bộ key từ `api/user_gemini_keys.php` vào `localStorage`.
-- [ ] Người dùng đã nạp Mistral 1 key và Gemini 10 key trên trang chủ sẽ tự động có key hoạt động ngay trên Quản lý văn bản mà không bị báo lỗi thiếu key.
-- [ ] Khi chụp dán ảnh số/ngày văn bản: OCR thành công bằng Mistral (hoặc fallback Gemini Vision), điền tự động vào trường số, ngày, trích yếu.
-- [ ] Trang Quản lý văn bản có nút "Cấu hình AI" để kiểm tra và nạp thêm key.
-- [ ] Tất cả các smoke test chạy thành công (PASS).
+## 4. Rủi ro và Giải pháp
+1. **Rủi ro API Key Gemini không có quyền truy cập Vision hoặc model bị deprecated**:
+   - *Giải pháp*: Mặc định chọn model thị giác thông dụng `gemini-2.5-flash` hoặc model đang chọn trong `AiDesignConfig.getModule()`. Hỗ trợ xoay vòng ngẫu nhiên danh sách key người dùng đã lưu.
+2. **Rủi ro xung đột giữa lớp chữ PDF và OCR ảnh**:
+   - *Giải pháp*: Giữ nguyên luồng PDF ưu tiên đọc lớp chữ (`extractPdfTextLayer`) và chữ ký nhị phân (`/Type /Sig`), chỉ khi text layer quá ngắn hoặc kém mới kích hoạt OCR ảnh trang đầu.
+3. **Rủi ro người dùng chưa có cả Mistral lẫn Gemini key**:
+   - *Giải pháp*: Không throw error làm đơ ứng dụng; hiển thị toast màu hổ phách cảnh báo rõ ràng và tự động mở modal `AiDesignConfig.openModal()` để người dùng nạp key ngay.
+
+---
+
+## 5. Lệnh máy kiểm thử cụ thể (Test Commands)
+Coder cần chạy và đảm bảo tất cả các lệnh sau đều PASS:
+```powershell
+node tests/vanban-ocr-clipboard-smoke.js
+node tests/vanban-chuyenmon-signature-smoke.js
+node tests/vanban-display-saved-smoke.js
+python tests/vanban-chuyenmon-root-smoke.py
+```
