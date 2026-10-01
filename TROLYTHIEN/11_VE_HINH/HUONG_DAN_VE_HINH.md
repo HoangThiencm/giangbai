@@ -33,12 +33,20 @@ Dựng trên hệ trục Oxy. Không vẽ ước lượng.
 
 ## Bốn file kết quả
 
-Ghi vào `TROLYTHIEN/11_VE_HINH/Ket_qua/`. Tên không dấu cách, ví dụ `Tam_giac_ABC`.
+Ghi vào `TROLYTHIEN/11_VE_HINH/Ket_qua/`.
+**Quy tắc đặt tên file theo Tên bài tập (Naming Convention):**
+Tên file BẮT BUỘC đặt theo tên bài tập / câu hỏi trong đề của giáo viên, không dấu, nối bằng gạch dưới `_` để dễ quan sát và quản lý (ví dụ: `Bai_1_Hinh_Binh_Hanh_ABCD`, `Bai_2_Tam_Giac_ABC_Vuong_Tai_A`, `Cau_3_Hinh_Chop_S_ABCD`...).
 
-1. `[Ten_Hinh].png` — ảnh PNG độ phân giải cao nền trắng sắc nét, chèn trực tiếp ngay vào Word, PowerPoint, bài kiểm tra, Zalo mà không cần đổi đuôi.
-2. `[Ten_Hinh].svg` — SVG độc lập, có `viewBox`, nền trắng, nét đen, vector sắc nét không vỡ hạt.
-3. `[Ten_Hinh]_geogebra.txt` — mỗi dòng một lệnh GeoGebra: `Point`, `Segment`, `Circle`, `Intersect`, `Polygon`, `PerpendicularLine`, `Midpoint`. Cạnh dùng `Segment`, không dùng `Line` vô hạn. Đường phụ đặt tên `aux_` rồi `SetVisibleInView(aux_, 1, false)`. Không ghi chú thích `//` hay `#`.
-4. `[Ten_Hinh].html` — một file mở bằng trình duyệt, nhúng đúng SVG, có nút tải PNG, nút tải SVG và nút copy lệnh GeoGebra.
+1. `Bai_X_[Ten_Hinh].png` — ảnh PNG độ phân giải cao nền trắng sắc nét, chèn trực tiếp ngay vào Word, PowerPoint, bài kiểm tra, Zalo mà không cần đổi đuôi.
+2. `Bai_X_[Ten_Hinh].svg` — SVG độc lập, có `viewBox`, nền trắng, nét đen, vector sắc nét không vỡ hạt.
+3. `Bai_X_[Ten_Hinh]_geogebra.txt` — mỗi dòng một lệnh GeoGebra: `Point`, `Segment`, `Circle`, `Intersect`, `Polygon`, `PerpendicularLine`, `Midpoint`. Cạnh dùng `Segment`, không dùng `Line` vô hạn. Đường phụ đặt tên `aux_` rồi `SetVisibleInView(aux_, 1, false)`. Không ghi chú thích `//` hay `#`.
+4. `Bai_X_[Ten_Hinh].html` — một file mở bằng trình duyệt, nhúng đúng SVG, có nút tải PNG, nút tải SVG và nút copy lệnh GeoGebra.
+
+## Dọn dẹp file rác
+Bất cứ khi nào giáo viên muốn làm sạch các file cache, file tách PDF tạm thời:
+- Gọi trợ lý: *"Thiên ơi, dọn dẹp file rác"*
+- Hoặc click đúp chạy file `tools/Don_Dep_File_Rac.bat` (hoặc `python tools/don_dep_file_rac.py`).
+Hệ thống sẽ quét sạch toàn bộ cache và thư mục nháp, bảo toàn 100% tài liệu và sản phẩm hình vẽ trong `Ket_qua/`.
 
 ## Sửa trên canvas
 

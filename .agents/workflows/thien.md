@@ -105,10 +105,11 @@ Dựng hình học bằng tọa độ giải tích, không vẽ ước lượng.
 - **Đề bài:** lấy chữ người dùng dán trong chat, hoặc đọc ảnh/đề (.png, .jpg, .txt, .docx) trong `TROLYTHIEN/11_VE_HINH/Dau_vao/`.
 - **Nếu ảnh mờ, nghiêng hoặc thiếu số đo:** hỏi lại dữ kiện, không đoán.
 - **Tính toán:** giao điểm, tiếp điểm, trung điểm, trực tâm, trọng tâm bằng công thức Oxy. Nhãn đỉnh không đè nét vẽ. Hình không gian dùng một phối cảnh và nét đứt cho cạnh khuất.
-- **File kết quả** ghi đủ 4 file vào `TROLYTHIEN/11_VE_HINH/Ket_qua/`:
-  1. `[Ten_Hinh].png` (ảnh nét cao chèn trực tiếp Word/PowerPoint)
-  2. `[Ten_Hinh].svg`
-  3. `[Ten_Hinh]_geogebra.txt` (Point, Segment, Circle, Intersect)
-  4. `[Ten_Hinh].html` (nhúng SVG, nút tải PNG/SVG, nút copy lệnh GeoGebra)
+- **File kết quả** đặt tên theo Tên bài tập (ví dụ `Bai_1_Hinh_Binh_Hanh_ABCD`), ghi đủ 4 file vào `TROLYTHIEN/11_VE_HINH/Ket_qua/`:
+  1. `Bai_X_[Ten_Hinh].png` (ảnh nét cao chèn trực tiếp Word/PowerPoint)
+  2. `Bai_X_[Ten_Hinh].svg`
+  3. `Bai_X_[Ten_Hinh]_geogebra.txt` (Point, Segment, Circle, Intersect)
+  4. `Bai_X_[Ten_Hinh].html` (nhúng SVG, nút tải PNG/SVG, nút copy lệnh GeoGebra)
 - **Sửa tương tác trên canvas:** [https://www.hoangthiencm.id.vn/vehinh.html](https://www.hoangthiencm.id.vn/vehinh.html) và file cục bộ [vehinh.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html).
+- **Dọn dẹp file rác:** Khi người dùng yêu cầu dọn rác/làm sạch cache, kích hoạt `python tools/don_dep_file_rac.py` (hoặc chạy `tools/Don_Dep_File_Rac.bat`).
 

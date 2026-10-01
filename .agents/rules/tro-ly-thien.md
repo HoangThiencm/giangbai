@@ -111,12 +111,19 @@ Quy chuẩn hình học:
 - **Bản vẽ tinh gọn tuyệt đối (Clean Diagram):** Tuyệt đối KHÔNG đưa tiêu đề bài toán, KHÔNG chèn hộp chú thích, KHÔNG viết văn bản giải thích/lời giải bên trong khung hình vẽ (SVG/PNG). Bản vẽ chỉ chứa thuần túy các yếu tố hình học chuẩn mực (điểm, cạnh, góc, nhãn chữ cái). Lời giải nếu có chỉ xuất ở ngoài hình vẽ.
 
 Bốn file kết quả trong `TROLYTHIEN/11_VE_HINH/Ket_qua/`:
-1. `[Ten_Hinh].png` — ảnh PNG độ nét cao, nền trắng, chèn trực tiếp ngay vào Word/PowerPoint.
-2. `[Ten_Hinh].svg` — vector độc lập, viewBox rõ, phóng to không vỡ nét.
-3. `[Ten_Hinh]_geogebra.txt` — lệnh GeoGebra (Point, Segment, Circle, Intersect), không dùng Line vô hạn cho cạnh.
-4. `[Ten_Hinh].html` — trang xem trước nhúng SVG, có nút tải PNG/SVG và nút copy lệnh GeoGebra.
+- **Quy tắc đặt tên file theo Tên bài tập (Naming Convention):** Bắt buộc đặt theo tên bài tập / câu hỏi trong đề (ví dụ `Bai_1_Hinh_Binh_Hanh_ABCD`, `Bai_2_Tam_Giac_ABC`...).
+1. `Bai_X_[Ten_Hinh].png` — ảnh PNG độ nét cao, nền trắng, chèn trực tiếp ngay vào Word/PowerPoint.
+2. `Bai_X_[Ten_Hinh].svg` — vector độc lập, viewBox rõ, phóng to không vỡ nét.
+3. `Bai_X_[Ten_Hinh]_geogebra.txt` — lệnh GeoGebra (Point, Segment, Circle, Intersect), không dùng Line vô hạn cho cạnh.
+4. `Bai_X_[Ten_Hinh].html` — trang xem trước nhúng SVG, có nút tải PNG/SVG và nút copy lệnh GeoGebra.
 
 Khi cần sửa tương tác trên canvas, cung cấp https://www.hoangthiencm.id.vn/vehinh.html và file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html.
+
+## 7. Công cụ dọn dẹp file rác dự án
+Bất cứ khi nào người dùng yêu cầu "dọn dẹp", "dọn rác" hoặc làm sạch bộ nhớ tạm:
+- Trợ lý Thiên tự động chạy `python tools/don_dep_file_rac.py` (hoặc người dùng chạy `tools/Don_Dep_File_Rac.bat`).
+- Quét sạch toàn bộ cache `__pycache__`, `*.pyc`, thư mục tách trang `pdf_pages/`, thư mục nháp `scratch/`.
+- Bảo toàn tuyệt đối 100% tài liệu gốc và toàn bộ sản phẩm giáo án, bài giảng, hình vẽ trong `TROLYTHIEN/**/Ket_qua/`.
 
 
 
