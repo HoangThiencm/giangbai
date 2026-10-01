@@ -23,8 +23,8 @@ const option = '11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bà
 
 const workflowMenu = workflow.split("### BƯỚC 2")[0];
 const rulesMenu = rules.split("## 2.")[0];
-assert.strictEqual((workflowMenu.match(/^\s+\d+\. "/gm) || []).length, 11, "workflow menu 11");
-assert.strictEqual((rulesMenu.match(/^\s+\d+\. "/gm) || []).length, 11, "rules menu 11");
+assert.strictEqual((workflowMenu.match(/^\s+\d+\. "/gm) || []).length, 12, "workflow menu 12");
+assert.strictEqual((rulesMenu.match(/^\s+\d+\. "/gm) || []).length, 12, "rules menu 12");
 mustInclude(workflowMenu, option, "workflow menu");
 mustInclude(rulesMenu, option, "rules menu");
 mustInclude(workflow, '#### Nhánh 11: Khi chọn "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"', "workflow");

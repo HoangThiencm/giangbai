@@ -1,23 +1,19 @@
-# IMPLEMENT
-
-Đã sửa lỗi AI vẽ hình trên `vehinh.html` và thêm nhánh 11 của Trợ lý Thiên theo PLAN.
+# IMPLEMENT: Nhánh 12 — Chuẩn hoá văn bản (Hành chính / Đảng)
 
 ## Đã làm
-
-- `api/vehinh_ai.php`: danh mục model là `gemini-2.5-flash` (mặc định), `gemini-2.5-pro`, `gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-1.5-flash`. Ba tên `gemini-3.6-flash`, `gemini-3.7-flash`, `gemini-3-flash-preview` chỉ còn trong danh sách loại trừ. `thinkingConfig.thinkingBudget` chỉ gửi cho `gemini-2.5-flash` và `gemini-2.5-pro`. cURL timeout 120 giây. Ảnh đề bài được kèm chỉ dẫn bóc dữ kiện và tọa độ. Lỗi trả về có mã HTTP upstream.
-- `vehinh.html`: hộp chọn model dùng năm model trên, `gemini-2.5-flash` là lựa chọn khuyên dùng.
-- `app.js`: cùng danh mục model. Model lưu trong trình duyệt mà không thuộc danh mục được đưa về `gemini-2.5-flash`. Chỉ có ảnh, không có chữ: câu lệnh yêu cầu đọc đề trong ảnh. Key nạp từ `api/user_gemini_keys.php`, `global_gemini_keys` và `khbd_user_gemini_keys_*`. Backend lỗi mạng, timeout hoặc HTTP 5xx thì trình duyệt gọi thẳng Gemini. Thông báo lỗi có mã HTTP.
-- Trợ lý Thiên: menu cấp 1 có 11 nhánh. Nhánh 11 là "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)" trong `.agents/rules/tro-ly-thien.md` và `.agents/workflows/thien.md`, kèm thư mục `TROLYTHIEN/11_VE_HINH/Dau_vao/`, `Ket_qua/` và `HUONG_DAN_VE_HINH.md`. Kết quả quy định đủ `.svg`, `_geogebra.txt`, `.html`. Có link `vehinh.html`.
+1. Menu Cấp 1 trong `.agents/workflows/thien.md` và `.agents/rules/tro-ly-thien.md` lên 12 lựa chọn, thêm `12. "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"`.
+2. Workflow có kịch bản Nhánh 12: đọc `.docx` tại `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Dau_vao/`, thẩm định theo Master Prompt, phản hồi 5 phần, xuất `Ket_qua/[Ten_File]_Chuan_Hoa.docx`.
+3. Rules có thư mục quy ước Nhánh 12 và mục `## 7. Quy chuẩn kỹ thuật cho Nhánh 12` (Times New Roman 13pt, thụt 1,27 cm, lề A4, `cantSplit`, `tblHeader`, lọc chính quyền 2 cấp). Mục dọn rác chuyển thành mục 8.
+4. Tạo `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Dau_vao/.gitkeep`, `Ket_qua/.gitkeep`, `HUONG_DAN_CHUAN_HOA_VAN_BAN.md`, `PROMPT_CHUAN_HOA_VAN_BAN.md` (mục A–I).
+5. Smoke: `tests/trolythien-bai-giang-html-smoke.js` và `tests/trolythien-vehinh-smoke.js` kỳ vọng 12 lựa chọn. Thêm `tests/trolythien-chuan-hoa-van-ban-smoke.js`.
 
 ## Kiểm thử
-
-- `node tests/vehinh-boot-smoke.js` — PASS
+- `node tests/trolythien-chuan-hoa-van-ban-smoke.js` — PASS
+- `node tests/trolythien-bai-giang-html-smoke.js` — PASS
 - `node tests/trolythien-vehinh-smoke.js` — PASS
-- `node tests/trolythien-bai-giang-html-smoke.js` — chưa PASS hết file. Phần menu 11 nhánh đã qua. File dừng vì thiếu `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Chay_Bai_12_Bang_Edge.bat` (bị `.gitignore`, không có trên đĩa). Đây là hiện trạng có sẵn, ngoài file của plan này.
-- `node tests/game-quiz-importer-smoke.js` — dừng ở assertion cũ bắt `api/vehinh_ai.php` phải timeout 30 giây và fallback `gemini-3.6-flash`. Plan này đổi đúng hai chỗ đó. File test không nằm trong danh sách file của plan nên không sửa.
-- `node --check app.js` — PASS
-- Chưa mở trình duyệt, chưa gọi Gemini thật. Cần `/verify` bấm Vẽ Hình với ảnh đề và model `gemini-2.5-flash`.
 
-## Chưa làm
+## Ngoài phạm vi
+Không sửa logic nhánh 1–11. Không thêm script xuất Word ngoài workflow/rules/prompt. Chưa commit, chưa push.
 
-- Không commit, không push.
+## Bàn giao
+Plan xong. Mở Antigravity IDE, chat mới: `/verify`

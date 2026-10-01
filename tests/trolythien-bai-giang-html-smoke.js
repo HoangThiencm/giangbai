@@ -33,23 +33,24 @@ const menuOptions = [
   '8. "8/ Tạo báo cáo"',
   '9. "9/ Viết sáng kiến"',
   '10. "10/ Tạo bài giảng HTML (từ PDF)"',
-  '11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"'
+  '11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"',
+  '12. "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"'
 ];
 
-mustInclude(workflow, "description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 11 tác vụ chính", "workflow");
-mustInclude(workflow, "Gọi tool `ask_question` với danh sách 11 lựa chọn:", "workflow");
+mustInclude(workflow, "description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 12 tác vụ chính", "workflow");
+mustInclude(workflow, "Gọi tool `ask_question` với danh sách 12 lựa chọn:", "workflow");
 assert.ok(!workflow.includes("danh sách 9 lựa chọn"), "workflow con dong menu 9 lua chon");
-mustInclude(rules, "## 1. Menu Cấp 1 (Tác vụ chính - 11 lựa chọn)", "rules");
-mustInclude(rules, "Gọi tool `ask_question` với 11 lựa chọn:", "rules");
+mustInclude(rules, "## 1. Menu Cấp 1 (Tác vụ chính - 12 lựa chọn)", "rules");
+mustInclude(rules, "Gọi tool `ask_question` với 12 lựa chọn:", "rules");
 assert.ok(!rules.includes("Tác vụ chính - 9 lựa chọn"), "rules con tieu de menu 9 lua chon");
 
 const workflowMenu = workflow.split("### BƯỚC 2")[0];
 const workflowMenuCount = (workflowMenu.match(/^\s+\d+\. "/gm) || []).length;
-assert.strictEqual(workflowMenuCount, 11, "workflow menu cap 1 phai dung 11 lua chon");
+assert.strictEqual(workflowMenuCount, 12, "workflow menu cap 1 phai dung 12 lua chon");
 
 const rulesMenu = rules.split("## 2.")[0];
 const rulesMenuCount = (rulesMenu.match(/^\s+\d+\. "/gm) || []).length;
-assert.strictEqual(rulesMenuCount, 11, "rules menu cap 1 phai dung 11 lua chon");
+assert.strictEqual(rulesMenuCount, 12, "rules menu cap 1 phai dung 12 lua chon");
 
 for (const option of menuOptions) {
   mustInclude(workflowMenu, option, "workflow menu");

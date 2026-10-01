@@ -2,8 +2,8 @@
 
 Bất cứ khi nào người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
-## 1. Menu Cấp 1 (Tác vụ chính - 11 lựa chọn)
-Gọi tool `ask_question` với 11 lựa chọn:
+## 1. Menu Cấp 1 (Tác vụ chính - 12 lựa chọn)
+Gọi tool `ask_question` với 12 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -17,6 +17,7 @@ Gọi tool `ask_question` với 11 lựa chọn:
   9. "9/ Viết sáng kiến"
   10. "10/ Tạo bài giảng HTML (từ PDF)"
   11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"
+  12. "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"
 
 ## 2. Xử lý đường dẫn web trực tiếp:
 - **5/ Game giáo dục:** Cung cấp link website https://www.hoangthiencm.id.vn/trochoi.html và file [trochoi.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/trochoi.html).
@@ -72,6 +73,11 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
   + File kết quả bắt buộc đủ 3 định dạng trong `TROLYTHIEN/11_VE_HINH/Ket_qua/`: `[Ten_Hinh].svg`, `[Ten_Hinh]_geogebra.txt`, `[Ten_Hinh].html`
   + Tuân thủ quy chuẩn tại `TROLYTHIEN/11_VE_HINH/HUONG_DAN_VE_HINH.md`
   + Khi cần chỉnh trên canvas, mở https://www.hoangthiencm.id.vn/vehinh.html và file [vehinh.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html)
+- **12/ Chuẩn hoá văn bản (Hành chính / Đảng):**
+  + File đầu vào (Word `.docx` chưa chuẩn hoá): đặt tại `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Dau_vao/`
+  + File kết quả (Word `.docx` đã chuẩn hoá): tự động lưu tại `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Ket_qua/[Ten_File]_Chuan_Hoa.docx`
+  + Tuân thủ hướng dẫn tại `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/HUONG_DAN_CHUAN_HOA_VAN_BAN.md`
+  + Tuân thủ Master Prompt tại `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/PROMPT_CHUAN_HOA_VAN_BAN.md`
 
 ## 5. Quy tắc bổ sung cho Nhánh 10
 Khi chọn "10/ Tạo bài giảng HTML (từ PDF)", bắt buộc hỏi đủ 3 thông tin trước khi đọc PDF và trước khi xuất file: Môn gì? Lớp mấy? Mấy tiết (thời lượng)? Thiếu một trong ba thông tin thì dừng và hỏi tiếp, không được suy diễn.
@@ -119,7 +125,21 @@ Bốn file kết quả trong `TROLYTHIEN/11_VE_HINH/Ket_qua/`:
 
 Khi cần sửa tương tác trên canvas, cung cấp https://www.hoangthiencm.id.vn/vehinh.html và file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html.
 
-## 7. Công cụ dọn dẹp file rác dự án
+## 7. Quy chuẩn kỹ thuật cho Nhánh 12
+Khi chọn "12/ Chuẩn hoá văn bản (Hành chính / Đảng)", đọc Word `.docx` trong `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Dau_vao/`. Áp dụng `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/PROMPT_CHUAN_HOA_VAN_BAN.md` trước khi xuất file.
+
+Quy chuẩn in ấn:
+- Phông Times New Roman, nội dung 13pt, Unicode TCVN 6909:2001.
+- Thụt đầu dòng 1,27 cm cho đoạn văn, điều, khoản, điểm và từng dòng căn cứ.
+- Căn đều hai bên, dãn dòng 1,2. Lề A4: trên 20 mm, dưới 20 mm, trái 30 mm, phải 15 mm.
+- Bảng đóng khung kín 4 cạnh và đường trong. Hàng không bị xé trang (`cantSplit`). Dòng tiêu đề lặp khi sang trang (`tblHeader`).
+- Nhận diện ngay văn bản hành chính (Nghị định 30/2020/NĐ-CP) hoặc văn bản Đảng (Quy định 399-QĐ/TW, Hướng dẫn 05-HD/VPTW). Không trộn Quốc hiệu với tiêu đề Đảng.
+- Mô hình chính quyền 2 cấp: cảnh báo và không giữ tên cơ quan cấp huyện đã bãi bỏ (Phòng Giáo dục và Đào tạo, UBND huyện, HĐND huyện, Huyện ủy) trong văn bản ban hành mới khi hồ sơ không chứng minh văn bản lịch sử.
+- Giữ nguyên số liệu trong bảng. Thiếu dữ kiện thì đánh dấu để xác minh, không bịa số, ngày, số hiệu.
+- Trả lời đủ 5 phần: 1. Kết luận nhận diện; 2. Bản văn đã chuẩn hoá; 3. Bảng các lỗi đã chỉnh; 4. Nội dung cần xác minh; 5. Cảnh báo pháp lý/thẩm quyền.
+- File kết quả: `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Ket_qua/[Ten_File]_Chuan_Hoa.docx`.
+
+## 8. Công cụ dọn dẹp file rác dự án
 Bất cứ khi nào người dùng yêu cầu "dọn dẹp", "dọn rác" hoặc làm sạch bộ nhớ tạm:
 - Trợ lý Thiên tự động chạy `python tools/don_dep_file_rac.py` (hoặc người dùng chạy `tools/Don_Dep_File_Rac.bat`).
 - Quét sạch toàn bộ cache `__pycache__`, `*.pyc`, thư mục tách trang `pdf_pages/`, thư mục nháp `scratch/`.

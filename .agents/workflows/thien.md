@@ -1,11 +1,11 @@
 ---
-description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 11 tác vụ chính
+description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 12 tác vụ chính
 ---
 
 Khi người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
 ### BƯỚC 1: Hiển thị bảng chọn Menu chính (Menu cấp 1)
-Gọi tool `ask_question` với danh sách 11 lựa chọn:
+Gọi tool `ask_question` với danh sách 12 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -19,6 +19,7 @@ Gọi tool `ask_question` với danh sách 11 lựa chọn:
   9. "9/ Viết sáng kiến"
   10. "10/ Tạo bài giảng HTML (từ PDF)"
   11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"
+  12. "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"
 
 ---
 
@@ -112,4 +113,11 @@ Dựng hình học bằng tọa độ giải tích, không vẽ ước lượng.
   4. `Bai_X_[Ten_Hinh].html` (nhúng SVG, nút tải PNG/SVG, nút copy lệnh GeoGebra)
 - **Sửa tương tác trên canvas:** [https://www.hoangthiencm.id.vn/vehinh.html](https://www.hoangthiencm.id.vn/vehinh.html) và file cục bộ [vehinh.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html).
 - **Dọn dẹp file rác:** Khi người dùng yêu cầu dọn rác/làm sạch cache, kích hoạt `python tools/don_dep_file_rac.py` (hoặc chạy `tools/Don_Dep_File_Rac.bat`).
+
+#### Nhánh 12: Khi chọn "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"
+Chuẩn hoá tệp Word đã có, không soạn văn bản mới. Đọc `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/HUONG_DAN_CHUAN_HOA_VAN_BAN.md` và áp dụng nguyên văn Master Prompt tại `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/PROMPT_CHUAN_HOA_VAN_BAN.md`.
+- **File đầu vào:** đọc trực tiếp tệp Word `.docx` trong `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Dau_vao/`. Trích toàn bộ đoạn văn và bảng biểu, giữ nguyên số liệu.
+- **Thẩm định:** phân loại Hành chính (Nghị định 30/2020/NĐ-CP) hoặc Đảng (Quy định 399-QĐ/TW và Hướng dẫn 05-HD/VPTW) ngay ở bước nhận diện. Kiểm tra chính tả, dấu câu, căn cứ, thẩm quyền. Cảnh báo nếu văn bản còn tên cơ quan cấp huyện đã bãi bỏ trong mô hình chính quyền 2 cấp.
+- **Phản hồi đủ 5 phần:** 1. Kết luận nhận diện; 2. Bản văn đã chuẩn hoá; 3. Bảng các lỗi đã chỉnh; 4. Nội dung cần xác minh; 5. Cảnh báo pháp lý/thẩm quyền.
+- **File kết quả:** xuất Word `.docx` vào `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Ket_qua/[Ten_File]_Chuan_Hoa.docx`. Kỹ thuật in: Times New Roman 13pt, thụt đầu dòng 1,27 cm, lề A4, bảng đóng khung 4 cạnh, `cantSplit`, `tblHeader`.
 
