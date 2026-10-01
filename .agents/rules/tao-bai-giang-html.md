@@ -316,6 +316,24 @@ mjx-container svg { display: inline !important; }
      - Cho phép lăn chuột (mouse wheel) để phóng to / thu nhỏ mượt mà.
      - Hỗ trợ giữ chuột kéo rê (pan/drag) để quan sát từng chi tiết khi đang zoom lớn.
      - Đóng nhanh bằng phím `Escape`, nút `✕` hoặc click ra ngoài vùng nền mờ.
+  3. **Event delegation trên `#slideDeck`:** bắt click phóng to mọi `svg` (trừ `mjx-container`), `img`, `.figure-box`, `[data-zoomable]`. Click hình không được gọi `nextStep()`. Delegation vẫn còn sau `toggleBilingual` hoặc khi gán lại `innerHTML` trong chế độ Thiết kế.
+
+### Vá 23 — Dẫn dắt Sư phạm 4 bước Độc lập (4-Step Pedagogical Scaffolding)
+
+- Mỗi ví dụ, bài tập, luyện tập tách đúng 4 bước `data-step`, không gộp gợi ý với lời giải và đáp án:
+  + Bước 1 (`data-step="1"`): Đề bài và hình vẽ ban đầu. Cột ghi bảng chỉ ghi tiêu đề mục hoặc để trống.
+  + Bước 2 (`data-step="2"`): Gợi ý / dẫn dắt / câu hỏi tư duy. Cấm hiện đáp án hay lời giải.
+  + Bước 3 (`data-step="3"`): Các bước giải chi tiết, biến đổi tương đương, tính toán.
+  + Bước 4 (`data-step="4"`): Chốt đáp số và nội dung kiến thức cốt lõi để học sinh ghi bảng, chép vở.
+- Đáp số cuối (câu «Vậy») chỉ hiện ở bước 4, ví dụ bằng `inline-anim` `data-step="4"`.
+
+### Vá 24 — Tương thích 100% Bút trình chiếu & Điều hướng Bàn phím đa năng (Universal Presenter & Key Navigation)
+
+- Phím tiến: `ArrowRight`, `ArrowDown`, `PageDown`, `Space`, `Enter` gọi `nextStep()`.
+- Phím lùi: `ArrowLeft`, `ArrowUp`, `PageUp`, `Backspace` gọi `prevStep()`.
+- Phím màn hình đen `b` và `.` bật/tắt lớp `.blank-screen`.
+- Gọi `preventDefault()` để trình duyệt không cuộn trang hoặc quay lại lịch sử.
+- Sau khi bấm nút trên `.control-bar`, gọi `blur()` để phím `Space` không kích hoạt lại nút đang focus.
 
 ## 5. Bộ khung mã HTML mẫu & Nguồn sự thật Master Template
 

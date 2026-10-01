@@ -1195,6 +1195,14 @@
       z-index: 10;
       transition: all 0.15s ease;
     }
+    .blank-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 100000;
+    }
+    .blank-screen.active { display: block; }
     .image-lightbox-close:hover {
       background: #ef4444;
       color: #ffffff;
@@ -1337,8 +1345,8 @@
       </div>
     </section>
 
-    <!-- SLIDE 5: KIẾN THỨC TRỌNG TÂM / ĐỊNH LÍ / QUY TẮC -->
-    <section class="slide-item" data-slide-index="5" data-tiet="1" data-max-steps="2">
+    <!-- SLIDE 5: VÍ DỤ — DẪN DẮT SƯ PHẠM 4 BƯỚC -->
+    <section class="slide-item" data-slide-index="5" data-tiet="1" data-max-steps="4">
       <header class="slide-header">
         <span class="slide-lesson-title">[TÊN BÀI HỌC]</span>
         <span class="slide-heading-text">KIẾN THỨC TRỌNG TÂM CẦN GHI NHỚ</span>
@@ -1357,13 +1365,21 @@
         </div>
         <div class="col-board">
           <div class="col-board-tag">VÍ DỤ ÁP DỤNG MINH HỌA</div>
+          <div class="content-block highlight-def" data-step="1">
+            <h4 class="block-title">📝 Ví dụ mẫu 1 — Đề bài:</h4>
+            <p>[Đề bài ví dụ 1 trích từ PDF]. Hình vẽ ban đầu (nếu có) nằm ở bước này.</p>
+          </div>
           <div class="content-block highlight-example" data-step="2">
-            <h4 class="block-title">📝 Ví dụ mẫu 1 (Kèm lời giải):</h4>
-            <p>[Đề bài ví dụ 1 trích từ PDF]</p>
-            <div style="margin-top:10px; padding:12px; background:var(--slide-bg); border:1px solid var(--border); border-radius:8px;">
-              <strong>Hướng dẫn giải:</strong>
-              <p>Áp dụng công thức trên, ta có kết quả chính xác theo SGK.</p>
-            </div>
+            <h4 class="block-title">💡 Gợi ý / Dẫn dắt:</h4>
+            <p>Em hãy xác định giả thiết và đại lượng cần tìm, rồi chọn đúng hệ thức trong khung kiến thức. Chưa viết lời giải và chưa nêu đáp số.</p>
+          </div>
+          <div class="content-block highlight-proof" data-step="3">
+            <h4 class="block-title">✏️ Các bước giải chi tiết:</h4>
+            <p>Bước biến đổi và tính toán trích từ SGK, chưa chốt câu kết luận cuối.</p>
+          </div>
+          <div class="content-block highlight-rule" data-step="4">
+            <h4 class="block-title">✅ Đáp số &amp; Ghi bảng:</h4>
+            <p>Chốt đáp số theo SGK. Học sinh chép vào vở nội dung kiến thức cốt lõi của ví dụ.</p>
           </div>
         </div>
       </div>
@@ -1393,7 +1409,7 @@
     </section>
 
     <!-- SLIDE 7: LUYỆN TẬP — BÀI TẬP TỰ LUẬN CÓ NÚT BẤM ĐÁP ÁN -->
-    <section class="slide-item" data-slide-index="7" data-tiet="1" data-max-steps="2">
+    <section class="slide-item" data-slide-index="7" data-tiet="1" data-max-steps="4">
       <header class="slide-header">
         <span class="slide-lesson-title">[TÊN BÀI HỌC]</span>
         <span class="slide-heading-text">C. LUYỆN TẬP &bull; BÀI TẬP TỰ LUẬN SGK</span>
@@ -1404,19 +1420,23 @@
           <div class="col-board-tag">ĐỀ BÀI TỰ LUẬN</div>
           <div class="content-block highlight-def" data-step="1">
             <h4 class="block-title">📖 Bài tập luyện tập [Số bài] (SGK trang [Trang]):</h4>
-            <p>[Nội dung đề bài luyện tập trích từ file PDF]</p>
-            <div style="margin-top:16px;">
-              <button type="button" class="btn-ctrl btn-ctrl-primary" onclick="var sol = document.getElementById('solution7'); sol.style.display = sol.style.display === 'none' ? 'block' : 'none';">👁️ Xem / Ẩn hướng dẫn giải chi tiết</button>
-            </div>
+            <p>[Nội dung đề bài luyện tập trích từ file PDF]. Cột ghi bảng ở bước này chỉ ghi tiêu đề mục hoặc để trống.</p>
+          </div>
+          <div class="content-block highlight-example" data-step="2">
+            <h4 class="block-title">💡 Gợi ý / Câu hỏi dẫn dắt:</h4>
+            <p>Giả thiết nào đã cho? Cần tìm đại lượng nào? Hệ thức nào phù hợp? Chưa hiện lời giải và đáp án.</p>
           </div>
         </div>
         <div class="col-board">
-          <div class="col-board-tag">HƯỚNG DẪN GIẢI SƯ PHẠM</div>
-          <div class="content-block highlight-proof" id="solution7" style="display:none;" data-step="2">
-            <h4 class="block-title">💡 Các bước giải chuẩn mực:</h4>
+          <div class="col-board-tag">LỜI GIẢI VÀ GHI BẢNG</div>
+          <div class="content-block highlight-proof" id="solution7" data-step="3">
+            <h4 class="block-title">✏️ Các bước giải chi tiết:</h4>
             <p>1. Xác định giả thiết và kết luận của bài toán.</p>
-            <p>2. Áp dụng hệ thức: Tính toán ra kết quả.</p>
-            <p>3. Kết luận: Vậy đáp số của bài toán là [Kết quả].</p>
+            <p>2. Biến đổi tương đương và tính toán theo SGK.</p>
+          </div>
+          <div class="content-block highlight-rule" data-step="4">
+            <h4 class="block-title">✅ Đáp số &amp; Ghi bảng:</h4>
+            <p>Vậy đáp số của bài toán là [Kết quả]. Học sinh chép câu chốt vào vở.</p>
           </div>
         </div>
       </div>
@@ -1478,6 +1498,7 @@
   </div>
 </div>
 
+<div class="blank-screen" id="blankScreen" aria-hidden="true"></div>
 <!-- THANH ĐIỀU KHIỂN NỔI -->
 <nav class="control-bar" id="controlBar">
   <button class="btn-ctrl" onclick="prevSlide()" title="Phím mũi tên Trái">◀ Trang trước</button>
@@ -3400,23 +3421,61 @@
     localStorage.setItem(key, JSON.stringify(updated));
   }
 
-  /* Phím tắt điều hướng */
+  function toggleBlankScreen() {
+    const blank = document.getElementById('blankScreen');
+    if (!blank) return;
+    blank.classList.toggle('active');
+  }
+
+  function zoomableFigure(target) {
+    if (!target || !target.closest) return null;
+    if (target.closest('mjx-container, button, a, input, textarea, .control-bar, #editModal')) return null;
+    const el = target.closest('svg, img, .figure-box, [data-zoomable]');
+    if (!el || el.closest('mjx-container')) return null;
+    return el;
+  }
+
+  /* Phím tắt điều hướng — bút trình chiếu */
   document.addEventListener('keydown', function(e) {
     if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
-    if (e.key === 'ArrowRight' || e.key === ' ') {
+    const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'];
+    const prevKeys = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'];
+    if (e.key === 'b' || e.key === 'B' || e.key === '.') {
+      e.preventDefault();
+      toggleBlankScreen();
+      return;
+    }
+    if (nextKeys.indexOf(e.key) !== -1) {
       e.preventDefault();
       nextStep();
-    } else if (e.key === 'ArrowLeft') {
+    } else if (prevKeys.indexOf(e.key) !== -1) {
       e.preventDefault();
       prevStep();
     }
   });
 
-  /* Chạm vùng trống tiến bước */
+  document.querySelectorAll('.control-bar button').forEach(function(btn) {
+    btn.addEventListener('click', function() { this.blur(); });
+  });
+
+  /* Chạm vùng trống tiến bước; hình vẽ mở Lightbox, không nhảy bước */
   document.getElementById('slideDeck').addEventListener('click', function(e) {
     if (isDesignMode) return;
+    const figure = zoomableFigure(e.target);
+    if (figure) {
+      e.preventDefault();
+      e.stopPropagation();
+      const block = figure.closest('.content-block');
+      let title = '';
+      if (block) {
+        const strong = block.querySelector('strong');
+        if (strong) title = strong.textContent.trim();
+      }
+      openImageLightbox(figure, title);
+      return;
+    }
     if (window.getSelection && !window.getSelection().isCollapsed) return;
-    if (e.target.closest('button, a, input, textarea, .control-bar, #editModal')) return;
+    if (e.target.closest('button, a, input, textarea, .control-bar, #editModal, .image-lightbox-dialog, .image-lightbox-backdrop, svg, img, .figure-box, [data-zoomable]')) return;
     nextStep();
   });
 
@@ -3684,22 +3743,7 @@
   });
 
   function initImageZoomListeners() {
-    const targets = document.querySelectorAll('.block-body svg, .block-body img');
-    targets.forEach(el => {
-      if (el.closest('mjx-container')) return; // Ignore MathJax SVG formulas
-      if (el.dataset.zoomAttached) return;
-      el.dataset.zoomAttached = "true";
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const block = el.closest('.content-block');
-        let title = '';
-        if (block) {
-          const strong = block.querySelector('strong');
-          if (strong) title = strong.textContent.trim();
-        }
-        openImageLightbox(el, title);
-      });
-    });
+    /* Zoom dùng event delegation trên #slideDeck nên vẫn hoạt động sau toggleBilingual / gán innerHTML. */
   }
 
   // Escape key closes lightbox

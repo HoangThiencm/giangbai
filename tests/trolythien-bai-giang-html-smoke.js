@@ -250,4 +250,36 @@ assert.strictEqual(gitCheckIgnore("TROLYTHIEN/10_BAI_GIANG_HTML/Dau_vao/.gitkeep
 assert.strictEqual(gitCheckIgnore("TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/.gitkeep"), false, "Ket_qua/.gitkeep phai duoc git theo doi");
 assert.strictEqual(gitCheckIgnore(rulePath), false, "rule agents phai duoc git theo doi");
 
+const presenterNeedles = [
+  "Vá 23",
+  "Vá 24",
+  "data-step=\"4\"",
+  "PageDown",
+  "PageUp",
+  "Backspace",
+  "blank-screen",
+  "mjx-container"
+];
+for (const needle of presenterNeedles) {
+  mustInclude(prompt, needle, "master prompt presenter");
+  mustInclude(rule, needle, "rule presenter");
+}
+
+const lectures = [
+  "TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_12_Mot_so_he_thuc_giua_canh_va_goc_trong_tam_giac_vuong_va_ung_dung.html",
+  "TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_4_Phuong_trinh_quy_ve_phuong_trinh_bac_nhat_mot_an.html"
+];
+for (const rel of lectures) {
+  const lecture = read(rel);
+  mustInclude(lecture, "PageDown", rel);
+  mustInclude(lecture, "PageUp", rel);
+  mustInclude(lecture, "ArrowDown", rel);
+  mustInclude(lecture, "ArrowUp", rel);
+  mustInclude(lecture, "Backspace", rel);
+  mustInclude(lecture, "zoomableFigure", rel);
+  mustInclude(lecture, ".image-lightbox-backdrop, svg, img, .figure-box, [data-zoomable]", rel);
+  mustInclude(lecture, 'data-step="3"', rel);
+  mustInclude(lecture, "badge-role-sol", rel);
+}
+
 console.log("trolythien-bai-giang-html-smoke: PASS");

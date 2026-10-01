@@ -1206,6 +1206,14 @@
       z-index: 10;
       transition: all 0.15s ease;
     }
+    .blank-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 100000;
+    }
+    .blank-screen.active { display: block; }
     .image-lightbox-close:hover {
       background: #ef4444;
       color: #ffffff;
@@ -1615,7 +1623,7 @@
             <div class="block-body">Trong các phương trình sau, phương trình nào là phương trình tích?<br>a) $(x - 5)(3x + 2) = 0$<br>b) $2x(x + 1) = 4$<br>c) $(2x - 1)(x + 3)(x - 4) = 0$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s3_t2" data-step="2" data-raw="• <b>Câu a:</b> Là phương trình tích dạng chuẩn $(ax+b)(cx+d)=0$.<br>• <b>Câu b:</b> Chưa phải phương trình tích vì vế phải khác $0$.<br>• <b>Câu c:</b> Là phương trình tích mở rộng (tích 3 nhị thức bậc nhất)." data-raw-vi="• <b>Câu a:</b> Là phương trình tích dạng chuẩn $(ax+b)(cx+d)=0$.<br>• <b>Câu b:</b> Chưa phải phương trình tích vì vế phải khác $0$.<br>• <b>Câu c:</b> Là phương trình tích mở rộng (tích 3 nhị thức bậc nhất)." data-raw-en="• <b>Part a:</b> Product equation of standard form $(ax+b)(cx+d)=0$.<br>• <b>Part b:</b> Not a product equation because right-hand side is not $0$.<br>• <b>Part c:</b> Extended product equation (product of 3 linear factors)." data-title-vi="ĐÁP ÁN & GIẢI THÍCH" data-title-en="ANSWER & EXPLANATION">
+          <div class="content-block highlight-ex" id="s3_t2" data-step="3" data-raw="• <b>Câu a:</b> Là phương trình tích dạng chuẩn $(ax+b)(cx+d)=0$.<br>• <b>Câu b:</b> Chưa phải phương trình tích vì vế phải khác $0$.<br>• <b>Câu c:</b> Là phương trình tích mở rộng (tích 3 nhị thức bậc nhất)." data-raw-vi="• <b>Câu a:</b> Là phương trình tích dạng chuẩn $(ax+b)(cx+d)=0$.<br>• <b>Câu b:</b> Chưa phải phương trình tích vì vế phải khác $0$.<br>• <b>Câu c:</b> Là phương trình tích mở rộng (tích 3 nhị thức bậc nhất)." data-raw-en="• <b>Part a:</b> Product equation of standard form $(ax+b)(cx+d)=0$.<br>• <b>Part b:</b> Not a product equation because right-hand side is not $0$.<br>• <b>Part c:</b> Extended product equation (product of 3 linear factors)." data-title-vi="ĐÁP ÁN & GIẢI THÍCH" data-title-en="ANSWER & EXPLANATION">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -1691,7 +1699,7 @@
             <div class="block-body"><b>Giải phương trình:</b> $$(2x + 1)(3x - 1) = 0$$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s4_b3" data-step="2" data-raw="Ta có: $2x + 1 = 0$ hoặc $3x - 1 = 0$<br>• Với $2x + 1 = 0$, suy ra $2x = -1$, hay $x = -\frac{1}{2}$<br>• Với $3x - 1 = 0$, suy ra $3x = 1$, hay $x = \frac{1}{3}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{2}$ và $x = \frac{1}{3}$." data-raw-vi="Ta có: $2x + 1 = 0$ hoặc $3x - 1 = 0$<br>• Với $2x + 1 = 0$, suy ra $2x = -1$, hay $x = -\frac{1}{2}$<br>• Với $3x - 1 = 0$, suy ra $3x = 1$, hay $x = \frac{1}{3}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{2}$ và $x = \frac{1}{3}$." data-raw-en="We have: $2x + 1 = 0$ or $3x - 1 = 0$<br>• With $2x + 1 = 0$, we get $2x = -1$, so $x = -\frac{1}{2}$<br>• With $3x - 1 = 0$, we get $3x = 1$, so $x = \frac{1}{3}$<br><b>Thus</b> the equation has two solutions: $x = -\frac{1}{2}$ and $x = \frac{1}{3}$." data-title-vi="VÍ DỤ MẪU 1 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 1 (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s4_b3" data-step="3" data-raw="Ta có: $2x + 1 = 0$ hoặc $3x - 1 = 0$<br>• Với $2x + 1 = 0$, suy ra $2x = -1$, hay $x = -\frac{1}{2}$<br>• Với $3x - 1 = 0$, suy ra $3x = 1$, hay $x = \frac{1}{3}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{2}$ và $x = \frac{1}{3}$." data-raw-vi="Ta có: $2x + 1 = 0$ hoặc $3x - 1 = 0$<br>• Với $2x + 1 = 0$, suy ra $2x = -1$, hay $x = -\frac{1}{2}$<br>• Với $3x - 1 = 0$, suy ra $3x = 1$, hay $x = \frac{1}{3}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{2}$ và $x = \frac{1}{3}$." data-raw-en="We have: $2x + 1 = 0$ or $3x - 1 = 0$<br>• With $2x + 1 = 0$, we get $2x = -1$, so $x = -\frac{1}{2}$<br>• With $3x - 1 = 0$, we get $3x = 1$, so $x = \frac{1}{3}$<br><b>Thus</b> the equation has two solutions: $x = -\frac{1}{2}$ and $x = \frac{1}{3}$." data-title-vi="VÍ DỤ MẪU 1 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 1 (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -1810,7 +1818,7 @@
             <div class="block-body"><b>Giải phương trình:</b> $$x^2 - x = -2x + 2$$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s5_b3" data-step="2" data-raw="<b>Lời giải từng bước:</b><br>• Chuyển vế: $x^2 - x + 2x - 2 = 0$<br>• Nhóm hạng tử: $x(x - 1) + 2(x - 1) = 0$<br>Suy ra: $(x + 2)(x - 1) = 0$<br>Do đó: $x + 2 = 0$ hoặc $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Vậy</b> nghiệm của phương trình là $x = -2$ và $x = 1$." data-raw-vi="<b>Lời giải từng bước:</b><br>• Chuyển vế: $x^2 - x + 2x - 2 = 0$<br>• Nhóm hạng tử: $x(x - 1) + 2(x - 1) = 0$<br>Suy ra: $(x + 2)(x - 1) = 0$<br>Do đó: $x + 2 = 0$ hoặc $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Vậy</b> nghiệm của phương trình là $x = -2$ và $x = 1$." data-raw-en="<b>Step-by-step solution:</b><br>• Transpose terms: $x^2 - x + 2x - 2 = 0$<br>• Group terms: $x(x - 1) + 2(x - 1) = 0$<br>This yields: $(x + 2)(x - 1) = 0$<br>Hence: $x + 2 = 0$ or $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Thus</b> solutions are $x = -2$ and $x = 1$." data-title-vi="VÍ DỤ MẪU 2 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 2 (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s5_b3" data-step="3" data-raw="<b>Lời giải từng bước:</b><br>• Chuyển vế: $x^2 - x + 2x - 2 = 0$<br>• Nhóm hạng tử: $x(x - 1) + 2(x - 1) = 0$<br>Suy ra: $(x + 2)(x - 1) = 0$<br>Do đó: $x + 2 = 0$ hoặc $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Vậy</b> nghiệm của phương trình là $x = -2$ và $x = 1$." data-raw-vi="<b>Lời giải từng bước:</b><br>• Chuyển vế: $x^2 - x + 2x - 2 = 0$<br>• Nhóm hạng tử: $x(x - 1) + 2(x - 1) = 0$<br>Suy ra: $(x + 2)(x - 1) = 0$<br>Do đó: $x + 2 = 0$ hoặc $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Vậy</b> nghiệm của phương trình là $x = -2$ và $x = 1$." data-raw-en="<b>Step-by-step solution:</b><br>• Transpose terms: $x^2 - x + 2x - 2 = 0$<br>• Group terms: $x(x - 1) + 2(x - 1) = 0$<br>This yields: $(x + 2)(x - 1) = 0$<br>Hence: $x + 2 = 0$ or $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Thus</b> solutions are $x = -2$ and $x = 1$." data-title-vi="VÍ DỤ MẪU 2 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 2 (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -2068,7 +2076,7 @@
             <div class="block-body"><b>Giải phương trình:</b> $$(3x + 1)(2 - 4x) = 0$$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s7_b3" data-step="2" data-raw="Ta có: $3x + 1 = 0$ hoặc $2 - 4x = 0$<br>• Với $3x + 1 = 0$, ta có $3x = -1 \Rightarrow x = -\frac{1}{3}$<br>• Với $2 - 4x = 0$, ta có $4x = 2 \Rightarrow x = \frac{2}{4} = \frac{1}{2}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{3}$ và $x = \frac{1}{2}$." data-raw-vi="Ta có: $3x + 1 = 0$ hoặc $2 - 4x = 0$<br>• Với $3x + 1 = 0$, ta có $3x = -1 \Rightarrow x = -\frac{1}{3}$<br>• Với $2 - 4x = 0$, ta có $4x = 2 \Rightarrow x = \frac{2}{4} = \frac{1}{2}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{3}$ và $x = \frac{1}{2}$." data-raw-en="We have: $3x + 1 = 0$ or $2 - 4x = 0$<br>• $3x + 1 = 0 \Rightarrow 3x = -1 \Rightarrow x = -\frac{1}{3}$<br>• $2 - 4x = 0 \Rightarrow 4x = 2 \Rightarrow x = \frac{2}{4} = \frac{1}{2}$<br><b>Thus</b> the equation has two solutions $x = -\frac{1}{3}$ and $x = \frac{1}{2}$." data-title-vi="LUYỆN TẬP 1A (HƯỚNG DẪN GIẢI)" data-title-en="PRACTICE 1A (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s7_b3" data-step="3" data-raw="Ta có: $3x + 1 = 0$ hoặc $2 - 4x = 0$<br>• Với $3x + 1 = 0$, ta có $3x = -1 \Rightarrow x = -\frac{1}{3}$<br>• Với $2 - 4x = 0$, ta có $4x = 2 \Rightarrow x = \frac{2}{4} = \frac{1}{2}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{3}$ và $x = \frac{1}{2}$." data-raw-vi="Ta có: $3x + 1 = 0$ hoặc $2 - 4x = 0$<br>• Với $3x + 1 = 0$, ta có $3x = -1 \Rightarrow x = -\frac{1}{3}$<br>• Với $2 - 4x = 0$, ta có $4x = 2 \Rightarrow x = \frac{2}{4} = \frac{1}{2}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{3}$ và $x = \frac{1}{2}$." data-raw-en="We have: $3x + 1 = 0$ or $2 - 4x = 0$<br>• $3x + 1 = 0 \Rightarrow 3x = -1 \Rightarrow x = -\frac{1}{3}$<br>• $2 - 4x = 0 \Rightarrow 4x = 2 \Rightarrow x = \frac{2}{4} = \frac{1}{2}$<br><b>Thus</b> the equation has two solutions $x = -\frac{1}{3}$ and $x = \frac{1}{2}$." data-title-vi="LUYỆN TẬP 1A (HƯỚNG DẪN GIẢI)" data-title-en="PRACTICE 1A (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -2187,7 +2195,7 @@
             <div class="block-body"><b>Giải phương trình:</b> $$x^2 - 3x = 2x - 6$$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s8_b3" data-step="2" data-raw="Chuyển vế và đặt nhân tử chung:<br>$x(x - 3) = 2(x - 3)$<br>Suy ra: $x(x - 3) - 2(x - 3) = 0$<br>$(x - 2)(x - 3) = 0$<br>Do đó: $x - 2 = 0$ hoặc $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Vậy</b> phương trình có hai nghiệm là $x = 2$ và $x = 3$." data-raw-vi="Chuyển vế và đặt nhân tử chung:<br>$x(x - 3) = 2(x - 3)$<br>Suy ra: $x(x - 3) - 2(x - 3) = 0$<br>$(x - 2)(x - 3) = 0$<br>Do đó: $x - 2 = 0$ hoặc $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Vậy</b> phương trình có hai nghiệm là $x = 2$ và $x = 3$." data-raw-en="Transpose terms and factor:<br>$x(x - 3) - 2(x - 3) = 0$<br>This yields: $(x - 2)(x - 3) = 0$<br>Hence: $x - 2 = 0$ or $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Thus</b> the equation has two roots: $x = 2$ and $x = 3$." data-title-vi="LUYỆN TẬP 1B (HƯỚNG DẪN GIẢI)" data-title-en="PRACTICE 1B (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s8_b3" data-step="3" data-raw="Chuyển vế và đặt nhân tử chung:<br>$x(x - 3) = 2(x - 3)$<br>Suy ra: $x(x - 3) - 2(x - 3) = 0$<br>$(x - 2)(x - 3) = 0$<br>Do đó: $x - 2 = 0$ hoặc $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Vậy</b> phương trình có hai nghiệm là $x = 2$ và $x = 3$." data-raw-vi="Chuyển vế và đặt nhân tử chung:<br>$x(x - 3) = 2(x - 3)$<br>Suy ra: $x(x - 3) - 2(x - 3) = 0$<br>$(x - 2)(x - 3) = 0$<br>Do đó: $x - 2 = 0$ hoặc $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Vậy</b> phương trình có hai nghiệm là $x = 2$ và $x = 3$." data-raw-en="Transpose terms and factor:<br>$x(x - 3) - 2(x - 3) = 0$<br>This yields: $(x - 2)(x - 3) = 0$<br>Hence: $x - 2 = 0$ or $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Thus</b> the equation has two roots: $x = 2$ and $x = 3$." data-title-vi="LUYỆN TẬP 1B (HƯỚNG DẪN GIẢI)" data-title-en="PRACTICE 1B (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -2306,7 +2314,7 @@
             <div class="block-body">Khu vườn hình vuông ban đầu có cạnh $15\text{ m}$. Lối đi xung quanh rộng $x\text{ (m)}$. Diện tích phần đất còn lại là $169\text{ m}^2$. Tìm $x$?</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s9_b3" data-step="2" data-raw="Khu đất còn lại có cạnh là $15 - 2x\text{ (m)}$ với $0 < 2x < 15$.<br>Diện tích: $(15 - 2x)^2 = 169$<br>Suy ra: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Do đó: $2 - 2x = 0$ hoặc $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (thỏa mãn điều kiện)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (loại vì $2x = 28 > 15$).<br><b>Vậy</b> bề rộng lối đi là $1\text{ m}$." data-raw-vi="Khu đất còn lại có cạnh là $15 - 2x\text{ (m)}$ với $0 < 2x < 15$.<br>Diện tích: $(15 - 2x)^2 = 169$<br>Suy ra: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Do đó: $2 - 2x = 0$ hoặc $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (thỏa mãn điều kiện)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (loại vì $2x = 28 > 15$).<br><b>Vậy</b> bề rộng lối đi là $1\text{ m}$." data-raw-en="The remaining garden side length is $15 - 2x\text{ (m)}$ with $0 < 2x < 15$.<br>Area equation: $(15 - 2x)^2 = 169$<br>This implies: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Hence: $2 - 2x = 0$ or $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (satisfies constraints)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (rejected since $28 > 15$).<br><b>Thus</b> the pathway width is $1\text{ m}$." data-title-vi="GIẢI BÀI TOÁN MỞ ĐẦU (HƯỚNG DẪN GIẢI)" data-title-en="OPENING PROBLEM (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s9_b3" data-step="3" data-raw="Khu đất còn lại có cạnh là $15 - 2x\text{ (m)}$ với $0 < 2x < 15$.<br>Diện tích: $(15 - 2x)^2 = 169$<br>Suy ra: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Do đó: $2 - 2x = 0$ hoặc $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (thỏa mãn điều kiện)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (loại vì $2x = 28 > 15$).<br><b>Vậy</b> bề rộng lối đi là $1\text{ m}$." data-raw-vi="Khu đất còn lại có cạnh là $15 - 2x\text{ (m)}$ với $0 < 2x < 15$.<br>Diện tích: $(15 - 2x)^2 = 169$<br>Suy ra: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Do đó: $2 - 2x = 0$ hoặc $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (thỏa mãn điều kiện)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (loại vì $2x = 28 > 15$).<br><b>Vậy</b> bề rộng lối đi là $1\text{ m}$." data-raw-en="The remaining garden side length is $15 - 2x\text{ (m)}$ with $0 < 2x < 15$.<br>Area equation: $(15 - 2x)^2 = 169$<br>This implies: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Hence: $2 - 2x = 0$ or $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (satisfies constraints)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (rejected since $28 > 15$).<br><b>Thus</b> the pathway width is $1\text{ m}$." data-title-vi="GIẢI BÀI TOÁN MỞ ĐẦU (HƯỚNG DẪN GIẢI)" data-title-en="OPENING PROBLEM (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -2609,7 +2617,7 @@
             <div class="block-body"><b>Tìm ĐKXĐ của mỗi phương trình:</b><br>a) $\frac{5x+2}{x-1} = 0$<br>b) $\frac{1}{x+1} = 1 + \frac{1}{x-2}$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s12_b3" data-step="2" data-raw="• Câu a: Vì $x - 1 \neq 0$ khi $x \neq 1$ nên ĐKXĐ là: $x \neq 1$.<br>• Câu b: Vì $x+1 \neq 0$ khi $x \neq -1$ và $x-2 \neq 0$ khi $x \neq 2$, nên ĐKXĐ là: $x \neq -1$ và $x \neq 2$." data-raw-vi="• Câu a: Vì $x - 1 \neq 0$ khi $x \neq 1$ nên ĐKXĐ là: $x \neq 1$.<br>• Câu b: Vì $x+1 \neq 0$ khi $x \neq -1$ và $x-2 \neq 0$ khi $x \neq 2$, nên ĐKXĐ là: $x \neq -1$ và $x \neq 2$." data-raw-en="• Part a: Since $x - 1 \neq 0$ when $x \neq 1$, constraints: $x \neq 1$.<br>• Part b: Since $x+1 \neq 0$ when $x \neq -1$ and $x-2 \neq 0$ when $x \neq 2$, constraints: $x \neq -1$ and $x \neq 2$." data-title-vi="VÍ DỤ MẪU 3 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 3 (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s12_b3" data-step="3" data-raw="• Câu a: Vì $x - 1 \neq 0$ khi $x \neq 1$ nên ĐKXĐ là: $x \neq 1$.<br>• Câu b: Vì $x+1 \neq 0$ khi $x \neq -1$ và $x-2 \neq 0$ khi $x \neq 2$, nên ĐKXĐ là: $x \neq -1$ và $x \neq 2$." data-raw-vi="• Câu a: Vì $x - 1 \neq 0$ khi $x \neq 1$ nên ĐKXĐ là: $x \neq 1$.<br>• Câu b: Vì $x+1 \neq 0$ khi $x \neq -1$ và $x-2 \neq 0$ khi $x \neq 2$, nên ĐKXĐ là: $x \neq -1$ và $x \neq 2$." data-raw-en="• Part a: Since $x - 1 \neq 0$ when $x \neq 1$, constraints: $x \neq 1$.<br>• Part b: Since $x+1 \neq 0$ when $x \neq -1$ and $x-2 \neq 0$ when $x \neq 2$, constraints: $x \neq -1$ and $x \neq 2$." data-title-vi="VÍ DỤ MẪU 3 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 3 (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -2770,7 +2778,7 @@
             <div class="block-body"><b>Tìm ĐKXĐ của các phương trình:</b><br>a) $\frac{3x+1}{2x-1} = 1$<br>b) $\frac{x}{x-1} + \frac{x+1}{x} = 2$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s13_b3" data-step="2" data-raw="• Câu a: Mẫu $2x - 1 \neq 0 \Rightarrow x \neq \frac{1}{2}$. ĐKXĐ: $x \neq \frac{1}{2}$.<br>• Câu b: Mẫu $x - 1 \neq 0 \Rightarrow x \neq 1$; Mẫu $x \neq 0$. ĐKXĐ: $x \neq 1$ và $x \neq 0$." data-raw-vi="• Câu a: Mẫu $2x - 1 \neq 0 \Rightarrow x \neq \frac{1}{2}$. ĐKXĐ: $x \neq \frac{1}{2}$.<br>• Câu b: Mẫu $x - 1 \neq 0 \Rightarrow x \neq 1$; Mẫu $x \neq 0$. ĐKXĐ: $x \neq 1$ và $x \neq 0$." data-raw-en="• Part a: Denominator $2x - 1 \neq 0 \Rightarrow x \neq \frac{1}{2}$. Constraints: $x \neq \frac{1}{2}$.<br>• Part b: Denominators $x - 1 \neq 0 \Rightarrow x \neq 1$ and $x \neq 0$. Constraints: $x \neq 1$ and $x \neq 0$." data-title-vi="LUYỆN TẬP 2 (HƯỚNG DẪN GIẢI)" data-title-en="PRACTICE 2 (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s13_b3" data-step="3" data-raw="• Câu a: Mẫu $2x - 1 \neq 0 \Rightarrow x \neq \frac{1}{2}$. ĐKXĐ: $x \neq \frac{1}{2}$.<br>• Câu b: Mẫu $x - 1 \neq 0 \Rightarrow x \neq 1$; Mẫu $x \neq 0$. ĐKXĐ: $x \neq 1$ và $x \neq 0$." data-raw-vi="• Câu a: Mẫu $2x - 1 \neq 0 \Rightarrow x \neq \frac{1}{2}$. ĐKXĐ: $x \neq \frac{1}{2}$.<br>• Câu b: Mẫu $x - 1 \neq 0 \Rightarrow x \neq 1$; Mẫu $x \neq 0$. ĐKXĐ: $x \neq 1$ và $x \neq 0$." data-raw-en="• Part a: Denominator $2x - 1 \neq 0 \Rightarrow x \neq \frac{1}{2}$. Constraints: $x \neq \frac{1}{2}$.<br>• Part b: Denominators $x - 1 \neq 0 \Rightarrow x \neq 1$ and $x \neq 0$. Constraints: $x \neq 1$ and $x \neq 0$." data-title-vi="LUYỆN TẬP 2 (HƯỚNG DẪN GIẢI)" data-title-en="PRACTICE 2 (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -3037,7 +3045,7 @@
             <div class="block-body"><b>Giải phương trình:</b> $$\frac{2}{x+1} + \frac{1}{x-2} = \frac{3}{(x+1)(x-2)} \quad (2)$$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s16_b3" data-step="2" data-raw="• ĐKXĐ: $x \neq -1$ và $x \neq 2$.<br>• Quy đồng và khử mẫu:<br>$2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Đối chiếu ĐKXĐ:</b> Giá trị $x = 2$ <b>không thỏa mãn ĐKXĐ</b>.<br><b>Vậy</b> phương trình (2) <b>vô nghiệm</b>." data-raw-vi="• ĐKXĐ: $x \neq -1$ và $x \neq 2$.<br>• Quy đồng và khử mẫu:<br>$2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Đối chiếu ĐKXĐ:</b> Giá trị $x = 2$ <b>không thỏa mãn ĐKXĐ</b>.<br><b>Vậy</b> phương trình (2) <b>vô nghiệm</b>." data-raw-en="• Constraints: $x \neq -1$ and $x \neq 2$.<br>• Clear denominators: $2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Verify constraints:</b> Value $x = 2$ <b>violates constraints</b>.<br><b>Thus</b> equation (2) <b>has no solution</b>." data-title-vi="VÍ DỤ MẪU 4 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 4 (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s16_b3" data-step="3" data-raw="• ĐKXĐ: $x \neq -1$ và $x \neq 2$.<br>• Quy đồng và khử mẫu:<br>$2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Đối chiếu ĐKXĐ:</b> Giá trị $x = 2$ <b>không thỏa mãn ĐKXĐ</b>.<br><b>Vậy</b> phương trình (2) <b>vô nghiệm</b>." data-raw-vi="• ĐKXĐ: $x \neq -1$ và $x \neq 2$.<br>• Quy đồng và khử mẫu:<br>$2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Đối chiếu ĐKXĐ:</b> Giá trị $x = 2$ <b>không thỏa mãn ĐKXĐ</b>.<br><b>Vậy</b> phương trình (2) <b>vô nghiệm</b>." data-raw-en="• Constraints: $x \neq -1$ and $x \neq 2$.<br>• Clear denominators: $2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Verify constraints:</b> Value $x = 2$ <b>violates constraints</b>.<br><b>Thus</b> equation (2) <b>has no solution</b>." data-title-vi="VÍ DỤ MẪU 4 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 4 (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -3369,7 +3377,7 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s20_b1" data-step="2" data-raw="Ta có: $x(x - 2) = 0$<br>Suy ra: $x = 0$ hoặc $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Kết luận:</b> Vậy phương trình có hai nghiệm là $x = 0$ và $x = 2$." data-raw-vi="Ta có: $x(x - 2) = 0$<br>Suy ra: $x = 0$ hoặc $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Kết luận:</b> Vậy phương trình có hai nghiệm là $x = 0$ và $x = 2$." data-raw-en="We have: $x(x - 2) = 0$<br>This means: $x = 0$ or $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Conclusion:</b> Thus the equation has two roots: $x = 0$ and $x = 2$." data-title-vi="HƯỚNG DẪN GIẢI CÂU A" data-title-en="GUIDED SOLUTION FOR PART A">
+          <div class="content-block highlight-def" id="s20_b1" data-step="3" data-raw="Ta có: $x(x - 2) = 0$<br>Suy ra: $x = 0$ hoặc $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Kết luận:</b> Vậy phương trình có hai nghiệm là $x = 0$ và $x = 2$." data-raw-vi="Ta có: $x(x - 2) = 0$<br>Suy ra: $x = 0$ hoặc $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Kết luận:</b> Vậy phương trình có hai nghiệm là $x = 0$ và $x = 2$." data-raw-en="We have: $x(x - 2) = 0$<br>This means: $x = 0$ or $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Conclusion:</b> Thus the equation has two roots: $x = 0$ and $x = 2$." data-title-vi="HƯỚNG DẪN GIẢI CÂU A" data-title-en="GUIDED SOLUTION FOR PART A">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -3470,7 +3478,7 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s21_b1" data-step="2" data-raw="$(x^2 - 4) + x(x - 2) = 0$<br>$(x - 2)(x + 2) + x(x - 2) = 0$<br>$(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>Suy ra: $x - 2 = 0$ hoặc $2x + 2 = 0 \Rightarrow x = 2$ hoặc $x = -1$." data-raw-vi="$(x^2 - 4) + x(x - 2) = 0$<br>$(x - 2)(x + 2) + x(x - 2) = 0$<br>$(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>Suy ra: $x - 2 = 0$ hoặc $2x + 2 = 0 \Rightarrow x = 2$ hoặc $x = -1$." data-raw-en="$(x - 2)(x + 2) + x(x - 2) = 0$<br>Factoring out: $(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>This yields: $x - 2 = 0$ or $2x + 2 = 0 \Rightarrow x = 2$ or $x = -1$." data-title-vi="HƯỚNG DẪN GIẢI CÂU A" data-title-en="GUIDED SOLUTION FOR PART A">
+          <div class="content-block highlight-def" id="s21_b1" data-step="3" data-raw="$(x^2 - 4) + x(x - 2) = 0$<br>$(x - 2)(x + 2) + x(x - 2) = 0$<br>$(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>Suy ra: $x - 2 = 0$ hoặc $2x + 2 = 0 \Rightarrow x = 2$ hoặc $x = -1$." data-raw-vi="$(x^2 - 4) + x(x - 2) = 0$<br>$(x - 2)(x + 2) + x(x - 2) = 0$<br>$(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>Suy ra: $x - 2 = 0$ hoặc $2x + 2 = 0 \Rightarrow x = 2$ hoặc $x = -1$." data-raw-en="$(x - 2)(x + 2) + x(x - 2) = 0$<br>Factoring out: $(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>This yields: $x - 2 = 0$ or $2x + 2 = 0 \Rightarrow x = 2$ or $x = -1$." data-title-vi="HƯỚNG DẪN GIẢI CÂU A" data-title-en="GUIDED SOLUTION FOR PART A">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -3571,7 +3579,7 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-ex" id="s22_b1" data-step="2" data-raw="• <b>ĐKXĐ:</b> $x \neq -\frac{1}{2}$ và $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = 0$ thỏa mãn ĐKXĐ.<br><b>Vậy</b> phương trình có nghiệm duy nhất là $x = 0$." data-raw-vi="• <b>ĐKXĐ:</b> $x \neq -\frac{1}{2}$ và $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = 0$ thỏa mãn ĐKXĐ.<br><b>Vậy</b> phương trình có nghiệm duy nhất là $x = 0$." data-raw-en="• Constraints: $x \neq -\frac{1}{2}$ and $x \neq -1$.<br>• Clear denominators: $2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• Verify constraints: $x = 0$ satisfies constraints.<br><b>Thus</b> the equation has unique solution $x = 0$." data-title-vi="HƯỚNG DẪN GIẢI 2.3A" data-title-en="GUIDED SOLUTION FOR 2.3A">
+          <div class="content-block highlight-ex" id="s22_b1" data-step="3" data-raw="• <b>ĐKXĐ:</b> $x \neq -\frac{1}{2}$ và $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = 0$ thỏa mãn ĐKXĐ.<br><b>Vậy</b> phương trình có nghiệm duy nhất là $x = 0$." data-raw-vi="• <b>ĐKXĐ:</b> $x \neq -\frac{1}{2}$ và $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = 0$ thỏa mãn ĐKXĐ.<br><b>Vậy</b> phương trình có nghiệm duy nhất là $x = 0$." data-raw-en="• Constraints: $x \neq -\frac{1}{2}$ and $x \neq -1$.<br>• Clear denominators: $2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• Verify constraints: $x = 0$ satisfies constraints.<br><b>Thus</b> the equation has unique solution $x = 0$." data-title-vi="HƯỚNG DẪN GIẢI 2.3A" data-title-en="GUIDED SOLUTION FOR 2.3A">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -3654,7 +3662,7 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-ex" id="s23_b1" data-step="2" data-raw="• Nhận xét: $x^3 + 1 = (x+1)(x^2 - x + 1)$.<br>Vì $x^2 - x + 1 > 0$ nên <b>ĐKXĐ:</b> $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{5}$ thỏa mãn.<br><b>Vậy</b> nghiệm là $x = \frac{1}{5}$." data-raw-vi="• Nhận xét: $x^3 + 1 = (x+1)(x^2 - x + 1)$.<br>Vì $x^2 - x + 1 > 0$ nên <b>ĐKXĐ:</b> $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{5}$ thỏa mãn.<br><b>Vậy</b> nghiệm là $x = \frac{1}{5}$." data-raw-en="• Constraints: $x \neq -1$ (since $x^2 - x + 1 > 0$ for all $x$).<br>• Clear denominators: $(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• Verify constraints: $x = \frac{1}{5}$ satisfies constraints.<br><b>Thus</b> the solution is $x = \frac{1}{5}$." data-title-vi="HƯỚNG DẪN GIẢI 2.3B" data-title-en="GUIDED SOLUTION FOR 2.3B">
+          <div class="content-block highlight-ex" id="s23_b1" data-step="3" data-raw="• Nhận xét: $x^3 + 1 = (x+1)(x^2 - x + 1)$.<br>Vì $x^2 - x + 1 > 0$ nên <b>ĐKXĐ:</b> $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{5}$ thỏa mãn.<br><b>Vậy</b> nghiệm là $x = \frac{1}{5}$." data-raw-vi="• Nhận xét: $x^3 + 1 = (x+1)(x^2 - x + 1)$.<br>Vì $x^2 - x + 1 > 0$ nên <b>ĐKXĐ:</b> $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{5}$ thỏa mãn.<br><b>Vậy</b> nghiệm là $x = \frac{1}{5}$." data-raw-en="• Constraints: $x \neq -1$ (since $x^2 - x + 1 > 0$ for all $x$).<br>• Clear denominators: $(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• Verify constraints: $x = \frac{1}{5}$ satisfies constraints.<br><b>Thus</b> the solution is $x = \frac{1}{5}$." data-title-vi="HƯỚNG DẪN GIẢI 2.3B" data-title-en="GUIDED SOLUTION FOR 2.3B">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -3852,7 +3860,7 @@
               </svg></div>
           </div>
         
-          <div class="content-block highlight-ex" id="s24_t2" data-step="2" data-raw="$(12 - x)^2 - 10^2 = 0$<br>$(12 - x - 10)(12 - x + 10) = 0$<br>$(2 - x)(22 - x) = 0$<br>Suy ra: $2 - x = 0$ hoặc $22 - x = 0 \Rightarrow x = 2$ hoặc $x = 22$.<br>Vì $0 < x < 12$ nên nhận $x = 2\text{ (m)}$.<br><b>Vậy</b> bề rộng $x = 2\text{ m}$." data-raw-vi="$(12 - x)^2 - 10^2 = 0$<br>$(12 - x - 10)(12 - x + 10) = 0$<br>$(2 - x)(22 - x) = 0$<br>Suy ra: $2 - x = 0$ hoặc $22 - x = 0 \Rightarrow x = 2$ hoặc $x = 22$.<br>Vì $0 < x < 12$ nên nhận $x = 2\text{ (m)}$.<br><b>Vậy</b> bề rộng $x = 2\text{ m}$." data-raw-en="$(12 - x)^2 - 10^2 = 0$<br>$(12 - x - 10)(12 - x + 10) = 0$<br>$(2 - x)(22 - x) = 0$<br>This yields: $2 - x = 0$ or $22 - x = 0 \Rightarrow x = 2$ or $x = 22$.<br>Since $0 < x < 12$, we accept $x = 2\text{ (m)}$.<br><b>Thus</b> the pathway width is $x = 2\text{ m}$." data-title-vi="LỜI GIẢI CHI TIẾT & BIỆN LUẬN" data-title-en="DETAILED SOLUTION & VERIFICATION">
+          <div class="content-block highlight-ex" id="s24_t2" data-step="3" data-raw="$(12 - x)^2 - 10^2 = 0$<br>$(12 - x - 10)(12 - x + 10) = 0$<br>$(2 - x)(22 - x) = 0$<br>Suy ra: $2 - x = 0$ hoặc $22 - x = 0 \Rightarrow x = 2$ hoặc $x = 22$.<br>Vì $0 < x < 12$ nên nhận $x = 2\text{ (m)}$.<br><b>Vậy</b> bề rộng $x = 2\text{ m}$." data-raw-vi="$(12 - x)^2 - 10^2 = 0$<br>$(12 - x - 10)(12 - x + 10) = 0$<br>$(2 - x)(22 - x) = 0$<br>Suy ra: $2 - x = 0$ hoặc $22 - x = 0 \Rightarrow x = 2$ hoặc $x = 22$.<br>Vì $0 < x < 12$ nên nhận $x = 2\text{ (m)}$.<br><b>Vậy</b> bề rộng $x = 2\text{ m}$." data-raw-en="$(12 - x)^2 - 10^2 = 0$<br>$(12 - x - 10)(12 - x + 10) = 0$<br>$(2 - x)(22 - x) = 0$<br>This yields: $2 - x = 0$ or $22 - x = 0 \Rightarrow x = 2$ or $x = 22$.<br>Since $0 < x < 12$, we accept $x = 2\text{ (m)}$.<br><b>Thus</b> the pathway width is $x = 2\text{ m}$." data-title-vi="LỜI GIẢI CHI TIẾT & BIỆN LUẬN" data-title-en="DETAILED SOLUTION & VERIFICATION">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -3917,7 +3925,7 @@
         <div class="col-task">
           <div class="col-task-tag">✍️ HOẠT ĐỘNG HỌC TẬP</div>
     
-          <div class="content-block highlight-ex" id="s25_t1" data-step="2" data-raw="$\frac{4}{x} + \frac{12}{8} - \frac{12}{x} = 1$<br>$\frac{3}{2} - \frac{8}{x} = 1 \Rightarrow \frac{8}{x} = \frac{1}{2} \Rightarrow x = 16\text{ (thỏa mãn } x > 8\text{)}$.<br><br>Người thứ nhất làm một mình trong <b>16 giờ</b>.<br>Trong 1 giờ người thứ hai làm được: $\frac{1}{8} - \frac{1}{16} = \frac{1}{16}$ công việc $\Rightarrow$ người thứ hai làm một mình trong <b>16 giờ</b>." data-raw-vi="$\frac{4}{x} + \frac{12}{8} - \frac{12}{x} = 1$<br>$\frac{3}{2} - \frac{8}{x} = 1 \Rightarrow \frac{8}{x} = \frac{1}{2} \Rightarrow x = 16\text{ (thỏa mãn } x > 8\text{)}$.<br><br>Người thứ nhất làm một mình trong <b>16 giờ</b>.<br>Trong 1 giờ người thứ hai làm được: $\frac{1}{8} - \frac{1}{16} = \frac{1}{16}$ công việc $\Rightarrow$ người thứ hai làm một mình trong <b>16 giờ</b>." data-raw-en="$\frac{4}{x} + \frac{12}{8} - \frac{12}{x} = 1$<br>$\frac{3}{2} - \frac{8}{x} = 1 \Rightarrow \frac{8}{x} = \frac{1}{2} \Rightarrow x = 16\text{ (satisfies } x > 8\text{)}$.<br><br>Worker 1 working alone takes <b>16 hours</b>.<br>In 1 hour worker 2 produces $\frac{1}{8} - \frac{1}{16} = \frac{1}{16}$ of the job $\Rightarrow$ Worker 2 working alone takes <b>16 hours</b>." data-title-vi="GIẢI PHƯƠNG TRÌNH NĂNG SUẤT (HƯỚNG DẪN GIẢI)" data-title-en="SOLVING WORK-RATE EQUATION">
+          <div class="content-block highlight-ex" id="s25_t1" data-step="3" data-raw="$\frac{4}{x} + \frac{12}{8} - \frac{12}{x} = 1$<br>$\frac{3}{2} - \frac{8}{x} = 1 \Rightarrow \frac{8}{x} = \frac{1}{2} \Rightarrow x = 16\text{ (thỏa mãn } x > 8\text{)}$.<br><br>Người thứ nhất làm một mình trong <b>16 giờ</b>.<br>Trong 1 giờ người thứ hai làm được: $\frac{1}{8} - \frac{1}{16} = \frac{1}{16}$ công việc $\Rightarrow$ người thứ hai làm một mình trong <b>16 giờ</b>." data-raw-vi="$\frac{4}{x} + \frac{12}{8} - \frac{12}{x} = 1$<br>$\frac{3}{2} - \frac{8}{x} = 1 \Rightarrow \frac{8}{x} = \frac{1}{2} \Rightarrow x = 16\text{ (thỏa mãn } x > 8\text{)}$.<br><br>Người thứ nhất làm một mình trong <b>16 giờ</b>.<br>Trong 1 giờ người thứ hai làm được: $\frac{1}{8} - \frac{1}{16} = \frac{1}{16}$ công việc $\Rightarrow$ người thứ hai làm một mình trong <b>16 giờ</b>." data-raw-en="$\frac{4}{x} + \frac{12}{8} - \frac{12}{x} = 1$<br>$\frac{3}{2} - \frac{8}{x} = 1 \Rightarrow \frac{8}{x} = \frac{1}{2} \Rightarrow x = 16\text{ (satisfies } x > 8\text{)}$.<br><br>Worker 1 working alone takes <b>16 hours</b>.<br>In 1 hour worker 2 produces $\frac{1}{8} - \frac{1}{16} = \frac{1}{16}$ of the job $\Rightarrow$ Worker 2 working alone takes <b>16 hours</b>." data-title-vi="GIẢI PHƯƠNG TRÌNH NĂNG SUẤT (HƯỚNG DẪN GIẢI)" data-title-en="SOLVING WORK-RATE EQUATION">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
@@ -4200,7 +4208,7 @@
             <div class="block-body">1. Ôn tập kỹ 4 bước giải phương trình chứa ẩn ở mẫu và kỹ năng phân tích nhân tử.<br>2. Hoàn thành các bài tập còn lại trong Sách bài tập Toán 9.<br>3. Chuẩn bị bài tiếp theo: <b>Bài 5. Bất đẳng thức và bất phương trình bậc nhất một ẩn</b>.</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s26_t2" data-step="2" data-raw="Toán học là chìa khóa mở cánh cửa tư duy khoa học.<br>Hãy luôn ghi nhớ đối chiếu điều kiện xác định trước khi kết luận nghiệm!" data-raw-vi="Toán học là chìa khóa mở cánh cửa tư duy khoa học.<br>Hãy luôn ghi nhớ đối chiếu điều kiện xác định trước khi kết luận nghiệm!" data-raw-en="Mathematics is the key that unlocks scientific thinking.<br>Always remember to verify domain restrictions before concluding roots!" data-title-vi="THÔNG ĐIỆP SƯ PHẠM" data-title-en="PEDAGOGICAL MESSAGE">
+          <div class="content-block highlight-ex" id="s26_t2" data-step="3" data-raw="Toán học là chìa khóa mở cánh cửa tư duy khoa học.<br>Hãy luôn ghi nhớ đối chiếu điều kiện xác định trước khi kết luận nghiệm!" data-raw-vi="Toán học là chìa khóa mở cánh cửa tư duy khoa học.<br>Hãy luôn ghi nhớ đối chiếu điều kiện xác định trước khi kết luận nghiệm!" data-raw-en="Mathematics is the key that unlocks scientific thinking.<br>Always remember to verify domain restrictions before concluding roots!" data-title-vi="THÔNG ĐIỆP SƯ PHẠM" data-title-en="PEDAGOGICAL MESSAGE">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               
@@ -4226,6 +4234,7 @@
   </div>
 </div>
 
+<div class="blank-screen" id="blankScreen" aria-hidden="true"></div>
 <!-- THANH ĐIỀU KHIỂN NỔI -->
 <nav class="control-bar" id="controlBar">
   <button class="btn-ctrl" onclick="prevSlide()" title="Phím mũi tên Trái">◀ Trang trước</button>
@@ -6129,23 +6138,61 @@
     localStorage.setItem(key, JSON.stringify(updated));
   }
 
-  /* Phím tắt điều hướng */
+  function toggleBlankScreen() {
+    const blank = document.getElementById('blankScreen');
+    if (!blank) return;
+    blank.classList.toggle('active');
+  }
+
+  function zoomableFigure(target) {
+    if (!target || !target.closest) return null;
+    if (target.closest('mjx-container, button, a, input, textarea, .control-bar, #editModal')) return null;
+    const el = target.closest('svg, img, .figure-box, [data-zoomable]');
+    if (!el || el.closest('mjx-container')) return null;
+    return el;
+  }
+
+  /* Phím tắt điều hướng — bút trình chiếu */
   document.addEventListener('keydown', function(e) {
     if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
-    if (e.key === 'ArrowRight' || e.key === ' ') {
+    const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'];
+    const prevKeys = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'];
+    if (e.key === 'b' || e.key === 'B' || e.key === '.') {
+      e.preventDefault();
+      toggleBlankScreen();
+      return;
+    }
+    if (nextKeys.indexOf(e.key) !== -1) {
       e.preventDefault();
       nextStep();
-    } else if (e.key === 'ArrowLeft') {
+    } else if (prevKeys.indexOf(e.key) !== -1) {
       e.preventDefault();
       prevStep();
     }
   });
 
-  /* Chạm vùng trống tiến bước */
+  document.querySelectorAll('.control-bar button').forEach(function(btn) {
+    btn.addEventListener('click', function() { this.blur(); });
+  });
+
+  /* Chạm vùng trống tiến bước; hình vẽ mở Lightbox, không nhảy bước */
   document.getElementById('slideDeck').addEventListener('click', function(e) {
     if (isDesignMode) return;
+    const figure = zoomableFigure(e.target);
+    if (figure) {
+      e.preventDefault();
+      e.stopPropagation();
+      const block = figure.closest('.content-block');
+      let title = '';
+      if (block) {
+        const strong = block.querySelector('strong');
+        if (strong) title = strong.textContent.trim();
+      }
+      openImageLightbox(figure, title);
+      return;
+    }
     if (window.getSelection && !window.getSelection().isCollapsed) return;
-    if (e.target.closest('button, a, input, textarea, .control-bar, #editModal')) return;
+    if (e.target.closest('button, a, input, textarea, .control-bar, #editModal, .image-lightbox-dialog, .image-lightbox-backdrop, svg, img, .figure-box, [data-zoomable]')) return;
     nextStep();
   });
 
@@ -6413,22 +6460,7 @@
   });
 
   function initImageZoomListeners() {
-    const targets = document.querySelectorAll('.block-body svg, .block-body img');
-    targets.forEach(el => {
-      if (el.closest('mjx-container')) return; // Ignore MathJax SVG formulas
-      if (el.dataset.zoomAttached) return;
-      el.dataset.zoomAttached = "true";
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const block = el.closest('.content-block');
-        let title = '';
-        if (block) {
-          const strong = block.querySelector('strong');
-          if (strong) title = strong.textContent.trim();
-        }
-        openImageLightbox(el, title);
-      });
-    });
+    /* Zoom dùng event delegation trên #slideDeck nên vẫn hoạt động sau toggleBilingual / gán innerHTML. */
   }
 
   // Escape key closes lightbox
