@@ -108,6 +108,7 @@ Quy chuẩn hình học:
 - Ký hiệu sư phạm GDPT 2018: đoạn thẳng, góc vuông, góc bằng nhau, cạnh bằng nhau, nhãn đỉnh A, B, C. Nhãn không đè lên nét vẽ.
 - Hình không gian (chóp, lăng trụ): một góc nhìn phối cảnh cố định; cạnh khuất dùng nét đứt.
 - Ảnh mờ, nghiêng hoặc thiếu dữ kiện: dừng và hỏi người dùng xác nhận, không bịa số đo.
+- **Bản vẽ tinh gọn tuyệt đối (Clean Diagram):** Tuyệt đối KHÔNG đưa tiêu đề bài toán, KHÔNG chèn hộp chú thích, KHÔNG viết văn bản giải thích/lời giải bên trong khung hình vẽ (SVG/PNG). Bản vẽ chỉ chứa thuần túy các yếu tố hình học chuẩn mực (điểm, cạnh, góc, nhãn chữ cái). Lời giải nếu có chỉ xuất ở ngoài hình vẽ.
 
 Bốn file kết quả trong `TROLYTHIEN/11_VE_HINH/Ket_qua/`:
 1. `[Ten_Hinh].png` — ảnh PNG độ nét cao, nền trắng, chèn trực tiếp ngay vào Word/PowerPoint.

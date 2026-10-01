@@ -29,6 +29,7 @@ Dựng trên hệ trục Oxy. Không vẽ ước lượng.
 - Cạnh bằng nhau: vạch ngang trên cạnh. Góc bằng nhau: cùng số cung.
 - Nhãn đỉnh A, B, C đặt lệch ra ngoài hình, không đè lên nét vẽ.
 - Hình không gian (chóp, lăng trụ): một góc nhìn phối cảnh cố định. Cạnh nhìn thấy nét liền. Cạnh khuất nét đứt.
+- **Bản vẽ tinh gọn tuyệt đối (Clean Diagram):** Tuyệt đối KHÔNG viết tiêu đề bài toán, KHÔNG chèn hộp chú thích, KHÔNG viết lời giải hoặc bình luận bên trong khung hình vẽ (SVG/PNG). Bản vẽ chỉ chứa thuần túy các yếu tố hình học (điểm, đoạn thẳng, đường cong, góc, ký hiệu bằng nhau và nhãn chữ cái A, B, C...) để giáo viên chèn trực tiếp vào đề thi/PowerPoint mà không bị rối mắt. Lời giải nếu có chỉ xuất ra ngoài (trong chat hoặc file HTML preview).
 
 ## Bốn file kết quả
 
