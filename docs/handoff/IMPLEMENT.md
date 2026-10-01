@@ -1,25 +1,22 @@
 # IMPLEMENT
 
-Đã nâng cấp bài giảng theo PLAN: bảng viết, nhảy tiết, loa song ngữ, khóa cuộn khi vẽ, cột ghi bảng và audio Hoài My.
+Đã sửa lỗi AI vẽ hình trên `vehinh.html` và thêm nhánh 11 của Trợ lý Thiên theo PLAN.
 
 ## Đã làm
 
-- `master_lecture_template.html` và `Bai_12_...html`:
-  - `#blackboardOverlay` / `#blackboardCanvas`: phấn trắng, phấn vàng, xóa bảng, giữ Shift vẽ đường thẳng. Phím `W` hoặc `B` mở bảng, `Escape` đóng.
-  - Nút `[Tiết 1]`, `[Tiết 2]`, `[Tiết 3]` gọi `jumpToPeriod` tới slide 1, 9, 16.
-  - Đã bỏ nút `[💬 Tắt phụ đề]`.
-  - `body.pen-mode` khóa `overflow: hidden` trên slide và hai cột.
-  - `speakBlockAuto`: giao diện Việt phát `audio/slide-N.mp3` (Hoài My), giao diện Anh gọi `speakBlockEn`. Nút loa 🔊 dùng `speakBlockAuto`. `speakBlockEn` không còn tự gọi `toggleLanguage()`.
-- Bài 12: các khối ví dụ, luyện tập, bài tập, phân tích đã chuyển sang cột hoạt động. Cột ghi bảng giữ định lí và công thức. Slide 2 vẫn đúng bước smoke (`s2_t1`/`s2_t2` bước 1, `s2_b1` bước 2, `s2_t3` bước 3, `s2_b2` bước 4).
-- Mục 5 của `PROMPT_TAO_BAI_GIANG_HTML.md` và `.agents/rules/tao-bai-giang-html.md` có bảng viết, nút tiết, `speakBlockAuto` và khóa cuộn.
-- Smoke hai file test có assertion cho bảng viết, nhảy tiết, loa song ngữ, không còn nút phụ đề.
-- `export_hoaimy_audio.py` đã xuất `audio/slide-1.mp3` đến `audio/slide-26.mp3`.
+- `api/vehinh_ai.php`: danh mục model là `gemini-2.5-flash` (mặc định), `gemini-2.5-pro`, `gemini-2.0-flash`, `gemini-2.0-flash-lite`, `gemini-1.5-flash`. Ba tên `gemini-3.6-flash`, `gemini-3.7-flash`, `gemini-3-flash-preview` chỉ còn trong danh sách loại trừ. `thinkingConfig.thinkingBudget` chỉ gửi cho `gemini-2.5-flash` và `gemini-2.5-pro`. cURL timeout 120 giây. Ảnh đề bài được kèm chỉ dẫn bóc dữ kiện và tọa độ. Lỗi trả về có mã HTTP upstream.
+- `vehinh.html`: hộp chọn model dùng năm model trên, `gemini-2.5-flash` là lựa chọn khuyên dùng.
+- `app.js`: cùng danh mục model. Model lưu trong trình duyệt mà không thuộc danh mục được đưa về `gemini-2.5-flash`. Chỉ có ảnh, không có chữ: câu lệnh yêu cầu đọc đề trong ảnh. Key nạp từ `api/user_gemini_keys.php`, `global_gemini_keys` và `khbd_user_gemini_keys_*`. Backend lỗi mạng, timeout hoặc HTTP 5xx thì trình duyệt gọi thẳng Gemini. Thông báo lỗi có mã HTTP.
+- Trợ lý Thiên: menu cấp 1 có 11 nhánh. Nhánh 11 là "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)" trong `.agents/rules/tro-ly-thien.md` và `.agents/workflows/thien.md`, kèm thư mục `TROLYTHIEN/11_VE_HINH/Dau_vao/`, `Ket_qua/` và `HUONG_DAN_VE_HINH.md`. Kết quả quy định đủ `.svg`, `_geogebra.txt`, `.html`. Có link `vehinh.html`.
 
 ## Kiểm thử
 
-- `node tests/trolythien-template-smoke.js` — PASS
-- `node tests/trolythien-bai-giang-html-smoke.js` — PASS
-- Chưa mở trình duyệt. Bấm Tiết, bảng viết, Shift và loa để chat `/verify`.
+- `node tests/vehinh-boot-smoke.js` — PASS
+- `node tests/trolythien-vehinh-smoke.js` — PASS
+- `node tests/trolythien-bai-giang-html-smoke.js` — chưa PASS hết file. Phần menu 11 nhánh đã qua. File dừng vì thiếu `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Chay_Bai_12_Bang_Edge.bat` (bị `.gitignore`, không có trên đĩa). Đây là hiện trạng có sẵn, ngoài file của plan này.
+- `node tests/game-quiz-importer-smoke.js` — dừng ở assertion cũ bắt `api/vehinh_ai.php` phải timeout 30 giây và fallback `gemini-3.6-flash`. Plan này đổi đúng hai chỗ đó. File test không nằm trong danh sách file của plan nên không sửa.
+- `node --check app.js` — PASS
+- Chưa mở trình duyệt, chưa gọi Gemini thật. Cần `/verify` bấm Vẽ Hình với ảnh đề và model `gemini-2.5-flash`.
 
 ## Chưa làm
 

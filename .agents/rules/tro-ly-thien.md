@@ -2,8 +2,8 @@
 
 Bất cứ khi nào người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
-## 1. Menu Cấp 1 (Tác vụ chính - 10 lựa chọn)
-Gọi tool `ask_question` với 10 lựa chọn:
+## 1. Menu Cấp 1 (Tác vụ chính - 11 lựa chọn)
+Gọi tool `ask_question` với 11 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -16,6 +16,7 @@ Gọi tool `ask_question` với 10 lựa chọn:
   8. "8/ Tạo báo cáo"
   9. "9/ Viết sáng kiến"
   10. "10/ Tạo bài giảng HTML (từ PDF)"
+  11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"
 
 ## 2. Xử lý đường dẫn web trực tiếp:
 - **5/ Game giáo dục:** Cung cấp link website https://www.hoangthiencm.id.vn/trochoi.html và file [trochoi.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/trochoi.html).
@@ -23,6 +24,7 @@ Gọi tool `ask_question` với 10 lựa chọn:
 - **7/ Quản lý tổ chuyên môn:** Cung cấp link website https://www.hoangthiencm.id.vn/phancongtochuyenmon.html và file [phancongtochuyenmon.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/phancongtochuyenmon.html).
 - **8/ Tạo báo cáo:** Cung cấp link Gemini Canvas https://gemini.google.com/app/7bc03567b9f738fb?hl=vi và file [backupcode viettailieu/taobaocao.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/backupcode%20viettailieu/taobaocao.html).
 - **9/ Viết sáng kiến:** Cung cấp link Gemini Canvas https://gemini.google.com/app/e6bf41201af60de3?hl=vi và file [backupcode viettailieu/sangkien.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/backupcode%20viettailieu/sangkien.html).
+- **11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh):** Cung cấp link website https://www.hoangthiencm.id.vn/vehinh.html và file [vehinh.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html).
 
 ## 3. Menu Cấp 2 khi chọn "3/ Tạo bài tập" (8 định dạng đánh số)
 Gọi tiếp tool `ask_question` với ĐÚNG 8 lựa chọn bám sát `taobaitap.html`:
@@ -65,6 +67,11 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
   + File kết quả (File HTML bài giảng trình chiếu tương tác đơn tệp): tự động lưu tại `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/[Tên_Bài].html`
   + Tuân thủ Master Prompt và 7 điểm vá thực chiến tại `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md`
   + Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-giang-html.md`
+- **11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh):**
+  + Đề bài chữ dán trong chat, hoặc ảnh/đề (.png, .jpg, .txt, .docx) đặt tại `TROLYTHIEN/11_VE_HINH/Dau_vao/`
+  + File kết quả bắt buộc đủ 3 định dạng trong `TROLYTHIEN/11_VE_HINH/Ket_qua/`: `[Ten_Hinh].svg`, `[Ten_Hinh]_geogebra.txt`, `[Ten_Hinh].html`
+  + Tuân thủ quy chuẩn tại `TROLYTHIEN/11_VE_HINH/HUONG_DAN_VE_HINH.md`
+  + Khi cần chỉnh trên canvas, mở https://www.hoangthiencm.id.vn/vehinh.html và file [vehinh.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html)
 
 ## 5. Quy tắc bổ sung cho Nhánh 10
 Khi chọn "10/ Tạo bài giảng HTML (từ PDF)", bắt buộc hỏi đủ 3 thông tin trước khi đọc PDF và trước khi xuất file: Môn gì? Lớp mấy? Mấy tiết (thời lượng)? Thiếu một trong ba thông tin thì dừng và hỏi tiếp, không được suy diễn.
@@ -92,6 +99,22 @@ Quy chuẩn thiết kế bài giảng HTML (bám Master Prompt `TROLYTHIEN/10_BA
   + Chiều sâu sư phạm: Tiết bài mới sau mỗi đơn vị kiến thức bắt buộc có bài tập kiểm tra đánh giá / quiz tương tác (phản hồi xanh/đỏ tức thì và phân tích bẫy lỗi sai) và kết thúc bài học bằng Sơ đồ tư duy trực quan (SVG Mindmap); Tiết luyện tập / ôn tập bắt buộc có hệ thống hóa kiến thức đầu tiết và trò chơi hóa (gamification) các bài tập thành chuỗi thử thách (Chặng 1, 2, 3,...).
 - Giữ nguyên vị trí Slide khi chuyển đổi Chế độ Thiết kế & Trình chiếu (Slide Preservation Across Modes): Khi bấm `[⚙️ Thiết kế]`, hệ thống tự động cuộn màn hình ngay đến đúng slide đang xem (có viền sáng nhận diện), tuyệt đối không nhảy về Slide 1; khi đang xem/sửa ở Chế độ Thiết kế rồi bấm `[🎬 Trình chiếu]`, hệ thống tự động nhận diện slide đang hiển thị trên màn hình để mở đúng slide đó.
 - File kết quả chỉ ghi tại `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/[Tên_Bài].html`.
+
+## 6. Quy chuẩn kỹ thuật cho Nhánh 11
+Khi chọn "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)", nhận đề từ chữ trong chat hoặc từ ảnh trong `TROLYTHIEN/11_VE_HINH/Dau_vao/`. Đọc `TROLYTHIEN/11_VE_HINH/HUONG_DAN_VE_HINH.md` trước khi dựng hình.
+
+Quy chuẩn hình học:
+- Tọa độ giải tích trên hệ trục Oxy. Giao điểm, tiếp điểm, trung điểm, trực tâm, trọng tâm tính bằng công thức, không ước lượng.
+- Ký hiệu sư phạm GDPT 2018: đoạn thẳng, góc vuông, góc bằng nhau, cạnh bằng nhau, nhãn đỉnh A, B, C. Nhãn không đè lên nét vẽ.
+- Hình không gian (chóp, lăng trụ): một góc nhìn phối cảnh cố định; cạnh khuất dùng nét đứt.
+- Ảnh mờ, nghiêng hoặc thiếu dữ kiện: dừng và hỏi người dùng xác nhận, không bịa số đo.
+
+Ba file kết quả trong `TROLYTHIEN/11_VE_HINH/Ket_qua/`:
+1. `[Ten_Hinh].svg` — vector độc lập, viewBox rõ, chèn được vào Word/PowerPoint.
+2. `[Ten_Hinh]_geogebra.txt` — lệnh GeoGebra (Point, Segment, Circle, Intersect), không dùng Line vô hạn cho cạnh.
+3. `[Ten_Hinh].html` — trang xem trước nhúng SVG, có nút tải PNG/SVG và nút copy lệnh GeoGebra.
+
+Khi cần sửa tương tác trên canvas, cung cấp https://www.hoangthiencm.id.vn/vehinh.html và file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html.
 
 
 

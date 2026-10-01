@@ -16,8 +16,24 @@ assert.match(appJs, /if \(typeof fabric === 'undefined' \|\| !fabric\.StaticCanv
 assert.match(appJs, /typeof isGeoGebraCoordinateRequested === 'function'/, 'GeoGebra formatter must tolerate isolated execution');
 
 assert.match(vehinhHtml, /value="__system__"/, 'HTML must include the default model option');
-assert.match(vehinhHtml, /value="gemini-3\.6-flash"/, 'HTML must include built-in Gemini model options');
-assert.match(vehinhHtml, /value="gemini-2\.5-flash"/, 'HTML must include every supported Gemini model');
+assert.match(vehinhHtml, /value="gemini-2\.5-flash"/, 'HTML must include the recommended Gemini model');
+assert.match(vehinhHtml, /Gemini 2\.5 Flash \(khuyên dùng\)/, 'HTML must mark gemini-2.5-flash as recommended');
+assert.match(vehinhHtml, /value="gemini-2\.5-pro"/, 'HTML must include gemini-2.5-pro');
+assert.match(vehinhHtml, /value="gemini-2\.0-flash"/, 'HTML must include gemini-2.0-flash');
+assert.match(vehinhHtml, /value="gemini-1\.5-flash"/, 'HTML must include gemini-1.5-flash');
+assert.ok(!vehinhHtml.includes('value="gemini-3.6-flash"'), 'HTML must not offer gemini-3.6-flash');
+assert.ok(!vehinhHtml.includes('value="gemini-3.7-flash"'), 'HTML must not offer gemini-3.7-flash');
+assert.ok(!vehinhHtml.includes('value="gemini-3-flash-preview"'), 'HTML must not offer gemini-3-flash-preview');
+assert.match(appJs, /'gemini-2\.5-flash'/, 'app.js catalog must start from real Gemini models');
+assert.match(appJs, /user_gemini_keys\.php/, 'app.js must load account Gemini keys');
+assert.match(appJs, /khbd_user_gemini_keys/, 'app.js must read khbd_user_gemini_keys');
+assert.match(appJs, /chỉ tải ảnh đề bài/, 'app.js must instruct the model to read an image-only prompt');
+assert.match(appJs, /generativelanguage\.googleapis\.com\/v1beta\/models/, 'app.js must call Gemini directly as fallback');
+assert.match(appJs, /HTTP \$\{response\.status\}/, 'app.js must surface the HTTP status');
+assert.match(apiPhp, /'gemini-2\.5-flash'/, 'API catalog must include gemini-2.5-flash');
+assert.match(apiPhp, /function vehinh_model_supports_thinking/, 'API must gate thinkingConfig by model');
+assert.match(apiPhp, /int \$timeout = 120/, 'API curl timeout must be 120 seconds');
+assert.ok(!apiPhp.includes("$safeFallback = 'gemini-3.6-flash'"), 'API must not fall back to gemini-3.6-flash');
 assert.match(vehinhHtml, /cdn\.jsdelivr\.net\/npm\/fabric@5\.3\.1\/dist\/fabric\.min\.js/, 'HTML must include a Fabric.js CDN fallback');
 assert.ok(!vehinhHtml.includes('Đang tải danh sách model...'), 'HTML must not leave a loading-only model placeholder');
 

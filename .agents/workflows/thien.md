@@ -1,11 +1,11 @@
 ---
-description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 10 tác vụ chính
+description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 11 tác vụ chính
 ---
 
 Khi người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
 ### BƯỚC 1: Hiển thị bảng chọn Menu chính (Menu cấp 1)
-Gọi tool `ask_question` với danh sách 10 lựa chọn:
+Gọi tool `ask_question` với danh sách 11 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -18,6 +18,7 @@ Gọi tool `ask_question` với danh sách 10 lựa chọn:
   8. "8/ Tạo báo cáo"
   9. "9/ Viết sáng kiến"
   10. "10/ Tạo bài giảng HTML (từ PDF)"
+  11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"
 
 ---
 
@@ -98,4 +99,15 @@ Tự động kích hoạt quy trình tạo bài giảng HTML trình chiếu tư�
   + Bảo toàn 100% dữ liệu gốc từ PDF, không bịa số liệu.
   + Phân bổ thời lượng chuẩn xác theo số tiết.
 - **Bước 4 (File kết quả):** Xuất file HTML thành phẩm vào `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/[Tên_Bài].html`.
+
+#### Nhánh 11: Khi chọn "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"
+Dựng hình học bằng tọa độ giải tích, không vẽ ước lượng. Tuân thủ `TROLYTHIEN/11_VE_HINH/HUONG_DAN_VE_HINH.md`.
+- **Đề bài:** lấy chữ người dùng dán trong chat, hoặc đọc ảnh/đề (.png, .jpg, .txt, .docx) trong `TROLYTHIEN/11_VE_HINH/Dau_vao/`.
+- **Nếu ảnh mờ, nghiêng hoặc thiếu số đo:** hỏi lại dữ kiện, không đoán.
+- **Tính toán:** giao điểm, tiếp điểm, trung điểm, trực tâm, trọng tâm bằng công thức Oxy. Nhãn đỉnh không đè nét vẽ. Hình không gian dùng một phối cảnh và nét đứt cho cạnh khuất.
+- **File kết quả** ghi đủ 3 file vào `TROLYTHIEN/11_VE_HINH/Ket_qua/`:
+  1. `[Ten_Hinh].svg`
+  2. `[Ten_Hinh]_geogebra.txt` (Point, Segment, Circle, Intersect)
+  3. `[Ten_Hinh].html` (nhúng SVG, nút tải PNG/SVG, nút copy lệnh GeoGebra)
+- **Sửa tương tác trên canvas:** [https://www.hoangthiencm.id.vn/vehinh.html](https://www.hoangthiencm.id.vn/vehinh.html) và file cục bộ [vehinh.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html).
 

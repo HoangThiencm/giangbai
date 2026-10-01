@@ -32,7 +32,7 @@ function vehinh_extract_gemini_text(array $response): string
     return trim($out);
 }
 
-function vehinh_post_json(string $url, array $headers, array $payload, int $timeout = 30): array
+function vehinh_post_json(string $url, array $headers, array $payload, int $timeout = 120): array
 {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -56,31 +56,55 @@ function vehinh_post_json(string $url, array $headers, array $payload, int $time
     ];
 }
 
+function vehinh_deprecated_models(): array
+{
+    return [
+        'gemini-3.6-flash',
+        'gemini-3.7-flash',
+        'gemini-3-flash-preview',
+    ];
+}
+
 function vehinh_provider_models(): array
 {
     return [
         'gemini' => [
-            'gemini-3.6-flash',
-            'gemini-3.7-flash',
-            'gemini-3-flash-preview',
-            'gemini-2.0-flash',
-            'gemini-2.5-pro',
             'gemini-2.5-flash',
+            'gemini-2.5-pro',
+            'gemini-2.0-flash',
             'gemini-2.0-flash-lite',
+            'gemini-1.5-flash',
         ],
     ];
+}
+
+function vehinh_model_supports_thinking(string $model): bool
+{
+    return in_array($model, ['gemini-2.5-flash', 'gemini-2.5-pro'], true);
+}
+
+function vehinh_is_usable_model(string $model, array $allowed): bool
+{
+    $model = trim($model);
+    if ($model === '' || in_array($model, vehinh_deprecated_models(), true)) {
+        return false;
+    }
+    if (in_array($model, $allowed, true)) {
+        return true;
+    }
+    return (bool)preg_match('/^gemini-[\w.\-]+$/i', $model);
 }
 
 function vehinh_resolve_model(array $runtime, ?string $requestedModel = null): string
 {
     $allowed = vehinh_provider_models()['gemini'] ?? [];
-    $defaultFallback = $allowed[0] ?? 'gemini-3.6-flash';
+    $defaultFallback = $allowed[0] ?? 'gemini-2.5-flash';
     $requested = trim((string)$requestedModel);
-    if ($requested !== '' && (in_array($requested, $allowed, true) || preg_match('/^gemini-[\w\.\-]+$/i', $requested))) {
+    if (vehinh_is_usable_model($requested, $allowed)) {
         return $requested;
     }
     $runtimeModel = trim((string)($runtime['gemini_model'] ?? ''));
-    if ($runtimeModel !== '' && (in_array($runtimeModel, $allowed, true) || preg_match('/^gemini-[\w\.\-]+$/i', $runtimeModel))) {
+    if (vehinh_is_usable_model($runtimeModel, $allowed) && in_array($runtimeModel, $allowed, true)) {
         return $runtimeModel;
     }
     return $defaultFallback;
@@ -89,9 +113,14 @@ function vehinh_resolve_model(array $runtime, ?string $requestedModel = null): s
 function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userInstruction, ?array $image, ?string $requestedModel = null, ?string $requestedFallback = null): array
 {
     $keys = $runtime['gemini_keys'] ?? [];
+    $allowed = vehinh_provider_models()['gemini'] ?? [];
     $initialModel = vehinh_resolve_model($runtime, $requestedModel);
     if (empty($runtime['gemini_enabled']) || empty($keys)) {
-        return ['error' => 'Gemini chưa bật hoặc chưa có key trong Cài đặt / Admin.'];
+        return ['error' => 'Gemini chưa bật hoặc chưa có key trong Cài đặt / Admin.', 'status' => 0];
+    }
+
+    if (is_array($image) && !empty($image['data'])) {
+        $systemPrompt .= "\n\nẢNH ĐỀ BÀI: Đọc toàn bộ chữ và hình trong ảnh. Bóc tách giả thiết, kết luận, số đo và ký hiệu. Tính tọa độ giải tích (giao điểm, tiếp điểm, trung điểm, trực tâm, trọng tâm) trước khi sinh mã. Nếu ảnh mờ, nghiêng hoặc thiếu dữ kiện, nêu phần cần người dùng xác nhận, không đoán bừa.";
     }
 
     $parts = [['text' => $systemPrompt . "\n\n" . $userInstruction]];
@@ -104,40 +133,52 @@ function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userIn
         ];
     }
 
-    $payload = [
-        'contents' => [['parts' => $parts]],
-        'generationConfig' => [
-            'temperature' => 0.2,
-            'maxOutputTokens' => 8192,
-            'thinkingConfig' => [
-                'thinkingBudget' => 0,
-            ],
-        ],
-    ];
-
-    $modelCandidates = [$initialModel];
-    $requestedFallback = trim((string)$requestedFallback);
-    if ($requestedFallback !== '' && !in_array($requestedFallback, $modelCandidates, true)) {
-        $modelCandidates[] = $requestedFallback;
+    $modelCandidates = [];
+    $pushModel = static function (string $model) use (&$modelCandidates, $allowed): void {
+        $model = trim($model);
+        if ($model === '' || in_array($model, $modelCandidates, true) || !vehinh_is_usable_model($model, $allowed)) {
+            return;
+        }
+        $modelCandidates[] = $model;
+    };
+    $pushModel($initialModel);
+    $pushModel((string)$requestedFallback);
+    $catalog = $allowed;
+    foreach ($catalog as $catalogModel) {
+        $pushModel((string)$catalogModel);
     }
-    $safeFallback = 'gemini-3.6-flash';
-    if (!in_array($safeFallback, $modelCandidates, true)) {
-        $modelCandidates[] = $safeFallback;
+    if (!$modelCandidates) {
+        $modelCandidates[] = 'gemini-2.5-flash';
     }
 
     $lastError = 'Gemini không phản hồi.';
+    $lastStatus = 0;
     foreach ($modelCandidates as $model) {
+        $generationConfig = [
+            'temperature' => 0.2,
+            'maxOutputTokens' => 8192,
+        ];
+        if (vehinh_model_supports_thinking($model)) {
+            $generationConfig['thinkingConfig'] = [
+                'thinkingBudget' => 0,
+            ];
+        }
+        $payload = [
+            'contents' => [['parts' => $parts]],
+            'generationConfig' => $generationConfig,
+        ];
         foreach ($keys as $key) {
             $key = trim((string)$key);
             if ($key === '') {
                 continue;
             }
             $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent?key=' . rawurlencode($key);
-            $response = vehinh_post_json($url, [], $payload, 30);
+            $response = vehinh_post_json($url, [], $payload, 120);
             if (!$response['ok']) {
-                $errMsg = (string)($response['error'] ?: ($response['json']['error']['message'] ?? ('Gemini HTTP ' . $response['status'])));
-                $lastError = $errMsg;
                 $status = (int)$response['status'];
+                $errMsg = (string)($response['error'] ?: ($response['json']['error']['message'] ?? ('Gemini HTTP ' . $status)));
+                $lastError = $status > 0 ? ('HTTP ' . $status . ': ' . $errMsg) : $errMsg;
+                $lastStatus = $status;
                 if ($status === 404 || $status === 400 || stripos($errMsg, 'not found') !== false || stripos($errMsg, 'no longer available') !== false || stripos($errMsg, 'not supported') !== false) {
                     break;
                 }
@@ -156,7 +197,7 @@ function vehinh_call_gemini(array $runtime, string $systemPrompt, string $userIn
         }
     }
 
-    return ['error' => $lastError, 'provider' => 'gemini', 'model' => $initialModel];
+    return ['error' => $lastError, 'provider' => 'gemini', 'model' => $initialModel, 'status' => $lastStatus];
 }
 
 $runtime = load_ai_runtime_config();
@@ -231,7 +272,14 @@ ai_usage_record([
 ]);
 
 if (!$ok) {
-    respond(['error' => (string)($result['error'] ?? 'AI vẽ hình không trả lời.'), 'provider' => 'gemini'], 502);
+    $upstreamStatus = (int)($result['status'] ?? 0);
+    $detail = (string)($result['error'] ?? 'AI vẽ hình không trả lời.');
+    respond([
+        'error' => $detail,
+        'provider' => 'gemini',
+        'model' => (string)($result['model'] ?? ''),
+        'upstream_status' => $upstreamStatus,
+    ], 502);
 }
 
 ai_student_quota_consume($currentUserId, $currentUserRole);

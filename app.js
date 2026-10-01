@@ -368,26 +368,23 @@ function bootVehinhApp() {
     const VEHINH_MODEL_STORAGE_PREFIX = 'vehinh_ai_model_';
     const DRAWING_AI_MODEL_CATALOG = {
         gemini: [
-            'gemini-3.6-flash',
-            'gemini-3.7-flash',
-            'gemini-3-flash-preview',
-            'gemini-2.0-flash',
-            'gemini-2.5-pro',
             'gemini-2.5-flash',
-            'gemini-2.0-flash-lite'
+            'gemini-2.5-pro',
+            'gemini-2.0-flash',
+            'gemini-2.0-flash-lite',
+            'gemini-1.5-flash'
         ],
     };
     const DRAWING_MODEL_LABELS = {
-        'gemini-3.6-flash': 'Gemini 3.6 Flash (khuyên dùng)',
-        'gemini-3.7-flash': 'Gemini 3.7 Flash',
-        'gemini-3-flash-preview': 'Gemini 3 Flash Preview',
-        'gemini-2.0-flash': 'Gemini 2.0 Flash',
+        'gemini-2.5-flash': 'Gemini 2.5 Flash (khuyên dùng)',
         'gemini-2.5-pro': 'Gemini 2.5 Pro',
-        'gemini-2.5-flash': 'Gemini 2.5 Flash',
+        'gemini-2.0-flash': 'Gemini 2.0 Flash',
         'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
+        'gemini-1.5-flash': 'Gemini 1.5 Flash',
     };
     const FOLLOW_SYSTEM_MODEL = '__system__';
-    const DEPRECATED_DRAWING_MODELS = ['gemini-1.5-flash', 'gemini-1.0-pro'];
+    const DEPRECATED_DRAWING_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3-flash-preview', 'gemini-1.0-pro'];
+    const DRAWING_AI_DIRECT_TIMEOUT_MS = 120000;
 
     function normalizeDrawingProvider(provider) {
         return 'gemini';
@@ -410,7 +407,7 @@ function bootVehinhApp() {
                     label: 'Google Gemini',
                     configured: false,
                     enabled: true,
-                    model: localStorage.getItem('default_gemini_module') || localStorage.getItem('khbd_gemini_model') || 'gemini-3.6-flash',
+                    model: preferredStoredDrawingModel(),
                     models: [...DRAWING_AI_MODEL_CATALOG.gemini],
                     keys_count: 0,
                     supports_image: true,
@@ -451,10 +448,18 @@ function bootVehinhApp() {
         return localStorage.getItem(`${VEHINH_MODEL_STORAGE_PREFIX}${provider}`) || '';
     }
 
+    function preferredStoredDrawingModel() {
+        const raw = localStorage.getItem('default_gemini_module') || localStorage.getItem('khbd_gemini_model') || '';
+        const usable = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
+        return usable.includes(raw) ? raw : 'gemini-2.5-flash';
+    }
+
     function getSystemDrawingModel() {
-        return localStorage.getItem('khbd_gemini_model')
+        const raw = localStorage.getItem('khbd_gemini_model')
             || localStorage.getItem('default_gemini_module')
-            || 'gemini-3.7-flash';
+            || 'gemini-2.5-flash';
+        const usable = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
+        return usable.includes(raw) ? raw : 'gemini-2.5-flash';
     }
 
     function getSystemDrawingFallbackModel() {
@@ -501,7 +506,7 @@ function bootVehinhApp() {
         if (configured && !isDeprecatedDrawingModel(configured) && (models.includes(configured) || looksLikeGemini(configured))) {
             return configured;
         }
-        return models.find((model) => !isDeprecatedDrawingModel(model)) || 'gemini-3.6-flash';
+        return models.find((model) => !isDeprecatedDrawingModel(model)) || 'gemini-2.5-flash';
     }
 
     function resolveDrawingRequestModel(provider) {
@@ -713,30 +718,68 @@ function bootVehinhApp() {
         `;
     }
 
-    function loadApiKeys() {
-        // Prioritize System Keys
-        const systemKeys = localStorage.getItem('global_gemini_keys');
-        if (systemKeys) {
+    function pushDrawingKey(found, raw) {
+        if (raw == null) return;
+        let values = [];
+        const text = String(raw).trim();
+        if (!text) return;
+        if (text.startsWith('[') || text.startsWith('{')) {
             try {
-                const keys = JSON.parse(systemKeys);
-                if (keys.length > 0) {
-                    apiKeysFromFile = keys;
-                    allDOMElements.apiKeyFilename.textContent = `Đã tải ${keys.length} khóa từ Hệ thống.`;
-                    allDOMElements.apiKeyFilename.classList.remove('text-red-400');
-                    allDOMElements.apiKeyFilename.classList.add('text-green-400');
-                }
-            } catch (e) { console.error("Error parsing system keys", e); }
+                const parsed = JSON.parse(text);
+                values = Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                values = text.split(/\r?\n/);
+            }
         } else {
-            // Fallback to local keys (from file upload)
-            const storedKeys = localStorage.getItem('geometryAiApiKeys');
-            if (storedKeys) {
-                apiKeysFromFile = JSON.parse(storedKeys);
-                if (apiKeysFromFile.length > 0) {
-                    allDOMElements.apiKeyFilename.textContent = `Đã tải ${apiKeysFromFile.length} khóa (Local).`;
-                    allDOMElements.apiKeyFilename.classList.add('text-green-400');
-                }
+            values = text.split(/\r?\n/);
+        }
+        values.forEach((item) => {
+            const key = String(item || '').trim();
+            if (key && !found.includes(key)) found.push(key);
+        });
+    }
+
+    function collectStoredGeminiKeys() {
+        const found = [];
+        pushDrawingKey(found, localStorage.getItem('global_gemini_keys'));
+        pushDrawingKey(found, localStorage.getItem('geometryAiApiKeys'));
+        for (let i = 0; i < localStorage.length; i += 1) {
+            const name = localStorage.key(i) || '';
+            if (name.startsWith('khbd_user_gemini_keys')) {
+                pushDrawingKey(found, localStorage.getItem(name));
             }
         }
+        return found;
+    }
+
+    async function syncDrawingKeysFromAccount() {
+        try {
+            const res = await fetch('api/user_gemini_keys.php', { credentials: 'include', cache: 'no-store' });
+            const data = await res.json().catch(() => ({}));
+            const keys = Array.isArray(data.keys) ? data.keys.map((key) => String(key || '').trim()).filter(Boolean) : [];
+            if (res.ok && keys.length) {
+                localStorage.setItem('global_gemini_keys', JSON.stringify(keys));
+                return keys;
+            }
+        } catch (error) {
+            console.warn('Không nạp được Gemini key từ tài khoản', error);
+        }
+        return collectStoredGeminiKeys();
+    }
+
+    function showDrawingKeyStatus(keys) {
+        if (!allDOMElements.apiKeyFilename) return;
+        allDOMElements.apiKeyFilename.classList.remove('text-red-400', 'text-green-400');
+        if (keys.length) {
+            allDOMElements.apiKeyFilename.textContent = `Đã nạp ${keys.length} khóa Gemini.`;
+            allDOMElements.apiKeyFilename.classList.add('text-green-400');
+        }
+    }
+
+    async function loadApiKeys() {
+        const keys = await syncDrawingKeysFromAccount();
+        apiKeysFromFile = keys;
+        showDrawingKeyStatus(keys);
     }
     loadDrawingAiConfig().finally(loadApiKeys);
 
@@ -847,9 +890,95 @@ function bootVehinhApp() {
         }, 2500);
     }
 
+    function drawingModelSupportsThinking(model) {
+        return ['gemini-2.5-flash', 'gemini-2.5-pro'].includes(String(model || '').trim());
+    }
+
+    function extractGeminiDrawingText(json) {
+        let out = '';
+        (json?.candidates || []).forEach((candidate) => {
+            (candidate?.content?.parts || []).forEach((part) => {
+                if (part?.text) out += part.text;
+            });
+        });
+        return out.trim();
+    }
+
+    function escapeDrawingError(text) {
+        return String(text || '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+    }
+
+    function shouldFallbackToDirectGemini(status, error) {
+        const name = error?.name || '';
+        if (name === 'AbortError' || name === 'TypeError' || name === 'TimeoutError') return true;
+        const code = Number(status || error?.status || 0);
+        return code === 0 || code >= 500;
+    }
+
+    async function callGeminiDrawingDirect(model, apiKey, systemPrompt, userInstruction, imagePayload) {
+        const parts = [{ text: `${systemPrompt}\n\n${userInstruction}` }];
+        if (imagePayload?.data && imagePayload?.mime_type) {
+            parts.push({ inlineData: { mimeType: imagePayload.mime_type, data: imagePayload.data } });
+        }
+        const generationConfig = { temperature: 0.2, maxOutputTokens: 8192 };
+        if (drawingModelSupportsThinking(model)) {
+            generationConfig.thinkingConfig = { thinkingBudget: 0 };
+        }
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), DRAWING_AI_DIRECT_TIMEOUT_MS);
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts }], generationConfig }),
+                signal: controller.signal,
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const message = data?.error?.message || 'Gemini không phản hồi.';
+                const err = new Error(`HTTP ${response.status}: ${message}`);
+                err.status = response.status;
+                throw err;
+            }
+            const text = extractGeminiDrawingText(data);
+            if (!text) {
+                const err = new Error(`HTTP ${response.status}: Gemini không trả về nội dung vẽ hình.`);
+                err.status = response.status;
+                throw err;
+            }
+            return text;
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    async function callGeminiDrawingDirectWithFallback(models, keys, systemPrompt, userInstruction, imagePayload) {
+        const usableModels = models.filter((model, index, list) => model && list.indexOf(model) === index && !isDeprecatedDrawingModel(model));
+        const usableKeys = keys.filter(Boolean);
+        if (!usableKeys.length) {
+            const err = new Error('Không có Gemini API Key trên trình duyệt để gọi trực tiếp.');
+            err.status = 0;
+            throw err;
+        }
+        let lastError = null;
+        for (const model of usableModels) {
+            for (const key of usableKeys) {
+                try {
+                    return await callGeminiDrawingDirect(model, key, systemPrompt, userInstruction, imagePayload);
+                } catch (error) {
+                    lastError = error;
+                    const status = Number(error.status || 0);
+                    if (status === 404 || status === 400) break;
+                }
+            }
+        }
+        throw lastError || new Error('Gọi trực tiếp Gemini thất bại.');
+    }
+
     // === AI GENERATION LOGIC (UPDATED WITH PRIORITY & FALLBACK) ===
     async function handleGenerateClick(isRegenerating = false) {
-        const userPrompt = allDOMElements.promptInput.value;
+        const userPrompt = String(allDOMElements.promptInput.value || '').trim();
         const imageFile = activeImageFile;
         if (!userPrompt && !imageFile) { allDOMElements.analysisOutput.innerHTML = '<span class="text-red-400">Lỗi: Vui lòng nhập đề bài hoặc tải ảnh.</span>'; return; }
         const selectedProvider = getActiveDrawingProvider();
@@ -917,38 +1046,84 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
   + ẨN ĐIỂM GỐC TỌA ĐỘ PHỤ TRỢ: Nếu định nghĩa gốc tọa độ tạm (ví dụ Origin = (0, 0)), hãy ẩn nó: SetVisibleInView(Origin, 1, false).
   + TUYỆT ĐỐI KHÔNG viết chú thích // hoặc # trong khối lệnh GeoGebra. Mọi biến số và điểm gốc (O, R, A...) phải được định nghĩa trước khi dùng. Mỗi dòng một lệnh.`;
         let userInstruction = `Phân tích và vẽ hình cho yêu cầu sau: ${userPrompt}`;
+        if (!userPrompt && imageFile) {
+            userInstruction = 'Người dùng chỉ tải ảnh đề bài và không gõ chữ. Hãy đọc toàn bộ chữ và hình trong ảnh, trích xuất đầy đủ đề bài (giả thiết, kết luận, số đo, ký hiệu), bóc tách dữ kiện hình học và tính tọa độ giải tích, rồi vẽ hình. Nếu ảnh mờ, nghiêng hoặc thiếu dữ kiện, nêu rõ phần cần người dùng xác nhận, không đoán bừa.';
+        }
         if (isRegenerating) { userInstruction += " Vui lòng vẽ lại hình này nhưng sử dụng các tọa độ và tỷ lệ khác với lần trước."; }
         try {
             await waitForAiThrottle();
+            if (!apiKeysFromFile.length) {
+                apiKeysFromFile = await syncDrawingKeysFromAccount();
+                showDrawingKeyStatus(apiKeysFromFile);
+            }
             const imagePayload = imageFile
                 ? { mime_type: imageFile.type, data: await imageToBase64(imageFile) }
                 : null;
             const clientKeys = (apiKeysFromFile && apiKeysFromFile.length)
                 ? apiKeysFromFile
-                : (function () {
-                    try { return JSON.parse(localStorage.getItem('global_gemini_keys') || '[]'); } catch { return []; }
-                })();
-            const response = await fetch('api/vehinh_ai.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    provider: selectedProvider,
-                    model: selectedModel,
-                    fallback_model: selectedFallbackModel,
-                    api_keys: clientKeys,
-                    system_prompt: systemPrompt,
-                    user_instruction: userInstruction,
-                    image: imagePayload,
-                }),
-            });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                const err = new Error(data.error || 'AI vẽ hình không phản hồi.');
-                err.code = data.code || '';
-                throw err;
+                : collectStoredGeminiKeys();
+            const directModels = [selectedModel, selectedFallbackModel, ...DRAWING_AI_MODEL_CATALOG.gemini];
+            let fullResponseText = '';
+            let backendError = null;
+            const controller = new AbortController();
+            const backendTimer = setTimeout(() => controller.abort(), 130000);
+            try {
+                const response = await fetch('api/vehinh_ai.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                        provider: selectedProvider,
+                        model: selectedModel,
+                        fallback_model: selectedFallbackModel,
+                        api_keys: clientKeys,
+                        system_prompt: systemPrompt,
+                        user_instruction: userInstruction,
+                        image: imagePayload,
+                    }),
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const message = data.error || 'AI vẽ hình không phản hồi.';
+                    const err = new Error(`HTTP ${response.status}: ${message}`);
+                    err.status = response.status;
+                    err.code = data.code || '';
+                    throw err;
+                }
+                fullResponseText = data.text || '';
+            } catch (error) {
+                if (error?.name === 'AbortError') {
+                    const err = new Error('HTTP 504: Hết thời gian chờ backend AI vẽ hình (130 giây).');
+                    err.status = 504;
+                    err.name = 'TimeoutError';
+                    backendError = err;
+                } else {
+                    backendError = error;
+                }
+            } finally {
+                clearTimeout(backendTimer);
             }
-            const fullResponseText = data.text || '';
+            if (!fullResponseText) {
+                const status = Number(backendError?.status || 0);
+                const reason = backendError?.message || 'AI vẽ hình không phản hồi.';
+                if (shouldFallbackToDirectGemini(status, backendError) && clientKeys.length) {
+                    allDOMElements.analysisOutput.innerHTML = `Backend ${escapeDrawingError(reason)}. Đang gọi trực tiếp Gemini...`;
+                    try {
+                        fullResponseText = await callGeminiDrawingDirectWithFallback(directModels, clientKeys, systemPrompt, userInstruction, imagePayload);
+                    } catch (directError) {
+                        const err = new Error(`${reason} Gọi trực tiếp Gemini cũng thất bại: ${directError.message}`);
+                        err.status = directError.status || status;
+                        throw err;
+                    }
+                } else {
+                    const err = backendError || new Error('AI vẽ hình không phản hồi.');
+                    if (!String(err.message || '').startsWith('HTTP ') && status) {
+                        err.message = `HTTP ${status}: ${err.message}`;
+                    }
+                    throw err;
+                }
+            }
             lastFullAiText = fullResponseText;
             allDOMElements.analysisOutput.innerHTML = fullResponseText.replace(/\n/g, '<br>');
             renderGeoGebraPanel(fullResponseText);
@@ -957,7 +1132,7 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
             await executeAiCode(fullResponseText);
         } catch (error) {
             console.error('Lỗi AI vẽ hình:', error);
-            allDOMElements.analysisOutput.innerHTML = `<span class="text-red-400">Lỗi AI vẽ hình:</span> ${error.message}`;
+            allDOMElements.analysisOutput.innerHTML = `<span class="text-red-400">Lỗi AI vẽ hình:</span> ${escapeDrawingError(error.message)}`;
             stopProgressIndicator();
             allDOMElements.loader.classList.add('hidden');
             allDOMElements.generateBtn.disabled = false;
