@@ -33,6 +33,11 @@ Bước 1, trước khi sửa:
 - Căn đều hai bên. Dãn dòng 1,2. Dãn cách trước 2pt, sau 3pt.
 - Lề A4: trên 20 mm, dưới 20 mm, trái 30 mm, phải 15 mm.
 - Quốc hiệu, Tiêu ngữ, tên cơ quan, số ký hiệu, địa danh và ngày tháng, trích yếu, nội dung, chữ ký, nơi nhận đúng vị trí Nghị định 30/2020/NĐ-CP.
+- Bảng header 2 cột, không viền: cột trái (tên cơ quan) 65 mm, cột phải (Quốc hiệu - Tiêu ngữ) 100 mm. Lề ô bằng 0. Quốc hiệu in hoa đứng đậm 12pt. Tiêu ngữ in thường đứng đậm 13pt. Tên cơ quan cấp trên in hoa đứng 12pt. Tên đơn vị in hoa đứng đậm 12pt.
+- `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM` và tên cơ quan cấp trên (ví dụ `ỦY BAN NHÂN DÂN XÃ XUÂN ĐÔNG`) nằm trọn trên một dòng. Không bẻ chữ cuối sang dòng thứ hai. Dùng `noWrap` và giãn ký tự khi cột hẹp.
+- Đường kẻ ngang là đối tượng đồ họa `v:line` (vector), nét liền, màu `#000000`, dày 0.75pt, căn giữa. Cấm ký tự `────` và cấm gạch chân Underline.
+- Dưới Tiêu ngữ: đường kẻ dài bằng dòng chữ (~35–40 mm). Dưới tên đơn vị: dài khoảng 1/3 đến 1/2 dòng chữ (~25–30 mm). Dưới trích yếu có tên loại (Kế hoạch, Báo cáo, Quyết định, Tờ trình): đường kẻ ~40–50 mm. Không chèn đoạn trống giữa trích yếu và căn cứ. Dãn trích yếu `space_before = 4pt`, đường kẻ `space_after = 6pt`.
+- Bảng số liệu: chữ 11,5pt. Cột mốc thời gian căn giữa. Cột nội dung căn đều hoặc căn trái.
 - Căn cứ: chữ thường, nghiêng, 13pt, thụt 1,27 cm. Dòng căn cứ trước kết thúc bằng `;`, dòng cuối bằng `,`.
 - Bảng: viền đơn đen 4 cạnh và đường trong. `cantSplit` để không xé một hàng sang hai trang. `tblHeader` để lặp dòng tiêu đề. Cỡ chữ trong ô 10–11,5pt khi 13pt làm tràn ô. Khối Quốc hiệu và khối chữ ký không kẻ viền.
 
@@ -58,16 +63,19 @@ Bước 1, trước khi sửa:
 - Thẩm quyền ký phải khớp cơ quan ban hành. Không nâng hoặc hạ chức danh.
 - Bộ lọc chính quyền 2 cấp: nếu văn bản mới còn Phòng Giáo dục và Đào tạo, UBND huyện, HĐND huyện hoặc Huyện ủy, đưa vào mục 5 và không âm thầm đổi tên khi chưa có cơ quan thay thế trong hồ sơ.
 
-## H. Cấu trúc trả lời 5 phần
+## H. Phản hồi chat ngắn
 
-1. Kết luận nhận diện: Hành chính hoặc Đảng, một câu lý do.
-2. Bản văn đã chuẩn hoá: nội dung sau khi chỉnh thể thức.
-3. Bảng các lỗi đã chỉnh: lỗi, vị trí, cách đã sửa.
-4. Nội dung cần xác minh: mục đánh dấu `[cần xác minh]`.
-5. Cảnh báo pháp lý/thẩm quyền: căn cứ hết hiệu lực, sai thẩm quyền, cơ quan cấp huyện đã bãi bỏ.
+Chat không xuất báo cáo 5 phần. Không dán lại toàn văn.
+
+Chat chỉ 2–3 dòng:
+
+1. Đã chuẩn hoá xong tệp Word.
+2. Đường dẫn `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Ket_qua/[Ten_File]_Chuan_Hoa.docx`.
+3. Một ghi chú pháp lý trọng yếu nếu có (căn cứ hết hiệu lực, sai thẩm quyền, cơ quan cấp huyện đã bãi bỏ). Không có thì bỏ dòng này.
 
 ## I. Yêu cầu cuối cùng
 
 - Xuất đúng một tệp `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Ket_qua/[Ten_File]_Chuan_Hoa.docx`.
 - Tệp đó dùng Times New Roman 13pt cho lời văn, thụt đầu dòng 1,27 cm, lề A4 như mục D, bảng kín 4 cạnh, có `cantSplit` và `tblHeader`.
-- Chat trả đủ 5 phần ở mục H. Không bỏ phần nào khi không có lỗi: ghi "Không phát hiện".
+- Header một dòng, đường kẻ `v:line` 0.75pt, có đường kẻ dưới trích yếu, bảng lộ trình 11,5pt.
+- Chat theo mục H.

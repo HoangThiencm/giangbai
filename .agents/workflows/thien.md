@@ -118,6 +118,6 @@ Dựng hình học bằng tọa độ giải tích, không vẽ ước lượng.
 Chuẩn hoá tệp Word đã có, không soạn văn bản mới. Đọc `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/HUONG_DAN_CHUAN_HOA_VAN_BAN.md` và áp dụng nguyên văn Master Prompt tại `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/PROMPT_CHUAN_HOA_VAN_BAN.md`.
 - **File đầu vào:** đọc trực tiếp tệp Word `.docx` trong `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Dau_vao/`. Trích toàn bộ đoạn văn và bảng biểu, giữ nguyên số liệu.
 - **Thẩm định:** phân loại Hành chính (Nghị định 30/2020/NĐ-CP) hoặc Đảng (Quy định 399-QĐ/TW và Hướng dẫn 05-HD/VPTW) ngay ở bước nhận diện. Kiểm tra chính tả, dấu câu, căn cứ, thẩm quyền. Cảnh báo nếu văn bản còn tên cơ quan cấp huyện đã bãi bỏ trong mô hình chính quyền 2 cấp.
-- **Phản hồi đủ 5 phần:** 1. Kết luận nhận diện; 2. Bản văn đã chuẩn hoá; 3. Bảng các lỗi đã chỉnh; 4. Nội dung cần xác minh; 5. Cảnh báo pháp lý/thẩm quyền.
-- **File kết quả:** xuất Word `.docx` vào `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Ket_qua/[Ten_File]_Chuan_Hoa.docx`. Kỹ thuật in: Times New Roman 13pt, thụt đầu dòng 1,27 cm, lề A4, bảng đóng khung 4 cạnh, `cantSplit`, `tblHeader`.
+- **Chat:** không xuất báo cáo 5 phần. Chỉ 2–3 dòng: đã chuẩn hoá xong, đường dẫn tệp Word, ghi chú pháp lý trọng yếu nếu có.
+- **File kết quả:** xuất Word `.docx` vào `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Ket_qua/[Ten_File]_Chuan_Hoa.docx`. Kỹ thuật in: Times New Roman 13pt, thụt đầu dòng 1,27 cm, lề A4, bảng đóng khung 4 cạnh, `cantSplit`, `tblHeader`. Header cột trái 65 mm, cột phải 100 mm, lề ô 0. Quốc hiệu và tên cơ quan mỗi cụm một dòng. Đường kẻ `v:line` 0.75pt dưới tiêu ngữ, tên đơn vị và trích yếu. Bảng số liệu 11,5pt.
 

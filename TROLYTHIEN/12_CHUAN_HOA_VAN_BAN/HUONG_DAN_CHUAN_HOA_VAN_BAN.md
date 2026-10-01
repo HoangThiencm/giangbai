@@ -24,13 +24,7 @@ Tệp nguồn thường lệch phông (Calibri, Arial, Times New Roman), lệch 
 5. Cảnh báo mô hình chính quyền 2 cấp nếu văn bản ban hành mới còn tên cơ quan cấp huyện đã bãi bỏ: Phòng Giáo dục và Đào tạo, UBND huyện, HĐND huyện, Huyện ủy.
 6. Giữ nguyên số liệu. Chỗ thiếu ghi `[cần xác minh]`, không điền số, ngày, số hiệu giả.
 
-Phản hồi trong chat đủ 5 phần:
-
-1. Kết luận nhận diện
-2. Bản văn đã chuẩn hoá
-3. Bảng các lỗi đã chỉnh
-4. Nội dung cần xác minh
-5. Cảnh báo pháp lý/thẩm quyền
+Chat chỉ báo ngắn 2–3 dòng: đã chuẩn hoá xong, đường dẫn tệp Word, và ghi chú pháp lý trọng yếu nếu có. Không dán báo cáo dài hay toàn văn vào chat.
 
 ## Nhận tệp thành phẩm
 
@@ -45,4 +39,6 @@ Kỹ thuật in của tệp kết quả:
 - Phông Times New Roman, nội dung 13pt.
 - Thụt đầu dòng 1,27 cm.
 - Khổ A4, lề trên 20 mm, dưới 20 mm, trái 30 mm, phải 15 mm.
-- Bảng đóng khung 4 cạnh. Hàng không bị xé trang (`cantSplit`). Dòng tiêu đề lặp khi sang trang (`tblHeader`).
+- Bảng đóng khung 4 cạnh. Hàng không bị xé trang (`cantSplit`). Dòng tiêu đề lặp khi sang trang (`tblHeader`). Chữ trong bảng lộ trình 11,5pt.
+- Header: cột trái 65 mm, cột phải 100 mm, lề ô bằng 0. Quốc hiệu và tên cơ quan cấp trên mỗi dòng một dòng.
+- Đường kẻ dưới tiêu ngữ, tên đơn vị và trích yếu là `v:line` dày 0.75pt. Không dùng chuỗi `────` hay gạch chân.

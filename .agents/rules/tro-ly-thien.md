@@ -136,7 +136,10 @@ Quy chuẩn in ấn:
 - Nhận diện ngay văn bản hành chính (Nghị định 30/2020/NĐ-CP) hoặc văn bản Đảng (Quy định 399-QĐ/TW, Hướng dẫn 05-HD/VPTW). Không trộn Quốc hiệu với tiêu đề Đảng.
 - Mô hình chính quyền 2 cấp: cảnh báo và không giữ tên cơ quan cấp huyện đã bãi bỏ (Phòng Giáo dục và Đào tạo, UBND huyện, HĐND huyện, Huyện ủy) trong văn bản ban hành mới khi hồ sơ không chứng minh văn bản lịch sử.
 - Giữ nguyên số liệu trong bảng. Thiếu dữ kiện thì đánh dấu để xác minh, không bịa số, ngày, số hiệu.
-- Trả lời đủ 5 phần: 1. Kết luận nhận diện; 2. Bản văn đã chuẩn hoá; 3. Bảng các lỗi đã chỉnh; 4. Nội dung cần xác minh; 5. Cảnh báo pháp lý/thẩm quyền.
+- Header 2 cột không viền: trái 65 mm, phải 100 mm, lề ô 0. Quốc hiệu 12pt đậm và tên cơ quan cấp trên nằm trọn một dòng (`noWrap`).
+- Đường kẻ ngang là `v:line` màu `#000000`, dày 0.75pt. Cấm `────` và cấm Underline. Có đường kẻ dưới trích yếu (~40–50 mm). Không chèn đoạn trống giữa trích yếu và căn cứ.
+- Bảng số liệu 11,5pt, căn giữa cột mốc thời gian, căn đều cột nội dung.
+- Chat không xuất báo cáo 5 phần. Chỉ 2–3 dòng: đã chuẩn hoá xong, đường dẫn tệp, ghi chú pháp lý trọng yếu nếu có.
 - File kết quả: `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Ket_qua/[Ten_File]_Chuan_Hoa.docx`.
 
 ## 8. Công cụ dọn dẹp file rác dự án

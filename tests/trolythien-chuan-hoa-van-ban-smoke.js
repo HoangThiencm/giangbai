@@ -47,12 +47,22 @@ for (const needle of paths) {
   mustInclude(guide, needle, "huong dan");
 }
 
-for (const needle of ["Times New Roman", "13pt", "1,27", "cantSplit", "tblHeader", "Nghị định 30/2020/NĐ-CP", "399-QĐ/TW", "05-HD/VPTW", "chính quyền 2 cấp", "1. Kết luận nhận diện", "5. Cảnh báo pháp lý/thẩm quyền"]) {
+for (const needle of ["Times New Roman", "13pt", "1,27", "cantSplit", "tblHeader", "Nghị định 30/2020/NĐ-CP", "399-QĐ/TW", "05-HD/VPTW", "chính quyền 2 cấp"]) {
   mustInclude(workflow, needle, "workflow");
   mustInclude(rules, needle, "rules");
   mustInclude(guide, needle, "huong dan");
   mustInclude(prompt, needle, "prompt");
 }
+
+for (const needle of ["65 mm", "100 mm", "v:line", "0.75pt", "11,5pt", "không xuất báo cáo 5 phần"]) {
+  mustInclude(workflow, needle, "workflow the thuc");
+  mustInclude(rules, needle, "rules the thuc");
+  mustInclude(prompt, needle, "prompt the thuc");
+}
+mustInclude(guide, "v:line", "huong dan");
+mustInclude(guide, "2–3 dòng", "huong dan chat");
+mustInclude(prompt, "## H. Phản hồi chat ngắn", "prompt");
+assert.ok(!prompt.includes("## H. Cấu trúc trả lời 5 phần"), "prompt con yeu cau bao cao 5 phan");
 
 for (const heading of [
   "## A. Cơ sở áp dụng",
@@ -62,7 +72,7 @@ for (const heading of [
   "## E. Xử lý văn bản Đảng QĐ 399",
   "## F. Kiểm tra chất lượng nội dung",
   "## G. Quy tắc về căn cứ pháp lý",
-  "## H. Cấu trúc trả lời 5 phần",
+  "## H. Phản hồi chat ngắn",
   "## I. Yêu cầu cuối cùng"
 ]) {
   mustInclude(prompt, heading, "prompt");
@@ -74,5 +84,29 @@ assert.ok(fs.existsSync(inputDir) && fs.statSync(inputDir).isDirectory(), "Thieu
 assert.ok(fs.existsSync(outputDir) && fs.statSync(outputDir).isDirectory(), "Thieu Ket_qua");
 assert.ok(fs.existsSync(path.join(inputDir, ".gitkeep")), "Thieu Dau_vao/.gitkeep");
 assert.ok(fs.existsSync(path.join(outputDir, ".gitkeep")), "Thieu Ket_qua/.gitkeep");
+
+const script = read("tools/standardize_kh_dayhoc.py");
+mustInclude(script, "Mm(65)", "script");
+mustInclude(script, "Mm(100)", "script");
+mustInclude(script, "v:line", "script");
+mustInclude(script, "0.75pt", "script");
+mustInclude(script, "size_pt=11.5", "script");
+assert.ok(!script.includes("p_sp2"), "script con doan trong p_sp2");
+assert.ok(!script.includes("────────"), "script con ky tu gach ngang");
+
+const docxPath = path.join(outputDir, "KH_TO_CHUC_DAY_HOC_TRUC_TUYEN_2026_2027_TRANPHU_Chuan_Hoa.docx");
+assert.ok(fs.existsSync(docxPath), "Thieu file ket qua docx");
+const { execFileSync } = require("child_process");
+const xml = execFileSync("python", ["-c", "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); sys.stdout.buffer.write(z.read('word/document.xml'))", docxPath]).toString("utf8");
+mustInclude(xml, "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", "docx");
+mustInclude(xml, "ỦY BAN NHÂN DÂN XÃ XUÂN ĐÔNG", "docx");
+mustInclude(xml, "v:line", "docx");
+mustInclude(xml, "0.75pt", "docx");
+mustInclude(xml, "w:cantSplit", "docx");
+mustInclude(xml, "w:tblHeader", "docx");
+assert.ok(!xml.includes("────────"), "docx con ky tu gach ngang");
+assert.ok(!xml.includes("w:u "), "docx con gach chan underline");
+const quocHieu = xml.split("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM").length - 1;
+assert.strictEqual(quocHieu, 1, "quoc hieu phai nam trong mot run");
 
 console.log("trolythien-chuan-hoa-van-ban-smoke: PASS");
