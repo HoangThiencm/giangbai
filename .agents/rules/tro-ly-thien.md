@@ -109,10 +109,11 @@ Quy chuẩn hình học:
 - Hình không gian (chóp, lăng trụ): một góc nhìn phối cảnh cố định; cạnh khuất dùng nét đứt.
 - Ảnh mờ, nghiêng hoặc thiếu dữ kiện: dừng và hỏi người dùng xác nhận, không bịa số đo.
 
-Ba file kết quả trong `TROLYTHIEN/11_VE_HINH/Ket_qua/`:
-1. `[Ten_Hinh].svg` — vector độc lập, viewBox rõ, chèn được vào Word/PowerPoint.
-2. `[Ten_Hinh]_geogebra.txt` — lệnh GeoGebra (Point, Segment, Circle, Intersect), không dùng Line vô hạn cho cạnh.
-3. `[Ten_Hinh].html` — trang xem trước nhúng SVG, có nút tải PNG/SVG và nút copy lệnh GeoGebra.
+Bốn file kết quả trong `TROLYTHIEN/11_VE_HINH/Ket_qua/`:
+1. `[Ten_Hinh].png` — ảnh PNG độ nét cao, nền trắng, chèn trực tiếp ngay vào Word/PowerPoint.
+2. `[Ten_Hinh].svg` — vector độc lập, viewBox rõ, phóng to không vỡ nét.
+3. `[Ten_Hinh]_geogebra.txt` — lệnh GeoGebra (Point, Segment, Circle, Intersect), không dùng Line vô hạn cho cạnh.
+4. `[Ten_Hinh].html` — trang xem trước nhúng SVG, có nút tải PNG/SVG và nút copy lệnh GeoGebra.
 
 Khi cần sửa tương tác trên canvas, cung cấp https://www.hoangthiencm.id.vn/vehinh.html và file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html.
 

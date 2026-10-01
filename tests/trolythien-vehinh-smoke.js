@@ -35,6 +35,7 @@ const paths = [
   "TROLYTHIEN/11_VE_HINH/Dau_vao/",
   "TROLYTHIEN/11_VE_HINH/Ket_qua/",
   "TROLYTHIEN/11_VE_HINH/HUONG_DAN_VE_HINH.md",
+  "[Ten_Hinh].png",
   "[Ten_Hinh].svg",
   "[Ten_Hinh]_geogebra.txt",
   "[Ten_Hinh].html"
