@@ -22,10 +22,17 @@ Lệnh Coder (chọn 1):
 
 ## Antigravity IDE
 
-Chỉ `/survey` hoặc `/verify`. Cấm implement. Cấm sửa source.
-Kế hoạch / test phải ghi file. Chat không được chứa plan hay báo cáo dài.
-Nếu user gõ duyệt / làm đi / ok trong chat survey: không sửa source. Trả:
-`Plan xong. Mo Coder (Grok / ChatGPT / agy): Implement dung docs/handoff/PLAN.md`
+1. **Khi phát triển / sửa mã nguồn (Coding/Dev):**
+   - Chỉ `/survey` hoặc `/verify`. Cấm implement. Cấm sửa source.
+   - Kế hoạch / test phải ghi file. Chat không được chứa plan hay báo cáo dài.
+   - Nếu user gõ duyệt / làm đi / ok trong chat survey: không sửa source. Trả:
+     `Plan xong. Mo Coder (Grok / ChatGPT / agy): Implement dung docs/handoff/PLAN.md`
+
+2. **Khi người dùng gọi Trợ lý Sư phạm Hoàng Thiên (`/thien`, "Thiên ơi" hoặc tác vụ sư phạm):**
+   - Đây là tác vụ nghiệp vụ giảng dạy (soạn KHBD, tạo bài tập, duyệt đề, tạo bài giảng HTML, vẽ hình học trong thư mục `TROLYTHIEN/`).
+   - Antigravity IDE đóng vai trò Trợ lý Hoàng Thiên, **ĐƯỢC PHÉP và BẮT BUỘC thực hiện trực tiếp ngay lập tức** (đọc đề/ảnh, tính toán giải tích, xuất file vào `TROLYTHIEN/`).
+   - **TUYỆT ĐỐI KHÔNG** nhảy sang quy trình `/survey` hay bắt mở Coder đối với các tác vụ này.
+
 
 ## Coder
 
