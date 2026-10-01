@@ -1195,6 +1195,69 @@
       z-index: 10;
       transition: all 0.15s ease;
     }
+    .laser-pointer {
+      display: none;
+      position: fixed;
+      width: 22px;
+      height: 22px;
+      margin-left: -11px;
+      margin-top: -11px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, #ef4444 45%, rgba(239, 68, 68, 0.2) 70%);
+      box-shadow: 0 0 14px 4px rgba(239, 68, 68, 0.85);
+      z-index: 950;
+      pointer-events: none;
+    }
+    .laser-pointer.active { display: block; }
+    body.laser-mode, body.laser-mode * { cursor: none !important; }
+    .draw-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      pointer-events: none;
+      touch-action: none;
+    }
+    body.pen-mode .draw-canvas { cursor: crosshair; }
+    body.pen-mode .slide-deck { user-select: none; }
+    body.pen-mode, body.pen-mode .slide-deck, body.pen-mode .slide-item, body.pen-mode .col-board, body.pen-mode .col-task { overflow: hidden !important; }
+    #blackboardOverlay {
+      display: none; position: fixed; inset: 0; z-index: 1200;
+      background-color: #14532d;
+      background-image: linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    #blackboardOverlay.active { display: block; }
+    #blackboardCanvas { width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+    .blackboard-tools {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px; z-index: 2;
+    }
+    .blackboard-tools button { font: inherit; border: 0; border-radius: 999px; padding: 8px 12px; cursor: pointer; }
+
+    .pen-palette {
+      display: none;
+      position: fixed;
+      bottom: 64px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1100;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.94);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+    .pen-palette.active { display: flex; }
+    .pen-palette button {
+      border: 0;
+      border-radius: 999px;
+      background: #1e293b;
+      color: #fff;
+      font: inherit;
+      font-size: 14px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .btn-ctrl.is-on { background: #b91c1c; border-radius: 999px; }
     .blank-screen {
       display: none;
       position: fixed;
@@ -1313,7 +1376,7 @@
     </section>
 
     <!-- SLIDE 4: HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC (BẢNG 2 CỘT CV 5512) -->
-    <section class="slide-item" data-slide-index="4" data-tiet="1" data-max-steps="3">
+    <section class="slide-item" data-slide-index="4" data-tiet="1" data-max-steps="4">
       <header class="slide-header">
         <span class="slide-lesson-title">[TÊN BÀI HỌC]</span>
         <span class="slide-heading-text">B. HÌNH THÀNH KIẾN THỨC &bull; HOẠT ĐỘNG 1</span>
@@ -1326,18 +1389,18 @@
             <h4 class="block-title">Bước 1: Chuyển giao nhiệm vụ</h4>
             <p>GV chia lớp thành các nhóm 4 học sinh, giao phiếu học tập số 1 và yêu cầu thực hiện nhiệm vụ [Nội dung nhiệm vụ trích từ PDF].</p>
           </div>
-          <div class="content-block highlight-def" data-step="2">
+          <div class="content-block highlight-def" data-step="3">
             <h4 class="block-title">Bước 2: Tổ chức thực hiện</h4>
             <p>GV quan sát các nhóm, kịp thời định hướng các nhóm gặp khó khăn; ghi nhận thái độ làm việc nhóm của học sinh.</p>
           </div>
         </div>
         <div class="col-board">
           <div class="col-board-tag">HOẠT ĐỘNG CỦA HỌC SINH & KẾT QUẢ</div>
-          <div class="content-block highlight-proof" data-step="1">
+          <div class="content-block highlight-proof" data-step="2">
             <h4 class="block-title">Học sinh tiếp nhận & Thảo luận</h4>
             <p>HS nhận phiếu học tập, phân công nhiệm vụ thành viên, tiến hành đo đạc / tính toán theo yêu cầu.</p>
           </div>
-          <div class="content-block highlight-example" data-step="3">
+          <div class="content-block highlight-example" data-step="4">
             <h4 class="block-title">Bước 3 & 4: Báo cáo thảo luận & Kết luận</h4>
             <p>Đại diện nhóm 1 lên bảng trình bày, các nhóm khác lắng nghe phản biện. GV nhận xét chốt kiến thức.</p>
           </div>
@@ -1346,7 +1409,7 @@
     </section>
 
     <!-- SLIDE 5: VÍ DỤ — DẪN DẮT SƯ PHẠM 4 BƯỚC -->
-    <section class="slide-item" data-slide-index="5" data-tiet="1" data-max-steps="4">
+    <section class="slide-item" data-slide-index="5" data-tiet="1" data-max-steps="5">
       <header class="slide-header">
         <span class="slide-lesson-title">[TÊN BÀI HỌC]</span>
         <span class="slide-heading-text">KIẾN THỨC TRỌNG TÂM CẦN GHI NHỚ</span>
@@ -1355,7 +1418,7 @@
       <div class="slide-content-grid">
         <div class="col-board">
           <div class="col-board-tag">QUY TẮC / ĐỊNH LÍ CHÍNH</div>
-          <div class="content-block highlight-def" data-step="1">
+          <div class="content-block highlight-def" data-step="0">
             <h4 class="block-title">📌 Nội dung quy tắc / định nghĩa cốt lõi:</h4>
             <p>[Trích xuất định lí, công thức trọng tâm từ PDF đóng khung nổi bật tại đây]</p>
             <div style="background:#e0e7ff; border-left:6px solid #4338ca; padding:14px 20px; border-radius:8px; margin-top:14px; font-size:24px; font-weight:700; color:#312e81;">
@@ -1365,19 +1428,19 @@
         </div>
         <div class="col-board">
           <div class="col-board-tag">VÍ DỤ ÁP DỤNG MINH HỌA</div>
-          <div class="content-block highlight-def" data-step="1">
+          <div class="content-block highlight-def" data-step="2">
             <h4 class="block-title">📝 Ví dụ mẫu 1 — Đề bài:</h4>
             <p>[Đề bài ví dụ 1 trích từ PDF]. Hình vẽ ban đầu (nếu có) nằm ở bước này.</p>
           </div>
-          <div class="content-block highlight-example" data-step="2">
+          <div class="content-block highlight-example" data-step="3">
             <h4 class="block-title">💡 Gợi ý / Dẫn dắt:</h4>
             <p>Em hãy xác định giả thiết và đại lượng cần tìm, rồi chọn đúng hệ thức trong khung kiến thức. Chưa viết lời giải và chưa nêu đáp số.</p>
           </div>
-          <div class="content-block highlight-proof" data-step="3">
+          <div class="content-block highlight-proof" data-step="4">
             <h4 class="block-title">✏️ Các bước giải chi tiết:</h4>
             <p>Bước biến đổi và tính toán trích từ SGK, chưa chốt câu kết luận cuối.</p>
           </div>
-          <div class="content-block highlight-rule" data-step="4">
+          <div class="content-block highlight-rule" data-step="5">
             <h4 class="block-title">✅ Đáp số &amp; Ghi bảng:</h4>
             <p>Chốt đáp số theo SGK. Học sinh chép vào vở nội dung kiến thức cốt lõi của ví dụ.</p>
           </div>
@@ -1499,18 +1562,41 @@
 </div>
 
 <div class="blank-screen" id="blankScreen" aria-hidden="true"></div>
+<div class="laser-pointer" id="laserPointer" aria-hidden="true"></div>
+<canvas class="draw-canvas" id="drawCanvas"></canvas>
+<div id="penPalette" class="pen-palette">
+  <button type="button" onclick="setPenColor('#ef4444', 3, false)">🔴 Bút đỏ</button>
+  <button type="button" onclick="setPenColor('rgba(250, 204, 21, 0.45)', 14, true)">🟡 Dạ quang</button>
+  <button type="button" onclick="clearDrawCanvas()">🗑️ Xóa nét</button>
+  <button type="button" onclick="togglePenMode(false)">✕</button>
+</div>
+<div id="blackboardOverlay" aria-hidden="true">
+  <canvas id="blackboardCanvas"></canvas>
+  <div class="blackboard-tools">
+    <button type="button" onclick="setChalk('#f8fafc', 4)">Phấn trắng</button>
+    <button type="button" onclick="setChalk('#fde047', 5)">Phấn vàng</button>
+    <button type="button" onclick="clearBlackboard()">Xóa bảng</button>
+    <button type="button" onclick="toggleBlackboard(false)">Đóng</button>
+  </div>
+</div>
 <!-- THANH ĐIỀU KHIỂN NỔI -->
 <nav class="control-bar" id="controlBar">
   <button class="btn-ctrl" onclick="prevSlide()" title="Phím mũi tên Trái">◀ Trang trước</button>
   <button class="btn-ctrl" onclick="prevStep()" title="Lùi 1 bước">↩ Lùi 1 bước</button>
   <button class="btn-ctrl btn-ctrl-primary" onclick="nextStep()" title="Phím mũi tên Phải hoặc chạm vùng trống">↪ Tiến 1 bước</button>
   <button class="btn-ctrl" onclick="nextSlide()">▶ Trang sau</button>
+  <button class="btn-ctrl" id="btnLaser" onclick="toggleLaserMode()" title="Con trỏ laser (phím L)">🔴 Laser</button>
+  <button class="btn-ctrl" id="btnPen" onclick="togglePenMode()" title="Bút vẽ trên slide (phím P)">✏️ Vẽ</button>
+  <button class="btn-ctrl" onclick="jumpToPeriod(1)" title="Nhảy đến slide 1">Tiết 1</button>
+  <button class="btn-ctrl" onclick="jumpToPeriod(2)" title="Nhảy đến slide 9">Tiết 2</button>
+  <button class="btn-ctrl" onclick="jumpToPeriod(3)" title="Nhảy đến slide 16">Tiết 3</button>
+  <button class="btn-ctrl" id="btnBlackboard" onclick="toggleBlackboard()" title="Bảng viết (phím W hoặc B)">📋 Bảng viết</button>
   <button class="btn-ctrl" onclick="toggleFullscreen()" title="Toàn màn hình (F11)">⛶ Toàn màn hình</button>
   <button class="btn-ctrl" id="btnFontSize" onclick="cycleFontSize()" title="Đổi cỡ chữ TV: 28px (Chuẩn TV) ⇄ 30px (TV Lớn) ⇄ 22px (Laptop)">🔤 TV 28px</button>
   <button class="btn-ctrl" id="btnToggleLang" onclick="toggleLanguage()" title="Chuyển đổi giao diện và nội dung song ngữ Việt / Anh">🌐 Song ngữ (VI/EN)</button>
   <button class="btn-ctrl btn-speech" id="btnReadSlideEn" onclick="toggleReadSlideEn()" title="Trợ giảng AI: Đọc tiếng Anh chậm rãi cho học sinh nghe">🔊 Đọc Slide (EN)</button>
+  <button class="btn-ctrl" id="btnReadSlideVi" onclick="playAudioOrSpeech()" title="Đọc tiếng Việt bằng giọng Natural (Edge: Hoài My). Không dùng giọng Google.">🗣️ Đọc tiếng Việt</button>
   <button class="btn-ctrl" id="btnSpeechRate" onclick="cycleSpeechRate()" title="Đổi tốc độ đọc: 0.85x (Chậm vừa) ⇄ 0.75x (Rất chậm) ⇄ 0.5x (Siêu chậm) ⇄ 1.0x (Tự nhiên)">⚡ 0.85x</button>
-  <button class="btn-ctrl" id="btnHelpCaption" onclick="showCaptionHelp()" title="Cách tắt phụ đề tự động (Live Caption) của Windows/Chrome">💬 Tắt phụ đề</button>
   <button class="btn-ctrl" id="btnSaveLecture" onclick="saveLecture()" title="Lưu trực tiếp đè vào file hoặc tải bản mới">💾 Lưu bài giảng</button>
   <button class="btn-ctrl btn-ctrl-mode" id="btnToggleMode" onclick="toggleMode()">⚙ Thiết kế</button>
 </nav>
@@ -1918,10 +2004,62 @@
     return cachedEnglishVoice;
   }
 
+  let cachedViVoice;
+  function getSweetVietnameseVoice() {
+    if (!('speechSynthesis' in window)) return null;
+    if (cachedViVoice) return cachedViVoice;
+    const voices = window.speechSynthesis.getVoices();
+    cachedViVoice = voices.find(v => /vi/i.test(v.lang) && /Natural/i.test(v.name) && /HoaiMy|NamMinh/i.test(v.name))
+      || voices.find(v => /vi/i.test(v.lang) && /Natural/i.test(v.name))
+      || null;
+    return cachedViVoice;
+  }
+
+  function speakBlockVi(blockEl) {
+    const voice = getSweetVietnameseVoice();
+    if (!voice) {
+      showToast('Để trải nghiệm giọng đọc AI Hoài My truyền cảm, Thầy/Cô vui lòng mở bài giảng trên trình duyệt Microsoft Edge.');
+      return;
+    }
+    const cur = blockEl || getCurrentSlide();
+    if (!cur) return;
+    const text = (cur.innerText || '').replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'vi-VN';
+    utter.voice = voice;
+    utter.rate = 1;
+    window.speechSynthesis.speak(utter);
+  }
+
+  let hoaiMyAudio = null;
+  function playAudioOrSpeech(blockEl) {
+    const slide = (blockEl && blockEl.classList && blockEl.classList.contains('slide-item')) ? blockEl : getCurrentSlide();
+    const idx = slide ? (slide.getAttribute('data-slide-index') || '1') : '1';
+    let fell = false;
+    function fallback() {
+      if (fell) return;
+      fell = true;
+      speakBlockVi(blockEl);
+    }
+    if (hoaiMyAudio) {
+      hoaiMyAudio.pause();
+      hoaiMyAudio = null;
+    }
+    const audio = new Audio('audio/slide-' + idx + '.mp3');
+    hoaiMyAudio = audio;
+    audio.addEventListener('error', fallback);
+    const played = audio.play();
+    if (played && played.catch) played.catch(fallback);
+  }
+
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.onvoiceschanged = () => {
       cachedEnglishVoice = null;
+      cachedViVoice = null;
       getEnglishVoice();
+      getSweetVietnameseVoice();
     };
   }
 
@@ -1962,11 +2100,6 @@
     }
 
     stopAllSpeech();
-
-    // Tự động chuyển màn hình sang Tiếng Anh để chữ trên màn hình khớp 100% với giọng đọc!
-    if (currentLang === 'vi') {
-      toggleLanguage();
-    }
 
     const titleEn = blockEl.getAttribute('data-title-en') || (blockEl.querySelector('strong') ? blockEl.querySelector('strong').textContent : '');
     const rawEn = blockEl.getAttribute('data-raw-en') || (blockEl.querySelector('.block-body') ? blockEl.querySelector('.block-body').innerHTML : '');
@@ -2574,6 +2707,7 @@
   }
 
   function updateSlideDisplay() {
+    if (typeof clearDrawCanvas === 'function') clearDrawCanvas();
     stopAllSpeech();
     slides.forEach(s => {
       s.classList.remove('active');
@@ -3081,7 +3215,7 @@
         <button class="btn-block-action btn-edit-block" onclick="openEditModal('${solBlockId}')">✏️ Sửa</button>
         <button class="btn-block-action btn-del-block" onclick="deleteBlock('${solBlockId}')">✕</button>
       </div>
-      <button class="btn-block-speak" onclick="speakBlockEn(this.closest('.content-block'), null, event)">🔊</button>
+      <button class="btn-block-speak" onclick="speakBlockAuto(this.closest('.content-block'), null, event)">🔊</button>
       <strong>HƯỚNG DẪN GIẢI CHI TIẾT</strong><br>
       <div class="block-body">${solHtml}</div>
     `;
@@ -3387,7 +3521,7 @@
       newBlock.setAttribute('data-title-vi', titleVal || 'NỘI DUNG MỚI');
       newBlock.setAttribute('data-title-en', smartTranslateText(titleVal || 'NEW CONTENT'));
 
-      newBlock.innerHTML = createDesignOverlayHTML(newBlockId, newStep) + `<button class="btn-block-speak" onclick="speakBlockEn(this.closest('.content-block'), null, event)" title="Nghe phát âm tiếng Anh chậm rãi (0.8x)">🔊</button><strong>${titleVal || 'NỘI DUNG MỚI'}</strong><br><div class="block-body">${contentVal}</div>`;
+      newBlock.innerHTML = createDesignOverlayHTML(newBlockId, newStep) + `<button class="btn-block-speak" onclick="speakBlockAuto(this.closest('.content-block'), null, event)" title="Nghe phát âm tiếng Anh chậm rãi (0.8x)">🔊</button><strong>${titleVal || 'NỘI DUNG MỚI'}</strong><br><div class="block-body">${contentVal}</div>`;
       attachDragHandle(newBlock);
 
       const addBtn = col.querySelector('.btn-add-block');
@@ -3421,6 +3555,207 @@
     localStorage.setItem(key, JSON.stringify(updated));
   }
 
+  let penDrawing = false;
+  let penColor = '#ef4444';
+  let penWidth = 3;
+  let penHighlight = false;
+
+  function resizeDrawCanvas() {
+    const canvas = document.getElementById('drawCanvas');
+    if (!canvas) return;
+    const ratio = window.devicePixelRatio || 1;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    canvas.width = Math.floor(w * ratio);
+    canvas.height = Math.floor(h * ratio);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.getContext('2d').setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+
+  function toggleLaserMode(force) {
+    const on = typeof force === 'boolean' ? force : !document.body.classList.contains('laser-mode');
+    if (on) togglePenMode(false);
+    document.body.classList.toggle('laser-mode', on);
+    const dot = document.getElementById('laserPointer');
+    if (dot) dot.classList.toggle('active', on);
+    const btn = document.getElementById('btnLaser');
+    if (btn) btn.classList.toggle('is-on', on);
+  }
+
+  function togglePenMode(force) {
+    const on = typeof force === 'boolean' ? force : !document.body.classList.contains('pen-mode');
+    if (on) toggleLaserMode(false);
+    document.body.classList.toggle('pen-mode', on);
+    const canvas = document.getElementById('drawCanvas');
+    const palette = document.getElementById('penPalette');
+    if (canvas) canvas.style.pointerEvents = on ? 'auto' : 'none';
+    if (palette) palette.classList.toggle('active', on);
+    const btn = document.getElementById('btnPen');
+    if (btn) btn.classList.toggle('is-on', on);
+    if (on) resizeDrawCanvas();
+  }
+
+  function setPenColor(color, width, isHighlighter) {
+    penColor = color;
+    penWidth = width;
+    penHighlight = !!isHighlighter;
+  }
+
+  function clearDrawCanvas() {
+    const canvas = document.getElementById('drawCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
+  function penPoint(e) {
+    if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  }
+
+  function bindDrawCanvas() {
+    const canvas = document.getElementById('drawCanvas');
+    if (!canvas || canvas.dataset.bound) return;
+    canvas.dataset.bound = '1';
+    const ctx = canvas.getContext('2d');
+    function start(e) {
+      if (!document.body.classList.contains('pen-mode')) return;
+      e.preventDefault();
+      penDrawing = true;
+      const p = penPoint(e);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+    function move(e) {
+      if (!penDrawing) return;
+      e.preventDefault();
+      const p = penPoint(e);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = penColor;
+      ctx.lineWidth = penWidth;
+      ctx.globalCompositeOperation = penHighlight ? 'multiply' : 'source-over';
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+    function end() { penDrawing = false; }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+  }
+  document.addEventListener('mousemove', function(e) {
+    const dot = document.getElementById('laserPointer');
+    if (!dot || !document.body.classList.contains('laser-mode')) return;
+    dot.style.left = e.clientX + 'px';
+    dot.style.top = e.clientY + 'px';
+  });
+  document.addEventListener('DOMContentLoaded', bindDrawCanvas);
+  window.addEventListener('resize', resizeDrawCanvas);
+
+
+  let chalkColor = '#f8fafc', chalkWidth = 4, chalkDrawing = false, chalkShift = false, chalkStart = null, chalkSnap = null;
+  function resizeBlackboard() {
+    const canvas = document.getElementById('blackboardCanvas');
+    const overlay = document.getElementById('blackboardOverlay');
+    if (!canvas || !overlay) return;
+    const ratio = window.devicePixelRatio || 1;
+    const w = overlay.clientWidth || window.innerWidth;
+    const h = overlay.clientHeight || window.innerHeight;
+    const prev = canvas.getContext('2d').getImageData(0, 0, canvas.width || 1, canvas.height || 1);
+    canvas.width = Math.floor(w * ratio);
+    canvas.height = Math.floor(h * ratio);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    if (prev.width > 1) ctx.putImageData(prev, 0, 0);
+  }
+  function toggleBlackboard(force) {
+    const overlay = document.getElementById('blackboardOverlay');
+    if (!overlay) return;
+    const on = typeof force === 'boolean' ? force : !overlay.classList.contains('active');
+    overlay.classList.toggle('active', on);
+    overlay.setAttribute('aria-hidden', on ? 'false' : 'true');
+    const btn = document.getElementById('btnBlackboard');
+    if (btn) btn.classList.toggle('is-on', on);
+    if (on) resizeBlackboard();
+  }
+  function setChalk(color, width) { chalkColor = color; chalkWidth = width; }
+  function clearBlackboard() {
+    const canvas = document.getElementById('blackboardCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.restore();
+  }
+  function bindBlackboard() {
+    const canvas = document.getElementById('blackboardCanvas');
+    if (!canvas || canvas.dataset.bound) return;
+    canvas.dataset.bound = '1';
+    const ctx = canvas.getContext('2d');
+    function point(e) {
+      const r = canvas.getBoundingClientRect();
+      const src = (e.touches && e.touches[0]) || e;
+      return { x: src.clientX - r.left, y: src.clientY - r.top };
+    }
+    function start(e) {
+      if (!document.getElementById('blackboardOverlay').classList.contains('active')) return;
+      e.preventDefault();
+      chalkDrawing = true;
+      chalkShift = !!(e.shiftKey);
+      chalkStart = point(e);
+      chalkSnap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      ctx.beginPath(); ctx.moveTo(chalkStart.x, chalkStart.y);
+    }
+    function move(e) {
+      if (!chalkDrawing) return;
+      e.preventDefault();
+      const p = point(e);
+      if (e.shiftKey || chalkShift) {
+        ctx.putImageData(chalkSnap, 0, 0);
+        ctx.beginPath();
+        ctx.moveTo(chalkStart.x, chalkStart.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.strokeStyle = chalkColor; ctx.lineWidth = chalkWidth; ctx.lineCap = 'round';
+        ctx.stroke();
+        return;
+      }
+      ctx.strokeStyle = chalkColor; ctx.lineWidth = chalkWidth; ctx.lineCap = 'round';
+      ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x, p.y);
+    }
+    function end() { chalkDrawing = false; chalkSnap = null; }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+  }
+  document.addEventListener('DOMContentLoaded', bindBlackboard);
+  function jumpToPeriod(n) {
+    const map = { 1: 1, 2: 9, 3: 16 };
+    const target = map[n];
+    if (!target || target > totalSlides) return;
+    currentSlideIndex = target;
+    currentStep = 0;
+    updateSlideDisplay();
+  }
+  function speakBlockAuto(blockEl, onFinished, ev) {
+    if (ev) ev.stopPropagation();
+    if (currentLang === 'en') return speakBlockEn(blockEl, onFinished, null);
+    if (blockEl && blockEl.classList.contains('is-speaking')) { stopAllSpeech(); return; }
+    playAudioOrSpeech(blockEl);
+  }
+
   function toggleBlankScreen() {
     const blank = document.getElementById('blankScreen');
     if (!blank) return;
@@ -3440,7 +3775,37 @@
     if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
     const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'];
     const prevKeys = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'];
-    if (e.key === 'b' || e.key === 'B' || e.key === '.') {
+    if (e.key === 'Escape') {
+      const board = document.getElementById('blackboardOverlay');
+      if (board && board.classList.contains('active')) { e.preventDefault(); toggleBlackboard(false); return; }
+      if (document.body.classList.contains('laser-mode') || document.body.classList.contains('pen-mode')) {
+        e.preventDefault();
+        toggleLaserMode(false);
+        togglePenMode(false);
+      }
+      return;
+    }
+    if (e.key === 'l' || e.key === 'L') {
+      e.preventDefault();
+      toggleLaserMode();
+      return;
+    }
+    if (e.key === 'p' || e.key === 'P') {
+      e.preventDefault();
+      togglePenMode();
+      return;
+    }
+    if (e.key === 'c' || e.key === 'C') {
+      e.preventDefault();
+      clearDrawCanvas();
+      return;
+    }
+    if (e.key === 'w' || e.key === 'W' || e.key === 'b' || e.key === 'B') {
+      e.preventDefault();
+      toggleBlackboard();
+      return;
+    }
+    if (e.key === '.') {
       e.preventDefault();
       toggleBlankScreen();
       return;
@@ -3461,6 +3826,7 @@
   /* Chạm vùng trống tiến bước; hình vẽ mở Lightbox, không nhảy bước */
   document.getElementById('slideDeck').addEventListener('click', function(e) {
     if (isDesignMode) return;
+    if (document.body.classList.contains('laser-mode')) return;
     const figure = zoomableFigure(e.target);
     if (figure) {
       e.preventDefault();

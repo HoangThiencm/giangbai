@@ -258,7 +258,15 @@ const presenterNeedles = [
   "PageUp",
   "Backspace",
   "blank-screen",
-  "mjx-container"
+  "mjx-container",
+  "Vá 25",
+  "toggleLaserMode",
+  "togglePenMode",
+  "#laserPointer",
+  "#drawCanvas",
+  "Vá 26",
+  "getSweetVietnameseVoice",
+  "laser-mode"
 ];
 for (const needle of presenterNeedles) {
   mustInclude(prompt, needle, "master prompt presenter");
@@ -280,6 +288,81 @@ for (const rel of lectures) {
   mustInclude(lecture, ".image-lightbox-backdrop, svg, img, .figure-box, [data-zoomable]", rel);
   mustInclude(lecture, 'data-step="3"', rel);
   mustInclude(lecture, "badge-role-sol", rel);
+  mustInclude(lecture, 'id="laserPointer"', rel);
+  mustInclude(lecture, 'id="drawCanvas"', rel);
+  mustInclude(lecture, "toggleLaserMode", rel);
+  mustInclude(lecture, "togglePenMode", rel);
+  mustInclude(lecture, "e.key === 'l' || e.key === 'L'", rel);
+  mustInclude(lecture, "e.key === 'p' || e.key === 'P'", rel);
+  const slides = lecture.split(/<section class="slide-item\b/).slice(1);
+  slides.forEach((slide, i) => {
+    const cols = [];
+    const reCol = /<div class="col-(?:board|task)"/g;
+    const marks = [];
+    let cm;
+    while ((cm = reCol.exec(slide))) marks.push(cm.index);
+    marks.forEach((pos, idx) => {
+      const chunk = slide.slice(pos, marks[idx + 1] || slide.length);
+      const steps = new Set();
+      const re = /<div class="content-block\b[^>]*>/g;
+      let m;
+      while ((m = re.exec(chunk))) {
+        const step = (m[0].match(/data-step="(\d+)"/) || [])[1];
+        if (step && step !== "0") steps.add(step);
+      }
+      cols.push(steps);
+    });
+    for (let a = 0; a < cols.length; a++) {
+      for (let b = a + 1; b < cols.length; b++) {
+        for (const step of cols[a]) {
+          assert.ok(!cols[b].has(step), rel + " slide " + (i + 1) + " trung data-step=" + step);
+        }
+      }
+    }
+  });
 }
+
+const bai12 = read("TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_12_Mot_so_he_thuc_giua_canh_va_goc_trong_tam_giac_vuong_va_ung_dung.html");
+function openingStep(src, id) {
+  const at = src.indexOf('id="' + id + '"');
+  assert.ok(at > 0, "thieu " + id);
+  const tag = src.slice(src.lastIndexOf("<div", at), src.indexOf(">", at) + 1);
+  return (tag.match(/data-step="(\d+)"/) || [])[1];
+}
+assert.strictEqual(openingStep(bai12, "s2_t1"), "1", "de bai Hoat dong 1 phai o buoc 1");
+assert.strictEqual(openingStep(bai12, "s2_t2"), "1", "Hinh 4.12 phai cung buoc voi de bai");
+assert.strictEqual(openingStep(bai12, "s2_b1"), "2", "quy uoc ky hieu phai o buoc 2");
+assert.strictEqual(openingStep(bai12, "s2_t3"), "3", "huong dan cau a b phai o buoc 3");
+assert.strictEqual(openingStep(bai12, "s2_b2"), "4", "he thuc chot phai o buoc 4");
+mustInclude(bai12, "document.body.classList.contains('laser-mode')) return;", "bai12 laser");
+mustInclude(bai12, "getSweetVietnameseVoice", "bai12 voice");
+mustInclude(bai12, "speakBlockVi", "bai12 speak vi");
+mustInclude(bai12, "function playAudioOrSpeech", "bai12 audio");
+mustInclude(bai12, "audio/slide-", "bai12 mp3 path");
+const edgeBat = read("TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Chay_Bai_12_Bang_Edge.bat");
+mustInclude(edgeBat, "msedge", "bat edge");
+mustInclude(edgeBat, "Bai_12_Mot_so_he_thuc_giua_canh_va_goc_trong_tam_giac_vuong_va_ung_dung.html", "bat html");
+const exporter = read("TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/export_hoaimy_audio.py");
+mustInclude(exporter, "edge_tts", "exporter lib");
+mustInclude(exporter, "vi-VN-HoaiMyNeural", "exporter voice");
+mustInclude(prompt, "playAudioOrSpeech", "prompt audio");
+mustInclude(rule, "Chay_Bai_12_Bang_Edge.bat", "rule bat");
+mustInclude(bai12, "Hoài My truyền cảm", "bai12 toast edge");
+mustInclude(bai12, 'id="blackboardOverlay"', "bai12 bang");
+mustInclude(bai12, "function toggleBlackboard", "bai12 toggle bang");
+mustInclude(bai12, "function jumpToPeriod", "bai12 nhay tiet");
+mustInclude(bai12, "speakBlockAuto", "bai12 loa");
+mustInclude(bai12, "e.key === 'w' || e.key === 'W'", "bai12 phim W");
+mustInclude(bai12, "overflow: hidden", "bai12 khoa cuon");
+assert.ok(!bai12.includes('id="btnHelpCaption"'), "bai12 khong con nut tat phu de");
+assert.ok(!bai12.includes('onclick="speakBlockEn('), "bai12 nut loa khong goi cung speakBlockEn");
+mustInclude(prompt, 'id="blackboardOverlay"', "prompt bang");
+mustInclude(rule, "speakBlockAuto", "rule loa");
+mustInclude(prompt, "jumpToPeriod(3)", "prompt tiet 3");
+assert.ok((bai12.match(/core-board/g) || []).length >= 9, "bai12 phai bao luu bang cot loi o cac slide vi du");
+mustInclude(bai12, "Định lí 1", "bai12 dinh li 1");
+mustInclude(bai12, "Định lí 2", "bai12 dinh li 2");
+mustInclude(prompt, "Đồng hành Đề bài - Hình vẽ", "prompt hinh ve");
+mustInclude(rule, "Phân bước Tuần tự 2 cột", "rule cot");
 
 console.log("trolythien-bai-giang-html-smoke: PASS");

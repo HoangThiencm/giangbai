@@ -1,16 +1,26 @@
-# IMPLEMENT — Bút trình chiếu, zoom ảnh, dẫn dắt 4 bước
+# IMPLEMENT
+
+Đã nâng cấp bài giảng theo PLAN: bảng viết, nhảy tiết, loa song ngữ, khóa cuộn khi vẽ, cột ghi bảng và audio Hoài My.
 
 ## Đã làm
-- `master_lecture_template.html`: phím tiến `ArrowRight`, `ArrowDown`, `PageDown`, Space, `Enter`; phím lùi `ArrowLeft`, `ArrowUp`, `PageUp`, `Backspace`; phím `b` và `.` bật/tắt `#blankScreen` (`.blank-screen`). `preventDefault()` khi nhận các phím này ngoài ô nhập. Nút `.control-bar` gọi `blur()` sau click.
-- Click trên `#slideDeck`: `zoomableFigure()` mở Lightbox cho `svg` / `img` / `.figure-box` / `[data-zoomable]` (bỏ `mjx-container`) và không gọi `nextStep()`. Delegation không phụ thuộc listener gắn trên từng ảnh.
-- Slide mẫu 5 và 7 trong template tách đề (bước 1), gợi ý (bước 2), lời giải chi tiết (bước 3), đáp số và ghi bảng (bước 4).
-- `PROMPT_TAO_BAI_GIANG_HTML.md` và `.agents/rules/tao-bai-giang-html.md`: Vá 22 nêu event delegation; thêm Vá 23 (4 bước) và Vá 24 (bút trình chiếu).
-- `Bai_12_...html` và `Bai_4_...html`: cùng bộ phím, màn hình đen, delegation zoom. Khối có huy hiệu Lời giải đang `data-step="2"` được chuyển thành `data-step="3"` (15 khối ở bài 12, 16 khối ở bài 4). Khối gợi ý giữ bước 2.
+
+- `master_lecture_template.html` và `Bai_12_...html`:
+  - `#blackboardOverlay` / `#blackboardCanvas`: phấn trắng, phấn vàng, xóa bảng, giữ Shift vẽ đường thẳng. Phím `W` hoặc `B` mở bảng, `Escape` đóng.
+  - Nút `[Tiết 1]`, `[Tiết 2]`, `[Tiết 3]` gọi `jumpToPeriod` tới slide 1, 9, 16.
+  - Đã bỏ nút `[💬 Tắt phụ đề]`.
+  - `body.pen-mode` khóa `overflow: hidden` trên slide và hai cột.
+  - `speakBlockAuto`: giao diện Việt phát `audio/slide-N.mp3` (Hoài My), giao diện Anh gọi `speakBlockEn`. Nút loa 🔊 dùng `speakBlockAuto`. `speakBlockEn` không còn tự gọi `toggleLanguage()`.
+- Bài 12: các khối ví dụ, luyện tập, bài tập, phân tích đã chuyển sang cột hoạt động. Cột ghi bảng giữ định lí và công thức. Slide 2 vẫn đúng bước smoke (`s2_t1`/`s2_t2` bước 1, `s2_b1` bước 2, `s2_t3` bước 3, `s2_b2` bước 4).
+- Mục 5 của `PROMPT_TAO_BAI_GIANG_HTML.md` và `.agents/rules/tao-bai-giang-html.md` có bảng viết, nút tiết, `speakBlockAuto` và khóa cuộn.
+- Smoke hai file test có assertion cho bảng viết, nhảy tiết, loa song ngữ, không còn nút phụ đề.
+- `export_hoaimy_audio.py` đã xuất `audio/slide-1.mp3` đến `audio/slide-26.mp3`.
 
 ## Kiểm thử
+
 - `node tests/trolythien-template-smoke.js` — PASS
 - `node tests/trolythien-bai-giang-html-smoke.js` — PASS
+- Chưa mở trình duyệt. Bấm Tiết, bảng viết, Shift và loa để chat `/verify`.
 
-## Ghi chú cho /verify
-- Câu «Vậy» trong hai file Ket_qua vẫn nằm trong khối lời giải bước 3. Tách thành khối bước 4 riêng trên HTML một dòng làm vỡ thẻ; mẫu 4 bước đầy đủ nằm ở slide 5 và 7 của master template và trong Vá 23.
-- Chưa commit, chưa push.
+## Chưa làm
+
+- Không commit, không push.

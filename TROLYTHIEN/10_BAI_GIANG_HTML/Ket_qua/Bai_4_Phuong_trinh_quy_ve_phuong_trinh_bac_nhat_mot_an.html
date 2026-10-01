@@ -1206,6 +1206,54 @@
       z-index: 10;
       transition: all 0.15s ease;
     }
+    .laser-pointer {
+      display: none;
+      position: fixed;
+      width: 22px;
+      height: 22px;
+      margin-left: -11px;
+      margin-top: -11px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, #ef4444 45%, rgba(239, 68, 68, 0.2) 70%);
+      box-shadow: 0 0 14px 4px rgba(239, 68, 68, 0.85);
+      z-index: 950;
+      pointer-events: none;
+    }
+    .laser-pointer.active { display: block; }
+    body.laser-mode, body.laser-mode * { cursor: none !important; }
+    .draw-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      pointer-events: none;
+      touch-action: none;
+    }
+    body.pen-mode .draw-canvas { cursor: crosshair; }
+    body.pen-mode .slide-deck { user-select: none; }
+    .pen-palette {
+      display: none;
+      position: fixed;
+      bottom: 64px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1100;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.94);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+    .pen-palette.active { display: flex; }
+    .pen-palette button {
+      border: 0;
+      border-radius: 999px;
+      background: #1e293b;
+      color: #fff;
+      font: inherit;
+      font-size: 14px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .btn-ctrl.is-on { background: #b91c1c; border-radius: 999px; }
     .blank-screen {
       display: none;
       position: fixed;
@@ -1244,11 +1292,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s1_b1" data-step="1" data-raw="• Nhận dạng và giải thành thạo <b>phương trình tích</b>: $(ax+b)(cx+d) = 0$.<br>• Giải <b>phương trình chứa ẩn ở mẫu</b> và kỹ năng loại nghiệm ngoại lai.<br>• Ứng dụng giải quyết các bài toán thực tiễn hình học và năng suất." data-raw-vi="• Nhận dạng và giải thành thạo <b>phương trình tích</b>: $(ax+b)(cx+d) = 0$.<br>• Giải <b>phương trình chứa ẩn ở mẫu</b> và kỹ năng loại nghiệm ngoại lai.<br>• Ứng dụng giải quyết các bài toán thực tiễn hình học và năng suất." data-raw-en="• Understand and solve <b>product equations</b>: $(ax+b)(cx+d) = 0$.<br>• Solve <b>rational equations</b> and master extraneous root rejection.<br>• Apply equations to practical geometric and work-rate problems." data-title-vi="TRỌNG TÂM KIẾN THỨC" data-title-en="CORE KNOWLEDGE FOCUS">
+          <div class="content-block highlight-def" id="s1_b1" data-step="4" data-raw="• Nhận dạng và giải thành thạo <b>phương trình tích</b>: $(ax+b)(cx+d) = 0$.<br>• Giải <b>phương trình chứa ẩn ở mẫu</b> và kỹ năng loại nghiệm ngoại lai.<br>• Ứng dụng giải quyết các bài toán thực tiễn hình học và năng suất." data-raw-vi="• Nhận dạng và giải thành thạo <b>phương trình tích</b>: $(ax+b)(cx+d) = 0$.<br>• Giải <b>phương trình chứa ẩn ở mẫu</b> và kỹ năng loại nghiệm ngoại lai.<br>• Ứng dụng giải quyết các bài toán thực tiễn hình học và năng suất." data-raw-en="• Understand and solve <b>product equations</b>: $(ax+b)(cx+d) = 0$.<br>• Solve <b>rational equations</b> and master extraneous root rejection.<br>• Apply equations to practical geometric and work-rate problems." data-title-vi="TRỌNG TÂM KIẾN THỨC" data-title-en="CORE KNOWLEDGE FOCUS">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               
-              <span class="badge-step-num" onclick="setBlockStepDirect('s1_b1')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s1_b1')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s1_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s1_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s1_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -1443,11 +1491,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s2_b1" data-step="1" data-raw="• Dạng phương trình: $(ax+b)(cx+d) = 0$.<br>• <b>Tính chất tích bằng 0:</b> Một tích bằng $0$ khi và chỉ khi ít nhất một thừa số bằng $0$." data-raw-vi="• Dạng phương trình: $(ax+b)(cx+d) = 0$.<br>• <b>Tính chất tích bằng 0:</b> Một tích bằng $0$ khi và chỉ khi ít nhất một thừa số bằng $0$." data-raw-en="• Standard form: $(ax+b)(cx+d) = 0$.<br>• <b>Zero-Product Property:</b> A product equals $0$ if and only if at least one factor equals $0$." data-title-vi="1. PHƯƠNG TRÌNH TÍCH" data-title-en="1. PRODUCT EQUATIONS">
+          <div class="content-block highlight-def" id="s2_b1" data-step="5" data-raw="• Dạng phương trình: $(ax+b)(cx+d) = 0$.<br>• <b>Tính chất tích bằng 0:</b> Một tích bằng $0$ khi và chỉ khi ít nhất một thừa số bằng $0$." data-raw-vi="• Dạng phương trình: $(ax+b)(cx+d) = 0$.<br>• <b>Tính chất tích bằng 0:</b> Một tích bằng $0$ khi và chỉ khi ít nhất một thừa số bằng $0$." data-raw-en="• Standard form: $(ax+b)(cx+d) = 0$.<br>• <b>Zero-Product Property:</b> A product equals $0$ if and only if at least one factor equals $0$." data-title-vi="1. PHƯƠNG TRÌNH TÍCH" data-title-en="1. PRODUCT EQUATIONS">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               
-              <span class="badge-step-num" onclick="setBlockStepDirect('s2_b1')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s2_b1')" title="Click để nhập số bước">5</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s2_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s2_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s2_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -1580,11 +1628,11 @@
             <div class="block-body"><b>Định nghĩa:</b><br>Phương trình tích là phương trình có dạng:<br>$$\mathbf{(ax + b)(cx + d) = 0}$$</div>
           </div>
         
-          <div class="content-block highlight-rule" id="s3_b2" data-step="1" data-raw="Để giải phương trình $(ax + b)(cx + d) = 0$, ta giải hai phương trình bậc nhất:<br>$$ax + b = 0 \quad \text{và} \quad cx + d = 0$$<br>Sau đó lấy tất cả các nghiệm của chúng." data-raw-vi="Để giải phương trình $(ax + b)(cx + d) = 0$, ta giải hai phương trình bậc nhất:<br>$$ax + b = 0 \quad \text{và} \quad cx + d = 0$$<br>Sau đó lấy tất cả các nghiệm của chúng." data-raw-en="To solve equation $(ax + b)(cx + d) = 0$, we solve two separate equations:<br>$$ax + b = 0 \quad \text{and} \quad cx + d = 0$$<br>Then gather all their solutions." data-title-vi="CÁCH GIẢI PHƯƠNG TRÌNH TÍCH" data-title-en="SOLVING PRODUCT EQUATIONS">
+          <div class="content-block highlight-rule" id="s3_b2" data-step="4" data-raw="Để giải phương trình $(ax + b)(cx + d) = 0$, ta giải hai phương trình bậc nhất:<br>$$ax + b = 0 \quad \text{và} \quad cx + d = 0$$<br>Sau đó lấy tất cả các nghiệm của chúng." data-raw-vi="Để giải phương trình $(ax + b)(cx + d) = 0$, ta giải hai phương trình bậc nhất:<br>$$ax + b = 0 \quad \text{và} \quad cx + d = 0$$<br>Sau đó lấy tất cả các nghiệm của chúng." data-raw-en="To solve equation $(ax + b)(cx + d) = 0$, we solve two separate equations:<br>$$ax + b = 0 \quad \text{and} \quad cx + d = 0$$<br>Then gather all their solutions." data-title-vi="CÁCH GIẢI PHƯƠNG TRÌNH TÍCH" data-title-en="SOLVING PRODUCT EQUATIONS">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               
-              <span class="badge-step-num" onclick="setBlockStepDirect('s3_b2')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s3_b2')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s3_b2', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s3_b2', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s3_b2')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -1699,11 +1747,11 @@
             <div class="block-body"><b>Giải phương trình:</b> $$(2x + 1)(3x - 1) = 0$$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s4_b3" data-step="3" data-raw="Ta có: $2x + 1 = 0$ hoặc $3x - 1 = 0$<br>• Với $2x + 1 = 0$, suy ra $2x = -1$, hay $x = -\frac{1}{2}$<br>• Với $3x - 1 = 0$, suy ra $3x = 1$, hay $x = \frac{1}{3}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{2}$ và $x = \frac{1}{3}$." data-raw-vi="Ta có: $2x + 1 = 0$ hoặc $3x - 1 = 0$<br>• Với $2x + 1 = 0$, suy ra $2x = -1$, hay $x = -\frac{1}{2}$<br>• Với $3x - 1 = 0$, suy ra $3x = 1$, hay $x = \frac{1}{3}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{2}$ và $x = \frac{1}{3}$." data-raw-en="We have: $2x + 1 = 0$ or $3x - 1 = 0$<br>• With $2x + 1 = 0$, we get $2x = -1$, so $x = -\frac{1}{2}$<br>• With $3x - 1 = 0$, we get $3x = 1$, so $x = \frac{1}{3}$<br><b>Thus</b> the equation has two solutions: $x = -\frac{1}{2}$ and $x = \frac{1}{3}$." data-title-vi="VÍ DỤ MẪU 1 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 1 (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s4_b3" data-step="4" data-raw="Ta có: $2x + 1 = 0$ hoặc $3x - 1 = 0$<br>• Với $2x + 1 = 0$, suy ra $2x = -1$, hay $x = -\frac{1}{2}$<br>• Với $3x - 1 = 0$, suy ra $3x = 1$, hay $x = \frac{1}{3}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{2}$ và $x = \frac{1}{3}$." data-raw-vi="Ta có: $2x + 1 = 0$ hoặc $3x - 1 = 0$<br>• Với $2x + 1 = 0$, suy ra $2x = -1$, hay $x = -\frac{1}{2}$<br>• Với $3x - 1 = 0$, suy ra $3x = 1$, hay $x = \frac{1}{3}$<br><b>Vậy</b> phương trình có hai nghiệm là $x = -\frac{1}{2}$ và $x = \frac{1}{3}$." data-raw-en="We have: $2x + 1 = 0$ or $3x - 1 = 0$<br>• With $2x + 1 = 0$, we get $2x = -1$, so $x = -\frac{1}{2}$<br>• With $3x - 1 = 0$, we get $3x = 1$, so $x = \frac{1}{3}$<br><b>Thus</b> the equation has two solutions: $x = -\frac{1}{2}$ and $x = \frac{1}{3}$." data-title-vi="VÍ DỤ MẪU 1 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 1 (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s4_b3')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s4_b3')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s4_b3', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s4_b3', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s4_b3')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -1818,11 +1866,11 @@
             <div class="block-body"><b>Giải phương trình:</b> $$x^2 - x = -2x + 2$$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s5_b3" data-step="3" data-raw="<b>Lời giải từng bước:</b><br>• Chuyển vế: $x^2 - x + 2x - 2 = 0$<br>• Nhóm hạng tử: $x(x - 1) + 2(x - 1) = 0$<br>Suy ra: $(x + 2)(x - 1) = 0$<br>Do đó: $x + 2 = 0$ hoặc $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Vậy</b> nghiệm của phương trình là $x = -2$ và $x = 1$." data-raw-vi="<b>Lời giải từng bước:</b><br>• Chuyển vế: $x^2 - x + 2x - 2 = 0$<br>• Nhóm hạng tử: $x(x - 1) + 2(x - 1) = 0$<br>Suy ra: $(x + 2)(x - 1) = 0$<br>Do đó: $x + 2 = 0$ hoặc $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Vậy</b> nghiệm của phương trình là $x = -2$ và $x = 1$." data-raw-en="<b>Step-by-step solution:</b><br>• Transpose terms: $x^2 - x + 2x - 2 = 0$<br>• Group terms: $x(x - 1) + 2(x - 1) = 0$<br>This yields: $(x + 2)(x - 1) = 0$<br>Hence: $x + 2 = 0$ or $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Thus</b> solutions are $x = -2$ and $x = 1$." data-title-vi="VÍ DỤ MẪU 2 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 2 (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s5_b3" data-step="5" data-raw="<b>Lời giải từng bước:</b><br>• Chuyển vế: $x^2 - x + 2x - 2 = 0$<br>• Nhóm hạng tử: $x(x - 1) + 2(x - 1) = 0$<br>Suy ra: $(x + 2)(x - 1) = 0$<br>Do đó: $x + 2 = 0$ hoặc $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Vậy</b> nghiệm của phương trình là $x = -2$ và $x = 1$." data-raw-vi="<b>Lời giải từng bước:</b><br>• Chuyển vế: $x^2 - x + 2x - 2 = 0$<br>• Nhóm hạng tử: $x(x - 1) + 2(x - 1) = 0$<br>Suy ra: $(x + 2)(x - 1) = 0$<br>Do đó: $x + 2 = 0$ hoặc $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Vậy</b> nghiệm của phương trình là $x = -2$ và $x = 1$." data-raw-en="<b>Step-by-step solution:</b><br>• Transpose terms: $x^2 - x + 2x - 2 = 0$<br>• Group terms: $x(x - 1) + 2(x - 1) = 0$<br>This yields: $(x + 2)(x - 1) = 0$<br>Hence: $x + 2 = 0$ or $x - 1 = 0$<br>• $x + 2 = 0 \Rightarrow x = -2$<br>• $x - 1 = 0 \Rightarrow x = 1$<br><b>Thus</b> solutions are $x = -2$ and $x = 1$." data-title-vi="VÍ DỤ MẪU 2 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 2 (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s5_b3')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s5_b3')" title="Click để nhập số bước">5</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s5_b3', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s5_b3', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s5_b3')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -2058,11 +2106,11 @@
             <div class="block-body"><b>Phương pháp:</b><br>Bước 1: Đưa về dạng tích.<br>Bước 2: Giải từng phương trình bậc nhất.</div>
           </div>
         
-          <div class="content-block" id="s7_b2" data-step="1" data-raw="<b>Giải phương trình:</b> $$(3x + 1)(2 - 4x) = 0$$" data-raw-vi="<b>Giải phương trình:</b> $$(3x + 1)(2 - 4x) = 0$$" data-raw-en="<b>Solve the equation:</b> $$(3x + 1)(2 - 4x) = 0$$" data-title-vi="LUYỆN TẬP 1A (ĐỀ BÀI)" data-title-en="PRACTICE 1A (PROBLEM)">
+          <div class="content-block" id="s7_b2" data-step="4" data-raw="<b>Giải phương trình:</b> $$(3x + 1)(2 - 4x) = 0$$" data-raw-vi="<b>Giải phương trình:</b> $$(3x + 1)(2 - 4x) = 0$$" data-raw-en="<b>Solve the equation:</b> $$(3x + 1)(2 - 4x) = 0$$" data-title-vi="LUYỆN TẬP 1A (ĐỀ BÀI)" data-title-en="PRACTICE 1A (PROBLEM)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-prob">📝 Đề bài</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s7_b2')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s7_b2')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s7_b2', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s7_b2', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s7_b2')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -2195,11 +2243,11 @@
             <div class="block-body"><b>Giải phương trình:</b> $$x^2 - 3x = 2x - 6$$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s8_b3" data-step="3" data-raw="Chuyển vế và đặt nhân tử chung:<br>$x(x - 3) = 2(x - 3)$<br>Suy ra: $x(x - 3) - 2(x - 3) = 0$<br>$(x - 2)(x - 3) = 0$<br>Do đó: $x - 2 = 0$ hoặc $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Vậy</b> phương trình có hai nghiệm là $x = 2$ và $x = 3$." data-raw-vi="Chuyển vế và đặt nhân tử chung:<br>$x(x - 3) = 2(x - 3)$<br>Suy ra: $x(x - 3) - 2(x - 3) = 0$<br>$(x - 2)(x - 3) = 0$<br>Do đó: $x - 2 = 0$ hoặc $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Vậy</b> phương trình có hai nghiệm là $x = 2$ và $x = 3$." data-raw-en="Transpose terms and factor:<br>$x(x - 3) - 2(x - 3) = 0$<br>This yields: $(x - 2)(x - 3) = 0$<br>Hence: $x - 2 = 0$ or $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Thus</b> the equation has two roots: $x = 2$ and $x = 3$." data-title-vi="LUYỆN TẬP 1B (HƯỚNG DẪN GIẢI)" data-title-en="PRACTICE 1B (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s8_b3" data-step="4" data-raw="Chuyển vế và đặt nhân tử chung:<br>$x(x - 3) = 2(x - 3)$<br>Suy ra: $x(x - 3) - 2(x - 3) = 0$<br>$(x - 2)(x - 3) = 0$<br>Do đó: $x - 2 = 0$ hoặc $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Vậy</b> phương trình có hai nghiệm là $x = 2$ và $x = 3$." data-raw-vi="Chuyển vế và đặt nhân tử chung:<br>$x(x - 3) = 2(x - 3)$<br>Suy ra: $x(x - 3) - 2(x - 3) = 0$<br>$(x - 2)(x - 3) = 0$<br>Do đó: $x - 2 = 0$ hoặc $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Vậy</b> phương trình có hai nghiệm là $x = 2$ và $x = 3$." data-raw-en="Transpose terms and factor:<br>$x(x - 3) - 2(x - 3) = 0$<br>This yields: $(x - 2)(x - 3) = 0$<br>Hence: $x - 2 = 0$ or $x - 3 = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br>• $x - 3 = 0 \Rightarrow x = 3$<br><b>Thus</b> the equation has two roots: $x = 2$ and $x = 3$." data-title-vi="LUYỆN TẬP 1B (HƯỚNG DẪN GIẢI)" data-title-en="PRACTICE 1B (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s8_b3')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s8_b3')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s8_b3', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s8_b3', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s8_b3')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -2314,11 +2362,11 @@
             <div class="block-body">Khu vườn hình vuông ban đầu có cạnh $15\text{ m}$. Lối đi xung quanh rộng $x\text{ (m)}$. Diện tích phần đất còn lại là $169\text{ m}^2$. Tìm $x$?</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s9_b3" data-step="3" data-raw="Khu đất còn lại có cạnh là $15 - 2x\text{ (m)}$ với $0 < 2x < 15$.<br>Diện tích: $(15 - 2x)^2 = 169$<br>Suy ra: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Do đó: $2 - 2x = 0$ hoặc $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (thỏa mãn điều kiện)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (loại vì $2x = 28 > 15$).<br><b>Vậy</b> bề rộng lối đi là $1\text{ m}$." data-raw-vi="Khu đất còn lại có cạnh là $15 - 2x\text{ (m)}$ với $0 < 2x < 15$.<br>Diện tích: $(15 - 2x)^2 = 169$<br>Suy ra: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Do đó: $2 - 2x = 0$ hoặc $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (thỏa mãn điều kiện)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (loại vì $2x = 28 > 15$).<br><b>Vậy</b> bề rộng lối đi là $1\text{ m}$." data-raw-en="The remaining garden side length is $15 - 2x\text{ (m)}$ with $0 < 2x < 15$.<br>Area equation: $(15 - 2x)^2 = 169$<br>This implies: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Hence: $2 - 2x = 0$ or $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (satisfies constraints)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (rejected since $28 > 15$).<br><b>Thus</b> the pathway width is $1\text{ m}$." data-title-vi="GIẢI BÀI TOÁN MỞ ĐẦU (HƯỚNG DẪN GIẢI)" data-title-en="OPENING PROBLEM (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s9_b3" data-step="4" data-raw="Khu đất còn lại có cạnh là $15 - 2x\text{ (m)}$ với $0 < 2x < 15$.<br>Diện tích: $(15 - 2x)^2 = 169$<br>Suy ra: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Do đó: $2 - 2x = 0$ hoặc $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (thỏa mãn điều kiện)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (loại vì $2x = 28 > 15$).<br><b>Vậy</b> bề rộng lối đi là $1\text{ m}$." data-raw-vi="Khu đất còn lại có cạnh là $15 - 2x\text{ (m)}$ với $0 < 2x < 15$.<br>Diện tích: $(15 - 2x)^2 = 169$<br>Suy ra: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Do đó: $2 - 2x = 0$ hoặc $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (thỏa mãn điều kiện)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (loại vì $2x = 28 > 15$).<br><b>Vậy</b> bề rộng lối đi là $1\text{ m}$." data-raw-en="The remaining garden side length is $15 - 2x\text{ (m)}$ with $0 < 2x < 15$.<br>Area equation: $(15 - 2x)^2 = 169$<br>This implies: $(15 - 2x)^2 - 13^2 = 0$<br>$(15 - 2x - 13)(15 - 2x + 13) = 0$<br>$(2 - 2x)(28 - 2x) = 0$<br>Hence: $2 - 2x = 0$ or $28 - 2x = 0$<br>• $2 - 2x = 0 \Rightarrow x = 1$ (satisfies constraints)<br>• $28 - 2x = 0 \Rightarrow x = 14$ (rejected since $28 > 15$).<br><b>Thus</b> the pathway width is $1\text{ m}$." data-title-vi="GIẢI BÀI TOÁN MỞ ĐẦU (HƯỚNG DẪN GIẢI)" data-title-en="OPENING PROBLEM (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s9_b3')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s9_b3')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s9_b3', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s9_b3', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s9_b3')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -2397,11 +2445,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s10_b1" data-step="1" data-raw="• Nhận dạng: Phương trình có biểu thức chứa ẩn ở mẫu thức.<br>• Bắt buộc: Phải tìm điều kiện xác định (ĐKXĐ) để mẫu thức khác $0$." data-raw-vi="• Nhận dạng: Phương trình có biểu thức chứa ẩn ở mẫu thức.<br>• Bắt buộc: Phải tìm điều kiện xác định (ĐKXĐ) để mẫu thức khác $0$." data-raw-en="• Recognition: Equations containing variable expressions in denominators.<br>• Requirement: Must find domain restrictions so denominators differ from $0$." data-title-vi="2. PHƯƠNG TRÌNH CHỨA ẨN Ở MẪU" data-title-en="2. RATIONAL EQUATIONS">
+          <div class="content-block highlight-def" id="s10_b1" data-step="4" data-raw="• Nhận dạng: Phương trình có biểu thức chứa ẩn ở mẫu thức.<br>• Bắt buộc: Phải tìm điều kiện xác định (ĐKXĐ) để mẫu thức khác $0$." data-raw-vi="• Nhận dạng: Phương trình có biểu thức chứa ẩn ở mẫu thức.<br>• Bắt buộc: Phải tìm điều kiện xác định (ĐKXĐ) để mẫu thức khác $0$." data-raw-en="• Recognition: Equations containing variable expressions in denominators.<br>• Requirement: Must find domain restrictions so denominators differ from $0$." data-title-vi="2. PHƯƠNG TRÌNH CHỨA ẨN Ở MẪU" data-title-en="2. RATIONAL EQUATIONS">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               
-              <span class="badge-step-num" onclick="setBlockStepDirect('s10_b1')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s10_b1')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s10_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s10_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s10_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -2617,11 +2665,11 @@
             <div class="block-body"><b>Tìm ĐKXĐ của mỗi phương trình:</b><br>a) $\frac{5x+2}{x-1} = 0$<br>b) $\frac{1}{x+1} = 1 + \frac{1}{x-2}$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s12_b3" data-step="3" data-raw="• Câu a: Vì $x - 1 \neq 0$ khi $x \neq 1$ nên ĐKXĐ là: $x \neq 1$.<br>• Câu b: Vì $x+1 \neq 0$ khi $x \neq -1$ và $x-2 \neq 0$ khi $x \neq 2$, nên ĐKXĐ là: $x \neq -1$ và $x \neq 2$." data-raw-vi="• Câu a: Vì $x - 1 \neq 0$ khi $x \neq 1$ nên ĐKXĐ là: $x \neq 1$.<br>• Câu b: Vì $x+1 \neq 0$ khi $x \neq -1$ và $x-2 \neq 0$ khi $x \neq 2$, nên ĐKXĐ là: $x \neq -1$ và $x \neq 2$." data-raw-en="• Part a: Since $x - 1 \neq 0$ when $x \neq 1$, constraints: $x \neq 1$.<br>• Part b: Since $x+1 \neq 0$ when $x \neq -1$ and $x-2 \neq 0$ when $x \neq 2$, constraints: $x \neq -1$ and $x \neq 2$." data-title-vi="VÍ DỤ MẪU 3 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 3 (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s12_b3" data-step="5" data-raw="• Câu a: Vì $x - 1 \neq 0$ khi $x \neq 1$ nên ĐKXĐ là: $x \neq 1$.<br>• Câu b: Vì $x+1 \neq 0$ khi $x \neq -1$ và $x-2 \neq 0$ khi $x \neq 2$, nên ĐKXĐ là: $x \neq -1$ và $x \neq 2$." data-raw-vi="• Câu a: Vì $x - 1 \neq 0$ khi $x \neq 1$ nên ĐKXĐ là: $x \neq 1$.<br>• Câu b: Vì $x+1 \neq 0$ khi $x \neq -1$ và $x-2 \neq 0$ khi $x \neq 2$, nên ĐKXĐ là: $x \neq -1$ và $x \neq 2$." data-raw-en="• Part a: Since $x - 1 \neq 0$ when $x \neq 1$, constraints: $x \neq 1$.<br>• Part b: Since $x+1 \neq 0$ when $x \neq -1$ and $x-2 \neq 0$ when $x \neq 2$, constraints: $x \neq -1$ and $x \neq 2$." data-title-vi="VÍ DỤ MẪU 3 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 3 (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s12_b3')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s12_b3')" title="Click để nhập số bước">5</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s12_b3', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s12_b3', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s12_b3')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -2843,11 +2891,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s14_b1" data-step="1" data-raw="<b>MỤC TIÊU KHÁM PHÁ:</b><br>• Quan sát các bước biến đổi phương trình chứa ẩn ở mẫu.<br>• Nhận biết bước quy đồng, khử mẫu và đối chiếu nghiệm." data-raw-vi="<b>MỤC TIÊU KHÁM PHÁ:</b><br>• Quan sát các bước biến đổi phương trình chứa ẩn ở mẫu.<br>• Nhận biết bước quy đồng, khử mẫu và đối chiếu nghiệm." data-raw-en="<b>EXPLORATION GOALS:</b><br>• Observe steps for transforming rational equations.<br>• Recognize clearing denominators and verifying solutions." data-title-vi="2. PHƯƠNG TRÌNH CHỨA ẨN Ở MẪU" data-title-en="2. RATIONAL EQUATIONS">
+          <div class="content-block highlight-def" id="s14_b1" data-step="3" data-raw="<b>MỤC TIÊU KHÁM PHÁ:</b><br>• Quan sát các bước biến đổi phương trình chứa ẩn ở mẫu.<br>• Nhận biết bước quy đồng, khử mẫu và đối chiếu nghiệm." data-raw-vi="<b>MỤC TIÊU KHÁM PHÁ:</b><br>• Quan sát các bước biến đổi phương trình chứa ẩn ở mẫu.<br>• Nhận biết bước quy đồng, khử mẫu và đối chiếu nghiệm." data-raw-en="<b>EXPLORATION GOALS:</b><br>• Observe steps for transforming rational equations.<br>• Recognize clearing denominators and verifying solutions." data-title-vi="2. PHƯƠNG TRÌNH CHỨA ẨN Ở MẪU" data-title-en="2. RATIONAL EQUATIONS">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               
-              <span class="badge-step-num" onclick="setBlockStepDirect('s14_b1')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s14_b1')" title="Click để nhập số bước">3</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s14_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s14_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s14_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -2944,11 +2992,11 @@
             <div class="block-body"><b>CÁC BƯỚC GIẢI TỔNG QUÁT (SGK TR.29):</b></div>
           </div>
         
-          <div class="content-block highlight-rule" id="s15_b2" data-step="1" data-raw="• <b>Bước 1:</b> Tìm điều kiện xác định (ĐKXĐ) của phương trình.<br>• <b>Bước 2:</b> Quy đồng mẫu hai vế rồi khử mẫu.<br>• <b>Bước 3:</b> Giải phương trình vừa tìm được.<br>• <b>Bước 4 (Kết luận):</b> Trong các giá trị tìm được ở Bước 3, giá trị nào <b>thỏa mãn ĐKXĐ</b> chính là nghiệm của phương trình đã cho." data-raw-vi="• <b>Bước 1:</b> Tìm điều kiện xác định (ĐKXĐ) của phương trình.<br>• <b>Bước 2:</b> Quy đồng mẫu hai vế rồi khử mẫu.<br>• <b>Bước 3:</b> Giải phương trình vừa tìm được.<br>• <b>Bước 4 (Kết luận):</b> Trong các giá trị tìm được ở Bước 3, giá trị nào <b>thỏa mãn ĐKXĐ</b> chính là nghiệm của phương trình đã cho." data-raw-en="• <b>Step 1:</b> Find domain restrictions (constraints) of the equation.<br>• <b>Step 2:</b> Find LCD, clear denominators.<br>• <b>Step 3:</b> Solve the resulting equation.<br>• <b>Step 4 (Conclusion):</b> From values found in Step 3, any value that <b>satisfies constraints</b> is a solution." data-title-vi="QUY TRÌNH 4 BƯỚC BẮT BUỘC" data-title-en="MANDATORY 4-STEP PROCEDURE">
+          <div class="content-block highlight-rule" id="s15_b2" data-step="2" data-raw="• <b>Bước 1:</b> Tìm điều kiện xác định (ĐKXĐ) của phương trình.<br>• <b>Bước 2:</b> Quy đồng mẫu hai vế rồi khử mẫu.<br>• <b>Bước 3:</b> Giải phương trình vừa tìm được.<br>• <b>Bước 4 (Kết luận):</b> Trong các giá trị tìm được ở Bước 3, giá trị nào <b>thỏa mãn ĐKXĐ</b> chính là nghiệm của phương trình đã cho." data-raw-vi="• <b>Bước 1:</b> Tìm điều kiện xác định (ĐKXĐ) của phương trình.<br>• <b>Bước 2:</b> Quy đồng mẫu hai vế rồi khử mẫu.<br>• <b>Bước 3:</b> Giải phương trình vừa tìm được.<br>• <b>Bước 4 (Kết luận):</b> Trong các giá trị tìm được ở Bước 3, giá trị nào <b>thỏa mãn ĐKXĐ</b> chính là nghiệm của phương trình đã cho." data-raw-en="• <b>Step 1:</b> Find domain restrictions (constraints) of the equation.<br>• <b>Step 2:</b> Find LCD, clear denominators.<br>• <b>Step 3:</b> Solve the resulting equation.<br>• <b>Step 4 (Conclusion):</b> From values found in Step 3, any value that <b>satisfies constraints</b> is a solution." data-title-vi="QUY TRÌNH 4 BƯỚC BẮT BUỘC" data-title-en="MANDATORY 4-STEP PROCEDURE">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               
-              <span class="badge-step-num" onclick="setBlockStepDirect('s15_b2')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s15_b2')" title="Click để nhập số bước">2</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s15_b2', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s15_b2', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s15_b2')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3045,11 +3093,11 @@
             <div class="block-body"><b>Giải phương trình:</b> $$\frac{2}{x+1} + \frac{1}{x-2} = \frac{3}{(x+1)(x-2)} \quad (2)$$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s16_b3" data-step="3" data-raw="• ĐKXĐ: $x \neq -1$ và $x \neq 2$.<br>• Quy đồng và khử mẫu:<br>$2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Đối chiếu ĐKXĐ:</b> Giá trị $x = 2$ <b>không thỏa mãn ĐKXĐ</b>.<br><b>Vậy</b> phương trình (2) <b>vô nghiệm</b>." data-raw-vi="• ĐKXĐ: $x \neq -1$ và $x \neq 2$.<br>• Quy đồng và khử mẫu:<br>$2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Đối chiếu ĐKXĐ:</b> Giá trị $x = 2$ <b>không thỏa mãn ĐKXĐ</b>.<br><b>Vậy</b> phương trình (2) <b>vô nghiệm</b>." data-raw-en="• Constraints: $x \neq -1$ and $x \neq 2$.<br>• Clear denominators: $2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Verify constraints:</b> Value $x = 2$ <b>violates constraints</b>.<br><b>Thus</b> equation (2) <b>has no solution</b>." data-title-vi="VÍ DỤ MẪU 4 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 4 (GUIDED SOLUTION)">
+          <div class="content-block highlight-ex" id="s16_b3" data-step="4" data-raw="• ĐKXĐ: $x \neq -1$ và $x \neq 2$.<br>• Quy đồng và khử mẫu:<br>$2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Đối chiếu ĐKXĐ:</b> Giá trị $x = 2$ <b>không thỏa mãn ĐKXĐ</b>.<br><b>Vậy</b> phương trình (2) <b>vô nghiệm</b>." data-raw-vi="• ĐKXĐ: $x \neq -1$ và $x \neq 2$.<br>• Quy đồng và khử mẫu:<br>$2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Đối chiếu ĐKXĐ:</b> Giá trị $x = 2$ <b>không thỏa mãn ĐKXĐ</b>.<br><b>Vậy</b> phương trình (2) <b>vô nghiệm</b>." data-raw-en="• Constraints: $x \neq -1$ and $x \neq 2$.<br>• Clear denominators: $2(x - 2) + 1(x + 1) = 3$<br>$2x - 4 + x + 1 = 3$<br>$3x - 3 = 3$<br>$3x = 6 \Rightarrow x = 2$.<br>• <b>Verify constraints:</b> Value $x = 2$ <b>violates constraints</b>.<br><b>Thus</b> equation (2) <b>has no solution</b>." data-title-vi="VÍ DỤ MẪU 4 (HƯỚNG DẪN GIẢI)" data-title-en="WORKED EXAMPLE 4 (GUIDED SOLUTION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s16_b3')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s16_b3')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s16_b3', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s16_b3', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s16_b3')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3146,11 +3194,11 @@
             <div class="block-body"><b>Giải phương trình:</b> $$\frac{1}{x-1} - \frac{4x}{x^3-1} = \frac{x}{x^2+x+1}$$</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s17_b3" data-step="2" data-raw="$x^3 - 1 = (x - 1)(x^2 + x + 1)$.<br>Vì $x^2 + x + 1 = (x + \frac{1}{2})^2 + \frac{3}{4} > 0$ với mọi $x$.<br>• <b>ĐKXĐ:</b> $x - 1 \neq 0 \Rightarrow x \neq 1$.<br>• Mẫu chung: $(x - 1)(x^2 + x + 1)$." data-raw-vi="$x^3 - 1 = (x - 1)(x^2 + x + 1)$.<br>Vì $x^2 + x + 1 = (x + \frac{1}{2})^2 + \frac{3}{4} > 0$ với mọi $x$.<br>• <b>ĐKXĐ:</b> $x - 1 \neq 0 \Rightarrow x \neq 1$.<br>• Mẫu chung: $(x - 1)(x^2 + x + 1)$." data-raw-en="$x^3 - 1 = (x - 1)(x^2 + x + 1)$.<br>Since $x^2 + x + 1 > 0$ for all $x$, constraint is $x - 1 \neq 0 \Rightarrow x \neq 1$.<br>LCD is $(x - 1)(x^2 + x + 1)$." data-title-vi="LUYỆN TẬP 3 (PHÂN TÍCH MẪU THỨC)" data-title-en="PRACTICE 3 (DENOMINATOR FACTORING)">
+          <div class="content-block highlight-ex" id="s17_b3" data-step="3" data-raw="$x^3 - 1 = (x - 1)(x^2 + x + 1)$.<br>Vì $x^2 + x + 1 = (x + \frac{1}{2})^2 + \frac{3}{4} > 0$ với mọi $x$.<br>• <b>ĐKXĐ:</b> $x - 1 \neq 0 \Rightarrow x \neq 1$.<br>• Mẫu chung: $(x - 1)(x^2 + x + 1)$." data-raw-vi="$x^3 - 1 = (x - 1)(x^2 + x + 1)$.<br>Vì $x^2 + x + 1 = (x + \frac{1}{2})^2 + \frac{3}{4} > 0$ với mọi $x$.<br>• <b>ĐKXĐ:</b> $x - 1 \neq 0 \Rightarrow x \neq 1$.<br>• Mẫu chung: $(x - 1)(x^2 + x + 1)$." data-raw-en="$x^3 - 1 = (x - 1)(x^2 + x + 1)$.<br>Since $x^2 + x + 1 > 0$ for all $x$, constraint is $x - 1 \neq 0 \Rightarrow x \neq 1$.<br>LCD is $(x - 1)(x^2 + x + 1)$." data-title-vi="LUYỆN TẬP 3 (PHÂN TÍCH MẪU THỨC)" data-title-en="PRACTICE 3 (DENOMINATOR FACTORING)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               
-              <span class="badge-step-num" onclick="setBlockStepDirect('s17_b3')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s17_b3')" title="Click để nhập số bước">3</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s17_b3', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s17_b3', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s17_b3')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3211,11 +3259,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s18_b1" data-step="1" data-raw="Phương trình sau khử mẫu:<br>$(x^2 + x + 1) - 4x = x(x - 1)$<br>$x^2 - 3x + 1 = x^2 - x$<br>$-2x = -1 \Rightarrow x = \frac{1}{2}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{2}$ thỏa mãn $x \neq 1$.<br><b>Vậy</b> nghiệm của phương trình là $x = \frac{1}{2}$." data-raw-vi="Phương trình sau khử mẫu:<br>$(x^2 + x + 1) - 4x = x(x - 1)$<br>$x^2 - 3x + 1 = x^2 - x$<br>$-2x = -1 \Rightarrow x = \frac{1}{2}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{2}$ thỏa mãn $x \neq 1$.<br><b>Vậy</b> nghiệm của phương trình là $x = \frac{1}{2}$." data-raw-en="Cleared equation:<br>$(x^2 + x + 1) - 4x = x(x - 1)$<br>$x^2 - 3x + 1 = x^2 - x$<br>$-2x = -1 \Rightarrow x = \frac{1}{2}$.<br><b>Verify constraints:</b> $x = \frac{1}{2}$ satisfies $x \neq 1$.<br><b>Thus</b> the solution is $x = \frac{1}{2}$." data-title-vi="LUYỆN TẬP 3 — BƯỚC 3 & 4 (HƯỚNG DẪN GIẢI CHI TIẾT)" data-title-en="PRACTICE 3 — STEPS 3 & 4 (SOLUTION & CONCLUSION)">
+          <div class="content-block highlight-def" id="s18_b1" data-step="3" data-raw="Phương trình sau khử mẫu:<br>$(x^2 + x + 1) - 4x = x(x - 1)$<br>$x^2 - 3x + 1 = x^2 - x$<br>$-2x = -1 \Rightarrow x = \frac{1}{2}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{2}$ thỏa mãn $x \neq 1$.<br><b>Vậy</b> nghiệm của phương trình là $x = \frac{1}{2}$." data-raw-vi="Phương trình sau khử mẫu:<br>$(x^2 + x + 1) - 4x = x(x - 1)$<br>$x^2 - 3x + 1 = x^2 - x$<br>$-2x = -1 \Rightarrow x = \frac{1}{2}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{2}$ thỏa mãn $x \neq 1$.<br><b>Vậy</b> nghiệm của phương trình là $x = \frac{1}{2}$." data-raw-en="Cleared equation:<br>$(x^2 + x + 1) - 4x = x(x - 1)$<br>$x^2 - 3x + 1 = x^2 - x$<br>$-2x = -1 \Rightarrow x = \frac{1}{2}$.<br><b>Verify constraints:</b> $x = \frac{1}{2}$ satisfies $x \neq 1$.<br><b>Thus</b> the solution is $x = \frac{1}{2}$." data-title-vi="LUYỆN TẬP 3 — BƯỚC 3 & 4 (HƯỚNG DẪN GIẢI CHI TIẾT)" data-title-en="PRACTICE 3 — STEPS 3 & 4 (SOLUTION & CONCLUSION)">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s18_b1')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s18_b1')" title="Click để nhập số bước">3</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s18_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s18_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s18_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3294,11 +3342,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s19_b1" data-step="1" data-raw="• <b>Dạng 1 (Phương trình tích):</b><br>$(ax+b)(cx+d) = 0 \Rightarrow ax+b=0$ hoặc $cx+d=0$.<br><br>• <b>Dạng 2 (Phương trình chứa ẩn ở mẫu):</b><br>1. Tìm ĐKXĐ $\rightarrow$ 2. Quy đồng & khử mẫu $\rightarrow$ 3. Giải PT $\rightarrow$ 4. Đối chiếu ĐKXĐ." data-raw-vi="• <b>Dạng 1 (Phương trình tích):</b><br>$(ax+b)(cx+d) = 0 \Rightarrow ax+b=0$ hoặc $cx+d=0$.<br><br>• <b>Dạng 2 (Phương trình chứa ẩn ở mẫu):</b><br>1. Tìm ĐKXĐ $\rightarrow$ 2. Quy đồng & khử mẫu $\rightarrow$ 3. Giải PT $\rightarrow$ 4. Đối chiếu ĐKXĐ." data-raw-en="• <b>Type 1 (Product equations):</b><br>$(ax+b)(cx+d) = 0 \Rightarrow ax+b=0$ or $cx+d=0$.<br><br>• <b>Type 2 (Rational equations):</b><br>1. Constraints $\rightarrow$ 2. Clear denominators $\rightarrow$ 3. Solve $\rightarrow$ 4. Verify constraints." data-title-vi="BẢN ĐỒ TƯ DUY 2 PHƯƠNG PHÁP" data-title-en="MIND MAP OF 2 METHODS">
+          <div class="content-block highlight-def" id="s19_b1" data-step="3" data-raw="• <b>Dạng 1 (Phương trình tích):</b><br>$(ax+b)(cx+d) = 0 \Rightarrow ax+b=0$ hoặc $cx+d=0$.<br><br>• <b>Dạng 2 (Phương trình chứa ẩn ở mẫu):</b><br>1. Tìm ĐKXĐ $\rightarrow$ 2. Quy đồng & khử mẫu $\rightarrow$ 3. Giải PT $\rightarrow$ 4. Đối chiếu ĐKXĐ." data-raw-vi="• <b>Dạng 1 (Phương trình tích):</b><br>$(ax+b)(cx+d) = 0 \Rightarrow ax+b=0$ hoặc $cx+d=0$.<br><br>• <b>Dạng 2 (Phương trình chứa ẩn ở mẫu):</b><br>1. Tìm ĐKXĐ $\rightarrow$ 2. Quy đồng & khử mẫu $\rightarrow$ 3. Giải PT $\rightarrow$ 4. Đối chiếu ĐKXĐ." data-raw-en="• <b>Type 1 (Product equations):</b><br>$(ax+b)(cx+d) = 0 \Rightarrow ax+b=0$ or $cx+d=0$.<br><br>• <b>Type 2 (Rational equations):</b><br>1. Constraints $\rightarrow$ 2. Clear denominators $\rightarrow$ 3. Solve $\rightarrow$ 4. Verify constraints." data-title-vi="BẢN ĐỒ TƯ DUY 2 PHƯƠNG PHÁP" data-title-en="MIND MAP OF 2 METHODS">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               
-              <span class="badge-step-num" onclick="setBlockStepDirect('s19_b1')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s19_b1')" title="Click để nhập số bước">3</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s19_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s19_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s19_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3377,11 +3425,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s20_b1" data-step="3" data-raw="Ta có: $x(x - 2) = 0$<br>Suy ra: $x = 0$ hoặc $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Kết luận:</b> Vậy phương trình có hai nghiệm là $x = 0$ và $x = 2$." data-raw-vi="Ta có: $x(x - 2) = 0$<br>Suy ra: $x = 0$ hoặc $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Kết luận:</b> Vậy phương trình có hai nghiệm là $x = 0$ và $x = 2$." data-raw-en="We have: $x(x - 2) = 0$<br>This means: $x = 0$ or $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Conclusion:</b> Thus the equation has two roots: $x = 0$ and $x = 2$." data-title-vi="HƯỚNG DẪN GIẢI CÂU A" data-title-en="GUIDED SOLUTION FOR PART A">
+          <div class="content-block highlight-def" id="s20_b1" data-step="4" data-raw="Ta có: $x(x - 2) = 0$<br>Suy ra: $x = 0$ hoặc $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Kết luận:</b> Vậy phương trình có hai nghiệm là $x = 0$ và $x = 2$." data-raw-vi="Ta có: $x(x - 2) = 0$<br>Suy ra: $x = 0$ hoặc $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Kết luận:</b> Vậy phương trình có hai nghiệm là $x = 0$ và $x = 2$." data-raw-en="We have: $x(x - 2) = 0$<br>This means: $x = 0$ or $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Conclusion:</b> Thus the equation has two roots: $x = 0$ and $x = 2$." data-title-vi="HƯỚNG DẪN GIẢI CÂU A" data-title-en="GUIDED SOLUTION FOR PART A">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s20_b1')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s20_b1')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s20_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s20_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s20_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3395,11 +3443,11 @@
             <div class="block-body">Ta có: $x(x - 2) = 0$<br>Suy ra: $x = 0$ hoặc $x - 2 = 0$<br>• $x = 0$<br>• $x - 2 = 0 \Rightarrow x = 2$<br><b>Kết luận:</b> Vậy phương trình có hai nghiệm là $x = 0$ và $x = 2$.</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s20_b2" data-step="3" data-raw="Ta có: $(2x + 1)(3x - 2) = 0$<br>Suy ra: $2x + 1 = 0$ hoặc $3x - 2 = 0$<br>• $2x = -1 \Rightarrow x = -\frac{1}{2}$<br>• $3x = 2 \Rightarrow x = \frac{2}{3}$<br><b>Kết luận:</b> Nghiệm $x = -\frac{1}{2}$ và $x = \frac{2}{3}$." data-raw-vi="Ta có: $(2x + 1)(3x - 2) = 0$<br>Suy ra: $2x + 1 = 0$ hoặc $3x - 2 = 0$<br>• $2x = -1 \Rightarrow x = -\frac{1}{2}$<br>• $3x = 2 \Rightarrow x = \frac{2}{3}$<br><b>Kết luận:</b> Nghiệm $x = -\frac{1}{2}$ và $x = \frac{2}{3}$." data-raw-en="We have: $(2x + 1)(3x - 2) = 0$<br>This means: $2x + 1 = 0$ or $3x - 2 = 0$<br>• $2x = -1 \Rightarrow x = -\frac{1}{2}$<br>• $3x = 2 \Rightarrow x = \frac{2}{3}$<br><b>Conclusion:</b> Solutions are $x = -\frac{1}{2}$ and $x = \frac{2}{3}$." data-title-vi="HƯỚNG DẪN GIẢI CÂU B" data-title-en="GUIDED SOLUTION FOR PART B">
+          <div class="content-block highlight-ex" id="s20_b2" data-step="4" data-raw="Ta có: $(2x + 1)(3x - 2) = 0$<br>Suy ra: $2x + 1 = 0$ hoặc $3x - 2 = 0$<br>• $2x = -1 \Rightarrow x = -\frac{1}{2}$<br>• $3x = 2 \Rightarrow x = \frac{2}{3}$<br><b>Kết luận:</b> Nghiệm $x = -\frac{1}{2}$ và $x = \frac{2}{3}$." data-raw-vi="Ta có: $(2x + 1)(3x - 2) = 0$<br>Suy ra: $2x + 1 = 0$ hoặc $3x - 2 = 0$<br>• $2x = -1 \Rightarrow x = -\frac{1}{2}$<br>• $3x = 2 \Rightarrow x = \frac{2}{3}$<br><b>Kết luận:</b> Nghiệm $x = -\frac{1}{2}$ và $x = \frac{2}{3}$." data-raw-en="We have: $(2x + 1)(3x - 2) = 0$<br>This means: $2x + 1 = 0$ or $3x - 2 = 0$<br>• $2x = -1 \Rightarrow x = -\frac{1}{2}$<br>• $3x = 2 \Rightarrow x = \frac{2}{3}$<br><b>Conclusion:</b> Solutions are $x = -\frac{1}{2}$ and $x = \frac{2}{3}$." data-title-vi="HƯỚNG DẪN GIẢI CÂU B" data-title-en="GUIDED SOLUTION FOR PART B">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s20_b2')" title="Click để nhập số bước">3</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s20_b2')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s20_b2', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s20_b2', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s20_b2')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3478,11 +3526,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s21_b1" data-step="3" data-raw="$(x^2 - 4) + x(x - 2) = 0$<br>$(x - 2)(x + 2) + x(x - 2) = 0$<br>$(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>Suy ra: $x - 2 = 0$ hoặc $2x + 2 = 0 \Rightarrow x = 2$ hoặc $x = -1$." data-raw-vi="$(x^2 - 4) + x(x - 2) = 0$<br>$(x - 2)(x + 2) + x(x - 2) = 0$<br>$(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>Suy ra: $x - 2 = 0$ hoặc $2x + 2 = 0 \Rightarrow x = 2$ hoặc $x = -1$." data-raw-en="$(x - 2)(x + 2) + x(x - 2) = 0$<br>Factoring out: $(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>This yields: $x - 2 = 0$ or $2x + 2 = 0 \Rightarrow x = 2$ or $x = -1$." data-title-vi="HƯỚNG DẪN GIẢI CÂU A" data-title-en="GUIDED SOLUTION FOR PART A">
+          <div class="content-block highlight-def" id="s21_b1" data-step="4" data-raw="$(x^2 - 4) + x(x - 2) = 0$<br>$(x - 2)(x + 2) + x(x - 2) = 0$<br>$(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>Suy ra: $x - 2 = 0$ hoặc $2x + 2 = 0 \Rightarrow x = 2$ hoặc $x = -1$." data-raw-vi="$(x^2 - 4) + x(x - 2) = 0$<br>$(x - 2)(x + 2) + x(x - 2) = 0$<br>$(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>Suy ra: $x - 2 = 0$ hoặc $2x + 2 = 0 \Rightarrow x = 2$ hoặc $x = -1$." data-raw-en="$(x - 2)(x + 2) + x(x - 2) = 0$<br>Factoring out: $(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>This yields: $x - 2 = 0$ or $2x + 2 = 0 \Rightarrow x = 2$ or $x = -1$." data-title-vi="HƯỚNG DẪN GIẢI CÂU A" data-title-en="GUIDED SOLUTION FOR PART A">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s21_b1')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s21_b1')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s21_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s21_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s21_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3496,11 +3544,11 @@
             <div class="block-body">$(x^2 - 4) + x(x - 2) = 0$<br>$(x - 2)(x + 2) + x(x - 2) = 0$<br>$(x - 2)(x + 2 + x) = 0$<br>$(x - 2)(2x + 2) = 0$<br>Suy ra: $x - 2 = 0$ hoặc $2x + 2 = 0 \Rightarrow x = 2$ hoặc $x = -1$.</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s21_b2" data-step="3" data-raw="$(2x + 1)^2 - 9x^2 = 0$<br>$(2x + 1)^2 - (3x)^2 = 0$<br>$(2x + 1 - 3x)(2x + 1 + 3x) = 0$<br>$(1 - x)(5x + 1) = 0$<br>Suy ra: $1 - x = 0$ hoặc $5x + 1 = 0 \Rightarrow x = 1$ hoặc $x = -\frac{1}{5}$." data-raw-vi="$(2x + 1)^2 - 9x^2 = 0$<br>$(2x + 1)^2 - (3x)^2 = 0$<br>$(2x + 1 - 3x)(2x + 1 + 3x) = 0$<br>$(1 - x)(5x + 1) = 0$<br>Suy ra: $1 - x = 0$ hoặc $5x + 1 = 0 \Rightarrow x = 1$ hoặc $x = -\frac{1}{5}$." data-raw-en="$(2x + 1 - 3x)(2x + 1 + 3x) = 0$<br>$(1 - x)(5x + 1) = 0$<br>This yields: $1 - x = 0$ or $5x + 1 = 0 \Rightarrow x = 1$ or $x = -\frac{1}{5}$." data-title-vi="HƯỚNG DẪN GIẢI CÂU B" data-title-en="GUIDED SOLUTION FOR PART B">
+          <div class="content-block highlight-ex" id="s21_b2" data-step="4" data-raw="$(2x + 1)^2 - 9x^2 = 0$<br>$(2x + 1)^2 - (3x)^2 = 0$<br>$(2x + 1 - 3x)(2x + 1 + 3x) = 0$<br>$(1 - x)(5x + 1) = 0$<br>Suy ra: $1 - x = 0$ hoặc $5x + 1 = 0 \Rightarrow x = 1$ hoặc $x = -\frac{1}{5}$." data-raw-vi="$(2x + 1)^2 - 9x^2 = 0$<br>$(2x + 1)^2 - (3x)^2 = 0$<br>$(2x + 1 - 3x)(2x + 1 + 3x) = 0$<br>$(1 - x)(5x + 1) = 0$<br>Suy ra: $1 - x = 0$ hoặc $5x + 1 = 0 \Rightarrow x = 1$ hoặc $x = -\frac{1}{5}$." data-raw-en="$(2x + 1 - 3x)(2x + 1 + 3x) = 0$<br>$(1 - x)(5x + 1) = 0$<br>This yields: $1 - x = 0$ or $5x + 1 = 0 \Rightarrow x = 1$ or $x = -\frac{1}{5}$." data-title-vi="HƯỚNG DẪN GIẢI CÂU B" data-title-en="GUIDED SOLUTION FOR PART B">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s21_b2')" title="Click để nhập số bước">3</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s21_b2')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s21_b2', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s21_b2', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s21_b2')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3579,11 +3627,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-ex" id="s22_b1" data-step="3" data-raw="• <b>ĐKXĐ:</b> $x \neq -\frac{1}{2}$ và $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = 0$ thỏa mãn ĐKXĐ.<br><b>Vậy</b> phương trình có nghiệm duy nhất là $x = 0$." data-raw-vi="• <b>ĐKXĐ:</b> $x \neq -\frac{1}{2}$ và $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = 0$ thỏa mãn ĐKXĐ.<br><b>Vậy</b> phương trình có nghiệm duy nhất là $x = 0$." data-raw-en="• Constraints: $x \neq -\frac{1}{2}$ and $x \neq -1$.<br>• Clear denominators: $2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• Verify constraints: $x = 0$ satisfies constraints.<br><b>Thus</b> the equation has unique solution $x = 0$." data-title-vi="HƯỚNG DẪN GIẢI 2.3A" data-title-en="GUIDED SOLUTION FOR 2.3A">
+          <div class="content-block highlight-ex" id="s22_b1" data-step="4" data-raw="• <b>ĐKXĐ:</b> $x \neq -\frac{1}{2}$ và $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = 0$ thỏa mãn ĐKXĐ.<br><b>Vậy</b> phương trình có nghiệm duy nhất là $x = 0$." data-raw-vi="• <b>ĐKXĐ:</b> $x \neq -\frac{1}{2}$ và $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = 0$ thỏa mãn ĐKXĐ.<br><b>Vậy</b> phương trình có nghiệm duy nhất là $x = 0$." data-raw-en="• Constraints: $x \neq -\frac{1}{2}$ and $x \neq -1$.<br>• Clear denominators: $2(x + 1) + 1(2x + 1) = 3$<br>$2x + 2 + 2x + 1 = 3$<br>$4x + 3 = 3 \Rightarrow 4x = 0 \Rightarrow x = 0$.<br>• Verify constraints: $x = 0$ satisfies constraints.<br><b>Thus</b> the equation has unique solution $x = 0$." data-title-vi="HƯỚNG DẪN GIẢI 2.3A" data-title-en="GUIDED SOLUTION FOR 2.3A">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s22_b1')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s22_b1')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s22_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s22_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s22_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3662,11 +3710,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-ex" id="s23_b1" data-step="3" data-raw="• Nhận xét: $x^3 + 1 = (x+1)(x^2 - x + 1)$.<br>Vì $x^2 - x + 1 > 0$ nên <b>ĐKXĐ:</b> $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{5}$ thỏa mãn.<br><b>Vậy</b> nghiệm là $x = \frac{1}{5}$." data-raw-vi="• Nhận xét: $x^3 + 1 = (x+1)(x^2 - x + 1)$.<br>Vì $x^2 - x + 1 > 0$ nên <b>ĐKXĐ:</b> $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{5}$ thỏa mãn.<br><b>Vậy</b> nghiệm là $x = \frac{1}{5}$." data-raw-en="• Constraints: $x \neq -1$ (since $x^2 - x + 1 > 0$ for all $x$).<br>• Clear denominators: $(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• Verify constraints: $x = \frac{1}{5}$ satisfies constraints.<br><b>Thus</b> the solution is $x = \frac{1}{5}$." data-title-vi="HƯỚNG DẪN GIẢI 2.3B" data-title-en="GUIDED SOLUTION FOR 2.3B">
+          <div class="content-block highlight-ex" id="s23_b1" data-step="4" data-raw="• Nhận xét: $x^3 + 1 = (x+1)(x^2 - x + 1)$.<br>Vì $x^2 - x + 1 > 0$ nên <b>ĐKXĐ:</b> $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{5}$ thỏa mãn.<br><b>Vậy</b> nghiệm là $x = \frac{1}{5}$." data-raw-vi="• Nhận xét: $x^3 + 1 = (x+1)(x^2 - x + 1)$.<br>Vì $x^2 - x + 1 > 0$ nên <b>ĐKXĐ:</b> $x \neq -1$.<br>• <b>Khử mẫu:</b><br>$(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• <b>Đối chiếu ĐKXĐ:</b> $x = \frac{1}{5}$ thỏa mãn.<br><b>Vậy</b> nghiệm là $x = \frac{1}{5}$." data-raw-en="• Constraints: $x \neq -1$ (since $x^2 - x + 1 > 0$ for all $x$).<br>• Clear denominators: $(x^2 - x + 1) - x(x + 1) = 3x$<br>$x^2 - x + 1 - x^2 - x = 3x$<br>$-2x + 1 = 3x \Rightarrow 5x = 1 \Rightarrow x = \frac{1}{5}$.<br>• Verify constraints: $x = \frac{1}{5}$ satisfies constraints.<br><b>Thus</b> the solution is $x = \frac{1}{5}$." data-title-vi="HƯỚNG DẪN GIẢI 2.3B" data-title-en="GUIDED SOLUTION FOR 2.3B">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-sol">💡 Lời giải</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s23_b1')" title="Click để nhập số bước">2</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s23_b1')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s23_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s23_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s23_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3745,11 +3793,11 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s24_b1" data-step="1" data-raw="• Kích thước mảnh đất: dài $14\text{ m}$, rộng $12\text{ m}$.<br>• Sân vườn chừa dải rộng $x\text{ (m)}$ và dải rộng $x+2\text{ (m)}$ (Hình 2.2).<br>• Diện tích phần đất làm nhà là $100\text{ m}^2$.<br>• Chiều rộng nhà: $12 - x\text{ (m)}$.<br>• Chiều dài nhà: $14 - (x + 2) = 12 - x\text{ (m)}$.<br>• <b>Phương trình:</b> $(12 - x)^2 = 100$." data-raw-vi="• Kích thước mảnh đất: dài $14\text{ m}$, rộng $12\text{ m}$.<br>• Sân vườn chừa dải rộng $x\text{ (m)}$ và dải rộng $x+2\text{ (m)}$ (Hình 2.2).<br>• Diện tích phần đất làm nhà là $100\text{ m}^2$.<br>• Chiều rộng nhà: $12 - x\text{ (m)}$.<br>• Chiều dài nhà: $14 - (x + 2) = 12 - x\text{ (m)}$.<br>• <b>Phương trình:</b> $(12 - x)^2 = 100$." data-raw-en="• Plot dimensions: length $14\text{ m}$, width $12\text{ m}$.<br>• Garden strip of width $x\text{ (m)}$ and strip of width $x+2\text{ (m)}$ (Figure 2.2).<br>• House foundation area is $100\text{ m}^2$.<br>• House width: $12 - x\text{ (m)}$.<br>• House length: $14 - (x + 2) = 12 - x\text{ (m)}$.<br>• <b>Equation:</b> $(12 - x)^2 = 100$." data-title-vi="BÀI TOÁN THỰC TẾ 2.4 (ĐỀ BÀI & THIẾT LẬP)" data-title-en="STAGE 3: REAL-WORLD PROBLEM 2.4">
+          <div class="content-block highlight-def" id="s24_b1" data-step="4" data-raw="• Kích thước mảnh đất: dài $14\text{ m}$, rộng $12\text{ m}$.<br>• Sân vườn chừa dải rộng $x\text{ (m)}$ và dải rộng $x+2\text{ (m)}$ (Hình 2.2).<br>• Diện tích phần đất làm nhà là $100\text{ m}^2$.<br>• Chiều rộng nhà: $12 - x\text{ (m)}$.<br>• Chiều dài nhà: $14 - (x + 2) = 12 - x\text{ (m)}$.<br>• <b>Phương trình:</b> $(12 - x)^2 = 100$." data-raw-vi="• Kích thước mảnh đất: dài $14\text{ m}$, rộng $12\text{ m}$.<br>• Sân vườn chừa dải rộng $x\text{ (m)}$ và dải rộng $x+2\text{ (m)}$ (Hình 2.2).<br>• Diện tích phần đất làm nhà là $100\text{ m}^2$.<br>• Chiều rộng nhà: $12 - x\text{ (m)}$.<br>• Chiều dài nhà: $14 - (x + 2) = 12 - x\text{ (m)}$.<br>• <b>Phương trình:</b> $(12 - x)^2 = 100$." data-raw-en="• Plot dimensions: length $14\text{ m}$, width $12\text{ m}$.<br>• Garden strip of width $x\text{ (m)}$ and strip of width $x+2\text{ (m)}$ (Figure 2.2).<br>• House foundation area is $100\text{ m}^2$.<br>• House width: $12 - x\text{ (m)}$.<br>• House length: $14 - (x + 2) = 12 - x\text{ (m)}$.<br>• <b>Equation:</b> $(12 - x)^2 = 100$." data-title-vi="BÀI TOÁN THỰC TẾ 2.4 (ĐỀ BÀI & THIẾT LẬP)" data-title-en="STAGE 3: REAL-WORLD PROBLEM 2.4">
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               <span class="badge-role badge-role-prob">📝 Đề bài</span>
-              <span class="badge-step-num" onclick="setBlockStepDirect('s24_b1')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s24_b1')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s24_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s24_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s24_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -3965,7 +4013,7 @@
         <div class="col-board">
           <div class="col-board-tag">📌 PHẦN GHI BẢNG</div>
     
-          <div class="content-block highlight-def" id="s26_b1" data-step="1" data-raw="<svg viewBox=&quot;0 0 680 430&quot; style=&quot;width:100%;max-width:620px;height:auto;margin:6px auto;display:block;&quot;>
+          <div class="content-block highlight-def" id="s26_b1" data-step="4" data-raw="<svg viewBox=&quot;0 0 680 430&quot; style=&quot;width:100%;max-width:620px;height:auto;margin:6px auto;display:block;&quot;>
             <defs>
               <linearGradient id=&quot;mm-grad-center&quot; x1=&quot;0%&quot; y1=&quot;0%&quot; x2=&quot;100%&quot; y2=&quot;100%&quot;>
                 <stop offset=&quot;0%&quot; stop-color=&quot;#4f46e5&quot;/>
@@ -4121,7 +4169,7 @@
             <div class="design-overlay">
               <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
               
-              <span class="badge-step-num" onclick="setBlockStepDirect('s26_b1')" title="Click để nhập số bước">1</span>
+              <span class="badge-step-num" onclick="setBlockStepDirect('s26_b1')" title="Click để nhập số bước">4</span>
               <button class="btn-step-order" onclick="moveBlockPosition('s26_b1', -1)" title="Di chuyển khối lên trên">▲</button>
               <button class="btn-step-order" onclick="moveBlockPosition('s26_b1', 1)" title="Di chuyển khối xuống dưới">▼</button>
               <button class="btn-block-action btn-edit-block" onclick="openEditModal('s26_b1')" title="Sửa nội dung khối">✏️ Sửa</button>
@@ -4235,12 +4283,22 @@
 </div>
 
 <div class="blank-screen" id="blankScreen" aria-hidden="true"></div>
+<div class="laser-pointer" id="laserPointer" aria-hidden="true"></div>
+<canvas class="draw-canvas" id="drawCanvas"></canvas>
+<div id="penPalette" class="pen-palette">
+  <button type="button" onclick="setPenColor('#ef4444', 3, false)">🔴 Bút đỏ</button>
+  <button type="button" onclick="setPenColor('rgba(250, 204, 21, 0.45)', 14, true)">🟡 Dạ quang</button>
+  <button type="button" onclick="clearDrawCanvas()">🗑️ Xóa nét</button>
+  <button type="button" onclick="togglePenMode(false)">✕</button>
+</div>
 <!-- THANH ĐIỀU KHIỂN NỔI -->
 <nav class="control-bar" id="controlBar">
   <button class="btn-ctrl" onclick="prevSlide()" title="Phím mũi tên Trái">◀ Trang trước</button>
   <button class="btn-ctrl" onclick="prevStep()" title="Lùi 1 bước">↩ Lùi 1 bước</button>
   <button class="btn-ctrl btn-ctrl-primary" onclick="nextStep()" title="Phím mũi tên Phải hoặc chạm vùng trống">↪ Tiến 1 bước</button>
   <button class="btn-ctrl" onclick="nextSlide()">▶ Trang sau</button>
+  <button class="btn-ctrl" id="btnLaser" onclick="toggleLaserMode()" title="Con trỏ laser (phím L)">🔴 Laser</button>
+  <button class="btn-ctrl" id="btnPen" onclick="togglePenMode()" title="Bút vẽ trên slide (phím P)">✏️ Vẽ</button>
   <button class="btn-ctrl" onclick="toggleFullscreen()" title="Toàn màn hình (F11)">⛶ Toàn màn hình</button>
   <button class="btn-ctrl" id="btnFontSize" onclick="cycleFontSize()" title="Đổi cỡ chữ TV: 28px (Chuẩn TV) ⇄ 30px (TV Lớn) ⇄ 22px (Laptop)">🔤 TV 28px</button>
   <button class="btn-ctrl" id="btnToggleLang" onclick="toggleLanguage()" title="Chuyển đổi giao diện và nội dung song ngữ Việt / Anh">🌐 Song ngữ (VI/EN)</button>
@@ -5291,6 +5349,7 @@
   }
 
   function updateSlideDisplay() {
+    if (typeof clearDrawCanvas === 'function') clearDrawCanvas();
     stopAllSpeech();
     slides.forEach(s => {
       s.classList.remove('active');
@@ -6138,6 +6197,113 @@
     localStorage.setItem(key, JSON.stringify(updated));
   }
 
+
+  let penDrawing = false;
+  let penColor = '#ef4444';
+  let penWidth = 3;
+  let penHighlight = false;
+
+  function resizeDrawCanvas() {
+    const canvas = document.getElementById('drawCanvas');
+    if (!canvas) return;
+    const ratio = window.devicePixelRatio || 1;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    canvas.width = Math.floor(w * ratio);
+    canvas.height = Math.floor(h * ratio);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.getContext('2d').setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+
+  function toggleLaserMode(force) {
+    const on = typeof force === 'boolean' ? force : !document.body.classList.contains('laser-mode');
+    if (on) togglePenMode(false);
+    document.body.classList.toggle('laser-mode', on);
+    const dot = document.getElementById('laserPointer');
+    if (dot) dot.classList.toggle('active', on);
+    const btn = document.getElementById('btnLaser');
+    if (btn) btn.classList.toggle('is-on', on);
+  }
+
+  function togglePenMode(force) {
+    const on = typeof force === 'boolean' ? force : !document.body.classList.contains('pen-mode');
+    if (on) toggleLaserMode(false);
+    document.body.classList.toggle('pen-mode', on);
+    const canvas = document.getElementById('drawCanvas');
+    const palette = document.getElementById('penPalette');
+    if (canvas) canvas.style.pointerEvents = on ? 'auto' : 'none';
+    if (palette) palette.classList.toggle('active', on);
+    const btn = document.getElementById('btnPen');
+    if (btn) btn.classList.toggle('is-on', on);
+    if (on) resizeDrawCanvas();
+  }
+
+  function setPenColor(color, width, isHighlighter) {
+    penColor = color;
+    penWidth = width;
+    penHighlight = !!isHighlighter;
+  }
+
+  function clearDrawCanvas() {
+    const canvas = document.getElementById('drawCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
+  function penPoint(e) {
+    if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  }
+
+  function bindDrawCanvas() {
+    const canvas = document.getElementById('drawCanvas');
+    if (!canvas || canvas.dataset.bound) return;
+    canvas.dataset.bound = '1';
+    const ctx = canvas.getContext('2d');
+    function start(e) {
+      if (!document.body.classList.contains('pen-mode')) return;
+      e.preventDefault();
+      penDrawing = true;
+      const p = penPoint(e);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+    function move(e) {
+      if (!penDrawing) return;
+      e.preventDefault();
+      const p = penPoint(e);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = penColor;
+      ctx.lineWidth = penWidth;
+      ctx.globalCompositeOperation = penHighlight ? 'multiply' : 'source-over';
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+    function end() { penDrawing = false; }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+  }
+  document.addEventListener('mousemove', function(e) {
+    const dot = document.getElementById('laserPointer');
+    if (!dot || !document.body.classList.contains('laser-mode')) return;
+    dot.style.left = e.clientX + 'px';
+    dot.style.top = e.clientY + 'px';
+  });
+  document.addEventListener('DOMContentLoaded', bindDrawCanvas);
+  window.addEventListener('resize', resizeDrawCanvas);
+
   function toggleBlankScreen() {
     const blank = document.getElementById('blankScreen');
     if (!blank) return;
@@ -6157,6 +6323,29 @@
     if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
     const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'];
     const prevKeys = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'];
+    if (e.key === 'Escape') {
+      if (document.body.classList.contains('laser-mode') || document.body.classList.contains('pen-mode')) {
+        e.preventDefault();
+        toggleLaserMode(false);
+        togglePenMode(false);
+      }
+      return;
+    }
+    if (e.key === 'l' || e.key === 'L') {
+      e.preventDefault();
+      toggleLaserMode();
+      return;
+    }
+    if (e.key === 'p' || e.key === 'P') {
+      e.preventDefault();
+      togglePenMode();
+      return;
+    }
+    if (e.key === 'c' || e.key === 'C') {
+      e.preventDefault();
+      clearDrawCanvas();
+      return;
+    }
     if (e.key === 'b' || e.key === 'B' || e.key === '.') {
       e.preventDefault();
       toggleBlankScreen();
@@ -6178,6 +6367,7 @@
   /* Chạm vùng trống tiến bước; hình vẽ mở Lightbox, không nhảy bước */
   document.getElementById('slideDeck').addEventListener('click', function(e) {
     if (isDesignMode) return;
+    if (document.body.classList.contains('laser-mode')) return;
     const figure = zoomableFigure(e.target);
     if (figure) {
       e.preventDefault();

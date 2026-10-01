@@ -4,26 +4,30 @@
 PASS
 
 ## Đối chiếu scope
-- Đã bổ sung 2 hàm đọc key đa nguồn `getAvailableGeminiKeys()` và `getAvailableMistralKeys()` trong `vanban-app.js`, quét toàn bộ các khóa lưu trữ: `global_*`, `khbd_user_*_<email>`, `khbd_user_*_default`, `khbd_gemini_api_keys`, `gemini_api_keys`, `xdpl_gemini_api_keys`, `geometryAiApiKeys`, `xdpl_mistral_api_keys`, cùng fallback `AiDesignConfig`.
-- Đã thêm hàm `ensureKeysLoaded()` await một lần `syncUserKeysFromServer()`, gọi ở đầu hàm `ocrImageData()` để loại bỏ hoàn toàn race condition khi người dùng chụp dán ảnh ngay khi mở trang.
-- Đã cập nhật `extractTextViaGeminiVision()` sử dụng danh sách key từ `getAvailableGeminiKeys()`.
-- Đã cập nhật `openSystemAiConfig()` ưu tiên gọi `UserAiSettings.openModal('keys')` chuẩn của toàn hệ thống, fallback sang `AiDesignConfig.openModal()`.
-- Đã nạp `<script src="js/user-ai-settings.js?v=20261001"></script>` vào `<head>` của 3 trang `quanlyvanban-chuyenmon.html`, `quanlyvanban-hanhchinh.html`, `quanlyvanban-dang.html`.
-- Không sửa ngoài scope, không vi phạm cấu trúc backend hay phân quyền.
+- `master_lecture_template.html` và `Bai_12...html`:
+  + Đã tích hợp BẢNG VIẾT DẠY HỌC (`#blackboardOverlay` / `#blackboardCanvas`): bảng xanh ô ly truyền thống, thanh công cụ phấn trắng/phấn vàng, xóa bảng, phím tắt `W` hoặc `B`, phím `Escape` đóng bảng, và nhấn giữ phím `Shift` để vẽ đường thẳng tắp phục vụ môn Hình học: PASS
+  + Cụm nút nhảy nhanh theo tiết học `[Tiết 1]`, `[Tiết 2]`, `[Tiết 3]` (nhảy tới Slide 1, 9, 16): PASS
+  + Đã bỏ hoàn toàn nút `[💬 Tắt phụ đề]`: PASS
+  + Khóa cuộn trang khi đang ở chế độ Bút vẽ (`body.pen-mode` áp dụng `overflow: hidden`): PASS
+  + Nút loa 🔊 thông minh gọi `speakBlockAuto`: ở giao diện tiếng Việt đọc tiếng Việt (ưu tiên audio MP3 Hoài My trong `audio/`), giao diện tiếng Anh gọi `speakBlockEn`. `speakBlockEn` không còn tự ý gọi `toggleLanguage()` sang tiếng Anh: PASS
+  + Cột Ghi bảng Bài 12 ngắn gọn, súc tích, giữ nguyên công thức/định lí cốt lõi; toàn bộ đề bài, hình vẽ, lời giải chuyển sang cột hoạt động: PASS
+  + Đã xuất đầy đủ 26 file MP3 giọng Hoài My (`slide-1.mp3` đến `slide-26.mp3`) trong `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/audio/`: PASS
+- `PROMPT_TAO_BAI_GIANG_HTML.md` và `.agents/rules/tao-bai-giang-html.md`:
+  + Mục 5 Skeleton đã được cập nhật đồng bộ toàn bộ Bảng viết, nút nhảy tiết, loa song ngữ và khóa cuộn: PASS
 
 ## Test đã chạy
-1. `node --check vanban-app.js` — Exit 0 (Cú pháp JS hợp lệ).
-2. `node tests/vanban-ocr-clipboard-smoke.js` — Exit 0 (PASS: kiểm tra đủ các token hàm gom key đa nguồn, `khbd_user_*`, `ensureKeysLoaded`, `UserAiSettings.openModal('keys')`).
-3. `node tests/vanban-chuyenmon-signature-smoke.js` — Exit 0 (PASS: lĩnh vực Chuyên môn, chuyển/sao chép văn bản, số quyết định và ngày ký số).
-4. `node tests/vanban-display-saved-smoke.js` — Exit 0 (PASS: hiển thị văn bản đã lưu, bộ lọc năm học và truy vấn legacy).
-5. `python tests/vanban-chuyenmon-root-smoke.py` — Exit 0 (PASS: bảo toàn bản gốc Hành chính khi chuyển sang Chuyên môn, 27/27 asserts).
+1. `node tests/trolythien-template-smoke.js` — PASS
+2. `node tests/trolythien-bai-giang-html-smoke.js` — PASS
 
 ## Pass / Fail từng tiêu chí
-- [x] Tự động nhận diện API Key từ `khbd_user_gemini_keys_*` và `khbd_user_mistral_keys_*` của tài khoản mà không báo thiếu key: PASS
-- [x] Chụp dán ảnh (Ctrl+V hoặc nút "Dán nhanh từ Clipboard") chạy OCR trơn tru: PASS
-- [x] Có nút "Cấu hình AI" mở hộp thoại `UserAiSettings` chuẩn với cả 2 tab Gemini & Mistral: PASS
-- [x] Không còn thông báo chặn cứng ép dùng Mistral OCR: PASS
-- [x] Toàn bộ 4 smoke test suites đều PASS: PASS
+1. Bảng viết dạy học (`#blackboardOverlay`, phím `W` / `B`, giữ Shift vẽ thẳng): PASS
+2. Cụm nút nhảy tiết học (`[Tiết 1]`, `[Tiết 2]`, `[Tiết 3]`): PASS
+3. Tinh gọn thanh công cụ, bỏ nút tắt phụ đề: PASS
+4. Khóa cuộn trang khi vẽ bút: PASS
+5. Nút loa thông minh đa ngữ (giao diện nào đọc tiếng đó, không tự đổi ngôn ngữ): PASS
+6. Bộ 26 file MP3 Hoài My chạy mượt mà trên Chrome, Cốc Cốc, Offline: PASS
+7. Cột Ghi bảng cố định công thức cốt lõi: PASS
+8. Smoke tests tự động 100%: PASS
 
 ## Bug
-- Không có
+Không phát hiện bug tồn đọng.

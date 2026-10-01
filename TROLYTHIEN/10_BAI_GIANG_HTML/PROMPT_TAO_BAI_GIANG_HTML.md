@@ -326,6 +326,8 @@ mjx-container svg { display: inline !important; }
   + Bước 3 (`data-step="3"`): Các bước giải chi tiết, biến đổi tương đương, tính toán.
   + Bước 4 (`data-step="4"`): Chốt đáp số và nội dung kiến thức cốt lõi để học sinh ghi bảng, chép vở.
 - Đáp số cuối (câu «Vậy») chỉ hiện ở bước 4, ví dụ bằng `inline-anim` `data-step="4"`.
+- **Nguyên tắc Đồng hành Đề bài - Hình vẽ:** SVG hoặc ảnh minh họa bắt buộc cùng `data-step` với đề bài hoặc tình huống mà nó minh họa (nhúng trong khối đề, hoặc khối hình cùng số bước). Cấm tách hình sang bước sau khiến đề bài bị trống hình.
+- **Nguyên tắc Phân bước Tuần tự 2 cột:** Trong một slide, cấm gán cùng một số `data-step` (kể cả `data-step="1"`) cho cả Cột Ghi Bảng và Cột Hoạt Động. Mỗi lần bấm chỉ hiện một ý: bước 1 là đề bài kèm hình; bước sau mới tới cột còn lại.
 
 ### Vá 24 — Tương thích 100% Bút trình chiếu & Điều hướng Bàn phím đa năng (Universal Presenter & Key Navigation)
 
@@ -334,6 +336,20 @@ mjx-container svg { display: inline !important; }
 - Phím màn hình đen `b` và `.` bật/tắt lớp `.blank-screen`.
 - Gọi `preventDefault()` để trình duyệt không cuộn trang hoặc quay lại lịch sử.
 - Sau khi bấm nút trên `.control-bar`, gọi `blur()` để phím `Space` không kích hoạt lại nút đang focus.
+
+### Vá 25 — Công cụ Trợ giảng Trực quan: Con trỏ Laser Đỏ & Bút vẽ Đánh dấu trên Slide (Virtual Laser Pointer & In-Slide Annotation Canvas)
+
+- `#laserPointer`: chấm đỏ 22px, `radial-gradient`, `box-shadow: 0 0 14px 4px rgba(239, 68, 68, 0.85)`, bám `clientX`/`clientY`. `toggleLaserMode` bật `body.laser-mode` và `cursor: none`.
+- `#drawCanvas`: canvas phủ slide, dưới `#controlBar`. `togglePenMode` bật vẽ chuột và cảm ứng. `setPenColor('#ef4444', 3, false)` là bút đỏ; `setPenColor('rgba(250, 204, 21, 0.45)', 14, true)` là dạ quang. `clearDrawCanvas()` xóa nét; `updateSlideDisplay()` cũng xóa khi đổi slide.
+- Phím `L` bật/tắt laser, `P` bật/tắt bút, `C` xóa nét, `Escape` tắt laser và bút. Bật bút thì tắt laser, và ngược lại.
+- `#penPalette` chỉ hiện khi đang vẽ. Nút trên `#controlBar`: `[🔴 Laser]` và `[✏️ Vẽ]`.
+- **Vá 25b:** Trong listener click của `#slideDeck`, nếu `document.body.classList.contains('laser-mode')` thì `return` ngay, không gọi `nextStep()`.
+
+### Vá 26 — Cột Ghi bảng Sư phạm và giọng đọc tiếng Việt Natural
+
+- Tiêu đề mục và định lí cốt lõi nằm ở đầu Cột Ghi bảng, `data-step="0"` (luôn hiện). Các slide ví dụ và luyện tập của cùng một mục phải bảo lưu khối đó (`core-board`), không thay bảng bằng đề bài.
+- `getSweetVietnameseVoice()` chỉ nhận voice `vi` có chữ `Natural` (ưu tiên `HoaiMy` hoặc `NamMinh`). `speakBlockVi` không đọc bằng giọng Google. Nếu không có voice Natural, hiện toast: *"Để trải nghiệm giọng đọc AI Hoài My truyền cảm, Thầy/Cô vui lòng mở bài giảng trên trình duyệt Microsoft Edge."*
+- `playAudioOrSpeech()` phát `audio/slide-N.mp3` giọng `vi-VN-HoaiMyNeural` trước. Không có file thì mới gọi `speakBlockVi`. File `Chay_Bai_12_Bang_Edge.bat` mở bài bằng `msedge`. Script `export_hoaimy_audio.py` dùng `edge_tts` để xuất các MP3 đó.
 
 ## 5. Bộ khung mã HTML mẫu & Nguồn sự thật Master Template
 
@@ -346,7 +362,7 @@ mjx-container svg { display: inline !important; }
 > **CẤM TUYỆT ĐỐI:** Tự ý viết lại CSS/JS từ đầu hoặc sinh file HTML giản lược. Bắt buộc giữ nguyên 100% toàn bộ thẻ `<head>`, cấu hình MathJax 3, toàn bộ 1.176 dòng CSS hiện đại, thanh điều khiển nổi `#controlBar`, Modal soạn thảo `#editModal`, Modal phóng to ảnh vector Lightbox `#imageLightboxBackdrop` và toàn bộ 2.094 dòng JS tương tác / Text-to-Speech phát âm tiếng Anh.
 > Trợ lý chỉ việc nhân bản từ `master_lecture_template.html`, thay thông tin tiêu đề bài học và đưa nội dung các slide trích xuất từ PDF vào đúng vùng `#slideDeck` (`<section class="slide-item ...">`).
 
-Skeleton dưới đây chạy được ngay khi lưu thành file `.html`. Khi soạn bài thật, thay mọi chỗ `[TRÍCH TỪ PDF]` bằng nội dung đã trích, rồi nhân slide cho đủ 8–12 hoặc 16–22 slides theo số tiết. Không giữ nguyên câu placeholder trong bài thành phẩm.
+Skeleton dưới đây chạy được ngay khi lưu thành file `.html`. Khi soạn bài thật, thay mọi chỗ `[TRÍCH TỪ PDF]` bằng nội dung đã trích, rồi nhân slide cho đủ 8–12 hoặc 16–22 slides theo số tiết. Không giữ nguyên câu placeholder trong bài thành phẩm, và không bịa số liệu ngoài PDF.
 
 ```html
 <!DOCTYPE html>
@@ -360,177 +376,142 @@ Skeleton dưới đây chạy được ngay khi lưu thành file `.html`. Khi so
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
   <style>
-    :root { color-scheme: light; }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #e8eef6; color: #102033; font-size: 22px; line-height: 1.45; }
-    header.bar { display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: #0b3a82; color: #fff; position: sticky; top: 0; z-index: 5; }
-    header.bar button, .nav button, .quiz button, .timer button, .answer-toggle { font: inherit; font-size: 18px; border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
-    header.bar button { background: #fff; color: #0b3a82; font-weight: 700; }
-    .deck { padding: 16px; }
-    .slide { background: #fff; border: 3px solid #0b3a82; border-radius: 12px; padding: 28px; margin: 0 auto 20px; max-width: 1100px; }
-    .deck.present .slide { display: none; width: min(100vw - 24px, calc((100vh - 92px) * 16 / 9)); aspect-ratio: 16 / 9; overflow: auto; }
-    .deck.present .slide.active { display: block; }
-    h1, h2 { margin: 0 0 12px; line-height: 1.25; }
-    h1 { font-size: 40px; }
-    h2 { font-size: 32px; color: #0b3a82; }
-    table.script { width: 100%; border-collapse: collapse; font-size: 18px; }
-    table.script th, table.script td { border: 2px solid #102033; padding: 10px; vertical-align: top; }
-    table.script th { background: #0b3a82; color: #fff; }
-    .callout { background: #fff6d8; border-left: 8px solid #b45309; padding: 12px 16px; font-weight: 700; }
-    .hidden { display: none; }
-    .quiz button { display: block; width: 100%; text-align: left; margin: 8px 0; background: #f4f7fb; border: 2px solid #0b3a82; }
-    .quiz button.correct { background: #166534; color: #fff; }
-    .quiz button.wrong { background: #b91c1c; color: #fff; }
-    .timer { font-size: 48px; font-weight: 800; letter-spacing: 2px; }
-    mjx-container svg { display: inline !important; }
-    .icon { width: 28px; height: 28px; vertical-align: middle; }
+    body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #0f172a; color: #0f172a; }
+    .slide-deck { height: 100vh; }
+    .slide-item { display: none; height: 100%; background: #fff; }
+    .slide-item.active { display: flex; flex-direction: column; }
+    .slide-content-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+    .col-board, .col-task { overflow: auto; padding: 8px; }
+    .content-block { background: #f8fafc; border: 2px solid #0b3a82; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .content-block[data-step="0"] { display: block; }
+    .laser-pointer { display: none; position: fixed; width: 22px; height: 22px; margin-left: -11px; margin-top: -11px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, #ef4444 45%, rgba(239, 68, 68, 0.2) 70%); box-shadow: 0 0 14px 4px rgba(239, 68, 68, 0.85); z-index: 950; pointer-events: none; }
+    .laser-pointer.active { display: block; }
+    body.laser-mode, body.laser-mode * { cursor: none !important; }
+    .draw-canvas { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
+    body.pen-mode .draw-canvas { cursor: crosshair; }
+    body.pen-mode { overflow: hidden; }
+    #blackboardOverlay { display: none; position: fixed; inset: 0; z-index: 1200; background: #14532d; }
+    #blackboardOverlay.active { display: block; }
+    #penPalette { display: none; position: fixed; bottom: 64px; left: 50%; transform: translateX(-50%); z-index: 1100; gap: 6px; background: #0f172a; border-radius: 999px; padding: 6px 10px; }
+    #penPalette.active { display: flex; }
+    .control-bar { position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 1000; }
+    .btn-ctrl { font: inherit; border: 0; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
   </style>
 </head>
-<body>
-  <header class="bar">
-    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="14" fill="none" stroke="#fff" stroke-width="2"/><path d="M8 20h8" stroke="#fff" stroke-width="2"/></svg>
-    <strong>[Môn] · Lớp [Lớp] · [Số tiết]</strong>
-    <button type="button" id="modeBtn" onclick="toggleMode()">Chế độ Trình chiếu 16:9</button>
-    <span id="counter">Thiết kế</span>
-  </header>
-  <main class="deck design" id="deck">
-    <section class="slide active">
-      <h1>[Tên bài trích từ PDF]</h1>
-      <p>Môn: [Môn]. Lớp: [Lớp]. Thời lượng: [Số tiết] ([phút] phút).</p>
-      <p class="callout">Ghi nhớ: [Khái niệm chốt trích từ PDF]</p>
-    </section>
-    <section class="slide">
-      <h2>Hoạt động theo CV 5512 và GDPT 2018</h2>
-      <table class="script">
-        <thead>
-          <tr><th>Hoạt động của Giáo viên</th><th>Hoạt động của Học sinh</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Bước 1: Chuyển giao nhiệm vụ.</strong> [Lệnh giao việc trích từ PDF]</td>
-            <td>Nhận nhiệm vụ, nhắc lại yêu cầu bằng lời của mình.</td>
-          </tr>
-          <tr>
-            <td><strong>Bước 2: Thực hiện nhiệm vụ.</strong> Quan sát, gợi ý đúng chỗ vướng trong PDF.</td>
-            <td>Làm [khám phá / ví dụ / luyện tập] đúng số liệu PDF.</td>
-          </tr>
-          <tr>
-            <td><strong>Bước 3: Báo cáo, thảo luận.</strong> Mời nhóm trình bày, chất vấn lệch so với sách.</td>
-            <td>Báo cáo sản phẩm, đối chiếu với bạn.</td>
-          </tr>
-          <tr>
-            <td><strong>Bước 4: Kết luận, nhận định.</strong> Chốt đúng định nghĩa / quy tắc trong PDF.</td>
-            <td>Ghi kiến thức chốt vào vở, nêu một ví dụ vừa làm.</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-    <section class="slide">
-      <h2>Ví dụ trong sách</h2>
-      <p>Công thức trong dòng: $[công thức PDF]$.</p>
-      <p>$$[công thức khối trích từ PDF]$$</p>
-      <button type="button" class="answer-toggle" onclick="toggleAnswer('ans1')">Ẩn/hiện đáp án</button>
-      <div id="ans1" class="hidden callout">[Lời giải trích từ PDF, không bịa]</div>
-    </section>
-    <section class="slide">
-      <h2>Trắc nghiệm</h2>
-      <div class="quiz" id="quiz1">
-        <p>[Câu hỏi trích từ PDF]</p>
-        <button type="button" onclick="chooseQuiz(this, false)">A. [Phương án PDF]</button>
-        <button type="button" onclick="chooseQuiz(this, true)">B. [Phương án đúng trong PDF]</button>
-        <button type="button" onclick="chooseQuiz(this, false)">C. [Phương án PDF]</button>
-        <button type="button" onclick="chooseQuiz(this, false)">D. [Phương án PDF]</button>
-        <p id="quizExplain" class="hidden">[Lời giải chi tiết trích từ PDF]</p>
+<body class="mode-present">
+<div class="slide-deck" id="slideDeck">
+  <section class="slide-item active" id="s1" data-slide-index="1" data-max-steps="4">
+    <div class="slide-content-grid">
+      <div class="col-board">
+        <div class="content-block core-board" data-step="0"><strong>[Tiêu đề mục]</strong><br>[Định lí cốt lõi trích từ PDF]</div>
+        <div class="content-block" data-step="2"><strong>Quy ước</strong><br>[Ký hiệu trích từ PDF]</div>
+        <div class="content-block" data-step="4"><strong>Chốt</strong><br>[Hệ thức chốt trích từ PDF]</div>
       </div>
-    </section>
-    <section class="slide">
-      <h2>Thảo luận nhóm</h2>
-      <p class="timer" id="clock">05:00</p>
-      <button type="button" onclick="startTimer(5)">Bắt đầu đếm ngược</button>
-      <p>Nhiệm vụ: [Câu hỏi thảo luận có trong PDF].</p>
-    </section>
-  </main>
-  <footer class="nav" style="display:flex;gap:12px;justify-content:center;padding:12px;">
-    <button type="button" onclick="moveSlide(-1)">← Trước</button>
-    <button type="button" onclick="moveSlide(1)">Sau →</button>
-  </footer>
-  <script>
-    var deck = document.getElementById("deck");
-    var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
-    var index = 0;
-    var present = false;
-    var timerId = null;
-
-    function typeset() {
-      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
-    }
-
-    function showSlide(next) {
-      index = (next + slides.length) % slides.length;
-      slides.forEach(function (slide, i) { slide.classList.toggle("active", i === index); });
-      var counter = document.getElementById("counter");
-      counter.textContent = present ? ("Slide " + (index + 1) + "/" + slides.length) : "Thiết kế";
-      typeset();
-    }
-
-    function moveSlide(step) {
-      if (!present) { present = true; deck.className = "deck present"; }
-      showSlide(index + step);
-    }
-
-    function toggleMode() {
-      present = !present;
-      deck.className = present ? "deck present" : "deck design";
-      document.getElementById("modeBtn").textContent = present ? "Chế độ Thiết kế" : "Chế độ Trình chiếu 16:9";
-      showSlide(present ? index : 0);
-    }
-
-    function toggleAnswer(id) {
-      var node = document.getElementById(id);
-      node.classList.toggle("hidden");
-      typeset();
-    }
-
-    function chooseQuiz(button, correct) {
-      var siblings = button.parentNode.querySelectorAll("button");
-      Array.prototype.forEach.call(siblings, function (item) {
-        item.classList.remove("correct", "wrong");
-        item.disabled = true;
-      });
-      button.classList.add(correct ? "correct" : "wrong");
-      document.getElementById("quizExplain").classList.remove("hidden");
-    }
-
-    function startTimer(minutes) {
-      var left = minutes * 60;
-      var clock = document.getElementById("clock");
-      if (timerId) clearInterval(timerId);
-      timerId = setInterval(function () {
-        left -= 1;
-        if (left < 0) { clearInterval(timerId); clock.textContent = "00:00"; return; }
-        var m = String(Math.floor(left / 60)).padStart(2, "0");
-        var s = String(left % 60).padStart(2, "0");
-        clock.textContent = m + ":" + s;
-      }, 1000);
-    }
-
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "ArrowRight" || event.key === " ") { event.preventDefault(); moveSlide(1); }
-      if (event.key === "ArrowLeft") { event.preventDefault(); moveSlide(-1); }
+      <div class="col-task">
+        <div class="content-block" data-step="1"><strong>Đề bài</strong><br>[TRÍCH TỪ PDF] <button type="button" onclick="speakBlockAuto(this.closest('.content-block'), null, event)">🔊</button></div>
+        <div class="content-block" data-step="3"><strong>Hướng dẫn</strong><br>[TRÍCH TỪ PDF]</div>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="laser-pointer" id="laserPointer" aria-hidden="true"></div>
+<canvas class="draw-canvas" id="drawCanvas"></canvas>
+<div id="penPalette" class="pen-palette">
+  <button type="button" onclick="setPenColor('#ef4444', 3, false)">🔴 Bút đỏ</button>
+  <button type="button" onclick="setPenColor('rgba(250, 204, 21, 0.45)', 14, true)">🟡 Dạ quang</button>
+  <button type="button" onclick="clearDrawCanvas()">🗑️ Xóa nét</button>
+  <button type="button" onclick="togglePenMode(false)">✕</button>
+</div>
+<div id="blackboardOverlay"><canvas id="blackboardCanvas"></canvas></div>
+<nav class="control-bar" id="controlBar">
+  <button class="btn-ctrl" onclick="jumpToPeriod(1)">Tiết 1</button>
+  <button class="btn-ctrl" onclick="jumpToPeriod(2)">Tiết 2</button>
+  <button class="btn-ctrl" onclick="jumpToPeriod(3)">Tiết 3</button>
+  <button class="btn-ctrl" onclick="prevStep()">◀ Trước</button>
+  <button class="btn-ctrl" onclick="nextStep()">▶ Sau</button>
+  <button class="btn-ctrl" id="btnLaser" onclick="toggleLaserMode()">🔴 Laser</button>
+  <button class="btn-ctrl" id="btnPen" onclick="togglePenMode()">✏️ Vẽ</button>
+  <button class="btn-ctrl" id="btnBlackboard" onclick="toggleBlackboard()">📋 Bảng viết</button>
+</nav>
+<script>
+  var step = 0;
+  function nextStep() { step += 1; }
+  function prevStep() { step = Math.max(0, step - 1); }
+  var currentLang = 'vi';
+  var currentSlideIndex = 1;
+  var totalSlides = 26;
+  function jumpToPeriod(n) { var map = { 1: 1, 2: 9, 3: 16 }; currentSlideIndex = map[n] || 1; }
+  function toggleBlackboard(force) {
+    var el = document.getElementById('blackboardOverlay');
+    var on = typeof force === 'boolean' ? force : !el.classList.contains('active');
+    el.classList.toggle('active', on);
+  }
+  function speakBlockAuto(blockEl) { if (currentLang === 'en') return; }
+  var penDrawing = false, penColor = '#ef4444', penWidth = 3, penHighlight = false;
+  function toggleLaserMode(force) {
+    var on = typeof force === 'boolean' ? force : !document.body.classList.contains('laser-mode');
+    if (on) togglePenMode(false);
+    document.body.classList.toggle('laser-mode', on);
+    var dot = document.getElementById('laserPointer');
+    if (dot) dot.classList.toggle('active', on);
+  }
+  function togglePenMode(force) {
+    var on = typeof force === 'boolean' ? force : !document.body.classList.contains('pen-mode');
+    if (on) toggleLaserMode(false);
+    document.body.classList.toggle('pen-mode', on);
+    var canvas = document.getElementById('drawCanvas');
+    var palette = document.getElementById('penPalette');
+    if (canvas) canvas.style.pointerEvents = on ? 'auto' : 'none';
+    if (palette) palette.classList.toggle('active', on);
+  }
+  function setPenColor(color, width, isHighlighter) { penColor = color; penWidth = width; penHighlight = !!isHighlighter; }
+  function clearDrawCanvas() {
+    var canvas = document.getElementById('drawCanvas');
+    if (!canvas) return;
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  }
+  function bindDrawCanvas() {
+    var canvas = document.getElementById('drawCanvas');
+    if (!canvas) return;
+    canvas.addEventListener('mousedown', function (e) {
+      if (!document.body.classList.contains('pen-mode')) return;
+      penDrawing = true;
+      var ctx = canvas.getContext('2d');
+      ctx.beginPath();
+      ctx.moveTo(e.clientX, e.clientY);
     });
-
-    var touchX = null;
-    document.addEventListener("touchstart", function (event) { touchX = event.changedTouches[0].clientX; });
-    document.addEventListener("touchend", function (event) {
-      if (touchX == null) return;
-      var dx = event.changedTouches[0].clientX - touchX;
-      if (dx < -40) moveSlide(1);
-      if (dx > 40) moveSlide(-1);
-      touchX = null;
+    canvas.addEventListener('mousemove', function (e) {
+      if (!penDrawing) return;
+      var ctx = canvas.getContext('2d');
+      ctx.strokeStyle = penColor;
+      ctx.lineWidth = penWidth;
+      ctx.lineTo(e.clientX, e.clientY);
+      ctx.stroke();
     });
-
-    typeset();
-  </script>
+    window.addEventListener('mouseup', function () { penDrawing = false; });
+  }
+  document.addEventListener('mousemove', function (e) {
+    var dot = document.getElementById('laserPointer');
+    if (!dot || !document.body.classList.contains('laser-mode')) return;
+    dot.style.left = e.clientX + 'px';
+    dot.style.top = e.clientY + 'px';
+  });
+  document.addEventListener('DOMContentLoaded', bindDrawCanvas);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { toggleBlackboard(false); toggleLaserMode(false); togglePenMode(false); return; }
+    if (e.key === 'w' || e.key === 'W' || e.key === 'b' || e.key === 'B') { toggleBlackboard(); return; }
+    if (e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleLaserMode(); return; }
+    if (e.key === 'p' || e.key === 'P') { e.preventDefault(); togglePenMode(); return; }
+    if (e.key === 'c' || e.key === 'C') { e.preventDefault(); clearDrawCanvas(); return; }
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') nextStep();
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') prevStep();
+  });
+  document.getElementById('slideDeck').addEventListener('click', function (e) {
+    if (document.body.classList.contains('laser-mode')) return;
+    nextStep();
+  });
+</script>
 </body>
 </html>
 ```
