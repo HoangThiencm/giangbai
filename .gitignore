@@ -22,12 +22,14 @@ TROLYTHIEN/**/Ket_qua/*
 !TROLYTHIEN/**/Ket_qua/.gitkeep
 !TROLYTHIEN/**/*.md
 !TROLYTHIEN/**/*.js
+!TROLYTHIEN/**/templates/**
 !TROLYTHIEN/10_BAI_GIANG_HTML/templates/**
 !TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_1_*.html
 !TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_2_*.html
 !TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_3_*.html
 !TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_4_*.html
 !TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_12_*.html
+!TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/*.html
 scratch/
 
 # Python bytecode & cache

@@ -26,8 +26,8 @@ Gọi tool `ask_question` với 11 lựa chọn:
 - **9/ Viết sáng kiến:** Cung cấp link Gemini Canvas https://gemini.google.com/app/e6bf41201af60de3?hl=vi và file [backupcode viettailieu/sangkien.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/backupcode%20viettailieu/sangkien.html).
 - **11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh):** Cung cấp link website https://www.hoangthiencm.id.vn/vehinh.html và file [vehinh.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html).
 
-## 3. Menu Cấp 2 khi chọn "3/ Tạo bài tập" (8 định dạng đánh số)
-Gọi tiếp tool `ask_question` với ĐÚNG 8 lựa chọn bám sát `taobaitap.html`:
+## 3. Menu Cấp 2 khi chọn "3/ Tạo bài tập" (9 định dạng đánh số)
+Gọi tiếp tool `ask_question` với ĐÚNG 9 lựa chọn:
 - Question: "CHỌN ĐỊNH DẠNG TẠO BÀI TẬP: Thầy/Cô muốn tạo bài tập theo hình thức nào?"
 - Options:
   1. "1. ⭐ Dạng Công văn 7991 (17 câu)"
@@ -38,6 +38,7 @@ Gọi tiếp tool `ask_question` với ĐÚNG 8 lựa chọn bám sát `taobaita
   6. "6. ⭐ Đề 15 phút tinh gọn (8 TN + 2 TL ngắn)"
   7. "7. ⭐ Tùy chỉnh linh hoạt số câu"
   8. "8. ⭐ Bài tập tự luận"
+  9. "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dưỡng - Phân dạng & Giải từng bước)"
 
 ## 4. Quy ước thư mục đầu vào và kết quả (Bắt buộc không lưu lung tung)
 Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư mục `TROLYTHIEN/`:
@@ -45,8 +46,9 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
   + File đầu vào (PDF SGK, PPCT, tài liệu): đặt tại `TROLYTHIEN/1_SOAN_KHBD/Dau_vao/`
   + File kết quả (File Word .docx KHBD hoàn chỉnh): tự động lưu tại `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/`
 - **2/ Tạo bài tập:**
-  + File đầu vào (PDF bài học, tài liệu nguồn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`
-  + File kết quả (File Word đề thi, OLM, Game...): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`
+  + File đầu vào (PDF bài học, PDF chuyên đề bài tập 5-10 trang, tài liệu nguồn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`
+  + File kết quả (File Word đề thi, OLM, Game, hoặc File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`
+  + Khi chọn mục 9 (Xuất bài dạy HTML): Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-day-html.md`.
 - **3/ Duyệt giáo án:**
   + File đầu vào (File Word/PDF giáo án cần thẩm định): đặt tại `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/`
   + File kết quả (Biên bản / Phiếu nhận xét .docx): tự động lưu tại `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/`
@@ -119,11 +121,34 @@ Bốn file kết quả trong `TROLYTHIEN/11_VE_HINH/Ket_qua/`:
 
 Khi cần sửa tương tác trên canvas, cung cấp https://www.hoangthiencm.id.vn/vehinh.html và file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html.
 
-## 7. Công cụ dọn dẹp file rác dự án
+## 7. Quy chuẩn cho Tính năng 9 thuộc Nhánh 3 (Tạo bài dạy HTML từ PDF bài học / bài tập)
+Khi chọn "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dưỡng - Phân dạng & Giải từng bước)":
+- **Mục đích:** Phục vụ trực tiếp cho việc Dạy thêm, dạy kèm, phụ đạo học sinh yếu/mất gốc, bồi dưỡng học sinh khá/giỏi và kết hợp chữa bài tập trên lớp.
+- **Đầu vào:** File PDF bài học hoặc PDF chuyên đề bài tập (khoảng 5–10 trang) đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`.
+- **Cơ chế xử lý 2 kịch bản đầu vào:**
+  + **Nếu là PDF Bài tập / Chuyên đề:** Tôn trọng 100% cấu trúc tác giả, tạo slide theo đúng trật tự từng bài, từng dạng toán có sẵn trong tài liệu.
+  + **Nếu là PDF SGK / Bài học lý thuyết:** Tự động tổng hợp và phân loại các bài tập/luyện tập thành 3–4 dạng toán có hệ thống từ cơ bản đến nâng cao.
+- **Cấu trúc thuần tuý toán học 100% (Đủ nhiều bài tập để cày kỹ năng):**
+  + Tuyệt đối không nói nhảm, không chèn slide bìa hay khẩu hiệu rườm rà.
+  + **Mỗi Dạng toán bắt buộc có từ 4 bài tập rèn luyện trở lên** (tổng số 12–16 bài/chuyên đề) để học sinh thực sự rèn luyện thành thạo kỹ năng làm bài.
+  + Cấu trúc: `Dạng N: Tên dạng` $\rightarrow$ `Cách giải` $\rightarrow$ `Bài 1` $\rightarrow$ `Bài 2` $\rightarrow$ `Bài 3` $\rightarrow$ `Bài 4`... (kèm hình vẽ và bài giải).
+- **Quy chuẩn Hình học:**
+  + Vẽ hình SVG giải tích cực kỳ chuẩn xác, sạch (Clean Diagram), không viết lời giải thích trong hình.
+  + Bố cục bài hình dạng **2 cột ngang (Side-by-Side)**: Cột trái ghim hình vẽ SVG chuẩn 1:1, cột phải chứa đề bài và bài giải từng bước.
+- **Thiết kế Điều khiển Linh động Khi Đứng Lớp & In Phiếu A4:**
+  + **Phím Mũi tên phải (`→`) / Nút `Tiếp ▶`:** Luôn luôn chuyển ngay sang bài tiếp theo (cho phép giáo viên bỏ qua bài giải nếu học sinh đã làm tốt mà không bị kẹt).
+  + **Phím `Space` / Phím `Enter` / Nút `💡 Hiện Bài Giải`:** Chỉ khi giáo viên cần giảng giải mới bấm để mở bài giải.
+  + **Thanh Mục Lục Chọn Bài Nhanh:** Cho phép giáo viên click nhảy cóc trực tiếp đến bất kỳ bài nào trong tích tắc.
+  + **In Phiếu Bài Tập A4:** Khi in (Ctrl+P), tự động gom toàn bộ bài tập về văn bản A4 chuẩn (Times New Roman), dàn trang liên tục, thuần tuý Đề bài + Hình vẽ + Dòng kẻ chấm chấm để học sinh làm bài; ẩn 100% toàn bộ Bài giải và Cách giải.
+- **Đầu ra:** Xuất file HTML duy nhất tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/[Ten_Bai_Day].html`.
+- Tuân thủ quy chuẩn chi tiết tại `.agents/rules/tao-bai-day-html.md`.
+
+## 8. Công cụ dọn dẹp file rác dự án
 Bất cứ khi nào người dùng yêu cầu "dọn dẹp", "dọn rác" hoặc làm sạch bộ nhớ tạm:
 - Trợ lý Thiên tự động chạy `python tools/don_dep_file_rac.py` (hoặc người dùng chạy `tools/Don_Dep_File_Rac.bat`).
 - Quét sạch toàn bộ cache `__pycache__`, `*.pyc`, thư mục tách trang `pdf_pages/`, thư mục nháp `scratch/`.
 - Bảo toàn tuyệt đối 100% tài liệu gốc và toàn bộ sản phẩm giáo án, bài giảng, hình vẽ trong `TROLYTHIEN/**/Ket_qua/`.
+
 
 
 
