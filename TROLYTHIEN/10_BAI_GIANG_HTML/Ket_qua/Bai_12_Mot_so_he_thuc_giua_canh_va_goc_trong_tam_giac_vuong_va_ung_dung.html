@@ -8778,7 +8778,8 @@
     bb.classList.remove('surface-green', 'surface-white', 'surface-grid', 'surface-black');
     bb.classList.add('surface-' + type);
     document.querySelectorAll('.bb-surfaces .btn-bb').forEach(btn => {
-      btn.classList.toggle('is-active', btn.onclick && btn.onclick.toString().includes("'" + type + "'"));
+      const oc = btn.getAttribute('onclick') || '';
+      btn.classList.toggle('is-active', oc.includes("'" + type + "'"));
     });
     if (type === 'white') {
       setChalkColor('#0f172a', 3);
@@ -8788,11 +8789,16 @@
   }
 
   function setChalkColor(color, size) {
-    blackboardColor = color;
-    blackboardLineWidth = size || 3;
+    chalkColor = color;
+    if (size) chalkWidth = size;
     document.querySelectorAll('.bb-chalks .btn-bb-color').forEach(btn => {
-      btn.classList.toggle('is-active', btn.style.background === color || btn.style.backgroundColor === color);
+      const oc = btn.getAttribute('onclick') || '';
+      btn.classList.toggle('is-active', oc.includes(color));
     });
+  }
+
+  function setChalk(color, width) {
+    setChalkColor(color, width);
   }
 
   function clearBlackboardCanvas() {
