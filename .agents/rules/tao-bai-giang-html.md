@@ -361,6 +361,7 @@ mjx-container svg { display: inline !important; }
   + Số thập phân: `1,2` $\rightarrow$ *"1 phẩy 2"*, `8,6` $\rightarrow$ *"8 phẩy 6"*.
   + Từ viết tắt: `SGK` $\rightarrow$ *"sách giáo khoa"*, `GV`, `HS`, `HĐ1` $\rightarrow$ *"hoạt động 1"*, `(H.4.17)` $\rightarrow$ *"(Hình 4.17)"*, `tr.74` $\rightarrow$ *"trang 74"*, `tam giác ABC` $\rightarrow$ *"tam giác A B C"*, đoạn thẳng `AB` $\rightarrow$ *"A B"*.
   + Lượng giác & ký hiệu: $\sin, \cos, \tan, \cot$, căn bậc hai, phân số, góc, vuông góc, song song.
+  + Ký hiệu dấu phẩy toán học: Đỉnh $P'$ $\rightarrow$ *"P phẩy"*, $M'$ $\rightarrow$ *"M phẩy"*, $N'$, $A'$, đoạn thẳng $AB'$ $\rightarrow$ *"A B phẩy"*, $P'P$ $\rightarrow$ *"P phẩy P"*, $y''$ $\rightarrow$ *"y hai phẩy"*, góc $19^\circ 30'$ $\rightarrow$ *"19 độ 30 phút"*. Tự động giải mã thực thể HTML `&#x27;` và `\prime` trước khi đọc.
 - Thanh điều khiển `#controlBar` gom nhóm thành 4 cụm bo tròn (`.ctrl-group`): Điều hướng, Chọn tiết học, Công cụ trợ giảng, Cài đặt & Đa phương tiện, chống tràn màn hình.
 
 ### Vá 28 — Menu Chuột Phải Sư Phạm (Quick Context Menu cho Laser & Vẽ)
