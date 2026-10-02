@@ -596,39 +596,53 @@
     }
 
     /* Thanh điều khiển nổi */
-    /* THANH CÔNG CỤ NỔI GOM NHÓM TINH GỌN */
     .control-bar {
       position: fixed;
-      bottom: 10px;
+      bottom: 12px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 999px;
-      padding: 4px 6px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
       display: flex;
       align-items: center;
-      gap: 6px;
-      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
+      justify-content: center;
+      gap: 8px;
       z-index: 1000;
-      max-width: calc(100vw - 24px);
+      max-width: calc(100vw - 16px);
       overflow-x: auto;
       scrollbar-width: none;
+      pointer-events: none;
     }
     .control-bar::-webkit-scrollbar {
       display: none;
     }
     .ctrl-group {
+      pointer-events: auto;
       display: inline-flex;
       align-items: center;
       gap: 3px;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 3px 5px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 4px 6px;
       border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
       flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+    .ctrl-group:hover {
+      border-color: rgba(255, 255, 255, 0.32);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6);
+    }
+    .ctrl-group-pedagogy {
+      background: rgba(30, 27, 75, 0.94);
+      border-color: rgba(129, 140, 248, 0.35);
+    }
+    .ctrl-group-pedagogy:hover {
+      border-color: rgba(129, 140, 248, 0.65);
     }
     .btn-ctrl {
       background: transparent;
@@ -752,6 +766,413 @@
       height: 1px;
       background: rgba(255, 255, 255, 0.12);
       margin: 4px 0;
+    }
+
+    /* MODAL SƯ PHẠM DÙNG CHUNG (Timer & Student Picker) */
+    .pedagogy-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn 0.2s ease;
+    }
+    .pedagogy-modal-box {
+      background: #ffffff;
+      color: #0f172a;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 20px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+      border: 2px solid #e2e8f0;
+      padding: 24px;
+      position: relative;
+      animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pedagogy-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 10px;
+    }
+    .pedagogy-modal-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pedagogy-modal-close {
+      background: #f1f5f9;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .pedagogy-modal-close:hover {
+      background: #fee2e2;
+      color: #ef4444;
+    }
+
+    /* ĐỒNG HỒ ĐẾM NGƯỢC (PEDAGOGICAL TIMER) */
+    .timer-display-wrap {
+      text-align: center;
+      margin: 16px 0;
+    }
+    .timer-digits {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 4rem;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 2px;
+      line-height: 1;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .timer-digits.is-warning {
+      color: #ea580c;
+      animation: pulse-warn 0.6s infinite alternate;
+    }
+    .timer-digits.is-ended {
+      color: #dc2626;
+      animation: pulse-warn 0.3s infinite alternate;
+    }
+    @keyframes pulse-warn {
+      from { transform: scale(1); }
+      to { transform: scale(1.04); }
+    }
+    .timer-progress-bar {
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      margin-top: 14px;
+      overflow: hidden;
+    }
+    .timer-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4);
+      border-radius: 999px;
+      transition: width 0.4s linear;
+    }
+    .timer-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .btn-timer-preset {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-timer-preset:hover, .btn-timer-preset.is-active {
+      background: #4f46e5;
+      color: #ffffff;
+      border-color: #4f46e5;
+    }
+    .timer-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .btn-timer-action {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #334155;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn-timer-primary {
+      background: #059669;
+      color: #ffffff;
+      border-color: #059669;
+    }
+    .btn-timer-primary:hover {
+      background: #047857;
+    }
+    .btn-timer-action:hover:not(.btn-timer-primary) {
+      background: #e2e8f0;
+    }
+    .timer-floating-badge {
+      position: fixed;
+      top: 14px;
+      right: 90px;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(99, 102, 241, 0.6);
+      border-radius: 999px;
+      padding: 6px 14px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      cursor: pointer;
+      z-index: 1500;
+      font-weight: 800;
+      font-family: 'Consolas', monospace;
+      font-size: 1.05rem;
+      transition: all 0.2s ease;
+    }
+    .timer-floating-badge:hover {
+      transform: scale(1.05);
+      border-color: #818cf8;
+    }
+
+    /* VÒNG QUAY / GỌI TÊN NGẪU NHIÊN (STUDENT PICKER) */
+    .picker-display-wrap {
+      text-align: center;
+      padding: 16px 10px;
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(6, 182, 212, 0.08));
+      border: 2px dashed #818cf8;
+      border-radius: 16px;
+      margin-bottom: 16px;
+    }
+    .picker-result {
+      font-size: 3.2rem;
+      font-weight: 900;
+      color: var(--primary);
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.1;
+      word-break: break-word;
+    }
+    .picker-subtext {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    .picker-mode-tabs {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 12px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #334155;
+    }
+    .picker-mode-tabs label {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .picker-settings-row {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+    .picker-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-picker-roll {
+      flex: 2;
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      color: #ffffff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+      transition: all 0.2s ease;
+    }
+    .btn-picker-roll:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(79, 70, 229, 0.5);
+    }
+    .btn-picker-roll:active {
+      transform: translateY(0);
+    }
+
+    /* THƯỚC KẺ & THƯỚC ĐO GÓC ẢO (VIRTUAL GEOMETRY TOOLS) */
+    .geom-tools-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1300;
+    }
+    .geom-tool-box {
+      pointer-events: auto;
+      position: absolute;
+      user-select: none;
+      touch-action: none;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+      border-radius: 8px;
+      transition: box-shadow 0.15s ease;
+    }
+    .geom-tool-header {
+      background: rgba(15, 23, 42, 0.85);
+      color: #ffffff;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: grab;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+    }
+    .geom-tool-header:active {
+      cursor: grabbing;
+    }
+    .geom-tool-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .geom-tool-actions button {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: #ffffff;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .geom-tool-actions button:hover {
+      background: #ef4444;
+    }
+    .geom-ruler {
+      top: 120px;
+      left: 120px;
+      width: 440px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(2, 132, 199, 0.6);
+    }
+    .ruler-body {
+      height: 70px;
+      position: relative;
+      background: linear-gradient(180deg, rgba(224, 242, 254, 0.3), rgba(255, 255, 255, 0.7));
+    }
+    .geom-protractor {
+      top: 220px;
+      left: 200px;
+      width: 320px;
+      background: transparent;
+    }
+    .protractor-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      cursor: grab;
+    }
+    .protractor-svg:active {
+      cursor: grabbing;
+    }
+
+    /* BẢNG VIẾT PHẤN NÂNG CẤP: THANH CHỌN BỀ MẶT BẢNG VÀ MÀU PHẤN */
+    .blackboard-top-bar {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      z-index: 1250;
+      align-items: center;
+    }
+    .bb-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .btn-bb {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-bb:hover, .btn-bb.is-active {
+      background: #4f46e5;
+      border-color: #818cf8;
+    }
+    .btn-bb-close {
+      background: rgba(239, 68, 68, 0.8);
+      border-color: #ef4444;
+    }
+    .btn-bb-close:hover {
+      background: #dc2626;
+    }
+    .btn-bb-color {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .btn-bb-color:hover, .btn-bb-color.is-active {
+      transform: scale(1.25);
+      border-color: #ffffff;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    }
+    #blackboardOverlay.surface-green { background: #14532d !important; }
+    #blackboardOverlay.surface-black { background: #09090b !important; }
+    #blackboardOverlay.surface-white { background: #f8fafc !important; }
+    #blackboardOverlay.surface-grid {
+      background-color: #14532d !important;
+      background-image: linear-gradient(rgba(255,255,255,0.12) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px) !important;
+      background-size: 28px 28px !important;
     }
 
     /* Accordion Toggle Answer */
@@ -1680,23 +2101,36 @@
   <button type="button" onclick="clearDrawCanvas()">🗑️ Xóa nét</button>
   <button type="button" onclick="togglePenMode(false)">✕</button>
 </div>
-<div id="blackboardOverlay" aria-hidden="true">
-  <canvas id="blackboardCanvas"></canvas>
-  <div class="blackboard-tools">
-    <button type="button" onclick="setChalk('#f8fafc', 4)">Phấn trắng</button>
-    <button type="button" onclick="setChalk('#fde047', 5)">Phấn vàng</button>
-    <button type="button" onclick="clearBlackboard()">Xóa bảng</button>
-    <button type="button" onclick="toggleBlackboard(false)">Đóng</button>
+<div id="blackboardOverlay" class="surface-green" aria-hidden="true">
+  <div class="blackboard-top-bar">
+    <div class="bb-group bb-surfaces">
+      <button type="button" class="btn-bb is-active" onclick="setBoardSurface('green')">🟢 Bảng xanh</button>
+      <button type="button" class="btn-bb" onclick="setBoardSurface('white')">⚪ Bảng trắng</button>
+      <button type="button" class="btn-bb" onclick="setBoardSurface('grid')">📐 Ô ly vuông</button>
+      <button type="button" class="btn-bb" onclick="setBoardSurface('black')">⬛ Bảng đen</button>
+    </div>
+    <div class="bb-group bb-chalks">
+      <button type="button" class="btn-bb-color is-active" style="background:#ffffff;" onclick="setChalkColor('#ffffff', 3)" title="Phấn trắng"></button>
+      <button type="button" class="btn-bb-color" style="background:#fde047;" onclick="setChalkColor('#fde047', 3)" title="Phấn vàng"></button>
+      <button type="button" class="btn-bb-color" style="background:#f43f5e;" onclick="setChalkColor('#f43f5e', 3)" title="Phấn đỏ/hồng"></button>
+      <button type="button" class="btn-bb-color" style="background:#38bdf8;" onclick="setChalkColor('#38bdf8', 3)" title="Phấn xanh dương"></button>
+    </div>
+    <div class="bb-group">
+      <button type="button" class="btn-bb" onclick="clearBlackboardCanvas()">🗑️ Xóa sạch</button>
+      <button type="button" class="btn-bb btn-bb-close" onclick="toggleBlackboard(false)">✕ Đóng (W)</button>
+    </div>
   </div>
+  <canvas id="blackboardCanvas"></canvas>
 </div>
-<!-- THANH ĐIỀU KHIỂN NỔI -->
+
+<!-- THANH ĐIỀU KHIỂN NỔI GOM THEO NHÓM ĐỘC LẬP -->
 <nav class="control-bar" id="controlBar">
   <!-- Nhóm 1: Điều hướng slide & bước -->
   <div class="ctrl-group ctrl-group-nav">
-    <button class="btn-ctrl btn-icon-only" onclick="prevSlide()" title="Phím mũi tên Trái">◀ Trang trước</button>
-    <button class="btn-ctrl" onclick="prevStep()" title="Lùi 1 bước">↩ Lùi 1 bước</button>
-    <button class="btn-ctrl btn-ctrl-primary" onclick="nextStep()" title="Phím mũi tên Phải hoặc chạm vùng trống">↪ Tiến 1 bước</button>
-    <button class="btn-ctrl btn-icon-only" onclick="nextSlide()" title="Phím mũi tên Phải">▶ Trang sau</button>
+    <button class="btn-ctrl btn-icon-only" onclick="prevSlide()" title="Phím mũi tên Trái">◀ Trước</button>
+    <button class="btn-ctrl" onclick="prevStep()" title="Lùi 1 bước">↩ Lùi bước</button>
+    <button class="btn-ctrl btn-ctrl-primary" onclick="nextStep()" title="Phím mũi tên Phải hoặc chạm vùng trống">↪ Tiến bước</button>
+    <button class="btn-ctrl btn-icon-only" onclick="nextSlide()" title="Phím mũi tên Phải">Sau ▶</button>
   </div>
 
   <!-- Nhóm 2: Chuyển tiết học -->
@@ -1706,22 +2140,26 @@
     <button class="btn-ctrl btn-period" onclick="jumpToPeriod(3)" title="Nhảy đến slide 16">Tiết 3</button>
   </div>
 
-  <!-- Nhóm 3: Công cụ Trợ giảng (Laser, Vẽ, Bảng, Đọc cả slide) -->
-  <div class="ctrl-group ctrl-group-tools">
-    <button class="btn-ctrl" id="btnLaser" onclick="toggleLaserMode()" title="Con trỏ laser (phím L / Chuột phải)">🔴 Laser</button>
-    <button class="btn-ctrl" id="btnPen" onclick="togglePenMode()" title="Bút vẽ trên slide (phím P / Chuột phải)">✏️ Vẽ</button>
-    <button class="btn-ctrl" id="btnBlackboard" onclick="toggleBlackboard()" title="Bảng viết (phím W hoặc B)">📋 Bảng viết</button>
-    <button class="btn-ctrl" id="btnReadSlideVi" onclick="playAudioOrSpeech()" title="Đọc tiếng Việt bằng giọng Natural (Edge: Hoài My). Không dùng giọng Google.">🗣️ Đọc slide</button>
-  </div>
-
-  <!-- Nhóm 4: Cài đặt hiển thị & Đa phương tiện -->
-  <div class="ctrl-group ctrl-group-settings">
-    <button class="btn-ctrl" onclick="toggleFullscreen()" title="Toàn màn hình (F11)">⛶ Toàn màn hình</button>
-    <button class="btn-ctrl" id="btnFontSize" onclick="cycleFontSize()" title="Đổi cỡ chữ TV: 28px (Chuẩn TV) ⇄ 30px (TV Lớn) ⇄ 22px (Laptop)">🔤 TV 28px</button>
+  <!-- Nhóm 3: Âm thanh & Ngôn ngữ -->
+  <div class="ctrl-group ctrl-group-speech">
+    <button class="btn-ctrl" id="btnReadSlideVi" onclick="playAudioOrSpeech()" title="Đọc tiếng Việt bằng giọng Natural (Edge: Hoài My)">🗣️ Đọc slide</button>
     <button class="btn-ctrl" id="btnToggleLang" onclick="toggleLanguage()" title="Chuyển đổi giao diện và nội dung song ngữ Việt / Anh">🌐 Song ngữ (VI/EN)</button>
     <button class="btn-ctrl btn-speech" id="btnReadSlideEn" onclick="toggleReadSlideEn()" title="Trợ giảng AI: Đọc tiếng Anh chậm rãi cho học sinh nghe">🔊 Đọc Slide (EN)</button>
     <button class="btn-ctrl" id="btnSpeechRate" onclick="cycleSpeechRate()" title="Đổi tốc độ đọc: 0.85x ⇄ 0.75x ⇄ 0.5x ⇄ 1.0x">⚡ 0.85x</button>
-    <button class="btn-ctrl" id="btnSaveLecture" onclick="saveLecture()" title="Lưu trực tiếp đè vào file hoặc tải bản mới">💾 Lưu bài giảng</button>
+  </div>
+
+  <!-- Nhóm 4: Công cụ Sư phạm Đặc biệt -->
+  <div class="ctrl-group ctrl-group-pedagogy">
+    <button class="btn-ctrl" id="btnTimer" onclick="toggleTimerModal()" title="Đồng hồ đếm ngược thảo luận/làm bài (Phím T / Chuột phải)">⏱️ Bấm giờ</button>
+    <button class="btn-ctrl" id="btnPicker" onclick="toggleStudentPicker()" title="Gọi ngẫu nhiên học sinh phát biểu / lên bảng (Phím R / Chuột phải)">🎲 Gọi tên</button>
+    <button class="btn-ctrl" id="btnGeomTools" onclick="toggleGeometryTools()" title="Thước kẻ & Thước đo góc ảo trực quan (Chuột phải)">📐 Thước đo</button>
+  </div>
+
+  <!-- Nhóm 5: Cài đặt hiển thị & Đa phương tiện -->
+  <div class="ctrl-group ctrl-group-settings">
+    <button class="btn-ctrl" onclick="toggleFullscreen()" title="Toàn màn hình (F11)">⛶ Toàn màn hình</button>
+    <button class="btn-ctrl" id="btnFontSize" onclick="cycleFontSize()" title="Đổi cỡ chữ TV: 28px (Chuẩn TV) ⇄ 30px (TV Lớn) ⇄ 22px (Laptop)">🔤 TV 28px</button>
+    <button class="btn-ctrl" id="btnSaveLecture" onclick="saveLecture()" title="Lưu trực tiếp đè vào file hoặc tải bản mới">💾 Lưu</button>
     <button class="btn-ctrl btn-ctrl-mode" id="btnToggleMode" onclick="toggleMode()">⚙ Thiết kế</button>
   </div>
 </nav>
@@ -1743,17 +2181,43 @@
     <span class="ctx-label">Bút dạ quang vàng</span>
     <span class="ctx-key">Dạ quang</span>
   </div>
+  <div class="ctx-item" onclick="handleCtxAction('geomTools')">
+    <span class="ctx-icon">📐</span>
+    <span class="ctx-label">Thước kẻ & Đo độ</span>
+    <span class="ctx-key">Thước ảo</span>
+  </div>
   <div class="ctx-item" onclick="handleCtxAction('clearPen')">
     <span class="ctx-icon">🗑️</span>
     <span class="ctx-label">Xóa nét vẽ</span>
     <span class="ctx-key">Phím C</span>
   </div>
+  <div class="ctx-divider"></div>
   <div class="ctx-item" onclick="handleCtxAction('blackboard')">
     <span class="ctx-icon">📋</span>
     <span class="ctx-label">Bảng viết phấn</span>
     <span class="ctx-key">Phím W</span>
   </div>
+  <div class="ctx-item" onclick="handleCtxAction('timer')">
+    <span class="ctx-icon">⏱️</span>
+    <span class="ctx-label">Đồng hồ đếm ngược</span>
+    <span class="ctx-key">Phím T</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('picker')">
+    <span class="ctx-icon">🎲</span>
+    <span class="ctx-label">Gọi tên ngẫu nhiên</span>
+    <span class="ctx-key">Phím R</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('blankScreen')">
+    <span class="ctx-icon">⬛</span>
+    <span class="ctx-label">Màn hình đen</span>
+    <span class="ctx-key">Phím B</span>
+  </div>
   <div class="ctx-divider"></div>
+  <div class="ctx-item" onclick="handleCtxAction('readSlideVi')">
+    <span class="ctx-icon">🗣️</span>
+    <span class="ctx-label">Đọc cả slide (Hoài My)</span>
+    <span class="ctx-key">Phím S</span>
+  </div>
   <div class="ctx-item" onclick="handleCtxAction('nextStep')">
     <span class="ctx-icon">↪️</span>
     <span class="ctx-label">Tiến 1 bước</span>
@@ -1763,6 +2227,110 @@
     <span class="ctx-icon">↩️</span>
     <span class="ctx-label">Lùi 1 bước</span>
     <span class="ctx-key">←</span>
+  </div>
+</div>
+
+<!-- ĐỒNG HỒ ĐẾM NGƯỢC SƯ PHẠM (COUNTDOWN TIMER) -->
+<div id="pedagogicalTimerModal" class="pedagogy-modal" style="display:none;" aria-hidden="true" onclick="if(event.target===this)closeTimerModal()">
+  <div class="pedagogy-modal-box timer-modal-box">
+    <div class="pedagogy-modal-header">
+      <span class="pedagogy-modal-title">⏱️ ĐỒNG HỒ ĐẾM NGƯỢC LÀM BÀI / THẢO LUẬN</span>
+      <button class="pedagogy-modal-close" onclick="closeTimerModal()">✕</button>
+    </div>
+    <div class="timer-display-wrap">
+      <div id="timerDigits" class="timer-digits">02:00</div>
+      <div class="timer-progress-bar"><div id="timerProgressBar" class="timer-progress-fill" style="width:100%;"></div></div>
+    </div>
+    <div class="timer-presets">
+      <button type="button" class="btn-timer-preset" onclick="setTimerPreset(60)">1 phút</button>
+      <button type="button" class="btn-timer-preset is-active" onclick="setTimerPreset(120)">2 phút</button>
+      <button type="button" class="btn-timer-preset" onclick="setTimerPreset(180)">3 phút</button>
+      <button type="button" class="btn-timer-preset" onclick="setTimerPreset(300)">5 phút</button>
+      <button type="button" class="btn-timer-preset" onclick="setTimerPreset(600)">10 phút</button>
+      <button type="button" class="btn-timer-preset" onclick="adjustTimer(30)">+30s</button>
+      <button type="button" class="btn-timer-preset" onclick="adjustTimer(-30)">-30s</button>
+    </div>
+    <div class="timer-actions">
+      <button type="button" id="btnTimerStart" class="btn-timer-action btn-timer-primary" onclick="toggleTimerRunning()">▶ BẮT ĐẦU</button>
+      <button type="button" class="btn-timer-action" onclick="resetTimer()">🔄 ĐẶT LẠI</button>
+      <button type="button" class="btn-timer-action" onclick="minimizeTimer()">🗕 THU NHỎ</button>
+    </div>
+  </div>
+</div>
+<div id="timerFloatingBadge" class="timer-floating-badge" style="display:none;" onclick="openTimerModal()" title="Bấm để mở rộng đồng hồ">
+  <span class="timer-badge-icon">⏱️</span>
+  <span id="timerBadgeDigits" class="timer-badge-text">02:00</span>
+</div>
+
+<!-- HỘP GỌI TÊN NGẪU NHIÊN HỌC SINH (STUDENT PICKER) -->
+<div id="studentPickerModal" class="pedagogy-modal" style="display:none;" aria-hidden="true" onclick="if(event.target===this)closeStudentPicker()">
+  <div class="pedagogy-modal-box picker-modal-box">
+    <div class="pedagogy-modal-header">
+      <span class="pedagogy-modal-title">🎲 GỌI TÊN NGẪU NHIÊN HỌC SINH</span>
+      <button class="pedagogy-modal-close" onclick="closeStudentPicker()">✕</button>
+    </div>
+    <div class="picker-display-wrap">
+      <div id="pickerResult" class="picker-result">?</div>
+      <div id="pickerSubText" class="picker-subtext">Sẵn sàng gọi học sinh</div>
+    </div>
+    <div class="picker-mode-tabs">
+      <label><input type="radio" name="pickerMode" value="number" checked onchange="switchPickerMode('number')"> Sĩ số lớp (Số)</label>
+      <label><input type="radio" name="pickerMode" value="names" onchange="switchPickerMode('names')"> Danh sách họ tên</label>
+    </div>
+    <div id="pickerNumberSettings" class="picker-settings-row">
+      <span>Sĩ số lớp từ 1 đến:</span>
+      <input type="number" id="pickerMaxNum" value="45" min="2" max="100" style="width:70px;padding:4px 8px;border-radius:6px;border:1px solid #cbd5e1;font-weight:700;">
+    </div>
+    <div id="pickerNamesSettings" class="picker-settings-row" style="display:none;">
+      <textarea id="pickerNameList" rows="3" placeholder="Nhập tên học sinh, cách nhau bằng dấu phẩy..." style="width:100%;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-family:inherit;font-size:13px;"></textarea>
+    </div>
+    <div class="picker-actions">
+      <button type="button" id="btnRollPicker" class="btn-picker-roll" onclick="rollStudentPicker()">🎲 QUAY NGẪU NHIÊN</button>
+      <button type="button" class="btn-timer-action" onclick="closeStudentPicker()">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- THƯỚC KẺ & THƯỚC ĐO GÓC ẢO (VIRTUAL GEOMETRY TOOLS) -->
+<div id="virtualGeometryTools" class="geom-tools-container" style="display:none;" aria-hidden="true">
+  <!-- Thước thẳng 20cm -->
+  <div id="geomRuler" class="geom-tool-box geom-ruler">
+    <div class="geom-tool-header">
+      <span class="geom-tool-title">📐 THƯỚC THẲNG (20 cm)</span>
+      <div class="geom-tool-actions">
+        <button type="button" onclick="rotateGeomTool('geomRuler', -15)" title="Xoay ngược chiều kim đồng hồ">↺</button>
+        <button type="button" onclick="rotateGeomTool('geomRuler', 15)" title="Xoay thuận chiều kim đồng hồ">↻</button>
+        <button type="button" onclick="toggleGeomTool('geomRuler')" title="Ẩn thước">✕</button>
+      </div>
+    </div>
+    <div class="ruler-body" id="rulerBody"></div>
+  </div>
+
+  <!-- Thước đo góc (Protractor) 180 độ -->
+  <div id="geomProtractor" class="geom-tool-box geom-protractor">
+    <div class="geom-tool-header">
+      <span class="geom-tool-title">🧭 THƯỚC ĐO ĐỘ (180°)</span>
+      <div class="geom-tool-actions">
+        <button type="button" onclick="rotateGeomTool('geomProtractor', -15)" title="Xoay ngược">↺</button>
+        <button type="button" onclick="rotateGeomTool('geomProtractor', 15)" title="Xoay thuận">↻</button>
+        <button type="button" onclick="toggleGeomTool('geomProtractor')" title="Ẩn đo độ">✕</button>
+      </div>
+    </div>
+    <svg viewBox="0 0 320 170" class="protractor-svg">
+      <path d="M 10 160 A 150 150 0 0 1 310 160 Z" fill="rgba(255,255,255,0.78)" stroke="#0284c7" stroke-width="2"/>
+      <circle cx="160" cy="160" r="4" fill="#0284c7"/>
+      <line x1="10" y1="160" x2="310" y2="160" stroke="#0284c7" stroke-width="2"/>
+      <g stroke="#0369a1" stroke-width="1.5">
+        <line x1="160" y1="160" x2="160" y2="15" stroke-dasharray="2,2"/>
+        <text x="160" y="32" font-size="11" font-weight="800" text-anchor="middle" fill="#0369a1">90°</text>
+        <text x="35" y="155" font-size="10" font-weight="700" fill="#0369a1">180°</text>
+        <text x="285" y="155" font-size="10" font-weight="700" fill="#0369a1">0°</text>
+        <text x="65" y="75" font-size="10" font-weight="700" fill="#0369a1">135°</text>
+        <text x="255" y="75" font-size="10" font-weight="700" fill="#0369a1">45°</text>
+        <text x="100" y="45" font-size="10" font-weight="700" fill="#0369a1">120°</text>
+        <text x="220" y="45" font-size="10" font-weight="700" fill="#0369a1">60°</text>
+      </g>
+    </svg>
   </div>
 </div>
 
@@ -4171,6 +4739,10 @@
     const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'];
     const prevKeys = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'];
     if (e.key === 'Escape') {
+      const pTimer = document.getElementById('pedagogicalTimerModal');
+      if (pTimer && pTimer.style.display !== 'none') { e.preventDefault(); closeTimerModal(); return; }
+      const pPicker = document.getElementById('studentPickerModal');
+      if (pPicker && pPicker.style.display !== 'none') { e.preventDefault(); closeStudentPicker(); return; }
       const board = document.getElementById('blackboardOverlay');
       if (board && board.classList.contains('active')) { e.preventDefault(); toggleBlackboard(false); return; }
       if (document.body.classList.contains('laser-mode') || document.body.classList.contains('pen-mode')) {
@@ -4178,6 +4750,21 @@
         toggleLaserMode(false);
         togglePenMode(false);
       }
+      return;
+    }
+    if (e.key === 't' || e.key === 'T') {
+      e.preventDefault();
+      toggleTimerModal();
+      return;
+    }
+    if (e.key === 'r' || e.key === 'R') {
+      e.preventDefault();
+      toggleStudentPicker();
+      return;
+    }
+    if (e.key === 's' || e.key === 'S') {
+      e.preventDefault();
+      readCurrentSlideVi();
       return;
     }
     if (e.key === 'l' || e.key === 'L') {
@@ -4357,6 +4944,16 @@
     if (toast) toast.remove();
     const tooltip = clone.querySelector('#selectionTooltip');
     if (tooltip) tooltip.remove();
+    const timerM = clone.querySelector('#pedagogicalTimerModal');
+    if (timerM) timerM.style.display = 'none';
+    const pickerM = clone.querySelector('#studentPickerModal');
+    if (pickerM) pickerM.style.display = 'none';
+    const geomT = clone.querySelector('#virtualGeometryTools');
+    if (geomT) geomT.style.display = 'none';
+    const timerB = clone.querySelector('#timerFloatingBadge');
+    if (timerB) timerB.style.display = 'none';
+    const ctxM = clone.querySelector('#contextMenu');
+    if (ctxM) ctxM.style.display = 'none';
 
     const htmlString = '<!DOCTYPE html>\n' + clone.outerHTML;
 
@@ -4525,7 +5122,414 @@
 
 
 
-  /* MENU CHUỘT PHẢI SƯ PHẠM (QUICK CONTEXT MENU CHO LASER & VẼ) */
+  /* ========================================================
+     VÁ 29: TÍNH NĂNG SƯ PHẠM NÂNG CAO (TIMER, STUDENT PICKER, VIRTUAL TOOLS)
+     ======================================================== */
+  // 1. Âm thanh Web Audio API (Zero dependencies, 100% offline)
+  function playPedagogyTone(freq, type, duration, delay) {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + (delay || 0));
+      gain.gain.setValueAtTime(0.18, ctx.currentTime + (delay || 0));
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (delay || 0) + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + (delay || 0));
+      osc.stop(ctx.currentTime + (delay || 0) + duration);
+    } catch(e) {}
+  }
+  function playTimerEndChime() {
+    playPedagogyTone(523.25, 'sine', 0.5, 0);    // C5
+    playPedagogyTone(659.25, 'sine', 0.5, 0.18); // E5
+    playPedagogyTone(783.99, 'sine', 0.8, 0.36); // G5
+  }
+  function playTimerTick() {
+    playPedagogyTone(880, 'triangle', 0.05, 0);
+  }
+  function playFanfareTone() {
+    playPedagogyTone(440, 'triangle', 0.15, 0);
+    playPedagogyTone(554.37, 'triangle', 0.15, 0.12);
+    playPedagogyTone(659.25, 'triangle', 0.15, 0.24);
+    playPedagogyTone(880, 'triangle', 0.6, 0.36);
+  }
+
+  // 2. Đồng hồ đếm ngược (Pedagogical Countdown Timer)
+  let timerTotalSeconds = 120;
+  let timerRemainingSeconds = 120;
+  let timerInterval = null;
+  let timerIsRunning = false;
+
+  function formatTimerTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function updateTimerUI() {
+    const formatted = formatTimerTime(timerRemainingSeconds);
+    const digitsEl = document.getElementById('timerDigits');
+    const badgeDigitsEl = document.getElementById('timerBadgeDigits');
+    const barEl = document.getElementById('timerProgressBar');
+    if (digitsEl) {
+      digitsEl.textContent = formatted;
+      digitsEl.classList.toggle('is-warning', timerRemainingSeconds <= 30 && timerRemainingSeconds > 0);
+      digitsEl.classList.toggle('is-ended', timerRemainingSeconds === 0);
+    }
+    if (badgeDigitsEl) {
+      badgeDigitsEl.textContent = formatted;
+    }
+    if (barEl) {
+      const pct = timerTotalSeconds > 0 ? (timerRemainingSeconds / timerTotalSeconds) * 100 : 0;
+      barEl.style.width = pct + '%';
+    }
+  }
+
+  function toggleTimerModal() {
+    const modal = document.getElementById('pedagogicalTimerModal');
+    if (!modal) return;
+    if (modal.style.display === 'none' || !modal.style.display) {
+      openTimerModal();
+    } else {
+      closeTimerModal();
+    }
+  }
+
+  function openTimerModal() {
+    const modal = document.getElementById('pedagogicalTimerModal');
+    const badge = document.getElementById('timerFloatingBadge');
+    if (modal) modal.style.display = 'flex';
+    if (badge) badge.style.display = 'none';
+  }
+
+  function closeTimerModal() {
+    const modal = document.getElementById('pedagogicalTimerModal');
+    const badge = document.getElementById('timerFloatingBadge');
+    if (modal) modal.style.display = 'none';
+    if (timerIsRunning && badge) {
+      badge.style.display = 'flex';
+    }
+  }
+
+  function minimizeTimer() {
+    closeTimerModal();
+    showToast('Đã thu nhỏ đồng hồ. Bấm vào huy hiệu ⏱ ở góc trên phải để mở lại.');
+  }
+
+  function setTimerPreset(sec) {
+    pauseTimer();
+    timerTotalSeconds = sec;
+    timerRemainingSeconds = sec;
+    updateTimerUI();
+    document.querySelectorAll('.btn-timer-preset').forEach(btn => {
+      btn.classList.toggle('is-active', btn.textContent.includes(Math.floor(sec/60) + ' phút'));
+    });
+  }
+
+  function adjustTimer(deltaSec) {
+    timerRemainingSeconds = Math.max(10, timerRemainingSeconds + deltaSec);
+    if (timerRemainingSeconds > timerTotalSeconds) timerTotalSeconds = timerRemainingSeconds;
+    updateTimerUI();
+  }
+
+  function toggleTimerRunning() {
+    if (timerIsRunning) {
+      pauseTimer();
+    } else {
+      startTimer();
+    }
+  }
+
+  function startTimer() {
+    if (timerRemainingSeconds <= 0) timerRemainingSeconds = timerTotalSeconds;
+    timerIsRunning = true;
+    const btn = document.getElementById('btnTimerStart');
+    if (btn) {
+      btn.textContent = '⏸ TẠM DỪNG';
+      btn.style.background = '#ea580c';
+    }
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      if (timerRemainingSeconds > 0) {
+        timerRemainingSeconds--;
+        if (timerRemainingSeconds <= 5 && timerRemainingSeconds > 0) {
+          playTimerTick();
+        }
+        updateTimerUI();
+      } else {
+        pauseTimer();
+        playTimerEndChime();
+        openTimerModal();
+        showToast('⏰ HẾT GIỜ LÀM BÀI / THẢO LUẬN!');
+      }
+    }, 1000);
+  }
+
+  function pauseTimer() {
+    timerIsRunning = false;
+    clearInterval(timerInterval);
+    const btn = document.getElementById('btnTimerStart');
+    if (btn) {
+      btn.textContent = '▶ TIẾP TỤC';
+      btn.style.background = '#059669';
+    }
+    const badge = document.getElementById('timerFloatingBadge');
+    if (badge && (document.getElementById('pedagogicalTimerModal').style.display === 'none')) {
+      badge.style.display = 'flex';
+    }
+  }
+
+  function resetTimer() {
+    pauseTimer();
+    timerRemainingSeconds = timerTotalSeconds;
+    const btn = document.getElementById('btnTimerStart');
+    if (btn) {
+      btn.textContent = '▶ BẮT ĐẦU';
+      btn.style.background = '#059669';
+    }
+    updateTimerUI();
+  }
+
+  // 3. Vòng quay / Hộp gọi tên ngẫu nhiên học sinh (Random Student Picker)
+  let pickerMode = 'number';
+  let isRollingPicker = false;
+  const defaultStudentNames = [
+    'Nguyễn Văn An', 'Trần Thị Bình', 'Lê Hoàng Cúc', 'Phạm Minh Dũng',
+    'Hoàng Ngọc Hoa', 'Đặng Quốc Hùng', 'Vũ Khánh Linh', 'Bùi Đức Nam',
+    'Ngô Gia Phúc', 'Đỗ Như Quỳnh', 'Dương Quang Sáng', 'Lý Thu Trang',
+    'Mai Văn Tuấn', 'Trịnh Thảo Vy', 'Hồ Tiến Đạt'
+  ];
+
+  function toggleStudentPicker() {
+    const modal = document.getElementById('studentPickerModal');
+    if (!modal) return;
+    if (modal.style.display === 'none' || !modal.style.display) {
+      modal.style.display = 'flex';
+      const txt = document.getElementById('pickerNameList');
+      if (txt && !txt.value) {
+        const saved = localStorage.getItem('lecture_student_names');
+        txt.value = saved || defaultStudentNames.join(', ');
+      }
+    } else {
+      closeStudentPicker();
+    }
+  }
+
+  function closeStudentPicker() {
+    const modal = document.getElementById('studentPickerModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function switchPickerMode(mode) {
+    pickerMode = mode;
+    const numRow = document.getElementById('pickerNumberSettings');
+    const nameRow = document.getElementById('pickerNamesSettings');
+    if (numRow) numRow.style.display = (mode === 'number') ? 'flex' : 'none';
+    if (nameRow) nameRow.style.display = (mode === 'names') ? 'block' : 'none';
+    const sub = document.getElementById('pickerSubText');
+    if (sub) sub.textContent = (mode === 'number') ? 'Chọn số ngẫu nhiên theo sĩ số' : 'Chọn tên ngẫu nhiên từ danh sách';
+  }
+
+  function rollStudentPicker() {
+    if (isRollingPicker) return;
+    isRollingPicker = true;
+    const resEl = document.getElementById('pickerResult');
+    const subEl = document.getElementById('pickerSubText');
+    const btn = document.getElementById('btnRollPicker');
+    if (btn) btn.disabled = true;
+
+    let candidates = [];
+    if (pickerMode === 'number') {
+      const max = parseInt(document.getElementById('pickerMaxNum').value, 10) || 45;
+      for (let i = 1; i <= max; i++) candidates.push('Số ' + i);
+    } else {
+      const txt = document.getElementById('pickerNameList').value || '';
+      localStorage.setItem('lecture_student_names', txt);
+      candidates = txt.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+      if (candidates.length === 0) candidates = defaultStudentNames;
+    }
+
+    let speed = 40;
+    let count = 0;
+    const maxCount = 28;
+
+    function stepRoll() {
+      const randIdx = Math.floor(Math.random() * candidates.length);
+      const chosen = candidates[randIdx];
+      if (resEl) resEl.textContent = chosen;
+      playPedagogyTone(600 + Math.random() * 300, 'sine', 0.04, 0);
+
+      count++;
+      if (count < maxCount) {
+        speed += 8;
+        setTimeout(stepRoll, speed);
+      } else {
+        isRollingPicker = false;
+        if (btn) btn.disabled = false;
+        playFanfareTone();
+        if (subEl) subEl.textContent = '🎉 Đã chọn xong!';
+        showToast('🎯 Mời bạn: ' + chosen + '!');
+      }
+    }
+    stepRoll();
+  }
+
+  // 4. Thước kẻ & Thước đo góc ảo (Virtual Geometry Tools)
+  let rulerRotation = 0;
+  let protractorRotation = 0;
+
+  function renderRulerBodySvg() {
+    const rb = document.getElementById('rulerBody');
+    if (!rb || rb.innerHTML.trim()) return;
+    let svg = '<svg viewBox="0 0 440 60" style="width:100%;height:100%;display:block;">';
+    svg += '<rect width="440" height="60" fill="none"/>';
+    for (let i = 0; i <= 20; i++) {
+      const x = 20 + i * 20;
+      svg += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="22" stroke="#0f172a" stroke-width="1.5"/>';
+      svg += '<text x="' + x + '" y="' + 38 + '" font-size="11" font-weight="800" font-family="sans-serif" fill="#0f172a" text-anchor="middle">' + i + '</text>';
+      if (i < 20) {
+        const xHalf = x + 10;
+        svg += '<line x1="' + xHalf + '" y1="0" x2="' + xHalf + '" y2="15" stroke="#334155" stroke-width="1"/>';
+        for (let m = 1; m < 10; m++) {
+          if (m === 5) continue;
+          const xMm = x + m * 2;
+          svg += '<line x1="' + xMm + '" y1="0" x2="' + xMm + '" y2="9" stroke="#64748b" stroke-width="0.8"/>';
+        }
+      }
+    }
+    svg += '<text x="428" y="52" font-size="9" font-weight="700" fill="#0284c7" text-anchor="end">cm</text>';
+    svg += '</svg>';
+    rb.innerHTML = svg;
+  }
+
+  function toggleGeometryTools() {
+    const wrap = document.getElementById('virtualGeometryTools');
+    if (!wrap) return;
+    if (wrap.style.display === 'none' || !wrap.style.display) {
+      wrap.style.display = 'block';
+      renderRulerBodySvg();
+      makeElementDraggable(document.getElementById('geomRuler'));
+      makeElementDraggable(document.getElementById('geomProtractor'));
+      showToast('📐 Đã mở thước ảo! Bạn có thể kéo thả di chuyển hoặc bấm xoay.');
+    } else {
+      wrap.style.display = 'none';
+    }
+  }
+
+  function toggleGeomTool(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+  }
+
+  function rotateGeomTool(id, angleDelta) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === 'geomRuler') {
+      rulerRotation = (rulerRotation + angleDelta) % 360;
+      el.style.transform = 'rotate(' + rulerRotation + 'deg)';
+    } else {
+      protractorRotation = (protractorRotation + angleDelta) % 360;
+      el.style.transform = 'rotate(' + protractorRotation + 'deg)';
+    }
+  }
+
+  function makeElementDraggable(elmnt) {
+    if (!elmnt || elmnt.dataset.dragInit) return;
+    elmnt.dataset.dragInit = 'true';
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    const header = elmnt.querySelector('.geom-tool-header') || elmnt;
+
+    header.onmousedown = dragMouseDown;
+    header.ontouchstart = dragTouchStart;
+
+    function dragMouseDown(e) {
+      if (e.target.closest('button')) return;
+      e.preventDefault();
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
+    }
+
+    function elementDrag(e) {
+      e.preventDefault();
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+    }
+
+    function closeDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+
+    function dragTouchStart(e) {
+      if (e.target.closest('button')) return;
+      const touch = e.touches[0];
+      pos3 = touch.clientX;
+      pos4 = touch.clientY;
+      document.ontouchend = closeDragTouch;
+      document.ontouchmove = elementTouchDrag;
+    }
+
+    function elementTouchDrag(e) {
+      const touch = e.touches[0];
+      pos1 = pos3 - touch.clientX;
+      pos2 = pos4 - touch.clientY;
+      pos3 = touch.clientX;
+      pos4 = touch.clientY;
+      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+    }
+
+    function closeDragTouch() {
+      document.ontouchend = null;
+      document.ontouchmove = null;
+    }
+  }
+
+  // 5. Nâng cấp Bảng viết phấn (Multi-surface Chalkboard)
+  function setBoardSurface(type) {
+    const bb = document.getElementById('blackboardOverlay');
+    if (!bb) return;
+    bb.classList.remove('surface-green', 'surface-white', 'surface-grid', 'surface-black');
+    bb.classList.add('surface-' + type);
+    document.querySelectorAll('.bb-surfaces .btn-bb').forEach(btn => {
+      btn.classList.toggle('is-active', btn.onclick && btn.onclick.toString().includes("'" + type + "'"));
+    });
+    if (type === 'white') {
+      setChalkColor('#0f172a', 3);
+    } else {
+      setChalkColor('#ffffff', 3);
+    }
+  }
+
+  function setChalkColor(color, size) {
+    blackboardColor = color;
+    blackboardLineWidth = size || 3;
+    document.querySelectorAll('.bb-chalks .btn-bb-color').forEach(btn => {
+      btn.classList.toggle('is-active', btn.style.background === color || btn.style.backgroundColor === color);
+    });
+  }
+
+  function clearBlackboardCanvas() {
+    clearBlackboard();
+  }
+
+  function readCurrentSlideVi() {
+    if (typeof playAudioOrSpeech === 'function') {
+      playAudioOrSpeech();
+    }
+  }
+
+  /* MENU CHUỘT PHẢI SƯ PHẠM (QUICK CONTEXT MENU) */
   function initContextMenu() {
     const ctx = document.getElementById('contextMenu');
     if (!ctx) return;
@@ -4549,8 +5553,8 @@
         if (lbl) lbl.textContent = isPen ? 'Tắt Bút vẽ' : 'Bút vẽ màn hình';
       }
 
-      const menuWidth = 220;
-      const menuHeight = 260;
+      const menuWidth = 240;
+      const menuHeight = 440;
       let x = e.clientX;
       let y = e.clientY;
       if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 8;
@@ -4588,10 +5592,20 @@
     } else if (action === 'highlighter') {
       if (!document.body.classList.contains('pen-mode')) togglePenMode(true);
       setPenColor('rgba(250, 204, 21, 0.45)', 14, true);
+    } else if (action === 'geomTools') {
+      toggleGeometryTools();
     } else if (action === 'clearPen') {
       clearDrawCanvas();
     } else if (action === 'blackboard') {
       toggleBlackboard();
+    } else if (action === 'timer') {
+      toggleTimerModal();
+    } else if (action === 'picker') {
+      toggleStudentPicker();
+    } else if (action === 'blankScreen') {
+      toggleBlankScreen();
+    } else if (action === 'readSlideVi') {
+      readCurrentSlideVi();
     } else if (action === 'nextStep') {
       nextStep();
     } else if (action === 'prevStep') {

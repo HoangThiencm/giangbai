@@ -368,6 +368,28 @@ mjx-container svg { display: inline !important; }
 
 - Tích hợp menu chuột phải trên slide: Nhấn chuột phải hiện ngay menu nổi tại vị trí con trỏ gồm: 🔴 Con trỏ Laser (L), ✏️ Bút vẽ (P), 🟡 Dạ quang, 🗑️ Xóa nét (C), 📋 Bảng viết (W), ↪️ Tiến / ↩️ Lùi bước. Tiện lợi tối đa khi giảng dạy bằng chuột không dây hoặc bút cảm ứng.
 
+### Vá 29 — Thanh công cụ đảo nổi chia nhóm, Chuột phải tích hợp đầy đủ công cụ và Bộ công cụ Sư phạm Đặc biệt (Đồng hồ đếm ngược, Vòng quay gọi tên, Thước hình học ảo, Bảng viết phấn đa bề mặt)
+
+- **Thanh điều khiển nổi (`#controlBar`) gom 5 cụm độc lập (Floating Pill Islands):**
+  + `.control-bar` có nền trong suốt (`background: transparent; border: none; box-shadow: none; pointer-events: none;`), các cụm `.ctrl-group` là những viên con nhộng nổi độc lập (`pointer-events: auto; background: rgba(15, 23, 42, 0.92); border-radius: 999px;`) có khoảng hở giữa các cụm. Khi giáo viên bấm vào khoảng hở hoặc phía trên thanh điều khiển, slide vẫn nhận lệnh chuyển bước bình thường.
+  + Đưa các công cụ thao tác nhanh lên Menu Chuột Phải (`#contextMenu`) và loại bỏ các nút trùng lặp khỏi thanh điều khiển dưới đáy (bỏ `🔴 Laser`, `✏️ Vẽ`, `📋 Bảng viết` ở đáy để thanh công cụ luôn tinh gọn, thanh thoát).
+- **Bộ Công cụ Sư phạm Tương tác Cao (Pedagogical Power Tools):**
+  1. **Đồng hồ đếm ngược thông minh (`#pedagogicalTimerModal` & `#timerFloatingBadge`):**
+     - Đếm ngược thời gian thảo luận nhóm, làm bài tập với các mốc nhanh: 1 phút, 2 phút, 3 phút, 5 phút, 10 phút hoặc cộng/trừ 30 giây.
+     - Thanh tiến trình trực quan (Progress Bar) và hiệu ứng chuyển màu cảnh báo: Xanh $\rightarrow$ Vàng cam ($\le 30s$) $\rightarrow$ Đỏ nhấp nháy khi hết giờ.
+     - Âm thanh tích tắc cảnh báo 5 giây cuối và chuông hoàn thành phát qua Native Web Audio API (100% offline, không cần tệp âm thanh bên ngoài).
+     - Hỗ trợ thu nhỏ thành huy hiệu nổi gọn gàng ở góc trên bên phải màn hình (`#timerFloatingBadge`) để không che khuất bài giảng trong lúc học sinh làm bài; mở lại nhanh bằng phím tắt `T` hoặc click vào huy hiệu.
+  2. **Vòng quay / Hộp chọn ngẫu nhiên học sinh (`#studentPickerModal`):**
+     - Phục vụ gọi học sinh lên bảng hoặc phát biểu ý kiến: hỗ trợ chọn theo số thứ tự (sĩ số lớp 1..N) hoặc theo danh sách tên lớp (lưu tự động vào `localStorage`).
+     - Hiệu ứng cuộn tên ngẫu nhiên kết hợp âm thanh vui nhộn và giai điệu fanfare chúc mừng khi dừng lại. Kích hoạt tức thì bằng phím tắt `R` hoặc Menu Chuột Phải.
+  3. **Thước kẻ & Thước đo độ hình học ảo (`#virtualGeometryTools`):**
+     - Thước thẳng 20 cm có vạch chia milimet và thước đo độ bán nguyệt $180^\circ$ trong suốt cao cấp.
+     - Giáo viên có thể kéo thả di chuyển (`draggable`) tự do trên slide, bấm các nút xoay $\pm 15^\circ$ để đo trực tiếp cạnh, góc trên các hình vẽ SVG / ảnh bài học.
+  4. **Bảng viết phấn nâng cấp Đa bề mặt (`#blackboardOverlay`):**
+     - Hỗ trợ chuyển đổi nhanh 4 loại bề mặt bảng chuẩn học đường: 🟢 Bảng xanh truyền thống, ⚪ Bảng trắng hiện đại, 📐 Bảng ô ly vuông (tiện vẽ đồ thị / hình học), ⬛ Bảng đá đen.
+     - Hộp phấn 4 màu trực quan: Trắng, Vàng, Đỏ/Hồng, Xanh dương; xóa sạch 1 chạm và đóng nhanh bằng phím `W` hoặc `Escape`.
+
+
 ## 5. Bộ khung mã HTML mẫu & Nguồn sự thật Master Template
 
 > [!IMPORTANT]
