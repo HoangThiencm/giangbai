@@ -1,11 +1,11 @@
 ---
-description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 12 tác vụ chính
+description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 13 tác vụ chính
 ---
 
 Khi người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
 ### BƯỚC 1: Hiển thị bảng chọn Menu chính (Menu cấp 1)
-Gọi tool `ask_question` với danh sách 12 lựa chọn:
+Gọi tool `ask_question` với danh sách 13 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -20,6 +20,7 @@ Gọi tool `ask_question` với danh sách 12 lựa chọn:
   10. "10/ Tạo bài giảng HTML (từ PDF)"
   11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"
   12. "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"
+  13. "13/ Chuyển ghi âm thành văn bản (iPhone / MP3)"
 
 ---
 
@@ -120,4 +121,13 @@ Chuẩn hoá tệp Word đã có, không soạn văn bản mới. Đọc `TROLYT
 - **Thẩm định:** phân loại Hành chính (Nghị định 30/2020/NĐ-CP) hoặc Đảng (Quy định 399-QĐ/TW và Hướng dẫn 05-HD/VPTW) ngay ở bước nhận diện. Kiểm tra chính tả, dấu câu, căn cứ, thẩm quyền. Cảnh báo nếu văn bản còn tên cơ quan cấp huyện đã bãi bỏ trong mô hình chính quyền 2 cấp.
 - **Chat:** không xuất báo cáo 5 phần. Chỉ 2–3 dòng: đã chuẩn hoá xong, đường dẫn tệp Word, ghi chú pháp lý trọng yếu nếu có.
 - **File kết quả:** xuất Word `.docx` vào `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Ket_qua/[Ten_File]_Chuan_Hoa.docx`. Kỹ thuật in: Times New Roman 13pt, thụt đầu dòng 1,27 cm, lề A4, bảng đóng khung 4 cạnh, `cantSplit`, `tblHeader`. Header cột trái 65 mm, cột phải 100 mm, lề ô 0. Quốc hiệu và tên cơ quan mỗi cụm một dòng. Đường kẻ `v:line` 0.75pt dưới tiêu ngữ, tên đơn vị và trích yếu. Bảng số liệu 11,5pt.
+
+#### Nhánh 13: Khi chọn "13/ Chuyển ghi âm thành văn bản (iPhone / MP3)"
+Bóc tách tệp ghi âm giọng nói thành văn bản trung thực (Verbatim transcript), độ chính xác 90–95%, không tự ý thay đổi câu từ hoặc uốn nắn theo thuật ngữ sách vở. Đọc `TROLYTHIEN/13_CHUYEN_GHI_AM/HUONG_DAN_CHUYEN_GHI_AM.md` và áp dụng nguyên văn Master Prompt tại `TROLYTHIEN/13_CHUYEN_GHI_AM/PROMPT_CHUYEN_GHI_AM.md`.
+- **File đầu vào:** đọc trực tiếp tệp âm thanh `.m4a` (từ iPhone), `.mp3`, `.wav`, `.aac` trong `TROLYTHIEN/13_CHUYEN_GHI_AM/Dau_vao/`.
+- **Nguyên tắc bóc tách:** Giữ nguyên từng từ của người phát biểu, tự động phân tích ngữ cảnh để sửa lỗi chính tả chuẩn xác (phát âm vùng miền, dấu hỏi/ngã, từ đồng âm), tự động ngắt câu, đặt dấu chấm phẩy, xuống dòng chia đoạn theo nhịp phát biểu hoặc theo từng người nói. Giữ nguyên số liệu, tên riêng.
+- **File kết quả:** tự động xuất đồng thời 2 file vào `TROLYTHIEN/13_CHUYEN_GHI_AM/Ket_qua/`:
+  1. `[Ten_File].docx`: tệp Word chuẩn A4, phông Times New Roman 13pt, dãn dòng 1.2, thụt đầu dòng 1.27 cm, căn đều, có tiêu đề và ngày giờ.
+  2. `[Ten_File].txt`: tệp văn bản thuần UTF-8 gọn nhẹ để sao chép nhanh.
+- **Chat:** phản hồi ngắn 2–3 dòng: đã bóc tách xong, đường dẫn tệp Word và Text, trích dẫn 1 câu mở đầu để nhận diện nội dung.
 

@@ -351,6 +351,22 @@ mjx-container svg { display: inline !important; }
 - `getSweetVietnameseVoice()` chỉ nhận voice `vi` có chữ `Natural` (ưu tiên `HoaiMy` hoặc `NamMinh`). `speakBlockVi` không đọc bằng giọng Google. Nếu không có voice Natural, hiện toast: *"Để trải nghiệm giọng đọc AI Hoài My truyền cảm, Thầy/Cô vui lòng mở bài giảng trên trình duyệt Microsoft Edge."*
 - `playAudioOrSpeech()` phát `audio/slide-N.mp3` giọng `vi-VN-HoaiMyNeural` trước. Không có file thì mới gọi `speakBlockVi`. File `Chay_Bai_12_Bang_Edge.bat` mở bài bằng `msedge`. Script `export_hoaimy_audio.py` dùng `edge_tts` để xuất các MP3 đó.
 
+### Vá 27 — Đọc tiếng Việt từng khối, Chuẩn hóa từ viết tắt & đơn vị đo lường Toán - Lý - Hóa, Gom nhóm thanh điều khiển tinh gọn
+
+- Khi nhấn loa `🔊` trên từng khối (`speakBlockAuto`), chỉ đọc DUY NHẤT khối đó bằng giọng Hoài My (`speakBlockVi(blockEl)`), không đọc cả slide. Nút `[🗣️ Đọc slide]` trên thanh điều khiển mới phát toàn bộ slide.
+- **Bộ chuẩn hóa sư phạm `vietnameseMathToSpeech()`:** Tự động chuyển đổi toàn diện các từ viết tắt chuyên môn và đơn vị đo lường Toán - Lý - Hóa sang cách đọc tiếng Việt chuẩn:
+  + Đơn vị độ dài: `120m` $\rightarrow$ *"120 mét"*, `250 m` $\rightarrow$ *"250 mét"*, `km`, `dm`, `cm`, `mm`.
+  + Đơn vị kép & diện tích/thể tích: `500 km/h` $\rightarrow$ *"500 ki-lô-mét trên giờ"*, `m/s`, `m^2` $\rightarrow$ *"mét vuông"*, `m^3` $\rightarrow$ *"mét khối"*, `lít`, `ml`.
+  + Đơn vị Lý - Hóa: `kg`, `g`, `N` (Niu-tơn), `J` (Jun), `W` (Oát), `Pa` (Pát-xcan), `V` (Vôn), `A` (Am-pe), `°C` (độ C), `%` (phần trăm), `mol`.
+  + Số thập phân: `1,2` $\rightarrow$ *"1 phẩy 2"*, `8,6` $\rightarrow$ *"8 phẩy 6"*.
+  + Từ viết tắt: `SGK` $\rightarrow$ *"sách giáo khoa"*, `GV`, `HS`, `HĐ1` $\rightarrow$ *"hoạt động 1"*, `(H.4.17)` $\rightarrow$ *"(Hình 4.17)"*, `tr.74` $\rightarrow$ *"trang 74"*, `tam giác ABC` $\rightarrow$ *"tam giác A B C"*, đoạn thẳng `AB` $\rightarrow$ *"A B"*.
+  + Lượng giác & ký hiệu: $\sin, \cos, \tan, \cot$, căn bậc hai, phân số, góc, vuông góc, song song.
+- Thanh điều khiển `#controlBar` gom nhóm thành 4 cụm bo tròn (`.ctrl-group`): Điều hướng, Chọn tiết học, Công cụ trợ giảng, Cài đặt & Đa phương tiện, chống tràn màn hình.
+
+### Vá 28 — Menu Chuột Phải Sư Phạm (Quick Context Menu cho Laser & Vẽ)
+
+- Tích hợp menu chuột phải trên slide: Nhấn chuột phải hiện ngay menu nổi tại vị trí con trỏ gồm: 🔴 Con trỏ Laser (L), ✏️ Bút vẽ (P), 🟡 Dạ quang, 🗑️ Xóa nét (C), 📋 Bảng viết (W), ↪️ Tiến / ↩️ Lùi bước. Tiện lợi tối đa khi giảng dạy bằng chuột không dây hoặc bút cảm ứng.
+
 ## 5. Bộ khung mã HTML mẫu & Nguồn sự thật Master Template
 
 > [!IMPORTANT]

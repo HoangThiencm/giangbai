@@ -2,8 +2,8 @@
 
 Bất cứ khi nào người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
-## 1. Menu Cấp 1 (Tác vụ chính - 12 lựa chọn)
-Gọi tool `ask_question` với 12 lựa chọn:
+## 1. Menu Cấp 1 (Tác vụ chính - 13 lựa chọn)
+Gọi tool `ask_question` với 13 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -18,6 +18,7 @@ Gọi tool `ask_question` với 12 lựa chọn:
   10. "10/ Tạo bài giảng HTML (từ PDF)"
   11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"
   12. "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"
+  13. "13/ Chuyển ghi âm thành văn bản (iPhone / MP3)"
 
 ## 2. Xử lý đường dẫn web trực tiếp:
 - **5/ Game giáo dục:** Cung cấp link website https://www.hoangthiencm.id.vn/trochoi.html và file [trochoi.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/trochoi.html).
@@ -78,6 +79,11 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
   + File kết quả (Word `.docx` đã chuẩn hoá): tự động lưu tại `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Ket_qua/[Ten_File]_Chuan_Hoa.docx`
   + Tuân thủ hướng dẫn tại `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/HUONG_DAN_CHUAN_HOA_VAN_BAN.md`
   + Tuân thủ Master Prompt tại `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/PROMPT_CHUAN_HOA_VAN_BAN.md`
+- **13/ Chuyển ghi âm thành văn bản (iPhone / MP3):**
+  + File đầu vào (File ghi âm `.m4a`, `.mp3`, `.wav`, `.aac`): đặt tại `TROLYTHIEN/13_CHUYEN_GHI_AM/Dau_vao/`
+  + File kết quả (File Word `.docx` và file Text `.txt`): tự động lưu tại `TROLYTHIEN/13_CHUYEN_GHI_AM/Ket_qua/[Ten_File].docx` và `[Ten_File].txt`
+  + Tuân thủ hướng dẫn tại `TROLYTHIEN/13_CHUYEN_GHI_AM/HUONG_DAN_CHUYEN_GHI_AM.md`
+  + Tuân thủ Master Prompt tại `TROLYTHIEN/13_CHUYEN_GHI_AM/PROMPT_CHUYEN_GHI_AM.md`
 
 ## 5. Quy tắc bổ sung cho Nhánh 10
 Khi chọn "10/ Tạo bài giảng HTML (từ PDF)", bắt buộc hỏi đủ 3 thông tin trước khi đọc PDF và trước khi xuất file: Môn gì? Lớp mấy? Mấy tiết (thời lượng)? Thiếu một trong ba thông tin thì dừng và hỏi tiếp, không được suy diễn.
@@ -147,6 +153,20 @@ Bất cứ khi nào người dùng yêu cầu "dọn dẹp", "dọn rác" hoặc
 - Trợ lý Thiên tự động chạy `python tools/don_dep_file_rac.py` (hoặc người dùng chạy `tools/Don_Dep_File_Rac.bat`).
 - Quét sạch toàn bộ cache `__pycache__`, `*.pyc`, thư mục tách trang `pdf_pages/`, thư mục nháp `scratch/`.
 - Bảo toàn tuyệt đối 100% tài liệu gốc và toàn bộ sản phẩm giáo án, bài giảng, hình vẽ trong `TROLYTHIEN/**/Ket_qua/`.
+
+## 9. Quy chuẩn kỹ thuật cho Nhánh 13 (Chuyển ghi âm thành văn bản)
+Khi chọn "13/ Chuyển ghi âm thành văn bản (iPhone / MP3)", đọc tệp ghi âm trong `TROLYTHIEN/13_CHUYEN_GHI_AM/Dau_vao/`. Áp dụng `TROLYTHIEN/13_CHUYEN_GHI_AM/PROMPT_CHUYEN_GHI_AM.md` trước khi xuất file.
+
+Quy chuẩn xử lý âm thanh:
+- Bóc tách trung thực nguyên văn (Verbatim transcript), đạt độ chính xác từ 90% đến 95%.
+- Tuyệt đối không tự ý uốn nắn câu từ theo bất kỳ thuật ngữ sách vở nào nếu người nói không sử dụng.
+- Tự động phân tích ngữ cảnh để sửa lỗi chính tả chuẩn xác (sửa lỗi phát âm địa phương, hỏi/ngã, s/x, tr/ch, d/gi, n/l và từ đồng âm) giúp câu từ đúng ngữ pháp tiếng Việt mà vẫn giữ trọn vẹn lời nói thực tế.
+- Tự động ngắt câu, đặt dấu chấm, phẩy, xuống dòng chia đoạn hợp lý theo ngữ điệu tiếng Việt giúp văn bản mạch lạc.
+- Hỗ trợ trực tiếp định dạng `.m4a` (từ iPhone), `.mp3`, `.wav`, `.aac`.
+- Hai file kết quả tự động lưu tại `TROLYTHIEN/13_CHUYEN_GHI_AM/Ket_qua/`:
+  1. `[Ten_File].docx`: phông Times New Roman 13pt, thụt đầu dòng 1.27 cm, dãn dòng 1.2, căn đều hai bên, lề A4 chuẩn (Top 20mm, Bottom 20mm, Left 30mm, Right 15mm), tiêu đề 14pt đậm.
+  2. `[Ten_File].txt`: tệp văn bản thuần UTF-8 hỗ trợ sao chép nhanh sang Zalo, email hay các tài liệu khác.
+- Chat phản hồi ngắn 2–3 dòng: đã bóc tách xong, đường dẫn tệp Word và Text, trích dẫn 1 câu mở đầu để nhận diện nội dung.
 
 
 

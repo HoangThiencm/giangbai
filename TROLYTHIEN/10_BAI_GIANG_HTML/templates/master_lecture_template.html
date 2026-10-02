@@ -594,47 +594,90 @@
     }
 
     /* Thanh điều khiển nổi */
+    /* THANH CÔNG CỤ NỔI GOM NHÓM TINH GỌN */
     .control-bar {
       position: fixed;
-      bottom: 8px;
+      bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.94);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 50px;
-      padding: 6px 14px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      padding: 4px 6px;
       display: flex;
       align-items: center;
       gap: 6px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.55);
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
       z-index: 1000;
+      max-width: calc(100vw - 24px);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .control-bar::-webkit-scrollbar {
+      display: none;
+    }
+    .ctrl-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 3px 5px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
     }
     .btn-ctrl {
       background: transparent;
       border: none;
       color: #f8fafc;
-      font-size: 0.88rem;
+      font-size: 0.82rem;
       font-weight: 700;
-      padding: 6px 12px;
-      border-radius: 30px;
+      padding: 5px 9px;
+      border-radius: 999px;
       cursor: pointer;
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 5px;
+      justify-content: center;
+      gap: 4px;
       transition: all 0.15s ease;
       white-space: nowrap;
+      user-select: none;
     }
     .btn-ctrl:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.16);
       color: #38bdf8;
+      transform: translateY(-1px);
+    }
+    .btn-ctrl:active {
+      transform: translateY(0);
     }
     .btn-ctrl-primary {
       background: #4f46e5;
-      color: #fff;
+      color: #ffffff;
+      padding: 5px 12px;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.45);
     }
     .btn-ctrl-primary:hover {
       background: #6366f1;
+    }
+    .btn-ctrl.is-on, .btn-ctrl.is-active {
+      background: #ef4444 !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+    }
+    .btn-ctrl.btn-period {
+      font-size: 0.78rem;
+      padding: 4px 8px;
+    }
+    .btn-ctrl.btn-period:hover {
+      background: #3b82f6;
+      color: #fff;
+    }
+    .btn-icon-only {
+      padding: 5px 8px;
+      min-width: 30px;
     }
     .btn-ctrl-mode {
       background: #059669;
@@ -642,6 +685,71 @@
     }
     .btn-ctrl-mode:hover {
       background: #10b981;
+    }
+
+    /* MENU CHUỘT PHẢI SƯ PHẠM (QUICK CONTEXT MENU) */
+    .context-menu {
+      position: fixed;
+      z-index: 2000;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 6px;
+      min-width: 210px;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      user-select: none;
+      animation: ctxFadeIn 0.12s ease-out;
+    }
+    @keyframes ctxFadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .ctx-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .ctx-item:hover {
+      background: rgba(99, 102, 241, 0.35);
+      color: #ffffff;
+    }
+    .ctx-item.is-active {
+      background: rgba(239, 68, 68, 0.28);
+      color: #fca5a5;
+    }
+    .ctx-icon {
+      width: 22px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 1.05rem;
+      margin-right: 6px;
+    }
+    .ctx-label {
+      flex: 1;
+    }
+    .ctx-key {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .ctx-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.12);
+      margin: 4px 0;
     }
 
     /* Accordion Toggle Answer */
@@ -1581,25 +1689,80 @@
 </div>
 <!-- THANH ĐIỀU KHIỂN NỔI -->
 <nav class="control-bar" id="controlBar">
-  <button class="btn-ctrl" onclick="prevSlide()" title="Phím mũi tên Trái">◀ Trang trước</button>
-  <button class="btn-ctrl" onclick="prevStep()" title="Lùi 1 bước">↩ Lùi 1 bước</button>
-  <button class="btn-ctrl btn-ctrl-primary" onclick="nextStep()" title="Phím mũi tên Phải hoặc chạm vùng trống">↪ Tiến 1 bước</button>
-  <button class="btn-ctrl" onclick="nextSlide()">▶ Trang sau</button>
-  <button class="btn-ctrl" id="btnLaser" onclick="toggleLaserMode()" title="Con trỏ laser (phím L)">🔴 Laser</button>
-  <button class="btn-ctrl" id="btnPen" onclick="togglePenMode()" title="Bút vẽ trên slide (phím P)">✏️ Vẽ</button>
-  <button class="btn-ctrl" onclick="jumpToPeriod(1)" title="Nhảy đến slide 1">Tiết 1</button>
-  <button class="btn-ctrl" onclick="jumpToPeriod(2)" title="Nhảy đến slide 9">Tiết 2</button>
-  <button class="btn-ctrl" onclick="jumpToPeriod(3)" title="Nhảy đến slide 16">Tiết 3</button>
-  <button class="btn-ctrl" id="btnBlackboard" onclick="toggleBlackboard()" title="Bảng viết (phím W hoặc B)">📋 Bảng viết</button>
-  <button class="btn-ctrl" onclick="toggleFullscreen()" title="Toàn màn hình (F11)">⛶ Toàn màn hình</button>
-  <button class="btn-ctrl" id="btnFontSize" onclick="cycleFontSize()" title="Đổi cỡ chữ TV: 28px (Chuẩn TV) ⇄ 30px (TV Lớn) ⇄ 22px (Laptop)">🔤 TV 28px</button>
-  <button class="btn-ctrl" id="btnToggleLang" onclick="toggleLanguage()" title="Chuyển đổi giao diện và nội dung song ngữ Việt / Anh">🌐 Song ngữ (VI/EN)</button>
-  <button class="btn-ctrl btn-speech" id="btnReadSlideEn" onclick="toggleReadSlideEn()" title="Trợ giảng AI: Đọc tiếng Anh chậm rãi cho học sinh nghe">🔊 Đọc Slide (EN)</button>
-  <button class="btn-ctrl" id="btnReadSlideVi" onclick="playAudioOrSpeech()" title="Đọc tiếng Việt bằng giọng Natural (Edge: Hoài My). Không dùng giọng Google.">🗣️ Đọc tiếng Việt</button>
-  <button class="btn-ctrl" id="btnSpeechRate" onclick="cycleSpeechRate()" title="Đổi tốc độ đọc: 0.85x (Chậm vừa) ⇄ 0.75x (Rất chậm) ⇄ 0.5x (Siêu chậm) ⇄ 1.0x (Tự nhiên)">⚡ 0.85x</button>
-  <button class="btn-ctrl" id="btnSaveLecture" onclick="saveLecture()" title="Lưu trực tiếp đè vào file hoặc tải bản mới">💾 Lưu bài giảng</button>
-  <button class="btn-ctrl btn-ctrl-mode" id="btnToggleMode" onclick="toggleMode()">⚙ Thiết kế</button>
+  <!-- Nhóm 1: Điều hướng slide & bước -->
+  <div class="ctrl-group ctrl-group-nav">
+    <button class="btn-ctrl btn-icon-only" onclick="prevSlide()" title="Phím mũi tên Trái">◀ Trang trước</button>
+    <button class="btn-ctrl" onclick="prevStep()" title="Lùi 1 bước">↩ Lùi 1 bước</button>
+    <button class="btn-ctrl btn-ctrl-primary" onclick="nextStep()" title="Phím mũi tên Phải hoặc chạm vùng trống">↪ Tiến 1 bước</button>
+    <button class="btn-ctrl btn-icon-only" onclick="nextSlide()" title="Phím mũi tên Phải">▶ Trang sau</button>
+  </div>
+
+  <!-- Nhóm 2: Chuyển tiết học -->
+  <div class="ctrl-group ctrl-group-periods">
+    <button class="btn-ctrl btn-period" onclick="jumpToPeriod(1)" title="Nhảy đến slide 1">Tiết 1</button>
+    <button class="btn-ctrl btn-period" onclick="jumpToPeriod(2)" title="Nhảy đến slide 9">Tiết 2</button>
+    <button class="btn-ctrl btn-period" onclick="jumpToPeriod(3)" title="Nhảy đến slide 16">Tiết 3</button>
+  </div>
+
+  <!-- Nhóm 3: Công cụ Trợ giảng (Laser, Vẽ, Bảng, Đọc cả slide) -->
+  <div class="ctrl-group ctrl-group-tools">
+    <button class="btn-ctrl" id="btnLaser" onclick="toggleLaserMode()" title="Con trỏ laser (phím L / Chuột phải)">🔴 Laser</button>
+    <button class="btn-ctrl" id="btnPen" onclick="togglePenMode()" title="Bút vẽ trên slide (phím P / Chuột phải)">✏️ Vẽ</button>
+    <button class="btn-ctrl" id="btnBlackboard" onclick="toggleBlackboard()" title="Bảng viết (phím W hoặc B)">📋 Bảng viết</button>
+    <button class="btn-ctrl" id="btnReadSlideVi" onclick="playAudioOrSpeech()" title="Đọc tiếng Việt bằng giọng Natural (Edge: Hoài My). Không dùng giọng Google.">🗣️ Đọc slide</button>
+  </div>
+
+  <!-- Nhóm 4: Cài đặt hiển thị & Đa phương tiện -->
+  <div class="ctrl-group ctrl-group-settings">
+    <button class="btn-ctrl" onclick="toggleFullscreen()" title="Toàn màn hình (F11)">⛶ Toàn màn hình</button>
+    <button class="btn-ctrl" id="btnFontSize" onclick="cycleFontSize()" title="Đổi cỡ chữ TV: 28px (Chuẩn TV) ⇄ 30px (TV Lớn) ⇄ 22px (Laptop)">🔤 TV 28px</button>
+    <button class="btn-ctrl" id="btnToggleLang" onclick="toggleLanguage()" title="Chuyển đổi giao diện và nội dung song ngữ Việt / Anh">🌐 Song ngữ (VI/EN)</button>
+    <button class="btn-ctrl btn-speech" id="btnReadSlideEn" onclick="toggleReadSlideEn()" title="Trợ giảng AI: Đọc tiếng Anh chậm rãi cho học sinh nghe">🔊 Đọc Slide (EN)</button>
+    <button class="btn-ctrl" id="btnSpeechRate" onclick="cycleSpeechRate()" title="Đổi tốc độ đọc: 0.85x ⇄ 0.75x ⇄ 0.5x ⇄ 1.0x">⚡ 0.85x</button>
+    <button class="btn-ctrl" id="btnSaveLecture" onclick="saveLecture()" title="Lưu trực tiếp đè vào file hoặc tải bản mới">💾 Lưu bài giảng</button>
+    <button class="btn-ctrl btn-ctrl-mode" id="btnToggleMode" onclick="toggleMode()">⚙ Thiết kế</button>
+  </div>
 </nav>
+
+<!-- MENU CHUỘT PHẢI SƯ PHẠM (QUICK CONTEXT MENU) -->
+<div id="contextMenu" class="context-menu" style="display:none;" aria-hidden="true">
+  <div class="ctx-item" onclick="handleCtxAction('laser')">
+    <span class="ctx-icon">🔴</span>
+    <span class="ctx-label">Con trỏ Laser</span>
+    <span class="ctx-key">Phím L</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('pen')">
+    <span class="ctx-icon">✏️</span>
+    <span class="ctx-label">Bút vẽ màn hình</span>
+    <span class="ctx-key">Phím P</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('highlighter')">
+    <span class="ctx-icon">🟡</span>
+    <span class="ctx-label">Bút dạ quang vàng</span>
+    <span class="ctx-key">Dạ quang</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('clearPen')">
+    <span class="ctx-icon">🗑️</span>
+    <span class="ctx-label">Xóa nét vẽ</span>
+    <span class="ctx-key">Phím C</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('blackboard')">
+    <span class="ctx-icon">📋</span>
+    <span class="ctx-label">Bảng viết phấn</span>
+    <span class="ctx-key">Phím W</span>
+  </div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item" onclick="handleCtxAction('nextStep')">
+    <span class="ctx-icon">↪️</span>
+    <span class="ctx-label">Tiến 1 bước</span>
+    <span class="ctx-key">Space</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('prevStep')">
+    <span class="ctx-icon">↩️</span>
+    <span class="ctx-label">Lùi 1 bước</span>
+    <span class="ctx-key">←</span>
+  </div>
+</div>
 
 <!-- TOOLTIP NỔI KHI BÔI ĐEN VĂN BẢN TRONG CHẾ ĐỘ THIẾT KẾ -->
 <div id="selectionTooltip" class="selection-tooltip" onmousedown="event.stopPropagation()">
@@ -2015,45 +2178,272 @@
     return cachedViVoice;
   }
 
-  function speakBlockVi(blockEl) {
+  function vietnameseMathToSpeech(text) {
+    if (!text) return '';
+    let t = text;
+
+    // 0. GIẢI MÃ THỰC THỂ HTML (chống dính &#x27;, &apos; trong dữ liệu thuộc tính)
+    t = t.replace(/&#x27;|&#39;|&apos;/g, "'");
+    t = t.replace(/&quot;/g, '"');
+    t = t.replace(/&amp;/g, '&');
+    t = t.replace(/&lt;/g, '<');
+    t = t.replace(/&gt;/g, '>');
+
+    // 1. TỪ VIẾT TẮT GIÁO DỤC, SƯ PHẠM & VĂN BẢN (dùng Unicode boundary chống vỡ từ tiếng Việt)
+    t = t.replace(/(?<![\p{L}\p{N}])SGK(?![\p{L}\p{N}])/gui, 'sách giáo khoa');
+    t = t.replace(/(?<![\p{L}\p{N}])SBT(?![\p{L}\p{N}])/gui, 'sách bài tập');
+    t = t.replace(/(?<![\p{L}\p{N}])GV(?![\p{L}\p{N}])/gui, 'giáo viên');
+    t = t.replace(/(?<![\p{L}\p{N}])HS(?![\p{L}\p{N}])/gui, 'học sinh');
+    t = t.replace(/(?<![\p{L}\p{N}])KHTN(?![\p{L}\p{N}])/gui, 'khoa học tự nhiên');
+    t = t.replace(/(?<![\p{L}\p{N}])GDPT(?![\p{L}\p{N}])/gui, 'giáo dục phổ thông');
+    t = t.replace(/(?<![\p{L}\p{N}])ĐKXĐ(?![\p{L}\p{N}])/gui, 'điều kiện xác định');
+    t = t.replace(/(?<![\p{L}\p{N}])ĐK(?![\p{L}\p{N}])/gui, 'điều kiện');
+    t = t.replace(/(?<![\p{L}\p{N}])(?:Đ\/s|ĐS)(?![\p{L}\p{N}])/gui, 'đáp số');
+    t = t.replace(/(?<![\p{L}\p{N}])(?:HDG|HD)(?![\p{L}\p{N}])/gui, 'hướng dẫn');
+    t = t.replace(/(?<![\p{L}\p{N}])TN(?![\p{L}\p{N}])/gui, 'trắc nghiệm');
+    t = t.replace(/(?<![\p{L}\p{N}])TL(?![\p{L}\p{N}])/gui, 'tự luận');
+    t = t.replace(/(?<![\p{L}\p{N}])THCS(?![\p{L}\p{N}])/gui, 'trung học cơ sở');
+    t = t.replace(/(?<![\p{L}\p{N}])THPT(?![\p{L}\p{N}])/gui, 'trung học phổ thông');
+    t = t.replace(/(?<![\p{L}\p{N}])HĐ\s*(\d+)/gui, 'hoạt động $1');
+    t = t.replace(/(?<![\p{L}\p{N}])HĐ(?![\p{L}\p{N}])/gui, 'hoạt động');
+    t = t.replace(/\(H\.?\s*(\d+(?:\.\d+)*)\)/gui, '(Hình $1)');
+    t = t.replace(/(?<![\p{L}\p{N}])H\.?\s*(\d+(?:\.\d+)*)/gui, 'Hình $1');
+    t = t.replace(/(?<![\p{L}\p{N}])(?:TR|trang|tr)\.?\s*(\d+)/gui, function(m, p1) { return 'trang ' + p1; });
+
+    // 2. SỐ THẬP PHÂN TIẾNG VIỆT (1,2 -> 1 phẩy 2; 8,6 -> 8 phẩy 6)
+    t = t.replace(/(\d+),(\d+)/g, '$1 phẩy $2');
+
+    // Phút và giây trong số đo góc / thời gian: 30' -> 30 phút, 15'' -> 15 giây
+    t = t.replace(/(\d+)\s*(?:''|″|’’)/g, '$1 giây ');
+    t = t.replace(/(\d+)\s*(?:'|′|’)/g, '$1 phút ');
+
+    // Ký hiệu toán học có dấu phẩy (đỉnh P', M', N', A', B', đạo hàm y', tọa độ x')
+    t = t.replace(/\^\{\\prime\}/g, "'");
+    t = t.replace(/\\prime/g, "'");
+    t = t.replace(/([A-Z])([A-Z]['′’])/gu, '$1 $2');
+    t = t.replace(/(?<![a-z\p{Ll}])([A-Z])(?:''|″|’’)(?!['′’])/gu, '$1 hai phẩy ');
+    t = t.replace(/(?<![a-zA-Z\p{L}])([a-z])(?:''|″|’’)(?!['′’])/gu, '$1 hai phẩy ');
+    t = t.replace(/(?<![a-z\p{Ll}])([A-Z])(?:'|′|’)(?!['′’])/gu, '$1 phẩy ');
+    t = t.replace(/(?<![a-zA-Z\p{L}])([a-z])(?:'|′|’)(?!['′’])/gu, '$1 phẩy ');
+
+    // 3. ĐƠN VỊ VẬN TỐC, GIA TỐC (Toán, Vật lý)
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*km\/h(?![\p{L}])/gui, '$1 ki-lô-mét trên giờ');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*m\/s\^?2(?![\p{L}])/gui, '$1 mét trên giây bình phương');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*m\/s(?![\p{L}])/gui, '$1 mét trên giây');
+
+    // 4. ĐƠN VỊ DIỆN TÍCH, THỂ TÍCH
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*(?:km\^2|km²)(?![\p{L}])/gui, '$1 ki-lô-mét vuông');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*(?:m\^2|m²)(?![\p{L}])/gui, '$1 mét vuông');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*(?:dm\^2|dm²)(?![\p{L}])/gui, '$1 đề-xi-mét vuông');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*(?:cm\^2|cm²)(?![\p{L}])/gui, '$1 xen-ti-mét vuông');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*(?:mm\^2|mm²)(?![\p{L}])/gui, '$1 mi-li-mét vuông');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*(?:m\^3|m³)(?![\p{L}])/gui, '$1 mét khối');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*(?:cm\^3|cm³)(?![\p{L}])/gui, '$1 xen-ti-mét khối');
+
+    // 5. ĐƠN VỊ ĐỘ DÀI & KHOẢNG CÁCH (120m -> 120 mét, 250 m -> 250 mét, \text{ m})
+    t = t.replace(/\\text\{\s*m\s*\}/gi, ' mét');
+    t = t.replace(/\\text\{\s*km\s*\}/gi, ' ki-lô-mét');
+    t = t.replace(/\\text\{\s*cm\s*\}/gi, ' xen-ti-mét');
+    t = t.replace(/\\text\{\s*mm\s*\}/gi, ' mi-li-mét');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*km(?![\p{L}])/gui, '$1 ki-lô-mét');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*dm(?![\p{L}])/gui, '$1 đề-xi-mét');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*cm(?![\p{L}])/gui, '$1 xen-ti-mét');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*mm(?![\p{L}])/gui, '$1 mi-li-mét');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*m(?![\p{L}])/gui, '$1 mét');
+
+    // 6. ĐƠN VỊ VẬT LÝ, HÓA HỌC & ĐO LƯỜNG
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*kg(?![\p{L}])/gui, '$1 ki-lô-gam');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*mg(?![\p{L}])/gui, '$1 mi-li-gam');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*g(?![\p{L}])/gui, '$1 gam');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*ml(?![\p{L}])/gui, '$1 mi-li-lít');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*l(?![\p{L}])/gui, '$1 lít');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*kW(?![\p{L}])/g, '$1 ki-lô oát');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*W(?![\p{L}])/g, '$1 oát');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*kJ(?![\p{L}])/g, '$1 ki-lô jun');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*J(?![\p{L}])/g, '$1 jun');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*kPa(?![\p{L}])/gi, '$1 ki-lô pát-xcan');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*Pa(?![\p{L}])/gi, '$1 pát-xcan');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*mV(?![\p{L}])/g, '$1 mi-li vôn');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*V(?![\p{L}])/g, '$1 vôn');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*mA(?![\p{L}])/g, '$1 mi-li am-pe');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*A(?![\p{L}])/g, '$1 am-pe');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*N(?![\p{L}])/g, '$1 niu-tơn');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*(?:°C|\^oC|oC)(?![\p{L}])/gui, '$1 độ C');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*%/g, '$1 phần trăm');
+    t = t.replace(/(\d+(?:\s+phẩy\s+\d+)?)\s*mol(?![\p{L}])/gui, '$1 mol');
+
+    // 7. TÊN HÌNH & ĐỈNH HÌNH HỌC (tam giác ABC -> tam giác A B C)
+    t = t.replace(/(tam giác|tứ giác|hình thang|hình thoi|hình chữ nhật|hình vuông)\s+([A-Z]{3,4})/gui, function(m, p1, p2) {
+      return p1 + ' ' + p2.split('').join(' ');
+    });
+    t = t.replace(/\\Delta\s*([A-Z]{3,4})/g, function(m, p1) {
+      return 'tam giác ' + p1.split('').join(' ');
+    });
+
+    // 8. ĐOẠN THẲNG HÌNH HỌC CHUẨN (chỉ áp dụng các cặp đỉnh toán học chuẩn, tuyệt đối không tách từ tiếng Việt)
+    t = t.replace(/(?<![\p{L}\p{N}])(AB|AC|AD|BC|BD|CD|AH|BH|CH|CE|AE|MN|NM|NP|PQ|QM|MP|NQ|EF|FG|GH|HE)(?![\p{L}\p{N}])/gu, function(m, p1) {
+      return p1.split('').join(' ');
+    });
+
+    // 9. KÝ HIỆU TOÁN HỌC & LƯỢNG GIÁC
+    t = t.replace(/\\cdot|\*/g, ' nhân ');
+    t = t.replace(/\\sin|\bsin\b/gi, ' sin ');
+    t = t.replace(/\\cos|\bcos\b/gi, ' cô-sin ');
+    t = t.replace(/\\tan|\btan\b/gi, ' tang ');
+    t = t.replace(/\\cot|\bcot\b/gi, ' cô-tang ');
+    t = t.replace(/\^2\b/g, ' bình phương ');
+    t = t.replace(/\^3\b/g, ' lập phương ');
+    t = t.replace(/\\sqrt\{([^}]+)\}/g, 'căn bậc hai của $1');
+    t = t.replace(/\\sqrt/g, 'căn bậc hai của ');
+    t = t.replace(/\\approx|≈/g, ' xấp xỉ ');
+    t = t.replace(/\\le|≤/g, ' nhỏ hơn hoặc bằng ');
+    t = t.replace(/\\ge|≥/g, ' lớn hơn hoặc bằng ');
+    t = t.replace(/\\ne|≠/g, ' khác ');
+    t = t.replace(/\\perp|⊥/g, ' vuông góc với ');
+    t = t.replace(/\\parallel|\/\//g, ' song song với ');
+    t = t.replace(/\\times/g, ' nhân ');
+    t = t.replace(/\^\{\\circ\}|\^\\circ|\\circ|°/g, ' độ ');
+    t = t.replace(/\\alpha|α/g, ' an-pha ');
+    t = t.replace(/\\beta|β/g, ' bê-ta ');
+    t = t.replace(/\\widehat\{([^}]+)\}|\\hat\{([^}]+)\}/g, 'góc $1');
+    t = t.replace(/\\Delta|Δ/g, 'tam giác ');
+    t = t.replace(/\\Rightarrow/g, ' suy ra ');
+    t = t.replace(/\\Leftrightarrow/g, ' tương đương ');
+    t = t.replace(/[{}$]/g, ' ');
+    t = t.replace(/\\/g, ' ');
+    t = t.replace(/\s+/g, ' ').trim();
+    return t;
+  }
+
+  function speakBlockVi(blockEl, onFinished) {
+    const cur = blockEl || getCurrentSlide();
+    if (!cur) {
+      if (onFinished) onFinished();
+      return;
+    }
+
+    const btnSpeak = cur.querySelector ? cur.querySelector('.btn-block-speak') : null;
+
+    if (cur.classList && cur.classList.contains('is-speaking') && !onFinished) {
+      stopAllSpeech();
+      return;
+    }
+
+    stopAllSpeech();
+
     const voice = getSweetVietnameseVoice();
     if (!voice) {
       showToast('Để trải nghiệm giọng đọc AI Hoài My truyền cảm, Thầy/Cô vui lòng mở bài giảng trên trình duyệt Microsoft Edge.');
+    }
+
+    let titleText = '';
+    let bodyText = '';
+
+    if (cur.getAttribute && cur.getAttribute('data-title-vi')) {
+      titleText = cur.getAttribute('data-title-vi');
+    } else {
+      const strongEl = cur.querySelector ? cur.querySelector('strong') : null;
+      if (strongEl) titleText = strongEl.textContent;
+    }
+
+    if (cur.getAttribute && cur.getAttribute('data-raw-vi')) {
+      bodyText = cur.getAttribute('data-raw-vi');
+    } else {
+      const clone = cur.cloneNode(true);
+      clone.querySelectorAll('.btn-block-speak, .drag-handle, .block-actions, button, script, style, .anim-badge, .badge-step').forEach(el => el.remove());
+      const cloneTitle = clone.querySelector('strong');
+      if (cloneTitle && titleText) cloneTitle.remove();
+      bodyText = clone.innerText || clone.textContent || '';
+    }
+
+    const cleanTitle = vietnameseMathToSpeech(titleText);
+    const cleanBody = vietnameseMathToSpeech(bodyText);
+    let fullText = (cleanTitle ? cleanTitle + '. ' : '') + cleanBody;
+    fullText = fullText.replace(/\s+/g, ' ').trim();
+
+    if (!fullText) {
+      if (onFinished) onFinished();
       return;
     }
-    const cur = blockEl || getCurrentSlide();
-    if (!cur) return;
-    const text = (cur.innerText || '').replace(/\s+/g, ' ').trim();
-    if (!text) return;
+
+    if (!('speechSynthesis' in window)) {
+      showToast('Trình duyệt không hỗ trợ Web Speech API.');
+      if (onFinished) onFinished();
+      return;
+    }
+
     window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
+    const utter = new SpeechSynthesisUtterance(fullText);
     utter.lang = 'vi-VN';
-    utter.voice = voice;
-    utter.rate = 1;
+    if (voice) utter.voice = voice;
+    utter.rate = 0.92;
+    utter.pitch = 1.0;
+
+    utter.onstart = () => {
+      if (cur.classList) cur.classList.add('is-speaking');
+      if (btnSpeak) {
+        btnSpeak.classList.add('is-speaking');
+        btnSpeak.textContent = '⏹';
+      }
+    };
+
+    const cleanup = () => {
+      if (cur.classList) cur.classList.remove('is-speaking');
+      if (btnSpeak) {
+        btnSpeak.classList.remove('is-speaking');
+        btnSpeak.textContent = '🔊';
+      }
+      if (onFinished) onFinished();
+    };
+
+    utter.onend = cleanup;
+    utter.onerror = cleanup;
+
     window.speechSynthesis.speak(utter);
   }
 
   let hoaiMyAudio = null;
-  function playAudioOrSpeech(blockEl) {
-    const slide = (blockEl && blockEl.classList && blockEl.classList.contains('slide-item')) ? blockEl : getCurrentSlide();
+  function playAudioOrSpeech(slideEl) {
+    const slide = (slideEl && slideEl.classList && slideEl.classList.contains('slide-item')) ? slideEl : getCurrentSlide();
     const idx = slide ? (slide.getAttribute('data-slide-index') || '1') : '1';
     let fell = false;
     function fallback() {
       if (fell) return;
       fell = true;
-      speakBlockVi(blockEl);
+      const btn = document.getElementById('btnReadSlideVi');
+      if (btn) btn.classList.remove('is-active');
+      speakBlockVi(slide);
     }
+
+    const btn = document.getElementById('btnReadSlideVi');
     if (hoaiMyAudio) {
       hoaiMyAudio.pause();
       hoaiMyAudio = null;
+      if (btn) {
+        btn.classList.remove('is-active');
+        btn.textContent = '🗣️ Đọc slide';
+      }
+      return;
     }
+
+    stopAllSpeech();
     const audio = new Audio('audio/slide-' + idx + '.mp3');
     hoaiMyAudio = audio;
+    if (btn) {
+      btn.classList.add('is-active');
+      btn.textContent = '⏹ Dừng đọc';
+    }
+    audio.addEventListener('ended', () => {
+      hoaiMyAudio = null;
+      if (btn) {
+        btn.classList.remove('is-active');
+        btn.textContent = '🗣️ Đọc slide';
+      }
+    });
     audio.addEventListener('error', fallback);
     const played = audio.play();
     if (played && played.catch) played.catch(fallback);
   }
-
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.onvoiceschanged = () => {
       cachedEnglishVoice = null;
@@ -3752,8 +4142,11 @@
   function speakBlockAuto(blockEl, onFinished, ev) {
     if (ev) ev.stopPropagation();
     if (currentLang === 'en') return speakBlockEn(blockEl, onFinished, null);
-    if (blockEl && blockEl.classList.contains('is-speaking')) { stopAllSpeech(); return; }
-    playAudioOrSpeech(blockEl);
+    if (blockEl && blockEl.classList.contains('is-speaking') && !onFinished) {
+      stopAllSpeech();
+      return;
+    }
+    speakBlockVi(blockEl, onFinished);
   }
 
   function toggleBlankScreen() {
@@ -4129,6 +4522,82 @@
   });
 
 
+
+  /* MENU CHUỘT PHẢI SƯ PHẠM (QUICK CONTEXT MENU CHO LASER & VẼ) */
+  function initContextMenu() {
+    const ctx = document.getElementById('contextMenu');
+    if (!ctx) return;
+
+    window.addEventListener('contextmenu', function(e) {
+      if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isLaser = document.body.classList.contains('laser-mode');
+      const isPen = document.body.classList.contains('pen-mode');
+      const items = ctx.querySelectorAll('.ctx-item');
+      if (items[0]) {
+        items[0].classList.toggle('is-active', isLaser);
+        const lbl = items[0].querySelector('.ctx-label');
+        if (lbl) lbl.textContent = isLaser ? 'Tắt Laser' : 'Con trỏ Laser';
+      }
+      if (items[1]) {
+        items[1].classList.toggle('is-active', isPen);
+        const lbl = items[1].querySelector('.ctx-label');
+        if (lbl) lbl.textContent = isPen ? 'Tắt Bút vẽ' : 'Bút vẽ màn hình';
+      }
+
+      const menuWidth = 220;
+      const menuHeight = 260;
+      let x = e.clientX;
+      let y = e.clientY;
+      if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 8;
+      if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 8;
+
+      ctx.style.left = Math.max(8, x) + 'px';
+      ctx.style.top = Math.max(8, y) + 'px';
+      ctx.style.display = 'flex';
+    });
+
+    window.addEventListener('click', function(e) {
+      if (!e.target.closest('#contextMenu')) {
+        hideContextMenu();
+      }
+    });
+
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        hideContextMenu();
+      }
+    });
+  }
+
+  function hideContextMenu() {
+    const ctx = document.getElementById('contextMenu');
+    if (ctx) ctx.style.display = 'none';
+  }
+
+  function handleCtxAction(action) {
+    hideContextMenu();
+    if (action === 'laser') {
+      toggleLaserMode();
+    } else if (action === 'pen') {
+      togglePenMode();
+    } else if (action === 'highlighter') {
+      if (!document.body.classList.contains('pen-mode')) togglePenMode(true);
+      setPenColor('rgba(250, 204, 21, 0.45)', 14, true);
+    } else if (action === 'clearPen') {
+      clearDrawCanvas();
+    } else if (action === 'blackboard') {
+      toggleBlackboard();
+    } else if (action === 'nextStep') {
+      nextStep();
+    } else if (action === 'prevStep') {
+      prevStep();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', initContextMenu);
 </script>
 </body>
 </html>
