@@ -392,6 +392,21 @@ mjx-container svg { display: inline !important; }
   + **Phóng to / Thu nhỏ (Resizable):** Có nút + / − để điều chỉnh tỷ lệ máy tính từ 70% đến 160% cho phù hợp với kích thước TV/máy chiếu lớp học.
   + **Hỗ trợ bàn phím máy tính:** Khi máy tính đang mở, giáo viên có thể bấm trực tiếp các phím số, phép tính + - * /, phím Enter (bằng dấu =) và Backspace (xóa ký tự).
 
+### Vá 31 — Tuyệt Đối Không Đưa Ghi Chú Sư Phạm / Giáo Án Dành Cho Giáo Viên Vào Slide Học Sinh & Chuẩn Hóa Cụm Công Cụ Sư Phạm
+
+1. **Tuyệt đối không đưa ghi chú sư phạm nội bộ vào slide:**
+   - Slide bài giảng HTML là phương tiện trực quan dạy học trực tiếp cho **HỌC SINH**.
+   - **CẤM TUYỆT ĐỐI** tạo các khối nội dung chứa ghi chú giáo án của giáo viên như: `"HƯỚNG DẪN TƯ DUY SƯ PHẠM"`, `"THÔNG ĐIỆP SƯ PHẠM"`, `"GHI CHÚ SƯ PHẠM"`, `"LƯU Ý DÀNH CHO GIÁO VIÊN"`, `"HỌC SINH CẦN NHỚ RẰNG..."` hoặc câu từ mang tính chất giáo án sư phạm nội bộ. Học sinh không cần học và không được nhìn thấy các ghi chú này trên slide trình chiếu.
+   - Mọi khối nội dung trên slide chỉ tập trung 100% vào kiến thức bài học học sinh cần quan sát và thực hành: **Khám phá / Đặt vấn đề**, **Định nghĩa / Khái niệm**, **Lời giải mẫu từng bước**, **Luyện tập**, **Vận dụng thực tế**, **Trắc nghiệm củng cố**, **Sơ đồ tư duy tổng kết**.
+
+2. **Cụm Công cụ Sư phạm & Tương tác đầy đủ (`.ctrl-group-pedagogy`):**
+   - Nằm trên thanh điều khiển nổi `#controlBar` bao gồm 5 công cụ trợ giảng cốt lõi:
+     + `🔴 Laser`: Con trỏ laser quang học phát sáng (Phím `L` / Chuột phải).
+     + `✏️ Vẽ`: Bút vẽ trực tiếp & Bút dạ quang vàng (Phím `P` / Chuột phải).
+     + `📋 Bảng vẽ`: Bảng viết phấn đa bề mặt (xanh, trắng, kẻ ô ly, đen) kèm khay phấn 4 màu (Phím `W` / Chuột phải).
+     + `🔢 Máy tính`: Máy tính cầm tay Casio fx-580VN X ClassWiz (Phím `C` / Chuột phải).
+     + `⏱️ Bấm giờ`: Đồng hồ đếm ngược thảo luận nhóm / làm bài tập (Phím `T` / Chuột phải).
+
 ## 5. Bộ khung mã HTML mẫu & Nguồn sự thật Master Template
 
 > [!IMPORTANT]
