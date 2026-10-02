@@ -60,7 +60,7 @@ for (const option of menuOptions) {
 const preservedBranches = [
   '#### Nhánh 1: Khi chọn "1/ Duyệt giáo án"\nHướng dẫn nạp file giáo án cần thẩm định vào `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/`, xuất kết quả biên bản ra `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/`.',
   '#### Nhánh 2: Khi chọn "2/ Soạn Giáo án (KHBD)"\nTự động kích hoạt quy trình soạn KHBD chuẩn V2.0:\n- File đầu vào (SGK, PPCT): đọc từ `TROLYTHIEN/1_SOAN_KHBD/Dau_vao/`\n- File kết quả: tự động xuất Word ra `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/`',
-  '#### Nhánh 3: Khi chọn "3/ Tạo bài tập"\nGọi tiếp tool `ask_question` với đúng 8 định dạng chuẩn (file đầu vào tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`, kết quả tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`):',
+  '#### Nhánh 3: Khi chọn "3/ Tạo bài tập"\nGọi tiếp tool `ask_question` với đúng 9 định dạng chuẩn (file đầu vào tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`, kết quả tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`):',
   '1. "1. ⭐ Dạng Công văn 7991 (17 câu)"',
   '8. "8. ⭐ Bài tập tự luận"',
   '#### Nhánh 4: Khi chọn "4/ Duyệt đề"\nHướng dẫn nạp file đề thi và ma trận vào `TROLYTHIEN/4_DUYET_DE/Dau_vao/`, xuất kết quả thẩm định ra `TROLYTHIEN/4_DUYET_DE/Ket_qua/`.',
@@ -109,7 +109,7 @@ for (const needle of branch10) {
 const preservedRules = [
   "## 2. Xử lý đường dẫn web trực tiếp:",
   "https://www.hoangthiencm.id.vn/trochoi.html",
-  "## 3. Menu Cấp 2 khi chọn \"3/ Tạo bài tập\" (8 định dạng đánh số)",
+  "## 3. Menu Cấp 2 khi chọn \"3/ Tạo bài tập\" (9 định dạng đánh số)",
   "1. \"1. ⭐ Dạng Công văn 7991 (17 câu)\"",
   "8. \"8. ⭐ Bài tập tự luận\"",
   "## 4. Quy ước thư mục đầu vào và kết quả (Bắt buộc không lưu lung tung)",

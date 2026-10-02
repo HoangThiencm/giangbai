@@ -383,6 +383,15 @@ mjx-container svg { display: inline !important; }
      - Hỗ trợ chuyển đổi nhanh 4 loại bề mặt bảng chuẩn học đường: 🟢 Bảng xanh truyền thống, ⚪ Bảng trắng hiện đại, 📐 Bảng ô ly vuông (tiện vẽ đồ thị / hình học), ⬛ Bảng đá đen.
      - Hộp phấn 4 màu trực quan: Trắng, Vàng, Đỏ/Hồng, Xanh dương; xóa sạch 1 chạm và đóng nhanh bằng phím `W` hoặc `Escape`.
 
+### Vá 30 — Máy tính Cầm tay Casio fx-580VN X ClassWiz Mô phỏng Trực tiếp trên Slide
+
+- **Mô phỏng máy tính khoa học Casio fx-580VN X hoàn chỉnh:**
+  + Tích hợp trực tiếp giao diện máy tính ClassWiz Natural Display sắc nét, có màn hình hiển thị biểu thức tự nhiên, phân số, căn thức, số mũ, bảng giá trị (x)$ và giải phương trình/hệ phương trình.
+  + **Bật/tắt linh hoạt:** Bấm nút [🔢 Máy tính] trong cụm Sư phạm trên thanh điều khiển hoặc phím tắt C (hoặc mở qua Menu chuột phải); đóng nhanh bằng phím Escape hoặc nút ✕.
+  + **Kéo thả tự do (Draggable):** Cho phép giáo viên giữ chuột ở thanh tiêu đề máy tính kéo dời vị trí đến bất kỳ góc nào trên màn hình để không che nội dung bài giảng.
+  + **Phóng to / Thu nhỏ (Resizable):** Có nút + / − để điều chỉnh tỷ lệ máy tính từ 70% đến 160% cho phù hợp với kích thước TV/máy chiếu lớp học.
+  + **Hỗ trợ bàn phím máy tính:** Khi máy tính đang mở, giáo viên có thể bấm trực tiếp các phím số, phép tính + - * /, phím Enter (bằng dấu =) và Backspace (xóa ký tự).
+
 ## 5. Bộ khung mã HTML mẫu & Nguồn sự thật Master Template
 
 > [!IMPORTANT]

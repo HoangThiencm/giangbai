@@ -97,6 +97,7 @@
       font-size: calc(var(--content-font-size, 28px) * 0.85);
     }
     body.mode-present .slide-heading-text {
+      display: none !important;
       font-size: var(--heading-font-size, 32px);
     }
     body.mode-present .slide-index-badge {
@@ -269,6 +270,7 @@
       letter-spacing: 0.5px;
     }
     .slide-heading-text {
+      display: none !important;
       font-size: 0.98rem;
       font-weight: 700;
       color: #047857;
@@ -604,22 +606,63 @@
       animation: pulse-speak 1s infinite alternate;
     }
 
-    /* Thanh điều khiển nổi */
+    /* Thanh điều khiển nổi gom nhóm độc lập (Floating Pill Islands) */
     .control-bar {
       position: fixed;
       bottom: 8px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.94);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 50px;
-      padding: 6px 14px;
+      background: transparent !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0;
       display: flex;
       align-items: center;
-      gap: 6px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.55);
+      justify-content: center;
+      gap: 8px;
       z-index: 1000;
+      max-width: calc(100vw - 16px);
+      overflow-x: auto;
+      scrollbar-width: none;
+      pointer-events: none;
+    }
+    .control-bar::-webkit-scrollbar {
+      display: none;
+    }
+    .ctrl-group {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 4px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+    .ctrl-group:hover {
+      border-color: rgba(255, 255, 255, 0.32);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6);
+    }
+    .ctrl-group-pedagogy {
+      background: rgba(30, 27, 75, 0.94);
+      border-color: rgba(129, 140, 248, 0.35);
+    }
+    .ctrl-group-pedagogy:hover {
+      border-color: rgba(129, 140, 248, 0.65);
+    }
+    .ctrl-group-speech {
+      background: rgba(15, 30, 42, 0.94);
+      border-color: rgba(56, 189, 248, 0.35);
+    }
+    .ctrl-group-speech:hover {
+      border-color: rgba(56, 189, 248, 0.65);
     }
     .btn-ctrl {
       background: transparent;
@@ -1268,7 +1311,242 @@
       transform: rotate(90deg) scale(1.1);
     }
 
-  </style>
+  
+
+    /* MENU CHUỘT PHẢI SƯ PHẠM (QUICK CONTEXT MENU) */
+    .context-menu {
+      position: fixed;
+      z-index: 2000;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 6px;
+      min-width: 210px;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      user-select: none;
+      animation: ctxFadeIn 0.12s ease-out;
+    }
+    @keyframes ctxFadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .ctx-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .ctx-item:hover {
+      background: rgba(99, 102, 241, 0.35);
+      color: #ffffff;
+    }
+    .ctx-item.is-active {
+      background: rgba(239, 68, 68, 0.28);
+      color: #fca5a5;
+    }
+    .ctx-icon {
+      width: 22px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 1.05rem;
+      margin-right: 6px;
+    }
+    .ctx-label {
+      flex: 1;
+    }
+    .ctx-key {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .ctx-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.12);
+      margin: 4px 0;
+    }
+
+
+/* ==========================================================================
+       4. MÁY TÍNH CẦM TAY CASIO fx-580VN X CLASSWIZ MÔ PHỎNG
+       ========================================================================== */
+    .casio-widget {
+      display: none;
+      position: fixed;
+      top: 70px;
+      right: 16px;
+      width: 428px;
+      max-height: 92vh;
+      overflow: auto;
+      background:
+        repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 3px),
+        linear-gradient(165deg, #3a3a40 0%, #1a1a1e 18%, #0c0c0e 55%, #16161a);
+      border: 3px solid #e4e4e7;
+      border-radius: 28px 28px 36px 36px;
+      box-shadow: 0 22px 48px rgba(0,0,0,0.55), inset 0 0 0 1px #52525b, inset 0 0 0 6px #18181b;
+      z-index: 12000;
+      user-select: none;
+      padding: 12px 12px 10px;
+      transform-origin: top right;
+      color: #f4f4f5;
+    }
+    .casio-widget.active { display: block; }
+    .casio-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: grab; touch-action: none; margin-bottom: 8px; }
+    .casio-brand { font-size: 13px; font-weight: 800; letter-spacing: 0.4px; line-height: 1.15; }
+    .casio-brand b { color: #f8fafc; }
+    .casio-brand small { display: block; font-size: 9px; letter-spacing: 1px; color: #d4d4d8; font-weight: 700; }
+    .casio-ctrl-btns { display: flex; gap: 4px; }
+    .casio-ctrl-btn { background: #27272a; color: #d4d4d8; border: 1px solid #52525b; border-radius: 4px; font-size: 12px; min-width: 28px; min-height: 28px; cursor: pointer; }
+    .casio-ctrl-btn.close { color: #fecaca; }
+    .casio-bezel { background: linear-gradient(180deg, #f8fafc, #a1a1aa 46%, #e5e7eb); padding: 7px; border-radius: 12px; margin-bottom: 6px; box-shadow: inset 0 1px 0 #fff, 0 1px 0 #52525b; }
+    .casio-screen { background: linear-gradient(#d7e4c8, #9fb592); border-radius: 6px; min-height: 102px; padding: 6px 8px; color: #142018; display: flex; flex-direction: column; justify-content: space-between; box-shadow: inset 0 2px 6px rgba(0,0,0,0.28); }
+    .casio-screen-top { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; font-weight: 800; }
+    .casio-inds { display: flex; gap: 6px; }
+    .casio-screen-expr { font-size: 16px; font-weight: 700; min-height: 32px; overflow-x: auto; white-space: nowrap; }
+    .casio-screen-res { font-size: 22px; font-weight: 800; text-align: right; overflow-x: auto; }
+    .casio-screen { min-height: 128px; overflow: auto; }
+    #casioViewComp[hidden], #casioViewMode[hidden] { display: none !important; }
+    .casio-mode-view { font-size: 15px; font-weight: 800; line-height: 1.35; min-height: 78px; }
+    .casio-mode-view .lcd-title { font-size: 13px; letter-spacing: 0.4px; }
+    .casio-mode-view .lcd-big { font-size: 24px; text-align: right; line-height: 1.2; }
+    .casio-mode-view .lcd-hint, .casio-mode-view .lcd-page { font-size: 12px; }
+    .lcd-cell { display: inline-block; min-width: 26px; margin: 0 1px; padding: 0 3px; border-radius: 3px; background: rgba(20,40,24,0.12); text-align: center; }
+    .lcd-cell.on { background: #1f6b34; color: #f7fee7; }
+    .lcd-row { white-space: nowrap; }
+    .nd-frac { display: inline-flex; flex-direction: column; vertical-align: middle; margin: 0 3px; line-height: 1; font-size: 0.78em; text-align: center; }
+    .nd-num { border-bottom: 1.5px solid #142018; padding: 0 3px 1px; }
+    .nd-den { padding: 1px 3px 0; }
+    .nd-rad-in { border-top: 1.5px solid #142018; padding: 0 3px; margin-left: 1px; }
+    .replay-pad {
+      width: 96px;
+      height: 96px;
+      margin: 2px auto 8px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 32% 28%, #ffffff, #e4e4e7 36%, #a1a1aa 70%, #52525b);
+      box-shadow: inset 0 2px 3px #fff, 0 3px 6px rgba(0,0,0,0.45), 0 0 0 2px #d4d4d8;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      place-items: center;
+    }
+    .replay-pad .rp { background: transparent; border: 0; color: #18181b; font-weight: 900; width: 28px; height: 26px; cursor: pointer; font-size: 13px; padding: 0; }
+    .replay-pad .up { grid-column: 2; grid-row: 1; }
+    .replay-pad .left { grid-column: 1; grid-row: 2; }
+    .replay-pad .mid { grid-column: 2; grid-row: 2; width: 18px; height: 18px; border-radius: 50%; background: #3f3f46; box-shadow: inset 0 1px 2px #000; }
+    .replay-pad .right { grid-column: 3; grid-row: 2; }
+    .replay-pad .down { grid-column: 2; grid-row: 3; }
+    .casio-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+    .c-btn {
+      min-height: 28px;
+      border-radius: 6px;
+      border: 1px solid #09090b;
+      border-bottom-width: 3px;
+      background: linear-gradient(#52525b, #27272a);
+      color: #fafafa;
+      font-weight: 800;
+      font-size: 11px;
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.28);
+      padding: 0 1px;
+    }
+    .c-btn.shift { background: linear-gradient(#fde047, #eab308); color: #111827; border-color: #a16207; }
+    .c-btn.is-on { outline: 2px solid #fff; }
+    .c-btn.shift.is-on { outline: 2px solid #fff; }
+    .c-btn.alpha { background: linear-gradient(#f87171, #dc2626); color: white; border-color: #7f1d1d; }
+    .c-btn.alpha.is-on { outline: 2px solid #fff; }
+    .c-btn.num { background: linear-gradient(#27272a, #09090b); font-size: 14px; }
+    .c-btn.equal { background: linear-gradient(#38bdf8, #0369a1); color: white; border-color: #0c4a6e; }
+    .c-btn.ac, .c-btn.del { background: linear-gradient(#fb923c, #c2410c); color: white; border-color: #7c2d12; }
+    .c-btn.span2 { grid-column: span 2; }
+    .casio-help { margin-top: 8px; font-size: 11.5px; color: #e4e4e7; }
+    .casio-help summary { cursor: pointer; font-weight: 800; color: #fde68a; }
+    .casio-help li { margin: 3px 0 3px 16px; }
+    .eqn-kind, .sys-kind { display: flex; gap: 4px; margin-bottom: 6px; }
+    .eqn-kind button, .sys-kind button { flex: 1; min-height: 28px; border-radius: 6px; border: 1px solid #52525b; background: #3f3f46; color: #fff; font-weight: 800; font-size: 11px; cursor: pointer; }
+    .eqn-kind button.on, .sys-kind button.on { background: #0369a1; border-color: #7dd3fc; }
+    .sys-line { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 12px; font-weight: 700; }
+    .sys-line input, .calc-form input.short { width: 62px; padding: 4px; border-radius: 6px; border: 1px solid #94a3b8; font-weight: 700; color: #0f172a; }
+    .calc-note { font-size: 12px; color: #e4e4e7; margin-bottom: 6px; }
+
+/* BẢNG VIẾT PHẤN NÂNG CẤP: THANH CHỌN BỀ MẶT BẢNG VÀ MÀU PHẤN */
+    .blackboard-top-bar {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      z-index: 1250;
+      align-items: center;
+    }
+    .bb-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .btn-bb {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-bb:hover, .btn-bb.is-active {
+      background: #4f46e5;
+      border-color: #818cf8;
+    }
+    .btn-bb-close {
+      background: rgba(239, 68, 68, 0.8);
+      border-color: #ef4444;
+    }
+    .btn-bb-close:hover {
+      background: #dc2626;
+    }
+    .btn-bb-color {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .btn-bb-color:hover, .btn-bb-color.is-active {
+      transform: scale(1.25);
+      border-color: #ffffff;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    }
+    #blackboardOverlay.surface-green { background: #14532d !important; }
+    #blackboardOverlay.surface-black { background: #09090b !important; }
+    #blackboardOverlay.surface-white { background: #f8fafc !important; }
+    #blackboardOverlay.surface-grid {
+      background-color: #14532d !important;
+      background-image: linear-gradient(rgba(255,255,255,0.12) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px) !important;
+      background-size: 28px 28px !important;
+    }
+</style>
 </head>
 <body class="mode-present">
 
@@ -2149,23 +2427,7 @@
         <div class="col-task">
           <div class="col-task-tag">✍️ HOẠT ĐỘNG HỌC TẬP</div>
     
-          <div class="content-block" id="s7_t1" data-step="1" data-raw="Phương trình đã có dạng tích $(ax+b)(cx+d) = 0$. Học sinh cho từng thừa số bằng $0$ để tìm nghiệm riêng rẽ." data-raw-vi="Phương trình đã có dạng tích $(ax+b)(cx+d) = 0$. Học sinh cho từng thừa số bằng $0$ để tìm nghiệm riêng rẽ." data-raw-en="Remember that a product equals zero when any of its individual factors equals zero. Solve each factor separately." data-title-vi="HƯỚNG DẪN TƯ DUY SƯ PHẠM" data-title-en="PEDAGOGICAL THINKING HINT">
-            <div class="design-overlay">
-              <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
-              
-              <span class="badge-step-num" onclick="setBlockStepDirect('s7_t1')" title="Click để nhập số bước">1</span>
-              <button class="btn-step-order" onclick="moveBlockPosition('s7_t1', -1)" title="Di chuyển khối lên trên">▲</button>
-              <button class="btn-step-order" onclick="moveBlockPosition('s7_t1', 1)" title="Di chuyển khối xuống dưới">▼</button>
-              <button class="btn-block-action btn-edit-block" onclick="openEditModal('s7_t1')" title="Sửa nội dung khối">✏️ Sửa</button>
-              <button class="btn-block-action btn-exit-step" onclick="setBlockExitStep('s7_t1')">💨 Biến mất</button>
-              <button class="btn-block-action btn-anim-block" onclick="addAnimToSelection('s7_t1')" title="Bôi đen đoạn văn bản rồi bấm để thêm hiệu ứng xuất hiện">✨ Hiệu ứng</button>
-              <button class="btn-block-action" onclick="toggleBlockWait('s7_t1')">👁️/⏱</button>
-              <button class="btn-block-action btn-del-block" onclick="deleteBlock('s7_t1')">✕</button>
-            </div>
-            <button class="btn-block-speak" onclick="speakBlockEn(this.closest('.content-block'), null, event)" title="Nghe phát âm tiếng Anh chậm rãi (0.8x)">🔊</button>
-            <strong>HƯỚNG DẪN TƯ DUY SƯ PHẠM</strong><br>
-            <div class="block-body">Phương trình đã có dạng tích $(ax+b)(cx+d) = 0$. Học sinh cho từng thừa số bằng $0$ để tìm nghiệm riêng rẽ.</div>
-          </div>
+          
         
           <div class="content-block highlight-rule" id="s7_t2" data-step="2" data-raw="⚠️ <b>Lưu ý:</b> Cẩn thận khi chuyển vế hệ số âm:<br>$2 - 4x = 0 \Rightarrow -4x = -2 \Rightarrow x = \frac{-2}{-4} = \frac{1}{2}$." data-raw-vi="⚠️ <b>Lưu ý:</b> Cẩn thận khi chuyển vế hệ số âm:<br>$2 - 4x = 0 \Rightarrow -4x = -2 \Rightarrow x = \frac{-2}{-4} = \frac{1}{2}$." data-raw-en="⚠️ <b>Caution:</b> Be careful when transposing negative coefficients:<br>$2 - 4x = 0 \Rightarrow -4x = -2 \Rightarrow x = \frac{-2}{-4} = \frac{1}{2}$." data-title-vi="LƯU Ý DẤU PHÉP TÍNH" data-title-en="PAY ATTENTION TO SIGNS">
             <div class="design-overlay">
@@ -4256,23 +4518,7 @@
             <div class="block-body">1. Ôn tập kỹ 4 bước giải phương trình chứa ẩn ở mẫu và kỹ năng phân tích nhân tử.<br>2. Hoàn thành các bài tập còn lại trong Sách bài tập Toán 9.<br>3. Chuẩn bị bài tiếp theo: <b>Bài 5. Bất đẳng thức và bất phương trình bậc nhất một ẩn</b>.</div>
           </div>
         
-          <div class="content-block highlight-ex" id="s26_t2" data-step="3" data-raw="Toán học là chìa khóa mở cánh cửa tư duy khoa học.<br>Hãy luôn ghi nhớ đối chiếu điều kiện xác định trước khi kết luận nghiệm!" data-raw-vi="Toán học là chìa khóa mở cánh cửa tư duy khoa học.<br>Hãy luôn ghi nhớ đối chiếu điều kiện xác định trước khi kết luận nghiệm!" data-raw-en="Mathematics is the key that unlocks scientific thinking.<br>Always remember to verify domain restrictions before concluding roots!" data-title-vi="THÔNG ĐIỆP SƯ PHẠM" data-title-en="PEDAGOGICAL MESSAGE">
-            <div class="design-overlay">
-              <span class="drag-handle" title="Giữ chuột và kéo để di chuyển khối lên/xuống hoặc sang cột khác">⠿</span>
-              
-              <span class="badge-step-num" onclick="setBlockStepDirect('s26_t2')" title="Click để nhập số bước">2</span>
-              <button class="btn-step-order" onclick="moveBlockPosition('s26_t2', -1)" title="Di chuyển khối lên trên">▲</button>
-              <button class="btn-step-order" onclick="moveBlockPosition('s26_t2', 1)" title="Di chuyển khối xuống dưới">▼</button>
-              <button class="btn-block-action btn-edit-block" onclick="openEditModal('s26_t2')" title="Sửa nội dung khối">✏️ Sửa</button>
-              <button class="btn-block-action btn-exit-step" onclick="setBlockExitStep('s26_t2')">💨 Biến mất</button>
-              <button class="btn-block-action btn-anim-block" onclick="addAnimToSelection('s26_t2')" title="Bôi đen đoạn văn bản rồi bấm để thêm hiệu ứng xuất hiện">✨ Hiệu ứng</button>
-              <button class="btn-block-action" onclick="toggleBlockWait('s26_t2')">👁️/⏱</button>
-              <button class="btn-block-action btn-del-block" onclick="deleteBlock('s26_t2')">✕</button>
-            </div>
-            <button class="btn-block-speak" onclick="speakBlockEn(this.closest('.content-block'), null, event)" title="Nghe phát âm tiếng Anh chậm rãi (0.8x)">🔊</button>
-            <strong>THÔNG ĐIỆP SƯ PHẠM</strong><br>
-            <div class="block-body">Toán học là chìa khóa mở cánh cửa tư duy khoa học.<br>Hãy luôn ghi nhớ đối chiếu điều kiện xác định trước khi kết luận nghiệm!</div>
-          </div>
+          
         
           <button class="btn-add-block" onclick="openCreateBlockModal('s26', 'task')">➕ Thêm hoạt động học sinh</button>
         </div>
@@ -4292,21 +4538,232 @@
   <button type="button" onclick="togglePenMode(false)">✕</button>
 </div>
 <!-- THANH ĐIỀU KHIỂN NỔI -->
+<!-- ==========================================================================
+       MÁY TÍNH CẦM TAY CASIO fx-580VN X CLASSWIZ MÔ PHỎNG
+       ========================================================================== -->
+  
+<!-- MENU CHUỘT PHẢI SƯ PHẠM (QUICK CONTEXT MENU) -->
+<div id="contextMenu" class="context-menu" style="display:none;" aria-hidden="true">
+  <div class="ctx-item" onclick="handleCtxAction('laser')">
+    <span class="ctx-icon">🔴</span>
+    <span class="ctx-label">Con trỏ Laser</span>
+    <span class="ctx-key">Phím L</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('pen')">
+    <span class="ctx-icon">✏️</span>
+    <span class="ctx-label">Bút vẽ màn hình</span>
+    <span class="ctx-key">Phím P</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('highlighter')">
+    <span class="ctx-icon">🟡</span>
+    <span class="ctx-label">Bút dạ quang vàng</span>
+    <span class="ctx-key">Dạ quang</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('clearPen')">
+    <span class="ctx-icon">🗑️</span>
+    <span class="ctx-label">Xóa nét vẽ</span>
+    <span class="ctx-key">Xóa nét</span>
+  </div>
+  <div class="ctx-divider"></div>
+    <div class="ctx-item" onclick="handleCtxAction('blackboard')">
+    <span class="ctx-icon">📋</span>
+    <span class="ctx-label">Bảng viết vẽ đa năng</span>
+    <span class="ctx-key">Phím W</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('calc')">
+    <span class="ctx-icon">🔢</span>
+    <span class="ctx-label">Máy tính Casio fx-580</span>
+    <span class="ctx-key">Phím C</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('blankScreen')">
+    <span class="ctx-icon">⬛</span>
+    <span class="ctx-label">Màn hình đen</span>
+    <span class="ctx-key">Phím B</span>
+  </div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item" onclick="handleCtxAction('readSlideEn')">
+    <span class="ctx-icon">🔊</span>
+    <span class="ctx-label">Đọc bài giảng EN</span>
+    <span class="ctx-key">Song ngữ</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('nextStep')">
+    <span class="ctx-icon">↪️</span>
+    <span class="ctx-label">Tiến 1 bước</span>
+    <span class="ctx-key">Phím Phải</span>
+  </div>
+  <div class="ctx-item" onclick="handleCtxAction('prevStep')">
+    <span class="ctx-icon">↩️</span>
+    <span class="ctx-label">Lùi 1 bước</span>
+    <span class="ctx-key">Phím Trái</span>
+  </div>
+</div>
+
+
+<div id="blackboardOverlay" class="surface-green" aria-hidden="true">
+  <div class="blackboard-top-bar">
+    <div class="bb-group bb-surfaces">
+      <button type="button" class="btn-bb is-active" onclick="setBoardSurface('green')">🟢 Bảng xanh</button>
+      <button type="button" class="btn-bb" onclick="setBoardSurface('white')">⚪ Bảng trắng</button>
+      <button type="button" class="btn-bb" onclick="setBoardSurface('grid')">📐 Ô ly vuông</button>
+      <button type="button" class="btn-bb" onclick="setBoardSurface('black')">⬛ Bảng đen</button>
+    </div>
+    <div class="bb-group bb-chalks">
+      <button type="button" class="btn-bb-color is-active" style="background:#ffffff;" onclick="setChalkColor('#ffffff', 3)" title="Phấn trắng"></button>
+      <button type="button" class="btn-bb-color" style="background:#fde047;" onclick="setChalkColor('#fde047', 3)" title="Phấn vàng"></button>
+      <button type="button" class="btn-bb-color" style="background:#f43f5e;" onclick="setChalkColor('#f43f5e', 3)" title="Phấn đỏ/hồng"></button>
+      <button type="button" class="btn-bb-color" style="background:#38bdf8;" onclick="setChalkColor('#38bdf8', 3)" title="Phấn xanh dương"></button>
+    </div>
+    <div class="bb-group">
+      <button type="button" class="btn-bb" onclick="clearBlackboardCanvas()">🗑️ Xóa sạch</button>
+      <button type="button" class="btn-bb btn-bb-close" onclick="toggleBlackboard(false)">✕ Đóng (W)</button>
+    </div>
+  </div>
+  <canvas id="blackboardCanvas"></canvas>
+
+<div id="casioWidget" class="casio-widget">
+    <div class="casio-header" id="casioHeader">
+      <div class="casio-brand">MÁY TÍNH <b>TRỢ GIẢNG</b><small>NATURAL DISPLAY</small></div>
+      <div class="casio-ctrl-btns">
+        <button type="button" class="casio-ctrl-btn" onclick="scaleCasio(0.9)" title="Thu nhỏ máy tính">−</button>
+        <button type="button" class="casio-ctrl-btn" onclick="scaleCasio(1.1)" title="Phóng to máy tính">+</button>
+        <button type="button" class="casio-ctrl-btn close" onclick="toggleCalculator(false)" title="Đóng máy tính">✕</button>
+      </div>
+    </div>
+    <div class="casio-bezel">
+      <div class="casio-screen">
+        <div class="casio-screen-top">
+          <span id="casioDegRad">DEG</span>
+          <span class="casio-inds">
+            <span id="casioShiftInd" style="display:none; color:#a16207;">S</span>
+            <span id="casioAlphaInd" style="display:none; color:#b91c1c;">A</span>
+            <span id="casioMemInd" style="display:none; color:#1d4ed8;">M</span>
+          </span>
+          <span>Math</span>
+        </div>
+        <div id="casioViewComp">
+          <div class="casio-screen-expr" id="casioExpr">0</div>
+          <div class="casio-screen-res" id="casioRes">0</div>
+        </div>
+        <div id="casioViewMode" class="casio-mode-view" hidden></div>
+      </div>
+    </div>
+    <div class="replay-pad" aria-label="Phím Replay">
+      <button type="button" class="rp up" onclick="casioKey('UP')" title="Replay lên: DEG">▲</button>
+      <button type="button" class="rp left" onclick="casioKey('LEFT')" title="Replay trái: xóa">◀</button>
+      <button type="button" class="rp mid" tabindex="-1"></button>
+      <button type="button" class="rp right" onclick="casioKey('RIGHT')" title="Replay phải">▶</button>
+      <button type="button" class="rp down" onclick="casioKey('DOWN')" title="Replay xuống: RAD">▼</button>
+    </div>
+    <div class="casio-grid">
+      <button type="button" class="c-btn shift" id="btnShift" onclick="casioKey('SHIFT')">SHIFT</button>
+      <button type="button" class="c-btn alpha" id="btnAlpha" onclick="casioKey('ALPHA')">ALPHA</button>
+      <button type="button" class="c-btn" onclick="casioKey('MENU')">MENU</button>
+      <button type="button" class="c-btn" onclick="casioKey('MODE')">MODE</button>
+      <button type="button" class="c-btn" onclick="casioKey('ON')">ON</button>
+      <button type="button" class="c-btn" onclick="casioKey('OPTN')">OPTN</button>
+      <button type="button" class="c-btn" onclick="casioKey('CALC')">CALC</button>
+      <button type="button" class="c-btn" onclick="casioKey('INT')">∫</button>
+      <button type="button" class="c-btn" onclick="casioKey('DIFF')">d/dx</button>
+      <button type="button" class="c-btn" onclick="casioKey('FRAC')">■/□</button>
+      <button type="button" class="c-btn" onclick="casioKey('sqrt')">√</button>
+      <button type="button" class="c-btn" onclick="casioKey('sqr')">x²</button>
+      <button type="button" class="c-btn" onclick="casioKey('pow')">x^</button>
+      <button type="button" class="c-btn" onclick="casioKey('log')">log</button>
+      <button type="button" class="c-btn" onclick="casioKey('ln')">ln</button>
+      <button type="button" class="c-btn" onclick="casioKey('NEG')">(−)</button>
+      <button type="button" class="c-btn" onclick="casioKey('DMS')">°′″</button>
+      <button type="button" class="c-btn" id="btnHyp" onclick="casioKey('hyp')">hyp</button>
+      <button type="button" class="c-btn" id="btnSin" onclick="casioKey('sin')">sin</button>
+      <button type="button" class="c-btn" id="btnCos" onclick="casioKey('cos')">cos</button>
+      <button type="button" class="c-btn" id="btnTan" onclick="casioKey('tan')">tan</button>
+      <button type="button" class="c-btn" onclick="casioKey('cube')">x³</button>
+      <button type="button" class="c-btn" onclick="casioKey('cbrt')">∛</button>
+      <button type="button" class="c-btn" onclick="casioKey('fact')">x!</button>
+      <button type="button" class="c-btn" onclick="casioKey('nCr')">nCr</button>
+      <button type="button" class="c-btn" onclick="casioKey('nPr')">nPr</button>
+      <button type="button" class="c-btn" onclick="casioKey('pi')">π</button>
+      <button type="button" class="c-btn" onclick="casioKey('ee')">e</button>
+      <button type="button" class="c-btn" onclick="casioKey('STO')">STO</button>
+      <button type="button" class="c-btn" onclick="casioKey('RCL')">RCL</button>
+      <button type="button" class="c-btn" onclick="casioKey('(')">(</button>
+      <button type="button" class="c-btn" onclick="casioKey(')')">)</button>
+      <button type="button" class="c-btn" onclick="casioKey('SD')">S⇔D</button>
+      <button type="button" class="c-btn" onclick="casioKey('M+')">M+</button>
+      <button type="button" class="c-btn" onclick="casioKey('M-')">M−</button>
+      <button type="button" class="c-btn" onclick="casioKey('ENG')">ENG</button>
+      <button type="button" class="c-btn num" onclick="casioKey('7')">7</button>
+      <button type="button" class="c-btn num" onclick="casioKey('8')">8</button>
+      <button type="button" class="c-btn num" onclick="casioKey('9')">9</button>
+      <button type="button" class="c-btn del" onclick="casioKey('DEL')">DEL</button>
+      <button type="button" class="c-btn ac" onclick="casioKey('AC')">AC</button>
+      <button type="button" class="c-btn" onclick="casioKey('/')">÷</button>
+      <button type="button" class="c-btn num" onclick="casioKey('4')">4</button>
+      <button type="button" class="c-btn num" onclick="casioKey('5')">5</button>
+      <button type="button" class="c-btn num" onclick="casioKey('6')">6</button>
+      <button type="button" class="c-btn" onclick="casioKey('*')">×</button>
+      <button type="button" class="c-btn" onclick="casioKey('-')">−</button>
+      <button type="button" class="c-btn" onclick="casioKey('SCI')">×10^x</button>
+      <button type="button" class="c-btn num" onclick="casioKey('1')">1</button>
+      <button type="button" class="c-btn num" onclick="casioKey('2')">2</button>
+      <button type="button" class="c-btn num" onclick="casioKey('3')">3</button>
+      <button type="button" class="c-btn" onclick="casioKey('+')">+</button>
+      <button type="button" class="c-btn" onclick="casioKey('Ans')">Ans</button>
+      <button type="button" class="c-btn equal" onclick="casioKey('=')">=</button>
+      <button type="button" class="c-btn num span2" onclick="casioKey('0')">0</button>
+      <button type="button" class="c-btn num" onclick="casioKey('.')">.</button>
+      <button type="button" class="c-btn" onclick="casioKey('%')">%</button>
+      <button type="button" class="c-btn" onclick="casioKey('abs')">Abs</button>
+      <button type="button" class="c-btn equal" onclick="casioKey('=')">=</button>
+    </div>
+    <details class="casio-help">
+      <summary>Hướng dẫn phím Toán 9</summary>
+      <ul>
+        <li>Phân số: 1 ■/□ 2 + 1 ■/□ 3 rồi = ra 5/6. S⇔D đổi sang 0.833333, bấm lại ra 5/6.</li>
+        <li>Máy đang mở: gõ số trên bàn phím, Enter là dấu =, Backspace là xóa.</li>
+        <li>Căn và lượng giác: 16 rồi √ ra √(16), = ra 4. 30 rồi sin, = ra 0.5.</li>
+        <li>Độ-phút-giây: nhập 30.25 rồi =, bấm °′″ ra 30°15'0''.</li>
+        <li>SHIFT (vàng) rồi sin/cos/tan để ra sin⁻¹, cos⁻¹, tan⁻¹. hyp đổi sang sinh, cosh, tanh.</li>
+        <li>MENU hoặc MODE: bấm 1 tính toán, 9 phương trình, 8 bảng f(x). Trong bảng, ALPHA chèn x.</li>
+        <li>▲ là DEG, ▼ là RAD khi đang tính. Trong kết quả, = hoặc ▼ xem nghiệm tiếp.</li>
+        <li>Ans, M+, M−, STO, RCL là bộ nhớ. Kéo thanh tiêu đề để dời máy tính.</li>
+        <li>∫ và d/dx mở bảng giá trị f(x). Máy lập bảng số, không tính tích phân ký hiệu.</li>
+      </ul>
+    </details>
+
+  </div>
+
 <nav class="control-bar" id="controlBar">
-  <button class="btn-ctrl" onclick="prevSlide()" title="Phím mũi tên Trái">◀ Trang trước</button>
-  <button class="btn-ctrl" onclick="prevStep()" title="Lùi 1 bước">↩ Lùi 1 bước</button>
-  <button class="btn-ctrl btn-ctrl-primary" onclick="nextStep()" title="Phím mũi tên Phải hoặc chạm vùng trống">↪ Tiến 1 bước</button>
-  <button class="btn-ctrl" onclick="nextSlide()">▶ Trang sau</button>
-  <button class="btn-ctrl" id="btnLaser" onclick="toggleLaserMode()" title="Con trỏ laser (phím L)">🔴 Laser</button>
-  <button class="btn-ctrl" id="btnPen" onclick="togglePenMode()" title="Bút vẽ trên slide (phím P)">✏️ Vẽ</button>
-  <button class="btn-ctrl" onclick="toggleFullscreen()" title="Toàn màn hình (F11)">⛶ Toàn màn hình</button>
-  <button class="btn-ctrl" id="btnFontSize" onclick="cycleFontSize()" title="Đổi cỡ chữ TV: 28px (Chuẩn TV) ⇄ 30px (TV Lớn) ⇄ 22px (Laptop)">🔤 TV 28px</button>
-  <button class="btn-ctrl" id="btnToggleLang" onclick="toggleLanguage()" title="Chuyển đổi giao diện và nội dung song ngữ Việt / Anh">🌐 Song ngữ (VI/EN)</button>
-  <button class="btn-ctrl btn-speech" id="btnReadSlideEn" onclick="toggleReadSlideEn()" title="Trợ giảng AI: Đọc tiếng Anh chậm rãi cho học sinh nghe">🔊 Đọc Slide (EN)</button>
-  <button class="btn-ctrl" id="btnSpeechRate" onclick="cycleSpeechRate()" title="Đổi tốc độ đọc: 0.85x (Chậm vừa) ⇄ 0.75x (Rất chậm) ⇄ 0.5x (Siêu chậm) ⇄ 1.0x (Tự nhiên)">⚡ 0.85x</button>
-  <button class="btn-ctrl" id="btnHelpCaption" onclick="showCaptionHelp()" title="Cách tắt phụ đề tự động (Live Caption) của Windows/Chrome">💬 Tắt phụ đề</button>
-  <button class="btn-ctrl" id="btnSaveLecture" onclick="saveLecture()" title="Lưu trực tiếp đè vào file hoặc tải bản mới">💾 Lưu bài giảng</button>
-  <button class="btn-ctrl btn-ctrl-mode" id="btnToggleMode" onclick="toggleMode()">⚙ Thiết kế</button>
+  <!-- Nhóm 1: Điều hướng Slide & Bước -->
+  <div class="ctrl-group ctrl-group-nav">
+    <button class="btn-ctrl" onclick="prevSlide()" title="Phím mũi tên Trái">◀ Trước</button>
+    <button class="btn-ctrl" onclick="prevStep()" title="Lùi 1 bước">↩ Lùi</button>
+    <button class="btn-ctrl btn-ctrl-primary" onclick="nextStep()" title="Phím mũi tên Phải hoặc chạm vùng trống">↪ Tiến bước</button>
+    <button class="btn-ctrl" onclick="nextSlide()" title="Phím mũi tên Phải">Sau ▶</button>
+  </div>
+
+  <!-- Nhóm 2: Công cụ Sư phạm & Tương tác -->
+  <div class="ctrl-group ctrl-group-pedagogy">
+    <button class="btn-ctrl" id="btnLaser" onclick="toggleLaserMode()" title="Con trỏ laser (phím L)">🔴 Laser</button>
+    <button class="btn-ctrl" id="btnPen" onclick="togglePenMode()" title="Bút vẽ & Dạ quang (phím P)">✏️ Vẽ</button>
+    <button class="btn-ctrl" id="btnBlackboard" onclick="toggleBlackboard()" title="Bảng viết vẽ toàn màn hình (phím W / Chuột phải)">📋 Bảng vẽ</button>
+    <button class="btn-ctrl" id="btnCalc" onclick="toggleCalculator()" title="Máy tính Casio fx-580VN X (phím C)">🔢 Máy tính</button>
+  </div>
+
+  <!-- Nhóm 3: Âm thanh & Song ngữ -->
+  <div class="ctrl-group ctrl-group-speech">
+    <button class="btn-ctrl" id="btnToggleLang" onclick="toggleLanguage()" title="Chuyển đổi song ngữ Việt / Anh">🌐 Song ngữ</button>
+    <button class="btn-ctrl btn-speech" id="btnReadSlideEn" onclick="toggleReadSlideEn()" title="Trợ giảng AI đọc tiếng Anh">🔊 Đọc EN</button>
+    <button class="btn-ctrl" id="btnSpeechRate" onclick="cycleSpeechRate()" title="Đổi tốc độ đọc: 0.85x ⇄ 0.75x ⇄ 0.5x ⇄ 1.0x">⚡ 0.85x</button>
+    <button class="btn-ctrl" id="btnHelpCaption" onclick="showCaptionHelp()" title="Cách tắt phụ đề tự động (Live Caption)">💬 Phụ đề</button>
+  </div>
+
+  <!-- Nhóm 4: Cài đặt hiển thị & Lưu bài -->
+  <div class="ctrl-group ctrl-group-settings">
+    <button class="btn-ctrl" onclick="toggleFullscreen()" title="Toàn màn hình (F11)">⛶ Toàn màn hình</button>
+    <button class="btn-ctrl" id="btnFontSize" onclick="cycleFontSize()" title="Đổi cỡ chữ TV: 28px ⇄ 30px ⇄ 22px">🔤 TV 28px</button>
+    <button class="btn-ctrl" id="btnSaveLecture" onclick="saveLecture()" title="Lưu trực tiếp đè vào file">💾 Lưu</button>
+    <button class="btn-ctrl btn-ctrl-mode" id="btnToggleMode" onclick="toggleMode()">⚙ Thiết kế</button>
+  </div>
 </nav>
 
 <!-- TOOLTIP NỔI KHI BÔI ĐEN VĂN BẢN TRONG CHẾ ĐỘ THIẾT KẾ -->
@@ -6324,6 +6781,8 @@
     const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'];
     const prevKeys = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'];
     if (e.key === 'Escape') {
+      toggleBlackboard(false);
+      toggleCalculator(false);
       if (document.body.classList.contains('laser-mode') || document.body.classList.contains('pen-mode')) {
         e.preventDefault();
         toggleLaserMode(false);
@@ -6341,9 +6800,18 @@
       togglePenMode();
       return;
     }
+    if (e.key === 'w' || e.key === 'W') {
+      e.preventDefault();
+      toggleBlackboard();
+      return;
+    }
     if (e.key === 'c' || e.key === 'C') {
       e.preventDefault();
-      clearDrawCanvas();
+      if (document.body.classList.contains('pen-mode')) {
+        clearDrawCanvas();
+      } else {
+        toggleCalculator();
+      }
       return;
     }
     if (e.key === 'b' || e.key === 'B' || e.key === '.') {
@@ -6658,6 +7126,8 @@
     const backdrop = document.getElementById('imageLightboxBackdrop');
     if (backdrop && backdrop.classList.contains('active')) {
       if (e.key === 'Escape') {
+      toggleBlackboard(false);
+      toggleCalculator(false);
         closeImageLightbox();
       } else if (e.key === '+' || e.key === '=') {
         zoomLightbox(0.25);
@@ -6668,6 +7138,1408 @@
       }
     }
   });
+
+
+
+  /* MENU CHUỘT PHẢI SƯ PHẠM (QUICK CONTEXT MENU) */
+  function initContextMenu() {
+    const ctx = document.getElementById('contextMenu');
+    if (!ctx) return;
+
+    window.addEventListener('contextmenu', function(e) {
+      if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isLaser = document.body.classList.contains('laser-mode');
+      const isPen = document.body.classList.contains('pen-mode');
+      const items = ctx.querySelectorAll('.ctx-item');
+      if (items[0]) {
+        items[0].classList.toggle('is-active', isLaser);
+        const lbl = items[0].querySelector('.ctx-label');
+        if (lbl) lbl.textContent = isLaser ? 'Tắt Laser' : 'Con trỏ Laser';
+      }
+      if (items[1]) {
+        items[1].classList.toggle('is-active', isPen);
+        const lbl = items[1].querySelector('.ctx-label');
+        if (lbl) lbl.textContent = isPen ? 'Tắt Bút vẽ' : 'Bút vẽ màn hình';
+      }
+
+      const menuWidth = 240;
+      const menuHeight = 360;
+      let x = e.clientX;
+      let y = e.clientY;
+      if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 8;
+      if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 8;
+
+      ctx.style.left = Math.max(8, x) + 'px';
+      ctx.style.top = Math.max(8, y) + 'px';
+      ctx.style.display = 'flex';
+    });
+
+    window.addEventListener('click', function(e) {
+      if (!e.target.closest('#contextMenu')) {
+        hideContextMenu();
+      }
+    });
+
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+      toggleBlackboard(false);
+      toggleCalculator(false);
+        hideContextMenu();
+      }
+    });
+  }
+
+  function hideContextMenu() {
+    const ctx = document.getElementById('contextMenu');
+    if (ctx) ctx.style.display = 'none';
+  }
+
+  function handleCtxAction(action) {
+    hideContextMenu();
+    if (action === 'laser') {
+      toggleLaserMode();
+    } else if (action === 'pen') {
+      togglePenMode();
+    } else if (action === 'highlighter') {
+      if (!document.body.classList.contains('pen-mode')) togglePenMode(true);
+      if (typeof setPenColor === 'function') setPenColor('rgba(250, 204, 21, 0.45)', 14, true);
+    } else if (action === 'clearPen') {
+      if (typeof clearDrawCanvas === 'function') clearDrawCanvas();
+    } else if (action === 'calc') {
+      toggleCalculator();
+    } else if (action === 'blankScreen') {
+      if (typeof toggleBlankScreen === 'function') toggleBlankScreen();
+    } else if (action === 'readSlideEn') {
+      if (typeof toggleReadSlideEn === 'function') toggleReadSlideEn();
+    } else if (action === 'nextStep') {
+      if (typeof nextStep === 'function') nextStep();
+    } else if (action === 'prevStep') {
+      if (typeof prevStep === 'function') prevStep();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', initContextMenu);
+
+
+
+/* ==========================================================================
+   MÁY TÍNH CẦM TAY CASIO fx-580VN X CLASSWIZ - CORE SIMULATOR ENGINE
+   ========================================================================== */
+    function solveRead(id) {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const raw = String(el.value || '').trim().replace(',', '.');
+      if (!raw) return null;
+      const n = parseFloat(raw);
+      if (!isFinite(n)) return null;
+      return Math.round(n * 1e10) / 1e10;
+    }
+
+    function solveFmt(n) {
+      if (Object.is(n, -0)) return '0';
+      const r = Math.round(n * 1e10) / 1e10;
+      return String(Object.is(r, -0) ? 0 : r);
+    }
+
+    function solveZero(n) { return Math.abs(n) < 1e-8; }
+
+    function casioQuadPages(a, b, c) {
+      if (solveZero(a)) {
+        if (solveZero(b) && solveZero(c)) return ['Vô số nghiệm'];
+        if (solveZero(b)) return ['Vô nghiệm'];
+        return ['x = ' + solveFmt(-c / b)];
+      }
+      const delta = b * b - 4 * a * c;
+      const pages = [];
+      if (delta < -1e-8) pages.push('Vô nghiệm thực');
+      else {
+        const s = Math.sqrt(Math.max(0, delta));
+        pages.push('x1 = ' + solveFmt((-b + s) / (2 * a)));
+        pages.push('x2 = ' + solveFmt((-b - s) / (2 * a)));
+      }
+      const xv = -b / (2 * a);
+      const yv = (a * xv + b) * xv + c;
+      pages.push('Đỉnh\nx = ' + solveFmt(xv) + '\ny = ' + solveFmt(yv));
+      return pages;
+    }
+
+    function casioCubicRoots(a, b, c, d) {
+      if (solveZero(a)) return null;
+      const A = b / a, B = c / a, C = d / a;
+      const p = B - A * A / 3;
+      const q = C + (2 * A * A * A - 9 * A * B) / 27;
+      const disc = (q / 2) * (q / 2) + (p / 3) * (p / 3) * (p / 3);
+      const shift = A / 3;
+      const roots = [];
+      function add(y) {
+        const x = y - shift;
+        if (typeof x !== 'number' || !isFinite(x)) return;
+        if (Math.abs(((a * x + b) * x + c) * x + d) > 1e-4) return;
+        const r = Math.round(x * 1e8) / 1e8;
+        if (roots.every(function (z) { return Math.abs(z - r) > 1e-5; })) roots.push(Object.is(r, -0) ? 0 : r);
+      }
+      if (disc > 1e-9) {
+        add(Math.cbrt(-q / 2 + Math.sqrt(disc)) + Math.cbrt(-q / 2 - Math.sqrt(disc)));
+      } else if (disc >= -1e-9) {
+        const u = Math.cbrt(-q / 2);
+        add(2 * u);
+        add(-u);
+      } else {
+        const rad = Math.sqrt(-p / 3);
+        const arg = (-q / 2) / (rad * rad * rad);
+        const phi = Math.acos(Math.max(-1, Math.min(1, arg)));
+        for (let k = 0; k < 3; k++) add(2 * rad * Math.cos((phi + 2 * Math.PI * k) / 3));
+      }
+      if (!roots.length) {
+        for (let n = -20; n <= 20; n++) if (Math.abs(((a * n + b) * n + c) * n + d) < 1e-6) add(n + shift);
+      }
+      roots.sort(function (p1, q1) { return p1 - q1; });
+      return roots;
+    }
+
+    function casioCubicPages(a, b, c, d) {
+      if (solveZero(a)) return casioQuadPages(b, c, d);
+      const roots = casioCubicRoots(a, b, c, d) || [];
+      if (!roots.length) return ['Vô nghiệm thực'];
+      return roots.map(function (x, i) { return 'x' + (i + 1) + ' = ' + solveFmt(x); });
+    }
+
+    function casioCramer2(v) {
+      const a1 = v[0], b1 = v[1], c1 = v[2], a2 = v[3], b2 = v[4], c2 = v[5];
+      const D = a1 * b2 - a2 * b1;
+      const Dx = c1 * b2 - c2 * b1;
+      const Dy = a1 * c2 - a2 * c1;
+      if (solveZero(D)) {
+        if (solveZero(Dx) && solveZero(Dy)) return { kind: 'inf' };
+        return { kind: 'none' };
+      }
+      return { kind: 'one', x: [Dx / D, Dy / D] };
+    }
+
+    function casioGauss(rows) {
+      const n = rows.length;
+      const A = rows.map(function (r) { return r.slice(); });
+      for (let col = 0; col < n; col++) {
+        let piv = col;
+        for (let r = col + 1; r < n; r++) if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;
+        if (Math.abs(A[piv][col]) < 1e-8) continue;
+        if (piv !== col) { const t = A[col]; A[col] = A[piv]; A[piv] = t; }
+        const div = A[col][col];
+        for (let j = col; j <= n; j++) A[col][j] /= div;
+        for (let r = 0; r < n; r++) {
+          if (r === col || Math.abs(A[r][col]) < 1e-10) continue;
+          const f = A[r][col];
+          for (let j = col; j <= n; j++) A[r][j] -= f * A[col][j];
+        }
+      }
+      const x = [];
+      let none = false;
+      let free = false;
+      for (let i = 0; i < n; i++) x.push(null);
+      for (let r = 0; r < n; r++) {
+        let idx = -1;
+        let cnt = 0;
+        for (let c = 0; c < n; c++) if (Math.abs(A[r][c]) > 1e-7) { idx = c; cnt++; }
+        if (cnt === 0) {
+          if (Math.abs(A[r][n]) > 1e-7) none = true;
+          continue;
+        }
+        if (cnt > 1) free = true;
+        else x[idx] = A[r][n];
+      }
+      if (none) return { kind: 'none' };
+      if (free || x.some(function (v) { return v === null; })) return { kind: 'inf' };
+      return { kind: 'one', x: x };
+    }
+
+    function casioSysPages(n, v) {
+      let got;
+      if (n === 2) got = casioCramer2(v);
+      else {
+        const rows = [];
+        const width = n + 1;
+        for (let r = 0; r < n; r++) rows.push(v.slice(r * width, (r + 1) * width));
+        got = casioGauss(rows);
+      }
+      if (got.kind === 'none') return ['Vô nghiệm'];
+      if (got.kind === 'inf') return ['Vô số nghiệm'];
+      const names = ['x', 'y', 'z', 'w'];
+      const pages = [];
+      for (let i = 0; i < n; i++) pages.push(names[i] + ' = ' + solveFmt(got.x[i]));
+      return pages;
+    }
+
+    let casioUi = 'comp';
+    let casioMat = null;
+    let casioPages = [];
+    let casioPage = 0;
+    let casioAskKind = '';
+    let casioTable = null;
+
+    function casioSyncView() {
+      const comp = document.getElementById('casioViewComp');
+      const mode = document.getElementById('casioViewMode');
+      const isComp = casioUi === 'comp';
+      if (comp) comp.hidden = !isComp;
+      if (mode) {
+        mode.hidden = isComp;
+        if (!isComp) mode.innerHTML = casioModeHtml();
+      }
+    }
+
+    function casioEnterMenu() {
+      casioUi = 'menu';
+      casioMenu = '';
+      casioSyncView();
+    }
+
+    function casioEnterComp(clearExpr) {
+      casioUi = 'comp';
+      casioMenu = '';
+      if (clearExpr) {
+        casioExprStr = '';
+        casioJustEval = false;
+        casioDmsStep = 0;
+        casioFrac = false;
+        casioEngN = 0;
+        casioPaint('0');
+      }
+      casioSyncView();
+    }
+
+    function casioEnterEqnKind() {
+      casioUi = 'eqn-kind';
+      casioSyncView();
+    }
+
+    function casioEnterTable() {
+      casioUi = 'table-fx';
+      casioExprStr = '';
+      casioJustEval = false;
+      casioTable = { expr: '', stage: 'fx', buffer: '', typing: false, rows: [], pos: 0, start: null, end: null, step: null, err: '' };
+      casioPaint();
+      casioSyncView();
+    }
+
+    function casioPolySpec(deg) {
+      if (deg === 2) return { kind: 'poly2', n: 2, title: 'ax² + bx + c = 0', names: ['a', 'b', 'c'] };
+      return { kind: 'poly3', n: 3, title: 'ax³ + bx² + cx + d = 0', names: ['a', 'b', 'c', 'd'] };
+    }
+
+    function casioSysSpec(n) {
+      const names = [];
+      const letters = ['a', 'b', 'c', 'd', 'e'];
+      for (let row = 1; row <= n; row++) {
+        for (let col = 0; col < n; col++) names.push(letters[col] + row);
+        names.push('c' + row);
+      }
+      return { kind: 'sys', n: n, title: 'Hệ ' + n + ' ẩn', names: names };
+    }
+
+    function casioStartMatrix(spec) {
+      casioMat = {
+        kind: spec.kind,
+        n: spec.n,
+        title: spec.title,
+        names: spec.names,
+        values: spec.names.map(function () { return null; }),
+        index: 0,
+        buffer: '',
+        typing: false,
+        phase: 'edit'
+      };
+      casioUi = 'matrix';
+      casioSyncView();
+    }
+
+    function casioCell(i, placeholder) {
+      const editing = casioMat.phase === 'edit' && casioMat.index === i;
+      let text;
+      if (editing && casioMat.typing) text = casioMat.buffer === '' ? placeholder : casioMat.buffer;
+      else if (casioMat.values[i] != null) text = solveFmt(casioMat.values[i]);
+      else text = placeholder;
+      return '<span class="lcd-cell' + (editing ? ' on' : '') + '">' + casioEscapeHtml(text) + '</span>';
+    }
+
+    function casioModeHtml() {
+      if (casioUi === 'menu') {
+        return '<div class="lcd-title">MENU</div>1: Tính toán (COMP)<br>9: Phương trình / Hệ PT (EQN)<br>8: Bảng giá trị (TABLE)';
+      }
+      if (casioUi === 'eqn-kind') {
+        return '<div class="lcd-title">EQN</div>1: He PT<br>2: PT';
+      }
+      if (casioUi === 'ask') {
+        if (casioAskKind === 'sys') return 'Hệ PT: Số ẩn? (2 ~ 4)';
+        return 'Phương trình: Bậc? (2 ~ 3)';
+      }
+      if (casioUi === 'matrix') return casioMatrixHtml();
+      if (casioUi === 'result') {
+        const page = casioPages[casioPage] || '';
+        return '<div class="lcd-page">' + (casioPage + 1) + '/' + casioPages.length + '</div><div class="lcd-big">' + casioEscapeHtml(page).replace(/\n/g, '<br>') + '</div>';
+      }
+      if (casioUi === 'table-fx') {
+        const body = casioExprStr ? casioRenderNatural(casioExprStr) : '';
+        const err = casioTable && casioTable.err ? '<div>' + casioEscapeHtml(casioTable.err) + '</div>' : '';
+        return '<div class="lcd-title">f(x)=</div><div class="lcd-expr">' + body + '</div>' + err + '<div class="lcd-hint">ALPHA = x, rồi =</div>';
+      }
+      if (casioUi === 'table-num') {
+        const label = casioTable.stage === 'start' ? 'Start?' : (casioTable.stage === 'end' ? 'End?' : 'Step?');
+        const shown = casioTable.typing ? (casioTable.buffer || '') : '';
+        const err = casioTable.err ? '<div class="lcd-hint">' + casioEscapeHtml(casioTable.err) + '</div>' : '';
+        return '<div class="lcd-title">' + label + '</div><div class="lcd-big">' + casioEscapeHtml(shown) + '</div>' + err;
+      }
+      if (casioUi === 'table-view') {
+        const rows = casioTable.rows || [];
+        let html = '<div class="lcd-title">x | f(x)</div>';
+        const start = casioTable.pos;
+        for (let i = 0; i < 4 && start + i < rows.length; i++) html += '<div>' + casioEscapeHtml(rows[start + i]) + '</div>';
+        if (!rows.length) html += '<div>Không có dòng</div>';
+        if (start + 4 < rows.length) html += '<div class="lcd-hint">▼</div>';
+        return html;
+      }
+      return '';
+    }
+
+    function casioMatrixHtml() {
+      let html = '<div class="lcd-title">' + casioEscapeHtml(casioMat.title) + '</div>';
+      if (casioMat.kind === 'sys' && casioMat.n === 2) {
+        html += '<div class="lcd-row">[' + casioCell(0, 'a1') + ']x + [' + casioCell(1, 'b1') + ']y = [' + casioCell(2, 'c1') + ']</div>';
+        html += '<div class="lcd-row">[' + casioCell(3, 'a2') + ']x + [' + casioCell(4, 'b2') + ']y = [' + casioCell(5, 'c2') + ']</div>';
+      } else if (casioMat.kind === 'sys') {
+        const n = casioMat.n;
+        const row = Math.floor(casioMat.index / (n + 1));
+        const letters = ['x', 'y', 'z', 'w'];
+        html += '<div class="lcd-hint">PT ' + (row + 1) + '/' + n + '</div><div class="lcd-row">';
+        for (let c = 0; c < n; c++) {
+          const idx = row * (n + 1) + c;
+          if (c) html += '+';
+          html += '[' + casioCell(idx, casioMat.names[idx]) + ']' + letters[c];
+        }
+        html += '=[' + casioCell(row * (n + 1) + n, 'c' + (row + 1)) + ']</div>';
+      } else {
+        for (let i = 0; i < casioMat.names.length; i++) {
+          html += '<div class="lcd-row">' + casioMat.names[i] + ' = [' + casioCell(i, '?') + ']</div>';
+        }
+      }
+      if (casioMat.phase === 'ready') html += '<div class="lcd-hint">Bấm = để giải</div>';
+      return html;
+    }
+
+    function casioCommitCell() {
+      const b = casioMat.buffer;
+      if (!casioMat.typing) return casioMat.values[casioMat.index] != null;
+      if (b === '' || b === '-' || b === '.' || b === '-.') return false;
+      try {
+        casioMat.values[casioMat.index] = casioEvaluate(b, { deg: casioIsDeg, ans: casioLastAns, mem: casioMem });
+      } catch (err) {
+        return false;
+      }
+      casioMat.buffer = '';
+      casioMat.typing = false;
+      return true;
+    }
+
+    function casioSolveMatrix() {
+      const v = casioMat.values;
+      let pages;
+      if (casioMat.kind === 'poly2') pages = casioQuadPages(v[0], v[1], v[2]);
+      else if (casioMat.kind === 'poly3') pages = casioCubicPages(v[0], v[1], v[2], v[3]);
+      else pages = casioSysPages(casioMat.n, v);
+      casioPages = pages;
+      casioPage = 0;
+      casioUi = 'result';
+      casioSyncView();
+    }
+
+    function casioMatrixKey(key) {
+      if (key === 'AC') {
+        if (casioMat.phase === 'ready') {
+          casioMat.phase = 'edit';
+          casioMat.index = casioMat.values.length - 1;
+        }
+        casioMat.values[casioMat.index] = null;
+        casioMat.buffer = '';
+        casioMat.typing = false;
+        casioSyncView();
+        return;
+      }
+      if (key === '=' ) {
+        if (casioMat.phase === 'ready') { casioSolveMatrix(); return; }
+        if (!casioCommitCell()) return;
+        if (casioMat.index < casioMat.values.length - 1) casioMat.index++;
+        else casioMat.phase = 'ready';
+        casioSyncView();
+        return;
+      }
+      if (casioMat.phase === 'ready') return;
+      if ((key >= '0' && key <= '9') || key === '.' || key === '/') {
+        if (!casioMat.typing) { casioMat.typing = true; casioMat.buffer = ''; }
+        if (key === '.' && casioMat.buffer.indexOf('.') >= 0) return;
+        casioMat.buffer += key;
+        casioSyncView();
+        return;
+      }
+      if (key === 'NEG' || key === '-') {
+        if (!casioMat.typing) { casioMat.typing = true; casioMat.buffer = ''; }
+        casioMat.buffer = casioMat.buffer.charAt(0) === '-' ? casioMat.buffer.slice(1) : ('-' + casioMat.buffer);
+        casioSyncView();
+        return;
+      }
+      if (key === 'DEL' || key === 'LEFT') {
+        if (casioMat.typing && casioMat.buffer) casioMat.buffer = casioMat.buffer.slice(0, -1);
+        else {
+          casioMat.values[casioMat.index] = null;
+          casioMat.typing = false;
+          casioMat.buffer = '';
+        }
+        casioSyncView();
+      }
+    }
+
+    function casioResultKey(key) {
+      if (key === '=' || key === 'DOWN') {
+        if (casioPage < casioPages.length - 1) casioPage++;
+        casioSyncView();
+        return;
+      }
+      if (key === 'UP') {
+        if (casioPage > 0) casioPage--;
+        casioSyncView();
+        return;
+      }
+      if (key === 'AC') {
+        casioMat.phase = 'edit';
+        casioMat.index = 0;
+        casioMat.buffer = '';
+        casioMat.typing = false;
+        casioUi = 'matrix';
+        casioSyncView();
+      }
+    }
+
+    function casioTableFxKey(key) {
+      if (key === 'AC') {
+        casioExprStr = '';
+        casioTable.err = '';
+        casioPaint();
+        casioSyncView();
+        return;
+      }
+      if (key === 'ALPHA') {
+        casioExprStr += 'x';
+        casioJustEval = false;
+        casioTable.err = '';
+        casioPaint();
+        casioSyncView();
+        return;
+      }
+      if (key === '=') {
+        if (!casioExprStr) return;
+        try {
+          casioEvaluate(casioExprStr, { deg: casioIsDeg, ans: casioLastAns, mem: casioMem, x: 0 });
+        } catch (err) {
+          casioTable.err = 'Lỗi cú pháp';
+          casioSyncView();
+          return;
+        }
+        casioTable.expr = casioExprStr;
+        casioTable.stage = 'start';
+        casioTable.buffer = '';
+        casioTable.typing = false;
+        casioTable.err = '';
+        casioUi = 'table-num';
+        casioSyncView();
+        return;
+      }
+      const before = casioExprStr;
+      casioCompKey(key);
+      if (casioExprStr !== before) casioTable.err = '';
+      casioSyncView();
+    }
+
+    function casioCommitNum(raw) {
+      if (raw === '' || raw === '-' || raw === '.' || raw === '-.') return null;
+      try { return casioEvaluate(raw, { deg: casioIsDeg, ans: casioLastAns, mem: casioMem }); }
+      catch (err) { return null; }
+    }
+
+    function casioTableNumKey(key) {
+      if (key === 'AC') {
+        if (casioTable.typing && casioTable.buffer) {
+          casioTable.buffer = '';
+          casioTable.typing = false;
+        } else if (casioTable.stage === 'step') casioTable.stage = 'end';
+        else if (casioTable.stage === 'end') casioTable.stage = 'start';
+        else { casioUi = 'table-fx'; }
+        casioSyncView();
+        return;
+      }
+      if ((key >= '0' && key <= '9') || key === '.' ) {
+        if (!casioTable.typing) { casioTable.typing = true; casioTable.buffer = ''; }
+        if (key === '.' && casioTable.buffer.indexOf('.') >= 0) return;
+        casioTable.buffer += key;
+        casioSyncView();
+        return;
+      }
+      if (key === 'NEG' || key === '-') {
+        if (!casioTable.typing) { casioTable.typing = true; casioTable.buffer = ''; }
+        casioTable.buffer = casioTable.buffer.charAt(0) === '-' ? casioTable.buffer.slice(1) : ('-' + casioTable.buffer);
+        casioSyncView();
+        return;
+      }
+      if (key === 'DEL' || key === 'LEFT') {
+        casioTable.buffer = casioTable.buffer.slice(0, -1);
+        casioSyncView();
+        return;
+      }
+      if (key !== '=') return;
+      const n = casioCommitNum(casioTable.typing ? casioTable.buffer : '');
+      if (n === null) return;
+      casioTable.buffer = '';
+      casioTable.typing = false;
+      if (casioTable.stage === 'start') casioTable.start = n;
+      else if (casioTable.stage === 'end') casioTable.end = n;
+      else casioTable.step = n;
+      if (casioTable.stage === 'start') casioTable.stage = 'end';
+      else if (casioTable.stage === 'end') casioTable.stage = 'step';
+      else {
+        if (solveZero(casioTable.step) && !solveZero(casioTable.end - casioTable.start)) {
+          casioTable.stage = 'step';
+          casioTable.err = 'Step khác 0';
+          casioUi = 'table-num';
+          casioSyncView();
+          return;
+        }
+        const rows = [];
+        let x = casioTable.start;
+        const step = casioTable.step;
+        const end = casioTable.end;
+        const dir = step >= 0 ? 1 : -1;
+        let guard = 0;
+        while (guard < 30 && (dir > 0 ? x <= end + 1e-9 : x >= end - 1e-9)) {
+          try {
+            const y = casioEvaluate(casioTable.expr, { deg: casioIsDeg, ans: casioLastAns, mem: casioMem, x: x });
+            rows.push(casioFormatNumber(x) + ' | ' + casioFormatNumber(y));
+          } catch (err) {
+            rows.push(casioFormatNumber(x) + ' | lỗi');
+          }
+          if (solveZero(step)) break;
+          x += step;
+          guard++;
+        }
+        casioTable.rows = rows;
+        casioTable.pos = 0;
+        casioUi = 'table-view';
+      }
+      casioSyncView();
+    }
+
+    function casioTableViewKey(key) {
+      if (key === 'UP') {
+        if (casioTable.pos > 0) casioTable.pos--;
+        casioSyncView();
+        return;
+      }
+      if (key === 'DOWN' || key === '=') {
+        if (casioTable.pos + 4 < casioTable.rows.length) casioTable.pos++;
+        casioSyncView();
+        return;
+      }
+      if (key === 'AC') {
+        casioUi = 'table-fx';
+        casioSyncView();
+      }
+    }
+
+    function casioUiKey(key) {
+      if (casioUi === 'menu') {
+        if (key === '1') casioEnterComp(false);
+        else if (key === '9') casioEnterEqnKind();
+        else if (key === '8') casioEnterTable();
+        else if (key === 'AC') casioEnterComp(false);
+        return;
+      }
+      if (casioUi === 'eqn-kind') {
+        if (key === '1') { casioAskKind = 'sys'; casioUi = 'ask'; casioSyncView(); }
+        else if (key === '2') { casioAskKind = 'poly'; casioUi = 'ask'; casioSyncView(); }
+        else if (key === 'AC') casioEnterMenu();
+        return;
+      }
+      if (casioUi === 'ask') {
+        const n = parseInt(key, 10);
+        if (casioAskKind === 'sys' && n >= 2 && n <= 4) casioStartMatrix(casioSysSpec(n));
+        else if (casioAskKind === 'poly' && (n === 2 || n === 3)) casioStartMatrix(casioPolySpec(n));
+        else if (key === 'AC') { casioUi = 'eqn-kind'; casioSyncView(); }
+        return;
+      }
+      if (casioUi === 'matrix') { casioMatrixKey(key); return; }
+      if (casioUi === 'result') { casioResultKey(key); return; }
+      if (casioUi === 'table-fx') { casioTableFxKey(key); return; }
+      if (casioUi === 'table-num') { casioTableNumKey(key); return; }
+      if (casioUi === 'table-view') casioTableViewKey(key);
+    }
+
+
+    // =========================================================================
+    // 4. MÁY TÍNH CẦM TAY CASIO fx-580VN X CLASSWIZ
+    // =========================================================================
+function casioGcd(a, b) {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b) {
+    const t = a % b;
+    a = b;
+    b = t;
+  }
+  return a || 1;
+}
+
+function casioRound(n) {
+  if (typeof n !== 'number' || !isFinite(n)) throw new Error('math');
+  const r = Math.round(n * 1e10) / 1e10;
+  return Object.is(r, -0) ? 0 : r;
+}
+
+function casioFormatNumber(n) {
+  const r = casioRound(n);
+  if (Math.abs(r - Math.round(r)) < 1e-8) return String(Math.round(r));
+  let s = r.toFixed(6);
+  s = s.replace(/0+$/, '').replace(/\.$/, '');
+  return s;
+}
+
+function casioFormatEng(n, step) {
+  if (!n) return '0';
+  const exp0 = Math.floor(Math.log10(Math.abs(n)));
+  const base = Math.floor(exp0 / 3) * 3;
+  const eng = base - 3 * ((step || 0) % 6);
+  return casioFormatNumber(n / Math.pow(10, eng)) + '×10^' + eng;
+}
+
+function casioFormatDMS(val) {
+  const n = casioRound(val);
+  const sign = n < 0 ? '-' : '';
+  let x = Math.abs(n);
+  let deg = Math.floor(x + 1e-8);
+  let mins = (x - deg) * 60;
+  let min = Math.floor(mins + 1e-8);
+  let sec = Math.round((mins - min) * 60);
+  if (sec >= 60) { sec = 0; min += 1; }
+  if (min >= 60) { min = 0; deg += 1; }
+  return sign + deg + '°' + min + "'" + sec + "''";
+}
+
+function casioFormatFraction(val) {
+  const n = casioRound(val);
+  const sign = n < 0 ? '-' : '';
+  const x = Math.abs(n);
+  const whole = Math.floor(x + 1e-9);
+  const frac = x - whole;
+  if (frac < 1e-8) return casioFormatNumber(n);
+  let best = null;
+  for (let d = 1; d <= 1000; d++) {
+    const num = Math.round(frac * d);
+    if (Math.abs(frac - num / d) < 1e-8) {
+      best = { n: num, d: d };
+      break;
+    }
+  }
+  if (!best || best.n === 0) return casioFormatNumber(n);
+  const g = casioGcd(best.n, best.d);
+  best.n /= g;
+  best.d /= g;
+  if (whole === 0) return sign + best.n + '/' + best.d;
+  return sign + whole + ' ' + best.n + '/' + best.d;
+}
+
+function casioPreprocess(expr, ans, mem) {
+  let s = String(expr || '');
+  s = s.replace(/\s+/g, '');
+  s = s.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+  s = s.replace(/²/g, '^2').replace(/³/g, '^3');
+  s = s.replace(/π/g, 'pi');
+  s = s.replace(/sinh⁻¹/g, 'asinh');
+  s = s.replace(/cosh⁻¹/g, 'acosh');
+  s = s.replace(/tanh⁻¹/g, 'atanh');
+  s = s.replace(/sin⁻¹/g, 'asin');
+  s = s.replace(/cos⁻¹/g, 'acos');
+  s = s.replace(/tan⁻¹/g, 'atan');
+  s = s.replace(/Ans/g, '(' + ans + ')');
+  s = s.replace(/(^|[^A-Za-z0-9])M(?![A-Za-z0-9])/g, function (_, p) { return p + '(' + mem + ')'; });
+  s = s.replace(/(\d+(?:\.\d+)?)°(?:(\d+(?:\.\d+)?)')?(?:(\d+(?:\.\d+)?)(?:''|"))?/g, function (_, d, m, sec) {
+    const v = parseFloat(d) + (m ? parseFloat(m) / 60 : 0) + (sec ? parseFloat(sec) / 3600 : 0);
+    return '(' + v + ')';
+  });
+  const open = (s.match(/\(/g) || []).length;
+  const close = (s.match(/\)/g) || []).length;
+  if (open > close) s += new Array(open - close + 1).join(')');
+  return s;
+}
+
+function casioTokenize(s) {
+  const out = [];
+  let i = 0;
+  while (i < s.length) {
+    const c = s.charAt(i);
+    if (c === ' ') { i++; continue; }
+    if ('+-*/^(),%'.indexOf(c) >= 0) { out.push(c); i++; continue; }
+    if (c === '√') { out.push('sqrt'); i++; continue; }
+    if (c === '∛') { out.push('cbrt'); i++; continue; }
+    if (c === 'π') { out.push('pi'); i++; continue; }
+    if (c >= '0' && c <= '9' || c === '.') {
+      let j = i + 1;
+      while (j < s.length) {
+        const d = s.charAt(j);
+        if ((d >= '0' && d <= '9') || d === '.') j++;
+        else break;
+      }
+      out.push(parseFloat(s.slice(i, j)));
+      i = j;
+      continue;
+    }
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+      let j = i + 1;
+      while (j < s.length) {
+        const d = s.charAt(j);
+        if ((d >= 'a' && d <= 'z') || (d >= 'A' && d <= 'Z') || (d >= '0' && d <= '9')) j++;
+        else break;
+      }
+      out.push(s.slice(i, j));
+      i = j;
+      continue;
+    }
+    throw new Error('syntax');
+  }
+  return out;
+}
+
+function casioFact(n) {
+  if (n < -1e-8 || Math.abs(n - Math.round(n)) > 1e-6 || n > 170) throw new Error('math');
+  let r = 1;
+  const k = Math.round(n);
+  for (let i = 2; i <= k; i++) r *= i;
+  return r;
+}
+
+function casioNcr(n, k) {
+  n = Math.round(n); k = Math.round(k);
+  if (n < 0 || k < 0 || k > n || Math.abs(n - Math.round(n)) > 1e-6) throw new Error('math');
+  k = Math.min(k, n - k);
+  let r = 1;
+  for (let i = 1; i <= k; i++) r = r * (n - k + i) / i;
+  return r;
+}
+
+function casioNpr(n, k) {
+  n = Math.round(n); k = Math.round(k);
+  if (n < 0 || k < 0 || k > n) throw new Error('math');
+  let r = 1;
+  for (let i = 0; i < k; i++) r *= (n - i);
+  return r;
+}
+
+function casioApplyFn(name, arg, deg) {
+  const rad = Math.PI / 180;
+  if (name === 'sin') return deg ? Math.sin(arg * rad) : Math.sin(arg);
+  if (name === 'cos') return deg ? Math.cos(arg * rad) : Math.cos(arg);
+  if (name === 'tan') return deg ? Math.tan(arg * rad) : Math.tan(arg);
+  if (name === 'asin') {
+    const v = Math.asin(arg);
+    return deg ? v / rad : v;
+  }
+  if (name === 'acos') {
+    const v = Math.acos(arg);
+    return deg ? v / rad : v;
+  }
+  if (name === 'atan') {
+    const v = Math.atan(arg);
+    return deg ? v / rad : v;
+  }
+  if (name === 'sinh') return Math.sinh(arg);
+  if (name === 'cosh') return Math.cosh(arg);
+  if (name === 'tanh') return Math.tanh(arg);
+  if (name === 'asinh') return Math.asinh(arg);
+  if (name === 'acosh') return Math.acosh(arg);
+  if (name === 'atanh') return Math.atanh(arg);
+  if (name === 'sqrt') return Math.sqrt(arg);
+  if (name === 'cbrt') return Math.cbrt(arg);
+  if (name === 'log') return Math.log10(arg);
+  if (name === 'ln') return Math.log(arg);
+  if (name === 'abs') return Math.abs(arg);
+  if (name === 'fact') return casioFact(arg);
+  throw new Error('syntax');
+}
+
+function casioEvaluate(expr, opts) {
+  const deg = !opts || opts.deg !== false;
+  const ans = opts && opts.ans != null ? opts.ans : 0;
+  const mem = opts && opts.mem != null ? opts.mem : 0;
+  const xVal = opts && typeof opts.x === 'number' ? opts.x : null;
+  const src = casioPreprocess(expr, ans, mem);
+  if (!src) return 0;
+  const tokens = casioTokenize(src);
+  let i = 0;
+  function peek() { return tokens[i]; }
+  function eat() { return tokens[i++]; }
+  const fns = { sin:1, cos:1, tan:1, asin:1, acos:1, atan:1, sinh:1, cosh:1, tanh:1, asinh:1, acosh:1, atanh:1, sqrt:1, cbrt:1, log:1, ln:1, abs:1, fact:1, nCr:1, nPr:1 };
+  function parseExpr() { return parseAdd(); }
+  function parseAdd() {
+    let v = parseMul();
+    while (peek() === '+' || peek() === '-') {
+      const op = eat();
+      const r = parseMul();
+      v = op === '+' ? v + r : v - r;
+    }
+    return v;
+  }
+  function parseMul() {
+    let v = parsePow();
+    while (peek() === '*' || peek() === '/') {
+      const op = eat();
+      const r = parsePow();
+      v = op === '*' ? v * r : v / r;
+    }
+    return v;
+  }
+  function parsePow() {
+    let v = parseUnary();
+    if (peek() === '^') {
+      eat();
+      v = Math.pow(v, parsePow());
+    }
+    return v;
+  }
+  function parseUnary() {
+    if (peek() === '+') { eat(); return parseUnary(); }
+    if (peek() === '-') { eat(); return -parseUnary(); }
+    return parsePost();
+  }
+  function parsePost() {
+    let v = parsePrimary();
+    while (peek() === '%') { eat(); v = v / 100; }
+    return v;
+  }
+  function parsePrimary() {
+    const t = peek();
+    if (t === '(') {
+      eat();
+      const v = parseExpr();
+      if (peek() === ')') eat();
+      return v;
+    }
+    if (fns[t]) {
+      eat();
+      if (peek() === '(') eat();
+      const arg = parseExpr();
+      if (t === 'nCr' || t === 'nPr') {
+        if (peek() !== ',') throw new Error('syntax');
+        eat();
+        const arg2 = parseExpr();
+        if (peek() === ')') eat();
+        return t === 'nCr' ? casioNcr(arg, arg2) : casioNpr(arg, arg2);
+      }
+      if (peek() === ')') eat();
+      return casioApplyFn(t, arg, deg);
+    }
+    if (t === 'pi') { eat(); return Math.PI; }
+    if (t === 'e') { eat(); return Math.E; }
+    if (t === 'x' || t === 'X') {
+      if (xVal === null) throw new Error('syntax');
+      eat();
+      return xVal;
+    }
+    if (typeof t === 'number') { eat(); return t; }
+    throw new Error('syntax');
+  }
+  const value = parseExpr();
+  if (i !== tokens.length) throw new Error('syntax');
+  return casioRound(value);
+}
+function casioEscapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function casioRenderNatural(expr) {
+  if (!expr) return '0';
+  let s = casioEscapeHtml(expr);
+  s = s.replace(/√\(([^()]*)\)/g, '<span class="nd-rad">√<span class="nd-rad-in">$1</span></span>');
+  s = s.replace(/([0-9.]+)\/([0-9.]+)/g, '<span class="nd-frac"><span class="nd-num">$1</span><span class="nd-den">$2</span></span>');
+  return s;
+}
+
+    let casioIsShift = false;
+    let casioIsAlpha = false;
+    let casioIsDeg = true;
+    let casioExprStr = '';
+    let casioLastAns = 0;
+    let casioScaleVal = 1.0;
+    let isDraggingCasio = false;
+    let casioDrag = null;
+    let casioFrac = false;
+    let casioJustEval = false;
+    let casioMenu = '';
+    let casioDmsStep = 0;
+    let casioMem = 0;
+    let casioHasM = false;
+    let casioIsHyp = false;
+    let casioEngN = 0;
+    let casioAnsDec = null;
+    let casioAnsFrac = null;
+    let casioShown = 'dec';
+
+    function toggleCalculator(force) {
+      const widget = document.getElementById('casioWidget');
+      if (!widget) return;
+      const on = typeof force === 'boolean' ? force : !widget.classList.contains('active');
+      widget.classList.toggle('active', on);
+      const btn = document.getElementById('btnCalc');
+      if (btn) btn.classList.toggle('active-tool', on);
+      if (on) initCasioDrag();
+    }
+
+    function scaleCasio(factor) {
+      casioScaleVal = Math.min(Math.max(0.7, casioScaleVal * factor), 1.6);
+      const widget = document.getElementById('casioWidget');
+      if (widget) widget.style.transform = 'scale(' + casioScaleVal + ')';
+    }
+
+    function initCasioDrag() {
+      const widget = document.getElementById('casioWidget');
+      const header = document.getElementById('casioHeader');
+      if (!widget || !header || header.dataset.bound) return;
+      header.dataset.bound = '1';
+      header.addEventListener('pointerdown', function (e) {
+        if (e.target.closest('button')) return;
+        casioDrag = { x: e.clientX, y: e.clientY, l: widget.offsetLeft, t: widget.offsetTop };
+        header.setPointerCapture(e.pointerId);
+      });
+      header.addEventListener('pointermove', function (e) {
+        if (!casioDrag) return;
+        widget.style.left = Math.max(0, casioDrag.l + e.clientX - casioDrag.x) + 'px';
+        widget.style.top = Math.max(0, casioDrag.t + e.clientY - casioDrag.y) + 'px';
+        widget.style.right = 'auto';
+      });
+      header.addEventListener('pointerup', function () { casioDrag = null; });
+      header.addEventListener('pointercancel', function () { casioDrag = null; });
+    }
+
+    function casioPaint(resultText) {
+      const exprEl = document.getElementById('casioExpr');
+      const resEl = document.getElementById('casioRes');
+      if (exprEl) exprEl.innerHTML = casioRenderNatural(casioExprStr);
+      if (resEl && resultText !== undefined) {
+        if (typeof resultText === 'string' && /^-?\d+\/\d+$/.test(resultText)) resEl.innerHTML = casioRenderNatural(resultText);
+        else resEl.textContent = resultText;
+        resEl.setAttribute('data-form', (typeof resultText === 'string' && resultText.indexOf('/') >= 0) ? 'frac' : 'dec');
+      }
+    }
+
+    function casioRefreshMode() {
+      const deg = document.getElementById('casioDegRad');
+      if (deg) deg.textContent = casioIsDeg ? 'DEG' : 'RAD';
+      const shift = document.getElementById('casioShiftInd');
+      if (shift) shift.style.display = casioIsShift ? 'inline' : 'none';
+      const alpha = document.getElementById('casioAlphaInd');
+      if (alpha) alpha.style.display = casioIsAlpha ? 'inline' : 'none';
+      const mem = document.getElementById('casioMemInd');
+      if (mem) mem.style.display = casioHasM ? 'inline' : 'none';
+      const btnS = document.getElementById('btnShift');
+      const btnA = document.getElementById('btnAlpha');
+      const btnH = document.getElementById('btnHyp');
+      if (btnS) btnS.classList.toggle('is-on', casioIsShift);
+      if (btnA) btnA.classList.toggle('is-on', casioIsAlpha);
+      if (btnH) btnH.classList.toggle('is-on', casioIsHyp);
+      const sin = document.getElementById('btnSin');
+      const cos = document.getElementById('btnCos');
+      const tan = document.getElementById('btnTan');
+      function label(base) {
+        if (casioIsHyp && casioIsShift) return base + 'h⁻¹';
+        if (casioIsHyp) return base + 'h';
+        if (casioIsShift) return base + '⁻¹';
+        return base;
+      }
+      if (sin) sin.textContent = label('sin');
+      if (cos) cos.textContent = label('cos');
+      if (tan) tan.textContent = label('tan');
+    }
+
+    function casioWrapFn(name) {
+      const bare = /^-?\d+(?:\.\d+)?$/.test(casioExprStr);
+      casioExprStr = bare ? (name + '(' + casioExprStr + ')') : (casioExprStr + name + '(');
+      casioJustEval = false;
+      casioPaint();
+    }
+
+    function casioPrepareAnsForms() {
+      casioAnsDec = casioFormatNumber(casioLastAns);
+      const frac = casioFormatFraction(casioLastAns);
+      casioAnsFrac = frac.indexOf('/') >= 0 ? frac : casioAnsDec;
+    }
+
+    function casioPaintAnsForm() {
+      casioFrac = casioShown === 'frac';
+      casioPaint(casioShown === 'frac' ? casioAnsFrac : casioAnsDec);
+    }
+
+    function casioShowAns() {
+      casioPrepareAnsForms();
+      const preferFrac = casioExprStr.indexOf('/') >= 0 && casioAnsFrac !== casioAnsDec;
+      casioShown = preferFrac ? 'frac' : 'dec';
+      casioPaintAnsForm();
+    }
+
+    function casioToggleSD() {
+      if (!casioJustEval) {
+        if (casioExprStr) {
+          try {
+            casioLastAns = casioEvaluate(casioExprStr, { deg: casioIsDeg, ans: casioLastAns, mem: casioMem });
+            casioJustEval = true;
+            casioPrepareAnsForms();
+            casioShown = (casioExprStr.indexOf('/') >= 0 && casioAnsFrac !== casioAnsDec) ? 'frac' : 'dec';
+          } catch (err) {
+            casioJustEval = false;
+            casioPaint(err && err.message === 'math' ? 'Lỗi toán' : 'Lỗi cú pháp');
+            return;
+          }
+        } else {
+          casioPrepareAnsForms();
+        }
+      } else if (casioAnsDec == null) {
+        casioPrepareAnsForms();
+      }
+      if (casioAnsFrac === casioAnsDec) {
+        casioShown = 'dec';
+        casioPaintAnsForm();
+        return;
+      }
+      casioShown = casioShown === 'frac' ? 'dec' : 'frac';
+      casioJustEval = true;
+      casioPaintAnsForm();
+    }
+
+    function casioFromKeyboard(e) {
+      const widget = document.getElementById('casioWidget');
+      const edit = document.getElementById('editModalBackdrop');
+      if (!widget || !widget.classList.contains('active')) return false;
+      if (edit && edit.classList.contains('active')) return false;
+      if (e.ctrlKey || e.metaKey || e.altKey) return false;
+      const k = e.key;
+      if (k >= '0' && k <= '9') { casioKey(k); return true; }
+      if (k === '.' || k === ',') { casioKey('.'); return true; }
+      if (k === 'Enter' || k === '=' || e.code === 'NumpadEnter') { casioKey('='); return true; }
+      if (k === '+' || k === '-' || k === '*' || k === '/') { casioKey(k); return true; }
+      if (k === '(' || k === ')') { casioKey(k); return true; }
+      if (k === '%') { casioKey('%'); return true; }
+      if (k === 'Backspace') { casioKey('DEL'); return true; }
+      if (k === 'ArrowUp') { casioKey('UP'); return true; }
+      if (k === 'ArrowDown') { casioKey('DOWN'); return true; }
+      if (k === 'ArrowLeft') { casioKey('LEFT'); return true; }
+      if (k === 'ArrowRight') { casioKey('RIGHT'); return true; }
+      return false;
+    }
+
+    function casioKey(key) {
+      if (key === 'MENU' || key === 'MODE') { casioEnterMenu(); return; }
+      if (casioUi !== 'comp') {
+        if (key === 'ON') { casioEnterComp(true); return; }
+        casioUiKey(key);
+        return;
+      }
+      casioCompKey(key);
+    }
+
+    function casioCompKey(key) {
+      if (casioMenu && (key === '1' || key === '2' || key === '3' || key === '4' || key === '5')) {
+        const menu = casioMenu;
+        casioMenu = '';
+        if (menu === 'menu' && key === '1') { casioIsDeg = true; casioRefreshMode(); casioPaint('DEG'); return; }
+        if (menu === 'menu' && key === '2') { casioIsDeg = false; casioRefreshMode(); casioPaint('RAD'); return; }
+        if (menu === 'optn' && key === '1') {
+          casioToggleSD();
+          return;
+        }
+        if (menu === 'optn' && key === '2') { casioPaint(casioFormatDMS(casioLastAns)); return; }
+      } else if (casioMenu && key !== 'SHIFT' && key !== 'ALPHA') {
+        casioMenu = '';
+      }
+
+      if (key === 'SHIFT') {
+        casioIsShift = !casioIsShift;
+        casioRefreshMode();
+        return;
+      }
+      if (key === 'ALPHA') {
+        casioIsAlpha = !casioIsAlpha;
+        casioRefreshMode();
+        return;
+      }
+      if (key === 'hyp') {
+        casioIsHyp = !casioIsHyp;
+        casioRefreshMode();
+        return;
+      }
+      if (key === 'MENU' || key === 'MODE') { casioEnterMenu(); return; }
+      if (key === 'OPTN') {
+        casioMenu = 'optn';
+        casioPaint('1:Phân số   2:Độ-phút-giây');
+        return;
+      }
+      if (key === 'CALC') { casioEnterEqnKind(); return; }
+      if (key === 'INT' || key === 'DIFF') { casioEnterTable(); return; }
+      if (key === 'UP') { casioIsDeg = true; casioRefreshMode(); return; }
+      if (key === 'DOWN') { casioIsDeg = false; casioRefreshMode(); return; }
+      if (key === 'RIGHT') return;
+      if (key === 'LEFT') key = 'DEL';
+
+      if (key === 'ON') {
+        if (casioIsShift) {
+          casioIsShift = false;
+          casioRefreshMode();
+          toggleCalculator(false);
+          return;
+        }
+        key = 'AC';
+      }
+      if (key === 'AC') {
+        casioExprStr = '';
+        casioJustEval = false;
+        casioDmsStep = 0;
+        casioFrac = false;
+        casioEngN = 0;
+        if (casioIsShift) { casioIsShift = false; casioRefreshMode(); }
+        casioPaint('0');
+        return;
+      }
+      if (key === 'DEL') {
+        casioExprStr = casioExprStr.slice(0, -1);
+        casioJustEval = false;
+        casioPaint();
+        return;
+      }
+      if (key === 'DMS') {
+        if (casioJustEval) {
+          casioPaint(casioFormatDMS(casioLastAns));
+          return;
+        }
+        casioExprStr += casioDmsStep === 0 ? '°' : (casioDmsStep === 1 ? "'" : "''");
+        casioDmsStep = (casioDmsStep + 1) % 3;
+        casioPaint();
+        return;
+      }
+      if (key === 'SD') {
+        casioToggleSD();
+        return;
+      }
+      if (key === 'sin' || key === 'cos' || key === 'tan') {
+        let name = key;
+        if (casioIsHyp && casioIsShift) name = 'a' + key + 'h';
+        else if (casioIsHyp) name = key + 'h';
+        else if (casioIsShift) name = key + '⁻¹';
+        const shown = name === 'asinh' ? 'sinh⁻¹' : name === 'acosh' ? 'cosh⁻¹' : name === 'atanh' ? 'tanh⁻¹' : name;
+        const bare = /^-?\d+(?:\.\d+)?$/.test(casioExprStr);
+        casioExprStr = bare ? (shown + '(' + casioExprStr + ')') : (casioExprStr + shown + '(');
+        casioJustEval = false;
+        if (casioIsShift) { casioIsShift = false; casioRefreshMode(); }
+        casioPaint();
+        return;
+      }
+      if (key === 'sqrt') { casioWrapFn('√'); return; }
+      if (key === 'cbrt') { casioWrapFn('∛'); return; }
+      if (key === 'abs') { casioWrapFn('abs'); return; }
+      if (key === 'ln') { casioWrapFn('ln'); return; }
+      if (key === 'log') { casioWrapFn('log'); return; }
+      if (key === 'fact') { casioWrapFn('fact'); return; }
+      if (key === 'nCr' || key === 'nPr') {
+        const bare = /^-?\d+(?:\.\d+)?$/.test(casioExprStr);
+        casioExprStr = bare ? (key + '(' + casioExprStr + ',') : (casioExprStr + key + '(');
+        casioJustEval = false;
+        casioPaint();
+        return;
+      }
+      if (key === 'sqr') { casioExprStr += '^2'; casioJustEval = false; casioPaint(); return; }
+      if (key === 'cube') { casioExprStr += '^3'; casioJustEval = false; casioPaint(); return; }
+      if (key === 'pow') { casioExprStr += '^('; casioJustEval = false; casioPaint(); return; }
+      if (key === 'SCI') { casioExprStr += '×10^('; casioJustEval = false; casioPaint(); return; }
+      if (key === 'FRAC') { casioExprStr += '/'; casioJustEval = false; casioPaint(); return; }
+      if (key === 'pi') { casioExprStr += 'π'; casioJustEval = false; casioPaint(); return; }
+      if (key === 'ee') { casioExprStr += 'e'; casioJustEval = false; casioPaint(); return; }
+      if (key === 'NEG') {
+        if (!casioExprStr || /[+\-×÷*/^(,]$/.test(casioExprStr)) casioExprStr += '-';
+        else casioExprStr += '×(-';
+        casioJustEval = false;
+        casioPaint();
+        return;
+      }
+      if (key === 'Ans') { casioExprStr += 'Ans'; casioJustEval = false; casioPaint(); return; }
+      if (key === 'STO') {
+        casioMem = casioLastAns;
+        casioHasM = true;
+        casioRefreshMode();
+        casioPaint('STO ' + casioFormatNumber(casioMem));
+        return;
+      }
+      if (key === 'RCL') {
+        casioExprStr += 'M';
+        casioJustEval = false;
+        casioPaint();
+        return;
+      }
+      if (key === 'M+') {
+        casioMem = casioRound(casioMem + casioLastAns);
+        casioHasM = true;
+        casioRefreshMode();
+        casioPaint('M ' + casioFormatNumber(casioMem));
+        return;
+      }
+      if (key === 'M-') {
+        casioMem = casioRound(casioMem - casioLastAns);
+        casioHasM = true;
+        casioRefreshMode();
+        casioPaint('M ' + casioFormatNumber(casioMem));
+        return;
+      }
+      if (key === 'ENG') {
+        if (!casioJustEval) { casioPaint('Bấm = rồi ENG'); return; }
+        casioEngN += 1;
+        casioPaint(casioFormatEng(casioLastAns, casioEngN));
+        return;
+      }
+      if (key === '=') {
+        try {
+          const ans = casioEvaluate(casioExprStr, { deg: casioIsDeg, ans: casioLastAns, mem: casioMem });
+          casioLastAns = ans;
+          casioJustEval = true;
+          casioEngN = 0;
+          casioShowAns();
+        } catch (err) {
+          casioJustEval = false;
+          casioPaint(err && err.message === 'math' ? 'Lỗi toán' : 'Lỗi cú pháp');
+        }
+        return;
+      }
+      if (key.length === 1) {
+        casioJustEval = false;
+        casioExprStr += key;
+        casioPaint();
+      }
+    }
+    // =========================================================================
+
+
+
+
+  /* === BẢNG VIẾT PHẤN ĐA BỀ MẶT (MULTI-SURFACE CHALKBOARD) === */
+  let chalkColor = '#f8fafc', chalkWidth = 4, chalkDrawing = false, chalkShift = false, chalkStart = null, chalkSnap = null;
+  function resizeBlackboard() {
+    const canvas = document.getElementById('blackboardCanvas');
+    const overlay = document.getElementById('blackboardOverlay');
+    if (!canvas || !overlay) return;
+    const ratio = window.devicePixelRatio || 1;
+    const w = overlay.clientWidth || window.innerWidth;
+    const h = overlay.clientHeight || window.innerHeight;
+    const prev = canvas.getContext('2d').getImageData(0, 0, canvas.width || 1, canvas.height || 1);
+    canvas.width = Math.floor(w * ratio);
+    canvas.height = Math.floor(h * ratio);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    if (prev.width > 1) ctx.putImageData(prev, 0, 0);
+  }
+  function toggleBlackboard(force) {
+    const overlay = document.getElementById('blackboardOverlay');
+    if (!overlay) return;
+    const on = typeof force === 'boolean' ? force : !overlay.classList.contains('active');
+    overlay.classList.toggle('active', on);
+    overlay.setAttribute('aria-hidden', on ? 'false' : 'true');
+    const btn = document.getElementById('btnBlackboard');
+    if (btn) btn.classList.toggle('is-on', on);
+    if (on) resizeBlackboard();
+  }
+  function setChalk(color, width) { chalkColor = color; chalkWidth = width; }
+  function clearBlackboard() {
+    const canvas = document.getElementById('blackboardCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.restore();
+  }
+  function bindBlackboard() {
+    const canvas = document.getElementById('blackboardCanvas');
+    if (!canvas || canvas.dataset.bound) return;
+    canvas.dataset.bound = '1';
+    const ctx = canvas.getContext('2d');
+    function point(e) {
+      const r = canvas.getBoundingClientRect();
+      const src = (e.touches && e.touches[0]) || e;
+      return { x: src.clientX - r.left, y: src.clientY - r.top };
+    }
+    function start(e) {
+      if (!document.getElementById('blackboardOverlay').classList.contains('active')) return;
+      e.preventDefault();
+      chalkDrawing = true;
+      chalkShift = !!(e.shiftKey);
+      chalkStart = point(e);
+      chalkSnap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      ctx.beginPath(); ctx.moveTo(chalkStart.x, chalkStart.y);
+    }
+    function move(e) {
+      if (!chalkDrawing) return;
+      e.preventDefault();
+      const p = point(e);
+      if (e.shiftKey || chalkShift) {
+        ctx.putImageData(chalkSnap, 0, 0);
+        ctx.beginPath();
+        ctx.moveTo(chalkStart.x, chalkStart.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.strokeStyle = chalkColor; ctx.lineWidth = chalkWidth; ctx.lineCap = 'round';
+        ctx.stroke();
+        return;
+      }
+      ctx.strokeStyle = chalkColor; ctx.lineWidth = chalkWidth; ctx.lineCap = 'round';
+      ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x, p.y);
+    }
+    function end() { chalkDrawing = false; chalkSnap = null; }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+  }
+  document.addEventListener('DOMContentLoaded', bindBlackboard);
+  window.addEventListener('resize', resizeBlackboard);
+
+  function setBoardSurface(type) {
+    const bb = document.getElementById('blackboardOverlay');
+    if (!bb) return;
+    bb.classList.remove('surface-green', 'surface-white', 'surface-grid', 'surface-black');
+    bb.classList.add('surface-' + type);
+    document.querySelectorAll('.bb-surfaces .btn-bb').forEach(btn => {
+      btn.classList.toggle('is-active', btn.onclick && btn.onclick.toString().includes("'" + type + "'"));
+    });
+    if (type === 'white') {
+      setChalkColor('#0f172a', 3);
+    } else {
+      setChalkColor('#ffffff', 3);
+    }
+  }
+
+  function setChalkColor(color, size) {
+    chalkColor = color;
+    chalkWidth = size || 3;
+    document.querySelectorAll('.bb-chalks .btn-bb-color').forEach(btn => {
+      const oc = (btn.getAttribute('style') || '');
+      btn.classList.toggle('is-active', oc.includes(color));
+    });
+  }
+
+  function clearBlackboardCanvas() {
+    clearBlackboard();
+  }
 
 </script>
 </body>
