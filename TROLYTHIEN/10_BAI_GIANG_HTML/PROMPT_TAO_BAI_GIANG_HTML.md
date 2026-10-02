@@ -351,6 +351,38 @@ mjx-container svg { display: inline !important; }
 - `getSweetVietnameseVoice()` chỉ nhận voice `vi` có chữ `Natural` (ưu tiên `HoaiMy` hoặc `NamMinh`). `speakBlockVi` không đọc bằng giọng Google. Nếu không có voice Natural, hiện toast: *"Để trải nghiệm giọng đọc AI Hoài My truyền cảm, Thầy/Cô vui lòng mở bài giảng trên trình duyệt Microsoft Edge."*
 - `playAudioOrSpeech()` phát `audio/slide-N.mp3` giọng `vi-VN-HoaiMyNeural` trước. Không có file thì mới gọi `speakBlockVi`. File `Chay_Bai_12_Bang_Edge.bat` mở bài bằng `msedge`. Script `export_hoaimy_audio.py` dùng `edge_tts` để xuất các MP3 đó.
 
+### Vá 27 — Đọc tiếng Việt từng khối, Chuẩn hóa từ viết tắt & đơn vị đo lường Toán - Lý - Hóa, Gom nhóm thanh điều khiển tinh gọn
+
+- Khi nhấn loa `🔊` trên từng khối (`speakBlockAuto`), chỉ đọc DUY NHẤT khối đó bằng giọng Hoài My (`speakBlockVi(blockEl)`), không đọc cả slide. Nút `[🗣️ Đọc slide]` trên thanh điều khiển mới phát toàn bộ slide.
+- **Bộ chuẩn hóa sư phạm `vietnameseMathToSpeech()`:** Tự động chuyển đổi toàn diện các từ viết tắt chuyên môn và đơn vị đo lường Toán - Lý - Hóa sang cách đọc tiếng Việt chuẩn:
+  + Đơn vị độ dài: `120m` $\rightarrow$ *"120 mét"*, `250 m` $\rightarrow$ *"250 mét"*, `km`, `dm`, `cm`, `mm`.
+  + Đơn vị kép & diện tích/thể tích: `500 km/h` $\rightarrow$ *"500 ki-lô-mét trên giờ"*, `m/s`, `m^2` $\rightarrow$ *"mét vuông"*, `m^3` $\rightarrow$ *"mét khối"*, `lít`, `ml`.
+  + Đơn vị Lý - Hóa: `kg`, `g`, `N` (Niu-tơn), `J` (Jun), `W` (Oát), `Pa` (Pát-xcan), `V` (Vôn), `A` (Am-pe), `°C` (độ C), `%` (phần trăm), `mol`.
+  + Số thập phân: `1,2` $\rightarrow$ *"1 phẩy 2"*, `8,6` $\rightarrow$ *"8 phẩy 6"*.
+  + Từ viết tắt: `SGK` $\rightarrow$ *"sách giáo khoa"*, `GV`, `HS`, `HĐ1` $\rightarrow$ *"hoạt động 1"*, `(H.4.17)` $\rightarrow$ *"(Hình 4.17)"*, `tr.74` $\rightarrow$ *"trang 74"*, `tam giác ABC` $\rightarrow$ *"tam giác A B C"*, đoạn thẳng `AB` $\rightarrow$ *"A B"*.
+  + Lượng giác & ký hiệu: $\sin, \cos, \tan, \cot$, căn bậc hai, phân số, góc, vuông góc, song song.
+  + Ký hiệu dấu phẩy toán học: Đỉnh $P'$ $\rightarrow$ *"P phẩy"*, $M'$ $\rightarrow$ *"M phẩy"*, $N'$, $A'$, đoạn thẳng $AB'$ $\rightarrow$ *"A B phẩy"*, $P'P$ $\rightarrow$ *"P phẩy P"*, $y''$ $\rightarrow$ *"y hai phẩy"*, góc $19^\circ 30'$ $\rightarrow$ *"19 độ 30 phút"*. Tự động giải mã thực thể HTML `&#x27;` và `\prime` trước khi đọc.
+- Thanh điều khiển `#controlBar` gom nhóm thành 4 cụm bo tròn (`.ctrl-group`): Điều hướng, Chọn tiết học, Công cụ trợ giảng, Cài đặt & Đa phương tiện, chống tràn màn hình.
+
+### Vá 28 — Menu Chuột Phải Sư Phạm (Quick Context Menu cho Laser & Vẽ)
+
+- Tích hợp menu chuột phải trên slide: Nhấn chuột phải hiện ngay menu nổi tại vị trí con trỏ gồm: 🔴 Con trỏ Laser (L), ✏️ Bút vẽ (P), 🟡 Dạ quang, 🗑️ Xóa nét (C), 📋 Bảng viết (W), ↪️ Tiến / ↩️ Lùi bước. Tiện lợi tối đa khi giảng dạy bằng chuột không dây hoặc bút cảm ứng.
+
+### Vá 29 — Thanh công cụ đảo nổi chia nhóm, Chuột phải tích hợp công cụ và Bộ công cụ Sư phạm Nâng cao (Đồng hồ đếm ngược thông minh, Bảng viết phấn đa bề mặt)
+
+- **Thanh điều khiển nổi (`#controlBar`) gom nhóm độc lập (Floating Pill Islands):**
+  + `.control-bar` có nền trong suốt (`background: transparent; border: none; box-shadow: none; pointer-events: none;`), các cụm `.ctrl-group` là những viên con nhộng nổi độc lập (`pointer-events: auto; background: rgba(15, 23, 42, 0.92); border-radius: 999px;`) có khoảng hở giữa các cụm. Khi giáo viên bấm vào khoảng hở hoặc phía trên thanh điều khiển, slide vẫn nhận lệnh chuyển bước bình thường.
+  + Đưa các công cụ thao tác nhanh lên Menu Chuột Phải (`#contextMenu`) và loại bỏ các nút trùng lặp khỏi thanh điều khiển dưới đáy (bỏ `🔴 Laser`, `✏️ Vẽ`, `📋 Bảng viết` ở đáy để thanh công cụ luôn tinh gọn, thanh thoát).
+- **Bộ Công cụ Sư phạm Tương tác Cao (Pedagogical Power Tools):**
+  1. **Đồng hồ đếm ngược thông minh (`#pedagogicalTimerModal` & `#timerFloatingBadge`):**
+     - Đếm ngược thời gian thảo luận nhóm, làm bài tập với các mốc nhanh: 1 phút, 2 phút, 3 phút, 5 phút, 10 phút hoặc cộng/trừ 30 giây.
+     - Thanh tiến trình trực quan (Progress Bar) và hiệu ứng chuyển màu cảnh báo: Xanh $\rightarrow$ Vàng cam ($\le 30s$) $\rightarrow$ Đỏ nhấp nháy khi hết giờ.
+     - Âm thanh tích tắc cảnh báo 5 giây cuối và chuông hoàn thành phát qua Native Web Audio API (100% offline, không cần tệp âm thanh bên ngoài).
+     - Hỗ trợ thu nhỏ thành huy hiệu nổi gọn gàng ở góc trên bên phải màn hình (`#timerFloatingBadge`) để không che khuất bài giảng trong lúc học sinh làm bài; mở lại nhanh bằng phím tắt `T` hoặc click vào huy hiệu.
+  2. **Bảng viết phấn nâng cấp Đa bề mặt (`#blackboardOverlay`):**
+     - Hỗ trợ chuyển đổi nhanh 4 loại bề mặt bảng chuẩn học đường: 🟢 Bảng xanh truyền thống, ⚪ Bảng trắng hiện đại, 📐 Bảng ô ly vuông (tiện vẽ đồ thị / hình học), ⬛ Bảng đá đen.
+     - Hộp phấn 4 màu trực quan: Trắng, Vàng, Đỏ/Hồng, Xanh dương; xóa sạch 1 chạm và đóng nhanh bằng phím `W` hoặc `Escape`.
+
 ## 5. Bộ khung mã HTML mẫu & Nguồn sự thật Master Template
 
 > [!IMPORTANT]
