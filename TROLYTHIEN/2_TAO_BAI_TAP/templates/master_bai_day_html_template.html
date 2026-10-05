@@ -1,3 +1,27 @@
+<!--
+  ================================================================================
+  MASTER BÀI DẠY HTML TEMPLATE — TRỢ LÝ SƯ PHẠM HOÀNG THIÊN
+  QUY CHUẨN ĐỒNG BỘ CHO DẠY THÊM, PHỤ ĐẠO & BỒI DƯỠNG (KNTT / CÁNH DIỀU / CHÂN TRỜI)
+  ================================================================================
+  1. HÌNH VẼ SVG ĐỘ RỘNG & PADDING AN TOÀN:
+     - viewBox tối thiểu 0 0 480 260 (hoặc rộng hơn phù hợp tỉ lệ hình).
+     - Padding an toàn tối thiểu 35px - 50px ở cả 4 phía biên.
+     - Tuyệt đối không để đỉnh (A, B, C, D) hoặc số đo độ dài dính sát viền hay bị cắt mất chữ.
+  2. CHUẨN MỰC SƯ PHẠM VỀ HÌNH VẼ:
+     - TUYỆT ĐỐI KHÔNG LỘ ĐÁP ÁN TRÊN HÌNH VẼ!
+     - Chỉ ghi dữ kiện giả thiết ban đầu đã cho trong đề bài.
+     - Yếu tố chưa biết / cần tìm / cần tính: Bắt buộc để dấu '?' hoặc để trống theo đúng SGK.
+  3. LỜI GIẢI HIỆN TỪNG BƯỚC (STEP-BY-STEP REVEAL):
+     - Mỗi lời giải phân tách thành các thẻ: <div class="step-card"><span class="step-num">Bước X</span>...</div>
+     - Phím Space hoặc nút [💡 Hiện Lời Giải]: Hiện tuần tự Bước 1 -> Bước 2 -> Bước 3... -> Thu gọn.
+     - Shift + Space hoặc [👁️ Hiện tất cả]: Bung toàn bộ các bước cùng lúc.
+  4. CỠ CHỮ TIVI SIÊU LỚN CHO MÀN HÌNH LỚP HỌC (28px - 44px):
+     - Biến CSS --tv-font-size tuần hoàn qua: 28px -> 32px -> 36px -> 40px -> 44px -> 24px.
+  5. KÉO THẢ HÌNH VẼ TỰ DO & BỐ CỤC LINH HOẠT:
+     - Kéo tự do ra ngoài khung (.diagram-dock-header, .is-floating, resize: both, nút [🆓 Tách nổi], [📌 Ghim lại]).
+     - Bố cục 1-click đưa hình xuống dưới đề bài (.layout-under-problem, nút [⬇️ Dưới đề], [↔️ 2 Cột]).
+  ================================================================================
+-->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -382,10 +406,41 @@
     /* Layout 2 cột: Cột trái Hình ảnh / SVG, Cột phải Đề bài & Lời giải */
     .slide-body-grid {
       display: grid;
-      grid-template-columns: 420px 1fr;
-      gap: 28px;
+      grid-template-columns: 460px 1fr;
+      gap: 24px;
       flex: 1;
+      transition: grid-template-columns 0.25s ease;
     }
+    .slide-body-grid.expanded-panel {
+      grid-template-columns: 58% 1fr;
+    }
+    /* Chế độ đặt hình minh hoạ phía dưới đề bài */
+    .slide-body-grid.layout-under-problem {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 16px !important;
+      overflow-y: auto !important;
+      max-height: calc(100vh - var(--toolbar-h, 54px) - 76px) !important;
+      padding-right: 8px;
+    }
+    .slide-body-grid.layout-under-problem .content-panel {
+      display: contents !important;
+    }
+    .slide-body-grid.layout-under-problem .problem-box {
+      order: 1 !important;
+      width: 100% !important;
+    }
+    .slide-body-grid.layout-under-problem .diagram-panel {
+      order: 2 !important;
+      width: 100% !important;
+      max-width: 820px !important;
+      margin: 0 auto !important;
+    }
+    .slide-body-grid.layout-under-problem .solution-box {
+      order: 3 !important;
+      width: 100% !important;
+    }
+
     .slide-body-full {
       display: flex;
       flex-direction: column;
@@ -397,18 +452,93 @@
       background: #f8fafc;
       border: 2px dashed #94a3b8;
       border-radius: 12px;
-      padding: 14px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
       position: relative;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    /* Chế độ kéo hình tự do khắp màn hình */
+    .diagram-panel.is-floating {
+      position: absolute !important;
+      z-index: 9300 !important;
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.35) !important;
+      border: 2px solid #2563eb !important;
+      background: #ffffff !important;
+      resize: both !important;
+      overflow: hidden !important;
+      min-width: 320px;
+      min-height: 260px;
+      max-width: 90vw;
+      max-height: 85vh;
+      border-radius: 12px;
     }
     .diagram-panel.dragover {
       background: #eff6ff;
       border-color: #2563eb;
       box-shadow: 0 0 12px rgba(37,99,235,0.3);
+    }
+
+    /* Thanh điều hướng / nắm kéo trên đầu khung hình */
+    .diagram-dock-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f1f5f9;
+      border-bottom: 1px solid #cbd5e1;
+      padding: 5px 8px;
+      border-radius: 8px 8px 0 0;
+      cursor: grab;
+      user-select: none;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 8px;
+      touch-action: none;
+    }
+    .diagram-dock-header:active {
+      cursor: grabbing;
+    }
+    .diagram-panel.is-floating .diagram-dock-header {
+      background: #1e293b;
+      color: #f8fafc;
+      border-bottom: 1px solid #334155;
+    }
+    .dock-header-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: inherit;
+    }
+    .dock-header-btns {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-dock-ctrl {
+      background: #ffffff;
+      border: 1px solid #94a3b8;
+      color: #1e293b;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .diagram-panel.is-floating .btn-dock-ctrl {
+      background: #334155;
+      border-color: #475569;
+      color: #f8fafc;
+    }
+    .btn-dock-ctrl:hover {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #ffffff;
     }
     .diagram-wrapper {
       width: 100%;
@@ -417,22 +547,39 @@
       justify-content: center;
       min-height: 240px;
       flex: 1;
-      cursor: zoom-in;
+      cursor: grab;
       overflow: hidden;
       position: relative;
+      touch-action: none;
+      user-select: none;
     }
-    .diagram-wrapper svg {
+    .diagram-wrapper.is-panning {
+      cursor: grabbing;
+    }
+    .diagram-scalable {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       width: 100%;
-      max-height: 350px;
-      transition: transform 0.15s;
+      height: 100%;
+      transform-origin: center center;
+      transition: transform 0.05s ease-out;
+      user-select: none;
+      touch-action: none;
+    }
+    .diagram-scalable svg {
+      width: 100%;
+      height: auto;
+      max-height: 380px;
+      pointer-events: none;
     }
     .custom-diagram-img {
       max-width: 100%;
-      max-height: 350px;
+      max-height: 380px;
       object-fit: contain;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      transition: transform 0.15s;
+      pointer-events: none;
     }
 
     /* Thanh công cụ hình ảnh trong bài */
@@ -557,6 +704,18 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* Mặc định khi mở hộp lời giải: ẩn từng bước, chỉ hiện bước có class is-revealed */
+    .solution-box.is-revealed .step-card {
+      display: none;
+    }
+    .solution-box.is-revealed .step-card.is-revealed {
+      display: block;
+      animation: slideDown 0.25s ease-out;
+    }
+    .solution-box.is-revealed.reveal-all .step-card {
+      display: block !important;
+    }
+
     .solution-header {
       font-size: calc(var(--tv-font-size) * 0.85);
       font-weight: 800;
@@ -564,7 +723,30 @@
       margin-bottom: 12px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 8px;
+      flex-wrap: wrap;
+    }
+    .solution-header-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-step-sub {
+      background: #ffffff;
+      border: 1px solid #86efac;
+      color: #166534;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-step-sub:hover {
+      background: #dcfce7;
+      border-color: #22c55e;
+      color: #14532d;
     }
 
     .step-card {
@@ -1448,7 +1630,7 @@
       <button type="button" class="nav-btn" onclick="prevSlide()" title="Phím mũi tên trái">◀ Trước</button>
       <div id="slideCounter" class="slide-counter">1 / __TOTAL_SLIDES__</div>
       <button type="button" class="nav-btn primary" onclick="nextSlide()" title="Phím mũi tên phải">Sau ▶</button>
-      <button type="button" class="nav-btn success" onclick="toggleCurrentSolution()" title="Phím Space">👁️ Hiện lời giải</button>
+      <button type="button" class="nav-btn success" id="btnTopSolution" onclick="toggleCurrentSolution()" title="Phím Space">👁️ Hiện lời giải</button>
     </div>
     <div class="bar-cluster">
       <div class="drop">
@@ -1479,7 +1661,61 @@
     </div>
   </header>
 
-  <!-- VÙNG TRÌNH CHIẾU SLIDE -->
+  <!-- VÙNG TRÌNH CHIẾU SLIDE
+       CẤU TRÚC CHUẨN CỦA MỖI SLIDE BÀI TẬP (Mẫu tham chiếu bắt buộc khi render vào __SLIDES_HTML__):
+       <section class="slide-card[ active]" data-slide="{num}" data-problem-id="{pid}">
+         <div class="slide-header">
+           <span class="slide-badge">{badge}</span>
+           <div class="slide-quick-ctrl">
+             <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Hiện Lời Giải</button>
+             <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+           </div>
+         </div>
+         <div class="slide-body-grid">
+           <div class="diagram-panel" id="diagramPanel_{pid}" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {pid})">
+             <div class="diagram-dock-header" id="diagramHeader_{pid}" title="Giữ chuột tại đây để kéo hình tự do khắp màn hình">
+               <span class="dock-header-title">📐 Kéo di chuyển hình</span>
+               <div class="dock-header-btns">
+                 <button type="button" class="btn-dock-ctrl btn-pos-toggle" onclick="toggleDiagramUnderProblem({pid})" title="Chuyển hình vẽ xuống phía dưới đề bài">⬇️ Dưới đề</button>
+                 <button type="button" class="btn-dock-ctrl btn-float-toggle" onclick="toggleFloatDiagram({pid})" title="Tách hình nổi tự do">🆓 Tách nổi</button>
+               </div>
+             </div>
+             <div class="diagram-wrapper" id="diagramWrapper_{pid}" ondblclick="zoomActiveSlideDiagram({pid})" title="Kéo chuột để di chuyển • Cuộn chuột để phóng to">
+               <div class="diagram-scalable" id="diagramScale_{pid}">
+                 {SVG_VIEWBOX_MIN_480x260_WITH_SAFE_PADDING}
+               </div>
+             </div>
+             <div class="image-actions-bar">
+               <button type="button" class="img-btn-zoom" onclick="zoomSlideDiagram({pid}, 0.2)">🔍+ To</button>
+               <button type="button" class="img-btn-zoom" onclick="zoomSlideDiagram({pid}, -0.2)">🔍- Nhỏ</button>
+               <button type="button" class="img-btn-action" id="btnPos_{pid}" onclick="toggleDiagramUnderProblem({pid})">⬇️ Dưới đề</button>
+               <button type="button" class="img-btn-action" id="btnFloat_{pid}" onclick="toggleFloatDiagram({pid})">🆓 Tách nổi</button>
+               <button type="button" class="img-btn-action" onclick="toggleExpandDiagram({pid})">↔️ Rộng</button>
+               <button type="button" class="img-btn-action" onclick="resetSlideDiagram({pid})">↺ Đặt lại</button>
+               <button type="button" class="img-btn-action" onclick="zoomActiveSlideDiagram({pid})">⛶ Toàn cảnh</button>
+               <label class="img-btn-upload">📁 Tải Ảnh<input type="file" id="fileInput_{pid}" accept="image/*" style="display:none" onchange="handleImageUpload(event, {pid})"></label>
+               <button type="button" class="img-btn-action" onclick="alert('Thầy hãy chụp màn hình (Win + Shift + S) rồi bấm Ctrl + V để dán ảnh!')">📋 Dán</button>
+               <button type="button" class="img-btn-remove" id="btnRemoveImg_{pid}" style="display:none" onclick="removeCustomImage({pid})">❌ Hình Gốc</button>
+             </div>
+             <div class="drop-hint">💡 Giữ thanh trên để kéo tự do • Bấm ⬇️ Dưới đề để chuyển xuống dưới đề bài • Cuộn chuột để phóng to</div>
+           </div>
+           <div class="content-panel">
+             <div class="problem-box"><strong>Bài {pid}:</strong> {debai}</div>
+             <div class="solution-box">
+               <div class="solution-header">
+                 <span>💡 BÀI GIẢI CHI TIẾT TỪNG BƯỚC:</span>
+                 <div class="solution-header-actions">
+                   <button type="button" class="btn-step-sub" onclick="revealAllSteps(event)">👁️ Hiện tất cả</button>
+                   <button type="button" class="btn-step-sub" onclick="hideCurrentSolution(event)">✖ Ẩn</button>
+                 </div>
+               </div>
+               <div class="step-card"><span class="step-num">Bước 1</span>...</div>
+               <div class="step-card"><span class="step-num">Bước 2</span>...</div>
+             </div>
+           </div>
+         </div>
+       </section>
+  -->
   <main class="slides-container">
     __SLIDES_HTML__
   </main>
@@ -1512,7 +1748,7 @@
     let currentSlide = 1;
     const totalSlides = __TOTAL_SLIDES__;
     let currentFontSizeIdx = 0;
-    const fontSizes = ["28px", "30px", "24px"];
+    const fontSizes = ["28px", "32px", "36px", "40px", "44px", "24px"];
     const originalSvgs = __ORIGINAL_SVGS_JSON__;
 
     function showSlide(index) {
@@ -1526,6 +1762,8 @@
 
       document.getElementById('slideCounter').innerText = `${currentSlide} / ${totalSlides}`;
       document.getElementById('jumpSelect').value = currentSlide;
+
+      updateSolutionButtons(activeCard);
 
       if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
     }
@@ -2137,15 +2375,114 @@
       if (casioUi === 'table-num') { casioTableNumKey(key); return; }
       if (casioUi === 'table-view') casioTableViewKey(key);
     }
+    function updateSolutionButtons(activeCard) {
+      if (!activeCard) activeCard = document.querySelector(`.slide-card[data-slide="${currentSlide}"]`);
+      if (!activeCard) return;
+
+      const solBox = activeCard.querySelector('.solution-box');
+      const topBtn = document.getElementById('btnTopSolution');
+      const slideBtn = activeCard.querySelector('.slide-quick-ctrl .btn-solution-toggle') || activeCard.querySelector('.slide-quick-ctrl .nav-btn.success');
+
+      if (!solBox) {
+        if (topBtn) topBtn.style.display = 'none';
+        return;
+      } else {
+        if (topBtn) topBtn.style.display = '';
+      }
+
+      const cards = solBox.querySelectorAll('.step-card');
+      const isBoxRevealed = solBox.classList.contains('is-revealed');
+      const revealedCards = solBox.querySelectorAll('.step-card.is-revealed');
+
+      let slideLabel = '💡 Hiện Lời Giải';
+      let topLabel = '👁️ Hiện lời giải';
+
+      if (!isBoxRevealed) {
+        slideLabel = cards.length > 0 ? '💡 Hiện Bước 1 ▶' : '💡 Hiện Lời Giải';
+        topLabel = cards.length > 0 ? '👁️ Bước 1 ▶' : '👁️ Hiện lời giải';
+      } else if (cards.length === 0) {
+        slideLabel = '✖ Ẩn Lời Giải';
+        topLabel = '✖ Ẩn lời giải';
+      } else if (revealedCards.length < cards.length) {
+        slideLabel = `💡 Bước ${revealedCards.length + 1}/${cards.length} ▶`;
+        topLabel = `👁️ Bước ${revealedCards.length + 1}/${cards.length} ▶`;
+      } else {
+        slideLabel = '✖ Ẩn Lời Giải';
+        topLabel = '✖ Ẩn lời giải';
+      }
+
+      if (topBtn) topBtn.innerHTML = topLabel;
+      if (slideBtn) slideBtn.innerHTML = slideLabel;
+    }
+
     function toggleCurrentSolution() {
       const activeCard = document.querySelector(`.slide-card[data-slide="${currentSlide}"]`);
       if (!activeCard) return;
 
       const solBox = activeCard.querySelector('.solution-box');
-      if (solBox) {
-        solBox.classList.toggle('is-revealed');
-        if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+      if (!solBox) return;
+
+      const cards = Array.from(solBox.querySelectorAll('.step-card'));
+
+      if (!solBox.classList.contains('is-revealed')) {
+        // Mở hộp lời giải và hiện ngay bước 1
+        solBox.classList.add('is-revealed');
+        solBox.classList.remove('reveal-all');
+        cards.forEach(c => c.classList.remove('is-revealed'));
+        if (cards.length > 0) {
+          cards[0].classList.add('is-revealed');
+        }
+      } else {
+        // Đang mở, kiểm tra tiến độ các bước
+        if (cards.length === 0) {
+          solBox.classList.remove('is-revealed');
+        } else {
+          const revealedCards = cards.filter(c => c.classList.contains('is-revealed'));
+          if (revealedCards.length < cards.length) {
+            // Hiện bước kế tiếp
+            cards[revealedCards.length].classList.add('is-revealed');
+          } else {
+            // Đã hiện hết tất cả bước -> Thu gọn/ẩn lời giải và reset
+            solBox.classList.remove('is-revealed');
+            solBox.classList.remove('reveal-all');
+            cards.forEach(c => c.classList.remove('is-revealed'));
+          }
+        }
       }
+
+      updateSolutionButtons(activeCard);
+      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+    }
+
+    function revealAllSteps(ev) {
+      if (ev) ev.stopPropagation();
+      const activeCard = document.querySelector(`.slide-card[data-slide="${currentSlide}"]`);
+      if (!activeCard) return;
+
+      const solBox = activeCard.querySelector('.solution-box');
+      if (!solBox) return;
+
+      solBox.classList.add('is-revealed');
+      solBox.classList.add('reveal-all');
+      solBox.querySelectorAll('.step-card').forEach(c => c.classList.add('is-revealed'));
+
+      updateSolutionButtons(activeCard);
+      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+    }
+
+    function hideCurrentSolution(ev) {
+      if (ev) ev.stopPropagation();
+      const activeCard = document.querySelector(`.slide-card[data-slide="${currentSlide}"]`);
+      if (!activeCard) return;
+
+      const solBox = activeCard.querySelector('.solution-box');
+      if (!solBox) return;
+
+      solBox.classList.remove('is-revealed');
+      solBox.classList.remove('reveal-all');
+      solBox.querySelectorAll('.step-card').forEach(c => c.classList.remove('is-revealed'));
+
+      updateSolutionButtons(activeCard);
     }
 
     function toggleTVFontSize() {
@@ -3453,7 +3790,10 @@ function casioRenderNatural(expr) {
       if (box) box.remove();
       const defaultSvg = originalSvgs[num];
       const wrapper = document.getElementById('diagramWrapper_' + num);
-      if (wrapper && defaultSvg) wrapper.innerHTML = defaultSvg;
+      if (wrapper && defaultSvg) {
+        wrapper.innerHTML = `<div class="diagram-scalable" id="diagramScale_${num}">${defaultSvg}</div>`;
+        resetSlideDiagram(num);
+      }
       const btnRemove = document.getElementById('btnRemoveImg_' + num);
       if (btnRemove) btnRemove.style.display = 'none';
       const printBox = document.getElementById('printSvg_' + num);
@@ -3461,7 +3801,7 @@ function casioRenderNatural(expr) {
     }
 
     function loadAllSavedImages() {
-      for (let num = 1; num <= 28; num++) {
+      for (const num in originalSvgs) {
         const saved = localStorage.getItem(`custom_lecture_img_${num}`);
         if (saved) applyCustomImage(num, saved);
       }
@@ -3744,9 +4084,245 @@ function casioRenderNatural(expr) {
         prevSlide();
       } else if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
-        toggleCurrentSolution();
+        if (e.shiftKey) {
+          revealAllSteps();
+        } else {
+          toggleCurrentSolution();
+        }
       }
     });
+
+    // =========================================================================
+    // 10. THU PHÓNG (ZOOM), KÉO DI CHUYỂN (PAN) & NỚI RỘNG KHUNG HÌNH TRÊN SLIDE
+    // =========================================================================
+    const slideTransforms = {};
+
+    function getSlideTransform(pid) {
+      if (!slideTransforms[pid]) {
+        slideTransforms[pid] = { zoom: 1, panX: 0, panY: 0 };
+      }
+      return slideTransforms[pid];
+    }
+
+    function applySlideTransform(pid) {
+      const el = document.getElementById(`diagramScale_${pid}`);
+      if (!el) return;
+      const t = getSlideTransform(pid);
+      el.style.transform = `translate(${t.panX}px, ${t.panY}px) scale(${t.zoom})`;
+    }
+
+    function zoomSlideDiagram(pid, delta) {
+      const t = getSlideTransform(pid);
+      t.zoom = Math.max(0.6, Math.min(3.5, parseFloat((t.zoom + delta).toFixed(2))));
+      applySlideTransform(pid);
+    }
+
+    function resetSlideDiagram(pid) {
+      const t = getSlideTransform(pid);
+      t.zoom = 1;
+      t.panX = 0;
+      t.panY = 0;
+      applySlideTransform(pid);
+    }
+
+    function toggleExpandDiagram(pid) {
+      const card = document.querySelector(`.slide-card[data-problem-id="${pid}"]`);
+      if (!card) return;
+      const grid = card.querySelector('.slide-body-grid');
+      if (grid) {
+        grid.classList.toggle('expanded-panel');
+      }
+    }
+
+    function toggleDiagramUnderProblem(pid) {
+      const card = document.querySelector(`.slide-card[data-problem-id="${pid}"]`);
+      if (!card) return;
+      const panel = document.getElementById(`diagramPanel_${pid}`);
+      if (panel && panel.classList.contains('is-floating')) {
+        toggleFloatDiagram(pid);
+      }
+      const grid = card.querySelector('.slide-body-grid');
+      if (!grid) return;
+      const isUnder = grid.classList.toggle('layout-under-problem');
+
+      const btnPos = document.getElementById(`btnPos_${pid}`);
+      const headerPosBtn = panel ? panel.querySelector('.btn-pos-toggle') : null;
+      const label = isUnder ? '↔️ 2 Cột' : '⬇️ Dưới đề';
+      const title = isUnder ? 'Chuyển về bố cục 2 cột ban đầu' : 'Chuyển hình vẽ xuống phía dưới đề bài';
+
+      if (btnPos) {
+        btnPos.innerText = label;
+        btnPos.title = title;
+      }
+      if (headerPosBtn) {
+        headerPosBtn.innerText = label;
+        headerPosBtn.title = title;
+      }
+    }
+
+    function toggleFloatDiagram(pid) {
+      const panel = document.getElementById(`diagramPanel_${pid}`);
+      if (!panel) return;
+      const card = panel.closest('.slide-card');
+      const isFloating = panel.classList.contains('is-floating');
+
+      const btnFloat = document.getElementById(`btnFloat_${pid}`);
+      const headerFloatBtn = panel.querySelector('.btn-float-toggle');
+
+      if (isFloating) {
+        panel.classList.remove('is-floating');
+        panel.style.left = '';
+        panel.style.top = '';
+        panel.style.width = '';
+        panel.style.height = '';
+        if (btnFloat) {
+          btnFloat.innerText = '🆓 Tách nổi';
+          btnFloat.title = 'Tách hình nổi, kéo thả tự do mọi vị trí trên màn hình';
+        }
+        if (headerFloatBtn) {
+          headerFloatBtn.innerText = '🆓 Tách nổi';
+          headerFloatBtn.title = 'Tách hình nổi, kéo thả tự do';
+        }
+      } else {
+        const rect = panel.getBoundingClientRect();
+        const cardRect = card ? card.getBoundingClientRect() : { left: 0, top: 0 };
+
+        panel.classList.add('is-floating');
+        panel.style.width = Math.max(rect.width, 440) + 'px';
+        panel.style.height = Math.max(rect.height, 320) + 'px';
+
+        const leftPos = Math.max(20, rect.left - cardRect.left);
+        const topPos = Math.max(20, rect.top - cardRect.top);
+        panel.style.left = leftPos + 'px';
+        panel.style.top = topPos + 'px';
+
+        if (btnFloat) {
+          btnFloat.innerText = '📌 Ghim lại';
+          btnFloat.title = 'Ghim hình lại vị trí cố định ban đầu';
+        }
+        if (headerFloatBtn) {
+          headerFloatBtn.innerText = '📌 Ghim lại';
+          headerFloatBtn.title = 'Ghim hình lại vị trí cố định ban đầu';
+        }
+      }
+    }
+
+    function bindFloatPanelDrag() {
+      document.querySelectorAll('.diagram-dock-header').forEach(header => {
+        const panel = header.closest('.diagram-panel');
+        if (!panel) return;
+        const idParts = panel.id.split('_');
+        if (idParts.length < 2) return;
+        const pid = idParts[1];
+
+        let isDragging = false;
+        let startMouseX = 0;
+        let startMouseY = 0;
+        let startLeft = 0;
+        let startTop = 0;
+
+        header.addEventListener('mousedown', (e) => {
+          if (e.target.closest('button') || e.target.closest('input') || e.target.closest('label')) return;
+          if (e.button !== 0) return;
+
+          const card = panel.closest('.slide-card');
+          const cardRect = card ? card.getBoundingClientRect() : { left: 0, top: 0 };
+
+          if (!panel.classList.contains('is-floating')) {
+            const rect = panel.getBoundingClientRect();
+            panel.classList.add('is-floating');
+            panel.style.width = Math.max(rect.width, 440) + 'px';
+            panel.style.height = Math.max(rect.height, 320) + 'px';
+            panel.style.left = Math.max(20, rect.left - cardRect.left) + 'px';
+            panel.style.top = Math.max(20, rect.top - cardRect.top) + 'px';
+
+            const btnFloat = document.getElementById(`btnFloat_${pid}`);
+            const headerFloatBtn = panel.querySelector('.btn-float-toggle');
+            if (btnFloat) btnFloat.innerText = '📌 Ghim lại';
+            if (headerFloatBtn) headerFloatBtn.innerText = '📌 Ghim lại';
+          }
+
+          isDragging = true;
+          startMouseX = e.clientX;
+          startMouseY = e.clientY;
+          startLeft = parseFloat(panel.style.left) || 0;
+          startTop = parseFloat(panel.style.top) || 0;
+          header.style.cursor = 'grabbing';
+          e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          const card = panel.closest('.slide-card');
+          const cardRect = card ? card.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+
+          let deltaX = e.clientX - startMouseX;
+          let deltaY = e.clientY - startMouseY;
+          let newLeft = startLeft + deltaX;
+          let newTop = startTop + deltaY;
+
+          newLeft = Math.max(10, Math.min(newLeft, cardRect.width - panel.offsetWidth - 10));
+          newTop = Math.max(10, Math.min(newTop, cardRect.height - panel.offsetHeight - 10));
+
+          panel.style.left = newLeft + 'px';
+          panel.style.top = newTop + 'px';
+        });
+
+        window.addEventListener('mouseup', () => {
+          if (isDragging) {
+            isDragging = false;
+            header.style.cursor = 'grab';
+          }
+        });
+      });
+    }
+
+    function bindDiagramPanZoom() {
+      document.querySelectorAll('.diagram-wrapper').forEach(wrapper => {
+        const idParts = wrapper.id.split('_');
+        if (idParts.length < 2) return;
+        const pid = idParts[1];
+
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        wrapper.addEventListener('mousedown', (e) => {
+          if (document.body.classList.contains('laser-mode') || document.body.classList.contains('pen-mode')) return;
+          if (e.target.closest('.image-actions-bar')) return;
+          if (e.button !== 0) return;
+
+          isDragging = true;
+          wrapper.classList.add('is-panning');
+          const t = getSlideTransform(pid);
+          startX = e.clientX - t.panX;
+          startY = e.clientY - t.panY;
+          e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          const t = getSlideTransform(pid);
+          t.panX = e.clientX - startX;
+          t.panY = e.clientY - startY;
+          applySlideTransform(pid);
+        });
+
+        window.addEventListener('mouseup', () => {
+          if (isDragging) {
+            isDragging = false;
+            wrapper.classList.remove('is-panning');
+          }
+        });
+
+        wrapper.addEventListener('wheel', (e) => {
+          if (document.body.classList.contains('laser-mode') || document.body.classList.contains('pen-mode')) return;
+          e.preventDefault();
+          const delta = e.deltaY < 0 ? 0.15 : -0.15;
+          zoomSlideDiagram(pid, delta);
+        }, { passive: false });
+      });
+    }
 
     // Khởi tạo hệ thống
     function syncToolbarOffset() {
@@ -3762,6 +4338,8 @@ function casioRenderNatural(expr) {
     });
     bindDrawCanvas();
     bindBlackboard();
+    bindDiagramPanZoom();
+    bindFloatPanelDrag();
     loadAllSavedImages();
     initEditableBlocks();
     showSlide(1);
