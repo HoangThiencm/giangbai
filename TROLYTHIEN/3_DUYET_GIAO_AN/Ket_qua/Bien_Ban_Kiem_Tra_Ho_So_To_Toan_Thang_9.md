@@ -38,15 +38,16 @@
 | **1** | **HỒ ĐĂNG DANH** | Toán 6, Toán 9 | 33 tiết (4 phân môn) | Đạt *(Chấp thuận giải trình có lý do chính đáng)* | **DUYỆT**<br>*(Xếp loại: Tốt)* |
 | **2** | **TRẦN LONG HẢI** | Toán 8 | 20 tiết (2 phân môn) | Đủ 100% Tháng 9 & vượt Tuần 5 | **TRẢ HỒ SƠ**<br>*(Sửa sai sót toán học)* |
 | **3** | **NGUYỄN THỊ THẢO** | Toán 6, Toán 7 | 34 tiết (4 phân môn) | Đủ 100% Tháng 9 (12t Số 6) & vượt Tuần 5 | **DUYỆT**<br>*(Xếp loại: Khá)* |
-| *4* | *[Đang chờ nạp...]* | *—* | *—* | *—* | *—* |
+| **4** | **TRẦN SÁNG** | Toán 6, Toán 9 | 28 tiết (4 phân môn, 144 tr) | Toán 9 đủ & vượt tiến độ;<br>❌ **Thiếu 04 tiết Tuần 4 Toán 6** | **TRẢ HỒ SƠ**<br>*(Bổ sung 4 tiết)* |
+| *5* | *[Đang chờ nạp...]* | *—* | *—* | *—* | *—* |
 
 ---
 
 ## IV. ĐÁNH GIÁ VÀ NHẬN XÉT CỤ THỂ TỪNG GIÁO VIÊN
 
 ### 1. Giáo viên: HỒ ĐĂNG DANH (Môn Toán 6, Toán 9)
-- **Ưu điểm**: Hồ sơ giáo án chuẩn bị chu đáo, nộp đủ cả 4 phân môn (Đại số 9, Hình học 9, Số học 6, Hình học 6) với tổng số 33 tiết. Thể thức văn bản và Header/Footer đúng quy chuẩn trường THCS Trần Phú. Cấu trúc các bài dạy đảm bảo đủ 4 hoạt động theo CV 5512.
-- **Về tiến độ thực hiện**: Đối với 02 tiết còn thiếu của Tuần 4 (Tiết 4 Bài 12 Hình 9 và Tiết 12 Số 6), tổ chuyên môn chấp thuận giải trình có lý do chính đáng và kế hoạch dạy bù trong tuần tiếp theo của thầy, thống nhất nghiệm thu tiến độ đạt yêu cầu.
+- **Ưu điểm**: Hồ sơ giáo án chuẩn bị chu đáo, nộp đủ 4 phân môn (Đại số 9, Hình học 9, Số học 6, Hình học 6) với tổng số 33 tiết. Thể thức văn bản và Header/Footer đúng quy chuẩn trường THCS Trần Phú. Cấu trúc bài dạy đảm bảo đủ 4 hoạt động theo CV 5512.
+- **Về tiến độ**: Đối với 02 tiết còn thiếu của Tuần 4 (Tiết 4 Bài 12 Hình 9 và Tiết 12 Số 6), tổ chuyên môn chấp thuận giải trình có lý do chính đáng và kế hoạch dạy bù trong tuần tiếp theo của thầy, thống nhất nghiệm thu tiến độ đạt yêu cầu.
 - **Tồn tại cần lưu ý**: Các câu mô tả mục tiêu chỉ báo NLS và AI tại Bài 1 (Đại số 9), Bài 6 và Bài 7 (Số học 6) chưa được định dạng in đậm, nghiêng theo quy định chuyên môn.
 - **Kết luận và xếp loại**: **DUYỆT HỒ SƠ (Xếp loại: TỐT)**. Đề nghị thầy hoàn thiện định dạng in đậm nghiêng phần tích hợp NLS/AI trước khi giảng dạy trên lớp.
 
@@ -76,7 +77,33 @@
 
 ---
 
-### 4. Giáo viên tiếp theo:
+### 4. Giáo viên: TRẦN SÁNG (Môn Toán 6, Toán 9)
+- **Ưu điểm**:
+  - Hồ sơ giáo án chuẩn bị với khối lượng rất lớn: 28 tiết (144 trang) thuộc 4 phân môn. Thể thức văn bản chuẩn mực, Header và Footer đầy đủ, chính xác từng trang theo quy định trường THCS Trần Phú.
+  - **Môn Toán 9** (Đại số 9: 59 trang — 12 tiết; Hình học 9: 17 trang — 4 tiết) soạn rất công phu, chuẩn mực, đảm bảo 100% tiến độ tháng 9 và vượt tuần 5. Ký hiệu góc và tỉ số lượng giác, hệ thức lượng trong tam giác vuông chuẩn xác tuyệt đối.
+  - **Tích hợp NLS và AI rất xuất sắc**: Nội dung tích hợp Năng lực số (5.3.TC2a) và Trí tuệ nhân tạo AI (9.B2.1) tại Bài 1 Đại số 9, cùng NLS (5.3 và 3.1) tại Bài 6 Số học 6 **đã được định dạng _IN ĐẬM, NGHIÊNG_** rất chuẩn xác theo quy chế chuyên môn.
+- **Tồn tại nghiêm trọng về tiến độ thực hiện chương trình (Khối 6)**:
+  - Hồ sơ môn Toán 6 chưa đảm bảo đủ 4 tuần của Tháng 9 theo PPCT Phụ lục 3, **thiếu tổng cộng 04 tiết**:
+    1. **Phân môn Số học 6** (43 trang): Mới nộp 09 tiết (đến hết Bài 6 của Tuần 3), **THIẾU HOÀN TOÀN CẢ TUẦN 4 gồm 03 tiết**: Tiết 10, 11 (Bài 7: Thứ tự thực hiện các phép tính) và Tiết 12 (Luyện tập chung).
+    2. **Phân môn Hình học 6** (25 trang): Mới nộp 03 tiết (Bài 18 và Tiết 1 Bài 19), **THIẾU TIẾT 4 (Tiết 2 Bài 19: Hình bình hành, hình thang cân) của Tuần 4**.
+- **Kết luận và xếp loại**: **ĐỀ NGHỊ TRẢ HỒ SƠ**. Yêu cầu thầy Trần Sáng soạn bổ sung gấp 04 tiết còn thiếu của Tuần 4 môn Toán 6 (03 tiết Số học 6 và 01 tiết Hình học 6) nộp lại tổ chuyên môn thẩm định để phê duyệt hoàn thành hồ sơ tháng 9.
+
+---
+
+### 5. Thẩm định hồ sơ giáo viên: LÊ THỊ BÌNH
+- **Phân công giảng dạy**: Môn Toán 7, Toán 8 và Hoạt động trải nghiệm, hướng nghiệp 7 (HĐTN 7).
+- **Tiến độ và khối lượng**: Nộp 05 tệp PDF gồm 178 trang, tổng cộng 45 tiết. Đảm bảo 100% tiến độ 4 tuần của Tháng 9 và vượt tiến độ sang tuần 5 ở phân môn Đại số 7 (Bài 3).
+- **Ưu điểm**:
+  + Hồ sơ chuẩn bị đồ sộ, công phu, phương pháp tổ chức 4 hoạt động CV 5512 rõ nét.
+  + Tích hợp Năng lực số và AI trong HĐTN 7 và Đại số 8 cực kỳ xuất sắc; toàn bộ các câu chỉ báo hành động NLS và AI đều được in đậm, nghiêng rất chuẩn mực và khớp 100% với Phụ lục 3.
+  + Kiến thức toán học chính xác, công thức và ký hiệu góc trong Hình học 7 và Hình học 8 chuẩn mực; khắc phục hoàn toàn lỗi toán học thường gặp ở bài Tứ giác.
+- **Tồn tại, lưu ý**:
+  + Tại Mục tiêu Trang 1 Hình học 8 cần bổ sung định dạng in đậm, nghiêng cho mã NLS 1.1 và 5.3; chú ý chỉnh sửa ký hiệu góc A bị lỗi font ở Trang 51 Hình học 8.
+- **Kết luận thẩm định**: **DUYỆT TOÀN BỘ HỒ SƠ - XẾP LOẠI: TỐT**.
+
+---
+
+### 6. Giáo viên tiếp theo:
 *[Đang chờ nạp hồ sơ kiểm tra cuốn chiếu tiếp theo...]*
 
 ---
@@ -87,3 +114,4 @@
 | :---: | :---: |
 | *(Ký và ghi rõ họ tên)* | *(Hiệu trưởng / Phó Hiệu trưởng ký duyệt)* |
 | <br><br><br><br>.................................................... | <br><br><br><br>.................................................... |
+
