@@ -4,23 +4,33 @@
 PASS
 
 ## Đối chiếu scope
-- Thanh công cụ thu gọn 1 hàng duy nhất (Single-row 54px, flex-wrap: nowrap, không tràn dòng): ĐẠT.
-- Chuyển chọn bài sang nút "☰ Danh mục bài" mở Drawer/Modal danh sách dạng lưới: ĐẠT.
-- Gom các nhóm công cụ thành 3 Dropdown Popover (Bút & Bảng, Trợ giảng, Tiện ích): ĐẠT.
-- Đổi tên máy tính thành "Máy tính" / "MÁY TÍNH TRỢ GIẢNG" (bỏ mác Casio fx-580 trên thanh điều khiển): ĐẠT.
-- Bổ sung 3 tab máy tính: Tính toán lượng giác, Giải phương trình bậc hai ($ax^2+bx+c=0$), Giải hệ 2 phương trình bậc nhất 2 ẩn: ĐẠT.
-- Đồng bộ hoàn chỉnh giữa template `master_bai_day_html_template.html` và bài dạy `Bai_12_...html`: ĐẠT.
+- Khảo sát và hỗ trợ phím T / nút chữ T trên bút trình chiếu hoạt động như Chuột Phải (mở/đóng Menu Chuột Phải Sư Phạm): ĐÃ THỰC HIỆN.
+- Bổ sung bộ theo dõi tọa độ con trỏ (`lastPointerX`, `lastPointerY`) qua `mousemove` và `pointermove`: ĐÃ THỰC HIỆN.
+- Cơ chế bật/tắt (Toggle) khi bấm phím T hoặc ContextMenu tại vị trí con trỏ: ĐÃ THỰC HIỆN.
+- Bảo vệ khi đang nhập văn bản trong ô input, textarea, contenteditable (không bị mở menu khi gõ chữ T): ĐÃ THỰC HIỆN.
+- Giữ nguyên sự kiện chuột phải vật lý (`contextmenu`) mở menu tại tọa độ click: ĐÃ THỰC HIỆN.
+- Cập nhật đồng bộ các file trong phạm vi:
+  + `TROLYTHIEN/10_BAI_GIANG_HTML/templates/master_lecture_template.html`
+  + `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_12_Mot_so_he_thuc_giua_canh_va_goc_trong_tam_giac_vuong_va_ung_dung.html`
+  + `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_4_Phuong_trinh_quy_ve_phuong_trinh_bac_nhat_mot_an.html`
+  + `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md`
 
 ## Test đã chạy
-- `python scratch/verify_survey2.py`: PASS 8/8 bài kiểm tra trên cả 2 tệp.
-- Kiểm thử logic giải PT bậc hai: $x^2 - 5x + 6 = 0 \to x_1 = 3, x_2 = 2$; hạ bậc khi $a = 0$; phân biệt nghiệm kép và vô nghiệm.
-- Kiểm thử logic giải Hệ phương trình 2 ẩn: $\begin{cases} 2x + y = 5 \\ x - y = 1 \end{cases} \to (2; 1)$; xử lý định thức $D = 0$.
-- Kiểm tra hiển thị header cố định 54px không wrap trên các kích thước màn hình.
+1. `node tests/trolythien-template-smoke.js`: PASS (master_lecture_template validation PASS, 6641 lines, 9 slides).
+2. `node tests/trolythien-bai-giang-html-smoke.js`: PASS.
+3. Automated Static Analysis Test (`verify_test.py`):
+   - Kiểm tra `lastPointerX` / `lastPointerY` tracking: PASS trên cả 3 file HTML.
+   - Kiểm tra `toggleContextMenuAt` & `showContextMenuAt`: PASS trên cả 3 file HTML.
+   - Kiểm tra xử lý `e.key === 't' || e.key === 'T' || e.key === 'ContextMenu'`: PASS trên cả 3 file HTML.
+   - Kiểm tra input / textarea / contenteditable guard: PASS trên cả 3 file HTML.
+   - Kiểm tra listener chuột phải vật lý `showContextMenuAt(e.clientX, e.clientY)`: PASS trên cả 3 file HTML.
 
 ## Pass / Fail từng tiêu chí
-1. Giao diện công cụ 1 hàng duy nhất, gọn gàng, không bị vỡ hàng: PASS.
-2. Máy tính trợ giảng đa năng (Tính toán, Giải PT bậc hai, Giải hệ PT): PASS.
-3. Cập nhật đồng bộ hoàn toàn vào file mẫu Master Template: PASS.
+- Bấm nút khoanh đỏ (`T`) trên bút hoặc phím `T` mở/đóng Menu Chuột Phải: PASS.
+- Menu mở đúng tọa độ con trỏ chuột/ngòi bút: PASS.
+- Không gây xung đột khi gõ chữ trong ô soạn thảo/thiết kế: PASS.
+- Chuột phải vật lý vẫn hoạt động bình thường: PASS.
+- Không phá vỡ các phím điều hướng slide (Arrow, Space, PageDown, v.v.): PASS.
 
 ## Bug
-Không có.
+Không có bug tồn đọng.

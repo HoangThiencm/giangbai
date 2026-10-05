@@ -42,20 +42,22 @@ Chỉ sau khi có đủ Môn, Lớp và Số tiết mới được thực hiện
 
 ### Vá 3 — Bảng 2 cột sư phạm chuẩn CV 5512 và GDPT 2018
 
-Mỗi hoạt động chính có bảng 2 cột:
-
-| Hoạt động của Giáo viên | Hoạt động của Học sinh |
-| --- | --- |
-| Việc GV giao, câu hỏi, cách tổ chức | Việc HS làm, sản phẩm, cách báo cáo |
-
-Đủ 4 bước, không bỏ bước, không để trống cột:
-
+Trong cấu trúc hồ sơ Kế hoạch bài dạy chuẩn CV 5512 và GDPT 2018 gồm 4 bước:
 1. Chuyển giao nhiệm vụ
 2. Thực hiện nhiệm vụ
 3. Báo cáo, thảo luận
 4. Kết luận, nhận định
+với sự tương tác hai chiều:
+| Hoạt động của Giáo viên | Hoạt động của Học sinh |
+| --- | --- |
+| Việc GV giao, câu hỏi, cách tổ chức | Việc HS làm, sản phẩm, cách báo cáo |
 
-Cột GV mô tả việc giao và chốt. Cột HS mô tả việc làm cụ thể. Không viết một cột rồi để cột kia trắng.
+**ĐẶC BIỆT LƯU Ý KHI LÊN SLIDE TRÌNH CHIẾU CHO HỌC SINH:**
+Slide trình chiếu là công cụ trực quan giảng dạy giữa giáo viên và học sinh, **TUYỆT ĐỐI KHÔNG** đưa các bước hành chính sư phạm giáo án vào slide (CẤM ghi "Bước 1: Chuyển giao nhiệm vụ", "Bước 2: Tổ chức thực hiện", "4 BƯỚC CV 5512" lên slide chiếu, học sinh không cần học các bước hành chính này!).
+
+Bố cục 2 cột sư phạm chuẩn trên slide chiếu:
+- **Cột trái (`col-board` - Bảng ghi bài):** Lưu lại nội dung cốt lõi học sinh ghi vào vở (Tiêu đề mục, Định nghĩa, Công thức tổng quát `data-step="0"` hoặc `fixed`, Ví dụ mẫu và lời giải chuẩn).
+- **Cột phải (`col-task` - Hoạt động học tập):** Không gian tương tác của học sinh (Tình huống khởi động, Hoạt động khám phá, Câu hỏi nhận biết, Bài tập luyện tập, Vận dụng, Trò chơi trắc nghiệm).
 
 ### Vá 4 — MathJax 3
 
@@ -318,16 +320,24 @@ mjx-container svg { display: inline !important; }
      - Đóng nhanh bằng phím `Escape`, nút `✕` hoặc click ra ngoài vùng nền mờ.
   3. **Event delegation trên `#slideDeck`:** bắt click phóng to mọi `svg` (trừ `mjx-container`), `img`, `.figure-box`, `[data-zoomable]`. Click hình không được gọi `nextStep()`. Delegation vẫn còn sau `toggleBilingual` hoặc khi gán lại `innerHTML` trong chế độ Thiết kế.
 
-### Vá 23 — Dẫn dắt Sư phạm 4 bước Độc lập (4-Step Pedagogical Scaffolding)
+### Vá 23 — Dẫn dắt Sư phạm & Tiến trình Tuần tự Dứt điểm (Pedagogical Flow & Step Sequence)
 
-- Mỗi ví dụ, bài tập, luyện tập tách đúng 4 bước `data-step`, không gộp gợi ý với lời giải và đáp án:
-  + Bước 1 (`data-step="1"`): Đề bài và hình vẽ ban đầu. Cột ghi bảng chỉ ghi tiêu đề mục hoặc để trống.
-  + Bước 2 (`data-step="2"`): Gợi ý / dẫn dắt / câu hỏi tư duy. Cấm hiện đáp án hay lời giải.
-  + Bước 3 (`data-step="3"`): Các bước giải chi tiết, biến đổi tương đương, tính toán.
-  + Bước 4 (`data-step="4"`): Chốt đáp số và nội dung kiến thức cốt lõi để học sinh ghi bảng, chép vở.
-- Đáp số cuối (câu «Vậy») chỉ hiện ở bước 4, ví dụ bằng `inline-anim` `data-step="4"`.
+- **Nguyên tắc Hoạt động nào xong dứt điểm hoạt động đó:** Ví dụ thì xong trọn vẹn ví dụ rồi mới tiếp theo sang bài luyện tập. Nếu slide có cả Ví dụ và Luyện tập:
+  + Cột trái: Bước $k$ (Ví dụ - Đề bài) $
+ightarrow$ Bước $k+1$ (Ví dụ - Hướng dẫn). *Ví dụ hoàn tất 100%!*
+  + Cột phải: Bước $k+2$ (Luyện tập - Đề bài) $
+ightarrow$ Bước $k+3$ (Luyện tập - Hướng dẫn). *Luyện tập hoàn tất 100%!*
+  + Tuyệt đối cấm nhảy qua nhảy lại lộn xộn giữa hai cột (CẤM: Trái Đề $
+ightarrow$ Phải Luyện tập Đề $
+ightarrow$ Phải Luyện tập Giải $
+ightarrow$ Trái Ví dụ Giải).
+- **Nguyên tắc Tiêu đề tinh gọn trực diện (1–3 từ):** Không dùng tiêu đề rườm rà.
+  + Dùng `HƯỚNG DẪN` thay cho `HƯỚNG DẪN GIẢI TỪNG BƯỚC` hoặc `LỜI GIẢI CHI TIẾT (CHUẨN SGK)`.
+  + Dùng `VÍ DỤ 1` thay cho `VÍ DỤ MẪU 1 (ĐỀ BÀI)`.
+  + Dùng `LUYỆN TẬP 1`, `HOẠT ĐỘNG 1`, `CÂU HỎI`, `ĐÁP ÁN`, `TRỌNG TÂM`, `CHÚ Ý`, `DẶN DÒ`.
 - **Nguyên tắc Đồng hành Đề bài - Hình vẽ:** SVG hoặc ảnh minh họa bắt buộc cùng `data-step` với đề bài hoặc tình huống mà nó minh họa (nhúng trong khối đề, hoặc khối hình cùng số bước). Cấm tách hình sang bước sau khiến đề bài bị trống hình.
-- **Nguyên tắc Phân bước Tuần tự 2 cột:** Trong một slide, cấm gán cùng một số `data-step` (kể cả `data-step="1"`) cho cả Cột Ghi Bảng và Cột Hoạt Động. Mỗi lần bấm chỉ hiện một ý: bước 1 là đề bài kèm hình; bước sau mới tới cột còn lại.
+- **Nguyên tắc Phân bước Tuần tự 2 cột:** Trong một slide, cấm gán cùng một số `data-step` (kể cả `data-step="1"`) cho cả Cột Ghi Bảng và Cột Hoạt Động (trừ `data-step="0"` cố định). Mỗi lần bấm chỉ xuất hiện một nội dung theo luồng tư duy tuần tự một chiều.
+- **Thống nhất Thanh công cụ & Menu chuột phải:** Chuột phải chỉ chứa các công cụ vẽ trực tiếp trên màn hình (Laser, Bút vẽ, Dạ quang, Xóa nét, Màn hình đen). Bảng viết toàn màn hình (`📋 Bảng viết` / phím `W`) nằm trên thanh công cụ `#controlBar`, có chèn ảnh máy tính (`📁 Chèn Ảnh`), dán ảnh clipboard (`📋 Dán (Ctrl+V)`), kéo thả, phóng to thu nhỏ, xoay và xóa ảnh.
 
 ### Vá 24 — Tương thích 100% Bút trình chiếu & Điều hướng Bàn phím đa năng (Universal Presenter & Key Navigation)
 
@@ -336,6 +346,9 @@ mjx-container svg { display: inline !important; }
 - Phím màn hình đen `b` và `.` bật/tắt lớp `.blank-screen`.
 - Gọi `preventDefault()` để trình duyệt không cuộn trang hoặc quay lại lịch sử.
 - Sau khi bấm nút trên `.control-bar`, gọi `blur()` để phím `Space` không kích hoạt lại nút đang focus.
+- Nút chữ `T` trên bút trình chiếu (phím `t` / `T`, `ContextMenu`, barrel button) tương đương chuột phải: gọi `toggleContextMenuAt(lastPointerX, lastPointerY)`. Lần 1 mở Menu Chuột Phải Sư Phạm, lần 2 đóng. `Escape` và click ngoài cũng đóng.
+- `lastPointerX` và `lastPointerY` cập nhật bằng `mousemove` và `pointermove`. Khi chưa di chuột, tọa độ mặc định là tâm cửa sổ (`innerWidth / 2`, `innerHeight / 2`). Menu kẹp vào trong màn hình, không tràn mép phải và mép dưới.
+- Nếu focus đang ở `input`, `textarea` hoặc `[contenteditable="true"]` thì bỏ qua phím `T` để giáo viên gõ chữ bình thường.
 
 ### Vá 25 — Công cụ Trợ giảng Trực quan: Con trỏ Laser Đỏ & Bút vẽ Đánh dấu trên Slide (Virtual Laser Pointer & In-Slide Annotation Canvas)
 
@@ -366,7 +379,7 @@ mjx-container svg { display: inline !important; }
 
 ### Vá 28 — Menu Chuột Phải Sư Phạm (Quick Context Menu cho Laser & Vẽ)
 
-- Tích hợp menu chuột phải trên slide: Nhấn chuột phải hiện ngay menu nổi tại vị trí con trỏ gồm: 🔴 Con trỏ Laser (L), ✏️ Bút vẽ (P), 🟡 Dạ quang, 🗑️ Xóa nét (C), 📋 Bảng viết (W), ↪️ Tiến / ↩️ Lùi bước. Tiện lợi tối đa khi giảng dạy bằng chuột không dây hoặc bút cảm ứng.
+- Tích hợp menu chuột phải trên slide: Nhấn chuột phải, hoặc nút `Tab` / `T` trên bút trình chiếu, hiện menu nổi tại vị trí con trỏ (`showContextMenuAt` / `toggleContextMenuAt`). Phím `Tab` chặn hành vi chuyển focus mặc định để mở menu tức thì. Menu giữ Laser, Bút vẽ, Dạ quang, Xóa nét, Bảng viết, Đồng hồ đếm giờ, Đọc bài, Tiến / Lùi bước. Đồng hồ vẫn có nút trên thanh công cụ `#controlBar`.
 
 ### Vá 29 — Thanh công cụ đảo nổi chia nhóm, Chuột phải tích hợp công cụ và Bộ công cụ Sư phạm Nâng cao (Đồng hồ đếm ngược thông minh, Bảng viết phấn đa bề mặt)
 
@@ -378,7 +391,7 @@ mjx-container svg { display: inline !important; }
      - Đếm ngược thời gian thảo luận nhóm, làm bài tập với các mốc nhanh: 1 phút, 2 phút, 3 phút, 5 phút, 10 phút hoặc cộng/trừ 30 giây.
      - Thanh tiến trình trực quan (Progress Bar) và hiệu ứng chuyển màu cảnh báo: Xanh $\rightarrow$ Vàng cam ($\le 30s$) $\rightarrow$ Đỏ nhấp nháy khi hết giờ.
      - Âm thanh tích tắc cảnh báo 5 giây cuối và chuông hoàn thành phát qua Native Web Audio API (100% offline, không cần tệp âm thanh bên ngoài).
-     - Hỗ trợ thu nhỏ thành huy hiệu nổi gọn gàng ở góc trên bên phải màn hình (`#timerFloatingBadge`) để không che khuất bài giảng trong lúc học sinh làm bài; mở lại nhanh bằng phím tắt `T` hoặc click vào huy hiệu.
+     - Hỗ trợ thu nhỏ thành huy hiệu nổi gọn gàng ở góc trên bên phải màn hình (`#timerFloatingBadge`) để không che khuất bài giảng trong lúc học sinh làm bài; mở lại bằng nút trên thanh công cụ, mục Đồng hồ trong Menu Chuột Phải, hoặc click vào huy hiệu. Phím `T` dành cho menu chuột phải.
   2. **Bảng viết phấn nâng cấp Đa bề mặt (`#blackboardOverlay`):**
      - Hỗ trợ chuyển đổi nhanh 4 loại bề mặt bảng chuẩn học đường: 🟢 Bảng xanh truyền thống, ⚪ Bảng trắng hiện đại, 📐 Bảng ô ly vuông (tiện vẽ đồ thị / hình học), ⬛ Bảng đá đen.
      - Hộp phấn 4 màu trực quan: Trắng, Vàng, Đỏ/Hồng, Xanh dương; xóa sạch 1 chạm và đóng nhanh bằng phím `W` hoặc `Escape`.
@@ -392,20 +405,82 @@ mjx-container svg { display: inline !important; }
   + **Phóng to / Thu nhỏ (Resizable):** Có nút + / − để điều chỉnh tỷ lệ máy tính từ 70% đến 160% cho phù hợp với kích thước TV/máy chiếu lớp học.
   + **Hỗ trợ bàn phím máy tính:** Khi máy tính đang mở, giáo viên có thể bấm trực tiếp các phím số, phép tính + - * /, phím Enter (bằng dấu =) và Backspace (xóa ký tự).
 
-### Vá 31 — Tuyệt Đối Không Đưa Ghi Chú Sư Phạm / Giáo Án Dành Cho Giáo Viên Vào Slide Học Sinh & Chuẩn Hóa Cụm Công Cụ Sư Phạm
+### Vá 31 — Tuyệt Đối Không Đưa Ghi Chú Sư Phạm / Giáo Án Dành Cho Giáo Viên Vào Slide Học Sinh
 
 1. **Tuyệt đối không đưa ghi chú sư phạm nội bộ vào slide:**
    - Slide bài giảng HTML là phương tiện trực quan dạy học trực tiếp cho **HỌC SINH**.
    - **CẤM TUYỆT ĐỐI** tạo các khối nội dung chứa ghi chú giáo án của giáo viên như: `"HƯỚNG DẪN TƯ DUY SƯ PHẠM"`, `"THÔNG ĐIỆP SƯ PHẠM"`, `"GHI CHÚ SƯ PHẠM"`, `"LƯU Ý DÀNH CHO GIÁO VIÊN"`, `"HỌC SINH CẦN NHỚ RẰNG..."` hoặc câu từ mang tính chất giáo án sư phạm nội bộ. Học sinh không cần học và không được nhìn thấy các ghi chú này trên slide trình chiếu.
    - Mọi khối nội dung trên slide chỉ tập trung 100% vào kiến thức bài học học sinh cần quan sát và thực hành: **Khám phá / Đặt vấn đề**, **Định nghĩa / Khái niệm**, **Lời giải mẫu từng bước**, **Luyện tập**, **Vận dụng thực tế**, **Trắc nghiệm củng cố**, **Sơ đồ tư duy tổng kết**.
 
-2. **Cụm Công cụ Sư phạm & Tương tác đầy đủ (`.ctrl-group-pedagogy`):**
-   - Nằm trên thanh điều khiển nổi `#controlBar` bao gồm 5 công cụ trợ giảng cốt lõi:
-     + `🔴 Laser`: Con trỏ laser quang học phát sáng (Phím `L` / Chuột phải).
-     + `✏️ Vẽ`: Bút vẽ trực tiếp & Bút dạ quang vàng (Phím `P` / Chuột phải).
-     + `📋 Bảng vẽ`: Bảng viết phấn đa bề mặt (xanh, trắng, kẻ ô ly, đen) kèm khay phấn 4 màu (Phím `W` / Chuột phải).
-     + `🔢 Máy tính`: Máy tính cầm tay Casio fx-580VN X ClassWiz (Phím `C` / Chuột phải).
-     + `⏱️ Bấm giờ`: Đồng hồ đếm ngược thảo luận nhóm / làm bài tập (Phím `T` / Chuột phải).
+### Vá 32 — Nguyên Tắc Phân Định Công Cụ Không Trùng Lặp (Zero Duplication giữa Toolbar và Menu Chuột Phải)
+
+> [!IMPORTANT]
+> **QUY TẮC BẤT BIẾN: Chức năng đã có ở thanh công cụ thì chuột phải KHÔNG CÓ; chức năng đã có ở chuột phải thì thanh công cụ dưới KHÔNG CÓ.**
+> Tuyệt đối không để xảy ra trùng lặp giữa hai khu vực này để giữ cho thanh công cụ dưới gọn gàng chuẩn mực và menu chuột phải thao tác nhanh nhất.
+
+1. **Thanh điều khiển nổi dưới đáy màn hình (`#controlBar`):**
+   - Chuyên phục vụ các tác vụ quản trị vĩ mô buổi học, điều hướng, đa phương tiện và ứng dụng hỗ trợ sư phạm:
+     + **Nhóm 1: Điều hướng** (`◀ Trước`, `↩ Lùi bước`, `↪ Tiến bước`, `Sau ▶`).
+     + **Nhóm 2: Chuyển tiết** (`Tiết 1`, `Tiết 2`, `Tiết 3`).
+     + **Nhóm 3: Âm thanh & Song ngữ** (`🗣️ Đọc slide`, `🌐 Song ngữ`, `🔊 Đọc EN`, `⚡ Tốc độ`).
+     + **Nhóm 4: Công cụ Sư phạm & Trợ giảng số (`.ctrl-group-pedagogy`)**:
+       - `📋 Bảng viết`: Mở trang bảng viết vẽ toàn màn hình tích hợp chèn ảnh kéo thả (Phím `W`).
+       - `⏱️ Bấm giờ`: Đồng hồ đếm ngược thảo luận nhóm / làm bài tập (Phím `T`).
+       - `🔢 Máy tính`: Máy tính cầm tay Casio fx-580VN X ClassWiz (Phím `C`).
+     + **Nhóm 5: Cài đặt & Lưu bài** (`⛶ Toàn màn hình`, `🔤 TV 28px`, `💾 Lưu`, `⚙ Thiết kế`).
+
+2. **Menu Chuột Phải Sư Phạm (`#contextMenu`):**
+   - Chuyên biệt dành riêng cho các thao tác vẽ / chiếu laser trực tiếp trên slide đang giảng:
+     + 🔴 **Con trỏ Laser** *(Phím `L`)*
+     + ✏️ **Bút vẽ màn hình** *(Phím `P`)*
+     + 🟡 **Bút dạ quang vàng** *(Dạ quang tô sáng)*
+     + 🗑️ **Xóa nét vẽ** *(Xóa nét)*
+     + ⬛ **Màn hình đen** *(Phím `B` — che màn hình tập trung học sinh)*
+   - *Cấm tuyệt đối đưa Bảng viết, Máy tính, Bấm giờ, Đọc slide, Tiến/Lùi bước vào Menu Chuột Phải (vì thanh công cụ dưới đã có đầy đủ, tuân thủ nguyên tắc Zero Duplication).*
+
+### Vá 33 — Bảng Viết Toàn Màn Hình Tích Hợp Chèn Ảnh Tự Do Kéo Thả, Co Giãn & Dán Clipboard
+
+1. **Vị trí nút Bảng:** Nằm cố định tại nhóm Sư phạm trên thanh công cụ dưới (`#controlBar` > `.ctrl-group-pedagogy` > `#btnBoard`), mở nhanh bằng phím `W`.
+2. **Khung ảnh nổi tương tác tự do trên Bảng (`#boardImageBox`):**
+   - **Chèn ảnh linh hoạt:** Nút `📁 Chèn Ảnh` (tải file ảnh từ máy) và nút `📋 Dán (Ctrl+V)` (hỗ trợ chụp màn hình `Win + Shift + S` rồi bấm `Ctrl + V` dán ngay vào bảng qua sự kiện `paste`).
+   - **Kéo thả di chuyển vị trí tự do:** Thanh tiêu đề `#boardImgHeader` (`Kéo ảnh`) và thân ảnh hỗ trợ bắt sự kiện `pointerdown`, `pointermove`, `pointerup` kèm `setPointerCapture` để kéo rê ảnh êm ái trên mặt bảng mà không bị kẹt hay giật lag.
+   - **Co giãn kích thước ảnh (Resize):** Chốt kéo `.resize-handle-br` ở góc dưới bên phải hộp ảnh; nút phóng to (`+`), nút thu nhỏ (`−`), lăn chuột chuột (`wheel`) trên ảnh để zoom mượt mà.
+   - **Xoay & Đặt lại:** Nút xoay 90 độ (`↻`), nút hoàn nguyên kích thước gốc (`↺`), nút xóa ảnh (`🗑️`).
+3. **Bộ công cụ viết phấn trên Bảng (`.blackboard-tools`):**
+   - Phấn 4 màu chuẩn sư phạm: Trắng `#ffffff`, Vàng `#fde047`, Hồng `#f472b6`, Xanh `#38bdf8`.
+   - Nét phấn Mảnh (2.5px) và nét Đậm (6px).
+   - Giữ phím `Shift` khi viết vẽ để tự động kẻ đường thẳng chuẩn xác.
+   - Đổi 3 bề mặt bảng học đường (`🎨 Đổi Bảng`): Bảng xanh lá `#14532d`, Bảng trắng `#f8fafc`, Bảng đen `#0f172a`.
+   - Xoá sạch nét phấn (`🗑️ Xoá Phấn`), Đóng bảng (`❌ Đóng Bảng (W)` hoặc phím `W` / `Escape`).
+
+### Vá 34 — Chuẩn Hóa Modal, Tooltip & Backdrop Guarding (Zero DOM Leak)
+
+1. **Tuyệt đối không để modal/tooltip hiển thị tự do trong dòng DOM:**
+   - Mọi modal và overlay (`#editModalBackdrop`, `#editModal`, `#selectionTooltip`, `#imageLightboxBackdrop`, `#boardImageBox`, `#pedagogicalTimerModal`) **BẮT BUỘC** phải có đầy đủ quy tắc CSS trong thẻ `<style>` với `position: fixed` hoặc `position: absolute`, `z-index` phù hợp và `display: none`.
+   - **BẢO VỆ KÉP (Inline Guard):** Bắt buộc đặt trực tiếp thuộc tính bảo vệ inline `style="display:none;"` ngay trên thẻ HTML của modal/tooltip để đảm bảo khi trang đang tải hay vừa mở, các modal này không bao giờ lộ ra ngoài luồng hiển thị chính của bài giảng.
+   - Các hàm mở/đóng JavaScript (`openEditModal`, `closeEditModal`, `openImageLightbox`, `closeImageLightbox`) phải đồng bộ đồng thời cả `backdrop.style.display` (`'flex'` / `'none'`) và lớp `.active`.
+
+### Vá 35 — Chuẩn Hóa Slide 1 Không Bao Giờ Trắng Màn Hình (Core Step-0 Rule)
+
+1. **Khối Mục tiêu bài học luôn xuất hiện ngay khi mở Slide 1 (`data-step="0"`):**
+   - Khi giáo viên và học sinh mở bài giảng ở Slide 1 (Mở đầu / Mục tiêu), Cột Ghi Bảng bên trái phải hiển thị ngay tức thì khối Mục tiêu bài học (`📌 MỤC TIÊU BÀI HỌC`) với thuộc tính `data-step="0"` (hoặc cố định).
+   - **CẤM TUYỆT ĐỐI** gán bước xuất hiện lớn hơn 0 (như `data-step="4"`) cho khối mở đầu này, tránh hoàn toàn tình trạng cả 2 cột đều trống rỗng / trắng xóa khi bài giảng vừa tải xong.
+2. **Tiến trình bước xuất hiện chuẩn mực trên Slide 1:**
+   - **Lúc vừa mở trang (Step 0):** Cột trái hiển thị rõ ràng Mục tiêu bài học. Cột phải chuẩn bị tình huống.
+   - **Bấm chuyển bước lần 1 (Step 1):** Cột phải hiển thị đồng thời Tình huống mở đầu kèm Hình vẽ minh họa SVG (tuân thủ Vá 23).
+   - **Bấm chuyển bước lần 2 (Step 2):** Cột phải hiển thị Định hướng tư duy toán học / Câu hỏi thảo luận.
+   - **Bấm chuyển bước lần 3 (Step 3):** Cột trái hiển thị Đặt vấn đề thực tiễn / Chuyển ý vào bài mới.
+   - **Bấm tiếp theo:** Tự động chuyển sang Slide 2.
+
+### Vá 36 — Chuẩn Hóa Xuống Dòng Môi Trường MathJax & Toàn Vẹn Chuỗi Thoát Ký Tự (MathJax Escape Integrity)
+
+1. **Xuống dòng trong môi trường MathJax nhiều dòng (`cases`, `aligned`, `matrix`):**
+   - Bắt buộc dùng đúng 2 dấu gạch chéo ngược: `\\[6pt]` hoặc `\\\\` (trong mã nguồn HTML: `\\[6pt]`).
+   - **CẤM TUYỆT ĐỐI** viết `\[4pt]` (chỉ có 1 dấu gạch chéo), vì MathJax sẽ hiểu nhầm `\[` là thẻ mở công thức toán hiển thị (display math), dẫn tới văng lỗi ký tự đỏ `\[4pt]` và hai dòng công thức bị dính liền trên một hàng.
+2. **Bảo vệ toàn vẹn ký tự thoát (Escape Safety):**
+   - Khi xử lý chuỗi hoặc thế văn bản bằng mã kịch bản (Python, JavaScript), luôn sử dụng raw strings (`r"..."`) hoặc `str.replace()`.
+   - Cấm dùng `re.sub()` với chuỗi thay thế có chứa `\`, tránh biến `\alpha` thành chuỗi ASCII 7 (Bell), `\beta` thành ASCII 8 (Backspace), hoặc `\right)` thành `\n ight)`.
+   - Trước khi đóng gói xuất xưởng, bắt buộc chạy kiểm thử DOM ảo không còn bất kỳ thuộc tính `data-mjx-error` hay `[Math Input Error]` nào.
 
 ## 5. Bộ khung mã HTML mẫu & Nguồn sự thật Master Template
 
