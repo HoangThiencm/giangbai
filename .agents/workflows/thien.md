@@ -27,7 +27,18 @@ Gọi tool `ask_question` với danh sách 13 lựa chọn:
 ### BƯỚC 2: Xử lý theo từng nhánh đã chọn
 
 #### Nhánh 1: Khi chọn "1/ Duyệt giáo án"
-Hướng dẫn nạp file giáo án cần thẩm định vào `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/`, xuất kết quả biên bản ra `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/`.
+Tự động kích hoạt quy trình thẩm định Kế hoạch bài dạy theo chuẩn CV 5512 & Quy định chuyên môn trường THCS Trần Phú:
+- **File đầu vào:** Đọc các tệp tham chiếu `Phu-luc-3-...docx` tại thư mục gốc `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/` và thư mục riêng từng giáo viên (ví dụ `HỒ ĐĂNG DANH/`).
+- **Quy chuẩn thẩm định:**
+  + Thể thức: Times New Roman 13pt (in đứng), A4, lề trên 1.5cm, dưới 1.5cm, trái 2.0cm, phải 1.5cm, dãn dòng 0/3/Single.
+  + Bắt buộc Header (*Trường THCS Trần Phú* | *Giáo viên: ...*) và Footer (*Môn/Phân môn* | *Trang* | *Năm học*).
+  + Khớp tiến độ phân môn (Đại số, Hình học, Số học).
+  + Tích hợp NLS/AI/STEM khớp Phụ lục 1 & 3; **bắt buộc phải in đậm, nghiêng**.
+  + Soát lỗi công thức toán học và số liệu.
+- **Cơ chế cuốn chiếu & Xuất kết quả tại `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/`:**
+  + Tự động khởi tạo và nối tiếp (append) thứ tự từng giáo viên vào Biên bản tổ: `Bien_Ban_Kiem_Tra_Ho_So_To_Toan_Thang_[X].docx` và `.md`.
+  + Xuất Phiếu nhận xét cá nhân gửi riêng: `Phieu_Nhan_Xet_Ho_So_[TenGV]_Thang_[X].docx`.
+  + Tuân thủ quy chuẩn riêng tại `.agents/rules/duyet-giao-an.md` và Master Prompt tại `TROLYTHIEN/3_DUYET_GIAO_AN/PROMPT_DUYET_GIAO_AN.md`.
 
 #### Nhánh 2: Khi chọn "2/ Soạn Giáo án (KHBD)"
 Tự động kích hoạt quy trình soạn KHBD chuẩn V2.0:
