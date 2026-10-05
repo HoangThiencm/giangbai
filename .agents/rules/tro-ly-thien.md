@@ -47,14 +47,22 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
 - **1/ Soạn Giáo án (KHBD):**
   + File đầu vào (PDF SGK, PPCT, tài liệu): đặt tại `TROLYTHIEN/1_SOAN_KHBD/Dau_vao/`
   + File kết quả (File Word .docx KHBD hoàn chỉnh): tự động lưu tại `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/`
+  + Tích hợp NLS và AI: Trong các hoạt động dạy học có năng lực số, năng lực AI thì **bắt buộc phải in đậm, in nghiêng phần tích hợp** (đồng bộ 100% với tiêu chuẩn thẩm định duyệt giáo án).
 - **2/ Tạo bài tập:**
   + File đầu vào (PDF bài học, PDF chuyên đề bài tập 5-10 trang, tài liệu nguồn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`
   + File kết quả (File Word đề thi, OLM, Game, hoặc File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`
   + Khi chọn mục 9 (Xuất bài dạy HTML): Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-day-html.md`.
 - **1/ Duyệt giáo án (Thẩm định KHBD):**
-  + File đầu vào: Tham chiếu các tệp `Phu-luc-3-...docx` ở thư mục gốc `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/` và thư mục riêng từng giáo viên (ví dụ `HỒ ĐĂNG DANH/`).
-  + Tiêu chuẩn thẩm định: Bám sát thể thức Phụ lục 4 (Times New Roman 13pt, A4, lề 1.5/1.5/2.0/1.5cm, dãn dòng 0/3/Single, Header & Footer đúng mẫu THCS Trần Phú); Tách đúng phân môn (Đại số, Hình học, Số học); Soát tích hợp NLS/AI khớp Phụ lục 1 & 3 và **bắt buộc phải in đậm, nghiêng**; Soát lỗi công thức toán học.
-  + Cơ chế cuốn chiếu: Tự động ghi và append thứ tự từng giáo viên vào Biên bản tổ `Bien_Ban_Kiem_Tra_Ho_So_To_Toan_Thang_[X].docx` và xuất Phiếu nhận xét cá nhân `Phieu_Nhan_Xet_Ho_So_[TenGV]_Thang_[X].docx` tại `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/`.
+  + File đầu vào: Tham chiếu các tệp `Phu-luc-3-...docx` ở thư mục gốc `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/` và thư mục riêng từng giáo viên (ví dụ `HỒ ĐĂNG DANH/`, `TRAN SANG/`...).
+  + Tiêu chuẩn thẩm định nghiêm ngặt:
+    * Thể thức: Phụ lục 4 (Times New Roman 13pt, A4, lề 1.5/1.5/2.0/1.5cm, dãn dòng 0/3/Single, Header & Footer đúng mẫu THCS Trần Phú).
+    * Tiến độ: Khớp 100% phân môn và số tiết theo Phụ lục 3 (thiếu tiết không lý do chính đáng -> Trả hồ sơ).
+    * Tích hợp NLS/AI: Khớp 1-1 mã và mô tả với Phụ lục 3; **bắt buộc phải in đậm, nghiêng** (chưa in đậm nghiêng -> Trả hồ sơ).
+    * Toán học & Ký hiệu (LỖI ĐỎ): Sai kiến thức, nhầm dấu hoặc **LỖI FONT CÔNG THỨC / BIẾN DẠNG KÝ HIỆU GÓC** (dấu chấm trên đầu đỉnh, ký tự rác vuông/perpendicular đè lên chữ) $\rightarrow$ **BẮT BUỘC TRẢ HỒ SƠ 100%! TUYỆT ĐỐI CẤM DUYỆT!**
+  + Đầu ra 3 tệp độc lập tại `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/`:
+    1. `Bien_Ban_Kiem_Tra_Ho_So_To_Toan_Thang_[X].docx` & `.md`: Biên bản hành chính trang trọng toàn tổ (cuốn chiếu append từng GV, không chèn mẫu copy-paste hệ thống).
+    2. `Cap_Nhat_He_Thong_Duyet_Giao_An_Thang_[X].docx` & `.md`: Tệp chuyên dụng để Tổ trưởng Copy & Paste vào vnEdu/SMAS/K12.
+    3. `Phieu_Nhan_Xet_Ho_So_[TenGV]_Thang_[X].docx`: Phiếu gửi riêng từng giáo viên.
   + Tuân thủ quy chuẩn riêng tại `.agents/rules/duyet-giao-an.md` và Master Prompt tại `TROLYTHIEN/3_DUYET_GIAO_AN/PROMPT_DUYET_GIAO_AN.md`.
 - **4/ Duyệt đề:**
   + File đầu vào (File Word/PDF đề & ma trận cần kiểm tra): đặt tại `TROLYTHIEN/4_DUYET_DE/Dau_vao/`

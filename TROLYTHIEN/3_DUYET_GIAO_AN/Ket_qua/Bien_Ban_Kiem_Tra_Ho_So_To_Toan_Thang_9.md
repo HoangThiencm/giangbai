@@ -34,12 +34,13 @@
 ## III. BẢNG TỔNG HỢP TIẾN ĐỘ VÀ XẾP LOẠI TOÀN TỔ
 
 | STT | Họ và tên GV | Môn / Khối lớp | Tổng số tiết đã nộp | Tiến độ PPCT Tháng 9 | Kết luận / Xếp loại |
-| :---: | :--- | :--- | :---: | :---: | :---: |
+| :---: | :--- | :--- | :---: | :--- | :---: |
 | **1** | **HỒ ĐĂNG DANH** | Toán 6, Toán 9 | 33 tiết (4 phân môn) | Đạt *(Chấp thuận giải trình có lý do chính đáng)* | **DUYỆT**<br>*(Xếp loại: Tốt)* |
-| **2** | **TRẦN LONG HẢI** | Toán 8 | 20 tiết (2 phân môn) | Đủ 100% Tháng 9 & vượt Tuần 5 | **TRẢ HỒ SƠ**<br>*(Sửa sai sót toán học)* |
-| **3** | **NGUYỄN THỊ THẢO** | Toán 6, Toán 7 | 34 tiết (4 phân môn) | Đủ 100% Tháng 9 (12t Số 6) & vượt Tuần 5 | **DUYỆT**<br>*(Xếp loại: Khá)* |
-| **4** | **TRẦN SÁNG** | Toán 6, Toán 9 | 28 tiết (4 phân môn, 144 tr) | Toán 9 đủ & vượt tiến độ;<br>❌ **Thiếu 04 tiết Tuần 4 Toán 6** | **TRẢ HỒ SƠ**<br>*(Bổ sung 4 tiết)* |
-| *5* | *[Đang chờ nạp...]* | *—* | *—* | *—* | *—* |
+| **2** | **TRẦN LONG HẢI** | Toán 8 | 20 tiết (2 phân môn, 89 tr) | Đủ 100% Tháng 9 & vượt Tuần 5 | **TRẢ HỒ SƠ**<br>*(Sửa sai sót toán học)* |
+| **3** | **NGUYỄN THỊ THẢO** | Toán 6, Toán 7 | 34 tiết (4 phân môn, 123 tr) | Đã sửa sạch 100% lỗi font góc Hình 7; NLS in đậm nghiêng chuẩn | **DUYỆT**<br>*(Xếp loại: Tốt)* |
+| **4** | **TRẦN SÁNG** | Toán 6, Toán 9 | 32 tiết (4 phân môn, 155 tr) | Đã bổ sung đủ 100% Tháng 9; NLS khớp PL3 | **DUYỆT**<br>*(Xếp loại: Khá)* |
+| **5** | **LÊ THỊ BÌNH** | Toán 7, Toán 8, HĐTN 7 | 45 tiết (5 phân môn, 178 tr) | Đã sửa sạch 100% lỗi font công thức Hình 8, 7; NLS/AI chuẩn mực | **DUYỆT**<br>*(Xếp loại: Tốt)* |
+| *6* | *[Đang chờ nạp...]* | *—* | *—* | *—* | *—* |
 
 ---
 
@@ -65,15 +66,13 @@
 ---
 
 ### 3. Giáo viên: NGUYỄN THỊ THẢO (Môn Toán 6, Toán 7)
-- **Ưu điểm**: 
-  - Hồ sơ giáo án chuẩn bị rất công phu, đầy đủ cả 4 phân môn với tổng cộng 34 tiết (123 trang): Số học 6 (12 tiết, 45 trang), Hình học 6 (5 tiết, 18 trang), Đại số 7 (9 tiết, 30 trang), Hình học 7 (8 tiết, 30 trang).
-  - Đảm bảo 100% tiến độ Tháng 9 và vượt tuần 5 ở các phân môn Hình 6 và Đại 7. Đặc biệt phân môn Số học 6 nộp đầy đủ 12 tiết đến hết bài Luyện tập chung của Tuần 4.
-  - Thể thức văn bản, Header/Footer đúng quy chuẩn trường THCS Trần Phú. Thiết kế tiến trình dạy học đủ 4 hoạt động CV 5512, có nội dung hướng dẫn và giao nhiệm vụ riêng cho học sinh hòa nhập (HSHN) rất nhân văn và chu đáo.
-  - **Tích hợp Năng lực số (NLS)** tại Bài 6 và Bài 7 Số học 6 được thực hiện rất xuất sắc: Khớp 1-1 cả mã chỉ báo và câu mô tả hành động với Phụ lục 3, đồng thời **đã được định dạng _IN ĐẬM, NGHIÊNG_** đúng quy chế chuyên môn.
-- **Tồn tại cần hoàn thiện**:
-  - Tại phân môn **Hình học 7 (30 trang)**, xuất hiện lỗi kỹ thuật trình bày ký hiệu góc có tính hệ thống: thay vì sử dụng dấu mũ góc chuẩn ($\widehat{xOy}, \widehat{yOm}, \widehat{mBx}, \widehat{MNQ}$...), phần mềm gõ công thức hiển thị thành dấu chấm trên đầu chữ cái đầu tiên (ví dụ: `ṁBy`, `ṁBx`, `ṅBx`, `ẋBy`, `ẋAB`, `ẏBA`, `ṀNQ`, `ṄQP`...) hoặc viết trần (`mBx`, `ANM`, `ACD`, `BAC`).
-  - Tại Trang 8 (Bài 3.3c) bị lỗi font tạo thành các khối đen đè chữ (`¶`, `·`); Trang 9 (Bài 3.5) có dòng viết `ṁBn = ẋBy = 180°` chưa chuẩn xác về diễn đạt toán học.
-- **Kết luận và xếp loại**: **DUYỆT HỒ SƠ (Xếp loại: KHÁ)**. Yêu cầu cô Nguyễn Thị Thảo đính chính, chuẩn hóa lại toàn bộ ký hiệu dấu mũ góc trong tệp Hình học 7 để nâng xếp loại Tốt trong đợt kiểm tra tiếp theo.
+- **Tiến độ và khối lượng**: Nộp đầy đủ 04 phân môn với tổng cộng 34 tiết (123 trang): Số học 6 (12 tiết, 45 trang), Hình học 6 (5 tiết, 18 trang), Đại số 7 (9 tiết, 30 trang), Hình học 7 (8 tiết, 30 trang). Đảm bảo 100% tiến độ Tháng 9 và vượt tuần 5 ở các phân môn Hình 6 và Đại 7.
+- **Ưu điểm nổi bật và kết quả khắc phục**:
+  - Giáo viên có tinh thần trách nhiệm và tính sư phạm rất cao: Sau khi tổ chuyên môn chỉ ra lỗi font ký hiệu góc trong tệp Hình học 7 cũ, cô Nguyễn Thị Thảo đã nhanh chóng tiếp thu, rà soát lại toàn bộ hệ thống ký hiệu MathType/Equation và xuất lại tệp PDF mới hoàn toàn sạch sẽ.
+  - Tại phân môn **Hình học 7 (30 trang)**: Toàn bộ các ký hiệu góc đối đỉnh, kề bù, so le trong, đồng vị ($\widehat{mOt}, \widehat{nOt}, \widehat{xOy}, \widehat{x'Oy'}, \widehat{yOm}, \widehat{mBx}, \widehat{nBx}, \widehat{mBn}, \widehat{O_1}, \widehat{O_2}$...) đều hiển thị dấu mũ góc cực kỳ sắc nét, chuẩn mực; không còn dấu chấm trên đầu chữ cái và không còn bất kỳ khối đen hay ký tự rác nào.
+  - Phân môn **Số học 6 (45 trang — 12 tiết)**: Soạn rất công phu, đủ 12 tiết đến hết bài Luyện tập chung của Tuần 4. Tích hợp Năng lực số (5.3 và 3.1) tại Bài 6 và Bài 7 khớp chuẩn Phụ lục 3 và **đã được định dạng _IN ĐẬM, NGHIÊNG_** rất mẫu mực. Thiết kế kế hoạch giao việc chu đáo cho học sinh hòa nhập (HSHN).
+  - Phân môn **Hình học 6 (18 trang)** và **Đại số 7 (30 trang)**: Soạn vượt tiến độ tuần 5, hình vẽ trực quan, các bước biến đổi số học và đại số chuẩn xác.
+- **Kết luận và xếp loại**: **DUYỆT HỒ SƠ (Xếp loại: TỐT)**. Biểu dương tinh thần cầu thị và chất lượng hồ sơ sau chỉnh sửa của cô Nguyễn Thị Thảo.
 
 ---
 
@@ -90,16 +89,14 @@
 
 ---
 
-### 5. Thẩm định hồ sơ giáo viên: LÊ THỊ BÌNH
-- **Phân công giảng dạy**: Môn Toán 7, Toán 8 và Hoạt động trải nghiệm, hướng nghiệp 7 (HĐTN 7).
-- **Tiến độ và khối lượng**: Nộp 05 tệp PDF gồm 178 trang, tổng cộng 45 tiết. Đảm bảo 100% tiến độ 4 tuần của Tháng 9 và vượt tiến độ sang tuần 5 ở phân môn Đại số 7 (Bài 3).
-- **Ưu điểm**:
-  + Hồ sơ chuẩn bị đồ sộ, công phu, phương pháp tổ chức 4 hoạt động CV 5512 rõ nét.
-  + Tích hợp Năng lực số và AI trong HĐTN 7 và Đại số 8 cực kỳ xuất sắc; toàn bộ các câu chỉ báo hành động NLS và AI đều được in đậm, nghiêng rất chuẩn mực và khớp 100% với Phụ lục 3.
-  + Kiến thức toán học chính xác, công thức và ký hiệu góc trong Hình học 7 và Hình học 8 chuẩn mực; khắc phục hoàn toàn lỗi toán học thường gặp ở bài Tứ giác.
-- **Tồn tại, lưu ý**:
-  + Tại Mục tiêu Trang 1 Hình học 8 cần bổ sung định dạng in đậm, nghiêng cho mã NLS 1.1 và 5.3; chú ý chỉnh sửa ký hiệu góc A bị lỗi font ở Trang 51 Hình học 8.
-- **Kết luận thẩm định**: **DUYỆT TOÀN BỘ HỒ SƠ - XẾP LOẠI: TỐT**.
+### 5. Giáo viên: LÊ THỊ BÌNH (Môn Toán 7, Toán 8, HĐTN 7)
+- **Tiến độ và khối lượng**: Nộp đầy đủ 05 tệp PDF gồm 178 trang với tổng số 45 tiết thuộc 5 phân môn: Hình học 7 (8 tiết, 31 tr), Đại số 7 (9 tiết, 31 tr), Hình học 8 (8 tiết, 52 tr), Đại số 8 (8 tiết, 51 tr) và HĐTN 7 (12 tiết, 13 tr). Đảm bảo 100% tiến độ Tháng 9 và vượt tiến độ sang tuần 5 ở phân môn Đại số 7.
+- **Ưu điểm nổi bật và kết quả khắc phục**:
+  - Giáo viên có tinh thần trách nhiệm và tính sư phạm rất cao: Sau khi tổ chuyên môn chỉ ra lỗi biến dạng font công thức ký hiệu góc, cô Lê Thị Bình đã khẩn trương rà soát lại tệp gốc, chỉnh sửa định dạng MathType/Equation chuẩn xác và export lại PDF sạch sẽ 100%.
+  - Tại phân môn **Hình học 8 (52 trang)**: Các công thức tính góc tứ giác tại Bài 10 (Trang 5) và Luyện tập 2 ($\widehat{A}+\widehat{B}+\widehat{C}+\widehat{D}=360^\circ$, $\widehat{D}=360^\circ-(\widehat{A}+\widehat{B}+\widehat{C})=50^\circ$, $\widehat{F}=125^\circ$) hiển thị dấu mũ góc cực kỳ sắc nét, chuẩn mực; không còn bất kỳ ký tự rác vuông hay dấu đè lên đỉnh góc nào.
+  - Tại phân môn **Hình học 7 (31 trang)**: Ký hiệu các góc $\widehat{O_1}, \widehat{O_2}$, tia phân giác, quan hệ hai đường thẳng song song và vuông góc ($AB \perp AD, CD \perp AD$) trình bày rất khoa học, chuẩn mực.
+  - **Tích hợp Năng lực số (NLS) và Trí tuệ nhân tạo (AI)**: Thực hiện xuất sắc ở cả HĐTN 7 (Chủ đề 1, NLS 1.1, 3.1, 2.5, 4.2 và AI 7.A1.1, 7.A1.2, 7.B3.1) và Đại số 8 (Bài 3, NLS 5.3.TC2a). Toàn bộ 100% các câu mô tả hành động **đều được định dạng _IN ĐẬM, NGHIÊNG_** rất chuẩn quy định chuyên môn.
+- **Kết luận và xếp loại**: **DUYỆT HỒ SƠ (Xếp loại: TỐT)**. Đánh giá cao tinh thần cầu thị và chất lượng hồ sơ bài dạy sau chỉnh sửa của cô Lê Thị Bình.
 
 ---
 

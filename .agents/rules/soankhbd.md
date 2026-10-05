@@ -13,11 +13,14 @@ Quy tắc này áp dụng vĩnh viễn cho mọi yêu cầu "soạn khbd" trong 
   - **CẤM TUYỆT ĐỐI:** Không ghi `(01 TIẾT — 45 PHÚT)` hay `(X TIẾT — Y PHÚT)` ở tiêu đề này.
 - **Thời lượng:** Phân bổ cụ thể vào các hoạt động sao cho **tổng thời lượng khớp chính xác** thời gian của bài (ví dụ bài 1 tiết: 5p + 32p + 8p = 45 phút; bài 2 tiết: 8p + 45p + 25p + 12p = 90 phút).
 
-## 3. Tiêu đề Năng lực số và AI
+## 3. Thể hiện Năng lực số và AI
 - Tiêu đề mục con trong Phần I ghi đúng chuẩn:
   - `### c) Năng lực số (NLS)`
   - `### d) Năng lực Trí tuệ Nhân tạo (AI)`
 - **CẤM TUYỆT ĐỐI:** Không chèn chữ `-- Theo PPCT` vào tiêu đề các mục này.
+- **BẮT BUỘC IN ĐẬM, IN NGHIÊNG TRONG CÁC HOẠT ĐỘNG DẠY HỌC:**
+  + Trong tiến trình dạy học (các hoạt động A, B, C, D), ở bất kỳ hoạt động/bước nào có triển khai Năng lực số hoặc Năng lực AI, **toàn bộ nội dung tích hợp (mã chỉ báo và mô tả hành động GV/HS)** bắt buộc phải được **in đậm, in nghiêng** (ví dụ: `***(Tích hợp NLS 1.1.TC1a: Khai thác học liệu số mô phỏng...)***` hoặc `***(Tích hợp AI 6.B2.1: Sử dụng trợ lý AI...)***`).
+  + Quy định này đồng bộ 100% với tiêu chuẩn kiểm tra/duyệt giáo án của trường THCS Trần Phú (chưa in đậm nghiêng -> Trả hồ sơ).
 
 ## 4. Độ chính xác tuyệt đối của Hình vẽ toán học
 - Hình vẽ tạo bằng SVG và render ra PNG 300 DPI độ nét cao, nền trắng (#ffffff), nét vẽ mực đen (#111827), nhãn điểm Times New Roman in hoa nghiêng.

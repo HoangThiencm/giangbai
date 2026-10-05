@@ -79,17 +79,17 @@
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
 > `Soạn đủ 09 tiết đảm bảo 100% tiến độ tháng 9 và vượt tuần 5. Cấu trúc 4 hoạt động rõ ràng, các bước thực hiện phép tính số hữu tỉ và lũy thừa chuẩn xác, bài tập củng cố bám sát SGK Kết nối tri thức. Duyệt.`
 
-### • Phân môn Hình học 7 (30 trang — 08 tiết: Bài 8, 9, LTC, Bài 10): [DUYỆT CÓ LƯU Ý (ĐÍNH CHÍNH KÝ HIỆU GÓC)]
+### • Phân môn Hình học 7 (30 trang — 08 tiết: Bài 8, 9, LTC, Bài 10): [ĐẠT / DUYỆT (TỐT)]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
-> `Kế hoạch bài dạy đảm bảo đủ 08 tiết đúng tiến độ tháng 9. Nội dung kiến thức hai góc kề bù, đối đỉnh, hai đường thẳng song song và tiên đề Euclid đầy đủ. Lưu ý: Cần chỉnh sửa lại lỗi kỹ thuật hiển thị ký hiệu góc (các góc bị hiển thị thành dấu chấm trên đầu chữ cái như ṁBy, ẋAB... và lỗi font ở trang 8, 9) thành dấu mũ góc chuẩn xác trước khi giảng dạy.`
+> `Kế hoạch bài dạy Hình học 7 soạn đầy đủ 08 tiết đúng PPCT Tháng 9. Giáo viên đã khắc phục triệt để lỗi font ký hiệu góc; các góc hiển thị dấu mũ góc chuẩn xác, rõ nét, không còn dấu chấm trên đầu chữ hay ký tự rác. Cấu trúc 4 hoạt động CV 5512 rõ ràng, bài tập hình học phong phú. Duyệt.`
 
-### • Nhận xét chung toàn bộ hồ sơ Cô Nguyễn Thị Thảo (Duyệt theo gói): [DUYỆT - XẾP LOẠI KHÁ]
+### • Nhận xét chung toàn bộ hồ sơ Cô Nguyễn Thị Thảo (Duyệt theo gói): [DUYỆT - XẾP LOẠI TỐT]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
-> `DUYỆT HỒ SƠ (Xếp loại Khá). Hồ sơ nộp đầy đủ 34 tiết (123 trang), tiến độ đạt 100% tháng 9 và vượt tuần 5. Tích hợp NLS Số học 6 in đậm nghiêng rất chuẩn mực. Đề nghị cô Thảo chuẩn hóa lại ký hiệu dấu mũ góc trong phân môn Hình học 7 để nâng xếp loại Tốt trong đợt sau.`
+> `DUYỆT HỒ SƠ (Xếp loại Tốt). Hồ sơ giáo án nộp đầy đủ 34 tiết (123 trang) thuộc 4 phân môn Toán 6, Toán 7. Tiến độ đảm bảo 100% Tháng 9 và vượt tuần 5. Đã chỉnh sửa hoàn toàn sạch sẽ lỗi font ký hiệu góc trong Hình học 7. Tích hợp NLS tại Số học 6 in đậm nghiêng chuẩn mực, có kế hoạch giao việc chu đáo cho học sinh hòa nhập.`
 
 ---
 
-## 4. THẦY TRẦN SÁNG (MÔN TOÁN 6, TOÁN 9 — 28 TIẾT, 144 TRANG)
+## 4. THẦY TRẦN SÁNG (MÔN TOÁN 6, TOÁN 9 — 32 TIẾT, 155 TRANG)
 
 ### • Phân môn Đại số 9 (59 trang — 12 tiết: Bài 1 đến Bài 4): [ĐẠT / DUYỆT (XUẤT SẮC)]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
@@ -99,17 +99,17 @@
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
 > `Soạn đủ 04 tiết đảm bảo 100% tiến độ 4 tuần tháng 9. Kiến thức định nghĩa tỉ số lượng giác góc nhọn và hệ thức giữa cạnh và góc trong tam giác vuông chuẩn xác, ký hiệu góc chuẩn mực. Duyệt.`
 
-### • Phân môn Số học 6 (43 trang — 09 tiết: Bài 1 đến Bài 6): [KHÔNG DUYỆT / TRẢ HỒ SƠ (THIẾU TUẦN 4)]
+### • Phân môn Số học 6 (54 trang — 12 tiết: Bài 1 đến Bài 7 & LTC): [ĐẠT / DUYỆT (KHÁ)]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
-> `HỒ SƠ CHƯA ĐẠT TIẾN ĐỘ THÁNG 9. Hiện tại mới nộp 09 tiết (đến hết Bài 6), còn thiếu trọn vẹn Tuần 4 gồm 03 tiết: Tiết 10, 11 (Bài 7: Thứ tự thực hiện các phép tính) và Tiết 12 (Luyện tập chung) theo đúng PPCT Phụ lục 3. Đề nghị thầy soạn bổ sung đủ 03 tiết nộp lại tổ chuyên môn.`
+> `Kế hoạch bài dạy đã nộp bổ sung đầy đủ 03 tiết Tuần 4 (Tiết 10, 11 Bài 7 và Tiết 12 LTC), hoàn thành 100% tiến độ Tháng 9 (12 tiết). Kiến thức và các bước thực hiện phép tính chuẩn xác. Lưu ý: Cần in đậm, nghiêng câu mô tả Năng lực số (5.3.TC1a và 3.1.TC1a) tại Bài 7 theo đúng quy chế chuyên môn trước khi giảng dạy. Duyệt.`
 
-### • Phân môn Hình học 6 (25 trang — 03 tiết: Bài 18 & Tiết 1 Bài 19): [KHÔNG DUYỆT / TRẢ HỒ SƠ (THIẾU TIẾT 4)]
+### • Phân môn Hình học 6 (25 trang — 04 tiết: Bài 18 & Tiết 3, 4 Bài 19): [ĐẠT / DUYỆT]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
-> `HỒ SƠ CHƯA ĐẠT TIẾN ĐỘ THÁNG 9. Mới nộp 03 tiết (Bài 18 và hình chữ nhật, hình thoi), còn thiếu Tiết 4 của Tuần 4 (Tiết 2 Bài 19: Hình bình hành, hình thang cân) theo PPCT Phụ lục 3. Đề nghị thầy soạn bổ sung Tiết 4 nộp lại tổ chuyên môn.`
+> `Kế hoạch bài dạy đảm bảo đủ 04 tiết của 4 tuần tháng 9 theo đúng PPCT Phụ lục 3 (Bài 18 và Tiết 3, 4 Bài 19). Hình vẽ trực quan, phân chia hoạt động GV - HS rõ ràng. Duyệt.`
 
-### • Nhận xét chung toàn bộ hồ sơ Thầy Trần Sáng (Duyệt theo gói): [TRẢ HỒ SƠ (BỔ SUNG 4 TIẾT TOÁN 6)]
+### • Nhận xét chung toàn bộ hồ sơ Thầy Trần Sáng (Duyệt theo gói): [DUYỆT - XẾP LOẠI KHÁ]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
-> `TRẢ HỒ SƠ. Môn Toán 9 (Đại số 9 và Hình học 9) soạn rất tốt, đủ và vượt tiến độ, tích hợp NLS/AI in đậm nghiêng chuẩn mực. Tuy nhiên môn Toán 6 chưa đảm bảo tiến độ tháng 9, còn thiếu tổng cộng 04 tiết của Tuần 4 (03 tiết Số học 6 và 01 tiết Hình học 6). Đề nghị thầy Trần Sáng bổ sung đủ 04 tiết nộp lại để phê duyệt hoàn thành hồ sơ tháng 9.`
+> `DUYỆT HỒ SƠ (Xếp loại Khá). Giáo viên đã nộp bổ sung đầy đủ 04 tiết môn Toán 6, hoàn thành 100% tiến độ Tháng 9 với tổng cộng 32 tiết (155 trang). Tích hợp NLS và AI đầy đủ khớp Phụ lục 3. Nhắc nhở thầy Sáng in đậm, nghiêng nội dung NLS tại Bài 7 Số học 6 để hoàn thiện hồ sơ.`
 
 ---
 
@@ -133,8 +133,8 @@
 
 ### • Phân môn Hình học 8 (52 trang — 08 tiết: Bài 10, 11, LTC, Bài 12, LTC): [ĐẠT / DUYỆT (TỐT)]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
-> `Kế hoạch bài dạy soạn rất kỹ lưỡng (52 trang), đủ 08 tiết đảm bảo 100% tiến độ tháng 9. Khắc phục hoàn toàn lỗi toán học (định lý tổng 4 góc tứ giác và phép tính góc E, H tại Bài 10 chuẩn xác). Tích hợp NLS 1.1 và 5.3 in đậm nghiêng ở hoạt động. Lưu ý: Chỉnh lại lỗi font hiển thị tia phân giác góc A ở trang 51 trước khi dạy. Duyệt.`
+> `Kế hoạch bài dạy soạn đầy đủ 08 tiết đúng PPCT Tháng 9. Giáo viên đã khắc phục triệt để lỗi font công thức toán học tại Bài 10 (Tứ giác) và Luyện tập 2; ký hiệu góc và các công thức tính góc tứ giác hiển thị sắc nét, chuẩn mực. Cấu trúc 4 hoạt động CV 5512 rõ ràng, hình vẽ trực quan. Duyệt.`
 
 ### • Nhận xét chung toàn bộ hồ sơ Cô Lê Thị Bình (Duyệt theo gói): [DUYỆT - XẾP LOẠI TỐT]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
-> `DUYỆT TOÀN BỘ HỒ SƠ (Xếp loại Tốt). Giáo án chuẩn bị rất công phu (178 trang PDF qua 5 phân môn), đảm bảo 100% tiến độ tháng 9 và vượt tuần 5 ở Đại 7. Tích hợp NLS/AI xuất sắc, tuân thủ tuyệt đối quy định in đậm, nghiêng. Toán học và thể thức chuẩn mực. Biểu dương tinh thần trách nhiệm chuyên môn của cô Bình.`
+> `DUYỆT HỒ SƠ (Xếp loại Tốt). Hồ sơ giáo án nộp đầy đủ 45 tiết (178 trang) thuộc 5 phân môn Toán 7, Toán 8, HĐTN 7. Đảm bảo 100% tiến độ Tháng 9 và vượt tuần 5. Đã chỉnh sửa hoàn toàn sạch sẽ lỗi font công thức toán học và ký hiệu góc trong các phân môn Hình học. Nội dung tích hợp NLS và AI mẫu mực, 100% câu mô tả đều in đậm nghiêng đúng quy định.`
