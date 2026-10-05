@@ -28,8 +28,8 @@ Gọi tool `ask_question` với 13 lựa chọn:
 - **9/ Viết sáng kiến:** Cung cấp link Gemini Canvas https://gemini.google.com/app/e6bf41201af60de3?hl=vi và file [backupcode viettailieu/sangkien.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/backupcode%20viettailieu/sangkien.html).
 - **11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh):** Cung cấp link website https://www.hoangthiencm.id.vn/vehinh.html và file [vehinh.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html).
 
-## 3. Menu Cấp 2 khi chọn "3/ Tạo bài tập" (9 định dạng đánh số)
-Gọi tiếp tool `ask_question` với ĐÚNG 9 lựa chọn:
+## 3. Menu Cấp 2 khi chọn "3/ Tạo bài tập" (10 lựa chọn đánh số)
+Gọi tiếp tool `ask_question` với ĐÚNG 10 lựa chọn:
 - Question: "CHỌN ĐỊNH DẠNG TẠO BÀI TẬP: Thầy/Cô muốn tạo bài tập theo hình thức nào?"
 - Options:
   1. "1. ⭐ Dạng Công văn 7991 (17 câu)"
@@ -41,6 +41,7 @@ Gọi tiếp tool `ask_question` với ĐÚNG 9 lựa chọn:
   7. "7. ⭐ Tùy chỉnh linh hoạt số câu"
   8. "8. ⭐ Bài tập tự luận"
   9. "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dưỡng - Phân dạng & Giải từng bước)"
+  10. "10. ✂️ Tự động cắt PDF SGK thành từng bài học (Chuẩn xác 100% từng bài)"
 
 ## 4. Quy ước thư mục đầu vào và kết quả (Bắt buộc không lưu lung tung)
 Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư mục `TROLYTHIEN/`:
@@ -48,10 +49,18 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
   + File đầu vào (PDF SGK, PPCT, tài liệu): đặt tại `TROLYTHIEN/1_SOAN_KHBD/Dau_vao/`
   + File kết quả (File Word .docx KHBD hoàn chỉnh): tự động lưu tại `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/`
   + Tích hợp NLS và AI: Trong các hoạt động dạy học có năng lực số, năng lực AI thì **bắt buộc phải in đậm, in nghiêng phần tích hợp** (đồng bộ 100% với tiêu chuẩn thẩm định duyệt giáo án).
+  + Bắt buộc có Sơ đồ tư duy (Mindmap) trong các tiết Ôn tập / Luyện tập chung (tại Hoạt động 2.1) và Bắt buộc có hình vẽ toán học trong các bài Hình học (tuân thủ `.agents/rules/soankhbd.md`).
+  + Chuẩn hóa công thức Toán: Ký hiệu chia hết hiển thị đúng 3 chấm dọc (`\vdots` $\rightarrow$ $⋮$), không chia hết (`\not\vdots` $\rightarrow$ $∤$), tuyệt đối không để sót chữ *vdots* in nghiêng.
 - **2/ Tạo bài tập:**
-  + File đầu vào (PDF bài học, PDF chuyên đề bài tập 5-10 trang, tài liệu nguồn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`
-  + File kết quả (File Word đề thi, OLM, Game, hoặc File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`
+  + File đầu vào (PDF bài học, PDF chuyên đề bài tập 5-10 trang, SGK trọn cuốn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`
+  + File kết quả (File Word đề thi, OLM, Game, File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9, hoặc trọn bộ PDF từng bài khi chọn mục 10): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`
   + Khi chọn mục 9 (Xuất bài dạy HTML): Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-day-html.md`.
+  + Khi chọn mục 10 (Cắt PDF SGK thành từng bài học):
+    * Đọc cuốn SGK/SBT PDF trong `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`.
+    * Tự động xác định độ lệch số trang in vs số trang PDF (Offset).
+    * Nhận diện chuẩn xác 100% ranh giới từng bài (bài học, luyện tập chung, bài tập cuối chương).
+    * Gọi engine `TROLYTHIEN/engine/cat_pdf_sgk.py` trích xuất bằng PyMuPDF giữ nguyên 100% chất lượng vector/ảnh gốc.
+    * Xuất danh sách PDF từng bài học sạch sẽ vào `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/PDF_Tung_Bai/` (không tự ý sao chép sang Dau_vao).
 - **1/ Duyệt giáo án (Thẩm định KHBD):**
   + File đầu vào: Tham chiếu các tệp `Phu-luc-3-...docx` ở thư mục gốc `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/` và thư mục riêng từng giáo viên (ví dụ `HỒ ĐĂNG DANH/`, `TRAN SANG/`...).
   + Tiêu chuẩn thẩm định nghiêm ngặt:

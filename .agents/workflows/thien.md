@@ -47,7 +47,7 @@ Tự động kích hoạt quy trình soạn KHBD chuẩn V2.0:
 - **Tích hợp NLS và AI:** Trong các hoạt động dạy học có năng lực số, năng lực AI thì **bắt buộc phải in đậm, in nghiêng phần tích hợp** (khớp chuẩn duyệt giáo án).
 
 #### Nhánh 3: Khi chọn "3/ Tạo bài tập"
-Gọi tiếp tool `ask_question` với đúng 9 định dạng chuẩn (file đầu vào tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`, kết quả tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`):
+Gọi tiếp tool `ask_question` với đúng 10 định dạng chuẩn (file đầu vào tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`, kết quả tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`):
 - Question: "CHỌN ĐỊNH DẠNG TẠO BÀI TẬP: Thầy/Cô muốn tạo bài tập theo hình thức nào?"
 - Options:
   1. "1. ⭐ Dạng Công văn 7991 (17 câu)"
@@ -59,8 +59,10 @@ Gọi tiếp tool `ask_question` với đúng 9 định dạng chuẩn (file đ�
   7. "7. ⭐ Tùy chỉnh linh hoạt số câu"
   8. "8. ⭐ Bài tập tự luận"
   9. "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dưỡng - Phân dạng & Giải từng bước)"
+  10. "10. ✂️ Tự động cắt PDF SGK thành từng bài học (Chuẩn xác 100% từng bài)"
 
 *Khi chọn lựa chọn 9:* Tự động kích hoạt quy trình tạo bài dạy HTML phân dạng chuyên biệt cho dạy thêm, dạy kèm, phụ đạo và bồi dưỡng (tuân thủ `.agents/rules/tao-bai-day-html.md`).
+*Khi chọn lựa chọn 10:* Tự động kích hoạt quy trình cắt PDF SGK thành từng bài học chuẩn xác 100% (tuân thủ `.agents/rules/tro-ly-thien.md`).
 
 
 #### Nhánh 4: Khi chọn "4/ Duyệt đề"

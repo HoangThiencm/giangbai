@@ -9,9 +9,7 @@
 // Deploy version: 20260916-textbook-exact-v18
 
 (function (global) {
-  if (typeof global.DocxGenerator !== "undefined" || typeof global.docxGenerator !== "undefined" || (typeof DocxGenerator !== "undefined" && typeof docxGenerator !== "undefined")) {
-    if (typeof global.DocxGenerator === "undefined" && typeof DocxGenerator !== "undefined") global.DocxGenerator = DocxGenerator;
-    if (typeof global.docxGenerator === "undefined" && typeof docxGenerator !== "undefined") global.docxGenerator = docxGenerator;
+  if (typeof global.DocxGenerator !== "undefined" || typeof global.docxGenerator !== "undefined") {
     return;
   }
 
@@ -154,6 +152,9 @@
              .replace(/_4/g, "₄").replace(/_5/g, "₅").replace(/_6/g, "₆").replace(/_7/g, "₇")
              .replace(/_8/g, "₈").replace(/_9/g, "₉").replace(/_\{([0-9a-zA-Z+-]+)\}/g, "_($1)");
     
+        // Ký hiệu chia hết, không chia hết
+        s = s.replace(/\\not\s*\\vdots/g, "∤").replace(/\\not\s*\\mid/g, "∤");
+
         // Các ký hiệu toán học phổ biến
         const mathDict = {
           "\\alpha": "α", "\\beta": "β", "\\gamma": "γ", "\\delta": "δ", "\\Delta": "Δ",
@@ -166,6 +167,7 @@
           "\\perp": "⊥", "\\parallel": "∥", "\\angle": "∠", "\\triangle": "△",
           "\\degree": "°", "^{\\circ}": "°", "\\rightarrow": "→", "\\Rightarrow": "⇒",
           "\\mid": "∣", "\\vert": "|", "\\Vert": "‖", "\\colon": ":", "\\setminus": "∖",
+          "\\vdots": "⋮", "\\not\\vdots": "∤", "\\nmid": "∤",
           "\\backsimeq": "⋍", "\\backsim": "∽", "\\sim": "∽",
           "\\wideparen": "⌒", "\\overarc": "⌒",
           "\\Leftrightarrow": "⇔", "\\cdots": "...", "\\ldots": "...", "\\text": "",
@@ -190,6 +192,7 @@
        */
       normalizeLatexForMath(latex) {
         let source = String(latex || "");
+        source = source.replace(/\\not\s*\\vdots/g, "∤").replace(/\\not\s*\\mid/g, "∤");
         const supportedCommands = [
           "Leftrightarrow", "Rightarrow", "leftarrow", "rightarrow", "overrightarrow", "subseteq", "supseteq",
           "emptyset", "parallel", "triangle", "varepsilon", "displaystyle", "overline", "widehat",
@@ -201,7 +204,7 @@
           "Theta", "lambda", "sigma", "Sigma", "omega", "Omega", "nabla", "partial", "infty",
           "angle", "perp", "bullet", "degree", "right", "left", "frac", "sqrt", "beta", "epsilon",
           "varepsilon", "pi", "Pi", "phi", "Phi", "psi", "rho", "mu", "nu", "neq", "leq", "geq",
-          "mid", "vert", "Vert", "colon", "setminus",
+          "mid", "vert", "Vert", "colon", "setminus", "vdots", "nmid",
           "dots", "circ", "hbar", "not", "in", "ni", "ne", "le", "ge", "pm", "mp", "ast", "div",
           "cup", "cap", "sim", "to", "ell", "sin", "cos", "tan", "cot", "sec", "csc", "log", "ln",
           "lg", "lim", "max", "min", "gcd", "lcm", "det", "dim", "ker", "hom", "arg", "exp", "sinh",
@@ -336,6 +339,7 @@
           subset: "⊂", subseteq: "⊆", supset: "⊃", sim: "∽", backsim: "∽", backsimeq: "⋍", approx: "≈", equiv: "≡",
           wideparen: "⌒", overarc: "⌒",
           mid: "∣", vert: "|", Vert: "‖", colon: ":", setminus: "∖",
+          vdots: "⋮", nmid: "∤",
           cdots: "⋯", ldots: "…", dots: "…", degree: "°", ell: "ℓ", hbar: "ℏ",
           lbrack: "[", rbrack: "]", lbrace: "{", rbrace: "}", lparen: "(", rparen: ")"
         };

@@ -54,7 +54,10 @@ function createKhbdDocx({ mdFilePath, outputDocxPath, lessonInfo, illustrations 
     formatKhbdRoleLineBreaks: formatKhbdRoleLineBreaks
   };
 
-  const { DocxGenerator } = require('../js/khbd-docx.js');
+  const khbdDocxPath = fs.existsSync(path.resolve(__dirname, '../../js/khbd-docx.js'))
+    ? path.resolve(__dirname, '../../js/khbd-docx.js')
+    : path.resolve(__dirname, '../js/khbd-docx.js');
+  const { DocxGenerator } = require(khbdDocxPath);
   const generator = new DocxGenerator();
 
   // Override createIllustrationParagraphs
